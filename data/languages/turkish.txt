@@ -2477,6 +2477,9 @@ Clan plates size
 Clan: %s
 == Klan: %s
 
+Classic
+== Klasik
+
 Classic Easy
 == Klasik Easy
 
@@ -4657,9 +4660,6 @@ Empty slots still take space, so clear the ones you no longer use.
 
 enable
 == etkinleştir
-
-Enable "Hammer skin steal" only if you want your skin to change on every hammer hit, since other players see it too.
-== Çekiçle skin çalmayı yalnızca her vuruşta skinin değişmesini istiyorsan aç; diğer oyuncular da görür.
 
 Enable "Map progress bar" and choose its location: Standalone, Player stats or Dynamic Island. Enable "Show player stats HUD" for the Player stats location.
 == Harita ilerleme çubuğunu açın ve konumunu seçin: ayrı göster, oyuncu istatistikleri veya Dinamik Ada. Oyuncu istatistiklerini seçerseniz oyuncu istatistikleri HUD’unu da açın.
@@ -8951,6 +8951,18 @@ Name plate elements allow free Y movement
 Name plate elements freely movable within bounds
 == İsim Plakası Öğesinin Kutu İçinde Serbestçe Hareket Etmesine İzin Ver
 
+Name plate hammer icon X offset
+== İsim etiketi çekiç simgesi X kaydırması
+
+Name plate hammer icon Y offset
+== İsim etiketi çekiç simgesi Y kaydırması
+
+Name plate hook icon X offset
+== İsim etiketi kanca simgesi X kaydırması
+
+Name plate hook icon Y offset
+== İsim etiketi kanca simgesi Y kaydırması
+
 Name plate key line X offset
 == İsim Plakası Tuş Satırı X Kayması
 
@@ -10513,9 +10525,6 @@ Players weapons has no affect on others
 
 Playing effects
 == Oynatma efektleri
-
-Plays a short effect when a tee's skin changes, and can copy the skin of the tee you just hammered.
-== Bir tee'nin skini değiştiğinde kısa bir efekt oynatır ve az önce çekiçle vurduğun tee'nin skinini kopyalayabilir.
 
 Plays an animation whenever your skin changes, including skins stolen with the hammer.
 == Çekiçle çalınanlar dahil, skinin değiştiğinde bir animasyon oynatır.
@@ -16219,9 +16228,6 @@ Turn on "Show titles on nameplates", pick a "Title style", then adjust "Title mo
 
 Turn on "Skin outline for self and dummy" or "Skin outline for other players", then tune width and opacity; "Cycle custom Tee hue" animates custom colors.
 == Kendin ve dummy için skin dış çizgisini ya da diğer oyuncuların skin dış çizgisini aç, kalınlık ve saydamlığı ayarla; özel Tee tonu döngüsü özel renkleri canlandırır.
-
-Turn on "Skin transition animation", choose a "Skin transition type" and "Animation range", then set "Skin transition duration" and "Skin transition intensity".
-== Skin geçiş animasyonunu aç, geçiş türünü ve animasyon aralığını seç, ardından geçiş süresi ile yoğunluğunu ayarla.
 
 Turn on "Smooth free spectator camera" and set "Cinematic smoothness": low values stay snappy, high values drift slowly.
 == Yumuşak serbest izleme kamerasını aç ve sinematik yumuşatmayı ayarla: düşük değer çevik, yüksek değer ağır kayar.

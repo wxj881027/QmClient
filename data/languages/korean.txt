@@ -2477,6 +2477,9 @@ Clan plates size
 Clan: %s
 == 클랜: %s
 
+Classic
+== 클래식
+
 Classic Easy
 == 클래식 Easy
 
@@ -4657,9 +4660,6 @@ Empty slots still take space, so clear the ones you no longer use.
 
 enable
 == 활성화
-
-Enable "Hammer skin steal" only if you want your skin to change on every hammer hit, since other players see it too.
-== 해머로 칠 때마다 스킨이 바뀌길 원할 때만 해머 스킨 강탈을 켜세요. 다른 플레이어에게도 보입니다.
 
 Enable "Map progress bar" and choose its location: Standalone, Player stats or Dynamic Island. Enable "Show player stats HUD" for the Player stats location.
 == 맵 진행률 바를 켜고 위치를 별도 표시, 플레이어 통계 또는 다이내믹 아일랜드로 선택하세요. 플레이어 통계를 선택하면 플레이어 통계 HUD 표시도 켜야 합니다.
@@ -8951,6 +8951,18 @@ Name plate elements allow free Y movement
 Name plate elements freely movable within bounds
 == 네임플레이트 요소 상자 내 자유 이동 허용
 
+Name plate hammer icon X offset
+== 이름표 해머 아이콘 X 오프셋
+
+Name plate hammer icon Y offset
+== 이름표 해머 아이콘 Y 오프셋
+
+Name plate hook icon X offset
+== 이름표 훅 아이콘 X 오프셋
+
+Name plate hook icon Y offset
+== 이름표 훅 아이콘 Y 오프셋
+
 Name plate key line X offset
 == 네임플레이트 키 행 X 오프셋
 
@@ -10513,9 +10525,6 @@ Players weapons has no affect on others
 
 Playing effects
 == 효과 재생
-
-Plays a short effect when a tee's skin changes, and can copy the skin of the tee you just hammered.
-== Tee의 스킨이 바뀔 때 짧은 효과를 재생하고, 방금 해머로 친 상대의 스킨을 복사할 수도 있습니다.
 
 Plays an animation whenever your skin changes, including skins stolen with the hammer.
 == 해머로 빼앗은 스킨을 포함해 스킨이 바뀔 때 애니메이션을 재생합니다.
@@ -16219,9 +16228,6 @@ Turn on "Show titles on nameplates", pick a "Title style", then adjust "Title mo
 
 Turn on "Skin outline for self and dummy" or "Skin outline for other players", then tune width and opacity; "Cycle custom Tee hue" animates custom colors.
 == 자신과 dummy의 스킨 윤곽선 또는 다른 플레이어의 스킨 윤곽선을 켜고 두께와 불투명도를 맞추세요. 사용자 지정 Tee 색조 순환이 사용자 지정 색상을 움직입니다.
-
-Turn on "Skin transition animation", choose a "Skin transition type" and "Animation range", then set "Skin transition duration" and "Skin transition intensity".
-== 스킨 전환 애니메이션을 켜고 전환 유형과 애니메이션 범위를 고른 뒤, 전환 시간과 강도를 설정하세요.
 
 Turn on "Smooth free spectator camera" and set "Cinematic smoothness": low values stay snappy, high values drift slowly.
 == 자유 관전 카메라 부드럽게를 켜고 영화식 부드러움을 설정하세요. 낮으면 민첩하고 높으면 천천히 흐릅니다.

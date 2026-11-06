@@ -2477,6 +2477,9 @@ Clan plates size
 Clan: %s
 == Clan: %s
 
+Classic
+== Clásico
+
 Classic Easy
 == Clásico Easy
 
@@ -4657,9 +4660,6 @@ Empty slots still take space, so clear the ones you no longer use.
 
 enable
 == activar
-
-Enable "Hammer skin steal" only if you want your skin to change on every hammer hit, since other players see it too.
-== Activa el robo de skin con martillo solo si quieres cambiar de skin con cada golpe, porque los demás también lo ven.
 
 Enable "Map progress bar" and choose its location: Standalone, Player stats or Dynamic Island. Enable "Show player stats HUD" for the Player stats location.
 == Activa la barra de progreso del mapa y elige su ubicación: por separado, en las estadísticas del jugador o en la Isla dinámica. Para mostrarla en las estadísticas, activa también el HUD de estadísticas del jugador.
@@ -8951,6 +8951,18 @@ Name plate elements allow free Y movement
 Name plate elements freely movable within bounds
 == Permitir movimiento libre dentro del cuadro del elemento de la placa de nombre
 
+Name plate hammer icon X offset
+== Desplazamiento X del icono de martillo del nombre
+
+Name plate hammer icon Y offset
+== Desplazamiento Y del icono de martillo del nombre
+
+Name plate hook icon X offset
+== Desplazamiento X del icono de gancho del nombre
+
+Name plate hook icon Y offset
+== Desplazamiento Y del icono de gancho del nombre
+
 Name plate key line X offset
 == Desplazamiento X de la fila de teclas de la placa de nombre
 
@@ -10513,9 +10525,6 @@ Players weapons has no affect on others
 
 Playing effects
 == Efectos de reproducción
-
-Plays a short effect when a tee's skin changes, and can copy the skin of the tee you just hammered.
-== Reproduce un efecto breve cuando cambia la skin de un tee y puede copiar la skin del tee al que acabas de dar con el martillo.
 
 Plays an animation whenever your skin changes, including skins stolen with the hammer.
 == Reproduce una animación cuando cambia tu skin, incluidas las robadas con el martillo.
@@ -16219,9 +16228,6 @@ Turn on "Show titles on nameplates", pick a "Title style", then adjust "Title mo
 
 Turn on "Skin outline for self and dummy" or "Skin outline for other players", then tune width and opacity; "Cycle custom Tee hue" animates custom colors.
 == Activa Contorno de skin propio y del dummy o Contorno de skin de otros jugadores y ajusta grosor y opacidad; el ciclo de tono del Tee anima los colores personalizados.
-
-Turn on "Skin transition animation", choose a "Skin transition type" and "Animation range", then set "Skin transition duration" and "Skin transition intensity".
-== Activa la animación de transición de skin, elige el tipo y el rango de animación, y ajusta duración e intensidad.
 
 Turn on "Smooth free spectator camera" and set "Cinematic smoothness": low values stay snappy, high values drift slowly.
 == Activa la cámara libre suavizada y ajusta la suavidad cinematográfica: valores bajos responden rápido, altos se deslizan despacio.

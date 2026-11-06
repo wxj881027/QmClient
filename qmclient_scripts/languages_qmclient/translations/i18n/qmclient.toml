@@ -1,4 +1,68 @@
 [[message]]
+key = "Name plate hammer icon X offset"
+[message.translations]
+simplified_chinese = "昵称卡锤图标 X 偏移"
+traditional_chinese = "暱稱卡錘圖示 X 偏移"
+japanese = "ネームプレートのハンマーアイコンの X オフセット"
+korean = "이름표 해머 아이콘 X 오프셋"
+russian = "Смещение значка молота у имени по X"
+german = "X-Versatz des Hammersymbols am Namensschild"
+spanish = "Desplazamiento X del icono de martillo del nombre"
+french = "Décalage X de l’icône de marteau du nom"
+brazilian_portuguese = "Deslocamento X do ícone de martelo do nome"
+portuguese = "Deslocamento X do ícone de martelo do nome"
+turkish = "İsim etiketi çekiç simgesi X kaydırması"
+polish = "Przesunięcie X ikony młota przy nazwie"
+
+[[message]]
+key = "Name plate hammer icon Y offset"
+[message.translations]
+simplified_chinese = "昵称卡锤图标 Y 偏移"
+traditional_chinese = "暱稱卡錘圖示 Y 偏移"
+japanese = "ネームプレートのハンマーアイコンの Y オフセット"
+korean = "이름표 해머 아이콘 Y 오프셋"
+russian = "Смещение значка молота у имени по Y"
+german = "Y-Versatz des Hammersymbols am Namensschild"
+spanish = "Desplazamiento Y del icono de martillo del nombre"
+french = "Décalage Y de l’icône de marteau du nom"
+brazilian_portuguese = "Deslocamento Y do ícone de martelo do nome"
+portuguese = "Deslocamento Y do ícone de martelo do nome"
+turkish = "İsim etiketi çekiç simgesi Y kaydırması"
+polish = "Przesunięcie Y ikony młota przy nazwie"
+
+[[message]]
+key = "Name plate hook icon X offset"
+[message.translations]
+simplified_chinese = "昵称卡钩图标 X 偏移"
+traditional_chinese = "暱稱卡鉤圖示 X 偏移"
+japanese = "ネームプレートのフックアイコンの X オフセット"
+korean = "이름표 훅 아이콘 X 오프셋"
+russian = "Смещение значка крюка у имени по X"
+german = "X-Versatz des Hakensymbols am Namensschild"
+spanish = "Desplazamiento X del icono de gancho del nombre"
+french = "Décalage X de l’icône de grappin du nom"
+brazilian_portuguese = "Deslocamento X do ícone de gancho do nome"
+portuguese = "Deslocamento X do ícone de gancho do nome"
+turkish = "İsim etiketi kanca simgesi X kaydırması"
+polish = "Przesunięcie X ikony haka przy nazwie"
+
+[[message]]
+key = "Name plate hook icon Y offset"
+[message.translations]
+simplified_chinese = "昵称卡钩图标 Y 偏移"
+traditional_chinese = "暱稱卡鉤圖示 Y 偏移"
+japanese = "ネームプレートのフックアイコンの Y オフセット"
+korean = "이름표 훅 아이콘 Y 오프셋"
+russian = "Смещение значка крюка у имени по Y"
+german = "Y-Versatz des Hakensymbols am Namensschild"
+spanish = "Desplazamiento Y del icono de gancho del nombre"
+french = "Décalage Y de l’icône de grappin du nom"
+brazilian_portuguese = "Deslocamento Y do ícone de gancho do nome"
+portuguese = "Deslocamento Y do ícone de gancho do nome"
+turkish = "İsim etiketi kanca simgesi Y kaydırması"
+polish = "Przesunięcie Y ikony haka przy nazwie"
+
+[[message]]
 key = "?!Stuck keys!?"
 [message.translations]
 simplified_chinese = "?!卡键!?"

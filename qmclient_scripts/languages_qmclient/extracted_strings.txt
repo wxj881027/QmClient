@@ -826,6 +826,7 @@ Clan name size on nameplate
 Clan of the player followed from the pie menu
 Clan plates size
 Clan: %s
+Classic
 Classic Easy
 Classic Next
 Classic Nut
@@ -1554,7 +1555,6 @@ Emoticon shadow
 Emoticons
 Empty slots still take space, so clear the ones you no longer use.
 enable
-Enable "Hammer skin steal" only if you want your skin to change on every hammer hit, since other players see it too.
 Enable "Map progress bar" and choose its location: Standalone, Player stats or Dynamic Island. Enable "Show player stats HUD" for the Player stats location.
 Enable "Show unpredicted ghosts of other players", then tune the predicted and unpredicted ghost opacity.
 Enable "Try to rename before finishing", then fill in the finishing name and run to the finish to test it.
@@ -2989,6 +2989,10 @@ Name plate coord line Y offset
 Name plate elements allow free X movement
 Name plate elements allow free Y movement
 Name plate elements freely movable within bounds
+Name plate hammer icon X offset
+Name plate hammer icon Y offset
+Name plate hook icon X offset
+Name plate hook icon Y offset
 Name plate key line X offset
 Name plate key line Y offset
 Name plate name line X offset
@@ -3513,7 +3517,6 @@ Players shown
 Players weapons affect others
 Players weapons has no affect on others
 Playing effects
-Plays a short effect when a tee's skin changes, and can copy the skin of the tee you just hammered.
 Plays an animation whenever your skin changes, including skins stolen with the hammer.
 Playtime (h)
 Please add a valid cut first
@@ -5420,7 +5423,6 @@ Turn on "Show important server prompts as notifications" or "Route Echo messages
 Turn on "Show own coordinates" or "Show other players' coordinates", then choose "Show X" and "Show Y".
 Turn on "Show titles on nameplates", pick a "Title style", then adjust "Title motion" and "Wave amount"; "Advanced mode" adds color and glow.
 Turn on "Skin outline for self and dummy" or "Skin outline for other players", then tune width and opacity; "Cycle custom Tee hue" animates custom colors.
-Turn on "Skin transition animation", choose a "Skin transition type" and "Animation range", then set "Skin transition duration" and "Skin transition intensity".
 Turn on "Smooth free spectator camera" and set "Cinematic smoothness": low values stay snappy, high values drift slowly.
 Turn on "Team tee glow", then set "Team tee glow intensity" and "Team tee glow halo size"; "Team 0 glow" handles players without a team.
 Turn on "Weapon switch animation" or "Play a flip animation while reloading weapons", then pick an "Animation range" and tune duration, distance and rotation.

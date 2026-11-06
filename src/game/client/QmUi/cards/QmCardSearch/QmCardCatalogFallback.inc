@@ -48,6 +48,10 @@ namespace
 		{nullptr, "qm_nameplate_hook_offset_y", nullptr},
 		{nullptr, "qm_nameplate_keys_offset_x", nullptr},
 		{nullptr, "qm_nameplate_keys_offset_y", nullptr},
+		{nullptr, "qm_nameplate_water_hammer_offset_x", "卡锤位置"},
+		{nullptr, "qm_nameplate_water_hammer_offset_y", nullptr},
+		{nullptr, "qm_nameplate_water_hook_offset_x", "卡钩位置"},
+		{nullptr, "qm_nameplate_water_hook_offset_y", nullptr},
 		{nullptr, "qm_nameplate_name_offset_x", nullptr},
 		{nullptr, "qm_nameplate_name_offset_y", nullptr},
 	};

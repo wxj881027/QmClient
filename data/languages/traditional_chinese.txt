@@ -2477,6 +2477,9 @@ Clan plates size
 Clan: %s
 == 戰隊：%s
 
+Classic
+== 古典
+
 Classic Easy
 == 古典 Easy
 
@@ -4657,9 +4660,6 @@ Empty slots still take space, so clear the ones you no longer use.
 
 enable
 == 開啟
-
-Enable "Hammer skin steal" only if you want your skin to change on every hammer hit, since other players see it too.
-== 只有想每次錘中都換皮膚時才開啟錘中偷皮——別人也會看到你的皮膚在變。
 
 Enable "Map progress bar" and choose its location: Standalone, Player stats or Dynamic Island. Enable "Show player stats HUD" for the Player stats location.
 == 開啟「地圖進度條」，選擇獨立顯示、玩家統計或靈動島。選擇玩家統計時，還需開啟「顯示玩家統計 HUD」。
@@ -8951,6 +8951,18 @@ Name plate elements allow free Y movement
 Name plate elements freely movable within bounds
 == 名字板元素允許在框內自由移動
 
+Name plate hammer icon X offset
+== 暱稱卡錘圖示 X 偏移
+
+Name plate hammer icon Y offset
+== 暱稱卡錘圖示 Y 偏移
+
+Name plate hook icon X offset
+== 暱稱卡鉤圖示 X 偏移
+
+Name plate hook icon Y offset
+== 暱稱卡鉤圖示 Y 偏移
+
 Name plate key line X offset
 == 名字板按鍵行 X 偏移
 
@@ -10513,9 +10525,6 @@ Players weapons has no affect on others
 
 Playing effects
 == 播放效果
-
-Plays a short effect when a tee's skin changes, and can copy the skin of the tee you just hammered.
-== 皮膚的 Tee 換膚時播放一個短效果，還可以把剛錘到的那個人的皮膚複製過來。
 
 Plays an animation whenever your skin changes, including skins stolen with the hammer.
 == 皮膚變化時播放動畫，包括錘子偷來的皮膚。
@@ -16219,9 +16228,6 @@ Turn on "Show titles on nameplates", pick a "Title style", then adjust "Title mo
 
 Turn on "Skin outline for self and dummy" or "Skin outline for other players", then tune width and opacity; "Cycle custom Tee hue" animates custom colors.
 == 打開自己與 dummy 的皮膚描邊或其他玩家的皮膚描邊，再調寬度和透明度；循環自定義 Tee 色調負責讓自訂顏色動起來。
-
-Turn on "Skin transition animation", choose a "Skin transition type" and "Animation range", then set "Skin transition duration" and "Skin transition intensity".
-== 開啟換膚過渡動畫，選擇過渡類型和動畫範圍，再調過渡時長和過渡強度。
 
 Turn on "Smooth free spectator camera" and set "Cinematic smoothness": low values stay snappy, high values drift slowly.
 == 開啟平滑自由觀戰鏡頭並設定電影鏡頭平滑度：數值低反應快，數值高鏡頭慢慢漂。
