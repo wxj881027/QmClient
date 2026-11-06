@@ -55,6 +55,8 @@ void CQmMusicAppWatcher::OnShutdown()
 
 void CQmMusicAppWatcher::OnUpdate()
 {
+	if(m_pScanJob && m_pScanJob->State() == IJob::STATE_FAILED)
+		m_pScanJob.reset();
 	if(m_pScanJob)
 	{
 		uint64_t RunningMask;

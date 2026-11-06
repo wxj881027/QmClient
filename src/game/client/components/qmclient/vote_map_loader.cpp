@@ -139,9 +139,9 @@ bool CQmVoteMapLoader::Poll(SRequest &Request, IEngine *pEngine, bool Catalog)
 			Request.m_Error = true;
 		Request.m_pHttp.reset();
 	}
-	if(!Request.m_pJob || Request.m_pJob->State() != IJob::STATE_DONE)
+	if(!Request.m_pJob || !Request.m_pJob->Finished())
 		return false;
-	Request.m_Error = !Request.m_pJob->m_Success;
+	Request.m_Error = Request.m_pJob->State() != IJob::STATE_DONE || !Request.m_pJob->m_Success;
 	if(!Request.m_Error)
 	{
 		if(Catalog)

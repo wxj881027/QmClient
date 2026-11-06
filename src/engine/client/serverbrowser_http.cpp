@@ -494,13 +494,13 @@ namespace
 						continue;
 					}
 				}
-				if(Attempt.m_pParse->State() != IJob::STATE_DONE)
+				if(!Attempt.m_pParse->Finished())
 				{
 					++Index;
 					continue;
 				}
 				const auto &Result = Attempt.m_pParse;
-				if(Result->m_Success)
+				if(Result->State() == IJob::STATE_DONE && Result->m_Success)
 				{
 					m_HadSuccess = true;
 					m_Failures = 0;

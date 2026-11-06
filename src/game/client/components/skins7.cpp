@@ -188,7 +188,7 @@ std::shared_ptr<CSkins7::CSkinPartLoadJob> CSkins7::CreateSkinPartLoadJob(int Pa
 void CSkins7::ProcessCompletedJobs()
 {
 	const auto Begin = time_get_nanoseconds();
-	if(!m_pSkinInfoJob || m_pSkinInfoJob->State() != IJob::STATE_DONE)
+	if(!m_pSkinInfoJob || !m_pSkinInfoJob->Finished())
 		return;
 	if(m_RefreshRequest.RetryFailedScan(m_pSkinInfoJob, m_LoadCompletion, Begin))
 		return;

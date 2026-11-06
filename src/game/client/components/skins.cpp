@@ -2957,10 +2957,13 @@ void CSkins::QueueSkinDirectoryScanJob()
 
 void CSkins::ProcessSkinDirectoryScanJob()
 {
-	if(m_pSkinDirectoryScanJob && m_pSkinDirectoryScanJob->State() == IJob::STATE_DONE)
+	if(m_pSkinDirectoryScanJob && m_pSkinDirectoryScanJob->Finished())
 	{
-		m_vPendingSkinDirectoryEntries = m_pSkinDirectoryScanJob->TakeResult().m_vEntries;
-		m_SkinDirectoryMergeCursor = 0;
+		if(m_pSkinDirectoryScanJob->State() == IJob::STATE_DONE)
+		{
+			m_vPendingSkinDirectoryEntries = m_pSkinDirectoryScanJob->TakeResult().m_vEntries;
+			m_SkinDirectoryMergeCursor = 0;
+		}
 		m_pSkinDirectoryScanJob.reset();
 	}
 
@@ -3113,6 +3116,12 @@ bool CSkins::ApplyOfficialSkinIndexJson(const char *pJson, size_t JsonSize)
 
 void CSkins::ProcessSkinListPlanJob()
 {
+	if(m_pSkinListPlanJob && m_pSkinListPlanJob->State() == IJob::STATE_FAILED)
+	{
+		m_pSkinListPlanJob.reset();
+		m_SkinList.m_NeedsUpdate = true;
+		return;
+	}
 	if(m_pSkinListPlanJob && m_pSkinListPlanJob->State() == IJob::STATE_DONE)
 	{
 		auto Result = m_pSkinListPlanJob->TakeResult();

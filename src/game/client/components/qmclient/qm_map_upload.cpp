@@ -165,8 +165,8 @@ namespace QmMapUpload
 				if(m_pRequest)
 					m_pHttp->Run(m_pRequest);
 			}
-			else
-				m_Status = EStatus::CANCELLED;
+			else if(m_Status != EStatus::CANCELLED)
+				m_Status = m_pPrepareJob->State() == IJob::STATE_FAILED ? EStatus::READ_FAILED : EStatus::CANCELLED;
 			m_pPrepareJob.reset();
 		}
 		if(!m_pRequest || !m_pRequest->Done())

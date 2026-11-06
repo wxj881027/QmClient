@@ -5275,6 +5275,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/support/qm_open_link_probe.h
     src/test/unit/engine/jobs_test.cpp
     src/test/integration/engine/job_pool_startup_test.cpp
+    src/test/integration/engine/job_pool_failure_test.cpp
     src/test/integration/engine/http_startup_test.cpp
     src/test/integration/engine/http_response_buffer_test.cpp
     src/test/integration/engine/http_completion_test.cpp

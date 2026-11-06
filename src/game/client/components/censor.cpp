@@ -79,7 +79,7 @@ void CCensor::OnRender()
 {
 	if(m_pCensorListDownloadJob && m_pCensorListDownloadJob->Done())
 	{
-		if(m_pCensorListDownloadJob->m_vLoadedWords)
+		if(m_pCensorListDownloadJob->State() == IJob::STATE_DONE && m_pCensorListDownloadJob->m_vLoadedWords)
 			m_vCensoredWords = std::move(*m_pCensorListDownloadJob->m_vLoadedWords);
 		m_pCensorListDownloadJob = nullptr;
 	}

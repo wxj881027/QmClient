@@ -4495,7 +4495,7 @@ void CClient::Update()
 	{
 		replay_save::ConsumeCompleted(m_EditJobs, [this](const std::shared_ptr<CDemoEdit> &pJob) {
 			char aBuf[IO_MAX_PATH_LENGTH + 64];
-			if(pJob->Success())
+			if(pJob->State() == IJob::STATE_DONE && pJob->Success())
 			{
 				str_format(aBuf, sizeof(aBuf), "Successfully saved the replay to '%s'!", pJob->Destination());
 				m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", aBuf);

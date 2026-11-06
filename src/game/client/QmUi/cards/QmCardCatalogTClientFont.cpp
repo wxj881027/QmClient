@@ -124,6 +124,8 @@ namespace fontstore
 		SCatalog &Result = Catalog(pStorage);
 		if(Result.m_Loaded)
 			return;
+		if(s_pCatalogJob && s_pCatalogJob->State() == IJob::STATE_FAILED)
+			s_pCatalogJob.reset();
 		if(!s_pCatalogJob)
 			TryQueueCatalogLoadJob(s_pCatalogJob, *pEngine, pStorage);
 		else if(s_pCatalogJob->TakeResult(Result))

@@ -194,7 +194,7 @@ bool CSounds::Reload()
 {
 	if(m_WaitForSoundJob)
 	{
-		if(m_pSoundJob && (m_pSoundJob->State() == IJob::STATE_DONE || m_pSoundJob->State() == IJob::STATE_ABORTED))
+		if(m_pSoundJob && m_pSoundJob->Finished())
 		{
 			m_WaitForSoundJob = false;
 		}
@@ -259,7 +259,7 @@ void CSounds::OnRender()
 	// check for sound initialisation
 	if(m_WaitForSoundJob)
 	{
-		if(m_pSoundJob->State() == IJob::STATE_DONE)
+		if(m_pSoundJob->Finished())
 			m_WaitForSoundJob = false;
 		else
 			return;

@@ -2660,7 +2660,7 @@ void CQmClient::FinishQmDdnetPlayerStats()
 
 		auto pParseJob = std::static_pointer_cast<CQmDdnetPlayerStatsParseJob>(m_pQmDdnetPlayerParseJob);
 		const std::string ParsePlayerName = m_QmDdnetPlayerState.RequestPlayerName();
-		CQmDdnetPlayerStatsParseJob::SResult Result = pParseJob->TakeResult();
+		CQmDdnetPlayerStatsParseJob::SResult Result = pParseJob->State() == IJob::STATE_DONE ? pParseJob->TakeResult() : CQmDdnetPlayerStatsParseJob::SResult();
 		m_pQmDdnetPlayerParseJob = nullptr;
 		bool StartRefresh = false;
 		if(!m_QmDdnetPlayerState.CompleteParse(ParsePlayerName, Result.m_Parsed, time_get(), time_timestamp(), (int64_t)QMCLIENT_DDNET_PLAYER_RETRY_DELAY_SECONDS * time_freq(), (int64_t)QMCLIENT_DDNET_PLAYER_SYNC_INTERVAL_SECONDS * time_freq(), StartRefresh))

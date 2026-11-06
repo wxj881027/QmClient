@@ -829,9 +829,9 @@ public:
 		if(!Entry.m_pLoadJob)
 			return Entry.m_pRenderer != nullptr;
 		auto &Job = *Entry.m_pLoadJob;
-		if(Job.State() != IJob::STATE_DONE)
+		if(!Job.Finished())
 			return false;
-		if(!Job.m_Success)
+		if(Job.State() != IJob::STATE_DONE || !Job.m_Success)
 		{
 			Entry.m_LoadFailed = true;
 			Entry.m_RetryAfterTime = Now + MAP_PREVIEW_FAILED_RETRY_DELAY;

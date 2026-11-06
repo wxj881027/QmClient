@@ -21,7 +21,7 @@ class CSteamProbeJob : public IJob
 	void Run() override
 	{
 		m_Info = m_pfnInspect(m_ManualPath.c_str());
-		// 线程池捕获异常后也会进入DONE，只有完整返回才可发布。
+		// 正常返回和池的成功终态都成立时才发布。
 		m_Succeeded = true;
 	}
 

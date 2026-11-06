@@ -1644,7 +1644,7 @@ void CGameConsole::CInstance::CancelChatExport()
 	if(m_pChatExportJob->m_Queued)
 	{
 		// 已经交给后台：只发取消请求，等它自己收尾，避免拆掉正在使用的数据。
-		if(m_pChatExportJob->State() != IJob::STATE_DONE)
+		if(!m_pChatExportJob->Finished())
 			m_pChatExportJob->m_Cancelled.store(true);
 	}
 	else
@@ -1667,11 +1667,11 @@ void CGameConsole::CInstance::UpdateChatExport()
 		}
 		return;
 	}
-	// 取消仅发请求；STATE_DONE 后才能读取后台结果并释放任务。
-	if(m_pChatExportJob->State() != IJob::STATE_DONE)
+	// 取消仅发请求；worker 已返回后才能读取标记或释放任务。
+	if(!m_pChatExportJob->Finished())
 		return;
 	const auto pJob = std::move(m_pChatExportJob);
-	if(pJob->m_Success)
+	if(pJob->State() == IJob::STATE_DONE && pJob->m_Success)
 	{
 		char aBuf[128];
 		str_format(aBuf, sizeof(aBuf), Localize("Exported %d chat messages"), (int)pJob->m_vLines.size());

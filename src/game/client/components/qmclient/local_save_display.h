@@ -189,7 +189,7 @@ public:
 		if(m_pJob)
 		{
 			const auto State = m_pJob->State();
-			if(State != IJob::STATE_DONE && State != IJob::STATE_ABORTED)
+			if(State != IJob::STATE_DONE && State != IJob::STATE_ABORTED && State != IJob::STATE_FAILED)
 				return false;
 			// 已取消作业可能仍在运行，不能读取其结果。
 			if(State == IJob::STATE_DONE && m_pJob->m_Succeeded)

@@ -151,6 +151,7 @@ TEST(SteamProbeState, WorkerExceptionDoesNotPublishEmptyInfoAndRetriesRefresh)
 		p->m_State.RequestRefresh();
 		ASSERT_TRUE(p->Start("old", false, FailInspect));
 		ASSERT_TRUE(p->Finish("old"));
+		EXPECT_EQ(p->m_pJob->State(), IJob::STATE_FAILED);
 		EXPECT_TRUE(p->m_State.HasResult());
 		EXPECT_STREQ(p->m_State.Info().m_aPath, "old");
 		EXPECT_TRUE(p->m_State.Info().m_Running);

@@ -591,7 +591,7 @@ void CTClient::PollUpdateProxyRequests()
 			It = m_vUpdateProxyRequests.erase(It);
 			continue;
 		}
-		if(It->m_pJob->State() != IJob::STATE_DONE && Now - It->m_Start < 8)
+		if(!It->m_pJob->Finished() && Now - It->m_Start < 8)
 		{
 			++It;
 			continue;

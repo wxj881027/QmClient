@@ -69,6 +69,8 @@ public:
 	template<typename TPublish>
 	EPublishResult PublishResult(bool HasNewerSnapshot, TPublish &&Publish) REQUIRES(!m_Lock)
 	{
+		if(State() == IJob::STATE_FAILED)
+			return HasNewerSnapshot ? EPublishResult::SUPERSEDED : EPublishResult::INVALID;
 		if(State() != IJob::STATE_DONE)
 			return EPublishResult::WAITING;
 		const CLockScope Lock(m_Lock);

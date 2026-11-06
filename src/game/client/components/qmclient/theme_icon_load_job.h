@@ -94,11 +94,16 @@ public:
 	bool IsCompleted() const REQUIRES(!m_Lock)
 	{
 		const CLockScope Lock(m_Lock);
-		return m_Completed;
+		return m_Completed || Finished();
 	}
 	SResult TakeResult() REQUIRES(!m_Lock)
 	{
 		const CLockScope Lock(m_Lock);
+		if(Finished() && State() != STATE_DONE)
+		{
+			m_Result.m_Image.Free();
+			m_Result.m_Success = false;
+		}
 		SResult Result = std::move(m_Result);
 		m_Result = SResult();
 		return Result;

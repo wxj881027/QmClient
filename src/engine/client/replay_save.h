@@ -33,7 +33,7 @@ namespace replay_save
 	template<typename TJobs, typename TNotify>
 	bool ConsumeCompleted(TJobs &Jobs, const TNotify &Notify) noexcept
 	{
-		if(Jobs.empty() || Jobs.front()->State() != IJob::STATE_DONE)
+		if(Jobs.empty() || !Jobs.front()->Finished())
 			return false;
 		auto pJob = Jobs.front();
 		Jobs.pop_front();

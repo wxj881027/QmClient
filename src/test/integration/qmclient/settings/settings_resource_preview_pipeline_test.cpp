@@ -585,7 +585,8 @@ TEST(SettingsResourcePreviewWorkerFailure, AllocationExceptionCanBeConsumedAsCom
 	CJobPool Pool;
 	ASSERT_TRUE(Pool.TryInit(1));
 	ASSERT_TRUE(Pool.TryAdd(pJob));
-	ASSERT_TRUE(WaitForJobDone(*pJob));
+	ASSERT_TRUE(WaitForJobFinished(*pJob));
+	EXPECT_EQ(pJob->State(), IJob::STATE_FAILED);
 	Pool.Shutdown();
 	ASSERT_TRUE(pJob->Completed());
 	EXPECT_EQ(Storage.m_Reads, 1);
@@ -606,7 +607,8 @@ TEST(SettingsResourcePreviewWorkerFailure, NonStandardExceptionCanBeConsumedAsCo
 	CJobPool Pool;
 	ASSERT_TRUE(Pool.TryInit(1));
 	ASSERT_TRUE(Pool.TryAdd(pJob));
-	ASSERT_TRUE(WaitForJobDone(*pJob));
+	ASSERT_TRUE(WaitForJobFinished(*pJob));
+	EXPECT_EQ(pJob->State(), IJob::STATE_FAILED);
 	Pool.Shutdown();
 	ASSERT_TRUE(pJob->Completed());
 	EXPECT_EQ(Storage.m_Reads, 1);
@@ -629,7 +631,8 @@ TEST(SettingsResourcePreviewWorkerFailure, RuntimeFailureAllowsRetryOnTheSameNat
 	ASSERT_TRUE(Pool.TryInit(1));
 	auto pFailed = CSettingsResourcePreviewJob::FromPath("failure", "preview.png", &Storage, IStorage::TYPE_ALL, 4);
 	ASSERT_TRUE(Pool.TryAdd(pFailed));
-	ASSERT_TRUE(WaitForJobDone(*pFailed));
+	ASSERT_TRUE(WaitForJobFinished(*pFailed));
+	EXPECT_EQ(pFailed->State(), IJob::STATE_FAILED);
 	ASSERT_TRUE(pFailed->Completed());
 	auto Failed = pFailed->TakeResult();
 	ASSERT_FALSE(Failed.m_Artifact.m_Success);

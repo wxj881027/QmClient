@@ -335,9 +335,9 @@ public:
 	template<typename TCanUpload, typename TUpload>
 	void Poll(TCanUpload &&CanUpload, TUpload &&Upload)
 	{
-		if(!m_pJob || m_pJob->State() != IJob::STATE_DONE)
+		if(!m_pJob || !m_pJob->Finished())
 			return;
-		if(m_pJob->RetryableFailure())
+		if(m_pJob->State() != IJob::STATE_DONE || m_pJob->RetryableFailure())
 		{
 			Finish(true);
 			return;

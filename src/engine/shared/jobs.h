@@ -48,12 +48,16 @@ public:
 		 * @see IsAbortable
 		 */
 		STATE_ABORTED,
+
+		// Run 已异常退出，输出可能不完整；不会再由 worker 修改。
+		STATE_FAILED,
 	};
 
 private:
 	std::shared_ptr<IJob> m_pNext;
 	std::atomic<EJobState> m_State;
 	std::atomic<bool> m_Abortable;
+	std::atomic<bool> m_Finished;
 
 protected:
 	/**
@@ -80,25 +84,27 @@ public:
 	/**
 	 * Returns the state of the job.
 	 *
-	 * @remark Accessing jobs in any other way that with the base functions of `IJob`
-	 * is generally not thread-safe unless the job is in `STATE_DONE` or has not been
-	 * enqueued yet.
+	 * @remark STATE_DONE / STATE_FAILED 发布后 worker 不再修改业务输出。
+	 * STATE_FAILED 不证明业务成功；STATE_ABORTED 可能仍在运行。
+	 * 具体任务若有独立的同步发布入口，其他访问遵循该入口的合同。
 	 *
 	 * @return State of the job.
 	 */
 	EJobState State() const;
 
 	/**
-	 * Returns whether the job was completed or aborted, i.e. whether it's not still
-	 * queued or running.
+	 * 返回作业是否处于成功、失败或取消终态。
 	 *
 	 * @return `true` if the job is done, `false` otherwise.
 	 *
-	 * @remark This function also considers aborted jobs to be done, but aborted jobs
-	 * may still be running until the cancelation is accepted. Ensure the job's state
-	 * is `STATE_DONE` before accessing any results of the job.
+	 * @remark 取消作业可能仍在运行；Finished 另行确认 Run 已结束或已撤回。
+	 * 基于通用状态判断业务成功时只接受 STATE_DONE。
 	 */
 	bool Done() const;
+
+	// Run 已返回或已确认不再入队执行；单独的取消状态不能证明这一点。
+	// 通用状态只以 STATE_DONE 判断成功；独立同步发布入口遵循其自身合同。
+	bool Finished() const;
 
 	/**
 	 * Aborts the job, if it can be aborted.

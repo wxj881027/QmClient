@@ -342,8 +342,15 @@ void CQmScreenshotManager::PumpThumbnailWork(IGraphics *pGraphics, IStorage *pSt
 		for(auto &[Key, Entry] : m_vThumbnails)
 		{
 			(void)Key;
-			if(Entry.m_pJob == nullptr || Entry.m_pJob->State() != IJob::STATE_DONE)
+			if(Entry.m_pJob == nullptr || !Entry.m_pJob->Finished())
 				continue;
+			if(Entry.m_pJob->State() != IJob::STATE_DONE)
+			{
+				Entry.m_Thumbnail.m_LoadFailed = true;
+				Entry.m_Thumbnail.m_Loading = false;
+				Entry.m_pJob.reset();
+				continue;
+			}
 			if(UploadsLeft <= 0 || (pLimiter != nullptr && !pLimiter->CanUpload()))
 				continue;
 
@@ -375,7 +382,7 @@ void CQmScreenshotManager::PumpThumbnailWork(IGraphics *pGraphics, IStorage *pSt
 	{
 		(void)Key;
 		// 已完成但还没上传的条目只占内存，不占用后台解码槽位。
-		if(Entry.m_pJob != nullptr && Entry.m_pJob->State() != IJob::STATE_DONE)
+		if(Entry.m_pJob != nullptr && !Entry.m_pJob->Finished())
 			++RunningJobs;
 	}
 

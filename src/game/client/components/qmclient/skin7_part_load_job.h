@@ -156,7 +156,7 @@ public:
 	bool IsCompleted() const REQUIRES(!m_Mutex)
 	{
 		CLockScope Lock(m_Mutex);
-		return m_Completed;
+		return m_Completed || Finished();
 	}
 
 	// 回调不得重入本任务；只有完整发布成功才释放原 CPU 结果。
@@ -164,7 +164,15 @@ public:
 	bool PublishResult(TPublish &&Publish) REQUIRES(!m_Mutex)
 	{
 		CLockScope Lock(m_Mutex);
-		if(!m_Completed || m_ResultConsumed)
+		if(m_ResultConsumed)
+			return false;
+		if(Finished() && State() != STATE_DONE)
+		{
+			m_Result = SResult();
+			m_ResultConsumed = true;
+			return true;
+		}
+		if(!m_Completed)
 			return false;
 		try
 		{
@@ -183,7 +191,12 @@ public:
 	SResult GetResult() REQUIRES(!m_Mutex)
 	{
 		CLockScope Lock(m_Mutex);
-		m_ResultConsumed = m_Completed;
+		m_ResultConsumed = m_Completed || Finished();
+		if(Finished() && State() != STATE_DONE)
+		{
+			m_Result = SResult();
+			return SResult();
+		}
 		SResult Result = std::move(m_Result);
 		m_Result = SResult();
 		return Result;

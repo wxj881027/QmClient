@@ -662,7 +662,7 @@ void CMapImages::HookPreviewKickJob()
 
 void CMapImages::HookPreviewPollJob()
 {
-	if(!m_HookPreviewJobPending || m_pHookPreviewJob == nullptr || !m_pHookPreviewJob->Done())
+	if(!m_HookPreviewJobPending || m_pHookPreviewJob == nullptr || !m_pHookPreviewJob->Finished())
 		return;
 
 	std::shared_ptr<IJob> pJob = std::move(m_pHookPreviewJob);
@@ -678,7 +678,7 @@ void CMapImages::HookPreviewPollJob()
 		pDecode->FreeTiles();
 		return;
 	}
-	if(!pDecode->m_Success)
+	if(pJob->State() != IJob::STATE_DONE || !pDecode->m_Success)
 	{
 		// 包缺失/损坏：保持失败状态，key 变化前不再重试
 		m_HookPreviewFailed = true;

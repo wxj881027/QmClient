@@ -354,8 +354,8 @@ void CPlayerPoints::ProcessCompletedRequests(TRequests &Requests, CQmPlayerPoint
 		{
 			if(!Slot.m_Request.Submitted())
 			{
-				const bool ProxyReady = !Slot.m_pProxyJob || Slot.m_pProxyJob->State() == IJob::STATE_DONE;
-				const char *pProxy = ProxyReady && Slot.m_pProxyJob && Slot.m_pProxyJob->HasDecision() ? Slot.m_pProxyJob->Proxy().c_str() : nullptr;
+				const bool ProxyReady = !Slot.m_pProxyJob || Slot.m_pProxyJob->Finished();
+				const char *pProxy = Slot.m_pProxyJob && Slot.m_pProxyJob->State() == IJob::STATE_DONE && Slot.m_pProxyJob->HasDecision() ? Slot.m_pProxyJob->Proxy().c_str() : nullptr;
 				if(!Slot.m_Request.PollWithSubmit([this](const auto &pPending) { SubmitRequest(pPending); }, Now() / static_cast<double>(time_freq()), ProxyReady, pProxy))
 				{
 					++Iter;

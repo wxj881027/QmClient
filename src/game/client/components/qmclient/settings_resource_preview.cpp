@@ -185,13 +185,15 @@ std::shared_ptr<CSettingsResourcePreviewJob> CSettingsResourcePreviewJob::FromPa
 bool CSettingsResourcePreviewJob::Completed() const
 {
 	const CLockScope Lock(m_Lock);
-	// 池会收拢运行异常并发布DONE；没有正常产出时也必须让消费者取走失败结果。
-	return m_Completed || State() == IJob::STATE_DONE;
+	// 池收拢异常后已无 worker 写入，消费者仍需取走失败结果并释放等待槽。
+	return m_Completed || Finished();
 }
 
 CSettingsResourcePreviewJob::SResult CSettingsResourcePreviewJob::TakeResult()
 {
 	const CLockScope Lock(m_Lock);
+	if(Finished() && State() != STATE_DONE)
+		return SResult();
 	SResult Result = std::move(m_Result);
 	m_Result = SResult();
 	return Result;

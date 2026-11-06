@@ -42,6 +42,11 @@ namespace
 		AllocatePixel(Image);
 		return false;
 	}
+	bool ThrowUnknownAfterPixels(const void *, unsigned, const char *, CImageInfo &Image)
+	{
+		AllocatePixel(Image);
+		throw 7;
+	}
 
 	class QmThemeIconJob : public ::testing::Test
 	{
@@ -150,6 +155,19 @@ TEST_F(QmThemeIconJob, DecoderRejectionDiscardsPartiallyWrittenPixels)
 {
 	ASSERT_NO_FATAL_FAILURE(Store());
 	ExpectFailed(Run(RejectAfterPixels));
+}
+
+TEST_F(QmThemeIconJob, UncaughtDecoderFailureReleasesWaitWithoutPublishingPixels)
+{
+	ASSERT_NO_FATAL_FAILURE(Store());
+	auto pJob = std::make_shared<CQmThemeIconLoadJob>("theme", "icon.png", m_pStorage.get(), ThrowUnknownAfterPixels);
+	ASSERT_TRUE(m_Pool.TryAdd(pJob));
+	ASSERT_TRUE(WaitForJobFinished(*pJob));
+	EXPECT_EQ(pJob->State(), IJob::STATE_FAILED);
+	ExpectFailed(pJob);
+	const auto pNext = Run();
+	ASSERT_NE(pNext, nullptr);
+	EXPECT_TRUE(pNext->TakeResult().m_Success);
 }
 
 TEST_F(QmThemeIconJob, RgbPngIsConvertedToRgba)

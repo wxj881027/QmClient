@@ -324,13 +324,13 @@ namespace qm_update
 		{
 			if(m_Phase == EPhase::MERGE)
 			{
-				if(m_pMerge->State() == IJob::STATE_DONE)
+				if(m_pMerge->Finished())
 				{
-					m_LocalError = !m_pMerge->Success();
+					m_LocalError = m_pMerge->State() != IJob::STATE_DONE || !m_pMerge->Success();
 					if(m_LocalError)
 						for(auto &Part : m_vParts)
 							Part.m_pCleanup->Cancel();
-					Complete(m_LocalError ? EHttpState::ERROR : EHttpState::DONE, m_LocalError ? 0 : 200, m_pMerge->Digest());
+					Complete(m_LocalError ? EHttpState::ERROR : EHttpState::DONE, m_LocalError ? 0 : 200, m_LocalError ? std::nullopt : std::make_optional(m_pMerge->Digest()));
 				}
 				return;
 			}

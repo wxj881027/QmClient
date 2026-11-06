@@ -57,7 +57,7 @@ public:
 	bool RetryFailedScan(std::shared_ptr<CQmSkin7InfoJob> &pJob, CQmSkin7LoadCompletion &Completion,
 		std::chrono::nanoseconds Now) noexcept
 	{
-		if(!pJob || pJob->State() != IJob::STATE_DONE || pJob->Succeeded())
+		if(!pJob || !pJob->Finished() || pJob->Succeeded())
 			return false;
 		if(!m_Pending)
 		{

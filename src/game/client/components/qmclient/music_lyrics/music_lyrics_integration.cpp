@@ -261,8 +261,14 @@ void CMusicLyricsIntegration::LoadLyricFile(const char *pPath)
 
 void CMusicLyricsIntegration::ProcessLyricLoadJob()
 {
-	if(!m_pImpl->m_pLyricLoadJob || m_pImpl->m_pLyricLoadJob->State() != IJob::STATE_DONE)
+	if(!m_pImpl->m_pLyricLoadJob || !m_pImpl->m_pLyricLoadJob->Finished())
 		return;
+	if(m_pImpl->m_pLyricLoadJob->State() != IJob::STATE_DONE)
+	{
+		m_pImpl->m_pLyricLoadJob.reset();
+		m_pImpl->m_NextLyricLoadRetryTick = MonotonicTickMs() + LYRIC_LOAD_RETRY_DELAY_MS;
+		return;
+	}
 	CSodaLyricLoadJob::SResult Result = m_pImpl->m_pLyricLoadJob->TakeResult();
 	m_pImpl->m_pLyricLoadJob.reset();
 	if(!m_pImpl->m_HasSong || Result.m_SongId != m_pImpl->m_SongId ||

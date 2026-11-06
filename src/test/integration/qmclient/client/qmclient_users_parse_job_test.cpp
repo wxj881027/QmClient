@@ -21,6 +21,14 @@ namespace
 		return Message.m_pPayload;
 	}
 
+	class CFailedUsersJob : public CQmClientUsersParseJob
+	{
+		void Run() override { throw std::bad_alloc(); }
+
+	public:
+		using CQmClientUsersParseJob::CQmClientUsersParseJob;
+	};
+
 	class CUsersParseEngine : public IEngine
 	{
 	public:
@@ -308,4 +316,34 @@ TEST(QmClientUsersParseJob, NewerSnapshotAlsoSupersedesFreshCompletedResult)
 	EXPECT_EQ(pJob->PublishResult(true, [&](auto &) { ++Calls; return true; }), EPublish::SUPERSEDED);
 	EXPECT_EQ(Calls, 0);
 	EXPECT_FALSE(pJob->TakeResult().m_Parsed);
+}
+
+TEST(QmClientUsersParseJob, FailedWorkerDoesNotInvokeResultPublisher)
+{
+	using EPublish = CQmClientUsersParseJob::EPublishResult;
+	auto pJob = std::make_shared<CFailedUsersJob>(Payload(), "one:8303", 900, 12);
+	CJobPool Pool;
+	ASSERT_TRUE(Pool.TryInit(1));
+	ASSERT_TRUE(Pool.TryAdd(pJob));
+	ASSERT_TRUE(WaitForJobFinished(*pJob));
+	Pool.Shutdown();
+	ASSERT_EQ(pJob->State(), IJob::STATE_FAILED);
+	int Calls = 0;
+	EXPECT_EQ(pJob->PublishResult(false, [&](auto &) { ++Calls; return true; }), EPublish::INVALID);
+	EXPECT_EQ(Calls, 0);
+}
+
+TEST(QmClientUsersParseJob, NewerSnapshotSupersedesFailedWorkerWithoutPublishing)
+{
+	using EPublish = CQmClientUsersParseJob::EPublishResult;
+	auto pJob = std::make_shared<CFailedUsersJob>(Payload(), "one:8303", 900, 12);
+	CJobPool Pool;
+	ASSERT_TRUE(Pool.TryInit(1));
+	ASSERT_TRUE(Pool.TryAdd(pJob));
+	ASSERT_TRUE(WaitForJobFinished(*pJob));
+	Pool.Shutdown();
+	ASSERT_EQ(pJob->State(), IJob::STATE_FAILED);
+	int Calls = 0;
+	EXPECT_EQ(pJob->PublishResult(true, [&](auto &) { ++Calls; return true; }), EPublish::SUPERSEDED);
+	EXPECT_EQ(Calls, 0);
 }

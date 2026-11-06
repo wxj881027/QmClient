@@ -196,7 +196,7 @@ TEST_F(QmAxiomParseDispatch, FailedWorkerReleasesRequestWithoutReadingPartialRes
 	const auto Deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
 	while(!m_Scores.m_pLastJob->Done() && std::chrono::steady_clock::now() < Deadline)
 		std::this_thread::yield();
-	ASSERT_EQ(m_Scores.m_pLastJob->State(), IJob::STATE_ABORTED);
+	ASSERT_EQ(m_Scores.m_pLastJob->State(), IJob::STATE_FAILED);
 	EXPECT_FALSE(m_Scores.m_pLastJob->Ready());
 	m_Scores.OnUpdate();
 	EXPECT_EQ(m_Scores.GetDdStatsGameTypes("player"), nullptr);

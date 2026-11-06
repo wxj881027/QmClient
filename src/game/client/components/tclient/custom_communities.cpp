@@ -88,6 +88,10 @@ void CCustomCommunities::OnConsoleInit()
 
 void CCustomCommunities::OnRender()
 {
+	if(m_pCustomCommunitiesCacheJob && m_pCustomCommunitiesCacheJob->State() == IJob::STATE_FAILED)
+		m_pCustomCommunitiesCacheJob.reset();
+	if(m_pCustomCommunitiesResponseJob && m_pCustomCommunitiesResponseJob->State() == IJob::STATE_FAILED)
+		m_pCustomCommunitiesResponseJob.reset();
 	if(m_pCustomCommunitiesCacheJob && m_pCustomCommunitiesCacheJob->State() == IJob::STATE_DONE)
 	{
 		if(auto pInfo = m_pCustomCommunitiesCacheJob->TakeInfo())

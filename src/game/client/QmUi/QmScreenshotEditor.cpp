@@ -99,19 +99,20 @@ void CQmScreenshotEditor::Pump(CMenus *pMenus)
 		if(Done)
 			m_pDialog.reset();
 	}
-	if(m_pExport && m_pExport->State() == IJob::STATE_DONE)
+	if(m_pExport && m_pExport->Finished())
 	{
+		const bool Saved = m_pExport->State() == IJob::STATE_DONE && m_pExport->Saved();
 		if(!m_pExport->Canceled())
-			qm_ui::Toast(m_pExport->Saved() ? EQmToastKind::SUCCESS : EQmToastKind::FAILED,
-				m_pExport->Saved() ? Localize("The watermarked screenshot was saved next to the original") : Localize("Unable to save the watermarked screenshot"));
+			qm_ui::Toast(Saved ? EQmToastKind::SUCCESS : EQmToastKind::FAILED,
+				Saved ? Localize("The watermarked screenshot was saved next to the original") : Localize("Unable to save the watermarked screenshot"));
 		m_pExport.reset();
 	}
-	if(m_pPreview && m_pPreview->State() == IJob::STATE_DONE)
+	if(m_pPreview && m_pPreview->Finished())
 	{
 		// 同时只保留一个预览任务。连续拖动时也发布已完成帧，再请求最新参数。
 		if(!m_pPreview->Canceled())
 		{
-			const auto *pImage = m_pPreview->Preview();
+			const auto *pImage = m_pPreview->State() == IJob::STATE_DONE ? m_pPreview->Preview() : nullptr;
 			m_Failed = !pImage;
 			if(pImage)
 			{

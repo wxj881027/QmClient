@@ -123,6 +123,7 @@ namespace qm_update
 	}
 
 	void CSystemProxyJob::Run()
+	try
 	{
 #if defined(CONF_FAMILY_WINDOWS)
 		WINHTTP_CURRENT_USER_IE_PROXY_CONFIG Config{};
@@ -170,5 +171,9 @@ namespace qm_update
 			}
 		}
 #endif
+	}
+	catch(...)
+	{
+		// 查询失败沿既有回退保留此前完整决定；未取得决定时由消费者自行回退。
 	}
 }
