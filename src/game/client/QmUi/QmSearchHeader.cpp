@@ -41,9 +41,7 @@ void qm_search_header::Render(CUi *pUi, IGraphics *pGraphics, ITextRender *pText
 	}
 	SLabelProperties Props;
 	Props.m_MaxWidth = Subtitle.w;
-	Props.m_DisallowNewline = true;
-	Props.m_EllipsisAtEnd = true;
-	Props.m_MinimumFontSize = 10.0f * UiScale;
+	Props.m_EnableWidthCheck = false;
 	const ColorRGBA PreviousColor = pTextRender->GetTextColor();
 	pTextRender->TextColor(ui_token::color::TEXT_SECONDARY);
 	pUi->DoLabel(&Subtitle, pText, 14.0f * UiScale, TEXTALIGN_MC, Props);
