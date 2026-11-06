@@ -29,6 +29,19 @@ namespace
 		void Run() override {}
 	};
 
+	class CObservedMergeAllocationResource : public CTrackedAllocationResource
+	{
+	public:
+		const void *m_pObservedBlock = nullptr;
+		bool m_ObservedBlockReleased = false;
+		void Deallocate(void *pData, size_t Bytes, size_t Alignment) noexcept override
+		{
+			if(pData == m_pObservedBlock)
+				m_ObservedBlockReleased = true;
+			CTrackedAllocationResource::Deallocate(pData, Bytes, Alignment);
+		}
+	};
+
 	// 限制真实 vector 的容量上界，不需要构造超大扫描结果。
 	template<typename T>
 	class CTwoItemAllocator
@@ -86,7 +99,7 @@ namespace
 	class SettingsAssetListMerge : public ::testing::Test
 	{
 	protected:
-		CTrackedAllocationResource m_Resource;
+		CObservedMergeAllocationResource m_Resource;
 		TMergeList m_vList{CBorrowedAllocator<CMenus::SCustomItem>(&m_Resource)};
 		CAssetMergeHandleFactory m_Graphics;
 		std::shared_ptr<IJob> m_pOldJob;
@@ -331,6 +344,154 @@ TEST_F(SettingsAssetListMerge, RepeatingSuccessfulBatchDoesNotAllocateOrPrepare)
 	EXPECT_EQ(m_vList.data(), pData);
 	EXPECT_EQ(m_vList.capacity(), Capacity);
 	ExpectNames(m_vList, {"alpha", "middle", "zeta"});
+	ExpectMergedOldItem();
+}
+
+TEST_F(SettingsAssetListMerge, PublicationInvalidatesBorrowedViewOnceBeforeOldStorageIsReleased)
+{
+	const auto vEntries = MergeEntries({"alpha", "zeta"});
+	std::vector<CMenus::SCustomItem *> vpBorrowed{&m_vList.front()};
+	m_Resource.m_pObservedBlock = m_vList.data();
+	int Notifications = 0;
+	bool Dirty = false;
+	bool HadBorrowedView = false;
+	bool SawNewOwner = false;
+	bool OldStorageWasAlive = false;
+	auto OnPublish = [&]() noexcept {
+		++Notifications;
+		HadBorrowedView = vpBorrowed.size() == 1;
+		SawNewOwner = m_vList.size() == 3 && str_comp(m_vList.front().m_aName, "alpha") == 0;
+		OldStorageWasAlive = !m_Resource.m_ObservedBlockReleased;
+		vpBorrowed.clear();
+		Dirty = true;
+	};
+	ASSERT_TRUE(TryMergeSettingsAssetEntries(m_vList, vEntries, PrepareNothing, OnPublish));
+	EXPECT_EQ(Notifications, 1);
+	EXPECT_TRUE(HadBorrowedView);
+	EXPECT_TRUE(SawNewOwner);
+	EXPECT_TRUE(OldStorageWasAlive);
+	EXPECT_TRUE(m_Resource.m_ObservedBlockReleased);
+	EXPECT_TRUE(vpBorrowed.empty());
+	EXPECT_TRUE(Dirty);
+	ExpectMergedOldItem();
+	ASSERT_TRUE(TryMergeSettingsAssetEntries(m_vList, vEntries, PrepareNothing, OnPublish));
+	EXPECT_EQ(Notifications, 1);
+}
+
+TEST_F(SettingsAssetListMerge, EmptyBatchLeavesTheBorrowedViewValidWithoutNotification)
+{
+	const auto vEntries = MergeEntries({});
+	auto *pData = m_vList.data();
+	const size_t Capacity = m_vList.capacity();
+	std::vector<CMenus::SCustomItem *> vpBorrowed{pData};
+	int Notifications = 0;
+	EXPECT_TRUE(TryMergeSettingsAssetEntries(m_vList, vEntries, PrepareNothing, [&]() noexcept {
+		++Notifications;
+		vpBorrowed.clear();
+	}));
+	EXPECT_EQ(Notifications, 0);
+	ASSERT_EQ(vpBorrowed.size(), 1U);
+	EXPECT_EQ(vpBorrowed.front(), pData);
+	ExpectUnchanged(pData, Capacity);
+}
+
+TEST_F(SettingsAssetListMerge, ExistingNamesKeepTheBorrowedViewValidWithoutNotification)
+{
+	const auto vEntries = MergeEntries({"middle", "middle"});
+	auto *pData = m_vList.data();
+	const size_t Capacity = m_vList.capacity();
+	std::vector<CMenus::SCustomItem *> vpBorrowed{pData};
+	m_Resource.m_FailAt = m_Resource.m_Allocations + 1;
+	int Notifications = 0;
+	EXPECT_TRUE(TryMergeSettingsAssetEntries(m_vList, vEntries, PrepareNothing, [&]() noexcept {
+		++Notifications;
+		vpBorrowed.clear();
+	}));
+	EXPECT_EQ(Notifications, 0);
+	ASSERT_EQ(vpBorrowed.size(), 1U);
+	EXPECT_EQ(vpBorrowed.front(), pData);
+	ExpectUnchanged(pData, Capacity);
+}
+
+TEST_F(SettingsAssetListMerge, AllocationFailuresPreserveBorrowedViewUntilRetryPublishes)
+{
+	const auto vEntries = MergeEntries({"zeta", "alpha"});
+	auto *pData = m_vList.data();
+	const size_t Capacity = m_vList.capacity();
+	std::vector<CMenus::SCustomItem *> vpBorrowed{pData};
+	int Notifications = 0;
+	bool Dirty = false;
+	auto OnPublish = [&]() noexcept {
+		++Notifications;
+		vpBorrowed.clear();
+		Dirty = true;
+	};
+	for(const int AllocationStep : {1, 2})
+	{
+		SCOPED_TRACE(AllocationStep);
+		m_Resource.m_FailAt = m_Resource.m_Allocations + AllocationStep;
+		EXPECT_FALSE(TryMergeSettingsAssetEntries(m_vList, vEntries, PrepareNothing, OnPublish));
+		EXPECT_EQ(Notifications, 0);
+		EXPECT_FALSE(Dirty);
+		ASSERT_EQ(vpBorrowed.size(), 1U);
+		EXPECT_EQ(vpBorrowed.front(), pData);
+		ExpectUnchanged(pData, Capacity);
+	}
+	m_Resource.m_FailAt = -1;
+	ASSERT_TRUE(TryMergeSettingsAssetEntries(m_vList, vEntries, PrepareNothing, OnPublish));
+	EXPECT_EQ(Notifications, 1);
+	EXPECT_TRUE(Dirty);
+	EXPECT_TRUE(vpBorrowed.empty());
+	ExpectNames(m_vList, {"alpha", "middle", "zeta"});
+	ExpectMergedOldItem();
+}
+
+TEST_F(SettingsAssetListMerge, AuthorAllocationFailureKeepsBorrowedViewUntilRetryPublishes)
+{
+	const auto vEntries = MergeEntries({"alpha"});
+	auto *pData = m_vList.data();
+	const size_t Capacity = m_vList.capacity();
+	std::vector<CMenus::SCustomItem *> vpBorrowed{pData};
+	int Notifications = 0;
+	auto OnPublish = [&]() noexcept {
+		++Notifications;
+		vpBorrowed.clear();
+	};
+	auto PrepareAuthor = [](auto &Item, const auto &) {
+		str_copy(Item.m_aAuthor, "candidate author");
+		throw std::bad_alloc();
+	};
+	EXPECT_FALSE(TryMergeSettingsAssetEntries(m_vList, vEntries, PrepareAuthor, OnPublish));
+	EXPECT_EQ(Notifications, 0);
+	ASSERT_EQ(vpBorrowed.size(), 1U);
+	EXPECT_EQ(vpBorrowed.front(), pData);
+	ExpectUnchanged(pData, Capacity);
+	ASSERT_TRUE(TryMergeSettingsAssetEntries(m_vList, vEntries, PrepareNothing, OnPublish));
+	EXPECT_EQ(Notifications, 1);
+	EXPECT_TRUE(vpBorrowed.empty());
+	ExpectMergedOldItem();
+}
+
+TEST_F(SettingsAssetListMerge, AuthorLengthFailureKeepsBorrowedViewUntilRetryPublishes)
+{
+	const auto vEntries = MergeEntries({"alpha"});
+	auto *pData = m_vList.data();
+	const size_t Capacity = m_vList.capacity();
+	std::vector<CMenus::SCustomItem *> vpBorrowed{pData};
+	int Notifications = 0;
+	auto OnPublish = [&]() noexcept {
+		++Notifications;
+		vpBorrowed.clear();
+	};
+	auto PrepareAuthor = [](auto &, const auto &) { throw std::length_error("author metadata exceeds capacity"); };
+	EXPECT_FALSE(TryMergeSettingsAssetEntries(m_vList, vEntries, PrepareAuthor, OnPublish));
+	EXPECT_EQ(Notifications, 0);
+	ASSERT_EQ(vpBorrowed.size(), 1U);
+	EXPECT_EQ(vpBorrowed.front(), pData);
+	ExpectUnchanged(pData, Capacity);
+	ASSERT_TRUE(TryMergeSettingsAssetEntries(m_vList, vEntries, PrepareNothing, OnPublish));
+	EXPECT_EQ(Notifications, 1);
+	EXPECT_TRUE(vpBorrowed.empty());
 	ExpectMergedOldItem();
 }
 

@@ -1406,6 +1406,28 @@ protected:
 	std::unordered_set<std::string> m_aaCustomPreviewReadyQueued[NUMBER_OF_ASSETS_TABS];
 	unsigned m_aCustomPreviewEpoch[NUMBER_OF_ASSETS_TABS] = {0};
 
+	// 后台结果与资源维护访问持有条目的列表，不依赖筛选后的借用视图。
+	template<typename FVisit>
+	void VisitOwnedSettingsAssetList(int Tab, FVisit &&Visit)
+	{
+		switch(Tab)
+		{
+		case ASSETS_TAB_ENTITIES: Visit(m_vEntitiesList); break;
+		case ASSETS_TAB_GAME: Visit(m_vGameList); break;
+		case ASSETS_TAB_EMOTICONS: Visit(m_vEmoticonList); break;
+		case ASSETS_TAB_PARTICLES: Visit(m_vParticlesList); break;
+		case ASSETS_TAB_HUD: Visit(m_vHudList); break;
+		case ASSETS_TAB_GUI_CURSOR: Visit(m_vGuiCursorList); break;
+		case ASSETS_TAB_ARROW: Visit(m_vArrowList); break;
+		case ASSETS_TAB_STRONG_WEAK: Visit(m_vStrongWeakList); break;
+		case ASSETS_TAB_ENTITY_BG: Visit(m_vEntityBgList); break;
+		case ASSETS_TAB_EXTRAS: Visit(m_vExtrasList); break;
+		default: break;
+		}
+	}
+	void RefreshPublishedLocalAssetAuthorsForTab(int Tab);
+	void RestartOrphanedCustomPreviewDecodes(int Tab);
+
 	bool m_IsInit = false;
 
 	static void LoadEntities(struct SCustomEntities *pEntitiesItem, void *pUser);

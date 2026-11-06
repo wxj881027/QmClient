@@ -15,13 +15,19 @@
 #include <utility>
 #include <vector>
 
+struct SSettingsAssetMergeNoopPublish
+{
+	void operator()() const noexcept {}
+};
+
 // 既有列表须已按资源名排序；准备回调只填写新条目，不发布外部资源。
-template<typename TItem, typename TAllocator, typename TPrepare>
-bool TryMergeSettingsAssetEntries(std::vector<TItem, TAllocator> &vList, const std::vector<CMenus::SSettingsAssetMergeEntry> &vEntries, TPrepare &&Prepare)
+template<typename TItem, typename TAllocator, typename TPrepare, typename TOnPublish = SSettingsAssetMergeNoopPublish>
+bool TryMergeSettingsAssetEntries(std::vector<TItem, TAllocator> &vList, const std::vector<CMenus::SSettingsAssetMergeEntry> &vEntries, TPrepare &&Prepare, TOnPublish &&OnPublish = {})
 {
 	static_assert(std::is_base_of_v<CMenus::SCustomItem, TItem>);
 	static_assert(std::is_nothrow_move_constructible_v<TItem>);
 	static_assert(std::is_nothrow_move_assignable_v<TItem>);
+	static_assert(std::is_nothrow_invocable_v<TOnPublish &>);
 
 	try
 	{
@@ -66,6 +72,8 @@ bool TryMergeSettingsAssetEntries(std::vector<TItem, TAllocator> &vList, const s
 		while(NewIndex < vNewItems.size())
 			vMerged.push_back(std::move(vNewItems[NewIndex++]));
 		vList.swap(vMerged);
+		// 旧存储尚未析构，先撤回借用视图；通知不能分配或抛异常。
+		OnPublish();
 		return true;
 	}
 	catch(const std::bad_alloc &)
