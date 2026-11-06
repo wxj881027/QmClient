@@ -8640,6 +8640,7 @@ public:
 		int Width = pCommand->m_Width;
 		int Height = pCommand->m_Height;
 		int Flags = pCommand->m_Flags;
+		auto Release = TakeGraphicsUploadRelease(pCommand->m_Release);
 		auto pData = TakeGraphicsUpload(pCommand->m_pData);
 
 		return CreateTextureCMD(Slot, Width, Height, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM, Flags, pData);

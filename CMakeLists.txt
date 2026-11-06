@@ -3876,6 +3876,7 @@ if(CLIENT)
     components/qmclient/settings_asset_image_job.h
     components/qmclient/settings_asset_list_job.h
     components/qmclient/settings_asset_hierarchy.h
+    components/qmclient/settings_asset_memory.h
     components/qmclient/settings_asset_list_merge.h
     components/qmclient/settings_asset_queue.h
     components/qmclient/settings_asset_search_view.h
@@ -5731,6 +5732,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/settings/settings_resource_preview_pipeline_test.cpp
     src/test/integration/qmclient/settings/settings_resource_preview_upload_test.cpp
     src/test/integration/qmclient/settings/settings_resource_preview_invalidation_test.cpp
+    src/test/integration/qmclient/settings/settings_resource_preview_memory_test.cpp
     src/test/integration/qmclient/settings/settings_asset_list_merge_test.cpp
     src/test/integration/qmclient/settings/settings_asset_search_view_test.cpp
     src/test/integration/qmclient/settings/qm_nameplate_cards_test.cpp
@@ -6610,6 +6612,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/client/qm_friend_code_allocation_test.cpp
       src/test/unit/qmclient/client/qm_friend_code_publication_test.cpp
       src/test/unit/qmclient/client/qm_friend_last_seen_allocation_test.cpp
+      src/test/unit/qmclient/settings/settings_asset_memory_test.cpp
+      src/engine/gfx/image.cpp
       src/test/integration/qmclient/client/qm_friend_last_seen_allocation_service_test.cpp
       src/test/support/friend_last_seen_test_support.h
       src/game/client/components/qmclient/friend_last_seen_data.cpp

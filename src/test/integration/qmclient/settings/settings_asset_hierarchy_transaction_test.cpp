@@ -65,6 +65,7 @@ namespace
 
 	struct SPublishedHierarchy
 	{
+		CSettingsAssetMemoryBudget m_MemoryBudget{64};
 		std::vector<std::string> m_vSourceNames = {CURRENT_MAP, NESTED_MAP};
 		TSourceKinds m_vSourceKinds = {{CURRENT_MAP, EEntityBgHierarchyEntrySource::LOCAL}};
 		std::vector<TItem> m_vItems;
@@ -82,7 +83,11 @@ namespace
 			Item.m_PreviewImage.m_Format = CImageInfo::FORMAT_RGBA;
 			Item.m_PreviewImage.m_pData = static_cast<uint8_t *>(calloc(8, 1));
 			if(Item.m_PreviewImage.m_pData)
+			{
+				if(!SettingsAssetMemoryTryAcquireImage(Item.m_PreviewImage, Item.m_MemoryLease, &m_MemoryBudget))
+					throw std::bad_alloc();
 				Item.m_PreviewImage.m_pData[0] = 73;
+			}
 			Item.m_PreviewState = TItem::PREVIEW_STATE_READY;
 			Item.m_PreviewEpoch = 41;
 			Item.m_PreviewListIndex = 23;
@@ -117,6 +122,7 @@ namespace
 			EXPECT_FALSE(Item.m_RenderTexture.IsValid());
 			EXPECT_EQ(Item.m_pDecodeJob, nullptr);
 			EXPECT_EQ(Item.m_PreviewImage.m_pData, nullptr);
+			EXPECT_FALSE(Item.m_MemoryLease.HasReservation());
 		}
 	}
 
@@ -157,6 +163,8 @@ namespace
 			EXPECT_EQ(Published.m_vItems.data(), pItemsBefore);
 			ASSERT_EQ(Published.m_vItems.size(), 1u);
 			EXPECT_EQ(Published.m_vItems[0].m_PreviewImage.m_pData, pPixelsBefore);
+			EXPECT_EQ(Published.m_vItems[0].m_MemoryLease.Bytes(), 16u);
+			EXPECT_EQ(Published.m_MemoryBudget.Used(), 16u);
 			EXPECT_EQ(Published.m_vItems[0].m_pDecodeJob, pJobBefore);
 			EXPECT_EQ(Published.m_vItems[0].m_RenderTexture.Id(), 37);
 			EXPECT_EQ(Published.m_vItems[0].m_RenderTexture.Generation(), 9u);
@@ -349,6 +357,8 @@ TEST(SettingsAssetHierarchyTransaction, CommitMovesReadyPixelsAndTextureWithoutA
 	EXPECT_EQ(pCurrent->m_PreviewImage.m_Width, 2u);
 	EXPECT_EQ(pCurrent->m_PreviewImage.m_Height, 1u);
 	EXPECT_EQ(pCurrent->m_PreviewImage.m_Format, CImageInfo::FORMAT_RGBA);
+	EXPECT_EQ(pCurrent->m_MemoryLease.Bytes(), 16u);
+	EXPECT_EQ(Published.m_MemoryBudget.Used(), 16u);
 	EXPECT_EQ(pCurrent->m_PreviewState, TItem::PREVIEW_STATE_READY);
 	EXPECT_EQ(pCurrent->m_PreviewEpoch, 41u);
 	EXPECT_EQ(pCurrent->m_PreviewListIndex, 23u);
@@ -362,12 +372,13 @@ TEST(SettingsAssetHierarchyTransaction, CommitMovesReadyPixelsAndTextureWithoutA
 	EXPECT_EQ(Candidate->m_vItems[0].m_pDecodeJob, nullptr);
 	EXPECT_EQ(Candidate->m_vItems[0].m_PreviewImage.m_pData, nullptr);
 	EXPECT_EQ(Candidate->m_vItems[0].m_PreviewImage.m_Width, 0u);
+	EXPECT_FALSE(Candidate->m_vItems[0].m_MemoryLease.HasReservation());
 }
 
 TEST(SettingsAssetHierarchyTransaction, CommitKeepsTheInFlightJobOwnedByItsNewSameNameItem)
 {
 	SPublishedHierarchy Published;
-	Published.m_vItems[0].m_PreviewImage.Free();
+	Published.m_vItems[0].FreePreviewCpuImage();
 	Published.m_vItems[0].m_PreviewState = TItem::PREVIEW_STATE_LOADING;
 	Published.m_vItems[0].m_pDecodeJob = std::make_shared<CHierarchyPreviewJob>();
 	const auto pJob = Published.m_vItems[0].m_pDecodeJob;
@@ -384,6 +395,74 @@ TEST(SettingsAssetHierarchyTransaction, CommitKeepsTheInFlightJobOwnedByItsNewSa
 	EXPECT_EQ(Candidate->m_vItems[0].m_pDecodeJob, nullptr);
 	EXPECT_FALSE(Candidate->m_vItems[0].m_RenderTexture.IsValid());
 	EXPECT_EQ(pJob.use_count(), 2);
+}
+
+TEST(SettingsAssetHierarchyTransaction, NativeCopyContextFailureKeepsThePublishedPixelsAndCanRetry)
+{
+	SPublishedHierarchy Published;
+	const auto *pPixels = Published.m_vItems.front().m_PreviewImage.m_pData;
+	ASSERT_NE(pPixels, nullptr);
+	bool Triggered = false;
+	bool Rejected = false;
+	{
+		CPredictionAllocationFailure Failure;
+		try
+		{
+			TItem Copy(Published.m_vItems.front());
+		}
+		catch(const std::bad_alloc &)
+		{
+			Rejected = true;
+		}
+		Triggered = Failure.Triggered();
+	}
+	ASSERT_TRUE(Triggered);
+	EXPECT_TRUE(Rejected);
+	EXPECT_EQ(Published.m_vItems.front().m_PreviewImage.m_pData, pPixels);
+	EXPECT_EQ(pPixels[0], 73);
+	EXPECT_EQ(Published.m_MemoryBudget.Used(), 16u);
+	TItem Retry(Published.m_vItems.front());
+	ASSERT_NE(Retry.m_PreviewImage.m_pData, nullptr);
+	EXPECT_NE(Retry.m_PreviewImage.m_pData, pPixels);
+	EXPECT_EQ(Retry.m_PreviewImage.m_pData[0], 73);
+	EXPECT_EQ(Published.m_MemoryBudget.Used(), 32u);
+}
+
+TEST(SettingsAssetHierarchyTransaction, NativeCopyAssignmentContextFailurePreservesTheOldOwnerUntilRetry)
+{
+	SPublishedHierarchy Source;
+	SPublishedHierarchy Destination;
+	str_copy(Destination.m_vItems.front().m_aName, "old-destination.map");
+	const auto *pOldPixels = Destination.m_vItems.front().m_PreviewImage.m_pData;
+	const auto *pSourcePixels = Source.m_vItems.front().m_PreviewImage.m_pData;
+	ASSERT_NE(pOldPixels, nullptr);
+	ASSERT_NE(pSourcePixels, nullptr);
+	bool Triggered = false;
+	bool Rejected = false;
+	{
+		CPredictionAllocationFailure Failure;
+		try
+		{
+			Destination.m_vItems.front() = Source.m_vItems.front();
+		}
+		catch(const std::bad_alloc &)
+		{
+			Rejected = true;
+		}
+		Triggered = Failure.Triggered();
+	}
+	ASSERT_TRUE(Triggered);
+	EXPECT_TRUE(Rejected);
+	EXPECT_STREQ(Destination.m_vItems.front().m_aName, "old-destination.map");
+	EXPECT_EQ(Destination.m_vItems.front().m_PreviewImage.m_pData, pOldPixels);
+	EXPECT_EQ(Destination.m_vItems.front().m_RenderTexture.Id(), 37);
+	EXPECT_EQ(Destination.m_MemoryBudget.Used(), 16u);
+	EXPECT_EQ(Source.m_MemoryBudget.Used(), 16u);
+	Destination.m_vItems.front() = Source.m_vItems.front();
+	EXPECT_STREQ(Destination.m_vItems.front().m_aName, CURRENT_MAP);
+	EXPECT_NE(Destination.m_vItems.front().m_PreviewImage.m_pData, pSourcePixels);
+	EXPECT_EQ(Destination.m_MemoryBudget.Used(), 0u);
+	EXPECT_EQ(Source.m_MemoryBudget.Used(), 32u);
 }
 
 TEST(SettingsAssetHierarchyTransaction, RemovedPreviewRemainsOwnedByTheReturnedOldItems)
@@ -490,7 +569,7 @@ TEST(SettingsAssetHierarchyTransaction, ReturningFromFlatFilterRetiresTheWorksho
 	Published.m_vSourceNames = {"entity_bg/installed"};
 	Published.m_vSourceKinds = {{"entity_bg/installed", EEntityBgHierarchyEntrySource::WORKSHOP}};
 	str_copy(Published.m_vItems[0].m_aName, "entity_bg/installed");
-	Published.m_vItems[0].m_PreviewImage.Free();
+	Published.m_vItems[0].FreePreviewCpuImage();
 	Published.m_vItems[0].m_PreviewBytes = 0;
 	Published.m_vItems[0].m_PreviewState = TItem::PREVIEW_STATE_LOADING;
 	Published.m_vItems[0].m_pDecodeJob = std::make_shared<CHierarchyPreviewJob>();

@@ -61,6 +61,7 @@
 #include <game/client/components/qmclient/pose_map.h>
 #include <game/client/components/qmclient/qm_map_upload.h>
 #include <game/client/components/qmclient/screenshot_manager.h>
+#include <game/client/components/qmclient/settings_asset_memory.h>
 #include <game/client/components/qmclient/settings_perf_windows.h>
 #include <game/client/components/qmclient/translate/translate_probe.h>
 #include <game/client/components/section_loader.h>
@@ -79,6 +80,7 @@
 #include <deque>
 #include <initializer_list>
 #include <memory>
+#include <new>
 #include <optional>
 #include <set>
 #include <string>
@@ -347,6 +349,7 @@ public:
 		std::shared_ptr<IJob> m_pDecodeJob;
 		EPreviewState m_PreviewState = PREVIEW_STATE_UNLOADED;
 		CImageInfo m_PreviewImage;
+		CSettingsAssetMemoryLease m_MemoryLease;
 		unsigned m_PreviewEpoch = 0;
 		size_t m_PreviewListIndex = 0;
 		size_t m_PreviewBytes = 0;
@@ -373,7 +376,15 @@ public:
 			str_copy(m_aDisplayName, Other.m_aDisplayName);
 			str_copy(m_aAuthor, Other.m_aAuthor);
 			if(Other.m_PreviewImage.m_pData != nullptr)
+			{
+				// 副本须先独立取得峰值额度，不能与原图共用一次像素记账。
+				if(!(Other.m_MemoryLease.HasReservation() ? Other.m_MemoryLease.TryClone(m_MemoryLease) :
+									    SettingsAssetMemoryTryAcquireImage(Other.m_PreviewImage, m_MemoryLease)))
+					throw std::bad_alloc();
 				m_PreviewImage = Other.m_PreviewImage.DeepCopy();
+				if(m_PreviewImage.m_pData == nullptr)
+					throw std::bad_alloc();
+			}
 		}
 
 		SCustomItem &operator=(const SCustomItem &Other)
@@ -381,22 +392,8 @@ public:
 			if(this == &Other)
 				return *this;
 
-			m_RenderTexture = Other.m_RenderTexture;
-			str_copy(m_aName, Other.m_aName);
-			str_copy(m_aDisplayName, Other.m_aDisplayName);
-			str_copy(m_aAuthor, Other.m_aAuthor);
-			m_pDecodeJob = Other.m_pDecodeJob;
-			m_PreviewState = Other.m_PreviewState;
-			m_PreviewImage.Free();
-			if(Other.m_PreviewImage.m_pData != nullptr)
-				m_PreviewImage = Other.m_PreviewImage.DeepCopy();
-			m_PreviewEpoch = Other.m_PreviewEpoch;
-			m_PreviewListIndex = Other.m_PreviewListIndex;
-			m_PreviewBytes = Other.m_PreviewBytes;
-			m_PreviewRequestedTextureSize = Other.m_PreviewRequestedTextureSize;
-			m_PreviewResidentBytes = Other.m_PreviewResidentBytes;
-			m_PreviewResized = Other.m_PreviewResized;
-			m_PreviewHighPriority = Other.m_PreviewHighPriority;
+			SCustomItem Candidate(Other);
+			*this = std::move(Candidate);
 			return *this;
 		}
 
@@ -405,7 +402,26 @@ public:
 
 		~SCustomItem()
 		{
+			FreePreviewCpuImage();
+		}
+
+		void FreePreviewCpuImage() noexcept
+		{
 			m_PreviewImage.Free();
+			m_MemoryLease.Reset();
+		}
+
+		// 压力回收只撤回 CPU 输入；已显示的纹理和驻留字节不参与退役。
+		void DiscardPreviewCpuInput() noexcept
+		{
+			FreePreviewCpuImage();
+			m_pDecodeJob.reset();
+			m_PreviewState = m_RenderTexture.IsValid() ? PREVIEW_STATE_LOADED : PREVIEW_STATE_UNLOADED;
+			m_PreviewEpoch = 0;
+			m_PreviewListIndex = 0;
+			m_PreviewBytes = 0;
+			m_PreviewResized = false;
+			m_PreviewHighPriority = false;
 		}
 
 		bool operator<(const SCustomItem &Other) const { return str_comp(m_aName, Other.m_aName) < 0; }
@@ -1427,6 +1443,10 @@ protected:
 	}
 	void RefreshPublishedLocalAssetAuthorsForTab(int Tab);
 	void RestartOrphanedCustomPreviewDecodes(int Tab);
+	void RecoverSettingsAssetCpuPressure(int CurrentTab, bool Deferred = false);
+	uint64_t m_LastAssetCpuRecoveryFrame = ~uint64_t{0};
+	uint64_t m_LastAssetCpuDeferredSequence = 0;
+	bool m_AssetCpuPressurePending = false;
 
 	bool m_IsInit = false;
 

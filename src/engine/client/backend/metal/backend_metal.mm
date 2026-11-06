@@ -4473,6 +4473,7 @@ public:
 			case CCommandBuffer::CMD_TEXTURE_CREATE:
 			{
 				const auto *pCommand = static_cast<const CCommandBuffer::SCommand_Texture_Create *>(pBaseCommand);
+				auto Release = TakeGraphicsUploadRelease(pCommand->m_Release);
 				auto pData = TakeGraphicsUpload(pCommand->m_pData);
 				const bool Success = CreateTexture(pCommand->m_Slot, pCommand->m_Width, pCommand->m_Height, EMetalTextureFormat::RGBA8, pCommand->m_Flags, pData.get());
 				if(!Success)

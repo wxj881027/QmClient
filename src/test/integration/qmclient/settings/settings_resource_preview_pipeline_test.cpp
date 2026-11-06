@@ -829,12 +829,22 @@ TEST(SettingsResourcePreviewWorkerFailure, UnsupportedCheckedBackendDoesNotFallB
 	EXPECT_EQ(Result.m_Artifact.m_Image.m_pData, nullptr);
 }
 
-TEST(SettingsResourcePreviewWorkerFailure, FileLimitCannotWrapAtCheckedInterfaceWidth)
+TEST(SettingsResourcePreviewWorkerFailure, WideFileLimitCannotWrapIntoSmallAggregateReservation)
 {
 	CPreviewReadFailureStorage Storage;
 	Storage.m_Failure = CPreviewReadFailureStorage::EFailure::IO_FAILURE;
 	auto Artifact = BuildPreviewArtifactFromPath("preview.png", &Storage, IStorage::TYPE_ALL, "wide-limit", 4, std::numeric_limits<size_t>::max());
 	EXPECT_FALSE(Artifact.m_Success);
+	EXPECT_TRUE(Artifact.m_Deferred);
+	EXPECT_EQ(Storage.m_Reads, 0);
+}
+
+TEST(SettingsResourcePreviewWorkerFailure, CheckedReaderStillSaturatesWideFileLimitAtInterfaceWidth)
+{
+	CPreviewReadFailureStorage Storage;
+	Storage.m_Failure = CPreviewReadFailureStorage::EFailure::IO_FAILURE;
+	CQmCheckedFileData Data;
+	EXPECT_FALSE(Data.Read(Storage, "preview.png", IStorage::TYPE_ALL, std::numeric_limits<size_t>::max()));
 	EXPECT_EQ(Storage.m_Reads, 1);
 	EXPECT_EQ(Storage.m_MaxBytes, std::numeric_limits<unsigned>::max());
 }

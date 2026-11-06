@@ -100,6 +100,7 @@ namespace
 	{
 	protected:
 		CObservedMergeAllocationResource m_Resource;
+		CSettingsAssetMemoryBudget m_MemoryBudget{64};
 		TMergeList m_vList{CBorrowedAllocator<CMenus::SCustomItem>(&m_Resource)};
 		CAssetMergeHandleFactory m_Graphics;
 		std::shared_ptr<IJob> m_pOldJob;
@@ -118,6 +119,7 @@ namespace
 			Item.m_PreviewImage.m_Format = CImageInfo::FORMAT_RGBA;
 			Item.m_PreviewImage.m_pData = static_cast<uint8_t *>(calloc(8, 1));
 			ASSERT_NE(Item.m_PreviewImage.m_pData, nullptr);
+			ASSERT_TRUE(SettingsAssetMemoryTryAcquireImage(Item.m_PreviewImage, Item.m_MemoryLease, &m_MemoryBudget));
 			m_pOldPixels = Item.m_PreviewImage.m_pData;
 			m_pOldPixels[0] = 47;
 			m_pOldJob = std::make_shared<CAssetMergeJob>();
@@ -138,6 +140,7 @@ namespace
 				m_vList.swap(vEmpty);
 			}
 			EXPECT_EQ(m_Resource.m_Live, 0);
+			EXPECT_EQ(m_MemoryBudget.Used(), 0u);
 		}
 		void ExpectOldItem(const CMenus::SCustomItem &Item)
 		{
@@ -152,6 +155,8 @@ namespace
 			EXPECT_EQ(Item.m_PreviewImage.m_Width, 2U);
 			EXPECT_EQ(Item.m_PreviewImage.m_Height, 1U);
 			EXPECT_EQ(Item.m_PreviewImage.m_Format, CImageInfo::FORMAT_RGBA);
+			EXPECT_EQ(Item.m_MemoryLease.Bytes(), 16u);
+			EXPECT_EQ(m_MemoryBudget.Used(), 16u);
 			EXPECT_EQ(Item.m_pDecodeJob, m_pOldJob);
 			EXPECT_EQ(Item.m_pDecodeJob.use_count(), 2);
 			EXPECT_EQ(Item.m_PreviewState, CMenus::SCustomItem::PREVIEW_STATE_READY);
@@ -193,6 +198,154 @@ TEST_F(SettingsAssetListMerge, EmptyBatchDoesNotAllocateOrPrepare)
 	EXPECT_EQ(Prepared, 0);
 	EXPECT_EQ(m_Resource.m_Allocations, Allocations);
 	ExpectUnchanged(pData, Capacity);
+}
+
+TEST_F(SettingsAssetListMerge, FullCpuQuotaDoesNotPreventMovingExistingOwnersDuringMerge)
+{
+	CSettingsAssetMemoryLease Blocker;
+	ASSERT_TRUE(m_MemoryBudget.TryAcquire(48, Blocker));
+	const auto vEntries = MergeEntries({"alpha", "zeta"});
+	ASSERT_TRUE(TryMergeSettingsAssetEntries(m_vList, vEntries, PrepareNothing));
+	const auto *pOld = FindItem(m_vList, "middle");
+	ASSERT_NE(pOld, nullptr);
+	EXPECT_EQ(pOld->m_PreviewImage.m_pData, m_pOldPixels);
+	EXPECT_EQ(pOld->m_MemoryLease.Bytes(), 16u);
+	EXPECT_EQ(m_MemoryBudget.Used(), 64u);
+	Blocker.Reset();
+	ExpectMergedOldItem();
+}
+
+TEST_F(SettingsAssetListMerge, CopyHasIndependentPixelsAndReservation)
+{
+	CMenus::SCustomItem Copy(m_vList.front());
+	EXPECT_EQ(m_MemoryBudget.Used(), 32u);
+	ASSERT_NE(Copy.m_PreviewImage.m_pData, nullptr);
+	EXPECT_NE(Copy.m_PreviewImage.m_pData, m_pOldPixels);
+	EXPECT_EQ(Copy.m_PreviewImage.m_pData[0], 47);
+	EXPECT_EQ(Copy.m_MemoryLease.Bytes(), 16u);
+	Copy.FreePreviewCpuImage();
+	EXPECT_EQ(Copy.m_PreviewImage.m_pData, nullptr);
+	EXPECT_FALSE(Copy.m_MemoryLease.HasReservation());
+	EXPECT_EQ(m_MemoryBudget.Used(), 16u);
+	EXPECT_EQ(m_vList.front().m_PreviewImage.m_pData, m_pOldPixels);
+	EXPECT_EQ(m_pOldPixels[0], 47);
+}
+
+TEST_F(SettingsAssetListMerge, CopyQuotaRejectionKeepsTheSourceAndAllowsRetry)
+{
+	CSettingsAssetMemoryLease Blocker;
+	ASSERT_TRUE(m_MemoryBudget.TryAcquire(48, Blocker));
+	EXPECT_THROW({ CMenus::SCustomItem Copy(m_vList.front()); }, std::bad_alloc);
+	EXPECT_EQ(m_MemoryBudget.Used(), 64u);
+	EXPECT_EQ(m_vList.front().m_PreviewImage.m_pData, m_pOldPixels);
+	EXPECT_EQ(m_pOldPixels[0], 47);
+	Blocker.Reset();
+	CMenus::SCustomItem Retry(m_vList.front());
+	EXPECT_NE(Retry.m_PreviewImage.m_pData, m_pOldPixels);
+	EXPECT_EQ(m_MemoryBudget.Used(), 32u);
+}
+
+TEST_F(SettingsAssetListMerge, CopyAssignmentQuotaRejectionKeepsDestinationPixelsMetadataAndGpu)
+{
+	CSettingsAssetMemoryBudget DestinationBudget(16);
+	CMenus::SCustomItem Destination;
+	str_copy(Destination.m_aName, "old destination");
+	Destination.m_RenderTexture = m_Graphics.Handle(67, 4);
+	Destination.m_PreviewImage = m_vList.front().m_PreviewImage.DeepCopy();
+	ASSERT_NE(Destination.m_PreviewImage.m_pData, nullptr);
+	Destination.m_PreviewImage.m_pData[0] = 91;
+	ASSERT_TRUE(SettingsAssetMemoryTryAcquireImage(Destination.m_PreviewImage, Destination.m_MemoryLease, &DestinationBudget));
+	auto *pDestinationPixels = Destination.m_PreviewImage.m_pData;
+	CSettingsAssetMemoryLease Blocker;
+	ASSERT_TRUE(m_MemoryBudget.TryAcquire(48, Blocker));
+	EXPECT_THROW(Destination = m_vList.front(), std::bad_alloc);
+	EXPECT_STREQ(Destination.m_aName, "old destination");
+	EXPECT_EQ(Destination.m_PreviewImage.m_pData, pDestinationPixels);
+	EXPECT_EQ(pDestinationPixels[0], 91);
+	EXPECT_EQ(Destination.m_RenderTexture.Id(), 67);
+	EXPECT_EQ(Destination.m_RenderTexture.Generation(), 4u);
+	EXPECT_EQ(DestinationBudget.Used(), 16u);
+	EXPECT_EQ(m_MemoryBudget.Used(), 64u);
+	Blocker.Reset();
+	Destination = m_vList.front();
+	EXPECT_STREQ(Destination.m_aName, "middle");
+	EXPECT_NE(Destination.m_PreviewImage.m_pData, m_pOldPixels);
+	EXPECT_EQ(Destination.m_PreviewImage.m_pData[0], 47);
+	EXPECT_EQ(DestinationBudget.Used(), 0u);
+	EXPECT_EQ(m_MemoryBudget.Used(), 32u);
+}
+
+TEST_F(SettingsAssetListMerge, MoveAssignmentRetiresOldCpuPixelsAndTransfersOneReservation)
+{
+	CSettingsAssetMemoryBudget DestinationBudget(16);
+	CMenus::SCustomItem Destination;
+	Destination.m_PreviewImage = m_vList.front().m_PreviewImage.DeepCopy();
+	ASSERT_NE(Destination.m_PreviewImage.m_pData, nullptr);
+	ASSERT_TRUE(SettingsAssetMemoryTryAcquireImage(Destination.m_PreviewImage, Destination.m_MemoryLease, &DestinationBudget));
+	Destination = std::move(m_vList.front());
+	EXPECT_EQ(Destination.m_PreviewImage.m_pData, m_pOldPixels);
+	EXPECT_EQ(Destination.m_MemoryLease.Bytes(), 16u);
+	EXPECT_EQ(m_vList.front().m_PreviewImage.m_pData, nullptr);
+	EXPECT_FALSE(m_vList.front().m_MemoryLease.HasReservation());
+	EXPECT_EQ(DestinationBudget.Used(), 0u);
+	EXPECT_EQ(m_MemoryBudget.Used(), 16u);
+	Destination.FreePreviewCpuImage();
+	EXPECT_EQ(m_MemoryBudget.Used(), 0u);
+}
+
+TEST_F(SettingsAssetListMerge, CpuPressureRetirementPreservesGpuAndUnblocksAnotherImageReservation)
+{
+	CSettingsAssetMemoryLease Blocker;
+	ASSERT_TRUE(m_MemoryBudget.TryAcquire(48, Blocker));
+	CMenus::SCustomItem Next;
+	Next.m_PreviewImage = m_vList.front().m_PreviewImage.DeepCopy();
+	ASSERT_NE(Next.m_PreviewImage.m_pData, nullptr);
+	EXPECT_FALSE(SettingsAssetMemoryTryAcquireImage(Next.m_PreviewImage, Next.m_MemoryLease, &m_MemoryBudget));
+	EXPECT_FALSE(Next.m_MemoryLease.HasReservation());
+	m_vList.front().DiscardPreviewCpuInput();
+	const auto &Retired = m_vList.front();
+	EXPECT_EQ(Retired.m_PreviewImage.m_pData, nullptr);
+	EXPECT_FALSE(Retired.m_MemoryLease.HasReservation());
+	EXPECT_EQ(Retired.m_pDecodeJob, nullptr);
+	EXPECT_EQ(Retired.m_RenderTexture.Id(), 41);
+	EXPECT_EQ(Retired.m_RenderTexture.Generation(), 17u);
+	EXPECT_EQ(Retired.m_PreviewResidentBytes, 77u);
+	EXPECT_EQ(Retired.m_PreviewRequestedTextureSize, 128);
+	EXPECT_EQ(Retired.m_PreviewState, CMenus::SCustomItem::PREVIEW_STATE_LOADED);
+	EXPECT_EQ(Retired.m_PreviewEpoch, 0u);
+	ASSERT_TRUE(SettingsAssetMemoryTryAcquireImage(Next.m_PreviewImage, Next.m_MemoryLease, &m_MemoryBudget));
+	EXPECT_EQ(m_MemoryBudget.Used(), 64u);
+	Next.FreePreviewCpuImage();
+	Blocker.Reset();
+	EXPECT_EQ(m_MemoryBudget.Used(), 0u);
+}
+
+TEST_F(SettingsAssetListMerge, CpuPressureRetirementWithoutGpuAllowsANewDecode)
+{
+	m_vList.front().m_RenderTexture.Invalidate();
+	m_vList.front().m_PreviewResidentBytes = 0;
+	m_vList.front().DiscardPreviewCpuInput();
+	EXPECT_EQ(m_vList.front().m_PreviewState, CMenus::SCustomItem::PREVIEW_STATE_UNLOADED);
+	EXPECT_EQ(m_vList.front().m_PreviewBytes, 0u);
+	EXPECT_EQ(m_vList.front().m_PreviewListIndex, 0u);
+	EXPECT_FALSE(m_vList.front().m_PreviewHighPriority);
+	EXPECT_EQ(m_MemoryBudget.Used(), 0u);
+	m_vList.front().DiscardPreviewCpuInput();
+	EXPECT_EQ(m_MemoryBudget.Used(), 0u);
+}
+
+TEST_F(SettingsAssetListMerge, EntityCpuPressureRetirementPreservesIndependentTextureOwners)
+{
+	CMenus::SCustomEntities Entity;
+	static_cast<CMenus::SCustomItem &>(Entity) = std::move(m_vList.front());
+	Entity.m_aImages[0].m_Texture = m_Graphics.Handle(71, 8);
+	Entity.DiscardPreviewCpuInput();
+	EXPECT_EQ(Entity.m_RenderTexture.Id(), 41);
+	EXPECT_EQ(Entity.m_RenderTexture.Generation(), 17u);
+	EXPECT_EQ(Entity.m_aImages[0].m_Texture.Id(), 71);
+	EXPECT_EQ(Entity.m_aImages[0].m_Texture.Generation(), 8u);
+	EXPECT_EQ(Entity.m_PreviewResidentBytes, 77u);
+	EXPECT_EQ(m_MemoryBudget.Used(), 0u);
 }
 
 TEST_F(SettingsAssetListMerge, ExistingNamesDoNotAllocateOrReplaceTheOldDisplay)

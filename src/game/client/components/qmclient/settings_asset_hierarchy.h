@@ -122,6 +122,7 @@ void CommitSettingsAssetHierarchy(SSettingsAssetHierarchyCandidate<TItem> &Candi
 			Previous.m_RenderTexture.Invalidate();
 			Item.m_pDecodeJob = std::move(Previous.m_pDecodeJob);
 			Item.m_PreviewImage = std::move(Previous.m_PreviewImage);
+			Item.m_MemoryLease = std::move(Previous.m_MemoryLease);
 			Item.m_PreviewState = Previous.m_PreviewState;
 			Item.m_PreviewEpoch = Previous.m_PreviewEpoch;
 			Item.m_PreviewListIndex = Previous.m_PreviewListIndex;

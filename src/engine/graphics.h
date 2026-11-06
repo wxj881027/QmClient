@@ -20,6 +20,13 @@
 #include <string>
 #include <vector>
 
+// 命令区只复制这两个字段；接收方在像素释放后归还自有上下文。
+struct SGraphicsUploadRelease
+{
+	void *m_pContext = nullptr;
+	void (*m_pfnRelease)(void *) noexcept = nullptr;
+};
+
 #define GRAPHICS_TYPE_UNSIGNED_BYTE 0x1401
 #define GRAPHICS_TYPE_UNSIGNED_SHORT 0x1403
 #define GRAPHICS_TYPE_INT 0x1404
@@ -658,6 +665,13 @@ public:
 	virtual void UnloadTexture(CTextureHandle *pIndex) = 0;
 	virtual CTextureHandle LoadTextureRaw(const CImageInfo &Image, int Flags, const char *pTexName = nullptr) = 0;
 	virtual CTextureHandle LoadTextureRawMove(CImageInfo &Image, int Flags, const char *pTexName = nullptr) = 0;
+	// false 保留图像和上下文供延期；true 已接管二者，纹理仍可能创建失败。
+	// 调用方在进入前须为原图及格式转换、后端缩放的并存像素预留额度。
+	virtual bool TryLoadTextureRawMoveOwned(CImageInfo &, int, const char *, SGraphicsUploadRelease &, CTextureHandle &Texture)
+	{
+		Texture.Invalidate();
+		return false;
+	}
 	virtual CTextureHandle LoadTexture(const char *pFilename, int StorageType, int Flags = 0) = 0;
 	/**
 	 * 判断句柄当前是否真的还指向一张已分配贴图。

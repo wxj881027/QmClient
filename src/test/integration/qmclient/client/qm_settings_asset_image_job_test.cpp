@@ -9,9 +9,12 @@
 #include <test/test.h>
 
 #include <array>
+#include <chrono>
+#include <condition_variable>
 #include <cstdlib>
 #include <deque>
 #include <memory>
+#include <mutex>
 #include <new>
 #include <stdexcept>
 #include <unordered_set>
@@ -62,6 +65,8 @@ namespace
 	public:
 		bool m_Accept = true;
 		bool m_Throw = false;
+		bool m_ThrowLength = false;
+		int m_Attempts = 0;
 		std::weak_ptr<IJob> m_Attempt;
 		explicit CImageAdmissionEngine(CJobPool &Pool) :
 			m_Pool(Pool) {}
@@ -69,7 +74,10 @@ namespace
 		void AddJob(std::shared_ptr<IJob> pJob) override { (void)TryAddJob(std::move(pJob)); }
 		bool TryAddJob(std::shared_ptr<IJob> pJob) override
 		{
+			++m_Attempts;
 			m_Attempt = pJob;
+			if(m_ThrowLength)
+				throw std::length_error("image admission preparation failed");
 			if(m_Throw)
 				throw std::bad_alloc();
 			return m_Accept && m_Pool.TryAdd(std::move(pJob));
@@ -89,6 +97,60 @@ namespace
 	public:
 		explicit CFailAfterPublication(IStorage *pStorage) :
 			CFullAsyncImageLoadJob({"image.png"}, pStorage, "image", IStorage::TYPE_SAVE) {}
+	};
+
+	class CImageJobGate
+	{
+		std::mutex m_Mutex;
+		std::condition_variable m_Condition;
+		bool m_Entered = false;
+		bool m_Released = false;
+
+	public:
+		void EnterAndWait()
+		{
+			std::unique_lock<std::mutex> Lock(m_Mutex);
+			m_Entered = true;
+			m_Condition.notify_all();
+			m_Condition.wait_for(Lock, std::chrono::seconds(2), [&] { return m_Released; });
+		}
+		bool WaitForEntry()
+		{
+			std::unique_lock<std::mutex> Lock(m_Mutex);
+			return m_Condition.wait_for(Lock, std::chrono::seconds(2), [&] { return m_Entered; });
+		}
+		void Release()
+		{
+			const std::lock_guard<std::mutex> Lock(m_Mutex);
+			m_Released = true;
+			m_Condition.notify_all();
+		}
+	};
+
+	class CReleaseImageJobGate
+	{
+		std::shared_ptr<CImageJobGate> m_pGate;
+
+	public:
+		explicit CReleaseImageJobGate(std::shared_ptr<CImageJobGate> pGate) :
+			m_pGate(std::move(pGate)) {}
+		~CReleaseImageJobGate() { m_pGate->Release(); }
+	};
+
+	class CPausedImageLoadJob : public CFullAsyncImageLoadJob
+	{
+		std::shared_ptr<CImageJobGate> m_pGate;
+		void Run() override
+		{
+			m_pGate->EnterAndWait();
+			CFullAsyncImageLoadJob::Run();
+		}
+
+	public:
+		CPausedImageLoadJob(IStorage &Storage, CSettingsAssetMemoryBudget &Budget, std::shared_ptr<CImageJobGate> pGate) :
+			CFullAsyncImageLoadJob({"image.png"}, &Storage, "paused", IStorage::TYPE_SAVE, 0, nullptr,
+				static_cast<FResize>(ResizeImage), ASSET_PREVIEW_MAX_DECODED_BYTES, &Budget),
+			m_pGate(std::move(pGate)) {}
 	};
 
 	class QmSettingsAssetImageJob : public ::testing::Test
@@ -135,6 +197,13 @@ namespace
 		std::shared_ptr<CFullAsyncImageLoadJob> NewJob(int MaxSize = 0)
 		{
 			return std::make_shared<CFullAsyncImageLoadJob>(std::vector<std::string>{"missing.png", "image.png"}, m_pStorage.get(), "image", IStorage::TYPE_SAVE, MaxSize);
+		}
+		uint64_t WorkingBytes(int MaxSize = 0)
+		{
+			uint64_t Bytes = 0;
+			if(!SettingsAssetMemoryComputeWorkingBytes(LOCAL_ASSET_PREVIEW_MAX_FILE_SIZE, ASSET_PREVIEW_MAX_DECODED_BYTES, MaxSize, Bytes))
+				throw std::logic_error("invalid image fixture budget");
+			return Bytes;
 		}
 		void Execute(const std::shared_ptr<IJob> &pJob)
 		{
@@ -564,4 +633,213 @@ TEST_F(QmSettingsAssetImageJob, FailedReadyRegistrationKeepsNativePixelsForRetry
 	EXPECT_EQ(Markers.size(), 1u);
 	EXPECT_EQ(Result.m_Image.m_pData, pPixels);
 	EXPECT_EQ(pPixels[0], 11);
+}
+
+TEST_F(QmSettingsAssetImageJob, QuotaPressureDefersBeforeEngineAdmissionAndLaterRetrySucceeds)
+{
+	ASSERT_NO_FATAL_FAILURE(StorePng());
+	CSettingsAssetMemoryBudget Budget(WorkingBytes());
+	CSettingsAssetMemoryLease Held;
+	ASSERT_TRUE(Budget.TryAcquire(Budget.Limit(), Held));
+	CImageAdmissionEngine Engine(m_Pool);
+	ESettingsAssetImageAdmission Admission = ESettingsAssetImageAdmission::FAILED;
+	EXPECT_EQ(QmTryQueueSettingsAssetImage({"image.png"}, m_pStorage.get(), Engine, "image", IStorage::TYPE_SAVE, 0,
+			  ASSET_PREVIEW_MAX_DECODED_BYTES, &Budget, &Admission),
+		nullptr);
+	EXPECT_EQ(Admission, ESettingsAssetImageAdmission::DEFERRED);
+	EXPECT_EQ(Engine.m_Attempts, 0);
+	EXPECT_EQ(Budget.Used(), Budget.Limit());
+	Held.Reset();
+	auto pJob = QmTryQueueSettingsAssetImage({"image.png"}, m_pStorage.get(), Engine, "image", IStorage::TYPE_SAVE, 0,
+		ASSET_PREVIEW_MAX_DECODED_BYTES, &Budget, &Admission);
+	ASSERT_NE(pJob, nullptr);
+	EXPECT_EQ(Admission, ESettingsAssetImageAdmission::ACCEPTED);
+	ASSERT_TRUE(WaitForJobFinished(*pJob));
+	auto Result = pJob->GetResult();
+	ASSERT_TRUE(Result.m_Success);
+	EXPECT_EQ(Result.m_MemoryLease.Bytes(), 16u);
+	EXPECT_EQ(Budget.Used(), 16u);
+}
+
+TEST_F(QmSettingsAssetImageJob, DirectConstructorCannotBypassInjectedQuota)
+{
+	CSettingsAssetMemoryBudget Budget(WorkingBytes() - 1);
+	EXPECT_THROW(std::make_shared<CFullAsyncImageLoadJob>(std::vector<std::string>{"image.png"}, m_pStorage.get(), "image", IStorage::TYPE_SAVE, 0,
+			     nullptr, static_cast<CFullAsyncImageLoadJob::FResize>(ResizeImage), ASSET_PREVIEW_MAX_DECODED_BYTES, &Budget),
+		std::bad_alloc);
+	EXPECT_EQ(Budget.Used(), 0u);
+	EXPECT_EQ(Budget.DeferredSequence(), 1u);
+}
+
+TEST_F(QmSettingsAssetImageJob, WorkingQuotaShrinksToReadyAndRemainsWithResultAfterJobRelease)
+{
+	ASSERT_NO_FATAL_FAILURE(StorePng());
+	CSettingsAssetMemoryBudget Budget(WorkingBytes());
+	auto pJob = std::make_shared<CFullAsyncImageLoadJob>(std::vector<std::string>{"image.png"}, m_pStorage.get(), "image", IStorage::TYPE_SAVE, 0,
+		nullptr, static_cast<CFullAsyncImageLoadJob::FResize>(ResizeImage), ASSET_PREVIEW_MAX_DECODED_BYTES, &Budget);
+	EXPECT_EQ(Budget.Used(), Budget.Limit());
+	ASSERT_NO_FATAL_FAILURE(Execute(pJob));
+	auto Result = pJob->GetResult();
+	ASSERT_TRUE(Result.m_Success);
+	EXPECT_EQ(Result.m_Image.DataSize(), 8u);
+	EXPECT_EQ(Result.m_MemoryLease.Bytes(), 16u);
+	EXPECT_EQ(Budget.Used(), 16u);
+	EXPECT_FALSE(pJob->GetResult().m_MemoryLease.HasReservation());
+	pJob.reset();
+	EXPECT_EQ(Budget.Used(), 16u);
+	EXPECT_EQ(Result.m_Image.m_pData[0], 11);
+	Result.m_Image.Free();
+	Result.m_MemoryLease.Reset();
+	EXPECT_EQ(Budget.Used(), 0u);
+}
+
+TEST_F(QmSettingsAssetImageJob, DecodeExceptionReleasesQuotaWhileFailedJobIsStillOwned)
+{
+	ASSERT_NO_FATAL_FAILURE(StorePng());
+	CSettingsAssetMemoryBudget Budget(WorkingBytes());
+	auto pJob = std::make_shared<CFullAsyncImageLoadJob>(std::vector<std::string>{"image.png"}, m_pStorage.get(), "image", IStorage::TYPE_SAVE, 0,
+		ThrowAllocationAfterPixels, static_cast<CFullAsyncImageLoadJob::FResize>(ResizeImage), ASSET_PREVIEW_MAX_DECODED_BYTES, &Budget);
+	ASSERT_NO_FATAL_FAILURE(Execute(pJob));
+	EXPECT_EQ(pJob->State(), IJob::STATE_FAILED);
+	ExpectEmptyFailure(pJob);
+	EXPECT_EQ(Budget.Used(), 0u);
+	EXPECT_FALSE(pJob->GetResult().m_MemoryLease.HasReservation());
+}
+
+TEST_F(QmSettingsAssetImageJob, CancelledRunningJobKeepsReservationUntilWorkerAndLastOwnerFinish)
+{
+	ASSERT_NO_FATAL_FAILURE(StorePng());
+	CSettingsAssetMemoryBudget Budget(WorkingBytes());
+	const auto pGate = std::make_shared<CImageJobGate>();
+	const CReleaseImageJobGate Release(pGate);
+	auto pJob = std::make_shared<CPausedImageLoadJob>(*m_pStorage, Budget, pGate);
+	ASSERT_TRUE(m_Pool.TryAdd(pJob));
+	ASSERT_TRUE(pGate->WaitForEntry());
+	ASSERT_TRUE(pJob->Abort());
+	EXPECT_FALSE(pJob->Finished());
+	EXPECT_EQ(Budget.Used(), Budget.Limit());
+	pGate->Release();
+	ASSERT_TRUE(WaitForJobFinished(*pJob));
+	EXPECT_EQ(pJob->State(), IJob::STATE_ABORTED);
+	EXPECT_EQ(Budget.Used(), 16u);
+	pJob.reset();
+	m_Pool.Shutdown();
+	m_Started = false;
+	EXPECT_EQ(Budget.Used(), 0u);
+}
+
+TEST_F(QmSettingsAssetImageJob, EveryDecodedFormatKeepsTwoRgbaImagesInReadyQuota)
+{
+	CSettingsAssetMemoryBudget Budget(WorkingBytes());
+	for(const auto Format : {CImageInfo::FORMAT_RGB, CImageInfo::FORMAT_RGBA, CImageInfo::FORMAT_R, CImageInfo::FORMAT_RA})
+	{
+		SCOPED_TRACE(Format);
+		ASSERT_NO_FATAL_FAILURE(StorePng(Format));
+		{
+			auto pJob = std::make_shared<CFullAsyncImageLoadJob>(std::vector<std::string>{"image.png"}, m_pStorage.get(), "image", IStorage::TYPE_SAVE, 0,
+				nullptr, static_cast<CFullAsyncImageLoadJob::FResize>(ResizeImage), ASSET_PREVIEW_MAX_DECODED_BYTES, &Budget);
+			ASSERT_NO_FATAL_FAILURE(Execute(pJob));
+			auto Result = pJob->GetResult();
+			ASSERT_TRUE(Result.m_Success);
+			EXPECT_EQ(Result.m_Image.m_Format, Format);
+			EXPECT_EQ(Result.m_MemoryLease.Bytes(), 16u);
+			EXPECT_EQ(Budget.Used(), 16u);
+		}
+		EXPECT_EQ(Budget.Used(), 0u);
+	}
+}
+
+TEST_F(QmSettingsAssetImageJob, NativeResizeKeepsOnlyFinalReadyQuota)
+{
+	ASSERT_NO_FATAL_FAILURE(StorePng());
+	CSettingsAssetMemoryBudget Budget(WorkingBytes(1));
+	CImageAdmissionEngine Engine(m_Pool);
+	auto pJob = QmTryQueueSettingsAssetImage({"image.png"}, m_pStorage.get(), Engine, "image", IStorage::TYPE_SAVE, 1,
+		ASSET_PREVIEW_MAX_DECODED_BYTES, &Budget);
+	ASSERT_NE(pJob, nullptr);
+	ASSERT_TRUE(WaitForJobFinished(*pJob));
+	auto Result = pJob->GetResult();
+	ASSERT_TRUE(Result.m_Success);
+	EXPECT_TRUE(Result.m_Resized);
+	EXPECT_EQ(Result.m_Image.DataSize(), 4u);
+	EXPECT_EQ(Result.m_MemoryLease.Bytes(), 8u);
+	EXPECT_EQ(Budget.Used(), 8u);
+}
+
+TEST_F(QmSettingsAssetImageJob, EngineRejectionIsDeferredAndReturnsPreparedQuota)
+{
+	ASSERT_NO_FATAL_FAILURE(StorePng());
+	CSettingsAssetMemoryBudget Budget(WorkingBytes());
+	CImageAdmissionEngine Engine(m_Pool);
+	Engine.m_Accept = false;
+	ESettingsAssetImageAdmission Admission = ESettingsAssetImageAdmission::FAILED;
+	EXPECT_EQ(QmTryQueueSettingsAssetImage({"image.png"}, m_pStorage.get(), Engine, "image", IStorage::TYPE_SAVE, 0,
+			  ASSET_PREVIEW_MAX_DECODED_BYTES, &Budget, &Admission),
+		nullptr);
+	EXPECT_EQ(Admission, ESettingsAssetImageAdmission::DEFERRED);
+	EXPECT_TRUE(Engine.m_Attempt.expired());
+	EXPECT_EQ(Budget.Used(), 0u);
+	Engine.m_Accept = true;
+	auto pJob = QmTryQueueSettingsAssetImage({"image.png"}, m_pStorage.get(), Engine, "image", IStorage::TYPE_SAVE, 0,
+		ASSET_PREVIEW_MAX_DECODED_BYTES, &Budget, &Admission);
+	ASSERT_NE(pJob, nullptr);
+	EXPECT_EQ(Admission, ESettingsAssetImageAdmission::ACCEPTED);
+	ASSERT_TRUE(WaitForJobFinished(*pJob));
+	EXPECT_TRUE(pJob->GetResult().m_Success);
+}
+
+TEST_F(QmSettingsAssetImageJob, PreparationLengthErrorIsDeferredAndDoesNotRetainQuota)
+{
+	CSettingsAssetMemoryBudget Budget(WorkingBytes());
+	CImageAdmissionEngine Engine(m_Pool);
+	Engine.m_ThrowLength = true;
+	ESettingsAssetImageAdmission Admission = ESettingsAssetImageAdmission::FAILED;
+	EXPECT_EQ(QmTryQueueSettingsAssetImage({"image.png"}, m_pStorage.get(), Engine, "image", IStorage::TYPE_SAVE, 0,
+			  ASSET_PREVIEW_MAX_DECODED_BYTES, &Budget, &Admission),
+		nullptr);
+	EXPECT_EQ(Admission, ESettingsAssetImageAdmission::DEFERRED);
+	EXPECT_TRUE(Engine.m_Attempt.expired());
+	EXPECT_EQ(Budget.Used(), 0u);
+}
+
+TEST_F(QmSettingsAssetImageJob, EmptyCandidateListFailsWithoutSubmittingOrReservingQuota)
+{
+	CSettingsAssetMemoryBudget Budget(WorkingBytes());
+	CImageAdmissionEngine Engine(m_Pool);
+	ESettingsAssetImageAdmission Admission = ESettingsAssetImageAdmission::ACCEPTED;
+	EXPECT_EQ(QmTryQueueSettingsAssetImage({}, m_pStorage.get(), Engine, "empty", IStorage::TYPE_SAVE, 0,
+			  ASSET_PREVIEW_MAX_DECODED_BYTES, &Budget, &Admission),
+		nullptr);
+	EXPECT_EQ(Admission, ESettingsAssetImageAdmission::FAILED);
+	EXPECT_EQ(Engine.m_Attempts, 0);
+	EXPECT_EQ(Budget.Used(), 0u);
+	EXPECT_EQ(Budget.DeferredSequence(), 0u);
+}
+
+TEST_F(QmSettingsAssetImageJob, MissingStorageFailsWithoutSubmittingOrReservingQuota)
+{
+	CSettingsAssetMemoryBudget Budget(WorkingBytes());
+	CImageAdmissionEngine Engine(m_Pool);
+	ESettingsAssetImageAdmission Admission = ESettingsAssetImageAdmission::ACCEPTED;
+	EXPECT_EQ(QmTryQueueSettingsAssetImage({"image.png"}, nullptr, Engine, "missing-storage", IStorage::TYPE_SAVE, 0,
+			  ASSET_PREVIEW_MAX_DECODED_BYTES, &Budget, &Admission),
+		nullptr);
+	EXPECT_EQ(Admission, ESettingsAssetImageAdmission::FAILED);
+	EXPECT_EQ(Engine.m_Attempts, 0);
+	EXPECT_EQ(Budget.Used(), 0u);
+	EXPECT_EQ(Budget.DeferredSequence(), 0u);
+}
+
+TEST_F(QmSettingsAssetImageJob, NullContextNameFailsWithoutSubmittingOrReservingQuota)
+{
+	CSettingsAssetMemoryBudget Budget(WorkingBytes());
+	CImageAdmissionEngine Engine(m_Pool);
+	ESettingsAssetImageAdmission Admission = ESettingsAssetImageAdmission::ACCEPTED;
+	EXPECT_EQ(QmTryQueueSettingsAssetImage({"image.png"}, m_pStorage.get(), Engine, nullptr, IStorage::TYPE_SAVE, 0,
+			  ASSET_PREVIEW_MAX_DECODED_BYTES, &Budget, &Admission),
+		nullptr);
+	EXPECT_EQ(Admission, ESettingsAssetImageAdmission::FAILED);
+	EXPECT_EQ(Engine.m_Attempts, 0);
+	EXPECT_EQ(Budget.Used(), 0u);
+	EXPECT_EQ(Budget.DeferredSequence(), 0u);
 }

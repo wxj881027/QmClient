@@ -688,6 +688,7 @@ public:
 		int m_Flags;
 		// data must be in RGBA format
 		mutable uint8_t *m_pData = nullptr;
+		mutable SGraphicsUploadRelease m_Release;
 	};
 
 	struct SCommand_Texture_Destroy : public SCommand
@@ -886,6 +887,7 @@ public:
 			{
 				const auto *pUpload = static_cast<const SCommand_Texture_Create *>(pCommand);
 				ReleaseData(pUpload->m_pData);
+				ReleaseGraphicsUpload(pUpload->m_Release);
 				break;
 			}
 			case CMD_TEXTURE_UPDATE:
@@ -1377,6 +1379,7 @@ public:
 	void LoadTextureAddWarning(size_t Width, size_t Height, int Flags, const char *pTexName);
 	IGraphics::CTextureHandle LoadTextureRaw(const CImageInfo &Image, int Flags, const char *pTexName = nullptr) override;
 	IGraphics::CTextureHandle LoadTextureRawMove(CImageInfo &Image, int Flags, const char *pTexName = nullptr) override;
+	bool TryLoadTextureRawMoveOwned(CImageInfo &Image, int Flags, const char *pTexName, SGraphicsUploadRelease &Release, IGraphics::CTextureHandle &Texture) override;
 
 	bool IsRenderTargetSupported() const override;
 	bool IsRenderTargetGaussianBlurSupported() const override;

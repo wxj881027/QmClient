@@ -723,6 +723,39 @@ IGraphics::CTextureHandle CGraphics_Threaded::LoadTextureRawMove(CImageInfo &Ima
 	return CreateTextureHandle(Slots.Id(), Slots.Generation());
 }
 
+bool CGraphics_Threaded::TryLoadTextureRawMoveOwned(CImageInfo &Image, int Flags, const char *pTexName, SGraphicsUploadRelease &Release, IGraphics::CTextureHandle &Texture)
+{
+	dbg_assert(IsMainThread(), "GPU texture upload must be called from main thread");
+	Texture.Invalidate();
+	int TextureId = -1;
+	uint32_t TextureGeneration = 0;
+	try
+	{
+		LoadTextureAddWarning(Image.m_Width, Image.m_Height, Flags, pTexName);
+		if(!TryQueueGraphicsTextureUploadOwned(Image, Release, m_TextureSlots, [&](int Slot, size_t Width, size_t Height, uint8_t *pData, const SGraphicsUploadRelease &OwnedRelease) {
+				   auto Cmd = LoadTextureCreateCommand(Slot, Width, Height, Flags);
+				   Cmd.m_pData = pData;
+				   Cmd.m_Release = OwnedRelease;
+				   if(m_pCommandBuffer->AddCommandUnsafe(Cmd))
+					   return true;
+				   // 只提交旧缓冲；当前命令仍由调用方持有，不使用断言式接收。
+				   KickCommandBuffer();
+				   return m_pCommandBuffer->AddCommandUnsafe(Cmd); }, TextureId, TextureGeneration))
+			return false;
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	catch(const std::length_error &)
+	{
+		return false;
+	}
+	if(TextureId >= 0)
+		Texture = CreateTextureHandle(TextureId, TextureGeneration);
+	return true;
+}
+
 IGraphics::CTextureHandle CGraphics_Threaded::LoadTexture(const char *pFilename, int StorageType, int Flags)
 {
 	dbg_assert(pFilename[0] != '\0', "Cannot load texture from file with empty filename"); // would cause Valgrind to crash otherwise

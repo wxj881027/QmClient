@@ -63,6 +63,7 @@ bool CCommandProcessorFragment_Null::Cmd_Init(const SCommand_Init *pCommand)
 
 void CCommandProcessorFragment_Null::Cmd_Texture_Create(const CCommandBuffer::SCommand_Texture_Create *pCommand)
 {
+	auto Release = TakeGraphicsUploadRelease(pCommand->m_Release);
 	auto pData = TakeGraphicsUpload(pCommand->m_pData);
 }
 

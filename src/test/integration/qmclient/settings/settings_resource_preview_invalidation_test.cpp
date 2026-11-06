@@ -412,18 +412,25 @@ TEST_F(ResourcePreviewInvalidation, CancellationDuringCheckedFileReadKeepsStorag
 	ASSERT_NO_FATAL_FAILURE(PrepareBlockingStorage(pGate));
 	ASSERT_NO_FATAL_FAILURE(StartPool());
 	CPreviewPoolEngine Engine(m_Pool);
-	auto pOld = CSettingsResourcePreviewJob::FromPath("old", "late.png", m_pBlockingStorage.get(), IStorage::TYPE_SAVE, 0);
+	CSettingsAssetMemoryBudget MemoryBudget;
+	uint64_t WorkingBytes = 0;
+	ASSERT_TRUE(SettingsAssetMemoryComputeWorkingBytes(LOCAL_ASSET_PREVIEW_MAX_FILE_SIZE, ASSET_PREVIEW_MAX_DECODED_BYTES, 0, WorkingBytes));
+	auto pOld = CSettingsResourcePreviewJob::FromPath("old", "late.png", m_pBlockingStorage.get(), IStorage::TYPE_SAVE, 0,
+		LOCAL_ASSET_PREVIEW_MAX_FILE_SIZE, ASSET_PREVIEW_MAX_DECODED_BYTES, &MemoryBudget);
 	uint64_t Generation = 7;
 	const auto OldKey = InvalidationKey(s_pEntityType, "same", false, Generation);
 	ASSERT_TRUE(TryStartSettingsResourcePreviewJob(m_Cache, m_Jobs, OldKey, Engine, [&] { return pOld; }));
 	ASSERT_TRUE(pGate->WaitForEntry());
+	EXPECT_EQ(MemoryBudget.Used(), WorkingBytes);
 	InvalidateSettingsResourcePreviews(m_Cache, m_Uploads, m_Jobs, &m_Graphics, {s_pEntityType}, &Generation, 1);
 	EXPECT_EQ(Generation, 8u);
 	EXPECT_TRUE(m_Jobs.empty());
 	EXPECT_EQ(m_Cache.Size(), 0u);
 	EXPECT_FALSE(pOld->Finished());
+	EXPECT_EQ(MemoryBudget.Used(), WorkingBytes);
 	pGate->Release();
 	ASSERT_TRUE(WaitForJobFinished(*pOld));
+	EXPECT_EQ(MemoryBudget.Used(), 0u);
 	EXPECT_FALSE(pGate->TimedOut());
 	EXPECT_TRUE(m_pBlockingStorage->m_NameRetained.load());
 	EXPECT_TRUE(m_pBlockingStorage->m_ReadSucceeded.load());
