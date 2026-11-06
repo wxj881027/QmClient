@@ -11,6 +11,7 @@
 #include <game/client/components/menus.h>
 
 #include <algorithm>
+#include <cstring>
 #include <string>
 #include <unordered_set>
 #include <utility>
@@ -35,6 +36,14 @@ public:
 
 	using SAssetEntry = CMenus::SSettingsAssetMergeEntry;
 
+	struct SScanLimits
+	{
+		size_t m_MaxDepth = 32;
+		size_t m_MaxDirectoryCalls = 8192;
+		size_t m_MaxNonDotVisits = 131072;
+		size_t m_MaxEntries = 65536;
+	};
+
 	struct SScanContext
 	{
 		IStorage *m_pStorage;
@@ -42,21 +51,82 @@ public:
 		EAssetResourceKind m_Kind;
 		bool m_SkipReservedDefault;
 		EEntityBgHierarchyEntrySource m_Source = EEntityBgHierarchyEntrySource::LOCAL;
+		const SScanLimits *m_pLimits;
+		size_t m_DirectoryCalls = 0;
+		size_t m_NonDotVisits = 0;
+		size_t m_EmittedEntries = 0;
+		bool m_Failed = false;
 	};
 
 private:
 	EAssetType m_Type;
 	IStorage *m_pStorage;
+	SScanLimits m_Limits;
 	mutable CLock m_Lock;
 	std::vector<SAssetEntry> m_vEntries;
 	mutable bool m_Completed = false;
 	int m_Generation = 0;
 
+	static bool FailScan(SScanContext *pContext)
+	{
+		pContext->m_Failed = true;
+		return false;
+	}
+
+	static bool CountScanWork(SScanContext *pContext, size_t &Count, size_t Limit)
+	{
+		if(pContext->m_Failed)
+			return false;
+		if(Count >= Limit)
+			return FailScan(pContext);
+		++Count;
+		return true;
+	}
+
+	template<size_t N>
+	static bool JoinScanPath(SScanContext *pContext, char (&aOut)[N], const char *pParent, const char *pName)
+	{
+		const size_t ParentLength = std::strlen(pParent);
+		const size_t NameLength = std::strlen(pName);
+		const size_t Separator = ParentLength != 0 ? 1 : 0;
+		if(ParentLength >= N || Separator > N - 1 - ParentLength || NameLength > N - 1 - ParentLength - Separator)
+			return FailScan(pContext);
+		if(Separator)
+			str_format(aOut, sizeof(aOut), "%s/%s", pParent, pName);
+		else
+			str_copy(aOut, pName);
+		return true;
+	}
+
+	static bool AddScanEntry(SScanContext *pContext, const SAssetEntry &Entry)
+	{
+		if(!CountScanWork(pContext, pContext->m_EmittedEntries, pContext->m_pLimits->m_MaxEntries))
+			return false;
+		pContext->m_pEntries->push_back(Entry);
+		return true;
+	}
+
+	static bool ScanDirectory(SScanContext *pContext, const char *pPath, FS_LISTDIR_CALLBACK Callback, void *pUser)
+	{
+		if(!CountScanWork(pContext, pContext->m_DirectoryCalls, pContext->m_pLimits->m_MaxDirectoryCalls))
+			return false;
+		// Checked 保留跨根名称遮蔽，并将停止/错误传播到后续根；不能退回 void 扫描。
+		const auto Result = pContext->m_pStorage->ListDirectoryChecked(IStorage::TYPE_ALL, pPath, Callback, pUser);
+		if(Result != EFsListDirectoryResult::SUCCESS && Result != EFsListDirectoryResult::NOT_FOUND)
+			return FailScan(pContext);
+		return !pContext->m_Failed;
+	}
+
 	static int ScanCallback(const char *pName, int IsDir, int DirType, void *pUser)
 	{
 		(void)DirType;
-		const auto *pContext = static_cast<const SScanContext *>(pUser);
-		auto *pEntries = pContext->m_pEntries;
+		auto *pContext = static_cast<SScanContext *>(pUser);
+		if(pContext->m_Failed)
+			return 1;
+		if(!str_comp(pName, ".") || !str_comp(pName, ".."))
+			return 0;
+		if(!CountScanWork(pContext, pContext->m_NonDotVisits, pContext->m_pLimits->m_MaxNonDotVisits))
+			return 1;
 
 		if(IsDir)
 		{
@@ -68,10 +138,15 @@ private:
 				return 0;
 
 			SAssetEntry Entry;
+			if(std::strlen(pName) >= sizeof(Entry.m_aName))
+			{
+				FailScan(pContext);
+				return 1;
+			}
 			str_copy(Entry.m_aName, pName);
 			Entry.m_IsDir = true;
 			Entry.m_Source = pContext->m_Source;
-			pEntries->push_back(Entry);
+			return AddScanEntry(pContext, Entry) ? 0 : 1;
 		}
 		else
 		{
@@ -84,6 +159,11 @@ private:
 			if(str_endswith(pName, pExt))
 			{
 				char aName[IO_MAX_PATH_LENGTH];
+				if(std::strlen(pName) >= sizeof(aName))
+				{
+					FailScan(pContext);
+					return 1;
+				}
 				str_truncate(aName, sizeof(aName), pName, str_length(pName) - str_length(pExt));
 				if(pContext->m_SkipReservedDefault && str_comp(aName, "default") == 0)
 					return 0;
@@ -92,7 +172,7 @@ private:
 				str_copy(Entry.m_aName, aName);
 				Entry.m_IsDir = false;
 				Entry.m_Source = pContext->m_Source;
-				pEntries->push_back(Entry);
+				return AddScanEntry(pContext, Entry) ? 0 : 1;
 			}
 		}
 		return 0;
@@ -105,38 +185,49 @@ private:
 		char m_aRelativePath[IO_MAX_PATH_LENGTH];
 		char m_aNamePrefix[IO_MAX_PATH_LENGTH];
 		EEntityBgHierarchyEntrySource m_Source = EEntityBgHierarchyEntrySource::LOCAL;
+		size_t m_Depth = 0;
 	};
 
-	static int RecursiveMapScanCallback(const CFsFileInfo *pInfo, int IsDir, int StorageType, void *pUser)
+	static int RecursiveMapScanCallback(const char *pName, int IsDir, int StorageType, void *pUser)
 	{
 		(void)StorageType;
 		auto *pContext = static_cast<SRecursiveMapScanContext *>(pUser);
-		if(!str_comp(pInfo->m_pName, ".") || !str_comp(pInfo->m_pName, ".."))
+		auto *pScan = pContext->m_pScanContext;
+		if(pScan->m_Failed)
+			return 1;
+		if(!str_comp(pName, ".") || !str_comp(pName, ".."))
 			return 0;
+		if(!CountScanWork(pScan, pScan->m_NonDotVisits, pScan->m_pLimits->m_MaxNonDotVisits))
+			return 1;
+		if(IsDir && pName[0] == '.')
+			return 0;
+		const char *pExtension = nullptr;
+		if(!IsDir)
+		{
+			pExtension = str_endswith_nocase(pName, ".map") ? ".map" : FindBackgroundFileExtension(pName);
+			if(pExtension == nullptr)
+				return 0;
+		}
 
 		char aRelativePath[IO_MAX_PATH_LENGTH];
-		if(pContext->m_aRelativePath[0] != '\0')
-			str_format(aRelativePath, sizeof(aRelativePath), "%s/%s", pContext->m_aRelativePath, pInfo->m_pName);
-		else
-			str_copy(aRelativePath, pInfo->m_pName);
+		char aFullPath[IO_MAX_PATH_LENGTH];
+		if(!JoinScanPath(pScan, aRelativePath, pContext->m_aRelativePath, pName) ||
+			!JoinScanPath(pScan, aFullPath, pContext->m_aBasePath, aRelativePath))
+			return 1;
 
 		if(IsDir)
 		{
-			if(pInfo->m_pName[0] == '.')
-				return 0;
+			if(pContext->m_Depth >= pScan->m_pLimits->m_MaxDepth)
+			{
+				FailScan(pScan);
+				return 1;
+			}
 
 			SRecursiveMapScanContext NextContext = *pContext;
 			str_copy(NextContext.m_aRelativePath, aRelativePath, sizeof(NextContext.m_aRelativePath));
-
-			char aFullPath[IO_MAX_PATH_LENGTH];
-			str_format(aFullPath, sizeof(aFullPath), "%s/%s", pContext->m_aBasePath, aRelativePath);
-			pContext->m_pScanContext->m_pStorage->ListDirectoryInfo(IStorage::TYPE_ALL, aFullPath, RecursiveMapScanCallback, &NextContext);
-			return 0;
+			NextContext.m_Depth = pContext->m_Depth + 1;
+			return ScanDirectory(pScan, aFullPath, RecursiveMapScanCallback, &NextContext) ? 0 : 1;
 		}
-
-		const char *pExtension = str_endswith_nocase(pInfo->m_pName, ".map") ? ".map" : FindBackgroundFileExtension(pInfo->m_pName);
-		if(pExtension == nullptr)
-			return 0;
 
 		char aName[IO_MAX_PATH_LENGTH];
 		if(pContext->m_aNamePrefix[0] != '\0')
@@ -145,11 +236,13 @@ private:
 			{
 				char aWithoutExt[IO_MAX_PATH_LENGTH];
 				str_truncate(aWithoutExt, sizeof(aWithoutExt), aRelativePath, str_length(aRelativePath) - str_length(pExtension));
-				str_format(aName, sizeof(aName), "%s/%s", pContext->m_aNamePrefix, aWithoutExt);
+				if(!JoinScanPath(pScan, aName, pContext->m_aNamePrefix, aWithoutExt))
+					return 1;
 			}
 			else
 			{
-				str_format(aName, sizeof(aName), "%s/%s", pContext->m_aNamePrefix, aRelativePath);
+				if(!JoinScanPath(pScan, aName, pContext->m_aNamePrefix, aRelativePath))
+					return 1;
 			}
 		}
 		else
@@ -166,19 +259,19 @@ private:
 		str_copy(Entry.m_aName, aName);
 		Entry.m_IsDir = false;
 		Entry.m_Source = pContext->m_Source;
-		pContext->m_pScanContext->m_pEntries->push_back(Entry);
-		return 0;
+		return AddScanEntry(pScan, Entry) ? 0 : 1;
 	}
 
 protected:
 	void Run() override REQUIRES(!m_Lock)
 	{
 		std::vector<SAssetEntry> vEntries;
-		SScanContext ScanContext{m_pStorage, &vEntries, EAssetResourceKind::DIRECTORY, true, EEntityBgHierarchyEntrySource::LOCAL};
+		SScanContext ScanContext{m_pStorage, &vEntries, EAssetResourceKind::DIRECTORY, true, EEntityBgHierarchyEntrySource::LOCAL, &m_Limits};
 
 		if(m_Type == ASSET_TYPE_EXTRAS)
 		{
-			m_pStorage->ListDirectory(IStorage::TYPE_ALL, "assets/extras", ScanCallback, &ScanContext);
+			if(!ScanDirectory(&ScanContext, "assets/extras", ScanCallback, &ScanContext))
+				return;
 		}
 		else
 		{
@@ -226,11 +319,13 @@ protected:
 
 				SRecursiveMapScanContext AssetsContext;
 				AssetsContext.m_pScanContext = &ScanContext;
-				str_copy(AssetsContext.m_aBasePath, pCategory->m_pInstallFolder, sizeof(AssetsContext.m_aBasePath));
+				if(!JoinScanPath(&ScanContext, AssetsContext.m_aBasePath, "", pCategory->m_pInstallFolder))
+					return;
 				AssetsContext.m_aRelativePath[0] = '\0';
 				str_copy(AssetsContext.m_aNamePrefix, "entity_bg", sizeof(AssetsContext.m_aNamePrefix));
 				AssetsContext.m_Source = EEntityBgHierarchyEntrySource::LOCAL;
-				m_pStorage->ListDirectoryInfo(IStorage::TYPE_ALL, pCategory->m_pInstallFolder, RecursiveMapScanCallback, &AssetsContext);
+				if(!ScanDirectory(&ScanContext, pCategory->m_pInstallFolder, RecursiveMapScanCallback, &AssetsContext))
+					return;
 
 				SRecursiveMapScanContext MapsContext;
 				MapsContext.m_pScanContext = &ScanContext;
@@ -238,21 +333,25 @@ protected:
 				MapsContext.m_aRelativePath[0] = '\0';
 				MapsContext.m_aNamePrefix[0] = '\0';
 				MapsContext.m_Source = EEntityBgHierarchyEntrySource::LOCAL;
-				m_pStorage->ListDirectoryInfo(IStorage::TYPE_ALL, "maps", RecursiveMapScanCallback, &MapsContext);
+				if(!ScanDirectory(&ScanContext, "maps", RecursiveMapScanCallback, &MapsContext))
+					return;
 			}
 			else if(pCategory->m_Kind == EAssetResourceKind::MAP_FILE)
 			{
 				SRecursiveMapScanContext RecursiveContext;
 				RecursiveContext.m_pScanContext = &ScanContext;
-				str_copy(RecursiveContext.m_aBasePath, pCategory->m_pInstallFolder, sizeof(RecursiveContext.m_aBasePath));
+				if(!JoinScanPath(&ScanContext, RecursiveContext.m_aBasePath, "", pCategory->m_pInstallFolder))
+					return;
 				RecursiveContext.m_aRelativePath[0] = '\0';
 				RecursiveContext.m_aNamePrefix[0] = '\0';
 				RecursiveContext.m_Source = EEntityBgHierarchyEntrySource::LOCAL;
-				m_pStorage->ListDirectoryInfo(IStorage::TYPE_ALL, pCategory->m_pInstallFolder, RecursiveMapScanCallback, &RecursiveContext);
+				if(!ScanDirectory(&ScanContext, pCategory->m_pInstallFolder, RecursiveMapScanCallback, &RecursiveContext))
+					return;
 			}
 			else
 			{
-				m_pStorage->ListDirectory(IStorage::TYPE_ALL, pCategory->m_pInstallFolder, ScanCallback, &ScanContext);
+				if(!ScanDirectory(&ScanContext, pCategory->m_pInstallFolder, ScanCallback, &ScanContext))
+					return;
 			}
 		}
 
@@ -280,8 +379,14 @@ protected:
 
 public:
 	CAssetListLoadJob(EAssetType Type, IStorage *pStorage) :
+		CAssetListLoadJob(Type, pStorage, SScanLimits{})
+	{
+	}
+
+	CAssetListLoadJob(EAssetType Type, IStorage *pStorage, const SScanLimits &Limits) :
 		m_Type(Type),
-		m_pStorage(pStorage)
+		m_pStorage(pStorage),
+		m_Limits(Limits)
 	{
 	}
 

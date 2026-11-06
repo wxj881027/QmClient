@@ -412,6 +412,17 @@ namespace
 			m_LastCandidate = pJob;
 			return pJob;
 		}
+		size_t StoredFileBytes(const char *pPath = "preview.png")
+		{
+			IOHANDLE File = m_pStorage->OpenFile(pPath, IOFLAG_READ, IStorage::TYPE_SAVE);
+			if(!File)
+				throw std::runtime_error("missing preview fixture");
+			const int64_t Length = io_length(File);
+			const int Closed = io_close(File);
+			if(Length <= 0 || Closed != 0)
+				throw std::runtime_error("invalid preview fixture length");
+			return static_cast<size_t>(Length);
+		}
 		bool Start()
 		{
 			return TryStartSettingsResourcePreviewJob(m_Cache, m_Jobs, m_Key, m_Engine, [this] { return CreateJob(); });
@@ -516,6 +527,71 @@ TEST_F(ResourcePreviewAdmission, ClosedNativePoolLeavesNoWaitingIdentityAndReope
 	EXPECT_NE(Result.m_Artifact.m_Image.m_pData, nullptr);
 }
 
+TEST_F(ResourcePreviewAdmission, FromPathFileLimitRejectsBeforeDecodeAndExactLimitAllowsRetry)
+{
+	const size_t FileBytes = StoredFileBytes();
+	CJobPool Pool;
+	ASSERT_TRUE(Pool.TryInit(1));
+	auto pRejected = CSettingsResourcePreviewJob::FromPath("file-budget", "preview.png", m_pStorage.get(), IStorage::TYPE_SAVE, 1, FileBytes - 1, 8);
+	ASSERT_TRUE(Pool.TryAdd(pRejected));
+	ASSERT_TRUE(WaitForJobFinished(*pRejected));
+	auto Rejected = pRejected->TakeResult();
+	EXPECT_FALSE(Rejected.m_Artifact.m_Success);
+	EXPECT_EQ(Rejected.m_Artifact.m_Image.m_pData, nullptr);
+
+	auto pAccepted = CSettingsResourcePreviewJob::FromPath("file-budget", "preview.png", m_pStorage.get(), IStorage::TYPE_SAVE, 1, FileBytes, 8);
+	ASSERT_TRUE(Pool.TryAdd(pAccepted));
+	ASSERT_TRUE(WaitForJobFinished(*pAccepted));
+	Pool.Shutdown();
+	auto Accepted = pAccepted->TakeResult();
+	ASSERT_TRUE(Accepted.m_Artifact.m_Success);
+	EXPECT_EQ(Accepted.m_Artifact.m_Image.DataSize(), 4u);
+}
+
+TEST_F(ResourcePreviewAdmission, FromPathDecodedBudgetRejectsSourceBeforeResizeAndExactLimitRecovers)
+{
+	CJobPool Pool;
+	ASSERT_TRUE(Pool.TryInit(1));
+	auto pRejected = CSettingsResourcePreviewJob::FromPath("decoded-budget", "preview.png", m_pStorage.get(), IStorage::TYPE_SAVE, 1, StoredFileBytes(), 7);
+	ASSERT_TRUE(Pool.TryAdd(pRejected));
+	ASSERT_TRUE(WaitForJobFinished(*pRejected));
+	auto Rejected = pRejected->TakeResult();
+	EXPECT_FALSE(Rejected.m_Artifact.m_Success);
+	EXPECT_EQ(Rejected.m_Artifact.m_Image.m_pData, nullptr);
+
+	auto pAccepted = CSettingsResourcePreviewJob::FromPath("decoded-budget", "preview.png", m_pStorage.get(), IStorage::TYPE_SAVE, 1, StoredFileBytes(), 8);
+	ASSERT_TRUE(Pool.TryAdd(pAccepted));
+	ASSERT_TRUE(WaitForJobFinished(*pAccepted));
+	Pool.Shutdown();
+	auto Accepted = pAccepted->TakeResult();
+	ASSERT_TRUE(Accepted.m_Artifact.m_Success);
+	EXPECT_EQ(Accepted.m_Artifact.m_Image.m_Width, 1u);
+	EXPECT_EQ(Accepted.m_Artifact.m_Image.m_Height, 1u);
+}
+
+#if defined(CONF_WEBP)
+TEST_F(ResourcePreviewAdmission, FromPathWebpBudgetRejectsSourceBeforeResizeAndCanRetry)
+{
+	CPreviewImage Image(2, 1);
+	ASSERT_NE(Image.m_Image.m_pData, nullptr);
+	ASSERT_TRUE(CImageLoader::SaveWebP(m_pStorage->OpenFile("preview.webp", IOFLAG_WRITE, IStorage::TYPE_SAVE), "preview.webp", Image.m_Image));
+	const size_t FileBytes = StoredFileBytes("preview.webp");
+	CJobPool Pool;
+	ASSERT_TRUE(Pool.TryInit(1));
+	auto pRejected = CSettingsResourcePreviewJob::FromPath("webp-budget", "preview.webp", m_pStorage.get(), IStorage::TYPE_SAVE, 1, FileBytes, 7);
+	ASSERT_TRUE(Pool.TryAdd(pRejected));
+	ASSERT_TRUE(WaitForJobFinished(*pRejected));
+	EXPECT_FALSE(pRejected->TakeResult().m_Artifact.m_Success);
+	auto pAccepted = CSettingsResourcePreviewJob::FromPath("webp-budget", "preview.webp", m_pStorage.get(), IStorage::TYPE_SAVE, 1, FileBytes, 8);
+	ASSERT_TRUE(Pool.TryAdd(pAccepted));
+	ASSERT_TRUE(WaitForJobFinished(*pAccepted));
+	Pool.Shutdown();
+	auto Accepted = pAccepted->TakeResult();
+	ASSERT_TRUE(Accepted.m_Artifact.m_Success);
+	EXPECT_EQ(Accepted.m_Artifact.m_Image.DataSize(), 4u);
+}
+#endif
+
 namespace
 {
 	// 只替换文件读取边界，任务、池终态和结果消费均使用生产实现。
@@ -544,20 +620,18 @@ namespace
 		bool GetExecutablePath(const char *, char *, unsigned) const override { Unexpected(); }
 		void ListDirectory(int, const char *, FS_LISTDIR_CALLBACK, void *) override { Unexpected(); }
 		void ListDirectoryInfo(int, const char *, FS_LISTDIR_CALLBACK_FILEINFO, void *) override { Unexpected(); }
-		IOHANDLE OpenFile(const char *, int, int, char *, int) override { Unexpected(); }
-		bool FileExists(const char *, int) override { Unexpected(); }
-		bool FolderExists(const char *, int) override { Unexpected(); }
-		bool ReadFile(const char *, int, void **ppResult, unsigned *pResultLen) override
+		IOHANDLE OpenFile(const char *, int, int, char *, int) override
 		{
-			*ppResult = nullptr;
-			*pResultLen = 0;
 			++m_Reads;
 			if(m_Failure == EFailure::ALLOCATION)
 				throw std::bad_alloc();
 			if(m_Failure == EFailure::RUNTIME)
-				throw std::runtime_error("preview read failed");
+				throw std::runtime_error("preview open failed");
 			throw SReadFailure{};
 		}
+		bool FileExists(const char *, int) override { Unexpected(); }
+		bool FolderExists(const char *, int) override { Unexpected(); }
+		bool ReadFile(const char *, int, void **, unsigned *) override { Unexpected(); }
 		char *ReadFileStr(const char *, int) override { Unexpected(); }
 		bool RetrieveTimes(const char *, int, time_t *, time_t *) override { Unexpected(); }
 		bool CalculateHashes(const char *, int, SHA256_DIGEST *, unsigned *) override { Unexpected(); }

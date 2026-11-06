@@ -1,6 +1,8 @@
 // 请抬头享受阳光｜日子很好 我很我---------致咩子
 #include "settings_resource_preview.h"
 
+#include "bounded_file_reader.h"
+
 #include <base/math.h>
 #include <base/system.h>
 
@@ -189,12 +191,14 @@ CSettingsResourcePreviewJob::CSettingsResourcePreviewJob(std::string Name, CImag
 {
 }
 
-std::shared_ptr<CSettingsResourcePreviewJob> CSettingsResourcePreviewJob::FromPath(std::string Name, std::string Path, IStorage *pStorage, int StorageType, int TargetSize)
+std::shared_ptr<CSettingsResourcePreviewJob> CSettingsResourcePreviewJob::FromPath(std::string Name, std::string Path, IStorage *pStorage, int StorageType, int TargetSize, size_t MaxFileBytes, size_t MaxDecodedBytes)
 {
 	std::shared_ptr<CSettingsResourcePreviewJob> pJob = std::make_shared<CSettingsResourcePreviewJob>(std::move(Name), CImageInfo(), TargetSize);
 	pJob->m_Path = std::move(Path);
 	pJob->m_pStorage = pStorage;
 	pJob->m_StorageType = StorageType;
+	pJob->m_MaxFileBytes = MaxFileBytes;
+	pJob->m_MaxDecodedBytes = MaxDecodedBytes;
 	return pJob;
 }
 
@@ -233,7 +237,7 @@ void CSettingsResourcePreviewJob::Run()
 	}
 	SResult Result;
 	if(!m_Path.empty())
-		Result.m_Artifact = BuildPreviewArtifactFromPath(m_Path.c_str(), m_pStorage, m_StorageType, m_Name.c_str(), m_TargetSize);
+		Result.m_Artifact = BuildPreviewArtifactFromPath(m_Path.c_str(), m_pStorage, m_StorageType, m_Name.c_str(), m_TargetSize, m_MaxFileBytes, m_MaxDecodedBytes);
 	else
 		Result.m_Artifact = BuildPreviewArtifact(std::move(m_InputImage), m_TargetSize);
 	const CLockScope Lock(m_Lock);
@@ -420,7 +424,7 @@ SResourcePreviewArtifact BuildPreviewArtifact(CImageInfo &&Image, int TargetSize
 	return Artifact;
 }
 
-SResourcePreviewArtifact BuildPreviewArtifactFromPath(const char *pPath, IStorage *pStorage, int StorageType, const char *pContextName, int TargetSize)
+SResourcePreviewArtifact BuildPreviewArtifactFromPath(const char *pPath, IStorage *pStorage, int StorageType, const char *pContextName, int TargetSize, size_t MaxFileBytes, size_t MaxDecodedBytes)
 {
 	const auto Start = time_get_nanoseconds();
 	SResourcePreviewArtifact Artifact;
@@ -430,11 +434,8 @@ SResourcePreviewArtifact BuildPreviewArtifactFromPath(const char *pPath, IStorag
 		return Artifact;
 	}
 
-	void *pData = nullptr;
-	unsigned DataSize = 0;
-	const bool Read = pStorage->ReadFile(pPath, StorageType, &pData, &DataSize);
-	const std::unique_ptr<void, decltype(&free)> pFile(pData, free);
-	if(!Read || pFile == nullptr || DataSize == 0)
+	std::vector<uint8_t> vFileData;
+	if(!QmReadFileBounded(pStorage->OpenFile(pPath, IOFLAG_READ, StorageType), MaxFileBytes, vFileData))
 	{
 		Artifact.m_DurationMs = std::chrono::duration<double, std::milli>(time_get_nanoseconds() - Start).count();
 		return Artifact;
@@ -442,9 +443,9 @@ SResourcePreviewArtifact BuildPreviewArtifactFromPath(const char *pPath, IStorag
 
 	SResourcePreviewArtifact Decoded;
 	bool Success = false;
-	if(CImageLoader::LoadWebP(pFile.get(), DataSize, pContextName != nullptr ? pContextName : pPath, Decoded.m_Image))
+	if(CImageLoader::LoadWebP(vFileData.data(), vFileData.size(), pContextName != nullptr ? pContextName : pPath, Decoded.m_Image, MaxDecodedBytes))
 		Success = true;
-	else if(CImageLoader::LoadPng(pFile.get(), DataSize, pContextName != nullptr ? pContextName : pPath, Decoded.m_Image))
+	else if(CImageLoader::LoadPng(vFileData.data(), vFileData.size(), pContextName != nullptr ? pContextName : pPath, Decoded.m_Image, MaxDecodedBytes))
 		Success = true;
 	if(Success)
 		Artifact = BuildPreviewArtifact(std::move(Decoded.m_Image), TargetSize);

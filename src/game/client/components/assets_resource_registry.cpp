@@ -18,6 +18,8 @@ SEntitiesAssetSelection ResolveEntitiesAssetSelection(std::string_view AssetName
 namespace
 {
 	constexpr std::string_view ENTITY_BG_WORKSHOP_PREFIX = "entity_bg/";
+	constexpr std::string_view ENTITY_BG_WORKSHOP_FOLDER_TOKEN = "//entity_bg";
+	constexpr std::string_view ENTITY_BG_WORKSHOP_FOLDER_PREFIX = "//entity_bg/";
 	constexpr std::string_view ENTITY_BG_INSTALL_PREFIX = "assets/entity_bg/";
 	constexpr std::string_view ENTITY_BG_MAP_SUFFIX = ".map";
 	constexpr const char *ENTITY_BG_WORKSHOP_FOLDER_LABEL = "entity_bg (Workshop)";
@@ -122,7 +124,7 @@ bool IsEntityBgWorkshopRootEntry(const SEntityBgHierarchyEntry &Entry)
 {
 	return Entry.m_IsDirectory &&
 	       Entry.m_Source == EEntityBgHierarchyEntrySource::WORKSHOP &&
-	       str_comp(Entry.m_aName, "entity_bg") == 0;
+	       IsEntityBgWorkshopFolderPath(Entry.m_aName);
 }
 
 EEntityBgHierarchyEntrySource MergeEntityBgHierarchyEntrySource(EEntityBgHierarchyEntrySource Existing, EEntityBgHierarchyEntrySource Incoming)
@@ -372,13 +374,30 @@ std::array<std::string, 4> BuildNamedSingleFileAssetCandidates(std::string_view 
 
 bool IsEntityBgWorkshopFolderPath(const char *pPath)
 {
-	return pPath != nullptr && str_comp(pPath, "entity_bg") == 0;
+	return pPath != nullptr && (str_comp(pPath, ENTITY_BG_WORKSHOP_FOLDER_TOKEN.data()) == 0 || str_comp(pPath, "entity_bg") == 0);
+}
+
+bool IsEntityBgParentFolderPath(const char *pPath)
+{
+	return pPath != nullptr && str_comp(pPath, "/") == 0;
+}
+
+bool EntityBgWorkshopAssetMatchesFolder(std::string_view AssetName, const char *pCurrentFolder)
+{
+	if(!IsEntityBgWorkshopFolderOrChildPath(pCurrentFolder))
+		return false;
+	if(IsEntityBgWorkshopFolderPath(pCurrentFolder))
+		return true;
+	std::string_view Folder(pCurrentFolder);
+	if(Folder.starts_with("//"))
+		Folder.remove_prefix(2);
+	return AssetName.size() > Folder.size() && AssetName.starts_with(Folder) && AssetName[Folder.size()] == '/';
 }
 
 bool EntityBgHierarchyEntryLess(const SEntityBgHierarchyEntry &Left, const SEntityBgHierarchyEntry &Right)
 {
-	const bool LeftIsParent = str_comp(Left.m_aName, "..") == 0;
-	const bool RightIsParent = str_comp(Right.m_aName, "..") == 0;
+	const bool LeftIsParent = Left.m_IsDirectory && IsEntityBgParentFolderPath(Left.m_aName);
+	const bool RightIsParent = Right.m_IsDirectory && IsEntityBgParentFolderPath(Right.m_aName);
 	if(LeftIsParent != RightIsParent)
 		return LeftIsParent;
 
@@ -421,13 +440,20 @@ static std::string_view EntityBgHierarchyPath(std::string_view AssetName)
 	return AssetName;
 }
 
-static bool IsEntityBgWorkshopFolderOrChildPath(const char *pPath)
+bool IsEntityBgWorkshopFolderOrChildPath(const char *pPath)
 {
-	return pPath != nullptr && (IsEntityBgWorkshopFolderPath(pPath) || str_startswith(pPath, "entity_bg/"));
+	return pPath != nullptr && (IsEntityBgWorkshopFolderPath(pPath) || str_startswith(pPath, ENTITY_BG_WORKSHOP_FOLDER_PREFIX.data()) || str_startswith(pPath, "entity_bg/"));
 }
 
 static std::string_view EntityBgLogicalFolder(std::string_view CurrentFolder)
 {
+	if(CurrentFolder == ENTITY_BG_WORKSHOP_FOLDER_TOKEN)
+		return "";
+	if(CurrentFolder.starts_with(ENTITY_BG_WORKSHOP_FOLDER_PREFIX))
+		return CurrentFolder.substr(ENTITY_BG_WORKSHOP_FOLDER_PREFIX.size());
+	// LOCAL 目录用前导斜杠隔离导航身份；只去掉该标记，不再解释同名 Workshop 前缀。
+	if(CurrentFolder.starts_with('/'))
+		return CurrentFolder.substr(1);
 	if(CurrentFolder == "entity_bg")
 		return "";
 	if(CurrentFolder.starts_with(ENTITY_BG_WORKSHOP_PREFIX))
@@ -460,7 +486,7 @@ std::vector<SEntityBgHierarchyEntry> BuildEntityBgHierarchyEntries(const std::ve
 	};
 
 	if(aFolder[0] != '\0')
-		AddEntry("..", "..", true, EEntityBgHierarchyEntrySource::NAVIGATION);
+		AddEntry("/", "..", true, EEntityBgHierarchyEntrySource::NAVIGATION);
 
 	for(const std::string &AssetName : vAssetNames)
 	{
@@ -484,7 +510,7 @@ std::vector<SEntityBgHierarchyEntry> BuildEntityBgHierarchyEntries(const std::ve
 			else
 			{
 				const std::string FolderDisplayName(HierarchyName.substr(0, SlashPos));
-				const std::string FolderPath(HierarchyName.substr(0, SlashPos));
+				const std::string FolderPath = "/" + std::string(HierarchyName.substr(0, SlashPos));
 				AddEntry(FolderPath.c_str(), FolderDisplayName.c_str(), true, Source);
 			}
 			continue;
@@ -501,7 +527,7 @@ std::vector<SEntityBgHierarchyEntry> BuildEntityBgHierarchyEntries(const std::ve
 				continue;
 		}
 
-		const std::string_view MatchFolder = IsWorkshopFolder ? LogicalFolder : std::string_view(aFolder);
+		const std::string_view MatchFolder = LogicalFolder;
 		if(HierarchyName == MatchFolder)
 			continue;
 		if(!MatchFolder.empty())
@@ -524,13 +550,13 @@ std::vector<SEntityBgHierarchyEntry> BuildEntityBgHierarchyEntries(const std::ve
 			const std::string ChildDisplayName(Remainder.substr(0, SlashPos));
 			const std::string ChildLogicalPath = MatchFolder.empty() ? std::string(Remainder.substr(0, SlashPos)) :
 										   std::string(MatchFolder) + "/" + std::string(Remainder.substr(0, SlashPos));
-			const std::string ChildPath = IsWorkshopFolder ? std::string(ENTITY_BG_WORKSHOP_PREFIX) + ChildLogicalPath : ChildLogicalPath;
+			const std::string ChildPath = IsWorkshopFolder ? std::string(ENTITY_BG_WORKSHOP_FOLDER_PREFIX) + ChildLogicalPath : "/" + ChildLogicalPath;
 			AddEntry(ChildPath.c_str(), ChildDisplayName.c_str(), true, Source);
 		}
 	}
 
 	if(aFolder[0] == '\0' && ShowWorkshopFolder && (ForceShowWorkshopFolder || HasEntityBgWorkshopFolder(vAssetNames, pAssetSources)))
-		AddEntry("entity_bg", ENTITY_BG_WORKSHOP_FOLDER_LABEL, true, EEntityBgHierarchyEntrySource::WORKSHOP);
+		AddEntry(ENTITY_BG_WORKSHOP_FOLDER_TOKEN.data(), ENTITY_BG_WORKSHOP_FOLDER_LABEL, true, EEntityBgHierarchyEntrySource::WORKSHOP);
 
 	std::stable_sort(vEntries.begin(), vEntries.end(), EntityBgHierarchyEntryLess);
 	return vEntries;
@@ -550,7 +576,7 @@ void BuildEntityBgParentFolder(const char *pCurrentFolder, char *pOut, int OutSi
 	if(pOut[0] == '\0')
 		return;
 
-	if(str_comp(pOut, "entity_bg") == 0 || fs_parent_dir(pOut) != 0)
+	if(IsEntityBgWorkshopFolderPath(pOut) || fs_parent_dir(pOut) != 0)
 		pOut[0] = '\0';
 }
 

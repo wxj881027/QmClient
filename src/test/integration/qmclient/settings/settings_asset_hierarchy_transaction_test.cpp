@@ -110,7 +110,7 @@ namespace
 		if(Filtered)
 			EXPECT_EQ(ItemNames(Candidate.m_vItems), (std::vector<std::string>{"default", NESTED_MAP, SYNCED_MAP, CURRENT_MAP}));
 		else
-			EXPECT_EQ(ItemNames(Candidate.m_vItems), (std::vector<std::string>{"entity_bg", "folder-one", "default", CURRENT_MAP}));
+			EXPECT_EQ(ItemNames(Candidate.m_vItems), (std::vector<std::string>{"//entity_bg", "/folder-one", "default", CURRENT_MAP}));
 		for(const TItem &Item : Candidate.m_vItems)
 		{
 			EXPECT_EQ(Item.m_aAuthor[0] != '\0', !Item.m_IsDirectory);
@@ -188,7 +188,7 @@ TEST(SettingsAssetHierarchyTransaction, HierarchyPreparesDefaultSourcesFoldersAn
 			vCandidateKinds.emplace("entity_bg/installed.map", EEntityBgHierarchyEntrySource::WORKSHOP); }, [&](TItem &Item) { ++AuthorCalls; str_copy(Item.m_aAuthor, "prepared author"); });
 	ASSERT_TRUE(Candidate);
 	EXPECT_TRUE(SyncSawDefault);
-	EXPECT_EQ(ItemNames(Candidate->m_vItems), (std::vector<std::string>{"entity_bg", "folder", "default", "zeta.map"}));
+	EXPECT_EQ(ItemNames(Candidate->m_vItems), (std::vector<std::string>{"//entity_bg", "/folder", "default", "zeta.map"}));
 	EXPECT_EQ(AuthorCalls, 2);
 	EXPECT_TRUE(Candidate->m_vItems[0].m_IsDirectory);
 	EXPECT_TRUE(Candidate->m_vItems[1].m_IsDirectory);
@@ -202,19 +202,41 @@ TEST(SettingsAssetHierarchyTransaction, HiddenWorkshopResetsItsChildFolderOnlyIn
 {
 	const std::vector<std::string> vNames = {"local.map", "entity_bg/installed.map"};
 	const TSourceKinds vKinds = {{"entity_bg/installed.map", EEntityBgHierarchyEntrySource::WORKSHOP}};
-	const char aFolder[] = "entity_bg/child";
-	auto Candidate = TryPrepareSettingsAssetHierarchy<TItem>(vNames, vKinds, aFolder, false, true, "", KeepSources, PopulateAuthor);
+	for(const char *pFolder : {"//entity_bg/child", "entity_bg/child"})
+	{
+		SCOPED_TRACE(pFolder);
+		const std::string Folder(pFolder);
+		auto Candidate = TryPrepareSettingsAssetHierarchy<TItem>(vNames, vKinds, Folder.c_str(), false, true, "", KeepSources, PopulateAuthor);
+		ASSERT_TRUE(Candidate);
+		EXPECT_STREQ(Candidate->m_aCurrentFolder, "");
+		EXPECT_EQ(Folder, pFolder);
+		EXPECT_EQ(ItemNames(Candidate->m_vItems), (std::vector<std::string>{"default", "local.map"}));
+	}
+}
+
+TEST(SettingsAssetHierarchyTransaction, HiddenWorkshopDoesNotResetLocalEntityBgNavigationTokens)
+{
+	const std::vector<std::string> vNames = {"entity_bg/entity_bg/sub/local", "entity_bg/workshop"};
+	const TSourceKinds Kinds = {
+		{vNames[0], EEntityBgHierarchyEntrySource::LOCAL},
+		{vNames[1], EEntityBgHierarchyEntrySource::WORKSHOP},
+	};
+	auto Candidate = TryPrepareSettingsAssetHierarchy<TItem>(vNames, Kinds, "/entity_bg/sub", false, false, "", KeepSources, PopulateAuthor);
 	ASSERT_TRUE(Candidate);
-	EXPECT_STREQ(Candidate->m_aCurrentFolder, "");
-	EXPECT_STREQ(aFolder, "entity_bg/child");
-	EXPECT_EQ(ItemNames(Candidate->m_vItems), (std::vector<std::string>{"default", "local.map"}));
+	EXPECT_STREQ(Candidate->m_aCurrentFolder, "/entity_bg/sub");
+	EXPECT_EQ(ItemNames(Candidate->m_vItems), (std::vector<std::string>{"/", vNames[0]}));
+	EXPECT_TRUE(Candidate->m_vItems[0].m_IsDirectory);
+	EXPECT_FALSE(Candidate->m_vItems[1].m_IsDirectory);
+	EXPECT_STREQ(Candidate->m_vItems[1].m_aAuthor, "Creator of entity_bg/entity_bg/sub/local");
+	EXPECT_EQ(Candidate->m_vSourceKinds.at(vNames[0]), EEntityBgHierarchyEntrySource::LOCAL);
+	EXPECT_EQ(Candidate->m_vSourceKinds.find("/entity_bg/sub"), Candidate->m_vSourceKinds.end());
 }
 
 TEST(SettingsAssetHierarchyTransaction, PendingWorkshopContentCanKeepTheWorkshopFolderVisible)
 {
 	auto Candidate = TryPrepareSettingsAssetHierarchy<TItem>({}, {}, "", true, true, "", KeepSources, PopulateAuthor);
 	ASSERT_TRUE(Candidate);
-	EXPECT_EQ(ItemNames(Candidate->m_vItems), (std::vector<std::string>{"entity_bg", "default"}));
+	EXPECT_EQ(ItemNames(Candidate->m_vItems), (std::vector<std::string>{"//entity_bg", "default"}));
 	EXPECT_TRUE(Candidate->m_vItems[0].m_IsDirectory);
 }
 
@@ -384,4 +406,171 @@ TEST(SettingsAssetHierarchyTransaction, RemovedPreviewRemainsOwnedByTheReturnedO
 	EXPECT_EQ(pOld->m_RenderTexture.Id(), 81);
 	EXPECT_EQ(pOld->m_RenderTexture.Generation(), 12u);
 	EXPECT_EQ(pOld->m_pDecodeJob, pRemovedJob);
+}
+
+TEST(SettingsAssetHierarchyTransaction, DirectoryNavigationDoesNotBorrowItsSameStemLeafPreview)
+{
+	SPublishedHierarchy Published;
+	Published.m_vSourceNames = {"foo", "foo/child"};
+	Published.m_vSourceKinds = {{"foo", EEntityBgHierarchyEntrySource::LOCAL}, {"foo/child", EEntityBgHierarchyEntrySource::LOCAL}};
+	str_copy(Published.m_vItems[0].m_aName, "foo");
+	const auto *pPixels = Published.m_vItems[0].m_PreviewImage.m_pData;
+	ASSERT_NE(pPixels, nullptr);
+	auto Root = TryPrepareSettingsAssetHierarchy<TItem>(Published.m_vSourceNames, Published.m_vSourceKinds, "", true, false, "", KeepSources, PopulateAuthor);
+	ASSERT_TRUE(Root);
+	EXPECT_EQ(ItemNames(Root->m_vItems), (std::vector<std::string>{"/foo", "default", "foo"}));
+	CommitSettingsAssetHierarchy(*Root, Published.m_vSourceNames, Published.m_vSourceKinds, Published.m_vItems);
+	const auto *pDirectory = FindItem(Published.m_vItems, "/foo");
+	ASSERT_NE(pDirectory, nullptr);
+	EXPECT_TRUE(pDirectory->m_IsDirectory);
+	EXPECT_FALSE(pDirectory->m_RenderTexture.IsValid());
+	EXPECT_EQ(pDirectory->m_PreviewImage.m_pData, nullptr);
+	EXPECT_EQ(pDirectory->m_pDecodeJob, nullptr);
+	EXPECT_STREQ(pDirectory->m_aAuthor, "");
+	const auto *pLeaf = FindItem(Published.m_vItems, "foo");
+	ASSERT_NE(pLeaf, nullptr);
+	EXPECT_FALSE(pLeaf->m_IsDirectory);
+	EXPECT_EQ(pLeaf->m_RenderTexture.Id(), 37);
+	EXPECT_EQ(pLeaf->m_RenderTexture.Generation(), 9U);
+	EXPECT_EQ(pLeaf->m_PreviewImage.m_pData, pPixels);
+	EXPECT_STREQ(pLeaf->m_aAuthor, "Creator of foo");
+	EXPECT_EQ(Published.m_vSourceKinds.find("/foo"), Published.m_vSourceKinds.end());
+
+	auto Child = TryPrepareSettingsAssetHierarchy<TItem>(Published.m_vSourceNames, Published.m_vSourceKinds, pDirectory->m_aName, true, false, "", KeepSources, PopulateAuthor);
+	ASSERT_TRUE(Child);
+	EXPECT_EQ(ItemNames(Child->m_vItems), (std::vector<std::string>{"/", "foo/child"}));
+	CommitSettingsAssetHierarchy(*Child, Published.m_vSourceNames, Published.m_vSourceKinds, Published.m_vItems);
+	const auto *pChildLeaf = FindItem(Published.m_vItems, "foo/child");
+	ASSERT_NE(pChildLeaf, nullptr);
+	EXPECT_FALSE(pChildLeaf->m_RenderTexture.IsValid());
+	EXPECT_EQ(pChildLeaf->m_PreviewImage.m_pData, nullptr);
+	const auto *pRetiredLeaf = FindItem(Child->m_vItems, "foo");
+	ASSERT_NE(pRetiredLeaf, nullptr);
+	EXPECT_FALSE(pRetiredLeaf->m_IsDirectory);
+	EXPECT_EQ(pRetiredLeaf->m_RenderTexture.Id(), 37);
+	EXPECT_EQ(pRetiredLeaf->m_RenderTexture.Generation(), 9U);
+	EXPECT_EQ(pRetiredLeaf->m_PreviewImage.m_pData, pPixels);
+	const auto *pRetiredDirectory = FindItem(Child->m_vItems, "/foo");
+	ASSERT_NE(pRetiredDirectory, nullptr);
+	EXPECT_TRUE(pRetiredDirectory->m_IsDirectory);
+	EXPECT_FALSE(pRetiredDirectory->m_RenderTexture.IsValid());
+	EXPECT_EQ(pRetiredDirectory->m_PreviewImage.m_pData, nullptr);
+}
+
+TEST(SettingsAssetHierarchyTransaction, WorkshopNavigationAndItsSameNamedLeafKeepSeparatePreviewOwners)
+{
+	SPublishedHierarchy Published;
+	Published.m_vSourceNames = {"entity_bg", "entity_bg/installed"};
+	Published.m_vSourceKinds = {{"entity_bg", EEntityBgHierarchyEntrySource::LOCAL}, {"entity_bg/installed", EEntityBgHierarchyEntrySource::WORKSHOP}};
+	str_copy(Published.m_vItems[0].m_aName, "entity_bg");
+	const auto *pPixels = Published.m_vItems[0].m_PreviewImage.m_pData;
+	ASSERT_NE(pPixels, nullptr);
+	auto Root = TryPrepareSettingsAssetHierarchy<TItem>(Published.m_vSourceNames, Published.m_vSourceKinds, "", true, false, "", KeepSources, PopulateAuthor);
+	ASSERT_TRUE(Root);
+	EXPECT_EQ(ItemNames(Root->m_vItems), (std::vector<std::string>{"//entity_bg", "default", "entity_bg"}));
+	CommitSettingsAssetHierarchy(*Root, Published.m_vSourceNames, Published.m_vSourceKinds, Published.m_vItems);
+	const auto *pDirectory = FindItem(Published.m_vItems, "//entity_bg");
+	ASSERT_NE(pDirectory, nullptr);
+	EXPECT_TRUE(pDirectory->m_IsDirectory);
+	EXPECT_FALSE(pDirectory->m_RenderTexture.IsValid());
+	EXPECT_EQ(pDirectory->m_PreviewImage.m_pData, nullptr);
+	EXPECT_EQ(pDirectory->m_pDecodeJob, nullptr);
+	const auto *pLeaf = FindItem(Published.m_vItems, "entity_bg");
+	ASSERT_NE(pLeaf, nullptr);
+	EXPECT_FALSE(pLeaf->m_IsDirectory);
+	EXPECT_EQ(pLeaf->m_RenderTexture.Id(), 37);
+	EXPECT_EQ(pLeaf->m_PreviewImage.m_pData, pPixels);
+	EXPECT_NE(Published.m_vSourceKinds.find("entity_bg"), Published.m_vSourceKinds.end());
+	EXPECT_EQ(Published.m_vSourceKinds.find("//entity_bg"), Published.m_vSourceKinds.end());
+}
+
+TEST(SettingsAssetHierarchyTransaction, ReturningFromFlatFilterRetiresTheWorkshopLeafJobInsteadOfGivingItToNavigation)
+{
+	SPublishedHierarchy Published;
+	Published.m_vSourceNames = {"entity_bg/installed"};
+	Published.m_vSourceKinds = {{"entity_bg/installed", EEntityBgHierarchyEntrySource::WORKSHOP}};
+	str_copy(Published.m_vItems[0].m_aName, "entity_bg/installed");
+	Published.m_vItems[0].m_PreviewImage.Free();
+	Published.m_vItems[0].m_PreviewBytes = 0;
+	Published.m_vItems[0].m_PreviewState = TItem::PREVIEW_STATE_LOADING;
+	Published.m_vItems[0].m_pDecodeJob = std::make_shared<CHierarchyPreviewJob>();
+	const auto pJob = Published.m_vItems[0].m_pDecodeJob;
+	auto Flat = TryPrepareSettingsAssetHierarchy<TItem>(Published.m_vSourceNames, Published.m_vSourceKinds, "", true, false, "Creator", KeepSources, PopulateAuthor);
+	ASSERT_TRUE(Flat);
+	CommitSettingsAssetHierarchy(*Flat, Published.m_vSourceNames, Published.m_vSourceKinds, Published.m_vItems);
+	ASSERT_NE(FindItem(Published.m_vItems, "entity_bg/installed"), nullptr);
+	auto Root = TryPrepareSettingsAssetHierarchy<TItem>(Published.m_vSourceNames, Published.m_vSourceKinds, "", true, false, "", KeepSources, PopulateAuthor);
+	ASSERT_TRUE(Root);
+	CommitSettingsAssetHierarchy(*Root, Published.m_vSourceNames, Published.m_vSourceKinds, Published.m_vItems);
+	const auto *pDirectory = FindItem(Published.m_vItems, "//entity_bg");
+	ASSERT_NE(pDirectory, nullptr);
+	EXPECT_TRUE(pDirectory->m_IsDirectory);
+	EXPECT_FALSE(pDirectory->m_RenderTexture.IsValid());
+	EXPECT_EQ(pDirectory->m_pDecodeJob, nullptr);
+	EXPECT_EQ(FindItem(Published.m_vItems, "entity_bg/installed"), nullptr);
+	const auto *pRetired = FindItem(Root->m_vItems, "entity_bg/installed");
+	ASSERT_NE(pRetired, nullptr);
+	EXPECT_FALSE(pRetired->m_IsDirectory);
+	EXPECT_EQ(pRetired->m_RenderTexture.Id(), 37);
+	EXPECT_EQ(pRetired->m_pDecodeJob, pJob);
+	EXPECT_EQ(pJob.use_count(), 2);
+	EXPECT_EQ(Published.m_vSourceKinds.find("//entity_bg"), Published.m_vSourceKinds.end());
+}
+
+TEST(SettingsAssetHierarchyTransaction, ParentNavigationDoesNotBorrowTheRealDotDotMapLeafPreview)
+{
+	SPublishedHierarchy Published;
+	// maps/...map 的真实资源名是 ..，仍作为 leaf 保留，不能拿它作父目录身份。
+	Published.m_vSourceNames = {"..", "foo/child"};
+	Published.m_vSourceKinds = {{"..", EEntityBgHierarchyEntrySource::LOCAL}, {"foo/child", EEntityBgHierarchyEntrySource::LOCAL}};
+	str_copy(Published.m_vItems[0].m_aName, "..");
+	const auto *pPixels = Published.m_vItems[0].m_PreviewImage.m_pData;
+	ASSERT_NE(pPixels, nullptr);
+	auto Root = TryPrepareSettingsAssetHierarchy<TItem>(Published.m_vSourceNames, Published.m_vSourceKinds, "", true, false, "", KeepSources, PopulateAuthor);
+	ASSERT_TRUE(Root);
+	CommitSettingsAssetHierarchy(*Root, Published.m_vSourceNames, Published.m_vSourceKinds, Published.m_vItems);
+	const auto *pLeaf = FindItem(Published.m_vItems, "..");
+	ASSERT_NE(pLeaf, nullptr);
+	EXPECT_FALSE(pLeaf->m_IsDirectory);
+	EXPECT_EQ(pLeaf->m_PreviewImage.m_pData, pPixels);
+	auto Child = TryPrepareSettingsAssetHierarchy<TItem>(Published.m_vSourceNames, Published.m_vSourceKinds, "/foo", true, false, "", KeepSources, PopulateAuthor);
+	ASSERT_TRUE(Child);
+	CommitSettingsAssetHierarchy(*Child, Published.m_vSourceNames, Published.m_vSourceKinds, Published.m_vItems);
+	const auto *pParent = FindItem(Published.m_vItems, "/");
+	ASSERT_NE(pParent, nullptr);
+	EXPECT_TRUE(pParent->m_IsDirectory);
+	EXPECT_STREQ(pParent->m_aDisplayName, "..");
+	EXPECT_FALSE(pParent->m_RenderTexture.IsValid());
+	EXPECT_EQ(pParent->m_PreviewImage.m_pData, nullptr);
+	EXPECT_EQ(pParent->m_pDecodeJob, nullptr);
+	const auto *pRetired = FindItem(Child->m_vItems, "..");
+	ASSERT_NE(pRetired, nullptr);
+	EXPECT_EQ(pRetired->m_RenderTexture.Id(), 37);
+	EXPECT_EQ(pRetired->m_PreviewImage.m_pData, pPixels);
+	EXPECT_EQ(Published.m_vSourceKinds.find("/"), Published.m_vSourceKinds.end());
+}
+
+TEST(SettingsAssetHierarchyTransaction, SameNameWithAChangedEntryKindRetainsTheOldPreviewOwner)
+{
+	for(const bool WasDirectory : {false, true})
+	{
+		SCOPED_TRACE(WasDirectory);
+		SPublishedHierarchy Published;
+		str_copy(Published.m_vItems[0].m_aName, "same-name");
+		Published.m_vItems[0].m_IsDirectory = WasDirectory;
+		const auto *pPixels = Published.m_vItems[0].m_PreviewImage.m_pData;
+		TCandidate Candidate;
+		TItem Next;
+		str_copy(Next.m_aName, "same-name");
+		Next.m_IsDirectory = !WasDirectory;
+		Candidate.m_vItems.push_back(std::move(Next));
+		CommitSettingsAssetHierarchy(Candidate, Published.m_vSourceNames, Published.m_vSourceKinds, Published.m_vItems);
+		ASSERT_EQ(Published.m_vItems.size(), 1u);
+		EXPECT_EQ(Published.m_vItems[0].m_IsDirectory, !WasDirectory);
+		EXPECT_FALSE(Published.m_vItems[0].m_RenderTexture.IsValid());
+		EXPECT_EQ(Published.m_vItems[0].m_PreviewImage.m_pData, nullptr);
+		ASSERT_EQ(Candidate.m_vItems.size(), 1u);
+		EXPECT_EQ(Candidate.m_vItems[0].m_RenderTexture.Id(), 37);
+		EXPECT_EQ(Candidate.m_vItems[0].m_PreviewImage.m_pData, pPixels);
+	}
 }

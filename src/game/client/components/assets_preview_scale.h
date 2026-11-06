@@ -13,6 +13,8 @@
 inline constexpr size_t ASSET_PREVIEW_UPLOAD_MAX_BYTES_PER_FRAME = 1 * 1024 * 1024;
 inline constexpr int ASSET_PREVIEW_MIN_TEXTURE_SIZE = 512;
 inline constexpr int LOCAL_ASSET_PREVIEW_MAX_TEXTURE_SIZE = 4096;
+// 解码前按 RGBA 最坏情况限制源图，允许完整 4K，避免先分配大图再缩小。
+inline constexpr size_t ASSET_PREVIEW_MAX_DECODED_BYTES = size_t(LOCAL_ASSET_PREVIEW_MAX_TEXTURE_SIZE) * LOCAL_ASSET_PREVIEW_MAX_TEXTURE_SIZE * 4u;
 inline constexpr int WORKSHOP_ASSET_PREVIEW_MAX_TEXTURE_SIZE = 2048;
 inline constexpr int LOCAL_ASSET_PREVIEW_MAX_FILE_SIZE = 64 * 1024 * 1024;
 

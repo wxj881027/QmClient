@@ -104,7 +104,18 @@ namespace
 			if(m_Started)
 				m_Pool.Shutdown();
 		}
-		void StorePng()
+		void StorePng(CImageInfo::EImageFormat Format = CImageInfo::FORMAT_RGBA)
+		{
+			std::array<uint8_t, 8> aPixels{11, 22, 33, 255, 44, 55, 66, 255};
+			CImageInfo Image;
+			Image.m_Width = 2;
+			Image.m_Height = 1;
+			Image.m_Format = Format;
+			Image.m_pData = aPixels.data();
+			ASSERT_TRUE(CImageLoader::SavePng(m_pStorage->OpenFile("image.png", IOFLAG_WRITE, IStorage::TYPE_SAVE), "image.png", Image));
+		}
+#if defined(CONF_WEBP)
+		void StoreWebp()
 		{
 			std::array<uint8_t, 8> aPixels{11, 22, 33, 255, 44, 55, 66, 255};
 			CImageInfo Image;
@@ -112,8 +123,9 @@ namespace
 			Image.m_Height = 1;
 			Image.m_Format = CImageInfo::FORMAT_RGBA;
 			Image.m_pData = aPixels.data();
-			ASSERT_TRUE(CImageLoader::SavePng(m_pStorage->OpenFile("image.png", IOFLAG_WRITE, IStorage::TYPE_SAVE), "image.png", Image));
+			ASSERT_TRUE(CImageLoader::SaveWebP(m_pStorage->OpenFile("image.webp", IOFLAG_WRITE, IStorage::TYPE_SAVE), "image.webp", Image));
 		}
+#endif
 		std::shared_ptr<CFullAsyncImageLoadJob> NewJob(int MaxSize = 0)
 		{
 			return std::make_shared<CFullAsyncImageLoadJob>(std::vector<std::string>{"missing.png", "image.png"}, m_pStorage.get(), "image", IStorage::TYPE_SAVE, MaxSize);
@@ -226,6 +238,72 @@ TEST_F(QmSettingsAssetImageJob, NativeResizePublishesTargetAndSourceDimensions)
 	EXPECT_EQ(Result.m_SourceHeight, 1);
 	EXPECT_EQ(Result.m_Image.m_Width, 1u);
 	EXPECT_EQ(Result.m_Image.m_Height, 1u);
+}
+
+TEST_F(QmSettingsAssetImageJob, SourcePngBudgetRejectsBeforeDownscaleAndExactLimitAllowsNextJob)
+{
+	ASSERT_NO_FATAL_FAILURE(StorePng());
+	CImageAdmissionEngine Engine(m_Pool);
+	// 原图需要8字节，缩图只需4字节；预算必须约束解码源而不是缩图结果。
+	auto pRejected = QmTryQueueSettingsAssetImage({"image.png"}, m_pStorage.get(), Engine, "budget", IStorage::TYPE_SAVE, 1, 7);
+	ASSERT_NE(pRejected, nullptr);
+	ASSERT_TRUE(WaitForJobFinished(*pRejected));
+	ExpectEmptyFailure(pRejected);
+	auto pAccepted = QmTryQueueSettingsAssetImage({"image.png"}, m_pStorage.get(), Engine, "budget", IStorage::TYPE_SAVE, 1, 8);
+	ASSERT_NE(pAccepted, nullptr);
+	ASSERT_TRUE(WaitForJobFinished(*pAccepted));
+	auto Result = pAccepted->GetResult();
+	ASSERT_TRUE(Result.m_Success);
+	EXPECT_EQ(Result.m_SourceWidth, 2);
+	EXPECT_EQ(Result.m_Image.m_Width, 1u);
+	EXPECT_EQ(Result.m_Image.m_Height, 1u);
+	EXPECT_EQ(Result.m_Image.DataSize(), 4u);
+}
+
+TEST_F(QmSettingsAssetImageJob, RgbPngBudgetReservesSpaceForRgbaConversion)
+{
+	ASSERT_NO_FATAL_FAILURE(StorePng(CImageInfo::FORMAT_RGB));
+	CImageAdmissionEngine Engine(m_Pool);
+	auto pRejected = QmTryQueueSettingsAssetImage({"image.png"}, m_pStorage.get(), Engine, "rgb-budget", IStorage::TYPE_SAVE, 0, 6);
+	ASSERT_NE(pRejected, nullptr);
+	ASSERT_TRUE(WaitForJobFinished(*pRejected));
+	ExpectEmptyFailure(pRejected);
+	auto pAccepted = QmTryQueueSettingsAssetImage({"image.png"}, m_pStorage.get(), Engine, "rgb-budget", IStorage::TYPE_SAVE, 0, 8);
+	ASSERT_NE(pAccepted, nullptr);
+	ASSERT_TRUE(WaitForJobFinished(*pAccepted));
+	auto Result = pAccepted->GetResult();
+	ASSERT_TRUE(Result.m_Success);
+	EXPECT_EQ(Result.m_Image.m_Format, CImageInfo::FORMAT_RGB);
+	EXPECT_EQ(Result.m_Image.DataSize(), 6u);
+}
+
+#if defined(CONF_WEBP)
+TEST_F(QmSettingsAssetImageJob, SourceWebpBudgetRejectsBeforeDownscaleAndExactLimitRecovers)
+{
+	ASSERT_NO_FATAL_FAILURE(StoreWebp());
+	CImageAdmissionEngine Engine(m_Pool);
+	auto pRejected = QmTryQueueSettingsAssetImage({"image.webp"}, m_pStorage.get(), Engine, "budget", IStorage::TYPE_SAVE, 1, 7);
+	ASSERT_NE(pRejected, nullptr);
+	ASSERT_TRUE(WaitForJobFinished(*pRejected));
+	ExpectEmptyFailure(pRejected);
+	auto pAccepted = QmTryQueueSettingsAssetImage({"image.webp"}, m_pStorage.get(), Engine, "budget", IStorage::TYPE_SAVE, 1, 8);
+	ASSERT_NE(pAccepted, nullptr);
+	ASSERT_TRUE(WaitForJobFinished(*pAccepted));
+	auto Result = pAccepted->GetResult();
+	ASSERT_TRUE(Result.m_Success);
+	EXPECT_EQ(Result.m_SourceWidth, 2);
+	EXPECT_EQ(Result.m_Image.DataSize(), 4u);
+}
+#endif
+
+TEST_F(QmSettingsAssetImageJob, InjectedFourArgumentDecoderResultIsCheckedBeforeResize)
+{
+	ASSERT_NO_FATAL_FAILURE(StorePng());
+	// 接缝内部的分配由替身负责；这里仅验证它不能发布超预算结果。
+	auto pJob = std::make_shared<CFullAsyncImageLoadJob>(std::vector<std::string>{"image.png"}, m_pStorage.get(), "injected", IStorage::TYPE_SAVE, 1,
+		DecodePng, KeepOriginalImage, 7);
+	ASSERT_NO_FATAL_FAILURE(Execute(pJob));
+	ExpectEmptyFailure(pJob);
 }
 
 TEST_F(QmSettingsAssetImageJob, ResizeExceptionDoesNotLeaveConsumerWaiting)

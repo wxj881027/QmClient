@@ -281,10 +281,10 @@ TEST(AssetsResourceRegistry, EntityBgHierarchyViewBuildsFolderEntriesAndShortFil
 
 	const auto vRootEntries = BuildEntityBgHierarchyEntries(vAssetNames, "", true, &vSources);
 	EXPECT_TRUE(vRootEntries.size() == 4u);
-	EXPECT_TRUE(std::string_view(vRootEntries[0].m_aName) == "entity_bg");
+	EXPECT_TRUE(std::string_view(vRootEntries[0].m_aName) == "//entity_bg");
 	EXPECT_TRUE(vRootEntries[0].m_IsDirectory);
 	EXPECT_TRUE(std::string_view(vRootEntries[0].m_aDisplayName) == "entity_bg (Workshop)");
-	EXPECT_TRUE(std::string_view(vRootEntries[1].m_aName) == "local_folder");
+	EXPECT_TRUE(std::string_view(vRootEntries[1].m_aName) == "/local_folder");
 	EXPECT_TRUE(vRootEntries[1].m_IsDirectory);
 	EXPECT_TRUE(std::string_view(vRootEntries[1].m_aDisplayName) == "local_folder");
 	EXPECT_TRUE(std::string_view(vRootEntries[2].m_aName) == "default");
@@ -296,9 +296,9 @@ TEST(AssetsResourceRegistry, EntityBgHierarchyViewBuildsFolderEntriesAndShortFil
 
 	const auto vWorkshopEntries = BuildEntityBgHierarchyEntries(vAssetNames, "entity_bg", true, &vSources);
 	EXPECT_TRUE(vWorkshopEntries.size() == 3u);
-	EXPECT_TRUE(std::string_view(vWorkshopEntries[0].m_aName) == "..");
+	EXPECT_TRUE(std::string_view(vWorkshopEntries[0].m_aName) == "/");
 	EXPECT_TRUE(vWorkshopEntries[0].m_IsDirectory);
-	EXPECT_TRUE(std::string_view(vWorkshopEntries[1].m_aName) == "entity_bg/castle");
+	EXPECT_TRUE(std::string_view(vWorkshopEntries[1].m_aName) == "//entity_bg/castle");
 	EXPECT_TRUE(vWorkshopEntries[1].m_IsDirectory);
 	EXPECT_TRUE(std::string_view(vWorkshopEntries[1].m_aDisplayName) == "castle");
 	EXPECT_TRUE(std::string_view(vWorkshopEntries[2].m_aName) == "entity_bg/forest");
@@ -307,7 +307,7 @@ TEST(AssetsResourceRegistry, EntityBgHierarchyViewBuildsFolderEntriesAndShortFil
 
 	const auto vNestedEntries = BuildEntityBgHierarchyEntries(vAssetNames, "entity_bg/castle", true, &vSources);
 	EXPECT_TRUE(vNestedEntries.size() == 3u);
-	EXPECT_TRUE(std::string_view(vNestedEntries[0].m_aName) == "..");
+	EXPECT_TRUE(std::string_view(vNestedEntries[0].m_aName) == "/");
 	EXPECT_TRUE(vNestedEntries[0].m_IsDirectory);
 	EXPECT_TRUE(std::string_view(vNestedEntries[0].m_aDisplayName) == "..");
 	EXPECT_TRUE(std::string_view(vNestedEntries[1].m_aName) == "entity_bg/castle/day");
@@ -319,7 +319,7 @@ TEST(AssetsResourceRegistry, EntityBgHierarchyViewBuildsFolderEntriesAndShortFil
 
 	const auto vLocalFolderEntries = BuildEntityBgHierarchyEntries(vAssetNames, "local_folder", true, &vSources);
 	EXPECT_TRUE(vLocalFolderEntries.size() == 2u);
-	EXPECT_TRUE(std::string_view(vLocalFolderEntries[0].m_aName) == "..");
+	EXPECT_TRUE(std::string_view(vLocalFolderEntries[0].m_aName) == "/");
 	EXPECT_TRUE(vLocalFolderEntries[0].m_IsDirectory);
 	EXPECT_TRUE(std::string_view(vLocalFolderEntries[1].m_aName) == "local_folder/demo");
 	EXPECT_FALSE(vLocalFolderEntries[1].m_IsDirectory);
@@ -346,11 +346,11 @@ TEST(AssetsResourceRegistry, EntityBgHierarchyViewUsesRootPriorityAndEntrySource
 	const auto vRootEntries = BuildEntityBgHierarchyEntries(vAssetNames, "", true, &vSources);
 
 	ASSERT_EQ(vRootEntries.size(), 5u);
-	EXPECT_STREQ(vRootEntries[0].m_aName, "entity_bg");
+	EXPECT_STREQ(vRootEntries[0].m_aName, "//entity_bg");
 	EXPECT_EQ(vRootEntries[0].m_Source, EEntityBgHierarchyEntrySource::WORKSHOP);
 	EXPECT_TRUE(vRootEntries[0].m_IsDirectory);
 
-	EXPECT_STREQ(vRootEntries[1].m_aName, "local_folder");
+	EXPECT_STREQ(vRootEntries[1].m_aName, "/local_folder");
 	EXPECT_EQ(vRootEntries[1].m_Source, EEntityBgHierarchyEntrySource::LOCAL);
 	EXPECT_TRUE(vRootEntries[1].m_IsDirectory);
 
@@ -385,7 +385,7 @@ TEST(AssetsResourceRegistry, EntityBgHierarchyViewCanHideWorkshopFolderAtRoot)
 	const auto vHiddenWorkshopEntries = BuildEntityBgHierarchyEntries(vAssetNames, "", false, &vSources);
 
 	ASSERT_EQ(vHiddenWorkshopEntries.size(), 2u);
-	EXPECT_STREQ(vHiddenWorkshopEntries[0].m_aName, "local_folder");
+	EXPECT_STREQ(vHiddenWorkshopEntries[0].m_aName, "/local_folder");
 	EXPECT_STREQ(vHiddenWorkshopEntries[1].m_aName, "default");
 }
 
@@ -405,11 +405,11 @@ TEST(AssetsResourceRegistry, EntityBgHierarchyViewCanForceWorkshopFolderAtRootWi
 	const auto vRootEntries = BuildEntityBgHierarchyEntries(vAssetNames, "", true, &vSources, true);
 
 	ASSERT_EQ(vRootEntries.size(), 3u);
-	EXPECT_STREQ(vRootEntries[0].m_aName, "entity_bg");
+	EXPECT_STREQ(vRootEntries[0].m_aName, "//entity_bg");
 	EXPECT_EQ(vRootEntries[0].m_Source, EEntityBgHierarchyEntrySource::WORKSHOP);
 	EXPECT_TRUE(vRootEntries[0].m_IsDirectory);
 	EXPECT_STREQ(vRootEntries[0].m_aDisplayName, "entity_bg (Workshop)");
-	EXPECT_STREQ(vRootEntries[1].m_aName, "local_folder");
+	EXPECT_STREQ(vRootEntries[1].m_aName, "/local_folder");
 	EXPECT_STREQ(vRootEntries[2].m_aName, "default");
 }
 
@@ -430,7 +430,7 @@ TEST(AssetsResourceRegistry, EntityBgHierarchyViewKeepsManagedLocalAssetsVisible
 
 	const auto vRootEntries = BuildEntityBgHierarchyEntries(vAssetNames, "", false, &vSources);
 	ASSERT_EQ(vRootEntries.size(), 3u);
-	EXPECT_STREQ(vRootEntries[0].m_aName, "local_folder");
+	EXPECT_STREQ(vRootEntries[0].m_aName, "/local_folder");
 	EXPECT_EQ(vRootEntries[0].m_Source, EEntityBgHierarchyEntrySource::LOCAL);
 	EXPECT_TRUE(vRootEntries[0].m_IsDirectory);
 	EXPECT_STREQ(vRootEntries[1].m_aName, "default");
@@ -441,7 +441,7 @@ TEST(AssetsResourceRegistry, EntityBgHierarchyViewKeepsManagedLocalAssetsVisible
 
 	const auto vFolderEntries = BuildEntityBgHierarchyEntries(vAssetNames, "local_folder", false, &vSources);
 	ASSERT_EQ(vFolderEntries.size(), 2u);
-	EXPECT_STREQ(vFolderEntries[0].m_aName, "..");
+	EXPECT_STREQ(vFolderEntries[0].m_aName, "/");
 	EXPECT_STREQ(vFolderEntries[1].m_aName, "entity_bg/local_folder/day");
 	EXPECT_EQ(vFolderEntries[1].m_Source, EEntityBgHierarchyEntrySource::LOCAL);
 	EXPECT_STREQ(vFolderEntries[1].m_aDisplayName, "day");
@@ -462,14 +462,14 @@ TEST(AssetsResourceRegistry, EntityBgHierarchyViewKeepsInstalledWorkshopAssetsIn
 
 	const auto vRootEntries = BuildEntityBgHierarchyEntries(vAssetNames, "", true, &vSources);
 	ASSERT_EQ(vRootEntries.size(), 2u);
-	EXPECT_STREQ(vRootEntries[0].m_aName, "entity_bg");
+	EXPECT_STREQ(vRootEntries[0].m_aName, "//entity_bg");
 	EXPECT_EQ(vRootEntries[0].m_Source, EEntityBgHierarchyEntrySource::WORKSHOP);
 	EXPECT_TRUE(vRootEntries[0].m_IsDirectory);
 	EXPECT_STREQ(vRootEntries[1].m_aName, "default");
 
 	const auto vWorkshopEntries = BuildEntityBgHierarchyEntries(vAssetNames, "entity_bg", true, &vSources);
 	ASSERT_EQ(vWorkshopEntries.size(), 3u);
-	EXPECT_STREQ(vWorkshopEntries[0].m_aName, "..");
+	EXPECT_STREQ(vWorkshopEntries[0].m_aName, "/");
 	EXPECT_STREQ(vWorkshopEntries[1].m_aName, "entity_bg/11");
 	EXPECT_EQ(vWorkshopEntries[1].m_Source, EEntityBgHierarchyEntrySource::WORKSHOP);
 	EXPECT_STREQ(vWorkshopEntries[2].m_aName, "entity_bg/coverage");
@@ -494,6 +494,237 @@ TEST(AssetsResourceRegistry, EntityBgHierarchyViewKeepsLocalSourceWhenWorkshopSh
 	EXPECT_EQ(vHiddenWorkshopEntries[1].m_Source, EEntityBgHierarchyEntrySource::LOCAL);
 }
 
+TEST(AssetsResourceRegistry, LocalDirectoryAndMapWithTheSameStemKeepSeparateIdentities)
+{
+	std::vector<std::string> vNames = {"foo", "foo/bar"};
+	for(const bool Reverse : {false, true})
+	{
+		SCOPED_TRACE(Reverse);
+		if(Reverse)
+			std::reverse(vNames.begin(), vNames.end());
+		const auto vRoot = BuildEntityBgHierarchyEntries(vNames, "");
+		ASSERT_EQ(vRoot.size(), 2U);
+		EXPECT_STREQ(vRoot[0].m_aName, "/foo");
+		EXPECT_STREQ(vRoot[0].m_aDisplayName, "foo");
+		EXPECT_TRUE(vRoot[0].m_IsDirectory);
+		EXPECT_STREQ(vRoot[1].m_aName, "foo");
+		EXPECT_FALSE(vRoot[1].m_IsDirectory);
+		const auto vChild = BuildEntityBgHierarchyEntries(vNames, vRoot[0].m_aName);
+		ASSERT_EQ(vChild.size(), 2U);
+		EXPECT_STREQ(vChild[0].m_aName, "/");
+		EXPECT_STREQ(vChild[1].m_aName, "foo/bar");
+		EXPECT_STREQ(vChild[1].m_aDisplayName, "bar");
+		EXPECT_FALSE(vChild[1].m_IsDirectory);
+	}
+}
+
+TEST(AssetsResourceRegistry, LocalEntityBgDirectoryDoesNotAliasTheWorkshopRoot)
+{
+	const std::vector<std::string> vNames = {"entity_bg/entity_bg/local", "entity_bg/workshop"};
+	const std::unordered_map<std::string, EEntityBgHierarchyEntrySource> Sources = {
+		{vNames[0], EEntityBgHierarchyEntrySource::LOCAL},
+		{vNames[1], EEntityBgHierarchyEntrySource::WORKSHOP},
+	};
+	const auto vRoot = BuildEntityBgHierarchyEntries(vNames, "", true, &Sources);
+	ASSERT_EQ(vRoot.size(), 2U);
+	EXPECT_TRUE(IsEntityBgWorkshopRootEntry(vRoot[0]));
+	EXPECT_STREQ(vRoot[0].m_aName, "//entity_bg");
+	EXPECT_STREQ(vRoot[1].m_aName, "/entity_bg");
+	EXPECT_EQ(vRoot[1].m_Source, EEntityBgHierarchyEntrySource::LOCAL);
+	EXPECT_FALSE(IsEntityBgWorkshopFolderPath(vRoot[1].m_aName));
+	const auto vLocal = BuildEntityBgHierarchyEntries(vNames, vRoot[1].m_aName, true, &Sources);
+	ASSERT_EQ(vLocal.size(), 2U);
+	EXPECT_STREQ(vLocal[1].m_aName, vNames[0].c_str());
+	EXPECT_EQ(vLocal[1].m_Source, EEntityBgHierarchyEntrySource::LOCAL);
+	const auto vWorkshop = BuildEntityBgHierarchyEntries(vNames, vRoot[0].m_aName, true, &Sources);
+	ASSERT_EQ(vWorkshop.size(), 2U);
+	EXPECT_STREQ(vWorkshop[1].m_aName, vNames[1].c_str());
+	EXPECT_EQ(vWorkshop[1].m_Source, EEntityBgHierarchyEntrySource::WORKSHOP);
+}
+
+TEST(AssetsResourceRegistry, HiddenWorkshopKeepsLocalEntityBgSubdirectoriesReachable)
+{
+	const std::vector<std::string> vNames = {"entity_bg/entity_bg/deep/local", "entity_bg/workshop"};
+	const std::unordered_map<std::string, EEntityBgHierarchyEntrySource> Sources = {
+		{vNames[0], EEntityBgHierarchyEntrySource::LOCAL},
+		{vNames[1], EEntityBgHierarchyEntrySource::WORKSHOP},
+	};
+	const auto vRoot = BuildEntityBgHierarchyEntries(vNames, "", false, &Sources);
+	ASSERT_EQ(vRoot.size(), 1U);
+	EXPECT_STREQ(vRoot[0].m_aName, "/entity_bg");
+	const auto vChild = BuildEntityBgHierarchyEntries(vNames, vRoot[0].m_aName, false, &Sources);
+	ASSERT_EQ(vChild.size(), 2U);
+	EXPECT_STREQ(vChild[1].m_aName, "/entity_bg/deep");
+	EXPECT_TRUE(vChild[1].m_IsDirectory);
+	const auto vLeaf = BuildEntityBgHierarchyEntries(vNames, vChild[1].m_aName, false, &Sources);
+	ASSERT_EQ(vLeaf.size(), 2U);
+	EXPECT_STREQ(vLeaf[1].m_aName, vNames[0].c_str());
+	EXPECT_FALSE(vLeaf[1].m_IsDirectory);
+}
+
+TEST(AssetsResourceRegistry, LegacyBareLocalFolderAndNavigationTokenSelectTheSameChildren)
+{
+	const std::vector<std::string> vNames = {"local_folder/nested/leaf", "local_folder/file"};
+	for(const char *pFolder : {"local_folder", "/local_folder"})
+	{
+		SCOPED_TRACE(pFolder);
+		const auto vChildren = BuildEntityBgHierarchyEntries(vNames, pFolder);
+		ASSERT_EQ(vChildren.size(), 3U);
+		EXPECT_STREQ(vChildren[0].m_aName, "/");
+		EXPECT_STREQ(vChildren[1].m_aName, "/local_folder/nested");
+		EXPECT_TRUE(vChildren[1].m_IsDirectory);
+		EXPECT_STREQ(vChildren[2].m_aName, "local_folder/file");
+		EXPECT_FALSE(vChildren[2].m_IsDirectory);
+	}
+}
+
+TEST(AssetsResourceRegistry, NavigationTokensFitTheBoundedRelativeResourceName)
+{
+	const std::string Directory(IO_MAX_PATH_LENGTH - 3, 'a');
+	const std::string Name = Directory + "/x";
+	const auto vRoot = BuildEntityBgHierarchyEntries({Name}, "");
+	ASSERT_EQ(vRoot.size(), 1U);
+	EXPECT_EQ(std::string(vRoot[0].m_aName), "/" + Directory);
+	const auto vChild = BuildEntityBgHierarchyEntries({Name}, vRoot[0].m_aName);
+	ASSERT_EQ(vChild.size(), 2U);
+	EXPECT_EQ(std::string(vChild[1].m_aName), Name);
+	EXPECT_STREQ(vChild[1].m_aDisplayName, "x");
+	const std::string WorkshopDirectory(IO_MAX_PATH_LENGTH - 13, 'b');
+	const std::string WorkshopName = "entity_bg/" + WorkshopDirectory + "/x";
+	const std::unordered_map<std::string, EEntityBgHierarchyEntrySource> Sources = {{WorkshopName, EEntityBgHierarchyEntrySource::WORKSHOP}};
+	const auto vWorkshop = BuildEntityBgHierarchyEntries({WorkshopName}, "//entity_bg", true, &Sources);
+	ASSERT_EQ(vWorkshop.size(), 2U);
+	EXPECT_EQ(std::string(vWorkshop[1].m_aName), "//entity_bg/" + WorkshopDirectory);
+	const auto vWorkshopChild = BuildEntityBgHierarchyEntries({WorkshopName}, vWorkshop[1].m_aName, true, &Sources);
+	ASSERT_EQ(vWorkshopChild.size(), 2U);
+	EXPECT_EQ(std::string(vWorkshopChild[1].m_aName), WorkshopName);
+	EXPECT_STREQ(vWorkshopChild[1].m_aDisplayName, "x");
+}
+
+TEST(AssetsResourceRegistry, ParentNavigationKeepsLocalTokensSeparateFromWorkshopPaths)
+{
+	char aParent[IO_MAX_PATH_LENGTH];
+	BuildEntityBgParentFolder("/foo/bar", aParent, sizeof(aParent));
+	EXPECT_STREQ(aParent, "/foo");
+	BuildEntityBgParentFolder("/foo", aParent, sizeof(aParent));
+	EXPECT_STREQ(aParent, "");
+	BuildEntityBgParentFolder("/entity_bg/deep", aParent, sizeof(aParent));
+	EXPECT_STREQ(aParent, "/entity_bg");
+	BuildEntityBgParentFolder("/entity_bg", aParent, sizeof(aParent));
+	EXPECT_STREQ(aParent, "");
+	BuildEntityBgParentFolder("entity_bg/deep", aParent, sizeof(aParent));
+	EXPECT_STREQ(aParent, "entity_bg");
+	BuildEntityBgParentFolder("entity_bg", aParent, sizeof(aParent));
+	EXPECT_STREQ(aParent, "");
+	BuildEntityBgParentFolder("//entity_bg/deep", aParent, sizeof(aParent));
+	EXPECT_STREQ(aParent, "//entity_bg");
+	BuildEntityBgParentFolder("//entity_bg", aParent, sizeof(aParent));
+	EXPECT_STREQ(aParent, "");
+}
+
+TEST(AssetsResourceRegistry, WorkshopRootDoesNotHideTheRelativeMapNamedEntityBg)
+{
+	const std::vector<std::string> vNames = {"entity_bg", "entity_bg/installed"};
+	const std::unordered_map<std::string, EEntityBgHierarchyEntrySource> Sources = {
+		{vNames[0], EEntityBgHierarchyEntrySource::LOCAL},
+		{vNames[1], EEntityBgHierarchyEntrySource::WORKSHOP},
+	};
+	const auto vRoot = BuildEntityBgHierarchyEntries(vNames, "", true, &Sources);
+	ASSERT_EQ(vRoot.size(), 2U);
+	EXPECT_STREQ(vRoot[0].m_aName, "//entity_bg");
+	EXPECT_TRUE(IsEntityBgWorkshopRootEntry(vRoot[0]));
+	EXPECT_STREQ(vRoot[1].m_aName, "entity_bg");
+	EXPECT_FALSE(vRoot[1].m_IsDirectory);
+	for(const char *pFolder : {"//entity_bg", "entity_bg"})
+	{
+		SCOPED_TRACE(pFolder);
+		const auto vChild = BuildEntityBgHierarchyEntries(vNames, pFolder, true, &Sources);
+		ASSERT_EQ(vChild.size(), 2U);
+		EXPECT_STREQ(vChild[0].m_aName, "/");
+		EXPECT_STREQ(vChild[1].m_aName, "entity_bg/installed");
+		EXPECT_FALSE(vChild[1].m_IsDirectory);
+	}
+}
+
+TEST(AssetsResourceRegistry, ParentNavigationDoesNotHideTheRelativeMapNamedDotDot)
+{
+	const std::vector<std::string> vNames = {"..", "folder/..", "folder/child"};
+	const auto vRoot = BuildEntityBgHierarchyEntries(vNames, "");
+	ASSERT_EQ(vRoot.size(), 2U);
+	EXPECT_STREQ(vRoot[0].m_aName, "/folder");
+	EXPECT_STREQ(vRoot[1].m_aName, "..");
+	EXPECT_FALSE(vRoot[1].m_IsDirectory);
+	EXPECT_FALSE(IsEntityBgParentFolderPath(vRoot[1].m_aName));
+	const auto vChild = BuildEntityBgHierarchyEntries(vNames, vRoot[0].m_aName);
+	ASSERT_EQ(vChild.size(), 3U);
+	EXPECT_STREQ(vChild[0].m_aName, "/");
+	EXPECT_STREQ(vChild[0].m_aDisplayName, "..");
+	EXPECT_TRUE(vChild[0].m_IsDirectory);
+	EXPECT_TRUE(IsEntityBgParentFolderPath(vChild[0].m_aName));
+	EXPECT_STREQ(vChild[1].m_aName, "folder/..");
+	EXPECT_STREQ(vChild[1].m_aDisplayName, "..");
+	EXPECT_FALSE(vChild[1].m_IsDirectory);
+	EXPECT_STREQ(vChild[2].m_aName, "folder/child");
+}
+
+TEST(AssetsResourceRegistry, WorkshopDirectoryAndSameStemLeafKeepSeparateIdentities)
+{
+	const std::vector<std::string> vNames = {"entity_bg/foo", "entity_bg/foo/child"};
+	const std::unordered_map<std::string, EEntityBgHierarchyEntrySource> Sources = {
+		{vNames[0], EEntityBgHierarchyEntrySource::WORKSHOP},
+		{vNames[1], EEntityBgHierarchyEntrySource::WORKSHOP},
+	};
+	const auto vRoot = BuildEntityBgHierarchyEntries(vNames, "//entity_bg", true, &Sources);
+	ASSERT_EQ(vRoot.size(), 3U);
+	EXPECT_STREQ(vRoot[0].m_aName, "/");
+	EXPECT_STREQ(vRoot[1].m_aName, "//entity_bg/foo");
+	EXPECT_TRUE(vRoot[1].m_IsDirectory);
+	EXPECT_STREQ(vRoot[2].m_aName, "entity_bg/foo");
+	EXPECT_FALSE(vRoot[2].m_IsDirectory);
+	for(const char *pFolder : {"//entity_bg/foo", "entity_bg/foo"})
+	{
+		SCOPED_TRACE(pFolder);
+		const auto vChild = BuildEntityBgHierarchyEntries(vNames, pFolder, true, &Sources);
+		ASSERT_EQ(vChild.size(), 2U);
+		EXPECT_STREQ(vChild[0].m_aName, "/");
+		EXPECT_STREQ(vChild[1].m_aName, "entity_bg/foo/child");
+		EXPECT_FALSE(vChild[1].m_IsDirectory);
+	}
+}
+
+TEST(AssetsResourceRegistry, WorkshopPredicatesAndDownloadMatchingAcceptNewAndLegacyFolderTokens)
+{
+	for(const char *pRoot : {"//entity_bg", "entity_bg"})
+	{
+		SCOPED_TRACE(pRoot);
+		EXPECT_TRUE(IsEntityBgWorkshopFolderPath(pRoot));
+		EXPECT_TRUE(IsEntityBgWorkshopFolderOrChildPath(pRoot));
+		EXPECT_TRUE(EntityBgWorkshopAssetMatchesFolder("entity_bg/asset", pRoot));
+		EXPECT_TRUE(EntityBgWorkshopAssetMatchesFolder("entity_bg/deep/asset", pRoot));
+	}
+	for(const char *pFolder : {"//entity_bg/deep", "entity_bg/deep"})
+	{
+		SCOPED_TRACE(pFolder);
+		EXPECT_FALSE(IsEntityBgWorkshopFolderPath(pFolder));
+		EXPECT_TRUE(IsEntityBgWorkshopFolderOrChildPath(pFolder));
+		EXPECT_TRUE(EntityBgWorkshopAssetMatchesFolder("entity_bg/deep/asset", pFolder));
+		EXPECT_FALSE(EntityBgWorkshopAssetMatchesFolder("entity_bg/deep", pFolder));
+		EXPECT_FALSE(EntityBgWorkshopAssetMatchesFolder("entity_bg/deeper/asset", pFolder));
+		EXPECT_FALSE(EntityBgWorkshopAssetMatchesFolder("entity_bg/de", pFolder));
+	}
+	for(const char *pLocal : {"/entity_bg", "/entity_bg/deep", "/"})
+	{
+		SCOPED_TRACE(pLocal);
+		EXPECT_FALSE(IsEntityBgWorkshopFolderOrChildPath(pLocal));
+		EXPECT_FALSE(EntityBgWorkshopAssetMatchesFolder("entity_bg/deep/asset", pLocal));
+	}
+	EXPECT_TRUE(IsEntityBgParentFolderPath("/"));
+	EXPECT_FALSE(IsEntityBgParentFolderPath(".."));
+	EXPECT_FALSE(IsEntityBgParentFolderPath(nullptr));
+	EXPECT_FALSE(IsEntityBgWorkshopFolderOrChildPath(nullptr));
+	EXPECT_FALSE(EntityBgWorkshopAssetMatchesFolder("entity_bg/asset", nullptr));
+}
+
 TEST(AssetsResourceRegistry, RebuildEntityBgWorkshopLocalNameRestoresLocalNameFromInstallPath)
 {
 	EXPECT_EQ(RebuildEntityBgWorkshopLocalName("assets/entity_bg/castle-night.map"), "entity_bg/castle-night");
@@ -512,7 +743,7 @@ TEST(AssetsResourceRegistry, NormalizeEntityBgWorkshopInstallPathForcesMapExtens
 TEST(AssetsResourceRegistry, EntityBgHierarchyEntryLessKeepsParentBeforeFoldersAndDefault)
 {
 	SEntityBgHierarchyEntry ParentEntry;
-	str_copy(ParentEntry.m_aName, "..");
+	str_copy(ParentEntry.m_aName, "/");
 	str_copy(ParentEntry.m_aDisplayName, "..");
 	ParentEntry.m_IsDirectory = true;
 	ParentEntry.m_Source = EEntityBgHierarchyEntrySource::NAVIGATION;
@@ -544,7 +775,7 @@ TEST(AssetsResourceRegistry, EntityBgHierarchyEntryLessKeepsParentBeforeFoldersA
 TEST(AssetsResourceRegistry, EntityBgHierarchyEntryLessPinsWorkshopFolderBeforeOtherRootFolders)
 {
 	SEntityBgHierarchyEntry WorkshopFolderEntry;
-	str_copy(WorkshopFolderEntry.m_aName, "entity_bg");
+	str_copy(WorkshopFolderEntry.m_aName, "//entity_bg");
 	str_copy(WorkshopFolderEntry.m_aDisplayName, "entity_bg (Workshop)");
 	WorkshopFolderEntry.m_IsDirectory = true;
 	WorkshopFolderEntry.m_Source = EEntityBgHierarchyEntrySource::WORKSHOP;

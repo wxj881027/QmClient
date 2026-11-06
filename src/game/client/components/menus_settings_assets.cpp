@@ -1757,7 +1757,7 @@ namespace
 
 	static bool IsEntityBgWorkshopFolderOrChild(const char *pPath)
 	{
-		return pPath != nullptr && (IsEntityBgWorkshopFolderPath(pPath) || str_startswith(pPath, "entity_bg/"));
+		return IsEntityBgWorkshopFolderOrChildPath(pPath);
 	}
 
 	static bool UsesCombinedAssetList(const SAssetResourceCategory *pCategory)
@@ -2449,36 +2449,40 @@ namespace
 		}
 	}
 
-	void MigrateReservedNamedSingleFileAssets(IStorage *pStorage, const SAssetResourceCategory &Category)
+	bool MigrateReservedNamedSingleFileAssets(IStorage *pStorage, const SAssetResourceCategory &Category)
 	{
 		if(Category.m_Kind != EAssetResourceKind::NAMED_SINGLE_FILE)
-			return;
+			return true;
 
 		std::vector<std::string> vExistingNames;
-		CollectNamedSingleFileAssetNames(pStorage, Category, vExistingNames);
-
 		std::vector<std::string> vSaveNames;
-		SNamedSingleFileNameScanUser ScanUser{&vSaveNames};
-		pStorage->ListDirectory(IStorage::TYPE_SAVE, Category.m_pInstallFolder, CollectNamedSingleFileAssetNamesCallback, &ScanUser);
+		try
+		{
+			CollectNamedSingleFileAssetNames(pStorage, Category, vExistingNames);
+			SNamedSingleFileNameScanUser ScanUser{&vSaveNames};
+			pStorage->ListDirectory(IStorage::TYPE_SAVE, Category.m_pInstallFolder, CollectNamedSingleFileAssetNamesCallback, &ScanUser);
+		}
+		catch(const std::bad_alloc &)
+		{
+			return false;
+		}
+		catch(const std::length_error &)
+		{
+			return false;
+		}
 
 		for(const std::string &Name : vSaveNames)
 		{
 			if(IsProtectedDefaultAsset(Name) || !IsReservedNamedSingleFileAssetName(Category, Name))
 				continue;
 
-			const std::string NewName = NextReservedNamedSingleFileMigrationName(Category, Name, vExistingNames);
-			char aOldPath[IO_MAX_PATH_LENGTH];
-			char aNewPath[IO_MAX_PATH_LENGTH];
-			str_format(aOldPath, sizeof(aOldPath), "%s/%s.png", Category.m_pInstallFolder, Name.c_str());
-			str_format(aNewPath, sizeof(aNewPath), "%s/%s.png", Category.m_pInstallFolder, NewName.c_str());
-			if(pStorage->FileExists(aOldPath, IStorage::TYPE_SAVE) &&
-				!pStorage->FileExists(aNewPath, IStorage::TYPE_SAVE) &&
-				pStorage->RenameFile(aOldPath, aNewPath, IStorage::TYPE_SAVE))
-			{
-				vExistingNames.emplace_back(NewName);
-				UpdateNamedSingleFileConfigSelectionAfterMigration(Category, Name.c_str(), NewName.c_str());
-			}
+			const auto Migration = TryMigrateReservedNamedSingleFileAsset(pStorage, Category, Name.c_str(), vExistingNames, IStorage::TYPE_SAVE);
+			if(Migration.m_PreparationFailed)
+				return false;
+			if(Migration.m_Renamed)
+				UpdateNamedSingleFileConfigSelectionAfterMigration(Category, Name.c_str(), Migration.m_Name.c_str());
 		}
+		return true;
 	}
 
 	void TryImportLegacySingleFileAsset(IStorage *pStorage, const SAssetResourceCategory &Category)
@@ -3176,7 +3180,7 @@ bool CMenus::RefreshEntityBgHierarchyView()
 		for(size_t Index = 0; Index < Candidate->m_vItems.size(); ++Index)
 		{
 			const auto &Next = Candidate->m_vItems[Index];
-			const auto Previous = std::find_if(m_vEntityBgList.begin(), m_vEntityBgList.end(), [&](const auto &Item) { return str_comp(Item.m_aName, Next.m_aName) == 0; });
+			const auto Previous = std::find_if(m_vEntityBgList.begin(), m_vEntityBgList.end(), [&](const auto &Item) { return Item.m_IsDirectory == Next.m_IsDirectory && str_comp(Item.m_aName, Next.m_aName) == 0; });
 			if(Previous == m_vEntityBgList.end())
 				continue;
 			if(Previous->m_pDecodeJob)
@@ -3936,7 +3940,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			if(Category.m_Kind == EAssetResourceKind::NAMED_SINGLE_FILE)
 			{
 				TryImportLegacySingleFileAsset(Storage(), Category);
-				MigrateReservedNamedSingleFileAssets(Storage(), Category);
+				if(!MigrateReservedNamedSingleFileAssets(Storage(), Category))
+					return;
 			}
 		}
 
@@ -6062,7 +6067,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 					const auto *pEntityBgItem = static_cast<const SCustomEntityBg *>(pSelectedItem);
 					if(pEntityBgItem->m_IsDirectory)
 					{
-						if(str_comp(pSelectedItem->m_aName, "..") == 0)
+						if(IsEntityBgParentFolderPath(pSelectedItem->m_aName))
 						{
 							char aParentFolder[IO_MAX_PATH_LENGTH];
 							BuildEntityBgParentFolder(m_aEntityBgCurrentFolder, aParentFolder, sizeof(aParentFolder));
@@ -6786,10 +6791,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		auto WorkshopAssetMatchesCurrentEntityBgFolder = [&](const SWorkshopHudAsset &Asset) {
 			if(!ShouldShowEntityBgWorkshopAssetsInCurrentFolder())
 				return false;
-			if(IsEntityBgWorkshopFolderPath(m_aEntityBgCurrentFolder))
-				return true;
-			const int CurrentFolderLength = str_length(m_aEntityBgCurrentFolder);
-			return str_startswith(Asset.m_LocalName.c_str(), m_aEntityBgCurrentFolder) && Asset.m_LocalName[CurrentFolderLength] == '/';
+			return EntityBgWorkshopAssetMatchesFolder(Asset.m_LocalName, m_aEntityBgCurrentFolder);
 		};
 		for(size_t AssetIndex = 0; AssetIndex < AssetCount; ++AssetIndex)
 		{
@@ -7179,7 +7181,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 						const bool IsWorkshopRootFolder = IsEntityBgDirectory &&
 										  IsEntityBgWorkshopFolderPath(pItem->m_aName);
 						PreviewState.m_DrawFolderIcon = true;
-						PreviewState.m_FolderIsParent = str_comp(pItem->m_aName, "..") == 0;
+						PreviewState.m_FolderIsParent = IsEntityBgParentFolderPath(pItem->m_aName);
 						PreviewState.m_FolderIsWorkshopRoot = IsWorkshopRootFolder;
 					}
 					else if(s_CurCustomTab == ASSETS_TAB_ENTITIES && gs_SettingsAssetsEntityGamePreview)
@@ -7549,7 +7551,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				{
 					if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG && static_cast<const SCustomEntityBg *>(pNewItem)->m_IsDirectory)
 					{
-						if(str_comp(pNewItem->m_aName, "..") == 0)
+						if(IsEntityBgParentFolderPath(pNewItem->m_aName))
 						{
 							char aParentFolder[IO_MAX_PATH_LENGTH];
 							BuildEntityBgParentFolder(m_aEntityBgCurrentFolder, aParentFolder, sizeof(aParentFolder));

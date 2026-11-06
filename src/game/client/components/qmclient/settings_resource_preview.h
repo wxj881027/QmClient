@@ -12,6 +12,7 @@
 #include <engine/shared/jobs.h>
 #include <engine/storage.h>
 
+#include <game/client/components/assets_preview_scale.h>
 #include <game/client/components/settings_resource_jobs.h>
 
 #include <cstddef>
@@ -224,7 +225,8 @@ public:
 
 	CSettingsResourcePreviewJob(std::string Name, CImageInfo &&Image, int TargetSize);
 	~CSettingsResourcePreviewJob() override { m_InputImage.Free(); }
-	static std::shared_ptr<CSettingsResourcePreviewJob> FromPath(std::string Name, std::string Path, IStorage *pStorage, int StorageType, int TargetSize);
+	static std::shared_ptr<CSettingsResourcePreviewJob> FromPath(std::string Name, std::string Path, IStorage *pStorage, int StorageType, int TargetSize,
+		size_t MaxFileBytes = LOCAL_ASSET_PREVIEW_MAX_FILE_SIZE, size_t MaxDecodedBytes = ASSET_PREVIEW_MAX_DECODED_BYTES);
 
 	bool Completed() const REQUIRES(!m_Lock);
 	SResult TakeResult() REQUIRES(!m_Lock);
@@ -256,6 +258,8 @@ private:
 	int m_StorageType = IStorage::TYPE_ALL;
 	CImageInfo m_InputImage;
 	int m_TargetSize = 0;
+	size_t m_MaxFileBytes = LOCAL_ASSET_PREVIEW_MAX_FILE_SIZE;
+	size_t m_MaxDecodedBytes = ASSET_PREVIEW_MAX_DECODED_BYTES;
 	mutable CLock m_Lock;
 	SResult m_Result;
 	bool m_Completed = false;
@@ -324,7 +328,8 @@ bool TryStartSettingsResourcePreviewJob(CSettingsResourcePreviewCache &Cache, TJ
 }
 
 SResourcePreviewArtifact BuildPreviewArtifact(CImageInfo &&Image, int TargetSize);
-SResourcePreviewArtifact BuildPreviewArtifactFromPath(const char *pPath, IStorage *pStorage, int StorageType, const char *pContextName, int TargetSize);
+SResourcePreviewArtifact BuildPreviewArtifactFromPath(const char *pPath, IStorage *pStorage, int StorageType, const char *pContextName, int TargetSize,
+	size_t MaxFileBytes = LOCAL_ASSET_PREVIEW_MAX_FILE_SIZE, size_t MaxDecodedBytes = ASSET_PREVIEW_MAX_DECODED_BYTES);
 bool SettingsResourcePreviewImageValidForUpload(const CImageInfo &Image);
 bool SettingsResourcePreviewConsumeUploadBudget(SResourcePreviewUploadBudget &Budget, int Count = 1);
 void SettingsResourcePreviewCommitUploadBudget(SResourcePreviewUploadBudget &Budget, int Count = 1);

@@ -46,7 +46,7 @@ try
 	EnsureDefaultAssetVisible(Candidate.m_vSourceNames);
 	Candidate.m_vSourceKinds["default"] = EEntityBgHierarchyEntrySource::LOCAL;
 	std::forward<TSyncSources>(SyncSources)(Candidate.m_vSourceNames, Candidate.m_vSourceKinds);
-	if(!ShowWorkshop && (IsEntityBgWorkshopFolderPath(Candidate.m_aCurrentFolder) || str_startswith(Candidate.m_aCurrentFolder, "entity_bg/")))
+	if(!ShowWorkshop && IsEntityBgWorkshopFolderOrChildPath(Candidate.m_aCurrentFolder))
 		Candidate.m_aCurrentFolder[0] = '\0';
 
 	std::vector<SEntityBgHierarchyEntry> vEntries;
@@ -116,7 +116,7 @@ void CommitSettingsAssetHierarchy(SSettingsAssetHierarchyCandidate<TItem> &Candi
 	{
 		for(TItem &Previous : vItems)
 		{
-			if(str_comp(Previous.m_aName, Item.m_aName) != 0)
+			if(Previous.m_IsDirectory != Item.m_IsDirectory || str_comp(Previous.m_aName, Item.m_aName) != 0)
 				continue;
 			Item.m_RenderTexture = Previous.m_RenderTexture;
 			Previous.m_RenderTexture.Invalidate();

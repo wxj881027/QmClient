@@ -5,7 +5,9 @@
 #include <base/system.h>
 
 #include <array>
+#include <new>
 #include <span>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -93,6 +95,9 @@ inline bool AssetResourceSupportsBlank(const SAssetResourceCategory &Category)
 	return Category.m_Kind != EAssetResourceKind::MAP_FILE;
 }
 bool IsEntityBgWorkshopFolderPath(const char *pPath);
+bool IsEntityBgWorkshopFolderOrChildPath(const char *pPath);
+bool IsEntityBgParentFolderPath(const char *pPath);
+bool EntityBgWorkshopAssetMatchesFolder(std::string_view AssetName, const char *pCurrentFolder);
 bool HasEntityBgWorkshopFolder(const std::vector<std::string> &vAssetNames, const std::unordered_map<std::string, EEntityBgHierarchyEntrySource> *pAssetSources = nullptr);
 bool IsEntityBgWorkshopRootEntry(const SEntityBgHierarchyEntry &Entry);
 EEntityBgHierarchyEntrySource MergeEntityBgHierarchyEntrySource(EEntityBgHierarchyEntrySource Existing, EEntityBgHierarchyEntrySource Incoming);
@@ -130,7 +135,55 @@ SEntityBgInstallPathPreparation PrepareEntityBgWorkshopInstallPath(TStorage *pSt
 	return Result;
 }
 
+struct SNamedSingleFileMigrationResult
+{
+	std::string m_Name;
+	bool m_PreparationFailed = false;
+	bool m_Renamed = false;
+};
+
+// 改名前准备返回名、独立登记名和容量；后端拒绝不发布，提交异常保留可见。
+template<typename TStorage>
+SNamedSingleFileMigrationResult TryMigrateReservedNamedSingleFileAsset(TStorage *pStorage, const SAssetResourceCategory &Category, const char *pOldName, std::vector<std::string> &vExistingNames, int StorageType)
+{
+	SNamedSingleFileMigrationResult Result;
+	char aOldPath[IO_MAX_PATH_LENGTH];
+	char aNewPath[IO_MAX_PATH_LENGTH];
+	str_format(aOldPath, sizeof(aOldPath), "%s/%s.png", Category.m_pInstallFolder, pOldName);
+	if(!pStorage->FileExists(aOldPath, StorageType))
+		return Result;
+	std::string RegistrationName;
+	try
+	{
+		Result.m_Name = NextReservedNamedSingleFileMigrationName(Category, pOldName, vExistingNames);
+		RegistrationName = Result.m_Name;
+		str_format(aNewPath, sizeof(aNewPath), "%s/%s.png", Category.m_pInstallFolder, Result.m_Name.c_str());
+		vExistingNames.reserve(vExistingNames.size() + 1);
+	}
+	catch(const std::bad_alloc &)
+	{
+		Result.m_Name.clear();
+		Result.m_PreparationFailed = true;
+		return Result;
+	}
+	catch(const std::length_error &)
+	{
+		Result.m_Name.clear();
+		Result.m_PreparationFailed = true;
+		return Result;
+	}
+	if(pStorage->FileExists(aNewPath, StorageType) || !pStorage->RenameFile(aOldPath, aNewPath, StorageType))
+		return Result;
+	vExistingNames.push_back(std::move(RegistrationName));
+	Result.m_Renamed = true;
+	return Result;
+}
+
 bool EntityBgHierarchyEntryLess(const SEntityBgHierarchyEntry &Left, const SEntityBgHierarchyEntry &Right);
+// LOCAL 目录以 / 开头、Workshop 目录以 //entity_bg 开头，parent 使用 / 作为内部导航 token。
+// 扫描 leaf 保持相对资源名，因此不会与这些导航身份碰撞。
+// token 仅用于 current folder/返回上级；真实文件名、磁盘路径和保存配置保持原资源名。
+// 旧的无标记 LOCAL/Workshop current folder 仍可传入，返回的目录统一使用 token。
 std::vector<SEntityBgHierarchyEntry> BuildEntityBgHierarchyEntries(const std::vector<std::string> &vAssetNames, const char *pCurrentFolder, bool ShowWorkshopFolder = true, const std::unordered_map<std::string, EEntityBgHierarchyEntrySource> *pAssetSources = nullptr, bool ForceShowWorkshopFolder = false);
 bool ShouldShowEntityBgDirectorySubtitle(bool IsDirectory);
 void BuildEntityBgParentFolder(const char *pCurrentFolder, char *pOut, int OutSize);

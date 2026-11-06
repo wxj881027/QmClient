@@ -198,24 +198,24 @@ namespace
 
 	public:
 		std::atomic<bool> m_NameRetained{false};
-		std::atomic<bool> m_ReadSucceeded{false};
+		std::atomic<bool> m_OpenSucceeded{false};
 		CBlockingPreviewStorage(IStorage &Storage, std::shared_ptr<CPreviewGate> pGate) :
 			m_Storage(Storage), m_pGate(std::move(pGate)) {}
-		bool ReadFile(const char *pName, int Type, void **ppResult, unsigned *pLength) override
+		IOHANDLE OpenFile(const char *pName, int Flags, int Type, char *pBuffer, int BufferSize) override
 		{
 			const std::string OriginalName = pName;
 			m_pGate->EnterAndWait();
 			m_NameRetained = std::strcmp(pName, OriginalName.c_str()) == 0;
-			const bool Read = m_Storage.ReadFile(pName, Type, ppResult, pLength);
-			m_ReadSucceeded = Read;
-			return Read;
+			IOHANDLE File = m_Storage.OpenFile(pName, Flags, Type, pBuffer, BufferSize);
+			m_OpenSucceeded = File != nullptr;
+			return File;
 		}
 		int NumPaths() const override { Unexpected(); }
 		bool GetDataPath(const char *, char *, unsigned) const override { Unexpected(); }
 		bool GetExecutablePath(const char *, char *, unsigned) const override { Unexpected(); }
 		void ListDirectory(int, const char *, FS_LISTDIR_CALLBACK, void *) override { Unexpected(); }
 		void ListDirectoryInfo(int, const char *, FS_LISTDIR_CALLBACK_FILEINFO, void *) override { Unexpected(); }
-		IOHANDLE OpenFile(const char *, int, int, char *, int) override { Unexpected(); }
+		bool ReadFile(const char *, int, void **, unsigned *) override { Unexpected(); }
 		bool FileExists(const char *, int) override { Unexpected(); }
 		bool FolderExists(const char *, int) override { Unexpected(); }
 		char *ReadFileStr(const char *, int) override { Unexpected(); }
@@ -400,7 +400,7 @@ TEST_F(ResourcePreviewInvalidation, QueuedOldJobCannotPublishAfterSameFullKeyIsR
 	EXPECT_EQ(m_Telemetry.m_PreviewJobsDone, 1);
 }
 
-TEST_F(ResourcePreviewInvalidation, CancellationDuringActualReadKeepsStorageInputValidAndRejectsLateResult)
+TEST_F(ResourcePreviewInvalidation, CancellationDuringActualFileOpenKeepsStorageInputValidAndRejectsLateResult)
 {
 	const auto pGate = std::make_shared<CPreviewGate>();
 	const CReleasePreviewGate Release(pGate);
@@ -421,7 +421,7 @@ TEST_F(ResourcePreviewInvalidation, CancellationDuringActualReadKeepsStorageInpu
 	ASSERT_TRUE(WaitForJobFinished(*pOld));
 	EXPECT_FALSE(pGate->TimedOut());
 	EXPECT_TRUE(m_pBlockingStorage->m_NameRetained.load());
-	EXPECT_TRUE(m_pBlockingStorage->m_ReadSucceeded.load());
+	EXPECT_TRUE(m_pBlockingStorage->m_OpenSucceeded.load());
 	EXPECT_EQ(pOld->State(), IJob::STATE_DONE);
 	EXPECT_TRUE(TryPublishSettingsResourcePreviewJob(*pOld, OldKey, m_Cache, m_Uploads, m_Telemetry, Generation));
 	EXPECT_EQ(m_Cache.Size(), 0u);

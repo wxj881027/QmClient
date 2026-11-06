@@ -45,6 +45,7 @@ private:
 	IStorage *m_pStorage;
 	int m_StorageType;
 	int m_MaxTextureSize;
+	size_t m_MaxDecodedBytes;
 	std::string m_Name;
 	FDecode m_pDecode;
 	FResize m_pResize;
@@ -52,20 +53,20 @@ private:
 	SResult m_Result;
 	bool m_Completed = false;
 
-	static bool DecodeImage(const void *pData, unsigned Size, const char *pName, CImageInfo &Image)
+	static bool DecodeImage(const void *pData, unsigned Size, const char *pName, CImageInfo &Image, size_t MaxDecodedBytes)
 	{
 		constexpr uint8_t PngSignature[] = {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
 		constexpr uint8_t WebpRiff[] = {0x52, 0x49, 0x46, 0x46};
 		constexpr uint8_t WebpWebp[] = {0x57, 0x45, 0x42, 0x50};
 		const auto *pBytes = static_cast<const uint8_t *>(pData);
 		if(Size >= 12 && memcmp(pBytes, WebpRiff, 4) == 0 && memcmp(pBytes + 8, WebpWebp, 4) == 0)
-			return CImageLoader::LoadWebP(pData, Size, pName, Image);
+			return CImageLoader::LoadWebP(pData, Size, pName, Image, MaxDecodedBytes);
 		if(Size >= 8 && memcmp(pBytes, PngSignature, 8) == 0)
-			return CImageLoader::LoadPng(pData, Size, pName, Image);
-		if(CImageLoader::LoadWebP(pData, Size, pName, Image))
+			return CImageLoader::LoadPng(pData, Size, pName, Image, MaxDecodedBytes);
+		if(CImageLoader::LoadWebP(pData, Size, pName, Image, MaxDecodedBytes))
 			return true;
 		Image.Free();
-		return CImageLoader::LoadPng(pData, Size, pName, Image);
+		return CImageLoader::LoadPng(pData, Size, pName, Image, MaxDecodedBytes);
 	}
 
 protected:
@@ -81,9 +82,12 @@ protected:
 		if(!vFileData.empty())
 		{
 			auto &Image = Result.m_Image;
-			Result.m_Success = m_pDecode(vFileData.data(), (unsigned)vFileData.size(), m_Name.c_str(), Image);
+			// 四参解码器保留为外部测试接缝；生产默认路径在实际解码分配前传入预算。
+			Result.m_Success = m_pDecode != nullptr ? m_pDecode(vFileData.data(), (unsigned)vFileData.size(), m_Name.c_str(), Image) :
+								  DecodeImage(vFileData.data(), (unsigned)vFileData.size(), m_Name.c_str(), Image, m_MaxDecodedBytes);
 			Result.m_Success = Result.m_Success && Image.m_pData != nullptr && Image.m_Width > 0 && Image.m_Height > 0 &&
-					   Image.m_Width <= std::numeric_limits<int>::max() && Image.m_Height <= std::numeric_limits<int>::max();
+					   Image.m_Width <= std::numeric_limits<int>::max() && Image.m_Height <= std::numeric_limits<int>::max() &&
+					   Image.m_Width <= m_MaxDecodedBytes / 4u / Image.m_Height;
 			if(Result.m_Success && m_MaxTextureSize > 0)
 			{
 				Result.m_SourceWidth = (int)Image.m_Width;
@@ -106,12 +110,13 @@ protected:
 
 public:
 	CFullAsyncImageLoadJob(std::vector<std::string> &&vPossiblePaths, IStorage *pStorage, const char *pName,
-		int StorageType = IStorage::TYPE_ALL, int MaxTextureSize = 0, FDecode pDecode = DecodeImage,
-		FResize pResize = static_cast<FResize>(ResizeImage)) :
+		int StorageType = IStorage::TYPE_ALL, int MaxTextureSize = 0, FDecode pDecode = nullptr,
+		FResize pResize = static_cast<FResize>(ResizeImage), size_t MaxDecodedBytes = ASSET_PREVIEW_MAX_DECODED_BYTES) :
 		m_vPossiblePaths(std::move(vPossiblePaths)),
 		m_pStorage(pStorage),
 		m_StorageType(StorageType),
 		m_MaxTextureSize(MaxTextureSize),
+		m_MaxDecodedBytes(MaxDecodedBytes),
 		m_Name(pName),
 		m_pDecode(pDecode),
 		m_pResize(pResize)
@@ -138,11 +143,12 @@ public:
 
 // 准备和接收成功后才向页面交出等待对象，拒收不留下永远排队的任务。
 inline std::shared_ptr<CFullAsyncImageLoadJob> QmTryQueueSettingsAssetImage(std::vector<std::string> &&vPaths,
-	IStorage *pStorage, IEngine &Engine, const char *pName, int StorageType, int MaxTextureSize)
+	IStorage *pStorage, IEngine &Engine, const char *pName, int StorageType, int MaxTextureSize, size_t MaxDecodedBytes = ASSET_PREVIEW_MAX_DECODED_BYTES)
 {
 	try
 	{
-		auto pJob = std::make_shared<CFullAsyncImageLoadJob>(std::move(vPaths), pStorage, pName, StorageType, MaxTextureSize);
+		auto pJob = std::make_shared<CFullAsyncImageLoadJob>(std::move(vPaths), pStorage, pName, StorageType, MaxTextureSize,
+			nullptr, static_cast<CFullAsyncImageLoadJob::FResize>(ResizeImage), MaxDecodedBytes);
 		if(Engine.TryAddJob(pJob))
 			return pJob;
 	}
