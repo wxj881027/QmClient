@@ -169,6 +169,34 @@ TEST_F(QmChatLogWrites, AcceptedJobOwnsPendingActionsAfterQueueOwnerIsDestroyed)
 	EXPECT_EQ(*m_pWritten, (std::vector<int>{1}));
 }
 
+TEST_F(QmChatLogWrites, PreviousFinishedJobDestructionDoesNotReleaseNewReservation)
+{
+	Enqueue(1);
+	ASSERT_TRUE(Submit());
+	ASSERT_TRUE(WaitForJobFinished(*m_pLastJob));
+	m_Pool.Shutdown();
+	m_Started = false;
+	Enqueue(2);
+	std::shared_ptr<IJob> pAccepted;
+	ASSERT_TRUE(m_Queue.TrySubmit([&pAccepted](std::shared_ptr<IJob> pJob) {
+		pAccepted = std::move(pJob);
+		return true;
+	}));
+	// 池已排空，旧句柄在此释放；新接收的任务仍须独占调度权。
+	m_pLastJob.reset();
+	int Attempts = 0;
+	EXPECT_FALSE(m_Queue.TrySubmit([&Attempts](std::shared_ptr<IJob>) {
+		++Attempts;
+		return false;
+	}));
+	EXPECT_EQ(Attempts, 0);
+	m_Started = m_Pool.TryInit(1);
+	ASSERT_TRUE(m_Started);
+	ASSERT_TRUE(m_Pool.TryAdd(pAccepted));
+	ASSERT_TRUE(WaitForJobFinished(*pAccepted));
+	EXPECT_EQ(*m_pWritten, (std::vector<int>{1, 2}));
+}
+
 TEST_F(QmChatLogWrites, ActionCanEnqueueNextWriteOutsideQueueLock)
 {
 	m_Queue.Enqueue([this] {
