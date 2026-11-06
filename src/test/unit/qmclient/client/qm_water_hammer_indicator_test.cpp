@@ -193,6 +193,64 @@ TEST(QmWaterHammerIndicator, HammerAndHookCanBeHeldIndependently)
 	EXPECT_FALSE(QmShouldMarkWaterHook(200, false, Input, nullptr));
 }
 
+TEST(QmWaterHeldColor, HammerUsesConfiguredPressedColor)
+{
+	const SQmWaterHeldState Held{true, false};
+	const auto Color = Held.HighlightColor(0x00ff55, 0x0000ff);
+
+	ASSERT_TRUE(Color.has_value());
+	EXPECT_NEAR(Color->r, 2.0f / 3.0f, 0.00001f);
+	EXPECT_NEAR(Color->g, 0.0f, 0.00001f);
+	EXPECT_NEAR(Color->b, 0.0f, 0.00001f);
+	EXPECT_FLOAT_EQ(Color->a, 1.0f);
+}
+
+TEST(QmWaterHeldColor, HookUsesItsOwnConfiguredPressedColor)
+{
+	const SQmWaterHeldState Held{false, true};
+	const auto Color = Held.HighlightColor(0x0000ff, 0x55ff55);
+
+	ASSERT_TRUE(Color.has_value());
+	EXPECT_NEAR(Color->r, 0.0f, 0.00001f);
+	EXPECT_NEAR(Color->g, 2.0f / 3.0f, 0.00001f);
+	EXPECT_NEAR(Color->b, 0.0f, 0.00001f);
+	EXPECT_FLOAT_EQ(Color->a, 1.0f);
+}
+
+TEST(QmWaterHeldColor, HoldingBothInputsPrioritizesHammerColor)
+{
+	const SQmWaterHeldState Held{true, true};
+	const auto Color = Held.HighlightColor(0x000000, 0x0000ff);
+
+	ASSERT_TRUE(Color.has_value());
+	EXPECT_EQ(*Color, ColorRGBA(0.0f, 0.0f, 0.0f));
+}
+
+TEST(QmWaterHeldColor, ReleasingHammerFallsBackToHookThenClearsHighlight)
+{
+	SQmWaterHeldState Held{true, true};
+	ASSERT_EQ(Held.HighlightColor(0x000000, 0x0000ff), ColorRGBA(0.0f, 0.0f, 0.0f));
+
+	Held.m_Hammer = false;
+	EXPECT_EQ(Held.HighlightColor(0x000000, 0x0000ff), ColorRGBA(1.0f, 1.0f, 1.0f));
+
+	Held.m_Hook = false;
+	EXPECT_FALSE(Held.HighlightColor(0x000000, 0x0000ff).has_value());
+}
+
+TEST(QmWaterHeldColor, NoHeldInputsLeaveAppearanceUnchanged)
+{
+	EXPECT_FALSE(SQmWaterHeldState{}.HighlightColor(0x000000, 0x0000ff).has_value());
+}
+
+TEST(QmWaterHeldColor, ColorChangesApplyWhileInputRemainsHeld)
+{
+	const SQmWaterHeldState Held{true, false};
+	ASSERT_EQ(Held.HighlightColor(0x000000, 0x0000ff), ColorRGBA(0.0f, 0.0f, 0.0f));
+
+	EXPECT_EQ(Held.HighlightColor(0x0000ff, 0x000000), ColorRGBA(1.0f, 1.0f, 1.0f));
+}
+
 TEST(QmWaterHammerIndicator, FrozenDirectionUsesReceivedLeftAndJumpInsteadOfClearedSnapshot)
 {
 	CNetMsg_Sv_PreInput Message{};

@@ -13,12 +13,6 @@
 
 #include <array>
 
-struct SQmWaterHeldState
-{
-	bool m_Hammer = false;
-	bool m_Hook = false;
-};
-
 // 结合本地分身输入与 sv_preinput，提供同队可见玩家冻结时的卡锤、卡钩和方向键状态。
 class CQmWaterHammerIndicator : public CComponent
 {
@@ -35,7 +29,7 @@ public:
 	bool IsInPenaltyArea(vec2 Position) const;
 	SQmWaterHeldState MarkedInputs(int ClientId) const;
 	SQmWaterDirectionState DirectionInputs(int ClientId) const;
-	bool IsMarked(int ClientId) const;
+	std::optional<ColorRGBA> HighlightColor(int ClientId) const;
 };
 
 #endif // GAME_CLIENT_COMPONENTS_QMCLIENT_WATER_HAMMER_INDICATOR_H

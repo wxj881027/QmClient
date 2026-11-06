@@ -1,9 +1,28 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_WATER_HAMMER_INDICATOR_LOGIC_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_WATER_HAMMER_INDICATOR_LOGIC_H
 
+#include <base/color.h>
+
 #include <generated/protocol.h>
 
 #include <game/mapitems.h>
+
+#include <optional>
+
+struct SQmWaterHeldState
+{
+	bool m_Hammer = false;
+	bool m_Hook = false;
+
+	std::optional<ColorRGBA> HighlightColor(unsigned HammerColor, unsigned HookColor) const
+	{
+		if(!m_Hammer && !m_Hook)
+			return std::nullopt;
+
+		// 同时卡锤和卡钩时，整个角色优先使用卡锤的按下颜色。
+		return color_cast<ColorRGBA>(ColorHSLA(m_Hammer ? HammerColor : HookColor));
+	}
+};
 
 struct SQmWaterHammerInputState
 {
