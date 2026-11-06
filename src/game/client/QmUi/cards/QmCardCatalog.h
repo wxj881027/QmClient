@@ -34,7 +34,6 @@ namespace qm_card_catalog
 	uint64_t GeneralMeasureContentRevision();
 	uint64_t NameplateMeasureContentRevision();
 	uint64_t BlockWordsLayoutRevision();
-	uint64_t FavoriteMapsLayoutRevision(size_t Count);
 
 	// 该 stableId 是否有可构造的卡片模块（用于搜索页过滤与页面自检）。
 	bool HasCardModule(const char *pStableId);
@@ -66,7 +65,6 @@ namespace qm_card_catalog
 		uint64_t m_KeywordRulesRevision = 1;
 		size_t m_KeywordRulesCount = 0;
 		bool m_KeywordRulesHalfFilled = false;
-		uint64_t m_FavoriteMapsRevision = 1;
 	};
 
 	void FillKeywordReplyLayoutState(SQmFunctionCardLayoutState &State);
@@ -186,7 +184,6 @@ namespace qm_card_catalog
 		static void RenderQmFunctionKeywordReplyContent(CMenus *pMenus, CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 		static void RenderQmFunctionPieMenuContent(CMenus *pMenus, CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, float ButtonHeight, float CardPadding, float CardCornerRadius, bool PrewarmOnly);
 		static void RenderQmFunctionMapUploadContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, bool PrewarmOnly);
-		static void RenderQmFunctionFavoriteMapsContent(CMenus *pMenus, CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, bool PrewarmOnly);
 		static void RenderQmFunctionHJAssistContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 		static void RenderQmHudDummyMiniViewContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool Expanded, bool PrewarmOnly);
 		static void RenderQmHudCoordsContent(CMenus *pMenus, CUIRect &Content, const SSettingsContentMetrics &Metrics, float LabelWidth, bool PrewarmOnly);

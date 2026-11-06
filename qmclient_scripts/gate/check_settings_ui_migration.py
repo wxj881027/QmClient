@@ -72,7 +72,6 @@ PAGE_STABLE_IDS = {
 		"qm:translate",
 		"qm:pie_menu",
 		"qm:map_upload",
-		"qm:favorite_maps",
 		"qm:hj_assist",
 		"qm:solo_split",
 	),

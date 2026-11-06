@@ -3383,7 +3383,6 @@ if(CLIENT)
     QmUi/cards/QmCardCatalogVisualContent.cpp
     QmUi/cards/QmCardCatalogFunctionContent.cpp
     QmUi/cards/QmCardCatalogTranslateContent.cpp
-    QmUi/cards/QmCardCatalogFavoriteMapsContent.cpp
     QmUi/cards/QmCardCatalogHudContent.cpp
     QmUi/cards/QmCardCatalogVoiceContent.cpp
     QmUi/cards/QmCardCatalogBackground3DContent.cpp
