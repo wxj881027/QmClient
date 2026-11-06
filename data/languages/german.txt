@@ -1955,6 +1955,9 @@ Bubble opacity
 Build the status text shown above Tees
 == Build the status text shown above Tees
 
+Built-in
+== Integriert
+
 Button - Disabled
 == Schaltfläche - Deaktiviert
 
@@ -2477,32 +2480,8 @@ Clan: %s
 Classic
 == Klassisch
 
-Classic Easy
-== Classic Easy
-
-Classic easy
-== Klassisch einfach
-
-Classic Next
-== Classic Next
-
-Classic next
-== Klassisch nächste
-
-Classic Nut
-== Classic Nut
-
-Classic nut
-== Klassisch nut
-
 Classic PowerShell
 == Klassische PowerShell
-
-Classic Pro
-== Classic Pro
-
-Classic pro
-== Klassisch pro
 
 Clear
 == Leeren
@@ -5306,6 +5285,9 @@ Exchange (ProRes 422 HQ / MOV)
 Exclude
 == Ausschließen
 
+exec
+== exec
+
 Execute before connecting
 == Vor dem Verbinden ausführen
 
@@ -6725,6 +6707,9 @@ Hold gun higher like TW 0.6.1 and earlier
 Hold left click for free camera
 == Halte linke Maustaste für freie Kamera
 
+Hold still
+== Anhalten
+
 Hold the wheel key to see the selection move; release it to run the highlighted slot.
 == Halte die Radtaste gedrückt, um die Auswahl zu bewegen, und lass sie los, um den markierten Platz auszuführen.
 
@@ -7489,6 +7474,9 @@ Keep unsent message on chat close
 
 Keep vote window open after voting
 == Abstimmungsfenster nach der Abstimmung offen lassen
+
+Key
+== Taste
 
 Key binds
 == Tastenbelegungen
@@ -14448,7 +14436,7 @@ Source language code for translation (auto=auto-detect)
 == Quellsprachcode für Übersetzung (auto=automatische Erkennung)
 
 Space
-== Abstand
+== Leertaste
 
 Spam protection: prevent spamming of team switching, chat, skin changes, emotes, votes
 == Spamschutz: verhindert Spammen von Teamwechsel, Chat, Skinwechsel, Emotes, Abstimmungen
@@ -15965,9 +15953,6 @@ Total play time
 Total: %d save(s)
 == Gesamt: %d Save(s)
 
-Traditional
-== Traditionell
-
 Trail alpha
 == Deckkraft der Spur
 
@@ -17471,6 +17456,9 @@ Writing item %d failed
 Written %d items
 == %d Elemente geschrieben
 
+X
+== X
+
 x = DDNet CPU% / total CPU%
 == x = DDNet CPU% / Gesamt CPU%
 
@@ -17479,6 +17467,9 @@ X alignment color
 
 X alignment hint with me
 == X-Ausrichtungshinweis mit mir
+
+Y
+== Y
 
 y = DDNet memory usage
 == y = DDNet Speichernutzung

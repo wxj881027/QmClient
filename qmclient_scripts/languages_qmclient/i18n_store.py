@@ -43,7 +43,8 @@ PENDING_TRANSLATION_RE = re.compile(
     r"^Pending ([a-z_]+) translation(?:\s+.+)?$"
 )
 
-BILINGUAL_FALLBACK_MODULES = frozenset({"editor"})
+# 新模块先只提供简体中文，其余语言按英文原文回退（渐进翻译）。
+BILINGUAL_FALLBACK_MODULES = frozenset({"editor", "bind_workshop"})
 VERBATIM_TRANSLATION_MODULES = frozenset({"editor"})
 
 

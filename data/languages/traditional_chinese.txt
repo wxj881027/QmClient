@@ -1955,6 +1955,9 @@ Bubble opacity
 Build the status text shown above Tees
 == Build the status text shown above Tees
 
+Built-in
+== 內置
+
 Button - Disabled
 == 按鈕 - 未啟用
 
@@ -2475,34 +2478,10 @@ Clan: %s
 == 戰隊：%s
 
 Classic
-== 古典
-
-Classic Easy
-== 古典 Easy
-
-Classic easy
-== 古典 easy
-
-Classic Next
-== 古典 Next
-
-Classic next
-== 古典 next
-
-Classic Nut
-== 古典 Nut
-
-Classic nut
-== 古典 nut
+== 经典
 
 Classic PowerShell
 == 經典 PowerShell
-
-Classic Pro
-== 古典 Pro
-
-Classic pro
-== 古典 pro
 
 Clear
 == 清空
@@ -3606,19 +3585,19 @@ Days
 == 天
 
 DDmaX
-== DDmaX
+== 古典
 
 DDmaX Easy
-== DDmaX Easy
+== 古典 Easy
 
 DDmaX Next
-== DDmaX Next
+== 古典 Next
 
 DDmaX Nut
-== DDmaX Nut
+== 古典 Nut
 
 DDmaX Pro
-== DDmaX Pro
+== 古典 Pro
 
 DDNet
 == DDNet
@@ -5306,6 +5285,9 @@ Exchange (ProRes 422 HQ / MOV)
 Exclude
 == 排除
 
+exec
+== exec
+
 Execute before connecting
 == 連接前執行
 
@@ -6717,13 +6699,16 @@ HJ assist
 == HJ 大佬輔助
 
 Hold
-== 保持
+== 按住
 
 Hold gun higher like TW 0.6.1 and earlier
 == 像 TW 0.6.1 及更早版本一樣，tee 將槍握得更高一點
 
 Hold left click for free camera
 == 按住左鍵自由鏡頭
+
+Hold still
+== 停住
 
 Hold the wheel key to see the selection move; release it to run the highlighted slot.
 == 按住輪盤鍵可以看到選取移動，放開就執行高亮槽位的指令。
@@ -7489,6 +7474,9 @@ Keep unsent message on chat close
 
 Keep vote window open after voting
 == 投票後不關閉投票窗口
+
+Key
+== 按鍵
 
 Key binds
 == 按鍵綁定
@@ -14448,7 +14436,7 @@ Source language code for translation (auto=auto-detect)
 == 翻譯源語言代碼（auto=自動檢測）
 
 Space
-== 間隔
+== 空格
 
 Spam protection: prevent spamming of team switching, chat, skin changes, emotes, votes
 == 刷屏保護：防止切換隊伍、聊天、換皮膚、表情和投票的刷屏
@@ -15965,9 +15953,6 @@ Total play time
 Total: %d save(s)
 == 總計：%d 個存檔
 
-Traditional
-== 繁體
-
 Trail alpha
 == 拖尾透明度
 
@@ -17471,6 +17456,9 @@ Writing item %d failed
 Written %d items
 == 已寫入 %d 項
 
+X
+== X
+
 x = DDNet CPU% / total CPU%
 == x = DDNet CPU% / 總 CPU%
 
@@ -17479,6 +17467,9 @@ X alignment color
 
 X alignment hint with me
 == 與我 X 對齊提示
+
+Y
+== Y
 
 y = DDNet memory usage
 == y = DDNet 內存佔用

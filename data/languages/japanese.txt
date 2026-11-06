@@ -1955,6 +1955,9 @@ Bubble opacity
 Build the status text shown above Tees
 == Build the status text shown above Tees
 
+Built-in
+== 内蔵
+
 Button - Disabled
 == ボタン - 無効
 
@@ -2477,32 +2480,8 @@ Clan: %s
 Classic
 == クラシック
 
-Classic Easy
-== クラシック Easy
-
-Classic easy
-== クラシック easy
-
-Classic Next
-== クラシック Next
-
-Classic next
-== クラシック next
-
-Classic Nut
-== クラシック Nut
-
-Classic nut
-== クラシック nut
-
 Classic PowerShell
 == クラシック PowerShell
-
-Classic Pro
-== クラシック Pro
-
-Classic pro
-== クラシック pro
 
 Clear
 == クリア
@@ -5306,6 +5285,9 @@ Exchange (ProRes 422 HQ / MOV)
 Exclude
 == 除外
 
+exec
+== exec
+
 Execute before connecting
 == 接続前に実行
 
@@ -6717,13 +6699,16 @@ HJ assist
 == HJ アシスト
 
 Hold
-== 保持
+== 長押し
 
 Hold gun higher like TW 0.6.1 and earlier
 == TW 0.6.1 以前のように銃を高く構える
 
 Hold left click for free camera
 == 左クリックでフリーカメラ
+
+Hold still
+== 停止
 
 Hold the wheel key to see the selection move; release it to run the highlighted slot.
 == ホイールキーを押し続けると選択が動き、離すと強調表示されたスロットが実行されます。
@@ -7489,6 +7474,9 @@ Keep unsent message on chat close
 
 Keep vote window open after voting
 == 投票後も投票ウィンドウを開いたままにする
+
+Key
+== キー
 
 Key binds
 == キーバインド
@@ -14448,7 +14436,7 @@ Source language code for translation (auto=auto-detect)
 == 翻訳元言語コード（auto=自動検出）
 
 Space
-== 間隔
+== スペース
 
 Spam protection: prevent spamming of team switching, chat, skin changes, emotes, votes
 == スパム対策：チーム切り替え、チャット、スキン変更、エモート、投票のスパムを防止
@@ -15965,9 +15953,6 @@ Total play time
 Total: %d save(s)
 == 合計: %d 個のセーブ
 
-Traditional
-== 繁体字
-
 Trail alpha
 == トレイルの透明度
 
@@ -17471,6 +17456,9 @@ Writing item %d failed
 Written %d items
 == %d 個のアイテムを書き込みました
 
+X
+== X
+
 x = DDNet CPU% / total CPU%
 == x = DDNet CPU% / 合計 CPU%
 
@@ -17479,6 +17467,9 @@ X alignment color
 
 X alignment hint with me
 == 自分と X 軸揃えのヒント
+
+Y
+== Y
 
 y = DDNet memory usage
 == y = DDNet メモリ使用量

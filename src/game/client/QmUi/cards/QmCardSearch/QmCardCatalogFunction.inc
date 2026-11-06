@@ -78,11 +78,12 @@ namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_favorite_maps[] = {
 		{Localizable("Brutal"), nullptr, "高阶"},
-		{Localizable("Classic"), nullptr, "古典"},
-		{Localizable("Classic easy"), nullptr, "古典 easy"},
-		{Localizable("Classic next"), nullptr, "古典 next"},
-		{Localizable("Classic nut"), nullptr, "古典 nut"},
-		{Localizable("Classic pro"), nullptr, "古典 pro"},
+		// DDmaX 系列走自己的键，中文按官方习惯叫「古典」，不再借用 Classic* 键。
+		{Localizable("DDmaX"), nullptr, "古典"},
+		{Localizable("DDmaX Easy"), nullptr, "古典 easy"},
+		{Localizable("DDmaX Next"), nullptr, "古典 next"},
+		{Localizable("DDmaX Nut"), nullptr, "古典 nut"},
+		{Localizable("DDmaX Pro"), nullptr, "古典 pro"},
 		{Localizable("Copied"), nullptr, "已复制"},
 		{Localizable("Dummy"), nullptr, "分身"},
 		{Localizable("Event"), nullptr, "活动"},

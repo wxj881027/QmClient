@@ -100,16 +100,17 @@ void CMenus::RenderQmFunctionFavoriteMapsContent(CUIRect &Content, float UiScale
 	auto MapTypeDisplayName = [](const char *pType) -> const char * {
 		if(!pType || pType[0] == '\0')
 			return Localize("Unknown");
+		// DDmaX 系列走自己的键，中文按官方习惯显示「古典 / 古典 Easy」等，不再借用 Classic* 键。
 		if(str_comp_nocase(pType, "DDmaX Easy") == 0)
-			return Localize("Classic easy");
+			return Localize("DDmaX Easy");
 		if(str_comp_nocase(pType, "DDmaX Next") == 0)
-			return Localize("Classic next");
+			return Localize("DDmaX Next");
 		if(str_comp_nocase(pType, "DDmaX Pro") == 0)
-			return Localize("Classic pro");
+			return Localize("DDmaX Pro");
 		if(str_comp_nocase(pType, "DDmaX Nut") == 0)
-			return Localize("Classic nut");
+			return Localize("DDmaX Nut");
 		if(str_comp_nocase(pType, "DDmaX") == 0)
-			return Localize("Classic");
+			return Localize("DDmaX");
 		if(str_comp_nocase(pType, "Novice") == 0)
 			return Localize("Novice");
 		if(str_comp_nocase(pType, "Moderate") == 0)

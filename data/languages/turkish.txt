@@ -1955,6 +1955,9 @@ Bubble opacity
 Build the status text shown above Tees
 == Build the status text shown above Tees
 
+Built-in
+== Dahili
+
 Button - Disabled
 == Düğme - Devre Dışı
 
@@ -2477,32 +2480,8 @@ Clan: %s
 Classic
 == Klasik
 
-Classic Easy
-== Klasik Easy
-
-Classic easy
-== Klasik kolay
-
-Classic Next
-== Klasik Next
-
-Classic next
-== Klasik sonraki
-
-Classic Nut
-== Klasik Nut
-
-Classic nut
-== Klasik nut
-
 Classic PowerShell
 == Klasik PowerShell
-
-Classic Pro
-== Klasik Pro
-
-Classic pro
-== Klasik profesyonel
 
 Clear
 == Temizle
@@ -5306,6 +5285,9 @@ Exchange (ProRes 422 HQ / MOV)
 Exclude
 == Hariç tut
 
+exec
+== exec
+
 Execute before connecting
 == Bağlanmadan önce çalıştır
 
@@ -6725,6 +6707,9 @@ Hold gun higher like TW 0.6.1 and earlier
 Hold left click for free camera
 == Serbest kamera için sol tıklamayı basılı tut
 
+Hold still
+== Sabit tut
+
 Hold the wheel key to see the selection move; release it to run the highlighted slot.
 == Seçimin hareket ettiğini görmek için çark tuşunu basılı tut, vurgulanan dilimi çalıştırmak için bırak.
 
@@ -7489,6 +7474,9 @@ Keep unsent message on chat close
 
 Keep vote window open after voting
 == Oylamadan sonra oylama penceresini açık tut
+
+Key
+== Tuş
 
 Key binds
 == Tuş atamaları
@@ -15965,9 +15953,6 @@ Total play time
 Total: %d save(s)
 == Toplam: %d save
 
-Traditional
-== Geleneksel
-
 Trail alpha
 == İz opaklığı
 
@@ -17471,6 +17456,9 @@ Writing item %d failed
 Written %d items
 == %d öğe yazıldı
 
+X
+== X
+
 x = DDNet CPU% / total CPU%
 == x = DDNet CPU% / toplam CPU%
 
@@ -17479,6 +17467,9 @@ X alignment color
 
 X alignment hint with me
 == Benimle X hizalama ipucu
+
+Y
+== Y
 
 y = DDNet memory usage
 == y = DDNet bellek kullanımı

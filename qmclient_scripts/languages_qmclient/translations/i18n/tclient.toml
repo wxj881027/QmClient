@@ -7730,13 +7730,14 @@ polish = "Nieprzezroczystość konturu stałych kafelków"
 
 [[message]]
 key = "Space"
+# 键名，不是「间隔」。DDNet 的内置键名同样译作空格，这里保持与官方一致。
 [message.translations]
-simplified_chinese = "间隔"
-traditional_chinese = "間隔"
-japanese = "間隔"
-korean = "간격"
-russian = "Промежуток"
-german = "Abstand"
+simplified_chinese = "空格"
+traditional_chinese = "空格"
+japanese = "スペース"
+korean = "스페이스"
+russian = "Пробел"
+german = "Leertaste"
 spanish = "Espacio"
 french = "Espace"
 brazilian_portuguese = "Espaço"

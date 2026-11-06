@@ -1955,6 +1955,9 @@ Bubble opacity
 Build the status text shown above Tees
 == Build the status text shown above Tees
 
+Built-in
+== Integrado
+
 Button - Disabled
 == Botón - Desactivado
 
@@ -2477,32 +2480,8 @@ Clan: %s
 Classic
 == Clásico
 
-Classic Easy
-== Clásico Easy
-
-Classic easy
-== Clásico fácil
-
-Classic Next
-== Clásico Next
-
-Classic next
-== Clásico siguiente
-
-Classic Nut
-== Clásico Nut
-
-Classic nut
-== Clásico nut
-
 Classic PowerShell
 == PowerShell clásico
-
-Classic Pro
-== Clásico Pro
-
-Classic pro
-== Clásico pro
 
 Clear
 == Limpiar
@@ -5306,6 +5285,9 @@ Exchange (ProRes 422 HQ / MOV)
 Exclude
 == Excluir
 
+exec
+== exec
+
 Execute before connecting
 == Ejecutar antes de conectar
 
@@ -6725,6 +6707,9 @@ Hold gun higher like TW 0.6.1 and earlier
 Hold left click for free camera
 == Mantén clic izquierdo para cámara libre
 
+Hold still
+== Mantener
+
 Hold the wheel key to see the selection move; release it to run the highlighted slot.
 == Mantén la tecla de la rueda para mover la selección y suéltala para ejecutar la casilla resaltada.
 
@@ -7489,6 +7474,9 @@ Keep unsent message on chat close
 
 Keep vote window open after voting
 == Mantener la ventana de votación abierta después de votar
+
+Key
+== Tecla
 
 Key binds
 == Atajos de teclas
@@ -15965,9 +15953,6 @@ Total play time
 Total: %d save(s)
 == Total: %d guardado(s)
 
-Traditional
-== Tradicional
-
 Trail alpha
 == Alfa de estela
 
@@ -17471,6 +17456,9 @@ Writing item %d failed
 Written %d items
 == %d elementos escritos
 
+X
+== X
+
 x = DDNet CPU% / total CPU%
 == x = DDNet CPU% / CPU total%
 
@@ -17479,6 +17467,9 @@ X alignment color
 
 X alignment hint with me
 == Sugerencia de alineación X conmigo
+
+Y
+== Y
 
 y = DDNet memory usage
 == y = uso de memoria de DDNet

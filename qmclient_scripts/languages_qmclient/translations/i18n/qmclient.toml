@@ -4385,8 +4385,8 @@ polish = "Klan gracza śledzonego z menu kołowego"
 [[message]]
 key = "Classic"
 [message.translations]
-simplified_chinese = "古典"
-traditional_chinese = "古典"
+simplified_chinese = "经典"
+traditional_chinese = "经典"
 japanese = "クラシック"
 korean = "클래식"
 russian = "Классический"
@@ -4397,70 +4397,6 @@ brazilian_portuguese = "Clássico"
 portuguese = "Clássico"
 turkish = "Klasik"
 polish = "Klasyczny"
-
-[[message]]
-key = "Classic easy"
-[message.translations]
-simplified_chinese = "古典 easy"
-traditional_chinese = "古典 easy"
-japanese = "クラシック easy"
-korean = "클래식 easy"
-russian = "Классический easy"
-german = "Klassisch einfach"
-spanish = "Clásico fácil"
-french = "Classique facile"
-brazilian_portuguese = "Clássico fácil"
-portuguese = "Clássico fácil"
-turkish = "Klasik kolay"
-polish = "Klasyczny łatwy"
-
-[[message]]
-key = "Classic next"
-[message.translations]
-simplified_chinese = "古典 next"
-traditional_chinese = "古典 next"
-japanese = "クラシック next"
-korean = "클래식 next"
-russian = "Классический next"
-german = "Klassisch nächste"
-spanish = "Clásico siguiente"
-french = "Classique suivant"
-brazilian_portuguese = "Clássico próximo"
-portuguese = "Clássico seguinte"
-turkish = "Klasik sonraki"
-polish = "Klasyczny następny"
-
-[[message]]
-key = "Classic nut"
-[message.translations]
-simplified_chinese = "古典 nut"
-traditional_chinese = "古典 nut"
-japanese = "クラシック nut"
-korean = "클래식 nut"
-russian = "Классический nut"
-german = "Klassisch nut"
-spanish = "Clásico nut"
-french = "Classique nut"
-brazilian_portuguese = "Clássico nut"
-portuguese = "Clássico nut"
-turkish = "Klasik nut"
-polish = "Klasyczny nut"
-
-[[message]]
-key = "Classic pro"
-[message.translations]
-simplified_chinese = "古典 pro"
-traditional_chinese = "古典 pro"
-japanese = "クラシック pro"
-korean = "클래식 pro"
-russian = "Классический pro"
-german = "Klassisch pro"
-spanish = "Clásico pro"
-french = "Classique pro"
-brazilian_portuguese = "Clássico pro"
-portuguese = "Clássico pro"
-turkish = "Klasik profesyonel"
-polish = "Klasyczny pro"
 
 [[message]]
 key = "Classic title glow"
