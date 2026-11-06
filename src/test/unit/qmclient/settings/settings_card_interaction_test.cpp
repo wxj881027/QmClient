@@ -220,8 +220,6 @@ TEST_F(SettingsCardMeasureRevision, DynamicListChangesInvalidateSearchMeasuremen
 	EXPECT_NE(Original, MeasureModuleCardsRevision(Layout));
 	--Layout.m_KeywordRulesRevision;
 	EXPECT_EQ(Original, MeasureModuleCardsRevision(Layout));
-	++Layout.m_FavoriteMapsRevision;
-	EXPECT_NE(Original, MeasureModuleCardsRevision(Layout));
 }
 
 TEST(SettingsCardDeck, ScrollMovementOnlySuppressesHoverAfterAnInitializedOffset)

@@ -590,9 +590,6 @@ Add friends by entering their name below or by clicking their name in the player
 Add function
 == 新增功能
 
-Add Group
-== 添加群組
-
 Add Item
 == 添加項
 
@@ -1126,6 +1123,9 @@ Are you sure that you want to quit?
 
 Are you sure that you want to remove '%s' from your war groups?
 == 您確定要從您的敵對群組中刪除 '%s' 嗎？
+
+Are you sure that you want to remove '%s' from your war list?
+== 確定要把「%s」從敵對列表中刪除嗎？
 
 Are you sure that you want to remove the clan '%s' from your friends list?
 == 確定要將戰隊 "%s" 從你的好友列表中刪除？
@@ -2740,12 +2740,6 @@ Colors and opacity of the popup list that suggests chat commands and emoticons w
 
 Colors for chat command and emoji completion
 == 聊天指令和表情補全的配色
-
-Colors in chat
-== 在聊天欄中的顏色
-
-Colors in scoreboard
-== 計分板中的顏色
 
 Colors of the hook collision line, in case of a possible collision with:
 == 鉤子輔助線顏色（瞄準以下目標時）：
@@ -4604,6 +4598,9 @@ Edit the name and clan fields; the dummy keeps its own values.
 Edit this custom command on the Bind Wheel page.
 == 請至 Bind 輪盤頁面編輯這條自訂命令。
 
+Edit title style
+== 編輯頭銜樣式
+
 Edit touch controls
 == 編輯觸控設置
 
@@ -5236,6 +5233,9 @@ Entity wall outline opacity
 
 entity_bg (Workshop)
 == entity_bg（Workshop）
+
+Entries in it will fall back to none.
+== 裡面的條目會回到 none。
 
 Entries with NVENC, AMF, Quick Sync or VideoToolbox use the GPU encoding chip and are several times faster. Only encoders that really work on this machine are listed.
 == 帶 NVENC、AMF、Quick Sync 或 VideoToolbox 字樣的項目用顯示卡的編碼單元，速度快好幾倍。清單裡只出現這台機器真正可用的編碼器。
@@ -6098,9 +6098,6 @@ Game type
 Game type (ddnet, mod)
 == 遊戲類型（ddnet、mod）
 
-Game types:
-== 遊戲模式：
-
 Game update rate (Hz)
 == 遊戲更新率（單位：Hz）
 
@@ -6400,6 +6397,9 @@ Ground jump
 
 Group name
 == 分組名稱
+
+Group names are limited to 16 characters
+== 群組名稱最多 16 個字元
 
 Groups input helpers: fast input, automatic margin, sub-tick aiming and cursor behavior.
 == 將輸入輔助集中分組：快速輸入、自動邊距、子 tick 瞄準與游標行為。
@@ -8270,6 +8270,9 @@ Manual target
 Map
 == 地圖
 
+Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
+== 地圖瀏覽器難度分類過濾位元遮罩（位 0-14，見 map_vote_difficulty.h）
+
 Map browser difficulty star filter bitmask (bits 1-5)
 == 地圖瀏覽器難度星級篩選位元遮罩（位元 1-5）
 
@@ -8732,6 +8735,9 @@ Mix rate
 Mixed
 == 混合
 
+Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+== 僅行動端：下次啟動時把崩潰報告複製到 Downloads/QmClient（0 = 保留在應用沙箱內）
+
 Mobile spectator camera: 0=joystick pad, 1=drag the view
 == 手機觀戰取景方式：0=搖桿，1=拖曳畫面
 
@@ -8795,6 +8801,9 @@ Mouse speed for aiming and for menus, and how far your cursor may travel from th
 Move a friend category to a position
 == 將好友分組移動到指定位置
 
+Move down
+== 下移
+
 Move left
 == 向左移動
 
@@ -8809,6 +8818,9 @@ Move the free camera, then add a keyframe at the current demo time.
 
 Move to category
 == 移動到分類
+
+Move up
+== 上移
 
 Movement
 == 移動
@@ -9137,6 +9149,9 @@ New features
 New features (unread)
 == 新功能（未讀）
 
+New group
+== 新建群組
+
 New IME
 == 新版 IME
 
@@ -9281,6 +9296,9 @@ No downloadable portable package for this version
 No empty team left.
 == 已經沒有空隊伍了
 
+No entries yet
+== 暫無條目
+
 No favorite maps yet
 == 暫無收藏地圖
 
@@ -9355,6 +9373,9 @@ No player nearby
 
 No player with this name found.
 == 沒有找到這個名字的玩家
+
+No players match
+== 沒有符合的玩家
 
 No players match these filters
 == 沒有符合篩選條件的玩家
@@ -9619,6 +9640,9 @@ On
 
 One key can hold several commands, so remove single entries under "Bound functions" instead of clearing the key.
 == 一個鍵能放多條指令，想刪掉其中一條就到已綁定功能裡單獨刪除，不必清空整個鍵。
+
+Online
+== 線上
 
 Online friends
 == 在線好友
@@ -9949,9 +9973,6 @@ Override Entry
 
 Override Freeze Tile Entity Alpha (0-100)
 == 覆蓋凍結圖塊的實體 alpha (0-100)
-
-Override Group
-== 覆蓋群組
 
 Override location for ping estimation, available: auto, af, as, as:cn, eu, na, oc, sa (Automatic, Africa, Asia, China, Europe, North America, Oceania/Australia, South America
 == 覆寫 Ping 估算位置，可用：auto、af、as、as:cn、eu、na、oc、sa（自動、非洲、亞洲、中國、歐洲、北美洲、大洋洲/澳洲、南美洲）
@@ -10375,9 +10396,6 @@ Player country (ISO 3166-1 numeric code)
 
 Player country filter in server browser (ISO 3166-1 numeric)
 == 在伺服器瀏覽器中過濾的玩家國家/地區（ISO 3166-1 數字）
-
-Player country:
-== 玩家國家
 
 Player death
 == 玩家死亡
@@ -11687,6 +11705,9 @@ Rename demo
 Rename folder
 == 重命名文件夾
 
+Rename group
+== 重新命名群組
+
 Rename queue
 == 改名名單
 
@@ -12055,6 +12076,9 @@ Reverse gradient colors
 
 Reverse IME gradient colors
 == 反轉漸層顏色 (IME)
+
+Reverse order
+== 倒序排列
 
 Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
 == 反向按鍵時立即反向縮放（0=保留原有平滑縮放）
@@ -12618,7 +12642,7 @@ Selects the country flag shown for you and for the dummy.
 == 選擇為你和分身顯示的國旗。
 
 Self
-== 自身
+== 本體
 
 Self and friends
 == 自己和好友
@@ -13094,7 +13118,7 @@ Show chat when rendering video
 Show clan above name plates
 == 顯示戰隊名稱
 
-Show clan if war
+Show clan for enemies
 == 如果有敵對則顯示戰隊
 
 Show clan name on nameplate
@@ -13240,6 +13264,12 @@ Show enemy color in scoreboard
 
 Show enemy color in spectator menu
 == 在旁觀菜單中顯示敵對顏色
+
+Show enemy colors in chat
+== 在聊天欄中的顏色
+
+Show enemy colors in scoreboard
+== 計分板中的顏色
 
 Show enemy group players
 == 顯示敵對組玩家
@@ -14761,9 +14791,6 @@ Stress system (debug builds only).
 
 Strict game type filter
 == 嚴格遊戲模式篩選
-
-Strict gametype filter
-== 嚴格匹配
 
 Strict mode
 == 嚴格模式

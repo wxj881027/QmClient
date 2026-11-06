@@ -117,6 +117,15 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 		if(CanCommit)
 			s_PieMenuRenameQueue.SetEmptyText(Localize("Example: A|B|C,D|E (C: main, D: dummy)"));
 		ui_widget::InputField(TextInputCtx, &s_PieMenuRenameQueue, ControlColumn, Localize("Example: A|B|C,D|E (C: main, D: dummy)"), BodySize);
+		// 改名名单的说明是一整句不可断行的中文，走通用配置提示会因默认阅读宽度被截成省略号；
+		// 这里按内容宽度给出完整提示，整句始终可见。
+		if(!PrewarmOnly)
+		{
+			const char *pRenameQueueHelp = Localize("Pie menu rename list (| separates entries; main,dummy renames both)");
+			const float HelpFontSize = CurrentSettingsContentMetrics().m_SmallSize;
+			const float HelpWidth = TextRender()->TextWidth(HelpFontSize, pRenameQueueHelp) + HelpFontSize * 2.0f;
+			GameClient()->m_Tooltips.DoSmallToolTip(&s_PieMenuRenameQueue, &ControlColumn, pRenameQueueHelp, HelpFontSize, HelpWidth);
+		}
 	}
 	Flow.Space(LineSpacing * 2.0f);
 
@@ -169,7 +178,15 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 		aItemSizes[Index] = ResolveSettingsToggleButtonSize(TextRender()->TextWidth(BodySize, aColorEntries[Index].m_pName), BodySize, LineHeight, PaddingX, PaddingY);
 		aItemSizes[Index].m_Width += LineHeight + LineSpacing;
 	}
-	auto Grid = ResolveSettingsToggleGrid(Content.w, aItemSizes, LineSpacing);
+	// 左右并列：左边是选项按钮列表，中间是重置图标，右边是圆饼预览。
+	// 预览尺寸先算出来，左侧列表据此收缩，两侧共用同一行高。
+	const float PreviewBaseSide = minimum(Content.w, std::clamp(Content.w * 0.88f, LineHeight * 10.0f, LineHeight * 13.5f));
+	const float PreviewSide = PreviewBaseSide * 0.8f;
+	const float ColumnGap = maximum(CardPadding * 0.8f, LineSpacing * 2.0f);
+	const float ResetButtonSide = std::clamp(ButtonHeight, LineHeight * 1.5f, LineHeight * 2.0f);
+	const float ResetColumnWidth = ResetButtonSide + ColumnGap;
+	const float OptionsColumnWidth = maximum(LineHeight * 8.0f, Content.w - PreviewSide - ResetColumnWidth);
+	auto Grid = ResolveSettingsToggleGrid(OptionsColumnWidth, aItemSizes, LineSpacing);
 	for(size_t Index = 0; Index < aColorEntries.size(); ++Index)
 	{
 		const CUIRect Button = OptionButtonRect({0, 0, Grid.m_aColumnWidths[Index % Grid.m_Columns], LineHeight});
@@ -178,13 +195,29 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 		aItemSizes[Index].m_Height = ResolveSettingsToggleButtonSize(0, LabelHeight, LineHeight, PaddingX, PaddingY).m_Height;
 	}
 	Grid.SetItemHeights(aItemSizes);
-	CUIRect GridArea;
-	if(Flow.Control("pie-color-grid", Grid.Height(), GridArea))
+	std::array<const SPieMenuColorEntry *, qm_pie_menu::OPTION_COUNT> apVisibleEntries{};
+	int VisibleCount = 0;
+	for(const auto &Entry : aColorEntries)
+		if(*Entry.m_pEnabled)
+			apVisibleEntries[VisibleCount++] = &Entry;
+	constexpr float PreviewStartAngle = -90.0f;
+	const float PreviewSectorGap = VisibleCount == 1 ? 0.0f : 3.6f;
+	constexpr float PreviewInnerRatio = 108.0f / 288.0f;
+	const float OptionsRowHeight = std::max(Grid.Height(), PreviewSide);
+	if(Flow.Control("pie-option-color-heading", BodySize, Row))
+		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-pie-menu-option-color", &Row, Localize("Option color"), BodySize, TEXTALIGN_ML, {}, (int)Row.w);
+	Flow.Space(LineSpacing);
+	CUIRect OptionsRow;
+	if(Flow.Control("pie-color-options-row", OptionsRowHeight, OptionsRow))
 	{
+		CUIRect OptionsColumn, ResetColumn, PreviewColumn;
+		OptionsRow.VSplitLeft(OptionsColumnWidth, &OptionsColumn, &OptionsRow);
+		OptionsRow.VSplitLeft(ResetColumnWidth, &ResetColumn, &OptionsRow);
+		PreviewColumn = OptionsRow;
 		for(size_t Index = 0; Index < aColorEntries.size(); ++Index)
 		{
 			const auto &Entry = aColorEntries[Index];
-			const CUIRect Cell = Grid.Cell(GridArea, static_cast<int>(Index));
+			const CUIRect Cell = Grid.Cell(OptionsColumn, static_cast<int>(Index));
 			DoSettingsToggleButton(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, OptionButtonRect(Cell),
 				{Entry.m_pEnabled, Entry.m_pTextId, Entry.m_pName}, ToggleMetrics, CanCommit, Flow.Input() ? ESettingsToggleGroupPass::INPUT : ESettingsToggleGroupPass::RENDER);
 			const CUIRect Swatch = QmPieOptionSwatchRect(Cell, LineHeight);
@@ -194,31 +227,23 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 			if(!PrewarmOnly)
 				GameClient()->m_Tooltips.DoToolTip(Entry.m_pColorValue, &Swatch, Localize("Set color"));
 		}
-	}
-	Flow.Space(LineSpacing);
-	if(Flow.Control("pie-option-color-heading", BodySize, Row))
-		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-pie-menu-option-color", &Row, Localize("Option color"), BodySize, TEXTALIGN_ML, {}, (int)Row.w);
-	Flow.Space(LineSpacing);
-	std::array<const SPieMenuColorEntry *, qm_pie_menu::OPTION_COUNT> apVisibleEntries{};
-	int VisibleCount = 0;
-	for(const auto &Entry : aColorEntries)
-		if(*Entry.m_pEnabled)
-			apVisibleEntries[VisibleCount++] = &Entry;
-	constexpr float PreviewStartAngle = -90.0f;
-	const float PreviewSectorGap = VisibleCount == 1 ? 0.0f : 3.6f;
-	constexpr float PreviewInnerRatio = 108.0f / 288.0f;
-	const float PreviewBaseSide = minimum(Content.w, std::clamp(Content.w * 0.88f, LineHeight * 10.0f, LineHeight * 13.5f));
-	const float PreviewSide = PreviewBaseSide * 0.8f;
-	CUIRect PreviewRow, PreviewRect, PreviewInfoRect;
-	const float PreviewHeight = std::max(PreviewSide, LineHeight + LineSpacing * 0.75f + ButtonHeight);
-	if(Flow.Control("pie-color-preview", PreviewHeight, PreviewRow))
-	{
-		PreviewRow.VSplitLeft(PreviewSide, &PreviewRect, &PreviewInfoRect);
-		PreviewRect.h = PreviewSide;
-		PreviewInfoRect.VSplitLeft(maximum(CardPadding * 0.8f, LineSpacing * 2.0f), nullptr, &PreviewInfoRect);
+		// 重置图标夹在两栏之间并垂直居中：一键把选项颜色恢复成默认值。
+		CUIRect ResetButton;
+		ResetButton.w = ResetButton.h = ResetButtonSide;
+		ResetButton.x = ResetColumn.x + (ResetColumn.w - ResetButton.w) * 0.5f;
+		ResetButton.y = ResetColumn.y + (ResetColumn.h - ResetButton.h) * 0.5f;
+		static CButtonContainer s_ResetAllColorsButton;
+		if(!PrewarmOnly && Ui()->DoButton_QmIcon(&s_ResetAllColorsButton, EQmIcon::ARROW_ROTATE_RIGHT, FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT, 0, &ResetButton, BUTTONFLAG_LEFT) && CanCommit)
+			for(const auto &Entry : aColorEntries)
+				*Entry.m_pColorValue = color_cast<ColorHSLA>(Entry.m_DefaultColor).Pack(Entry.m_Alpha);
+		if(!PrewarmOnly)
+			GameClient()->m_Tooltips.DoToolTip(&s_ResetAllColorsButton, &ResetButton, Localize("Reset colors"));
+		CUIRect PreviewRect = PreviewColumn;
+		PreviewRect.w = minimum(PreviewRect.w, PreviewSide);
+		PreviewRect.h = minimum(PreviewRect.h, PreviewSide);
+		PreviewRect.y = PreviewColumn.y + (PreviewColumn.h - PreviewRect.h) * 0.5f;
 		PreviewRect.Margin(LineSpacing * 0.5f, &PreviewRect);
 		CUIRect PreviewFrame = PreviewRect;
-		const char *pHintText = Localize("Click to set color");
 		if(!PrewarmOnly)
 		{
 			if(Flow.Drawing())
@@ -274,7 +299,6 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 				}
 				const int FocusedSector = HoveredSector >= 0 ? HoveredSector : PopupSectorIndex;
 				const char *pCenterTitle = FocusedSector >= 0 ? apVisibleEntries[FocusedSector]->m_pName : Localize("Set color");
-				pHintText = FocusedSector >= 0 ? apVisibleEntries[FocusedSector]->m_pName : Localize("Option color");
 				float CenterTitleSize = maximum(BodySize, BaseOuterRadius * 0.095f);
 				TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.98f);
 				float CenterTitleWidth = TextRender()->TextWidth(CenterTitleSize, pCenterTitle);
@@ -287,28 +311,6 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 				TextRender()->TextColor(TextRender()->DefaultTextColor());
 			}
 		}
-		CUIRect PreviewInfoContent = PreviewInfoRect;
-		const float InfoSpacing = LineSpacing * 0.75f;
-		const float InfoHeight = LineHeight + InfoSpacing + ButtonHeight;
-		if(PreviewInfoContent.h > InfoHeight)
-			PreviewInfoContent.HSplitTop((PreviewInfoContent.h - InfoHeight) * 0.5f, nullptr, &PreviewInfoContent);
-		CUIRect HintRow, ResetRow;
-		PreviewInfoContent.HSplitTop(LineHeight, &HintRow, &PreviewInfoContent);
-		PreviewInfoContent.HSplitTop(InfoSpacing, nullptr, &PreviewInfoContent);
-		PreviewInfoContent.HSplitTop(ButtonHeight, &ResetRow, &PreviewInfoContent);
-		SLabelProperties HintProps;
-		HintProps.m_MaxWidth = maximum(0.0f, HintRow.w);
-		HintProps.m_EllipsisAtEnd = true;
-		Ui()->DoLabel(&HintRow, pHintText, BodySize * 0.9f, TEXTALIGN_MR, HintProps);
-		static CButtonContainer s_ResetAllColorsButton;
-		CUIRect ResetButton;
-		const float ResetWidth = minimum(ButtonHeight, maximum(0.0f, ResetRow.w));
-		ResetRow.VSplitRight(ResetWidth, nullptr, &ResetButton);
-		if(!PrewarmOnly && Ui()->DoButton_QmIcon(&s_ResetAllColorsButton, EQmIcon::ARROW_ROTATE_RIGHT, FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT, 0, &ResetButton, BUTTONFLAG_LEFT) && CanCommit)
-			for(const auto &Entry : aColorEntries)
-				*Entry.m_pColorValue = color_cast<ColorHSLA>(Entry.m_DefaultColor).Pack(Entry.m_Alpha);
-		if(!PrewarmOnly)
-			GameClient()->m_Tooltips.DoToolTip(&s_ResetAllColorsButton, &ResetButton, Localize("Reset colors"));
 	}
 	Flow.Space(LineSpacing);
 	if(CanCommit && g_Config.m_QmPerfDebug)

@@ -590,9 +590,6 @@ Add friends by entering their name below or by clicking their name in the player
 Add function
 == Dodaj funkcję
 
-Add Group
-== Dodaj grupę
-
 Add Item
 == Dodaj element
 
@@ -1126,6 +1123,9 @@ Are you sure that you want to quit?
 
 Are you sure that you want to remove '%s' from your war groups?
 == Czy na pewno chcesz usunąć '%s' z grup wojennych?
+
+Are you sure that you want to remove '%s' from your war list?
+== Usunąć „%s” z listy wrogów?
 
 Are you sure that you want to remove the clan '%s' from your friends list?
 == Czy na pewno chcesz usunąć klan '%s' z listy znajomych?
@@ -2740,12 +2740,6 @@ Colors and opacity of the popup list that suggests chat commands and emoticons w
 
 Colors for chat command and emoji completion
 == Kolory uzupełniania poleceń i emoji na czacie
-
-Colors in chat
-== Kolory na czacie
-
-Colors in scoreboard
-== Kolory w tabeli wyników
 
 Colors of the hook collision line, in case of a possible collision with:
 == Kolory linii asysty haka, w przypadku możliwej kolizji z:
@@ -4604,6 +4598,9 @@ Edit the name and clan fields; the dummy keeps its own values.
 Edit this custom command on the Bind Wheel page.
 == Edytuj to własne polecenie na stronie koła poleceń.
 
+Edit title style
+== Edytuj styl tytułu
+
 Edit touch controls
 == Edytuj sterowanie dotykowe
 
@@ -5236,6 +5233,9 @@ Entity wall outline opacity
 
 entity_bg (Workshop)
 == entity_bg (Workshop)
+
+Entries in it will fall back to none.
+== Zawarte w niej wpisy wrócą do none.
 
 Entries with NVENC, AMF, Quick Sync or VideoToolbox use the GPU encoding chip and are several times faster. Only encoders that really work on this machine are listed.
 == Pozycje z NVENC, AMF, Quick Sync lub VideoToolbox używają układu kodującego GPU i są kilkukrotnie szybsze. Na liście są tylko kodery, które naprawdę działają na tej maszynie.
@@ -6098,9 +6098,6 @@ Game type
 Game type (ddnet, mod)
 == Typ gry (ddnet, mod)
 
-Game types:
-== Typy gier:
-
 Game update rate (Hz)
 == Częstotliwość aktualizacji gry (Hz)
 
@@ -6400,6 +6397,9 @@ Ground jump
 
 Group name
 == Nazwa grupy
+
+Group names are limited to 16 characters
+== Nazwy grup mają maksymalnie 16 znaków
 
 Groups input helpers: fast input, automatic margin, sub-tick aiming and cursor behavior.
 == Grupuje ułatwienia sterowania: szybkie wejście, automatyczny margines, celowanie w podtaktach i zachowanie kursora.
@@ -8270,6 +8270,9 @@ Manual target
 Map
 == Mapa
 
+Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
+== Maska bitowa filtra kategorii trudności przeglądarki map (bity 0-14, patrz map_vote_difficulty.h)
+
 Map browser difficulty star filter bitmask (bits 1-5)
 == Maska bitowa filtra gwiazdek trudności w przeglądarce map (bity 1-5)
 
@@ -8732,6 +8735,9 @@ Mix rate
 Mixed
 == Mieszany
 
+Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+== Tylko mobile: skopiuj raport awarii do Downloads/QmClient przy następnym uruchomieniu (0 = zostaw w piaskownicy aplikacji)
+
 Mobile spectator camera: 0=joystick pad, 1=drag the view
 == Kamera mobilnego widza: 0=dżojstik, 1=przeciąganie widoku
 
@@ -8795,6 +8801,9 @@ Mouse speed for aiming and for menus, and how far your cursor may travel from th
 Move a friend category to a position
 == Przenieś kategorię znajomych na pozycję
 
+Move down
+== W dół
+
 Move left
 == Przesuń w lewo
 
@@ -8809,6 +8818,9 @@ Move the free camera, then add a keyframe at the current demo time.
 
 Move to category
 == Przenieś do kategorii
+
+Move up
+== W górę
 
 Movement
 == Ruch
@@ -9137,6 +9149,9 @@ New features
 New features (unread)
 == Nowości (nieprzeczytane)
 
+New group
+== Nowa grupa
+
 New IME
 == Nowe IME
 
@@ -9281,6 +9296,9 @@ No downloadable portable package for this version
 No empty team left.
 == Nie pozostała żadna pusta drużyna.
 
+No entries yet
+== Brak wpisów
+
 No favorite maps yet
 == Brak ulubionych map
 
@@ -9355,6 +9373,9 @@ No player nearby
 
 No player with this name found.
 == Nie znaleziono gracza o tym imieniu.
+
+No players match
+== Brak pasujących graczy
 
 No players match these filters
 == Żaden gracz nie pasuje do filtrów
@@ -9619,6 +9640,9 @@ On
 
 One key can hold several commands, so remove single entries under "Bound functions" instead of clearing the key.
 == Jeden klawisz może mieć kilka komend, więc usuwaj pojedyncze wpisy w Przypisane funkcje zamiast czyścić cały klawisz.
+
+Online
+== Online
 
 Online friends
 == Znajomi online
@@ -9949,9 +9973,6 @@ Override Entry
 
 Override Freeze Tile Entity Alpha (0-100)
 == Zastąpienie alfa encji dla zamrożonych płytek (0-100)
-
-Override Group
-== Nadpisz grupę
 
 Override location for ping estimation, available: auto, af, as, as:cn, eu, na, oc, sa (Automatic, Africa, Asia, China, Europe, North America, Oceania/Australia, South America
 == Zastąp region szacowania Ping; dostępne opcje: auto, af, as, as:cn, eu, na, oc, sa (Automatycznie, Afryka, Azja, Chiny, Europa, Ameryka Północna, Oceania/Australia, Ameryka Południowa)
@@ -10375,9 +10396,6 @@ Player country (ISO 3166-1 numeric code)
 
 Player country filter in server browser (ISO 3166-1 numeric)
 == Filtr kraju gracza w przeglądarce serwerów (numeryczny ISO 3166-1)
-
-Player country:
-== Kraj gracza:
 
 Player death
 == Śmierć gracza
@@ -11687,6 +11705,9 @@ Rename demo
 Rename folder
 == Zmień nazwę folderu
 
+Rename group
+== Zmień nazwę grupy
+
 Rename queue
 == Kolejka zmiany nazwy
 
@@ -12055,6 +12076,9 @@ Reverse gradient colors
 
 Reverse IME gradient colors
 == Odwróć kolory gradientu (IME)
+
+Reverse order
+== Odwrotna kolejność
 
 Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
 == Natychmiastowa zmiana kierunku zoomu przeciwnym klawiszem (0=zachowaj płynny zoom)
@@ -13094,7 +13118,7 @@ Show chat when rendering video
 Show clan above name plates
 == Pokaż klan nad tabliczkami z nazwami
 
-Show clan if war
+Show clan for enemies
 == Pokaż klan jeśli wróg
 
 Show clan name on nameplate
@@ -13240,6 +13264,12 @@ Show enemy color in scoreboard
 
 Show enemy color in spectator menu
 == Pokaż kolor wroga w menu obserwatora
+
+Show enemy colors in chat
+== Kolory na czacie
+
+Show enemy colors in scoreboard
+== Kolory w tabeli wyników
 
 Show enemy group players
 == Pokaż graczy z grupy wroga
@@ -14761,9 +14791,6 @@ Stress system (debug builds only).
 
 Strict game type filter
 == Ścisłe filtrowanie typu gry
-
-Strict gametype filter
-== Ścisły filtr typu gry
 
 Strict mode
 == Tryb ścisły

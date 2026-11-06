@@ -2233,10 +2233,13 @@ ColorHSLA CMenus::DoLine_ColorPicker(CButtonContainer *pResetId, const SSettings
 	}
 	const ColorHSLA PickedColor = DoButton_ColorPicker(&Layout.m_ColorButtonRect, pColorValue, Alpha);
 
-	if(DoButton_Menu(pResetId, Localize("Reset"), 0, &Layout.m_ResetButtonRect, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::BASE, 0.1f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), nullptr, Metrics.m_BodySize))
+	// 重置只放回转箭头图标，说明走悬浮提示：颜色行里塞「重置」两个字太占地方，
+	// 而且和旁边那几个图标按钮不是一套语言。
+	if(Ui()->DoButton_QmIcon(pResetId, EQmIcon::ARROW_ROTATE_RIGHT, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &Layout.m_ResetButtonRect, IGraphics::CORNER_ALL))
 	{
 		*pColorValue = color_cast<ColorHSLA>(DefaultColor).Pack(Alpha);
 	}
+	GameClient()->m_Tooltips.DoToolTip(pResetId, &Layout.m_ResetButtonRect, Localize("Reset"));
 
 	Ui()->DoConfigTooltip(pColorValue, &HintRect, pColorValue);
 	return PickedColor;
@@ -6105,20 +6108,24 @@ void CMenus::RenderThemeSelection(CUIRect MainView, const SSettingsContentMetric
 	const float HeaderSpacing = Metrics.m_LineSpacing;
 	CUIRect HeaderView = MainView;
 	CUIRect Header, HeaderRow;
-	HeaderView.HSplitTop(HeaderHeight + HeaderSpacing, &Header, nullptr);
+	HeaderView.HSplitTop(HeaderHeight + HeaderSpacing * 2.0f, &Header, nullptr);
 	Header.HSplitTop(HeaderHeight, &HeaderRow, nullptr);
 
-	s_ListBox.DoHeader(&MainView, Localize("Theme"), HeaderHeight, HeaderSpacing);
+	s_ListBox.DoHeader(&MainView, Localize("Theme"), HeaderHeight, HeaderSpacing * 2.0f);
 
 	static CButtonContainer s_RefreshButton;
 	CUIRect RefreshButton;
-	HeaderRow.VSplitRight(80.0f * Metrics.m_UiScale, nullptr, &RefreshButton);
-	RefreshButton.VMargin(Metrics.m_LineSpacing * 0.5f, &RefreshButton);
-	if(DoButton_Menu(&s_RefreshButton, Localize("Refresh"), 0, &RefreshButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::BASE, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, Metrics.m_BodySize))
+	const float RefreshSide = std::min(HeaderHeight, 80.0f * Metrics.m_UiScale);
+	HeaderRow.VSplitRight(RefreshSide, nullptr, &RefreshButton);
+	RefreshButton.h = RefreshSide;
+	RefreshButton.y += (HeaderRow.h - RefreshSide) * 0.5f;
+	RefreshButton.Margin(Metrics.m_LineSpacing * 0.5f, &RefreshButton);
+	if(Ui()->DoButton_QmIcon(&s_RefreshButton, EQmIcon::ARROW_ROTATE_RIGHT, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &RefreshButton, IGraphics::CORNER_ALL))
 	{
 		MenuBackground.RefreshThemes();
 		s_ListBox.ResetScroll();
 	}
+	GameClient()->m_Tooltips.DoToolTip(&s_RefreshButton, &RefreshButton, Localize("Refresh"));
 
 	const std::vector<CTheme> &vThemes = MenuBackground.GetThemes();
 

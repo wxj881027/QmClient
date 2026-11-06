@@ -212,10 +212,13 @@ namespace ui_widget
 		const bool HasIcon = Options.m_pLeadingIcon != nullptr || Search;
 		const bool HasTrailingAction = Options.m_pTrailingActionId != nullptr && Options.m_pTrailingActionIcon != nullptr;
 		const bool InlineTrailingText = Options.m_InlineTrailingText && Options.m_pTrailingText != nullptr && Options.m_pTrailingText[0] != '\0';
+		// 一个输入框里不放两个尾部图标：有显隐眼睛这类动作时就不再给清空叉号留槽位，
+		// 眼睛因此贴到输入框最右边，也不会和叉号抢点击区域。
+		const bool Clearable = Options.m_Clearable && !HasTrailingAction;
 		const float TrailingWidth = HasTrailingAction ? std::max(Options.m_TrailingWidth, Rect.h) : Options.m_TrailingWidth;
-		const SInputFieldLayout Layout = ResolveInputFieldLayout(Rect, HasIcon, Options.m_Clearable, Ctx.m_UiScale, InlineTrailingText ? 0.0f : TrailingWidth);
-		const bool ShowClear = Options.m_Clearable && QmInputFieldClearVisible(pInput->IsEmpty(), WasActive, WasEmpty);
-		const float ClearAlpha = Options.m_Clearable ? AnimateStateValue(Ctx, pInput->GetClearButtonId(), EUiAnimProperty::ALPHA, ShowClear ? 1.0f : 0.0f, ui_token::motion::HOVER_FADE) : 0.0f;
+		const SInputFieldLayout Layout = ResolveInputFieldLayout(Rect, HasIcon, Clearable, Ctx.m_UiScale, InlineTrailingText ? 0.0f : TrailingWidth);
+		const bool ShowClear = Clearable && QmInputFieldClearVisible(pInput->IsEmpty(), WasActive, WasEmpty);
+		const float ClearAlpha = Clearable ? AnimateStateValue(Ctx, pInput->GetClearButtonId(), EUiAnimProperty::ALPHA, ShowClear ? 1.0f : 0.0f, ui_token::motion::HOVER_FADE) : 0.0f;
 		const float FontSize = std::min(Options.m_FontSize, Layout.m_ContentRect.h * CUi::ms_FontmodHeight * 0.8f);
 		CUIRect TextRect = Layout.m_ContentRect;
 		CUIRect TrailingRect = Layout.m_TrailingRect;
@@ -279,7 +282,7 @@ namespace ui_widget
 		RenderOptions.m_DrawBackground = false;
 		RenderOptions.m_ProcessInput = ProcessInput;
 		CUIRect InputHitRect = Layout.m_ShellRect;
-		if(Options.m_Clearable && ShowClear && Layout.m_ClearRect.w > 0.0f)
+		if(Clearable && ShowClear && Layout.m_ClearRect.w > 0.0f)
 			InputHitRect.VSplitRight(Layout.m_ClearRect.w, &InputHitRect, nullptr);
 		if(HasTrailingAction && TrailingRect.w > 0.0f)
 			InputHitRect.VSplitRight(TrailingRect.w, &InputHitRect, nullptr);
@@ -297,7 +300,7 @@ namespace ui_widget
 		if(RenderOnly)
 			pInput->SetEmptyText(pPreviousPlaceholder);
 
-		if(Options.m_Clearable && !Ctx.m_pUi->MeasurementOnly() && ClearAlpha > 0.01f)
+		if(Clearable && !Ctx.m_pUi->MeasurementOnly() && ClearAlpha > 0.01f)
 		{
 			const CUIRect &ClearRect = Layout.m_ClearRect;
 			// 清除按钮跟随内容出现/消失；槽位始终保留，文字不因 × 出现而重排。
@@ -321,7 +324,7 @@ namespace ui_widget
 			SButtonSurfaceOptions ActionOptions;
 			ActionOptions.m_Role = EUiButtonRole::ICON;
 			ActionOptions.m_TransparentInactive = true;
-			ActionOptions.m_Corners = Options.m_Clearable ? IGraphics::CORNER_NONE : IGraphics::CORNER_R;
+			ActionOptions.m_Corners = Clearable ? IGraphics::CORNER_NONE : IGraphics::CORNER_R;
 			DrawButtonSurface(Ctx, Options.m_pTrailingActionId, TrailingRect, ActionOptions);
 			// 尾部图标必须带上动作 id：它是显隐动画的节点键，缺了就一直走静态字形。
 			DrawInputFieldIcon(Ctx, TrailingRect, Options.m_pTrailingActionIcon, InputIconColor, Options.m_TrailingActionQmIcon, Options.m_pTrailingActionId);
@@ -516,7 +519,11 @@ namespace ui_widget
 			InputField = Controls;
 		if(InputField.w <= 0.0f)
 			InputField = ValueRect;
-		InputField.VMargin(std::min(5.0f, ValueWidth * 0.1f), &InputField);
+		// 内缩只留在左侧：外框右边缘必须落在控件列右边界上，数值框才能和同行开关、
+		// 下拉右对齐。此前两侧各缩 5px，是单位还占独立尾槽时给「外框—单位」留的间距；
+		// 单位已改成框内内联显示，右侧再缩就只剩一条比开关短的错位空隙。
+		// 左侧内缩保留，继续用作滑条轨道与输入框之间的间距。
+		InputField.VSplitLeft(std::min(5.0f, ValueWidth * 0.1f), nullptr, &InputField);
 
 		if(HasLabel)
 		{
@@ -738,14 +745,33 @@ namespace ui_widget
 			const uint64_t TrackKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash ^ 0xA5A5ull, reinterpret_cast<uint64_t>(pId));
 			Track = ResolveUiAnimValueColor(*pAnim, TrackKey, Track, ui_token::motion::BTN_HOVER.m_DurationSec, ui_token::motion::BTN_HOVER.m_Easing);
 			const uint64_t KnobKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash ^ 0x5A5Aull, reinterpret_cast<uint64_t>(pId));
+			// 开关首次出现时用当前状态初始化滑块，避免一露面就自己左右滑一段。
+			if(!pAnim->HasValue(KnobKey, EUiAnimProperty::COLOR_MIX))
+				SetUiPresentationStateValue(*pAnim, KnobKey, EUiAnimProperty::COLOR_MIX, Progress);
 			Progress = ResolveUiAnimSpringValue(*pAnim, KnobKey, EUiAnimProperty::COLOR_MIX, Progress, ui_token::motion::TOGGLE);
 		}
-		const SToggleLayout Layout = ResolveToggleLayout(Rect, Progress);
+		// 滑块离目标档位越远拉伸越多：中段最像液体，落位时随弹簧回弹收圆。
+		const float KnobStretch = Animate && Enabled && !Ctx.m_pUi->AnimationsBlocked() ? std::clamp(std::abs(Progress - (Value ? 1.0f : 0.0f)), 0.0f, 1.0f) * 2.0f : 0.0f;
+		const SToggleLayout Layout = ResolveToggleLayout(Rect, Progress, KnobStretch);
 		const bool Hovered = Enabled && Ctx.m_pUi->Enabled() && Ctx.m_pUi->VisualMouseHovered(pHitRect != nullptr ? pHitRect : &Rect);
 		const bool Pressed = Hovered && Ctx.m_pUi->CheckActiveItem(pId) && Ctx.m_pUi->MouseButton(0);
 		const auto Feedback = ResolveUiToggleFeedbackStyle(Style, Track, Backdrop, Enabled, Hovered, Pressed);
 		DrawControlSurface(Ctx, Layout.m_Track, Feedback.m_Track, Feedback.m_Border, ui_token::radius::PILL, ui_token::feedback::ICON_BORDER_WIDTH);
 		DrawControlSurface(Ctx, Layout.m_Knob, Feedback.m_Knob, ColorRGBA(), ui_token::radius::PILL);
+	}
+
+	// 两端渐隐的细分隔线：分组标题下用它，比整块背景板轻，不会把标题读成按钮。
+	void DrawFadeDivider(CUi *pUi, const CUIRect &Rect)
+	{
+		if(pUi == nullptr || pUi->MeasurementOnly())
+			return;
+		const float Inset = std::min(Rect.w * ui_token::server_filter::DIVIDER_INSET_RATIO, ui_token::server_filter::DIVIDER_INSET_MAX);
+		CUIRect Bar{Rect.x + Inset, Rect.y + (Rect.h - ui_token::server_filter::DIVIDER_THICKNESS) * 0.5f, std::max(0.0f, Rect.w - 2.0f * Inset), ui_token::server_filter::DIVIDER_THICKNESS};
+		const ColorRGBA Peak = ui_token::color::TEXT_SECONDARY.WithAlpha(0.18f);
+		const ColorRGBA Edge = Peak.WithAlpha(0.0f);
+		const float Half = Bar.w * 0.5f;
+		pUi->Graphics()->DrawRect4(Bar.x, Bar.y, Half, Bar.h, Edge, Peak, Edge, Peak, IGraphics::CORNER_NONE, 0.0f);
+		pUi->Graphics()->DrawRect4(Bar.x + Half, Bar.y, Bar.w - Half, Bar.h, Peak, Edge, Peak, Edge, IGraphics::CORNER_NONE, 0.0f);
 	}
 
 	void DrawMarkedControl(const IUiContext &Ctx, const void *pId, const char *pMark, const CUIRect &Rect, const CUIRect *pHitRect)
@@ -760,6 +786,32 @@ namespace ui_widget
 		CUiScopedSurfaceText SurfaceText(Ctx.m_pUi->TextRender(), Fill);
 		if(pMark != nullptr && pMark[0] != '\0')
 			Ctx.m_pUi->DoLabel(&Rect, pMark, Rect.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
+	}
+
+	bool FilterChip(const IUiContext &Ctx, const void *pId, const CUIRect &Rect, const char *pLabel, bool Selected, bool Enabled)
+	{
+		if(Ctx.m_pUi == nullptr || pId == nullptr)
+			return false;
+		// 禁用时不接输入，也不画选中色：让「这组选项现在不起作用」看得出来。
+		const bool Pressed = Enabled && !Ctx.m_pUi->RenderOnly() && Ctx.m_pUi->DoButtonLogic(pId, 0, &Rect, BUTTONFLAG_LEFT) != 0;
+		if(Ctx.m_pUi->MeasurementOnly() || Ctx.m_pUi->DrawingSuppressed())
+			return Pressed;
+		CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ctx.m_pUi);
+		SButtonSurfaceOptions Options;
+		Options.m_Selected = Selected && Enabled;
+		Options.m_Radius = ui_token::radius::PILL;
+		// 每个胶囊都带自己的胶囊底（静止态也画），只有选中态换成强调色；
+		// 透明底会让整排退化成纯文字，看不出可点区域。
+		const ColorRGBA Fill = DrawButtonSurface(Ctx, pId, Rect, Options);
+		CUiScopedSurfaceText SurfaceText(Ctx.m_pUi->TextRender(), Fill);
+		SLabelProperties Props;
+		Props.m_MaxWidth = Rect.w;
+		Props.m_EllipsisAtEnd = true;
+		Props.m_MinimumFontSize = ui_token::server_filter::CHIP_MIN_FONT_SIZE;
+		Props.SetColor(Enabled ? ui_token::color::TEXT_PRIMARY : ui_token::color::TEXT_DISABLED);
+		CUIRect LabelRect = Rect;
+		Ctx.m_pUi->DoLabel(&LabelRect, pLabel, ui_token::server_filter::CHIP_FONT_SIZE, TEXTALIGN_MC, Props);
+		return Pressed;
 	}
 
 	bool Toggle(const IUiContext &Ctx, const void *pId, bool *pValue, const CUIRect &Rect, bool ProcessInput, bool Animate)

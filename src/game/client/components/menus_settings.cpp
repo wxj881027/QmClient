@@ -782,7 +782,7 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMet
 		CUIRect ItemRect;
 		Content.HSplitTop(Metrics.m_ListRowHeight, &ItemRect, &Content);
 		const bool Selected = s_SelectedLanguage == (int)i;
-		const bool Visible = gs_LanguageScrollRegion.AddRect(ItemRect, gs_LanguageScrollToSelected && Selected);
+		const bool Visible = gs_LanguageScrollRegion.AddRect(ItemRect, gs_LanguageScrollToSelected && Selected, Selected);
 		if(!Visible)
 			continue;
 		++VisibleLanguages;

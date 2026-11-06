@@ -1014,7 +1014,7 @@ polish = "Włącz listę filtra, wpisz słowa oddzielone przecinkami, a następn
 [[message]]
 key = "\"Hide player messages\" removes the whole line, including team chat that merely mentions a blocked word."
 [message.translations]
-simplified_chinese = "隐藏玩家消息会整行删掉，连只是在团队聊天里提到屏蔽词的整句也一起消失。"
+simplified_chinese = "隐藏玩家消息会整行删掉，连只是在队伍聊天里提到屏蔽词的整句也一起消失。"
 traditional_chinese = "隱藏玩家訊息會整行刪掉，連只是在團隊聊天裡提到屏蔽詞的整句也一起消失。"
 japanese = "プレイヤーメッセージを隠すは行ごと消します。チームチャットで語句に触れただけの行も消えます。"
 korean = "플레이어 메시지 숨기기는 줄 전체를 지웁니다. 팀 채팅에서 차단 단어를 언급하기만 해도 사라집니다."
@@ -1366,7 +1366,7 @@ polish = "Wyblakłe kafle śmierci i zamrożenia ułatwiają zobaczenie Tee i br
 [[message]]
 key = "Draws collision and interaction ranges on the map: tee collision, pickups, hammer, hook, lasers and explosions."
 [message.translations]
-simplified_chinese = "在地图上画出碰撞与交互范围：Tee 碰撞、拾取物、锤子、钩索、激光和爆炸。"
+simplified_chinese = "在地图上画出碰撞与交互范围：Tee 碰撞、拾取物、锤子、钩子、激光和爆炸。"
 traditional_chinese = "在地圖上畫出碰撞與互動範圍：Tee 碰撞、拾取物、槌子、鉤索、雷射與爆炸。"
 japanese = "マップ上に衝突と相互作用の範囲を描画します。Tee の衝突、取得物、ハンマー、フック、レーザー、爆発。"
 korean = "맵에 충돌 및 상호작용 범위를 그립니다. Tee 충돌, 획득 아이템, 망치, 훅, 레이저, 폭발."
@@ -1446,7 +1446,7 @@ polish = "Zaznacz podświetlaj sojuszników uderzających młotkiem w strefach �
 [[message]]
 key = "Use it to find the teammate who needs a wake-up; enemies are never highlighted, so do not look for them here."
 [message.translations]
-simplified_chinese = "用它找需要唤醒的队友；敌人从不被高亮，别在这里找他们。"
+simplified_chinese = "用它找需要唤醒的队友；敌对玩家从不被高亮，别在这里找他们。"
 traditional_chinese = "用它找需要喚醒的隊友；敵人從不會被高亮，別在這裡找他們。"
 japanese = "起こしてほしい味方を見つけるための機能です。敵は強調されないので、ここで探さないでください。"
 korean = "깨워 줘야 할 아군을 찾는 데 쓰세요. 적은 강조되지 않으니 여기서 찾지 마세요."
@@ -2726,7 +2726,7 @@ polish = "Pokazuje przy nazwie ikoną lub liczbą, czy danego Tee można jeszcze
 [[message]]
 key = "Turn on \"Show hook strength icon indicator\", optionally add \"Show hook strength number indicator\", then choose a \"Hook strength scope\"."
 [message.translations]
-simplified_chinese = "打开显示钩索强度图标，需要的话再开显示钩索强度数值，然后选择钩索强度范围。"
+simplified_chinese = "打开显示钩子强度图标，需要的话再开显示钩子强度数值，然后选择钩子强度范围。"
 traditional_chinese = "打開顯示鉤索強度圖示，需要時再開顯示鉤索強度數值，然後選擇鉤索強度範圍。"
 japanese = "フック強度アイコンインジケーター表示をオンにし、必要ならフック強度数値インジケーターもオンにして、フック強度の範囲を選びます。"
 korean = "갈고리 강도 아이콘 표시를 켜고, 필요하면 갈고리 강도 숫자 표시를 켠 뒤 갈고리 강도 범위를 고릅니다."
@@ -2742,7 +2742,7 @@ polish = "Włącz Pokaż wskaźnik ikony siły haka, opcjonalnie wskaźnik liczb
 [[message]]
 key = "\"Hook strength scope\" limits which players get the marker, so pick \"All\" if it seems missing."
 [message.translations]
-simplified_chinese = "钩索强度范围决定哪些玩家带标记，看不到标记时选全部。"
+simplified_chinese = "钩子强度范围决定哪些玩家带标记，看不到标记时选全部。"
 traditional_chinese = "鉤索強度範圍決定哪些玩家帶標記，看不到標記時選全部。"
 japanese = "フック強度の範囲でマーカーが付くプレイヤーが決まるので、見当たらないときはすべてを選びます。"
 korean = "갈고리 강도 범위는 표시가 붙을 플레이어를 제한하니, 안 보이면 모두를 고르세요."
@@ -3238,7 +3238,7 @@ polish = "Tryb bezwzględny celuje w stały punkt i ukrywa ustawienie prędkośc
 [[message]]
 key = "Keys for moving, jumping, firing and hooking, plus camera zoom and visibility shortcuts."
 [message.translations]
-simplified_chinese = "移动、跳跃、开火和钩索的按键，还有镜头缩放和显示相关的快捷键。"
+simplified_chinese = "移动、跳跃、开火和钩子的按键，还有镜头缩放和显示相关的快捷键。"
 traditional_chinese = "移動、跳躍、開火和鉤索的按鍵，還有鏡頭縮放和顯示相關的快捷鍵。"
 japanese = "移動、ジャンプ、射撃、フックのキーに加え、カメラズームと表示まわりのショートカット。"
 korean = "이동, 점프, 발사, 갈고리 키와 카메라 줌, 표시 관련 단축키입니다."
@@ -3254,7 +3254,7 @@ polish = "Klawisze ruchu, skoku, strzału i haka oraz zoom kamery i skróty wido
 [[message]]
 key = "Click the key field next to an action such as \"Jump\" or \"Hook\" and press the key you want; a waiting field takes your next key."
 [message.translations]
-simplified_chinese = "点跳跃或钩索这类动作旁边的按键栏，再按下想用的键；处于等待状态的按键栏会接收你下一个按键。"
+simplified_chinese = "点跳跃或钩子这类动作旁边的按键栏，再按下想用的键；处于等待状态的按键栏会接收你下一个按键。"
 traditional_chinese = "點跳躍或鉤索這類動作旁邊的按鍵欄，再按下想用的鍵；處於等待狀態的按鍵欄會接收你下一個按鍵。"
 japanese = "ジャンプやフックなどの動作の横にあるキー欄をクリックし、使いたいキーを押します。待機中の欄は次のキー入力を受け付けます。"
 korean = "점프나 갈고리 같은 동작 옆의 키 칸을 클릭하고 원하는 키를 누르세요. 대기 중인 칸은 다음 키 입력을 받습니다."
@@ -3430,7 +3430,7 @@ polish = "Daj czatowi drużynowemu własny klawisz, aby szybkie zawołanie do dr
 [[message]]
 key = "Keys for your second tee: switching to it, making it jump, fire or hook, and copying your moves."
 [message.translations]
-simplified_chinese = "第二个 tee 的按键：切换到它、让它跳跃、开火或钩索，以及复制你的操作。"
+simplified_chinese = "第二个 tee 的按键：切换到它、让它跳跃、开火或钩子，以及复制你的操作。"
 traditional_chinese = "第二個 tee 的按鍵：切換到它、讓它跳躍、開火或鉤索，以及複製你的操作。"
 japanese = "二つ目の tee 用のキー。切り替え、ジャンプ・射撃・フック、そして自分の動きのコピーです。"
 korean = "두 번째 tee를 위한 키로, 전환하고 점프·발사·갈고리를 시키며 내 움직임을 복사합니다."
@@ -4694,7 +4694,7 @@ polish = "Znaczniki są rysowane tylko na twoim ekranie i nigdy nie zmieniają s
 [[message]]
 key = "Applies an animated rainbow color to selected elements such as nameplates or the hook."
 [message.translations]
-simplified_chinese = "为名牌、钩索等选定元素加上流动的彩虹色。"
+simplified_chinese = "为名牌、钩子等选定元素加上流动的彩虹色。"
 traditional_chinese = "為名牌或鉤子等選定元素套用動畫彩虹色彩。"
 japanese = "ネームプレートやフックなどの選択した要素に、アニメーションする虹色を適用します。"
 korean = "이름표나 훅 같은 선택한 요소에 움직이는 무지개 색을 적용합니다."
@@ -6182,7 +6182,7 @@ polish = "Linie kolizji są liczone lokalnie i nie gwarantują, że hak się zac
 [[message]]
 key = "Previews hook collision colors and line styles."
 [message.translations]
-simplified_chinese = "预览钩子碰撞的颜色和线条样式。"
+simplified_chinese = "预览钩子辅助线的颜色和线条样式。"
 traditional_chinese = "預覽鉤索碰撞顏色與線條樣式。"
 japanese = "フックの当たり判定の色と線のスタイルをプレビューします。"
 korean = "훅 충돌 색상과 선 스타일을 미리 보여 줍니다."

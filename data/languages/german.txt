@@ -590,9 +590,6 @@ Add friends by entering their name below or by clicking their name in the player
 Add function
 == Funktion hinzufügen
 
-Add Group
-== Gruppe hinzufügen
-
 Add Item
 == Element hinzufügen
 
@@ -1126,6 +1123,9 @@ Are you sure that you want to quit?
 
 Are you sure that you want to remove '%s' from your war groups?
 == Bist du sicher, dass du '%s' aus deinen Kriegsgruppen entfernen möchtest?
+
+Are you sure that you want to remove '%s' from your war list?
+== „%s“ aus der Kriegsliste entfernen?
 
 Are you sure that you want to remove the clan '%s' from your friends list?
 == Bist du sicher, dass du den Clan '%s' aus deiner Freundesliste entfernen möchtest?
@@ -2740,12 +2740,6 @@ Colors and opacity of the popup list that suggests chat commands and emoticons w
 
 Colors for chat command and emoji completion
 == Farben für die Befehls- und Emoji-Vervollständigung im Chat
-
-Colors in chat
-== Farben im Chat
-
-Colors in scoreboard
-== Farben in der Bestenliste
 
 Colors of the hook collision line, in case of a possible collision with:
 == Farben der Hakenhilfslinie im Falle einer möglichen Kollision mit:
@@ -4604,6 +4598,9 @@ Edit the name and clan fields; the dummy keeps its own values.
 Edit this custom command on the Bind Wheel page.
 == Bearbeite diesen eigenen Befehl auf der Befehlsrad-Seite.
 
+Edit title style
+== Titelstil bearbeiten
+
 Edit touch controls
 == Touch-Steuerung bearbeiten
 
@@ -5236,6 +5233,9 @@ Entity wall outline opacity
 
 entity_bg (Workshop)
 == entity_bg (Workshop)
+
+Entries in it will fall back to none.
+== Darin enthaltene Einträge fallen auf none zurück.
 
 Entries with NVENC, AMF, Quick Sync or VideoToolbox use the GPU encoding chip and are several times faster. Only encoders that really work on this machine are listed.
 == Einträge mit NVENC, AMF, Quick Sync oder VideoToolbox nutzen den Encoder-Chip der Grafikkarte und sind mehrere Male schneller. Gelistet wird nur, was auf dieser Maschine wirklich läuft.
@@ -6098,9 +6098,6 @@ Game type
 Game type (ddnet, mod)
 == Spieltyp (ddnet, mod)
 
-Game types:
-== Spieltypen:
-
 Game update rate (Hz)
 == Spielaktualisierungsrate (Hz)
 
@@ -6400,6 +6397,9 @@ Ground jump
 
 Group name
 == Gruppenname
+
+Group names are limited to 16 characters
+== Gruppennamen sind auf 16 Zeichen begrenzt
 
 Groups input helpers: fast input, automatic margin, sub-tick aiming and cursor behavior.
 == Bündelt Eingabehilfen: schnelle Eingabe, automatischer Rand, Unter-Tick-Zielen und Cursorverhalten.
@@ -8270,6 +8270,9 @@ Manual target
 Map
 == Karte
 
+Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
+== Bitmaske des Schwierigkeitskategoriefilters im Kartenbrowser (Bits 0-14, siehe map_vote_difficulty.h)
+
 Map browser difficulty star filter bitmask (bits 1-5)
 == Bitmaske des Schwierigkeits-Sternfilters im Kartenbrowser (Bits 1-5)
 
@@ -8732,6 +8735,9 @@ Mix rate
 Mixed
 == Gemischt
 
+Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+== Nur mobil: Absturzbericht beim nächsten Start nach Downloads/QmClient kopieren (0 = in der App-Sandbox belassen)
+
 Mobile spectator camera: 0=joystick pad, 1=drag the view
 == Kamera im mobilen Zuschauermodus: 0=Joystick, 1=Bild ziehen
 
@@ -8795,6 +8801,9 @@ Mouse speed for aiming and for menus, and how far your cursor may travel from th
 Move a friend category to a position
 == Freundeskategorie an eine Position verschieben
 
+Move down
+== Nach unten
+
 Move left
 == Nach links bewegen
 
@@ -8809,6 +8818,9 @@ Move the free camera, then add a keyframe at the current demo time.
 
 Move to category
 == In Kategorie verschieben
+
+Move up
+== Nach oben
 
 Movement
 == Bewegung
@@ -9137,6 +9149,9 @@ New features
 New features (unread)
 == Neue Funktionen (ungelesen)
 
+New group
+== Neue Gruppe
+
 New IME
 == Neue IME
 
@@ -9281,6 +9296,9 @@ No downloadable portable package for this version
 No empty team left.
 == Kein leeres Team mehr übrig.
 
+No entries yet
+== Noch keine Einträge
+
 No favorite maps yet
 == Noch keine Lieblingskarten
 
@@ -9355,6 +9373,9 @@ No player nearby
 
 No player with this name found.
 == Kein Spieler mit diesem Namen gefunden.
+
+No players match
+== Keine passenden Spieler
 
 No players match these filters
 == Keine Spieler entsprechen diesen Filtern
@@ -9619,6 +9640,9 @@ On
 
 One key can hold several commands, so remove single entries under "Bound functions" instead of clearing the key.
 == Eine Taste kann mehrere Funktionen tragen, entferne einzelne Einträge unter Zugewiesene Funktionen, statt die Taste zu leeren.
+
+Online
+== Online
 
 Online friends
 == Freunde online
@@ -9949,9 +9973,6 @@ Override Entry
 
 Override Freeze Tile Entity Alpha (0-100)
 == Entity-Alpha für gefrorene Kacheln überschreiben (0-100)
-
-Override Group
-== Gruppe überschreiben
 
 Override location for ping estimation, available: auto, af, as, as:cn, eu, na, oc, sa (Automatic, Africa, Asia, China, Europe, North America, Oceania/Australia, South America
 == Standort für die Ping-Schätzung überschreiben, verfügbar: auto, af, as, as:cn, eu, na, oc, sa (Automatisch, Afrika, Asien, China, Europa, Nordamerika, Ozeanien/Australien, Südamerika)
@@ -10375,9 +10396,6 @@ Player country (ISO 3166-1 numeric code)
 
 Player country filter in server browser (ISO 3166-1 numeric)
 == Spielerland-Filter im Server-Browser (ISO 3166-1 numerisch)
-
-Player country:
-== Spielerland:
 
 Player death
 == Spielertod
@@ -11687,6 +11705,9 @@ Rename demo
 Rename folder
 == Ordner umbenennen
 
+Rename group
+== Gruppe umbenennen
+
 Rename queue
 == Umbenennungswarteschlange
 
@@ -12055,6 +12076,9 @@ Reverse gradient colors
 
 Reverse IME gradient colors
 == Verlaufsfarben umkehren (IME)
+
+Reverse order
+== Umgekehrte Reihenfolge
 
 Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
 == Zoomrichtung beim Drücken der Gegentaste sofort umkehren (0=ursprüngliches weiches Zoomen beibehalten)
@@ -13094,7 +13118,7 @@ Show chat when rendering video
 Show clan above name plates
 == Clan über Namensschildern anzeigen
 
-Show clan if war
+Show clan for enemies
 == Clan anzeigen, wenn Krieg
 
 Show clan name on nameplate
@@ -13240,6 +13264,12 @@ Show enemy color in scoreboard
 
 Show enemy color in spectator menu
 == Feindfarbe im Zuschauermenü anzeigen
+
+Show enemy colors in chat
+== Farben im Chat
+
+Show enemy colors in scoreboard
+== Farben in der Bestenliste
 
 Show enemy group players
 == Spieler der feindlichen Gruppe anzeigen
@@ -14760,9 +14790,6 @@ Stress system (debug builds only).
 == Stresssystem (nur Debug-Builds).
 
 Strict game type filter
-== Strenger Spieltyp-Filter
-
-Strict gametype filter
 == Strenger Spieltyp-Filter
 
 Strict mode

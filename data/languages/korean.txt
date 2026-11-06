@@ -590,9 +590,6 @@ Add friends by entering their name below or by clicking their name in the player
 Add function
 == 기능 추가
 
-Add Group
-== 그룹 추가
-
 Add Item
 == 아이템 추가
 
@@ -1126,6 +1123,9 @@ Are you sure that you want to quit?
 
 Are you sure that you want to remove '%s' from your war groups?
 == 전쟁 그룹에서 '%s'을(를) 제거하시겠습니까?
+
+Are you sure that you want to remove '%s' from your war list?
+== 「%s」을(를) 적대 목록에서 삭제할까요?
 
 Are you sure that you want to remove the clan '%s' from your friends list?
 == 정말로 클랜 '%s'을(를) 친구 목록에서 제거하시겠습니까?
@@ -2740,12 +2740,6 @@ Colors and opacity of the popup list that suggests chat commands and emoticons w
 
 Colors for chat command and emoji completion
 == 채팅 명령어 및 이모지 자동 완성 색상
-
-Colors in chat
-== 채팅에서의 색상
-
-Colors in scoreboard
-== 점수판에서의 색상
 
 Colors of the hook collision line, in case of a possible collision with:
 == 갈고리 보조선 색상 (다음 대상에 충돌 가능할 경우):
@@ -4604,6 +4598,9 @@ Edit the name and clan fields; the dummy keeps its own values.
 Edit this custom command on the Bind Wheel page.
 == 이 사용자 지정 명령은 바인드 휠 페이지에서 편집하세요.
 
+Edit title style
+== 칭호 스타일 편집
+
 Edit touch controls
 == 터치 컨트롤 편집
 
@@ -5236,6 +5233,9 @@ Entity wall outline opacity
 
 entity_bg (Workshop)
 == entity_bg (Workshop)
+
+Entries in it will fall back to none.
+== 포함된 항목은 none으로 돌아갑니다.
 
 Entries with NVENC, AMF, Quick Sync or VideoToolbox use the GPU encoding chip and are several times faster. Only encoders that really work on this machine are listed.
 == NVENC, AMF, Quick Sync, VideoToolbox가 붙은 항목은 GPU 인코딩 회로를 써서 몇 배 빠릅니다. 이 컴퓨터에서 실제로 동작하는 인코더만 목록에 나옵니다.
@@ -6098,9 +6098,6 @@ Game type
 Game type (ddnet, mod)
 == 게임 유형 (ddnet, mod)
 
-Game types:
-== 게임 유형:
-
 Game update rate (Hz)
 == 게임 업데이트율 (Hz)
 
@@ -6400,6 +6397,9 @@ Ground jump
 
 Group name
 == 그룹 이름
+
+Group names are limited to 16 characters
+== 그룹 이름은 최대 16자입니다
 
 Groups input helpers: fast input, automatic margin, sub-tick aiming and cursor behavior.
 == 입력 보조 기능을 묶은 항목입니다. 빠른 입력, 자동 여백, 서브 틱 조준, 커서 동작을 포함합니다.
@@ -8270,6 +8270,9 @@ Manual target
 Map
 == 맵
 
+Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
+== 맵 브라우저 난이도 카테고리 필터 비트마스크 (비트 0-14, map_vote_difficulty.h 참고)
+
 Map browser difficulty star filter bitmask (bits 1-5)
 == 맵 브라우저 난이도 별 필터 비트마스크 (비트 1-5)
 
@@ -8732,6 +8735,9 @@ Mix rate
 Mixed
 == 혼합
 
+Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+== 모바일 전용: 다음 실행 시 충돌 보고서를 Downloads/QmClient로 복사합니다 (0 = 앱 샌드박스 안에 보관)
+
 Mobile spectator camera: 0=joystick pad, 1=drag the view
 == 모바일 관전 카메라: 0=조이스틱, 1=화면 드래그
 
@@ -8795,6 +8801,9 @@ Mouse speed for aiming and for menus, and how far your cursor may travel from th
 Move a friend category to a position
 == 친구 분류를 지정 위치로 이동
 
+Move down
+== 아래로 이동
+
 Move left
 == 왼쪽으로 이동
 
@@ -8809,6 +8818,9 @@ Move the free camera, then add a keyframe at the current demo time.
 
 Move to category
 == 카테고리로 이동
+
+Move up
+== 위로 이동
 
 Movement
 == 이동
@@ -9137,6 +9149,9 @@ New features
 New features (unread)
 == 새 기능 (읽지 않음)
 
+New group
+== 새 그룹
+
 New IME
 == 새 IME
 
@@ -9281,6 +9296,9 @@ No downloadable portable package for this version
 No empty team left.
 == 빈 팀이 없습니다.
 
+No entries yet
+== 아직 항목이 없습니다
+
 No favorite maps yet
 == 아직 즐겨찾는 맵 없음
 
@@ -9355,6 +9373,9 @@ No player nearby
 
 No player with this name found.
 == 이 이름의 플레이어를 찾을 수 없습니다.
+
+No players match
+== 일치하는 플레이어가 없습니다
 
 No players match these filters
 == 필터에 맞는 플레이어가 없습니다
@@ -9619,6 +9640,9 @@ On
 
 One key can hold several commands, so remove single entries under "Bound functions" instead of clearing the key.
 == 키 하나에 명령을 여러 개 둘 수 있으니, 키를 통째로 지우지 말고 지정된 기능에서 하나씩 삭제하세요.
+
+Online
+== 온라인
 
 Online friends
 == 온라인 친구
@@ -9949,9 +9973,6 @@ Override Entry
 
 Override Freeze Tile Entity Alpha (0-100)
 == 얼음 타일의 엔티티 알파 덮어쓰기 (0-100)
-
-Override Group
-== 그룹 재정의
 
 Override location for ping estimation, available: auto, af, as, as:cn, eu, na, oc, sa (Automatic, Africa, Asia, China, Europe, North America, Oceania/Australia, South America
 == Ping 추정 위치를 재정의합니다. 사용 가능: auto, af, as, as:cn, eu, na, oc, sa(자동, 아프리카, 아시아, 중국, 유럽, 북미, 오세아니아/호주, 남미)
@@ -10375,9 +10396,6 @@ Player country (ISO 3166-1 numeric code)
 
 Player country filter in server browser (ISO 3166-1 numeric)
 == 서버 브라우저의 플레이어 국가 필터 (ISO 3166-1 숫자)
-
-Player country:
-== 플레이어 국가:
 
 Player death
 == 플레이어 사망
@@ -11687,6 +11705,9 @@ Rename demo
 Rename folder
 == 폴더 이름 바꾸기
 
+Rename group
+== 그룹 이름 변경
+
 Rename queue
 == 이름 변경 대기열
 
@@ -12055,6 +12076,9 @@ Reverse gradient colors
 
 Reverse IME gradient colors
 == 그라데이션 색상 반전 (IME)
+
+Reverse order
+== 역순 정렬
 
 Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
 == 반대 줌 키를 누르면 즉시 방향 전환 (0=기존 부드러운 줌 유지)
@@ -13094,7 +13118,7 @@ Show chat when rendering video
 Show clan above name plates
 == 이름표 위에 클랜 표시
 
-Show clan if war
+Show clan for enemies
 == 전쟁 시 클랜 표시
 
 Show clan name on nameplate
@@ -13240,6 +13264,12 @@ Show enemy color in scoreboard
 
 Show enemy color in spectator menu
 == 관전 메뉴에서 적 색상 표시
+
+Show enemy colors in chat
+== 채팅에서의 색상
+
+Show enemy colors in scoreboard
+== 점수판에서의 색상
 
 Show enemy group players
 == 적 그룹 플레이어 표시
@@ -14761,9 +14791,6 @@ Stress system (debug builds only).
 
 Strict game type filter
 == 엄격한 게임 유형 필터
-
-Strict gametype filter
-== 엄격한 게임 모드 필터
 
 Strict mode
 == 엄격 모드

@@ -375,7 +375,7 @@ TEST(QmNewUiMenuBranches, NoThemeBackgroundAndFriendRowsUseSharedSdfSurfaces)
 	EXPECT_NE(Browser.find("#include <game/client/QmUi/UiSurface.h>"), std::string::npos);
 	// 圆角数值已收进 ui_token::radius（SMALL_MENU 即 5.0），断言跟着 token 走。
 	EXPECT_NE(Browser.find("DrawRoundedSurface(Ui(), Header, HeaderColor, ColorRGBA(), ui_token::radius::SMALL_MENU);"), std::string::npos);
-	EXPECT_NE(Browser.find("DrawRoundedSurface(Ui(), Rect, Color, ColorRGBA(), ui_token::radius::SMALL_MENU);"), std::string::npos);
+	EXPECT_NE(Browser.find("DrawRoundedSurface(Ui(), Rect, CardFill, ColorRGBA(), ui_token::radius::SMALL_MENU);"), std::string::npos);
 	EXPECT_EQ(Browser.find("Rect.Draw(Color, IGraphics::CORNER_ALL, 5.0f);"), std::string::npos);
 }
 

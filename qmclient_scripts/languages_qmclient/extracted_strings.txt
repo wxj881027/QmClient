@@ -195,7 +195,6 @@ Add Entry
 Add friend
 Add friends by entering their name below or by clicking their name in the player list.
 Add function
-Add Group
 Add Item
 Add keyframe
 Add latency for antiping (0 to disable)
@@ -374,6 +373,7 @@ Are you sure that you want to disconnect?
 Are you sure that you want to import the touch controls from the clipboard? This will overwrite your current touch controls.
 Are you sure that you want to quit?
 Are you sure that you want to remove '%s' from your war groups?
+Are you sure that you want to remove '%s' from your war list?
 Are you sure that you want to remove the clan '%s' from your friends list?
 Are you sure that you want to remove the player '%s' from your friends list?
 Are you sure that you want to reset the controls to their defaults?
@@ -688,9 +688,11 @@ Cancel your swap request
 Candidate files
 Candy gradient
 Cannot join the target player's team
+Cannot load map tags. Please retry.
 Cannot open word list file. Previous words remain active.
 Cannot read complete word list file. Previous words remain active.
 Cannot remove the wiki file
+Cannot submit this tag. Please retry later.
 Cannot swap: the other player is not in your team
 Cannot update public words. Previous words remain active.
 Cannot write the wiki file
@@ -912,8 +914,6 @@ Colors
 Colors a halo around each tee by its race team, so teammates and opponents are easy to tell apart.
 Colors and opacity of the popup list that suggests chat commands and emoticons while you type in chat.
 Colors for chat command and emoji completion
-Colors in chat
-Colors in scoreboard
 Colors of the hook collision line, in case of a possible collision with:
 Colors of the translate button in the chat input and of the language menu that button opens.
 Colors too close to the map background are hard to read while moving.
@@ -940,6 +940,7 @@ Compatibility mode
 Compatible with single-player area hints from other servers
 Complete restore replaces the listed files. A backup is saved before importing. The client will restart.
 Complete snapshots are arriving late or not arriving
+Completion records unavailable. Try refreshing.
 Compressor attack time (ms)
 Compressor makeup gain (percent)
 Compressor ratio (x10)
@@ -1533,6 +1534,7 @@ Edit player and dummy identity information
 Edit skin texture
 Edit the name and clan fields; the dummy keeps its own values.
 Edit this custom command on the Bind Wheel page.
+Edit title style
 Edit touch controls
 Editing (all-intra H.264 / MP4)
 Editor
@@ -1744,6 +1746,7 @@ Entity overlay
 Entity Preview
 Entity wall outline opacity
 entity_bg (Workshop)
+Entries in it will fall back to none.
 Entries with NVENC, AMF, Quick Sync or VideoToolbox use the GPU encoding chip and are several times faster. Only encoders that really work on this machine are listed.
 Entry: %s
 Erase items on the in game background
@@ -1911,6 +1914,7 @@ Finish Name
 Finish name
 Finish Name:
 Finish or reset the current race before restoring a save.
+Finish this map before submitting tags.
 Finished
 Finished maps
 Fire
@@ -2032,7 +2036,6 @@ Game sound volume
 Game time margin
 Game type
 Game type (ddnet, mod)
-Game types:
 Game update rate (Hz)
 Game update rate when window inactive (Hz)
 Game/predicted tick
@@ -2133,6 +2136,7 @@ Grenade launch
 Grenade pickup
 Ground jump
 Group name
+Group names are limited to 16 characters
 Groups input helpers: fast input, automatic margin, sub-tick aiming and cursor behavior.
 GUI cursor
 GUI cursor assets
@@ -2677,6 +2681,7 @@ Loading demo info
 Loading ghost files
 Loading map
 Loading map file from storage
+Loading map tags…
 Loading maps…
 Loading menu images
 Loading race demo files
@@ -2756,6 +2761,7 @@ Manual source file
 Manual Steam path is invalid; using automatic detection
 Manual target
 Map
+Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
 Map browser difficulty star filter bitmask (bits 1-5)
 Map browser: show empty servers only
 Map browser: show favorite maps only
@@ -2782,6 +2788,7 @@ Map Progress: %.1f%%
 Map Progress: --
 Map size
 Map sound volume
+Map tags
 Map to use on server
 Map type:
 Map upload
@@ -2910,6 +2917,7 @@ Misc
 Miscellaneous
 Mix rate
 Mixed
+Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
 Mobile spectator camera: 0=joystick pad, 1=drag the view
 Mode
 Model
@@ -2931,11 +2939,13 @@ Mouse sensitivity in menu/editor
 Mouse size
 Mouse speed for aiming and for menus, and how far your cursor may travel from the tee.
 Move a friend category to a position
+Move down
 Move left
 Move player to spectators
 Move right
 Move the free camera, then add a keyframe at the current demo time.
 Move to category
+Move up
 Movement
 Moves to the point with x/y-coordinates ii
 Moves to the tile with x/y-number ii
@@ -3045,6 +3055,7 @@ New button
 New category name
 New features
 New features (unread)
+New group
 New IME
 New IME candidate bar background color
 New IME candidate bar opacity
@@ -3053,6 +3064,8 @@ New name:
 New preset
 New preset name
 New random timeout code
+New tag (up to 10 characters)
+New tags require review. Click a tag to support it.
 New version available
 Newest first
 News
@@ -3069,6 +3082,7 @@ No .map files in this folder
 No ammunition
 No animation
 No answer from server yet.
+No approved tags yet.
 No assets
 No assets available for composition.
 No assets found.
@@ -3093,6 +3107,7 @@ No demo with this filename exists
 No director players available
 No downloadable portable package for this version
 No empty team left.
+No entries yet
 No favorite maps yet
 No filter
 No functions bound
@@ -3118,6 +3133,7 @@ No password
 No peer
 No player nearby
 No player with this name found.
+No players match
 No players match these filters
 No presets yet
 No preview
@@ -3206,6 +3222,7 @@ Old files are deleted once the save limit is reached, so copy any demo you want 
 Oldschool
 On
 One key can hold several commands, so remove single entries under "Bound functions" instead of clearing the key.
+Online
 Online friends
 Online Players
 Only .wv files are supported right now.
@@ -3316,7 +3333,6 @@ Override Death Tile Entity Alpha (0-100)
 Override Entity Alpha for Unfreeze Tiles (0-100)
 Override Entry
 Override Freeze Tile Entity Alpha (0-100)
-Override Group
 Override location for ping estimation, available: auto, af, as, as:cn, eu, na, oc, sa (Automatic, Africa, Asia, China, Europe, North America, Oceania/Australia, South America
 Override Selected
 Overview
@@ -3458,7 +3474,6 @@ Player clan
 Player count
 Player country (ISO 3166-1 numeric code)
 Player country filter in server browser (ISO 3166-1 numeric)
-Player country:
 Player death
 Player decoration color
 Player eyes color
@@ -3895,6 +3910,7 @@ Rename
 Rename a friend category
 Rename demo
 Rename folder
+Rename group
 Rename queue
 Rename screenshot
 Rename: %s
@@ -4018,6 +4034,7 @@ Retrying…
 Reverse chat gradient colors
 Reverse gradient colors
 Reverse IME gradient colors
+Reverse order
 Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
 Review and edit custom key bindings
 Review and reset changed configuration values
@@ -4364,7 +4381,7 @@ Show chat in demo preview and video
 Show chat messages above players
 Show chat when rendering video
 Show clan above name plates
-Show clan if war
+Show clan for enemies
 Show clan name on nameplate
 Show clan on nameplates for enemies
 Show client ID
@@ -4380,6 +4397,8 @@ Show Collision Borders
 Show colors in spectator selection
 Show combo hint when hooking or hammering player within 2 seconds
 Show command completion in chat
+Show community map tags
+Show community map tags in server information
 Show compact vote HUD
 Show configurable outlines around map tiles
 Show coordinates above players
@@ -4413,6 +4432,8 @@ Show emoji completion in chat
 Show enemy color in chat
 Show enemy color in scoreboard
 Show enemy color in spectator menu
+Show enemy colors in chat
+Show enemy colors in scoreboard
 Show enemy group players
 Show enemy reason
 Show entities
@@ -4920,7 +4941,6 @@ Streamer word list file
 Strength icons assets
 Stress system (debug builds only).
 Strict game type filter
-Strict gametype filter
 Strict mode
 Stroke fade time
 Stroke retention time (0=Never disappear)
@@ -4935,6 +4955,7 @@ Style kill, finish, and system messages
 Styles chat names and message colors, including gradients.
 Styles kill, finish and system messages in the chat area.
 Sub-Tick aiming
+Submit
 Success
 Successfully saved the replay!
 Sudden Death
@@ -4986,6 +5007,7 @@ System message
 System message color
 System message text gradient color
 System prompt text color
+Tag submitted for review.
 Take a screenshot
 Take photo
 Taper trail ends
@@ -5178,6 +5200,7 @@ This save-code already exists
 This server does not support race teams
 This server has an initial chat delay, you will be able to talk in %s seconds.
 This skin name cannot be used.
+This tag is not allowed.
 This team already has the maximum allowed size of %s players
 This team can't be locked
 This team can't have the mode changed
@@ -5925,6 +5948,7 @@ Your nickname '%s' is already used (%d points). Do you still want to use it?
 Your own colors appear only under "Custom"; press "Reset console appearance" if the text becomes hard to read.
 Your profile
 Your skin
+Your support has been recorded.
 Your swap request timed out %s seconds ago, use /swap again to request
 Your team has been killed because it contains an invalid tee state
 Your team has not started yet

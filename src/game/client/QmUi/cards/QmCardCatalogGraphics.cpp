@@ -1043,15 +1043,10 @@ static CButtonContainer s_CardBorderColorResetId;
 				else
 					pMotionDescription = Localize("Full: each enabled animation category uses its complete transition");
 
-				GameClient()->m_Tooltips.DoToolTip(&s_aMotionButtons[0], &MotionRow, Localize("This is the master switch for all interface animation categories"));
+				char aMotionTip[256];
+				str_format(aMotionTip, sizeof(aMotionTip), "%s\n%s", Localize("This is the master switch for all interface animation categories"), pMotionDescription);
+				GameClient()->m_Tooltips.DoToolTip(&s_aMotionButtons[0], &MotionRow, aMotionTip);
 			});
-			const char *pDescription = g_Config.m_QmUiMotionLevel == 0 ? Localize("Off: disables all interface animations while preserving the options below") : g_Config.m_QmUiMotionLevel == 1 ? Localize("Reduced: uses shorter transitions and disables presentation animations") :
-																									       Localize("Full: each enabled animation category uses its complete transition");
-			Flow.Text("graphics-motion-description", pDescription, 0.0f, GraphicsMetrics.m_SmallSize, GraphicsMetrics.m_LineSpacing, [this](const char *pValue, float Width, float Size) { return TextRender()->TextBoundingBox(Size, pValue, -1, Width).m_H + Size * 0.25f; }, [this, GraphicsMetrics](const CUIRect &Row, const char *pText) {
-					SLabelProperties Props;
-					Props.m_MaxWidth = Row.w;
-					Props.m_EnableWidthCheck = false;
-					Ui()->DoLabel(&Row, pText, GraphicsMetrics.m_SmallSize, TEXTALIGN_ML, Props); }, GraphicsMetrics.m_LineHeight);
 
 			if(!qm_card_catalog::QmCardRenderHook::Personalization(this, ContentRect, "deck:graphics-interaction", GraphicsMetrics))
 				return;

@@ -23,6 +23,7 @@ namespace ui_token::color
 	inline constexpr ColorRGBA SURFACE_ELEVATED{0.10f, 0.11f, 0.14f, 0.82f};
 	inline constexpr ColorRGBA SURFACE_OVERLAY{0.0f, 0.0f, 0.0f, 0.40f};
 	inline constexpr ColorRGBA SURFACE_HIGHLIGHT{1.0f, 1.0f, 1.0f, 0.05f};
+	inline constexpr ColorRGBA PREVIEW_SURFACE{1.0f, 1.0f, 1.0f, 0.10f};
 	inline constexpr ColorRGBA SURFACE_SHADOW{0.0f, 0.0f, 0.0f, 0.12f};
 	inline constexpr ColorRGBA BORDER_SUBTLE{1.0f, 1.0f, 1.0f, 0.08f};
 	inline constexpr ColorRGBA BORDER_FOCUS{0.4f, 0.753f, 0.957f, 0.85f};
@@ -194,6 +195,48 @@ namespace ui_token::secondary_panel
 	inline constexpr float UPDATE_WIDTH = 600.0f;
 	inline constexpr float UPDATE_ACTION_LINE_FACTOR = 2.4f;
 } // namespace ui_token::secondary_panel
+
+// 服务器信息页的键值行：三行信息（版本 / 游戏模式 / 延迟）与收藏 / 暴露 IP
+// 开关行共用同一套行高与行距，步长只在这里定义，调用点不再各写 15 / 18 / 2。
+// 右侧服务器筛选面板：行高、组间距与胶囊网格的度量集中在这里，
+// 底部快捷条与筛选面板共用同一套密度，避免两处各写 18 / 24 / 26。
+namespace ui_token::server_filter
+{
+	inline constexpr float LINE_HEIGHT = 16.0f;
+	inline constexpr float LINE_SPACING = 3.0f;
+	inline constexpr float BODY_FONT_SIZE = 12.0f;
+	inline constexpr float SECTION_GAP = 6.0f;
+	inline constexpr float SECTION_TITLE_SCALE = 1.3f;
+	// 胶囊最小宽度按内容分档：星标档位短，模式名长。给错成 6 会让一行塞满 10 个胶囊，
+	// 每个都只剩省略号。
+	inline constexpr float CHIP_STAR_MIN_WIDTH = 40.0f;
+	inline constexpr float CHIP_LABEL_MIN_WIDTH = 68.0f;
+	inline constexpr float CHIP_HEIGHT = 24.0f;
+	inline constexpr float CHIP_GAP = 4.0f;
+	// FilterChip 是筛选胶囊与设置页二选一胶囊的唯一绘制入口，字号随该组统一。
+	inline constexpr float CHIP_FONT_SIZE = 11.0f;
+	inline constexpr float CHIP_MIN_FONT_SIZE = 9.0f;
+	inline constexpr float DIVIDER_HEIGHT = 2.0f;
+	inline constexpr float DIVIDER_THICKNESS = 1.0f;
+	inline constexpr float DIVIDER_INSET_RATIO = 0.1f;
+	inline constexpr float DIVIDER_INSET_MAX = 16.0f;
+} // namespace ui_token::server_filter
+
+namespace ui_token::server_info
+{
+	inline constexpr float ROW_HEIGHT = 15.0f;
+	inline constexpr float ROW_GAP = 2.0f;
+	inline constexpr float MIN_ROW_HEIGHT = 11.0f;
+	inline constexpr float BLOCK_PADDING = 5.0f;
+	inline constexpr float COPY_BUTTON_HEIGHT = 15.0f;
+	inline constexpr float LABEL_COLUMN_WIDTH = 80.0f;
+	inline constexpr float TOGGLE_WIDTH = 30.0f;
+	inline constexpr float TOGGLE_LABEL_GAP = 6.0f;
+	inline constexpr float LABEL_FONT_INSET = 4.0f;
+	inline constexpr float EXPOSE_APPEAR_DURATION = 0.15f;
+	inline constexpr float EXPOSE_SLIDE = 4.0f;
+	inline constexpr float EXPOSE_SCALE_FROM = 0.85f;
+} // namespace ui_token::server_info
 
 namespace ui_token::confirm_dialog
 {

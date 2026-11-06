@@ -590,9 +590,6 @@ Add friends by entering their name below or by clicking their name in the player
 Add function
 == Добавить действие
 
-Add Group
-== Добавить группу
-
 Add Item
 == Добавить элемент
 
@@ -1126,6 +1123,9 @@ Are you sure that you want to quit?
 
 Are you sure that you want to remove '%s' from your war groups?
 == Вы уверены, что хотите удалить '%s' из ваших вражеских групп?
+
+Are you sure that you want to remove '%s' from your war list?
+== Удалить «%s» из списка врагов?
 
 Are you sure that you want to remove the clan '%s' from your friends list?
 == Вы уверены, что хотите удалить клан '%s' из списка друзей?
@@ -2740,12 +2740,6 @@ Colors and opacity of the popup list that suggests chat commands and emoticons w
 
 Colors for chat command and emoji completion
 == Цвета автодополнения команд и эмодзи в чате
-
-Colors in chat
-== Цвета в чате
-
-Colors in scoreboard
-== Цвета в таблице результатов
 
 Colors of the hook collision line, in case of a possible collision with:
 == Цвета линии захвата при возможном столкновении с:
@@ -4604,6 +4598,9 @@ Edit the name and clan fields; the dummy keeps its own values.
 Edit this custom command on the Bind Wheel page.
 == Измените эту пользовательскую команду на странице колеса команд.
 
+Edit title style
+== Изменить стиль титула
+
 Edit touch controls
 == Редактировать сенсорное управление
 
@@ -5236,6 +5233,9 @@ Entity wall outline opacity
 
 entity_bg (Workshop)
 == entity_bg (Мастерская)
+
+Entries in it will fall back to none.
+== Записи из неё вернутся в none.
 
 Entries with NVENC, AMF, Quick Sync or VideoToolbox use the GPU encoding chip and are several times faster. Only encoders that really work on this machine are listed.
 == Пункты с NVENC, AMF, Quick Sync или VideoToolbox используют аппаратный кодировщик видеокарты и работают в несколько раз быстрее. В списке только те, что реально работают на этой машине.
@@ -6098,9 +6098,6 @@ Game type
 Game type (ddnet, mod)
 == Тип игры (ddnet, mod)
 
-Game types:
-== Типы игр:
-
 Game update rate (Hz)
 == Частота обновления игры (Гц)
 
@@ -6400,6 +6397,9 @@ Ground jump
 
 Group name
 == Имя группы
+
+Group names are limited to 16 characters
+== Имя группы — не более 16 символов
 
 Groups input helpers: fast input, automatic margin, sub-tick aiming and cursor behavior.
 == Объединяет средства ввода: быстрый ввод, автоматический отступ, прицеливание по подтикам и поведение курсора.
@@ -8270,6 +8270,9 @@ Manual target
 Map
 == Карта
 
+Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
+== Битовая маска фильтра категорий сложности в браузере карт (биты 0-14, см. map_vote_difficulty.h)
+
 Map browser difficulty star filter bitmask (bits 1-5)
 == Битовая маска фильтра сложности по звёздам в браузере карт (биты 1-5)
 
@@ -8732,6 +8735,9 @@ Mix rate
 Mixed
 == Смешанный
 
+Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+== Только для мобильных: при следующем запуске скопировать отчёт о сбое в Downloads/QmClient (0 = оставить в песочнице приложения)
+
 Mobile spectator camera: 0=joystick pad, 1=drag the view
 == Камера мобильного наблюдателя: 0=джойстик, 1=перетаскивание
 
@@ -8795,6 +8801,9 @@ Mouse speed for aiming and for menus, and how far your cursor may travel from th
 Move a friend category to a position
 == Переместить категорию друзей на позицию
 
+Move down
+== Переместить вниз
+
 Move left
 == Двигаться влево
 
@@ -8809,6 +8818,9 @@ Move the free camera, then add a keyframe at the current demo time.
 
 Move to category
 == Переместить в категорию
+
+Move up
+== Переместить вверх
 
 Movement
 == Движение
@@ -9137,6 +9149,9 @@ New features
 New features (unread)
 == Новые возможности (не прочитано)
 
+New group
+== Новая группа
+
 New IME
 == Новый IME
 
@@ -9281,6 +9296,9 @@ No downloadable portable package for this version
 No empty team left.
 == Не осталось пустых команд.
 
+No entries yet
+== Записей пока нет
+
 No favorite maps yet
 == Пока нет избранных карт
 
@@ -9355,6 +9373,9 @@ No player nearby
 
 No player with this name found.
 == Игрок с таким именем не найден.
+
+No players match
+== Нет подходящих игроков
 
 No players match these filters
 == Нет игроков, соответствующих фильтрам
@@ -9619,6 +9640,9 @@ On
 
 One key can hold several commands, so remove single entries under "Bound functions" instead of clearing the key.
 == На одну клавишу можно повесить несколько команд, поэтому удаляйте отдельные записи в Назначенные действия, а не очищайте клавишу.
+
+Online
+== В сети
 
 Online friends
 == Друзья онлайн
@@ -9949,9 +9973,6 @@ Override Entry
 
 Override Freeze Tile Entity Alpha (0-100)
 == Переопределить альфа-канал сущностей для замороженных тайлов (0-100)
-
-Override Group
-== Переопределить группу
 
 Override location for ping estimation, available: auto, af, as, as:cn, eu, na, oc, sa (Automatic, Africa, Asia, China, Europe, North America, Oceania/Australia, South America
 == Переопределить регион для оценки Ping: auto, af, as, as:cn, eu, na, oc, sa (автоматически, Африка, Азия, Китай, Европа, Северная Америка, Океания/Австралия, Южная Америка)
@@ -10375,9 +10396,6 @@ Player country (ISO 3166-1 numeric code)
 
 Player country filter in server browser (ISO 3166-1 numeric)
 == Фильтр страны игрока в браузере серверов (числовой код ISO 3166-1)
-
-Player country:
-== Страна игрока:
 
 Player death
 == Смерть игрока
@@ -11687,6 +11705,9 @@ Rename demo
 Rename folder
 == Переименовать папку
 
+Rename group
+== Переименовать группу
+
 Rename queue
 == Режим замены
 
@@ -12055,6 +12076,9 @@ Reverse gradient colors
 
 Reverse IME gradient colors
 == Обратить цвета градиента (IME)
+
+Reverse order
+== Обратный порядок
 
 Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
 == Мгновенно менять направление зума при нажатии противоположной клавиши (0=оставить прежний плавный зум)
@@ -13094,7 +13118,7 @@ Show chat when rendering video
 Show clan above name plates
 == Показать клан над табличками с именами
 
-Show clan if war
+Show clan for enemies
 == Показывать клан, если вражда
 
 Show clan name on nameplate
@@ -13240,6 +13264,12 @@ Show enemy color in scoreboard
 
 Show enemy color in spectator menu
 == Показывать вражеский цвет в меню наблюдателя
+
+Show enemy colors in chat
+== Цвета в чате
+
+Show enemy colors in scoreboard
+== Цвета в таблице результатов
 
 Show enemy group players
 == Показывать игроков вражеской группы
@@ -14760,9 +14790,6 @@ Stress system (debug builds only).
 == Система стресса (только для отладочных сборок).
 
 Strict game type filter
-== Строгий фильтр типа игры
-
-Strict gametype filter
 == Строгий фильтр типа игры
 
 Strict mode

@@ -2,6 +2,7 @@
 namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_deck_general_client[] = {
+		{Localizable("Show community map tags"), "qm_map_tags", "地图标签 通关 Tag 审核"},
 		{Localizable("Config directory"), nullptr, "配置目录（cfg）"},
 		{Localizable("Hz", "Hertz"), nullptr, "Hz", "Hertz"},
 		{Localizable("Save power by lowering update rate (higher input latency)"), nullptr, "降低刷新率以节约功耗（增加输入延迟）"},

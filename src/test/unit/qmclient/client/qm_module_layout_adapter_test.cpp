@@ -82,7 +82,6 @@ static std::vector<SQmModuleEntry> MakeAllDefaults()
 		{EQmModuleId::Laser, EQmModuleColumn::Right, 3, "laser"},
 		{EQmModuleId::PlayerStats, EQmModuleColumn::Right, 4, "player_stats"},
 		{EQmModuleId::CollisionHitbox, EQmModuleColumn::Right, 5, "collision_hitbox"},
-		{EQmModuleId::FavoriteMaps, EQmModuleColumn::Right, 6, "favorite_maps"},
 		{EQmModuleId::HJAssist, EQmModuleColumn::Right, 7, "hj_assist"},
 		{EQmModuleId::DebugGraph, EQmModuleColumn::Right, 9, "debug_graph"},
 		{EQmModuleId::InputOverlay, EQmModuleColumn::Right, 10, "input_overlay"},
@@ -166,7 +165,7 @@ TEST(QmModuleLayoutAdapter, MapUploadSurvivesLegacyMigrationAndLayoutRoundTrip)
 {
 	qm_card_order::CModel Model;
 	Model.LoadMerged("", qm_card_registry::BuildDefaultEntries());
-	ASSERT_TRUE(LoadLegacyQmLayoutIntoModel(Model, "favorite_maps:right:0"));
+	ASSERT_TRUE(LoadLegacyQmLayoutIntoModel(Model, "map_upload:right:0"));
 	ASSERT_GE(Model.FindByStableId("qm:map_upload"), 0);
 	ASSERT_TRUE(MoveQmModuleInModel(Model, EQmModuleId::MapUpload, EQmModuleColumn::Left, 0));
 	char aLayout[32768];

@@ -4,15 +4,12 @@ namespace
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_better_scoreboard[] = {
 		{Localizable("Better scoreboard"), nullptr, "更好的计分板"},
 		{Localizable("Scroll mode"), nullptr, "滚动模式 满人服务器改用固定行高计分板，滚轮翻看其余玩家"},
-		{Localizable("Leave empty to show everyone"), nullptr, "留空显示所有玩家"},
-		{Localizable("Scoreboard filter: only show players whose name or clan contains this text"), nullptr, "计分板筛选：匹配名字或战队"},
 		{Localizable("Scoreboard point check"), nullptr, "计分板积分检查"},
 		{Localizable("Scoreboard playtime"), nullptr, "计分板游玩时间 累计小时 DDStats"},
 		{Localizable("Show scoreboard after death"), nullptr, "死亡后显示计分板"},
 		{Localizable("Use the scoreboard cursor mode to scroll the list"), nullptr, "使用计分板光标模式滚动查看列表"},
 		{Localizable("Show total playtime from DDStats instead of points in scoreboard"), nullptr, "计分板用总游戏时长替代分数"},
 		{nullptr, "qm_better_scoreboard", nullptr},
-		{nullptr, "qm_scoreboard_filter", nullptr},
 		{nullptr, "qm_scoreboard_on_death", nullptr},
 		{nullptr, "qm_scoreboard_points", nullptr},
 		{nullptr, "qm_scoreboard_playtime", nullptr},
@@ -71,32 +68,6 @@ namespace
 		{nullptr, "qm_show_other_super_emotes", nullptr},
 	};
 	QM_CARD_SEARCH_REGISTER("qm:emoticons", qm_emoticons);
-}
-
-// 声明式搜索索引：文案随所属卡片声明，静态初始化时自动注册。
-namespace
-{
-	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_favorite_maps[] = {
-		{Localizable("Brutal"), nullptr, "高阶"},
-		{Localizable("Classic"), nullptr, "古典"},
-		{Localizable("Classic easy"), nullptr, "古典 easy"},
-		{Localizable("Classic next"), nullptr, "古典 next"},
-		{Localizable("Classic nut"), nullptr, "古典 nut"},
-		{Localizable("Classic pro"), nullptr, "古典 pro"},
-		{Localizable("Copied"), nullptr, "已复制"},
-		{Localizable("Dummy"), nullptr, "分身"},
-		{Localizable("Event"), nullptr, "活动"},
-		{Localizable("Fun"), nullptr, "娱乐"},
-		{Localizable("Insane"), nullptr, "疯狂"},
-		{Localizable("Moderate"), nullptr, "中阶"},
-		{Localizable("No favorite maps yet"), nullptr, "暂无收藏地图"},
-		{Localizable("Novice"), nullptr, "简单"},
-		{Localizable("Oldschool"), nullptr, "传统"},
-		{Localizable("Race"), nullptr, "竞速"},
-		{Localizable("Solo"), nullptr, "单人"},
-		{Localizable("Unknown"), nullptr, "未知"},
-	};
-	QM_CARD_SEARCH_REGISTER("qm:favorite_maps", qm_favorite_maps);
 }
 
 // 声明式搜索索引：文案随所属卡片声明，静态初始化时自动注册。

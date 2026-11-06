@@ -2129,7 +2129,7 @@ polish = "Automatycznie akceptuj zaproszenia do drużyny, wysyłając /team <n>"
 [[message]]
 key = "Auto-close chat after unfreeze"
 [message.translations]
-simplified_chinese = "解冻后自动关闭聊天"
+simplified_chinese = "解冻后自动关闭聊天框"
 traditional_chinese = "解凍後自動關閉聊天"
 japanese = "凍結解除後にチャットを自動で閉じる"
 korean = "얼음 해제 후 자동 채팅 닫기"
@@ -3073,7 +3073,7 @@ polish = "Bind dummy control and copy actions"
 [[message]]
 key = "Bind movement, jump, hook, and fire actions"
 [message.translations]
-simplified_chinese = "绑定移动、跳跃、钩爪和开火操作"
+simplified_chinese = "绑定移动、跳跃、钩子和开火操作"
 traditional_chinese = "Bind movement, jump, hook, and fire actions"
 japanese = "Bind movement, jump, hook, and fire actions"
 korean = "Bind movement, jump, hook, and fire actions"
@@ -5041,7 +5041,7 @@ polish = "Configure camera, weapon, and gameplay defaults"
 [[message]]
 key = "Configure chat position, size, and visibility"
 [message.translations]
-simplified_chinese = "配置聊天位置、大小和可见性"
+simplified_chinese = "配置聊天框位置、大小和可见性"
 traditional_chinese = "Configure chat position, size, and visibility"
 japanese = "Configure chat position, size, and visibility"
 korean = "Configure chat position, size, and visibility"
@@ -5153,7 +5153,7 @@ polish = "Configure HJ unfreeze assistance"
 [[message]]
 key = "Configure hook range and collision guide lines"
 [message.translations]
-simplified_chinese = "配置钩爪范围和碰撞引导线"
+simplified_chinese = "配置钩子范围和碰撞引导线"
 traditional_chinese = "Configure hook range and collision guide lines"
 japanese = "Configure hook range and collision guide lines"
 korean = "Configure hook range and collision guide lines"
@@ -10065,7 +10065,7 @@ polish = "Wyszukiwanie funkcji"
 [[message]]
 key = "Filter off"
 [message.translations]
-simplified_chinese = "关闭过滤"
+simplified_chinese = "不筛选"
 traditional_chinese = "關閉過濾"
 japanese = "フィルターオフ"
 korean = "필터 끄기"
@@ -10081,7 +10081,7 @@ polish = "Filtr wyłączony"
 [[message]]
 key = "Filter Team %d"
 [message.translations]
-simplified_chinese = "过滤队伍 %d"
+simplified_chinese = "筛选队伍 %d"
 traditional_chinese = "過濾隊伍 %d"
 japanese = "チーム %d をフィルター"
 korean = "팀 %d 필터"
@@ -10097,7 +10097,7 @@ polish = "Filtruj drużynę %d"
 [[message]]
 key = "Filter: Team %d"
 [message.translations]
-simplified_chinese = "过滤：队伍 %d"
+simplified_chinese = "筛选：队伍 %d"
 traditional_chinese = "過濾：隊伍 %d"
 japanese = "フィルター: チーム %d"
 korean = "필터: 팀 %d"
@@ -11249,7 +11249,7 @@ polish = "Klawisz trybu Gores"
 [[message]]
 key = "Gores team drown board opacity"
 [message.translations]
-simplified_chinese = "Gores 团队落水榜不透明度"
+simplified_chinese = "Gores 队伍落水榜不透明度"
 traditional_chinese = "Gores 團隊落水榜不透明度"
 japanese = "Gores チーム溺死ボードの不透明度"
 korean = "Gores 팀 익사 보드 불투명도"
@@ -11457,7 +11457,7 @@ polish = "Ukryj podstawowe informacje systemowe (wejście, wersja, zasady) w try
 [[message]]
 key = "Hide chat messages from players marked as enemies"
 [message.translations]
-simplified_chinese = "隐藏被标记为敌人的玩家的聊天消息"
+simplified_chinese = "隐藏标记为敌对玩家的聊天消息"
 traditional_chinese = "隱藏被標記為敵人的玩家聊天訊息"
 japanese = "敵としてマークしたプレイヤーのチャットメッセージを隠す"
 korean = "적으로 표시한 플레이어의 채팅 메시지 숨기기"
@@ -12513,7 +12513,7 @@ polish = "Asysta HJ"
 [[message]]
 key = "Hook interaction"
 [message.translations]
-simplified_chinese = "钩索交互"
+simplified_chinese = "钩子交互"
 traditional_chinese = "鉤子互動"
 japanese = "フックの相互作用"
 korean = "후크 상호작용"
@@ -13825,7 +13825,7 @@ polish = "Szerokość miękkiej krawędzi podświetlenia karaoke w px"
 [[message]]
 key = "Keep unsent message on chat close"
 [message.translations]
-simplified_chinese = "关闭聊天时保留未发送内容"
+simplified_chinese = "关闭聊天框时保留未发送内容"
 traditional_chinese = "關閉聊天時保留未發送內容"
 japanese = "チャットを閉じる時に未送信内容を保持"
 korean = "채팅 닫을 때 전송되지 않은 내용 유지"
@@ -16849,7 +16849,7 @@ polish = "Maksymalna liczba wyświetlanych powiadomień"
 [[message]]
 key = "Maximum players shown in the Gores team drown board"
 [message.translations]
-simplified_chinese = "Gores 团队落水榜显示的最大玩家数"
+simplified_chinese = "Gores 队伍落水榜显示的最大玩家数"
 traditional_chinese = "Gores 團隊落水榜顯示的玩家上限"
 japanese = "Gores チーム溺死ボードに表示するプレイヤー数の上限"
 korean = "Gores 팀 익사 보드에 표시할 최대 플레이어 수"
@@ -17617,7 +17617,7 @@ polish = "Liczba tabliczek z pełną jakością efektów; powyżej warstwy efekt
 [[message]]
 key = "Nameplate hook strength icon scope (0=Own 1=Others 2=Strong hook 3=Weak hook 4=All players)"
 [message.translations]
-simplified_chinese = "铭牌钩索强度图标范围（0=自己，1=他人，2=强钩，3=弱钩，4=所有玩家）"
+simplified_chinese = "铭牌钩子强度图标范围（0=自己，1=他人，2=强钩，3=弱钩，4=所有玩家）"
 traditional_chinese = "名牌鉤子強度圖標範圍（0=自己 1=他人 2=強鉤 3=弱鉤 4=所有玩家）"
 japanese = "ネームプレートフック強度アイコン範囲（0=自分 1=他人 2=強フック 3=弱フック 4=全プレイヤー）"
 korean = "이름표 갈고리 강도 아이콘 범위 (0=자신 1=타인 2=강한 갈고리 3=약한 갈고리 4=모든 플레이어)"
@@ -21057,7 +21057,7 @@ polish = "Sprawdź i zastosuj ustalony zestaw ustawień wyglądu"
 [[message]]
 key = "Preview hook collision colors and line styles"
 [message.translations]
-simplified_chinese = "预览钩爪碰撞颜色和线条样式"
+simplified_chinese = "预览钩子辅助线颜色和线条样式"
 traditional_chinese = "Preview hook collision colors and line styles"
 japanese = "Preview hook collision colors and line styles"
 korean = "Preview hook collision colors and line styles"
@@ -21153,7 +21153,7 @@ polish = "Preview the composed status bar output"
 [[message]]
 key = "Preview the current chat appearance"
 [message.translations]
-simplified_chinese = "预览当前聊天外观"
+simplified_chinese = "预览当前聊天框外观"
 traditional_chinese = "Preview the current chat appearance"
 japanese = "Preview the current chat appearance"
 korean = "Preview the current chat appearance"
@@ -24678,7 +24678,7 @@ polish = "Wysyłanie i odbieranie"
 [[message]]
 key = "Sending locally, suggest the other party unmute or confirm they can receive"
 [message.translations]
-simplified_chinese = "本地正在发送，建议让对方开麦或确认对方是否能接收"
+simplified_chinese = "本地正在发送，建议让对方取消静音或确认能否接收"
 traditional_chinese = "本地正在發送，建議讓對方開麥或確認對方是否能接收"
 japanese = "ローカルで送信中です。相手にミュート解除を促すか、受信可能か確認してください"
 korean = "로컬에서 전송 중, 상대방이 마이크를 켜거나 수신 가능한지 확인하세요"
@@ -25302,7 +25302,7 @@ polish = "Pokaż dymki czatu nad Tee"
 [[message]]
 key = "Show chat in demo preview and video"
 [message.translations]
-simplified_chinese = "在回放预览与视频中显示聊天"
+simplified_chinese = "在回放预览与视频中显示聊天框"
 traditional_chinese = "在回放預覽與影片中顯示聊天"
 japanese = "デモプレビューと動画でチャットを表示"
 korean = "데모 미리보기와 영상에서 채팅 표시"
@@ -26774,7 +26774,7 @@ polish = "Pokaż hitboxy interakcji Tee, mapy i broni"
 [[message]]
 key = "Show Tees in the Gores team drown board"
 [message.translations]
-simplified_chinese = "在 Gores 团队落水榜中显示 Tee"
+simplified_chinese = "在 Gores 队伍落水榜中显示 Tee"
 traditional_chinese = "在 Gores 團隊落水榜顯示 Tee"
 japanese = "Gores チーム溺死ボードにTeeを表示"
 korean = "Gores 팀 익사 보드에 Tee 표시"
@@ -26790,7 +26790,7 @@ polish = "Pokaż Tees na tablicy utonięć drużyny Gores"
 [[message]]
 key = "Show the Gores team drown board"
 [message.translations]
-simplified_chinese = "显示 Gores 团队落水榜"
+simplified_chinese = "显示 Gores 队伍落水榜"
 traditional_chinese = "顯示 Gores 團隊落水榜"
 japanese = "Gores チーム溺死ボードを表示"
 korean = "Gores 팀 익사 보드 표시"
@@ -35832,7 +35832,7 @@ polish = "Rozmiar gradientu (czat, %)"
 [[message]]
 key = "Chat gradient type (0=linear, 1=radial, 2=angular, 3=reflected, 4=diamond)"
 [message.translations]
-simplified_chinese = "渐变类型 (聊天; 0=线性渐变，1=径向渐变，2=角度渐变，3=对称渐变，4=菱形渐变)"
+simplified_chinese = "聊天框渐变类型（0=线性渐变，1=径向渐变，2=角度渐变，3=对称渐变，4=菱形渐变）"
 traditional_chinese = "漸層類型 (聊天; 0=線性漸層, 1=放射漸層, 2=角度漸層, 3=對稱漸層, 4=菱形漸層)"
 japanese = "グラデーションの種類 (チャット; 0=線形グラデーション, 1=放射状グラデーション, 2=角度グラデーション, 3=反射グラデーション, 4=菱形グラデーション)"
 korean = "그라데이션 유형 (채팅; 0=선형 그라데이션, 1=방사형 그라데이션, 2=각도 그라데이션, 3=대칭 그라데이션, 4=마름모 그라데이션)"
@@ -36088,7 +36088,7 @@ polish = "Podświetlaj polecenia konsoli"
 [[message]]
 key = "Show the chat scrollbar on the right"
 [message.translations]
-simplified_chinese = "在右侧显示聊天滚动条"
+simplified_chinese = "在右侧显示聊天框滚动条"
 traditional_chinese = "在右側顯示聊天捲軸"
 japanese = "チャットのスクロールバーを右側に表示"
 korean = "채팅 스크롤바를 오른쪽에 표시"
@@ -38504,7 +38504,7 @@ polish = "Ochrona przed samobójstwem po stronie klienta jest domyślnie wyłąc
 [[message]]
 key = "Render demo content only during video export (hide HUD, chat and spectator overlays)"
 [message.translations]
-simplified_chinese = "仅渲染 demo：导出时隐藏 HUD、聊天和旁观信息"
+simplified_chinese = "仅渲染 demo：导出时隐藏 HUD、聊天框和旁观信息"
 traditional_chinese = "僅渲染 demo：匯出時隱藏 HUD、聊天與旁觀資訊"
 japanese = "デモのみを書き出す：書き出し中は HUD、チャット、観戦情報を非表示にします"
 korean = "데모만 렌더링: 내보내는 동안 HUD, 채팅, 관전 정보를 숨깁니다"
@@ -39000,7 +39000,7 @@ polish = "Szerokość wyjściowa eksportu w pikselach (0 = zgodnie z rozmiarem r
 [[message]]
 key = "Export preset: 0=custom, 1=daily(libx264/mp4), 2=efficient share(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov), 5=best quality(all-intra H.264 4:4:4/mp4), 6=fastest(hardware h264/mp4)"
 [message.translations]
-simplified_chinese = "导出预设：0=自定义，1=日常(libx264/mp4)，2=高效分享(hevc/mp4)，3=剪辑(all-intra H.264/mp4)，4=交换(ProRes/mov)，5=最佳质量(all-intra H.264 4:4:4/mp4)，6=最快(硬件 h264/mp4)"
+simplified_chinese = "导出预设：0=自定义，1=日常（libx264/mp4），2=高效分享（hevc/mp4），3=剪辑（all-intra H.264/mp4），4=交换（ProRes/mov），5=最佳质量（all-intra H.264 4:4:4/mp4），6=最快（硬件 h264/mp4）"
 traditional_chinese = "匯出預設：0=自訂，1=日常(libx264/mp4)，2=高效分享(hevc/mp4)，3=剪輯(all-intra H.264/mp4)，4=交換(ProRes/mov)，5=最佳品質(all-intra H.264 4:4:4/mp4)，6=最快(硬體 h264/mp4)"
 japanese = "書き出しプリセット: 0=カスタム、1=日常(libx264/mp4)、2=効率的な共有(hevc/mp4)、3=編集用(all-intra H.264/mp4)、4=交換用(ProRes/mov)、5=最高品質(all-intra H.264 4:4:4/mp4)、6=最速(ハードウェア h264/mp4)"
 korean = "내보내기 프리셋: 0=사용자 지정, 1=일상(libx264/mp4), 2=효율적 공유(hevc/mp4), 3=편집(all-intra H.264/mp4), 4=교환(ProRes/mov), 5=최고 품질(all-intra H.264 4:4:4/mp4), 6=최속(하드웨어 h264/mp4)"
@@ -39918,3 +39918,51 @@ brazilian_portuguese = "Larguras dos cartões de configurações: stableId para 
 portuguese = "Larguras dos cartões de definições: stableId para largura total, !stableId para meia largura, separados por ponto e vírgula"
 turkish = "Ayar kartı genişlikleri: tam genişlik için stableId, yarım genişlik için !stableId; noktalı virgülle ayrılır"
 polish = "Szerokości kart ustawień: stableId oznacza pełną szerokość, !stableId połowę szerokości; wpisy oddzielaj średnikami"
+
+[[message]]
+key = "Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)"
+[message.translations]
+simplified_chinese = "仅移动端：下次启动时把崩溃报告复制到 Downloads/QmClient（0 = 保留在应用沙箱内）"
+traditional_chinese = "僅行動端：下次啟動時把崩潰報告複製到 Downloads/QmClient（0 = 保留在應用沙箱內）"
+japanese = "モバイルのみ：次回起動時にクラッシュレポートを Downloads/QmClient にコピーします（0 = アプリのサンドボックス内に保持）"
+korean = "모바일 전용: 다음 실행 시 충돌 보고서를 Downloads/QmClient로 복사합니다 (0 = 앱 샌드박스 안에 보관)"
+russian = "Только для мобильных: при следующем запуске скопировать отчёт о сбое в Downloads/QmClient (0 = оставить в песочнице приложения)"
+german = "Nur mobil: Absturzbericht beim nächsten Start nach Downloads/QmClient kopieren (0 = in der App-Sandbox belassen)"
+spanish = "Solo móvil: copiar el informe de fallos a Downloads/QmClient en el próximo inicio (0 = mantenerlo dentro del sandbox de la aplicación)"
+french = "Mobile uniquement : copier le rapport de crash dans Downloads/QmClient au prochain lancement (0 = le garder dans le bac à sable de l'application)"
+brazilian_portuguese = "Somente mobile: copiar o relatório de falha para Downloads/QmClient na próxima inicialização (0 = manter dentro do sandbox do aplicativo)"
+portuguese = "Somente mobile: copiar o relatório de falha para Downloads/QmClient na próxima inicialização (0 = manter dentro do sandbox do aplicativo)"
+turkish = "Yalnızca mobil: çökme raporunu bir sonraki açılışta Downloads/QmClient konumuna kopyala (0 = uygulama korumalı alanında bırak)"
+polish = "Tylko mobile: skopiuj raport awarii do Downloads/QmClient przy następnym uruchomieniu (0 = zostaw w piaskownicy aplikacji)"
+
+[[message]]
+key = "Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)"
+[message.translations]
+simplified_chinese = "地图浏览器难度分类筛选位掩码（位 0-14，见 map_vote_difficulty.h）"
+traditional_chinese = "地圖瀏覽器難度分類過濾位元遮罩（位 0-14，見 map_vote_difficulty.h）"
+japanese = "マップブラウザの難易度カテゴリフィルタのビットマスク（ビット 0-14、map_vote_difficulty.h 参照）"
+korean = "맵 브라우저 난이도 카테고리 필터 비트마스크 (비트 0-14, map_vote_difficulty.h 참고)"
+russian = "Битовая маска фильтра категорий сложности в браузере карт (биты 0-14, см. map_vote_difficulty.h)"
+german = "Bitmaske des Schwierigkeitskategoriefilters im Kartenbrowser (Bits 0-14, siehe map_vote_difficulty.h)"
+spanish = "Máscara de bits del filtro de categorías de dificultad del navegador de mapas (bits 0-14, ver map_vote_difficulty.h)"
+french = "Masque de bits du filtre de catégories de difficulté du navigateur de cartes (bits 0-14, voir map_vote_difficulty.h)"
+brazilian_portuguese = "Máscara de bits do filtro de categorias de dificuldade do navegador de mapas (bits 0-14, ver map_vote_difficulty.h)"
+portuguese = "Máscara de bits do filtro de categorias de dificuldade do navegador de mapas (bits 0-14, ver map_vote_difficulty.h)"
+turkish = "Harita tarayıcısı zorluk kategori filtresi bit maskesi (bit 0-14, bkz. map_vote_difficulty.h)"
+polish = "Maska bitowa filtra kategorii trudności przeglądarki map (bity 0-14, patrz map_vote_difficulty.h)"
+
+[[message]]
+key = "Edit title style"
+[message.translations]
+simplified_chinese = "编辑头衔样式"
+traditional_chinese = "編輯頭銜樣式"
+japanese = "タイトルスタイルを編集"
+korean = "칭호 스타일 편집"
+russian = "Изменить стиль титула"
+spanish = "Editar estilo del título"
+french = "Modifier le style du titre"
+german = "Titelstil bearbeiten"
+brazilian_portuguese = "Editar estilo do título"
+portuguese = "Editar estilo do título"
+turkish = "Başlık stilini düzenle"
+polish = "Edytuj styl tytułu"
