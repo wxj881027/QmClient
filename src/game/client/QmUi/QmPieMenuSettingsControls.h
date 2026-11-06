@@ -2,6 +2,7 @@
 #define GAME_CLIENT_QMUI_QMPIEMENUSETTINGSCONTROLS_H
 
 #include "UiSurface.h"
+#include "UiTokens.h"
 
 #include <game/client/ui.h>
 
@@ -18,11 +19,17 @@ inline CUIRect QmPieOptionButtonRect(CUIRect Cell, float LineHeight, float Spaci
 }
 
 // 配色与文字按钮各自处理命中；后台保留色块绘制，预布局只处理输入。
+// 色块外观和右侧选项按钮对齐：统一白描边把色块从按钮底上分出来，
+// 悬浮时回到原色并提亮描边，不悬浮时整体压暗，指针停在哪一格一眼能看出。
 inline bool QmDrawPieOptionColorControl(const IUiContext &Ctx, const void *pColorId, ColorRGBA Color, const CUIRect &Swatch, float CornerRadius, bool ProcessInput)
 {
 	if(Ctx.m_pUi == nullptr || (Ctx.m_pUi->DrawingSuppressed() && !Ctx.m_pUi->PreLayoutInput()))
 		return false;
-	DrawRoundedSurface(Ctx, Swatch, Color, ColorRGBA(), CornerRadius);
+	const bool Hovered = Ctx.m_pUi->VisualMouseHovered(&Swatch);
+	// 只改明暗不改色相：色块仍然代表玩家挑的那个颜色。
+	const ColorRGBA Fill = ui_token::color::UiColorSurface(Color, 1.0f, Hovered ? 1.12f : 0.84f);
+	const ColorRGBA Border = ui_token::color::TEXT_PRIMARY.WithAlpha(Hovered ? 0.95f : 0.55f);
+	DrawRoundedSurface(Ctx, Swatch, Fill, Border, CornerRadius, ui_token::feedback::ICON_BORDER_WIDTH);
 	return ProcessInput && !Ctx.m_pUi->RenderOnly() && Ctx.m_pUi->DoButtonLogic(pColorId, 0, &Swatch, BUTTONFLAG_LEFT) != 0;
 }
 

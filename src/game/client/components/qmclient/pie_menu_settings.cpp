@@ -12,6 +12,7 @@
 #include <game/client/QmUi/SettingsContentLayout.h>
 #include <game/client/QmUi/SettingsToggleGrid.h>
 #include <game/client/QmUi/UiForms.h>
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/menus.h>
 #include <game/client/components/pie_menu_logic.h>
 #include <game/client/components/qmclient/perf_logging.h>
@@ -178,14 +179,28 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 		aItemSizes[Index] = ResolveSettingsToggleButtonSize(TextRender()->TextWidth(BodySize, aColorEntries[Index].m_pName), BodySize, LineHeight, PaddingX, PaddingY);
 		aItemSizes[Index].m_Width += LineHeight + LineSpacing;
 	}
-	// 左右并列：左边是选项按钮列表，中间是重置图标，右边是圆饼预览。
-	// 预览尺寸先算出来，左侧列表据此收缩，两侧共用同一行高。
+	// 左右对调：左边是圆饼预览，中间是重置图标，右边是选项按钮网格。
+	// 预览边长仍沿用行高公式（卡片高度估算 QmPieMenuContentHeight 用的是同一个式子），
+	// 选项网格先占够两列，预览只使用剩下的宽度，右侧按钮不会被挤成一列一个。
 	const float PreviewBaseSide = minimum(Content.w, std::clamp(Content.w * 0.88f, LineHeight * 10.0f, LineHeight * 13.5f));
 	const float PreviewSide = PreviewBaseSide * 0.8f;
 	const float ColumnGap = maximum(CardPadding * 0.8f, LineSpacing * 2.0f);
-	const float ResetButtonSide = std::clamp(ButtonHeight, LineHeight * 1.5f, LineHeight * 2.0f);
+	// 重置图标按钮原来按 clamp(ButtonHeight, 1.5 倍行高, 2 倍行高) 出尺寸，比行高明显偏大；
+	// 现在收到控件行高量级（约 1.2 倍行高），下限用 spacing token 托底。
+	const float ResetButtonSide = maximum(ui_token::spacing::LG, minimum(ButtonHeight, LineHeight) * 1.2f);
 	const float ResetColumnWidth = ResetButtonSide + ColumnGap;
-	const float OptionsColumnWidth = maximum(LineHeight * 8.0f, Content.w - PreviewSide - ResetColumnWidth);
+	// 选项网格是「按钮 + 色块」成对的两列：按列取最长项得到两列各自的最小宽度，
+	// 先保证右侧列宽放得下两列，再决定预览能用多少宽度。
+	float aOptionColumnMinWidth[2] = {0.0f, 0.0f};
+	for(size_t Index = 0; Index < aItemSizes.size(); ++Index)
+	{
+		const size_t Column = Index % 2;
+		aOptionColumnMinWidth[Column] = maximum(aOptionColumnMinWidth[Column], aItemSizes[Index].m_Width);
+	}
+	const float OptionsMinWidth = aOptionColumnMinWidth[0] + aOptionColumnMinWidth[1] + LineSpacing;
+	const float OptionsColumnWidth = minimum(maximum(OptionsMinWidth, Content.w - PreviewSide - ResetColumnWidth), maximum(0.0f, Content.w - ResetColumnWidth));
+	// 预览尺寸按剩余宽度重算：只拿两栏分完剩下的那一列。
+	const float PreviewColumnWidth = maximum(0.0f, Content.w - OptionsColumnWidth - ResetColumnWidth);
 	auto Grid = ResolveSettingsToggleGrid(OptionsColumnWidth, aItemSizes, LineSpacing);
 	for(size_t Index = 0; Index < aColorEntries.size(); ++Index)
 	{
@@ -203,23 +218,25 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 	constexpr float PreviewStartAngle = -90.0f;
 	const float PreviewSectorGap = VisibleCount == 1 ? 0.0f : 3.6f;
 	constexpr float PreviewInnerRatio = 108.0f / 288.0f;
-	const float OptionsRowHeight = std::max(Grid.Height(), PreviewSide);
+	// 行高同时容纳网格与预览：预览被剩余列宽夹住时，整行跟着夹住后的尺寸走。
+	const float OptionsRowHeight = std::max(Grid.Height(), minimum(PreviewSide, PreviewColumnWidth));
 	if(Flow.Control("pie-option-color-heading", BodySize, Row))
 		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-pie-menu-option-color", &Row, Localize("Option color"), BodySize, TEXTALIGN_ML, {}, (int)Row.w);
 	Flow.Space(LineSpacing);
 	CUIRect OptionsRow;
 	if(Flow.Control("pie-color-options-row", OptionsRowHeight, OptionsRow))
 	{
-		CUIRect OptionsColumn, ResetColumn, PreviewColumn;
-		OptionsRow.VSplitLeft(OptionsColumnWidth, &OptionsColumn, &OptionsRow);
-		OptionsRow.VSplitLeft(ResetColumnWidth, &ResetColumn, &OptionsRow);
-		PreviewColumn = OptionsRow;
+		CUIRect PreviewColumn, ResetColumn, OptionsColumn;
+		// 从左到右：圆饼预览、重置图标、选项按钮网格。
+		OptionsRow.VSplitLeft(PreviewColumnWidth, &PreviewColumn, &OptionsRow);
+		OptionsRow.VSplitLeft(ResetColumnWidth, &ResetColumn, &OptionsColumn);
 		for(size_t Index = 0; Index < aColorEntries.size(); ++Index)
 		{
 			const auto &Entry = aColorEntries[Index];
 			const CUIRect Cell = Grid.Cell(OptionsColumn, static_cast<int>(Index));
+			// 末位参数打开悬浮明暗反馈：按钮和右侧色块要一起响应指针。
 			DoSettingsToggleButton(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, OptionButtonRect(Cell),
-				{Entry.m_pEnabled, Entry.m_pTextId, Entry.m_pName}, ToggleMetrics, CanCommit, Flow.Input() ? ESettingsToggleGroupPass::INPUT : ESettingsToggleGroupPass::RENDER);
+				{Entry.m_pEnabled, Entry.m_pTextId, Entry.m_pName}, ToggleMetrics, CanCommit, Flow.Input() ? ESettingsToggleGroupPass::INPUT : ESettingsToggleGroupPass::RENDER, true);
 			const CUIRect Swatch = QmPieOptionSwatchRect(Cell, LineHeight);
 			if(QmDrawPieOptionColorControl(TextInputCtx, Entry.m_pColorValue,
 				   color_cast<ColorRGBA>(ColorHSLA(*Entry.m_pColorValue, Entry.m_Alpha)), Swatch, CornerRadius * 0.5f, CanCommit))
@@ -239,8 +256,10 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 		if(!PrewarmOnly)
 			GameClient()->m_Tooltips.DoToolTip(&s_ResetAllColorsButton, &ResetButton, Localize("Reset colors"));
 		CUIRect PreviewRect = PreviewColumn;
+		// 预览边长取剩余列宽与行高上限里的较小值，列比圆饼宽时左右居中。
 		PreviewRect.w = minimum(PreviewRect.w, PreviewSide);
 		PreviewRect.h = minimum(PreviewRect.h, PreviewSide);
+		PreviewRect.x = PreviewColumn.x + (PreviewColumn.w - PreviewRect.w) * 0.5f;
 		PreviewRect.y = PreviewColumn.y + (PreviewColumn.h - PreviewRect.h) * 0.5f;
 		PreviewRect.Margin(LineSpacing * 0.5f, &PreviewRect);
 		CUIRect PreviewFrame = PreviewRect;

@@ -319,7 +319,7 @@ bool CMenus::DoSettingsToggleButtonGroup(int Page, int Tab, int Subtab, CUIRect 
 	return Changed;
 }
 
-bool CMenus::DoSettingsToggleButton(int Page, int Tab, int Subtab, const CUIRect &Button, const SSettingsToggleEntry &Entry, const SSettingsContentMetrics &Metrics, bool ProcessInput, ESettingsToggleGroupPass Pass)
+bool CMenus::DoSettingsToggleButton(int Page, int Tab, int Subtab, const CUIRect &Button, const SSettingsToggleEntry &Entry, const SSettingsContentMetrics &Metrics, bool ProcessInput, ESettingsToggleGroupPass Pass, bool HoverEmphasis)
 {
 	if(Pass == ESettingsToggleGroupPass::LAYOUT)
 		return false;
@@ -349,9 +349,14 @@ bool CMenus::DoSettingsToggleButton(int Page, int Tab, int Subtab, const CUIRect
 	Options.m_Radius *= Metrics.m_UiScale;
 	// 与 F1 筛选相同，以选中底色表达启用状态，不再另画滑动开关。
 	Options.m_Color = Options.m_Selected ? color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(1.0f) : ResolveConfiguredControlSurface();
+	// 需要突出悬浮位置的场景（成对出现的色块 + 按钮）再加一层明暗差：
+	// 不悬浮时底色压暗，悬浮时回到原亮度并把描边提亮。
+	const bool Hovered = HoverEmphasis && !m_MenuTextPlanCollecting && Ui()->VisualMouseHovered(&Button);
+	if(HoverEmphasis)
+		Options.m_Color = ui_token::color::UiColorSurface(*Options.m_Color, 1.0f, Hovered ? 1.12f : 0.84f);
 	// 开关选中后保留浅色描边，不随浅色底翻成深色；文字也维持原前景色。
 	if(Options.m_Selected)
-		Options.m_BorderOverride = ui_token::color::TEXT_PRIMARY.WithAlpha(0.72f);
+		Options.m_BorderOverride = ui_token::color::TEXT_PRIMARY.WithAlpha(HoverEmphasis ? (Hovered ? 0.95f : 0.55f) : 0.72f);
 	else
 		Options.m_BorderOverride.reset();
 	ColorRGBA Fill = *Options.m_Color;
