@@ -9137,9 +9137,6 @@ Network timeout
 Network timeout protection
 == 网络超时保护
 
-New
-== 新建
-
 new
 == 新
 
@@ -9154,6 +9151,9 @@ New features
 
 New features (unread)
 == 新功能（未读）
+
+New group
+== 新建群组
 
 New IME
 == 新版 IME
@@ -11716,6 +11716,9 @@ Rename demo
 
 Rename folder
 == 重命名文件夹
+
+Rename group
+== 重命名群组
 
 Rename queue
 == 改名名单

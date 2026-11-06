@@ -9116,9 +9116,6 @@ Network timeout
 Network timeout protection
 == Защита от тайм-аута сети
 
-New
-== New
-
 new
 == новое
 
@@ -9133,6 +9130,9 @@ New features
 
 New features (unread)
 == Новые возможности (не прочитано)
+
+New group
+== Новая группа
 
 New IME
 == Новый IME
@@ -9624,7 +9624,7 @@ One key can hold several commands, so remove single entries under "Bound functio
 == На одну клавишу можно повесить несколько команд, поэтому удаляйте отдельные записи в Назначенные действия, а не очищайте клавишу.
 
 Online
-== Online
+== В сети
 
 Online friends
 == Друзья онлайн
@@ -11686,6 +11686,9 @@ Rename demo
 
 Rename folder
 == Переименовать папку
+
+Rename group
+== Переименовать группу
 
 Rename queue
 == Режим замены

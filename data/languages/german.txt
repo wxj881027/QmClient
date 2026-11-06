@@ -9116,9 +9116,6 @@ Network timeout
 Network timeout protection
 == Netzwerk-Timeout-Schutz
 
-New
-== New
-
 new
 == neu
 
@@ -9133,6 +9130,9 @@ New features
 
 New features (unread)
 == Neue Funktionen (ungelesen)
+
+New group
+== Neue Gruppe
 
 New IME
 == Neue IME
@@ -11686,6 +11686,9 @@ Rename demo
 
 Rename folder
 == Ordner umbenennen
+
+Rename group
+== Gruppe umbenennen
 
 Rename queue
 == Umbenennungswarteschlange

@@ -9116,9 +9116,6 @@ Network timeout
 Network timeout protection
 == Protección de tiempo de espera de red
 
-New
-== New
-
 new
 == nuevo
 
@@ -9133,6 +9130,9 @@ New features
 
 New features (unread)
 == Novedades (sin leer)
+
+New group
+== Nuevo grupo
 
 New IME
 == Nuevo IME
@@ -9624,7 +9624,7 @@ One key can hold several commands, so remove single entries under "Bound functio
 == Una tecla puede tener varios comandos, así que borra entradas sueltas en Funciones asignadas en vez de vaciar la tecla.
 
 Online
-== Online
+== En línea
 
 Online friends
 == Amigos en línea
@@ -11686,6 +11686,9 @@ Rename demo
 
 Rename folder
 == Renombrar carpeta
+
+Rename group
+== Renombrar grupo
 
 Rename queue
 == Cola de renombre

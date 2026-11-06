@@ -9116,9 +9116,6 @@ Network timeout
 Network timeout protection
 == 네트워크 타임아웃 보호
 
-New
-== New
-
 new
 == 새로 만들기
 
@@ -9133,6 +9130,9 @@ New features
 
 New features (unread)
 == 새 기능 (읽지 않음)
+
+New group
+== 새 그룹
 
 New IME
 == 새 IME
@@ -9624,7 +9624,7 @@ One key can hold several commands, so remove single entries under "Bound functio
 == 키 하나에 명령을 여러 개 둘 수 있으니, 키를 통째로 지우지 말고 지정된 기능에서 하나씩 삭제하세요.
 
 Online
-== Online
+== 온라인
 
 Online friends
 == 온라인 친구
@@ -11686,6 +11686,9 @@ Rename demo
 
 Rename folder
 == 폴더 이름 바꾸기
+
+Rename group
+== 그룹 이름 변경
 
 Rename queue
 == 이름 변경 대기열

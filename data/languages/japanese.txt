@@ -9116,9 +9116,6 @@ Network timeout
 Network timeout protection
 == ネットワークタイムアウト保護
 
-New
-== New
-
 new
 == 新規
 
@@ -9133,6 +9130,9 @@ New features
 
 New features (unread)
 == 新機能（未読）
+
+New group
+== 新しいグループ
 
 New IME
 == 新しいIME
@@ -9624,7 +9624,7 @@ One key can hold several commands, so remove single entries under "Bound functio
 == 1 つのキーに複数のコマンドを割り当てられるので、キーを丸ごと消さず割り当て済みの機能で個別に削除します。
 
 Online
-== Online
+== オンライン
 
 Online friends
 == オンラインのフレンド
@@ -11686,6 +11686,9 @@ Rename demo
 
 Rename folder
 == フォルダーの名前を変更
+
+Rename group
+== グループ名を変更
 
 Rename queue
 == リネームキュー

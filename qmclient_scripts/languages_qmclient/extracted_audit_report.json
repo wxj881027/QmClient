@@ -1,7 +1,7 @@
 {
   "summary": {
     "must_i18n": 10701,
-    "business_data": 12741,
+    "business_data": 12742,
     "test_only": 6449,
     "needs_review": 4195,
     "violation": 0
@@ -28079,14 +28079,21 @@
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 312,
+      "line": 310,
       "text": "No entries yet",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 334,
+      "line": 332,
+      "text": "Name",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
+      "line": 333,
       "text": "Name",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -28094,35 +28101,35 @@
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "line": 335,
-      "text": "Name",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 337,
       "text": "Clan",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 338,
+      "line": 336,
       "text": "Clan",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 343,
+      "line": 341,
       "text": "Reason",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 344,
+      "line": 342,
       "text": "Reason",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
+      "line": 352,
+      "text": "Add Entry",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
@@ -28135,252 +28142,245 @@
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 356,
+      "line": 366,
       "text": "Add Entry",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 368,
-      "text": "Add Entry",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 368,
+      "line": 366,
       "text": "Override Entry",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 372,
+      "line": 370,
       "text": "Add Entry",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 380,
+      "line": 378,
       "text": "Override Entry",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 412,
+      "line": 410,
       "text": "War Groups",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 438,
+      "line": 436,
       "text": "Enable warlist",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 445,
+      "line": 443,
       "text": "Colors",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 451,
+      "line": 449,
       "text": "Show enemy colors in chat",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 456,
+      "line": 454,
       "text": "Show enemy colors in scoreboard",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 461,
+      "line": 459,
       "text": "Show enemy color in spectator menu",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 466,
+      "line": 464,
       "text": "Show clan for enemies",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 470,
+      "line": 468,
       "text": "Other",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 475,
+      "line": 473,
       "text": "Allow Duplicate Entries",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 480,
+      "line": 478,
       "text": "Fully block enemy players",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 485,
+      "line": 483,
       "text": "Block enemy chat",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 574,
+      "line": 572,
       "text": "Are you sure that you want to remove '%s' from your war groups?",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 597,
+      "line": 595,
       "text": "War Groups",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 606,
-      "text": "New",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "line": 612,
-      "text": "Rename",
+      "text": "New group",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 627,
-      "text": "Group name",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 628,
-      "text": "Group name",
+      "line": 620,
+      "text": "Rename group",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "line": 630,
+      "text": "Group name",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
+      "line": 631,
+      "text": "Group name",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
+      "line": 633,
       "text": "Save",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 644,
+      "line": 647,
       "text": "Cancel",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 652,
+      "line": 655,
       "text": "Color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 677,
+      "line": 681,
       "text": "Dummy",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 677,
+      "line": 681,
       "text": "Friends",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 677,
+      "line": 681,
       "text": "Online",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 677,
+      "line": 681,
       "text": "Self",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 728,
+      "line": 751,
       "text": "No players match",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 769,
+      "line": 788,
       "text": "No players match",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 834,
+      "line": 853,
       "text": "Edit Entry",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 834,
+      "line": 853,
       "text": "Online Players",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 834,
+      "line": 853,
       "text": "Settings",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 834,
+      "line": 853,
       "text": "War Entries",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 834,
+      "line": 853,
       "text": "War Groups",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -88659,175 +88659,182 @@
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 271,
+      "line": 272,
       "text": "",
       "category": "business_data",
       "reason": "settings matcher, command, or serialized config token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 317,
+      "line": 315,
       "text": "entries=%d filtered=%d",
       "category": "business_data",
       "reason": "log or telemetry key/value payload"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 318,
+      "line": 316,
       "text": "tclient_warlist",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 382,
+      "line": 380,
       "text": "",
       "category": "business_data",
       "reason": "settings matcher, command, or serialized config token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 412,
+      "line": 410,
       "text": "%s · %s",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 417,
+      "line": 415,
       "text": "tclient_warlist",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 438,
+      "line": 436,
       "text": "tclient-warlist-enable",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 445,
+      "line": 443,
       "text": "tclient-warlist-colors-caption",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 451,
+      "line": 449,
       "text": "tclient-warlist-colors-chat",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 456,
+      "line": 454,
       "text": "tclient-warlist-colors-scoreboard",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 461,
+      "line": 459,
       "text": "tclient-warlist-colors-spectate",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 466,
+      "line": 464,
       "text": "tclient-warlist-colors-clan",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 470,
+      "line": 468,
       "text": "tclient-warlist-other-caption",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 475,
+      "line": 473,
       "text": "tclient-warlist-allow-duplicates",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 480,
+      "line": 478,
       "text": "tclient-warlist-block-enemies",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 485,
+      "line": 483,
       "text": "tclient-warlist-block-enemy-chat",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 597,
+      "line": 595,
       "text": "%s (%d)",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 609,
+      "line": 610,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 630,
+      "line": 633,
       "text": "",
       "category": "business_data",
       "reason": "settings matcher, command, or serialized config token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 663,
+      "line": 666,
       "text": "groups=%d",
       "category": "business_data",
       "reason": "log or telemetry key/value payload"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 664,
+      "line": 667,
       "text": "tclient_warlist",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 827,
+      "line": 712,
+      "text": "",
+      "category": "business_data",
+      "reason": "empty or whitespace literal"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
+      "line": 846,
       "text": "players=%d filtered=%d",
       "category": "business_data",
       "reason": "log or telemetry key/value payload"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 828,
+      "line": 847,
       "text": "tclient_warlist",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 856,
+      "line": 875,
       "text": "%s-divider",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
-      "line": 888,
+      "line": 907,
       "text": "deck:tclient-warlist",
       "category": "business_data",
       "reason": "settings matcher, command, or serialized config token"

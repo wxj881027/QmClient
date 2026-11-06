@@ -9116,9 +9116,6 @@ Network timeout
 Network timeout protection
 == Ağ zaman aşımı koruması
 
-New
-== New
-
 new
 == yeni
 
@@ -9133,6 +9130,9 @@ New features
 
 New features (unread)
 == Yeni özellikler (okunmadı)
+
+New group
+== Yeni grup
 
 New IME
 == Yeni IME
@@ -9624,7 +9624,7 @@ One key can hold several commands, so remove single entries under "Bound functio
 == Bir tuş birden çok komut taşıyabilir; tuşu tümden temizlemek yerine Atanmış işlevler altından tek tek sil.
 
 Online
-== Online
+== Çevrimiçi
 
 Online friends
 == Çevrimiçi arkadaşlar
@@ -11686,6 +11686,9 @@ Rename demo
 
 Rename folder
 == Klasörü yeniden adlandır
+
+Rename group
+== Grubu yeniden adlandır
 
 Rename queue
 == Sırayı yeniden adlandır

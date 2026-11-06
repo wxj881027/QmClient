@@ -3044,12 +3044,12 @@ Netversion
 Network
 Network timeout
 Network timeout protection
-New
 new
 New button
 New category name
 New features
 New features (unread)
+New group
 New IME
 New IME candidate bar background color
 New IME candidate bar opacity
@@ -3904,6 +3904,7 @@ Rename
 Rename a friend category
 Rename demo
 Rename folder
+Rename group
 Rename queue
 Rename screenshot
 Rename: %s
