@@ -165,6 +165,8 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 	const float LineSpacing = Metrics.m_LineSpacing;
 	const float TipSize = Metrics.m_SmallSize;
 	const float PreviewHeight = LineHeight * 3.0f + LineSpacing * 2.0f;
+	// 发言预览改成整套聊天框预览，要放得下系统行、高亮、队伍、好友、普通五条。
+	const float ChatPreviewHeight = LineHeight * 6.0f + LineSpacing * 2.0f;
 
 	Out = {};
 	Out.m_Spec = {pDefault->m_pStableId, Localize(pDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pDefault)};
@@ -266,7 +268,7 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 			});
 
 			CUIRect ChatPreview, ChatPreviewLabel, ChatPreviewArea;
-			const bool HasPreview = Flow.Control("title-chat-preview", PreviewHeight, ChatPreview);
+			const bool HasPreview = Flow.Control("title-chat-preview", ChatPreviewHeight, ChatPreview);
 			Flow.Space(LineSpacing);
 			if(HasPreview && Flow.Drawing() && !pMenus->Ui()->DrawingSuppressed())
 			{
@@ -295,7 +297,13 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 				ChatPreviewArea.Draw(ui_token::color::PREVIEW_SURFACE, IGraphics::CORNER_ALL, ui_token::radius::BASE);
 				ChatPreviewArea.Margin(TipSize * 0.45f, &ChatPreviewArea);
 				pMenus->Ui()->ClipEnable(&ChatPreviewArea);
-				RenderQmSponsorChatPreview(pMenus->Graphics(), pMenus->TextRender(), ChatPreviewArea, BodySize, static_cast<EQmSponsorChatStyle>(g_Config.m_QmSponsorChatStyle), Auth.TitleAnimationTime());
+				// 上半段是整套聊天框预览（和外观页那张卡同一份实现）。
+				CUIRect ChatLinesArea, SponsorLineArea;
+				ChatPreviewArea.HSplitBottom(LineHeight * 1.5f, &ChatLinesArea, &SponsorLineArea);
+				qm_card_catalog::QmCardRenderHook::RenderQmChatBoxPreview(pMenus, ChatLinesArea);
+				// 最后一行换成赞助者本人这句，用当前发言样式渲染，看到的就是别人眼里的效果。
+				SponsorLineArea.HSplitTop(LineHeight * 0.25f, nullptr, &SponsorLineArea);
+				RenderQmSponsorChatPreview(pMenus->Graphics(), pMenus->TextRender(), SponsorLineArea, BodySize, static_cast<EQmSponsorChatStyle>(g_Config.m_QmSponsorChatStyle), Auth.TitleAnimationTime());
 				pMenus->Ui()->ClipDisable();
 			}
 
