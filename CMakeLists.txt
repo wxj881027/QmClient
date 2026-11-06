@@ -3874,6 +3874,8 @@ if(CLIENT)
     components/qmclient/settings_resource_preview.h
     components/qmclient/settings_asset_image_job.h
     components/qmclient/settings_asset_list_job.h
+    components/qmclient/settings_asset_hierarchy.h
+    components/qmclient/settings_asset_list_merge.h
     components/qmclient/settings_asset_queue.h
     components/qmclient/screenshot_clipboard.cpp
     components/qmclient/screenshot_clipboard.h
@@ -5725,6 +5727,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/settings/settings_resource_preview_pipeline_test.cpp
     src/test/integration/qmclient/settings/settings_resource_preview_upload_test.cpp
     src/test/integration/qmclient/settings/settings_resource_preview_invalidation_test.cpp
+    src/test/integration/qmclient/settings/settings_asset_list_merge_test.cpp
     src/test/integration/qmclient/settings/qm_nameplate_cards_test.cpp
     src/test/integration/qmclient/settings/qm_general_cards_test.cpp
     src/test/integration/qmclient/settings/qm_catalog_search_test.cpp
@@ -5843,6 +5846,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/settings/settings_resource_budget_test.cpp
     src/test/unit/qmclient/settings/settings_asset_loading_test.cpp
     src/test/unit/qmclient/settings/settings_asset_preview_budget_test.cpp
+    src/test/unit/client/assets_preview_memory_accounting_test.cpp
     src/test/unit/qmclient/settings/settings_asset_preview_lifecycle_test.cpp
     src/test/unit/qmclient/settings/settings_asset_priority_test.cpp
     src/test/unit/qmclient/settings/settings_asset_admission_test.cpp
@@ -6596,6 +6600,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/client/qm_console_input_colors_test.cpp
       src/test/unit/qmclient/client/qm_settings_asset_queue_test.cpp
       src/test/unit/client/entity_bg_install_path_commit_test.cpp
+      src/test/integration/qmclient/settings/settings_asset_hierarchy_transaction_test.cpp
       src/game/client/components/assets_resource_registry.cpp
       src/test/unit/qmclient/client/qm_console_selection_copy_test.cpp
       src/test/unit/qmclient/ui/qm_line_input_motion_allocation_test.cpp

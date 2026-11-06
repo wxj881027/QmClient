@@ -320,7 +320,7 @@ private:
 	std::chrono::nanoseconds m_aAssetLoadRetryAt[NUMBER_OF_ASSETS_TABS]{};
 	SSettingsAssetPendingMerge m_aAssetPendingMerges[NUMBER_OF_ASSETS_TABS];
 	int m_aAssetLoadGenerations[NUMBER_OF_ASSETS_TABS] = {};
-	void PublishSettingsAssetMergeEntries(int Tab, const std::vector<SSettingsAssetMergeEntry> &vEntries);
+	bool PublishSettingsAssetMergeEntries(int Tab, const std::vector<SSettingsAssetMergeEntry> &vEntries);
 	void InvalidateSettingsAssetResourcePlan();
 	void CancelLocalAssetPreview(int Tab, const char *pName);
 	bool TryStartSettingsAssetListJob(int Tab);
@@ -400,8 +400,8 @@ public:
 			return *this;
 		}
 
-		SCustomItem(SCustomItem &&Other) = default;
-		SCustomItem &operator=(SCustomItem &&Other) = default;
+		SCustomItem(SCustomItem &&Other) noexcept = default;
+		SCustomItem &operator=(SCustomItem &&Other) noexcept = default;
 
 		~SCustomItem()
 		{
@@ -1397,6 +1397,8 @@ protected:
 	std::vector<std::string> m_vEntityBgSourceNames;
 	std::unordered_map<std::string, EEntityBgHierarchyEntrySource> m_vEntityBgSourceKinds;
 	char m_aEntityBgCurrentFolder[IO_MAX_PATH_LENGTH] = "";
+	bool m_EntityBgHierarchyRefreshPending = false;
+	std::chrono::nanoseconds m_EntityBgHierarchyRefreshRetryAt{};
 	bool m_ShowWorkshopAssets = false;
 	std::vector<SCustomExtras> m_vExtrasList;
 	std::deque<SSettingsAssetPreviewHandle> m_aaCustomPreviewDecodeQueue[NUMBER_OF_ASSETS_TABS];
@@ -1423,8 +1425,8 @@ protected:
 	static void ConchainAssetExtras(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 
 	void ClearCustomItems(int CurTab);
-	void RefreshEntityBgHierarchyView();
-	void SyncEntityBgInstalledWorkshopSources();
+	bool RefreshEntityBgHierarchyView();
+	void SyncEntityBgInstalledWorkshopSources(std::vector<std::string> &vNames, std::unordered_map<std::string, EEntityBgHierarchyEntrySource> &Kinds);
 	void AssetsEditorOpen(int Type);
 
 private:

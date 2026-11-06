@@ -110,7 +110,7 @@ inline TByteCount PreviewBudgetBytes(size_t OverrideMb, int Percent, float GpuBu
 	return static_cast<TByteCount>(static_cast<TByteCount>(BudgetMb) * BytesPerMb);
 }
 
-inline int ComputePreviewBudgetedTextureSize(int MaxTextureSize, int MinTextureSize, size_t TextureBudgetBytes, size_t CurrentTextureMemoryBytes, size_t ReplacedResidentPreviewBytes)
+inline int ComputePreviewBudgetedTextureSize(int MaxTextureSize, int MinTextureSize, uint64_t TextureBudgetBytes, uint64_t CurrentTextureMemoryBytes, uint64_t ReplacedResidentPreviewBytes)
 {
 	if(MaxTextureSize <= 0)
 		return std::max(MinTextureSize, 0);
@@ -121,11 +121,12 @@ inline int ComputePreviewBudgetedTextureSize(int MaxTextureSize, int MinTextureS
 	if(TextureBudgetBytes == 0)
 		return TextureSize;
 
+	const uint64_t BaseTextureBytes = CurrentTextureMemoryBytes > ReplacedResidentPreviewBytes ? CurrentTextureMemoryBytes - ReplacedResidentPreviewBytes : 0;
 	while(TextureSize > MinTextureSize)
 	{
-		const size_t BaseTextureBytes = CurrentTextureMemoryBytes > ReplacedResidentPreviewBytes ? CurrentTextureMemoryBytes - ReplacedResidentPreviewBytes : 0;
-		const size_t EstimatedBytes = BaseTextureBytes + PreviewTextureSizeBytesEstimate(TextureSize);
-		if(EstimatedBytes <= TextureBudgetBytes)
+		const uint64_t EstimatedBytes = PreviewTextureSizeBytesEstimate(TextureSize);
+		// 用剩余额度比较，避免已有纹理与候选估算相加后绕回较小值。
+		if(BaseTextureBytes <= TextureBudgetBytes && EstimatedBytes <= TextureBudgetBytes - BaseTextureBytes)
 			break;
 		const int NextTextureSize = PreviewBudgetNextTier(TextureSize, MinTextureSize);
 		if(NextTextureSize == TextureSize)

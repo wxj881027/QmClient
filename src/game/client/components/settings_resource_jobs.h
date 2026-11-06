@@ -4,6 +4,7 @@
 #include <game/client/components/settings_runtime_cache.h>
 #include <game/client/ui_rect.h>
 
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <unordered_set>
@@ -528,8 +529,21 @@ int SettingsResourceClampSharedHeavyBudgetWithScrollTrickle(int RemainingBudget,
 bool SettingsResourceConsumeSharedHeavyBudget(int &RemainingBudget);
 bool SettingsResourceUploadWithinByteBudget(int UploadedThisFrame, size_t UploadedBytesThisFrame, size_t ItemBytes, size_t MaxBytesPerFrame);
 bool SettingsResourceOversizedUploadAllowed(const SSettingsResourceFrameContext &Context, bool PageSwitchActive, ESettingsResourcePriority Priority, int OversizedUploadsThisFrame, size_t ItemBytes, size_t MaxBytesPerFrame);
-size_t SettingsAssetPreviewResidentBudgetBytes(size_t OverrideMb, int Percent, float GpuBudgetMb);
-int SettingsAssetPreviewBudgetedTextureSize(int MaxTextureSize, int MinTextureSize, size_t TextureBudgetBytes, size_t CurrentTextureMemoryBytes, size_t ResidentPreviewBytes);
+// 直接统计拥有条目的容器，避免搜索指针在列表重建后失效。
+template<typename TItem, typename TAllocator>
+uint64_t SettingsAssetPreviewResidentBytes(const std::vector<TItem, TAllocator> &Items)
+{
+	uint64_t ResidentBytes = 0;
+	for(const TItem &Item : Items)
+	{
+		if(Item.m_RenderTexture.IsValid())
+			ResidentBytes += Item.m_PreviewResidentBytes;
+	}
+	return ResidentBytes;
+}
+
+uint64_t SettingsAssetPreviewResidentBudgetBytes(size_t OverrideMb, int Percent, float GpuBudgetMb);
+int SettingsAssetPreviewBudgetedTextureSize(int MaxTextureSize, int MinTextureSize, uint64_t TextureBudgetBytes, uint64_t CurrentTextureMemoryBytes, uint64_t ResidentPreviewBytes);
 std::string SettingsAssetPreviewHandleKey(const SSettingsAssetPreviewHandle &Handle);
 bool SettingsAssetPreviewHandleMatches(const SSettingsAssetPreviewHandle &Handle, int CurrentTab, unsigned CurrentEpoch, size_t CurrentIndex, const char *pName);
 // 只看「这个句柄是不是还在说这张卡」：列表在软重扫合并后会重新排序，条目下标
