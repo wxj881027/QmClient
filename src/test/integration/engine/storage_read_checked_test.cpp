@@ -3,10 +3,15 @@
 #include <engine/storage.h>
 
 #include <gtest/gtest.h>
+#include <test/support/regular_file_open_timeout.h>
 #include <test/test.h>
 
 #include <cstdlib>
 #include <string>
+
+#if defined(CONF_FAMILY_UNIX)
+#include <sys/stat.h>
+#endif
 
 namespace
 {
@@ -89,6 +94,9 @@ namespace
 			Write((std::string(pPrefix) + "/" + m_Relative + "/skin.json").c_str(), pValue);
 		}
 		EResult ReadLayers() { return Read((m_Relative + "/skin.json").c_str(), IStorage::TYPE_ALL, m_pLayered.get()); }
+	};
+	class CLayeredCheckedStorageReadDeathTest : public CLayeredCheckedStorageReadTest
+	{
 	};
 }
 
@@ -308,3 +316,24 @@ TEST_F(CCheckedStorageReadTest, BoundedReadKeepsAbsoluteTypeTranslation)
 		EXPECT_EQ(Contents(), "ok");
 	}
 }
+
+#if defined(CONF_FAMILY_UNIX) && GTEST_HAS_DEATH_TEST && !defined(CONF_PLATFORM_ANDROID) && !defined(CONF_PLATFORM_EMSCRIPTEN)
+TEST_F(CLayeredCheckedStorageReadDeathTest, EarlierFifoIsFailureAndCannotBeHiddenByLaterFile)
+{
+	const std::string Fifo = m_Save + "/" + m_Relative + "/skin.json";
+	ASSERT_EQ(mkfifo(Fifo.c_str(), 0600), 0);
+	ASSERT_NO_FATAL_FAILURE(WriteLayer("read_app/data", "ok"));
+	const std::string Relative = m_Relative + "/skin.json";
+	ASSERT_EXIT(
+		{
+			ArmRegularFileOpenChildTimeout();
+			void *pData = nullptr;
+			unsigned Size = 0;
+			const auto Result = m_pLayered->ReadFileCheckedBounded(Relative.c_str(), IStorage::TYPE_ALL, &pData, &Size, 1024);
+			const bool Failed = Result == EResult::IO_FAILURE && pData == nullptr && Size == 0;
+			free(pData);
+			_exit(Failed ? 0 : 1);
+		},
+		testing::ExitedWithCode(0), "");
+}
+#endif

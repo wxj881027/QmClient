@@ -1,6 +1,7 @@
 #include <game/client/components/qmclient/statistics_file.h>
 
 #include <gtest/gtest.h>
+#include <test/support/regular_file_open_timeout.h>
 #include <test/test.h>
 
 #include <algorithm>
@@ -8,6 +9,10 @@
 #include <memory>
 #include <string>
 #include <string_view>
+
+#if defined(CONF_FAMILY_UNIX)
+#include <sys/stat.h>
+#endif
 
 namespace
 {
@@ -166,3 +171,30 @@ TEST(QmStatisticsFile, OversizedOtherwiseValidDocumentRemainsOnDiskWithoutPublis
 	ASSERT_NE(File, nullptr);
 	EXPECT_EQ(io_length(File.get()), static_cast<int64_t>(QM_STATISTICS_MAX_FILE_BYTES) + 1);
 }
+
+#if defined(CONF_FAMILY_UNIX) && GTEST_HAS_DEATH_TEST && !defined(CONF_PLATFORM_ANDROID) && !defined(CONF_PLATFORM_EMSCRIPTEN)
+TEST(QmStatisticsFileDeathTest, FifoIsInvalidWithoutWaitingForWriterOrRemovingFile)
+{
+	CTestInfo Info;
+	auto pStorage = Info.CreateTestStorage();
+	ASSERT_NE(pStorage, nullptr);
+	ASSERT_TRUE(pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE));
+	char aPath[IO_MAX_PATH_LENGTH];
+	pStorage->GetCompletePath(IStorage::TYPE_SAVE, "qmclient/statistics.json", aPath, sizeof(aPath));
+	ASSERT_EQ(mkfifo(aPath, 0600), 0);
+	ASSERT_EXIT(
+		{
+			ArmRegularFileOpenChildTimeout();
+			json_value *pRoot = nullptr;
+			const auto Result = QmLoadStatisticsFile(pStorage.get(), "qmclient/statistics.json", &pRoot);
+			const bool Invalid = Result == EQmStatisticsFileLoadResult::INVALID && pRoot == nullptr;
+			if(pRoot)
+				json_value_free(pRoot);
+			_exit(Invalid ? 0 : 1);
+		},
+		testing::ExitedWithCode(0), "");
+	struct stat Information;
+	ASSERT_EQ(lstat(aPath, &Information), 0);
+	EXPECT_TRUE(S_ISFIFO(Information.st_mode));
+}
+#endif

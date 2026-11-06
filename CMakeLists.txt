@@ -5878,6 +5878,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/base/windows_registry_string_test.cpp
     src/test/integration/base/windows_com_lifecycle_test.cpp
     src/test/integration/base/windows_io_handle_test.cpp
+    src/test/integration/base/regular_file_open_test.cpp
+    src/test/support/regular_file_open_timeout.h
     src/test/integration/base/windows_exception_snapshot_test.cpp
     src/test/integration/base/windows_stdout_logger_test.cpp
     src/test/unit/engine/netobj_secure_unpack_test.cpp

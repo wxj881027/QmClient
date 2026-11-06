@@ -81,7 +81,7 @@ public:
 		*pResultLen = 0;
 		return EReadFileResult::UNSUPPORTED;
 	}
-	// 分配前限制可定位文件的完整大小；读出长度与测得长度不符时失败，不降级成无限读取。
+	// 只读打开后确认的普通文件，分配前限长；读出长度不符时失败，不降级成无限读取。
 	virtual EReadFileResult ReadFileCheckedBounded(const char *, int, void **ppResult, unsigned *pResultLen, unsigned)
 	{
 		if(ppResult)

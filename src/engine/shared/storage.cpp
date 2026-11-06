@@ -807,7 +807,8 @@ namespace
 				if(NameLength >= sizeof(aPath) || PrefixLength + Separator > sizeof(aPath) - NameLength - 1)
 					return EReadFileResult::IO_FAILURE;
 				bool NotFound = false;
-				std::unique_ptr<void, decltype(&io_close)> File(io_open_read_checked(GetPath(Index, pFilename, aPath, sizeof(aPath)), &NotFound), io_close);
+				const char *pPath = GetPath(Index, pFilename, aPath, sizeof(aPath));
+				std::unique_ptr<void, decltype(&io_close)> File(MaxBytes ? io_open_read_regular_checked(pPath, &NotFound) : io_open_read_checked(pPath, &NotFound), io_close);
 				if(!File)
 					return NotFound ? EReadFileResult::NOT_FOUND : EReadFileResult::IO_FAILURE;
 				std::unique_ptr<void, decltype(&free)> Data(nullptr, free);

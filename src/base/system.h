@@ -110,6 +110,10 @@ IOHANDLE io_open(const char *filename, int flags);
 // 严格校验UTF-8，返回句柄由调用方关闭；旧io_open保持原有语义。
 IOHANDLE io_open_read_checked(const char *pFilename, bool *pNotFound);
 
+// 只接受打开后确认的普通文件，符号链接按其目标判断；Unix打开FIFO时不等待写端。
+// 非普通类型和校验失败不冒充缺失，返回流仍由调用方关闭。
+IOHANDLE io_open_read_regular_checked(const char *pFilename, bool *pNotFound);
+
 /**
  * Reads data into a buffer from a file.
  *
