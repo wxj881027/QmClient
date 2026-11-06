@@ -653,12 +653,6 @@ namespace
 			Localizable("\"Cycle custom Tee hue\" only works with custom colors and does nothing while the TClient rainbow Tee option is on."),
 		},
 		{
-			"qm:skin_transition",
-			Localizable("Plays a short effect when a tee's skin changes, and can copy the skin of the tee you just hammered."),
-			Localizable("Turn on \"Skin transition animation\", choose a \"Skin transition type\" and \"Animation range\", then set \"Skin transition duration\" and \"Skin transition intensity\"."),
-			Localizable("Enable \"Hammer skin steal\" only if you want your skin to change on every hammer hit, since other players see it too."),
-		},
-		{
 			"qm:solo_split",
 			Localizable("Puts you and your dummy in two separate teams so each can run a solo map, with keys to enter and leave."),
 			Localizable("Tick \"Auto-connect dummy\" to connect the dummy for you, then bind \"Solo split key\" to toggle, or use the enter and leave keys."),
