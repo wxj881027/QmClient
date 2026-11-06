@@ -48079,7 +48079,7 @@
     {
       "file": "src/game/client/components/menus_browser.cpp",
       "line": 3294,
-      "text": "Leaks your IP address to all servers by pinging each of them, also acquiring the latency in the process",
+      "text": "Leaks your IP address to this server by pinging it, also acquiring the latency in the process",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },

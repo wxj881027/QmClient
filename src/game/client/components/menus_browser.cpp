@@ -3291,7 +3291,7 @@ void CMenus::RenderServerbrowserInfo(CUIRect View)
 		static int s_LeakIpButton = 0;
 		int ExposeIp = pSelectedServer->m_FavoriteAllowPing != TRISTATE::NONE;
 		SSettingsToggleEntry ExposeEntry{&ExposeIp, "Leak IP", Localize("Leak IP"), &s_LeakIpButton};
-		ExposeEntry.m_pTooltip = Localize("Leaks your IP address to all servers by pinging each of them, also acquiring the latency in the process");
+		ExposeEntry.m_pTooltip = Localize("Leaks your IP address to this server by pinging it, also acquiring the latency in the process");
 		ExposeEntry.m_ShowCheckmark = true;
 		const float Height = ToggleHeight(ExposeEntry.m_pLabel);
 		View.HSplitTop(Metrics.m_LineSpacing * s_ExposeRowAnim, nullptr, &View);
