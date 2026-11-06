@@ -112,32 +112,6 @@ namespace
 // 声明式搜索索引：文案随所属卡片声明，静态初始化时自动注册。
 namespace
 {
-	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_entity_overlay[] = {
-		{Localizable("CP opacity"), nullptr, "CP 点不透明度"},
-		{Localizable("Death opacity"), nullptr, "死亡不透明度"},
-		{Localizable("Deep freeze opacity"), nullptr, "深度冻结不透明度"},
-		{Localizable("Deep unfreeze opacity"), nullptr, "深度解冻不透明度"},
-		{Localizable("Freeze opacity"), nullptr, "冻结不透明度"},
-		{Localizable("Switch opacity"), nullptr, "开关不透明度"},
-		{Localizable("Teleport opacity"), nullptr, "传送不透明度"},
-		{Localizable("Tune layer opacity"), nullptr, "叠层不透明度"},
-		{Localizable("Unfreeze opacity"), nullptr, "解冻不透明度"},
-		{nullptr, "cl_overlay_entities", nullptr},
-		{nullptr, "qm_entity_overlay_death_alpha", nullptr},
-		{nullptr, "qm_entity_overlay_deep_freeze_alpha", nullptr},
-		{nullptr, "qm_entity_overlay_deep_unfreeze_alpha", nullptr},
-		{nullptr, "qm_entity_overlay_freeze_alpha", nullptr},
-		{nullptr, "qm_entity_overlay_switch_alpha", nullptr},
-		{nullptr, "qm_entity_overlay_tele_alpha", nullptr},
-		{nullptr, "qm_entity_overlay_tele_checkpoint_alpha", nullptr},
-		{nullptr, "qm_entity_overlay_unfreeze_alpha", nullptr},
-	};
-	QM_CARD_SEARCH_REGISTER("qm:entity_overlay", qm_entity_overlay);
-}
-
-// 声明式搜索索引：文案随所属卡片声明，静态初始化时自动注册。
-namespace
-{
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_focus_mode[] = {
 		{Localizable("Audio"), nullptr, "语音音效"},
 		{Localizable("Chat"), nullptr, "聊天"},

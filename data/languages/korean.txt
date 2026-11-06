@@ -4235,8 +4235,8 @@ Draft file is empty
 Drag
 == 드래그
 
-Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Tune layer opacity" to fade the whole entity layer.
-== 사망 불투명도나 텔레포트 불투명도 같은 슬라이더를 0~100%에서 움직이거나, 레이어 불투명도 조정으로 엔티티 레이어 전체를 흐리게 합니다.
+Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Overlay entities" to fade the whole entity layer.
+== 사망 불투명도나 텔레포트 불투명도 같은 슬라이더를 0~100%에서 움직이거나, '엔티티 표시'로 엔티티 레이어 전체를 흐리게 합니다.
 
 Drag HUD modules with the left mouse button
 == 마우스 왼쪽 버튼으로 HUD 모듈 드래그
@@ -5213,8 +5213,8 @@ Entity Background Image
 Entity layer
 == 엔티티 레이어
 
-Entity overlay
-== 엔티티 오버레이
+Entity layer adjustments
+== 엔티티 레이어 조정
 
 Entity Preview
 == 엔티티 미리보기
@@ -16162,9 +16162,6 @@ Tune additional world and player effects
 
 Tune in zone a variable to value
 == 영역 a의 변수를 값으로 조정
-
-Tune layer opacity
-== 튠 레이어 불투명도
 
 Tune variable to value
 == 변수를 값으로 조정

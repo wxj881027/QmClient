@@ -4235,8 +4235,8 @@ Draft file is empty
 Drag
 == Arrastrar
 
-Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Tune layer opacity" to fade the whole entity layer.
-== Arrastra un control como opacidad de muerte u opacidad de teletransporte de 0 a 100%, o usa ajustar la opacidad de la capa para atenuar toda la capa de entidades.
+Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Overlay entities" to fade the whole entity layer.
+== Arrastra un control como opacidad de muerte u opacidad de teletransporte de 0 a 100%, o usa superponer entidades para atenuar toda la capa de entidades.
 
 Drag HUD modules with the left mouse button
 == Arrastra los módulos HUD con el botón izquierdo del ratón
@@ -5213,8 +5213,8 @@ Entity Background Image
 Entity layer
 == Capa de entidades
 
-Entity overlay
-== Superposición de entidades
+Entity layer adjustments
+== Ajustes de la capa de entidades
 
 Entity Preview
 == Vista previa de entidades
@@ -16162,9 +16162,6 @@ Tune additional world and player effects
 
 Tune in zone a variable to value
 == Ajustar variable en zona a a valor
-
-Tune layer opacity
-== Opacidad de la capa de ajuste
 
 Tune variable to value
 == Ajustar variable a valor
