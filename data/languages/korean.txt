@@ -2066,6 +2066,9 @@ Candidate files
 Candy gradient
 == 캔디 그라데이션
 
+Cannot import: invalid data or too many friends or categories.
+== 가져올 수 없습니다. 데이터가 잘못되었거나 친구 또는 그룹 수가 한도를 초과했습니다.
+
 Cannot join the target player's team
 == 대상 플레이어의 팀에 참가할 수 없습니다
 
@@ -2476,6 +2479,9 @@ Clan plates size
 
 Clan: %s
 == 클랜: %s
+
+Classic
+== 클래식
 
 Classic Easy
 == 클래식 Easy
@@ -3218,6 +3224,9 @@ Copy a .qmconfig file into the package folder, then refresh.
 Copy all
 == 모두 복사
 
+Copy friend code
+== 친구 코드 복사
+
 Copy info
 == 정보 복사
 
@@ -3262,6 +3271,9 @@ Could not delete "%s"
 
 Could not download "%s"
 == "%s"을(를) 다운로드할 수 없습니다
+
+Could not encode friend data.
+== 친구 데이터를 코드로 변환하지 못했습니다.
 
 Could not find a Tutorial server. Check your internet connection.
 == 튜토리얼 서버를 찾을 수 없습니다. 인터넷 연결을 확인하세요.
@@ -4658,9 +4670,6 @@ Empty slots still take space, so clear the ones you no longer use.
 enable
 == 활성화
 
-Enable "Hammer skin steal" only if you want your skin to change on every hammer hit, since other players see it too.
-== 해머로 칠 때마다 스킨이 바뀌길 원할 때만 해머 스킨 강탈을 켜세요. 다른 플레이어에게도 보입니다.
-
 Enable "Map progress bar" and choose its location: Standalone, Player stats or Dynamic Island. Enable "Show player stats HUD" for the Player stats location.
 == 맵 진행률 바를 켜고 위치를 별도 표시, 플레이어 통계 또는 다이내믹 아일랜드로 선택하세요. 플레이어 통계를 선택하면 플레이어 통계 HUD 표시도 켜야 합니다.
 
@@ -5954,6 +5963,9 @@ Friend
 Friend bar category expand state (1=expanded, 0=collapsed)
 == 친구 바 카테고리 확장 상태 (1=확장, 0=축소)
 
+Friend code copied, including categories, notes and pins.
+== 그룹, 메모, 고정 상태가 포함된 친구 코드를 복사했습니다.
+
 Friend color in friends list
 == 친구 목록의 친구 색상
 
@@ -6001,6 +6013,12 @@ Friend option color
 
 Friends
 == 친구
+
+Friends imported and saved.
+== 친구를 가져와 저장했습니다.
+
+Friends imported for this session, but saving settings failed.
+== 현재 세션에 친구를 가져왔지만 설정을 저장하지 못했습니다.
 
 Friends only
 == 친구만
@@ -6986,8 +7004,14 @@ Import and restart
 Import configuration package
 == 설정 패키지 가져오기
 
+Import friend code
+== 친구 코드 가져오기
+
 Import from clipboard
 == 클립보드에서 가져오기
+
+Import merges friends and keeps local duplicates by default. Codes contain private names and notes.
+== 기본적으로 친구를 병합하고 중복 친구의 로컬 정보를 유지합니다. 코드에는 비공개 이름과 메모가 포함됩니다.
 
 Improved anti ping
 == 개선된 안티 핑
@@ -7300,6 +7324,9 @@ Invalid X coordinate.
 
 Invalid Y coordinate.
 == 잘못된 Y 좌표입니다.
+
+Invalid, damaged or unsupported friend code.
+== 친구 코드가 잘못되었거나 손상되었거나 지원되지 않는 버전입니다.
 
 Invert camera drift direction
 == 카메라 드리프트 방향 반전
@@ -10052,6 +10079,12 @@ Password visibility icon animation: 0=Fade, 1=Morph
 Past year
 == 지난 1년
 
+Paste a friend code first.
+== 먼저 친구 코드를 붙여넣으세요.
+
+Paste friend code
+== 친구 코드 붙여넣기
+
 Paste sp_dc from Spotify web cookies
 == 브라우저의 sp_dc 쿠키 붙여넣기
 
@@ -10513,9 +10546,6 @@ Players weapons has no affect on others
 
 Playing effects
 == 효과 재생
-
-Plays a short effect when a tee's skin changes, and can copy the skin of the tee you just hammered.
-== Tee의 스킨이 바뀔 때 짧은 효과를 재생하고, 방금 해머로 친 상대의 스킨을 복사할 수도 있습니다.
 
 Plays an animation whenever your skin changes, including skins stolen with the hammer.
 == 해머로 빼앗은 스킨을 포함해 스킨이 바뀔 때 애니메이션을 재생합니다.
@@ -11330,6 +11360,9 @@ Read the listed rows, then press "Apply Qm recommended appearance"; if the font 
 Ready
 == 준비됨
 
+Ready to import: %d friends, %d categories.
+== 가져오기 준비됨: 친구 %d명, 그룹 %d개.
+
 Really? Not even a little?
 == 정말요? 조금도 생각해 보실 생각이 없나요?
 
@@ -11777,6 +11810,9 @@ Repeat message
 Repeat the latest chat message
 == 최신 채팅 메시지 반복
 
+Replace all friends
+== 모든 친구 교체
+
 Replace censored words with length-based chars
 == 차단어 길이에 따른 다중 문자 대체
 
@@ -11800,6 +11836,9 @@ Replace settings, binds and the listed cfg files, then restart? The current conf
 
 Replace skin with one having this prefix (e.g. cats, santa)
 == 이 접두사가 있는 스킨으로 교체 (예: cats, santa)
+
+Replace your entire friend list, categories, notes and pins with the pasted code?
+== 전체 친구 목록, 그룹, 메모, 고정 상태를 붙여넣은 코드로 교체할까요?
 
 Replacement chars
 == 교체 문자
@@ -16219,9 +16258,6 @@ Turn on "Show titles on nameplates", pick a "Title style", then adjust "Title mo
 
 Turn on "Skin outline for self and dummy" or "Skin outline for other players", then tune width and opacity; "Cycle custom Tee hue" animates custom colors.
 == 자신과 dummy의 스킨 윤곽선 또는 다른 플레이어의 스킨 윤곽선을 켜고 두께와 불투명도를 맞추세요. 사용자 지정 Tee 색조 순환이 사용자 지정 색상을 움직입니다.
-
-Turn on "Skin transition animation", choose a "Skin transition type" and "Animation range", then set "Skin transition duration" and "Skin transition intensity".
-== 스킨 전환 애니메이션을 켜고 전환 유형과 애니메이션 범위를 고른 뒤, 전환 시간과 강도를 설정하세요.
 
 Turn on "Smooth free spectator camera" and set "Cinematic smoothness": low values stay snappy, high values drift slowly.
 == 자유 관전 카메라 부드럽게를 켜고 영화식 부드러움을 설정하세요. 낮으면 민첩하고 높으면 천천히 흐릅니다.

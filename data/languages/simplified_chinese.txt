@@ -2066,6 +2066,9 @@ Candidate files
 Candy gradient
 == 糖果渐变
 
+Cannot import: invalid data or too many friends or categories.
+== 无法导入：数据无效，或好友、分组数量超出上限。
+
 Cannot join the target player's team
 == 无法加入目标玩家的队伍
 
@@ -2482,6 +2485,9 @@ Clan plates size
 
 Clan: %s
 == 战队：%s
+
+Classic
+== 古典
 
 Classic Easy
 == 古典 Easy
@@ -3227,6 +3233,9 @@ Copy a .qmconfig file into the package folder, then refresh.
 Copy all
 == 复制全部
 
+Copy friend code
+== 复制好友码
+
 Copy info
 == 复制服务器信息
 
@@ -3271,6 +3280,9 @@ Could not delete "%s"
 
 Could not download "%s"
 == 无法下载"%s"
+
+Could not encode friend data.
+== 无法生成好友码。
 
 Could not find a Tutorial server. Check your internet connection.
 == 未找到教程服务器。请检查你的网络连接。
@@ -4667,9 +4679,6 @@ Empty slots still take space, so clear the ones you no longer use.
 enable
 == 开启
 
-Enable "Hammer skin steal" only if you want your skin to change on every hammer hit, since other players see it too.
-== 只有想每次锤中都换皮肤时才开启锤中偷皮——别人也会看到你的皮肤在变。
-
 Enable "Map progress bar" and choose its location: Standalone, Player stats or Dynamic Island. Enable "Show player stats HUD" for the Player stats location.
 == 开启“地图进度条”，选择独立显示、玩家统计或灵动岛。选择玩家统计时，还需开启“显示玩家统计 HUD”。
 
@@ -5969,6 +5978,9 @@ Friend
 Friend bar category expand state (1=expanded, 0=collapsed)
 == 好友栏分类展开状态(1=展开，0=收起)
 
+Friend code copied, including categories, notes and pins.
+== 好友码已复制，包含分组、备注和置顶状态。
+
 Friend color in friends list
 == 好友列表中好友条目颜色
 
@@ -6016,6 +6028,12 @@ Friend option color
 
 Friends
 == 好友
+
+Friends imported and saved.
+== 好友已导入并保存。
+
+Friends imported for this session, but saving settings failed.
+== 好友已在本次运行中导入，但设置保存失败。
 
 Friends only
 == 仅限好友
@@ -7001,8 +7019,14 @@ Import and restart
 Import configuration package
 == 导入配置包
 
+Import friend code
+== 导入好友码
+
 Import from clipboard
 == 从剪贴板导入
+
+Import merges friends and keeps local duplicates by default. Codes contain private names and notes.
+== 默认合并好友，重复好友保留本地资料。好友码包含私人名单和备注。
 
 Improved anti ping
 == 改进版延迟补偿
@@ -7315,6 +7339,9 @@ Invalid X coordinate.
 
 Invalid Y coordinate.
 == 无效的 Y 坐标
+
+Invalid, damaged or unsupported friend code.
+== 好友码无效、已损坏或版本不受支持。
 
 Invert camera drift direction
 == 反转相机漂移方向
@@ -10082,6 +10109,12 @@ Password visibility icon animation: 0=Fade, 1=Morph
 Past year
 == 最近一年
 
+Paste a friend code first.
+== 请先粘贴好友码。
+
+Paste friend code
+== 粘贴好友码
+
 Paste sp_dc from Spotify web cookies
 == 粘贴浏览器中的 sp_dc cookie
 
@@ -10543,9 +10576,6 @@ Players weapons has no affect on others
 
 Playing effects
 == 播放效果
-
-Plays a short effect when a tee's skin changes, and can copy the skin of the tee you just hammered.
-== 皮肤的 Tee 换肤时播放一个短效果，还可以把刚锤到的那个人的皮肤复制过来。
 
 Plays an animation whenever your skin changes, including skins stolen with the hammer.
 == 皮肤变化时播放动画，包括锤子偷来的皮肤。
@@ -11360,6 +11390,9 @@ Read the listed rows, then press "Apply Qm recommended appearance"; if the font 
 Ready
 == 已就绪
 
+Ready to import: %d friends, %d categories.
+== 待导入：%d 位好友，%d 个分组。
+
 Really? Not even a little?
 == 真的？一点都不考虑一下吗？
 
@@ -11807,6 +11840,9 @@ Repeat message
 Repeat the latest chat message
 == 复读最新聊天消息
 
+Replace all friends
+== 替换全部好友
+
 Replace censored words with length-based chars
 == 按屏蔽词长度多字符替换
 
@@ -11830,6 +11866,9 @@ Replace settings, binds and the listed cfg files, then restart? The current conf
 
 Replace skin with one having this prefix (e.g. cats, santa)
 == 将皮肤替换为带有此前缀的皮肤（例如小猫、圣诞老人）
+
+Replace your entire friend list, categories, notes and pins with the pasted code?
+== 确定用粘贴的好友码替换全部好友、分组、备注和置顶状态吗？
 
 Replacement chars
 == 替换字符
@@ -16264,9 +16303,6 @@ Turn on "Show titles on nameplates", pick a "Title style", then adjust "Title mo
 
 Turn on "Skin outline for self and dummy" or "Skin outline for other players", then tune width and opacity; "Cycle custom Tee hue" animates custom colors.
 == 打开自己和 dummy 的皮肤描边或其他玩家的皮肤描边，再调宽度和透明度；循环自定义 Tee 色调负责让自定义颜色动起来。
-
-Turn on "Skin transition animation", choose a "Skin transition type" and "Animation range", then set "Skin transition duration" and "Skin transition intensity".
-== 打开换肤过渡动画，选择过渡类型和动画范围，再调过渡时长和过渡强度。
 
 Turn on "Smooth free spectator camera" and set "Cinematic smoothness": low values stay snappy, high values drift slowly.
 == 打开平滑自由观战镜头并设置电影镜头平滑度：数值低反应快，数值高镜头慢慢漂。

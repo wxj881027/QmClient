@@ -91,6 +91,7 @@ class IHttpRequest;
 class CChat;
 class CProfile;
 struct SQmProfileWheelEditorState;
+struct SQmFriendCodeUiState;
 namespace qm_card_registry
 {
 	struct SCardNavigationTarget;
@@ -3296,6 +3297,7 @@ private:
 	qm_card_catalog::STClientCardResult RunTClientProfilesCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass);
 	int m_ProfilePresetsTab = 0;
 	std::shared_ptr<SQmProfileWheelEditorState> m_pProfileWheelEditor;
+	std::shared_ptr<SQmFriendCodeUiState> m_pFriendCodeUiState;
 	uint64_t ProfileWheelEditorRevision() const;
 	void RenderProfileWheelEditor(const qm_card_catalog::SQmCardBuildContext &Ctx, CUIRect &Content, bool ReadOnly);
 	void EditProfileInWheel(const CProfile &Profile, bool Dummy);

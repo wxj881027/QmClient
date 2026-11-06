@@ -2066,6 +2066,9 @@ Candidate files
 Candy gradient
 == Gradiente de doces
 
+Cannot import: invalid data or too many friends or categories.
+== Não foi possível importar: dados inválidos ou amigos ou grupos em excesso.
+
 Cannot join the target player's team
 == Não é possível entrar na equipe deste jogador
 
@@ -2476,6 +2479,9 @@ Clan plates size
 
 Clan: %s
 == Clã: %s
+
+Classic
+== Clássico
 
 Classic Easy
 == Clássico Fácil
@@ -3218,6 +3224,9 @@ Copy a .qmconfig file into the package folder, then refresh.
 Copy all
 == Copiar tudo
 
+Copy friend code
+== Copiar código de amigos
+
 Copy info
 == Copiar informações
 
@@ -3262,6 +3271,9 @@ Could not delete "%s"
 
 Could not download "%s"
 == Não foi possível baixar "%s"
+
+Could not encode friend data.
+== Não foi possível codificar os dados dos amigos.
 
 Could not find a Tutorial server. Check your internet connection.
 == Não foi possível encontrar um servidor Tutorial. Verifique sua conexão com a internet.
@@ -4658,9 +4670,6 @@ Empty slots still take space, so clear the ones you no longer use.
 enable
 == ativar
 
-Enable "Hammer skin steal" only if you want your skin to change on every hammer hit, since other players see it too.
-== Ative o roubo de skin com martelo só se quiser trocar de skin a cada acerto, porque os outros também veem.
-
 Enable "Map progress bar" and choose its location: Standalone, Player stats or Dynamic Island. Enable "Show player stats HUD" for the Player stats location.
 == Ative a barra de progresso do mapa e escolha onde exibi-la: separada, nas estatísticas do jogador ou na Ilha Dinâmica. Para exibi-la nas estatísticas, ative também o HUD de estatísticas do jogador.
 
@@ -5954,6 +5963,9 @@ Friend
 Friend bar category expand state (1=expanded, 0=collapsed)
 == Estado de expansão da categoria da barra de amigos (1=expandido, 0=recolhido)
 
+Friend code copied, including categories, notes and pins.
+== Código de amigos copiado com grupos, notas e amigos fixados.
+
 Friend color in friends list
 == Cor do amigo na lista de amigos
 
@@ -6001,6 +6013,12 @@ Friend option color
 
 Friends
 == Amigos
+
+Friends imported and saved.
+== Amigos importados e salvos.
+
+Friends imported for this session, but saving settings failed.
+== Amigos importados para esta sessão, mas não foi possível salvar as configurações.
 
 Friends only
 == Apenas amigos
@@ -6986,8 +7004,14 @@ Import and restart
 Import configuration package
 == Importar pacote de configurações
 
+Import friend code
+== Importar código de amigos
+
 Import from clipboard
 == Importar da área de transferência
+
+Import merges friends and keeps local duplicates by default. Codes contain private names and notes.
+== Por padrão, a importação mescla amigos e mantém os dados locais dos duplicados. Os códigos contêm nomes e notas privados.
 
 Improved anti ping
 == Anti-ping melhorado
@@ -7300,6 +7324,9 @@ Invalid X coordinate.
 
 Invalid Y coordinate.
 == Coordenada Y inválida.
+
+Invalid, damaged or unsupported friend code.
+== Código de amigos inválido, danificado ou incompatível.
 
 Invert camera drift direction
 == Inverter direção da deriva da câmera
@@ -10052,6 +10079,12 @@ Password visibility icon animation: 0=Fade, 1=Morph
 Past year
 == Último ano
 
+Paste a friend code first.
+== Cole um código de amigos primeiro.
+
+Paste friend code
+== Colar código de amigos
+
 Paste sp_dc from Spotify web cookies
 == Cole o cookie sp_dc do navegador
 
@@ -10513,9 +10546,6 @@ Players weapons has no affect on others
 
 Playing effects
 == Efeitos de reprodução
-
-Plays a short effect when a tee's skin changes, and can copy the skin of the tee you just hammered.
-== Toca um efeito curto quando a skin de um tee muda e pode copiar a skin do tee que você acabou de acertar com o martelo.
 
 Plays an animation whenever your skin changes, including skins stolen with the hammer.
 == Reproduz uma animação quando o skin muda, incluindo os roubados com o martelo.
@@ -11330,6 +11360,9 @@ Read the listed rows, then press "Apply Qm recommended appearance"; if the font 
 Ready
 == Pronto
 
+Ready to import: %d friends, %d categories.
+== Pronto para importar: %d amigos, %d grupos.
+
 Really? Not even a little?
 == Sério? Nem um pouquinho?
 
@@ -11777,6 +11810,9 @@ Repeat message
 Repeat the latest chat message
 == Repetir a última mensagem do chat
 
+Replace all friends
+== Substituir todos os amigos
+
 Replace censored words with length-based chars
 == Substituir por múltiplos caracteres conforme comprimento da palavra bloqueada
 
@@ -11800,6 +11836,9 @@ Replace settings, binds and the listed cfg files, then restart? The current conf
 
 Replace skin with one having this prefix (e.g. cats, santa)
 == Substituir skin por uma com este prefixo (ex.: gatos, papai noel)
+
+Replace your entire friend list, categories, notes and pins with the pasted code?
+== Substituir toda a lista de amigos, grupos, notas e amigos fixados pelo código colado?
 
 Replacement chars
 == Caracteres de substituição
@@ -16219,9 +16258,6 @@ Turn on "Show titles on nameplates", pick a "Title style", then adjust "Title mo
 
 Turn on "Skin outline for self and dummy" or "Skin outline for other players", then tune width and opacity; "Cycle custom Tee hue" animates custom colors.
 == Ative o contorno da skin própria e do dummy ou para outros jogadores e ajuste espessura e opacidade; a alternância de matiz do Tee anima as cores personalizadas.
-
-Turn on "Skin transition animation", choose a "Skin transition type" and "Animation range", then set "Skin transition duration" and "Skin transition intensity".
-== Ative a animação de transição de skin, escolha o tipo e o alcance da animação e ajuste duração e intensidade.
 
 Turn on "Smooth free spectator camera" and set "Cinematic smoothness": low values stay snappy, high values drift slowly.
 == Ative a câmera livre suavizada e ajuste a suavidade cinematográfica: baixo responde rápido, alto desliza devagar.

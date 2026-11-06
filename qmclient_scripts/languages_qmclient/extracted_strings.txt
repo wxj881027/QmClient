@@ -687,6 +687,7 @@ Cancel translation test
 Cancel your swap request
 Candidate files
 Candy gradient
+Cannot import: invalid data or too many friends or categories.
 Cannot join the target player's team
 Cannot load map tags. Please retry.
 Cannot open word list file. Previous words remain active.
@@ -826,6 +827,7 @@ Clan name size on nameplate
 Clan of the player followed from the pie menu
 Clan plates size
 Clan: %s
+Classic
 Classic Easy
 Classic Next
 Classic Nut
@@ -1074,6 +1076,7 @@ Copied
 Copy
 Copy a .qmconfig file into the package folder, then refresh.
 Copy all
+Copy friend code
 Copy info
 Copy name
 Copy name option color
@@ -1089,6 +1092,7 @@ Could not connect dummy
 Could not connect to the translation service. Please try again later.
 Could not delete "%s"
 Could not download "%s"
+Could not encode friend data.
 Could not find a Tutorial server. Check your internet connection.
 Could not find online Tutorial server.\nStarting and connecting to local server…
 Could not find your Team
@@ -1554,7 +1558,6 @@ Emoticon shadow
 Emoticons
 Empty slots still take space, so clear the ones you no longer use.
 enable
-Enable "Hammer skin steal" only if you want your skin to change on every hammer hit, since other players see it too.
 Enable "Map progress bar" and choose its location: Standalone, Player stats or Dynamic Island. Enable "Show player stats HUD" for the Player stats location.
 Enable "Show unpredicted ghosts of other players", then tune the predicted and unpredicted ghost opacity.
 Enable "Try to rename before finishing", then fill in the finishing name and run to the finish to test it.
@@ -1988,6 +1991,7 @@ Freeze/Deep freeze tile outline width
 Frequently asked questions
 Friend
 Friend bar category expand state (1=expanded, 0=collapsed)
+Friend code copied, including categories, notes and pins.
 Friend color in friends list
 Friend entry color in friend list
 Friend heart
@@ -2004,6 +2008,8 @@ Friend online and join notifications
 Friend online notification
 Friend option color
 Friends
+Friends imported and saved.
+Friends imported for this session, but saving settings failed.
 Friends only
 Frozen fire attempt
 Frozen prediction margin
@@ -2332,7 +2338,9 @@ IME selection background color
 IME text color
 Import and restart
 Import configuration package
+Import friend code
 Import from clipboard
+Import merges friends and keeps local duplicates by default. Codes contain private names and notes.
 Improved anti ping
 In DDNet, played when a freeze heart freezes the player. Other modes may use it for health pickups.
 In DDNet, played when weapons are removed. Other modes may use it for armor pickups.
@@ -2437,6 +2445,7 @@ Invalid title appearance
 Invalid translation backend
 Invalid X coordinate.
 Invalid Y coordinate.
+Invalid, damaged or unsupported friend code.
 Invert camera drift direction
 Invite %s to the locked team
 Invite a person to a locked team
@@ -3359,6 +3368,8 @@ Password incorrect
 Password required to use reserved slots.
 Password visibility icon animation: 0=Fade, 1=Morph
 Past year
+Paste a friend code first.
+Paste friend code
 Paste sp_dc from Spotify web cookies
 Path to CA certificate for verifying the MySQL/MariaDB server certificate
 Path to client certificate for the MySQL/MariaDB SSL connection
@@ -3513,7 +3524,6 @@ Players shown
 Players weapons affect others
 Players weapons has no affect on others
 Playing effects
-Plays a short effect when a tee's skin changes, and can copy the skin of the tee you just hammered.
 Plays an animation whenever your skin changes, including skins stolen with the hammer.
 Playtime (h)
 Please add a valid cut first
@@ -3785,6 +3795,7 @@ Ratio
 Ratio threshold for local target language detection
 Read the listed rows, then press "Apply Qm recommended appearance"; if the font is missing, the panel says so and your current fonts stay.
 Ready
+Ready to import: %d friends, %d categories.
 Really? Not even a little?
 Realtime channel heartbeat interval (seconds, 0 uses default)
 Realtime channel reconnect backoff base (ms)
@@ -3934,6 +3945,7 @@ Renders the demo that is currently playing into a video file. It runs as fast as
 Renders your frame rate in the top right
 Repeat message
 Repeat the latest chat message
+Replace all friends
 Replace censored words with length-based chars
 Replace mode
 Replace mode 0=Regex 1=Full 2=Both
@@ -3942,6 +3954,7 @@ Replace non-friend skins with default
 Replace selected variant
 Replace settings, binds and the listed cfg files, then restart? The current configuration will be backed up first.
 Replace skin with one having this prefix (e.g. cats, santa)
+Replace your entire friend list, categories, notes and pins with the pasted code?
 Replacement chars
 Replaces or hides chat lines that match words on your own list before they are shown to you.
 Replay
@@ -5420,7 +5433,6 @@ Turn on "Show important server prompts as notifications" or "Route Echo messages
 Turn on "Show own coordinates" or "Show other players' coordinates", then choose "Show X" and "Show Y".
 Turn on "Show titles on nameplates", pick a "Title style", then adjust "Title motion" and "Wave amount"; "Advanced mode" adds color and glow.
 Turn on "Skin outline for self and dummy" or "Skin outline for other players", then tune width and opacity; "Cycle custom Tee hue" animates custom colors.
-Turn on "Skin transition animation", choose a "Skin transition type" and "Animation range", then set "Skin transition duration" and "Skin transition intensity".
 Turn on "Smooth free spectator camera" and set "Cinematic smoothness": low values stay snappy, high values drift slowly.
 Turn on "Team tee glow", then set "Team tee glow intensity" and "Team tee glow halo size"; "Team 0 glow" handles players without a team.
 Turn on "Weapon switch animation" or "Play a flip animation while reloading weapons", then pick an "Animation range" and tune duration, distance and rotation.
