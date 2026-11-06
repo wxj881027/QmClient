@@ -3660,6 +3660,7 @@ if(CLIENT)
     components/qmclient/axiom_scores_parse_job.h
     components/qmclient/friend_last_seen.cpp
     components/qmclient/friend_last_seen.h
+    components/qmclient/friend_last_seen_service.cpp
     components/qmclient/friend_last_seen_data.cpp
     components/qmclient/friend_last_seen_data.h
     components/qmclient/bind_editor.cpp
@@ -5014,6 +5015,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/client/qm_friend_online_scan_test.cpp
     src/test/integration/qmclient/client/qm_friend_online_notify_test.cpp
     src/test/unit/qmclient/client/qm_friend_last_seen_test.cpp
+    src/test/integration/qmclient/client/qm_friend_last_seen_service_test.cpp
     src/test/unit/qmclient/client/qm_friends_category_drag_test.cpp
     src/test/unit/qmclient/client/qm_browser_friend_ui_id_test.cpp
     src/test/unit/qmclient/client/qm_browser_selection_test.cpp
@@ -6099,6 +6101,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/game/client/components/qmclient/axiom_scores.cpp
     src/game/client/components/qmclient/axiom_scores_data.cpp
     src/game/client/components/qmclient/friend_last_seen_data.cpp
+    src/game/client/components/qmclient/friend_last_seen_service.cpp
     src/game/client/components/qmclient/streamer_word_filter.cpp
     src/game/client/components/qmclient/map_tags.cpp
     src/game/client/components/qmclient/public_word_filter.cpp
@@ -6606,6 +6609,11 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/settings/settings_asset_hierarchy_transaction_test.cpp
       src/test/integration/qmclient/client/qm_friend_code_allocation_test.cpp
       src/test/unit/qmclient/client/qm_friend_code_publication_test.cpp
+      src/test/unit/qmclient/client/qm_friend_last_seen_allocation_test.cpp
+      src/test/integration/qmclient/client/qm_friend_last_seen_allocation_service_test.cpp
+      src/test/support/friend_last_seen_test_support.h
+      src/game/client/components/qmclient/friend_last_seen_data.cpp
+      src/game/client/components/qmclient/friend_last_seen_service.cpp
       src/game/client/components/qmclient/friend_code.cpp
       src/engine/client/friends.cpp
       src/game/client/components/assets_resource_registry.cpp

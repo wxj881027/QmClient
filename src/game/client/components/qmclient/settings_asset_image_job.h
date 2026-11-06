@@ -72,19 +72,19 @@ private:
 protected:
 	void Run() override REQUIRES(!m_Lock)
 	{
-		std::vector<uint8_t> vFileData;
+		CQmCheckedFileData FileData;
 		for(const auto &Path : m_vPossiblePaths)
 		{
-			if(QmReadFileBounded(m_pStorage->OpenFile(Path.c_str(), IOFLAG_READ, m_StorageType), LOCAL_ASSET_PREVIEW_MAX_FILE_SIZE, vFileData))
+			if(FileData.Read(*m_pStorage, Path.c_str(), m_StorageType, LOCAL_ASSET_PREVIEW_MAX_FILE_SIZE))
 				break;
 		}
 		SResult Result;
-		if(!vFileData.empty())
+		if(FileData.Data() != nullptr)
 		{
 			auto &Image = Result.m_Image;
 			// 四参解码器保留为外部测试接缝；生产默认路径在实际解码分配前传入预算。
-			Result.m_Success = m_pDecode != nullptr ? m_pDecode(vFileData.data(), (unsigned)vFileData.size(), m_Name.c_str(), Image) :
-								  DecodeImage(vFileData.data(), (unsigned)vFileData.size(), m_Name.c_str(), Image, m_MaxDecodedBytes);
+			Result.m_Success = m_pDecode != nullptr ? m_pDecode(FileData.Data(), FileData.Size(), m_Name.c_str(), Image) :
+								  DecodeImage(FileData.Data(), FileData.Size(), m_Name.c_str(), Image, m_MaxDecodedBytes);
 			Result.m_Success = Result.m_Success && Image.m_pData != nullptr && Image.m_Width > 0 && Image.m_Height > 0 &&
 					   Image.m_Width <= std::numeric_limits<int>::max() && Image.m_Height <= std::numeric_limits<int>::max() &&
 					   Image.m_Width <= m_MaxDecodedBytes / 4u / Image.m_Height;

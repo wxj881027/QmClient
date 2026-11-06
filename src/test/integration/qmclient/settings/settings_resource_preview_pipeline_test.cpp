@@ -3,20 +3,28 @@
 
 #include <engine/gfx/image_loader.h>
 
+#include <game/client/components/qmclient/bounded_file_reader.h>
 #include <game/client/components/qmclient/settings_resource_preview.h>
 
 #include <gtest/gtest.h>
 #include <test/support/icon_benchmark_graphics.h>
 #include <test/support/job_wait.h>
+#include <test/support/regular_file_open_timeout.h>
 #include <test/test.h>
 
 #include <chrono>
 #include <cstdlib>
+#include <limits>
 #include <new>
 #include <stdexcept>
 #include <thread>
 #include <utility>
 #include <vector>
+
+#if defined(CONF_FAMILY_UNIX)
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
 
 namespace
 {
@@ -412,6 +420,12 @@ namespace
 			m_LastCandidate = pJob;
 			return pJob;
 		}
+		std::string Path(const char *pName)
+		{
+			char aPath[IO_MAX_PATH_LENGTH];
+			m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, pName, aPath, sizeof(aPath));
+			return aPath;
+		}
 		size_t StoredFileBytes(const char *pPath = "preview.png")
 		{
 			IOHANDLE File = m_pStorage->OpenFile(pPath, IOFLAG_READ, IStorage::TYPE_SAVE);
@@ -432,6 +446,36 @@ namespace
 			EXPECT_TRUE(m_Jobs.empty());
 			ASSERT_NE(m_Cache.Find(m_Key), nullptr);
 			EXPECT_FALSE(m_Cache.Find(m_Key)->m_PreviewJobPending);
+		}
+	};
+	class ResourcePreviewFileDeathTest : public ResourcePreviewAdmission
+	{
+	};
+	class ResourcePreviewLayeredRead : public ResourcePreviewAdmission
+	{
+	protected:
+		std::unique_ptr<IStorage> m_pLayered;
+		std::string m_Relative;
+		void SetUp() override
+		{
+			ResourcePreviewAdmission::SetUp();
+			ASSERT_FALSE(HasFatalFailure());
+			for(const char *pDir : {"preview_save", "preview_app", "preview_app/data", "preview_app/data/mapres"})
+				ASSERT_TRUE(m_pStorage->CreateFolder(pDir, IStorage::TYPE_SAVE));
+			const auto Save = Path("preview_save"), Executable = Path("preview_app/client.exe");
+			const char *apArgs[] = {Executable.c_str()};
+			m_pLayered = CreateTempStorage(Save.c_str(), 1, apArgs);
+			ASSERT_NE(m_pLayered, nullptr);
+			m_Relative = std::string("preview_") + m_Info.m_aFilename;
+			for(const char *pRoot : {"preview_save", "preview_app/data"})
+				ASSERT_TRUE(m_pStorage->CreateFolder((std::string(pRoot) + "/" + m_Relative).c_str(), IStorage::TYPE_SAVE));
+		}
+		void StoreLowerRootPreview()
+		{
+			CPreviewImage Image(2, 1);
+			ASSERT_NE(Image.m_Image.m_pData, nullptr);
+			const auto Name = "preview_app/data/" + m_Relative + "/preview.png";
+			ASSERT_TRUE(CImageLoader::SavePng(m_pStorage->OpenFile(Name.c_str(), IOFLAG_WRITE, IStorage::TYPE_SAVE), Name.c_str(), Image.m_Image));
 		}
 	};
 }
@@ -548,6 +592,93 @@ TEST_F(ResourcePreviewAdmission, FromPathFileLimitRejectsBeforeDecodeAndExactLim
 	EXPECT_EQ(Accepted.m_Artifact.m_Image.DataSize(), 4u);
 }
 
+TEST_F(ResourcePreviewAdmission, CheckedFileBufferMovesWithoutDuplicatingItsOwner)
+{
+	CQmCheckedFileData Input;
+	ASSERT_TRUE(Input.Read(*m_pStorage, "preview.png", IStorage::TYPE_SAVE, StoredFileBytes()));
+	const void *pEncoded = Input.Data();
+	const unsigned Size = Input.Size();
+	CQmCheckedFileData Moved(std::move(Input));
+	EXPECT_EQ(Input.Data(), nullptr);
+	EXPECT_EQ(Input.Size(), 0u);
+	EXPECT_EQ(Moved.Data(), pEncoded);
+	EXPECT_EQ(Moved.Size(), Size);
+	CQmCheckedFileData Replaced;
+	ASSERT_TRUE(Replaced.Read(*m_pStorage, "preview.png", IStorage::TYPE_SAVE, Size));
+	Replaced = std::move(Moved);
+	EXPECT_EQ(Moved.Data(), nullptr);
+	EXPECT_EQ(Moved.Size(), 0u);
+	EXPECT_EQ(Replaced.Data(), pEncoded);
+	EXPECT_EQ(Replaced.Size(), Size);
+}
+
+TEST_F(ResourcePreviewAdmission, FailedCheckedReadClearsPriorEncodedInputAndAllowsRetry)
+{
+	CQmCheckedFileData Input;
+	const size_t FileBytes = StoredFileBytes();
+	ASSERT_TRUE(Input.Read(*m_pStorage, "preview.png", IStorage::TYPE_SAVE, FileBytes));
+	EXPECT_FALSE(Input.Read(*m_pStorage, "preview.png", IStorage::TYPE_SAVE, FileBytes - 1));
+	EXPECT_EQ(Input.Data(), nullptr);
+	EXPECT_EQ(Input.Size(), 0u);
+	ASSERT_TRUE(Input.Read(*m_pStorage, "preview.png", IStorage::TYPE_SAVE, FileBytes));
+	EXPECT_NE(Input.Data(), nullptr);
+	EXPECT_EQ(Input.Size(), FileBytes);
+}
+
+TEST_F(ResourcePreviewLayeredRead, MissingEarlierRootKeepsLowerRootPreviewAvailable)
+{
+	ASSERT_NO_FATAL_FAILURE(StoreLowerRootPreview());
+	const auto Name = m_Relative + "/preview.png";
+	auto Artifact = BuildPreviewArtifactFromPath(Name.c_str(), m_pLayered.get(), IStorage::TYPE_ALL, "lower-root", 0);
+	ASSERT_TRUE(Artifact.m_Success);
+	EXPECT_EQ(Artifact.m_Image.m_Width, 2u);
+	EXPECT_EQ(Artifact.m_Image.m_Height, 1u);
+}
+
+TEST_F(ResourcePreviewLayeredRead, NonregularEarlierRootCannotBeHiddenByLaterPreviewAndRemovalAllowsRetry)
+{
+	ASSERT_NO_FATAL_FAILURE(StoreLowerRootPreview());
+	const auto Earlier = "preview_save/" + m_Relative + "/preview.png";
+	ASSERT_TRUE(m_pStorage->CreateFolder(Earlier.c_str(), IStorage::TYPE_SAVE));
+	const auto Name = m_Relative + "/preview.png";
+	auto Rejected = BuildPreviewArtifactFromPath(Name.c_str(), m_pLayered.get(), IStorage::TYPE_ALL, "nonregular-root", 0);
+	EXPECT_FALSE(Rejected.m_Success);
+	EXPECT_EQ(Rejected.m_Image.m_pData, nullptr);
+	ASSERT_TRUE(m_pStorage->RemoveFolder(Earlier.c_str(), IStorage::TYPE_SAVE));
+	auto Accepted = BuildPreviewArtifactFromPath(Name.c_str(), m_pLayered.get(), IStorage::TYPE_ALL, "recovered-root", 0);
+	ASSERT_TRUE(Accepted.m_Success);
+	EXPECT_EQ(Accepted.m_Image.m_Width, 2u);
+}
+
+#if defined(CONF_FAMILY_UNIX) && GTEST_HAS_DEATH_TEST && !defined(CONF_PLATFORM_ANDROID) && !defined(CONF_PLATFORM_EMSCRIPTEN)
+TEST_F(ResourcePreviewFileDeathTest, FromPathFifoCompletesFailureWithoutBlockingFollowingReadOrShutdown)
+{
+	const auto Fifo = Path("input.png");
+	ASSERT_EQ(mkfifo(Fifo.c_str(), 0600), 0);
+	ASSERT_EXIT(
+		{
+			ArmRegularFileOpenChildTimeout();
+			CJobPool Pool;
+			if(!Pool.TryInit(1))
+				_exit(2);
+			auto pRejected = CSettingsResourcePreviewJob::FromPath("fifo", "input.png", m_pStorage.get(), IStorage::TYPE_SAVE, 4);
+			if(!Pool.TryAdd(pRejected) || !WaitForJobFinished(*pRejected))
+				_exit(3);
+			auto Rejected = pRejected->TakeResult();
+			if(!pRejected->Completed() || pRejected->State() != IJob::STATE_DONE || Rejected.m_Artifact.m_Success || Rejected.m_Artifact.m_Image.m_pData != nullptr)
+				_exit(4);
+			auto pNext = CSettingsResourcePreviewJob::FromPath("retry", "preview.png", m_pStorage.get(), IStorage::TYPE_SAVE, 4);
+			if(!Pool.TryAdd(pNext) || !WaitForJobFinished(*pNext))
+				_exit(5);
+			auto Next = pNext->TakeResult();
+			const bool Success = Next.m_Artifact.m_Success && Next.m_Artifact.m_Image.m_pData != nullptr;
+			Pool.Shutdown();
+			_exit(Success ? 0 : 6);
+		},
+		testing::ExitedWithCode(0), "");
+}
+#endif
+
 TEST_F(ResourcePreviewAdmission, FromPathDecodedBudgetRejectsSourceBeforeResizeAndExactLimitRecovers)
 {
 	CJobPool Pool;
@@ -609,24 +740,35 @@ namespace
 			ALLOCATION,
 			RUNTIME,
 			NON_STANDARD,
+			IO_FAILURE,
+			UNSUPPORTED,
 		};
 		struct SReadFailure
 		{
 		};
 		EFailure m_Failure = EFailure::ALLOCATION;
 		int m_Reads = 0;
+		unsigned m_MaxBytes = 0;
 		int NumPaths() const override { Unexpected(); }
 		bool GetDataPath(const char *, char *, unsigned) const override { Unexpected(); }
 		bool GetExecutablePath(const char *, char *, unsigned) const override { Unexpected(); }
 		void ListDirectory(int, const char *, FS_LISTDIR_CALLBACK, void *) override { Unexpected(); }
 		void ListDirectoryInfo(int, const char *, FS_LISTDIR_CALLBACK_FILEINFO, void *) override { Unexpected(); }
-		IOHANDLE OpenFile(const char *, int, int, char *, int) override
+		IOHANDLE OpenFile(const char *, int, int, char *, int) override { Unexpected(); }
+		EReadFileResult ReadFileCheckedBounded(const char *pName, int Type, void **ppResult, unsigned *pResultLen, unsigned MaxBytes) override
 		{
 			++m_Reads;
+			m_MaxBytes = MaxBytes;
+			if(m_Failure == EFailure::UNSUPPORTED)
+				return IStorage::ReadFileCheckedBounded(pName, Type, ppResult, pResultLen, MaxBytes);
+			*ppResult = nullptr;
+			*pResultLen = 0;
+			if(m_Failure == EFailure::IO_FAILURE)
+				return EReadFileResult::IO_FAILURE;
 			if(m_Failure == EFailure::ALLOCATION)
 				throw std::bad_alloc();
 			if(m_Failure == EFailure::RUNTIME)
-				throw std::runtime_error("preview open failed");
+				throw std::runtime_error("preview read failed");
 			throw SReadFailure{};
 		}
 		bool FileExists(const char *, int) override { Unexpected(); }
@@ -647,6 +789,54 @@ namespace
 		const char *GetBinaryPath(const char *, char *, unsigned) override { Unexpected(); }
 		const char *GetBinaryPathAbsolute(const char *, char *, unsigned) override { Unexpected(); }
 	};
+}
+
+TEST(SettingsResourcePreviewWorkerFailure, CheckedIoFailurePublishesCompletedFailureWithRequestedLimit)
+{
+	CPreviewReadFailureStorage Storage;
+	Storage.m_Failure = CPreviewReadFailureStorage::EFailure::IO_FAILURE;
+	auto pJob = CSettingsResourcePreviewJob::FromPath("io-failure", "preview.png", &Storage, IStorage::TYPE_ALL, 4, 17);
+	CJobPool Pool;
+	ASSERT_TRUE(Pool.TryInit(1));
+	ASSERT_TRUE(Pool.TryAdd(pJob));
+	ASSERT_TRUE(WaitForJobFinished(*pJob));
+	Pool.Shutdown();
+	EXPECT_EQ(pJob->State(), IJob::STATE_DONE);
+	EXPECT_TRUE(pJob->Completed());
+	EXPECT_EQ(Storage.m_Reads, 1);
+	EXPECT_EQ(Storage.m_MaxBytes, 17u);
+	auto Result = pJob->TakeResult();
+	EXPECT_FALSE(Result.m_Artifact.m_Success);
+	EXPECT_EQ(Result.m_Artifact.m_Image.m_pData, nullptr);
+}
+
+TEST(SettingsResourcePreviewWorkerFailure, UnsupportedCheckedBackendDoesNotFallBackToOrdinaryOpen)
+{
+	CPreviewReadFailureStorage Storage;
+	Storage.m_Failure = CPreviewReadFailureStorage::EFailure::UNSUPPORTED;
+	auto pJob = CSettingsResourcePreviewJob::FromPath("unsupported", "preview.png", &Storage, IStorage::TYPE_ALL, 4);
+	CJobPool Pool;
+	ASSERT_TRUE(Pool.TryInit(1));
+	ASSERT_TRUE(Pool.TryAdd(pJob));
+	ASSERT_TRUE(WaitForJobFinished(*pJob));
+	Pool.Shutdown();
+	EXPECT_EQ(pJob->State(), IJob::STATE_DONE);
+	EXPECT_TRUE(pJob->Completed());
+	EXPECT_EQ(Storage.m_Reads, 1);
+	EXPECT_EQ(Storage.m_MaxBytes, static_cast<unsigned>(LOCAL_ASSET_PREVIEW_MAX_FILE_SIZE));
+	auto Result = pJob->TakeResult();
+	EXPECT_FALSE(Result.m_Artifact.m_Success);
+	EXPECT_EQ(Result.m_Artifact.m_Image.m_pData, nullptr);
+}
+
+TEST(SettingsResourcePreviewWorkerFailure, FileLimitCannotWrapAtCheckedInterfaceWidth)
+{
+	CPreviewReadFailureStorage Storage;
+	Storage.m_Failure = CPreviewReadFailureStorage::EFailure::IO_FAILURE;
+	auto Artifact = BuildPreviewArtifactFromPath("preview.png", &Storage, IStorage::TYPE_ALL, "wide-limit", 4, std::numeric_limits<size_t>::max());
+	EXPECT_FALSE(Artifact.m_Success);
+	EXPECT_EQ(Storage.m_Reads, 1);
+	EXPECT_EQ(Storage.m_MaxBytes, std::numeric_limits<unsigned>::max());
 }
 
 TEST(SettingsResourcePreviewWorkerFailure, AllocationExceptionCanBeConsumedAsCompletedFailure)

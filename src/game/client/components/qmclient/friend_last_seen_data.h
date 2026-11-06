@@ -52,11 +52,13 @@ public:
 	const SQmFriendLastSeenEntry *Get(const char *pName, int64_t Now);
 	const SQmFriendLastSeenEntry *Find(const char *pName) const;
 	std::optional<SQmFriendLastSeenRequest> NextRequest(int64_t Now);
+	const SQmFriendLastSeenRequest *CurrentRequest() const noexcept { return m_ActiveRequest ? &*m_ActiveRequest : nullptr; }
 	bool IsCurrent(uint64_t RequestId) const;
 	void Complete(uint64_t RequestId, std::optional<std::string> Date, int64_t Now, int64_t RetryAfterSeconds = 0);
 	void CancelRequests();
 	void RetainNames(const std::unordered_set<std::string> &Names);
 	std::string Serialize() const;
+	bool TrySerialize(std::string &Body) const;
 	bool Load(std::string_view Body, int64_t Now);
 	bool Dirty() const { return m_Dirty; }
 };

@@ -198,17 +198,22 @@ namespace
 
 	public:
 		std::atomic<bool> m_NameRetained{false};
-		std::atomic<bool> m_OpenSucceeded{false};
+		std::atomic<bool> m_ReadSucceeded{false};
+		unsigned m_MaxBytes = 0;
+		int m_StorageType = 0;
 		CBlockingPreviewStorage(IStorage &Storage, std::shared_ptr<CPreviewGate> pGate) :
 			m_Storage(Storage), m_pGate(std::move(pGate)) {}
-		IOHANDLE OpenFile(const char *pName, int Flags, int Type, char *pBuffer, int BufferSize) override
+		IOHANDLE OpenFile(const char *, int, int, char *, int) override { Unexpected(); }
+		EReadFileResult ReadFileCheckedBounded(const char *pName, int Type, void **ppResult, unsigned *pResultLen, unsigned MaxBytes) override
 		{
 			const std::string OriginalName = pName;
+			m_MaxBytes = MaxBytes;
+			m_StorageType = Type;
 			m_pGate->EnterAndWait();
 			m_NameRetained = std::strcmp(pName, OriginalName.c_str()) == 0;
-			IOHANDLE File = m_Storage.OpenFile(pName, Flags, Type, pBuffer, BufferSize);
-			m_OpenSucceeded = File != nullptr;
-			return File;
+			const auto Result = m_Storage.ReadFileCheckedBounded(pName, Type, ppResult, pResultLen, MaxBytes);
+			m_ReadSucceeded = Result == EReadFileResult::SUCCESS;
+			return Result;
 		}
 		int NumPaths() const override { Unexpected(); }
 		bool GetDataPath(const char *, char *, unsigned) const override { Unexpected(); }
@@ -400,7 +405,7 @@ TEST_F(ResourcePreviewInvalidation, QueuedOldJobCannotPublishAfterSameFullKeyIsR
 	EXPECT_EQ(m_Telemetry.m_PreviewJobsDone, 1);
 }
 
-TEST_F(ResourcePreviewInvalidation, CancellationDuringActualFileOpenKeepsStorageInputValidAndRejectsLateResult)
+TEST_F(ResourcePreviewInvalidation, CancellationDuringCheckedFileReadKeepsStorageInputValidAndRejectsLateResult)
 {
 	const auto pGate = std::make_shared<CPreviewGate>();
 	const CReleasePreviewGate Release(pGate);
@@ -421,7 +426,9 @@ TEST_F(ResourcePreviewInvalidation, CancellationDuringActualFileOpenKeepsStorage
 	ASSERT_TRUE(WaitForJobFinished(*pOld));
 	EXPECT_FALSE(pGate->TimedOut());
 	EXPECT_TRUE(m_pBlockingStorage->m_NameRetained.load());
-	EXPECT_TRUE(m_pBlockingStorage->m_OpenSucceeded.load());
+	EXPECT_TRUE(m_pBlockingStorage->m_ReadSucceeded.load());
+	EXPECT_EQ(m_pBlockingStorage->m_MaxBytes, LOCAL_ASSET_PREVIEW_MAX_FILE_SIZE);
+	EXPECT_EQ(m_pBlockingStorage->m_StorageType, IStorage::TYPE_SAVE);
 	EXPECT_EQ(pOld->State(), IJob::STATE_DONE);
 	EXPECT_TRUE(TryPublishSettingsResourcePreviewJob(*pOld, OldKey, m_Cache, m_Uploads, m_Telemetry, Generation));
 	EXPECT_EQ(m_Cache.Size(), 0u);

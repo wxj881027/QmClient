@@ -434,8 +434,8 @@ SResourcePreviewArtifact BuildPreviewArtifactFromPath(const char *pPath, IStorag
 		return Artifact;
 	}
 
-	std::vector<uint8_t> vFileData;
-	if(!QmReadFileBounded(pStorage->OpenFile(pPath, IOFLAG_READ, StorageType), MaxFileBytes, vFileData))
+	CQmCheckedFileData FileData;
+	if(!FileData.Read(*pStorage, pPath, StorageType, MaxFileBytes))
 	{
 		Artifact.m_DurationMs = std::chrono::duration<double, std::milli>(time_get_nanoseconds() - Start).count();
 		return Artifact;
@@ -443,9 +443,9 @@ SResourcePreviewArtifact BuildPreviewArtifactFromPath(const char *pPath, IStorag
 
 	SResourcePreviewArtifact Decoded;
 	bool Success = false;
-	if(CImageLoader::LoadWebP(vFileData.data(), vFileData.size(), pContextName != nullptr ? pContextName : pPath, Decoded.m_Image, MaxDecodedBytes))
+	if(CImageLoader::LoadWebP(FileData.Data(), FileData.Size(), pContextName != nullptr ? pContextName : pPath, Decoded.m_Image, MaxDecodedBytes))
 		Success = true;
-	else if(CImageLoader::LoadPng(vFileData.data(), vFileData.size(), pContextName != nullptr ? pContextName : pPath, Decoded.m_Image, MaxDecodedBytes))
+	else if(CImageLoader::LoadPng(FileData.Data(), FileData.Size(), pContextName != nullptr ? pContextName : pPath, Decoded.m_Image, MaxDecodedBytes))
 		Success = true;
 	if(Success)
 		Artifact = BuildPreviewArtifact(std::move(Decoded.m_Image), TargetSize);

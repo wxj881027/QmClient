@@ -54,6 +54,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -1289,6 +1290,10 @@ namespace
 			m_ThumbImage.Free();
 		}
 	};
+
+	// 扩容必须移动预览 owner，避免复制已经就绪的像素。
+	static_assert(std::is_nothrow_move_constructible_v<SWorkshopHudAsset>);
+	static_assert(std::is_nothrow_move_assignable_v<SWorkshopHudAsset>);
 
 	struct SWorkshopHudState
 	{

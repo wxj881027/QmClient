@@ -4,6 +4,7 @@
 
 #include <gtest/gtest.h>
 #include <test/support/job_wait.h>
+#include <test/support/regular_file_open_timeout.h>
 #include <test/support/rejectable_allocation_resource.h>
 #include <test/test.h>
 
@@ -16,6 +17,11 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+
+#if defined(CONF_FAMILY_UNIX)
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
 
 namespace
 {
@@ -143,6 +149,15 @@ namespace
 			EXPECT_EQ(Result.m_Image.m_pData, nullptr);
 		}
 	};
+	class QmSettingsAssetImageJobDeathTest : public QmSettingsAssetImageJob
+	{
+		void SetUp() override
+		{
+			// 作业池仅在死亡测试子进程创建，父进程不保留 fork 前的 worker。
+			m_pStorage = m_Info.CreateTestStorage();
+			ASSERT_NE(m_pStorage, nullptr);
+		}
+	};
 }
 
 TEST_F(QmSettingsAssetImageJob, PngPixelsTransferOnceAndSurviveJobRelease)
@@ -183,6 +198,89 @@ TEST_F(QmSettingsAssetImageJob, FirstReadableCandidateKeepsExistingPriorityEvenW
 	ASSERT_NO_FATAL_FAILURE(Execute(pJob));
 	ExpectEmptyFailure(pJob);
 }
+
+TEST_F(QmSettingsAssetImageJob, EmptyCandidateDoesNotHideFollowingReadableImage)
+{
+	ASSERT_NO_FATAL_FAILURE(StorePng());
+	IOHANDLE Empty = m_pStorage->OpenFile("empty.png", IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	ASSERT_NE(Empty, nullptr);
+	ASSERT_EQ(io_close(Empty), 0);
+	auto pJob = std::make_shared<CFullAsyncImageLoadJob>(std::vector<std::string>{"empty.png", "image.png"}, m_pStorage.get(), "image", IStorage::TYPE_SAVE);
+	ASSERT_NO_FATAL_FAILURE(Execute(pJob));
+	auto Result = pJob->GetResult();
+	ASSERT_TRUE(Result.m_Success);
+	EXPECT_EQ(Result.m_Image.m_pData[0], 11);
+}
+
+TEST_F(QmSettingsAssetImageJob, DirectoryCandidateDoesNotHideFollowingReadableImage)
+{
+	ASSERT_NO_FATAL_FAILURE(StorePng());
+	ASSERT_TRUE(m_pStorage->CreateFolder("directory.png", IStorage::TYPE_SAVE));
+	auto pJob = std::make_shared<CFullAsyncImageLoadJob>(std::vector<std::string>{"directory.png", "image.png"}, m_pStorage.get(), "image", IStorage::TYPE_SAVE);
+	ASSERT_NO_FATAL_FAILURE(Execute(pJob));
+	auto Result = pJob->GetResult();
+	ASSERT_TRUE(Result.m_Success);
+	EXPECT_EQ(Result.m_Image.m_pData[0], 11);
+}
+
+#if defined(CONF_FAMILY_UNIX) && GTEST_HAS_DEATH_TEST && !defined(CONF_PLATFORM_ANDROID) && !defined(CONF_PLATFORM_EMSCRIPTEN)
+TEST_F(QmSettingsAssetImageJobDeathTest, FifoWithoutWriterCompletesFailureAndPoolAcceptsFollowingImage)
+{
+	ASSERT_NO_FATAL_FAILURE(StorePng());
+	char aFifo[IO_MAX_PATH_LENGTH];
+	m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, "input.png", aFifo, sizeof(aFifo));
+	ASSERT_EQ(mkfifo(aFifo, 0600), 0);
+	ASSERT_EXIT(
+		{
+			ArmRegularFileOpenChildTimeout();
+			CJobPool Pool;
+			if(!Pool.TryInit(1))
+				_exit(2);
+			auto pRejected = std::make_shared<CFullAsyncImageLoadJob>(std::vector<std::string>{"input.png"}, m_pStorage.get(), "fifo", IStorage::TYPE_SAVE);
+			if(!Pool.TryAdd(pRejected) || !WaitForJobFinished(*pRejected))
+				_exit(3);
+			auto Rejected = pRejected->GetResult();
+			if(!pRejected->IsCompleted() || pRejected->State() != IJob::STATE_DONE || Rejected.m_Success || Rejected.m_Image.m_pData != nullptr)
+				_exit(4);
+			auto pNext = NewJob();
+			if(!Pool.TryAdd(pNext) || !WaitForJobFinished(*pNext))
+				_exit(5);
+			auto Next = pNext->GetResult();
+			const bool Success = Next.m_Success && Next.m_Image.m_pData != nullptr && Next.m_Image.m_pData[0] == 11;
+			Pool.Shutdown();
+			_exit(Success ? 0 : 6);
+		},
+		testing::ExitedWithCode(0), "");
+	struct stat Information;
+	ASSERT_EQ(lstat(aFifo, &Information), 0);
+	EXPECT_TRUE(S_ISFIFO(Information.st_mode));
+}
+
+TEST_F(QmSettingsAssetImageJobDeathTest, SymlinkToFifoIsSkippedBeforeTryingNextCandidate)
+{
+	ASSERT_NO_FATAL_FAILURE(StorePng());
+	char aFifo[IO_MAX_PATH_LENGTH], aLink[IO_MAX_PATH_LENGTH];
+	m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, "input.fifo", aFifo, sizeof(aFifo));
+	m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, "linked.webp", aLink, sizeof(aLink));
+	ASSERT_EQ(mkfifo(aFifo, 0600), 0);
+	ASSERT_EQ(symlink("input.fifo", aLink), 0);
+	ASSERT_EXIT(
+		{
+			ArmRegularFileOpenChildTimeout();
+			CJobPool Pool;
+			if(!Pool.TryInit(1))
+				_exit(2);
+			auto pJob = std::make_shared<CFullAsyncImageLoadJob>(std::vector<std::string>{"linked.webp", "image.png"}, m_pStorage.get(), "image", IStorage::TYPE_SAVE);
+			if(!Pool.TryAdd(pJob) || !WaitForJobFinished(*pJob))
+				_exit(3);
+			auto Result = pJob->GetResult();
+			const bool Success = Result.m_Success && Result.m_Image.m_pData != nullptr && Result.m_Image.m_pData[0] == 11;
+			Pool.Shutdown();
+			_exit(Success ? 0 : 4);
+		},
+		testing::ExitedWithCode(0), "");
+}
+#endif
 
 TEST_F(QmSettingsAssetImageJob, AllocationExceptionAfterPixelsCompletesFailureAndNextJobRuns)
 {
