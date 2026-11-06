@@ -332,9 +332,6 @@ void CMenus::RenderQmFunctionJumpHintContent(CUIRect &Content, float LineHeight,
 	}
 	Flow.Space(LineSpacing);
 
-	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:jump_hint", CurrentSettingsContentMetrics(), PrewarmOnly))
-		return;
-
 	static CButtonContainer s_QmJumpHintColorId;
 	if(Flow.Control("color", ResolveSettingsColorRowLayout(Content, CurrentSettingsContentMetrics(), false).m_ConsumedHeight, Row))
 		DoLine_ColorPicker(&s_QmJumpHintColorId, CurrentSettingsContentMetrics(), &Row, Localize("Text color"), &g_Config.m_QmJumpHintColor, ui_token::color::NEUTRAL_WHITE, false);

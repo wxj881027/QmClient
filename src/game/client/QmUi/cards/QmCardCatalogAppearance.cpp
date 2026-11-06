@@ -314,7 +314,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 						{&g_Config.m_ClShowhudDummyActions, "appearance-show-dummy-actions", Localize("Show dummy actions")},
 					},
 					AppearanceMetrics, !RenderOnly);
-				// 卡键/锤子/分身控制/分身同步四个状态开关与自定义 bind 状态列表已迁移到 QmClient → HUD → DDRace HUD Pro 卡片
+				// 卡键、锤子、分身控制与同步状态由同页的 DDRace HUD Pro 卡片提供。
 				Flow.Space(MarginSmall);
 				DoSettingsToggleGroup(SETTINGS_APPEARANCE, APPEARANCE_TAB_HUD, APPEARANCE_TAB_HUD, RightView,
 					{
@@ -981,9 +981,6 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 					Flow.Space(MarginSmall);
 				}
 
-				if(!qm_card_catalog::QmCardRenderHook::Personalization(this, LeftView, "deck:appearance-hook-collision-main", AppearanceMetrics, RenderOnly))
-					return;
-
 				if(Flow.Control("appearance-hook-collision-own-width", LineSize, Button))
 				{
 					DoAppearanceNumericField(APPEARANCE_TAB_HOOK_COLLISION, "appearance-hook-collision-own-width", &g_Config.m_ClHookCollSize, &g_Config.m_ClHookCollSize, Button, Localize("Width of your own hook collision line"), 0, 20, &CUi::ms_LinearScrollbarScale);
@@ -1290,9 +1287,6 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 					}
 				}
 				Flow.Space(MarginSmall);
-
-				if(!qm_card_catalog::QmCardRenderHook::Personalization(this, LeftView, "deck:appearance-info-messages", AppearanceMetrics, RenderOnly))
-					return;
 
 				static CButtonContainer s_KillMessageNormalColorId, s_KillMessageHighlightColorId;
 				{
