@@ -13971,8 +13971,8 @@ polish = "Wybrany pakiet"
 [[message]]
 key = "Self"
 [message.translations]
-simplified_chinese = "自身"
-traditional_chinese = "自身"
+simplified_chinese = "本体"
+traditional_chinese = "本體"
 japanese = "自身"
 korean = "자신"
 russian = "Себя"

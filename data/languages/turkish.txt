@@ -1124,6 +1124,9 @@ Are you sure that you want to quit?
 Are you sure that you want to remove '%s' from your war groups?
 == '%s' öğesini savaş gruplarınızdan kaldırmak istediğinizden emin misiniz?
 
+Are you sure that you want to remove '%s' from your war list?
+== "%s" düşman listesinden kaldırılsın mı?
+
 Are you sure that you want to remove the clan '%s' from your friends list?
 == '%s' klanını arkadaş listenizden kaldırmak istediğinize emin misiniz?
 

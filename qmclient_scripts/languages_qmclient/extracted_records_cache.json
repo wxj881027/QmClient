@@ -2420,28 +2420,35 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 352
+      "line": 375
     },
     {
       "key": "Add Entry",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 354
+      "line": 377
     },
     {
       "key": "Add Entry",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 366
+      "line": 389
     },
     {
       "key": "Add Entry",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 370
+      "line": 393
+    },
+    {
+      "key": "Add Entry",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
+      "context": "",
+      "line": 718
     },
     {
       "key": "Add friend",
@@ -3638,7 +3645,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 473
+      "line": 496
     },
     {
       "key": "Allow Duplicate Entries",
@@ -4716,7 +4723,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 572
+      "line": 595
     },
     {
       "key": "Are you sure that you want to remove '%s' from your war groups?",
@@ -4724,6 +4731,13 @@
       "source": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogTClientWarList.inc",
       "context": "",
       "line": 6
+    },
+    {
+      "key": "Are you sure that you want to remove '%s' from your war list?",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
+      "context": "",
+      "line": 299
     },
     {
       "key": "Are you sure that you want to remove all unused envelopes from this map?",
@@ -7558,7 +7572,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 483
+      "line": 506
     },
     {
       "key": "Block enemy chat",
@@ -8426,7 +8440,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 647
+      "line": 658
     },
     {
       "key": "Cancel",
@@ -10358,14 +10372,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 335
+      "line": 358
     },
     {
       "key": "Clan",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 336
+      "line": 359
     },
     {
       "key": "Clan",
@@ -11324,7 +11338,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 655
+      "line": 681
     },
     {
       "key": "Color",
@@ -11597,7 +11611,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 443
+      "line": 466
     },
     {
       "key": "Colors",
@@ -18646,7 +18660,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 681
+      "line": 711
     },
     {
       "key": "Dummy",
@@ -19570,7 +19584,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 853
+      "line": 894
     },
     {
       "key": "Edit Entry",
@@ -21621,7 +21635,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 436
+      "line": 459
     },
     {
       "key": "Enable warlist",
@@ -26059,7 +26073,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 681
+      "line": 711
     },
     {
       "key": "Friends",
@@ -26262,7 +26276,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 478
+      "line": 501
     },
     {
       "key": "Fully block enemy players",
@@ -27739,14 +27753,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 630
+      "line": 653
     },
     {
       "key": "Group name",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 631
+      "line": 654
     },
     {
       "key": "Group name",
@@ -38141,14 +38155,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 332
+      "line": 355
     },
     {
       "key": "Name",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 333
+      "line": 356
     },
     {
       "key": "Name",
@@ -38890,7 +38904,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 612
+      "line": 635
     },
     {
       "key": "New group",
@@ -39576,7 +39590,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 310
+      "line": 333
     },
     {
       "key": "No favorite maps yet",
@@ -39828,14 +39842,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 751
+      "line": 785
     },
     {
       "key": "No players match",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 788
+      "line": 822
     },
     {
       "key": "No players match these filters",
@@ -41375,7 +41389,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 681
+      "line": 711
     },
     {
       "key": "Online friends",
@@ -41389,7 +41403,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 853
+      "line": 894
     },
     {
       "key": "Online Players",
@@ -42383,7 +42397,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 468
+      "line": 491
     },
     {
       "key": "Other",
@@ -42803,14 +42817,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 366
+      "line": 389
     },
     {
       "key": "Override Entry",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 378
+      "line": 401
     },
     {
       "key": "Override Freeze Tile Entity Alpha (0-100)",
@@ -48466,14 +48480,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 341
+      "line": 364
     },
     {
       "key": "Reason",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 342
+      "line": 365
     },
     {
       "key": "Reason",
@@ -50083,7 +50097,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 620
+      "line": 643
     },
     {
       "key": "Rename queue",
@@ -52064,7 +52078,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 633
+      "line": 657
     },
     {
       "key": "Save",
@@ -54080,7 +54094,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 681
+      "line": 711
     },
     {
       "key": "Self",
@@ -55130,7 +55144,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 853
+      "line": 894
     },
     {
       "key": "Settings",
@@ -56075,7 +56089,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 464
+      "line": 487
     },
     {
       "key": "Show clan for enemies",
@@ -56565,14 +56579,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 459
+      "line": 482
     },
     {
       "key": "Show enemy colors in chat",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 449
+      "line": 472
     },
     {
       "key": "Show enemy colors in chat",
@@ -56586,7 +56600,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 454
+      "line": 477
     },
     {
       "key": "Show enemy colors in scoreboard",
@@ -72112,7 +72126,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 853
+      "line": 894
     },
     {
       "key": "War Entries",
@@ -72126,21 +72140,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 410
+      "line": 433
     },
     {
       "key": "War Groups",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 595
+      "line": 618
     },
     {
       "key": "War Groups",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientWarList.cpp",
       "context": "",
-      "line": 853
+      "line": 894
     },
     {
       "key": "War Groups",

@@ -1124,6 +1124,9 @@ Are you sure that you want to quit?
 Are you sure that you want to remove '%s' from your war groups?
 == 전쟁 그룹에서 '%s'을(를) 제거하시겠습니까?
 
+Are you sure that you want to remove '%s' from your war list?
+== 「%s」을(를) 적대 목록에서 삭제할까요?
+
 Are you sure that you want to remove the clan '%s' from your friends list?
 == 정말로 클랜 '%s'을(를) 친구 목록에서 제거하시겠습니까?
 

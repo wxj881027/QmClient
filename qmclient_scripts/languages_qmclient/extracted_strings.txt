@@ -373,6 +373,7 @@ Are you sure that you want to disconnect?
 Are you sure that you want to import the touch controls from the clipboard? This will overwrite your current touch controls.
 Are you sure that you want to quit?
 Are you sure that you want to remove '%s' from your war groups?
+Are you sure that you want to remove '%s' from your war list?
 Are you sure that you want to remove the clan '%s' from your friends list?
 Are you sure that you want to remove the player '%s' from your friends list?
 Are you sure that you want to reset the controls to their defaults?

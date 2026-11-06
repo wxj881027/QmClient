@@ -284,10 +284,33 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		}
 
 		const int NewSelectedEntry = EntriesListBox.DoEnd();
+		// 删条目是破坏性操作：先弹确认弹窗，确认后才真删，点错还有反悔机会。
+		static CWarEntry *s_pPendingRemoveEntry = nullptr;
+		static CUi::SConfirmPopupContext s_RemoveWarEntryConfirm;
+		static char s_aRemoveWarEntryLabel[64];
 		if(!ReadOnly && !Ui()->RenderOnly() && pEntryToRemove != nullptr)
 		{
-			GameClient()->m_WarList.RemoveWarEntry(pEntryToRemove);
-			pSelectedEntry = nullptr;
+			str_copy(s_aRemoveWarEntryLabel, pEntryToRemove->m_aClan[0] != '\0' ? pEntryToRemove->m_aClan : pEntryToRemove->m_aName, sizeof(s_aRemoveWarEntryLabel));
+			s_pPendingRemoveEntry = pEntryToRemove;
+			s_RemoveWarEntryConfirm.Reset();
+			s_RemoveWarEntryConfirm.DefaultButtons();
+			s_RemoveWarEntryConfirm.m_Tone = CUi::SConfirmPopupContext::ETone::DANGER;
+			str_format(s_RemoveWarEntryConfirm.m_aMessage, sizeof(s_RemoveWarEntryConfirm.m_aMessage),
+				Localize("Are you sure that you want to remove '%s' from your war list?"), s_aRemoveWarEntryLabel);
+			Ui()->ShowPopupConfirm(Ui()->MouseX(), Ui()->MouseY(), &s_RemoveWarEntryConfirm);
+		}
+		if(s_pPendingRemoveEntry != nullptr)
+		{
+			if(s_RemoveWarEntryConfirm.m_Result == CUi::SConfirmPopupContext::CONFIRMED)
+			{
+				GameClient()->m_WarList.RemoveWarEntry(s_pPendingRemoveEntry);
+				pSelectedEntry = nullptr;
+				s_pPendingRemoveEntry = nullptr;
+			}
+			else if(s_RemoveWarEntryConfirm.m_Result == CUi::SConfirmPopupContext::CANCELED || !Ui()->IsPopupOpen(&s_RemoveWarEntryConfirm))
+			{
+				s_pPendingRemoveEntry = nullptr;
+			}
 		}
 		else if(!ReadOnly && !Ui()->RenderOnly() && NewSelectedEntry >= 0 && NewSelectedEntry < (int)s_vFilteredEntries.size() &&
 			(SelectedOldEntry != NewSelectedEntry || (Ui()->HotItem() == &s_vItemIds[NewSelectedEntry] && Ui()->MouseButtonClicked(0))))
@@ -630,7 +653,10 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 			s_TypeNameInput.SetEmptyText(Localize("Group name"));
 			ui_widget::InputField(TClientWarListTextInputCtx, &s_TypeNameInput, Field, Localize("Group name"), EditBoxFontSize);
 			static CButtonContainer s_ConfirmGroupButton, s_CancelGroupButton;
-			if(DoButtonLineSize_Menu(&s_ConfirmGroupButton, Localize("Save"), 0, &ConfirmButton, LineSize) && !ReadOnly && !Ui()->RenderOnly() && str_comp(s_aTypeName, "") != 0)
+			// 勾/叉是图标按钮，说明放悬浮提示里。
+			GameClient()->m_Tooltips.DoToolTip(&s_ConfirmGroupButton, &ConfirmButton, Localize("Save"));
+			GameClient()->m_Tooltips.DoToolTip(&s_CancelGroupButton, &CancelButton, Localize("Cancel"));
+			if(Ui()->DoButton_QmIcon(&s_ConfirmGroupButton, EQmIcon::CHECK, "\xEE\x86\x82", 0, &ConfirmButton, IGraphics::CORNER_ALL) && !ReadOnly && !Ui()->RenderOnly() && str_comp(s_aTypeName, "") != 0)
 			{
 				if(s_GroupEditMode == 1)
 				{
@@ -644,7 +670,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 				}
 				s_GroupEditMode = 0;
 			}
-			if(DoButtonLineSize_Menu(&s_CancelGroupButton, Localize("Cancel"), 0, &CancelButton, LineSize) && !ReadOnly && !Ui()->RenderOnly())
+			if(Ui()->DoButton_QmIcon(&s_CancelGroupButton, EQmIcon::CLOSE, "\xEE\x93\xB6", 0, &CancelButton, IGraphics::CORNER_ALL) && !ReadOnly && !Ui()->RenderOnly())
 				s_GroupEditMode = 0;
 		}
 		// 颜色跟着选中群组走：点开色板改完立刻生效，不用再去按「覆盖群组」。
@@ -677,11 +703,19 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		// 页签式切换统一用胶囊滑块，轨道和滑块自己会画，不给四个独立按钮拼手感。
 		if(Flow.Control("tclient-warlist-player-source", LineSize, PlayerSourceRect, MarginSmall))
 		{
+			CUIRect Tabs, AddEntryRect;
+			// 选好人还要能落地：行尾放一个 + 按钮，把编辑区当前内容直接加成条目。
+			PlayerSourceRect.VSplitRight(WarListMetrics.m_ButtonHeight, &Tabs, &AddEntryRect);
+			Tabs.VSplitRight(MarginSmall, &Tabs, nullptr);
 			static CButtonContainer s_aPlayerSourceButtons[4];
 			const char *apSourceLabels[4] = {Localize("Online"), Localize("Friends"), Localize("Self"), Localize("Dummy")};
-			const int NewSource = DoSegmentedChoice(s_aPlayerSourceButtons, apSourceLabels, 4, s_PlayerSource, PlayerSourceRect);
+			const int NewSource = DoSegmentedChoice(s_aPlayerSourceButtons, apSourceLabels, 4, s_PlayerSource, Tabs);
 			if(NewSource != s_PlayerSource && !ReadOnly && !Ui()->RenderOnly())
 				s_PlayerSource = NewSource;
+			static CButtonContainer s_AddFromSourceButton;
+			if(Ui()->DoButton_QmIcon(&s_AddFromSourceButton, EQmIcon::PLUS, FONT_ICON_PLUS, pSelectedType != nullptr ? 0 : -1, &AddEntryRect, IGraphics::CORNER_ALL) && pSelectedType != nullptr && !ReadOnly && !Ui()->RenderOnly())
+				GameClient()->m_WarList.AddWarEntry(s_aEntryName, s_aEntryClan, s_aEntryReason, pSelectedType->m_aWarName);
+			GameClient()->m_Tooltips.DoToolTip(&s_AddFromSourceButton, &AddEntryRect, Localize("Add Entry"));
 		}
 		// 好友、自身、分身都不依赖当前服务器：好友读好友列表，自身和分身是本地预设。
 		if(s_PlayerSource != 0)
@@ -840,7 +874,14 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 			if(!ReadOnly || Ui()->BackgroundRender())
 				RenderTeeCute(CAnimState::GetIdle(), &TeeInfo, 0, vec2(1.0f, 0.0f), TeeRect.Center() + vec2(-1.0f, 2.5f), true);
 		}
-		PlayerListBox.DoEnd();
+		const int ClickedPlayer = PlayerListBox.DoEnd();
+		// 整行点击兜底：只点行中间空白处也该把这个人填进编辑区。
+		if(!ReadOnly && !Ui()->RenderOnly() && ClickedPlayer >= 0 && ClickedPlayer < (int)s_vFilteredPlayerIds.size())
+		{
+			const int ClickedId = s_vFilteredPlayerIds[ClickedPlayer];
+			str_copy(s_aEntryName, GameClient()->m_aClients[ClickedId].m_aName, sizeof(s_aEntryName));
+			str_copy(s_aEntryClan, GameClient()->m_aClients[ClickedId].m_aClan, sizeof(s_aEntryClan));
+		}
 
 		char aExtra[96];
 		str_format(aExtra, sizeof(aExtra), "players=%d filtered=%d", MAX_CLIENTS, (int)s_vFilteredPlayerIds.size());

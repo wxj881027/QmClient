@@ -1124,6 +1124,9 @@ Are you sure that you want to quit?
 Are you sure that you want to remove '%s' from your war groups?
 == 您确定要从您的敌对群组中删除 '%s' 吗？
 
+Are you sure that you want to remove '%s' from your war list?
+== 确定要把「%s」从敌对列表里删掉吗？
+
 Are you sure that you want to remove the clan '%s' from your friends list?
 == 确定要将战队 "%s" 从你的好友列表中删除？
 
@@ -12651,7 +12654,7 @@ Selects the country flag shown for you and for the dummy.
 == 选择为你和分身显示的国旗。
 
 Self
-== 自身
+== 本体
 
 Self and friends
 == 自己和好友

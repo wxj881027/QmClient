@@ -1124,6 +1124,9 @@ Are you sure that you want to quit?
 Are you sure that you want to remove '%s' from your war groups?
 == Czy na pewno chcesz usunąć '%s' z grup wojennych?
 
+Are you sure that you want to remove '%s' from your war list?
+== Usunąć „%s” z listy wrogów?
+
 Are you sure that you want to remove the clan '%s' from your friends list?
 == Czy na pewno chcesz usunąć klan '%s' z listy znajomych?
 
