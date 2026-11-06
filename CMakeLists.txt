@@ -6621,7 +6621,6 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/client/qm_friend_code_publication_test.cpp
       src/test/unit/qmclient/client/qm_friend_last_seen_allocation_test.cpp
       src/test/unit/qmclient/settings/settings_asset_memory_test.cpp
-      src/engine/gfx/image.cpp
       src/test/integration/qmclient/client/qm_friend_last_seen_allocation_service_test.cpp
       src/test/support/friend_last_seen_test_support.h
       src/game/client/components/qmclient/friend_last_seen_data.cpp
@@ -6721,6 +6720,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/game/client/pickup_data.cpp
       src/game/client/projectile_data.cpp
       src/generated/client_data.cpp
+      $<TARGET_OBJECTS:engine-gfx>
       $<TARGET_OBJECTS:engine-shared>
       $<TARGET_OBJECTS:game-shared>
       $<TARGET_OBJECTS:rust-bridge-shared>
@@ -6728,7 +6728,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     )
     add_dependencies(qm-prediction-tests generate_protocol)
     target_include_directories(qm-prediction-tests SYSTEM PRIVATE ${GTEST_INCLUDE_DIRS})
-    target_link_libraries(qm-prediction-tests ${QM_GTEST_LIBRARIES} ${LIBS})
+    target_link_libraries(qm-prediction-tests ${PNG_LIBRARIES} ${WebP_LIBRARIES} ${QM_GTEST_LIBRARIES} ${LIBS})
     if(TARGET_OS STREQUAL "windows")
       target_link_libraries(qm-prediction-tests bcrypt winhttp ws2_32)
     endif()
