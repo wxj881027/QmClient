@@ -116,6 +116,7 @@ class CQmAxiomScores : public CComponent
 	std::array<SRequestSlot, 2> m_aModeRequests;
 	SRequestSlot m_DdStatsRequest;
 	std::shared_ptr<CQmAxiomDdStatsParseJob> m_pDdStatsParseJob;
+	std::shared_ptr<CHttpResponseBufferBudget> m_pResponseBufferBudget;
 	std::string m_ActivePlayerName;
 	std::map<std::string, SRequestSlot, std::less<>> m_SearchRequests;
 	std::map<std::string, SRequestSlot, std::less<>> m_ModeRequests;

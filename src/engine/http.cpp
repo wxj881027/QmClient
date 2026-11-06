@@ -30,6 +30,8 @@ IHttpRequest::~IHttpRequest()
 	dbg_assert(m_File == nullptr, "HTTP request file was not closed");
 	free(m_pBody);
 	free(m_pBuffer);
+	if(m_pResponseBufferBudget)
+		m_pResponseBufferBudget->Release(m_BufferSize);
 	if(m_State == EHttpState::DONE && m_ValidateBeforeOverwrite)
 	{
 		OnValidation(false);
@@ -40,6 +42,14 @@ void IHttpRequest::WriteToMemory()
 {
 	m_WriteToMemory = true;
 	m_WriteToFile = false;
+}
+
+bool IHttpRequest::SetResponseBufferBudget(std::shared_ptr<CHttpResponseBufferBudget> pBudget) noexcept
+{
+	if(m_State != EHttpState::QUEUED || m_BufferSize != 0 || !m_WriteToMemory || m_WriteToFile)
+		return false;
+	m_pResponseBufferBudget = std::move(pBudget);
+	return true;
 }
 
 void IHttpRequest::WriteToFile(IStorage *pStorage, const char *pDest, int StorageType)
@@ -295,6 +305,8 @@ const char *IHttpRequest::GetRequestType(REQUEST Type)
 
 bool IHttpRequest::ShouldSkipRequest()
 {
+	if(m_pResponseBufferBudget && (!m_WriteToMemory || m_WriteToFile))
+		return false;
 	if(m_WriteToFile && m_ExpectedSha256.has_value())
 	{
 		SHA256_DIGEST Sha256;
@@ -309,6 +321,9 @@ bool IHttpRequest::ShouldSkipRequest()
 
 bool IHttpRequest::BeforeInit()
 {
+	// 文件回读可另行产生内存，不能用纯内存缓冲预算冒充已约束该路径。
+	if(m_pResponseBufferBudget && (!m_WriteToMemory || m_WriteToFile))
+		return false;
 	if((m_Type == REQUEST::POST || m_Type == REQUEST::POST_FORM || m_Type == REQUEST::POST_JSON) && !m_pBody)
 	{
 		log_error("http", "failed to allocate HTTP request body");
@@ -459,9 +474,16 @@ size_t IHttpRequest::OnData(const char *pData, size_t DataSize)
 		}
 		if(NewBufferSize != m_BufferSize)
 		{
+			const size_t Additional = NewBufferSize - m_BufferSize;
+			if(m_pResponseBufferBudget && !m_pResponseBufferBudget->TryAcquire(Additional))
+				return Reject();
 			auto *pNewBuffer = static_cast<unsigned char *>(ReallocateResponseBuffer(NewBufferSize));
 			if(pNewBuffer == nullptr)
+			{
+				if(m_pResponseBufferBudget)
+					m_pResponseBufferBudget->Release(Additional);
 				return Reject();
+			}
 			m_pBuffer = pNewBuffer;
 			m_BufferSize = NewBufferSize;
 		}

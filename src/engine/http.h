@@ -9,6 +9,7 @@
 #include <base/types.h>
 
 #include <engine/shared/http_range.h>
+#include <engine/shared/http_response_buffer_budget.h>
 
 #include <atomic>
 #include <chrono>
@@ -71,6 +72,8 @@ public:
 	long RequestTimeoutMs() const { return m_Timeout.m_TimeoutMs; }
 	// Skip the download if the local file is newer or as new as the remote file.
 	void MaxResponseSize(int64_t MaxResponseSize) { m_MaxResponseSize = MaxResponseSize; }
+	// Run前为纯内存响应设置共享容量预算；缓冲或终态已存在时不能改记账归属。
+	bool SetResponseBufferBudget(std::shared_ptr<CHttpResponseBufferBudget> pBudget) noexcept;
 	// 仅取得正文前缀用于下载测速；达到上限主动结束，不落盘、不作为完整下载。
 	void ResponseSample(size_t Bytes);
 	void ResultResponseSample(unsigned char **ppResult, size_t *pResultLength) const;
@@ -237,6 +240,7 @@ protected:
 	// If `m_WriteToMemory` is true.
 	size_t m_BufferSize = 0;
 	unsigned char *m_pBuffer = nullptr;
+	std::shared_ptr<CHttpResponseBufferBudget> m_pResponseBufferBudget;
 
 	// If `m_WriteToFile` is true.
 	IOHANDLE m_File = nullptr;

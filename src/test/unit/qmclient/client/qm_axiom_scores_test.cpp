@@ -1355,7 +1355,7 @@ TEST(QmAxiomScoresAsync, InvalidResponsePreservesVisibleDataAndAllowsRefresh)
 	EXPECT_EQ(Http.m_vRequests.size(), 6u);
 }
 
-TEST(QmAxiomScoresAsync, ShutdownDiscardsQueuedParseWithoutBorrowingComponent)
+TEST(QmAxiomScoresAsync, ShutdownCancelsQueuedParseWithoutBorrowingComponent)
 {
 	CFakeAxiomHttp Http;
 	CTestAxiomScores Scores(&Http, true);
@@ -1366,7 +1366,7 @@ TEST(QmAxiomScoresAsync, ShutdownDiscardsQueuedParseWithoutBorrowingComponent)
 	Scores.OnShutdown();
 	Http.m_vRequests.clear();
 	Scores.m_vParseJobs[0]->Parse();
-	EXPECT_TRUE(Scores.m_vParseJobs[0]->Ready());
+	EXPECT_FALSE(Scores.m_vParseJobs[0]->Ready());
 	Scores.OnUpdate();
 	EXPECT_EQ(Scores.GetDdStatsGameTypes("async_player"), nullptr);
 }

@@ -11,6 +11,7 @@
 #include <memory>
 #include <new>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace
@@ -124,6 +125,8 @@ namespace
 		int m_AbortCalls = 0;
 		CNativeResponse() :
 			IHttpRequest("https://axiom.test/player") { LogProgress(HTTPLOG::NONE); }
+		size_t Feed(std::string_view Body) { return OnData(Body.data(), Body.size()); }
+		void Complete(EHttpState State = EHttpState::DONE) { OnCompletionInternal(State); }
 		void Header(const char *) override
 		{
 			if(m_HeaderThrows)
@@ -169,6 +172,41 @@ namespace
 	protected:
 		CNativeScores m_Scores;
 		void TearDown() override { m_Scores.OnShutdown(); }
+	};
+
+	class CNativeBudgetScores final : public CClockScores
+	{
+		const char *StatisticsPlayerName() const override { return "local"; }
+		std::shared_ptr<IHttpRequest> CreateNativeRequest(const char *) override
+		{
+			return std::make_shared<CNativeResponse>();
+		}
+		void SubmitNativeRequest(const std::shared_ptr<IHttpRequest> &pRequest) override
+		{
+			m_vRequests.push_back(std::static_pointer_cast<CNativeResponse>(pRequest));
+		}
+
+	public:
+		std::vector<std::shared_ptr<CNativeResponse>> m_vRequests;
+	};
+
+	class QmAxiomNativeBufferBudget : public ::testing::Test
+	{
+	protected:
+		CNativeBudgetScores m_Scores;
+		void TearDown() override { m_Scores.OnShutdown(); }
+		void FillBudget()
+		{
+			m_Scores.SetMode(EQmAxiomMode::GORES);
+			const std::string Body(8 * 1024 * 1024, 'x');
+			for(int Index = 0; Index < 8; ++Index)
+			{
+				m_Scores.OnUpdate();
+				m_Scores.EnsureQueried(("remote_" + std::to_string(Index)).c_str());
+				ASSERT_EQ(m_Scores.m_vRequests.size(), static_cast<size_t>(Index + 1));
+				ASSERT_EQ(m_Scores.m_vRequests.back()->Feed(Body), Body.size());
+			}
+		}
 	};
 }
 
@@ -423,4 +461,36 @@ TEST_F(QmAxiomNativeRequestLifecycle, SuccessfulNativeRequestIsOwnedUntilResetCa
 	EXPECT_TRUE(m_Scores.m_pNext->IsAbortRequested());
 	EXPECT_EQ(m_Scores.m_pNext->m_AbortCalls, 1);
 	EXPECT_EQ(m_Scores.GetResult("player")->m_SearchStatus, EQmAxiomScoreStatus::NOT_REQUESTED);
+}
+
+TEST_F(QmAxiomNativeBufferBudget, NativeRequestsShareOneCapacityLimit)
+{
+	ASSERT_NO_FATAL_FAILURE(FillBudget());
+	m_Scores.OnUpdate();
+	m_Scores.EnsureQueried("over_budget");
+	ASSERT_EQ(m_Scores.m_vRequests.size(), 9u);
+	EXPECT_EQ(m_Scores.m_vRequests.back()->Feed("x"), 0u);
+	m_Scores.m_vRequests.back()->Complete();
+	EXPECT_EQ(m_Scores.m_vRequests.back()->State(), EHttpState::ERROR);
+	m_Scores.OnUpdate();
+	const auto *pResult = m_Scores.GetResult("over_budget");
+	ASSERT_NE(pResult, nullptr);
+	EXPECT_EQ(pResult->m_SearchStatus, EQmAxiomScoreStatus::HTTP_ERROR);
+}
+
+TEST_F(QmAxiomNativeBufferBudget, ResetRetainsChargesUntilBackendOwnersActuallyReleaseBuffers)
+{
+	ASSERT_NO_FATAL_FAILURE(FillBudget());
+	m_Scores.OnReset();
+	EXPECT_TRUE(m_Scores.m_vRequests[0]->IsAbortRequested());
+	m_Scores.OnUpdate();
+	m_Scores.EnsureQueried("during_reset");
+	ASSERT_EQ(m_Scores.m_vRequests.size(), 9u);
+	EXPECT_EQ(m_Scores.m_vRequests.back()->Feed("x"), 0u);
+	m_Scores.m_vRequests.back()->Complete();
+	m_Scores.OnUpdate();
+	m_Scores.m_vRequests.clear();
+	m_Scores.EnsureQueried("after_release");
+	ASSERT_EQ(m_Scores.m_vRequests.size(), 1u);
+	EXPECT_EQ(m_Scores.m_vRequests.back()->Feed("x"), 1u);
 }

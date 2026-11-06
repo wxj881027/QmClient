@@ -2876,6 +2876,7 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   http_url.h
   http_range.h
   http_response_headers.h
+  http_response_buffer_budget.h
   http_request_completion.h
   http_emscripten.cpp
   http_emscripten.h

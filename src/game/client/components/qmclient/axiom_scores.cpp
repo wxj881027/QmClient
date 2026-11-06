@@ -30,6 +30,7 @@ namespace
 	constexpr int64_t AXIOM_SEARCH_CACHE_TTL_MS = AXIOM_MATCH_CACHE_TTL_MS;
 	constexpr int64_t AXIOM_SCORE_CACHE_TTL_MS = AXIOM_POINTS_CACHE_TTL_MS;
 	constexpr int64_t AXIOM_MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
+	constexpr size_t AXIOM_RESPONSE_BUFFER_BUDGET_BYTES = 64 * 1024 * 1024;
 	constexpr size_t AXIOM_MAX_CACHE_ENTRIES = 128;
 	constexpr size_t AXIOM_MAX_CONCURRENT_REQUESTS = 64;
 	constexpr int AXIOM_SEARCH_STARTS_PER_FRAME = 2;
@@ -537,10 +538,17 @@ std::shared_ptr<IQmAxiomHttpRequest> CQmAxiomScores::StartRequest(const char *pU
 	{
 		if(m_pHttpOverride != nullptr)
 			return m_pHttpOverride->Get(pUrl, AXIOM_CONNECT_TIMEOUT_MS, TimeoutMs, AXIOM_MAX_RESPONSE_BYTES);
+		if(!m_pResponseBufferBudget)
+			m_pResponseBufferBudget = std::make_shared<CHttpResponseBufferBudget>(AXIOM_RESPONSE_BUFFER_BUDGET_BYTES);
 		pRequest = CreateNativeRequest(pUrl);
 		if(!pRequest)
 			return nullptr;
 		PrepareRequest(pRequest.get(), TimeoutMs);
+		if(!pRequest->SetResponseBufferBudget(m_pResponseBufferBudget))
+		{
+			TryAbortRequest(pRequest);
+			return nullptr;
+		}
 		// 提交前准备完整owner；提交后不再为返回包装分配内存。
 		auto pWrapped = std::make_shared<CNativeAxiomHttpRequest>(pRequest);
 		SubmitNativeRequest(pRequest);
@@ -691,6 +699,8 @@ void CQmAxiomScores::AbortActiveRequests(bool ResetFetchingStates) noexcept
 	for(SRequestSlot &Slot : m_aModeRequests)
 		Slot.m_PlayerName.clear();
 	m_DdStatsRequest.m_PlayerName.clear();
+	if(m_pDdStatsParseJob)
+		m_pDdStatsParseJob->Cancel();
 	m_pDdStatsParseJob.reset();
 	m_ActivePlayerName.clear();
 	++m_Generation;
@@ -983,7 +993,7 @@ void CQmAxiomScores::ProcessScoreboardRequests()
 void CQmAxiomScores::StartDdStatsRequest(const char *pPlayerName, SCacheEntry &Entry) noexcept
 try
 {
-	if(!m_DdStatsEnabled || m_DdStatsRequest.m_pRequest)
+	if(!m_DdStatsEnabled || m_DdStatsRequest.m_pRequest || m_pDdStatsParseJob)
 		return;
 	if(!pPlayerName || pPlayerName[0] == '\0')
 		return;
@@ -1221,21 +1231,29 @@ bool CQmAxiomScores::SubmitDdStatsParseJob(const std::shared_ptr<CQmAxiomDdStats
 
 void CQmAxiomScores::ProcessDdStatsRequest()
 {
-	if(!m_DdStatsRequest.m_pRequest || !m_DdStatsRequest.m_pRequest->Done())
+	if(!m_pDdStatsParseJob && (!m_DdStatsRequest.m_pRequest || !m_DdStatsRequest.m_pRequest->Done()))
 		return;
 
-	if(m_DdStatsRequest.m_pRequest->TransportSucceeded() && m_DdStatsRequest.m_pRequest->StatusCode() == 200)
+	if(m_pDdStatsParseJob || (m_DdStatsRequest.m_pRequest->TransportSucceeded() && m_DdStatsRequest.m_pRequest->StatusCode() == 200))
 	{
 		if(!m_pDdStatsParseJob)
 		{
+			std::shared_ptr<CQmAxiomDdStatsParseJob> pJob;
 			try
 			{
-				auto pJob = std::make_shared<CQmAxiomDdStatsParseJob>(m_DdStatsRequest.m_pRequest, m_DdStatsRequest.m_PlayerName);
+				pJob = std::make_shared<CQmAxiomDdStatsParseJob>(m_DdStatsRequest.m_pRequest, m_DdStatsRequest.m_PlayerName);
 				if(SubmitDdStatsParseJob(pJob))
+				{
 					m_pDdStatsParseJob = std::move(pJob);
+					m_DdStatsRequest.m_pRequest.reset();
+				}
+				else
+					pJob->Cancel();
 			}
 			catch(...)
 			{
+				if(pJob)
+					pJob->Cancel();
 				// 分配或入队失败沿解析失败路径释放本次请求，保留已有数据。
 			}
 		}
@@ -1254,7 +1272,7 @@ void CQmAxiomScores::ProcessDdStatsRequest()
 		return;
 	SCacheEntry &Entry = CacheIt->second;
 	const int64_t Now = CurrentTick();
-	if(!pRequest->TransportSucceeded() || pRequest->StatusCode() != 200)
+	if(!pParseJob && (!pRequest || !pRequest->TransportSucceeded() || pRequest->StatusCode() != 200))
 	{
 		RecordFailure(Entry.m_DdStatsFailureCount);
 		Entry.m_LastDdStatsFailureTick = Now;
@@ -1312,7 +1330,7 @@ void CQmAxiomScores::FinishActiveQueryIfIdle()
 		if(Slot.m_pRequest)
 			return;
 	}
-	if(m_DdStatsRequest.m_pRequest)
+	if(m_DdStatsRequest.m_pRequest || m_pDdStatsParseJob)
 		return;
 	m_ActivePlayerName.clear();
 }
@@ -1330,7 +1348,7 @@ try
 		return;
 	}
 	// 统计页的双模式和 DDStats 查询仍以单活动玩家运行。
-	if(m_SearchRequest.m_pRequest || m_aModeRequests[0].m_pRequest || m_aModeRequests[1].m_pRequest || m_DdStatsRequest.m_pRequest)
+	if(m_SearchRequest.m_pRequest || m_aModeRequests[0].m_pRequest || m_aModeRequests[1].m_pRequest || m_DdStatsRequest.m_pRequest || m_pDdStatsParseJob)
 		return;
 
 	const int64_t Now = CurrentTick();
@@ -1374,7 +1392,7 @@ try
 		AnyRequestNeeded = true;
 	}
 	const bool DdStatsFresh = !m_DdStatsEnabled || IsWithinWindow(Entry.m_LastDdStatsSuccessTick, Now, AXIOM_SCORE_CACHE_TTL_MS);
-	const bool DdStatsFetching = m_DdStatsRequest.m_pRequest && m_ActivePlayerName == Name;
+	const bool DdStatsFetching = (m_DdStatsRequest.m_pRequest || m_pDdStatsParseJob) && m_ActivePlayerName == Name;
 	const bool DdStatsRetryBlocked = IsWithinWindow(Entry.m_LastDdStatsFailureTick, Now, FailureRetryWindowMs(Entry.m_DdStatsFailureCount));
 	const bool NeedDdStats = m_DdStatsEnabled && !DdStatsFresh && !DdStatsFetching && !DdStatsRetryBlocked;
 	AnyRequestNeeded |= NeedDdStats;
@@ -1458,7 +1476,7 @@ bool CQmAxiomScores::IsFetchingPlayer(const char *pPlayerName) const
 	for(const SRequestSlot &Slot : m_aModeRequests)
 		if(Slot.m_pRequest && Slot.m_PlayerName == pPlayerName)
 			return true;
-	return m_DdStatsRequest.m_pRequest && m_DdStatsRequest.m_PlayerName == pPlayerName;
+	return (m_DdStatsRequest.m_pRequest || m_pDdStatsParseJob) && m_DdStatsRequest.m_PlayerName == pPlayerName;
 }
 
 bool CQmAxiomScores::IsPlayerFailed(const char *pPlayerName) const
