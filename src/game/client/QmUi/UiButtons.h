@@ -38,6 +38,9 @@ namespace ui_widget
 		std::optional<ColorRGBA> m_Color;
 		// 选中态可显式指定描边，避免浅色选中底把默认反馈描边压成深色。
 		std::optional<ColorRGBA> m_BorderOverride;
+		// 由调用方给出悬浮判定：声明式卡片的 DRAW 回放趟里 VisualMouseHovered 恒为 false，
+		// 只能由知道指针位置的调用方覆盖，颜色仍走公共反馈 token。
+		std::optional<bool> m_HoveredOverride;
 		const CUIRect *m_pHitRect = nullptr;
 	};
 

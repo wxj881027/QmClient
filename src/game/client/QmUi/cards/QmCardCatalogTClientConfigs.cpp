@@ -289,10 +289,6 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientConfigsCard(const qm_card_
 				// TClient 的配置项已迁到「栖梦」配置名下，这一项筛选项不再保留；配置变量本身不动。
 				FilterEntry(&g_Config.m_QmUiShowDDNet, "DDNet"),
 				FilterEntry(&g_Config.m_QmUiShowQm, "QmClient"),
-			},
-			ConfigMetrics, Flow.Input() && !ReadOnly);
-		DoSettingsToggleButtonGroup(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, Content,
-			{
 				FilterEntry(&g_Config.m_QmUiCompactList, "Compact"),
 				FilterEntry(&g_Config.m_QmUiOnlyModified, "Modified"),
 			},

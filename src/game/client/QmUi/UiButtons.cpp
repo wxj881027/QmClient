@@ -52,7 +52,7 @@ namespace ui_widget
 		SUiButtonState State;
 		State.m_Enabled = Options.m_Enabled;
 		State.m_Selected = Options.m_Selected;
-		State.m_Hovered = pId != nullptr && Options.m_Enabled && pUi->Enabled() && pUi->VisualMouseHovered(Options.m_pHitRect != nullptr ? Options.m_pHitRect : &Rect);
+		State.m_Hovered = Options.m_HoveredOverride.value_or(pId != nullptr && Options.m_Enabled && pUi->Enabled() && pUi->VisualMouseHovered(Options.m_pHitRect != nullptr ? Options.m_pHitRect : &Rect));
 		State.m_Pressed = State.m_Hovered && pUi->CheckActiveItem(pId) && (pUi->MouseButton(0) || pUi->MouseButton(1) || pUi->MouseButton(2));
 		const ColorRGBA Base = Options.m_Color.value_or(Options.m_TransparentInactive ? ColorRGBA() : ResolveConfiguredControlSurface());
 		auto Style = ResolveUiButtonStyle(Options.m_Role, Base, Backdrop, Theme, State);
