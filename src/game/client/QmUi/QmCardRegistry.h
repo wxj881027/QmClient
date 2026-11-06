@@ -153,6 +153,8 @@ namespace qm_card_registry
 	bool RepairLegacyTitleLayout(qm_card_order::CModel &Model);
 	bool RepairLegacyNameplateTitleLayout(qm_card_order::CModel &Model);
 	bool RepairLegacyTeeLayout(qm_card_order::CModel &Model);
+	// 聊天气泡已移入游戏界面的聊天页，恢复仍保存为视觉页的卡片。
+	bool RepairLegacyChatBubbleTab(qm_card_order::CModel &Model);
 	bool IsTClientMainCardsLegacyLeft(const qm_card_order::CModel &Model);
 	bool MoveTClientMainCardsToAlternatingColumns(qm_card_order::CModel &Model);
 	ETClientMainCardsMigrationResult MigrateTClientMainCardsToAlternatingColumns(qm_card_order::CModel &Model, char *pSerialized, int SerializedSize);
