@@ -6095,6 +6095,9 @@ Game type
 Game type (ddnet, mod)
 == 游戏类型（ddnet、mod）
 
+Game types:
+== 游戏模式：
+
 Game update rate (Hz)
 == 游戏更新率（单位：Hz）
 
@@ -7750,6 +7753,9 @@ Leak IP
 
 Leaks your IP address to all servers by pinging each of them, also acquiring the latency in the process
 == 通过逐个 ping 服务器泄露你的 IP，同时会获取延迟
+
+Leaks your IP address to this server by pinging it, also acquiring the latency in the process
+== 通过 ping 当前服务器获取延迟，同时会向该服务器暴露你的 IP 地址
 
 Learn
 == 教程 Wiki
@@ -10402,6 +10408,9 @@ Player country (ISO 3166-1 numeric code)
 
 Player country filter in server browser (ISO 3166-1 numeric)
 == 在服务器浏览器中过滤的玩家国家/地区（ISO 3166-1 数字）
+
+Player country:
+== 玩家国家
 
 Player death
 == 玩家死亡
@@ -14812,6 +14821,9 @@ Stress system (debug builds only).
 
 Strict game type filter
 == 严格游戏模式筛选
+
+Strict gametype filter
+== 严格匹配
 
 Strict mode
 == 严格模式

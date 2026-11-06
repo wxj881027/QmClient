@@ -2030,6 +2030,7 @@ Game sound volume
 Game time margin
 Game type
 Game type (ddnet, mod)
+Game types:
 Game update rate (Hz)
 Game update rate when window inactive (Hz)
 Game/predicted tick
@@ -2582,6 +2583,7 @@ Launch Steam automatically when starting externally
 Layout
 Leak IP
 Leaks your IP address to all servers by pinging each of them, also acquiring the latency in the process
+Leaks your IP address to this server by pinging it, also acquiring the latency in the process
 Learn
 Learn "Toggle dummy" first; the other dummy keys only help once you already play with a second tee.
 Leave "Automatic updates" off if you update by hand: it can restart the client to install a build.
@@ -3466,6 +3468,7 @@ Player clan
 Player count
 Player country (ISO 3166-1 numeric code)
 Player country filter in server browser (ISO 3166-1 numeric)
+Player country:
 Player death
 Player decoration color
 Player eyes color
@@ -4936,6 +4939,7 @@ Streamer word list file
 Strength icons assets
 Stress system (debug builds only).
 Strict game type filter
+Strict gametype filter
 Strict mode
 Stroke fade time
 Stroke retention time (0=Never disappear)

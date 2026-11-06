@@ -6080,6 +6080,9 @@ Game type
 Game type (ddnet, mod)
 == Tipo de juego (ddnet, mod)
 
+Game types:
+== Tipos de juego:
+
 Game update rate (Hz)
 == Tasa de actualización del juego (Hz)
 
@@ -7735,6 +7738,9 @@ Leak IP
 
 Leaks your IP address to all servers by pinging each of them, also acquiring the latency in the process
 == Filtra tu dirección IP a todos los servidores haciendo ping a cada uno, también adquiriendo la latencia en el proceso
+
+Leaks your IP address to this server by pinging it, also acquiring the latency in the process
+== Revela tu dirección IP a este servidor al hacerle ping para medir la latencia
 
 Learn
 == Aprender
@@ -10372,6 +10378,9 @@ Player country (ISO 3166-1 numeric code)
 
 Player country filter in server browser (ISO 3166-1 numeric)
 == Filtro de país del jugador en el navegador de servidores (numérico ISO 3166-1)
+
+Player country:
+== País del jugador:
 
 Player death
 == Muerte del jugador
@@ -14775,6 +14784,9 @@ Stress system (debug builds only).
 == Sistema de estrés (solo compilaciones de depuración).
 
 Strict game type filter
+== Filtro estricto de tipo de juego
+
+Strict gametype filter
 == Filtro estricto de tipo de juego
 
 Strict mode
