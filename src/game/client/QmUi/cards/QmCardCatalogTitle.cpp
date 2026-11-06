@@ -17,12 +17,16 @@
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiTokens.h>
+#include <game/client/animstate.h>
+#include <game/client/components/chat.h>
 #include <game/client/components/menus.h>
 #include <game/client/components/qmclient/chat_gradient.h>
 #include <game/client/components/qmclient/qm_title_badge.h>
 #include <game/client/components/qmclient/sponsor_chat_render.h>
+#include <game/client/components/skins.h>
 #include <game/client/gameclient.h>
 #include <game/client/render.h>
+#include <game/client/skin.h>
 #include <game/client/ui.h>
 #include <game/client/ui_scrollregion.h>
 #include <game/localization.h>
@@ -110,6 +114,53 @@ static void RenderQmSponsorChatPreview(IGraphics *pGraphics, ITextRender *pTextR
 	QmRenderSponsorChatText(pGraphics, pTextRender, s_SponsorChatPreviewContainer, Style, 1.0f, 0.0f, 0.0f, FontSize, SweepState, TimeSeconds - s_StartTime);
 }
 
+// 「发言预览」要的是聊天框里那一条消息本身：消息底色 + 发言人名字 + 那句话，
+// 不是把整框示例聊天复制一遍。
+void qm_card_catalog::QmCardRenderHook::RenderQmSponsorChatMessagePreview(CMenus *pMenus, const CUIRect &Rect, int StyleValue, double TimeSeconds)
+{
+	if(Rect.w <= 1.0f || Rect.h <= 1.0f)
+		return;
+	const auto Style = static_cast<EQmSponsorChatStyle>(StyleValue);
+	ITextRender *pTextRender = pMenus->TextRender();
+	CChat *pChat = &pMenus->GameClient()->m_Chat;
+	const float FontSize = std::clamp(Rect.h * 0.40f, 8.0f, pChat->FontSize() * 2.0f);
+	const float PaddingX = pChat->MessagePaddingX() * 2.0f;
+	const float TeeSize = pChat->MessageTeeSize() * 2.0f;
+
+	// 一条消息的底色，圆角和聊天框同源。
+	const ColorRGBA Background = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClChatBackgroundColor, true));
+	DrawRoundedSurface(pMenus->Ui(), Rect, Background, ColorRGBA(), pChat->MessageRounding() * 2.0f);
+
+	const float CenterY = Rect.y + Rect.h / 2.0f;
+	float X = Rect.x + PaddingX * 0.5f;
+
+	// 头像：聊天框每条玩家消息前面那块，缩放跟着字号走。
+	if(TeeSize > 1.0f && !g_Config.m_ClChatOld)
+	{
+		const CSkin *pSkin = pMenus->GameClient()->m_Skins.Find("default");
+		if(pSkin != nullptr)
+		{
+			CTeeRenderInfo Info;
+			Info.m_Size = TeeSize;
+			Info.Apply(pSkin);
+			pMenus->RenderTools()->RenderTee(CAnimState::GetIdle(), &Info, EMOTE_NORMAL, vec2(1, 0.1f), vec2(X + TeeSize * 0.5f, CenterY));
+		}
+		X += TeeSize + CChat::MESSAGE_TEE_PADDING_RIGHT * 2.0f;
+	}
+
+	// 发言人名字，用聊天框里玩家名的颜色，后面跟冒号。
+	CTextCursor NameCursor;
+	NameCursor.SetPosition(vec2(X, CenterY - FontSize / 2.0f));
+	NameCursor.m_FontSize = FontSize;
+	pTextRender->TextColor(ColorRGBA(0.8f, 0.8f, 0.8f, 1.0f));
+	pTextRender->TextEx(&NameCursor, pMenus->Client()->PlayerName(), -1);
+	pTextRender->TextEx(&NameCursor, ": ", -1);
+	pTextRender->TextColor(pTextRender->DefaultTextColor());
+
+	// 内容仍走赞助者发言样式渲染，位置接在名字后面。
+	CUIRect TextRect{X, Rect.y, std::max(1.0f, Rect.x + Rect.w - X), Rect.h};
+	RenderQmSponsorChatPreview(pMenus->Graphics(), pTextRender, TextRect, FontSize, Style, TimeSeconds);
+}
 namespace
 {
 	struct SQmTitleProfileDraft
@@ -166,7 +217,7 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 	const float TipSize = Metrics.m_SmallSize;
 	const float PreviewHeight = LineHeight * 3.0f + LineSpacing * 2.0f;
 	// 发言预览改成整套聊天框预览，要放得下系统行、高亮、队伍、好友、普通五条。
-	const float ChatPreviewHeight = LineHeight * 7.6f + LineSpacing * 2.0f;
+	const float ChatPreviewHeight = LineHeight * 2.0f;
 
 	Out = {};
 	Out.m_Spec = {pDefault->m_pStableId, Localize(pDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pDefault)};
@@ -295,13 +346,7 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 				// 标题和预览块之间留一个行距，别贴在一起。
 				ChatPreviewArea.HSplitTop(LineSpacing * 0.6f, nullptr, &ChatPreviewArea);
 				pMenus->Ui()->ClipEnable(&ChatPreviewArea);
-				// 聊天框预览铺满整块，底部先给它留出一行，赞助者那句话就画在那行里，不会互相压。
-				const float SponsorReserve = LineHeight * 1.6f;
-				qm_card_catalog::QmCardRenderHook::RenderQmChatBoxPreview(pMenus, ChatPreviewArea, LineSpacing, SponsorReserve);
-				CUIRect SponsorLineArea;
-				ChatPreviewArea.HSplitBottom(SponsorReserve, nullptr, &SponsorLineArea);
-				SponsorLineArea.Margin(LineSpacing * 0.75f, &SponsorLineArea);
-				RenderQmSponsorChatPreview(pMenus->Graphics(), pMenus->TextRender(), SponsorLineArea, BodySize, static_cast<EQmSponsorChatStyle>(g_Config.m_QmSponsorChatStyle), Auth.TitleAnimationTime());
+				qm_card_catalog::QmCardRenderHook::RenderQmSponsorChatMessagePreview(pMenus, ChatPreviewArea, g_Config.m_QmSponsorChatStyle, Auth.TitleAnimationTime());
 				pMenus->Ui()->ClipDisable();
 			}
 
