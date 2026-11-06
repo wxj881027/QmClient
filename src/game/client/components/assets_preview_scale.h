@@ -6,7 +6,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <limits>
 #include <string_view>
+#include <type_traits>
 
 inline constexpr size_t ASSET_PREVIEW_UPLOAD_MAX_BYTES_PER_FRAME = 1 * 1024 * 1024;
 inline constexpr int ASSET_PREVIEW_MIN_TEXTURE_SIZE = 512;
@@ -86,14 +88,26 @@ inline int PreviewUploadBudgetTextureSize(int MaxTextureSize, int MinTextureSize
 	return std::clamp(TextureSize, MinTextureSize, MaxTextureSize);
 }
 
-inline size_t PreviewBudgetBytes(size_t OverrideMb, int Percent, float GpuBudgetMb)
+template<typename TByteCount = size_t>
+inline TByteCount PreviewBudgetBytes(size_t OverrideMb, int Percent, float GpuBudgetMb)
 {
+	static_assert(std::is_integral_v<TByteCount> && std::is_unsigned_v<TByteCount> && !std::is_same_v<TByteCount, bool>);
+	constexpr uint64_t BytesPerMb = 1024ull * 1024ull;
+	constexpr TByteCount MaxBytes = std::numeric_limits<TByteCount>::max();
+	constexpr uint64_t MaxWholeMb = MaxBytes / BytesPerMb;
 	if(OverrideMb > 0)
-		return OverrideMb * 1024ull * 1024ull;
-	if(Percent <= 0 || GpuBudgetMb <= 0.0f)
+	{
+		if(OverrideMb > MaxWholeMb)
+			return MaxBytes;
+		return static_cast<TByteCount>(OverrideMb * BytesPerMb);
+	}
+	if(Percent <= 0 || !(GpuBudgetMb > 0.0f))
 		return 0;
 	const float BudgetMb = GpuBudgetMb * std::clamp(Percent, 0, 100) / 100.0f;
-	return (size_t)std::max(BudgetMb, 0.0f) * 1024ull * 1024ull;
+	// 先限制可表示的整MB，再转整数；超限不能绕回表示不限制预算的0。
+	if(BudgetMb >= static_cast<float>(MaxWholeMb) + 1.0f)
+		return MaxBytes;
+	return static_cast<TByteCount>(static_cast<TByteCount>(BudgetMb) * BytesPerMb);
 }
 
 inline int ComputePreviewBudgetedTextureSize(int MaxTextureSize, int MinTextureSize, size_t TextureBudgetBytes, size_t CurrentTextureMemoryBytes, size_t ReplacedResidentPreviewBytes)

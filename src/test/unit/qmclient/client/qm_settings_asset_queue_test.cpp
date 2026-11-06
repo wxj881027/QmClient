@@ -1,4 +1,5 @@
 #include <game/client/components/qmclient/settings_asset_queue.h>
+#include <game/client/components/settings_resource_jobs.h>
 
 #include <gtest/gtest.h>
 #include <test/support/prediction_allocation_failure.h>
@@ -411,4 +412,101 @@ TEST(QmSettingsAssetQueue, FrontWithoutMarkerCanBeDiscardedSafely)
 	EXPECT_TRUE(SettingsAssetQueueTryConsumeFront(Queue, Markers, Key, [](const auto &) { return true; }));
 	EXPECT_TRUE(Queue.empty());
 	EXPECT_TRUE(Markers.empty());
+}
+
+TEST(QmSettingsAssetQueue, DiscardAssetRemovesBothInputPhasesAndKeepsOtherTabsAndNames)
+{
+	std::deque<SSettingsAssetPreviewHandle> Decode{{2, 1, 3, "removed"}, {2, 1, 4, "kept"}, {3, 1, 3, "removed"}};
+	std::deque<SSettingsAssetPreviewHandle> Ready{{2, 1, 3, "removed"}, {2, 1, 4, "kept"}, {3, 1, 3, "removed"}};
+	std::unordered_set<std::string> Markers{"2:1:3:removed", "2:1:4:kept", "3:1:3:removed"};
+	SettingsAssetQueueDiscardAsset(Decode, Ready, Markers, 2, "removed");
+	ASSERT_EQ(Decode.size(), 2u);
+	ASSERT_EQ(Ready.size(), 2u);
+	EXPECT_EQ(Decode.front().m_Name, "kept");
+	EXPECT_EQ(Ready.front().m_Name, "kept");
+	EXPECT_EQ(Decode.back().m_Tab, 3);
+	EXPECT_EQ(Ready.back().m_Tab, 3);
+	EXPECT_EQ(Markers, (std::unordered_set<std::string>{"2:1:4:kept", "3:1:3:removed"}));
+}
+
+TEST(QmSettingsAssetQueue, DiscardAssetRemovesAllOldEpochsAndIndicesOfSameName)
+{
+	std::deque<SSettingsAssetPreviewHandle> Decode{{2, 1, 3, "removed"}, {2, 9, 17, "removed"}};
+	std::deque<SSettingsAssetPreviewHandle> Ready = Decode;
+	std::unordered_set<std::string> Markers{"2:1:3:removed", "2:9:17:removed"};
+	SettingsAssetQueueDiscardAsset(Decode, Ready, Markers, 2, "removed");
+	EXPECT_TRUE(Decode.empty());
+	EXPECT_TRUE(Ready.empty());
+	EXPECT_TRUE(Markers.empty());
+}
+
+TEST(QmSettingsAssetQueue, DiscardAssetMatchesCompleteNameIncludingColons)
+{
+	std::deque<SSettingsAssetPreviewHandle> Decode{{2, 1, 3, "prefix:removed"}, {2, 1, 4, "removed"}};
+	std::deque<SSettingsAssetPreviewHandle> Ready = Decode;
+	std::unordered_set<std::string> Markers{"2:1:3:prefix:removed", "2:1:4:removed"};
+	SettingsAssetQueueDiscardAsset(Decode, Ready, Markers, 2, "prefix:removed");
+	ASSERT_EQ(Decode.size(), 1u);
+	EXPECT_EQ(Decode.front().m_Name, "removed");
+	EXPECT_EQ(Markers, (std::unordered_set<std::string>{"2:1:4:removed"}));
+}
+
+TEST(QmSettingsAssetQueue, DiscardAssetClearsOrphanedMarkerWithoutQueueNode)
+{
+	std::deque<SSettingsAssetPreviewHandle> Decode, Ready;
+	std::unordered_set<std::string> Markers{"2:1:3:removed", "2:1:4:kept"};
+	SettingsAssetQueueDiscardAsset(Decode, Ready, Markers, 2, "removed");
+	EXPECT_EQ(Markers, (std::unordered_set<std::string>{"2:1:4:kept"}));
+}
+
+TEST(QmSettingsAssetQueue, DiscardAssetDoesNotAllocateDuringLongNameCleanup)
+{
+	const std::string Name(256, 'n');
+	std::deque<SSettingsAssetPreviewHandle> Decode{{2, 1, 3, Name}, {2, 1, 4, "kept"}};
+	std::deque<SSettingsAssetPreviewHandle> Ready = Decode;
+	std::unordered_set<std::string> Markers{"2:1:3:" + Name, "2:1:4:kept"};
+	size_t Attempts;
+	{
+		CPredictionAllocationFailure Failure;
+		SettingsAssetQueueDiscardAsset(Decode, Ready, Markers, 2, Name);
+		Attempts = Failure.Attempts();
+	}
+	EXPECT_EQ(Attempts, 0u);
+	ASSERT_EQ(Decode.size(), 1u);
+	ASSERT_EQ(Ready.size(), 1u);
+	EXPECT_EQ(Decode.front().m_Name, "kept");
+	EXPECT_EQ(Markers, (std::unordered_set<std::string>{"2:1:4:kept"}));
+}
+
+TEST(QmSettingsAssetQueue, RepeatedDiscardKeepsOtherResourcesInOriginalOrder)
+{
+	std::deque<SSettingsAssetPreviewHandle> Decode{{2, 1, 1, "first"}, {2, 1, 2, "removed"}, {2, 1, 3, "last"}};
+	std::deque<SSettingsAssetPreviewHandle> Ready = Decode;
+	std::unordered_set<std::string> Markers{"2:1:1:first", "2:1:2:removed", "2:1:3:last"};
+	SettingsAssetQueueDiscardAsset(Decode, Ready, Markers, 2, "removed");
+	SettingsAssetQueueDiscardAsset(Decode, Ready, Markers, 2, "removed");
+	ASSERT_EQ(Decode.size(), 2u);
+	ASSERT_EQ(Ready.size(), 2u);
+	EXPECT_EQ(Decode.front().m_Name, "first");
+	EXPECT_EQ(Decode.back().m_Name, "last");
+	EXPECT_EQ(Ready.front().m_Name, "first");
+	EXPECT_EQ(Ready.back().m_Name, "last");
+	EXPECT_EQ(Markers.size(), 2u);
+}
+
+TEST(QmSettingsAssetQueue, MarkerIdentityRequiresCompleteTabAndCompleteName)
+{
+	EXPECT_TRUE(SettingsAssetQueueKeyReferencesAsset("2:1:3:removed", 2, "removed"));
+	EXPECT_FALSE(SettingsAssetQueueKeyReferencesAsset("21:1:3:removed", 2, "removed"));
+	EXPECT_FALSE(SettingsAssetQueueKeyReferencesAsset("3:1:3:removed", 2, "removed"));
+	EXPECT_FALSE(SettingsAssetQueueKeyReferencesAsset("2:1:3:prefix:removed", 2, "removed"));
+	EXPECT_FALSE(SettingsAssetQueueKeyReferencesAsset("2:1:3:removed-more", 2, "removed"));
+}
+
+TEST(QmSettingsAssetQueue, InvalidMarkerShapeDoesNotMatchDeletion)
+{
+	EXPECT_FALSE(SettingsAssetQueueKeyReferencesAsset("removed", 2, "removed"));
+	EXPECT_FALSE(SettingsAssetQueueKeyReferencesAsset("2:1:removed", 2, "removed"));
+	EXPECT_FALSE(SettingsAssetQueueKeyReferencesAsset("invalid:1:3:removed", 2, "removed"));
+	EXPECT_FALSE(SettingsAssetQueueKeyReferencesAsset("999999999999999999999:1:3:removed", 2, "removed"));
 }

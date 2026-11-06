@@ -321,6 +321,7 @@ private:
 	int m_aAssetLoadGenerations[NUMBER_OF_ASSETS_TABS] = {};
 	void PublishSettingsAssetMergeEntries(int Tab, const std::vector<SSettingsAssetMergeEntry> &vEntries);
 	void InvalidateSettingsAssetResourcePlan();
+	void CancelLocalAssetPreview(int Tab, const char *pName);
 	bool TryStartSettingsAssetListJob(int Tab);
 	bool RecoverFailedSettingsAssetListJob(int Tab);
 	int CurrentSettingsAssetsTab() const;
@@ -416,6 +417,31 @@ public:
 			IGraphics::CTextureHandle m_Texture;
 		};
 		SEntitiesImage m_aImages[MAP_IMAGE_MOD_TYPE_COUNT];
+
+		void UnloadTextures(IGraphics *pGraphics)
+		{
+			auto SameTexture = [](const auto &Left, const auto &Right) {
+				return Left.IsValid() && Right.IsValid() && Left.Id() == Right.Id() && Left.Generation() == Right.Generation();
+			};
+			for(auto &Image : m_aImages)
+			{
+				if(!Image.m_Texture.IsValid())
+					continue;
+				if(SameTexture(m_RenderTexture, Image.m_Texture))
+					m_RenderTexture.Invalidate();
+				for(auto &Other : m_aImages)
+				{
+					if(&Other != &Image && SameTexture(Other.m_Texture, Image.m_Texture))
+						Other.m_Texture.Invalidate();
+				}
+				pGraphics->UnloadTexture(&Image.m_Texture);
+				Image.m_Texture.Invalidate();
+			}
+			// 异步缩略图可能独立于旧实体图数组，不能在清表时丢掉其 owner。
+			if(m_RenderTexture.IsValid())
+				pGraphics->UnloadTexture(&m_RenderTexture);
+			m_RenderTexture.Invalidate();
+		}
 	};
 
 	struct SCustomGame : public SCustomItem
@@ -3095,6 +3121,7 @@ private:
 	void DrainMenuTextContainerBuild(CUIElement &Element, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps, int StrLen, const CTextCursor *pReadCursor, bool Render, bool *pTextContainerRecreated);
 	void CountMenuTextImmediateFallback();
 	void ClearSettingsAssetsCardMetadataCache();
+	void ClearSettingsAssetPreviewResources();
 	void ClearSettingsTeePreviewCache();
 	void ClearSettingsLanguageRowCache();
 	void LogSettingsUiBudget(const char *pPage, const SSettingsUiBudgetFrame &Frame) const;

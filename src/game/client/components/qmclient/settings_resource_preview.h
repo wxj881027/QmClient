@@ -20,6 +20,7 @@
 #include <functional>
 #include <memory>
 #include <new>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -48,6 +49,7 @@ struct SResourcePreviewKey
 	uint64_t m_LocaleHash = 0;
 	int m_UiScale = 0;
 	int m_CardWidth = 0;
+	uint64_t m_ResourceGeneration = 0;
 
 	bool operator==(const SResourcePreviewKey &Other) const;
 };
@@ -55,6 +57,16 @@ struct SResourcePreviewKey
 struct SResourcePreviewKeyHash
 {
 	size_t operator()(const SResourcePreviewKey &Key) const;
+};
+
+// 只在主线程同步清理期间借用，字符串不能来自即将删除的 key。
+struct SResourcePreviewInvalidationScope
+{
+	const char *m_pType = nullptr;
+	const char *m_pId = nullptr;
+	std::optional<bool> m_Workshop;
+
+	bool Matches(const SResourcePreviewKey &Key) const;
 };
 
 struct SResourcePreviewState
@@ -122,6 +134,7 @@ public:
 	void MarkTextureReady(const SResourcePreviewKey &Key, IGraphics::CTextureHandle Texture = IGraphics::CTextureHandle(), IGraphics *pGraphics = nullptr);
 	void MarkUploadFailed(const SResourcePreviewKey &Key);
 	void Clear(IGraphics *pGraphics = nullptr);
+	void Invalidate(const SResourcePreviewInvalidationScope &Scope, IGraphics *pGraphics);
 	size_t Size() const { return m_vStates.size(); }
 
 private:
@@ -179,6 +192,7 @@ public:
 	int Drain(SResourcePreviewUploadBudget &Budget, SResourcePreviewTelemetry &Telemetry, CSettingsResourcePreviewCache &Cache, IGraphics *pGraphics);
 	size_t QueueDepth() const { return m_vUploadQueue.size(); }
 	void Clear();
+	void Invalidate(const SResourcePreviewInvalidationScope &Scope);
 
 private:
 	bool EnqueuePrepared(const SResourcePreviewKey &Key, CImageInfo &&Image, TUploadFinalize &&Finalize, const char *pDebugName);
@@ -214,12 +228,13 @@ public:
 
 	bool Completed() const REQUIRES(!m_Lock);
 	SResult TakeResult() REQUIRES(!m_Lock);
+	void CancelPublication() REQUIRES(!m_Lock);
 	// 仅供主线程发布结果；消费者准备失败时不取走结果，也不允许重入此 job。
 	template<typename FConsume>
 	bool TryPublishResult(FConsume &&Consume) REQUIRES(!m_Lock)
 	{
 		const CLockScope Lock(m_Lock);
-		if(m_ResultTaken)
+		if(m_PublicationCancelled || m_ResultTaken)
 			return true;
 		if(!m_Completed && !Finished())
 			return false;
@@ -245,9 +260,32 @@ private:
 	SResult m_Result;
 	bool m_Completed = false;
 	bool m_ResultTaken = false;
+	bool m_PublicationCancelled = false;
 };
 
-bool TryPublishSettingsResourcePreviewJob(CSettingsResourcePreviewJob &Job, const SResourcePreviewKey &Key, CSettingsResourcePreviewCache &Cache, CSettingsResourcePreviewUploadScheduler &Uploads, SResourcePreviewTelemetry &Telemetry);
+bool TryPublishSettingsResourcePreviewJob(CSettingsResourcePreviewJob &Job, const SResourcePreviewKey &Key, CSettingsResourcePreviewCache &Cache, CSettingsResourcePreviewUploadScheduler &Uploads, SResourcePreviewTelemetry &Telemetry, uint64_t CurrentGeneration = 0);
+
+// 代际先推进，再关闭发布并清理跟踪；worker 输入仍由 pool owner 保活，不阻塞等待。
+// 代际区间及匹配字符串由调用方保证在同步调用期间有效，空区间用于单个身份移除。
+template<typename TJobs>
+void InvalidateSettingsResourcePreviews(CSettingsResourcePreviewCache &Cache, CSettingsResourcePreviewUploadScheduler &Uploads, TJobs &Jobs, IGraphics *pGraphics, const SResourcePreviewInvalidationScope &Scope = {}, uint64_t *pGenerations = nullptr, size_t GenerationCount = 0)
+{
+	for(size_t Index = 0; Index < GenerationCount; ++Index)
+		++pGenerations[Index];
+	for(auto It = Jobs.begin(); It != Jobs.end();)
+	{
+		if(!Scope.Matches(It->first))
+		{
+			++It;
+			continue;
+		}
+		if(It->second)
+			It->second->CancelPublication();
+		It = Jobs.erase(It);
+	}
+	Uploads.Invalidate(Scope);
+	Cache.Invalidate(Scope, pGraphics);
+}
 
 // 跟踪节点先准备，接收失败撤回；缓存等待标记只在引擎确认后发布。
 template<typename TJobs, typename FCreate>

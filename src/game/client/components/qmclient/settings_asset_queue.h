@@ -2,11 +2,50 @@
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_SETTINGS_ASSET_QUEUE_H
 
 #include <algorithm>
+#include <charconv>
 #include <iterator>
 #include <new>
 #include <stdexcept>
+#include <string_view>
+#include <system_error>
 #include <type_traits>
 #include <utility>
+
+inline bool SettingsAssetQueueKeyReferencesAsset(std::string_view Key, int Tab, std::string_view Name)
+{
+	const size_t FirstSeparator = Key.find(':');
+	if(FirstSeparator == std::string_view::npos)
+		return false;
+	int KeyTab = -1;
+	const auto Parsed = std::from_chars(Key.data(), Key.data() + FirstSeparator, KeyTab);
+	if(Parsed.ec != std::errc() || Parsed.ptr != Key.data() + FirstSeparator || KeyTab != Tab)
+		return false;
+	Key.remove_prefix(FirstSeparator + 1);
+	for(int Field = 0; Field < 2; ++Field)
+	{
+		const size_t Separator = Key.find(':');
+		if(Separator == std::string_view::npos)
+			return false;
+		Key.remove_prefix(Separator + 1);
+	}
+	return Key == Name;
+}
+
+// 名字须由调用方持有至清理结束；删除单个资源不重建其它资源的记录。
+template<typename TQueue, typename TSet>
+void SettingsAssetQueueDiscardAsset(TQueue &Decode, TQueue &Ready, TSet &ReadyQueued, int Tab, std::string_view Name)
+{
+	auto Matches = [&](const auto &Handle) { return Handle.m_Tab == Tab && Handle.m_Name == Name; };
+	Decode.erase(std::remove_if(Decode.begin(), Decode.end(), Matches), Decode.end());
+	Ready.erase(std::remove_if(Ready.begin(), Ready.end(), Matches), Ready.end());
+	for(auto It = ReadyQueued.begin(); It != ReadyQueued.end();)
+	{
+		if(SettingsAssetQueueKeyReferencesAsset(*It, Tab, Name))
+			It = ReadyQueued.erase(It);
+		else
+			++It;
+	}
+}
 
 template<typename TQueue>
 void SettingsAssetQueuePromote(TQueue &Queue, typename TQueue::iterator It) noexcept

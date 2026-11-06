@@ -6679,6 +6679,7 @@ void CMenus::OnShutdown()
 	ClearQmTitlePreviewContainers();
 	InvalidateSettingsTextPool();
 	ClearSettingsAssetsCardMetadataCache();
+	ClearSettingsAssetPreviewResources();
 	ClearSettingsTeePreviewCache();
 	ClearSettingsLanguageRowCache();
 	ResetDemoScreenshotPreview();

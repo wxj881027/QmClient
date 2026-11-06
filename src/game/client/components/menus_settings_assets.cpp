@@ -327,6 +327,8 @@ namespace
 	static CSettingsResourcePreviewCache gs_SettingsAssetsResourcePreviewCache;
 	static CSettingsResourcePreviewUploadScheduler gs_SettingsAssetsResourcePreviewUploadScheduler;
 	static std::unordered_map<SResourcePreviewKey, std::shared_ptr<CSettingsResourcePreviewJob>, SResourcePreviewKeyHash> m_vEntityBgPreviewJobs;
+	// 内容硬失效独立于层级/筛选的本地 epoch；每个类别分别跟踪本地和商店。
+	static uint64_t gs_aAssetsPreviewGenerations[CMenus::NUMBER_OF_ASSETS_TABS * 2] = {};
 
 	static uint64_t AssetsCardLocaleHash()
 	{
@@ -540,6 +542,19 @@ namespace
 		return ListArea;
 	}
 
+	static void InvalidateAssetsResourcePreviewScope(int Tab, IGraphics *pGraphics, std::optional<bool> Workshop = std::nullopt, const char *pId = nullptr)
+	{
+		if(Tab < CMenus::ASSETS_TAB_ENTITIES || Tab >= CMenus::NUMBER_OF_ASSETS_TABS)
+			return;
+		char aType[64];
+		str_format(aType, sizeof(aType), "assets:%s", AssetsSettingsTabName(Tab));
+		uint64_t *pGenerations = &gs_aAssetsPreviewGenerations[Tab * 2 + (Workshop.value_or(false) ? 1 : 0)];
+		const size_t GenerationCount = pId != nullptr ? 0 : Workshop.has_value() ? 1 :
+											   2;
+		InvalidateSettingsResourcePreviews(gs_SettingsAssetsResourcePreviewCache, gs_SettingsAssetsResourcePreviewUploadScheduler,
+			m_vEntityBgPreviewJobs, pGraphics, {aType, pId, Workshop}, pGenerations, GenerationCount);
+	}
+
 	static SResourcePreviewKey BuildAssetsResourcePreviewKey(const char *pAssetId, int Tab, bool Workshop, float UiScale, float CardWidth)
 	{
 		SResourcePreviewKey Key;
@@ -549,6 +564,8 @@ namespace
 		Key.m_LocaleHash = AssetsCardLocaleHash();
 		Key.m_UiScale = AssetsUiScaleBucket(UiScale);
 		Key.m_CardWidth = AssetsCardWidthBucket(CardWidth);
+		if(Tab >= CMenus::ASSETS_TAB_ENTITIES && Tab < CMenus::NUMBER_OF_ASSETS_TABS)
+			Key.m_ResourceGeneration = gs_aAssetsPreviewGenerations[Tab * 2 + (Workshop ? 1 : 0)];
 		Key.m_Type += ":";
 		Key.m_Type += AssetsSettingsTabName(Tab);
 		return Key;
@@ -594,12 +611,20 @@ namespace
 		for(auto It = m_vEntityBgPreviewJobs.begin(); It != m_vEntityBgPreviewJobs.end();)
 		{
 			const std::shared_ptr<CSettingsResourcePreviewJob> &pJob = It->second;
+			const uint64_t CurrentGeneration = gs_aAssetsPreviewGenerations[CMenus::ASSETS_TAB_ENTITY_BG * 2 + (It->first.m_Workshop ? 1 : 0)];
+			if(It->first.m_ResourceGeneration != CurrentGeneration)
+			{
+				if(pJob)
+					pJob->CancelPublication();
+				It = m_vEntityBgPreviewJobs.erase(It);
+				continue;
+			}
 			if(!pJob || !pJob->Completed())
 			{
 				++It;
 				continue;
 			}
-			if(!TryPublishSettingsResourcePreviewJob(*pJob, It->first, gs_SettingsAssetsResourcePreviewCache, gs_SettingsAssetsResourcePreviewUploadScheduler, ResourcePreviewTelemetry))
+			if(!TryPublishSettingsResourcePreviewJob(*pJob, It->first, gs_SettingsAssetsResourcePreviewCache, gs_SettingsAssetsResourcePreviewUploadScheduler, ResourcePreviewTelemetry, CurrentGeneration))
 			{
 				++It;
 				continue;
@@ -1611,21 +1636,27 @@ namespace
 	}
 
 	static void NormalizeEntityBgWorkshopAsset(SWorkshopHudAsset &Asset, IStorage *pStorage)
+	try
 	{
 		if(Asset.m_InstallPath.empty())
 			return;
 
-		const auto Prepared = PrepareEntityBgWorkshopInstallPath(pStorage, Asset.m_InstallPath, IStorage::TYPE_SAVE);
+		auto Prepared = PrepareEntityBgWorkshopInstallPath(pStorage, Asset.m_InstallPath, IStorage::TYPE_SAVE);
 		if(Prepared.m_RenameFailed)
 		{
 			log_warn("assets", "Could not rename workshop asset '%s'; keeping previous install path", Asset.m_InstallPath.c_str());
 			return;
 		}
-		Asset.m_InstallPath = Prepared.m_Path;
-
-		const std::string LocalName = RebuildEntityBgWorkshopLocalName(Asset.m_InstallPath);
-		if(!LocalName.empty())
-			Asset.m_LocalName = LocalName;
+		Asset.m_InstallPath = std::move(Prepared.m_Path);
+		if(!Prepared.m_LocalName.empty())
+			Asset.m_LocalName = std::move(Prepared.m_LocalName);
+	}
+	catch(const std::bad_alloc &)
+	{
+		// 改名前的准备失败保留原文件与元数据，不从页面入口抛出。
+	}
+	catch(const std::length_error &)
+	{
 	}
 
 	static bool EntityBgWorkshopInstallLooksCorrupt(IStorage *pStorage, const SWorkshopHudAsset &Asset)
@@ -1885,6 +1916,23 @@ namespace
 		Asset.m_ThumbRequestedTextureSize = 0;
 		Asset.m_ThumbResidentBytes = 0;
 		pGraphics->UnloadTexture(&Asset.m_ThumbTexture);
+	}
+
+	static void InvalidateWorkshopPreviewInputs(SWorkshopHudState &State, IGraphics *pGraphics)
+	{
+		ClearWorkshopDecodeThumbQueue(State);
+		ClearWorkshopReadyThumbQueue(State);
+		for(SWorkshopHudAsset &Asset : State.m_vAssets)
+		{
+			if(Asset.m_pThumbTask)
+				Asset.m_pThumbTask->Abort();
+			Asset.m_pThumbTask.reset();
+			Asset.m_pDecodeJob.reset();
+			ResetWorkshopThumbReadyState(Asset);
+			Asset.m_ThumbRequestedTextureSize = 0;
+			Asset.m_ThumbResidentBytes = 0;
+			pGraphics->UnloadTexture(&Asset.m_ThumbTexture);
+		}
 	}
 
 	static bool QueueWorkshopReadyThumb(SWorkshopHudState &State, SWorkshopHudAsset &Asset, int CurTab, const IClient *pClient)
@@ -3002,6 +3050,20 @@ static void ResetCustomItemPreviewState(CMenus::SCustomItem &Item)
 	Item.m_PreviewHighPriority = false;
 }
 
+static void CancelLocalAssetPreviewInput(CMenus::SCustomItem &Item, IGraphics *pGraphics)
+{
+	ResetCustomItemPreviewState(Item);
+	if(Item.m_RenderTexture.IsValid())
+		pGraphics->UnloadTexture(&Item.m_RenderTexture);
+	Item.m_RenderTexture.Invalidate();
+}
+
+static void CancelLocalAssetPreviewInput(CMenus::SCustomEntities &Item, IGraphics *pGraphics)
+{
+	ResetCustomItemPreviewState(Item);
+	Item.UnloadTextures(pGraphics);
+}
+
 // 列表重建/合并会把预览队列整个清空、epoch 前进，正在解码的句柄随之作废。
 // 但条目本身还在：它们的 m_PreviewState 停在 LOADING，解码任务却已经没有队列
 // 认领，于是再也不会被重新调度——卡片永远停在灰占位上（实测的「贴图缺失」）。
@@ -3173,8 +3235,38 @@ void CMenus::RefreshEntityBgHierarchyView()
 	}
 }
 
+void CMenus::CancelLocalAssetPreview(int Tab, const char *pName)
+{
+	if(Tab < ASSETS_TAB_ENTITIES || Tab >= NUMBER_OF_ASSETS_TABS)
+		return;
+	auto Cancel = [&](auto &Items) {
+		for(auto &Item : Items)
+		{
+			if(str_comp(Item.m_aName, pName) == 0)
+				CancelLocalAssetPreviewInput(Item, Graphics());
+		}
+	};
+	switch(Tab)
+	{
+	case ASSETS_TAB_ENTITIES: Cancel(m_vEntitiesList); break;
+	case ASSETS_TAB_GAME: Cancel(m_vGameList); break;
+	case ASSETS_TAB_EMOTICONS: Cancel(m_vEmoticonList); break;
+	case ASSETS_TAB_PARTICLES: Cancel(m_vParticlesList); break;
+	case ASSETS_TAB_HUD: Cancel(m_vHudList); break;
+	case ASSETS_TAB_GUI_CURSOR: Cancel(m_vGuiCursorList); break;
+	case ASSETS_TAB_ARROW: Cancel(m_vArrowList); break;
+	case ASSETS_TAB_STRONG_WEAK: Cancel(m_vStrongWeakList); break;
+	case ASSETS_TAB_ENTITY_BG: Cancel(m_vEntityBgList); break;
+	case ASSETS_TAB_EXTRAS: Cancel(m_vExtrasList); break;
+	default: break;
+	}
+	SettingsAssetQueueDiscardAsset(m_aaCustomPreviewDecodeQueue[Tab], m_aaCustomPreviewReadyQueue[Tab], m_aaCustomPreviewReadyQueued[Tab], Tab, pName);
+}
+
 void CMenus::ClearCustomItems(int CurTab)
 {
+	// 这里刷新本地条目，商店目录与下载保持；两种内容代际分开。
+	InvalidateAssetsResourcePreviewScope(CurTab, Graphics(), false);
 	// Reset async loading state first
 	m_aAssetLoadStates[CurTab] = ASSET_LOAD_STATE_UNLOADED;
 	m_aAssetLoadRetryAt[CurTab] = std::chrono::nanoseconds(0);
@@ -3201,10 +3293,7 @@ void CMenus::ClearCustomItems(int CurTab)
 		for(auto &Entity : m_vEntitiesList)
 		{
 			ResetCustomItemPreviewState(Entity);
-			for(auto &Image : Entity.m_aImages)
-			{
-				Graphics()->UnloadTexture(&Image.m_Texture);
-			}
+			Entity.UnloadTextures(Graphics());
 		}
 		m_vEntitiesList.clear();
 		gs_vpSearchEntitiesList.clear();
@@ -3292,16 +3381,19 @@ void CMenus::ClearCustomItems(int CurTab)
 
 void CMenus::InvalidateSettingsAssetResourcePlan()
 {
+	InvalidateSettingsResourcePreviews(gs_SettingsAssetsResourcePreviewCache, gs_SettingsAssetsResourcePreviewUploadScheduler,
+		m_vEntityBgPreviewJobs, Graphics(), {}, gs_aAssetsPreviewGenerations, NUMBER_OF_ASSETS_TABS * 2);
 	for(int Tab = ASSETS_TAB_ENTITIES; Tab < NUMBER_OF_ASSETS_TABS; ++Tab)
 	{
+		if(SWorkshopHudState *pWorkshopState = WorkshopStateByTab(Tab))
+			InvalidateWorkshopPreviewInputs(*pWorkshopState, Graphics());
 		switch(Tab)
 		{
 		case ASSETS_TAB_ENTITIES:
 			for(auto &Entity : m_vEntitiesList)
 			{
 				ResetCustomItemPreviewState(Entity);
-				for(auto &Image : Entity.m_aImages)
-					Graphics()->UnloadTexture(&Image.m_Texture);
+				Entity.UnloadTextures(Graphics());
 			}
 			m_vEntitiesList.clear();
 			gs_vpSearchEntitiesList.clear();
@@ -3361,6 +3453,17 @@ void CMenus::InvalidateSettingsAssetResourcePlan()
 		gs_aInitCustomList[Tab] = true;
 	}
 	gs_NextAssetWarmupTab = ASSETS_TAB_ENTITIES;
+}
+
+void CMenus::ClearSettingsAssetPreviewResources()
+{
+	// 复用硬失效释放本地及共享资源；此时图形接口仍存活，不做等待。
+	InvalidateSettingsAssetResourcePlan();
+	for(int Tab = ASSETS_TAB_ENTITIES; Tab < NUMBER_OF_ASSETS_TABS; ++Tab)
+	{
+		if(SWorkshopHudState *pWorkshopState = WorkshopStateByTab(Tab))
+			ResetWorkshopState(*pWorkshopState, Graphics(), true);
+	}
 }
 
 template<typename TItem>
@@ -5979,6 +6082,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			const SWorkshopHudAsset *pWorkshopAsset = FindWorkshopAssetByLocalName(WorkshopStateByTab(s_CurCustomTab), s_aPendingDeleteName);
 			if(DeleteLocalAssetByTab(Storage(), s_CurCustomTab, s_aPendingDeleteName, pWorkshopAsset != nullptr ? pWorkshopAsset->m_InstallPath.c_str() : nullptr))
 			{
+				InvalidateAssetsResourcePreviewScope(s_CurCustomTab, Graphics(), false, s_aPendingDeleteName);
+				CancelLocalAssetPreview(s_CurCustomTab, s_aPendingDeleteName);
 				char aToastText[IO_MAX_PATH_LENGTH + 64];
 				str_format(aToastText, sizeof(aToastText), Localize("Deleted \"%s\""), s_aPendingDeleteName);
 				qm_ui::Toast(EQmToastKind::SUCCESS, aToastText);
@@ -6348,7 +6453,10 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				for(SWorkshopHudAsset &Asset : WorkshopState.m_vAssets)
 				{
 					if(!NewAssetIds.contains(Asset.m_Id))
+					{
+						InvalidateAssetsResourcePreviewScope(s_CurCustomTab, Graphics(), true, Asset.m_Id.empty() ? Asset.m_Name.c_str() : Asset.m_Id.c_str());
 						ResetWorkshopAssetRuntimeState(Asset, Graphics(), true);
+					}
 				}
 				WorkshopState.m_vAssets.erase(
 					std::remove_if(WorkshopState.m_vAssets.begin(), WorkshopState.m_vAssets.end(),
@@ -7457,6 +7565,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				const SWorkshopHudAsset *pWorkshopAsset = FindWorkshopAssetByLocalName(&WorkshopState, s_aWorkshopPendingDeleteName);
 				if(DeleteLocalAssetByTab(Storage(), s_CurCustomTab, s_aWorkshopPendingDeleteName, pWorkshopAsset != nullptr ? pWorkshopAsset->m_InstallPath.c_str() : nullptr))
 				{
+					InvalidateAssetsResourcePreviewScope(s_CurCustomTab, Graphics(), false, s_aWorkshopPendingDeleteName);
+					CancelLocalAssetPreview(s_CurCustomTab, s_aWorkshopPendingDeleteName);
 					char aToastText[IO_MAX_PATH_LENGTH + 64];
 					str_format(aToastText, sizeof(aToastText), Localize("Deleted \"%s\""), s_aWorkshopPendingDeleteName);
 					qm_ui::Toast(EQmToastKind::SUCCESS, aToastText);
@@ -7692,7 +7802,10 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	if(SupportsWorkshopSync && DoSettingsButton_Menu(SETTINGS_ASSETS, s_CurCustomTab, s_CurCustomTab, &s_WorkshopSyncId, "assets-toolbar-sync-workshop-assets", Localize("Sync Workshop Assets"), 0, &WorkshopSyncButton))
 	{
 		if(SWorkshopHudState *pWorkshopState = WorkshopStateByTab(s_CurCustomTab))
+		{
+			InvalidateAssetsResourcePreviewScope(s_CurCustomTab, Graphics(), true);
 			ResetWorkshopState(*pWorkshopState, Graphics(), true);
+		}
 	}
 	if(SupportsWorkshopSync)
 		GameClient()->m_Tooltips.DoToolTip(&s_WorkshopSyncId, &WorkshopSyncButton, Localize("Sync Workshop Assets"));

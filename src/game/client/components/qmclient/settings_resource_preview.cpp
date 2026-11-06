@@ -7,6 +7,7 @@
 #include <engine/gfx/image_loader.h>
 #include <engine/gfx/image_manipulation.h>
 
+#include <algorithm>
 #include <chrono>
 #include <utility>
 
@@ -16,6 +17,7 @@ bool SResourcePreviewKey::operator==(const SResourcePreviewKey &Other) const
 	       m_LocaleHash == Other.m_LocaleHash &&
 	       m_UiScale == Other.m_UiScale &&
 	       m_CardWidth == Other.m_CardWidth &&
+	       m_ResourceGeneration == Other.m_ResourceGeneration &&
 	       m_Type == Other.m_Type &&
 	       m_Id == Other.m_Id;
 }
@@ -28,7 +30,15 @@ size_t SResourcePreviewKeyHash::operator()(const SResourcePreviewKey &Key) const
 	Hash ^= std::hash<uint64_t>{}(Key.m_LocaleHash) + 0x9e3779b9 + (Hash << 6) + (Hash >> 2);
 	Hash ^= std::hash<int>{}(Key.m_UiScale) + 0x9e3779b9 + (Hash << 6) + (Hash >> 2);
 	Hash ^= std::hash<int>{}(Key.m_CardWidth) + 0x9e3779b9 + (Hash << 6) + (Hash >> 2);
+	Hash ^= std::hash<uint64_t>{}(Key.m_ResourceGeneration) + 0x9e3779b9 + (Hash << 6) + (Hash >> 2);
 	return Hash;
+}
+
+bool SResourcePreviewInvalidationScope::Matches(const SResourcePreviewKey &Key) const
+{
+	return (m_pType == nullptr || Key.m_Type == m_pType) &&
+	       (m_pId == nullptr || Key.m_Id == m_pId) &&
+	       (!m_Workshop.has_value() || Key.m_Workshop == *m_Workshop);
 }
 
 SResourcePreviewState &CSettingsResourcePreviewCache::GetOrCreate(const SResourcePreviewKey &Key)
@@ -95,16 +105,22 @@ void CSettingsResourcePreviewCache::MarkUploadFailed(const SResourcePreviewKey &
 
 void CSettingsResourcePreviewCache::Clear(IGraphics *pGraphics)
 {
-	if(pGraphics != nullptr)
+	Invalidate({}, pGraphics);
+}
+
+void CSettingsResourcePreviewCache::Invalidate(const SResourcePreviewInvalidationScope &Scope, IGraphics *pGraphics)
+{
+	for(auto It = m_vStates.begin(); It != m_vStates.end();)
 	{
-		for(auto &[Key, State] : m_vStates)
+		if(!Scope.Matches(It->first))
 		{
-			(void)Key;
-			if(State.m_Texture.IsValid())
-				pGraphics->UnloadTexture(&State.m_Texture);
+			++It;
+			continue;
 		}
+		if(pGraphics != nullptr && It->second.m_Texture.IsValid())
+			pGraphics->UnloadTexture(&It->second.m_Texture);
+		It = m_vStates.erase(It);
 	}
-	m_vStates.clear();
 }
 
 void CSettingsResourcePreviewScheduler::BeginFrame(int VisibleBudget, int NearVisibleBudget, int BackgroundBudget, int UploadBudget)
@@ -186,13 +202,13 @@ bool CSettingsResourcePreviewJob::Completed() const
 {
 	const CLockScope Lock(m_Lock);
 	// 池收拢异常后已无 worker 写入，消费者仍需取走失败结果并释放等待槽。
-	return m_Completed || Finished();
+	return m_PublicationCancelled || m_Completed || Finished();
 }
 
 CSettingsResourcePreviewJob::SResult CSettingsResourcePreviewJob::TakeResult()
 {
 	const CLockScope Lock(m_Lock);
-	if(!m_Completed || m_ResultTaken)
+	if(m_PublicationCancelled || !m_Completed || m_ResultTaken)
 		return SResult();
 	SResult Result = std::move(m_Result);
 	m_Result = SResult();
@@ -200,14 +216,29 @@ CSettingsResourcePreviewJob::SResult CSettingsResourcePreviewJob::TakeResult()
 	return Result;
 }
 
+void CSettingsResourcePreviewJob::CancelPublication()
+{
+	const CLockScope Lock(m_Lock);
+	m_PublicationCancelled = true;
+	m_Result = SResult();
+	// 输入可能仍在锁外被 worker 使用，不在这里清理它或等待物理完成。
+}
+
 void CSettingsResourcePreviewJob::Run()
 {
+	{
+		const CLockScope Lock(m_Lock);
+		if(m_PublicationCancelled)
+			return;
+	}
 	SResult Result;
 	if(!m_Path.empty())
 		Result.m_Artifact = BuildPreviewArtifactFromPath(m_Path.c_str(), m_pStorage, m_StorageType, m_Name.c_str(), m_TargetSize);
 	else
 		Result.m_Artifact = BuildPreviewArtifact(std::move(m_InputImage), m_TargetSize);
 	const CLockScope Lock(m_Lock);
+	if(m_PublicationCancelled)
+		return;
 	m_Result = std::move(Result);
 	m_Completed = true;
 }
@@ -248,8 +279,13 @@ bool CSettingsResourcePreviewUploadScheduler::EnqueuePrepared(const SResourcePre
 	}
 }
 
-bool TryPublishSettingsResourcePreviewJob(CSettingsResourcePreviewJob &Job, const SResourcePreviewKey &Key, CSettingsResourcePreviewCache &Cache, CSettingsResourcePreviewUploadScheduler &Uploads, SResourcePreviewTelemetry &Telemetry)
+bool TryPublishSettingsResourcePreviewJob(CSettingsResourcePreviewJob &Job, const SResourcePreviewKey &Key, CSettingsResourcePreviewCache &Cache, CSettingsResourcePreviewUploadScheduler &Uploads, SResourcePreviewTelemetry &Telemetry, uint64_t CurrentGeneration)
 {
+	if(Key.m_ResourceGeneration != CurrentGeneration)
+	{
+		Job.CancelPublication();
+		return true;
+	}
 	try
 	{
 		return Job.TryPublishResult([&](CSettingsResourcePreviewJob::SResult &Result) {
@@ -350,6 +386,14 @@ int CSettingsResourcePreviewUploadScheduler::Drain(SResourcePreviewUploadBudget 
 void CSettingsResourcePreviewUploadScheduler::Clear()
 {
 	m_vUploadQueue.clear();
+}
+
+void CSettingsResourcePreviewUploadScheduler::Invalidate(const SResourcePreviewInvalidationScope &Scope)
+{
+	// 稳定压缩后一次删除尾段，不分配候选容器，也不调用取消项的 Finalize。
+	m_vUploadQueue.erase(std::remove_if(m_vUploadQueue.begin(), m_vUploadQueue.end(),
+				     [&](const SUploadItem &Item) { return Scope.Matches(Item.m_Key); }),
+		m_vUploadQueue.end());
 }
 
 SResourcePreviewArtifact BuildPreviewArtifact(CImageInfo &&Image, int TargetSize)

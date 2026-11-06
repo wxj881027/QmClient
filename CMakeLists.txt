@@ -5135,6 +5135,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/base/logger_file_creation_test.cpp
     src/test/unit/client/assets_editor_layout_test.cpp
     src/test/unit/client/assets_preview_scale_test.cpp
+    src/test/unit/client/assets_preview_budget_conversion_test.cpp
     src/test/unit/client/assets_author_persistence_test.cpp
     src/test/unit/client/assets_resource_migration_test.cpp
     src/test/unit/client/assets_resource_registry_test.cpp
@@ -5718,6 +5719,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qmclient_update_package_plan_test.cpp
     src/test/integration/qmclient/settings/settings_resource_preview_pipeline_test.cpp
     src/test/integration/qmclient/settings/settings_resource_preview_upload_test.cpp
+    src/test/integration/qmclient/settings/settings_resource_preview_invalidation_test.cpp
     src/test/integration/qmclient/settings/qm_nameplate_cards_test.cpp
     src/test/integration/qmclient/settings/qm_general_cards_test.cpp
     src/test/integration/qmclient/settings/qm_catalog_search_test.cpp
@@ -6585,6 +6587,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/client/qm_console_search_input_allocation_test.cpp
       src/test/unit/qmclient/client/qm_console_input_colors_test.cpp
       src/test/unit/qmclient/client/qm_settings_asset_queue_test.cpp
+      src/test/unit/client/entity_bg_install_path_commit_test.cpp
+      src/game/client/components/assets_resource_registry.cpp
       src/test/unit/qmclient/client/qm_console_selection_copy_test.cpp
       src/test/unit/qmclient/ui/qm_line_input_motion_allocation_test.cpp
       src/test/unit/qmclient/ui/qm_selection_commit_allocation_test.cpp

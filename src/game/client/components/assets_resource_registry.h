@@ -9,6 +9,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 enum class EAssetResourceKind
@@ -102,20 +103,31 @@ struct SEntityBgInstallPathPreparation
 {
 	std::string m_Path;
 	bool m_RenameFailed = false;
+	std::string m_LocalName;
 };
 
-// 路径元数据只在文件改名成功后跟进；已有目标与没有旧文件时保留原规范化策略。
+// 路径、本地名与返回对象均在改名前准备；提交后仅移动或交换已有字符串。
+// 已有目标与没有旧文件时保留原规范化策略，改名失败不提供待发布的本地名。
 template<typename TStorage>
 SEntityBgInstallPathPreparation PrepareEntityBgWorkshopInstallPath(TStorage *pStorage, std::string_view InstallPath, int StorageType)
 {
-	const std::string Current(InstallPath);
-	const std::string Normalized = NormalizeEntityBgWorkshopInstallPath(InstallPath);
-	if(Normalized.empty() || Normalized == Current)
-		return {Current, false};
-	if(pStorage && pStorage->FileExists(Current.c_str(), StorageType) && !pStorage->FileExists(Normalized.c_str(), StorageType) &&
-		!pStorage->RenameFile(Current.c_str(), Normalized.c_str(), StorageType))
-		return {Current, true};
-	return {Normalized, false};
+	std::string Current(InstallPath);
+	SEntityBgInstallPathPreparation Result;
+	Result.m_Path = NormalizeEntityBgWorkshopInstallPath(InstallPath);
+	const bool NeedsNormalization = !Result.m_Path.empty() && Result.m_Path != Current;
+	if(!NeedsNormalization)
+		Result.m_Path = std::move(Current);
+	Result.m_LocalName = RebuildEntityBgWorkshopLocalName(Result.m_Path);
+	if(!NeedsNormalization)
+		return Result;
+	if(pStorage && pStorage->FileExists(Current.c_str(), StorageType) && !pStorage->FileExists(Result.m_Path.c_str(), StorageType) &&
+		!pStorage->RenameFile(Current.c_str(), Result.m_Path.c_str(), StorageType))
+	{
+		Result.m_Path.swap(Current);
+		Result.m_LocalName.clear();
+		Result.m_RenameFailed = true;
+	}
+	return Result;
 }
 
 bool EntityBgHierarchyEntryLess(const SEntityBgHierarchyEntry &Left, const SEntityBgHierarchyEntry &Right);
