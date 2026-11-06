@@ -43,13 +43,44 @@ TEST(QmSearchHeader, QueryRemovesHeaderAndPlacesInputAtTop)
 	EXPECT_FLOAT_EQ(Layout.m_InputOffsetY, 0.0f);
 }
 
-TEST(QmSearchHeader, EmptySearchCentersTheCompleteGroup)
+TEST(QmSearchHeader, EmptySearchAnchorsLogoAtQuarterAndInputCardAtHalf)
 {
-	const CUIRect Viewport{20.0f, 30.0f, 600.0f, 400.0f};
-	const auto Layout = qm_search_header::Layout(Viewport, 100.0f, 1.0f, false, 0);
-	EXPECT_FLOAT_EQ(Layout.m_Logo.x + Layout.m_Logo.w * 0.5f, Viewport.x + Viewport.w * 0.5f);
-	EXPECT_NEAR(Layout.m_Logo.y - Viewport.y, Viewport.h - Layout.m_InputOffsetY - 100.0f, 0.001f);
-	EXPECT_LT(Layout.m_Logo.y + Layout.m_Logo.h, Layout.m_Subtitle.y);
+	const CUIRect Viewport{20.0f, 30.0f, 900.0f, 600.0f};
+	for(int Image = 0; Image < qm_search_header::NUM_LOGOS; ++Image)
+	{
+		SCOPED_TRACE(Image);
+		const auto Layout = qm_search_header::Layout(Viewport, 100.0f, 1.0f, false, Image);
+		ASSERT_GT(Layout.m_Logo.h, 0.0f);
+		EXPECT_FLOAT_EQ(Layout.m_Logo.x + Layout.m_Logo.w * 0.5f, Viewport.x + Viewport.w * 0.5f);
+		EXPECT_NEAR(Layout.m_Logo.y + Layout.m_Logo.h * 0.5f, Viewport.y + Viewport.h * 0.25f, 0.001f);
+		EXPECT_FLOAT_EQ(Layout.m_InputOffsetY + 50.0f, Viewport.h * 0.5f);
+		EXPECT_LT(Layout.m_Logo.y + Layout.m_Logo.h, Layout.m_Subtitle.y);
+		EXPECT_LT(Layout.m_Subtitle.y + Layout.m_Subtitle.h, Viewport.y + Layout.m_InputOffsetY);
+	}
+}
+
+TEST(QmSearchHeader, ChangingInputCardHeightKeepsItsCenterAtHalf)
+{
+	const CUIRect Viewport{20.0f, 30.0f, 900.0f, 600.0f};
+	const float aInputHeights[] = {40.0f, 100.0f, 140.0f};
+	for(const float InputHeight : aInputHeights)
+	{
+		SCOPED_TRACE(InputHeight);
+		const auto Layout = qm_search_header::Layout(Viewport, InputHeight, 1.0f, false, 0);
+		ASSERT_GT(Layout.m_Logo.h, 0.0f);
+		EXPECT_NEAR(Layout.m_Logo.y + Layout.m_Logo.h * 0.5f, Viewport.y + Viewport.h * 0.25f, 0.001f);
+		EXPECT_FLOAT_EQ(Layout.m_InputOffsetY + InputHeight * 0.5f, Viewport.h * 0.5f);
+		EXPECT_LT(Layout.m_Subtitle.y + Layout.m_Subtitle.h, Viewport.y + Layout.m_InputOffsetY);
+	}
+}
+
+TEST(QmSearchHeader, LargeScaleKeepsQuarterAndHalfAnchorsWhenSpaceAllows)
+{
+	const CUIRect Viewport{20.0f, 30.0f, 1400.0f, 1200.0f};
+	const auto Layout = qm_search_header::Layout(Viewport, 240.0f, 2.0f, false, 1);
+	ASSERT_GT(Layout.m_Logo.h, 0.0f);
+	EXPECT_NEAR(Layout.m_Logo.y + Layout.m_Logo.h * 0.5f, Viewport.y + Viewport.h * 0.25f, 0.001f);
+	EXPECT_FLOAT_EQ(Layout.m_InputOffsetY + 120.0f, Viewport.h * 0.5f);
 	EXPECT_LT(Layout.m_Subtitle.y + Layout.m_Subtitle.h, Viewport.y + Layout.m_InputOffsetY);
 }
 
@@ -61,6 +92,8 @@ TEST(QmSearchHeader, SmallViewportAndLargeScaleKeepHeaderInsideViewport)
 	EXPECT_GE(Layout.m_Logo.x, Viewport.x);
 	EXPECT_GE(Layout.m_Logo.y, Viewport.y);
 	EXPECT_LE(Layout.m_Logo.x + Layout.m_Logo.w, Viewport.x + Viewport.w);
+	EXPECT_LT(Layout.m_Logo.y + Layout.m_Logo.h, Layout.m_Subtitle.y);
+	EXPECT_LT(Layout.m_Subtitle.y + Layout.m_Subtitle.h, Viewport.y + Layout.m_InputOffsetY);
 	EXPECT_LE(Layout.m_InputOffsetY + 120.0f, Viewport.h);
 }
 
@@ -78,7 +111,7 @@ TEST(QmSearchHeader, EveryImageCanBeSelectedIndependentlyOfSplash)
 		qm_search_header::CSession Session;
 		Session.Enter(1, 0, Image);
 		EXPECT_EQ(Session.LogoIndex(), Image);
-		EXPECT_STREQ(Session.Text(), "今天打算跑什么图呢?");
+		EXPECT_STREQ(Session.Text(), qm_search_header::SPLASHES[0]);
 	}
 }
 

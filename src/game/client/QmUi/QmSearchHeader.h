@@ -102,23 +102,28 @@ inline SLayout Layout(const CUIRect &Viewport, float InputHeight, float UiScale,
 	if(HasQuery)
 		return Result;
 	const float Available = std::max(0.0f, Viewport.h - InputHeight);
+	Result.m_InputOffsetY = Available * 0.5f;
 	const float Gap = 12.0f * UiScale;
 	const float SubtitleHeight = 22.0f * UiScale;
 	const float LogoBudget = std::max(0.0f, Available - SubtitleHeight - 2.0f * Gap);
-	// 极矮视口优先保留输入框；正常窗口将图片、短句和输入卡片整体居中。
+	// 极矮视口优先保留输入框。
 	if(LogoBudget < 20.0f * UiScale || Viewport.w <= 0.0f)
-	{
-		Result.m_InputOffsetY = Available * 0.5f;
 		return Result;
-	}
+	// 图片中心位于视口的 1/4，输入卡片中心位于 1/2；短句与间距预留在两者之间。
+	const float LogoCenterY = Viewport.h * 0.25f;
+	const float CenteredLogoBudget = 2.0f * std::min(LogoCenterY, Result.m_InputOffsetY - LogoCenterY - SubtitleHeight - 2.0f * Gap);
+	const bool UseAnchors = CenteredLogoBudget >= 20.0f * UiScale;
+	const float LogoHeightBudget = UseAnchors ? std::min(LogoBudget, CenteredLogoBudget) : LogoBudget;
 	const float LogoAspect = s_aLogos[Result.m_LogoIndex].Aspect();
-	const float LogoWidth = std::min({340.0f * UiScale, Viewport.w * 0.8f, LogoBudget * LogoAspect});
+	const float LogoWidth = std::min({340.0f * UiScale, Viewport.w * 0.8f, LogoHeightBudget * LogoAspect});
 	const float LogoHeight = LogoWidth / LogoAspect;
 	const float HeaderHeight = LogoHeight + SubtitleHeight + 2.0f * Gap;
-	const float Top = (Available - HeaderHeight) * 0.5f;
+	// 高度不足时沿用整组居中的紧凑布局，避免图片、短句和输入卡片重叠。
+	const float Top = UseAnchors ? LogoCenterY - LogoHeight * 0.5f : (Available - HeaderHeight) * 0.5f;
 	Result.m_Logo = {Viewport.x + (Viewport.w - LogoWidth) * 0.5f, Viewport.y + Top, LogoWidth, LogoHeight};
 	Result.m_Subtitle = {Viewport.x, Result.m_Logo.y + LogoHeight + Gap, Viewport.w, SubtitleHeight};
-	Result.m_InputOffsetY = Top + HeaderHeight;
+	if(!UseAnchors)
+		Result.m_InputOffsetY = Top + HeaderHeight;
 	return Result;
 }
 

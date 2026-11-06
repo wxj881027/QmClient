@@ -317,7 +317,7 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 	const SCardMotionSpec Motion = SettingsCardMotionSpec();
 
 	// —— 搜索输入卡片：脱离卡组手动绘制 ——
-	// 无搜索内容时在视口内垂直居中；输入内容后置顶并把下方空间让位给结果卡片，
+	// 无搜索内容时卡片中心位于视口中线；输入内容后置顶并把下方空间让位给结果卡片，
 	// 两种状态间的过渡沿用卡组让位动画的时长与缓动。
 	static CButtonContainer s_GlobalSearchInputCollapseButton;
 	static bool s_GlobalSearchInputCollapsed = false;
@@ -326,7 +326,9 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 	// 回退 PR #425 时丢掉了这段展开逻辑，只留下带折叠判据的消费分支。
 	if(!ReadOnly && m_FocusSettingsSearchOnEntry)
 		s_GlobalSearchInputCollapsed = false;
-	const float InputContentHeight = s_GlobalSearchInputCollapsed ? 0.0f : 2.0f * LineHeight + LineSpacing;
+	const float SearchInputHeight = LineHeight * 1.2f;
+	const float SearchInputFontSize = BodySize * 1.2f;
+	const float InputContentHeight = s_GlobalSearchInputCollapsed ? 0.0f : SearchInputHeight + LineHeight + LineSpacing;
 	const SSettingsCardSpec InputSpec{"deck:global-search-input", Localize("Feature Search"), qm_card_registry::ResolveLocalizedDescription("deck:global-search-input")};
 	const float InputChromeHeight = BuildSettingsCardFrame({0.0f, 0.0f, Page.m_ContentViewport.w, 0.0f}, InputSpec, InputContentHeight, UiScale).m_Rect.h;
 	const auto HeaderLayout = qm_search_header::Layout(Page.m_ContentViewport, InputChromeHeight, UiScale, HasSearchQuery, m_GlobalSearchHeaderSession.LogoIndex());
@@ -361,18 +363,18 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 		SSettingsCardVisualState InputVisualState;
 		InputVisualState.m_Collapsed = s_GlobalSearchInputCollapsed;
 		InputVisualState.m_ClipContent = true;
-		const auto RenderInputContent = [this, UiScale, BodySize, SmallSize, LineHeight, LineSpacing, SearchMatchedGlobalCardCount, ReadOnly](CUIRect Content) {
+		const auto RenderInputContent = [this, UiScale, SearchInputHeight, SearchInputFontSize, SmallSize, LineHeight, LineSpacing, SearchMatchedGlobalCardCount, ReadOnly](CUIRect Content) {
 			if(Content.h <= 0.0f || Content.w <= 0.0f)
 				return;
 			CUIRect Row;
-			Content.HSplitTop(LineHeight, &Row, &Content);
+			Content.HSplitTop(SearchInputHeight, &Row, &Content);
 			IUiContext InputCtx = SettingsUiContext("settings_global_search", UiScale);
 			if(ReadOnly)
 			{
 				InputCtx.m_pAnim = nullptr;
 				InputCtx.m_pTree = nullptr;
 			}
-			ui_widget::InputField(InputCtx, &m_GlobalCardSearchInput, Row, BodySize, !ReadOnly && !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive());
+			ui_widget::InputField(InputCtx, &m_GlobalCardSearchInput, Row, SearchInputFontSize, !ReadOnly && !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive());
 			Content.HSplitTop(LineSpacing * 0.65f, nullptr, &Content);
 			Content.HSplitTop(LineHeight, &Row, &Content);
 			char aSearchHint[64];
