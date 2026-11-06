@@ -120,11 +120,11 @@ namespace qm_card_catalog
 			return BuildChatCompletionCard(Ctx, Out);
 		if(str_comp(pStableId, "qm:steam") == 0)
 			return BuildSteamCard(Ctx, Id, Out);
-		if(ContainsStableId(VisualCardStableIds(), pStableId))
+		if(Id == qm_module::EQmModuleId::ChatBubble || ContainsStableId(VisualCardStableIds(), pStableId))
 			return BuildVisualCard(Ctx, Id, Out);
 		if(ContainsStableId(FunctionCardStableIds(), pStableId))
 			return BuildFunctionCard(Ctx, Id, Out);
-		if(ContainsStableId(HudCardStableIds(), pStableId))
+		if(Id == qm_module::EQmModuleId::SystemMediaControls || ContainsStableId(HudCardStableIds(), pStableId))
 			return BuildHudCard(Ctx, Id, Out);
 		return false;
 	}

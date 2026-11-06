@@ -307,7 +307,7 @@ void CMenus::RenderQmVisualChatBubbleContent(CUIRect &Content, float LineHeight,
 	{
 		SplitSettingsControlRow(StyleRow, CurrentSettingsContentMetrics(), &StyleLabel, &StyleControl);
 		RenderQmVisualLabel("qm-chat-bubble-style-label", &StyleLabel, Localize("Style"), BodySize);
-		const char *apStyles[] = {Localize("Comic dialogue"), Localize("Candy gradient"), Localize("Cloud bubble")};
+		const char *apStyles[] = {Localize("Comic dialogue"), Localize("Candy gradient"), Localize("Cloud bubble"), Localize("Default")};
 		static CUi::SDropDownState s_StyleState;
 		static CScrollRegion s_StyleScroll;
 		s_StyleState.m_SelectionPopupContext.m_pScrollRegion = &s_StyleScroll;
@@ -350,14 +350,14 @@ void CMenus::RenderQmVisualChatBubbleContent(CUIRect &Content, float LineHeight,
 			else
 				qm_chat_bubble::Render(Graphics(), Bubble, Colors);
 			TextRender()->TextColor(Colors.m_Text);
-			TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor().WithMultipliedAlpha(g_Config.m_QmChatBubbleCustomColors ? Colors.m_Text.a : 0.0f));
+			TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor().WithMultipliedAlpha((g_Config.m_QmChatBubbleCustomColors || Style == qm_chat_bubble::EStyle::DEFAULT) ? Colors.m_Text.a : 0.0f));
 			CTextCursor Cursor;
 			Cursor.m_FontSize = FontSize * Scale;
 			Cursor.m_LineWidth = Measure.m_LineWidth * Scale;
 			Cursor.m_Flags = TEXTFLAG_RENDER;
 			Cursor.SetPosition(Bubble.m_TextPosition);
 			qm_chat_bubble::RenderText(TextRender(), Cursor, pText, Colors.m_Text,
-				TextRender()->DefaultTextOutlineColor().WithMultipliedAlpha(g_Config.m_QmChatBubbleCustomColors ? Colors.m_Text.a : 0.0f));
+				TextRender()->DefaultTextOutlineColor().WithMultipliedAlpha((g_Config.m_QmChatBubbleCustomColors || Style == qm_chat_bubble::EStyle::DEFAULT) ? Colors.m_Text.a : 0.0f));
 		}
 		TextRender()->SetRenderFlags(PreviousFlags);
 		TextRender()->TextColor(PreviousColor);

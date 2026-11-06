@@ -407,7 +407,9 @@ void CMenus::RenderQmHudSystemMediaControlsContent(CUIRect &Content, float LineH
 	CSettingsContentLayoutFlow Flow(Content);
 	const auto DeclaredCheckbox = [&](CUIRect &, float Height, float Spacing, const void *pId, const char *pTextId, const char *pText, int *pValue) {
 		CUIRect Row;
-		const bool Changed = Flow.Control(pTextId, Height, Row) && RenderQmHudCheckbox(Row, Height, 0.0f, pId, pTextId, pText, pValue);
+		const bool Changed = Flow.Control(pTextId, Height, Row) && DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, -1, pId, pTextId, pText, *pValue, &Row);
+		if(Changed)
+			*pValue ^= 1;
 		Flow.Space(Spacing);
 		return Changed;
 	};
@@ -429,13 +431,13 @@ void CMenus::RenderQmHudSystemMediaControlsContent(CUIRect &Content, float LineH
 		NextButton = Actions.m_aButtons[2];
 
 		static CButtonContainer s_SmtcPrev;
-		if(DoSettingsButton_Menu(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, &s_SmtcPrev, "qmclient-smtc-previous", Localize("Previous"), 0, &PrevButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE))
+		if(DoSettingsButton_Menu(SETTINGS_DDNET, -1, -1, &s_SmtcPrev, "qmclient-smtc-previous", Localize("Previous"), 0, &PrevButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE))
 			GameClient()->m_SystemMediaControls.Previous();
 		static CButtonContainer s_SmtcPlayPause;
-		if(DoSettingsButton_Menu(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, &s_SmtcPlayPause, "qmclient-smtc-play-pause", Localize("Play/Pause"), 0, &PlayButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE))
+		if(DoSettingsButton_Menu(SETTINGS_DDNET, -1, -1, &s_SmtcPlayPause, "qmclient-smtc-play-pause", Localize("Play/Pause"), 0, &PlayButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE))
 			GameClient()->m_SystemMediaControls.PlayPause();
 		static CButtonContainer s_SmtcNext;
-		if(DoSettingsButton_Menu(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, &s_SmtcNext, "qmclient-smtc-next", Localize("Next"), 0, &NextButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE))
+		if(DoSettingsButton_Menu(SETTINGS_DDNET, -1, -1, &s_SmtcNext, "qmclient-smtc-next", Localize("Next"), 0, &NextButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE))
 			GameClient()->m_SystemMediaControls.Next();
 	}
 	Flow.Space(LineSpacing);

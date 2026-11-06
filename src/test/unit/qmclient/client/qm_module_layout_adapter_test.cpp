@@ -533,7 +533,7 @@ TEST(QmModuleLayoutAdapter, SerializeMergedGlobalOrderPreservesNonQmCards)
 	const std::string Result(aMerged);
 	EXPECT_NE(Result.find("tclient:visual-nameplates|tclient|1|0;"), std::string::npos);
 	EXPECT_NE(Result.find("deck:graphics-display|graphics|2|0;"), std::string::npos);
-	EXPECT_NE(Result.find("qm:chat_bubble|visual|right|"), std::string::npos);
+	EXPECT_NE(Result.find("qm:chat_bubble|appearance-chat|right|"), std::string::npos);
 	EXPECT_NE(Result.find("qm:camera_view|visual|left|"), std::string::npos);
 	EXPECT_EQ(Result.find("qm:chat_bubble|visual|1|5;"), std::string::npos);
 }
@@ -553,7 +553,7 @@ TEST(QmModuleLayoutAdapter, SerializeMergedGlobalOrderDropsUnknownQmCards)
 	const std::string Result(aMerged);
 	EXPECT_EQ(Result.find("qm:removed_card"), std::string::npos);
 	EXPECT_NE(Result.find("tclient:visual-nameplates|tclient|left|0;"), std::string::npos);
-	EXPECT_NE(Result.find("qm:chat_bubble|visual|right|"), std::string::npos);
+	EXPECT_NE(Result.find("qm:chat_bubble|appearance-chat|right|"), std::string::npos);
 }
 
 // 意图：全局合并直接写固定长度 config buffer；容量不足必须显式失败，
@@ -575,7 +575,7 @@ TEST(QmModuleLayoutAdapter, SerializeMergedGlobalOrderReportsTruncation)
 		aFull,
 		sizeof(aFull)));
 	EXPECT_NE(std::string(aFull).find("tclient:visual-nameplates|tclient|left|0;"), std::string::npos);
-	EXPECT_NE(std::string(aFull).find("qm:chat_bubble|visual|right|"), std::string::npos);
+	EXPECT_NE(std::string(aFull).find("qm:chat_bubble|appearance-chat|right|"), std::string::npos);
 }
 
 // 意图：首次迁移把旧 Qm 排序落到全局 stableId|tab|column|order 格式，并标记完成。
@@ -591,7 +591,7 @@ TEST(QmModuleLayoutAdapter, MigrateGlobalCardOrderWritesPipeFormatAndMarksMigrat
 
 	EXPECT_EQ(g_Config.m_QmCardOrderMigrated, 1);
 	const std::string Result(g_Config.m_QmGlobalCardOrder);
-	EXPECT_NE(Result.find("qm:chat_bubble|visual|right|"), std::string::npos);
+	EXPECT_NE(Result.find("qm:chat_bubble|appearance-chat|right|"), std::string::npos);
 	EXPECT_NE(Result.find("qm:camera_view|visual|left|"), std::string::npos);
 	EXPECT_NE(Result.find("tclient:auto-reply|tclient|left|4;"), std::string::npos);
 	EXPECT_NE(Result.find("deck:sound-audio-pack|sound|right|0;"), std::string::npos);
@@ -613,7 +613,7 @@ TEST(QmModuleLayoutAdapter, MigrateGlobalCardOrderPreservesRegistryOnlyQmCards)
 	EXPECT_TRUE(MigrateQmLayoutToGlobalCardOrder(Defaults));
 
 	const std::string Result(g_Config.m_QmGlobalCardOrder);
-	EXPECT_NE(Result.find("qm:chat_bubble|visual|right|"), std::string::npos);
+	EXPECT_NE(Result.find("qm:chat_bubble|appearance-chat|right|"), std::string::npos);
 	EXPECT_NE(Result.find("qm:nameplate_text|hud|right|18;"), std::string::npos);
 }
 
@@ -669,40 +669,21 @@ TEST(QmModuleLayoutAdapter, MigrateGlobalCardOrderIsIdempotent)
 	EXPECT_STREQ(g_Config.m_QmGlobalCardOrder, "qm:chat_bubble|search|1|0;");
 }
 
-// 意图：保留旧换皮卡的布局和折叠 key，新外观卡可独立折叠、保存和恢复。
-TEST(QmModuleLayoutAdapter, SplitSkinCardsKeepIndependentPersistentState)
+// 已移除的换皮卡不再写回，全局布局仍保留 Tee 外观卡的用户位置。
+TEST(QmModuleLayoutAdapter, RemovedSkinTransitionCardKeepsAppearanceLayout)
 {
-	const auto Defaults = MakeAllDefaults();
-	std::array<bool, QmModuleCount> aCollapsed = {};
-	ASSERT_TRUE(ParseLegacyQmCollapsed("skin_transition", Defaults, aCollapsed));
-	EXPECT_TRUE(aCollapsed[static_cast<size_t>(EQmModuleId::SkinTransition)]);
-	EXPECT_FALSE(aCollapsed[static_cast<size_t>(EQmModuleId::SkinAppearance)]);
-	EQmModuleId AppearanceId = EQmModuleId::Info;
-	ASSERT_TRUE(QmModuleIdFromStableId("qm:skin_appearance", &AppearanceId));
-	EXPECT_EQ(AppearanceId, EQmModuleId::SkinAppearance);
-	EXPECT_STREQ(QmModuleStableId(EQmModuleId::SkinTransition), "qm:skin_transition");
-
-	aCollapsed[static_cast<size_t>(EQmModuleId::SkinAppearance)] = true;
 	char aSerialized[256];
-	SerializeLegacyQmCollapsed(Defaults, aCollapsed, aSerialized, sizeof(aSerialized));
-	std::array<bool, QmModuleCount> aReloaded = {};
-	ASSERT_TRUE(ParseLegacyQmCollapsed(aSerialized, Defaults, aReloaded));
-	EXPECT_EQ(aCollapsed, aReloaded);
-	ASSERT_TRUE(ParseLegacyQmCollapsed("skin_appearance", Defaults, aReloaded));
-	EXPECT_TRUE(aReloaded[static_cast<size_t>(EQmModuleId::SkinAppearance)]);
-	EXPECT_FALSE(aReloaded[static_cast<size_t>(EQmModuleId::SkinTransition)]);
-
-	// 旧存档仅含换皮卡，合并默认卡片后仍保留用户移动过的位置。
 	qm_card_order::CModel OldModel;
-	OldModel.SetEntries({{"qm:skin_transition", "function", 2, 0}});
+	OldModel.SetEntries({{"qm:skin_transition", "search", 2, 0}, {"qm:skin_appearance", "search", 2, 1}});
 	ASSERT_TRUE(OldModel.Serialize(aSerialized, sizeof(aSerialized)));
 	qm_card_order::CModel ReloadedModel;
 	ASSERT_TRUE(ReloadedModel.LoadMerged(aSerialized, qm_card_registry::BuildDefaultEntries()));
-	const int TransitionIndex = ReloadedModel.FindByStableId("qm:skin_transition");
+	EXPECT_EQ(ReloadedModel.FindByStableId("qm:skin_transition"), -1);
 	const int AppearanceIndex = ReloadedModel.FindByStableId("qm:skin_appearance");
-	ASSERT_GE(TransitionIndex, 0);
 	ASSERT_GE(AppearanceIndex, 0);
-	EXPECT_STREQ(ReloadedModel.Entry(TransitionIndex).m_pDefaultTab, "function");
-	EXPECT_EQ(ReloadedModel.Entry(TransitionIndex).m_Column, 2);
-	EXPECT_STREQ(ReloadedModel.Entry(AppearanceIndex).m_pDefaultTab, "tee");
+	EXPECT_STREQ(ReloadedModel.Entry(AppearanceIndex).m_pDefaultTab, "search");
+	EXPECT_EQ(ReloadedModel.Entry(AppearanceIndex).m_Column, 2);
+	char aGlobalSerialized[sizeof(g_Config.m_QmGlobalCardOrder)];
+	ASSERT_TRUE(ReloadedModel.Serialize(aGlobalSerialized, sizeof(aGlobalSerialized)));
+	EXPECT_EQ(std::string(aGlobalSerialized).find("qm:skin_transition"), std::string::npos);
 }

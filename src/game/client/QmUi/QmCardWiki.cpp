@@ -497,12 +497,6 @@ namespace
 			Localizable("It stays on for every match, so switch it off before real races to keep the screen and your aim clean."),
 		},
 		{
-			"qm:console",
-			Localizable("Font size, background opacity, colors and command highlighting of the local console you open with F1."),
-			Localizable("Set \"Console font size\" and \"Console background opacity\", tick \"Highlight console commands\", then choose a \"Console color scheme\"."),
-			Localizable("Your own colors appear only under \"Custom\"; press \"Reset console appearance\" if the text becomes hard to read."),
-		},
-		{
 			"qm:coords",
 			Localizable("Shows X and Y coordinates on players' nameplates, for yourself, for other players, or both."),
 			Localizable("Turn on \"Show own coordinates\" or \"Show other players' coordinates\", then choose \"Show X\" and \"Show Y\"."),
@@ -657,12 +651,6 @@ namespace
 			Localizable("Adds an outline to skins, slowly cycles your custom Tee colors, and draws a shadow behind emoticons."),
 			Localizable("Turn on \"Skin outline for self and dummy\" or \"Skin outline for other players\", then tune width and opacity; \"Cycle custom Tee hue\" animates custom colors."),
 			Localizable("\"Cycle custom Tee hue\" only works with custom colors and does nothing while the TClient rainbow Tee option is on."),
-		},
-		{
-			"qm:skin_transition",
-			Localizable("Plays a short effect when a tee's skin changes, and can copy the skin of the tee you just hammered."),
-			Localizable("Turn on \"Skin transition animation\", choose a \"Skin transition type\" and \"Animation range\", then set \"Skin transition duration\" and \"Skin transition intensity\"."),
-			Localizable("Enable \"Hammer skin steal\" only if you want your skin to change on every hammer hit, since other players see it too."),
 		},
 		{
 			"qm:solo_split",

@@ -885,7 +885,7 @@ bool CGameConsole::CInstance::OnInput(const IInput::CEvent &Event)
 		if(m_Type == CONSOLETYPE_LOCAL && !m_ChatExportMode && m_pGameConsole->Input()->AltIsPressed() &&
 			Event.m_Key >= KEY_1 && Event.m_Key <= KEY_5 && !m_pGameConsole->Input()->HasComposition())
 		{
-			SetLogFilterMask(QmToggleConsoleLogFilterCategory(m_LogFilterMask, LogFilterCategoryForButton(Event.m_Key - KEY_1)));
+			SetLogFilterMask(QmSelectConsoleLogFilterCategory(LogFilterCategoryForButton(Event.m_Key - KEY_1)));
 			Handled = true;
 		}
 		else if(Event.m_Key == KEY_RETURN || Event.m_Key == KEY_KP_ENTER)
@@ -1885,14 +1885,10 @@ void CGameConsole::OnRender()
 		Localize("All"), Localize("Players"), Localize("System"), Localize("Commands"), Localize("Binds")};
 	constexpr float FilterSpacing = 4.0f;
 	constexpr float FilterPadding = 6.0f;
-	const float FilterIndicatorWidth = FontSize + 4.0f;
-	float aFilterWidths[CInstance::LOG_FILTER_BUTTON_COUNT];
-	float TotalFilterWidth = LocalConsole ? FilterSpacing * (CInstance::LOG_FILTER_BUTTON_COUNT - 1) : 0.0f;
+	float FilterWidth = 0.0f;
 	for(int i = 0; LocalConsole && i < CInstance::LOG_FILTER_BUTTON_COUNT; ++i)
-	{
-		aFilterWidths[i] = TextRender()->TextWidth(FontSize, apFilterLabels[i]) + FilterPadding * 2.0f + (LocalConsole && i != 0 ? FilterIndicatorWidth : 0.0f);
-		TotalFilterWidth += aFilterWidths[i];
-	}
+		FilterWidth = maximum(FilterWidth, TextRender()->TextWidth(FontSize, apFilterLabels[i]) + FilterPadding * 2.0f);
+	const float TotalFilterWidth = LocalConsole ? FilterWidth * CInstance::LOG_FILTER_BUTTON_COUNT + FilterSpacing * (CInstance::LOG_FILTER_BUTTON_COUNT - 1) : 0.0f;
 	enum class EToolbarAction
 	{
 		SEARCH,
@@ -2661,10 +2657,10 @@ void CGameConsole::OnRender()
 		const int LineEnd = pConsole->m_LinesRendered > 0 ? pConsole->m_BacklogCurLine + pConsole->m_LinesRendered : 0;
 		str_format(aLinesBuf, sizeof(aLinesBuf), Localize("Lines %d - %d (%s)"), LineStart, LineEnd,
 			pConsole->m_BacklogCurLine != 0 ? Localize("Locked") : Localize("Following"));
-		const auto ToolbarButton = [&](const CUIRect &Rect, const char *pLabel, float Scale, bool Selected = false, bool CategoryButton = false, uint64_t AnimationKey = 0) {
+		const auto ToolbarButton = [&](const CUIRect &Rect, const char *pLabel, float Scale, bool Selected = false, uint64_t AnimationKey = 0) {
 			return QmConsoleUi::Button(Ui(), Rect, pLabel, maximum(1.0f, FontSize * Scale), Selected,
 				m_ButtonPressPosition, ButtonMousePosition, pConsole->m_MouseIsPress, ButtonReleased, !SettingsOpen && m_ConsoleState == CONSOLE_OPEN,
-				CategoryButton ? FilterIndicatorWidth * Scale : 0.0f, LocalConsole ? &Palette : nullptr, AnimationKey);
+				0.0f, LocalConsole ? &Palette : nullptr, AnimationKey);
 		};
 		const float LinesWidth = LocalConsole ? 0.0f : TextRender()->TextWidth(FontSize, aLinesBuf);
 		float FilterX = LocalConsole ? 10.0f : LinesWidth + 20.0f;
@@ -2674,12 +2670,11 @@ void CGameConsole::OnRender()
 			for(int i = 0; i < CInstance::LOG_FILTER_BUTTON_COUNT; ++i)
 			{
 				const int Category = CInstance::LogFilterCategoryForButton(i);
-				const CUIRect Button = {FilterX, 3.0f, aFilterWidths[i] * FilterScale, LocalConsole ? FontSize + 10.0f : 14.0f};
+				const CUIRect Button = {FilterX, 3.0f, FilterWidth * FilterScale, LocalConsole ? FontSize + 10.0f : 14.0f};
 				if(ToolbarButton(Button, apFilterLabels[i], FilterScale, QmConsoleLogFilterButtonActive(pConsole->m_LogFilterMask, Category),
-					   LocalConsole && Category != QM_CONSOLE_LOG_CATEGORY_ALL,
 					   (static_cast<uint64_t>(reinterpret_cast<uintptr_t>(pConsole)) << 3) ^ static_cast<uint64_t>(i + 1)))
-					pConsole->SetLogFilterMask(QmToggleConsoleLogFilterCategory(pConsole->m_LogFilterMask, Category));
-				FilterX += (aFilterWidths[i] + FilterSpacing) * FilterScale;
+					pConsole->SetLogFilterMask(QmSelectConsoleLogFilterCategory(Category));
+				FilterX += (FilterWidth + FilterSpacing) * FilterScale;
 			}
 		}
 		if(LocalConsole)

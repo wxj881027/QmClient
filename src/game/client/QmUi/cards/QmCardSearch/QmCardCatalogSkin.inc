@@ -24,14 +24,6 @@ namespace
 		{nullptr, "qm_skin_outline_local", nullptr},
 		{nullptr, "qm_skin_outline_others", nullptr},
 		{nullptr, "qm_skin_outline_width", nullptr},
-	};
-	QM_CARD_SEARCH_REGISTER("qm:skin_appearance", qm_skin_appearance);
-}
-
-// 声明式搜索索引：文案随所属卡片声明，静态初始化时自动注册。
-namespace
-{
-	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_skin_transition[] = {
 		{Localizable("Afterimage pop"), nullptr, "残影弹出"},
 		{Localizable("All players"), nullptr, "所有人"},
 		{Localizable("Animation range"), nullptr, "动画范围"},
@@ -61,5 +53,5 @@ namespace
 		{nullptr, "qm_skin_change_transition_scope", nullptr},
 		{nullptr, "qm_skin_change_transition_type", nullptr},
 	};
-	QM_CARD_SEARCH_REGISTER("qm:skin_transition", qm_skin_transition);
+	QM_CARD_SEARCH_REGISTER("qm:skin_appearance", qm_skin_appearance);
 }

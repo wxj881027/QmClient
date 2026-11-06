@@ -2714,6 +2714,7 @@ void CMenus::RenderSettingsTeeGlow(CUIRect Content, const SSettingsContentMetric
 	{
 		CUIRect Team0GlowLabel, Team0GlowDropDown;
 		SplitSettingsControlRow(TeeGlowRow, TeeMetrics, &Team0GlowLabel, &Team0GlowDropDown, ESettingsControlWidth::SHORT_CHOICE);
+		Team0GlowDropDown.x = TeeGlowRow.x + TeeGlowRow.w - Team0GlowDropDown.w;
 		DoSettingsMenuLabel(SETTINGS_TEE, -1, -1, "tee-team-glow-team0-label", &Team0GlowLabel, Localize("Team 0 glow"), BodySize, TEXTALIGN_ML);
 		const char *apTeam0GlowModes[] = {Localize("Off"), Localize("Tee color"), Localize("Custom color"), Localize("Rainbow")};
 		static CUi::SDropDownState s_Team0GlowModeDropDownState;

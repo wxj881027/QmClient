@@ -8489,7 +8489,7 @@ void CMenus::OnRender()
 		if(!QmUiMobilePlatform() && !GameClient()->m_GameConsole.IsActive() && (IsActive() || GameClient()->m_Spectator.PlaybackControlsActive() || QmPoseMapPopupOpen() || QmPoseHudActive()))
 		{
 			if(m_BrowserColumnResizeCursor && !Ui()->IsPopupOpen())
-				RenderTools()->RenderResizeCursor(Ui()->MousePos(), 24.0f);
+				RenderTools()->RenderResizeCursor(Ui()->MousePos(), 18.0f);
 			else
 				RenderTools()->RenderCursor(Ui()->MousePos(), 24.0f);
 		}

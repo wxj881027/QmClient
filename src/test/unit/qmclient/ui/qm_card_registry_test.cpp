@@ -58,8 +58,6 @@ TEST(QmCardRegistrySearch, InternalSettingLabelsAndConfigNamesFindTheContainingC
 		{"qm_emoticon_projectile_duration", "qm:skin_appearance"},
 		{"Skin outline for other players", "qm:skin_appearance"},
 		{"qm_skin_outline_others", "qm:skin_appearance"},
-		{"qm_console_font_size", "qm:console"},
-		{"qm_console_search_selected_color", "qm:console"},
 		{"Show key press counts", "qm:input_overlay"},
 		{"qm_input_overlay_key_counts", "qm:input_overlay"},
 	};
@@ -985,7 +983,7 @@ TEST(QmCardRegistry, QmCardsPreserveLegacyModuleSearchKeywords)
 	}
 }
 
-// 拆分后外观和换皮动画的功能词应分别指向承载它们的卡片。
+// 外观与换皮动画的功能词均指向 Tee 外观卡。
 TEST(QmCardRegistry, SkinSettingsSearchFindsOwningCard)
 {
 	const qm_card_order::CModel Model = RegistryModelAfterRoundTrip();
@@ -1006,7 +1004,7 @@ TEST(QmCardRegistry, SkinSettingsSearchFindsOwningCard)
 	for(const char *pQuery : {"皮肤描边", "循环色调", "表情阴影", "skin outline"})
 		ExpectOwner(pQuery, "qm:skin_appearance", "qm:skin_transition", "tee");
 	for(const char *pQuery : {"锤中偷皮", "皮肤切换", "换皮", "skin transition animation"})
-		ExpectOwner(pQuery, "qm:skin_transition", "qm:skin_appearance", "visual");
+		ExpectOwner(pQuery, "qm:skin_appearance", "qm:skin_transition", "tee");
 }
 
 // 意图：QiaFen 三名分裂（枚举 QiaFen / UI 名 keyword_reply / 持久化 key qiafen）是迁移最大陷阱。
