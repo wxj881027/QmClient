@@ -260,8 +260,6 @@ public:
 	// 绘制用偏移：通常等于状态偏移；内容骤减（折叠分类）时用短时缓动追上去。
 	float ContentScrollOffsetY() const { return m_Params.m_ScrollHorizontal ? 0.0f : -m_DisplayOffset; }
 	float m_DisplayOffset = 0.0f;
-	bool m_DisplayOffsetInit = false;
-	int64_t m_DisplayOffsetTick = 0;
 	void DoEdgeScrolling();
 	bool RectClipped(const CUIRect &Rect) const;
 	bool ContentOverflows() const;
