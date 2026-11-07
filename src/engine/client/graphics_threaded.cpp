@@ -5048,22 +5048,19 @@ bool CGraphics_Threaded::SetVSync(bool State)
 	if(!m_pCommandBuffer)
 		return true;
 
-	// add vsync command
-	bool RetOk = false;
+	// 切换垂直同步会让后端重建交换链。以前这里同步等待后端确认，
+	// 等于把整条渲染管线在当前帧掐住——正好掐在开关动画中间，必卡。
+	// 改成照常下发命令、配置乐观更新：重建发生在渲染线程自己的帧边界上，
+	// 界面线程继续跑动画；真失败了下一帧的能力查询会把配置纠正回来。
+	m_QmVSyncAck = false;
 	CCommandBuffer::SCommand_VSync Cmd;
 	Cmd.m_VSync = State ? 1 : 0;
-	Cmd.m_pRetOk = &RetOk;
+	Cmd.m_pRetOk = &m_QmVSyncAck;
 	AddCmd(Cmd);
-
-	// kick the command buffer
 	KickCommandBuffer();
-	WaitForIdle();
 
-	if(RetOk)
-	{
-		g_Config.m_GfxVsync = State;
-	}
-	return RetOk;
+	g_Config.m_GfxVsync = State;
+	return true;
 }
 
 bool CGraphics_Threaded::SetMultiSampling(uint32_t ReqMultiSamplingCount, uint32_t &MultiSamplingCountBackend)
