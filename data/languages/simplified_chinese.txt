@@ -4190,6 +4190,9 @@ Door Laser Outline Color
 Door laser outline color
 == 门的激光轮廓颜色
 
+Double-tap the bound key within 400 ms to send the current lyric to public chat
+== 在 400 毫秒内连按两次绑定按键，将当前一句歌词发送到公共聊天
+
 Download
 == 下载
 
@@ -5875,9 +5878,6 @@ Format player names after a finish
 
 Forms
 == 表单
-
-Found %d global cards
-== 匹配到 %d 张全局卡片
 
 Four IP addresses are already online
 == 已有 4 个 IP 在线，请等待其他会话离线
@@ -12845,15 +12845,6 @@ Server hostname (0.7 only)
 Server info
 == 服务器信息
 
-Server information lower left card width (per mille)
-== 服务器信息左下卡片宽度（千分比）
-
-Server information upper left card width (per mille)
-== 服务器信息左上卡片宽度（千分比）
-
-Server information upper row height (per mille)
-== 服务器信息上排高度（千分比）
-
 Server kick/spec votes are no longer actively moderated.
 == 服务器的踢人/旁观投票已不再由主动管理员模式接管
 
@@ -14215,6 +14206,9 @@ Simple noise reduction
 
 Simple noise reduction strength
 == 简单降噪强度
+
+Singing
+== 唱歌
 
 Size
 == 大小

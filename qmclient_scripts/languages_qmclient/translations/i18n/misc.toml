@@ -16086,3 +16086,19 @@ brazilian_portuguese = "Substituir toda a lista de amigos, grupos, notas e amigo
 portuguese = "Substituir toda a lista de amigos, grupos, notas e amigos afixados pelo código colado?"
 turkish = "Tüm arkadaş listesi, gruplar, notlar ve sabitlemeler yapıştırılan kodla değiştirilsin mi?"
 polish = "Zastąpić całą listę znajomych, grupy, notatki i przypięcia danymi z wklejonego kodu?"
+
+[[message]]
+key = "Singing"
+[message.translations]
+simplified_chinese = "唱歌"
+traditional_chinese = "唱歌"
+japanese = "歌う"
+korean = "노래하기"
+russian = "Пение"
+german = "Singen"
+spanish = "Cantar"
+french = "Chanter"
+brazilian_portuguese = "Cantar"
+portuguese = "Cantar"
+turkish = "Şarkı söyleme"
+polish = "Śpiewanie"

@@ -4181,6 +4181,9 @@ Door Laser Outline Color
 Door laser outline color
 == Color del contorno del láser de la puerta
 
+Double-tap the bound key within 400 ms to send the current lyric to public chat
+== Pulsa dos veces la tecla asignada en un plazo de 400 ms para enviar la línea actual de la canción al chat público
+
 Download
 == Descargar
 
@@ -5860,9 +5863,6 @@ Format player names after a finish
 
 Forms
 == Formularios
-
-Found %d global cards
-== Se encontraron %d tarjetas globales
 
 Four IP addresses are already online
 == Ya hay 4 direcciones IP conectadas
@@ -12815,15 +12815,6 @@ Server hostname (0.7 only)
 Server info
 == Información del servidor
 
-Server information lower left card width (per mille)
-== Anchura de la tarjeta inferior izquierda de información del servidor (por mil)
-
-Server information upper left card width (per mille)
-== Anchura de la tarjeta superior izquierda de información del servidor (por mil)
-
-Server information upper row height (per mille)
-== Altura de la fila superior de información del servidor (por mil)
-
 Server kick/spec votes are no longer actively moderated.
 == Los votos de expulsión/espectador del servidor ya no son moderados activamente.
 
@@ -14179,6 +14170,9 @@ Simple noise reduction
 
 Simple noise reduction strength
 == Intensidad de reducción de ruido simple
+
+Singing
+== Cantar
 
 Size
 == Tamaño

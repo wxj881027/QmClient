@@ -4181,6 +4181,9 @@ Door Laser Outline Color
 Door laser outline color
 == Tür-Laser-Konturfarbe
 
+Double-tap the bound key within 400 ms to send the current lyric to public chat
+== Drücke die belegte Taste innerhalb von 400 ms zweimal, um die aktuelle Liedzeile in den öffentlichen Chat zu senden
+
 Download
 == Herunterladen
 
@@ -5860,9 +5863,6 @@ Format player names after a finish
 
 Forms
 == Formulare
-
-Found %d global cards
-== %d globale Karten gefunden
 
 Four IP addresses are already online
 == Bereits 4 IP-Adressen online
@@ -12815,15 +12815,6 @@ Server hostname (0.7 only)
 Server info
 == Serverinfo
 
-Server information lower left card width (per mille)
-== Serverinformationen: Breite der Karte unten links (Promille)
-
-Server information upper left card width (per mille)
-== Serverinformationen: Breite der Karte oben links (Promille)
-
-Server information upper row height (per mille)
-== Serverinformationen: Höhe der oberen Reihe (Promille)
-
 Server kick/spec votes are no longer actively moderated.
 == Kick-/Zuschauer-Abstimmungen des Servers werden nicht mehr aktiv moderiert.
 
@@ -14179,6 +14170,9 @@ Simple noise reduction
 
 Simple noise reduction strength
 == Stärke der einfachen Rauschunterdrückung
+
+Singing
+== Singen
 
 Size
 == Größe

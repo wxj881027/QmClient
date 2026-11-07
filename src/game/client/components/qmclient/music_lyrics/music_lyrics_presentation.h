@@ -2,6 +2,10 @@
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_MUSIC_LYRICS_MUSIC_LYRICS_PRESENTATION_H
 
 #include "music_humming_state.h"
+#include "music_lyrics_display.h"
+#include "music_singing_state.h"
+
+#include <engine/console.h>
 
 #include <game/client/component.h>
 
@@ -16,14 +20,20 @@ public:
 	};
 
 	int Sizeof() const override { return sizeof(*this); }
+	void OnConsoleInit() override;
 	void OnUpdate() override;
 	void OnReset() override;
 	void OnStateChange(int NewState, int OldState) override;
 	const SFrame &Frame() const { return m_Frame; }
 
 private:
+	static void ConSing(IConsole::IResult *pResult, void *pUserData);
+	QmMusicLyrics::SSourceSnapshot CurrentSource(int &SourceId) const;
+	void SynchronizeSinging(const QmMusicLyrics::SSourceSnapshot &Source, int SourceId);
+
 	SFrame m_Frame;
 	QmMusicLyrics::CHummingState m_Humming;
+	QmMusicLyrics::CSingingState m_Singing;
 };
 
 #endif

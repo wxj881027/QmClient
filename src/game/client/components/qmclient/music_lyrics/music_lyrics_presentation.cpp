@@ -6,6 +6,7 @@
 #include <base/time.h>
 
 #include <engine/client.h>
+#include <engine/graphics.h>
 #include <engine/shared/config.h>
 
 #include <game/client/components/qmclient/netease_hook/qm_netease_hook_protocol.h>
@@ -20,10 +21,32 @@ namespace
 	}
 }
 
+void CQmLyricsPresentation::OnConsoleInit()
+{
+	Console()->Register("+qm_sing", "", CFGFLAG_CLIENT, ConSing, this, "Double-tap the bound key within 400 ms to send the current lyric to public chat");
+}
+
+void CQmLyricsPresentation::ConSing(IConsole::IResult *pResult, void *pUserData)
+{
+	auto *pThis = static_cast<CQmLyricsPresentation *>(pUserData);
+	if(pResult->GetInteger(0) == 0)
+	{
+		pThis->m_Singing.OnStroke(false, 0, {});
+		return;
+	}
+	int SourceId;
+	const auto Source = pThis->CurrentSource(SourceId);
+	pThis->SynchronizeSinging(Source, SourceId);
+	const std::string Message = pThis->m_Singing.OnStroke(true, time_get() * 1000 / time_freq(), Source.m_Original);
+	if(!Message.empty())
+		pThis->GameClient()->m_Chat.SendAutomaticChat(g_Config.m_ClDummy, Message.c_str());
+}
+
 void CQmLyricsPresentation::OnReset()
 {
 	m_Frame = {};
 	m_Humming.Reset();
+	m_Singing.Reset();
 }
 
 void CQmLyricsPresentation::OnStateChange(int NewState, int OldState)
@@ -31,10 +54,10 @@ void CQmLyricsPresentation::OnStateChange(int NewState, int OldState)
 	OnReset();
 }
 
-void CQmLyricsPresentation::OnUpdate()
+QmMusicLyrics::SSourceSnapshot CQmLyricsPresentation::CurrentSource(int &SourceId) const
 {
 	QmMusicLyrics::SSourceSnapshot Source;
-	int SourceId = 0;
+	SourceId = 0;
 	if(g_Config.m_QmNeteaseHookEnable)
 	{
 		Source = GameClient()->m_NeteaseIntegration.LyricsSnapshot();
@@ -50,6 +73,28 @@ void CQmLyricsPresentation::OnUpdate()
 		Source = GameClient()->m_SpotifyIntegration.LyricsSnapshot();
 		SourceId = 5;
 	}
+	return Source;
+}
+
+void CQmLyricsPresentation::SynchronizeSinging(const QmMusicLyrics::SSourceSnapshot &Source, int SourceId)
+{
+	const int Connection = g_Config.m_ClDummy;
+	const bool Online = Client()->State() == IClient::STATE_ONLINE &&
+			    (Connection == IClient::CONN_MAIN || Client()->DummyConnected());
+	CSystemMediaControls::SState Media;
+	const bool Available = g_Config.m_QmSinging && Online && Source.m_SongId != 0 && Source.m_Active &&
+			       !GameClient()->m_Menus.IsActive() && !GameClient()->m_Chat.IsActive() &&
+			       !GameClient()->m_GameConsole.IsActive() && Graphics()->WindowActive() &&
+			       GameClient()->m_SystemMediaControls.GetStateSnapshot(Media) && Media.m_Playing;
+	m_Singing.Synchronize(Available, {SourceId, Source.m_SongId, Source.m_Generation, Source.m_ProducerPid,
+		Connection, Online ? GameClient()->m_aLocalIds[Connection] : -1});
+}
+
+void CQmLyricsPresentation::OnUpdate()
+{
+	int SourceId;
+	const auto Source = CurrentSource(SourceId);
+	SynchronizeSinging(Source, SourceId);
 
 	m_Frame = {};
 	if(g_Config.m_QmLyrics && g_Config.m_QmLyricsInMediaIsland)
