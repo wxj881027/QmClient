@@ -4181,6 +4181,9 @@ Door Laser Outline Color
 Door laser outline color
 == Цвет контура лазера двери.
 
+Double-tap the bound key within 400 ms to send the current lyric to public chat
+== Дважды нажмите назначенную клавишу в течение 400 мс, чтобы отправить текущую строку песни в общий чат
+
 Download
 == Скачать
 
@@ -5860,9 +5863,6 @@ Format player names after a finish
 
 Forms
 == Формы
-
-Found %d global cards
-== Найдено %d глобальных карточек
 
 Four IP addresses are already online
 == Уже подключены 4 IP-адреса
@@ -12815,15 +12815,6 @@ Server hostname (0.7 only)
 Server info
 == Информация о сервере
 
-Server information lower left card width (per mille)
-== Ширина нижней левой карточки информации о сервере (промилле)
-
-Server information upper left card width (per mille)
-== Ширина верхней левой карточки информации о сервере (промилле)
-
-Server information upper row height (per mille)
-== Высота верхнего ряда информации о сервере (промилле)
-
 Server kick/spec votes are no longer actively moderated.
 == Голосования за кик/спек на сервере больше не контролируются активным модератором.
 
@@ -14179,6 +14170,9 @@ Simple noise reduction
 
 Simple noise reduction strength
 == Сила простого шумоподавления
+
+Singing
+== Пение
 
 Size
 == Размер

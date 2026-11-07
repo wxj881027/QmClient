@@ -3651,10 +3651,12 @@ if(CLIENT)
     components/qmclient/monitoring/monitoring.h
     components/qmclient/music_app_watcher.cpp
     components/qmclient/music_app_watcher.h
+    components/qmclient/music_lyrics/music_lyrics_chat.h
     components/qmclient/music_lyrics/music_lyrics_display.h
     components/qmclient/music_lyrics/music_humming_state.h
     components/qmclient/music_lyrics/music_lyrics_presentation.cpp
     components/qmclient/music_lyrics/music_lyrics_presentation.h
+    components/qmclient/music_lyrics/music_singing_state.h
     components/qmclient/netease_hook/qm_netease_lyrics_channel.cpp
     components/qmclient/netease_hook/qm_netease_lyrics_channel.h
     components/qmclient/music_lyrics/music_lyrics_integration.cpp
@@ -5021,6 +5023,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/integration/qmclient/client/qm_netease_lyrics_channel_test.cpp
     src/test/unit/qmclient/music/music_lyrics_display_test.cpp
     src/test/unit/qmclient/music/music_humming_state_test.cpp
+    src/test/unit/qmclient/music/music_singing_state_test.cpp
     src/test/unit/qmclient/client/qm_lyrics_hud_layout_test.cpp
     src/test/unit/qmclient/client/qm_fast_practice_hook_input_test.cpp
     src/test/unit/qmclient/client/qm_fast_practice_cursor_test.cpp

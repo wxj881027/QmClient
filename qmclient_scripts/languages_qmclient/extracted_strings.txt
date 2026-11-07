@@ -1395,6 +1395,7 @@ Door Laser Inner Color
 Door laser inner color
 Door Laser Outline Color
 Door laser outline color
+Double-tap the bound key within 400 ms to send the current lyric to public chat
 Download
 Download "%s"?
 Download community skins
@@ -1957,7 +1958,6 @@ Force i to pause for i seconds
 Force vote
 Format player names after a finish
 Forms
-Found %d global cards
 Four IP addresses are already online
 FPM
 FPS
@@ -4280,9 +4280,6 @@ Server executable not found, can't run server
 Server filter
 Server hostname (0.7 only)
 Server info
-Server information lower left card width (per mille)
-Server information upper left card width (per mille)
-Server information upper row height (per mille)
 Server kick/spec votes are no longer actively moderated.
 Server kick/spec votes will now be actively moderated.
 Server list is more than five minutes old
@@ -4737,6 +4734,7 @@ Silently disconnect from the current server while keeping Tee timeout protection
 Simple
 Simple noise reduction
 Simple noise reduction strength
+Singing
 Size
 Size of entity text data (20% to 100%)
 Size of hook strength icon and number indicator

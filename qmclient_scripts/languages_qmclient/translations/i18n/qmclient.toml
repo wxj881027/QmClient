@@ -40142,3 +40142,19 @@ brazilian_portuguese = "Altura da linha superior das informações do servidor (
 portuguese = "Altura da linha superior das informações do servidor (por mil)"
 turkish = "Sunucu bilgileri üst satır yüksekliği (binde)"
 polish = "Wysokość górnego rzędu informacji o serwerze (promile)"
+
+[[message]]
+key = "Double-tap the bound key within 400 ms to send the current lyric to public chat"
+[message.translations]
+simplified_chinese = "在 400 毫秒内连按两次绑定按键，将当前一句歌词发送到公共聊天"
+traditional_chinese = "在 400 毫秒內連按兩次綁定按鍵，將目前這句歌詞傳送到公開聊天"
+japanese = "割り当てたキーを400ミリ秒以内に続けて二度押すと、現在の歌詞を全体チャットに送信します"
+korean = "지정한 키를 400밀리초 안에 두 번 눌러 현재 가사를 전체 채팅으로 보냅니다"
+russian = "Дважды нажмите назначенную клавишу в течение 400 мс, чтобы отправить текущую строку песни в общий чат"
+german = "Drücke die belegte Taste innerhalb von 400 ms zweimal, um die aktuelle Liedzeile in den öffentlichen Chat zu senden"
+spanish = "Pulsa dos veces la tecla asignada en un plazo de 400 ms para enviar la línea actual de la canción al chat público"
+french = "Appuyez deux fois sur la touche assignée en l’espace de 400 ms pour envoyer la ligne actuelle des paroles dans le chat public"
+brazilian_portuguese = "Pressione a tecla vinculada duas vezes em até 400 ms para enviar a linha atual da letra ao chat público"
+portuguese = "Prima a tecla atribuída duas vezes em até 400 ms para enviar a linha atual da letra para o chat público"
+turkish = "Geçerli şarkı sözü satırını genel sohbete göndermek için atanan tuşa 400 ms içinde iki kez basın"
+polish = "Naciśnij dwukrotnie przypisany klawisz w ciągu 400 ms, aby wysłać bieżący wers piosenki na czat publiczny"
