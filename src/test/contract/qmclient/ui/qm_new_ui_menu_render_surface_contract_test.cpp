@@ -291,12 +291,12 @@ TEST(QmNewUiMenuRenderSurfaceContract, OrdinaryUiRoundedSurfacesUseSharedPath)
 
 TEST(QmNewUiMenuRenderSurfaceContract, LegacyRoundedRectDrawSitesRequireExplicitAllowlist)
 {
+	// 聊天选中块/发言预览、统计板已经并进共享圆角路径，因此不再列入；
+	// 列表只能缩，不能为了过测试把新直绘塞回来。
 	const char *const apAllowlistedFiles[] = {
 		"src/game/client/components/hud.cpp",
-		"src/game/client/components/chat.cpp",
 		"src/game/client/components/nameplates.cpp",
 		"src/game/client/components/spectator.cpp",
-		"src/game/client/components/statboard.cpp",
 	};
 	for(const char *pPath : apAllowlistedFiles)
 	{

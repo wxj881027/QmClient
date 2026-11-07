@@ -258,9 +258,8 @@ fragment float4 qmclient_rounded_rect_sdf_fragment(SMetalVertexOut Input [[stage
 	const float Radius = clamp(RoundedRectCornerRadius(Point, CornerRadii), 0.0, min(BaseHalfSize.x, BaseHalfSize.y));
 	const float OuterDistance = RoundedRectDistance(Point, BaseHalfSize, Radius, CornerSmoothing, CurveType) - ShapeExpand;
 	const float OuterCoverage = RoundedRectCoverage(OuterDistance, RenderParams.y);
-	const float4 InnerCornerRadii = max(CornerRadii - float4(BorderWidth), float4(0.0));
-	const float InnerRadius = clamp(RoundedRectCornerRadius(Point, InnerCornerRadii), 0.0, min(InnerHalfSize.x, InnerHalfSize.y));
-	const float InnerDistance = RoundedRectDistance(Point, InnerHalfSize, InnerRadius);
+	// 内缘是同一形状向内偏移一个边框宽度：连续曲率下「半径减边框」不是等距内缩。
+	const float InnerDistance = OuterDistance + BorderWidth;
 	// 与 rounded_rect_sdf.frag 保持一致：只描边时这里要被清零，不能是 const。
 	float InnerCoverage = BorderWidth > 0.0 && min(InnerHalfSize.x, InnerHalfSize.y) > 0.0 ? RoundedRectCoverage(InnerDistance, RenderParams.y) : 0.0;
 	if(BorderWidth <= 0.0)

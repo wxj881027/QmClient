@@ -3043,12 +3043,35 @@ void CGraphics_Threaded::RenderMediaIslandSdf(const IGraphics::SMediaIslandSdfPa
 	m_pCommandBuffer->AddRenderCalls(1);
 }
 
+// 圆角绘制统计：只在 qm_perf_debug 打开时累加，用于判断该不该做合批。
+static int s_QmPerfSdfRects = 0;
+static int s_QmPerfSdfFlushes = 0;
+static int64_t s_QmPerfLastLog = 0;
+
 void CGraphics_Threaded::RenderRoundedRectSdf(const IGraphics::SRoundedRectSdfParams &Params)
 {
 	const vec4 Rect = Params.m_Rect;
 	if(Rect.z <= 0.0f || Rect.w <= 0.0f)
 		return;
 
+	if(g_Config.m_QmPerfDebug != 0)
+	{
+		s_QmPerfSdfRects++;
+		if(m_NumVertices > 0)
+			s_QmPerfSdfFlushes++;
+		const int64_t Now = time_get();
+		if(s_QmPerfLastLog == 0)
+		{
+			s_QmPerfLastLog = Now;
+		}
+		else if(Now - s_QmPerfLastLog >= time_freq())
+		{
+			dbg_msg("perf/qm", "rounded_sdf_per_sec=%d sdf_flushes_per_sec=%d frame_sdf_last=%.0f", s_QmPerfSdfRects, s_QmPerfSdfFlushes, (double)s_QmPerfSdfRects);
+			s_QmPerfSdfRects = 0;
+			s_QmPerfSdfFlushes = 0;
+			s_QmPerfLastLog = Now;
+		}
+	}
 	if(m_NumVertices > 0)
 	{
 #if defined(CONF_PLATFORM_MACOS)
