@@ -1,3 +1,4 @@
+#include <game/client/QmUi/UiSurface.h>
 #include "nameplates.h"
 
 #include "qmclient/nameplate_density.h"
@@ -2488,22 +2489,22 @@ void CNamePlates::RenderNamePlatePreview(const CUIRect &PreviewArea, int Dummy)
 				Graphics()->LinesEnd();
 			}
 
-			Graphics()->QuadsBegin();
+			SRoundedSurfaceParams RowSurface;
+			RowSurface.m_Radius = 4.0f;
+			RowSurface.m_Corners = IGraphics::CORNER_ALL;
 			for(const SNameplateCoreRowRect &Rect : aEditorRects)
 			{
 				if(!Rect.m_Visible)
 					continue;
 				const bool Dragging = m_pData->m_FreeMoveDragRow == Rect.m_Row;
 				const bool Hovered = HoveredRow == Rect.m_Row;
+				ColorRGBA RowColor = ColorRGBA(1.0f, 1.0f, 1.0f, 0.06f);
 				if(Dragging)
-					Graphics()->SetColor(ColorRGBA(0.25f, 0.85f, 1.0f, 0.22f));
+					RowColor = ColorRGBA(0.25f, 0.85f, 1.0f, 0.22f);
 				else if(Hovered)
-					Graphics()->SetColor(ColorRGBA(1.0f, 1.0f, 1.0f, 0.14f));
-				else
-					Graphics()->SetColor(ColorRGBA(1.0f, 1.0f, 1.0f, 0.06f));
-				Graphics()->DrawRectExt(Rect.m_Min.x, Rect.m_Min.y, Rect.m_Max.x - Rect.m_Min.x, Rect.m_Max.y - Rect.m_Min.y, 4.0f, IGraphics::CORNER_ALL);
+					RowColor = ColorRGBA(1.0f, 1.0f, 1.0f, 0.14f);
+				DrawRoundedSurface(Ui(), CUIRect{Rect.m_Min.x, Rect.m_Min.y, Rect.m_Max.x - Rect.m_Min.x, Rect.m_Max.y - Rect.m_Min.y}, RowColor, ColorRGBA(), RowSurface);
 			}
-			Graphics()->QuadsEnd();
 			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 		}
 	}

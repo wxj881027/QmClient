@@ -899,13 +899,23 @@ void CSpectator::OnRender()
 				Corners |= IGraphics::CORNER_TL | IGraphics::CORNER_TR;
 			if(EndsGroup || NextDDTeam != DDTeam)
 				Corners |= IGraphics::CORNER_BL | IGraphics::CORNER_BR;
-			Graphics()->DrawRect(CenterX + x - RowHitInset + BoxOffset, CenterY + y + BoxMove, RowWidth - BoxOffset, LineHeight, Color, Corners, RoundRadius);
+			{
+				SRoundedSurfaceParams TeamSurface;
+				TeamSurface.m_Radius = RoundRadius;
+				TeamSurface.m_Corners = Corners;
+				DrawRoundedSurface(Ui(), CUIRect{CenterX + x - RowHitInset + BoxOffset, CenterY + y + BoxMove, RowWidth - BoxOffset, LineHeight}, Color, ColorRGBA(), TeamSurface);
+			}
 		}
 		OldDDTeam = DDTeam;
 
 		if(SelectedId() == pInfo->m_Id)
 		{
-			Graphics()->DrawRect(CenterX + x - RowHitInset + BoxOffset, CenterY + y + BoxMove, RowWidth - BoxOffset, LineHeight, ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f * ContentAlpha), IGraphics::CORNER_ALL, RoundRadius);
+			{
+				SRoundedSurfaceParams SelectionSurface;
+				SelectionSurface.m_Radius = RoundRadius;
+				SelectionSurface.m_Corners = IGraphics::CORNER_ALL;
+				DrawRoundedSurface(Ui(), CUIRect{CenterX + x - RowHitInset + BoxOffset, CenterY + y + BoxMove, RowWidth - BoxOffset, LineHeight}, ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f * ContentAlpha), ColorRGBA(), SelectionSurface);
+			}
 		}
 
 		bool PlayerSelected = false;

@@ -291,12 +291,11 @@ TEST(QmNewUiMenuRenderSurfaceContract, OrdinaryUiRoundedSurfacesUseSharedPath)
 
 TEST(QmNewUiMenuRenderSurfaceContract, LegacyRoundedRectDrawSitesRequireExplicitAllowlist)
 {
-	// 聊天选中块/发言预览、统计板已经并进共享圆角路径，因此不再列入；
 	// 列表只能缩，不能为了过测试把新直绘塞回来。
+	// hud.cpp 保留的唯一原因是这些元素根本没有圆角可统一：0.75px 宽的分隔线、
+	// 1px 圆角的进度条。亚像素元素走 SDF 既看不出差别，还多一次绘制命令。
 	const char *const apAllowlistedFiles[] = {
 		"src/game/client/components/hud.cpp",
-		"src/game/client/components/nameplates.cpp",
-		"src/game/client/components/spectator.cpp",
 	};
 	for(const char *pPath : apAllowlistedFiles)
 	{
