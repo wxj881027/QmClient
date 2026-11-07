@@ -5,6 +5,7 @@
 #include "SettingsCardCollapseState.h"
 #include "SettingsCardContentBridge.h"
 #include "SettingsCardInfo.h"
+#include "SettingsCardMotion.h"
 #include "SettingsCardWidth.h"
 #include "SettingsCardWidthState.h"
 #include "SettingsSearchReveal.h"
@@ -913,6 +914,9 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 	// 入场或重排期间鼠标可能仍停在卡片最终位置；只有布局稳定后再次移动鼠标才恢复 hover 亮度，
 	// 避免动画结束的首帧从普通背景突然跳到高亮背景。
 	const bool LayoutStable = !EntryPending && !EntryPositionActive && !ContentHeightAnimationActive && !ReflowTargetChanged && !ReflowPositionActive;
+	// 把「卡片还在动」发布给外部：语音冷启动这类一次性重活要等动画播完，
+	// 否则展开动画和音频子系统初始化会压在同一帧。
+	qm_settings_motion::PublishCardAnimationActive(!LayoutStable);
 	if(m_SuppressHoverFeedbackOnce && LayoutStable && m_HasPointerPosition &&
 		(std::abs(Input.m_MouseX - m_LastPointerX) > 0.001f || std::abs(Input.m_MouseY - m_LastPointerY) > 0.001f))
 		m_SuppressHoverFeedbackOnce = false;

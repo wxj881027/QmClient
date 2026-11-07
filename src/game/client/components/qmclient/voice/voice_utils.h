@@ -307,6 +307,12 @@ namespace VoiceUtils
 	uint32_t VoiceTransmitBlockers(const SVoiceTransmitPreconditions &Preconditions);
 	void FormatVoiceTransmitBlockers(uint32_t Blockers, char *pBuf, int BufSize);
 	bool VoiceNeedsAudioRefresh(const SVoiceAudioRefreshState &State);
+	// 语音运行时冷启动（SDL 音频子系统、设备枚举、工作线程）会整块压在首次启用的那一帧上。
+	// 设置卡片正在播展开/折叠动画时先别启动：那几帧已经因为重新声明行、测量和新建文本变长。
+	// 动画标记异常长时间不落时由 DeadlineExpired 放行，避免语音一直起不来。
+	// 这条策略只管「首次启动」；已经在跑的会话不受动画影响。
+	inline constexpr int VOICE_COLD_START_MAX_DEFER_MS = 1000;
+	bool VoiceShouldDeferColdStart(bool CardAnimationActive, bool DeadlineExpired);
 	void ComputeVoiceEncoderTargets(int LossPerc, float JitterMax, int BitrateProfile, int *pTargetBitrate, int *pTargetLoss, bool *pTargetFec);
 	void ComputeVoiceEncoderTargetsWithComplexity(int LossPerc, float JitterMax, int BitrateProfile, int *pTargetBitrate, int *pTargetLoss, bool *pTargetFec, int *pTargetComplexity);
 	float ComputeVoiceAutoGain(float CurrentGain, float FrameRms, const SVoiceAgcConfig &Config);
