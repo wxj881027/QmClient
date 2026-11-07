@@ -127,7 +127,7 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	int64_t m_QmGraphicsLastPumpNetworkNs = 0;
 	// 待应用的垂直同步状态：-1 表示没有等待中的切换。
 	int m_QmPendingVSync = -1;
-	int64_t m_QmVSyncApplyTime = 0;
+	int64_t m_QmVSyncQueuedAt = 0;
 	std::atomic<bool> m_HangWatchdogStop{false};
 	std::thread m_HangWatchdogThread;
 	char m_aHangDumpDir[IO_MAX_PATH_LENGTH] = "";

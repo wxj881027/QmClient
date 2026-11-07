@@ -508,6 +508,8 @@ public:
 	virtual void OnShutdown() = 0;
 	virtual void OnRender() = 0;
 	virtual void OnUpdate() = 0;
+	// 界面动画是否全部停下。垂直同步切换要等它，否则交换链重建会砸在动画中间。
+	virtual bool QmUiAnimationsIdle() const { return true; }
 	// 连接资源在常规主循环推进，编辑器占用游戏更新时也不能暂停准备。
 	virtual void OnConnectionResourceUpdate() {}
 	// 每次替换地图前都通知，即使客户端仍处于加载状态。

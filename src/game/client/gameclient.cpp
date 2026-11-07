@@ -3357,6 +3357,12 @@ bool CGameClient::PoseSkinsReady()
 	return false;
 }
 
+bool CGameClient::QmUiAnimationsIdle() const
+{
+	const CUiV2AnimationRuntime *pRuntime = m_UI.QmAnimationRuntime();
+	return pRuntime == nullptr || pRuntime->ActiveTrackCount() == 0;
+}
+
 void CGameClient::OnShutdown()
 {
 	// 退出前结算进行中的 stutter 窗口，避免最后的诊断数据丢失
