@@ -125,6 +125,9 @@ class CClient : public IClient, public CDemoPlayer::IListener
 
 	QmHangDiagnostics::CSnapshotStore m_HangInfo;
 	int64_t m_QmGraphicsLastPumpNetworkNs = 0;
+	// 待应用的垂直同步状态：-1 表示没有等待中的切换。
+	int m_QmPendingVSync = -1;
+	int64_t m_QmVSyncApplyTime = 0;
 	std::atomic<bool> m_HangWatchdogStop{false};
 	std::thread m_HangWatchdogThread;
 	char m_aHangDumpDir[IO_MAX_PATH_LENGTH] = "";
@@ -766,6 +769,7 @@ public:
 	// gfx
 	void Notify(const char *pTitle, const char *pMessage) override;
 	void OnWindowResize() override;
+	void QueueVSyncChange(bool State) override;
 	void BenchmarkQuit(int Seconds, const char *pFilename);
 
 	void EnsureWindowShown();

@@ -470,7 +470,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 				str_format(aBuf, sizeof(aBuf), "%s (%s)", Localize("V-Sync"), Localize("may cause delay"));
 				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_GfxVsync, "graphics-vsync-delay-warning", aBuf, g_Config.m_GfxVsync, &Button))
 				{
-					Graphics()->SetVSync(!g_Config.m_GfxVsync);
+					Client()->QueueVSyncChange(!g_Config.m_GfxVsync);
 				}
 			});
 

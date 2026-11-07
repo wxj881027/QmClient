@@ -4188,6 +4188,17 @@ void CClient::Update()
 {
 	m_LinkProbeTracker.OnFrame(time_get(), time_freq());
 
+	// 界面动画播完后再真正切换垂直同步（交换链重建的掉帧因此落在静止时刻）。
+	if(m_QmVSyncApplyTime != 0 && time_get() >= m_QmVSyncApplyTime)
+	{
+		m_QmVSyncApplyTime = 0;
+		if(m_QmPendingVSync >= 0)
+		{
+			Graphics()->SetVSync(m_QmPendingVSync != 0);
+			m_QmPendingVSync = -1;
+		}
+	}
+
 	const bool GraphicsTrace = QmGraphicsTraceEnabled(2);
 	const bool PerfRuntime = QmPerfEnabled();
 	// GraphicsTrace 走原有 perf/graphics 通道；常规性能/卡顿诊断下把 client_update 的子阶段
@@ -7636,6 +7647,16 @@ void CClient::Notify(const char *pTitle, const char *pMessage)
 	Graphics()->NotifyWindow();
 }
 
+void CClient::QueueVSyncChange(bool State)
+{
+	if(Graphics() == nullptr)
+		return;
+	m_QmPendingVSync = State ? 1 : 0;
+	// 设置页开关的动画大约两三百毫秒。把交换链重建推迟到动画播完之后，
+	// 用户看到的是开关顺滑地滑过去，而不是滑到一半定一下。
+	m_QmVSyncApplyTime = time_get() + time_freq() * 4 / 10;
+}
+
 void CClient::OnWindowResize()
 {
 	TextRender()->OnPreWindowResize();
@@ -7651,7 +7672,7 @@ void CClient::ConchainWindowVSync(IConsole::IResult *pResult, void *pUserData, I
 	{
 		if(g_Config.m_GfxVsync != pResult->GetInteger(0))
 		{
-			pSelf->Graphics()->SetVSync(pResult->GetInteger(0));
+			pSelf->QueueVSyncChange(pResult->GetInteger(0) != 0);
 		}
 	}
 	else

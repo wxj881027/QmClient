@@ -263,6 +263,9 @@ public:
 	// gfx
 	virtual void Notify(const char *pTitle, const char *pMessage) = 0;
 	virtual void OnWindowResize() = 0;
+	// 切换垂直同步要重建交换链，重建那一下必然掉帧；先把请求挂起，等界面动画播完再真的切，
+	// 动画就不会被那一下打断。
+	virtual void QueueVSyncChange(bool State) = 0;
 
 	virtual void UpdateAndSwap() = 0;
 
