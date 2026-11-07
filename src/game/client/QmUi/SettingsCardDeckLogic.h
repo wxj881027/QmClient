@@ -300,6 +300,16 @@ bool SettingsCardDeckAllowsDragStart(bool EntryPending, bool EntryPositionActive
 SSettingsCardAnimationWork ResolveSettingsCardAnimationWork(float EntryDuration, bool EntryWasActive, bool ReflowInitializedThisFrame, bool SnapReflow, float ReflowDuration, bool ReflowTargetChanged, bool ReflowWasActive);
 // 首帧直接采用稳定目标；之后仅在高度目标变化或轨道仍活动时访问动画 runtime。
 SSettingsCardHeightAnimationWork ResolveSettingsCardHeightAnimationWork(bool InitializedThisFrame, bool TargetChanged, bool AnimationWasActive, float Duration, bool Snap);
+// 内容高度补间由 Deck 自己按帧推进，单帧最多推进整段过渡的这个比例。
+// 「内容变多」触发的目标变化正好落在内容第一次出现的那一帧之后——该帧要声明新行、
+// 测量并创建新文本，比常规帧长得多；若把整帧时长直接计入补间进度，ease-out 会让
+// 高度当场走到终点，看起来就是「瞬移、动画没播完」。常规帧（约 16ms）低于该上限，
+// 平时过渡速度不变。
+inline constexpr float SETTINGS_CARD_CONTENT_HEIGHT_MAX_STEP_FRACTION = 1.0f / 8.0f;
+// 单帧实际推进的过渡时长：常规帧取帧时长，卡顿帧截到上面的比例上限。
+float SettingsCardContentHeightStepSeconds(float FrameDt, float Duration);
+// 已累计过渡时长对应的归一化进度，曲线与原补间使用的 EEasing::EASE_OUT_QUART 一致。
+float SettingsCardContentHeightProgress(float Elapsed, float Duration);
 // 只裁剪正在改变高度的卡片；同 Deck 的其他卡片不得跟随闪烁或截断 focus ring。
 bool SettingsCardDeckShouldClipContent(bool HasRenderableContent, bool ContentHeightAnimationActive);
 // 每一帧都从前一张卡当前动画底边继续，保证动态高度全过程同列卡片不重叠。

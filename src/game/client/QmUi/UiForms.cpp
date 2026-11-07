@@ -112,7 +112,9 @@ namespace ui_widget
 
 			bool Active = pInput->IsActive() || Ctx.m_pUi->IsActiveItem(pInput);
 			const bool MousePressed = Ctx.m_pUi->MouseButton(0) || Ctx.m_pUi->MouseButton(1);
-			if(!Multiline && MousePressed && !Ctx.m_pUi->MouseHovered(&Rect))
+			// 指针判定用可见几何：设置卡片的出图趟是 RenderOnly 的内容 DRAW 回放，
+			// MouseHovered 在那里恒为 false，按住鼠标时会把聚焦态误判成失焦。
+			if(!Multiline && MousePressed && !Ctx.m_pUi->VisualMouseHovered(&Rect))
 				Active = false;
 			if(!Active && Ctx.m_pUi->HotItem() == pInput && Ctx.m_pUi->MouseButton(0))
 				Active = true;
@@ -238,11 +240,20 @@ namespace ui_widget
 		CUiScopedSurfaceText SurfaceText(Ctx.m_pUi->TextRender(), PlateColor);
 		// 激活态边框单层绘制：颜色与粗细随聚焦动画在常规边框与强调色环之间过渡，
 		// 不再叠加第二层描边——半透明强调环叠在常规边框上会让灰边透出（叠色）。
+		// 聚焦描边必须算在真正出图的那趟：设置卡片的内容是在 RenderOnly 的 DRAW 回放里出图，
+		// 预布局输入趟的圆角面会被 DrawingSuppressed 吃掉，只看 ProcessInput 就永远画不出描边。
 		float FocusAlpha = 0.0f;
-		if(ProcessInput && Ctx.m_pAnim != nullptr)
+		const bool FocusPaintPass = Options.m_ProcessInput && !Ctx.m_pUi->MeasurementOnly() && !Ctx.m_pUi->DrawingSuppressed();
+		CUiV2AnimationRuntime *pFocusAnim = Ctx.m_pAnim != nullptr ? Ctx.m_pAnim : Ctx.m_pUi->QmAnimationRuntime();
+		if(FocusPaintPass && pFocusAnim != nullptr)
 		{
 			const bool FocusActive = InputFieldFocusActive(Ctx, pInput, Layout.m_ShellRect, Options.m_Mode == EInputFieldMode::MULTILINE);
-			FocusAlpha = AnimateStateValue(Ctx, pInput, EUiAnimProperty::ALPHA, FocusActive ? 1.0f : 0.0f, ui_token::motion::INPUT_FOCUS_RING);
+			const uint64_t FocusKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash, reinterpret_cast<uint64_t>(pInput));
+			const float FocusTarget = FocusActive ? 1.0f : 0.0f;
+			// 同一帧可能重复出图：只让真实出图的趟推进轨道，其余趟只读当前进度。
+			FocusAlpha = Ctx.m_pUi->AnimationsBlocked() ?
+					     pFocusAnim->GetValue(FocusKey, EUiAnimProperty::ALPHA, FocusTarget) :
+					     pFocusAnim->ResolveTargetValue(FocusKey, EUiAnimProperty::ALPHA, FocusTarget, ui_token::motion::INPUT_FOCUS_RING);
 		}
 		if(!Ctx.m_pUi->MeasurementOnly() && FocusAlpha > 0.01f)
 		{
