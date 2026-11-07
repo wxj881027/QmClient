@@ -4195,13 +4195,19 @@ void CClient::Update()
 		const int64_t Elapsed = time_get() - m_QmVSyncQueuedAt;
 		if(Elapsed >= time_freq() * 2)
 		{
-			const int64_t ApplyStart = time_get();
-			Graphics()->SetVSync(m_QmPendingVSync != 0);
-			dbg_msg("gfx/qm", "vsync_apply state=%d apply=%.2fms waited=%.0fms", m_QmPendingVSync,
-				(time_get() - ApplyStart) * 1000.0 / time_freq(), Elapsed * 1000.0 / time_freq());
+			const int ApplyState = m_QmPendingVSync;
 			m_QmPendingVSync = -1;
 			m_QmVSyncQueuedAt = 0;
 			m_QmVSyncIdleFrames = 0;
+			// 连点后值转回原样就不用再动交换链。
+			if(ApplyState != m_QmAppliedVSync)
+			{
+				const int64_t ApplyStart = time_get();
+				Graphics()->SetVSync(ApplyState != 0);
+				m_QmAppliedVSync = ApplyState;
+				dbg_msg("gfx/qm", "vsync_apply state=%d apply=%.2fms waited=%.0fms", ApplyState,
+					(time_get() - ApplyStart) * 1000.0 / time_freq(), Elapsed * 1000.0 / time_freq());
+			}
 		}
 	}
 
@@ -7657,10 +7663,12 @@ void CClient::QueueVSyncChange(bool State)
 {
 	if(Graphics() == nullptr)
 		return;
+	// 开关外观必须立刻跟手：点击就把配置写上，真正切换交给下面 2 秒后的应用点。
+	g_Config.m_GfxVsync = State ? 1 : 0;
 	m_QmPendingVSync = State ? 1 : 0;
-	m_QmVSyncIdleFrames = 0;
-	// 交换链重建推迟到界面动画全部停下之后，用户看到开关顺滑滑完，而不是滑到一半定一下。
-	m_QmVSyncQueuedAt = time_get();
+	// 连点不能把计时器一直往后推，否则永远落不了地——那就是"点了没反应"的成因。
+	if(m_QmVSyncQueuedAt == 0)
+		m_QmVSyncQueuedAt = time_get();
 	dbg_msg("gfx/qm", "vsync_queue state=%d", State ? 1 : 0);
 }
 
