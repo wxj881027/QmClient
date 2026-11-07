@@ -98,6 +98,10 @@ namespace qm_card_catalog
 	// 页面只做"取清单 → 逐张构造 → 交给 CSettingsCardDeck"。
 	bool BuildCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
 	void BuildCards(const SQmCardBuildContext &Ctx, const std::vector<const char *> &vStableIds, std::vector<SSettingsCardDefinition> &vOut);
+	// 卡片构建计时：只用来定位"打开某设置页卡住"是哪些卡片定义吃掉的，
+	// 每张卡两次 time_get，总开关由调用方按帧控制（非调试页面不会有输出）。
+	void ResetCardBuildTimings();
+	void LogCardBuildTimings(const char *pPage);
 
 	// 搜索页用的卡片目录条目：stableId + 该卡当前所在分类（导航目标），
 	// 由 QmCardRegistry 的默认 Placement 表与当前布局模型共同解析。

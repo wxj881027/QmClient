@@ -127,6 +127,9 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	int64_t m_QmGraphicsLastPumpNetworkNs = 0;
 	// 待应用的垂直同步状态：-1 表示没有等待中的切换。
 	int m_QmPendingVSync = -1;
+	// 连续多少帧界面动画都处于静止：只有连续静止才算"动画真的播完"，
+	// 单帧恰好静止不能代表滑块液态回弹已经到位。
+	int m_QmVSyncIdleFrames = 0;
 	int64_t m_QmVSyncQueuedAt = 0;
 	std::atomic<bool> m_HangWatchdogStop{false};
 	std::thread m_HangWatchdogThread;

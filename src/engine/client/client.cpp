@@ -4195,19 +4195,25 @@ void CClient::Update()
 	{
 		const int64_t Now = time_get();
 		const int64_t Elapsed = Now - m_QmVSyncQueuedAt;
-		const bool MinDelayPassed = Elapsed >= time_freq() / 5;
+		const bool MinDelayPassed = Elapsed >= time_freq() * 7 / 20;
 		const bool AnimationsIdle = GameClient() == nullptr || GameClient()->QmUiAnimationsIdle();
-		const bool Fallback = Elapsed >= time_freq() * 3 / 2;
-		if(Fallback || (MinDelayPassed && AnimationsIdle))
+		m_QmVSyncIdleFrames = AnimationsIdle ? m_QmVSyncIdleFrames + 1 : 0;
+		// 连续静止帧数：滑块的液态回弹在结构上"稳定"后还会继续细动，
+		// 单帧静止就切会把重建压在动画尾巴上。
+		constexpr int REQUIRED_IDLE_FRAMES = 6;
+		const bool Settled = AnimationsIdle && m_QmVSyncIdleFrames >= REQUIRED_IDLE_FRAMES;
+		const bool Fallback = Elapsed >= time_freq() * 2;
+		if(Fallback || (MinDelayPassed && Settled))
 		{
 			const int64_t ApplyStart = time_get();
-			const bool UsedFallback = !AnimationsIdle;
+			const bool UsedFallback = !Settled;
 			Graphics()->SetVSync(m_QmPendingVSync != 0);
-			dbg_msg("gfx/qm", "vsync_apply state=%d apply=%.2fms waited=%.0fms reason=%s", m_QmPendingVSync,
-				(time_get() - ApplyStart) * 1000.0 / time_freq(), Elapsed * 1000.0 / time_freq(),
+			dbg_msg("gfx/qm", "vsync_apply state=%d apply=%.2fms waited=%.0fms idle_frames=%d reason=%s", m_QmPendingVSync,
+				(time_get() - ApplyStart) * 1000.0 / time_freq(), Elapsed * 1000.0 / time_freq(), m_QmVSyncIdleFrames,
 				UsedFallback ? "fallback" : "idle");
 			m_QmPendingVSync = -1;
 			m_QmVSyncQueuedAt = 0;
+			m_QmVSyncIdleFrames = 0;
 		}
 	}
 
@@ -7664,6 +7670,7 @@ void CClient::QueueVSyncChange(bool State)
 	if(Graphics() == nullptr)
 		return;
 	m_QmPendingVSync = State ? 1 : 0;
+	m_QmVSyncIdleFrames = 0;
 	// 交换链重建推迟到界面动画全部停下之后，用户看到开关顺滑滑完，而不是滑到一半定一下。
 	m_QmVSyncQueuedAt = time_get();
 	dbg_msg("gfx/qm", "vsync_queue state=%d", State ? 1 : 0);

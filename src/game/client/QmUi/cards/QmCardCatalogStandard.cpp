@@ -126,7 +126,9 @@ void CMenus::RenderSettingsCatalogPage(CUIRect MainView, const char *pTab, bool 
 		InputState.m_pScrollParams = &ScrollParams;
 	}
 	const uint64_t MeasurementEnvironmentRevision = ResolveSettingsCardDefinitionsRevision(m_SettingsCardDeckDisplayCycle, m_MenuTextPoolGeneration, MainView.w, 0);
+	qm_card_catalog::ResetCardBuildTimings();
 	const auto Result = SettingsCardDeckForRenderPass().RenderCached(Ctx.m_UiContext, Ctx.m_Page, pTab, Revision, BuildDefinitions, SettingsCardOrderModelForRenderPass(), pScroll, InputState, SettingsCardMotionSpec(), SettingsCardDeckVisualOptions(), MeasurementEnvironmentRevision);
+	qm_card_catalog::LogCardBuildTimings(pTab);
 	if(!ReadOnly && Result.m_OrderChanged)
 		SaveSettingsCardOrderModel();
 	if(TrackTClient)
