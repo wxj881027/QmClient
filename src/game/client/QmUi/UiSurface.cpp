@@ -64,14 +64,7 @@ bool DrawRoundedSurface(IGraphics *pGraphics, const CUIRect &Rect, const ColorRG
 		// 几何回退只能画圆：外扩按「半径加外扩量」近似，和 SDF 分支保持同一外缘。
 		Plan.m_Radius += Plan.m_Expand;
 	}
-	// 细碎元素（圆点、细条、小开关内部）没必要吃一次独立的 SDF 绘制命令：
-	// SDF 每个矩形都要先冲刷顶点批次再单独下发一次绘制，而几何 AA 能和其它四边形
-	// 合成一批。设置页实测每秒三万多次圆角提交，全走 SDF 时每帧三百多次绘制，
-	// 动画期间就是这个量在拖帧。只把「短边小于 10px」的转到几何路径，卡片、
-	// 胶囊这类需要连续曲率的大面仍然走 SDF。
-	const bool UseGeometryForTiny = Plan.m_UseSdf && Plan.m_BorderWidth <= 0.0f &&
-					std::min(Plan.m_Rect.w, Plan.m_Rect.h) < 10.0f;
-	if(Plan.m_UseSdf && !UseGeometryForTiny)
+	if(Plan.m_UseSdf)
 	{
 		IGraphics::SRoundedRectSdfParams SdfParams;
 		SdfParams.m_Rect = vec4(Plan.m_Rect.x, Plan.m_Rect.y, Plan.m_Rect.w, Plan.m_Rect.h);
