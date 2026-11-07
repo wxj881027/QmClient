@@ -4188,29 +4188,17 @@ void CClient::Update()
 {
 	m_LinkProbeTracker.OnFrame(time_get(), time_freq());
 
-	// 界面动画播完后再真正切换垂直同步（交换链重建的掉帧因此落在静止时刻）。
-	// 只看固定延时不靠谱：页面切换、卡片展开、滑块回弹叠加起来可能超过一秒，
-	// 于是改成"等动画真的停下"，并留 1.5 秒上限兜底（控制台切换、悬停动画长期不停）。
+	// 点了垂直同步开关后固定等 2 秒再真正切换：交换链重建必然停顿一下，
+	// 这 2 秒足够页面切换和开关动画全部播完，停顿落在静止画面上。
 	if(m_QmPendingVSync >= 0 && m_QmVSyncQueuedAt != 0)
 	{
-		const int64_t Now = time_get();
-		const int64_t Elapsed = Now - m_QmVSyncQueuedAt;
-		const bool MinDelayPassed = Elapsed >= time_freq() * 7 / 20;
-		const bool AnimationsIdle = GameClient() == nullptr || GameClient()->QmUiAnimationsIdle();
-		m_QmVSyncIdleFrames = AnimationsIdle ? m_QmVSyncIdleFrames + 1 : 0;
-		// 连续静止帧数：滑块的液态回弹在结构上"稳定"后还会继续细动，
-		// 单帧静止就切会把重建压在动画尾巴上。
-		constexpr int REQUIRED_IDLE_FRAMES = 6;
-		const bool Settled = AnimationsIdle && m_QmVSyncIdleFrames >= REQUIRED_IDLE_FRAMES;
-		const bool Fallback = Elapsed >= time_freq() * 2;
-		if(Fallback || (MinDelayPassed && Settled))
+		const int64_t Elapsed = time_get() - m_QmVSyncQueuedAt;
+		if(Elapsed >= time_freq() * 2)
 		{
 			const int64_t ApplyStart = time_get();
-			const bool UsedFallback = !Settled;
 			Graphics()->SetVSync(m_QmPendingVSync != 0);
-			dbg_msg("gfx/qm", "vsync_apply state=%d apply=%.2fms waited=%.0fms idle_frames=%d reason=%s", m_QmPendingVSync,
-				(time_get() - ApplyStart) * 1000.0 / time_freq(), Elapsed * 1000.0 / time_freq(), m_QmVSyncIdleFrames,
-				UsedFallback ? "fallback" : "idle");
+			dbg_msg("gfx/qm", "vsync_apply state=%d apply=%.2fms waited=%.0fms", m_QmPendingVSync,
+				(time_get() - ApplyStart) * 1000.0 / time_freq(), Elapsed * 1000.0 / time_freq());
 			m_QmPendingVSync = -1;
 			m_QmVSyncQueuedAt = 0;
 			m_QmVSyncIdleFrames = 0;

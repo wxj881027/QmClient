@@ -99,6 +99,7 @@ void CMenus::RenderSettingsCatalogPage(CUIRect MainView, const char *pTab, bool 
 	const auto &vIds = qm_card_catalog::CatalogPageStableIds(pTab);
 	const uint64_t ContentRevision = qm_card_catalog::QmCardRenderHook::PrepareStandardCards(Ctx, vIds) ^ qm_card_catalog::QmCardRenderHook::PrepareTClientCards(Ctx, vIds);
 	const uint64_t Revision = ResolveSettingsCardDefinitionsRevision(m_SettingsCardDeckDisplayCycle, m_MenuTextPoolGeneration, MainView.w, ContentRevision ^ str_quickhash(pTab));
+	const double DefinitionsStart = time_get() * 1000.0 / (double)time_freq();
 	const auto BuildDefinitions = [Ctx, &vIds](std::vector<SSettingsCardDefinition> &vCards) {
 		qm_card_catalog::BuildCards(Ctx, vIds, vCards);
 	};
@@ -127,8 +128,16 @@ void CMenus::RenderSettingsCatalogPage(CUIRect MainView, const char *pTab, bool 
 	}
 	const uint64_t MeasurementEnvironmentRevision = ResolveSettingsCardDefinitionsRevision(m_SettingsCardDeckDisplayCycle, m_MenuTextPoolGeneration, MainView.w, 0);
 	qm_card_catalog::ResetCardBuildTimings();
+	const double CatalogRenderStart = time_get() * 1000.0 / (double)time_freq();
 	const auto Result = SettingsCardDeckForRenderPass().RenderCached(Ctx.m_UiContext, Ctx.m_Page, pTab, Revision, BuildDefinitions, SettingsCardOrderModelForRenderPass(), pScroll, InputState, SettingsCardMotionSpec(), SettingsCardDeckVisualOptions(), MeasurementEnvironmentRevision);
 	qm_card_catalog::LogCardBuildTimings(pTab);
+	{
+		const double Now = time_get() * 1000.0 / (double)time_freq();
+		const double Total = Now - DefinitionsStart;
+		if(Total > 50.0 || PrewarmOnly)
+			dbg_msg("perf/page", "page=%s prewarm=%d total=%.1fms render=%.1fms parallel=%d measurement=%d", pTab, PrewarmOnly ? 1 : 0, Total,
+				Now - CatalogRenderStart, Ui()->RenderOnly() ? 1 : 0, Ui()->MeasurementOnly() ? 1 : 0);
+	}
 	if(!ReadOnly && Result.m_OrderChanged)
 		SaveSettingsCardOrderModel();
 	if(TrackTClient)
