@@ -46,8 +46,10 @@ namespace
 			Params.m_BorderColor = vec4(Border.r, Border.g, Border.b, Border.a);
 			Params.m_CornerRadii = Plan.m_CornerRadii;
 			Params.m_Params = vec4(Plan.m_BorderWidth, Plan.m_PixelSize, Plan.m_PixelSize * 2.0f, 0.0f);
-			// 边框环带必须和填充取同一个曲线档位，否则描边和底色在角上会差一条线。
-			Params.m_ShapeParams.x = CornerCurveType();
+			// 边框环带必须和填充取同一套形状参数（曲线档位、连续曲率强度、胶囊接缝），
+			// 少一项就会在角上或端头差出一条线。这三项在 SDF 里是独立分量，不能只写档位。
+			Params.m_GradientParams2.w = CornerSmoothing();
+			Params.m_ShapeParams = vec4(CornerCurveType(), CapsuleSeam(), 0.0f, 0.0f);
 			pGraphics->RenderRoundedRectSdf(Params);
 			return;
 		}

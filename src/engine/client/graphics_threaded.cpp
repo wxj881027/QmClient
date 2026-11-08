@@ -2293,12 +2293,12 @@ void CGraphics_Threaded::DrawRectExtAntialias(float x, float y, float w, float h
 	if(Corners == 0 || r <= 0.0f || Color.a <= 0.0f)
 		return;
 
-	// 连续曲率：圆角沿边铺得更长，几何兜底必须和着色器用同一条曲线、同一个生长上限，
-	// 否则没有 SDF 的机器上圆角会明显小一圈，或者胶囊被强行压弯。
-	const int CornerCurve = g_Config.m_QmUiCornerCurve;
-	const SRoundedCornerShape CornerShape = ResolveRoundedCornerShape(r, w, h, g_Config.m_QmUiCornerSmoothing / 100.0f, CornerCurve, g_Config.m_QmUiCapsuleSeam / 100.0f);
-	const float CornerAmount = CornerShape.m_Amount;
-	const float Inset = CornerShape.m_Radius;
+	// 这里只补外缘羽化，形状必须和调用方已经画好的那一块完全一致：无 SDF 时填充走
+	// DrawRect/DrawRectExt、边框走固定方向表，两者都是圆弧，而且都不做连续曲率的
+	// 沿边生长。若这里按全局配置再生长一次，羽化边会落在形状外 0.3–1.3 倍半径处，
+	// 看起来是一圈脱离面板的软边；HUD 边框也走这条路径，同样会错位。
+	// 连续曲率的形状只由携带显式参数的路径决定（SDF 片元、离屏掩码顶点）。
+	const float Inset = r;
 	const float AntialiasSize = minimum(RoundedRectAntialiasSize(), Inset);
 	if(AntialiasSize <= 0.0f)
 		return;
@@ -2350,12 +2350,12 @@ void CGraphics_Threaded::DrawRectExtAntialias(float x, float y, float w, float h
 
 	for(int Segment = 0; Segment < NumSegments; ++Segment)
 	{
-		// 采样点来自和着色器同一条曲线；强度为 0 时就是原来的圆弧方向表。
-		float StartX, StartY, EndX, EndY;
-		RoundedCornerCurveDirection(CornerCurve, CornerAmount, Segment, NumSegments, StartX, StartY);
-		RoundedCornerCurveDirection(CornerCurve, CornerAmount, Segment + 1, NumSegments, EndX, EndY);
-		const vec2 DirectionStart(StartX, StartY);
-		const vec2 DirectionEnd(EndX, EndY);
+		// 圆弧方向表：第 0 个采样点落在竖直边上，最后一个落在水平边上，
+		// 与 DrawRectExt 使用的那张缓存方向表同源。
+		const float StartAngle = (float)Segment / (float)NumSegments * (float)pi * 0.5f;
+		const float EndAngle = (float)(Segment + 1) / (float)NumSegments * (float)pi * 0.5f;
+		const vec2 DirectionStart(std::cos(StartAngle), std::sin(StartAngle));
+		const vec2 DirectionEnd(std::cos(EndAngle), std::sin(EndAngle));
 
 		if(Corners & CORNER_TL)
 			aFreeform[NumItems++] = RoundedRectAntialiasSegment(x + Inset, y + Inset, Inset, OuterRadius, DirectionStart, DirectionEnd, -1.0f, -1.0f);
