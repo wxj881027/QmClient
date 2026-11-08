@@ -36,8 +36,10 @@ inline constexpr float QM_TOOLTIP_ENTER_SECONDS = 0.18f;
 inline constexpr float QM_TOOLTIP_SIDE_POP_DISTANCE = 8.0f;
 
 // 所有气泡共用 ui_token::tooltip 一套尺寸。设置页紧凑小字气泡是基准，
-// qm_tooltip_font_size（默认 14 = 1 倍）对全部气泡统一缩放，默认配置下
-// 设置页、服务器列表、好友列表的字号/内边距/外边距/圆角/宽度上限完全一致。
+// qm_tooltip_font_size 的值就是字号本身（默认等于 FONT_SIZE），对全部气泡统一缩放；
+// 默认配置下设置页、服务器列表、好友列表的字号/内边距/外边距/圆角/宽度上限完全一致。
+// 不再做「配置 14 = 1 倍」的二次换算：那样老存档调到 20 会被压成 14.3，
+// 而且设置页预览按配置值直接画字，会比真实气泡大一号。
 inline float QmTooltipFontScale(const int ConfiguredFontSize)
 {
 	return std::clamp(ConfiguredFontSize, 10, 24) / ui_token::tooltip::FONT_SIZE_CONFIG_REFERENCE;

@@ -102,7 +102,7 @@ MACRO_CONFIG_INT(QmColorPickerShape, qm_color_picker_shape, 0, 0, 1, CFGFLAG_CLI
 MACRO_CONFIG_STR(QmColorPickerPalette, qm_color_picker_palette, 4096, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Color picker saved swatches (format: name|#hex entries separated by semicolons)")
 MACRO_CONFIG_COL(QmTooltipBackgroundColor, qm_tooltip_background_color, 0xD9000066, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Tooltip background color")
 MACRO_CONFIG_COL(QmTooltipTextColor, qm_tooltip_text_color, 0xFF0000FF, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Tooltip text color")
-MACRO_CONFIG_INT(QmTooltipFontSize, qm_tooltip_font_size, 14, 10, 24, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Tooltip font size")
+MACRO_CONFIG_INT(QmTooltipFontSize, qm_tooltip_font_size, 10, 10, 24, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Tooltip font size")
 MACRO_CONFIG_INT(QmTooltipAnimation, qm_tooltip_animation, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Tooltip bounce animation")
 MACRO_CONFIG_COL(QmUiDropdownColor, qm_ui_dropdown_color, 0x000000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Button background color")
 MACRO_CONFIG_INT(QmUiDropdownOpacity, qm_ui_dropdown_opacity, 16, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Button background opacity percentage")

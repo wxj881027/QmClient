@@ -31,6 +31,8 @@ namespace ui_token::color
 	inline constexpr ColorRGBA TINT_ZONE_HOVER{1.0f, 1.0f, 1.0f, 0.035f}; // 5% ×0.7
 	inline constexpr ColorRGBA TINT_ZONE_SELECTED{1.0f, 1.0f, 1.0f, 0.060f}; // 5% ×1.2
 	inline constexpr ColorRGBA TINT_ROW_HOVER{1.0f, 1.0f, 1.0f, 0.060f}; // 5% ×1.2
+	// 绑定设置页那种整行可点的大行：悬停时比卡片内小行更亮。数值与
+	// LIST_ITEM_SELECTED 相同但语义不同（这里是悬停，那边是选中），不要合并。
 	inline constexpr ColorRGBA TINT_ROW_ACTIVE{1.0f, 1.0f, 1.0f, 0.140f}; // 5% ×2.8
 	// 二、可辨识的立体部件（滚轮底座、倾斜板）
 	inline constexpr ColorRGBA TINT_PART{1.0f, 1.0f, 1.0f, 0.060f}; // 5% ×1.2
@@ -43,6 +45,8 @@ namespace ui_token::color
 	inline constexpr ColorRGBA SURFACE_SHADOW{0.0f, 0.0f, 0.0f, 0.12f};
 	inline constexpr ColorRGBA BORDER_SUBTLE{1.0f, 1.0f, 1.0f, 0.08f};
 	inline constexpr ColorRGBA BORDER_FOCUS{0.4f, 0.753f, 0.957f, 0.85f};
+	// 列表控件（ListBox）的整行悬停/选中：直接压在菜单底图上，比卡片内的
+	// TINT_ROW_* 更亮，才压得住背板。两者不要互相替换。
 	inline constexpr ColorRGBA LIST_ITEM_SELECTED{1.0f, 1.0f, 1.0f, 0.14f};
 	inline constexpr ColorRGBA LIST_ITEM_HOVER{1.0f, 1.0f, 1.0f, 0.08f};
 
@@ -293,9 +297,11 @@ namespace ui_token::tooltip
 {
 	// 阅读字号，与设置页小字同一档。
 	inline constexpr float FONT_SIZE = font::SMALL;
-	// 用户设置 qm_tooltip_font_size 的默认值；它同时是等比缩放的基准，
-	// 默认配置（14）下缩放系数为 1，所有气泡都正好是 FONT_SIZE。
-	inline constexpr float FONT_SIZE_CONFIG_REFERENCE = 14.0f;
+	// qm_tooltip_font_size 的值就是字号本身：默认值等于 FONT_SIZE，缩放系数为 1。
+	// 内边距、外边距、圆角、宽度上限都按 FONT_SIZE 的比例定义，所以配置调大时
+	// 它们跟着等比放大。这里不做「配置 14 = 1 倍」的二次换算，否则设置页里的
+	// 「气泡预览」用配置值直接画字，预览会比真实气泡大一号。
+	inline constexpr float FONT_SIZE_CONFIG_REFERENCE = FONT_SIZE;
 	// 相对于 FONT_SIZE 的比例：内边距 0.3 字高、外边距 0.4 字高、圆角 0.3 字高。
 	inline constexpr float PADDING = 3.0f;
 	inline constexpr float MARGIN = 4.0f;
