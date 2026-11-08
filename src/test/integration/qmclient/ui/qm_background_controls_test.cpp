@@ -1073,7 +1073,7 @@ TEST_F(QmBackgroundControlsIntegration, SelectedSecondaryButtonUsesPublicRadiusA
 	EXPECT_EQ(m_Recording.m_vSurfaces.back().m_FillColor, Selected.m_FillColor);
 }
 
-TEST_F(QmBackgroundControlsIntegration, TransparentSelectedButtonKeepsBorderUntilPointerEnters)
+TEST_F(QmBackgroundControlsIntegration, SelectedAndHoveredButtonShareTheSameBorder)
 {
 	const auto Ctx = ui_widget::ControlContext(&m_Ui);
 	ui_widget::SButtonSurfaceOptions Options;
@@ -1091,7 +1091,9 @@ TEST_F(QmBackgroundControlsIntegration, TransparentSelectedButtonKeepsBorderUnti
 	m_Ui.OnCursorMove(Pixels.x, Pixels.y);
 	m_Client.AdvanceFrame();
 	m_Ui.Update();
-	EXPECT_LT(Draw(), SelectedBorder);
+	// 悬停与选中的描边是同一条白边（2026-11 统一按下/选中态描边后不再收细）：
+	// 状态差异只由填充色表达，边框不再是"指针进入后变细"的第二信号。
+	EXPECT_FLOAT_EQ(Draw(), SelectedBorder);
 	Options.m_Selected = false;
 	EXPECT_FLOAT_EQ(Draw(), SelectedBorder);
 }
