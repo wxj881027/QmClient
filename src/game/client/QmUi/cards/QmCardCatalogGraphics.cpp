@@ -1167,6 +1167,10 @@ static CButtonContainer s_CardBorderColorResetId;
 	// 手感档位决定弹簧参数两行是否参与布局，属于"影响行集合"的状态，必须参与
 	// 高度测量缓存键；否则切到弹簧档后行已渲染、卡片高度却还是旧的，内容被裁。
 	GraphicsLayoutRevision = GraphicsLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(std::clamp(g_Config.m_QmUiScrollFeel, 0, 2));
+	// 同理：原圆弧档不显示「圆角强度」与「胶囊接缝」两行，切档会改变行集合。
+	// 四档选择是自绘控件、不走配置绑定，没有别的失效路径，漏了这一项就会在
+	// 从原圆弧档切回来时按旧高度裁剪，或切到原圆弧档时留下两条空行。
+	GraphicsLayoutRevision = GraphicsLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(std::clamp(g_Config.m_QmUiCornerCurve, 0, 3));
 	if(pCards != nullptr)
 	{
 		BuildDefinitions(*pCards);
