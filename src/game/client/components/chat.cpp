@@ -1,7 +1,6 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 
-#include <game/client/QmUi/UiSurface.h>
 #include "chat.h"
 
 #include <base/log.h>
@@ -20,6 +19,7 @@
 #include <generated/protocol.h>
 #include <generated/protocol7.h>
 
+#include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiTheme.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/animstate.h>

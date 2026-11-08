@@ -1,4 +1,3 @@
-#include <game/client/QmUi/UiSurface.h>
 #include <engine/graphics.h>
 #include <engine/serverbrowser.h>
 #include <engine/shared/config.h>
@@ -8,6 +7,7 @@
 #include <generated/client_data.h>
 #include <generated/protocol.h>
 
+#include <game/client/QmUi/UiSurface.h>
 #include <game/client/animstate.h>
 #include <game/client/components/motd.h>
 #include <game/client/components/statboard.h>

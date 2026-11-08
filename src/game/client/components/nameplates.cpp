@@ -1,4 +1,3 @@
-#include <game/client/QmUi/UiSurface.h>
 #include "nameplates.h"
 
 #include "qmclient/nameplate_density.h"
@@ -17,6 +16,7 @@
 #include <game/client/QmUi/QmAnimResolve.h>
 #include <game/client/QmUi/QmChatBubble.h>
 #include <game/client/QmUi/QmCloudBubble.h>
+#include <game/client/QmUi/UiSurface.h>
 #include <game/client/animstate.h>
 #include <game/client/components/nameplate_text_effects.h>
 #include <game/client/components/qmclient/chat_emoji.h>
