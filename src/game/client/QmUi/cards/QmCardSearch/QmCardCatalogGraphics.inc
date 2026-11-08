@@ -103,7 +103,7 @@ namespace
 		{Localizable("Scroll feel"), nullptr, "滚动手感、平滑滚动、弹簧滚动"},
 		{Localizable("Every wheel tick restarts from rest, matching the original client"), nullptr, "原始滚动 Original"},
 		{Localizable("Consecutive wheel ticks carry their velocity into one continuous glide"), nullptr, "平滑滚动 Smooth"},
-		{Localizable("A damped spring drives the offset, so reversing direction slows down before it turns"), nullptr, "弹簧滚动 Spring"},
+		{Localizable("A damped spring drives the offset; reversing slows it before it turns"), nullptr, "弹簧滚动 Spring"},
 		{Localizable("Spring response"), nullptr, "弹簧响应"},
 		{Localizable("Spring damping"), nullptr, "弹簧阻尼"},
 		{Localizable("End bounce"), nullptr, "末端回弹"},
