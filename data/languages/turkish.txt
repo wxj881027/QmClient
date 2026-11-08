@@ -4181,6 +4181,9 @@ Door Laser Outline Color
 Door laser outline color
 == Kapı lazer dış çizgi rengi
 
+Double-tap the bound key within 400 ms to send the current lyric to public chat
+== Geçerli şarkı sözü satırını genel sohbete göndermek için atanan tuşa 400 ms içinde iki kez basın
+
 Download
 == İndir
 
@@ -5860,9 +5863,6 @@ Format player names after a finish
 
 Forms
 == Formlar
-
-Found %d global cards
-== %d küresel kart bulundu
 
 Four IP addresses are already online
 == Zaten 4 IP adresi çevrimiçi
@@ -12815,15 +12815,6 @@ Server hostname (0.7 only)
 Server info
 == Sunucu bilgisi
 
-Server information lower left card width (per mille)
-== Sunucu bilgileri sol alt kart genişliği (binde)
-
-Server information upper left card width (per mille)
-== Sunucu bilgileri sol üst kart genişliği (binde)
-
-Server information upper row height (per mille)
-== Sunucu bilgileri üst satır yüksekliği (binde)
-
 Server kick/spec votes are no longer actively moderated.
 == Sunucu atma/seyirci oyları artık aktif olarak yönetilmiyor.
 
@@ -14179,6 +14170,9 @@ Simple noise reduction
 
 Simple noise reduction strength
 == Basit gürültü azaltma gücü
+
+Singing
+== Şarkı söyleme
 
 Size
 == Boyut

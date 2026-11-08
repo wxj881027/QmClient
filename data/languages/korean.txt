@@ -4181,6 +4181,9 @@ Door Laser Outline Color
 Door laser outline color
 == 문 레이저 외곽선 색상
 
+Double-tap the bound key within 400 ms to send the current lyric to public chat
+== 지정한 키를 400밀리초 안에 두 번 눌러 현재 가사를 전체 채팅으로 보냅니다
+
 Download
 == 다운로드
 
@@ -5860,9 +5863,6 @@ Format player names after a finish
 
 Forms
 == 양식
-
-Found %d global cards
-== %d개의 전역 카드를 찾았습니다
 
 Four IP addresses are already online
 == 이미 4개 IP가 접속 중입니다
@@ -12815,15 +12815,6 @@ Server hostname (0.7 only)
 Server info
 == 서버 정보
 
-Server information lower left card width (per mille)
-== 서버 정보 왼쪽 아래 카드 너비(천분율)
-
-Server information upper left card width (per mille)
-== 서버 정보 왼쪽 위 카드 너비(천분율)
-
-Server information upper row height (per mille)
-== 서버 정보 위쪽 행 높이(천분율)
-
 Server kick/spec votes are no longer actively moderated.
 == 서버 추방/관전 투표가 더 이상 적극적으로 관리되지 않습니다.
 
@@ -14179,6 +14170,9 @@ Simple noise reduction
 
 Simple noise reduction strength
 == 간단한 노이즈 감소 강도
+
+Singing
+== 노래하기
 
 Size
 == 크기

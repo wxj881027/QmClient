@@ -33,6 +33,11 @@ TEST(QmBindOverview, UnknownCommandsFallBackToCustom)
 	EXPECT_EQ(GroupForCommand(""), EBindOptionGroup::CUSTOM);
 }
 
+TEST(QmBindOverview, SingingIsListedInMiscellaneous)
+{
+	EXPECT_EQ(GroupForCommand("+qm_sing"), EBindOptionGroup::MISCELLANEOUS);
+}
+
 TEST(QmBindOverview, CommandMatchIsExactNotPrefixOrCaseInsensitive)
 {
 	EXPECT_EQ(GroupForCommand("+lef"), EBindOptionGroup::CUSTOM);

@@ -4181,6 +4181,9 @@ Door Laser Outline Color
 Door laser outline color
 == ドアレーザーアウトライン色
 
+Double-tap the bound key within 400 ms to send the current lyric to public chat
+== 割り当てたキーを400ミリ秒以内に続けて二度押すと、現在の歌詞を全体チャットに送信します
+
 Download
 == ダウンロード
 
@@ -5860,9 +5863,6 @@ Format player names after a finish
 
 Forms
 == フォーム
-
-Found %d global cards
-== %d 枚のグローバルカードが見つかりました
 
 Four IP addresses are already online
 == すでに4つのIPが接続中です
@@ -12815,15 +12815,6 @@ Server hostname (0.7 only)
 Server info
 == サーバー情報
 
-Server information lower left card width (per mille)
-== サーバー情報の左下カードの幅（千分率）
-
-Server information upper left card width (per mille)
-== サーバー情報の左上カードの幅（千分率）
-
-Server information upper row height (per mille)
-== サーバー情報の上段の高さ（千分率）
-
 Server kick/spec votes are no longer actively moderated.
 == サーバーのキック/観戦投票は、アクティブモデレーションの対象ではなくなりました。
 
@@ -14179,6 +14170,9 @@ Simple noise reduction
 
 Simple noise reduction strength
 == 簡易ノイズリダクション強度
+
+Singing
+== 歌う
 
 Size
 == サイズ
