@@ -1,6 +1,6 @@
-#include <game/client/components/qmclient/public_word_filter.h>
-
 #include <engine/shared/protocol.h>
+
+#include <game/client/components/qmclient/public_word_filter.h>
 
 #include <gtest/gtest.h>
 

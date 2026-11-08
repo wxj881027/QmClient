@@ -3,11 +3,10 @@
 
 #include "netease_lyric_state.h"
 
-#include <game/client/components/qmclient/music_lyrics/music_lyrics_display.h>
-#include <game/client/components/qmclient/netease_hook/qm_netease_lyrics_channel.h>
-
 #include <game/client/component.h>
+#include <game/client/components/qmclient/music_lyrics/music_lyrics_display.h>
 #include <game/client/components/qmclient/netease_hook/qm_netease_hook_protocol.h>
+#include <game/client/components/qmclient/netease_hook/qm_netease_lyrics_channel.h>
 
 #include <cstddef>
 #include <cstdint>

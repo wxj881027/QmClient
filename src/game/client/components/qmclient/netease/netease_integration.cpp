@@ -445,7 +445,9 @@ QmMusicLyrics::SSourceSnapshot CNeteaseIntegration::LyricsSnapshot() const
 	if(!State.m_HasSong || m_WaitingForBridgeIdentity)
 		return {};
 	const QmMusicLyrics::SLyricsData *pData = m_LyricsData.HasLyrics() &&
-		m_DataSongId == State.m_SongId && m_DataGeneration == State.m_Generation && m_DataPid == m_LastCloudMusicPid ? &m_LyricsData : nullptr;
+								  m_DataSongId == State.m_SongId && m_DataGeneration == State.m_Generation && m_DataPid == m_LastCloudMusicPid ?
+							  &m_LyricsData :
+							  nullptr;
 	std::string_view Translation;
 	if(pData && State.m_LyricValid)
 	{
