@@ -35,6 +35,14 @@ enum class EQmTooltipPlacement
 inline constexpr float QM_TOOLTIP_ENTER_SECONDS = 0.18f;
 inline constexpr float QM_TOOLTIP_SIDE_POP_DISTANCE = 8.0f;
 
+// 所有气泡共用 ui_token::tooltip 一套尺寸。设置页紧凑小字气泡是基准，
+// qm_tooltip_font_size（默认 14 = 1 倍）对全部气泡统一缩放，默认配置下
+// 设置页、服务器列表、好友列表的字号/内边距/外边距/圆角/宽度上限完全一致。
+inline float QmTooltipFontScale(const int ConfiguredFontSize)
+{
+	return std::clamp(ConfiguredFontSize, 10, 24) / ui_token::tooltip::FONT_SIZE_CONFIG_REFERENCE;
+}
+
 // EASE_OUT_QUART 单调收口（0.88 → 1.0，无过冲回弹）：气泡常锚在控件/弹层
 // 边缘，ease-out-back 的过冲会被读作「弹层展开在弹」（用户明确要求下拉
 // 弹出优雅无弹跳），故入场只保留缩放渐入、去掉回弹段。
@@ -127,7 +135,7 @@ struct CTooltip
 	float m_WidthHint = -1.0f;
 	bool m_OnScreen = false; // 登记时的悬浮资格，保留内容裁剪与弹层屏蔽结果。
 	float m_FadeTime = 0.75f;
-	float m_FontSize = 14.0f;
+	float m_FontSize = ui_token::tooltip::FONT_SIZE;
 	bool m_SmallInstant = false;
 	bool m_HoverByRect = false;
 	bool m_Immediate = false;
