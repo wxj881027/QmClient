@@ -414,8 +414,8 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 			// 飘在空中；自绘底板之后键帽本体和槽位同宽同高，长键也是完整的一整条。
 			const float PlateInset = std::max(1.0f, std::floor(UiScale * 0.5f));
 			const CUIRect Plate{Rect.x + PlateInset, Rect.y + PlateInset, std::max(1.0f, Rect.w - 2.0f * PlateInset), std::max(1.0f, Rect.h - 2.0f * PlateInset)};
-			const ColorRGBA PlateFill = Selected ? ui_token::color::SURFACE_HIGHLIGHT : Hovered ? ui_token::color::SURFACE_HIGHLIGHT.WithMultipliedAlpha(0.6f) :
-													      ui_token::color::SURFACE_ELEVATED;
+			const ColorRGBA PlateFill = Selected ? ui_token::color::TINT_CONTROL_SELECTED : Hovered ? ui_token::color::TINT_CONTROL_HOVER :
+														  ui_token::color::SURFACE_ELEVATED;
 			DrawRoundedSurface(Ui(), Plate, PlateFill, ui_token::color::SURFACE_SHADOW.WithAlpha(0.45f), ui_token::radius::BASE, ui_token::feedback::ICON_BORDER_WIDTH * 0.5f);
 			// 键名/图标居中：文字按可用宽度自动缩字号，方向键用箭头字符，避免 Left/Rig 被截断。
 			// 命中判定仍然用整个格子 Rect，边缘也点得中。
@@ -514,7 +514,7 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 			// 会叠成十字，看起来像方向键；整根胶囊才有「滚轮」的样子。
 			const auto DrawWheelBackdrop = [this, &Diagram]() {
 				DrawRoundedSurface(Ui(), Diagram.m_Wheel, ui_token::color::SURFACE_ELEVATED, ui_token::color::NEUTRAL_WHITE.WithAlpha(0.10f), Diagram.m_WheelRadius, ui_token::feedback::ICON_BORDER_WIDTH * 0.5f);
-				DrawRoundedSurface(Ui(), Diagram.m_Wheel, ui_token::color::SURFACE_HIGHLIGHT.WithMultipliedAlpha(1.2f), ui_token::color::COLOR_TRANSPARENT, Diagram.m_WheelRadius);
+				DrawRoundedSurface(Ui(), Diagram.m_Wheel, ui_token::color::TINT_PART, ui_token::color::COLOR_TRANSPARENT, Diagram.m_WheelRadius);
 				// 段间用浅色细纹分隔：整根胶囊因此像有纹路的滚轮，而不是三块拼起来的按钮。
 				const float DividerWidth = Diagram.m_Wheel.w * 0.62f;
 				const float DividerThickness = std::max(1.0f, Diagram.m_Wheel.w * 0.035f);
@@ -549,11 +549,11 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 				if(SideButton)
 					DrawRoundedSurface(Ui(), Plate, ui_token::color::SURFACE_ELEVATED, ui_token::color::NEUTRAL_WHITE.WithAlpha(0.10f), Zone.m_Radius, ui_token::feedback::ICON_BORDER_WIDTH * 0.5f, Zone.m_Corners);
 				else if(TiltPad && (Hovered || Selected))
-					DrawRoundedSurface(Ui(), Plate, ui_token::color::SURFACE_HIGHLIGHT.WithMultipliedAlpha(1.8f), ui_token::color::NEUTRAL_WHITE.WithAlpha(0.10f), Zone.m_Radius, ui_token::feedback::ICON_BORDER_WIDTH * 0.5f);
+					DrawRoundedSurface(Ui(), Plate, ui_token::color::TINT_PART_ACTIVE, ui_token::color::NEUTRAL_WHITE.WithAlpha(0.10f), Zone.m_Radius, ui_token::feedback::ICON_BORDER_WIDTH * 0.5f);
 				if(WheelSegment && (Hovered || Selected))
 					DrawRoundedSurface(Ui(), Plate, ui_token::color::SURFACE_HIGHLIGHT, ui_token::color::COLOR_TRANSPARENT, Zone.m_Radius, 0.0f, Zone.m_Corners);
 				else if(!WheelSegment && !TiltPad && (Selected || Hovered))
-					DrawRoundedSurface(Ui(), Plate, ui_token::color::SURFACE_HIGHLIGHT.WithMultipliedAlpha(Selected ? 1.2f : 0.7f), ui_token::color::COLOR_TRANSPARENT, Zone.m_Radius, 0.0f, Zone.m_Corners);
+					DrawRoundedSurface(Ui(), Plate, Selected ? ui_token::color::TINT_ZONE_SELECTED : ui_token::color::TINT_ZONE_HOVER, ui_token::color::COLOR_TRANSPARENT, Zone.m_Radius, 0.0f, Zone.m_Corners);
 				CUIRect LabelRect = Plate;
 				LabelRect.VMargin(std::max(1.0f, Plate.w * 0.06f), &LabelRect);
 				// 左右键的名字放在板子下沿：滚轮整簇压在接缝上方，居中写会被滚轮盖住。
@@ -993,7 +993,7 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 				const bool RowHovered = Ui()->MouseInside(&Node);
 				DrawRoundedSurface(Ui(), Node, NodeSurface, ui_token::color::COLOR_TRANSPARENT, ui_token::radius::BASE);
 				if(RowHovered)
-					DrawRoundedSurface(Ui(), Node, ui_token::color::SURFACE_HIGHLIGHT.WithAlpha(0.14f), ui_token::color::COLOR_TRANSPARENT, ui_token::radius::BASE);
+					DrawRoundedSurface(Ui(), Node, ui_token::color::TINT_ROW_ACTIVE, ui_token::color::COLOR_TRANSPARENT, ui_token::radius::BASE);
 				const ColorRGBA RowBorder = RowEditing ? BindEditorAccent(Ui()) : RowHovered ? ui_token::feedback::ACTIVE_BORDER :
 													       ui_token::color::BORDER_SUBTLE;
 				DrawRoundedSurface(Ui(), Node, ui_token::color::COLOR_TRANSPARENT, RowBorder, ui_token::radius::BASE, ui_token::feedback::ICON_BORDER_WIDTH);

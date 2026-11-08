@@ -1417,7 +1417,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 			{
 				const bool HoveredCard = Ui()->MouseHovered(&CardButton);
 				const bool CardActive = Ui()->IsPopupOpen(&m_ScoreboardPopupContext) && m_ScoreboardPopupContext.m_ClientId == ClientId;
-				CardButton.Draw(HoveredCard || CardActive ? ScoreboardDecorationColor(ui_token::color::SURFACE_HIGHLIGHT.WithMultipliedAlpha(4.0f * ItemAlpha)) : ScoreboardDecorationColor(ui_token::color::SURFACE_HIGHLIGHT.WithMultipliedAlpha(ItemAlpha)), IGraphics::CORNER_ALL, RoundRadius);
+				CardButton.Draw(HoveredCard || CardActive ? ScoreboardDecorationColor(ui_token::color::TINT_HUD_CARD_ACTIVE.WithMultipliedAlpha(ItemAlpha)) : ScoreboardDecorationColor(ui_token::color::TINT_HUD_CARD.WithMultipliedAlpha(ItemAlpha)), IGraphics::CORNER_ALL, RoundRadius);
 				TextRender()->TextColor(TextRender()->DefaultTextColor().WithMultipliedAlpha(ItemAlpha));
 				Ui()->DoLabel(&CardButton, FontIcons::FONT_ICON_ELLIPSIS, minimum(LineHeight * 0.7f, 10.0f), TEXTALIGN_MC);
 				TextRender()->TextColor(TextRender()->DefaultTextColor());

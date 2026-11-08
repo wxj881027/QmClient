@@ -481,7 +481,7 @@ void CEmoticon::OnRender()
 	{
 		Graphics()->TextureClear();
 		Graphics()->QuadsBegin();
-		Graphics()->SetColor(ui_token::color::SURFACE_HIGHLIGHT.WithMultipliedAlpha(2.0f * PresentationAlpha));
+		Graphics()->SetColor(ui_token::color::TINT_HUD_BAR.WithMultipliedAlpha(PresentationAlpha));
 		Graphics()->DrawCircle(ScreenCenter.x, ScreenCenter.y, s_InnerCircleRadius * PresentationScale, 64);
 		Graphics()->QuadsEnd();
 

@@ -729,7 +729,7 @@ void CMenus::RenderQmBindOverviewContent(CUIRect &Content, const bool ReadOnly)
 				}
 				// 悬停反馈：整行可点却原来没有任何视觉回应，鼠标在上面像失灵。
 				if(Enabled && Ui()->MouseHovered(&Row))
-					DrawRoundedSurface(Ui(), Row, ui_token::color::SURFACE_HIGHLIGHT.WithAlpha(0.06f), ColorRGBA(), ui_token::radius::TIGHT);
+					DrawRoundedSurface(Ui(), Row, ui_token::color::TINT_ROW_HOVER, ColorRGBA(), ui_token::radius::TIGHT);
 				const bool Flagged = Entry.m_Flags != qm_bind_workshop::OCCUPANCY_NONE;
 				// 被标记的行只加一档很淡的警告底色：正文与描边保持中性，颜色不抢命令文本。
 				if(Flagged)

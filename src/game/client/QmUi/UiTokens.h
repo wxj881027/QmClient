@@ -23,6 +23,22 @@ namespace ui_token::color
 	inline constexpr ColorRGBA SURFACE_ELEVATED{0.10f, 0.11f, 0.14f, 0.82f};
 	inline constexpr ColorRGBA SURFACE_OVERLAY{0.0f, 0.0f, 0.0f, 0.40f};
 	inline constexpr ColorRGBA SURFACE_HIGHLIGHT{1.0f, 1.0f, 1.0f, 0.05f};
+	// SURFACE_HIGHLIGHT 的语义档：数值等于原来的 WithMultipliedAlpha 结果，换名不改观感。
+	// 按三族分开命名，调一档只改一处，也不会顺手带走别族的手感。
+	// 一、面板/玻璃上的表面反馈（底本身已有 0.70–0.82 不透明度）
+	inline constexpr ColorRGBA TINT_CONTROL_HOVER{1.0f, 1.0f, 1.0f, 0.030f}; // 5% ×0.6
+	inline constexpr ColorRGBA TINT_CONTROL_SELECTED{1.0f, 1.0f, 1.0f, 0.050f}; // 5%
+	inline constexpr ColorRGBA TINT_ZONE_HOVER{1.0f, 1.0f, 1.0f, 0.035f}; // 5% ×0.7
+	inline constexpr ColorRGBA TINT_ZONE_SELECTED{1.0f, 1.0f, 1.0f, 0.060f}; // 5% ×1.2
+	inline constexpr ColorRGBA TINT_ROW_HOVER{1.0f, 1.0f, 1.0f, 0.060f}; // 5% ×1.2
+	inline constexpr ColorRGBA TINT_ROW_ACTIVE{1.0f, 1.0f, 1.0f, 0.140f}; // 5% ×2.8
+	// 二、可辨识的立体部件（滚轮底座、倾斜板）
+	inline constexpr ColorRGBA TINT_PART{1.0f, 1.0f, 1.0f, 0.060f}; // 5% ×1.2
+	inline constexpr ColorRGBA TINT_PART_ACTIVE{1.0f, 1.0f, 1.0f, 0.090f}; // 5% ×1.8
+	// 三、游戏内叠层（直接压在画面上，5% 在亮地图几乎不可见）
+	inline constexpr ColorRGBA TINT_HUD_BAR{1.0f, 1.0f, 1.0f, 0.100f}; // 5% ×2
+	inline constexpr ColorRGBA TINT_HUD_CARD{1.0f, 1.0f, 1.0f, 0.050f}; // 5%
+	inline constexpr ColorRGBA TINT_HUD_CARD_ACTIVE{1.0f, 1.0f, 1.0f, 0.200f}; // 5% ×4
 	inline constexpr ColorRGBA PREVIEW_SURFACE{1.0f, 1.0f, 1.0f, 0.10f};
 	inline constexpr ColorRGBA SURFACE_SHADOW{0.0f, 0.0f, 0.0f, 0.12f};
 	inline constexpr ColorRGBA BORDER_SUBTLE{1.0f, 1.0f, 1.0f, 0.08f};

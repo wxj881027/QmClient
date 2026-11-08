@@ -207,7 +207,7 @@ void CQmMobileSpectator::RenderMobileVoteBar(const SQmMobileVoteBarLayout &Layou
 	Ui()->DoLabel(&Layout.m_Reason, aBuf, Layout.m_SmallFontSize, TEXTALIGN_ML, Props);
 
 	// 进度条：是和否按票数比例铺满，和计分板里的投票面板同一语义。
-	Layout.m_Bars.Draw(ui_token::color::SURFACE_HIGHLIGHT.WithMultipliedAlpha(2.0f), IGraphics::CORNER_ALL, Layout.m_Bars.h / 2.0f);
+	Layout.m_Bars.Draw(ui_token::color::TINT_HUD_BAR, IGraphics::CORNER_ALL, Layout.m_Bars.h / 2.0f);
 	const int Total = Voting.TotalCount();
 	if(Total > 0)
 	{
