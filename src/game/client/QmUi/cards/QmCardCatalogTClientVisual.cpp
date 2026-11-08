@@ -363,16 +363,13 @@ float CMenus::LayoutTClientTeeStatusBarCard(const qm_card_catalog::SQmCardBuildC
 			}
 		}
 	}
-	if(qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "tclient:tee-status-bar", Ctx.m_Metrics, Ctx.m_ReadOnly))
+	if(Flow.Control("frozen-max-rows", LineSize, Row, MarginSmall))
 	{
-		if(Flow.Control("frozen-max-rows", LineSize, Row, MarginSmall))
-		{
-			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-frozen-max-rows", &g_Config.m_QmFrozenMaxRows, &g_Config.m_QmFrozenMaxRows, &Row, Localize("Maximum rows"), 1, 6);
-		}
-		if(Flow.Control("frozen-hud-tee-size", LineSize, Row, MarginSmall))
-		{
-			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-frozen-hud-tee-size", &g_Config.m_QmFrozenHudTeeSize, &g_Config.m_QmFrozenHudTeeSize, &Row, Localize("Tee size"), 8, 27);
-		}
+		DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-frozen-max-rows", &g_Config.m_QmFrozenMaxRows, &g_Config.m_QmFrozenMaxRows, &Row, Localize("Maximum rows"), 1, 6);
+	}
+	if(Flow.Control("frozen-hud-tee-size", LineSize, Row, MarginSmall))
+	{
+		DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-frozen-hud-tee-size", &g_Config.m_QmFrozenHudTeeSize, &g_Config.m_QmFrozenHudTeeSize, &Row, Localize("Tee size"), 8, 27);
 	}
 	if(MeasureScope)
 	{
@@ -483,16 +480,13 @@ float CMenus::LayoutTClientGhostToolsCard(const qm_card_catalog::SQmCardBuildCon
 		static CButtonContainer s_ReaderButtonGhost, s_ClearButtonGhost;
 		DoLine_KeyReader(Row, s_ReaderButtonGhost, s_ClearButtonGhost, Localize("Toggle ghost key"), "toggle qm_show_others_ghosts 0 1");
 	}
-	if(qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "tclient:ghost-tools", Ctx.m_Metrics, Ctx.m_ReadOnly))
+	if(Flow.Control("predicted-ghost-opacity", LineSize, Row, MarginSmall))
 	{
-		if(Flow.Control("predicted-ghost-opacity", LineSize, Row, MarginSmall))
-		{
-			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-predicted-ghost-opacity", &g_Config.m_QmPredGhostsAlpha, &g_Config.m_QmPredGhostsAlpha, &Row, Localize("Predicted ghost opacity"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
-		}
-		if(Flow.Control("unpredicted-ghost-opacity", LineSize, Row, MarginSmall))
-		{
-			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-unpredicted-ghost-opacity", &g_Config.m_QmUnpredGhostsAlpha, &g_Config.m_QmUnpredGhostsAlpha, &Row, Localize("Unpredicted ghost opacity"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
-		}
+		DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-predicted-ghost-opacity", &g_Config.m_QmPredGhostsAlpha, &g_Config.m_QmPredGhostsAlpha, &Row, Localize("Predicted ghost opacity"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+	}
+	if(Flow.Control("unpredicted-ghost-opacity", LineSize, Row, MarginSmall))
+	{
+		DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-unpredicted-ghost-opacity", &g_Config.m_QmUnpredGhostsAlpha, &g_Config.m_QmUnpredGhostsAlpha, &Row, Localize("Unpredicted ghost opacity"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
 	}
 	if(MeasureScope)
 	{
@@ -528,23 +522,20 @@ float CMenus::LayoutTClientRainbowCard(const qm_card_catalog::SQmCardBuildContex
 	{
 		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmRainbowOthers, "tclient-rainbow-others", Localize("Rainbow others"), &g_Config.m_QmRainbowOthers, &Row, LineSize);
 	}
-	if(qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "tclient:rainbow", Ctx.m_Metrics, Ctx.m_ReadOnly))
+	if(Flow.Control("rainbow-mode", LineSize, Row, MarginSmall))
 	{
-		if(Flow.Control("rainbow-mode", LineSize, Row, MarginSmall))
-		{
-			const char *apNames[] = {Localize("Rainbow"), Localize("Pulse"), Localize("Black"), Localize("Random")};
-			static CUi::SDropDownState s_RainbowDropDownState;
-			static CScrollRegion s_RainbowDropDownScrollRegion;
-			s_RainbowDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_RainbowDropDownScrollRegion;
-			const int Old = g_Config.m_QmRainbowMode - 1;
-			const int New = DoSettingsDropDown(&Row, Old, apNames, std::size(apNames), s_RainbowDropDownState, {}, &g_Config.m_QmRainbowMode);
-			if(Flow.Input() && !Ui()->RenderOnly() && Old != New)
-				g_Config.m_QmRainbowMode = New + 1;
-		}
-		if(Flow.Control("rainbow-speed", LineSize, Row, MarginSmall))
-		{
-			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-rainbow-speed", &g_Config.m_QmRainbowSpeed, &g_Config.m_QmRainbowSpeed, &Row, Localize("Rainbow speed"), 0, 5000, &CUi::ms_LogarithmicScrollbarScale, 0, "%");
-		}
+		const char *apNames[] = {Localize("Rainbow"), Localize("Pulse"), Localize("Black"), Localize("Random")};
+		static CUi::SDropDownState s_RainbowDropDownState;
+		static CScrollRegion s_RainbowDropDownScrollRegion;
+		s_RainbowDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_RainbowDropDownScrollRegion;
+		const int Old = g_Config.m_QmRainbowMode - 1;
+		const int New = DoSettingsDropDown(&Row, Old, apNames, std::size(apNames), s_RainbowDropDownState, {}, &g_Config.m_QmRainbowMode);
+		if(Flow.Input() && !Ui()->RenderOnly() && Old != New)
+			g_Config.m_QmRainbowMode = New + 1;
+	}
+	if(Flow.Control("rainbow-speed", LineSize, Row, MarginSmall))
+	{
+		DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-rainbow-speed", &g_Config.m_QmRainbowSpeed, &g_Config.m_QmRainbowSpeed, &Row, Localize("Rainbow speed"), 0, 5000, &CUi::ms_LogarithmicScrollbarScale, 0, "%");
 	}
 	if(MeasureScope)
 	{
@@ -675,24 +666,21 @@ float CMenus::LayoutTClientBackgroundDrawCard(const qm_card_catalog::SQmCardBuil
 		static CButtonContainer s_ReaderButtonDraw, s_ClearButtonDraw;
 		DoLine_KeyReader(Row, s_ReaderButtonDraw, s_ClearButtonDraw, Localize("Draw where mouse is"), "+bg_draw");
 	}
-	if(qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "tclient:background-draw", Ctx.m_Metrics, Ctx.m_ReadOnly))
+	if(Flow.Control("color", LineSize, Row, MarginSmall))
 	{
-		if(Flow.Control("color", LineSize, Row, MarginSmall))
-		{
-			static CButtonContainer s_BgDrawColor;
-			DoLine_ColorPicker(&s_BgDrawColor, CurrentSettingsContentMetrics(), &Row, Localize("Color"), &g_Config.m_QmBgDrawColor, ColorRGBA(1.0f, 1.0f, 1.0f), false);
-		}
-		if(Flow.Control("fade-time", LineSize, Row, MarginSmall))
-		{
-			if(g_Config.m_QmBgDrawFadeTime == 0)
-				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-bg-draw-fade-time", &g_Config.m_QmBgDrawFadeTime, &g_Config.m_QmBgDrawFadeTime, &Row, Localize("Stroke fade time"), 0, 600, &CUi::ms_LinearScrollbarScale, 0, Localize(" seconds (never)"));
-			else
-				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-bg-draw-fade-time", &g_Config.m_QmBgDrawFadeTime, &g_Config.m_QmBgDrawFadeTime, &Row, Localize("Stroke fade time"), 0, 600, &CUi::ms_LinearScrollbarScale, 0, Localize(" seconds"));
-		}
-		if(Flow.Control("width", LineSize, Row, MarginSmall))
-		{
-			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-bg-draw-width", &g_Config.m_QmBgDrawWidth, &g_Config.m_QmBgDrawWidth, &Row, Localize("Width"), 1, 50);
-		}
+		static CButtonContainer s_BgDrawColor;
+		DoLine_ColorPicker(&s_BgDrawColor, CurrentSettingsContentMetrics(), &Row, Localize("Color"), &g_Config.m_QmBgDrawColor, ColorRGBA(1.0f, 1.0f, 1.0f), false);
+	}
+	if(Flow.Control("fade-time", LineSize, Row, MarginSmall))
+	{
+		if(g_Config.m_QmBgDrawFadeTime == 0)
+			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-bg-draw-fade-time", &g_Config.m_QmBgDrawFadeTime, &g_Config.m_QmBgDrawFadeTime, &Row, Localize("Stroke fade time"), 0, 600, &CUi::ms_LinearScrollbarScale, 0, Localize(" seconds (never)"));
+		else
+			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-bg-draw-fade-time", &g_Config.m_QmBgDrawFadeTime, &g_Config.m_QmBgDrawFadeTime, &Row, Localize("Stroke fade time"), 0, 600, &CUi::ms_LinearScrollbarScale, 0, Localize(" seconds"));
+	}
+	if(Flow.Control("width", LineSize, Row, MarginSmall))
+	{
+		DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-bg-draw-width", &g_Config.m_QmBgDrawWidth, &g_Config.m_QmBgDrawWidth, &Row, Localize("Width"), 1, 50);
 	}
 	if(MeasureScope)
 	{

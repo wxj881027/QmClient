@@ -103,7 +103,7 @@ namespace ui_widget
 			}
 		}
 		const ColorRGBA Fill = pUi->ScaleControlAlpha(Style.m_Fill);
-		DrawRoundedSurface(Ctx, DrawRect, Fill, pUi->ScaleControlAlpha(Style.m_Border), Options.m_Radius, Options.m_BorderWidth, Options.m_Corners);
+		DrawRoundedSurface(Ctx, DrawRect, Fill, pUi->ScaleControlAlpha(Style.m_Border), Options.m_Radius, Options.m_BorderWidth, Options.m_Corners, Options.m_AlignToPixel);
 		return Fill;
 	}
 

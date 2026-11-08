@@ -2051,18 +2051,16 @@ void CPlayers::OnRender()
 			}
 		}
 
-		// 仅对可见渲染路径中的同队玩家变色，提示其在冻结状态下持续按锤。
-		if(GameClient()->QmWaterHammerIndicator().IsMarked(i))
+		// 同队玩家冻结时，身体和脚统一使用当前卡锤或卡钩的按下颜色。
+		if(const auto Color = GameClient()->QmWaterHammerIndicator().HighlightColor(i))
 		{
-			const ColorRGBA BodyColor(1.0f, 0.25f, 0.08f, 1.0f);
-			const ColorRGBA FeetColor(1.0f, 0.55f, 0.12f, 1.0f);
 			aRenderInfo[i].m_CustomColoredSkin = true;
-			aRenderInfo[i].m_ColorBody = BodyColor;
-			aRenderInfo[i].m_ColorFeet = FeetColor;
+			aRenderInfo[i].m_ColorBody = *Color;
+			aRenderInfo[i].m_ColorFeet = *Color;
 			aRenderInfo[i].m_aSixup[g_Config.m_ClDummy].m_aUseCustomColors[protocol7::SKINPART_BODY] = true;
 			aRenderInfo[i].m_aSixup[g_Config.m_ClDummy].m_aUseCustomColors[protocol7::SKINPART_FEET] = true;
-			aRenderInfo[i].m_aSixup[g_Config.m_ClDummy].m_aColors[protocol7::SKINPART_BODY] = BodyColor;
-			aRenderInfo[i].m_aSixup[g_Config.m_ClDummy].m_aColors[protocol7::SKINPART_FEET] = FeetColor;
+			aRenderInfo[i].m_aSixup[g_Config.m_ClDummy].m_aColors[protocol7::SKINPART_BODY] = *Color;
+			aRenderInfo[i].m_aSixup[g_Config.m_ClDummy].m_aColors[protocol7::SKINPART_FEET] = *Color;
 		}
 	}
 

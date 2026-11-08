@@ -172,6 +172,10 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 			g_Config.m_QmNameplateCoordsOffsetY,
 			g_Config.m_QmNameplateKeysOffsetX,
 			g_Config.m_QmNameplateKeysOffsetY,
+			g_Config.m_QmNameplateWaterHammerOffsetX,
+			g_Config.m_QmNameplateWaterHammerOffsetY,
+			g_Config.m_QmNameplateWaterHookOffsetX,
+			g_Config.m_QmNameplateWaterHookOffsetY,
 			g_Config.m_ClNamePlatesTeamcolors,
 			g_Config.m_QmNameplateTextEffects,
 			g_Config.m_QmNameplateTextBorderRange,
@@ -310,7 +314,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 						{&g_Config.m_ClShowhudDummyActions, "appearance-show-dummy-actions", Localize("Show dummy actions")},
 					},
 					AppearanceMetrics, !RenderOnly);
-				// 卡键/锤子/分身控制/分身同步四个状态开关与自定义 bind 状态列表已迁移到 QmClient → HUD → DDRace HUD Pro 卡片
+				// 卡键、锤子、分身控制与同步状态由同页的 DDRace HUD Pro 卡片提供。
 				Flow.Space(MarginSmall);
 				DoSettingsToggleGroup(SETTINGS_APPEARANCE, APPEARANCE_TAB_HUD, APPEARANCE_TAB_HUD, RightView,
 					{
@@ -923,6 +927,10 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				{
 					g_Config.m_QmNameplateKeysOffsetX = 0;
 					g_Config.m_QmNameplateKeysOffsetY = 0;
+					g_Config.m_QmNameplateWaterHammerOffsetX = 0;
+					g_Config.m_QmNameplateWaterHammerOffsetY = 0;
+					g_Config.m_QmNameplateWaterHookOffsetX = 0;
+					g_Config.m_QmNameplateWaterHookOffsetY = 0;
 					g_Config.m_QmNameplateCoordsOffsetX = 0;
 					g_Config.m_QmNameplateCoordsOffsetY = 0;
 					g_Config.m_QmNameplateHookOffsetX = 0;
@@ -983,9 +991,6 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 					}
 					Flow.Space(MarginSmall);
 				}
-
-				if(!qm_card_catalog::QmCardRenderHook::Personalization(this, LeftView, "deck:appearance-hook-collision-main", AppearanceMetrics, RenderOnly))
-					return;
 
 				if(Flow.Control("appearance-hook-collision-own-width", LineSize, Button))
 				{
@@ -1293,9 +1298,6 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 					}
 				}
 				Flow.Space(MarginSmall);
-
-				if(!qm_card_catalog::QmCardRenderHook::Personalization(this, LeftView, "deck:appearance-info-messages", AppearanceMetrics, RenderOnly))
-					return;
 
 				static CButtonContainer s_KillMessageNormalColorId, s_KillMessageHighlightColorId;
 				{

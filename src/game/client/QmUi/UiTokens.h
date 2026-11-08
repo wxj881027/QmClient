@@ -97,6 +97,8 @@ namespace ui_token::color
 	// 卡片内预览区（皮肤/地图/激光演示等）的暗化背板；跨卡片共享同一档，
 	// 与文件内更深的演示背板（0.3/0.5 档）区分，视觉统一时在此收敛。
 	inline constexpr ColorRGBA PREVIEW_BACKDROP{0.0f, 0.0f, 0.0f, 0.25f};
+	inline constexpr ColorRGBA SCREENSHOT_EDITOR_BACKDROP{0.06f, 0.07f, 0.09f, 0.95f};
+	inline constexpr ColorRGBA SCREENSHOT_EDITOR_DISABLED_ACTION{1.0f, 1.0f, 1.0f, 0.08f};
 
 	// 容器与滚动条的默认外观。与既有 token 的近似值（BORDER_SUBTLE 0.08 等）
 	// 是当前视觉现状，统一视觉时改这里一处生效，不在调用点写死。

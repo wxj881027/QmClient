@@ -165,8 +165,6 @@ void CMenus::RenderQmFunctionHJAssistContent(CUIRect &Content, float LineHeight,
 	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, Content,
 		{{&g_Config.m_QmPausedSpectatorFade, "Fade spectators in water", Localize("Fade spectators in water")}},
 		CurrentSettingsContentMetrics(), !PrewarmOnly);
-	if(!(g_Config.m_QmAutoTeamLock || g_Config.m_QmPausedSpectatorFade) || !qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:hj_assist", CurrentSettingsContentMetrics(), PrewarmOnly))
-		return;
 
 	if(g_Config.m_QmAutoTeamLock)
 	{
@@ -291,6 +289,7 @@ namespace qm_card_catalog
 					QmCardRenderHook::RenderQmFunctionCheckboxRow(pMenus, Row, LineHeight, 0, &g_Config.m_QmSpectatorFriendsFirst, "List friends first in the spectator menu", Localize("List friends first in the spectator menu"), &g_Config.m_QmSpectatorFriendsFirst, PrewarmOnly);
 				Flow.Space(LineSpacing);
 				QmCardRenderHook::RenderQmFunctionFriendNotifyContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LabelWidth, PrewarmOnly);
+				QmCardRenderHook::RenderFriendCodeControls(pMenus, Content, PrewarmOnly);
 			};
 			Add(Id, "qm:friend_notify", "Friend Notifications", "Friend online and join notifications",
 				[RenderFriendNotify, ReadOnly](CUIRect &Content) { RenderFriendNotify(Content, ReadOnly); });

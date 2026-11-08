@@ -343,6 +343,9 @@
 === Saves for '%s' ===
 == === '%s' のセーブ ===
 
+?!Stuck keys!?
+== ?!押しっぱなし!?
+
 []
 [%s] %s (Map: %s, Time: %s)
 == [%s] %s（マップ: %s、時間: %s）
@@ -794,6 +797,9 @@ Alias of poses_render
 Alias of poses_video
 == poses_video のエイリアス
 
+Alignment
+== 配置
+
 Alive notification color
 == 生存通知の色
 
@@ -1013,9 +1019,6 @@ APP ID
 Appearance
 == 外観
 
-Appearance and command highlighting of the local console
-== ローカルコンソールの外観とコマンドの強調表示
-
 Appearance of help bubbles
 == ヘルプ吹き出しの外観
 
@@ -1072,9 +1075,6 @@ Apply to dummy
 
 Apply to player
 == プレイヤーに適用
-
-Apply watermark
-== ウォーターマークを適用
 
 Applying overwrites your font, UI scale, animation and panel colors at once, so note the values you like first.
 == 適用するとフォント、UI 倍率、アニメーション、パネルの色が一括で上書きされるので、好みの値は先に控えておきましょう。
@@ -1519,9 +1519,6 @@ Automatically record demos
 
 Automatically record replays
 == リプレイを自動録画
-
-Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)
-== 読み込みに成功したローカルセーブ記録を自動削除（0 = 保持して使用済みとしてマーク、1 = 削除）
 
 Automatically reply to muted players
 == ミュートされたプレイヤーに自動返信
@@ -2072,6 +2069,9 @@ Candidate files
 Candy gradient
 == キャンディグラデーション
 
+Cannot import: invalid data or too many friends or categories.
+== インポートできません。データが無効か、フレンドまたはグループが多すぎます。
+
 Cannot join the target player's team
 == 対象プレイヤーのチームには参加できません
 
@@ -2213,8 +2213,8 @@ Chat bubble display duration (seconds)
 Chat bubble font size
 == チャットバブルのフォントサイズ
 
-Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble)
-== チャット吹き出しのスタイル（0=漫画風会話、1=キャンディグラデーション、2=雲の吹き出し）
+Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble, 3=Default)
+== チャット吹き出しのスタイル（0=漫画風会話、1=キャンディグラデーション、2=雲の吹き出し、3=デフォルト）
 
 Chat bubble text color
 == チャットバブルの文字色
@@ -2395,6 +2395,9 @@ Choose default eyes when joining a server
 
 Choose export name first.
 == 最初にエクスポート名を入力してください。
+
+Choose Logo (PNG / WebP)
+== ロゴを選択 (PNG / WebP)
 
 Choose off, simple or full; the individual switches below only apply to full.
 == オフ・簡易・フルから選びます。下の個別スイッチはフルのときだけ適用されます。
@@ -2583,6 +2586,9 @@ Click to add this community to favorites
 == クリックしてこのコミュニティをお気に入りに追加
 
 Click to copy map name
+== クリックしてマップ名をコピー
+
+Click to copy the map name
 == クリックしてマップ名をコピー
 
 Click to copy this clan's name to clipboard
@@ -2893,9 +2899,6 @@ Configure game and client preferences
 
 Configure ghost recording and playback tools
 == Configure ghost recording and playback tools
-
-Configure hammer skin steal and skin transition animations
-== ハンマースキン盗用とスキン切り替えアニメーションを設定
 
 Configure health, ammo, timer, and race HUD
 == Configure health, ammo, timer, and race HUD
@@ -3215,6 +3218,9 @@ Copy a .qmconfig file into the package folder, then refresh.
 Copy all
 == すべてコピー
 
+Copy friend code
+== フレンドコードをコピー
+
 Copy info
 == 情報をコピー
 
@@ -3265,6 +3271,9 @@ Could not delete "%s"
 
 Could not download "%s"
 == 「%s」をダウンロードできませんでした
+
+Could not encode friend data.
+== フレンドデータをコードに変換できませんでした。
 
 Could not find a Tutorial server. Check your internet connection.
 == チュートリアルサーバーが見つかりませんでした。インターネット接続を確認してください。
@@ -4172,6 +4181,9 @@ Door Laser Outline Color
 Door laser outline color
 == ドアレーザーアウトライン色
 
+Double-tap the bound key within 400 ms to send the current lyric to public chat
+== 割り当てたキーを400ミリ秒以内に続けて二度押すと、現在の歌詞を全体チャットに送信します
+
 Download
 == ダウンロード
 
@@ -4235,11 +4247,14 @@ Draft file is empty
 Drag
 == ドラッグ
 
-Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Tune layer opacity" to fade the whole entity layer.
-== 死亡の不透明度やテレポートの不透明度などのスライダーを 0〜100% で動かすか、レイヤーの不透明度を調整でエンティティ層全体を薄くします。
+Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Overlay entities" to fade the whole entity layer.
+== 死亡の不透明度やテレポートの不透明度などのスライダーを 0〜100% で動かすか、「エンティティを重ねる」でエンティティ層全体を薄くします。
 
 Drag HUD modules with the left mouse button
 == マウスの左ボタンで HUD モジュールをドラッグ
+
+Drag the selected watermark to move it. The original image is preserved.
+== 選択した透かしをドラッグして移動します。元の画像は保持されます。
 
 Drag the three sliders; master scales the other two.
 == 3 つのスライダーをドラッグします。マスターは残り 2 つの音量をまとめて増減させます。
@@ -4661,9 +4676,6 @@ Empty slots still take space, so clear the ones you no longer use.
 enable
 == 有効
 
-Enable "Hammer skin steal" only if you want your skin to change on every hammer hit, since other players see it too.
-== ハンマーで叩くたびにスキンを変えたいときだけ、ハンマースキン強奪をオンにしてください。相手にも見えます。
-
 Enable "Map progress bar" and choose its location: Standalone, Player stats or Dynamic Island. Enable "Show player stats HUD" for the Player stats location.
 == 「マップ進行バー」を有効にし、表示位置を単独表示、プレイヤー統計、ダイナミックアイランドから選びます。プレイヤー統計を選ぶ場合は「プレイヤー統計 HUD を表示」も有効にしてください。
 
@@ -5054,6 +5066,9 @@ Enable the frozen Tee HUD, choose whether to count active or frozen Tees, then s
 Enable the guide line, then set its length, style and colors.
 == ガイド線を有効にしてから、長さ、スタイル、色を設定します。
 
+Enable the highlight and nameplate key presses, then choose the pressed hammer and hook icon colors. Icon size follows the key press size.
+== 強調とネームプレートのキー表示を有効にして、ハンマーとフックの押下時の色を選びます。アイコンの大きさはキー表示に連動します。
+
 Enable the indicator; choose its distance mode and whether war-list players get a different color.
 == インジケーターを有効にし、距離モードと、war-list のプレイヤーを別の色で表示するかを選びます。
 
@@ -5216,8 +5231,8 @@ Entity Background Image
 Entity layer
 == エンティティ層
 
-Entity overlay
-== エンティティオーバーレイ
+Entity layer adjustments
+== エンティティレイヤーの調整
 
 Entity Preview
 == エンティティプレビュー
@@ -5825,9 +5840,6 @@ Font cursor
 Font size
 == フォントサイズ
 
-Font size, background opacity, colors and command highlighting of the local console you open with F1.
-== F1 で開くローカルコンソールのフォントサイズ、背景の不透明度、色、コマンドの強調表示。
-
 Font store
 == フォントストア
 
@@ -5866,9 +5878,6 @@ Format player names after a finish
 
 Forms
 == フォーム
-
-Found %d global cards
-== %d 枚のグローバルカードが見つかりました
 
 Four IP addresses are already online
 == すでに4つのIPが接続中です
@@ -5969,6 +5978,9 @@ Friend
 Friend bar category expand state (1=expanded, 0=collapsed)
 == フレンドバーカテゴリの展開状態（1=展開、0=折りたたみ）
 
+Friend code copied, including categories, notes and pins.
+== グループ、メモ、ピン留めを含むフレンドコードをコピーしました。
+
 Friend color in friends list
 == フレンドリスト内のフレンド色
 
@@ -6016,6 +6028,12 @@ Friend option color
 
 Friends
 == フレンド
+
+Friends imported and saved.
+== フレンドをインポートして保存しました。
+
+Friends imported for this session, but saving settings failed.
+== 今回のセッションにフレンドをインポートしましたが、設定の保存に失敗しました。
 
 Friends only
 == フレンドのみ
@@ -6665,6 +6683,9 @@ Highlight Color
 Highlight console commands
 == コンソールのコマンドを強調表示
 
+Highlight frozen teammates' hammer and hook inputs
+== 凍結中の味方のハンマーとフック入力を強調
+
 Highlight game type
 == ゲームタイプをハイライト
 
@@ -6677,17 +6698,14 @@ Highlight ping value
 Highlight selected players in the game world
 == Highlight selected players in the game world
 
-Highlight teammates hammering in death or freeze areas
-== 死亡または凍結エリアでハンマーを振っているチームメイトを強調表示
-
-Highlight teammates holding hammer in death or freeze areas
-== 死亡または凍結エリアでハンマーを押し続けているチームメイトを強調表示
-
 Highlighted message
 == ハイライトメッセージ
 
 Highlighted message color
 == ハイライトされたメッセージの色
+
+Highlights frozen teammates holding hammer and shows their held hammer or hook beside the nameplate key presses.
+== 凍結中にハンマーを押し続ける味方を強調し、ネームプレートのキー表示の両側にハンマーとフックの入力を表示します。
 
 Hit feedback
 == ヒット確認音
@@ -6914,6 +6932,9 @@ Icon symbols:
 Icons
 == アイコン
 
+Icons disappear on release or unfreeze. Remote held inputs require server preinput support; your active character is excluded.
+== キーを離すか凍結が解除されるとアイコンは消えます。他のプレイヤーの入力表示にはサーバーの事前入力対応が必要です。操作中の自キャラクターは対象外です。
+
 Identity preset
 == プロフィールプリセット
 
@@ -7007,8 +7028,14 @@ Import and restart
 Import configuration package
 == 設定パッケージをインポート
 
+Import friend code
+== フレンドコードをインポート
+
 Import from clipboard
 == クリップボードからインポート
+
+Import merges friends and keeps local duplicates by default. Codes contain private names and notes.
+== 標準ではフレンドを統合し、重複する相手のローカル情報を保持します。コードには個人の名前とメモが含まれます。
 
 Improved anti ping
 == 改善されたアンチピング
@@ -7321,6 +7348,9 @@ Invalid X coordinate.
 
 Invalid Y coordinate.
 == Y座標が無効です
+
+Invalid, damaged or unsupported friend code.
+== フレンドコードが無効、破損、または未対応です。
 
 Invert camera drift direction
 == カメラドリフト方向を反転
@@ -7759,6 +7789,9 @@ Leak IP
 
 Leaks your IP address to all servers by pinging each of them, also acquiring the latency in the process
 == 各サーバーに ping を送信することで IP アドレスをすべてのサーバーに漏洩し、同時にレイテンシも取得します
+
+Leaks your IP address to this server by pinging it, also acquiring the latency in the process
+== このサーバーに ping を送信して遅延を測定する際に、このサーバーにあなたの IP アドレスが公開されます
 
 Learn
 == チュートリアル Wiki
@@ -8414,9 +8447,6 @@ Markers
 Markers are drawn on your screen only and never change the game itself.
 == マーカーは自分の画面にだけ描かれ、ゲーム自体には影響しません。
 
-Marks teammates who hold hammer while stuck in death or freeze areas, so you can see who is hammering them.
-== デスやフリーズの範囲に挟まれたままハンマーを持つ味方を目立たせ、誰が叩いているか分かるようにします。
-
 Master server URL to register
 == 登録するマスターサーバー URL
 
@@ -8981,6 +9011,18 @@ Name plate elements allow free Y movement
 Name plate elements freely movable within bounds
 == ネームプレート要素の枠内自由移動を許可
 
+Name plate hammer icon X offset
+== ネームプレートのハンマーアイコンの X オフセット
+
+Name plate hammer icon Y offset
+== ネームプレートのハンマーアイコンの Y オフセット
+
+Name plate hook icon X offset
+== ネームプレートのフックアイコンの X オフセット
+
+Name plate hook icon Y offset
+== ネームプレートのフックアイコンの Y オフセット
+
 Name plate key line X offset
 == ネームプレートキー行 X オフセット
 
@@ -9322,6 +9364,9 @@ No local servers found (ports %d-%d)
 
 No login required
 == ログイン不要
+
+No Logo selected
+== ロゴ未選択
 
 No map
 == マップなし
@@ -10085,6 +10130,12 @@ Password visibility icon animation: 0=Fade, 1=Morph
 Past year
 == 過去1年間
 
+Paste a friend code first.
+== 先にフレンドコードを貼り付けてください。
+
+Paste friend code
+== フレンドコードを貼り付け
+
 Paste sp_dc from Spotify web cookies
 == ブラウザの sp_dc クッキーを貼り付け
 
@@ -10252,9 +10303,6 @@ Pistol guide line
 
 Pixel: Layer Shift
 == ピクセル風：レイヤーシフト
-
-Place title on a separate line above the player name instead of inline
-== タイトルを名前と同じ行ではなく、プレイヤー名の上に別の行で表示
 
 Plasma gun shots per second
 == プラズマガンの毎秒発射数
@@ -10550,9 +10598,6 @@ Players weapons has no affect on others
 Playing effects
 == エフェクトの再生
 
-Plays a short effect when a tee's skin changes, and can copy the skin of the tee you just hammered.
-== Tee のスキンが変わったときに短いエフェクトを出します。たった今ハンマーで叩いた相手のスキンをコピーすることもできます。
-
 Plays an animation whenever your skin changes, including skins stolen with the hammer.
 == ハンマーで奪ったスキンも含め、スキンが変わるときにアニメーションを再生します。
 
@@ -10769,6 +10814,9 @@ Press Esc to exit the HUD editor
 Press F2, log in, then use: change_map map_name
 == F2 を押してログイン後、change_map map_name を実行します
 
+Pressed hammer icon color
+== ハンマー押下時のアイコン色
+
 Pressed hook collision line color when hitting a tee
 == フックキー押下時にTeeに当たったときのフック補助線の色
 
@@ -10777,6 +10825,9 @@ Pressed hook collision line color when hitting something hookable
 
 Pressed hook collision line color when not aiming at anything hookable
 == フックキー押下時にフック可能な物体を狙っていないときのフック補助線の色
+
+Pressed hook icon color
+== フック押下時のアイコン色
 
 Pressed hook line color; always used when custom pressed colors are enabled
 == 押下時のフックライン色。カスタム押下色が有効なとき常に使用
@@ -10822,6 +10873,9 @@ Preview cut (P)
 
 Preview dummy nameplate
 == ダミーのネームプレートをプレビュー
+
+Preview failed. Check the image and Logo, then retry.
+== プレビューに失敗しました。画像とロゴを確認して再試行してください。
 
 Preview hook collision colors and line styles
 == Preview hook collision colors and line styles
@@ -11360,6 +11414,9 @@ Read the listed rows, then press "Apply Qm recommended appearance"; if the font 
 Ready
 == 準備完了
 
+Ready to import: %d friends, %d categories.
+== インポート待ち：フレンド %d 人、グループ %d 個。
+
 Really? Not even a little?
 == 本当に？少しも考えてくれないんですか？
 
@@ -11624,6 +11681,9 @@ Remove chat
 Remove friend
 == フレンドを削除
 
+Remove from favorites
+== お気に入りから削除
+
 Remove from history
 == 履歴から削除
 
@@ -11632,6 +11692,9 @@ Remove from queue
 
 Remove Item
 == アイテムを削除
+
+Remove Logo
+== ロゴを削除
 
 Remove right to vote from player with client ID
 == クライアント ID を持つプレイヤーから投票権を削除
@@ -11804,6 +11867,9 @@ Repeat message
 Repeat the latest chat message
 == 最新のチャットメッセージを繰り返す
 
+Replace all friends
+== フレンドをすべて置き換える
+
 Replace censored words with length-based chars
 == ブロックワードの長さに応じて複数文字で置換
 
@@ -11827,6 +11893,9 @@ Replace settings, binds and the listed cfg files, then restart? The current conf
 
 Replace skin with one having this prefix (e.g. cats, santa)
 == このプレフィックスを持つスキンに置き換え（例：cats、santa）
+
+Replace your entire friend list, categories, notes and pins with the pasted code?
+== フレンド一覧、グループ、メモ、ピン留めをすべて貼り付けたコードの内容に置き換えますか？
 
 Replacement chars
 == 置換文字
@@ -11965,6 +12034,9 @@ Reset IME appearance
 
 Reset key press counts
 == キーを押した回数をリセット
+
+Reset layer
+== レイヤーをリセット
 
 Reset layout
 == レイアウトをリセット
@@ -12128,6 +12200,9 @@ Rotate hammer with cursor like other weapons
 Rotates your tee through a saved list of skins, either on a timer or at a random spot when a map starts.
 == 保存したスキン一覧で Tee を順に切り替えます。タイマーでも、マップ開始時にランダムな位置からでも動かせます。
 
+Rotation
+== 回転
+
 Round
 == ラウンド
 
@@ -12263,9 +12338,6 @@ Save ghost
 Save last %d min
 == 最後の %d 分を保存
 
-Save loaded and marked as used.
-== セーブを読み込み、使用済みとしてマークしました。
-
 Save loaded; local record removed.
 == セーブを読み込み、ローカルの記録を削除しました。
 
@@ -12274,6 +12346,9 @@ Save loaded; the local record could not be removed.
 
 Save player names in replay
 == リプレイにプレイヤー名を保存
+
+Save PNG copy
+== PNG コピーを保存
 
 Save power by lowering update rate
 == 更新レートを下げて省電力
@@ -12352,6 +12427,9 @@ Saves and loads complete client profiles, including name, chat settings and bind
 
 Saves file
 == ファイルを保存
+
+Saving…
+== 保存中…
 
 Say in chat
 == チャットで発言
@@ -12832,9 +12910,6 @@ Set "Background color" and "Background opacity", then "Text color", "Selected te
 
 Set "Button - Disabled" and "Button - Enabled" for the button, then "Menu background" and the two menu option rows for the popup.
 == ボタンにはボタン - 無効とボタン - 有効を設定し、ポップアップにはメニュー背景と 2 行のメニュー項目を設定します。
-
-Set "Console font size" and "Console background opacity", tick "Highlight console commands", then choose a "Console color scheme".
-== コンソールのフォントサイズと背景の不透明度を設定し、コンソールのコマンドを強調表示にチェックを入れ、コンソールの配色を選びます。
 
 Set "Display mode" to "Show on key" or "Always show", then pick "Pistol guide line" and "Predict ninja path", plus color, "Line width" and "Opacity".
 == 表示モードをキー表示か常に表示にし、ピストルのガイド線や忍者経路の予測を選び、色・線幅・不透明度を調整します。
@@ -13946,9 +14021,6 @@ Show tiles layers from BG map
 Show title setting hints immediately in small text
 == 称号設定のヒントを小さな文字ですぐに表示
 
-Show titles above player names
-== プレイヤー名の上に称号を表示
-
 Show titles on nameplates
 == ネームプレートに称号を表示
 
@@ -14146,6 +14218,9 @@ Simple noise reduction
 
 Simple noise reduction strength
 == 簡易ノイズリダクション強度
+
+Singing
+== 歌う
 
 Size
 == サイズ
@@ -15347,6 +15422,9 @@ Test translation
 Testing translation...
 == 翻訳をテスト中…
 
+Text
+== テキスト
+
 Text alpha
 == テキストの透明度
 
@@ -15641,9 +15719,6 @@ Tick "Enable system media control", then "Show song info in top-left corner"; th
 Tick "Enable voice", then open "Advanced options" to pick "Input device" and "Output device"; "Auto unmute when speaking" frees your mute key.
 == 音声を有効にするをオンにし、詳細オプションで入力デバイスと出力デバイスを選びます。話すと自動でミュート解除を使えばミュートキーが空きます。
 
-Tick "Highlight teammates hammering in death or freeze areas"; it works on your own team only and needs no key bind.
-== デスやフリーズ範囲でハンマーを振る味方を強調表示にチェックを入れます。自チームにだけ働き、キー割り当ては不要です。
-
 Tick "Launch Steam automatically when starting externally"; if Steam is not found, type its path or press "Detect Steam again".
 == 外部起動時に Steam を自動で起動を有効にします。Steam が見つからない場合はパスを入力するか、Steam を再検出を押します。
 
@@ -15679,6 +15754,9 @@ tile
 
 Tile outlines
 == タイルのアウトライン
+
+Tile watermark
+== 透かしを敷き詰める
 
 Time
 == タイム
@@ -16181,9 +16259,6 @@ Tune additional world and player effects
 Tune in zone a variable to value
 == ゾーン a の変数を値にチューニング
 
-Tune layer opacity
-== チューンレイヤーの不透明度
-
 Tune variable to value
 == 変数を値にチューニング
 
@@ -16258,9 +16333,6 @@ Turn on "Show titles on nameplates", pick a "Title style", then adjust "Title mo
 
 Turn on "Skin outline for self and dummy" or "Skin outline for other players", then tune width and opacity; "Cycle custom Tee hue" animates custom colors.
 == 自分と dummy のスキンの輪郭か他のプレイヤーのスキンの輪郭をオンにして、太さと不透明度を調整します。カスタム Tee の色相切り替えがカスタムカラーを動かします。
-
-Turn on "Skin transition animation", choose a "Skin transition type" and "Animation range", then set "Skin transition duration" and "Skin transition intensity".
-== スキン切り替えアニメーションをオンにし、切り替えタイプとアニメーション範囲を選んで、切り替えの長さと強さを設定します。
 
 Turn on "Smooth free spectator camera" and set "Cinematic smoothness": low values stay snappy, high values drift slowly.
 == 自由観戦カメラの平滑化をオンにして映画的平滑度を設定します。低いほど機敏、高いほどゆっくり流れます。
@@ -16408,6 +16480,9 @@ Unable to load savegame: loaded on a different server
 
 Unable to load savegame: SaveId corrupted
 == セーブをロードできません: SaveId が破損しています
+
+Unable to open the file picker
+== ファイル選択画面を開けません
 
 Unable to open the screenshot file
 == スクリーンショットファイルを開けませんでした
@@ -16625,6 +16700,9 @@ Update ready to install
 Update sources are temporarily unavailable
 == 更新元は一時的に利用できません
 
+Updating preview…
+== プレビュー更新中…
+
 Updating public word list...
 == 共有NGワードを更新中...
 
@@ -16745,9 +16823,6 @@ Use high bandwidth mode (doubles server bandwidth, LAN only)
 Use installed asset names. Empty fields keep the current asset.
 == インストール済みの素材名を入力してください。空欄は現在の素材を保持します。
 
-Use it to find the teammate who needs a wake-up; enemies are never highlighted, so do not look for them here.
-== 起こしてほしい味方を見つけるための機能です。敵は強調されないので、ここで探さないでください。
-
 Use k key to kill (restart), q to pause and watch other players. See settings for other key binds.
 == K キーで自殺（再スタート）、Q キーで一時停止して他のプレイヤーを観戦します。他のキーバインドは設定で確認してください。
 
@@ -16840,9 +16915,6 @@ Use warlist colors instead of regular colors
 
 Use warlist groups for indicator
 == インジケーターに敵対リストグループを使用
-
-Used
-== 使用済み
 
 Used by active shared text and numeric input fields
 == 有効な共通テキスト・数値入力欄で使用されます
@@ -17189,11 +17261,11 @@ Warning
 Watches your friend list and reports friends coming online or joining your map, with optional automatic greeting.
 == フレンドリストを監視し、フレンドがオンラインになったり同じマップに入ったりしたら知らせます。自動あいさつも可能です。
 
-Water hammer highlight
-== 水中ハンマーのハイライト
-
 Watermark
 == ウォーターマーク
+
+Watermark editor
+== 透かしエディター
 
 Weak hook
 == 弱いフック
@@ -17818,9 +17890,6 @@ Your movements are not taken into account when calculating the line colors
 
 Your nickname '%s' is already used (%d points). Do you still want to use it?
 == ニックネーム '%s' は既に使用されています（%d ポイント）。それでも使用しますか？
-
-Your own colors appear only under "Custom"; press "Reset console appearance" if the text becomes hard to read.
-== 独自の色はカスタムを選んだときだけ現れます。文字が読みにくくなったらコンソールの外観をリセットのボタンを押します。
 
 Your profile
 == あなたのプロフィール

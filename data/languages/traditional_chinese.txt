@@ -343,6 +343,9 @@
 === Saves for '%s' ===
 == === 「%s」的存檔 ===
 
+?!Stuck keys!?
+== ?!卡鍵!?
+
 []
 [%s] %s (Map: %s, Time: %s)
 == [%s] %s（地圖：%s，時間：%s）
@@ -794,6 +797,9 @@ Alias of poses_render
 Alias of poses_video
 == poses_video 的別名
 
+Alignment
+== 對齊
+
 Alive notification color
 == 存活提醒顏色
 
@@ -1013,9 +1019,6 @@ APP ID
 Appearance
 == 遊戲界面
 
-Appearance and command highlighting of the local console
-== 本機控制台的外觀和命令醒目顯示
-
 Appearance of help bubbles
 == 提示氣泡外觀
 
@@ -1072,9 +1075,6 @@ Apply to dummy
 
 Apply to player
 == 套用至本體
-
-Apply watermark
-== 套用浮水印
 
 Applying overwrites your font, UI scale, animation and panel colors at once, so note the values you like first.
 == 套用會一次覆蓋字型、UI 縮放、動畫與面板顏色，先記下你喜歡的數值。
@@ -1519,9 +1519,6 @@ Automatically record demos
 
 Automatically record replays
 == 自動錄製回放
-
-Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)
-== 存檔載入成功後自動刪除本地記錄（0 = 保留並標記為已使用，1 = 刪除）
 
 Automatically reply to muted players
 == 對已屏蔽發言的玩家自動回覆
@@ -2072,6 +2069,9 @@ Candidate files
 Candy gradient
 == 糖果漸層
 
+Cannot import: invalid data or too many friends or categories.
+== 無法匯入：資料無效，或好友、群組數量超出上限。
+
 Cannot join the target player's team
 == 無法加入目標玩家的隊伍
 
@@ -2213,8 +2213,8 @@ Chat bubble display duration (seconds)
 Chat bubble font size
 == 聊天氣泡字體大小
 
-Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble)
-== 訊息氣泡樣式（0=漫畫對白，1=糖果漸層，2=雲朵氣泡）
+Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble, 3=Default)
+== 訊息氣泡樣式（0=漫畫對白，1=糖果漸層，2=雲朵氣泡，3=預設）
 
 Chat bubble text color
 == 聊天氣泡文字顏色
@@ -2395,6 +2395,9 @@ Choose default eyes when joining a server
 
 Choose export name first.
 == 請先填寫導出名稱。
+
+Choose Logo (PNG / WebP)
+== 選擇 Logo（PNG / WebP）
 
 Choose off, simple or full; the individual switches below only apply to full.
 == 可選擇關閉、精簡或完整；下方各個開關只在「完整」下生效。
@@ -2583,6 +2586,9 @@ Click to add this community to favorites
 == 點擊將該社區加入收藏
 
 Click to copy map name
+== 點擊複製地圖名
+
+Click to copy the map name
 == 點擊複製地圖名
 
 Click to copy this clan's name to clipboard
@@ -2893,9 +2899,6 @@ Configure game and client preferences
 
 Configure ghost recording and playback tools
 == Configure ghost recording and playback tools
-
-Configure hammer skin steal and skin transition animations
-== 調整錘中偷皮和換皮動畫
 
 Configure health, ammo, timer, and race HUD
 == Configure health, ammo, timer, and race HUD
@@ -3215,6 +3218,9 @@ Copy a .qmconfig file into the package folder, then refresh.
 Copy all
 == 複製全部
 
+Copy friend code
+== 複製好友碼
+
 Copy info
 == 複製伺服器信息
 
@@ -3265,6 +3271,9 @@ Could not delete "%s"
 
 Could not download "%s"
 == 無法下載"%s"
+
+Could not encode friend data.
+== 無法產生好友碼。
 
 Could not find a Tutorial server. Check your internet connection.
 == 找不到教學伺服器。請檢查你的網路連線。
@@ -4172,6 +4181,9 @@ Door Laser Outline Color
 Door laser outline color
 == 門的激光輪廓顏色
 
+Double-tap the bound key within 400 ms to send the current lyric to public chat
+== 在 400 毫秒內連按兩次綁定按鍵，將目前這句歌詞傳送到公開聊天
+
 Download
 == 下載
 
@@ -4235,11 +4247,14 @@ Draft file is empty
 Drag
 == 拖曳
 
-Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Tune layer opacity" to fade the whole entity layer.
-== 拖曳死亡透明度或傳送透明度這類滑桿，範圍 0 到 100%，或用調整圖層透明度把整個實體層調淡。
+Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Overlay entities" to fade the whole entity layer.
+== 拖曳死亡透明度或傳送透明度這類滑桿，範圍 0 到 100%，或用「顯示實體層」把整個實體層調淡。
 
 Drag HUD modules with the left mouse button
 == 按住鼠標左鍵拖動 HUD 模塊
+
+Drag the selected watermark to move it. The original image is preserved.
+== 拖曳選取的浮水印可調整位置，原圖會保留。
 
 Drag the three sliders; master scales the other two.
 == 拖動三個滑桿；主音量會按比例調整另外兩個音量。
@@ -4661,9 +4676,6 @@ Empty slots still take space, so clear the ones you no longer use.
 enable
 == 開啟
 
-Enable "Hammer skin steal" only if you want your skin to change on every hammer hit, since other players see it too.
-== 只有想每次錘中都換皮膚時才開啟錘中偷皮——別人也會看到你的皮膚在變。
-
 Enable "Map progress bar" and choose its location: Standalone, Player stats or Dynamic Island. Enable "Show player stats HUD" for the Player stats location.
 == 開啟「地圖進度條」，選擇獨立顯示、玩家統計或靈動島。選擇玩家統計時，還需開啟「顯示玩家統計 HUD」。
 
@@ -5054,6 +5066,9 @@ Enable the frozen Tee HUD, choose whether to count active or frozen Tees, then s
 Enable the guide line, then set its length, style and colors.
 == 啟用輔助線，然後設定長度、樣式與顏色。
 
+Enable the highlight and nameplate key presses, then choose the pressed hammer and hook icon colors. Icon size follows the key press size.
+== 開啟高亮和暱稱按鍵顯示後，可以分別調整卡錘、卡鉤的按下顏色。圖示大小跟隨按鍵顯示。
+
 Enable the indicator; choose its distance mode and whether war-list players get a different color.
 == 啟用指示器；選擇它的距離模式，並設定 war-list 玩家是否使用不同顏色。
 
@@ -5216,8 +5231,8 @@ Entity Background Image
 Entity layer
 == 實體層
 
-Entity overlay
-== 實體疊加
+Entity layer adjustments
+== 實體層調整
 
 Entity Preview
 == 實體層預覽
@@ -5825,9 +5840,6 @@ Font cursor
 Font size
 == 字體大小
 
-Font size, background opacity, colors and command highlighting of the local console you open with F1.
-== 用 F1 開啟的本機主控台的字型大小、背景不透明度、顏色與指令高亮。
-
 Font store
 == 字型商店
 
@@ -5866,9 +5878,6 @@ Format player names after a finish
 
 Forms
 == 表單
-
-Found %d global cards
-== 匹配到 %d 張全局卡片
 
 Four IP addresses are already online
 == 已有 4 個 IP 在線，請等待其他會話離線
@@ -5969,6 +5978,9 @@ Friend
 Friend bar category expand state (1=expanded, 0=collapsed)
 == 好友欄分類展開狀態(1=展開，0=收起)
 
+Friend code copied, including categories, notes and pins.
+== 好友碼已複製，包含群組、備註和置頂狀態。
+
 Friend color in friends list
 == 好友列表中好友條目顏色
 
@@ -6016,6 +6028,12 @@ Friend option color
 
 Friends
 == 好友
+
+Friends imported and saved.
+== 好友已匯入並儲存。
+
+Friends imported for this session, but saving settings failed.
+== 好友已在本次執行中匯入，但設定儲存失敗。
 
 Friends only
 == 僅限好友
@@ -6665,6 +6683,9 @@ Highlight Color
 Highlight console commands
 == 醒目顯示控制台命令
 
+Highlight frozen teammates' hammer and hook inputs
+== 高亮凍結中隊友的卡錘和卡鉤
+
 Highlight game type
 == 高亮顯示遊戲類型
 
@@ -6677,17 +6698,14 @@ Highlight ping value
 Highlight selected players in the game world
 == Highlight selected players in the game world
 
-Highlight teammates hammering in death or freeze areas
-== 高亮在死亡或凍結區域卡錘的隊友
-
-Highlight teammates holding hammer in death or freeze areas
-== 高亮在死亡或凍結區域按住錘子的隊友
-
 Highlighted message
 == 被提及消息
 
 Highlighted message color
 == 提及訊息顏色
+
+Highlights frozen teammates holding hammer and shows their held hammer or hook beside the nameplate key presses.
+== 高亮凍結中持續按錘的隊友，並在暱稱按鍵顯示兩側顯示卡錘、卡鉤圖示。
 
 Hit feedback
 == 命中回饋
@@ -6914,6 +6932,9 @@ Icon symbols:
 Icons
 == 圖示
 
+Icons disappear on release or unfreeze. Remote held inputs require server preinput support; your active character is excluded.
+== 放開按鍵或解凍後隱藏圖示。他人按鍵狀態需要伺服器支援預輸入；不顯示目前操控角色的卡鍵狀態。
+
 Identity preset
 == 身分預設
 
@@ -7007,8 +7028,14 @@ Import and restart
 Import configuration package
 == 匯入配置包
 
+Import friend code
+== 匯入好友碼
+
 Import from clipboard
 == 從剪貼板導入
+
+Import merges friends and keeps local duplicates by default. Codes contain private names and notes.
+== 預設合併好友，重複好友保留本機資料。好友碼包含私人名單和備註。
 
 Improved anti ping
 == 改進反 Ping
@@ -7321,6 +7348,9 @@ Invalid X coordinate.
 
 Invalid Y coordinate.
 == 無效的 Y 座標
+
+Invalid, damaged or unsupported friend code.
+== 好友碼無效、已損壞或版本不受支援。
 
 Invert camera drift direction
 == 反轉相機漂移方向
@@ -7759,6 +7789,9 @@ Leak IP
 
 Leaks your IP address to all servers by pinging each of them, also acquiring the latency in the process
 == 通過逐個 ping 伺服器洩露你的 IP，同時會獲取延遲
+
+Leaks your IP address to this server by pinging it, also acquiring the latency in the process
+== 透過 ping 目前的伺服器取得延遲，同時會向該伺服器暴露你的 IP 位址
 
 Learn
 == 教程 Wiki
@@ -8414,9 +8447,6 @@ Markers
 Markers are drawn on your screen only and never change the game itself.
 == 標記只繪製在你的畫面上，永遠不會改變遊戲本身。
 
-Marks teammates who hold hammer while stuck in death or freeze areas, so you can see who is hammering them.
-== 標記卡在死亡或凍結區域裡仍握著槌子的隊友，方便你看清是誰在槌他們。
-
 Master server URL to register
 == 要註冊的主伺服器 URL
 
@@ -8981,6 +9011,18 @@ Name plate elements allow free Y movement
 Name plate elements freely movable within bounds
 == 名字板元素允許在框內自由移動
 
+Name plate hammer icon X offset
+== 暱稱卡錘圖示 X 偏移
+
+Name plate hammer icon Y offset
+== 暱稱卡錘圖示 Y 偏移
+
+Name plate hook icon X offset
+== 暱稱卡鉤圖示 X 偏移
+
+Name plate hook icon Y offset
+== 暱稱卡鉤圖示 Y 偏移
+
 Name plate key line X offset
 == 名字板按鍵行 X 偏移
 
@@ -9322,6 +9364,9 @@ No local servers found (ports %d-%d)
 
 No login required
 == 無需登錄
+
+No Logo selected
+== 尚未選擇 Logo
 
 No map
 == 無地圖
@@ -10085,6 +10130,12 @@ Password visibility icon animation: 0=Fade, 1=Morph
 Past year
 == 最近一年
 
+Paste a friend code first.
+== 請先貼上好友碼。
+
+Paste friend code
+== 貼上好友碼
+
 Paste sp_dc from Spotify web cookies
 == 貼上瀏覽器中的 sp_dc cookie
 
@@ -10252,9 +10303,6 @@ Pistol guide line
 
 Pixel: Layer Shift
 == 像素風：層移
-
-Place title on a separate line above the player name instead of inline
-== 將頭銜獨立顯示在玩家名稱上方，而不是與名稱同列
 
 Plasma gun shots per second
 == 等離子槍每秒發射多少發子彈
@@ -10550,9 +10598,6 @@ Players weapons has no affect on others
 Playing effects
 == 播放效果
 
-Plays a short effect when a tee's skin changes, and can copy the skin of the tee you just hammered.
-== 皮膚的 Tee 換膚時播放一個短效果，還可以把剛錘到的那個人的皮膚複製過來。
-
 Plays an animation whenever your skin changes, including skins stolen with the hammer.
 == 皮膚變化時播放動畫，包括錘子偷來的皮膚。
 
@@ -10769,6 +10814,9 @@ Press Esc to exit the HUD editor
 Press F2, log in, then use: change_map map_name
 == 按 F2 登入管理後，輸入：change_map 地圖名
 
+Pressed hammer icon color
+== 卡錘按下顏色
+
 Pressed hook collision line color when hitting a tee
 == 按住鉤鍵時命中角色的鉤子輔助線顏色
 
@@ -10777,6 +10825,9 @@ Pressed hook collision line color when hitting something hookable
 
 Pressed hook collision line color when not aiming at anything hookable
 == 按住鉤鍵時未瞄準可鉤物體的鉤子輔助線顏色
+
+Pressed hook icon color
+== 卡鉤按下顏色
 
 Pressed hook line color; always used when custom pressed colors are enabled
 == 按下後顏色；開啟自訂按下後顏色時始終生效
@@ -10822,6 +10873,9 @@ Preview cut (P)
 
 Preview dummy nameplate
 == 預覽分身名牌
+
+Preview failed. Check the image and Logo, then retry.
+== 預覽失敗，請檢查圖片和 Logo 後重試。
 
 Preview hook collision colors and line styles
 == Preview hook collision colors and line styles
@@ -11360,6 +11414,9 @@ Read the listed rows, then press "Apply Qm recommended appearance"; if the font 
 Ready
 == 已就緒
 
+Ready to import: %d friends, %d categories.
+== 待匯入：%d 位好友，%d 個群組。
+
 Really? Not even a little?
 == 真的？一點都不考慮一下嗎？
 
@@ -11624,6 +11681,9 @@ Remove chat
 Remove friend
 == 刪除好友
 
+Remove from favorites
+== 取消收藏
+
 Remove from history
 == 從歷史中移除
 
@@ -11632,6 +11692,9 @@ Remove from queue
 
 Remove Item
 == 刪除項
+
+Remove Logo
+== 移除 Logo
 
 Remove right to vote from player with client ID
 == 刪除具有客戶端 ID 的玩家的投票權
@@ -11804,6 +11867,9 @@ Repeat message
 Repeat the latest chat message
 == 復讀最新聊天消息
 
+Replace all friends
+== 取代全部好友
+
 Replace censored words with length-based chars
 == 按屏蔽詞長度多字符替換
 
@@ -11827,6 +11893,9 @@ Replace settings, binds and the listed cfg files, then restart? The current conf
 
 Replace skin with one having this prefix (e.g. cats, santa)
 == 將皮膚替換為帶有此前綴的皮膚（例如小貓、聖誕老人）
+
+Replace your entire friend list, categories, notes and pins with the pasted code?
+== 確定用貼上的好友碼取代全部好友、群組、備註和置頂狀態嗎？
 
 Replacement chars
 == 替換字符
@@ -11965,6 +12034,9 @@ Reset IME appearance
 
 Reset key press counts
 == 清零按鍵累計次數
+
+Reset layer
+== 重設目前圖層
 
 Reset layout
 == 重置佈局
@@ -12128,6 +12200,9 @@ Rotate hammer with cursor like other weapons
 Rotates your tee through a saved list of skins, either on a timer or at a random spot when a map starts.
 == 按儲存的皮膚列表輪流換膚，可以定時切換，也可以在地圖開始時隨機挑一個。
 
+Rotation
+== 旋轉
+
 Round
 == 回合數
 
@@ -12263,9 +12338,6 @@ Save ghost
 Save last %d min
 == 保存前 %d 分鐘
 
-Save loaded and marked as used.
-== 存檔已載入並標記為已使用。
-
 Save loaded; local record removed.
 == 存檔讀取成功，已刪除本機紀錄。
 
@@ -12274,6 +12346,9 @@ Save loaded; the local record could not be removed.
 
 Save player names in replay
 == 在回放中保存玩家名稱
+
+Save PNG copy
+== 另存 PNG 副本
 
 Save power by lowering update rate
 == 降低更新率以節省電量
@@ -12352,6 +12427,9 @@ Saves and loads complete client profiles, including name, chat settings and bind
 
 Saves file
 == 存檔密碼文件
+
+Saving…
+== 正在儲存…
 
 Say in chat
 == 在聊天中說
@@ -12832,9 +12910,6 @@ Set "Background color" and "Background opacity", then "Text color", "Selected te
 
 Set "Button - Disabled" and "Button - Enabled" for the button, then "Menu background" and the two menu option rows for the popup.
 == 按鈕用按鈕 - 停用與按鈕 - 啟用來設定，彈出選單則設選單背景與兩行選單選項。
-
-Set "Console font size" and "Console background opacity", tick "Highlight console commands", then choose a "Console color scheme".
-== 設定主控台字型大小與主控台背景不透明度，勾選高亮主控台指令，再選擇主控台配色方案。
 
 Set "Display mode" to "Show on key" or "Always show", then pick "Pistol guide line" and "Predict ninja path", plus color, "Line width" and "Opacity".
 == 把顯示方式設為按鍵顯示或一直顯示，再依需要開啟手槍輔助線和預測忍者路徑，並調整顏色、線寬和透明度。
@@ -13946,9 +14021,6 @@ Show tiles layers from BG map
 Show title setting hints immediately in small text
 == 立即以小字顯示頭銜設定提示
 
-Show titles above player names
-== 頭銜顯示在名字上方
-
 Show titles on nameplates
 == 顯示名牌頭銜
 
@@ -14146,6 +14218,9 @@ Simple noise reduction
 
 Simple noise reduction strength
 == 簡單降噪強度
+
+Singing
+== 唱歌
 
 Size
 == 大小
@@ -15347,6 +15422,9 @@ Test translation
 Testing translation...
 == 正在測試翻譯…
 
+Text
+== 文字
+
 Text alpha
 == 文字透明度
 
@@ -15641,9 +15719,6 @@ Tick "Enable system media control", then "Show song info in top-left corner"; th
 Tick "Enable voice", then open "Advanced options" to pick "Input device" and "Output device"; "Auto unmute when speaking" frees your mute key.
 == 勾選啟用語音，打開進階選項選擇輸入裝置與輸出裝置；說話時自動取消靜音能讓你空出靜音鍵。
 
-Tick "Highlight teammates hammering in death or freeze areas"; it works on your own team only and needs no key bind.
-== 勾選高亮在死亡或凍結區域槌人的隊友；只對自己隊伍生效，不需綁定按鍵。
-
 Tick "Launch Steam automatically when starting externally"; if Steam is not found, type its path or press "Detect Steam again".
 == 勾選從外部啟動時自動啟動 Steam；若找不到 Steam，手動輸入其路徑或按下重新偵測 Steam。
 
@@ -15679,6 +15754,9 @@ tile
 
 Tile outlines
 == 牆體輪廓
+
+Tile watermark
+== 平鋪浮水印
 
 Time
 == 時間
@@ -16181,9 +16259,6 @@ Tune additional world and player effects
 Tune in zone a variable to value
 == 將區域 a 的變量調到指定值
 
-Tune layer opacity
-== 疊層不透明度
-
 Tune variable to value
 == 將變量調到指定值
 
@@ -16258,9 +16333,6 @@ Turn on "Show titles on nameplates", pick a "Title style", then adjust "Title mo
 
 Turn on "Skin outline for self and dummy" or "Skin outline for other players", then tune width and opacity; "Cycle custom Tee hue" animates custom colors.
 == 打開自己與 dummy 的皮膚描邊或其他玩家的皮膚描邊，再調寬度和透明度；循環自定義 Tee 色調負責讓自訂顏色動起來。
-
-Turn on "Skin transition animation", choose a "Skin transition type" and "Animation range", then set "Skin transition duration" and "Skin transition intensity".
-== 開啟換膚過渡動畫，選擇過渡類型和動畫範圍，再調過渡時長和過渡強度。
 
 Turn on "Smooth free spectator camera" and set "Cinematic smoothness": low values stay snappy, high values drift slowly.
 == 開啟平滑自由觀戰鏡頭並設定電影鏡頭平滑度：數值低反應快，數值高鏡頭慢慢漂。
@@ -16408,6 +16480,9 @@ Unable to load savegame: loaded on a different server
 
 Unable to load savegame: SaveId corrupted
 == 無法載入存檔：存檔編號已損壞
+
+Unable to open the file picker
+== 無法開啟檔案選擇器
 
 Unable to open the screenshot file
 == 無法打開截圖文件
@@ -16625,6 +16700,9 @@ Update ready to install
 Update sources are temporarily unavailable
 == 更新來源暫時無法使用
 
+Updating preview…
+== 正在更新預覽…
+
 Updating public word list...
 == 正在更新公共詞庫...
 
@@ -16745,9 +16823,6 @@ Use high bandwidth mode (doubles server bandwidth, LAN only)
 Use installed asset names. Empty fields keep the current asset.
 == 填寫已安裝的貼圖名稱；留空表示保留目前貼圖。
 
-Use it to find the teammate who needs a wake-up; enemies are never highlighted, so do not look for them here.
-== 用它找需要喚醒的隊友；敵人從不會被高亮，別在這裡找他們。
-
 Use k key to kill (restart), q to pause and watch other players. See settings for other key binds.
 == 使用 K 鍵自殺（重新開始），Q 鍵暫停並旁觀其他玩家。其他按鍵綁定可在設置中查看。
 
@@ -16840,9 +16915,6 @@ Use warlist colors instead of regular colors
 
 Use warlist groups for indicator
 == 使用敵對列表作為指示器
-
-Used
-== 已使用
 
 Used by active shared text and numeric input fields
 == 用於已啟用的共用文字與數值輸入框
@@ -17189,11 +17261,11 @@ Warning
 Watches your friend list and reports friends coming online or joining your map, with optional automatic greeting.
 == 盯著你的好友清單，在好友上線或進入你所在的地圖時提醒你，還可以自動打招呼。
 
-Water hammer highlight
-== 水域卡錘高亮
-
 Watermark
 == 浮水印
+
+Watermark editor
+== 浮水印編輯器
 
 Weak hook
 == 弱鉤
@@ -17818,9 +17890,6 @@ Your movements are not taken into account when calculating the line colors
 
 Your nickname '%s' is already used (%d points). Do you still want to use it?
 == 你使用的暱稱 "%s" 已被使用（%d 分）。確認要使用這個名字嗎？
-
-Your own colors appear only under "Custom"; press "Reset console appearance" if the text becomes hard to read.
-== 自選顏色只在選自訂時出現；文字難以辨讀時按重設主控台外觀。
 
 Your profile
 == 您的個人資料

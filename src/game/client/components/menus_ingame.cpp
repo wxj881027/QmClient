@@ -28,6 +28,7 @@
 #include <generated/protocol.h>
 
 #include <game/client/QmUi/QmAnimResolve.h>
+#include <game/client/QmUi/QmServerInfoGeometry.h>
 #include <game/client/QmUi/QmTree.h>
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiForms.h>
@@ -1161,10 +1162,7 @@ void CMenus::PrepareIngameServerInfoTextRuntime(const CUIRect *pMainView)
 		MainView.HSplitTop(6.0f, nullptr, &MainView);
 	}
 
-	const float FontSizeTitle = 32.0f;
-	const float FontSizeBody = 20.0f;
 	const float MotdFontSize = 16.0f;
-	const float ServerInfoLabelWidth = 132.0f;
 
 	SSettingsAdaptiveBudgetInput TextBudgetInput;
 	TextBudgetInput.m_FrameId = Client()->PerfFrame();
@@ -1184,29 +1182,34 @@ void CMenus::PrepareIngameServerInfoTextRuntime(const CUIRect *pMainView)
 
 	const CServerInfo &CurrentServerInfo = Client()->ServerInfo();
 
-	CUIRect ServerInfo, GameInfo, Motd;
 	MainView.Margin(10.0f, &MainView);
-	MainView.HSplitMid(&ServerInfo, &Motd, 10.0f);
-	ServerInfo.VSplitMid(&ServerInfo, &GameInfo, 10.0f);
-	ServerInfo.Margin(10.0f, &ServerInfo);
-	GameInfo.Margin(10.0f, &GameInfo);
-	if(g_Config.m_QmMapTags && Motd.w >= 300.0f && Motd.h >= 180.0f)
-		Motd.VSplitLeft(Motd.w * 0.38f, &Motd, nullptr);
-	Motd.Margin(10.0f, &Motd);
+	const auto Layout = QmServerInfoGeometry::Layout(MainView, g_Config.m_QmMapTags != 0);
+	CUIRect ServerInfo = QmServerInfoGeometry::ContentRect(Layout.m_Server);
+	CUIRect GameInfo = QmServerInfoGeometry::ContentRect(Layout.m_Game);
+	CUIRect Motd = QmServerInfoGeometry::ContentRect(Layout.m_Motd);
+	const float ServerScale = QmServerInfoGeometry::FitScale(ServerInfo, 280.0f, QmServerInfoGeometry::ServerContentHeight(GameClient()->m_Snap.m_pLocalInfo != nullptr, ServerBrowser()->Community(CurrentServerInfo.m_aCommunityId) != nullptr));
+	const auto *pGameInfoObj = GameClient()->m_Snap.m_pGameInfoObj;
+	const int OptionalFields = pGameInfoObj ? (int)(pGameInfoObj->m_ScoreLimit != 0) + (int)(pGameInfoObj->m_TimeLimit != 0) + (int)(pGameInfoObj->m_RoundCurrent && pGameInfoObj->m_RoundNum) : 0;
+	const float GameScale = QmServerInfoGeometry::FitScale(GameInfo, 280.0f, QmServerInfoGeometry::GameContentHeight(OptionalFields, GameClient()->m_GameInfo.m_DDRaceTeam, CurrentServerInfo.m_aMap[0] != '\0'));
+	float FontSizeTitle = 32.0f * ServerScale;
+	float FontSizeBody = 20.0f * ServerScale;
+	float ServerInfoLabelWidth = 132.0f * ServerScale;
+	SLabelProperties FieldProps;
+	FieldProps.m_MinimumFontSize = 0.1f;
 
 	CUIRect Label;
 	ServerInfo.HSplitTop(FontSizeTitle, &Label, &ServerInfo);
-	ServerInfo.HSplitTop(5.0f, nullptr, &ServerInfo);
+	ServerInfo.HSplitTop(5.0f * ServerScale, nullptr, &ServerInfo);
 	ServerInfo.HSplitTop(FontSizeBody, &Label, &ServerInfo);
 	ServerInfo.HSplitTop(FontSizeBody, nullptr, &ServerInfo);
-	RequestSnapshotTextContainer("ingame-server-info-name-value", &Label, CurrentServerInfo.m_aName, FontSizeBody, TEXTALIGN_ML, {});
+	RequestSnapshotTextContainer("ingame-server-info-name-value", &Label, CurrentServerInfo.m_aName, FontSizeBody, TEXTALIGN_ML, FieldProps);
 
 	ServerInfo.HSplitTop(FontSizeBody, &Label, &ServerInfo);
 	char aBuf[256];
 	auto RequestServerInfoField = [&](const char *pValueTextId, CUIRect *pRow, const char *pValueText) {
 		CUIRect LabelRect, ValueRect;
 		pRow->VSplitLeft(ServerInfoLabelWidth, &LabelRect, &ValueRect);
-		RequestSnapshotTextContainer(pValueTextId, &ValueRect, pValueText, FontSizeBody, TEXTALIGN_ML, {});
+		RequestSnapshotTextContainer(pValueTextId, &ValueRect, pValueText, FontSizeBody, TEXTALIGN_ML, FieldProps);
 	};
 	RequestServerInfoField("ingame-server-info-address-value", &Label, CurrentServerInfo.m_aAddress);
 
@@ -1222,14 +1225,16 @@ void CMenus::PrepareIngameServerInfoTextRuntime(const CUIRect *pMainView)
 	ServerInfo.HSplitTop(FontSizeBody, &Label, &ServerInfo);
 	RequestServerInfoField("ingame-server-info-password-value", &Label, CurrentServerInfo.m_Flags & SERVER_FLAG_PASSWORD ? Localize("Yes") : Localize("No"));
 
+	FontSizeTitle = 32.0f * GameScale;
+	FontSizeBody = 20.0f * GameScale;
+	ServerInfoLabelWidth = 132.0f * GameScale;
 	GameInfo.HSplitTop(FontSizeTitle, &Label, &GameInfo);
-	GameInfo.HSplitTop(5.0f, nullptr, &GameInfo);
+	GameInfo.HSplitTop(5.0f * GameScale, nullptr, &GameInfo);
 	GameInfo.HSplitTop(FontSizeBody, &Label, &GameInfo);
 	RequestServerInfoField("ingame-game-info-type-value", &Label, CurrentServerInfo.m_aGameType);
 	GameInfo.HSplitTop(FontSizeBody, &Label, &GameInfo);
 	RequestServerInfoField("ingame-game-info-map-value", &Label, CurrentServerInfo.m_aMap);
 
-	const auto *pGameInfoObj = GameClient()->m_Snap.m_pGameInfoObj;
 	if(pGameInfoObj)
 	{
 		if(pGameInfoObj->m_ScoreLimit)
@@ -1272,8 +1277,9 @@ void CMenus::PrepareIngameServerInfoTextRuntime(const CUIRect *pMainView)
 	RequestServerInfoField("ingame-game-info-players-value", &Label, aBuf);
 
 	CUIRect MotdHeader;
-	Motd.HSplitTop(2.0f * MotdFontSize, &MotdHeader, &Motd);
-	Motd.HSplitTop(5.0f, nullptr, &Motd);
+	const float MotdScale = QmServerInfoGeometry::FitScale(Motd, 180.0f, 53.0f);
+	Motd.HSplitTop(2.0f * MotdFontSize * MotdScale, &MotdHeader, &Motd);
+	Motd.HSplitTop(5.0f * MotdScale, nullptr, &Motd);
 	if(GameClient()->m_Motd.ServerMotd()[0])
 		RequestIngameMotdParagraphCache(Motd, MotdFontSize);
 
@@ -1403,7 +1409,6 @@ void CMenus::DrainIngameMotdParagraphCache(CUIRect Motd, float FontSize, bool Al
 				m_IngameMotdParagraphCache.m_Width = Motd.w;
 				m_IngameMotdParagraphCache.m_FontSize = FontSize;
 				m_IngameMotdParagraphCache.m_Height = m_IngameMotdParagraphCache.m_BuildHeight;
-				m_IngameMotdParagraphCache.m_LastStableHeight = m_IngameMotdParagraphCache.m_Height;
 				m_IngameMotdParagraphCache.m_Valid = true;
 				m_IngameMotdParagraphCache.m_Pending = false;
 			}
@@ -1422,16 +1427,22 @@ void CMenus::DrainIngameMotdParagraphCache(CUIRect Motd, float FontSize, bool Al
 	}
 }
 
-bool CMenus::RenderIngameMotdStableParagraphCache(CUIRect Motd, float FontSize, CUIRect MotdTextArea)
+bool CMenus::RenderIngameMotdStableParagraphCache(CUIRect Motd)
 {
-	if(m_IngameMotdParagraphCache.m_Valid && m_MotdTextContainerIndex.Valid() &&
-		absolute(m_IngameMotdParagraphCache.m_Width - Motd.w) < 0.01f &&
-		absolute(m_IngameMotdParagraphCache.m_FontSize - FontSize) < 0.01f)
-	{
-		TextRender()->RenderTextContainer(m_MotdTextContainerIndex, TextRender()->DefaultTextColor(), TextRender()->DefaultTextOutlineColor(), MotdTextArea.x, MotdTextArea.y);
-		return true;
-	}
-	return false;
+	if(!m_IngameMotdParagraphCache.m_Valid || !m_MotdTextContainerIndex.Valid())
+		return false;
+	const auto Bounds = TextRender()->GetBoundingBoxTextContainer(m_MotdTextContainerIndex);
+	const float Scale = QmServerInfoGeometry::FitScale(Motd, Bounds.m_W, maximum(Bounds.m_H, m_IngameMotdParagraphCache.m_Height));
+	if(Scale <= 0.0f)
+		return false;
+
+	// 缩放已有的完整容器，不因高度变化反复排版，也不让旧宽度的容器越过卡片边界。
+	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
+	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+	Graphics()->MapScreen((ScreenX0 - Motd.x) / Scale, (ScreenY0 - Motd.y) / Scale, (ScreenX1 - Motd.x) / Scale, (ScreenY1 - Motd.y) / Scale);
+	TextRender()->RenderTextContainer(m_MotdTextContainerIndex, TextRender()->DefaultTextColor(), TextRender()->DefaultTextOutlineColor(), 0.0f, 0.0f);
+	Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
+	return true;
 }
 
 void CMenus::DrainIngameUiSnapshotTextRuntime()
@@ -1452,9 +1463,6 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 {
 	const bool PreviousServerInfoRenderActive = m_IngameServerInfoRenderActive;
 	m_IngameServerInfoRenderActive = true;
-	const float FontSizeTitle = 32.0f;
-	const float FontSizeBody = 20.0f;
-	const float ServerInfoLabelWidth = 132.0f;
 
 	const CServerInfo &CurrentServerInfo = Client()->ServerInfo();
 	SSettingsAdaptiveBudgetInput TextBudgetInput;
@@ -1473,23 +1481,33 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 	LogSettingsAdaptiveBudget("ingame_server_info_snapshot_text", TextBudgetInput, m_IngameTextFrameBudget);
 	m_IngameTextFrameBudget.m_TextContainerTokens = maximum(1, m_IngameTextFrameBudget.m_TextContainerTokens);
 
-	CUIRect ServerInfo, GameInfo, Motd;
 	MainView.Draw(ms_ColorTabbarActive, MenuShellCorners(), 10.0f);
 	MainView.Margin(10.0f, &MainView);
-	MainView.HSplitMid(&ServerInfo, &Motd, 10.0f);
-	ServerInfo.VSplitMid(&ServerInfo, &GameInfo, 10.0f);
+	const bool ShowTags = g_Config.m_QmMapTags != 0;
+	const auto Layout = QmServerInfoGeometry::Layout(MainView, ShowTags);
+	CUIRect ServerInfo = Layout.m_Server;
+	CUIRect GameInfo = Layout.m_Game;
+	const CCommunity *pCommunity = ServerBrowser()->Community(CurrentServerInfo.m_aCommunityId);
 
 	ServerInfo.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_ALL, 10.0f);
-	ServerInfo.Margin(10.0f, &ServerInfo);
+	ServerInfo = QmServerInfoGeometry::ContentRect(ServerInfo);
+	const float ServerScale = QmServerInfoGeometry::FitScale(ServerInfo, 280.0f, QmServerInfoGeometry::ServerContentHeight(GameClient()->m_Snap.m_pLocalInfo != nullptr, pCommunity != nullptr));
+	float FontSizeTitle = 32.0f * ServerScale;
+	float FontSizeBody = 20.0f * ServerScale;
+	float ServerInfoLabelWidth = 132.0f * ServerScale;
+	SLabelProperties FieldProps;
+	FieldProps.m_MinimumFontSize = 0.1f;
+	if(!m_MenuTextPlanCollecting)
+		Ui()->ClipEnable(&ServerInfo);
 
 	CUIRect Label;
 	ServerInfo.HSplitTop(FontSizeTitle, &Label, &ServerInfo);
-	ServerInfo.HSplitTop(5.0f, nullptr, &ServerInfo);
-	DoIngameMenuTitleLabel(PAGE_SERVER_INFO, "ingame-server-info-title", &Label, Localize("Server info"), FontSizeTitle, TEXTALIGN_ML);
+	ServerInfo.HSplitTop(5.0f * ServerScale, nullptr, &ServerInfo);
+	DoIngameMenuTitleLabel(PAGE_SERVER_INFO, "ingame-server-info-title", &Label, Localize("Server info"), FontSizeTitle, TEXTALIGN_ML, FieldProps);
 
 	ServerInfo.HSplitTop(FontSizeBody, &Label, &ServerInfo);
 	ServerInfo.HSplitTop(FontSizeBody, nullptr, &ServerInfo);
-	RenderIngameServerInfoValueCached("ingame-server-info-name-value", m_IngameServerInfoTextSnapshot.m_ServerNameHash, &Label, CurrentServerInfo.m_aName, FontSizeBody, TEXTALIGN_ML);
+	RenderIngameServerInfoValueCached("ingame-server-info-name-value", m_IngameServerInfoTextSnapshot.m_ServerNameHash, &Label, CurrentServerInfo.m_aName, FontSizeBody, TEXTALIGN_ML, FieldProps);
 
 	ServerInfo.HSplitTop(FontSizeBody, &Label, &ServerInfo);
 	char aBuf[256];
@@ -1498,8 +1516,8 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 		str_format(aLabel, sizeof(aLabel), "%s:", pLabelText);
 		CUIRect LabelRect, ValueRect;
 		pRow->VSplitLeft(ServerInfoLabelWidth, &LabelRect, &ValueRect);
-		DoIngameMenuLabel(PAGE_SERVER_INFO, pLabelTextId, &LabelRect, aLabel, FontSizeBody, TEXTALIGN_ML);
-		RenderIngameServerInfoValueCached(pValueTextId, ValueHash, &ValueRect, pValueText, FontSizeBody, TEXTALIGN_ML);
+		DoIngameMenuLabel(PAGE_SERVER_INFO, pLabelTextId, &LabelRect, aLabel, FontSizeBody, TEXTALIGN_ML, FieldProps);
+		RenderIngameServerInfoValueCached(pValueTextId, ValueHash, &ValueRect, pValueText, FontSizeBody, TEXTALIGN_ML, FieldProps);
 	};
 	DoServerInfoField("ingame-server-info-address-label", "ingame-server-info-address-value", m_IngameServerInfoTextSnapshot.m_AddressHash, &Label, Localize("Address"), CurrentServerInfo.m_aAddress);
 
@@ -1516,12 +1534,11 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 	ServerInfo.HSplitTop(FontSizeBody, &Label, &ServerInfo);
 	DoServerInfoField("ingame-server-info-password-label", "ingame-server-info-password-value", m_IngameServerInfoTextSnapshot.m_PasswordHash, &Label, Localize("Password"), CurrentServerInfo.m_Flags & SERVER_FLAG_PASSWORD ? Localize("Yes") : Localize("No"));
 
-	const CCommunity *pCommunity = ServerBrowser()->Community(CurrentServerInfo.m_aCommunityId);
 	if(pCommunity != nullptr)
 	{
 		ServerInfo.HSplitTop(FontSizeBody, &Label, &ServerInfo);
 		str_format(aBuf, sizeof(aBuf), "%s:", Localize("Community"));
-		DoIngameMenuLabel(PAGE_SERVER_INFO, "ingame-server-info-community-label", &Label, aBuf, FontSizeBody, TEXTALIGN_ML);
+		DoIngameMenuLabel(PAGE_SERVER_INFO, "ingame-server-info-community-label", &Label, aBuf, FontSizeBody, TEXTALIGN_ML, FieldProps);
 
 		const CCommunityIcon *pIcon = m_CommunityIcons.Find(pCommunity->Id());
 		if(pIcon != nullptr)
@@ -1535,11 +1552,14 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 		}
 	}
 
+	// 窄卡片中三个操作各占一行，避免收藏开关与复制按钮互相遮挡。
+	CUIRect Actions;
+	ServerInfo.HSplitBottom(70.0f * ServerScale, nullptr, &Actions);
 	// copy info button
 	{
 		CUIRect Button;
-		ServerInfo.HSplitBottom(20.0f, &ServerInfo, &Button);
-		Button.VSplitRight(200.0f, &ServerInfo, &Button);
+		Actions.HSplitBottom(20.0f * ServerScale, &Actions, &Button);
+		Actions.HSplitBottom(5.0f * ServerScale, &Actions, nullptr);
 		static CButtonContainer s_CopyButton;
 		if(DoIngameMenuButton(PAGE_SERVER_INFO, "ingame-server-info-copy-button", &s_CopyButton, Localize("Copy info"), 0, &Button))
 		{
@@ -1563,7 +1583,8 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 	{
 		CUIRect Button;
 		TRISTATE IsFavorite = Favorites()->IsFavorite(CurrentServerInfo.m_aAddresses, CurrentServerInfo.m_NumAddresses);
-		ServerInfo.HSplitBottom(20.0f, &ServerInfo, &Button);
+		Actions.HSplitBottom(20.0f * ServerScale, &Actions, &Button);
+		Actions.HSplitBottom(5.0f * ServerScale, &Actions, nullptr);
 		static int s_AddFavButton = 0;
 		if(DoIngameMenuCheckBox(PAGE_SERVER_INFO, "ingame-server-info-favorite", &s_AddFavButton, Localize("Favorite"), IsFavorite != TRISTATE::NONE, &Button))
 		{
@@ -1578,7 +1599,8 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 	{
 		CUIRect Button;
 		bool IsMapFavorite = GameClient()->m_TClient.IsFavoriteMap(CurrentServerInfo.m_aMap);
-		ServerInfo.HSplitBottom(20.0f, &ServerInfo, &Button);
+		Actions.HSplitBottom(20.0f * ServerScale, &Actions, &Button);
+		Actions.HSplitBottom(5.0f * ServerScale, &Actions, nullptr);
 		static int s_AddFavMapButton = 0;
 		if(DoIngameMenuCheckBox(PAGE_SERVER_INFO, "ingame-server-info-favorite-map", &s_AddFavMapButton, Localize("Favorite map"), IsMapFavorite, &Button))
 		{
@@ -1589,12 +1611,22 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 		}
 	}
 
+	if(!m_MenuTextPlanCollecting)
+		Ui()->ClipDisable();
 	GameInfo.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_ALL, 10.0f);
-	GameInfo.Margin(10.0f, &GameInfo);
+	GameInfo = QmServerInfoGeometry::ContentRect(GameInfo);
+	if(!m_MenuTextPlanCollecting)
+		Ui()->ClipEnable(&GameInfo);
+	const auto *pGameInfoObj = GameClient()->m_Snap.m_pGameInfoObj;
+	const int OptionalFields = pGameInfoObj ? (int)(pGameInfoObj->m_ScoreLimit != 0) + (int)(pGameInfoObj->m_TimeLimit != 0) + (int)(pGameInfoObj->m_RoundCurrent && pGameInfoObj->m_RoundNum) : 0;
+	const float GameScale = QmServerInfoGeometry::FitScale(GameInfo, 280.0f, QmServerInfoGeometry::GameContentHeight(OptionalFields, GameClient()->m_GameInfo.m_DDRaceTeam, CurrentServerInfo.m_aMap[0] != '\0'));
+	FontSizeTitle = 32.0f * GameScale;
+	FontSizeBody = 20.0f * GameScale;
+	ServerInfoLabelWidth = 132.0f * GameScale;
 
 	GameInfo.HSplitTop(FontSizeTitle, &Label, &GameInfo);
-	GameInfo.HSplitTop(5.0f, nullptr, &GameInfo);
-	DoIngameMenuTitleLabel(PAGE_SERVER_INFO, "ingame-game-info-title", &Label, Localize("Game info"), FontSizeTitle, TEXTALIGN_ML);
+	GameInfo.HSplitTop(5.0f * GameScale, nullptr, &GameInfo);
+	DoIngameMenuTitleLabel(PAGE_SERVER_INFO, "ingame-game-info-title", &Label, Localize("Game info"), FontSizeTitle, TEXTALIGN_ML, FieldProps);
 
 	GameInfo.HSplitTop(FontSizeBody, &Label, &GameInfo);
 	DoServerInfoField("ingame-game-info-type-label", "ingame-game-info-type-value", m_IngameServerInfoTextSnapshot.m_GameTypeHash, &Label, Localize("Game type"), CurrentServerInfo.m_aGameType);
@@ -1602,7 +1634,6 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 	GameInfo.HSplitTop(FontSizeBody, &Label, &GameInfo);
 	DoServerInfoField("ingame-game-info-map-label", "ingame-game-info-map-value", m_IngameServerInfoTextSnapshot.m_MapHash, &Label, Localize("Map"), CurrentServerInfo.m_aMap);
 
-	const auto *pGameInfoObj = GameClient()->m_Snap.m_pGameInfoObj;
 	if(pGameInfoObj)
 	{
 		if(pGameInfoObj->m_ScoreLimit)
@@ -1680,7 +1711,7 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 	ServerInfoTextInputCtx.m_ScopeHash = MakeUiScopeHash("ingame_server_info_text_inputs");
 	ServerInfoTextInputCtx.m_FrameDt = GameClient()->UiRuntimeV2()->FrameDt();
 
-	if(CurrentServerInfo.m_aMap[0] != '\0' && GameInfo.h >= 34.0f)
+	if(CurrentServerInfo.m_aMap[0] != '\0' && GameInfo.h >= 34.0f * GameScale)
 	{
 		static CLineInputBuffered<256> s_MapNoteInput;
 		static char s_aMapNoteInputMap[MAX_MAP_LENGTH] = "";
@@ -1692,11 +1723,11 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 		}
 
 		CUIRect NoteRow, NoteLabel, NoteInput;
-		GameInfo.HSplitTop(8.0f, nullptr, &GameInfo);
-		GameInfo.HSplitTop(22.0f, &NoteRow, &GameInfo);
-		NoteRow.VSplitLeft(72.0f, &NoteLabel, &NoteInput);
+		GameInfo.HSplitTop(8.0f * GameScale, nullptr, &GameInfo);
+		GameInfo.HSplitTop(22.0f * GameScale, &NoteRow, &GameInfo);
+		NoteRow.VSplitLeft(72.0f * GameScale, &NoteLabel, &NoteInput);
 		str_format(aBuf, sizeof(aBuf), "%s:", Localize("Note"));
-		DoIngameMenuLabel(PAGE_SERVER_INFO, "ingame-game-info-note", &NoteLabel, aBuf, FontSizeBody, TEXTALIGN_ML);
+		DoIngameMenuLabel(PAGE_SERVER_INFO, "ingame-game-info-note", &NoteLabel, aBuf, FontSizeBody, TEXTALIGN_ML, FieldProps);
 		ui_widget::SInputFieldOptions MapNoteInputOptions;
 		MapNoteInputOptions.m_pPlaceholder = Localize("Note");
 		MapNoteInputOptions.m_FontSize = FontSizeBody * 0.85f;
@@ -1704,17 +1735,17 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 			GameClient()->m_TClient.SetMapNote(CurrentServerInfo.m_aMap, s_MapNoteInput.GetString());
 	}
 
-	if(g_Config.m_QmMapTags && Motd.w >= 300.0f && Motd.h >= 180.0f)
+	if(!m_MenuTextPlanCollecting)
+		Ui()->ClipDisable();
+	if(ShowTags)
 	{
-		CUIRect TagPanel;
-		Motd.VSplitLeft(Motd.w * 0.38f, &Motd, &TagPanel);
-		TagPanel.VMargin(5.0f, &TagPanel);
+		CUIRect TagPanel = Layout.m_Tags;
 		TagPanel.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_ALL, 10.0f);
-		TagPanel.Margin(10.0f, &TagPanel);
+		TagPanel = QmServerInfoGeometry::ContentRect(TagPanel);
 		if(!m_MenuTextPlanCollecting)
 			m_MapTagsPanel.Render(GameClient(), TagPanel);
 	}
-	RenderServerInfoMotd(Motd);
+	RenderServerInfoMotd(Layout.m_Motd);
 	m_IngameServerInfoRenderActive = PreviousServerInfoRenderActive;
 }
 
@@ -1722,12 +1753,15 @@ void CMenus::RenderServerInfoMotd(CUIRect Motd)
 {
 	const float MotdFontSize = 16.0f;
 	Motd.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_ALL, 10.0f);
-	Motd.Margin(10.0f, &Motd);
+	Motd = QmServerInfoGeometry::ContentRect(Motd);
+	const float MotdScale = QmServerInfoGeometry::FitScale(Motd, 180.0f, 53.0f);
 
 	CUIRect MotdHeader;
-	Motd.HSplitTop(2.0f * MotdFontSize, &MotdHeader, &Motd);
-	Motd.HSplitTop(5.0f, nullptr, &Motd);
-	DoIngameMenuTitleLabel(PAGE_SERVER_INFO, "ingame-server-info-motd-title", &MotdHeader, Localize("MOTD"), 2.0f * MotdFontSize, TEXTALIGN_ML);
+	SLabelProperties HeaderProps;
+	HeaderProps.m_MinimumFontSize = 0.1f;
+	Motd.HSplitTop(2.0f * MotdFontSize * MotdScale, &MotdHeader, &Motd);
+	Motd.HSplitTop(5.0f * MotdScale, nullptr, &Motd);
+	DoIngameMenuTitleLabel(PAGE_SERVER_INFO, "ingame-server-info-motd-title", &MotdHeader, Localize("MOTD"), 2.0f * MotdFontSize * MotdScale, TEXTALIGN_ML, HeaderProps);
 
 	if(m_MenuTextPlanCollecting)
 		return;
@@ -1735,39 +1769,18 @@ void CMenus::RenderServerInfoMotd(CUIRect Motd)
 	if(!GameClient()->m_Motd.ServerMotd()[0])
 		return;
 
-	static CScrollRegion s_ScrollRegion;
-	vec2 ScrollOffset(0.0f, 0.0f);
-	CScrollRegionParams ScrollParams = QmScrollRegionParamsForSize(EQmScrollSize::MEDIUM);
-	ScrollParams.m_ScrollUnit = 5 * MotdFontSize;
-	s_ScrollRegion.Begin(&Motd, &ScrollOffset, &ScrollParams);
-	Motd.y += ScrollOffset.y;
-
 	RequestIngameMotdParagraphCache(Motd, MotdFontSize);
-	const bool CacheReady = IngameMotdParagraphCacheMatches(Motd, MotdFontSize);
-
-	CUIRect MotdTextArea;
-	const float MotdTextHeight = CacheReady ? m_IngameMotdParagraphCache.m_Height : maximum(m_IngameMotdParagraphCache.m_LastStableHeight, maximum(3.0f * MotdFontSize, Motd.h));
-	Motd.HSplitTop(MotdTextHeight, &MotdTextArea, &Motd);
-	s_ScrollRegion.AddRect(MotdTextArea);
-
-	if(CacheReady && m_MotdTextContainerIndex.Valid())
+	Ui()->ClipEnable(&Motd);
+	const bool RenderedMotdParagraph = RenderIngameMotdStableParagraphCache(Motd);
+	Ui()->ClipDisable();
+	// MOTD 是可延迟通知：未完成时保持旧的完整容器，首次加载则留空，
+	// 不额外光栅化占位文本，也不回退到整段同步 TextEx。
+	if(!RenderedMotdParagraph && QmPerfEnabled())
 	{
-		TextRender()->RenderTextContainer(m_MotdTextContainerIndex, TextRender()->DefaultTextColor(), TextRender()->DefaultTextOutlineColor(), MotdTextArea.x, MotdTextArea.y);
+		char aPayload[160];
+		str_format(aPayload, sizeof(aPayload), "event=text_runtime_budget page=game operation=ingame_server_info frame=%" PRIu64 " server_info_not_ready=1", (uint64_t)Client()->PerfFrame());
+		QmPerfLogPayload("perf/text", aPayload, Client(), "game");
 	}
-	else
-	{
-		const bool RenderedMotdParagraph = RenderIngameMotdStableParagraphCache(Motd, MotdFontSize, MotdTextArea);
-		// MOTD 是可延迟通知：未完成时保持旧的完整容器，首次加载则留空，
-		// 不额外光栅化占位文本，也不回退到整段同步 TextEx。
-		if(!RenderedMotdParagraph && QmPerfEnabled())
-		{
-			char aPayload[160];
-			str_format(aPayload, sizeof(aPayload), "event=text_runtime_budget page=game operation=ingame_server_info frame=%" PRIu64 " server_info_not_ready=1", (uint64_t)Client()->PerfFrame());
-			QmPerfLogPayload("perf/text", aPayload, Client(), "game");
-		}
-	}
-
-	s_ScrollRegion.End();
 }
 
 void CMenus::RenderUnfinishedMaps(CUIRect MainView)

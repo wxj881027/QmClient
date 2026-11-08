@@ -99,8 +99,6 @@ TEST(QmCatalogSearch, InternalLabelsAliasesAndConfigsResolveWithoutOpeningTheirP
 		{"Enable Netease music Hook", "qm:lyrics"},
 		{"Infinity symbol", "qm:dynamic_island"},
 		{"Hook countdown size", "qm:dynamic_island"},
-		{"Console color scheme", "qm:console"},
-		{"Console font size", "qm:console"},
 		{"Selection background color", "qm:chat_completion"},
 		// 索引标签改写后仍按界面当前文案命中：滚动手感改成三档后，旧标签
 		// （Original scroll feel / Restart smooth scrolling…）已在源码中消失。
@@ -123,6 +121,26 @@ TEST(QmCatalogSearch, InternalLabelsAliasesAndConfigsResolveWithoutOpeningTheirP
 		ASSERT_NE(It, Results.end());
 		EXPECT_TRUE(qm_card_catalog::HasCardModule(It->m_pStableId));
 		EXPECT_STREQ(It->m_Target.m_pStableId, Case.m_pCard);
+	}
+}
+
+TEST(QmCatalogSearch, EntityLayerOptionsResolveToTheirDDNetCard)
+{
+	qm_card_order::CModel Model;
+	Model.SetEntries(qm_card_registry::BuildDefaultEntries());
+	for(const char *pQuery : {"实体层调整", "Overlay entities", "Show text entities", "cl_overlay_entities", "cl_text_entities", "cl_text_entities_size", "qm_entity_overlay_freeze_alpha"})
+	{
+		SCOPED_TRACE(pQuery);
+		const auto Results = qm_card_catalog::SearchResultEntries(pQuery, Model);
+		const auto It = std::find_if(Results.begin(), Results.end(), [](const auto &Result) {
+			return std::string(Result.m_pStableId) == "qm:entity_overlay";
+		});
+		ASSERT_NE(It, Results.end());
+		EXPECT_STREQ(It->m_pTab, "ddnet");
+		EXPECT_TRUE(qm_card_catalog::HasCardModule(It->m_pStableId));
+		EXPECT_TRUE(std::none_of(Results.begin(), Results.end(), [](const auto &Result) {
+			return std::string(Result.m_pStableId) == "deck:ddnet-gameplay";
+		}));
 	}
 }
 
@@ -261,17 +279,27 @@ TEST(QmCatalogSearch, EveryQueryTokenMustMatchTheSameCard)
 {
 	qm_card_order::CModel Model;
 	Model.SetEntries(qm_card_registry::BuildDefaultEntries());
-	const auto Multi = qm_card_registry::SearchCards("console font", Model);
+	const auto Multi = qm_card_registry::SearchCards("lyrics language", Model);
 	EXPECT_TRUE(std::any_of(Multi.begin(), Multi.end(), [](const auto &Result) {
-		return std::string(Result.m_pStableId) == "qm:console";
+		return std::string(Result.m_pStableId) == "qm:lyrics";
 	}));
 	// 全角空格与半角空格同义。
-	const auto FullWidth = qm_card_registry::SearchCards("console　font", Model);
+	const auto FullWidth = qm_card_registry::SearchCards("lyrics　language", Model);
 	EXPECT_TRUE(std::any_of(FullWidth.begin(), FullWidth.end(), [](const auto &Result) {
-		return std::string(Result.m_pStableId) == "qm:console";
+		return std::string(Result.m_pStableId) == "qm:lyrics";
 	}));
 	// 任一查询词没有命中时整张卡不返回。
-	EXPECT_TRUE(qm_card_registry::SearchCards("console zzzznotfound", Model).empty());
+	EXPECT_TRUE(qm_card_registry::SearchCards("lyrics zzzznotfound", Model).empty());
+}
+
+TEST(QmCatalogSearch, RemovedConsoleCardDoesNotAppearInResults)
+{
+	qm_card_order::CModel Model;
+	Model.SetEntries(qm_card_registry::BuildDefaultEntries());
+	const auto Results = qm_card_registry::SearchCards("console font", Model);
+	EXPECT_FALSE(std::any_of(Results.begin(), Results.end(), [](const auto &Result) {
+		return std::string(Result.m_pStableId) == "qm:console";
+	}));
 }
 
 TEST(QmCatalogSearch, TitleMatchesRankAheadOfSettingText)
@@ -373,4 +401,12 @@ TEST(QmCatalogSearch, LyricsUseTheirOwnControlsAndNavigationTarget)
 	ASSERT_NE(It, Results.end());
 	EXPECT_TRUE(qm_card_catalog::HasCardModule(It->m_pStableId));
 	EXPECT_STREQ(It->m_Target.m_pStableId, "qm:lyrics");
+}
+
+TEST(QmCatalogSearch, RemovedFavoriteMapsCardHasNoSearchMetadata)
+{
+	const qm_card_registry::SCardSettingSearch *pSettings = nullptr;
+	size_t Count = 0;
+	EXPECT_FALSE(qm_card_catalog::FindSearchMetadata("qm:favorite_maps", &pSettings, &Count));
+	EXPECT_EQ(qm_card_search::Find("qm:favorite_maps"), nullptr);
 }

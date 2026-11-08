@@ -75,11 +75,6 @@ void qm_card_catalog::QmCardRenderHook::RenderQmVisualSkinAppearanceContent(CMen
 	pMenus->RenderQmVisualSkinAppearanceContent(Content, LineHeight, BodySize, LineSpacing, LabelWidth, ResolvePrewarmOnly(pMenus->Ui(), PrewarmOnly));
 }
 
-void qm_card_catalog::QmCardRenderHook::RenderQmVisualSkinTransitionContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
-{
-	pMenus->RenderQmVisualSkinTransitionContent(Content, LineHeight, BodySize, LineSpacing, LabelWidth, ResolvePrewarmOnly(pMenus->Ui(), PrewarmOnly));
-}
-
 void qm_card_catalog::QmCardRenderHook::RenderQmFunctionGoresActorContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
 {
 	pMenus->RenderQmFunctionGoresActorContent(Content, LineHeight, BodySize, LineSpacing, LabelWidth, ResolvePrewarmOnly(pMenus->Ui(), PrewarmOnly));
@@ -263,11 +258,6 @@ void qm_card_catalog::QmCardRenderHook::DoSettingsLabel(CMenus *pMenus, const ch
 ITextRender *qm_card_catalog::QmCardRenderHook::TextRenderer(CMenus *pMenus)
 {
 	return pMenus->TextRender();
-}
-
-size_t qm_card_catalog::QmCardRenderHook::FavoriteMapCount(CMenus *pMenus)
-{
-	return pMenus != nullptr ? pMenus->GameClient()->TClientComponent().GetFavoriteMaps().size() : 0;
 }
 
 bool qm_card_catalog::QmCardRenderHook::GameConsoleActive(CMenus *pMenus)

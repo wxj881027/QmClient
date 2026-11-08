@@ -2765,8 +2765,9 @@ void CMenus::RenderSettingsTeeGlow(CUIRect Content, const SSettingsContentMetric
 	if(Flow.Control("tee-team-glow-team0-mode", TeeMetrics.m_LineHeight, TeeGlowRow, TeeMetrics.m_LineSpacing))
 	{
 		CUIRect Team0GlowLabel, Team0GlowDropDown;
-		// 与同卡开关行对齐：下拉吃到行尾，右侧留白不再比其它控件宽。
-		SplitSettingsControlRow(TeeGlowRow, TeeMetrics, &Team0GlowLabel, &Team0GlowDropDown, ESettingsControlWidth::LONG_CHOICE);
+		// 配置下拉沿用标准短选项宽度并贴齐行尾，避免多选颜色名把按钮撑满整行。
+		SplitSettingsControlRow(TeeGlowRow, TeeMetrics, &Team0GlowLabel, &Team0GlowDropDown, ESettingsControlWidth::SHORT_CHOICE);
+		Team0GlowDropDown.x = TeeGlowRow.x + TeeGlowRow.w - Team0GlowDropDown.w;
 		DoSettingsMenuLabel(SETTINGS_TEE, -1, -1, "tee-team-glow-team0-label", &Team0GlowLabel, Localize("Team 0 glow"), BodySize, TEXTALIGN_ML);
 		const char *apTeam0GlowModes[] = {Localize("Off"), Localize("Tee color"), Localize("Custom color"), Localize("Rainbow")};
 		static CUi::SDropDownState s_Team0GlowModeDropDownState;

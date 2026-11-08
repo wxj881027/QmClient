@@ -114,20 +114,18 @@ namespace qm_card_registry
 		static const std::vector<SCardDefault> s_aDefaults = [] {
 		std::vector<SCardDefault> Cards = {
 			// === 栖梦侧栏模块 · qm:<key>（显式默认值齐全，来源 s_aQmModuleDefaults + 数据债补录）===
-			{"qm:console", "visual", ECardColumn::Left, 20, "Console settings", "控制台 终端 字号 配色 命令 参数 字符串 数字 链接 搜索 高亮 console terminal font color highlight qm_console_font_size qm_console_color_scheme qm_console_opacity qm_console_highlight_commands qm_console_background_color qm_console_text_color qm_console_command_color qm_console_parameter_color qm_console_string_color qm_console_number_color qm_console_link_color qm_console_search_color qm_console_search_selected_color", "Appearance and command highlighting of the local console"},
 			{"qm:chat_completion", "visual", ECardColumn::Left, 21, "Chat completion appearance", "聊天补全外观 liaotian buquan waiguan 聊天指令 命令 表情 配色 背景 透明度 文字 选中 chat command emoji completion appearance background opacity text selection color qm_chat_completion_bg_color qm_chat_completion_opacity qm_chat_completion_text_color qm_chat_completion_selected_text_color qm_chat_completion_selected_color", "Colors for chat command and emoji completion"},
 			{"qm:tooltip", "visual", ECardColumn::Left, 9, "Tooltips", "提示 气泡 说明 背景 文字 字号 颜色 回弹 tooltip help font color bounce qm_tooltip_background_color qm_tooltip_text_color qm_tooltip_font_size qm_tooltip_animation", "Appearance of help bubbles"},
 			{"qm:appearance_preset", "visual", ECardColumn::Full, 1, "Qm recommended appearance", "栖梦 推荐 预设 外观 字体 霞鹜文楷 lxgw wenkai font preset recommended appearance qm_custom_font qm_custom_font_cjk ui_color qm_ui_scale qm_ui_motion_level qm_gaussian_blur", "Preview and apply a fixed appearance preset"},
 			{"qm:info", "visual", ECardColumn::Full, 0, "QmClient", "qmclient info", "QmClient information and project links", "credits-qmclient", "deck:qmclient-contributors-community"},
-			{"qm:chat_bubble", "visual", ECardColumn::Left, 0, "Chat bubble", "消息气泡 漫画 对白 QQ 糖果 渐变 云朵 聚集 散开 liaotian qipao chat bubble typing 预览 yulan 镜头缩放 suofang 持续时间 chixu 透明度 touming 字体大小 ziti 最大宽度 kuandu 垂直偏移 pianyi 圆角 yuanjiao visual", "Show chat messages above players"},
+			{"qm:chat_bubble", "appearance-chat", ECardColumn::Left, 2, "Chat bubble", "消息气泡 漫画 对白 QQ 糖果 渐变 云朵 聚集 散开 liaotian qipao chat bubble typing 预览 yulan 镜头缩放 suofang 持续时间 chixu 透明度 touming 字体大小 ziti 最大宽度 kuandu 垂直偏移 pianyi 圆角 yuanjiao", "Show chat messages above players"},
 			{"qm:focus_mode", "visual", ECardColumn::Left, 2, "Zen Mode", "禅模式 zhuanzhi moshi focus mode zen mode 隐藏 yincang hud 名字 mingzi 特效 texiao 计分板 jifenban 沉浸 chenjing 无干扰 wuganrao 聊天 liaotian chat 非必要UI visual", "Hide UI for focused gameplay"},
 			{"qm:camera_view", "visual", ECardColumn::Right, 0, "Camera view", "镜头 jingtou camera drift 漂移 piaoyi dynamic fov 动态视野 dongtai shiye 纵横比 zonghengbi aspect ratio preset 预设 yushe 自定义 zidinyi 视野视角 shijiao visual", "Adjust game camera and FOV settings"},
 			{"qm:spectator_mode", "visual", ECardColumn::Right, 24, Localizable("Spectate mode"), "观战模式 guanzhan moshi spectator freeview 自由视角 ziyou shijiao cinematic camera smooth 平滑 pinghua demo replay 回放 huifang", "Smooth the mouse-driven camera in live and demo free spectating"},
-			{"qm:skin_appearance", "tee", ECardColumn::Left, 1, "Tee appearance", "Tee外观 tee waiguan 皮肤描边 pifu miaobian skin outline 边缘 bianyuan 颜色 yanse 粗细 cuxi 透明度 toumingdu 循环色调 xunhuan sediao hue 速度 sudu 分身 fenshen dummy 表情阴影 biaoqing yinying emoticon shadow 表情弹射时长 tanshe shichang projectile duration visual", "Configure Tee appearance and skins"},
-			{"qm:water_hammer", "visual", ECardColumn::Right, 4, "Water hammer highlight", "水域 shuiyu 死亡 death 冻结 freeze 卡锤 kachui 锤子 chuizi hammer held preinput teammate 同队 tongdui 高亮 gaoliang 变色 bianse visual", "Highlight teammates holding hammer in death or freeze areas"},
-			{"qm:skin_transition", "visual", ECardColumn::Left, 2, "Skin transition animation", "皮肤切换 pifu qiehuan skin transition animation 换皮 huanpi 动画 donghua 开关 kaiguan 类型 leixing 时长 shichang 强度 qiangdu easing 缓动 huandong 锤中偷皮 chuizhong toupi hammer skin steal 故障 guzhang glitch 抖动 doudong 弹性 tanxing elastic 范围 fanwei scope 分身 fenshen dummy visual", "Configure hammer skin steal and skin transition animations"},
+			{"qm:skin_appearance", "tee", ECardColumn::Left, 1, "Tee appearance", "Tee外观 tee waiguan 皮肤描边 pifu miaobian skin outline 边缘 bianyuan 颜色 yanse 粗细 cuxi 透明度 toumingdu 循环色调 xunhuan sediao hue 速度 sudu 分身 fenshen dummy 表情阴影 biaoqing yinying emoticon shadow 表情弹射时长 tanshe shichang projectile duration 皮肤切换 pifu qiehuan skin transition animation 换皮 huanpi 动画 donghua 锤中偷皮 chuizhong toupi hammer skin steal visual", "Configure Tee appearance and skins"},
+			{"qm:water_hammer", "visual", ECardColumn::Right, 4, "?!Stuck keys!?", "水域 shuiyu 死亡 death 冻结 freeze 卡锤 kachui 锤子 chuizi hammer 卡钩 kagou 钩索 gousuo hook 按键 anjian 图标 tubiao 颜色 yanse held preinput teammate 同队 tongdui 高亮 gaoliang 变色 bianse visual", "Highlight frozen teammates' hammer and hook inputs"},
 			{"qm:weapon_animation", "visual", ECardColumn::Right, 1, "Weapon animation", "武器动画 wuqi donghua weapon animation 切换武器动画 qiehuan wuqi donghua weapon switch animation 装填动画 zhuangtian donghua reload animation 概率 gailv probability 滑入 huaru 旋转 xuanzhuan visual", "Play a slide-in rotation animation when switching weapons"},
-			{"qm:entity_overlay", "visual", ECardColumn::Right, 2, "Entity overlay", "实体层颜色 shiti ceng yanse 实体层 shiti entity overlay 死亡透明度 siwang 冻结透明度 dongjie 解冻透明度 jiedong 深度冻结 shendu dongjie 深度解冻 shendu jiedong 传送透明度 chuansong cp点透明度 cp checkpoint 开关透明度 kaiguan 叠层透明度 dieceng visual", "Adjust opacity of entity layers"},
+			{"qm:entity_overlay", "ddnet", ECardColumn::Right, 0, "Entity layer adjustments", "实体层调整 shiti ceng tiaozheng 实体层颜色 yanse 实体层叠加 diejia entity overlay 文本实体 wenben shiti 死亡透明度 siwang 冻结透明度 dongjie 解冻透明度 jiedong 深度冻结 shendu dongjie 深度解冻 shendu jiedong 传送透明度 chuansong cp点透明度 cp checkpoint 开关透明度 kaiguan 叠层透明度 dieceng ddnet", "Adjust opacity of entity layers"},
 			{"qm:collision_hitbox", "visual", ECardColumn::Right, 5, "Collision hitbox", "碰撞箱模式 pengzhuangxiang moshi 碰撞体积可视化 pengzhuang tiji keshihua collision hitbox hitbox mode 显示碰撞 武器交互 透明度 visual", "Show collision and weapon interaction"},
 			{"qm:streamer", "visual", ECardColumn::Left, 10, "Streamer mode", "主播模式 zhubo moshi 直播 zhibo 隐私 yinsi 敏感词 minganci 屏蔽词 pingbici 反规避 fangui bi 非好友昵称改id feihaoyou nicheng id 非好友皮肤默认 pifu moren 计分板默认国旗 guoqi visual", "Protect names and skins while streaming"},
 			{"qm:translate_ui", "function", ECardColumn::Left, 15, "Translate UI", "fanyi ui 颜色 yanse color 按钮 anniu button 菜单 caidan menu rgba 自定义 zidingyi custom function", "Customize translate button and menu colors"},
@@ -135,14 +133,14 @@ namespace qm_card_registry
 			{"qm:gores", "function", ECardColumn::Left, 4, "Gores", "gores kog king of gores 锤枪切换 chuichang qiehuan 自动切枪 zidong qieqiang 自动切锤 zidong qiechui gun hammer prevweapon fire 开火后切锤 kaihuo qiechui 拿到其他武器停用 快速输入 kuaisu shuru fast input 快速输入其他玩家 移动方块 yidongfangkuai 移动水 yidongshui 预测 yuce axiom quad prediction function", "Gores auto weapon switch"},
 			{"qm:solo_split", "function", ECardColumn::Left, 17, "Solo split", "单刷 danshua 单刷模式 danshua moshi 分队 fendui 分身 fenshen dummy 队伍 duiwu team 独立 duli 各自进队 gezi jindui 组队 zudui 自动锁队 zidong suodui lock 锁队 一键 yijian 单人 danren 刷图 shuatu solo 同步 tongbu 开局 kaiju function", "Split main and dummy into different teams for solo-run sync"},
 			{"qm:key_binds", "function", ECardColumn::Left, 5, "Key binds", "按键绑定 anjian bangding bind 快捷键 kuaijiejian 常用绑定 changyong bangding 武器辅助线 fuzhuxian 异常断开 yichang duankai timeout disconnect function", "Common key bindings"},
-			{"qm:better_scoreboard", "function", ECardColumn::Left, 6, "Better scoreboard", "更好的计分板 genghao jifenban better scoreboard 计分板查分 chafen 计分板积分检查 jifenban jifen jiancha scoreboard point check 游玩时间 youwan shijian 累计小时 leiji xiaoshi playtime DDStats qm_scoreboard_playtime 显示死亡后计分板 死亡后显示计分板 siwang hou xianshi jifenban show scoreboard after death 滚动计分板 gundong jifenban fixed-size scoreboard rows mouse wheel 计分板Qm标识 qm biaoshi scoreboard badge function", "Scoreboard"},
-			{"qm:mini_features", "function", ECardColumn::Left, 7, "Mini features", "梦的小功能 meng xiaogongneng 粒子拖尾 lizi tuowei 远程粒子 yuancheng lizi 聊天框淡出 liaotian danchu 聊天指令补全 zhiling buquan 命令补全 mingling buquan command completion autocomplete qm_chat_command_completion 聊天表情补全 liaotian biaoqing buquan emoji completion qm_chat_emoji_completion 表情选择 biaoqing xuanze 动画优化 donghua youhua 哼歌 hengge humming qm_humming 复读 fudu 锤人换皮 chuiren huanpi 随机表情 suiji biaoqing 连击 lianji combo 说话不弹表情 shuo hua biaoqing 本地彩虹名字 caihong mingzi 更新 gengxin 版本 banben 过旧 guojiu 提示 tishi outdated version warning 新版UI xinban ui settings page shezhi yemian 候选栏 houxuanlan 进程优先级 jincheng youxianji 协作制图 xiezuo zhitu 多人制图 duoren zhitu tune zone 区域着色 quyu zhaose 地图着色 ditu zhaose function", "Only what you can't imagine, nothing Dream can't do"},
+			{"qm:better_scoreboard", "function", ECardColumn::Left, 6, "Better scoreboard", "更好的计分板 genghao jifenban better scoreboard 计分板查分 chafen 计分板积分检查 jifenban jifen jiancha scoreboard point check 游玩时间 youwan shijian 累计小时 leiji xiaoshi playtime DDStats qm_scoreboard_playtime 显示死亡后计分板 死亡后显示计分板 siwang hou xianshi jifenban show scoreboard after death 滚动计分板 gundong jifenban fixed-size scoreboard rows mouse wheel 计分板筛选 jifenban shaixuan scoreboard filter 计分板Qm标识 qm biaoshi scoreboard badge function", "Scoreboard"},
+			{"qm:mini_features", "function", ECardColumn::Left, 7, "Mini features", "梦的小功能 meng xiaogongneng 粒子拖尾 lizi tuowei 远程粒子 yuancheng lizi 聊天框淡出 liaotian danchu 聊天指令补全 zhiling buquan 命令补全 mingling buquan command completion autocomplete qm_chat_command_completion 聊天表情补全 liaotian biaoqing buquan emoji completion qm_chat_emoji_completion 表情选择 biaoqing xuanze 动画优化 donghua youhua 哼歌 hengge humming qm_humming 唱歌 changge singing qm_singing qm_sing 双击歌词 shuangji geci 复读 fudu 锤人换皮 chuiren huanpi 随机表情 suiji biaoqing 连击 lianji combo 说话不弹表情 shuo hua biaoqing 本地彩虹名字 caihong mingzi 更新 gengxin 版本 banben 过旧 guojiu 提示 tishi outdated version warning 新版UI xinban ui settings page shezhi yemian 候选栏 houxuanlan 进程优先级 jincheng youxianji 协作制图 xiezuo zhitu 多人制图 duoren zhitu tune zone 区域着色 quyu zhaose 地图着色 ditu zhaose function", "Only what you can't imagine, nothing Dream can't do"},
 			{"qm:self_kill_protection", "function", ECardColumn::Left, 22, "Client-side self-kill protection", "自杀保护 zisha baohu 客户端侧自杀 kehu duan ce 自杀 kehuduan zisha 自杀开关 关闭自杀 kaiguan 开启自杀 自动开启 zidong kaiqi 自动拦截 开局 jukaishi 延迟 yanchi 分钟 fenzhong 自动 跑图 shuatu fangwuchu 防误触 拦截 lanjie K键 K jian kill 命令 mingling selfkill self kill protection client-side bind qm_self_kill_off qm_self_kill_on qm_self_kill_enabled qm_self_kill_auto_delay", "Opt-in protection for client-initiated self-kill, with optional auto-enable after joining a game"},
 			{"qm:ime", "function", ECardColumn::Left, 19, "IME", "输入法 shurufa ime 候选栏 houxuanlan 新版输入法 xinban shurufa 自动管理 zidong guanli 背景 beijing 颜色 yanse 透明度 toumingdu 高斯模糊 gaosi mohu function", "Configure the IME candidate bar"},
 			{"qm:jump_hint", "function", ECardColumn::Left, 7, "Jump hint", "位置跳跃提示 tiaoyue tishi jump hint position edge jump color yanse 颜色 horizontal position shuiping weizhi vertical position chuizhi weizhi font size ziti function", "Customize the position jump hint"},
 			{"qm:weapon_trajectory", "function", ECardColumn::Left, 8, "Weapon trajectory", "武器辅助线 wuqi fuzhuxian weapon trajectory 弹道辅助线 dandao fuzhuxian 手枪辅助线 shouqiang fuzhuxian pistol guide line 预测忍者路径 yuce renzhe lujing predict ninja path 线宽 xian kuan 透明度 toumingdu 始终显示 shizhong xianshi 按键显示 anjian xianshi function", "Show grenade and laser trajectory preview"},
 			{"qm:coords", "hud", ECardColumn::Left, 9, "Coordinates", "显示坐标 xianshi zuobiao coords position 自己坐标 ziji 他人坐标 taren 显示x xianshi x 显示y xianshi y 对齐提示 duiqi tishi 严格对齐 yange duiqi hud", "Show coordinates above players"},
-			{"qm:friend_notify", "function", ECardColumn::Left, 11, "Friend notify", "好友提醒 haoyou tixing 好友上线 shangxian 最近在线 zuijin zaixian 最后上号 shanghao DDStats 旁观优先 pangguan youxian spectator priority 自动刷新 zidong shuaxin 服务器列表 fuwuqi liebiao 刷新间隔 jiange 进图打招呼 jintu dazhaohu 大字显示 dazi xianshi function", "Friend online and join notifications"},
+			{"qm:friend_notify", "function", ECardColumn::Left, 11, "Friend notify", "好友码 haoyouma friend code 导入 daoru 导出 daochu 备份 beifen 好友提醒 haoyou tixing 好友上线 shangxian 最近在线 zuijin zaixian 最后上号 shanghao DDStats 旁观优先 pangguan youxian spectator priority 自动刷新 zidong shuaxin 服务器列表 fuwuqi liebiao 刷新间隔 jiange 进图打招呼 jintu dazhaohu 大字显示 dazi xianshi function", "Friend online and join notifications"},
 			{"qm:block_words", "function", ECardColumn::Left, 12, "Block words", "屏蔽词 pingbici block words 公共词库 gonggongciku public word filter 控制台显示 kongzhitai 启用列表 qiyong liebiao 按词长替换 cichang tihuan 多字符替换 duozifu tihuan function", "Chat word filtering"},
 			{"qm:qiafen", "function", ECardColumn::Left, 13, "Keyword reply", "关键词回复 guanjianci huifu 自动回复 zidong huifu 冷却 lengque dummy 发言 fayan 规则 guize 改名 gaiming 自动改名 zidong gaiming keyword reply qiafen function", "Configure keyword-based automatic replies"}, // UI 名 keyword_reply，以持久化 key qiafen 为权威
 			{"qm:translate", "function", ECardColumn::Left, 14, "Translate", "翻译 fanyi translate 腾讯云 tengxunyun 智谱AI zhipuai 大模型 LLM 自动翻译 zidong fanyi 主动翻译 zhudong fanyi [ru] 目标语言 mubiao yuyan 端点 duandian endpoint 地域 diyu region secret id key api key 密钥 秘钥 凭证 glm-4.7-flash glm-4-flash 模型 model 中文跳过 zhongwen tiaoguo 服务器消息跳过 function", "Chat translation settings"},
@@ -160,10 +158,10 @@ namespace qm_card_registry
 			{"qm:dynamic_island", "hud", ECardColumn::Right, 14, "Dynamic island", "灵动岛 lld lingdongdao dynamic island hud 顶部 dingbu 背景 beijing 颜色 yanse 透明度 touming 黑底 heidi 原版 yuanban 默认 moren classic old style 始终显示歌名歌手 shizhong xianshi geming geshou song title artist always show qm_hud_island_always_show_track_details", "Configure HUD island appearance"},
 			// 歌词开关实际渲染在灵动岛卡内；本条只用于注册表/搜索，跳转指向承载卡。
 			{"qm:lyrics", "hud", ECardColumn::Right, 16, "Lyrics", "歌词 geci lyrics 来源 laiyuan source 网易云 wangyi netease 汽水 qishui soda spotify 显示 xianshi 翻译 fanyi 单语 danyu 双语 shuangyu 原文 yuanwen 译文 yiwen 分离 fenli 附岛 fudao qm_lyrics_language qm_lyrics_separate_island hud", "Configure the lyrics display"},
-			{"qm:system_media_controls", "hud", ECardColumn::Right, 15, "System media controls", "系统媒体控制 xitong meiti kongzhi smtc media controls 启用系统媒体 qiyong 显示歌曲信息 gequ xinxi 上一个 shangyige 播放暂停 bofang zanting 下一个 xiayige hud", "Expose playback controls to the operating system"},
+			{"qm:system_media_controls", "ddnet", ECardColumn::Right, 3, "System media controls", "系统媒体控制 xitong meiti kongzhi smtc media controls 启用系统媒体 qiyong 显示歌曲信息 gequ xinxi 上一个 shangyige 播放暂停 bofang zanting 下一个 xiayige hud", "Expose playback controls to the operating system"},
 			{"qm:background_3d", "hud", ECardColumn::Right, 17, "3D background", "3d背景 3d beijing background particles 粒子 lizi 方块 fangkuai cube 爱心 aixin heart 球体 qiuti sphere 金字塔 jinzita pyramid 钻石 zuanshi diamond 圆环 yuanhuan ring 星形 xingxing star 月牙 yueya crescent 混合 hunhe mixed 数量 shuliang 速度 sudu 尺寸 chicun 深度 shendu 透明度 touming 颜色 yanse 随机 suiji 自定义 zidingyi 辉光 huiguang 拖尾 tuowei trail 脉冲 maichong pulse 闪烁 shanshuo twinkle 推动 tuidong 碰撞 pengzhuang 淡入 danru 淡出 danchu hud", "Configure background 3D particle effects"},
 			{"qm:debug_mode", "hud", ECardColumn::Right, 19, "Debug mode", "调试模式 tiaoshi moshi debug mode 性能日志 xingneng rizhi perf log 性能调试 xingneng tiaoshi 日志文件 rizhi wenjian 采样阈值 caiyang yuzhi threshold 卡顿诊断 kadun zhenduan stutter diagnostics hud", "Enable performance debug logging and diagnostics"},
-			{"qm:bind_status_hud", "hud", ECardColumn::Right, 20, "DDRace HUD Pro", "bind status hud 分身状态 fenshen zhuangtai 卡键 kajian 锤子 chuizi 分身控制 fenshen kongzhi 分身同步 fenshen tongbu 同步 tongbu ddrace hud pro", "Dummy key/hammer/control/copy status switches"},
+			{"qm:bind_status_hud", "appearance-hud", ECardColumn::Right, 1, "DDRace HUD Pro", "bind status hud 分身状态 fenshen zhuangtai 卡键 kajian 锤子 chuizi 分身控制 fenshen kongzhi 分身同步 fenshen tongbu 同步 tongbu ddrace hud pro", "Dummy key/hammer/control/copy status switches"},
 			{"qm:gores_drown_board", "hud", ECardColumn::Right, 23, "Gores drown board", "Gores Kog 落水 luoshui 冻结 dongjie 死亡 siwang 排行 paixing 榜单 bangdan 队伍 duiwu Tee 透明度 toumingdu 人数 renshu hud", "Configure the Gores team drown board"},
 			{"qm:nameplate_text", "hud", ECardColumn::Right, 18, "Nameplate text", "nameplate text hud 名字 mingzi 名牌 mingpai 文字 wenzi", "Customize additional nameplate text", "appearance-name-plate", "deck:appearance-name-plate-text"}, // 旧模块入口继续定位到外观页的文字卡片。
 			{"qm:laser", "visual", ECardColumn::Right, 3, "Laser", "激光设置 jiguang laser 增强特效 zengqiang texiao 辉光强度 huiguang qiangdu 激光大小 daxiao 半透明 bantouming 圆角端点 yuanjiao duandian 脉冲速度 maichong sudu 脉冲幅度 maichong fudu visual", "Customize laser shape and effects", "appearance-laser", "deck:appearance-laser-enhanced"}, // 数据债：原无 tab 归属，B1 补 visual；功能由外观页承载
@@ -198,7 +196,7 @@ namespace qm_card_registry
 			// 贡献者页分两个子页签（credits-qmclient / credits-links）；DDNet/TClient 署名卡并入友链，全卡半宽。
 			{"deck:qmclient-contributors-community", "credits-qmclient", ECardColumn::Left, 1, "QmClient Community", "community links qmclient", "Find QmClient communities and project links"},
 			{"deck:qmclient-contributors-title", "credits-qmclient", ECardColumn::Left, 0, Localizable("Sponsor title"), "sponsor title code authentication nickname redeem chat platinum fluid 赞助头衔 兑换 绑定 昵称 发言 柔光 铂金 流体 液体", Localizable("Redeem your code and customize your title")},
-			{"deck:qmclient-contributors-title-display", "appearance-name-plate", ECardColumn::Left, 2, Localizable("Title display"), "title display nameplate above main dummy moon sun color opacity size scale 头衔显示 名牌 上方 本体 分身 月亮 太阳 星轨 配色 透明度 头衔大小 缩放 qm_nameplate_title_scale qm_show_nameplate_title qm_nameplate_title_above_name qm_show_main_title qm_show_dummy_title qm_sponsor_chat_effects qm_title_badge_style qm_title_badge_color qm_title_opacity", Localizable("Title visibility and appearance")},
+			{"deck:qmclient-contributors-title-display", "appearance-name-plate", ECardColumn::Left, 2, Localizable("Title display"), "title display nameplate above main dummy moon sun color opacity size scale 头衔显示 名牌 上方 本体 分身 月亮 太阳 星轨 配色 透明度 头衔大小 缩放 qm_nameplate_title_scale qm_show_nameplate_title qm_show_main_title qm_show_dummy_title qm_sponsor_chat_effects qm_title_badge_style qm_title_badge_color qm_title_opacity", Localizable("Title visibility and appearance")},
 			{"deck:qmclient-contributors-sponsors", "credits-qmclient", ECardColumn::Right, 0, "Sponsor support", "sponsor support qmclient", "View the people supporting QmClient development"},
 			{"deck:credits-friend-links", "credits-links", ECardColumn::Left, 0, "Friend links", "friend links ddnet workshop website qmclient homepage axiom teeworlds community", "Project and community websites"},
 			{"deck:qmclient-contributors-ddnet", "credits-links", ECardColumn::Right, 0, "DDNet", "ddnet contributors credits ddrace ddnet staff ddnet releases", "DDNet contributors and staff credits"},
@@ -228,8 +226,8 @@ namespace qm_card_registry
 			{"deck:sound-audio-pack", "sound", ECardColumn::Right, 0, "Audio packs", "audio pack audio packs sound", "Browse and activate custom audio packs"},
 			{"deck:ddnet-demo", "ddnet", ECardColumn::Left, 0, "Demo", "demo ddnet", "Configure DDNet demo recording behavior"},
 			{"deck:ddnet-gameplay", "ddnet", ECardColumn::Left, 1, "Gameplay", "gameplay ddnet", "Adjust DDNet gameplay indicators and assists"},
-			{"deck:ddnet-background", "ddnet", ECardColumn::Right, 0, "Background", "background ddnet", "Choose the menu map and background colors"},
-			{"deck:ddnet-miscellaneous", "ddnet", ECardColumn::Right, 1, "Miscellaneous", "miscellaneous ddnet", "Configure remaining DDNet client preferences"},
+			{"deck:ddnet-background", "ddnet", ECardColumn::Right, 1, "Background", "background ddnet", "Choose the menu map and background colors"},
+			{"deck:ddnet-miscellaneous", "ddnet", ECardColumn::Right, 2, "Miscellaneous", "miscellaneous ddnet", "Configure remaining DDNet client preferences"},
 			{"deck:tclient-bind-wheel-editor", "tclient-bind-wheel", ECardColumn::Left, 0, "Bind Wheel", "bind wheel tclient", "Assign commands and labels to wheel slots"},
 			{"deck:tclient-bind-wheel-preview", "tclient-bind-wheel", ECardColumn::Right, 0, "Preview", "preview bind wheel tclient", "Preview the bind wheel layout and selection"},
 			{"deck:tclient-status-bar-settings", "tclient-status-bar", ECardColumn::Left, 0, "Status Bar", "status bar tclient", "Adjust status bar position and text style"},
@@ -793,6 +791,40 @@ namespace qm_card_registry
 		RepairLegacyTitleLayout(Model);
 		const auto *pDefault = FindByStableId(pStableId);
 		Model.MoveToTab(pStableId, pDefault->m_pDefaultTab, 1, pDefault->m_DefaultOrder);
+		return true;
+	}
+
+	bool RepairLegacyChatBubbleTab(qm_card_order::CModel &Model)
+	{
+		const char *pStableId = "qm:chat_bubble";
+		const int Index = Model.FindByStableId(pStableId);
+		if(Index < 0 || Model.Entry(Index).m_pDefaultTab == nullptr || str_comp(Model.Entry(Index).m_pDefaultTab, "visual") != 0)
+			return false;
+		const auto *pDefault = FindByStableId(pStableId);
+		int Column = 1;
+		if(pDefault->m_DefaultColumn == ECardColumn::Full)
+			Column = 0;
+		else if(pDefault->m_DefaultColumn == ECardColumn::Right)
+			Column = 2;
+		// 追加到目标列，保留聊天页现有卡片顺序；已经移入聊天页的自定位置不再改动。
+		Model.MoveToTab(pStableId, pDefault->m_pDefaultTab, Column, static_cast<int>(Model.ColumnIndices(pDefault->m_pDefaultTab, Column).size()));
+		return true;
+	}
+
+	bool RepairLegacyBindStatusHudTab(qm_card_order::CModel &Model)
+	{
+		const char *pStableId = "qm:bind_status_hud";
+		const int Index = Model.FindByStableId(pStableId);
+		if(Index < 0 || Model.Entry(Index).m_pDefaultTab == nullptr || str_comp(Model.Entry(Index).m_pDefaultTab, "hud") != 0)
+			return false;
+		const auto *pDefault = FindByStableId(pStableId);
+		int Column = 1;
+		if(pDefault->m_DefaultColumn == ECardColumn::Full)
+			Column = 0;
+		else if(pDefault->m_DefaultColumn == ECardColumn::Right)
+			Column = 2;
+		// 追加到目标列，保留 HUD 页已有排序；已经放在目标页的自定义位置不再改动。
+		Model.MoveToTab(pStableId, pDefault->m_pDefaultTab, Column, static_cast<int>(Model.ColumnIndices(pDefault->m_pDefaultTab, Column).size()));
 		return true;
 	}
 

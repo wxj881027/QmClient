@@ -6,6 +6,7 @@
 
 #include <engine/map.h>
 #include <engine/shared/json.h>
+#include <engine/shared/protocol.h>
 
 #include <algorithm>
 #include <cmath>
@@ -270,6 +271,24 @@ bool QmVoteMaps::ParseVoteMap(const char *pDescription, SMap &Map)
 	}
 	Map = std::move(Parsed);
 	return true;
+}
+
+std::string QmVoteMaps::MapVoteCommand(const std::string &Name)
+{
+	if(Name.empty() || Name.size() >= MAX_MAP_LENGTH)
+		return {};
+	std::string Command = "/map \"";
+	for(const unsigned char Char : Name)
+	{
+		if(Char < 0x20 || Char == 0x7f)
+			return {};
+		if(Char == '\\' || Char == '"')
+			Command += '\\';
+		Command += Char;
+	}
+	Command += '"';
+	// 聊天消息超长时拒绝发送，避免截断后投到另一张地图。
+	return Command.size() < MAX_CHAT_LENGTH ? Command : std::string{};
 }
 
 int QmVoteMaps::FindOption(const CVoteOptionClient *pFirst, const char *pMapName)

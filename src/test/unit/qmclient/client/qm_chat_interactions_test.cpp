@@ -1,6 +1,7 @@
 // 请抬头享受阳光｜日子很好 我很我---------致咩子
 #include <base/system.h>
 
+#include <game/client/QmUi/QmChatLineMenuLayout.h>
 #include <game/client/components/chat.h>
 #include <game/client/components/console.h>
 #include <game/client/components/hud_editor.h>
@@ -641,4 +642,59 @@ TEST(QmChatWhisperTargets, BuildWhisperCommandKeepsQuotedNameAndMessage)
 	EXPECT_STREQ(aCommand, "/w \"alice\" hello there");
 	EXPECT_FALSE(CChat::BuildWhisperCommand(aCommand, sizeof(aCommand), "", "hello"));
 	EXPECT_FALSE(CChat::BuildWhisperCommand(aCommand, sizeof(aCommand), "alice", nullptr));
+}
+
+TEST(QmChatLineMenuLayout, AllActionsFitInsidePopupWithBottomPadding)
+{
+	const CUIRect Menu = qm_chat_line_menu::PopupRect({50.0f, 80.0f}, {0.0f, 0.0f, 800.0f, 600.0f});
+	CUIRect Content;
+	Menu.Margin(qm_chat_line_menu::CONTENT_INSET, &Content);
+	const auto Layout = qm_chat_line_menu::LayoutContent(Content);
+
+	ASSERT_EQ(Layout.m_aButtons.size(), 7u);
+	EXPECT_FLOAT_EQ(Layout.m_Header.y, Content.y);
+	EXPECT_GE(Layout.m_HeaderDivider.y, Layout.m_Header.y + Layout.m_Header.h);
+	float PreviousBottom = Layout.m_HeaderDivider.y + Layout.m_HeaderDivider.h;
+	for(const CUIRect &Button : Layout.m_aButtons)
+	{
+		EXPECT_GT(Button.y, PreviousBottom);
+		EXPECT_FLOAT_EQ(Button.h, 23.0f);
+		EXPECT_GE(Button.x, Content.x);
+		EXPECT_LE(Button.x + Button.w, Content.x + Content.w);
+		EXPECT_LE(Button.y + Button.h, Content.y + Content.h);
+		PreviousBottom = Button.y + Button.h;
+	}
+	EXPECT_GE(Layout.m_GroupDivider.y, Layout.m_aButtons[qm_chat_line_menu::SPECTATE].y + Layout.m_aButtons[qm_chat_line_menu::SPECTATE].h);
+	EXPECT_LE(Layout.m_GroupDivider.y + Layout.m_GroupDivider.h, Layout.m_aButtons[qm_chat_line_menu::MUTE_PLAYER].y);
+	EXPECT_GE(Menu.y + Menu.h - PreviousBottom, qm_chat_line_menu::CONTENT_INSET);
+}
+
+TEST(QmChatLineMenuLayout, InteriorPointerKeepsPopupAtRequestedPosition)
+{
+	const CUIRect Menu = qm_chat_line_menu::PopupRect({100.0f, 120.0f}, {0.0f, 0.0f, 800.0f, 600.0f});
+	EXPECT_FLOAT_EQ(Menu.x, 100.0f);
+	EXPECT_FLOAT_EQ(Menu.y, 120.0f);
+}
+
+TEST(QmChatLineMenuLayout, BottomPointerOpensUpwardUsingFullMenuHeight)
+{
+	const CUIRect Menu = qm_chat_line_menu::PopupRect({100.0f, 590.0f}, {0.0f, 0.0f, 800.0f, 600.0f});
+	EXPECT_FLOAT_EQ(Menu.x, 100.0f);
+	EXPECT_LT(Menu.y, 590.0f);
+	EXPECT_FLOAT_EQ(Menu.y + Menu.h, 590.0f);
+}
+
+TEST(QmChatLineMenuLayout, AllViewportCornersKeepScreenMargin)
+{
+	const CUIRect Screen{30.0f, 40.0f, 400.0f, 300.0f};
+	const vec2 aCorners[] = {{30.0f, 40.0f}, {430.0f, 40.0f}, {30.0f, 340.0f}, {430.0f, 340.0f}};
+	for(const vec2 Corner : aCorners)
+	{
+		SCOPED_TRACE(::testing::Message() << "pointer " << Corner.x << ", " << Corner.y);
+		const CUIRect Menu = qm_chat_line_menu::PopupRect(Corner, Screen);
+		EXPECT_GE(Menu.x, Screen.x + qm_chat_line_menu::SCREEN_MARGIN);
+		EXPECT_GE(Menu.y, Screen.y + qm_chat_line_menu::SCREEN_MARGIN);
+		EXPECT_LE(Menu.x + Menu.w, Screen.x + Screen.w - qm_chat_line_menu::SCREEN_MARGIN);
+		EXPECT_LE(Menu.y + Menu.h, Screen.y + Screen.h - qm_chat_line_menu::SCREEN_MARGIN);
+	}
 }

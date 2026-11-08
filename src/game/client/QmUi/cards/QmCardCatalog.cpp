@@ -120,11 +120,11 @@ namespace qm_card_catalog
 			return BuildChatCompletionCard(Ctx, Out);
 		if(str_comp(pStableId, "qm:steam") == 0)
 			return BuildSteamCard(Ctx, Id, Out);
-		if(ContainsStableId(VisualCardStableIds(), pStableId))
+		if(Id == qm_module::EQmModuleId::ChatBubble || Id == qm_module::EQmModuleId::EntityOverlay || ContainsStableId(VisualCardStableIds(), pStableId))
 			return BuildVisualCard(Ctx, Id, Out);
 		if(ContainsStableId(FunctionCardStableIds(), pStableId))
 			return BuildFunctionCard(Ctx, Id, Out);
-		if(ContainsStableId(HudCardStableIds(), pStableId))
+		if(Id == qm_module::EQmModuleId::SystemMediaControls || Id == qm_module::EQmModuleId::BindStatusHud || ContainsStableId(HudCardStableIds(), pStableId))
 			return BuildHudCard(Ctx, Id, Out);
 		return false;
 	}
@@ -196,55 +196,4 @@ namespace qm_card_catalog
 		}
 	}
 
-	std::vector<SQmSearchResultEntry> SearchResultEntries(const char *pQuery, const qm_card_order::CModel &Model)
-	{
-		std::vector<SQmSearchResultEntry> vEntries;
-		std::vector<qm_card_registry::SCardSearchResult> vMatches;
-		if(pQuery != nullptr && pQuery[0] != '\0')
-		{
-			vMatches = qm_card_registry::SearchCards(pQuery, Model);
-		}
-		else
-		{
-			// 空查询列出全部可构造卡片，供用户浏览（搜索页即卡片目录本身）。
-			vMatches.reserve(qm_card_registry::Defaults().size());
-			for(const qm_card_registry::SCardDefault &Default : qm_card_registry::Defaults())
-			{
-				qm_card_registry::SCardSearchResult Match;
-				Match.m_pStableId = Default.m_pStableId;
-				Match.m_Title = Default.m_pTitle != nullptr ? Localize(Default.m_pTitle) : "";
-				Match.m_Description = Default.m_pDescription != nullptr ? Localize(Default.m_pDescription) : "";
-				Match.m_Target = qm_card_registry::ResolveCardNavigationTarget(Default, Model);
-				vMatches.push_back(std::move(Match));
-			}
-		}
-
-		vEntries.reserve(vMatches.size());
-		for(qm_card_registry::SCardSearchResult &Match : vMatches)
-		{
-			// 只有真正有卡片模块的 stableId 才能在搜索页就地渲染，其余（已下线/纯占位）不展示。
-			if(!HasCardModule(Match.m_pStableId))
-				continue;
-			const char *pTab = Match.m_Target.m_pTab;
-			if(pTab != nullptr && str_comp(pTab, "global-search") == 0)
-				continue;
-			SQmSearchResultEntry Entry;
-			Entry.m_pStableId = Match.m_pStableId;
-			Entry.m_pTab = pTab;
-			Entry.m_Title = std::move(Match.m_Title);
-			Entry.m_Description = std::move(Match.m_Description);
-			vEntries.push_back(std::move(Entry));
-		}
-		return vEntries;
-	}
-
-	std::vector<qm_card_order::SEntry> BuildSearchModelEntries(const std::vector<SQmSearchResultEntry> &vResults)
-	{
-		// 搜索结果每张卡独占整行：Full 列 + 顺序即匹配顺序，搜索页不参与分类内的拖拽排序。
-		std::vector<qm_card_order::SEntry> vEntries;
-		vEntries.reserve(vResults.size());
-		for(size_t Index = 0; Index < vResults.size(); ++Index)
-			vEntries.push_back({vResults[Index].m_pStableId, "global-search", 0, (int)Index});
-		return vEntries;
-	}
 } // namespace qm_card_catalog

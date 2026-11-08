@@ -1,5 +1,6 @@
 #include "QmCardCatalog.h"
 #include "QmCardCatalogTClientInternal.h"
+#include "QmCardMeasureRevision.h"
 
 #include <base/perf_timer.h>
 #include <base/str.h>
@@ -92,6 +93,7 @@ void CMenus::RenderSettingsCatalogPage(CUIRect MainView, const char *pTab, bool 
 	Ctx.m_ReadOnly = ReadOnly;
 	Ctx.m_Metrics = ResolveSettingsContentMetrics(MainView.w);
 	Ctx.m_Page = SettingsPageLayout(MainView, Ctx.m_Metrics.m_UiScale);
+	Ctx.m_LabelWidth = ResolveSettingsCardLabelWidth(Ctx.m_Page.m_TwoColumns ? Ctx.m_Page.m_aColumns[0].w : Ctx.m_Page.m_ContentViewport.w, Ctx.m_Metrics);
 	Ctx.m_UiContext = SettingsUiContext(pTab, Ctx.m_Metrics.m_UiScale);
 	if(ReadOnly)
 	{
@@ -102,9 +104,9 @@ void CMenus::RenderSettingsCatalogPage(CUIRect MainView, const char *pTab, bool 
 	const auto &vIds = qm_card_catalog::CatalogPageStableIds(pTab);
 	const double QmPrepareStartMs = QmPageMs();
 	const uint64_t ContentRevision = qm_card_catalog::QmCardRenderHook::PrepareStandardCards(Ctx, vIds) ^ qm_card_catalog::QmCardRenderHook::PrepareTClientCards(Ctx, vIds);
-	const uint64_t Revision = ResolveSettingsCardDefinitionsRevision(m_SettingsCardDeckDisplayCycle, m_MenuTextPoolGeneration, MainView.w, ContentRevision ^ str_quickhash(pTab));
 	const double QmPrepareMs = QmPageMs() - QmPrepareStartMs;
 	const double DefinitionsStart = QmPageMs();
+	const uint64_t Revision = ResolveSettingsCardDefinitionsRevision(m_SettingsCardDeckDisplayCycle, m_MenuTextPoolGeneration, MainView.w, ContentRevision ^ str_quickhash(pTab) ^ (str_comp(pTab, "ddnet") == 0 ? static_cast<uint64_t>(g_Config.m_QmSmtcEnable) : 0) ^ (str_comp(pTab, "appearance-chat") == 0 ? qm_card_catalog::MeasureModuleCardRevision(qm_module::EQmModuleId::ChatBubble) : 0));
 	const auto BuildDefinitions = [Ctx, &vIds](std::vector<SSettingsCardDefinition> &vCards) {
 		qm_card_catalog::BuildCards(Ctx, vIds, vCards);
 	};

@@ -1332,20 +1332,20 @@ turkish = "Haritadaki ölüm, dondurma, çözme, ışınlanma, kontrol noktası 
 polish = "Krycie warstw encji na mapie, takich jak śmierć, zamrożenie, rozmrożenie, teleport, punkt kontrolny i przełączniki."
 
 [[message]]
-key = "Drag a slider like \"Death opacity\" or \"Teleport opacity\" from 0 to 100%, or use \"Tune layer opacity\" to fade the whole entity layer."
+key = "Drag a slider like \"Death opacity\" or \"Teleport opacity\" from 0 to 100%, or use \"Overlay entities\" to fade the whole entity layer."
 [message.translations]
-simplified_chinese = "拖动死亡透明度或传送透明度这类滑块，范围 0 到 100%，或用调整图层透明度把整个实体层调淡。"
-traditional_chinese = "拖曳死亡透明度或傳送透明度這類滑桿，範圍 0 到 100%，或用調整圖層透明度把整個實體層調淡。"
-japanese = "死亡の不透明度やテレポートの不透明度などのスライダーを 0〜100% で動かすか、レイヤーの不透明度を調整でエンティティ層全体を薄くします。"
-korean = "사망 불투명도나 텔레포트 불투명도 같은 슬라이더를 0~100%에서 움직이거나, 레이어 불투명도 조정으로 엔티티 레이어 전체를 흐리게 합니다."
-russian = "Двигайте ползунок вроде непрозрачности смерти или непрозрачности телепорта от 0 до 100% или используйте настройку прозрачности слоя, чтобы приглушить весь слой объектов."
-german = "Ziehen Sie einen Regler wie Todesdeckkraft oder Teleportdeckkraft von 0 bis 100 %, oder nutzen Sie Ebenendeckkraft anpassen, um die ganze Objektebene zu dämpfen."
-spanish = "Arrastra un control como opacidad de muerte u opacidad de teletransporte de 0 a 100%, o usa ajustar la opacidad de la capa para atenuar toda la capa de entidades."
-french = "Faites glisser un curseur comme opacité de la mort ou opacité de la téléportation de 0 à 100 %, ou utilisez régler l'opacité du calque pour atténuer tout le calque d'entités."
-brazilian_portuguese = "Arraste um controle como opacidade de morte ou opacidade de teletransporte de 0 a 100%, ou use ajustar a opacidade da camada para esmaecer toda a camada de entidades."
-portuguese = "Arraste um controlo como opacidade de morte ou opacidade de teleporte de 0 a 100%, ou use ajustar a opacidade da camada para esbater toda a camada de entidades."
-turkish = "Ölüm saydamlığı veya ışınlanma saydamlığı gibi bir kaydırıcıyı %0 ile %100 arasında sürükleyin ya da katman saydamlığını ayarla ile tüm varlık katmanını soluklaştırın."
-polish = "Przeciągnij suwak, np. krycie śmierci lub krycie teleportu, od 0 do 100%, albo użyj dostrój krycie warstwy, by wyciszyć całą warstwę encji."
+simplified_chinese = "拖动死亡透明度或传送透明度这类滑块，范围 0 到 100%，或用“显示实体层”把整个实体层调淡。"
+traditional_chinese = "拖曳死亡透明度或傳送透明度這類滑桿，範圍 0 到 100%，或用「顯示實體層」把整個實體層調淡。"
+japanese = "死亡の不透明度やテレポートの不透明度などのスライダーを 0〜100% で動かすか、「エンティティを重ねる」でエンティティ層全体を薄くします。"
+korean = "사망 불투명도나 텔레포트 불투명도 같은 슬라이더를 0~100%에서 움직이거나, '엔티티 표시'로 엔티티 레이어 전체를 흐리게 합니다."
+russian = "Двигайте ползунок вроде непрозрачности смерти или непрозрачности телепорта от 0 до 100% или используйте наложение сущностей, чтобы приглушить весь слой объектов."
+german = "Ziehen Sie einen Regler wie Todesdeckkraft oder Teleportdeckkraft von 0 bis 100 %, oder nutzen Sie Entitäten einblenden, um die ganze Objektebene zu dämpfen."
+spanish = "Arrastra un control como opacidad de muerte u opacidad de teletransporte de 0 a 100%, o usa superponer entidades para atenuar toda la capa de entidades."
+french = "Faites glisser un curseur comme opacité de la mort ou opacité de la téléportation de 0 à 100 %, ou utilisez superposer les entités pour atténuer tout le calque d'entités."
+brazilian_portuguese = "Arraste um controle como opacidade de morte ou opacidade de teletransporte de 0 a 100%, ou use sobrepor entidades para esmaecer toda a camada de entidades."
+portuguese = "Arraste um controlo como opacidade de morte ou opacidade de teleporte de 0 a 100%, ou use sobrepor entidades para esbater toda a camada de entidades."
+turkish = "Ölüm saydamlığı veya ışınlanma saydamlığı gibi bir kaydırıcıyı %0 ile %100 arasında sürükleyin ya da varlık katmanını göster ile tüm varlık katmanını soluklaştırın."
+polish = "Przeciągnij suwak, np. krycie śmierci lub krycie teleportu, od 0 do 100%, albo użyj nakładki encji, by wyciszyć całą warstwę encji."
 
 [[message]]
 key = "Fading death and freeze tiles helps you see tees and weapons behind them, but the exact tile edge gets harder to judge."

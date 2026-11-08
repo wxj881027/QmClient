@@ -129,3 +129,309 @@ TEST(QmWaterHammerIndicator, AllDeathAndFreezeTilesArePenaltyTiles)
 	EXPECT_TRUE(QmIsWaterHammerPenaltyTile(TILE_LFREEZE));
 	EXPECT_FALSE(QmIsWaterHammerPenaltyTile(TILE_AIR));
 }
+
+TEST(QmWaterHammerIndicator, RemoteHookRequiresActualFreeze)
+{
+	const SQmWaterHammerInputState Input{true, 0, 0, 1};
+	EXPECT_TRUE(QmShouldMarkWaterHook(200, false, Input, nullptr));
+	EXPECT_TRUE(QmShouldMarkWaterHook(-1, false, Input, nullptr));
+	EXPECT_TRUE(QmShouldMarkWaterHook(0, true, Input, nullptr));
+	EXPECT_FALSE(QmShouldMarkWaterHook(0, false, Input, nullptr));
+}
+
+TEST(QmWaterHammerIndicator, RemoteHookReleaseClearsMark)
+{
+	SQmWaterHammerInputState Input{true, 0, 0, 1};
+	ASSERT_TRUE(QmShouldMarkWaterHook(200, false, Input, nullptr));
+	Input.m_Hook = 0;
+	EXPECT_FALSE(QmShouldMarkWaterHook(200, false, Input, nullptr));
+}
+
+TEST(QmWaterHammerIndicator, RemoteHookRequiresReceivedInput)
+{
+	const SQmWaterHammerInputState Input{false, 0, 0, 1};
+	EXPECT_FALSE(QmShouldMarkWaterHook(200, false, Input, nullptr));
+}
+
+TEST(QmWaterHammerIndicator, LocalHookWorksWithoutPreInputAndClearsOnRelease)
+{
+	CNetObj_PlayerInput Input{};
+	Input.m_Hook = 1;
+	ASSERT_TRUE(QmShouldMarkWaterHook(200, false, {}, &Input));
+	Input.m_Hook = 0;
+	EXPECT_FALSE(QmShouldMarkWaterHook(200, false, {}, &Input));
+}
+
+TEST(QmWaterHammerIndicator, LocalHookReleaseOverridesStalePreInput)
+{
+	const SQmWaterHammerInputState PreInput{true, 0, 0, 1};
+	CNetObj_PlayerInput Input{};
+	EXPECT_FALSE(QmShouldMarkWaterHook(200, false, PreInput, &Input));
+}
+
+TEST(QmWaterHammerIndicator, LocalHeldHookOverridesReleasedPreInput)
+{
+	const SQmWaterHammerInputState PreInput{true, 0, 0, 0};
+	CNetObj_PlayerInput Input{};
+	Input.m_Hook = 1;
+	EXPECT_TRUE(QmShouldMarkWaterHook(200, false, PreInput, &Input));
+	EXPECT_FALSE(QmShouldMarkWaterHook(200, false, PreInput, nullptr));
+	EXPECT_FALSE(QmShouldMarkWaterHook(0, false, PreInput, &Input));
+}
+
+TEST(QmWaterHammerIndicator, HammerAndHookCanBeHeldIndependently)
+{
+	SQmWaterHammerInputState Input{true, WEAPON_HAMMER + 1, 1, 1};
+	EXPECT_TRUE(QmShouldMarkWaterHammer(200, false, WEAPON_HAMMER, Input, nullptr));
+	EXPECT_TRUE(QmShouldMarkWaterHook(200, false, Input, nullptr));
+	Input.m_Fire = 2;
+	EXPECT_FALSE(QmShouldMarkWaterHammer(200, false, WEAPON_HAMMER, Input, nullptr));
+	EXPECT_TRUE(QmShouldMarkWaterHook(200, false, Input, nullptr));
+	Input.m_Fire = 3;
+	Input.m_Hook = 0;
+	EXPECT_TRUE(QmShouldMarkWaterHammer(200, false, WEAPON_HAMMER, Input, nullptr));
+	EXPECT_FALSE(QmShouldMarkWaterHook(200, false, Input, nullptr));
+}
+
+TEST(QmWaterHeldColor, HammerUsesConfiguredPressedColor)
+{
+	const SQmWaterHeldState Held{true, false};
+	const auto Color = Held.HighlightColor(0x00ff55, 0x0000ff);
+
+	ASSERT_TRUE(Color.has_value());
+	EXPECT_NEAR(Color->r, 2.0f / 3.0f, 0.00001f);
+	EXPECT_NEAR(Color->g, 0.0f, 0.00001f);
+	EXPECT_NEAR(Color->b, 0.0f, 0.00001f);
+	EXPECT_FLOAT_EQ(Color->a, 1.0f);
+}
+
+TEST(QmWaterHeldColor, HookUsesItsOwnConfiguredPressedColor)
+{
+	const SQmWaterHeldState Held{false, true};
+	const auto Color = Held.HighlightColor(0x0000ff, 0x55ff55);
+
+	ASSERT_TRUE(Color.has_value());
+	EXPECT_NEAR(Color->r, 0.0f, 0.00001f);
+	EXPECT_NEAR(Color->g, 2.0f / 3.0f, 0.00001f);
+	EXPECT_NEAR(Color->b, 0.0f, 0.00001f);
+	EXPECT_FLOAT_EQ(Color->a, 1.0f);
+}
+
+TEST(QmWaterHeldColor, HoldingBothInputsPrioritizesHammerColor)
+{
+	const SQmWaterHeldState Held{true, true};
+	const auto Color = Held.HighlightColor(0x000000, 0x0000ff);
+
+	ASSERT_TRUE(Color.has_value());
+	EXPECT_EQ(*Color, ColorRGBA(0.0f, 0.0f, 0.0f));
+}
+
+TEST(QmWaterHeldColor, ReleasingHammerFallsBackToHookThenClearsHighlight)
+{
+	SQmWaterHeldState Held{true, true};
+	ASSERT_EQ(Held.HighlightColor(0x000000, 0x0000ff), ColorRGBA(0.0f, 0.0f, 0.0f));
+
+	Held.m_Hammer = false;
+	EXPECT_EQ(Held.HighlightColor(0x000000, 0x0000ff), ColorRGBA(1.0f, 1.0f, 1.0f));
+
+	Held.m_Hook = false;
+	EXPECT_FALSE(Held.HighlightColor(0x000000, 0x0000ff).has_value());
+}
+
+TEST(QmWaterHeldColor, NoHeldInputsLeaveAppearanceUnchanged)
+{
+	EXPECT_FALSE(SQmWaterHeldState{}.HighlightColor(0x000000, 0x0000ff).has_value());
+}
+
+TEST(QmWaterHeldColor, ColorChangesApplyWhileInputRemainsHeld)
+{
+	const SQmWaterHeldState Held{true, false};
+	ASSERT_EQ(Held.HighlightColor(0x000000, 0x0000ff), ColorRGBA(0.0f, 0.0f, 0.0f));
+
+	EXPECT_EQ(Held.HighlightColor(0x0000ff, 0x000000), ColorRGBA(1.0f, 1.0f, 1.0f));
+}
+
+TEST(QmWaterHammerIndicator, FrozenDirectionUsesReceivedLeftAndJumpInsteadOfClearedSnapshot)
+{
+	CNetMsg_Sv_PreInput Message{};
+	Message.m_IntendedTick = 100;
+	Message.m_Direction = -1;
+	Message.m_Jump = 1;
+	SQmWaterHammerInputState Input;
+	Input.Update(Message);
+
+	const auto Direction = QmResolveWaterDirection(200, false, 0, 0, Input);
+	EXPECT_TRUE(Direction.m_Left);
+	EXPECT_TRUE(Direction.m_Jump);
+	EXPECT_FALSE(Direction.m_Right);
+}
+
+TEST(QmWaterHammerIndicator, DeepAndLiveFreezeUseReceivedRightInput)
+{
+	CNetMsg_Sv_PreInput Message{};
+	Message.m_Direction = 1;
+	SQmWaterHammerInputState Input;
+	Input.Update(Message);
+
+	const auto DeepFrozen = QmResolveWaterDirection(-1, false, 0, 0, Input);
+	EXPECT_FALSE(DeepFrozen.m_Left);
+	EXPECT_FALSE(DeepFrozen.m_Jump);
+	EXPECT_TRUE(DeepFrozen.m_Right);
+
+	const auto LiveFrozen = QmResolveWaterDirection(0, true, 0, 0, Input);
+	EXPECT_FALSE(LiveFrozen.m_Left);
+	EXPECT_FALSE(LiveFrozen.m_Jump);
+	EXPECT_TRUE(LiveFrozen.m_Right);
+}
+
+TEST(QmWaterHammerIndicator, FrozenDirectionChangeReplacesPreviousArrow)
+{
+	CNetMsg_Sv_PreInput Message{};
+	Message.m_IntendedTick = 100;
+	Message.m_Direction = -1;
+	Message.m_Jump = 1;
+	SQmWaterHammerInputState Input;
+	Input.Update(Message);
+	ASSERT_TRUE(QmResolveWaterDirection(200, false, 0, 0, Input).m_Left);
+
+	Message.m_IntendedTick = 101;
+	Message.m_Direction = 1;
+	Input.Update(Message);
+	const auto Direction = QmResolveWaterDirection(200, false, 0, 0, Input);
+	EXPECT_FALSE(Direction.m_Left);
+	EXPECT_TRUE(Direction.m_Jump);
+	EXPECT_TRUE(Direction.m_Right);
+}
+
+TEST(QmWaterHammerIndicator, FrozenReleaseClearsArrowsDespiteHeldSnapshot)
+{
+	CNetMsg_Sv_PreInput Message{};
+	Message.m_IntendedTick = 100;
+	Message.m_Direction = -1;
+	Message.m_Jump = 1;
+	SQmWaterHammerInputState Input;
+	Input.Update(Message);
+	ASSERT_TRUE(QmResolveWaterDirection(200, false, 0, 0, Input).m_Jump);
+
+	Message.m_IntendedTick = 101;
+	Message.m_Direction = 0;
+	Message.m_Jump = 0;
+	Input.Update(Message);
+	const auto Direction = QmResolveWaterDirection(200, false, -1, 1, Input);
+	EXPECT_FALSE(Direction.m_Left);
+	EXPECT_FALSE(Direction.m_Jump);
+	EXPECT_FALSE(Direction.m_Right);
+}
+
+TEST(QmWaterHammerIndicator, MissingPreInputFallsBackToSnapshot)
+{
+	const auto Direction = QmResolveWaterDirection(200, false, 1, 1, {});
+	EXPECT_FALSE(Direction.m_Left);
+	EXPECT_TRUE(Direction.m_Jump);
+	EXPECT_TRUE(Direction.m_Right);
+}
+
+TEST(QmWaterHammerIndicator, ThawReturnsToSnapshotDirectionAndJumpBits)
+{
+	CNetMsg_Sv_PreInput Message{};
+	Message.m_Direction = -1;
+	Message.m_Jump = 1;
+	SQmWaterHammerInputState Input;
+	Input.Update(Message);
+	ASSERT_TRUE(QmResolveWaterDirection(200, false, 0, 0, Input).m_Left);
+
+	const auto Direction = QmResolveWaterDirection(0, false, 1, 2, Input);
+	EXPECT_FALSE(Direction.m_Left);
+	EXPECT_FALSE(Direction.m_Jump);
+	EXPECT_TRUE(Direction.m_Right);
+	EXPECT_TRUE(QmResolveWaterDirection(0, false, 1, 3, Input).m_Jump);
+}
+
+TEST(QmWaterHammerIndicator, DelayedPreInputCannotRestoreReleasedKeys)
+{
+	CNetMsg_Sv_PreInput Message{};
+	Message.m_IntendedTick = 101;
+	SQmWaterHammerInputState Input;
+	Input.Update(Message);
+
+	Message.m_IntendedTick = 100;
+	Message.m_Direction = -1;
+	Message.m_Jump = 1;
+	Input.Update(Message);
+	const auto Direction = QmResolveWaterDirection(200, false, 0, 0, Input);
+	EXPECT_FALSE(Direction.m_Left);
+	EXPECT_FALSE(Direction.m_Jump);
+	EXPECT_FALSE(Direction.m_Right);
+}
+
+TEST(QmWaterHammerIndicator, SameTickReleaseUpdatesHeldKeys)
+{
+	CNetMsg_Sv_PreInput Message{};
+	Message.m_IntendedTick = 100;
+	Message.m_Direction = -1;
+	Message.m_Jump = 1;
+	SQmWaterHammerInputState Input;
+	Input.Update(Message);
+
+	Message.m_Direction = 0;
+	Message.m_Jump = 0;
+	Input.Update(Message);
+	const auto Direction = QmResolveWaterDirection(200, false, -1, 1, Input);
+	EXPECT_FALSE(Direction.m_Left);
+	EXPECT_FALSE(Direction.m_Jump);
+	EXPECT_FALSE(Direction.m_Right);
+}
+
+TEST(QmWaterHammerIndicator, ResetDiscardsHeldKeysAndAcceptsNewSessionTick)
+{
+	CNetMsg_Sv_PreInput Message{};
+	Message.m_IntendedTick = 100;
+	Message.m_Direction = -1;
+	Message.m_Jump = 1;
+	SQmWaterHammerInputState Input;
+	Input.Update(Message);
+
+	Input = {};
+	const auto ResetDirection = QmResolveWaterDirection(200, false, 0, 0, Input);
+	EXPECT_FALSE(ResetDirection.m_Left);
+	EXPECT_FALSE(ResetDirection.m_Jump);
+	EXPECT_FALSE(ResetDirection.m_Right);
+
+	Message.m_IntendedTick = 1;
+	Message.m_Direction = 1;
+	Message.m_Jump = 0;
+	Input.Update(Message);
+	EXPECT_TRUE(QmResolveWaterDirection(200, false, 0, 0, Input).m_Right);
+}
+
+TEST(QmWaterHammerIndicator, PreInputUpdateRetainsHammerAndHookState)
+{
+	CNetMsg_Sv_PreInput Message{};
+	Message.m_WantedWeapon = WEAPON_HAMMER + 1;
+	Message.m_Fire = 1;
+	Message.m_Hook = 1;
+	SQmWaterHammerInputState Input;
+	Input.Update(Message);
+	EXPECT_TRUE(QmShouldMarkWaterHammer(200, false, WEAPON_GUN, Input, nullptr));
+	EXPECT_TRUE(QmShouldMarkWaterHook(200, false, Input, nullptr));
+
+	Message.m_Fire = 2;
+	Message.m_Hook = 0;
+	Input.Update(Message);
+	EXPECT_FALSE(QmShouldMarkWaterHammer(200, false, WEAPON_GUN, Input, nullptr));
+	EXPECT_FALSE(QmShouldMarkWaterHook(200, false, Input, nullptr));
+}
+
+TEST(QmWaterHammerIndicator, InvalidPreInputTickDoesNotReplaceSnapshotFallback)
+{
+	CNetMsg_Sv_PreInput Message{};
+	Message.m_IntendedTick = -1;
+	Message.m_Direction = -1;
+	Message.m_Jump = 1;
+	SQmWaterHammerInputState Input;
+	Input.Update(Message);
+	const auto Direction = QmResolveWaterDirection(200, false, 1, 0, Input);
+	EXPECT_FALSE(Direction.m_Left);
+	EXPECT_FALSE(Direction.m_Jump);
+	EXPECT_TRUE(Direction.m_Right);
+}

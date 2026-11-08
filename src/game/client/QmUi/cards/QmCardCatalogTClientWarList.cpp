@@ -100,7 +100,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 	const float UiScale = SettingsPageUiScale(MainView.w);
 	const SSettingsPageLayoutFrame Page = Ctx.m_Page;
 	const SSettingsContentMetrics WarListMetrics = ResolveSettingsContentMetrics(MainView.w);
-	const float ListRowHeight = WarListMetrics.m_ListRowHeight;
+	const float ListRowHeight = std::max(WarListMetrics.m_ListRowHeight, LineSize + 2.0f * MarginSmall);
 	constexpr int WarListViewportRows = 8;
 	std::unique_ptr<CUiRenderOnlyGuard> pRenderOnlyGuard;
 	if(ReadOnly && !Ui()->RenderOnly())
@@ -260,13 +260,13 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 			{
 				str_copy(aBuf, pEntry->m_aName);
 			}
-			EntryRect.VSplitLeft(35.0f, &EntryTypeRect, &EntryRect);
+			EntryRect.VSplitLeft(ListRowHeight, &EntryTypeRect, &EntryRect);
 			if(!ReadOnly || Ui()->BackgroundRender())
 			{
 				if(IsClan)
-					RenderFontIcon_QmIcon(EntryTypeRect, EQmIcon::USERS, FONT_ICON_USERS, 18.0f, TEXTALIGN_MC);
+					RenderFontIcon_QmIcon(EntryTypeRect, EQmIcon::USERS, FONT_ICON_USERS, FontSize, TEXTALIGN_MC);
 				else
-					RenderDevSkin(EntryTypeRect.Center(), ListRowHeight, "default", "default", false, 0, 0, 0, false, false);
+					RenderDevSkin(EntryTypeRect.Center(), LineSize, "default", "default", false, 0, 0, 0, false, false);
 			}
 
 			// 备注改成整行悬浮提示：行尾那个聊天图标没人认识，白占宽度。
@@ -276,12 +276,14 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 				GameClient()->m_Tooltips.SetFadeTime(&s_vItemIds[i], 0.0f);
 			}
 
-			EntryRect.HMargin(MarginExtraSmall, &EntryRect);
-			EntryRect.HSplitMid(&EntryRect, &WarType, MarginSmall);
+			// 名称与分组各占一列，长文本省略，避免两行挤压和删除按钮缩成小点。
+			EntryRect.VSplitRight(EntryRect.w * 0.32f, &EntryRect, &WarType);
+			EntryRect.VSplitRight(MarginSmall, &EntryRect, nullptr);
 			DoTClientLabel(Ui(), &EntryRect, aBuf, StandardFontSize, TEXTALIGN_ML);
-			TextRender()->TextColor(pEntry->m_pWarType->m_Color);
-			DoTClientLabel(Ui(), &WarType, pEntry->m_pWarType->m_aWarName, StandardFontSize, TEXTALIGN_ML);
-			TextRender()->TextColor(TextRender()->DefaultTextColor());
+			if(Flow.Drawing())
+				WarType.Draw(pEntry->m_pWarType->m_Color.WithAlpha(0.16f), IGraphics::CORNER_ALL, ui_token::radius::TIGHT * UiScale);
+			WarType.VMargin(MarginSmall, &WarType);
+			DoTClientLabel(Ui(), &WarType, pEntry->m_pWarType->m_aWarName, StandardFontSize, TEXTALIGN_MC);
 		}
 
 		const int NewSelectedEntry = EntriesListBox.DoEnd();
@@ -358,6 +360,15 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 			s_ClanInput.SetBuffer(s_aEntryClan, sizeof(s_aEntryClan));
 			s_ClanInput.SetEmptyText(Localize("Clan"));
 			ui_widget::InputField(TClientWarListTextInputCtx, &s_ClanInput, ClanField, Localize("Clan"), EditBoxFontSize);
+		}
+		if(Flow.Control("tclient-warlist-selected-group", LineSize, Button, MarginSmall) && pSelectedType)
+		{
+			Button.VSplitMid(&ButtonL, &ButtonR, MarginSmall);
+			DoTClientLabel(Ui(), &ButtonL, Localize("War Groups"), FontSize, TEXTALIGN_ML);
+			if(Flow.Drawing())
+				ButtonR.Draw(pSelectedType->m_Color.WithAlpha(0.16f), IGraphics::CORNER_ALL, ui_token::radius::TIGHT * UiScale);
+			ButtonR.VMargin(MarginSmall, &ButtonR);
+			DoTClientLabel(Ui(), &ButtonR, pSelectedType->m_aWarName, FontSize, TEXTALIGN_MC);
 		}
 		if(Flow.Control("tclient-warlist-reason", LineSize, Button, MarginSmall))
 		{
@@ -496,13 +507,12 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 					continue;
 
 				CUIRect TypeRect, DeleteButton;
-				Item.m_Rect.Margin(0.0f, &TypeRect);
+				Item.m_Rect.Margin(MarginSmall, &TypeRect);
 				if(pType->m_Removable)
 				{
-					TypeRect.VSplitRight(20.0f, &TypeRect, &DeleteButton);
-					DeleteButton.HSplitTop(20.0f, &DeleteButton, nullptr);
-					DeleteButton.Margin(2.0f, &DeleteButton);
-					if(DoButtonNoRect_QmIcon(&s_vTypeDeleteButtons[i], EQmIcon::TRASH, FONT_ICON_TRASH, 0, &DeleteButton, IGraphics::CORNER_ALL) && !ReadOnly && !Ui()->RenderOnly())
+					TypeRect.VSplitRight(LineSize, &TypeRect, &DeleteButton);
+					TypeRect.VSplitRight(MarginSmall, &TypeRect, nullptr);
+					if(Ui()->DoButton_QmIcon(&s_vTypeDeleteButtons[i], EQmIcon::TRASH, FONT_ICON_TRASH, 0, &DeleteButton, IGraphics::CORNER_ALL) && !ReadOnly && !Ui()->RenderOnly())
 						m_pRemoveWarType = pType;
 				}
 				// 组色画成色块，名字回归正文色：纯色文字在色弱视角下等于没有信息，
@@ -822,7 +832,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 												       (Ui()->HotItem() == &s_vNameButtons[ClientId] ? ColorRGBA(1.0f, 1.0f, 1.0f, 0.33f) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.0f));
 			if(NameButtonColor.a > 0.0f)
 				DrawRoundedSurface(Ui(), PlayerRect, NameButtonColor, ColorRGBA(), 5.0f, 0.0f, IGraphics::CORNER_L);
-			Ui()->DoLabel(&NameRect, Client.m_aName, StandardFontSize, TEXTALIGN_ML);
+			DoTClientLabel(Ui(), &NameRect, Client.m_aName, StandardFontSize, TEXTALIGN_ML);
 			if(Ui()->DoButtonLogic(&s_vNameButtons[ClientId], false, &PlayerRect, BUTTONFLAG_LEFT) && !ReadOnly && !Ui()->RenderOnly())
 			{
 				str_copy(s_aEntryName, Client.m_aName);
@@ -833,7 +843,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 												       (Ui()->HotItem() == &s_vClanButtons[ClientId] ? ColorRGBA(1.0f, 1.0f, 1.0f, 0.33f) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.0f));
 			if(ClanButtonColor.a > 0.0f)
 				DrawRoundedSurface(Ui(), ClanRect, ClanButtonColor, ColorRGBA(), 5.0f, 0.0f, IGraphics::CORNER_R);
-			Ui()->DoLabel(&ClanRect, Client.m_aClan, StandardFontSize, TEXTALIGN_ML);
+			DoTClientLabel(Ui(), &ClanRect, Client.m_aClan, StandardFontSize, TEXTALIGN_ML);
 			if(Ui()->DoButtonLogic(&s_vClanButtons[ClientId], false, &ClanRect, BUTTONFLAG_LEFT) && !ReadOnly && !Ui()->RenderOnly())
 			{
 				str_copy(s_aEntryClan, Client.m_aClan);
@@ -903,6 +913,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 			};
 			aHeights[Index] = TClientDeclaredRegion(apSectionIds[Index], ColumnWidth, aRenderSections[Index], nullptr);
 		}
+		// 编辑区和分组管理连续排列；下方设置与在线玩家独立成行。
 		std::array<float, 2> aColumnHeights{};
 		for(size_t Index = 0; Index < aHeights.size(); ++Index)
 			aColumnHeights[Columns == 1 ? 0 : anColumnOf[Index]] += aHeights[Index] + SectionGap;

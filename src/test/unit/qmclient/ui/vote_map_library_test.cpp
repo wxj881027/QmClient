@@ -270,3 +270,27 @@ TEST(VoteMapLibrary, TypeVoteOptionMatchesOfficialFlexVoteLabels)
 	EXPECT_TRUE(TypeVoteOptionMatches("DDmaX Next Maps", "DDmaX.Next", "经典 Next"));
 	EXPECT_TRUE(TypeVoteOptionMatches("ddmax next maps", "DDmaX Next", "经典 Next"));
 }
+
+TEST(VoteMapLibrary, SelectedMapCommandKeepsSpacesUnicodeAndQuotedNames)
+{
+	EXPECT_EQ(MapVoteCommand("2 To Tango"), "/map \"2 To Tango\"");
+	EXPECT_EQ(MapVoteCommand("森林"), "/map \"森林\"");
+	EXPECT_EQ(MapVoteCommand("\"Quoted\" \\ Map"), "/map \"\\\"Quoted\\\" \\\\ Map\"");
+	EXPECT_EQ(MapVoteCommand("Map; Other"), "/map \"Map; Other\"");
+}
+
+TEST(VoteMapLibrary, MapCommandDoesNotTruncateLongNames)
+{
+	const std::string Name(127, 'a');
+	EXPECT_EQ(MapVoteCommand(Name), "/map \"" + Name + "\"");
+	EXPECT_TRUE(MapVoteCommand(std::string(128, 'a')).empty());
+	EXPECT_TRUE(MapVoteCommand(std::string(127, '"')).empty());
+}
+
+TEST(VoteMapLibrary, MapCommandRejectsEmptyNamesAndControlCharacters)
+{
+	EXPECT_TRUE(MapVoteCommand("").empty());
+	EXPECT_TRUE(MapVoteCommand("Map\nOther").empty());
+	EXPECT_TRUE(MapVoteCommand("Map\rOther").empty());
+	EXPECT_TRUE(MapVoteCommand(std::string("Map\0Other", 9)).empty());
+}

@@ -332,9 +332,6 @@ void CMenus::RenderQmFunctionJumpHintContent(CUIRect &Content, float LineHeight,
 	}
 	Flow.Space(LineSpacing);
 
-	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:jump_hint", CurrentSettingsContentMetrics(), PrewarmOnly))
-		return;
-
 	static CButtonContainer s_QmJumpHintColorId;
 	if(Flow.Control("color", ResolveSettingsColorRowLayout(Content, CurrentSettingsContentMetrics(), false).m_ConsumedHeight, Row))
 		DoLine_ColorPicker(&s_QmJumpHintColorId, CurrentSettingsContentMetrics(), &Row, Localize("Text color"), &g_Config.m_QmJumpHintColor, ui_token::color::NEUTRAL_WHITE, false);
@@ -536,6 +533,7 @@ void CMenus::RenderQmFunctionMiniFeaturesContent(CUIRect &Content, float LineHei
 		{
 			{&g_Config.m_QmRepeatEnabled, "Enable repeat", Localize("Enable repeat")},
 			{&g_Config.m_QmHumming, "Humming", Localize("Humming"), nullptr, 0, Localize("Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines")},
+			{&g_Config.m_QmSinging, "Singing", Localize("Singing"), nullptr, 0, Localize("Double-tap the bound key within 400 ms to send the current lyric to public chat")},
 			{&g_Config.m_QmRandomEmoteOnHit, "Random emoticon", Localize("Random emoticon")},
 		},
 		CurrentSettingsContentMetrics(), !PrewarmOnly);

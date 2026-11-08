@@ -20,16 +20,12 @@ namespace qm_card_catalog
 		const std::vector<const char *> s_vVisualCards = {
 			"qm:appearance_preset",
 			"qm:tooltip",
-			"qm:console",
 			"qm:chat_completion",
-			"qm:chat_bubble",
 			"qm:focus_mode",
 			"qm:camera_view",
 			"qm:spectator_mode",
-			"qm:skin_transition",
 			"qm:weapon_animation",
 			"qm:streamer",
-			"qm:entity_overlay",
 			"qm:collision_hitbox",
 			"qm:water_hammer",
 		};
@@ -67,10 +63,8 @@ namespace qm_card_catalog
 			"qm:hud_notifications",
 			"qm:voice",
 			"qm:dynamic_island",
-			"qm:system_media_controls",
 			"qm:lyrics",
 			"qm:background_3d",
-			"qm:bind_status_hud",
 			"qm:gores_drown_board",
 		};
 
@@ -177,7 +171,7 @@ namespace qm_card_catalog
 
 	bool HasCardModule(const char *pStableId)
 	{
-		return IsTClientCard(pStableId) || IsStandardCard(pStableId) || ContainsStableId(s_vVisualCards, pStableId) || ContainsStableId(s_vFunctionCards, pStableId) || ContainsStableId(s_vHudCards, pStableId) || ContainsStableId(s_vBindCards, pStableId) || ContainsStableId(s_vNameplateCards, pStableId) || ContainsStableId(s_vTeeCards, pStableId) || ContainsStableId(s_vTitleCards, pStableId) || ContainsStableId(s_vGeneralCards, pStableId) || ContainsStableId(s_vControlsCards, pStableId);
+		return IsTClientCard(pStableId) || IsStandardCard(pStableId) || (pStableId != nullptr && (str_comp(pStableId, "qm:system_media_controls") == 0 || str_comp(pStableId, "qm:chat_bubble") == 0 || str_comp(pStableId, "qm:entity_overlay") == 0 || str_comp(pStableId, "qm:bind_status_hud") == 0)) || ContainsStableId(s_vVisualCards, pStableId) || ContainsStableId(s_vFunctionCards, pStableId) || ContainsStableId(s_vHudCards, pStableId) || ContainsStableId(s_vBindCards, pStableId) || ContainsStableId(s_vNameplateCards, pStableId) || ContainsStableId(s_vTeeCards, pStableId) || ContainsStableId(s_vTitleCards, pStableId) || ContainsStableId(s_vGeneralCards, pStableId) || ContainsStableId(s_vControlsCards, pStableId);
 	}
 
 	const std::vector<const char *> &ControlsCardStableIds()
@@ -267,7 +261,7 @@ namespace qm_card_catalog
 			std::map<std::string, std::vector<const char *>> Cards;
 			for(const auto &Default : qm_card_registry::Defaults())
 			{
-				if(!IsStandardCard(Default.m_pStableId) && !IsTClientCard(Default.m_pStableId))
+				if(!IsStandardCard(Default.m_pStableId) && !IsTClientCard(Default.m_pStableId) && str_comp(Default.m_pStableId, "qm:system_media_controls") != 0 && str_comp(Default.m_pStableId, "qm:chat_bubble") != 0 && str_comp(Default.m_pStableId, "qm:entity_overlay") != 0 && str_comp(Default.m_pStableId, "qm:bind_status_hud") != 0)
 					continue;
 				// 字体卡片是 TClient 的实现，但玩家找它的地方是画面页：按呈现位置归页，
 				// 卡片实现仍按 tclient 分派，不受影响。

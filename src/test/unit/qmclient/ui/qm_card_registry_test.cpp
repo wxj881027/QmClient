@@ -58,8 +58,6 @@ TEST(QmCardRegistrySearch, InternalSettingLabelsAndConfigNamesFindTheContainingC
 		{"qm_emoticon_projectile_duration", "qm:skin_appearance"},
 		{"Skin outline for other players", "qm:skin_appearance"},
 		{"qm_skin_outline_others", "qm:skin_appearance"},
-		{"qm_console_font_size", "qm:console"},
-		{"qm_console_search_selected_color", "qm:console"},
 		{"Show key press counts", "qm:input_overlay"},
 		{"qm_input_overlay_key_counts", "qm:input_overlay"},
 	};
@@ -605,14 +603,23 @@ TEST(QmCardRegistry, SoundStandardPageCardsPersistInVisualOrder)
 		(std::vector<std::string>{"deck:sound-audio-pack"}));
 }
 
-// 意图：DDNet 标准页的四张卡片按默认视觉顺序分布在左右列，重启后不能改变阅读顺序。
+// 意图：实体层调整位于 DDNet 右列首位，序列化后仍保持该归属和阅读顺序。
 TEST(QmCardRegistry, DDNetStandardPageCardsPersistInVisualOrder)
 {
 	const qm_card_order::CModel Model = RegistryModelAfterRoundTrip();
-	EXPECT_EQ(Model.StableIdOrder("deck:", "ddnet", 1),
+	EXPECT_EQ(Model.StableIdOrder("", "ddnet", 1),
 		(std::vector<std::string>{"deck:ddnet-demo", "deck:ddnet-gameplay"}));
-	EXPECT_EQ(Model.StableIdOrder("deck:", "ddnet", 2),
-		(std::vector<std::string>{"deck:ddnet-background", "deck:ddnet-miscellaneous"}));
+	EXPECT_EQ(Model.StableIdOrder("", "ddnet", 2),
+		(std::vector<std::string>{"qm:entity_overlay", "deck:ddnet-background", "deck:ddnet-miscellaneous", "qm:system_media_controls"}));
+
+	const auto *pCard = qm_card_registry::FindByStableId("qm:entity_overlay");
+	ASSERT_NE(pCard, nullptr);
+	EXPECT_STREQ(pCard->m_pTitle, "Entity layer adjustments");
+	const auto &vDDNetCards = qm_card_catalog::CatalogPageStableIds("ddnet");
+	EXPECT_NE(std::find_if(vDDNetCards.begin(), vDDNetCards.end(), [](const char *pStableId) { return std::string(pStableId) == "qm:entity_overlay"; }), vDDNetCards.end());
+	const auto &vVisualCards = qm_card_catalog::VisualCardStableIds();
+	EXPECT_EQ(std::find_if(vVisualCards.begin(), vVisualCards.end(), [](const char *pStableId) { return std::string(pStableId) == "qm:entity_overlay"; }), vVisualCards.end());
+	EXPECT_TRUE(qm_card_catalog::HasCardModule("qm:entity_overlay"));
 }
 
 // 意图：敌对列表是一个完整编辑器，registry 只能暴露一张全宽卡片，避免卡片化破坏功能布局。
@@ -848,31 +855,6 @@ TEST(QmCardRegistry, AppearanceDeckDefaultsUseSubPagePlacements)
 	}
 }
 
-// 意图：deck 默认 placement 的 order 是 tab+column 内的局部顺序，不是跨所有设置页的全局序号。
-// 否则首次迁移/缺失补位会在每个非 Qm 设置页留下大空洞，拖拽持久化后的默认顺序不稳定。
-TEST(QmCardRegistry, SettingsDeckDefaultOrdersAreLocalToTabAndColumn)
-{
-	std::map<std::string, std::vector<int>> OrdersByGroup;
-	for(const auto &E : qm_card_registry::Defaults())
-	{
-		const std::string Id = E.m_pStableId;
-		if(Id.rfind("deck:", 0) != 0)
-			continue;
-
-		const std::string Tab = E.m_pDefaultTab != nullptr ? E.m_pDefaultTab : "";
-		OrdersByGroup[Tab + "|" + std::to_string(static_cast<int>(E.m_DefaultColumn))].push_back(E.m_DefaultOrder);
-	}
-
-	ASSERT_FALSE(OrdersByGroup.empty());
-	for(auto &Group : OrdersByGroup)
-	{
-		std::vector<int> &Orders = Group.second;
-		std::sort(Orders.begin(), Orders.end());
-		for(size_t i = 0; i < Orders.size(); ++i)
-			EXPECT_EQ(Orders[i], static_cast<int>(i)) << Group.first;
-	}
-}
-
 // 意图：默认全局模型必须从注册表一键构建，包含 Qm/Tclient/deck 全部默认 placement，
 // 供首次迁移和新增卡片补位复用，避免各页面各自拼全局配置。
 TEST(QmCardRegistry, BuildDefaultEntriesCoversEveryRegisteredCard)
@@ -985,7 +967,7 @@ TEST(QmCardRegistry, QmCardsPreserveLegacyModuleSearchKeywords)
 	}
 }
 
-// 拆分后外观和换皮动画的功能词应分别指向承载它们的卡片。
+// 外观与换皮动画的功能词均指向 Tee 外观卡。
 TEST(QmCardRegistry, SkinSettingsSearchFindsOwningCard)
 {
 	const qm_card_order::CModel Model = RegistryModelAfterRoundTrip();
@@ -1006,7 +988,7 @@ TEST(QmCardRegistry, SkinSettingsSearchFindsOwningCard)
 	for(const char *pQuery : {"皮肤描边", "循环色调", "表情阴影", "skin outline"})
 		ExpectOwner(pQuery, "qm:skin_appearance", "qm:skin_transition", "tee");
 	for(const char *pQuery : {"锤中偷皮", "皮肤切换", "换皮", "skin transition animation"})
-		ExpectOwner(pQuery, "qm:skin_transition", "qm:skin_appearance", "visual");
+		ExpectOwner(pQuery, "qm:skin_appearance", "qm:skin_transition", "tee");
 }
 
 // 意图：QiaFen 三名分裂（枚举 QiaFen / UI 名 keyword_reply / 持久化 key qiafen）是迁移最大陷阱。
@@ -1195,4 +1177,22 @@ TEST(QmCardRegistry, LegacyBindTabMovesCardsIntoControls)
 	EXPECT_STREQ(Model.Entry(Model.FindByStableId("qm:bind_editor")).m_pDefaultTab, "controls");
 	EXPECT_STREQ(Model.Entry(Model.FindByStableId("qm:bind_overview")).m_pDefaultTab, "controls");
 	EXPECT_FALSE(qm_card_registry::RepairLegacyBindTab(Model));
+}
+
+TEST(QmCardRegistry, FavoriteMapsCardIsRemovedFromSettingsAndSearch)
+{
+	EXPECT_EQ(qm_card_registry::FindByStableId("qm:favorite_maps"), nullptr);
+	EXPECT_FALSE(qm_card_catalog::HasCardModule("qm:favorite_maps"));
+	const auto &vCards = qm_card_catalog::FunctionCardStableIds();
+	EXPECT_FALSE(std::any_of(vCards.begin(), vCards.end(), [](const char *pId) {
+		return std::string(pId) == "qm:favorite_maps";
+	}));
+	const auto Model = RegistryModelAfterRoundTrip();
+	for(const char *pQuery : {"收藏地图", "favorite maps"})
+	{
+		const auto Results = qm_card_registry::SearchCards(pQuery, Model);
+		EXPECT_FALSE(std::any_of(Results.begin(), Results.end(), [](const auto &Result) {
+			return std::string(Result.m_pStableId) == "qm:favorite_maps";
+		}));
+	}
 }

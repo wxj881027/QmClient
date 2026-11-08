@@ -392,7 +392,7 @@ public:
 		static constexpr int DATA_BACKGROUND = 3;
 		static constexpr int DATA_MAIN_PARAMS = 4; // radius, disabled radius, ring radius, ring thickness
 		static constexpr int DATA_METADATA = 5; // item count, corners, has capsule, screen pixel size
-		static constexpr int DATA_CAPSULE_PARAMS = 6; // radius, smooth union, unused, unused
+		static constexpr int DATA_CAPSULE_PARAMS = 6; // 副岛半径、融合半径、主岛涟漪幅度与相位
 		static constexpr int DATA_RESERVED = 7; // outer shadow size, opacity, unused, unused
 		static constexpr int DATA_ITEM_BASE = 8;
 		static constexpr int DATA_ITEM_STRIDE = 3;

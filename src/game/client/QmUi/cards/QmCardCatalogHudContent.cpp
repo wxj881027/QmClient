@@ -54,7 +54,7 @@ extern std::unordered_map<std::string, CBindSlot> g_CommandBindCache;
 void CMenus::RenderQmHudBindStatusContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
 {
 	CSettingsContentLayoutFlow Flow(Content);
-	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, Content,
+	DoSettingsToggleGroup(SETTINGS_APPEARANCE, APPEARANCE_TAB_HUD, APPEARANCE_TAB_HUD, Content,
 		{
 			{&g_Config.m_ClShowhudKeyStatusReset, "appearance-show-key-stuck-status", Localize("Show key stuck status")},
 			{&g_Config.m_ClShowhudKeyStatusHammer, "appearance-show-hammer-status", Localize("Show hammer status")},
@@ -73,9 +73,6 @@ void CMenus::RenderQmHudDebugGraphContent(CUIRect &Content, float LineHeight, fl
 	if(Flow.Control("hud-debug-graph-toggle-bind", LineHeight, BindRow))
 		RenderQmHudKeyBindRow(BindRow, s_ReaderButtonDebugGraphToggle, s_ClearButtonDebugGraphToggle, Localize("Global toggle key"), "toggle dbg_graphs 0 1", LineHeight, BodySize, 0.0f, LabelWidth);
 	Flow.Space(LineSpacing);
-
-	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:debug_graph", CurrentSettingsContentMetrics(), PrewarmOnly || Ui()->RenderOnly()))
-		return;
 
 	CUIRect Row, LabelColumn, ControlColumn;
 	if(Flow.Control("qmclient-debug-graph-panel-opacity", CurrentSettingsContentMetrics().m_LineHeight, Row))
@@ -225,7 +222,7 @@ void CMenus::RenderQmHudDynamicIslandContent(CUIRect &Content, float LineHeight,
 		CUIRect ColorRow;
 		if(Flow.Control("hud-QmHudIslandBgColor", CurrentSettingsContentMetrics().m_ButtonHeight, ColorRow))
 		{
-			DoLine_AlphaColorPicker(&s_DynamicIslandBgColorId, CurrentSettingsContentMetrics(), &ColorRow, Localize("Background color"), &g_Config.m_QmHudIslandBgColor, &g_Config.m_QmHudIslandBgOpacity, 0x9C460E, 80);
+			DoLine_AlphaColorPicker(&s_DynamicIslandBgColorId, CurrentSettingsContentMetrics(), &ColorRow, Localize("Background color"), &g_Config.m_QmHudIslandBgColor, &g_Config.m_QmHudIslandBgOpacity, 0x9C460E, 100);
 		}
 		Flow.Space(CurrentSettingsContentMetrics().m_LineSpacing);
 	}
@@ -409,7 +406,9 @@ void CMenus::RenderQmHudSystemMediaControlsContent(CUIRect &Content, float LineH
 	CSettingsContentLayoutFlow Flow(Content);
 	const auto DeclaredCheckbox = [&](CUIRect &, float Height, float Spacing, const void *pId, const char *pTextId, const char *pText, int *pValue) {
 		CUIRect Row;
-		const bool Changed = Flow.Control(pTextId, Height, Row) && RenderQmHudCheckbox(Row, Height, 0.0f, pId, pTextId, pText, pValue);
+		const bool Changed = Flow.Control(pTextId, Height, Row) && DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, -1, pId, pTextId, pText, *pValue, &Row);
+		if(Changed)
+			*pValue ^= 1;
 		Flow.Space(Spacing);
 		return Changed;
 	};
@@ -431,13 +430,13 @@ void CMenus::RenderQmHudSystemMediaControlsContent(CUIRect &Content, float LineH
 		NextButton = Actions.m_aButtons[2];
 
 		static CButtonContainer s_SmtcPrev;
-		if(DoSettingsButton_Menu(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, &s_SmtcPrev, "qmclient-smtc-previous", Localize("Previous"), 0, &PrevButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE))
+		if(DoSettingsButton_Menu(SETTINGS_DDNET, -1, -1, &s_SmtcPrev, "qmclient-smtc-previous", Localize("Previous"), 0, &PrevButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE))
 			GameClient()->m_SystemMediaControls.Previous();
 		static CButtonContainer s_SmtcPlayPause;
-		if(DoSettingsButton_Menu(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, &s_SmtcPlayPause, "qmclient-smtc-play-pause", Localize("Play/Pause"), 0, &PlayButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE))
+		if(DoSettingsButton_Menu(SETTINGS_DDNET, -1, -1, &s_SmtcPlayPause, "qmclient-smtc-play-pause", Localize("Play/Pause"), 0, &PlayButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE))
 			GameClient()->m_SystemMediaControls.PlayPause();
 		static CButtonContainer s_SmtcNext;
-		if(DoSettingsButton_Menu(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, &s_SmtcNext, "qmclient-smtc-next", Localize("Next"), 0, &NextButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE))
+		if(DoSettingsButton_Menu(SETTINGS_DDNET, -1, -1, &s_SmtcNext, "qmclient-smtc-next", Localize("Next"), 0, &NextButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE))
 			GameClient()->m_SystemMediaControls.Next();
 	}
 	Flow.Space(LineSpacing);
@@ -680,15 +679,11 @@ void CMenus::RenderQmHudGoresDrownBoardContent(CUIRect &Content, float LineHeigh
 		Flow.Space(Spacing);
 		return Changed;
 	};
-	// 基础开关保持可见，人数与外观设置由个性调整统一展开。
 	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmGoresDrownBoard, "Show Gores drown board", Localize("Show Gores drown board"), &g_Config.m_QmGoresDrownBoard);
 	if(!g_Config.m_QmGoresDrownBoard)
 		return;
 
 	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmGoresDrownBoardIncludeTeam0, "Include Team 0", Localize("Include Team 0"), &g_Config.m_QmGoresDrownBoardIncludeTeam0);
-
-	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:gores_drown_board", CurrentSettingsContentMetrics(), PrewarmOnly || Ui()->RenderOnly()))
-		return;
 
 	CUIRect Row, LabelColumn, ControlColumn;
 	auto RenderValue = [&](const char *pTextId, const char *pText, const void *pInputId, int *pValue, int MinValue, int MaxValue, const char *pSuffix = "") {

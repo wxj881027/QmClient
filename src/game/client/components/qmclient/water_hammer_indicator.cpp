@@ -17,7 +17,7 @@ void CQmWaterHammerIndicator::OnNewSnapshot()
 {
 	for(int ClientId = 0; ClientId < MAX_CLIENTS; ++ClientId)
 	{
-		if(!GameClient()->m_aClients[ClientId].m_Active)
+		if(!CanUseRemoteInput(ClientId))
 			m_aInputs[ClientId] = SQmWaterHammerInputState{};
 	}
 }
@@ -27,10 +27,37 @@ void CQmWaterHammerIndicator::OnPreInput(const CNetMsg_Sv_PreInput &Message)
 	if(Message.m_Owner < 0 || Message.m_Owner >= MAX_CLIENTS)
 		return;
 
-	SQmWaterHammerInputState &Input = m_aInputs[Message.m_Owner];
-	Input.m_Received = true;
-	Input.m_WantedWeapon = Message.m_WantedWeapon;
-	Input.m_Fire = Message.m_Fire;
+	m_aInputs[Message.m_Owner].Update(Message);
+}
+
+bool CQmWaterHammerIndicator::CanUseRemoteInput(const int ClientId) const
+{
+	if(Client()->State() != IClient::STATE_ONLINE || ClientId < 0 || ClientId >= MAX_CLIENTS)
+		return false;
+
+	const int LocalClientId = GameClient()->m_Snap.m_LocalClientId;
+	if(LocalClientId < 0 || LocalClientId >= MAX_CLIENTS || ClientId == LocalClientId)
+		return false;
+
+	const auto &ClientData = GameClient()->m_aClients[ClientId];
+	return ClientData.m_Active && !ClientData.m_Spec &&
+	       !GameClient()->m_aClients[LocalClientId].m_Spec &&
+	       GameClient()->m_Snap.m_aCharacters[LocalClientId].m_Active &&
+	       GameClient()->m_Snap.m_aCharacters[ClientId].m_Active &&
+	       GameClient()->m_Teams.Team(ClientId) == GameClient()->m_Teams.Team(LocalClientId);
+}
+
+SQmWaterDirectionState CQmWaterHammerIndicator::DirectionInputs(const int ClientId) const
+{
+	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
+		return {};
+
+	const auto &Character = GameClient()->m_Snap.m_aCharacters[ClientId];
+	const auto &ClientData = GameClient()->m_aClients[ClientId];
+	// 方向箭头沿用“显示按键”设置，不受卡锤、卡钩高亮开关影响。
+	return QmResolveWaterDirection(ClientData.m_FreezeEnd, ClientData.m_LiveFrozen,
+		Character.m_Cur.m_Direction, Character.m_Cur.m_Jumped,
+		CanUseRemoteInput(ClientId) ? m_aInputs[ClientId] : SQmWaterHammerInputState{});
 }
 
 bool CQmWaterHammerIndicator::IsInPenaltyArea(const vec2 Position) const
@@ -59,24 +86,32 @@ bool CQmWaterHammerIndicator::IsInPenaltyArea(const vec2 Position) const
 	return false;
 }
 
-bool CQmWaterHammerIndicator::IsMarked(const int ClientId) const
+SQmWaterHeldState CQmWaterHammerIndicator::MarkedInputs(const int ClientId) const
 {
 	if(!g_Config.m_QmWaterHammerHighlight || ClientId < 0 || ClientId >= MAX_CLIENTS)
-		return false;
+		return {};
 
 	const int LocalClientId = GameClient()->m_Snap.m_LocalClientId;
 	if(LocalClientId < 0 || LocalClientId >= MAX_CLIENTS || ClientId == LocalClientId)
-		return false;
+		return {};
 
 	const CGameClient::CClientData &ClientData = GameClient()->m_aClients[ClientId];
 	if(!ClientData.m_Active || ClientData.m_Spec || !GameClient()->m_Snap.m_aCharacters[ClientId].m_Active)
-		return false;
+		return {};
 	if(GameClient()->m_Teams.Team(ClientId) != GameClient()->m_Teams.Team(LocalClientId))
-		return false;
+		return {};
 
 	const CNetObj_PlayerInput *pLocalInput = nullptr;
 	if(Client()->DummyConnected() && ClientId == GameClient()->m_aLocalIds[!g_Config.m_ClDummy])
 		pLocalInput = g_Config.m_ClDummyHammer ? &GameClient()->m_HammerInput : &GameClient()->m_DummyInput;
 
-	return QmShouldMarkWaterHammer(ClientData.m_FreezeEnd, ClientData.m_LiveFrozen, ClientData.m_RenderCur.m_Weapon, m_aInputs[ClientId], pLocalInput);
+	return {
+		QmShouldMarkWaterHammer(ClientData.m_FreezeEnd, ClientData.m_LiveFrozen, ClientData.m_RenderCur.m_Weapon, m_aInputs[ClientId], pLocalInput),
+		QmShouldMarkWaterHook(ClientData.m_FreezeEnd, ClientData.m_LiveFrozen, m_aInputs[ClientId], pLocalInput),
+	};
+}
+
+std::optional<ColorRGBA> CQmWaterHammerIndicator::HighlightColor(const int ClientId) const
+{
+	return MarkedInputs(ClientId).HighlightColor(g_Config.m_QmWaterHammerColor, g_Config.m_QmWaterHookColor);
 }

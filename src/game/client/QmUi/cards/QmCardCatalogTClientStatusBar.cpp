@@ -200,7 +200,6 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientStatusBarCard(const qm_car
 			else if(pStatusBarOverrideTooltip != nullptr)
 				DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-show", &CheckBoxRect, Localize("Show status bar"), FontSize, TEXTALIGN_ML, StatusBarLabelProps);
 		}
-		if(qm_card_catalog::QmCardRenderHook::Personalization(this, View, "deck:tclient-status-bar-settings", CurrentSettingsContentMetrics(), ReadOnly))
 		{
 			if(Flow.Control("tclient-statusbar-show-labels", LineSize, CheckBoxRect, MarginSmall))
 			{

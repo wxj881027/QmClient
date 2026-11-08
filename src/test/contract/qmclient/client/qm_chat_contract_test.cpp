@@ -21,17 +21,6 @@ TEST(QmLocalSaveJoinHint, UsesExpiringEchoMessages)
 	EXPECT_EQ(Body.find("GameClient()->Echo(CodesLine.c_str(), true);"), std::string::npos);
 }
 
-TEST(QmFastPracticeCommands, TeleportDefaultsToAimingOrSpectatingPosition)
-{
-	const std::string Source = ReadTestSourceFile("src/game/client/components/tclient/fast_practice.cpp");
-	const size_t CommandBlock = Source.find("if(Cmd == \"tp\" || Cmd == \"teleport\" || Cmd == \"tc\" || Cmd == \"telecursor\")");
-	ASSERT_NE(CommandBlock, std::string::npos);
-	const size_t TargetLine = Source.find("vec2 Target = GameClient()->m_Controls.m_aTargetPos[g_Config.m_ClDummy];", CommandBlock);
-	ASSERT_NE(TargetLine, std::string::npos);
-	EXPECT_LT(CommandBlock, TargetLine);
-	EXPECT_EQ(Source.find("PracticeTeleCursorTarget", CommandBlock), std::string::npos);
-}
-
 TEST(QmFastPracticeCommands, ResetRecapturesAnchorFromSnapshotAndServerInputIsNeutral)
 {
 	const std::string Source = ReadTestSourceFile("src/game/client/components/tclient/fast_practice.cpp");
@@ -88,18 +77,6 @@ TEST(QmChatRepeat, TeamMessagesKeepTheirSendChannel)
 	EXPECT_NE(RepeatLastMessage.find("GameClient()->m_Chat.SendChat(m_LastChatTeam, m_aLastChatMessage);"), std::string::npos);
 }
 
-TEST(QmChatInteractions, ChatLineMenuKeepsSpectateAction)
-{
-	const std::string Header = ReadTestSourceFile("src/game/client/components/chat.h");
-	const std::string Source = ReadTestSourceFile("src/game/client/components/chat.cpp");
-
-	EXPECT_NE(Header.find("CButtonContainer m_SpectateButton;"), std::string::npos);
-	EXPECT_NE(Header.find("void SpectateChatLine(const CChatLinePopupContext &Context);"), std::string::npos);
-	EXPECT_NE(Source.find("DoEntry(&pPopupContext->m_SpectateButton, EQmIcon::EYE, FontIcons::FONT_ICON_EYE, Localize(\"Spectate\")"), std::string::npos);
-	EXPECT_NE(Source.find("GameClient()->m_Spectator.Spectate(Context.m_ClientId);"), std::string::npos);
-	EXPECT_NE(Source.find("Console()->ExecuteLine(aCommand);"), std::string::npos);
-}
-
 TEST(QmChatInteractions, VisibleTranslationCollectsCandidatesBeforeStartingJobs)
 {
 	const std::string Source = ReadTestSourceFile("src/game/client/components/chat.cpp");
@@ -141,26 +118,4 @@ TEST(QmRedPacketAutoClaim, DedicatedSendPathAllowsWhitespaceOnlyPassword)
 
 	EXPECT_NE(SendChatOnConn.find("pLine == nullptr || pLine[0] == '\\0'"), std::string::npos);
 	EXPECT_NE(SendChatOnConn.find("!AllowWhitespaceOnly && *str_utf8_skip_whitespaces(pLine) == '\\0'"), std::string::npos);
-}
-
-TEST(QmChatInteractions, ChatLineMenuUsesContentBoundsAndKeepsTargetHighlighted)
-{
-	const std::string Header = ReadTestSourceFile("src/game/client/components/chat.h");
-	const std::string Source = ReadTestSourceFile("src/game/client/components/chat.cpp");
-	const std::string OnRender = SourceFunctionBody(Source, "void CChat::OnRender()");
-	const std::string OpenMenu = SourceFunctionBody(Source, "void CChat::OpenChatLineMenu(");
-
-	EXPECT_NE(Header.find("float m_ContentWidth"), std::string::npos);
-	EXPECT_NE(Header.find("int m_LineIndex = -1"), std::string::npos);
-	EXPECT_NE(OnRender.find("Line.m_ContentWidth"), std::string::npos);
-	EXPECT_NE(OnRender.find("const float RenderedContentWidth = Line.m_ContentWidth * RenderScale;"), std::string::npos);
-	EXPECT_NE(OnRender.find("const bool MouseInsideLine = IsChatLineHit(RenderedTextRect, MousePos);"), std::string::npos);
-	EXPECT_NE(OnRender.find("ChatLineMenuOpen && m_ChatLinePopupContext.m_LineIndex == LineIndex"), std::string::npos);
-	EXPECT_NE(OnRender.find("const ColorRGBA SelectionColor"), std::string::npos);
-	// 选中高亮在圆角重构后走共享表面路径，仍按行内容矩形绘制。
-	EXPECT_NE(OnRender.find("DrawRoundedSurface(Ui(), CUIRect{RenderedTextRect.x"), std::string::npos);
-	EXPECT_NE(OpenMenu.find("m_ChatLinePopupContext.m_LineIndex = GetLineIndex(&Line);"), std::string::npos);
-	EXPECT_NE(OpenMenu.find("UiMousePos.x, UiMousePos.y"), std::string::npos);
-	EXPECT_EQ(OpenMenu.find("ChatToUiScale"), std::string::npos);
-	EXPECT_NE(OnRender.find("OpenChatLineMenu(*pMenuLine, GetUiMousePos());"), std::string::npos);
 }

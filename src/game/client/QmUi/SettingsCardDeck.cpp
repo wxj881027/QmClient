@@ -333,14 +333,19 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 			if(pDefinition == nullptr)
 				return;
 			const bool FullWidth = WidthState.IsFullWidth(pDefinition->m_Spec.m_pStableId, Column == 0);
+			int LayoutColumn = Column;
+			if(Column == 0 && !FullWidth)
+			{
+				const auto *pDefault = qm_card_registry::FindByStableId(pDefinition->m_Spec.m_pStableId);
+				LayoutColumn = ResolveSettingsCardLayoutColumn(Column, FullWidth, pDefault && pDefault->m_DefaultColumn == qm_card_registry::ECardColumn::Right);
+			}
 			if(DrawLayout.m_TwoColumns)
 			{
 				if(FullWidth)
 					ColumnRect = DrawLayout.m_ContentViewport;
 				else if(Column == 0)
 				{
-					const auto *pDefault = qm_card_registry::FindByStableId(pDefinition->m_Spec.m_pStableId);
-					ColumnRect = DrawLayout.m_aColumns[pDefault && pDefault->m_DefaultColumn == qm_card_registry::ECardColumn::Right ? 1 : 0];
+					ColumnRect = DrawLayout.m_aColumns[LayoutColumn - 1];
 				}
 			}
 			CUIRect Slot{ColumnRect.x, ColumnRect.y, ColumnRect.w, 0.0f};
@@ -434,11 +439,11 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 			SSettingsCardFrame Frame = ResolveSettingsCardHeaderActions(
 				BuildSettingsCardFrame(Slot, pDefinition->m_Spec, ContentHeight, Ctx.m_UiScale),
 				pDefinition->m_LeadingHeaderActionWidth, HasSettingsCardInfo(pDefinition->m_Spec));
-			const SSettingsCardColumnFrame Placement = DrawLayout.m_TwoColumns ? m_PackingPlan.Append(Column, Frame.m_Rect.h, LeadingFullWidth) : SingleColumnPlan.Append(Frame.m_Rect.h);
+			const SSettingsCardColumnFrame Placement = DrawLayout.m_TwoColumns ? m_PackingPlan.Append(LayoutColumn, Frame.m_Rect.h, LeadingFullWidth) : SingleColumnPlan.Append(Frame.m_Rect.h);
 			Frame = ResolveSettingsCardDrawFrame(Frame, 0.0f, Placement.m_Y - Frame.m_Rect.y);
 			if(StateIndex == m_WidthAnchorStateIndex)
 				Frame = ResolveSettingsCardDrawFrame(Frame, 0.0f, m_WidthAnchorY + ScrollOffset.y - Frame.m_Rect.y);
-			m_vPreparedCards.push_back({pDefinition, StateIndex, Column, FullWidth, Frame, TargetContentHeight, HeightInitializedThisFrame, Runtime.m_ContentHeightWasActive, m_vContentLayouts[StateIndex]});
+			m_vPreparedCards.push_back({pDefinition, StateIndex, Column, LayoutColumn, FullWidth, Frame, TargetContentHeight, HeightInitializedThisFrame, Runtime.m_ContentHeightWasActive, m_vContentLayouts[StateIndex]});
 		};
 		auto AppendColumn = [&](const std::vector<int> &vStateIndices, int Column, CUIRect ColumnRect) {
 			for(const int StateIndex : vStateIndices)
@@ -477,7 +482,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 				const auto &Runtime = m_vRuntimeStates[Card.m_StateIndex];
 				CUIRect Reference = Runtime.m_LayoutReference;
 				Reference.y += ScrollOffset.y;
-				m_vWidthPlacements.push_back({Card.m_Column, Card.m_FullWidth, Card.m_Frame.m_Rect, Reference, Runtime.m_HasLayoutReference && !m_Drag.Active()});
+				m_vWidthPlacements.push_back({Card.m_LayoutColumn, Card.m_FullWidth, Card.m_Frame.m_Rect, Reference, Runtime.m_HasLayoutReference && !m_Drag.Active()});
 			}
 			m_WidthLayout.Arrange(m_vWidthPlacements, DrawLayout.m_CardGap);
 			for(size_t i = 0; i < m_vPreparedCards.size(); ++i)

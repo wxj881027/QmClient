@@ -75,6 +75,7 @@ void CMenus::RenderQmVisualTranslateUiContent(CUIRect &Content, float LineHeight
 void CMenus::RenderQmVisualEntityOverlayContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
 {
 	CSettingsContentLayoutFlow Flow(Content);
+	const bool CanCommit = Flow.Input() && !PrewarmOnly && !Ui()->RenderOnly();
 	auto RenderSlider = [&](const void *pInputId, int *pValue, const char *pTextId, const char *pTitle) {
 		CUIRect Row, LabelColumn, ControlColumn;
 		const bool HasRow = Flow.Control(pTextId, LineHeight, Row);
@@ -96,7 +97,30 @@ void CMenus::RenderQmVisualEntityOverlayContent(CUIRect &Content, float LineHeig
 	static int s_QmEntityOverlayTeleCheckpointAlphaInputId;
 	static int s_QmEntityOverlaySwitchAlphaInputId;
 	static int s_ClOverlayEntitiesInputId;
-	RenderSlider(&s_ClOverlayEntitiesInputId, &g_Config.m_ClOverlayEntities, "m_ClOverlayEntities", Localize("Tune layer opacity"));
+	// 显示实体层和原来的叠层不透明度共用配置，合并后只保留一个控件。
+	RenderSlider(&s_ClOverlayEntitiesInputId, &g_Config.m_ClOverlayEntities, "m_ClOverlayEntities", Localize("Overlay entities"));
+	CUIRect Row;
+	if(Flow.Control("text-entities", LineHeight, Row))
+	{
+		if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_ClTextEntities, "Show text entities", Localize("Show text entities"), g_Config.m_ClTextEntities, &Row) && CanCommit)
+			g_Config.m_ClTextEntities ^= 1;
+	}
+	Flow.Space(LineSpacing);
+	if(g_Config.m_ClTextEntities)
+	{
+		if(Flow.Control("text-entities-size", LineHeight, Row))
+		{
+			CUIRect LabelColumn, ControlColumn;
+			SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
+			RenderQmVisualLabel("ddnet-text-entities-size", &LabelColumn, Localize("Size"), BodySize);
+			GameClient()->m_Tooltips.DoSettingsToolTipForConfig(&g_Config.m_ClTextEntitiesSize, &Row, &g_Config.m_ClTextEntitiesSize, &LabelColumn);
+			const int PreviousSize = g_Config.m_ClTextEntitiesSize;
+			RenderQmSettingsSliderWithValueInput(&g_Config.m_ClTextEntitiesSize, ControlColumn, &g_Config.m_ClTextEntitiesSize, 20, 100, "", PrewarmOnly, CUi::SCROLLBAR_OPTION_DELAYUPDATE);
+			if(CanCommit && PreviousSize != g_Config.m_ClTextEntitiesSize)
+				GameClient()->m_MapImages.SetTextureScale(g_Config.m_ClTextEntitiesSize);
+		}
+		Flow.Space(LineSpacing);
+	}
 	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:entity_overlay", CurrentSettingsContentMetrics(), PrewarmOnly || Ui()->RenderOnly()))
 		return;
 
@@ -308,7 +332,7 @@ void CMenus::RenderQmVisualChatBubbleContent(CUIRect &Content, float LineHeight,
 	{
 		SplitSettingsControlRow(StyleRow, CurrentSettingsContentMetrics(), &StyleLabel, &StyleControl);
 		RenderQmVisualLabel("qm-chat-bubble-style-label", &StyleLabel, Localize("Style"), BodySize);
-		const char *apStyles[] = {Localize("Comic dialogue"), Localize("Candy gradient"), Localize("Cloud bubble")};
+		const char *apStyles[] = {Localize("Comic dialogue"), Localize("Candy gradient"), Localize("Cloud bubble"), Localize("Default")};
 		static CUi::SDropDownState s_StyleState;
 		static CScrollRegion s_StyleScroll;
 		s_StyleState.m_SelectionPopupContext.m_pScrollRegion = &s_StyleScroll;
@@ -351,14 +375,14 @@ void CMenus::RenderQmVisualChatBubbleContent(CUIRect &Content, float LineHeight,
 			else
 				qm_chat_bubble::Render(Graphics(), Bubble, Colors);
 			TextRender()->TextColor(Colors.m_Text);
-			TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor().WithMultipliedAlpha(g_Config.m_QmChatBubbleCustomColors ? Colors.m_Text.a : 0.0f));
+			TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor().WithMultipliedAlpha((g_Config.m_QmChatBubbleCustomColors || Style == qm_chat_bubble::EStyle::DEFAULT) ? Colors.m_Text.a : 0.0f));
 			CTextCursor Cursor;
 			Cursor.m_FontSize = FontSize * Scale;
 			Cursor.m_LineWidth = Measure.m_LineWidth * Scale;
 			Cursor.m_Flags = TEXTFLAG_RENDER;
 			Cursor.SetPosition(Bubble.m_TextPosition);
 			qm_chat_bubble::RenderText(TextRender(), Cursor, pText, Colors.m_Text,
-				TextRender()->DefaultTextOutlineColor().WithMultipliedAlpha(g_Config.m_QmChatBubbleCustomColors ? Colors.m_Text.a : 0.0f));
+				TextRender()->DefaultTextOutlineColor().WithMultipliedAlpha((g_Config.m_QmChatBubbleCustomColors || Style == qm_chat_bubble::EStyle::DEFAULT) ? Colors.m_Text.a : 0.0f));
 		}
 		TextRender()->SetRenderFlags(PreviousFlags);
 		TextRender()->TextColor(PreviousColor);
@@ -526,7 +550,7 @@ void CMenus::RenderQmVisualSpectatorModeContent(CUIRect &Content, float LineHeig
 {
 	CSettingsContentLayoutFlow Flow(Content);
 	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmCinematicCamera, "qmclient-spectator-smoothing", Localize("Smooth free spectator camera"), &g_Config.m_QmCinematicCamera);
-	if(g_Config.m_QmCinematicCamera && qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:spectator_mode", CurrentSettingsContentMetrics(), PrewarmOnly || Ui()->RenderOnly()))
+	if(g_Config.m_QmCinematicCamera)
 	{
 		static int s_SmoothnessInputId;
 		CUIRect Row, LabelColumn, ControlColumn;
@@ -558,9 +582,6 @@ void CMenus::RenderQmVisualCameraViewContent(CUIRect &Content, float LineHeight,
 	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmCameraDrift, "Enable camera drift", Localize("Enable camera drift"), &g_Config.m_QmCameraDrift);
 	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmDynamicFov, "Enable dynamic FOV", Localize("Enable dynamic FOV"), &g_Config.m_QmDynamicFov);
 	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmZoomInstantReverse, "Instant zoom reverse", Localize("Instant zoom reverse"), &g_Config.m_QmZoomInstantReverse);
-
-	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:camera_view", CurrentSettingsContentMetrics(), PrewarmOnly || Ui()->RenderOnly()))
-		return;
 
 	if(g_Config.m_QmCameraDrift)
 	{
