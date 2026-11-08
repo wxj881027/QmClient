@@ -2087,6 +2087,12 @@ Cannot update public words. Previous words remain active.
 Cannot write the wiki file
 == Wiki dosyası yazılamıyor
 
+Capsule seam
+== Kapsül birleşimi
+
+Capsule seam smoothing: ease the straight-to-cap curvature jump (0 = plain semicircular ends)
+== Kapsül birleşimi yumuşatma: düz ile uç arasındaki eğrilik sıçramasını yumuşatır (0 = saf yarım daire uçlar)
+
 Capture the flag
 == Bayrak kapmaca (CTF)
 
@@ -2477,32 +2483,23 @@ Clan: %s
 Classic
 == Klasik
 
+Classic arc
+== Klasik yay
+
 Classic Easy
 == Klasik Easy
-
-Classic easy
-== Klasik kolay
 
 Classic Next
 == Klasik Next
 
-Classic next
-== Klasik sonraki
-
 Classic Nut
 == Klasik Nut
-
-Classic nut
-== Klasik nut
 
 Classic PowerShell
 == Klasik PowerShell
 
 Classic Pro
 == Klasik Pro
-
-Classic pro
-== Klasik profesyonel
 
 Clear
 == Temizle
@@ -2558,9 +2555,6 @@ Click a key on the keyboard picture or under "Mouse", then add a command with "A
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
 == Listeden bir dile tıklayınca hemen uygulanır; soldaki bayrak seçili olanı gösterir.
 
-Click a map name to copy it and press the X button to remove it; add maps with the "Favorite map" checkbox in the in-game server info page.
-== Harita adına tıklayınca kopyalanır, sağdaki X düğmesi kaydı kaldırır. Ekleme için oyun içi sunucu bilgi sayfasındaki favori harita kutusunu işaretle.
-
 Click a part on the right to edit its color, blend mode and strength.
 == Rengini, karıştırma modunu ve gücünü ayarlamak için sağdaki bir parçaya tıklayın.
 
@@ -2595,9 +2589,6 @@ Click to add this community to favorites
 == Bu topluluğu favorilere eklemek için tıklayın
 
 Click to copy map name
-== Harita adını kopyalamak için tıklayın
-
-Click to copy the map name
 == Harita adını kopyalamak için tıklayın
 
 Click to copy this clan's name to clipboard
@@ -3020,6 +3011,9 @@ Confirm disconnect after game end (minutes, -1 off, 0 always)
 Confirm quit after game end (minutes, -1 off, 0 always)
 == Oyun bittikten sonra çıkmayı onayla (dakika, -1 kapalı, 0 her zaman)
 
+Conic Bezier
+== Konik Bézier
+
 Connect address error
 == Bağlantı adresi hatası
 
@@ -3152,6 +3146,9 @@ Contents
 Continue anyway?
 == Yine de devam edilsin mi?
 
+Continuous-curvature UI corners (0 = classic arc, 100 = strongest)
+== Arayüz köşelerinde sürekli eğrilik (0 = klasik yay, 100 = en güçlü)
+
 Contributors
 == Katkıda Bulunanlar
 
@@ -3253,6 +3250,12 @@ Copy skin ID
 
 Copy skin option color
 == Kopyala cilt seçeneği rengi
+
+Corner curvature
+== Köşe eğriliği
+
+Corner curve
+== Köşe eğrisi
 
 Could not add the player as a friend
 == Oyuncu arkadaş olarak eklenemedi
@@ -5612,9 +5615,6 @@ Favorite maps
 Favorites
 == Favoriler
 
-Favorites match the exact map name and also feed the "Favorite map" tab in the server browser.
-== Favoriler harita adının tam eşleşmesine göre çalışır ve sunucu tarayıcısındaki favori harita sekmesini de besler.
-
 feat-003 dogfood: tokens + 12 widgets
 == feat-003 dogfood: tokenlar + 12 widget
 
@@ -7771,9 +7771,6 @@ Leave empty to disable
 
 Leave empty to join public room
 == Genel odaya katılmak için boş bırakın
-
-Leave empty to show everyone
-== Herkesi göstermek için boş bırakın
 
 Leave empty to use default prompt
 == Varsayılan istemi kullanmak için boş bırakın
@@ -11165,6 +11162,9 @@ Queue preset: %s
 Quick action menu for players
 == Oyuncular için hızlı işlem menüsü
 
+Quintic Bezier
+== Beşinci derece Bézier
+
 Quit
 == Çıkış
 
@@ -11620,9 +11620,6 @@ Remove chat
 
 Remove friend
 == Arkadaşı kaldır
-
-Remove from favorites
-== Favorilerden kaldır
 
 Remove from history
 == Geçmişten kaldır
@@ -12395,9 +12392,6 @@ Scoreboard
 Scoreboard cursor
 == Skor tablosu imleci
 
-Scoreboard filter: only show players whose name or clan contains this text
-== Skor tablosu filtresi: adı veya klanı bu metni içeren oyuncuları göster
-
 Scoreboard playtime
 == Skor tablosunda oyun süresi
 
@@ -12982,6 +12976,9 @@ Settings page opacity
 
 Settings page right panel opacity
 == Ayarlar sayfası sağ panel opaklığı
+
+Settings prewarm default migration done
+== Ayarlar ön ısıtma varsayılanı taşıması tamamlandı
 
 Settings, binds, profiles, chat binds and the war list are included. Select additional cfg files below.
 == Ayarlar, tuş atamaları, görünüm profilleri, sohbet bağlantıları ve savaş listesi dahildir. Aşağıdan ek cfg dosyalarını seçin.
@@ -14852,6 +14849,9 @@ Sun
 Super
 == Süper
 
+Superellipse
+== Süperelips
+
 Support is optional; nothing here changes client behavior.
 == Destek isteğe bağlıdır; buradaki hiçbir şey istemci davranışını değiştirmez.
 
@@ -16337,6 +16337,9 @@ UI color
 UI controller sens.
 == Arayüz kumanda hassasiyeti
 
+UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier
+== Arayüz köşe eğrisi: 0 = klasik yay, 1 = süperelips, 2 = beşinci derece Bézier, 3 = konik Bézier
+
 UI icon color
 == Arayüz simgesi rengi
 
@@ -17774,17 +17777,11 @@ Your current race time is %s
 Your current version is outdated. Please update from the QQ group.
 == Mevcut sürümünüz güncel değil. Lütfen QQ grubundan en son sürümü güncelleyin.
 
-Your favorite map manager
-== En sevdiğiniz harita yöneticiniz
-
 Your favorite maps appear here
 == Favori haritalarınız burada görünür
 
 Your friend %s is online and currently on map %s!
 == Arkadaşınız %s çevrimiçi ve şu anda %s haritasında!
-
-Your list of favorite maps, each shown with its map type, with quick copy and remove actions.
-== Favori haritalarının listesi; her biri türüyle gösterilir ve hızlıca kopyalanıp kaldırılabilir.
 
 Your locked team was killed because '%s' %s
 == Kilitli takımınız '%s' %s olduğu için öldürüldü

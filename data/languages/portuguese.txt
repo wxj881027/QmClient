@@ -2087,6 +2087,12 @@ Cannot update public words. Previous words remain active.
 Cannot write the wiki file
 == Não é possível gravar o ficheiro do Wiki
 
+Capsule seam
+== Junta da cápsula
+
+Capsule seam smoothing: ease the straight-to-cap curvature jump (0 = plain semicircular ends)
+== Suavização da junta da cápsula: suaviza o salto de curvatura entre a reta e a ponta (0 = pontas semicirculares)
+
 Capture the flag
 == Capturar a bandeira (CTF)
 
@@ -2477,32 +2483,23 @@ Clan: %s
 Classic
 == Clássico
 
+Classic arc
+== Arco clássico
+
 Classic Easy
 == Classic Easy
-
-Classic easy
-== Clássico fácil
 
 Classic Next
 == Classic Next
 
-Classic next
-== Clássico seguinte
-
 Classic Nut
 == Classic Nut
-
-Classic nut
-== Clássico nut
 
 Classic PowerShell
 == PowerShell clássico
 
 Classic Pro
 == Classic Pro
-
-Classic pro
-== Clássico pro
 
 Clear
 == Limpar
@@ -2558,9 +2555,6 @@ Click a key on the keyboard picture or under "Mouse", then add a command with "A
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
 == Clica num idioma da lista para o aplicar de imediato; a bandeira à esquerda mostra o escolhido.
 
-Click a map name to copy it and press the X button to remove it; add maps with the "Favorite map" checkbox in the in-game server info page.
-== Clica no nome do mapa para o copiar e prime o X para o remover; adiciona mapas pela caixa "Mapa favorito" na página de informações do servidor.
-
 Click a part on the right to edit its color, blend mode and strength.
 == Clica numa parte à direita para ajustar a cor, o modo de mistura e a intensidade.
 
@@ -2595,9 +2589,6 @@ Click to add this community to favorites
 == Clique para adicionar esta comunidade aos favoritos
 
 Click to copy map name
-== Clique para copiar o nome do mapa
-
-Click to copy the map name
 == Clique para copiar o nome do mapa
 
 Click to copy this clan's name to clipboard
@@ -3020,6 +3011,9 @@ Confirm disconnect after game end (minutes, -1 off, 0 always)
 Confirm quit after game end (minutes, -1 off, 0 always)
 == Confirmar saída após fim do jogo (minutos, -1 desligado, 0 sempre)
 
+Conic Bezier
+== Bézier cónica
+
 Connect address error
 == Erro de endereço de conexão
 
@@ -3152,6 +3146,9 @@ Contents
 Continue anyway?
 == Continuar mesmo assim?
 
+Continuous-curvature UI corners (0 = classic arc, 100 = strongest)
+== Curvatura contínua nos cantos da interface (0 = arco clássico, 100 = máximo)
+
 Contributors
 == Contribuidores
 
@@ -3253,6 +3250,12 @@ Copy skin ID
 
 Copy skin option color
 == Cor das opções de skin copiada
+
+Corner curvature
+== Curvatura do canto
+
+Corner curve
+== Curva do canto
 
 Could not add the player as a friend
 == Não foi possível adicionar o jogador como amigo
@@ -5612,9 +5615,6 @@ Favorite maps
 Favorites
 == Favoritos
 
-Favorites match the exact map name and also feed the "Favorite map" tab in the server browser.
-== Os favoritos comparam o nome exato do mapa e também alimentam o separador "Mapa favorito" do navegador de servidores.
-
 feat-003 dogfood: tokens + 12 widgets
 == feat-003 dogfood：tokens + 12 widgets
 
@@ -7771,9 +7771,6 @@ Leave empty to disable
 
 Leave empty to join public room
 == Deixe vazio para entrar na sala pública
-
-Leave empty to show everyone
-== Deixe vazio para mostrar todos os jogadores
 
 Leave empty to use default prompt
 == Deixe vazio para usar o prompt padrão
@@ -11165,6 +11162,9 @@ Queue preset: %s
 Quick action menu for players
 == Menu de ação rápida para jogadores
 
+Quintic Bezier
+== Bézier quíntica
+
 Quit
 == Sair
 
@@ -11620,9 +11620,6 @@ Remove chat
 
 Remove friend
 == Remover amigo
-
-Remove from favorites
-== Remover dos favoritos
 
 Remove from history
 == Remover do histórico
@@ -12395,9 +12392,6 @@ Scoreboard
 Scoreboard cursor
 == Cursor do placar
 
-Scoreboard filter: only show players whose name or clan contains this text
-== Filtro do placar: mostrar apenas jogadores cujo nome ou clã contenha este texto
-
 Scoreboard playtime
 == Tempo de jogo no painel
 
@@ -12982,6 +12976,9 @@ Settings page opacity
 
 Settings page right panel opacity
 == Opacidade do painel direito da página de configurações
+
+Settings prewarm default migration done
+== Migração do valor predefinido de pré-aquecimento das configurações concluída
 
 Settings, binds, profiles, chat binds and the war list are included. Select additional cfg files below.
 == Inclui configurações, binds, perfis de skin, binds de chat e lista de guerra. Selecione ficheiros cfg adicionais abaixo.
@@ -14852,6 +14849,9 @@ Sun
 Super
 == Super
 
+Superellipse
+== Superelipse
+
 Support is optional; nothing here changes client behavior.
 == O apoio é opcional; nada aqui altera o comportamento do cliente.
 
@@ -16337,6 +16337,9 @@ UI color
 UI controller sens.
 == Sensibilidade do comando na IU
 
+UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier
+== Curva do canto da interface: 0 = arco clássico, 1 = superelipse, 2 = Bézier quíntica, 3 = Bézier cónica
+
 UI icon color
 == Cor dos ícones da interface
 
@@ -17774,17 +17777,11 @@ Your current race time is %s
 Your current version is outdated. Please update from the QQ group.
 == A sua versão atual está desatualizada. Por favor, atualize a partir do grupo QQ.
 
-Your favorite map manager
-== O teu gestor de mapas favorito
-
 Your favorite maps appear here
 == Os seus mapas favoritos aparecem aqui
 
 Your friend %s is online and currently on map %s!
 == O teu amigo %s está online e atualmente no mapa %s!
-
-Your list of favorite maps, each shown with its map type, with quick copy and remove actions.
-== A tua lista de mapas favoritos, cada um com o tipo e ações rápidas de copiar e remover.
 
 Your locked team was killed because '%s' %s
 == A tua equipa bloqueada foi morta porque '%s' %s

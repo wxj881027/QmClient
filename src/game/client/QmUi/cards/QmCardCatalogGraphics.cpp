@@ -135,6 +135,10 @@ namespace
 
 uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildContext &Ctx, std::vector<SSettingsCardDefinition> *pCards)
 {
+	// 冷启动时这个函数一次要 600ms，先拆开看是静态初始化（枚举显示模式）
+	// 还是后面的卡片定义构建。
+	const auto QmGfxNowMs = [] { return time_get() * 1000.0 / (double)time_freq(); };
+	const double QmGfxEntryMs = QmGfxNowMs();
 	const SSettingsPageLayoutFrame GraphicsPage = Ctx.m_Page;
 	static bool CheckSettings;
 	CheckSettings = false;
@@ -165,6 +169,8 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 		s_InitDisplayAllVideoModes = g_Config.m_GfxDisplayAllVideoModes;
 	}
 
+	if(pCards == nullptr)
+		dbg_msg("perf/page", "graphics_prepare static_init=%.1fms", QmGfxNowMs() - QmGfxEntryMs);
 	const SSettingsContentMetrics GraphicsMetrics = Ctx.m_Metrics;
 	const float UiScale = GraphicsMetrics.m_UiScale;
 	const float BodySize = GraphicsMetrics.m_BodySize;
@@ -734,23 +740,45 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 					g_Config.m_QmUiCardBorders ^= 1;
 			});
 
-			// 圆角曲线：胶囊滑块切换算法；强度为 0 时两种算法都精确等于原来的圆弧。
+			// 圆角曲线四档：原圆弧是旧外观（同时关掉沿边生长与曲线），其余三档都是
+			// 连续曲率，区别只在曲率沿弧长怎么分布。小控件受 25% 生长上限约束，
+			// 实际会退化成圆弧，所以四档的差别只在卡片和面板这类大表面上看得出来。
 			RowAction("graphics-corner-curve", GraphicsMetrics.m_LineHeight, [&](CUIRect CornerCurveRow) {
-				static CButtonContainer s_aCornerCurveButtons[2];
-				const char *apCornerCurveLabels[] = {Localize("Superellipse"), Localize("Bezier")};
+				static CButtonContainer s_aCornerCurveButtons[4];
+				const char *apCornerCurveLabels[] = {
+					Localize("Classic arc"),
+					Localize("Superellipse"),
+					Localize("Quintic Bezier"),
+					Localize("Conic Bezier"),
+				};
 				CUIRect CornerCurveLabel, CornerCurveSegments;
 				SplitSettingsControlRow(CornerCurveRow, GraphicsMetrics, &CornerCurveLabel, &CornerCurveSegments, ESettingsControlWidth::LONG_CHOICE);
 				Ui()->DoLabel(&CornerCurveLabel, Localize("Corner curve"), BodySize, TEXTALIGN_ML);
-				const int CurrentCurve = g_Config.m_QmUiCornerCurve != 0 ? 1 : 0;
-				const int PickedCurve = DoSegmentedChoice(s_aCornerCurveButtons, apCornerCurveLabels, 2, CurrentCurve, CornerCurveSegments);
+				// 四档选择是自绘控件，不经过 NumericField / DropDown 的配置绑定，
+				// 这里给整行补登记配置说明：悬停标题或右侧控件都能看到提示。
+				static const char s_CornerCurveHelpId[] = "graphics-corner-curve-help";
+				GameClient()->m_Tooltips.DoSettingsToolTipForConfig(s_CornerCurveHelpId, &CornerCurveRow, &g_Config.m_QmUiCornerCurve, &CornerCurveLabel);
+				const int CurrentCurve = g_Config.m_QmUiCornerCurve;
+				const int PickedCurve = DoSegmentedChoice(s_aCornerCurveButtons, apCornerCurveLabels, 4, CurrentCurve, CornerCurveSegments);
 				if(PickedCurve != CurrentCurve)
 					g_Config.m_QmUiCornerCurve = PickedCurve;
 			});
 
-			// 圆角强度：连续数值，0 = 以前的圆弧渲染。
-			RowAction("graphics-corner-curvature", GraphicsMetrics.m_LineHeight, [&](CUIRect CornerCurvatureRow) {
-				DoGraphicsNumericField("graphics-corner-curvature", &g_Config.m_QmUiCornerSmoothing, &g_Config.m_QmUiCornerSmoothing, CornerCurvatureRow, Localize("Corner curvature"), 0, 100, &CUi::ms_LinearScrollbarScale, "%", CUi::SCROLLBAR_OPTION_DELAYUPDATE);
-			});
+			// 圆角强度与胶囊接缝：原圆弧档没有可调项，两行都不占位；
+			// 数值不随切档清空，切回连续曲率档时沿用上一次的值。
+			if(g_Config.m_QmUiCornerCurve != 0)
+			{
+				RowAction("graphics-corner-curvature", GraphicsMetrics.m_LineHeight, [&](CUIRect CornerCurvatureRow) {
+					DoGraphicsNumericField("graphics-corner-curvature", &g_Config.m_QmUiCornerSmoothing, &g_Config.m_QmUiCornerSmoothing, CornerCurvatureRow, Localize("Corner curvature"), 0, 100, &CUi::ms_LinearScrollbarScale, "%", CUi::SCROLLBAR_OPTION_DELAYUPDATE);
+				});
+
+				// 胶囊接缝软化：只加曲线强度、不加半径，曲率在几个像素内从 0 缓升到 1/R。
+				// 只有「有一段直边」的胶囊生效，正圆（滑块圆点、单选按钮）不受影响。
+				// 0 = 纯半圆端头，与 iOS 一致。
+				RowAction("graphics-capsule-seam", GraphicsMetrics.m_LineHeight, [&](CUIRect CapsuleSeamRow) {
+					DoGraphicsNumericField("graphics-capsule-seam", &g_Config.m_QmUiCapsuleSeam, &g_Config.m_QmUiCapsuleSeam, CapsuleSeamRow, Localize("Capsule seam"), 0, 100, &CUi::ms_LinearScrollbarScale, "%", CUi::SCROLLBAR_OPTION_DELAYUPDATE);
+				});
+			}
 
 
 			if(!qm_card_catalog::QmCardRenderHook::Personalization(this, ContentRect, "deck:graphics-visual", GraphicsMetrics))
@@ -1120,5 +1148,7 @@ static CButtonContainer s_CardBorderColorResetId;
 			qm_card_catalog::UseDeclaredModuleContent(Ctx, Card);
 		}
 	}
+	if(pCards == nullptr)
+		dbg_msg("perf/page", "graphics_prepare total=%.1fms", QmGfxNowMs() - QmGfxEntryMs);
 	return GraphicsLayoutRevision;
 }

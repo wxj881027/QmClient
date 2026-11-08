@@ -912,10 +912,12 @@ void CGraphics_Threaded::DrawRenderTarget(CRenderTargetHandle Target, const SRen
 	};
 
 	const float Rounding = std::clamp(Params.m_Rounding, 0.0f, minimum(Params.m_W, Params.m_H) * 0.5f);
-	// 连续曲率：圆角沿边铺开的长度随强度变长，掩码用同一个系数、同一套曲线采样，
+	// 连续曲率：圆角沿边铺开的长度随强度变长，掩码用同一个生长上限、同一套曲线采样，
 	// 否则面板换了形状、底下的模糊掩码还是圆弧，角上会露出没被模糊的硬边。
-	const float CornerAmount = std::clamp(Params.m_CornerSmoothing, 0.0f, 1.0f);
-	const float Inset = std::clamp(RoundedCornerCurveInset(Rounding, CornerAmount), 0.0f, minimum(Params.m_W, Params.m_H) * 0.5f);
+	const int CornerCurve = (int)Params.m_CornerCurve;
+	const SRoundedCornerShape CornerShape = ResolveRoundedCornerShape(Rounding, Params.m_W, Params.m_H, Params.m_CornerSmoothing, CornerCurve, Params.m_CornerSeam);
+	const float CornerAmount = CornerShape.m_Amount;
+	const float Inset = CornerShape.m_Radius;
 	if(Params.m_Corners == CORNER_NONE || Rounding <= 0.0f)
 	{
 		AddQuad(
@@ -932,7 +934,7 @@ void CGraphics_Threaded::DrawRenderTarget(CRenderTargetHandle Target, const SRen
 		for(int i = 0; i < RECT_CORNER_SEGMENTS + 3; i++)
 		{
 			float DirectionX, DirectionY;
-			RoundedCornerCurveDirection((int)Params.m_CornerCurve, CornerAmount, i, RECT_CORNER_SEGMENTS, DirectionX, DirectionY);
+			RoundedCornerCurveDirection(CornerCurve, CornerAmount, i, RECT_CORNER_SEGMENTS, DirectionX, DirectionY);
 			aCorner[i] = vec2(DirectionX, DirectionY);
 		}
 		constexpr int NumSegments = RECT_CORNER_SEGMENTS;
@@ -970,19 +972,36 @@ void CGraphics_Threaded::DrawRenderTarget(CRenderTargetHandle Target, const SRen
 					vec2(Params.m_X + Params.m_W - Inset + Ca3 * Inset, Params.m_Y + Params.m_H - Inset + Sa3 * Inset));
 		}
 
-		// 掩码是硬边几何：内部用两条互相重叠 1 像素的带状四边形，
-		// 四条边和角区的扇形就不会因为亚像素位置差出 1 像素缝（面板圆角上那圈点状边就是这么来的）。
-		constexpr float MaskOverlap = 1.0f;
+		// 掩码是硬边几何：内部用五块互不重叠的四边形铺满（中心 + 上下左右四条边带），
+		// 每块都用上面同一个 Inset 算边，因此与四角扇形共用同一条边界，不会差出缝。
+		// 不能用「两条覆盖整高/整宽、互相重叠 1 像素」的写法：那样交集处会把同一块
+		// 模糊底合成两次。胶囊的短边正好是两倍圆角，交集就是横贯垂直中线的一条窄带，
+		// 合成 alpha 不是 1 时（模糊纹理带透明度）会显出一条亮/暗横条。
 		AddQuad(
-			vec2(Params.m_X + Inset - MaskOverlap, Params.m_Y),
-			vec2(Params.m_X + Params.m_W - Inset + MaskOverlap, Params.m_Y),
-			vec2(Params.m_X + Params.m_W - Inset + MaskOverlap, Params.m_Y + Params.m_H),
-			vec2(Params.m_X + Inset - MaskOverlap, Params.m_Y + Params.m_H));
+			vec2(Params.m_X + Inset, Params.m_Y + Inset),
+			vec2(Params.m_X + Params.m_W - Inset, Params.m_Y + Inset),
+			vec2(Params.m_X + Params.m_W - Inset, Params.m_Y + Params.m_H - Inset),
+			vec2(Params.m_X + Inset, Params.m_Y + Params.m_H - Inset));
 		AddQuad(
-			vec2(Params.m_X, Params.m_Y + Inset - MaskOverlap),
-			vec2(Params.m_X + Params.m_W, Params.m_Y + Inset - MaskOverlap),
-			vec2(Params.m_X + Params.m_W, Params.m_Y + Params.m_H - Inset + MaskOverlap),
-			vec2(Params.m_X, Params.m_Y + Params.m_H - Inset + MaskOverlap));
+			vec2(Params.m_X + Inset, Params.m_Y),
+			vec2(Params.m_X + Params.m_W - Inset, Params.m_Y),
+			vec2(Params.m_X + Params.m_W - Inset, Params.m_Y + Inset),
+			vec2(Params.m_X + Inset, Params.m_Y + Inset));
+		AddQuad(
+			vec2(Params.m_X + Inset, Params.m_Y + Params.m_H - Inset),
+			vec2(Params.m_X + Params.m_W - Inset, Params.m_Y + Params.m_H - Inset),
+			vec2(Params.m_X + Params.m_W - Inset, Params.m_Y + Params.m_H),
+			vec2(Params.m_X + Inset, Params.m_Y + Params.m_H));
+		AddQuad(
+			vec2(Params.m_X, Params.m_Y + Inset),
+			vec2(Params.m_X + Inset, Params.m_Y + Inset),
+			vec2(Params.m_X + Inset, Params.m_Y + Params.m_H - Inset),
+			vec2(Params.m_X, Params.m_Y + Params.m_H - Inset));
+		AddQuad(
+			vec2(Params.m_X + Params.m_W - Inset, Params.m_Y + Inset),
+			vec2(Params.m_X + Params.m_W, Params.m_Y + Inset),
+			vec2(Params.m_X + Params.m_W, Params.m_Y + Params.m_H - Inset),
+			vec2(Params.m_X + Params.m_W - Inset, Params.m_Y + Params.m_H - Inset));
 		if(!(Params.m_Corners & CORNER_TL))
 			AddQuad(vec2(Params.m_X, Params.m_Y), vec2(Params.m_X + Inset, Params.m_Y), vec2(Params.m_X + Inset, Params.m_Y + Inset), vec2(Params.m_X, Params.m_Y + Inset));
 		if(!(Params.m_Corners & CORNER_TR))
@@ -2133,7 +2152,6 @@ void CGraphics_Threaded::QuadsDraw(CQuadItem *pArray, int Num)
 
 void CGraphics_Threaded::QuadsDrawTL(const CQuadItem *pArray, int Num)
 {
-
 	QuadsDrawTLImpl(m_aVertices, pArray, Num);
 }
 
@@ -2275,11 +2293,12 @@ void CGraphics_Threaded::DrawRectExtAntialias(float x, float y, float w, float h
 	if(Corners == 0 || r <= 0.0f || Color.a <= 0.0f)
 		return;
 
-	// 连续曲率：圆角沿边铺得更长，几何兜底必须和着色器用同一条曲线、同一个内缩长度，
-	// 否则没有 SDF 的机器上圆角会明显小一圈。
-	const float CornerAmount = std::clamp(g_Config.m_QmUiCornerSmoothing / 100.0f, 0.0f, 1.0f);
+	// 连续曲率：圆角沿边铺得更长，几何兜底必须和着色器用同一条曲线、同一个生长上限，
+	// 否则没有 SDF 的机器上圆角会明显小一圈，或者胶囊被强行压弯。
 	const int CornerCurve = g_Config.m_QmUiCornerCurve;
-	const float Inset = std::clamp(RoundedCornerCurveInset(r, CornerAmount), 0.0f, minimum(w, h) * 0.5f);
+	const SRoundedCornerShape CornerShape = ResolveRoundedCornerShape(r, w, h, g_Config.m_QmUiCornerSmoothing / 100.0f, CornerCurve, g_Config.m_QmUiCapsuleSeam / 100.0f);
+	const float CornerAmount = CornerShape.m_Amount;
+	const float Inset = CornerShape.m_Radius;
 	const float AntialiasSize = minimum(RoundedRectAntialiasSize(), Inset);
 	if(AntialiasSize <= 0.0f)
 		return;
@@ -2826,7 +2845,6 @@ int CGraphics_Threaded::CreateRectQuadContainer(float x, float y, float w, float
 
 void CGraphics_Threaded::DrawRect(float x, float y, float w, float h, ColorRGBA Color, int Corners, float Rounding)
 {
-
 	TextureClear();
 	QuadsBegin();
 	SetColor(Color);

@@ -93,8 +93,12 @@ fragment float4 qmclient_procedural_ring_fragment(SMetalVertexOut Input [[stage_
 	return float4(Input.m_Color.rgb, Input.m_Color.a * RadialCoverage * AngularCoverage);
 }
 
-// 圆角形状由两个参数描述：连续曲率强度 Smoothing（0 = 圆弧），
-// 以及外扩 Expand（整块形状按距离场向外偏移，等价于同一条曲线的等距外扩）。
+// 圆角形状由曲线档位 CurveType、连续曲率强度 Smoothing（0 = 圆弧）和外扩 Expand
+// （整块形状按距离场向外偏移，等价于同一条曲线的等距外扩）描述。
+//
+// 曲线档位：0 = 原圆弧（旧外观），1 = 超椭圆（p 范数），2 = 五次贝塞尔，
+// 3 = 圆锥贝塞尔（有理二次）。超椭圆与五次贝塞尔的端点曲率都是 0，是真正的
+// 连续曲率；圆锥贝塞尔的端点曲率恒为 1/(2W^2 E)，只能把接缝跳变压小，做不到 0。
 // 圆锥曲线角（有理二次 Bézier）：P0=(E,0)、P1=(E,E)、P2=(0,E)，权重 W。
 // W = 0.7071 时正好是圆弧；W 越大角越平。零等值线就是这条曲线本身。
 float2 ConicCornerPoint(float T, float E, float W)
@@ -148,19 +152,111 @@ float ConicCornerDistance(float2 P, float E, float W)
 	return dot(P - Q, P) > 0.0 ? Dist : -Dist;
 }
 
-float RoundedRectDistance(float2 Point, float2 HalfSize, float Radius, float Smoothing, float CurveType)
-
+// 生长上限：普通控件封在短边的 25%，已经是胶囊的元素（半径达到短边 9/10）放宽到
+// 短边的 40%。这里用半边长表示，所以系数是 0.5 / 0.8。上限只限制生长，
+// 不回收调用方本来就给的更大半径。
+float RoundedCornerCapRatio(float Radius, float MinHalf)
 {
-	// 连续曲率：圆角沿边铺得更长（最多 1.4 倍），曲率从直边处的 0 开始爬升。
-	const float Amount = clamp(Smoothing, 0.0, 1.0);
-	const float EffectiveRadius = min(Radius * (1.0 + 1.3 * Amount), min(HalfSize.x, HalfSize.y));
+	return Radius >= MinHalf * (9.0 / 10.0) ? 0.8 : 0.5;
+}
+
+// 连续曲率的代价是曲率峰值升高：90° 转弯、端点曲率归零、圆角长度不变时，峰值
+// 必然高于圆弧（超椭圆满强度能到 2.5 倍）。所以圆角沿边拉长来补偿，拉长量受有效
+// 半径上限约束，曲线强度按「实际拿到多少生长」反解——扩不动时（胶囊、短边很近的
+// 小控件）自动退回圆弧，不会被强行压弯。
+// x = 实际生效的圆角半径（含沿边拉长），y = 实际生效的曲线强度。
+float2 RoundedCornerShape(float2 HalfSize, float Radius, float Smoothing, float CurveType, float SeamAmount)
+{
+	// 原圆弧档就是旧外观：不扩展、也不换曲线。
+	const float Amount = CurveType > 0.5 ? clamp(Smoothing, 0.0, 1.0) : 0.0;
+	const float MinHalf = max(min(HalfSize.x, HalfSize.y), 0.0001);
+	const float ClampedRadius = clamp(Radius, 0.0, MinHalf);
+	if(ClampedRadius <= 0.0 || Amount <= 0.0)
+		return float2(ClampedRadius, 0.0);
+	const float MaxRadius = max(MinHalf * RoundedCornerCapRatio(ClampedRadius, MinHalf), ClampedRadius);
+	const float EffectiveRadius = clamp(ClampedRadius * (1.0 + 1.3 * Amount), ClampedRadius, MaxRadius);
+	float EffectiveAmount = clamp((EffectiveRadius / ClampedRadius - 1.0) / 1.3, 0.0, 1.0);
+	// 胶囊没有生长空间，但半圆端头与直边的接缝可以单独软化：给一个远小于半径生长的
+	// 曲线强度，曲率在几个像素内从 0 缓升到 1/R，形状几乎不变，只是肩部不再突然拐弯。
+	// 只有「真的有一段直边」的胶囊才谈得上接缝：正圆（滑块圆点、单选按钮）四个角
+	// 本来就是连续的，不该被压成方圆，所以再要求长边明显长于短边。
+	const bool Capsule = ClampedRadius >= MinHalf * (9.0 / 10.0) && max(HalfSize.x, HalfSize.y) > MinHalf * 1.2;
+	if(Capsule)
+		EffectiveAmount = max(EffectiveAmount, min(Amount, clamp(SeamAmount, 0.0, 1.0)));
+	return float2(EffectiveRadius, EffectiveAmount);
+}
+
+// 五次贝塞尔圆角：控制点 P0=(1,0)、P1=(1,y1)、P2=(x2,y2)、P3=(y2,x2)、
+// P4=(y1,1)、P5=(0,1)。前两个控制点都落在 x=1 上，端点切向沿直边、曲率恒为 0，
+// 这就是「真连续曲率」的来源。两组取值之间按强度插值：0 取曲率匹配的三次圆弧
+// 升阶结果（几乎就是圆弧），1 取拟合圆锥 W=1.2 手感的那组（外形偏差 0.6%）。
+// 一次返回点与切向量：牛顿迭代每轮两样都要，分开写会把伯恩斯坦求和做两遍。
+float4 QuinticCorner(float T, float E, float Amount)
+{
+	const float Y1 = mix(0.3291504, 0.14, Amount);
+	const float X2 = mix(0.8645747, 1.0, Amount);
+	const float Y2 = mix(0.6291504, 0.80, Amount);
+	const float U = 1.0 - T;
+	const float U2 = U * U;
+	const float T2 = T * T;
+	const float B0 = U2 * U2 * U;
+	const float B1 = 5.0 * T * U2 * U2;
+	const float B2 = 10.0 * T2 * U2 * U;
+	const float B3 = 10.0 * T2 * T * U2;
+	const float B4 = 5.0 * T2 * T2 * U;
+	const float B5 = T2 * T2 * T;
+	const float2 Point = B0 * float2(1.0, 0.0) + B1 * float2(1.0, Y1) + B2 * float2(X2, Y2) + B3 * float2(Y2, X2) + B4 * float2(Y1, 1.0) + B5 * float2(0.0, 1.0);
+	const float D0 = 5.0 * U2 * U2;
+	const float D1 = 20.0 * T * U2 * U;
+	const float D2 = 30.0 * T2 * U2;
+	const float D3 = 20.0 * T2 * T * U;
+	const float D4 = 5.0 * T2 * T2;
+	const float2 Derivative = D0 * float2(0.0, Y1) + D1 * (float2(X2, Y2) - float2(1.0, Y1)) + D2 * (float2(Y2, X2) - float2(X2, Y2)) + D3 * (float2(Y1, 1.0) - float2(Y2, X2)) + D4 * (float2(0.0, 1.0) - float2(Y1, 1.0));
+	return float4(Point.x, Point.y, Derivative.x, Derivative.y) * E;
+}
+
+float QuinticCornerDistance(float2 P, float E, float Amount)
+{
+	float Best = 1e9;
+	float BestT = 0.5;
+	for(int i = 0; i <= 5; i++)
+	{
+		const float T = float(i) / 5.0;
+		const float Dist = length(QuinticCorner(T, E, Amount).xy - P);
+		if(Dist < Best)
+		{
+			Best = Dist;
+			BestT = T;
+		}
+	}
+	float T = BestT;
+	for(int i = 0; i < 4; i++)
+	{
+		const float4 Node = QuinticCorner(T, E, Amount);
+		T = clamp(T - dot(Node.xy - P, Node.zw) / max(dot(Node.zw, Node.zw), 0.000001), 0.0, 1.0);
+	}
+	const float2 Q = QuinticCorner(T, E, Amount).xy;
+	const float Dist = length(Q - P);
+	// Corner 坐标离角点越近越靠内：比曲线更近角点 = 形状内部 = 负值。
+	return dot(P - Q, P) > 0.0 ? Dist : -Dist;
+}
+
+float RoundedRectDistance(float2 Point, float2 HalfSize, float Radius, float Smoothing, float CurveType, float SeamAmount)
+{
+	const float2 Shape = RoundedCornerShape(HalfSize, Radius, Smoothing, CurveType, SeamAmount);
+	const float EffectiveRadius = Shape.x;
+	const float Amount = Shape.y;
 	const float2 DistanceToInner = abs(Point) - HalfSize + EffectiveRadius;
 	const float2 Corner = max(DistanceToInner, float2(0.0));
 	const float Flat = min(max(DistanceToInner.x, DistanceToInner.y), 0.0);
 	// 只有两个分量都为正才是圆角区；边上和内部直接用圆的距离。
 	if(Amount <= 0.001 || Corner.x <= 0.0 || Corner.y <= 0.0)
 		return length(Corner) + Flat - EffectiveRadius;
-	if(CurveType > 0.5)
+	// 曲线档位：1 = 超椭圆（p 范数），2 = 五次贝塞尔，3 = 圆锥贝塞尔。
+	const int Type = int(CurveType + 0.5);
+	if(Type == 2)
+		return QuinticCornerDistance(Corner, EffectiveRadius, Amount);
+	if(Type == 3)
 		return ConicCornerDistance(Corner, EffectiveRadius, mix(0.70710678, 1.2, Amount));
 	const float Exponent = mix(2.0, 4.0, Amount);
 	const float PowX = pow(Corner.x, Exponent);
@@ -242,8 +338,11 @@ fragment float4 qmclient_rounded_rect_sdf_fragment(SMetalVertexOut Input [[stage
 	const float4 CornerRadii = Params[3];
 	const float4 RenderParams = Params[4];
 	const float CornerSmoothing = clamp(Params[14].w, 0.0, 1.0);
-	// 圆角曲线类型：0 = 超椭圆，1 = 圆锥曲线角（有理二次 Bézier）
-	const float CurveType = Params[4].w;
+	// 圆角曲线档位：0 = 原圆弧，1 = 超椭圆，2 = 五次贝塞尔，3 = 圆锥贝塞尔。
+	// 档位在 Params[17].x、胶囊接缝软化在 Params[17].y；RenderParams.w 仍然是
+	// 「边框取渐变」开关，两者不共用分量。
+	const float CurveType = Params[17].x;
+	const float CornerSeam = clamp(Params[17].y, 0.0, 1.0);
 	// 形状外扩：四角形状按基础矩形算完再整体外扩，叠层之间因此保持等距。
 	const float ShapeExpand = clamp(Params[16].w, 0.0, 64.0);
 	const float2 HalfSize = Rect.zw * 0.5;
@@ -256,7 +355,7 @@ fragment float4 qmclient_rounded_rect_sdf_fragment(SMetalVertexOut Input [[stage
 	FillColor = RoundedRectGradientColor(GradientUV, FillColor, Params);
 	const float2 BaseHalfSize = max(HalfSize - float2(ShapeExpand), float2(0.5));
 	const float Radius = clamp(RoundedRectCornerRadius(Point, CornerRadii), 0.0, min(BaseHalfSize.x, BaseHalfSize.y));
-	const float OuterDistance = RoundedRectDistance(Point, BaseHalfSize, Radius, CornerSmoothing, CurveType) - ShapeExpand;
+	const float OuterDistance = RoundedRectDistance(Point, BaseHalfSize, Radius, CornerSmoothing, CurveType, CornerSeam) - ShapeExpand;
 	const float OuterCoverage = RoundedRectCoverage(OuterDistance, RenderParams.y);
 	// 内缘是同一形状向内偏移一个边框宽度：连续曲率下「半径减边框」不是等距内缩。
 	const float InnerDistance = OuterDistance + BorderWidth;

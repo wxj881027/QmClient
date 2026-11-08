@@ -2087,6 +2087,12 @@ Cannot update public words. Previous words remain active.
 Cannot write the wiki file
 == Не удалось записать файл Wiki
 
+Capsule seam
+== Стык капсулы
+
+Capsule seam smoothing: ease the straight-to-cap curvature jump (0 = plain semicircular ends)
+== Сглаживание стыка капсулы: смягчает скачок кривизны между прямой и торцом (0 = чистый полукруг)
+
 Capture the flag
 == Захват флага (CTF)
 
@@ -2477,32 +2483,23 @@ Clan: %s
 Classic
 == Классический
 
+Classic arc
+== Классическая дуга
+
 Classic Easy
 == Классический Easy
-
-Classic easy
-== Классический easy
 
 Classic Next
 == Классический Next
 
-Classic next
-== Классический next
-
 Classic Nut
 == Классический Nut
-
-Classic nut
-== Классический nut
 
 Classic PowerShell
 == Классический PowerShell
 
 Classic Pro
 == Классический Pro
-
-Classic pro
-== Классический pro
 
 Clear
 == Очистить
@@ -2558,9 +2555,6 @@ Click a key on the keyboard picture or under "Mouse", then add a command with "A
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
 == Щёлкните язык в списке, и он применится сразу; флаг слева показывает текущий выбор.
 
-Click a map name to copy it and press the X button to remove it; add maps with the "Favorite map" checkbox in the in-game server info page.
-== Щёлкните по названию карты, чтобы скопировать его, а кнопка X справа удалит запись. Добавлять карты можно галочкой «Избранная карта» на странице информации о сервере.
-
 Click a part on the right to edit its color, blend mode and strength.
 == Нажмите на часть справа, чтобы изменить цвет, режим и силу смешивания.
 
@@ -2595,9 +2589,6 @@ Click to add this community to favorites
 == Нажмите, чтобы добавить это сообщество в избранное
 
 Click to copy map name
-== Нажмите, чтобы скопировать название карты
-
-Click to copy the map name
 == Нажмите, чтобы скопировать название карты
 
 Click to copy this clan's name to clipboard
@@ -3020,6 +3011,9 @@ Confirm disconnect after game end (minutes, -1 off, 0 always)
 Confirm quit after game end (minutes, -1 off, 0 always)
 == Подтверждение выхода после окончания игры (минуты, -1 выкл, 0 всегда)
 
+Conic Bezier
+== Коническая кривая Безье
+
 Connect address error
 == Ошибка адреса подключения
 
@@ -3152,6 +3146,9 @@ Contents
 Continue anyway?
 == Всё равно продолжить?
 
+Continuous-curvature UI corners (0 = classic arc, 100 = strongest)
+== Непрерывная кривизна углов интерфейса (0 = классическая дуга, 100 = максимум)
+
 Contributors
 == Авторы
 
@@ -3253,6 +3250,12 @@ Copy skin ID
 
 Copy skin option color
 == Цвет опции копирования скина
+
+Corner curvature
+== Кривизна угла
+
+Corner curve
+== Кривая угла
 
 Could not add the player as a friend
 == Не удалось добавить игрока в друзья
@@ -5612,9 +5615,6 @@ Favorite maps
 Favorites
 == Избранное
 
-Favorites match the exact map name and also feed the "Favorite map" tab in the server browser.
-== Совпадение идёт по точному названию карты, и эти же записи наполняют вкладку избранных карт в браузере серверов.
-
 feat-003 dogfood: tokens + 12 widgets
 == feat-003 dogfood: токены + 12 виджетов
 
@@ -7771,9 +7771,6 @@ Leave empty to disable
 
 Leave empty to join public room
 == Оставьте пустым для входа в публичную комнату
-
-Leave empty to show everyone
-== Оставьте пустым, чтобы показать всех игроков
 
 Leave empty to use default prompt
 == Оставьте пустым для использования промпта по умолчанию
@@ -11165,6 +11162,9 @@ Queue preset: %s
 Quick action menu for players
 == Меню быстрых действий для игроков
 
+Quintic Bezier
+== Кривая Безье 5-го порядка
+
 Quit
 == Выйти
 
@@ -11620,9 +11620,6 @@ Remove chat
 
 Remove friend
 == Удалить друга
-
-Remove from favorites
-== Очередь переименования
 
 Remove from history
 == Удалить из истории
@@ -12395,9 +12392,6 @@ Scoreboard
 Scoreboard cursor
 == Курсор таблицы лидеров
 
-Scoreboard filter: only show players whose name or clan contains this text
-== Фильтр таблицы: показывать только игроков, чьё имя или клан содержит этот текст
-
 Scoreboard playtime
 == Время игры в таблице
 
@@ -12982,6 +12976,9 @@ Settings page opacity
 
 Settings page right panel opacity
 == Прозрачность правой панели страницы настроек
+
+Settings prewarm default migration done
+== Миграция значения по умолчанию для предварительного прогрева настроек завершена
 
 Settings, binds, profiles, chat binds and the war list are included. Select additional cfg files below.
 == Включены настройки, привязки клавиш, профили скинов, чат-привязки и список врагов. Ниже выберите дополнительные файлы cfg.
@@ -14852,6 +14849,9 @@ Sun
 Super
 == Супер
 
+Superellipse
+== Суперэллипс
+
 Support is optional; nothing here changes client behavior.
 == Поддержка необязательна, и ничто из этого не меняет поведение клиента.
 
@@ -16337,6 +16337,9 @@ UI color
 UI controller sens.
 == Чувствительность контроллера (интерфейс)
 
+UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier
+== Кривая углов интерфейса: 0 = классическая дуга, 1 = суперэллипс, 2 = кривая Безье 5-го порядка, 3 = коническая кривая Безье
+
 UI icon color
 == Цвет значков интерфейса
 
@@ -17774,17 +17777,11 @@ Your current race time is %s
 Your current version is outdated. Please update from the QQ group.
 == Ваша текущая версия устарела. Пожалуйста, обновитесь из группы QQ.
 
-Your favorite map manager
-== Ваш любимый менеджер карт
-
 Your favorite maps appear here
 == Ваши избранные карты появятся здесь
 
 Your friend %s is online and currently on map %s!
 == Ваш друг %s онлайн и сейчас на карте %s!
-
-Your list of favorite maps, each shown with its map type, with quick copy and remove actions.
-== Список избранных карт: у каждой указан тип, а скопировать или удалить её можно в один клик.
 
 Your locked team was killed because '%s' %s
 == Ваша заблокированная команда была убита, потому что '%s' %s

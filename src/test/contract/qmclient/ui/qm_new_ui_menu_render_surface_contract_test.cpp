@@ -92,10 +92,15 @@ TEST(QmNewUiMenuRenderSurfaceContract, ShaderBackendsShareContinuousCurvatureCur
 	{
 		EXPECT_NE(pShader->find("ConicCornerDistance"), std::string::npos);
 		EXPECT_NE(pShader->find("mix(0.70710678, 1.2, Amount)"), std::string::npos);
+		// 四次贝塞尔凑不出两端曲率为 0：三次的控制点条件会退化，五次才有足够自由度。
+		EXPECT_NE(pShader->find("QuinticCornerDistance"), std::string::npos);
+		// 生长上限与强度反解必须在三个后端都是同一套公式，否则换后端就换个圆角。
+		EXPECT_NE(pShader->find("RoundedCornerCapRatio"), std::string::npos);
+		EXPECT_NE(pShader->find("RoundedCornerShape"), std::string::npos);
 	}
 	EXPECT_NE(GlShader.find("ConicCornerDistance"), std::string::npos);
-	EXPECT_NE(VulkanShader.find("gRoundedRectSdfData[4].w"), std::string::npos);
-	EXPECT_NE(MetalShader.find("Params[4].w"), std::string::npos);
+	EXPECT_NE(VulkanShader.find("gRoundedRectSdfData[17].x"), std::string::npos);
+	EXPECT_NE(MetalShader.find("Params[17].x"), std::string::npos);
 }
 
 TEST(QmNewUiMenuRenderSurfaceContract, ShaderBackendsKeepRoundedSurfaceComposition)
@@ -104,7 +109,7 @@ TEST(QmNewUiMenuRenderSurfaceContract, ShaderBackendsKeepRoundedSurfaceCompositi
 	for(const char *pShaderPath : {"data/shader/rounded_rect_sdf.frag", "data/shader/vulkan/rounded_rect_sdf.frag"})
 	{
 		const std::string Shader = ReadTextFile(pShaderPath);
-		EXPECT_NE(Shader.find("gRoundedRectSdfData[17]"), std::string::npos);
+		EXPECT_NE(Shader.find("gRoundedRectSdfData[18];"), std::string::npos);
 		EXPECT_NE(Shader.find("float CornerRadius(vec2 Point, vec4 CornerRadii)"), std::string::npos);
 		EXPECT_NE(Shader.find("float SdfFeather(float DistanceValue, float PixelSize)"), std::string::npos);
 		EXPECT_NE(Shader.find("return max(PixelSize, length(vec2(dFdx(DistanceValue), dFdy(DistanceValue))));"), std::string::npos);
@@ -146,7 +151,7 @@ TEST(QmNewUiMenuRenderSurfaceContract, ShaderBackendsKeepRoundedSurfaceCompositi
 		EXPECT_NE(MetalShader.find("fragment float4 qmclient_rounded_rect_sdf_fragment("), std::string::npos);
 		EXPECT_NE(MetalShader.find("float4 RoundedRectGradientColor("), std::string::npos);
 		EXPECT_NE(MetalShader.find("constant float4 *Params [[buffer(1)]]"), std::string::npos);
-		EXPECT_NE(MetalShader.find("float RoundedRectDistance(float2 Point, float2 HalfSize, float Radius, float Smoothing, float CurveType)"), std::string::npos);
+		EXPECT_NE(MetalShader.find("float RoundedRectDistance(float2 Point, float2 HalfSize, float Radius, float Smoothing, float CurveType, float SeamAmount)"), std::string::npos);
 		EXPECT_NE(MetalShader.find("float RoundedRectCornerRadius(float2 Point, float4 CornerRadii)"), std::string::npos);
 		EXPECT_NE(MetalShader.find("float RoundedRectCoverage(float DistanceValue, float PixelSize)"), std::string::npos);
 		EXPECT_NE(MetalShader.find("const float Feather = max(PixelSize, length(float2(dfdx(DistanceValue), dfdy(DistanceValue))));"), std::string::npos);
@@ -247,7 +252,12 @@ TEST(QmNewUiMenuRenderSurfaceContract, ShaderBackendsKeepRoundedSurfaceCompositi
 	{
 		EXPECT_NE(pShader->find("Amount <= 0.001"), std::string::npos);
 		EXPECT_NE(pShader->find("mix(2.0, 4.0, Amount)"), std::string::npos);
-		EXPECT_NE(pShader->find("EffectiveRadius = min(Radius * (1.0 + 1.3 * Amount)"), std::string::npos);
+		// 生长上限只夹生长、不回收已有半径；曲线强度按实际生长反解。
+		EXPECT_NE(pShader->find("return Radius >= MinHalf * (9.0 / 10.0) ? 0.8 : 0.5;"), std::string::npos);
+		EXPECT_NE(pShader->find("clamp(ClampedRadius * (1.0 + 1.3 * Amount), ClampedRadius, MaxRadius)"), std::string::npos);
+		// 胶囊接缝软化：胶囊没有生长空间，但半圆端头与直边的曲率跳变要能单独缓，
+		// 否则就只能二选一（要么硬接缝，要么整个端头被压方）。
+		EXPECT_NE(pShader->find("min(Amount, clamp(SeamAmount, 0.0, 1.0))"), std::string::npos);
 		EXPECT_NE(pShader->find("GradientLength"), std::string::npos);
 		EXPECT_NE(pShader->find("[14].w"), std::string::npos);
 		EXPECT_NE(pShader->find("[16].w"), std::string::npos);
@@ -262,7 +272,7 @@ TEST(QmNewUiMenuRenderSurfaceContract, ShaderBackendsKeepRoundedSurfaceCompositi
 
 	const std::string GraphicsHeader = ReadTextFile("src/engine/graphics.h");
 	const std::string GraphicsThreaded = ReadTextFile("src/engine/client/graphics_threaded.cpp");
-	EXPECT_NE(GraphicsHeader.find("static_assert(sizeof(SRoundedRectSdfParams) == sizeof(vec4) * 17);"), std::string::npos);
+	EXPECT_NE(GraphicsHeader.find("static_assert(sizeof(SRoundedRectSdfParams) == sizeof(vec4) * 18);"), std::string::npos);
 	const std::string RoundedCommand = FunctionBody(GraphicsThreaded, "void CGraphics_Threaded::RenderRoundedRectSdf");
 	EXPECT_NE(RoundedCommand.find("Params.m_Params.z"), std::string::npos);
 	EXPECT_NE(RoundedCommand.find("if(m_NumVertices > 0)"), std::string::npos);

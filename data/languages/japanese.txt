@@ -2087,6 +2087,12 @@ Cannot update public words. Previous words remain active.
 Cannot write the wiki file
 == Wiki ファイルを書き込めません
 
+Capsule seam
+== カプセルのはぎ目
+
+Capsule seam smoothing: ease the straight-to-cap curvature jump (0 = plain semicircular ends)
+== カプセルのはぎ目の平滑化：直線から端までの曲率の飛びを和らげます（0 = 純粋な半円端）
+
 Capture the flag
 == キャプチャー・ザ・フラッグ (CTF)
 
@@ -2477,32 +2483,23 @@ Clan: %s
 Classic
 == クラシック
 
+Classic arc
+== クラシック円弧
+
 Classic Easy
 == クラシック Easy
-
-Classic easy
-== クラシック easy
 
 Classic Next
 == クラシック Next
 
-Classic next
-== クラシック next
-
 Classic Nut
 == クラシック Nut
-
-Classic nut
-== クラシック nut
 
 Classic PowerShell
 == クラシック PowerShell
 
 Classic Pro
 == クラシック Pro
-
-Classic pro
-== クラシック pro
 
 Clear
 == クリア
@@ -2558,9 +2555,6 @@ Click a key on the keyboard picture or under "Mouse", then add a command with "A
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
 == 一覧で言語をクリックするとすぐに反映されます。左側の国旗が現在の選択を示します。
 
-Click a map name to copy it and press the X button to remove it; add maps with the "Favorite map" checkbox in the in-game server info page.
-== マップ名をクリックするとコピーでき、右側のXボタンで削除できます。追加はゲーム内のサーバー情報ページでお気に入りマップにチェックを入れます。
-
 Click a part on the right to edit its color, blend mode and strength.
 == 右側のパーツをクリックして、色、ブレンドモード、強度を調整します。
 
@@ -2595,9 +2589,6 @@ Click to add this community to favorites
 == クリックしてこのコミュニティをお気に入りに追加
 
 Click to copy map name
-== クリックしてマップ名をコピー
-
-Click to copy the map name
 == クリックしてマップ名をコピー
 
 Click to copy this clan's name to clipboard
@@ -3020,6 +3011,9 @@ Confirm disconnect after game end (minutes, -1 off, 0 always)
 Confirm quit after game end (minutes, -1 off, 0 always)
 == ゲーム終了後の終了確認（分、-1 でオフ、0 で常時）
 
+Conic Bezier
+== 円錐ベジェ
+
 Connect address error
 == 接続アドレスエラー
 
@@ -3152,6 +3146,9 @@ Contents
 Continue anyway?
 == それでも続行しますか？
 
+Continuous-curvature UI corners (0 = classic arc, 100 = strongest)
+== UI の角の連続曲率（0 = クラシック円弧、100 = 最強）
+
 Contributors
 == コントリビューター
 
@@ -3253,6 +3250,12 @@ Copy skin ID
 
 Copy skin option color
 == スキンオプションの色をコピー
+
+Corner curvature
+== 角の曲率
+
+Corner curve
+== 角の曲線
 
 Could not add the player as a friend
 == プレイヤーをフレンドに追加できませんでした
@@ -5612,9 +5615,6 @@ Favorite maps
 Favorites
 == お気に入り
 
-Favorites match the exact map name and also feed the "Favorite map" tab in the server browser.
-== お気に入りはマップ名の完全一致で判定され、サーバーブラウザのお気に入りマップタブにも反映されます。
-
 feat-003 dogfood: tokens + 12 widgets
 == feat-003 dogfood: トークン + 12 ウィジェット
 
@@ -7771,9 +7771,6 @@ Leave empty to disable
 
 Leave empty to join public room
 == 空欄にして公開ルームに入室
-
-Leave empty to show everyone
-== 空欄の場合は全プレイヤーを表示
 
 Leave empty to use default prompt
 == 空欄にしてデフォルトプロンプトを使用
@@ -11165,6 +11162,9 @@ Queue preset: %s
 Quick action menu for players
 == プレイヤー向けクイックアクションメニュー
 
+Quintic Bezier
+== 5次ベジェ
+
 Quit
 == 終了
 
@@ -11620,9 +11620,6 @@ Remove chat
 
 Remove friend
 == フレンドを削除
-
-Remove from favorites
-== お気に入りから削除
 
 Remove from history
 == 履歴から削除
@@ -12395,9 +12392,6 @@ Scoreboard
 Scoreboard cursor
 == スコアボードカーソル
 
-Scoreboard filter: only show players whose name or clan contains this text
-== スコアボードフィルター：名前またはクランにこの文字列を含むプレイヤーのみ表示します
-
 Scoreboard playtime
 == スコアボードのプレイ時間
 
@@ -12982,6 +12976,9 @@ Settings page opacity
 
 Settings page right panel opacity
 == 設定ページ右パネルの不透明度
+
+Settings prewarm default migration done
+== 設定のプリウォーム既定値の移行が完了しました
 
 Settings, binds, profiles, chat binds and the war list are included. Select additional cfg files below.
 == 設定、キー割り当て、スキンプロファイル、チャットバインド、敵対リストを含みます。追加の cfg ファイルを下で選択してください。
@@ -14852,6 +14849,9 @@ Sun
 Super
 == スーパー
 
+Superellipse
+== 超楕円
+
 Support is optional; nothing here changes client behavior.
 == 支援は任意です。ここの内容がクライアントの動作を変えることはありません。
 
@@ -16337,6 +16337,9 @@ UI color
 UI controller sens.
 == UI コントローラー感度
 
+UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier
+== UI の角の曲線：0 = クラシック円弧、1 = 超楕円、2 = 5次ベジェ、3 = 円錐ベジェ
+
 UI icon color
 == UI アイコンの色
 
@@ -17774,17 +17777,11 @@ Your current race time is %s
 Your current version is outdated. Please update from the QQ group.
 == 現在のバージョンは古いです。QQ グループから最新版を更新してください。
 
-Your favorite map manager
-== あなたの好きなマップマネージャー
-
 Your favorite maps appear here
 == お気に入りのマップがここに表示されます
 
 Your friend %s is online and currently on map %s!
 == 友達の %s がオンラインで、現在マップ %s にいます！
-
-Your list of favorite maps, each shown with its map type, with quick copy and remove actions.
-== お気に入りマップの一覧です。各マップは種類付きで表示され、コピーと削除をすばやく行えます。
 
 Your locked team was killed because '%s' %s
 == '%s' が %s したため、ロックされたチームが全滅しました

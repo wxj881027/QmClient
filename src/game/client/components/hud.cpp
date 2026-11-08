@@ -2248,8 +2248,9 @@ void CHud::RenderDummyMiniMap()
 				DrawParams.m_H = Frame.m_Content.h;
 				DrawParams.m_Corners = HudEditorScope.m_Corners;
 				DrawParams.m_Rounding = Frame.m_ContentRadius;
-		DrawParams.m_CornerSmoothing = std::clamp(g_Config.m_QmUiCornerSmoothing / 100.0f, 0.0f, 1.0f);
-		DrawParams.m_CornerCurve = g_Config.m_QmUiCornerCurve != 0 ? 1.0f : 0.0f;
+				DrawParams.m_CornerSmoothing = std::clamp(g_Config.m_QmUiCornerSmoothing / 100.0f, 0.0f, 1.0f);
+				DrawParams.m_CornerCurve = (float)g_Config.m_QmUiCornerCurve;
+				DrawParams.m_CornerSeam = std::clamp(g_Config.m_QmUiCapsuleSeam / 100.0f, 0.0f, 1.0f);
 				DrawParams.m_Opaque = true;
 				if(Backend == QmDummyMiniViewLayout::EBackend::VULKAN)
 				{

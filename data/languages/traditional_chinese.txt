@@ -2087,6 +2087,12 @@ Cannot update public words. Previous words remain active.
 Cannot write the wiki file
 == 無法寫入 Wiki 檔案
 
+Capsule seam
+== 膠囊接縫
+
+Capsule seam smoothing: ease the straight-to-cap curvature jump (0 = plain semicircular ends)
+== 膠囊接縫軟化：緩和直邊到端頭的曲率跳變（0 = 純半圓端頭）
+
 Capture the flag
 == 奪旗模式 (CTF)
 
@@ -2477,32 +2483,23 @@ Clan: %s
 Classic
 == 古典
 
+Classic arc
+== 經典圓弧
+
 Classic Easy
 == 古典 Easy
-
-Classic easy
-== 古典 easy
 
 Classic Next
 == 古典 Next
 
-Classic next
-== 古典 next
-
 Classic Nut
 == 古典 Nut
-
-Classic nut
-== 古典 nut
 
 Classic PowerShell
 == 經典 PowerShell
 
 Classic Pro
 == 古典 Pro
-
-Classic pro
-== 古典 pro
 
 Clear
 == 清空
@@ -2558,9 +2555,6 @@ Click a key on the keyboard picture or under "Mouse", then add a command with "A
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
 == 在清單裡點一種語言就會立即生效，左側的國旗標出目前選擇。
 
-Click a map name to copy it and press the X button to remove it; add maps with the "Favorite map" checkbox in the in-game server info page.
-== 點地圖名可以複製，點右側的 X 按鈕可以移除；在遊戲內伺服器資訊頁勾選收藏地圖即可加入。
-
 Click a part on the right to edit its color, blend mode and strength.
 == 點擊右側部件，調整顏色、混合模式和強度。
 
@@ -2595,9 +2589,6 @@ Click to add this community to favorites
 == 點擊將該社區加入收藏
 
 Click to copy map name
-== 點擊複製地圖名
-
-Click to copy the map name
 == 點擊複製地圖名
 
 Click to copy this clan's name to clipboard
@@ -3020,6 +3011,9 @@ Confirm disconnect after game end (minutes, -1 off, 0 always)
 Confirm quit after game end (minutes, -1 off, 0 always)
 == 遊戲結束後退出前彈出確認窗口（分鐘，-1 關閉，0 始終打開）
 
+Conic Bezier
+== 圓錐貝塞爾
+
 Connect address error
 == 連接地址錯誤
 
@@ -3152,6 +3146,9 @@ Contents
 Continue anyway?
 == 仍要退出？
 
+Continuous-curvature UI corners (0 = classic arc, 100 = strongest)
+== 介面圓角連續曲率（0 = 經典圓弧，100 = 最強）
+
 Contributors
 == 貢獻者
 
@@ -3253,6 +3250,12 @@ Copy skin ID
 
 Copy skin option color
 == 複製皮膚選項顏色
+
+Corner curvature
+== 圓角曲率
+
+Corner curve
+== 圓角曲線
 
 Could not add the player as a friend
 == 無法將該玩家加入好友
@@ -5612,9 +5615,6 @@ Favorite maps
 Favorites
 == 收藏夾
 
-Favorites match the exact map name and also feed the "Favorite map" tab in the server browser.
-== 收藏依地圖名精確匹配，同時會作為伺服器瀏覽器裡收藏地圖分頁的來源。
-
 feat-003 dogfood: tokens + 12 widgets
 == feat-003 dogfood：tokens + 12 widgets
 
@@ -7771,9 +7771,6 @@ Leave empty to disable
 
 Leave empty to join public room
 == 留空以進入公共房間
-
-Leave empty to show everyone
-== 留空顯示所有玩家
 
 Leave empty to use default prompt
 == 留空使用默認提示詞
@@ -11165,6 +11162,9 @@ Queue preset: %s
 Quick action menu for players
 == 對玩家快捷操作菜單
 
+Quintic Bezier
+== 五次貝塞爾
+
 Quit
 == 退出
 
@@ -11620,9 +11620,6 @@ Remove chat
 
 Remove friend
 == 刪除好友
-
-Remove from favorites
-== 取消收藏
 
 Remove from history
 == 從歷史中移除
@@ -12395,9 +12392,6 @@ Scoreboard
 Scoreboard cursor
 == 計分板光標
 
-Scoreboard filter: only show players whose name or clan contains this text
-== 計分板篩選：符合名字或戰隊
-
 Scoreboard playtime
 == 計分板遊玩時間
 
@@ -12982,6 +12976,9 @@ Settings page opacity
 
 Settings page right panel opacity
 == 設置頁右側設置欄透明度
+
+Settings prewarm default migration done
+== 設定預熱預設值遷移已完成
 
 Settings, binds, profiles, chat binds and the war list are included. Select additional cfg files below.
 == 包含設定、按鍵綁定、外觀配置、聊天綁定和敵對列表。請在下方選擇額外的 cfg 檔案。
@@ -14852,6 +14849,9 @@ Sun
 Super
 == 無敵
 
+Superellipse
+== 超橢圓
+
 Support is optional; nothing here changes client behavior.
 == 支持完全出於自願；此處內容不會改變用戶端行為。
 
@@ -16337,6 +16337,9 @@ UI color
 UI controller sens.
 == 搖桿靈敏度（界面）
 
+UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier
+== 介面圓角曲線：0 = 經典圓弧，1 = 超橢圓，2 = 五次貝塞爾，3 = 圓錐貝塞爾
+
 UI icon color
 == 介面圖示顏色
 
@@ -17774,17 +17777,11 @@ Your current race time is %s
 Your current version is outdated. Please update from the QQ group.
 == 當前版本不是最新版，請前往 QQ 群更新最新版
 
-Your favorite map manager
-== 你最愛的地圖管家
-
 Your favorite maps appear here
 == 你收藏的地圖會顯示在這裡
 
 Your friend %s is online and currently on map %s!
 == 你的好友 %s 在線，當前在地圖 %s！
-
-Your list of favorite maps, each shown with its map type, with quick copy and remove actions.
-== 你的收藏地圖清單，每張都標出地圖類型，並提供快速複製和移除操作。
 
 Your locked team was killed because '%s' %s
 == 你的鎖隊因 '%s' %s 而被全員處死

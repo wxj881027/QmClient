@@ -696,6 +696,8 @@ Cannot submit this tag. Please retry later.
 Cannot swap: the other player is not in your team
 Cannot update public words. Previous words remain active.
 Cannot write the wiki file
+Capsule seam
+Capsule seam smoothing: ease the straight-to-cap curvature jump (0 = plain semicircular ends)
 Capture the flag
 Capture-the-flag event cue, used by CTF servers rather than ordinary DDNet racing.
 Card guide
@@ -826,15 +828,12 @@ Clan of the player followed from the pie menu
 Clan plates size
 Clan: %s
 Classic
+Classic arc
 Classic Easy
-Classic easy
 Classic Next
-Classic next
 Classic Nut
-Classic nut
 Classic PowerShell
 Classic Pro
-Classic pro
 Clear
 Clear all favorite maps
 Clear all history
@@ -853,7 +852,6 @@ Clears the voting options
 Click "QmClient Settings", "Profiles", "War List" or "Chat Binds" to open that file, then use "Configuration packages" to export or import a whole set.
 Click a key on the keyboard picture or under "Mouse", then add a command with "Add function" or use the capture button to move an existing bind.
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
-Click a map name to copy it and press the X button to remove it; add maps with the "Favorite map" checkbox in the in-game server info page.
 Click a part on the right to edit its color, blend mode and strength.
 Click a row such as "HDF" or "Left jump", press the key you want, and use the trash icon to remove a bind.
 Click again to find the next location.
@@ -866,7 +864,6 @@ Click the key field next to an action such as "Jump" or "Hook" and press the key
 Click the key field next to an action such as "Scoreboard", "Spectate mode" or "Pie menu" and press the key you want.
 Click to add this community to favorites
 Click to copy map name
-Click to copy the map name
 Click to copy this clan's name to clipboard
 Click to copy this player's name to clipboard
 Click to remove this clan from your friends list.
@@ -1008,6 +1005,7 @@ Confirm clear all
 Confirm clear finished
 Confirm disconnect after game end (minutes, -1 off, 0 always)
 Confirm quit after game end (minutes, -1 off, 0 always)
+Conic Bezier
 Connect address error
 Connect dummy
 Connect dummy automatically for solo split mode
@@ -1052,6 +1050,7 @@ Container format: MP4 is the most compatible, MOV suits editing, MKV suits lossl
 Container:
 Contents
 Continue anyway?
+Continuous-curvature UI corners (0 = classic arc, 100 = strongest)
 Contributors
 Control custom background drawing
 Control latency compensation tools
@@ -1086,6 +1085,8 @@ Copy skin from dummy
 Copy skin from player
 Copy skin ID
 Copy skin option color
+Corner curvature
+Corner curve
 Could not add the player as a friend
 Could not back up configuration files.
 Could not check for existing player with your name. Check your internet connection.
@@ -1872,7 +1873,6 @@ Favorite icon color
 Favorite map
 Favorite maps
 Favorites
-Favorites match the exact map name and also feed the "Favorite map" tab in the server browser.
 feat-003 dogfood: tokens + 12 widgets
 Feature guide and announcements
 Feature Search
@@ -2594,7 +2594,6 @@ Leave "Automatic updates" off if you update by hand: it can restart the client t
 Leave empty to detect automatically
 Leave empty to disable
 Leave empty to join public room
-Leave empty to show everyone
 Leave empty to use default prompt
 Leave empty to use the default directory. Relative paths use the config directory.
 Leave it off on normal servers: the auto switch overrides your weapon keys, so your pick can change before you shoot.
@@ -3730,6 +3729,7 @@ Querying...
 Queue is empty
 Queue preset: %s
 Quick action menu for players
+Quintic Bezier
 Quit
 Quit the client
 Quitting. Please wait…
@@ -3882,7 +3882,6 @@ remove a voting option
 Remove Bind
 Remove chat
 Remove friend
-Remove from favorites
 Remove from history
 Remove from queue
 Remove Item
@@ -4140,7 +4139,6 @@ Score limit
 Score option color
 Scoreboard
 Scoreboard cursor
-Scoreboard filter: only show players whose name or clan contains this text
 Scoreboard playtime
 Scoreboard point check
 Scoreboard score lookup
@@ -4336,6 +4334,7 @@ Settings card widths: stableId for full width, !stableId for half width, separat
 Settings file
 Settings page opacity
 Settings page right panel opacity
+Settings prewarm default migration done
 Settings, binds, profiles, chat binds and the war list are included. Select additional cfg files below.
 Severe
 Shape
@@ -4962,6 +4961,7 @@ Sudden Death
 Suicides
 Sun
 Super
+Superellipse
 Support is optional; nothing here changes client behavior.
 Support ♥
 Surprise
@@ -5459,6 +5459,7 @@ UDP socket not open
 UI animations
 UI color
 UI controller sens.
+UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier
 UI icon color
 UI icon custom color
 UI icon style
@@ -5938,10 +5939,8 @@ You're the last one!
 Your account is your in-game name — register it on the Axiom website. Fill in the registered main and dummy passwords. This option does not register accounts.
 Your current race time is %s
 Your current version is outdated. Please update from the QQ group.
-Your favorite map manager
 Your favorite maps appear here
 Your friend %s is online and currently on map %s!
-Your list of favorite maps, each shown with its map type, with quick copy and remove actions.
 Your locked team was killed because '%s' %s
 Your movements are not taken into account when calculating the line colors
 Your nickname '%s' is already used (%d points). Do you still want to use it?

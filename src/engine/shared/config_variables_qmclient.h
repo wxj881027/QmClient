@@ -790,6 +790,7 @@ MACRO_CONFIG_INT(QmDummySkinQueueRandomJoin, qm_dummy_skin_queue_random_join, 0,
 // 实测：关闭时第一次打开图像页要 435ms（整帧冻住），开启后降到 6ms，
 // 且没有引入新的长帧（最长帧 438ms -> 37ms）。默认打开，仍可手动关闭。
 MACRO_CONFIG_INT(QmSettingsPrewarm, qm_settings_prewarm, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pre-warm settings page on startup and menu idle")
+MACRO_CONFIG_INT(QmSettingsPrewarmMigrated, qm_settings_prewarm_migrated, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Settings prewarm default migration done")
 
 // Chat Bubble Settings - 聊天气泡
 // 手机端默认把轨道放右侧：左侧边缘更容易被误触和圆角挡住。
@@ -992,3 +993,7 @@ MACRO_CONFIG_INT(QmSelfKillAutoDelay, qm_self_kill_auto_delay, 0, 0, 60, CFGFLAG
 // 短边 25% 上限约束，扩不动时（胶囊、短边很近的小控件）曲线自动退回圆弧。
 MACRO_CONFIG_INT(QmUiCornerCurve, qm_ui_corner_curve, 2, 0, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier")
 MACRO_CONFIG_INT(QmUiCornerSmoothing, qm_ui_corner_smoothing, 40, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Continuous-curvature UI corners (0 = classic arc, 100 = strongest)")
+// 胶囊接缝软化：胶囊的半径已经贴到短边一半、没有生长空间，但半圆端头与直边交界处
+// 的曲率跳变仍可以单独软化。过渡带只有几个像素，形状几乎不变，只是肩部不再突然
+// 从直边拐进半圆。0 = 与 iOS 一致（纯半圆端头，接缝保持硬），这是默认值。
+MACRO_CONFIG_INT(QmUiCapsuleSeam, qm_ui_capsule_seam, 0, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Capsule seam smoothing: ease the straight-to-cap curvature jump (0 = plain semicircular ends)")

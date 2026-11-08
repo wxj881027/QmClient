@@ -13,6 +13,27 @@
 
 namespace
 {
+	// 圆角曲线走配置：0 原圆弧（旧外观），1 超椭圆，2 五次贝塞尔，3 圆锥贝塞尔。
+	// 同一元素的所有绘制分支必须取同一个值，否则填充、边框、照片会各自圆角不同。
+	float CornerCurveType()
+	{
+		// 档位直接透传给着色器与几何采样器；有效半径与曲线强度由两者各自的
+		// ResolveRoundedCornerShape 用同一套公式反解，不在这里预先算。
+		return (float)g_Config.m_QmUiCornerCurve;
+	}
+
+	float CornerSmoothing()
+	{
+		return std::clamp((float)g_Config.m_QmUiCornerSmoothing / 100.0f, 0.0f, 1.0f);
+	}
+
+	// 胶囊接缝软化：胶囊的半径贴到短边一半，没有生长空间，但半圆端头与直边的
+	// 曲率跳变可以单独缓一下。0 = 纯半圆端头（与 iOS 一致）。
+	float CapsuleSeam()
+	{
+		return std::clamp((float)g_Config.m_QmUiCapsuleSeam / 100.0f, 0.0f, 1.0f);
+	}
+
 	void DrawRoundedSurfaceBorder(IGraphics *pGraphics, const SRoundedSurfacePlan &Plan, const ColorRGBA &Border, int Corners)
 	{
 		if(Border.a <= 0.0f || Plan.m_BorderWidth <= 0.0f)
@@ -25,6 +46,8 @@ namespace
 			Params.m_BorderColor = vec4(Border.r, Border.g, Border.b, Border.a);
 			Params.m_CornerRadii = Plan.m_CornerRadii;
 			Params.m_Params = vec4(Plan.m_BorderWidth, Plan.m_PixelSize, Plan.m_PixelSize * 2.0f, 0.0f);
+			// 边框环带必须和填充取同一个曲线档位，否则描边和底色在角上会差一条线。
+			Params.m_ShapeParams.x = CornerCurveType();
 			pGraphics->RenderRoundedRectSdf(Params);
 			return;
 		}
@@ -38,19 +61,6 @@ namespace
 		pGraphics->DrawRoundedRectAntialias(Plan.m_Rect.x, Plan.m_Rect.y, Plan.m_Rect.w, Plan.m_Rect.h, Plan.m_Radius, Corners, Border);
 	}
 
-	// 圆角形状走配置：0 是原来的圆弧圆角，>0 让直线与圆角之间曲率渐变。
-	// 同一元素的所有绘制分支必须取同一个值，否则填充、边框、照片会各自圆角不同。
-	float CornerCurveType()
-{
-	// 0 = 超椭圆（p 范数），1 = 圆锥曲线角（有理二次 Bézier）。
-	// 只有着色器路径能画曲线，几何兜底始终是圆弧，所以这里只负责把开关透传下去。
-	return g_Config.m_QmUiCornerCurve != 0 ? 1.0f : 0.0f;
-}
-
-float CornerSmoothing()
-	{
-		return std::clamp((float)g_Config.m_QmUiCornerSmoothing / 100.0f, 0.0f, 1.0f);
-	}
 }
 
 bool DrawRoundedSurface(IGraphics *pGraphics, const CUIRect &Rect, const ColorRGBA &Fill, const ColorRGBA &Border, const SRoundedSurfaceParams &Params)
@@ -74,7 +84,7 @@ bool DrawRoundedSurface(IGraphics *pGraphics, const CUIRect &Rect, const ColorRG
 		SdfParams.m_CornerRadii = Plan.m_CornerRadii;
 		SdfParams.m_Params = vec4(Plan.m_BorderWidth, Plan.m_PixelSize, Plan.m_PixelSize * 2.0f, 0.0f);
 		SdfParams.m_GradientParams2.w = CornerSmoothing();
-		SdfParams.m_Params.w = CornerCurveType();
+		SdfParams.m_ShapeParams = vec4(CornerCurveType(), CapsuleSeam(), 0.0f, 0.0f);
 		SdfParams.m_TextureParams1.w = Plan.m_Expand;
 		pGraphics->RenderRoundedRectSdf(SdfParams);
 		return true;
@@ -123,7 +133,7 @@ bool DrawRoundedImage(IGraphics *pGraphics, const CUIRect &Rect, const SRoundedI
 	SdfParams.m_TextureParams1.y = std::clamp(Image.m_Alpha, 0.0f, 1.0f);
 	SdfParams.m_TextureParams1.w = Plan.m_Expand;
 	SdfParams.m_GradientParams2.w = CornerSmoothing();
-		SdfParams.m_Params.w = CornerCurveType();
+	SdfParams.m_ShapeParams = vec4(CornerCurveType(), CapsuleSeam(), 0.0f, 0.0f);
 	// 图片取样器必须由命令携带：RenderRoundedRectSdf 沿用调用方 TextureSet 的绑定。
 	pGraphics->TextureSet(Image.m_Texture);
 	pGraphics->RenderRoundedRectSdf(SdfParams);
@@ -214,7 +224,7 @@ bool DrawRoundedGradientSurface(IGraphics *pGraphics, const CUIRect &Rect, const
 		SdfParams.m_GradientParams2.y = Params.m_BorderOnly ? 1.0f : 0.0f;
 		SdfParams.m_GradientParams2.z = std::max(0.0f, Params.m_BorderFalloff);
 		SdfParams.m_GradientParams2.w = CornerSmoothing();
-		SdfParams.m_Params.w = CornerCurveType();
+		SdfParams.m_ShapeParams = vec4(CornerCurveType(), CapsuleSeam(), 0.0f, 0.0f);
 		SdfParams.m_TextureParams1.w = Plan.m_Expand;
 		pGraphics->RenderRoundedRectSdf(SdfParams);
 		return true;

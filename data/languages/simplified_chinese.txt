@@ -2093,6 +2093,12 @@ Cannot update public words. Previous words remain active.
 Cannot write the wiki file
 == 无法写入 Wiki 文件
 
+Capsule seam
+== 胶囊接缝
+
+Capsule seam smoothing: ease the straight-to-cap curvature jump (0 = plain semicircular ends)
+== 胶囊接缝软化：缓和直边到端头的曲率跳变（0 = 纯半圆端头）
+
 Capture the flag
 == 夺旗模式 (CTF)
 
@@ -2483,32 +2489,23 @@ Clan: %s
 Classic
 == 古典
 
+Classic arc
+== 经典圆弧
+
 Classic Easy
 == 古典 Easy
-
-Classic easy
-== 古典 easy
 
 Classic Next
 == 古典 Next
 
-Classic next
-== 古典 next
-
 Classic Nut
 == 古典 Nut
-
-Classic nut
-== 古典 nut
 
 Classic PowerShell
 == 经典 PowerShell
 
 Classic Pro
 == 古典 Pro
-
-Classic pro
-== 古典 pro
 
 Clear
 == 清空
@@ -2564,9 +2561,6 @@ Click a key on the keyboard picture or under "Mouse", then add a command with "A
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
 == 在列表里点一种语言就会立即生效，左侧的国旗标出当前选择。
 
-Click a map name to copy it and press the X button to remove it; add maps with the "Favorite map" checkbox in the in-game server info page.
-== 点地图名可以复制，点右侧的 X 按钮可以移除；在游戏内服务器信息页勾选收藏地图即可添加。
-
 Click a part on the right to edit its color, blend mode and strength.
 == 点击右侧部件，调整颜色、混合模式和强度。
 
@@ -2601,9 +2595,6 @@ Click to add this community to favorites
 == 点击将该社区加入收藏
 
 Click to copy map name
-== 点击复制地图名
-
-Click to copy the map name
 == 点击复制地图名
 
 Click to copy this clan's name to clipboard
@@ -3029,6 +3020,9 @@ Confirm disconnect after game end (minutes, -1 off, 0 always)
 Confirm quit after game end (minutes, -1 off, 0 always)
 == 游戏结束后退出前弹出确认窗口（分钟，-1 关闭，0 始终打开）
 
+Conic Bezier
+== 圆锥贝塞尔
+
 Connect address error
 == 连接地址错误
 
@@ -3161,6 +3155,9 @@ Contents
 Continue anyway?
 == 仍要退出？
 
+Continuous-curvature UI corners (0 = classic arc, 100 = strongest)
+== 界面圆角连续曲率（0 = 经典圆弧，100 = 最强）
+
 Contributors
 == 贡献者
 
@@ -3262,6 +3259,12 @@ Copy skin ID
 
 Copy skin option color
 == 复制皮肤选项颜色
+
+Corner curvature
+== 圆角曲率
+
+Corner curve
+== 圆角曲线
 
 Could not add the player as a friend
 == 无法将该玩家添加为好友
@@ -5621,9 +5624,6 @@ Favorite maps
 Favorites
 == 收藏夹
 
-Favorites match the exact map name and also feed the "Favorite map" tab in the server browser.
-== 收藏按地图名精确匹配，同时会作为服务器浏览器里收藏地图分页的来源。
-
 feat-003 dogfood: tokens + 12 widgets
 == feat-003 dogfood：tokens + 12 widgets
 
@@ -7786,9 +7786,6 @@ Leave empty to disable
 
 Leave empty to join public room
 == 留空以进入公共房间
-
-Leave empty to show everyone
-== 留空显示所有玩家
 
 Leave empty to use default prompt
 == 留空使用默认提示词
@@ -11195,6 +11192,9 @@ Queue preset: %s
 Quick action menu for players
 == 对玩家快捷操作菜单
 
+Quintic Bezier
+== 五次贝塞尔
+
 Quit
 == 退出
 
@@ -11650,9 +11650,6 @@ Remove chat
 
 Remove friend
 == 删除好友
-
-Remove from favorites
-== 取消收藏
 
 Remove from history
 == 从历史中移除
@@ -12425,9 +12422,6 @@ Scoreboard
 Scoreboard cursor
 == 计分板光标
 
-Scoreboard filter: only show players whose name or clan contains this text
-== 计分板筛选：匹配名字或战队
-
 Scoreboard playtime
 == 计分板游玩时间
 
@@ -13012,6 +13006,9 @@ Settings page opacity
 
 Settings page right panel opacity
 == 设置页右侧设置栏透明度
+
+Settings prewarm default migration done
+== 设置预热默认值迁移已完成
 
 Settings, binds, profiles, chat binds and the war list are included. Select additional cfg files below.
 == 包含设置、按键绑定、皮肤配置、聊天绑定和战争名单。请在下方选择额外的 cfg 文件。
@@ -14891,6 +14888,9 @@ Sun
 Super
 == 无敌
 
+Superellipse
+== 超椭圆
+
 Support is optional; nothing here changes client behavior.
 == 支持完全自愿；此处内容不会改变客户端行为。
 
@@ -16382,6 +16382,9 @@ UI color
 UI controller sens.
 == 摇杆灵敏度（界面）
 
+UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier
+== 界面圆角曲线：0 = 经典圆弧，1 = 超椭圆，2 = 五次贝塞尔，3 = 圆锥贝塞尔
+
 UI icon color
 == 界面图标颜色
 
@@ -17819,17 +17822,11 @@ Your current race time is %s
 Your current version is outdated. Please update from the QQ group.
 == 当前版本不是最新版，请前往 QQ 群更新最新版
 
-Your favorite map manager
-== 你最爱的地图管家
-
 Your favorite maps appear here
 == 你收藏的地图会显示在这里
 
 Your friend %s is online and currently on map %s!
 == 你的好友 %s 在线，当前在地图 %s！
-
-Your list of favorite maps, each shown with its map type, with quick copy and remove actions.
-== 你的收藏地图列表，每张都标出地图类型，并提供快速复制和移除操作。
 
 Your locked team was killed because '%s' %s
 == 你的锁队因 '%s' %s 而被全员处死
