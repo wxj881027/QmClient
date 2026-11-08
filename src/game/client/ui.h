@@ -1109,6 +1109,13 @@ public:
 	{
 		return m_RenderOnlyDepth == 0 && m_ContentDrawDepth == m_BackgroundRenderDepth && !UnderlyingPointerInputBlocked() && MouseInside(pRect) && MouseInsideClip();
 	}
+	// 控件外观的悬浮判定：与 VisualMouseHovered 共用同一条深度门，但不看指针输入
+	// 是否被上层遮挡。卡片 DRAW 回放时上层弹层会置 UnderlyingPointerInputBlocked，
+	// 而按钮的描边与填充仍要与前景那一份一致，否则背板上的控件会整片失去高亮。
+	bool VisualSurfaceHovered(const CUIRect *pRect) const
+	{
+		return m_RenderOnlyDepth == 0 && m_ContentDrawDepth == m_BackgroundRenderDepth && MouseInside(pRect) && MouseInsideClip();
+	}
 	// 热控件判定与 VisualMouseHovered 同一可见性语义：测量趟与纯背景趟不可见，
 	// 内容 DRAW 回放有效（热控件由同一帧先行的 INPUT 回放趟设置）。
 	bool VisualHotItem(const void *pId) const

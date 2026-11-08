@@ -66,13 +66,11 @@ namespace ui_widget
 		SUiButtonState State;
 		State.m_Enabled = Options.m_Enabled;
 		State.m_Selected = Options.m_Selected;
-		// 悬浮反馈按指针几何位置判断：声明式卡片的出图趟里 VisualMouseHovered 会被深度门关掉，
-		// 卡片内所有按钮（筛选按钮、选项按钮、菜单按钮）就会集体失去高亮。
-		// 这里保留显式覆盖入口，其余情况直接看指针是否落在按钮和裁剪区内。
+		// 悬浮反馈走控件外观判定：内容 DRAW 回放保留高亮，纯背景趟与测量趟不出现反馈。
+		// 不把 pId 当前提——卡片出图趟里 pId 会为了跳过动画被置空。
+		// 需要自算几何的调用点用 Options.m_HoveredOverride 覆盖（见 SettingsCard 的色块按钮）。
 		const CUIRect &HitRect = Options.m_pHitRect != nullptr ? *Options.m_pHitRect : Rect;
-		// 悬浮只看指针位置，不要求传了 pId：卡片出图趟里 pId 会为了跳过动画被置空，
-		// 一旦把它当成前提，按钮就永远拿不到悬浮反馈。
-		State.m_Hovered = Options.m_HoveredOverride.value_or(Options.m_Enabled && pUi->Enabled() && pUi->MouseInside(&HitRect) && pUi->MouseInsideClip());
+		State.m_Hovered = Options.m_HoveredOverride.value_or(Options.m_Enabled && pUi->Enabled() && pUi->VisualSurfaceHovered(&HitRect));
 		State.m_Pressed = State.m_Hovered && pUi->CheckActiveItem(pId) && (pUi->MouseButton(0) || pUi->MouseButton(1) || pUi->MouseButton(2));
 		const ColorRGBA Base = Options.m_Color.value_or(Options.m_TransparentInactive ? ColorRGBA() : ResolveConfiguredControlSurface());
 		auto Style = ResolveUiButtonStyle(Options.m_Role, Base, Backdrop, Theme, State);

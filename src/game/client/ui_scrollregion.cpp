@@ -119,7 +119,9 @@ void CScrollRegion::Begin(CUIRect *pClipRect, vec2 *pOutOffset, const CScrollReg
 			m_DisplayOffsetInit = true;
 		}
 		const float Delta = TargetOffset - m_DisplayOffset;
-		if(std::abs(Delta) > 24.0f && g_Config.m_QmUiMotionLevel > 0)
+		// 测量趟与纯背景趟只读状态偏移：后台快照必须落在暂停的位置，否则控制台开合
+		// 这类后台渲染会取到缓动中途的偏移，画面与状态各说一套。
+		if(std::abs(Delta) > 24.0f && g_Config.m_QmUiMotionLevel > 0 && !Ui()->RenderOnly())
 			m_DisplayOffset += Delta * (1.0f - std::exp(-Dt * 16.0f));
 		else
 			m_DisplayOffset = TargetOffset;
