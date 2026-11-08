@@ -365,9 +365,6 @@ A calm-play mode that hides the HUD, names, effects, chat and sounds you pick, s
 A crowded HUD hides the game, so start with one element and add more if needed.
 == Un HUD recargado tapa el juego; empieza con un elemento y añade más si hace falta.
 
-A damped spring drives the offset, so reversing direction slows down before it turns
-== Un resorte amortiguado mueve el desplazamiento, así que al invertir la dirección frena antes de girar
-
 A damped spring drives the offset; reversing slows it before it turns
 == Un resorte amortiguado impulsa el desplazamiento; al invertir la dirección frena antes de girar
 

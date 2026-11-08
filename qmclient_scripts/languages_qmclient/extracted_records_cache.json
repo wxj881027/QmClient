@@ -1765,18 +1765,18 @@
       "line": 791
     },
     {
-      "key": "A damped spring drives the offset, so reversing direction slows down before it turns",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "context": "",
-      "line": 106
-    },
-    {
       "key": "A damped spring drives the offset; reversing slows it before it turns",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1128
+      "line": 1133
+    },
+    {
+      "key": "A damped spring drives the offset; reversing slows it before it turns",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
+      "context": "",
+      "line": 106
     },
     {
       "key": "A demo with this name already exists",
@@ -4107,7 +4107,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1104
+      "line": 1109
     },
     {
       "key": "Animate chat box, emote selector, scoreboard, and spectate selection",
@@ -4135,7 +4135,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1092
+      "line": 1097
     },
     {
       "key": "Animate settings card expand and collapse height changes",
@@ -4149,7 +4149,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1086
+      "line": 1091
     },
     {
       "key": "Animate settings card lists when entering a page",
@@ -4170,7 +4170,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1098
+      "line": 1103
     },
     {
       "key": "Animate settings card reorder and layout reflow",
@@ -5318,7 +5318,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 869
+      "line": 874
     },
     {
       "key": "Auto",
@@ -7628,14 +7628,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 869
+      "line": 874
     },
     {
       "key": "Black",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 969
+      "line": 974
     },
     {
       "key": "Black",
@@ -7880,7 +7880,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 925
+      "line": 930
     },
     {
       "key": "Blur mode",
@@ -7929,7 +7929,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 971
+      "line": 976
     },
     {
       "key": "Bold",
@@ -8321,7 +8321,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 829
+      "line": 834
     },
     {
       "key": "Button background color",
@@ -9056,7 +9056,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 780
+      "line": 784
     },
     {
       "key": "Capsule seam smoothing: ease the straight-to-cap curvature jump (0 = plain semicircular ends)",
@@ -9119,7 +9119,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1090
+      "line": 1095
     },
     {
       "key": "Card height animation",
@@ -9133,7 +9133,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1084
+      "line": 1089
     },
     {
       "key": "Card list entry animation",
@@ -9161,7 +9161,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1096
+      "line": 1101
     },
     {
       "key": "Card reflow animation",
@@ -12934,7 +12934,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1022
+      "line": 1027
     },
     {
       "key": "Connection icon color",
@@ -12948,7 +12948,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1029
+      "line": 1034
     },
     {
       "key": "Connection icon custom color",
@@ -13025,7 +13025,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1127
+      "line": 1132
     },
     {
       "key": "Consecutive wheel ticks carry their velocity into one continuous glide",
@@ -14866,14 +14866,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 869
+      "line": 874
     },
     {
       "key": "Custom",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1021
+      "line": 1026
     },
     {
       "key": "Custom",
@@ -15223,7 +15223,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 885
+      "line": 890
     },
     {
       "key": "Custom text color",
@@ -18996,7 +18996,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 916
+      "line": 921
     },
     {
       "key": "Dual Kawase",
@@ -22230,7 +22230,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1148
+      "line": 1153
     },
     {
       "key": "End bounce",
@@ -23112,7 +23112,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1126
+      "line": 1131
     },
     {
       "key": "Every wheel tick restarts from rest, matching the original client",
@@ -23399,7 +23399,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 847
+      "line": 852
     },
     {
       "key": "Expanded dropdown background color",
@@ -23882,7 +23882,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1043
+      "line": 1048
     },
     {
       "key": "Fade",
@@ -24715,7 +24715,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 919
+      "line": 924
     },
     {
       "key": "Fast, lightweight blur with a softer approximation.",
@@ -24799,7 +24799,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1011
+      "line": 1016
     },
     {
       "key": "Favorite icon color",
@@ -25107,7 +25107,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 971
+      "line": 976
     },
     {
       "key": "Fill",
@@ -25856,7 +25856,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1021
+      "line": 1026
     },
     {
       "key": "Follow UI icon color",
@@ -26612,7 +26612,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1002
+      "line": 1007
     },
     {
       "key": "Friend icon color",
@@ -26871,7 +26871,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1063
+      "line": 1068
     },
     {
       "key": "Full",
@@ -26927,7 +26927,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1073
+      "line": 1078
     },
     {
       "key": "Full: each enabled animation category uses its complete transition",
@@ -27382,7 +27382,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 916
+      "line": 921
     },
     {
       "key": "Gaussian",
@@ -30245,7 +30245,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1149
+      "line": 1154
     },
     {
       "key": "How far the plasma gun tracks a tee",
@@ -31785,7 +31785,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 838
+      "line": 843
     },
     {
       "key": "Input background color",
@@ -32044,7 +32044,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 800
+      "line": 805
     },
     {
       "key": "Interface accent color",
@@ -32093,7 +32093,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 791
+      "line": 796
     },
     {
       "key": "Interface surface",
@@ -32975,7 +32975,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 916
+      "line": 921
     },
     {
       "key": "Kawase",
@@ -34543,7 +34543,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 971
+      "line": 976
     },
     {
       "key": "Light",
@@ -38330,7 +38330,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1043
+      "line": 1048
     },
     {
       "key": "Morph",
@@ -38659,7 +38659,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 920
+      "line": 925
     },
     {
       "key": "Multi-resolution blur with a stronger result and balanced GPU cost.",
@@ -42208,7 +42208,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1063
+      "line": 1068
     },
     {
       "key": "Off",
@@ -42355,7 +42355,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1069
+      "line": 1074
     },
     {
       "key": "Off: disables all interface animations while preserving the options below",
@@ -43482,7 +43482,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1115
+      "line": 1120
     },
     {
       "key": "Original",
@@ -44532,7 +44532,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1044
+      "line": 1049
     },
     {
       "key": "Password icon animation",
@@ -47171,7 +47171,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1102
+      "line": 1107
     },
     {
       "key": "Presentation animations",
@@ -48711,7 +48711,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1021
+      "line": 1026
     },
     {
       "key": "Quality tier",
@@ -49054,7 +49054,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 969
+      "line": 974
     },
     {
       "key": "Rainbow",
@@ -49124,7 +49124,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 948
+      "line": 953
     },
     {
       "key": "Rainbow card titles",
@@ -50153,7 +50153,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1063
+      "line": 1068
     },
     {
       "key": "Reduced",
@@ -50167,7 +50167,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1071
+      "line": 1076
     },
     {
       "key": "Reduced: uses shorter transitions and disables presentation animations",
@@ -50433,7 +50433,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 971
+      "line": 976
     },
     {
       "key": "Regular",
@@ -54332,7 +54332,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 909
+      "line": 914
     },
     {
       "key": "Scoreboard surface",
@@ -54563,7 +54563,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1110
+      "line": 1115
     },
     {
       "key": "Scroll feel",
@@ -54605,7 +54605,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1154
+      "line": 1159
     },
     {
       "key": "Scroll step",
@@ -54962,7 +54962,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 856
+      "line": 861
     },
     {
       "key": "Secondary menu background color",
@@ -55326,7 +55326,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 810
+      "line": 815
     },
     {
       "key": "Selected item color",
@@ -56600,7 +56600,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 820
+      "line": 825
     },
     {
       "key": "Settings card background",
@@ -56635,7 +56635,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 939
+      "line": 944
     },
     {
       "key": "Settings card border color",
@@ -61850,7 +61850,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1115
+      "line": 1120
     },
     {
       "key": "Smooth",
@@ -61871,7 +61871,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 918
+      "line": 923
     },
     {
       "key": "Smooth and accurate blur with the highest GPU cost.",
@@ -62130,7 +62130,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1015
+      "line": 1020
     },
     {
       "key": "Solid favorite icon",
@@ -62144,7 +62144,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1006
+      "line": 1011
     },
     {
       "key": "Solid friend icon",
@@ -63278,14 +63278,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1115
+      "line": 1120
     },
     {
       "key": "Spring damping",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1143
+      "line": 1148
     },
     {
       "key": "Spring damping",
@@ -63299,14 +63299,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1144
+      "line": 1149
     },
     {
       "key": "Spring response",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1138
+      "line": 1143
     },
     {
       "key": "Spring response",
@@ -63334,7 +63334,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1139
+      "line": 1144
     },
     {
       "key": "SQL Server name for record table",
@@ -66722,7 +66722,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 865
+      "line": 870
     },
     {
       "key": "Text color mode",
@@ -66743,7 +66743,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 898
+      "line": 903
     },
     {
       "key": "Text input focus ring color",
@@ -67513,7 +67513,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1076
+      "line": 1081
     },
     {
       "key": "This is the master switch for all interface animation categories",
@@ -70544,7 +70544,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 974
+      "line": 979
     },
     {
       "key": "UI icon color",
@@ -70558,7 +70558,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 995
+      "line": 1000
     },
     {
       "key": "UI icon custom color",
@@ -70572,7 +70572,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1033
+      "line": 1038
     },
     {
       "key": "UI icon style",
@@ -70586,7 +70586,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1061
+      "line": 1066
     },
     {
       "key": "UI motion level",
@@ -72070,7 +72070,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 981
+      "line": 986
     },
     {
       "key": "Use custom UI icon color",
@@ -72574,7 +72574,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 899
+      "line": 904
     },
     {
       "key": "Used by active shared text and numeric input fields",
@@ -74450,7 +74450,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 1155
+      "line": 1160
     },
     {
       "key": "Wheel distance per tick; hold Alt for 3x",
@@ -74807,14 +74807,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 869
+      "line": 874
     },
     {
       "key": "White",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "context": "",
-      "line": 969
+      "line": 974
     },
     {
       "key": "White",

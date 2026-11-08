@@ -123,7 +123,6 @@ A bar too close to the edge is cut on unusual aspect ratios.
 A big "Team tee glow halo size" can wash out outlines and map detail, so start low and raise it slowly.
 A calm-play mode that hides the HUD, names, effects, chat and sounds you pick, so only the game stays on screen.
 A crowded HUD hides the game, so start with one element and add more if needed.
-A damped spring drives the offset, so reversing direction slows down before it turns
 A damped spring drives the offset; reversing slows it before it turns
 A demo with this name already exists
 A folder with this name already exists

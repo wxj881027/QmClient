@@ -2,7 +2,7 @@
   "summary": {
     "must_i18n": 10966,
     "business_data": 12823,
-    "test_only": 6600,
+    "test_only": 6604,
     "needs_review": 4382,
     "violation": 0
   },
@@ -23508,567 +23508,567 @@
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 780,
+      "line": 784,
       "text": "Capsule seam",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 791,
+      "line": 796,
       "text": "Interface surface",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 800,
+      "line": 805,
       "text": "Interface accent color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 810,
+      "line": 815,
       "text": "Selected item color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 820,
+      "line": 825,
       "text": "Settings card background",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 829,
+      "line": 834,
       "text": "Button background color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 838,
+      "line": 843,
       "text": "Input background color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 847,
+      "line": 852,
       "text": "Expanded dropdown background color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 856,
+      "line": 861,
       "text": "Secondary menu background color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 865,
+      "line": 870,
       "text": "Text color mode",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 869,
+      "line": 874,
       "text": "Auto",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 869,
+      "line": 874,
       "text": "Black",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 869,
+      "line": 874,
       "text": "Custom",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 869,
+      "line": 874,
       "text": "White",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 885,
+      "line": 890,
       "text": "Custom text color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 898,
+      "line": 903,
       "text": "Text input focus ring color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 899,
+      "line": 904,
       "text": "Used by active shared text and numeric input fields",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 909,
+      "line": 914,
       "text": "Scoreboard surface",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 916,
+      "line": 921,
       "text": "Dual Kawase",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 916,
+      "line": 921,
       "text": "Gaussian",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 916,
+      "line": 921,
       "text": "Kawase",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 918,
+      "line": 923,
       "text": "Smooth and accurate blur with the highest GPU cost.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 919,
+      "line": 924,
       "text": "Fast, lightweight blur with a softer approximation.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 920,
+      "line": 925,
       "text": "Multi-resolution blur with a stronger result and balanced GPU cost.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 925,
+      "line": 930,
       "text": "Blur mode",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 939,
+      "line": 944,
       "text": "Settings card border color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 948,
+      "line": 953,
       "text": "Rainbow card titles",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 969,
+      "line": 974,
       "text": "Black",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 969,
+      "line": 974,
       "text": "Rainbow",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 969,
+      "line": 974,
       "text": "White",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 971,
+      "line": 976,
       "text": "Bold",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 971,
+      "line": 976,
       "text": "Fill",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 971,
+      "line": 976,
       "text": "Light",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 971,
+      "line": 976,
       "text": "Regular",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 974,
+      "line": 979,
       "text": "UI icon color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 981,
+      "line": 986,
       "text": "Use custom UI icon color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 995,
+      "line": 1000,
       "text": "UI icon custom color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1002,
+      "line": 1007,
       "text": "Friend icon color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1006,
+      "line": 1011,
       "text": "Solid friend icon",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1011,
+      "line": 1016,
       "text": "Favorite icon color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1015,
+      "line": 1020,
       "text": "Solid favorite icon",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1021,
+      "line": 1026,
       "text": "Custom",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1021,
+      "line": 1026,
       "text": "Follow UI icon color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1021,
+      "line": 1026,
       "text": "Quality tier",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1022,
+      "line": 1027,
       "text": "Connection icon color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1029,
+      "line": 1034,
       "text": "Connection icon custom color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1033,
+      "line": 1038,
       "text": "UI icon style",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1043,
+      "line": 1048,
       "text": "Fade",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1043,
+      "line": 1048,
       "text": "Morph",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1044,
+      "line": 1049,
       "text": "Password icon animation",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1061,
+      "line": 1066,
       "text": "UI motion level",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1063,
+      "line": 1068,
       "text": "Full",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1063,
+      "line": 1068,
       "text": "Off",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1063,
+      "line": 1068,
       "text": "Reduced",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1069,
+      "line": 1074,
       "text": "Off: disables all interface animations while preserving the options below",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1071,
+      "line": 1076,
       "text": "Reduced: uses shorter transitions and disables presentation animations",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1073,
+      "line": 1078,
       "text": "Full: each enabled animation category uses its complete transition",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1076,
+      "line": 1081,
       "text": "This is the master switch for all interface animation categories",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1084,
+      "line": 1089,
       "text": "Card list entry animation",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1086,
+      "line": 1091,
       "text": "Animate settings card lists when entering a page",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1090,
+      "line": 1095,
       "text": "Card height animation",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1092,
+      "line": 1097,
       "text": "Animate settings card expand and collapse height changes",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1096,
+      "line": 1101,
       "text": "Card reflow animation",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1098,
+      "line": 1103,
       "text": "Animate settings card reorder and layout reflow",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1102,
+      "line": 1107,
       "text": "Presentation animations",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1104,
+      "line": 1109,
       "text": "Animate chat box, emote selector, scoreboard, and spectate selection",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1110,
+      "line": 1115,
       "text": "Scroll feel",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1115,
+      "line": 1120,
       "text": "Original",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1115,
+      "line": 1120,
       "text": "Smooth",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1115,
+      "line": 1120,
       "text": "Spring",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1126,
+      "line": 1131,
       "text": "Every wheel tick restarts from rest, matching the original client",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1127,
+      "line": 1132,
       "text": "Consecutive wheel ticks carry their velocity into one continuous glide",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1128,
+      "line": 1133,
       "text": "A damped spring drives the offset; reversing slows it before it turns",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1138,
+      "line": 1143,
       "text": "Spring response",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1139,
+      "line": 1144,
       "text": "Spring settle time; lower is snappier, higher feels heavier",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1143,
+      "line": 1148,
       "text": "Spring damping",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1144,
+      "line": 1149,
       "text": "Spring firmness; 100 stops without overshoot, lower bounces past",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1148,
+      "line": 1153,
       "text": "End bounce",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1149,
+      "line": 1154,
       "text": "How far a wheel or drag can push past an end, in UI pixels; 0 disables",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1154,
+      "line": 1159,
       "text": "Scroll step",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1155,
+      "line": 1160,
       "text": "Wheel distance per tick; hold Alt for 3x",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -37264,7 +37264,7 @@
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
       "line": 106,
-      "text": "A damped spring drives the offset, so reversing direction slows down before it turns",
+      "text": "A damped spring drives the offset; reversing slows it before it turns",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
@@ -86034,154 +86034,154 @@
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 780,
+      "line": 784,
       "text": "%",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 780,
+      "line": 784,
       "text": "graphics-capsule-seam",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 865,
+      "line": 870,
       "text": "text-color-mode",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 948,
+      "line": 953,
       "text": "rainbow-card-titles",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 981,
+      "line": 986,
       "text": "graphics-custom-icon-color",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1006,
+      "line": 1011,
       "text": "graphics-solid-friend-icon",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1015,
+      "line": 1020,
       "text": "graphics-solid-favorite-icon",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1061,
+      "line": 1066,
       "text": "graphics-ui-motion-level-label",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1076,
+      "line": 1081,
       "text": "%s\\n%s",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1084,
+      "line": 1089,
       "text": "settings-card-list-entry-animations",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1090,
+      "line": 1095,
       "text": "settings-card-height-animations",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1096,
+      "line": 1101,
       "text": "settings-card-reflow-animations",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1102,
+      "line": 1107,
       "text": "presentation-animations",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1110,
+      "line": 1115,
       "text": "graphics-scroll-feel-label",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1138,
+      "line": 1143,
       "text": "graphics-scroll-spring-response",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1138,
+      "line": 1143,
       "text": "ms",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1143,
+      "line": 1148,
       "text": "%",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1143,
+      "line": 1148,
       "text": "graphics-scroll-spring-damping",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1148,
+      "line": 1153,
       "text": "graphics-scroll-bounce",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1154,
+      "line": 1159,
       "text": "graphics-scroll-step",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1196,
+      "line": 1208,
       "text": "graphics_prepare total=%.1fms",
       "category": "business_data",
       "reason": "log or telemetry key/value payload"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "line": 1196,
+      "line": 1208,
       "text": "perf/page",
       "category": "business_data",
       "reason": "command, config, or machine token"
@@ -104773,7 +104773,7 @@
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 5,
+      "line": 4,
       "text": "chat.h",
       "category": "business_data",
       "reason": "command, config, or machine token"
@@ -122623,21 +122623,21 @@
     },
     {
       "file": "src/game/client/components/nameplates.cpp",
-      "line": 2,
+      "line": 1,
       "text": "nameplates.h",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/nameplates.cpp",
-      "line": 4,
+      "line": 3,
       "text": "qmclient/nameplate_density.h",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/nameplates.cpp",
-      "line": 5,
+      "line": 4,
       "text": "qmclient/perf_logging.h",
       "category": "business_data",
       "reason": "path, file name, or URL data"
@@ -148495,14 +148495,14 @@
     },
     {
       "file": "src/game/client/components/spectator.cpp",
-      "line": 5,
+      "line": 4,
       "text": "spectator.h",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/spectator.cpp",
-      "line": 7,
+      "line": 6,
       "text": "camera.h",
       "category": "business_data",
       "reason": "command, config, or machine token"
@@ -158603,7 +158603,7 @@
     },
     {
       "file": "src/game/client/ui_rect.cpp",
-      "line": 6,
+      "line": 5,
       "text": "ui.h",
       "category": "business_data",
       "reason": "command, config, or machine token"
@@ -176141,20 +176141,27 @@
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
       "line": 161,
-      "text": "m_ChatLinePopupContext.m_LineIndex = GetLineIndex(&Line);",
+      "text": "DrawRoundedSurface(Ui(), CUIRect{RenderedTextRect.x",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
       "line": 162,
+      "text": "m_ChatLinePopupContext.m_LineIndex = GetLineIndex(&Line);",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
+      "line": 163,
       "text": "UiMousePos.x, UiMousePos.y",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 164,
+      "line": 165,
       "text": "OpenChatLineMenu(*pMenuLine, GetUiMousePos());",
       "category": "test_only",
       "reason": "test fixture or assertion text"
@@ -181166,567 +181173,588 @@
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 113,
+      "line": 101,
+      "text": "max(HalfSize.x, HalfSize.y) > MinHalf * 1.2",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
+      "line": 102,
+      "text": "(Capsule ? 0.8 : 0.5)",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
+      "line": 117,
       "text": "float CornerRadius(vec2 Point, vec4 CornerRadii)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 114,
-      "text": "float SdfFeather(float DistanceValue, float PixelSize)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 115,
-      "text": "return max(PixelSize, length(vec2(dFdx(DistanceValue), dFdy(DistanceValue))));",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 116,
-      "text": "return 1.0 - smoothstep(-Feather * 0.5, Feather * 0.5, DistanceValue);",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
       "line": 118,
-      "text": "float InnerDistance = OuterDistance + BorderWidth;",
+      "text": "float SdfFeather(float DistanceValue, float PixelSize)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
       "line": 119,
-      "text": "float BorderCoverage = max(OuterCoverage - InnerCoverage, 0.0);",
+      "text": "return max(PixelSize, length(vec2(dFdx(DistanceValue), dFdy(DistanceValue))));",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
       "line": 120,
-      "text": "vec4 GradientColor(vec2 UV, vec4 SolidColor)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 121,
-      "text": "vec4 FillColor = GradientColor(GradientUV, ",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 122,
-      "text": "float OuterCoverage = Coverage(OuterDistance, Params.y);",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 123,
-      "text": "InnerCoverage = BorderWidth > 0.0 && min(InnerHalfSize.x, InnerHalfSize.y) > 0.0 ? Coverage(InnerDistance, Params.y) : 0.0;",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 126,
-      "text": "Rect.zw + vec2(Params.z * 2.0)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 127,
-      "text": "float OutputAlpha = FillAlpha + BorderAlpha;",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 129,
-      "text": "vec4 BorderTint = BorderColor;",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 130,
-      "text": "if(Params.w > 0.5)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 134,
-      "text": "[14].y > 0.5;",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 136,
-      "text": "float BandT = clamp(InnerDistance / max(BorderWidth, 0.0001), 0.0, 1.0);",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 137,
-      "text": "vec3 Premultiplied = FillColor.rgb * FillAlpha + BorderTint.rgb * BorderAlpha;",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 138,
-      "text": "BorderAlpha * (1.0 - FillAlpha)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 139,
-      "text": "mix(BorderColor, FillColor, InnerCoverage)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 149,
-      "text": "fragment float4 qmclient_rounded_rect_sdf_fragment(",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 151,
-      "text": "fragment float4 qmclient_rounded_rect_sdf_fragment(",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 152,
-      "text": "float4 RoundedRectGradientColor(",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 153,
-      "text": "constant float4 *Params [[buffer(1)]]",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 154,
-      "text": "float RoundedRectDistance(float2 Point, float2 HalfSize, float Radius, float Smoothing, float CurveType, float SeamAmount)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 155,
-      "text": "float RoundedRectCornerRadius(float2 Point, float4 CornerRadii)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 156,
-      "text": "float RoundedRectCoverage(float DistanceValue, float PixelSize)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 157,
-      "text": "const float Feather = max(PixelSize, length(float2(dfdx(DistanceValue), dfdy(DistanceValue))));",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 158,
       "text": "return 1.0 - smoothstep(-Feather * 0.5, Feather * 0.5, DistanceValue);",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 159,
-      "text": "const float InnerDistance = OuterDistance + BorderWidth;",
+      "line": 122,
+      "text": "float InnerDistance = OuterDistance + BorderWidth;",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 161,
+      "line": 123,
       "text": "float BorderCoverage = max(OuterCoverage - InnerCoverage, 0.0);",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 162,
-      "text": "const bool BorderOnly = Params[14].y > 0.5;",
+      "line": 124,
+      "text": "vec4 GradientColor(vec2 UV, vec4 SolidColor)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 163,
-      "text": "const float OuterCoverage = RoundedRectCoverage(OuterDistance, RenderParams.y);",
+      "line": 125,
+      "text": "vec4 FillColor = GradientColor(GradientUV, ",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 166,
-      "text": "float InnerCoverage = BorderWidth > 0.0 && min(InnerHalfSize.x, InnerHalfSize.y) > 0.0 ? RoundedRectCoverage(InnerDistance, RenderParams.y) : 0.0;",
+      "line": 126,
+      "text": "float OuterCoverage = Coverage(OuterDistance, Params.y);",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 167,
-      "text": "const float InnerCoverage = BorderWidth",
+      "line": 127,
+      "text": "InnerCoverage = BorderWidth > 0.0 && min(InnerHalfSize.x, InnerHalfSize.y) > 0.0 ? Coverage(InnerDistance, Params.y) : 0.0;",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 168,
-      "text": "Rect.zw + float2(RenderParams.z * 2.0)",
+      "line": 130,
+      "text": "Rect.zw + vec2(Params.z * 2.0)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 169,
-      "text": "const float OutputAlpha = FillAlpha + BorderAlpha;",
+      "line": 131,
+      "text": "float OutputAlpha = FillAlpha + BorderAlpha;",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 171,
-      "text": "float4 BorderTint = BorderColor;",
+      "line": 133,
+      "text": "vec4 BorderTint = BorderColor;",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 172,
-      "text": "if(RenderParams.w > 0.5)",
+      "line": 134,
+      "text": "if(Params.w > 0.5)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 173,
-      "text": "const float3 Premultiplied = FillColor.rgb * FillAlpha + BorderTint.rgb * BorderAlpha;",
+      "line": 138,
+      "text": "[14].y > 0.5;",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 177,
+      "line": 140,
+      "text": "float BandT = clamp(InnerDistance / max(BorderWidth, 0.0001), 0.0, 1.0);",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
+      "line": 141,
+      "text": "vec3 Premultiplied = FillColor.rgb * FillAlpha + BorderTint.rgb * BorderAlpha;",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
+      "line": 142,
       "text": "BorderAlpha * (1.0 - FillAlpha)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 178,
+      "line": 143,
       "text": "mix(BorderColor, FillColor, InnerCoverage)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 181,
-      "text": "float RoundedRectSdf",
+      "line": 153,
+      "text": "fragment float4 qmclient_rounded_rect_sdf_fragment(",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 203,
-      "text": "layout(set = 0, binding = 0) uniform sampler2D gTextureSampler;",
+      "line": 155,
+      "text": "fragment float4 qmclient_rounded_rect_sdf_fragment(",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 204,
-      "text": "layout(std140, set = 1, binding = 1)",
+      "line": 156,
+      "text": "float4 RoundedRectGradientColor(",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 205,
-      "text": "layout(std140, set = 0, binding = 1)",
+      "line": 157,
+      "text": "constant float4 *Params [[buffer(1)]]",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 207,
-      "text": "const uint32_t ParamSet = Textured ? 1u : 0u;",
+      "line": 158,
+      "text": "float RoundedRectDistance(float2 Point, float2 HalfSize, float Radius, float Smoothing, float CurveType, float SeamAmount)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 223,
-      "text": "return ",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 253,
-      "text": "Amount <= 0.001",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 254,
-      "text": "mix(2.0, 4.0, Amount)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 256,
-      "text": "return Radius >= MinHalf * (9.0 / 10.0) ? 0.8 : 0.5;",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 257,
-      "text": "clamp(ClampedRadius * (1.0 + 1.3 * Amount), ClampedRadius, MaxRadius)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 260,
-      "text": "min(Amount, clamp(SeamAmount, 0.0, 1.0))",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 266,
-      "text": "return length(Corner) + Flat - EffectiveRadius;",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 267,
-      "text": "if(Amount <= 0.001 ||",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 270,
-      "text": "float CornerRadius(vec2 Point, vec4 CornerRadii)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 271,
+      "line": 159,
       "text": "float RoundedRectCornerRadius(float2 Point, float4 CornerRadii)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 275,
-      "text": "static_assert(sizeof(SRoundedRectSdfParams) == sizeof(vec4) * 18);",
+      "line": 160,
+      "text": "float RoundedRectCoverage(float DistanceValue, float PixelSize)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 276,
-      "text": "void CGraphics_Threaded::RenderRoundedRectSdf",
+      "line": 161,
+      "text": "const float Feather = max(PixelSize, length(float2(dfdx(DistanceValue), dfdy(DistanceValue))));",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
+      "line": 162,
+      "text": "return 1.0 - smoothstep(-Feather * 0.5, Feather * 0.5, DistanceValue);",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
+      "line": 163,
+      "text": "const float InnerDistance = OuterDistance + BorderWidth;",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
+      "line": 165,
+      "text": "float BorderCoverage = max(OuterCoverage - InnerCoverage, 0.0);",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
+      "line": 166,
+      "text": "const bool BorderOnly = Params[14].y > 0.5;",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
+      "line": 167,
+      "text": "const float OuterCoverage = RoundedRectCoverage(OuterDistance, RenderParams.y);",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
+      "line": 170,
+      "text": "float InnerCoverage = BorderWidth > 0.0 && min(InnerHalfSize.x, InnerHalfSize.y) > 0.0 ? RoundedRectCoverage(InnerDistance, RenderParams.y) : 0.0;",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
+      "line": 171,
+      "text": "const float InnerCoverage = BorderWidth",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
+      "line": 172,
+      "text": "Rect.zw + float2(RenderParams.z * 2.0)",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
+      "line": 173,
+      "text": "const float OutputAlpha = FillAlpha + BorderAlpha;",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
+      "line": 175,
+      "text": "float4 BorderTint = BorderColor;",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
+      "line": 176,
+      "text": "if(RenderParams.w > 0.5)",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
+      "line": 177,
+      "text": "const float3 Premultiplied = FillColor.rgb * FillAlpha + BorderTint.rgb * BorderAlpha;",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
+      "line": 181,
+      "text": "BorderAlpha * (1.0 - FillAlpha)",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
+      "line": 182,
+      "text": "mix(BorderColor, FillColor, InnerCoverage)",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
+      "line": 185,
+      "text": "float RoundedRectSdf",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
+      "line": 207,
+      "text": "layout(set = 0, binding = 0) uniform sampler2D gTextureSampler;",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
+      "line": 208,
+      "text": "layout(std140, set = 1, binding = 1)",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
+      "line": 209,
+      "text": "layout(std140, set = 0, binding = 1)",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
+      "line": 211,
+      "text": "const uint32_t ParamSet = Textured ? 1u : 0u;",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
+      "line": 227,
+      "text": "return ",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
+      "line": 257,
+      "text": "Amount <= 0.001",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
+      "line": 258,
+      "text": "mix(2.0, 4.0, Amount)",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
+      "line": 262,
+      "text": "(Capsule ? 0.8 : 0.5)",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
+      "line": 263,
+      "text": "max(HalfSize.x, HalfSize.y) > MinHalf * 1.2",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
+      "line": 264,
+      "text": "clamp(ClampedRadius * (1.0 + 1.3 * Amount), ClampedRadius, MaxRadius)",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
+      "line": 267,
+      "text": "min(Amount, clamp(SeamAmount, 0.0, 1.0))",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
+      "line": 273,
+      "text": "return length(Corner) + Flat - EffectiveRadius;",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
+      "line": 274,
+      "text": "if(Amount <= 0.001 ||",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
+      "line": 277,
+      "text": "float CornerRadius(vec2 Point, vec4 CornerRadii)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
       "line": 278,
-      "text": "if(m_NumVertices > 0)",
+      "text": "float RoundedRectCornerRadius(float2 Point, float4 CornerRadii)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 284,
-      "text": "m_RoundedRectSdfCommandCount = 0;",
+      "line": 282,
+      "text": "static_assert(sizeof(SRoundedRectSdfParams) == sizeof(vec4) * 18);",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
+      "line": 283,
+      "text": "void CGraphics_Threaded::RenderRoundedRectSdf",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
       "line": 285,
+      "text": "if(m_NumVertices > 0)",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
+      "line": 291,
+      "text": "m_RoundedRectSdfCommandCount = 0;",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
+      "line": 292,
       "text": "m_RoundedRectSdfFlushCount = 0;",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 295,
+      "line": 302,
       "text": "DrawRoundedImage(Ui(), CardRect",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 296,
+      "line": 303,
       "text": "DrawRoundedSurface(Ui(), BorderRect",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 297,
+      "line": 304,
       "text": "Graphics()->DrawRect(PreviewX + ShadowOffset",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 298,
+      "line": 305,
       "text": "DrawRoundedSurface(Ui(), HelpRect",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 299,
+      "line": 306,
       "text": "Graphics()->DrawRect(HelpX, HelpY",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 370,
+      "line": 377,
       "text": "#if defined(CONF_PLATFORM_MACOS)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 371,
+      "line": 378,
       "text": "QmNameplateUsesPhysicalPixelAlignment(This.Graphics()->ScreenHiDPIScale(), true)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 378,
+      "line": 385,
       "text": "void CMenus::RenderBackground()",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 381,
+      "line": 388,
       "text": "const bool NoMenuTheme = g_Config.m_ClMenuMap[0] == '\\0';",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 382,
+      "line": 389,
       "text": "const ColorRGBA CheckerColor = NoMenuTheme",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 384,
+      "line": 391,
       "text": "#include <game/client/QmUi/UiSurface.h>",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 386,
+      "line": 393,
       "text": "DrawRoundedSurface(Ui(), Header, HeaderColor, ColorRGBA(), ui_token::radius::SMALL_MENU);",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 387,
+      "line": 394,
       "text": "DrawRoundedSurface(Ui(), Rect, CardFill, ColorRGBA(), ui_token::radius::SMALL_MENU);",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 388,
+      "line": 395,
       "text": "Rect.Draw(Color, IGraphics::CORNER_ALL, 5.0f);",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 395,
+      "line": 402,
       "text": "DrawRoundedSurface(Ui(), Item.m_Rect",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 396,
+      "line": 403,
       "text": "DrawRoundedSurface(Ui(), View",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 397,
+      "line": 404,
       "text": "DrawRoundedSurface(Ui(), ShellRect",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 400,
+      "line": 407,
       "text": "DrawRoundedSurface(Ui(), FallbackRect",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 401,
+      "line": 408,
       "text": "DrawRoundedSurface(pUi, StatusRect",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp",
-      "line": 402,
+      "line": 409,
       "text": "DrawRoundedSurface(Ui(), WorkshopHudView",
       "category": "test_only",
       "reason": "test fixture or assertion text"
@@ -189069,20 +189097,6 @@
     },
     {
       "file": "src/test/support/qm_ui_test_client.h",
-      "line": 55,
-      "text": "unexpected UI client boundary call",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/support/qm_ui_test_client.h",
-      "line": 56,
-      "text": "unexpected UI client boundary call",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/support/qm_ui_test_client.h",
       "line": 57,
       "text": "unexpected UI client boundary call",
       "category": "test_only",
@@ -189573,6 +189587,13 @@
     },
     {
       "file": "src/test/support/qm_ui_test_client.h",
+      "line": 127,
+      "text": "unexpected UI client boundary call",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/support/qm_ui_test_client.h",
       "line": 128,
       "text": "unexpected UI client boundary call",
       "category": "test_only",
@@ -189580,7 +189601,7 @@
     },
     {
       "file": "src/test/support/qm_ui_test_client.h",
-      "line": 129,
+      "line": 130,
       "text": "unexpected UI client boundary call",
       "category": "test_only",
       "reason": "test fixture or assertion text"
@@ -189594,7 +189615,14 @@
     },
     {
       "file": "src/test/support/qm_ui_test_client.h",
-      "line": 132,
+      "line": 133,
+      "text": "unexpected UI client boundary call",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/support/qm_ui_test_client.h",
+      "line": 134,
       "text": "unexpected UI client boundary call",
       "category": "test_only",
       "reason": "test fixture or assertion text"

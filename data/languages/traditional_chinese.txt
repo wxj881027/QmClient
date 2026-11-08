@@ -365,9 +365,6 @@ A calm-play mode that hides the HUD, names, effects, chat and sounds you pick, s
 A crowded HUD hides the game, so start with one element and add more if needed.
 == HUD 太擁擠會遮住遊戲畫面，先開一個元素，有需要再加。
 
-A damped spring drives the offset, so reversing direction slows down before it turns
-== 由阻尼彈簧驅動位移，反向時會先減速再轉向
-
 A damped spring drives the offset; reversing slows it before it turns
 == 阻尼彈簧驅動偏移，反向時先減速再迴轉
 

@@ -365,9 +365,6 @@ A calm-play mode that hides the HUD, names, effects, chat and sounds you pick, s
 A crowded HUD hides the game, so start with one element and add more if needed.
 == Um HUD cheio esconde o jogo; comece com um elemento e adicione mais se precisar.
 
-A damped spring drives the offset, so reversing direction slows down before it turns
-== Uma mola amortecida move o deslocamento, então inverter a direção freia antes de virar
-
 A damped spring drives the offset; reversing slows it before it turns
 == Uma mola amortecida conduz o deslocamento; ao inverter, ela desacelera antes de virar
 

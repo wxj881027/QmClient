@@ -365,9 +365,6 @@ A calm-play mode that hides the HUD, names, effects, chat and sounds you pick, s
 A crowded HUD hides the game, so start with one element and add more if needed.
 == HUD が混み合うとゲームが見えなくなるので、まず 1 つだけ有効にして、必要なら追加しましょう。
 
-A damped spring drives the offset, so reversing direction slows down before it turns
-== 減衰バネが位置を動かすため、逆向きの操作では一度減速してから折り返します
-
 A damped spring drives the offset; reversing slows it before it turns
 == 減衰バネが偏移を駆動し、逆方向へは一旦減速してから戻ります
 

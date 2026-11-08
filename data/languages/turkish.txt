@@ -365,9 +365,6 @@ A calm-play mode that hides the HUD, names, effects, chat and sounds you pick, s
 A crowded HUD hides the game, so start with one element and add more if needed.
 == Kalabalık bir HUD oyunu gizler; tek bir öğeyle başlayın, gerekirse ekleyin.
 
-A damped spring drives the offset, so reversing direction slows down before it turns
-== Konumu sönümlü bir yay sürükler, bu yüzden yön değiştirirken önce yavaşlar
-
 A damped spring drives the offset; reversing slows it before it turns
 == Sönümlü bir yay kaydırmayı sürer; yön değişirken önce yavaşlar
 
