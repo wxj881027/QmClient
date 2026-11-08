@@ -787,7 +787,9 @@ MACRO_CONFIG_INT(QmDummySkinQueueRotateMap, qm_dummy_skin_queue_rotate_map, 0, 0
 MACRO_CONFIG_INT(QmDummySkinQueueRandomJoin, qm_dummy_skin_queue_random_join, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Start dummy skin queue from a random position when entering a map")
 
 // Settings performance - 性能
-MACRO_CONFIG_INT(QmSettingsPrewarm, qm_settings_prewarm, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pre-warm settings page on startup and menu idle")
+// 实测：关闭时第一次打开图像页要 435ms（整帧冻住），开启后降到 6ms，
+// 且没有引入新的长帧（最长帧 438ms -> 37ms）。默认打开，仍可手动关闭。
+MACRO_CONFIG_INT(QmSettingsPrewarm, qm_settings_prewarm, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pre-warm settings page on startup and menu idle")
 
 // Chat Bubble Settings - 聊天气泡
 // 手机端默认把轨道放右侧：左侧边缘更容易被误触和圆角挡住。
@@ -984,7 +986,9 @@ MACRO_CONFIG_INT(QmSelfKillEnabled, qm_self_kill_enabled, 0, 0, 1, CFGFLAG_CLIEN
 // 自动开启只改本局运行时状态，不写回 qm_self_kill_enabled。
 MACRO_CONFIG_INT(QmSelfKillAutoDelay, qm_self_kill_auto_delay, 0, 0, 60, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-enable self-kill protection this many minutes after joining a game (0 = never)")
 
-// 圆角形状：0 保留原来的圆弧圆角，>0 让直线与圆角之间曲率渐变（连续曲率）。
-// UI 是分层叠出来的，开启前必须先保证各层都由同一形状按距离偏移得到，否则角上会对不齐。
-MACRO_CONFIG_INT(QmUiCornerCurve, qm_ui_corner_curve, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Continuous-curvature corner curve: 0 = superellipse, 1 = conic Bezier")
+// 圆角曲线档位：0 原圆弧（旧外观，不扩展），1 超椭圆，2 五次贝塞尔，3 圆锥贝塞尔。
+// 超椭圆与五次贝塞尔的端点曲率为 0，是真正的连续曲率；圆锥贝塞尔的端点曲率恒为
+// 1/(2W²E)，只能把接缝跳变压小。连续曲率靠沿边拉长圆角补偿曲率峰值，拉长量受
+// 短边 25% 上限约束，扩不动时（胶囊、短边很近的小控件）曲线自动退回圆弧。
+MACRO_CONFIG_INT(QmUiCornerCurve, qm_ui_corner_curve, 2, 0, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier")
 MACRO_CONFIG_INT(QmUiCornerSmoothing, qm_ui_corner_smoothing, 40, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Continuous-curvature UI corners (0 = classic arc, 100 = strongest)")
