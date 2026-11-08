@@ -73,7 +73,7 @@ void CMenus::RenderQmConsoleContent(CUIRect &Content, const SSettingsContentMetr
 		const bool Selected = g_Config.m_QmConsoleColorScheme == Entry.m_Value;
 		// 行是列表项而不是按钮：只在悬停/选中时铺一层底色，不给每行描边，
 		// 否则十几行连起来全是框，看起来比内容还重。
-		const bool Hovered = !PrewarmOnly && Flow.Input() && Ui()->VisualMouseHovered(&RowRect);
+		const bool Hovered = !PrewarmOnly && Flow.Input() && Ui()->VisualSurfaceHovered(&RowRect);
 		const bool Activate = Ui()->DoButtonLogic(&Button, 0, &RowRect, BUTTONFLAG_LEFT);
 		// 预渲染只走几何与绘制，不消费点击，也不写配置。
 		if(!PrewarmOnly && Activate && Flow.Input() && !Ui()->RenderOnly())

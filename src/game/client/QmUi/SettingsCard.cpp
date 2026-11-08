@@ -352,7 +352,8 @@ bool CMenus::DoSettingsToggleButton(int Page, int Tab, int Subtab, const CUIRect
 	Options.m_Color = Options.m_Selected ? color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(1.0f) : ResolveConfiguredControlSurface();
 	// 需要突出悬浮位置的场景（成对出现的色块 + 按钮）再加一层明暗差：
 	// 不悬浮时底色压暗，悬浮时回到原亮度并把描边提亮。
-	// 指针位置直接按几何判断：声明式卡片的 DRAW 回放趟会把 VisualMouseHovered 关掉。
+	// 指针位置直接按几何判断：这里是「成对色块」的强调语义，命中区可能小于卡片矩形，
+	// 不复用控件外观判定；普通按钮的悬浮仍走 VisualSurfaceHovered。
 	// 这里不自算亮度：非悬浮用遮罩 token 压暗，悬浮提亮交给公共按钮反馈样式。
 	const float MouseX = Ui()->MouseX();
 	const float MouseY = Ui()->MouseY();

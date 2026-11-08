@@ -125,6 +125,9 @@ namespace ui_token::feedback
 	inline constexpr float ICON_PRESS_ALPHA = 0.30f;
 	inline constexpr float ICON_BORDER_ALPHA = 0.70f;
 	inline constexpr float ICON_BORDER_WIDTH = 1.0f;
+	// 悬停 / 按下 / 选中统一使用的白色描边。按钮表面、动作组外框、键位行等
+	// 所有「控件处于活动态」的描边都从这里取，禁止在调用文件重写 1,1,1,alpha。
+	inline constexpr ColorRGBA ACTIVE_BORDER{1.0f, 1.0f, 1.0f, ICON_BORDER_ALPHA};
 }
 
 namespace ui_token::spacing

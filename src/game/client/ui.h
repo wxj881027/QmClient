@@ -1104,17 +1104,18 @@ public:
 	// 冻结，否则预热帧把弹簧直接推到目标、背景帧凭空创建轨道；声明式卡片桥
 	// 的 DRAW 回放（内容出图，两 depth 相等）是最终出图趟，必须推进。
 	bool AnimationsBlocked() const { return m_RenderOnlyDepth > 0 || m_ContentDrawDepth != m_BackgroundRenderDepth; }
-	// 内容 DRAW 保留控件反馈；真正的下层菜单、测量和活动弹层仍屏蔽反馈。
-	bool VisualMouseHovered(const CUIRect *pRect) const
-	{
-		return m_RenderOnlyDepth == 0 && m_ContentDrawDepth == m_BackgroundRenderDepth && !UnderlyingPointerInputBlocked() && MouseInside(pRect) && MouseInsideClip();
-	}
-	// 控件外观的悬浮判定：与 VisualMouseHovered 共用同一条深度门，但不看指针输入
-	// 是否被上层遮挡。卡片 DRAW 回放时上层弹层会置 UnderlyingPointerInputBlocked，
-	// 而按钮的描边与填充仍要与前景那一份一致，否则背板上的控件会整片失去高亮。
+	// 控件外观的悬浮判定：这是「这个控件现在看起来该不该亮」的唯一入口。
+	// 只按渲染层判断——内容 DRAW 回放与最终出图趟有效，测量趟与纯背景趟无效；
+	// 不看指针输入是否被上层弹层遮挡，否则同一控件在回放趟与前景趟会给出两种外观。
 	bool VisualSurfaceHovered(const CUIRect *pRect) const
 	{
 		return m_RenderOnlyDepth == 0 && m_ContentDrawDepth == m_BackgroundRenderDepth && MouseInside(pRect) && MouseInsideClip();
+	}
+	// 严格档：在控件外观之外再要求指针没有被上层弹层遮挡（弹层下方不出现悬浮反馈）。
+	// 需要这条额外规则时用它，其余外观一律用 VisualSurfaceHovered，避免两套判定漂移。
+	bool VisualMouseHovered(const CUIRect *pRect) const
+	{
+		return VisualSurfaceHovered(pRect) && !UnderlyingPointerInputBlocked();
 	}
 	// 热控件判定与 VisualMouseHovered 同一可见性语义：测量趟与纯背景趟不可见，
 	// 内容 DRAW 回放有效（热控件由同一帧先行的 INPUT 回放趟设置）。

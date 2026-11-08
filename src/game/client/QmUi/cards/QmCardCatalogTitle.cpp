@@ -93,7 +93,7 @@ static void RenderQmSponsorChatPreview(IGraphics *pGraphics, ITextRender *pTextR
 	const char *pText = Localize("See you at the next checkpoint.");
 	const ColorRGBA Color = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClMessageColor));
 	const ColorRGBA PreviousColor = pTextRender->GetTextColor();
-	pTextRender->TextColor(Style == EQmSponsorChatStyle::FLUID ? ColorRGBA(1, 1, 1, Color.a) : Color);
+	pTextRender->TextColor(Style == EQmSponsorChatStyle::FLUID ? ui_token::color::NEUTRAL_WHITE.WithAlpha(Color.a) : Color);
 	CTextCursor Cursor;
 	Cursor.SetPosition(vec2(Rect.x, Rect.y + (Rect.h - FontSize) / 2.0f));
 	Cursor.m_FontSize = FontSize;
@@ -164,7 +164,7 @@ void qm_card_catalog::QmCardRenderHook::RenderQmSponsorChatMessagePreview(CMenus
 	CTextCursor NameCursor;
 	NameCursor.SetPosition(vec2(X, CenterY - FontSize / 2.0f));
 	NameCursor.m_FontSize = FontSize;
-	pTextRender->TextColor(ColorRGBA(0.8f, 0.8f, 0.8f, 1.0f));
+	pTextRender->TextColor(ui_token::color::TEXT_SECONDARY);
 	if(g_Config.m_ClShowIds && HaveLocal)
 	{
 		char aClientId[16] = "";

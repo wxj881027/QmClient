@@ -1015,8 +1015,8 @@ bool CUi::MouseHovered(const CUIRect *pRect) const
 {
 	// 输入判定语义：任何非交互趟（测量、背景/回放）一律不响应——
 	// click-outside、DoButtonLogic 等输入路径都依赖这一点。
-	// 视觉侧的悬浮反馈用 VisualMouseHovered / VisualHotItem（内容
-	// DRAW 回放放行），两者不可混用。
+	// 控件外观用 VisualSurfaceHovered / VisualHotItem（内容 DRAW 回放放行），
+	// 两者不可混用。
 	return !RenderOnly() && !UnderlyingPointerInputBlocked() && MouseInside(pRect) && MouseInsideClip();
 }
 

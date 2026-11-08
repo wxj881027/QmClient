@@ -5734,6 +5734,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/ui/qm_confirm_popup_result_test.cpp
       src/test/integration/qmclient/ui/qm_tooltip_text_layout_test.cpp
       src/test/integration/qmclient/ui/qm_card_summary_layout_test.cpp
+      src/test/integration/qmclient/ui/qm_visual_hover_visibility_test.cpp
       src/test/integration/qmclient/ui/qm_secondary_panel_actions_test.cpp
       src/test/integration/qmclient/ui/qm_browser_map_preview_input_test.cpp
       src/test/integration/qmclient/ui/qm_settings_action_group_test.cpp

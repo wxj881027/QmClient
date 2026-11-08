@@ -24,8 +24,8 @@ namespace ui_widget
 		// 的反馈遮罩）和按下 0.97 缩放表达，描边不再随状态换色，也不另提一档 alpha。
 		// 旧实现把表面自动前景色当描边色，默认选中色 #8FDDAD 提到 0.88 alpha 之后
 		// 亮度超过阈值被判成 NEUTRAL_BLACK，于是 Shift 这类选中键按下时描出黑边，
-		// 和悬停白边割裂。alpha 直接沿用悬停档 ui_token::feedback::ICON_BORDER_ALPHA。
-		constexpr ColorRGBA ActiveBorderColor{1.0f, 1.0f, 1.0f, ui_token::feedback::ICON_BORDER_ALPHA};
+		// 和悬停白边割裂。
+		constexpr ColorRGBA ActiveBorderColor = ui_token::feedback::ACTIVE_BORDER;
 
 		// 按钮描边的唯一出口：可用按钮进入悬停/按下/选中一律白色描边；禁用、透明
 		// 未激活等状态仍由主题解析结果和调用处的覆盖决定。
@@ -226,7 +226,7 @@ namespace ui_widget
 		Ctx.m_pUi->ClipDisable();
 		SUiButtonState BorderState;
 		BorderState.m_Enabled = !(LeftDisabled && RightDisabled);
-		BorderState.m_Hovered = (!LeftDisabled && Ctx.m_pUi->VisualMouseHovered(&Left)) || (!RightDisabled && Ctx.m_pUi->VisualMouseHovered(&Right));
+		BorderState.m_Hovered = (!LeftDisabled && Ctx.m_pUi->VisualSurfaceHovered(&Left)) || (!RightDisabled && Ctx.m_pUi->VisualSurfaceHovered(&Right));
 		BorderState.m_Pressed = BorderState.m_Hovered && (Ctx.m_pUi->CheckActiveItem(pLeft) || Ctx.m_pUi->CheckActiveItem(pRight)) && (Ctx.m_pUi->MouseButton(0) || Ctx.m_pUi->MouseButton(1) || Ctx.m_pUi->MouseButton(2));
 		const float Inset = std::min(ui_token::spacing::XS, Rect.h * 0.25f);
 		const CUIRect Divider{Right.x - 0.5f, Rect.y + Inset, 1.0f, std::max(0.0f, Rect.h - 2.0f * Inset)};

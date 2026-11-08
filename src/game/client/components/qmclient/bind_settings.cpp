@@ -363,7 +363,7 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 				DrawRoundedSurface(Ui(), Plate, ui_token::color::COLOR_TRANSPARENT, BindEditorAccent(Ui()), Radius, ui_token::feedback::ICON_BORDER_WIDTH, Corners);
 			// 悬停但未选中：白色高亮描边（和其它按钮悬停同源），让「鼠标在这」和「选中了」分得开。
 			else if(Hovered)
-				DrawRoundedSurface(Ui(), Plate, ui_token::color::COLOR_TRANSPARENT, ColorRGBA(1.0f, 1.0f, 1.0f, ui_token::feedback::ICON_BORDER_ALPHA), Radius, ui_token::feedback::ICON_BORDER_WIDTH, Corners);
+				DrawRoundedSurface(Ui(), Plate, ui_token::color::COLOR_TRANSPARENT, ui_token::feedback::ACTIVE_BORDER, Radius, ui_token::feedback::ICON_BORDER_WIDTH, Corners);
 			// 已绑定标记：键帽贴着底边一条 2px 强调色下划线；鼠标区域改成居中的一小截短划，
 			// 贴在圆角底边上会从圆弧两侧戳出去，整条又太抢眼。两种都用主题强调色。
 			if(GameClient()->m_Binds.Get(Slot)[0] != '\0')
@@ -994,7 +994,7 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 				DrawRoundedSurface(Ui(), Node, NodeSurface, ui_token::color::COLOR_TRANSPARENT, ui_token::radius::BASE);
 				if(RowHovered)
 					DrawRoundedSurface(Ui(), Node, ui_token::color::SURFACE_HIGHLIGHT.WithAlpha(0.14f), ui_token::color::COLOR_TRANSPARENT, ui_token::radius::BASE);
-				const ColorRGBA RowBorder = RowEditing ? BindEditorAccent(Ui()) : RowHovered ? ColorRGBA(1.0f, 1.0f, 1.0f, ui_token::feedback::ICON_BORDER_ALPHA) :
+				const ColorRGBA RowBorder = RowEditing ? BindEditorAccent(Ui()) : RowHovered ? ui_token::feedback::ACTIVE_BORDER :
 													       ui_token::color::BORDER_SUBTLE;
 				DrawRoundedSurface(Ui(), Node, ui_token::color::COLOR_TRANSPARENT, RowBorder, ui_token::radius::BASE, ui_token::feedback::ICON_BORDER_WIDTH);
 				CUIRect Marker, Label;

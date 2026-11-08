@@ -932,7 +932,7 @@ void CMenus::RenderSettingsTeeEditor(CUIRect Content, const SSettingsContentMetr
 	{
 		const CUIRect &Slot = SliderLayout.m_aSlotRects[Emote];
 		const bool IsActive = Emote == ActiveEmote;
-		const bool IsHovered = Ui()->VisualMouseHovered(&Slot) && !Ui()->IsPopupOpen();
+		const bool IsHovered = Ui()->VisualSurfaceHovered(&Slot) && !Ui()->IsPopupOpen();
 		if(IsHovered && !IsActive)
 		{
 			CUIRect HoverRect;

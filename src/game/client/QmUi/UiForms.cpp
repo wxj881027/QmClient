@@ -112,9 +112,9 @@ namespace ui_widget
 
 			bool Active = pInput->IsActive() || Ctx.m_pUi->IsActiveItem(pInput);
 			const bool MousePressed = Ctx.m_pUi->MouseButton(0) || Ctx.m_pUi->MouseButton(1);
-			// 指针判定用可见几何：设置卡片的出图趟是 RenderOnly 的内容 DRAW 回放，
+			// 指针判定用控件外观语义：设置卡片的出图趟是 RenderOnly 的内容 DRAW 回放，
 			// MouseHovered 在那里恒为 false，按住鼠标时会把聚焦态误判成失焦。
-			if(!Multiline && MousePressed && !Ctx.m_pUi->VisualMouseHovered(&Rect))
+			if(!Multiline && MousePressed && !Ctx.m_pUi->VisualSurfaceHovered(&Rect))
 				Active = false;
 			if(!Active && Ctx.m_pUi->HotItem() == pInput && Ctx.m_pUi->MouseButton(0))
 				Active = true;
@@ -764,7 +764,7 @@ namespace ui_widget
 		// 滑块离目标档位越远拉伸越多：中段最像液体，落位时随弹簧回弹收圆。
 		const float KnobStretch = Animate && Enabled && !Ctx.m_pUi->AnimationsBlocked() ? std::clamp(std::abs(Progress - (Value ? 1.0f : 0.0f)), 0.0f, 1.0f) * 2.0f : 0.0f;
 		const SToggleLayout Layout = ResolveToggleLayout(Rect, Progress, KnobStretch);
-		const bool Hovered = Enabled && Ctx.m_pUi->Enabled() && Ctx.m_pUi->VisualMouseHovered(pHitRect != nullptr ? pHitRect : &Rect);
+		const bool Hovered = Enabled && Ctx.m_pUi->Enabled() && Ctx.m_pUi->VisualSurfaceHovered(pHitRect != nullptr ? pHitRect : &Rect);
 		const bool Pressed = Hovered && Ctx.m_pUi->CheckActiveItem(pId) && Ctx.m_pUi->MouseButton(0);
 		const auto Feedback = ResolveUiToggleFeedbackStyle(Style, Track, Backdrop, Enabled, Hovered, Pressed);
 		DrawControlSurface(Ctx, Layout.m_Track, Feedback.m_Track, Feedback.m_Border, ui_token::radius::PILL, ui_token::feedback::ICON_BORDER_WIDTH);
