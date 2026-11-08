@@ -87,6 +87,24 @@ TEST(UiV2AnimSpring, ClampedDtNoExplosion)
 	EXPECT_LE(After, 150.0f);
 }
 
+TEST(UiV2AnimSpring, AnalyticStepIsFrameRateIndependent)
+{
+	// 共用积分器 QmSpringAdvance 对线性常系数 ODE 与步长无关，这是滚动弹簧手感
+	// 能复用同一份实现的前提：一次大步与十次小步必须落到同一状态。
+	const SUiSpringConfig Spring = {1.0f, 280.0f, 26.0f};
+	float BigValue = 0.0f;
+	float BigVelocity = 0.0f;
+	QmSpringAdvance(BigValue, BigVelocity, 100.0f, Spring, 0.1f);
+
+	float SmallValue = 0.0f;
+	float SmallVelocity = 0.0f;
+	for(int i = 0; i < 10; ++i)
+		QmSpringAdvance(SmallValue, SmallVelocity, 100.0f, Spring, 0.01f);
+
+	EXPECT_NEAR(SmallValue, BigValue, 1e-3f);
+	EXPECT_NEAR(SmallVelocity, BigVelocity, 0.05f);
+}
+
 TEST(UiV2AnimSpring, MergeTargetPreservesVelocity)
 {
 	CUiV2AnimationRuntime Runtime;

@@ -365,6 +365,9 @@ A calm-play mode that hides the HUD, names, effects, chat and sounds you pick, s
 A crowded HUD hides the game, so start with one element and add more if needed.
 == Un HUD surchargé masque le jeu ; commencez par un élément et ajoutez-en au besoin.
 
+A damped spring drives the offset, so reversing direction slows down before it turns
+== Un ressort amorti pilote le décalage : changer de direction ralentit avant de repartir
+
 A demo with this name already exists
 == Une démo avec ce nom existe déjà
 
@@ -2480,29 +2483,17 @@ Classic
 Classic Easy
 == Classic Easy
 
-Classic easy
-== Classique facile
-
 Classic Next
 == Classic Next
 
-Classic next
-== Classique suivant
-
 Classic Nut
 == Classic Nut
-
-Classic nut
-== Classique nut
 
 Classic PowerShell
 == PowerShell classique
 
 Classic Pro
 == Classic Pro
-
-Classic pro
-== Classique pro
 
 Clear
 == Effacer
@@ -2558,9 +2549,6 @@ Click a key on the keyboard picture or under "Mouse", then add a command with "A
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
 == Clique sur une langue de la liste pour l'appliquer immédiatement ; le drapeau à gauche indique le choix actuel.
 
-Click a map name to copy it and press the X button to remove it; add maps with the "Favorite map" checkbox in the in-game server info page.
-== Clique sur le nom d'une map pour le copier, et sur le X pour la retirer ; ajoute des maps avec la case « Map favorite » dans la page d'infos du serveur en jeu.
-
 Click a part on the right to edit its color, blend mode and strength.
 == Cliquez sur une partie à droite pour régler sa couleur, son mode de fusion et son intensité.
 
@@ -2595,9 +2583,6 @@ Click to add this community to favorites
 == Cliquez pour ajouter cette communauté aux favoris
 
 Click to copy map name
-== Cliquez pour copier le nom de la carte
-
-Click to copy the map name
 == Cliquez pour copier le nom de la carte
 
 Click to copy this clan's name to clipboard
@@ -3085,6 +3070,9 @@ Connlimit: number of connections allowed per IP in a time period
 
 Connlimit: time window for IP connection count
 == Connlimit : fenêtre de temps pour le comptage des connexions IP
+
+Consecutive wheel ticks carry their velocity into one continuous glide
+== Les crans successifs reprennent la vitesse pour former un seul glissement continu
 
 Console
 == Console
@@ -5159,6 +5147,9 @@ Encoder:
 End (s)
 == Fin (s)
 
+End bounce
+== Rebond aux extrémités
+
 End marker of replay slice
 == Marqueur de fin de segment de rediffusion
 
@@ -5281,6 +5272,9 @@ Event
 
 Every click applies the skin at once, so star the ones you like before you start browsing.
 == Chaque clic applique le skin aussitôt ; mets en favori ceux qui te plaisent avant de parcourir.
+
+Every wheel tick restarts from rest, matching the original client
+== Chaque cran de molette repart de l'arrêt, comme dans le client d'origine
 
 Exact bound nickname
 == Pseudo exact associé
@@ -5611,9 +5605,6 @@ Favorite maps
 
 Favorites
 == Favoris
-
-Favorites match the exact map name and also feed the "Favorite map" tab in the server browser.
-== Les favoris correspondent au nom exact de la map et alimentent aussi l'onglet « Map favorite » du navigateur de serveurs.
 
 feat-003 dogfood: tokens + 12 widgets
 == feat-003 dogfood : tokens + 12 widgets
@@ -6818,6 +6809,12 @@ How far the plasma gun tracks a tee
 How far the tractor tracks a tee
 == Distance de suivi du tee par le tracteur
 
+How far the wheel or a drag can push past an end, in UI pixels; the content springs back after scrolling stops. 0 disables it
+== Distance dont la molette ou un glissement peut pousser le contenu au-delà d'une extrémité, en pixels UI ; le contenu revient à l'arrêt du défilement. 0 désactive
+
+How firmly the spring settles; 100 stops without overshoot, lower values let it bounce past the target
+== Fermeté avec laquelle le ressort se stabilise ; 100 s'arrête sans dépasser, plus bas rebondit au-delà de la cible
+
 How long expression lasts
 == Durée de l'expression
 
@@ -7771,9 +7768,6 @@ Leave empty to disable
 
 Leave empty to join public room
 == Laissez vide pour rejoindre une salle publique
-
-Leave empty to show everyone
-== Laissez vide pour afficher tous les joueurs
 
 Leave empty to use default prompt
 == Laissez vide pour utiliser l'invite par défaut
@@ -11621,9 +11615,6 @@ Remove chat
 Remove friend
 == Supprimer l'ami
 
-Remove from favorites
-== Retirer des favoris
-
 Remove from history
 == Supprimer de l'historique
 
@@ -12044,9 +12035,6 @@ Restore old single-segment hook collision line behavior
 Restore recommended
 == Restaurer les valeurs recommandées
 
-Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
-== Rétablir le défilement d’origine : chaque cran relance le défilement fluide sans conserver la vitesse
-
 Restored the built-in content
 == Contenu intégré restauré
 
@@ -12154,6 +12142,9 @@ Rows here usually come from old configs, so test each command before you rely on
 
 RTT
 == RTT
+
+Rubber-band distance in UI pixels when the wheel or a drag pushes past an end (0=off); the content springs back after scrolling stops
+== Distance d'effet élastique en pixels UI quand la molette ou un glissement dépasse une extrémité (0=désactivé) ; le contenu revient à l'arrêt
 
 Rule line 1.
 == Ligne de règle 1.
@@ -12395,9 +12386,6 @@ Scoreboard
 Scoreboard cursor
 == Curseur du tableau des scores
 
-Scoreboard filter: only show players whose name or clan contains this text
-== Filtre du tableau : n'afficher que les joueurs dont le nom ou le clan contient ce texte
-
 Scoreboard playtime
 == Temps de jeu dans le tableau
 
@@ -12469,6 +12457,9 @@ Screenshots
 
 Screenshots directory
 == Répertoire des captures d'écran
+
+Scroll feel
+== Sensation de défilement
 
 Scroll mode
 == Mode de défilement
@@ -14597,6 +14588,21 @@ Spotify sp_dc cookie (from browser DevTools, long-lived)
 Spree
 == Série
 
+Spring
+== Ressort
+
+Spring damping
+== Amortissement du ressort
+
+Spring response
+== Réponse du ressort
+
+Spring scroll feel damping ratio in percent; 100 stops without overshoot
+== Taux d'amortissement du défilement à ressort en pourcentage ; 100 s'arrête sans dépasser
+
+Spring scroll feel response time in milliseconds; lower reaches the target sooner
+== Temps de réponse du défilement à ressort en millisecondes ; plus court arrive plus vite
+
 SQL Server name for record table
 == Nom du serveur SQL pour la table d'enregistrement
 
@@ -15709,6 +15715,9 @@ Time limit
 
 Time limit: %d min
 == Limite de temps : %d min
+
+Time the spring needs to settle on a new target; lower reaches it sooner, higher feels heavier
+== Temps que met le ressort à atteindre une nouvelle cible ; plus court est plus vif, plus long plus lourd
 
 Time to wait before changing team: %s
 == Temps d'attente avant de changer d'équipe : %s
@@ -17282,6 +17291,9 @@ Wheel distance per tick; hold Alt for 3x
 Wheel label
 == Nom dans la roue
 
+Wheel scroll feel: 0=Smooth (velocity carries over), 1=Original (each tick restarts), 2=Spring
+== Sensation de la molette : 0=Doux (vitesse reprise), 1=Original (réinitialisé à chaque cran), 2=Ressort
+
 Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
 == Pas de molette en pixels d’interface ; les pages de réglages défilent de 12 fois cette valeur par cran
 
@@ -17774,17 +17786,11 @@ Your current race time is %s
 Your current version is outdated. Please update from the QQ group.
 == Votre version actuelle est obsolète. Veuillez mettre à jour depuis le groupe QQ.
 
-Your favorite map manager
-== Votre gestionnaire de cartes préféré
-
 Your favorite maps appear here
 == Vos cartes favorites apparaissent ici
 
 Your friend %s is online and currently on map %s!
 == Votre ami %s est en ligne et actuellement sur la carte %s !
-
-Your list of favorite maps, each shown with its map type, with quick copy and remove actions.
-== Ta liste de maps favorites, chacune affichée avec son type et des actions rapides de copie et de suppression.
 
 Your locked team was killed because '%s' %s
 == Votre équipe verrouillée a été tuée parce que '%s' %s

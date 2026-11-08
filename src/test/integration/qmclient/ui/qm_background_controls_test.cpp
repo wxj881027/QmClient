@@ -1671,3 +1671,74 @@ TEST_F(QmBackgroundControlsIntegration, ServerFilterDrawsVisibleKnobAtEachSelect
 		EXPECT_NEAR(Knob.m_Rect.x + Knob.m_Rect.z * 0.5f, Geometry.Position(Value / 6.0f), PixelSize);
 	}
 }
+
+// 滚轮在两端都要有可累积的橡皮筋位移，并在停止滚动后回位。覆盖真实
+// CScrollRegion 路径：内容坐标随偏移移动，测量才能抵消滚动量。
+TEST_F(QmBackgroundControlsIntegration, WheelOverscrollAccumulatesAtBothEnds)
+{
+	g_Config.m_QmUiMotionLevel = 2;
+	g_Config.m_QmUiScrollFeel = static_cast<int>(EQmScrollFeel::SPRING);
+	g_Config.m_QmUiScrollBounce = 48;
+	g_Config.m_UiSmoothScrollTime = 500;
+
+	CScrollRegion Region;
+	const CUIRect ParentClip{0, 0, 400, 300};
+	const CUIRect Viewport{0, 0, 200, 100};
+	const float ContentHeight = 900.0f;
+	const float MaxOffset = ContentHeight - Viewport.h;
+	CScrollRegionParams Params;
+	vec2 Offset;
+	const auto Draw = [&]() {
+		CUIRect View = Viewport;
+		Region.Begin(&View, &Offset, &Params);
+		// 真实调用方传入的是屏幕坐标（随滚动偏移移动），测量才能抵消偏移。
+		Region.AddRect(CUIRect{0.0f, Offset.y, 200.0f, ContentHeight});
+		Region.End();
+		return Offset.y;
+	};
+	const auto Wheel = [&](int Key) {
+		IInput::CEvent Event{};
+		Event.m_Key = Key;
+		Event.m_Flags = IInput::FLAG_PRESS;
+		m_Ui.OnInput(Event);
+		m_Client.AdvanceFrame();
+		m_Ui.Update();
+		return Draw();
+	};
+
+	m_Ui.ClipEnable(&ParentClip);
+	Draw();
+	const vec2 Pixels = Viewport.Center() * vec2(m_Recording.WindowWidth(), m_Recording.WindowHeight()) / m_Ui.Screen()->Size();
+	m_Ui.OnCursorMove(Pixels.x, Pixels.y);
+	m_Client.AdvanceFrame();
+	m_Ui.Update();
+
+	// 底部：每档滚轮累积越界，到橡皮筋上限封顶。
+	for(int i = 0; i < 120; ++i)
+		Wheel(KEY_MOUSE_WHEEL_DOWN);
+	EXPECT_NEAR(Region.State().Offset(), MaxOffset + 48.0f, 1.0f);
+	// 满量程后继续滚不能越过上限。
+	for(int i = 0; i < 6; ++i)
+		Wheel(KEY_MOUSE_WHEEL_DOWN);
+	EXPECT_NEAR(Region.State().Offset(), MaxOffset + 48.0f, 2.0f);
+	// 停止滚动后回位到边界。
+	for(int i = 0; i < 40; ++i)
+	{
+		m_Client.AdvanceFrame();
+		m_Ui.Update();
+		Draw();
+	}
+	EXPECT_NEAR(Region.State().Offset(), MaxOffset, 1.0f);
+
+	// 顶部：与底部完全对称。
+	for(int i = 0; i < 120; ++i)
+		Wheel(KEY_MOUSE_WHEEL_UP);
+	EXPECT_NEAR(Region.State().Offset(), -48.0f, 1.0f);
+	for(int i = 0; i < 40; ++i)
+	{
+		m_Client.AdvanceFrame();
+		m_Ui.Update();
+		Draw();
+	}
+	EXPECT_NEAR(Region.State().Offset(), 0.0f, 1.0f);
+}

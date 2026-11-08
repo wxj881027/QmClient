@@ -365,6 +365,9 @@ A calm-play mode that hides the HUD, names, effects, chat and sounds you pick, s
 A crowded HUD hides the game, so start with one element and add more if needed.
 == Zatłoczony HUD zasłania grę, więc zacznij od jednego elementu i dodawaj kolejne w razie potrzeby.
 
+A damped spring drives the offset, so reversing direction slows down before it turns
+== Przesunięciem steruje tłumiona sprężyna, więc zmiana kierunku najpierw wyhamowuje
+
 A demo with this name already exists
 == Demo o tej nazwie już istnieje
 
@@ -2480,29 +2483,17 @@ Classic
 Classic Easy
 == Klasyczny Easy
 
-Classic easy
-== Klasyczny łatwy
-
 Classic Next
 == Klasyczny Next
 
-Classic next
-== Klasyczny następny
-
 Classic Nut
 == Klasyczny Nut
-
-Classic nut
-== Klasyczny nut
 
 Classic PowerShell
 == Klasyczny PowerShell
 
 Classic Pro
 == Klasyczny Pro
-
-Classic pro
-== Klasyczny pro
 
 Clear
 == Wyczyść
@@ -2558,9 +2549,6 @@ Click a key on the keyboard picture or under "Mouse", then add a command with "A
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
 == Kliknięcie języka na liście od razu go stosuje; flaga po lewej pokazuje aktualny wybór.
 
-Click a map name to copy it and press the X button to remove it; add maps with the "Favorite map" checkbox in the in-game server info page.
-== Kliknięcie nazwy mapy kopiuje ją, a przycisk X po prawej usuwa wpis. Mapy dodasz polem „Ulubiona mapa" na stronie informacji o serwerze.
-
 Click a part on the right to edit its color, blend mode and strength.
 == Kliknij część po prawej, aby dostosować kolor, tryb i siłę mieszania.
 
@@ -2595,9 +2583,6 @@ Click to add this community to favorites
 == Kliknij, aby dodać tę społeczność do ulubionych
 
 Click to copy map name
-== Kliknij, aby skopiować nazwę mapy
-
-Click to copy the map name
 == Kliknij, aby skopiować nazwę mapy
 
 Click to copy this clan's name to clipboard
@@ -3085,6 +3070,9 @@ Connlimit: number of connections allowed per IP in a time period
 
 Connlimit: time window for IP connection count
 == Connlimit: okno czasowe dla liczenia połączeń IP
+
+Consecutive wheel ticks carry their velocity into one continuous glide
+== Kolejne kroki kółka przejmują prędkość i tworzą jeden płynny ruch
 
 Console
 == Konsola
@@ -5159,6 +5147,9 @@ Encoder:
 End (s)
 == Koniec (s)
 
+End bounce
+== Odbicie na krawędzi
+
 End marker of replay slice
 == Znacznik końca wycinka powtórki
 
@@ -5281,6 +5272,9 @@ Event
 
 Every click applies the skin at once, so star the ones you like before you start browsing.
 == Każde kliknięcie od razu stosuje skórkę, więc najpierw oznacz gwiazdką te, które lubisz.
+
+Every wheel tick restarts from rest, matching the original client
+== Każdy krok kółka startuje od zera, jak w oryginalnym kliencie
 
 Exact bound nickname
 == Dokładny powiązany pseudonim
@@ -5611,9 +5605,6 @@ Favorite maps
 
 Favorites
 == Ulubione
-
-Favorites match the exact map name and also feed the "Favorite map" tab in the server browser.
-== Ulubione dopasowują się po dokładnej nazwie mapy i zasilają zakładkę „Ulubiona mapa" w przeglądarce serwerów.
 
 feat-003 dogfood: tokens + 12 widgets
 == feat-003 dogfood: tokeny + 12 widgetów
@@ -6818,6 +6809,12 @@ How far the plasma gun tracks a tee
 How far the tractor tracks a tee
 == Jak daleko traktor śledzi tee
 
+How far the wheel or a drag can push past an end, in UI pixels; the content springs back after scrolling stops. 0 disables it
+== Jak daleko kółko lub przeciąganie mogą wypchnąć treść poza krawędź, w pikselach UI; po zatrzymaniu przewijania treść wraca. 0 wyłącza
+
+How firmly the spring settles; 100 stops without overshoot, lower values let it bounce past the target
+== Jak twardo sprężyna się zatrzymuje; 100 zatrzymuje się bez przestrzelenia, mniejsze wartości odbijają za cel
+
 How long expression lasts
 == Jak długo trwa wyraz twarzy
 
@@ -7771,9 +7768,6 @@ Leave empty to disable
 
 Leave empty to join public room
 == Pozostaw puste, aby dołączyć do publicznego pokoju
-
-Leave empty to show everyone
-== Pozostaw puste, aby pokazać wszystkich graczy
 
 Leave empty to use default prompt
 == Pozostaw puste, aby użyć domyślnego promptu
@@ -11621,9 +11615,6 @@ Remove chat
 Remove friend
 == Usuń znajomego
 
-Remove from favorites
-== Usuń z ulubionych
-
 Remove from history
 == Usuń z historii
 
@@ -12044,9 +12035,6 @@ Restore old single-segment hook collision line behavior
 Restore recommended
 == Przywróć zalecane
 
-Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
-== Przywróć oryginalne przewijanie kółkiem: każdy skok uruchamia płynne przewijanie od nowa bez zachowania prędkości
-
 Restored the built-in content
 == Przywrócono treść wbudowaną
 
@@ -12154,6 +12142,9 @@ Rows here usually come from old configs, so test each command before you rely on
 
 RTT
 == RTT
+
+Rubber-band distance in UI pixels when the wheel or a drag pushes past an end (0=off); the content springs back after scrolling stops
+== Odległość efektu gumki w pikselach UI, gdy kółko lub przeciąganie przekracza krawędź (0=wył.); po zatrzymaniu treść wraca
 
 Rule line 1.
 == Linia regulaminu 1.
@@ -12395,9 +12386,6 @@ Scoreboard
 Scoreboard cursor
 == Kursor tablicy wyników
 
-Scoreboard filter: only show players whose name or clan contains this text
-== Filtr tabeli wyników: pokazuj tylko graczy, których nazwa lub klan zawiera ten tekst
-
 Scoreboard playtime
 == Czas gry w tabeli wyników
 
@@ -12469,6 +12457,9 @@ Screenshots
 
 Screenshots directory
 == Katalog zrzutów ekranu
+
+Scroll feel
+== Odczucie przewijania
 
 Scroll mode
 == Tryb przewijania
@@ -14597,6 +14588,21 @@ Spotify sp_dc cookie (from browser DevTools, long-lived)
 Spree
 == Seria
 
+Spring
+== Sprężyna
+
+Spring damping
+== Tłumienie sprężyny
+
+Spring response
+== Odpowiedź sprężyny
+
+Spring scroll feel damping ratio in percent; 100 stops without overshoot
+== Współczynnik tłumienia sprężynowego przewijania w procentach; 100 zatrzymuje się bez przestrzelenia
+
+Spring scroll feel response time in milliseconds; lower reaches the target sooner
+== Czas odpowiedzi sprężynowego przewijania w milisekundach; mniejszy szybciej dociera
+
 SQL Server name for record table
 == Nazwa serwera SQL dla tabeli rekordów
 
@@ -15709,6 +15715,9 @@ Time limit
 
 Time limit: %d min
 == Limit czasu: %d min
+
+Time the spring needs to settle on a new target; lower reaches it sooner, higher feels heavier
+== Czas, w jakim sprężyna osiąga nowy cel; mniejszy dociera szybciej, większy wydaje się cięższy
 
 Time to wait before changing team: %s
 == Czas oczekiwania przed zmianą drużyny: %s
@@ -17282,6 +17291,9 @@ Wheel distance per tick; hold Alt for 3x
 Wheel label
 == Nazwa w kole
 
+Wheel scroll feel: 0=Smooth (velocity carries over), 1=Original (each tick restarts), 2=Spring
+== Odczucie kółka: 0=Płynnie (przejmuje prędkość), 1=Oryginalny (reset przy każdym kroku), 2=Sprężyna
+
 Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
 == Krok kółka w pikselach interfejsu; strony ustawień przewijają się o 12 razy tę wartość na skok
 
@@ -17774,17 +17786,11 @@ Your current race time is %s
 Your current version is outdated. Please update from the QQ group.
 == Twoja obecna wersja jest przestarzała. Zaktualizuj z grupy QQ.
 
-Your favorite map manager
-== Twój ulubiony menedżer map
-
 Your favorite maps appear here
 == Twoje ulubione mapy pojawią się tutaj
 
 Your friend %s is online and currently on map %s!
 == Twój znajomy %s jest online i aktualnie na mapie %s!
-
-Your list of favorite maps, each shown with its map type, with quick copy and remove actions.
-== Twoja lista ulubionych map, każda z typem oraz szybkim kopiowaniem i usuwaniem.
 
 Your locked team was killed because '%s' %s
 == Twoja zablokowana drużyna została zabita, ponieważ '%s' %s

@@ -365,6 +365,9 @@ A calm-play mode that hides the HUD, names, effects, chat and sounds you pick, s
 A crowded HUD hides the game, so start with one element and add more if needed.
 == Kalabalık bir HUD oyunu gizler; tek bir öğeyle başlayın, gerekirse ekleyin.
 
+A damped spring drives the offset, so reversing direction slows down before it turns
+== Konumu sönümlü bir yay sürükler, bu yüzden yön değiştirirken önce yavaşlar
+
 A demo with this name already exists
 == Bu isimde bir demo zaten mevcut
 
@@ -2480,29 +2483,17 @@ Classic
 Classic Easy
 == Klasik Easy
 
-Classic easy
-== Klasik kolay
-
 Classic Next
 == Klasik Next
 
-Classic next
-== Klasik sonraki
-
 Classic Nut
 == Klasik Nut
-
-Classic nut
-== Klasik nut
 
 Classic PowerShell
 == Klasik PowerShell
 
 Classic Pro
 == Klasik Pro
-
-Classic pro
-== Klasik profesyonel
 
 Clear
 == Temizle
@@ -2558,9 +2549,6 @@ Click a key on the keyboard picture or under "Mouse", then add a command with "A
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
 == Listeden bir dile tıklayınca hemen uygulanır; soldaki bayrak seçili olanı gösterir.
 
-Click a map name to copy it and press the X button to remove it; add maps with the "Favorite map" checkbox in the in-game server info page.
-== Harita adına tıklayınca kopyalanır, sağdaki X düğmesi kaydı kaldırır. Ekleme için oyun içi sunucu bilgi sayfasındaki favori harita kutusunu işaretle.
-
 Click a part on the right to edit its color, blend mode and strength.
 == Rengini, karıştırma modunu ve gücünü ayarlamak için sağdaki bir parçaya tıklayın.
 
@@ -2595,9 +2583,6 @@ Click to add this community to favorites
 == Bu topluluğu favorilere eklemek için tıklayın
 
 Click to copy map name
-== Harita adını kopyalamak için tıklayın
-
-Click to copy the map name
 == Harita adını kopyalamak için tıklayın
 
 Click to copy this clan's name to clipboard
@@ -3085,6 +3070,9 @@ Connlimit: number of connections allowed per IP in a time period
 
 Connlimit: time window for IP connection count
 == Bağlantı sınırı: IP bağlantı sayısı için zaman penceresi
+
+Consecutive wheel ticks carry their velocity into one continuous glide
+== Ardışık tekerlek adımları hızı devralarak tek bir akıcı kaydırmaya dönüşür
 
 Console
 == Konsol
@@ -5159,6 +5147,9 @@ Encoder:
 End (s)
 == Bitiş (sn)
 
+End bounce
+== Uçta yaylanma
+
 End marker of replay slice
 == Tekrar diliminin bitiş işareti
 
@@ -5281,6 +5272,9 @@ Event
 
 Every click applies the skin at once, so star the ones you like before you start browsing.
 == Her tıklama skini anında uygular; beğendiklerini göz atmaya başlamadan önce yıldızla.
+
+Every wheel tick restarts from rest, matching the original client
+== Her tekerlek adımı durarak yeniden başlar, orijinal istemcideki gibi
 
 Exact bound nickname
 == Bağlanacak tam takma ad
@@ -5611,9 +5605,6 @@ Favorite maps
 
 Favorites
 == Favoriler
-
-Favorites match the exact map name and also feed the "Favorite map" tab in the server browser.
-== Favoriler harita adının tam eşleşmesine göre çalışır ve sunucu tarayıcısındaki favori harita sekmesini de besler.
 
 feat-003 dogfood: tokens + 12 widgets
 == feat-003 dogfood: tokenlar + 12 widget
@@ -6818,6 +6809,12 @@ How far the plasma gun tracks a tee
 How far the tractor tracks a tee
 == Traktörün bir tee'yi ne kadar takip edeceği
 
+How far the wheel or a drag can push past an end, in UI pixels; the content springs back after scrolling stops. 0 disables it
+== Tekerleğin veya sürüklemenin içeriği bir ucun ötesine ne kadar itebileceği (UI pikseli); kaydırma durunca içerik geri döner. 0 kapatır
+
+How firmly the spring settles; 100 stops without overshoot, lower values let it bounce past the target
+== Yayın ne kadar sıkı oturduğu; 100 hedefi aşmadan durur, küçük değerler hedefi geçip geri döner
+
 How long expression lasts
 == İfadenin ne kadar süreceği
 
@@ -7771,9 +7768,6 @@ Leave empty to disable
 
 Leave empty to join public room
 == Genel odaya katılmak için boş bırakın
-
-Leave empty to show everyone
-== Herkesi göstermek için boş bırakın
 
 Leave empty to use default prompt
 == Varsayılan istemi kullanmak için boş bırakın
@@ -11621,9 +11615,6 @@ Remove chat
 Remove friend
 == Arkadaşı kaldır
 
-Remove from favorites
-== Favorilerden kaldır
-
 Remove from history
 == Geçmişten kaldır
 
@@ -12044,9 +12035,6 @@ Restore old single-segment hook collision line behavior
 Restore recommended
 == Önerilenleri geri yükle
 
-Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
-== Özgün tekerlek kaydırmasını geri getir: her kademe hızı devralmadan yumuşak kaydırmayı yeniden başlatır
-
 Restored the built-in content
 == Paket içeriği geri yüklendi
 
@@ -12154,6 +12142,9 @@ Rows here usually come from old configs, so test each command before you rely on
 
 RTT
 == RTT
+
+Rubber-band distance in UI pixels when the wheel or a drag pushes past an end (0=off); the content springs back after scrolling stops
+== Tekerlek veya sürükleme bir ucu geçtiğinde lastik bant mesafesi, UI pikseli (0=kapalı); kaydırma durunca içerik geri döner
 
 Rule line 1.
 == Kural satırı 1.
@@ -12395,9 +12386,6 @@ Scoreboard
 Scoreboard cursor
 == Skor tablosu imleci
 
-Scoreboard filter: only show players whose name or clan contains this text
-== Skor tablosu filtresi: adı veya klanı bu metni içeren oyuncuları göster
-
 Scoreboard playtime
 == Skor tablosunda oyun süresi
 
@@ -12469,6 +12457,9 @@ Screenshots
 
 Screenshots directory
 == Ekran görüntüleri dizini
+
+Scroll feel
+== Kaydırma hissi
 
 Scroll mode
 == Kaydırma modu
@@ -14597,6 +14588,21 @@ Spotify sp_dc cookie (from browser DevTools, long-lived)
 Spree
 == Seri
 
+Spring
+== Yay
+
+Spring damping
+== Yay sönümü
+
+Spring response
+== Yay tepkisi
+
+Spring scroll feel damping ratio in percent; 100 stops without overshoot
+== Yaylı kaydırma sönüm oranı (yüzde); 100 hedefi aşmadan durur
+
+Spring scroll feel response time in milliseconds; lower reaches the target sooner
+== Yaylı kaydırma tepki süresi (milisaniye); küçük değer hedefe daha çabuk ulaşır
+
 SQL Server name for record table
 == Kayıt tablosu için SQL Sunucu adı
 
@@ -15709,6 +15715,9 @@ Time limit
 
 Time limit: %d min
 == Süre sınırı: %d dk
+
+Time the spring needs to settle on a new target; lower reaches it sooner, higher feels heavier
+== Yayın yeni hedefe oturma süresi; küçük değer daha çabuk ulaşır, büyük değer daha ağır hissettirir
 
 Time to wait before changing team: %s
 == Takım değiştirmeden önce beklenecek süre: %s
@@ -17282,6 +17291,9 @@ Wheel distance per tick; hold Alt for 3x
 Wheel label
 == Çark etiketi
 
+Wheel scroll feel: 0=Smooth (velocity carries over), 1=Original (each tick restarts), 2=Spring
+== Tekerlek hissi: 0=Yumuşak (hız devralınır), 1=Özgün (her adımda sıfırlanır), 2=Yay
+
 Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
 == Tekerlek kademesi başına arayüz pikseli; ayar kartı sayfaları her kademede bu değerin 12 katı kayar
 
@@ -17774,17 +17786,11 @@ Your current race time is %s
 Your current version is outdated. Please update from the QQ group.
 == Mevcut sürümünüz güncel değil. Lütfen QQ grubundan en son sürümü güncelleyin.
 
-Your favorite map manager
-== En sevdiğiniz harita yöneticiniz
-
 Your favorite maps appear here
 == Favori haritalarınız burada görünür
 
 Your friend %s is online and currently on map %s!
 == Arkadaşınız %s çevrimiçi ve şu anda %s haritasında!
-
-Your list of favorite maps, each shown with its map type, with quick copy and remove actions.
-== Favori haritalarının listesi; her biri türüyle gösterilir ve hızlıca kopyalanıp kaldırılabilir.
 
 Your locked team was killed because '%s' %s
 == Kilitli takımınız '%s' %s olduğu için öldürüldü

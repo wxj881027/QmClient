@@ -365,6 +365,9 @@ A calm-play mode that hides the HUD, names, effects, chat and sounds you pick, s
 A crowded HUD hides the game, so start with one element and add more if needed.
 == Ein überfülltes HUD verdeckt das Spiel; starte mit einem Element und ergänze bei Bedarf.
 
+A damped spring drives the offset, so reversing direction slows down before it turns
+== Eine gedämpfte Feder treibt den Versatz, daher bremst sie beim Richtungswechsel erst ab
+
 A demo with this name already exists
 == Eine Demo mit diesem Namen existiert bereits
 
@@ -2480,29 +2483,17 @@ Classic
 Classic Easy
 == Classic Easy
 
-Classic easy
-== Klassisch einfach
-
 Classic Next
 == Classic Next
 
-Classic next
-== Klassisch nächste
-
 Classic Nut
 == Classic Nut
-
-Classic nut
-== Klassisch nut
 
 Classic PowerShell
 == Klassische PowerShell
 
 Classic Pro
 == Classic Pro
-
-Classic pro
-== Klassisch pro
 
 Clear
 == Leeren
@@ -2558,9 +2549,6 @@ Click a key on the keyboard picture or under "Mouse", then add a command with "A
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
 == Ein Klick auf eine Sprache wendet sie sofort an; die Flagge links zeigt die aktuelle Auswahl.
 
-Click a map name to copy it and press the X button to remove it; add maps with the "Favorite map" checkbox in the in-game server info page.
-== Ein Klick auf den Kartennamen kopiert ihn, das X rechts entfernt den Eintrag. Hinzufügen kannst du Karten über das Kästchen „Lieblingskarte" auf der Serverinfo-Seite im Spiel.
-
 Click a part on the right to edit its color, blend mode and strength.
 == Klicke rechts auf einen Teil, um Farbe, Mischmodus und Stärke anzupassen.
 
@@ -2596,9 +2584,6 @@ Click to add this community to favorites
 
 Click to copy map name
 == Klicke, um Kartenname zu kopieren
-
-Click to copy the map name
-== Klicke, um den Kartennamen zu kopieren
 
 Click to copy this clan's name to clipboard
 == Klicke, um den Namen dieses Clans in die Zwischenablage zu kopieren
@@ -3085,6 +3070,9 @@ Connlimit: number of connections allowed per IP in a time period
 
 Connlimit: time window for IP connection count
 == Connlimit: Zeitfenster für die IP-Verbindungsanzahl
+
+Consecutive wheel ticks carry their velocity into one continuous glide
+== Aufeinanderfolgende Radstufen übernehmen die Geschwindigkeit und laufen in einem Zug weiter
 
 Console
 == Konsole
@@ -5159,6 +5147,9 @@ Encoder:
 End (s)
 == Ende (s)
 
+End bounce
+== Randfederung
+
 End marker of replay slice
 == Endmarkierung des Replay-Ausschnitts
 
@@ -5281,6 +5272,9 @@ Event
 
 Every click applies the skin at once, so star the ones you like before you start browsing.
 == Jeder Klick wendet den Skin sofort an, markiere also Favoriten mit dem Stern, bevor du stöberst.
+
+Every wheel tick restarts from rest, matching the original client
+== Jede Radstufe startet aus der Ruhe, wie im Original-Client
 
 Exact bound nickname
 == Exakter gebundener Spielername
@@ -5611,9 +5605,6 @@ Favorite maps
 
 Favorites
 == Favoriten
-
-Favorites match the exact map name and also feed the "Favorite map" tab in the server browser.
-== Favoriten gleichen den exakten Kartennamen ab und füllen auch den Tab „Lieblingskarte" im Serverbrowser.
 
 feat-003 dogfood: tokens + 12 widgets
 == feat-003 dogfood: Tokens + 12 Widgets
@@ -6818,6 +6809,12 @@ How far the plasma gun tracks a tee
 How far the tractor tracks a tee
 == Wie weit der Traktor einem Tee folgt
 
+How far the wheel or a drag can push past an end, in UI pixels; the content springs back after scrolling stops. 0 disables it
+== Wie weit das Rad oder Ziehen den Inhalt über ein Ende hinausschieben kann, in UI-Pixeln; nach dem Ende des Scrollens federt er zurück. 0 deaktiviert
+
+How firmly the spring settles; 100 stops without overshoot, lower values let it bounce past the target
+== Wie straff die Feder einschwingt; 100 stoppt ohne Überschwingen, kleinere Werte federn über das Ziel hinaus
+
 How long expression lasts
 == Wie lange der Gesichtsausdruck anhält
 
@@ -7771,9 +7768,6 @@ Leave empty to disable
 
 Leave empty to join public room
 == Leer lassen, um öffentlichem Raum beizutreten
-
-Leave empty to show everyone
-== Leer lassen, um alle Spieler anzuzeigen
 
 Leave empty to use default prompt
 == Leer lassen, um Standard-Prompt zu verwenden
@@ -11621,9 +11615,6 @@ Remove chat
 Remove friend
 == Freund entfernen
 
-Remove from favorites
-== Aus Favoriten entfernen
-
 Remove from history
 == Aus Verlauf entfernen
 
@@ -12044,9 +12035,6 @@ Restore old single-segment hook collision line behavior
 Restore recommended
 == Empfohlene Werte wiederherstellen
 
-Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
-== Ursprüngliches Mausradverhalten wiederherstellen: Jede Raste startet das sanfte Scrollen ohne Übernahme der Geschwindigkeit neu
-
 Restored the built-in content
 == Mitgelieferter Inhalt wiederhergestellt
 
@@ -12154,6 +12142,9 @@ Rows here usually come from old configs, so test each command before you rely on
 
 RTT
 == RTT
+
+Rubber-band distance in UI pixels when the wheel or a drag pushes past an end (0=off); the content springs back after scrolling stops
+== Gummiband-Abstand in UI-Pixeln, wenn Rad oder Ziehen über ein Ende hinausgeht (0=aus); nach dem Scrollen federt der Inhalt zurück
 
 Rule line 1.
 == Regelzeile 1.
@@ -12395,9 +12386,6 @@ Scoreboard
 Scoreboard cursor
 == Bestenlisten-Cursor
 
-Scoreboard filter: only show players whose name or clan contains this text
-== Scoreboard-Filter: nur Spieler anzeigen, deren Name oder Clan diesen Text enthält
-
 Scoreboard playtime
 == Spielzeit in der Punktetabelle
 
@@ -12469,6 +12457,9 @@ Screenshots
 
 Screenshots directory
 == Screenshot-Verzeichnis
+
+Scroll feel
+== Scrollgefühl
 
 Scroll mode
 == Scrollmodus
@@ -14597,6 +14588,21 @@ Spotify sp_dc cookie (from browser DevTools, long-lived)
 Spree
 == Serie
 
+Spring
+== Feder
+
+Spring damping
+== Federdämpfung
+
+Spring response
+== Federreaktion
+
+Spring scroll feel damping ratio in percent; 100 stops without overshoot
+== Dämpfungsverhältnis des Feder-Scrollens in Prozent; 100 stoppt ohne Überschwingen
+
+Spring scroll feel response time in milliseconds; lower reaches the target sooner
+== Reaktionszeit des Feder-Scrollens in Millisekunden; kleiner erreicht das Ziel schneller
+
 SQL Server name for record table
 == SQL-Servername für die Rekordtabelle
 
@@ -15709,6 +15715,9 @@ Time limit
 
 Time limit: %d min
 == Zeitlimit: %d min
+
+Time the spring needs to settle on a new target; lower reaches it sooner, higher feels heavier
+== Zeit, bis die Feder ein neues Ziel erreicht; kleiner ist schneller, größer fühlt sich schwerer an
 
 Time to wait before changing team: %s
 == Wartezeit vor dem Teamwechsel: %s
@@ -17282,6 +17291,9 @@ Wheel distance per tick; hold Alt for 3x
 Wheel label
 == Name im Rad
 
+Wheel scroll feel: 0=Smooth (velocity carries over), 1=Original (each tick restarts), 2=Spring
+== Scrollgefühl: 0=Sanft (Geschwindigkeit wird übernommen), 1=Original (jede Stufe neu), 2=Feder
+
 Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
 == Mausradschritt in UI-Pixeln; Einstellungsseiten scrollen pro Raste um das 12-Fache dieses Werts
 
@@ -17774,17 +17786,11 @@ Your current race time is %s
 Your current version is outdated. Please update from the QQ group.
 == Deine aktuelle Version ist veraltet. Bitte aktualisiere über die QQ-Gruppe.
 
-Your favorite map manager
-== Dein Lieblingskarten-Manager
-
 Your favorite maps appear here
 == Deine Lieblingskarten erscheinen hier
 
 Your friend %s is online and currently on map %s!
 == Dein Freund %s ist online und aktuell auf Karte %s!
-
-Your list of favorite maps, each shown with its map type, with quick copy and remove actions.
-== Deine Liste der Lieblingskarten, jede mit ihrem Kartentyp und schnellen Kopier- und Löschaktionen.
 
 Your locked team was killed because '%s' %s
 == Dein gesperrtes Team wurde getötet, weil '%s' %s

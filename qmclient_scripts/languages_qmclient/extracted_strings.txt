@@ -120,6 +120,7 @@ A bar too close to the edge is cut on unusual aspect ratios.
 A big "Team tee glow halo size" can wash out outlines and map detail, so start low and raise it slowly.
 A calm-play mode that hides the HUD, names, effects, chat and sounds you pick, so only the game stays on screen.
 A crowded HUD hides the game, so start with one element and add more if needed.
+A damped spring drives the offset, so reversing direction slows down before it turns
 A demo with this name already exists
 A folder with this name already exists
 A grab bag of small convenience switches that do not deserve their own card: chat completion, the Qm scoreboard badge, tune zone colors, message merging, repeat and combo.
@@ -827,14 +828,10 @@ Clan plates size
 Clan: %s
 Classic
 Classic Easy
-Classic easy
 Classic Next
-Classic next
 Classic Nut
-Classic nut
 Classic PowerShell
 Classic Pro
-Classic pro
 Clear
 Clear all favorite maps
 Clear all history
@@ -853,7 +850,6 @@ Clears the voting options
 Click "QmClient Settings", "Profiles", "War List" or "Chat Binds" to open that file, then use "Configuration packages" to export or import a whole set.
 Click a key on the keyboard picture or under "Mouse", then add a command with "Add function" or use the capture button to move an existing bind.
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
-Click a map name to copy it and press the X button to remove it; add maps with the "Favorite map" checkbox in the in-game server info page.
 Click a part on the right to edit its color, blend mode and strength.
 Click a row such as "HDF" or "Left jump", press the key you want, and use the trash icon to remove a bind.
 Click again to find the next location.
@@ -866,7 +862,6 @@ Click the key field next to an action such as "Jump" or "Hook" and press the key
 Click the key field next to an action such as "Scoreboard", "Spectate mode" or "Pie menu" and press the key you want.
 Click to add this community to favorites
 Click to copy map name
-Click to copy the map name
 Click to copy this clan's name to clipboard
 Click to copy this player's name to clipboard
 Click to remove this clan from your friends list.
@@ -1030,6 +1025,7 @@ Connection quality
 Connection severely abnormal
 Connlimit: number of connections allowed per IP in a time period
 Connlimit: time window for IP connection count
+Consecutive wheel ticks carry their velocity into one continuous glide
 Console
 Console background color
 Console background opacity
@@ -1721,6 +1717,7 @@ Encoder
 Encoder used for export. Hardware encoders appear only when available.
 Encoder:
 End (s)
+End bounce
 End marker of replay slice
 Endless hook has been activated
 Endless hook has been deactivated
@@ -1762,6 +1759,7 @@ EUR
 Evaluate an expression
 Event
 Every click applies the skin at once, so star the ones you like before you start browsing.
+Every wheel tick restarts from rest, matching the original client
 Exact bound nickname
 Example /help settings will display the help about /settings
 Example of usage
@@ -1872,7 +1870,6 @@ Favorite icon color
 Favorite map
 Favorite maps
 Favorites
-Favorites match the exact map name and also feed the "Favorite map" tab in the server browser.
 feat-003 dogfood: tokens + 12 widgets
 Feature guide and announcements
 Feature Search
@@ -2276,6 +2273,8 @@ Hostname of DNSBL provider for IP verification
 Hover for tooltip
 How far the plasma gun tracks a tee
 How far the tractor tracks a tee
+How far the wheel or a drag can push past an end, in UI pixels; the content springs back after scrolling stops. 0 disables it
+How firmly the spring settles; 100 stops without overshoot, lower values let it bounce past the target
 How long expression lasts
 How long the server message of the day is displayed
 How many seconds players stay frozen (applies to all except delay freeze in switch layer and deep freeze).
@@ -2594,7 +2593,6 @@ Leave "Automatic updates" off if you update by hand: it can restart the client t
 Leave empty to detect automatically
 Leave empty to disable
 Leave empty to join public room
-Leave empty to show everyone
 Leave empty to use default prompt
 Leave empty to use the default directory. Relative paths use the config directory.
 Leave it off on normal servers: the auto switch overrides your weapon keys, so your pick can change before you shoot.
@@ -3882,7 +3880,6 @@ remove a voting option
 Remove Bind
 Remove chat
 Remove friend
-Remove from favorites
 Remove from history
 Remove from queue
 Remove Item
@@ -4023,7 +4020,6 @@ Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects anoth
 Restore Kugou files
 Restore old single-segment hook collision line behavior
 Restore recommended
-Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
 Restored the built-in content
 Restoring save %d: main '%s', dummy '%s'.
 Results include cards on other pages; the tab switches automatically.
@@ -4060,6 +4056,7 @@ Rounded caps
 Route Echo messages to notifications
 Rows here usually come from old configs, so test each command before you rely on it.
 RTT
+Rubber-band distance in UI pixels when the wheel or a drag pushes past an end (0=off); the content springs back after scrolling stops
 Rule line 1.
 Rule line 10.
 Rule line 2.
@@ -4140,7 +4137,6 @@ Score limit
 Score option color
 Scoreboard
 Scoreboard cursor
-Scoreboard filter: only show players whose name or clan contains this text
 Scoreboard playtime
 Scoreboard point check
 Scoreboard score lookup
@@ -4165,6 +4161,7 @@ Screenshot watermark: include map name
 Screenshot watermark: include timestamp
 Screenshots
 Screenshots directory
+Scroll feel
 Scroll mode
 Scroll mode: Off
 Scroll mode: On
@@ -4876,6 +4873,11 @@ Sponsor title badge: 0 = moon, 1 = sun
 Sponsors:
 Spotify sp_dc cookie (from browser DevTools, long-lived)
 Spree
+Spring
+Spring damping
+Spring response
+Spring scroll feel damping ratio in percent; 100 stops without overshoot
+Spring scroll feel response time in milliseconds; lower reaches the target sooner
 SQL Server name for record table
 Squishy Tee deformation duration
 Squishy Tee deformation intensity
@@ -5250,6 +5252,7 @@ Time in seconds before economy authentication timeout.
 Time interval (seconds) between chat messages.
 Time limit
 Time limit: %d min
+Time the spring needs to settle on a new target; lower reaches it sooner, higher feels heavier
 Time to wait before changing team: %s
 Time to wait before handling inactive players (in minutes)
 Timeout code to use for dummy
@@ -5774,6 +5777,7 @@ What level DDRace binding is set to (automatic, you don't need to use it).
 What this controls
 Wheel distance per tick; hold Alt for 3x
 Wheel label
+Wheel scroll feel: 0=Smooth (velocity carries over), 1=Original (each tick restarts), 2=Spring
 Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
 When TClient rainbow Tee is enabled, this feature has no effect.
 Where your title appears and how it looks: nameplate, style, motion, colors and glow.
@@ -5938,10 +5942,8 @@ You're the last one!
 Your account is your in-game name — register it on the Axiom website. Fill in the registered main and dummy passwords. This option does not register accounts.
 Your current race time is %s
 Your current version is outdated. Please update from the QQ group.
-Your favorite map manager
 Your favorite maps appear here
 Your friend %s is online and currently on map %s!
-Your list of favorite maps, each shown with its map type, with quick copy and remove actions.
 Your locked team was killed because '%s' %s
 Your movements are not taken into account when calculating the line colors
 Your nickname '%s' is already used (%d points). Do you still want to use it?

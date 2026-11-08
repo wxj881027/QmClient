@@ -365,6 +365,9 @@ A calm-play mode that hides the HUD, names, effects, chat and sounds you pick, s
 A crowded HUD hides the game, so start with one element and add more if needed.
 == HUD が混み合うとゲームが見えなくなるので、まず 1 つだけ有効にして、必要なら追加しましょう。
 
+A damped spring drives the offset, so reversing direction slows down before it turns
+== 減衰バネが位置を動かすため、逆向きの操作では一度減速してから折り返します
+
 A demo with this name already exists
 == この名前のデモは既に存在します
 
@@ -2480,29 +2483,17 @@ Classic
 Classic Easy
 == クラシック Easy
 
-Classic easy
-== クラシック easy
-
 Classic Next
 == クラシック Next
 
-Classic next
-== クラシック next
-
 Classic Nut
 == クラシック Nut
-
-Classic nut
-== クラシック nut
 
 Classic PowerShell
 == クラシック PowerShell
 
 Classic Pro
 == クラシック Pro
-
-Classic pro
-== クラシック pro
 
 Clear
 == クリア
@@ -2558,9 +2549,6 @@ Click a key on the keyboard picture or under "Mouse", then add a command with "A
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
 == 一覧で言語をクリックするとすぐに反映されます。左側の国旗が現在の選択を示します。
 
-Click a map name to copy it and press the X button to remove it; add maps with the "Favorite map" checkbox in the in-game server info page.
-== マップ名をクリックするとコピーでき、右側のXボタンで削除できます。追加はゲーム内のサーバー情報ページでお気に入りマップにチェックを入れます。
-
 Click a part on the right to edit its color, blend mode and strength.
 == 右側のパーツをクリックして、色、ブレンドモード、強度を調整します。
 
@@ -2595,9 +2583,6 @@ Click to add this community to favorites
 == クリックしてこのコミュニティをお気に入りに追加
 
 Click to copy map name
-== クリックしてマップ名をコピー
-
-Click to copy the map name
 == クリックしてマップ名をコピー
 
 Click to copy this clan's name to clipboard
@@ -3085,6 +3070,9 @@ Connlimit: number of connections allowed per IP in a time period
 
 Connlimit: time window for IP connection count
 == Connlimit：IP 接続数の時間枠
+
+Consecutive wheel ticks carry their velocity into one continuous glide
+== 連続したホイール操作で速度を引き継ぎ、ひと続きの滑らかな動きになります
 
 Console
 == コンソール
@@ -5159,6 +5147,9 @@ Encoder:
 End (s)
 == 終了 (秒)
 
+End bounce
+== 端での跳ね返り
+
 End marker of replay slice
 == リプレイスライスの終了マーカー
 
@@ -5281,6 +5272,9 @@ Event
 
 Every click applies the skin at once, so star the ones you like before you start browsing.
 == クリックするたびにすぐ適用されるので、気に入ったものは先に星を付けてから探してください。
+
+Every wheel tick restarts from rest, matching the original client
+== ホイール1目盛ごとに静止状態から始まり、オリジナル版と同じ挙動になります
 
 Exact bound nickname
 == 紐付ける正確なニックネーム
@@ -5611,9 +5605,6 @@ Favorite maps
 
 Favorites
 == お気に入り
-
-Favorites match the exact map name and also feed the "Favorite map" tab in the server browser.
-== お気に入りはマップ名の完全一致で判定され、サーバーブラウザのお気に入りマップタブにも反映されます。
 
 feat-003 dogfood: tokens + 12 widgets
 == feat-003 dogfood: トークン + 12 ウィジェット
@@ -6818,6 +6809,12 @@ How far the plasma gun tracks a tee
 How far the tractor tracks a tee
 == トラクターが Tee を追跡する距離
 
+How far the wheel or a drag can push past an end, in UI pixels; the content springs back after scrolling stops. 0 disables it
+== ホイールやドラッグで端を越えて押し出せる距離（UI ピクセル）。スクロールを止めると内容が戻ります。0 で無効
+
+How firmly the spring settles; 100 stops without overshoot, lower values let it bounce past the target
+== バネの収まりの強さ。100 は行き過ぎずに停止し、小さいほど目標を越えて跳ね返ります
+
 How long expression lasts
 == 表情の持続時間
 
@@ -7771,9 +7768,6 @@ Leave empty to disable
 
 Leave empty to join public room
 == 空欄にして公開ルームに入室
-
-Leave empty to show everyone
-== 空欄の場合は全プレイヤーを表示
 
 Leave empty to use default prompt
 == 空欄にしてデフォルトプロンプトを使用
@@ -11621,9 +11615,6 @@ Remove chat
 Remove friend
 == フレンドを削除
 
-Remove from favorites
-== お気に入りから削除
-
 Remove from history
 == 履歴から削除
 
@@ -12044,9 +12035,6 @@ Restore old single-segment hook collision line behavior
 Restore recommended
 == 推奨値に戻す
 
-Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
-== 従来のホイール操作に戻す：各刻みで速度を引き継がず、滑らかなスクロールを再開
-
 Restored the built-in content
 == 内蔵コンテンツに戻しました
 
@@ -12154,6 +12142,9 @@ Rows here usually come from old configs, so test each command before you rely on
 
 RTT
 == RTT
+
+Rubber-band distance in UI pixels when the wheel or a drag pushes past an end (0=off); the content springs back after scrolling stops
+== ホイールやドラッグで端を越えたときのゴムバンド距離（UI ピクセル、0=無効）。スクロールを止めると内容が戻ります
 
 Rule line 1.
 == ルール 1 行目
@@ -12395,9 +12386,6 @@ Scoreboard
 Scoreboard cursor
 == スコアボードカーソル
 
-Scoreboard filter: only show players whose name or clan contains this text
-== スコアボードフィルター：名前またはクランにこの文字列を含むプレイヤーのみ表示します
-
 Scoreboard playtime
 == スコアボードのプレイ時間
 
@@ -12469,6 +12457,9 @@ Screenshots
 
 Screenshots directory
 == スクリーンショットディレクトリ
+
+Scroll feel
+== スクロールの手触り
 
 Scroll mode
 == スクロールモード
@@ -14597,6 +14588,21 @@ Spotify sp_dc cookie (from browser DevTools, long-lived)
 Spree
 == 連続キル
 
+Spring
+== バネ
+
+Spring damping
+== バネの減衰
+
+Spring response
+== バネの応答
+
+Spring scroll feel damping ratio in percent; 100 stops without overshoot
+== バネ式スクロールの減衰比（パーセント）。100 は行き過ぎずに停止します
+
+Spring scroll feel response time in milliseconds; lower reaches the target sooner
+== バネ式スクロールの応答時間（ミリ秒）。小さいほど早く到達します
+
 SQL Server name for record table
 == レコードテーブルの SQL Server 名
 
@@ -15709,6 +15715,9 @@ Time limit
 
 Time limit: %d min
 == 制限時間：%d 分
+
+Time the spring needs to settle on a new target; lower reaches it sooner, higher feels heavier
+== バネが新しい目標に落ち着くまでの時間。小さいほど速く到達し、大きいほど重い手触りになります
 
 Time to wait before changing team: %s
 == チーム変更までの待機時間: %s
@@ -17282,6 +17291,9 @@ Wheel distance per tick; hold Alt for 3x
 Wheel label
 == ホイールの表示名
 
+Wheel scroll feel: 0=Smooth (velocity carries over), 1=Original (each tick restarts), 2=Spring
+== ホイールの感覚: 0=滑らか（速度を継承）、1=オリジナル（毎回リセット）、2=バネ
+
 Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
 == ホイール1刻みのUIピクセル移動量。設定カードのページは各刻みでこの値の12倍移動
 
@@ -17774,17 +17786,11 @@ Your current race time is %s
 Your current version is outdated. Please update from the QQ group.
 == 現在のバージョンは古いです。QQ グループから最新版を更新してください。
 
-Your favorite map manager
-== あなたの好きなマップマネージャー
-
 Your favorite maps appear here
 == お気に入りのマップがここに表示されます
 
 Your friend %s is online and currently on map %s!
 == 友達の %s がオンラインで、現在マップ %s にいます！
-
-Your list of favorite maps, each shown with its map type, with quick copy and remove actions.
-== お気に入りマップの一覧です。各マップは種類付きで表示され、コピーと削除をすばやく行えます。
 
 Your locked team was killed because '%s' %s
 == '%s' が %s したため、ロックされたチームが全滅しました

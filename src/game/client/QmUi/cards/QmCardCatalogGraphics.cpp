@@ -20,6 +20,7 @@
 #include <game/client/QmUi/QmAnimResolve.h>
 #include <game/client/QmUi/QmCardRegistry.h>
 #include <game/client/QmUi/QmPasswordIcon.h>
+#include <game/client/QmUi/QmScroll.h>
 #include <game/client/QmUi/QmToast.h>
 #include <game/client/QmUi/QmUiPerf.h>
 #include <game/client/QmUi/SecondaryPanel.h>
@@ -1056,11 +1057,51 @@ static CButtonContainer s_CardBorderColorResetId;
 				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmExtraAnimations, &PresentationAnimations, Localize("Animate chat box, emote selector, scoreboard, and spectate selection"));
 			});
 
-			RowAction("graphics-ScrollLegacyWheel", GraphicsMetrics.m_LineHeight, [&](CUIRect ScrollLegacyWheel) {
-				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmUiScrollLegacyWheel, "graphics-scroll-legacy-wheel", Localize("Original scroll feel"), g_Config.m_QmUiScrollLegacyWheel, &ScrollLegacyWheel))
-					g_Config.m_QmUiScrollLegacyWheel ^= 1;
-				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUiScrollLegacyWheel, &ScrollLegacyWheel, Localize("Restart smooth scrolling on every wheel tick"));
+			RowAction("graphics-ScrollFeel", GraphicsMetrics.m_LineHeight, [&](CUIRect ScrollFeelRow) {
+				CUIRect Label, Segments;
+				SplitSettingsControlRow(ScrollFeelRow, GraphicsMetrics, &Label, &Segments, ESettingsControlWidth::LONG_CHOICE);
+				DoSettingsLabel(SETTINGS_GRAPHICS, -1, "graphics-scroll-feel-label", &Label, Localize("Scroll feel"), BodySize, TEXTALIGN_ML);
+				static CButtonContainer s_aScrollFeelButtons[3];
+				// 展示顺序（原版 → 顺滑 → 弹簧）与枚举值顺序不同：枚举把 SMOOTH 钉在 0
+				// 作为默认档（配置零初始化时必须是生产默认），这里显式映射。
+				static constexpr EQmScrollFeel s_aScrollFeelOrder[] = {EQmScrollFeel::ORIGINAL, EQmScrollFeel::SMOOTH, EQmScrollFeel::SPRING};
+				const char *apScrollFeelLabels[] = {Localize("Original"), Localize("Smooth"), Localize("Spring")};
+				int CurrentScrollFeel = 1;
+				for(int i = 0; i < 3; ++i)
+					if(s_aScrollFeelOrder[i] == static_cast<EQmScrollFeel>(g_Config.m_QmUiScrollFeel))
+						CurrentScrollFeel = i;
+				const int NewScrollFeel = DoSegmentedChoice(s_aScrollFeelButtons, apScrollFeelLabels, 3, CurrentScrollFeel, Segments);
+				if(NewScrollFeel != CurrentScrollFeel)
+					g_Config.m_QmUiScrollFeel = static_cast<int>(s_aScrollFeelOrder[NewScrollFeel]);
+				// 整行 tooltip 跟随当前档位：三档的差别只在"怎么走向目标"，
+				// 所以文案直接说明这一点，而不是重复档位名。
+				const char *apScrollFeelTooltips[] = {
+					Localize("Every wheel tick restarts from rest, matching the original client"),
+					Localize("Consecutive wheel ticks carry their velocity into one continuous glide"),
+					Localize("A damped spring drives the offset, so reversing direction slows down before it turns"),
+				};
+				GameClient()->m_Tooltips.DoToolTip(&s_aScrollFeelButtons[0], &ScrollFeelRow, apScrollFeelTooltips[std::clamp(NewScrollFeel, 0, (int)std::size(apScrollFeelTooltips) - 1)]);
 			});
+
+			// 弹簧档的三个参数只在选中弹簧时出现：另外两档是固定时长补间，不读它们，
+			// 常驻会让"改了没反应"变成新的困惑源。
+			if(static_cast<EQmScrollFeel>(g_Config.m_QmUiScrollFeel) == EQmScrollFeel::SPRING)
+			{
+				RowAction("graphics-ScrollSpringResponse", GraphicsMetrics.m_LineHeight, [&](CUIRect SpringResponseRow) {
+					DoGraphicsNumericField("graphics-scroll-spring-response", &g_Config.m_QmUiScrollSpringResponse, &g_Config.m_QmUiScrollSpringResponse, SpringResponseRow, Localize("Spring response"), 80, 600, &CUi::ms_LinearScrollbarScale, "ms");
+					GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUiScrollSpringResponse, &SpringResponseRow, Localize("Time the spring needs to settle on a new target; lower reaches it sooner, higher feels heavier"));
+				});
+
+				RowAction("graphics-ScrollSpringDamping", GraphicsMetrics.m_LineHeight, [&](CUIRect SpringDampingRow) {
+					DoGraphicsNumericField("graphics-scroll-spring-damping", &g_Config.m_QmUiScrollSpringDamping, &g_Config.m_QmUiScrollSpringDamping, SpringDampingRow, Localize("Spring damping"), 50, 100, &CUi::ms_LinearScrollbarScale, "%");
+					GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUiScrollSpringDamping, &SpringDampingRow, Localize("How firmly the spring settles; 100 stops without overshoot, lower values let it bounce past the target"));
+				});
+
+				RowAction("graphics-ScrollBounce", GraphicsMetrics.m_LineHeight, [&](CUIRect ScrollBounceRow) {
+					DoGraphicsNumericField("graphics-scroll-bounce", &g_Config.m_QmUiScrollBounce, &g_Config.m_QmUiScrollBounce, ScrollBounceRow, Localize("End bounce"), 0, 64);
+					GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUiScrollBounce, &ScrollBounceRow, Localize("How far the wheel or a drag can push past an end, in UI pixels; the content springs back after scrolling stops. 0 disables it"));
+				});
+			}
 
 			RowAction("graphics-ScrollStep", GraphicsMetrics.m_LineHeight, [&](CUIRect ScrollStepRow) {
 				DoGraphicsNumericField("graphics-scroll-step", &g_Config.m_QmUiScrollStep, &g_Config.m_QmUiScrollStep, ScrollStepRow, Localize("Scroll step"), 2, 100);
@@ -1076,6 +1117,9 @@ static CButtonContainer s_CardBorderColorResetId;
 	GraphicsLayoutRevision = GraphicsLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(RenderOnly ? 1 : 0);
 	GraphicsLayoutRevision = GraphicsLayoutRevision * 1099511628211ULL ^ GraphicsVisualMeasureRevision;
 	GraphicsLayoutRevision = GraphicsLayoutRevision * 1099511628211ULL ^ GraphicsDisplayMeasureRevision;
+	// 手感档位决定弹簧参数两行是否参与布局，属于"影响行集合"的状态，必须参与
+	// 高度测量缓存键；否则切到弹簧档后行已渲染、卡片高度却还是旧的，内容被裁。
+	GraphicsLayoutRevision = GraphicsLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(std::clamp(g_Config.m_QmUiScrollFeel, 0, 2));
 	if(pCards != nullptr)
 	{
 		BuildDefinitions(*pCards);

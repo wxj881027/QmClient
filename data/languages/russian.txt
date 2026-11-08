@@ -365,6 +365,9 @@ A calm-play mode that hides the HUD, names, effects, chat and sounds you pick, s
 A crowded HUD hides the game, so start with one element and add more if needed.
 == Перегруженный HUD закрывает игру — начните с одного элемента и добавляйте по необходимости.
 
+A damped spring drives the offset, so reversing direction slows down before it turns
+== Смещение ведёт демпфированная пружина, поэтому при смене направления она сначала тормозит
+
 A demo with this name already exists
 == Демо с таким именем уже существует
 
@@ -2480,29 +2483,17 @@ Classic
 Classic Easy
 == Классический Easy
 
-Classic easy
-== Классический easy
-
 Classic Next
 == Классический Next
 
-Classic next
-== Классический next
-
 Classic Nut
 == Классический Nut
-
-Classic nut
-== Классический nut
 
 Classic PowerShell
 == Классический PowerShell
 
 Classic Pro
 == Классический Pro
-
-Classic pro
-== Классический pro
 
 Clear
 == Очистить
@@ -2558,9 +2549,6 @@ Click a key on the keyboard picture or under "Mouse", then add a command with "A
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
 == Щёлкните язык в списке, и он применится сразу; флаг слева показывает текущий выбор.
 
-Click a map name to copy it and press the X button to remove it; add maps with the "Favorite map" checkbox in the in-game server info page.
-== Щёлкните по названию карты, чтобы скопировать его, а кнопка X справа удалит запись. Добавлять карты можно галочкой «Избранная карта» на странице информации о сервере.
-
 Click a part on the right to edit its color, blend mode and strength.
 == Нажмите на часть справа, чтобы изменить цвет, режим и силу смешивания.
 
@@ -2595,9 +2583,6 @@ Click to add this community to favorites
 == Нажмите, чтобы добавить это сообщество в избранное
 
 Click to copy map name
-== Нажмите, чтобы скопировать название карты
-
-Click to copy the map name
 == Нажмите, чтобы скопировать название карты
 
 Click to copy this clan's name to clipboard
@@ -3085,6 +3070,9 @@ Connlimit: number of connections allowed per IP in a time period
 
 Connlimit: time window for IP connection count
 == Connlimit: временное окно для подсчёта подключений с IP
+
+Consecutive wheel ticks carry their velocity into one continuous glide
+== Непрерывная прокрутка наследует скорость и сливается в одно плавное движение
 
 Console
 == Консоль
@@ -5159,6 +5147,9 @@ Encoder:
 End (s)
 == Конец (с)
 
+End bounce
+== Отскок на краю
+
 End marker of replay slice
 == Конечный маркер фрагмента повтора
 
@@ -5281,6 +5272,9 @@ Event
 
 Every click applies the skin at once, so star the ones you like before you start browsing.
 == Каждый клик сразу применяет скин, поэтому отметьте звёздочкой любимые до начала просмотра.
+
+Every wheel tick restarts from rest, matching the original client
+== Каждый щелчок колеса начинается с покоя, как в оригинальном клиенте
 
 Exact bound nickname
 == Точный ник для привязки
@@ -5611,9 +5605,6 @@ Favorite maps
 
 Favorites
 == Избранное
-
-Favorites match the exact map name and also feed the "Favorite map" tab in the server browser.
-== Совпадение идёт по точному названию карты, и эти же записи наполняют вкладку избранных карт в браузере серверов.
 
 feat-003 dogfood: tokens + 12 widgets
 == feat-003 dogfood: токены + 12 виджетов
@@ -6818,6 +6809,12 @@ How far the plasma gun tracks a tee
 How far the tractor tracks a tee
 == Как далеко трактор отслеживает ти
 
+How far the wheel or a drag can push past an end, in UI pixels; the content springs back after scrolling stops. 0 disables it
+== Насколько колесо или перетаскивание могут вытолкнуть содержимое за край, в пикселях UI; после остановки прокрутки оно возвращается. 0 отключает
+
+How firmly the spring settles; 100 stops without overshoot, lower values let it bounce past the target
+== Насколько жёстко пружина затухает; 100 — без перелёта, меньше — отскакивает за цель
+
 How long expression lasts
 == Как долго длится выражение
 
@@ -7771,9 +7768,6 @@ Leave empty to disable
 
 Leave empty to join public room
 == Оставьте пустым для входа в публичную комнату
-
-Leave empty to show everyone
-== Оставьте пустым, чтобы показать всех игроков
 
 Leave empty to use default prompt
 == Оставьте пустым для использования промпта по умолчанию
@@ -11621,9 +11615,6 @@ Remove chat
 Remove friend
 == Удалить друга
 
-Remove from favorites
-== Очередь переименования
-
 Remove from history
 == Удалить из истории
 
@@ -12044,9 +12035,6 @@ Restore old single-segment hook collision line behavior
 Restore recommended
 == Вернуть рекомендованные
 
-Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
-== Вернуть прежнюю прокрутку колёсиком: каждый шаг заново запускает плавную прокрутку без сохранения скорости
-
 Restored the built-in content
 == Встроенный текст восстановлен
 
@@ -12154,6 +12142,9 @@ Rows here usually come from old configs, so test each command before you rely on
 
 RTT
 == RTT
+
+Rubber-band distance in UI pixels when the wheel or a drag pushes past an end (0=off); the content springs back after scrolling stops
+== Расстояние «резинки» в пикселях UI, когда колесо или перетаскивание выходит за край (0=выкл.); после остановки содержимое возвращается
 
 Rule line 1.
 == Строка правил 1.
@@ -12395,9 +12386,6 @@ Scoreboard
 Scoreboard cursor
 == Курсор таблицы лидеров
 
-Scoreboard filter: only show players whose name or clan contains this text
-== Фильтр таблицы: показывать только игроков, чьё имя или клан содержит этот текст
-
 Scoreboard playtime
 == Время игры в таблице
 
@@ -12469,6 +12457,9 @@ Screenshots
 
 Screenshots directory
 == Каталог скриншотов
+
+Scroll feel
+== Ощущение прокрутки
 
 Scroll mode
 == Режим прокрутки
@@ -14597,6 +14588,21 @@ Spotify sp_dc cookie (from browser DevTools, long-lived)
 Spree
 == Серия
 
+Spring
+== Пружина
+
+Spring damping
+== Демпфирование пружины
+
+Spring response
+== Отклик пружины
+
+Spring scroll feel damping ratio in percent; 100 stops without overshoot
+== Коэффициент демпфирования пружинной прокрутки в процентах; 100 — без перелёта
+
+Spring scroll feel response time in milliseconds; lower reaches the target sooner
+== Время отклика пружинной прокрутки в миллисекундах; меньше — быстрее
+
 SQL Server name for record table
 == Имя SQL-сервера для таблицы записей
 
@@ -15709,6 +15715,9 @@ Time limit
 
 Time limit: %d min
 == Лимит времени: %d мин
+
+Time the spring needs to settle on a new target; lower reaches it sooner, higher feels heavier
+== Время, за которое пружина достигает новой цели; меньше — быстрее, больше — тяжелее
 
 Time to wait before changing team: %s
 == Время ожидания перед сменой команды: %s
@@ -17282,6 +17291,9 @@ Wheel distance per tick; hold Alt for 3x
 Wheel label
 == Название в колесе
 
+Wheel scroll feel: 0=Smooth (velocity carries over), 1=Original (each tick restarts), 2=Spring
+== Ощущение колеса: 0=Плавно (с наследованием скорости), 1=Оригинал (сброс каждый раз), 2=Пружина
+
 Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
 == Шаг колёсика в пикселях интерфейса; страницы карточек настроек прокручиваются на 12 таких шагов
 
@@ -17774,17 +17786,11 @@ Your current race time is %s
 Your current version is outdated. Please update from the QQ group.
 == Ваша текущая версия устарела. Пожалуйста, обновитесь из группы QQ.
 
-Your favorite map manager
-== Ваш любимый менеджер карт
-
 Your favorite maps appear here
 == Ваши избранные карты появятся здесь
 
 Your friend %s is online and currently on map %s!
 == Ваш друг %s онлайн и сейчас на карте %s!
-
-Your list of favorite maps, each shown with its map type, with quick copy and remove actions.
-== Список избранных карт: у каждой указан тип, а скопировать или удалить её можно в один клик.
 
 Your locked team was killed because '%s' %s
 == Ваша заблокированная команда была убита, потому что '%s' %s

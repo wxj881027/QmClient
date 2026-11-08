@@ -31,14 +31,28 @@ struct SQmScrollMetrics
 	float MaxOffset() const;
 };
 
+// 滚轮手感档位。SMOOTH 必须占 0：g_Config 在未跑配置加载时（测试环境）是零初始化，
+// 0 必须是生产默认档，否则测试与线上手感会静默分叉。档位在设置界面的展示顺序
+// （原版 → 顺滑 → 弹簧）由卡片侧单独映射，不依赖枚举值大小。
+enum class EQmScrollFeel
+{
+	SMOOTH = 0,
+	ORIGINAL = 1,
+	SPRING = 2,
+};
+
 struct SQmScrollConfig
 {
 	float m_WheelScale = 10.0f;
 	bool m_NativeWheelStep = true;
 	float m_NativeWheelAnimationTime = 0.0f;
-	// 原版滚轮手感：每档滚轮重置平滑动画的初速（不继承当前速度），连续
-	// 滚动每档重新起步（上游 DDNet 语义）；关闭时维持速度继承的顺滑手感。
-	bool m_LegacyWheelFeel = false;
+	EQmScrollFeel m_Feel = EQmScrollFeel::SMOOTH;
+	// 弹簧档的两个参数，直接来自设置界面（qm_ui_scroll_spring_response /
+	// qm_ui_scroll_spring_damping）。响应周期是弹簧的固有周期，与"固定时长动画
+	// 的结束时刻"不是同一个量，所以不再从 m_NativeWheelAnimationTime 推导。
+	// m_SpringResponse <= 0 表示立即吸附（动效等级 0 的瞬移语义）。
+	float m_SpringResponse = 0.30f;
+	float m_SpringDamping = 0.90f;
 	float m_Friction = 9.0f;
 	float m_OverscrollStiffness = 120.0f;
 	float m_OverscrollDamping = 22.0f;
@@ -155,7 +169,7 @@ public:
 
 	float Offset() const { return m_Offset; }
 	float Velocity() const { return m_Velocity; }
-	bool Animating() const { return m_AnimTime > 0.0f; }
+	bool Animating() const { return m_AnimTime > 0.0f || m_SpringSettling; }
 	bool ThumbDragActive() const { return m_ThumbDragActive; }
 	float ThumbDragGrabOffset() const { return m_ThumbDragGrabOffset; }
 	SQmScrollContentDragState &ContentDragState() { return m_ContentDragState; }
@@ -170,6 +184,12 @@ private:
 	float m_AnimStartOffset = 0.0f;
 	float m_AnimStartVelocity = 0.0f;
 	float m_AnimTargetOffset = 0.0f;
+	// 弹簧手感专用：m_AnimTargetOffset 在 SPRING 档是弹簧目标，settling 表示仍在
+	// 收敛。与 m_AnimTime 分开，因为弹簧没有固定结束时刻，靠位移/速度阈值吸附。
+	bool m_SpringSettling = false;
+	// 滚轮把内容顶在橡皮筋区时的保持计时。桌面端没有"松手"事件，滚轮是离散输入，
+	// 只能在停止滚动一小段时间后回收目标、让弹簧把内容拉回边界。
+	float m_BounceHoldTimer = 0.0f;
 	bool m_HasPendingScrollTarget = false;
 	float m_PendingScrollTarget = 0.0f;
 	bool m_ThumbDragActive = false;

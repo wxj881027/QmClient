@@ -365,6 +365,9 @@ A calm-play mode that hides the HUD, names, effects, chat and sounds you pick, s
 A crowded HUD hides the game, so start with one element and add more if needed.
 == HUD 太满会挡住游戏画面，先从一项开始，需要时再加。
 
+A damped spring drives the offset, so reversing direction slows down before it turns
+== 由阻尼弹簧驱动偏移，反向时会先减速再转向
+
 A demo with this name already exists
 == 已有同名回放
 
@@ -2486,29 +2489,17 @@ Classic
 Classic Easy
 == 古典 Easy
 
-Classic easy
-== 古典 easy
-
 Classic Next
 == 古典 Next
 
-Classic next
-== 古典 next
-
 Classic Nut
 == 古典 Nut
-
-Classic nut
-== 古典 nut
 
 Classic PowerShell
 == 经典 PowerShell
 
 Classic Pro
 == 古典 Pro
-
-Classic pro
-== 古典 pro
 
 Clear
 == 清空
@@ -2564,9 +2555,6 @@ Click a key on the keyboard picture or under "Mouse", then add a command with "A
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
 == 在列表里点一种语言就会立即生效，左侧的国旗标出当前选择。
 
-Click a map name to copy it and press the X button to remove it; add maps with the "Favorite map" checkbox in the in-game server info page.
-== 点地图名可以复制，点右侧的 X 按钮可以移除；在游戏内服务器信息页勾选收藏地图即可添加。
-
 Click a part on the right to edit its color, blend mode and strength.
 == 点击右侧部件，调整颜色、混合模式和强度。
 
@@ -2601,9 +2589,6 @@ Click to add this community to favorites
 == 点击将该社区加入收藏
 
 Click to copy map name
-== 点击复制地图名
-
-Click to copy the map name
 == 点击复制地图名
 
 Click to copy this clan's name to clipboard
@@ -3094,6 +3079,9 @@ Connlimit: number of connections allowed per IP in a time period
 
 Connlimit: time window for IP connection count
 == Connlimit：IP 连接数统计时间
+
+Consecutive wheel ticks carry their velocity into one continuous glide
+== 连续滚轮会继承当前速度，连成一段顺滑滑行
 
 Console
 == 控制台
@@ -5168,6 +5156,9 @@ Encoder:
 End (s)
 == 结束 (秒)
 
+End bounce
+== 边界回弹
+
 End marker of replay slice
 == 回放切片的结束标记
 
@@ -5290,6 +5281,9 @@ Event
 
 Every click applies the skin at once, so star the ones you like before you start browsing.
 == 每点一次都会立刻套用，想留下喜欢的皮肤就先加星再慢慢浏览。
+
+Every wheel tick restarts from rest, matching the original client
+== 每档滚轮都从静止重新起步，与原版客户端一致
 
 Exact bound nickname
 == 要绑定的完整昵称
@@ -5620,9 +5614,6 @@ Favorite maps
 
 Favorites
 == 收藏夹
-
-Favorites match the exact map name and also feed the "Favorite map" tab in the server browser.
-== 收藏按地图名精确匹配，同时会作为服务器浏览器里收藏地图分页的来源。
 
 feat-003 dogfood: tokens + 12 widgets
 == feat-003 dogfood：tokens + 12 widgets
@@ -6833,6 +6824,12 @@ How far the plasma gun tracks a tee
 How far the tractor tracks a tee
 == 拖拉机将跟踪 tee 多远
 
+How far the wheel or a drag can push past an end, in UI pixels; the content springs back after scrolling stops. 0 disables it
+== 滚轮或拖拽把内容推过边界的距离（UI 像素）；停止滚动后内容会弹回。0 为关闭
+
+How firmly the spring settles; 100 stops without overshoot, lower values let it bounce past the target
+== 弹簧收敛的干脆程度；100 不过冲直接停住，越小越过目标回弹越多
+
 How long expression lasts
 == 表情持续时间
 
@@ -7786,9 +7783,6 @@ Leave empty to disable
 
 Leave empty to join public room
 == 留空以进入公共房间
-
-Leave empty to show everyone
-== 留空显示所有玩家
 
 Leave empty to use default prompt
 == 留空使用默认提示词
@@ -11651,9 +11645,6 @@ Remove chat
 Remove friend
 == 删除好友
 
-Remove from favorites
-== 取消收藏
-
 Remove from history
 == 从历史中移除
 
@@ -12074,9 +12065,6 @@ Restore old single-segment hook collision line behavior
 Restore recommended
 == 恢复推荐
 
-Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
-== 恢复原版滚轮手感：每格重新开始平滑滚动，不继承速度
-
 Restored the built-in content
 == 已还原内置内容
 
@@ -12184,6 +12172,9 @@ Rows here usually come from old configs, so test each command before you rely on
 
 RTT
 == 往返延迟
+
+Rubber-band distance in UI pixels when the wheel or a drag pushes past an end (0=off); the content springs back after scrolling stops
+== 滚轮或拖拽推过边界时的橡皮筋距离，UI 像素（0=关闭）；停止滚动后内容弹回
 
 Rule line 1.
 == 规则第 1 行
@@ -12425,9 +12416,6 @@ Scoreboard
 Scoreboard cursor
 == 计分板光标
 
-Scoreboard filter: only show players whose name or clan contains this text
-== 计分板筛选：匹配名字或战队
-
 Scoreboard playtime
 == 计分板游玩时间
 
@@ -12499,6 +12487,9 @@ Screenshots
 
 Screenshots directory
 == 截图目录
+
+Scroll feel
+== 滚动手感
 
 Scroll mode
 == 滚动模式
@@ -14633,6 +14624,21 @@ Spotify sp_dc cookie (from browser DevTools, long-lived)
 Spree
 == 连杀
 
+Spring
+== 弹簧
+
+Spring damping
+== 弹簧阻尼
+
+Spring response
+== 弹簧响应
+
+Spring scroll feel damping ratio in percent; 100 stops without overshoot
+== 弹簧滚动手感的阻尼比，单位百分比；100 表示不过冲直接停住
+
+Spring scroll feel response time in milliseconds; lower reaches the target sooner
+== 弹簧滚动手感的响应时间，单位毫秒；越小越快到位
+
 SQL Server name for record table
 == 插入记录表的 SQL Server 名称
 
@@ -15754,6 +15760,9 @@ Time limit
 
 Time limit: %d min
 == 规定时限：%d 分钟
+
+Time the spring needs to settle on a new target; lower reaches it sooner, higher feels heavier
+== 弹簧落到新目标所需的时间；越小到位越快，越大手感越沉
 
 Time to wait before changing team: %s
 == 距离下次切换队伍还需等待：%s
@@ -17327,6 +17336,9 @@ Wheel distance per tick; hold Alt for 3x
 Wheel label
 == 轮盘显示名称
 
+Wheel scroll feel: 0=Smooth (velocity carries over), 1=Original (each tick restarts), 2=Spring
+== 滚轮手感：0=顺滑（继承速度），1=原版（每档重置），2=弹簧
+
 Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
 == 滚轮每格的界面像素步长；设置卡片页面每格滚动此值的 12 倍
 
@@ -17819,17 +17831,11 @@ Your current race time is %s
 Your current version is outdated. Please update from the QQ group.
 == 当前版本不是最新版，请前往 QQ 群更新最新版
 
-Your favorite map manager
-== 你最爱的地图管家
-
 Your favorite maps appear here
 == 你收藏的地图会显示在这里
 
 Your friend %s is online and currently on map %s!
 == 你的好友 %s 在线，当前在地图 %s！
-
-Your list of favorite maps, each shown with its map type, with quick copy and remove actions.
-== 你的收藏地图列表，每张都标出地图类型，并提供快速复制和移除操作。
 
 Your locked team was killed because '%s' %s
 == 你的锁队因 '%s' %s 而被全员处死

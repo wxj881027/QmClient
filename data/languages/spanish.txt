@@ -365,6 +365,9 @@ A calm-play mode that hides the HUD, names, effects, chat and sounds you pick, s
 A crowded HUD hides the game, so start with one element and add more if needed.
 == Un HUD recargado tapa el juego; empieza con un elemento y añade más si hace falta.
 
+A damped spring drives the offset, so reversing direction slows down before it turns
+== Un resorte amortiguado mueve el desplazamiento, así que al invertir la dirección frena antes de girar
+
 A demo with this name already exists
 == Ya existe una demo con este nombre
 
@@ -2480,29 +2483,17 @@ Classic
 Classic Easy
 == Clásico Easy
 
-Classic easy
-== Clásico fácil
-
 Classic Next
 == Clásico Next
 
-Classic next
-== Clásico siguiente
-
 Classic Nut
 == Clásico Nut
-
-Classic nut
-== Clásico nut
 
 Classic PowerShell
 == PowerShell clásico
 
 Classic Pro
 == Clásico Pro
-
-Classic pro
-== Clásico pro
 
 Clear
 == Limpiar
@@ -2558,9 +2549,6 @@ Click a key on the keyboard picture or under "Mouse", then add a command with "A
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
 == Haz clic en un idioma de la lista para aplicarlo al momento; la bandera de la izquierda indica el elegido.
 
-Click a map name to copy it and press the X button to remove it; add maps with the "Favorite map" checkbox in the in-game server info page.
-== Haz clic en el nombre del mapa para copiarlo y pulsa la X para quitarlo; añade mapas con la casilla «Mapa favorito» en la página de información del servidor.
-
 Click a part on the right to edit its color, blend mode and strength.
 == Haz clic en una parte a la derecha para ajustar su color, modo de mezcla e intensidad.
 
@@ -2595,9 +2583,6 @@ Click to add this community to favorites
 == Haz clic para añadir esta comunidad a favoritos
 
 Click to copy map name
-== Haz clic para copiar el nombre del mapa
-
-Click to copy the map name
 == Haz clic para copiar el nombre del mapa
 
 Click to copy this clan's name to clipboard
@@ -3085,6 +3070,9 @@ Connlimit: number of connections allowed per IP in a time period
 
 Connlimit: time window for IP connection count
 == Límite de conexiones: ventana de tiempo para el conteo de conexiones IP
+
+Consecutive wheel ticks carry their velocity into one continuous glide
+== Los pasos consecutivos heredan la velocidad y se funden en un deslizamiento continuo
 
 Console
 == Consola
@@ -5159,6 +5147,9 @@ Encoder:
 End (s)
 == Fin (s)
 
+End bounce
+== Rebote en el borde
+
 End marker of replay slice
 == Marcador final del segmento de repetición
 
@@ -5281,6 +5272,9 @@ Event
 
 Every click applies the skin at once, so star the ones you like before you start browsing.
 == Cada clic aplica el skin al instante, así que marca con estrella los que te gusten antes de explorar.
+
+Every wheel tick restarts from rest, matching the original client
+== Cada paso de la rueda reinicia desde el reposo, igual que el cliente original
 
 Exact bound nickname
 == Apodo exacto vinculado
@@ -5611,9 +5605,6 @@ Favorite maps
 
 Favorites
 == Favoritos
-
-Favorites match the exact map name and also feed the "Favorite map" tab in the server browser.
-== Los favoritos se comparan por el nombre exacto del mapa y también alimentan la pestaña «Mapa favorito» del navegador de servidores.
 
 feat-003 dogfood: tokens + 12 widgets
 == feat-003 dogfood: tokens + 12 widgets de UI
@@ -6818,6 +6809,12 @@ How far the plasma gun tracks a tee
 How far the tractor tracks a tee
 == Qué tan lejos rastrea el tractor a un tee
 
+How far the wheel or a drag can push past an end, in UI pixels; the content springs back after scrolling stops. 0 disables it
+== Cuánto pueden empujar la rueda o el arrastre más allá de un extremo, en píxeles de UI; el contenido vuelve al detenerse el desplazamiento. 0 lo desactiva
+
+How firmly the spring settles; 100 stops without overshoot, lower values let it bounce past the target
+== Con qué firmeza se asienta el resorte; 100 se detiene sin sobrepasar, valores menores rebotan más allá del objetivo
+
 How long expression lasts
 == Cuánto dura la expresión
 
@@ -7771,9 +7768,6 @@ Leave empty to disable
 
 Leave empty to join public room
 == Dejar vacío para unirse a una sala pública
-
-Leave empty to show everyone
-== Déjalo vacío para mostrar a todos los jugadores
 
 Leave empty to use default prompt
 == Dejar vacío para usar el aviso predeterminado
@@ -11621,9 +11615,6 @@ Remove chat
 Remove friend
 == Eliminar amigo
 
-Remove from favorites
-== Eliminar de favoritos
-
 Remove from history
 == Eliminar del historial
 
@@ -12044,9 +12035,6 @@ Restore old single-segment hook collision line behavior
 Restore recommended
 == Restaurar recomendados
 
-Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
-== Restaurar el desplazamiento original: cada paso de la rueda reinicia el desplazamiento suave sin heredar la velocidad
-
 Restored the built-in content
 == Se restauró el contenido incluido
 
@@ -12154,6 +12142,9 @@ Rows here usually come from old configs, so test each command before you rely on
 
 RTT
 == RTT
+
+Rubber-band distance in UI pixels when the wheel or a drag pushes past an end (0=off); the content springs back after scrolling stops
+== Distancia del efecto goma en píxeles de UI cuando la rueda o el arrastre superan un extremo (0=desactivado); el contenido vuelve al parar
 
 Rule line 1.
 == Línea de regla 1.
@@ -12395,9 +12386,6 @@ Scoreboard
 Scoreboard cursor
 == Cursor de la tabla de puntuaciones
 
-Scoreboard filter: only show players whose name or clan contains this text
-== Filtro del marcador: mostrar solo jugadores cuyo nombre o clan contenga este texto
-
 Scoreboard playtime
 == Tiempo de juego en el marcador
 
@@ -12469,6 +12457,9 @@ Screenshots
 
 Screenshots directory
 == Directorio de capturas de pantalla
+
+Scroll feel
+== Sensación de desplazamiento
 
 Scroll mode
 == Modo de desplazamiento
@@ -14597,6 +14588,21 @@ Spotify sp_dc cookie (from browser DevTools, long-lived)
 Spree
 == Racha
 
+Spring
+== Resorte
+
+Spring damping
+== Amortiguación del resorte
+
+Spring response
+== Respuesta del resorte
+
+Spring scroll feel damping ratio in percent; 100 stops without overshoot
+== Relación de amortiguación del desplazamiento con resorte en porcentaje; 100 se detiene sin sobrepasar
+
+Spring scroll feel response time in milliseconds; lower reaches the target sooner
+== Tiempo de respuesta del desplazamiento con resorte en milisegundos; menor llega antes
+
 SQL Server name for record table
 == Nombre del servidor SQL para la tabla de registros
 
@@ -15709,6 +15715,9 @@ Time limit
 
 Time limit: %d min
 == Límite de tiempo: %d min
+
+Time the spring needs to settle on a new target; lower reaches it sooner, higher feels heavier
+== Tiempo que tarda el resorte en alcanzar un nuevo objetivo; menor llega antes, mayor se siente más pesado
 
 Time to wait before changing team: %s
 == Tiempo de espera antes de cambiar de equipo: %s
@@ -17282,6 +17291,9 @@ Wheel distance per tick; hold Alt for 3x
 Wheel label
 == Nombre en la rueda
 
+Wheel scroll feel: 0=Smooth (velocity carries over), 1=Original (each tick restarts), 2=Spring
+== Sensación de la rueda: 0=Suave (hereda la velocidad), 1=Original (reinicia cada paso), 2=Resorte
+
 Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
 == Paso de la rueda en píxeles de interfaz; las páginas de ajustes desplazan 12 veces este valor por paso
 
@@ -17774,17 +17786,11 @@ Your current race time is %s
 Your current version is outdated. Please update from the QQ group.
 == Tu versión actual está desactualizada. Por favor, actualiza desde el grupo de QQ.
 
-Your favorite map manager
-== Tu gestor de mapas favorito
-
 Your favorite maps appear here
 == Tus mapas favoritos aparecen aquí
 
 Your friend %s is online and currently on map %s!
 == ¡Tu amigo %s está en línea y actualmente en el mapa %s!
-
-Your list of favorite maps, each shown with its map type, with quick copy and remove actions.
-== Tu lista de mapas favoritos, cada uno con su tipo y acciones rápidas de copiar y eliminar.
 
 Your locked team was killed because '%s' %s
 == Tu equipo bloqueado fue eliminado porque '%s' %s
