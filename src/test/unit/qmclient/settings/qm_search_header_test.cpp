@@ -145,3 +145,34 @@ TEST(QmSearchHeader, EachImageKeepsItsVisibleArtworkAspectRatio)
 		EXPECT_NEAR(Layout.m_Logo.w / Layout.m_Logo.h, aExpectedAspects[Image], 0.001f) << Image;
 	}
 }
+
+TEST(QmSearchHeader, SubtitleUsesMiddleSeventyPercentOfViewport)
+{
+	for(const float Width : {180.0f, 900.0f, 1400.0f})
+	{
+		SCOPED_TRACE(Width);
+		const CUIRect Viewport{20.0f, 30.0f, Width, 600.0f};
+		const auto Layout = qm_search_header::Layout(Viewport, 100.0f, 1.0f, false, 0);
+		ASSERT_GT(Layout.m_Subtitle.h, 0.0f);
+		EXPECT_FLOAT_EQ(Layout.m_Subtitle.w, Width * 0.7f);
+		EXPECT_NEAR(Layout.m_Subtitle.x - Viewport.x, Width * 0.15f, 0.001f);
+		EXPECT_NEAR(Layout.m_Subtitle.x + Layout.m_Subtitle.w * 0.5f, Viewport.x + Width * 0.5f, 0.001f);
+	}
+}
+
+TEST(QmSearchHeader, MultilineSubtitleReservesHeightBeforeInput)
+{
+	for(const float Scale : {1.0f, 2.0f})
+	{
+		SCOPED_TRACE(Scale);
+		const CUIRect Viewport{20.0f, 30.0f, 900.0f, 600.0f * Scale};
+		const float TextHeight = 80.0f * Scale;
+		const float InputHeight = 100.0f * Scale;
+		const auto Layout = qm_search_header::Layout(Viewport, InputHeight, Scale, false, 0, TextHeight);
+		ASSERT_GT(Layout.m_Logo.h, 0.0f);
+		EXPECT_FLOAT_EQ(Layout.m_Subtitle.h, TextHeight);
+		EXPECT_GT(Layout.m_Subtitle.y, Layout.m_Logo.y + Layout.m_Logo.h);
+		EXPECT_LT(Layout.m_Subtitle.y + Layout.m_Subtitle.h, Viewport.y + Layout.m_InputOffsetY);
+		EXPECT_LE(Layout.m_InputOffsetY + InputHeight, Viewport.h);
+	}
+}

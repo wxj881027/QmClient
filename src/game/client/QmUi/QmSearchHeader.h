@@ -95,7 +95,12 @@ struct SLayout
 	int m_LogoIndex = 0;
 };
 
-inline SLayout Layout(const CUIRect &Viewport, float InputHeight, float UiScale, bool HasQuery, int LogoIndex)
+inline float SubtitleWidth(const CUIRect &Viewport)
+{
+	return std::max(0.0f, Viewport.w * 0.7f);
+}
+
+inline SLayout Layout(const CUIRect &Viewport, float InputHeight, float UiScale, bool HasQuery, int LogoIndex, float TextHeight = 0.0f)
 {
 	SLayout Result;
 	Result.m_LogoIndex = std::clamp(LogoIndex, 0, NUM_LOGOS - 1);
@@ -104,7 +109,7 @@ inline SLayout Layout(const CUIRect &Viewport, float InputHeight, float UiScale,
 	const float Available = std::max(0.0f, Viewport.h - InputHeight);
 	Result.m_InputOffsetY = Available * 0.5f;
 	const float Gap = 12.0f * UiScale;
-	const float SubtitleHeight = 22.0f * UiScale;
+	const float SubtitleHeight = std::max(22.0f * UiScale, TextHeight);
 	const float LogoBudget = std::max(0.0f, Available - SubtitleHeight - 2.0f * Gap);
 	// 极矮视口优先保留输入框。
 	if(LogoBudget < 20.0f * UiScale || Viewport.w <= 0.0f)
@@ -121,7 +126,8 @@ inline SLayout Layout(const CUIRect &Viewport, float InputHeight, float UiScale,
 	// 高度不足时沿用整组居中的紧凑布局，避免图片、短句和输入卡片重叠。
 	const float Top = UseAnchors ? LogoCenterY - LogoHeight * 0.5f : (Available - HeaderHeight) * 0.5f;
 	Result.m_Logo = {Viewport.x + (Viewport.w - LogoWidth) * 0.5f, Viewport.y + Top, LogoWidth, LogoHeight};
-	Result.m_Subtitle = {Viewport.x, Result.m_Logo.y + LogoHeight + Gap, Viewport.w, SubtitleHeight};
+	const float TextWidth = SubtitleWidth(Viewport);
+	Result.m_Subtitle = {Viewport.x + (Viewport.w - TextWidth) * 0.5f, Result.m_Logo.y + LogoHeight + Gap, TextWidth, SubtitleHeight};
 	if(!UseAnchors)
 		Result.m_InputOffsetY = Top + HeaderHeight;
 	return Result;
