@@ -4188,6 +4188,29 @@ void CClient::Update()
 {
 	m_LinkProbeTracker.OnFrame(time_get(), time_freq());
 
+	// 点了垂直同步开关后固定等 2 秒再真正切换：交换链重建必然停顿一下，
+	// 这 2 秒足够页面切换和开关动画全部播完，停顿落在静止画面上。
+	if(m_QmPendingVSync >= 0 && m_QmVSyncQueuedAt != 0)
+	{
+		const int64_t Elapsed = time_get() - m_QmVSyncQueuedAt;
+		if(Elapsed >= time_freq() * 2)
+		{
+			const int ApplyState = m_QmPendingVSync;
+			m_QmPendingVSync = -1;
+			m_QmVSyncQueuedAt = 0;
+			m_QmVSyncIdleFrames = 0;
+			// 连点后值转回原样就不用再动交换链。
+			if(ApplyState != m_QmAppliedVSync)
+			{
+				const int64_t ApplyStart = time_get();
+				Graphics()->SetVSync(ApplyState != 0);
+				m_QmAppliedVSync = ApplyState;
+				dbg_msg("gfx/qm", "vsync_apply state=%d apply=%.2fms waited=%.0fms", ApplyState,
+					(time_get() - ApplyStart) * 1000.0 / time_freq(), Elapsed * 1000.0 / time_freq());
+			}
+		}
+	}
+
 	const bool GraphicsTrace = QmGraphicsTraceEnabled(2);
 	const bool PerfRuntime = QmPerfEnabled();
 	// GraphicsTrace 走原有 perf/graphics 通道；常规性能/卡顿诊断下把 client_update 的子阶段
@@ -7636,6 +7659,19 @@ void CClient::Notify(const char *pTitle, const char *pMessage)
 	Graphics()->NotifyWindow();
 }
 
+void CClient::QueueVSyncChange(bool State)
+{
+	if(Graphics() == nullptr)
+		return;
+	// 开关外观必须立刻跟手：点击就把配置写上，真正切换交给下面 2 秒后的应用点。
+	g_Config.m_GfxVsync = State ? 1 : 0;
+	m_QmPendingVSync = State ? 1 : 0;
+	// 连点不能把计时器一直往后推，否则永远落不了地——那就是"点了没反应"的成因。
+	if(m_QmVSyncQueuedAt == 0)
+		m_QmVSyncQueuedAt = time_get();
+	dbg_msg("gfx/qm", "vsync_queue state=%d", State ? 1 : 0);
+}
+
 void CClient::OnWindowResize()
 {
 	TextRender()->OnPreWindowResize();
@@ -7651,7 +7687,7 @@ void CClient::ConchainWindowVSync(IConsole::IResult *pResult, void *pUserData, I
 	{
 		if(g_Config.m_GfxVsync != pResult->GetInteger(0))
 		{
-			pSelf->Graphics()->SetVSync(pResult->GetInteger(0));
+			pSelf->QueueVSyncChange(pResult->GetInteger(0) != 0);
 		}
 	}
 	else

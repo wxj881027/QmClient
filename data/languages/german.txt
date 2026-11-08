@@ -2096,6 +2096,12 @@ Cannot update public words. Previous words remain active.
 Cannot write the wiki file
 == Wiki-Datei kann nicht geschrieben werden
 
+Capsule seam
+== Kapselnaht
+
+Capsule seam smoothing: ease the straight-to-cap curvature jump (0 = plain semicircular ends)
+== Kapselnaht-Glättung: dämpft den Krümmungssprung zwischen Gerade und Kappe (0 = reine Halbkreisenden)
+
 Capture the flag
 == Capture the Flag (CTF)
 
@@ -2485,6 +2491,9 @@ Clan: %s
 
 Classic
 == Klassisch
+
+Classic arc
+== Klassischer Bogen
 
 Classic PowerShell
 == Klassische PowerShell
@@ -2990,6 +2999,9 @@ Confirm disconnect after game end (minutes, -1 off, 0 always)
 Confirm quit after game end (minutes, -1 off, 0 always)
 == Beenden nach Spielende bestätigen (Minuten, -1 aus, 0 immer)
 
+Conic Bezier
+== Konische Bézierkurve
+
 Connect address error
 == Verbindungsadressfehler
 
@@ -3125,6 +3137,9 @@ Contents
 Continue anyway?
 == Trotzdem fortfahren?
 
+Continuous-curvature UI corners (0 = classic arc, 100 = strongest)
+== Stetige Krümmung der Oberflächenecken (0 = klassischer Bogen, 100 = am stärksten)
+
 Contributors
 == Mitwirkende
 
@@ -3226,6 +3241,12 @@ Copy skin ID
 
 Copy skin option color
 == Farbe der Skin-Optionen kopieren
+
+Corner curvature
+== Eckenkrümmung
+
+Corner curve
+== Eckenkurve
 
 Could not add the player as a friend
 == Spieler konnte nicht als Freund hinzugefügt werden
@@ -11147,6 +11168,9 @@ Queue preset: %s
 Quick action menu for players
 == Schnellaktionsmenü für Spieler
 
+Quintic Bezier
+== Quintische Bézierkurve
+
 Quit
 == Beenden
 
@@ -12958,6 +12982,9 @@ Settings page opacity
 
 Settings page right panel opacity
 == Deckkraft des rechten Bedienfelds der Einstellungsseite
+
+Settings prewarm default migration done
+== Migration des Standardwerts für das Vorwärmen der Einstellungen abgeschlossen
 
 Settings, binds, profiles, chat binds and the war list are included. Select additional cfg files below.
 == Einstellungen, Tastenbelegungen, Skin-Profile, Chat-Binds und Kriegsliste sind enthalten. Wählen Sie unten zusätzliche cfg-Dateien aus.
@@ -14846,6 +14873,9 @@ Sun
 Super
 == Super
 
+Superellipse
+== Superellipse
+
 Support is optional; nothing here changes client behavior.
 == Unterstützung ist freiwillig; hier ändert sich nichts am Verhalten des Clients.
 
@@ -16327,6 +16357,9 @@ UI color
 
 UI controller sens.
 == Controller-Empfindlichkeit (UI)
+
+UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier
+== Eckenkurve der Oberfläche: 0 = klassischer Bogen, 1 = Superellipse, 2 = quintische Bézierkurve, 3 = konische Bézierkurve
 
 UI icon color
 == Farbe der UI-Symbole

@@ -724,6 +724,8 @@ Cannot swap: the other player is not in your team
 Cannot update public words. Previous words remain active.
 Cannot write cfg file
 Cannot write the wiki file
+Capsule seam
+Capsule seam smoothing: ease the straight-to-cap curvature jump (0 = plain semicircular ends)
 Capture the flag
 Capture-the-flag event cue, used by CTF servers rather than ordinary DDNet racing.
 Card guide
@@ -856,6 +858,7 @@ Clan of the player followed from the pie menu
 Clan plates size
 Clan: %s
 Classic
+Classic arc
 Classic PowerShell
 Clear
 Clear all favorite maps
@@ -1026,6 +1029,7 @@ Confirm clear all
 Confirm clear finished
 Confirm disconnect after game end (minutes, -1 off, 0 always)
 Confirm quit after game end (minutes, -1 off, 0 always)
+Conic Bezier
 Connect
 Connect address error
 Connect dummy
@@ -1073,6 +1077,7 @@ Container format: MP4 is the most compatible, MOV suits editing, MKV suits lossl
 Container:
 Contents
 Continue anyway?
+Continuous-curvature UI corners (0 = classic arc, 100 = strongest)
 Contributors
 Control custom background drawing
 Control latency compensation tools
@@ -1108,6 +1113,8 @@ Copy skin from dummy
 Copy skin from player
 Copy skin ID
 Copy skin option color
+Corner curvature
+Corner curve
 Could not add the player as a friend
 Could not back up configuration files.
 Could not check for existing player with your name. Check your internet connection.
@@ -3865,6 +3872,7 @@ Queue is empty
 Queue preset: %s
 Quick action menu for players
 Quick Hammer
+Quintic Bezier
 Quit
 Quit the client
 Quitting. Please wait…
@@ -4484,6 +4492,7 @@ Settings card widths: stableId for full width, !stableId for half width, separat
 Settings file
 Settings page opacity
 Settings page right panel opacity
+Settings prewarm default migration done
 Settings, binds, profiles, chat binds and the war list are included. Select additional cfg files below.
 Severe
 Shape
@@ -5124,6 +5133,7 @@ Sudden Death
 Suicides
 Sun
 Super
+Superellipse
 Support is optional; nothing here changes client behavior.
 Support ♥
 Surprise
@@ -5637,6 +5647,7 @@ UDP socket not open
 UI animations
 UI color
 UI controller sens.
+UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier
 UI icon color
 UI icon custom color
 UI icon style

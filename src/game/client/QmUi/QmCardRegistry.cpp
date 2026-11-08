@@ -219,7 +219,7 @@ namespace qm_card_registry
 			{"deck:tee-glow", "tee", ECardColumn::Right, 1, "Team tee glow", "tee team glow color rainbow spectate", "Color tee outlines by team for spectating"},
 			{"deck:tee7-editor", "tee7", ECardColumn::Full, 0, "Skin", "tee sixup skin editor", "Edit individual Tee 7 skin parts"},
 			{"deck:graphics-display", "graphics", ECardColumn::Left, 0, Localizable("Graphics display"), "graphics display monitor window", "Window and monitor"},
-			{"deck:graphics-visual", "graphics", ECardColumn::Left, 1, Localizable("Visual"), "graphics visual rendering card appearance settings card border corner segments rainbow title", "Rendering options"},
+			{"deck:graphics-visual", "graphics", ECardColumn::Left, 1, Localizable("Visual"), "graphics visual rendering card appearance settings card border corner segments rainbow title capsule seam 胶囊接缝 圆角曲线 曲率", "Rendering options"},
 			{"deck:graphics-icons", "graphics", ECardColumn::Left, 2, Localizable("Icons"), "graphics UI icon color white black weight regular bold phosphor", "Configure UI icon appearance"},
 			{"deck:graphics-modes", "graphics", ECardColumn::Right, 0, Localizable("Display modes"), "display modes graphics resolutions", "Available resolutions"},
 			{"deck:graphics-interaction", "graphics", ECardColumn::Right, 1, Localizable("Interface animations"), "interface ui motion animations focus rainbow", "Motion and focus feedback"},

@@ -1,6 +1,7 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 
+#include <game/client/QmUi/UiSurface.h>
 #include "chat.h"
 
 #include <base/log.h>
@@ -4128,7 +4129,10 @@ void CChat::OnRender()
 			Graphics()->TextureClear();
 			const ColorRGBA SelectionColor = ColorRGBA(0.20f, 0.55f, 0.88f, 0.35f * AnimAlpha);
 			const float Rounding = g_Config.m_ClChatOld ? 0.0f : MessageRounding();
-			Graphics()->DrawRect(RenderedTextRect.x, RenderedTextRect.y, RenderedTextRect.w, RenderedTextRect.h, SelectionColor, IGraphics::CORNER_ALL, Rounding);
+			SRoundedSurfaceParams SelectionSurface;
+			SelectionSurface.m_Radius = Rounding;
+			SelectionSurface.m_Corners = IGraphics::CORNER_ALL;
+			DrawRoundedSurface(Ui(), CUIRect{RenderedTextRect.x, RenderedTextRect.y, RenderedTextRect.w, RenderedTextRect.h}, SelectionColor, ColorRGBA(), SelectionSurface);
 		}
 
 		const bool RenderChatEmoji = Line.m_ChatEmojiRect.w > 0.0f && GameClient()->m_QmChatEmoji.CanRender(Line.m_ChatEmoji);
@@ -4249,7 +4253,10 @@ void CChat::OnRender()
 			{
 				if(BackgroundBaseColor.a > 0.0f)
 					Ui()->RenderGaussianBlur({x, PreviewY, PreviewWidth, RowHeight}, 1.0f, IGraphics::CORNER_ALL, MessageRounding());
-				Graphics()->DrawRect(x, PreviewY, PreviewWidth, RowHeight, BackgroundBaseColor, IGraphics::CORNER_ALL, MessageRounding());
+				SRoundedSurfaceParams PreviewSurface;
+				PreviewSurface.m_Radius = MessageRounding();
+				PreviewSurface.m_Corners = IGraphics::CORNER_ALL;
+				DrawRoundedSurface(Ui(), CUIRect{x, PreviewY, PreviewWidth, RowHeight}, BackgroundBaseColor, ColorRGBA(), PreviewSurface);
 			}
 
 			TextRender()->TextColor(Line.m_TextColor);

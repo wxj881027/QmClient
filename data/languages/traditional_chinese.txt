@@ -2096,6 +2096,12 @@ Cannot update public words. Previous words remain active.
 Cannot write the wiki file
 == 無法寫入 Wiki 檔案
 
+Capsule seam
+== 膠囊接縫
+
+Capsule seam smoothing: ease the straight-to-cap curvature jump (0 = plain semicircular ends)
+== 膠囊接縫軟化：緩和直邊到端頭的曲率跳變（0 = 純半圓端頭）
+
 Capture the flag
 == 奪旗模式 (CTF)
 
@@ -2485,6 +2491,9 @@ Clan: %s
 
 Classic
 == 经典
+
+Classic arc
+== 經典圓弧
 
 Classic PowerShell
 == 經典 PowerShell
@@ -2990,6 +2999,9 @@ Confirm disconnect after game end (minutes, -1 off, 0 always)
 Confirm quit after game end (minutes, -1 off, 0 always)
 == 遊戲結束後退出前彈出確認窗口（分鐘，-1 關閉，0 始終打開）
 
+Conic Bezier
+== 圓錐貝塞爾
+
 Connect address error
 == 連接地址錯誤
 
@@ -3125,6 +3137,9 @@ Contents
 Continue anyway?
 == 仍要退出？
 
+Continuous-curvature UI corners (0 = classic arc, 100 = strongest)
+== 介面圓角連續曲率（0 = 經典圓弧，100 = 最強）
+
 Contributors
 == 貢獻者
 
@@ -3226,6 +3241,12 @@ Copy skin ID
 
 Copy skin option color
 == 複製皮膚選項顏色
+
+Corner curvature
+== 圓角曲率
+
+Corner curve
+== 圓角曲線
 
 Could not add the player as a friend
 == 無法將該玩家加入好友
@@ -11147,6 +11168,9 @@ Queue preset: %s
 Quick action menu for players
 == 對玩家快捷操作菜單
 
+Quintic Bezier
+== 五次貝塞爾
+
 Quit
 == 退出
 
@@ -12958,6 +12982,9 @@ Settings page opacity
 
 Settings page right panel opacity
 == 設置頁右側設置欄透明度
+
+Settings prewarm default migration done
+== 設定預熱預設值遷移已完成
 
 Settings, binds, profiles, chat binds and the war list are included. Select additional cfg files below.
 == 包含設定、按鍵綁定、外觀配置、聊天綁定和敵對列表。請在下方選擇額外的 cfg 檔案。
@@ -14846,6 +14873,9 @@ Sun
 Super
 == 無敵
 
+Superellipse
+== 超橢圓
+
 Support is optional; nothing here changes client behavior.
 == 支持完全出於自願；此處內容不會改變用戶端行為。
 
@@ -16327,6 +16357,9 @@ UI color
 
 UI controller sens.
 == 搖桿靈敏度（界面）
+
+UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier
+== 介面圓角曲線：0 = 經典圓弧，1 = 超橢圓，2 = 五次貝塞爾，3 = 圓錐貝塞爾
 
 UI icon color
 == 介面圖示顏色

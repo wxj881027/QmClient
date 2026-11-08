@@ -129,13 +129,69 @@ namespace qm_card_catalog
 		return false;
 	}
 
+	namespace
+	{
+		// 单页最多记 4 张最慢卡片：够定位瓶颈，又不会让日志变成流水账。
+		struct SCardBuildTimingEntry
+		{
+			const char *m_pStableId = nullptr;
+			double m_Ms = 0.0;
+		};
+		struct SCardBuildTimingState
+		{
+			double m_TotalMs = 0.0;
+			int m_BuildCount = 0;
+			SCardBuildTimingEntry m_aSlowest[4];
+		};
+		SCardBuildTimingState s_CardBuildTiming;
+	} // namespace
+
+	void ResetCardBuildTimings()
+	{
+		s_CardBuildTiming = SCardBuildTimingState{};
+	}
+
+	void LogCardBuildTimings(const char *pPage)
+	{
+		if(s_CardBuildTiming.m_BuildCount == 0 || s_CardBuildTiming.m_TotalMs < 20.0)
+			return;
+		char aSlowest[256];
+		aSlowest[0] = '\0';
+		for(const auto &Entry : s_CardBuildTiming.m_aSlowest)
+		{
+			if(Entry.m_pStableId == nullptr)
+				continue;
+			char aEntry[80];
+			str_format(aEntry, sizeof(aEntry), "%s=%.1fms ", Entry.m_pStableId, Entry.m_Ms);
+			str_append(aSlowest, aEntry, sizeof(aSlowest));
+		}
+		dbg_msg("perf/cards", "page=%s build_total=%.1fms cards=%d slowest=[%s]", pPage != nullptr ? pPage : "?", s_CardBuildTiming.m_TotalMs, s_CardBuildTiming.m_BuildCount, aSlowest);
+	}
+
 	void BuildCards(const SQmCardBuildContext &Ctx, const std::vector<const char *> &vStableIds, std::vector<SSettingsCardDefinition> &vOut)
 	{
 		vOut.reserve(vOut.size() + vStableIds.size());
 		for(const char *pStableId : vStableIds)
 		{
+			const int64_t CardStartNs = time_get_nanoseconds().count();
 			SSettingsCardDefinition Definition;
-			if(BuildCard(Ctx, pStableId, Definition))
+			const bool Built = BuildCard(Ctx, pStableId, Definition);
+			const double CardMs = (time_get_nanoseconds().count() - CardStartNs) / 1000000.0;
+			s_CardBuildTiming.m_TotalMs += CardMs;
+			s_CardBuildTiming.m_BuildCount++;
+			// 插入到最慢榜（4 项降序），只在真的比榜尾快时才跳过。
+			for(auto &Entry : s_CardBuildTiming.m_aSlowest)
+			{
+				if(CardMs > Entry.m_Ms)
+				{
+					for(size_t Index = std::size(s_CardBuildTiming.m_aSlowest) - 1; Index > 0; --Index)
+						s_CardBuildTiming.m_aSlowest[Index] = s_CardBuildTiming.m_aSlowest[Index - 1];
+					Entry = SCardBuildTimingEntry{};
+					s_CardBuildTiming.m_aSlowest[0] = SCardBuildTimingEntry{pStableId, CardMs};
+					break;
+				}
+			}
+			if(Built)
 				vOut.push_back(std::move(Definition));
 		}
 	}

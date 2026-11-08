@@ -263,6 +263,9 @@ public:
 	// gfx
 	virtual void Notify(const char *pTitle, const char *pMessage) = 0;
 	virtual void OnWindowResize() = 0;
+	// 切换垂直同步要重建交换链，重建那一下必然掉帧；先把请求挂起，等界面动画播完再真的切，
+	// 动画就不会被那一下打断。
+	virtual void QueueVSyncChange(bool State) = 0;
 
 	virtual void UpdateAndSwap() = 0;
 
@@ -505,6 +508,8 @@ public:
 	virtual void OnShutdown() = 0;
 	virtual void OnRender() = 0;
 	virtual void OnUpdate() = 0;
+	// 界面动画是否全部停下。垂直同步切换要等它，否则交换链重建会砸在动画中间。
+	virtual bool QmUiAnimationsIdle() const { return true; }
 	// 连接资源在常规主循环推进，编辑器占用游戏更新时也不能暂停准备。
 	virtual void OnConnectionResourceUpdate() {}
 	// 每次替换地图前都通知，即使客户端仍处于加载状态。

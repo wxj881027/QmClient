@@ -2096,6 +2096,12 @@ Cannot update public words. Previous words remain active.
 Cannot write the wiki file
 == Wiki dosyası yazılamıyor
 
+Capsule seam
+== Kapsül birleşimi
+
+Capsule seam smoothing: ease the straight-to-cap curvature jump (0 = plain semicircular ends)
+== Kapsül birleşimi yumuşatma: düz ile uç arasındaki eğrilik sıçramasını yumuşatır (0 = saf yarım daire uçlar)
+
 Capture the flag
 == Bayrak kapmaca (CTF)
 
@@ -2485,6 +2491,9 @@ Clan: %s
 
 Classic
 == Klasik
+
+Classic arc
+== Klasik yay
 
 Classic PowerShell
 == Klasik PowerShell
@@ -2990,6 +2999,9 @@ Confirm disconnect after game end (minutes, -1 off, 0 always)
 Confirm quit after game end (minutes, -1 off, 0 always)
 == Oyun bittikten sonra çıkmayı onayla (dakika, -1 kapalı, 0 her zaman)
 
+Conic Bezier
+== Konik Bézier
+
 Connect address error
 == Bağlantı adresi hatası
 
@@ -3125,6 +3137,9 @@ Contents
 Continue anyway?
 == Yine de devam edilsin mi?
 
+Continuous-curvature UI corners (0 = classic arc, 100 = strongest)
+== Arayüz köşelerinde sürekli eğrilik (0 = klasik yay, 100 = en güçlü)
+
 Contributors
 == Katkıda Bulunanlar
 
@@ -3226,6 +3241,12 @@ Copy skin ID
 
 Copy skin option color
 == Kopyala cilt seçeneği rengi
+
+Corner curvature
+== Köşe eğriliği
+
+Corner curve
+== Köşe eğrisi
 
 Could not add the player as a friend
 == Oyuncu arkadaş olarak eklenemedi
@@ -11147,6 +11168,9 @@ Queue preset: %s
 Quick action menu for players
 == Oyuncular için hızlı işlem menüsü
 
+Quintic Bezier
+== Beşinci derece Bézier
+
 Quit
 == Çıkış
 
@@ -12958,6 +12982,9 @@ Settings page opacity
 
 Settings page right panel opacity
 == Ayarlar sayfası sağ panel opaklığı
+
+Settings prewarm default migration done
+== Ayarlar ön ısıtma varsayılanı taşıması tamamlandı
 
 Settings, binds, profiles, chat binds and the war list are included. Select additional cfg files below.
 == Ayarlar, tuş atamaları, görünüm profilleri, sohbet bağlantıları ve savaş listesi dahildir. Aşağıdan ek cfg dosyalarını seçin.
@@ -14846,6 +14873,9 @@ Sun
 Super
 == Süper
 
+Superellipse
+== Süperelips
+
 Support is optional; nothing here changes client behavior.
 == Destek isteğe bağlıdır; buradaki hiçbir şey istemci davranışını değiştirmez.
 
@@ -16327,6 +16357,9 @@ UI color
 
 UI controller sens.
 == Arayüz kumanda hassasiyeti
+
+UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier
+== Arayüz köşe eğrisi: 0 = klasik yay, 1 = süperelips, 2 = beşinci derece Bézier, 3 = konik Bézier
 
 UI icon color
 == Arayüz simgesi rengi

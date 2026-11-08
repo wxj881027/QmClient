@@ -4439,6 +4439,7 @@ void CMenus::Render()
 		else
 		{
 			CPerfTimer ShellTimer;
+			const int64_t QmShellStart = time_get();
 			CUIRect TabBar, MainView;
 			Screen.HSplitTop(MENU_MENUBAR_HEIGHT_NEW, &TabBar, &MainView);
 			// 手机端所有菜单页统一对齐设置页壳层：导航栏与内容区一起内缩，
@@ -4506,8 +4507,13 @@ void CMenus::Render()
 				ScrollInputActive,
 				m_SettingsPageSwitchActive || TransitionActive,
 				m_SettingsScrollActive);
+			double QmPrewarmMs = 0.0;
 			if(CanPrewarmSettings && MenuOpenFrame > 0)
+			{
+				const int64_t QmPrewarmStart = time_get();
 				PrewarmVisibleSettingsResources(MainView);
+				QmPrewarmMs = (time_get() - QmPrewarmStart) * 1000.0 / time_freq();
+			}
 			if(m_MenuPage == PAGE_NEWS)
 			{
 				RenderNews(MainView);
@@ -4535,6 +4541,11 @@ void CMenus::Render()
 			char aContentExtra[128];
 			str_format(aContentExtra, sizeof(aContentExtra), "page=%s transition=%d", pPageName, TransitionActive ? 1 : 0);
 			LogPerfStage(Client(), "offline_page_content", ContentTimer.ElapsedMs(), TransitionActive, aContentExtra);
+			{
+				const double QmTotalMs = (time_get() - QmShellStart) * 1000.0 / time_freq();
+				if(QmTotalMs > 20.0)
+					dbg_msg("perf/gap", "shell_total=%.1fms prewarm=%.1fms content=%.1fms page=%s", QmTotalMs, QmPrewarmMs, ContentTimer.ElapsedMs(), pPageName);
+			}
 			if(Client()->State() != ClientState)
 			{
 				if(ContentTransitionActive)
@@ -7388,7 +7399,13 @@ CMenus::CScopedMenuTextVisibleGuard::CScopedMenuTextVisibleGuard(CMenus *pMenus)
 	m_pMenus(pMenus),
 	m_Previous(pMenus->m_MenuTextPoolVisibleGuard)
 {
-	m_pMenus->EnsureSettingsMenuTextPlanReadyForVisible();
+	{
+		const int64_t GuardStart = time_get();
+		m_pMenus->EnsureSettingsMenuTextPlanReadyForVisible();
+		const double GuardMs = (time_get() - GuardStart) * 1000.0 / time_freq();
+		if(GuardMs > 5.0)
+			dbg_msg("perf/menutext", "ensure_plan_ready=%.1fms", GuardMs);
+	}
 	m_pMenus->m_MenuTextPoolVisibleGuard = true;
 	if(!m_Previous)
 	{

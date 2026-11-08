@@ -2096,6 +2096,12 @@ Cannot update public words. Previous words remain active.
 Cannot write the wiki file
 == Impossible d’écrire le fichier du wiki
 
+Capsule seam
+== Joint de capsule
+
+Capsule seam smoothing: ease the straight-to-cap curvature jump (0 = plain semicircular ends)
+== Adoucissement du joint de capsule : adoucit le saut de courbure entre le droit et l'extrémité (0 = extrémités en demi-cercle)
+
 Capture the flag
 == Capture du drapeau (CTF)
 
@@ -2485,6 +2491,9 @@ Clan: %s
 
 Classic
 == Classique
+
+Classic arc
+== Arc classique
 
 Classic PowerShell
 == PowerShell classique
@@ -2990,6 +2999,9 @@ Confirm disconnect after game end (minutes, -1 off, 0 always)
 Confirm quit after game end (minutes, -1 off, 0 always)
 == Confirmer la sortie après la fin de la partie (minutes, -1 désactivé, 0 toujours)
 
+Conic Bezier
+== Bézier conique
+
 Connect address error
 == Erreur d'adresse de connexion
 
@@ -3125,6 +3137,9 @@ Contents
 Continue anyway?
 == Continuer quand même ?
 
+Continuous-curvature UI corners (0 = classic arc, 100 = strongest)
+== Courbure continue des coins de l'interface (0 = arc classique, 100 = maximum)
+
 Contributors
 == Contributeurs
 
@@ -3226,6 +3241,12 @@ Copy skin ID
 
 Copy skin option color
 == Couleur des options de copie de skin
+
+Corner curvature
+== Courbure de coin
+
+Corner curve
+== Courbe de coin
 
 Could not add the player as a friend
 == Impossible d'ajouter le joueur comme ami
@@ -11147,6 +11168,9 @@ Queue preset: %s
 Quick action menu for players
 == Menu d'action rapide pour les joueurs
 
+Quintic Bezier
+== Bézier quintique
+
 Quit
 == Quitter
 
@@ -12958,6 +12982,9 @@ Settings page opacity
 
 Settings page right panel opacity
 == Opacité du panneau droit de la page des paramètres
+
+Settings prewarm default migration done
+== Migration de la valeur par défaut du préchauffage des paramètres terminée
 
 Settings, binds, profiles, chat binds and the war list are included. Select additional cfg files below.
 == Les paramètres, touches assignées, profils de skin, touches de discussion et liste de guerre sont inclus. Sélectionnez les fichiers cfg supplémentaires ci-dessous.
@@ -14846,6 +14873,9 @@ Sun
 Super
 == Super | Référence chinois simplifié : 无敌
 
+Superellipse
+== Superellipse
+
 Support is optional; nothing here changes client behavior.
 == Le soutien est facultatif ; rien ici ne change le comportement du client.
 
@@ -16327,6 +16357,9 @@ UI color
 
 UI controller sens.
 == Sensibilité manette (interface)
+
+UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier
+== Courbe de coin de l'interface : 0 = arc classique, 1 = superellipse, 2 = Bézier quintique, 3 = Bézier conique
 
 UI icon color
 == Couleur des icônes de l'interface

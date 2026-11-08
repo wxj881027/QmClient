@@ -2096,6 +2096,12 @@ Cannot update public words. Previous words remain active.
 Cannot write the wiki file
 == Не удалось записать файл Wiki
 
+Capsule seam
+== Стык капсулы
+
+Capsule seam smoothing: ease the straight-to-cap curvature jump (0 = plain semicircular ends)
+== Сглаживание стыка капсулы: смягчает скачок кривизны между прямой и торцом (0 = чистый полукруг)
+
 Capture the flag
 == Захват флага (CTF)
 
@@ -2485,6 +2491,9 @@ Clan: %s
 
 Classic
 == Классический
+
+Classic arc
+== Классическая дуга
 
 Classic PowerShell
 == Классический PowerShell
@@ -2990,6 +2999,9 @@ Confirm disconnect after game end (minutes, -1 off, 0 always)
 Confirm quit after game end (minutes, -1 off, 0 always)
 == Подтверждение выхода после окончания игры (минуты, -1 выкл, 0 всегда)
 
+Conic Bezier
+== Коническая кривая Безье
+
 Connect address error
 == Ошибка адреса подключения
 
@@ -3125,6 +3137,9 @@ Contents
 Continue anyway?
 == Всё равно продолжить?
 
+Continuous-curvature UI corners (0 = classic arc, 100 = strongest)
+== Непрерывная кривизна углов интерфейса (0 = классическая дуга, 100 = максимум)
+
 Contributors
 == Авторы
 
@@ -3226,6 +3241,12 @@ Copy skin ID
 
 Copy skin option color
 == Цвет опции копирования скина
+
+Corner curvature
+== Кривизна угла
+
+Corner curve
+== Кривая угла
 
 Could not add the player as a friend
 == Не удалось добавить игрока в друзья
@@ -11147,6 +11168,9 @@ Queue preset: %s
 Quick action menu for players
 == Меню быстрых действий для игроков
 
+Quintic Bezier
+== Кривая Безье 5-го порядка
+
 Quit
 == Выйти
 
@@ -12958,6 +12982,9 @@ Settings page opacity
 
 Settings page right panel opacity
 == Прозрачность правой панели страницы настроек
+
+Settings prewarm default migration done
+== Миграция значения по умолчанию для предварительного прогрева настроек завершена
 
 Settings, binds, profiles, chat binds and the war list are included. Select additional cfg files below.
 == Включены настройки, привязки клавиш, профили скинов, чат-привязки и список врагов. Ниже выберите дополнительные файлы cfg.
@@ -14846,6 +14873,9 @@ Sun
 Super
 == Супер
 
+Superellipse
+== Суперэллипс
+
 Support is optional; nothing here changes client behavior.
 == Поддержка необязательна, и ничто из этого не меняет поведение клиента.
 
@@ -16327,6 +16357,9 @@ UI color
 
 UI controller sens.
 == Чувствительность контроллера (интерфейс)
+
+UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier
+== Кривая углов интерфейса: 0 = классическая дуга, 1 = суперэллипс, 2 = кривая Безье 5-го порядка, 3 = коническая кривая Безье
 
 UI icon color
 == Цвет значков интерфейса

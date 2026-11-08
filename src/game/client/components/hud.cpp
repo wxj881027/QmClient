@@ -2248,6 +2248,9 @@ void CHud::RenderDummyMiniMap()
 				DrawParams.m_H = Frame.m_Content.h;
 				DrawParams.m_Corners = HudEditorScope.m_Corners;
 				DrawParams.m_Rounding = Frame.m_ContentRadius;
+				DrawParams.m_CornerSmoothing = std::clamp(g_Config.m_QmUiCornerSmoothing / 100.0f, 0.0f, 1.0f);
+				DrawParams.m_CornerCurve = (float)g_Config.m_QmUiCornerCurve;
+				DrawParams.m_CornerSeam = std::clamp(g_Config.m_QmUiCapsuleSeam / 100.0f, 0.0f, 1.0f);
 				DrawParams.m_Opaque = true;
 				if(Backend == QmDummyMiniViewLayout::EBackend::VULKAN)
 				{
@@ -2595,8 +2598,14 @@ void CHud::RenderTextInfo()
 			const float FrozenHudY = 0.0f;
 			const float FrozenHudW = TeeSize * std::min(NumInTeam, MaxTees);
 			const float FrozenHudH = TeeSize + 3.0f + (TotalRows - 1) * TeeSize;
-			Ui()->RenderGaussianBlur({FrozenHudX, FrozenHudY, FrozenHudW, FrozenHudH}, 1.0f, IGraphics::CORNER_B, ui_token::radius::BASE);
-			Graphics()->DrawRect(FrozenHudX, FrozenHudY, FrozenHudW, FrozenHudH, ui_token::color::SURFACE_GLASS, IGraphics::CORNER_B, ui_token::radius::BASE);
+			const CUIRect FrozenHudRect{FrozenHudX, FrozenHudY, FrozenHudW, FrozenHudH};
+			Ui()->RenderGaussianBlur(FrozenHudRect, 1.0f, IGraphics::CORNER_B, ui_token::radius::BASE);
+			// 玻璃底必须和模糊遮罩用同一条形状：旧直绘路径的圆角是一圈四边形拼的，
+			// 换连续曲率后边缘对不上，会露出断续的硬边。
+			SRoundedSurfaceParams FrozenHudSurface;
+			FrozenHudSurface.m_Radius = ui_token::radius::BASE;
+			FrozenHudSurface.m_Corners = IGraphics::CORNER_B;
+			DrawRoundedSurface(Ui(), FrozenHudRect, ui_token::color::SURFACE_GLASS, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), FrozenHudSurface);
 
 			bool Overflow = NumInTeam > MaxTees * MaxRows;
 
@@ -5992,8 +6001,12 @@ void CHud::RenderKeyStatus()
 	if(Layout.m_H <= 0.0f)
 		return;
 
-	Ui()->RenderGaussianBlur({Layout.m_X, Layout.m_Y, Layout.m_W, Layout.m_H}, 1.0f, IGraphics::CORNER_ALL, ui_token::radius::BASE);
-	Graphics()->DrawRect(Layout.m_X, Layout.m_Y, Layout.m_W, Layout.m_H, ui_token::color::SURFACE_GLASS, IGraphics::CORNER_ALL, ui_token::radius::BASE);
+	const CUIRect KeyStatusRect{Layout.m_X, Layout.m_Y, Layout.m_W, Layout.m_H};
+	Ui()->RenderGaussianBlur(KeyStatusRect, 1.0f, IGraphics::CORNER_ALL, ui_token::radius::BASE);
+	SRoundedSurfaceParams KeyStatusSurface;
+	KeyStatusSurface.m_Radius = ui_token::radius::BASE;
+	KeyStatusSurface.m_Corners = IGraphics::CORNER_ALL;
+	DrawRoundedSurface(Ui(), KeyStatusRect, ui_token::color::SURFACE_GLASS, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), KeyStatusSurface);
 
 	float TextX = Layout.m_X + Layout.m_PaddingX;
 	float TextY = Layout.m_Y + Layout.m_PaddingY;
@@ -6696,7 +6709,12 @@ void CHud::RenderSpectatorHud()
 	// 手机：四角都要圆，跟计分板卡片同一档半径；编辑器里贴边时按编辑器给的角。
 	const int SpectatorHudCorners = QmUiMobilePlatform() ? IGraphics::CORNER_ALL : HudEditorScope.m_Corners;
 	Ui()->RenderGaussianBlur(BackgroundRect, 1.0f, SpectatorHudCorners, ui_token::radius::CARD);
-	Graphics()->DrawRect(BackgroundRect.x, BackgroundRect.y, BackgroundRect.w, BackgroundRect.h, BackgroundColor, SpectatorHudCorners, ui_token::radius::CARD);
+	{
+		SRoundedSurfaceParams SpectatorSurface;
+		SpectatorSurface.m_Radius = ui_token::radius::CARD;
+		SpectatorSurface.m_Corners = SpectatorHudCorners;
+		DrawRoundedSurface(Ui(), BackgroundRect, BackgroundColor, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), SpectatorSurface);
+	}
 	if(Layout.m_TextWidth > 0.0f)
 	{
 		const CUIRect Label{Layout.m_Left + 6.0f, BackgroundRect.y, Layout.m_TextWidth, BackgroundRect.h};
@@ -6740,8 +6758,12 @@ void CHud::RenderLocalTime(float x)
 		char aTimeStr[6];
 		str_timestamp_format(aTimeStr, sizeof(aTimeStr), "%H:%M");
 		const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::LocalTime, {x - 30.0f, 0.0f, 25.0f, 12.5f});
-		Ui()->RenderGaussianBlur({x - 30.0f, 0.0f, 25.0f, 12.5f}, 1.0f, HudEditorScope.m_Corners, ui_token::radius::BASE);
-		Graphics()->DrawRect(x - 30.0f, 0.0f, 25.0f, 12.5f, ui_token::color::SURFACE_GLASS, HudEditorScope.m_Corners, ui_token::radius::BASE);
+		const CUIRect LocalTimeRect{x - 30.0f, 0.0f, 25.0f, 12.5f};
+		Ui()->RenderGaussianBlur(LocalTimeRect, 1.0f, HudEditorScope.m_Corners, ui_token::radius::BASE);
+		SRoundedSurfaceParams LocalTimeSurface;
+		LocalTimeSurface.m_Radius = ui_token::radius::BASE;
+		LocalTimeSurface.m_Corners = HudEditorScope.m_Corners;
+		DrawRoundedSurface(Ui(), LocalTimeRect, ui_token::color::SURFACE_GLASS, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), LocalTimeSurface);
 		TextRender()->Text(x - 25.0f, (12.5f - 5.f) / 2.f, 5.0f, aTimeStr, -1.0f);
 		GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 		return;
@@ -7456,7 +7478,12 @@ void CHud::RenderGoresDrownBoard()
 	Ui()->RenderGaussianBlur(BoardRect, 1.0f, HudEditorScope.m_Corners, ui_token::radius::BASE);
 	ColorRGBA BackgroundColor = ui_token::color::SURFACE_GLASS;
 	BackgroundColor.a *= RenderAlpha;
-	Graphics()->DrawRect(BoardX, BoardY, BoardWidth, BoardHeight, BackgroundColor, HudEditorScope.m_Corners, ui_token::radius::BASE);
+	{
+		SRoundedSurfaceParams BoardSurface;
+		BoardSurface.m_Radius = ui_token::radius::BASE;
+		BoardSurface.m_Corners = HudEditorScope.m_Corners;
+		DrawRoundedSurface(Ui(), BoardRect, BackgroundColor, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), BoardSurface);
+	}
 
 	const ColorRGBA PreviousTextColor = TextRender()->GetTextColor();
 	const ColorRGBA PreviousOutlineColor = TextRender()->GetTextOutlineColor();

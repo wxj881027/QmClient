@@ -2177,6 +2177,12 @@ Cannot write cfg file
 Cannot write the wiki file
 == 无法写入 Wiki 文件
 
+Capsule seam
+== 胶囊接缝
+
+Capsule seam smoothing: ease the straight-to-cap curvature jump (0 = plain semicircular ends)
+== 胶囊接缝软化：缓和直边到端头的曲率跳变（0 = 纯半圆端头）
+
 Capture the flag
 == 夺旗模式 (CTF)
 
@@ -2572,6 +2578,9 @@ Clan: %s
 
 Classic
 == 经典
+
+Classic arc
+== 经典圆弧
 
 Classic PowerShell
 == 经典 PowerShell
@@ -3083,6 +3092,9 @@ Confirm disconnect after game end (minutes, -1 off, 0 always)
 Confirm quit after game end (minutes, -1 off, 0 always)
 == 游戏结束后退出前弹出确认窗口（分钟，-1 关闭，0 始终打开）
 
+Conic Bezier
+== 圆锥贝塞尔
+
 Connect
 == 连接
 
@@ -3224,6 +3236,9 @@ Contents
 Continue anyway?
 == 仍要退出？
 
+Continuous-curvature UI corners (0 = classic arc, 100 = strongest)
+== 界面圆角连续曲率（0 = 经典圆弧，100 = 最强）
+
 Contributors
 == 贡献者
 
@@ -3328,6 +3343,12 @@ Copy skin ID
 
 Copy skin option color
 == 复制皮肤选项颜色
+
+Corner curvature
+== 圆角曲率
+
+Corner curve
+== 圆角曲线
 
 Could not add the player as a friend
 == 无法将该玩家添加为好友
@@ -11600,6 +11621,9 @@ Quick action menu for players
 Quick Hammer
 == 快速切锤
 
+Quintic Bezier
+== 五次贝塞尔
+
 Quit
 == 退出
 
@@ -13456,6 +13480,9 @@ Settings page opacity
 
 Settings page right panel opacity
 == 设置页右侧设置栏透明度
+
+Settings prewarm default migration done
+== 设置预热默认值迁移已完成
 
 Settings, binds, profiles, chat binds and the war list are included. Select additional cfg files below.
 == 包含设置、按键绑定、皮肤配置、聊天绑定和战争名单。请在下方选择额外的 cfg 文件。
@@ -15377,6 +15404,9 @@ Sun
 Super
 == 无敌
 
+Superellipse
+== 超椭圆
+
 Support is optional; nothing here changes client behavior.
 == 支持完全自愿；此处内容不会改变客户端行为。
 
@@ -16915,6 +16945,9 @@ UI color
 
 UI controller sens.
 == 摇杆灵敏度（界面）
+
+UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier
+== 界面圆角曲线：0 = 经典圆弧，1 = 超椭圆，2 = 五次贝塞尔，3 = 圆锥贝塞尔
 
 UI icon color
 == 界面图标颜色

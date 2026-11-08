@@ -286,6 +286,24 @@ namespace ui_token::font
 	inline constexpr float TIP = 9.0f;
 } // namespace ui_token::font
 
+// 气泡（tooltip）的唯一尺寸来源。设置页的紧凑小字气泡就是全局标准，服务器列表、
+// 好友列表等普通气泡不再各用一套更大的字号/内边距；行距由文字引擎按同一字号
+// 推导，所以字号统一即行距统一，这里不另设行距。
+namespace ui_token::tooltip
+{
+	// 阅读字号，与设置页小字同一档。
+	inline constexpr float FONT_SIZE = font::SMALL;
+	// 用户设置 qm_tooltip_font_size 的默认值；它同时是等比缩放的基准，
+	// 默认配置（14）下缩放系数为 1，所有气泡都正好是 FONT_SIZE。
+	inline constexpr float FONT_SIZE_CONFIG_REFERENCE = 14.0f;
+	// 相对于 FONT_SIZE 的比例：内边距 0.3 字高、外边距 0.4 字高、圆角 0.3 字高。
+	inline constexpr float PADDING = 3.0f;
+	inline constexpr float MARGIN = 4.0f;
+	inline constexpr float RADIUS = 3.0f;
+	// 默认阅读宽度上限；设置页与普通页面共用同一档，窄视口按比例收窄。
+	inline constexpr float MAX_WIDTH = 300.0f;
+} // namespace ui_token::tooltip
+
 // HUD 基础字号按 300 逻辑高度定义：辅助信息、正文、重点数值、关键提示。
 namespace ui_token::hud::font
 {

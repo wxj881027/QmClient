@@ -2096,6 +2096,12 @@ Cannot update public words. Previous words remain active.
 Cannot write the wiki file
 == Wiki 파일을 쓸 수 없습니다
 
+Capsule seam
+== 캡슐 이음새
+
+Capsule seam smoothing: ease the straight-to-cap curvature jump (0 = plain semicircular ends)
+== 캡슐 이음새 부드럽게: 직선과 끝의 곡률 점프를 완화합니다(0 = 순수 반원 끝)
+
 Capture the flag
 == 깃발 뺏기 (CTF)
 
@@ -2485,6 +2491,9 @@ Clan: %s
 
 Classic
 == 클래식
+
+Classic arc
+== 클래식 원호
 
 Classic PowerShell
 == 클래식 PowerShell
@@ -2990,6 +2999,9 @@ Confirm disconnect after game end (minutes, -1 off, 0 always)
 Confirm quit after game end (minutes, -1 off, 0 always)
 == 게임 종료 후 종료 확인 (분, -1=끄기, 0=항상)
 
+Conic Bezier
+== 원뿔 베지어
+
 Connect address error
 == 연결 주소 오류
 
@@ -3125,6 +3137,9 @@ Contents
 Continue anyway?
 == 그래도 계속하시겠습니까?
 
+Continuous-curvature UI corners (0 = classic arc, 100 = strongest)
+== UI 모서리 연속 곡률(0 = 클래식 원호, 100 = 최대)
+
 Contributors
 == 기여자
 
@@ -3226,6 +3241,12 @@ Copy skin ID
 
 Copy skin option color
 == 스킨 옵션 색상 복사
+
+Corner curvature
+== 모서리 곡률
+
+Corner curve
+== 모서리 곡선
 
 Could not add the player as a friend
 == 플레이어를 친구로 추가할 수 없습니다
@@ -11147,6 +11168,9 @@ Queue preset: %s
 Quick action menu for players
 == 플레이어 빠른 작업 메뉴
 
+Quintic Bezier
+== 5차 베지어
+
 Quit
 == 종료
 
@@ -12958,6 +12982,9 @@ Settings page opacity
 
 Settings page right panel opacity
 == 설정 페이지 오른쪽 패널 불투명도
+
+Settings prewarm default migration done
+== 설정 예열 기본값 마이그레이션이 완료되었습니다
 
 Settings, binds, profiles, chat binds and the war list are included. Select additional cfg files below.
 == 설정, 키 바인드, 스킨 프로필, 채팅 바인드와 전쟁 목록이 포함됩니다. 아래에서 추가 cfg 파일을 선택하세요.
@@ -14846,6 +14873,9 @@ Sun
 Super
 == 슈퍼
 
+Superellipse
+== 초타원
+
 Support is optional; nothing here changes client behavior.
 == 지원은 선택 사항이며, 이곳의 내용은 클라이언트 동작을 바꾸지 않습니다.
 
@@ -16327,6 +16357,9 @@ UI color
 
 UI controller sens.
 == UI 컨트롤러 감도
+
+UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier
+== UI 모서리 곡선: 0 = 클래식 원호, 1 = 초타원, 2 = 5차 베지어, 3 = 원뿔 베지어
 
 UI icon color
 == UI 아이콘 색상

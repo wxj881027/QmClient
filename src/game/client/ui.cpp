@@ -26,6 +26,7 @@
 #include <engine/keys.h>
 #include <engine/shared/config.h>
 
+#include <game/client/QmUi/UiSurface.h>
 #include <game/localization.h>
 
 #include <algorithm>
@@ -180,6 +181,17 @@ void CUIElement::SUIElementRect::Draw(const CUIRect *pRect, ColorRGBA Color, int
 
 	if(Color.a > 0.0f && Color.a < 1.0f && m_pParent->Ui()->GaussianBlurScopeActive())
 		m_pParent->Ui()->RenderGaussianBlur(*pRect, m_pParent->Ui()->GaussianBlurScopeAlpha(), Corners, Rounding);
+	// 有 SDF 时所有圆角矩形都走同一条形状：边缘抗锯齿一致、连续曲率生效，
+	// 也不再依赖缓存四边形网格（那条网格的圆角环带会出现断续的点状边）。
+	if(Rounding > 0.0f && Corners != 0 && m_pParent->Ui()->Graphics()->HasRoundedRectSdf())
+	{
+		SRoundedSurfaceParams Params;
+		Params.m_Radius = Rounding;
+		Params.m_Corners = Corners;
+		Params.m_PixelSize = 0.0001f;
+		DrawRoundedSurface(m_pParent->Ui(), *pRect, Color, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), Params);
+		return;
+	}
 	m_pParent->Ui()->Graphics()->TextureClear();
 	m_pParent->Ui()->Graphics()->RenderQuadContainerEx(m_UIRectQuadContainer,
 		0, -1, m_X, m_Y, 1, 1);
@@ -641,18 +653,28 @@ void CUi::RenderGaussianBlur(const CUIRect &Rect, float Alpha, int Corners, floa
 
 	Graphics()->ClipEnable(ClipX0, ClipY0, ClipX1 - ClipX0, ClipY1 - ClipY0);
 	Graphics()->BlendNormal();
+	// 掩码必须和面板落在同一块物理像素矩形上：面板走 SDF 前会把矩形对齐到物理像素，
+	// 掩码这层如果还用原始亚像素矩形，两者最多差半个像素——差的那一侧会漏出一条没被
+	// 面板盖住的模糊背景（看起来像一条细白线，且随亚像素位置在上/下边之间跳）。
+	const float MaskPixelSize = std::max(std::abs(MappedWidth) / std::max((float)Graphics()->ScreenWidth(), 1.0f), 0.0001f);
+	const SRoundedRectGeometry MaskGeometry = ResolveRoundedRectGeometry(Rect.x, Rect.y, Rect.w, Rect.h, Rounding, MaskPixelSize);
+	const CUIRect MaskRect{MaskGeometry.m_X, MaskGeometry.m_Y, MaskGeometry.m_W, MaskGeometry.m_H};
 	IGraphics::SRenderTargetDrawParams DrawParams;
-	DrawParams.m_X = Rect.x;
-	DrawParams.m_Y = Rect.y;
-	DrawParams.m_W = Rect.w;
-	DrawParams.m_H = Rect.h;
+	DrawParams.m_X = MaskRect.x;
+	DrawParams.m_Y = MaskRect.y;
+	DrawParams.m_W = MaskRect.w;
+	DrawParams.m_H = MaskRect.h;
 	DrawParams.m_Alpha = std::clamp(Alpha, 0.0f, 1.0f);
 	DrawParams.m_Corners = Corners;
-	DrawParams.m_Rounding = Rounding;
-	DrawParams.m_U0 = (Rect.x - ScreenX0) / MappedWidth;
-	DrawParams.m_U1 = (Rect.x + Rect.w - ScreenX0) / MappedWidth;
-	DrawParams.m_V0 = 1.0f - (Rect.y - ScreenY0) / MappedHeight;
-	DrawParams.m_V1 = 1.0f - (Rect.y + Rect.h - ScreenY0) / MappedHeight;
+	DrawParams.m_Rounding = MaskGeometry.m_Rounding;
+	// 模糊掩码跟着面板用的是同一条圆角曲线，否则角上会漏出没模糊的边。
+	DrawParams.m_CornerSmoothing = std::clamp(g_Config.m_QmUiCornerSmoothing / 100.0f, 0.0f, 1.0f);
+	DrawParams.m_CornerCurve = (float)g_Config.m_QmUiCornerCurve;
+	DrawParams.m_CornerSeam = std::clamp(g_Config.m_QmUiCapsuleSeam / 100.0f, 0.0f, 1.0f);
+	DrawParams.m_U0 = (MaskRect.x - ScreenX0) / MappedWidth;
+	DrawParams.m_U1 = (MaskRect.x + MaskRect.w - ScreenX0) / MappedWidth;
+	DrawParams.m_V0 = 1.0f - (MaskRect.y - ScreenY0) / MappedHeight;
+	DrawParams.m_V1 = 1.0f - (MaskRect.y + MaskRect.h - ScreenY0) / MappedHeight;
 	Graphics()->DrawRenderTarget(m_GaussianBlurTarget, DrawParams);
 	if(IsClipped())
 		UpdateClipping();

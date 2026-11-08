@@ -848,6 +848,17 @@ static void MigrateJumpHintConfig()
 	MigrateJumpHintDefaults(g_Config.m_QmJumpHintDefaultsMigrated, g_Config.m_QmJumpHint, g_Config.m_QmJumpHintText, sizeof(g_Config.m_QmJumpHintText));
 }
 
+// 设置页预热以前默认关闭，第一次打开图像页会整帧冻结（实测 435ms），而几乎没有
+// 用户知道这条配置存在，存档里的 0 基本都不是主动关闭。这里一次性改成打开；
+// 之后用户在设置里的选择不再被覆盖。
+static void MigrateSettingsPrewarmDefault()
+{
+	if(g_Config.m_QmSettingsPrewarmMigrated)
+		return;
+	g_Config.m_QmSettingsPrewarm = 1;
+	g_Config.m_QmSettingsPrewarmMigrated = 1;
+}
+
 // 昵称显示从 cl_nameplates / cl_nameplates_own 两开关改成 qm_nameplate_show_scope 六档。
 // 远程直接换档、不做迁移，原本关掉名牌的玩家升级后会突然看到所有人；这里把旧意图
 // 一次性映射到对应档位，之后用户在新分段控件里的选择不再被覆盖。
@@ -922,6 +933,7 @@ void CGameClient::OnInit()
 	// 在首次绘制前处理跳跃提示默认文案。
 	MigrateJumpHintConfig();
 	MigrateNameplateShowScopeConfig();
+	MigrateSettingsPrewarmDefault();
 	MigrateTranslateUiColorAlphaConfig(ConfigManager());
 
 	// 启动赞助提醒：跨过阈值才写盘，避免每次启动都重写配置文件。
@@ -3355,6 +3367,12 @@ bool CGameClient::PoseSkinsReady()
 	// 只靠常规帧循环等待会变成空等，抓帧永远等不到 LOADED。
 	m_Skins.UpdateForSettingsWarmup();
 	return false;
+}
+
+bool CGameClient::QmUiAnimationsIdle() const
+{
+	const CUiV2AnimationRuntime *pRuntime = m_UI.QmAnimationRuntime();
+	return pRuntime == nullptr || pRuntime->ActiveTrackCount() == 0;
 }
 
 void CGameClient::OnShutdown()
