@@ -116,6 +116,80 @@ TEST(QmSearchAnswers, QmTcAndDdnetFeatureQueriesResolveToTheirAnswer)
 	}
 }
 
+TEST(QmSearchAnswers, ConfirmedSettingsAndResourceQueriesResolveToTheirAnswer)
+{
+	struct SCase
+	{
+		const char *m_pQuery;
+		const char *m_pId;
+	};
+	for(const auto &Case : {
+		    SCase{"钩子倒计时怎么开?", "hook-countdown"},
+		    SCase{"钩索倒计时", "hook-countdown"},
+		    SCase{"怎么给皮肤调色", "skin-colors"},
+		    SCase{"脚部颜色", "skin-colors"},
+		    SCase{"音效有啥用", "audio-packs"},
+		    SCase{"音效怎么使用", "audio-packs"},
+		    SCase{"音效在哪下", "audio-packs"},
+		    SCase{"音效包放哪里", "audio-packs"},
+		    SCase{"导出的聊天记录在哪里呀", "chat-export"},
+		    SCase{"聊天记录保存位置", "chat-export"},
+		    SCase{"这一类皮肤怎么关掉", "tee-status-bar"},
+		    SCase{"上面一排皮肤怎么关", "tee-status-bar"},
+		    SCase{"顶部头像", "tee-status-bar"},
+		    SCase{"队友头像", "tee-status-bar"},
+		    SCase{"Tee状态栏", "tee-status-bar"},
+		    SCase{"名字前面的数字可以关掉吗", "player-ids"},
+		    SCase{"聊天数字", "player-ids"},
+		    SCase{"名字前面的冒号", "player-ids"},
+		    SCase{"可以一直发大表情的指令是什么", "super-emote"},
+		    SCase{"大表情绑定", "super-emote"},
+		    SCase{"super_emote", "super-emote"}})
+	{
+		SCOPED_TRACE(Case.m_pQuery);
+		const auto Result = qm_search_answers::Search(Case.m_pQuery);
+		ASSERT_NE(Result.m_pAnswer, nullptr);
+		EXPECT_STREQ(Result.m_pAnswer->m_pId, Case.m_pId);
+	}
+}
+
+TEST(QmSearchAnswers, ConfirmedCommandAnswersOfferTheirDocumentedCommands)
+{
+	struct SCase
+	{
+		const char *m_pQuery;
+		const char *m_pCommand;
+	};
+	for(const auto &Case : {
+		    SCase{"钩子倒计时", "qm_hook_countdown 1"},
+		    SCase{"顶部头像", "qm_frozen_tees_hud 0"},
+		    SCase{"名字前面的数字", "cl_show_ids 0"},
+		    SCase{"大表情绑定", "bind key \"super_emote 0\""}})
+	{
+		SCOPED_TRACE(Case.m_pQuery);
+		const auto Result = qm_search_answers::Search(Case.m_pQuery);
+		ASSERT_NE(Result.m_pAnswer, nullptr);
+		EXPECT_STREQ(Result.m_pAnswer->m_pCommand, Case.m_pCommand);
+	}
+}
+
+TEST(QmSearchAnswers, ChatExportAnswerOpensTheExportDirectory)
+{
+	const auto Result = qm_search_answers::Search("导出聊天记录");
+	ASSERT_NE(Result.m_pAnswer, nullptr);
+	EXPECT_STREQ(Result.m_pAnswer->m_pDirectory, "qmclient/chat_log");
+	EXPECT_EQ(Result.m_pAnswer->m_pCommand, nullptr);
+}
+
+TEST(QmSearchAnswers, AudioPackAnswerProvidesTheConfirmedGroupAndDirectory)
+{
+	const auto Result = qm_search_answers::Search("音效在哪下");
+	ASSERT_NE(Result.m_pAnswer, nullptr);
+	EXPECT_STREQ(Result.m_pAnswer->m_pDirectory, "audio");
+	EXPECT_NE(std::string(Result.m_pAnswer->m_pAnswer).find("1076765929"), std::string::npos);
+	EXPECT_NE(std::string(Result.m_pAnswer->m_pAnswer).find("栖梦QimenG"), std::string::npos);
+}
+
 TEST(QmSearchAnswers, SelectingAnyCandidateQuestionResolvesThatAnswer)
 {
 	for(const auto &Answer : qm_search_answers::Answers())
