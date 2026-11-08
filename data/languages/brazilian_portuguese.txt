@@ -6791,17 +6791,14 @@ Hostname of DNSBL provider for IP verification
 Hover for tooltip
 == Passe o mouse para ver a dica
 
+How far a wheel or drag can push past an end, in UI pixels; 0 disables
+== Quanto a roda ou o arrasto pode passar do fim, em pixels de UI; 0 desativa
+
 How far the plasma gun tracks a tee
 == Distância que a arma de plasma rastreia um tee
 
 How far the tractor tracks a tee
 == Distância que o trator rastreia um tee
-
-How far the wheel or a drag can push past an end, in UI pixels; the content springs back after scrolling stops. 0 disables it
-== Quanto a roda ou o arrasto podem empurrar além de um limite, em pixels de UI; o conteúdo volta quando a rolagem para. 0 desativa
-
-How firmly the spring settles; 100 stops without overshoot, lower values let it bounce past the target
-== Firmeza com que a mola se assenta; 100 para sem ultrapassar, valores menores passam do alvo e voltam
 
 How long expression lasts
 == Duração da expressão facial
@@ -14576,6 +14573,9 @@ Spring
 Spring damping
 == Amortecimento da mola
 
+Spring firmness; 100 stops without overshoot, lower bounces past
+== Firmeza da mola; 100 para sem ultrapassar, menor ricocheteia além do alvo
+
 Spring response
 == Resposta da mola
 
@@ -14584,6 +14584,9 @@ Spring scroll feel damping ratio in percent; 100 stops without overshoot
 
 Spring scroll feel response time in milliseconds; lower reaches the target sooner
 == Tempo de resposta da rolagem com mola em milissegundos; menor chega mais rápido
+
+Spring settle time; lower is snappier, higher feels heavier
+== Tempo de acomodação da mola; menor responde mais rápido, maior parece mais pesado
 
 SQL Server name for record table
 == Nome do SQL Server para a tabela de registros
@@ -15697,9 +15700,6 @@ Time limit
 
 Time limit: %d min
 == Limite de tempo: %d min
-
-Time the spring needs to settle on a new target; lower reaches it sooner, higher feels heavier
-== Tempo que a mola leva para atingir um novo alvo; menor chega antes, maior parece mais pesado
 
 Time to wait before changing team: %s
 == Tempo de espera antes de mudar de time: %s

@@ -1089,17 +1089,17 @@ static CButtonContainer s_CardBorderColorResetId;
 			{
 				RowAction("graphics-ScrollSpringResponse", GraphicsMetrics.m_LineHeight, [&](CUIRect SpringResponseRow) {
 					DoGraphicsNumericField("graphics-scroll-spring-response", &g_Config.m_QmUiScrollSpringResponse, &g_Config.m_QmUiScrollSpringResponse, SpringResponseRow, Localize("Spring response"), 80, 600, &CUi::ms_LinearScrollbarScale, "ms");
-					GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUiScrollSpringResponse, &SpringResponseRow, Localize("Time the spring needs to settle on a new target; lower reaches it sooner, higher feels heavier"));
+					GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUiScrollSpringResponse, &SpringResponseRow, Localize("Spring settle time; lower is snappier, higher feels heavier"));
 				});
 
 				RowAction("graphics-ScrollSpringDamping", GraphicsMetrics.m_LineHeight, [&](CUIRect SpringDampingRow) {
 					DoGraphicsNumericField("graphics-scroll-spring-damping", &g_Config.m_QmUiScrollSpringDamping, &g_Config.m_QmUiScrollSpringDamping, SpringDampingRow, Localize("Spring damping"), 50, 100, &CUi::ms_LinearScrollbarScale, "%");
-					GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUiScrollSpringDamping, &SpringDampingRow, Localize("How firmly the spring settles; 100 stops without overshoot, lower values let it bounce past the target"));
+					GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUiScrollSpringDamping, &SpringDampingRow, Localize("Spring firmness; 100 stops without overshoot, lower bounces past"));
 				});
 
 				RowAction("graphics-ScrollBounce", GraphicsMetrics.m_LineHeight, [&](CUIRect ScrollBounceRow) {
 					DoGraphicsNumericField("graphics-scroll-bounce", &g_Config.m_QmUiScrollBounce, &g_Config.m_QmUiScrollBounce, ScrollBounceRow, Localize("End bounce"), 0, 64);
-					GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUiScrollBounce, &ScrollBounceRow, Localize("How far the wheel or a drag can push past an end, in UI pixels; the content springs back after scrolling stops. 0 disables it"));
+					GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUiScrollBounce, &ScrollBounceRow, Localize("How far a wheel or drag can push past an end, in UI pixels; 0 disables"));
 				});
 			}
 

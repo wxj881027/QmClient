@@ -2342,10 +2342,9 @@ Hooking L/R: %.0f%%/%.0f%%
 Horizontal position
 Hostname of DNSBL provider for IP verification
 Hover for tooltip
+How far a wheel or drag can push past an end, in UI pixels; 0 disables
 How far the plasma gun tracks a tee
 How far the tractor tracks a tee
-How far the wheel or a drag can push past an end, in UI pixels; the content springs back after scrolling stops. 0 disables it
-How firmly the spring settles; 100 stops without overshoot, lower values let it bounce past the target
 How long expression lasts
 How long the server message of the day is displayed
 How many cfg files this flow goes through by exec; five at most.
@@ -5028,9 +5027,11 @@ Spotify sp_dc cookie (from browser DevTools, long-lived)
 Spree
 Spring
 Spring damping
+Spring firmness; 100 stops without overshoot, lower bounces past
 Spring response
 Spring scroll feel damping ratio in percent; 100 stops without overshoot
 Spring scroll feel response time in milliseconds; lower reaches the target sooner
+Spring settle time; lower is snappier, higher feels heavier
 SQL Server name for record table
 Squishy Tee deformation duration
 Squishy Tee deformation intensity
@@ -5422,7 +5423,6 @@ Time in seconds before economy authentication timeout.
 Time interval (seconds) between chat messages.
 Time limit
 Time limit: %d min
-Time the spring needs to settle on a new target; lower reaches it sooner, higher feels heavier
 Time to wait before changing team: %s
 Time to wait before handling inactive players (in minutes)
 Timeout code to use for dummy

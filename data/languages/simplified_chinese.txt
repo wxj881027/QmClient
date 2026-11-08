@@ -7031,17 +7031,14 @@ Hostname of DNSBL provider for IP verification
 Hover for tooltip
 == 悬停显示提示
 
+How far a wheel or drag can push past an end, in UI pixels; 0 disables
+== 滚轮或拖拽能把内容推过末端多远（UI 像素）；0 关闭
+
 How far the plasma gun tracks a tee
 == 等离子枪将跟踪 tee 多远
 
 How far the tractor tracks a tee
 == 拖拉机将跟踪 tee 多远
-
-How far the wheel or a drag can push past an end, in UI pixels; the content springs back after scrolling stops. 0 disables it
-== 滚轮或拖拽把内容推过边界的距离（UI 像素）；停止滚动后内容会弹回。0 为关闭
-
-How firmly the spring settles; 100 stops without overshoot, lower values let it bounce past the target
-== 弹簧收敛的干脆程度；100 不过冲直接停住，越小越过目标回弹越多
 
 How long expression lasts
 == 表情持续时间
@@ -15089,6 +15086,9 @@ Spring
 Spring damping
 == 弹簧阻尼
 
+Spring firmness; 100 stops without overshoot, lower bounces past
+== 弹簧收敛强度；100 直接停住不过冲，越小越会越过目标回弹
+
 Spring response
 == 弹簧响应
 
@@ -15097,6 +15097,9 @@ Spring scroll feel damping ratio in percent; 100 stops without overshoot
 
 Spring scroll feel response time in milliseconds; lower reaches the target sooner
 == 弹簧滚动手感的响应时间，单位毫秒；越小越快到位
+
+Spring settle time; lower is snappier, higher feels heavier
+== 弹簧落定时间；越小响应越快，越大手感越沉
 
 SQL Server name for record table
 == 插入记录表的 SQL Server 名称
@@ -16270,9 +16273,6 @@ Time limit
 
 Time limit: %d min
 == 规定时限：%d 分钟
-
-Time the spring needs to settle on a new target; lower reaches it sooner, higher feels heavier
-== 弹簧落到新目标所需的时间；越小到位越快，越大手感越沉
 
 Time to wait before changing team: %s
 == 距离下次切换队伍还需等待：%s

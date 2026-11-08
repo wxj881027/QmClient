@@ -6791,17 +6791,14 @@ Hostname of DNSBL provider for IP verification
 Hover for tooltip
 == Наведите для подсказки
 
+How far a wheel or drag can push past an end, in UI pixels; 0 disables
+== Насколько колесо или перетаскивание может выйти за край, в пикселях UI; 0 отключает
+
 How far the plasma gun tracks a tee
 == Как далеко плазменная пушка отслеживает ти
 
 How far the tractor tracks a tee
 == Как далеко трактор отслеживает ти
-
-How far the wheel or a drag can push past an end, in UI pixels; the content springs back after scrolling stops. 0 disables it
-== Насколько колесо или перетаскивание могут вытолкнуть содержимое за край, в пикселях UI; после остановки прокрутки оно возвращается. 0 отключает
-
-How firmly the spring settles; 100 stops without overshoot, lower values let it bounce past the target
-== Насколько жёстко пружина затухает; 100 — без перелёта, меньше — отскакивает за цель
 
 How long expression lasts
 == Как долго длится выражение
@@ -14576,6 +14573,9 @@ Spring
 Spring damping
 == Демпфирование пружины
 
+Spring firmness; 100 stops without overshoot, lower bounces past
+== Упругость пружины; 100 — без перелёта, меньше — отскакивает за цель
+
 Spring response
 == Отклик пружины
 
@@ -14584,6 +14584,9 @@ Spring scroll feel damping ratio in percent; 100 stops without overshoot
 
 Spring scroll feel response time in milliseconds; lower reaches the target sooner
 == Время отклика пружинной прокрутки в миллисекундах; меньше — быстрее
+
+Spring settle time; lower is snappier, higher feels heavier
+== Время стабилизации пружины; меньше — отзывчивее, больше — тяжелее
 
 SQL Server name for record table
 == Имя SQL-сервера для таблицы записей
@@ -15697,9 +15700,6 @@ Time limit
 
 Time limit: %d min
 == Лимит времени: %d мин
-
-Time the spring needs to settle on a new target; lower reaches it sooner, higher feels heavier
-== Время, за которое пружина достигает новой цели; меньше — быстрее, больше — тяжелее
 
 Time to wait before changing team: %s
 == Время ожидания перед сменой команды: %s

@@ -6791,17 +6791,14 @@ Hostname of DNSBL provider for IP verification
 Hover for tooltip
 == 툴팁을 보려면 마우스를 올리세요
 
+How far a wheel or drag can push past an end, in UI pixels; 0 disables
+== 휠이나 드래그로 끝을 넘어 밀 수 있는 거리(UI 픽셀)입니다. 0이면 끕니다
+
 How far the plasma gun tracks a tee
 == 플라즈마 건이 티를 추적하는 거리
 
 How far the tractor tracks a tee
 == 트랙터가 티를 추적하는 거리
-
-How far the wheel or a drag can push past an end, in UI pixels; the content springs back after scrolling stops. 0 disables it
-== 휠이나 드래그로 끝을 넘어 밀 수 있는 거리(UI 픽셀)입니다. 스크롤을 멈추면 내용이 되돌아옵니다. 0이면 끕니다
-
-How firmly the spring settles; 100 stops without overshoot, lower values let it bounce past the target
-== 스프링이 얼마나 단단히 안착하는지입니다. 100이면 목표를 넘지 않고 멈추며, 작을수록 목표를 지나쳐 튕깁니다
 
 How long expression lasts
 == 표정 지속 시간
@@ -14576,6 +14573,9 @@ Spring
 Spring damping
 == 스프링 감쇠
 
+Spring firmness; 100 stops without overshoot, lower bounces past
+== 스프링 안정 강도입니다. 100은 목표를 넘지 않고 멈추며, 작을수록 목표를 지나 튕깁니다
+
 Spring response
 == 스프링 응답
 
@@ -14584,6 +14584,9 @@ Spring scroll feel damping ratio in percent; 100 stops without overshoot
 
 Spring scroll feel response time in milliseconds; lower reaches the target sooner
 == 스프링 스크롤 감도의 응답 시간(밀리초). 작을수록 빨리 도달합니다
+
+Spring settle time; lower is snappier, higher feels heavier
+== 스프링이 목표에 안착하는 시간입니다. 작을수록 빠르게 반응하고, 클수록 묵직합니다
 
 SQL Server name for record table
 == 기록 테이블의 SQL Server 이름
@@ -15697,9 +15700,6 @@ Time limit
 
 Time limit: %d min
 == 시간 제한: %d 분
-
-Time the spring needs to settle on a new target; lower reaches it sooner, higher feels heavier
-== 스프링이 새 목표에 안착하는 데 걸리는 시간입니다. 작을수록 빨리 도달하고 클수록 묵직합니다
 
 Time to wait before changing team: %s
 == 팀 변경까지 대기 시간: %s

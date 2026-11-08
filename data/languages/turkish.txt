@@ -6791,17 +6791,14 @@ Hostname of DNSBL provider for IP verification
 Hover for tooltip
 == İpucu için üzerine gel
 
+How far a wheel or drag can push past an end, in UI pixels; 0 disables
+== Tekerlek veya sürüklemenin sonu ne kadar aşabileceği, UI pikseli cinsinden; 0 kapatır
+
 How far the plasma gun tracks a tee
 == Plazma silahının bir tee'yi ne kadar takip edeceği
 
 How far the tractor tracks a tee
 == Traktörün bir tee'yi ne kadar takip edeceği
-
-How far the wheel or a drag can push past an end, in UI pixels; the content springs back after scrolling stops. 0 disables it
-== Tekerleğin veya sürüklemenin içeriği bir ucun ötesine ne kadar itebileceği (UI pikseli); kaydırma durunca içerik geri döner. 0 kapatır
-
-How firmly the spring settles; 100 stops without overshoot, lower values let it bounce past the target
-== Yayın ne kadar sıkı oturduğu; 100 hedefi aşmadan durur, küçük değerler hedefi geçip geri döner
 
 How long expression lasts
 == İfadenin ne kadar süreceği
@@ -14576,6 +14573,9 @@ Spring
 Spring damping
 == Yay sönümü
 
+Spring firmness; 100 stops without overshoot, lower bounces past
+== Yay sertliği; 100 hedefi aşmadan durur, küçük değer hedefi geçip geri döner
+
 Spring response
 == Yay tepkisi
 
@@ -14584,6 +14584,9 @@ Spring scroll feel damping ratio in percent; 100 stops without overshoot
 
 Spring scroll feel response time in milliseconds; lower reaches the target sooner
 == Yaylı kaydırma tepki süresi (milisaniye); küçük değer hedefe daha çabuk ulaşır
+
+Spring settle time; lower is snappier, higher feels heavier
+== Yayın oturma süresi; küçük daha çabuk tepki verir, büyük daha ağır hissettirir
 
 SQL Server name for record table
 == Kayıt tablosu için SQL Sunucu adı
@@ -15697,9 +15700,6 @@ Time limit
 
 Time limit: %d min
 == Süre sınırı: %d dk
-
-Time the spring needs to settle on a new target; lower reaches it sooner, higher feels heavier
-== Yayın yeni hedefe oturma süresi; küçük değer daha çabuk ulaşır, büyük değer daha ağır hissettirir
 
 Time to wait before changing team: %s
 == Takım değiştirmeden önce beklenecek süre: %s

@@ -6791,17 +6791,14 @@ Hostname of DNSBL provider for IP verification
 Hover for tooltip
 == Für Tooltip bewegen
 
+How far a wheel or drag can push past an end, in UI pixels; 0 disables
+== Wie weit Mausrad oder Ziehen über das Ende hinausgeht, in UI-Pixeln; 0 deaktiviert
+
 How far the plasma gun tracks a tee
 == Wie weit die Plasma-Kanone einem Tee folgt
 
 How far the tractor tracks a tee
 == Wie weit der Traktor einem Tee folgt
-
-How far the wheel or a drag can push past an end, in UI pixels; the content springs back after scrolling stops. 0 disables it
-== Wie weit das Rad oder Ziehen den Inhalt über ein Ende hinausschieben kann, in UI-Pixeln; nach dem Ende des Scrollens federt er zurück. 0 deaktiviert
-
-How firmly the spring settles; 100 stops without overshoot, lower values let it bounce past the target
-== Wie straff die Feder einschwingt; 100 stoppt ohne Überschwingen, kleinere Werte federn über das Ziel hinaus
 
 How long expression lasts
 == Wie lange der Gesichtsausdruck anhält
@@ -14576,6 +14573,9 @@ Spring
 Spring damping
 == Federdämpfung
 
+Spring firmness; 100 stops without overshoot, lower bounces past
+== Federhärte; 100 stoppt ohne Überschwingen, kleiner schwingt über das Ziel hinaus
+
 Spring response
 == Federreaktion
 
@@ -14584,6 +14584,9 @@ Spring scroll feel damping ratio in percent; 100 stops without overshoot
 
 Spring scroll feel response time in milliseconds; lower reaches the target sooner
 == Reaktionszeit des Feder-Scrollens in Millisekunden; kleiner erreicht das Ziel schneller
+
+Spring settle time; lower is snappier, higher feels heavier
+== Zeit bis die Feder zur Ruhe kommt; kleiner reagiert schneller, größer wirkt schwerer
 
 SQL Server name for record table
 == SQL-Servername für die Rekordtabelle
@@ -15697,9 +15700,6 @@ Time limit
 
 Time limit: %d min
 == Zeitlimit: %d min
-
-Time the spring needs to settle on a new target; lower reaches it sooner, higher feels heavier
-== Zeit, bis die Feder ein neues Ziel erreicht; kleiner ist schneller, größer fühlt sich schwerer an
 
 Time to wait before changing team: %s
 == Wartezeit vor dem Teamwechsel: %s

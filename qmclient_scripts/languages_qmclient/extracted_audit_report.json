@@ -2,7 +2,7 @@
   "summary": {
     "must_i18n": 10955,
     "business_data": 12804,
-    "test_only": 6588,
+    "test_only": 6594,
     "needs_review": 4382,
     "violation": 0
   },
@@ -23950,7 +23950,7 @@
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "line": 1092,
-      "text": "Time the spring needs to settle on a new target; lower reaches it sooner, higher feels heavier",
+      "text": "Spring settle time; lower is snappier, higher feels heavier",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
@@ -23964,7 +23964,7 @@
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "line": 1097,
-      "text": "How firmly the spring settles; 100 stops without overshoot, lower values let it bounce past the target",
+      "text": "Spring firmness; 100 stops without overshoot, lower bounces past",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
@@ -23978,7 +23978,7 @@
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "line": 1102,
-      "text": "How far the wheel or a drag can push past an end, in UI pixels; the content springs back after scrolling stops. 0 disables it",
+      "text": "How far a wheel or drag can push past an end, in UI pixels; 0 disables",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
@@ -76673,7 +76673,7 @@
     },
     {
       "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
-      "line": 286,
+      "line": 296,
       "text": "Lyrics language",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -185324,92 +185324,106 @@
     },
     {
       "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
-      "line": 129,
+      "line": 107,
+      "text": "Scroll feel",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
+      "line": 108,
+      "text": "Spring damping",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
+      "line": 109,
+      "text": "End bounce",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
+      "line": 111,
+      "text": "Config Filters",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
+      "line": 112,
+      "text": "Show enemy color in spectator menu",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
+      "line": 114,
+      "text": "set color",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
+      "line": 139,
       "text": "皮肤队列",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
-      "line": 130,
+      "line": 140,
       "text": "Enable skin queue rotation",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
-      "line": 131,
+      "line": 141,
       "text": "将改动保存回此预设",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
-      "line": 132,
+      "line": 142,
       "text": "Save changes back to this preset",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
-      "line": 143,
+      "line": 153,
       "text": "Blank asset auto fallback",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
-      "line": 143,
-      "text": "空白资源自动回退",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
-      "line": 146,
-      "text": "回退",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
-      "line": 151,
-      "text": "空白资源自动回退",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
       "line": 153,
-      "text": "自定义资源的贴图全透明",
+      "text": "空白资源自动回退",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
+      "line": 156,
+      "text": "回退",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
       "line": 161,
-      "text": "Lyrics language",
+      "text": "空白资源自动回退",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
-      "line": 162,
-      "text": "Blank asset auto fallback",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
-      "line": 165,
-      "text": "Blank asset auto fallback",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
-      "line": 168,
-      "text": "Lyrics language",
+      "line": 163,
+      "text": "自定义资源的贴图全透明",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
@@ -185422,21 +185436,28 @@
     },
     {
       "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
-      "line": 199,
+      "line": 172,
+      "text": "Blank asset auto fallback",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
+      "line": 175,
+      "text": "Blank asset auto fallback",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
+      "line": 178,
       "text": "Lyrics language",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
-      "line": 202,
-      "text": "Lyrics language",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
-      "line": 207,
+      "line": 181,
       "text": "Lyrics language",
       "category": "test_only",
       "reason": "test fixture or assertion text"
@@ -185450,112 +185471,133 @@
     },
     {
       "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
-      "line": 214,
+      "line": 212,
       "text": "Lyrics language",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
-      "line": 216,
+      "line": 217,
       "text": "Lyrics language",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
-      "line": 230,
+      "line": 219,
+      "text": "Lyrics language",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
+      "line": 224,
+      "text": "Lyrics language",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
+      "line": 226,
+      "text": "Lyrics language",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
+      "line": 240,
       "text": "Blank asset auto fallback",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
-      "line": 232,
+      "line": 242,
       "text": "Automatically fall back",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
-      "line": 254,
+      "line": 264,
       "text": "console font",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
-      "line": 264,
+      "line": 274,
       "text": "console zzzznotfound",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
-      "line": 280,
+      "line": 290,
       "text": "Lyrics language",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
-      "line": 288,
+      "line": 298,
       "text": "Lyrics language",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
-      "line": 292,
+      "line": 302,
       "text": "LYRICS LANGUAGE",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
-      "line": 311,
+      "line": 321,
       "text": "Lyrics language",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
-      "line": 311,
+      "line": 321,
       "text": "歌词语言",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
-      "line": 313,
+      "line": 323,
       "text": "歌词语言",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
-      "line": 314,
+      "line": 324,
       "text": "其他文案",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
-      "line": 322,
+      "line": 332,
       "text": "激光",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
-      "line": 347,
+      "line": 357,
       "text": "激光",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
-      "line": 359,
+      "line": 369,
       "text": "歌词",
       "category": "test_only",
       "reason": "test fixture or assertion text"

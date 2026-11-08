@@ -30192,6 +30192,13 @@
       "line": 184
     },
     {
+      "key": "How far a wheel or drag can push past an end, in UI pixels; 0 disables",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
+      "context": "",
+      "line": 1102
+    },
+    {
       "key": "How far the plasma gun tracks a tee",
       "category": "indirect",
       "source": "src/engine/shared/config_variables.h",
@@ -30204,20 +30211,6 @@
       "source": "src/engine/shared/config_variables.h",
       "context": "",
       "line": 728
-    },
-    {
-      "key": "How far the wheel or a drag can push past an end, in UI pixels; the content springs back after scrolling stops. 0 disables it",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "context": "",
-      "line": 1102
-    },
-    {
-      "key": "How firmly the spring settles; 100 stops without overshoot, lower values let it bounce past the target",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "context": "",
-      "line": 1097
     },
     {
       "key": "How long expression lasts",
@@ -35957,7 +35950,7 @@
       "category": "localize_or_localizable",
       "source": "src/test/integration/qmclient/settings/qm_catalog_search_test.cpp",
       "context": "",
-      "line": 286
+      "line": 296
     },
     {
       "key": "Lyrics language (0=Original, 1=Translation, 2=Original and translation)",
@@ -63239,6 +63232,13 @@
       "line": 108
     },
     {
+      "key": "Spring firmness; 100 stops without overshoot, lower bounces past",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
+      "context": "",
+      "line": 1097
+    },
+    {
       "key": "Spring response",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
@@ -63265,6 +63265,13 @@
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
       "line": 65
+    },
+    {
+      "key": "Spring settle time; lower is snappier, higher feels heavier",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
+      "context": "",
+      "line": 1092
     },
     {
       "key": "SQL Server name for record table",
@@ -68123,13 +68130,6 @@
       "source": "src/game/editor/explanations.cpp",
       "context": "Editor",
       "line": 193
-    },
-    {
-      "key": "Time the spring needs to settle on a new target; lower reaches it sooner, higher feels heavier",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
-      "context": "",
-      "line": 1092
     },
     {
       "key": "Time to wait before changing team: %s",

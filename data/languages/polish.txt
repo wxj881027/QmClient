@@ -6791,17 +6791,14 @@ Hostname of DNSBL provider for IP verification
 Hover for tooltip
 == Najedź, aby zobaczyć podpowiedź
 
+How far a wheel or drag can push past an end, in UI pixels; 0 disables
+== Jak daleko kółko lub przeciąganie może wyjść za koniec, w pikselach UI; 0 wyłącza
+
 How far the plasma gun tracks a tee
 == Jak daleko działo plazmowe śledzi tee
 
 How far the tractor tracks a tee
 == Jak daleko traktor śledzi tee
-
-How far the wheel or a drag can push past an end, in UI pixels; the content springs back after scrolling stops. 0 disables it
-== Jak daleko kółko lub przeciąganie mogą wypchnąć treść poza krawędź, w pikselach UI; po zatrzymaniu przewijania treść wraca. 0 wyłącza
-
-How firmly the spring settles; 100 stops without overshoot, lower values let it bounce past the target
-== Jak twardo sprężyna się zatrzymuje; 100 zatrzymuje się bez przestrzelenia, mniejsze wartości odbijają za cel
 
 How long expression lasts
 == Jak długo trwa wyraz twarzy
@@ -14576,6 +14573,9 @@ Spring
 Spring damping
 == Tłumienie sprężyny
 
+Spring firmness; 100 stops without overshoot, lower bounces past
+== Twardość sprężyny; 100 zatrzymuje się bez przeregulowania, mniej odbija za cel
+
 Spring response
 == Odpowiedź sprężyny
 
@@ -14584,6 +14584,9 @@ Spring scroll feel damping ratio in percent; 100 stops without overshoot
 
 Spring scroll feel response time in milliseconds; lower reaches the target sooner
 == Czas odpowiedzi sprężynowego przewijania w milisekundach; mniejszy szybciej dociera
+
+Spring settle time; lower is snappier, higher feels heavier
+== Czas ustalania sprężyny; mniejszy reaguje szybciej, większy wydaje się cięższy
 
 SQL Server name for record table
 == Nazwa serwera SQL dla tabeli rekordów
@@ -15697,9 +15700,6 @@ Time limit
 
 Time limit: %d min
 == Limit czasu: %d min
-
-Time the spring needs to settle on a new target; lower reaches it sooner, higher feels heavier
-== Czas, w jakim sprężyna osiąga nowy cel; mniejszy dociera szybciej, większy wydaje się cięższy
 
 Time to wait before changing team: %s
 == Czas oczekiwania przed zmianą drużyny: %s

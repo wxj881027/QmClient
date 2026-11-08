@@ -6791,17 +6791,14 @@ Hostname of DNSBL provider for IP verification
 Hover for tooltip
 == Pasa el cursor para ver ayuda
 
+How far a wheel or drag can push past an end, in UI pixels; 0 disables
+== Cuánto puede pasar del extremo la rueda o el arrastre, en píxeles de UI; 0 lo desactiva
+
 How far the plasma gun tracks a tee
 == Qué tan lejos rastrea el arma de plasma a un tee
 
 How far the tractor tracks a tee
 == Qué tan lejos rastrea el tractor a un tee
-
-How far the wheel or a drag can push past an end, in UI pixels; the content springs back after scrolling stops. 0 disables it
-== Cuánto pueden empujar la rueda o el arrastre más allá de un extremo, en píxeles de UI; el contenido vuelve al detenerse el desplazamiento. 0 lo desactiva
-
-How firmly the spring settles; 100 stops without overshoot, lower values let it bounce past the target
-== Con qué firmeza se asienta el resorte; 100 se detiene sin sobrepasar, valores menores rebotan más allá del objetivo
 
 How long expression lasts
 == Cuánto dura la expresión
@@ -14576,6 +14573,9 @@ Spring
 Spring damping
 == Amortiguación del resorte
 
+Spring firmness; 100 stops without overshoot, lower bounces past
+== Firmeza del resorte; 100 se detiene sin pasarse, menor rebota más allá del objetivo
+
 Spring response
 == Respuesta del resorte
 
@@ -14584,6 +14584,9 @@ Spring scroll feel damping ratio in percent; 100 stops without overshoot
 
 Spring scroll feel response time in milliseconds; lower reaches the target sooner
 == Tiempo de respuesta del desplazamiento con resorte en milisegundos; menor llega antes
+
+Spring settle time; lower is snappier, higher feels heavier
+== Tiempo de asentamiento del resorte; menor responde antes, mayor se siente más pesado
 
 SQL Server name for record table
 == Nombre del servidor SQL para la tabla de registros
@@ -15697,9 +15700,6 @@ Time limit
 
 Time limit: %d min
 == Límite de tiempo: %d min
-
-Time the spring needs to settle on a new target; lower reaches it sooner, higher feels heavier
-== Tiempo que tarda el resorte en alcanzar un nuevo objetivo; menor llega antes, mayor se siente más pesado
 
 Time to wait before changing team: %s
 == Tiempo de espera antes de cambiar de equipo: %s

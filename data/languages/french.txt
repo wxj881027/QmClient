@@ -6791,17 +6791,14 @@ Hostname of DNSBL provider for IP verification
 Hover for tooltip
 == Survoler pour l'infobulle
 
+How far a wheel or drag can push past an end, in UI pixels; 0 disables
+== Distance dont la molette ou le glissement peut dépasser une extrémité, en pixels UI ; 0 désactive
+
 How far the plasma gun tracks a tee
 == Distance de suivi du tee par le pistolet à plasma
 
 How far the tractor tracks a tee
 == Distance de suivi du tee par le tracteur
-
-How far the wheel or a drag can push past an end, in UI pixels; the content springs back after scrolling stops. 0 disables it
-== Distance dont la molette ou un glissement peut pousser le contenu au-delà d'une extrémité, en pixels UI ; le contenu revient à l'arrêt du défilement. 0 désactive
-
-How firmly the spring settles; 100 stops without overshoot, lower values let it bounce past the target
-== Fermeté avec laquelle le ressort se stabilise ; 100 s'arrête sans dépasser, plus bas rebondit au-delà de la cible
 
 How long expression lasts
 == Durée de l'expression
@@ -14576,6 +14573,9 @@ Spring
 Spring damping
 == Amortissement du ressort
 
+Spring firmness; 100 stops without overshoot, lower bounces past
+== Fermeté du ressort ; 100 s'arrête sans dépasser, plus faible rebondit au-delà de la cible
+
 Spring response
 == Réponse du ressort
 
@@ -14584,6 +14584,9 @@ Spring scroll feel damping ratio in percent; 100 stops without overshoot
 
 Spring scroll feel response time in milliseconds; lower reaches the target sooner
 == Temps de réponse du défilement à ressort en millisecondes ; plus court arrive plus vite
+
+Spring settle time; lower is snappier, higher feels heavier
+== Temps de stabilisation du ressort ; plus court réagit plus vite, plus long paraît plus lourd
 
 SQL Server name for record table
 == Nom du serveur SQL pour la table d'enregistrement
@@ -15697,9 +15700,6 @@ Time limit
 
 Time limit: %d min
 == Limite de temps : %d min
-
-Time the spring needs to settle on a new target; lower reaches it sooner, higher feels heavier
-== Temps que met le ressort à atteindre une nouvelle cible ; plus court est plus vif, plus long plus lourd
 
 Time to wait before changing team: %s
 == Temps d'attente avant de changer d'équipe : %s
