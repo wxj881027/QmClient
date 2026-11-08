@@ -377,6 +377,9 @@ A crowded HUD hides the game, so start with one element and add more if needed.
 A damped spring drives the offset, so reversing direction slows down before it turns
 == 由阻尼弹簧驱动偏移，反向时会先减速再转向
 
+A damped spring drives the offset; reversing slows it before it turns
+== 阻尼弹簧驱动偏移，反向时先减速再回转
+
 A demo with this name already exists
 == 已有同名回放
 

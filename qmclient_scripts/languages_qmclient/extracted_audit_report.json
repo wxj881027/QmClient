@@ -23936,7 +23936,7 @@
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
       "line": 1081,
-      "text": "A damped spring drives the offset, so reversing direction slows down before it turns",
+      "text": "A damped spring drives the offset; reversing slows it before it turns",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },

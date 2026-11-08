@@ -368,6 +368,9 @@ A crowded HUD hides the game, so start with one element and add more if needed.
 A damped spring drives the offset, so reversing direction slows down before it turns
 == Eine gedämpfte Feder treibt den Versatz, daher bremst sie beim Richtungswechsel erst ab
 
+A damped spring drives the offset; reversing slows it before it turns
+== Eine gedämpfte Feder treibt den Versatz; beim Richtungswechsel bremst sie erst ab
+
 A demo with this name already exists
 == Eine Demo mit diesem Namen existiert bereits
 

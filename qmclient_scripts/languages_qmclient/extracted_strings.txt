@@ -124,6 +124,7 @@ A big "Team tee glow halo size" can wash out outlines and map detail, so start l
 A calm-play mode that hides the HUD, names, effects, chat and sounds you pick, so only the game stays on screen.
 A crowded HUD hides the game, so start with one element and add more if needed.
 A damped spring drives the offset, so reversing direction slows down before it turns
+A damped spring drives the offset; reversing slows it before it turns
 A demo with this name already exists
 A folder with this name already exists
 A grab bag of small convenience switches that do not deserve their own card: chat completion, the Qm scoreboard badge, tune zone colors, message merging, repeat and combo.

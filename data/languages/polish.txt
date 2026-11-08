@@ -368,6 +368,9 @@ A crowded HUD hides the game, so start with one element and add more if needed.
 A damped spring drives the offset, so reversing direction slows down before it turns
 == Przesunięciem steruje tłumiona sprężyna, więc zmiana kierunku najpierw wyhamowuje
 
+A damped spring drives the offset; reversing slows it before it turns
+== Sprężyna z tłumieniem prowadzi przesunięcie; przy zmianie kierunku najpierw zwalnia
+
 A demo with this name already exists
 == Demo o tej nazwie już istnieje
 

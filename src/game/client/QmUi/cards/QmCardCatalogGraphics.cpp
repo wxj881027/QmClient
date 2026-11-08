@@ -1078,7 +1078,7 @@ static CButtonContainer s_CardBorderColorResetId;
 				const char *apScrollFeelTooltips[] = {
 					Localize("Every wheel tick restarts from rest, matching the original client"),
 					Localize("Consecutive wheel ticks carry their velocity into one continuous glide"),
-					Localize("A damped spring drives the offset, so reversing direction slows down before it turns"),
+					Localize("A damped spring drives the offset; reversing slows it before it turns"),
 				};
 				GameClient()->m_Tooltips.DoToolTip(&s_aScrollFeelButtons[0], &ScrollFeelRow, apScrollFeelTooltips[std::clamp(NewScrollFeel, 0, (int)std::size(apScrollFeelTooltips) - 1)]);
 			});

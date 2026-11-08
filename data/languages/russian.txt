@@ -368,6 +368,9 @@ A crowded HUD hides the game, so start with one element and add more if needed.
 A damped spring drives the offset, so reversing direction slows down before it turns
 == Смещение ведёт демпфированная пружина, поэтому при смене направления она сначала тормозит
 
+A damped spring drives the offset; reversing slows it before it turns
+== Демпфированная пружина двигает смещение; при развороте она сначала замедляется
+
 A demo with this name already exists
 == Демо с таким именем уже существует
 

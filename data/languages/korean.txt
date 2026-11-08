@@ -368,6 +368,9 @@ A crowded HUD hides the game, so start with one element and add more if needed.
 A damped spring drives the offset, so reversing direction slows down before it turns
 == 감쇠 스프링이 위치를 구동하므로 방향을 바꾸면 먼저 감속한 뒤 전환됩니다
 
+A damped spring drives the offset; reversing slows it before it turns
+== 감쇠 스프링이 오프셋을 구동하며, 방향을 바꾸면 먼저 느려졌다가 돌아섭니다
+
 A demo with this name already exists
 == 이 이름의 데모가 이미 존재합니다.
 

@@ -368,6 +368,9 @@ A crowded HUD hides the game, so start with one element and add more if needed.
 A damped spring drives the offset, so reversing direction slows down before it turns
 == Un resorte amortiguado mueve el desplazamiento, así que al invertir la dirección frena antes de girar
 
+A damped spring drives the offset; reversing slows it before it turns
+== Un resorte amortiguado impulsa el desplazamiento; al invertir la dirección frena antes de girar
+
 A demo with this name already exists
 == Ya existe una demo con este nombre
 

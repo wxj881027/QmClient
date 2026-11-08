@@ -15654,3 +15654,19 @@ brazilian_portuguese = "Tempo de acomodação da mola; menor responde mais rápi
 portuguese = "Tempo de estabilização da mola; menor responde mais depressa, maior parece mais pesado"
 turkish = "Yayın oturma süresi; küçük daha çabuk tepki verir, büyük daha ağır hissettirir"
 polish = "Czas ustalania sprężyny; mniejszy reaguje szybciej, większy wydaje się cięższy"
+
+[[message]]
+key = "A damped spring drives the offset; reversing slows it before it turns"
+[message.translations]
+simplified_chinese = "阻尼弹簧驱动偏移，反向时先减速再回转"
+traditional_chinese = "阻尼彈簧驅動偏移，反向時先減速再迴轉"
+japanese = "減衰バネが偏移を駆動し、逆方向へは一旦減速してから戻ります"
+korean = "감쇠 스프링이 오프셋을 구동하며, 방향을 바꾸면 먼저 느려졌다가 돌아섭니다"
+russian = "Демпфированная пружина двигает смещение; при развороте она сначала замедляется"
+german = "Eine gedämpfte Feder treibt den Versatz; beim Richtungswechsel bremst sie erst ab"
+spanish = "Un resorte amortiguado impulsa el desplazamiento; al invertir la dirección frena antes de girar"
+french = "Un ressort amorti pilote le décalage ; en sens inverse, il ralentit avant de repartir"
+brazilian_portuguese = "Uma mola amortecida conduz o deslocamento; ao inverter, ela desacelera antes de virar"
+portuguese = "Uma mola amortecida conduz o deslocamento; ao inverter, abranda antes de virar"
+turkish = "Sönümlü bir yay kaydırmayı sürer; yön değişirken önce yavaşlar"
+polish = "Sprężyna z tłumieniem prowadzi przesunięcie; przy zmianie kierunku najpierw zwalnia"
