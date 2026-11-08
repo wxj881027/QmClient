@@ -83,9 +83,11 @@ void CMenus::RenderDemoCameraPanel(CUIRect View, bool Enabled)
 		char aTime[32];
 		str_time(qm_demo_cut::ToCentiseconds(static_cast<int64_t>(Frame.m_Tick - PlaybackPlayer()->BaseInfo()->m_FirstTick), Client()->GameTickSpeed()), TIME_HOURS_CENTISECS, aTime, sizeof(aTime));
 		str_format(aStatus, sizeof(aStatus), Localize("Keyframe %d/%d: %s"), Camera.Selected() + 1, static_cast<int>(Camera.Track().Frames().size()), aTime);
+		// 相机过渡的「停住」不能和工坊的 Hold（按住）共用同一个 Localize identity：
+		// 共用会让两处抢同一份译文，术语修一处就污染另一处。
 		const char *pTransition = Frame.m_Transition == qm_demo_camera::ETransition::SMOOTH ? Localize("Smooth") :
 					  Frame.m_Transition == qm_demo_camera::ETransition::LINEAR ? Localize("Linear") :
-												      Localize("Hold");
+												      Localize("Hold still");
 		if(TextButton(pTransition, ButtonIndex++, true))
 			Camera.CycleTransition();
 	}

@@ -20,7 +20,7 @@ namespace
 	void ExpectSeparate(const CUIRect &First, const CUIRect &Second)
 	{
 		EXPECT_TRUE(First.x + First.w <= Second.x || Second.x + Second.w <= First.x ||
-			First.y + First.h <= Second.y || Second.y + Second.h <= First.y);
+			    First.y + First.h <= Second.y || Second.y + Second.h <= First.y);
 	}
 
 	CSystemMediaControls::SState Media(const char *pSource = "music-player", const char *pTitle = "Song", const char *pArtist = "Artist")

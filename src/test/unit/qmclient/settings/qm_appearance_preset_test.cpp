@@ -1,4 +1,5 @@
 #include <engine/shared/qm_default_profile.h>
+
 #include <game/client/QmUi/cards/QmAppearancePreset.h>
 
 #include <gtest/gtest.h>

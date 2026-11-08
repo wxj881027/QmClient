@@ -1958,6 +1958,9 @@ Bubble opacity
 Build the status text shown above Tees
 == Build the status text shown above Tees
 
+Built-in
+== 내장
+
 Button - Disabled
 == 버튼 - 비활성화
 
@@ -2480,20 +2483,8 @@ Clan: %s
 Classic
 == 클래식
 
-Classic Easy
-== 클래식 Easy
-
-Classic Next
-== 클래식 Next
-
-Classic Nut
-== 클래식 Nut
-
 Classic PowerShell
 == 클래식 PowerShell
-
-Classic Pro
-== 클래식 Pro
 
 Clear
 == 지우기
@@ -5300,6 +5291,9 @@ Exchange (ProRes 422 HQ / MOV)
 Exclude
 == 제외
 
+exec
+== exec
+
 Execute before connecting
 == 연결 전 실행
 
@@ -6716,6 +6710,9 @@ Hold gun higher like TW 0.6.1 and earlier
 Hold left click for free camera
 == 자유 카메라를 위해 왼쪽 클릭 유지
 
+Hold still
+== 정지
+
 Hold the wheel key to see the selection move; release it to run the highlighted slot.
 == 휠 키를 누르고 있으면 선택이 움직이고, 놓으면 강조된 슬롯이 실행됩니다.
 
@@ -7486,6 +7483,9 @@ Keep unsent message on chat close
 
 Keep vote window open after voting
 == 투표 후 투표 창 유지
+
+Key
+== 키
 
 Key binds
 == 키 바인드
@@ -14469,7 +14469,7 @@ Source language code for translation (auto=auto-detect)
 == 번역 소스 언어 코드 (auto=자동 감지)
 
 Space
-== 간격
+== 스페이스
 
 Spam protection: prevent spamming of team switching, chat, skin changes, emotes, votes
 == 스팸 방지: 팀 전환, 채팅, 스킨 변경, 이모트, 투표 스팸 방지
@@ -16001,9 +16001,6 @@ Total play time
 Total: %d save(s)
 == 총계：%d 개 저장됨
 
-Traditional
-== 번체
-
 Trail alpha
 == 트레일 투명도
 
@@ -17510,6 +17507,9 @@ Writing item %d failed
 Written %d items
 == %d개 항목 작성됨
 
+X
+== X
+
 x = DDNet CPU% / total CPU%
 == x = DDNet CPU% / 전체 CPU%
 
@@ -17518,6 +17518,9 @@ X alignment color
 
 X alignment hint with me
 == 나와 X 정렬 힌트
+
+Y
+== Y
 
 y = DDNet memory usage
 == y = DDNet 메모리 사용량

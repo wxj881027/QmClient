@@ -19,6 +19,20 @@ namespace ui_widget
 		// 与通知语义的 ui_token::color::DANGER（柔和珊瑚红）刻意区分。
 		constexpr ColorRGBA SlashMaskColor{0.0f, 0.0f, 0.0f, 0.65f};
 		constexpr ColorRGBA SlashWarnColor{1.0f, 0.0f, 0.0f, 1.0f};
+
+		// 悬停、按下、选中三态共用这一条白色描边：状态差异只由填充深浅（0.16 → 0.30
+		// 的反馈遮罩）和按下 0.97 缩放表达，描边不再随状态换色，也不另提一档 alpha。
+		// 旧实现把表面自动前景色当描边色，默认选中色 #8FDDAD 提到 0.88 alpha 之后
+		// 亮度超过阈值被判成 NEUTRAL_BLACK，于是 Shift 这类选中键按下时描出黑边，
+		// 和悬停白边割裂。alpha 直接沿用悬停档 ui_token::feedback::ICON_BORDER_ALPHA。
+		constexpr ColorRGBA ActiveBorderColor{1.0f, 1.0f, 1.0f, ui_token::feedback::ICON_BORDER_ALPHA};
+
+		// 按钮描边的唯一出口：可用按钮进入悬停/按下/选中一律白色描边；禁用、透明
+		// 未激活等状态仍由主题解析结果和调用处的覆盖决定。
+		ColorRGBA ResolveActiveButtonBorder(const SUiSecondaryButtonStyle &Style, const SUiButtonState &State)
+		{
+			return State.m_Enabled && (State.m_Hovered || State.m_Selected) ? ActiveBorderColor : Style.m_Border;
+		}
 	}
 
 	SSettingsActionGroupLayout PrepareSettingsActionGroup(CUi &Ui, SSettingsActionGroupState &State, const CUIRect &Row, const char *const *ppLabels, int Count, const SSettingsContentMetrics &Metrics, ESettingsActionGroupWidth WidthPolicy)
@@ -62,6 +76,9 @@ namespace ui_widget
 		State.m_Pressed = State.m_Hovered && pUi->CheckActiveItem(pId) && (pUi->MouseButton(0) || pUi->MouseButton(1) || pUi->MouseButton(2));
 		const ColorRGBA Base = Options.m_Color.value_or(Options.m_TransparentInactive ? ColorRGBA() : ResolveConfiguredControlSurface());
 		auto Style = ResolveUiButtonStyle(Options.m_Role, Base, Backdrop, Theme, State);
+		// 描边统一在公共表面这一层收敛，调用点（设置卡片、下拉、页签、键位格等）
+		// 不再各自决定按下态描边颜色。
+		Style.m_Border = ResolveActiveButtonBorder(Style, State);
 		if(Options.m_TransparentInactive && !State.m_Hovered && !State.m_Selected)
 			Style.m_Border = ColorRGBA();
 		if(Options.m_BorderOverride.has_value())
@@ -220,7 +237,8 @@ namespace ui_widget
 			Divider.Draw(Ctx.m_pUi->ScaleBackgroundAlpha(ui_token::color::BORDER_SUBTLE), IGraphics::CORNER_NONE, 0.0f);
 			const SUiTheme &Theme = Ctx.m_pTheme != nullptr ? *Ctx.m_pTheme : Ctx.m_pUi->QmControlTheme();
 			const auto BorderStyle = ResolveUiButtonStyle(EUiButtonRole::SECONDARY, ResolveConfiguredControlSurface(), CUiScopedSurfaceText::CurrentSurface(), Theme, BorderState);
-			DrawRoundedSurface(Ctx, Rect, ColorRGBA(), Ctx.m_pUi->ScaleControlAlpha(BorderStyle.m_Border), ResolveUiTextButtonRadius(Geometry), ui_token::feedback::ICON_BORDER_WIDTH);
+			const ColorRGBA BorderColor = ResolveActiveButtonBorder(BorderStyle, BorderState);
+			DrawRoundedSurface(Ctx, Rect, ColorRGBA(), Ctx.m_pUi->ScaleControlAlpha(BorderColor), ResolveUiTextButtonRadius(Geometry), ui_token::feedback::ICON_BORDER_WIDTH);
 		}
 		Ctx.m_pUi->DoButtonTooltip(pLeft, &Left, pLeftTooltip);
 		Ctx.m_pUi->DoButtonTooltip(pRight, &Right, pRightTooltip);

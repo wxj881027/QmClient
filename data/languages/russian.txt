@@ -1958,6 +1958,9 @@ Bubble opacity
 Build the status text shown above Tees
 == Build the status text shown above Tees
 
+Built-in
+== Встроенный
+
 Button - Disabled
 == Кнопка - Отключена
 
@@ -2480,20 +2483,8 @@ Clan: %s
 Classic
 == Классический
 
-Classic Easy
-== Классический Easy
-
-Classic Next
-== Классический Next
-
-Classic Nut
-== Классический Nut
-
 Classic PowerShell
 == Классический PowerShell
-
-Classic Pro
-== Классический Pro
 
 Clear
 == Очистить
@@ -5300,6 +5291,9 @@ Exchange (ProRes 422 HQ / MOV)
 Exclude
 == Исключить
 
+exec
+== exec
+
 Execute before connecting
 == Выполнить перед подключением
 
@@ -6716,6 +6710,9 @@ Hold gun higher like TW 0.6.1 and earlier
 Hold left click for free camera
 == Зажмите левую кнопку мыши для свободной камеры
 
+Hold still
+== Стоп-кадр
+
 Hold the wheel key to see the selection move; release it to run the highlighted slot.
 == Зажмите клавишу колеса — выбор будет двигаться; отпустите, чтобы сработала подсвеченная ячейка.
 
@@ -7486,6 +7483,9 @@ Keep unsent message on chat close
 
 Keep vote window open after voting
 == Оставлять окно голосования открытым после голосования
+
+Key
+== Клавиша
 
 Key binds
 == Привязки клавиш
@@ -14469,7 +14469,7 @@ Source language code for translation (auto=auto-detect)
 == Код исходного языка перевода (auto=автоопределение)
 
 Space
-== Промежуток
+== Пробел
 
 Spam protection: prevent spamming of team switching, chat, skin changes, emotes, votes
 == Защита от спама: предотвращает спам при смене команды, в чате, смене скина, эмоциях и голосовании
@@ -16001,9 +16001,6 @@ Total play time
 Total: %d save(s)
 == Всего: %d сохранений
 
-Traditional
-== Традиционный
-
 Trail alpha
 == Прозрачность следа
 
@@ -17510,6 +17507,9 @@ Writing item %d failed
 Written %d items
 == Записано %d элементов
 
+X
+== X
+
 x = DDNet CPU% / total CPU%
 == x = DDNet CPU% / общий CPU%
 
@@ -17518,6 +17518,9 @@ X alignment color
 
 X alignment hint with me
 == Подсказка выравнивания по X со мной
+
+Y
+== Y
 
 y = DDNet memory usage
 == y = использование памяти DDNet

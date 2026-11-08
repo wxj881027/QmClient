@@ -6474,10 +6474,22 @@ bool CMenus::SetSettingsPageFromCardTab(const char *pTab)
 		g_Config.m_UiSettingsPage = SETTINGS_TCLIENT;
 		m_TClientSettingsTab = 0;
 	}
-	else if(str_comp(pTab, "bind") == 0 || str_comp(pTab, "qmclient-bind") == 0)
+	else if(str_comp(pTab, "bind") == 0 || str_comp(pTab, "qmclient-bind") == 0 || str_comp(pTab, "bind-official") == 0)
+	{
+		// 原来的「官方」子页签已改名为「绑定」并升为一级页签：bind 与旧链接
+		// bind-official 都落在同一个一级页签上，命令名保持不变。
+		g_Config.m_UiSettingsPage = SETTINGS_CONTROLS;
+		m_MenusSettingsControls.SetTab(CMenusSettingsControls::ETab::BIND);
+	}
+	else if(str_comp(pTab, "bind-workshop") == 0)
 	{
 		g_Config.m_UiSettingsPage = SETTINGS_CONTROLS;
-		m_MenusSettingsControls.SetTab(CMenusSettingsControls::ETab::BIND_WORKSHOP);
+		m_MenusSettingsControls.SetTab(CMenusSettingsControls::ETab::WORKSHOP);
+	}
+	else if(str_comp(pTab, "bind-blueprint") == 0)
+	{
+		g_Config.m_UiSettingsPage = SETTINGS_CONTROLS;
+		m_MenusSettingsControls.SetTab(CMenusSettingsControls::ETab::BLUEPRINT);
 	}
 	else if(str_comp(pTab, "tclient-bind-wheel") == 0)
 	{

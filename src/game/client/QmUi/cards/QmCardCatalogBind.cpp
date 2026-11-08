@@ -11,10 +11,12 @@
 #include <game/client/QmUi/SettingsContentLayout.h>
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiForms.h>
+#include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiSurfaceText.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/qmclient/bind_editor.h>
 #include <game/client/components/qmclient/bind_overview.h>
+#include <game/client/components/qmclient/bind_workshop.h>
 #include <game/client/gameclient.h>
 #include <game/client/qm_icon.h>
 #include <game/client/ui_listbox.h>
@@ -452,14 +454,25 @@ namespace
 		std::string m_KeyName;
 		std::string m_Command;
 		EBindOptionGroup m_Group;
+		// 纯逻辑层的占用标记（OCCUPANCY_*），由 BuildOccupancy 一次给出，本卡不再自行判定。
+		int m_Flags = qm_bind_workshop::OCCUPANCY_NONE;
+		// 点行跳转到键盘编辑器时要用的槽位（CBindSlot 没有默认构造，这里存两个整数）。
+		int m_Key = 0;
+		int m_ModifierMask = 0;
 	};
 
 	struct SBindOverviewState
 	{
 		CLineInputBuffered<256> m_Filter;
 		bool m_SortByCommand = false;
+		// 「只看多动作」胶囊：只叠加过滤条件，不改分组与排序。
+		bool m_OnlyMultiAction = false;
+		int m_MultiActionCount = 0;
+		// 每一行一个隐形按钮：点一行就把该键聚焦到键盘卡片上。
+		std::array<CButtonContainer, 128> m_aRowButtons{};
 		CButtonContainer m_SortButton;
 		CButtonContainer m_CopyButton;
+		CButtonContainer m_MultiActionButton;
 		std::vector<SBindOverviewEntryUi> m_vEntries;
 		std::vector<int> m_vFiltered;
 		uint64_t m_BindsRevision = 0;
@@ -487,20 +500,43 @@ namespace
 		}
 	}
 
+	// 徽标两档，都只是信息、不是错误：一条绑定串了多个动作，或者这条命令还挂在别的键上。
+	// 两档同时命中就一起显示，中间用细分隔点隔开。
+	std::string BindFlagTags(const int Flags)
+	{
+		std::string Tags;
+		if((Flags & qm_bind_workshop::OCCUPANCY_MULTI_ACTION) != 0)
+			Tags += Localize("Multi");
+		if((Flags & qm_bind_workshop::OCCUPANCY_SHARED_FUNCTION) != 0)
+		{
+			if(!Tags.empty())
+				Tags += " · ";
+			Tags += Localize("Same function");
+		}
+		return Tags;
+	}
+
+	// 数据源直接用纯逻辑层的占用结果：键名、命令与标记出自同一遍扫描。
 	void RebuildBindOverviewEntries(SBindOverviewState &State, const CBinds &Binds)
 	{
 		State.m_vEntries.clear();
-		for(int Modifier = KeyModifier::NONE; Modifier < KeyModifier::COMBINATION_COUNT; ++Modifier)
+		State.m_MultiActionCount = 0;
+		const std::vector<qm_bind_workshop::SOccupancyEntry> vOccupancy = qm_bind_workshop::BuildOccupancy(
+			[&Binds](int Key, int Modifier) { return Binds.Get(Key, Modifier); },
+			[&Binds](int Key, int Modifier, char *pBuffer, size_t BufferSize) { Binds.GetKeyBindName(Key, Modifier, pBuffer, BufferSize); });
+		State.m_vEntries.reserve(vOccupancy.size());
+		for(const qm_bind_workshop::SOccupancyEntry &Occupancy : vOccupancy)
 		{
-			for(int Key = KEY_FIRST; Key < KEY_LAST; ++Key)
-			{
-				const char *pCommand = Binds.Get(Key, Modifier);
-				if(!pCommand[0])
-					continue;
-				char aKeyName[128];
-				Binds.GetKeyBindName(Key, Modifier, aKeyName, sizeof(aKeyName));
-				State.m_vEntries.push_back({aKeyName, pCommand, qm_bind_overview::GroupForCommand(pCommand)});
-			}
+			SBindOverviewEntryUi Entry;
+			Entry.m_KeyName = Occupancy.m_KeyName;
+			Entry.m_Command = Occupancy.m_Command;
+			Entry.m_Group = qm_bind_overview::GroupForCommand(Occupancy.m_Command.c_str());
+			Entry.m_Flags = Occupancy.m_Flags;
+			Entry.m_Key = Occupancy.m_Slot.m_Key;
+			Entry.m_ModifierMask = Occupancy.m_Slot.m_ModifierMask;
+			if((Entry.m_Flags & qm_bind_workshop::OCCUPANCY_MULTI_ACTION) != 0)
+				++State.m_MultiActionCount;
+			State.m_vEntries.push_back(std::move(Entry));
 		}
 		State.m_BindsRevision = Binds.Revision();
 		State.m_EntriesValid = true;
@@ -508,11 +544,17 @@ namespace
 
 	void RefreshBindOverviewFilter(SBindOverviewState &State)
 	{
+		// 没有多动作条目时自动退出过滤：胶囊此时置灰不可点，不能让用户困在空列表里。
+		if(State.m_MultiActionCount == 0)
+			State.m_OnlyMultiAction = false;
 		State.m_vFiltered.clear();
 		const char *pFilter = State.m_Filter.GetString();
 		for(size_t Index = 0; Index < State.m_vEntries.size(); ++Index)
 		{
 			const SBindOverviewEntryUi &Entry = State.m_vEntries[Index];
+			// 过滤与搜索框叠加：两个条件同时满足才显示，分组与排序逻辑不动。
+			if(State.m_OnlyMultiAction && (Entry.m_Flags & qm_bind_workshop::OCCUPANCY_MULTI_ACTION) == 0)
+				continue;
 			if(pFilter[0] == '\0' ||
 				str_utf8_find_nocase(Entry.m_KeyName.c_str(), pFilter) != nullptr ||
 				str_utf8_find_nocase(Entry.m_Command.c_str(), pFilter) != nullptr)
@@ -548,15 +590,61 @@ void CMenus::RenderQmBindOverviewContent(CUIRect &Content, const bool ReadOnly)
 
 	CSettingsContentLayoutFlow Flow(Content);
 
+	// 卡片里只说这两档标记的含义，它们都不是错误：一条绑定可以用分号串多个命令；
+	// 同一个命令也可能同时挂在别的键上（合法的双键位）。
+	const float HintSize = Metrics.m_SmallSize * 0.9f;
+	Flow.Text("bind-overview-occupancy-hint", Localize("Badges are informational: a bind can chain several commands, and one command can be bound to several keys."), 0.0f, HintSize, Metrics.m_LineSpacing * 0.5f, [this, HintSize](const char *pText, float Width, float FontSize) { return TextRender()->TextBoundingBox(FontSize, pText, -1, Width, FontSize * 1.45f).m_H; }, [this, HintSize](const CUIRect &Row, const char *pText) {
+			SLabelProperties Props;
+			Props.m_MaxWidth = Row.w;
+			Props.m_EllipsisAtEnd = true;
+			TextRender()->TextColor(ui_token::color::TEXT_TIP);
+			Ui()->DoLabel(&Row, pText, HintSize, TEXTALIGN_ML, Props);
+			TextRender()->TextColor(TextRender()->DefaultTextColor()); }, Metrics.m_RowStep);
+
 	CUIRect Toolbar;
 	if(Flow.Control("bind-overview-toolbar", Metrics.m_ButtonHeight, Toolbar))
 	{
 		const float Scale = Metrics.m_UiScale;
-		CUIRect Filter, Sort, Copy;
+		char aMultiLabel[96];
+		str_format(aMultiLabel, sizeof(aMultiLabel), "%s  ·%d", Localize("Only multi-action"), State.m_MultiActionCount);
+		CUIRect Filter, Sort, Copy, Conflicts;
 		Toolbar.VSplitRight(96.0f * Scale, &Toolbar, &Copy);
 		Toolbar.VSplitRight(4.0f * Scale, &Toolbar, nullptr);
 		Toolbar.VSplitRight(130.0f * Scale, &Toolbar, &Sort);
 		Toolbar.VSplitRight(4.0f * Scale, &Toolbar, nullptr);
+		// 「只看多动作」胶囊排在排序按钮左边；卡片太窄时让位给搜索框，保证输入框至少留一行宽度。
+		const float ConflictWidth = std::min(
+			std::clamp(TextRender()->TextWidth(Metrics.m_SmallSize, aMultiLabel) + 22.0f * Scale, 104.0f * Scale, 200.0f * Scale),
+			std::max(0.0f, Toolbar.w - 140.0f * Scale));
+		if(ConflictWidth >= 48.0f * Scale)
+		{
+			Toolbar.VSplitRight(ConflictWidth, &Toolbar, &Conflicts);
+			Toolbar.VSplitRight(4.0f * Scale, &Toolbar, nullptr);
+			// 计数为 0 时置灰不可点：否则点开只剩一片空列表。
+			const bool ConflictsAvailable = State.m_MultiActionCount > 0;
+			ui_widget::SButtonSurfaceOptions ConflictOptions;
+			ConflictOptions.m_Enabled = ConflictsAvailable;
+			ConflictOptions.m_Selected = State.m_OnlyMultiAction;
+			ConflictOptions.m_Radius = ui_token::radius::PILL;
+			const ColorRGBA ConflictFill = ui_widget::DrawButtonSurface(ui_widget::ControlContext(Ui()), &State.m_MultiActionButton, Conflicts, ConflictOptions);
+			{
+				CUiScopedSurfaceText SurfaceText(TextRender(), ConflictFill);
+				if(!ConflictsAvailable)
+					TextRender()->TextColor(ui_token::color::TEXT_DISABLED);
+				SLabelProperties ConflictProps;
+				ConflictProps.m_MaxWidth = std::max(1.0f, Conflicts.w - 8.0f * Scale);
+				ConflictProps.m_EllipsisAtEnd = true;
+				Ui()->DoLabel(&Conflicts, aMultiLabel, Metrics.m_SmallSize, TEXTALIGN_MC, ConflictProps);
+				if(!ConflictsAvailable)
+					TextRender()->TextColor(TextRender()->DefaultTextColor());
+			}
+			if(ConflictsAvailable && Enabled && Ui()->DoButtonLogic(&State.m_MultiActionButton, State.m_OnlyMultiAction ? 1 : 0, &Conflicts, BUTTONFLAG_LEFT) != 0)
+			{
+				State.m_OnlyMultiAction = !State.m_OnlyMultiAction;
+				// 同一帧重算列表，胶囊与列表不滞后一帧。
+				RefreshBindOverviewFilter(State);
+			}
+		}
 		Filter = Toolbar;
 		if(DoButton_Menu(&State.m_SortButton, State.m_SortByCommand ? Localize("Sort by command") : Localize("Sort by key"), 0, &Sort) && Enabled)
 			State.m_SortByCommand = !State.m_SortByCommand;
@@ -596,6 +684,13 @@ void CMenus::RenderQmBindOverviewContent(CUIRect &Content, const bool ReadOnly)
 		Flow.Space(Metrics.m_LineSpacing * 0.5f);
 	}
 
+	// 徽标列固定宽度：被标记与未被标记的行共用同一列宽，键名与命令两条竖线不因
+	// 徽标出现而抖动；宽度按最长的组合文案量出来，窄卡片时整体收敛。
+	std::string BadgeProbe = Localize("Multi");
+	BadgeProbe += " · ";
+	BadgeProbe += Localize("Same function");
+	const float BadgeColumn = std::min(160.0f * Metrics.m_UiScale,
+		std::max(56.0f * Metrics.m_UiScale, TextRender()->TextWidth(Metrics.m_SmallSize, BadgeProbe.c_str()) + 20.0f * Metrics.m_UiScale));
 	int EntryIndex = 0;
 	bool HasAny = false;
 	for(int GroupIndex = 0; GroupIndex < (int)EBindOptionGroup::NUM; ++GroupIndex)
@@ -626,13 +721,43 @@ void CMenus::RenderQmBindOverviewContent(CUIRect &Content, const bool ReadOnly)
 			str_format(aRowId, sizeof(aRowId), "bind-overview-entry-%d", EntryIndex++);
 			if(Flow.Control(aRowId, Metrics.m_LineHeight, Row))
 			{
+				if(Enabled && EntryIndex < (int)State.m_aRowButtons.size())
+				{
+					// 整行都可点：点了把焦点交给键盘卡片的这个键，占用和键面从此连起来。
+					if(Ui()->DoButtonLogic(&State.m_aRowButtons[EntryIndex], 0, &Row, BUTTONFLAG_LEFT) && Ui()->MouseHovered(&Row))
+						FocusBindKey(Entry.m_Key, Entry.m_ModifierMask);
+				}
+				// 悬停反馈：整行可点却原来没有任何视觉回应，鼠标在上面像失灵。
+				if(Enabled && Ui()->MouseHovered(&Row))
+					DrawRoundedSurface(Ui(), Row, ui_token::color::SURFACE_HIGHLIGHT.WithAlpha(0.06f), ColorRGBA(), ui_token::radius::TIGHT);
+				const bool Flagged = Entry.m_Flags != qm_bind_workshop::OCCUPANCY_NONE;
+				// 被标记的行只加一档很淡的警告底色：正文与描边保持中性，颜色不抢命令文本。
+				if(Flagged)
+					DrawRoundedSurface(Ui(), Row, ui_token::color::WARNING.WithAlpha(0.08f), ColorRGBA(), ui_token::radius::TIGHT);
+				CUIRect Columns = Row, Badge;
+				Columns.VSplitRight(BadgeColumn, &Columns, &Badge);
 				CUIRect KeyRect, CommandRect;
-				Row.VSplitLeft(std::min(Row.w * 0.4f, 160.0f * Metrics.m_UiScale), &KeyRect, &CommandRect);
+				Columns.VSplitLeft(std::min(Columns.w * 0.4f, 160.0f * Metrics.m_UiScale), &KeyRect, &CommandRect);
 				Ui()->DoLabel(&KeyRect, Entry.m_KeyName.c_str(), Metrics.m_BodySize, TEXTALIGN_ML);
 				SLabelProperties Props;
 				Props.m_MaxWidth = std::max(1.0f, CommandRect.w);
 				Props.m_EllipsisAtEnd = true;
 				Ui()->DoLabel(&CommandRect, Entry.m_Command.c_str(), Metrics.m_BodySize, TEXTALIGN_ML, Props);
+				const std::string FlagTags = BindFlagTags(Entry.m_Flags);
+				if(!FlagTags.empty())
+				{
+					const float BadgeTextWidth = TextRender()->TextWidth(Metrics.m_SmallSize, FlagTags.c_str());
+					const float BadgeWidth = std::min(Badge.w, BadgeTextWidth + 12.0f * Metrics.m_UiScale);
+					const float BadgeHeight = std::min(Badge.h, Metrics.m_BadgeHeight);
+					CUIRect BadgeRect{Badge.x + Badge.w - BadgeWidth, Badge.y + (Badge.h - BadgeHeight) * 0.5f, BadgeWidth, BadgeHeight};
+					DrawRoundedSurface(Ui(), BadgeRect, ui_token::color::WARNING.WithAlpha(0.12f), ui_token::color::WARNING.WithAlpha(0.10f), ui_token::radius::PILL, 1.0f);
+					SLabelProperties BadgeProps;
+					BadgeProps.m_MaxWidth = std::max(1.0f, BadgeRect.w - 6.0f * Metrics.m_UiScale);
+					BadgeProps.m_EllipsisAtEnd = true;
+					TextRender()->TextColor(ui_token::color::WARNING);
+					Ui()->DoLabel(&BadgeRect, FlagTags.c_str(), Metrics.m_SmallSize, TEXTALIGN_MC, BadgeProps);
+					TextRender()->TextColor(TextRender()->DefaultTextColor());
+				}
 			}
 			Flow.Space(Metrics.m_LineSpacing * 0.35f);
 			HasAny = true;

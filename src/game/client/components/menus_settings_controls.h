@@ -55,10 +55,15 @@ public:
 class CMenusSettingsControls : public CComponentInterfaces
 {
 public:
+	// 控制页只有一层页签，四个页签并列：「控制 / 绑定 / 指令工坊 / 蓝图」。
+	// 原来绑定页内部的「官方 / 指令工坊 / 蓝图」子页签已提升为同级页签，「官方」改名为「绑定」；
+	// 深链接通过 SetTab 直接指定一级页签，组件内不再保存第二份页签状态。
 	enum class ETab
 	{
 		CONTROLS,
-		BIND_WORKSHOP,
+		BIND,
+		WORKSHOP,
+		BLUEPRINT,
 		NUM,
 	};
 

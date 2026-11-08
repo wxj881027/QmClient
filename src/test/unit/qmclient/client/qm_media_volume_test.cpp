@@ -1,4 +1,5 @@
 #include <game/client/components/qmclient/media_volume_logic.h>
+
 #include <gtest/gtest.h>
 
 #include <limits>
