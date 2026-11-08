@@ -2594,9 +2594,6 @@ Click to remove this player from your friends list.
 Click to select server. Double click to join your friend.
 == Sunucuyu seçmek için tıklayın. Arkadaşınıza katılmak için çift tıklayın.
 
-Click to set color
-== Rengi ayarlamak için tıkla
-
 Client
 == İstemci
 
@@ -2822,17 +2819,11 @@ Concurrent requests when refreshing server browser
 Config
 == Yapılandırma
 
-Config Changes
-== Yapılandırma Değişiklikleri
-
 Config directory
 == Yapılandırma dizini (cfg)
 
 Config Files
 == Yapılandırma Dosyaları
-
-Config Filters
-== Yapılandırma Filtreleri
 
 Config version. Helps new client fix old config errors.
 == Yapılandırma sürümü. Yeni istemcinin eski yapılandırma hatalarını düzeltmesine yardımcı olur.
@@ -9872,9 +9863,6 @@ Original only
 Original options
 == Özgün seçenekler
 
-Original scroll feel
-== Özgün kaydırma hissi
-
 Other
 == Diğer
 
@@ -12011,9 +11999,6 @@ Restart
 Restart in x seconds (0 = abort)
 == x saniye içinde yeniden başlat (0 = iptal)
 
-Restart smooth scrolling on every wheel tick
-== Her tekerlek kademesinde yumuşak kaydırmayı yeniden başlat
-
 Restart the client
 == İstemciyi yeniden başlat
 
@@ -13147,9 +13132,6 @@ Show collision and weapon interaction
 
 Show Collision Borders
 == Çarpışma hacmi kenarlığını göster
-
-Show colors in spectator selection
-== Seyirci seçiminde renkleri göster
 
 Show combo hint when hooking or hammering player within 2 seconds
 == 2 saniye içinde bir oyuncuyu art arda kancaladığında veya çekiçlediğinde combo ipucu göster

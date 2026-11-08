@@ -2594,9 +2594,6 @@ Click to remove this player from your friends list.
 Click to select server. Double click to join your friend.
 == Нажмите, чтобы выбрать сервер. Дважды нажмите, чтобы присоединиться к другу.
 
-Click to set color
-== Нажмите, чтобы задать цвет
-
 Client
 == Клиент
 
@@ -2822,17 +2819,11 @@ Concurrent requests when refreshing server browser
 Config
 == Конфиг
 
-Config Changes
-== Изменения конфигурации
-
 Config directory
 == Папка конфигурации
 
 Config Files
 == Файлы конфигурации
-
-Config Filters
-== Фильтры конфигурации
 
 Config version. Helps new client fix old config errors.
 == Версия конфигурации. Помогает новому клиенту исправить старые ошибки конфигурации.
@@ -9872,9 +9863,6 @@ Original only
 Original options
 == Исходные варианты
 
-Original scroll feel
-== Прежнее ощущение прокрутки
-
 Other
 == Другое
 
@@ -12011,9 +11999,6 @@ Restart
 Restart in x seconds (0 = abort)
 == Перезапуск через x секунд (0 = отмена)
 
-Restart smooth scrolling on every wheel tick
-== Перезапускать плавную прокрутку на каждом шаге колёсика
-
 Restart the client
 == Перезапустить клиент
 
@@ -13147,9 +13132,6 @@ Show collision and weapon interaction
 
 Show Collision Borders
 == Показывать границы коллизий
-
-Show colors in spectator selection
-== Показывать цвета в выборе наблюдателя
 
 Show combo hint when hooking or hammering player within 2 seconds
 == Показывать комбо-уведомления при попадании крюком или молотом в одного игрока в течение 2 секунд

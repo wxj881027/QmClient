@@ -102,6 +102,16 @@ TEST(QmCatalogSearch, InternalLabelsAliasesAndConfigsResolveWithoutOpeningTheirP
 		{"Console color scheme", "qm:console"},
 		{"Console font size", "qm:console"},
 		{"Selection background color", "qm:chat_completion"},
+		// 索引标签改写后仍按界面当前文案命中：滚动手感改成三档后，旧标签
+		// （Original scroll feel / Restart smooth scrolling…）已在源码中消失。
+		{"Scroll feel", "deck:graphics-interaction"},
+		{"Spring damping", "deck:graphics-interaction"},
+		{"End bounce", "deck:graphics-interaction"},
+		// 旧标签删掉后靠卡片关键词兜底，检索意图不能丢。
+		{"Config Filters", "deck:tclient-configs-actions"},
+		{"Show enemy color in spectator menu", "deck:tclient-warlist"},
+		// 取色入口是动作按钮文案，标签位置由别名承接。
+		{"set color", "qm:pie_menu"},
 	};
 	for(const auto &Case : aCases)
 	{

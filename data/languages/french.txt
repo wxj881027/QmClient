@@ -2594,9 +2594,6 @@ Click to remove this player from your friends list.
 Click to select server. Double click to join your friend.
 == Cliquez pour sélectionner le serveur. Double-cliquez pour rejoindre un(e) ami(e).
 
-Click to set color
-== Cliquez pour définir la couleur
-
 Client
 == Client
 
@@ -2822,17 +2819,11 @@ Concurrent requests when refreshing server browser
 Config
 == Configuration
 
-Config Changes
-== Modifications de configuration
-
 Config directory
 == Répertoire de configuration
 
 Config Files
 == Fichiers de configuration
-
-Config Filters
-== Filtres de configuration
 
 Config version. Helps new client fix old config errors.
 == Version de la configuration. Aide le nouveau client à corriger les anciennes erreurs de configuration.
@@ -9872,9 +9863,6 @@ Original only
 Original options
 == Options d’origine
 
-Original scroll feel
-== Défilement d’origine
-
 Other
 == Autre
 
@@ -12011,9 +11999,6 @@ Restart
 Restart in x seconds (0 = abort)
 == Redémarrer dans x secondes (0 = annuler)
 
-Restart smooth scrolling on every wheel tick
-== relance le défilement fluide à chaque cran de la molette
-
 Restart the client
 == Redémarrer le client
 
@@ -13147,9 +13132,6 @@ Show collision and weapon interaction
 
 Show Collision Borders
 == Afficher les bordures des volumes de collision
-
-Show colors in spectator selection
-== Afficher les couleurs dans la sélection de spectateur
 
 Show combo hint when hooking or hammering player within 2 seconds
 == Afficher un indicateur de combo lorsque vous touchez ou martelez un joueur deux fois en 2 secondes

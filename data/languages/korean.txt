@@ -2594,9 +2594,6 @@ Click to remove this player from your friends list.
 Click to select server. Double click to join your friend.
 == 클릭하여 서버를 선택하세요. 더블 클릭하여 친구의 서버에 접속하세요.
 
-Click to set color
-== 클릭하여 색상 설정
-
 Client
 == 클라이언트
 
@@ -2822,17 +2819,11 @@ Concurrent requests when refreshing server browser
 Config
 == 설정
 
-Config Changes
-== 설정 변경
-
 Config directory
 == 설정 디렉토리
 
 Config Files
 == 설정 파일
-
-Config Filters
-== 설정 필터
 
 Config version. Helps new client fix old config errors.
 == 설정 버전. 새 클라이언트가 이전 설정 오류를 수정하는 데 도움
@@ -9872,9 +9863,6 @@ Original only
 Original options
 == 원본 투표 항목
 
-Original scroll feel
-== 기존 스크롤 감각
-
 Other
 == 기타
 
@@ -12011,9 +11999,6 @@ Restart
 Restart in x seconds (0 = abort)
 == x초 후 재시작 (0 = 중단)
 
-Restart smooth scrolling on every wheel tick
-== 휠 한 눈금마다 부드러운 스크롤을 다시 시작
-
 Restart the client
 == 클라이언트 재시작
 
@@ -13147,9 +13132,6 @@ Show collision and weapon interaction
 
 Show Collision Borders
 == 충돌체 테두리 표시
-
-Show colors in spectator selection
-== 관전 선택에서 색상 표시
 
 Show combo hint when hooking or hammering player within 2 seconds
 == 2초 내에 연속으로 갈고리나 망치로 플레이어를 맞추면 콤보 알림 표시

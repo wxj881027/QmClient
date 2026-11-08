@@ -2681,9 +2681,6 @@ Click to remove this player from your friends list.
 Click to select server. Double click to join your friend.
 == 单击选择服务器；双击加入好友所在服
 
-Click to set color
-== 点击设置颜色
-
 Client
 == 客户端
 
@@ -2915,17 +2912,11 @@ Concurrent requests when refreshing server browser
 Config
 == 配置
 
-Config Changes
-== 配置更改
-
 Config directory
 == 配置目录（cfg）
 
 Config Files
 == 配置文件
-
-Config Filters
-== 配置过滤器
 
 Config version. Helps new client fix old config errors.
 == 配置版本。帮助新客户端修复旧配置错误。
@@ -10286,9 +10277,6 @@ Original only
 Original options
 == 原始选项
 
-Original scroll feel
-== 原版滚动手感
-
 Other
 == 其他
 
@@ -12479,9 +12467,6 @@ Restart
 Restart in x seconds (0 = abort)
 == 在 x 秒后重新启动（0 = 中止）
 
-Restart smooth scrolling on every wheel tick
-== 每次滚轮都从静止重新开始平滑滚动
-
 Restart the client
 == 重启客户端
 
@@ -13645,9 +13630,6 @@ Show collision and weapon interaction
 
 Show Collision Borders
 == 显示碰撞体积边框
-
-Show colors in spectator selection
-== 旁观选择中显示颜色
 
 Show combo hint when hooking or hammering player within 2 seconds
 == 2 秒内钩中或锤击玩家时显示连击提示

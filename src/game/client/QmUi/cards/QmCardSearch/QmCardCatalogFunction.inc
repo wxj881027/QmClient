@@ -318,7 +318,6 @@ namespace
 namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_pie_menu[] = {
-		{Localizable("Click to set color"), nullptr, "点击设置颜色"},
 		{Localizable("Detection distance"), nullptr, "检测距离"},
 		{Localizable("Enable pie menu"), nullptr, "启用饼菜单"},
 		{Localizable("Example: A|B|C,D|E (C: main, D: dummy)"), nullptr, "示例：A|B|C,D|E（C 为本体，D 为分身）"},
@@ -329,7 +328,7 @@ namespace
 		{Localizable("Join team"), nullptr, "加入队伍"},
 		{Localizable("Mention"), nullptr, "提及"},
 		{Localizable("Opacity"), nullptr, "不透明度"},
-		{Localizable("Option color"), nullptr, "选项颜色"},
+		{Localizable("Option color"), nullptr, "选项颜色 点击设置颜色 set color 取色"},
 		{Localizable("Pie menu effects"), nullptr, "饼菜单开合效果"},
 		{Localizable("Pie menu highlight tint"), nullptr, "饼菜单选中色调"},
 		{Localizable("Rename queue"), nullptr, "改名名单"},

@@ -18,7 +18,7 @@ namespace
 		{Localizable("Reason"), nullptr, "原因"},
 		{Localizable("Settings"), nullptr, "设置"},
 		{Localizable("Show clan for enemies"), nullptr, "敌对玩家显示战队"},
-		{Localizable("Show colors in spectator selection"), nullptr, "旁观选择中显示颜色"},
+		{Localizable("Show enemy color in spectator menu"), nullptr, "旁观选择中显示颜色"},
 		{Localizable("Edit Entry"), nullptr, "编辑条目"},
 		{Localizable("War Entries"), nullptr, "敌对条目"},
 		{Localizable("War Groups"), nullptr, "敌对群组"},

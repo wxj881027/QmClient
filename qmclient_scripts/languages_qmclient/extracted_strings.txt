@@ -892,7 +892,6 @@ Click to remove this clan from your friends list.
 Click to remove this community from favorites
 Click to remove this player from your friends list.
 Click to select server. Double click to join your friend.
-Click to set color
 Client
 Client CPU usage is high
 Client frame time is abnormal
@@ -970,10 +969,8 @@ Concurrency
 Concurrency (0 = auto)
 Concurrent requests when refreshing server browser
 Config
-Config Changes
 Config directory
 Config Files
-Config Filters
 Config version. Helps new client fix old config errors.
 Configs
 Configuration
@@ -3427,7 +3424,6 @@ Original language for incoming and outgoing text
 Original message language
 Original only
 Original options
-Original scroll feel
 Other
 Other game modes
 Other modes
@@ -4158,7 +4154,6 @@ Resource preview VRAM budget override (MB, 0=auto)
 Resource preview VRAM budget percentage (based on device local VRAM budget)
 Restart
 Restart in x seconds (0 = abort)
-Restart smooth scrolling on every wheel tick
 Restart the client
 Restarting. Please wait…
 Restore a recently used Tee skin
@@ -4547,7 +4542,6 @@ Show client IDs on a separate line
 Show client-generated chat messages, e.g., echo
 Show collision and weapon interaction
 Show Collision Borders
-Show colors in spectator selection
 Show combo hint when hooking or hammering player within 2 seconds
 Show command completion in chat
 Show community map tags

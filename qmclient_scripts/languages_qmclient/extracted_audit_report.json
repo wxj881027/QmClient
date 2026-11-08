@@ -1,9 +1,9 @@
 {
   "summary": {
-    "must_i18n": 10953,
+    "must_i18n": 10955,
     "business_data": 12804,
     "test_only": 6588,
-    "needs_review": 4380,
+    "needs_review": 4382,
     "violation": 0
   },
   "must_i18n": [
@@ -34919,1462 +34919,1455 @@
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
       "line": 321,
-      "text": "Click to set color",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 322,
       "text": "Detection distance",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 323,
+      "line": 322,
       "text": "Enable pie menu",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 324,
+      "line": 323,
       "text": "Example: A|B|C,D|E (C: main, D: dummy)",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 325,
+      "line": 324,
       "text": "Follow server",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 326,
+      "line": 325,
       "text": "Following: %s",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 327,
+      "line": 326,
       "text": "Friend",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 328,
+      "line": 327,
       "text": "Invite to team",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 329,
+      "line": 328,
       "text": "Join team",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 330,
+      "line": 329,
       "text": "Mention",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 331,
+      "line": 330,
       "text": "Opacity",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 332,
+      "line": 331,
       "text": "Option color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 333,
+      "line": 332,
       "text": "Pie menu effects",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 334,
+      "line": 333,
       "text": "Pie menu highlight tint",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 335,
+      "line": 334,
       "text": "Rename queue",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 336,
+      "line": 335,
       "text": "Spectate",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 337,
+      "line": 336,
       "text": "UI scale",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 338,
+      "line": 337,
       "text": "View points",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 339,
+      "line": 338,
       "text": "Whisper",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 379,
+      "line": 378,
       "text": "Auto reply cooldown",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 380,
+      "line": 379,
       "text": "Both sides of keyword rules must be filled",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 381,
+      "line": 380,
       "text": "Enable keyword reply",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 382,
+      "line": 381,
       "text": "Keyword rules",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 383,
+      "line": 382,
       "text": "Regex",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 384,
+      "line": 383,
       "text": "Rename",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 385,
+      "line": 384,
       "text": "Reply content",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 386,
+      "line": 385,
       "text": "Reply with dummy",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 387,
+      "line": 386,
       "text": "Rule list",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 388,
+      "line": 387,
       "text": "Trigger limits",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 401,
+      "line": 400,
       "text": "Auto team lock",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 402,
+      "line": 401,
       "text": "Auto-connect dummy",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 403,
+      "line": 402,
       "text": "Solo split enter key",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 404,
+      "line": 403,
       "text": "Solo split key",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 405,
+      "line": 404,
       "text": "Solo split leave key",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 406,
+      "line": 405,
       "text": "Team when leaving solo split",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 421,
+      "line": 420,
       "text": "API key",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 422,
+      "line": 421,
       "text": "Advanced options",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 423,
+      "line": 422,
       "text": "Always translate",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 424,
+      "line": 423,
       "text": "Auto concurrency: %d (smart default)",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 425,
+      "line": 424,
       "text": "Auto translate received messages",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 426,
+      "line": 425,
       "text": "Auto translate sent messages",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 427,
+      "line": 426,
       "text": "Concurrency (0 = auto)",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 428,
+      "line": 427,
       "text": "Custom",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 429,
+      "line": 428,
       "text": "Custom API key",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 430,
+      "line": 429,
       "text": "Custom prompt template",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 431,
+      "line": 430,
       "text": "Custom…",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 432,
+      "line": 431,
       "text": "DeepSeek",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 433,
+      "line": 432,
       "text": "DeepSeek API key",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 434,
+      "line": 433,
       "text": "Enable FTAPI auto-translate (may overload the service)",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 435,
+      "line": 434,
       "text": "Enable thinking mode (slower)",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 436,
+      "line": 435,
       "text": "Endpoint",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 437,
+      "line": 436,
       "text": "Endpoint (optional)",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 438,
+      "line": 437,
       "text": "LLM provider",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 439,
+      "line": 438,
       "text": "Leave empty to use default prompt",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 440,
+      "line": 439,
       "text": "Make sure the backend supports OpenAI-compatible thinking parameters",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 441,
+      "line": 440,
       "text": "Manual concurrency: %d",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 442,
+      "line": 441,
       "text": "Minimum match chars",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 443,
+      "line": 442,
       "text": "Model",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 444,
+      "line": 443,
       "text": "MyMemory needs no registration (anonymous daily quota)",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 445,
+      "line": 444,
       "text": "OpenAI",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 446,
+      "line": 445,
       "text": "OpenAI API key",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 447,
+      "line": 446,
       "text": "Original language for incoming and outgoing text",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 448,
+      "line": 447,
       "text": "Original message language",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 449,
+      "line": 448,
       "text": "Receive translation method",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 450,
+      "line": 449,
       "text": "Region",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 451,
+      "line": 450,
       "text": "SecretId",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 452,
+      "line": 451,
       "text": "SecretKey",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 453,
+      "line": 452,
       "text": "Send translation method",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 454,
+      "line": 453,
       "text": "Target language ratio",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 455,
+      "line": 454,
       "text": "Tencent Cloud SecretId",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 456,
+      "line": 455,
       "text": "Tencent Cloud SecretKey",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 457,
+      "line": 456,
       "text": "Thinking mode requires a reasoning model",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 458,
+      "line": 457,
       "text": "Translate only when needed",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 459,
+      "line": 458,
       "text": "Translate only when not in target language",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 460,
+      "line": 459,
       "text": "Translate outgoing messages to",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 461,
+      "line": 460,
       "text": "Translate received messages to",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 462,
+      "line": 461,
       "text": "Translation service",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 463,
+      "line": 462,
       "text": "Zhipu AI",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 464,
+      "line": 463,
       "text": "Zhipu API key",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 465,
+      "line": 464,
       "text": "Zhipu free models allow only 1 concurrent request",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 466,
+      "line": 465,
       "text": "⚠️ FTAPI is a free service. Excessive use may cause service suspension.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 467,
+      "line": 466,
       "text": "Show original text below outgoing translation",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 503,
+      "line": 502,
       "text": "APP ID",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 504,
+      "line": 503,
       "text": "Authentication",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 505,
+      "line": 504,
       "text": "Bearer API key",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 506,
+      "line": 505,
       "text": "DeepL API quota depends on your subscription. Get an API key at deepl.com.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 507,
+      "line": 506,
       "text": "Failed",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 508,
+      "line": 507,
       "text": "Local service without authentication",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 509,
+      "line": 508,
       "text": "Send sampling and token limit parameters",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 510,
+      "line": 509,
       "text": "Success",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 511,
+      "line": 510,
       "text": "Testing translation...",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 512,
+      "line": 511,
       "text": "Thinking controls depend on the model server. Server defaults do not guarantee that thinking is disabled.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 513,
+      "line": 512,
       "text": "Thinking parameters",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 514,
+      "line": 513,
       "text": "Translated text size",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 515,
+      "line": 514,
       "text": "Translation diagnostics",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 516,
+      "line": 515,
       "text": "Use server defaults",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 531,
+      "line": 530,
       "text": "Button - Disabled",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 532,
+      "line": 531,
       "text": "Button - Enabled",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 533,
+      "line": 532,
       "text": "Menu background",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 534,
+      "line": 533,
       "text": "Menu option - normal",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 535,
+      "line": 534,
       "text": "Menu option - selected",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 549,
+      "line": 548,
       "text": "Advanced options",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 550,
+      "line": 549,
       "text": "Allow mic permission in system settings, then reopen voice",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 551,
+      "line": 550,
       "text": "Audio backend init failed",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 552,
+      "line": 551,
       "text": "Audio backend init failed, try switching devices and check details",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 553,
+      "line": 552,
       "text": "Audio init failed, check details below and logs",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 554,
+      "line": 553,
       "text": "Audio issue",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 555,
+      "line": 554,
       "text": "Auto",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 556,
+      "line": 555,
       "text": "Auto gain control for mic (AGC, experimental)",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 557,
+      "line": 556,
       "text": "Auto unmute when speaking",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 558,
+      "line": 557,
       "text": "Check if voice server address is reachable",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 559,
+      "line": 558,
       "text": "Check input device, system default mic, and mic permission first",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 560,
+      "line": 559,
       "text": "Check output device, confirm headphones/speakers are still online",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 561,
+      "line": 560,
       "text": "Confirm both are on same server, same room, and support voice",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 562,
+      "line": 561,
       "text": "Connect to server first to establish voice network link",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 563,
+      "line": 562,
       "text": "Connected",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 564,
+      "line": 563,
       "text": "Connected, no one is speaking",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 565,
+      "line": 564,
       "text": "Connected, waiting for first ping",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 566,
+      "line": 565,
       "text": "Current status",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 567,
+      "line": 566,
       "text": "Default",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 568,
+      "line": 567,
       "text": "Default input open failed",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 569,
+      "line": 568,
       "text": "Default output open failed",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 570,
+      "line": 569,
       "text": "Detailed reason",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 571,
+      "line": 570,
       "text": "Disconnected",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 572,
+      "line": 571,
       "text": "Enable stereo positioning",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 573,
+      "line": 572,
       "text": "Enable voice",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 574,
+      "line": 573,
       "text": "Full map listen in same room",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 575,
+      "line": 574,
       "text": "Input device",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 576,
+      "line": 575,
       "text": "Input device not found",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 577,
+      "line": 576,
       "text": "Input device open failed",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 578,
+      "line": 577,
       "text": "Input device open failed, try reconnecting headset/mic or reselecting input device",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 579,
+      "line": 578,
       "text": "Input switch",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 580,
+      "line": 579,
       "text": "Leave empty to join public room",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 581,
+      "line": 580,
       "text": "Left/right channel width",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 582,
+      "line": 581,
       "text": "Local test mode",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 583,
+      "line": 582,
       "text": "Local test mode, no server needed",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 584,
+      "line": 583,
       "text": "Matched with callable peer",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 585,
+      "line": 584,
       "text": "Microphone",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 586,
+      "line": 585,
       "text": "Microphone permission denied by system",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 587,
+      "line": 586,
       "text": "Microphone volume",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 588,
+      "line": 587,
       "text": "Mute microphone",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 589,
+      "line": 588,
       "text": "Muted",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 590,
+      "line": 589,
       "text": "No audio issues detected",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 591,
+      "line": 590,
       "text": "No callable peer found",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 592,
+      "line": 591,
       "text": "No input device available",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 593,
+      "line": 592,
       "text": "No noise reduction",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 594,
+      "line": 593,
       "text": "No output device available",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 595,
+      "line": 594,
       "text": "No peer",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 596,
+      "line": 595,
       "text": "Noise reduction mode",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 597,
+      "line": 596,
       "text": "Not connected to server",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 598,
+      "line": 597,
       "text": "Not enabled",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 599,
+      "line": 598,
       "text": "Not open, check input device or mic permission",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 600,
+      "line": 599,
       "text": "Not open, check output device",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 601,
+      "line": 600,
       "text": "Opened",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 602,
+      "line": 601,
       "text": "Output device",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 603,
+      "line": 602,
       "text": "Output device not found",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 604,
+      "line": 603,
       "text": "Output device open failed",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 605,
+      "line": 604,
       "text": "Output device open failed, try reconnecting speakers/headphones or reselecting output device",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 606,
+      "line": 605,
       "text": "Output switch",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 607,
+      "line": 606,
       "text": "Parsing voice server address",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 608,
+      "line": 607,
       "text": "Playback volume",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 609,
+      "line": 608,
       "text": "Please enable voice first",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 610,
+      "line": 609,
       "text": "Receiving",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 611,
+      "line": 610,
       "text": "Room",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 612,
+      "line": 611,
       "text": "Room password",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 613,
+      "line": 612,
       "text": "Send & Receive",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 614,
+      "line": 613,
       "text": "Sending and receiving",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 615,
+      "line": 614,
       "text": "Sending locally, suggest the other party unmute or confirm they can receive",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 616,
+      "line": 615,
       "text": "Sending, waiting for peer echo",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 617,
+      "line": 616,
       "text": "Server",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 618,
+      "line": 617,
       "text": "Server URL",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 619,
+      "line": 618,
       "text": "Show voice connection status",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 620,
+      "line": 619,
       "text": "Simple noise reduction",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 621,
+      "line": 620,
       "text": "Simple noise reduction strength",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 622,
+      "line": 621,
       "text": "Speaker",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 623,
+      "line": 622,
       "text": "Speech trigger threshold",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 624,
+      "line": 623,
       "text": "Start here to quickly diagnose if the issue is with device, server, or room",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 625,
+      "line": 624,
       "text": "Status normal, check details below if still experiencing issues",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 626,
+      "line": 625,
       "text": "Switch failed",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 627,
+      "line": 626,
       "text": "Switched to",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 628,
+      "line": 627,
       "text": "Switching",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 629,
+      "line": 628,
       "text": "Switching back to default input",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 630,
+      "line": 629,
       "text": "Switching back to default output",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 631,
+      "line": 630,
       "text": "System default",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 632,
+      "line": 631,
       "text": "Troubleshooting suggestions",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 633,
+      "line": 632,
       "text": "Try reselecting input device, confirm default mic or headset mic is online",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 634,
+      "line": 633,
       "text": "Try reselecting output device, confirm headphones/speakers are online",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 635,
+      "line": 634,
       "text": "Try toggling voice or reconnecting to server",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 636,
+      "line": 635,
       "text": "UDP socket not open",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 637,
+      "line": 636,
       "text": "Unclassified audio issue",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 638,
+      "line": 637,
       "text": "Unknown status",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 639,
+      "line": 638,
       "text": "Use default input",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 640,
+      "line": 639,
       "text": "Use default output",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 641,
+      "line": 640,
       "text": "Voice activation release delay",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 642,
+      "line": 641,
       "text": "Voice bitrate",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 643,
+      "line": 642,
       "text": "Voice distance radius (tiles)",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 644,
+      "line": 643,
       "text": "Waiting for the voice WebSocket connection",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 645,
+      "line": 644,
       "text": "Waiting to open",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 646,
+      "line": 645,
       "text": "Waiting to open input device",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 647,
+      "line": 646,
       "text": "Waiting to open output device",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 677,
+      "line": 676,
       "text": "Always show",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 678,
+      "line": 677,
       "text": "Display mode",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 679,
+      "line": 678,
       "text": "Guide line color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 680,
+      "line": 679,
       "text": "Line width",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 681,
+      "line": 680,
       "text": "Off",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 682,
+      "line": 681,
       "text": "Opacity",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 683,
+      "line": 682,
       "text": "Pistol guide line",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 684,
+      "line": 683,
       "text": "Predict ninja path",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 685,
+      "line": 684,
       "text": "Show on key",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -37173,265 +37166,300 @@
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
       "line": 103,
-      "text": "Original scroll feel",
+      "text": "Scroll feel",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
       "line": 104,
-      "text": "Restart smooth scrolling on every wheel tick",
+      "text": "Every wheel tick restarts from rest, matching the original client",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
       "line": 105,
-      "text": "Scroll step",
+      "text": "Consecutive wheel ticks carry their velocity into one continuous glide",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
       "line": 106,
+      "text": "A damped spring drives the offset, so reversing direction slows down before it turns",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
+      "line": 107,
+      "text": "Spring response",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
+      "line": 108,
+      "text": "Spring damping",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
+      "line": 109,
+      "text": "End bounce",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
+      "line": 110,
+      "text": "Scroll step",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
+      "line": 111,
       "text": "Wheel distance per tick; hold Alt for 3x",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 120,
+      "line": 125,
       "text": "Current",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 121,
+      "line": 126,
       "text": "Desktop fullscreen",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 122,
+      "line": 127,
       "text": "Fullscreen",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 123,
+      "line": 128,
       "text": "Windowed",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 124,
+      "line": 129,
       "text": "Windowed borderless",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 125,
+      "line": 130,
       "text": "Windowed fullscreen",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 138,
+      "line": 143,
       "text": "Auto",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 139,
+      "line": 144,
       "text": "Black",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 140,
+      "line": 145,
       "text": "Blur mode",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 141,
+      "line": 146,
       "text": "Button background color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 142,
+      "line": 147,
       "text": "Custom",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 143,
+      "line": 148,
       "text": "Custom text color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 144,
+      "line": 149,
       "text": "Dual Kawase",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 145,
+      "line": 150,
       "text": "Enable backdrop blur",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 146,
+      "line": 151,
       "text": "Expanded dropdown background color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 147,
+      "line": 152,
       "text": "Fast, lightweight blur with a softer approximation.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 148,
+      "line": 153,
       "text": "Gaussian",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 149,
+      "line": 154,
       "text": "Input background color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 150,
+      "line": 155,
       "text": "Interface accent color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 151,
+      "line": 156,
       "text": "Interface surface",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 152,
+      "line": 157,
       "text": "Kawase",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 153,
+      "line": 158,
       "text": "Multi-resolution blur with a stronger result and balanced GPU cost.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 154,
+      "line": 159,
       "text": "Rainbow card titles",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 155,
+      "line": 160,
       "text": "Scoreboard surface",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 156,
+      "line": 161,
       "text": "Secondary menu background color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 157,
+      "line": 162,
       "text": "Selected item color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 158,
+      "line": 163,
       "text": "Settings card background",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 159,
+      "line": 164,
       "text": "Settings card border color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 160,
+      "line": 165,
       "text": "Show settings card borders",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 161,
+      "line": 166,
       "text": "Smooth and accurate blur with the highest GPU cost.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 162,
+      "line": 167,
       "text": "Text color mode",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 163,
+      "line": 168,
       "text": "Text input focus ring color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 164,
+      "line": 169,
       "text": "Used by active shared text and numeric input fields",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 165,
+      "line": 170,
       "text": "White",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -39679,111 +39707,97 @@
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogTClientConfigs.inc",
       "line": 11,
-      "text": "Config Changes",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogTClientConfigs.inc",
-      "line": 12,
-      "text": "Config Filters",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogTClientConfigs.inc",
-      "line": 13,
       "text": "DDNet",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogTClientConfigs.inc",
-      "line": 14,
+      "line": 12,
       "text": "Gameplay",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogTClientConfigs.inc",
-      "line": 15,
+      "line": 13,
       "text": "HUD",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogTClientConfigs.inc",
-      "line": 16,
+      "line": 14,
       "text": "Input",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogTClientConfigs.inc",
-      "line": 17,
+      "line": 15,
       "text": "Misc",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogTClientConfigs.inc",
-      "line": 18,
+      "line": 16,
       "text": "Modified",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogTClientConfigs.inc",
-      "line": 19,
+      "line": 17,
       "text": "QmClient",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogTClientConfigs.inc",
-      "line": 20,
+      "line": 18,
       "text": "Search",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogTClientConfigs.inc",
-      "line": 21,
+      "line": 19,
       "text": "Social",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogTClientConfigs.inc",
-      "line": 22,
+      "line": 20,
       "text": "TClient",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogTClientConfigs.inc",
-      "line": 23,
+      "line": 21,
       "text": "Visual",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogTClientConfigs.inc",
-      "line": 24,
+      "line": 22,
       "text": "default",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogTClientConfigs.inc",
-      "line": 25,
+      "line": 23,
       "text": "maximum",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogTClientConfigs.inc",
-      "line": 26,
+      "line": 24,
       "text": "minimum",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -41303,7 +41317,7 @@
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogTClientWarList.inc",
       "line": 21,
-      "text": "Show colors in spectator selection",
+      "text": "Show enemy color in spectator menu",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
@@ -96065,826 +96079,826 @@
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 340,
+      "line": 339,
       "text": "qm_perf_debug",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 341,
+      "line": 340,
       "text": "qm_pie_follow_name",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 342,
+      "line": 341,
       "text": "qm_pie_menu_color_copy_name",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 343,
+      "line": 342,
       "text": "qm_pie_menu_color_copy_skin",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 344,
+      "line": 343,
       "text": "qm_pie_menu_color_follow",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 345,
+      "line": 344,
       "text": "qm_pie_menu_color_friend",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 346,
+      "line": 345,
       "text": "qm_pie_menu_color_invite_team",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 347,
+      "line": 346,
       "text": "qm_pie_menu_color_join_team",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 348,
+      "line": 347,
       "text": "qm_pie_menu_color_mention",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 349,
+      "line": 348,
       "text": "qm_pie_menu_color_score",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 350,
+      "line": 349,
       "text": "qm_pie_menu_color_spectate",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 351,
+      "line": 350,
       "text": "qm_pie_menu_color_swap",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 352,
+      "line": 351,
       "text": "qm_pie_menu_color_whisper",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 353,
+      "line": 352,
       "text": "qm_pie_menu_copy_name_enabled",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 354,
+      "line": 353,
       "text": "qm_pie_menu_copy_skin_enabled",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 355,
+      "line": 354,
       "text": "qm_pie_menu_effects",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 356,
+      "line": 355,
       "text": "qm_pie_menu_enabled",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 357,
+      "line": 356,
       "text": "qm_pie_menu_follow_enabled",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 358,
+      "line": 357,
       "text": "qm_pie_menu_friend_enabled",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 359,
+      "line": 358,
       "text": "qm_pie_menu_invite_team_enabled",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 360,
+      "line": 359,
       "text": "qm_pie_menu_join_team_enabled",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 361,
+      "line": 360,
       "text": "qm_pie_menu_max_distance",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 362,
+      "line": 361,
       "text": "qm_pie_menu_mention_enabled",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 363,
+      "line": 362,
       "text": "qm_pie_menu_opacity",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 364,
+      "line": 363,
       "text": "qm_pie_menu_rename_queue",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 365,
+      "line": 364,
       "text": "qm_pie_menu_scale",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 366,
+      "line": 365,
       "text": "qm_pie_menu_score_enabled",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 367,
+      "line": 366,
       "text": "qm_pie_menu_selected_color",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 368,
+      "line": 367,
       "text": "qm_pie_menu_spectate_enabled",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 369,
+      "line": 368,
       "text": "qm_pie_menu_swap_enabled",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 370,
+      "line": 369,
       "text": "qm_pie_menu_whisper_enabled",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 372,
+      "line": 371,
       "text": "qm:pie_menu",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 389,
+      "line": 388,
       "text": "qm_auto_reply_cooldown",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 390,
+      "line": 389,
       "text": "qm_keyword_reply_enabled",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 391,
+      "line": 390,
       "text": "qm_keyword_reply_rules",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 392,
+      "line": 391,
       "text": "qm_keyword_reply_use_dummy",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 407,
+      "line": 406,
       "text": "qm_auto_team_lock",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 408,
+      "line": 407,
       "text": "qm_solo_split",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 409,
+      "line": 408,
       "text": "qm_solo_split_enter",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 410,
+      "line": 409,
       "text": "qm_solo_split_leave",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 411,
+      "line": 410,
       "text": "qm_solo_split_link_dummy",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 412,
+      "line": 411,
       "text": "qm_solo_split_restore_team",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 414,
+      "line": 413,
       "text": "qm:solo_split",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 468,
+      "line": 467,
       "text": "qm_translate_auto",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 469,
+      "line": 468,
       "text": "qm_translate_auto_mode",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 470,
+      "line": 469,
       "text": "qm_translate_auto_outgoing",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 471,
+      "line": 470,
       "text": "qm_translate_auto_outgoing_mode",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 472,
+      "line": 471,
       "text": "qm_translate_backend",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 473,
+      "line": 472,
       "text": "qm_translate_deepl_key",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 474,
+      "line": 473,
       "text": "qm_translate_ftapi_auto_enable",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 475,
+      "line": 474,
       "text": "qm_translate_libre_endpoint",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 476,
+      "line": 475,
       "text": "qm_translate_libre_key",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 477,
+      "line": 476,
       "text": "qm_translate_llm_concurrency",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 478,
+      "line": 477,
       "text": "qm_translate_llm_enable_thinking",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 479,
+      "line": 478,
       "text": "qm_translate_llm_endpoint_custom",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 480,
+      "line": 479,
       "text": "qm_translate_llm_endpoint_deepseek",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 481,
+      "line": 480,
       "text": "qm_translate_llm_endpoint_openai",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 482,
+      "line": 481,
       "text": "qm_translate_llm_endpoint_zhipu",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 483,
+      "line": 482,
       "text": "qm_translate_llm_key_custom",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 484,
+      "line": 483,
       "text": "qm_translate_llm_key_deepseek",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 485,
+      "line": 484,
       "text": "qm_translate_llm_key_openai",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 486,
+      "line": 485,
       "text": "qm_translate_llm_key_zhipu",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 487,
+      "line": 486,
       "text": "qm_translate_llm_model_custom",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 488,
+      "line": 487,
       "text": "qm_translate_llm_model_deepseek",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 489,
+      "line": 488,
       "text": "qm_translate_llm_model_openai",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 490,
+      "line": 489,
       "text": "qm_translate_llm_model_zhipu",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 491,
+      "line": 490,
       "text": "qm_translate_llm_provider",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 492,
+      "line": 491,
       "text": "qm_translate_local_detect_min_chars",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 493,
+      "line": 492,
       "text": "qm_translate_local_detect_ratio",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 494,
+      "line": 493,
       "text": "qm_translate_outgoing_target",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 495,
+      "line": 494,
       "text": "qm_translate_show_advanced",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 496,
+      "line": 495,
       "text": "qm_translate_source",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 497,
+      "line": 496,
       "text": "qm_translate_system_prompt",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 498,
+      "line": 497,
       "text": "qm_translate_target",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 499,
+      "line": 498,
       "text": "qm_translate_tc_endpoint",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 500,
+      "line": 499,
       "text": "qm_translate_tc_region",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 501,
+      "line": 500,
       "text": "qm_translate_tc_secret_id",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 502,
+      "line": 501,
       "text": "qm_translate_tc_secret_key",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 517,
+      "line": 516,
       "text": "qm_chat_translation_size",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 518,
+      "line": 517,
       "text": "qm_translate_baidu_app_id",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 519,
+      "line": 518,
       "text": "qm_translate_baidu_key",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 520,
+      "line": 519,
       "text": "qm_translate_llm_custom_auth",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 521,
+      "line": 520,
       "text": "qm_translate_llm_custom_parameters",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 522,
+      "line": 521,
       "text": "qm_translate_llm_custom_thinking",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 536,
+      "line": 535,
       "text": "qm_translate_btn_color_disabled",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 537,
+      "line": 536,
       "text": "qm_translate_btn_color_enabled",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 538,
+      "line": 537,
       "text": "qm_translate_menu_bg_color",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 539,
+      "line": 538,
       "text": "qm_translate_menu_option_normal",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 540,
+      "line": 539,
       "text": "qm_translate_menu_option_selected",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 542,
+      "line": 541,
       "text": "qm:translate_ui",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 648,
+      "line": 647,
       "text": "qm_voice_agc_enable",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 649,
+      "line": 648,
       "text": "qm_voice_bitrate_profile",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 650,
+      "line": 649,
       "text": "qm_voice_enable",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 651,
+      "line": 650,
       "text": "qm_voice_group_global",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 652,
+      "line": 651,
       "text": "qm_voice_input_device",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 653,
+      "line": 652,
       "text": "qm_voice_mic_mute",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 654,
+      "line": 653,
       "text": "qm_voice_mic_volume",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 655,
+      "line": 654,
       "text": "qm_voice_noise_suppress_enable",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 656,
+      "line": 655,
       "text": "qm_voice_noise_suppress_strength",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 657,
+      "line": 656,
       "text": "qm_voice_output_device",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 658,
+      "line": 657,
       "text": "qm_voice_radius",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 659,
+      "line": 658,
       "text": "qm_voice_server",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 660,
+      "line": 659,
       "text": "qm_voice_show_advanced",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 661,
+      "line": 660,
       "text": "qm_voice_show_connection_status",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 662,
+      "line": 661,
       "text": "qm_voice_stereo",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 663,
+      "line": 662,
       "text": "qm_voice_stereo_width",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 664,
+      "line": 663,
       "text": "qm_voice_token",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 665,
+      "line": 664,
       "text": "qm_voice_vad_enable",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 666,
+      "line": 665,
       "text": "qm_voice_vad_release_delay_ms",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 667,
+      "line": 666,
       "text": "qm_voice_vad_threshold",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 668,
+      "line": 667,
       "text": "qm_voice_volume",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 686,
+      "line": 685,
       "text": "qm_weapon_trajectory",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 687,
+      "line": 686,
       "text": "qm_weapon_trajectory_alpha",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 688,
+      "line": 687,
       "text": "qm_weapon_trajectory_color",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 689,
+      "line": 688,
       "text": "qm_weapon_trajectory_gun",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 690,
+      "line": 689,
       "text": "qm_weapon_trajectory_ninja",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 691,
+      "line": 690,
       "text": "qm_weapon_trajectory_width",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 693,
+      "line": 692,
       "text": "qm:weapon_trajectory",
       "category": "business_data",
       "reason": "command, config, or machine token"
@@ -97262,238 +97276,238 @@
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 107,
+      "line": 112,
       "text": "qm_extra_animations",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 108,
+      "line": 113,
       "text": "qm_ui_card_height_animations",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 109,
+      "line": 114,
       "text": "qm_ui_card_reflow_animations",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 110,
+      "line": 115,
       "text": "qm_ui_list_entry_animations",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 111,
+      "line": 116,
       "text": "qm_ui_motion_level",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 126,
+      "line": 131,
       "text": "gfx_color_depth",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 127,
+      "line": 132,
       "text": "gfx_screen_height",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 128,
+      "line": 133,
       "text": "gfx_screen_refresh_rate",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 129,
+      "line": 134,
       "text": "gfx_screen_width",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 166,
+      "line": 171,
       "text": "qm_blur_mode",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 167,
+      "line": 172,
       "text": "qm_gaussian_blur",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 168,
+      "line": 173,
       "text": "qm_scoreboard_color",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 169,
+      "line": 174,
       "text": "qm_scoreboard_opacity",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 170,
+      "line": 175,
       "text": "qm_ui_accent_color",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 171,
+      "line": 176,
       "text": "qm_ui_accent_opacity",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 172,
+      "line": 177,
       "text": "qm_ui_card_border_color",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 173,
+      "line": 178,
       "text": "qm_ui_card_borders",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 174,
+      "line": 179,
       "text": "qm_ui_card_color",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 175,
+      "line": 180,
       "text": "qm_ui_card_opacity",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 176,
+      "line": 181,
       "text": "qm_ui_card_rainbow_titles",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 177,
+      "line": 182,
       "text": "qm_ui_color",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 178,
+      "line": 183,
       "text": "qm_ui_dropdown_color",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 179,
+      "line": 184,
       "text": "qm_ui_dropdown_list_color",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 180,
+      "line": 185,
       "text": "qm_ui_dropdown_list_opacity",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 181,
+      "line": 186,
       "text": "qm_ui_dropdown_opacity",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 182,
+      "line": 187,
       "text": "qm_ui_focus_color",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 183,
+      "line": 188,
       "text": "qm_ui_input_color",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 184,
+      "line": 189,
       "text": "qm_ui_input_opacity",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 185,
+      "line": 190,
       "text": "qm_ui_opacity",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 186,
+      "line": 191,
       "text": "qm_ui_popup_color",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 187,
+      "line": 192,
       "text": "qm_ui_popup_opacity",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 188,
+      "line": 193,
       "text": "qm_ui_selected_color",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 189,
+      "line": 194,
       "text": "qm_ui_text_color_mode",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 190,
+      "line": 195,
       "text": "qm_ui_text_custom_color",
       "category": "business_data",
       "reason": "command, config, or machine token"
@@ -99089,7 +99103,7 @@
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogTClientConfigs.inc",
-      "line": 27,
+      "line": 25,
       "text": "qm_ui_compact_list",
       "category": "business_data",
       "reason": "command, config, or machine token"
@@ -158274,7 +158288,7 @@
     },
     {
       "file": "src/game/client/ui.h",
-      "line": 1408,
+      "line": 1416,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
@@ -158393,7 +158407,7 @@
     },
     {
       "file": "src/game/client/ui_scrollregion.cpp",
-      "line": 317,
+      "line": 319,
       "text": "scroll_region_reserve",
       "category": "business_data",
       "reason": "command, config, or machine token"
@@ -217030,1441 +217044,1434 @@
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
       "line": 321,
-      "text": "点击设置颜色",
-      "category": "needs_review",
-      "reason": "unclassified human-readable client string"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 322,
       "text": "检测距离",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 323,
+      "line": 322,
       "text": "启用饼菜单",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 324,
+      "line": 323,
       "text": "示例：A|B|C,D|E（C 为本体，D 为分身）",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 325,
+      "line": 324,
       "text": "跨服跟随",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 326,
+      "line": 325,
       "text": "正在跟随：%s",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 327,
+      "line": 326,
       "text": "好友",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 328,
+      "line": 327,
       "text": "邀请组队",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 329,
+      "line": 328,
       "text": "加入队伍",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 330,
+      "line": 329,
       "text": "提及",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 331,
+      "line": 330,
       "text": "不透明度",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
+      "line": 331,
+      "text": "选项颜色 点击设置颜色 set color 取色",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
       "line": 332,
-      "text": "选项颜色",
-      "category": "needs_review",
-      "reason": "unclassified human-readable client string"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 333,
       "text": "饼菜单开合效果",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 334,
+      "line": 333,
       "text": "饼菜单选中色调",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 335,
+      "line": 334,
       "text": "改名名单",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 336,
+      "line": 335,
       "text": "观战",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 337,
+      "line": 336,
       "text": "UI 大小",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 338,
+      "line": 337,
       "text": "查看积分",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 339,
+      "line": 338,
       "text": "私聊",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 379,
+      "line": 378,
       "text": "自动回复冷却",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 380,
+      "line": 379,
       "text": "关键词规则的两侧都必须填写",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 381,
+      "line": 380,
       "text": "启用关键词回复",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 382,
+      "line": 381,
       "text": "关键词规则",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 383,
+      "line": 382,
       "text": "正则",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 384,
+      "line": 383,
       "text": "重命名",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 385,
+      "line": 384,
       "text": "回复内容",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 386,
+      "line": 385,
       "text": "使用分身回复",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 387,
+      "line": 386,
       "text": "规则列表",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 388,
+      "line": 387,
       "text": "触发限制",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 401,
+      "line": 400,
       "text": "自动锁队",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 402,
+      "line": 401,
       "text": "自动连接分身",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 403,
+      "line": 402,
       "text": "单刷模式进队按键",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 404,
+      "line": 403,
       "text": "单刷模式按键",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 405,
+      "line": 404,
       "text": "单刷模式出队按键",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 406,
+      "line": 405,
       "text": "退出单刷时的队伍",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 421,
+      "line": 420,
       "text": "API 密钥",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 422,
+      "line": 421,
       "text": "高级选项",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 423,
+      "line": 422,
       "text": "始终翻译",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 424,
+      "line": 423,
       "text": "自动并发数：%d（智能默认）",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 425,
+      "line": 424,
       "text": "自动翻译收到的聊天消息",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 426,
+      "line": 425,
       "text": "自动翻译发送的聊天消息",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 427,
+      "line": 426,
       "text": "并发数（0 = 自动）",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 428,
+      "line": 427,
       "text": "自定义",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 429,
+      "line": 428,
       "text": "自定义 API 密钥",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 430,
+      "line": 429,
       "text": "自定义提示词模板",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 431,
+      "line": 430,
       "text": "自定义…",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 433,
+      "line": 432,
       "text": "DeepSeek API 密钥",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 434,
+      "line": 433,
       "text": "启用 FTAPI 自动翻译（可能导致服务过载）",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 435,
+      "line": 434,
       "text": "启用思考模式（较慢）",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 436,
+      "line": 435,
       "text": "端点",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 437,
+      "line": 436,
       "text": "端点（可选）",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 438,
+      "line": 437,
       "text": "LLM 提供商",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 439,
+      "line": 438,
       "text": "留空使用默认提示词",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 440,
+      "line": 439,
       "text": "确保后端支持 OpenAI 兼容的思考参数",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 441,
+      "line": 440,
       "text": "手动并发数：%d",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 442,
+      "line": 441,
       "text": "最少匹配字符数",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 443,
+      "line": 442,
       "text": "模型",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 444,
+      "line": 443,
       "text": "MyMemory 无需注册（匿名每日配额）",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 446,
+      "line": 445,
       "text": "OpenAI API 密钥",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 447,
+      "line": 446,
       "text": "接收与发送消息共用的原文语言",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 448,
+      "line": 447,
       "text": "原文语言",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 449,
+      "line": 448,
       "text": "接收翻译方式",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 450,
+      "line": 449,
       "text": "地域",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 451,
+      "line": 450,
       "text": "密钥 ID",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 452,
+      "line": 451,
       "text": "密钥",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 453,
+      "line": 452,
       "text": "发送翻译方式",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 454,
+      "line": 453,
       "text": "目标语言比例",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 455,
+      "line": 454,
       "text": "腾讯云密钥 ID",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 456,
+      "line": 455,
       "text": "腾讯云密钥",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 457,
+      "line": 456,
       "text": "启用思考模式需要使用推理模型",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 458,
+      "line": 457,
       "text": "仅在需要时翻译",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 459,
+      "line": 458,
       "text": "仅在非目标语言时翻译",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 460,
+      "line": 459,
       "text": "发送消息译为",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 461,
+      "line": 460,
       "text": "收到消息译为",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 462,
+      "line": 461,
       "text": "翻译服务",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 463,
+      "line": 462,
       "text": "智谱清言",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 464,
+      "line": 463,
       "text": "智谱 API 密钥",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 465,
+      "line": 464,
       "text": "智谱免费模型只允许 1 个并发请求",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 466,
+      "line": 465,
       "text": "⚠️ FTAPI 是免费服务，过度使用可能导致服务暂停",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 467,
+      "line": 466,
       "text": "发送翻译下方显示原文",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 503,
+      "line": 502,
       "text": "应用 ID",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 504,
+      "line": 503,
       "text": "认证方式",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 505,
+      "line": 504,
       "text": "Bearer API 密钥",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 506,
+      "line": 505,
       "text": "DeepL API 额度取决于订阅方案。请在 deepl.com 获取 API 密钥。",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 507,
+      "line": 506,
       "text": "失败",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 508,
+      "line": 507,
       "text": "本机服务，无需认证",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 509,
+      "line": 508,
       "text": "发送采样与 token 上限参数",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 510,
+      "line": 509,
       "text": "成功",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 511,
+      "line": 510,
       "text": "正在测试翻译…",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 512,
+      "line": 511,
       "text": "思考控制取决于模型服务。使用服务默认值不代表已关闭思考。",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 513,
+      "line": 512,
       "text": "思考参数格式",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 514,
+      "line": 513,
       "text": "译文字号",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 515,
+      "line": 514,
       "text": "翻译诊断",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 516,
+      "line": 515,
       "text": "使用服务默认值",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 531,
+      "line": 530,
       "text": "按钮 - 未启用",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 532,
+      "line": 531,
       "text": "按钮 - 已启用",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 533,
+      "line": 532,
       "text": "菜单背景",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 534,
+      "line": 533,
       "text": "菜单选项 - 普通",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 535,
+      "line": 534,
       "text": "菜单选项 - 选中",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 549,
+      "line": 548,
       "text": "高级选项",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 550,
+      "line": 549,
       "text": "需要在系统设置里允许麦克风权限，然后重新打开语音",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 551,
+      "line": 550,
       "text": "音频后端初始化失败",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 552,
+      "line": 551,
       "text": "音频后端初始化失败，建议切换设备后重试，并查看详细原因",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 553,
+      "line": 552,
       "text": "音频初始化失败，建议查看下方详细原因并结合日志排查",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 554,
+      "line": 553,
       "text": "音频问题",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 555,
+      "line": 554,
       "text": "自动",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 556,
+      "line": 555,
       "text": "自动平衡麦克风音量（AGC，实验性）",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 557,
+      "line": 556,
       "text": "自动检测说话时开麦",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 558,
+      "line": 557,
       "text": "建议检查语音服务器地址是否可用",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 559,
+      "line": 558,
       "text": "建议先检查输入设备、系统默认麦克风和麦克风权限",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 560,
+      "line": 559,
       "text": "建议先检查输出设备，确认耳机或扬声器仍在线",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 561,
+      "line": 560,
       "text": "建议确认双方在同服、同房间，并且对方也支持语音",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 562,
+      "line": 561,
       "text": "需要先进入服务器，语音网络链路才会建立",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 563,
+      "line": 562,
       "text": "连接成功",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 564,
+      "line": 563,
       "text": "已联通，暂时无人说话",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 565,
+      "line": 564,
       "text": "已连接，等待首个 ping",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 566,
+      "line": 565,
       "text": "当前状态",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 567,
+      "line": 566,
       "text": "默认",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 568,
+      "line": 567,
       "text": "默认输入打开失败",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 569,
+      "line": 568,
       "text": "默认输出打开失败",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 570,
+      "line": 569,
       "text": "详细原因",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 571,
+      "line": 570,
       "text": "已断开连接",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 572,
+      "line": 571,
       "text": "启用立体声定位",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 573,
+      "line": 572,
       "text": "启用语音",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 574,
+      "line": 573,
       "text": "同房间全图收听",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 575,
+      "line": 574,
       "text": "输入设备",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 576,
+      "line": 575,
       "text": "输入设备不存在",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 577,
+      "line": 576,
       "text": "输入设备打开失败",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 578,
+      "line": 577,
       "text": "输入设备打开失败，建议重插耳机/麦克风后刷新，或重新选择输入设备",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 579,
+      "line": 578,
       "text": "输入切换",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 580,
+      "line": 579,
       "text": "留空以进入公共房间",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 581,
+      "line": 580,
       "text": "左右声道宽度",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 582,
+      "line": 581,
       "text": "本地测试模式",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 583,
+      "line": 582,
       "text": "本地测试模式，无需服务器",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 584,
+      "line": 583,
       "text": "已匹配到可通话对端",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 585,
+      "line": 584,
       "text": "麦克风",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 586,
+      "line": 585,
       "text": "麦克风权限被系统拒绝",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 587,
+      "line": 586,
       "text": "麦克风音量",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 588,
+      "line": 587,
       "text": "静音麦克风",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 589,
+      "line": 588,
       "text": "已静音",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 590,
+      "line": 589,
       "text": "未发现音频异常",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 591,
+      "line": 590,
       "text": "当前未发现可通话对端",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 592,
+      "line": 591,
       "text": "系统没有可用输入设备",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 593,
+      "line": 592,
       "text": "不降噪",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 594,
+      "line": 593,
       "text": "系统没有可用输出设备",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 595,
+      "line": 594,
       "text": "暂无对端",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 596,
+      "line": 595,
       "text": "降噪模式",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 597,
+      "line": 596,
       "text": "未进入服务器",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 598,
+      "line": 597,
       "text": "未启用",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 599,
+      "line": 598,
       "text": "未打开，请检查输入设备或麦克风权限",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 600,
+      "line": 599,
       "text": "未打开，请检查输出设备",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 601,
+      "line": 600,
       "text": "已打开",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 602,
+      "line": 601,
       "text": "输出设备",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 603,
+      "line": 602,
       "text": "输出设备不存在",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 604,
+      "line": 603,
       "text": "输出设备打开失败",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 605,
+      "line": 604,
       "text": "输出设备打开失败，建议重插耳机/扬声器后刷新，或重新选择输出设备",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 606,
+      "line": 605,
       "text": "输出切换",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 607,
+      "line": 606,
       "text": "正在解析语音服务器地址",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 608,
+      "line": 607,
       "text": "播放音量",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 609,
+      "line": 608,
       "text": "请先启用语音",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 610,
+      "line": 609,
       "text": "正在接收",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 611,
+      "line": 610,
       "text": "房间",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 612,
+      "line": 611,
       "text": "房间密码",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 613,
+      "line": 612,
       "text": "收发",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 614,
+      "line": 613,
       "text": "正在发送和接收",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 615,
+      "line": 614,
       "text": "本地正在发送，建议让对方开麦或确认对方是否能接收",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 616,
+      "line": 615,
       "text": "正在发送，等待对端回声",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 617,
+      "line": 616,
       "text": "服务器",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 618,
+      "line": 617,
       "text": "服务器 URL",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 619,
+      "line": 618,
       "text": "显示语音连接状态",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 620,
+      "line": 619,
       "text": "简单降噪",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 621,
+      "line": 620,
       "text": "简单降噪强度",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 622,
+      "line": 621,
       "text": "扬声器",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 623,
+      "line": 622,
       "text": "说话触发阈值",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 624,
+      "line": 623,
       "text": "先看这里，可以快速判断卡在设备、服务器还是房间",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 625,
+      "line": 624,
       "text": "当前状态正常，如仍异常请查看下方详细原因",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 626,
+      "line": 625,
       "text": "切换失败",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 627,
+      "line": 626,
       "text": "已切换",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 628,
+      "line": 627,
       "text": "正在切换",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 629,
+      "line": 628,
       "text": "正在切回默认输入",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 630,
+      "line": 629,
       "text": "正在切回默认输出",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 631,
+      "line": 630,
       "text": "系统默认",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 632,
+      "line": 631,
       "text": "建议排查",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 633,
+      "line": 632,
       "text": "建议重新选择输入设备，并确认默认麦克风或耳机麦克风仍在线",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 634,
+      "line": 633,
       "text": "建议重新选择输出设备，并确认耳机或扬声器仍在线",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 635,
+      "line": 634,
       "text": "建议重新切换语音开关或重试进入服务器",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 636,
+      "line": 635,
       "text": "UDP 套接字未打开",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 637,
+      "line": 636,
       "text": "音频异常未分类",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 638,
+      "line": 637,
       "text": "未知状态",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 639,
+      "line": 638,
       "text": "使用默认输入",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 640,
+      "line": 639,
       "text": "使用默认输出",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 641,
+      "line": 640,
       "text": "语音激活释放延迟",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 642,
+      "line": 641,
       "text": "语音码率",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 643,
+      "line": 642,
       "text": "语音距离半径（格）",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 644,
+      "line": 643,
       "text": "正在等待语音 WebSocket 连接",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 645,
+      "line": 644,
       "text": "等待打开",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 646,
+      "line": 645,
       "text": "等待打开输入设备",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 647,
+      "line": 646,
       "text": "等待打开输出设备",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 677,
+      "line": 676,
       "text": "始终显示",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 678,
+      "line": 677,
       "text": "显示模式",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 679,
+      "line": 678,
       "text": "辅助线颜色",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 680,
+      "line": 679,
       "text": "线宽",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 682,
+      "line": 681,
       "text": "不透明度",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 683,
+      "line": 682,
       "text": "手枪辅助线",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 684,
+      "line": 683,
       "text": "预测忍者路径",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFunction.inc",
-      "line": 685,
+      "line": 684,
       "text": "按键显示",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
@@ -219235,258 +219242,293 @@
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
       "line": 103,
-      "text": "原始滚动手感",
+      "text": "滚动手感、平滑滚动、弹簧滚动",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
       "line": 104,
-      "text": "每次滚轮都重新开始平滑滚动",
+      "text": "原始滚动 Original",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
       "line": 105,
-      "text": "滚动步长",
+      "text": "平滑滚动 Smooth",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
       "line": 106,
+      "text": "弹簧滚动 Spring",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
+      "line": 107,
+      "text": "弹簧响应",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
+      "line": 108,
+      "text": "弹簧阻尼",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
+      "line": 109,
+      "text": "末端回弹",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
+      "line": 110,
+      "text": "滚动步长",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
+      "line": 111,
       "text": "每格滚轮距离；按住 Alt 为 3 倍",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 120,
+      "line": 125,
       "text": "当前",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 121,
+      "line": 126,
       "text": "无边框全屏",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 122,
+      "line": 127,
       "text": "独占全屏",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 123,
+      "line": 128,
       "text": "窗口化",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 124,
+      "line": 129,
       "text": "无边框窗口",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 125,
+      "line": 130,
       "text": "窗口化全屏",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 138,
+      "line": 143,
       "text": "自动",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 139,
+      "line": 144,
       "text": "黑色",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 140,
+      "line": 145,
       "text": "模糊模式",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 141,
+      "line": 146,
       "text": "按钮背景颜色",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 142,
+      "line": 147,
       "text": "自定义",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 143,
+      "line": 148,
       "text": "自定义文本颜色",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 144,
+      "line": 149,
       "text": "双重 Kawase",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 145,
+      "line": 150,
       "text": "启用背景模糊",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 146,
+      "line": 151,
       "text": "展开列表背景颜色",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 147,
+      "line": 152,
       "text": "快速、轻量的模糊效果，采用较柔和的近似处理。",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 148,
+      "line": 153,
       "text": "高斯",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 149,
+      "line": 154,
       "text": "输入框背景颜色",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 150,
+      "line": 155,
       "text": "界面强调色",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 151,
+      "line": 156,
       "text": "界面表面",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 153,
+      "line": 158,
       "text": "多分辨率模糊，效果更强，并兼顾 GPU 开销。",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 154,
+      "line": 159,
       "text": "卡片标题彩虹流动",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 155,
+      "line": 160,
       "text": "计分板表面",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 156,
+      "line": 161,
       "text": "二级菜单背景颜色",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 157,
+      "line": 162,
       "text": "选中项颜色",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 158,
+      "line": 163,
       "text": "设置卡片背景",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 159,
+      "line": 164,
       "text": "设置卡片边框颜色",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 160,
+      "line": 165,
       "text": "显示设置卡片边框",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 161,
+      "line": 166,
       "text": "平滑且准确的模糊效果，但 GPU 开销最高。",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 162,
+      "line": 167,
       "text": "文本颜色模式",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 163,
+      "line": 168,
       "text": "文本输入焦点环颜色",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 164,
+      "line": 169,
       "text": "用于已激活的共享文本与数值输入框",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
-      "line": 165,
+      "line": 170,
       "text": "白色",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
@@ -221705,91 +221747,77 @@
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogTClientConfigs.inc",
-      "line": 11,
-      "text": "配置更改",
-      "category": "needs_review",
-      "reason": "unclassified human-readable client string"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogTClientConfigs.inc",
       "line": 12,
-      "text": "配置过滤器",
-      "category": "needs_review",
-      "reason": "unclassified human-readable client string"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogTClientConfigs.inc",
-      "line": 14,
       "text": "游戏玩法",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogTClientConfigs.inc",
-      "line": 16,
+      "line": 14,
       "text": "输入",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogTClientConfigs.inc",
-      "line": 17,
+      "line": 15,
       "text": "其他杂项",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogTClientConfigs.inc",
-      "line": 18,
+      "line": 16,
       "text": "仅已修改",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogTClientConfigs.inc",
-      "line": 19,
+      "line": 17,
       "text": "栖梦",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogTClientConfigs.inc",
-      "line": 20,
+      "line": 18,
       "text": "搜索",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogTClientConfigs.inc",
-      "line": 21,
+      "line": 19,
       "text": "社交功能",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogTClientConfigs.inc",
-      "line": 23,
+      "line": 21,
       "text": "视觉效果",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogTClientConfigs.inc",
-      "line": 24,
+      "line": 22,
       "text": "默认",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogTClientConfigs.inc",
-      "line": 25,
+      "line": 23,
       "text": "最大值",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogTClientConfigs.inc",
-      "line": 26,
+      "line": 24,
       "text": "最小值",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
