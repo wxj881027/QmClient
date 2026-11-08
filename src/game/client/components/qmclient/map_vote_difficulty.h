@@ -146,7 +146,90 @@ namespace QmMapVotes
 		return !OutMap.empty();
 	}
 
-	inline bool MatchesFilter(int Stars, int NumPlayers, bool EmptyOnly, int StarMask, bool FavoritesOnly, bool IsFavorite)
+	// 类别位序固定：位序即掩码位。新增类别只能追加到末尾，不能插队，否则旧配置会指向别的类别。
+	inline const char *const s_apMapBrowserCategoryKeys[] = {
+		"Novice",
+		"Moderate",
+		"Brutal",
+		"Insane",
+		"Dummy",
+		"Solo",
+		"Oldschool",
+		"DDmaX Easy",
+		"DDmaX Next",
+		"DDmaX Pro",
+		"DDmaX Nut",
+		"DDmaX",
+		"Event",
+		"Fun",
+		"Race",
+	};
+	constexpr int MAP_BROWSER_CATEGORY_COUNT = (int)(sizeof(s_apMapBrowserCategoryKeys) / sizeof(s_apMapBrowserCategoryKeys[0]));
+
+	// 目录侧写 DDmaX.Next、界面与社区侧写 DDmaX Next：比较前统一去掉点和空格。
+	inline void MapBrowserCategoryNormalize(const char *pCategory, char *pOut, int OutSize)
+	{
+		int Out = 0;
+		for(const char *p = pCategory; p != nullptr && *p != '\0' && Out + 1 < OutSize; ++p)
+		{
+			if(*p == '.' || *p == ' ')
+				continue;
+			pOut[Out++] = *p;
+		}
+		pOut[Out < OutSize ? Out : OutSize - 1] = '\0';
+	}
+
+	// 无法识别的类别返回 -1：界面不显示对应胶囊，过滤时按「判不出」处理。
+	inline int MapBrowserCategoryBit(const char *pCategory)
+	{
+		if(pCategory == nullptr || pCategory[0] == '\0')
+			return -1;
+		char aNormalized[32];
+		MapBrowserCategoryNormalize(pCategory, aNormalized, sizeof(aNormalized));
+		for(int Index = 0; Index < MAP_BROWSER_CATEGORY_COUNT; ++Index)
+		{
+			char aKey[32];
+			MapBrowserCategoryNormalize(s_apMapBrowserCategoryKeys[Index], aKey, sizeof(aKey));
+			if(str_comp_nocase(aKey, aNormalized) == 0)
+				return Index;
+		}
+		return -1;
+	}
+
+	// 底部滑条档位：0 不筛选，1-6 依次对应「常用六档」（前六位）的位序。
+	// 掩码里出现多选或侧栏专属类别时返回 -1，界面据此显示「自定义」。
+	inline int MapBrowserCategoryLevel(int CategoryMask)
+	{
+		if(CategoryMask == 0)
+			return 0;
+		for(int Level = 1; Level <= 6; ++Level)
+		{
+			if(CategoryMask == (1 << (Level - 1)))
+				return Level;
+		}
+		return -1;
+	}
+
+	inline int MapBrowserCategoryMaskForLevel(int Level)
+	{
+		if(Level < 1 || Level > 6)
+			return 0;
+		return 1 << (Level - 1);
+	}
+
+	inline bool MapBrowserCategorySelected(int CategoryMask, int Bit)
+	{
+		return Bit >= 0 && Bit < MAP_BROWSER_CATEGORY_COUNT && (CategoryMask & (1 << Bit)) != 0;
+	}
+
+	inline int ToggleMapBrowserCategory(int CategoryMask, int Bit)
+	{
+		if(Bit < 0 || Bit >= MAP_BROWSER_CATEGORY_COUNT)
+			return CategoryMask;
+		return MapBrowserCategorySelected(CategoryMask, Bit) ? CategoryMask & ~(1 << Bit) : CategoryMask | (1 << Bit);
+	}
+
+	inline bool MatchesFilter(int Stars, const char *pCategory, int NumPlayers, bool EmptyOnly, int StarMask, int CategoryMask, bool FavoritesOnly, bool IsFavorite)
 	{
 		// 「只看空服」是唯一的空服条件：EmptyOnly 关闭时空服照常显示，
 		// 与引擎侧 CServerBrowser::Filter() 的 m_QmMapBrowserEmptyOnly 分支同义。
@@ -154,46 +237,31 @@ namespace QmMapVotes
 			return false;
 		if(StarMask != 0 && (Stars < 0 || (StarMask & (1 << Stars)) == 0))
 			return false;
+		// 类别只筛掉「判得出类别且没勾选」的服务器：Gores 的 kog 服和解析不出难度的
+		// 服务器没有类别 key，勾选难度时仍然保留，避免整个社区凭空消失。
+		if(CategoryMask != 0)
+		{
+			const int Bit = MapBrowserCategoryBit(pCategory);
+			if(Bit >= 0 && !MapBrowserCategorySelected(CategoryMask, Bit))
+				return false;
+		}
 		if(FavoritesOnly && !IsFavorite)
 			return false;
 		return true;
 	}
 
-	// 浏览器紧凑滑块的档位：0 不筛选，1 无人服务器，2-6 对应 1-5 星。
-	constexpr int MAP_BROWSER_FILTER_LEVEL_NONE = 0;
-	constexpr int MAP_BROWSER_FILTER_LEVEL_EMPTY = 1;
-	constexpr int MAP_BROWSER_FILTER_LEVEL_FIRST_STAR = 2;
-	constexpr int MAP_BROWSER_FILTER_LEVEL_LAST_STAR = 6;
-
-	// 返回 -1 代表现有配置未表达单一档位（收藏、多选或星级与空服组合）。
-	inline int MapBrowserFilterLevel(bool EmptyOnly, int StarMask)
+	// 星级掩码第 1-5 位对应 1-5 星，位 0 不使用；界面上的难度胶囊直接勾选这些位。
+	inline bool MapBrowserStarSelected(int StarMask, int Star)
 	{
-		if(StarMask == 0)
-			return EmptyOnly ? MAP_BROWSER_FILTER_LEVEL_EMPTY : MAP_BROWSER_FILTER_LEVEL_NONE;
-		if(EmptyOnly || StarMask <= 0 || (StarMask & (StarMask - 1)) != 0)
-			return -1;
-		for(int Star = 1; Star <= 5; ++Star)
-		{
-			if(StarMask == (1 << Star))
-				return Star + MAP_BROWSER_FILTER_LEVEL_FIRST_STAR - 1;
-		}
-		return -1;
+		return Star >= 1 && Star <= 5 && (StarMask & (1 << Star)) != 0;
 	}
 
-	// 档位对应的星级；不筛选与无人服务器档返回 0。
-	inline int MapBrowserFilterStars(int Level)
+	// 越界星级不改变掩码，避免非法位写进配置；点击已选中的星级即取消该位。
+	inline int ToggleMapBrowserStar(int StarMask, int Star)
 	{
-		return Level >= MAP_BROWSER_FILTER_LEVEL_FIRST_STAR && Level <= MAP_BROWSER_FILTER_LEVEL_LAST_STAR ? Level - MAP_BROWSER_FILTER_LEVEL_FIRST_STAR + 1 : 0;
-	}
-
-	inline void ApplyMapBrowserFilterLevel(int Level, int &EmptyOnly, int &StarMask)
-	{
-		// 越界档位不表达任何筛选：保持现有配置，避免把「无法用单档表达」误写成为不筛选。
-		if(Level < MAP_BROWSER_FILTER_LEVEL_NONE)
-			return;
-		EmptyOnly = Level == MAP_BROWSER_FILTER_LEVEL_EMPTY ? 1 : 0;
-		const int Stars = MapBrowserFilterStars(Level);
-		StarMask = Stars > 0 ? 1 << Stars : 0;
+		if(Star < 1 || Star > 5)
+			return StarMask;
+		return MapBrowserStarSelected(StarMask, Star) ? StarMask & ~(1 << Star) : StarMask | (1 << Star);
 	}
 }
 

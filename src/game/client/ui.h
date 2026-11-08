@@ -1370,25 +1370,6 @@ public:
 	bool DoClearableEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, int Corners = IGraphics::CORNER_ALL, const std::vector<STextColorSplit> &vColorSplits = {});
 	bool DoClearableEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, int Corners, const std::vector<STextColorSplit> &vColorSplits, const SEditBoxRenderOptions &RenderOptions);
 
-	/**
-	 * Creates an input field with a search icon and a clear [x] button attached to it.
-	 * The input will have default text "Search" and the hotkey Ctrl+F can be used to activate the input.
-	 *
-	 * @see DoEditBox
-	 *
-	 * @param pLineInput This pointer will be stored and written to on next user input.
-	 *                   So you can not pass in a pointer that goes out of scope such as a local variable.
-	 *                   Pass in either a member variable of the current class or a static variable.
-	 *                   For example ```static CLineInputBuffered<IO_MAX_PATH_LENGTH> s_MyInput;```
-	 * @param pRect the UI rect it will attach to
-	 * @param FontSize Size of the font (`10.0f`, `12.0f` and `14.0f` are commonly used here)
-	 * @param HotkeyEnabled Whether the hotkey to enable this editbox is currently enabled.
-	 *
-	 * @return true if the value of the input field changed since the last call.
-	 */
-	bool DoEditBox_Search(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, bool HotkeyEnabled);
-	bool DoEditBox_Search(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, bool HotkeyEnabled, const SEditBoxRenderOptions &RenderOptions);
-
 	int DoButton_Menu(CUIElement &UIElement, const CButtonContainer *pId, const std::function<const char *()> &GetTextLambda, const CUIRect *pRect, const SMenuButtonProperties &Props = {});
 	void DrawButton_FontIcon(const char *pText, const CUIRect *pRect, ColorRGBA Color, int Corners = IGraphics::CORNER_ALL, bool Enabled = true);
 	int DoButton_FontIcon(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, unsigned Flags, int Corners = IGraphics::CORNER_ALL, bool Enabled = true, std::optional<ColorRGBA> ButtonColor = std::nullopt);
@@ -1422,7 +1403,6 @@ public:
 		SCROLLBAR_OPTION_MULTILINE = 1 << 2,
 		SCROLLBAR_OPTION_DELAYUPDATE = 1 << 3,
 	};
-	float DoScrollbarV(const void *pId, const CUIRect *pRect, float Current);
 	void RenderScrollbarH(const void *pId, const CUIRect *pRect, float Current, const ColorRGBA *pColorInner = nullptr);
 	float DoScrollbarH(const void *pId, const CUIRect *pRect, float Current, const ColorRGBA *pColorInner = nullptr);
 	bool DoScrollbarOption(const void *pId, int *pOption, const CUIRect *pRect, const char *pStr, int Min, int Max, const IScrollbarScale *pScale = &ms_LinearScrollbarScale, unsigned Flags = 0u, const char *pSuffix = "", const char *pMaxText = nullptr);

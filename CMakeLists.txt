@@ -3342,6 +3342,8 @@ if(CLIENT)
     QmUi/QmWikiMedia.h
     QmUi/QmWikiStore.cpp
     QmUi/QmWikiStore.h
+    QmUi/MapTagsPanel.cpp
+    QmUi/MapTagsPanel.h
     QmUi/cards/QmCardCatalog.cpp
     QmUi/cards/QmCardCatalog.h
     QmUi/cards/QmCardCatalogIds.cpp
@@ -3381,7 +3383,6 @@ if(CLIENT)
     QmUi/cards/QmCardCatalogVisualContent.cpp
     QmUi/cards/QmCardCatalogFunctionContent.cpp
     QmUi/cards/QmCardCatalogTranslateContent.cpp
-    QmUi/cards/QmCardCatalogFavoriteMapsContent.cpp
     QmUi/cards/QmCardCatalogHudContent.cpp
     QmUi/cards/QmCardCatalogVoiceContent.cpp
     QmUi/cards/QmCardCatalogBackground3DContent.cpp
@@ -3578,6 +3579,8 @@ if(CLIENT)
     components/qmclient/console_text.h
     components/qmclient/streamer_word_filter.cpp
     components/qmclient/streamer_word_filter.h
+    components/qmclient/map_tags.cpp
+    components/qmclient/map_tags.h
     components/qmclient/public_word_filter.cpp
     components/qmclient/public_word_filter.h
     components/qmclient/word_filter_list.cpp
@@ -4752,7 +4755,6 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/ui/QmAnimDropdownTest.cpp
     src/test/unit/qmclient/ui/QmAnimFormsTest.cpp
     src/test/unit/qmclient/ui/QmDiscreteSliderTest.cpp
-    src/test/unit/client/map_browser_filter_slider_test.cpp
     src/test/unit/qmclient/ui/QmAnimScrollTest.cpp
     src/test/unit/qmclient/ui/QmListRowFeedbackTest.cpp
     src/test/unit/qmclient/ui/QmAnimTreeTest.cpp
@@ -4954,6 +4956,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_console_text_test.cpp
     src/test/unit/qmclient/client/qm_console_wheel_test.cpp
     src/test/unit/qmclient/client/qm_streamer_word_filter_test.cpp
+    src/test/unit/qmclient/client/qm_map_tags_test.cpp
+    src/test/integration/qmclient/client/qm_map_tags_lifecycle_test.cpp
     src/test/unit/qmclient/client/qm_public_word_filter_test.cpp
     src/test/unit/qmclient/client/qm_word_filter_list_test.cpp
     src/test/integration/qmclient/client/qm_public_word_filter_cache_test.cpp
@@ -5427,6 +5431,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/axiom_scores_data.cpp
     src/game/client/components/qmclient/friend_last_seen_data.cpp
     src/game/client/components/qmclient/streamer_word_filter.cpp
+    src/game/client/components/qmclient/map_tags.cpp
     src/game/client/components/qmclient/public_word_filter.cpp
     src/game/client/components/qmclient/word_filter_list.cpp
     src/test/support/ui_test_stubs.cpp

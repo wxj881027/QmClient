@@ -590,9 +590,6 @@ Add friends by entering their name below or by clicking their name in the player
 Add function
 == Añadir función
 
-Add Group
-== Añadir Grupo
-
 Add Item
 == Añadir Elemento
 
@@ -1126,6 +1123,9 @@ Are you sure that you want to quit?
 
 Are you sure that you want to remove '%s' from your war groups?
 == ¿Estás seguro de que quieres eliminar '%s' de tus grupos de guerra?
+
+Are you sure that you want to remove '%s' from your war list?
+== ¿Quitar «%s» de la lista de enemigos?
 
 Are you sure that you want to remove the clan '%s' from your friends list?
 == ¿Estás seguro de que quieres eliminar el clan '%s' de tu lista de amigos?
@@ -2537,9 +2537,6 @@ Click a key on the keyboard picture or under "Mouse", then add a command with "A
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
 == Haz clic en un idioma de la lista para aplicarlo al momento; la bandera de la izquierda indica el elegido.
 
-Click a map name to copy it and press the X button to remove it; add maps with the "Favorite map" checkbox in the in-game server info page.
-== Haz clic en el nombre del mapa para copiarlo y pulsa la X para quitarlo; añade mapas con la casilla «Mapa favorito» en la página de información del servidor.
-
 Click a part on the right to edit its color, blend mode and strength.
 == Haz clic en una parte a la derecha para ajustar su color, modo de mezcla e intensidad.
 
@@ -2574,9 +2571,6 @@ Click to add this community to favorites
 == Haz clic para añadir esta comunidad a favoritos
 
 Click to copy map name
-== Haz clic para copiar el nombre del mapa
-
-Click to copy the map name
 == Haz clic para copiar el nombre del mapa
 
 Click to copy this clan's name to clipboard
@@ -2719,12 +2713,6 @@ Colors and opacity of the popup list that suggests chat commands and emoticons w
 
 Colors for chat command and emoji completion
 == Colores del autocompletado de comandos y emojis del chat
-
-Colors in chat
-== Colores en el chat
-
-Colors in scoreboard
-== Colores en la tabla de puntuaciones
 
 Colors of the hook collision line, in case of a possible collision with:
 == Colores de la línea de colisión del gancho, en caso de posible colisión con:
@@ -4583,6 +4571,9 @@ Edit the name and clan fields; the dummy keeps its own values.
 Edit this custom command on the Bind Wheel page.
 == Edita este comando personalizado en la página Rueda de comandos.
 
+Edit title style
+== Editar estilo del título
+
 Edit touch controls
 == Editar controles táctiles
 
@@ -5216,6 +5207,9 @@ Entity wall outline opacity
 entity_bg (Workshop)
 == entity_bg (Workshop)
 
+Entries in it will fall back to none.
+== Sus entradas pasarán a none.
+
 Entries with NVENC, AMF, Quick Sync or VideoToolbox use the GPU encoding chip and are several times faster. Only encoders that really work on this machine are listed.
 == Las entradas con NVENC, AMF, Quick Sync o VideoToolbox usan el chip codificador de la GPU y son varias veces más rápidas. Solo aparecen los codificadores que de verdad funcionan en este equipo.
 
@@ -5593,9 +5587,6 @@ Favorite maps
 
 Favorites
 == Favoritos
-
-Favorites match the exact map name and also feed the "Favorite map" tab in the server browser.
-== Los favoritos se comparan por el nombre exacto del mapa y también alimentan la pestaña «Mapa favorito» del navegador de servidores.
 
 feat-003 dogfood: tokens + 12 widgets
 == feat-003 dogfood: tokens + 12 widgets de UI
@@ -6080,9 +6071,6 @@ Game type
 Game type (ddnet, mod)
 == Tipo de juego (ddnet, mod)
 
-Game types:
-== Tipos de juego:
-
 Game update rate (Hz)
 == Tasa de actualización del juego (Hz)
 
@@ -6382,6 +6370,9 @@ Ground jump
 
 Group name
 == Nombre del grupo
+
+Group names are limited to 16 characters
+== Los nombres de grupo admiten hasta 16 caracteres
 
 Groups input helpers: fast input, automatic margin, sub-tick aiming and cursor behavior.
 == Agrupa ayudas de entrada: entrada rápida, margen automático, puntería por subtics y comportamiento del cursor.
@@ -7760,9 +7751,6 @@ Leave empty to disable
 Leave empty to join public room
 == Dejar vacío para unirse a una sala pública
 
-Leave empty to show everyone
-== Déjalo vacío para mostrar a todos los jugadores
-
 Leave empty to use default prompt
 == Dejar vacío para usar el aviso predeterminado
 
@@ -8258,6 +8246,9 @@ Manual target
 Map
 == Mapa
 
+Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
+== Máscara de bits del filtro de categorías de dificultad del navegador de mapas (bits 0-14, ver map_vote_difficulty.h)
+
 Map browser difficulty star filter bitmask (bits 1-5)
 == Máscara de bits del filtro de estrellas de dificultad del navegador de mapas (bits 1-5)
 
@@ -8720,6 +8711,9 @@ Mix rate
 Mixed
 == Mixto
 
+Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+== Solo móvil: copiar el informe de fallos a Downloads/QmClient en el próximo inicio (0 = mantenerlo dentro del sandbox de la aplicación)
+
 Mobile spectator camera: 0=joystick pad, 1=drag the view
 == Cámara de espectador móvil: 0=joystick, 1=arrastrar la vista
 
@@ -8783,6 +8777,9 @@ Mouse speed for aiming and for menus, and how far your cursor may travel from th
 Move a friend category to a position
 == Mover una categoría de amigos a una posición
 
+Move down
+== Bajar
+
 Move left
 == Mover a la izquierda
 
@@ -8797,6 +8794,9 @@ Move the free camera, then add a keyframe at the current demo time.
 
 Move to category
 == Mover a categoría
+
+Move up
+== Subir
 
 Movement
 == Movimiento
@@ -9125,6 +9125,9 @@ New features
 New features (unread)
 == Novedades (sin leer)
 
+New group
+== Nuevo grupo
+
 New IME
 == Nuevo IME
 
@@ -9269,6 +9272,9 @@ No downloadable portable package for this version
 No empty team left.
 == No queda ningún equipo vacío.
 
+No entries yet
+== Todavía no hay entradas
+
 No favorite maps yet
 == Aún no hay mapas favoritos
 
@@ -9343,6 +9349,9 @@ No player nearby
 
 No player with this name found.
 == No se encontró ningún jugador con este nombre.
+
+No players match
+== Ningún jugador coincide
 
 No players match these filters
 == Ningún jugador coincide con estos filtros
@@ -9607,6 +9616,9 @@ On
 
 One key can hold several commands, so remove single entries under "Bound functions" instead of clearing the key.
 == Una tecla puede tener varios comandos, así que borra entradas sueltas en Funciones asignadas en vez de vaciar la tecla.
+
+Online
+== En línea
 
 Online friends
 == Amigos en línea
@@ -9937,9 +9949,6 @@ Override Entry
 
 Override Freeze Tile Entity Alpha (0-100)
 == Sobrescribir alpha de entidad para tiles congelados (0-100)
-
-Override Group
-== Sobrescribir Grupo
 
 Override location for ping estimation, available: auto, af, as, as:cn, eu, na, oc, sa (Automatic, Africa, Asia, China, Europe, North America, Oceania/Australia, South America
 == Sobrescribir la ubicación para estimar el Ping; opciones: auto, af, as, as:cn, eu, na, oc, sa (Automático, África, Asia, China, Europa, Norteamérica, Oceanía/Australia, Sudamérica)
@@ -10363,9 +10372,6 @@ Player country (ISO 3166-1 numeric code)
 
 Player country filter in server browser (ISO 3166-1 numeric)
 == Filtro de país del jugador en el navegador de servidores (numérico ISO 3166-1)
-
-Player country:
-== País del jugador:
 
 Player death
 == Muerte del jugador
@@ -11591,9 +11597,6 @@ Remove chat
 Remove friend
 == Eliminar amigo
 
-Remove from favorites
-== Eliminar de favoritos
-
 Remove from history
 == Eliminar del historial
 
@@ -11674,6 +11677,9 @@ Rename demo
 
 Rename folder
 == Renombrar carpeta
+
+Rename group
+== Renombrar grupo
 
 Rename queue
 == Cola de renombre
@@ -12044,6 +12050,9 @@ Reverse gradient colors
 Reverse IME gradient colors
 == Invertir los colores del degradado (IME)
 
+Reverse order
+== Orden inverso
+
 Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
 == Invertir el zoom al instante al pulsar la tecla opuesta (0=mantener el zoom suave original)
 
@@ -12358,9 +12367,6 @@ Scoreboard
 
 Scoreboard cursor
 == Cursor de la tabla de puntuaciones
-
-Scoreboard filter: only show players whose name or clan contains this text
-== Filtro del marcador: mostrar solo jugadores cuyo nombre o clan contenga este texto
 
 Scoreboard playtime
 == Tiempo de juego en el marcador
@@ -13082,7 +13088,7 @@ Show chat when rendering video
 Show clan above name plates
 == Mostrar Clan sobre las placas de nombre
 
-Show clan if war
+Show clan for enemies
 == Mostrar clan si hay guerra
 
 Show clan name on nameplate
@@ -13228,6 +13234,12 @@ Show enemy color in scoreboard
 
 Show enemy color in spectator menu
 == Mostrar color enemigo en el menú de espectador
+
+Show enemy colors in chat
+== Colores en el chat
+
+Show enemy colors in scoreboard
+== Colores en la tabla de puntuaciones
 
 Show enemy group players
 == Mostrar jugadores del grupo enemigo
@@ -14748,9 +14760,6 @@ Stress system (debug builds only).
 == Sistema de estrés (solo compilaciones de depuración).
 
 Strict game type filter
-== Filtro estricto de tipo de juego
-
-Strict gametype filter
 == Filtro estricto de tipo de juego
 
 Strict mode
@@ -17738,17 +17747,11 @@ Your current race time is %s
 Your current version is outdated. Please update from the QQ group.
 == Tu versión actual está desactualizada. Por favor, actualiza desde el grupo de QQ.
 
-Your favorite map manager
-== Tu gestor de mapas favorito
-
 Your favorite maps appear here
 == Tus mapas favoritos aparecen aquí
 
 Your friend %s is online and currently on map %s!
 == ¡Tu amigo %s está en línea y actualmente en el mapa %s!
-
-Your list of favorite maps, each shown with its map type, with quick copy and remove actions.
-== Tu lista de mapas favoritos, cada uno con su tipo y acciones rápidas de copiar y eliminar.
 
 Your locked team was killed because '%s' %s
 == Tu equipo bloqueado fue eliminado porque '%s' %s

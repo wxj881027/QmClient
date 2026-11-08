@@ -1190,6 +1190,8 @@ void CMenus::PrepareIngameServerInfoTextRuntime(const CUIRect *pMainView)
 	ServerInfo.VSplitMid(&ServerInfo, &GameInfo, 10.0f);
 	ServerInfo.Margin(10.0f, &ServerInfo);
 	GameInfo.Margin(10.0f, &GameInfo);
+	if(g_Config.m_QmMapTags && Motd.w >= 300.0f && Motd.h >= 180.0f)
+		Motd.VSplitLeft(Motd.w * 0.38f, &Motd, nullptr);
 	Motd.Margin(10.0f, &Motd);
 
 	CUIRect Label;
@@ -1702,6 +1704,16 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 			GameClient()->m_TClient.SetMapNote(CurrentServerInfo.m_aMap, s_MapNoteInput.GetString());
 	}
 
+	if(g_Config.m_QmMapTags && Motd.w >= 300.0f && Motd.h >= 180.0f)
+	{
+		CUIRect TagPanel;
+		Motd.VSplitLeft(Motd.w * 0.38f, &Motd, &TagPanel);
+		TagPanel.VMargin(5.0f, &TagPanel);
+		TagPanel.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_ALL, 10.0f);
+		TagPanel.Margin(10.0f, &TagPanel);
+		if(!m_MenuTextPlanCollecting)
+			m_MapTagsPanel.Render(GameClient(), TagPanel);
+	}
 	RenderServerInfoMotd(Motd);
 	m_IngameServerInfoRenderActive = PreviousServerInfoRenderActive;
 }

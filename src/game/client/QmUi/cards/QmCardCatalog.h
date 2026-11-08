@@ -34,7 +34,6 @@ namespace qm_card_catalog
 	uint64_t GeneralMeasureContentRevision();
 	uint64_t NameplateMeasureContentRevision();
 	uint64_t BlockWordsLayoutRevision();
-	uint64_t FavoriteMapsLayoutRevision(size_t Count);
 
 	// 该 stableId 是否有可构造的卡片模块（用于搜索页过滤与页面自检）。
 	bool HasCardModule(const char *pStableId);
@@ -66,7 +65,6 @@ namespace qm_card_catalog
 		uint64_t m_KeywordRulesRevision = 1;
 		size_t m_KeywordRulesCount = 0;
 		bool m_KeywordRulesHalfFilled = false;
-		uint64_t m_FavoriteMapsRevision = 1;
 	};
 
 	void FillKeywordReplyLayoutState(SQmFunctionCardLayoutState &State);
@@ -146,6 +144,8 @@ namespace qm_card_catalog
 		static bool BuildConfigFilesCard(const SQmCardBuildContext &Ctx, SSettingsCardDefinition &Out);
 		static bool BuildNameplateCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
 		static bool BuildTitleCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
+		// 聊天框里「一条消息」的样子：消息底色 + 发言人名字 + 内容。
+		static void RenderQmSponsorChatMessagePreview(CMenus *pMenus, const CUIRect &Rect, int Style, double TimeSeconds);
 		static bool BuildTeeCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
 		static bool RenderQmFunctionCheckbox(CMenus *pMenus, const void *pId, const char *pTextId, const char *pText, int *pValue, CUIRect *pRect, bool PrewarmOnly);
 		static bool RenderQmFunctionCheckboxRow(CMenus *pMenus, CUIRect &Content, float LineHeight, float LineSpacing, const void *pId, const char *pTextId, const char *pText, int *pValue, bool PrewarmOnly, const char *pTooltip = nullptr);
@@ -184,7 +184,6 @@ namespace qm_card_catalog
 		static void RenderQmFunctionKeywordReplyContent(CMenus *pMenus, CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 		static void RenderQmFunctionPieMenuContent(CMenus *pMenus, CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, float ButtonHeight, float CardPadding, float CardCornerRadius, bool PrewarmOnly);
 		static void RenderQmFunctionMapUploadContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, bool PrewarmOnly);
-		static void RenderQmFunctionFavoriteMapsContent(CMenus *pMenus, CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, bool PrewarmOnly);
 		static void RenderQmFunctionHJAssistContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 		static void RenderQmHudDummyMiniViewContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool Expanded, bool PrewarmOnly);
 		static void RenderQmHudCoordsContent(CMenus *pMenus, CUIRect &Content, const SSettingsContentMetrics &Metrics, float LabelWidth, bool PrewarmOnly);

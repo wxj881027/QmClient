@@ -527,7 +527,7 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 			}
 			Flow.Space(DDNetMetrics.m_LineSpacing);
 #if defined(CONF_FAMILY_WINDOWS)
-			Flow.Space(10.0f);
+			Flow.Space(DDNetMetrics.m_SectionGap);
 			if(Flow.Control("unregister-shell", DDNetMetrics.m_LineHeight, Button))
 			{
 				static CButtonContainer s_ButtonUnregisterShell;

@@ -590,9 +590,6 @@ Add friends by entering their name below or by clicking their name in the player
 Add function
 == İşlev ekle
 
-Add Group
-== Grup Ekle
-
 Add Item
 == Öğe Ekle
 
@@ -1126,6 +1123,9 @@ Are you sure that you want to quit?
 
 Are you sure that you want to remove '%s' from your war groups?
 == '%s' öğesini savaş gruplarınızdan kaldırmak istediğinizden emin misiniz?
+
+Are you sure that you want to remove '%s' from your war list?
+== "%s" düşman listesinden kaldırılsın mı?
 
 Are you sure that you want to remove the clan '%s' from your friends list?
 == '%s' klanını arkadaş listenizden kaldırmak istediğinize emin misiniz?
@@ -2537,9 +2537,6 @@ Click a key on the keyboard picture or under "Mouse", then add a command with "A
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
 == Listeden bir dile tıklayınca hemen uygulanır; soldaki bayrak seçili olanı gösterir.
 
-Click a map name to copy it and press the X button to remove it; add maps with the "Favorite map" checkbox in the in-game server info page.
-== Harita adına tıklayınca kopyalanır, sağdaki X düğmesi kaydı kaldırır. Ekleme için oyun içi sunucu bilgi sayfasındaki favori harita kutusunu işaretle.
-
 Click a part on the right to edit its color, blend mode and strength.
 == Rengini, karıştırma modunu ve gücünü ayarlamak için sağdaki bir parçaya tıklayın.
 
@@ -2574,9 +2571,6 @@ Click to add this community to favorites
 == Bu topluluğu favorilere eklemek için tıklayın
 
 Click to copy map name
-== Harita adını kopyalamak için tıklayın
-
-Click to copy the map name
 == Harita adını kopyalamak için tıklayın
 
 Click to copy this clan's name to clipboard
@@ -2719,12 +2713,6 @@ Colors and opacity of the popup list that suggests chat commands and emoticons w
 
 Colors for chat command and emoji completion
 == Sohbette komut ve emoji tamamlama renkleri
-
-Colors in chat
-== Sohbetteki renkler
-
-Colors in scoreboard
-== Skor tablosundaki renkler
 
 Colors of the hook collision line, in case of a possible collision with:
 == Olası çarpma durumunda kanca yardım çizgisi renkleri:
@@ -4583,6 +4571,9 @@ Edit the name and clan fields; the dummy keeps its own values.
 Edit this custom command on the Bind Wheel page.
 == Bu özel komutu Komut Çarkı sayfasında düzenleyin.
 
+Edit title style
+== Başlık stilini düzenle
+
 Edit touch controls
 == Dokunmatik kontrolleri düzenle
 
@@ -5216,6 +5207,9 @@ Entity wall outline opacity
 entity_bg (Workshop)
 == entity_bg（Workshop）
 
+Entries in it will fall back to none.
+== İçindeki kayıtlar none'a döner.
+
 Entries with NVENC, AMF, Quick Sync or VideoToolbox use the GPU encoding chip and are several times faster. Only encoders that really work on this machine are listed.
 == NVENC, AMF, Quick Sync veya VideoToolbox içeren seçenekler ekran kartının kodlama birimini kullanır ve birkaç kat hızlıdır. Listede yalnızca bu makinede gerçekten çalışan kodlayıcılar görünür.
 
@@ -5593,9 +5587,6 @@ Favorite maps
 
 Favorites
 == Favoriler
-
-Favorites match the exact map name and also feed the "Favorite map" tab in the server browser.
-== Favoriler harita adının tam eşleşmesine göre çalışır ve sunucu tarayıcısındaki favori harita sekmesini de besler.
 
 feat-003 dogfood: tokens + 12 widgets
 == feat-003 dogfood: tokenlar + 12 widget
@@ -6080,9 +6071,6 @@ Game type
 Game type (ddnet, mod)
 == Oyun türü (ddnet, mod)
 
-Game types:
-== Oyun türleri:
-
 Game update rate (Hz)
 == Oyun güncelleme hızı (Hz)
 
@@ -6382,6 +6370,9 @@ Ground jump
 
 Group name
 == Grup adı
+
+Group names are limited to 16 characters
+== Grup adları en fazla 16 karakterdir
 
 Groups input helpers: fast input, automatic margin, sub-tick aiming and cursor behavior.
 == Girdi yardımcılarını gruplar: hızlı girdi, otomatik kenar boşluğu, alt tik nişan alma ve imleç davranışı.
@@ -7760,9 +7751,6 @@ Leave empty to disable
 Leave empty to join public room
 == Genel odaya katılmak için boş bırakın
 
-Leave empty to show everyone
-== Herkesi göstermek için boş bırakın
-
 Leave empty to use default prompt
 == Varsayılan istemi kullanmak için boş bırakın
 
@@ -8258,6 +8246,9 @@ Manual target
 Map
 == Harita
 
+Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
+== Harita tarayıcısı zorluk kategori filtresi bit maskesi (bit 0-14, bkz. map_vote_difficulty.h)
+
 Map browser difficulty star filter bitmask (bits 1-5)
 == Harita tarayıcısı zorluk yıldızı filtresi bit maskesi (bitler 1-5)
 
@@ -8720,6 +8711,9 @@ Mix rate
 Mixed
 == Karışık
 
+Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+== Yalnızca mobil: çökme raporunu bir sonraki açılışta Downloads/QmClient konumuna kopyala (0 = uygulama korumalı alanında bırak)
+
 Mobile spectator camera: 0=joystick pad, 1=drag the view
 == Mobil izleyici kamerası: 0=joystick, 1=görünümü sürükle
 
@@ -8783,6 +8777,9 @@ Mouse speed for aiming and for menus, and how far your cursor may travel from th
 Move a friend category to a position
 == Arkadaş kategorisini bir konuma taşı
 
+Move down
+== Aşağı taşı
+
 Move left
 == Sola hareket et
 
@@ -8797,6 +8794,9 @@ Move the free camera, then add a keyframe at the current demo time.
 
 Move to category
 == Kategoriye taşı
+
+Move up
+== Yukarı taşı
 
 Movement
 == Hareket
@@ -9125,6 +9125,9 @@ New features
 New features (unread)
 == Yeni özellikler (okunmadı)
 
+New group
+== Yeni grup
+
 New IME
 == Yeni IME
 
@@ -9269,6 +9272,9 @@ No downloadable portable package for this version
 No empty team left.
 == Boş takım kalmadı.
 
+No entries yet
+== Henüz kayıt yok
+
 No favorite maps yet
 == Henüz favori harita yok
 
@@ -9343,6 +9349,9 @@ No player nearby
 
 No player with this name found.
 == Bu isimde bir oyuncu bulunamadı.
+
+No players match
+== Eşleşen oyuncu yok
 
 No players match these filters
 == Bu filtrelere uyan oyuncu yok
@@ -9607,6 +9616,9 @@ On
 
 One key can hold several commands, so remove single entries under "Bound functions" instead of clearing the key.
 == Bir tuş birden çok komut taşıyabilir; tuşu tümden temizlemek yerine Atanmış işlevler altından tek tek sil.
+
+Online
+== Çevrimiçi
 
 Online friends
 == Çevrimiçi arkadaşlar
@@ -9937,9 +9949,6 @@ Override Entry
 
 Override Freeze Tile Entity Alpha (0-100)
 == Donma Bloklarının Varlık Alfa Değerini Geçersiz Kıl (0-100)
-
-Override Group
-== Grubu Geçersiz Kıl
 
 Override location for ping estimation, available: auto, af, as, as:cn, eu, na, oc, sa (Automatic, Africa, Asia, China, Europe, North America, Oceania/Australia, South America
 == Ping tahmini konumunu geçersiz kıl; seçenekler: auto, af, as, as:cn, eu, na, oc, sa (Otomatik, Afrika, Asya, Çin, Avrupa, Kuzey Amerika, Okyanusya/Avustralya, Güney Amerika)
@@ -10363,9 +10372,6 @@ Player country (ISO 3166-1 numeric code)
 
 Player country filter in server browser (ISO 3166-1 numeric)
 == Sunucu tarayıcısında oyuncu ülke filtresi (ISO 3166-1 sayısal)
-
-Player country:
-== Oyuncu ülkesi:
 
 Player death
 == Oyuncu ölümü
@@ -11591,9 +11597,6 @@ Remove chat
 Remove friend
 == Arkadaşı kaldır
 
-Remove from favorites
-== Favorilerden kaldır
-
 Remove from history
 == Geçmişten kaldır
 
@@ -11674,6 +11677,9 @@ Rename demo
 
 Rename folder
 == Klasörü yeniden adlandır
+
+Rename group
+== Grubu yeniden adlandır
 
 Rename queue
 == Sırayı yeniden adlandır
@@ -12044,6 +12050,9 @@ Reverse gradient colors
 Reverse IME gradient colors
 == Gradyan renklerini ters çevir (IME)
 
+Reverse order
+== Ters sıra
+
 Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
 == Karşı zoom tuşuna basınca yönü anında çevir (0=özgün yumuşak zoom korunur)
 
@@ -12358,9 +12367,6 @@ Scoreboard
 
 Scoreboard cursor
 == Skor tablosu imleci
-
-Scoreboard filter: only show players whose name or clan contains this text
-== Skor tablosu filtresi: adı veya klanı bu metni içeren oyuncuları göster
 
 Scoreboard playtime
 == Skor tablosunda oyun süresi
@@ -13082,7 +13088,7 @@ Show chat when rendering video
 Show clan above name plates
 == İsim plakalarının üstünde klanı göster
 
-Show clan if war
+Show clan for enemies
 == Savaş varsa klanı göster
 
 Show clan name on nameplate
@@ -13228,6 +13234,12 @@ Show enemy color in scoreboard
 
 Show enemy color in spectator menu
 == Seyirci menüsünde düşman rengini göster
+
+Show enemy colors in chat
+== Sohbetteki renkler
+
+Show enemy colors in scoreboard
+== Skor tablosundaki renkler
 
 Show enemy group players
 == Düşman grubu oyuncularını göster
@@ -14748,9 +14760,6 @@ Stress system (debug builds only).
 == Stres sistemi (yalnızca hata ayıklama yapıları).
 
 Strict game type filter
-== Katı oyun türü filtresi
-
-Strict gametype filter
 == Katı oyun türü filtresi
 
 Strict mode
@@ -17738,17 +17747,11 @@ Your current race time is %s
 Your current version is outdated. Please update from the QQ group.
 == Mevcut sürümünüz güncel değil. Lütfen QQ grubundan en son sürümü güncelleyin.
 
-Your favorite map manager
-== En sevdiğiniz harita yöneticiniz
-
 Your favorite maps appear here
 == Favori haritalarınız burada görünür
 
 Your friend %s is online and currently on map %s!
 == Arkadaşınız %s çevrimiçi ve şu anda %s haritasında!
-
-Your list of favorite maps, each shown with its map type, with quick copy and remove actions.
-== Favori haritalarının listesi; her biri türüyle gösterilir ve hızlıca kopyalanıp kaldırılabilir.
 
 Your locked team was killed because '%s' %s
 == Kilitli takımınız '%s' %s olduğu için öldürüldü

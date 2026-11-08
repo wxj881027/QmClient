@@ -9,6 +9,8 @@
 #include <engine/shared/config.h>
 #include <engine/textrender.h>
 
+#include <game/client/QmUi/SettingsCardMotion.h>
+#include <game/client/components/qmclient/voice/voice_utils.h>
 #include <game/client/gameclient.h>
 
 #include <algorithm>
@@ -239,7 +241,29 @@ void CVoiceComponent::OnRender()
 	{
 		m_Voice.Shutdown();
 		m_OverlayState.Reset();
+		// 关掉之后丢掉冷启动门：下次再启用时重新按当时的卡片动画状态判定。
+		m_ColdStartReleased = false;
+		m_ColdStartDeadline = 0;
 		return;
+	}
+
+	// 卡片展开/折叠动画期间不要同时冷启动语音运行时。展开那几帧本来就要重新声明行、
+	// 重新测量并新建文本缓存，再把 SDL 音频子系统、设备枚举和工作线程压进去，掉帧会叠加。
+	// 只推迟第一次启动；已经在跑的会话不等动画。动画标记异常时按上限兜底放行。
+	if(!m_ColdStartReleased)
+	{
+		const bool DeadlineExpired = m_ColdStartDeadline != 0 && time_get() >= m_ColdStartDeadline;
+		if(VoiceUtils::VoiceShouldDeferColdStart(qm_settings_motion::IsCardAnimationActive(), DeadlineExpired))
+		{
+			if(m_ColdStartDeadline == 0)
+			{
+				m_ColdStartDeadline = time_get() + (int64_t)time_freq() * VoiceUtils::VOICE_COLD_START_MAX_DEFER_MS / 1000;
+				log_info("voice", "deferring runtime start until the settings card animation settles");
+			}
+			return;
+		}
+		m_ColdStartReleased = true;
+		m_ColdStartDeadline = 0;
 	}
 
 	m_Voice.OnFrame();

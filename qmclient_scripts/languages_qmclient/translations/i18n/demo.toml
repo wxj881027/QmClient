@@ -3224,7 +3224,7 @@ polish = "Tylko demo"
 [[message]]
 key = "Hide the in-game HUD, chat and spectator overlays while recording. Camera switching still works."
 [message.translations]
-simplified_chinese = "录制时隐藏游戏内 HUD、聊天和旁观信息；切换相机仍然可用。"
+simplified_chinese = "录制时隐藏游戏内 HUD、聊天框和旁观信息；切换相机仍然可用。"
 traditional_chinese = "錄製時隱藏遊戲內 HUD、聊天與旁觀資訊；切換相機仍可使用。"
 japanese = "録画中はゲーム内 HUD、チャット、観戦情報を非表示にします。カメラ切り替えは引き続き使用できます。"
 korean = "녹화 중 게임 내 HUD, 채팅, 관전 정보를 숨깁니다. 카메라 전환은 계속 사용할 수 있습니다."

@@ -529,11 +529,6 @@ key = "Make press event"
 simplified_chinese = "设为按下事件"
 
 [[message]]
-key = "Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)"
-[message.translations]
-simplified_chinese = "仅移动端：下次启动时把崩溃报告复制到 Downloads/QmClient（0 = 保留在应用沙盒内）"
-
-[[message]]
 key = "Needs cfg file - copy only"
 [message.translations]
 simplified_chinese = "需要 cfg 文件 — 仅可复制"

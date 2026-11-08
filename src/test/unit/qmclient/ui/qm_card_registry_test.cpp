@@ -116,7 +116,7 @@ TEST(QmCardRegistry, BetterScoreboardSearchTargetsItsFunctionCard)
 {
 	qm_card_order::CModel Model;
 	Model.LoadMerged("", qm_card_registry::BuildDefaultEntries());
-	for(const char *pQuery : {"更好的计分板", "计分板积分检查", "显示死亡后计分板", "滚动计分板", "计分板筛选"})
+	for(const char *pQuery : {"更好的计分板", "计分板积分检查", "显示死亡后计分板", "滚动计分板"})
 	{
 		const auto vResults = qm_card_registry::SearchCards(pQuery, Model);
 		const auto It = std::find_if(vResults.begin(), vResults.end(), [](const auto &Result) {

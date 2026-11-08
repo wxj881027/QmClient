@@ -114,6 +114,7 @@ MACRO_CONFIG_INT(QmUiPopupOpacity, qm_ui_popup_opacity, 20, 0, 100, CFGFLAG_CLIE
 MACRO_CONFIG_INT(QmMapBrowserEmptyOnly, qm_map_browser_empty_only, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Map browser: show empty servers only")
 MACRO_CONFIG_INT(QmMapBrowserFavoriteOnly, qm_map_browser_favorite_only, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Map browser: show favorite maps only")
 MACRO_CONFIG_INT(QmMapBrowserStarMask, qm_map_browser_star_mask, 0, 0, 62, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Map browser difficulty star filter bitmask (bits 1-5)")
+MACRO_CONFIG_INT(QmMapBrowserCategoryMask, qm_map_browser_category_mask, 0, 0, 32767, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)")
 // 留空沿用原目录；自定义路径只影响之后开始保存的文件。
 MACRO_CONFIG_STR(QmDemoDirectory, qm_demo_directory, 512, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Demo directory")
 MACRO_CONFIG_STR(QmVideoDirectory, qm_video_directory, 512, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Video directory")
@@ -233,8 +234,8 @@ MACRO_CONFIG_INT(QmScoreboardPlaytime, qm_scoreboard_playtime, 0, 0, 1, CFGFLAG_
 MACRO_CONFIG_INT(QmScoreboardSortMode, qm_scoreboard_sort_mode, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Scoreboard sort mode (0=Score, 1=Points)")
 MACRO_CONFIG_INT(QmScoreboardOnDeath, qm_scoreboard_on_death, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show scoreboard after death")
 MACRO_CONFIG_INT(QmScoreboardScroll, qm_scoreboard_scroll, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Fixed-size scoreboard rows with mouse wheel scrolling for crowded servers")
-MACRO_CONFIG_STR(QmScoreboardFilter, qm_scoreboard_filter, 32, "", CFGFLAG_CLIENT, "Scoreboard filter: only show players whose name or clan contains this text")
 MACRO_CONFIG_INT(QmBetterScoreboard, qm_better_scoreboard, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable enhanced scoreboard presentation")
+MACRO_CONFIG_INT(QmMapTags, qm_map_tags, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show community map tags in server information")
 MACRO_CONFIG_INT(QmHideJoinServerInfo, qm_hide_join_server_info, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Do not auto-show server info on entering map")
 
 // Chat / 聊天

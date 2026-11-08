@@ -106,6 +106,12 @@ void CListBox::DoStart(float RowHeight, int NumItems, int ItemsPerRow, int RowsP
 	m_ListBoxItemSelected = false;
 	const int64_t Now = time_get();
 	const int64_t Frequency = maximum<int64_t>(1, time_freq());
+	// 只有在「上一帧没画过」（切页、关闭后重开）时才算重新出现：连续渲染不重复滚动，
+	// 避免用户刚滚走就被拉回去。此前只在首次渲染滚一次，重开面板常停在错误位置。
+	// 250ms 阈值：单帧卡顿也会超过 50ms，50ms 会把连续渲染误判成重新出现。
+	if(m_LastDrawTime != 0 && Now - m_LastDrawTime > Frequency / 4 && SelectedIndex >= 0)
+		m_ListBoxUpdateScroll = true;
+	m_LastDrawTime = Now;
 	const bool EntryAnimationEnabled = g_Config.m_QmUiListEntryAnimations != 0 && g_Config.m_QmUiMotionLevel > 0;
 	// F1 后台仍显示同一列表；只有纯测量不参与可见动画生命周期。
 	const EQmListEntryRenderPass AnimationPass = Ui()->MeasurementOnly()  ? EQmListEntryRenderPass::MEASUREMENT :

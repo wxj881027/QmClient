@@ -178,27 +178,34 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientConfigsCard(const qm_card_
 	static int s_TcUiTagMisc = 0;
 
 	ChangesCount = s_StagedInts.size() + s_StagedStrs.size() + s_StagedCols.size();
-	auto RenderActions = [&](CUIRect ApplyBar) {
+	// 顶部工具行的「应用更改 / 清除更改 / 更改数」整组：测量与渲染共用同一份按钮文字宽度缓存。
+	static ui_widget::SSettingsActionGroupState s_ConfigActions;
+	const char *apConfigActionLabels[] = {Localize("Apply Changes"), Localize("Clear Changes")};
+	// 按整行宽度量出动作组的自然尺寸：按钮按内容取宽，只有极窄行才会被压缩。
+	auto MeasureConfigActions = [&](const float RowWidth) {
+		const CUIRect Reference{0.0f, 0.0f, std::max(0.0f, RowWidth), ConfigMetrics.m_LineHeight};
+		return ui_widget::PrepareSettingsActionGroup(*Ui(), s_ConfigActions, Reference, apConfigActionLabels, 2, ConfigMetrics, ESettingsActionGroupWidth::CONTENT);
+	};
+	// 计数文本与动作按钮同字号，宽度参与工具行的右对齐测量；右侧留一个间距单位收尾，
+	// 避免字体取整把最后一位数字省略成省略号。
+	auto MeasureChangesCounter = [&]() {
+		char aBuf[64];
+		str_format(aBuf, sizeof(aBuf), Localize("Changes: %d"), (int)ChangesCount);
+		return TextRender()->TextWidth(ConfigMetrics.m_BodySize, aBuf) + ui_token::spacing::XS;
+	};
+	auto RenderActions = [&](const CUIRect &Actions) {
 		CPerfTimer ActionsTimer;
-		CUIRect Row = ApplyBar;
-		Row.HMargin(MarginSmall, &Row);
-		Row.h = LineSize;
-		Row.y = ApplyBar.y + (ApplyBar.h - LineSize) / 2.0f;
-
 		CUIRect ApplyBtn, ClearBtn, Counter;
-		static ui_widget::SSettingsActionGroupState s_ConfigActions;
-		const char *apActionLabels[] = {Localize("Apply Changes"), Localize("Clear Changes")};
-		CUIRect Actions = Row;
-		Actions.w = std::max(0.0f, Row.w - ResolveSettingsCardLabelWidth(Row.w, ConfigMetrics) - ConfigMetrics.m_LineSpacing);
-		const auto ActionLayout = ui_widget::PrepareSettingsActionGroup(*Ui(), s_ConfigActions, Actions, apActionLabels, 2, ConfigMetrics, ESettingsActionGroupWidth::CONTENT);
+		const auto ActionLayout = ui_widget::PrepareSettingsActionGroup(*Ui(), s_ConfigActions, Actions, apConfigActionLabels, 2, ConfigMetrics, ESettingsActionGroupWidth::CONTENT);
 		ApplyBtn = ActionLayout.m_aButtons[0];
 		ClearBtn = ActionLayout.m_aButtons[1];
-		const float CounterX = std::min(Row.x + std::max(0.0f, Row.w), ClearBtn.x + ClearBtn.w + ConfigMetrics.m_LineSpacing);
-		Counter = {CounterX, Row.y, std::max(0.0f, Row.x + Row.w - CounterX), Row.h};
+		// 计数文本紧跟两颗按钮，占满动作区剩余宽度，整组因此贴住工具行右边缘。
+		const float CounterX = ClearBtn.x + ClearBtn.w + ConfigMetrics.m_LineSpacing;
+		Counter = {CounterX, Actions.y, std::max(0.0f, Actions.x + Actions.w - CounterX), Actions.h};
 
 		static CButtonContainer s_ApplyBtn, s_ClearBtn;
 		int DisabledStyle = ChangesCount > 0 ? 0 : -1;
-		const bool ApplyClicked = DoTClientSettingsButton_Menu(&s_ApplyBtn, "tclient-config-apply-changes", Localize("Apply Changes"), DisabledStyle, &ApplyBtn);
+		const bool ApplyClicked = DoTClientSettingsButton_Menu(&s_ApplyBtn, "tclient-config-apply-changes", apConfigActionLabels[0], DisabledStyle, &ApplyBtn);
 		if(ChangesCount > 0 && ApplyClicked)
 		{
 			for(const SConfigVariable *pVar : SortStagedKeys(s_StagedInts))
@@ -231,7 +238,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientConfigsCard(const qm_card_
 			}
 			ClearStagedAndCaches();
 		}
-		const bool ClearClicked = DoTClientSettingsButton_Menu(&s_ClearBtn, "tclient-config-clear-changes", Localize("Clear Changes"), DisabledStyle, &ClearBtn);
+		const bool ClearClicked = DoTClientSettingsButton_Menu(&s_ClearBtn, "tclient-config-clear-changes", apConfigActionLabels[1], DisabledStyle, &ClearBtn);
 		if(ChangesCount > 0 && ClearClicked)
 		{
 			ClearStagedAndCaches();
@@ -239,57 +246,73 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientConfigsCard(const qm_card_
 
 		char aBuf[64];
 		str_format(aBuf, sizeof(aBuf), Localize("Changes: %d"), (int)ChangesCount);
-		DoTClientLabel(Ui(), &Counter, aBuf, TCLIENT_BODY_FONT_SIZE, TEXTALIGN_ML);
+		DoTClientLabel(Ui(), &Counter, aBuf, ConfigMetrics.m_BodySize, TEXTALIGN_ML);
 		LogTClientPerfStageEx("tclient_configs", "actions", ETClientSettingsPerfStage::INTERACTIVE_LAYER, ActionsTimer.ElapsedMs(), false, aBuf);
 	};
 
+	// 顶部工具行：搜索框在左，应用/清除/更改数整组贴右；行高与行内间距全部取自内容 metrics。
+	auto RenderToolbarRow = [&](CUIRect Row) {
+		const auto ActionsMeasure = MeasureConfigActions(Row.w);
+		float ActionsWidth = 0.0f;
+		if(ActionsMeasure.m_Count > 0)
+		{
+			const CUIRect &LastAction = ActionsMeasure.m_aButtons[ActionsMeasure.m_Count - 1];
+			ActionsWidth = LastAction.x + LastAction.w + ConfigMetrics.m_LineSpacing + MeasureChangesCounter();
+		}
+		// 窄行优先保住搜索区的标签列与控件下限，动作组随之压缩，两段不会互相挤压。
+		const float SearchMinimum = ResolveSettingsInlineRowMinimumWidth(ConfigMetrics.m_LabelWidth + 2.0f * ConfigMetrics.m_ButtonHeight, ConfigMetrics.m_SectionGap, 1);
+		ActionsWidth = std::clamp(ActionsWidth, 0.0f, std::max(0.0f, Row.w - SearchMinimum - ConfigMetrics.m_LineSpacing));
+		const CUIRect SearchArea{Row.x, Row.y, std::max(0.0f, Row.w - ActionsWidth - ConfigMetrics.m_LineSpacing), Row.h};
+		const CUIRect Actions{SearchArea.x + SearchArea.w + ConfigMetrics.m_LineSpacing, Row.y, ActionsWidth, Row.h};
+		CUIRect SearchLabel, SearchEdit;
+		SplitSettingsControlRow(SearchArea, ConfigMetrics, &SearchLabel, &SearchEdit);
+		DoSettingsMenuLabel(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, nullptr, &SearchLabel, Localize("Search"), FontSize, TEXTALIGN_ML);
+		IUiContext TClientConfigSearchCtx;
+		TClientConfigSearchCtx.m_pUi = Ui();
+		TClientConfigSearchCtx.m_pAnim = &GameClient()->UiRuntimeV2()->AnimRuntime();
+		TClientConfigSearchCtx.m_pTree = &GameClient()->UiRuntimeV2()->Tree();
+		TClientConfigSearchCtx.m_ScopeHash = MakeUiScopeHash("settings_tclient_config_search");
+		TClientConfigSearchCtx.m_FrameDt = GameClient()->UiRuntimeV2()->FrameDt();
+		ui_widget::InputField(TClientConfigSearchCtx, &s_SearchInput, SearchEdit, EditBoxFontSize, !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive());
+		RenderActions(Actions);
+	};
 	auto RenderFilters = [&](CUIRect &Content) {
 		CSettingsContentLayoutFlow Flow(Content);
-		auto RenderSearch = [&](CUIRect Row) {
-			CUIRect SearchLabel, SearchEdit;
-			SplitSettingsControlRow(Row, ConfigMetrics, &SearchLabel, &SearchEdit);
-			DoSettingsMenuLabel(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, nullptr, &SearchLabel, Localize("Search"), FontSize, TEXTALIGN_ML);
-			IUiContext TClientConfigSearchCtx;
-			TClientConfigSearchCtx.m_pUi = Ui();
-			TClientConfigSearchCtx.m_pAnim = &GameClient()->UiRuntimeV2()->AnimRuntime();
-			TClientConfigSearchCtx.m_pTree = &GameClient()->UiRuntimeV2()->Tree();
-			TClientConfigSearchCtx.m_ScopeHash = MakeUiScopeHash("settings_tclient_config_search");
-			TClientConfigSearchCtx.m_FrameDt = GameClient()->UiRuntimeV2()->FrameDt();
-			ui_widget::InputField(TClientConfigSearchCtx, &s_SearchInput, SearchEdit, EditBoxFontSize, !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive());
+		// 复用服务器筛选面板的写法：短筛选按钮左侧带圆形勾选指示，一排横看完。
+		const auto FilterEntry = [](int *pValue, const char *pTextId) {
+			SSettingsToggleEntry Result{pValue, pTextId, Localize(pTextId)};
+			Result.m_ShowCheckmark = true;
+			return Result;
 		};
-		CUIRect SearchRow;
-		if(Flow.Control("tclient-config-search", LineSize, SearchRow, MarginSmall))
-			RenderSearch(SearchRow);
-		DoSettingsToggleGroup(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, Content,
+		DoSettingsToggleButtonGroup(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, Content,
 			{
-				{&g_Config.m_QmUiShowDDNet, "DDNet", Localize("DDNet")},
-				{&g_Config.m_QmUiShowTClient, "TClient", Localize("TClient")},
-				{&g_Config.m_QmUiShowQm, "QmClient", Localize("QmClient")},
+				// TClient 的配置项已迁到「栖梦」配置名下，这一项筛选项不再保留；配置变量本身不动。
+				FilterEntry(&g_Config.m_QmUiShowDDNet, "DDNet"),
+				FilterEntry(&g_Config.m_QmUiShowQm, "QmClient"),
+				FilterEntry(&g_Config.m_QmUiCompactList, "Compact"),
+				FilterEntry(&g_Config.m_QmUiOnlyModified, "Modified"),
 			},
 			ConfigMetrics, Flow.Input() && !ReadOnly);
-		DoSettingsToggleGroup(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, Content,
+		DoSettingsToggleButtonGroup(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, Content,
 			{
-				{&g_Config.m_QmUiCompactList, "Compact", Localize("Compact")},
-				{&g_Config.m_QmUiOnlyModified, "Modified", Localize("Modified")},
-			},
-			ConfigMetrics, Flow.Input() && !ReadOnly);
-		DoSettingsToggleGroup(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, Content,
-			{
-				{&s_TcUiTagVisual, "Visual", Localize("Visual")},
-				{&s_TcUiTagHud, "HUD", Localize("HUD")},
-				{&s_TcUiTagInput, "Input", Localize("Input")},
-				{&s_TcUiTagChat, "Chat", Localize("Chat")},
-				{&s_TcUiTagAudio, "Audio", Localize("Audio")},
-				{&s_TcUiTagAutomation, "Auto", Localize("Auto")},
-				{&s_TcUiTagSocial, "Social", Localize("Social")},
-				{&s_TcUiTagCamera, "Camera", Localize("Camera")},
-				{&s_TcUiTagGameplay, "Gameplay", Localize("Gameplay")},
-				{&s_TcUiTagMisc, "Misc", Localize("Misc")},
+				FilterEntry(&s_TcUiTagVisual, "Visual"),
+				FilterEntry(&s_TcUiTagHud, "HUD"),
+				FilterEntry(&s_TcUiTagInput, "Input"),
+				FilterEntry(&s_TcUiTagChat, "Chat"),
+				FilterEntry(&s_TcUiTagAudio, "Audio"),
+				FilterEntry(&s_TcUiTagAutomation, "Auto"),
+				FilterEntry(&s_TcUiTagSocial, "Social"),
+				FilterEntry(&s_TcUiTagCamera, "Camera"),
+				FilterEntry(&s_TcUiTagGameplay, "Gameplay"),
+				FilterEntry(&s_TcUiTagMisc, "Misc"),
 			},
 			ConfigMetrics, Flow.Input() && !ReadOnly);
 	};
 
 	auto RenderList = [&](CUIRect ListArea) {
+		// 行内留白与标签缩进都从内容 metrics 派生：行距一个单位，标签缩进两个单位。
+		const float RowInset = ConfigMetrics.m_LineSpacing;
+		const float LabelIndent = 2.0f * ConfigMetrics.m_LineSpacing;
 		const int FlagMask = CFGFLAG_CLIENT;
 		auto BuildConfigTagMask = [](const char *pScriptName) {
 			unsigned int Mask = 0;
@@ -505,7 +528,8 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientConfigsCard(const qm_card_
 		ScrollOffset = ScrollFrame.m_BeginOffset;
 
 		ListArea.y += ScrollOffset.y;
-		ListArea.VSplitRight(5.0f, &ListArea, nullptr);
+		// 右侧留出与行距同宽的空带，列表不贴到滚动条上。
+		ListArea.VSplitRight(RowInset, &ListArea, nullptr);
 		CUIRect Content = ListArea;
 
 		auto SourceName = [](EConfigSource Source) {
@@ -548,7 +572,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientConfigsCard(const qm_card_
 			RowItem.Draw(Modified ? BgModified : BgNormal, IGraphics::CORNER_ALL, ui_token::radius::BASE);
 
 			CUIRect RowContent;
-			RowItem.Margin(5.0f, &RowContent);
+			RowItem.Margin(RowInset, &RowContent);
 
 			CUIRect TopLine, Below;
 			IUiContext TClientConfigTextInputCtx;
@@ -578,7 +602,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientConfigsCard(const qm_card_
 			}
 			else
 				TopLine.VSplitRight(std::clamp(TopLine.w * 0.46f, 170.0f, 320.0f), &NameLine, &Right);
-			NameLine.VSplitLeft(std::min(10.0f, NameLine.w), nullptr, &NameLine);
+			NameLine.VSplitLeft(std::min(LabelIndent, NameLine.w), nullptr, &NameLine);
 
 			Ui()->DoLabel(&NameLine, pVar->m_pScriptName, FontSize, TEXTALIGN_ML);
 
@@ -595,7 +619,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientConfigsCard(const qm_card_
 				CUIRect Help;
 				Below.HSplitTop(ConfigRowMetrics.m_HelpGap, nullptr, &Below);
 				Help = Below;
-				Help.VSplitLeft(10.0f, nullptr, &Help);
+				Help.VSplitLeft(LabelIndent, nullptr, &Help);
 				const std::string LocalizedHelp = BuildLocalizedConfigHelpText(pVar);
 				Ui()->DoLabel(&Help, LocalizedHelp.c_str(), ConfigHelpHeight, TEXTALIGN_ML);
 			}
@@ -717,7 +741,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientConfigsCard(const qm_card_
 				ColorRect.x = Controls.x;
 				ColorRect.h = ColorPickerLineSize;
 				ColorRect.y = Right.y + (Right.h - ColorPickerLineSize) / 2.0f;
-				ColorRect.w = ColorPickerLineSize + 8.0f + 60.0f;
+				ColorRect.w = ColorPickerLineSize + ui_token::spacing::SM + 60.0f;
 				const ColorRGBA DefaultColor = color_cast<ColorRGBA>(ColorHSLA(pCol->m_Default, true).UnclampLighting(pCol->m_DarkestLighting));
 				static std::unordered_map<const SConfigVariable *, CButtonContainer> s_ColorResetIds;
 				CButtonContainer &ResetId = s_ColorResetIds[pVar];
@@ -753,7 +777,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientConfigsCard(const qm_card_
 			}
 		}
 
-		CUIRect EndPad{Content.x, Content.y, Content.w, 5.0f};
+		CUIRect EndPad{Content.x, Content.y, Content.w, RowInset};
 		FinishSettingsScrollRegion(ConfigListScrollRegion, ScrollFrame, &EndPad);
 		PrevConfigsScrollY = ScrollFrame.m_FinalOffsetY;
 		char aExtra[96];
@@ -761,7 +785,6 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientConfigsCard(const qm_card_
 		LogTClientPerfStageEx("tclient_configs", "list", ETClientSettingsPerfStage::STATIC_LAYER, ListTimer.ElapsedMs(), false, aExtra);
 	};
 
-	const float SectionGap = MarginSmall * 2.0f;
 	const auto ConfigListViewportHeightForWidth = [ConfigMetrics](float ContentWidth) {
 		const float ConfigInlineMinWidth = ResolveSettingsInlineRowMinimumWidth(ConfigMetrics.m_LabelWidth + 2.0f * ConfigMetrics.m_ButtonHeight, ConfigMetrics.m_SectionGap, 1);
 		const bool StackedRows = ContentWidth < ConfigInlineMinWidth;
@@ -772,17 +795,15 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientConfigsCard(const qm_card_
 	const auto RenderConfigCard = [&](CUIRect &Content) {
 		CSettingsContentLayoutFlow Flow(Content);
 		CUIRect Row;
-		if(Flow.Control("tclient-config-changes-heading", HeadlineHeight, Row))
-			DoSettingsMenuLabel(g_Config.m_UiSettingsPage, m_TClientSettingsTab, -1, "tclient-config-changes-heading", &Row, Localize("Config Changes"), HeadlineFontSize, TEXTALIGN_ML);
-		Flow.Space(MarginSmall);
-		if(Flow.Control("tclient-config-actions", LineSize, Row))
-			RenderActions(Row);
-		Flow.Space(SectionGap);
-		if(Flow.Control("tclient-config-filters-heading", HeadlineHeight, Row))
-			DoSettingsMenuLabel(g_Config.m_UiSettingsPage, m_TClientSettingsTab, -1, "tclient-config-filters-heading", &Row, Localize("Config Filters"), HeadlineFontSize, TEXTALIGN_ML);
-		Flow.Space(MarginSmall);
+		// 整页从上到下只有三块：工具行（搜索 + 应用/清除/更改数）、筛选按钮组、配置项列表。
+		// 小节标题不再渲染，块与块之间的间距统一取内容 metrics 的区块间距。
+		if(Flow.Control("tclient-config-toolbar", ConfigMetrics.m_LineHeight, Row))
+			RenderToolbarRow(Row);
+		Flow.Space(ConfigMetrics.m_SectionGap);
 		RenderFilters(Content);
-		Flow.Space(SectionGap);
+		// 筛选按钮组的最后一排自带一个行距，这里只补到区块间距的量，
+		// 让「工具行 → 筛选组」和「筛选组 → 列表」两处间距在视觉上一致。
+		Flow.Space(ConfigMetrics.m_SectionGap - ConfigMetrics.m_LineSpacing);
 		if(Flow.Control("tclient-config-list", ConfigListViewportHeightForWidth(Content.w), Row))
 			RenderList(Row);
 	};

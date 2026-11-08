@@ -24,5 +24,4 @@
 
 ## 相关
 
-- [收藏地图](qm:favorite_maps)
 - [控制台](qm:console)

@@ -165,11 +165,6 @@ void qm_card_catalog::QmCardRenderHook::RenderQmFunctionMapUploadContent(CMenus 
 	pMenus->RenderQmFunctionMapUploadContent(Content, LineHeight, BodySize, LineSpacing, ResolvePrewarmOnly(pMenus->Ui(), PrewarmOnly));
 }
 
-void qm_card_catalog::QmCardRenderHook::RenderQmFunctionFavoriteMapsContent(CMenus *pMenus, CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, bool PrewarmOnly)
-{
-	pMenus->RenderQmFunctionFavoriteMapsContent(Content, UiScale, LineHeight, BodySize, LineSpacing, ResolvePrewarmOnly(pMenus->Ui(), PrewarmOnly));
-}
-
 void qm_card_catalog::QmCardRenderHook::RenderQmFunctionHJAssistContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
 {
 	pMenus->RenderQmFunctionHJAssistContent(Content, LineHeight, BodySize, LineSpacing, LabelWidth, ResolvePrewarmOnly(pMenus->Ui(), PrewarmOnly));

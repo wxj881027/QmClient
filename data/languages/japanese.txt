@@ -590,9 +590,6 @@ Add friends by entering their name below or by clicking their name in the player
 Add function
 == 機能を追加
 
-Add Group
-== グループを追加
-
 Add Item
 == アイテムを追加
 
@@ -1126,6 +1123,9 @@ Are you sure that you want to quit?
 
 Are you sure that you want to remove '%s' from your war groups?
 == 本当に敵対グループから '%s' を削除しますか？
+
+Are you sure that you want to remove '%s' from your war list?
+== 「%s」を敵対リストから削除してもよいですか？
 
 Are you sure that you want to remove the clan '%s' from your friends list?
 == フレンドリストからクラン '%s' を削除してもよろしいですか？
@@ -2537,9 +2537,6 @@ Click a key on the keyboard picture or under "Mouse", then add a command with "A
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
 == 一覧で言語をクリックするとすぐに反映されます。左側の国旗が現在の選択を示します。
 
-Click a map name to copy it and press the X button to remove it; add maps with the "Favorite map" checkbox in the in-game server info page.
-== マップ名をクリックするとコピーでき、右側のXボタンで削除できます。追加はゲーム内のサーバー情報ページでお気に入りマップにチェックを入れます。
-
 Click a part on the right to edit its color, blend mode and strength.
 == 右側のパーツをクリックして、色、ブレンドモード、強度を調整します。
 
@@ -2574,9 +2571,6 @@ Click to add this community to favorites
 == クリックしてこのコミュニティをお気に入りに追加
 
 Click to copy map name
-== クリックしてマップ名をコピー
-
-Click to copy the map name
 == クリックしてマップ名をコピー
 
 Click to copy this clan's name to clipboard
@@ -2719,12 +2713,6 @@ Colors and opacity of the popup list that suggests chat commands and emoticons w
 
 Colors for chat command and emoji completion
 == チャットのコマンド・絵文字補完の配色
-
-Colors in chat
-== チャット内の色
-
-Colors in scoreboard
-== スコアボード内の色
 
 Colors of the hook collision line, in case of a possible collision with:
 == フック補助線の色（以下の対象と衝突する可能性がある場合）：
@@ -4583,6 +4571,9 @@ Edit the name and clan fields; the dummy keeps its own values.
 Edit this custom command on the Bind Wheel page.
 == このカスタムコマンドはバインドホイールのページで編集してください。
 
+Edit title style
+== タイトルスタイルを編集
+
 Edit touch controls
 == タッチコントロールを編集
 
@@ -5216,6 +5207,9 @@ Entity wall outline opacity
 entity_bg (Workshop)
 == entity_bg（Workshop）
 
+Entries in it will fall back to none.
+== 中の項目は none に戻ります。
+
 Entries with NVENC, AMF, Quick Sync or VideoToolbox use the GPU encoding chip and are several times faster. Only encoders that really work on this machine are listed.
 == NVENC、AMF、Quick Sync、VideoToolbox を含む項目は GPU のエンコード回路を使い、数倍速くなります。このマシンで実際に動くエンコーダーだけが一覧に出ます。
 
@@ -5593,9 +5587,6 @@ Favorite maps
 
 Favorites
 == お気に入り
-
-Favorites match the exact map name and also feed the "Favorite map" tab in the server browser.
-== お気に入りはマップ名の完全一致で判定され、サーバーブラウザのお気に入りマップタブにも反映されます。
 
 feat-003 dogfood: tokens + 12 widgets
 == feat-003 dogfood: トークン + 12 ウィジェット
@@ -6080,9 +6071,6 @@ Game type
 Game type (ddnet, mod)
 == ゲームタイプ（ddnet、mod）
 
-Game types:
-== ゲームタイプ：
-
 Game update rate (Hz)
 == ゲーム更新レート（Hz）
 
@@ -6382,6 +6370,9 @@ Ground jump
 
 Group name
 == グループ名
+
+Group names are limited to 16 characters
+== グループ名は最大16文字です
 
 Groups input helpers: fast input, automatic margin, sub-tick aiming and cursor behavior.
 == 入力支援をまとめた項目です。高速入力、自動マージン、サブティック照準、カーソルの挙動を含みます。
@@ -7760,9 +7751,6 @@ Leave empty to disable
 Leave empty to join public room
 == 空欄にして公開ルームに入室
 
-Leave empty to show everyone
-== 空欄の場合は全プレイヤーを表示
-
 Leave empty to use default prompt
 == 空欄にしてデフォルトプロンプトを使用
 
@@ -8258,6 +8246,9 @@ Manual target
 Map
 == マップ
 
+Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
+== マップブラウザの難易度カテゴリフィルタのビットマスク（ビット 0-14、map_vote_difficulty.h 参照）
+
 Map browser difficulty star filter bitmask (bits 1-5)
 == マップブラウザーの難易度星フィルターのビットマスク（ビット 1-5）
 
@@ -8720,6 +8711,9 @@ Mix rate
 Mixed
 == 混合
 
+Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+== モバイルのみ：次回起動時にクラッシュレポートを Downloads/QmClient にコピーします（0 = アプリのサンドボックス内に保持）
+
 Mobile spectator camera: 0=joystick pad, 1=drag the view
 == モバイル観戦のカメラ操作：0=ジョイスティック、1=画面ドラッグ
 
@@ -8783,6 +8777,9 @@ Mouse speed for aiming and for menus, and how far your cursor may travel from th
 Move a friend category to a position
 == フレンドカテゴリを指定位置へ移動
 
+Move down
+== 下へ移動
+
 Move left
 == 左に移動
 
@@ -8797,6 +8794,9 @@ Move the free camera, then add a keyframe at the current demo time.
 
 Move to category
 == カテゴリに移動
+
+Move up
+== 上へ移動
 
 Movement
 == 移動
@@ -9125,6 +9125,9 @@ New features
 New features (unread)
 == 新機能（未読）
 
+New group
+== 新しいグループ
+
 New IME
 == 新しいIME
 
@@ -9269,6 +9272,9 @@ No downloadable portable package for this version
 No empty team left.
 == 空いているチームはもうありません。
 
+No entries yet
+== エントリがまだありません
+
 No favorite maps yet
 == まだお気に入りマップはありません
 
@@ -9343,6 +9349,9 @@ No player nearby
 
 No player with this name found.
 == この名前のプレイヤーは見つかりませんでした。
+
+No players match
+== 一致するプレイヤーがいません
 
 No players match these filters
 == 条件に一致するプレイヤーはいません
@@ -9607,6 +9616,9 @@ On
 
 One key can hold several commands, so remove single entries under "Bound functions" instead of clearing the key.
 == 1 つのキーに複数のコマンドを割り当てられるので、キーを丸ごと消さず割り当て済みの機能で個別に削除します。
+
+Online
+== オンライン
 
 Online friends
 == オンラインのフレンド
@@ -9937,9 +9949,6 @@ Override Entry
 
 Override Freeze Tile Entity Alpha (0-100)
 == フリーズタイルのエンティティアルファを上書き（0-100）
-
-Override Group
-== 上書きグループ
 
 Override location for ping estimation, available: auto, af, as, as:cn, eu, na, oc, sa (Automatic, Africa, Asia, China, Europe, North America, Oceania/Australia, South America
 == Ping 推定地域を上書きします。選択肢：auto、af、as、as:cn、eu、na、oc、sa（自動、アフリカ、アジア、中国、ヨーロッパ、北米、オセアニア/オーストラリア、南米）
@@ -10363,9 +10372,6 @@ Player country (ISO 3166-1 numeric code)
 
 Player country filter in server browser (ISO 3166-1 numeric)
 == サーバーブラウザでのプレイヤーの国フィルター（ISO 3166-1 数値）
-
-Player country:
-== プレイヤーの国：
 
 Player death
 == プレイヤー死亡
@@ -11591,9 +11597,6 @@ Remove chat
 Remove friend
 == フレンドを削除
 
-Remove from favorites
-== お気に入りから削除
-
 Remove from history
 == 履歴から削除
 
@@ -11674,6 +11677,9 @@ Rename demo
 
 Rename folder
 == フォルダーの名前を変更
+
+Rename group
+== グループ名を変更
 
 Rename queue
 == リネームキュー
@@ -12044,6 +12050,9 @@ Reverse gradient colors
 Reverse IME gradient colors
 == グラデーションの色を反転 (IME)
 
+Reverse order
+== 逆順に並べる
+
 Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
 == 逆方向キーでズームを即座に反転（0=元の滑らかなズームを維持）
 
@@ -12358,9 +12367,6 @@ Scoreboard
 
 Scoreboard cursor
 == スコアボードカーソル
-
-Scoreboard filter: only show players whose name or clan contains this text
-== スコアボードフィルター：名前またはクランにこの文字列を含むプレイヤーのみ表示します
 
 Scoreboard playtime
 == スコアボードのプレイ時間
@@ -13082,7 +13088,7 @@ Show chat when rendering video
 Show clan above name plates
 == ネームプレートの上にクランを表示
 
-Show clan if war
+Show clan for enemies
 == 敵対の場合にクランを表示
 
 Show clan name on nameplate
@@ -13228,6 +13234,12 @@ Show enemy color in scoreboard
 
 Show enemy color in spectator menu
 == スペクテーターメニューで敵の色を表示
+
+Show enemy colors in chat
+== チャット内の色
+
+Show enemy colors in scoreboard
+== スコアボード内の色
 
 Show enemy group players
 == 敵グループのプレイヤーを表示
@@ -14748,9 +14760,6 @@ Stress system (debug builds only).
 == ストレスシステム（デバッグビルドのみ）
 
 Strict game type filter
-== 厳格なゲームタイプフィルター
-
-Strict gametype filter
 == 厳格なゲームタイプフィルター
 
 Strict mode
@@ -17738,17 +17747,11 @@ Your current race time is %s
 Your current version is outdated. Please update from the QQ group.
 == 現在のバージョンは古いです。QQ グループから最新版を更新してください。
 
-Your favorite map manager
-== あなたの好きなマップマネージャー
-
 Your favorite maps appear here
 == お気に入りのマップがここに表示されます
 
 Your friend %s is online and currently on map %s!
 == 友達の %s がオンラインで、現在マップ %s にいます！
-
-Your list of favorite maps, each shown with its map type, with quick copy and remove actions.
-== お気に入りマップの一覧です。各マップは種類付きで表示され、コピーと削除をすばやく行えます。
 
 Your locked team was killed because '%s' %s
 == '%s' が %s したため、ロックされたチームが全滅しました

@@ -249,7 +249,7 @@ public:
 
 	void Begin(CUIRect *pClipRect, vec2 *pOutOffset, const CScrollRegionParams *pParams = nullptr);
 	void End();
-	bool AddRect(const CUIRect &Rect, bool ShouldScrollHere = false); // returns true if the added rect is visible (not clipped)
+	bool AddRect(const CUIRect &Rect, bool ShouldScrollHere = false, bool IsSelection = false); // returns true if the added rect is visible (not clipped)
 	void ScrollHere(EScrollOption Option = SCROLLHERE_KEEP_IN_VIEW);
 	void ScrollRelative(EScrollRelative Direction, float SpeedMultiplier = 1.0f);
 	void ScrollRelativeDirect(vec2 ScrollAmount);
@@ -257,7 +257,11 @@ public:
 	void SetScrollOffsetY(float OffsetY);
 	void SetContentHeightForNextFrame(float ContentHeight);
 	const CUIRect *ClipRect() const { return &m_ClipRect; }
-	float ContentScrollOffsetY() const { return m_Params.m_ScrollHorizontal ? 0.0f : -m_ScrollState.Offset(); }
+	// 绘制用偏移：通常等于状态偏移；内容骤减（折叠分类）时用短时缓动追上去。
+	float ContentScrollOffsetY() const { return m_Params.m_ScrollHorizontal ? 0.0f : -m_DisplayOffset; }
+	float m_DisplayOffset = 0.0f;
+	bool m_DisplayOffsetInit = false;
+	int64_t m_DisplayOffsetTick = 0;
 	void DoEdgeScrolling();
 	bool RectClipped(const CUIRect &Rect) const;
 	bool ContentOverflows() const;
@@ -285,6 +289,12 @@ private:
 	void AdvanceAnimation();
 	void MaintainNoScrollSliderActive();
 	void DoSlider();
+
+	// 列表重新出现时把选中项滚进视野：记录本帧条目序号与「选中项」序号。
+	int m_AddRectIndex = 0;
+	int m_SelectionRectIndex = -1;
+	bool m_ReScrollSelection = false;
+	int64_t m_LastDrawTime = 0;
 };
 
 #endif

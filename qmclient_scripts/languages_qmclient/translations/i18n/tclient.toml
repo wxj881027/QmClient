@@ -1377,9 +1377,9 @@ turkish = "Renkler"
 polish = "Kolory"
 
 [[message]]
-key = "Colors in chat"
+key = "Show enemy colors in chat"
 [message.translations]
-simplified_chinese = "在聊天栏中的颜色"
+simplified_chinese = "聊天框中显示敌对玩家的颜色"
 traditional_chinese = "在聊天欄中的顏色"
 japanese = "チャット内の色"
 korean = "채팅에서의 색상"
@@ -1393,9 +1393,9 @@ turkish = "Sohbetteki renkler"
 polish = "Kolory na czacie"
 
 [[message]]
-key = "Colors in scoreboard"
+key = "Show enemy colors in scoreboard"
 [message.translations]
-simplified_chinese = "计分板中的颜色"
+simplified_chinese = "计分板中显示敌对玩家的颜色"
 traditional_chinese = "計分板中的顏色"
 japanese = "スコアボード内の色"
 korean = "점수판에서의 색상"
@@ -2691,7 +2691,7 @@ polish = "Włącz broń moda na %d: %s"
 [[message]]
 key = "Enable rainbow rendering for hook"
 [message.translations]
-simplified_chinese = "启用钩索彩虹渲染"
+simplified_chinese = "启用钩子彩虹渲染"
 traditional_chinese = "啟用鉤子彩虹渲染"
 japanese = "フックのレインボーレンダリングを有効化"
 korean = "갈고리 무지개 렌더링 활성화"
@@ -5443,7 +5443,7 @@ polish = "Tęcza"
 [[message]]
 key = "Rainbow hook"
 [message.translations]
-simplified_chinese = "彩虹色钩索"
+simplified_chinese = "彩虹色钩子"
 traditional_chinese = "彩虹色鉤索"
 japanese = "レインボーフック"
 korean = "무지개 갈고리"
@@ -6577,9 +6577,9 @@ turkish = "Etkin göstergeleri göster"
 polish = "Pokaż dowolny włączony wskaźnik"
 
 [[message]]
-key = "Show clan if war"
+key = "Show clan for enemies"
 [message.translations]
-simplified_chinese = "如果有敌对则显示战队"
+simplified_chinese = "敌对玩家显示战队"
 traditional_chinese = "如果有敵對則顯示戰隊"
 japanese = "敵対の場合にクランを表示"
 korean = "전쟁 시 클랜 표시"
@@ -9042,6 +9042,22 @@ turkish = "Savaş Girişleri"
 polish = "Wpisy wojenne"
 
 [[message]]
+key = "No entries yet"
+[message.translations]
+simplified_chinese = "暂无条目"
+traditional_chinese = "暫無條目"
+japanese = "エントリがまだありません"
+korean = "아직 항목이 없습니다"
+russian = "Записей пока нет"
+german = "Noch keine Einträge"
+spanish = "Todavía no hay entradas"
+french = "Aucune entrée pour l'instant"
+brazilian_portuguese = "Nenhuma entrada ainda"
+portuguese = "Nenhuma entrada ainda"
+turkish = "Henüz kayıt yok"
+polish = "Brak wpisów"
+
+[[message]]
 key = "War Groups"
 [message.translations]
 simplified_chinese = "敌对群组"
@@ -10669,3 +10685,179 @@ brazilian_portuguese = "Save carregado e marcado como usado."
 portuguese = "Save carregado e marcado como usado."
 turkish = "Kayıt yüklendi ve kullanıldı olarak işaretlendi."
 polish = "Zapis wczytano i oznaczono jako użyty."
+
+[[message]]
+key = "No players match"
+[message.translations]
+simplified_chinese = "没有匹配的玩家"
+traditional_chinese = "沒有符合的玩家"
+japanese = "一致するプレイヤーがいません"
+korean = "일치하는 플레이어가 없습니다"
+russian = "Нет подходящих игроков"
+german = "Keine passenden Spieler"
+spanish = "Ningún jugador coincide"
+french = "Aucun joueur correspondant"
+brazilian_portuguese = "Nenhum jogador correspondente"
+portuguese = "Nenhum jogador correspondente"
+turkish = "Eşleşen oyuncu yok"
+polish = "Brak pasujących graczy"
+
+[[message]]
+key = "New"
+[message.translations]
+simplified_chinese = "新建"
+traditional_chinese = "新建"
+japanese = "新規"
+korean = "새로 만들기"
+russian = "Создать"
+german = "Neu"
+spanish = "Nuevo"
+french = "Nouveau"
+brazilian_portuguese = "Novo"
+portuguese = "Novo"
+turkish = "Yeni"
+polish = "Nowy"
+
+[[message]]
+key = "Online"
+[message.translations]
+simplified_chinese = "在线"
+traditional_chinese = "線上"
+japanese = "オンライン"
+korean = "온라인"
+russian = "В сети"
+german = "Online"
+spanish = "En línea"
+french = "En ligne"
+brazilian_portuguese = "Online"
+portuguese = "Online"
+turkish = "Çevrimiçi"
+polish = "Online"
+
+[[message]]
+key = "New group"
+[message.translations]
+simplified_chinese = "新建群组"
+traditional_chinese = "新建群組"
+japanese = "新しいグループ"
+korean = "새 그룹"
+russian = "Новая группа"
+german = "Neue Gruppe"
+spanish = "Nuevo grupo"
+french = "Nouveau groupe"
+brazilian_portuguese = "Novo grupo"
+portuguese = "Novo grupo"
+turkish = "Yeni grup"
+polish = "Nowa grupa"
+
+[[message]]
+key = "Rename group"
+[message.translations]
+simplified_chinese = "重命名群组"
+traditional_chinese = "重新命名群組"
+japanese = "グループ名を変更"
+korean = "그룹 이름 변경"
+russian = "Переименовать группу"
+german = "Gruppe umbenennen"
+spanish = "Renombrar grupo"
+french = "Renommer le groupe"
+brazilian_portuguese = "Renomear grupo"
+portuguese = "Renomear grupo"
+turkish = "Grubu yeniden adlandır"
+polish = "Zmień nazwę grupy"
+
+[[message]]
+key = "Are you sure that you want to remove '%s' from your war list?"
+[message.translations]
+simplified_chinese = "确定要把「%s」从敌对列表里删掉吗？"
+traditional_chinese = "確定要把「%s」從敵對列表中刪除嗎？"
+japanese = "「%s」を敵対リストから削除してもよいですか？"
+korean = "「%s」을(를) 적대 목록에서 삭제할까요?"
+russian = "Удалить «%s» из списка врагов?"
+german = "„%s“ aus der Kriegsliste entfernen?"
+spanish = "¿Quitar «%s» de la lista de enemigos?"
+french = "Retirer « %s » de la liste des ennemis ?"
+brazilian_portuguese = "Remover \"%s\" da lista de inimigos?"
+portuguese = "Remover \"%s\" da lista de inimigos?"
+turkish = "\"%s\" düşman listesinden kaldırılsın mı?"
+polish = "Usunąć „%s” z listy wrogów?"
+
+[[message]]
+key = "Reverse order"
+[message.translations]
+simplified_chinese = "倒序排列"
+traditional_chinese = "倒序排列"
+japanese = "逆順に並べる"
+korean = "역순 정렬"
+russian = "Обратный порядок"
+german = "Umgekehrte Reihenfolge"
+spanish = "Orden inverso"
+french = "Ordre inversé"
+brazilian_portuguese = "Ordem inversa"
+portuguese = "Ordem inversa"
+turkish = "Ters sıra"
+polish = "Odwrotna kolejność"
+
+[[message]]
+key = "Move up"
+[message.translations]
+simplified_chinese = "上移"
+traditional_chinese = "上移"
+japanese = "上へ移動"
+korean = "위로 이동"
+russian = "Переместить вверх"
+german = "Nach oben"
+spanish = "Subir"
+french = "Monter"
+brazilian_portuguese = "Mover para cima"
+portuguese = "Mover para cima"
+turkish = "Yukarı taşı"
+polish = "W górę"
+
+[[message]]
+key = "Move down"
+[message.translations]
+simplified_chinese = "下移"
+traditional_chinese = "下移"
+japanese = "下へ移動"
+korean = "아래로 이동"
+russian = "Переместить вниз"
+german = "Nach unten"
+spanish = "Bajar"
+french = "Descendre"
+brazilian_portuguese = "Mover para baixo"
+portuguese = "Mover para baixo"
+turkish = "Aşağı taşı"
+polish = "W dół"
+
+[[message]]
+key = "Group names are limited to 16 characters"
+[message.translations]
+simplified_chinese = "群组名最多 16 个字符"
+traditional_chinese = "群組名稱最多 16 個字元"
+japanese = "グループ名は最大16文字です"
+korean = "그룹 이름은 최대 16자입니다"
+russian = "Имя группы — не более 16 символов"
+german = "Gruppennamen sind auf 16 Zeichen begrenzt"
+spanish = "Los nombres de grupo admiten hasta 16 caracteres"
+french = "Les noms de groupe sont limités à 16 caractères"
+brazilian_portuguese = "Nomes de grupo têm no máximo 16 caracteres"
+portuguese = "Nomes de grupo têm no máximo 16 caracteres"
+turkish = "Grup adları en fazla 16 karakterdir"
+polish = "Nazwy grup mają maksymalnie 16 znaków"
+
+[[message]]
+key = "Entries in it will fall back to none."
+[message.translations]
+simplified_chinese = "里面的条目会回到 none。"
+traditional_chinese = "裡面的條目會回到 none。"
+japanese = "中の項目は none に戻ります。"
+korean = "포함된 항목은 none으로 돌아갑니다."
+russian = "Записи из неё вернутся в none."
+german = "Darin enthaltene Einträge fallen auf none zurück."
+spanish = "Sus entradas pasarán a none."
+french = "Ses entrées passeront à none."
+brazilian_portuguese = "As entradas dela voltam para none."
+portuguese = "As entradas dela voltam para none."
+turkish = "İçindeki kayıtlar none'a döner."
+polish = "Zawarte w niej wpisy wrócą do none."

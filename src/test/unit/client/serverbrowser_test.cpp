@@ -452,21 +452,35 @@ TEST(ServerBrowserStatusLayout, WidthTransitionsKeepEveryControlWithinMeasuredCo
 	}
 }
 
-TEST(ServerBrowserMapFilterLayout, LongTranslatedLabelCannotDisplaceToggleOrSlider)
+TEST(ServerBrowserMapFilterLayout, SliderSwitchesAndStateLabelStayInsideTheirColumns)
 {
-	for(float Width : {1.0f, 30.0f, 80.0f, 140.0f, 350.0f})
+	for(float Width : {1.0f, 30.0f, 80.0f, 140.0f, 220.0f, 350.0f})
 	{
 		SCOPED_TRACE(Width);
 		const CUIRect Area{10.0f, 20.0f, Width, 64.0f};
 		const auto Layout = QmBrowserMapFilterLayout(Area, 1200.0f);
 		for(const CUIRect &Rect : {Layout.m_Heading, Layout.m_CurrentLabel, Layout.m_Slider,
+			    Layout.m_EmptyGroup, Layout.m_EmptyLabel, Layout.m_EmptyToggle,
 			    Layout.m_FavoriteGroup, Layout.m_FavoriteLabel, Layout.m_FavoriteToggle, Layout.m_FavoriteIcon})
 			ExpectBrowserRectWithin(Rect, Area);
-		EXPECT_GT(Layout.m_Slider.w, 0.0f);
-		EXPECT_GT(Layout.m_FavoriteToggle.w, 0.0f);
-		EXPECT_GE(Layout.m_FavoriteToggle.x, Layout.m_FavoriteLabel.x + Layout.m_FavoriteLabel.w);
 		EXPECT_GE(Layout.m_Slider.x, Layout.m_CurrentLabel.x + Layout.m_CurrentLabel.w);
+		EXPECT_GE(Layout.m_EmptyToggle.x, Layout.m_EmptyLabel.x + Layout.m_EmptyLabel.w);
+		EXPECT_GE(Layout.m_FavoriteToggle.x, Layout.m_FavoriteLabel.x + Layout.m_FavoriteLabel.w);
+		EXPECT_GE(Layout.m_FavoriteIcon.x, Layout.m_FavoriteToggle.x + Layout.m_FavoriteToggle.w);
+		EXPECT_FLOAT_EQ(Layout.m_ContentHeight, QmBrowserMapFilterContentHeight(Width));
 	}
+}
+
+TEST(ServerBrowserMapFilterLayout, StateLabelAndSliderShareARowAboveBothSwitches)
+{
+	const CUIRect Area{10.0f, 20.0f, 320.0f, 64.0f};
+	const auto Layout = QmBrowserMapFilterLayout(Area, 60.0f);
+	EXPECT_FLOAT_EQ(Layout.m_Slider.y, Layout.m_CurrentLabel.y);
+	EXPECT_GT(Layout.m_Slider.w, 100.0f);
+	// 开关行整体位于滑条行下方，且空服开关与收藏组分占左右两半，互不重叠。
+	EXPECT_GT(Layout.m_EmptyGroup.y, Layout.m_CurrentLabel.y + Layout.m_CurrentLabel.h);
+	EXPECT_GT(Layout.m_FavoriteGroup.y, Layout.m_CurrentLabel.y + Layout.m_CurrentLabel.h);
+	EXPECT_LE(Layout.m_EmptyGroup.x + Layout.m_EmptyGroup.w, Layout.m_FavoriteGroup.x);
 }
 
 TEST(ServerBrowserPanelLayout, ResizeRecoveryRestoresOriginalContentAndListAllocation)

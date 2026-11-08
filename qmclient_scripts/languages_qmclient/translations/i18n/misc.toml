@@ -369,7 +369,7 @@ polish = "Dodaj preset kolejki dummy"
 [[message]]
 key = "Add a foe"
 [message.translations]
-simplified_chinese = "添加一个敌人"
+simplified_chinese = "添加一个敌对玩家"
 traditional_chinese = "添加一個敵人"
 japanese = "敵を追加"
 korean = "적 추가"
@@ -3971,7 +3971,7 @@ polish = "Wymień podłączonych graczy z opcjonalnym filtrem podciągów bez ro
 [[message]]
 key = "List foes"
 [message.translations]
-simplified_chinese = "列出敌人"
+simplified_chinese = "列出敌对玩家"
 traditional_chinese = "列出敵人"
 japanese = "敵を一覧表示"
 korean = "적 목록을 표시합니다"
@@ -6051,7 +6051,7 @@ polish = "Usuń kraj z filtra wykluczeń dla konkretnej społeczności (ISO 3166
 [[message]]
 key = "Remove a foe"
 [message.translations]
-simplified_chinese = "移除一个敌人"
+simplified_chinese = "移除一个敌对玩家"
 traditional_chinese = "移除一個敵人"
 japanese = "敵を削除"
 korean = "적 제거"
@@ -11135,7 +11135,7 @@ polish = "Czas gry"
 [[message]]
 key = "Team rank"
 [message.translations]
-simplified_chinese = "团队排名"
+simplified_chinese = "队伍排名"
 traditional_chinese = "團隊排名"
 japanese = "チーム順位"
 korean = "팀 순위"
@@ -12712,7 +12712,7 @@ polish = "Przenieś kategorię znajomych na pozycję"
 [[message]]
 key = "Configure the Gores team drown board"
 [message.translations]
-simplified_chinese = "配置 Gores 团队落水榜"
+simplified_chinese = "配置 Gores 队伍落水榜"
 traditional_chinese = "設定 Gores 團隊落水榜"
 japanese = "Gores チーム溺死ボードを設定"
 korean = "Gores 팀 익사 보드 설정"
@@ -15032,7 +15032,7 @@ polish = "Startuje z losowej pozycji w kolejce przy każdym wejściu na mapę"
 [[message]]
 key = "Use the custom colors below while the hook key is held"
 [message.translations]
-simplified_chinese = "按住钩索键时使用下方的自定义颜色"
+simplified_chinese = "按住钩子键时使用下方的自定义颜色"
 traditional_chinese = "按住鉤索鍵時使用下方的自訂顏色"
 japanese = "フックキー押下中は下のカスタムカラーを使用"
 korean = "훅 키를 누르고 있는 동안 아래의 사용자 지정 색상 사용"

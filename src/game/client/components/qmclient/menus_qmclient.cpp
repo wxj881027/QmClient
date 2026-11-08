@@ -156,27 +156,19 @@ void CMenus::RenderSettingsQmClientFunctionDeck(CUIRect MainView, bool PrewarmOn
 	static std::array<CButtonContainer, QmModuleCount> s_aCollapseButtons;
 	qm_card_collapse::SyncQmModules(s_aCollapsed);
 
-	const size_t FavoriteMapCount = GameClient()->TClientComponent().GetFavoriteMaps().size();
-	qm_card_catalog::FavoriteMapsLayoutRevision(FavoriteMapCount);
-	auto ToggleCollapsed = [](void *pUser, EQmModuleId Id) {
+	auto ToggleCollapsed = [](void *, EQmModuleId Id) {
 		const int Index = std::clamp((int)Id, 0, (int)QmModuleCount - 1);
-		const bool WasCollapsed = s_aCollapsed[Index];
-		const bool Collapsed = !WasCollapsed;
+		const bool Collapsed = !s_aCollapsed[Index];
 		if(!qm_card_collapse::SetQmModuleCollapsed(Id, Collapsed))
 			return;
 		s_aCollapsed[Index] = Collapsed;
-		if(Id == EQmModuleId::FavoriteMaps && WasCollapsed != Collapsed && !Collapsed)
-		{
-			const size_t FavoriteMapCount = static_cast<CMenus *>(pUser)->GameClient()->TClientComponent().GetFavoriteMaps().size();
-			qm_card_catalog::FavoriteMapsLayoutRevision(FavoriteMapCount);
-		}
 	};
 	auto MeasureContentRevision = [this](EQmModuleId Id) -> uint64_t {
-		return qm_card_catalog::MeasureModuleCardRevision(Id, ResolveFunctionCardLayoutState(GameClient()->TClientComponent().GetFavoriteMaps().size()));
+		return qm_card_catalog::MeasureModuleCardRevision(Id, ResolveFunctionCardLayoutState());
 	};
 	// 卡片改由全局卡片目录构造（N3）：页面只声明「这一页有哪些卡片」，测量与渲染都在目录里。
-	// 内容量状态（词条过滤/关键词回复/收藏地图）经 m_pFunctionLayout 注入，目录测量依赖它。
-	const qm_card_catalog::SQmFunctionCardLayoutState FunctionCardLayout = ResolveFunctionCardLayoutState(GameClient()->TClientComponent().GetFavoriteMaps().size());
+	// 内容量状态（词条过滤/关键词回复）经 m_pFunctionLayout 注入，目录测量依赖它。
+	const qm_card_catalog::SQmFunctionCardLayoutState FunctionCardLayout = ResolveFunctionCardLayoutState();
 	auto BuildDefinitions = [&](std::vector<SSettingsCardDefinition> &vCards) {
 		qm_card_catalog::SQmCardBuildContext CardBuild;
 		CardBuild.m_pMenus = this;

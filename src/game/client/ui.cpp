@@ -2468,39 +2468,6 @@ bool CUi::DoClearableEditBox(CLineInput *pLineInput, const CUIRect *pRect, float
 	return ReturnValue;
 }
 
-bool CUi::DoEditBox_Search(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, bool HotkeyEnabled)
-{
-	return DoEditBox_Search(pLineInput, pRect, FontSize, HotkeyEnabled, {});
-}
-
-bool CUi::DoEditBox_Search(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, bool HotkeyEnabled, const SEditBoxRenderOptions &RenderOptions)
-{
-	const ColorRGBA PreviousTextColor = TextRender()->GetTextColor();
-	const ColorRGBA PreviousTextOutlineColor = TextRender()->GetTextOutlineColor();
-	const ColorRGBA PreviousTextSelectionColor = TextRender()->GetTextSelectionColor();
-	const unsigned PreviousRenderFlags = TextRender()->GetRenderFlags();
-	const EFontPreset PreviousFontPreset = TextRender()->GetFontPreset();
-
-	CUIRect QuickSearch = *pRect;
-	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-	DoLabel_QmIcon(&QuickSearch, EQmIcon::SEARCH, FONT_ICON_MAGNIFYING_GLASS, FontSize, TEXTALIGN_ML);
-	const float SearchWidth = TextRender()->TextWidth(FontSize, FONT_ICON_MAGNIFYING_GLASS);
-	TextRender()->SetRenderFlags(PreviousRenderFlags);
-	TextRender()->SetFontPreset(PreviousFontPreset);
-	TextRender()->TextOutlineColor(PreviousTextOutlineColor);
-	TextRender()->TextSelectionColor(PreviousTextSelectionColor);
-	TextRender()->TextColor(PreviousTextColor);
-	QuickSearch.VSplitLeft(SearchWidth + 5.0f, nullptr, &QuickSearch);
-	if(HotkeyEnabled && Input()->ModifierIsPressed() && Input()->KeyPress(KEY_F))
-	{
-		SetActiveItem(pLineInput);
-		pLineInput->SelectAll();
-	}
-	pLineInput->SetEmptyText(Localize("Search"));
-	return DoClearableEditBox(pLineInput, &QuickSearch, FontSize, IGraphics::CORNER_ALL, {}, RenderOptions);
-}
-
 void CUi::DoConfigTooltip(const void *pId, const CUIRect *pRect, const void *pValue, const void *pSecondValue)
 {
 	if(m_pQmTooltips != nullptr)
@@ -2978,90 +2945,6 @@ SEditResult<int64_t> CUi::DoValueSelectorWithState(const void *pId, const CUIRec
 	}
 
 	return SEditResult<int64_t>{State, Current};
-}
-
-float CUi::DoScrollbarV(const void *pId, const CUIRect *pRect, float Current)
-{
-	Current = std::clamp(Current, 0.0f, 1.0f);
-
-	// layout
-	CUIRect Rail;
-	pRect->Margin(5.0f, &Rail);
-
-	CUIRect Handle;
-	Rail.HSplitTop(std::clamp(33.0f, Rail.w, Rail.h / 3.0f), &Handle, nullptr);
-	Handle.y = Rail.y + (Rail.h - Handle.h) * Current;
-
-	// logic
-	const bool InsideRail = MouseHovered(&Rail);
-	const bool InsideHandle = MouseHovered(&Handle);
-	bool Grabbed = false; // whether to apply the offset
-	if(CaptureTouchDrag(pId, &Rail) && !IsActiveItem(pId))
-	{
-		SetActiveItem(pId);
-		m_ActiveScrollbarOffset = InsideHandle ? MouseY() - Handle.y : Handle.h / 2.0f;
-	}
-
-	if(CheckActiveItem(pId))
-	{
-		if(MouseButton(0))
-		{
-			Grabbed = true;
-			if(Input()->ShiftIsPressed())
-				m_MouseSlow = true;
-		}
-		else
-		{
-			SetActiveItem(nullptr);
-		}
-	}
-	else if(HotItem() == pId || (!Input()->TouchFingerStates().empty() && InsideRail))
-	{
-		if(InsideHandle)
-		{
-			if(MouseButton(0))
-			{
-				SetActiveItem(pId);
-				m_ActiveScrollbarOffset = MouseY() - Handle.y;
-				Grabbed = true;
-			}
-		}
-		else if(MouseButtonClicked(0))
-		{
-			SetActiveItem(pId);
-			m_ActiveScrollbarOffset = Handle.h / 2.0f;
-			Grabbed = true;
-		}
-	}
-
-	if(InsideRail && !MouseButton(0))
-	{
-		SetHotItem(pId);
-	}
-
-	float ReturnValue = Current;
-	if(Grabbed)
-	{
-		const float Min = Rail.y;
-		const float Max = Rail.h - Handle.h;
-		const float Cur = MouseY() - m_ActiveScrollbarOffset;
-		ReturnValue = std::clamp((Cur - Min) / Max, 0.0f, 1.0f);
-	}
-
-	// render
-	if(QmAnimationRuntime() != nullptr)
-	{
-		const auto Style = ResolveUiSliderStyle(QmControlTheme(), CUiScopedSurfaceText::CurrentSurface(), HotItem() == pId, CheckActiveItem(pId));
-		DrawRoundedSurface(this, Rail, ScaleControlAlpha(Style.m_Track), ColorRGBA(), ui_token::radius::PILL);
-		ui_widget::DrawScrollbarHandle(ui_widget::ControlContext(this), pId, Handle);
-	}
-	else
-	{
-		DrawRoundedSurface(this, Rail, ScaleControlAlpha(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f)), ColorRGBA(), Rail.w / 2.0f);
-		DrawRoundedSurface(this, Handle, ScaleControlAlpha(ms_ScrollBarColorFunction.GetColor(CheckActiveItem(pId), HotItem() == pId)), ColorRGBA(), Handle.w / 2.0f);
-	}
-
-	return ReturnValue;
 }
 
 void CUi::RenderScrollbarH(const void *pId, const CUIRect *pRect, float Current, const ColorRGBA *pColorInner)
