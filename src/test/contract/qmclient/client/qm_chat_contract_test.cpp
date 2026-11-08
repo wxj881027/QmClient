@@ -157,7 +157,8 @@ TEST(QmChatInteractions, ChatLineMenuUsesContentBoundsAndKeepsTargetHighlighted)
 	EXPECT_NE(OnRender.find("const bool MouseInsideLine = IsChatLineHit(RenderedTextRect, MousePos);"), std::string::npos);
 	EXPECT_NE(OnRender.find("ChatLineMenuOpen && m_ChatLinePopupContext.m_LineIndex == LineIndex"), std::string::npos);
 	EXPECT_NE(OnRender.find("const ColorRGBA SelectionColor"), std::string::npos);
-	EXPECT_NE(OnRender.find("Graphics()->DrawRect(RenderedTextRect.x"), std::string::npos);
+	// 选中高亮在圆角重构后走共享表面路径，仍按行内容矩形绘制。
+	EXPECT_NE(OnRender.find("DrawRoundedSurface(Ui(), CUIRect{RenderedTextRect.x"), std::string::npos);
 	EXPECT_NE(OpenMenu.find("m_ChatLinePopupContext.m_LineIndex = GetLineIndex(&Line);"), std::string::npos);
 	EXPECT_NE(OpenMenu.find("UiMousePos.x, UiMousePos.y"), std::string::npos);
 	EXPECT_EQ(OpenMenu.find("ChatToUiScale"), std::string::npos);
