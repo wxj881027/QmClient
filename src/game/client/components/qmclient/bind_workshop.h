@@ -267,13 +267,17 @@ namespace qm_bind_workshop
 	// 返回第一条越界行号（1 起）；0 表示全部通过。
 	size_t FindCfgViolation(std::string_view Content);
 
-	// ---- 键位占用 / 遮蔽 ----
+	// ---- 键位占用 ----
+	// 两档标记都不带「错误」的意思，只是信息：
+	//   MULTI_ACTION    —— 一条绑定里串了多个动作；
+	//   SHARED_FUNCTION —— 同一个命令还挂在别的物理键上（同键换修饰键不算）。
+	// 「同键另有修饰键组合」不算问题——按裸键时走的还是裸键绑定，组合键优先只影响
+	// 按着修饰键的那一下，玩家不会因此按不出来，标成「被覆盖」是误报。
 	enum
 	{
 		OCCUPANCY_NONE = 0,
-		OCCUPANCY_SHADOWED = 1 << 0, // 同键有修饰键组合，可能遮蔽无修饰键绑定
-		OCCUPANCY_RESERVED_CHORD = 1 << 1, // 保留和弦，按下不会回落到无修饰键绑定
 		OCCUPANCY_MULTI_ACTION = 1 << 2, // 一条命令串里串了多个动作
+		OCCUPANCY_SHARED_FUNCTION = 1 << 3, // 同一条命令也绑在别的物理键上
 	};
 
 	struct SOccupancyEntry

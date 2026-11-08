@@ -999,49 +999,49 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2323
+      "line": 2321
     },
     {
       "key": "(no command)",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2763
+      "line": 2761
     },
     {
       "key": "(no command)",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2777
+      "line": 2775
     },
     {
       "key": "(no note)",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 582
+      "line": 579
     },
     {
       "key": "(no note)",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2322
+      "line": 2320
     },
     {
       "key": "(no note)",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2763
+      "line": 2761
     },
     {
       "key": "(no note)",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2777
+      "line": 2775
     },
     {
       "key": "(On Latest)",
@@ -1797,7 +1797,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 3019
+      "line": 3017
     },
     {
       "key": "A key that already has a command is overwritten, so recheck your other binds after assigning keys here.",
@@ -1825,7 +1825,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 583
+      "line": 580
     },
     {
       "key": "A pack missing files falls back to the default sounds.",
@@ -4534,14 +4534,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 1244
+      "line": 1241
     },
     {
       "key": "Apply",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 1542
+      "line": 1540
     },
     {
       "key": "Apply a preset first",
@@ -4604,7 +4604,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 1496
+      "line": 1493
     },
     {
       "key": "Apply Changes",
@@ -4688,7 +4688,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2869
+      "line": 2867
     },
     {
       "key": "Apply to player",
@@ -6725,7 +6725,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 3036
+      "line": 3034
     },
     {
       "key": "Backdrop blur",
@@ -7055,6 +7055,13 @@
       "source": "src/engine/shared/config_variables_tclient.h",
       "context": "",
       "line": 249
+    },
+    {
+      "key": "Badges are informational: a bind can chain several commands, and one command can be bound to several keys.",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "context": "",
+      "line": 596
     },
     {
       "key": "Baidu Translate",
@@ -7404,7 +7411,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2872
+      "line": 2870
     },
     {
       "key": "Bind applied - undo available",
@@ -7418,7 +7425,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 1551
+      "line": 1549
     },
     {
       "key": "Bind chat, team chat, and history actions",
@@ -7481,7 +7488,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
       "context": "",
-      "line": 783
+      "line": 790
     },
     {
       "key": "Bind overview",
@@ -7915,7 +7922,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 638
+      "line": 635
     },
     {
       "key": "Bold",
@@ -8069,7 +8076,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_settings.cpp",
       "context": "",
-      "line": 690
+      "line": 783
     },
     {
       "key": "Bounded capture frame queue depth for demo export (higher values use more memory)",
@@ -8083,7 +8090,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2683
+      "line": 2681
     },
     {
       "key": "Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow",
@@ -8272,14 +8279,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 602
+      "line": 599
     },
     {
       "key": "Built-in cfg is empty - nothing was installed",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 751
+      "line": 748
     },
     {
       "key": "BULLET: Bounces off the walls without explosion. Touching the bullet works like FREEZE tile (freezes for 3 seconds by default).",
@@ -8391,7 +8398,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2813
+      "line": 2811
     },
     {
       "key": "c = Player position",
@@ -8797,14 +8804,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_settings.cpp",
       "context": "",
-      "line": 849
+      "line": 952
     },
     {
       "key": "Cancel",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 1540
+      "line": 1538
     },
     {
       "key": "Cancel",
@@ -8944,28 +8951,28 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 601
+      "line": 598
     },
     {
       "key": "Cannot create the qm_bind folder in the config directory",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 738
+      "line": 735
     },
     {
       "key": "Cannot install cfg: storage is not ready",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 600
+      "line": 597
     },
     {
       "key": "Cannot install cfg: storage is not ready",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 731
+      "line": 728
     },
     {
       "key": "Cannot join the target player's team",
@@ -9014,21 +9021,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 603
+      "line": 600
     },
     {
       "key": "Cannot write cfg file",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 759
+      "line": 756
     },
     {
       "key": "Cannot write cfg file",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 768
+      "line": 765
     },
     {
       "key": "Cannot write the wiki file",
@@ -9217,14 +9224,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 605
+      "line": 602
     },
     {
       "key": "cfg installed",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 1420
+      "line": 1417
     },
     {
       "key": "Change \"Update Rate\" in Hz, tick \"Skip the main menu\", and use \"Settings file\" or \"Themes directory\" to open those locations.",
@@ -10820,7 +10827,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 639
+      "line": 636
     },
     {
       "key": "Classic PowerShell",
@@ -11989,21 +11996,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_settings.cpp",
       "context": "",
-      "line": 837
+      "line": 937
     },
     {
       "key": "Command",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 584
+      "line": 581
     },
     {
       "key": "Command",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2752
+      "line": 2750
     },
     {
       "key": "Command",
@@ -12818,25 +12825,11 @@
       "line": 803
     },
     {
-      "key": "conflicts",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
-      "context": "",
-      "line": 577
-    },
-    {
-      "key": "conflicts",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
-      "context": "",
-      "line": 1532
-    },
-    {
       "key": "Connect",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 640
+      "line": 637
     },
     {
       "key": "Connect address error",
@@ -13060,14 +13053,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 585
+      "line": 582
     },
     {
       "key": "connections removed",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2505
+      "line": 2503
     },
     {
       "key": "Connlimit: number of connections allowed per IP in a time period",
@@ -13809,7 +13802,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
       "context": "",
-      "line": 677
+      "line": 681
     },
     {
       "key": "Copied",
@@ -13851,7 +13844,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2855
+      "line": 2853
     },
     {
       "key": "Copy",
@@ -13865,14 +13858,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 586
+      "line": 583
     },
     {
       "key": "Copy",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2852
+      "line": 2850
     },
     {
       "key": "Copy a .qmconfig file into the package folder, then refresh.",
@@ -13893,7 +13886,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
       "context": "",
-      "line": 647
+      "line": 651
     },
     {
       "key": "Copy info",
@@ -14642,7 +14635,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2879
+      "line": 2877
     },
     {
       "key": "Cube",
@@ -14873,7 +14866,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 641
+      "line": 638
     },
     {
       "key": "curve type",
@@ -16224,7 +16217,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 642
+      "line": 639
     },
     {
       "key": "Deep Freeze",
@@ -16735,14 +16728,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 643
+      "line": 640
     },
     {
       "key": "Defaults",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 644
+      "line": 641
     },
     {
       "key": "Define automatic chat reply rules",
@@ -16826,7 +16819,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 587
+      "line": 584
     },
     {
       "key": "Delete",
@@ -16896,7 +16889,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_settings.cpp",
       "context": "",
-      "line": 925
+      "line": 1031
     },
     {
       "key": "Delete",
@@ -16966,7 +16959,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_settings.cpp",
       "context": "",
-      "line": 232
+      "line": 181
     },
     {
       "key": "Delete command %d",
@@ -17862,7 +17855,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 588
+      "line": 585
     },
     {
       "key": "Disconnect dummy",
@@ -18401,21 +18394,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 589
+      "line": 586
     },
     {
       "key": "Double-click empty canvas to add a node",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2879
+      "line": 2877
     },
     {
       "key": "Double-click empty space to add a node, right-click a link to delete it, Delete removes the selection, Ctrl+Z undoes.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 3015
+      "line": 3013
     },
     {
       "key": "Download",
@@ -18653,14 +18646,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2879
+      "line": 2877
     },
     {
       "key": "Drag from the dot on the right of one node to the dot on the left of the next to link them.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 3013
+      "line": 3011
     },
     {
       "key": "Drag HUD modules with the left mouse button",
@@ -18681,7 +18674,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 3020
+      "line": 3018
     },
     {
       "key": "Drag the three sliders; master scales the other two.",
@@ -19080,7 +19073,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 590
+      "line": 587
     },
     {
       "key": "Drop on right canvas to replace one part.",
@@ -19444,7 +19437,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 645
+      "line": 642
     },
     {
       "key": "Dummy Hammer (HDF)",
@@ -19605,7 +19598,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 646
+      "line": 643
     },
     {
       "key": "Dummy skin",
@@ -19731,7 +19724,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 591
+      "line": 588
     },
     {
       "key": "Duplicate",
@@ -19969,7 +19962,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 592
+      "line": 589
     },
     {
       "key": "Echo follows the original chat color",
@@ -20046,7 +20039,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2878
+      "line": 2876
     },
     {
       "key": "Edit",
@@ -23336,7 +23329,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 593
+      "line": 590
     },
     {
       "key": "Execute before connecting",
@@ -23567,14 +23560,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 594
+      "line": 591
     },
     {
       "key": "Export all",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 1689
+      "line": 1687
     },
     {
       "key": "Export cfg",
@@ -23588,7 +23581,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 1681
+      "line": 1679
     },
     {
       "key": "Export configuration package",
@@ -23623,21 +23616,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 595
+      "line": 592
     },
     {
       "key": "Export failed",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 1687
+      "line": 1685
     },
     {
       "key": "Export failed",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 1705
+      "line": 1703
     },
     {
       "key": "Export failed",
@@ -23756,14 +23749,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 596
+      "line": 593
     },
     {
       "key": "Exported",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 717
+      "line": 714
     },
     {
       "key": "Exported %d chat messages",
@@ -23945,21 +23938,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 647
+      "line": 644
     },
     {
       "key": "F6 enable",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 648
+      "line": 645
     },
     {
       "key": "F7 super kill",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 649
+      "line": 646
     },
     {
       "key": "Fade",
@@ -24148,14 +24141,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 609
+      "line": 606
     },
     {
       "key": "Failed",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2824
+      "line": 2822
     },
     {
       "key": "Failed during initialization. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings.cfg in the config directory and try again.",
@@ -25688,7 +25681,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 1732
+      "line": 1730
     },
     {
       "key": "Flow loaded",
@@ -25702,56 +25695,56 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 611
+      "line": 608
     },
     {
       "key": "Flow loaded",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 1761
+      "line": 1759
     },
     {
       "key": "Flow loaded",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 1778
+      "line": 1776
     },
     {
       "key": "Flow title",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 610
+      "line": 607
     },
     {
       "key": "Flow title",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2554
+      "line": 2552
     },
     {
       "key": "Flow title",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2562
+      "line": 2560
     },
     {
       "key": "flows exported",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 612
+      "line": 609
     },
     {
       "key": "flows exported",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 1707
+      "line": 1705
     },
     {
       "key": "Fluid",
@@ -25779,7 +25772,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 650
+      "line": 647
     },
     {
       "key": "Folder",
@@ -26990,7 +26983,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 651
+      "line": 648
     },
     {
       "key": "Full width",
@@ -28509,7 +28502,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2298
+      "line": 2296
     },
     {
       "key": "Group",
@@ -28530,7 +28523,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2945
+      "line": 2943
     },
     {
       "key": "Group name",
@@ -28866,14 +28859,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2682
+      "line": 2680
     },
     {
       "key": "Height",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2737
+      "line": 2735
     },
     {
       "key": "Height",
@@ -28950,14 +28943,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 652
+      "line": 649
     },
     {
       "key": "Hide all",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 653
+      "line": 650
     },
     {
       "key": "Hide basic system info (join, version, rules) in Zen mode",
@@ -29321,7 +29314,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 654
+      "line": 651
     },
     {
       "key": "Hide non-friend names/clans and show client ID",
@@ -29720,7 +29713,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 655
+      "line": 652
     },
     {
       "key": "History",
@@ -30378,7 +30371,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2817
+      "line": 2815
     },
     {
       "key": "How many seconds players stay frozen (applies to all except delay freeze in switch layer and deep freeze).",
@@ -30413,7 +30406,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2946
+      "line": 2944
     },
     {
       "key": "How to handle inactive players (0 = move to spectators, 1 = move to free spec slot/kick, 2 = kick)",
@@ -32065,14 +32058,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 597
+      "line": 594
     },
     {
       "key": "Install and apply",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 1244
+      "line": 1241
     },
     {
       "key": "Installed",
@@ -32107,14 +32100,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 598
+      "line": 595
     },
     {
       "key": "Installed - the cfg file is in your config folder",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 1275
+      "line": 1272
     },
     {
       "key": "Installing update. Please wait...",
@@ -32541,7 +32534,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 656
+      "line": 653
     },
     {
       "key": "Invite %s to the locked team",
@@ -33186,20 +33179,6 @@
       "source": "src/game/client/QmUi/QmCardRegistry.cpp",
       "context": "",
       "line": 137
-    },
-    {
-      "key": "Key conflict",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/qmclient/bind_settings.cpp",
-      "context": "",
-      "line": 712
-    },
-    {
-      "key": "Key conflict",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
-      "context": "",
-      "line": 1522
     },
     {
       "key": "Key occupancy",
@@ -34088,7 +34067,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 657
+      "line": 654
     },
     {
       "key": "Last verified approved update source",
@@ -34138,13 +34117,6 @@
       "source": "src/game/client/components/tclient/statusbar.h",
       "context": "",
       "line": 85
-    },
-    {
-      "key": "Later binds on the same key replace earlier ones, and modifier chords win over plain keys - so a plain bind can end up shadowed.",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
-      "context": "",
-      "line": 592
     },
     {
       "key": "Latin font",
@@ -34459,7 +34431,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 658
+      "line": 655
     },
     {
       "key": "Left click inside the quad to select an area to slice. Hold alt to ignore grid. Right click to leave knife mode.",
@@ -34571,7 +34543,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 3014
+      "line": 3012
     },
     {
       "key": "Left/right channel width",
@@ -34774,14 +34746,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2812
+      "line": 2810
     },
     {
       "key": "Line length: bytes of the bind line that will be written.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 3024
+      "line": 3022
     },
     {
       "key": "Line thickness.",
@@ -34872,42 +34844,42 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 1914
+      "line": 1912
     },
     {
       "key": "Link deleted",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2031
+      "line": 2029
     },
     {
       "key": "Link failed",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 613
+      "line": 610
     },
     {
       "key": "Link source is gone",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 614
+      "line": 611
     },
     {
       "key": "Linked",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 615
+      "line": 612
     },
     {
       "key": "Links and gestures",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2945
+      "line": 2943
     },
     {
       "key": "Links open in the system browser.",
@@ -35922,7 +35894,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 659
+      "line": 656
     },
     {
       "key": "Lock delay",
@@ -36237,7 +36209,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 660
+      "line": 657
     },
     {
       "key": "Main Tee",
@@ -36279,7 +36251,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 661
+      "line": 658
     },
     {
       "key": "Maintains the list of hostile players and groups plus the rules used to display them.",
@@ -36307,7 +36279,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 616
+      "line": 613
     },
     {
       "key": "Make sure the backend supports OpenAI-compatible thinking parameters",
@@ -37721,7 +37693,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_settings.cpp",
       "context": "Bind keyboard key",
-      "line": 591
+      "line": 681
     },
     {
       "key": "Menu",
@@ -38022,7 +37994,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2879
+      "line": 2877
     },
     {
       "key": "Milliseconds to apply quick input early",
@@ -38547,14 +38519,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_settings.cpp",
       "context": "",
-      "line": 601
+      "line": 691
     },
     {
       "key": "Mouse distance",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 607
+      "line": 604
     },
     {
       "key": "Mouse sensitivity",
@@ -38783,6 +38755,20 @@
     {
       "key": "Multi",
       "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "context": "",
+      "line": 509
+    },
+    {
+      "key": "Multi",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "context": "",
+      "line": 689
+    },
+    {
+      "key": "Multi",
+      "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
       "line": 535
@@ -38792,7 +38778,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 1213
+      "line": 1210
     },
     {
       "key": "Multi-resolution blur with a stronger result and balanced GPU cost.",
@@ -39821,14 +39807,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 599
+      "line": 596
     },
     {
       "key": "Needs cfg file - install writes it into your config folder",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 1275
+      "line": 1272
     },
     {
       "key": "Negative stability buffer",
@@ -39856,21 +39842,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 617
+      "line": 614
     },
     {
       "key": "Nesting depth",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2816
+      "line": 2814
     },
     {
       "key": "Nesting depth: how many cfg files the flow goes through by exec, five at most.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 3025
+      "line": 3023
     },
     {
       "key": "Net",
@@ -40031,14 +40017,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 618
+      "line": 615
     },
     {
       "key": "New flow",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 1767
+      "line": 1765
     },
     {
       "key": "New folder",
@@ -40234,7 +40220,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 619
+      "line": 616
     },
     {
       "key": "Next weapon",
@@ -40269,7 +40255,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 662
+      "line": 659
     },
     {
       "key": "Ninja attack",
@@ -40668,7 +40654,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 1786
+      "line": 1784
     },
     {
       "key": "No demo is being recorded",
@@ -40745,14 +40731,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 620
+      "line": 617
     },
     {
       "key": "No executable action",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 1448
+      "line": 1445
     },
     {
       "key": "No favorite maps yet",
@@ -40794,7 +40780,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_settings.cpp",
       "context": "",
-      "line": 746
+      "line": 873
     },
     {
       "key": "No input device available",
@@ -40913,7 +40899,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 1123
+      "line": 1120
     },
     {
       "key": "No matching Rank 1 replay",
@@ -41123,7 +41109,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
       "context": "",
-      "line": 765
+      "line": 772
     },
     {
       "key": "No results",
@@ -41235,7 +41221,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2690
+      "line": 2688
     },
     {
       "key": "No server selected",
@@ -41298,7 +41284,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 663
+      "line": 660
     },
     {
       "key": "No such savegame for this map",
@@ -41340,70 +41326,70 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2575
+      "line": 2573
     },
     {
       "key": "Node created",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 621
+      "line": 618
     },
     {
       "key": "Node created",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2449
+      "line": 2447
     },
     {
       "key": "Node created",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2614
+      "line": 2612
     },
     {
       "key": "Node deleted",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 622
+      "line": 619
     },
     {
       "key": "Node deleted",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 1931
+      "line": 1929
     },
     {
       "key": "Node deleted",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2525
+      "line": 2523
     },
     {
       "key": "Node duplicated",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 623
+      "line": 620
     },
     {
       "key": "Node duplicated",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2497
+      "line": 2495
     },
     {
       "key": "Node types",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2945
+      "line": 2943
     },
     {
       "key": "Nodes",
@@ -41417,14 +41403,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2878
+      "line": 2876
     },
     {
       "key": "nodes selected",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2669
+      "line": 2667
     },
     {
       "key": "Noise reduction mode",
@@ -41977,14 +41963,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 624
+      "line": 621
     },
     {
       "key": "Note",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2752
+      "line": 2750
     },
     {
       "key": "Note:",
@@ -42026,21 +42012,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2826
+      "line": 2824
     },
     {
       "key": "Nothing to redo",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2919
+      "line": 2917
     },
     {
       "key": "Nothing to undo",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2919
+      "line": 2917
     },
     {
       "key": "Notification animation duration (ms)",
@@ -42320,7 +42306,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 578
+      "line": 575
     },
     {
       "key": "Off",
@@ -42778,13 +42764,6 @@
       "line": 535
     },
     {
-      "key": "Only conflicts",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
-      "context": "",
-      "line": 605
-    },
-    {
       "key": "Only free spectating is affected, not normal play; set \"Cinematic smoothness\" to 0 to keep instant camera response.",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmCardWiki.cpp",
@@ -42797,6 +42776,13 @@
       "source": "src/game/client/QmUi/QmCardWiki.cpp",
       "context": "",
       "line": 659
+    },
+    {
+      "key": "Only multi-action",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "context": "",
+      "line": 609
     },
     {
       "key": "Only one press event is allowed",
@@ -43979,7 +43965,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2838
+      "line": 2836
     },
     {
       "key": "Output device",
@@ -44098,7 +44084,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 3027
+      "line": 3025
     },
     {
       "key": "Overall sponsor title badge color",
@@ -44246,6 +44232,20 @@
       "source": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogTClientProfiles.inc",
       "context": "",
       "line": 21
+    },
+    {
+      "key": "Overwrites",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
+      "context": "",
+      "line": 1520
+    },
+    {
+      "key": "overwrites",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
+      "context": "",
+      "line": 1530
     },
     {
       "key": "Own",
@@ -44658,7 +44658,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2824
+      "line": 2822
     },
     {
       "key": "Password",
@@ -45400,7 +45400,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 664
+      "line": 661
     },
     {
       "key": "Plasma gun shots per second",
@@ -47010,7 +47010,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 665
+      "line": 662
     },
     {
       "key": "Practice mode can't be enabled in team 0 mode.",
@@ -47395,7 +47395,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 608
+      "line": 605
     },
     {
       "key": "Press \"Save\" after any change: the title and chat style are stored on your account, and \"Refresh\" reloads them.",
@@ -47451,7 +47451,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 625
+      "line": 622
     },
     {
       "key": "Press F2, log in, then use: change_map map_name",
@@ -50293,7 +50293,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2915
+      "line": 2913
     },
     {
       "key": "Reduce antiping and player prediction when frozen",
@@ -52197,7 +52197,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 666
+      "line": 663
     },
     {
       "key": "Rescue is not enabled on this server and you're not in a team with /practice turned on. Note that you can't earn a rank with practice enabled.",
@@ -52254,27 +52254,6 @@
       "source": "src/game/client/components/qmclient/chat_command_preview.h",
       "context": "",
       "line": 178
-    },
-    {
-      "key": "Reserved",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
-      "context": "",
-      "line": 686
-    },
-    {
-      "key": "Reserved",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/qmclient/bind_settings.cpp",
-      "context": "",
-      "line": 178
-    },
-    {
-      "key": "Reserved",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
-      "context": "",
-      "line": 547
     },
     {
       "key": "reserved settings(1)",
@@ -52400,7 +52379,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 667
+      "line": 664
     },
     {
       "key": "Reset chat completion appearance",
@@ -52442,7 +52421,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 668
+      "line": 665
     },
     {
       "key": "Reset count appearance",
@@ -52645,7 +52624,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 669
+      "line": 666
     },
     {
       "key": "Reset weapons when passing start tile",
@@ -52827,14 +52806,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 548
+      "line": 547
     },
     {
       "key": "Restored previous bind",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 922
+      "line": 919
     },
     {
       "key": "Restored the built-in content",
@@ -53058,7 +53037,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 670
+      "line": 667
     },
     {
       "key": "Right click or double click to add points on active channels. Use shift to change the zoom axis. Press S to scale selected points.",
@@ -53429,7 +53408,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 626
+      "line": 623
     },
     {
       "key": "Run on join",
@@ -53528,6 +53507,20 @@
       "source": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogAppearance.inc",
       "context": "",
       "line": 137
+    },
+    {
+      "key": "Same function",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "context": "",
+      "line": 514
+    },
+    {
+      "key": "Same function",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "context": "",
+      "line": 691
     },
     {
       "key": "Same group full map listening",
@@ -53660,7 +53653,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_settings.cpp",
       "context": "",
-      "line": 848
+      "line": 951
     },
     {
       "key": "Save",
@@ -54829,14 +54822,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 549
+      "line": 548
     },
     {
       "key": "Scroll to browse",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 1466
+      "line": 1463
     },
     {
       "key": "Scroll to browse the credits.",
@@ -54885,7 +54878,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
       "context": "",
-      "line": 662
+      "line": 666
     },
     {
       "key": "Search",
@@ -55081,7 +55074,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 988
+      "line": 985
     },
     {
       "key": "Search results",
@@ -55550,14 +55543,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 550
+      "line": 549
     },
     {
       "key": "Selected node",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2662
+      "line": 2660
     },
     {
       "key": "Selected part: %d",
@@ -55613,7 +55606,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2670
+      "line": 2668
     },
     {
       "key": "Selection background color",
@@ -55893,7 +55886,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 551
+      "line": 550
     },
     {
       "key": "Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines",
@@ -56012,14 +56005,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 606
+      "line": 603
     },
     {
       "key": "Sensitivity only",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 671
+      "line": 668
     },
     {
       "key": "Separate Dynamic Island",
@@ -57000,13 +56993,6 @@
       "source": "src/game/client/components/qmclient/monitoring/monitoring.cpp",
       "context": "",
       "line": 122
-    },
-    {
-      "key": "Shadowed",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
-      "context": "",
-      "line": 552
     },
     {
       "key": "Shape",
@@ -58511,7 +58497,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 553
+      "line": 551
     },
     {
       "key": "Show hook strength icon indicator",
@@ -61276,7 +61262,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 554
+      "line": 552
     },
     {
       "key": "Size",
@@ -62487,7 +62473,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
       "context": "",
-      "line": 645
+      "line": 649
     },
     {
       "key": "Sort by favorites",
@@ -62508,7 +62494,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
       "context": "",
-      "line": 645
+      "line": 649
     },
     {
       "key": "Sort by number of friends",
@@ -62837,7 +62823,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 672
+      "line": 669
     },
     {
       "key": "Specifies whether zoom should be limited in game (0 = unlimited)",
@@ -63558,7 +63544,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2416
+      "line": 2414
     },
     {
       "key": "Start here to quickly diagnose if the issue is with device, server, or room",
@@ -63691,14 +63677,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 555
+      "line": 553
     },
     {
       "key": "State - Toggle restore",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 556
+      "line": 554
     },
     {
       "key": "Statistics",
@@ -63747,14 +63733,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 557
+      "line": 555
     },
     {
       "key": "Status",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2822
+      "line": 2820
     },
     {
       "key": "Status Bar",
@@ -63901,7 +63887,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 3026
+      "line": 3024
     },
     {
       "key": "Steam client path",
@@ -64013,7 +63999,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 673
+      "line": 670
     },
     {
       "key": "Still free after %d sponsors. Take a look?",
@@ -64608,7 +64594,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 558
+      "line": 556
     },
     {
       "key": "Switch failed",
@@ -64636,7 +64622,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 674
+      "line": 671
     },
     {
       "key": "Switch interval",
@@ -64748,7 +64734,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 559
+      "line": 557
     },
     {
       "key": "Switch to laser",
@@ -64930,7 +64916,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 675
+      "line": 672
     },
     {
       "key": "sync",
@@ -65385,7 +65371,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 560
+      "line": 558
     },
     {
       "key": "Team %d",
@@ -65420,7 +65406,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 676
+      "line": 673
     },
     {
       "key": "Team 0 (unteamed) tee glow mode: 0=Off, 1=Tee color, 2=Custom color, 3=Rainbow",
@@ -65476,7 +65462,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 677
+      "line": 674
     },
     {
       "key": "Team can't be loaded while in team 0 mode",
@@ -65700,7 +65686,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 561
+      "line": 559
     },
     {
       "key": "Team save already in progress",
@@ -66337,7 +66323,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 678
+      "line": 675
     },
     {
       "key": "Teleport all weapons (deprecated, use special entities instead)",
@@ -66890,7 +66876,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 627
+      "line": 624
     },
     {
       "key": "The animation speed.",
@@ -66918,7 +66904,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2997
+      "line": 2995
     },
     {
       "key": "The card only appears while such a bind exists; click its key field to change the key, and the row label is the command it runs.",
@@ -66967,7 +66953,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_settings.cpp",
       "context": "",
-      "line": 775
+      "line": 812
     },
     {
       "key": "The downloaded file is not a valid demo",
@@ -67541,28 +67527,28 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_settings.cpp",
       "context": "",
-      "line": 679
+      "line": 772
     },
     {
       "key": "This bind contains an unfinished quote and cannot be edited safely.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_settings.cpp",
       "context": "",
-      "line": 770
+      "line": 807
     },
     {
       "key": "This bind is already over the local config line limit.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_settings.cpp",
       "context": "",
-      "line": 668
+      "line": 761
     },
     {
       "key": "This bind is already over the local config line limit.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_settings.cpp",
       "context": "",
-      "line": 788
+      "line": 825
     },
     {
       "key": "This connection cannot change names while connected. Reconnect with the saved names first.",
@@ -67695,14 +67681,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 604
+      "line": 601
     },
     {
       "key": "This preset has no built-in cfg",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 776
+      "line": 773
     },
     {
       "key": "This save exists, but you are not part of it. ",
@@ -67912,7 +67898,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 628
+      "line": 625
     },
     {
       "key": "Tick \"Auto-connect dummy\" to connect the dummy for you, then bind \"Solo split key\" to toggle, or use the enter and leave keys.",
@@ -68661,7 +68647,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 562
+      "line": 560
     },
     {
       "key": "Toggle auto camera",
@@ -68682,7 +68668,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 563
+      "line": 561
     },
     {
       "key": "Toggle config value",
@@ -68899,7 +68885,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 629
+      "line": 626
     },
     {
       "key": "Toggle scoreboard cursor",
@@ -68927,7 +68913,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 630
+      "line": 627
     },
     {
       "key": "Toggle team between team 0 and team mode. This mode will make your team behave like team 0.",
@@ -69186,7 +69172,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 564
+      "line": 562
     },
     {
       "key": "Too many parameters",
@@ -70453,14 +70439,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 631
+      "line": 628
     },
     {
       "key": "Type",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2704
+      "line": 2702
     },
     {
       "key": "Type a map name or choose one from the list.",
@@ -71013,35 +70999,35 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_settings.cpp",
       "context": "",
-      "line": 232
+      "line": 181
     },
     {
       "key": "Undo",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_settings.cpp",
       "context": "",
-      "line": 692
+      "line": 785
     },
     {
       "key": "Undo",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 565
+      "line": 563
     },
     {
       "key": "Undo",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 915
+      "line": 912
     },
     {
       "key": "Undo",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2915
+      "line": 2913
     },
     {
       "key": "Unexpected map upload response.",
@@ -71454,7 +71440,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 566
+      "line": 564
     },
     {
       "key": "Unknown error. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings.cfg in the config directory and try again.",
@@ -71650,7 +71636,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 567
+      "line": 565
     },
     {
       "key": "Unregister protocol and file extensions",
@@ -71678,7 +71664,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 679
+      "line": 676
     },
     {
       "key": "Untick \"Show other players' large emoticons\" or \"Show other players' launched emoticons\"; click \"Launch emote key\" to assign the key that turns launching on and off.",
@@ -71699,21 +71685,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 568
+      "line": 566
     },
     {
       "key": "Untitled flow",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 1777
+      "line": 1775
     },
     {
       "key": "Untitled flow",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 3052
+      "line": 3050
     },
     {
       "key": "Unused tiles can't be placed by default because they could get a use later and then destroy your map.\\n\\nActivate the 'Allow unused' setting to be able to place every tile.",
@@ -72700,7 +72686,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 569
+      "line": 567
     },
     {
       "key": "Uses the active action with the current aiming position.",
@@ -72728,7 +72714,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 570
+      "line": 568
     },
     {
       "key": "v = Velocity",
@@ -72777,49 +72763,49 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 571
+      "line": 569
     },
     {
       "key": "Validate",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 1679
+      "line": 1677
     },
     {
       "key": "Validation",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 572
+      "line": 570
     },
     {
       "key": "Validation",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2808
+      "line": 2806
     },
     {
       "key": "Validation and output",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2945
+      "line": 2943
     },
     {
       "key": "Validation passed",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 573
+      "line": 571
     },
     {
       "key": "Validation passed",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 1680
+      "line": 1678
     },
     {
       "key": "value",
@@ -72882,14 +72868,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 574
+      "line": 572
     },
     {
       "key": "Variants",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 1235
+      "line": 1232
     },
     {
       "key": "Velocity",
@@ -74247,7 +74233,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 575
+      "line": 573
     },
     {
       "key": "Weapon animation",
@@ -74576,7 +74562,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 680
+      "line": 677
     },
     {
       "key": "Wheel label",
@@ -74604,14 +74590,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 576
+      "line": 574
     },
     {
       "key": "Wheel up",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 681
+      "line": 678
     },
     {
       "key": "When TClient rainbow Tee is enabled, this feature has no effect.",
@@ -75024,14 +75010,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2680
+      "line": 2678
     },
     {
       "key": "Width",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2736
+      "line": 2734
     },
     {
       "key": "Width",
@@ -75234,7 +75220,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 682
+      "line": 679
     },
     {
       "key": "Word Filter",
@@ -75381,14 +75367,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2676
+      "line": 2674
     },
     {
       "key": "X",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2732
+      "line": 2730
     },
     {
       "key": "X",
@@ -75458,14 +75444,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2678
+      "line": 2676
     },
     {
       "key": "Y",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 2733
+      "line": 2731
     },
     {
       "key": "Y",
@@ -77075,7 +77061,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
-      "line": 683
+      "line": 680
     },
     {
       "key": "Zoom Allowed",

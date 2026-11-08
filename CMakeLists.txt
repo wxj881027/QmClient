@@ -3544,6 +3544,8 @@ if(CLIENT)
     components/qmclient/friend_last_seen_data.h
     components/qmclient/bind_editor.cpp
     components/qmclient/bind_editor.h
+    components/qmclient/bind_mouse_diagram.cpp
+    components/qmclient/bind_mouse_diagram.h
     components/qmclient/bind_overview.h
     components/qmclient/bind_settings.cpp
     components/qmclient/bind_workshop.cpp
@@ -4926,6 +4928,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/base/prng_test.cpp
     src/test/unit/qmclient/client/qm_bind_editor_console_test.cpp
     src/test/unit/qmclient/client/qm_bind_editor_test.cpp
+    src/test/unit/qmclient/client/qm_bind_mouse_diagram_test.cpp
     src/test/unit/qmclient/client/qm_bind_overview_test.cpp
     src/test/unit/qmclient/client/qm_bind_workshop_catalog_test.cpp
     src/test/unit/qmclient/client/qm_bind_workshop_plan_test.cpp
@@ -5449,6 +5452,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/qm/music/qm_qqmusic_protocol.h
     src/game/client/components/qmclient/modes.cpp
     src/game/client/components/qmclient/bind_editor.cpp
+    src/game/client/components/qmclient/bind_mouse_diagram.cpp
     src/game/client/components/qmclient/bind_workshop.cpp
     src/game/client/components/qmclient/bind_workshop_layout.cpp
     src/game/client/components/qmclient/wheel_presets.cpp

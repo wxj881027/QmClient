@@ -1,4 +1,14 @@
 [[message]]
+key = "Overwrites"
+[message.translations]
+simplified_chinese = "会覆盖"
+
+[[message]]
+key = "overwrites"
+[message.translations]
+simplified_chinese = "处会覆盖"
+
+[[message]]
 key = "(no command)"
 [message.translations]
 simplified_chinese = "（无命令）"
@@ -179,9 +189,14 @@ key = "Middle-drag to pan"
 simplified_chinese = "中键拖动平移画布"
 
 [[message]]
-key = "Later binds on the same key replace earlier ones, and modifier chords win over plain keys - so a plain bind can end up shadowed."
+key = "Badges are informational: a bind can chain several commands, and one command can be bound to several keys."
 [message.translations]
-simplified_chinese = "同一个键位后写入的绑定会覆盖先前的；组合键优先于裸键，所以裸键可能按不出来（例如已经有 Shift+A 时，单独的 A 会失效）。"
+simplified_chinese = "徽标只是说明：一条绑定可以串多个命令，同一个命令也可以同时绑在别的键上。"
+
+[[message]]
+key = "Same function"
+[message.translations]
+simplified_chinese = "同功能按键"
 
 [[message]]
 key = "Line length"
@@ -269,11 +284,6 @@ key = "Redo"
 simplified_chinese = "重做"
 
 [[message]]
-key = "Reserved"
-[message.translations]
-simplified_chinese = "保留和弦"
-
-[[message]]
 key = "Restored previous bind"
 [message.translations]
 simplified_chinese = "已恢复原有绑定"
@@ -282,11 +292,6 @@ simplified_chinese = "已恢复原有绑定"
 key = "Send the ready message to the team channel."
 [message.translations]
 simplified_chinese = "向队伍频道发送准备消息。"
-
-[[message]]
-key = "Shadowed"
-[message.translations]
-simplified_chinese = "被覆盖"
 
 [[message]]
 key = "Show hook collision line and drop mouse sensitivity to 66 while held."
@@ -387,11 +392,6 @@ simplified_chinese = "校验通过"
 key = "Variants"
 [message.translations]
 simplified_chinese = "变体"
-
-[[message]]
-key = "conflicts"
-[message.translations]
-simplified_chinese = "处冲突"
 
 [[message]]
 key = "occupied"
@@ -509,11 +509,6 @@ key = "flows exported"
 simplified_chinese = "张流程已导出"
 
 [[message]]
-key = "Key conflict"
-[message.translations]
-simplified_chinese = "键位冲突"
-
-[[message]]
 key = "Link failed"
 [message.translations]
 simplified_chinese = "连线失败"
@@ -574,9 +569,9 @@ key = "Node duplicated"
 simplified_chinese = "已复制节点"
 
 [[message]]
-key = "Only conflicts"
+key = "Only multi-action"
 [message.translations]
-simplified_chinese = "只看冲突"
+simplified_chinese = "只看多动作"
 
 [[message]]
 key = "Press event"

@@ -17,7 +17,7 @@
 #include <game/client/components/key_binder.h>
 #include <game/client/components/menus.h>
 #include <game/client/components/qmclient/bind_editor.h>
-#include <game/client/components/qmclient/bind_workshop.h>
+#include <game/client/components/qmclient/bind_mouse_diagram.h>
 #include <game/client/gameclient.h>
 #include <game/client/qm_icon.h>
 #include <game/localization.h>
@@ -130,9 +130,12 @@ namespace
 		std::array<CButtonContainer, 4> m_aModifierButtons{};
 		std::deque<SActionControls> m_vActionControls;
 		// 就地编辑已绑定动作：m_EditActionIndex 是正在编辑的行，-1 表示列表处于只读态。
-		// m_EditActionSlot 记住编辑开始时选中的键位，选中键一变就取消，避免把命令写回别的键。
+		// m_EditActionSlot 记住编辑开始时选中的键位，写回永远用这个槽位，换选中键也不会写错。
 		int m_EditActionIndex = -1;
 		CBindSlot m_EditActionSlot = CBindSlot(KEY_UNKNOWN, KeyModifier::NONE);
+		// 编辑行的屏幕矩形：点在这一块外面就把正在编辑的内容写回并关闭编辑。
+		CUIRect m_EditActionRect{};
+		bool m_EditActionRectValid = false;
 		CLineInputBuffered<qm_bind_editor::INPUT_CAPACITY> m_EditActionInput;
 		CButtonContainer m_EditActionCommit;
 		CButtonContainer m_EditActionCancel;
@@ -164,60 +167,6 @@ namespace
 	int ModifierBit(const int Modifier)
 	{
 		return 1 << Modifier;
-	}
-
-	// 冲突类型文案：与 Bind 一览卡的徽标共用同一套英文原文，交给翻译流水线。
-	// 键面圆点只表达"有冲突"，具体类型放在右侧已绑定功能区的一行小字里。
-	void FormatBindConflictTypes(const int Flags, char *pBuffer, const size_t BufferSize)
-	{
-		pBuffer[0] = '\0';
-		const char *apTypes[2];
-		int TypeCount = 0;
-
-		if((Flags & qm_bind_workshop::OCCUPANCY_RESERVED_CHORD) != 0)
-			apTypes[TypeCount++] = Localize("Reserved");
-		for(int Index = 0; Index < TypeCount; ++Index)
-		{
-			if(Index > 0)
-				str_append(pBuffer, ", ", (int)BufferSize);
-			str_append(pBuffer, apTypes[Index], (int)BufferSize);
-		}
-	}
-
-	// 键位占用缓存：按物理键聚合（同键多修饰键取并集），CBinds 版本不变时
-	// 零重建零分配。deck 的键面圆点与右侧冲突说明都走这一个入口。
-	const std::array<int, KEY_LAST> &BindConflictFlagTable(const CBinds &Binds)
-	{
-		static std::array<int, KEY_LAST> s_aFlags{};
-		static uint64_t s_Revision = ~0ULL;
-		const uint64_t Revision = Binds.Revision();
-		if(s_Revision != Revision)
-		{
-			s_aFlags.fill(qm_bind_workshop::OCCUPANCY_NONE);
-			const std::vector<qm_bind_workshop::SOccupancyEntry> vOccupancy = qm_bind_workshop::BuildOccupancy(
-				[&Binds](int Key, int Modifier) { return Binds.Get(Key, Modifier); },
-				[&Binds](int Key, int Modifier, char *pBuffer, size_t BufferSize) { Binds.GetKeyBindName(Key, Modifier, pBuffer, BufferSize); });
-			for(const qm_bind_workshop::SOccupancyEntry &Entry : vOccupancy)
-			{
-				const int Key = Entry.m_Slot.m_Key;
-				// 同一键挂多条命令是 DDNet 的合法用法（按顺序执行），不当作冲突：
-				// 只保留真的互相打架的类型（被遮蔽、保留组合、被不同用途占用）。
-				// 「同键有没有别的修饰键组合」不算冲突：Ctrl+Return 之类不会顶掉 Return，
-				// 只有系统保留和弦这种真的会被游戏截走的组合才提示。
-				const int Conflicts = Entry.m_Flags & ~(qm_bind_workshop::OCCUPANCY_MULTI_ACTION | qm_bind_workshop::OCCUPANCY_SHADOWED);
-				if(Key >= KEY_FIRST && Key < KEY_LAST)
-					s_aFlags[Key] |= Conflicts;
-			}
-			s_Revision = Revision;
-		}
-		return s_aFlags;
-	}
-
-	int BindConflictFlags(const CBinds &Binds, const int Key)
-	{
-		if(Key < KEY_FIRST || Key >= KEY_LAST)
-			return qm_bind_workshop::OCCUPANCY_NONE;
-		return BindConflictFlagTable(Binds)[Key];
 	}
 
 	void SetBindEditorError(SBindEditorUiState &State, const char *pMessage)
@@ -395,24 +344,63 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 		// Enter / Home / Down / Right 这些名字比单个字母长，只缩到 TIP 会被截成
 		// Ent / Ho / Do / Rig，玩家认不出是哪个键，所以下限要低于 TIP。
 		const float MinKeyLabelSize = ui_token::font::TIP * 0.62f * Metrics.m_UiScale;
-		const auto DrawKey = [this, &State, ReadOnly, BodySize, MinKeyLabelSize, UiScale = Metrics.m_UiScale](const SBindKeyTile &Tile, const CUIRect &Rect) {
-			if(Tile.m_Spacer)
-				return;
-			if(State.m_KeyButtonCount >= (int)State.m_aKeyButtons.size())
-				return;
-			const CBindSlot Slot(Tile.m_Key, State.m_ModifierMask);
-			const bool Hovered = Ui()->MouseHovered(&Rect);
-			// 悬停只负责视觉反馈，绝不写选中：选中是点击结果，只有点了别的键才换。
-			// 早期版本用悬停跟随选中，结果鼠标一移开就"选中没了、右边的已绑定功能也换人"。
-
-			// 左键在某颗键上按下就冻结悬停跟随：DoButtonLogic 只在抬起时返回 1，若等它标记，
-			// 按住不放把鼠标拖到数字键盘区或别的键上时，悬停会把选中抢走或跳走。
-			// 冻结建立在"按下的那颗键"上，所以在键盘空白处、修饰键上按下不会顺手冻住悬停。
+		// 左键在键面上按下就冻结悬停跟随：DoButtonLogic 只在抬起时返回 1，若等它标记，
+		// 按住不放把鼠标拖到数字键盘区或别的键上时，悬停会把选中抢走或跳走。
+		// 冻结建立在"按下的那颗键"上，所以在键盘空白处、修饰键上按下不会顺手冻住悬停。
+		// 鼠标图和键帽共用这一段：两种键面是同一套按下语义。
+		const auto NoteZonePress = [this, &State, ReadOnly](const bool Hovered) {
 			if(!ReadOnly && Hovered && Ui()->MouseButtonClicked(0) != 0)
 			{
 				State.m_KeySelectionHeld = true;
 				State.m_KeyPressFrozen = true;
 			}
+		};
+		// 键面通用状态层：选中/悬停描边、已绑定下划线、冲突点与点击写回。
+		// 键盘键帽和鼠标图共用这一份实现，两边的选中语义、描边宽度和冲突标记不会再各写一套。
+		const auto DrawZoneState = [this, &State, ReadOnly](const CBindSlot &Slot, const CUIRect &Rect, const CUIRect &Plate, const float Radius, const int Corners, const bool Hovered, const bool Selected, const float DotInset, const int BoundStyle, const CButtonContainer *pButton) -> int {
+			// 选中：沿表面补一圈强调色描边（不按命中矩形画，避免描边离表面一圈）。
+			if(Selected)
+				DrawRoundedSurface(Ui(), Plate, ui_token::color::COLOR_TRANSPARENT, BindEditorAccent(Ui()), Radius, ui_token::feedback::ICON_BORDER_WIDTH, Corners);
+			// 悬停但未选中：白色高亮描边（和其它按钮悬停同源），让「鼠标在这」和「选中了」分得开。
+			else if(Hovered)
+				DrawRoundedSurface(Ui(), Plate, ui_token::color::COLOR_TRANSPARENT, ColorRGBA(1.0f, 1.0f, 1.0f, ui_token::feedback::ICON_BORDER_ALPHA), Radius, ui_token::feedback::ICON_BORDER_WIDTH, Corners);
+			// 已绑定标记：键帽贴着底边一条 2px 强调色下划线；鼠标区域改成居中的一小截短划，
+			// 贴在圆角底边上会从圆弧两侧戳出去，整条又太抢眼。两种都用主题强调色。
+			if(GameClient()->m_Binds.Get(Slot)[0] != '\0')
+			{
+				if(BoundStyle == 0)
+				{
+					const float Thickness = 2.0f * ui_token::feedback::ICON_BORDER_WIDTH;
+					const float UnderlineInset = std::min(Radius, Plate.w * 0.2f);
+					const CUIRect Underline{Plate.x + UnderlineInset, Plate.y + Plate.h - Thickness, std::max(1.0f, Plate.w - 2.0f * UnderlineInset), Thickness};
+					DrawRoundedSurface(Ui(), Underline, Ui()->ScaleControlAlpha(BindEditorAccent(Ui())), ui_token::color::COLOR_TRANSPARENT, Thickness * 0.5f);
+				}
+				else if(BoundStyle == 1)
+				{
+					// 鼠标区域：居中的一截强调色短划，离底边留一档，不压住板上文字。
+					const float Thickness = std::max(1.0f, 1.5f * ui_token::feedback::ICON_BORDER_WIDTH);
+					const float UnderlineWidth = std::min(Plate.w * 0.5f, std::max(Thickness, Plate.h * 0.9f));
+					const CUIRect Underline{Plate.x + (Plate.w - UnderlineWidth) * 0.5f, Plate.y + Plate.h - Thickness - std::max(1.5f, Plate.h * 0.06f), UnderlineWidth, Thickness};
+					DrawRoundedSurface(Ui(), Underline, Ui()->ScaleControlAlpha(BindEditorAccent(Ui())).WithMultipliedAlpha(0.85f), ui_token::color::COLOR_TRANSPARENT, Thickness * 0.5f);
+				}
+			}
+			if(pButton == nullptr)
+				return 0;
+			return ReadOnly ? 0 : Ui()->DoButtonLogic(pButton, Selected ? 1 : 0, &Rect, BUTTONFLAG_LEFT);
+		};
+		const auto DrawKey = [this, &State, ReadOnly, BodySize, MinKeyLabelSize, &NoteZonePress, &DrawZoneState, UiScale = Metrics.m_UiScale](const SBindKeyTile &Tile, const CUIRect &Rect) {
+			if(Tile.m_Spacer)
+				return;
+			if(State.m_KeyButtonCount >= (int)State.m_aKeyButtons.size())
+				return;
+			const CBindSlot Slot(Tile.m_Key, State.m_ModifierMask);
+			// 悬停判定用纯几何、且不看趟次：这张卡会走「交互趟 + 背景出图趟」，
+			// 最终出图那一趟 RenderOnly() 为真，任何 ReadOnly/MouseHovered 条件都会把
+			// 边框高亮挡掉——之前键面看起来「没有悬浮」就是这个原因。
+			const bool Hovered = Ui()->MouseInside(&Rect);
+			// 悬停只负责视觉反馈，绝不写选中：选中是点击结果，只有点了别的键才换。
+			// 早期版本用悬停跟随选中，结果鼠标一移开就"选中没了、右边的已绑定功能也换人"。
+			NoteZonePress(Hovered);
 			const bool Selected = State.m_HasSelected && State.m_Selected == Slot;
 			// 行跳转的二级揭示：先登记这颗键（登记即请求滚动到它），再照常绘制。
 			if(Selected && State.m_RevealSelectedKey && !ReadOnly && g_pBindDeckScrollRegion != nullptr)
@@ -437,6 +425,8 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 			Props.m_MaxWidth = std::max(1.0f, LabelRect.w);
 			Props.m_MinimumFontSize = MinKeyLabelSize;
 			Props.m_EllipsisAtEnd = true;
+			// 非空表示这颗键的名字被截断了，需要悬浮提示补全名。
+			const char *pTooltipText = nullptr;
 			if(Tile.m_IconId >= 0)
 			{
 				// 图标路径：由图标绘制按字形包围盒居中，不手填像素偏移。
@@ -459,36 +449,25 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 					for(int Step = 0; Step < 3 && LabelSize > MinKeyLabelSize && TextRender()->TextWidth(LabelSize, pKeyLabel) > LabelRect.w + 0.5f; ++Step)
 						LabelSize = std::max(MinKeyLabelSize, LabelSize * 0.88f);
 				}
+				// 缩到最小档还是放不下，键帽上就会带省略号：这种键补一条悬浮提示显示全名。
+				if(TextRender()->TextWidth(LabelSize, pKeyLabel) > LabelRect.w + 0.5f)
+					pTooltipText = pKeyLabel;
 				SLabelProperties FixedProps = Props;
 				// 字号已经自己算好，关掉内部收缩，避免又一次逐级搜索。
 				FixedProps.m_EnableWidthCheck = false;
 				Ui()->DoLabel(&LabelRect, pKeyLabel, LabelSize, TEXTALIGN_MC, FixedProps);
 			}
-			// 选中：沿键帽板补一圈强调色描边（不按命中矩形画，避免描边离键帽一圈）。
-			if(Selected)
-				DrawRoundedSurface(Ui(), Plate, ui_token::color::COLOR_TRANSPARENT, BindEditorAccent(Ui()), ui_token::radius::BASE, ui_token::feedback::ICON_BORDER_WIDTH);
-			// 悬停但未选中：白色高亮描边（和其它按钮悬停同源），让「鼠标在这」和「选中了」分得开。
-			else if(Hovered && !ReadOnly)
-				DrawRoundedSurface(Ui(), Plate, ui_token::color::COLOR_TRANSPARENT, ColorRGBA(1.0f, 1.0f, 1.0f, ui_token::feedback::ICON_BORDER_ALPHA), ui_token::radius::BASE, ui_token::feedback::ICON_BORDER_WIDTH);
-			// 已绑定：表面底部一条 2px 强调色下划线（替代原先压在键顶的整条绿色横条）。
-			// 下划线跟选中描边同一个强调色来源（主题强调色），改主题时键面和整页一起变。
-			if(GameClient()->m_Binds.Get(Slot)[0] != '\0')
+			// 状态层与点击写回统一交给 DrawZoneState：键帽和鼠标图的描边、下划线、
+			// 冲突点因此永远同一套，不会一边改了另一边忘了跟。
+			const CButtonContainer *pButton = State.m_KeyButtonCount < (int)State.m_aKeyButtons.size() ? &State.m_aKeyButtons[State.m_KeyButtonCount] : nullptr;
+			const int ButtonResult = DrawZoneState(Slot, Rect, Plate, ui_token::radius::BASE, IGraphics::CORNER_ALL, Hovered, Selected, PlateInset, 0, pButton);
+			if(pButton != nullptr)
 			{
-				const float Thickness = 2.0f * ui_token::feedback::ICON_BORDER_WIDTH;
-				const float UnderlineInset = std::min(ui_token::radius::BASE, Plate.w * 0.2f);
-				const CUIRect Underline{Plate.x + UnderlineInset, Plate.y + Plate.h - Thickness, std::max(1.0f, Plate.w - 2.0f * UnderlineInset), Thickness};
-				DrawRoundedSurface(Ui(), Underline, Ui()->ScaleControlAlpha(BindEditorAccent(Ui())), ui_token::color::COLOR_TRANSPARENT, ui_token::radius::NONE);
+				++State.m_KeyButtonCount;
+				// 只给被截断的键弹提示：完整键名放得下时再弹一次「A」纯属挡视线。
+				if(!ReadOnly && pTooltipText != nullptr)
+					GameClient()->m_Tooltips.DoToolTipForRect(pButton, &Rect, pTooltipText);
 			}
-			// 冲突只在键面右上角点一颗 4px 圆点：键面中心留给键名，同一键有多种
-			// 冲突也不加文字，类型留给右侧已绑定功能区的悬停说明。
-			if(BindConflictFlags(GameClient()->m_Binds, Slot.m_Key) != 0)
-			{
-				const float DotSize = std::min(ui_token::spacing::XS, Plate.h * 0.35f);
-				const CUIRect Dot{Plate.x + Plate.w - DotSize - std::max(1.0f, PlateInset), Plate.y + std::max(1.0f, PlateInset), DotSize, DotSize};
-				DrawRoundedSurface(Ui(), Dot, ui_token::color::WARNING.WithAlpha(0.95f), ui_token::color::COLOR_TRANSPARENT, DotSize * 0.5f);
-			}
-			const int ButtonResult = ReadOnly ? 0 : Ui()->DoButtonLogic(&State.m_aKeyButtons[State.m_KeyButtonCount], Selected ? 1 : 0, &Rect, BUTTONFLAG_LEFT);
-			++State.m_KeyButtonCount;
 			if(ButtonResult != 0 && !ReadOnly)
 			{
 				State.m_Selected = Slot;
@@ -500,23 +479,134 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 			}
 		};
 
-		// 鼠标区同样落在键面网格上：行高、单元宽、间隙与键盘排完全一致。
-		const auto RenderKeyRow = [&](const std::initializer_list<SBindKeyTile> Tiles) {
-			if(Tiles.size() == 0)
-				return;
-			CUIRect Row;
-			char aId[64];
-			str_format(aId, sizeof(aId), "bind-mouse-row-%d", KeyRow++);
-			const bool HasRow = Flow.Control(aId, KeyRowHeight, Row);
-			Flow.Space(LineSpacing);
-			if(!HasRow)
-				return;
-			float X = Row.x;
-			for(const SBindKeyTile &Tile : Tiles)
+		// 鼠标不再排成一排键帽：按顶视图自绘一只鼠标，左右键、滚轮三段、滚轮倾斜和
+		// 两个侧键各自独立命中。状态（选中/悬停/已绑定/冲突）全部走键帽那套 DrawZoneState。
+		// 区域文字：大键用完整键名，滚轮与侧键放不下，用 M3/M4/M5 与箭头，完整名字在悬停提示里。
+		static constexpr std::array<const char *, qm_bind_mouse::ZONE_COUNT> s_apZoneLabels = {"Mouse 1", "Mouse 2", nullptr, "M3", nullptr, nullptr, nullptr, "M5", "M4"};
+		static constexpr std::array<const char *, qm_bind_mouse::ZONE_COUNT> s_apZoneNames = {"Mouse 1", "Mouse 2", "Wheel up", "Mouse 3", "Wheel down", "Wheel left", "Wheel right", "Mouse 5", "Mouse 4"};
+		static constexpr std::array<int, qm_bind_mouse::ZONE_COUNT> s_aZoneIcons = {-1, -1, (int)EQmIcon::CHEVRON_UP, -1, (int)EQmIcon::CHEVRON_DOWN, (int)EQmIcon::CHEVRON_LEFT, (int)EQmIcon::CHEVRON_RIGHT, -1, -1};
+		// 字形常量不是 constexpr（textrender.h 里的 static const char *），这里跟着用 static const。
+		static const std::array<const char *, qm_bind_mouse::ZONE_COUNT> s_apZoneIconGlyphs = {nullptr, nullptr, FontIcons::FONT_ICON_CHEVRON_UP, nullptr, FontIcons::FONT_ICON_CHEVRON_DOWN, FontIcons::FONT_ICON_CHEVRON_LEFT, FontIcons::FONT_ICON_CHEVRON_RIGHT, nullptr, nullptr};
+		const auto RenderMouseDiagram = [this, &State, ReadOnly, &NoteZonePress, &DrawZoneState, BodySize, PlotScale = Metrics.m_UiScale](const CUIRect &Block) {
+			const qm_bind_mouse::SDiagram Diagram = qm_bind_mouse::Layout(Block);
+			// 行跳转的二级揭示：选中的是鼠标键时把整张图拉进视口（那颗键不画在键盘排里）。
+			if(!ReadOnly && State.m_RevealSelectedKey && State.m_HasSelected && qm_bind_mouse::IsMouseKey(State.m_Selected.m_Key) && g_pBindDeckScrollRegion != nullptr)
 			{
-				const CUIRect TileRect{X, Row.y, KeyTileWidth(Tile.m_Units), Row.h};
-				DrawKey(Tile, TileRect);
-				X += KeyUnit * Tile.m_Units;
+				State.m_RevealSelectedKey = false;
+				g_pBindDeckScrollRegion->AddRect(Diagram.m_Body, true);
+			}
+			// 本体：和键帽同一套深色玻璃材质——整只鼠标是一块深色剪影，不再把上半截
+			// 单独做成「深色屏幕」。左右键分界和按键区/掌托分界用两道细亮缝表达，
+			// 和真实鼠标顶视图一个读法；垫一层下移的阴影让它从卡片上浮起来。
+			const float ShadowOffset = std::max(1.0f, BodySize * 0.14f);
+			const CUIRect BodyShadow{Diagram.m_Body.x, Diagram.m_Body.y + ShadowOffset, Diagram.m_Body.w, Diagram.m_Body.h};
+			DrawRoundedSurface(Ui(), BodyShadow, ui_token::color::SURFACE_OVERLAY.WithMultipliedAlpha(0.5f), ui_token::color::COLOR_TRANSPARENT, Diagram.m_BodyRadius);
+			DrawRoundedSurface(Ui(), Diagram.m_Body, ui_token::color::SURFACE_GLASS, ui_token::color::NEUTRAL_WHITE.WithAlpha(0.14f), Diagram.m_BodyRadius, ui_token::feedback::ICON_BORDER_WIDTH);
+			const CUIRect &ButtonZone = Diagram.m_aZones[qm_bind_mouse::ZONE_MOUSE1].m_Rect;
+			const float SeamWidth = std::max(2.0f, Diagram.m_Body.w * 0.022f);
+			const float ButtonBottom = ButtonZone.y + ButtonZone.h;
+			const CUIRect VerticalSeam{Diagram.m_Body.x + Diagram.m_Body.w * 0.5f - SeamWidth * 0.5f, ButtonZone.y, SeamWidth, ButtonZone.h};
+			DrawRoundedSurface(Ui(), VerticalSeam, ui_token::color::NEUTRAL_WHITE.WithAlpha(0.10f), ui_token::color::COLOR_TRANSPARENT, SeamWidth * 0.5f);
+			const float SeamInset = Diagram.m_Body.w * 0.03f;
+			const CUIRect HorizontalSeam{Diagram.m_Body.x + SeamInset, ButtonBottom, Diagram.m_Body.w - 2.0f * SeamInset, std::max(1.0f, Diagram.m_Body.w * 0.008f)};
+			DrawRoundedSurface(Ui(), HorizontalSeam, ui_token::color::NEUTRAL_WHITE.WithAlpha(0.08f), ui_token::color::COLOR_TRANSPARENT, HorizontalSeam.h * 0.5f);
+			// 滚轮整根画成一枚竖胶囊：上滚 / 中键 / 下滚是它里面的三段。三段各画一枚小药丸
+			// 会叠成十字，看起来像方向键；整根胶囊才有「滚轮」的样子。
+			const auto DrawWheelBackdrop = [this, &Diagram]() {
+				DrawRoundedSurface(Ui(), Diagram.m_Wheel, ui_token::color::SURFACE_ELEVATED, ui_token::color::NEUTRAL_WHITE.WithAlpha(0.10f), Diagram.m_WheelRadius, ui_token::feedback::ICON_BORDER_WIDTH * 0.5f);
+				DrawRoundedSurface(Ui(), Diagram.m_Wheel, ui_token::color::SURFACE_HIGHLIGHT.WithMultipliedAlpha(1.2f), ui_token::color::COLOR_TRANSPARENT, Diagram.m_WheelRadius);
+				// 段间用浅色细纹分隔：整根胶囊因此像有纹路的滚轮，而不是三块拼起来的按钮。
+				const float DividerWidth = Diagram.m_Wheel.w * 0.62f;
+				const float DividerThickness = std::max(1.0f, Diagram.m_Wheel.w * 0.035f);
+				const float DividerX = Diagram.m_Wheel.x + (Diagram.m_Wheel.w - DividerWidth) * 0.5f;
+				for(const int UpperZone : {qm_bind_mouse::ZONE_WHEEL_UP, qm_bind_mouse::ZONE_MOUSE3})
+				{
+					const CUIRect &Upper = Diagram.m_aZones[UpperZone].m_Rect;
+					const CUIRect Divider{DividerX, Upper.y + Upper.h, DividerWidth, DividerThickness};
+					DrawRoundedSurface(Ui(), Divider, ui_token::color::NEUTRAL_WHITE.WithAlpha(0.12f), ui_token::color::COLOR_TRANSPARENT, DividerThickness * 0.5f);
+				}
+			};
+			// 悬停按纯几何定唯一区域（滚轮压在左右键上时，底下那颗大键不能跟着亮）；
+			// 和键面一样不看趟次，否则最终出图那趟会把反馈盖掉。
+			const int TopZone = qm_bind_mouse::HitTest(Diagram, Ui()->MouseX(), Ui()->MouseY());
+			const float PlateInset = std::max(1.0f, std::floor(PlotScale * 0.5f));
+			for(const int ZoneIndex : qm_bind_mouse::ZONE_DRAW_ORDER)
+			{
+				if(ZoneIndex == qm_bind_mouse::ZONE_WHEEL_UP)
+					DrawWheelBackdrop();
+				const qm_bind_mouse::SZone &Zone = Diagram.m_aZones[ZoneIndex];
+				const CBindSlot Slot(Zone.m_Key, State.m_ModifierMask);
+				// 悬停同样用纯几何 + 命中优先级：MouseHovered 的趟次条件会把反馈盖掉。
+				const bool Hovered = TopZone == ZoneIndex;
+				NoteZonePress(Hovered);
+				const bool Selected = State.m_HasSelected && State.m_Selected == Slot;
+				const CUIRect Plate{Zone.m_Rect.x + PlateInset, Zone.m_Rect.y + PlateInset, std::max(1.0f, Zone.m_Rect.w - 2.0f * PlateInset), std::max(1.0f, Zone.m_Rect.h - 2.0f * PlateInset)};
+				const bool WheelSegment = ZoneIndex == qm_bind_mouse::ZONE_WHEEL_UP || ZoneIndex == qm_bind_mouse::ZONE_MOUSE3 || ZoneIndex == qm_bind_mouse::ZONE_WHEEL_DOWN;
+				const bool TiltPad = ZoneIndex == qm_bind_mouse::ZONE_WHEEL_LEFT || ZoneIndex == qm_bind_mouse::ZONE_WHEEL_RIGHT;
+				const bool SideButton = ZoneIndex == qm_bind_mouse::ZONE_MOUSE4 || ZoneIndex == qm_bind_mouse::ZONE_MOUSE5;
+				// 左右键直接落在本体剪影上（只靠两道缝区分）；侧键在本体外侧，需要自己一块板；
+				// 滚轮段落在整根胶囊上；倾斜键平时不铺底，悬停/选中才浮出一小块底。
+				if(SideButton)
+					DrawRoundedSurface(Ui(), Plate, ui_token::color::SURFACE_ELEVATED, ui_token::color::NEUTRAL_WHITE.WithAlpha(0.10f), Zone.m_Radius, ui_token::feedback::ICON_BORDER_WIDTH * 0.5f, Zone.m_Corners);
+				else if(TiltPad && (Hovered || Selected))
+					DrawRoundedSurface(Ui(), Plate, ui_token::color::SURFACE_HIGHLIGHT.WithMultipliedAlpha(1.8f), ui_token::color::NEUTRAL_WHITE.WithAlpha(0.10f), Zone.m_Radius, ui_token::feedback::ICON_BORDER_WIDTH * 0.5f);
+				if(WheelSegment && (Hovered || Selected))
+					DrawRoundedSurface(Ui(), Plate, ui_token::color::SURFACE_HIGHLIGHT, ui_token::color::COLOR_TRANSPARENT, Zone.m_Radius, 0.0f, Zone.m_Corners);
+				else if(!WheelSegment && !TiltPad && (Selected || Hovered))
+					DrawRoundedSurface(Ui(), Plate, ui_token::color::SURFACE_HIGHLIGHT.WithMultipliedAlpha(Selected ? 1.2f : 0.7f), ui_token::color::COLOR_TRANSPARENT, Zone.m_Radius, 0.0f, Zone.m_Corners);
+				CUIRect LabelRect = Plate;
+				LabelRect.VMargin(std::max(1.0f, Plate.w * 0.06f), &LabelRect);
+				// 左右键的名字放在板子下沿：滚轮整簇压在接缝上方，居中写会被滚轮盖住。
+				const bool LowerNameBand = ZoneIndex == qm_bind_mouse::ZONE_MOUSE1 || ZoneIndex == qm_bind_mouse::ZONE_MOUSE2;
+				if(LowerNameBand)
+				{
+					LabelRect.y += Plate.h * 0.62f;
+					LabelRect.h = std::max(1.0f, Plate.h * 0.34f);
+				}
+				if(s_apZoneIconGlyphs[ZoneIndex] != nullptr)
+				{
+					// 倾斜箭头平时压暗一档，悬停/选中才回到正常前景色；字号单独放大一点，
+					// 否则它比滚轮里的箭头还小，缩成一个看不见的点。
+					const bool FadedTilt = TiltPad && !Hovered && !Selected;
+					if(FadedTilt)
+						TextRender()->TextColor(ui_token::color::TEXT_SECONDARY);
+					const float IconSize = TiltPad ? std::min(BodySize * 0.95f, std::min(LabelRect.w, LabelRect.h) * 0.9f) :
+									 std::min(BodySize * 1.15f, std::min(LabelRect.w, LabelRect.h) * 0.72f);
+					Ui()->DoLabel_QmIcon(&LabelRect, (EQmIcon)s_aZoneIcons[ZoneIndex], s_apZoneIconGlyphs[ZoneIndex], IconSize, TEXTALIGN_MC);
+					if(FadedTilt)
+						TextRender()->TextColor(TextRender()->DefaultTextColor());
+				}
+				else if(s_apZoneLabels[ZoneIndex] != nullptr)
+				{
+					// 键名走普通标签收缩（最多九颗，不是 113 颗键面，逐级量宽的成本可以接受）。
+					SLabelProperties Props;
+					Props.m_MaxWidth = std::max(1.0f, LabelRect.w);
+					Props.m_MinimumFontSize = ui_token::font::TIP * 0.62f * PlotScale;
+					Props.m_EllipsisAtEnd = true;
+					const float LabelSize = LowerNameBand ? std::min(BodySize * 0.95f, LabelRect.h * 0.82f) :
+										std::min(BodySize * 0.82f, std::min(LabelRect.w, LabelRect.h) * 0.72f);
+					Ui()->DoLabel(&LabelRect, s_apZoneLabels[ZoneIndex], LabelSize, TEXTALIGN_MC, Props);
+				}
+				const CButtonContainer *pButton = nullptr;
+				if(State.m_KeyButtonCount < (int)State.m_aKeyButtons.size())
+				{
+					pButton = &State.m_aKeyButtons[State.m_KeyButtonCount];
+					++State.m_KeyButtonCount;
+				}
+				// 滚轮三段在胶囊里已经有两道纹路，再画已绑定短线会把滚轮变成一排横线，
+				// 所以滚轮段不画已绑定标记（左右键、侧键、倾斜键照常画）。
+				const int BoundStyle = WheelSegment ? -1 : 1;
+				const int ButtonResult = DrawZoneState(Slot, Zone.m_Rect, Plate, Zone.m_Radius, Zone.m_Corners, Hovered, Selected, std::max(1.0f, Zone.m_Radius * 0.2f), BoundStyle, pButton);
+				if(pButton != nullptr)
+					GameClient()->m_Tooltips.DoToolTip(pButton, &Zone.m_Rect, Localize(s_apZoneNames[ZoneIndex]));
+				if(ButtonResult != 0 && !ReadOnly)
+				{
+					State.m_Selected = Slot;
+					State.m_HasSelected = true;
+					State.m_KeySelectionHeld = true;
+					State.m_Error.clear();
+					State.m_Status.clear();
+				}
 			}
 		};
 		const auto RenderPhysicalKeyRow = [&](const std::initializer_list<SBindKeyTile> Tiles) {
@@ -599,8 +689,11 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 		CUIRect MouseHeader;
 		if(Flow.Control("bind-mouse-header", LineHeight, MouseHeader))
 			DoSettingsMenuLabel(SETTINGS_CONTROLS, -1, -1, "qm-bind-editor-mouse", &MouseHeader, Localize("Mouse"), BodySize, TEXTALIGN_ML, {}, (int)MouseHeader.w);
-		RenderKeyRow({{KEY_MOUSE_1, "Mouse 1", "mouse_left", 1.4f}, {KEY_MOUSE_2, "Mouse 2", "mouse_right", 1.4f}, {KEY_MOUSE_3, "Mouse 3", "mouse_scroll", 1.4f}, {KEY_MOUSE_4, "Mouse 4", "mouse_side_back", 1.4f}, {KEY_MOUSE_5, "Mouse 5", "mouse_side_forward", 1.4f}, {KEY_MOUSE_WHEEL_UP, "Wheel up", "mouse_scroll_up", 1.4f}, {KEY_MOUSE_WHEEL_DOWN, "Wheel down", "mouse_scroll_down", 1.4f}});
-		RenderKeyRow({{KEY_MOUSE_WHEEL_LEFT, "Wheel left", "mouse_horizontal", 1.4f}, {KEY_MOUSE_WHEEL_RIGHT, "Wheel right", "mouse_horizontal", 1.4f}});
+		// 鼠标图自己占一块固定高度的行：高度只由行高决定，测量和绘制两趟算出来的卡片高度一致。
+		CUIRect MouseBlock;
+		if(Flow.Control("bind-mouse-diagram", qm_bind_mouse::DiagramHeight(LineHeight), MouseBlock))
+			RenderMouseDiagram(MouseBlock);
+		Flow.Space(LineSpacing);
 		if(!ReadOnly)
 			State.m_KeyboardRect = {KeyboardStart.x, KeyboardStart.y, KeyboardStart.w, Left.y - KeyboardStart.y};
 	};
@@ -695,37 +788,70 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 				// 撤销后列表、下划线和冲突标记都由状态重算，这里只收掉可能失效的编辑态。
 				Ui()->ReleaseActiveTextInput(&State.m_EditActionInput);
 				State.m_EditActionIndex = -1;
+				State.m_EditActionRectValid = false;
 				State.m_Error.clear();
 				State.m_Status.clear();
 			}
 		}
 		Flow.Space(LineSpacing * 0.4f);
-		// 悬停（点选也会落到同一个键）的键带冲突标记时，在已绑定功能顶部补一行
-		// 类型说明：复用现有 18px 行高与 TIP 字号，不挤占下面的指令节点。
-		{
-			const int ConflictFlags = BindConflictFlags(GameClient()->m_Binds, ActiveSlot.m_Key);
-			if(ConflictFlags != 0)
+		// 就地编辑写回：读整串当前绑定、只替换被编辑的那一条、拼回原顺序再写。
+		// 槽位用编辑开始时记下的 m_EditActionSlot：即使选中键已经换掉，也只会写回原来那一颗键。
+		// 写回路径和「添加功能」完全一致（CBinds::Bind，持久化由 binds 的配置回调负责）。
+		const auto ApplyActionEdit = [&](const int EditIndex) {
+			const CBindSlot EditSlot = State.m_EditActionSlot;
+			qm_bind_editor::SCommands Current = qm_bind_editor::SplitCommands(GameClient()->m_Binds.Get(EditSlot.m_Key, EditSlot.m_ModifierMask));
+			const std::string EditedText = State.m_EditActionInput.GetString();
+			const qm_bind_editor::SCommands Edited = qm_bind_editor::SplitCommands(EditedText);
+			if(!Current.m_Complete)
 			{
-				char aConflictTypes[128];
-				FormatBindConflictTypes(ConflictFlags, aConflictTypes, sizeof(aConflictTypes));
-				char aConflictLine[192];
-				str_format(aConflictLine, sizeof(aConflictLine), "%s: %s", Localize("Key conflict"), aConflictTypes);
-				CUIRect ConflictRow;
-				if(Flow.Control("bind-conflict-hint", LineHeight, ConflictRow))
-				{
-					TextRender()->TextColor(ui_token::color::WARNING);
-					Ui()->DoLabel(&ConflictRow, aConflictLine, ui_token::font::TIP * Metrics.m_UiScale, TEXTALIGN_ML);
-					TextRender()->TextColor(TextRender()->DefaultTextColor());
-				}
-				Flow.Space(LineSpacing * 0.4f);
+				SetBindEditorError(State, Localize("This bind contains an unfinished quote and cannot be edited safely."));
+				return false;
 			}
-		}
-		// 就地编辑的目标必须还是当前选中的键位：选中键一换（点别的键、键位捕获、行跳转），
-		// 这个输入框的语义就从"改这条动作"变成"改别的键的动作"，直接取消而不是静默写错键。
+			if(!Edited.m_Complete || Edited.m_vCommands.empty() || !Console()->LineIsValid(EditedText.c_str()))
+			{
+				SetBindEditorError(State, Localize("The command is empty, incomplete, or exceeds the local config line limit."));
+				return false;
+			}
+			if(EditIndex < 0 || EditIndex >= (int)Current.m_vCommands.size())
+				return false;
+			std::vector<std::string> vCommands = Current.m_vCommands;
+			vCommands.erase(vCommands.begin() + EditIndex);
+			vCommands.insert(vCommands.begin() + EditIndex, Edited.m_vCommands.begin(), Edited.m_vCommands.end());
+			const std::string Updated = qm_bind_editor::JoinCommands(vCommands);
+			char aKeyName[128];
+			GameClient()->m_Binds.GetKeyBindName(EditSlot.m_Key, EditSlot.m_ModifierMask, aKeyName, sizeof(aKeyName));
+			if(!qm_bind_editor::FitsConfigLine(aKeyName, Updated))
+			{
+				SetBindEditorError(State, Localize("This bind is already over the local config line limit."));
+				return false;
+			}
+			// 编辑写回也进撤销栈：改错了能一键退回改之前的整串命令。
+			RecordBindUndo(State.m_vBindUndo, GameClient()->m_Binds, EditSlot);
+			GameClient()->m_Binds.Bind(EditSlot.m_Key, Updated.c_str(), false, EditSlot.m_ModifierMask);
+			State.m_Error.clear();
+			return true;
+		};
+		// 收尾：写回成功才退出编辑；写不回去（命令非法）保留编辑态与草稿，错误提示还在下方。
+		const auto CommitActionEdit = [&]() -> bool {
+			if(State.m_EditActionIndex < 0)
+				return false;
+			if(!ApplyActionEdit(State.m_EditActionIndex))
+				return false;
+			State.m_EditActionIndex = -1;
+			State.m_EditActionRectValid = false;
+			Ui()->ReleaseActiveTextInput(&State.m_EditActionInput);
+			return true;
+		};
+		// 选中键一换（点别的键、键位捕获、行跳转）先把正在编辑的内容写回原来的键，
+		// 不再静默丢掉；写不回去的那份草稿不能安全落到别的键上，只能取消。
 		if(!ReadOnly && State.m_EditActionIndex >= 0 && State.m_EditActionSlot != ActiveSlot)
 		{
-			Ui()->ReleaseActiveTextInput(&State.m_EditActionInput);
-			State.m_EditActionIndex = -1;
+			if(!CommitActionEdit())
+			{
+				Ui()->ReleaseActiveTextInput(&State.m_EditActionInput);
+				State.m_EditActionIndex = -1;
+				State.m_EditActionRectValid = false;
+			}
 		}
 		// 卡片内容会被画两趟：交互趟（处理输入）与 RenderOnly 的外观趟（只提交外观）。
 		// 绘制和可点判定都不能只看 ReadOnly——外观趟会把按钮、编辑行整段跳过，看起来
@@ -738,6 +864,7 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 		{
 			Ui()->ReleaseActiveTextInput(&State.m_EditActionInput);
 			State.m_EditActionIndex = -1;
+			State.m_EditActionRectValid = false;
 		}
 		if(Parsed.m_vCommands.empty())
 		{
@@ -758,42 +885,19 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 				ActionCtx.m_pAnim = nullptr;
 				ActionCtx.m_pTree = nullptr;
 			}
-			// 就地编辑写回：读整串当前绑定、只替换被编辑的那一条、拼回原顺序再写。
-			// 写回路径和「添加功能」完全一致（CBinds::Bind，持久化由 binds 的配置回调负责），
-			// 所以同键的其它动作不会被这条命令的编辑或删除一起清掉。
-			const auto ApplyActionEdit = [&](const int EditIndex) {
-				qm_bind_editor::SCommands Current = qm_bind_editor::SplitCommands(GameClient()->m_Binds.Get(ActiveSlot.m_Key, ActiveSlot.m_ModifierMask));
-				const std::string EditedText = State.m_EditActionInput.GetString();
-				const qm_bind_editor::SCommands Edited = qm_bind_editor::SplitCommands(EditedText);
-				if(!Current.m_Complete)
-				{
-					SetBindEditorError(State, Localize("This bind contains an unfinished quote and cannot be edited safely."));
-					return false;
-				}
-				if(!Edited.m_Complete || Edited.m_vCommands.empty() || !Console()->LineIsValid(EditedText.c_str()))
-				{
-					SetBindEditorError(State, Localize("The command is empty, incomplete, or exceeds the local config line limit."));
-					return false;
-				}
-				if(EditIndex < 0 || EditIndex >= (int)Current.m_vCommands.size())
-					return false;
-				std::vector<std::string> vCommands = Current.m_vCommands;
-				vCommands.erase(vCommands.begin() + EditIndex);
-				vCommands.insert(vCommands.begin() + EditIndex, Edited.m_vCommands.begin(), Edited.m_vCommands.end());
-				const std::string Updated = qm_bind_editor::JoinCommands(vCommands);
-				char aKeyName[128];
-				GameClient()->m_Binds.GetKeyBindName(ActiveSlot.m_Key, ActiveSlot.m_ModifierMask, aKeyName, sizeof(aKeyName));
-				if(!qm_bind_editor::FitsConfigLine(aKeyName, Updated))
-				{
-					SetBindEditorError(State, Localize("This bind is already over the local config line limit."));
-					return false;
-				}
-				// 编辑写回也进撤销栈：改错了能一键退回改之前的整串命令。
-				RecordBindUndo(State.m_vBindUndo, GameClient()->m_Binds, ActiveSlot);
-				GameClient()->m_Binds.Bind(ActiveSlot.m_Key, Updated.c_str(), false, ActiveSlot.m_ModifierMask);
-				State.m_Error.clear();
-				return true;
-			};
+			// 编辑中点在行外任意位置 = 保存并关闭：不需要专门去点 ✓，也不用先按取消。
+			// 点在输入框或 ✓/✕ 上仍在编辑行内，交给下面的控件自己处理。
+			if(!ReadOnly && State.m_EditActionIndex >= 0 && State.m_EditActionRectValid && Ui()->MouseButtonClicked(0) != 0)
+			{
+				CUIRect Hit = State.m_EditActionRect;
+				const float Margin = 2.0f * Metrics.m_UiScale;
+				Hit.x -= Margin;
+				Hit.y -= Margin;
+				Hit.w += 2.0f * Margin;
+				Hit.h += 2.0f * Margin;
+				if(!Ui()->MouseInside(&Hit))
+					CommitActionEdit();
+			}
 			int RemoveRow = -1;
 			for(size_t Index = 0; Index < Parsed.m_vCommands.size(); ++Index)
 			{
@@ -811,15 +915,11 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 				// 现在编辑行固定在同一行内完成布局，两趟走同一分支，只有交互被 ContentDraw 跳过。
 				if(State.m_EditActionIndex == (int)Index && State.m_EditActionSlot == ActiveSlot)
 				{
-					// 编辑中的行走的是另一条分支（输入框 + ✓✕），不经过普通行的描边，所以
-					// 这里补同一套外框：圆角和线宽跟普通行一致，边框用强调色，一眼能看出
-					// "正在编辑的是哪一行"。表面仍由按钮表面组件解析，底色与其它行相同。
-					ui_widget::SButtonSurfaceOptions EditRowOptions;
-					EditRowOptions.m_Selected = true;
-					EditRowOptions.m_Color = ui_token::color::SURFACE_ELEVATED;
-					EditRowOptions.m_BorderOverride = BindEditorAccent(Ui());
-					EditRowOptions.m_pHitRect = &Row;
-					ui_widget::DrawButtonSurface(ui_widget::ControlContext(Ui()), pControls != nullptr ? (const void *)&pControls->m_Row : nullptr, Row, EditRowOptions);
+					// 编辑行只铺普通行底色：强调色交给输入框自己的聚焦框，不再把 ✓/✕
+					// 一起圈进一块高亮边框里。行矩形记进状态，"点行外即保存"靠它判断。
+					DrawRoundedSurface(Ui(), Row, ui_token::color::SURFACE_ELEVATED, ui_token::color::BORDER_SUBTLE, ui_token::radius::BASE);
+					State.m_EditActionRect = Row;
+					State.m_EditActionRectValid = true;
 					const float Scale = Metrics.m_UiScale;
 					// 图标按钮沿用同页图标按钮的尺寸口径：正方形、边长取行高，留出按钮间距。
 					const float IconButtonSize = std::max(LineHeight, NodeHeight - ui_token::spacing::XS * Scale);
@@ -836,6 +936,9 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 					EditOptions.m_Clearable = true;
 					EditOptions.m_pPlaceholder = Localize("Command");
 					const ui_widget::SInputFieldResult EditResult = ui_widget::InputField(ActionCtx, &State.m_EditActionInput, InputRect, EditOptions);
+					// 编辑中的高亮只落在输入框边框上（换成主题强调色），不再把右边的 ✓/✕
+					// 一起圈进一块高亮框里。
+					DrawRoundedSurface(Ui(), InputRect, ui_token::color::COLOR_TRANSPARENT, BindEditorAccent(Ui()), ui_token::radius::BASE, ui_token::feedback::ICON_BORDER_WIDTH);
 					bool Commit = EditResult.m_Submitted;
 					bool CancelRow = false;
 					if(ContentDraw)
@@ -848,18 +951,18 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 						GameClient()->m_Tooltips.DoToolTip(&State.m_EditActionCommit, &ConfirmIcon, Localize("Save"));
 						GameClient()->m_Tooltips.DoToolTip(&State.m_EditActionCancel, &CancelIcon, Localize("Cancel"));
 					}
-					if(Commit && ApplyActionEdit((int)Index))
+					if(Commit)
 					{
-						// 本帧后面的行继续按新内容画，列表不等下一帧才刷新。
-						Parsed.m_vCommands[Index] = State.m_EditActionInput.GetString();
-						State.m_EditActionIndex = -1;
+						// 写不回去（命令非法）时保留编辑态和草稿，错误提示已经在下方。
+						if(CommitActionEdit())
+							Parsed.m_vCommands[Index] = State.m_EditActionInput.GetString();
 					}
-					else if(Commit || CancelRow)
+					else if(CancelRow)
 					{
 						State.m_EditActionIndex = -1;
-					}
-					if(State.m_EditActionIndex < 0)
+						State.m_EditActionRectValid = false;
 						Ui()->ReleaseActiveTextInput(&State.m_EditActionInput);
+					}
 					continue;
 				}
 				Row.VSplitRight(LineHeight, &Row, &Remove);
@@ -885,7 +988,9 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 				// 弹层遮罩），这套页面会走多次绘制，任何一趟判成 false 都会把悬停反馈盖掉——
 				// 之前悬停一直不出现就是这个原因。纯几何判定与趟次无关，哪一趟画都能出反馈。
 				const bool RowEditing = State.m_EditActionIndex == (int)Index && State.m_EditActionSlot == ActiveSlot;
-				const bool RowHovered = !ReadOnly && Ui()->MouseInside(&Node);
+				// 悬停同样只看几何、不看趟次：最终出图那一趟 RenderOnly() 为真，加了 ReadOnly
+				// 条件反而会把行悬停盖掉。
+				const bool RowHovered = Ui()->MouseInside(&Node);
 				DrawRoundedSurface(Ui(), Node, NodeSurface, ui_token::color::COLOR_TRANSPARENT, ui_token::radius::BASE);
 				if(RowHovered)
 					DrawRoundedSurface(Ui(), Node, ui_token::color::SURFACE_HIGHLIGHT.WithAlpha(0.14f), ui_token::color::COLOR_TRANSPARENT, ui_token::radius::BASE);
@@ -906,6 +1011,7 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 				{
 					State.m_EditActionIndex = (int)Index;
 					State.m_EditActionSlot = ActiveSlot;
+					State.m_EditActionRectValid = false;
 					State.m_EditActionInput.Set(Parsed.m_vCommands[Index].c_str());
 					State.m_EditActionInput.Activate(EInputPriority::UI);
 					Ui()->SetActiveItem(&State.m_EditActionInput);
@@ -939,6 +1045,7 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 				GameClient()->m_Binds.Bind(ActiveSlot.m_Key, Updated.c_str(), false, ActiveSlot.m_ModifierMask);
 				Ui()->ReleaseActiveTextInput(&State.m_EditActionInput);
 				State.m_EditActionIndex = -1;
+				State.m_EditActionRectValid = false;
 				State.m_Error.clear();
 				SetBindEditorDeletedStatus(State);
 			}

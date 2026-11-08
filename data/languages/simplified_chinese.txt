@@ -1730,6 +1730,9 @@ Background stroke color
 Background stroke width
 == 背景描边宽度
 
+Badges are informational: a bind can chain several commands, and one command can be bound to several keys.
+== 徽标只是说明：一条绑定可以串多个命令，同一个命令也可以同时绑在别的键上。
+
 Baidu Translate
 == 百度翻译
 
@@ -3085,9 +3088,6 @@ Confirm disconnect after game end (minutes, -1 off, 0 always)
 
 Confirm quit after game end (minutes, -1 off, 0 always)
 == 游戏结束后退出前弹出确认窗口（分钟，-1 关闭，0 始终打开）
-
-conflicts
-== 处冲突
 
 Connect
 == 连接
@@ -7730,9 +7730,6 @@ Key
 Key binds
 == 按键绑定
 
-Key conflict
-== 键位冲突
-
 Key occupancy
 == 键位占用
 
@@ -7972,9 +7969,6 @@ Latency compensation
 
 Latency Jitter
 == 延迟抖动
-
-Later binds on the same key replace earlier ones, and modifier chords win over plain keys - so a plain bind can end up shadowed.
-== 同一个键位后写入的绑定会覆盖先前的；组合键优先于裸键，所以裸键可能按不出来（例如已经有 Shift+A 时，单独的 A 会失效）。
 
 Latin font
 == 拉丁文字字体
@@ -10013,14 +10007,14 @@ Only affects custom Tee colors.
 Only allow authorized clients to vote
 == 只允许经过授权的客户端进行投票
 
-Only conflicts
-== 只看冲突
-
 Only free spectating is affected, not normal play; set "Cinematic smoothness" to 0 to keep instant camera response.
 == 只影响自由观战，不影响正常游玩；把电影镜头平滑度设成 0 就恢复即时响应。
 
 Only kills sent by your own client are blocked and server commands still work, so press your off key again after racing.
 == 只拦截你自己客户端发出的自杀，服务器指令仍然有效，所以跑完图记得再按一次禁止键。
+
+Only multi-action
+== 只看多动作
 
 Only one press event is allowed
 == 只能有一个按下事件
@@ -10354,6 +10348,12 @@ Overview
 
 Overwrite clan even if empty
 == 即使战队为空也覆盖
+
+Overwrites
+== 会覆盖
+
+overwrites
+== 处会覆盖
 
 Own hook line width
 == 自己的钩索辅助线宽度
@@ -12317,9 +12317,6 @@ Rescue/Freeze: %d/%d
 Rescue: auto mode teleports out of freeze; manual mode records a rescue point on landing and teleports when frozen
 == 救援：自动模式下传送出冻结；手动模式下落地记录救援点，冻结时传送出去
 
-Reserved
-== 保留和弦
-
 Reset
 == 重置
 
@@ -12637,6 +12634,9 @@ Same as "vote no"
 
 Same clan color in scoreboard
 == 相同战队在计分板上的颜色
+
+Same function
+== 同功能按键
 
 Same group full map listening
 == 同组全图收听
@@ -13426,9 +13426,6 @@ Settings, binds, profiles, chat binds and the war list are included. Select addi
 
 Severe
 == 严重
-
-Shadowed
-== 被覆盖
 
 Shape
 == 形状

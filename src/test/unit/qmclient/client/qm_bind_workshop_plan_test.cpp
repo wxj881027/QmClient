@@ -271,8 +271,9 @@ TEST(QmBindWorkshop, EachConflictingBindIsMarkedAndThePlanStaysUsable)
 	EXPECT_EQ(Duplicated.ConflictCount(), 1u);
 }
 
-TEST(QmBindWorkshop, OccupancyMarksShadowedAndMultiActionSlots)
+TEST(QmBindWorkshop, OccupancyOnlyFlagsMultiActionSlots)
 {
+	// 同键挂一个 Shift 组合是正常用法：按裸键走的仍是裸键绑定，不应因此被标记。
 	const auto GetCommand = [](int Key, int Modifier) -> const char * {
 		if(Key == KEY_H && Modifier == KeyModifier::NONE)
 			return "toggle cl_dummy_hammer 0 1; echo HDF";
@@ -288,18 +289,41 @@ TEST(QmBindWorkshop, OccupancyMarksShadowedAndMultiActionSlots)
 	};
 	const std::vector<SOccupancyEntry> vEntries = BuildOccupancy(GetCommand, GetKeyName);
 	ASSERT_EQ(vEntries.size(), 2u);
-	int NumShadowed = 0;
-	int NumMultiAction = 0;
 	for(const SOccupancyEntry &Entry : vEntries)
 	{
 		EXPECT_EQ(Entry.m_Slot.m_Key, KEY_H);
-		if((Entry.m_Flags & OCCUPANCY_SHADOWED) != 0)
-			++NumShadowed;
-		if((Entry.m_Flags & OCCUPANCY_MULTI_ACTION) != 0)
-			++NumMultiAction;
+		const int Expected = Entry.m_Slot.m_ModifierMask == KeyModifier::NONE ? OCCUPANCY_MULTI_ACTION : OCCUPANCY_NONE;
+		EXPECT_EQ(Entry.m_Flags, Expected);
 	}
-	EXPECT_EQ(NumShadowed, 1);
-	EXPECT_EQ(NumMultiAction, 1);
+}
+
+TEST(QmBindWorkshop, OccupancyFlagsSameCommandOnDifferentKeys)
+{
+	// w 与 alt+w 都是 +jump：同一颗键的两种按法，不算「另一颗键干同一个活」。
+	// up 也是 +jump：这才是同功能按键。
+	const auto GetCommand = [](int Key, int Modifier) -> const char * {
+		if(Key == KEY_W && (Modifier == KeyModifier::NONE || Modifier == (1 << KeyModifier::ALT)))
+			return "+jump";
+		if(Key == KEY_UP && Modifier == KeyModifier::NONE)
+			return "+jump";
+		if(Key == KEY_Z && Modifier == KeyModifier::NONE)
+			return "+hook";
+		return "";
+	};
+	const auto GetKeyName = [](int Key, int Modifier, char *pBuffer, size_t BufferSize) {
+		(void)Modifier;
+		str_copy(pBuffer, Key == KEY_W ? "w" : Key == KEY_UP ? "up" :
+					       Key == KEY_Z          ? "z" :
+								       "?",
+			BufferSize);
+	};
+	const std::vector<SOccupancyEntry> vEntries = BuildOccupancy(GetCommand, GetKeyName);
+	ASSERT_EQ(vEntries.size(), 4u);
+	for(const SOccupancyEntry &Entry : vEntries)
+	{
+		const int Expected = (Entry.m_Slot.m_Key == KEY_W || Entry.m_Slot.m_Key == KEY_UP) ? OCCUPANCY_SHARED_FUNCTION : OCCUPANCY_NONE;
+		EXPECT_EQ(Entry.m_Flags, Expected) << Entry.m_KeyName;
+	}
 }
 
 // ---- 参数模型：模板替换、越界夹紧 ----------------

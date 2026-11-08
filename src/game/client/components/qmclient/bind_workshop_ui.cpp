@@ -544,12 +544,10 @@ namespace
 			Localize("Passed"),
 			Localize("Precision Jump"),
 			Localize("Quick Hammer"),
-			Localize("Reserved"),
 			Localize("Restored previous bind"),
 			Localize("Scroll to browse"),
 			Localize("Selected node"),
 			Localize("Send the ready message to the team channel."),
-			Localize("Shadowed"),
 			Localize("Show hook collision line and drop mouse sensitivity to 66 while held."),
 			Localize("Single"),
 			Localize("State - Toggle"),
@@ -574,7 +572,6 @@ namespace
 			Localize("Variants"),
 			Localize("Weapon"),
 			Localize("Wheel to zoom - drag empty space to pan"),
-			Localize("conflicts"),
 			Localize("occupied")};
 		(void)apKeys;
 		// 蓝图页新增文案：同上，集中登记一次以保证语言文件收录。
@@ -1495,7 +1492,8 @@ void CMenus::RenderSettingsBindWorkshop(CUIRect MainView, const bool PrewarmOnly
 
 		DrawLabel(Head, Localize("Apply bind"), HeadlineSize, TEXTALIGN_ML, ui_token::color::TEXT_PRIMARY);
 		// 逐条列「键 → 命令」：一组动作会写好几条，只报第一条等于没报。
-		// 冲突也按条标，用户能指着具体那一行改键，而不是只看到一句「有冲突」。
+		// 这一行会顶掉原来的绑定，就在行尾标「会覆盖」；不提「冲突」——两个键各绑各的
+		// 本来就合法，唯一要提醒的是「你现在写的会盖掉旧的那条」，Diff 里也已经是 旧 -> 新。
 		const SPreset *pPendingPreset = State.m_PendingPreset < vPresets.size() ? &vPresets[State.m_PendingPreset] : nullptr;
 		float LineY = BodyText.y;
 		for(const SApplyEntry &Entry : State.m_PendingPlan.m_vEntries)
@@ -1515,22 +1513,22 @@ void CMenus::RenderSettingsBindWorkshop(CUIRect MainView, const bool PrewarmOnly
 			if(Entry.m_Overwrite)
 				Line += Entry.m_Previous + " -> ";
 			Line += Entry.m_Command;
-			const bool Conflict = Entry.m_Conflicts != APPLY_CONFLICT_NONE;
-			if(Conflict)
+			const bool Overwrites = Entry.m_Conflicts != APPLY_CONFLICT_NONE;
+			if(Overwrites)
 			{
 				Line += "  · ";
-				Line += Localize("Key conflict");
+				Line += Localize("Overwrites");
 			}
 			const SWrappedText LineText = WrapText(Line, BodyText.w, SmallSize, 1);
 			DrawWrapped(CUIRect{BodyText.x, LineY, BodyText.w, SmallLine}, LineText, SmallSize, SmallLine, TEXTALIGN_ML,
-				Conflict ? ui_token::color::WARNING : ui_token::color::TEXT_SECONDARY, 1.0f);
+				Overwrites ? ui_token::color::WARNING : ui_token::color::TEXT_SECONDARY, 1.0f);
 			LineY += SmallLine;
 		}
 		if(State.m_PendingPlan.HasConflicts() && LineY + SmallLine <= BodyText.y + BodyText.h + 0.5f)
 		{
-			char aConflict[96];
-			str_format(aConflict, sizeof(aConflict), "%zu %s", State.m_PendingPlan.ConflictCount(), Localize("conflicts"));
-			DrawLabel(CUIRect{BodyText.x, LineY, BodyText.w, SmallLine}, aConflict, TipSize, TEXTALIGN_ML, ui_token::color::WARNING);
+			char aOverwrites[96];
+			str_format(aOverwrites, sizeof(aOverwrites), "%zu %s", State.m_PendingPlan.ConflictCount(), Localize("overwrites"));
+			DrawLabel(CUIRect{BodyText.x, LineY, BodyText.w, SmallLine}, aOverwrites, TipSize, TEXTALIGN_ML, ui_token::color::WARNING);
 		}
 
 		CUIRect Confirm, Cancel;

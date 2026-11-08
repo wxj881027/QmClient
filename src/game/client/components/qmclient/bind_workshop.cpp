@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <cstring>
 #include <deque>
+#include <map>
 #include <set>
 #include <string>
 #include <string_view>
@@ -836,8 +837,6 @@ namespace qm_bind_workshop
 	std::vector<SOccupancyEntry> BuildOccupancy(const FGetCommand &GetCommand, const FGetKeyName &GetKeyName)
 	{
 		std::vector<SOccupancyEntry> vEntries;
-		std::array<int, KEY_LAST> aOccupiedModifiers{};
-		aOccupiedModifiers.fill(0);
 		for(int Modifier = 0; Modifier < KeyModifier::COMBINATION_COUNT; ++Modifier)
 		{
 			for(int Key = KEY_FIRST; Key < KEY_LAST; ++Key)
@@ -845,32 +844,27 @@ namespace qm_bind_workshop
 				const char *pCommand = GetCommand(Key, Modifier);
 				if(pCommand == nullptr || pCommand[0] == '\0')
 					continue;
-				if(Key >= 0 && Key < KEY_LAST)
-					aOccupiedModifiers[Key] |= 1 << Modifier;
 				SOccupancyEntry Entry;
 				Entry.m_Slot = CBindSlot(Key, Modifier);
 				char aKeyName[128] = {};
 				GetKeyName(Key, Modifier, aKeyName, sizeof(aKeyName));
 				Entry.m_KeyName = aKeyName;
 				Entry.m_Command = pCommand;
-				if(CBinds::IsReservedShortcutChord(Modifier))
-					Entry.m_Flags |= OCCUPANCY_RESERVED_CHORD;
 				if(std::string_view(pCommand).find(';') != std::string_view::npos)
 					Entry.m_Flags |= OCCUPANCY_MULTI_ACTION;
 				vEntries.push_back(std::move(Entry));
 			}
 		}
+		// 同功能按键：同一个命令挂在两颗以上不同的物理键上。同键换修饰键（q 与 alt+q
+		// 都是 say /pause）只是同一颗键的两种按法，不算「另一个键干同一个活」。
+		std::map<std::string, std::set<int>> aCommandKeys;
+		for(const SOccupancyEntry &Entry : vEntries)
+			aCommandKeys[Entry.m_Command].insert(Entry.m_Slot.m_Key);
 		for(SOccupancyEntry &Entry : vEntries)
 		{
-			const int Key = Entry.m_Slot.m_Key;
-			if(Key < 0 || Key >= KEY_LAST)
-				continue;
-			const int Modifiers = aOccupiedModifiers[Key];
-			// 无修饰键绑定被同键的其它修饰键组合遮蔽（保留和弦时不回落）。
-			if(Entry.m_Slot.m_ModifierMask == KeyModifier::NONE && (Modifiers & ~(1 << KeyModifier::NONE)) != 0)
-				Entry.m_Flags |= OCCUPANCY_SHADOWED;
-			else if(Entry.m_Slot.m_ModifierMask != KeyModifier::NONE && (Modifiers & (1 << KeyModifier::NONE)) != 0 && !CBinds::AllowsUnmodifiedFallback(Key, Entry.m_Slot.m_ModifierMask))
-				Entry.m_Flags |= OCCUPANCY_SHADOWED;
+			const auto It = aCommandKeys.find(Entry.m_Command);
+			if(It != aCommandKeys.end() && It->second.size() > 1)
+				Entry.m_Flags |= OCCUPANCY_SHARED_FUNCTION;
 		}
 		std::stable_sort(vEntries.begin(), vEntries.end(), [](const SOccupancyEntry &A, const SOccupancyEntry &B) {
 			if(A.m_Flags != B.m_Flags)

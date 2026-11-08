@@ -575,6 +575,7 @@ Background music volume
 Background opacity
 Background stroke color
 Background stroke width
+Badges are informational: a bind can chain several commands, and one command can be bound to several keys.
 Baidu Translate
 Balance master, music, and game volume
 Balanced (recommended)
@@ -1027,7 +1028,6 @@ Confirm clear all
 Confirm clear finished
 Confirm disconnect after game end (minutes, -1 off, 0 always)
 Confirm quit after game end (minutes, -1 off, 0 always)
-conflicts
 Connect
 Connect address error
 Connect dummy
@@ -2575,7 +2575,6 @@ Keep unsent message on chat close
 Keep vote window open after voting
 Key
 Key binds
-Key conflict
 Key occupancy
 Key press count color
 Key press count font size
@@ -2656,7 +2655,6 @@ Last viewed client release notes
 Latency
 Latency compensation
 Latency Jitter
-Later binds on the same key replace earlier ones, and modifier chords win over plain keys - so a plain bind can end up shadowed.
 Latin font
 Latin font weight
 Launch count threshold for the next sponsor reminder
@@ -3336,9 +3334,9 @@ Online Players
 Only .wv files are supported right now.
 Only affects custom Tee colors.
 Only allow authorized clients to vote
-Only conflicts
 Only free spectating is affected, not normal play; set "Cinematic smoothness" to 0 to keep instant camera response.
 Only kills sent by your own client are blocked and server commands still work, so press your off key again after racing.
+Only multi-action
 Only one press event is allowed
 Only save ghost if better than previous record
 Only save improvements
@@ -3450,6 +3448,8 @@ Override location for ping estimation, available: auto, af, as, as:cn, eu, na, o
 Override Selected
 Overview
 Overwrite clan even if empty
+Overwrites
+overwrites
 Own hook line width
 Own team only
 p = Ping latency
@@ -4104,7 +4104,6 @@ Rescue mode switched to %s
 Rescue to a nearby air tile
 Rescue/Freeze: %d/%d
 Rescue: auto mode teleports out of freeze; manual mode records a rescue point on landing and teleports when frozen
-Reserved
 Reset
 Reset a config to its default value
 Reset All
@@ -4211,6 +4210,7 @@ Runs commands automatically when you connect to a server, split into a connect p
 SA
 Same as "vote no"
 Same clan color in scoreboard
+Same function
 Same group full map listening
 Sans-serif
 Sat.
@@ -4474,7 +4474,6 @@ Settings page opacity
 Settings page right panel opacity
 Settings, binds, profiles, chat binds and the war list are included. Select additional cfg files below.
 Severe
-Shadowed
 Shape
 Share of the server browser name/map split given to the name column (per mille)
 Sharpen
