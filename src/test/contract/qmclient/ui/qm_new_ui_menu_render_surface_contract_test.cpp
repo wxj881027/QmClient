@@ -95,7 +95,11 @@ TEST(QmNewUiMenuRenderSurfaceContract, ShaderBackendsShareContinuousCurvatureCur
 		// 四次贝塞尔凑不出两端曲率为 0：三次的控制点条件会退化，五次才有足够自由度。
 		EXPECT_NE(pShader->find("QuinticCornerDistance"), std::string::npos);
 		// 生长上限与强度反解必须在三个后端都是同一套公式，否则换后端就换个圆角。
-		EXPECT_NE(pShader->find("RoundedCornerCapRatio"), std::string::npos);
+		// 胶囊判据（半径贴到短边 9/10，且长边明显长于短边）要和 CPU 侧逐字一致：
+		// 早先 CPU 用完整判据、着色器只看半径，近方形的大半径控件会在两边拿到
+		// 不同的生长上限，几何兜底与 SDF 就此分叉。
+		EXPECT_NE(pShader->find("max(HalfSize.x, HalfSize.y) > MinHalf * 1.2"), std::string::npos);
+		EXPECT_NE(pShader->find("(Capsule ? 0.8 : 0.5)"), std::string::npos);
 		EXPECT_NE(pShader->find("RoundedCornerShape"), std::string::npos);
 	}
 	EXPECT_NE(GlShader.find("ConicCornerDistance"), std::string::npos);
@@ -253,7 +257,10 @@ TEST(QmNewUiMenuRenderSurfaceContract, ShaderBackendsKeepRoundedSurfaceCompositi
 		EXPECT_NE(pShader->find("Amount <= 0.001"), std::string::npos);
 		EXPECT_NE(pShader->find("mix(2.0, 4.0, Amount)"), std::string::npos);
 		// 生长上限只夹生长、不回收已有半径；曲线强度按实际生长反解。
-		EXPECT_NE(pShader->find("return Radius >= MinHalf * (9.0 / 10.0) ? 0.8 : 0.5;"), std::string::npos);
+		// 胶囊判据带上「长边明显长于短边」，与 CPU 侧 ResolveRoundedCornerShape 同一条：
+		// 之前着色器只看半径，近方形的大半径控件在 SDF 与几何兜底之间生长上限不同。
+		EXPECT_NE(pShader->find("(Capsule ? 0.8 : 0.5)"), std::string::npos);
+		EXPECT_NE(pShader->find("max(HalfSize.x, HalfSize.y) > MinHalf * 1.2"), std::string::npos);
 		EXPECT_NE(pShader->find("clamp(ClampedRadius * (1.0 + 1.3 * Amount), ClampedRadius, MaxRadius)"), std::string::npos);
 		// 胶囊接缝软化：胶囊没有生长空间，但半圆端头与直边的曲率跳变要能单独缓，
 		// 否则就只能二选一（要么硬接缝，要么整个端头被压方）。

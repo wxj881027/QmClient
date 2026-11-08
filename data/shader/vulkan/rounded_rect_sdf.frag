@@ -83,14 +83,6 @@ float ConicCornerDistance(vec2 P, float E, float W)
 	return dot(P - Q, P) > 0.0 ? Dist : -Dist;
 }
 
-// 生长上限：普通控件封在短边的 25%，已经是胶囊的元素（半径达到短边 9/10）放宽到
-// 短边的 40%。这里用半边长表示，所以系数是 0.5 / 0.8。上限只限制生长，
-// 不回收调用方本来就给的更大半径。
-float RoundedCornerCapRatio(float Radius, float MinHalf)
-{
-	return Radius >= MinHalf * (9.0 / 10.0) ? 0.8 : 0.5;
-}
-
 // 连续曲率的代价是曲率峰值升高：90° 转弯、端点曲率归零、圆角长度不变时，峰值
 // 必然高于圆弧（超椭圆满强度能到 2.5 倍）。所以圆角沿边拉长来补偿，拉长量受有效
 // 半径上限约束，曲线强度按「实际拿到多少生长」反解——扩不动时（胶囊、短边很近的
@@ -104,14 +96,18 @@ vec2 RoundedCornerShape(vec2 HalfSize, float Radius, float Smoothing, float Curv
 	float ClampedRadius = clamp(Radius, 0.0, MinHalf);
 	if(ClampedRadius <= 0.0 || Amount <= 0.0)
 		return vec2(ClampedRadius, 0.0);
-	float MaxRadius = max(MinHalf * RoundedCornerCapRatio(ClampedRadius, MinHalf), ClampedRadius);
+	// 只有「真的有一段直边」的胶囊才谈得上接缝：正圆（滑块圆点、单选按钮）四个角
+	// 本来就是连续的，不该被压成方圆，所以再要求长边明显长于短边。
+	// 判据与 CPU 侧 ResolveRoundedCornerShape 必须逐字一致，否则两边生长上限不同。
+	bool Capsule = ClampedRadius >= MinHalf * (9.0 / 10.0) && max(HalfSize.x, HalfSize.y) > MinHalf * 1.2;
+	// 生长上限：普通控件封在短边的 25%，已经是胶囊的元素放宽到短边的 40%；
+	// 这里用半边长表示，所以系数是 0.5 / 0.8。上限只限制生长，不回收更大的半径。
+	float MaxRadius = max(MinHalf * (Capsule ? 0.8 : 0.5), ClampedRadius);
 	float EffectiveRadius = clamp(ClampedRadius * (1.0 + 1.3 * Amount), ClampedRadius, MaxRadius);
 	float EffectiveAmount = clamp((EffectiveRadius / ClampedRadius - 1.0) / 1.3, 0.0, 1.0);
 	// 胶囊没有生长空间，但半圆端头与直边的接缝可以单独软化：给一个远小于半径生长的
 	// 曲线强度，曲率在几个像素内从 0 缓升到 1/R，形状几乎不变，只是肩部不再突然拐弯。
-	// 只有「真的有一段直边」的胶囊才谈得上接缝：正圆（滑块圆点、单选按钮）四个角
-	// 本来就是连续的，不该被压成方圆，所以再要求长边明显长于短边。
-	bool Capsule = ClampedRadius >= MinHalf * (9.0 / 10.0) && max(HalfSize.x, HalfSize.y) > MinHalf * 1.2;
+	// 上限取 min(强度, 接缝)：曲率强度是主强度，接缝只在它之下做分部微调。
 	if(Capsule)
 		EffectiveAmount = max(EffectiveAmount, min(Amount, clamp(SeamAmount, 0.0, 1.0)));
 	return vec2(EffectiveRadius, EffectiveAmount);
