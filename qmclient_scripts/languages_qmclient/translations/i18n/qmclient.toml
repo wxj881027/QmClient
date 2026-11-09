@@ -2305,7 +2305,7 @@ polish = "Automatycznie akceptuj zaproszenia do drużyny, wysyłając /team <n>"
 [[message]]
 key = "Auto-close chat after unfreeze"
 [message.translations]
-simplified_chinese = "解冻后自动关闭聊天"
+simplified_chinese = "解冻后自动关闭聊天框"
 traditional_chinese = "解凍後自動關閉聊天"
 japanese = "凍結解除後にチャットを自動で閉じる"
 korean = "얼음 해제 후 자동 채팅 닫기"
@@ -3249,7 +3249,7 @@ polish = "Bind dummy control and copy actions"
 [[message]]
 key = "Bind movement, jump, hook, and fire actions"
 [message.translations]
-simplified_chinese = "绑定移动、跳跃、钩爪和开火操作"
+simplified_chinese = "绑定移动、跳跃、钩子和开火操作"
 traditional_chinese = "Bind movement, jump, hook, and fire actions"
 japanese = "Bind movement, jump, hook, and fire actions"
 korean = "Bind movement, jump, hook, and fire actions"
@@ -4561,8 +4561,8 @@ polish = "Klan gracza śledzonego z menu kołowego"
 [[message]]
 key = "Classic"
 [message.translations]
-simplified_chinese = "古典"
-traditional_chinese = "古典"
+simplified_chinese = "经典"
+traditional_chinese = "经典"
 japanese = "クラシック"
 korean = "클래식"
 russian = "Классический"
@@ -4573,70 +4573,6 @@ brazilian_portuguese = "Clássico"
 portuguese = "Clássico"
 turkish = "Klasik"
 polish = "Klasyczny"
-
-[[message]]
-key = "Classic easy"
-[message.translations]
-simplified_chinese = "古典 easy"
-traditional_chinese = "古典 easy"
-japanese = "クラシック easy"
-korean = "클래식 easy"
-russian = "Классический easy"
-german = "Klassisch einfach"
-spanish = "Clásico fácil"
-french = "Classique facile"
-brazilian_portuguese = "Clássico fácil"
-portuguese = "Clássico fácil"
-turkish = "Klasik kolay"
-polish = "Klasyczny łatwy"
-
-[[message]]
-key = "Classic next"
-[message.translations]
-simplified_chinese = "古典 next"
-traditional_chinese = "古典 next"
-japanese = "クラシック next"
-korean = "클래식 next"
-russian = "Классический next"
-german = "Klassisch nächste"
-spanish = "Clásico siguiente"
-french = "Classique suivant"
-brazilian_portuguese = "Clássico próximo"
-portuguese = "Clássico seguinte"
-turkish = "Klasik sonraki"
-polish = "Klasyczny następny"
-
-[[message]]
-key = "Classic nut"
-[message.translations]
-simplified_chinese = "古典 nut"
-traditional_chinese = "古典 nut"
-japanese = "クラシック nut"
-korean = "클래식 nut"
-russian = "Классический nut"
-german = "Klassisch nut"
-spanish = "Clásico nut"
-french = "Classique nut"
-brazilian_portuguese = "Clássico nut"
-portuguese = "Clássico nut"
-turkish = "Klasik nut"
-polish = "Klasyczny nut"
-
-[[message]]
-key = "Classic pro"
-[message.translations]
-simplified_chinese = "古典 pro"
-traditional_chinese = "古典 pro"
-japanese = "クラシック pro"
-korean = "클래식 pro"
-russian = "Классический pro"
-german = "Klassisch pro"
-spanish = "Clásico pro"
-french = "Classique pro"
-brazilian_portuguese = "Clássico pro"
-portuguese = "Clássico pro"
-turkish = "Klasik profesyonel"
-polish = "Klasyczny pro"
 
 [[message]]
 key = "Classic title glow"
@@ -5217,7 +5153,7 @@ polish = "Configure camera, weapon, and gameplay defaults"
 [[message]]
 key = "Configure chat position, size, and visibility"
 [message.translations]
-simplified_chinese = "配置聊天位置、大小和可见性"
+simplified_chinese = "配置聊天框位置、大小和可见性"
 traditional_chinese = "Configure chat position, size, and visibility"
 japanese = "Configure chat position, size, and visibility"
 korean = "Configure chat position, size, and visibility"
@@ -5329,7 +5265,7 @@ polish = "Configure HJ unfreeze assistance"
 [[message]]
 key = "Configure hook range and collision guide lines"
 [message.translations]
-simplified_chinese = "配置钩爪范围和碰撞引导线"
+simplified_chinese = "配置钩子范围和碰撞引导线"
 traditional_chinese = "Configure hook range and collision guide lines"
 japanese = "Configure hook range and collision guide lines"
 korean = "Configure hook range and collision guide lines"
@@ -10241,7 +10177,7 @@ polish = "Wyszukiwanie funkcji"
 [[message]]
 key = "Filter off"
 [message.translations]
-simplified_chinese = "关闭过滤"
+simplified_chinese = "不筛选"
 traditional_chinese = "關閉過濾"
 japanese = "フィルターオフ"
 korean = "필터 끄기"
@@ -10257,7 +10193,7 @@ polish = "Filtr wyłączony"
 [[message]]
 key = "Filter Team %d"
 [message.translations]
-simplified_chinese = "过滤队伍 %d"
+simplified_chinese = "筛选队伍 %d"
 traditional_chinese = "過濾隊伍 %d"
 japanese = "チーム %d をフィルター"
 korean = "팀 %d 필터"
@@ -10273,7 +10209,7 @@ polish = "Filtruj drużynę %d"
 [[message]]
 key = "Filter: Team %d"
 [message.translations]
-simplified_chinese = "过滤：队伍 %d"
+simplified_chinese = "筛选：队伍 %d"
 traditional_chinese = "過濾：隊伍 %d"
 japanese = "フィルター: チーム %d"
 korean = "필터: 팀 %d"
@@ -11425,7 +11361,7 @@ polish = "Klawisz trybu Gores"
 [[message]]
 key = "Gores team drown board opacity"
 [message.translations]
-simplified_chinese = "Gores 团队落水榜不透明度"
+simplified_chinese = "Gores 队伍落水榜不透明度"
 traditional_chinese = "Gores 團隊落水榜不透明度"
 japanese = "Gores チーム溺死ボードの不透明度"
 korean = "Gores 팀 익사 보드 불투명도"
@@ -11633,7 +11569,7 @@ polish = "Ukryj podstawowe informacje systemowe (wejście, wersja, zasady) w try
 [[message]]
 key = "Hide chat messages from players marked as enemies"
 [message.translations]
-simplified_chinese = "隐藏被标记为敌人的玩家的聊天消息"
+simplified_chinese = "隐藏标记为敌对玩家的聊天消息"
 traditional_chinese = "隱藏被標記為敵人的玩家聊天訊息"
 japanese = "敵としてマークしたプレイヤーのチャットメッセージを隠す"
 korean = "적으로 표시한 플레이어의 채팅 메시지 숨기기"
@@ -12689,7 +12625,7 @@ polish = "Asysta HJ"
 [[message]]
 key = "Hook interaction"
 [message.translations]
-simplified_chinese = "钩索交互"
+simplified_chinese = "钩子交互"
 traditional_chinese = "鉤子互動"
 japanese = "フックの相互作用"
 korean = "후크 상호작용"
@@ -14001,7 +13937,7 @@ polish = "Szerokość miękkiej krawędzi podświetlenia karaoke w px"
 [[message]]
 key = "Keep unsent message on chat close"
 [message.translations]
-simplified_chinese = "关闭聊天时保留未发送内容"
+simplified_chinese = "关闭聊天框时保留未发送内容"
 traditional_chinese = "關閉聊天時保留未發送內容"
 japanese = "チャットを閉じる時に未送信内容を保持"
 korean = "채팅 닫을 때 전송되지 않은 내용 유지"
@@ -17025,7 +16961,7 @@ polish = "Maksymalna liczba wyświetlanych powiadomień"
 [[message]]
 key = "Maximum players shown in the Gores team drown board"
 [message.translations]
-simplified_chinese = "Gores 团队落水榜显示的最大玩家数"
+simplified_chinese = "Gores 队伍落水榜显示的最大玩家数"
 traditional_chinese = "Gores 團隊落水榜顯示的玩家上限"
 japanese = "Gores チーム溺死ボードに表示するプレイヤー数の上限"
 korean = "Gores 팀 익사 보드에 표시할 최대 플레이어 수"
@@ -17793,7 +17729,7 @@ polish = "Liczba tabliczek z pełną jakością efektów; powyżej warstwy efekt
 [[message]]
 key = "Nameplate hook strength icon scope (0=Own 1=Others 2=Strong hook 3=Weak hook 4=All players)"
 [message.translations]
-simplified_chinese = "铭牌钩索强度图标范围（0=自己，1=他人，2=强钩，3=弱钩，4=所有玩家）"
+simplified_chinese = "铭牌钩子强度图标范围（0=自己，1=他人，2=强钩，3=弱钩，4=所有玩家）"
 traditional_chinese = "名牌鉤子強度圖標範圍（0=自己 1=他人 2=強鉤 3=弱鉤 4=所有玩家）"
 japanese = "ネームプレートフック強度アイコン範囲（0=自分 1=他人 2=強フック 3=弱フック 4=全プレイヤー）"
 korean = "이름표 갈고리 강도 아이콘 범위 (0=자신 1=타인 2=강한 갈고리 3=약한 갈고리 4=모든 플레이어)"
@@ -21233,7 +21169,7 @@ polish = "Sprawdź i zastosuj ustalony zestaw ustawień wyglądu"
 [[message]]
 key = "Preview hook collision colors and line styles"
 [message.translations]
-simplified_chinese = "预览钩爪碰撞颜色和线条样式"
+simplified_chinese = "预览钩子辅助线颜色和线条样式"
 traditional_chinese = "Preview hook collision colors and line styles"
 japanese = "Preview hook collision colors and line styles"
 korean = "Preview hook collision colors and line styles"
@@ -21329,7 +21265,7 @@ polish = "Preview the composed status bar output"
 [[message]]
 key = "Preview the current chat appearance"
 [message.translations]
-simplified_chinese = "预览当前聊天外观"
+simplified_chinese = "预览当前聊天框外观"
 traditional_chinese = "Preview the current chat appearance"
 japanese = "Preview the current chat appearance"
 korean = "Preview the current chat appearance"
@@ -24854,7 +24790,7 @@ polish = "Wysyłanie i odbieranie"
 [[message]]
 key = "Sending locally, suggest the other party unmute or confirm they can receive"
 [message.translations]
-simplified_chinese = "本地正在发送，建议让对方开麦或确认对方是否能接收"
+simplified_chinese = "本地正在发送，建议让对方取消静音或确认能否接收"
 traditional_chinese = "本地正在發送，建議讓對方開麥或確認對方是否能接收"
 japanese = "ローカルで送信中です。相手にミュート解除を促すか、受信可能か確認してください"
 korean = "로컬에서 전송 중, 상대방이 마이크를 켜거나 수신 가능한지 확인하세요"
@@ -25478,7 +25414,7 @@ polish = "Pokaż dymki czatu nad Tee"
 [[message]]
 key = "Show chat in demo preview and video"
 [message.translations]
-simplified_chinese = "在回放预览与视频中显示聊天"
+simplified_chinese = "在回放预览与视频中显示聊天框"
 traditional_chinese = "在回放預覽與影片中顯示聊天"
 japanese = "デモプレビューと動画でチャットを表示"
 korean = "데모 미리보기와 영상에서 채팅 표시"
@@ -26950,7 +26886,7 @@ polish = "Pokaż hitboxy interakcji Tee, mapy i broni"
 [[message]]
 key = "Show Tees in the Gores team drown board"
 [message.translations]
-simplified_chinese = "在 Gores 团队落水榜中显示 Tee"
+simplified_chinese = "在 Gores 队伍落水榜中显示 Tee"
 traditional_chinese = "在 Gores 團隊落水榜顯示 Tee"
 japanese = "Gores チーム溺死ボードにTeeを表示"
 korean = "Gores 팀 익사 보드에 Tee 표시"
@@ -26966,7 +26902,7 @@ polish = "Pokaż Tees na tablicy utonięć drużyny Gores"
 [[message]]
 key = "Show the Gores team drown board"
 [message.translations]
-simplified_chinese = "显示 Gores 团队落水榜"
+simplified_chinese = "显示 Gores 队伍落水榜"
 traditional_chinese = "顯示 Gores 團隊落水榜"
 japanese = "Gores チーム溺死ボードを表示"
 korean = "Gores 팀 익사 보드 표시"
@@ -36008,7 +35944,7 @@ polish = "Rozmiar gradientu (czat, %)"
 [[message]]
 key = "Chat gradient type (0=linear, 1=radial, 2=angular, 3=reflected, 4=diamond)"
 [message.translations]
-simplified_chinese = "渐变类型 (聊天; 0=线性渐变，1=径向渐变，2=角度渐变，3=对称渐变，4=菱形渐变)"
+simplified_chinese = "聊天框渐变类型（0=线性渐变，1=径向渐变，2=角度渐变，3=对称渐变，4=菱形渐变）"
 traditional_chinese = "漸層類型 (聊天; 0=線性漸層, 1=放射漸層, 2=角度漸層, 3=對稱漸層, 4=菱形漸層)"
 japanese = "グラデーションの種類 (チャット; 0=線形グラデーション, 1=放射状グラデーション, 2=角度グラデーション, 3=反射グラデーション, 4=菱形グラデーション)"
 korean = "그라데이션 유형 (채팅; 0=선형 그라데이션, 1=방사형 그라데이션, 2=각도 그라데이션, 3=대칭 그라데이션, 4=마름모 그라데이션)"
@@ -36264,7 +36200,7 @@ polish = "Podświetlaj polecenia konsoli"
 [[message]]
 key = "Show the chat scrollbar on the right"
 [message.translations]
-simplified_chinese = "在右侧显示聊天滚动条"
+simplified_chinese = "在右侧显示聊天框滚动条"
 traditional_chinese = "在右側顯示聊天捲軸"
 japanese = "チャットのスクロールバーを右側に表示"
 korean = "채팅 스크롤바를 오른쪽에 표시"
@@ -38680,7 +38616,7 @@ polish = "Ochrona przed samobójstwem po stronie klienta jest domyślnie wyłąc
 [[message]]
 key = "Render demo content only during video export (hide HUD, chat and spectator overlays)"
 [message.translations]
-simplified_chinese = "仅渲染 demo：导出时隐藏 HUD、聊天和旁观信息"
+simplified_chinese = "仅渲染 demo：导出时隐藏 HUD、聊天框和旁观信息"
 traditional_chinese = "僅渲染 demo：匯出時隱藏 HUD、聊天與旁觀資訊"
 japanese = "デモのみを書き出す：書き出し中は HUD、チャット、観戦情報を非表示にします"
 korean = "데모만 렌더링: 내보내는 동안 HUD, 채팅, 관전 정보를 숨깁니다"
@@ -39176,7 +39112,7 @@ polish = "Szerokość wyjściowa eksportu w pikselach (0 = zgodnie z rozmiarem r
 [[message]]
 key = "Export preset: 0=custom, 1=daily(libx264/mp4), 2=efficient share(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov), 5=best quality(all-intra H.264 4:4:4/mp4), 6=fastest(hardware h264/mp4)"
 [message.translations]
-simplified_chinese = "导出预设：0=自定义，1=日常(libx264/mp4)，2=高效分享(hevc/mp4)，3=剪辑(all-intra H.264/mp4)，4=交换(ProRes/mov)，5=最佳质量(all-intra H.264 4:4:4/mp4)，6=最快(硬件 h264/mp4)"
+simplified_chinese = "导出预设：0=自定义，1=日常（libx264/mp4），2=高效分享（hevc/mp4），3=剪辑（all-intra H.264/mp4），4=交换（ProRes/mov），5=最佳质量（all-intra H.264 4:4:4/mp4），6=最快（硬件 h264/mp4）"
 traditional_chinese = "匯出預設：0=自訂，1=日常(libx264/mp4)，2=高效分享(hevc/mp4)，3=剪輯(all-intra H.264/mp4)，4=交換(ProRes/mov)，5=最佳品質(all-intra H.264 4:4:4/mp4)，6=最快(硬體 h264/mp4)"
 japanese = "書き出しプリセット: 0=カスタム、1=日常(libx264/mp4)、2=効率的な共有(hevc/mp4)、3=編集用(all-intra H.264/mp4)、4=交換用(ProRes/mov)、5=最高品質(all-intra H.264 4:4:4/mp4)、6=最速(ハードウェア h264/mp4)"
 korean = "내보내기 프리셋: 0=사용자 지정, 1=일상(libx264/mp4), 2=효율적 공유(hevc/mp4), 3=편집(all-intra H.264/mp4), 4=교환(ProRes/mov), 5=최고 품질(all-intra H.264 4:4:4/mp4), 6=최속(하드웨어 h264/mp4)"
@@ -40094,6 +40030,311 @@ brazilian_portuguese = "Larguras dos cartões de configurações: stableId para 
 portuguese = "Larguras dos cartões de definições: stableId para largura total, !stableId para meia largura, separados por ponto e vírgula"
 turkish = "Ayar kartı genişlikleri: tam genişlik için stableId, yarım genişlik için !stableId; noktalı virgülle ayrılır"
 polish = "Szerokości kart ustawień: stableId oznacza pełną szerokość, !stableId połowę szerokości; wpisy oddzielaj średnikami"
+
+[[message]]
+key = "Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)"
+[message.translations]
+simplified_chinese = "仅移动端：下次启动时把崩溃报告复制到 Downloads/QmClient（0 = 保留在应用沙箱内）"
+traditional_chinese = "僅行動端：下次啟動時把崩潰報告複製到 Downloads/QmClient（0 = 保留在應用沙箱內）"
+japanese = "モバイルのみ：次回起動時にクラッシュレポートを Downloads/QmClient にコピーします（0 = アプリのサンドボックス内に保持）"
+korean = "모바일 전용: 다음 실행 시 충돌 보고서를 Downloads/QmClient로 복사합니다 (0 = 앱 샌드박스 안에 보관)"
+russian = "Только для мобильных: при следующем запуске скопировать отчёт о сбое в Downloads/QmClient (0 = оставить в песочнице приложения)"
+german = "Nur mobil: Absturzbericht beim nächsten Start nach Downloads/QmClient kopieren (0 = in der App-Sandbox belassen)"
+spanish = "Solo móvil: copiar el informe de fallos a Downloads/QmClient en el próximo inicio (0 = mantenerlo dentro del sandbox de la aplicación)"
+french = "Mobile uniquement : copier le rapport de crash dans Downloads/QmClient au prochain lancement (0 = le garder dans le bac à sable de l'application)"
+brazilian_portuguese = "Somente mobile: copiar o relatório de falha para Downloads/QmClient na próxima inicialização (0 = manter dentro do sandbox do aplicativo)"
+portuguese = "Somente mobile: copiar o relatório de falha para Downloads/QmClient na próxima inicialização (0 = manter dentro do sandbox do aplicativo)"
+turkish = "Yalnızca mobil: çökme raporunu bir sonraki açılışta Downloads/QmClient konumuna kopyala (0 = uygulama korumalı alanında bırak)"
+polish = "Tylko mobile: skopiuj raport awarii do Downloads/QmClient przy następnym uruchomieniu (0 = zostaw w piaskownicy aplikacji)"
+
+[[message]]
+key = "Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)"
+[message.translations]
+simplified_chinese = "地图浏览器难度分类筛选位掩码（位 0-14，见 map_vote_difficulty.h）"
+traditional_chinese = "地圖瀏覽器難度分類過濾位元遮罩（位 0-14，見 map_vote_difficulty.h）"
+japanese = "マップブラウザの難易度カテゴリフィルタのビットマスク（ビット 0-14、map_vote_difficulty.h 参照）"
+korean = "맵 브라우저 난이도 카테고리 필터 비트마스크 (비트 0-14, map_vote_difficulty.h 참고)"
+russian = "Битовая маска фильтра категорий сложности в браузере карт (биты 0-14, см. map_vote_difficulty.h)"
+german = "Bitmaske des Schwierigkeitskategoriefilters im Kartenbrowser (Bits 0-14, siehe map_vote_difficulty.h)"
+spanish = "Máscara de bits del filtro de categorías de dificultad del navegador de mapas (bits 0-14, ver map_vote_difficulty.h)"
+french = "Masque de bits du filtre de catégories de difficulté du navigateur de cartes (bits 0-14, voir map_vote_difficulty.h)"
+brazilian_portuguese = "Máscara de bits do filtro de categorias de dificuldade do navegador de mapas (bits 0-14, ver map_vote_difficulty.h)"
+portuguese = "Máscara de bits do filtro de categorias de dificuldade do navegador de mapas (bits 0-14, ver map_vote_difficulty.h)"
+turkish = "Harita tarayıcısı zorluk kategori filtresi bit maskesi (bit 0-14, bkz. map_vote_difficulty.h)"
+polish = "Maska bitowa filtra kategorii trudności przeglądarki map (bity 0-14, patrz map_vote_difficulty.h)"
+
+[[message]]
+key = "Edit title style"
+[message.translations]
+simplified_chinese = "编辑头衔样式"
+traditional_chinese = "編輯頭銜樣式"
+japanese = "タイトルスタイルを編集"
+korean = "칭호 스타일 편집"
+russian = "Изменить стиль титула"
+spanish = "Editar estilo del título"
+french = "Modifier le style du titre"
+german = "Titelstil bearbeiten"
+brazilian_portuguese = "Editar estilo do título"
+portuguese = "Editar estilo do título"
+turkish = "Başlık stilini düzenle"
+polish = "Edytuj styl tytułu"
+
+[[message]]
+key = "Wheel scroll feel: 0=Smooth (velocity carries over), 1=Original (each tick restarts), 2=Spring"
+[message.translations]
+simplified_chinese = "滚轮手感：0=顺滑（继承速度），1=原版（每档重置），2=弹簧"
+traditional_chinese = "滾輪手感：0=順滑（繼承速度），1=原版（每檔重置），2=彈簧"
+japanese = "ホイールの感覚: 0=滑らか（速度を継承）、1=オリジナル（毎回リセット）、2=バネ"
+korean = "휠 감도: 0=부드럽게(속도 이어받기), 1=기본(매번 초기화), 2=스프링"
+russian = "Ощущение колеса: 0=Плавно (с наследованием скорости), 1=Оригинал (сброс каждый раз), 2=Пружина"
+german = "Scrollgefühl: 0=Sanft (Geschwindigkeit wird übernommen), 1=Original (jede Stufe neu), 2=Feder"
+spanish = "Sensación de la rueda: 0=Suave (hereda la velocidad), 1=Original (reinicia cada paso), 2=Resorte"
+french = "Sensation de la molette : 0=Doux (vitesse reprise), 1=Original (réinitialisé à chaque cran), 2=Ressort"
+brazilian_portuguese = "Sensação da roda: 0=Suave (herda a velocidade), 1=Original (reinicia a cada passo), 2=Mola"
+portuguese = "Sensação da roda: 0=Suave (herda a velocidade), 1=Original (reinicia a cada passo), 2=Mola"
+turkish = "Tekerlek hissi: 0=Yumuşak (hız devralınır), 1=Özgün (her adımda sıfırlanır), 2=Yay"
+polish = "Odczucie kółka: 0=Płynnie (przejmuje prędkość), 1=Oryginalny (reset przy każdym kroku), 2=Sprężyna"
+
+[[message]]
+key = "Rubber-band distance in UI pixels when dragging or flinging past an end (0=off); the wheel never bounces"
+[message.translations]
+simplified_chinese = "拖拽或甩动越过边界时的橡皮筋距离，UI 像素（0=关闭）；滚轮永不回弹"
+traditional_chinese = "拖曳或甩動越過邊界時的橡皮筋距離，UI 像素（0=關閉）；滾輪永不回彈"
+japanese = "ドラッグやフリックで端を越えたときのゴムバンド距離（UI ピクセル、0=無効）。ホイールでは弾みません"
+korean = "드래그나 플릭으로 끝을 넘을 때의 고무줄 거리(UI 픽셀, 0=끔). 휠로는 튕기지 않습니다"
+russian = "Расстояние «резинки» в пикселях UI при перетаскивании или броске за край (0=выкл.); колесо не отскакивает"
+german = "Gummiband-Abstand in UI-Pixeln beim Ziehen oder Schleudern über ein Ende hinaus (0=aus); das Rad federt nie"
+spanish = "Distancia del efecto goma en píxeles de UI al arrastrar o lanzar más allá de un extremo (0=desactivado); la rueda nunca rebota"
+french = "Distance d'effet élastique en pixels UI lors d'un glissement ou lancer au-delà d'une extrémité (0=désactivé) ; la molette ne rebondit jamais"
+brazilian_portuguese = "Distância do efeito elástico em pixels de UI ao arrastar ou arremessar além de um limite (0=desligado); a roda nunca quica"
+portuguese = "Distância do efeito elástico em píxeis de UI ao arrastar ou lançar além de uma extremidade (0=desligado); a roda nunca ressalta"
+turkish = "Bir ucu aşarken sürükleme veya savurma sırasındaki lastik bant mesafesi, UI pikseli (0=kapalı); tekerlek asla yaylanmaz"
+polish = "Odległość efektu gumki w pikselach UI przy przeciąganiu lub rzucie poza krawędź (0=wył.); kółko nigdy nie odbija"
+
+[[message]]
+key = "Spring scroll feel response time in milliseconds; lower reaches the target sooner"
+[message.translations]
+simplified_chinese = "弹簧滚动手感的响应时间，单位毫秒；越小越快到位"
+traditional_chinese = "彈簧捲動手感的響應時間，單位毫秒；越小越快到位"
+japanese = "バネ式スクロールの応答時間（ミリ秒）。小さいほど早く到達します"
+korean = "스프링 스크롤 감도의 응답 시간(밀리초). 작을수록 빨리 도달합니다"
+russian = "Время отклика пружинной прокрутки в миллисекундах; меньше — быстрее"
+german = "Reaktionszeit des Feder-Scrollens in Millisekunden; kleiner erreicht das Ziel schneller"
+spanish = "Tiempo de respuesta del desplazamiento con resorte en milisegundos; menor llega antes"
+french = "Temps de réponse du défilement à ressort en millisecondes ; plus court arrive plus vite"
+brazilian_portuguese = "Tempo de resposta da rolagem com mola em milissegundos; menor chega mais rápido"
+portuguese = "Tempo de resposta do deslocamento com mola em milissegundos; menor chega mais rápido"
+turkish = "Yaylı kaydırma tepki süresi (milisaniye); küçük değer hedefe daha çabuk ulaşır"
+polish = "Czas odpowiedzi sprężynowego przewijania w milisekundach; mniejszy szybciej dociera"
+
+[[message]]
+key = "Spring scroll feel damping ratio in percent; 100 stops without overshoot"
+[message.translations]
+simplified_chinese = "弹簧滚动手感的阻尼比，单位百分比；100 表示不过冲直接停住"
+traditional_chinese = "彈簧捲動手感的阻尼比，單位百分比；100 表示不過衝直接停住"
+japanese = "バネ式スクロールの減衰比（パーセント）。100 は行き過ぎずに停止します"
+korean = "스프링 스크롤 감도의 감쇠비(퍼센트). 100이면 목표를 넘지 않고 멈춥니다"
+russian = "Коэффициент демпфирования пружинной прокрутки в процентах; 100 — без перелёта"
+german = "Dämpfungsverhältnis des Feder-Scrollens in Prozent; 100 stoppt ohne Überschwingen"
+spanish = "Relación de amortiguación del desplazamiento con resorte en porcentaje; 100 se detiene sin sobrepasar"
+french = "Taux d'amortissement du défilement à ressort en pourcentage ; 100 s'arrête sans dépasser"
+brazilian_portuguese = "Taxa de amortecimento da rolagem com mola em porcentagem; 100 para sem ultrapassar"
+portuguese = "Taxa de amortecimento do deslocamento com mola em percentagem; 100 para sem ultrapassar"
+turkish = "Yaylı kaydırma sönüm oranı (yüzde); 100 hedefi aşmadan durur"
+polish = "Współczynnik tłumienia sprężynowego przewijania w procentach; 100 zatrzymuje się bez przestrzelenia"
+
+[[message]]
+key = "Rubber-band distance in UI pixels when the wheel or a drag pushes past an end (0=off); the content springs back after scrolling stops"
+[message.translations]
+simplified_chinese = "滚轮或拖拽推过边界时的橡皮筋距离，UI 像素（0=关闭）；停止滚动后内容弹回"
+traditional_chinese = "滾輪或拖曳推過邊界時的橡皮筋距離，UI 像素（0=關閉）；停止捲動後內容彈回"
+japanese = "ホイールやドラッグで端を越えたときのゴムバンド距離（UI ピクセル、0=無効）。スクロールを止めると内容が戻ります"
+korean = "휠이나 드래그로 끝을 넘을 때의 고무줄 거리(UI 픽셀, 0=끔). 스크롤을 멈추면 내용이 되돌아옵니다"
+russian = "Расстояние «резинки» в пикселях UI, когда колесо или перетаскивание выходит за край (0=выкл.); после остановки содержимое возвращается"
+german = "Gummiband-Abstand in UI-Pixeln, wenn Rad oder Ziehen über ein Ende hinausgeht (0=aus); nach dem Scrollen federt der Inhalt zurück"
+spanish = "Distancia del efecto goma en píxeles de UI cuando la rueda o el arrastre superan un extremo (0=desactivado); el contenido vuelve al parar"
+french = "Distance d'effet élastique en pixels UI quand la molette ou un glissement dépasse une extrémité (0=désactivé) ; le contenu revient à l'arrêt"
+brazilian_portuguese = "Distância do efeito elástico em pixels de UI quando a roda ou o arrasto passa de um limite (0=desligado); o conteúdo volta ao parar"
+portuguese = "Distância do efeito elástico em píxeis de UI quando a roda ou o arrasto passa de uma extremidade (0=desligado); o conteúdo regressa ao parar"
+turkish = "Tekerlek veya sürükleme bir ucu geçtiğinde lastik bant mesafesi, UI pikseli (0=kapalı); kaydırma durunca içerik geri döner"
+polish = "Odległość efektu gumki w pikselach UI, gdy kółko lub przeciąganie przekracza krawędź (0=wył.); po zatrzymaniu treść wraca"
+
+[[message]]
+key = "Corner curve"
+[message.translations]
+simplified_chinese = "圆角曲线"
+traditional_chinese = "圓角曲線"
+japanese = "角の曲線"
+korean = "모서리 곡선"
+russian = "Кривая угла"
+german = "Eckenkurve"
+spanish = "Curva de esquina"
+french = "Courbe de coin"
+brazilian_portuguese = "Curva do canto"
+portuguese = "Curva do canto"
+turkish = "Köşe eğrisi"
+polish = "Krzywa narożnika"
+
+[[message]]
+key = "Corner curvature"
+[message.translations]
+simplified_chinese = "圆角曲率"
+traditional_chinese = "圓角曲率"
+japanese = "角の曲率"
+korean = "모서리 곡률"
+russian = "Кривизна угла"
+german = "Eckenkrümmung"
+spanish = "Curvatura de esquina"
+french = "Courbure de coin"
+brazilian_portuguese = "Curvatura do canto"
+portuguese = "Curvatura do canto"
+turkish = "Köşe eğriliği"
+polish = "Krzywizna narożnika"
+
+[[message]]
+key = "Capsule seam"
+[message.translations]
+simplified_chinese = "胶囊接缝"
+traditional_chinese = "膠囊接縫"
+japanese = "カプセルのはぎ目"
+korean = "캡슐 이음새"
+russian = "Стык капсулы"
+german = "Kapselnaht"
+spanish = "Costura de cápsula"
+french = "Joint de capsule"
+brazilian_portuguese = "Junta da cápsula"
+portuguese = "Junta da cápsula"
+turkish = "Kapsül birleşimi"
+polish = "Szew kapsuły"
+
+[[message]]
+key = "Classic arc"
+[message.translations]
+simplified_chinese = "经典圆弧"
+traditional_chinese = "經典圓弧"
+japanese = "クラシック円弧"
+korean = "클래식 원호"
+russian = "Классическая дуга"
+german = "Klassischer Bogen"
+spanish = "Arco clásico"
+french = "Arc classique"
+brazilian_portuguese = "Arco clássico"
+portuguese = "Arco clássico"
+turkish = "Klasik yay"
+polish = "Klasyczny łuk"
+
+[[message]]
+key = "Superellipse"
+[message.translations]
+simplified_chinese = "超椭圆"
+traditional_chinese = "超橢圓"
+japanese = "超楕円"
+korean = "초타원"
+russian = "Суперэллипс"
+german = "Superellipse"
+spanish = "Superelipse"
+french = "Superellipse"
+brazilian_portuguese = "Superelipse"
+portuguese = "Superelipse"
+turkish = "Süperelips"
+polish = "Superelipsa"
+
+[[message]]
+key = "Quintic Bezier"
+[message.translations]
+simplified_chinese = "五次贝塞尔"
+traditional_chinese = "五次貝塞爾"
+japanese = "5次ベジェ"
+korean = "5차 베지어"
+russian = "Кривая Безье 5-го порядка"
+german = "Quintische Bézierkurve"
+spanish = "Bézier quíntica"
+french = "Bézier quintique"
+brazilian_portuguese = "Bézier quíntica"
+portuguese = "Bézier quíntica"
+turkish = "Beşinci derece Bézier"
+polish = "Bézier piątego stopnia"
+
+[[message]]
+key = "Conic Bezier"
+[message.translations]
+simplified_chinese = "圆锥贝塞尔"
+traditional_chinese = "圓錐貝塞爾"
+japanese = "円錐ベジェ"
+korean = "원뿔 베지어"
+russian = "Коническая кривая Безье"
+german = "Konische Bézierkurve"
+spanish = "Bézier cónica"
+french = "Bézier conique"
+brazilian_portuguese = "Bézier cônica"
+portuguese = "Bézier cónica"
+turkish = "Konik Bézier"
+polish = "Bézier stożkowa"
+
+
+[[message]]
+key = "UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier"
+[message.translations]
+simplified_chinese = "界面圆角曲线：0 = 经典圆弧，1 = 超椭圆，2 = 五次贝塞尔，3 = 圆锥贝塞尔"
+traditional_chinese = "介面圓角曲線：0 = 經典圓弧，1 = 超橢圓，2 = 五次貝塞爾，3 = 圓錐貝塞爾"
+japanese = "UI の角の曲線：0 = クラシック円弧、1 = 超楕円、2 = 5次ベジェ、3 = 円錐ベジェ"
+korean = "UI 모서리 곡선: 0 = 클래식 원호, 1 = 초타원, 2 = 5차 베지어, 3 = 원뿔 베지어"
+russian = "Кривая углов интерфейса: 0 = классическая дуга, 1 = суперэллипс, 2 = кривая Безье 5-го порядка, 3 = коническая кривая Безье"
+german = "Eckenkurve der Oberfläche: 0 = klassischer Bogen, 1 = Superellipse, 2 = quintische Bézierkurve, 3 = konische Bézierkurve"
+spanish = "Curva de esquina de la interfaz: 0 = arco clásico, 1 = superelipse, 2 = Bézier quíntica, 3 = Bézier cónica"
+french = "Courbe de coin de l'interface : 0 = arc classique, 1 = superellipse, 2 = Bézier quintique, 3 = Bézier conique"
+brazilian_portuguese = "Curva do canto da interface: 0 = arco clássico, 1 = superelipse, 2 = Bézier quíntica, 3 = Bézier cônica"
+portuguese = "Curva do canto da interface: 0 = arco clássico, 1 = superelipse, 2 = Bézier quíntica, 3 = Bézier cónica"
+turkish = "Arayüz köşe eğrisi: 0 = klasik yay, 1 = süperelips, 2 = beşinci derece Bézier, 3 = konik Bézier"
+polish = "Krzywa narożnika interfejsu: 0 = klasyczny łuk, 1 = superelipsa, 2 = Bézier piątego stopnia, 3 = Bézier stożkowa"
+
+[[message]]
+key = "Continuous-curvature UI corners (0 = classic arc, 100 = strongest)"
+[message.translations]
+simplified_chinese = "界面圆角连续曲率（0 = 经典圆弧，100 = 最强）"
+traditional_chinese = "介面圓角連續曲率（0 = 經典圓弧，100 = 最強）"
+japanese = "UI の角の連続曲率（0 = クラシック円弧、100 = 最強）"
+korean = "UI 모서리 연속 곡률(0 = 클래식 원호, 100 = 최대)"
+russian = "Непрерывная кривизна углов интерфейса (0 = классическая дуга, 100 = максимум)"
+german = "Stetige Krümmung der Oberflächenecken (0 = klassischer Bogen, 100 = am stärksten)"
+spanish = "Curvatura continua en las esquinas de la interfaz (0 = arco clásico, 100 = máximo)"
+french = "Courbure continue des coins de l'interface (0 = arc classique, 100 = maximum)"
+brazilian_portuguese = "Curvatura contínua nos cantos da interface (0 = arco clássico, 100 = máximo)"
+portuguese = "Curvatura contínua nos cantos da interface (0 = arco clássico, 100 = máximo)"
+turkish = "Arayüz köşelerinde sürekli eğrilik (0 = klasik yay, 100 = en güçlü)"
+polish = "Ciągła krzywizna narożników interfejsu (0 = klasyczny łuk, 100 = maksimum)"
+
+[[message]]
+key = "Capsule seam smoothing: ease the straight-to-cap curvature jump (0 = plain semicircular ends)"
+[message.translations]
+simplified_chinese = "胶囊接缝软化：缓和直边到端头的曲率跳变（0 = 纯半圆端头）"
+traditional_chinese = "膠囊接縫軟化：緩和直邊到端頭的曲率跳變（0 = 純半圓端頭）"
+japanese = "カプセルのはぎ目の平滑化：直線から端までの曲率の飛びを和らげます（0 = 純粋な半円端）"
+korean = "캡슐 이음새 부드럽게: 직선과 끝의 곡률 점프를 완화합니다(0 = 순수 반원 끝)"
+russian = "Сглаживание стыка капсулы: смягчает скачок кривизны между прямой и торцом (0 = чистый полукруг)"
+german = "Kapselnaht-Glättung: dämpft den Krümmungssprung zwischen Gerade und Kappe (0 = reine Halbkreisenden)"
+spanish = "Suavizado de la costura de cápsula: suaviza el salto de curvatura entre la recta y el extremo (0 = extremos semicirculares puros)"
+french = "Adoucissement du joint de capsule : adoucit le saut de courbure entre le droit et l'extrémité (0 = extrémités en demi-cercle)"
+brazilian_portuguese = "Suavização da junta da cápsula: suaviza o salto de curvatura entre a reta e a ponta (0 = pontas semicirculares)"
+portuguese = "Suavização da junta da cápsula: suaviza o salto de curvatura entre a reta e a ponta (0 = pontas semicirculares)"
+turkish = "Kapsül birleşimi yumuşatma: düz ile uç arasındaki eğrilik sıçramasını yumuşatır (0 = saf yarım daire uçlar)"
+polish = "Wygładzanie szwu kapsuły: łagodzi skok krzywizny między prostą a końcem (0 = czyste półkola)"
+
+[[message]]
+key = "Settings prewarm default migration done"
+[message.translations]
+simplified_chinese = "设置预热默认值迁移已完成"
+traditional_chinese = "設定預熱預設值遷移已完成"
+japanese = "設定のプリウォーム既定値の移行が完了しました"
+korean = "설정 예열 기본값 마이그레이션이 완료되었습니다"
+russian = "Миграция значения по умолчанию для предварительного прогрева настроек завершена"
+german = "Migration des Standardwerts für das Vorwärmen der Einstellungen abgeschlossen"
+spanish = "Migración del valor predeterminado de precalentamiento de ajustes completada"
+french = "Migration de la valeur par défaut du préchauffage des paramètres terminée"
+brazilian_portuguese = "Migração do valor padrão de pré-aquecimento das configurações concluída"
+portuguese = "Migração do valor predefinido de pré-aquecimento das configurações concluída"
+turkish = "Ayarlar ön ısıtma varsayılanı taşıması tamamlandı"
+polish = "Migracja domyślnej wartości wstępnego ładowania ustawień zakończona"
 
 [[message]]
 key = "Server information lower left card width (per mille)"

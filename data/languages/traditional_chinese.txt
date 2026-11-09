@@ -368,6 +368,9 @@ A calm-play mode that hides the HUD, names, effects, chat and sounds you pick, s
 A crowded HUD hides the game, so start with one element and add more if needed.
 == HUD 太擁擠會遮住遊戲畫面，先開一個元素，有需要再加。
 
+A damped spring drives the offset; reversing slows it before it turns
+== 阻尼彈簧驅動偏移，反向時先減速再迴轉
+
 A demo with this name already exists
 == 已有同名回放
 
@@ -592,9 +595,6 @@ Add friends by entering their name below or by clicking their name in the player
 
 Add function
 == 新增功能
-
-Add Group
-== 添加群組
 
 Add Item
 == 添加項
@@ -1127,6 +1127,9 @@ Are you sure that you want to quit?
 Are you sure that you want to remove '%s' from your war groups?
 == 您確定要從您的敵對群組中刪除 '%s' 嗎？
 
+Are you sure that you want to remove '%s' from your war list?
+== 確定要把「%s」從敵對列表中刪除嗎？
+
 Are you sure that you want to remove the clan '%s' from your friends list?
 == 確定要將戰隊 "%s" 從你的好友列表中刪除？
 
@@ -1586,9 +1589,6 @@ Axiom website
 Axis
 == 軸
 
-Back
-== 返回
-
 Backdrop blur
 == 背景模糊
 
@@ -1955,6 +1955,9 @@ Bubble opacity
 Build the status text shown above Tees
 == Build the status text shown above Tees
 
+Built-in
+== 內置
+
 Button - Disabled
 == 按鈕 - 未啟用
 
@@ -2089,6 +2092,12 @@ Cannot update public words. Previous words remain active.
 
 Cannot write the wiki file
 == 無法寫入 Wiki 檔案
+
+Capsule seam
+== 膠囊接縫
+
+Capsule seam smoothing: ease the straight-to-cap curvature jump (0 = plain semicircular ends)
+== 膠囊接縫軟化：緩和直邊到端頭的曲率跳變（0 = 純半圓端頭）
 
 Capture the flag
 == 奪旗模式 (CTF)
@@ -2481,22 +2490,13 @@ Clan: %s
 == 戰隊：%s
 
 Classic
-== 古典
+== 经典
 
-Classic Easy
-== 古典 Easy
-
-Classic Next
-== 古典 Next
-
-Classic Nut
-== 古典 Nut
+Classic arc
+== 經典圓弧
 
 Classic PowerShell
 == 經典 PowerShell
-
-Classic Pro
-== 古典 Pro
 
 Clear
 == 清空
@@ -2608,9 +2608,6 @@ Click to remove this player from your friends list.
 
 Click to select server. Double click to join your friend.
 == 點擊選擇伺服器。雙擊加入好友所在伺服器。
-
-Click to set color
-== 點擊設定顏色
 
 Client
 == 客戶端
@@ -2732,12 +2729,6 @@ Colors and opacity of the popup list that suggests chat commands and emoticons w
 Colors for chat command and emoji completion
 == 聊天指令和表情補全的配色
 
-Colors in chat
-== 在聊天欄中的顏色
-
-Colors in scoreboard
-== 計分板中的顏色
-
 Colors of the hook collision line, in case of a possible collision with:
 == 鉤子輔助線顏色（瞄準以下目標時）：
 
@@ -2843,17 +2834,11 @@ Concurrent requests when refreshing server browser
 Config
 == 配置
 
-Config Changes
-== 配置變更
-
 Config directory
 == 配置目錄（cfg）
 
 Config Files
 == 配置文件
-
-Config Filters
-== 配置過濾器
 
 Config version. Helps new client fix old config errors.
 == 配置版本。幫助新客戶修復舊配置的錯誤。
@@ -3014,6 +2999,9 @@ Confirm disconnect after game end (minutes, -1 off, 0 always)
 Confirm quit after game end (minutes, -1 off, 0 always)
 == 遊戲結束後退出前彈出確認窗口（分鐘，-1 關閉，0 始終打開）
 
+Conic Bezier
+== 圓錐貝塞爾
+
 Connect address error
 == 連接地址錯誤
 
@@ -3080,6 +3068,9 @@ Connlimit: number of connections allowed per IP in a time period
 Connlimit: time window for IP connection count
 == Connlimit：IP 連接數統計時間
 
+Consecutive wheel ticks carry their velocity into one continuous glide
+== 連續滾輪會繼承目前速度，連成一段順滑滑行
+
 Console
 == 控制台
 
@@ -3145,6 +3136,9 @@ Contents
 
 Continue anyway?
 == 仍要退出？
+
+Continuous-curvature UI corners (0 = classic arc, 100 = strongest)
+== 介面圓角連續曲率（0 = 經典圓弧，100 = 最強）
 
 Contributors
 == 貢獻者
@@ -3250,6 +3244,12 @@ Copy skin ID
 
 Copy skin option color
 == 複製皮膚選項顏色
+
+Corner curvature
+== 圓角曲率
+
+Corner curve
+== 圓角曲線
 
 Could not add the player as a friend
 == 無法將該玩家加入好友
@@ -3600,19 +3600,19 @@ Days
 == 天
 
 DDmaX
-== DDmaX
+== 古典
 
 DDmaX Easy
-== DDmaX Easy
+== 古典 Easy
 
 DDmaX Next
-== DDmaX Next
+== 古典 Next
 
 DDmaX Nut
-== DDmaX Nut
+== 古典 Nut
 
 DDmaX Pro
-== DDmaX Pro
+== 古典 Pro
 
 DDNet
 == DDNet
@@ -4604,6 +4604,9 @@ Edit the name and clan fields; the dummy keeps its own values.
 Edit this custom command on the Bind Wheel page.
 == 請至 Bind 輪盤頁面編輯這條自訂命令。
 
+Edit title style
+== 編輯頭銜樣式
+
 Edit touch controls
 == 編輯觸控設置
 
@@ -5162,6 +5165,9 @@ Encoder:
 End (s)
 == 結束 (秒)
 
+End bounce
+== 邊界回彈
+
 End marker of replay slice
 == 回放切片的結束標記
 
@@ -5237,6 +5243,9 @@ Entity wall outline opacity
 entity_bg (Workshop)
 == entity_bg（Workshop）
 
+Entries in it will fall back to none.
+== 裡面的條目會回到 none。
+
 Entries with NVENC, AMF, Quick Sync or VideoToolbox use the GPU encoding chip and are several times faster. Only encoders that really work on this machine are listed.
 == 帶 NVENC、AMF、Quick Sync 或 VideoToolbox 字樣的項目用顯示卡的編碼單元，速度快好幾倍。清單裡只出現這台機器真正可用的編碼器。
 
@@ -5282,6 +5291,9 @@ Event
 Every click applies the skin at once, so star the ones you like before you start browsing.
 == 每點一次都會立刻套用，想留下喜歡的皮膚就先加星再慢慢瀏覽。
 
+Every wheel tick restarts from rest, matching the original client
+== 每檔滾輪都從靜止重新起步，與原版客戶端一致
+
 Exact bound nickname
 == 要綁定的完整暱稱
 
@@ -5305,6 +5317,9 @@ Exchange (ProRes 422 HQ / MOV)
 
 Exclude
 == 排除
+
+exec
+== exec
 
 Execute before connecting
 == 連接前執行
@@ -6398,6 +6413,9 @@ Ground jump
 Group name
 == 分組名稱
 
+Group names are limited to 16 characters
+== 群組名稱最多 16 個字元
+
 Groups input helpers: fast input, automatic margin, sub-tick aiming and cursor behavior.
 == 將輸入輔助集中分組：快速輸入、自動邊距、子 tick 瞄準與游標行為。
 
@@ -6714,13 +6732,16 @@ HJ assist
 == HJ 大佬輔助
 
 Hold
-== 保持
+== 按住
 
 Hold gun higher like TW 0.6.1 and earlier
 == 像 TW 0.6.1 及更早版本一樣，tee 將槍握得更高一點
 
 Hold left click for free camera
 == 按住左鍵自由鏡頭
+
+Hold still
+== 停住
 
 Hold the wheel key to see the selection move; release it to run the highlighted slot.
 == 按住輪盤鍵可以看到選取移動，放開就執行高亮槽位的指令。
@@ -6808,6 +6829,9 @@ Hostname of DNSBL provider for IP verification
 
 Hover for tooltip
 == 懸停查看提示
+
+How far a wheel or drag can push past an end, in UI pixels; 0 disables
+== 滾輪或拖曳能把內容推過末端多遠（UI 像素）；0 關閉
 
 How far the plasma gun tracks a tee
 == 等離子槍將跟蹤 tee 多遠
@@ -7499,6 +7523,9 @@ Keep unsent message on chat close
 Keep vote window open after voting
 == 投票後不關閉投票窗口
 
+Key
+== 按鍵
+
 Key binds
 == 按鍵綁定
 
@@ -7783,9 +7810,6 @@ Leave empty to disable
 
 Leave empty to join public room
 == 留空以進入公共房間
-
-Leave empty to show everyone
-== 留空顯示所有玩家
 
 Leave empty to use default prompt
 == 留空使用默認提示詞
@@ -8283,7 +8307,7 @@ Map
 == 地圖
 
 Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
-== Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
+== 地圖瀏覽器難度分類過濾位元遮罩（位 0-14，見 map_vote_difficulty.h）
 
 Map browser difficulty star filter bitmask (bits 1-5)
 == 地圖瀏覽器難度星級篩選位元遮罩（位元 1-5）
@@ -8745,7 +8769,7 @@ Mixed
 == 混合
 
 Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
-== Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+== 僅行動端：下次啟動時把崩潰報告複製到 Downloads/QmClient（0 = 保留在應用沙箱內）
 
 Mobile spectator camera: 0=joystick pad, 1=drag the view
 == 手機觀戰取景方式：0=搖桿，1=拖曳畫面
@@ -8810,6 +8834,9 @@ Mouse speed for aiming and for menus, and how far your cursor may travel from th
 Move a friend category to a position
 == 將好友分組移動到指定位置
 
+Move down
+== 下移
+
 Move left
 == 向左移動
 
@@ -8824,6 +8851,9 @@ Move the free camera, then add a keyframe at the current demo time.
 
 Move to category
 == 移動到分類
+
+Move up
+== 上移
 
 Movement
 == 移動
@@ -9164,6 +9194,9 @@ New features
 New features (unread)
 == 新功能（未讀）
 
+New group
+== 新建群組
+
 New IME
 == 新版 IME
 
@@ -9308,6 +9341,9 @@ No downloadable portable package for this version
 No empty team left.
 == 已經沒有空隊伍了
 
+No entries yet
+== 暫無條目
+
 No favorite maps yet
 == 暫無收藏地圖
 
@@ -9385,6 +9421,9 @@ No player nearby
 
 No player with this name found.
 == 沒有找到這個名字的玩家
+
+No players match
+== 沒有符合的玩家
 
 No players match these filters
 == 沒有符合篩選條件的玩家
@@ -9650,6 +9689,9 @@ On
 One key can hold several commands, so remove single entries under "Bound functions" instead of clearing the key.
 == 一個鍵能放多條指令，想刪掉其中一條就到已綁定功能裡單獨刪除，不必清空整個鍵。
 
+Online
+== 線上
+
 Online friends
 == 在線好友
 
@@ -9884,9 +9926,6 @@ Original only
 Original options
 == 原始選項
 
-Original scroll feel
-== 原版捲動手感
-
 Other
 == 其他
 
@@ -9979,9 +10018,6 @@ Override Entry
 
 Override Freeze Tile Entity Alpha (0-100)
 == 覆蓋凍結圖塊的實體 alpha (0-100)
-
-Override Group
-== 覆蓋群組
 
 Override location for ping estimation, available: auto, af, as, as:cn, eu, na, oc, sa (Automatic, Africa, Asia, China, Europe, North America, Oceania/Australia, South America
 == 覆寫 Ping 估算位置，可用：auto、af、as、as:cn、eu、na、oc、sa（自動、非洲、亞洲、中國、歐洲、北美洲、大洋洲/澳洲、南美洲）
@@ -11183,6 +11219,9 @@ Queue preset: %s
 Quick action menu for players
 == 對玩家快捷操作菜單
 
+Quintic Bezier
+== 五次貝塞爾
+
 Quit
 == 退出
 
@@ -11729,6 +11768,9 @@ Rename demo
 Rename folder
 == 重命名文件夾
 
+Rename group
+== 重新命名群組
+
 Rename queue
 == 改名名單
 
@@ -12050,9 +12092,6 @@ Restart
 Restart in x seconds (0 = abort)
 == 在 x 秒後重新啟動（0 = 中止）
 
-Restart smooth scrolling on every wheel tick
-== 每次滾輪都從靜止重新開始平滑捲動
-
 Restart the client
 == 重啟客戶端
 
@@ -12073,9 +12112,6 @@ Restore old single-segment hook collision line behavior
 
 Restore recommended
 == 恢復建議值
-
-Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
-== 恢復原版滾輪手感：每格重新開始平滑捲動，不繼承速度
 
 Restored the built-in content
 == 已還原內建內容
@@ -12106,6 +12142,9 @@ Reverse gradient colors
 
 Reverse IME gradient colors
 == 反轉漸層顏色 (IME)
+
+Reverse order
+== 倒序排列
 
 Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
 == 反向按鍵時立即反向縮放（0=保留原有平滑縮放）
@@ -12184,6 +12223,9 @@ Rows here usually come from old configs, so test each command before you rely on
 
 RTT
 == RTT
+
+Rubber-band distance in UI pixels when the wheel or a drag pushes past an end (0=off); the content springs back after scrolling stops
+== 滾輪或拖曳推過邊界時的橡皮筋距離，UI 像素（0=關閉）；停止捲動後內容彈回
 
 Rule line 1.
 == 規則第 1 行
@@ -12428,9 +12470,6 @@ Scoreboard
 Scoreboard cursor
 == 計分板光標
 
-Scoreboard filter: only show players whose name or clan contains this text
-== 計分板篩選：符合名字或戰隊
-
 Scoreboard playtime
 == 計分板遊玩時間
 
@@ -12502,6 +12541,9 @@ Screenshots
 
 Screenshots directory
 == 截圖目錄
+
+Scroll feel
+== 捲動手感
 
 Scroll mode
 == 捲動模式
@@ -12675,7 +12717,7 @@ Selects the country flag shown for you and for the dummy.
 == 選擇為你和分身顯示的國旗。
 
 Self
-== 自身
+== 本體
 
 Self and friends
 == 自己和好友
@@ -13013,6 +13055,9 @@ Settings page opacity
 Settings page right panel opacity
 == 設置頁右側設置欄透明度
 
+Settings prewarm default migration done
+== 設定預熱預設值遷移已完成
+
 Settings, binds, profiles, chat binds and the war list are included. Select additional cfg files below.
 == 包含設定、按鍵綁定、外觀配置、聊天綁定和敵對列表。請在下方選擇額外的 cfg 檔案。
 
@@ -13148,7 +13193,7 @@ Show chat when rendering video
 Show clan above name plates
 == 顯示戰隊名稱
 
-Show clan if war
+Show clan for enemies
 == 如果有敵對則顯示戰隊
 
 Show clan name on nameplate
@@ -13186,9 +13231,6 @@ Show collision and weapon interaction
 
 Show Collision Borders
 == 顯示碰撞體積邊框
-
-Show colors in spectator selection
-== 旁觀選擇中顯示顏色
 
 Show combo hint when hooking or hammering player within 2 seconds
 == 2 秒內連續鉤中或錘中玩家時顯示連擊提示
@@ -13294,6 +13336,12 @@ Show enemy color in scoreboard
 
 Show enemy color in spectator menu
 == 在旁觀菜單中顯示敵對顏色
+
+Show enemy colors in chat
+== 在聊天欄中的顏色
+
+Show enemy colors in scoreboard
+== 計分板中的顏色
 
 Show enemy group players
 == 顯示敵對組玩家
@@ -14502,7 +14550,7 @@ Source language code for translation (auto=auto-detect)
 == 翻譯源語言代碼（auto=自動檢測）
 
 Space
-== 間隔
+== 空格
 
 Spam protection: prevent spamming of team switching, chat, skin changes, emotes, votes
 == 刷屏保護：防止切換隊伍、聊天、換皮膚、表情和投票的刷屏
@@ -14620,6 +14668,27 @@ Spotify sp_dc cookie (from browser DevTools, long-lived)
 
 Spree
 == 連殺
+
+Spring
+== 彈簧
+
+Spring damping
+== 彈簧阻尼
+
+Spring firmness; 100 stops without overshoot, lower bounces past
+== 彈簧收斂強度；100 直接停住不過衝，越小越會越過目標回彈
+
+Spring response
+== 彈簧響應
+
+Spring scroll feel damping ratio in percent; 100 stops without overshoot
+== 彈簧捲動手感的阻尼比，單位百分比；100 表示不過衝直接停住
+
+Spring scroll feel response time in milliseconds; lower reaches the target sooner
+== 彈簧捲動手感的響應時間，單位毫秒；越小越快到位
+
+Spring settle time; lower is snappier, higher feels heavier
+== 彈簧落定時間；越小反應越快，越大手感越沉
 
 SQL Server name for record table
 == 插入記錄表的 SQL Server 名稱
@@ -14875,6 +14944,9 @@ Sun
 
 Super
 == 無敵
+
+Superellipse
+== 超橢圓
 
 Support is optional; nothing here changes client behavior.
 == 支持完全出於自願；此處內容不會改變用戶端行為。
@@ -16019,9 +16091,6 @@ Total play time
 Total: %d save(s)
 == 總計：%d 個存檔
 
-Traditional
-== 繁體
-
 Trail alpha
 == 拖尾透明度
 
@@ -16357,6 +16426,9 @@ UI color
 
 UI controller sens.
 == 搖桿靈敏度（界面）
+
+UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier
+== 介面圓角曲線：0 = 經典圓弧，1 = 超橢圓，2 = 五次貝塞爾，3 = 圓錐貝塞爾
 
 UI icon color
 == 介面圖示顏色
@@ -17303,6 +17375,9 @@ Wheel distance per tick; hold Alt for 3x
 Wheel label
 == 輪盤顯示名稱
 
+Wheel scroll feel: 0=Smooth (velocity carries over), 1=Original (each tick restarts), 2=Spring
+== 滾輪手感：0=順滑（繼承速度），1=原版（每檔重置），2=彈簧
+
 Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
 == 滾輪每格的介面像素步長；設定卡片頁面每格捲動此值的 12 倍
 
@@ -17519,6 +17594,9 @@ Writing item %d failed
 Written %d items
 == 已寫入 %d 項
 
+X
+== X
+
 x = DDNet CPU% / total CPU%
 == x = DDNet CPU% / 總 CPU%
 
@@ -17527,6 +17605,9 @@ X alignment color
 
 X alignment hint with me
 == 與我 X 對齊提示
+
+Y
+== Y
 
 y = DDNet memory usage
 == y = DDNet 內存佔用

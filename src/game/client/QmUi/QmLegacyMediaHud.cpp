@@ -1,4 +1,5 @@
 #include "QmLegacyMediaHud.h"
+
 #include "QmLyricsHud.h"
 
 #include <engine/textrender.h>

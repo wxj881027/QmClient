@@ -3558,8 +3558,14 @@ if(CLIENT)
     components/qmclient/friend_last_seen_data.h
     components/qmclient/bind_editor.cpp
     components/qmclient/bind_editor.h
+    components/qmclient/bind_mouse_diagram.cpp
+    components/qmclient/bind_mouse_diagram.h
     components/qmclient/bind_overview.h
     components/qmclient/bind_settings.cpp
+    components/qmclient/bind_workshop.cpp
+    components/qmclient/bind_workshop.h
+    components/qmclient/bind_workshop_ui.cpp
+    components/qmclient/bind_workshop_layout.cpp
     components/qmclient/browser_status_layout.h
     components/qmclient/browser_map_preview.h
     components/qmclient/browser_map_preview_loader.h
@@ -4955,7 +4961,10 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/base/prng_test.cpp
     src/test/unit/qmclient/client/qm_bind_editor_console_test.cpp
     src/test/unit/qmclient/client/qm_bind_editor_test.cpp
+    src/test/unit/qmclient/client/qm_bind_mouse_diagram_test.cpp
     src/test/unit/qmclient/client/qm_bind_overview_test.cpp
+    src/test/unit/qmclient/client/qm_bind_workshop_catalog_test.cpp
+    src/test/unit/qmclient/client/qm_bind_workshop_plan_test.cpp
     src/test/unit/qmclient/client/qm_background_particles_test.cpp
     src/test/unit/qmclient/client/qm_axiom_scores_test.cpp
     src/test/integration/qmclient/client/qm_axiom_quad_collision_test.cpp
@@ -5488,6 +5497,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/qm/music/qm_qqmusic_protocol.h
     src/game/client/components/qmclient/modes.cpp
     src/game/client/components/qmclient/bind_editor.cpp
+    src/game/client/components/qmclient/bind_mouse_diagram.cpp
+    src/game/client/components/qmclient/bind_workshop.cpp
+    src/game/client/components/qmclient/bind_workshop_layout.cpp
     src/game/client/components/qmclient/wheel_presets.cpp
     src/game/client/components/qmclient/settings_resource_preview.cpp
     src/game/client/components/qmclient/tee_hue_cycle.cpp
@@ -5763,6 +5775,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/ui/qm_confirm_popup_result_test.cpp
       src/test/integration/qmclient/ui/qm_tooltip_text_layout_test.cpp
       src/test/integration/qmclient/ui/qm_card_summary_layout_test.cpp
+      src/test/integration/qmclient/ui/qm_visual_hover_visibility_test.cpp
       src/test/integration/qmclient/ui/qm_secondary_panel_actions_test.cpp
       src/test/integration/qmclient/ui/qm_browser_map_preview_input_test.cpp
       src/test/integration/qmclient/ui/qm_settings_action_group_test.cpp
@@ -5796,6 +5809,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/game/client/QmUi/QmCardOrderModel.cpp
       src/game/client/QmUi/QmCardRegistry.cpp
       src/game/client/QmUi/QmCardWiki.cpp
+      src/game/client/QmUi/cards/QmCardCatalogIds.cpp
       src/game/client/QmUi/cards/QmCardCatalogSearch.cpp
       src/game/client/QmUi/QmCardWikiPanel.cpp
       src/game/client/QmUi/QmWikiDocs.cpp
@@ -5875,6 +5889,9 @@ if(TARGET benchmark::benchmark AND SERVER AND FREETYPE_FOUND)
     src/test/benchmark/qm_benchmark_main.cpp
     src/test/benchmark/qm_online_replay_benchmark.cpp
     src/test/benchmark/qm_route_render_cache_benchmark.cpp
+    src/test/benchmark/qm_bind_blueprint_benchmark.cpp
+    src/game/client/components/qmclient/bind_workshop.cpp
+    src/game/client/components/qmclient/bind_editor.cpp
     src/test/benchmark/qm_str_benchmark.cpp
     src/test/benchmark/qm_update_benchmark.cpp
     src/game/client/components/qmclient/update_manifest.cpp

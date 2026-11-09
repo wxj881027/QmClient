@@ -616,7 +616,7 @@ bool CQmScreenshotManager::DrawWatermark(IStorage *pStorage, CImageInfo &Image, 
 		const int BandY = Top ? 0 : (int)Image.m_Height - BandH;
 		for(int Y = BandY; Y < BandY + BandH; ++Y)
 			for(int X = 0; X < (int)Image.m_Width; ++X)
-				BlendPixel(Image, X, Y, ColorRGBA(0.0f, 0.0f, 0.0f, 0.62f));
+				BlendPixel(Image, X, Y, ui_token::color::NEUTRAL_BLACK.WithAlpha(0.62f));
 		const int TextX = Right ? (int)Image.m_Width - TextW - Margin : Margin;
 		if(UseFont)
 			Font.Draw(Image, Text, std::max(Margin, TextX), BandY + Margin + FontSize, ui_token::color::NEUTRAL_WHITE);
@@ -658,8 +658,8 @@ bool CQmScreenshotManager::DrawEditorWatermark(IStorage *pStorage, CImageInfo &I
 		if(!Stamp.m_pData)
 			return false;
 		// 阴影随文字图层变换，不绘制原先贯穿图片的黑色条带。
-		Font.Draw(Stamp, Text, Pad + 1, Pad + FontSize + 1, ColorRGBA(0, 0, 0, 0.75f));
-		Font.Draw(Stamp, Text, Pad, Pad + FontSize, ColorRGBA(1, 1, 1, 1));
+		Font.Draw(Stamp, Text, Pad + 1, Pad + FontSize + 1, ui_token::color::NEUTRAL_BLACK.WithAlpha(0.75f));
+		Font.Draw(Stamp, Text, Pad, Pad + FontSize, ui_token::color::NEUTRAL_WHITE);
 		if(!Composite(Stamp, Options.m_TextLayer, 0))
 			return false;
 	}

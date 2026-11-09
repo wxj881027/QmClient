@@ -1086,14 +1086,6 @@ void CScoreboard::BuildPlayerRowPlan(int Team, CScoreboardPlayerRowPlan &Plan)
 	auto &&IsInScoreboardTeam = [&](const CNetObj_PlayerInfo *pInfo) {
 		if(pInfo == nullptr)
 			return false;
-		// 名字/战队子串过滤（不区分大小写）：qm_scoreboard_filter 留空显示全部。
-		const char *pFilter = g_Config.m_QmScoreboardFilter;
-		if(pFilter[0] != '\0')
-		{
-			const auto &ClientData = GameClient()->m_aClients[pInfo->m_ClientId];
-			if(!str_find_nocase(ClientData.m_aName, pFilter) && !str_find_nocase(ClientData.m_aClan, pFilter))
-				return false;
-		}
 		return QmScoreboardEffectivePlayerTeam(pInfo->m_Team, GameClient()->m_aClients[pInfo->m_ClientId].m_Spec, IsTeamPlay) == Team;
 	};
 
@@ -1425,7 +1417,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 			{
 				const bool HoveredCard = Ui()->MouseHovered(&CardButton);
 				const bool CardActive = Ui()->IsPopupOpen(&m_ScoreboardPopupContext) && m_ScoreboardPopupContext.m_ClientId == ClientId;
-				CardButton.Draw(HoveredCard || CardActive ? ScoreboardDecorationColor(ui_token::color::SURFACE_HIGHLIGHT.WithMultipliedAlpha(4.0f * ItemAlpha)) : ScoreboardDecorationColor(ui_token::color::SURFACE_HIGHLIGHT.WithMultipliedAlpha(ItemAlpha)), IGraphics::CORNER_ALL, RoundRadius);
+				CardButton.Draw(HoveredCard || CardActive ? ScoreboardDecorationColor(ui_token::color::TINT_HUD_CARD_ACTIVE.WithMultipliedAlpha(ItemAlpha)) : ScoreboardDecorationColor(ui_token::color::TINT_HUD_CARD.WithMultipliedAlpha(ItemAlpha)), IGraphics::CORNER_ALL, RoundRadius);
 				TextRender()->TextColor(TextRender()->DefaultTextColor().WithMultipliedAlpha(ItemAlpha));
 				Ui()->DoLabel(&CardButton, FontIcons::FONT_ICON_ELLIPSIS, minimum(LineHeight * 0.7f, 10.0f), TEXTALIGN_MC);
 				TextRender()->TextColor(TextRender()->DefaultTextColor());

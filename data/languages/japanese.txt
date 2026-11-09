@@ -368,6 +368,9 @@ A calm-play mode that hides the HUD, names, effects, chat and sounds you pick, s
 A crowded HUD hides the game, so start with one element and add more if needed.
 == HUD が混み合うとゲームが見えなくなるので、まず 1 つだけ有効にして、必要なら追加しましょう。
 
+A damped spring drives the offset; reversing slows it before it turns
+== 減衰バネが偏移を駆動し、逆方向へは一旦減速してから戻ります
+
 A demo with this name already exists
 == この名前のデモは既に存在します
 
@@ -592,9 +595,6 @@ Add friends by entering their name below or by clicking their name in the player
 
 Add function
 == 機能を追加
-
-Add Group
-== グループを追加
 
 Add Item
 == アイテムを追加
@@ -1127,6 +1127,9 @@ Are you sure that you want to quit?
 Are you sure that you want to remove '%s' from your war groups?
 == 本当に敵対グループから '%s' を削除しますか？
 
+Are you sure that you want to remove '%s' from your war list?
+== 「%s」を敵対リストから削除してもよいですか？
+
 Are you sure that you want to remove the clan '%s' from your friends list?
 == フレンドリストからクラン '%s' を削除してもよろしいですか？
 
@@ -1586,9 +1589,6 @@ Axiom website
 Axis
 == 軸
 
-Back
-== 戻る
-
 Backdrop blur
 == 背景のぼかし
 
@@ -1955,6 +1955,9 @@ Bubble opacity
 Build the status text shown above Tees
 == Build the status text shown above Tees
 
+Built-in
+== 内蔵
+
 Button - Disabled
 == ボタン - 無効
 
@@ -2089,6 +2092,12 @@ Cannot update public words. Previous words remain active.
 
 Cannot write the wiki file
 == Wiki ファイルを書き込めません
+
+Capsule seam
+== カプセルのはぎ目
+
+Capsule seam smoothing: ease the straight-to-cap curvature jump (0 = plain semicircular ends)
+== カプセルのはぎ目の平滑化：直線から端までの曲率の飛びを和らげます（0 = 純粋な半円端）
 
 Capture the flag
 == キャプチャー・ザ・フラッグ (CTF)
@@ -2483,20 +2492,11 @@ Clan: %s
 Classic
 == クラシック
 
-Classic Easy
-== クラシック Easy
-
-Classic Next
-== クラシック Next
-
-Classic Nut
-== クラシック Nut
+Classic arc
+== クラシック円弧
 
 Classic PowerShell
 == クラシック PowerShell
-
-Classic Pro
-== クラシック Pro
 
 Clear
 == クリア
@@ -2608,9 +2608,6 @@ Click to remove this player from your friends list.
 
 Click to select server. Double click to join your friend.
 == クリックでサーバー選択、ダブルクリックで友達のサーバーに参加。
-
-Click to set color
-== クリックして色を設定
 
 Client
 == クライアント
@@ -2732,12 +2729,6 @@ Colors and opacity of the popup list that suggests chat commands and emoticons w
 Colors for chat command and emoji completion
 == チャットのコマンド・絵文字補完の配色
 
-Colors in chat
-== チャット内の色
-
-Colors in scoreboard
-== スコアボード内の色
-
 Colors of the hook collision line, in case of a possible collision with:
 == フック補助線の色（以下の対象と衝突する可能性がある場合）：
 
@@ -2843,17 +2834,11 @@ Concurrent requests when refreshing server browser
 Config
 == 設定
 
-Config Changes
-== 設定変更
-
 Config directory
 == 設定ディレクトリ
 
 Config Files
 == 設定ファイル
-
-Config Filters
-== 設定フィルター
 
 Config version. Helps new client fix old config errors.
 == 設定バージョン。新しいクライアントが古い設定のエラーを修正するのに役立ちます
@@ -3014,6 +2999,9 @@ Confirm disconnect after game end (minutes, -1 off, 0 always)
 Confirm quit after game end (minutes, -1 off, 0 always)
 == ゲーム終了後の終了確認（分、-1 でオフ、0 で常時）
 
+Conic Bezier
+== 円錐ベジェ
+
 Connect address error
 == 接続アドレスエラー
 
@@ -3080,6 +3068,9 @@ Connlimit: number of connections allowed per IP in a time period
 Connlimit: time window for IP connection count
 == Connlimit：IP 接続数の時間枠
 
+Consecutive wheel ticks carry their velocity into one continuous glide
+== 連続したホイール操作で速度を引き継ぎ、ひと続きの滑らかな動きになります
+
 Console
 == コンソール
 
@@ -3145,6 +3136,9 @@ Contents
 
 Continue anyway?
 == それでも続行しますか？
+
+Continuous-curvature UI corners (0 = classic arc, 100 = strongest)
+== UI の角の連続曲率（0 = クラシック円弧、100 = 最強）
 
 Contributors
 == コントリビューター
@@ -3250,6 +3244,12 @@ Copy skin ID
 
 Copy skin option color
 == スキンオプションの色をコピー
+
+Corner curvature
+== 角の曲率
+
+Corner curve
+== 角の曲線
 
 Could not add the player as a friend
 == プレイヤーをフレンドに追加できませんでした
@@ -4604,6 +4604,9 @@ Edit the name and clan fields; the dummy keeps its own values.
 Edit this custom command on the Bind Wheel page.
 == このカスタムコマンドはバインドホイールのページで編集してください。
 
+Edit title style
+== タイトルスタイルを編集
+
 Edit touch controls
 == タッチコントロールを編集
 
@@ -5162,6 +5165,9 @@ Encoder:
 End (s)
 == 終了 (秒)
 
+End bounce
+== 端での跳ね返り
+
 End marker of replay slice
 == リプレイスライスの終了マーカー
 
@@ -5237,6 +5243,9 @@ Entity wall outline opacity
 entity_bg (Workshop)
 == entity_bg（Workshop）
 
+Entries in it will fall back to none.
+== 中の項目は none に戻ります。
+
 Entries with NVENC, AMF, Quick Sync or VideoToolbox use the GPU encoding chip and are several times faster. Only encoders that really work on this machine are listed.
 == NVENC、AMF、Quick Sync、VideoToolbox を含む項目は GPU のエンコード回路を使い、数倍速くなります。このマシンで実際に動くエンコーダーだけが一覧に出ます。
 
@@ -5282,6 +5291,9 @@ Event
 Every click applies the skin at once, so star the ones you like before you start browsing.
 == クリックするたびにすぐ適用されるので、気に入ったものは先に星を付けてから探してください。
 
+Every wheel tick restarts from rest, matching the original client
+== ホイール1目盛ごとに静止状態から始まり、オリジナル版と同じ挙動になります
+
 Exact bound nickname
 == 紐付ける正確なニックネーム
 
@@ -5305,6 +5317,9 @@ Exchange (ProRes 422 HQ / MOV)
 
 Exclude
 == 除外
+
+exec
+== exec
 
 Execute before connecting
 == 接続前に実行
@@ -6398,6 +6413,9 @@ Ground jump
 Group name
 == グループ名
 
+Group names are limited to 16 characters
+== グループ名は最大16文字です
+
 Groups input helpers: fast input, automatic margin, sub-tick aiming and cursor behavior.
 == 入力支援をまとめた項目です。高速入力、自動マージン、サブティック照準、カーソルの挙動を含みます。
 
@@ -6714,13 +6732,16 @@ HJ assist
 == HJ アシスト
 
 Hold
-== 保持
+== 長押し
 
 Hold gun higher like TW 0.6.1 and earlier
 == TW 0.6.1 以前のように銃を高く構える
 
 Hold left click for free camera
 == 左クリックでフリーカメラ
+
+Hold still
+== 停止
 
 Hold the wheel key to see the selection move; release it to run the highlighted slot.
 == ホイールキーを押し続けると選択が動き、離すと強調表示されたスロットが実行されます。
@@ -6808,6 +6829,9 @@ Hostname of DNSBL provider for IP verification
 
 Hover for tooltip
 == ホバーでツールチップ
+
+How far a wheel or drag can push past an end, in UI pixels; 0 disables
+== ホイールやドラッグで端を越えて押し込める距離（UI ピクセル）。0 で無効
 
 How far the plasma gun tracks a tee
 == プラズマガンが Tee を追跡する距離
@@ -7499,6 +7523,9 @@ Keep unsent message on chat close
 Keep vote window open after voting
 == 投票後も投票ウィンドウを開いたままにする
 
+Key
+== キー
+
 Key binds
 == キーバインド
 
@@ -7783,9 +7810,6 @@ Leave empty to disable
 
 Leave empty to join public room
 == 空欄にして公開ルームに入室
-
-Leave empty to show everyone
-== 空欄の場合は全プレイヤーを表示
 
 Leave empty to use default prompt
 == 空欄にしてデフォルトプロンプトを使用
@@ -8283,7 +8307,7 @@ Map
 == マップ
 
 Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
-== Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
+== マップブラウザの難易度カテゴリフィルタのビットマスク（ビット 0-14、map_vote_difficulty.h 参照）
 
 Map browser difficulty star filter bitmask (bits 1-5)
 == マップブラウザーの難易度星フィルターのビットマスク（ビット 1-5）
@@ -8745,7 +8769,7 @@ Mixed
 == 混合
 
 Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
-== Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+== モバイルのみ：次回起動時にクラッシュレポートを Downloads/QmClient にコピーします（0 = アプリのサンドボックス内に保持）
 
 Mobile spectator camera: 0=joystick pad, 1=drag the view
 == モバイル観戦のカメラ操作：0=ジョイスティック、1=画面ドラッグ
@@ -8810,6 +8834,9 @@ Mouse speed for aiming and for menus, and how far your cursor may travel from th
 Move a friend category to a position
 == フレンドカテゴリを指定位置へ移動
 
+Move down
+== 下へ移動
+
 Move left
 == 左に移動
 
@@ -8824,6 +8851,9 @@ Move the free camera, then add a keyframe at the current demo time.
 
 Move to category
 == カテゴリに移動
+
+Move up
+== 上へ移動
 
 Movement
 == 移動
@@ -9164,6 +9194,9 @@ New features
 New features (unread)
 == 新機能（未読）
 
+New group
+== 新しいグループ
+
 New IME
 == 新しいIME
 
@@ -9308,6 +9341,9 @@ No downloadable portable package for this version
 No empty team left.
 == 空いているチームはもうありません。
 
+No entries yet
+== エントリがまだありません
+
 No favorite maps yet
 == まだお気に入りマップはありません
 
@@ -9385,6 +9421,9 @@ No player nearby
 
 No player with this name found.
 == この名前のプレイヤーは見つかりませんでした。
+
+No players match
+== 一致するプレイヤーがいません
 
 No players match these filters
 == 条件に一致するプレイヤーはいません
@@ -9650,6 +9689,9 @@ On
 One key can hold several commands, so remove single entries under "Bound functions" instead of clearing the key.
 == 1 つのキーに複数のコマンドを割り当てられるので、キーを丸ごと消さず割り当て済みの機能で個別に削除します。
 
+Online
+== オンライン
+
 Online friends
 == オンラインのフレンド
 
@@ -9884,9 +9926,6 @@ Original only
 Original options
 == 元の投票項目
 
-Original scroll feel
-== 従来のスクロール感
-
 Other
 == その他
 
@@ -9979,9 +10018,6 @@ Override Entry
 
 Override Freeze Tile Entity Alpha (0-100)
 == フリーズタイルのエンティティアルファを上書き（0-100）
-
-Override Group
-== 上書きグループ
 
 Override location for ping estimation, available: auto, af, as, as:cn, eu, na, oc, sa (Automatic, Africa, Asia, China, Europe, North America, Oceania/Australia, South America
 == Ping 推定地域を上書きします。選択肢：auto、af、as、as:cn、eu、na、oc、sa（自動、アフリカ、アジア、中国、ヨーロッパ、北米、オセアニア/オーストラリア、南米）
@@ -11183,6 +11219,9 @@ Queue preset: %s
 Quick action menu for players
 == プレイヤー向けクイックアクションメニュー
 
+Quintic Bezier
+== 5次ベジェ
+
 Quit
 == 終了
 
@@ -11729,6 +11768,9 @@ Rename demo
 Rename folder
 == フォルダーの名前を変更
 
+Rename group
+== グループ名を変更
+
 Rename queue
 == リネームキュー
 
@@ -12050,9 +12092,6 @@ Restart
 Restart in x seconds (0 = abort)
 == x 秒後に再起動（0 = 中止）
 
-Restart smooth scrolling on every wheel tick
-== ホイールの目盛りごとにスクロールをやり直す
-
 Restart the client
 == クライアントを再起動
 
@@ -12073,9 +12112,6 @@ Restore old single-segment hook collision line behavior
 
 Restore recommended
 == 推奨値に戻す
-
-Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
-== 従来のホイール操作に戻す：各刻みで速度を引き継がず、滑らかなスクロールを再開
 
 Restored the built-in content
 == 内蔵コンテンツに戻しました
@@ -12106,6 +12142,9 @@ Reverse gradient colors
 
 Reverse IME gradient colors
 == グラデーションの色を反転 (IME)
+
+Reverse order
+== 逆順に並べる
 
 Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
 == 逆方向キーでズームを即座に反転（0=元の滑らかなズームを維持）
@@ -12184,6 +12223,9 @@ Rows here usually come from old configs, so test each command before you rely on
 
 RTT
 == RTT
+
+Rubber-band distance in UI pixels when the wheel or a drag pushes past an end (0=off); the content springs back after scrolling stops
+== ホイールやドラッグで端を越えたときのゴムバンド距離（UI ピクセル、0=無効）。スクロールを止めると内容が戻ります
 
 Rule line 1.
 == ルール 1 行目
@@ -12428,9 +12470,6 @@ Scoreboard
 Scoreboard cursor
 == スコアボードカーソル
 
-Scoreboard filter: only show players whose name or clan contains this text
-== スコアボードフィルター：名前またはクランにこの文字列を含むプレイヤーのみ表示します
-
 Scoreboard playtime
 == スコアボードのプレイ時間
 
@@ -12502,6 +12541,9 @@ Screenshots
 
 Screenshots directory
 == スクリーンショットディレクトリ
+
+Scroll feel
+== スクロールの手触り
 
 Scroll mode
 == スクロールモード
@@ -13013,6 +13055,9 @@ Settings page opacity
 Settings page right panel opacity
 == 設定ページ右パネルの不透明度
 
+Settings prewarm default migration done
+== 設定のプリウォーム既定値の移行が完了しました
+
 Settings, binds, profiles, chat binds and the war list are included. Select additional cfg files below.
 == 設定、キー割り当て、スキンプロファイル、チャットバインド、敵対リストを含みます。追加の cfg ファイルを下で選択してください。
 
@@ -13148,7 +13193,7 @@ Show chat when rendering video
 Show clan above name plates
 == ネームプレートの上にクランを表示
 
-Show clan if war
+Show clan for enemies
 == 敵対の場合にクランを表示
 
 Show clan name on nameplate
@@ -13186,9 +13231,6 @@ Show collision and weapon interaction
 
 Show Collision Borders
 == 衝突判定ボックス枠を表示
-
-Show colors in spectator selection
-== 観戦者選択で色を表示
 
 Show combo hint when hooking or hammering player within 2 seconds
 == 2 秒以内に連続でフックまたはハンマーでヒットしたときにコンボ表示
@@ -13294,6 +13336,12 @@ Show enemy color in scoreboard
 
 Show enemy color in spectator menu
 == スペクテーターメニューで敵の色を表示
+
+Show enemy colors in chat
+== チャット内の色
+
+Show enemy colors in scoreboard
+== スコアボード内の色
 
 Show enemy group players
 == 敵グループのプレイヤーを表示
@@ -14502,7 +14550,7 @@ Source language code for translation (auto=auto-detect)
 == 翻訳元言語コード（auto=自動検出）
 
 Space
-== 間隔
+== スペース
 
 Spam protection: prevent spamming of team switching, chat, skin changes, emotes, votes
 == スパム対策：チーム切り替え、チャット、スキン変更、エモート、投票のスパムを防止
@@ -14620,6 +14668,27 @@ Spotify sp_dc cookie (from browser DevTools, long-lived)
 
 Spree
 == 連続キル
+
+Spring
+== バネ
+
+Spring damping
+== バネの減衰
+
+Spring firmness; 100 stops without overshoot, lower bounces past
+== バネの収まり具合。100 は行き過ぎずに止まり、小さいほど目標を越えて跳ね返ります
+
+Spring response
+== バネの応答
+
+Spring scroll feel damping ratio in percent; 100 stops without overshoot
+== バネ式スクロールの減衰比（パーセント）。100 は行き過ぎずに停止します
+
+Spring scroll feel response time in milliseconds; lower reaches the target sooner
+== バネ式スクロールの応答時間（ミリ秒）。小さいほど早く到達します
+
+Spring settle time; lower is snappier, higher feels heavier
+== バネが目標に落ち着くまでの時間。小さいほど機敏に、大きいほど重く感じます
 
 SQL Server name for record table
 == レコードテーブルの SQL Server 名
@@ -14875,6 +14944,9 @@ Sun
 
 Super
 == スーパー
+
+Superellipse
+== 超楕円
 
 Support is optional; nothing here changes client behavior.
 == 支援は任意です。ここの内容がクライアントの動作を変えることはありません。
@@ -16019,9 +16091,6 @@ Total play time
 Total: %d save(s)
 == 合計: %d 個のセーブ
 
-Traditional
-== 繁体字
-
 Trail alpha
 == トレイルの透明度
 
@@ -16357,6 +16426,9 @@ UI color
 
 UI controller sens.
 == UI コントローラー感度
+
+UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier
+== UI の角の曲線：0 = クラシック円弧、1 = 超楕円、2 = 5次ベジェ、3 = 円錐ベジェ
 
 UI icon color
 == UI アイコンの色
@@ -17303,6 +17375,9 @@ Wheel distance per tick; hold Alt for 3x
 Wheel label
 == ホイールの表示名
 
+Wheel scroll feel: 0=Smooth (velocity carries over), 1=Original (each tick restarts), 2=Spring
+== ホイールの感覚: 0=滑らか（速度を継承）、1=オリジナル（毎回リセット）、2=バネ
+
 Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
 == ホイール1刻みのUIピクセル移動量。設定カードのページは各刻みでこの値の12倍移動
 
@@ -17519,6 +17594,9 @@ Writing item %d failed
 Written %d items
 == %d 個のアイテムを書き込みました
 
+X
+== X
+
 x = DDNet CPU% / total CPU%
 == x = DDNet CPU% / 合計 CPU%
 
@@ -17527,6 +17605,9 @@ X alignment color
 
 X alignment hint with me
 == 自分と X 軸揃えのヒント
+
+Y
+== Y
 
 y = DDNet memory usage
 == y = DDNet メモリ使用量

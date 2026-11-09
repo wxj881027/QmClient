@@ -64,8 +64,10 @@ void CScrollRegion::ClampBackgroundScrollOffset()
 		return;
 
 	// 后台只约束失效的尺寸偏移；合法偏移不重设，保留暂停的动画和待处理定位。
+	// 橡皮筋区的越界量要一并保留，否则控制台开合这类后台渲染会把它夹掉，回弹中断。
 	const float MaxOffset = ContentOverflows() ? MaxScroll() : 0.0f;
-	const float Offset = std::clamp(m_ScrollState.Offset(), 0.0f, MaxOffset);
+	const float Overscroll = ScrollConfig().m_MaxOverscroll;
+	const float Offset = std::clamp(m_ScrollState.Offset(), -Overscroll, MaxOffset + Overscroll);
 	if(Offset != m_ScrollState.Offset())
 		m_ScrollState.SetOffset(Offset, ScrollMetrics(), ScrollConfig());
 }
@@ -109,8 +111,8 @@ void CScrollRegion::Begin(CUIRect *pClipRect, vec2 *pOutOffset, const CScrollReg
 		const float TargetOffset = m_ScrollState.Offset();
 		const float MaxOffset = ContentOverflows() ? MaxScroll() : 0.0f;
 		const bool AnimateContentShrink = m_DisplayOffset > MaxOffset && TargetOffset == MaxOffset &&
-			!m_ScrollState.Animating() && !m_ScrollState.ThumbDragActive() && !m_ScrollState.ContentDragState().m_Active &&
-			TouchAxis == 0.0f && g_Config.m_QmUiMotionLevel > 0 && g_Config.m_UiSmoothScrollTime > 0;
+						  !m_ScrollState.Animating() && !m_ScrollState.ThumbDragActive() && !m_ScrollState.ContentDragState().m_Active &&
+						  TouchAxis == 0.0f && g_Config.m_QmUiMotionLevel > 0 && g_Config.m_UiSmoothScrollTime > 0;
 		if(!AnimateContentShrink)
 			m_DisplayOffset = TargetOffset;
 		else if(!Ui()->RenderOnly())
@@ -171,8 +173,10 @@ bool CScrollRegion::AddRect(const CUIRect &Rect, bool ShouldScrollHere, bool IsS
 	// 重新出现的那一帧，选中项自动滚进视野，调用方不必自己记录「第一次渲染」。
 	const bool ScrollToThisRect = ShouldScrollHere || (m_ReScrollSelection && m_SelectionRectIndex == RectIndex);
 	m_LastAddedRect = Rect;
-	// 测量必须与调用方布局同源：调用方拿到的偏移就是显示偏移，
-	// 两者都用它，缓动窗口内才能精确抵消。
+	// 测量必须与调用方布局同源：调用方拿到的偏移就是显示偏移，两者都用它，
+	// 缓动窗口内才能精确抵消。这里不要为橡皮筋做任何夹取——Rect 是随偏移移动的
+	// 屏幕坐标，减去 ContentOffset 后恰好还原内容高度，越界时同样精确；夹取反而
+	// 会让越界量算进内容高度，使 MaxOffset 追着偏移膨胀。
 	const vec2 ContentOffset = ContentScrollOffset();
 	if(m_Params.m_ScrollHorizontal)
 		m_ContentSize = maximum(std::ceil(Rect.x + Rect.w - (m_ClipRect.x + ContentOffset.x)), m_ContentSize);

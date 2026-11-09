@@ -47,10 +47,6 @@ SAME_SOURCE_ALLOWED_BY_LANGUAGE = {
         "Auto",
         "Chat",
         "Clan",
-        "Classic Easy",
-        "Classic Next",
-        "Classic Nut",
-        "Classic Pro",
         "Client",
         "Combo",
         "Community",
@@ -156,10 +152,6 @@ SAME_SOURCE_ALLOWED_BY_LANGUAGE = {
         "Auto",
         "Chat",
         "Clan",
-        "Classic Easy",
-        "Classic Next",
-        "Classic Nut",
-        "Classic Pro",
         "Client",
         "Combo",
         "Compact",
@@ -261,10 +253,6 @@ SAME_SOURCE_ALLOWED_BY_LANGUAGE = {
         "%s min.",
         "Auto",
         "Chat",
-        "Classic Easy",
-        "Classic Next",
-        "Classic Nut",
-        "Classic Pro",
         "Combo",
         "Dummy",
         "Editor",
@@ -332,6 +320,68 @@ SAME_SOURCE_ALLOWED_BY_LANGUAGE = {
         "System",
     },
 }
+
+
+# ── 提示词里的术语表与撰写规则 ──────────────────────────────────────────────
+# 只在本文件维护：prompt_assets/ 由人工审校流程单独管理，这里补的是“统一译法 + 跨模块
+# 一致性 + 英文源文案写法”三类硬约束，防止模型按模块各译一套说法。
+# 术语取的是仓库现状（terminology.toml、官方简体中文参考与源码注释里已经在用的译名），
+# 不是按词典直译；改这里等于改全仓库口径，动之前先确认代码里没有别的叫法。
+QMCLIENT_GLOSSARY_FIXED_TERMS = """
+## QmClient / DDNet 术语表（全仓库强制统一，不许换词）
+- Tee / tee → 保留 `Tee`，不要译成“角色”“小人”“方块”；指一群玩家时写 `Tee` 或“玩家”
+- clan → 战队（禁止：部落、氏族、公会）
+- scoreboard → 计分板（禁止：排行榜、记分板、积分板）
+- chat → 聊天框（禁止：聊天栏、聊天窗）；仅当 source 恰好是键位标签 `Chat` 时沿用官方“聊天”
+- warlist / war list → 敌对列表（禁止：战争列表、仇人列表）
+- enemy → 敌对玩家（禁止：敌人、敌军、仇敌）
+- server browser → 服务器浏览器（禁止：服务器列表、服务器浏览）
+- filter → 筛选（动词名词都用“筛选”，禁止“过滤”）
+- 地图难度档位：Novice → 新手、Moderate → 中等、Brutal → 残酷、Insane → 疯狂
+- DDmaX 系列名与官方分类名不译，原样保留：DDmaX Easy/Next/Nut/Pro、Classic Easy/Next/Nut/Pro
+- 玩法词用固定中文，不要一半英文一半中文：hook → 钩索、freeze → 冻结、armor → 护甲、
+  grenade → 榴弹枪、laser → 激光、dummy → 分身、air jump → 空中跳
+- 一律保留英文：DDNet、QmClient、Tee、DDmaX、HUD、FPS、Ping、UI、API 等产品名与缩写，
+  以及键位名、控制台命令（`/kill`）、配置名（`qm_gaussian_blur`）、文件名
+""".strip()
+
+QMCLIENT_CONSISTENCY_RULES = """
+## 一致性规则（跨模块不许换词）
+- 一个概念全仓库只有一种说法：本术语表、下文“官方 DDNet 参考”、下文“现有相邻译文”里
+  已经出现过的译法就是定案，直接沿用，不要另造同义词。
+- 官方简体中文参考和新译法冲突时以官方为准；官方没有的才按语义新造，造了就一路用到底。
+- 同一模块内相近条目保持同一句式：开关统一“显示…/启用…”，数值统一“名词 + 范围/单位”，
+  分组标题用短名词。
+- 同一概念的译法在本次所有批次里必须一致；拿不准就回看术语表和相邻译文，不要每个 batch
+  重新决定一次。
+- 同一界面里不要出现“一处英文、一处中文”的同义混用，例如不能一处写 hook、另一处写钩索。
+- 复用已有译文的措辞而不是重译：相邻译文已有“显示敌对玩家颜色”，新的同类条目照这个结构写。
+""".strip()
+
+QMCLIENT_ENGLISH_SOURCE_RULES = """
+## 英文源文案撰写规则（判断 source 意图，并在译文里纠正不合格写法）
+- UI 控件标签用“动词短语 + 对象”，例如 `Show enemy colors in chat`；不要写成名词短语
+  `Colors in chat`。
+- 一条 source 能说清的就不要另加 tooltip 长说明；短句优先于说明文，说明文只在确实需要
+  多个条件时才用。
+- 标签写“点了做什么 / 显示什么”，不写“这是什么概念”：Show…、Hide…、Enable…、Toggle…、Reset…
+- 数值项写“名词 + 单位/范围”，例如 `Hook length (%)`、`Zoom step (ms)`，不要写成完整句子。
+- 分组标题写短名词（`Chat`、`HUD`、`Scoreboard`），不要写动宾长句。
+- 翻译时若 source 本身是名词短语但实际是开关或动作，按动词短语译
+  （`Colors in chat` → “显示聊天框中的敌对玩家颜色”），并在结论里点明该 source 建议改写。
+- 反向也要防：source 已经是完整句子时，译文要同样是能独立读懂的句子，不要压成两个词的标签。
+""".strip()
+
+
+def render_prompt_guides() -> str:
+    """拼出术语表、一致性规则与英文撰写规则三段，供 render_prompt 注入提示词。"""
+    return "\n\n".join(
+        (
+            QMCLIENT_GLOSSARY_FIXED_TERMS,
+            QMCLIENT_CONSISTENCY_RULES,
+            QMCLIENT_ENGLISH_SOURCE_RULES,
+        )
+    )
 
 
 @dataclass(frozen=True)
@@ -667,6 +717,8 @@ def render_prompt(
         rendered_terminology,
         "",
         rendered_official_references,
+        "",
+        render_prompt_guides(),
         "",
         "Few shots:",
         prompt_assets[2].strip(),

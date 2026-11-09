@@ -224,3 +224,26 @@ TEST(UiV2Anim, AwaitTracksRejectsAlreadyCompletedOrUnknownTrackIds)
 	const uint32_t aTrackIds[] = {101, 99999};
 	EXPECT_EQ(Runtime.AwaitTracks(aTrackIds, 2), 0u);
 }
+
+TEST(UiV2Anim, IdleValueCacheEntriesAreEvictedWhileReadOnesSurvive)
+{
+	CUiV2AnimationRuntime Runtime;
+	// 值缓存只保存"最后已知值"：条目丢失后 resolver 会把首见当作已在目标位，
+	// 不会补一段进场动画，因此淘汰是安全的。NodeKey 大量来自指针地址，界面进出
+	// 会不断产生新键，不淘汰这张表就会在整个会话里只增不减。
+	Runtime.SetValue(1, EUiAnimProperty::POS_X, 0.0f);
+	for(int i = 0; i < 4200; ++i)
+		Runtime.SetValue(1000 + i, EUiAnimProperty::POS_X, 1.0f);
+
+	// 超过软上限后开始按空闲帧淘汰；键 1 每帧被读取，不应过期。
+	// 淘汰每 1024 帧做一次，因此空闲窗口要跨过一个检查点才会真正生效。
+	for(int Frame = 0; Frame < 2100; ++Frame)
+	{
+		Runtime.GetValue(1, EUiAnimProperty::POS_X, -1.0f);
+		Runtime.Advance(1.0f / 60.0f);
+	}
+
+	EXPECT_FLOAT_EQ(Runtime.GetValue(1, EUiAnimProperty::POS_X, -1.0f), 0.0f);
+	// 从未被读取的一次性键在空闲窗口后淘汰，回落到调用方给的默认值。
+	EXPECT_FLOAT_EQ(Runtime.GetValue(2000, EUiAnimProperty::POS_X, -1.0f), -1.0f);
+}

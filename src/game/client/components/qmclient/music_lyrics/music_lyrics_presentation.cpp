@@ -89,7 +89,7 @@ void CQmLyricsPresentation::SynchronizeSinging(const QmMusicLyrics::SSourceSnaps
 			       !GameClient()->m_GameConsole.IsActive() && WindowActive &&
 			       GameClient()->m_SystemMediaControls.GetStateSnapshot(Media) && Media.m_Playing;
 	m_Singing.Synchronize(Available, {SourceId, Source.m_SongId, Source.m_Generation, Source.m_ProducerPid,
-		Connection, Online ? GameClient()->m_aLocalIds[Connection] : -1});
+						 Connection, Online ? GameClient()->m_aLocalIds[Connection] : -1});
 }
 
 void CQmLyricsPresentation::OnUpdate()

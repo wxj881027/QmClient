@@ -275,7 +275,7 @@ polish = "Nie tłumacz wiadomości serwera"
 [[message]]
 key = "Echo the text in chat window"
 [message.translations]
-simplified_chinese = "在聊天窗口输出文本"
+simplified_chinese = "在聊天框中输出文本"
 traditional_chinese = "在聊天窗口輸出文本"
 japanese = "チャットウィンドウにテキストを表示"
 korean = "채팅 창에 텍스트 출력"

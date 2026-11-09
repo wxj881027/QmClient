@@ -158,10 +158,12 @@ void CMenus::RenderSettingsQmClientFunctionDeck(CUIRect MainView, bool PrewarmOn
 
 	auto ToggleCollapsed = [](void *, EQmModuleId Id) {
 		const int Index = std::clamp((int)Id, 0, (int)QmModuleCount - 1);
-		if(qm_card_collapse::SetQmModuleCollapsed(Id, !s_aCollapsed[Index]))
-			s_aCollapsed[Index] = !s_aCollapsed[Index];
+		const bool Collapsed = !s_aCollapsed[Index];
+		if(!qm_card_collapse::SetQmModuleCollapsed(Id, Collapsed))
+			return;
+		s_aCollapsed[Index] = Collapsed;
 	};
-	auto MeasureContentRevision = [](EQmModuleId Id) -> uint64_t {
+	auto MeasureContentRevision = [this](EQmModuleId Id) -> uint64_t {
 		return qm_card_catalog::MeasureModuleCardRevision(Id, ResolveFunctionCardLayoutState());
 	};
 	// 卡片改由全局卡片目录构造（N3）：页面只声明「这一页有哪些卡片」，测量与渲染都在目录里。

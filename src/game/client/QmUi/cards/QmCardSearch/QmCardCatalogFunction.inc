@@ -4,15 +4,12 @@ namespace
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_better_scoreboard[] = {
 		{Localizable("Better scoreboard"), nullptr, "更好的计分板"},
 		{Localizable("Scroll mode"), nullptr, "滚动模式 满人服务器改用固定行高计分板，滚轮翻看其余玩家"},
-		{Localizable("Leave empty to show everyone"), nullptr, "留空显示所有玩家"},
-		{Localizable("Scoreboard filter: only show players whose name or clan contains this text"), nullptr, "计分板筛选：匹配名字或战队"},
 		{Localizable("Scoreboard point check"), nullptr, "计分板积分检查"},
 		{Localizable("Scoreboard playtime"), nullptr, "计分板游玩时间 累计小时 DDStats"},
 		{Localizable("Show scoreboard after death"), nullptr, "死亡后显示计分板"},
 		{Localizable("Use the scoreboard cursor mode to scroll the list"), nullptr, "使用计分板光标模式滚动查看列表"},
 		{Localizable("Show total playtime from DDStats instead of points in scoreboard"), nullptr, "计分板用总游戏时长替代分数"},
 		{nullptr, "qm_better_scoreboard", nullptr},
-		{nullptr, "qm_scoreboard_filter", nullptr},
 		{nullptr, "qm_scoreboard_on_death", nullptr},
 		{nullptr, "qm_scoreboard_points", nullptr},
 		{nullptr, "qm_scoreboard_playtime", nullptr},
@@ -324,7 +321,6 @@ namespace
 namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_pie_menu[] = {
-		{Localizable("Click to set color"), nullptr, "点击设置颜色"},
 		{Localizable("Detection distance"), nullptr, "检测距离"},
 		{Localizable("Enable pie menu"), nullptr, "启用饼菜单"},
 		{Localizable("Example: A|B|C,D|E (C: main, D: dummy)"), nullptr, "示例：A|B|C,D|E（C 为本体，D 为分身）"},
@@ -335,7 +331,7 @@ namespace
 		{Localizable("Join team"), nullptr, "加入队伍"},
 		{Localizable("Mention"), nullptr, "提及"},
 		{Localizable("Opacity"), nullptr, "不透明度"},
-		{Localizable("Option color"), nullptr, "选项颜色"},
+		{Localizable("Option color"), nullptr, "选项颜色 点击设置颜色 set color 取色"},
 		{Localizable("Pie menu effects"), nullptr, "饼菜单开合效果"},
 		{Localizable("Pie menu highlight tint"), nullptr, "饼菜单选中色调"},
 		{Localizable("Rename queue"), nullptr, "改名名单"},

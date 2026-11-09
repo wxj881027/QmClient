@@ -37,8 +37,12 @@ namespace ui_widget
 		float m_Radius = ui_token::radius::BASE;
 		float m_BorderWidth = ui_token::feedback::ICON_BORDER_WIDTH;
 		std::optional<ColorRGBA> m_Color;
-		// 选中态可显式指定描边，避免浅色选中底把默认反馈描边压成深色。
+		// 悬停/按下/选中的描边由 DrawButtonSurface 统一解析成同一条白色描边，
+		// 不随表面前景色变化；需要额外语义时才用这里显式覆盖（优先于统一描边）。
 		std::optional<ColorRGBA> m_BorderOverride;
+		// 由调用方给出悬浮判定：需要按「成对色块」等自有几何判定的场景才覆盖，
+		// 颜色仍走公共反馈 token。
+		std::optional<bool> m_HoveredOverride;
 		const CUIRect *m_pHitRect = nullptr;
 	};
 

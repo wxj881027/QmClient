@@ -1104,10 +1104,18 @@ public:
 	// 冻结，否则预热帧把弹簧直接推到目标、背景帧凭空创建轨道；声明式卡片桥
 	// 的 DRAW 回放（内容出图，两 depth 相等）是最终出图趟，必须推进。
 	bool AnimationsBlocked() const { return m_RenderOnlyDepth > 0 || m_ContentDrawDepth != m_BackgroundRenderDepth; }
-	// 内容 DRAW 保留控件反馈；真正的下层菜单、测量和活动弹层仍屏蔽反馈。
+	// 控件外观的悬浮判定：这是「这个控件现在看起来该不该亮」的唯一入口。
+	// 只按渲染层判断——内容 DRAW 回放与最终出图趟有效，测量趟与纯背景趟无效；
+	// 不看指针输入是否被上层弹层遮挡，否则同一控件在回放趟与前景趟会给出两种外观。
+	bool VisualSurfaceHovered(const CUIRect *pRect) const
+	{
+		return m_RenderOnlyDepth == 0 && m_ContentDrawDepth == m_BackgroundRenderDepth && MouseInside(pRect) && MouseInsideClip();
+	}
+	// 严格档：在控件外观之外再要求指针没有被上层弹层遮挡（弹层下方不出现悬浮反馈）。
+	// 需要这条额外规则时用它，其余外观一律用 VisualSurfaceHovered，避免两套判定漂移。
 	bool VisualMouseHovered(const CUIRect *pRect) const
 	{
-		return m_RenderOnlyDepth == 0 && m_ContentDrawDepth == m_BackgroundRenderDepth && !UnderlyingPointerInputBlocked() && MouseInside(pRect) && MouseInsideClip();
+		return VisualSurfaceHovered(pRect) && !UnderlyingPointerInputBlocked();
 	}
 	// 热控件判定与 VisualMouseHovered 同一可见性语义：测量趟与纯背景趟不可见，
 	// 内容 DRAW 回放有效（热控件由同一帧先行的 INPUT 回放趟设置）。
@@ -1370,25 +1378,6 @@ public:
 	bool DoClearableEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, int Corners = IGraphics::CORNER_ALL, const std::vector<STextColorSplit> &vColorSplits = {});
 	bool DoClearableEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, int Corners, const std::vector<STextColorSplit> &vColorSplits, const SEditBoxRenderOptions &RenderOptions);
 
-	/**
-	 * Creates an input field with a search icon and a clear [x] button attached to it.
-	 * The input will have default text "Search" and the hotkey Ctrl+F can be used to activate the input.
-	 *
-	 * @see DoEditBox
-	 *
-	 * @param pLineInput This pointer will be stored and written to on next user input.
-	 *                   So you can not pass in a pointer that goes out of scope such as a local variable.
-	 *                   Pass in either a member variable of the current class or a static variable.
-	 *                   For example ```static CLineInputBuffered<IO_MAX_PATH_LENGTH> s_MyInput;```
-	 * @param pRect the UI rect it will attach to
-	 * @param FontSize Size of the font (`10.0f`, `12.0f` and `14.0f` are commonly used here)
-	 * @param HotkeyEnabled Whether the hotkey to enable this editbox is currently enabled.
-	 *
-	 * @return true if the value of the input field changed since the last call.
-	 */
-	bool DoEditBox_Search(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, bool HotkeyEnabled);
-	bool DoEditBox_Search(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, bool HotkeyEnabled, const SEditBoxRenderOptions &RenderOptions);
-
 	int DoButton_Menu(CUIElement &UIElement, const CButtonContainer *pId, const std::function<const char *()> &GetTextLambda, const CUIRect *pRect, const SMenuButtonProperties &Props = {});
 	void DrawButton_FontIcon(const char *pText, const CUIRect *pRect, ColorRGBA Color, int Corners = IGraphics::CORNER_ALL, bool Enabled = true);
 	int DoButton_FontIcon(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, unsigned Flags, int Corners = IGraphics::CORNER_ALL, bool Enabled = true, std::optional<ColorRGBA> ButtonColor = std::nullopt);
@@ -1422,7 +1411,6 @@ public:
 		SCROLLBAR_OPTION_MULTILINE = 1 << 2,
 		SCROLLBAR_OPTION_DELAYUPDATE = 1 << 3,
 	};
-	float DoScrollbarV(const void *pId, const CUIRect *pRect, float Current);
 	void RenderScrollbarH(const void *pId, const CUIRect *pRect, float Current, const ColorRGBA *pColorInner = nullptr);
 	float DoScrollbarH(const void *pId, const CUIRect *pRect, float Current, const ColorRGBA *pColorInner = nullptr);
 	bool DoScrollbarOption(const void *pId, int *pOption, const CUIRect *pRect, const char *pStr, int Min, int Max, const IScrollbarScale *pScale = &ms_LinearScrollbarScale, unsigned Flags = 0u, const char *pSuffix = "", const char *pMaxText = nullptr);

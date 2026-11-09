@@ -77,6 +77,9 @@ namespace qm_card_catalog
 
 void CMenus::RenderSettingsCatalogPage(CUIRect MainView, const char *pTab, bool PrewarmOnly)
 {
+	// 页面内部耗时拆分：入口、卡片准备、卡片渲染三段，打开页面慢时能指出具体哪段。
+	const auto QmPageMs = [] { return time_get() * 1000.0 / (double)time_freq(); };
+	const double QmEntryMs = QmPageMs();
 	const bool ReadOnly = PrewarmOnly || Ui()->RenderOnly();
 	const bool TrackTClient = !ReadOnly && str_comp(pTab, "tclient") == 0;
 	CPerfTimer LayoutBudgetTimer;
@@ -99,7 +102,10 @@ void CMenus::RenderSettingsCatalogPage(CUIRect MainView, const char *pTab, bool 
 	}
 	Ctx.m_pScrollRegion = pScroll;
 	const auto &vIds = qm_card_catalog::CatalogPageStableIds(pTab);
+	const double QmPrepareStartMs = QmPageMs();
 	const uint64_t ContentRevision = qm_card_catalog::QmCardRenderHook::PrepareStandardCards(Ctx, vIds) ^ qm_card_catalog::QmCardRenderHook::PrepareTClientCards(Ctx, vIds);
+	const double QmPrepareMs = QmPageMs() - QmPrepareStartMs;
+	const double DefinitionsStart = QmPageMs();
 	const uint64_t Revision = ResolveSettingsCardDefinitionsRevision(m_SettingsCardDeckDisplayCycle, m_MenuTextPoolGeneration, MainView.w, ContentRevision ^ str_quickhash(pTab) ^ (str_comp(pTab, "ddnet") == 0 ? static_cast<uint64_t>(g_Config.m_QmSmtcEnable) : 0) ^ (str_comp(pTab, "appearance-chat") == 0 ? qm_card_catalog::MeasureModuleCardRevision(qm_module::EQmModuleId::ChatBubble) : 0));
 	const auto BuildDefinitions = [Ctx, &vIds](std::vector<SSettingsCardDefinition> &vCards) {
 		qm_card_catalog::BuildCards(Ctx, vIds, vCards);
@@ -128,7 +134,17 @@ void CMenus::RenderSettingsCatalogPage(CUIRect MainView, const char *pTab, bool 
 		InputState.m_pScrollParams = &ScrollParams;
 	}
 	const uint64_t MeasurementEnvironmentRevision = ResolveSettingsCardDefinitionsRevision(m_SettingsCardDeckDisplayCycle, m_MenuTextPoolGeneration, MainView.w, 0);
+	qm_card_catalog::ResetCardBuildTimings();
+	const double CatalogRenderStart = time_get() * 1000.0 / (double)time_freq();
 	const auto Result = SettingsCardDeckForRenderPass().RenderCached(Ctx.m_UiContext, Ctx.m_Page, pTab, Revision, BuildDefinitions, SettingsCardOrderModelForRenderPass(), pScroll, InputState, SettingsCardMotionSpec(), SettingsCardDeckVisualOptions(), MeasurementEnvironmentRevision);
+	qm_card_catalog::LogCardBuildTimings(pTab);
+	{
+		const double Now = QmPageMs();
+		const double Total = Now - QmEntryMs;
+		if(Total > 30.0 || PrewarmOnly || str_comp(pTab, "graphics") == 0)
+			dbg_msg("perf/page", "page=%s prewarm=%d total=%.1fms prepare=%.1fms deck=%.1fms renderonly=%d measure=%d", pTab, PrewarmOnly ? 1 : 0,
+				Total, QmPrepareMs, Now - CatalogRenderStart, Ui()->RenderOnly() ? 1 : 0, Ui()->MeasurementOnly() ? 1 : 0);
+	}
 	if(!ReadOnly && Result.m_OrderChanged)
 		SaveSettingsCardOrderModel();
 	if(TrackTClient)

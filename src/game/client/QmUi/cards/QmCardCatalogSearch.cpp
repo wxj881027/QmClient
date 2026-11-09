@@ -1,5 +1,7 @@
 #include "QmCardCatalogSearch.h"
 
+#include "QmCardCatalog.h"
+
 #include <base/detect.h>
 
 #include <game/client/QmUi/QmCardSearchRegistry.h>
@@ -110,5 +112,50 @@ namespace qm_card_catalog
 		*ppSettings = pRegistration->m_pEntries;
 		*pCount = pRegistration->m_Count;
 		return true;
+	}
+	std::vector<SQmSearchResultEntry> SearchResultEntries(const char *pQuery, const qm_card_order::CModel &Model)
+	{
+		std::vector<SQmSearchResultEntry> vEntries;
+		std::vector<qm_card_registry::SCardSearchResult> vMatches;
+		if(pQuery != nullptr && pQuery[0] != '\0')
+			vMatches = qm_card_registry::SearchCards(pQuery, Model);
+		else
+		{
+			vMatches.reserve(qm_card_registry::Defaults().size());
+			for(const qm_card_registry::SCardDefault &Default : qm_card_registry::Defaults())
+			{
+				qm_card_registry::SCardSearchResult Match;
+				Match.m_pStableId = Default.m_pStableId;
+				Match.m_Title = Default.m_pTitle != nullptr ? Localize(Default.m_pTitle) : "";
+				Match.m_Description = Default.m_pDescription != nullptr ? Localize(Default.m_pDescription) : "";
+				Match.m_Target = qm_card_registry::ResolveCardNavigationTarget(Default, Model);
+				vMatches.push_back(std::move(Match));
+			}
+		}
+		vEntries.reserve(vMatches.size());
+		for(qm_card_registry::SCardSearchResult &Match : vMatches)
+		{
+			if(!HasCardModule(Match.m_pStableId))
+				continue;
+			const char *pTab = Match.m_Target.m_pTab;
+			if(pTab != nullptr && str_comp(pTab, "global-search") == 0)
+				continue;
+			SQmSearchResultEntry Entry;
+			Entry.m_pStableId = Match.m_pStableId;
+			Entry.m_pTab = pTab;
+			Entry.m_Title = std::move(Match.m_Title);
+			Entry.m_Description = std::move(Match.m_Description);
+			vEntries.push_back(std::move(Entry));
+		}
+		return vEntries;
+	}
+
+	std::vector<qm_card_order::SEntry> BuildSearchModelEntries(const std::vector<SQmSearchResultEntry> &vResults)
+	{
+		std::vector<qm_card_order::SEntry> vEntries;
+		vEntries.reserve(vResults.size());
+		for(size_t Index = 0; Index < vResults.size(); ++Index)
+			vEntries.push_back({vResults[Index].m_pStableId, "global-search", 0, (int)Index});
+		return vEntries;
 	}
 } // namespace qm_card_catalog

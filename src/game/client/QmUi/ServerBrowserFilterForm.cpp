@@ -23,12 +23,13 @@
 void CMenus::RenderServerbrowserFilterForm(CUIRect &View)
 {
 	SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(Ui()->Screen()->w);
-	// 沿用浏览器原有字号与行高，短按钮通过横排节省空间。
-	Metrics.m_LineHeight = 18.0f;
-	Metrics.m_BodySize = 14.0f * CUi::ms_FontmodHeight;
-	Metrics.m_LineSpacing = 3.0f;
+	// 字号、行高、组间距与胶囊度量统一来自 ui_token::server_filter，
+	// 面板里不再出现 18 / 14 / 3 / 6 / 24 / 26 这类字面量。
+	Metrics.m_LineHeight = ui_token::server_filter::LINE_HEIGHT;
+	Metrics.m_BodySize = ui_token::server_filter::BODY_FONT_SIZE * CUi::ms_FontmodHeight;
+	Metrics.m_LineSpacing = ui_token::server_filter::LINE_SPACING;
 	Metrics.m_InputHeight = Metrics.m_LineHeight;
-	Metrics.m_SectionGap = 6.0f;
+	Metrics.m_SectionGap = ui_token::server_filter::SECTION_GAP;
 	const auto Entry = [](int *pValue, const char *pTextId) {
 		SSettingsToggleEntry Result{pValue, pTextId, Localize(pTextId)};
 		Result.m_ShowCheckmark = true;
@@ -52,9 +53,9 @@ void CMenus::RenderServerbrowserFilterForm(CUIRect &View)
 	// 分割线两端渐隐、不拉满宽：贴在标题下面就成下划线，所以线本身要离开标题一行。
 	const auto DrawFadeDivider = [&]() {
 		CUIRect Line;
-		View.HSplitTop(2.0f, &Line, &View);
-		const float Inset = std::min(Line.w * 0.1f, 16.0f);
-		CUIRect Bar{Line.x + Inset, Line.y + 0.5f, std::max(0.0f, Line.w - 2.0f * Inset), 1.0f};
+		View.HSplitTop(ui_token::server_filter::DIVIDER_HEIGHT, &Line, &View);
+		const float Inset = std::min(Line.w * ui_token::server_filter::DIVIDER_INSET_RATIO, ui_token::server_filter::DIVIDER_INSET_MAX);
+		CUIRect Bar{Line.x + Inset, Line.y + 0.5f, std::max(0.0f, Line.w - 2.0f * Inset), ui_token::server_filter::DIVIDER_THICKNESS};
 		const ColorRGBA Peak = ui_token::color::TEXT_SECONDARY.WithAlpha(0.18f);
 		const ColorRGBA Edge = Peak.WithAlpha(0.0f);
 		const float Half = Bar.w * 0.5f;
@@ -63,7 +64,7 @@ void CMenus::RenderServerbrowserFilterForm(CUIRect &View)
 	};
 	const auto DrawSection = [&](const char *pText) {
 		View.HSplitTop(ui_token::spacing::MD, nullptr, &View);
-		DrawLabel(pText, Metrics.m_BodySize * 1.15f, ui_token::color::TEXT_PRIMARY);
+		DrawLabel(pText, Metrics.m_BodySize * ui_token::server_filter::SECTION_TITLE_SCALE, ui_token::color::TEXT_PRIMARY);
 		View.HSplitTop(ui_token::spacing::XS, nullptr, &View);
 		DrawFadeDivider();
 		View.HSplitTop(ui_token::spacing::XS, nullptr, &View);
@@ -76,13 +77,13 @@ void CMenus::RenderServerbrowserFilterForm(CUIRect &View)
 	};
 
 	DrawSection(Localize("Common filters"));
-	DoSettingsToggleGroup(-1, -1, -1, View, {
-							Entry(&g_Config.m_BrFilterEmpty, Localizable("Has people playing")),
-							Entry(&g_Config.m_BrFilterFull, Localizable("Server not full")),
-							Entry(&g_Config.m_BrFilterFriends, Localizable("Show friends only")),
-							Entry(&g_Config.m_BrFilterPw, Localizable("No password")),
-							Entry(&g_Config.m_BrFilterLogin, Localizable("No login required")),
-						},
+	DoSettingsToggleButtonGroup(-1, -1, -1, View, {
+							      Entry(&g_Config.m_BrFilterEmpty, Localizable("Has people playing")),
+							      Entry(&g_Config.m_BrFilterFull, Localizable("Server not full")),
+							      Entry(&g_Config.m_BrFilterFriends, Localizable("Show friends only")),
+							      Entry(&g_Config.m_BrFilterPw, Localizable("No password")),
+							      Entry(&g_Config.m_BrFilterLogin, Localizable("No login required")),
+						      },
 		Metrics);
 
 	// 按地址筛选列表。注意与底部「服务器地址」输入框区分：那个是要连接的地址，这个只过滤列表，
@@ -101,10 +102,10 @@ void CMenus::RenderServerbrowserFilterForm(CUIRect &View)
 	}
 
 	DrawSection(Localize("Player count"));
-	DoSettingsToggleGroup(-1, -1, -1, View, {
-							Entry(&g_Config.m_BrFilterSpectators, Localizable("Count players only")),
-							Entry(&g_Config.m_BrFilterConnectingPlayers, Localizable("Filter connecting players")),
-						},
+	DoSettingsToggleButtonGroup(-1, -1, -1, View, {
+							      Entry(&g_Config.m_BrFilterSpectators, Localizable("Count players only")),
+							      Entry(&g_Config.m_BrFilterConnectingPlayers, Localizable("Filter connecting players")),
+						      },
 		Metrics);
 
 	if(ServerBrowser()->CommunityCache().AnyRanksAvailable())
@@ -113,9 +114,9 @@ void CMenus::RenderServerbrowserFilterForm(CUIRect &View)
 		const bool WasIndicatingFinished = g_Config.m_BrIndicateFinished != 0;
 		const SSettingsToggleEntry Finished = Entry(&g_Config.m_BrIndicateFinished, Localizable("Indicate map finish"));
 		if(WasIndicatingFinished)
-			DoSettingsToggleGroup(-1, -1, -1, View, {Finished, Entry(&g_Config.m_BrFilterUnfinishedMap, Localizable("Unfinished map"))}, Metrics);
+			DoSettingsToggleButtonGroup(-1, -1, -1, View, {Finished, Entry(&g_Config.m_BrFilterUnfinishedMap, Localizable("Unfinished map"))}, Metrics);
 		else
-			DoSettingsToggleGroup(-1, -1, -1, View, {Finished}, Metrics);
+			DoSettingsToggleButtonGroup(-1, -1, -1, View, {Finished}, Metrics);
 		if(!g_Config.m_BrIndicateFinished)
 			g_Config.m_BrFilterUnfinishedMap = 0;
 		else if(!WasIndicatingFinished)
@@ -127,7 +128,7 @@ void CMenus::RenderServerbrowserFilterForm(CUIRect &View)
 	{
 		static int s_aStarChipIds[6];
 		const IUiContext ChipContext = SettingsUiContext("server_browser_filter_stars");
-		const SQmBrowserChipGrid Chips = QmBrowserChipGrid(View, 6, 24.0f);
+		const SQmBrowserChipGrid Chips = QmBrowserChipGrid(View, 6, ui_token::server_filter::CHIP_STAR_MIN_WIDTH, ui_token::server_filter::CHIP_HEIGHT, ui_token::server_filter::CHIP_GAP);
 		int StarMask = g_Config.m_QmMapBrowserStarMask;
 		bool StarMaskChanged = false;
 		if(ui_widget::FilterChip(ChipContext, &s_aStarChipIds[0], Chips.m_aRects[0], Localize("All"), StarMask == 0))
@@ -167,7 +168,7 @@ void CMenus::RenderServerbrowserFilterForm(CUIRect &View)
 		int CategoryMask = g_Config.m_QmMapBrowserCategoryMask;
 		bool CategoryMaskChanged = false;
 		const auto DrawChipGroup = [&](const char *const *ppKeys, const char *const *ppLabels, int Count, int IdOffset, bool Translate) {
-			const SQmBrowserChipGrid Chips = QmBrowserChipGrid(View, Count, 26.0f);
+			const SQmBrowserChipGrid Chips = QmBrowserChipGrid(View, Count, ui_token::server_filter::CHIP_LABEL_MIN_WIDTH, ui_token::server_filter::CHIP_HEIGHT, ui_token::server_filter::CHIP_GAP);
 			for(int Index = 0; Index < Chips.m_Count; ++Index)
 			{
 				const int Bit = QmMapVotes::MapBrowserCategoryBit(ppKeys[Index]);

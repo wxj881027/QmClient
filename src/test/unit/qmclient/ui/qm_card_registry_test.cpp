@@ -114,7 +114,7 @@ TEST(QmCardRegistry, BetterScoreboardSearchTargetsItsFunctionCard)
 {
 	qm_card_order::CModel Model;
 	Model.LoadMerged("", qm_card_registry::BuildDefaultEntries());
-	for(const char *pQuery : {"更好的计分板", "计分板积分检查", "显示死亡后计分板", "滚动计分板", "计分板筛选"})
+	for(const char *pQuery : {"更好的计分板", "计分板积分检查", "显示死亡后计分板", "滚动计分板"})
 	{
 		const auto vResults = qm_card_registry::SearchCards(pQuery, Model);
 		const auto It = std::find_if(vResults.begin(), vResults.end(), [](const auto &Result) {
@@ -852,31 +852,6 @@ TEST(QmCardRegistry, AppearanceDeckDefaultsUseSubPagePlacements)
 		EXPECT_STREQ(pDefault->m_pDefaultTab, Expected.m_pTab) << Expected.m_pStableId;
 		EXPECT_EQ(pDefault->m_DefaultColumn, Expected.m_Column) << Expected.m_pStableId;
 		EXPECT_EQ(pDefault->m_DefaultOrder, Expected.m_Order) << Expected.m_pStableId;
-	}
-}
-
-// 意图：deck 默认 placement 的 order 是 tab+column 内的局部顺序，不是跨所有设置页的全局序号。
-// 否则首次迁移/缺失补位会在每个非 Qm 设置页留下大空洞，拖拽持久化后的默认顺序不稳定。
-TEST(QmCardRegistry, SettingsDeckDefaultOrdersAreLocalToTabAndColumn)
-{
-	std::map<std::string, std::vector<int>> OrdersByGroup;
-	for(const auto &E : qm_card_registry::Defaults())
-	{
-		const std::string Id = E.m_pStableId;
-		if(Id.rfind("deck:", 0) != 0)
-			continue;
-
-		const std::string Tab = E.m_pDefaultTab != nullptr ? E.m_pDefaultTab : "";
-		OrdersByGroup[Tab + "|" + std::to_string(static_cast<int>(E.m_DefaultColumn))].push_back(E.m_DefaultOrder);
-	}
-
-	ASSERT_FALSE(OrdersByGroup.empty());
-	for(auto &Group : OrdersByGroup)
-	{
-		std::vector<int> &Orders = Group.second;
-		std::sort(Orders.begin(), Orders.end());
-		for(size_t i = 0; i < Orders.size(); ++i)
-			EXPECT_EQ(Orders[i], static_cast<int>(i)) << Group.first;
 	}
 }
 

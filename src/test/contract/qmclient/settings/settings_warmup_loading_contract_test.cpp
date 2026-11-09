@@ -116,12 +116,14 @@ TEST(SettingsWarmupLoadingContract, LoadingPrewarmDoesNotPumpResourceWork)
 	EXPECT_EQ(PrewarmBody.find("m_Skins.OnUpdate();"), std::string::npos);
 }
 
-TEST(SettingsWarmupLoadingContract, SettingsPrewarmDefaultDisabled)
+TEST(SettingsWarmupLoadingContract, SettingsPrewarmDefaultEnabled)
 {
 	const std::string Config = ReadTestSourceFile("src/engine/shared/config_variables_qmclient.h");
 
-	EXPECT_NE(Config.find("MACRO_CONFIG_INT(QmSettingsPrewarm, qm_settings_prewarm, 0, 0, 1,"), std::string::npos);
-	EXPECT_EQ(Config.find("MACRO_CONFIG_INT(QmSettingsPrewarm, qm_settings_prewarm, 1, 0, 1,"), std::string::npos);
+	// 默认打开：关闭时首次打开设置页会整帧冻结（实测 435ms），开启后 6ms。
+	// 保留 0/1 取值范围，用户仍可手动关掉。
+	EXPECT_NE(Config.find("MACRO_CONFIG_INT(QmSettingsPrewarm, qm_settings_prewarm, 1, 0, 1,"), std::string::npos);
+	EXPECT_EQ(Config.find("MACRO_CONFIG_INT(QmSettingsPrewarm, qm_settings_prewarm, 0, 0, 1,"), std::string::npos);
 }
 
 TEST(SettingsWarmupLoadingContract, SettingsPageCachePrewarmRespectsDisabledConfigAtUnifiedEntry)

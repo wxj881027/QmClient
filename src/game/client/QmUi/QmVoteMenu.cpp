@@ -36,14 +36,7 @@ namespace
 	{
 		// 目录数据可能写 DDmaX.Next，界面文案统一按空格写法匹配。
 		pKey = QmVoteMaps::CategoryKey(pKey);
-		if(str_comp(pKey, "DDmaX Easy") == 0)
-			return Localize("Classic Easy");
-		if(str_comp(pKey, "DDmaX Next") == 0)
-			return Localize("Classic Next");
-		if(str_comp(pKey, "DDmaX Pro") == 0)
-			return Localize("Classic Pro");
-		if(str_comp(pKey, "DDmaX Nut") == 0)
-			return Localize("Classic Nut");
+		// DDmaX 系列走自己的键，中文按官方习惯显示「古典 / 古典 Easy」等，不再借用 Classic* 键。
 		return Localize(pKey);
 	}
 

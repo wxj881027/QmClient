@@ -41,10 +41,10 @@ bool CQmWaterHammerIndicator::CanUseRemoteInput(const int ClientId) const
 
 	const auto &ClientData = GameClient()->m_aClients[ClientId];
 	return ClientData.m_Active && !ClientData.m_Spec &&
-		!GameClient()->m_aClients[LocalClientId].m_Spec &&
-		GameClient()->m_Snap.m_aCharacters[LocalClientId].m_Active &&
-		GameClient()->m_Snap.m_aCharacters[ClientId].m_Active &&
-		GameClient()->m_Teams.Team(ClientId) == GameClient()->m_Teams.Team(LocalClientId);
+	       !GameClient()->m_aClients[LocalClientId].m_Spec &&
+	       GameClient()->m_Snap.m_aCharacters[LocalClientId].m_Active &&
+	       GameClient()->m_Snap.m_aCharacters[ClientId].m_Active &&
+	       GameClient()->m_Teams.Team(ClientId) == GameClient()->m_Teams.Team(LocalClientId);
 }
 
 SQmWaterDirectionState CQmWaterHammerIndicator::DirectionInputs(const int ClientId) const

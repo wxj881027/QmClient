@@ -131,6 +131,10 @@ private:
 		float m_LastReflowTargetY = 0.0f;
 		float m_AnimatedContentHeight = 0.0f;
 		float m_LastContentHeightTarget = 0.0f;
+		// 内容高度补间由 Deck 自己推进：记录这一段过渡的起点、目标和已累计时长。
+		float m_ContentHeightAnimFrom = 0.0f;
+		float m_ContentHeightAnimTo = 0.0f;
+		float m_ContentHeightAnimElapsed = 0.0f;
 		float m_LastDrawOffsetX = 0.0f;
 		float m_LastDrawOffsetY = 0.0f;
 		bool m_ReflowInitialized = false;
@@ -182,6 +186,8 @@ private:
 	float m_LastWidthViewport = -1.0f;
 	uint64_t m_WidthLayoutRevision = UINT64_MAX;
 	float m_LastViewportHeight = -1.0f;
+	// 动效运行时的帧时钟读数，用于识别渲染帧边界：同一帧里 Deck 可能跑两趟。
+	float m_LastContentHeightFrameTimeSec = -1.0f;
 	std::string m_LastRenderedTab;
 	std::string m_PendingRevealStableId;
 	SDragState m_Drag;

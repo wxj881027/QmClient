@@ -368,6 +368,9 @@ A calm-play mode that hides the HUD, names, effects, chat and sounds you pick, s
 A crowded HUD hides the game, so start with one element and add more if needed.
 == Перегруженный HUD закрывает игру — начните с одного элемента и добавляйте по необходимости.
 
+A damped spring drives the offset; reversing slows it before it turns
+== Демпфированная пружина двигает смещение; при развороте она сначала замедляется
+
 A demo with this name already exists
 == Демо с таким именем уже существует
 
@@ -592,9 +595,6 @@ Add friends by entering their name below or by clicking their name in the player
 
 Add function
 == Добавить действие
-
-Add Group
-== Добавить группу
 
 Add Item
 == Добавить элемент
@@ -1127,6 +1127,9 @@ Are you sure that you want to quit?
 Are you sure that you want to remove '%s' from your war groups?
 == Вы уверены, что хотите удалить '%s' из ваших вражеских групп?
 
+Are you sure that you want to remove '%s' from your war list?
+== Удалить «%s» из списка врагов?
+
 Are you sure that you want to remove the clan '%s' from your friends list?
 == Вы уверены, что хотите удалить клан '%s' из списка друзей?
 
@@ -1586,9 +1589,6 @@ Axiom website
 Axis
 == Ось
 
-Back
-== Назад
-
 Backdrop blur
 == Размытие фона
 
@@ -1955,6 +1955,9 @@ Bubble opacity
 Build the status text shown above Tees
 == Build the status text shown above Tees
 
+Built-in
+== Встроенный
+
 Button - Disabled
 == Кнопка - Отключена
 
@@ -2089,6 +2092,12 @@ Cannot update public words. Previous words remain active.
 
 Cannot write the wiki file
 == Не удалось записать файл Wiki
+
+Capsule seam
+== Стык капсулы
+
+Capsule seam smoothing: ease the straight-to-cap curvature jump (0 = plain semicircular ends)
+== Сглаживание стыка капсулы: смягчает скачок кривизны между прямой и торцом (0 = чистый полукруг)
 
 Capture the flag
 == Захват флага (CTF)
@@ -2483,20 +2492,11 @@ Clan: %s
 Classic
 == Классический
 
-Classic Easy
-== Классический Easy
-
-Classic Next
-== Классический Next
-
-Classic Nut
-== Классический Nut
+Classic arc
+== Классическая дуга
 
 Classic PowerShell
 == Классический PowerShell
-
-Classic Pro
-== Классический Pro
 
 Clear
 == Очистить
@@ -2608,9 +2608,6 @@ Click to remove this player from your friends list.
 
 Click to select server. Double click to join your friend.
 == Нажмите, чтобы выбрать сервер. Дважды нажмите, чтобы присоединиться к другу.
-
-Click to set color
-== Нажмите, чтобы задать цвет
 
 Client
 == Клиент
@@ -2732,12 +2729,6 @@ Colors and opacity of the popup list that suggests chat commands and emoticons w
 Colors for chat command and emoji completion
 == Цвета автодополнения команд и эмодзи в чате
 
-Colors in chat
-== Цвета в чате
-
-Colors in scoreboard
-== Цвета в таблице результатов
-
 Colors of the hook collision line, in case of a possible collision with:
 == Цвета линии захвата при возможном столкновении с:
 
@@ -2843,17 +2834,11 @@ Concurrent requests when refreshing server browser
 Config
 == Конфиг
 
-Config Changes
-== Изменения конфигурации
-
 Config directory
 == Папка конфигурации
 
 Config Files
 == Файлы конфигурации
-
-Config Filters
-== Фильтры конфигурации
 
 Config version. Helps new client fix old config errors.
 == Версия конфигурации. Помогает новому клиенту исправить старые ошибки конфигурации.
@@ -3014,6 +2999,9 @@ Confirm disconnect after game end (minutes, -1 off, 0 always)
 Confirm quit after game end (minutes, -1 off, 0 always)
 == Подтверждение выхода после окончания игры (минуты, -1 выкл, 0 всегда)
 
+Conic Bezier
+== Коническая кривая Безье
+
 Connect address error
 == Ошибка адреса подключения
 
@@ -3080,6 +3068,9 @@ Connlimit: number of connections allowed per IP in a time period
 Connlimit: time window for IP connection count
 == Connlimit: временное окно для подсчёта подключений с IP
 
+Consecutive wheel ticks carry their velocity into one continuous glide
+== Непрерывная прокрутка наследует скорость и сливается в одно плавное движение
+
 Console
 == Консоль
 
@@ -3145,6 +3136,9 @@ Contents
 
 Continue anyway?
 == Всё равно продолжить?
+
+Continuous-curvature UI corners (0 = classic arc, 100 = strongest)
+== Непрерывная кривизна углов интерфейса (0 = классическая дуга, 100 = максимум)
 
 Contributors
 == Авторы
@@ -3250,6 +3244,12 @@ Copy skin ID
 
 Copy skin option color
 == Цвет опции копирования скина
+
+Corner curvature
+== Кривизна угла
+
+Corner curve
+== Кривая угла
 
 Could not add the player as a friend
 == Не удалось добавить игрока в друзья
@@ -4604,6 +4604,9 @@ Edit the name and clan fields; the dummy keeps its own values.
 Edit this custom command on the Bind Wheel page.
 == Измените эту пользовательскую команду на странице колеса команд.
 
+Edit title style
+== Изменить стиль титула
+
 Edit touch controls
 == Редактировать сенсорное управление
 
@@ -5162,6 +5165,9 @@ Encoder:
 End (s)
 == Конец (с)
 
+End bounce
+== Отскок на краю
+
 End marker of replay slice
 == Конечный маркер фрагмента повтора
 
@@ -5237,6 +5243,9 @@ Entity wall outline opacity
 entity_bg (Workshop)
 == entity_bg (Мастерская)
 
+Entries in it will fall back to none.
+== Записи из неё вернутся в none.
+
 Entries with NVENC, AMF, Quick Sync or VideoToolbox use the GPU encoding chip and are several times faster. Only encoders that really work on this machine are listed.
 == Пункты с NVENC, AMF, Quick Sync или VideoToolbox используют аппаратный кодировщик видеокарты и работают в несколько раз быстрее. В списке только те, что реально работают на этой машине.
 
@@ -5282,6 +5291,9 @@ Event
 Every click applies the skin at once, so star the ones you like before you start browsing.
 == Каждый клик сразу применяет скин, поэтому отметьте звёздочкой любимые до начала просмотра.
 
+Every wheel tick restarts from rest, matching the original client
+== Каждый щелчок колеса начинается с покоя, как в оригинальном клиенте
+
 Exact bound nickname
 == Точный ник для привязки
 
@@ -5305,6 +5317,9 @@ Exchange (ProRes 422 HQ / MOV)
 
 Exclude
 == Исключить
+
+exec
+== exec
 
 Execute before connecting
 == Выполнить перед подключением
@@ -6398,6 +6413,9 @@ Ground jump
 Group name
 == Имя группы
 
+Group names are limited to 16 characters
+== Имя группы — не более 16 символов
+
 Groups input helpers: fast input, automatic margin, sub-tick aiming and cursor behavior.
 == Объединяет средства ввода: быстрый ввод, автоматический отступ, прицеливание по подтикам и поведение курсора.
 
@@ -6722,6 +6740,9 @@ Hold gun higher like TW 0.6.1 and earlier
 Hold left click for free camera
 == Зажмите левую кнопку мыши для свободной камеры
 
+Hold still
+== Стоп-кадр
+
 Hold the wheel key to see the selection move; release it to run the highlighted slot.
 == Зажмите клавишу колеса — выбор будет двигаться; отпустите, чтобы сработала подсвеченная ячейка.
 
@@ -6808,6 +6829,9 @@ Hostname of DNSBL provider for IP verification
 
 Hover for tooltip
 == Наведите для подсказки
+
+How far a wheel or drag can push past an end, in UI pixels; 0 disables
+== Насколько колесо или перетаскивание может выйти за край, в пикселях UI; 0 отключает
 
 How far the plasma gun tracks a tee
 == Как далеко плазменная пушка отслеживает ти
@@ -7499,6 +7523,9 @@ Keep unsent message on chat close
 Keep vote window open after voting
 == Оставлять окно голосования открытым после голосования
 
+Key
+== Клавиша
+
 Key binds
 == Привязки клавиш
 
@@ -7783,9 +7810,6 @@ Leave empty to disable
 
 Leave empty to join public room
 == Оставьте пустым для входа в публичную комнату
-
-Leave empty to show everyone
-== Оставьте пустым, чтобы показать всех игроков
 
 Leave empty to use default prompt
 == Оставьте пустым для использования промпта по умолчанию
@@ -8283,7 +8307,7 @@ Map
 == Карта
 
 Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
-== Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
+== Битовая маска фильтра категорий сложности в браузере карт (биты 0-14, см. map_vote_difficulty.h)
 
 Map browser difficulty star filter bitmask (bits 1-5)
 == Битовая маска фильтра сложности по звёздам в браузере карт (биты 1-5)
@@ -8745,7 +8769,7 @@ Mixed
 == Смешанный
 
 Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
-== Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+== Только для мобильных: при следующем запуске скопировать отчёт о сбое в Downloads/QmClient (0 = оставить в песочнице приложения)
 
 Mobile spectator camera: 0=joystick pad, 1=drag the view
 == Камера мобильного наблюдателя: 0=джойстик, 1=перетаскивание
@@ -8810,6 +8834,9 @@ Mouse speed for aiming and for menus, and how far your cursor may travel from th
 Move a friend category to a position
 == Переместить категорию друзей на позицию
 
+Move down
+== Переместить вниз
+
 Move left
 == Двигаться влево
 
@@ -8824,6 +8851,9 @@ Move the free camera, then add a keyframe at the current demo time.
 
 Move to category
 == Переместить в категорию
+
+Move up
+== Переместить вверх
 
 Movement
 == Движение
@@ -9164,6 +9194,9 @@ New features
 New features (unread)
 == Новые возможности (не прочитано)
 
+New group
+== Новая группа
+
 New IME
 == Новый IME
 
@@ -9308,6 +9341,9 @@ No downloadable portable package for this version
 No empty team left.
 == Не осталось пустых команд.
 
+No entries yet
+== Записей пока нет
+
 No favorite maps yet
 == Пока нет избранных карт
 
@@ -9385,6 +9421,9 @@ No player nearby
 
 No player with this name found.
 == Игрок с таким именем не найден.
+
+No players match
+== Нет подходящих игроков
 
 No players match these filters
 == Нет игроков, соответствующих фильтрам
@@ -9650,6 +9689,9 @@ On
 One key can hold several commands, so remove single entries under "Bound functions" instead of clearing the key.
 == На одну клавишу можно повесить несколько команд, поэтому удаляйте отдельные записи в Назначенные действия, а не очищайте клавишу.
 
+Online
+== В сети
+
 Online friends
 == Друзья онлайн
 
@@ -9884,9 +9926,6 @@ Original only
 Original options
 == Исходные варианты
 
-Original scroll feel
-== Прежнее ощущение прокрутки
-
 Other
 == Другое
 
@@ -9979,9 +10018,6 @@ Override Entry
 
 Override Freeze Tile Entity Alpha (0-100)
 == Переопределить альфа-канал сущностей для замороженных тайлов (0-100)
-
-Override Group
-== Переопределить группу
 
 Override location for ping estimation, available: auto, af, as, as:cn, eu, na, oc, sa (Automatic, Africa, Asia, China, Europe, North America, Oceania/Australia, South America
 == Переопределить регион для оценки Ping: auto, af, as, as:cn, eu, na, oc, sa (автоматически, Африка, Азия, Китай, Европа, Северная Америка, Океания/Австралия, Южная Америка)
@@ -11183,6 +11219,9 @@ Queue preset: %s
 Quick action menu for players
 == Меню быстрых действий для игроков
 
+Quintic Bezier
+== Кривая Безье 5-го порядка
+
 Quit
 == Выйти
 
@@ -11729,6 +11768,9 @@ Rename demo
 Rename folder
 == Переименовать папку
 
+Rename group
+== Переименовать группу
+
 Rename queue
 == Режим замены
 
@@ -12050,9 +12092,6 @@ Restart
 Restart in x seconds (0 = abort)
 == Перезапуск через x секунд (0 = отмена)
 
-Restart smooth scrolling on every wheel tick
-== Перезапускать плавную прокрутку на каждом шаге колёсика
-
 Restart the client
 == Перезапустить клиент
 
@@ -12073,9 +12112,6 @@ Restore old single-segment hook collision line behavior
 
 Restore recommended
 == Вернуть рекомендованные
-
-Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
-== Вернуть прежнюю прокрутку колёсиком: каждый шаг заново запускает плавную прокрутку без сохранения скорости
 
 Restored the built-in content
 == Встроенный текст восстановлен
@@ -12106,6 +12142,9 @@ Reverse gradient colors
 
 Reverse IME gradient colors
 == Обратить цвета градиента (IME)
+
+Reverse order
+== Обратный порядок
 
 Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
 == Мгновенно менять направление зума при нажатии противоположной клавиши (0=оставить прежний плавный зум)
@@ -12184,6 +12223,9 @@ Rows here usually come from old configs, so test each command before you rely on
 
 RTT
 == RTT
+
+Rubber-band distance in UI pixels when the wheel or a drag pushes past an end (0=off); the content springs back after scrolling stops
+== Расстояние «резинки» в пикселях UI, когда колесо или перетаскивание выходит за край (0=выкл.); после остановки содержимое возвращается
 
 Rule line 1.
 == Строка правил 1.
@@ -12428,9 +12470,6 @@ Scoreboard
 Scoreboard cursor
 == Курсор таблицы лидеров
 
-Scoreboard filter: only show players whose name or clan contains this text
-== Фильтр таблицы: показывать только игроков, чьё имя или клан содержит этот текст
-
 Scoreboard playtime
 == Время игры в таблице
 
@@ -12502,6 +12541,9 @@ Screenshots
 
 Screenshots directory
 == Каталог скриншотов
+
+Scroll feel
+== Ощущение прокрутки
 
 Scroll mode
 == Режим прокрутки
@@ -13013,6 +13055,9 @@ Settings page opacity
 Settings page right panel opacity
 == Прозрачность правой панели страницы настроек
 
+Settings prewarm default migration done
+== Миграция значения по умолчанию для предварительного прогрева настроек завершена
+
 Settings, binds, profiles, chat binds and the war list are included. Select additional cfg files below.
 == Включены настройки, привязки клавиш, профили скинов, чат-привязки и список врагов. Ниже выберите дополнительные файлы cfg.
 
@@ -13148,7 +13193,7 @@ Show chat when rendering video
 Show clan above name plates
 == Показать клан над табличками с именами
 
-Show clan if war
+Show clan for enemies
 == Показывать клан, если вражда
 
 Show clan name on nameplate
@@ -13186,9 +13231,6 @@ Show collision and weapon interaction
 
 Show Collision Borders
 == Показывать границы коллизий
-
-Show colors in spectator selection
-== Показывать цвета в выборе наблюдателя
 
 Show combo hint when hooking or hammering player within 2 seconds
 == Показывать комбо-уведомления при попадании крюком или молотом в одного игрока в течение 2 секунд
@@ -13294,6 +13336,12 @@ Show enemy color in scoreboard
 
 Show enemy color in spectator menu
 == Показывать вражеский цвет в меню наблюдателя
+
+Show enemy colors in chat
+== Цвета в чате
+
+Show enemy colors in scoreboard
+== Цвета в таблице результатов
 
 Show enemy group players
 == Показывать игроков вражеской группы
@@ -14502,7 +14550,7 @@ Source language code for translation (auto=auto-detect)
 == Код исходного языка перевода (auto=автоопределение)
 
 Space
-== Промежуток
+== Пробел
 
 Spam protection: prevent spamming of team switching, chat, skin changes, emotes, votes
 == Защита от спама: предотвращает спам при смене команды, в чате, смене скина, эмоциях и голосовании
@@ -14620,6 +14668,27 @@ Spotify sp_dc cookie (from browser DevTools, long-lived)
 
 Spree
 == Серия
+
+Spring
+== Пружина
+
+Spring damping
+== Демпфирование пружины
+
+Spring firmness; 100 stops without overshoot, lower bounces past
+== Упругость пружины; 100 — без перелёта, меньше — отскакивает за цель
+
+Spring response
+== Отклик пружины
+
+Spring scroll feel damping ratio in percent; 100 stops without overshoot
+== Коэффициент демпфирования пружинной прокрутки в процентах; 100 — без перелёта
+
+Spring scroll feel response time in milliseconds; lower reaches the target sooner
+== Время отклика пружинной прокрутки в миллисекундах; меньше — быстрее
+
+Spring settle time; lower is snappier, higher feels heavier
+== Время стабилизации пружины; меньше — отзывчивее, больше — тяжелее
 
 SQL Server name for record table
 == Имя SQL-сервера для таблицы записей
@@ -14875,6 +14944,9 @@ Sun
 
 Super
 == Супер
+
+Superellipse
+== Суперэллипс
 
 Support is optional; nothing here changes client behavior.
 == Поддержка необязательна, и ничто из этого не меняет поведение клиента.
@@ -16019,9 +16091,6 @@ Total play time
 Total: %d save(s)
 == Всего: %d сохранений
 
-Traditional
-== Традиционный
-
 Trail alpha
 == Прозрачность следа
 
@@ -16357,6 +16426,9 @@ UI color
 
 UI controller sens.
 == Чувствительность контроллера (интерфейс)
+
+UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier
+== Кривая углов интерфейса: 0 = классическая дуга, 1 = суперэллипс, 2 = кривая Безье 5-го порядка, 3 = коническая кривая Безье
 
 UI icon color
 == Цвет значков интерфейса
@@ -17303,6 +17375,9 @@ Wheel distance per tick; hold Alt for 3x
 Wheel label
 == Название в колесе
 
+Wheel scroll feel: 0=Smooth (velocity carries over), 1=Original (each tick restarts), 2=Spring
+== Ощущение колеса: 0=Плавно (с наследованием скорости), 1=Оригинал (сброс каждый раз), 2=Пружина
+
 Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
 == Шаг колёсика в пикселях интерфейса; страницы карточек настроек прокручиваются на 12 таких шагов
 
@@ -17519,6 +17594,9 @@ Writing item %d failed
 Written %d items
 == Записано %d элементов
 
+X
+== X
+
 x = DDNet CPU% / total CPU%
 == x = DDNet CPU% / общий CPU%
 
@@ -17527,6 +17605,9 @@ X alignment color
 
 X alignment hint with me
 == Подсказка выравнивания по X со мной
+
+Y
+== Y
 
 y = DDNet memory usage
 == y = использование памяти DDNet

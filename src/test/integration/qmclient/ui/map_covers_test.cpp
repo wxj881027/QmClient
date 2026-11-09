@@ -6,11 +6,10 @@
 
 #include <game/client/components/qmclient/map_covers.h>
 
+#include <gtest/gtest.h>
 #include <test/support/icon_benchmark_graphics.h>
 #include <test/support/job_wait.h>
 #include <test/test.h>
-
-#include <gtest/gtest.h>
 
 #include <cstdlib>
 #include <utility>

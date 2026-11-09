@@ -98,6 +98,10 @@ namespace qm_card_catalog
 	// 页面只做"取清单 → 逐张构造 → 交给 CSettingsCardDeck"。
 	bool BuildCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
 	void BuildCards(const SQmCardBuildContext &Ctx, const std::vector<const char *> &vStableIds, std::vector<SSettingsCardDefinition> &vOut);
+	// 卡片构建计时：只用来定位"打开某设置页卡住"是哪些卡片定义吃掉的，
+	// 每张卡两次 time_get，总开关由调用方按帧控制（非调试页面不会有输出）。
+	void ResetCardBuildTimings();
+	void LogCardBuildTimings(const char *pPage);
 
 	// 搜索页用的卡片目录条目：stableId + 该卡当前所在分类（导航目标），
 	// 由 QmCardRegistry 的默认 Placement 表与当前布局模型共同解析。
@@ -145,6 +149,8 @@ namespace qm_card_catalog
 		static bool BuildNameplateCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
 		static bool BuildWaterHammerCard(const SQmCardBuildContext &Ctx, qm_module::EQmModuleId Id, SSettingsCardDefinition &Out);
 		static bool BuildTitleCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
+		// 聊天框里「一条消息」的样子：消息底色 + 发言人名字 + 内容。
+		static void RenderQmSponsorChatMessagePreview(CMenus *pMenus, const CUIRect &Rect, int Style, double TimeSeconds);
 		static bool BuildTeeCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
 		static bool RenderQmFunctionCheckbox(CMenus *pMenus, const void *pId, const char *pTextId, const char *pText, int *pValue, CUIRect *pRect, bool PrewarmOnly);
 		static bool RenderQmFunctionCheckboxRow(CMenus *pMenus, CUIRect &Content, float LineHeight, float LineSpacing, const void *pId, const char *pTextId, const char *pText, int *pValue, bool PrewarmOnly, const char *pTooltip = nullptr);

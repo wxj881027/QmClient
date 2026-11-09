@@ -349,8 +349,8 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 	const float InputChromeHeight = BuildSettingsCardFrame({0.0f, 0.0f, Page.m_ContentViewport.w, 0.0f}, InputSpec, InputContentHeight, UiScale).m_Rect.h;
 	const float SubtitleWidth = qm_search_header::SubtitleWidth(Page.m_ContentViewport);
 	const float SubtitleHeight = !HasSearchQuery && SubtitleWidth > 0.0f ?
-		TextRender()->TextBoundingBox(14.0f * UiScale, m_GlobalSearchHeaderSession.Text(), -1, SubtitleWidth).m_H + 8.0f * UiScale :
-		0.0f;
+					     TextRender()->TextBoundingBox(14.0f * UiScale, m_GlobalSearchHeaderSession.Text(), -1, SubtitleWidth).m_H + 8.0f * UiScale :
+					     0.0f;
 	const auto HeaderLayout = qm_search_header::Layout(Page.m_ContentViewport, InputChromeHeight, UiScale, HasSearchQuery, m_GlobalSearchHeaderSession.LogoIndex(), SubtitleHeight);
 	const float TargetOffsetY = HeaderLayout.m_InputOffsetY;
 	float InputOffsetY = TargetOffsetY;

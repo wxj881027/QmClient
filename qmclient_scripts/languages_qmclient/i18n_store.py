@@ -43,8 +43,9 @@ PENDING_TRANSLATION_RE = re.compile(
     r"^Pending ([a-z_]+) translation(?:\s+.+)?$"
 )
 
-# 地图标签按已确认需求只维护简中，其余语言使用英文源码回退。
-BILINGUAL_FALLBACK_MODULES = frozenset({"editor", "map_tags"})
+# 新模块先只提供简体中文，其余语言按英文原文回退（渐进翻译）。
+# 地图标签按已确认需求同样只维护简中，其余语言使用英文源码回退。
+BILINGUAL_FALLBACK_MODULES = frozenset({"editor", "bind_workshop", "map_tags"})
 VERBATIM_TRANSLATION_MODULES = frozenset({"editor"})
 
 
@@ -515,10 +516,6 @@ def _may_keep_source_text(source: str) -> bool:
         "OpenAI",
         "API",
         "Alpha",
-        "Classic Easy",
-        "Classic Next",
-        "Classic Nut",
-        "Classic Pro",
         "Client",
         "Community",
         "Console",

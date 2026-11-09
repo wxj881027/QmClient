@@ -53,7 +53,6 @@ TEST(QmMonitoringAssetsContract, AssetsSharedUploadSchedulerDoesNotRequeueMovedP
 	EXPECT_NE(WorkshopFailureBody.find("GPU_UPLOAD_BUDGET"), std::string::npos);
 }
 
-
 TEST(QmMonitoringAssetsContract, SettingsResourcePreviewDrainRejectsInvalidImagesBeforeConsumingBudget)
 {
 	const std::string Source = ReadRepoFile("src/game/client/components/qmclient/settings_resource_preview.cpp");

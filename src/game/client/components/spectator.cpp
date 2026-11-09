@@ -12,6 +12,7 @@
 #include <generated/protocol.h>
 
 #include <game/client/QmUi/QmAnimResolve.h>
+#include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/animstate.h>
 #include <game/client/components/qmclient/friend_heart_icon.h>
@@ -774,17 +775,32 @@ void CSpectator::OnRender()
 	// draw selections
 	if(SelectedId() == SPEC_FREEVIEW)
 	{
-		Graphics()->DrawRect(CenterX - (ObjWidth - TabPadX), TabTop, TabWidth, TabHeight, ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f * ContentAlpha), IGraphics::CORNER_ALL, 20.0f);
+		{
+			SRoundedSurfaceParams SpectatorTabSurface;
+			SpectatorTabSurface.m_Radius = 20.0f;
+			SpectatorTabSurface.m_Corners = IGraphics::CORNER_ALL;
+			DrawRoundedSurface(Ui(), CUIRect{CenterX - (ObjWidth - TabPadX), TabTop, TabWidth, TabHeight}, ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f * ContentAlpha), ColorRGBA(), SpectatorTabSurface);
+		}
 	}
 
 	if(MultiViewActive())
 	{
-		Graphics()->DrawRect(CenterX - (ObjWidth - TabPadX) + (ObjWidth * 2.0f / 3.0f), TabTop, TabWidth, TabHeight, ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f * ContentAlpha), IGraphics::CORNER_ALL, 20.0f);
+		{
+			SRoundedSurfaceParams SpectatorTabSurface;
+			SpectatorTabSurface.m_Radius = 20.0f;
+			SpectatorTabSurface.m_Corners = IGraphics::CORNER_ALL;
+			DrawRoundedSurface(Ui(), CUIRect{CenterX - (ObjWidth - TabPadX) + (ObjWidth * 2.0f / 3.0f), TabTop, TabWidth, TabHeight}, ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f * ContentAlpha), ColorRGBA(), SpectatorTabSurface);
+		}
 	}
 
 	if((ViewModeActive || (Client()->State() == IClient::STATE_DEMOPLAYBACK && GameClient()->m_Snap.m_LocalClientId >= 0)) && (ViewModeActive ? SelectedId() == 0 : GameClient()->m_DemoSpecId == SPEC_FOLLOW))
 	{
-		Graphics()->DrawRect(CenterX - (ObjWidth - TabPadX) + (ObjWidth * 2.0f * 2.0f / 3.0f), TabTop, TabWidth, TabHeight, ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f * ContentAlpha), IGraphics::CORNER_ALL, 20.0f);
+		{
+			SRoundedSurfaceParams SpectatorTabSurface;
+			SpectatorTabSurface.m_Radius = 20.0f;
+			SpectatorTabSurface.m_Corners = IGraphics::CORNER_ALL;
+			DrawRoundedSurface(Ui(), CUIRect{CenterX - (ObjWidth - TabPadX) + (ObjWidth * 2.0f * 2.0f / 3.0f), TabTop, TabWidth, TabHeight}, ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f * ContentAlpha), ColorRGBA(), SpectatorTabSurface);
+		}
 	}
 
 	bool FreeViewSelected = false;
@@ -883,13 +899,23 @@ void CSpectator::OnRender()
 				Corners |= IGraphics::CORNER_TL | IGraphics::CORNER_TR;
 			if(EndsGroup || NextDDTeam != DDTeam)
 				Corners |= IGraphics::CORNER_BL | IGraphics::CORNER_BR;
-			Graphics()->DrawRect(CenterX + x - RowHitInset + BoxOffset, CenterY + y + BoxMove, RowWidth - BoxOffset, LineHeight, Color, Corners, RoundRadius);
+			{
+				SRoundedSurfaceParams TeamSurface;
+				TeamSurface.m_Radius = RoundRadius;
+				TeamSurface.m_Corners = Corners;
+				DrawRoundedSurface(Ui(), CUIRect{CenterX + x - RowHitInset + BoxOffset, CenterY + y + BoxMove, RowWidth - BoxOffset, LineHeight}, Color, ColorRGBA(), TeamSurface);
+			}
 		}
 		OldDDTeam = DDTeam;
 
 		if(SelectedId() == pInfo->m_Id)
 		{
-			Graphics()->DrawRect(CenterX + x - RowHitInset + BoxOffset, CenterY + y + BoxMove, RowWidth - BoxOffset, LineHeight, ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f * ContentAlpha), IGraphics::CORNER_ALL, RoundRadius);
+			{
+				SRoundedSurfaceParams SelectionSurface;
+				SelectionSurface.m_Radius = RoundRadius;
+				SelectionSurface.m_Corners = IGraphics::CORNER_ALL;
+				DrawRoundedSurface(Ui(), CUIRect{CenterX + x - RowHitInset + BoxOffset, CenterY + y + BoxMove, RowWidth - BoxOffset, LineHeight}, ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f * ContentAlpha), ColorRGBA(), SelectionSurface);
+			}
 		}
 
 		bool PlayerSelected = false;

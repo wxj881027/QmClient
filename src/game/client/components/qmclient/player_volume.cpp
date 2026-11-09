@@ -8,10 +8,11 @@
 #pragma push_macro("NOGDI")
 #undef NOGDI
 #include <windows.h>
-#include <wingdi.h>
+
 #include <appmodel.h>
 #include <audiopolicy.h>
 #include <mmdeviceapi.h>
+#include <wingdi.h>
 #include <winrt/base.h>
 #pragma pop_macro("NOGDI")
 
@@ -165,7 +166,9 @@ bool CQmPlayerVolume::SetVolume(uint64_t Generation, float Level)
 	return true;
 }
 #else
-struct CQmPlayerVolume::SImpl {};
+struct CQmPlayerVolume::SImpl
+{
+};
 CQmPlayerVolume::CQmPlayerVolume() = default;
 CQmPlayerVolume::~CQmPlayerVolume() = default;
 CQmPlayerVolume::SSnapshot CQmPlayerVolume::Refresh(const std::string &) { return {}; }

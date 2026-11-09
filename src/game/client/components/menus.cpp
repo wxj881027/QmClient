@@ -2248,10 +2248,13 @@ ColorHSLA CMenus::DoLine_ColorPicker(CButtonContainer *pResetId, const SSettings
 	}
 	const ColorHSLA PickedColor = DoButton_ColorPicker(&Layout.m_ColorButtonRect, pColorValue, Alpha);
 
-	if(DoButton_Menu(pResetId, Localize("Reset"), 0, &Layout.m_ResetButtonRect, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::BASE, 0.1f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), nullptr, Metrics.m_BodySize))
+	// 重置只放回转箭头图标，说明走悬浮提示：颜色行里塞「重置」两个字太占地方，
+	// 而且和旁边那几个图标按钮不是一套语言。
+	if(Ui()->DoButton_QmIcon(pResetId, EQmIcon::ARROW_ROTATE_RIGHT, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &Layout.m_ResetButtonRect, IGraphics::CORNER_ALL))
 	{
 		*pColorValue = color_cast<ColorHSLA>(DefaultColor).Pack(Alpha);
 	}
+	GameClient()->m_Tooltips.DoToolTip(pResetId, &Layout.m_ResetButtonRect, Localize("Reset"));
 
 	Ui()->DoConfigTooltip(pColorValue, &HintRect, pColorValue);
 	return PickedColor;
@@ -4451,6 +4454,7 @@ void CMenus::Render()
 		else
 		{
 			CPerfTimer ShellTimer;
+			const int64_t QmShellStart = time_get();
 			CUIRect TabBar, MainView;
 			Screen.HSplitTop(MENU_MENUBAR_HEIGHT_NEW, &TabBar, &MainView);
 			// 手机端所有菜单页统一对齐设置页壳层：导航栏与内容区一起内缩，
@@ -4518,8 +4522,13 @@ void CMenus::Render()
 				ScrollInputActive,
 				m_SettingsPageSwitchActive || TransitionActive,
 				m_SettingsScrollActive);
+			double QmPrewarmMs = 0.0;
 			if(CanPrewarmSettings && MenuOpenFrame > 0)
+			{
+				const int64_t QmPrewarmStart = time_get();
 				PrewarmVisibleSettingsResources(MainView);
+				QmPrewarmMs = (time_get() - QmPrewarmStart) * 1000.0 / time_freq();
+			}
 			if(m_MenuPage == PAGE_NEWS)
 			{
 				RenderNews(MainView);
@@ -4547,6 +4556,11 @@ void CMenus::Render()
 			char aContentExtra[128];
 			str_format(aContentExtra, sizeof(aContentExtra), "page=%s transition=%d", pPageName, TransitionActive ? 1 : 0);
 			LogPerfStage(Client(), "offline_page_content", ContentTimer.ElapsedMs(), TransitionActive, aContentExtra);
+			{
+				const double QmTotalMs = (time_get() - QmShellStart) * 1000.0 / time_freq();
+				if(QmTotalMs > 20.0)
+					dbg_msg("perf/gap", "shell_total=%.1fms prewarm=%.1fms content=%.1fms page=%s", QmTotalMs, QmPrewarmMs, ContentTimer.ElapsedMs(), pPageName);
+			}
 			if(Client()->State() != ClientState)
 			{
 				if(ContentTransitionActive)
@@ -6117,20 +6131,24 @@ void CMenus::RenderThemeSelection(CUIRect MainView, const SSettingsContentMetric
 	const float HeaderSpacing = Metrics.m_LineSpacing;
 	CUIRect HeaderView = MainView;
 	CUIRect Header, HeaderRow;
-	HeaderView.HSplitTop(HeaderHeight + HeaderSpacing, &Header, nullptr);
+	HeaderView.HSplitTop(HeaderHeight + HeaderSpacing * 2.0f, &Header, nullptr);
 	Header.HSplitTop(HeaderHeight, &HeaderRow, nullptr);
 
-	s_ListBox.DoHeader(&MainView, Localize("Theme"), HeaderHeight, HeaderSpacing);
+	s_ListBox.DoHeader(&MainView, Localize("Theme"), HeaderHeight, HeaderSpacing * 2.0f);
 
 	static CButtonContainer s_RefreshButton;
 	CUIRect RefreshButton;
-	HeaderRow.VSplitRight(80.0f * Metrics.m_UiScale, nullptr, &RefreshButton);
-	RefreshButton.VMargin(Metrics.m_LineSpacing * 0.5f, &RefreshButton);
-	if(DoButton_Menu(&s_RefreshButton, Localize("Refresh"), 0, &RefreshButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::BASE, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, Metrics.m_BodySize))
+	const float RefreshSide = std::min(HeaderHeight, 80.0f * Metrics.m_UiScale);
+	HeaderRow.VSplitRight(RefreshSide, nullptr, &RefreshButton);
+	RefreshButton.h = RefreshSide;
+	RefreshButton.y += (HeaderRow.h - RefreshSide) * 0.5f;
+	RefreshButton.Margin(Metrics.m_LineSpacing * 0.5f, &RefreshButton);
+	if(Ui()->DoButton_QmIcon(&s_RefreshButton, EQmIcon::ARROW_ROTATE_RIGHT, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &RefreshButton, IGraphics::CORNER_ALL))
 	{
 		MenuBackground.RefreshThemes();
 		s_ListBox.ResetScroll();
 	}
+	GameClient()->m_Tooltips.DoToolTip(&s_RefreshButton, &RefreshButton, Localize("Refresh"));
 
 	const std::vector<CTheme> &vThemes = MenuBackground.GetThemes();
 
@@ -6476,10 +6494,22 @@ bool CMenus::SetSettingsPageFromCardTab(const char *pTab)
 		g_Config.m_UiSettingsPage = SETTINGS_TCLIENT;
 		m_TClientSettingsTab = 0;
 	}
-	else if(str_comp(pTab, "bind") == 0 || str_comp(pTab, "qmclient-bind") == 0)
+	else if(str_comp(pTab, "bind") == 0 || str_comp(pTab, "qmclient-bind") == 0 || str_comp(pTab, "bind-official") == 0)
+	{
+		// 原来的「官方」子页签已改名为「绑定」并升为一级页签：bind 与旧链接
+		// bind-official 都落在同一个一级页签上，命令名保持不变。
+		g_Config.m_UiSettingsPage = SETTINGS_CONTROLS;
+		m_MenusSettingsControls.SetTab(CMenusSettingsControls::ETab::BIND);
+	}
+	else if(str_comp(pTab, "bind-workshop") == 0)
 	{
 		g_Config.m_UiSettingsPage = SETTINGS_CONTROLS;
-		m_MenusSettingsControls.SetTab(CMenusSettingsControls::ETab::BIND_WORKSHOP);
+		m_MenusSettingsControls.SetTab(CMenusSettingsControls::ETab::WORKSHOP);
+	}
+	else if(str_comp(pTab, "bind-blueprint") == 0)
+	{
+		g_Config.m_UiSettingsPage = SETTINGS_CONTROLS;
+		m_MenusSettingsControls.SetTab(CMenusSettingsControls::ETab::BLUEPRINT);
 	}
 	else if(str_comp(pTab, "tclient-bind-wheel") == 0)
 	{
@@ -7375,7 +7405,13 @@ CMenus::CScopedMenuTextVisibleGuard::CScopedMenuTextVisibleGuard(CMenus *pMenus)
 	m_pMenus(pMenus),
 	m_Previous(pMenus->m_MenuTextPoolVisibleGuard)
 {
-	m_pMenus->EnsureSettingsMenuTextPlanReadyForVisible();
+	{
+		const int64_t GuardStart = time_get();
+		m_pMenus->EnsureSettingsMenuTextPlanReadyForVisible();
+		const double GuardMs = (time_get() - GuardStart) * 1000.0 / time_freq();
+		if(GuardMs > 5.0)
+			dbg_msg("perf/menutext", "ensure_plan_ready=%.1fms", GuardMs);
+	}
 	m_pMenus->m_MenuTextPoolVisibleGuard = true;
 	if(!m_Previous)
 	{
