@@ -3,6 +3,8 @@
 #ifndef ENGINE_CLIENT_INPUT_H
 #define ENGINE_CLIENT_INPUT_H
 
+#include "input_windows_ime.h"
+
 #include <engine/console.h>
 #include <engine/input.h>
 #include <engine/keys.h>
@@ -137,9 +139,10 @@ private:
 	};
 	std::deque<SWindowsMessage> m_QueuedWindowsMessages;
 	uint32_t m_WindowsMessageEvent = 0;
-	std::optional<SQmImeCandidateList> ReadWindowsImeCandidates(void *pWindow, unsigned CandidateListFlags, bool *pHasActiveComposition = nullptr);
+	CWindowsImeHook m_WindowsImeHook;
+	std::optional<SQmImeCandidateList> ReadWindowsImeCandidates(void *pWindow, unsigned CandidateListFlags);
 	void ProcessSystemMessage(tagMSG *pMsg);
-	static bool SDLCALL WindowsMessageHook(void *pUser, tagMSG *pMsg);
+	static void WindowsImeNotify(void *pUser, HWND Window, WPARAM WParam, LPARAM LParam);
 #endif
 
 public:

@@ -114,7 +114,7 @@ inline bool QmImeShouldSuppressStaleCandidateReload(bool SuppressFlag, bool IsOp
 	return SuppressFlag;
 }
 
-// IMM 快照保留分页；SDL 快照在原生通知缺失或列表尚未就绪时补齐当前页。
+// Windows 只使用 IMM 分页快照，其他平台使用 SDL 候选事件。
 struct SQmImeCandidateList
 {
 	std::vector<std::string> m_vCandidates;
@@ -146,11 +146,8 @@ public:
 		m_SuppressStaleReload = true;
 	}
 
-	void UpdateFromNative(std::optional<SQmImeCandidateList> List, bool IsOpenNotify, bool HasActiveComposition = false)
+	void UpdateFromNative(std::optional<SQmImeCandidateList> List, bool IsOpenNotify)
 	{
-		// 提交后可能漏收下一轮打开/编辑通知；仅由当前 IMM 组合串确认恢复。
-		if(HasActiveComposition)
-			ResumeComposition();
 		const bool Suppress = QmImeShouldSuppressStaleCandidateReload(m_SuppressStaleReload, IsOpenNotify);
 		if(IsOpenNotify)
 			ResumeComposition();
@@ -167,32 +164,24 @@ public:
 		}
 	}
 
-	void UpdateFromSdl(const char *const *ppCandidates, int Count, int SelectedIndex, bool WindowsNumberedCandidates, std::optional<SQmImeCandidateList> NativeCandidates = std::nullopt, bool HasActiveComposition = false)
+	void UpdateFromSdl(const char *const *ppCandidates, int Count, int SelectedIndex, bool NativeCandidates)
 	{
+		// 包括空列表在内的 SDL 快照都不能覆盖 Windows 的 IMM 状态。
+		if(NativeCandidates)
+			return;
 		if(Count <= 0 || ppCandidates == nullptr)
 		{
 			Clear();
 			return;
 		}
-		if(HasActiveComposition)
-			ResumeComposition();
 		if(!AcceptsSdlCandidates())
 			return;
-
-		if(NativeCandidates.has_value() && !NativeCandidates->m_vCandidates.empty())
-		{
-			m_Candidates = std::move(*NativeCandidates);
-			return;
-		}
 
 		Clear();
 		m_Candidates.m_vCandidates.reserve(Count);
 		for(int i = 0; i < Count; ++i)
 		{
 			const char *pCandidate = ppCandidates[i] != nullptr ? ppCandidates[i] : "";
-			// SDL 的 Windows 后端已加上一位数字和空格，候选窗会自行绘制序号。
-			if(WindowsNumberedCandidates && pCandidate[0] >= '0' && pCandidate[0] <= '9' && pCandidate[1] == ' ')
-				pCandidate += 2;
 			m_Candidates.m_vCandidates.emplace_back(pCandidate);
 		}
 		m_Candidates.m_SelectedIndex = SelectedIndex >= 0 && SelectedIndex < Count ? SelectedIndex : -1;

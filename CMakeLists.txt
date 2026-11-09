@@ -1044,7 +1044,7 @@ endif()
 
 if(TARGET_OS STREQUAL "windows")
   set(PLATFORM_CLIENT)
-  set(PLATFORM_CLIENT_LIBS opengl32.lib gdi32.lib winmm.lib imm32.lib oleaut32.lib ole32.lib windowscodecs.lib mfplat.lib mfreadwrite.lib mfuuid.lib)
+  set(PLATFORM_CLIENT_LIBS opengl32.lib gdi32.lib winmm.lib imm32.lib comctl32.lib oleaut32.lib ole32.lib windowscodecs.lib mfplat.lib mfreadwrite.lib mfuuid.lib)
   if(MSVC)
     list(APPEND PLATFORM_CLIENT_LIBS windowsapp.lib)
   endif()
@@ -5054,6 +5054,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/contract/qmclient/client/qm_hud_editor_contract_test.cpp
     src/test/unit/qmclient/client/country_flag_anim_start_time_test.cpp
     src/test/unit/qmclient/client/qm_ime_platform_test.cpp
+    src/test/integration/engine/input_windows_ime_test.cpp
     src/test/unit/qmclient/client/qm_serverlist_cache_test.cpp
     src/test/unit/qmclient/client/qm_input_overlay_count_test.cpp
     src/test/unit/qmclient/ui/qm_ui_scale_test.cpp
@@ -5614,7 +5615,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     target_link_libraries(${TARGET_TESTRUNNER} ${SDL3_LIBRARIES})
   endif()
   if(TARGET_OS STREQUAL "windows")
-    target_link_libraries(${TARGET_TESTRUNNER} bcrypt winhttp ws2_32)
+    target_link_libraries(${TARGET_TESTRUNNER} bcrypt winhttp ws2_32 comctl32)
   endif()
   if(FFMPEG_FOUND)
     target_link_libraries(${TARGET_TESTRUNNER} ${FFMPEG_LIBRARIES})
