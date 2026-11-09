@@ -284,41 +284,6 @@ jobs:
             cmake --build build --target run_tests --parallel
           fi
 
-      # 临时诊断（定位 macOS 例外展开问题后删除）：用 macOS runner 当调试机。
-      - name: Diagnose macOS failing tests
-        if: failure() && runner.os == 'macOS'
-        shell: bash
-        run: |
-          set +e
-          cd build
-          echo "=== cache flags ==="
-          grep -E 'CMAKE_CXX_FLAGS|CMAKE_CXX_COMPILER:|CMAKE_EXE_LINKER_FLAGS' CMakeCache.txt
-          echo "=== per-TU commands ==="
-          ninja -t commands > /tmp/cmds.txt 2>&1
-          grep -E 'qm_font_scan_failure_test|shared/jobs\.cpp' /tmp/cmds.txt | head -4
-          echo "=== fno flags counts ==="
-          for f in -fno-exceptions -fno-unwind-tables -fno-asynchronous-unwind-tables -fno-rtti; do
-            printf '%s: %s\n' "$f" "$(grep -c -- "$f" /tmp/cmds.txt)"
-          done
-          echo "=== each font scan test alone ==="
-          for t in EnumerationExceptionDoesNotTerminateWorkerOrBlockNextJob ReadExceptionPublishesOnlyPreviouslyCompletedFiles AllocationExceptionLeavesFinishedEmptyScan FailedRestoreAllowsChangedSelectionToStartNewRequest; do
-            echo "--- $t"
-            ./testrunner --gtest_filter="QmFontScanFailure.$t" 2>&1 | tail -8
-            echo "exit=${PIPESTATUS[0]}"
-          done
-          echo "=== lldb: std::terminate ==="
-          lldb --batch -o 'breakpoint set -n std::terminate' \
-            -o 'run --gtest_filter=QmFontScanFailure.EnumerationExceptionDoesNotTerminateWorkerOrBlockNextJob' \
-            -o 'thread list' -o 'bt all' ./testrunner 2>&1 | tail -120
-          echo "=== lldb: __cxa_throw ==="
-          lldb --batch -o 'breakpoint set -n __cxa_throw' \
-            -o 'run --gtest_filter=QmFontScanFailure.EnumerationExceptionDoesNotTerminateWorkerOrBlockNextJob' \
-            -o 'bt 10' ./testrunner 2>&1 | tail -60
-          echo "=== unwind metadata ==="
-          otool -l testrunner | grep -i -A3 -E 'unwind|eh_frame' | head -30
-          nm -m testrunner 2>/dev/null | grep -i personality | head -5
-          exit 0
-
       - name: Package
         shell: bash
         run: |
