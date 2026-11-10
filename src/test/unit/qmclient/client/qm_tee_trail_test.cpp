@@ -301,6 +301,24 @@ TEST(QmTeeTrailBuild, OriginalKeepsNormalBlending)
 		EXPECT_FALSE(Quad.m_Additive);
 }
 
+TEST(QmTeeTrailBuild, StardustKeepsItsIndependentHeadGlowWithSoftenedBands)
+{
+	const auto vTrail = MakePixelLine();
+	std::vector<qm_tee_trail::SQuad> vQuads;
+	qm_tee_trail::BuildEffect(vTrail, qm_tee_trail::STYLE_STARDUST, true, 200.0, 12.0f, 9, vQuads);
+	ASSERT_FALSE(vQuads.empty());
+	bool VisibleHeadGlow = false;
+	for(const auto &Quad : vQuads)
+	{
+		if(!Quad.m_Additive)
+			continue;
+		for(size_t i = 0; i < 4; ++i)
+			if(distance(Quad.m_aPos[i], vTrail[0].m_Pos) < 0.001f && Quad.m_aColor[i].a > 0.1f)
+				VisibleHeadGlow = true;
+	}
+	EXPECT_TRUE(VisibleHeadGlow);
+}
+
 TEST(QmTeeTrailBuild, SeparatedSegmentsKeepAllBodiesBeforeTheGlow)
 {
 	auto vTrail = MakeTrail(16);
