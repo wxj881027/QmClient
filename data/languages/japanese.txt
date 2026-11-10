@@ -1028,6 +1028,12 @@ Append saved word list chunk
 Append to log file instead of overwriting
 == 上書きではなくログファイルに追記
 
+Apple
+== Apple
+
+Apple capsule
+== Apple カプセル
+
 Applied to %d same-family part(s).
 == 同じファミリーの %d 個のパーツに適用しました。
 
@@ -2093,11 +2099,14 @@ Cannot update public words. Previous words remain active.
 Cannot write the wiki file
 == Wiki ファイルを書き込めません
 
-Capsule seam
-== カプセルのはぎ目
+Capsule end strength
+== カプセル端の強さ
 
-Capsule seam smoothing: ease the straight-to-cap curvature jump (0 = plain semicircular ends)
-== カプセルのはぎ目の平滑化：直線から端までの曲率の飛びを和らげます（0 = 純粋な半円端）
+Capsule ends
+== カプセル端
+
+Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
+== Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
 
 Capture the flag
 == キャプチャー・ザ・フラッグ (CTF)
@@ -2734,6 +2743,9 @@ Colors of the hook collision line, in case of a possible collision with:
 
 Colors of the translate button in the chat input and of the language menu that button opens.
 == チャット入力欄の翻訳ボタンと、そのボタンで開く言語メニューの色。
+
+Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
+== Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
 
 Colors too close to the map background are hard to read while moving.
 == マップの背景に近すぎる色は、動いているときに見分けにくくなります。
@@ -3443,6 +3455,15 @@ Current: Score
 Current: Time
 == 現在：時間
 
+Curvature strength for the Apple corner curve (0 = arc, 100 = strongest)
+== Apple 連続角丸の曲率の強さ（0 = 円弧、100 = 最大）
+
+Curvature strength for the conic corner curve
+== 円錐ベジェ角丸の曲率の強さ
+
+Curvature strength for the superellipse corner curve
+== 超楕円角丸の曲率の強さ
+
 Custom
 == カスタム
 
@@ -3740,6 +3761,9 @@ Decides which skins the client downloads and lists, and can add a prefix to load
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == 専用 WebSocket エンドポイント（空欄なら wss://qmclient.icu/ws を使用）
 
+Deep freeze
+== Deep freeze
+
 Deep freeze color
 == ディープフリーズ色
 
@@ -3749,6 +3773,12 @@ Deep freeze opacity
 Deep freeze tile outline color
 == ディープフリーズタイルのアウトライン色
 
+Deep freeze tile outline width
+== Deep freeze tile outline width
+
+Deep unfreeze
+== Deep unfreeze
+
 Deep unfreeze color
 == ディープアンフリーズ色
 
@@ -3757,6 +3787,9 @@ Deep unfreeze opacity
 
 Deep unfreeze tile outline color
 == ディープアンフリーズタイルのアウトライン色
+
+Deep unfreeze tile outline width
+== Deep unfreeze tile outline width
 
 Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 == Deepfly モード（0=通常、1=DF、2=HDF、3=カスタム）
@@ -5363,6 +5396,9 @@ Expanded dropdown background color
 Expanded dropdown background opacity percentage
 == 展開リスト背景 — 不透明度（パーセント）
 
+Expanded personalization sections (format: stableId=1;stableId2=0;)
+== Expanded personalization sections (format: stableId=1;stableId2=0;)
+
 Experimental
 == 実験的
 
@@ -5966,8 +6002,8 @@ Freeze stars
 Freeze tile outline color
 == フリーズタイルアウトラインの色
 
-Freeze/Deep freeze tile outline width
-== フリーズ/ディープフリーズタイルアウトラインの幅
+Freeze tile outline width
+== Freeze tile outline width
 
 Frequently asked questions
 == よくある質問
@@ -6812,11 +6848,14 @@ Hook strength scope
 Hook through teleporters (deprecated, use special entities instead)
 == テレポーターを通るフック（非推奨、代わりに特殊エンティティを使用）
 
-Hookable/Unhookable tile outline color
-== フック可能/不可能タイルアウトラインの色
+Hookable tile outline color
+== Hookable tile outline color
 
-Hookable/unhookable tile outline width
-== フック可能/不可能タイルアウトラインの幅
+Hookable tile outline width
+== Hookable tile outline width
+
+Hookable tiles
+== Hookable tiles
 
 Hooking L/R: %.0f%%/%.0f%%
 == フック L/R：%.0f%%/%.0f%%
@@ -7516,6 +7555,9 @@ Keep the defaults unless you play with high ping; then try one option at a time 
 
 Keep the text light on a dark background; press "Reset tooltip appearance" to return to the defaults.
 == 暗い背景には明るい文字が見やすいです。既定の見た目に戻すにはヒントの外観をリセットを押します。
+
+Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
+== Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
 
 Keep unsent message on chat close
 == チャットを閉じる時に未送信内容を保持
@@ -8347,6 +8389,9 @@ Map play history
 
 Map preview rendering unavailable
 == マッププレビューを描画できません
+
+Map preview shows the entity layer only (hides textures)
+== Map preview shows the entity layer only (hides textures)
 
 Map Preview TODO
 == マッププレビュー TODO
@@ -10250,6 +10295,9 @@ Pick a shape, then tune glow and animation speed.
 Pick a slot, type the command and its label, then hold the wheel key in game to test.
 == スロットを選んでコマンドとラベルを入力し、ゲーム内でホイールキーを押し続けて試します。
 
+Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
+== Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
+
 Pick result: %s
 == 抽選結果：%s
 
@@ -10303,6 +10351,9 @@ Pistol guide line
 
 Pixel: Layer Shift
 == ピクセル風：レイヤーシフト
+
+Plain capsule
+== 通常カプセル
 
 Plasma gun shots per second
 == プラズマガンの毎秒発射数
@@ -12476,6 +12527,9 @@ Scoreboard playtime
 Scoreboard point check
 == スコアボードポイントチェック
 
+Scoreboard row colors
+== Scoreboard row colors
+
 Scoreboard score lookup
 == スコアボードスコア確認
 
@@ -13280,6 +13334,12 @@ Show DDRace HUD
 Show death tile outlines
 == デスタイルの輪郭を表示
 
+Show deep freeze tile outlines
+== Show deep freeze tile outlines
+
+Show deep unfreeze tile outlines
+== Show deep unfreeze tile outlines
+
 Show default flag in scoreboard
 == スコアボードにデフォルトの国旗を表示
 
@@ -13385,8 +13445,8 @@ Show freeze bar under frozen players indicating thaw time
 Show freeze bars
 == フリーズバーを表示
 
-Show freeze/deep freeze tile outlines
-== フリーズ/ディープフリーズタイルの輪郭を表示
+Show freeze tile outlines
+== Show freeze tile outlines
 
 Show friend icon in name plates
 == ネームプレートにフレンドアイコンを表示
@@ -13460,8 +13520,8 @@ Show hook strength icon indicator
 Show hook strength number indicator
 == フック強度数値インジケーターを表示
 
-Show hookable/unhookable tile outlines
-== フック可能/不可能タイルの輪郭を表示
+Show hookable tile outlines
+== Show hookable tile outlines
 
 Show how weapons, shields, snowflakes, and flags appear in game
 == 武器、シールド、雪片、旗がゲーム内でどう見えるかを表示
@@ -14036,8 +14096,11 @@ Show tune zone colors
 Show tuning parameters affecting own player (0=Off, 1=Show changed, 2=Show all)
 == 自身のプレイヤーに影響するチューニングパラメーターを表示（0 = オフ、1 = 変更のみ表示、2 = すべて表示）
 
-Show unfreeze/deep unfreeze tile outlines
-== フリーズ解除/ディープフリーズ解除タイルのアウトラインを表示
+Show unfreeze tile outlines
+== Show unfreeze tile outlines
+
+Show unhookable tile outlines
+== Show unhookable tile outlines
 
 Show unknown server messages
 == 不明なサーバーメッセージを表示
@@ -14209,6 +14272,9 @@ Shutdown server when empty
 
 Silently disconnect from the current server while keeping Tee timeout protection
 == Tee のタイムアウト保護を維持したまま現在のサーバーからサイレント切断
+
+Silky capsule
+== なめらかカプセル
 
 Simple
 == シンプル
@@ -14878,6 +14944,9 @@ Streamer word list file
 
 Strength icons assets
 == 強さアイコンアセット
+
+Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)
+== Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)
 
 Stress system (debug builds only).
 == ストレスシステム（デバッグビルドのみ）
@@ -16427,8 +16496,8 @@ UI color
 UI controller sens.
 == UI コントローラー感度
 
-UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier
-== UI の角の曲線：0 = クラシック円弧、1 = 超楕円、2 = 5次ベジェ、3 = 円錐ベジェ
+UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier, 4 = Apple continuous (Bezier + arc + Bezier)
+== UI 角丸曲線：0 = 円弧、1 = 超楕円、2 = 5次ベジェ、3 = 円錐ベジェ、4 = Apple 連続角丸（ベジェ + 円弧 + ベジェ）
 
 UI icon color
 == UI アイコンの色
@@ -16574,8 +16643,17 @@ Unfreeze opacity
 Unfreeze tile outline color
 == フリーズ解除タイルのアウトライン色
 
-Unfreeze/Deep unfreeze tile outline width
-== フリーズ解除/ディープフリーズ解除タイルのアウトライン幅
+Unfreeze tile outline width
+== Unfreeze tile outline width
+
+Unhookable tile outline color
+== Unhookable tile outline color
+
+Unhookable tile outline width
+== Unhookable tile outline width
+
+Unhookable tiles
+== Unhookable tiles
 
 Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
 == 統一書き出し品質（CRF/CQ/QP スケール 0-51、-1 = cl_video_crf を使用）。各エンコーダーのネイティブパラメータにマッピングされます

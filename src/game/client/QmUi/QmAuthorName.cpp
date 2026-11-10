@@ -1,5 +1,7 @@
 #include "QmAuthorName.h"
 
+#include <game/client/QmUi/UiSurface.h>
+
 #include "UiTokens.h"
 
 #include <engine/client.h>
@@ -110,9 +112,10 @@ void CQmAuthorName::Render(CUi *pUi, IGraphics *pGraphics, const QmSponsorAuthor
 			if(pGraphics->GaussianBlurRenderTarget(m_Source, m_aTemporary, m_Blurred, Params))
 			{
 				IGraphics::SRenderTargetDrawParams Draw;
-				Draw.m_CornerSmoothing = std::clamp(g_Config.m_QmUiCornerSmoothing / 100.0f, 0.0f, 1.0f);
+				Draw.m_CornerSmoothing = QmEffectiveCornerSmoothing();
 				Draw.m_CornerCurve = (float)g_Config.m_QmUiCornerCurve;
-				Draw.m_CornerSeam = std::clamp(g_Config.m_QmUiCapsuleSeam / 100.0f, 0.0f, 1.0f);
+				// 胶囊端头档位与面板同源：0 = 正圆弧，1 = 丝滑（固定 0.5 强度）。
+				Draw.m_CornerSeam = g_Config.m_QmUiCapsuleStyle == 2 ? 1.0f + std::clamp(g_Config.m_QmUiCapsuleAppleStrength / 100.0f, 0.0f, 1.0f) : (g_Config.m_QmUiCapsuleStyle == 1 ? 0.5f : 0.0f);
 				Draw.m_X = Area.x;
 				Draw.m_Y = Area.y;
 				Draw.m_W = m_Width * PixelSize.x;

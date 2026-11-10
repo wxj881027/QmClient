@@ -999,9 +999,16 @@ MACRO_CONFIG_INT(QmSelfKillAutoDelay, qm_self_kill_auto_delay, 0, 0, 60, CFGFLAG
 // 超椭圆与五次贝塞尔的端点曲率为 0，是真正的连续曲率；圆锥贝塞尔的端点曲率恒为
 // 1/(2W²E)，只能把接缝跳变压小。连续曲率靠沿边拉长圆角补偿曲率峰值，拉长量受
 // 短边 25% 上限约束，扩不动时（胶囊、短边很近的小控件）曲线自动退回圆弧。
-MACRO_CONFIG_INT(QmUiCornerCurve, qm_ui_corner_curve, 2, 0, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier")
+MACRO_CONFIG_INT(QmUiCornerCurve, qm_ui_corner_curve, 2, 0, 4, CFGFLAG_CLIENT | CFGFLAG_SAVE, "UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier, 4 = Apple continuous (Bezier + arc + Bezier)")
+// 圆角强度按曲线档位分开存：每档各自记住自己的值，切档时互不覆盖。
+// 苹果三段式的基准是 60%（iOS 标准），其余三档是 40%。原圆弧档没有强度，不需要存档。
+MACRO_CONFIG_INT(QmUiCornerSmoothingApple, qm_ui_corner_smoothing_apple, 60, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Curvature strength for the Apple corner curve (0 = arc, 100 = strongest)")
+MACRO_CONFIG_INT(QmUiCornerSmoothingSquircle, qm_ui_corner_smoothing_squircle, 40, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Curvature strength for the superellipse corner curve")
+MACRO_CONFIG_INT(QmUiCornerSmoothingConic, qm_ui_corner_smoothing_conic, 40, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Curvature strength for the conic corner curve")
 MACRO_CONFIG_INT(QmUiCornerSmoothing, qm_ui_corner_smoothing, 40, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Continuous-curvature UI corners (0 = classic arc, 100 = strongest)")
-// 胶囊接缝软化：胶囊的半径已经贴到短边一半、没有生长空间，但半圆端头与直边交界处
-// 的曲率跳变仍可以单独软化。过渡带只有几个像素，形状几乎不变，只是肩部不再突然
-// 从直边拐进半圆。0 = 与 iOS 一致（纯半圆端头，接缝保持硬），这是默认值。
-MACRO_CONFIG_INT(QmUiCapsuleSeam, qm_ui_capsule_seam, 0, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Capsule seam smoothing: ease the straight-to-cap curvature jump (0 = plain semicircular ends)")
+// 胶囊端头三档：0 = 普通胶囊（正圆弧端头）；1 = 丝滑（只把直边靠端帽的一段往外鼓 3%，
+// 端帽本身仍是精确正圆）；2 = 苹果（端帽换成三段式连续曲线，端部略方润）。
+MACRO_CONFIG_INT(QmUiCapsuleStyle, qm_ui_capsule_style, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous")
+// 苹果胶囊端部的强度单独控制，不和上方「圆角曲率」共用：胶囊的端头是半圆，
+// 和卡片的圆角不是同一类形状，共用一个滑杆两边都调不准。
+MACRO_CONFIG_INT(QmUiCapsuleAppleStrength, qm_ui_capsule_apple_strength, 60, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)")

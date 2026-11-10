@@ -6,6 +6,7 @@
 
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiSurface.h>
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/QmUi/UiSurfaceText.h>
 #include <game/client/components/binds.h>
 #include <game/client/gameclient.h>
@@ -43,14 +44,33 @@ CKeyBinder::CKeyReaderResult CKeyBinder::DoKeyReader(CButtonContainer *pReaderBu
 
 	CUIRect KeyReaderButton, ClearButton;
 	pRect->VSplitRight(pRect->h, &KeyReaderButton, &ClearButton);
+	// 分段控件：左边键名块、右边垃圾桶块，两块各自一块底（分块要保留），
+	// 但必须共用同一个胶囊半径、只取各自那一侧的圆角，拼起来才是同一条外轮廓。
+	// 之前裂开就是因为两块半径不一致：左边按胶囊画、右边按小圆角画。
+	const float SharedRadius = pRect->h * 0.5f;
 	ui_widget::SButtonSurfaceOptions ReaderOptions;
 	ReaderOptions.m_Selected = m_pKeyReaderId == pReaderButton;
 	ReaderOptions.m_Corners = IGraphics::CORNER_L;
+	ReaderOptions.m_Radius = SharedRadius;
 	const ColorRGBA ReaderBaseColor = ui_widget::DrawButtonSurface(ui_widget::ControlContext(Ui()), pReaderButton, KeyReaderButton, ReaderOptions);
 	CUiScopedSurfaceText SurfaceText(TextRender(), ReaderBaseColor);
-	const int ClearButtonResult = Ui()->DoButton_QmIcon(
-		pClearButton, EQmIcon::TRASH, FONT_ICON_TRASH,
-		0, &ClearButton, BUTTONFLAG_LEFT, IGraphics::CORNER_R);
+
+	ui_widget::SButtonSurfaceOptions ClearOptions;
+	ClearOptions.m_Corners = IGraphics::CORNER_R;
+	ClearOptions.m_Radius = SharedRadius;
+	const bool ClearHovered = Ui()->MouseInside(&ClearButton);
+	ui_widget::DrawButtonSurface(ui_widget::ControlContext(Ui()), pClearButton, ClearButton, ClearOptions);
+	const int ClearButtonResult = Ui()->DoButtonLogic(pClearButton, 0, &ClearButton, BUTTONFLAG_LEFT);
+	{
+		// 垃圾桶字形 = 键名文字字号（与同一行的按键名同 em）：以前按盒子 0.48h 反推，
+		// 字形只有文字的 53%，看起来像贴错的小图标。
+		const float GlyphSize = FontSize > 0.0f ? FontSize : pRect->h * ui_token::control::ICON_INK_RATIO * ui_token::control::ICON_INK_RATIO;
+		const float IconBox = std::clamp(ui_token::control::IconBox(GlyphSize), 0.0f, ClearButton.h);
+		CUIRect IconRect = ClearButton;
+		const float Inset = (ClearButton.h - IconBox) * 0.5f;
+		IconRect.Margin(Inset, &IconRect);
+		Ui()->DrawQmIcon(IconRect, EQmIcon::TRASH, FONT_ICON_TRASH, ColorRGBA(1.0f, 1.0f, 1.0f, ClearHovered ? 1.0f : 0.72f));
+	}
 
 	const int ButtonResult = Ui()->DoButtonLogic(pReaderButton, 0, &KeyReaderButton, BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT);
 	if(!ReadOnly && (ButtonResult == 1 || Activate))

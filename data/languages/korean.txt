@@ -1028,6 +1028,12 @@ Append saved word list chunk
 Append to log file instead of overwriting
 == 덮어쓰기 대신 로그 파일에 추가
 
+Apple
+== Apple
+
+Apple capsule
+== Apple 캡슐
+
 Applied to %d same-family part(s).
 == 동일 계열 부품 %d개에 적용되었습니다.
 
@@ -2093,11 +2099,14 @@ Cannot update public words. Previous words remain active.
 Cannot write the wiki file
 == Wiki 파일을 쓸 수 없습니다
 
-Capsule seam
-== 캡슐 이음새
+Capsule end strength
+== 캡슐 끝 강도
 
-Capsule seam smoothing: ease the straight-to-cap curvature jump (0 = plain semicircular ends)
-== 캡슐 이음새 부드럽게: 직선과 끝의 곡률 점프를 완화합니다(0 = 순수 반원 끝)
+Capsule ends
+== 캡슐 끝
+
+Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
+== Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
 
 Capture the flag
 == 깃발 뺏기 (CTF)
@@ -2734,6 +2743,9 @@ Colors of the hook collision line, in case of a possible collision with:
 
 Colors of the translate button in the chat input and of the language menu that button opens.
 == 채팅 입력창의 번역 버튼과 그 버튼으로 여는 언어 메뉴의 색상입니다.
+
+Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
+== Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
 
 Colors too close to the map background are hard to read while moving.
 == 맵 배경과 너무 비슷한 색은 움직이는 동안 보기 어렵습니다.
@@ -3443,6 +3455,15 @@ Current: Score
 Current: Time
 == 현재: 시간
 
+Curvature strength for the Apple corner curve (0 = arc, 100 = strongest)
+== Apple 연속 모서리의 곡률 강도(0 = 원호, 100 = 최대)
+
+Curvature strength for the conic corner curve
+== 원뿔 베지어 모서리의 곡률 강도
+
+Curvature strength for the superellipse corner curve
+== 초타원 모서리의 곡률 강도
+
 Custom
 == 사용자 정의
 
@@ -3740,6 +3761,9 @@ Decides which skins the client downloads and lists, and can add a prefix to load
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == 전용 WebSocket 주소 (비우면 wss://qmclient.icu/ws 사용)
 
+Deep freeze
+== Deep freeze
+
 Deep freeze color
 == 깊은 얼음 색상
 
@@ -3749,6 +3773,12 @@ Deep freeze opacity
 Deep freeze tile outline color
 == 깊은 프리즈 타일 외곽선 색상
 
+Deep freeze tile outline width
+== Deep freeze tile outline width
+
+Deep unfreeze
+== Deep unfreeze
+
 Deep unfreeze color
 == 깊은 해동 색상
 
@@ -3757,6 +3787,9 @@ Deep unfreeze opacity
 
 Deep unfreeze tile outline color
 == 깊은 언프리즈 타일 외곽선 색상
+
+Deep unfreeze tile outline width
+== Deep unfreeze tile outline width
 
 Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 == 딥플라이 모드 (0=일반, 1=DF, 2=HDF, 3=사용자 정의)
@@ -5363,6 +5396,9 @@ Expanded dropdown background color
 Expanded dropdown background opacity percentage
 == 펼쳐진 목록 배경색 — 불투명도 백분율
 
+Expanded personalization sections (format: stableId=1;stableId2=0;)
+== Expanded personalization sections (format: stableId=1;stableId2=0;)
+
 Experimental
 == 실험적
 
@@ -5966,8 +6002,8 @@ Freeze stars
 Freeze tile outline color
 == 얼음 타일 외곽선 색상
 
-Freeze/Deep freeze tile outline width
-== 얼음/깊은 얼음 타일 외곽선 두께
+Freeze tile outline width
+== Freeze tile outline width
 
 Frequently asked questions
 == 자주 묻는 질문
@@ -6812,11 +6848,14 @@ Hook strength scope
 Hook through teleporters (deprecated, use special entities instead)
 == 텔레포터를 통한 갈고리 (비권장, 대신 특수 엔티티 사용)
 
-Hookable/Unhookable tile outline color
-== 갈고리 가능/불가능 타일 외곽선 색상
+Hookable tile outline color
+== Hookable tile outline color
 
-Hookable/unhookable tile outline width
-== 갈고리 가능/불가능 타일 외곽선 두께
+Hookable tile outline width
+== Hookable tile outline width
+
+Hookable tiles
+== Hookable tiles
 
 Hooking L/R: %.0f%%/%.0f%%
 == 갈고리 L/R: %.0f%%/%.0f%%
@@ -7516,6 +7555,9 @@ Keep the defaults unless you play with high ping; then try one option at a time 
 
 Keep the text light on a dark background; press "Reset tooltip appearance" to return to the defaults.
 == 어두운 배경에는 밝은 글자가 읽기 좋습니다. 기본 모양으로 되돌리려면 도움말 모양 초기화를 누르세요.
+
+Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
+== Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
 
 Keep unsent message on chat close
 == 채팅 닫을 때 전송되지 않은 내용 유지
@@ -8347,6 +8389,9 @@ Map play history
 
 Map preview rendering unavailable
 == 맵 미리보기를 렌더링할 수 없습니다
+
+Map preview shows the entity layer only (hides textures)
+== Map preview shows the entity layer only (hides textures)
 
 Map Preview TODO
 == 맵 미리보기 할 일
@@ -10250,6 +10295,9 @@ Pick a shape, then tune glow and animation speed.
 Pick a slot, type the command and its label, then hold the wheel key in game to test.
 == 슬롯을 고르고 명령과 라벨을 입력한 뒤, 게임에서 휠 키를 눌러 테스트하세요.
 
+Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
+== Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
+
 Pick result: %s
 == 추첨 결과: %s
 
@@ -10303,6 +10351,9 @@ Pistol guide line
 
 Pixel: Layer Shift
 == 픽셀풍: 레이어 이동
+
+Plain capsule
+== 일반 캡슐
 
 Plasma gun shots per second
 == 플라즈마 건 초당 발사 수
@@ -12476,6 +12527,9 @@ Scoreboard playtime
 Scoreboard point check
 == 점수판 포인트 확인
 
+Scoreboard row colors
+== Scoreboard row colors
+
 Scoreboard score lookup
 == 스코어보드 점수 확인
 
@@ -13280,6 +13334,12 @@ Show DDRace HUD
 Show death tile outlines
 == 죽음 타일 윤곽선 표시
 
+Show deep freeze tile outlines
+== Show deep freeze tile outlines
+
+Show deep unfreeze tile outlines
+== Show deep unfreeze tile outlines
+
 Show default flag in scoreboard
 == 점수판에 기본 국기 표시
 
@@ -13385,8 +13445,8 @@ Show freeze bar under frozen players indicating thaw time
 Show freeze bars
 == 해동 진행바 표시
 
-Show freeze/deep freeze tile outlines
-== 얼음/깊은 얼음 타일 윤곽선 표시
+Show freeze tile outlines
+== Show freeze tile outlines
 
 Show friend icon in name plates
 == 이름표에 친구 아이콘 표시
@@ -13460,8 +13520,8 @@ Show hook strength icon indicator
 Show hook strength number indicator
 == 갈고리 강도 숫자 표시
 
-Show hookable/unhookable tile outlines
-== 갈고리 가능/불가능 타일 윤곽선 표시
+Show hookable tile outlines
+== Show hookable tile outlines
 
 Show how weapons, shields, snowflakes, and flags appear in game
 == 무기, 방패, 눈송이, 깃발이 게임에서 어떻게 보이는지 표시
@@ -14036,8 +14096,11 @@ Show tune zone colors
 Show tuning parameters affecting own player (0=Off, 1=Show changed, 2=Show all)
 == 자신의 플레이어에 영향을 미치는 튜닝 파라미터 표시 (0 = 끄기, 1 = 변경된 것만 표시, 2 = 모두 표시)
 
-Show unfreeze/deep unfreeze tile outlines
-== 언프리즈/딥 언프리즈 타일 윤곽선 표시
+Show unfreeze tile outlines
+== Show unfreeze tile outlines
+
+Show unhookable tile outlines
+== Show unhookable tile outlines
 
 Show unknown server messages
 == 알 수 없는 서버 메시지 표시
@@ -14209,6 +14272,9 @@ Shutdown server when empty
 
 Silently disconnect from the current server while keeping Tee timeout protection
 == 티 타임아웃 보호를 유지하면서 현재 서버에서 조용히 연결 해제
+
+Silky capsule
+== 부드러운 캡슐
 
 Simple
 == 간단
@@ -14878,6 +14944,9 @@ Streamer word list file
 
 Strength icons assets
 == 강도 아이콘 에셋
+
+Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)
+== Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)
 
 Stress system (debug builds only).
 == 스트레스 시스템 (디버그 빌드 전용)
@@ -16427,8 +16496,8 @@ UI color
 UI controller sens.
 == UI 컨트롤러 감도
 
-UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier
-== UI 모서리 곡선: 0 = 클래식 원호, 1 = 초타원, 2 = 5차 베지어, 3 = 원뿔 베지어
+UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier, 4 = Apple continuous (Bezier + arc + Bezier)
+== UI 모서리 곡선: 0 = 원호, 1 = 초타원, 2 = 5차 베지어, 3 = 원뿔 베지어, 4 = Apple 연속 모서리(베지어 + 호 + 베지어)
 
 UI icon color
 == UI 아이콘 색상
@@ -16574,8 +16643,17 @@ Unfreeze opacity
 Unfreeze tile outline color
 == 언프리즈 타일 윤곽선 색상
 
-Unfreeze/Deep unfreeze tile outline width
-== 언프리즈/딥 언프리즈 타일 윤곽선 두께
+Unfreeze tile outline width
+== Unfreeze tile outline width
+
+Unhookable tile outline color
+== Unhookable tile outline color
+
+Unhookable tile outline width
+== Unhookable tile outline width
+
+Unhookable tiles
+== Unhookable tiles
 
 Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
 == 통합 내보내기 품질 (CRF/CQ/QP 척도 0-51, -1 = cl_video_crf 사용). 각 인코더의 고유 매개변수로 매핑됩니다

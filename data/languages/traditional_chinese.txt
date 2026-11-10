@@ -1028,6 +1028,12 @@ Append saved word list chunk
 Append to log file instead of overwriting
 == 追加到日誌文件而不是每次覆蓋
 
+Apple
+== 蘋果
+
+Apple capsule
+== 蘋果膠囊
+
 Applied to %d same-family part(s).
 == 已應用到 %d 個同族部件。
 
@@ -2093,11 +2099,14 @@ Cannot update public words. Previous words remain active.
 Cannot write the wiki file
 == 無法寫入 Wiki 檔案
 
-Capsule seam
-== 膠囊接縫
+Capsule end strength
+== 膠囊端部強度
 
-Capsule seam smoothing: ease the straight-to-cap curvature jump (0 = plain semicircular ends)
-== 膠囊接縫軟化：緩和直邊到端頭的曲率跳變（0 = 純半圓端頭）
+Capsule ends
+== 膠囊端頭
+
+Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
+== Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
 
 Capture the flag
 == 奪旗模式 (CTF)
@@ -2734,6 +2743,9 @@ Colors of the hook collision line, in case of a possible collision with:
 
 Colors of the translate button in the chat input and of the language menu that button opens.
 == 聊天輸入框裡翻譯按鈕的顏色，以及該按鈕開啟的語言選單的顏色。
+
+Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
+== Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
 
 Colors too close to the map background are hard to read while moving.
 == 顏色若太接近地圖背景，移動時會很難看清。
@@ -3443,6 +3455,15 @@ Current: Score
 Current: Time
 == 當前：時間
 
+Curvature strength for the Apple corner curve (0 = arc, 100 = strongest)
+== 蘋果連續圓角的曲率強度（0 = 圓弧，100 = 最強）
+
+Curvature strength for the conic corner curve
+== 圓錐貝塞爾圓角的曲率強度
+
+Curvature strength for the superellipse corner curve
+== 超橢圓圓角的曲率強度
+
 Custom
 == 自定義
 
@@ -3740,6 +3761,9 @@ Decides which skins the client downloads and lists, and can add a prefix to load
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == 專用 WebSocket 位址（留空使用 wss://qmclient.icu/ws）
 
+Deep freeze
+== Deep freeze
+
 Deep freeze color
 == 深度凍結顏色
 
@@ -3749,6 +3773,12 @@ Deep freeze opacity
 Deep freeze tile outline color
 == 深凍圖塊輪廓顏色
 
+Deep freeze tile outline width
+== Deep freeze tile outline width
+
+Deep unfreeze
+== Deep unfreeze
+
 Deep unfreeze color
 == 深度解凍顏色
 
@@ -3757,6 +3787,9 @@ Deep unfreeze opacity
 
 Deep unfreeze tile outline color
 == 深解凍圖塊輪廓顏色
+
+Deep unfreeze tile outline width
+== Deep unfreeze tile outline width
 
 Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 == Deepfly 模式（0=正常，1=DF，2=HDF，3=自定義）
@@ -5363,6 +5396,9 @@ Expanded dropdown background color
 Expanded dropdown background opacity percentage
 == 展開清單背景 — 不透明度百分比
 
+Expanded personalization sections (format: stableId=1;stableId2=0;)
+== Expanded personalization sections (format: stableId=1;stableId2=0;)
+
 Experimental
 == 實驗性
 
@@ -5966,8 +6002,8 @@ Freeze stars
 Freeze tile outline color
 == 凍結圖塊輪廓顏色
 
-Freeze/Deep freeze tile outline width
-== 凍結/深凍圖塊輪廓寬度
+Freeze tile outline width
+== Freeze tile outline width
 
 Frequently asked questions
 == 常見問題
@@ -6812,11 +6848,14 @@ Hook strength scope
 Hook through teleporters (deprecated, use special entities instead)
 == 鉤子穿過傳送器（已棄用，請使用特殊實體代替）
 
-Hookable/Unhookable tile outline color
-== 可鉤/不可鉤圖塊輪廓顏色
+Hookable tile outline color
+== Hookable tile outline color
 
-Hookable/unhookable tile outline width
-== 可鉤/不可鉤圖塊輪廓寬度
+Hookable tile outline width
+== Hookable tile outline width
+
+Hookable tiles
+== Hookable tiles
 
 Hooking L/R: %.0f%%/%.0f%%
 == 出鉤 L/R：%.0f%%/%.0f%%
@@ -7516,6 +7555,9 @@ Keep the defaults unless you play with high ping; then try one option at a time 
 
 Keep the text light on a dark background; press "Reset tooltip appearance" to return to the defaults.
 == 深色背景配淺色文字最好讀；想恢復建議樣式就點重設提示外觀。
+
+Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
+== Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
 
 Keep unsent message on chat close
 == 關閉聊天時保留未發送內容
@@ -8347,6 +8389,9 @@ Map play history
 
 Map preview rendering unavailable
 == 目前無法繪製地圖預覽
+
+Map preview shows the entity layer only (hides textures)
+== Map preview shows the entity layer only (hides textures)
 
 Map Preview TODO
 == 地圖預覽待做
@@ -10250,6 +10295,9 @@ Pick a shape, then tune glow and animation speed.
 Pick a slot, type the command and its label, then hold the wheel key in game to test.
 == 選一個槽位，輸入指令和對應標籤，再到遊戲裡按住輪盤鍵測試。
 
+Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
+== Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
+
 Pick result: %s
 == 抽取結果：%s
 
@@ -10303,6 +10351,9 @@ Pistol guide line
 
 Pixel: Layer Shift
 == 像素風：層移
+
+Plain capsule
+== 普通膠囊
 
 Plasma gun shots per second
 == 等離子槍每秒發射多少發子彈
@@ -12476,6 +12527,9 @@ Scoreboard playtime
 Scoreboard point check
 == 計分板積分檢查
 
+Scoreboard row colors
+== Scoreboard row colors
+
 Scoreboard score lookup
 == 計分板查分
 
@@ -13280,6 +13334,12 @@ Show DDRace HUD
 Show death tile outlines
 == 顯示死亡圖塊輪廓
 
+Show deep freeze tile outlines
+== Show deep freeze tile outlines
+
+Show deep unfreeze tile outlines
+== Show deep unfreeze tile outlines
+
 Show default flag in scoreboard
 == 在記分牌中顯示默認國旗
 
@@ -13385,8 +13445,8 @@ Show freeze bar under frozen players indicating thaw time
 Show freeze bars
 == 顯示解凍進度條
 
-Show freeze/deep freeze tile outlines
-== 顯示凍結/深凍圖塊輪廓
+Show freeze tile outlines
+== Show freeze tile outlines
 
 Show friend icon in name plates
 == 在暱稱中顯示好友圖標
@@ -13460,8 +13520,8 @@ Show hook strength icon indicator
 Show hook strength number indicator
 == 顯示鉤索強度數值
 
-Show hookable/unhookable tile outlines
-== 顯示可鉤/不可鉤圖塊輪廓
+Show hookable tile outlines
+== Show hookable tile outlines
 
 Show how weapons, shields, snowflakes, and flags appear in game
 == 顯示武器、護盾、雪花與旗幟在遊戲中的外觀
@@ -14036,8 +14096,11 @@ Show tune zone colors
 Show tuning parameters affecting own player (0=Off, 1=Show changed, 2=Show all)
 == 顯示影響自身玩家的調整參數信息（0 = 關閉，1 = 顯示已改變的，2 = 顯示全部）
 
-Show unfreeze/deep unfreeze tile outlines
-== 顯示解凍/深解凍圖塊輪廓
+Show unfreeze tile outlines
+== Show unfreeze tile outlines
+
+Show unhookable tile outlines
+== Show unhookable tile outlines
 
 Show unknown server messages
 == 顯示未知伺服器消息
@@ -14209,6 +14272,9 @@ Shutdown server when empty
 
 Silently disconnect from the current server while keeping Tee timeout protection
 == 靜默斷開當前伺服器連接，用於保留 Tee 超時保護
+
+Silky capsule
+== 絲滑膠囊
 
 Simple
 == 簡單
@@ -14878,6 +14944,9 @@ Streamer word list file
 
 Strength icons assets
 == 強弱圖標資源
+
+Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)
+== Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)
 
 Stress system (debug builds only).
 == 壓力系統（僅限調試版本）
@@ -16427,8 +16496,8 @@ UI color
 UI controller sens.
 == 搖桿靈敏度（界面）
 
-UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier
-== 介面圓角曲線：0 = 經典圓弧，1 = 超橢圓，2 = 五次貝塞爾，3 = 圓錐貝塞爾
+UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier, 4 = Apple continuous (Bezier + arc + Bezier)
+== 介面圓角曲線：0 = 經典圓弧，1 = 超橢圓，2 = 五次貝塞爾，3 = 圓錐貝塞爾，4 = 蘋果連續圓角（貝塞爾 + 圓弧 + 貝塞爾）
 
 UI icon color
 == 介面圖示顏色
@@ -16574,8 +16643,17 @@ Unfreeze opacity
 Unfreeze tile outline color
 == 解凍圖塊輪廓顏色
 
-Unfreeze/Deep unfreeze tile outline width
-== 解凍/深解凍圖塊輪廓寬度
+Unfreeze tile outline width
+== Unfreeze tile outline width
+
+Unhookable tile outline color
+== Unhookable tile outline color
+
+Unhookable tile outline width
+== Unhookable tile outline width
+
+Unhookable tiles
+== Unhookable tiles
 
 Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
 == 統一匯出品質（CRF/CQ/QP 標度 0-51，-1 = 使用 cl_video_crf）；映射到各編碼器的原生參數

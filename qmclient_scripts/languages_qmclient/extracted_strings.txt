@@ -350,6 +350,8 @@ Appearance
 Appearance of help bubbles
 Append saved word list chunk
 Append to log file instead of overwriting
+Apple
+Apple capsule
 Applied to %d same-family part(s).
 Applies an animated rainbow color to selected elements such as nameplates or the hook.
 Apply
@@ -723,8 +725,9 @@ Cannot swap: the other player is not in your team
 Cannot update public words. Previous words remain active.
 Cannot write cfg file
 Cannot write the wiki file
-Capsule seam
-Capsule seam smoothing: ease the straight-to-cap curvature jump (0 = plain semicircular ends)
+Capsule end strength
+Capsule ends
+Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
 Capture the flag
 Capture-the-flag event cue, used by CTF servers rather than ordinary DDNet racing.
 Card guide
@@ -939,6 +942,7 @@ Colors and opacity of the popup list that suggests chat commands and emoticons w
 Colors for chat command and emoji completion
 Colors of the hook collision line, in case of a possible collision with:
 Colors of the translate button in the chat input and of the language menu that button opens.
+Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
 Colors too close to the map background are hard to read while moving.
 Combo
 Comic dialogue
@@ -1182,6 +1186,9 @@ Current: Ranks
 Current: Score
 Current: Time
 Cursor
+Curvature strength for the Apple corner curve (0 = arc, 100 = strongest)
+Curvature strength for the conic corner curve
+Curvature strength for the superellipse corner curve
 Custom
 custom
 Custom API key
@@ -1283,12 +1290,16 @@ Debug tile layer clipping.
 Decides which skins the client downloads and lists, and can add a prefix to load prefixed skin variants.
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 Deep fly
+Deep freeze
 Deep freeze color
 Deep freeze opacity
 Deep freeze tile outline color
+Deep freeze tile outline width
+Deep unfreeze
 Deep unfreeze color
 Deep unfreeze opacity
 Deep unfreeze tile outline color
+Deep unfreeze tile outline width
 Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 DeepL API
 DeepL API Key (free keys end with :fx)
@@ -1843,6 +1854,7 @@ Expand
 Expand console
 Expanded dropdown background color
 Expanded dropdown background opacity percentage
+Expanded personalization sections (format: stableId=1;stableId2=0;)
 Experimental
 Experimental: repeats outgoing UDP game packets when round-trip probes go unanswered. Upload traffic may triple; download loss and late duplicate inputs can still cause problems. Disabled with KCP.
 Export
@@ -2058,7 +2070,7 @@ Freeze opacity
 Freeze projectile collision volume
 Freeze stars
 Freeze tile outline color
-Freeze/Deep freeze tile outline width
+Freeze tile outline width
 Frequently asked questions
 Friend
 Friend bar category expand state (1=expanded, 0=collapsed)
@@ -2349,8 +2361,9 @@ Hook loop
 Hook Strength
 Hook strength scope
 Hook through teleporters (deprecated, use special entities instead)
-Hookable/Unhookable tile outline color
-Hookable/unhookable tile outline width
+Hookable tile outline color
+Hookable tile outline width
+Hookable tiles
 Hooking L/R: %.0f%%/%.0f%%
 Horizontal position
 Hostname of DNSBL provider for IP verification
@@ -2591,6 +2604,7 @@ Keep it small and near an edge: the hint draws over the map and can cover the ti
 Keep messages short so they fit in one chat line.
 Keep the defaults unless you play with high ping; then try one option at a time and compare.
 Keep the text light on a dark background; press "Reset tooltip appearance" to return to the defaults.
+Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
 Keep unsent message on chat close
 Keep vote window open after voting
 Key
@@ -2886,6 +2900,7 @@ Map name or path:
 Map not downloaded yet — join the server to preview it
 Map play history
 Map preview rendering unavailable
+Map preview shows the entity layer only (hides textures)
 Map Preview TODO
 Map progress
 Map progress bar
@@ -3558,6 +3573,7 @@ Pick a pack to activate it; samples are reloaded when the selection changes.
 Pick a scope under "Show name plates", then set "Name plates size" and "Name plates offset"; clan and client ID lines have their own switches.
 Pick a shape, then tune glow and animation speed.
 Pick a slot, type the command and its label, then hold the wheel key in game to test.
+Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
 Pick result: %s
 Pick the key that starts this flow.
 Pick the mode first, then the monitor and resolution; the refresh rate follows the monitor's current mode.
@@ -3578,6 +3594,7 @@ Pistol
 Pistol guide line
 Pixel: Layer Shift
 Plain
+Plain capsule
 Plasma gun shots per second
 Platinum highlight
 Play a flip animation while reloading weapons
@@ -4317,6 +4334,7 @@ Scoreboard
 Scoreboard cursor
 Scoreboard playtime
 Scoreboard point check
+Scoreboard row colors
 Scoreboard score lookup
 Scoreboard sort mode (0=Score, 1=Points)
 Scoreboard surface
@@ -4593,6 +4611,8 @@ Show DDNet config variables
 Show DDNet map finishes in server browser
 Show DDRace HUD
 Show death tile outlines
+Show deep freeze tile outlines
+Show deep unfreeze tile outlines
 Show default flag in scoreboard
 Show default mod rules.
 Show direction key indicators above rank ghost members in view mode
@@ -4628,7 +4648,7 @@ Show flag on name plate
 Show FPS
 Show freeze bar under frozen players indicating thaw time
 Show freeze bars
-Show freeze/deep freeze tile outlines
+Show freeze tile outlines
 Show friend icon in name plates
 Show friend join in large text
 Show friend option
@@ -4654,7 +4674,7 @@ Show Hook Collision
 Show hook collision line and drop mouse sensitivity to 66 while held.
 Show hook strength icon indicator
 Show hook strength number indicator
-Show hookable/unhookable tile outlines
+Show hookable tile outlines
 Show how weapons, shields, snowflakes, and flags appear in game
 Show HUD
 Show important messages when rendering video
@@ -4846,7 +4866,8 @@ Show toast
 Show total playtime from DDStats instead of points in scoreboard
 Show tune zone colors
 Show tuning parameters affecting own player (0=Off, 1=Show changed, 2=Show all)
-Show unfreeze/deep unfreeze tile outlines
+Show unfreeze tile outlines
+Show unhookable tile outlines
 Show unknown server messages
 Show unpredictable shadow tee (0 = off, 1 = self, 2 = others only, 3 = all)
 Show unpredicted ghosts for other players
@@ -4904,6 +4925,7 @@ Shuffle skin queue
 Shut down
 Shutdown server when empty
 Silently disconnect from the current server while keeping Tee timeout protection
+Silky capsule
 Simple
 Simple noise reduction
 Simple noise reduction strength
@@ -5134,6 +5156,7 @@ Stop the current demo
 Streamer mode
 Streamer word list file
 Strength icons assets
+Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)
 Stress system (debug builds only).
 Strict game type filter
 Strict mode
@@ -5670,7 +5693,7 @@ UDP socket not open
 UI animations
 UI color
 UI controller sens.
-UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier
+UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier, 4 = Apple continuous (Bezier + arc + Bezier)
 UI icon color
 UI icon custom color
 UI icon style
@@ -5720,7 +5743,10 @@ Unflip:
 Unfreeze
 Unfreeze opacity
 Unfreeze tile outline color
-Unfreeze/Deep unfreeze tile outline width
+Unfreeze tile outline width
+Unhookable tile outline color
+Unhookable tile outline width
+Unhookable tiles
 Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
 Uninvite player from team
 Unix socket server for IP address recording (Unix only)

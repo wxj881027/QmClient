@@ -55,6 +55,8 @@ enum
 	ROUNDED_CORNER_CURVE_SUPERELLIPSE = 1,
 	ROUNDED_CORNER_CURVE_QUINTIC = 2,
 	ROUNDED_CORNER_CURVE_CONIC = 3,
+	// 4 = 苹果/Figma 三段式（贝塞尔 + 圆弧 + 贝塞尔），曲线会沿直边外扩。
+	ROUNDED_CORNER_CURVE_APPLE = 4,
 };
 
 struct SRoundedCornerShape
@@ -89,10 +91,16 @@ inline SRoundedCornerShape ResolveRoundedCornerShape(const float Radius, const f
 	const float MaxRadius = std::max(MinHalf * CapRatio, ClampedRadius);
 	Shape.m_Radius = std::clamp(ClampedRadius * (1.0f + 1.3f * Amount), ClampedRadius, MaxRadius);
 	Shape.m_Amount = std::clamp((Shape.m_Radius / ClampedRadius - 1.0f) / 1.3f, 0.0f, 1.0f);
-	// 胶囊没有生长空间，但半圆端头与直边的接缝可以单独软化：给一个远小于半径生长的
-	// 曲线强度，曲率在几个像素内从 0 缓升到 1/R，形状几乎不变，只是肩部不再突然拐弯。
+	// 苹果三段式自己负责沿边外扩（p = r*(1+0.881108*s)），半径不再按 1.3 倍生长，
+	// 强度直接取平滑度；否则会和曲线自身的扩边叠加，圆角被放大两次。
+	if(Curve == ROUNDED_CORNER_CURVE_APPLE)
+	{
+		Shape.m_Radius = ClampedRadius;
+		Shape.m_Amount = Amount;
+	}
+	// 胶囊的端帽必须永远是精确正圆：曲线强度恒为 0（丝滑胶囊只改直边，见着色器）。
 	if(Capsule)
-		Shape.m_Amount = std::max(Shape.m_Amount, std::min(Amount, std::clamp(SeamAmount, 0.0f, 1.0f)));
+		Shape.m_Amount = 0.0f;
 	return Shape;
 }
 
@@ -110,6 +118,47 @@ inline void RoundedCornerCurveDirection(const int Curve, const float Amount, con
 		const float Angle = T * (float)pi * 0.5f;
 		OutX = std::cos(Angle);
 		OutY = std::sin(Angle);
+		return;
+	}
+	if(Curve == ROUNDED_CORNER_CURVE_APPLE)
+	{
+		// 苹果三段式：直边 → 三次贝塞尔 → 圆弧 → 三次贝塞尔 → 直边。
+		// 曲线沿直边外扩 0.881*A，所以这里的坐标会超出 [0,1]：调用方按半径放大后
+		// 正好落在直边上。控制点与着色器 AppleCorner 完全一致（手柄 0.3 / 0.382 倍弦长）。
+		// 与着色器一致：平滑度封顶 0.85，再往上圆弧段会退化成一个尖角。
+		const float ClampedA = std::min(A, 0.85f);
+		const float Ext = 0.881108f * ClampedA;
+		const float Phi = 0.7853982f * ClampedA;
+		const float StartX = 1.0f;
+		const float StartY = -Ext;
+		const float ArcX = std::cos(Phi);
+		const float ArcY = std::sin(Phi);
+		const float Chord = std::sqrt((ArcX - StartX) * (ArcX - StartX) + (ArcY - StartY) * (ArcY - StartY));
+		const float Handle0X = StartX;
+		const float Handle0Y = StartY + Chord * 0.3f;
+		const float Handle1X = ArcX + std::sin(Phi) * (Chord * 0.382f);
+		const float Handle1Y = ArcY - std::cos(Phi) * (Chord * 0.382f);
+		if(T < 0.3f)
+		{
+			const float U = T / 0.3f;
+			const float V = 1.0f - U;
+			OutX = V * V * V * StartX + 3.0f * V * V * U * Handle0X + 3.0f * V * U * U * Handle1X + U * U * U * ArcX;
+			OutY = V * V * V * StartY + 3.0f * V * V * U * Handle0Y + 3.0f * V * U * U * Handle1Y + U * U * U * ArcY;
+			return;
+		}
+		if(T < 0.7f)
+		{
+			const float Angle = Phi + ((float)pi * 0.5f - 2.0f * Phi) * ((T - 0.3f) / 0.4f);
+			OutX = std::cos(Angle);
+			OutY = std::sin(Angle);
+			return;
+		}
+		const float U = (1.0f - T) / 0.3f;
+		const float V = 1.0f - U;
+		const float PointX = V * V * V * StartX + 3.0f * V * V * U * Handle0X + 3.0f * V * U * U * Handle1X + U * U * U * ArcX;
+		const float PointY = V * V * V * StartY + 3.0f * V * V * U * Handle0Y + 3.0f * V * U * U * Handle1Y + U * U * U * ArcY;
+		OutX = PointY;
+		OutY = PointX;
 		return;
 	}
 	if(Curve == ROUNDED_CORNER_CURVE_CONIC)

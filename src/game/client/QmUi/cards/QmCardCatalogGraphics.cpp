@@ -1172,13 +1172,15 @@ static CButtonContainer s_CardBorderColorResetId;
 	// 手感档位决定弹簧参数两行是否参与布局，属于"影响行集合"的状态，必须参与
 	// 高度测量缓存键；否则切到弹簧档后行已渲染、卡片高度却还是旧的，内容被裁。
 	GraphicsLayoutRevision = GraphicsLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(std::clamp(g_Config.m_QmUiScrollFeel, 0, 2));
-	// 同理：原圆弧档不显示「圆角强度」与「胶囊接缝」两行，切档会改变行集合。
+	// 同理：原圆弧档不显示「圆角强度」与「胶囊端头」两行，切档会改变行集合。
 	// 四档选择是自绘控件、不走配置绑定，没有别的失效路径，漏了这一项就会在
 	// 从原圆弧档切回来时按旧高度裁剪，或切到原圆弧档时留下两条空行。
-	GraphicsLayoutRevision = GraphicsLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(std::clamp(g_Config.m_QmUiCornerCurve, 0, 3));
-	// 曲率强度为 0 时「胶囊接缝」那一行也不显示（接缝上限是 min(强度, 接缝)），
-	// 同样属于行集合变化。这里只取「是否为零」，避免拖动滑杆时每帧换缓存键。
-	GraphicsLayoutRevision = GraphicsLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(g_Config.m_QmUiCornerSmoothing > 0 ? 1 : 0);
+	GraphicsLayoutRevision = GraphicsLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(std::clamp(g_Config.m_QmUiCornerCurve, 0, 4));
+	// 胶囊端头现在是固定两项、不随强度增减行，所以强度只影响重测次数，不影响行集合；
+	// 这里仍取「是否为零」，避免拖动滑杆时每帧换缓存键。
+	GraphicsLayoutRevision = GraphicsLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(*QmCornerSmoothingForCurve(g_Config.m_QmUiCornerCurve) > 0 ? 1 : 0);
+	// 苹果胶囊档会多出一行端部强度，切档必须让高度缓存失效。
+	GraphicsLayoutRevision = GraphicsLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(std::clamp(g_Config.m_QmUiCapsuleStyle, 0, 2));
 	if(pCards != nullptr)
 	{
 		BuildDefinitions(*pCards);

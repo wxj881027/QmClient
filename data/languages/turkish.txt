@@ -1028,6 +1028,12 @@ Append saved word list chunk
 Append to log file instead of overwriting
 == Günlük dosyasının üzerine yazmak yerine sonuna ekle
 
+Apple
+== Apple
+
+Apple capsule
+== Apple kapsül
+
 Applied to %d same-family part(s).
 == %d adet aynı aile parçasına uygulandı.
 
@@ -2093,11 +2099,14 @@ Cannot update public words. Previous words remain active.
 Cannot write the wiki file
 == Wiki dosyası yazılamıyor
 
-Capsule seam
-== Kapsül birleşimi
+Capsule end strength
+== Kapsül uç gücü
 
-Capsule seam smoothing: ease the straight-to-cap curvature jump (0 = plain semicircular ends)
-== Kapsül birleşimi yumuşatma: düz ile uç arasındaki eğrilik sıçramasını yumuşatır (0 = saf yarım daire uçlar)
+Capsule ends
+== Kapsül uçları
+
+Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
+== Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
 
 Capture the flag
 == Bayrak kapmaca (CTF)
@@ -2734,6 +2743,9 @@ Colors of the hook collision line, in case of a possible collision with:
 
 Colors of the translate button in the chat input and of the language menu that button opens.
 == Sohbet girişindeki çeviri düğmesinin ve bu düğmenin açtığı dil menüsünün renkleri.
+
+Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
+== Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
 
 Colors too close to the map background are hard to read while moving.
 == Harita arka planına çok yakın renkler hareket halindeyken zor okunur.
@@ -3443,6 +3455,15 @@ Current: Score
 Current: Time
 == Geçerli: Süre
 
+Curvature strength for the Apple corner curve (0 = arc, 100 = strongest)
+== Apple köşe eğrilik gücü (0 = yay, 100 = en güçlü)
+
+Curvature strength for the conic corner curve
+== Konik köşe eğrilik gücü
+
+Curvature strength for the superellipse corner curve
+== Süperelips köşe eğrilik gücü
+
 Custom
 == Özel
 
@@ -3740,6 +3761,9 @@ Decides which skins the client downloads and lists, and can add a prefix to load
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == Özel WebSocket adresi (boşsa wss://qmclient.icu/ws kullanılır)
 
+Deep freeze
+== Deep freeze
+
 Deep freeze color
 == Derin donma rengi
 
@@ -3749,6 +3773,12 @@ Deep freeze opacity
 Deep freeze tile outline color
 == Derin donma bloğu anahat rengi
 
+Deep freeze tile outline width
+== Deep freeze tile outline width
+
+Deep unfreeze
+== Deep unfreeze
+
 Deep unfreeze color
 == Derin çözülme rengi
 
@@ -3757,6 +3787,9 @@ Deep unfreeze opacity
 
 Deep unfreeze tile outline color
 == Derin çözülme bloğu anahat rengi
+
+Deep unfreeze tile outline width
+== Deep unfreeze tile outline width
 
 Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 == Deepfly modu (0=normal, 1=DF, 2=HDF, 3=özel)
@@ -5363,6 +5396,9 @@ Expanded dropdown background color
 Expanded dropdown background opacity percentage
 == Açılan liste arka plan rengi — opaklık yüzdesi
 
+Expanded personalization sections (format: stableId=1;stableId2=0;)
+== Expanded personalization sections (format: stableId=1;stableId2=0;)
+
 Experimental
 == deneysel
 
@@ -5966,8 +6002,8 @@ Freeze stars
 Freeze tile outline color
 == Donma döşemesi ana hattı rengi
 
-Freeze/Deep freeze tile outline width
-== Donma/derin donma döşemesi ana hattı genişliği
+Freeze tile outline width
+== Freeze tile outline width
 
 Frequently asked questions
 == Sık sorulan sorular
@@ -6812,11 +6848,14 @@ Hook strength scope
 Hook through teleporters (deprecated, use special entities instead)
 == Işınlayıcılardan kanca geçirme (kullanımdan kaldırıldı, bunun yerine özel varlıklar kullanın)
 
-Hookable/Unhookable tile outline color
-== Kancalanabilir/kancalanamaz döşeme ana hattı rengi
+Hookable tile outline color
+== Hookable tile outline color
 
-Hookable/unhookable tile outline width
-== Kancalanabilir/kancalanamaz döşeme ana hattı genişliği
+Hookable tile outline width
+== Hookable tile outline width
+
+Hookable tiles
+== Hookable tiles
 
 Hooking L/R: %.0f%%/%.0f%%
 == Kanca S/S: %.0f%%/%.0f%%
@@ -7516,6 +7555,9 @@ Keep the defaults unless you play with high ping; then try one option at a time 
 
 Keep the text light on a dark background; press "Reset tooltip appearance" to return to the defaults.
 == Koyu zeminde açık renk yazı daha okunaklıdır; yardım görünümünü sıfırla düğmesi önerilen görünümü geri getirir.
+
+Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
+== Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
 
 Keep unsent message on chat close
 == Sohbet kapatılırken gönderilmemiş içeriği sakla
@@ -8347,6 +8389,9 @@ Map play history
 
 Map preview rendering unavailable
 == Harita önizlemesi oluşturulamıyor
+
+Map preview shows the entity layer only (hides textures)
+== Map preview shows the entity layer only (hides textures)
 
 Map Preview TODO
 == Harita önizlemesi yapılacak
@@ -10250,6 +10295,9 @@ Pick a shape, then tune glow and animation speed.
 Pick a slot, type the command and its label, then hold the wheel key in game to test.
 == Bir dilim seç, komutu ve etiketini yaz, sonra oyunda çark tuşunu basılı tutarak dene.
 
+Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
+== Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
+
 Pick result: %s
 == Seçim sonucu: %s
 
@@ -10303,6 +10351,9 @@ Pistol guide line
 
 Pixel: Layer Shift
 == Piksel: katman kayması
+
+Plain capsule
+== Düz kapsül
 
 Plasma gun shots per second
 == Plazma tabancasının saniyedeki atış sayısı
@@ -12476,6 +12527,9 @@ Scoreboard playtime
 Scoreboard point check
 == Skor tablosu puan kontrolü
 
+Scoreboard row colors
+== Scoreboard row colors
+
 Scoreboard score lookup
 == Skor Tablosu Puan Sorgulama
 
@@ -13280,6 +13334,12 @@ Show DDRace HUD
 Show death tile outlines
 == Ölüm döşemesi ana hatlarını göster
 
+Show deep freeze tile outlines
+== Show deep freeze tile outlines
+
+Show deep unfreeze tile outlines
+== Show deep unfreeze tile outlines
+
 Show default flag in scoreboard
 == Skor tablosunda varsayılan bayrağı göster
 
@@ -13385,8 +13445,8 @@ Show freeze bar under frozen players indicating thaw time
 Show freeze bars
 == Çözülme çubuklarını göster
 
-Show freeze/deep freeze tile outlines
-== Donma/derin donma döşemesi ana hatlarını göster
+Show freeze tile outlines
+== Show freeze tile outlines
 
 Show friend icon in name plates
 == İsim plakalarında arkadaş simgesini göster
@@ -13460,8 +13520,8 @@ Show hook strength icon indicator
 Show hook strength number indicator
 == Kanca gücü sayı göstergesini göster
 
-Show hookable/unhookable tile outlines
-== Kancalanabilir/kancalanamaz döşeme ana hatlarını göster
+Show hookable tile outlines
+== Show hookable tile outlines
 
 Show how weapons, shields, snowflakes, and flags appear in game
 == Silahların, kalkanların, kar tanelerinin ve bayrakların oyunda nasıl göründüğünü göster
@@ -14036,8 +14096,11 @@ Show tune zone colors
 Show tuning parameters affecting own player (0=Off, 1=Show changed, 2=Show all)
 == Kendi oyuncunu etkileyen ayar parametrelerini göster (0=Kapalı, 1=Değişenleri göster, 2=Tümünü göster)
 
-Show unfreeze/deep unfreeze tile outlines
-== Çözülme/derin çözülme döşemesi anahatlarını göster
+Show unfreeze tile outlines
+== Show unfreeze tile outlines
+
+Show unhookable tile outlines
+== Show unhookable tile outlines
 
 Show unknown server messages
 == Bilinmeyen sunucu mesajlarını göster
@@ -14209,6 +14272,9 @@ Shutdown server when empty
 
 Silently disconnect from the current server while keeping Tee timeout protection
 == Tee zaman aşımı korumasını korurken geçerli sunucudan sessizce bağlantıyı kes
+
+Silky capsule
+== Yumuşak kapsül
 
 Simple
 == Basit
@@ -14878,6 +14944,9 @@ Streamer word list file
 
 Strength icons assets
 == Güç simgeleri varlıkları
+
+Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)
+== Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)
 
 Stress system (debug builds only).
 == Stres sistemi (yalnızca hata ayıklama yapıları).
@@ -16427,8 +16496,8 @@ UI color
 UI controller sens.
 == Arayüz kumanda hassasiyeti
 
-UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier
-== Arayüz köşe eğrisi: 0 = klasik yay, 1 = süperelips, 2 = beşinci derece Bézier, 3 = konik Bézier
+UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier, 4 = Apple continuous (Bezier + arc + Bezier)
+== Arayüz köşe eğrisi: 0 = yay, 1 = süperelips, 2 = beşinci derece Bézier, 3 = konik Bézier, 4 = Apple sürekli köşe (Bézier + yay + Bézier)
 
 UI icon color
 == Arayüz simgesi rengi
@@ -16574,8 +16643,17 @@ Unfreeze opacity
 Unfreeze tile outline color
 == Çözülme döşemesi anahat rengi
 
-Unfreeze/Deep unfreeze tile outline width
-== Çözülme/derin çözülme döşemesi anahat genişliği
+Unfreeze tile outline width
+== Unfreeze tile outline width
+
+Unhookable tile outline color
+== Unhookable tile outline color
+
+Unhookable tile outline width
+== Unhookable tile outline width
+
+Unhookable tiles
+== Unhookable tiles
 
 Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
 == Birleşik dışa aktarma kalitesi (CRF/CQ/QP ölçeği 0-51, -1 = cl_video_crf kullan); her kodlayıcının yerel parametresine eşlenir

@@ -8,6 +8,7 @@
 #include <base/color.h>
 
 #include <engine/client/rounded_rect_geometry.h>
+#include <engine/shared/config.h>
 #include <engine/graphics.h>
 
 #include <game/client/ui_rect.h>
@@ -18,6 +19,24 @@
 
 class CUi;
 struct SQmColorGradient;
+
+// 圆角强度按档位分开存：每档一个配置，切档时各自记住自己的值。
+// 同一元素的所有绘制分支必须取同一个值，否则填充、边框、照片会各自圆角不同。
+inline int *QmCornerSmoothingForCurve(const int Curve)
+{
+	switch(Curve)
+	{
+	case ROUNDED_CORNER_CURVE_SUPERELLIPSE: return &g_Config.m_QmUiCornerSmoothingSquircle;
+	case ROUNDED_CORNER_CURVE_CONIC: return &g_Config.m_QmUiCornerSmoothingConic;
+	case ROUNDED_CORNER_CURVE_APPLE: return &g_Config.m_QmUiCornerSmoothingApple;
+	default: return &g_Config.m_QmUiCornerSmoothing;
+	}
+}
+
+inline float QmEffectiveCornerSmoothing()
+{
+	return std::clamp((float)*QmCornerSmoothingForCurve(g_Config.m_QmUiCornerCurve) / 100.0f, 0.0f, 1.0f);
+}
 
 // 普通 UI 圆角必须走 DrawRoundedSurface / CUIRect::Draw 公共路径。
 // 旧直绘路径仅允许用于高频 HUD/聊天/名牌/观战/统计板渲染。

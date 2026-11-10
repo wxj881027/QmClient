@@ -1028,6 +1028,12 @@ Append saved word list chunk
 Append to log file instead of overwriting
 == Добавлять в файл журнала вместо перезаписи
 
+Apple
+== Apple
+
+Apple capsule
+== Капсула Apple
+
 Applied to %d same-family part(s).
 == Применено к %d частям того же семейства.
 
@@ -2093,11 +2099,14 @@ Cannot update public words. Previous words remain active.
 Cannot write the wiki file
 == Не удалось записать файл Wiki
 
-Capsule seam
-== Стык капсулы
+Capsule end strength
+== Сила торцов капсулы
 
-Capsule seam smoothing: ease the straight-to-cap curvature jump (0 = plain semicircular ends)
-== Сглаживание стыка капсулы: смягчает скачок кривизны между прямой и торцом (0 = чистый полукруг)
+Capsule ends
+== Торцы капсулы
+
+Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
+== Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
 
 Capture the flag
 == Захват флага (CTF)
@@ -2734,6 +2743,9 @@ Colors of the hook collision line, in case of a possible collision with:
 
 Colors of the translate button in the chat input and of the language menu that button opens.
 == Цвета кнопки перевода в поле чата и меню языков, которое она открывает.
+
+Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
+== Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
 
 Colors too close to the map background are hard to read while moving.
 == Цвета, близкие к фону карты, плохо видны в движении.
@@ -3443,6 +3455,15 @@ Current: Score
 Current: Time
 == Текущее: Время
 
+Curvature strength for the Apple corner curve (0 = arc, 100 = strongest)
+== Сила кривизны для скругления Apple (0 = дуга, 100 = максимум)
+
+Curvature strength for the conic corner curve
+== Сила кривизны для конической кривой Безье
+
+Curvature strength for the superellipse corner curve
+== Сила кривизны для суперэллипса
+
 Custom
 == Пользовательский
 
@@ -3740,6 +3761,9 @@ Decides which skins the client downloads and lists, and can add a prefix to load
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == Адрес выделенного WebSocket (пусто — используется wss://qmclient.icu/ws)
 
+Deep freeze
+== Deep freeze
+
 Deep freeze color
 == Цвет глубокой заморозки
 
@@ -3749,6 +3773,12 @@ Deep freeze opacity
 Deep freeze tile outline color
 == Цвет контура тайла глубокой заморозки
 
+Deep freeze tile outline width
+== Deep freeze tile outline width
+
+Deep unfreeze
+== Deep unfreeze
+
 Deep unfreeze color
 == Цвет глубокой разморозки
 
@@ -3757,6 +3787,9 @@ Deep unfreeze opacity
 
 Deep unfreeze tile outline color
 == Цвет контура тайла глубокой разморозки
+
+Deep unfreeze tile outline width
+== Deep unfreeze tile outline width
 
 Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 == Режим Deepfly (0=нормальный, 1=DF, 2=HDF, 3=пользовательский)
@@ -5363,6 +5396,9 @@ Expanded dropdown background color
 Expanded dropdown background opacity percentage
 == Цвет фона раскрытого списка — непрозрачность в процентах
 
+Expanded personalization sections (format: stableId=1;stableId2=0;)
+== Expanded personalization sections (format: stableId=1;stableId2=0;)
+
 Experimental
 == экспериментально
 
@@ -5966,8 +6002,8 @@ Freeze stars
 Freeze tile outline color
 == Цвет контура тайлов заморозки
 
-Freeze/Deep freeze tile outline width
-== Ширина контура тайлов заморозки/глубокой заморозки
+Freeze tile outline width
+== Freeze tile outline width
 
 Frequently asked questions
 == Частые вопросы
@@ -6812,11 +6848,14 @@ Hook strength scope
 Hook through teleporters (deprecated, use special entities instead)
 == Крюк сквозь телепортеры (устарело, используйте специальные сущности)
 
-Hookable/Unhookable tile outline color
-== Цвет контура цепляемых/нецепляемых тайлов
+Hookable tile outline color
+== Hookable tile outline color
 
-Hookable/unhookable tile outline width
-== Ширина контура цепляемых/нецепляемых тайлов
+Hookable tile outline width
+== Hookable tile outline width
+
+Hookable tiles
+== Hookable tiles
 
 Hooking L/R: %.0f%%/%.0f%%
 == Зацеп крюком В/П: %.0f%%/%.0f%%
@@ -7516,6 +7555,9 @@ Keep the defaults unless you play with high ping; then try one option at a time 
 
 Keep the text light on a dark background; press "Reset tooltip appearance" to return to the defaults.
 == На тёмном фоне лучше читается светлый текст; кнопка сброса вернёт рекомендуемый вид подсказки.
+
+Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
+== Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
 
 Keep unsent message on chat close
 == Сохранять неотправленное содержимое при закрытии чата
@@ -8347,6 +8389,9 @@ Map play history
 
 Map preview rendering unavailable
 == Предпросмотр карты недоступен
+
+Map preview shows the entity layer only (hides textures)
+== Map preview shows the entity layer only (hides textures)
 
 Map Preview TODO
 == Предпросмотр карты в работе
@@ -10250,6 +10295,9 @@ Pick a shape, then tune glow and animation speed.
 Pick a slot, type the command and its label, then hold the wheel key in game to test.
 == Выберите ячейку, введите команду и подпись, затем зажмите клавишу колеса в игре для проверки.
 
+Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
+== Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
+
 Pick result: %s
 == Результат выбора: %s
 
@@ -10303,6 +10351,9 @@ Pistol guide line
 
 Pixel: Layer Shift
 == Пиксели: сдвиг слоёв
+
+Plain capsule
+== Обычная капсула
 
 Plasma gun shots per second
 == Выстрелов плазменной пушки в секунду
@@ -12476,6 +12527,9 @@ Scoreboard playtime
 Scoreboard point check
 == Проверка очков на табло
 
+Scoreboard row colors
+== Scoreboard row colors
+
 Scoreboard score lookup
 == Просмотр очков в таблице лидеров
 
@@ -13280,6 +13334,12 @@ Show DDRace HUD
 Show death tile outlines
 == Показывать контуры тайлов смерти
 
+Show deep freeze tile outlines
+== Show deep freeze tile outlines
+
+Show deep unfreeze tile outlines
+== Show deep unfreeze tile outlines
+
 Show default flag in scoreboard
 == Показывать флаги по умолчанию в таблице результатов
 
@@ -13385,8 +13445,8 @@ Show freeze bar under frozen players indicating thaw time
 Show freeze bars
 == Показать полосы разморозки
 
-Show freeze/deep freeze tile outlines
-== Показывать контуры тайлов заморозки/глубокой заморозки
+Show freeze tile outlines
+== Show freeze tile outlines
 
 Show friend icon in name plates
 == Показывать иконку друга в табличках с именами
@@ -13460,8 +13520,8 @@ Show hook strength icon indicator
 Show hook strength number indicator
 == Показывать числовой индикатор силы крюка
 
-Show hookable/unhookable tile outlines
-== Показывать контуры цепляемых/нецепляемых тайлов
+Show hookable tile outlines
+== Show hookable tile outlines
 
 Show how weapons, shields, snowflakes, and flags appear in game
 == Показывать внешний вид оружия, щитов, снежинок и флагов в игре
@@ -14036,8 +14096,11 @@ Show tune zone colors
 Show tuning parameters affecting own player (0=Off, 1=Show changed, 2=Show all)
 == Показывать параметры настройки, влияющие на своего игрока (0 = Выкл, 1 = Показывать изменённые, 2 = Показывать все)
 
-Show unfreeze/deep unfreeze tile outlines
-== Показывать контуры тайлов разморозки/глубокой разморозки
+Show unfreeze tile outlines
+== Show unfreeze tile outlines
+
+Show unhookable tile outlines
+== Show unhookable tile outlines
 
 Show unknown server messages
 == Показывать неизвестные сообщения сервера
@@ -14209,6 +14272,9 @@ Shutdown server when empty
 
 Silently disconnect from the current server while keeping Tee timeout protection
 == Тихо отключиться от текущего сервера, сохранив защиту от тайм-аута ти
+
+Silky capsule
+== Плавная капсула
 
 Simple
 == Простой
@@ -14878,6 +14944,9 @@ Streamer word list file
 
 Strength icons assets
 == Ресурсы иконок силы
+
+Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)
+== Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)
 
 Stress system (debug builds only).
 == Система стресса (только для отладочных сборок).
@@ -16427,8 +16496,8 @@ UI color
 UI controller sens.
 == Чувствительность контроллера (интерфейс)
 
-UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier
-== Кривая углов интерфейса: 0 = классическая дуга, 1 = суперэллипс, 2 = кривая Безье 5-го порядка, 3 = коническая кривая Безье
+UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier, 4 = Apple continuous (Bezier + arc + Bezier)
+== Кривая скругления UI: 0 = дуга, 1 = суперэллипс, 2 = кривая Безье 5-го порядка, 3 = коническая Безье, 4 = непрерывное скругление Apple (Безье + дуга + Безье)
 
 UI icon color
 == Цвет значков интерфейса
@@ -16574,8 +16643,17 @@ Unfreeze opacity
 Unfreeze tile outline color
 == Цвет контура тайлов разморозки
 
-Unfreeze/Deep unfreeze tile outline width
-== Ширина контура тайлов разморозки/глубокой разморозки
+Unfreeze tile outline width
+== Unfreeze tile outline width
+
+Unhookable tile outline color
+== Unhookable tile outline color
+
+Unhookable tile outline width
+== Unhookable tile outline width
+
+Unhookable tiles
+== Unhookable tiles
 
 Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
 == Единое качество экспорта (шкала CRF/CQ/QP 0-51, -1 = использовать cl_video_crf); отображается на собственный параметр каждого кодировщика

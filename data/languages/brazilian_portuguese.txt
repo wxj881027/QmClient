@@ -1028,6 +1028,12 @@ Append saved word list chunk
 Append to log file instead of overwriting
 == Anexar ao arquivo de log em vez de sobrescrever
 
+Apple
+== Apple
+
+Apple capsule
+== Cápsula Apple
+
 Applied to %d same-family part(s).
 == Aplicado a %d parte(s) da mesma família.
 
@@ -2093,11 +2099,14 @@ Cannot update public words. Previous words remain active.
 Cannot write the wiki file
 == Não é possível gravar o arquivo do Wiki
 
-Capsule seam
-== Junta da cápsula
+Capsule end strength
+== Intensidade das extremidades da cápsula
 
-Capsule seam smoothing: ease the straight-to-cap curvature jump (0 = plain semicircular ends)
-== Suavização da junta da cápsula: suaviza o salto de curvatura entre a reta e a ponta (0 = pontas semicirculares)
+Capsule ends
+== Extremidades da cápsula
+
+Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
+== Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
 
 Capture the flag
 == Capture a bandeira (CTF)
@@ -2734,6 +2743,9 @@ Colors of the hook collision line, in case of a possible collision with:
 
 Colors of the translate button in the chat input and of the language menu that button opens.
 == Cores do botão de tradução na caixa de chat e do menu de idiomas que ele abre.
+
+Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
+== Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
 
 Colors too close to the map background are hard to read while moving.
 == Cores muito próximas do fundo do mapa são difíceis de ler em movimento.
@@ -3443,6 +3455,15 @@ Current: Score
 Current: Time
 == Atual: Tempo
 
+Curvature strength for the Apple corner curve (0 = arc, 100 = strongest)
+== Intensidade de curvatura do canto da Apple (0 = arco, 100 = máxima)
+
+Curvature strength for the conic corner curve
+== Intensidade de curvatura do canto cônico
+
+Curvature strength for the superellipse corner curve
+== Intensidade de curvatura do canto de superelipse
+
 Custom
 == Personalizado
 
@@ -3740,6 +3761,9 @@ Decides which skins the client downloads and lists, and can add a prefix to load
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == Endereço WebSocket dedicado (vazio usa wss://qmclient.icu/ws)
 
+Deep freeze
+== Deep freeze
+
 Deep freeze color
 == Cor de congelamento profundo
 
@@ -3749,6 +3773,12 @@ Deep freeze opacity
 Deep freeze tile outline color
 == Cor do contorno do tile de freeze profundo
 
+Deep freeze tile outline width
+== Deep freeze tile outline width
+
+Deep unfreeze
+== Deep unfreeze
+
 Deep unfreeze color
 == Cor de descongelamento profundo
 
@@ -3757,6 +3787,9 @@ Deep unfreeze opacity
 
 Deep unfreeze tile outline color
 == Cor do contorno do tile de descongelamento profundo
+
+Deep unfreeze tile outline width
+== Deep unfreeze tile outline width
 
 Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 == Modo Deepfly (0=normal, 1=DF, 2=HDF, 3=personalizado)
@@ -5363,6 +5396,9 @@ Expanded dropdown background color
 Expanded dropdown background opacity percentage
 == Cor de fundo da lista expandida — opacidade em porcentagem
 
+Expanded personalization sections (format: stableId=1;stableId2=0;)
+== Expanded personalization sections (format: stableId=1;stableId2=0;)
+
 Experimental
 == experimental
 
@@ -5966,8 +6002,8 @@ Freeze stars
 Freeze tile outline color
 == Cor do contorno do bloco de congelamento
 
-Freeze/Deep freeze tile outline width
-== Largura do contorno do bloco de congelamento/congelamento profundo
+Freeze tile outline width
+== Freeze tile outline width
 
 Frequently asked questions
 == Perguntas frequentes
@@ -6812,11 +6848,14 @@ Hook strength scope
 Hook through teleporters (deprecated, use special entities instead)
 == Gancho através de teleportes (obsoleto, use entidades especiais)
 
-Hookable/Unhookable tile outline color
-== Cor do contorno do bloco enganchável/não enganchável
+Hookable tile outline color
+== Hookable tile outline color
 
-Hookable/unhookable tile outline width
-== Largura do contorno do bloco enganchável/não enganchável
+Hookable tile outline width
+== Hookable tile outline width
+
+Hookable tiles
+== Hookable tiles
 
 Hooking L/R: %.0f%%/%.0f%%
 == Gancho E/D: %.0f%%/%.0f%%
@@ -7516,6 +7555,9 @@ Keep the defaults unless you play with high ping; then try one option at a time 
 
 Keep the text light on a dark background; press "Reset tooltip appearance" to return to the defaults.
 == Em fundo escuro o texto claro lê melhor; o botão de redefinir a aparência das dicas volta ao padrão.
+
+Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
+== Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
 
 Keep unsent message on chat close
 == Manter conteúdo não enviado ao fechar o chat
@@ -8347,6 +8389,9 @@ Map play history
 
 Map preview rendering unavailable
 == Não é possível renderizar a prévia do mapa
+
+Map preview shows the entity layer only (hides textures)
+== Map preview shows the entity layer only (hides textures)
 
 Map Preview TODO
 == Prévia do mapa pendente
@@ -10250,6 +10295,9 @@ Pick a shape, then tune glow and animation speed.
 Pick a slot, type the command and its label, then hold the wheel key in game to test.
 == Escolha um espaço, digite o comando e o rótulo e, no jogo, segure a tecla da roda para testar.
 
+Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
+== Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
+
 Pick result: %s
 == Resultado da escolha: %s
 
@@ -10303,6 +10351,9 @@ Pistol guide line
 
 Pixel: Layer Shift
 == Pixels: deslocamento de camadas
+
+Plain capsule
+== Cápsula simples
 
 Plasma gun shots per second
 == Tiros de plasma por segundo
@@ -12476,6 +12527,9 @@ Scoreboard playtime
 Scoreboard point check
 == Verificação de pontos no placar
 
+Scoreboard row colors
+== Scoreboard row colors
+
 Scoreboard score lookup
 == Verificar pontuação no placar
 
@@ -13280,6 +13334,12 @@ Show DDRace HUD
 Show death tile outlines
 == Mostrar contornos de tiles de morte
 
+Show deep freeze tile outlines
+== Show deep freeze tile outlines
+
+Show deep unfreeze tile outlines
+== Show deep unfreeze tile outlines
+
 Show default flag in scoreboard
 == Exibir bandeira padrão no placar
 
@@ -13385,8 +13445,8 @@ Show freeze bar under frozen players indicating thaw time
 Show freeze bars
 == Mostrar barras de freeze
 
-Show freeze/deep freeze tile outlines
-== Mostrar contornos de tiles de congelamento/congelamento profundo
+Show freeze tile outlines
+== Show freeze tile outlines
 
 Show friend icon in name plates
 == Mostrar ícone de amigo nas placas de nome
@@ -13460,8 +13520,8 @@ Show hook strength icon indicator
 Show hook strength number indicator
 == Mostrar indicador de número de força do gancho
 
-Show hookable/unhookable tile outlines
-== Mostrar contornos de tiles engatáveis/não engatáveis
+Show hookable tile outlines
+== Show hookable tile outlines
 
 Show how weapons, shields, snowflakes, and flags appear in game
 == Mostrar como armas, escudos, flocos de neve e bandeiras aparecem no jogo
@@ -14036,8 +14096,11 @@ Show tune zone colors
 Show tuning parameters affecting own player (0=Off, 1=Show changed, 2=Show all)
 == Mostrar parâmetros de ajuste que afetam o próprio jogador (0 = Desligado, 1 = Mostrar alterados, 2 = Mostrar todos)
 
-Show unfreeze/deep unfreeze tile outlines
-== Mostrar contornos de tiles de descongelamento/descongelamento profundo
+Show unfreeze tile outlines
+== Show unfreeze tile outlines
+
+Show unhookable tile outlines
+== Show unhookable tile outlines
 
 Show unknown server messages
 == Mostrar mensagens desconhecidas do servidor
@@ -14209,6 +14272,9 @@ Shutdown server when empty
 
 Silently disconnect from the current server while keeping Tee timeout protection
 == Desconectar silenciosamente do servidor atual mantendo a proteção de timeout do Tee
+
+Silky capsule
+== Cápsula suave
 
 Simple
 == Simples
@@ -14878,6 +14944,9 @@ Streamer word list file
 
 Strength icons assets
 == Recursos de ícones de força
+
+Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)
+== Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)
 
 Stress system (debug builds only).
 == Sistema de estresse (apenas builds de depuração).
@@ -16427,8 +16496,8 @@ UI color
 UI controller sens.
 == Sensibilidade do controle na interface
 
-UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier
-== Curva do canto da interface: 0 = arco clássico, 1 = superelipse, 2 = Bézier quíntica, 3 = Bézier cônica
+UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier, 4 = Apple continuous (Bezier + arc + Bezier)
+== Curva de canto da interface: 0 = arco, 1 = superelipse, 2 = Bézier quíntica, 3 = Bézier cônica, 4 = canto contínuo da Apple (Bézier + arco + Bézier)
 
 UI icon color
 == Cor dos ícones da interface
@@ -16574,8 +16643,17 @@ Unfreeze opacity
 Unfreeze tile outline color
 == Cor do contorno do tile de descongelamento
 
-Unfreeze/Deep unfreeze tile outline width
-== Largura do contorno do tile de descongelamento/descongelamento profundo
+Unfreeze tile outline width
+== Unfreeze tile outline width
+
+Unhookable tile outline color
+== Unhookable tile outline color
+
+Unhookable tile outline width
+== Unhookable tile outline width
+
+Unhookable tiles
+== Unhookable tiles
 
 Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
 == Qualidade de exportação unificada (escala CRF/CQ/QP 0-51, -1 = usar cl_video_crf); mapeada para o parâmetro nativo de cada codificador
