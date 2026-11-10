@@ -1417,13 +1417,13 @@ namespace
 	void PickerDrawHueStrip(const CUIRect &Area)
 	{
 		static constexpr float s_aaHueStops[7][3] = {
-			{1.0f, 0.0f, 0.0f}, // red
-			{1.0f, 0.0f, 1.0f}, // magenta
-			{0.0f, 0.0f, 1.0f}, // blue
-			{0.0f, 1.0f, 1.0f}, // cyan
-			{0.0f, 1.0f, 0.0f}, // green
-			{1.0f, 1.0f, 0.0f}, // yellow
-			{1.0f, 0.0f, 0.0f}, // red
+			{1.0f, 0.0f, 0.0f}, // 红
+			{1.0f, 1.0f, 0.0f}, // 黄
+			{0.0f, 1.0f, 0.0f}, // 绿
+			{0.0f, 1.0f, 1.0f}, // 青
+			{0.0f, 0.0f, 1.0f}, // 蓝
+			{1.0f, 0.0f, 1.0f}, // 品红
+			{1.0f, 0.0f, 0.0f}, // 红
 		};
 		const float StopWidth = Area.w / (std::size(s_aaHueStops) - 1);
 		CUIRect StopArea;
