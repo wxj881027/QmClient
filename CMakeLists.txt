@@ -3481,6 +3481,7 @@ if(CLIENT)
     components/freezebars.h
     components/ghost.cpp
     components/ghost.h
+    components/qmclient/ghost_start_detection.h
     components/hud.cpp
     components/hud.h
     components/hud_frozen_tee_state.h
@@ -4840,6 +4841,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_nameplate_layout_test.cpp
     src/test/unit/qmclient/client/qm_nameplate_text_effects_test.cpp
     src/test/unit/qmclient/client/qm_route_visited_test.cpp
+    src/test/unit/qmclient/client/qm_ghost_start_detection_test.cpp
     src/test/unit/qmclient/client/qm_route_render_cache_test.cpp
     src/test/integration/qmclient/client/qm_map_route_cache_test.cpp
     src/test/unit/qmclient/monitoring/qm_stutter_sample_series_test.cpp
