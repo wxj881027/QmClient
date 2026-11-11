@@ -346,15 +346,11 @@ namespace qm_module
 			{
 				const EQmModuleId Id = static_cast<EQmModuleId>(Index);
 				const char *pStableId = QmModuleStableId(Id);
-				const qm_card_registry::SCardDefault *pDefault = qm_card_registry::FindByStableId(pStableId);
-				if(pStableId == nullptr || pDefault == nullptr)
+				// 默认列/序来自注册表的瀑布分配；注册表里没有默认 placement 的条目按左列首行兜底。
+				const qm_card_order::SEntry *pPlacement = pStableId != nullptr ? qm_card_registry::FindDefaultPlacement(pStableId) : nullptr;
+				if(pStableId == nullptr || pPlacement == nullptr)
 					continue;
-				EQmModuleColumn Column = EQmModuleColumn::Left;
-				if(pDefault->m_DefaultColumn == qm_card_registry::ECardColumn::Full)
-					Column = EQmModuleColumn::Full;
-				else if(pDefault->m_DefaultColumn == qm_card_registry::ECardColumn::Right)
-					Column = EQmModuleColumn::Right;
-				vDefaults.push_back({Id, Column, pDefault->m_DefaultOrder, pStableId + 3});
+				vDefaults.push_back({Id, QmModuleColumnFromInt(pPlacement->m_Column), pPlacement->m_OrderInColumn, pStableId + 3});
 			}
 			return vDefaults;
 		}
@@ -395,8 +391,9 @@ namespace qm_module
 	bool MoveQmModuleInModel(qm_card_order::CModel &Model, EQmModuleId Id, EQmModuleColumn TargetColumn, int TargetOrder)
 	{
 		const char *pStableId = QmModuleStableId(Id);
-		const qm_card_registry::SCardDefault *pDefault = pStableId != nullptr ? qm_card_registry::FindByStableId(pStableId) : nullptr;
-		if(pDefault == nullptr || Model.FindByStableId(pStableId) < 0 || pDefault->m_DefaultColumn == qm_card_registry::ECardColumn::Full || TargetColumn == EQmModuleColumn::Full)
+		// 默认全宽卡（瀑布里的独占一行）不能被拖进左右列。
+		const qm_card_order::SEntry *pPlacement = pStableId != nullptr ? qm_card_registry::FindDefaultPlacement(pStableId) : nullptr;
+		if(pPlacement == nullptr || Model.FindByStableId(pStableId) < 0 || pPlacement->m_Column == 0 || TargetColumn == EQmModuleColumn::Full)
 			return false;
 		Model.Move(pStableId, QmModuleColumnToInt(TargetColumn), TargetOrder);
 		return true;
@@ -405,8 +402,8 @@ namespace qm_module
 	bool MoveQmModuleToTabInModel(qm_card_order::CModel &Model, EQmModuleId Id, const char *pTargetTab, EQmModuleColumn TargetColumn, int TargetOrder)
 	{
 		const char *pStableId = QmModuleStableId(Id);
-		const qm_card_registry::SCardDefault *pDefault = pStableId != nullptr ? qm_card_registry::FindByStableId(pStableId) : nullptr;
-		if(pDefault == nullptr || pTargetTab == nullptr || pTargetTab[0] == '\0' || Model.FindByStableId(pStableId) < 0 || pDefault->m_DefaultColumn == qm_card_registry::ECardColumn::Full || TargetColumn == EQmModuleColumn::Full)
+		const qm_card_order::SEntry *pPlacement = pStableId != nullptr ? qm_card_registry::FindDefaultPlacement(pStableId) : nullptr;
+		if(pPlacement == nullptr || pTargetTab == nullptr || pTargetTab[0] == '\0' || Model.FindByStableId(pStableId) < 0 || pPlacement->m_Column == 0 || TargetColumn == EQmModuleColumn::Full)
 			return false;
 		Model.MoveToTab(pStableId, pTargetTab, QmModuleColumnToInt(TargetColumn), TargetOrder);
 		return true;

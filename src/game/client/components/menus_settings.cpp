@@ -357,6 +357,8 @@ CUi::EPopupMenuFunctionResult CMenus::PopupSettingsCountrySelection(void *pConte
 	}
 
 	s_ListBox.DoStart(44.0f, s_vFiltered.size(), Columns, 1, SelectedIndex, &GridArea, false);
+	// 国码文字跟随设置页小字，不再写死 10（窄视口小字会缩到 9，写死就比别处大一号）。
+	const float CountryLabelSize = ResolveSettingsContentMetrics(GridArea.w).m_SmallSize;
 
 	for(size_t i = 0; i < s_vFiltered.size(); ++i)
 	{
@@ -398,7 +400,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupSettingsCountrySelection(void *pConte
 			const auto [MatchStart, MatchLen] = Filtered.m_Match.value();
 			Props.m_vColorSplits.emplace_back(MatchStart, MatchLen, ui_token::color::ACCENT_PRIMARY);
 		}
-		pUi->DoLabel(&Label, pEntry->m_aCountryCodeString, 10.0f, TEXTALIGN_MC, Props);
+		pUi->DoLabel(&Label, pEntry->m_aCountryCodeString, CountryLabelSize, TEXTALIGN_MC, Props);
 	}
 
 	const int NewSelected = s_ListBox.DoEnd();
@@ -968,7 +970,7 @@ void CMenus::RenderSettings(CUIRect MainView)
 			SETTINGS_SEARCH,
 			SETTINGS_CONTRIBUTORS,
 		};
-		// 竖排页签（设置页左栏）保持原来的分块选中/悬停底色，不做胶囊滑块。
+		// 竖排页签（设置页左栏）保持原来的分块选中/悬停底色，只换胶囊端头形状，不加滑块。
 		const ColorRGBA SettingsNavigationSelected = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(0.42f);
 		const ColorRGBA SettingsNavigationHover = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(0.20f);
 		std::array<CUIRect, SETTINGS_LENGTH> aSlots;
@@ -1000,7 +1002,9 @@ void CMenus::RenderSettings(CUIRect MainView)
 		for(int Index = 0; Index < Count; ++Index)
 		{
 			const int Page = aPages[Index];
-			DoButton_MenuTab(&m_aSettingsTabButtons[Page], m_SettingsTabLabels.Get(Page), g_Config.m_UiSettingsPage == Page, &aSlots[Index], IGraphics::CORNER_ALL, &m_aAnimatorsSettingsTab[Page], nullptr, &SettingsNavigationSelected, &SettingsNavigationHover, 10.0f, nullptr, &m_aSettingsTabLabelElements[Page]);
+			// 字号必须和预热缓存（menus.cpp 里用 TAB_FONT_SIZE 建缓存）同一个值：
+			// 不传就走行高反推 17.6，与 13 不一致，缓存容器每帧被判脏、13 根本不生效。
+			DoButton_MenuTab(&m_aSettingsTabButtons[Page], m_SettingsTabLabels.Get(Page), g_Config.m_UiSettingsPage == Page, &aSlots[Index], IGraphics::CORNER_ALL, &m_aAnimatorsSettingsTab[Page], nullptr, &SettingsNavigationSelected, &SettingsNavigationHover, ui_token::radius::PILL, nullptr, &m_aSettingsTabLabelElements[Page], ui_token::settings::TAB_FONT_SIZE);
 		}
 
 		if(SettingsPerfEnabled)
@@ -1651,7 +1655,9 @@ CUi::EPopupMenuFunctionResult CMenus::PopupSkinQueuePresetRename(void *pContext,
 	if(pPopupContext->m_PresetIndex < 0 || pPopupContext->m_PresetIndex >= (int)vPresets.size())
 		return CUi::POPUP_CLOSE_CURRENT;
 
-	const float FontSize = 10.0f;
+	// 弹层字号取设置页小字，输入框取正文，二者不再各自写死 10 / 11。
+	const SSettingsContentMetrics PopupMetrics = ResolveSettingsContentMetrics(View.w);
+	const float FontSize = PopupMetrics.m_SmallSize;
 	View.Margin(5.0f, &View);
 
 	CUIRect Label, Input, Buttons, Cancel, Confirm;
@@ -1663,7 +1669,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupSkinQueuePresetRename(void *pContext,
 	IUiContext SkinQueuePresetRenameTextInputCtx;
 	SkinQueuePresetRenameTextInputCtx.m_pUi = pMenus->Ui();
 	SkinQueuePresetRenameTextInputCtx.m_ScopeHash = MakeUiScopeHash("settings_skin_queue_preset_rename_text_input");
-	ui_widget::InputField(SkinQueuePresetRenameTextInputCtx, &pPopupContext->m_NameInput, Input, nullptr, FontSize + 1.0f);
+	ui_widget::InputField(SkinQueuePresetRenameTextInputCtx, &pPopupContext->m_NameInput, Input, nullptr, PopupMetrics.m_BodySize);
 
 	View.HSplitTop(4.0f, nullptr, &View);
 	View.HSplitTop(18.0f, &Buttons, &View);
@@ -1693,6 +1699,9 @@ CUi::EPopupMenuFunctionResult CMenus::PopupMapPicker(void *pContext, CUIRect Vie
 	s_ListBox.SetWheelOwnerPriority(EUiWheelOwnerPriority::POPUP);
 	s_ListBox.SetScrollProfile(EQmScrollProfile::POPUP_LIST);
 	s_ListBox.DoStart(20.0f, pPopupContext->m_vMaps.size(), 1, 3, -1, &View, false);
+	// 行内图标与文件名同一字号：图标盒传 IconBox(字号)，绘制出来字形才等于文字。
+	const float MapRowTextSize = ResolveSettingsContentMetrics(View.w).m_SmallSize;
+	const float MapRowIconBox = ui_token::control::IconBox(MapRowTextSize);
 
 	int MapIndex = 0;
 	for(auto &Map : pPopupContext->m_vMaps)
@@ -1734,9 +1743,9 @@ CUi::EPopupMenuFunctionResult CMenus::PopupMapPicker(void *pContext, CUIRect Vie
 			}
 		}
 
-		pMenus->Ui()->DoLabel_QmIcon(&Icon, IconType, pIconType, 12.0f, TEXTALIGN_ML);
+		pMenus->Ui()->DoLabel_QmIcon(&Icon, IconType, pIconType, MapRowIconBox, TEXTALIGN_ML);
 
-		pMenus->Ui()->DoLabel(&Label, aLabelText, 10.0f, TEXTALIGN_ML);
+		pMenus->Ui()->DoLabel(&Label, aLabelText, MapRowTextSize, TEXTALIGN_ML);
 	}
 
 	const int NewSelected = s_ListBox.DoEnd();

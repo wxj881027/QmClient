@@ -113,6 +113,12 @@ namespace
 			Localizable("Effects are heavy on crowded servers, so keep \"Automatic effect LOD when crowded\" enabled."),
 		},
 		{
+			"deck:appearance-scoreboard",
+			Localizable("Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list."),
+			Localizable("Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list."),
+			Localizable("Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read."),
+		},
+		{
 			"deck:controls-chat",
 			Localizable("Keys that open chat, team chat and chat commands, plus voice chat and repeating your last line."),
 			Localizable("Click the key field beside \"Chat\", \"Team chat\" or \"Chat command\" and press the key you want to use."),

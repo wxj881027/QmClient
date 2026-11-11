@@ -137,10 +137,10 @@ bool qm_card_catalog::QmCardRenderHook::BuildConfigFilesCard(const SQmCardBuildC
 			CUIRect Rect;
 			if(Flow.Control(pId, Rows * RowHeight + (Rows - 1.0f) * Metrics.m_LineSpacing, Rect))
 				Action(Rect);
-			Flow.Space(Metrics.m_LineSpacing);
+			Flow.Space(ui_token::settings::RowGap(Metrics.m_LineSpacing));
 		};
 		const auto Text = [&](const char *pId, const char *pValue, float Rows = 1) {
-			Flow.Text(pId, pValue, 0.0f, Metrics.m_BodySize, Metrics.m_LineSpacing, [pMenus](const char *pText, float Width, float FontSize) { return pMenus->TextRender()->TextBoundingBox(FontSize, pText, -1, Width).m_H + FontSize * 0.25f; }, [pMenus, Metrics](const CUIRect &Rect, const char *pText) { pMenus->Ui()->DoLabel(&Rect, pText, Metrics.m_BodySize, TEXTALIGN_ML, {.m_MaxWidth = Rect.w, .m_EnableWidthCheck = false}); }, Rows * RowHeight + (Rows - 1) * Metrics.m_LineSpacing);
+			Flow.Text(pId, pValue, 0.0f, Metrics.m_BodySize, ui_token::settings::RowGap(Metrics.m_LineSpacing), [pMenus](const char *pText, float Width, float FontSize) { return pMenus->TextRender()->TextBoundingBox(FontSize, pText, -1, Width).m_H + FontSize * 0.25f; }, [pMenus, Metrics](const CUIRect &Rect, const char *pText) { pMenus->Ui()->DoLabel(&Rect, pText, Metrics.m_BodySize, TEXTALIGN_ML, {.m_MaxWidth = Rect.w, .m_EnableWidthCheck = false}); }, Rows * RowHeight + (Rows - 1) * Metrics.m_LineSpacing);
 		};
 		const auto Button = [pMenus, Metrics, Interactive, &State](int Index, const char *pId, const char *pLabel, const CUIRect &Rect, bool Checked = false) {
 			const bool Clicked = pMenus->DoSettingsButton_Menu(CMenus::SETTINGS_GENERAL, -1, -1, &State.m_aButtons[Index], pId, pLabel, Checked, &Rect, Metrics);

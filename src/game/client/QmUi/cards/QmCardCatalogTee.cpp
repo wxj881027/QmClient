@@ -829,7 +829,8 @@ void CMenus::RenderSettingsTeeEditor(CUIRect Content, const SSettingsContentMetr
 			}
 			else
 			{
-				Ui()->DoLabel_QmIcon(&Status, EQmIcon::TRIANGLE_EXCLAMATION, FONT_ICON_TRIANGLE_EXCLAMATION, BodySize, TEXTALIGN_MC);
+				// 图标盒子按同行文字字号反推（字形 = 盒子 × 0.8），直接传字号会让字形小一圈。
+				Ui()->DoLabel_QmIcon(&Status, EQmIcon::TRIANGLE_EXCLAMATION, FONT_ICON_TRIANGLE_EXCLAMATION, ui_token::control::IconBox(BodySize), TEXTALIGN_MC);
 				const char *pStatus = pContainer == nullptr ? Localize("This skin name cannot be used.") : Indicator == CSkins::CSkinContainer::EStatusIndicator::NOT_FOUND ? Localize("Skin could not be found.") :
 																							      Localize("Skin could not be loaded due to an error. Check the local console for details.");
 				GameClient()->m_Tooltips.DoToolTip(&s_aStatusIds[PreviewTarget], &Status, pStatus);
@@ -1061,7 +1062,8 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 			TextRender()->TextColor(ColorRGBA(1.0f, 0.0f, 0.0f, 1.0f));
 			TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 			TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-			Ui()->DoLabel_QmIcon(&StatusIcon, Indicator == CSkins::CSkinContainer::EStatusIndicator::NOT_FOUND ? EQmIcon::QUESTION : EQmIcon::TRIANGLE_EXCLAMATION, Indicator == CSkins::CSkinContainer::EStatusIndicator::NOT_FOUND ? FONT_ICON_QUESTION : FONT_ICON_TRIANGLE_EXCLAMATION, 12.0f, TEXTALIGN_MC);
+			// 状态图标字形与同行文字同号：盒子由字号反推，不再写死 12px 盒子。
+			Ui()->DoLabel_QmIcon(&StatusIcon, Indicator == CSkins::CSkinContainer::EStatusIndicator::NOT_FOUND ? EQmIcon::QUESTION : EQmIcon::TRIANGLE_EXCLAMATION, Indicator == CSkins::CSkinContainer::EStatusIndicator::NOT_FOUND ? FONT_ICON_QUESTION : FONT_ICON_TRIANGLE_EXCLAMATION, ui_token::control::IconBox(BodySize), TEXTALIGN_MC);
 			TextRender()->SetRenderFlags(0);
 			TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 			TextRender()->TextColor(TextRender()->DefaultTextColor());
@@ -1278,7 +1280,8 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 			TextRender()->TextColor(Color);
 			SLabelProperties Props;
 			Props.m_MaxWidth = pRect->w;
-			ui_widget::DrawIconSwapBinding(QueueIconCtx, QmIconLabelRect(*pRect, 12.0f, TEXTALIGN_MC), Color, &QueueBinding);
+			// 排队按钮的图标与行文字同号：图标盒按行文字字号反推。
+			ui_widget::DrawIconSwapBinding(QueueIconCtx, QmIconLabelRect(*pRect, ui_token::control::IconBox(BodySize), TEXTALIGN_MC), Color, &QueueBinding);
 			TextRender()->TextColor(TextRender()->DefaultTextColor());
 			TextRender()->SetRenderFlags(0);
 			TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
@@ -1453,7 +1456,7 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 				MetadataProps.m_DisallowNewline = true;
 				MetadataProps.m_StopAtEnd = true;
 				TextRender()->TextColor(ColorRGBA(0.8f, 0.8f, 0.8f, 0.8f));
-				Ui()->DoLabel(&MetadataLine, aSkinMetadata, maximum(8.0f, BodySize - 3.0f), TEXTALIGN_ML, MetadataProps);
+				Ui()->DoLabel(&MetadataLine, aSkinMetadata, TeeMetrics.m_SmallSize, TEXTALIGN_ML, MetadataProps);
 				TextRender()->TextColor(TextRender()->DefaultTextColor());
 			}
 			else
@@ -2420,12 +2423,14 @@ void CMenus::RenderSettingsTeeSkinQueue(CUIRect Content, const SSettingsContentM
 		}
 		s_QueueListBox.SetWheelOwnerPriority(EUiWheelOwnerPriority::COMPOSITE_CONTROL);
 		s_QueueListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);
-		s_QueueListBox.SetScrollbarAlwaysReserved(true);
-		s_QueueListBox.SetItemColors(ui_token::color::LIST_ITEM_SELECTED, ui_token::color::LIST_ITEM_SELECTED, ui_token::color::LIST_ITEM_HOVER);
+		// 统一行外观：胶囊整行 + token 行距 + 按字号派生的行内内边距；皮肤队列最多
+		// 显示 6 行，滚动条改成覆盖式细轨（不再预留宽度，行宽不随队列长度横跳）。
+		s_QueueListBox.SetCapsuleRows(BodySize);
+		s_QueueListBox.SetVisibleRowRange(1, ui_token::list::SKIN_QUEUE_MAX_VISIBLE_ROWS);
 		s_QueueListBox.DoStart(TeeMetrics.m_ListRowHeight, (int)SkinQueue.size(), 1, 1, -1, &QueueListBody, true, IGraphics::CORNER_ALL);
 		for(size_t i = 0; i < SkinQueue.size(); ++i)
 		{
-			const CListboxItem Item = s_QueueListBox.DoNextItem(&s_QueueItemIds[i], (int)i == QueueIndex, 3.0f);
+			const CListboxItem Item = s_QueueListBox.DoNextItem(&s_QueueItemIds[i], (int)i == QueueIndex);
 			if(!Item.m_Visible)
 			{
 				continue;
@@ -2441,7 +2446,8 @@ void CMenus::RenderSettingsTeeSkinQueue(CUIRect Content, const SSettingsContentM
 
 			if(s_QueueDragging && DragTarget == (int)i && (int)i != s_QueueDragIndex)
 			{
-				DrawRoundedSurface(Ui(), Item.m_Rect, ColorRGBA(0.4f, 0.4f, 1.0f, 0.2f), ColorRGBA(), 3.0f);
+				// 拖放落点高亮与行本身同一形状：胶囊行不能再用矩形小圆角。
+				DrawRoundedSurface(Ui(), Item.m_Rect, ColorRGBA(0.4f, 0.4f, 1.0f, 0.2f), ColorRGBA(), ui_token::list::RowRadius(TeeMetrics.m_ListRowHeight));
 			}
 			if(s_QueueDragging && DragTarget == (int)i && (int)i != s_QueueDragIndex)
 			{
@@ -2453,7 +2459,8 @@ void CMenus::RenderSettingsTeeSkinQueue(CUIRect Content, const SSettingsContentM
 				HasQueueDropLine = true;
 			}
 
-			CUIRect DragRect = Item.m_Rect;
+			// 行内左右内边距已由 CListBox 的胶囊行按字号让出，这里只排图标和删除按钮。
+			CUIRect DragRect = Item.m_ContentRect;
 			CUIRect RemoveRect;
 			DragRect.VSplitRight(20.0f, &DragRect, &RemoveRect);
 			CUIRect DragArea = DragRect;
@@ -2461,7 +2468,6 @@ void CMenus::RenderSettingsTeeSkinQueue(CUIRect Content, const SSettingsContentM
 			const float TeeSize = minimum(16.0f, TeeMetrics.m_ListRowHeight - 4.0f);
 			CUIRect TeeRect, LabelRect;
 			DragRect.VSplitLeft(TeeSize + 6.0f, &TeeRect, &LabelRect);
-			TeeRect.VSplitLeft(3.0f, nullptr, &TeeRect);
 
 			char aEntryLabel[64];
 			str_format(aEntryLabel, sizeof(aEntryLabel), "%d. %s", (int)i + 1, SkinQueue[i].m_SkinName.c_str());
@@ -2483,7 +2489,8 @@ void CMenus::RenderSettingsTeeSkinQueue(CUIRect Content, const SSettingsContentM
 			TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
 			const float RemoveAlpha = Ui()->HotItem() == &s_QueueRemoveIds[i] ? 0.2f : 0.0f;
 			TextRender()->TextColor(ColorRGBA(0.9f, 0.3f, 0.3f, 0.7f + RemoveAlpha));
-			Ui()->DoLabel_QmIcon(&RemoveRect, EQmIcon::TRASH, FONT_ICON_TRASH, TeeMetrics.m_SmallSize, TEXTALIGN_MC);
+			// 同一行左侧是 BodySize 的皮肤名，移除图标也跟行文字同号，而不是小字档。
+			Ui()->DoLabel_QmIcon(&RemoveRect, EQmIcon::TRASH, FONT_ICON_TRASH, ui_token::control::IconBox(BodySize), TEXTALIGN_MC);
 			TextRender()->TextColor(TextRender()->DefaultTextColor());
 			TextRender()->SetRenderFlags(0);
 			TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
@@ -2655,25 +2662,25 @@ void CMenus::RenderSettingsTeeSkinQueue(CUIRect Content, const SSettingsContentM
 			static CListBox s_PresetListBox;
 			static std::vector<char> s_vPresetItemIds;
 			s_vPresetItemIds.resize(vQueuePresets.size());
-			const float PresetRowSpacing = TeeMetrics.m_LineSpacing * 0.5f;
 
 			int SelectPresetIndex = -1;
 			const int PresetSelectedOld = ActivePresetIndex >= 0 ? ActivePresetIndex : -1;
 			s_PresetListBox.SetWheelOwnerPriority(EUiWheelOwnerPriority::COMPOSITE_CONTROL);
 			s_PresetListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);
-			s_PresetListBox.SetScrollbarAlwaysReserved(true);
-			s_PresetListBox.DoAutoSpacing(PresetRowSpacing);
-			s_PresetListBox.SetItemColors(ui_token::color::LIST_ITEM_SELECTED, ui_token::color::LIST_ITEM_SELECTED, ui_token::color::LIST_ITEM_HOVER);
+			// 统一行外观：胶囊整行 + token 行距（预设栏原本就用这半档行距）+ 按字号
+			// 派生的行内内边距，可见 2~3 行，滚动条覆盖在行右侧不占行宽。
+			s_PresetListBox.SetCapsuleRows(BodySize);
+			s_PresetListBox.SetVisibleRowRange(ui_token::list::PRESET_MIN_VISIBLE_ROWS, ui_token::list::PRESET_MAX_VISIBLE_ROWS);
 			s_PresetListBox.DoStart(TeeMetrics.m_ListRowHeight, (int)vQueuePresets.size(), 1, 1, PresetSelectedOld, &PresetList, true, IGraphics::CORNER_ALL);
 			for(size_t i = 0; i < vQueuePresets.size(); ++i)
 			{
-				const CListboxItem Item = s_PresetListBox.DoNextItem(&s_vPresetItemIds[i], ActivePresetIndex == (int)i, PresetRowSpacing);
+				const CListboxItem Item = s_PresetListBox.DoNextItem(&s_vPresetItemIds[i], ActivePresetIndex == (int)i);
 				if(!Item.m_Visible)
 					continue;
 
+				// 提示框仍贴整行；文字排进已内退的内容区，不再自己补左缩进。
 				CUIRect SelectRect = Item.m_Rect;
-				CUIRect NameRect = SelectRect;
-				NameRect.VSplitLeft(TeeMetrics.m_LineSpacing, nullptr, &NameRect);
+				CUIRect NameRect = Item.m_ContentRect;
 
 				char aEntryLabel[96];
 				if(GameClient()->m_Skins.IsBuiltInSkinQueuePreset(i))
@@ -2762,7 +2769,7 @@ void CMenus::RenderSettingsTeeGlow(CUIRect Content, const SSettingsContentMetric
 		if(DoSettingsButton_CheckBox(SETTINGS_TEE, -1, &g_Config.m_QmTeamTeeGlow, "tee-team-glow", Localize("Team tee glow"), g_Config.m_QmTeamTeeGlow, &TeeGlowRow) && Flow.Input() && !Ui()->RenderOnly())
 			g_Config.m_QmTeamTeeGlow ^= 1;
 	}
-	if(Flow.Control("tee-team-glow-team0-mode", TeeMetrics.m_LineHeight, TeeGlowRow, TeeMetrics.m_LineSpacing))
+	if(Flow.Control("tee-team-glow-team0-mode", TeeMetrics.m_LineHeight, TeeGlowRow, ui_token::settings::RowGap(TeeMetrics.m_LineSpacing)))
 	{
 		CUIRect Team0GlowLabel, Team0GlowDropDown;
 		// 配置下拉沿用标准短选项宽度并贴齐行尾，避免多选颜色名把按钮撑满整行。
@@ -2775,22 +2782,26 @@ void CMenus::RenderSettingsTeeGlow(CUIRect Content, const SSettingsContentMetric
 		if(Flow.Input() && !Ui()->RenderOnly() && Team0ModeNew != g_Config.m_QmTeamTeeGlowTeam0Mode)
 			g_Config.m_QmTeamTeeGlowTeam0Mode = Team0ModeNew;
 	}
-	Flow.Space(TeeMetrics.m_LineSpacing);
-	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "deck:tee-glow", TeeMetrics))
+	Flow.Space(ui_token::settings::RowGap(TeeMetrics.m_LineSpacing));
+	float SectionReveal = 0.0f;
+	if(!qm_card_catalog::QmCardRenderHook::PersonalizationReveal(this, Content, "deck:tee-glow", TeeMetrics, &SectionReveal))
 		return;
+	const CSettingsContentRevealScope SectionRevealScope(Ui(), Flow, SectionReveal);
 
 	const auto Slider = [&](const char *pId, const char *pLabel, int *pValue) {
-		if(Flow.Control(pId, TeeMetrics.m_LineHeight, TeeGlowRow, TeeMetrics.m_LineSpacing))
+		if(Flow.Control(pId, TeeMetrics.m_LineHeight, TeeGlowRow, ui_token::settings::RowGap(TeeMetrics.m_LineSpacing)))
 			DoSettingsScrollbarOption(SETTINGS_TEE, -1, pId, pValue, pValue, &TeeGlowRow, pLabel, 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
 	};
 	Slider("tee-team-glow-strength", Localize("Team tee glow intensity"), &g_Config.m_QmTeamTeeGlowStrength);
 	Slider("tee-team-glow-size", Localize("Team tee glow halo size"), &g_Config.m_QmTeamTeeGlowSize);
-	if(g_Config.m_QmTeamTeeGlowTeam0Mode == 2)
+	static CSettingsConditionalRows s_TeamTeeGlowTeam0Rows;
+	if(s_TeamTeeGlowTeam0Rows.Update(g_Config.m_QmTeamTeeGlowTeam0Mode == 2, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 	{
-		if(Flow.Control("tee-team-glow-team0-color", TeeMetrics.m_ButtonHeight, TeeGlowRow, TeeMetrics.m_LineSpacing))
+		const CSettingsContentRevealScope TeamTeeGlowTeam0RevealScope(Ui(), Flow, s_TeamTeeGlowTeam0Rows.Fade(g_Config.m_QmUiMotionLevel));
+		if(Flow.Control("tee-team-glow-team0-color", TeeMetrics.m_ButtonHeight, TeeGlowRow, ui_token::settings::RowGap(TeeMetrics.m_LineSpacing)))
 		{
 			static CButtonContainer s_Team0GlowColorId;
-			DoLine_ColorPicker(&s_Team0GlowColorId, TeeMetrics, &TeeGlowRow, Localize("Team 0 glow color"), &g_Config.m_QmTeamTeeGlowColor, ui_token::color::NEUTRAL_WHITE, false, nullptr, false, false);
+			DoLine_ColorPicker(&s_Team0GlowColorId, TeeMetrics, &TeeGlowRow, Localize("Team 0 glow color"), &g_Config.m_QmTeamTeeGlowColor, color_cast<ColorRGBA>(ColorHSLA(CConfig::ms_QmTeamTeeGlowColor)), false, nullptr, false, false);
 		}
 	}
 }

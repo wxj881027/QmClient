@@ -35,9 +35,18 @@ TEST(QmCreditsLayout, PartialLegacyLayoutRestoresQmCardsToVisibleColumns)
 	EXPECT_TRUE(Before[2].empty());
 
 	ASSERT_TRUE(qm_card_registry::RepairLegacyCreditsTabs(Model));
+	// 修复目标 = 当前默认布局（列/序由注册表瀑布分配），不再写死某张卡回到哪一列。
+	qm_card_order::CModel DefaultModel;
+	DefaultModel.SetEntries(qm_card_registry::BuildDefaultEntries());
+	const std::vector<int> vDefaultActive{
+		DefaultModel.FindByStableId("deck:qmclient-contributors-community"),
+		DefaultModel.FindByStableId("deck:qmclient-contributors-title"),
+		DefaultModel.FindByStableId("deck:qmclient-contributors-sponsors"),
+	};
+	const auto aDefault = BuildSettingsCardDeckColumnOrder(DefaultModel, "credits-qmclient", vDefaultActive);
 	const auto After = BuildSettingsCardDeckColumnOrder(Model, "credits-qmclient", vActive);
-	EXPECT_EQ(After[1], (std::vector<int>{vActive[1], vActive[0]}));
-	EXPECT_EQ(After[2], (std::vector<int>{vActive[2]}));
+	for(int Column = 0; Column < 3; ++Column)
+		EXPECT_EQ(After[Column], aDefault[Column]) << Column;
 	EXPECT_EQ(Model.StableIdOrder("deck:", "credits-links", 1), (std::vector<std::string>{"deck:credits-friend-links", "deck:tclient-info-developers"}));
 }
 
@@ -80,14 +89,21 @@ TEST(QmCreditsLayout, UnifiedLegacyPageSplitsIntoCurrentTabs)
 		qm_card_registry::BuildDefaultEntries()));
 
 	ASSERT_TRUE(qm_card_registry::RepairLegacyCreditsTabs(Model));
-	EXPECT_EQ(Model.StableIdOrder("deck:", "credits-qmclient", 1), (std::vector<std::string>{"deck:qmclient-contributors-title", "deck:qmclient-contributors-community"}));
-	EXPECT_EQ(Model.StableIdOrder("deck:", "credits-qmclient", 2), (std::vector<std::string>{"deck:qmclient-contributors-sponsors"}));
+	// 修复后三个位置域都回到各自的默认布局。
+	qm_card_order::CModel DefaultModel;
+	DefaultModel.SetEntries(qm_card_registry::BuildDefaultEntries());
+	for(const char *pTab : {"credits-qmclient", "credits-links", "general"})
+	{
+		SCOPED_TRACE(pTab);
+		for(int Column = 0; Column < 3; ++Column)
+			EXPECT_EQ(Model.StableIdOrder("deck:", pTab, Column), DefaultModel.StableIdOrder("deck:", pTab, Column)) << pTab;
+	}
 	const int DisplayIndex = Model.FindByStableId("deck:qmclient-contributors-title-display");
 	ASSERT_GE(DisplayIndex, 0);
 	EXPECT_STREQ(Model.Entry(DisplayIndex).m_pDefaultTab, "appearance-name-plate");
-	EXPECT_EQ(Model.Entry(DisplayIndex).m_Column, 1);
-	EXPECT_EQ(Model.StableIdOrder("deck:", "credits-links", 2), (std::vector<std::string>{"deck:qmclient-contributors-ddnet"}));
-	EXPECT_EQ(Model.StableIdOrder("deck:", "credits-links", 1), (std::vector<std::string>{"deck:credits-friend-links", "deck:tclient-info-developers"}));
+	const qm_card_order::SEntry *pDisplayPlacement = qm_card_registry::FindDefaultPlacement("deck:qmclient-contributors-title-display");
+	ASSERT_NE(pDisplayPlacement, nullptr);
+	EXPECT_EQ(Model.Entry(DisplayIndex).m_Column, pDisplayPlacement->m_Column);
 	const int FilesIndex = Model.FindByStableId("deck:tclient-info-files");
 	ASSERT_GE(FilesIndex, 0);
 	EXPECT_STREQ(Model.Entry(FilesIndex).m_pDefaultTab, "general");
@@ -131,7 +147,9 @@ TEST(QmCreditsLayout, RepairedLayoutSurvivesReloadWithoutRepeatedMigration)
 	ASSERT_TRUE(Reloaded.LoadMerged(aSerialized, Defaults));
 	EXPECT_FALSE(qm_card_registry::RepairLegacyCreditsTabs(Reloaded));
 	EXPECT_FALSE(Reloaded.IsDirty());
-	EXPECT_EQ(Reloaded.StableIdOrder("deck:", "credits-qmclient", 1), (std::vector<std::string>{"deck:qmclient-contributors-title", "deck:qmclient-contributors-community"}));
+	// 重载后的贡献者页必须与修复结果逐列一致（而不是回到某个手写列序）。
+	for(int Column = 0; Column < 3; ++Column)
+		EXPECT_EQ(Reloaded.StableIdOrder("deck:", "credits-qmclient", Column), Model.StableIdOrder("deck:", "credits-qmclient", Column)) << Column;
 }
 
 TEST(QmCreditsLayout, CompletedMigrationVersionSurvivesConfigReload)

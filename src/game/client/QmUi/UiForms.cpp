@@ -218,18 +218,27 @@ namespace ui_widget
 		// 眼睛因此贴到输入框最右边，也不会和叉号抢点击区域。
 		const bool Clearable = Options.m_Clearable && !HasTrailingAction;
 		const float TrailingWidth = HasTrailingAction ? std::max(Options.m_TrailingWidth, Rect.h) : Options.m_TrailingWidth;
-		const SInputFieldLayout Layout = ResolveInputFieldLayout(Rect, HasIcon, Clearable, Ctx.m_UiScale, InlineTrailingText ? 0.0f : TrailingWidth);
+		// 字号只允许「调用方给定」或「行高兜底」二者之一；以前是 min(给定, 0.8h*0.8)，
+		// 双 0.8 叠加会把正文压到 0.64 行高，行高一大文字就偏小。
+		// 输入框的内边距（PadX / IconTextGap）与文字绘制共用这一个字号，测量与绘制
+		// 不会各拿一套字号；调用方没给字号时按 Ctx.m_UiScale 走与其他控件同一条夹取。
+		const float FontSize = Options.m_FontSize > 0.0f ? std::min(Options.m_FontSize, Rect.h * CUi::ms_FontmodHeight) :
+								   Rect.h * CUi::ms_FontmodHeight * ui_token::control::ICON_INK_RATIO;
+		const float BodySize = FontSize > 0.0f ? FontSize : ui_token::control::BodySizeFromScale(Ctx.m_UiScale);
+		const SInputFieldLayout Layout = ResolveInputFieldLayout(Rect, HasIcon, Clearable, Ctx.m_UiScale, InlineTrailingText ? 0.0f : TrailingWidth, BodySize);
 		const bool ShowClear = Clearable && QmInputFieldClearVisible(pInput->IsEmpty(), WasActive, WasEmpty);
 		const float ClearAlpha = Clearable ? AnimateStateValue(Ctx, pInput->GetClearButtonId(), EUiAnimProperty::ALPHA, ShowClear ? 1.0f : 0.0f, ui_token::motion::HOVER_FADE) : 0.0f;
-		const float FontSize = std::min(Options.m_FontSize, Layout.m_ContentRect.h * CUi::ms_FontmodHeight * 0.8f);
+		// 编辑框始终拿整块内容框：DoEditBox 自己按行高垂直居中，光标高度按字号算，
+		// 若把矩形收成「正文框」会把光标上沿裁掉 1~2px（选区同理）。PadY 只参与
+		// 行高构成与内联文字排版，不做为编辑框矩形，避免用内边距去裁字形。
 		CUIRect TextRect = Layout.m_ContentRect;
 		CUIRect TrailingRect = Layout.m_TrailingRect;
 		if(InlineTrailingText)
 		{
 			const char *pDisplayText = pInput->GetDisplayedString();
 			const float TextWidth = Ctx.m_pUi->TextRender()->TextWidth(FontSize, pDisplayText);
-			const float TrailingTextWidth = Ctx.m_pUi->TextRender()->TextWidth(FontSize * 0.82f, Options.m_pTrailingText);
-			const SInlineTrailingTextLayout InlineLayout = ResolveInlineTrailingTextLayout(Layout.m_ContentRect, TextWidth, TrailingTextWidth, Ctx.m_UiScale);
+			const float TrailingTextWidth = Ctx.m_pUi->TextRender()->TextWidth(FontSize * ui_token::control::SUFFIX_RATIO, Options.m_pTrailingText);
+			const SInlineTrailingTextLayout InlineLayout = ResolveInlineTrailingTextLayout(TextRect, TextWidth, TrailingTextWidth, Ctx.m_UiScale);
 			TextRect = InlineLayout.m_TextRect;
 			TrailingRect = InlineLayout.m_TrailingRect;
 		}
@@ -342,7 +351,7 @@ namespace ui_widget
 			TrailingAction = ProcessInput && Ctx.m_pUi->DoButtonLogic(Options.m_pTrailingActionId, 0, &TrailingRect, BUTTONFLAG_LEFT) != 0;
 		}
 		if(Options.m_pTrailingText != nullptr && TrailingRect.w > 0.0f)
-			Ctx.m_pUi->DoLabel(&TrailingRect, Options.m_pTrailingText, FontSize * 0.82f, TEXTALIGN_MC);
+			Ctx.m_pUi->DoLabel(&TrailingRect, Options.m_pTrailingText, FontSize * ui_token::control::SUFFIX_RATIO, TEXTALIGN_MC);
 
 		if(!ProcessInput)
 			return {};
@@ -580,7 +589,8 @@ namespace ui_widget
 			const bool ShowMaxText = !pInput->IsActive() && !IsInfinite && Options.m_pMaxText != nullptr && DisplayValue == Max && str_comp(pInput->GetString(), aNumericValue) == 0;
 			CLineInput *pVisibleInput = !Ctx.m_pUi->MeasurementOnly() && pState->m_HasSyncedValue && !ShowMaxText ? pInput : &PreviewInput;
 			SInputFieldOptions FieldOptions;
-			FieldOptions.m_FontSize = std::min(Options.m_FontSize, InputField.h * CUi::ms_FontmodHeight * 0.8f);
+			FieldOptions.m_FontSize = Options.m_FontSize > 0.0f ? std::min(Options.m_FontSize, InputField.h * CUi::ms_FontmodHeight) :
+									      InputField.h * CUi::ms_FontmodHeight * ui_token::control::ICON_INK_RATIO;
 			FieldOptions.m_TextAlign = TEXTALIGN_MC;
 			FieldOptions.m_pTrailingText = HasSuffix ? Options.m_pSuffix : nullptr;
 			FieldOptions.m_InlineTrailingText = HasSuffix;

@@ -42,7 +42,7 @@ void qm_card_catalog::BuildSearchAnswerCard(const SSearchAnswerContext &Ctx, con
 			Ctx.m_pUi->DoLabel(&Rect, pText, Metrics.m_BodySize, TEXTALIGN_ML, Props);
 		};
 		const auto Text = [&](const char *pId, const char *pText) {
-			Flow.Text(pId, pText, 0, Metrics.m_BodySize, Metrics.m_LineSpacing, {}, DrawText, Metrics.m_LineHeight);
+			Flow.Text(pId, pText, 0, Metrics.m_BodySize, ui_token::settings::RowGap(Metrics.m_LineSpacing), {}, DrawText, Metrics.m_LineHeight);
 		};
 		const auto Button = [&](const char *pId, const char *pLabel, CButtonContainer &Id) {
 			CUIRect Row;
@@ -61,7 +61,7 @@ void qm_card_catalog::BuildSearchAnswerCard(const SSearchAnswerContext &Ctx, con
 					DrawText(Row, pLabel);
 				}
 			}
-			Flow.Space(Metrics.m_LineSpacing);
+			Flow.Space(ui_token::settings::RowGap(Metrics.m_LineSpacing));
 			return Clicked;
 		};
 

@@ -464,16 +464,15 @@ namespace
 			RenderMetadata(Shell, *pMetadata, Render);
 	}
 
-	constexpr float AssetsCardTitleFontSize = 9.0f;
-	constexpr float AssetsCardAuthorFontSize = 7.0f;
-	constexpr float AssetsCardStatusTagFontSize = 6.0f;
+	// 卡片元数据字号不再写死：标题取页面正文、作者与状态标签取页面小字，
+	// 由 RenderSettingsCustom 里算好的 ContentMetrics 传进来（6/7px 低于小字下限，窄视口还会更小）。
 	constexpr float AssetsCardStatusTagMinWidth = 24.0f;
 	constexpr float AssetsCardStatusTagMaxWidth = 36.0f;
 	constexpr float AssetsCardStatusTagHorizontalPadding = 2.0f;
 	constexpr ColorRGBA AssetsCardStatusReadyColor = ColorRGBA(0.18f, 0.62f, 0.32f, 0.88f);
 	constexpr ColorRGBA AssetsCardStatusNetworkColor = ColorRGBA(0.35f, 0.45f, 0.56f, 0.86f);
 
-	static void RenderAssetsCardMetadataFallback(CUi *pUi, const SSettingsAssetsCardShell &Shell, const char *pTitle, const char *pAuthor, const char *pStatusLabel, bool StatusReady, bool ShowAuthorRow)
+	static void RenderAssetsCardMetadataFallback(CUi *pUi, const SSettingsAssetsCardShell &Shell, const char *pTitle, const char *pAuthor, const char *pStatusLabel, bool StatusReady, bool ShowAuthorRow, float TitleFontSize, float AuthorFontSize, float StatusTagFontSize)
 	{
 		if(pUi == nullptr)
 			return;
@@ -482,14 +481,14 @@ namespace
 		TitleProps.m_MaxWidth = static_cast<int>(Shell.m_TitleRect.w);
 		TitleProps.m_StopAtEnd = true;
 		TitleProps.m_EllipsisAtEnd = true;
-		pUi->DoLabel(&Shell.m_TitleRect, pSafeTitle, AssetsCardTitleFontSize, TEXTALIGN_ML, TitleProps);
+		pUi->DoLabel(&Shell.m_TitleRect, pSafeTitle, TitleFontSize, TEXTALIGN_ML, TitleProps);
 		if(ShowAuthorRow)
 		{
 			SLabelProperties AuthorProps;
 			AuthorProps.m_MaxWidth = static_cast<int>(Shell.m_AuthorRect.w);
 			AuthorProps.m_StopAtEnd = true;
 			AuthorProps.m_EllipsisAtEnd = true;
-			pUi->DoLabel(&Shell.m_AuthorRect, pAuthor != nullptr && pAuthor[0] != '\0' ? pAuthor : "--", AssetsCardAuthorFontSize, TEXTALIGN_ML, AuthorProps);
+			pUi->DoLabel(&Shell.m_AuthorRect, pAuthor != nullptr && pAuthor[0] != '\0' ? pAuthor : "--", AuthorFontSize, TEXTALIGN_ML, AuthorProps);
 		}
 		if(Shell.m_HasStatusTag && pStatusLabel != nullptr && pStatusLabel[0] != '\0')
 		{
@@ -499,7 +498,7 @@ namespace
 			StatusLabelProps.m_MaxWidth = static_cast<int>(StatusRect.w - AssetsCardStatusTagHorizontalPadding * 2.0f);
 			StatusLabelProps.m_StopAtEnd = true;
 			StatusLabelProps.m_EllipsisAtEnd = true;
-			pUi->DoLabel(&StatusRect, pStatusLabel, AssetsCardStatusTagFontSize, TEXTALIGN_MC, StatusLabelProps);
+			pUi->DoLabel(&StatusRect, pStatusLabel, StatusTagFontSize, TEXTALIGN_MC, StatusLabelProps);
 		}
 	}
 
@@ -4740,7 +4739,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	auto ComputeToolbarButtonWidth = [&](const char *pLabel) {
 		constexpr float MinButtonWidth = 90.0f;
 		constexpr float HorizontalPadding = 18.0f;
-		return maximum(MinButtonWidth, TextRender()->TextWidth(10.0f, Localize(pLabel), -1, -1.0f) + HorizontalPadding);
+		// 量宽用与绘制同一个字号（按钮正文），否则长译文会被算窄再截断。
+		return maximum(MinButtonWidth, TextRender()->TextWidth(ContentMetrics.m_BodySize, Localize(pLabel), -1, -1.0f) + HorizontalPadding);
 	};
 	const float AssetsDirButtonWidth = ComputeToolbarButtonWidth("Assets directory");
 	const float AssetsEditorButtonWidth = ComputeToolbarButtonWidth("Assets editor");
@@ -5469,7 +5469,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		StatusLabelProps.m_MaxWidth = static_cast<int>(StatusRect.w - AssetsCardStatusTagHorizontalPadding * 2.0f);
 		StatusLabelProps.m_StopAtEnd = true;
 		StatusLabelProps.m_EllipsisAtEnd = true;
-		Ui()->DoLabel(&StatusRect, pLabel != nullptr && pLabel[0] != '\0' ? pLabel : "--", AssetsCardStatusTagFontSize, TEXTALIGN_MC, StatusLabelProps);
+		Ui()->DoLabel(&StatusRect, pLabel != nullptr && pLabel[0] != '\0' ? pLabel : "--", ContentMetrics.m_SmallSize, TEXTALIGN_MC, StatusLabelProps);
 	};
 
 	auto ComputePreviewDrawRect = [&](const CUIRect &TextureRect, float ContentWidth, float ContentHeight) {
@@ -5540,7 +5540,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		auto ComputeBadgeWidth = [&](const char *pLabel) {
 			if(pLabel == nullptr || pLabel[0] == '\0')
 				return AssetsCardStatusTagMinWidth;
-			const float DesiredBadgeWidth = TextRender()->TextWidth(AssetsCardStatusTagFontSize, pLabel, -1, -1.0f) + AssetsCardStatusTagHorizontalPadding * 2.0f;
+			const float DesiredBadgeWidth = TextRender()->TextWidth(ContentMetrics.m_SmallSize, pLabel, -1, -1.0f) + AssetsCardStatusTagHorizontalPadding * 2.0f;
 			return maximum(AssetsCardStatusTagMinWidth, minimum(AssetsCardStatusTagMaxWidth, DesiredBadgeWidth));
 		};
 		auto ReserveTrailingRect = [&](CUIRect &AvailableRect, float DesiredWidth, float DesiredMinWidth, CUIRect &OutRect, bool &OutVisible) {
@@ -5764,7 +5764,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		TitleProps.m_MaxWidth = static_cast<int>(Shell.m_TitleRect.w);
 		TitleProps.m_StopAtEnd = true;
 		TitleProps.m_EllipsisAtEnd = true;
-		DoMenuLabelStreamed(MENU_TEXT_SCOPE_SETTINGS, *Metadata.m_pTitleElement, &Shell.m_TitleRect, Metadata.m_Title.c_str(), AssetsCardTitleFontSize, TEXTALIGN_ML, TitleProps, -1, nullptr, Render);
+		DoMenuLabelStreamed(MENU_TEXT_SCOPE_SETTINGS, *Metadata.m_pTitleElement, &Shell.m_TitleRect, Metadata.m_Title.c_str(), ContentMetrics.m_BodySize, TEXTALIGN_ML, TitleProps, -1, nullptr, Render);
 
 		if(Shell.m_HasAuthorRow)
 		{
@@ -5776,7 +5776,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			AuthorProps.m_MaxWidth = static_cast<int>(Shell.m_AuthorRect.w);
 			AuthorProps.m_StopAtEnd = true;
 			AuthorProps.m_EllipsisAtEnd = true;
-			DoMenuLabelStreamed(MENU_TEXT_SCOPE_SETTINGS, *Metadata.m_pAuthorElement, &Shell.m_AuthorRect, Metadata.m_Author.c_str(), AssetsCardAuthorFontSize, TEXTALIGN_ML, AuthorProps, -1, nullptr, Render);
+			DoMenuLabelStreamed(MENU_TEXT_SCOPE_SETTINGS, *Metadata.m_pAuthorElement, &Shell.m_AuthorRect, Metadata.m_Author.c_str(), ContentMetrics.m_SmallSize, TEXTALIGN_ML, AuthorProps, -1, nullptr, Render);
 		}
 		if(!Render)
 			return;
@@ -5792,7 +5792,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				Metadata.m_pErrorElement->Init(Ui(), 1);
 			CUIRect ErrorRect = Shell.m_CardRect;
 			ErrorRect.HSplitBottom(14.0f, nullptr, &ErrorRect);
-			DoMenuLabelStreamed(MENU_TEXT_SCOPE_SETTINGS, *Metadata.m_pErrorElement, &ErrorRect, Localize("Download failed"), 9.0f, TEXTALIGN_MC, SLabelProperties(), -1, nullptr, Render);
+			DoMenuLabelStreamed(MENU_TEXT_SCOPE_SETTINGS, *Metadata.m_pErrorElement, &ErrorRect, Localize("Download failed"), ContentMetrics.m_SmallSize, TEXTALIGN_MC, SLabelProperties(), -1, nullptr, Render);
 		}
 	};
 
@@ -5803,7 +5803,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 
 		CUIRect LabelRect = FallbackRect;
 		LabelRect.Margin(8.0f, &LabelRect);
-		Ui()->DoLabel(&LabelRect, Localize("Map Preview TODO"), 11.0f, TEXTALIGN_MC);
+		Ui()->DoLabel(&LabelRect, Localize("Map Preview TODO"), ContentMetrics.m_SmallSize, TEXTALIGN_MC);
 	};
 
 	auto RenderEntityBgVideoFallback = [&](const CUIRect &Rect) {
@@ -5817,7 +5817,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		Ui()->DoLabel_QmIcon(&IconRect, EQmIcon::PLAY, FONT_ICON_PLAY, 30.0f, TEXTALIGN_MC);
 		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 		LabelRect.Margin(6.0f, &LabelRect);
-		Ui()->DoLabel(&LabelRect, Localize("Video Background"), 10.5f, TEXTALIGN_MC);
+		Ui()->DoLabel(&LabelRect, Localize("Video Background"), ContentMetrics.m_SmallSize, TEXTALIGN_MC);
 	};
 
 	if(s_CurCustomTab == ASSETS_TAB_ENTITIES)
@@ -6299,13 +6299,13 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				if(AssetsContentWarmupBlocked)
 				{
 					RenderAssetsCardMetadataCached(Shell, pMetadata, RenderAssetsCardMetadata, false);
-					RenderAssetsCardMetadataFallback(Ui(), Shell, pMetadata->m_Title.c_str(), pMetadata->m_Author.c_str(), pMetadata->m_StatusLabel.c_str(), pMetadata->m_Installed || pMetadata->m_LocalOnly, ShowAuthorRow);
+					RenderAssetsCardMetadataFallback(Ui(), Shell, pMetadata->m_Title.c_str(), pMetadata->m_Author.c_str(), pMetadata->m_StatusLabel.c_str(), pMetadata->m_Installed || pMetadata->m_LocalOnly, ShowAuthorRow, ContentMetrics.m_BodySize, ContentMetrics.m_SmallSize, ContentMetrics.m_SmallSize);
 				}
 				else
 					RenderAssetsCardMetadataCached(Shell, pMetadata, RenderAssetsCardMetadata, true);
 			}
 			else if(AssetsRenderCardMetadataFallback)
-				RenderAssetsCardMetadataFallback(Ui(), Shell, AssetCardDisplayName(pItem), pItem->m_aAuthor[0] != '\0' ? pItem->m_aAuthor : "--", pLocalStatusLabel, true, ShowAuthorRow);
+				RenderAssetsCardMetadataFallback(Ui(), Shell, AssetCardDisplayName(pItem), pItem->m_aAuthor[0] != '\0' ? pItem->m_aAuthor : "--", pLocalStatusLabel, true, ShowAuthorRow, ContentMetrics.m_BodySize, ContentMetrics.m_SmallSize, ContentMetrics.m_SmallSize);
 			SSettingsAssetsCardPreviewState PreviewState;
 			const SResourcePreviewKey PreviewKey = BuildAssetsResourcePreviewKey(pItem->m_aName, s_CurCustomTab, false, Graphics()->ScreenHiDPIScale(), CardRect.w);
 			SResourcePreviewState &ResourcePreviewState = gs_SettingsAssetsResourcePreviewCache.GetOrCreate(PreviewKey);
@@ -7637,13 +7637,13 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 						if(AssetsContentWarmupBlocked)
 						{
 							RenderAssetsCardMetadataCached(Shell, pMetadata, RenderAssetsCardMetadata, false);
-							RenderAssetsCardMetadataFallback(Ui(), Shell, pMetadata->m_Title.c_str(), pMetadata->m_Author.c_str(), pMetadata->m_StatusLabel.c_str(), pMetadata->m_Installed || pMetadata->m_LocalOnly, ShowAuthorRow);
+							RenderAssetsCardMetadataFallback(Ui(), Shell, pMetadata->m_Title.c_str(), pMetadata->m_Author.c_str(), pMetadata->m_StatusLabel.c_str(), pMetadata->m_Installed || pMetadata->m_LocalOnly, ShowAuthorRow, ContentMetrics.m_BodySize, ContentMetrics.m_SmallSize, ContentMetrics.m_SmallSize);
 						}
 						else
 							RenderAssetsCardMetadataCached(Shell, pMetadata, RenderAssetsCardMetadata, true);
 					}
 					else if(AssetsRenderCardMetadataFallback)
-						RenderAssetsCardMetadataFallback(Ui(), Shell, AssetCardDisplayName(pItem), pItem->m_aAuthor[0] != '\0' ? pItem->m_aAuthor : "--", pLocalStatusLabel, true, ShowAuthorRow);
+						RenderAssetsCardMetadataFallback(Ui(), Shell, AssetCardDisplayName(pItem), pItem->m_aAuthor[0] != '\0' ? pItem->m_aAuthor : "--", pLocalStatusLabel, true, ShowAuthorRow, ContentMetrics.m_BodySize, ContentMetrics.m_SmallSize, ContentMetrics.m_SmallSize);
 					WorkshopCardLayoutTextMs += CardLayoutTextTimer.ElapsedMs();
 
 					CPerfTimer CardPreviewDrawTimer;
@@ -7785,13 +7785,13 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 						if(AssetsContentWarmupBlocked)
 						{
 							RenderAssetsCardMetadataCached(Shell, pMetadata, RenderAssetsCardMetadata, false);
-							RenderAssetsCardMetadataFallback(Ui(), Shell, pMetadata->m_Title.c_str(), pMetadata->m_Author.c_str(), pMetadata->m_StatusLabel.c_str(), pMetadata->m_Installed || pMetadata->m_LocalOnly, ShowAuthorRow);
+							RenderAssetsCardMetadataFallback(Ui(), Shell, pMetadata->m_Title.c_str(), pMetadata->m_Author.c_str(), pMetadata->m_StatusLabel.c_str(), pMetadata->m_Installed || pMetadata->m_LocalOnly, ShowAuthorRow, ContentMetrics.m_BodySize, ContentMetrics.m_SmallSize, ContentMetrics.m_SmallSize);
 						}
 						else
 							RenderAssetsCardMetadataCached(Shell, pMetadata, RenderAssetsCardMetadata, true);
 					}
 					else if(AssetsRenderCardMetadataFallback)
-						RenderAssetsCardMetadataFallback(Ui(), Shell, Asset.m_Name.c_str(), Asset.m_Author.empty() ? "--" : Asset.m_Author.c_str(), pWorkshopStatusLabel, Asset.m_Installed, ShowAuthorRow);
+						RenderAssetsCardMetadataFallback(Ui(), Shell, Asset.m_Name.c_str(), Asset.m_Author.empty() ? "--" : Asset.m_Author.c_str(), pWorkshopStatusLabel, Asset.m_Installed, ShowAuthorRow, ContentMetrics.m_BodySize, ContentMetrics.m_SmallSize, ContentMetrics.m_SmallSize);
 					WorkshopCardLayoutTextMs += CardLayoutTextTimer.ElapsedMs();
 
 					CPerfTimer CardPreviewDrawTimer;

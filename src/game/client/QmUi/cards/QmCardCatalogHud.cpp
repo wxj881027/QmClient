@@ -90,8 +90,9 @@ namespace qm_card_catalog
 		case EQmModuleId::HudNotifications:
 			Add(Id, "qm:hud_notifications", "Notifications", "Show important server prompts and Echo messages as popups", [pMenus, Metrics, LabelWidth, ReadOnly](CUIRect &Content) {
 				qm_card_catalog::QmCardRenderHook::RenderQmHudNotificationsBasicContent(pMenus, Content, Metrics, LabelWidth, ReadOnly);
-				if(g_Config.m_QmHudNotificationsShowAdvanced)
-					qm_card_catalog::QmCardRenderHook::RenderQmHudNotificationsAdvancedContent(pMenus, Content, Metrics, LabelWidth, ReadOnly);
+				// 高级内容自己按 m_QmHudNotificationsShowAdvanced 做显隐与过渡：这里无条件调用，
+				// 收起动画才能播完，否则配置一变内容就凭空消失、高度直接塌掉。
+				qm_card_catalog::QmCardRenderHook::RenderQmHudNotificationsAdvancedContent(pMenus, Content, Metrics, LabelWidth, ReadOnly);
 			});
 			return true;
 		case EQmModuleId::Voice:
@@ -126,8 +127,8 @@ void CMenus::RenderQmHudInputOverlayContent(CUIRect &Content, const SSettingsCon
 	CSettingsContentLayoutFlow Flow(Content);
 	const auto DeclaredCheckbox = [&](CUIRect &, float Height, float Spacing, const void *pId, const char *pTextId, const char *pText, int *pValue) {
 		CUIRect Row;
-		const bool Changed = Flow.Control(pTextId, Height, Row) && RenderQmHudCheckbox(Row, Height, 0.0f, pId, pTextId, pText, pValue);
-		Flow.Space(Spacing);
+		// 行距由这一行自己声明（A 型），不再行后补 Space：与 HudContent 里的同名 helper 同一套写法。
+		const bool Changed = Flow.Control(pTextId, Height, Row, Spacing) && RenderQmHudCheckbox(Row, Height, 0.0f, pId, pTextId, pText, pValue);
 		return Changed;
 	};
 	const float LineHeight = Metrics.m_LineHeight;
@@ -145,10 +146,12 @@ void CMenus::RenderQmHudInputOverlayContent(CUIRect &Content, const SSettingsCon
 		if(DoButton_Menu(&s_ResetKeyCounts, Localize("Reset key press counts"), 0, &ResetRow) && !PrewarmOnly)
 			GameClient()->m_InputOverlay.ResetKeyCounts();
 	}
-	Flow.Space(LineSpacing);
+	Flow.Space(ui_token::settings::RowGap(LineSpacing));
 
-	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:input_overlay", Metrics, PrewarmOnly || Ui()->RenderOnly()))
+	float SectionReveal = 0.0f;
+	if(!qm_card_catalog::QmCardRenderHook::PersonalizationReveal(this, Content, "qm:input_overlay", Metrics, &SectionReveal, PrewarmOnly || Ui()->RenderOnly()))
 		return;
+	const CSettingsContentRevealScope SectionRevealScope(Ui(), Flow, SectionReveal);
 
 	CUIRect Row, LabelColumn, ControlColumn;
 	auto RenderValue = [&](const char *pTextId, const char *pText, const void *pInputId, int *pValue, int MinValue, int MaxValue) {
@@ -158,7 +161,7 @@ void CMenus::RenderQmHudInputOverlayContent(CUIRect &Content, const SSettingsCon
 			RenderQmHudLabel(pTextId, &LabelColumn, Localize(pText), BodySize);
 			RenderQmSettingsSliderWithValueInput(pInputId, ControlColumn, pValue, MinValue, MaxValue, "%", PrewarmOnly);
 		}
-		Flow.Space(LineSpacing);
+		Flow.Space(ui_token::settings::RowGap(LineSpacing));
 	};
 	static int s_QmInputOverlayScaleInputId;
 	static int s_QmInputOverlayMouseScaleInputId;
@@ -180,17 +183,15 @@ void CMenus::RenderQmHudInputOverlayContent(CUIRect &Content, const SSettingsCon
 			DoLine_ColorPicker(&s_CountColor, Metrics, &ColorRow, Localize("Key press count color"), &g_Config.m_QmInputOverlayCountColor,
 				color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::QmInputOverlayCountColor, true)), false, nullptr, true);
 		}
-		Flow.Space(CurrentSettingsContentMetrics().m_LineSpacing);
 	}
-	if(Flow.Control("qmclient-input-overlay-count-label", CurrentSettingsContentMetrics().m_LineHeight, Row))
+	if(Flow.Control("qmclient-input-overlay-count-label", CurrentSettingsContentMetrics().m_LineHeight, Row, ui_token::settings::RowGap(CurrentSettingsContentMetrics().m_LineSpacing)))
 	{
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
 		RenderQmHudLabel("qmclient-input-overlay-count-label", &LabelColumn, Localize("Key press count label"), BodySize);
 		static CLineInput s_CountLabel(g_Config.m_QmInputOverlayCountLabel, sizeof(g_Config.m_QmInputOverlayCountLabel));
 		ui_widget::InputField(SettingsUiContext("settings_input_overlay_count_label", Metrics.m_UiScale), &s_CountLabel, ControlColumn, "", BodySize);
 	}
-	Flow.Space(LineSpacing);
-	if(Flow.Control("hud-input-overlay-reset-appearance", CurrentSettingsContentMetrics().m_LineHeight, Row))
+	if(Flow.Control("hud-input-overlay-reset-appearance", CurrentSettingsContentMetrics().m_LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		static CButtonContainer s_CountAppearanceReset;
 		if(DoButton_Menu(&s_CountAppearanceReset, Localize("Reset count appearance"), 0, &Row) && !PrewarmOnly && !Ui()->RenderOnly())
@@ -200,7 +201,7 @@ void CMenus::RenderQmHudInputOverlayContent(CUIRect &Content, const SSettingsCon
 			str_copy(g_Config.m_QmInputOverlayCountLabel, DefaultConfig::QmInputOverlayCountLabel);
 		}
 	}
-	Flow.Space(LineSpacing);
+	Flow.Space(ui_token::settings::RowGap(LineSpacing));
 }
 
 void CMenus::RenderQmHudPlayerStatsContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
@@ -208,15 +209,17 @@ void CMenus::RenderQmHudPlayerStatsContent(CUIRect &Content, float LineHeight, f
 	CSettingsContentLayoutFlow Flow(Content);
 	const auto DeclaredCheckbox = [&](CUIRect &, float Height, float Spacing, const void *pId, const char *pTextId, const char *pText, int *pValue) {
 		CUIRect Row;
-		const bool Changed = Flow.Control(pTextId, Height, Row) && RenderQmHudCheckbox(Row, Height, 0.0f, pId, pTextId, pText, pValue);
-		Flow.Space(Spacing);
+		// 行距由这一行自己声明（A 型），不再行后补 Space：与 HudContent 里的同名 helper 同一套写法。
+		const bool Changed = Flow.Control(pTextId, Height, Row, Spacing) && RenderQmHudCheckbox(Row, Height, 0.0f, pId, pTextId, pText, pValue);
 		return Changed;
 	};
 	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmPlayerStatsHud, "Show player stats HUD", Localize("Show player stats HUD"), &g_Config.m_QmPlayerStatsHud);
 	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmPlayerStatsMapProgress, "Map progress bar", Localize("Map progress bar"), &g_Config.m_QmPlayerStatsMapProgress);
 	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmPlayerStatsResetOnJoin, "Reset stats when joining a server", Localize("Reset stats when joining a server"), &g_Config.m_QmPlayerStatsResetOnJoin);
-	if(g_Config.m_QmPlayerStatsMapProgress)
+	static CSettingsConditionalRows s_PlayerStatsMapProgressRows;
+	if(s_PlayerStatsMapProgressRows.Update(g_Config.m_QmPlayerStatsMapProgress, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 	{
+		const CSettingsContentRevealScope PlayerStatsMapProgressRevealScope(Ui(), Flow, s_PlayerStatsMapProgressRows.Fade(g_Config.m_QmUiMotionLevel));
 		CUIRect LocationRow, LocationLabel, LocationControl;
 		if(Flow.Control("qmclient-map-progress-location", LineHeight, LocationRow))
 		{
@@ -231,7 +234,7 @@ void CMenus::RenderQmHudPlayerStatsContent(CUIRect &Content, float LineHeight, f
 			if(!PrewarmOnly && !Ui()->RenderOnly())
 				g_Config.m_QmPlayerStatsMapProgressStyle = Selection;
 		}
-		Flow.Space(LineSpacing);
+		Flow.Space(ui_token::settings::RowGap(LineSpacing));
 
 		{
 			static CButtonContainer s_MapProgressColorId;
@@ -239,9 +242,9 @@ void CMenus::RenderQmHudPlayerStatsContent(CUIRect &Content, float LineHeight, f
 				CUIRect ColorRow;
 				if(Flow.Control("hud-QmPlayerStatsMapProgressColor", CurrentSettingsContentMetrics().m_ButtonHeight, ColorRow))
 				{
-					DoLine_ColorPicker(&s_MapProgressColorId, CurrentSettingsContentMetrics(), &ColorRow, Localize("Progress bar color"), &g_Config.m_QmPlayerStatsMapProgressColor, ColorRGBA(36.0f / 255.0f, 199.0f / 255.0f, 100.0f / 255.0f, 1.0f), false, nullptr, true);
+					DoLine_ColorPicker(&s_MapProgressColorId, CurrentSettingsContentMetrics(), &ColorRow, Localize("Progress bar color"), &g_Config.m_QmPlayerStatsMapProgressColor, color_cast<ColorRGBA>(ColorHSLA(CConfig::ms_QmPlayerStatsMapProgressColor, true)), false, nullptr, true);
 				}
-				Flow.Space(CurrentSettingsContentMetrics().m_LineSpacing);
+				Flow.Space(ui_token::settings::RowGap(CurrentSettingsContentMetrics().m_LineSpacing));
 			}
 		}
 		if(g_Config.m_QmPlayerStatsMapProgressStyle == 0)
@@ -254,7 +257,7 @@ void CMenus::RenderQmHudPlayerStatsContent(CUIRect &Content, float LineHeight, f
 					RenderQmHudLabel(pTextId, &LabelColumn, Localize(pText), BodySize);
 					RenderQmSettingsSliderWithValueInput(pInputId, ControlColumn, pValue, MinValue, MaxValue, pSuffix, PrewarmOnly);
 				}
-				Flow.Space(LineSpacing);
+				Flow.Space(ui_token::settings::RowGap(LineSpacing));
 			};
 			static int s_QmPlayerStatsMapProgressWidthInputId;
 			static int s_QmPlayerStatsMapProgressHeightInputId;

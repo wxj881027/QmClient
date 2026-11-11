@@ -13008,7 +13008,7 @@ Scoreboard point check
 == 计分板积分检查
 
 Scoreboard row colors
-== Scoreboard row colors
+== 计分板行颜色
 
 Scoreboard score lookup
 == 计分板查分

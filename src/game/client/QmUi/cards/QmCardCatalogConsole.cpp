@@ -37,7 +37,7 @@ void CMenus::RenderQmConsoleContent(CUIRect &Content, const SSettingsContentMetr
 	CUIRect Row;
 	const auto TakeRow = [&](const char *pId, float Height) {
 		const bool HasRow = Flow.Control(pId, Height, Row);
-		Flow.Space(Metrics.m_LineSpacing);
+		Flow.Space(ui_token::settings::RowGap(Metrics.m_LineSpacing));
 		return HasRow;
 	};
 	const auto Numeric = [&](ui_widget::SNumericFieldState &State, int *pValue, const char *pId, const char *pLabel, int Min, int Max, const char *pSuffix) {

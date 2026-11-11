@@ -221,3 +221,50 @@ TEST(QmAnimationBackend, MotionPolicyIsCanonical)
 	EXPECT_EQ(Direct.m_Driver, Compatibility.m_Driver);
 	EXPECT_EQ(Direct.m_Easing, Compatibility.m_Easing);
 }
+
+// 弹层条目的左内退必须真的落在横向：CUiRect 的 HMargin 改的是 y/h（上下），
+// 写成 HMargin 时文字会贴着胶囊左缘、纵向反而被压掉两段行高（2026-11-11 的实机现象）。
+TEST(QmUiTokensDropdownEntry, InsetFollowsFontAndIsCappedByRowHeight)
+{
+	// 设置页正文字号 10~12：档位由 max(8, 0.75×字号) 决定。
+	EXPECT_FLOAT_EQ(ui_token::dropdown::EntryInsetX(10.0f), 8.0f);
+	EXPECT_FLOAT_EQ(ui_token::dropdown::EntryInsetX(12.0f), 9.0f);
+	// 行高只当上限：20 高的行给 9，16 高的行被夹到 8。
+	EXPECT_FLOAT_EQ(ui_token::dropdown::EntryInsetX(12.0f, 20.0f), 9.0f);
+	EXPECT_FLOAT_EQ(ui_token::dropdown::EntryInsetX(12.0f, 16.0f), 8.0f);
+	// 大字号不会因为行矮而顶出胶囊端帽；行再高也不会把文字推向中间。
+	EXPECT_FLOAT_EQ(ui_token::dropdown::EntryInsetX(20.0f, 16.0f), 8.0f);
+	EXPECT_FLOAT_EQ(ui_token::dropdown::EntryInsetX(12.0f, 40.0f), 9.0f);
+	// 退化行高（0 / 负）视为没有可用空间，不做负内退。
+	EXPECT_FLOAT_EQ(ui_token::dropdown::EntryInsetX(12.0f, 0.0f), 0.0f);
+	EXPECT_FLOAT_EQ(ui_token::dropdown::EntryInsetX(12.0f, -5.0f), 0.0f);
+	// 列表胶囊行与弹层条目同一条公式：同一个视觉件不能有两套内退。
+	EXPECT_FLOAT_EQ(ui_token::list::RowInsetX(12.0f), ui_token::dropdown::EntryInsetX(12.0f));
+}
+
+TEST(QmUiTokensDropdownEntry, LabelRectInsetsLeftRightAndKeepsVerticalPadding)
+{
+	const CUIRect Row{100.0f, 40.0f, 200.0f, 20.0f};
+	const float InsetX = ui_token::dropdown::EntryInsetX(12.0f, Row.h);
+	const CUIRect Label = ui_token::dropdown::EntryLabelRect(Row, 2.0f, 12.0f);
+	// 横向：Padding + 内退，两侧都退。
+	EXPECT_FLOAT_EQ(Label.x, Row.x + 2.0f + InsetX);
+	EXPECT_FLOAT_EQ(Label.w, Row.w - 2.0f * (2.0f + InsetX));
+	// 纵向：只退 Padding，内退不参与——这正是轴向回归的判据。
+	EXPECT_FLOAT_EQ(Label.y, Row.y + 2.0f);
+	EXPECT_FLOAT_EQ(Label.h, Row.h - 4.0f);
+
+	// 换一个很大的内退值：纵向依旧只受 Padding 影响。
+	const CUIRect Wide = ui_token::dropdown::EntryLabelRect(Row, 2.0f, 12.0f, 40.0f);
+	EXPECT_FLOAT_EQ(Wide.x, Row.x + 42.0f);
+	EXPECT_FLOAT_EQ(Wide.w, Row.w - 84.0f);
+	EXPECT_FLOAT_EQ(Wide.y, Row.y + 2.0f);
+	EXPECT_FLOAT_EQ(Wide.h, Row.h - 4.0f);
+
+	// 调用点的显式覆盖值优先，且同样只作用于左右。
+	const CUIRect Overridden = ui_token::dropdown::EntryLabelRect(Row, 0.0f, 12.0f, 24.0f);
+	EXPECT_FLOAT_EQ(Overridden.x, Row.x + 24.0f);
+	EXPECT_FLOAT_EQ(Overridden.w, Row.w - 48.0f);
+	EXPECT_FLOAT_EQ(Overridden.y, Row.y);
+	EXPECT_FLOAT_EQ(Overridden.h, Row.h);
+}

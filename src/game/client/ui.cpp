@@ -2576,10 +2576,15 @@ int CUi::DoButton_Menu(CUIElement &UIElement, const CButtonContainer *pId, const
 	Text.HMargin(pRect->h >= 20.0f ? 2.0f : 1.0f, &Text);
 	Text.HMargin((Text.h * Props.m_FontFactor) / 2.0f, &Text);
 	const float FontSize = Props.m_FontSize > 0.0f ? Props.m_FontSize : Text.h * CUi::ms_FontmodHeight;
+	// chevron 与标签同字号：图标 em 就是正文字号，盒子按 0.8 反推。
+	// 以前按行高反推（盒 0.75h、字形 0.8×(h−4)），行高越大箭头越大，
+	// 26–28 高的行会比文字大 1.5 倍。
+	const float IconFontSize = FontSize;
+	const float IconBox = std::clamp(IconFontSize / CUi::ms_FontmodHeight, 0.0f, pRect->h);
 	if(Props.m_ShowDropDownIcon)
 	{
 		Text.VSplitRight(pRect->h * 0.25f, &Text, nullptr);
-		Text.VSplitRight(pRect->h * 0.75f, &Text, &DropDownIcon);
+		Text.VSplitRight(IconBox, &Text, &DropDownIcon);
 	}
 
 	if(RenderOnly())
@@ -2596,7 +2601,7 @@ int CUi::DoButton_Menu(CUIElement &UIElement, const CButtonContainer *pId, const
 		DoLabel(&Text, GetTextLambda(), FontSize, TEXTALIGN_MC);
 		TextRender()->SetFontPreset(PreviousPreset);
 		if(Props.m_ShowDropDownIcon)
-			DoLabel_QmIcon(&DropDownIcon, EQmIcon::CIRCLE_CHEVRON_DOWN, FONT_ICON_CIRCLE_CHEVRON_DOWN, DropDownIcon.h * CUi::ms_FontmodHeight, TEXTALIGN_MR);
+			DoLabel_QmIcon(&DropDownIcon, EQmIcon::CIRCLE_CHEVRON_DOWN, FONT_ICON_CIRCLE_CHEVRON_DOWN, IconFontSize, TEXTALIGN_MR);
 		return 0;
 	}
 
@@ -2638,7 +2643,7 @@ int CUi::DoButton_Menu(CUIElement &UIElement, const CButtonContainer *pId, const
 		TextRender()->SetFontPreset(PreviousPreset);
 	}
 	if(Props.m_ShowDropDownIcon)
-		DoLabel_QmIcon(&DropDownIcon, EQmIcon::CIRCLE_CHEVRON_DOWN, FONT_ICON_CIRCLE_CHEVRON_DOWN, DropDownIcon.h * CUi::ms_FontmodHeight, TEXTALIGN_MR);
+		DoLabel_QmIcon(&DropDownIcon, EQmIcon::CIRCLE_CHEVRON_DOWN, FONT_ICON_CIRCLE_CHEVRON_DOWN, IconFontSize, TEXTALIGN_MR);
 	ColorRGBA ColorText = TextRender()->GetTextColor();
 	ColorRGBA ColorTextOutline = TextRender()->GetTextOutlineColor();
 	if(!SurfaceOptions.m_Enabled)
@@ -2750,29 +2755,34 @@ int CUi::DoButton_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const
 	return ui_widget::DoIconButton(ui_widget::ControlContext(this), pButtonContainer, Icon, pFallbackIcon, Checked, *pRect, Flags, Corners, Enabled, ButtonColor, ShowSlash, TransparentInactive, nullptr, pIconDraw);
 }
 
-int CUi::DoButton_PopupMenu(CButtonContainer *pButtonContainer, const char *pText, const CUIRect *pRect, float Size, int Align, float Padding, bool TransparentInactive, bool Enabled, const std::optional<ColorRGBA> ButtonColor, float MinimumFontSize)
+int CUi::DoButton_PopupMenu(CButtonContainer *pButtonContainer, const char *pText, const CUIRect *pRect, float Size, int Align, float Padding, bool TransparentInactive, bool Enabled, const std::optional<ColorRGBA> ButtonColor, float MinimumFontSize, float TextInsetX)
 {
 	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(this);
 	ui_widget::SButtonSurfaceOptions Options;
 	Options.m_Role = EUiButtonRole::LIST_ENTRY;
+	// 弹层条目、列表胶囊行现在是同一个视觉件：圆角统一由行高推导（半角 ≤ CARD），
+	// 不再一边 radius::BASE(8)、一边 list::RowRadius(24→12)。
+	Options.m_Radius = ui_token::list::RowRadius(pRect->h);
 	Options.m_Enabled = Enabled;
 	Options.m_TransparentInactive = TransparentInactive;
 	Options.m_Color = ButtonColor;
 	const ColorRGBA Fill = ui_widget::DrawButtonSurface(ui_widget::ControlContext(this), pButtonContainer, *pRect, Options);
 	CUiScopedSurfaceText SurfaceText(TextRender(), Fill);
 
-	CUIRect Label;
-	pRect->Margin(Padding, &Label);
+	// 行背景仍占满整行；只把文字从左右边缘退开，避免贴着胶囊圆角。
+	// 左右方向必须用 VMargin（HMargin 在这个仓库是上下），轴向与档位都在 token 里算好；
+	// 调用点没显式给值时按字号与行高派生——弹层条目一律带内退，不靠调用点记得传参。
+	const CUIRect EntryLabel = ui_token::dropdown::EntryLabelRect(*pRect, Padding, Size, TextInsetX);
 	if(MinimumFontSize > 0.0f)
 	{
 		SLabelProperties Props;
-		Props.m_MaxWidth = Label.w;
+		Props.m_MaxWidth = EntryLabel.w;
 		Props.m_MinimumFontSize = MinimumFontSize;
 		Props.m_EllipsisAtEnd = true;
-		DoLabel(&Label, pText, Size, Align, Props);
+		DoLabel(&EntryLabel, pText, Size, Align, Props);
 	}
 	else
-		DoLabel(&Label, pText, Size, Align);
+		DoLabel(&EntryLabel, pText, Size, Align);
 
 	return Enabled ? DoButtonLogic(pButtonContainer, 0, pRect, BUTTONFLAG_LEFT) : 0;
 }
@@ -3209,7 +3219,8 @@ bool CUi::DoScrollbarOption(const void *pId, int *pOption, const CUIRect *pRect,
 
 void CUi::RenderProgressBar(CUIRect ProgressBar, float Progress)
 {
-	const float Rounding = minimum(ui_token::radius::TIGHT, ProgressBar.h / 2.0f);
+	// 进度条是典型的横条，端头直接给半圆：TIGHT 的小圆角在长条上会显得方。
+	const float Rounding = minimum(ui_token::radius::PILL, ProgressBar.h / 2.0f);
 	DrawRoundedSurface(this, ProgressBar, ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), ColorRGBA(), Rounding);
 	ProgressBar.w = maximum(ProgressBar.w * Progress, 2 * Rounding);
 	DrawRoundedSurface(this, ProgressBar, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), ColorRGBA(), Rounding);

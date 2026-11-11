@@ -96,6 +96,32 @@ TEST(QmColorPickerPalette, ParseCapsSwatchCount)
 	EXPECT_EQ(vSwatches.size(), (size_t)qm_picker_palette::MAX_SWATCHES);
 }
 
+TEST(QmColorPickerPalette, NextUniqueNameSkipsTakenNumbersAndReservedSwatch)
+{
+	std::vector<qm_picker_palette::SSwatch> vSwatches(3);
+	str_copy(vSwatches[0].m_aName, "自定义 1");
+	str_copy(vSwatches[1].m_aName, "自定义 3");
+	str_copy(vSwatches[2].m_aName, "红");
+	qm_picker_palette::SSwatch Reserved{};
+	str_copy(Reserved.m_aName, "自定义 2");
+
+	char aName[qm_picker_palette::MAX_NAME_BYTES];
+	qm_picker_palette::NextUniqueName(aName, (int)sizeof(aName), "自定义", vSwatches, nullptr, -1);
+	EXPECT_EQ(aName, std::string("自定义 2"));
+
+	// 撤销缓冲里的「自定义 2」也要避开：否则撤回后会出现两个同名声块。
+	qm_picker_palette::NextUniqueName(aName, (int)sizeof(aName), "自定义", vSwatches, &Reserved, -1);
+	EXPECT_EQ(aName, std::string("自定义 4"));
+
+	// 前缀不同互不影响。
+	qm_picker_palette::NextUniqueName(aName, (int)sizeof(aName), "颜色", vSwatches, &Reserved, -1);
+	EXPECT_EQ(aName, std::string("颜色 1"));
+
+	// 正在改名的条目跳过自己：清空名字后回退名从它自己的位置重新取号。
+	qm_picker_palette::NextUniqueName(aName, (int)sizeof(aName), "自定义", vSwatches, nullptr, 1);
+	EXPECT_EQ(aName, std::string("自定义 2"));
+}
+
 TEST(QmColorPickerPalette, ParseHexColorSupportsShorthand)
 {
 	ColorRGBA Color;

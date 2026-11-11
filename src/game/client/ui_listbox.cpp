@@ -49,6 +49,54 @@ void CListBox::Reset()
 	m_HoverFeedback.Reset();
 	m_ScrollFeedbackSnap = false;
 	m_FeedbackNumItems = -1;
+	m_CapsuleRows = false;
+	m_ItemColorsOverridden = false;
+	m_RowInsetX = ui_token::list::RowInsetX(ui_token::font::BODY);
+	m_AutoSpacingOverridden = false;
+	m_MinVisibleRows = 0;
+	m_MaxVisibleRows = 0;
+	m_ScrollbarOverlay = false;
+	m_ContainerRadius = ui_token::radius::SMALL_MENU;
+	m_HeaderThisFrame = false;
+	m_BackgroundDrawn = false;
+}
+
+void CListBox::SetCapsuleRows(float FontSize)
+{
+	m_CapsuleRows = true;
+	// 行内左右内边距与弹层条目同源：文字不再贴着胶囊左缘，窄窗口也不跟着挤没。
+	m_RowInsetX = ui_token::list::RowInsetX(FontSize > 0.0f ? FontSize : ui_token::font::BODY);
+	// 胶囊行默认用覆盖式滚动条：滚动条出现不会挤压行宽，行内容不会横跳。
+	m_ScrollbarOverlay = true;
+	// 自适应高度也随统一外观生效：默认最多 3 行，调用点要更多行时用
+	// SetVisibleRowRange 显式放宽（显示模式 8 行、皮肤队列 6 行）。
+	if(m_MaxVisibleRows <= 0)
+		SetVisibleRowRange(1, ui_token::list::DEFAULT_MAX_VISIBLE_ROWS);
+	// 选中/悬停填充统一走列表 token（调用点显式 SetItemColors 过就以后者为准），
+	// 三个列表和以后的胶囊列表不再各写一份同一组颜色。
+	if(!m_ItemColorsOverridden)
+	{
+		m_SelectedItemActiveColor = ui_token::color::LIST_ITEM_SELECTED;
+		m_SelectedItemInactiveColor = ui_token::color::LIST_ITEM_SELECTED;
+		m_HoveredItemColor = ui_token::color::LIST_ITEM_HOVER;
+	}
+}
+
+void CListBox::SetVisibleRowRange(int MinRows, int MaxRows)
+{
+	m_MinVisibleRows = maximum(0, MinRows);
+	m_MaxVisibleRows = maximum(m_MinVisibleRows, MaxRows);
+}
+
+float CListBox::ResolveRowCornerRadius() const
+{
+	// 只有显式开启胶囊行（SetCapsuleRows）的列表才换成胶囊横条：它会同时带来行距、
+	// 行内边距和覆盖式滚动条，四件事是一整套。没开启的列表（服务器浏览器、demo、
+	// 投票等既有页面）保持原来的小圆角，不被顺带改观感。
+	if(m_CapsuleRows && m_ListBoxItemsPerRow <= 1)
+		return ui_token::list::RowRadius(m_ListBoxRowHeight);
+	// 多列网格里的格子保留旧小圆角（格子本身有卡片外形）。
+	return ui_token::radius::SMALL_MENU;
 }
 
 void CListBox::DoHeader(const CUIRect *pRect, const char *pTitle, float HeaderHeight, float Spacing, int BackgroundCorners)
@@ -56,10 +104,14 @@ void CListBox::DoHeader(const CUIRect *pRect, const char *pTitle, float HeaderHe
 	CUIRect View = *pRect;
 	CUIRect Header;
 	m_BackgroundCorners = BackgroundCorners;
+	// 标题和列表体共用同一个容器圆角：这里拿到的就是整容器，先按它算出来记住，
+	// 紧随其后的 DoStart 只拿到列表体，沿用这一档才不会上下两段圆角不一致。
+	m_ContainerRadius = ui_token::list::ContainerRadius(pRect->w, pRect->h);
+	m_HeaderThisFrame = true;
 
 	// background
 	View.HSplitTop(HeaderHeight + Spacing, &Header, nullptr);
-	DrawRoundedSurface(Ui(), Header, Ui()->ScaleBackgroundAlpha(ColorRGBA(0.0f, 0.0f, 0.0f, 0.15f)), ColorRGBA(), 5.0f, 0.0f, m_BackgroundCorners & IGraphics::CORNER_T);
+	DrawRoundedSurface(Ui(), Header, Ui()->ScaleBackgroundAlpha(ColorRGBA(0.0f, 0.0f, 0.0f, 0.15f)), ColorRGBA(), m_ContainerRadius, 0.0f, m_BackgroundCorners & IGraphics::CORNER_T);
 
 	// draw header
 	View.HSplitTop(HeaderHeight, &Header, &View);
@@ -87,23 +139,38 @@ void CListBox::DoStart(float RowHeight, int NumItems, int ItemsPerRow, int RowsP
 	else
 		View = m_ListBoxView;
 
-	// background
-	m_BackgroundCorners = BackgroundCorners;
-	if(Background)
-		DrawRoundedSurface(Ui(), View, Ui()->ScaleBackgroundAlpha(ColorRGBA(0.0f, 0.0f, 0.0f, 0.15f)), ColorRGBA(), 5.0f, 0.0f, m_BackgroundCorners & (m_HasHeader ? IGraphics::CORNER_B : IGraphics::CORNER_ALL));
-
 	// setup the variables
-	m_ListBoxView = View;
+	m_BackgroundCorners = BackgroundCorners;
 	m_RowView = {};
 	m_ListBoxSelectedIndex = SelectedIndex;
 	m_ListBoxNewSelected = SelectedIndex;
 	m_ListBoxNewSelOffset = 0;
 	m_ListBoxItemIndex = 0;
-	m_ListBoxRowHeight = RowHeight;
+	m_ListBoxRowHeight = RowHeight > 0.0f ? RowHeight : ui_token::list::ROW_HEIGHT;
 	m_ListBoxNumItems = NumItems;
 	m_ListBoxItemsPerRow = ItemsPerRow;
 	m_ListBoxItemActivated = false;
 	m_ListBoxItemSelected = false;
+	// 胶囊行：行距由组件统一给（调用点显式 DoAutoSpacing 过就不覆盖）。
+	if(m_CapsuleRows && !m_AutoSpacingOverridden)
+		m_AutoSpacing = ui_token::list::ROW_SPACING;
+	// 自适应高度：按条目数和行高算出内容高度，只在调用方给的上限内取，调用点不必
+	// 再自己 std::min；超出的部分交给滚动条。空列表不占高度。
+	if(m_MaxVisibleRows > 0)
+	{
+		const int VisibleRows = ui_token::list::VisibleRows(m_ListBoxNumItems, m_ListBoxItemsPerRow, m_MinVisibleRows, m_MaxVisibleRows);
+		View.h = minimum(View.h, ui_token::list::RowsHeight(VisibleRows, m_ListBoxRowHeight, m_AutoSpacing));
+	}
+	// 容器圆角按容器长宽推导；带标题的列表沿用 DoHeader 用整容器算出的那一档。
+	if(!m_HeaderThisFrame)
+		m_ContainerRadius = ui_token::list::ContainerRadius(View.w, View.h);
+	m_HeaderThisFrame = false;
+	m_ListBoxView = View;
+
+	// background
+	m_BackgroundDrawn = Background;
+	if(Background)
+		DrawRoundedSurface(Ui(), View, Ui()->ScaleBackgroundAlpha(ColorRGBA(0.0f, 0.0f, 0.0f, 0.15f)), ColorRGBA(), m_ContainerRadius, 0.0f, m_BackgroundCorners & (m_HasHeader ? IGraphics::CORNER_B : IGraphics::CORNER_ALL));
 	const int64_t Now = time_get();
 	const int64_t Frequency = maximum<int64_t>(1, time_freq());
 	// 只有在「上一帧没画过」（切页、关闭后重开）时才算重新出现：连续渲染不重复滚动，
@@ -160,12 +227,24 @@ void CListBox::DoStart(float RowHeight, int NumItems, int ItemsPerRow, int RowsP
 	ScrollParams.m_HideScrollbar = m_HideScrollbar;
 	ScrollParams.m_ScrollbarAlwaysReserved = m_ScrollbarAlwaysReserved;
 	ScrollParams.m_AnimateScrollbarReserve = m_AnimateScrollbarReserve;
+	// 覆盖式滚动条：不预留内容宽度，出现/消失只走显示系数与淡入滑出，
+	// 行宽在有没有滚动条时完全一致。细轨比面板级滚动条窄，否则会压住行文字。
+	ScrollParams.m_ScrollbarOverlay = m_ScrollbarOverlay;
+	ScrollParams.m_ScrollbarRevealSec = m_ScrollbarOverlay ? ui_token::list::SCROLLBAR_FADE.m_DurationSec : 0.0f;
+	ScrollParams.m_ScrollbarSlide = m_ScrollbarOverlay ? ui_token::list::SCROLLBAR_SLIDE : 0.0f;
+	if(m_ScrollbarOverlay)
+	{
+		if(!m_ScrollbarWidthOverridden)
+			ScrollParams.m_ScrollbarThickness = ui_token::list::SCROLLBAR_WIDTH;
+		if(!m_ScrollbarMarginOverridden)
+			ScrollParams.m_ScrollbarMargin = ui_token::list::SCROLLBAR_MARGIN;
+	}
 	m_ScrollbarWidth = QmListBoxScrollbarMetric(ScrollParams.m_ScrollbarThickness, m_ScrollbarWidth, m_ScrollbarWidthOverridden);
 	m_ScrollbarMargin = QmListBoxScrollbarMetric(ScrollParams.m_ScrollbarMargin, m_ScrollbarMargin, m_ScrollbarMarginOverridden);
 	ScrollParams.m_ScrollbarThickness = m_ScrollbarWidth;
 	ScrollParams.m_ScrollbarMargin = m_ScrollbarMargin;
 	const int NumRows = (m_ListBoxNumItems + maximum(1, m_ListBoxItemsPerRow) - 1) / maximum(1, m_ListBoxItemsPerRow);
-	m_ScrollRegion.SetContentHeightForNextFrame(NumRows * m_ListBoxRowHeight + maximum(0, NumRows - 1) * m_AutoSpacing);
+	m_ScrollRegion.SetContentHeightForNextFrame(ui_token::list::RowsHeight(NumRows, m_ListBoxRowHeight, m_AutoSpacing));
 	m_ScrollRegion.Begin(&m_ListBoxView, &ScrollOffset, &ScrollParams);
 	m_ListBoxView.y += ScrollOffset.y;
 
@@ -199,6 +278,15 @@ CListboxItem CListBox::DoNextRow()
 	}
 
 	m_RowView.VSplitLeft(m_RowView.w / (m_ListBoxItemsPerRow - m_ListBoxItemIndex % m_ListBoxItemsPerRow), &Item.m_Rect, &m_RowView);
+	// 胶囊行沿左右各收一段：容器圆角比行胶囊圆角大出来的那几像素，若贴着容器边，
+	// 顶行/底行的胶囊直角边会从容器圆角外侧探出来。两档都按尺寸推导，所以标准行
+	// （行高 25 对容器 12~14）几乎不用让位，矮行才多让一点；多列网格没有这一层。
+	if(m_CapsuleRows && m_ListBoxItemsPerRow <= 1 && m_BackgroundDrawn)
+	{
+		const float TrackInset = maximum(0.0f, m_ContainerRadius - ui_token::list::RowRadius(m_ListBoxRowHeight));
+		Item.m_Rect.x += TrackInset;
+		Item.m_Rect.w = maximum(0.0f, Item.m_Rect.w - 2.0f * TrackInset);
+	}
 
 	Item.m_Selected = m_ListBoxSelectedIndex == m_ListBoxItemIndex;
 	// 依次自裁剪框内浮现：行内容先画在最终矩形下方位移处，同时把裁剪
@@ -212,6 +300,15 @@ CListboxItem CListBox::DoNextRow()
 	if(EntryVisual.m_Fade < 0.999f)
 		m_EntryAlphaScope.emplace(Ui(), EntryVisual.m_Fade);
 	Item.m_Rect = QmListBoxEntryAnimatedRect(Item.m_Rect, m_EntryAnimationFadeOnly ? 0.0f : EntryVisual.m_OffsetY);
+	// 行内容区：把 token 派生的左右内边距让出来，文字/图标排在这里；行背景与命中区域
+	// 仍是 m_Rect。内退对**所有行**成立（不再只在胶囊行生效），这样非胶囊列表的弹层
+	// 条目也能拿到同一条内退；只用 m_Rect 排版的旧调用点不受影响。
+	Item.m_ContentRect = Item.m_Rect;
+	if(m_RowInsetX > 0.0f)
+	{
+		Item.m_ContentRect.x += m_RowInsetX;
+		Item.m_ContentRect.w = maximum(0.0f, Item.m_ContentRect.w - 2.0f * m_RowInsetX);
+	}
 	Item.m_Visible = !m_ScrollRegion.RectClipped(Item.m_Rect);
 
 	m_ListBoxItemIndex++;
@@ -273,6 +370,7 @@ CListboxItem CListBox::DoNextItem(const void *pId, bool Selected, float CornerRa
 	// 前景：选中填充为白色低透明，与底合成后亮度会跨过阈值被解析成黑。
 	// 旧选中行即使已经不再被选中，也要继续画到淡出结束，才能和新行走成
 	// 真正的交叉淡变，而不是先消失再淡入。
+	const float RowCornerRadius = CornerRadius >= 0.0f ? CornerRadius : ResolveRowCornerRadius();
 	const float SelectionAlpha = m_SelectedFeedback.Alpha(ThisItemIndex);
 	if(SelectionAlpha > 0.001f)
 	{
@@ -283,7 +381,7 @@ CListboxItem CListBox::DoNextItem(const void *pId, bool Selected, float CornerRa
 		ColorRGBA SelectionBorder = ColorRGBA();
 		if(m_ItemSelectionInset > 0.0f)
 			SelectionBorder = ui_token::color::NEUTRAL_WHITE.WithAlpha(ui_token::feedback::ICON_BORDER_ALPHA * SelectionAlpha);
-		DrawRoundedSurface(Ui(), SelectionRect, SelectionFill, SelectionBorder, CornerRadius, 1.0f);
+		DrawRoundedSurface(Ui(), SelectionRect, SelectionFill, SelectionBorder, RowCornerRadius, 1.0f);
 	}
 	if(Ui()->HotItem() == pId)
 		m_HoverFeedback.Observe(ThisItemIndex);
@@ -293,7 +391,7 @@ CListboxItem CListBox::DoNextItem(const void *pId, bool Selected, float CornerRa
 		CUIRect HoverRect = Item.m_Rect;
 		if(m_ItemSelectionInset > 0.0f)
 			HoverRect.Margin(m_ItemSelectionInset, &HoverRect);
-		DrawRoundedSurface(Ui(), HoverRect, Ui()->ScaleBackgroundAlpha(m_HoveredItemColor).WithMultipliedAlpha(HoverAlpha), ColorRGBA(), CornerRadius);
+		DrawRoundedSurface(Ui(), HoverRect, Ui()->ScaleBackgroundAlpha(m_HoveredItemColor).WithMultipliedAlpha(HoverAlpha), ColorRGBA(), RowCornerRadius);
 	}
 
 	return Item;
@@ -346,6 +444,14 @@ CListboxItem CListBox::DoCustomRow(float Height, bool ScrollHere)
 	if(EntryVisual.m_Fade < 0.999f)
 		m_EntryAlphaScope.emplace(Ui(), EntryVisual.m_Fade);
 	Item.m_Rect = QmListBoxEntryAnimatedRect(Item.m_Rect, m_EntryAnimationFadeOnly ? 0.0f : EntryVisual.m_OffsetY);
+	// 自定义行也要有内容矩形：以前留全 0，胶囊列表里插一行自定义内容就会拿到 0 宽，
+	// 只能退回用整行矩形（于是又贴边）。这里与普通行走同一套内退规则。
+	Item.m_ContentRect = Item.m_Rect;
+	if(m_CapsuleRows && m_RowInsetX > 0.0f)
+	{
+		Item.m_ContentRect.x += m_RowInsetX;
+		Item.m_ContentRect.w = maximum(0.0f, Item.m_ContentRect.w - 2.0f * m_RowInsetX);
+	}
 	Item.m_Visible = !m_ScrollRegion.RectClipped(Item.m_Rect);
 	return Item;
 }

@@ -40,6 +40,30 @@ namespace qm_picker_palette
 		}
 	}
 
+	// 自动命名：取「前缀 N」中第一个未被占用的编号。
+	// pReserved 指向此刻不在列表里、但随时可能插回的条目（例如撤销缓冲）：
+	// 取名时一并视为已占用，否则「删除自定义 1 → 重新改色 → 撤回」会出现两个同名声块。
+	// SkipIndex 是正在改名的条目本身，扫描时跳过，避免回退名被它自己的旧名字挤到下一个编号。
+	inline void NextUniqueName(char *pName, int Size, const char *pPrefix, const std::vector<SSwatch> &vSwatches, const SSwatch *pReserved, int SkipIndex)
+	{
+		for(int Number = 1;; Number++)
+		{
+			char aName[MAX_NAME_BYTES];
+			str_format(aName, sizeof(aName), "%s %d", pPrefix, Number);
+			bool Taken = pReserved != nullptr && str_comp(pReserved->m_aName, aName) == 0;
+			for(int Index = 0; !Taken && Index < (int)vSwatches.size(); Index++)
+			{
+				if(Index != SkipIndex && str_comp(vSwatches[Index].m_aName, aName) == 0)
+					Taken = true;
+			}
+			if(!Taken)
+			{
+				str_copy(pName, aName, Size);
+				return;
+			}
+		}
+	}
+
 	inline int HexDigitValue(char c)
 	{
 		if(c >= '0' && c <= '9')

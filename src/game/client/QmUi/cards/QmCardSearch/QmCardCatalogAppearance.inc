@@ -131,21 +131,12 @@ namespace
 namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_deck_appearance_hud_main[] = {
-		{Localizable("Authed name color in scoreboard"), nullptr, "管理权限者名字在计分板上的颜色"},
-		{Localizable("Clan color in friends list"), nullptr, "好友列表中战队成员条目颜色"},
-		{Localizable("Friend color in friends list"), nullptr, "好友列表中好友条目颜色"},
-		{Localizable("Same clan color in scoreboard"), nullptr, "相同战队在计分板上的颜色"},
-		{Localizable("Scoreboard"), nullptr, "计分板"},
 		{Localizable("Show health, shields and ammo"), nullptr, "显示生命、护甲与弹药栏"},
 		{Localizable("Show ingame HUD"), nullptr, "显示 HUD"},
 		{Localizable("Show local time always"), nullptr, "始终显示本地时间"},
 		{Localizable("Show score"), nullptr, "显示分数"},
 		{Localizable("Show spectator cursor"), nullptr, "显示旁观者光标"},
 		{Localizable("Show votes window after voting"), nullptr, "投票后不关闭投票窗口"},
-		{nullptr, "cl_authed_player_color", nullptr},
-		{nullptr, "cl_friends_list_clan_color", nullptr},
-		{nullptr, "cl_friends_list_friend_color", nullptr},
-		{nullptr, "cl_same_clan_color", nullptr},
 		{nullptr, "cl_show_local_time_always", nullptr},
 		{nullptr, "cl_show_votes_after_voting", nullptr},
 		{nullptr, "cl_showhud", nullptr},
@@ -240,4 +231,20 @@ namespace
 		{nullptr, "cl_laser_sg_outline_color", nullptr},
 	};
 	QM_CARD_SEARCH_REGISTER("deck:appearance-laser-preview", deck_appearance_laser_preview);
+}
+
+// 声明式搜索索引：文案随所属卡片声明，静态初始化时自动注册。
+namespace
+{
+	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_deck_appearance_scoreboard[] = {
+		{Localizable("Authed name color in scoreboard"), nullptr, "管理权限者名字在计分板上的颜色"},
+		{Localizable("Clan color in friends list"), nullptr, "好友列表中战队成员条目颜色"},
+		{Localizable("Friend color in friends list"), nullptr, "好友列表中好友条目颜色"},
+		{Localizable("Same clan color in scoreboard"), nullptr, "相同战队在计分板上的颜色"},
+		{nullptr, "cl_authed_player_color", nullptr},
+		{nullptr, "cl_friends_list_clan_color", nullptr},
+		{nullptr, "cl_friends_list_friend_color", nullptr},
+		{nullptr, "cl_same_clan_color", nullptr},
+	};
+	QM_CARD_SEARCH_REGISTER("deck:appearance-scoreboard", deck_appearance_scoreboard);
 }

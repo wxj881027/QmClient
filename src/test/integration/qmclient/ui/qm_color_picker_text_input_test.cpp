@@ -43,6 +43,49 @@ protected:
 		return {pPopup->x + pPopup->w - Inset - TitleHeight - 2.0f - TitleHeight * 0.5f, pPopup->y + Inset + TitleHeight * 0.5f};
 	}
 
+	// 调色板标题行右侧按钮：0=＋、1=改名、2=删除、3=撤回（与 PopupColorPicker 的右对齐布局一致）。
+	vec2 PaletteHeaderButtonCenter(int SlotFromRight) const
+	{
+		const CUIRect *pPopup = m_Ui.GetPopupMenuRect(&m_Picker);
+		EXPECT_NE(pPopup, nullptr);
+		const float Inset = m_Ui.PopupMenuContentInset() * 0.5f;
+		const float Right = pPopup->x + pPopup->w - Inset;
+		const float ButtonSize = 14.0f;
+		const float Gap = 4.0f;
+		const float PaletteAreaHeight = 16.0f + 2.0f + 128.0f;
+		const float HeaderCenterY = pPopup->y + pPopup->h - Inset - PaletteAreaHeight + 16.0f * 0.5f;
+		return {Right - ButtonSize * 0.5f - SlotFromRight * (ButtonSize + Gap), HeaderCenterY};
+	}
+
+	// 用户调色板第 Index 个色块的圆心：首格是“当前颜色”，8 列均分、按行换行。
+	vec2 PaletteSwatchCenter(int Index) const
+	{
+		const CUIRect *pPopup = m_Ui.GetPopupMenuRect(&m_Picker);
+		EXPECT_NE(pPopup, nullptr);
+		const float Inset = m_Ui.PopupMenuContentInset() * 0.5f;
+		const float ContentX = pPopup->x + Inset;
+		const float ContentW = pPopup->w - 2.0f * Inset;
+		const float CellW = (ContentW - 7.0f * 4.0f) / 8.0f;
+		const float ViewportY = pPopup->y + pPopup->h - Inset - (16.0f + 2.0f + 128.0f) + 16.0f + 2.0f;
+		const int Slot = Index + 1;
+		const vec2 Center = {ContentX + (Slot % 8) * (CellW + 4.0f) + CellW * 0.5f, ViewportY + (Slot / 8) * (22.0f + 11.0f + 4.0f) + 11.0f};
+		fprintf(stderr, "popup=(%.1f,%.1f,%.1fx%.1f) inset=%.1f contentW=%.1f cell=%.1f swatch=(%.1f,%.1f)\n", pPopup->x, pPopup->y, pPopup->w, pPopup->h, Inset, ContentW, CellW, Center.x, Center.y);
+		return Center;
+	}
+
+	void Click(const vec2 &Position)
+	{
+		FrameAt(Position, true);
+		FrameAt(Position, false);
+	}
+
+	// 弹窗有开启动画：等它停稳再按坐标点击，否则内容按缩放中的位置响应。
+	void Settle()
+	{
+		for(int i = 0; i < 40; i++)
+			Frame();
+	}
+
 	void TypeText(const char *pText)
 	{
 		IInput::CEvent Event{};
@@ -277,6 +320,47 @@ TEST_F(QmColorPickerTextInput, PercentAlphaTreatsTypedValueAsPercent)
 	EXPECT_STREQ(Input.GetString(), "100");
 }
 
+TEST_F(QmColorPickerTextInput, EditingColorCreatesNamedDraftSwatch)
+{
+	Open();
+	ASSERT_FALSE(HasFatalFailure());
+	ASSERT_TRUE(m_Picker.m_vPalette.empty());
+	CLineInput &Input = m_Picker.m_aChannelInputs[0];
+	Focus(Input);
+	ASSERT_FALSE(HasFatalFailure());
+	Paste(Input, "128");
+	ASSERT_FALSE(HasFatalFailure());
+	ASSERT_EQ(m_Picker.m_vPalette.size(), 1u);
+	EXPECT_EQ(m_Picker.m_DraftPaletteIndex, 0);
+	EXPECT_STREQ(m_Picker.m_vPalette[0].m_aName, "自定义 1");
+	EXPECT_EQ(m_Picker.m_vPalette[0].m_Color.PackAlphaLast(), m_Picker.m_RgbaColor.PackAlphaLast());
+	// 继续改色只更新同一条草稿，不重复新增。
+	Input.SelectAll();
+	TypeText("64");
+	Frame();
+	ASSERT_EQ(m_Picker.m_vPalette.size(), 1u);
+	EXPECT_EQ(m_Picker.m_vPalette[0].m_Color.PackAlphaLast(), m_Picker.m_RgbaColor.PackAlphaLast());
+}
+
+TEST_F(QmColorPickerTextInput, CancelRemovesDraftSwatch)
+{
+	Open();
+	ASSERT_FALSE(HasFatalFailure());
+	CLineInput &Input = m_Picker.m_aChannelInputs[0];
+	Focus(Input);
+	ASSERT_FALSE(HasFatalFailure());
+	Paste(Input, "128");
+	ASSERT_EQ(m_Picker.m_vPalette.size(), 1u);
+	IInput::CEvent Event{};
+	Event.m_Flags = IInput::FLAG_PRESS;
+	Event.m_Key = KEY_ESCAPE;
+	ASSERT_TRUE(m_Ui.OnInput(Event));
+	Frame();
+	EXPECT_FALSE(m_Ui.IsPopupOpen(&m_Picker));
+	EXPECT_TRUE(m_Picker.m_vPalette.empty());
+	EXPECT_EQ(m_Picker.m_DraftPaletteIndex, -1);
+}
+
 TEST_F(QmColorPickerTextInput, TypedValueSurvivesImmediateAcceptClick)
 {
 	Open();
@@ -294,4 +378,103 @@ TEST_F(QmColorPickerTextInput, TypedValueSurvivesImmediateAcceptClick)
 	FrameAt(Accept, false);
 	EXPECT_FALSE(m_Ui.IsPopupOpen(&m_Picker));
 	EXPECT_FLOAT_EQ(ColorHSLA(m_Color, true).a, 100.0f / 255.0f);
+}
+
+TEST_F(QmColorPickerTextInput, UndoAfterDeletingDraftKeepsNamesDistinct)
+{
+	// 「删除自定义 1 → 重新改色 → 撤回」不能在调色板里留下两个同名自动色块。
+	Open();
+	ASSERT_FALSE(HasFatalFailure());
+	Settle();
+	CLineInput &Input = m_Picker.m_aChannelInputs[0];
+	Focus(Input);
+	ASSERT_FALSE(HasFatalFailure());
+	Paste(Input, "128");
+	ASSERT_EQ(m_Picker.m_vPalette.size(), 1u);
+	ASSERT_STREQ(m_Picker.m_vPalette[0].m_aName, "自定义 1");
+
+	Click(PaletteSwatchCenter(0));
+	ASSERT_EQ(m_Picker.m_SelectedPaletteIndex, 0);
+	Click(PaletteHeaderButtonCenter(2));
+	ASSERT_TRUE(m_Picker.m_vPalette.empty());
+
+	Focus(Input);
+	ASSERT_FALSE(HasFatalFailure());
+	Input.SelectAll();
+	Paste(Input, "64");
+	ASSERT_EQ(m_Picker.m_vPalette.size(), 1u);
+	// 待撤回的「自定义 1」此刻不在列表里，新草稿必须避开它。
+	EXPECT_STREQ(m_Picker.m_vPalette[0].m_aName, "自定义 2");
+
+	Click(PaletteHeaderButtonCenter(3));
+	ASSERT_EQ(m_Picker.m_vPalette.size(), 2u);
+	EXPECT_STREQ(m_Picker.m_vPalette[0].m_aName, "自定义 1");
+	EXPECT_STREQ(m_Picker.m_vPalette[1].m_aName, "自定义 2");
+}
+
+TEST_F(QmColorPickerTextInput, CancelRemovesDraftRestoredByUndo)
+{
+	// 删除草稿再撤回，草稿身份要一并恢复：✕/Esc 取消仍应把它移除。
+	Open();
+	ASSERT_FALSE(HasFatalFailure());
+	Settle();
+	CLineInput &Input = m_Picker.m_aChannelInputs[0];
+	Focus(Input);
+	ASSERT_FALSE(HasFatalFailure());
+	Paste(Input, "128");
+	ASSERT_EQ(m_Picker.m_vPalette.size(), 1u);
+
+	Click(PaletteSwatchCenter(0));
+	Click(PaletteHeaderButtonCenter(2));
+	ASSERT_TRUE(m_Picker.m_vPalette.empty());
+	Click(PaletteHeaderButtonCenter(3));
+	ASSERT_EQ(m_Picker.m_vPalette.size(), 1u);
+	EXPECT_EQ(m_Picker.m_DraftPaletteIndex, 0);
+
+	IInput::CEvent Event{};
+	Event.m_Flags = IInput::FLAG_PRESS;
+	Event.m_Key = KEY_ESCAPE;
+	ASSERT_TRUE(m_Ui.OnInput(Event));
+	Frame();
+	EXPECT_FALSE(m_Ui.IsPopupOpen(&m_Picker));
+	EXPECT_TRUE(m_Picker.m_vPalette.empty());
+}
+
+TEST_F(QmColorPickerTextInput, RenamingDraftKeepsSwatchOnCancel)
+{
+	// 用户给草稿显式命名后它就是正式色块：✕ 取消不能删掉它。
+	Open();
+	ASSERT_FALSE(HasFatalFailure());
+	Settle();
+	CLineInput &Input = m_Picker.m_aChannelInputs[0];
+	Focus(Input);
+	ASSERT_FALSE(HasFatalFailure());
+	Paste(Input, "128");
+	ASSERT_EQ(m_Picker.m_vPalette.size(), 1u);
+
+	Click(PaletteSwatchCenter(0));
+	Click(PaletteHeaderButtonCenter(1));
+	ASSERT_EQ(m_Picker.m_RenamingPaletteIndex, 0);
+	Frame();
+	CLineInput &Rename = m_Picker.m_RenameInput;
+	ASSERT_TRUE(Rename.IsActive());
+	Rename.SelectAll();
+	TypeText("红");
+	IInput::CEvent Enter{};
+	Enter.m_Flags = IInput::FLAG_PRESS;
+	Enter.m_Key = KEY_RETURN;
+	ASSERT_TRUE(m_Ui.OnInput(Enter));
+	Frame();
+	ASSERT_EQ(m_Picker.m_RenamingPaletteIndex, -1);
+	ASSERT_STREQ(m_Picker.m_vPalette[0].m_aName, "红");
+	ASSERT_EQ(m_Picker.m_DraftPaletteIndex, -1);
+
+	IInput::CEvent Escape{};
+	Escape.m_Flags = IInput::FLAG_PRESS;
+	Escape.m_Key = KEY_ESCAPE;
+	ASSERT_TRUE(m_Ui.OnInput(Escape));
+	Frame();
+	EXPECT_FALSE(m_Ui.IsPopupOpen(&m_Picker));
+	ASSERT_EQ(m_Picker.m_vPalette.size(), 1u);
+	EXPECT_STREQ(m_Picker.m_vPalette[0].m_aName, "红");
 }

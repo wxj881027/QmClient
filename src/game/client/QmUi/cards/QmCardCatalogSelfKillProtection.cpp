@@ -37,35 +37,34 @@ void CMenus::RenderQmSelfKillProtectionContent(CUIRect &Content, float LineHeigh
 			// 没点就是没改：把临时值换回配置原值，自动开启的状态不会被顺手写进存档。
 			g_Config.m_QmSelfKillEnabled = ConfigValue;
 	}
-	Flow.Space(LineSpacing);
 
 	static CButtonContainer s_ReaderButtonSelfKillOff, s_ClearButtonSelfKillOff;
 	static CButtonContainer s_ReaderButtonSelfKillOn, s_ClearButtonSelfKillOn;
-	if(Flow.Control("self-kill-protection-bind-off", LineHeight, Row))
+	if(Flow.Control("self-kill-protection-bind-off", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		RenderQmHudKeyBindRow(Row, s_ReaderButtonSelfKillOff, s_ClearButtonSelfKillOff, Localize("Self-kill off"), "qm_self_kill_off", LineHeight, BodySize, 0.0f, LabelWidth);
-	Flow.Space(LineSpacing);
-	if(Flow.Control("self-kill-protection-bind-on", LineHeight, Row))
+	if(Flow.Control("self-kill-protection-bind-on", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		RenderQmHudKeyBindRow(Row, s_ReaderButtonSelfKillOn, s_ClearButtonSelfKillOn, Localize("Self-kill on"), "qm_self_kill_on", LineHeight, BodySize, 0.0f, LabelWidth);
-	Flow.Space(LineSpacing);
 
 	// 自动开启：0 = 永不自动开启（默认），大于 0 表示进图后第几分钟自动拦下 K 键。
 	// 与其它卡的数值行同一套标签 + 滑杆 + 数值输入布局。
 	static int s_AutoDelayInputId;
-	if(Flow.Control("self-kill-protection-auto-delay", LineHeight, Row))
+	if(Flow.Control("self-kill-protection-auto-delay", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
 		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "self-kill-protection-auto-delay", &LabelColumn, Localize("Auto-enable after"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
 		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(&s_AutoDelayInputId, &Row, &g_Config.m_QmSelfKillAutoDelay, &LabelColumn);
 		RenderQmSettingsSliderWithValueInput(&s_AutoDelayInputId, ControlColumn, &g_Config.m_QmSelfKillAutoDelay, 0, 60, "min", PrewarmOnly);
 	}
-	Flow.Space(LineSpacing);
+	Flow.Space(ui_token::settings::RowGap(LineSpacing));
 
-	Flow.Text("self-kill-protection-hint", Localize("To prevent accidental kills while racing, toggle the switch above or use the two bind rows. To self-kill, enable first, then press K. Auto-enable counts from the moment you join a game; 0 minutes keeps it off. Server commands are not affected"), 0.0f, BodySize, LineSpacing, [this](const char *pText, float Width, float FontSize) { return TextRender()->TextBoundingBox(FontSize, pText, -1, Width).m_H + FontSize * 0.25f; }, [this, BodySize](const CUIRect &Hint, const char *pText) {
+	// 说明行统一取小字档；测量与绘制共用同一个字号变量，不再借正文字号。
+	const float HintSize = CurrentSettingsContentMetrics().m_SmallSize;
+	Flow.Text("self-kill-protection-hint", Localize("To prevent accidental kills while racing, toggle the switch above or use the two bind rows. To self-kill, enable first, then press K. Auto-enable counts from the moment you join a game; 0 minutes keeps it off. Server commands are not affected"), 0.0f, HintSize, ui_token::settings::RowGap(LineSpacing), [this](const char *pText, float Width, float FontSize) { return TextRender()->TextBoundingBox(FontSize, pText, -1, Width).m_H + FontSize * 0.25f; }, [this, HintSize](const CUIRect &Hint, const char *pText) {
 			SLabelProperties Props;
 			Props.m_MaxWidth = Hint.w;
 			Props.m_EllipsisAtEnd = true;
 			TextRender()->TextColor(ui_token::color::TEXT_TIP);
-			Ui()->DoLabel(&Hint, pText, BodySize, TEXTALIGN_ML, Props);
+			Ui()->DoLabel(&Hint, pText, HintSize, TEXTALIGN_ML, Props);
 			TextRender()->TextColor(TextRender()->DefaultTextColor()); });
 }
 

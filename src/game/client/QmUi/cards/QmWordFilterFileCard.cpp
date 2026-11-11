@@ -13,6 +13,9 @@
 void CMenus::RenderQmWordFilterFileContent(CUIRect &Content, bool Streamer, float LineHeight, float LineSpacing, float BodySize)
 {
 	CSettingsContentLayoutFlow Flow(Content);
+
+	// 计数与状态说明行取小字档；测量与绘制共用同一个字号变量，不再借正文字号。
+	const float SmallSize = CurrentSettingsContentMetrics().m_SmallSize;
 	static CLineInputBuffered<1024> s_aPathInputs[2];
 	static CButtonContainer s_aReloadButtons[2];
 	const int Index = Streamer ? 1 : 0;
@@ -21,17 +24,16 @@ void CMenus::RenderQmWordFilterFileContent(CUIRect &Content, bool Streamer, floa
 	if(Flow.Input() && !Ui()->RenderOnly() && !Input.IsActive() && str_comp(Input.GetString(), pPath) != 0)
 		Input.Set(pPath);
 	CUIRect Row;
-	if(Flow.Control("word-filter-file-label", LineHeight, Row))
+	// 行距由行自己声明：声明阶段记到上一行末尾，行后不再补 Space。
+	if(Flow.Control("word-filter-file-label", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		Ui()->DoLabel(&Row, Localize("Word list file"), BodySize, TEXTALIGN_ML);
-	Flow.Space(LineSpacing);
 	IUiContext Context = SettingsUiContext(Streamer ? "streamer_word_file" : "chat_word_file", CurrentSettingsContentMetrics().m_UiScale);
-	if(Flow.Control("word-filter-file-path", LineHeight, Row) && ui_widget::InputField(Context, &Input, Row, "", BodySize) && Flow.Input() && !Ui()->RenderOnly())
+	if(Flow.Control("word-filter-file-path", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)) && ui_widget::InputField(Context, &Input, Row, "", BodySize) && Flow.Input() && !Ui()->RenderOnly())
 	{
 		str_copy(pPath, Input.GetString(), sizeof(g_Config.m_QmBlockWordsFile));
 		GameClient()->m_Chat.ReloadWordFilterFile(Streamer, false);
 	}
-	Flow.Space(LineSpacing);
-	if(Flow.Control("word-filter-file-reload", LineHeight, Row))
+	if(Flow.Control("word-filter-file-reload", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		CUIRect Reload, Count;
 		Row.VSplitLeft(std::min(Row.w * 0.35f, 100.0f), &Reload, &Count);
@@ -41,10 +43,12 @@ void CMenus::RenderQmWordFilterFileContent(CUIRect &Content, bool Streamer, floa
 		char aCount[128];
 		str_format(aCount, sizeof(aCount), Localize("%d words loaded"), static_cast<int>(File.Words().size()));
 		Count.VMargin(5.0f, &Count);
-		Ui()->DoLabel(&Count, aCount, BodySize, TEXTALIGN_ML);
+		Ui()->DoLabel(&Count, aCount, SmallSize, TEXTALIGN_ML);
 	}
-	Flow.Space(LineSpacing);
+	// Flow.Text 只有行后间距、没有「行前间距」参数：状态行之上这一档仍由上一行补，
+	// 与其它含 Flow.Text 的卡片同一种写法。
+	Flow.Space(ui_token::settings::RowGap(LineSpacing));
 	const auto &File = GameClient()->m_Chat.WordFilterFile(Streamer);
 	const char *pStatus = File.Error().empty() ? Localize("UTF-8 text, one word per line (max 2 MiB).") : Localize(File.Error().c_str());
-	Flow.Text("word-filter-file-status", pStatus, 0.0f, BodySize, LineSpacing, [this](const char *pText, float Width, float Size) { return TextRender()->TextBoundingBox(Size, pText, -1, Width).m_H; }, [this, BodySize](const CUIRect &Rect, const char *pText) { Ui()->DoLabel(&Rect, pText, BodySize, TEXTALIGN_ML, {.m_MaxWidth = Rect.w}); }, LineHeight);
+	Flow.Text("word-filter-file-status", pStatus, 0.0f, SmallSize, ui_token::settings::RowGap(LineSpacing), [this](const char *pText, float Width, float Size) { return TextRender()->TextBoundingBox(Size, pText, -1, Width).m_H; }, [this, SmallSize](const CUIRect &Rect, const char *pText) { Ui()->DoLabel(&Rect, pText, SmallSize, TEXTALIGN_ML, {.m_MaxWidth = Rect.w}); }, LineHeight);
 }

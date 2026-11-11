@@ -23,33 +23,46 @@ void CMenus::RenderQmFunctionBlockWordsContent(CUIRect &Content, float UiScale, 
 {
 	CSettingsContentLayoutFlow Flow(Content);
 	CUIRect Row, LabelColumn, ControlColumn;
+	// 行距由每行自己声明（声明阶段记到上一行末尾），行后不再补 Space。
+	// 条件块是否声明由展开状态决定，所以块前那一档也由块内第一行自己带；
+	// 块收起时这一档改由块后面的行声明，两条路径都只有一档。
 	auto RenderCheckbox = [this, &Flow, &Row, LineHeight, LineSpacing, PrewarmOnly](const void *pId, const char *pText, int *pValue) {
-		if(Flow.Control(pText, LineHeight, Row))
+		if(Flow.Control(pText, LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 			RenderQmFunctionCheckbox(pId, pText, Localize(pText), pValue, &Row, PrewarmOnly);
-		Flow.Space(LineSpacing);
 	};
 	RenderCheckbox(&g_Config.m_QmBlockWordsShowConsole, Localizable("Show blocked words in console"), &g_Config.m_QmBlockWordsShowConsole);
 	static CButtonContainer s_BlockWordsConsoleColorId;
-	if(Flow.Control("console-color", ResolveSettingsColorRowLayout(Content, CurrentSettingsContentMetrics(), false).m_ConsumedHeight, Row))
-		DoLine_ColorPicker(&s_BlockWordsConsoleColorId, CurrentSettingsContentMetrics(), &Row, Localize("Console color"), &g_Config.m_QmBlockWordsConsoleColor, ui_token::color::NEUTRAL_WHITE, false);
+	// 色块行只按按钮高度占位、行距自己声明：ConsumedHeight 自带的那档行尾间距会和下一行叠成双倍。
+	if(Flow.Control("console-color", CurrentSettingsContentMetrics().m_ButtonHeight, Row, ui_token::settings::RowGap(LineSpacing)))
+		DoLine_ColorPicker(&s_BlockWordsConsoleColorId, CurrentSettingsContentMetrics(), &Row, Localize("Console color"), &g_Config.m_QmBlockWordsConsoleColor, color_cast<ColorRGBA>(ColorHSLA(CConfig::ms_QmBlockWordsConsoleColor)), false);
 	RenderCheckbox(&g_Config.m_QmPublicBlockWords, Localizable("Use public word filter"), &g_Config.m_QmPublicBlockWords);
-	if(g_Config.m_QmPublicBlockWords)
+	// 公共词表的计数与状态说明：开关关掉就整块不声明，打开时按展开进度长高、下面的行让位。
+	static CSettingsConditionalRows s_PublicWordFilterRows;
+	if(s_PublicWordFilterRows.Update(g_Config.m_QmPublicBlockWords, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 	{
+		const CSettingsContentRevealScope PublicWordFilterRevealScope(Ui(), Flow, s_PublicWordFilterRows.Fade(g_Config.m_QmUiMotionLevel));
 		const auto &PublicWords = GameClient()->m_Chat.PublicWordFilter();
 		char aCount[128];
 		str_format(aCount, sizeof(aCount), Localize("Public words: %d"), static_cast<int>(PublicWords.Words().size()));
 		const char *pStatus = PublicWords.Refreshing()     ? Localize("Updating public word list...") :
 				      !PublicWords.Error().empty() ? Localize(PublicWords.Error().c_str()) :
 								     Localize("Public words match literal text in incoming player chat.");
+
+		// 说明行统一取小字档；测量与绘制共用同一个字号变量，不再借正文字号。
+		const float HintSize = CurrentSettingsContentMetrics().m_SmallSize;
 		auto Measure = [this](const char *pText, float Width, float Size) { return TextRender()->TextBoundingBox(Size, pText, -1, Width).m_H; };
-		auto Render = [this, BodySize](const CUIRect &Rect, const char *pText) { Ui()->DoLabel(&Rect, pText, BodySize, TEXTALIGN_ML, {.m_MaxWidth = Rect.w}); };
-		Flow.Text("public-word-filter-count", aCount, 0.0f, BodySize, LineSpacing, Measure, Render, LineHeight);
-		Flow.Text("public-word-filter-status", pStatus, 0.0f, BodySize, LineSpacing, Measure, Render, LineHeight);
+		auto Render = [this, HintSize](const CUIRect &Rect, const char *pText) { Ui()->DoLabel(&Rect, pText, HintSize, TEXTALIGN_ML, {.m_MaxWidth = Rect.w}); };
+		// 块内第一行是 Flow.Text（没有行前间距参数），进块这一档只能由块内 Space 声明：
+		// 它跟着展开系数一起缩放，块收起时归零，空出来的位置由下一行自己的行前间距顶上。
+		Flow.Space(ui_token::settings::RowGap(LineSpacing));
+		Flow.Text("public-word-filter-count", aCount, 0.0f, HintSize, ui_token::settings::RowGap(LineSpacing), Measure, Render, LineHeight);
+		// 末行的行尾间距由下一行自己声明，这里置 0，避免同一处叠成双倍。
+		Flow.Text("public-word-filter-status", pStatus, 0.0f, HintSize, 0.0f, Measure, Render, LineHeight);
 	}
 	RenderCheckbox(&g_Config.m_QmBlockWordsEnabled, Localizable("Enable word filter list"), &g_Config.m_QmBlockWordsEnabled);
 
 	const int BlockWordsAction = g_Config.m_QmBlockWordsAction;
-	if(Flow.Control("qmclient-word-filter-action", LineHeight, Row))
+	if(Flow.Control("qmclient-word-filter-action", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
 		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-word-filter-action", &LabelColumn, Localize("Behavior"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
@@ -59,13 +72,15 @@ void CMenus::RenderQmFunctionBlockWordsContent(CUIRect &Content, float UiScale, 
 		if(Flow.Input() && !PrewarmOnly && !Ui()->RenderOnly() && NewAction >= 0 && NewAction != BlockWordsAction)
 			g_Config.m_QmBlockWordsAction = NewAction;
 	}
-	Flow.Space(LineSpacing);
-
-	if(g_Config.m_QmBlockWordsAction == 0)
+	// 块前这一档改由块内第一行自己声明：文件行 helper 也自带行距了，
+	// 块外再留一档会在块收起时叠成双倍。
+	static CSettingsConditionalRows s_BlockWordsReplaceRows;
+	if(s_BlockWordsReplaceRows.Update(g_Config.m_QmBlockWordsAction == 0, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 	{
+		const CSettingsContentRevealScope BlockWordsReplaceRevealScope(Ui(), Flow, s_BlockWordsReplaceRows.Fade(g_Config.m_QmUiMotionLevel));
 		RenderCheckbox(&g_Config.m_QmBlockWordsMultiReplace, Localizable("Use multi-char replacement based on word length"), &g_Config.m_QmBlockWordsMultiReplace);
 
-		if(Flow.Control("qmclient-word-filter-replacement-chars", LineHeight, Row))
+		if(Flow.Control("qmclient-word-filter-replacement-chars", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		{
 			static CLineInputBuffered<8> s_BlockWordsReplaceInput;
 			static bool s_BlockWordsReplaceInited = false;
@@ -91,9 +106,8 @@ void CMenus::RenderQmFunctionBlockWordsContent(CUIRect &Content, float UiScale, 
 				str_copy(g_Config.m_QmBlockWordsReplacementChar, aReplacement, sizeof(g_Config.m_QmBlockWordsReplacementChar));
 			}
 		}
-		Flow.Space(LineSpacing);
 
-		if(Flow.Control("qmclient-word-filter-match-mode", LineHeight, Row))
+		if(Flow.Control("qmclient-word-filter-match-mode", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		{
 			SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
 			DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-word-filter-match-mode", &LabelColumn, Localize("Mode"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
@@ -103,9 +117,9 @@ void CMenus::RenderQmFunctionBlockWordsContent(CUIRect &Content, float UiScale, 
 			if(Flow.Input() && !PrewarmOnly && !Ui()->RenderOnly() && NewMode >= 0 && NewMode != g_Config.m_QmBlockWordsMode)
 				g_Config.m_QmBlockWordsMode = NewMode;
 		}
-		Flow.Space(LineSpacing);
 	}
 
+	// 单词表文件 helper 的每一行自己声明行距（已改成 A 型），块后不再补边界行距。
 	RenderQmWordFilterFileContent(Content, false, LineHeight, LineSpacing, BodySize);
 	static CLineInputBuffered<QmWordFilterList::INLINE_CAPACITY> s_BlockWordsInput;
 	static bool s_BlockWordsInited = false;
@@ -147,10 +161,10 @@ void CMenus::RenderQmFunctionHJAssistContent(CUIRect &Content, float LineHeight,
 {
 	CSettingsContentLayoutFlow Flow(Content);
 	CUIRect Row, LabelColumn, ControlColumn;
+	// 行距由行自己声明，行后不再补 Space：卡底和下一行的间距都由下一行自己给出。
 	const auto RenderCheckbox = [this, &Flow, &Row, LineHeight, LineSpacing, PrewarmOnly](const char *pText, int *pValue) {
-		if(Flow.Control(pText, LineHeight, Row))
+		if(Flow.Control(pText, LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 			RenderQmFunctionCheckbox(pValue, pText, Localize(pText), pValue, &Row, PrewarmOnly);
-		Flow.Space(LineSpacing);
 	};
 	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, Content,
 		{
@@ -166,27 +180,29 @@ void CMenus::RenderQmFunctionHJAssistContent(CUIRect &Content, float LineHeight,
 		{{&g_Config.m_QmPausedSpectatorFade, "Fade spectators in water", Localize("Fade spectators in water")}},
 		CurrentSettingsContentMetrics(), !PrewarmOnly);
 
-	if(g_Config.m_QmAutoTeamLock)
+	static CSettingsConditionalRows s_AutoTeamLockRows;
+	if(s_AutoTeamLockRows.Update(g_Config.m_QmAutoTeamLock, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 	{
-		if(Flow.Control("hj-assist-1", LineHeight, Row))
+		const CSettingsContentRevealScope AutoTeamLockRevealScope(Ui(), Flow, s_AutoTeamLockRows.Fade(g_Config.m_QmUiMotionLevel));
+		if(Flow.Control("hj-assist-1", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		{
 			SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
 			DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-hj-assist-lock-delay", &LabelColumn, Localize("Lock delay"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
 			static int s_QmAutoTeamLockDelayInputId;
 			RenderQmSettingsSliderWithValueInput(&s_QmAutoTeamLockDelayInputId, ControlColumn, &g_Config.m_QmAutoTeamLockDelay, 0, 30, "s", PrewarmOnly);
 		}
-		Flow.Space(LineSpacing);
 	}
-	if(g_Config.m_QmPausedSpectatorFade)
+	static CSettingsConditionalRows s_PausedSpectatorFadeRows;
+	if(s_PausedSpectatorFadeRows.Update(g_Config.m_QmPausedSpectatorFade, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 	{
-		if(Flow.Control("hj-assist-2", LineHeight, Row))
+		const CSettingsContentRevealScope PausedSpectatorFadeRevealScope(Ui(), Flow, s_PausedSpectatorFadeRows.Fade(g_Config.m_QmUiMotionLevel));
+		if(Flow.Control("hj-assist-2", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		{
 			SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
 			DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-hj-assist-spectator-alpha", &LabelColumn, Localize("Spectator opacity"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
 			static int s_QmPausedSpectatorAlphaInputId;
 			RenderQmSettingsSliderWithValueInput(&s_QmPausedSpectatorAlphaInputId, ControlColumn, &g_Config.m_QmPausedSpectatorAlpha, 0, 100, "%", PrewarmOnly);
 		}
-		Flow.Space(LineSpacing);
 	}
 }
 
@@ -285,10 +301,12 @@ namespace qm_card_catalog
 			const auto RenderFriendNotify = [pMenus, LineHeight, BodySize, LineSpacing, LabelWidth](CUIRect &Content, const bool PrewarmOnly) {
 				CSettingsContentLayoutFlow Flow(Content);
 				CUIRect Row;
-				if(Flow.Control("spectator-friends-first", LineHeight, Row))
+				// 行距由行自己声明；这是本卡第一行，声明阶段会自动归零。
+				if(Flow.Control("spectator-friends-first", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 					QmCardRenderHook::RenderQmFunctionCheckboxRow(pMenus, Row, LineHeight, 0, &g_Config.m_QmSpectatorFriendsFirst, "List friends first in the spectator menu", Localize("List friends first in the spectator menu"), &g_Config.m_QmSpectatorFriendsFirst, PrewarmOnly);
-				Flow.Space(LineSpacing);
 				QmCardRenderHook::RenderQmFunctionFriendNotifyContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LabelWidth, PrewarmOnly);
+				// 好友码控件仍是「行后补 Space」的写法，这里补一档边界行距。
+				Flow.Space(ui_token::settings::RowGap(LineSpacing));
 				QmCardRenderHook::RenderFriendCodeControls(pMenus, Content, PrewarmOnly);
 			};
 			Add(Id, "qm:friend_notify", "Friend Notifications", "Friend online and join notifications",

@@ -8,17 +8,13 @@
 #include <vector>
 
 // 全局卡片组件注册表（单一事实源）。
-// 每张卡的默认 Placement {stableId, tab, column, order}，是默认值、迁移兜底、新卡补位的唯一依据。
-// tab 是可变位置维度（非卡片固有归属）；数据债卡（laser/nameplate_text）的 tab 在本表补齐。
-// stableId 使用 qm:/tclient:/deck: 命名空间并保持全局唯一。
+// 每张卡声明自己的 stableId、tab 归属、是否全宽，以及面向用户的标题/关键词/描述。
+// 默认列与列内序**不再逐张手写**：BuildDefaultEntries() 按注册表顺序（即页面阅读序）
+// 做「对称瀑布」分配——半宽卡进当前累计高度更矮的一列（等高放左列），全宽卡独占一行并
+// 重置两列高度；没有登记检索表的卡片按等权兜底，绝不引入运行时测量依赖。
+// tab 是可变位置维度（非卡片固有归属）；stableId 使用 qm:/tclient:/deck: 命名空间并保持全局唯一。
 namespace qm_card_registry
 {
-	enum class ECardColumn
-	{
-		Left,
-		Right,
-		Full,
-	};
 	enum class ETClientMainCardsMigrationResult
 	{
 		NOT_LEGACY,
@@ -59,8 +55,8 @@ namespace qm_card_registry
 	{
 		const char *m_pStableId; // 全局唯一 stableId（qm:/tclient:/deck: 命名空间）
 		const char *m_pDefaultTab; // 默认归属 tab（nullptr=横跨卡如 info，或暂无归属）
-		ECardColumn m_DefaultColumn; // 默认列
-		int m_DefaultOrder; // 列内默认序
+		// 是否横跨两列（独占一行）。半宽卡的左右列由默认瀑布分配，表里不写列号。
+		bool m_FullWidth = false;
 		const char *m_pTitle; // 面向用户的默认标题（Localize key）
 		const char *m_pSearchKeywords; // 搜索补充词，英文小写为主，空格分隔
 		const char *m_pDescription = nullptr; // 面向用户的描述（Localize key）
@@ -142,8 +138,15 @@ namespace qm_card_registry
 	// UI 名（如 QiaFen 的 keyword_reply）不在注册表故不映射——以持久化 key 为权威，避免迁移丢用户布局。
 	const char *MigrateLegacyKey(const char *pLegacyKey);
 
-	// 构建完整默认全局模型 entries（从注册表派生），供首次迁移和缺失卡补位复用。
+	// 默认瀑布布局使用的静态高度权重：卡片头 + 由检索表条目数估计的设置行数。
+	// 0 表示该条目没有自己的 deck 渲染器（功能由别的卡承载），不占列高。
+	// 它只服务默认布局的对称性，运行时布局不做任何界面测量。
+	int DefaultCardHeightWeight(const char *pStableId);
+
+	// 构建完整默认全局模型 entries（注册表顺序 + 瀑布列分配），供首次迁移和缺失卡补位复用。
 	std::vector<qm_card_order::SEntry> BuildDefaultEntries();
+	// 单卡默认 placement（与 BuildDefaultEntries 同一次计算结果）；未命中返回 nullptr。
+	const qm_card_order::SEntry *FindDefaultPlacement(const char *pStableId);
 	// 回退现代分类后恢复卡片归属，保留列位置和源分类内的相对顺序。
 	bool RepairRemovedModernTabs(qm_card_order::CModel &Model);
 	// Bind 编辑器从栖梦页迁入控制页后，把旧持久化 tab 归属迁到 controls。

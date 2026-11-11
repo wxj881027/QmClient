@@ -449,21 +449,20 @@ static void DrawFriendFollowRing(CUi *pUi, const CUIRect &Rect, float Alpha, boo
 		const SQmColorGradient Gradient = FriendRingGradient(Flow);
 		// 单次绘制一条很宽的环带，靠带宽内的幂次衰减本身形成连续渐变。
 		// 叠多个窄环带会看到彼此的分界（"一层层"），只有一条连续衰减的带才是晕。
+		// 光晕用形状外扩（m_ShapeExpand）而不是「矩形放大 + 半径加宽」：连续曲率下
+		// 圆角的等距外扩不是半径加宽的同一条曲线，手动放大矩形会让光环四角与卡片
+		// 错位（换档位/强度时尤其明显）。外扩走距离场偏移，任何曲线档位都同心。
 		const auto EmitSdfGlow = [&](float Spread, float Falloff, float RingAlpha) {
-			CUIRect Layer = Ring;
-			Layer.x -= Spread;
-			Layer.y -= Spread;
-			Layer.w += 2.0f * Spread;
-			Layer.h += 2.0f * Spread;
 			SRoundedSurfaceParams Params;
-			Params.m_Radius = Radius + Spread;
+			Params.m_Radius = Radius;
+			Params.m_ShapeExpand = Spread;
 			Params.m_BorderWidth = Spread;
 			Params.m_BorderUsesGradient = true;
 			Params.m_BorderOnly = true;
 			Params.m_BorderFalloff = Falloff;
 			// 边框色的 alpha 决定整体强弱，渐变只提供色相。
 			const ColorRGBA RingColor(1.0f, 1.0f, 1.0f, RingAlpha);
-			DrawRoundedGradientSurface(pUi->Graphics(), Layer, Gradient, 1.0f, RingColor, Params);
+			DrawRoundedGradientSurface(pUi->Graphics(), Ring, Gradient, 1.0f, RingColor, Params);
 		};
 		// 外层：宽而柔的氤氲；内层：窄而实的彩带。两者同一套几何中心，
 		// 宽度连续衔接，因此叠起来看不到分层。
@@ -910,7 +909,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupMapPreview(void *pContext, CUIRect Vi
 	if(Panel.Header(s_Title, s_CloseButton, pPopupContext->m_aMapName, &s_Caption, aMeta))
 		return CUi::POPUP_CLOSE_CURRENT;
 	// 工具行与提示在画布外，始终留在二级面板内部。
-	Panel.ToggleRow(s_EntitiesLabel, Localize("Show entities only (hide textures)"), pPopupContext->m_EntityOnly);
+	Panel.ToggleRow(s_EntitiesLabel, Localize("Show entities only (hide textures)"), g_Config.m_QmMapPreviewEntityOnly);
 	CUIRect Preview = Panel.ContentRect();
 	const auto Metrics = ui_widget::ResolveSecondaryPanelMetrics(pUi->Screen()->w);
 	Preview.HSplitTop(Metrics.m_Spacing, nullptr, &Preview);
@@ -1003,7 +1002,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupMapPreview(void *pContext, CUIRect Vi
 		pPopupContext->m_InitialViewSet = true;
 	}
 	QmBrowserMapPreviewInput(*pUi, Camera, DrawRect, Active);
-	const bool EntityOnly = pPopupContext->m_EntityOnly != 0;
+	const bool EntityOnly = g_Config.m_QmMapPreviewEntityOnly != 0;
 	const bool DynamicBackground = EntityOnly && !IsDefaultBackgroundEntitiesValue(g_Config.m_ClBackgroundEntities) && !IsBackgroundImageExtension(g_Config.m_ClBackgroundEntities);
 	const bool ViewChanged = Camera.Center() != pEntry->m_RenderedCenter || Camera.Zoom() != pEntry->m_RenderedZoom || EntityOnly != pEntry->m_RenderedEntities ||
 				 (EntityOnly && (pEntry->m_RenderedBackgroundColor != g_Config.m_ClBackgroundEntitiesColor || str_comp(pEntry->m_aRenderedBackground, g_Config.m_ClBackgroundEntities) != 0)) || DynamicBackground;
@@ -1127,6 +1126,8 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	{
 		CUIRect ResetBtn;
 		Headers.VSplitLeft(ms_ListheaderHeight, &ResetBtn, &Headers);
+		// 左侧留一点呼吸边距：按钮不贴列表左边缘（右侧不动，后面各列的对齐不变）。
+		ResetBtn.VSplitLeft(4.0f, nullptr, &ResetBtn);
 		ResetBtn.Margin(1.0f, &ResetBtn);
 		static CButtonContainer s_ResetColsButton;
 		if(Ui()->DoButton_QmIcon(&s_ResetColsButton, EQmIcon::ARROW_ROTATE_RIGHT, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &ResetBtn, BUTTONFLAG_LEFT))
@@ -3745,7 +3746,8 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 		HeaderColor.a = HeaderHovered || PopupOpen ? 0.4f : 0.25f;
 		if(FriendDropHovered)
 			HeaderColor = FriendDropAllowed ? ColorRGBA(0.2f, 0.9f, 0.4f, 0.5f) : ColorRGBA(0.9f, 0.25f, 0.2f, 0.4f);
-		DrawRoundedSurface(Ui(), Header, HeaderColor, ColorRGBA(), ui_token::radius::SMALL_MENU);
+		// 分类表头是横条，端头直接用半圆：和页面里其它胶囊背景同一种形状。
+		DrawRoundedSurface(Ui(), Header, HeaderColor, ColorRGBA(), ui_token::radius::PILL);
 		Header.VSplitLeft(Header.h, &GroupIcon, &GroupLabel);
 		GroupIcon.Margin(2.0f, &GroupIcon);
 		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);

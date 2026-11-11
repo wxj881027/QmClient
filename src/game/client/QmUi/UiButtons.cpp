@@ -171,7 +171,10 @@ namespace ui_widget
 				return false;
 			SButtonSurfaceOptions Options;
 			Options.m_Role = Role;
-			Options.m_Radius = ResolveUiTextButtonRadius(Geometry);
+			// 长条按钮（宽明显大于高）给胶囊端头；接近方形的按钮仍用小圆角，
+			// 否则方按钮会被压成圆形。
+			const CUIRect &SurfaceRect = pSurfaceRect != nullptr ? *pSurfaceRect : Rect;
+			Options.m_Radius = SurfaceRect.w >= SurfaceRect.h * 1.8f ? ui_token::radius::PILL : ResolveUiTextButtonRadius(Geometry);
 			if(!DrawBorder)
 				Options.m_BorderWidth = 0.0f;
 			Options.m_Corners = Corners;
@@ -182,12 +185,15 @@ namespace ui_widget
 			CUiScopedSurfaceText SurfaceText(Ctx.m_pUi->TextRender(), Fill);
 			if(Disabled)
 				Ctx.m_pUi->TextRender()->TextColor(Ctx.m_pUi->TextRender()->GetTextColor().WithMultipliedAlpha(0.65f));
+			// 按钮字号随视口缩放：写死 12 会让窄窗口下同一排按钮出现两种大小
+			// （设置卡里走 Metrics 的控件会缩到 9.6，这里不会）。
+			const float ButtonBodySize = ui_token::control::BodySizeFromScale(Ctx.m_UiScale);
 			SLabelProperties Props;
-			Props.m_MaxWidth = std::max(0.0f, Rect.w - ui_token::spacing::SM);
-			Props.m_MinimumFontSize = ui_token::font::SMALL;
+			Props.m_MaxWidth = std::max(0.0f, Rect.w - 2.0f * ui_token::control::PadX(ButtonBodySize));
+			Props.m_MinimumFontSize = std::min(ui_token::font::SMALL, ButtonBodySize);
 			Props.m_EllipsisAtEnd = true;
 			if(Props.m_MaxWidth > 0.0f && Rect.h > 0.0f)
-				Ctx.m_pUi->DoLabel(&Rect, pText, ui_token::font::BODY, TEXTALIGN_MC, Props);
+				Ctx.m_pUi->DoLabel(&Rect, pText, ButtonBodySize, TEXTALIGN_MC, Props);
 			if(Disabled && !Ctx.m_pUi->RenderOnly() && Ctx.m_pUi->CheckActiveItem(pBtn))
 				Ctx.m_pUi->SetActiveItem(nullptr);
 			const bool Clicked = !Disabled && !Ctx.m_pUi->RenderOnly() && Ctx.m_pUi->DoButtonLogic(pBtn, 0, &Rect, BUTTONFLAG_LEFT) != 0;

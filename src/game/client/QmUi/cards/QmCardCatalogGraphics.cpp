@@ -354,7 +354,9 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 		static CListBox s_ListBox;
 		const float RowHeightResList = GraphicsMetrics.m_ListRowHeight;
 		const float FontSizeResListHeader = GraphicsMetrics.m_BodySize;
-		const float FontSizeResList = GraphicsMetrics.m_SmallSize;
+		// 列表行与音频包列表等设置页列表同档：行文字用正文字号，小字只留给
+		// 单位、角标与说明行；胶囊行内边距由同一字号派生（SetCapsuleRows）。
+		const float FontSizeResList = GraphicsMetrics.m_BodySize;
 		if(Flow.Control("graphics-window-mode", GraphicsMetrics.m_LineHeight, WindowModeDropDown)) {
 		const char *apWindowModes[] = {Localize("Windowed"), Localize("Windowed borderless"), Localize("Windowed fullscreen"), Localize("Desktop fullscreen"), Localize("Fullscreen")};
 		static CUi::SDropDownState s_WindowModeDropDownState;
@@ -378,8 +380,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 		}
 
 		}
-		Flow.Space(GraphicsMetrics.m_LineSpacing);
-		if(Flow.Control("graphics-current-mode", GraphicsMetrics.m_LineHeight, ModeLabel))
+		if(Flow.Control("graphics-current-mode", GraphicsMetrics.m_LineHeight, ModeLabel, ui_token::settings::RowGap(GraphicsMetrics.m_LineSpacing)))
 		{
 			int G = std::gcd(g_Config.m_GfxScreenWidth, g_Config.m_GfxScreenHeight);
 			const int AspectGcd = G > 0 ? G : 1;
@@ -389,15 +390,16 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 			Ui()->DoLabel(&ModeLabel, aBuf, FontSizeResListHeader, TEXTALIGN_MC);
 		}
 
-		Flow.Space(GraphicsMetrics.m_LineSpacing);
-		if(Flow.Control("graphics-mode-list", std::max(0.0f, GraphicsModesTargetContentHeight - 2.0f * (GraphicsMetrics.m_LineHeight + GraphicsMetrics.m_LineSpacing)), ModeList))
+		if(Flow.Control("graphics-mode-list", std::max(0.0f, GraphicsModesTargetContentHeight - 2.0f * (GraphicsMetrics.m_LineHeight + GraphicsMetrics.m_LineSpacing)), ModeList, ui_token::settings::RowGap(GraphicsMetrics.m_LineSpacing)))
 		{
 			int SelectedOld = -1;
 			s_ListBox.SetActive(!Ui()->IsPopupOpen());
 			s_ListBox.SetWheelOwnerPriority(EUiWheelOwnerPriority::COMPOSITE_CONTROL);
 			s_ListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);
-			s_ListBox.SetHideScrollbar(true);
-			s_ListBox.SetItemColors(ui_token::color::LIST_ITEM_SELECTED, ui_token::color::LIST_ITEM_SELECTED, ui_token::color::LIST_ITEM_HOVER);
+			// 统一行外观：胶囊整行 + token 行距 + 按字号派生的行内内边距；
+			// 可见行上限 8，超过就出覆盖式滚动条（细轨不占行宽，不再整条隐藏）。
+			s_ListBox.SetCapsuleRows(FontSizeResList);
+			s_ListBox.SetVisibleRowRange(1, ui_token::list::MAX_VISIBLE_ROWS);
 			s_ListBox.DoStart(RowHeightResList, s_NumNodes, 1, 3, SelectedOld, &ModeList);
 
 			for(int i = 0; i < s_NumNodes; ++i)
@@ -416,8 +418,9 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 					continue;
 
 				int G = std::gcd(s_aModes[i].m_WindowWidth, s_aModes[i].m_WindowHeight);
-				str_format(aBuf, sizeof(aBuf), " %dx%d @%dhz %d bit (%d:%d)", s_aModes[i].m_CanvasWidth, s_aModes[i].m_CanvasHeight, s_aModes[i].m_RefreshRate, Depth, s_aModes[i].m_WindowWidth / G, s_aModes[i].m_WindowHeight / G);
-				Ui()->DoLabel(&Item.m_Rect, aBuf, FontSizeResList, TEXTALIGN_ML);
+				str_format(aBuf, sizeof(aBuf), "%dx%d @%dhz %d bit (%d:%d)", s_aModes[i].m_CanvasWidth, s_aModes[i].m_CanvasHeight, s_aModes[i].m_RefreshRate, Depth, s_aModes[i].m_WindowWidth / G, s_aModes[i].m_WindowHeight / G);
+				// 行内容区已含 token 左右内边距，文字不再贴着胶囊边缘。
+				Ui()->DoLabel(&Item.m_ContentRect, aBuf, FontSizeResList, TEXTALIGN_ML);
 			}
 
 			const int NewSelected = s_ListBox.DoEnd();
@@ -438,7 +441,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 				CUIRect Row;
 				if(Flow.Control(pId, Height, Row))
 					Action(Row);
-				Flow.Space(GraphicsMetrics.m_LineSpacing);
+				Flow.Space(ui_token::settings::RowGap(GraphicsMetrics.m_LineSpacing));
 			};
 			if(Graphics()->GetNumScreens() > 1)
 			{
@@ -652,7 +655,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 			const auto InfoLabel = [this, &Flow, GraphicsMetrics, BodySize](const char *pId, const char *pLabel, const char *pValue) {
 				char aText[1024];
 				str_format(aText, sizeof(aText), "%s: %s", pLabel, pValue != nullptr && pValue[0] != '\0' ? pValue : Localize("Unknown"));
-				Flow.Text(pId, aText, 0.0f, BodySize, GraphicsMetrics.m_LineSpacing, [this](const char *pText, float Width, float Size) { return TextRender()->TextBoundingBox(Size, pText, -1, Width).m_H + Size * 0.25f; }, [this, BodySize](const CUIRect &Row, const char *pText) {
+				Flow.Text(pId, aText, 0.0f, BodySize, ui_token::settings::RowGap(GraphicsMetrics.m_LineSpacing), [this](const char *pText, float Width, float Size) { return TextRender()->TextBoundingBox(Size, pText, -1, Width).m_H + Size * 0.25f; }, [this, BodySize](const CUIRect &Row, const char *pText) {
 						SLabelProperties Props;
 						Props.m_MaxWidth = Row.w;
 						Props.m_EnableWidthCheck = false;
@@ -722,7 +725,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
                 CUIRect Row;
                 if(Flow.Control(pId, Height, Row))
                     Action(Row);
-                Flow.Space(GraphicsMetrics.m_LineSpacing);
+                Flow.Space(ui_token::settings::RowGap(GraphicsMetrics.m_LineSpacing));
             };
 			const bool TextCustomColorVisible = g_Config.m_QmUiTextColorMode == 3;
 			SSettingsContentMetrics ColorMetrics = GraphicsMetrics;
@@ -745,50 +748,76 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 			// 连续曲率，区别只在曲率沿弧长怎么分布。小控件受 25% 生长上限约束，
 			// 实际会退化成圆弧，所以四档的差别只在卡片和面板这类大表面上看得出来。
 			RowAction("graphics-corner-curve", GraphicsMetrics.m_LineHeight, [&](CUIRect CornerCurveRow) {
-				static CButtonContainer s_aCornerCurveButtons[4];
+				static CButtonContainer s_aCornerCurveButtons[5];
 				const char *apCornerCurveLabels[] = {
 					Localize("Classic arc"),
 					Localize("Superellipse"),
 					Localize("Quintic Bezier"),
 					Localize("Conic Bezier"),
+					Localize("Apple"),
 				};
 				CUIRect CornerCurveLabel, CornerCurveSegments;
 				SplitSettingsControlRow(CornerCurveRow, GraphicsMetrics, &CornerCurveLabel, &CornerCurveSegments, ESettingsControlWidth::LONG_CHOICE);
 				Ui()->DoLabel(&CornerCurveLabel, Localize("Corner curve"), BodySize, TEXTALIGN_ML);
-				// 四档选择是自绘控件，不经过 NumericField / DropDown 的配置绑定，
+				// 五档选择是自绘控件，不经过 NumericField / DropDown 的配置绑定，
 				// 这里给整行补登记配置说明：悬停标题或右侧控件都能看到提示。
 				static const char s_CornerCurveHelpId[] = "graphics-corner-curve-help";
 				GameClient()->m_Tooltips.DoSettingsToolTipForConfig(s_CornerCurveHelpId, &CornerCurveRow, &g_Config.m_QmUiCornerCurve, &CornerCurveLabel);
 				const int CurrentCurve = g_Config.m_QmUiCornerCurve;
-				const int PickedCurve = DoSegmentedChoice(s_aCornerCurveButtons, apCornerCurveLabels, 4, CurrentCurve, CornerCurveSegments);
+				const int PickedCurve = DoSegmentedChoice(s_aCornerCurveButtons, apCornerCurveLabels, 5, CurrentCurve, CornerCurveSegments);
 				if(PickedCurve != CurrentCurve)
 					g_Config.m_QmUiCornerCurve = PickedCurve;
 			});
 
-			// 圆角强度与胶囊接缝：原圆弧档没有可调项，两行都不占位；
+			// 圆角强度与胶囊端头：原圆弧档没有可调项，两行都不占位；
 			// 数值不随切档清空，切回连续曲率档时沿用上一次的值。
 			if(g_Config.m_QmUiCornerCurve != 0)
 			{
 				RowAction("graphics-corner-curvature", GraphicsMetrics.m_LineHeight, [&](CUIRect CornerCurvatureRow) {
-					DoGraphicsNumericField("graphics-corner-curvature", &g_Config.m_QmUiCornerSmoothing, &g_Config.m_QmUiCornerSmoothing, CornerCurvatureRow, Localize("Corner curvature"), 0, 100, &CUi::ms_LinearScrollbarScale, "%", CUi::SCROLLBAR_OPTION_DELAYUPDATE);
+					// 强度按档位分开记忆：每档一个配置，切档时各自回到自己的值。
+					int *pSmoothing = QmCornerSmoothingForCurve(g_Config.m_QmUiCornerCurve);
+					DoGraphicsNumericField("graphics-corner-curvature", pSmoothing, pSmoothing, CornerCurvatureRow, Localize("Corner curvature"), 0, 100, &CUi::ms_LinearScrollbarScale, "%", CUi::SCROLLBAR_OPTION_DELAYUPDATE);
 				});
 
-				// 胶囊接缝软化：只加曲线强度、不加半径，曲率在几个像素内从 0 缓升到 1/R。
-				// 只有「有一段直边」的胶囊生效，正圆（滑块圆点、单选按钮）不受影响。
-				// 上限是 min(圆角强度, 接缝)：强度是主强度，接缝只在它之下做分部微调，
-				// 所以强度为 0 时接缝没有任何效果，这一行也不占位。
-				// 0 = 纯半圆端头，与 iOS 一致。
-				if(g_Config.m_QmUiCornerSmoothing > 0)
+				// 胶囊端头两档：普通胶囊 = 正圆弧端头；丝滑 = 只把直边靠端帽的一段往外鼓一点点，
+				// 端帽本身仍是精确正圆，所以不会出现端头被拉平、胶囊变方。
+				// 只对「有一段直边」的胶囊生效，正圆（滑块圆点、单选按钮）不受影响。
+				RowAction("graphics-capsule-style", GraphicsMetrics.m_LineHeight, [&](CUIRect CapsuleStyleRow) {
+					static CButtonContainer s_aCapsuleStyleButtons[3];
+					const char *apCapsuleStyleLabels[] = {
+						Localize("Plain capsule"),
+						Localize("Silky capsule"),
+					Localize("Apple capsule"),
+					};
+					CUIRect CapsuleStyleLabel, CapsuleStyleSegments;
+					SplitSettingsControlRow(CapsuleStyleRow, GraphicsMetrics, &CapsuleStyleLabel, &CapsuleStyleSegments, ESettingsControlWidth::LONG_CHOICE);
+					Ui()->DoLabel(&CapsuleStyleLabel, Localize("Capsule ends"), BodySize, TEXTALIGN_ML);
+					static const char s_CapsuleStyleHelpId[] = "graphics-capsule-style-help";
+					GameClient()->m_Tooltips.DoSettingsToolTipForConfig(s_CapsuleStyleHelpId, &CapsuleStyleRow, &g_Config.m_QmUiCapsuleStyle, &CapsuleStyleLabel);
+					const int CurrentStyle = g_Config.m_QmUiCapsuleStyle;
+					const int PickedStyle = DoSegmentedChoice(s_aCapsuleStyleButtons, apCapsuleStyleLabels, 3, CurrentStyle, CapsuleStyleSegments);
+					if(PickedStyle != CurrentStyle)
+						g_Config.m_QmUiCapsuleStyle = PickedStyle;
+				});
+
+				// 苹果胶囊端部强度：只在这一档出现，独立于上方的「圆角曲率」。
+				// 胶囊的端头是半圆，和卡片圆角不是同一类形状，共用一个滑杆两边都调不准。
+				// 显隐走设置页统一的布局过渡，和「个性调整」里那些子项同一套动画。
+				static CSettingsConditionalRows s_CapsuleStrengthRows;
+				if(s_CapsuleStrengthRows.Update(g_Config.m_QmUiCapsuleStyle == 2, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 				{
-					RowAction("graphics-capsule-seam", GraphicsMetrics.m_LineHeight, [&](CUIRect CapsuleSeamRow) {
-						DoGraphicsNumericField("graphics-capsule-seam", &g_Config.m_QmUiCapsuleSeam, &g_Config.m_QmUiCapsuleSeam, CapsuleSeamRow, Localize("Capsule seam"), 0, 100, &CUi::ms_LinearScrollbarScale, "%", CUi::SCROLLBAR_OPTION_DELAYUPDATE);
+					const CSettingsContentRevealScope CapsuleStrengthScope(Ui(), Flow, s_CapsuleStrengthRows.Fade(g_Config.m_QmUiMotionLevel));
+					RowAction("graphics-capsule-strength", GraphicsMetrics.m_LineHeight, [&](CUIRect CapsuleStrengthRow) {
+						DoGraphicsNumericField("graphics-capsule-strength", &g_Config.m_QmUiCapsuleAppleStrength, &g_Config.m_QmUiCapsuleAppleStrength, CapsuleStrengthRow, Localize("Capsule end strength"), 0, 100, &CUi::ms_LinearScrollbarScale, "%", CUi::SCROLLBAR_OPTION_DELAYUPDATE);
 					});
 				}
 			}
 
 
-			if(!qm_card_catalog::QmCardRenderHook::Personalization(this, ContentRect, "deck:graphics-visual", GraphicsMetrics))
+			float SectionReveal = 0.0f;
+			if(!qm_card_catalog::QmCardRenderHook::PersonalizationReveal(this, ContentRect, "deck:graphics-visual", GraphicsMetrics, &SectionReveal))
 				return;
+			const CSettingsContentRevealScope SectionRevealScope(Ui(), Flow, SectionReveal);
 
 			RowAction("graphics-surface", GraphicsMetrics.m_ButtonHeight, [&](CUIRect UiColorRow) {
 static CButtonContainer s_UiColorResetId;
@@ -892,7 +921,7 @@ CUIRect TextCustomColorRow;
 					InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::CONFIG_HASH_CHANGED);
 			}
 			if(TextCustomColorVisible)
-				Flow.Space(GraphicsMetrics.m_LineSpacing);
+				Flow.Space(ui_token::settings::RowGap(GraphicsMetrics.m_LineSpacing));
 
 			RowAction("graphics-focus-color", GraphicsMetrics.m_ButtonHeight, [&](CUIRect FocusColorRow) {
 static CButtonContainer s_FocusColorResetId;
@@ -941,7 +970,7 @@ const char *apBlurModeLabels[] = {Localize("Gaussian"), Localize("Kawase"), Loca
 static CButtonContainer s_CardBorderColorResetId;
 			const unsigned OldCardBorderColor = g_Config.m_QmUiCardBorderColor;
 
-			DoLine_ColorPicker(&s_CardBorderColorResetId, ColorMetrics, &CardBorderColorRow, Localize("Settings card border color"), &g_Config.m_QmUiCardBorderColor, ColorRGBA(1.0f, 1.0f, 1.0f, 0.10f), false, nullptr, true, false);
+			DoLine_ColorPicker(&s_CardBorderColorResetId, ColorMetrics, &CardBorderColorRow, Localize("Settings card border color"), &g_Config.m_QmUiCardBorderColor, color_cast<ColorRGBA>(ColorHSLA(CConfig::ms_QmUiCardBorderColor, true)), false, nullptr, true, false);
 			if(OldCardBorderColor != g_Config.m_QmUiCardBorderColor)
 				InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::CONFIG_HASH_CHANGED);
 
@@ -959,7 +988,7 @@ static CButtonContainer s_CardBorderColorResetId;
 				CUIRect Row;
 				if(Flow.Control(pId, Height, Row))
 					Action(Row);
-				Flow.Space(GraphicsMetrics.m_LineSpacing);
+				Flow.Space(ui_token::settings::RowGap(GraphicsMetrics.m_LineSpacing));
 			};
 			const bool CustomColor = qm_icon_settings::CustomColorEnabled(g_Config.m_QmUiIconColor, g_Config.m_QmUiIconCustomColorEnabled);
 			const auto DoIconChoiceRow = [this, GraphicsMetrics, BodySize](CUIRect Row, const char *pLabel, const char *const *ppLabels, int Count, int Current, CButtonContainer *pButtons, auto &&OnChanged) {
@@ -989,22 +1018,24 @@ static CButtonContainer s_CardBorderColorResetId;
 					Client()->OnWindowResize();
 				}
 			});
-			if(!qm_card_catalog::QmCardRenderHook::Personalization(this, ContentRect, "deck:graphics-icons", GraphicsMetrics))
+			float SectionReveal = 0.0f;
+			if(!qm_card_catalog::QmCardRenderHook::PersonalizationReveal(this, ContentRect, "deck:graphics-icons", GraphicsMetrics, &SectionReveal))
 				return;
+			const CSettingsContentRevealScope SectionRevealScope(Ui(), Flow, SectionReveal);
 
 			if(CustomColor)
 			{
 				SSettingsContentMetrics ColorMetrics = GraphicsMetrics;
 				ColorMetrics.m_LineSpacing = 0.0f;
 				RowAction("graphics-icon-custom-color", GraphicsMetrics.m_ButtonHeight, [&](CUIRect CustomColorRow) {
-					DoLine_ColorPicker(&s_GraphicsIconCustomColorResetId, ColorMetrics, &CustomColorRow, Localize("UI icon custom color"), &g_Config.m_QmUiIconCustomColor, ui_token::color::NEUTRAL_WHITE, false, nullptr, false, false);
+					DoLine_ColorPicker(&s_GraphicsIconCustomColorResetId, ColorMetrics, &CustomColorRow, Localize("UI icon custom color"), &g_Config.m_QmUiIconCustomColor, color_cast<ColorRGBA>(ColorHSLA(CConfig::ms_QmUiIconCustomColor)), false, nullptr, false, false);
 				});
 			}
 			SSettingsContentMetrics SemanticColorMetrics = GraphicsMetrics;
 			SemanticColorMetrics.m_LineSpacing = 0.0f;
 
 			RowAction("graphics-friend-icon-color", GraphicsMetrics.m_ButtonHeight, [&](CUIRect FriendColorRow) {
-				DoLine_ColorPicker(&s_GraphicsFriendIconColorResetId, SemanticColorMetrics, &FriendColorRow, Localize("Friend icon color"), &g_Config.m_QmUiFriendIconColor, color_cast<ColorRGBA>(ColorHSLA(0x00D1AB)), false, nullptr, false, false);
+				DoLine_ColorPicker(&s_GraphicsFriendIconColorResetId, SemanticColorMetrics, &FriendColorRow, Localize("Friend icon color"), &g_Config.m_QmUiFriendIconColor, color_cast<ColorRGBA>(ColorHSLA(CConfig::ms_QmUiFriendIconColor)), false, nullptr, false, false);
 			});
 
 			RowAction("graphics-friend-icon-filled", GraphicsMetrics.m_LineHeight, [&](CUIRect FriendFilledRow) {
@@ -1013,7 +1044,7 @@ static CButtonContainer s_CardBorderColorResetId;
 			});
 
 			RowAction("graphics-favorite-icon-color", GraphicsMetrics.m_ButtonHeight, [&](CUIRect FavoriteColorRow) {
-				DoLine_ColorPicker(&s_GraphicsFavoriteIconColorResetId, SemanticColorMetrics, &FavoriteColorRow, Localize("Favorite icon color"), &g_Config.m_QmUiFavoriteIconColor, color_cast<ColorRGBA>(ColorHSLA(0x21FFA6)), false, nullptr, false, false);
+				DoLine_ColorPicker(&s_GraphicsFavoriteIconColorResetId, SemanticColorMetrics, &FavoriteColorRow, Localize("Favorite icon color"), &g_Config.m_QmUiFavoriteIconColor, color_cast<ColorRGBA>(ColorHSLA(CConfig::ms_QmUiFavoriteIconColor)), false, nullptr, false, false);
 			});
 
 			RowAction("graphics-favorite-icon-filled", GraphicsMetrics.m_LineHeight, [&](CUIRect FavoriteFilledRow) {
@@ -1031,7 +1062,7 @@ static CButtonContainer s_CardBorderColorResetId;
 			if(QmSignalIconColorMode() == QM_SIGNAL_COLOR_CUSTOM)
 			{
 				RowAction("graphics-signal-icon-color", GraphicsMetrics.m_ButtonHeight, [&](CUIRect SignalColorRow) {
-					DoLine_ColorPicker(&s_GraphicsSignalIconColorResetId, SemanticColorMetrics, &SignalColorRow, Localize("Connection icon custom color"), &g_Config.m_QmHudIslandSignalColor, color_cast<ColorRGBA>(ColorHSLA(0x00D1AB)), false, nullptr, false, false);
+					DoLine_ColorPicker(&s_GraphicsSignalIconColorResetId, SemanticColorMetrics, &SignalColorRow, Localize("Connection icon custom color"), &g_Config.m_QmHudIslandSignalColor, color_cast<ColorRGBA>(ColorHSLA(CConfig::ms_QmHudIslandSignalColor)), false, nullptr, false, false);
 				});
 			}
 			RowAction("graphics-icon-weight", GraphicsMetrics.m_LineHeight, [&](CUIRect Row) {
@@ -1057,7 +1088,7 @@ static CButtonContainer s_CardBorderColorResetId;
 				CUIRect Row;
 				if(Flow.Control(pId, Height, Row))
 					Action(Row);
-				Flow.Space(GraphicsMetrics.m_LineSpacing);
+				Flow.Space(ui_token::settings::RowGap(GraphicsMetrics.m_LineSpacing));
 			};
 
 			RowAction("graphics-motion", GraphicsMetrics.m_LineHeight, [&](CUIRect MotionRow) {
@@ -1082,8 +1113,10 @@ static CButtonContainer s_CardBorderColorResetId;
 				GameClient()->m_Tooltips.DoToolTip(&s_aMotionButtons[0], &MotionRow, aMotionTip);
 			});
 
-			if(!qm_card_catalog::QmCardRenderHook::Personalization(this, ContentRect, "deck:graphics-interaction", GraphicsMetrics))
+			float SectionReveal = 0.0f;
+			if(!qm_card_catalog::QmCardRenderHook::PersonalizationReveal(this, ContentRect, "deck:graphics-interaction", GraphicsMetrics, &SectionReveal))
 				return;
+			const CSettingsContentRevealScope SectionRevealScope(Ui(), Flow, SectionReveal);
 
 			RowAction("graphics-ListEntryAnimations", GraphicsMetrics.m_LineHeight, [&](CUIRect ListEntryAnimations) {
 				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmUiListEntryAnimations, "settings-card-list-entry-animations", Localize("Card list entry animation"), g_Config.m_QmUiListEntryAnimations, &ListEntryAnimations))

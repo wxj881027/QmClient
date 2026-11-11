@@ -20,6 +20,7 @@
 
 #include <game/client/QmUi/SettingsContentLayout.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
+#include <game/client/QmUi/SettingsPersonalization.h>
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiSurface.h>
@@ -70,12 +71,11 @@ void CMenus::RenderQmHudDebugGraphContent(CUIRect &Content, float LineHeight, fl
 	static CButtonContainer s_ReaderButtonDebugGraphToggle;
 	static CButtonContainer s_ClearButtonDebugGraphToggle;
 	CUIRect BindRow;
-	if(Flow.Control("hud-debug-graph-toggle-bind", LineHeight, BindRow))
+	if(Flow.Control("hud-debug-graph-toggle-bind", LineHeight, BindRow, ui_token::settings::RowGap(LineSpacing)))
 		RenderQmHudKeyBindRow(BindRow, s_ReaderButtonDebugGraphToggle, s_ClearButtonDebugGraphToggle, Localize("Global toggle key"), "toggle dbg_graphs 0 1", LineHeight, BodySize, 0.0f, LabelWidth);
-	Flow.Space(LineSpacing);
 
 	CUIRect Row, LabelColumn, ControlColumn;
-	if(Flow.Control("qmclient-debug-graph-panel-opacity", CurrentSettingsContentMetrics().m_LineHeight, Row))
+	if(Flow.Control("qmclient-debug-graph-panel-opacity", CurrentSettingsContentMetrics().m_LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
 		RenderQmHudLabel("qmclient-debug-graph-panel-opacity", &LabelColumn, Localize("Panel opacity"), BodySize);
@@ -83,7 +83,6 @@ void CMenus::RenderQmHudDebugGraphContent(CUIRect &Content, float LineHeight, fl
 		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(&s_QmMonitoringHudOpacityInputId, &Row, &g_Config.m_QmMonitoringHudOpacity, &LabelColumn);
 		RenderQmSettingsSliderWithValueInput(&s_QmMonitoringHudOpacityInputId, ControlColumn, &g_Config.m_QmMonitoringHudOpacity, 0, 100, "%", PrewarmOnly);
 	}
-	Flow.Space(LineSpacing);
 }
 
 void CMenus::RenderQmHudDebugModeContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
@@ -93,7 +92,7 @@ void CMenus::RenderQmHudDebugModeContent(CUIRect &Content, float LineHeight, flo
 	const bool DebugModeEnabled = g_Config.m_QmPerfDebug != 0 || g_Config.m_QmPerfLogfile != 0 || g_Config.m_QmPerfStutterDiagnostics != 0;
 
 	CUIRect Row, LabelColumn, ControlColumn;
-	if(Flow.Control("hud-debug-mode-enable", CurrentSettingsContentMetrics().m_LineHeight, Row))
+	if(Flow.Control("hud-debug-mode-enable", CurrentSettingsContentMetrics().m_LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		static int s_QmPerfDebugModeSwitchId;
 		if(DoSettingsButton_CheckBox(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, &s_QmPerfDebugModeSwitchId, "Debug mode", Localize("Debug mode"), DebugModeEnabled, &Row))
@@ -104,21 +103,20 @@ void CMenus::RenderQmHudDebugModeContent(CUIRect &Content, float LineHeight, flo
 			g_Config.m_QmPerfStutterDiagnostics = NewValue;
 		}
 	}
-	Flow.Space(LineSpacing);
 
 	// 调试模式卡片不放个性调整收起区：细调项本身就是排障入口，直接全部可见才能一眼核对状态。
+	// 行距由行自己声明（声明阶段记到上一行末尾），行后不再补 Space。
 	auto RenderCheckbox = [this, &Flow, &Row, LineSpacing](const void *pId, const char *pText, int *pValue) {
-		if(Flow.Control(pText, CurrentSettingsContentMetrics().m_LineHeight, Row))
+		if(Flow.Control(pText, CurrentSettingsContentMetrics().m_LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		{
 			if(DoSettingsButton_CheckBox(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, pId, pText, Localize(pText), *pValue, &Row))
 				*pValue ^= 1;
 		}
-		Flow.Space(LineSpacing);
 	};
 	RenderCheckbox(&g_Config.m_QmPerfDebug, "Enable main thread and render stage performance debug logging", &g_Config.m_QmPerfDebug);
 	RenderCheckbox(&g_Config.m_QmPerfLogfile, "Write performance debug logs to dedicated file", &g_Config.m_QmPerfLogfile);
 
-	if(Flow.Control("hud-QmPerfDebugThresholdMs", CurrentSettingsContentMetrics().m_LineHeight, Row))
+	if(Flow.Control("hud-QmPerfDebugThresholdMs", CurrentSettingsContentMetrics().m_LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
 		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, "qmclient-debug-mode-threshold", &LabelColumn, Localize("Performance debug log threshold (ms)"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
@@ -126,7 +124,6 @@ void CMenus::RenderQmHudDebugModeContent(CUIRect &Content, float LineHeight, flo
 		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(&s_QmPerfDebugThresholdMsInputId, &Row, &g_Config.m_QmPerfDebugThresholdMs, &LabelColumn);
 		RenderQmSettingsSliderWithValueInput(&s_QmPerfDebugThresholdMsInputId, ControlColumn, &g_Config.m_QmPerfDebugThresholdMs, 1, 1000, "ms", PrewarmOnly);
 	}
-	Flow.Space(LineSpacing);
 
 	RenderCheckbox(&g_Config.m_QmPerfStutterDiagnostics, "Enable client stutter diagnostics at startup", &g_Config.m_QmPerfStutterDiagnostics);
 }
@@ -134,32 +131,31 @@ void CMenus::RenderQmHudDebugModeContent(CUIRect &Content, float LineHeight, flo
 void CMenus::RenderQmHudDummyMiniViewContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool Expanded, bool PrewarmOnly)
 {
 	CSettingsContentLayoutFlow Flow(Content);
+	// 行距由行自己声明（声明阶段记到上一行末尾），行后不再补 Space。
 	const auto DeclaredCheckbox = [&](CUIRect &, float Height, float Spacing, const void *pId, const char *pTextId, const char *pText, int *pValue) {
 		CUIRect Row;
-		const bool Changed = Flow.Control(pTextId, Height, Row) && RenderQmHudCheckbox(Row, Height, 0.0f, pId, pTextId, pText, pValue);
-		Flow.Space(Spacing);
-		return Changed;
+		return Flow.Control(pTextId, Height, Row, Spacing) && RenderQmHudCheckbox(Row, Height, 0.0f, pId, pTextId, pText, pValue);
 	};
 	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmDummyMiniView, "Enable dummy window", Localize("Enable dummy window"), &g_Config.m_QmDummyMiniView);
 	if(!g_Config.m_QmDummyMiniView)
 		return;
-	Flow.Space(LineHeight * 0.8f);
-	Flow.Space(LineSpacing);
-
-	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmDummyMiniViewAuto, "Only show when the other Tee is not on screen", Localize("Only show when the other Tee is not on screen"), &g_Config.m_QmDummyMiniViewAuto);
-	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:dummy_miniview", CurrentSettingsContentMetrics(), PrewarmOnly || Ui()->RenderOnly()))
+	// 「启用虚拟窗口」→「仅当另一个 Tee 不在屏幕时显示」是一个新分区：间距由这一行声明成分区档。
+	// 旧写法先补 LineHeight*0.8 再让行补 1×，两份叠加，实际间距随行高漂移。
+	DeclaredCheckbox(Content, LineHeight, ui_token::settings::SectionGap(LineSpacing), &g_Config.m_QmDummyMiniViewAuto, "Only show when the other Tee is not on screen", Localize("Only show when the other Tee is not on screen"), &g_Config.m_QmDummyMiniViewAuto);
+	float SectionReveal = 0.0f;
+	if(!qm_card_catalog::QmCardRenderHook::PersonalizationReveal(this, Content, "qm:dummy_miniview", CurrentSettingsContentMetrics(), &SectionReveal, PrewarmOnly || Ui()->RenderOnly()))
 		return;
+	const CSettingsContentRevealScope SectionRevealScope(Ui(), Flow, SectionReveal);
 
 	CUIRect Row, LabelColumn, ControlColumn;
 	auto RenderValue = [&](const char *pTextId, const char *pText, const void *pInputId, int *pValue, int MinValue, int MaxValue) {
-		if(Flow.Control(pTextId, CurrentSettingsContentMetrics().m_LineHeight, Row))
+		if(Flow.Control(pTextId, CurrentSettingsContentMetrics().m_LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		{
 			SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
 			RenderQmHudLabel(pTextId, &LabelColumn, Localize(pText), BodySize);
 			GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pInputId, &Row, pValue, &LabelColumn);
 			RenderQmSettingsSliderWithValueInput(pInputId, ControlColumn, pValue, MinValue, MaxValue, "%", PrewarmOnly);
 		}
-		Flow.Space(LineSpacing);
 	};
 	static int s_QmDummyMiniViewSizeInputId;
 	static int s_QmDummyMiniViewZoomInputId;
@@ -170,11 +166,10 @@ void CMenus::RenderQmHudDummyMiniViewContent(CUIRect &Content, float LineHeight,
 void CMenus::RenderQmHudDynamicIslandContent(CUIRect &Content, float LineHeight, float LineSpacing, bool OriginalStyle)
 {
 	CSettingsContentLayoutFlow Flow(Content);
+	// 行距由行自己声明（声明阶段记到上一行末尾），行后不再补 Space。
 	const auto DeclaredCheckbox = [&](CUIRect &, float Height, float Spacing, const void *pId, const char *pTextId, const char *pText, int *pValue) {
 		CUIRect Row;
-		const bool Changed = Flow.Control(pTextId, Height, Row) && RenderQmHudCheckbox(Row, Height, 0.0f, pId, pTextId, pText, pValue);
-		Flow.Space(Spacing);
-		return Changed;
+		return Flow.Control(pTextId, Height, Row, Spacing) && RenderQmHudCheckbox(Row, Height, 0.0f, pId, pTextId, pText, pValue);
 	};
 	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmHudIslandUseOriginalStyle, "Use original style", Localize("Use original style"), &g_Config.m_QmHudIslandUseOriginalStyle);
 	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmHudIslandShowTeam, "Show team", Localize("Show team"), &g_Config.m_QmHudIslandShowTeam);
@@ -212,45 +207,47 @@ void CMenus::RenderQmHudDynamicIslandContent(CUIRect &Content, float LineHeight,
 		}
 	}
 	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmHudIslandAlwaysShowTrackDetails, "Always show song title and artist", Localize("Always show song title and artist"), &g_Config.m_QmHudIslandAlwaysShowTrackDetails);
-	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:dynamic_island", CurrentSettingsContentMetrics(), Ui()->RenderOnly()))
+	float SectionReveal = 0.0f;
+	if(!qm_card_catalog::QmCardRenderHook::PersonalizationReveal(this, Content, "qm:dynamic_island", CurrentSettingsContentMetrics(), &SectionReveal, Ui()->RenderOnly()))
 		return;
+	const CSettingsContentRevealScope SectionRevealScope(Ui(), Flow, SectionReveal);
 
 	static CButtonContainer s_DynamicIslandBgColorId;
 	// 颜色弹窗里的 A(透明度) 是整块板的通透度（亚克力）：开高斯模糊时模糊照旧，
 	// 板越透越看得见后面的画面；A=0 时整块板连外圈阴影一起消失。
 	{
 		CUIRect ColorRow;
-		if(Flow.Control("hud-QmHudIslandBgColor", CurrentSettingsContentMetrics().m_ButtonHeight, ColorRow))
+		if(Flow.Control("hud-QmHudIslandBgColor", CurrentSettingsContentMetrics().m_ButtonHeight, ColorRow, ui_token::settings::RowGap(LineSpacing)))
 		{
-			DoLine_AlphaColorPicker(&s_DynamicIslandBgColorId, CurrentSettingsContentMetrics(), &ColorRow, Localize("Background color"), &g_Config.m_QmHudIslandBgColor, &g_Config.m_QmHudIslandBgOpacity, 0x9C460E, 100);
+			DoLine_AlphaColorPicker(&s_DynamicIslandBgColorId, CurrentSettingsContentMetrics(), &ColorRow, Localize("Background color"), &g_Config.m_QmHudIslandBgColor, &g_Config.m_QmHudIslandBgOpacity, CConfig::ms_QmHudIslandBgColor, CConfig::ms_QmHudIslandBgOpacity);
 		}
-		Flow.Space(CurrentSettingsContentMetrics().m_LineSpacing);
 	}
 
-	if(g_Config.m_QmHookCountdown)
+	static CSettingsConditionalRows s_HookCountdownRows;
+	if(s_HookCountdownRows.Update(g_Config.m_QmHookCountdown, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 	{
+		const CSettingsContentRevealScope HookCountdownRevealScope(Ui(), Flow, s_HookCountdownRows.Fade(g_Config.m_QmUiMotionLevel));
 		// 尺寸：50%–200%，与 HUD 其它百分比配置同一口径。
 		CUIRect SizeRow;
-		if(Flow.Control("qmclient-hook-countdown-size", CurrentSettingsContentMetrics().m_LineHeight, SizeRow))
+		if(Flow.Control("qmclient-hook-countdown-size", CurrentSettingsContentMetrics().m_LineHeight, SizeRow, ui_token::settings::RowGap(CurrentSettingsContentMetrics().m_LineSpacing)))
 		{
 			CUIRect SizeLabel, SizeControl;
 			SplitSettingsControlRow(SizeRow, CurrentSettingsContentMetrics(), &SizeLabel, &SizeControl);
-			DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, "qmclient-hook-countdown-size-label", &SizeLabel, Localize("Hook countdown size"), 10.0f, TEXTALIGN_ML, {}, (int)SizeLabel.w);
+			DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, "qmclient-hook-countdown-size-label", &SizeLabel, Localize("Hook countdown size"), CurrentSettingsContentMetrics().m_BodySize, TEXTALIGN_ML, {}, (int)SizeLabel.w);
 			static int s_HookCountdownSizeId;
 			RenderQmSettingsSliderWithValueInput(&s_HookCountdownSizeId, SizeControl, &g_Config.m_QmHookCountdownSize, 50, 200, "%", Ui()->RenderOnly());
 		}
-		Flow.Space(LineSpacing);
 
 		// 环色是三段色阶（普通 / 警告 / 紧急），三段并排占一行：同一组颜色横向排开，
 		// 既省掉两行高度，也能一眼看出它们是同一条时间轴上的颜色。
 		// 无限钩是另一套彩虹色，这里只管普通钩的进度环。
 		{
 			CUIRect ColorRow;
-			if(Flow.Control("qmclient-hook-countdown-colors", CurrentSettingsContentMetrics().m_ButtonHeight, ColorRow))
+			if(Flow.Control("qmclient-hook-countdown-colors", CurrentSettingsContentMetrics().m_ButtonHeight, ColorRow, ui_token::settings::RowGap(LineSpacing)))
 			{
 				CUIRect ColorLabel, ColorControls;
 				SplitSettingsControlRow(ColorRow, CurrentSettingsContentMetrics(), &ColorLabel, &ColorControls);
-				DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, "qmclient-hook-countdown-colors-label", &ColorLabel, Localize("Hook countdown colors"), 10.0f, TEXTALIGN_ML, {}, (int)ColorLabel.w);
+				DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, "qmclient-hook-countdown-colors-label", &ColorLabel, Localize("Hook countdown colors"), CurrentSettingsContentMetrics().m_BodySize, TEXTALIGN_ML, {}, (int)ColorLabel.w);
 				constexpr float SwatchGap = 4.0f;
 				const float SwatchWidth = (ColorControls.w - SwatchGap * 2.0f) / 3.0f;
 				unsigned int *apStageColors[] = {&g_Config.m_QmHookCountdownColor, &g_Config.m_QmHookCountdownWarningColor, &g_Config.m_QmHookCountdownUrgentColor};
@@ -262,16 +259,15 @@ void CMenus::RenderQmHudDynamicIslandContent(CUIRect &Content, float LineHeight,
 					DoButton_ColorPicker(&Swatch, apStageColors[Stage], false);
 				}
 			}
-			Flow.Space(LineSpacing);
 		}
 
 		// 无限钩的指示样式：∞ 符号或圆环，两者都用同一套彩虹流动色。
 		CUIRect StyleRow;
-		if(Flow.Control("qmclient-hook-countdown-endless-style", CurrentSettingsContentMetrics().m_LineHeight, StyleRow))
+		if(Flow.Control("qmclient-hook-countdown-endless-style", CurrentSettingsContentMetrics().m_LineHeight, StyleRow, ui_token::settings::RowGap(LineSpacing)))
 		{
 			CUIRect StyleLabel, StyleControl;
 			SplitSettingsControlRow(StyleRow, CurrentSettingsContentMetrics(), &StyleLabel, &StyleControl);
-			DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, "qmclient-hook-countdown-endless-style-label", &StyleLabel, Localize("Endless hook indicator"), 10.0f, TEXTALIGN_ML, {}, (int)StyleLabel.w);
+			DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, "qmclient-hook-countdown-endless-style-label", &StyleLabel, Localize("Endless hook indicator"), CurrentSettingsContentMetrics().m_BodySize, TEXTALIGN_ML, {}, (int)StyleLabel.w);
 			// 两个选项互斥：点哪个就把配置设成对应档位。
 			int InfinityStyle = g_Config.m_QmHookCountdownEndlessStyle == 0 ? 1 : 0;
 			int RingStyle = g_Config.m_QmHookCountdownEndlessStyle == 1 ? 1 : 0;
@@ -285,18 +281,16 @@ void CMenus::RenderQmHudDynamicIslandContent(CUIRect &Content, float LineHeight,
 			if(DoSettingsButton_Menu(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, &s_RingStyleId, "qmclient-hook-countdown-style-ring", Localize("Rainbow ring"), RingStyle, &RingButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE) && !RenderOnly)
 				g_Config.m_QmHookCountdownEndlessStyle = 1;
 		}
-		Flow.Space(LineSpacing);
 	}
 }
 
 void CMenus::RenderQmHudLyricsContent(CUIRect &Content, float LineHeight, float LineSpacing, bool PrewarmOnly)
 {
 	CSettingsContentLayoutFlow Flow(Content);
+	// 行距由行自己声明（声明阶段记到上一行末尾），行后不再补 Space。
 	const auto DeclaredCheckbox = [&](CUIRect &, float Height, float Spacing, const void *pId, const char *pTextId, const char *pText, int *pValue) {
 		CUIRect Row;
-		const bool Changed = Flow.Control(pTextId, Height, Row) && RenderQmHudCheckbox(Row, Height, 0.0f, pId, pTextId, pText, pValue);
-		Flow.Space(Spacing);
-		return Changed;
+		return Flow.Control(pTextId, Height, Row, Spacing) && RenderQmHudCheckbox(Row, Height, 0.0f, pId, pTextId, pText, pValue);
 	};
 	// 音乐 Hook 开关：同一时间只能启用一个，点开其中一个时自动关闭其余。
 	// 遍历 QmMusicHookRegistry 而非硬编码 Netease/Soda，新增 Hook 只需在注册表登记即自动覆盖。
@@ -329,18 +323,20 @@ void CMenus::RenderQmHudLyricsContent(CUIRect &Content, float LineHeight, float 
 		}
 	}
 	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmLyrics, "Enable lyrics", Localize("Enable lyrics"), &g_Config.m_QmLyrics);
-	if(qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:lyrics", CurrentSettingsContentMetrics(), PrewarmOnly || Ui()->RenderOnly()))
+	float SectionReveal = 0.0f;
+	if(qm_card_catalog::QmCardRenderHook::PersonalizationReveal(this, Content, "qm:lyrics", CurrentSettingsContentMetrics(), &SectionReveal, PrewarmOnly || Ui()->RenderOnly()))
 	{
+		const CSettingsContentRevealScope SectionRevealScope(Ui(), Flow, SectionReveal);
 		DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmLyricsInMediaIsland, "Show lyrics in Dynamic Island", Localize("Show lyrics in Dynamic Island"), &g_Config.m_QmLyricsInMediaIsland);
 		DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmLyricsSeparateIsland, "Separate Dynamic Island", Localize("Separate Dynamic Island"), &g_Config.m_QmLyricsSeparateIsland);
 		DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmLyricsIslandFollowWidth, "Follow main island width", Localize("Follow main island width"), &g_Config.m_QmLyricsIslandFollowWidth);
 		{
 			CUIRect Row;
-			if(Flow.Control("qmclient-lyrics-language", CurrentSettingsContentMetrics().m_LineHeight, Row))
+			if(Flow.Control("qmclient-lyrics-language", CurrentSettingsContentMetrics().m_LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 			{
 				CUIRect Label, Control;
 				SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &Label, &Control);
-				RenderQmHudLabel("qmclient-lyrics-language-label", &Label, Localize("Lyrics language"), ui_token::font::BODY);
+				RenderQmHudLabel("qmclient-lyrics-language-label", &Label, Localize("Lyrics language"), CurrentSettingsContentMetrics().m_BodySize);
 				const char *apNames[] = {Localize("Original only"), Localize("Translation only"), Localize("Original and translation")};
 				static CUi::SDropDownState s_LanguageDropDown;
 				static CScrollRegion s_LanguageScroll;
@@ -349,13 +345,12 @@ void CMenus::RenderQmHudLyricsContent(CUIRect &Content, float LineHeight, float 
 				if(!PrewarmOnly && !Ui()->RenderOnly() && Selected >= 0)
 					g_Config.m_QmLyricsLanguage = Selected;
 			}
-			Flow.Space(LineSpacing);
 		}
 	}
 	if(g_Config.m_QmKugouHookEnable != 0)
 	{
 		CUIRect Row, SetupButton, RestoreButton;
-		if(Flow.Control("hud-lyrics-kugou-actions", CurrentSettingsContentMetrics().m_LineHeight, Row))
+		if(Flow.Control("hud-lyrics-kugou-actions", CurrentSettingsContentMetrics().m_LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		{
 			static ui_widget::SSettingsActionGroupState s_KugouActionWidths;
 			const char *apActionLabels[] = {Localize("Set up Kugou lyrics"), Localize("Restore Kugou files")};
@@ -369,47 +364,46 @@ void CMenus::RenderQmHudLyricsContent(CUIRect &Content, float LineHeight, float 
 			if(!PrewarmOnly && !Ui()->RenderOnly() && (Setup || Restore))
 				GameClient()->m_MusicLyricsIntegration.RunKugouSetup(Restore);
 		}
-		Flow.Space(LineSpacing);
 	}
 	if(g_Config.m_QmKugouHookEnable != 0 || g_Config.m_QmQQMusicHookEnable != 0)
 	{
 		CUIRect Row;
-		if(Flow.Control("qmclient-music-hook-status", CurrentSettingsContentMetrics().m_LineHeight, Row))
+		if(Flow.Control("qmclient-music-hook-status", CurrentSettingsContentMetrics().m_LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		{
 			char aStatus[512] = {};
 			GameClient()->m_MusicLyricsIntegration.GetStatus(aStatus, sizeof(aStatus));
-			RenderQmHudLabel("qmclient-music-hook-status", &Row, aStatus, ui_token::font::BODY);
+			RenderQmHudLabel("qmclient-music-hook-status", &Row, aStatus, CurrentSettingsContentMetrics().m_BodySize);
 		}
-		Flow.Space(LineSpacing);
 	}
-	if(g_Config.m_QmSpotifyEnable != 0)
+	static CSettingsConditionalRows s_SpotifyLyricsRows;
+	if(s_SpotifyLyricsRows.Update(g_Config.m_QmSpotifyEnable != 0, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 	{
+		const CSettingsContentRevealScope SpotifyLyricsRevealScope(Ui(), Flow, s_SpotifyLyricsRows.Fade(g_Config.m_QmUiMotionLevel));
 		static CLineInput s_SpotifySpDc(g_Config.m_QmSpotifySpDc, sizeof(g_Config.m_QmSpotifySpDc));
 		CUIRect Row, LabelColumn, InputColumn;
-		if(Flow.Control("qmclient-lyrics-spotify-sp-dc", CurrentSettingsContentMetrics().m_LineHeight, Row))
+		if(Flow.Control("qmclient-lyrics-spotify-sp-dc", CurrentSettingsContentMetrics().m_LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		{
 			SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &InputColumn);
-			RenderQmHudLabel("qmclient-lyrics-spotify-sp-dc", &LabelColumn, "spotify_ck", ui_token::font::BODY);
+			RenderQmHudLabel("qmclient-lyrics-spotify-sp-dc", &LabelColumn, "spotify_ck", CurrentSettingsContentMetrics().m_BodySize);
 			static ui_widget::SPasswordFieldState s_SpotifySpDcState;
 			IUiContext TextInputCtx = SettingsUiContext("settings_qmclient_lyrics_spotify_text_inputs");
 			ui_widget::SPasswordFieldOptions SpDcOptions;
 			SpDcOptions.m_pPlaceholder = Localize("Paste sp_dc from Spotify web cookies");
-			SpDcOptions.m_FontSize = ui_token::font::BODY;
+			SpDcOptions.m_FontSize = CurrentSettingsContentMetrics().m_BodySize;
 			ui_widget::PasswordField(TextInputCtx, &s_SpotifySpDc, InputColumn, &s_SpotifySpDcState, SpDcOptions);
 		}
-		Flow.Space(LineSpacing);
 	}
 }
 
 void CMenus::RenderQmHudSystemMediaControlsContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, bool PrewarmOnly)
 {
 	CSettingsContentLayoutFlow Flow(Content);
+	// 行距由行自己声明（声明阶段记到上一行末尾），行后不再补 Space。
 	const auto DeclaredCheckbox = [&](CUIRect &, float Height, float Spacing, const void *pId, const char *pTextId, const char *pText, int *pValue) {
 		CUIRect Row;
-		const bool Changed = Flow.Control(pTextId, Height, Row) && DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, -1, pId, pTextId, pText, *pValue, &Row);
+		const bool Changed = Flow.Control(pTextId, Height, Row, Spacing) && DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, -1, pId, pTextId, pText, *pValue, &Row);
 		if(Changed)
 			*pValue ^= 1;
-		Flow.Space(Spacing);
 		return Changed;
 	};
 	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmSmtcEnable, "Enable system media control", Localize("Enable system media control"), &g_Config.m_QmSmtcEnable);
@@ -420,7 +414,7 @@ void CMenus::RenderQmHudSystemMediaControlsContent(CUIRect &Content, float LineH
 	// Hook 开关与歌词开关已迁出为独立的 qm:lyrics 卡（内容函数仍是 RenderQmHudLyricsContent，
 	// 由卡片目录的 Hud 分类模块负责调用）。此处不再渲染，否则歌词与来源开关会在两处各出现一次。
 	CUIRect MediaButtons, PrevButton, PlayButton, NextButton;
-	if(Flow.Control("hud-media-actions", LineHeight, MediaButtons))
+	if(Flow.Control("hud-media-actions", LineHeight, MediaButtons, ui_token::settings::RowGap(LineSpacing)))
 	{
 		static ui_widget::SSettingsActionGroupState s_MediaActionWidths;
 		const char *apActionLabels[] = {Localize("Previous"), Localize("Play/Pause"), Localize("Next")};
@@ -439,17 +433,16 @@ void CMenus::RenderQmHudSystemMediaControlsContent(CUIRect &Content, float LineH
 		if(DoSettingsButton_Menu(SETTINGS_DDNET, -1, -1, &s_SmtcNext, "qmclient-smtc-next", Localize("Next"), 0, &NextButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE))
 			GameClient()->m_SystemMediaControls.Next();
 	}
-	Flow.Space(LineSpacing);
 }
 
 void CMenus::RenderQmHudNotificationsBasicContent(CUIRect &Content, const SSettingsContentMetrics &Metrics, float LabelWidth, bool PrewarmOnly)
 {
 	CSettingsContentLayoutFlow Flow(Content);
+	// 行距由行自己声明（声明阶段记到上一行末尾），行后不再补 Space。
+	// 同一个卡片下面还会接「高级选项」的内容，所以这里不能留尾距，否则接缝处会叠成双倍。
 	const auto DeclaredCheckbox = [&](CUIRect &, float Height, float Spacing, const void *pId, const char *pTextId, const char *pText, int *pValue) {
 		CUIRect Row;
-		const bool Changed = Flow.Control(pTextId, Height, Row) && RenderQmHudCheckbox(Row, Height, 0.0f, pId, pTextId, pText, pValue);
-		Flow.Space(Spacing);
-		return Changed;
+		return Flow.Control(pTextId, Height, Row, Spacing) && RenderQmHudCheckbox(Row, Height, 0.0f, pId, pTextId, pText, pValue);
 	};
 	const float LineHeight = Metrics.m_LineHeight;
 	const float BodySize = Metrics.m_BodySize;
@@ -458,30 +451,49 @@ void CMenus::RenderQmHudNotificationsBasicContent(CUIRect &Content, const SSetti
 	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmHudNotificationsEcho, "Route Echo messages to notifications", Localize("Route Echo messages to notifications"), &g_Config.m_QmHudNotificationsEcho);
 	CUIRect Row, LabelColumn, ControlColumn;
 	auto RenderValue = [&](const char *pTextId, const char *pText, const void *pInputId, int *pValue, int MinValue, int MaxValue, const char *pSuffix = "") {
-		if(Flow.Control(pTextId, CurrentSettingsContentMetrics().m_LineHeight, Row))
+		if(Flow.Control(pTextId, CurrentSettingsContentMetrics().m_LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		{
 			SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
 			RenderQmHudLabel(pTextId, &LabelColumn, Localize(pText), BodySize);
 			GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pInputId, &Row, pValue, &LabelColumn);
 			RenderQmSettingsSliderWithValueInput(pInputId, ControlColumn, pValue, MinValue, MaxValue, pSuffix, PrewarmOnly);
 		}
-		Flow.Space(LineSpacing);
 	};
 	static int s_QmHudNotificationHoldInputId;
 	static int s_QmHudNotificationTextSizeInputId;
 	RenderValue("qmclient-notifications-hold-time", "Notification hold time", &s_QmHudNotificationHoldInputId, &g_Config.m_QmHudNotificationsHoldMs, 500, 10000, "ms");
 	RenderValue("qmclient-notifications-text-size", "Notification text size", &s_QmHudNotificationTextSizeInputId, &g_Config.m_QmHudNotificationsTextSize, 1, 24);
-	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmHudNotificationsShowAdvanced, "Advanced options", Localize("Advanced options"), &g_Config.m_QmHudNotificationsShowAdvanced);
+	// 「个性调整」折叠行：高级内容在 AdvancedContent 里按同一配置位做显隐，
+	// 这里只负责入口本身；行 id（"Advanced options"）与文案保持不变，搜索与持久化不破。
+	static CButtonContainer s_NotificationsAdvancedFoldRowButton;
+	CUIRect NotificationsAdvancedFoldRow;
+	// 行前按「行距 + 1px 线 + 行距」预留分割线位置，线不会压到上面的字号滑条。
+	if(Flow.Control("Advanced options", LineHeight, NotificationsAdvancedFoldRow, SettingsFoldRowDividerHeight(LineSpacing)))
+	{
+		const SSettingsFoldRowStyle NotificationsAdvancedFoldStyle = ResolveSettingsFoldRowStyle(
+			SettingsCardDeckVisualOptions().m_BorderColor,
+			color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(1.0f));
+		const bool NotificationsAdvancedClicked = SettingsFoldRow(Ui(), &s_NotificationsAdvancedFoldRowButton, NotificationsAdvancedFoldRow, true, Localize("Personal adjustments"), Metrics.m_SmallSize, Metrics.m_LineSpacing, g_Config.m_QmHudNotificationsShowAdvanced != 0, NotificationsAdvancedFoldStyle);
+		if(NotificationsAdvancedClicked && Flow.Input() && !PrewarmOnly && !Ui()->RenderOnly())
+			g_Config.m_QmHudNotificationsShowAdvanced = g_Config.m_QmHudNotificationsShowAdvanced ? 0 : 1;
+	}
 }
 
 void CMenus::RenderQmHudNotificationsAdvancedContent(CUIRect &Content, const SSettingsContentMetrics &Metrics, float LabelWidth, bool PrewarmOnly)
 {
 	CSettingsContentLayoutFlow Flow(Content);
+	// 这一块由 Basic 内容里的「个性调整」折叠行驱动：显隐走与其它条件行同一条曲线，
+	// 收起动画播完之前继续占位，避免高度先塌、内容再凭空消失。收缩到 0 就不再声明。
+	static CSettingsRowReveal s_NotificationsAdvancedSectionReveal;
+	const bool NotificationsAdvancedDeclared = s_NotificationsAdvancedSectionReveal.Update(g_Config.m_QmHudNotificationsShowAdvanced != 0, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel);
+	if(!NotificationsAdvancedDeclared)
+		return;
+	const SQmListEntryVisual NotificationsAdvancedVisual = s_NotificationsAdvancedSectionReveal.Visual(g_Config.m_QmUiMotionLevel);
+	const CSettingsContentRevealScope NotificationsAdvancedRevealScope(Ui(), Flow, NotificationsAdvancedVisual.m_Fade);
+	// 行距由行自己声明（声明阶段记到上一行末尾），行后不再补 Space，卡底不会多留一档。
 	const auto DeclaredCheckbox = [&](CUIRect &, float Height, float Spacing, const void *pId, const char *pTextId, const char *pText, int *pValue) {
 		CUIRect Row;
-		const bool Changed = Flow.Control(pTextId, Height, Row) && RenderQmHudCheckbox(Row, Height, 0.0f, pId, pTextId, pText, pValue);
-		Flow.Space(Spacing);
-		return Changed;
+		return Flow.Control(pTextId, Height, Row, Spacing) && RenderQmHudCheckbox(Row, Height, 0.0f, pId, pTextId, pText, pValue);
 	};
 	const float LineHeight = Metrics.m_LineHeight;
 	const float BodySize = Metrics.m_BodySize;
@@ -499,9 +511,11 @@ void CMenus::RenderQmHudNotificationsAdvancedContent(CUIRect &Content, const SSe
 			Metrics, !PrewarmOnly);
 	}
 	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmHudNotificationsCompatSolo, "Detect compatible solo prompts from custom servers", Localize("Detect compatible solo prompts from custom servers"), &g_Config.m_QmHudNotificationsCompatSolo);
+	// Flow.Text 行只带行后间距，没有「行前间距」参数：它上面的间距仍由上一行补一档。
+	Flow.Space(ui_token::settings::RowGap(LineSpacing));
 
 	CUIRect Row, LabelColumn, ControlColumn;
-	Flow.Text("qmclient-notifications-basic-info-note", Localize("Join, version, rules, and help messages stay in chat instead of popups"), 0.0f, Metrics.m_SmallSize, LineSpacing, [this](const char *pText, float Width, float Size) { return TextRender()->TextBoundingBox(Size, pText, -1, Width).m_H; }, [this, &Metrics](const CUIRect &Rect, const char *pText) {
+	Flow.Text("qmclient-notifications-basic-info-note", Localize("Join, version, rules, and help messages stay in chat instead of popups"), 0.0f, Metrics.m_SmallSize, 0.0f, [this](const char *pText, float Width, float Size) { return TextRender()->TextBoundingBox(Size, pText, -1, Width).m_H; }, [this, &Metrics](const CUIRect &Rect, const char *pText) {
 			CUIRect Row = Rect;
 			TextRender()->TextColor(ColorRGBA(0.9f, 0.9f, 0.9f, 0.8f));
 			RenderQmHudLabel("qmclient-notifications-basic-info-note", &Row, pText, Metrics.m_SmallSize);
@@ -509,33 +523,30 @@ void CMenus::RenderQmHudNotificationsAdvancedContent(CUIRect &Content, const SSe
 	static CButtonContainer s_QmHudNotificationBgColorId;
 	{
 		CUIRect ColorRow;
-		if(Flow.Control("hud-QmHudNotificationsBgColor", CurrentSettingsContentMetrics().m_ButtonHeight, ColorRow))
+		if(Flow.Control("hud-QmHudNotificationsBgColor", CurrentSettingsContentMetrics().m_ButtonHeight, ColorRow, ui_token::settings::RowGap(CurrentSettingsContentMetrics().m_LineSpacing)))
 		{
-			DoLine_ColorPicker(&s_QmHudNotificationBgColorId, Metrics, &ColorRow, Localize("Notification background"), &g_Config.m_QmHudNotificationsBgColor, ColorRGBA(0.0f, 0.0f, 0.0f, 0.6f), false, nullptr, true);
+			DoLine_ColorPicker(&s_QmHudNotificationBgColorId, Metrics, &ColorRow, Localize("Notification background"), &g_Config.m_QmHudNotificationsBgColor, color_cast<ColorRGBA>(ColorHSLA(CConfig::ms_QmHudNotificationsBgColor, true)), false, nullptr, true);
 		}
-		Flow.Space(CurrentSettingsContentMetrics().m_LineSpacing);
 	}
 	static CButtonContainer s_QmHudNotificationTextColorId;
 	{
 		CUIRect ColorRow;
-		if(Flow.Control("hud-QmHudNotificationsTextColor", CurrentSettingsContentMetrics().m_ButtonHeight, ColorRow))
+		if(Flow.Control("hud-QmHudNotificationsTextColor", CurrentSettingsContentMetrics().m_ButtonHeight, ColorRow, ui_token::settings::RowGap(CurrentSettingsContentMetrics().m_LineSpacing)))
 		{
-			DoLine_ColorPicker(&s_QmHudNotificationTextColorId, Metrics, &ColorRow, Localize("System prompt text color"), &g_Config.m_QmHudNotificationsTextColor, ui_token::color::NEUTRAL_WHITE, false, nullptr, true);
+			DoLine_ColorPicker(&s_QmHudNotificationTextColorId, Metrics, &ColorRow, Localize("System prompt text color"), &g_Config.m_QmHudNotificationsTextColor, color_cast<ColorRGBA>(ColorHSLA(CConfig::ms_QmHudNotificationsTextColor, true)), false, nullptr, true);
 		}
-		Flow.Space(CurrentSettingsContentMetrics().m_LineSpacing);
 	}
 	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmHudNotificationsEchoInheritColor, "Echo follows the original chat color", Localize("Echo follows the original chat color"), &g_Config.m_QmHudNotificationsEchoInheritColor);
 	static CButtonContainer s_QmHudNotificationEchoTextColorId;
 	{
 		CUIRect ColorRow;
-		if(Flow.Control("hud-QmHudNotificationsEchoTextColor", CurrentSettingsContentMetrics().m_ButtonHeight, ColorRow))
+		if(Flow.Control("hud-QmHudNotificationsEchoTextColor", CurrentSettingsContentMetrics().m_ButtonHeight, ColorRow, ui_token::settings::RowGap(CurrentSettingsContentMetrics().m_LineSpacing)))
 		{
-			DoLine_ColorPicker(&s_QmHudNotificationEchoTextColorId, Metrics, &ColorRow, Localize("Echo text color when not inheriting chat color"), &g_Config.m_QmHudNotificationsEchoTextColor, ColorRGBA(0.5f, 0.78f, 1.0f, 1.0f), false, nullptr, true);
+			DoLine_ColorPicker(&s_QmHudNotificationEchoTextColorId, Metrics, &ColorRow, Localize("Echo text color when not inheriting chat color"), &g_Config.m_QmHudNotificationsEchoTextColor, color_cast<ColorRGBA>(ColorHSLA(CConfig::ms_QmHudNotificationsEchoTextColor, true)), false, nullptr, true);
 		}
-		Flow.Space(CurrentSettingsContentMetrics().m_LineSpacing);
 	}
 
-	if(Flow.Control("qmclient-notifications-popup-animation", CurrentSettingsContentMetrics().m_LineHeight, Row))
+	if(Flow.Control("qmclient-notifications-popup-animation", CurrentSettingsContentMetrics().m_LineHeight, Row, ui_token::settings::RowGap(CurrentSettingsContentMetrics().m_LineSpacing)))
 	{
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
 		RenderQmHudLabel("qmclient-notifications-popup-animation", &LabelColumn, Localize("Popup animation"), BodySize);
@@ -547,17 +558,15 @@ void CMenus::RenderQmHudNotificationsAdvancedContent(CUIRect &Content, const SSe
 		if(g_Config.m_QmHudNotificationsAnimType != AnimSelectedNew)
 			g_Config.m_QmHudNotificationsAnimType = AnimSelectedNew;
 	}
-	Flow.Space(LineSpacing);
 
 	auto RenderValue = [&](const char *pTextId, const char *pText, const void *pInputId, int *pValue, int MinValue, int MaxValue, const char *pSuffix = "") {
-		if(Flow.Control(pTextId, CurrentSettingsContentMetrics().m_LineHeight, Row))
+		if(Flow.Control(pTextId, CurrentSettingsContentMetrics().m_LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		{
 			SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
 			RenderQmHudLabel(pTextId, &LabelColumn, Localize(pText), BodySize);
 			GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pInputId, &Row, pValue, &LabelColumn);
 			RenderQmSettingsSliderWithValueInput(pInputId, ControlColumn, pValue, MinValue, MaxValue, pSuffix, PrewarmOnly);
 		}
-		Flow.Space(LineSpacing);
 	};
 	static int s_QmHudNotificationAnimInputId;
 	static int s_QmHudNotificationMaxVisibleInputId;
@@ -597,46 +606,42 @@ void CMenus::RenderQmHudCoordsContent(CUIRect &Content, const SSettingsContentMe
 		RenderQmHudLabel(pTextId, pRect, pText, FontSize);
 	};
 
-	if(Flow.Control("Show own coordinates", CurrentSettingsContentMetrics().m_LineHeight, Row))
+	if(Flow.Control("Show own coordinates", CurrentSettingsContentMetrics().m_LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		DoQmSettingsCheckboxAuto(&g_Config.m_QmNameplateCoordsOwn, "Show own coordinates", Localize("Show own coordinates"), &g_Config.m_QmNameplateCoordsOwn, &Row, LineHeight);
 	}
-	Flow.Space(LineSpacing);
 
-	if(Flow.Control("Show other players' coordinates", CurrentSettingsContentMetrics().m_LineHeight, Row))
+	if(Flow.Control("Show other players' coordinates", CurrentSettingsContentMetrics().m_LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		DoQmSettingsCheckboxAuto(&g_Config.m_QmNameplateCoords, "Show other players' coordinates", Localize("Show other players' coordinates"), &g_Config.m_QmNameplateCoords, &Row, LineHeight);
 	}
-	Flow.Space(LineSpacing);
 
-	if(Flow.Control("Show X", CurrentSettingsContentMetrics().m_LineHeight, Row))
+	if(Flow.Control("Show X", CurrentSettingsContentMetrics().m_LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		DoQmSettingsCheckboxAuto(&g_Config.m_QmNameplateCoordX, "Show X", Localize("Show X"), &g_Config.m_QmNameplateCoordX, &Row, LineHeight);
 	}
-	Flow.Space(LineSpacing);
 
-	if(Flow.Control("Show Y", CurrentSettingsContentMetrics().m_LineHeight, Row))
+	if(Flow.Control("Show Y", CurrentSettingsContentMetrics().m_LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		DoQmSettingsCheckboxAuto(&g_Config.m_QmNameplateCoordY, "Show Y", Localize("Show Y"), &g_Config.m_QmNameplateCoordY, &Row, LineHeight);
 	}
-	Flow.Space(LineSpacing);
 
-	if(Flow.Control("X alignment hint with me", CurrentSettingsContentMetrics().m_LineHeight, Row))
+	if(Flow.Control("X alignment hint with me", CurrentSettingsContentMetrics().m_LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		DoQmSettingsCheckboxAuto(&g_Config.m_QmNameplateCoordXAlignHint, "X alignment hint with me", Localize("X alignment hint with me"), &g_Config.m_QmNameplateCoordXAlignHint, &Row, LineHeight);
 	}
-	Flow.Space(LineSpacing);
 
-	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:coords", Metrics, PrewarmOnly || Ui()->RenderOnly()))
+	float SectionReveal = 0.0f;
+	if(!qm_card_catalog::QmCardRenderHook::PersonalizationReveal(this, Content, "qm:coords", Metrics, &SectionReveal, PrewarmOnly || Ui()->RenderOnly()))
 		return;
+	const CSettingsContentRevealScope SectionRevealScope(Ui(), Flow, SectionReveal);
 
-	if(Flow.Control("Strict mode", CurrentSettingsContentMetrics().m_LineHeight, Row))
+	if(Flow.Control("Strict mode", CurrentSettingsContentMetrics().m_LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		DoQmSettingsCheckboxAuto(&g_Config.m_QmNameplateCoordXAlignHintStrict, "Strict mode", Localize("Strict mode"), &g_Config.m_QmNameplateCoordXAlignHintStrict, &Row, LineHeight);
 	}
-	Flow.Space(LineSpacing);
 
-	if(Flow.Control("qmclient-show-coordinates-detection-time", CurrentSettingsContentMetrics().m_LineHeight, Row))
+	if(Flow.Control("qmclient-show-coordinates-detection-time", CurrentSettingsContentMetrics().m_LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelCol, &ControlCol);
 		DoQmSettingsLabel("qmclient-show-coordinates-detection-time", &LabelCol, Localize("Detection time"), BodySize);
@@ -657,27 +662,24 @@ void CMenus::RenderQmHudCoordsContent(CUIRect &Content, const SSettingsContentMe
 		if(PrewarmOnly || Ui()->RenderOnly())
 			g_Config.m_QmNameplateCoordXAlignHintWindowMs = OriginalValue;
 	}
-	Flow.Space(LineSpacing);
 
 	static CButtonContainer s_CoordXAlignHintColorId;
 	{
 		CUIRect ColorRow;
-		if(Flow.Control("hud-QmNameplateCoordXAlignHintColor", CurrentSettingsContentMetrics().m_ButtonHeight, ColorRow))
+		if(Flow.Control("hud-QmNameplateCoordXAlignHintColor", CurrentSettingsContentMetrics().m_ButtonHeight, ColorRow, ui_token::settings::RowGap(LineSpacing)))
 		{
-			DoLine_ColorPicker(&s_CoordXAlignHintColorId, Metrics, &ColorRow, Localize("X alignment color"), &g_Config.m_QmNameplateCoordXAlignHintColor, ColorRGBA(1.0f, 0.82f, 0.2f, 1.0f), false, nullptr, false, false);
+			DoLine_ColorPicker(&s_CoordXAlignHintColorId, Metrics, &ColorRow, Localize("X alignment color"), &g_Config.m_QmNameplateCoordXAlignHintColor, color_cast<ColorRGBA>(ColorHSLA(CConfig::ms_QmNameplateCoordXAlignHintColor)), false, nullptr, false, false);
 		}
-		Flow.Space(CurrentSettingsContentMetrics().m_LineSpacing);
 	}
 }
 
 void CMenus::RenderQmHudGoresDrownBoardContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
 {
 	CSettingsContentLayoutFlow Flow(Content);
+	// 行距由行自己声明（声明阶段记到上一行末尾），行后不再补 Space。
 	const auto DeclaredCheckbox = [&](CUIRect &, float Height, float Spacing, const void *pId, const char *pTextId, const char *pText, int *pValue) {
 		CUIRect Row;
-		const bool Changed = Flow.Control(pTextId, Height, Row) && RenderQmHudCheckbox(Row, Height, 0.0f, pId, pTextId, pText, pValue);
-		Flow.Space(Spacing);
-		return Changed;
+		return Flow.Control(pTextId, Height, Row, Spacing) && RenderQmHudCheckbox(Row, Height, 0.0f, pId, pTextId, pText, pValue);
 	};
 	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmGoresDrownBoard, "Show Gores drown board", Localize("Show Gores drown board"), &g_Config.m_QmGoresDrownBoard);
 	if(!g_Config.m_QmGoresDrownBoard)
@@ -687,14 +689,13 @@ void CMenus::RenderQmHudGoresDrownBoardContent(CUIRect &Content, float LineHeigh
 
 	CUIRect Row, LabelColumn, ControlColumn;
 	auto RenderValue = [&](const char *pTextId, const char *pText, const void *pInputId, int *pValue, int MinValue, int MaxValue, const char *pSuffix = "") {
-		if(Flow.Control(pTextId, CurrentSettingsContentMetrics().m_LineHeight, Row))
+		if(Flow.Control(pTextId, CurrentSettingsContentMetrics().m_LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		{
 			SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
 			RenderQmHudLabel(pTextId, &LabelColumn, Localize(pText), BodySize);
 			GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pInputId, &Row, pValue, &LabelColumn);
 			RenderQmSettingsSliderWithValueInput(pInputId, ControlColumn, pValue, MinValue, MaxValue, pSuffix, PrewarmOnly);
 		}
-		Flow.Space(LineSpacing);
 	};
 	static int s_QmGoresDrownBoardMaxPlayersInputId;
 	static int s_QmGoresDrownBoardOpacityInputId;

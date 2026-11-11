@@ -81,6 +81,13 @@ namespace qm_ui_test
 			++m_Draws;
 			m_vRectSubmissions.push_back({X, Y, W, H});
 		}
+		// 禁用的图标按钮用自由四边形画“不可用”斜线，圆角面的几何回退也走这条路径；
+		// 同属 GPU 提交边界，记录次数即可，不影响任何布局或输入断言。
+		void QuadsDrawFreeform(const CFreeformItem *, int Num) override
+		{
+			++m_Draws;
+			m_Quads += Num;
+		}
 		bool HasRoundedRectSdf() override { return true; }
 		bool HasRoundedRectSdfTexture() override { return m_HasSdfTexture; }
 		void DestroyRenderTarget(CRenderTargetHandle *pTarget) override

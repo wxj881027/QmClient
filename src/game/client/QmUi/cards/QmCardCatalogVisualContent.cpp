@@ -56,6 +56,7 @@ void CMenus::RenderQmVisualStreamerContent(CUIRect &Content, float LineHeight, f
 	SSettingsContentMetrics Metrics = CurrentSettingsContentMetrics();
 	Metrics.m_LineHeight = LineHeight;
 	Metrics.m_LineSpacing = LineSpacing;
+	CSettingsContentLayoutFlow Flow(Content);
 	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, Content,
 		{
 			{&g_Config.m_QmStreamerFilterWords, "Filter sensitive words", Localize("Filter sensitive words")},
@@ -64,6 +65,8 @@ void CMenus::RenderQmVisualStreamerContent(CUIRect &Content, float LineHeight, f
 			{&g_Config.m_QmStreamerScoreboardDefaultFlags, "Use default flags on scoreboard", Localize("Use default flags on scoreboard")},
 		},
 		Metrics);
+	// 组和下面的单词表文件行都改成「行自己声明行距」了：组尾不再补 Space，
+	// 单词表首行自己带行前距，这里不需要边界行距。
 	RenderQmWordFilterFileContent(Content, true, LineHeight, LineSpacing, Metrics.m_BodySize);
 }
 
@@ -78,8 +81,8 @@ void CMenus::RenderQmVisualEntityOverlayContent(CUIRect &Content, float LineHeig
 	const bool CanCommit = Flow.Input() && !PrewarmOnly && !Ui()->RenderOnly();
 	auto RenderSlider = [&](const void *pInputId, int *pValue, const char *pTextId, const char *pTitle) {
 		CUIRect Row, LabelColumn, ControlColumn;
-		const bool HasRow = Flow.Control(pTextId, LineHeight, Row);
-		Flow.Space(LineSpacing);
+		// 行距由行自己声明（声明阶段记到上一行末尾），行后不再补 Space。
+		const bool HasRow = Flow.Control(pTextId, LineHeight, Row, ui_token::settings::RowGap(LineSpacing));
 		if(!HasRow)
 			return;
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
@@ -100,15 +103,16 @@ void CMenus::RenderQmVisualEntityOverlayContent(CUIRect &Content, float LineHeig
 	// 显示实体层和原来的叠层不透明度共用配置，合并后只保留一个控件。
 	RenderSlider(&s_ClOverlayEntitiesInputId, &g_Config.m_ClOverlayEntities, "m_ClOverlayEntities", Localize("Overlay entities"));
 	CUIRect Row;
-	if(Flow.Control("text-entities", LineHeight, Row))
+	if(Flow.Control("text-entities", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_ClTextEntities, "Show text entities", Localize("Show text entities"), g_Config.m_ClTextEntities, &Row) && CanCommit)
 			g_Config.m_ClTextEntities ^= 1;
 	}
-	Flow.Space(LineSpacing);
-	if(g_Config.m_ClTextEntities)
+	static CSettingsConditionalRows s_TextEntitiesSizeRows;
+	if(s_TextEntitiesSizeRows.Update(g_Config.m_ClTextEntities, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 	{
-		if(Flow.Control("text-entities-size", LineHeight, Row))
+		const CSettingsContentRevealScope TextEntitiesSizeRevealScope(Ui(), Flow, s_TextEntitiesSizeRows.Fade(g_Config.m_QmUiMotionLevel));
+		if(Flow.Control("text-entities-size", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		{
 			CUIRect LabelColumn, ControlColumn;
 			SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
@@ -119,10 +123,11 @@ void CMenus::RenderQmVisualEntityOverlayContent(CUIRect &Content, float LineHeig
 			if(CanCommit && PreviousSize != g_Config.m_ClTextEntitiesSize)
 				GameClient()->m_MapImages.SetTextureScale(g_Config.m_ClTextEntitiesSize);
 		}
-		Flow.Space(LineSpacing);
 	}
-	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:entity_overlay", CurrentSettingsContentMetrics(), PrewarmOnly || Ui()->RenderOnly()))
+	float SectionReveal = 0.0f;
+	if(!qm_card_catalog::QmCardRenderHook::PersonalizationReveal(this, Content, "qm:entity_overlay", CurrentSettingsContentMetrics(), &SectionReveal, PrewarmOnly || Ui()->RenderOnly()))
 		return;
+	const CSettingsContentRevealScope SectionRevealScope(Ui(), Flow, SectionReveal);
 
 	RenderSlider(&s_QmEntityOverlayDeathAlphaInputId, &g_Config.m_QmEntityOverlayDeathAlpha, "m_QmEntityOverlayDeathAlpha", Localize("Death opacity"));
 	RenderSlider(&s_QmEntityOverlayFreezeAlphaInputId, &g_Config.m_QmEntityOverlayFreezeAlpha, "m_QmEntityOverlayFreezeAlpha", Localize("Freeze opacity"));
@@ -141,8 +146,8 @@ void CMenus::RenderQmVisualCollisionHitboxContent(CUIRect &Content, float LineHe
 	int HitboxModeEnabled = g_Config.m_QmHitboxMode || g_Config.m_QmShowCollisionHitbox;
 	{
 		CUIRect Row;
-		const bool HasRow = Flow.Control("qm-hitbox-enabled", LineHeight, Row);
-		Flow.Space(LineSpacing);
+		// 行距由行自己声明，行后不再补 Space。
+		const bool HasRow = Flow.Control("qm-hitbox-enabled", LineHeight, Row, ui_token::settings::RowGap(LineSpacing));
 		if(HasRow && DoSettingsButton_CheckBox(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, &g_Config.m_QmHitboxMode, "Show hitbox mode", Localize("Show hitbox mode"), HitboxModeEnabled, &Row))
 		{
 			HitboxModeEnabled ^= 1;
@@ -170,7 +175,7 @@ void CMenus::RenderQmVisualCollisionHitboxContent(CUIRect &Content, float LineHe
 		CurrentSettingsContentMetrics(), !PrewarmOnly);
 
 	CUIRect Row, LabelColumn, ControlColumn;
-	if(Flow.Control("qm-hitbox-scope", LineHeight, Row))
+	if(Flow.Control("qm-hitbox-scope", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		static std::vector<const char *> s_HitboxScopeDropDownNames;
 		s_HitboxScopeDropDownNames = {Localize("Local only"), Localize("Local + Dummy"), Localize("All players")};
@@ -184,37 +189,35 @@ void CMenus::RenderQmVisualCollisionHitboxContent(CUIRect &Content, float LineHe
 		if(g_Config.m_QmHitboxPlayerScope != HitboxScopeNew)
 			g_Config.m_QmHitboxPlayerScope = HitboxScopeNew;
 	}
-	Flow.Space(LineSpacing);
 
-	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:collision_hitbox", CurrentSettingsContentMetrics(), PrewarmOnly || Ui()->RenderOnly()))
+	float SectionReveal = 0.0f;
+	if(!qm_card_catalog::QmCardRenderHook::PersonalizationReveal(this, Content, "qm:collision_hitbox", CurrentSettingsContentMetrics(), &SectionReveal, PrewarmOnly || Ui()->RenderOnly()))
 		return;
+	const CSettingsContentRevealScope SectionRevealScope(Ui(), Flow, SectionReveal);
 
 	static CButtonContainer s_FreezeColorId;
 	CUIRect s_FreezeColorIdRow;
-	if(Flow.Control("s_FreezeColorId", LineHeight, s_FreezeColorIdRow))
+	if(Flow.Control("s_FreezeColorId", LineHeight, s_FreezeColorIdRow, ui_token::settings::RowGap(LineSpacing)))
 	{
 		CUIRect ColorRow = s_FreezeColorIdRow;
-		DoLine_ColorPicker(&s_FreezeColorId, CurrentSettingsContentMetrics(), &ColorRow, Localize("Freeze border color"), &g_Config.m_QmHitboxColorFreeze, ColorRGBA(1.0f, 0.0f, 1.0f), false);
+		DoLine_ColorPicker(&s_FreezeColorId, CurrentSettingsContentMetrics(), &ColorRow, Localize("Freeze border color"), &g_Config.m_QmHitboxColorFreeze, color_cast<ColorRGBA>(ColorHSLA(CConfig::ms_QmHitboxColorFreeze)), false);
 	}
-	Flow.Space(LineSpacing);
 	static CButtonContainer s_TeeColorId;
 	CUIRect s_TeeColorIdRow;
-	if(Flow.Control("s_TeeColorId", LineHeight, s_TeeColorIdRow))
+	if(Flow.Control("s_TeeColorId", LineHeight, s_TeeColorIdRow, ui_token::settings::RowGap(LineSpacing)))
 	{
 		CUIRect ColorRow = s_TeeColorIdRow;
-		DoLine_ColorPicker(&s_TeeColorId, CurrentSettingsContentMetrics(), &ColorRow, Localize("Tee hitbox color"), &g_Config.m_QmHitboxColorTee, ColorRGBA(0.0f, 1.0f, 1.0f), false);
+		DoLine_ColorPicker(&s_TeeColorId, CurrentSettingsContentMetrics(), &ColorRow, Localize("Tee hitbox color"), &g_Config.m_QmHitboxColorTee, color_cast<ColorRGBA>(ColorHSLA(CConfig::ms_QmHitboxColorTee)), false);
 	}
-	Flow.Space(LineSpacing);
 	static CButtonContainer s_WeaponColorId;
 	CUIRect s_WeaponColorIdRow;
-	if(Flow.Control("s_WeaponColorId", LineHeight, s_WeaponColorIdRow))
+	if(Flow.Control("s_WeaponColorId", LineHeight, s_WeaponColorIdRow, ui_token::settings::RowGap(LineSpacing)))
 	{
 		CUIRect ColorRow = s_WeaponColorIdRow;
-		DoLine_ColorPicker(&s_WeaponColorId, CurrentSettingsContentMetrics(), &ColorRow, Localize("Weapon range color"), &g_Config.m_QmHitboxColorWeapon, ColorRGBA(1.0f, 1.0f, 0.0f), false);
+		DoLine_ColorPicker(&s_WeaponColorId, CurrentSettingsContentMetrics(), &ColorRow, Localize("Weapon range color"), &g_Config.m_QmHitboxColorWeapon, color_cast<ColorRGBA>(ColorHSLA(CConfig::ms_QmHitboxColorWeapon)), false);
 	}
-	Flow.Space(LineSpacing);
 
-	if(Flow.Control("qm-hitbox-opacity", LineHeight, Row))
+	if(Flow.Control("qm-hitbox-opacity", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
 		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, "qmclient-hitbox-opacity", &LabelColumn, Localize("Opacity"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
@@ -222,7 +225,6 @@ void CMenus::RenderQmVisualCollisionHitboxContent(CUIRect &Content, float LineHe
 		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(&s_QmHitboxAlphaInputId, &Row, &g_Config.m_QmHitboxAlpha, &LabelColumn);
 		RenderQmSettingsSliderWithValueInput(&s_QmHitboxAlphaInputId, ControlColumn, &g_Config.m_QmHitboxAlpha, 0, 100, "%", PrewarmOnly);
 	}
-	Flow.Space(LineSpacing);
 }
 
 void CMenus::RenderQmVisualWeaponAnimationContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, float ContentGap, bool PrewarmOnly)
@@ -236,8 +238,7 @@ void CMenus::RenderQmVisualWeaponAnimationContent(CUIRect &Content, float LineHe
 	// 不受上方动画开关 early-return 影响（自视觉页字体区迁移至此武器动画卡片）。
 	{
 		CUIRect HammerRow, HammerLabel, HammerControl;
-		const bool HasHammerRow = Flow.Control("qm-weapon-hammer-mode", LineHeight, HammerRow);
-		Flow.Space(LineSpacing);
+		const bool HasHammerRow = Flow.Control("qm-weapon-hammer-mode", LineHeight, HammerRow, ui_token::settings::RowGap(LineSpacing));
 		if(HasHammerRow)
 		{
 			SplitSettingsControlRow(HammerRow, CurrentSettingsContentMetrics(), &HammerLabel, &HammerControl);
@@ -256,13 +257,14 @@ void CMenus::RenderQmVisualWeaponAnimationContent(CUIRect &Content, float LineHe
 
 	if(!g_Config.m_QmWeaponSwitchAnim && !g_Config.m_QmWeaponReloadAnim)
 		return;
-	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:weapon_animation", CurrentSettingsContentMetrics(), PrewarmOnly || Ui()->RenderOnly()))
+	float SectionReveal = 0.0f;
+	if(!qm_card_catalog::QmCardRenderHook::PersonalizationReveal(this, Content, "qm:weapon_animation", CurrentSettingsContentMetrics(), &SectionReveal, PrewarmOnly || Ui()->RenderOnly()))
 		return;
+	const CSettingsContentRevealScope SectionRevealScope(Ui(), Flow, SectionReveal);
 
 	CUIRect Row, LabelColumn, ControlColumn;
 	auto RenderValue = [&](const char *pTextId, const char *pText, const void *pInputId, int *pValue, int Min, int Max, const char *pSuffix = "") {
-		const bool HasRow = Flow.Control(pTextId, LineHeight, Row);
-		Flow.Space(LineSpacing);
+		const bool HasRow = Flow.Control(pTextId, LineHeight, Row, ui_token::settings::RowGap(LineSpacing));
 		if(!HasRow)
 			return;
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
@@ -277,7 +279,7 @@ void CMenus::RenderQmVisualWeaponAnimationContent(CUIRect &Content, float LineHe
 		RenderValue("qmclient-weapon-reload-animation-probability", "Weapon reload animation probability", &s_QmWeaponReloadAnimProbabilityInputId, &g_Config.m_QmWeaponReloadAnimProbability, 0, 100, "%");
 	}
 
-	if(Flow.Control("qm-weapon-scope", LineHeight, Row))
+	if(Flow.Control("qm-weapon-scope", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		static std::vector<const char *> s_WeaponSwitchAnimScopeDropDownNames;
 		s_WeaponSwitchAnimScopeDropDownNames = {Localize("Self only"), Localize("Local"), Localize("All players")};
@@ -291,7 +293,6 @@ void CMenus::RenderQmVisualWeaponAnimationContent(CUIRect &Content, float LineHe
 		if(g_Config.m_QmWeaponSwitchAnimScope != NewScope)
 			g_Config.m_QmWeaponSwitchAnimScope = NewScope;
 	}
-	Flow.Space(LineSpacing);
 
 	if(!g_Config.m_QmWeaponSwitchAnim)
 		return;
@@ -303,7 +304,7 @@ void CMenus::RenderQmVisualWeaponAnimationContent(CUIRect &Content, float LineHe
 	RenderValue("qmclient-weapon-switch-distance", "Weapon switch distance", &s_QmWeaponSwitchAnimDistanceInputId, &g_Config.m_QmWeaponSwitchAnimDistance, 0, 100);
 	RenderValue("qmclient-weapon-switch-rotation", "Weapon switch rotation", &s_QmWeaponSwitchAnimRotationInputId, &g_Config.m_QmWeaponSwitchAnimRotation, 0, 1440, "deg");
 
-	if(Flow.Control("qm-weapon-easing", LineHeight, Row))
+	if(Flow.Control("qm-weapon-easing", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
 		RenderQmVisualLabel("qmclient-weapon-switch-easing", &LabelColumn, Localize("Weapon switch easing"), BodySize);
@@ -317,7 +318,6 @@ void CMenus::RenderQmVisualWeaponAnimationContent(CUIRect &Content, float LineHe
 		if(g_Config.m_QmWeaponSwitchAnimEasing != NewEasing)
 			g_Config.m_QmWeaponSwitchAnimEasing = NewEasing;
 	}
-	Flow.Space(LineSpacing);
 }
 
 void CMenus::RenderQmVisualChatBubbleContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
@@ -328,7 +328,8 @@ void CMenus::RenderQmVisualChatBubbleContent(CUIRect &Content, float LineHeight,
 		return;
 
 	CUIRect StyleRow, StyleLabel, StyleControl;
-	if(Flow.Control("qm-chat-bubble-style", LineHeight, StyleRow))
+	// 行距由行自己声明（声明阶段记到上一行末尾），行后不再补 Space。
+	if(Flow.Control("qm-chat-bubble-style", LineHeight, StyleRow, ui_token::settings::RowGap(LineSpacing)))
 	{
 		SplitSettingsControlRow(StyleRow, CurrentSettingsContentMetrics(), &StyleLabel, &StyleControl);
 		RenderQmVisualLabel("qm-chat-bubble-style-label", &StyleLabel, Localize("Style"), BodySize);
@@ -340,10 +341,9 @@ void CMenus::RenderQmVisualChatBubbleContent(CUIRect &Content, float LineHeight,
 		if(Flow.Input() && !PrewarmOnly && !Ui()->RenderOnly())
 			g_Config.m_QmChatBubbleStyle = Selected;
 	}
-	Flow.Space(LineSpacing);
 
 	CUIRect PreviewRow;
-	if(Flow.Control("qm-chat-bubble-preview", LineHeight * 5.0f, PreviewRow) && Flow.Drawing() && !Ui()->DrawingSuppressed())
+	if(Flow.Control("qm-chat-bubble-preview", LineHeight * 5.0f, PreviewRow, ui_token::settings::RowGap(LineSpacing)) && Flow.Drawing() && !Ui()->DrawingSuppressed())
 	{
 		CUIRect PreviewLabel, Preview;
 		PreviewRow.HSplitTop(LineHeight, &PreviewLabel, &Preview);
@@ -388,15 +388,15 @@ void CMenus::RenderQmVisualChatBubbleContent(CUIRect &Content, float LineHeight,
 		TextRender()->TextColor(PreviousColor);
 		TextRender()->TextOutlineColor(PreviousOutline);
 	}
-	Flow.Space(LineSpacing);
 
-	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:chat_bubble", CurrentSettingsContentMetrics(), PrewarmOnly || Ui()->RenderOnly()))
+	float SectionReveal = 0.0f;
+	if(!qm_card_catalog::QmCardRenderHook::PersonalizationReveal(this, Content, "qm:chat_bubble", CurrentSettingsContentMetrics(), &SectionReveal, PrewarmOnly || Ui()->RenderOnly()))
 		return;
+	const CSettingsContentRevealScope SectionRevealScope(Ui(), Flow, SectionReveal);
 
 	auto RenderValue = [&](const char *pTextId, const char *pText, const void *pInputId, int *pValue, int Min, int Max, const char *pSuffix = "") {
 		CUIRect Row, LabelColumn, ControlColumn;
-		const bool HasRow = Flow.Control(pTextId, LineHeight, Row);
-		Flow.Space(LineSpacing);
+		const bool HasRow = Flow.Control(pTextId, LineHeight, Row, ui_token::settings::RowGap(LineSpacing));
 		if(!HasRow)
 			return;
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
@@ -412,7 +412,7 @@ void CMenus::RenderQmVisualChatBubbleContent(CUIRect &Content, float LineHeight,
 	RenderValue("qmclient-chat-bubble-font-size", "Font size", &s_QmChatBubbleFontSizeInputId, &g_Config.m_QmChatBubbleFontSize, 8, 32);
 
 	CUIRect Row, LabelColumn, ControlColumn;
-	if(Flow.Control("qm-bubble-animation", LineHeight, Row))
+	if(Flow.Control("qm-bubble-animation", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
 		RenderQmVisualLabel("qmclient-chat-bubble-animation", &LabelColumn, Localize("Animation"), BodySize);
@@ -430,8 +430,8 @@ void CMenus::RenderQmVisualChatBubbleContent(CUIRect &Content, float LineHeight,
 				g_Config.m_QmChatBubbleAnimation = Animation;
 		}
 	}
-	Flow.Space(LineSpacing);
 
+	// 下面这一行自己声明行距，这里不再补边界行距。
 	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmChatBubbleCustomColors, "qm-chat-bubble-custom-colors", Localize("Use custom colors"), &g_Config.m_QmChatBubbleCustomColors);
 	if(!g_Config.m_QmChatBubbleCustomColors)
 		return;
@@ -439,19 +439,18 @@ void CMenus::RenderQmVisualChatBubbleContent(CUIRect &Content, float LineHeight,
 	static CButtonContainer s_ChatBubbleBgColorId;
 	static CButtonContainer s_ChatBubbleTextColorId;
 	CUIRect s_ChatBubbleBgColorIdRow;
-	if(Flow.Control("s_ChatBubbleBgColorId", LineHeight, s_ChatBubbleBgColorIdRow))
+	if(Flow.Control("s_ChatBubbleBgColorId", LineHeight, s_ChatBubbleBgColorIdRow, ui_token::settings::RowGap(LineSpacing)))
 	{
 		CUIRect ColorRow = s_ChatBubbleBgColorIdRow;
-		DoLine_ColorPicker(&s_ChatBubbleBgColorId, CurrentSettingsContentMetrics(), &ColorRow, Localize("Background color"), &g_Config.m_QmChatBubbleBgColor, ColorRGBA(0.0f, 0.0f, 0.0f, 0.8f), false, nullptr, true);
+		// 重置默认值直接取配置项自己的出厂值（CConfig::ms_*），不再手抄一份颜色字面量。
+		DoLine_ColorPicker(&s_ChatBubbleBgColorId, CurrentSettingsContentMetrics(), &ColorRow, Localize("Background color"), &g_Config.m_QmChatBubbleBgColor, color_cast<ColorRGBA>(ColorHSLA(CConfig::ms_QmChatBubbleBgColor, true)), false, nullptr, true);
 	}
-	Flow.Space(LineSpacing);
 	CUIRect s_ChatBubbleTextColorIdRow;
-	if(Flow.Control("s_ChatBubbleTextColorId", LineHeight, s_ChatBubbleTextColorIdRow))
+	if(Flow.Control("s_ChatBubbleTextColorId", LineHeight, s_ChatBubbleTextColorIdRow, ui_token::settings::RowGap(LineSpacing)))
 	{
 		CUIRect ColorRow = s_ChatBubbleTextColorIdRow;
-		DoLine_ColorPicker(&s_ChatBubbleTextColorId, CurrentSettingsContentMetrics(), &ColorRow, Localize("Text color"), &g_Config.m_QmChatBubbleTextColor, ui_token::color::NEUTRAL_WHITE, false);
+		DoLine_ColorPicker(&s_ChatBubbleTextColorId, CurrentSettingsContentMetrics(), &ColorRow, Localize("Text color"), &g_Config.m_QmChatBubbleTextColor, color_cast<ColorRGBA>(ColorHSLA(CConfig::ms_QmChatBubbleTextColor)), false);
 	}
-	Flow.Space(LineSpacing);
 }
 
 void CMenus::RenderQmVisualFocusModeContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float ColumnGap, float LabelWidth)
@@ -464,18 +463,21 @@ void CMenus::RenderQmVisualFocusModeContent(CUIRect &Content, float LineHeight, 
 	static CButtonContainer s_ReaderButtonFocusToggle, s_ClearButtonFocusToggle;
 	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmFocusMode, "qmclient-focus-mode-enable", Localize("Enable Zen mode"), &g_Config.m_QmFocusMode);
 	CUIRect Row;
-	if(qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:focus_mode", Metrics, Ui()->RenderOnly()))
+	float SectionReveal = 0.0f;
+	if(qm_card_catalog::QmCardRenderHook::PersonalizationReveal(this, Content, "qm:focus_mode", Metrics, &SectionReveal, Ui()->RenderOnly()))
 	{
-		const auto RenderSection = [&](const char *pTextId, const char *pLabel) {
-			if(Flow.Control(pTextId, SmallSize, Row))
+		const CSettingsContentRevealScope SectionRevealScope(Ui(), Flow, SectionReveal);
+		// 分区标题也是普通行：行距由它自己声明，行后不再补 Space。
+		const auto RenderSection = [&](const char *pTextId, const char *pLabel, float SpacingBefore) {
+			if(Flow.Control(pTextId, SmallSize, Row, SpacingBefore))
 			{
 				TextRender()->TextColor(ColorRGBA(0.72f, 0.72f, 0.78f, 0.86f));
 				RenderQmVisualLabel(pTextId, &Row, Localize(pLabel), SmallSize);
 				TextRender()->TextColor(TextRender()->DefaultTextColor());
 			}
-			Flow.Space(LineSpacing);
 		};
-		RenderSection("qmclient-focus-section-interface", "Interface");
+		// 首行紧接收起行：行距仍由这一行自己声明，helper 不再补行尾 Space。
+		RenderSection("qmclient-focus-section-interface", "Interface", LineSpacing);
 		DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, Content,
 			{
 				{&g_Config.m_QmFocusModeHideHud, "qmclient-focus-hide-hud", Localize("Hide HUD")},
@@ -484,7 +486,7 @@ void CMenus::RenderQmVisualFocusModeContent(CUIRect &Content, float LineHeight, 
 				{&g_Config.m_QmFocusModeHideScoreboard, "qmclient-focus-hide-scoreboard", Localize("Hide scoreboard")},
 			},
 			Metrics);
-		RenderSection("qmclient-focus-section-players", "Players");
+		RenderSection("qmclient-focus-section-players", "Players", LineSpacing);
 		DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, Content,
 			{
 				{&g_Config.m_QmFocusModeHideNames, "qmclient-focus-hide-names", Localize("Hide names")},
@@ -493,7 +495,7 @@ void CMenus::RenderQmVisualFocusModeContent(CUIRect &Content, float LineHeight, 
 				{&g_Config.m_QmFocusModeHideGuideLines, "qmclient-focus-hide-guide-lines", Localize("Hide guide lines")},
 			},
 			Metrics);
-		RenderSection("qmclient-focus-section-visuals", "Visuals");
+		RenderSection("qmclient-focus-section-visuals", "Visuals", LineSpacing);
 		DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, Content,
 			{
 				{&g_Config.m_QmFocusModeHideJumpEffects, "qmclient-focus-hide-jump-effects", Localize("Hide jump effects")},
@@ -504,7 +506,7 @@ void CMenus::RenderQmVisualFocusModeContent(CUIRect &Content, float LineHeight, 
 				{&g_Config.m_QmFocusModeHideMuzzleEffects, "qmclient-focus-hide-muzzle-effects", Localize("Hide weapon muzzle flashes")},
 			},
 			Metrics);
-		RenderSection("qmclient-focus-section-audio", "Audio");
+		RenderSection("qmclient-focus-section-audio", "Audio", LineSpacing);
 		DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, Content,
 			{
 				{&g_Config.m_QmFocusModeMuteJumpSounds, "qmclient-focus-mute-jump-sounds", Localize("Mute jump sounds")},
@@ -512,7 +514,7 @@ void CMenus::RenderQmVisualFocusModeContent(CUIRect &Content, float LineHeight, 
 				{&g_Config.m_QmFocusModeMuteHammerSounds, "qmclient-focus-mute-hammer-sounds", Localize("Mute hammer sounds")},
 			},
 			Metrics);
-		RenderSection("qmclient-focus-section-chat", "Chat");
+		RenderSection("qmclient-focus-section-chat", "Chat", LineSpacing);
 		DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, Content,
 			{
 				{&g_Config.m_QmFocusModeHideChat, "qmclient-focus-hide-chat", Localize("Hide player messages")},
@@ -521,7 +523,10 @@ void CMenus::RenderQmVisualFocusModeContent(CUIRect &Content, float LineHeight, 
 				{&g_Config.m_QmFocusModeHideEcho, "qmclient-focus-hide-echo", Localize("Hide Echo messages")},
 			},
 			Metrics);
-		Flow.Space(LineSpacing);
+		// 收起区结束：组不再留尾距，而下面那行在收起区之外，由这里补一档边界行距（收起时本段不声明）。
+		// 这处不能改由下一行自己声明：下一行是手写行、没有行前间距参数，且它落在收起区之外，
+		// 这一档必须跟着收起动画一起缩放，所以保留在区间内由这里补。
+		Flow.Space(ui_token::settings::RowGap(LineSpacing));
 	}
 	if(!Flow.Control("qmclient-focus-mode-key", LineHeight, Row))
 		return;
@@ -550,12 +555,13 @@ void CMenus::RenderQmVisualSpectatorModeContent(CUIRect &Content, float LineHeig
 {
 	CSettingsContentLayoutFlow Flow(Content);
 	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmCinematicCamera, "qmclient-spectator-smoothing", Localize("Smooth free spectator camera"), &g_Config.m_QmCinematicCamera);
-	if(g_Config.m_QmCinematicCamera)
+	static CSettingsConditionalRows s_CinematicCameraRows;
+	if(s_CinematicCameraRows.Update(g_Config.m_QmCinematicCamera, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 	{
+		const CSettingsContentRevealScope CinematicCameraRevealScope(Ui(), Flow, s_CinematicCameraRows.Fade(g_Config.m_QmUiMotionLevel));
 		static int s_SmoothnessInputId;
 		CUIRect Row, LabelColumn, ControlColumn;
-		const bool HasRow = Flow.Control("qm-spectator-smoothness", LineHeight, Row);
-		Flow.Space(LineSpacing);
+		const bool HasRow = Flow.Control("qm-spectator-smoothness", LineHeight, Row, ui_token::settings::RowGap(LineSpacing));
 		if(!HasRow)
 			return;
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
@@ -570,8 +576,8 @@ void CMenus::RenderQmVisualCameraViewContent(CUIRect &Content, float LineHeight,
 	CSettingsContentLayoutFlow Flow(Content);
 	auto RenderValue = [&](const char *pTextId, const char *pText, const void *pId, int *pValue, int MinValue, int MaxValue, const char *pSuffix = "", unsigned Flags = 0u) {
 		CUIRect Row, LabelColumn, ControlColumn;
-		const bool HasRow = Flow.Control(pTextId, LineHeight, Row);
-		Flow.Space(LineSpacing);
+		// 行距由行自己声明，行后不再补 Space。
+		const bool HasRow = Flow.Control(pTextId, LineHeight, Row, ui_token::settings::RowGap(LineSpacing));
 		if(!HasRow)
 			return;
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
@@ -605,8 +611,7 @@ void CMenus::RenderQmVisualCameraViewContent(CUIRect &Content, float LineHeight,
 	static CScrollRegion s_AspectPresetDropDownScrollRegion;
 	s_AspectPresetDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_AspectPresetDropDownScrollRegion;
 	CUIRect Row, LabelColumn, ControlColumn;
-	const bool HasPresetRow = Flow.Control("qm-camera-aspect-preset", LineHeight, Row);
-	Flow.Space(LineSpacing);
+	const bool HasPresetRow = Flow.Control("qm-camera-aspect-preset", LineHeight, Row, ui_token::settings::RowGap(LineSpacing));
 	bool AspectChanged = false;
 	if(HasPresetRow)
 	{
@@ -656,7 +661,9 @@ void CMenus::RenderQmVisualCameraViewContent(CUIRect &Content, float LineHeight,
 		str_format(aAspectInfo, sizeof(aAspectInfo), "%s %.2f:1", Localize("Current aspect ratio:"), EffectiveAspectValue / 100.0f);
 	else
 		str_copy(aAspectInfo, Localize("Current aspect ratio: Show default"), sizeof(aAspectInfo));
-	Flow.Text("qm-camera-effective-aspect", aAspectInfo, 0.0f, BodySize, LineSpacing, [this](const char *pValue, float Width, float FontSize) { return TextRender()->TextBoundingBox(FontSize, pValue, -1, Width).m_H + FontSize * 0.25f; }, [this, BodySize](const CUIRect &TextRow, const char *pValue) { SLabelProperties Props; Props.m_MaxWidth = TextRow.w; Ui()->DoLabel(&TextRow, pValue, BodySize, TEXTALIGN_ML, Props); });
+	// Flow.Text 只有行后间距、没有「行前间距」参数：这一行之上的一档仍由上一行补。
+	Flow.Space(ui_token::settings::RowGap(LineSpacing));
+	Flow.Text("qm-camera-effective-aspect", aAspectInfo, 0.0f, BodySize, ui_token::settings::RowGap(LineSpacing), [this](const char *pValue, float Width, float FontSize) { return TextRender()->TextBoundingBox(FontSize, pValue, -1, Width).m_H + FontSize * 0.25f; }, [this, BodySize](const CUIRect &TextRow, const char *pValue) { SLabelProperties Props; Props.m_MaxWidth = TextRow.w; Ui()->DoLabel(&TextRow, pValue, BodySize, TEXTALIGN_ML, Props); });
 	if(AspectChanged && !PrewarmOnly && Flow.Input() && !Ui()->RenderOnly())
 		GameClient()->TClientComponent().QueueAspectApply();
 }

@@ -272,6 +272,16 @@ TEST(SettingsContentLayout, MultilineControlCachesTextMetricsAndPublishesTheFull
 
 namespace
 {
+	// 折叠行的行高与行距：分割线在行上方额外占「行距 + 1px + 行距」。
+	SSettingsContentMetrics PersonalizationMetrics()
+	{
+		SSettingsContentMetrics Metrics;
+		Metrics.m_LineHeight = 20.0f;
+		Metrics.m_LineSpacing = 4.0f;
+		Metrics.m_SmallSize = 10.0f;
+		return Metrics;
+	}
+
 	class CPersonalizationCard
 	{
 		CSettingsPersonalizationState &m_State;
@@ -284,8 +294,8 @@ namespace
 			CUIRect Row;
 			Flow.Control("basic", 20, Row);
 			Flow.Space(4);
-			if(SettingsPersonalizationSection(m_State, Rect, m_pStableId, 20, 4, ReadOnly,
-				   [&](const void *pId, const CUIRect &, bool) {
+			if(SettingsPersonalizationSection(m_State, Rect, m_pStableId, PersonalizationMetrics(), ReadOnly,
+				   [&](const void *pId, const CUIRect &, bool, bool) {
 					   m_pButtonId = pId;
 					   ++m_ButtonCalls;
 					   return Clicked;
@@ -333,9 +343,48 @@ TEST(SettingsPersonalization, NewCardsAreCollapsedAndDeclarationDoesNotProcessIn
 	EXPECT_NE(pLayout->Find("basic"), nullptr);
 	EXPECT_NE(pLayout->Find("personalization"), nullptr);
 	EXPECT_EQ(pLayout->Find("detail"), nullptr);
-	EXPECT_FLOAT_EQ(pLayout->Height(), 48);
+	// 20（基础行）+ 9（分割线占位：行距 4 + 1px + 行距 4）+ 20（折叠行）+ 4（行后间距）
+	EXPECT_FLOAT_EQ(pLayout->Height(), 53);
 	EXPECT_EQ(Card.m_ButtonCalls, 0);
 	EXPECT_EQ(Card.m_DetailInputs, 0);
+}
+
+TEST(SettingsPersonalization, RowKeepsOneLineGapOnBothSides)
+{
+	// 个性调整前后各保留一个标准行距：上一行只声明了行高、展开内容又自带行前间距时都不能缺或多。
+	CSettingsPersonalizationState State;
+	std::vector<SSettingsContentRowDeclaration> vRows;
+	CUIRect Content{0, 0, 320, 0};
+	{
+		CSettingsContentLayoutScope Scope(vRows);
+		CSettingsContentLayoutFlow Flow(Content);
+		CUIRect Row;
+		Flow.Control("basic", 20, Row);
+		SettingsPersonalizationSection(State, Content, "card-gap", PersonalizationMetrics(), false, [](const void *, const CUIRect &, bool, bool) { return false; });
+		Flow.Control("detail", 20, Row, 4);
+	}
+	ASSERT_EQ(vRows.size(), 3u);
+	EXPECT_FLOAT_EQ(vRows[0].m_Spacing, 9); // 行前间距补到分割线所需：4 + 1 + 4
+	EXPECT_FLOAT_EQ(vRows[1].m_Spacing, 4); // 行后间距不能叠成两倍
+}
+
+TEST(SettingsPersonalization, ExistingSectionGapIsNotReducedToTheLineGap)
+{
+	// 上一段自己留了更大的分段间距时，个性调整只补不足，不把它压回标准行距。
+	CSettingsPersonalizationState State;
+	std::vector<SSettingsContentRowDeclaration> vRows;
+	CUIRect Content{0, 0, 320, 0};
+	{
+		CSettingsContentLayoutScope Scope(vRows);
+		CSettingsContentLayoutFlow Flow(Content);
+		CUIRect Row;
+		Flow.Control("basic", 20, Row);
+		Flow.Space(16);
+		SettingsPersonalizationSection(State, Content, "card-section-gap", PersonalizationMetrics(), false, [](const void *, const CUIRect &, bool, bool) { return false; });
+	}
+	ASSERT_EQ(vRows.size(), 2u);
+	EXPECT_FLOAT_EQ(vRows[0].m_Spacing, 16);
+	EXPECT_FLOAT_EQ(vRows[1].m_Spacing, 4);
 }
 
 TEST(SettingsPersonalization, ToggleRebuildsHeightWithoutProcessingHiddenControls)
@@ -348,7 +397,7 @@ TEST(SettingsPersonalization, ToggleRebuildsHeightWithoutProcessingHiddenControl
 	ASSERT_NE(pOpened, nullptr);
 	EXPECT_TRUE(State.Expanded("card-a"));
 	EXPECT_NE(pOpened->Find("detail"), nullptr);
-	EXPECT_FLOAT_EQ(pOpened->Height(), 78);
+	EXPECT_FLOAT_EQ(pOpened->Height(), 83);
 	EXPECT_EQ(Card.m_DetailInputs, 0);
 	Card.Replay(*pOpened, ESettingsContentPass::INPUT, false);
 	EXPECT_EQ(Card.m_DetailInputs, 1);

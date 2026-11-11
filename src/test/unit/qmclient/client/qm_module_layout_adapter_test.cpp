@@ -593,8 +593,17 @@ TEST(QmModuleLayoutAdapter, MigrateGlobalCardOrderWritesPipeFormatAndMarksMigrat
 	const std::string Result(g_Config.m_QmGlobalCardOrder);
 	EXPECT_NE(Result.find("qm:chat_bubble|appearance-chat|right|"), std::string::npos);
 	EXPECT_NE(Result.find("qm:camera_view|visual|left|"), std::string::npos);
-	EXPECT_NE(Result.find("tclient:auto-reply|tclient|left|4;"), std::string::npos);
-	EXPECT_NE(Result.find("deck:sound-audio-pack|sound|right|0;"), std::string::npos);
+	// 默认列/序由对称瀑布派生，测试按注册表默认 placement 生成期望串，
+	// 不再把某张卡的列号和列内序号写死（写死会在每次调整注册顺序时误报）。
+	const auto ExpectPlacement = [&Result](const char *pStableId, const char *pTab) {
+		const qm_card_order::SEntry *pPlacement = qm_card_registry::FindDefaultPlacement(pStableId);
+		ASSERT_NE(pPlacement, nullptr) << pStableId;
+		char aExpected[160];
+		str_format(aExpected, sizeof(aExpected), "%s|%s|%s|%d;", pStableId, pTab, pPlacement->m_Column == 1 ? "left" : "right", pPlacement->m_OrderInColumn);
+		EXPECT_NE(Result.find(aExpected), std::string::npos) << aExpected;
+	};
+	ExpectPlacement("tclient:auto-reply", "tclient");
+	ExpectPlacement("deck:sound-audio-pack", "sound");
 	EXPECT_NE(Result.find("|"), std::string::npos);
 	EXPECT_EQ(Result.find("chat_bubble:right"), std::string::npos);
 }
@@ -614,7 +623,12 @@ TEST(QmModuleLayoutAdapter, MigrateGlobalCardOrderPreservesRegistryOnlyQmCards)
 
 	const std::string Result(g_Config.m_QmGlobalCardOrder);
 	EXPECT_NE(Result.find("qm:chat_bubble|appearance-chat|right|"), std::string::npos);
-	EXPECT_NE(Result.find("qm:nameplate_text|hud|right|18;"), std::string::npos);
+	const qm_card_order::SEntry *pNameplateText = qm_card_registry::FindDefaultPlacement("qm:nameplate_text");
+	ASSERT_NE(pNameplateText, nullptr);
+	char aNameplateExpected[160];
+	str_format(aNameplateExpected, sizeof(aNameplateExpected), "qm:nameplate_text|hud|%s|%d;",
+		pNameplateText->m_Column == 1 ? "left" : "right", pNameplateText->m_OrderInColumn);
+	EXPECT_NE(Result.find(aNameplateExpected), std::string::npos);
 }
 
 // 意图：首次迁移不能只把 Qm 旧排序合入全局配置；一旦 registry 默认 Tclient 卡片写入

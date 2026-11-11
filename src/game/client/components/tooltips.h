@@ -136,6 +136,9 @@ struct CTooltip
 	std::string m_Text;
 	float m_WidthHint = -1.0f;
 	bool m_OnScreen = false; // 登记时的悬浮资格，保留内容裁剪与弹层屏蔽结果。
+	// 登记发生在弹窗渲染过程中：弹窗接管指针时只有这类来源允许继续悬浮，
+	// 被弹窗盖住的下层控件即使矩形重合也不会透出提示。
+	bool m_FromPopup = false;
 	float m_FadeTime = 0.75f;
 	float m_FontSize = ui_token::tooltip::FONT_SIZE;
 	bool m_SmallInstant = false;
@@ -412,10 +415,17 @@ inline bool QmTooltipMayUpdate(const CTooltip &Current, uint64_t Frame, bool Fal
 }
 
 // 注册与最终绘制共享同一悬浮资格，弹层屏蔽和裁剪变化立即使矩形提示失效。
+// 真实 CUi 走 TooltipSourceHovered：弹窗接管指针时，落在弹窗内的来源仍然可悬浮，
+// 否则弹窗里的按钮提示永远显示不出来。测试假 UI 没有该方法时退回 MouseHovered。
 template<typename TUi>
 inline bool QmTooltipHovered(const CTooltip &Tooltip, TUi &Ui)
 {
-	return Ui.MouseHovered(&Tooltip.m_Rect) && (Tooltip.m_HoverByRect || Ui.HotItem() == Tooltip.m_pId);
+	bool Hovered;
+	if constexpr(requires { Ui.TooltipSourceHovered(&Tooltip.m_Rect, Tooltip.m_FromPopup); })
+		Hovered = Ui.TooltipSourceHovered(&Tooltip.m_Rect, Tooltip.m_FromPopup);
+	else
+		Hovered = Ui.MouseHovered(&Tooltip.m_Rect);
+	return Hovered && (Tooltip.m_HoverByRect || Ui.HotItem() == Tooltip.m_pId);
 }
 
 // 最终绘制核对登记时的页面与悬浮资格；同帧关闭页面或离开裁剪区后不能重新激活。
