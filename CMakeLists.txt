@@ -5744,6 +5744,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/ui/qm_ime_menu_input_test.cpp
       src/test/integration/qmclient/ui/qm_font_combobox_test.cpp
       src/test/integration/qmclient/ui/qm_color_picker_text_input_test.cpp
+      src/test/integration/qmclient/ui/qm_color_picker_palette_lifecycle_test.cpp
       src/test/integration/qmclient/client/qm_font_loading_test.cpp
       src/test/integration/qmclient/client/qm_text_measurement_test.cpp
       src/test/integration/qmclient/client/qm_title_badge_text_test.cpp
