@@ -2,8 +2,6 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "hud.h"
 
-#include <game/client/QmUi/UiSurface.h>
-
 #include "binds.h"
 #include "camera.h"
 #include "controls.h"
@@ -25,6 +23,7 @@
 #include <game/client/QmUi/QmAnimResolve.h>
 #include <game/client/QmUi/QmHookCountdownRender.h>
 #include <game/client/QmUi/QmLayout.h>
+#include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/animstate.h>
 #include <game/client/components/qmclient/demo_display.h>

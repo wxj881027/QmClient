@@ -8,8 +8,8 @@
 #include <base/color.h>
 
 #include <engine/client/rounded_rect_geometry.h>
-#include <engine/shared/config.h>
 #include <engine/graphics.h>
+#include <engine/shared/config.h>
 
 #include <game/client/ui_rect.h>
 

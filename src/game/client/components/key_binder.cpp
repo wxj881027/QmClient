@@ -6,8 +6,8 @@
 
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiSurface.h>
-#include <game/client/QmUi/UiTokens.h>
 #include <game/client/QmUi/UiSurfaceText.h>
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/binds.h>
 #include <game/client/gameclient.h>
 #include <game/client/qm_icon.h>
