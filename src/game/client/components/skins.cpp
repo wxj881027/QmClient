@@ -2780,24 +2780,43 @@ bool CSkins::PoseSkinsReady(const std::vector<std::string> &vNames, std::string 
 bool CSkins::PrewarmPlayerPreviewReady(int Dummy, int MaxEntries, bool ProgressiveListReady)
 {
 	CSkinList &List = SkinList(Dummy);
-
-	std::vector<std::string> vNames;
 	const int VisibleTotal = minimum((int)List.Skins().size(), MaxEntries);
-	vNames.reserve(VisibleTotal + 1);
-	const char *pSelectedSkin = Dummy ? g_Config.m_ClDummySkin : g_Config.m_ClPlayerSkin;
-	vNames.push_back(pSelectedSkin != nullptr && pSelectedSkin[0] != '\0' ? pSelectedSkin : "default");
+	const char *pSelectedSkinRaw = Dummy ? g_Config.m_ClDummySkin : g_Config.m_ClPlayerSkin;
+	const char *pSelectedSkin = pSelectedSkinRaw != nullptr && pSelectedSkinRaw[0] != '\0' ? pSelectedSkinRaw : "default";
+
+	// 选中皮肤与可见条目都要保持 LRU 使用痕迹：即使已就绪也不能停，
+	// 否则可见皮肤被回收后会在同一页面反复加载。
+	const CSkinContainer *pSelectedContainer = FindContainerOrNullptr(pSelectedSkin);
+	const bool SelectedReady = pSelectedContainer == nullptr ||
+				   pSelectedContainer->Skin() != nullptr ||
+				   pSelectedContainer->State() == CSkinContainer::EState::ERROR ||
+				   pSelectedContainer->State() == CSkinContainer::EState::NOT_FOUND;
+
+	int VisibleReadyCount = 0;
+	int SourceLoadedCount = 0;
+	const char *pMissReason = SelectedReady ? "visible_source_loading" : "selected_source_loading";
 	for(int i = 0; i < VisibleTotal; ++i)
 	{
 		const CSkinContainer *pContainer = List.Skins()[i].SkinContainer();
-		if(pContainer != nullptr)
-			vNames.emplace_back(pContainer->Name());
+		if(pContainer == nullptr)
+			continue;
+
+		const CSkinContainer::EState State = pContainer->State();
+		if(pContainer->Skin() != nullptr)
+		{
+			++VisibleReadyCount;
+			++SourceLoadedCount;
+		}
+		else if(State == CSkinContainer::EState::ERROR || State == CSkinContainer::EState::NOT_FOUND)
+		{
+			++VisibleReadyCount;
+		}
+		else
+		{
+			pMissReason = "visible_source_loading";
+		}
+		const_cast<CSkinContainer *>(pContainer)->RequestLoad(ESettingsResourcePriority::VISIBLE);
 	}
-
-	char aWarmupRequest[128];
-	str_format(aWarmupRequest, sizeof(aWarmupRequest), "dummy=%d selected=%s visible_total=%d", Dummy, vNames.front().c_str(), VisibleTotal);
-	LogSettingsSkinSourceWarmupEvent("warmup_request", aWarmupRequest);
-
-	PrewarmByNames(vNames, true);
 
 	const bool ProgressiveEntriesReady = SettingsSkinListHasProgressiveWarmEntries((int)m_SkinList.m_vSkins.size(), MaxEntries, (int)m_vPendingSkinListMergeEntries.size());
 	const bool ListReady = !m_SkinList.m_NeedsUpdate &&
@@ -2819,47 +2838,20 @@ bool CSkins::PrewarmPlayerPreviewReady(int Dummy, int MaxEntries, bool Progressi
 		return false;
 	}
 
-	const CSkinContainer *pSelectedContainer = FindContainerOrNullptr(vNames.front().c_str());
-	const bool SelectedReady = pSelectedContainer == nullptr ||
-				   pSelectedContainer->Skin() != nullptr ||
-				   pSelectedContainer->State() == CSkinContainer::EState::ERROR ||
-				   pSelectedContainer->State() == CSkinContainer::EState::NOT_FOUND;
-
-	int VisibleReadyCount = 0;
-	int SourceLoadedCount = 0;
-	const char *pMissReason = SelectedReady ? "visible_source_loading" : "selected_source_loading";
-	for(int i = 0; i < VisibleTotal; ++i)
-	{
-		const CSkinContainer *pContainer = List.Skins()[i].SkinContainer();
-		if(pContainer == nullptr)
-			continue;
-
-		const CSkinContainer::EState State = pContainer->State();
-		if(pContainer->Skin() != nullptr)
-		{
-			++VisibleReadyCount;
-			++SourceLoadedCount;
-			continue;
-		}
-		if(State == CSkinContainer::EState::ERROR || State == CSkinContainer::EState::NOT_FOUND)
-			++VisibleReadyCount;
-		else
-			pMissReason = "visible_source_loading";
-	}
+	// 已全部就绪：不再构造名字列表，也不再每帧格式化 warmup 诊断串。
+	if(SelectedReady && VisibleReadyCount >= VisibleTotal)
+		return true;
 
 	char aWarmupGate[192];
 	str_format(aWarmupGate, sizeof(aWarmupGate),
 		"dummy=%d selected_ready=%d visible_ready_count=%d visible_total=%d source_loaded_count=%d preview_ready_count=0 restore_queue_count=0",
 		Dummy, SelectedReady ? 1 : 0, VisibleReadyCount, VisibleTotal, SourceLoadedCount);
 	LogSettingsSkinSourceWarmupEvent("warmup_gate", aWarmupGate);
-	if(!SelectedReady || VisibleReadyCount < VisibleTotal)
-	{
-		char aWarmupMiss[96];
-		str_format(aWarmupMiss, sizeof(aWarmupMiss), "dummy=%d reason=%s", Dummy, pMissReason);
-		LogSettingsSkinSourceWarmupEvent("warmup_miss", aWarmupMiss);
-		return false;
-	}
-	return true;
+
+	char aWarmupMiss[96];
+	str_format(aWarmupMiss, sizeof(aWarmupMiss), "dummy=%d reason=%s", Dummy, pMissReason);
+	LogSettingsSkinSourceWarmupEvent("warmup_miss", aWarmupMiss);
+	return false;
 }
 
 void CSkins::QueueSkinListPlanJob(int Dummy)

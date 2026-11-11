@@ -33,7 +33,8 @@ namespace qm_settings_content
 	{
 		const auto Content = Out.m_RenderMeasured;
 		Out.m_ResolveContentLayout = [Content, pText, pUi](CSettingsContentLayoutCache &Cache, float Width) {
-			std::vector<SSettingsContentRowDeclaration> vRows;
+			// 复用缓存持有的声明缓冲，避免每帧每卡新建 vector。
+			std::vector<SSettingsContentRowDeclaration> &vRows = Cache.ScratchDeclarations();
 			{
 				CContentDeclarationUiGuard Guard(pUi);
 				CSettingsContentLayoutScope Scope(vRows);

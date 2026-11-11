@@ -230,8 +230,10 @@ namespace
 	{
 		CUIRect Text = MenuButtonTextRect(pRect, FontFactor, HoverLift);
 		const float ResolvedTextFontSize = TextFontSize > 0.0f ? std::min(TextFontSize, Text.h * CUi::ms_FontmodHeight) : Text.h * CUi::ms_FontmodHeight;
-		const float IconSide = Text.h;
-		const float Gap = IconSide * 0.20f;
+		// 图标盒子由字形字号按 0.8 约定反推：直接用 Text.h 会比约定大 6%，
+		// 同一个按钮里图标比文字小半档，和下拉 chevron 也不同源。
+		const float IconSide = std::min(Text.h, ui_token::control::IconBox(ResolvedTextFontSize));
+		const float Gap = ui_token::control::IconTextGap(ResolvedTextFontSize);
 		float TextWidth = pTextRender->TextWidth(ResolvedTextFontSize, pText);
 		TextWidth = std::clamp(TextWidth, 1.0f, std::max(1.0f, Text.w - IconSide - Gap));
 		const float TotalWidth = IconSide + Gap + TextWidth;
@@ -360,13 +362,22 @@ namespace
 		return round_to_int(Value * 10.0f);
 	}
 
-	std::string MenuTextCacheKey(CMenus::EMenuTextScope Scope, int Page, int Tab, int Subtab, const char *pTextId, const CMenus::SMenuTextStyleKey &StyleKey)
+	constexpr size_t MENU_TEXT_CACHE_KEY_SIZE = 512;
+
+	// 热路径直接格式化到调用方的栈缓冲，配合文本池的透明查找避免每个标签构造一次 std::string。
+	void FormatMenuTextCacheKey(char *pKey, size_t KeySize, CMenus::EMenuTextScope Scope, int Page, int Tab, int Subtab, const char *pTextId, const CMenus::SMenuTextStyleKey &StyleKey)
 	{
-		char aKey[512];
-		str_format(aKey, sizeof(aKey), "%s:%d:%d:%d:%s:fs%d:al%d:mw%d:us%d:hd%d:cm%d",
+		str_format(pKey, KeySize, "%s:%d:%d:%d:%s:fs%d:al%d:mw%d:us%d:hd%d:cm%d",
 			MenuTextScopeName(Scope), Page, Tab, Subtab, pTextId != nullptr ? pTextId : "",
 			MenuTextBucket(StyleKey.m_FontSize), StyleKey.m_Align, StyleKey.m_MaxWidthBucket,
 			StyleKey.m_UiScaleBucket, StyleKey.m_HiDpiScaleBucket, StyleKey.m_CompactMode);
+	}
+
+	// 计划收集等冷路径需要持有键本身，这里才真正分配字符串。
+	std::string MenuTextCacheKey(CMenus::EMenuTextScope Scope, int Page, int Tab, int Subtab, const char *pTextId, const CMenus::SMenuTextStyleKey &StyleKey)
+	{
+		char aKey[MENU_TEXT_CACHE_KEY_SIZE];
+		FormatMenuTextCacheKey(aKey, sizeof(aKey), Scope, Page, Tab, Subtab, pTextId, StyleKey);
 		return aKey;
 	}
 
@@ -1737,6 +1748,9 @@ int CMenus::DoButton_CheckBox_Common_WithLabelElement(const void *pId, const cha
 	const bool HasLabel = pText != nullptr && pText[0] != '\0';
 	const bool HasCustomGlyph = MarkedControl || (pBoxText[0] != '\0' && pBoxText[0] != 'X');
 	const IUiContext Context = ui_widget::ControlContext(Ui());
+	// 标签字号就是这一行控件的正文字号：开关轨道宽与标签间距都按它取，
+	// 与文字实际绘制用同一个值，窄窗口下不会出现开关比文字缩得慢。
+	const float FontSize = LabelFontSize > 0.0f ? LabelFontSize : std::min(ui_token::font::BODY, pRect->h * CUi::ms_FontmodHeight);
 	CUIRect Label, Control;
 	if(HasCustomGlyph)
 	{
@@ -1747,7 +1761,7 @@ int CMenus::DoButton_CheckBox_Common_WithLabelElement(const void *pId, const cha
 	}
 	else
 	{
-		const auto Layout = ui_widget::ResolveBooleanControlLayout(*pRect, HasLabel);
+		const auto Layout = ui_widget::ResolveBooleanControlLayout(*pRect, HasLabel, FontSize);
 		Label = Layout.m_LabelRect;
 		Control = Layout.m_ControlRect;
 		ui_widget::DrawToggle(Context, pId, pBoxText[0] == 'X', Control, true, ProcessInput, pRect);
@@ -1756,7 +1770,6 @@ int CMenus::DoButton_CheckBox_Common_WithLabelElement(const void *pId, const cha
 		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pId, pRect, pId, &Label);
 	if(HasLabel)
 	{
-		const float FontSize = LabelFontSize > 0.0f ? LabelFontSize : std::min(ui_token::font::BODY, pRect->h * CUi::ms_FontmodHeight);
 		SLabelProperties Props;
 		Props.m_MaxWidth = Label.w;
 		Props.m_MinimumFontSize = FontSize;
@@ -1803,7 +1816,7 @@ int CMenus::DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void 
 	{
 		return DoButton_CheckBox_Common_WithLabelElement(pId, pText, Checked ? "X" : "", pRect, BUTTONFLAG_LEFT, nullptr, ProcessInput, BodySize);
 	}
-	const auto Layout = ui_widget::ResolveBooleanControlLayout(*pRect, pText != nullptr && pText[0] != '\0');
+	const auto Layout = ui_widget::ResolveBooleanControlLayout(*pRect, pText != nullptr && pText[0] != '\0', BodySize);
 	const CUIRect &Label = Layout.m_LabelRect;
 	const CUIRect &ToggleRect = Layout.m_ControlRect;
 	SLabelProperties Props = LabelProps;
@@ -6992,13 +7005,22 @@ void CMenus::DoIngameMenuTitleLabel(int Page, const char *pTextId, const CUIRect
 
 CUIElement &CMenus::MenuTextElement(EMenuTextScope Scope, int Page, int Tab, int Subtab, const char *pTextId, const SMenuTextStyleKey &StyleKey)
 {
-	const uint64_t LanguageHash = str_quickhash(g_Config.m_ClLanguagefile);
-	// 分类字体（中文/图标符号）与各分类可变字重改变文本外观，一并计入菜单文本池字体键。
-	const uint64_t FontHash = str_quickhash(g_Config.m_QmCustomFont) * 31 +
-				  str_quickhash(g_Config.m_QmCustomFontCjk) * 131 +
-				  str_quickhash(g_Config.m_QmCustomFontIcons) * 1013 +
-				  (uint64_t)g_Config.m_QmCustomFontWeight * 10007 +
-				  (uint64_t)g_Config.m_QmCustomFontWeightCjk * 100003;
+	const uint64_t CurrentFrame = Client()->PerfFrame();
+	// 语言/字体哈希只随配置变化，但 MenuTextElement 每个标签都会调用；
+	// 按帧缓存，避免同一帧内对同一批字体路径重复做 str_quickhash。
+	if(m_MenuTextHashFrame != CurrentFrame)
+	{
+		m_MenuTextCachedLanguageHash = str_quickhash(g_Config.m_ClLanguagefile);
+		// 分类字体（中文/图标符号）与各分类可变字重改变文本外观，一并计入菜单文本池字体键。
+		m_MenuTextCachedFontHash = str_quickhash(g_Config.m_QmCustomFont) * 31 +
+					   str_quickhash(g_Config.m_QmCustomFontCjk) * 131 +
+					   str_quickhash(g_Config.m_QmCustomFontIcons) * 1013 +
+					   (uint64_t)g_Config.m_QmCustomFontWeight * 10007 +
+					   (uint64_t)g_Config.m_QmCustomFontWeightCjk * 100003;
+		m_MenuTextHashFrame = CurrentFrame;
+	}
+	const uint64_t LanguageHash = m_MenuTextCachedLanguageHash;
+	const uint64_t FontHash = m_MenuTextCachedFontHash;
 	if(m_MenuTextPoolLanguageHash == 0 || m_MenuTextPoolFontHash == 0)
 	{
 		m_MenuTextPoolLanguageHash = LanguageHash;
@@ -7037,11 +7059,20 @@ CUIElement &CMenus::MenuTextElement(EMenuTextScope Scope, int Page, int Tab, int
 		return m_MenuTextFallbackElement;
 	}
 
-	const std::string Key = MenuTextCacheKey(Scope, Page, Tab, Subtab, pTextId, StyleKey);
+	// 命中路径只在栈上格式化一次键，不分配字符串；未命中插入时才复制一次。
+	char aKey[MENU_TEXT_CACHE_KEY_SIZE];
+	FormatMenuTextCacheKey(aKey, sizeof(aKey), Scope, Page, Tab, Subtab, pTextId, StyleKey);
+	const std::string_view Key(aKey);
 	auto It = m_MenuTextPool.find(Key);
-	const uint64_t CurrentFrame = Client()->PerfFrame();
-	const bool HasDescriptor = m_SettingsMenuTextPlannedDescriptors.find(MenuTextDescriptorKey(Scope, Page, Tab, Subtab, pTextId)) != m_SettingsMenuTextPlannedDescriptors.end();
-	const bool KeyPlanned = m_SettingsMenuTextPlannedKeys.find(Key) != m_SettingsMenuTextPlannedKeys.end();
+	// descriptor/planned 只用于 visible guard 的诊断输出；正常帧不构造第二个 key，
+	// 也不做这两次与缓存命中无关的查找。
+	bool HasDescriptor = false;
+	bool KeyPlanned = false;
+	if(m_MenuTextPoolVisibleGuard)
+	{
+		HasDescriptor = m_SettingsMenuTextPlannedDescriptors.find(MenuTextDescriptorKey(Scope, Page, Tab, Subtab, pTextId)) != m_SettingsMenuTextPlannedDescriptors.end();
+		KeyPlanned = m_SettingsMenuTextPlannedKeys.find(Key) != m_SettingsMenuTextPlannedKeys.end();
+	}
 	if(m_MenuTextPoolVisibleGuard)
 	{
 		if(m_MenuTextStableCandidatesThisFrame == 0)
@@ -7068,13 +7099,13 @@ CUIElement &CMenus::MenuTextElement(EMenuTextScope Scope, int Page, int Tab, int
 		if(m_MenuTextPoolVisibleGuard)
 		{
 			++m_MenuTextStableMissesThisFrame;
-			LogSettingsTextPoolCoverageGap(Client(), "settings_text_miss", Scope, SettingsPerfStableTextScope(Page), Page, Tab, Subtab, Key.c_str(), "missing", HasDescriptor ? (KeyPlanned ? "not_built" : "key_mismatch") : "missing_descriptor", SettingsPerfActiveOperation(), m_MenuTextCoverageFrame);
+			LogSettingsTextPoolCoverageGap(Client(), "settings_text_miss", Scope, SettingsPerfStableTextScope(Page), Page, Tab, Subtab, aKey, "missing", HasDescriptor ? (KeyPlanned ? "not_built" : "key_mismatch") : "missing_descriptor", SettingsPerfActiveOperation(), m_MenuTextCoverageFrame);
 			if(!m_MenuTextFallbackElement.IsRegistered())
 				m_MenuTextFallbackElement.Init(Ui(), 1);
 			return m_MenuTextFallbackElement;
 		}
 		TrimMenuTextPoolForInsert(CurrentFrame);
-		It = m_MenuTextPool.try_emplace(Key).first;
+		It = m_MenuTextPool.try_emplace(std::string(Key)).first;
 		It->second.m_Element.Init(Ui(), 1);
 		It->second.m_StyleKey = StyleKey;
 		It->second.m_Generation = m_MenuTextPoolGeneration;
@@ -7084,7 +7115,7 @@ CUIElement &CMenus::MenuTextElement(EMenuTextScope Scope, int Page, int Tab, int
 		if(m_MenuTextPoolVisibleGuard)
 		{
 			++m_MenuTextStableStalesThisFrame;
-			LogSettingsTextPoolCoverageGap(Client(), "settings_text_stale", Scope, SettingsPerfStableTextScope(Page), Page, Tab, Subtab, Key.c_str(), m_MenuTextPoolLastStaleReason.empty() ? "style" : m_MenuTextPoolLastStaleReason.c_str(), KeyPlanned ? "stale_generation" : (HasDescriptor ? "key_mismatch" : "missing_descriptor"), SettingsPerfActiveOperation(), m_MenuTextCoverageFrame);
+			LogSettingsTextPoolCoverageGap(Client(), "settings_text_stale", Scope, SettingsPerfStableTextScope(Page), Page, Tab, Subtab, aKey, m_MenuTextPoolLastStaleReason.empty() ? "style" : m_MenuTextPoolLastStaleReason.c_str(), KeyPlanned ? "stale_generation" : (HasDescriptor ? "key_mismatch" : "missing_descriptor"), SettingsPerfActiveOperation(), m_MenuTextCoverageFrame);
 			if(!m_MenuTextFallbackElement.IsRegistered())
 				m_MenuTextFallbackElement.Init(Ui(), 1);
 			return m_MenuTextFallbackElement;
@@ -8192,28 +8223,38 @@ bool CMenus::PrewarmSettingsPageResources(int Page, int Tab, const CUIRect &Cont
 	Page = SettingsCanonicalPage(Page);
 	if(Page == SETTINGS_GENERAL)
 	{
-		std::vector<int> vCountryCodes;
+		// 空闲预热每帧都会走到这里，复用成员缓冲，避免已就绪后仍反复分配。
+		std::vector<int> &vCountryCodes = m_SettingsPrewarmCountryCodes;
+		vCountryCodes.clear();
 		const int NumLanguages = (int)g_Localization.Languages().size();
 		vCountryCodes.reserve(NumLanguages);
+		// 当前语言排在最前，让每轮 16 个加载启动名额先服务正在显示的国旗。
+		int SelectedIndex = -1;
 		for(int i = 0; i < NumLanguages; ++i)
 		{
 			const auto &Language = g_Localization.Languages()[i];
 			if(str_comp(Language.m_Filename.c_str(), g_Config.m_ClLanguagefile) == 0)
 			{
+				SelectedIndex = i;
 				vCountryCodes.push_back(Language.m_CountryCode);
 				break;
 			}
 		}
 		for(int i = 0; i < NumLanguages; ++i)
-			vCountryCodes.push_back(g_Localization.Languages()[i].m_CountryCode);
+		{
+			if(i != SelectedIndex)
+				vCountryCodes.push_back(g_Localization.Languages()[i].m_CountryCode);
+		}
 		return GameClient()->m_CountryFlags.PrewarmByCountryCodesReady(BuildSettingsCountryFlagWarmupPlan(vCountryCodes));
 	}
 	else if(Page == SETTINGS_TEE)
 	{
 		const int TeeWarmupEntries = SettingsTeeSkinListFirstPageWarmupEntries(ContentView.h);
-		std::vector<int> vIndices;
-		vIndices.reserve(GameClient()->m_CountryFlags.Num());
-		for(int i = 0; i < (int)GameClient()->m_CountryFlags.Num(); ++i)
+		std::vector<int> &vIndices = m_SettingsPrewarmFlagIndices;
+		vIndices.clear();
+		const int NumFlags = (int)GameClient()->m_CountryFlags.Num();
+		vIndices.reserve(NumFlags);
+		for(int i = 0; i < NumFlags; ++i)
 			vIndices.push_back(i);
 		const bool FlagsReady = GameClient()->m_CountryFlags.PrewarmByIndicesReady(vIndices);
 		const bool TeeReady = GameClient()->m_Skins.PrewarmPlayerPreviewReady(m_Dummy ? 1 : 0, TeeWarmupEntries, true);

@@ -80,6 +80,7 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -213,7 +214,7 @@ public:
 	int DoButton_CheckBox_Number(const void *pId, const char *pText, int Checked, const CUIRect *pRect);
 
 	bool DoSliderWithScaledValue(const void *pId, int *pOption, const CUIRect *pRect, const char *pStr, int Min, int Max, int Scale, const IScrollbarScale *pScale, unsigned Flags = 0u, const char *pSuffix = "");
-	bool DoLine_KeyReader(CUIRect &View, CButtonContainer &ReaderButton, CButtonContainer &ClearButton, const char *pName, const char *pCommand);
+	bool DoLine_KeyReader(CUIRect &View, CButtonContainer &ReaderButton, CButtonContainer &ClearButton, const char *pName, const char *pCommand, float BodySize = -1.0f);
 
 private:
 	int DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize, const IGraphics::CTextureHandle *pIconTexture = nullptr, const CUIRect *pUnscaledRect = nullptr);
@@ -2185,8 +2186,6 @@ protected:
 		// 打开时定位起点，后续保持用户拖拽与缩放，直到关闭。
 		CQmBrowserMapPreviewView m_View;
 		bool m_InitialViewSet = false;
-		// 只看实体层（关贴图）：模式变化时重新渲染（1 = 实体）。
-		int m_EntityOnly = 0;
 	} m_MapPreviewPopupContext;
 	// 预览地图加载缓存（LRU），实现位于 menus_browser.cpp。裸指针成员：
 	// unique_ptr<不完整类型> 会要求构造函数所在编译单元能实例化成员析构
@@ -2697,8 +2696,6 @@ public:
 
 		SETTINGS_LENGTH,
 	};
-	static constexpr float TCLIENT_SETTINGS_BODY_FONT_SIZE = 11.2f;
-
 	enum
 	{
 		QMCLIENT_SETTINGS_TAB_VISUAL = 0,
@@ -3022,6 +3019,23 @@ public:
 	void JoinTutorial();
 
 private:
+	// 菜单文本池的键是临时的格式化串。透明哈希/比较让热路径直接用栈上的 string_view 查找，
+	// 命中时不再为每个标签构造 std::string；只有真正插入时才分配一次。
+	struct SMenuTextKeyHash
+	{
+		using is_transparent = void;
+		size_t operator()(const std::string &Value) const { return std::hash<std::string_view>{}(Value); }
+		size_t operator()(std::string_view Value) const { return std::hash<std::string_view>{}(Value); }
+	};
+
+	struct SMenuTextKeyEqual
+	{
+		using is_transparent = void;
+		bool operator()(const std::string &Left, const std::string &Right) const { return Left == Right; }
+		bool operator()(std::string_view Left, const std::string &Right) const { return Left == std::string_view(Right); }
+		bool operator()(const std::string &Left, std::string_view Right) const { return std::string_view(Left) == Right; }
+	};
+
 	struct SMenuTextPoolEntry
 	{
 		CUIElement m_Element;
@@ -3184,12 +3198,16 @@ private:
 	int m_SettingsTextContextTab = -1;
 	int m_SettingsTextContextSubtab = -1;
 	int *m_pSettingsTextPrebuildBudget = nullptr;
-	std::unordered_map<std::string, SMenuTextPoolEntry> m_MenuTextPool;
+	std::unordered_map<std::string, SMenuTextPoolEntry, SMenuTextKeyHash, SMenuTextKeyEqual> m_MenuTextPool;
 	uint64_t m_MenuTextLastTrimFrame = ~uint64_t{0};
 	CUIElement m_MenuTextFallbackElement;
 	uint64_t m_MenuTextPoolGeneration = 1;
 	uint64_t m_MenuTextPoolLanguageHash = 0;
 	uint64_t m_MenuTextPoolFontHash = 0;
+	// 语言/字体哈希按帧缓存：MenuTextElement 每个标签都会调用，不能每标签重算。
+	uint64_t m_MenuTextHashFrame = ~uint64_t{0};
+	uint64_t m_MenuTextCachedLanguageHash = 0;
+	uint64_t m_MenuTextCachedFontHash = 0;
 	uint64_t m_MenuTextPoolGlyphAtlasRevision = 0;
 	uint64_t m_MenuTextPoolLayoutHash = 0;
 	uint64_t m_MenuTextPoolThemeHash = 0;
@@ -3221,11 +3239,14 @@ private:
 	std::vector<SMenuTextPlanItem> m_vSettingsMenuTextPrebuildPlan;
 	std::vector<SSettingsMenuTextPlanCollectionUnit> m_vSettingsMenuTextPlanCollectionUnits;
 	std::unordered_set<std::string> m_SettingsMenuTextPlannedDescriptors;
-	std::unordered_set<std::string> m_SettingsMenuTextPlannedKeys;
+	std::unordered_set<std::string, SMenuTextKeyHash, SMenuTextKeyEqual> m_SettingsMenuTextPlannedKeys;
 	size_t m_SettingsMenuTextPlanCursor = 0;
 	size_t m_SettingsMenuTextPlanCollectionCursor = 0;
 	// 字形预热：每轮共用数量和时间预算，构建容器前完成当前条目的预热。
 	CSettingsTextPrewarm m_MenuTextGlyphPrewarm;
+	// 设置页空闲预热复用缓冲：已就绪后仍会每帧检查，不能每帧重新分配向量。
+	std::vector<int> m_SettingsPrewarmCountryCodes;
+	std::vector<int> m_SettingsPrewarmFlagIndices;
 	uint64_t m_SettingsMenuTextPlanGeneration = 0;
 	uint64_t m_SettingsMenuTextPlanCollectionGeneration = 0;
 	std::string m_SettingsMenuTextPlanCollectionOperation;
@@ -3332,9 +3353,9 @@ private:
 	float LayoutTClientPetCacheSection(CUIRect &CurrentColumn, bool Render);
 	float LayoutTClientHudCacheSection(CUIRect &CurrentColumn, bool Render);
 	float RenderTClientHudInteractiveLayer(CUIRect &CurrentColumn);
-	int DoTClientSettingsButton_CheckBox(const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect);
-	int DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(const void *pId, const char *pTextId, const char *pText, int *pValue, CUIRect *pRect, float VMargin);
-	int DoTClientSettingsButton_Menu(CButtonContainer *pButtonContainer, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, int Flags = BUTTONFLAG_LEFT, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE);
+	int DoTClientSettingsButton_CheckBox(const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, float BodySize = -1.0f);
+	int DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(const void *pId, const char *pTextId, const char *pText, int *pValue, CUIRect *pRect, float VMargin, float BodySize = -1.0f);
+	int DoTClientSettingsButton_Menu(CButtonContainer *pButtonContainer, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, float BodySize = -1.0f, int Flags = BUTTONFLAG_LEFT, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE);
 	void InvalidateTClientSettingsRuntimeCacheSections(ESettingsCacheDirtyReason Reason = ESettingsCacheDirtyReason::CONFIG);
 	bool PrewarmSettingsPageResources(int Page, int Tab, const CUIRect &ContentView);
 	bool PrewarmSettingsAssetResources();
