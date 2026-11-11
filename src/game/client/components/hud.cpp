@@ -3596,7 +3596,8 @@ void CHud::EnsureMediaIslandFrameCache() const
 	Cache.m_Frame = CurrentFrame;
 	Cache.m_Valid = true;
 	const bool MusicLyricsEnabled = QmHudMusicLyricsSourceEnabled(g_Config.m_QmSodaHookEnable != 0, g_Config.m_QmKugouHookEnable != 0, g_Config.m_QmQQMusicHookEnable != 0);
-	const bool MediaHudEnabled = g_Config.m_QmSmtcShowHud && SystemMediaControls::AnyMediaSourceEnabled(g_Config.m_QmSmtcEnable != 0, g_Config.m_QmNeteaseHookEnable != 0 || MusicLyricsEnabled || g_Config.m_QmSpotifyEnable != 0);
+	// LX Music 本身注册了系统媒体会话,开启歌词后媒体岛也能拿到它的封面与歌名。
+	const bool MediaHudEnabled = g_Config.m_QmSmtcShowHud && SystemMediaControls::AnyMediaSourceEnabled(g_Config.m_QmSmtcEnable != 0, g_Config.m_QmNeteaseHookEnable != 0 || MusicLyricsEnabled || g_Config.m_QmSpotifyEnable != 0 || g_Config.m_QmLxMusicEnable != 0);
 	Cache.m_HasMediaState = MediaHudEnabled && GameClient()->m_SystemMediaControls.GetStateSnapshot(Cache.m_MediaState);
 
 	const auto &Lyrics = GameClient()->m_LyricsPresentation.Frame();

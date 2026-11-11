@@ -3672,6 +3672,12 @@ if(CLIENT)
     components/qmclient/music_lyrics/music_lyrics_model.h
     components/qmclient/music_lyrics/music_lyrics_qrc.cpp
     components/qmclient/music_lyrics/music_lyrics_qrc.h
+    components/qmclient/music_lyrics/qm_lxmusic_config.cpp
+    components/qmclient/music_lyrics/qm_lxmusic_config.h
+    components/qmclient/music_lyrics/qm_lxmusic_integration.cpp
+    components/qmclient/music_lyrics/qm_lxmusic_integration.h
+    components/qmclient/music_lyrics/qm_lxmusic_parser.cpp
+    components/qmclient/music_lyrics/qm_lxmusic_parser.h
     components/qmclient/music_lyrics/qm_soda_hook_provider.cpp
     components/qmclient/music_lyrics/qm_soda_hook_provider.h
     components/qmclient/music_lyrics/qm_soda_lyric_file.cpp
@@ -5148,6 +5154,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/music/qm_music_transport_test.cpp
     src/test/unit/qmclient/music/qm_kugou_protocol_test.cpp
     src/test/unit/qmclient/music/qm_kugou_patch_test.cpp
+    src/test/unit/qmclient/music/qm_lxmusic_parser_test.cpp
     src/test/unit/qmclient/music/qm_music_registry_test.cpp
     src/test/unit/qmclient/music/music_lyrics_krc_test.cpp
     src/test/unit/qmclient/music/music_lyrics_qrc_test.cpp
@@ -5479,6 +5486,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/music_lyrics/music_lyrics_krc.cpp
     src/game/client/components/qmclient/music_lyrics/music_lyrics_qrc.cpp
     src/game/client/components/qmclient/music_lyrics/qm_soda_lyric_file.cpp
+    src/game/client/components/qmclient/music_lyrics/qm_lxmusic_parser.cpp
+    src/game/client/components/qmclient/music_lyrics/qm_lxmusic_config.cpp
     src/qm/hooks/soda/qm_soda_protocol.cpp
     src/qm/music/qm_kugou_protocol.cpp
     src/qm/music/qm_qqmusic_protocol.cpp

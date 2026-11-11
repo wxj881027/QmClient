@@ -73,6 +73,11 @@ QmMusicLyrics::SSourceSnapshot CQmLyricsPresentation::CurrentSource(int &SourceI
 		Source = GameClient()->m_SpotifyIntegration.LyricsSnapshot();
 		SourceId = 5;
 	}
+	if(Source.m_SongId == 0 && g_Config.m_QmLxMusicEnable)
+	{
+		Source = GameClient()->m_LxMusicIntegration.LyricsSnapshot();
+		SourceId = 6;
+	}
 	return Source;
 }
 

@@ -4922,6 +4922,12 @@ Enable left swipe offset on chat fade
 Enable LLM thinking mode (may increase response time)
 == LLM-Denkmodus aktivieren (kann Antwortzeit erhöhen)
 
+Enable LX Music lyric integration
+== LX Music-Songtext-Integration aktivieren
+
+Enable LX Music lyrics
+== LX Music-Songtexte aktivieren
+
 Enable lyrics
 == Songtext aktivieren
 
@@ -8221,6 +8227,9 @@ Low contrast between name and message text makes chat hard to scan in fights.
 
 Lower means better quality and larger files; 18 is recommended
 == Niedrigere Werte bedeuten bessere Qualität und größere Dateien; 18 wird empfohlen
+
+LX Music open API port (0=auto-detect from LX Music config)
+== LX Music-Open-API-Port (0 = automatisch aus der LX Music-Konfiguration)
 
 LXGW WenKai is available.
 == LXGW WenKai ist verfügbar.
@@ -16411,6 +16420,9 @@ Turn on "Team tee glow", then set "Team tee glow intensity" and "Team tee glow h
 
 Turn on "Weapon switch animation" or "Play a flip animation while reloading weapons", then pick an "Animation range" and tune duration, distance and rotation.
 == Aktiviere die Waffenwechsel-Animation oder die Dreh-Animation beim Nachladen, wähle einen Animationsbereich und stelle Dauer, Distanz und Drehung ein.
+
+Turn on LX Music open API
+== LX Music Open API einschalten
 
 Turn on one option at a time: switching tee or closing chat can throw away a message you are still typing.
 == Immer nur eine Option einschalten: Tee-Wechsel oder Chat schließen können eine noch nicht fertige Nachricht verwerfen.

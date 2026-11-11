@@ -883,6 +883,12 @@ MACRO_CONFIG_STR(QmQQMusicHookHelperPath, qm_qqmusic_hook_helper_path, 512, "", 
 MACRO_CONFIG_INT(QmSpotifyEnable, qm_spotify_enable, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable Spotify lyric integration")
 MACRO_CONFIG_STR(QmSpotifySpDc, qm_spotify_sp_dc, 1024, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Spotify sp_dc cookie (from browser DevTools, long-lived)")
 
+// LX Music 歌词链路(纯本机 HTTP:轮询开放 API 的 /status 与 /lyric-all)。
+// 开放 API 默认关闭,需在 LX Music 设置里手动启用;端口默认从 LX 自己的
+// config_v2.json 读取,用户改了端口也能跟上。qm_lxmusic_port 非 0 时强制覆盖。
+MACRO_CONFIG_INT(QmLxMusicEnable, qm_lxmusic_enable, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable LX Music lyric integration")
+MACRO_CONFIG_INT(QmLxMusicPort, qm_lxmusic_port, 0, 0, 65535, CFGFLAG_CLIENT | CFGFLAG_SAVE, "LX Music open API port (0=auto-detect from LX Music config)")
+
 // Translate - 翻译模块
 MACRO_CONFIG_STR(QmTranslateBackend, qm_translate_backend, 32, "mymemory", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Translation service")
 MACRO_CONFIG_INT(QmTranslateShowAdvanced, qm_translate_show_advanced, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show advanced translation options")

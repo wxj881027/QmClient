@@ -288,6 +288,7 @@ namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_lyrics[] = {
 		{Localizable("Enable Kugou Music lyrics"), nullptr, "启用酷狗音乐歌词"},
+		{Localizable("Enable LX Music lyrics"), nullptr, "启用 LX Music 歌词"},
 		{Localizable("Enable lyrics"), nullptr, "启用歌词"},
 		{Localizable("Enable Netease music Hook"), nullptr, "启用网易云音乐 Hook"},
 		{Localizable("Enable QQ Music lyrics"), nullptr, "启用 QQ 音乐歌词"},
@@ -301,12 +302,15 @@ namespace
 		{Localizable("Separate Dynamic Island"), nullptr, "独立灵动岛 歌词附岛"},
 		{Localizable("Show lyrics in Dynamic Island"), nullptr, "将歌词显示在灵动岛内"},
 		{Localizable("Translation only"), nullptr, "仅译文"},
+		{Localizable("Turn on LX Music open API"), nullptr, "开启 LX Music 开放 API"},
 		{nullptr, "qm_kugou_hook_enable", nullptr},
 		{nullptr, "qm_lyrics", nullptr},
 		{nullptr, "qm_lyrics_in_media_island", nullptr},
 		{nullptr, "qm_lyrics_island_follow_width", nullptr},
 		{nullptr, "qm_lyrics_language", nullptr},
 		{nullptr, "qm_lyrics_separate_island", nullptr},
+		{nullptr, "qm_lxmusic_enable", nullptr},
+		{nullptr, "qm_lxmusic_port", nullptr},
 		{nullptr, "qm_netease_hook_enable", nullptr},
 		{nullptr, "qm_qqmusic_hook_enable", nullptr},
 		{nullptr, "qm_soda_hook_enable", nullptr},

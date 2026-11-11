@@ -5084,6 +5084,12 @@ Enable left swipe offset on chat fade
 Enable LLM thinking mode (may increase response time)
 == 启用 LLM 思考模式（可能增加响应时间）
 
+Enable LX Music lyric integration
+== 启用 LX Music 歌词集成
+
+Enable LX Music lyrics
+== 启用 LX Music 歌词
+
 Enable lyrics
 == 启用歌词
 
@@ -8527,6 +8533,9 @@ Low Sensitivity Aim
 
 Lower means better quality and larger files; 18 is recommended
 == 数字越低越清晰、文件越大；推荐使用 18
+
+LX Music open API port (0=auto-detect from LX Music config)
+== LX Music 开放 API 端口（0=自动从 LX Music 配置读取）
 
 LXGW WenKai is available.
 == 霞鹜文楷可用。
@@ -16999,6 +17008,9 @@ Turn on "Team tee glow", then set "Team tee glow intensity" and "Team tee glow h
 
 Turn on "Weapon switch animation" or "Play a flip animation while reloading weapons", then pick an "Animation range" and tune duration, distance and rotation.
 == 打开武器切换动画或换弹翻转动画，再选动画范围，并调整时长、距离和旋转角度。
+
+Turn on LX Music open API
+== 开启 LX Music 开放 API
 
 Turn on one option at a time: switching tee or closing chat can throw away a message you are still typing.
 == 一次只开一项：切换 Tee 或关闭聊天可能丢掉你还没写完的消息。

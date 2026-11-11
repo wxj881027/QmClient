@@ -89,6 +89,7 @@
 #include "components/qmclient/music_app_watcher.h"
 #include "components/qmclient/music_lyrics/music_lyrics_integration.h"
 #include "components/qmclient/music_lyrics/music_lyrics_presentation.h"
+#include "components/qmclient/music_lyrics/qm_lxmusic_integration.h"
 #include "components/qmclient/music_lyrics/qm_spotify_integration.h"
 #include "components/qmclient/netease/netease_integration.h"
 #include "components/qmclient/qm_hook_coll_candidates.h"
@@ -270,6 +271,7 @@ public:
 	CMusicLyricsIntegration m_MusicLyricsIntegration;
 	CQmMusicAppWatcher m_MusicAppWatcher;
 	CSpotifyIntegration m_SpotifyIntegration;
+	CLxMusicIntegration m_LxMusicIntegration;
 	CQmLyricsPresentation m_LyricsPresentation;
 
 	CDamageInd m_DamageInd;
