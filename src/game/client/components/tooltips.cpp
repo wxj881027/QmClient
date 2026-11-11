@@ -255,6 +255,7 @@ void CTooltips::DoToolTip(const void *pId, const CUIRect *pNearRect, const char 
 	Tooltip.m_Placement = Placement;
 	Tooltip.m_RegisteredFrame = m_Frame;
 	Tooltip.m_RegisteredContext = GameClient()->m_Menus.TooltipContext();
+	Tooltip.m_FromPopup = Ui()->RenderingPopupMenus();
 	Tooltip.m_OnScreen = QmTooltipHovered(Tooltip, *Ui());
 
 	if(Tooltip.m_OnScreen)
@@ -271,7 +272,10 @@ void CTooltips::OnRender()
 		ResetPresentation();
 		m_Context = Context;
 	}
-	if(!Ui()->Enabled() || Ui()->PointerInputBlocked() || (Ui()->DirectTouchInput() && !Ui()->TouchInputActive()))
+	// 弹窗打开时指针被弹窗接管，但弹窗自己的控件提示仍要显示：
+	// 只有当指针既不在任何弹窗内、又被弹窗阻断时才清空。
+	const bool PointerBlocked = Ui()->PointerInputBlocked() && !Ui()->MouseInsideOpenPopupMenu();
+	if(!Ui()->Enabled() || PointerBlocked || (Ui()->DirectTouchInput() && !Ui()->TouchInputActive()))
 	{
 		ClearActiveTooltip();
 		return;

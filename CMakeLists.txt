@@ -4796,7 +4796,6 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/contract/qmclient/ui/qm_font_icon_resource_contract_test.cpp
     src/test/unit/qmclient/ui/QmLayoutTest.cpp
     src/test/unit/qmclient/ui/QmColorPickerPaletteTest.cpp
-    src/test/unit/qmclient/ui/QmColorPickerSliderTest.cpp
     src/test/unit/qmclient/ui/qm_secondary_button_style_test.cpp
     src/test/contract/qmclient/client/qm_afk_presentation_contract_test.cpp
     src/test/unit/qmclient/client/qm_blank_asset_fallback_test.cpp
@@ -5773,6 +5772,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/ui/qm_multiline_edit_scroll_test.cpp
       src/test/integration/qmclient/ui/qm_wiki_panel_test.cpp
       src/test/integration/qmclient/ui/qm_confirm_popup_result_test.cpp
+      src/test/integration/qmclient/ui/qm_popup_tooltip_source_test.cpp
       src/test/integration/qmclient/ui/qm_tooltip_text_layout_test.cpp
       src/test/integration/qmclient/ui/qm_card_summary_layout_test.cpp
       src/test/integration/qmclient/ui/qm_visual_hover_visibility_test.cpp

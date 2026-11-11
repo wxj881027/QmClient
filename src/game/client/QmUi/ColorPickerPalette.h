@@ -15,7 +15,9 @@
 // 名称内的分隔符（';' '|'）在写入前统一替换为空格，保证可无损往返。
 namespace qm_picker_palette
 {
-	inline constexpr int MAX_SWATCHES = 12;
+	// “我的颜色”上限。48 格在取色器里是可滚动的 12 行网格，
+	// 配置串（4096 字节）按最坏条目 ~38 字节计仍有余量。
+	inline constexpr int MAX_SWATCHES = 48;
 	inline constexpr int MAX_NAME_BYTES = 28; // 含结尾 NUL；中文按 UTF-8 字节计
 
 	struct SSwatch

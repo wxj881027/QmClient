@@ -85,7 +85,8 @@ TEST(QmColorPickerPalette, ParseCapsSwatchCount)
 {
 	char aBuf[4096];
 	aBuf[0] = '\0';
-	for(int i = 0; i < 40; i++)
+	// 条目数超过上限才能验证“解析截断”，上限本身也是被测对象的一部分。
+	for(int i = 0; i < qm_picker_palette::MAX_SWATCHES + 8; i++)
 	{
 		char aEntry[64];
 		str_format(aEntry, sizeof(aEntry), "%s色%d|#112233", i > 0 ? ";" : "", i);

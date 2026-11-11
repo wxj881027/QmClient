@@ -23,6 +23,34 @@ protected:
 		m_Ui.RenderPopupMenus();
 	}
 
+	// 需要在指定位置点击时使用：坐标是屏幕逻辑像素，转换与真实窗口一致。
+	void FrameAt(vec2 Position, bool Pressed)
+	{
+		const vec2 Pixels = Position * vec2(m_Ui.Graphics()->WindowWidth(), m_Ui.Graphics()->WindowHeight()) / m_Ui.Screen()->Size();
+		const vec2 Delta = Pixels - m_Ui.UpdatedMousePos();
+		m_Ui.OnCursorMove(Delta.x, Delta.y);
+		m_Input.m_HeldKey = Pressed ? KEY_MOUSE_1 : 0;
+		Frame();
+	}
+
+	// 标题栏右侧的确认按钮：位置跟随弹窗标题行布局（15px 方形按钮、右起第二枚）。
+	vec2 AcceptButtonCenter() const
+	{
+		const CUIRect *pPopup = m_Ui.GetPopupMenuRect(&m_Picker);
+		EXPECT_NE(pPopup, nullptr);
+		const float Inset = m_Ui.PopupMenuContentInset() * 0.5f;
+		const float TitleHeight = 15.0f;
+		return {pPopup->x + pPopup->w - Inset - TitleHeight - 2.0f - TitleHeight * 0.5f, pPopup->y + Inset + TitleHeight * 0.5f};
+	}
+
+	void TypeText(const char *pText)
+	{
+		IInput::CEvent Event{};
+		Event.m_Flags = IInput::FLAG_TEXT;
+		str_copy(Event.m_aText, pText);
+		ASSERT_TRUE(m_Ui.OnInput(Event));
+	}
+
 	void Open(bool Alpha = true)
 	{
 		g_Config.m_QmColorPickerShape = CUi::SColorPickerPopupContext::SHAPE_SQUARE;
@@ -208,4 +236,38 @@ TEST_F(QmColorPickerTextInput, HexAlphaIsIgnoredWhenPickerDoesNotExposeAlpha)
 	EXPECT_EQ(m_Picker.m_RgbaColor.PackAlphaLast(), 0xe2d3cdffu);
 	Blur(m_Picker.m_HexInput);
 	EXPECT_STREQ(m_Picker.m_HexInput.GetString(), "#e2d3cd");
+}
+
+TEST_F(QmColorPickerTextInput, TypedChannelValueAppliesWhileEditing)
+{
+	Open();
+	ASSERT_FALSE(HasFatalFailure());
+	CLineInput &Input = m_Picker.m_aChannelInputs[3];
+	Focus(Input);
+	ASSERT_FALSE(HasFatalFailure());
+	Input.SelectAll();
+	TypeText("100");
+	Frame();
+	// 打字过程中就应实时生效，不必等到失焦或点确认。
+	EXPECT_FLOAT_EQ(m_Picker.m_RgbaColor.a, 100.0f / 255.0f);
+	EXPECT_FLOAT_EQ(ColorHSLA(m_Color, true).a, 100.0f / 255.0f);
+}
+
+TEST_F(QmColorPickerTextInput, TypedValueSurvivesImmediateAcceptClick)
+{
+	Open();
+	ASSERT_FALSE(HasFatalFailure());
+	CLineInput &Input = m_Picker.m_aChannelInputs[3];
+	Focus(Input);
+	ASSERT_FALSE(HasFatalFailure());
+	// 先把指针停在 ✓ 上，再让「输入」和「点击」落在同一帧：
+	// 关闭必须等这一帧的解析与回写跑完，否则最后这次修改会被丢掉。
+	const vec2 Accept = AcceptButtonCenter();
+	FrameAt(Accept, false);
+	Input.SelectAll();
+	TypeText("100");
+	FrameAt(Accept, true);
+	FrameAt(Accept, false);
+	EXPECT_FALSE(m_Ui.IsPopupOpen(&m_Picker));
+	EXPECT_FLOAT_EQ(ColorHSLA(m_Color, true).a, 100.0f / 255.0f);
 }

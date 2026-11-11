@@ -1042,6 +1042,35 @@ bool CUi::MouseHovered(const CUIRect *pRect) const
 	return !RenderOnly() && !UnderlyingPointerInputBlocked() && MouseInside(pRect) && MouseInsideClip();
 }
 
+bool CUi::MouseInsideOpenPopupMenu() const
+{
+	const vec2 Mouse = MousePos();
+	return std::any_of(m_vPopupMenus.begin(), m_vPopupMenus.end(), [Mouse](const SPopupMenu &PopupMenu) {
+		return !PopupMenu.m_Closing && PopupMenu.m_Props.m_BlockUnderlyingPointerInput && PopupMenu.m_Rect.Inside(Mouse);
+	});
+}
+
+bool CUi::TooltipSourceHovered(const CUIRect *pRect, const bool FromPopup) const
+{
+	if(RenderOnly() || pRect == nullptr || !MouseInside(pRect) || !MouseInsideClip())
+		return false;
+	if(!UnderlyingPointerInputBlocked())
+		return true;
+	// 弹窗接管指针期间，只有弹窗自己登记、且整块落在该弹窗内的来源仍算悬浮。
+	// 下层控件即使矩形恰好和弹窗重合也不会透出提示。
+	if(!FromPopup)
+		return false;
+	const vec2 Mouse = MousePos();
+	const CUIRect Source = *pRect;
+	return std::any_of(m_vPopupMenus.begin(), m_vPopupMenus.end(), [Mouse, &Source](const SPopupMenu &PopupMenu) {
+		if(PopupMenu.m_Closing || !PopupMenu.m_Props.m_BlockUnderlyingPointerInput || !PopupMenu.m_Rect.Inside(Mouse))
+			return false;
+		return Source.x >= PopupMenu.m_Rect.x && Source.y >= PopupMenu.m_Rect.y &&
+		       Source.x + Source.w <= PopupMenu.m_Rect.x + PopupMenu.m_Rect.w &&
+		       Source.y + Source.h <= PopupMenu.m_Rect.y + PopupMenu.m_Rect.h;
+	});
+}
+
 void CUi::ConvertMouseMove(float *pX, float *pY, IInput::ECursorType CursorType) const
 {
 	float Factor = 1.0f;
@@ -3006,7 +3035,7 @@ void CUi::RenderScrollbarH(const void *pId, const CUIRect *pRect, float Current,
 	}
 }
 
-float CUi::DoScrollbarH(const void *pId, const CUIRect *pRect, float Current, const ColorRGBA *pColorInner)
+float CUi::DoScrollbarHLogic(const void *pId, const CUIRect *pRect, float Current)
 {
 	Current = std::clamp(Current, 0.0f, 1.0f);
 
@@ -3085,8 +3114,13 @@ float CUi::DoScrollbarH(const void *pId, const CUIRect *pRect, float Current, co
 		ReturnValue = QmAnimationRuntime() != nullptr && Max <= 0.0f ? Current : std::clamp((Cur - Rail.x) / Max, 0.0f, 1.0f);
 	}
 
-	RenderScrollbarH(pId, pRect, ReturnValue, pColorInner);
+	return ReturnValue;
+}
 
+float CUi::DoScrollbarH(const void *pId, const CUIRect *pRect, float Current, const ColorRGBA *pColorInner)
+{
+	const float ReturnValue = DoScrollbarHLogic(pId, pRect, Current);
+	RenderScrollbarH(pId, pRect, ReturnValue, pColorInner);
 	return ReturnValue;
 }
 

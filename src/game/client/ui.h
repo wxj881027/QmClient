@@ -914,7 +914,9 @@ private:
 	struct SPopupMenu
 	{
 		static constexpr float POPUP_BORDER = 1.0f;
-		static constexpr float POPUP_MARGIN = 4.0f;
+		// 二级菜单内容四周留白。原 4 在视觉上几乎贴边，统一改为 spacing::SM（8），
+		// 弹窗内容与圆角外框之间才有可读的呼吸感。
+		static constexpr float POPUP_MARGIN = 8.0f;
 
 		const SPopupMenuId *m_pId;
 		SPopupMenuProperties m_Props;
@@ -1160,6 +1162,11 @@ public:
 	vec2 UpdatedMousePos() const { return m_UpdatedMousePos; }
 	vec2 UpdatedMouseDelta() const { return m_UpdatedMouseDelta; }
 	bool PointerInputBlocked() const { return UnderlyingPointerInputBlocked(); }
+	// 弹窗打开时会接管指针，但弹窗自己的控件仍应有悬浮反馈与提示气泡。
+	// 提示组件用这两个入口区分“来源在弹窗内”和“来源被弹窗挡住”。
+	bool MouseInsideOpenPopupMenu() const;
+	// FromPopup：提示来源登记于弹窗渲染过程。弹窗接管指针时只有这类来源还算悬浮。
+	bool TooltipSourceHovered(const CUIRect *pRect, bool FromPopup) const;
 	int LastMouseButton(int Index) const { return QmResolvePointerButtons(m_MouseButtons, m_LastMouseButtons, UnderlyingPointerInputBlocked()).Previous(Index); }
 	int MouseButton(int Index) const { return QmResolvePointerButtons(m_MouseButtons, m_LastMouseButtons, UnderlyingPointerInputBlocked()).Held(Index); }
 	int MouseButtonClicked(int Index) const { return QmResolvePointerButtons(m_MouseButtons, m_LastMouseButtons, UnderlyingPointerInputBlocked()).Pressed(Index); }
@@ -1412,6 +1419,9 @@ public:
 		SCROLLBAR_OPTION_DELAYUPDATE = 1 << 3,
 	};
 	void RenderScrollbarH(const void *pId, const CUIRect *pRect, float Current, const ColorRGBA *pColorInner = nullptr);
+	// 只处理滚动条交互与命中，不绘制。供需要自定义轨道的调用点（如取色器通道滑条）
+	// 复用同一套滑块行程、拖拽与热项语义。
+	float DoScrollbarHLogic(const void *pId, const CUIRect *pRect, float Current);
 	float DoScrollbarH(const void *pId, const CUIRect *pRect, float Current, const ColorRGBA *pColorInner = nullptr);
 	bool DoScrollbarOption(const void *pId, int *pOption, const CUIRect *pRect, const char *pStr, int Min, int Max, const IScrollbarScale *pScale = &ms_LinearScrollbarScale, unsigned Flags = 0u, const char *pSuffix = "", const char *pMaxText = nullptr);
 
@@ -1562,7 +1572,6 @@ public:
 		enum EColorPickerMode
 		{
 			MODE_UNSET = -1,
-			MODE_RECOMMENDED,
 			MODE_HSVA,
 			MODE_RGBA,
 			MODE_HSLA,
@@ -1589,9 +1598,14 @@ public:
 		// 「我的调色板」工作副本：打开时从 g_Config.m_QmColorPickerPalette 载入，
 		// 每次增删改名即刻序列化回写；全部取色器实例共享同一份配置。
 		std::vector<qm_picker_palette::SSwatch> m_vPalette;
-		int m_RenamingPaletteIndex = -1; // >=0 时对应色块显示为行内改名输入框
+		int m_RenamingPaletteIndex = -1; // >=0 时标题行变成改名输入框
 		CLineInput m_RenameInput;
 		char m_aRenameBuffer[qm_picker_palette::MAX_NAME_BYTES];
+		// 选中项（只对“我的颜色”生效）：删除/改名按钮的操作目标。
+		int m_SelectedPaletteIndex = -1;
+		// 单级撤回：记住最近一次删除的色块与插入位置，撤回后清空。
+		qm_picker_palette::SSwatch m_UndoSwatch{};
+		int m_UndoIndex = -1;
 		// UI element IDs
 		const char m_HuePickerId = 0;
 		const char m_WheelPickerId = 0;
@@ -1606,14 +1620,18 @@ public:
 		CButtonContainer m_ShapeButton;
 		CButtonContainer m_AcceptButton;
 		CButtonContainer m_CloseButton;
-		CButtonContainer m_InitialColorButton;
-		CButtonContainer m_aPresetButtons[24];
+		// 预设色系按钮：每组最多 8 色，按“组号 * 8 + 组内序号”平铺取用。
+		static constexpr int PRESET_MAX_PER_GROUP = 8;
+		CButtonContainer m_aPresetButtons[3 * PRESET_MAX_PER_GROUP];
 		CButtonContainer m_aPaletteSwatchButtons[qm_picker_palette::MAX_SWATCHES];
-		CButtonContainer m_aPaletteDeleteButtons[qm_picker_palette::MAX_SWATCHES];
+		// 名字单独一份命中区：点名字进改名，点色块应用颜色。
+		CButtonContainer m_aPaletteNameButtons[qm_picker_palette::MAX_SWATCHES];
+		// 调色板首位的“当前颜色”格（实时跟随取色结果，只作指示）。
+		CButtonContainer m_CurrentColorButton;
 		CButtonContainer m_AddPaletteButton;
-		// 调色板色块双击改名判定：记录上次左键点击的色块与时间。
-		float m_aSwatchClickTime[qm_picker_palette::MAX_SWATCHES] = {0.0f};
-		int m_LastSwatchClickIndex = -1;
+		CButtonContainer m_RenamePaletteButton;
+		CButtonContainer m_DeletePaletteButton;
+		CButtonContainer m_UndoPaletteButton;
 		EEditState m_State = EEditState::NONE;
 	};
 	void ShowPopupColorPicker(float X, float Y, SColorPickerPopupContext *pContext);
