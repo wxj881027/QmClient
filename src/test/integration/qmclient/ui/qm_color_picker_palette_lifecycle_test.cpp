@@ -264,6 +264,79 @@ TEST_F(QmColorPickerPaletteLifecycle, PresetClickAppliesColorWithoutDraft)
 	ExpectPaletteSaved();
 }
 
+TEST_F(QmColorPickerPaletteLifecycle, ShapeToggleKeepsPaletteHeaderUsable)
+{
+	// 弹窗高度在打开时固定：切到更高的色环不能把通道行/Hex 行压进调色板标题。
+	Open(true, false, "红|#ff0000");
+	ASSERT_FALSE(HasFatalFailure());
+	const CUIRect *pPopup = PopupRect();
+	ASSERT_NE(pPopup, nullptr);
+	const float HeightBefore = pPopup->h;
+
+	Click(ShapeToggleCenter());
+	ASSERT_TRUE(m_Picker.m_Shape == CUi::SColorPickerPopupContext::SHAPE_WHEEL);
+	pPopup = PopupRect();
+	ASSERT_NE(pPopup, nullptr);
+	EXPECT_FLOAT_EQ(pPopup->h, HeightBefore);
+
+	// 标题按钮仍可点：新增一格说明没有行被挤出弹窗。
+	Click(PaletteHeaderButtonCenter(0));
+	EXPECT_EQ(m_Picker.m_vPalette.size(), 2u);
+
+	Click(ShapeToggleCenter());
+	ASSERT_TRUE(m_Picker.m_Shape == CUi::SColorPickerPopupContext::SHAPE_SQUARE);
+	pPopup = PopupRect();
+	ASSERT_NE(pPopup, nullptr);
+	EXPECT_FLOAT_EQ(pPopup->h, HeightBefore);
+	EXPECT_EQ(m_Picker.m_vPalette.size(), 2u);
+}
+
+TEST_F(QmColorPickerPaletteLifecycle, OutsideClickCommitsPendingTextAndDropsDraft)
+{
+	// 百分比 alpha：外部点击关闭不跑内容回调，最后一帧键入的值也要生效，
+	// 未按 ✓ 的草稿不能留在调色板里。
+	Open(true, true);
+	ASSERT_FALSE(HasFatalFailure());
+	CLineInput &Alpha = m_Picker.m_aChannelInputs[3];
+	Focus(Alpha);
+	ASSERT_FALSE(HasFatalFailure());
+	Paste(Alpha, "50");
+	ASSERT_EQ(m_Picker.m_vPalette.size(), 1u);
+	EXPECT_FLOAT_EQ(m_Picker.m_RgbaColor.a, 0.5f);
+
+	// 指针先停在弹窗外，再敲入 100 并直接按下：这一帧弹窗先关闭、不渲染内容。
+	const vec2 Outside(4.0f, 4.0f);
+	FrameAt(Outside, false);
+	Alpha.SelectAll();
+	TypeText("100");
+	FrameAt(Outside, true);
+	FrameAt(Outside, false);
+
+	EXPECT_FALSE(m_Ui.IsPopupOpen(&m_Picker));
+	EXPECT_FLOAT_EQ(m_Picker.m_RgbaColor.a, 1.0f);
+	EXPECT_FLOAT_EQ(ColorHSLA(m_Color, true).a, 1.0f);
+	EXPECT_TRUE(m_Picker.m_vPalette.empty());
+	ExpectPaletteSaved();
+}
+
+TEST_F(QmColorPickerPaletteLifecycle, UndoAtCapacityDoesNotRestore)
+{
+	// 48 格满时删一个、草稿又填满：撤回按钮不可用，点击不改变调色板。
+	OpenWithMaxPalette();
+	ASSERT_FALSE(HasFatalFailure());
+	Click(PaletteSwatchCenter(1));
+	Click(PaletteHeaderButtonCenter(2));
+	ASSERT_EQ(m_Picker.m_vPalette.size(), (size_t)qm_picker_palette::MAX_SWATCHES - 1);
+	Focus(m_Picker.m_aChannelInputs[0]);
+	ASSERT_FALSE(HasFatalFailure());
+	Paste(m_Picker.m_aChannelInputs[0], "128");
+	ASSERT_EQ(m_Picker.m_vPalette.size(), (size_t)qm_picker_palette::MAX_SWATCHES);
+
+	Click(PaletteHeaderButtonCenter(3));
+	EXPECT_EQ(m_Picker.m_vPalette.size(), (size_t)qm_picker_palette::MAX_SWATCHES);
+	EXPECT_STREQ(m_Picker.m_vPalette[1].m_aName, "色 2");
+}
+
 TEST_F(QmColorPickerPaletteLifecycle, ModeTabsSwitchChannelSemantics)
 {
 	Open();

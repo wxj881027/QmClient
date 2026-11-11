@@ -1664,6 +1664,93 @@ namespace
 		qm_picker_palette::Serialize(g_Config.m_QmColorPickerPalette, (int)sizeof(g_Config.m_QmColorPickerPalette), pPicker->m_vPalette);
 	}
 
+	// 关闭前补提交输入框里尚未解析的文本：外部点击、ClosePopupMenu、分组收起
+	// 都不会跑内容回调，这一帧刚敲进去的值只能在这里落到工作色上。
+	void PickerCommitActiveTextInputs(CUi::SColorPickerPopupContext *pPicker)
+	{
+		const unsigned AlphaMax = pPicker->m_AlphaPercent ? 100u : 255u;
+		ColorHSVA Hsv = pPicker->m_HsvaColor;
+		ColorRGBA Rgb = pPicker->m_RgbaColor;
+		ColorHSLA Hsl = pPicker->m_HslaColor;
+		bool Changed = false;
+		for(int Channel = 0; Channel < 4; Channel++)
+		{
+			CLineInput &Input = pPicker->m_aChannelInputs[Channel];
+			if(!Input.IsActive() && &Input != pPicker->m_pLastActiveInput)
+				continue;
+			const char *pText = Input.GetString();
+			char *pEnd = nullptr;
+			const long Parsed = strtol(pText, &pEnd, 10);
+			if(pEnd == pText || *str_skip_whitespaces(pEnd) != '\0')
+				continue;
+			const unsigned Max = Channel == 3 ? AlphaMax : 255u;
+			const float Value = std::clamp<long>(Parsed, 0, (long)Max) / (float)Max;
+			if(pPicker->m_ColorMode == CUi::SColorPickerPopupContext::MODE_HSVA)
+			{
+				if(Channel == 0)
+					Hsv.h = Value;
+				else if(Channel == 1)
+					Hsv.s = Value;
+				else if(Channel == 2)
+					Hsv.v = Value;
+				else
+					Hsv.a = Value;
+			}
+			else if(pPicker->m_ColorMode == CUi::SColorPickerPopupContext::MODE_RGBA)
+			{
+				if(Channel == 0)
+					Rgb.r = Value;
+				else if(Channel == 1)
+					Rgb.g = Value;
+				else if(Channel == 2)
+					Rgb.b = Value;
+				else
+					Rgb.a = Value;
+			}
+			else
+			{
+				if(Channel == 0)
+					Hsl.h = Value;
+				else if(Channel == 1)
+					Hsl.s = Value;
+				else if(Channel == 2)
+					Hsl.l = Value;
+				else
+					Hsl.a = Value;
+			}
+			Changed = true;
+		}
+		CLineInput &Hex = pPicker->m_HexInput;
+		if(Hex.IsActive() || &Hex == pPicker->m_pLastActiveInput)
+		{
+			ColorRGBA Parsed;
+			if(qm_picker_palette::ParseHexColor(Hex.GetString(), Parsed))
+			{
+				if(!pPicker->m_Alpha)
+					Parsed.a = Rgb.a;
+				Rgb = Parsed;
+				Changed = true;
+			}
+		}
+		if(!Changed)
+			return;
+		if(pPicker->m_ColorMode == CUi::SColorPickerPopupContext::MODE_HSVA)
+		{
+			Hsl = color_cast<ColorHSLA>(Hsv);
+			Rgb = color_cast<ColorRGBA>(Hsl);
+		}
+		else
+		{
+			Hsl = color_cast<ColorHSLA>(Rgb);
+			Hsv = color_cast<ColorHSVA>(Hsl);
+		}
+		pPicker->m_HsvaColor = Hsv;
+		pPicker->m_RgbaColor = Rgb;
+		pPicker->m_HslaColor = Hsl;
+		if(pPicker->m_pHslaColor != nullptr)
+			*pPicker->m_pHslaColor = Hsl.Pack(pPicker->m_Alpha);
+	}
+
 	// 绘制单个圆形色块：透明色先垫深色底，静止态不带描边；
 	// Selected 是“调色板里被选中、可删除/改名”的状态，CurrentMatch 表示色值等于当前颜色。
 	// 两种状态与悬浮共用同一圈白色反馈环，不再有常驻描边让深色圆看起来像方块。
@@ -1712,6 +1799,8 @@ CUi::EPopupMenuFunctionResult CUi::PopupColorPicker(void *pContext, CUIRect View
 	SColorPickerPopupContext *pColorPicker = static_cast<SColorPickerPopupContext *>(pContext);
 	CUi *pUI = pColorPicker->m_pUI;
 	pColorPicker->m_State = EEditState::NONE;
+	pColorPicker->m_bCloseConsumedByCallback = false;
+	pColorPicker->m_pLastActiveInput = nullptr;
 
 	// 弹窗背板（含高斯模糊）已在 RenderPopupMenus 中绘制完成，弹窗内容一律画在
 	// 背板之上。若不抑制模糊，饱和度/明度渐变里透明→黑色的明度叠加层会因顶角
@@ -1896,8 +1985,14 @@ CUi::EPopupMenuFunctionResult CUi::PopupColorPicker(void *pContext, CUIRect View
 
 	{
 		// ===== 取色页：主取色区（方图 / 色环）+ 通道数值行 + Hex =====
+		// 弹窗高度在打开时固定，弹窗内切换形状不会再重算：取色区必须夹在可用高度内，
+		// 否则切到更高的色环会把通道行与 Hex 行压进调色板标题。
 		CUIRect PickerZone, RowsZone;
-		LeftCol.HSplitTop(pColorPicker->m_Shape == SColorPickerPopupContext::SHAPE_WHEEL ? PICKER_WHEEL_SIZE : PICKER_SV_SQUARE_HEIGHT, &PickerZone, &RowsZone);
+		const int ChannelRowCount = pColorPicker->m_Alpha ? 4 : 3;
+		const float RowsHeight = (ChannelRowCount + 1) * (PICKER_ROW_HEIGHT + PICKER_ROW_GAP);
+		const float PreferredZoneHeight = pColorPicker->m_Shape == SColorPickerPopupContext::SHAPE_WHEEL ? PICKER_WHEEL_SIZE : PICKER_SV_SQUARE_HEIGHT;
+		const float ZoneHeight = std::min(PreferredZoneHeight, std::max(0.0f, LeftCol.h - PICKER_ROW_GAP - RowsHeight));
+		LeftCol.HSplitTop(ZoneHeight, &PickerZone, &RowsZone);
 		RowsZone.HSplitTop(PICKER_ROW_GAP, nullptr, &RowsZone);
 
 		const ColorRGBA BorderColor = ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f);
@@ -2096,6 +2191,10 @@ CUi::EPopupMenuFunctionResult CUi::PopupColorPicker(void *pContext, CUIRect View
 				str_format(pColorPicker->m_aacChannelBuffers[ChannelIndex], sizeof(pColorPicker->m_aacChannelBuffers[ChannelIndex]), "%u", CurValue);
 				Input.Set(pColorPicker->m_aacChannelBuffers[ChannelIndex]);
 			}
+			else
+			{
+				pColorPicker->m_pLastActiveInput = &Input;
+			}
 			ui_widget::SInputFieldOptions ValueField;
 			ValueField.m_FontSize = 6.5f;
 			ValueField.m_TextAlign = TEXTALIGN_MC;
@@ -2240,6 +2339,10 @@ CUi::EPopupMenuFunctionResult CUi::PopupColorPicker(void *pContext, CUIRect View
 			{
 				str_format(pColorPicker->m_aHexBuffer, sizeof(pColorPicker->m_aHexBuffer), pColorPicker->m_Alpha ? "#%08x" : "#%06x", OldHex);
 				pColorPicker->m_HexInput.Set(pColorPicker->m_aHexBuffer);
+			}
+			else
+			{
+				pColorPicker->m_pLastActiveInput = &pColorPicker->m_HexInput;
 			}
 			ui_widget::SInputFieldOptions HexField;
 			HexField.m_FontSize = 7.0f;
@@ -2410,7 +2513,8 @@ CUi::EPopupMenuFunctionResult CUi::PopupColorPicker(void *pContext, CUIRect View
 		if(pUI->DoButton_QmIcon(&pColorPicker->m_DeletePaletteButton, EQmIcon::TRASH, FontIcons::FONT_ICON_TRASH, 0, &DeleteRect, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, HasSelection) && HasSelection)
 			DeleteSelectedColor();
 
-		const bool CanUndo = pColorPicker->m_UndoIndex >= 0;
+		// 撤回要在容量允许时才可点：调色板被草稿/＋ 填满后，撤回会静默失效。
+		const bool CanUndo = pColorPicker->m_UndoIndex >= 0 && (int)pColorPicker->m_vPalette.size() < qm_picker_palette::MAX_SWATCHES;
 		if(pUI->DoButton_QmIcon(&pColorPicker->m_UndoPaletteButton, EQmIcon::UNDO, FontIcons::FONT_ICON_UNDO, 0, &UndoRect, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, CanUndo) && CanUndo)
 			UndoDeleteColor();
 
@@ -2595,7 +2699,13 @@ CUi::EPopupMenuFunctionResult CUi::PopupColorPicker(void *pContext, CUIRect View
 		*pColorPicker->m_pHslaColor = PickerColorHSL.Pack(pColorPicker->m_Alpha);
 
 	if(AcceptClicked || RestoreRequested)
+	{
+		pColorPicker->m_bCloseConsumedByCallback = true;
+		// ✓ 把本次编辑的草稿转为正式色块：清掉草稿身份，OnClosed 不再清理它。
+		if(AcceptClicked && !RestoreRequested)
+			pColorPicker->m_DraftPaletteIndex = -1;
 		return CUi::POPUP_CLOSE_CURRENT;
+	}
 
 	return CUi::POPUP_KEEP_OPEN;
 }
@@ -2614,6 +2724,7 @@ void CUi::ShowPopupColorPicker(float X, float Y, SColorPickerPopupContext *pCont
 	pContext->m_UndoIndex = -1;
 	pContext->m_UndoWasDraft = false;
 	pContext->m_DraftPaletteIndex = -1;
+	pContext->m_bCloseConsumedByCallback = false;
 	pContext->m_Shape = (SColorPickerPopupContext::EColorPickerShape)std::clamp(g_Config.m_QmColorPickerShape, 0, 1);
 	for(int i = 0; i < 4; i++)
 	{
@@ -2629,6 +2740,22 @@ void CUi::ShowPopupColorPicker(float X, float Y, SColorPickerPopupContext *pCont
 	PopupProps.m_BlockUnderlyingPointerInput = true;
 	PopupProps.m_BlockUnderlyingScroll = true;
 	PopupProps.m_Animate = true;
+	// 收尾只处理没跑内容回调的关闭路径（外部点击、ClosePopupMenu、分组收起）：
+	// 补提交未解析的输入文本，并丢弃未确认的草稿。✓ 已在回调里脱钩，✕/Esc 已自行清理。
+	PopupProps.m_OnClosed = [pContext]() {
+		if(!pContext->m_bCloseConsumedByCallback)
+		{
+			PickerCommitActiveTextInputs(pContext);
+			if(pContext->m_DraftPaletteIndex >= 0 && pContext->m_DraftPaletteIndex < (int)pContext->m_vPalette.size())
+			{
+				pContext->m_vPalette.erase(pContext->m_vPalette.begin() + pContext->m_DraftPaletteIndex);
+				PickerSavePalette(pContext);
+			}
+		}
+		pContext->m_bCloseConsumedByCallback = false;
+		pContext->m_pLastActiveInput = nullptr;
+		pContext->m_DraftPaletteIndex = -1;
+	};
 	// 高度逐项累加：标题/分割线/页签 + 取色区 + 通道行（含可选 A）+ Hex 行
 	// + 调色板前的 token 间距 + 调色板区 + 弹窗内边距。固写高度会在方图/色环、
 	// 有无 alpha 的组合之间留出大小不一的空白。

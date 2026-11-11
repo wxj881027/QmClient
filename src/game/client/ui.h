@@ -1615,6 +1615,12 @@ public:
 		// 「自定义 N」草稿：用户首次改动颜色时自动追加到调色板末尾并实时跟随，
 		// ✓ 保留、✕ 撤销；点已有色块只应用颜色，不产生草稿。
 		int m_DraftPaletteIndex = -1;
+		// 关闭帧是否由内容回调自己处理（✓/✕/Esc）。外部点击、ClosePopupMenu 等
+		// 不跑内容回调的关闭路径由弹层的 OnClosed 收尾。
+		bool m_bCloseConsumedByCallback = false;
+		// 关闭前最后一帧仍在编辑的通道/Hex 输入框。弹层关闭会先释放活动项再跑
+		// OnClosed，届时 IsActive() 已为 false，只能靠这份记录补提交文本。
+		CLineInput *m_pLastActiveInput = nullptr;
 		// UI element IDs
 		const char m_HuePickerId = 0;
 		const char m_WheelPickerId = 0;

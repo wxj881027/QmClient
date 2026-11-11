@@ -100,6 +100,9 @@ namespace qm_ui_test
 		// 裁剪、光标与选区只提交 GPU 绘制，不替代真实文字布局和输入行为。
 		void ClipEnable(int, int, int, int) override {}
 		void ClipDisable() override {}
+		// 采样边界只是设备状态：色环纹理需要 clamp，由真实后端生效，测试不关心。
+		void WrapClamp() override {}
+		void WrapNormal() override {}
 		void QuadsDrawTL(const CQuadItem *, int Num) override
 		{
 			++m_Draws;

@@ -286,6 +286,36 @@ TEST(QmColorPickerPalette, SerializeClampsOutOfRangeComponents)
 	EXPECT_EQ(vParsed[0].m_Color, ColorRGBA(1.0f, 0.0f, 127.0f / 255.0f, 1.0f));
 }
 
+TEST(QmColorPickerPalette, ParseKeepsTruncatedNamesUtf8Valid)
+{
+	// 28 字节名字按 27 字节截断会切进「中」的中间；解析后必须是合法 UTF-8，
+	// 且再次序列化/解析时名字不再变化（否则配置往返不收敛）。
+	const std::string Name = std::string("a") + "中中中中中中中中中";
+	ASSERT_EQ(Name.size(), 28u);
+	const auto vFirst = qm_picker_palette::Parse((Name + "|#ff0000").c_str());
+	ASSERT_EQ(vFirst.size(), 1u);
+	EXPECT_EQ(vFirst[0].m_aName, std::string("a") + "中中中中中中中中");
+
+	char aBuf[128];
+	qm_picker_palette::Serialize(aBuf, (int)sizeof(aBuf), vFirst);
+	const auto vSecond = qm_picker_palette::Parse(aBuf);
+	ASSERT_EQ(vSecond.size(), 1u);
+	EXPECT_STREQ(vSecond[0].m_aName, vFirst[0].m_aName);
+}
+
+TEST(QmColorPickerPalette, NextUniqueNameTerminatesForOverlongPrefix)
+{
+	// 前缀占满 27 字节时编号会被截掉：候选名全部相同也不能死循环，
+	// 有上界的扫描至少保证返回一个可用名字。
+	const std::string Prefix(qm_picker_palette::MAX_NAME_BYTES - 2, 'P');
+	qm_picker_palette::SSwatch Reserved{};
+	str_copy(Reserved.m_aName, (Prefix + " ").c_str());
+
+	char aName[qm_picker_palette::MAX_NAME_BYTES];
+	qm_picker_palette::NextUniqueName(aName, (int)sizeof(aName), Prefix.c_str(), {}, &Reserved, -1);
+	EXPECT_NE(aName[0], '\0');
+}
+
 TEST(QmColorPickerPalette, ParseScansEntriesWithinSemicolonBoundary)
 {
 	// 首个条目是数 KB 的无分隔符名字：搜索 '|' 必须限制在条目内，
