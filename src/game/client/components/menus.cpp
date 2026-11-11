@@ -6142,6 +6142,12 @@ void CMenus::RenderThemeSelection(CUIRect MainView, const SSettingsContentMetric
 	s_ListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);
 	s_ListBox.SetWheelOwnerPriority(EUiWheelOwnerPriority::COMPOSITE_CONTROL);
 	s_ListBox.SetItemColors(ui_token::color::LIST_ITEM_SELECTED, ui_token::color::LIST_ITEM_SELECTED, ui_token::color::LIST_ITEM_HOVER);
+	// 统一行外观：胶囊整行 + token 行距 + 按字号派生的行内内边距，与图形页列表同一套。
+	// 可见行数取整数行（最少 3 行沿用原 RowsPerScroll 的设计意图，最多 8 行），
+	// 卡片测高（ResolveSettingsGeneralThemeListGeometry）用同一组行数，超出的行交给滚动条；
+	// 这样列表体高度正好停在整行边界，最上/最下一行的胶囊不会被裁掉或探出容器背景。
+	s_ListBox.SetCapsuleRows(Metrics.m_BodySize);
+	s_ListBox.SetVisibleRowRange(ui_token::list::THEME_MIN_VISIBLE_ROWS, ui_token::list::MAX_VISIBLE_ROWS);
 
 	const float HeaderHeight = Metrics.m_LineHeight;
 	const float HeaderSpacing = Metrics.m_LineSpacing;
@@ -6197,7 +6203,9 @@ void CMenus::RenderThemeSelection(CUIRect MainView, const SSettingsContentMetric
 		Ui()->DoConfigTooltip(&Theme.m_Name, &Item.m_Rect, g_Config.m_ClMenuMap);
 
 		const std::string Name = ThemeDisplayName(Theme.m_Name.c_str());
-		const auto RowLayout = ResolveThemeSelectionRowLayout(Item.m_Rect, TextRender()->TextWidth(Metrics.m_BodySize, Name.c_str()), Metrics.m_LineSpacing);
+		// 行内容一律排在 m_ContentRect：胶囊行会按字号让出左右内边距，并给覆盖式滚动条
+		// 那一列再让一条缝，用 m_Rect 摆图标/名称会压到滚动条下面。
+		const auto RowLayout = ResolveThemeSelectionRowLayout(Item.m_ContentRect, TextRender()->TextWidth(Metrics.m_BodySize, Name.c_str()), Metrics.m_LineSpacing);
 		CUIRect Icon = RowLayout.m_Icon;
 		const CUIRect Label = RowLayout.m_Label;
 

@@ -653,13 +653,13 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 	// 显隐：两层进度相乘会让动画变成 ease²，收起时还会两处同时缩高。
 	static CButtonContainer s_TranslateAdvancedFoldRowButton;
 	CUIRect TranslateAdvancedFoldRow;
-	// 行前按「行距 + 1px 线 + 行距」预留分割线位置，线不会压到上一行的输出语言行。
-	if(Flow.Control("translate-row-26", LineHeight, TranslateAdvancedFoldRow, SettingsFoldRowDividerHeight(LineSpacing)))
+	// 折叠行就是普通一行，行前只留一档行距（不再画分割线）。
+	if(Flow.Control("translate-row-26", LineHeight, TranslateAdvancedFoldRow, ui_token::settings::RowGap(LineSpacing)))
 	{
 		const SSettingsFoldRowStyle TranslateAdvancedFoldStyle = ResolveSettingsFoldRowStyle(
 			SettingsCardDeckVisualOptions().m_BorderColor,
 			color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(1.0f));
-		const bool TranslateAdvancedClicked = SettingsFoldRow(Ui(), &s_TranslateAdvancedFoldRowButton, TranslateAdvancedFoldRow, true, Localize("Personal adjustments"), SmallSize, Metrics.m_LineSpacing, g_Config.m_QmTranslateShowAdvanced != 0, TranslateAdvancedFoldStyle);
+		const bool TranslateAdvancedClicked = SettingsFoldRow(Ui(), &s_TranslateAdvancedFoldRowButton, TranslateAdvancedFoldRow, Localize("Personal adjustments"), SmallSize, g_Config.m_QmTranslateShowAdvanced != 0, TranslateAdvancedFoldStyle);
 		if(TranslateAdvancedClicked && Flow.Input() && !PrewarmOnly && !Ui()->RenderOnly())
 			g_Config.m_QmTranslateShowAdvanced = g_Config.m_QmTranslateShowAdvanced ? 0 : 1;
 	}

@@ -236,6 +236,8 @@ private:
 	// 统一行外观（胶囊行）：行距、行内左右内边距和覆盖式滚动条都由它开启。
 	bool m_CapsuleRows = false;
 	float m_RowInsetX = 0.0f;
+	// 胶囊行：滚动条压在内容上时，行右侧要给滚动条让出的缝（避免胶囊被压住一角）。
+	float m_RowReserveRight = 0.0f;
 	bool m_AutoSpacingOverridden = false;
 	// 自适应高度：可见行数夹在 [MinRows, MaxRows]；MaxRows <= 0 表示不接管高度。
 	int m_MinVisibleRows = 0;

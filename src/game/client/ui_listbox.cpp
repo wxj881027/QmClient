@@ -154,6 +154,10 @@ void CListBox::DoStart(float RowHeight, int NumItems, int ItemsPerRow, int RowsP
 	// 胶囊行：行距由组件统一给（调用点显式 DoAutoSpacing 过就不覆盖）。
 	if(m_CapsuleRows && !m_AutoSpacingOverridden)
 		m_AutoSpacing = ui_token::list::ROW_SPACING;
+	// 包裹式胶囊行不额外上下内缩：滚动区就等于调用方给的矩形，高度是否「严格整数行」
+	// 由调用方用 SetVisibleRowRange + RowsHeight 决定（所有胶囊列表都这样算，见 UiTokens 的
+	// VisibleRows/RowsHeight）。组件在这里再收 8px 只会让别人的整数行变成半行。
+	m_RowReserveRight = 0.0f;
 	// 自适应高度：按条目数和行高算出内容高度，只在调用方给的上限内取，调用点不必
 	// 再自己 std::min；超出的部分交给滚动条。空列表不占高度。
 	if(m_MaxVisibleRows > 0)
@@ -243,8 +247,14 @@ void CListBox::DoStart(float RowHeight, int NumItems, int ItemsPerRow, int RowsP
 	m_ScrollbarMargin = QmListBoxScrollbarMetric(ScrollParams.m_ScrollbarMargin, m_ScrollbarMargin, m_ScrollbarMarginOverridden);
 	ScrollParams.m_ScrollbarThickness = m_ScrollbarWidth;
 	ScrollParams.m_ScrollbarMargin = m_ScrollbarMargin;
+	// 轨道沿长度方向按容器圆角内缩：滑块端头不会贴到（甚至探出）容器圆角。
+	ScrollParams.m_ScrollbarTrackInset = std::max(0.0f, m_ContainerRadius);
 	const int NumRows = (m_ListBoxNumItems + maximum(1, m_ListBoxItemsPerRow) - 1) / maximum(1, m_ListBoxItemsPerRow);
-	m_ScrollRegion.SetContentHeightForNextFrame(ui_token::list::RowsHeight(NumRows, m_ListBoxRowHeight, m_AutoSpacing));
+	const float ContentHeight = ui_token::list::RowsHeight(NumRows, m_ListBoxRowHeight, m_AutoSpacing);
+	// 胶囊行：内容溢出时行右侧要让出滚动条那一列，否则行胶囊会压在滚动条下面。
+	if(m_CapsuleRows && m_ListBoxItemsPerRow <= 1 && ContentHeight > maximum(0.0f, m_ListBoxView.h) + 0.5f)
+		m_RowReserveRight = m_ScrollbarWidth + m_ScrollbarMargin + ui_token::list::SCROLLBAR_ROW_GAP;
+	m_ScrollRegion.SetContentHeightForNextFrame(ContentHeight);
 	m_ScrollRegion.Begin(&m_ListBoxView, &ScrollOffset, &ScrollParams);
 	m_ListBoxView.y += ScrollOffset.y;
 
@@ -287,6 +297,9 @@ CListboxItem CListBox::DoNextRow()
 		Item.m_Rect.x += TrackInset;
 		Item.m_Rect.w = maximum(0.0f, Item.m_Rect.w - 2.0f * TrackInset);
 	}
+	// 覆盖式滚动条压在内容上：行胶囊与行文字都要给滚动条那一列让位，否则选中/悬浮的
+	// 胶囊会被滚动条压住一角（用户实机反馈的现象）。
+	Item.m_Rect.w = maximum(0.0f, Item.m_Rect.w - m_RowReserveRight);
 
 	Item.m_Selected = m_ListBoxSelectedIndex == m_ListBoxItemIndex;
 	// 依次自裁剪框内浮现：行内容先画在最终矩形下方位移处，同时把裁剪

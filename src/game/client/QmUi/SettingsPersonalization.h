@@ -115,45 +115,29 @@ public:
 	}
 };
 
-// 折叠行的配色：分割线由卡片边框色压暗一档，文字默认次要色、悬停或展开用强调色。
+// 折叠行的配色：文字默认次要色、悬停或展开用强调色。
+// 这里**不画分割线**：折叠行就是普通一行，靠小字 + chevron 表达层级；
+// 之前那条压暗横线在部分卡片里会切断裂对齐（用户明确要求去掉）。
 struct SSettingsFoldRowStyle
 {
-	ColorRGBA m_LineColor{};
 	ColorRGBA m_TextColor{};
 	ColorRGBA m_ActiveColor{};
-	// 少数卡片上文已经有视觉分隔（例如紧接一组滑条），再加线会切断阅读，
-	// 由调用点关掉线但保留折叠行的其它样式。
-	bool m_DrawDivider = true;
 };
 
-inline SSettingsFoldRowStyle ResolveSettingsFoldRowStyle(const ColorRGBA &CardBorderColor, const ColorRGBA &AccentColor)
+inline SSettingsFoldRowStyle ResolveSettingsFoldRowStyle(const ColorRGBA & /*CardBorderColor*/, const ColorRGBA &AccentColor)
 {
 	SSettingsFoldRowStyle Style;
-	Style.m_LineColor = ui_token::color::UiColorSurface(CardBorderColor, 1.0f, ui_token::settings::row::FOLD_LINE_BRIGHTNESS);
 	Style.m_TextColor = ui_token::color::TEXT_SECONDARY;
 	Style.m_ActiveColor = AccentColor;
 	return Style;
 }
 
-// 分割线在行上方占「行距 + 1px + 行距」；折叠行本身仍只占一个标准行高。
-inline float SettingsFoldRowDividerHeight(float LineSpacing)
-{
-	return 2.0f * std::max(0.0f, LineSpacing) + ui_token::settings::row::DIVIDER_THICKNESS;
-}
-
-// 折叠行：上方一条压暗的分割线，「小字 + chevron」一组右对齐，整行可点。
-// 分割线画在行上方的声明行距里，所以行高保持一个标准行高，不额外补间距。
-inline bool SettingsFoldRow(CUi *pUi, const void *pId, const CUIRect &Row, bool DrawDivider, const char *pText, float FontSize, float LineSpacing, bool Expanded, const SSettingsFoldRowStyle &Style)
+// 折叠行：「小字 + chevron」一组右对齐，整行可点。行内不画分割线。
+inline bool SettingsFoldRow(CUi *pUi, const void *pId, const CUIRect &Row, const char *pText, float FontSize, bool Expanded, const SSettingsFoldRowStyle &Style)
 {
 	if(pUi == nullptr || pId == nullptr || Row.w <= 0.0f || Row.h <= 0.0f)
 		return false;
 	ITextRender *pTextRender = pUi->TextRender();
-	if(DrawDivider && Style.m_DrawDivider)
-	{
-		// 线下沿对齐到行顶上方一个行距，线上方的空缺由调用方声明的行距补足。
-		const CUIRect Line{Row.x, Row.y - std::max(0.0f, LineSpacing) - ui_token::settings::row::DIVIDER_THICKNESS, Row.w, ui_token::settings::row::DIVIDER_THICKNESS};
-		Line.Draw(Style.m_LineColor, IGraphics::CORNER_NONE, 0.0f);
-	}
 	const bool Hovered = pUi->VisualSurfaceHovered(&Row);
 	const bool Active = Hovered || Expanded;
 	const ColorRGBA PreviousColor = pTextRender->GetTextColor();
@@ -208,25 +192,24 @@ inline bool SettingsFoldRow(CUi *pUi, const void *pId, const CUIRect &Row, bool 
 // 行前、行后各保留一个标准行距：调用方已经留出间距时只取较大者，不会叠成双倍空隙。
 // Button(pId, Row, Expanded, DrawDivider) 负责这一行的绘制与命中，返回本帧是否点到整行；
 // 布局与展开状态只在这里维护，测试可以传入不依赖 UI 的桩。
+// DrawDivider 只是历史参数：折叠行不再画分割线，调用点仍按原签名传值。
 template<typename TButton>
 bool SettingsPersonalizationSectionEx(CSettingsPersonalizationState &State, CUIRect &Content, const char *pStableId, const SSettingsContentMetrics &Metrics, bool ReadOnly, bool DrawDivider, TButton &&Button)
 {
 	bool &Expanded = State.Section(pStableId);
 	const float LineHeight = std::max(0.0f, Metrics.m_LineHeight);
 	const float LineSpacing = std::max(0.0f, Metrics.m_LineSpacing);
-	// 行顶之上还有多少内容：第一行不再画分割线，避免线跑到卡片标题区。
 	const float ContentTop = Content.y;
 	CSettingsContentLayoutScope *pScope = CSettingsContentLayoutScope::Current();
 	const bool LayoutDeclaring = pScope != nullptr && pScope->m_Pass == ESettingsContentPass::DECLARE && pScope->m_pDeclarations != nullptr;
 	CSettingsContentLayoutFlow Flow(Content);
 	CUIRect Row;
-	// 只有真画分割线时才为它预留「行距 + 1px + 行距」；不画的卡只留一个标准行距，
-	// 否则会在折叠行上方凭空多出一条空白带。
-	const float ReservedSpacing = DrawDivider ? SettingsFoldRowDividerHeight(LineSpacing) : LineSpacing;
+	// 折叠行就是普通一行：行前只留一个标准行距，不再为分割线预留额外空白带。
+	const float ReservedSpacing = LineSpacing;
 	if(LayoutDeclaring && !pScope->m_pDeclarations->empty())
 		pScope->m_pDeclarations->back().m_Spacing = std::max(pScope->m_pDeclarations->back().m_Spacing, ReservedSpacing);
 	else if(pScope == nullptr)
-		Flow.Space(ReservedSpacing); // 非声明式卡片没有布局回放，自己留出线的位置
+		Flow.Space(ReservedSpacing); // 非声明式卡片没有布局回放，自己留出一档行距
 	if(Flow.Control("personalization", LineHeight, Row))
 	{
 		const bool Clicked = Button(&Expanded, Row, Expanded, DrawDivider && Row.y > ContentTop);

@@ -317,24 +317,27 @@ CUIRect CScrollRegion::SplitOverlayRail()
 {
 	// 轨道贴在内容边缘内侧：内容宽度完全不受影响，所以「有没有滚动条」不会让行宽横跳。
 	// 两侧都留 ScrollbarMargin：贴边的细轨会在圆角容器里探出圆角之外。
+	// 沿长度方向再加 TrackInset（宿主按容器圆角半径给）：滑块端头不会压到容器圆角，
+	// 首/末行的胶囊也不会被滚动条盖住端头。
 	const float Thickness = std::max(0.0f, m_Params.m_ScrollbarThickness);
 	const float Margin = std::max(0.0f, m_Params.m_ScrollbarMargin);
+	const float LengthInset = Margin + std::max(0.0f, m_Params.m_ScrollbarTrackInset);
 	CUIRect Rail;
 	if(m_Params.m_ScrollHorizontal)
 	{
 		Rail = m_ClipRect;
 		Rail.y = m_ClipRect.y + m_ClipRect.h - Thickness - Margin;
 		Rail.h = Thickness;
-		Rail.x += Margin;
-		Rail.w = std::max(0.0f, Rail.w - 2.0f * Margin);
+		Rail.x = m_ClipRect.x + LengthInset;
+		Rail.w = std::max(0.0f, m_ClipRect.w - 2.0f * LengthInset);
 	}
 	else
 	{
 		Rail = m_ClipRect;
 		Rail.x = m_ClipRect.x + m_ClipRect.w - Thickness - Margin;
 		Rail.w = Thickness;
-		Rail.y += Margin;
-		Rail.h = std::max(0.0f, Rail.h - 2.0f * Margin);
+		Rail.y = m_ClipRect.y + LengthInset;
+		Rail.h = std::max(0.0f, m_ClipRect.h - 2.0f * LengthInset);
 	}
 	Rail.w = std::max(0.0f, Rail.w);
 	Rail.h = std::max(0.0f, Rail.h);
@@ -407,6 +410,21 @@ CUIRect CScrollRegion::SplitContentArea()
 	}
 	m_RailRect.w = std::max(0.0f, m_RailRect.w);
 	m_RailRect.h = std::max(0.0f, m_RailRect.h);
+	// 非覆盖式轨道同样按容器圆角内缩长度方向：不然滑块下端会从容器圆角外侧探出来。
+	const float TrackInset = std::max(0.0f, m_Params.m_ScrollbarTrackInset);
+	if(TrackInset > 0.0f)
+	{
+		if(m_Params.m_ScrollHorizontal)
+		{
+			m_RailRect.x += TrackInset;
+			m_RailRect.w = std::max(0.0f, m_RailRect.w - 2.0f * TrackInset);
+		}
+		else
+		{
+			m_RailRect.y += TrackInset;
+			m_RailRect.h = std::max(0.0f, m_RailRect.h - 2.0f * TrackInset);
+		}
+	}
 
 	return ScrollbarBg;
 }

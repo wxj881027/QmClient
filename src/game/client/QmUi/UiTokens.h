@@ -289,6 +289,8 @@ namespace ui_token::list
 	// 行距只留半档：整行胶囊之间留一条读得出的缝，所有行列表统一这一档。
 	inline constexpr float ROW_SPACING = settings::ROW_GAP * 0.5f;
 
+	// 行右侧给覆盖式滚动条让出的缝：行胶囊不能压在滚动条下面（组件内部用）。
+	inline constexpr float SCROLLBAR_ROW_GAP = spacing::XS;
 	// 整行胶囊圆角：行高一半，超过卡片档才夹住。设置页列表行高 20~28 时正好是
 	// 完整胶囊；更高的单列行（好友 36、国家旗 44 等旧列表）停在卡片档，
 	// 不会被拉成体育场；绘制层仍按短边一半兜底。
@@ -303,6 +305,11 @@ namespace ui_token::list
 	inline constexpr int SKIN_QUEUE_MAX_VISIBLE_ROWS = 6;
 	inline constexpr int PRESET_MIN_VISIBLE_ROWS = 2;
 	inline constexpr int PRESET_MAX_VISIBLE_ROWS = 3;
+	// 主题（菜单中的背景图）列表：原来 DoStart 的 RowsPerScroll 是 3，内容区由外层卡片
+	// 给多少吃多少，视图高度停不到整行上，最上/最下一行的胶囊会被切一半。现在最少 3 行
+	// （沿用原 RowsPerScroll 的设计意图，主题至少 3 个内置项，卡片不会因此变矮）、最多 8 行；
+	// 卡片测高与 CListBox 的自适应高度共用这两个数，视图正好停在整个行的边界。
+	inline constexpr int THEME_MIN_VISIBLE_ROWS = 3;
 
 	// 行内左右内边距与弹层条目同一条公式（max(8, 字号 × 0.75)）：文字不再贴着
 	// 胶囊左缘，窄窗口里也不会跟着一起挤没。
@@ -359,12 +366,6 @@ namespace ui_token::settings::row
 	inline constexpr SRowMetrics DIVIDER{spacing::SM, 0.0f};
 	inline constexpr SRowMetrics FOLD{spacing::SM, 0.0f};
 	inline constexpr SRowMetrics NOTE{spacing::XS, spacing::MD};
-
-	// 分割线厚度：设置页统一 1px 细线，横向线不按圆角绘制。
-	inline constexpr float DIVIDER_THICKNESS = 1.0f;
-	// 折叠行分割线取卡片边框色压暗一档：亮度降到 0.7，透明度不动，
-	// 线永远比卡片轮廓更弱，不会跟卡片描边抢视线。
-	inline constexpr float FOLD_LINE_BRIGHTNESS = 0.7f;
 
 	enum class EType
 	{

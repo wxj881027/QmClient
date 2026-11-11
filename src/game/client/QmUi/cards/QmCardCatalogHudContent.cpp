@@ -467,13 +467,13 @@ void CMenus::RenderQmHudNotificationsBasicContent(CUIRect &Content, const SSetti
 	// 这里只负责入口本身；行 id（"Advanced options"）与文案保持不变，搜索与持久化不破。
 	static CButtonContainer s_NotificationsAdvancedFoldRowButton;
 	CUIRect NotificationsAdvancedFoldRow;
-	// 行前按「行距 + 1px 线 + 行距」预留分割线位置，线不会压到上面的字号滑条。
-	if(Flow.Control("Advanced options", LineHeight, NotificationsAdvancedFoldRow, SettingsFoldRowDividerHeight(LineSpacing)))
+	// 折叠行就是普通一行，行前只留一档行距（不再画分割线）。
+	if(Flow.Control("Advanced options", LineHeight, NotificationsAdvancedFoldRow, ui_token::settings::RowGap(LineSpacing)))
 	{
 		const SSettingsFoldRowStyle NotificationsAdvancedFoldStyle = ResolveSettingsFoldRowStyle(
 			SettingsCardDeckVisualOptions().m_BorderColor,
 			color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(1.0f));
-		const bool NotificationsAdvancedClicked = SettingsFoldRow(Ui(), &s_NotificationsAdvancedFoldRowButton, NotificationsAdvancedFoldRow, true, Localize("Personal adjustments"), Metrics.m_SmallSize, Metrics.m_LineSpacing, g_Config.m_QmHudNotificationsShowAdvanced != 0, NotificationsAdvancedFoldStyle);
+		const bool NotificationsAdvancedClicked = SettingsFoldRow(Ui(), &s_NotificationsAdvancedFoldRowButton, NotificationsAdvancedFoldRow, Localize("Personal adjustments"), Metrics.m_SmallSize, g_Config.m_QmHudNotificationsShowAdvanced != 0, NotificationsAdvancedFoldStyle);
 		if(NotificationsAdvancedClicked && Flow.Input() && !PrewarmOnly && !Ui()->RenderOnly())
 			g_Config.m_QmHudNotificationsShowAdvanced = g_Config.m_QmHudNotificationsShowAdvanced ? 0 : 1;
 	}

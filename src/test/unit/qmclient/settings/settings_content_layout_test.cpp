@@ -343,8 +343,9 @@ TEST(SettingsPersonalization, NewCardsAreCollapsedAndDeclarationDoesNotProcessIn
 	EXPECT_NE(pLayout->Find("basic"), nullptr);
 	EXPECT_NE(pLayout->Find("personalization"), nullptr);
 	EXPECT_EQ(pLayout->Find("detail"), nullptr);
-	// 20（基础行）+ 9（分割线占位：行距 4 + 1px + 行距 4）+ 20（折叠行）+ 4（行后间距）
-	EXPECT_FLOAT_EQ(pLayout->Height(), 53);
+	// 20（基础行）+ 4（折叠行前的一档行距；折叠行不再画分割线，所以没有「行距 + 1px + 行距」占位）
+	// + 20（折叠行）+ 4（行后间距）
+	EXPECT_FLOAT_EQ(pLayout->Height(), 48);
 	EXPECT_EQ(Card.m_ButtonCalls, 0);
 	EXPECT_EQ(Card.m_DetailInputs, 0);
 }
@@ -364,7 +365,7 @@ TEST(SettingsPersonalization, RowKeepsOneLineGapOnBothSides)
 		Flow.Control("detail", 20, Row, 4);
 	}
 	ASSERT_EQ(vRows.size(), 3u);
-	EXPECT_FLOAT_EQ(vRows[0].m_Spacing, 9); // 行前间距补到分割线所需：4 + 1 + 4
+	EXPECT_FLOAT_EQ(vRows[0].m_Spacing, 4); // 折叠行前只留一档行距（不画分割线）
 	EXPECT_FLOAT_EQ(vRows[1].m_Spacing, 4); // 行后间距不能叠成两倍
 }
 
@@ -397,7 +398,7 @@ TEST(SettingsPersonalization, ToggleRebuildsHeightWithoutProcessingHiddenControl
 	ASSERT_NE(pOpened, nullptr);
 	EXPECT_TRUE(State.Expanded("card-a"));
 	EXPECT_NE(pOpened->Find("detail"), nullptr);
-	EXPECT_FLOAT_EQ(pOpened->Height(), 83);
+	EXPECT_FLOAT_EQ(pOpened->Height(), 78);
 	EXPECT_EQ(Card.m_DetailInputs, 0);
 	Card.Replay(*pOpened, ESettingsContentPass::INPUT, false);
 	EXPECT_EQ(Card.m_DetailInputs, 1);

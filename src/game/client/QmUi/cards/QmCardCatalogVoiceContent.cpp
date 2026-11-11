@@ -404,16 +404,15 @@ void CMenus::RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMet
 		const bool VoiceAdvancedDeclared = s_VoiceAdvancedSectionReveal.Update(g_Config.m_QmVoiceShowAdvanced != 0, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel);
 		const SQmListEntryVisual VoiceAdvancedVisual = s_VoiceAdvancedSectionReveal.Visual(g_Config.m_QmUiMotionLevel);
 		CUIRect VoiceAdvancedFoldRow;
-		// 行前间距按「行距 + 1px 线 + 行距」预留：分割线画在行顶上方，FOLD 档只够不画线时用，
-		// 换成固定像素也会在非 1 倍 UI 缩放下压到上一行。
-		if(Flow.Control("voice-advanced", LineHeight, VoiceAdvancedFoldRow, SettingsFoldRowDividerHeight(LineSpacing)))
+		// 折叠行就是普通一行，行前只留一档行距（不再画分割线）。
+		if(Flow.Control("voice-advanced", LineHeight, VoiceAdvancedFoldRow, ui_token::settings::RowGap(LineSpacing)))
 		{
 			const SSettingsFoldRowStyle VoiceAdvancedFoldStyle = ResolveSettingsFoldRowStyle(
 				SettingsCardDeckVisualOptions().m_BorderColor,
 				color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(1.0f));
 			// 原来的复选框（控件 text id 仍是 "Advanced options"）换成整行可点的折叠行：
-			// 分割线 + 暗沉小字 + 右侧 chevron，展开/收起由 chevron 表达，不再是一枚开关。
-			const bool VoiceAdvancedClicked = SettingsFoldRow(Ui(), &s_VoiceAdvancedFoldRowButton, VoiceAdvancedFoldRow, true, Localize("Personal adjustments"), Metrics.m_SmallSize, Metrics.m_LineSpacing, g_Config.m_QmVoiceShowAdvanced != 0, VoiceAdvancedFoldStyle);
+			// 暗沉小字 + 右侧 chevron，展开/收起由 chevron 表达，不再是一枚开关。
+			const bool VoiceAdvancedClicked = SettingsFoldRow(Ui(), &s_VoiceAdvancedFoldRowButton, VoiceAdvancedFoldRow, Localize("Personal adjustments"), Metrics.m_SmallSize, g_Config.m_QmVoiceShowAdvanced != 0, VoiceAdvancedFoldStyle);
 			if(VoiceAdvancedClicked && Flow.Input() && !ReadOnly)
 				g_Config.m_QmVoiceShowAdvanced = g_Config.m_QmVoiceShowAdvanced ? 0 : 1;
 		}

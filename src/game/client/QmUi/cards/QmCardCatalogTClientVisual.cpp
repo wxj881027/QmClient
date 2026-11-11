@@ -485,8 +485,7 @@ float CMenus::LayoutTClientTileOutlinesCard(const qm_card_catalog::SQmCardBuildC
 		SSettingsFoldRowStyle FoldStyle = ResolveSettingsFoldRowStyle(
 			SettingsCardDeckVisualOptions().m_BorderColor,
 			color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(1.0f));
-		FoldStyle.m_DrawDivider = false;
-		const bool Clicked = SettingsFoldRow(Ui(), &s_OutlineFoldRowButton, FoldRow, false, Localize("Personal adjustments"), Ctx.m_Metrics.m_SmallSize, Ctx.m_Metrics.m_LineSpacing, SectionExpanded, FoldStyle);
+		const bool Clicked = SettingsFoldRow(Ui(), &s_OutlineFoldRowButton, FoldRow, Localize("Personal adjustments"), Ctx.m_Metrics.m_SmallSize, SectionExpanded, FoldStyle);
 		if(Clicked && Flow.Input() && !Ctx.m_ReadOnly)
 		{
 			SectionExpanded = !SectionExpanded;

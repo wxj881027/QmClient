@@ -90,6 +90,20 @@ static constexpr ColorRGBA gs_HighlightedTextColor = ColorRGBA(0.4f, 0.4f, 1.0f,
 static constexpr ColorRGBA gs_QmClientCountColor = ColorRGBA(0.75f, 0.55f, 1.0f, 1.0f);
 static constexpr float SERVER_LIST_TEXT_SIZE = 11.0f;
 static constexpr float SERVER_LIST_SCROLLBAR_RAIL_ALPHA_SCALE = 0.28f;
+// 筛选工具箱里的三张胶囊列表（社区 / 国家 / 类型）的行高与可见行数。
+// 槽位高度、列表渲染和滚动步进都从这里取，卡片高度不会和实际行数差半行。
+static constexpr float COMMUNITY_FILTER_ROW_HEIGHT = 13.0f;
+static constexpr float COUNTRY_FILTER_ROW_HEIGHT = 18.0f;
+static constexpr float TYPE_FILTER_ROW_HEIGHT = 13.0f;
+static constexpr int COMMUNITY_FILTER_VISIBLE_ROWS = 4;
+static constexpr int COUNTRY_FILTER_VISIBLE_ROWS = 4;
+
+// 筛选胶囊列表的整数行占位：N 行行高 + 行间 (N-1) 档 + 上下各半档留白，
+// 与列表里「半档留白 → 行高 → 半档留白」的步进严格相等，即 N × (行高 + 行距)。
+static constexpr float FilterGridExtent(int Rows, float RowHeight)
+{
+	return Rows * (RowHeight + ui_token::list::ROW_SPACING);
+}
 
 static SQmDropdownVisualStyle FriendsPopupVisualStyle()
 {
@@ -1122,6 +1136,13 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	CUIRect Headers;
 	View.HSplitTop(ms_ListheaderHeight, &Headers, &View);
 	Headers.VSplitRight(s_ListBox.ScrollbarWidthMax(), &Headers, nullptr);
+	// 胶囊行统一外观：表格行的行距并进行高（滚动步进与 SkipItems 都按行高走，
+	// 组件再叠一档行距会把跳过行补不回来），左右内退与行内内边距同源。
+	// 表头跟着同一条内退，列标题、列内容与行胶囊才会落在同一个坐标系里。
+	const float BrowserRowInsetX = ui_token::list::RowInsetX(SERVER_LIST_TEXT_SIZE);
+	const float BrowserRowStep = ms_ListheaderHeight + ui_token::list::ROW_SPACING;
+	Headers.VSplitLeft(BrowserRowInsetX, nullptr, &Headers);
+	Headers.VSplitRight(BrowserRowInsetX, &Headers, nullptr);
 
 	{
 		CUIRect ResetBtn;
@@ -1776,7 +1797,22 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	}
 	// 列表行和滚动条保留原有淡化，不影响上方表头及空列表提示中的按钮。
 	CUiBackgroundAlphaScaleScope ListOpacityScope(Ui(), SERVER_LIST_SCROLLBAR_RAIL_ALPHA_SCALE);
-	s_ListBox.DoStart(ms_ListheaderHeight, NumServers, 1, 3, SelectedServerIndex, &View, false);
+	// 胶囊行：整行圆角、token 选中/悬浮填充与行内左右内退。行距已经并入
+	// BrowserRowStep，这里显式把组件行距压成 0——可见范围裁剪只用 SkipItems，
+	// 它不补行距，滚过一屏后整张表会向上漂移。行间留白由行内选择内缩给出。
+	// 列表整体按 SERVER_LIST_SCROLLBAR_RAIL_ALPHA_SCALE 淡化（为滚动条轨道），
+	// 胶囊填充要落到与设置页同一强度，先把 token 颜色按同一系数反算回来。
+	const auto RowFeedbackColor = [](const ColorRGBA &TokenColor) {
+		return TokenColor.WithAlpha(TokenColor.a / SERVER_LIST_SCROLLBAR_RAIL_ALPHA_SCALE);
+	};
+	s_ListBox.SetItemColors(RowFeedbackColor(ui_token::color::LIST_ITEM_SELECTED), RowFeedbackColor(ui_token::color::LIST_ITEM_SELECTED), RowFeedbackColor(ui_token::color::LIST_ITEM_HOVER));
+	s_ListBox.SetCapsuleRows(SERVER_LIST_TEXT_SIZE);
+	s_ListBox.DoAutoSpacing(0.0f);
+	s_ListBox.SetItemSelectionInset(ui_token::list::ROW_SPACING * 0.5f);
+	// 可见行取整：按实际可用高度收敛到整数行，首/末行不会被裁掉半行。
+	const int ServerVisibleRows = maximum(1, (int)std::floor(std::max(0.0f, View.h) / BrowserRowStep));
+	s_ListBox.SetVisibleRowRange(1, ServerVisibleRows);
+	s_ListBox.DoStart(BrowserRowStep, NumServers, 1, 3, SelectedServerIndex, &View, false);
 
 	const bool RevealSelection = m_ServerBrowserShouldRevealSelection;
 	if(m_ServerBrowserShouldRevealSelection)
@@ -1793,14 +1829,13 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	int EndVisibleItem = NumServers;
 	if(!RevealSelection && NumServers > 0)
 	{
-		const float RowHeight = ms_ListheaderHeight;
 		const float ScrollY = std::max(0.0f, s_ListBox.ScrollOffsetY());
 		const float ViewHeight = std::max(0.0f, s_ListBox.ViewHeight());
 		const int ExtraRows = 1;
-		const int FirstVisibleRow = std::max(0, (int)std::floor(ScrollY / RowHeight) - ExtraRows);
+		const int FirstVisibleRow = std::max(0, (int)std::floor(ScrollY / BrowserRowStep) - ExtraRows);
 		const int LastVisibleRowExclusive = std::min(
 			NumServers,
-			(int)std::ceil((ScrollY + ViewHeight) / RowHeight) + ExtraRows);
+			(int)std::ceil((ScrollY + ViewHeight) / BrowserRowStep) + ExtraRows);
 		FirstVisibleItem = std::min(FirstVisibleRow, NumServers);
 		EndVisibleItem = std::max(FirstVisibleItem, LastVisibleRowExclusive);
 	}
@@ -1906,7 +1941,12 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			if(SegmentBlank)
 				pDisplayServerName = pItem->m_aName;
 		}
-		const CUIRect RowClip{Headers.x, ListItem.m_Rect.y, Headers.w, ListItem.m_Rect.h};
+		// 行内容排在内退后的内容区上：左右内边距由 CListBox 的胶囊行给出，
+		// 表格列只在这个内容区里按列宽切分，不再用整行矩形贴边摆文字。
+		// 纵向再让出半档，让内容与行胶囊（不含格间缝隙）同高。
+		CUIRect RowContent = ListItem.m_ContentRect;
+		RowContent.HMargin(ui_token::list::ROW_SPACING * 0.5f, &RowContent);
+		const CUIRect RowClip{Headers.x, RowContent.y, Headers.w, RowContent.h};
 		Ui()->ClipEnable(&RowClip);
 		for(const auto &Col : s_aCols)
 		{
@@ -1914,8 +1954,8 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 				continue;
 			CUIRect Button;
 			Button.x = Col.m_Rect.x;
-			Button.y = ListItem.m_Rect.y;
-			Button.h = ListItem.m_Rect.h;
+			Button.y = RowContent.y;
+			Button.h = RowContent.h;
 			Button.w = Col.m_Rect.w;
 			if(Button.w <= 0.0f)
 				continue;
@@ -2246,7 +2286,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		MenuUiPerf.m_UiMs = (float)ListFrameDurationMs;
 		QmLogMenuUiFramePerf(MenuUiPerf, Client());
 	}
-	if(NumServers * ms_ListheaderHeight > ListView.h)
+	if(NumServers * BrowserRowStep > ListView.h)
 	{
 		CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
 		CUIRect Fade = ListView;
@@ -2662,7 +2702,8 @@ void CMenus::RenderServerbrowserFilters(CUIRect View)
 		CUIRect TabContents, CountriesTab, TypesTab;
 		View.HSplitTop(6.0f, nullptr, &View);
 		View.HSplitTop(19.0f, &Button, &View);
-		View.HSplitTop(4.0f * 22.0f, &TabContents, &View);
+		// 页签内容区按国家/类型里更高的一档取整数行：末行完整可见，不被裁半行。
+		View.HSplitTop(FilterGridExtent(COUNTRY_FILTER_VISIBLE_ROWS, COUNTRY_FILTER_ROW_HEIGHT), &TabContents, &View);
 		Button.VSplitMid(&CountriesTab, &TypesTab);
 		// 与社区卡片同属工具箱面板内的顶层卡片，圆角跟随面板的 radius::CARD，
 		// 否则外缘大圆角里会套一圈更方的小圆角。
@@ -2775,7 +2816,7 @@ void CMenus::ResetServerbrowserFilters()
 
 void CMenus::RenderServerbrowserDDNetFilter(CUIRect View,
 	IFilterList &Filter,
-	float ItemHeight, int MaxItems, int ItemsPerRow,
+	float RowHeight, int MaxItems, int ItemsPerRow,
 	CScrollRegion &ScrollRegion, std::vector<unsigned char> &vItemIds,
 	bool UpdateCommunityCacheOnChange,
 	const std::function<const char *(int ItemIndex)> &GetItemName,
@@ -2783,10 +2824,23 @@ void CMenus::RenderServerbrowserDDNetFilter(CUIRect View,
 {
 	vItemIds.resize(MaxItems);
 
+	// 胶囊格：行高/行距/圆角/左右内退全部走列表 token，与设置页胶囊行同一套。
+	// 悬浮/选中是整格胶囊（含格间半档行距），文字与图标排在内退后的内容区上。
+	const float RowSpacing = ui_token::list::ROW_SPACING;
+	const float RowStep = RowHeight + RowSpacing;
+	const float CellRadius = ui_token::list::RowRadius(RowHeight);
+	// 行内左右内退：单列整行走 token 全量内退（文字不再贴胶囊左缘）；多列网格的格子
+	// 只有几十像素宽，全量内退会把旗标/文字挤小，按更小的一档收敛，格子边界仍由胶囊给出。
+	const float TokenRowInsetX = ui_token::list::RowInsetX(RowHeight * CUi::ms_FontmodHeight);
+	const float ContentInsetX = ItemsPerRow > 1 ? std::min(TokenRowInsetX, ui_token::spacing::XS) : TokenRowInsetX;
+	// 只按整数行开口：滚动视口边界落在行与行的缝隙里，首/末行不会被裁成半个胶囊。
+	const int VisibleGridRows = maximum(1, (int)std::floor((std::max(0.0f, View.h) - RowHeight - RowSpacing * 0.5f) / RowStep) + 1);
+	View.h = std::min(View.h, VisibleGridRows * RowStep);
+
 	vec2 ScrollOffset(0.0f, 0.0f);
 	SQmScrollRequest ScrollRequest;
 	ScrollRequest.m_Profile = EQmScrollProfile::FILTER_GRID;
-	ScrollRequest.m_RowExtent = ItemHeight;
+	ScrollRequest.m_RowExtent = RowStep;
 	ScrollRequest.m_RowsPerStep = 2;
 	const SQmResolvedScrollPolicy ScrollPolicy = QmResolveScrollPolicy(ScrollRequest);
 	CScrollRegionParams ScrollParams = QmScrollRegionParamsFromPolicy(ScrollPolicy);
@@ -2812,26 +2866,27 @@ void CMenus::RenderServerbrowserDDNetFilter(CUIRect View,
 		Ui()->MeasurementOnly() ? EQmListEntryRenderPass::MEASUREMENT : EQmListEntryRenderPass::INTERACTIVE);
 	for(int ItemIndex = 0; ItemIndex < MaxItems; ++ItemIndex)
 	{
-		CUIRect Item;
+		const int RowIndex = ItemIndex / ItemsPerRow;
+		CUIRect Cell;
 		if(ColumnIndex == 0)
-			View.HSplitTop(ItemHeight, &Row, &View);
-		Row.VSplitLeft(View.w / ItemsPerRow, &Item, &Row);
+			View.HSplitTop(RowStep, &Row, &View);
+		Cell = {Row.x + ColumnIndex * (Row.w / ItemsPerRow), Row.y + RowSpacing * 0.5f, Row.w / ItemsPerRow, RowHeight};
 		ColumnIndex = (ColumnIndex + 1) % ItemsPerRow;
-		if(!ScrollRegion.AddRect(Item))
+		if(!ScrollRegion.AddRect(Cell))
 			continue;
 
-		const SQmListEntryVisual EntryVisual = QmListEntryVisual(EntryElapsed, ItemIndex / maximum(1, ItemsPerRow), g_Config.m_QmUiMotionLevel);
+		const SQmListEntryVisual EntryVisual = QmListEntryVisual(EntryElapsed, RowIndex, g_Config.m_QmUiMotionLevel);
 		std::optional<CUiScopedControlAlphaScale> EntryFade;
 		if(EntryVisual.m_Fade < 0.999f)
 			EntryFade.emplace(Ui(), EntryVisual.m_Fade);
-		Item.y += EntryVisual.m_OffsetY;
+		Cell.y += EntryVisual.m_OffsetY;
 
 		const void *pItemId = &vItemIds[ItemIndex];
 		const char *pName = GetItemName(ItemIndex);
 		const bool Active = !Filter.Filtered(pName);
 		CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
 
-		const int Click = Ui()->DoButtonLogic(pItemId, 0, &Item, BUTTONFLAG_ALL);
+		const int Click = Ui()->DoButtonLogic(pItemId, 0, &Cell, BUTTONFLAG_ALL);
 		if(Click == 1 || Click == 2)
 		{
 			// left/right click to toggle filter
@@ -2907,9 +2962,19 @@ void CMenus::RenderServerbrowserDDNetFilter(CUIRect View,
 				UpdateCommunityCache(true);
 		}
 
+		// 内容区左右内退由列表 token 派生：图标、旗标、文字都排在这里，
+		// 不再靠各列表自己写 +2/-2 像素补偿；悬浮胶囊仍按整格绘制。
+		CUIRect Content = Cell;
+		Content.VMargin(std::min(ContentInsetX, std::max(0.0f, Cell.w * 0.5f)), &Content);
 		if(Ui()->HotItem() == pItemId && !ScrollRegion.Animating())
-			Item.Draw(BrowserOpacityColor(ColorRGBA(1.0f, 1.0f, 1.0f, 0.33f)), IGraphics::CORNER_ALL, 2.0f);
-		RenderItem(ItemIndex, Item, pItemId, Active);
+		{
+			// 悬浮是整格胶囊：填充与设置页列表同源，白色细描边把格子边界交代清楚
+			// （描边跟选中态同一条白色，不参与面板底色的灰度染色）。
+			const float HotAlpha = Ui()->ControlAlphaScale();
+			DrawRoundedSurface(Ui(), Cell, BrowserOpacityColor(ui_token::color::LIST_ITEM_HOVER, HotAlpha),
+				ui_token::feedback::ACTIVE_BORDER, CellRadius, 1.0f);
+		}
+		RenderItem(ItemIndex, Content, pItemId, Active);
 	}
 
 	ScrollRegion.End();
@@ -2943,8 +3008,7 @@ void CMenus::RenderServerbrowserCommunitiesFilter(CUIRect View)
 	static std::vector<unsigned char> s_vItemIds;
 	static std::vector<unsigned char> s_vFavoriteButtonIds;
 
-	const float ItemHeight = 13.0f;
-	const float Spacing = 2.0f;
+	const float RowHeight = COMMUNITY_FILTER_ROW_HEIGHT;
 
 	const auto &&GetItemName = [&](int ItemIndex) {
 		return ServerBrowser()->Communities()[ItemIndex].Id();
@@ -2953,13 +3017,12 @@ void CMenus::RenderServerbrowserCommunitiesFilter(CUIRect View)
 		const auto &Community = ServerBrowser()->Communities()[ItemIndex];
 		const float Alpha = ((Active ? 0.9f : 0.2f) + (Ui()->HotItem() == pItemId ? 0.1f : 0.0f)) * Ui()->ControlAlphaScale();
 
+		// 内容区已含胶囊行的左右内退，这里只排图标、名称、人数与收藏星：
+		// 星标右缘、人数与图标都跟着内容区走，不再手写 +2/-1 像素补偿。
 		CUIRect Icon, NameLabel, PlayerCountIcon, PlayerCountLabel, FavoriteButton;
 		Item.VSplitRight(Item.h, &Item, &FavoriteButton);
-		Item.HMargin(Spacing, &Item);
-		Item.VSplitLeft(Spacing, nullptr, &Item);
-		Item.VSplitRight(1.0f, &Item, nullptr);
 		Item.VSplitLeft(Item.h * 2.0f, &Icon, &NameLabel);
-		NameLabel.VSplitLeft(Spacing, nullptr, &NameLabel);
+		NameLabel.VSplitLeft(ui_token::control::IconTextGap(NameLabel.h), nullptr, &NameLabel);
 		NameLabel.VSplitRight(8.0f, &NameLabel, &PlayerCountIcon);
 		NameLabel.VSplitRight(25.0f, &NameLabel, &PlayerCountLabel);
 
@@ -2997,7 +3060,7 @@ void CMenus::RenderServerbrowserCommunitiesFilter(CUIRect View)
 	};
 
 	s_vFavoriteButtonIds.resize(MaxEntries);
-	RenderServerbrowserDDNetFilter(View, ServerBrowser()->CommunitiesFilter(), ItemHeight + 2.0f * Spacing, MaxEntries, EntriesPerRow, s_ScrollRegion, s_vItemIds, true, GetItemName, RenderItem);
+	RenderServerbrowserDDNetFilter(View, ServerBrowser()->CommunitiesFilter(), RowHeight, MaxEntries, EntriesPerRow, s_ScrollRegion, s_vItemIds, true, GetItemName, RenderItem);
 }
 
 void CMenus::RenderServerbrowserCountriesFilter(CUIRect View)
@@ -3008,21 +3071,21 @@ void CMenus::RenderServerbrowserCountriesFilter(CUIRect View)
 	static CScrollRegion s_ScrollRegion;
 	static std::vector<unsigned char> s_vItemIds;
 
-	const float ItemHeight = 18.0f;
-	const float Spacing = 2.0f;
+	const float RowHeight = COUNTRY_FILTER_ROW_HEIGHT;
 
 	const auto &&GetItemName = [&](int ItemIndex) {
 		return ServerBrowser()->CommunityCache().SelectableCountries()[ItemIndex]->Name();
 	};
 	const auto &&RenderItem = [&](int ItemIndex, CUIRect Item, const void *pItemId, bool Active) {
-		Item.Margin(Spacing, &Item);
-		const float OldWidth = Item.w;
-		Item.w = Item.h * 2.0f;
-		Item.x += (OldWidth - Item.w) / 2.0f;
-		GameClient()->m_CountryFlags.Render(ServerBrowser()->CommunityCache().SelectableCountries()[ItemIndex]->FlagId(), ColorRGBA(1.0f, 1.0f, 1.0f, ((Active ? 0.9f : 0.2f) + (Ui()->HotItem() == pItemId ? 0.1f : 0.0f)) * Ui()->ControlAlphaScale()), Item.x, Item.y, Item.w, Item.h);
+		// 旗帜保持 2:1，在内容区里居中；内容区由胶囊行的左右内退派生，
+		// 内退吃掉宽度时旗帜等比缩小而不是压扁。
+		const float FlagWidth = std::min(Item.w, Item.h * 2.0f);
+		const float FlagHeight = std::min(Item.h, FlagWidth * 0.5f);
+		CUIRect FlagRect{Item.x + (Item.w - FlagWidth) * 0.5f, Item.y + (Item.h - FlagHeight) * 0.5f, FlagWidth, FlagHeight};
+		GameClient()->m_CountryFlags.Render(ServerBrowser()->CommunityCache().SelectableCountries()[ItemIndex]->FlagId(), ColorRGBA(1.0f, 1.0f, 1.0f, ((Active ? 0.9f : 0.2f) + (Ui()->HotItem() == pItemId ? 0.1f : 0.0f)) * Ui()->ControlAlphaScale()), FlagRect.x, FlagRect.y, FlagRect.w, FlagRect.h);
 	};
 
-	RenderServerbrowserDDNetFilter(View, ServerBrowser()->CountriesFilter(), ItemHeight + 2.0f * Spacing, MaxEntries, EntriesPerRow, s_ScrollRegion, s_vItemIds, false, GetItemName, RenderItem);
+	RenderServerbrowserDDNetFilter(View, ServerBrowser()->CountriesFilter(), RowHeight, MaxEntries, EntriesPerRow, s_ScrollRegion, s_vItemIds, false, GetItemName, RenderItem);
 }
 
 void CMenus::RenderServerbrowserTypesFilter(CUIRect View)
@@ -3033,20 +3096,18 @@ void CMenus::RenderServerbrowserTypesFilter(CUIRect View)
 	static CScrollRegion s_ScrollRegion;
 	static std::vector<unsigned char> s_vItemIds;
 
-	const float ItemHeight = 13.0f;
-	const float Spacing = 2.0f;
+	const float RowHeight = TYPE_FILTER_ROW_HEIGHT;
 
 	const auto &&GetItemName = [&](int ItemIndex) {
 		return ServerBrowser()->CommunityCache().SelectableTypes()[ItemIndex]->Name();
 	};
 	const auto &&RenderItem = [&](int ItemIndex, CUIRect Item, const void *pItemId, bool Active) {
-		Item.Margin(Spacing, &Item);
 		TextRender()->TextColor(1.0f, 1.0f, 1.0f, ((Active ? 0.9f : 0.2f) + (Ui()->HotItem() == pItemId ? 0.1f : 0.0f)) * Ui()->ControlAlphaScale());
 		Ui()->DoLabel(&Item, GetItemName(ItemIndex), Item.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
 	};
 
-	RenderServerbrowserDDNetFilter(View, ServerBrowser()->TypesFilter(), ItemHeight + 2.0f * Spacing, MaxEntries, EntriesPerRow, s_ScrollRegion, s_vItemIds, false, GetItemName, RenderItem);
+	RenderServerbrowserDDNetFilter(View, ServerBrowser()->TypesFilter(), RowHeight, MaxEntries, EntriesPerRow, s_ScrollRegion, s_vItemIds, false, GetItemName, RenderItem);
 }
 
 CUi::EPopupMenuFunctionResult CMenus::PopupCountrySelection(void *pContext, CUIRect View, bool Active)
@@ -3061,8 +3122,19 @@ CUi::EPopupMenuFunctionResult CMenus::PopupCountrySelection(void *pContext, CUIR
 	s_ListBox.SetActive(Active);
 	s_ListBox.SetWheelOwnerPriority(EUiWheelOwnerPriority::POPUP);
 	s_ListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_GRID);
-	// 选中/悬停填充由 CListBox 统一绘制；这里只补选中描边，避免同一行画两遍。
+	// 选中/悬停填充与选中描边都由 CListBox 的胶囊格轨道统一绘制（与设置页列表同源）。
 	s_ListBox.SetItemColors(ui_token::color::LIST_ITEM_SELECTED, ui_token::color::LIST_ITEM_SELECTED, ui_token::color::LIST_ITEM_HOVER);
+	// 多列网格也走胶囊格：行距、左右内退和单列胶囊行同一套；圆角由调用点显式
+	// 传给 DoNextItem——组件对 ItemsPerRow > 1 默认仍取小圆角（多列网格的旧观感）。
+	// 行距并进行高：组件的自动行距在 ItemsPerRow > 1 时按每个格子推进一格
+	// （一格一行的 N 倍），网格行距会随列数放大；这里自己按行步进，网格才是
+	// 严格 N 行 × 行步进，滚动条高度和实际行位一致。
+	const float FlagCellHeight = 44.0f;
+	const float FlagCellStep = FlagCellHeight + ui_token::list::ROW_SPACING;
+	const float FlagCellRadius = ui_token::list::RowRadius(FlagCellHeight);
+	s_ListBox.SetCapsuleRows(10.0f);
+	s_ListBox.DoAutoSpacing(0.0f);
+	s_ListBox.SetItemSelectionInset(ui_token::list::ROW_SPACING * 0.5f);
 
 	if(pPopupContext->m_New)
 	{
@@ -3138,32 +3210,30 @@ CUi::EPopupMenuFunctionResult CMenus::PopupCountrySelection(void *pContext, CUIR
 		}
 	}
 
-	s_ListBox.DoStart(44.0f, s_vFiltered.size(), Columns, 1, SelectedIndex, &GridArea, false);
+	// 整数行：可见行由可用高度收敛，最后一行完整可见；列表再高也不越出内容区。
+	s_ListBox.SetVisibleRowRange(1, maximum(1, (int)std::floor(std::max(0.0f, GridArea.h) / FlagCellStep)));
+	s_ListBox.DoStart(FlagCellStep, s_vFiltered.size(), Columns, 1, SelectedIndex, &GridArea, false);
 
 	for(size_t i = 0; i < s_vFiltered.size(); ++i)
 	{
 		const SFilteredFlag &Filtered = s_vFiltered[i];
 		const CCountryFlags::CCountryFlag *pEntry = Filtered.m_pEntry;
 		const bool IsSelected = pEntry->m_CountryCode == pPopupContext->m_Selection;
-		const CListboxItem Item = s_ListBox.DoNextItem(pEntry, IsSelected);
+		const CListboxItem Item = s_ListBox.DoNextItem(pEntry, IsSelected, FlagCellRadius);
 		if(!Item.m_Visible)
 			continue;
 
-		const float SelectedAlpha = s_ListBox.SelectionFeedbackAlpha((int)i);
-		if(SelectedAlpha > 0.001f)
-		{
-			// 选中描边与资产卡/列表选中态同源（白 0.7），不用 BORDER_FOCUS 强调蓝；
-			// 填充交给 CListBox 的选中轨道，这里不再叠第二层。
-			DrawRoundedSurface(pUi, Item.m_Rect, ColorRGBA(), ui_token::color::NEUTRAL_WHITE.WithAlpha(ui_token::feedback::ICON_BORDER_ALPHA * SelectedAlpha), ui_token::radius::BASE, 1.0f);
-		}
-
+		// 选中填充与白色细描边都由 CListBox 的胶囊格轨道绘制（行内内缩给出格间缝隙），
+		// 这里不再补第二层描边；描边圆角随 FlagCellRadius 与胶囊格同档。
+		// 内容区已含胶囊格的左右内退：旗标与国码都排在这里，纵向让 5 给上下呼吸。
+		const CUIRect CellContent = Item.m_ContentRect;
 		CUIRect FlagRect, Label;
-		Item.m_Rect.Margin(5.0f, &FlagRect);
+		CellContent.HMargin(5.0f, &FlagRect);
 		FlagRect.HSplitBottom(12.0f, &FlagRect, &Label);
 		Label.HSplitTop(2.0f, nullptr, &Label);
-		const float OldWidth = FlagRect.w;
-		FlagRect.w = FlagRect.h * 2.0f;
-		FlagRect.x += (OldWidth - FlagRect.w) / 2.0f;
+		const float FlagWidth = std::min(CellContent.w, FlagRect.h * 2.0f);
+		const float FlagHeight = FlagWidth * 0.5f;
+		FlagRect = {CellContent.x + (CellContent.w - FlagWidth) * 0.5f, FlagRect.y + (FlagRect.h - FlagHeight) * 0.5f, FlagWidth, FlagHeight};
 		int64_t FlagAnimStartTime = s_PopupOpenTime;
 		if(s_PopupOpenTime > 0)
 		{
@@ -3351,11 +3421,18 @@ void CMenus::RenderServerbrowserInfo(CUIRect View)
 void CMenus::RenderServerbrowserInfoScoreboard(CUIRect View, const CServerInfo *pSelectedServer)
 {
 	const float FontSize = 10.0f;
+	// 玩家行与服务器列表同一套胶囊行：行距并进行高（可见范围按整数行收敛），
+	// 行内左右内边距由组件按字号派生，皮肤/旗标跟着内容区排。
+	const float PlayerRowHeight = 25.0f;
+	const float PlayerRowStep = PlayerRowHeight + ui_token::list::ROW_SPACING;
 
 	static CListBox s_ListBox;
 	View.VSplitLeft(5.0f, nullptr, &View);
-	s_ListBox.DoAutoSpacing(2.0f);
-	s_ListBox.DoStart(25.0f, (int)pSelectedServer->m_vClients.size(), 1, 3, -1, &View, false, IGraphics::CORNER_NONE);
+	s_ListBox.SetCapsuleRows(FontSize);
+	s_ListBox.DoAutoSpacing(0.0f);
+	s_ListBox.SetItemSelectionInset(ui_token::list::ROW_SPACING * 0.5f);
+	s_ListBox.SetVisibleRowRange(1, maximum(1, (int)std::floor(std::max(0.0f, View.h) / PlayerRowStep)));
+	s_ListBox.DoStart(PlayerRowStep, (int)pSelectedServer->m_vClients.size(), 1, 3, -1, &View, false, IGraphics::CORNER_NONE);
 
 	for(size_t i = 0; i < pSelectedServer->m_vClients.size(); i++)
 	{
@@ -3366,11 +3443,13 @@ void CMenus::RenderServerbrowserInfoScoreboard(CUIRect View, const CServerInfo *
 		auto GaussianBlurSuppression = Item.SuppressGaussianBlur();
 
 		CUIRect Skin, Name, Clan, Score, Flag;
-		Name = Item.m_Rect;
-
 		const ColorRGBA Color = PlayerBackgroundColor(CurrentClient.m_FriendState == IFriends::FRIEND_PLAYER, CurrentClient.m_FriendState == IFriends::FRIEND_CLAN, CurrentClient.m_Afk, false, false);
-		DrawRoundedSurface(Ui(), Name, Color, ColorRGBA(), 4.0f);
-		Name.VSplitLeft(1.0f, nullptr, &Name);
+		// 好友/战队/离开色块与胶囊行同形同内缩，不再是一块方角底色。
+		CUIRect RowRect = Item.m_Rect;
+		RowRect.Margin(ui_token::list::ROW_SPACING * 0.5f, &RowRect);
+		DrawRoundedSurface(Ui(), RowRect, Color, ColorRGBA(), ui_token::list::RowRadius(PlayerRowHeight));
+		Name = Item.m_ContentRect;
+		Name.HMargin(ui_token::list::ROW_SPACING * 0.5f, &Name);
 		Name.VSplitLeft(34.0f, &Score, &Name);
 		Name.VSplitLeft(18.0f, &Skin, &Name);
 		Name.VSplitRight(26.0f, &Name, &Flag);
@@ -5792,7 +5871,8 @@ void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 		if(g_Config.m_UiPage == PAGE_INTERNET || g_Config.m_UiPage == PAGE_FAVORITES)
 		{
 			CUIRect CommunityFilter;
-			ToolBox.HSplitTop(19.0f + 4.0f * 17.0f, &CommunityFilter, &ToolBox);
+			// 社区卡片 = 标题 + 整数行（胶囊行行高 + 半档行距），末行完整可见。
+			ToolBox.HSplitTop(19.0f + FilterGridExtent(COMMUNITY_FILTER_VISIBLE_ROWS, COMMUNITY_FILTER_ROW_HEIGHT), &CommunityFilter, &ToolBox);
 			ToolBox.HSplitTop(8.0f, nullptr, &ToolBox);
 			RenderServerbrowserCommunitiesFilter(CommunityFilter);
 		}

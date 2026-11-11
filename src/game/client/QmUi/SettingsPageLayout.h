@@ -704,17 +704,30 @@ struct SSettingsListCardGeometry
 
 inline SSettingsListCardGeometry ResolveSettingsGeneralLanguageListGeometry(const int ItemCount, const SSettingsContentMetrics &Metrics)
 {
+	// 语言列表按胶囊行渲染（menus_settings.cpp 的 RenderLanguageSelection），行距取列表
+	// token 的半档：测高与行布局同一条 RowsHeight，卡片不会比「整数行 + 行距」短一档，
+	// 可见行数也不会因为少算行距掉到 7 行。
 	SSettingsListCardGeometry Geometry;
 	Geometry.m_VisibleRows = std::clamp(ItemCount, 1, 8);
-	Geometry.m_ListViewportHeight = ResolveSettingsListViewportHeight(Geometry.m_VisibleRows, Metrics.m_ListRowHeight, 0.0f);
+	Geometry.m_ListViewportHeight = ResolveSettingsListViewportHeight(Geometry.m_VisibleRows, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING);
 	Geometry.m_ContentHeight = Geometry.m_ListViewportHeight;
 	return Geometry;
 }
 
 inline SSettingsListCardGeometry ResolveSettingsGeneralThemeListGeometry(const int ItemCount, const SSettingsContentMetrics &Metrics)
 {
-	SSettingsListCardGeometry Geometry = ResolveSettingsGeneralLanguageListGeometry(ItemCount, Metrics);
-	Geometry.m_ContentHeight += Metrics.m_LineHeight + Metrics.m_LineSpacing;
+	// 主题列表按胶囊行渲染（RenderThemeSelection 里 SetCapsuleRows），所以可见行数只能取
+	// 整数行、行距必须用列表 token 的半档，和高度的唯一来源 RowsHeight 对齐。
+	// 之前这里直接复用语言列表那份（行距 0、可见行数 clamp(ItemCount, 1, 8)）再补
+	// 「LineHeight + LineSpacing」当标题，和 DoHeader 实际消费的「LineHeight + 2 × LineSpacing」
+	// 差一档，列表体拿到的高度既不是整数行、也不够最后一行的行距，底部就会露出半行。
+	SSettingsListCardGeometry Geometry;
+	Geometry.m_VisibleRows = ui_token::list::VisibleRows(ItemCount, 1, ui_token::list::THEME_MIN_VISIBLE_ROWS, ui_token::list::MAX_VISIBLE_ROWS);
+	Geometry.m_ListViewportHeight = ResolveSettingsListViewportHeight(Geometry.m_VisibleRows, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING);
+	// 标题行与列表体共用同一个容器背景：两段高度相加必须正好等于卡片给这个控件的高度，
+	// 否则列表体比背景短/长一截（滚动条滑块也会压在容器圆角外）。DoHeader 实际消费
+	// LineHeight + 2 × LineSpacing，和 CListBox 的自适应高度上限（RowsHeight）拼起来才是整容器。
+	Geometry.m_ContentHeight = Geometry.m_ListViewportHeight + Metrics.m_LineHeight + 2.0f * Metrics.m_LineSpacing;
 	return Geometry;
 }
 

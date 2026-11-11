@@ -135,18 +135,71 @@ namespace
 		List = MainView;
 	}
 
-	float LanguageListLabelWidth(const CUIRect &ListRect, const SSettingsContentMetrics &Metrics)
+	// 语言页列表的行与容器几何：预热缓存（PrepareLanguagePageCache）与逐帧绘制
+	// 共用这一组事实，避免「测量一套、绘制另一套」让文字容器的尺寸键每帧都对不上。
+	// LabelWidth 只依赖列表宽度与字号、不依赖容器高度——预热缓存只拿得到宽度，
+	// 缓存键必须能只由宽度复现，否则缓存会永久失效、每帧重建文字容器。
+	struct SLanguageListRowLayout
 	{
+		float m_RowHeight = 0.0f;
+		float m_RowSpacing = 0.0f;
+		float m_RowInsetX = 0.0f;
+		float m_FlagWidth = 0.0f;
+		float m_ScrollbarWidth = 0.0f;
+	};
+
+	SLanguageListRowLayout ResolveLanguageListRowLayout(const SSettingsContentMetrics &Metrics)
+	{
+		SLanguageListRowLayout Layout;
+		Layout.m_RowHeight = Metrics.m_ListRowHeight;
+		// 行距只取列表 token 的半档：与 CListBox 胶囊行（图形页分辨率列表、
+		// Tee 队列/预设）同一数值，行与行之间只留一条读得出的缝。
+		Layout.m_RowSpacing = ui_token::list::ROW_SPACING;
+		// 行内左右内退与弹层条目同源（max(8, 字号 × 0.75)），文字不再贴着胶囊边缘。
+		Layout.m_RowInsetX = ui_token::list::RowInsetX(Metrics.m_BodySize);
+		// 国旗仍占两倍行高的宽度（现有比例），文字紧随其后。
+		Layout.m_FlagWidth = Layout.m_RowHeight * 2.0f;
 		SQmScrollRequest ScrollRequest;
 		ScrollRequest.m_Profile = EQmScrollProfile::SETTINGS_INNER;
-		const SQmResolvedScrollPolicy ScrollPolicy = QmResolveScrollPolicy(ScrollRequest, Metrics.m_UiScale);
-		CUIRect ScrollClip = ListRect;
-		ScrollClip.VSplitRight(ScrollPolicy.m_Style.m_ScrollbarWidth, &ScrollClip, nullptr);
-		CUIRect ItemRect = ScrollClip;
-		CUIRect Label;
-		ItemRect.h = Metrics.m_ListRowHeight;
-		ItemRect.VSplitLeft(ItemRect.h * 2.0f, nullptr, &Label);
-		return Label.w;
+		Layout.m_ScrollbarWidth = QmResolveScrollPolicy(ScrollRequest, Metrics.m_UiScale).m_Style.m_ScrollbarWidth;
+		return Layout;
+	}
+
+	// 行矩形：整行包含胶囊背景、命中区和行距之间的行宽，滚动条列始终预留，
+	// 滚动条出现/消失时文字宽度不横跳，缓存键也随之稳定。
+	CUIRect LanguageListRowRect(const CUIRect &ListRect, const SLanguageListRowLayout &Layout)
+	{
+		CUIRect RowRect = ListRect;
+		RowRect.w = maximum(0.0f, RowRect.w - Layout.m_ScrollbarWidth);
+		return RowRect;
+	}
+
+	// 行内容区：整行按行内退左右各让一段，国旗与文字整体右移（相对位置不变）。
+	CUIRect LanguageListRowContentRect(const CUIRect &RowRect, const SLanguageListRowLayout &Layout)
+	{
+		CUIRect Content = RowRect;
+		Content.x += Layout.m_RowInsetX;
+		Content.w = maximum(0.0f, Content.w - 2.0f * Layout.m_RowInsetX);
+		return Content;
+	}
+
+	float LanguageListLabelWidth(const CUIRect &ListRect, const SSettingsContentMetrics &Metrics)
+	{
+		const SLanguageListRowLayout Layout = ResolveLanguageListRowLayout(Metrics);
+		const CUIRect Content = LanguageListRowContentRect(LanguageListRowRect(ListRect, Layout), Layout);
+		return maximum(0.0f, Content.w - Layout.m_FlagWidth);
+	}
+
+	// 可见行数 = 容器可用高度能完整容纳的行数（首行之前、末行之后都不留行距）。
+	// 容器高度再严格按「可见行数 × 行高 + (可见行数 - 1) × 行距」反推，首/末行
+	// 胶囊因此不会被容器圆角或卡片裁剪切掉一角。
+	int ResolveLanguageListVisibleRows(const float AvailableHeight, const int ItemCount, const SLanguageListRowLayout &Layout)
+	{
+		if(ItemCount <= 0 || AvailableHeight <= 0.0f || Layout.m_RowHeight <= 0.0f)
+			return 0;
+		const float RowPitch = Layout.m_RowHeight + Layout.m_RowSpacing;
+		const int FitRows = (int)std::floor((AvailableHeight + Layout.m_RowSpacing) / RowPitch);
+		return std::clamp(FitRows, 1, ItemCount);
 	}
 
 	bool UseLanguagePageCache()
@@ -613,6 +666,7 @@ void CMenus::PrepareLanguagePageCache(float MainViewWidth, bool ForceComplete)
 	CUIRect List;
 	LayoutLanguagePageBaseRects(MainViewWidth, List);
 	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(MainViewWidth);
+	const SLanguageListRowLayout RowLayout = ResolveLanguageListRowLayout(Metrics);
 
 	const float LabelWidth = LanguageListLabelWidth(List, Metrics);
 	const bool LanguageChanged = str_comp(gs_aLanguageCacheLanguageFile, g_Config.m_ClLanguagefile) != 0;
@@ -642,20 +696,18 @@ void CMenus::PrepareLanguagePageCache(float MainViewWidth, bool ForceComplete)
 		return;
 	}
 
-	CUIRect ScrollClip = List;
-	SQmScrollRequest ScrollRequest;
-	ScrollRequest.m_Profile = EQmScrollProfile::SETTINGS_INNER;
-	const SQmResolvedScrollPolicy ScrollPolicy = QmResolveScrollPolicy(ScrollRequest, Metrics.m_UiScale);
-	ScrollClip.VSplitRight(ScrollPolicy.m_Style.m_ScrollbarWidth, &ScrollClip, nullptr);
-	CUIRect Content = ScrollClip;
+	CUIRect Content = LanguageListRowRect(List, RowLayout);
 	for(size_t i = 0; i < g_Localization.Languages().size(); ++i)
 	{
 		const auto &Language = g_Localization.Languages()[i];
 		CUIRect ItemRect;
-		Content.HSplitTop(Metrics.m_ListRowHeight, &ItemRect, &Content);
+		Content.HSplitTop(RowLayout.m_RowHeight, &ItemRect, &Content);
+		if(i + 1 < g_Localization.Languages().size())
+			Content.HSplitTop(RowLayout.m_RowSpacing, nullptr, &Content);
 
-		CUIRect FlagRect, Label;
-		ItemRect.VSplitLeft(ItemRect.h * 2.0f, &FlagRect, &Label);
+		CUIRect Label;
+		CUIRect RowContent = LanguageListRowContentRect(ItemRect, RowLayout);
+		RowContent.VSplitLeft(RowLayout.m_FlagWidth, nullptr, &Label);
 		CUIElement &LabelElement = SettingsTextElement(SETTINGS_LANGUAGE, -1, Language.m_Filename.c_str());
 		CUIElement::SUIElementRect &RectEl = *LabelElement.Rect(0);
 		const bool ColorChanged = RectEl.m_TextColor != TextRender()->GetTextColor() || RectEl.m_TextOutlineColor != TextRender()->GetTextOutlineColor();
@@ -733,17 +785,40 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMet
 
 	vec2 ScrollOffset(0.0f, 0.0f);
 	static float s_PrevLanguageScrollY = 0.0f;
+	const SLanguageListRowLayout RowLayout = ResolveLanguageListRowLayout(Metrics);
+	const int NumLanguages = (int)g_Localization.Languages().size();
+	const int VisibleRows = ResolveLanguageListVisibleRows(MainView.h, NumLanguages, RowLayout);
+	// 容器高度只按完整的行算：首/末行胶囊不会被容器圆角或卡片裁剪切掉一角。
+	// 仅在父矩形连一行都放不下（窗口极窄）时才退回父矩形高度，避免画到卡片外。
+	const float ContainerHeight = minimum(ui_token::list::RowsHeight(VisibleRows, RowLayout.m_RowHeight, RowLayout.m_RowSpacing), maximum(0.0f, MainView.h));
+	const float ContainerRadius = ui_token::list::ContainerRadius(MainView.w, ContainerHeight);
+	// 首/末行胶囊按「容器圆角 − 行胶囊圆角」横向内缩：胶囊直边与容器圆角切点对齐，
+	// 端头不会从容器圆角外侧探出来（与 CListBox 胶囊行同一条公式）。
+	const float CapsuleInsetX = maximum(0.0f, ContainerRadius - ui_token::list::RowRadius(RowLayout.m_RowHeight));
+	if(VisibleRows > 0)
+	{
+		CUIRect Container = MainView;
+		Container.h = ContainerHeight;
+		DrawRoundedSurface(Ui(), Container, Ui()->ScaleBackgroundAlpha(ColorRGBA(0.0f, 0.0f, 0.0f, 0.15f)), ColorRGBA(), ContainerRadius);
+	}
+	CUIRect ScrollView = MainView;
+	ScrollView.h = minimum(ScrollView.h, ContainerHeight);
 	SQmScrollRequest ScrollRequest;
 	ScrollRequest.m_Profile = EQmScrollProfile::SETTINGS_INNER;
-	ScrollRequest.m_RowExtent = Metrics.m_ListRowHeight;
+	ScrollRequest.m_RowExtent = RowLayout.m_RowHeight + RowLayout.m_RowSpacing;
 	ScrollRequest.m_RowsPerStep = 3;
 	const SQmResolvedScrollPolicy ScrollPolicy = QmResolveScrollPolicy(ScrollRequest);
 	CScrollRegionParams ScrollParams = QmScrollRegionParamsFromPolicy(ScrollPolicy);
 	ScrollParams.m_WheelOwnerPriority = EUiWheelOwnerPriority::COMPOSITE_CONTROL;
-	SSettingsScrollRegionFrame ScrollFrame = BeginSettingsScrollRegion(gs_LanguageScrollRegion, &MainView, ScrollParams, s_PrevLanguageScrollY);
+	// 轨道两端按容器圆角内缩：细轨端头不会从容器圆角外侧探出来。
+	ScrollParams.m_ScrollbarTrackInset = ContainerRadius;
+	SSettingsScrollRegionFrame ScrollFrame = BeginSettingsScrollRegion(gs_LanguageScrollRegion, &ScrollView, ScrollParams, s_PrevLanguageScrollY);
 	ScrollOffset = ScrollFrame.m_BeginOffset;
 
-	CUIRect Content = MainView;
+	// 行宽按「始终预留滚动条列」的固定宽度算，与预热缓存的宽度键同源；滚动区 Begin
+	// 会把传进去的容器矩形收窄到实际内容列（宽度随滚动条显隐变化），这里不再重复扣减，
+	// 否则滚动条出现时行宽会被扣两次。
+	CUIRect Content = LanguageListRowRect(MainView, RowLayout);
 	Content.y += ScrollOffset.y;
 	int VisibleLanguages = 0;
 	int CacheHits = 0;
@@ -782,7 +857,9 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMet
 	{
 		const auto &Language = g_Localization.Languages()[i];
 		CUIRect ItemRect;
-		Content.HSplitTop(Metrics.m_ListRowHeight, &ItemRect, &Content);
+		Content.HSplitTop(RowLayout.m_RowHeight, &ItemRect, &Content);
+		if(i + 1 < g_Localization.Languages().size())
+			Content.HSplitTop(RowLayout.m_RowSpacing, nullptr, &Content);
 		const bool Selected = s_SelectedLanguage == (int)i;
 		const bool Visible = gs_LanguageScrollRegion.AddRect(ItemRect, gs_LanguageScrollToSelected && Selected, Selected);
 		if(!Visible)
@@ -809,16 +886,23 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMet
 		if(Selected)
 			s_SelectedFeedback.Observe((int)i);
 		const float SelectedAlpha = s_SelectedFeedback.Alpha((int)i);
-		if(SelectedAlpha > 0.001f)
-			DrawRoundedSurface(Ui(), ItemRect, Ui()->ScaleBackgroundAlpha(ui_token::color::LIST_ITEM_SELECTED).WithMultipliedAlpha(SelectedAlpha), ColorRGBA(), 5.0f);
 		if(Ui()->HotItem() == pRowId)
 			s_HoverFeedback.Observe((int)i);
 		const float HoverAlpha = s_HoverFeedback.Alpha((int)i);
+		// 整行胶囊：圆角取自行高，宽高与绘制都走公共 DrawRoundedSurface；
+		// 悬浮先画、选中后叠，选中行被鼠标压住时白色细描边仍在最上层。
+		CUIRect CapsuleRect = ItemRect;
+		CapsuleRect.x += CapsuleInsetX;
+		CapsuleRect.w = maximum(0.0f, CapsuleRect.w - 2.0f * CapsuleInsetX);
+		const float RowRadius = ui_token::list::RowRadius(RowLayout.m_RowHeight);
 		if(HoverAlpha > 0.001f && !gs_LanguageScrollRegion.Animating())
-			DrawRoundedSurface(Ui(), ItemRect, Ui()->ScaleBackgroundAlpha(ui_token::color::LIST_ITEM_HOVER).WithMultipliedAlpha(HoverAlpha), ColorRGBA(), 5.0f);
+			DrawRoundedSurface(Ui(), CapsuleRect, Ui()->ScaleBackgroundAlpha(ui_token::color::LIST_ITEM_HOVER).WithMultipliedAlpha(HoverAlpha), ColorRGBA(), RowRadius);
+		if(SelectedAlpha > 0.001f)
+			DrawRoundedSurface(Ui(), CapsuleRect, Ui()->ScaleBackgroundAlpha(ui_token::color::LIST_ITEM_SELECTED).WithMultipliedAlpha(SelectedAlpha), ui_token::feedback::ACTIVE_BORDER.WithMultipliedAlpha(SelectedAlpha), RowRadius, ui_token::feedback::ICON_BORDER_WIDTH);
 
 		CUIRect FlagRect, Label;
-		ItemRect.VSplitLeft(ItemRect.h * 2.0f, &FlagRect, &Label);
+		CUIRect RowContent = LanguageListRowContentRect(ItemRect, RowLayout);
+		RowContent.VSplitLeft(RowLayout.m_FlagWidth, &FlagRect, &Label);
 		FlagRect.VMargin(6.0f, &FlagRect);
 		FlagRect.HMargin(3.0f, &FlagRect);
 		// 国旗是裸纹理 quad（不经过 CUi 显隐系数），行淡入系数单独传入。

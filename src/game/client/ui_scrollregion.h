@@ -92,6 +92,9 @@ struct CScrollRegionParams
 	bool m_ScrollbarOverlay;
 	float m_ScrollbarRevealSec;
 	float m_ScrollbarSlide;
+	// 轨道沿自身长度方向的内缩：贴边的细轨会在圆角容器里从圆角外侧探出来，
+	// 也会和首/末行的胶囊端头撞在一起。宿主按容器圆角半径传值（列表 = ContainerRadius）。
+	float m_ScrollbarTrackInset = 0.0f;
 	bool m_ScrollHorizontal;
 	const void *m_pWheelOwnerId;
 	bool m_WheelOwnerPreRegistered;

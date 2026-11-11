@@ -45,16 +45,15 @@ namespace qm_card_catalog
 	bool QmCardRenderHook::Personalization(CMenus *pMenus, CUIRect &Content, const char *pStableId, const SSettingsContentMetrics &Metrics, bool ReadOnly, bool DrawDivider)
 	{
 		EnsurePersonalizationLoaded();
-		// 分割线与强调色沿用卡片边框、选中色：折叠行不引入第三种色源。
+		// 强调色沿用卡片选中色；折叠行不画分割线，所以不再需要边框色。
 		SSettingsFoldRowStyle Style = ResolveSettingsFoldRowStyle(
 			color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiCardBorderColor, true)),
 			color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(1.0f));
-		Style.m_DrawDivider = DrawDivider;
 		const bool WasExpanded = s_Personalization.Expanded(pStableId);
 		const bool Expanded = SettingsPersonalizationSectionEx(s_Personalization, Content, pStableId, Metrics,
 			ReadOnly || pMenus->Ui()->RenderOnly() || pMenus->m_MenuTextPlanCollecting, DrawDivider,
-			[pMenus, &Metrics, &Style](const void *pId, const CUIRect &Row, bool Expanded, bool DrawDivider) {
-				return SettingsFoldRow(pMenus->Ui(), pId, Row, DrawDivider, Localize("Personal adjustments"), Metrics.m_SmallSize, Metrics.m_LineSpacing, Expanded, Style);
+			[pMenus, &Metrics, &Style](const void *pId, const CUIRect &Row, bool Expanded, bool) {
+				return SettingsFoldRow(pMenus->Ui(), pId, Row, Localize("Personal adjustments"), Metrics.m_SmallSize, Expanded, Style);
 			});
 		// 只在真切换时写回，避免每帧重排整串配置。
 		if(Expanded != WasExpanded)
