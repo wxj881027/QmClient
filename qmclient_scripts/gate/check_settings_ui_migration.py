@@ -16,6 +16,8 @@ PAGE_STABLE_IDS = {
 	"graphics": ("deck:graphics-display", "deck:graphics-visual", "deck:graphics-modes", "deck:graphics-interaction"),
 	"sound": ("deck:sound-toggle", "deck:sound-volume", "deck:sound-audio-pack"),
 	"ddnet": ("deck:ddnet-demo", "deck:ddnet-gameplay", "deck:ddnet-background", "deck:ddnet-miscellaneous", "qm:system_media_controls", "qm:entity_overlay"),
+	# DDNet 页内的「网络补偿」子页签：客户端预测卡 + 从 TClient 页整卡迁来的三张预测/延迟补偿卡。
+	"ddnet-prediction": ("deck:ddnet-prediction", "tclient:input", "tclient:anti-latency-tools", "tclient:improved-anti-ping"),
 	"appearance": (
 		"deck:appearance-hud-main",
 		"deck:appearance-hud-ddrace",
@@ -88,9 +90,6 @@ PAGE_STABLE_IDS = {
 		"tclient:visual-font-cursor",
 		"tclient:visual-nameplates",
 		"tclient:visual-effects",
-		"tclient:input",
-		"tclient:anti-latency-tools",
-		"tclient:improved-anti-ping",
 		"tclient:execute-on-join",
 		"tclient:voting",
 		"tclient:auto-reply",
@@ -122,6 +121,7 @@ PAGE_FUNCTIONS = {
 	"graphics": ("CMenus::RenderSettingsGraphics",),
 	"sound": ("CMenus::RenderSettingsSound",),
 	"ddnet": ("CMenus::RenderSettingsDDNet",),
+	"ddnet-prediction": ("CMenus::RenderSettingsDDNet",),
 	"appearance": ("CMenus::RenderSettingsAppearance",),
 	"controls": ("CMenusSettingsControls::Render",),
 	"qmclient_hud": ("CMenus::RenderSettingsQmClientHudDeck",),
@@ -147,6 +147,7 @@ PAGE_ROUTE_TABS = {
 	"graphics": ("graphics",),
 	"sound": ("sound",),
 	"ddnet": ("ddnet",),
+	"ddnet-prediction": ("ddnet-prediction",),
 	"appearance": (
 		"appearance-hud",
 		"appearance-chat",
@@ -276,6 +277,7 @@ CATALOG_PAGE_SOURCES = {
 	"graphics": "QmCardCatalogGraphics.cpp",
 	"sound": "QmCardCatalogSound.cpp",
 	"ddnet": "QmCardCatalogDDNet.cpp",
+	"ddnet-prediction": "QmCardCatalogDDNet.cpp",
 	"appearance": "QmCardCatalogAppearance.cpp",
 	"tclient": "QmCardCatalogTClientMain.cpp",
 	"tclient_bind_wheel": "QmCardCatalogTClientBindWheel.cpp",

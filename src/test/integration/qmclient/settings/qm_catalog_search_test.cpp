@@ -78,11 +78,14 @@ TEST(QmCatalogSearch, InternalLabelsAliasesAndConfigsResolveWithoutOpeningTheirP
 		{"gfx_screen_refresh_rate", "deck:graphics-modes"},
 		{"snd_volume", "deck:sound-volume"},
 		{"Sound volume", "deck:sound-volume"},
-		{"cl_predict_events", "deck:ddnet-gameplay"},
+		// 预测相关行已从「游戏玩法」搬到 DDNet 页「网络补偿」子页签的「客户端预测」卡：
+		// 查询必须命中新卡，而不是继续指向搬走行的旧卡。
+		{"cl_predict_events", "deck:ddnet-prediction"},
 		{"Axiom dummy password", "qm:gores"},
 		{"qm_ime_auto_manage", "qm:ime"},
 		{"cl_replay_length", "deck:ddnet-demo"},
-		{"预测余量", "deck:ddnet-gameplay"},
+		{"预测余量", "deck:ddnet-prediction"},
+		{"最大包份数", "deck:ddnet-prediction"},
 		{"cl_background_entities", "deck:ddnet-background"},
 		{"cl_chat_size", "deck:appearance-chat-settings"},
 		{"qm_custom_font_cjk", "tclient:font"},

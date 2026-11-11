@@ -160,6 +160,9 @@ namespace qm_card_registry
 	bool RepairLegacyChatBubbleTab(qm_card_order::CModel &Model);
 	// DDRace HUD Pro 已移入游戏界面的 HUD 页，恢复仍保存在栖梦 HUD 页的卡片。
 	bool RepairLegacyBindStatusHudTab(qm_card_order::CModel &Model);
+	// 三张预测卡已从 TClient 页迁到 DDNet 页的「网络补偿」子页签（tab=ddnet-prediction），
+	// 把旧存档里仍记在 tclient 下的位置恢复到默认归属。
+	bool RepairLegacyPredictionCardTabs(qm_card_order::CModel &Model);
 	bool IsTClientMainCardsLegacyLeft(const qm_card_order::CModel &Model);
 	bool MoveTClientMainCardsToAlternatingColumns(qm_card_order::CModel &Model);
 	ETClientMainCardsMigrationResult MigrateTClientMainCardsToAlternatingColumns(qm_card_order::CModel &Model, char *pSerialized, int SerializedSize);

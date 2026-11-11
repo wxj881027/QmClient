@@ -54,6 +54,10 @@ void CMenus::RenderQmSelfKillProtectionContent(CUIRect &Content, float LineHeigh
 		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "self-kill-protection-auto-delay", &LabelColumn, Localize("Auto-enable after"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
 		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(&s_AutoDelayInputId, &Row, &g_Config.m_QmSelfKillAutoDelay, &LabelColumn);
 		RenderQmSettingsSliderWithValueInput(&s_AutoDelayInputId, ControlColumn, &g_Config.m_QmSelfKillAutoDelay, 0, 60, "min", PrewarmOnly);
+		// 约定 B：行尾说明贴标签列右端（紧跟滑杆），常显「0 = 永不自动开启」这条最常被问到的规则；
+		// 完整解释仍在下面的说明行，两者分工不同。
+		if(Flow.Drawing())
+			DoSettingsInlineHint(Ui(), "self-kill-protection-auto-delay", LabelColumn, 0.0f, Localize("0 = never"), CurrentSettingsContentMetrics().m_SmallSize);
 	}
 	Flow.Space(ui_token::settings::RowGap(LineSpacing));
 

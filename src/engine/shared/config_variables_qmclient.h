@@ -49,6 +49,8 @@ MACRO_CONFIG_INT(QmAssetsPreviewBudgetMbOverride, qm_assets_preview_budget_mb_ov
 MACRO_CONFIG_INT(QmAssetsPreviewBudgetPercent, qm_assets_preview_budget_percent, 8, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Resource preview VRAM budget percentage (based on device local VRAM budget)")
 MACRO_CONFIG_INT(QmUiRuntimeV2Debug, qm_ui_runtime_v2_debug, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable UI runtime v2 debug logging")
 MACRO_CONFIG_INT(QmUiMotionLevel, qm_ui_motion_level, 2, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "QmUi animation intensity: 0=Off, 1=Reduced, 2=Full")
+// DDNet 页内子页签：未发布，不做配置迁移，直接给默认值。
+MACRO_CONFIG_INT(QmDdnetTab, qm_ddnet_tab, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "DDNet settings sub-tab: 0=general, 1=network compensation")
 MACRO_CONFIG_INT(QmUiScale, qm_ui_scale, 100, 50, 200, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Global UI size percentage")
 MACRO_CONFIG_INT(QmMobileCameraMode, qm_mobile_camera_mode, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Mobile spectator camera: 0=joystick pad, 1=drag the view")
 MACRO_CONFIG_INT(QmDefaultsProfileVersion, qm_defaults_profile_version, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Default appearance profile migration version")

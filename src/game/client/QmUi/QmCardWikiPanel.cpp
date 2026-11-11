@@ -267,6 +267,10 @@ namespace
 				pPopup->m_ResetScroll = false;
 			}
 			CScrollRegionParams ScrollParams = QmScrollRegionParamsForSize(EQmScrollSize::MEDIUM, UiScale);
+			// 轨道粗细/边距统一取列表 token：弹窗滚动面和 CListBox 共用同一条覆盖式滚动条，
+			// 不再按面板档另取一套粗细。
+			ScrollParams.m_ScrollbarThickness = ui_token::list::SCROLLBAR_WIDTH;
+			ScrollParams.m_ScrollbarMargin = ui_token::list::SCROLLBAR_MARGIN;
 			ScrollParams.m_WheelOwnerPriority = EUiWheelOwnerPriority::POPUP;
 			ScrollParams.m_pSliderThemeColor = &Theme.m_Accent;
 			vec2 ScrollOffset;

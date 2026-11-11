@@ -164,7 +164,13 @@ float CMenus::LayoutTClientAntiPingSmoothingCard(const qm_card_catalog::SQmCardB
 	if(Flow.Control("stable-direction", LineSize, Row, RowSpacing))
 		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmAntiPingStableDirection, "tclient-antiping-stable-direction", Localize("Optimistic prediction along stable direction"), &g_Config.m_QmAntiPingStableDirection, &Row, LineSize);
 	if(Flow.Control("negative-buffer", LineSize, Row, RowSpacing))
-		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmAntiPingNegativeBuffer, "tclient-antiping-negative-buffer", Localize("Negative stability buffer (for Gores)"), &g_Config.m_QmAntiPingNegativeBuffer, &Row, LineSize);
+	{
+		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmAntiPingNegativeBuffer, "tclient-antiping-negative-buffer", Localize("Negative stability buffer"), &g_Config.m_QmAntiPingNegativeBuffer, &Row, LineSize);
+		// 约定 B：原来的括号注解塞在标签里，改成同一行的行尾说明——标签只留正题，
+		// 注解常显、小一档字号、次要色，且不占独立行高。
+		if(Flow.Drawing())
+			DoSettingsInlineHint(Ui(), "negative-buffer", Row, 0.0f, Localize("for Gores"), Ctx.m_Metrics.m_SmallSize);
+	}
 	if(Flow.Control("uncertainty", LineSize, Button, RowSpacing))
 		DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-antiping-uncertainty-scale", &g_Config.m_QmAntiPingUncertaintyScale, &g_Config.m_QmAntiPingUncertaintyScale, &Button, Localize("Uncertainty duration"), 50, 400, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE, "%");
 	if(MeasureScope)

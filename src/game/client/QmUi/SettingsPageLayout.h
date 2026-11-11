@@ -159,7 +159,7 @@ private:
 
 // 页面和当前子 Tab 共同定义一次 card deck 的可见视图。
 // 子 Tab 改变时必须重新播放入场动画，但不能影响卡片在 model 中的持久化顺序。
-inline uint64_t ResolveSettingsCardDisplayViewKey(const int Page, const int PlayerTab, const int AppearanceTab, const int TClientTab, const int QmClientTab, const int CreditsTab = 0)
+inline uint64_t ResolveSettingsCardDisplayViewKey(const int Page, const int PlayerTab, const int AppearanceTab, const int TClientTab, const int QmClientTab, const int CreditsTab = 0, const int DdnetTab = 0)
 {
 	uint64_t Key = 1469598103934665603ULL;
 	const auto Mix = [&Key](const int Value) {
@@ -172,6 +172,8 @@ inline uint64_t ResolveSettingsCardDisplayViewKey(const int Page, const int Play
 	Mix(TClientTab);
 	Mix(QmClientTab);
 	Mix(CreditsTab);
+	// DDNet 页的页内子页签（常规 / 网络补偿）也要算进视图 key，否则切子页签不重播入场。
+	Mix(DdnetTab);
 	return Key;
 }
 
@@ -752,7 +754,10 @@ inline SSettingsListCardGeometry ResolveSettingsSoundAudioPackGeometry(const int
 {
 	SSettingsListCardGeometry Geometry;
 	Geometry.m_VisibleRows = ResolveSettingsSoundAudioPackVisibleRows(ItemCount);
-	Geometry.m_ListViewportHeight = ResolveSettingsListViewportHeight(Geometry.m_VisibleRows, Metrics.m_ListRowHeight, 0.0f);
+	// 音频包列表按胶囊行渲染（卡片里 SetCapsuleRows）：行距取列表 token 的半档，
+	// 与 CListBox 的自适应高度（RowsHeight）用同一组事实，否则测高少掉行间的缝，
+	// 最后一行会被裁一半。
+	Geometry.m_ListViewportHeight = ResolveSettingsListViewportHeight(Geometry.m_VisibleRows, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING);
 	// 外层 Margin(2) 与列表 Margin(6) 各作用于上下两侧。
 	constexpr float OuterPadding = 2.0f;
 	constexpr float ListPadding = 6.0f;

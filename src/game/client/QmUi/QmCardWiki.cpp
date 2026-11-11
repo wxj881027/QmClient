@@ -192,15 +192,21 @@ namespace
 		},
 		{
 			"deck:ddnet-gameplay",
-			Localizable("Toggles DDNet gameplay indicators and assists such as race time, team markers and hints."),
-			Localizable("Enable the indicators you need; each one draws on your own screen only."),
-			Localizable("Indicators that read game state can lag behind the server; do not rely on them for frame-perfect input."),
+			Localizable("General DDNet gameplay display: showing other players and their shadow opacity, background quads and the default zoom."),
+			Localizable("Tick \"Show others\" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use \"Show background quads\" and \"Default zoom\" for the view."),
+			Localizable("Prediction and latency compensation moved to the \"Network compensation\" sub-tab of the DDNet page."),
 		},
 		{
 			"deck:ddnet-miscellaneous",
 			Localizable("Collects the remaining DDNet client preferences that do not belong to other cards."),
 			Localizable("Review the entries and change only what you understand; defaults are tuned for normal play."),
 			Localizable("Options here affect networking or identity; test on a server before using them in matches."),
+		},
+		{
+			"deck:ddnet-prediction",
+			Localizable("Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, and upstream packet redundancy."),
+			Localizable("Set \"Prediction margin\" in milliseconds, tick \"AntiPing (latency compensation)\" and then choose what to predict; the redundancy switch is experimental and only useful on lossy connections."),
+			Localizable("Prediction trades accuracy for responsiveness: a larger margin and AntiPing smooth out ping jitter but can mispredict nearby actions, and upstream redundancy may triple upload traffic."),
 		},
 		{
 			"deck:general-client",

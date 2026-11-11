@@ -184,9 +184,6 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 				s_Reversed = !s_Reversed;
 			GameClient()->m_Tooltips.DoToolTip(&s_ReverseEntries, &SortButton, Localize("Reverse order"));
 		}
-		// 列表与上方控件之间统一留间距，条目列表和在线玩家看起来才是同一套节奏。
-		if(!Flow.Control("tclient-warlist-entries-list", std::clamp((int)GameClient()->m_WarList.m_vWarEntries.size(), 2, WarListViewportRows) * ListRowHeight, EntriesList, RowSpacing))
-			return;
 		static std::vector<CWarEntry *> s_vFilteredEntries;
 		static char s_aCachedEntriesFilter[128] = "";
 		static bool s_CachedReversed = false;
@@ -212,6 +209,13 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 			s_CachedWarEntriesRevision = GameClient()->m_WarList.Revision();
 		}
 
+		// 列表与上方控件之间统一留间距，条目列表和在线玩家看起来才是同一套节奏。
+		// 高度按**过滤后**的整数行派生（RowsHeight）：胶囊行的行距是半档，
+		// 用行数×行高会少掉行间的缝；空结果不占高度，不留没有背景的空面板。
+		const int EntryRows = ui_token::list::VisibleRows((int)s_vFilteredEntries.size(), 1, 2, WarListViewportRows);
+		if(!Flow.Control("tclient-warlist-entries-list", ui_token::list::RowsHeight(EntryRows, ListRowHeight, ui_token::list::ROW_SPACING), EntriesList, RowSpacing))
+			return;
+
 		int SelectedOldEntry = -1;
 		static CListBox s_EntriesListBox;
 		static CListBox s_EntriesReadOnlyListBox;
@@ -219,6 +223,10 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		EntriesListBox.SetActive(!ReadOnly);
 		EntriesListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);
 		EntriesListBox.SetWheelOwnerPriority(EUiWheelOwnerPriority::COMPOSITE_CONTROL);
+		// 胶囊行：行距、行内退、胶囊圆角与覆盖式滚动条统一走列表 token；
+		// 可见行数锁成外层声明的整数行，DoStart 的自适应高度才不会把末行裁一半。
+		EntriesListBox.SetCapsuleRows(StandardFontSize);
+		EntriesListBox.SetVisibleRowRange(EntryRows, EntryRows);
 		EntriesListBox.DoStart(ListRowHeight, s_vFilteredEntries.size(), 1, 2, SelectedOldEntry, &EntriesList);
 
 		static std::vector<unsigned char> s_vItemIds;
@@ -239,7 +247,8 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 				continue;
 
 			CUIRect EntryRect, DeleteButton, EntryTypeRect, WarType;
-			Item.m_Rect.Margin(0.0f, &EntryRect);
+			// 行内容排在内容区：胶囊行让出左右内退与滚动条那一列，删除按钮不会压到滚动条。
+			EntryRect = Item.m_ContentRect;
 			// 删除放最右侧，和群组行同一套尺寸与位置：一行左手名字、右手操作。
 			EntryRect.VSplitRight(20.0f, &EntryRect, &DeleteButton);
 			DeleteButton.HSplitTop(20.0f, &DeleteButton, nullptr);
@@ -476,7 +485,9 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		CUIRect WarTypeList, Button, ButtonL, ButtonR;
 		CSettingsContentLayoutFlow Flow(Column);
 		static CButtonContainer s_GroupColorPicker;
-		if(Flow.Control("tclient-warlist-groups-list", std::clamp((int)GameClient()->m_WarList.m_WarTypes.size(), 2, WarListViewportRows) * ListRowHeight, WarTypeList, RowSpacing))
+		// 整数行派生高度：胶囊行的行距是半档，行数×行高会少掉行间的缝。
+		const int TypeRows = ui_token::list::VisibleRows((int)GameClient()->m_WarList.m_WarTypes.size(), 1, 2, WarListViewportRows);
+		if(Flow.Control("tclient-warlist-groups-list", ui_token::list::RowsHeight(TypeRows, ListRowHeight, ui_token::list::ROW_SPACING), WarTypeList, RowSpacing))
 		{
 			m_pRemoveWarType = nullptr;
 			int SelectedOldType = -1;
@@ -486,6 +497,9 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 			WarTypeListBox.SetActive(!ReadOnly);
 			WarTypeListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);
 			WarTypeListBox.SetWheelOwnerPriority(EUiWheelOwnerPriority::COMPOSITE_CONTROL);
+			// 与条目列表同一套胶囊行外观；可见行数锁成外层声明的整数行。
+			WarTypeListBox.SetCapsuleRows(StandardFontSize);
+			WarTypeListBox.SetVisibleRowRange(TypeRows, TypeRows);
 			WarTypeListBox.DoStart(ListRowHeight, GameClient()->m_WarList.m_WarTypes.size(), 1, 2, SelectedOldType, &WarTypeList, true, IGraphics::CORNER_ALL);
 
 			static std::vector<unsigned char> s_vTypeItemIds;
@@ -507,7 +521,9 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 					continue;
 
 				CUIRect TypeRect, DeleteButton;
-				Item.m_Rect.Margin(RowSpacing, &TypeRect);
+				// 行内容排在内容区：胶囊行已经让出左右内退与滚动条那一列，
+				// 不再额外叠一层手写 Margin，否则组名会缩两遍。
+				TypeRect = Item.m_ContentRect;
 				if(pType->m_Removable)
 				{
 					TypeRect.VSplitRight(LineSize, &TypeRect, &DeleteButton);
@@ -722,22 +738,24 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 				}
 				s_vPlayerPicks.push_back({pName, pClan});
 			}
-			const int PickRows = std::clamp((int)s_vPlayerPicks.size(), 2, WarListViewportRows);
-			if(!Flow.Control("tclient-warlist-player-picks", PickRows * ListRowHeight, PlayerList, RowSpacing))
+			// 空列表保留两行高度，让「没有匹配玩家」的提示有位置放。
+			const int PickRows = std::max(2, ui_token::list::VisibleRows((int)s_vPlayerPicks.size(), 1, 2, WarListViewportRows));
+			if(!Flow.Control("tclient-warlist-player-picks", ui_token::list::RowsHeight(PickRows, ListRowHeight, ui_token::list::ROW_SPACING), PlayerList, RowSpacing))
 				return;
 			static CListBox s_PickListBox;
 			static std::vector<unsigned char> s_vPickItemIds;
 			s_vPickItemIds.resize(std::max<size_t>(1, s_vPlayerPicks.size()));
 			s_PickListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);
 			s_PickListBox.SetWheelOwnerPriority(EUiWheelOwnerPriority::COMPOSITE_CONTROL);
+			s_PickListBox.SetCapsuleRows(StandardFontSize);
+			s_PickListBox.SetVisibleRowRange(2, WarListViewportRows);
 			s_PickListBox.DoStart(ListRowHeight, s_vPlayerPicks.size(), 1, 2, -1, &PlayerList, true, IGraphics::CORNER_ALL);
 			for(size_t PickIndex = 0; PickIndex < s_vPlayerPicks.size(); ++PickIndex)
 			{
 				const CListboxItem Item = s_PickListBox.DoNextItem(&s_vPickItemIds[PickIndex], false);
 				if(!Item.m_Visible)
 					continue;
-				CUIRect RowRect = Item.m_Rect;
-				RowRect.Margin(RowSpacing, &RowRect);
+				CUIRect RowRect = Item.m_ContentRect;
 				CUIRect NameRect, ClanRect, AddEntryRect;
 				RowRect.VSplitRight(WarListMetrics.m_ButtonHeight, &RowRect, &AddEntryRect);
 				RowRect.VSplitRight(RowSpacing, &RowRect, nullptr);
@@ -788,10 +806,13 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 				str_find_nocase(Client.m_aClan, s_PlayerSearchInput.GetString()))
 				s_vFilteredPlayerIds.push_back(ClientId);
 		}
-		// 列表高度跟着实际人数收，空列表只占两行高，不铺满一屏空白。
-		const int PlayerRows = std::clamp((int)s_vFilteredPlayerIds.size(), 2, WarListViewportRows);
-		if(!Flow.Control("tclient-warlist-players-list", PlayerRows * ListRowHeight, PlayerList, RowSpacing))
+		// 列表高度跟着实际人数收，空列表保留两行高度给「没有匹配玩家」的提示；
+		// 行高按胶囊行的整数行派生（含半档行距），末行才不会被裁。
+		const int PlayerRows = std::max(2, ui_token::list::VisibleRows((int)s_vFilteredPlayerIds.size(), 1, 2, WarListViewportRows));
+		if(!Flow.Control("tclient-warlist-players-list", ui_token::list::RowsHeight(PlayerRows, ListRowHeight, ui_token::list::ROW_SPACING), PlayerList, RowSpacing))
 			return;
+		PlayerListBox.SetCapsuleRows(StandardFontSize);
+		PlayerListBox.SetVisibleRowRange(2, WarListViewportRows);
 		PlayerListBox.DoStart(ListRowHeight, s_vFilteredPlayerIds.size(), 1, 2, -1, &PlayerList, true, IGraphics::CORNER_ALL);
 		if(s_vFilteredPlayerIds.empty())
 		{
@@ -818,7 +839,8 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 
 			CUIRect PlayerRect, TeeRect, NameRect, ClanRect, AddEntryRect;
 			CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
-			Item.m_Rect.Margin(0.0f, &PlayerRect);
+			// 行内容排在内容区：胶囊行让出左右内退与滚动条那一列。
+			PlayerRect = Item.m_ContentRect;
 			// 每行末尾一个 +：作用对象就是这一行的人，不用先选中再去别处点添加。
 			PlayerRect.VSplitRight(WarListMetrics.m_ButtonHeight, &PlayerRect, &AddEntryRect);
 			AddEntryRect.VSplitRight(RowSpacing, &AddEntryRect, nullptr);

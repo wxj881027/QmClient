@@ -384,8 +384,7 @@ void CMenus::AppendTClientDeveloperCard(std::vector<SSettingsCardDefinition> &vC
 			if(DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_WebsiteButton, "tclient-links-website", Localize("Website"), 0, &RightButton) && Flow.Input() && !ReadOnly && !Ui()->RenderOnly())
 				Client()->ViewLink("https://tclient.app/");
 		}
-		Flow.Space(LineSpacing);
-		if(Flow.Control("tclient-developer-actions-1", LineHeight, Row))
+		if(Flow.Control("tclient-developer-actions-1", LineHeight, Row, LineSpacing))
 		{
 			Row.VSplitMid(&LeftButton, &RightButton, LineSpacing);
 			if(DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_GithubButton, "tclient-links-github", Localize("Github"), 0, &LeftButton) && Flow.Input() && !ReadOnly && !Ui()->RenderOnly())
@@ -516,8 +515,7 @@ void CMenus::AppendFriendLinkCards(std::vector<SSettingsCardDefinition> &vCards,
 			if(DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_DdnetWebsiteButton, "credits-links-ddnet-website", Localize("DDNet Website"), 0, &RightButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, -1.0f, EQmIcon::EARTH_AMERICAS, FONT_ICON_EARTH_AMERICAS, &s_aSiteIcons[ICON_DDNET]) && Flow.Input() && !ReadOnly && !Ui()->RenderOnly())
 				Client()->ViewLink("https://ddnet.org");
 		}
-		Flow.Space(LineSpacing);
-		if(Flow.Control("friend-link-actions-1", LineHeight, Row))
+		if(Flow.Control("friend-link-actions-1", LineHeight, Row, LineSpacing))
 		{
 			Row.VSplitMid(&LeftButton, &RightButton, LineSpacing);
 			if(DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_QmClientWebsiteButton, "credits-links-qmclient-website", Localize("QmClient Website"), 0, &LeftButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, -1.0f, EQmIcon::HOUSE, FONT_ICON_HOUSE, &s_aSiteIcons[ICON_QMCLIENT]) && Flow.Input() && !ReadOnly && !Ui()->RenderOnly())
@@ -525,8 +523,7 @@ void CMenus::AppendFriendLinkCards(std::vector<SSettingsCardDefinition> &vCards,
 			if(DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_ShengyanButton, "credits-links-shengyan", "shengyan 北京服", 0, &RightButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, -1.0f, EQmIcon::NETWORK_WIRED, FONT_ICON_NETWORK_WIRED, &s_aSiteIcons[ICON_SHENGYAN]) && Flow.Input() && !ReadOnly && !Ui()->RenderOnly())
 				Client()->ViewLink("https://shengyan.art/");
 		}
-		Flow.Space(LineSpacing);
-		if(Flow.Control("friend-link-actions-2", LineHeight, Row))
+		if(Flow.Control("friend-link-actions-2", LineHeight, Row, LineSpacing))
 		{
 			Row.VSplitMid(&LeftButton, &RightButton, LineSpacing);
 			if(DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_TeeDataButton, "credits-links-teedata", "TeeData 官方资源库", 0, &LeftButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, -1.0f, EQmIcon::FOLDER_OPEN, FONT_ICON_FOLDER_OPEN, &s_aSiteIcons[ICON_TEEDATA]) && Flow.Input() && !ReadOnly && !Ui()->RenderOnly())
@@ -534,8 +531,7 @@ void CMenus::AppendFriendLinkCards(std::vector<SSettingsCardDefinition> &vCards,
 			if(DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_DdStatsButton, "credits-links-ddstats", "DDStats 官方统计网站", 0, &RightButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, -1.0f, EQmIcon::LIST_UL, FONT_ICON_LIST_UL, &s_aSiteIcons[ICON_DDSTATS]) && Flow.Input() && !ReadOnly && !Ui()->RenderOnly())
 				Client()->ViewLink("https://ddstats.tw/");
 		}
-		Flow.Space(LineSpacing);
-		if(Flow.Control("friend-link-actions-3", LineHeight, Row))
+		if(Flow.Control("friend-link-actions-3", LineHeight, Row, LineSpacing))
 		{
 			// 单枚按钮同样占半行，与其余行保持同一栅格。
 			Row.VSplitMid(&LeftButton, &RightButton, LineSpacing);
@@ -587,16 +583,14 @@ void CMenus::AppendQmClientContributorCards(std::vector<SSettingsCardDefinition>
 				s_QQCopied = false;
 			DoSettingsMenuLabel(SETTINGS_CONTRIBUTORS, -1, -1, "qmclient-community-qq-group-copy", &Row, Flow.PublishedText("community-qq-copy", pCopyText), TipSize, TEXTALIGN_ML, {.m_MaxWidth = Row.w, .m_EnableWidthCheck = false}, (int)Row.w);
 		}
-		Flow.Space(LineSpacing);
 
-		if(Flow.Control("community-join-qq", LineHeight, Row))
+		if(Flow.Control("community-join-qq", LineHeight, Row, LineSpacing))
 		{
 			if(DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_JoinQqGroupButton, "qmclient-community-join-qq-group", Localize("Join QQ group"), 0, &Row) && Flow.Input() && !ReadOnly && !Ui()->RenderOnly())
 				Client()->ViewLink(pQmClientQqGroupLink);
 		}
-		Flow.Space(LineSpacing);
 
-		if(Flow.Control("community-updates", LineHeight, Row))
+		if(Flow.Control("community-updates", LineHeight, Row, LineSpacing))
 		{
 			if(DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_RecentUpdateButton, "qmclient-community-view-latest-updates", Localize("View latest updates"), 0, &Row) && Flow.Input() && !ReadOnly && !Ui()->RenderOnly())
 				Client()->ViewLink("https://qmclient.icu");
@@ -642,9 +636,8 @@ void CMenus::AppendQmClientContributorCards(std::vector<SSettingsCardDefinition>
 			s_ShowSponsorQrCode = !s_ShowSponsorQrCode;
 		if(s_ShowSponsorQrCode)
 		{
-			Flow.Space(LineHeight * 0.5f);
 			const float QrSide = std::clamp(Content.w, LineHeight * 8.0f, LineHeight * 12.0f);
-			const bool HasQr = Flow.Control("sponsor-qr-image", QrSide, Row);
+			const bool HasQr = Flow.Control("sponsor-qr-image", QrSide, Row, LineHeight * 0.5f);
 			if(HasQr && Flow.Drawing() && !ReadOnly && EnsureSponsorQrTexture(Graphics()))
 			{
 				CUIRect QrRect = Row;
@@ -742,8 +735,7 @@ void CMenus::AppendQmClientContributorCards(std::vector<SSettingsCardDefinition>
 
 		if(HasSponsorDeveloper)
 		{
-			Flow.Space(LineSpacing);
-			if(Flow.Control("sponsor-developer-actions", LineHeight, Row))
+			if(Flow.Control("sponsor-developer-actions", LineHeight, Row, LineSpacing))
 			{
 				static ui_widget::SSettingsActionGroupState s_DeveloperWidths;
 				const char *apActions[] = {Localize("Reload"), Localize("Publish"), Localize("Open folder")};

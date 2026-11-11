@@ -209,70 +209,65 @@ TEST(QmCardRegistry, BindWheelUsesTwoColumnsByDefault)
 	EXPECT_NE(pEditor->m_Column, pPreview->m_Column);
 }
 
-// 意图：注册表必须覆盖当前 Tclient 运行时 section 的 stable card id。
-// 这些 id 是全局 Search/迁移/默认补位的事实来源，漏掉会让对应卡片从全局卡片系统消失。
+// 意图：注册表必须覆盖当前 Tclient 运行时 section 的 stable card id，并写明每张卡的当前归属页。
+// 归属页是可变的重构结果（预测相关三卡已迁到 DDNet 页的「网络补偿」子页签），所以断言
+// 「注册表覆盖 + 归属正确」，不再用一句「全都属于 tclient」把页面结构焊死。
 TEST(QmCardRegistry, CoversCurrentTClientSectionIds)
 {
-	const char *apIds[] = {
-		"tclient:visual-font-cursor",
-		"tclient:visual-nameplates",
-		"tclient:visual-effects",
-		"tclient:input",
-		"tclient:anti-latency-tools",
-		"tclient:improved-anti-ping",
-		"tclient:execute-on-join",
-		"tclient:voting",
-		"tclient:auto-reply",
-		"tclient:player-indicator",
-		"tclient:pet",
-		"tclient:hud",
-		"tclient:tee-status-bar",
-		"tclient:tile-outlines",
-		"tclient:ghost-tools",
-		"tclient:rainbow",
-		"tclient:tee-trails",
-		"tclient:background-draw",
-		"tclient:finish-name",
-	};
-	for(const char *pId : apIds)
+	struct SExpectation
 	{
-		const auto *pDefault = qm_card_registry::FindByStableId(pId);
-		ASSERT_NE(pDefault, nullptr) << pId;
-		EXPECT_STREQ(pDefault->m_pDefaultTab, "tclient") << pId;
+		const char *m_pStableId;
+		const char *m_pTab;
+	};
+	const SExpectation aIds[] = {
+		{"tclient:visual-font-cursor", "tclient"},
+		{"tclient:visual-nameplates", "tclient"},
+		{"tclient:visual-effects", "tclient"},
+		// 预测相关三卡：实现仍是 TClient 卡，归属页是 DDNet 页的「网络补偿」子页签。
+		{"tclient:input", "ddnet-prediction"},
+		{"tclient:anti-latency-tools", "ddnet-prediction"},
+		{"tclient:improved-anti-ping", "ddnet-prediction"},
+		{"tclient:execute-on-join", "tclient"},
+		{"tclient:voting", "tclient"},
+		{"tclient:auto-reply", "tclient"},
+		{"tclient:player-indicator", "tclient"},
+		{"tclient:pet", "tclient"},
+		{"tclient:hud", "tclient"},
+		{"tclient:tee-status-bar", "tclient"},
+		{"tclient:tile-outlines", "tclient"},
+		{"tclient:ghost-tools", "tclient"},
+		{"tclient:rainbow", "tclient"},
+		{"tclient:tee-trails", "tclient"},
+		{"tclient:background-draw", "tclient"},
+		{"tclient:finish-name", "tclient"},
+	};
+	for(const SExpectation &Expectation : aIds)
+	{
+		const auto *pDefault = qm_card_registry::FindByStableId(Expectation.m_pStableId);
+		ASSERT_NE(pDefault, nullptr) << Expectation.m_pStableId;
+		EXPECT_STREQ(pDefault->m_pDefaultTab, Expectation.m_pTab) << Expectation.m_pStableId;
 	}
 }
 
-// 意图：tclient 页卡片全部登记在同一 tab 下，默认瀑布把两列都填满并保持高度接近，
-// 不再依赖"逐张交替"的手写列号。
+// 意图：Tclient 页卡片全部登记在同一 tab 下，默认瀑布把两列都填满并保持高度接近，
+// 不再依赖"逐张交替"的手写列号。页面成员从 CatalogPageStableIds()（生产事实）取，
+// 迁移走的卡片不应再留在 TClient 页。
 TEST(QmCardRegistry, TClientMainCardsFillBothDefaultColumns)
 {
-	const char *apIds[] = {
-		"tclient:visual-font-cursor",
-		"tclient:visual-nameplates",
-		"tclient:visual-effects",
-		"tclient:input",
-		"tclient:anti-latency-tools",
-		"tclient:improved-anti-ping",
-		"tclient:execute-on-join",
-		"tclient:voting",
-		"tclient:auto-reply",
-		"tclient:player-indicator",
-		"tclient:pet",
-		"tclient:hud",
-		"tclient:tee-status-bar",
-		"tclient:tile-outlines",
-		"tclient:ghost-tools",
-		"tclient:rainbow",
-		"tclient:tee-trails",
-		"tclient:background-draw",
-		"tclient:finish-name",
-	};
-	for(const char *pId : apIds)
+	const auto &vIds = qm_card_catalog::CatalogPageStableIds("tclient");
+	ASSERT_FALSE(vIds.empty());
+	for(const char *pId : vIds)
 	{
 		const qm_card_order::SEntry *pPlacement = qm_card_registry::FindDefaultPlacement(pId);
 		ASSERT_NE(pPlacement, nullptr) << pId;
 		EXPECT_STREQ(pPlacement->m_pDefaultTab, "tclient") << pId;
 		EXPECT_GT(pPlacement->m_Column, 0) << pId;
+	}
+	// 预测相关三卡整卡迁到 DDNet 页「网络补偿」子页签，TClient 页不再有它们的副本。
+	for(const char *pMoved : {"tclient:input", "tclient:anti-latency-tools", "tclient:improved-anti-ping"})
+	{
+		const bool StillInTClient = std::any_of(vIds.begin(), vIds.end(), [pMoved](const char *pId) { return str_comp(pId, pMoved) == 0; });
+		EXPECT_FALSE(StillInTClient) << pMoved;
 	}
 	const STabColumnBalance Balance = DefaultColumnBalance("tclient");
 	EXPECT_GT(Balance.m_Counts[0], 0);

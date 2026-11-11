@@ -807,7 +807,11 @@ void CMenusIngameTouchControls::RenderTouchButtonBrowser(CUIRect MainView)
 	MainView.HSplitTop(FONTSIZE / CUi::ms_FontmodHeight, &EditBox, &MainView);
 	static CListBox s_PreviewListBox;
 	EditBox.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_T, 5.0f);
-	EditBox.VSplitRight(s_PreviewListBox.ScrollbarWidthMax(), &EditBox, nullptr);
+	// 列表头/搜索行给滚动条让位：该列表保持原外观（没开胶囊行），行宽由滚动区裁掉
+	// 「解析后的轨道厚度」；RowReserveWidth() 在非胶囊列表上返回 0，退回同一个解析值
+	// （ScrollbarWidthMax 就是行内实际被裁掉的厚度），表头与列不再各算一套。
+	const float PreviewListScrollbarReserve = s_PreviewListBox.RowReserveWidth() > 0.0f ? s_PreviewListBox.RowReserveWidth() : s_PreviewListBox.ScrollbarWidthMax();
+	EditBox.VSplitRight(PreviewListScrollbarReserve, &EditBox, nullptr);
 	EditBox.VSplitLeft(ROWSIZE, nullptr, &EditBox);
 
 	float PosWidth = EditBox.w * 4.0f / 9.0f; // Total pos width.

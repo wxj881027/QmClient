@@ -410,7 +410,14 @@ void CMenus::RenderAudioPackEditorScreen(CUIRect MainView)
 	for(int Index = 0; Index < (int)vVisible.size(); ++Index)
 		if(vVisible[Index] == GroupIndex)
 			VisibleSelection = Index;
-	s_GroupList.DoStart(EditorLineSize * 2.0f, (int)vVisible.size(), 1, 3, VisibleSelection, &Catalog, false);
+	// 组列表填满目录面板：行数取「面板高度装得下的整数行」与实际条目数的较小值，
+	// 高度反推给 CListBox 的自适应上限（RowsHeight），末行才不会被面板底边裁一半。
+	const float GroupRowHeight = EditorLineSize * 2.0f;
+	const int GroupRowsFit = std::max(1, (int)((Catalog.h + ui_token::list::ROW_SPACING) / (GroupRowHeight + ui_token::list::ROW_SPACING)));
+	const int GroupRows = std::min(GroupRowsFit, ui_token::list::VisibleRows((int)vVisible.size(), 1, 1, GroupRowsFit));
+	s_GroupList.SetCapsuleRows(EditorFontSize);
+	s_GroupList.SetVisibleRowRange(GroupRows, GroupRows);
+	s_GroupList.DoStart(GroupRowHeight, (int)vVisible.size(), 1, 3, VisibleSelection, &Catalog, false);
 	for(int Index = 0; Index < (int)vVisible.size(); ++Index)
 	{
 		const auto &Group = s_vGroups[vVisible[Index]];
@@ -418,7 +425,8 @@ void CMenus::RenderAudioPackEditorScreen(CUIRect MainView)
 		if(!Item.m_Visible)
 			continue;
 		CUIRect NameRow, IdRow;
-		Item.m_Rect.HSplitMid(&NameRow, &IdRow);
+		// 行内容排在内容区：胶囊行已经让出左右内退与滚动条那一列。
+		Item.m_ContentRect.HSplitMid(&NameRow, &IdRow);
 		char aName[256];
 		str_format(aName, sizeof(aName), "%s [%d]", Group.m_pInfo->m_pSetName[0] != '\0' ? Localize(Group.m_pInfo->m_pName) : Group.m_pSetName, (int)Group.m_vSlotIndices.size());
 		Label(NameRow, aName);
@@ -446,6 +454,10 @@ void CMenus::RenderAudioPackEditorScreen(CUIRect MainView)
 
 	const auto &Group = s_vGroups[GroupIndex];
 	CScrollRegionParams ScrollParams = QmScrollRegionParamsForSize(EQmScrollSize::MEDIUM, Metrics.m_UiScale);
+	// 轨道粗细/边距统一取列表 token：整面板滚动面和 CListBox 共用同一条覆盖式滚动条，
+	// 不再按面板档另取一套粗细。
+	ScrollParams.m_ScrollbarThickness = ui_token::list::SCROLLBAR_WIDTH;
+	ScrollParams.m_ScrollbarMargin = ui_token::list::SCROLLBAR_MARGIN;
 	ScrollParams.m_WheelOwnerPriority = EUiWheelOwnerPriority::PAGE;
 	vec2 ScrollOffset;
 	s_WorkspaceScroll.Begin(&Workspace, &ScrollOffset, &ScrollParams);
@@ -533,9 +545,15 @@ void CMenus::RenderAudioPackEditorScreen(CUIRect MainView)
 	for(int Index = 0; Index < (int)vCandidates.size(); ++Index)
 		if(vCandidates[Index] == m_AudioPackEditorState.m_SelectedCandidateIndex)
 			CandidateSelection = Index;
-	const CUIRect CandidateRect = Take(EditorLineSize * 6.0f);
+	// 候选列表最多 3 行（沿用原面板高度），行数按实际候选数收；
+	// 高度用 RowsHeight 派生，和 CListBox 的自适应上限同源。
+	const float CandidateRowHeight = EditorLineSize * 2.0f;
+	const int CandidateRows = std::clamp((int)vCandidates.size(), 1, 3);
+	const CUIRect CandidateRect = Take(ui_token::list::RowsHeight(CandidateRows, CandidateRowHeight, ui_token::list::ROW_SPACING));
 	s_CandidateList.SetWheelOwnerPriority(EUiWheelOwnerPriority::COMPOSITE_CONTROL);
-	s_CandidateList.DoStart(EditorLineSize * 2.0f, (int)vCandidates.size(), 1, 3, CandidateSelection, &CandidateRect);
+	s_CandidateList.SetCapsuleRows(EditorFontSize);
+	s_CandidateList.SetVisibleRowRange(CandidateRows, CandidateRows);
+	s_CandidateList.DoStart(CandidateRowHeight, (int)vCandidates.size(), 1, 3, CandidateSelection, &CandidateRect);
 	for(int Index = 0; Index < (int)vCandidates.size(); ++Index)
 	{
 		const auto &Entry = m_AudioPackEditorState.m_vCandidateEntries[vCandidates[Index]];
@@ -543,7 +561,8 @@ void CMenus::RenderAudioPackEditorScreen(CUIRect MainView)
 		if(!Item.m_Visible)
 			continue;
 		CUIRect FileRow, OriginRow;
-		Item.m_Rect.HSplitMid(&FileRow, &OriginRow);
+		// 两行内容都排在内容区：胶囊行的左右内退与滚动条那一列的缝由组件让出。
+		Item.m_ContentRect.HSplitMid(&FileRow, &OriginRow);
 		const auto Slash = Entry.m_Path.find_last_of('/');
 		const char *pFilename = Slash != std::string::npos ? Entry.m_Path.c_str() + Slash + 1 : Entry.m_Path.c_str();
 		char aFilename[IO_MAX_PATH_LENGTH + 64];

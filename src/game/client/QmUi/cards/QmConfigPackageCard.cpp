@@ -139,6 +139,15 @@ bool qm_card_catalog::QmCardRenderHook::BuildConfigFilesCard(const SQmCardBuildC
 				Action(Rect);
 			Flow.Space(ui_token::settings::RowGap(Metrics.m_LineSpacing));
 		};
+		// 列表行按胶囊行渲染：高度按整数行派生（RowsHeight），与 CListBox 的自适应上限
+		// 同源；行数取实际条目数，空列表不占高度（留一块没有背景的空面板没有意义）。
+		const auto ListRowAction = [&](const char *pId, int ItemCount, int MaxRows, auto &&Action) {
+			CUIRect Rect;
+			const int Rows = ui_token::list::VisibleRows(ItemCount, 1, 1, MaxRows);
+			if(Flow.Control(pId, ui_token::list::RowsHeight(Rows, RowHeight, ui_token::list::ROW_SPACING), Rect))
+				Action(Rect, Rows);
+			Flow.Space(ui_token::settings::RowGap(Metrics.m_LineSpacing));
+		};
 		const auto Text = [&](const char *pId, const char *pValue, float Rows = 1) {
 			Flow.Text(pId, pValue, 0.0f, Metrics.m_BodySize, ui_token::settings::RowGap(Metrics.m_LineSpacing), [pMenus](const char *pText, float Width, float FontSize) { return pMenus->TextRender()->TextBoundingBox(FontSize, pText, -1, Width).m_H + FontSize * 0.25f; }, [pMenus, Metrics](const CUIRect &Rect, const char *pText) { pMenus->Ui()->DoLabel(&Rect, pText, Metrics.m_BodySize, TEXTALIGN_ML, {.m_MaxWidth = Rect.w, .m_EnableWidthCheck = false}); }, Rows * RowHeight + (Rows - 1) * Metrics.m_LineSpacing);
 		};
@@ -209,15 +218,18 @@ bool qm_card_catalog::QmCardRenderHook::BuildConfigFilesCard(const SQmCardBuildC
 		if(!State.m_Import)
 		{
 			Text("config-export-help", Localize("Settings, binds, profiles, chat binds and the war list are included. Select additional cfg files below."), 2);
-			RowAction("config-export-files", 8, [&](CUIRect ListRect) {
+			ListRowAction("config-export-files", (int)State.m_vCustomFiles.size(), 8, [&](CUIRect ListRect, int Rows) {
 				State.m_CustomList.SetActive(Interactive);
 				State.m_CustomList.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);
+				// 胶囊行 + 锁死整数可见行：行距与行内退走列表 token，末行不会被裁一半。
+				State.m_CustomList.SetCapsuleRows(Metrics.m_BodySize);
+				State.m_CustomList.SetVisibleRowRange(Rows, Rows);
 				State.m_CustomList.DoStart(RowHeight, State.m_vCustomFiles.size(), 1, 4, State.m_CustomSelection, &ListRect);
 				for(auto &Item : State.m_vCustomFiles)
 				{
 					const auto ListItem = State.m_CustomList.DoNextItem(&Item.m_Id);
 					if(ListItem.m_Visible)
-						PathLabel(&Item.m_Id, ListItem.m_Rect, ((Item.m_Selected ? "[x] " : "[ ] ") + Item.m_Path).c_str(), Item.m_Path.c_str());
+						PathLabel(&Item.m_Id, ListItem.m_ContentRect, ((Item.m_Selected ? "[x] " : "[ ] ") + Item.m_Path).c_str(), Item.m_Path.c_str());
 				}
 				const int Selected = State.m_CustomList.DoEnd();
 				if(Interactive && Selected >= 0 && Selected < static_cast<int>(State.m_vCustomFiles.size()))
@@ -258,15 +270,17 @@ bool qm_card_catalog::QmCardRenderHook::BuildConfigFilesCard(const SQmCardBuildC
 			Text("config-import-help", Localize("Copy a .qmconfig file into the package folder, then refresh."));
 			if(HasPackages)
 			{
-				RowAction("config-package-list", 5, [&](CUIRect ListRect) {
+				ListRowAction("config-package-list", (int)State.m_vPackages.size(), 5, [&](CUIRect ListRect, int Rows) {
 					State.m_PackageList.SetActive(Interactive);
 					State.m_PackageList.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);
+					State.m_PackageList.SetCapsuleRows(Metrics.m_BodySize);
+					State.m_PackageList.SetVisibleRowRange(Rows, Rows);
 					State.m_PackageList.DoStart(RowHeight, State.m_vPackages.size(), 1, 4, State.m_SelectedPackage, &ListRect);
 					for(auto &Item : State.m_vPackages)
 					{
 						const auto ListItem = State.m_PackageList.DoNextItem(&Item.m_Id, false);
 						if(ListItem.m_Visible)
-							PathLabel(&Item.m_Id, ListItem.m_Rect, Item.m_Path.c_str() + str_length(qm_config_package::PACKAGE_DIRECTORY) + 1, Item.m_Path.c_str());
+							PathLabel(&Item.m_Id, ListItem.m_ContentRect, Item.m_Path.c_str() + str_length(qm_config_package::PACKAGE_DIRECTORY) + 1, Item.m_Path.c_str());
 					}
 					const int Selected = State.m_PackageList.DoEnd();
 					if(Interactive && Selected != State.m_SelectedPackage && Selected >= 0 && Selected < static_cast<int>(State.m_vPackages.size()))
@@ -283,9 +297,11 @@ bool qm_card_catalog::QmCardRenderHook::BuildConfigFilesCard(const SQmCardBuildC
 			{
 				std::string Metadata = State.m_Preview.m_ClientVersion + " | " + State.m_Preview.m_ExportedAt;
 				Text("config-package-metadata", Metadata.c_str(), 2);
-				RowAction("config-package-preview", 7, [&](CUIRect ListRect) {
+				ListRowAction("config-package-preview", (int)State.m_Preview.m_vFiles.size(), 7, [&](CUIRect ListRect, int Rows) {
 					State.m_PreviewList.SetActive(false);
 					State.m_PreviewList.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);
+					State.m_PreviewList.SetCapsuleRows(Metrics.m_BodySize);
+					State.m_PreviewList.SetVisibleRowRange(Rows, Rows);
 					State.m_PreviewList.DoStart(RowHeight, State.m_Preview.m_vFiles.size(), 1, 4, -1, &ListRect);
 					for(size_t Index = 0; Index < State.m_Preview.m_vFiles.size(); ++Index)
 					{
@@ -294,7 +310,7 @@ bool qm_card_catalog::QmCardRenderHook::BuildConfigFilesCard(const SQmCardBuildC
 						if(Item.m_Visible)
 						{
 							const std::string Text = File.m_Path + (File.m_Present ? " (" + std::to_string(File.m_Content.size()) + " B)" : std::string(" (") + Localize("Remove") + ")");
-							PathLabel(&State.m_vPreviewIds[Index], Item.m_Rect, Text.c_str(), File.m_Path.c_str());
+							PathLabel(&State.m_vPreviewIds[Index], Item.m_ContentRect, Text.c_str(), File.m_Path.c_str());
 						}
 					}
 					State.m_PreviewList.DoEnd();

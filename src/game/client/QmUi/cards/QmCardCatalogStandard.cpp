@@ -33,6 +33,9 @@ namespace qm_card_catalog
 		case 2: return Ctx.m_pMenus->BuildSoundSettingsCards(Ctx, pCards);
 		case 3: return Ctx.m_pMenus->BuildDDNetSettingsCards(Ctx, pCards);
 		case 10: return Ctx.m_pMenus->BuildTee7SettingsCards(Ctx, pCards);
+		// DDNet 页「网络补偿」子页签与常规子页签共用同一个 DDNet 卡片构建器，
+		// 由 BuildStandardCard 按 stableId 取走本卡。
+		case 11: return Ctx.m_pMenus->BuildDDNetSettingsCards(Ctx, pCards);
 		default:
 			if(Family >= 4 && Family < (int)10)
 				return Ctx.m_pMenus->BuildAppearanceSettingsCards(Ctx, pCards, Family - 4);
@@ -42,7 +45,7 @@ namespace qm_card_catalog
 
 	uint64_t QmCardRenderHook::PrepareStandardCards(const SQmCardBuildContext &Ctx, const std::vector<const char *> &vStableIds)
 	{
-		std::array<bool, 11> aPrepared{};
+		std::array<bool, 12> aPrepared{};
 		uint64_t Revision = 0;
 		for(const char *pStableId : vStableIds)
 		{

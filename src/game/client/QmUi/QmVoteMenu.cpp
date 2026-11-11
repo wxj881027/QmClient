@@ -182,6 +182,10 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	// 列表行比旧版高一点：条目左侧要放得下正常比例的地图缩略图，否则只能看到
 	// 缩略图里的一条横线，玩家认不出是哪张图。封面图尺寸固定，与窗口宽度无关。
 	constexpr float RowHeight = 32.0f;
+	// 这个列表靠 SkipItems 做可见范围裁剪，而 SkipItems 不会推进行距（CListBox 自动行距
+	// 在裁剪路径上不成立），所以把行距并进行高：行本身仍是 RowHeight，行距留在行矩形
+	// 下方，滚动/裁剪/命中都与同一个 pitch 走，视觉上仍是胶囊行 + 半档行距。
+	const float RowPitch = RowHeight + ui_token::list::ROW_SPACING;
 	const float RowCoverHeight = RowHeight - 2.0f;
 	const float RowCoverWidth = RowCoverHeight * (float)CQmMapCovers::ROW_WIDTH / (float)CQmMapCovers::ROW_HEIGHT;
 	const float RowNameInset = 20.0f + 16.0f + 4.0f + RowCoverWidth + 6.0f;
@@ -329,7 +333,9 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		DrawRoundedSurface(Ui(), Sidebar, Ink.WithAlpha(0.025f), Ink.WithAlpha(0.10f), 8.0f, 1.0f);
 		Sidebar.Margin(4.0f, &Sidebar);
 		static CListBox s_Categories;
-		s_Categories.SetItemColors(Ink.WithAlpha(0.12f), Ink.WithAlpha(0.08f), Ink.WithAlpha(0.05f));
+		// 选中/悬浮走 CListBox 的统一默认（主题选中色 / 列表 token），行距半档，
+		// 圆角按行高推导成胶囊；不再用本页 Ink 另调一套。
+		s_Categories.DoAutoSpacing(ui_token::list::ROW_SPACING);
 		int SelectedCategory = 0;
 		for(size_t i = 0; i < std::size(s_apCategories); ++i)
 			if(State.m_Filter.m_Category == s_apCategories[i])
@@ -339,11 +345,11 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		static int s_AllCategory;
 		for(size_t i = 0; i <= std::size(s_apCategories); ++i)
 		{
-			const CListboxItem Item = s_Categories.DoNextItem(i == 0 ? (const void *)&s_AllCategory : (const void *)&s_apCategories[i - 1]);
+			const CListboxItem Item = s_Categories.DoNextItem(i == 0 ? (const void *)&s_AllCategory : (const void *)&s_apCategories[i - 1], false, ui_token::list::RowRadius(s_Categories.RowHeight()));
 			if(Item.m_Visible)
 			{
-				CUIRect Text = Item.m_Rect;
-				Text.VMargin(8.0f, &Text);
+				// 行文字排在组件让出左右内退后的内容区；DDmaX 子分类额外缩进一级。
+				CUIRect Text = Item.m_ContentRect;
 				if(i > 0 && str_startswith(s_apCategories[i - 1], "DDmaX "))
 					Text.VSplitLeft(8.0f, nullptr, &Text);
 				Label(Text, i == 0 ? Localize("All maps") : CategoryLabel(s_apCategories[i - 1]), 12.0f);
@@ -420,9 +426,10 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	List.HSplitTop(4.0f, nullptr, &List);
 	const bool Wide = List.w >= 540.0f;
 	const bool HasMapper = List.w >= 340.0f;
+	// 列排版只做水平切分：行传 CListBox 让出左右内退后的内容矩形；表头不在行里，
+	// 由调用点先用同一 token 内退，两类矩形同宽同起点，列才对得齐。
 	auto Columns = [&](CUIRect Row) {
 		std::array<CUIRect, 5> aRects{};
-		Row.VMargin(8.0f, &Row);
 		if(Wide)
 		{
 			Row.VSplitRight(86.0f, &Row, &aRects[4]);
@@ -442,8 +449,10 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	// 之后再画表头文字会被整行裁掉。滚动条宽度沿用上一帧 DoStart 记录的
 	// 策略宽度（与服务器列表表头同一做法），列宽仍按滚动条占用扣除。
 	CUIRect HeaderColumns = TableHeader;
-	const bool HeaderScrolls = (float)State.m_vVisible.size() * RowHeight > List.h;
+	const bool HeaderScrolls = (float)State.m_vVisible.size() * RowPitch > List.h;
 	HeaderColumns.VSplitRight(HeaderScrolls ? s_Maps.ScrollbarWidthMax() : 0.0f, &HeaderColumns, nullptr);
+	// 表头不在列表行里、拿不到 m_ContentRect：用与行内容区同一 token 源内退。
+	HeaderColumns.VMargin(ui_token::list::RowInsetX(ui_token::font::BODY), &HeaderColumns);
 	const auto aHead = Columns(HeaderColumns);
 	CUIRect MapHeading = aHead[0];
 	// 表头“地图”与行内名称对齐：前面是收藏星标、完成标记和缩略图。
@@ -466,29 +475,34 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	s_Maps.SetActive(!Ui()->IsPopupOpen() && !m_FilterInput.IsActive() && !m_ExcludeInput.IsActive());
 	if(ScrollToSelection)
 		s_Maps.ScrollToSelected();
-	s_Maps.DoStart(RowHeight, (int)State.m_vVisible.size(), 1, 3, Selected, &List, false);
+	s_Maps.DoStart(RowPitch, (int)State.m_vVisible.size(), 1, 3, Selected, &List, false);
 	const int ItemCount = (int)State.m_vVisible.size();
 	const float ScrollY = std::max(0.0f, s_Maps.ScrollOffsetY());
-	const int FirstVisible = ScrollToSelection ? 0 : std::clamp((int)std::floor(ScrollY / RowHeight) - 1, 0, ItemCount);
-	const int EndVisible = ScrollToSelection ? ItemCount : std::clamp((int)std::ceil((ScrollY + s_Maps.ViewHeight()) / RowHeight) + 1, FirstVisible, ItemCount);
+	const int FirstVisible = ScrollToSelection ? 0 : std::clamp((int)std::floor(ScrollY / RowPitch) - 1, 0, ItemCount);
+	const int EndVisible = ScrollToSelection ? ItemCount : std::clamp((int)std::ceil((ScrollY + s_Maps.ViewHeight()) / RowPitch) + 1, FirstVisible, ItemCount);
 	// 全目录仍参与滚动几何，只给可见行做命中测试和文字布局。
 	s_Maps.SkipItems(FirstVisible);
 	for(int Row = FirstVisible; Row < EndVisible; ++Row)
 	{
 		const int Index = State.m_vVisible[Row];
 		const auto &Map = State.m_vMaps[Index];
-		const CListboxItem Item = s_Maps.DoNextItem(&Map);
+		const CListboxItem Item = s_Maps.DoNextItem(&Map, false, ui_token::list::RowRadius(RowHeight));
 		if(!Item.m_Visible)
 			continue;
 		auto Blur = Item.SuppressGaussianBlur();
+		// 行矩形含行距，胶囊只画行高那一截；选中/悬浮改用列表统一来源（主题选中色 /
+		// 列表 token），不再有左侧竖条，也不再写死圆角。
+		CUIRect RowRect = Item.m_Rect;
+		RowRect.h = RowHeight;
 		const float SelectionAlpha = s_Maps.SelectionFeedbackAlpha(Row);
 		if(SelectionAlpha > 0.001f)
-			DrawRoundedSurface(Ui(), Item.m_Rect, Ui()->ScaleBackgroundAlpha(Ink.WithAlpha(s_Maps.Active() ? 0.12f : 0.08f)).WithMultipliedAlpha(SelectionAlpha), ColorRGBA(), 5.0f);
+			DrawRoundedSurface(Ui(), RowRect, Ui()->ScaleBackgroundAlpha(Ui()->QmControlTheme().m_Selected).WithMultipliedAlpha(SelectionAlpha), ColorRGBA(), ui_token::list::RowRadius(RowHeight));
 		if(Ui()->HotItem() == &Map)
-			DrawRoundedSurface(Ui(), Item.m_Rect, Ui()->ScaleBackgroundAlpha(Ink.WithAlpha(0.05f)), ColorRGBA(), 5.0f);
-		if(Item.m_Selected)
-			CUIRect{Item.m_Rect.x, Item.m_Rect.y + 4.0f, 2.0f, Item.m_Rect.h - 8.0f}.Draw(Ink.WithAlpha(0.55f), IGraphics::CORNER_ALL, 1.0f);
-		const auto aRow = Columns(Item.m_Rect);
+			DrawRoundedSurface(Ui(), RowRect, Ui()->ScaleBackgroundAlpha(ui_token::color::LIST_ITEM_HOVER), ColorRGBA(), ui_token::list::RowRadius(RowHeight));
+		// 行内容排在组件让出左右内退后的内容区（高度仍按行本身，行距不参与排版）。
+		CUIRect RowContent = Item.m_ContentRect;
+		RowContent.h = RowHeight;
+		const auto aRow = Columns(RowContent);
 		CUIRect MapLabel = aRow[0];
 		CUIRect Marker;
 		MapLabel.VSplitLeft(20.0f, &Marker, &MapLabel);
@@ -520,7 +534,7 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		MapLabel.VSplitLeft(4.0f, nullptr, &MapLabel);
 		CUIRect Cover;
 		MapLabel.VSplitLeft(RowCoverWidth, &Cover, &MapLabel);
-		Cover.y = Item.m_Rect.y + 1.0f;
+		Cover.y = RowContent.y + 1.0f;
 		Cover.h = RowCoverHeight;
 		DrawMapPatch(Cover, Map.m_Thumbnail, CQmMapCovers::ERole::ROW);
 		MapLabel.VSplitLeft(6.0f, nullptr, &MapLabel);
@@ -738,9 +752,10 @@ void CMenus::RenderVotePlayerList(CUIRect MainView, bool MoveToSpectators)
 		TextRender()->TextColor(Previous);
 	};
 	const bool ShowClan = MainView.w >= 340.0f;
+	// 列排版只做水平切分：行传 CListBox 让出左右内退后的内容矩形，表头不在行里，
+	// 先用同一 token 内退，两类矩形同宽同起点，列才对得齐。
 	auto Columns = [&](CUIRect Row) {
 		std::array<CUIRect, 2> aRects{};
-		Row.VMargin(8.0f, &Row);
 		if(ShowClan)
 			Row.VSplitRight(Row.w * 0.35f, &Row, &aRects[1]);
 		aRects[0] = Row;
@@ -749,7 +764,9 @@ void CMenus::RenderVotePlayerList(CUIRect MainView, bool MoveToSpectators)
 	CUIRect TableHeader;
 	MainView.HSplitTop(20.0f, &TableHeader, &MainView);
 	TableHeader.Draw(Ink.WithAlpha(0.06f), IGraphics::CORNER_ALL, 4.0f);
-	const auto aHead = Columns(TableHeader);
+	CUIRect HeadContent = TableHeader;
+	HeadContent.VMargin(ui_token::list::RowInsetX(ui_token::font::BODY), &HeadContent);
+	const auto aHead = Columns(HeadContent);
 	Label(aHead[0], Localize("Player"), true);
 	if(ShowClan)
 		Label(aHead[1], Localize("Clan"), true);
@@ -769,16 +786,19 @@ void CMenus::RenderVotePlayerList(CUIRect MainView, bool MoveToSpectators)
 	}
 	static CListBox s_aPlayerLists[2];
 	auto &ListBox = s_aPlayerLists[PageIndex];
-	ListBox.SetItemColors(Ink.WithAlpha(0.12f), Ink.WithAlpha(0.08f), Ink.WithAlpha(0.05f));
+	// 选中/悬浮走 CListBox 的统一默认（主题选中色 / 列表 token），行距半档，
+	// 圆角按行高推导成胶囊；不再用本页 Ink 另调一套。
+	ListBox.DoAutoSpacing(ui_token::list::ROW_SPACING);
 	ListBox.SetActive(!Ui()->IsPopupOpen() && !SearchInput.IsActive() && !ExcludeInput.IsActive() && !m_CallvoteReasonInput.IsActive());
 	ListBox.DoStart(24.0f, NumPlayers, 1, 3, Selected, &MainView, false);
 	for(int i = 0; i < NumPlayers; ++i)
 	{
 		const int Id = aPlayerIds[i];
-		const CListboxItem Item = ListBox.DoNextItem(&GameClient()->m_aClients[Id]);
+		const CListboxItem Item = ListBox.DoNextItem(&GameClient()->m_aClients[Id], false, ui_token::list::RowRadius(ListBox.RowHeight()));
 		if(!Item.m_Visible)
 			continue;
-		auto aColumns = Columns(Item.m_Rect);
+		// 行内容跟着内容区左右内退，不再手写 VMargin 补偿。
+		auto aColumns = Columns(Item.m_ContentRect);
 		CUIRect Tee;
 		aColumns[0].VSplitLeft(24.0f, &Tee, &aColumns[0]);
 		aColumns[0].VSplitLeft(4.0f, nullptr, &aColumns[0]);

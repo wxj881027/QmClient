@@ -145,7 +145,9 @@ namespace
 		float m_RowSpacing = 0.0f;
 		float m_RowInsetX = 0.0f;
 		float m_FlagWidth = 0.0f;
-		float m_ScrollbarWidth = 0.0f;
+		// 胶囊行右侧恒定为滚动条列让出的宽度：细轨 + 外边距 + 行与轨道之间的缝，
+		// 与 CListBox 胶囊行的 m_RowReserveRight 同一条公式；滚动条显隐都不改变行宽。
+		float m_RowReserveRight = 0.0f;
 	};
 
 	SLanguageListRowLayout ResolveLanguageListRowLayout(const SSettingsContentMetrics &Metrics)
@@ -159,18 +161,18 @@ namespace
 		Layout.m_RowInsetX = ui_token::list::RowInsetX(Metrics.m_BodySize);
 		// 国旗仍占两倍行高的宽度（现有比例），文字紧随其后。
 		Layout.m_FlagWidth = Layout.m_RowHeight * 2.0f;
-		SQmScrollRequest ScrollRequest;
-		ScrollRequest.m_Profile = EQmScrollProfile::SETTINGS_INNER;
-		Layout.m_ScrollbarWidth = QmResolveScrollPolicy(ScrollRequest, Metrics.m_UiScale).m_Style.m_ScrollbarWidth;
+		// 滚动条统一成列表胶囊行的细轨：粗细/外边距都取列表 token（设置页内层策略
+		// 自带的那一档比列表粗），轨道贴边的那一列再整体让给胶囊行。
+		Layout.m_RowReserveRight = ui_token::list::SCROLLBAR_WIDTH + ui_token::list::SCROLLBAR_MARGIN + ui_token::list::SCROLLBAR_ROW_GAP;
 		return Layout;
 	}
 
-	// 行矩形：整行包含胶囊背景、命中区和行距之间的行宽，滚动条列始终预留，
+	// 行矩形：整行包含胶囊背景、命中区和行距之间的行宽；滚动条列恒定预留，
 	// 滚动条出现/消失时文字宽度不横跳，缓存键也随之稳定。
 	CUIRect LanguageListRowRect(const CUIRect &ListRect, const SLanguageListRowLayout &Layout)
 	{
 		CUIRect RowRect = ListRect;
-		RowRect.w = maximum(0.0f, RowRect.w - Layout.m_ScrollbarWidth);
+		RowRect.w = maximum(0.0f, RowRect.w - Layout.m_RowReserveRight);
 		return RowRect;
 	}
 
@@ -332,8 +334,17 @@ CUi::EPopupMenuFunctionResult CMenus::PopupSettingsCountrySelection(void *pConte
 	s_ListBox.SetActive(Active);
 	s_ListBox.SetWheelOwnerPriority(EUiWheelOwnerPriority::POPUP);
 	s_ListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_GRID);
-	// 选中/悬停填充由 CListBox 统一绘制；这里只补选中描边，避免同一行画两遍。
-	s_ListBox.SetItemColors(ui_token::color::LIST_ITEM_SELECTED, ui_token::color::LIST_ITEM_SELECTED, ui_token::color::LIST_ITEM_HOVER);
+	// 选中填充（主题选中色）与悬停填充由 CListBox 的胶囊格轨道统一绘制，与下拉弹层
+	// 条目同源；这里不再覆盖颜色，也不补描边。多列网格也走胶囊格：行距、左右内退
+	// 与单列胶囊行同一套，圆角由调用点显式传给 DoNextItem（组件对 ItemsPerRow > 1
+	// 默认仍取小圆角）。行距并进行高：组件自动行距在 ItemsPerRow > 1 时按每个格子
+	// 推进一次，网格行距会随列数放大；这里自己按行步进，滚动条高度才和实际行位一致。
+	const float FlagCellHeight = 44.0f;
+	const float FlagCellStep = FlagCellHeight + ui_token::list::ROW_SPACING;
+	const float FlagCellRadius = ui_token::list::RowRadius(FlagCellHeight);
+	s_ListBox.SetCapsuleRows(ui_token::font::SMALL);
+	s_ListBox.DoAutoSpacing(0.0f);
+	s_ListBox.SetItemSelectionInset(ui_token::list::ROW_SPACING * 0.5f);
 
 	if(pPopupContext->m_New)
 	{
@@ -409,7 +420,9 @@ CUi::EPopupMenuFunctionResult CMenus::PopupSettingsCountrySelection(void *pConte
 		}
 	}
 
-	s_ListBox.DoStart(44.0f, s_vFiltered.size(), Columns, 1, SelectedIndex, &GridArea, false);
+	// 整数行：可见行由可用高度收敛，最后一行完整可见；列表再高也不越出内容区。
+	s_ListBox.SetVisibleRowRange(1, maximum(1, (int)std::floor(std::max(0.0f, GridArea.h) / FlagCellStep)));
+	s_ListBox.DoStart(FlagCellStep, s_vFiltered.size(), Columns, 1, SelectedIndex, &GridArea, false);
 	// 国码文字跟随设置页小字，不再写死 10（窄视口小字会缩到 9，写死就比别处大一号）。
 	const float CountryLabelSize = ResolveSettingsContentMetrics(GridArea.w).m_SmallSize;
 
@@ -418,25 +431,20 @@ CUi::EPopupMenuFunctionResult CMenus::PopupSettingsCountrySelection(void *pConte
 		const SFilteredFlag &Filtered = s_vFiltered[i];
 		const CCountryFlags::CCountryFlag *pEntry = Filtered.m_pEntry;
 		const bool IsSelected = pEntry->m_CountryCode == pPopupContext->m_Selection;
-		const CListboxItem Item = s_ListBox.DoNextItem(pEntry, IsSelected);
+		const CListboxItem Item = s_ListBox.DoNextItem(pEntry, IsSelected, FlagCellRadius);
 		if(!Item.m_Visible)
 			continue;
 
-		const float SelectedAlpha = s_ListBox.SelectionFeedbackAlpha((int)i);
-		if(SelectedAlpha > 0.001f)
-		{
-			// 选中描边与资产卡/列表选中态同源（白 0.7），不用 BORDER_FOCUS 强调蓝；
-			// 填充交给 CListBox 的选中轨道，这里不再叠第二层。
-			DrawRoundedSurface(pUi, Item.m_Rect, ColorRGBA(), ui_token::color::NEUTRAL_WHITE.WithAlpha(ui_token::feedback::ICON_BORDER_ALPHA * SelectedAlpha), ui_token::radius::BASE, 1.0f);
-		}
-
+		// 选中填充由 CListBox 的胶囊格轨道绘制（行内内缩给出格间缝隙），这里不再补描边。
+		// 内容区已含胶囊格的左右内退：旗标与国码都排在这里，纵向让 5 给上下呼吸。
+		const CUIRect CellContent = Item.m_ContentRect;
 		CUIRect FlagRect, Label;
-		Item.m_Rect.Margin(5.0f, &FlagRect);
+		CellContent.HMargin(5.0f, &FlagRect);
 		FlagRect.HSplitBottom(12.0f, &FlagRect, &Label);
 		Label.HSplitTop(2.0f, nullptr, &Label);
-		const float OldWidth = FlagRect.w;
-		FlagRect.w = FlagRect.h * 2.0f;
-		FlagRect.x += (OldWidth - FlagRect.w) / 2.0f;
+		const float FlagWidth = std::min(CellContent.w, FlagRect.h * 2.0f);
+		const float FlagHeight = FlagWidth * 0.5f;
+		FlagRect = {CellContent.x + (CellContent.w - FlagWidth) * 0.5f, FlagRect.y + (FlagRect.h - FlagHeight) * 0.5f, FlagWidth, FlagHeight};
 		int64_t FlagAnimStartTime = s_PopupOpenTime;
 		if(s_PopupOpenTime > 0)
 		{
@@ -810,14 +818,20 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMet
 	const SQmResolvedScrollPolicy ScrollPolicy = QmResolveScrollPolicy(ScrollRequest);
 	CScrollRegionParams ScrollParams = QmScrollRegionParamsFromPolicy(ScrollPolicy);
 	ScrollParams.m_WheelOwnerPriority = EUiWheelOwnerPriority::COMPOSITE_CONTROL;
+	// 滚动条统一成列表胶囊行的细轨：覆盖式轨道不占内容宽度，粗细与外边距取列表
+	// token，覆盖设置页内层策略自带的那一档（比列表粗）；行宽由下面的恒定预留列
+	// 保证，滚动条显隐不会让行宽横跳。
+	ScrollParams.m_ScrollbarOverlay = true;
+	ScrollParams.m_ScrollbarThickness = ui_token::list::SCROLLBAR_WIDTH;
+	ScrollParams.m_ScrollbarMargin = ui_token::list::SCROLLBAR_MARGIN;
 	// 轨道两端按容器圆角内缩：细轨端头不会从容器圆角外侧探出来。
 	ScrollParams.m_ScrollbarTrackInset = ContainerRadius;
 	SSettingsScrollRegionFrame ScrollFrame = BeginSettingsScrollRegion(gs_LanguageScrollRegion, &ScrollView, ScrollParams, s_PrevLanguageScrollY);
 	ScrollOffset = ScrollFrame.m_BeginOffset;
 
-	// 行宽按「始终预留滚动条列」的固定宽度算，与预热缓存的宽度键同源；滚动区 Begin
-	// 会把传进去的容器矩形收窄到实际内容列（宽度随滚动条显隐变化），这里不再重复扣减，
-	// 否则滚动条出现时行宽会被扣两次。
+	// 行宽按「恒定预留滚动条列」算：细轨 + 外边距 + 行与轨道之间的缝
+	// （SCROLLBAR_ROW_GAP），与 CListBox 胶囊行同一公式；预热缓存的宽度键也走这里，
+	// 所以滚动条显隐、内容是否溢出都不改变文字宽度。
 	CUIRect Content = LanguageListRowRect(MainView, RowLayout);
 	Content.y += ScrollOffset.y;
 	int VisibleLanguages = 0;
@@ -889,8 +903,9 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMet
 		if(Ui()->HotItem() == pRowId)
 			s_HoverFeedback.Observe((int)i);
 		const float HoverAlpha = s_HoverFeedback.Alpha((int)i);
-		// 整行胶囊：圆角取自行高，宽高与绘制都走公共 DrawRoundedSurface；
-		// 悬浮先画、选中后叠，选中行被鼠标压住时白色细描边仍在最上层。
+		// 整行胶囊：圆角取自行高，宽高与绘制都走公共 DrawRoundedSurface。
+		// 选中态与下拉框弹层条目同源（QmControlTheme().m_Selected 强调色整行填充、
+		// 不加描边），悬浮仍用列表 token；悬浮先画、选中后叠。
 		CUIRect CapsuleRect = ItemRect;
 		CapsuleRect.x += CapsuleInsetX;
 		CapsuleRect.w = maximum(0.0f, CapsuleRect.w - 2.0f * CapsuleInsetX);
@@ -898,7 +913,10 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMet
 		if(HoverAlpha > 0.001f && !gs_LanguageScrollRegion.Animating())
 			DrawRoundedSurface(Ui(), CapsuleRect, Ui()->ScaleBackgroundAlpha(ui_token::color::LIST_ITEM_HOVER).WithMultipliedAlpha(HoverAlpha), ColorRGBA(), RowRadius);
 		if(SelectedAlpha > 0.001f)
-			DrawRoundedSurface(Ui(), CapsuleRect, Ui()->ScaleBackgroundAlpha(ui_token::color::LIST_ITEM_SELECTED).WithMultipliedAlpha(SelectedAlpha), ui_token::feedback::ACTIVE_BORDER.WithMultipliedAlpha(SelectedAlpha), RowRadius, ui_token::feedback::ICON_BORDER_WIDTH);
+		{
+			const ColorRGBA SelectedFill = Ui()->ScaleBackgroundAlpha(Ui()->QmControlTheme().m_Selected).WithMultipliedAlpha(SelectedAlpha);
+			DrawRoundedSurface(Ui(), CapsuleRect, SelectedFill, ColorRGBA(), RowRadius);
+		}
 
 		CUIRect FlagRect, Label;
 		CUIRect RowContent = LanguageListRowContentRect(ItemRect, RowLayout);
@@ -1110,7 +1128,7 @@ void CMenus::RenderSettings(CUIRect MainView)
 			LogPerfStage(Client(), "settings_tabbar", StageTimer.ElapsedMs(), false, aTabBarExtra);
 		}
 	}
-	const uint64_t SettingsDisplayViewKey = ResolveSettingsCardDisplayViewKey(g_Config.m_UiSettingsPage, m_Dummy ? 1 : 0, m_AppearanceSettingsTab, m_TClientSettingsTab, m_QmClientSettingsTab, m_CreditsSettingsTab);
+	const uint64_t SettingsDisplayViewKey = ResolveSettingsCardDisplayViewKey(g_Config.m_UiSettingsPage, m_Dummy ? 1 : 0, m_AppearanceSettingsTab, m_TClientSettingsTab, m_QmClientSettingsTab, m_CreditsSettingsTab, g_Config.m_QmDdnetTab);
 	if(!CollectingMenuTextPlan && !Ui()->MeasurementOnly() && g_Config.m_UiSettingsPage != SETTINGS_TEE && m_SettingsCardDeckDisplayState.EnterView(SettingsDisplayViewKey))
 	{
 		m_SettingsCardDeck.BeginDisplayCycle(++m_SettingsCardDeckDisplayCycle, true);
@@ -1723,7 +1741,37 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 
 void CMenus::RenderSettingsDDNet(CUIRect MainView)
 {
-	RenderSettingsCatalogPage(MainView, "ddnet");
+	// DDNet 页内子页签（不是一级页签）：常规 / 网络补偿。
+	// 写法与外观页同源：ResolveSettingsSubTabLayout 让出页签高度，胶囊页签条统一由
+	// ui_widget::CapsuleTabBar 画滑块、DoButton_MenuTab 画文字，选中项写回 qm_ddnet_tab。
+	const SSettingsSubTabLayoutFrame DDNetSubTabs = ResolveSettingsSubTabLayout(MainView, ResolveSettingsContentMetrics(MainView.w).m_UiScale);
+	MainView = DDNetSubTabs.m_ContentRect;
+	const CUIRect TabBar = DDNetSubTabs.m_TabBarRect;
+	const float TabWidth = TabBar.w / (float)NUMBER_OF_DDNET_TABS;
+	static CButtonContainer s_aDdnetPageTabs[NUMBER_OF_DDNET_TABS] = {};
+	static CQmLocalizedLabelCache s_DdnetTabNames;
+	s_DdnetTabNames.Refresh(g_Config.m_ClLanguagefile,
+		{
+			Localizable("General"),
+			Localizable("Network compensation"),
+		});
+	CUIRect aDdnetTabSlots[NUMBER_OF_DDNET_TABS];
+	CUIRect DdnetTabsRemainder = TabBar;
+	for(int Tab = DDNET_TAB_GENERAL; Tab < NUMBER_OF_DDNET_TABS; ++Tab)
+		DdnetTabsRemainder.VSplitLeft(TabWidth, &aDdnetTabSlots[Tab], &DdnetTabsRemainder);
+	const int ActiveDdnetTab = std::clamp(g_Config.m_QmDdnetTab, (int)DDNET_TAB_GENERAL, (int)NUMBER_OF_DDNET_TABS - 1);
+	if(g_Config.m_QmDdnetTab != ActiveDdnetTab)
+		g_Config.m_QmDdnetTab = ActiveDdnetTab;
+	const IUiContext DdnetTabBarCtx = TabBarUiContext();
+	const int SelectedDdnetTab = ui_widget::CapsuleTabBar(DdnetTabBarCtx, MakeUiScopeHash("settings_ddnet_tabs_capsule"), aDdnetTabSlots, NUMBER_OF_DDNET_TABS, ActiveDdnetTab, SettingsCapsuleTabBarStyle());
+	// 预暖/测量趟只画不提交：页签切换必须由真实输入驱动。
+	const int EffectiveDdnetTab = SelectedDdnetTab >= 0 && SelectedDdnetTab < NUMBER_OF_DDNET_TABS ? SelectedDdnetTab : ActiveDdnetTab;
+	if(!Ui()->RenderOnly())
+		g_Config.m_QmDdnetTab = EffectiveDdnetTab;
+	for(int Tab = DDNET_TAB_GENERAL; Tab < NUMBER_OF_DDNET_TABS; ++Tab)
+		DoButton_MenuTab(&s_aDdnetPageTabs[Tab], s_DdnetTabNames.Get(Tab), EffectiveDdnetTab == Tab, &aDdnetTabSlots[Tab], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true);
+	// 子页签直接对应卡片目录页 key：卡片归属页由注册表决定，这里只决定渲染哪一页。
+	RenderSettingsCatalogPage(MainView, EffectiveDdnetTab == DDNET_TAB_PREDICTION ? "ddnet-prediction" : "ddnet");
 }
 
 CUi::EPopupMenuFunctionResult CMenus::PopupSkinQueuePresetRename(void *pContext, CUIRect View, bool Active)

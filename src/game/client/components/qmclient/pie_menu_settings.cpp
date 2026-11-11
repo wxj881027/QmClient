@@ -126,7 +126,6 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 			GameClient()->m_Tooltips.DoSmallToolTip(&s_PieMenuRenameQueue, &ControlColumn, pRenameQueueHelp, HelpFontSize, HelpWidth);
 		}
 	}
-	Flow.Space(LineSpacing * 2.0f);
 
 	struct SPieMenuColorEntry
 	{
@@ -220,7 +219,7 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 	constexpr float PreviewInnerRatio = 108.0f / 288.0f;
 	// 行高同时容纳网格与预览：预览被剩余列宽夹住时，整行跟着夹住后的尺寸走。
 	const float OptionsRowHeight = std::max(Grid.Height(), minimum(PreviewSide, PreviewColumnWidth));
-	if(Flow.Control("pie-option-color-heading", BodySize, Row))
+	if(Flow.Control("pie-option-color-heading", BodySize, Row, LineSpacing * 2.0f))
 		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-pie-menu-option-color", &Row, Localize("Option color"), BodySize, TEXTALIGN_ML, {}, (int)Row.w);
 	CUIRect OptionsRow;
 	if(Flow.Control("pie-color-options-row", OptionsRowHeight, OptionsRow, LineSpacing))

@@ -173,6 +173,59 @@ TEST(QmButtonStyle, DisabledListEntryIgnoresHoverAndPress)
 	EXPECT_EQ(DisabledPress.m_Border, Disabled.m_Border);
 }
 
+TEST(QmButtonStyle, ListEntryKeepsNoBorderInSelectedHoveredAndPressedStates)
+{
+	SUiTheme Theme{};
+	Theme.m_Selected = ColorRGBA(0.2f, 0.7f, 0.5f, 0.22f);
+	const ColorRGBA Surface(0.1f, 0.2f, 0.3f, 0.4f);
+	for(const ColorRGBA Backdrop : {ColorRGBA(0, 0, 0, 1), ColorRGBA(1, 1, 1, 1)})
+	{
+		const SUiButtonState aStates[] = {
+			SUiButtonState{true, false, false, true}, // 选中
+			SUiButtonState{true, true, false, false}, // 悬停
+			SUiButtonState{true, true, true, false}, // 按下
+			SUiButtonState{true, true, true, true}, // 按下的选中项
+		};
+		for(const SUiButtonState &State : aStates)
+		{
+			SCOPED_TRACE(::testing::Message() << "background=" << Backdrop.r << " hovered=" << State.m_Hovered << " pressed=" << State.m_Pressed << " selected=" << State.m_Selected);
+			const auto Style = ResolveUiButtonStyle(EUiButtonRole::LIST_ENTRY, Surface, Backdrop, Theme, State);
+			EXPECT_FLOAT_EQ(Style.m_Border.a, 0.0f);
+		}
+	}
+}
+
+TEST(QmButtonStyle, ListEntrySelectedFillIsTheThemeSelectedOverlayOnTheEntrySurface)
+{
+	SUiTheme Theme{};
+	Theme.m_Selected = ColorRGBA(0.2f, 0.7f, 0.5f, 0.22f);
+	const ColorRGBA Surface(0.1f, 0.2f, 0.3f, 0.4f), Backdrop(0, 0, 0, 1);
+	const auto Idle = ResolveUiButtonStyle(EUiButtonRole::LIST_ENTRY, Surface, Backdrop, Theme, {});
+	const auto Selected = ResolveUiButtonStyle(EUiButtonRole::LIST_ENTRY, Surface, Backdrop, Theme, {true, false, false, true});
+	// 选中只叠加主题选中色，不给条目额外垫一层不透明底板。
+	EXPECT_EQ(Selected.m_Fill, BlendUiButtonSurface(Surface, Theme.m_Selected));
+	EXPECT_EQ(Idle.m_Fill, Surface);
+	EXPECT_NE(Selected.m_Fill, Idle.m_Fill);
+}
+
+TEST(QmButtonStyle, OtherRolesKeepActiveBorderWhileListEntryDoesNot)
+{
+	SUiTheme Theme{};
+	Theme.m_Accent = ColorRGBA(0.8f, 0.3f, 0.1f, 1.0f);
+	Theme.m_Selected = ColorRGBA(0.2f, 0.7f, 0.5f, 0.22f);
+	const ColorRGBA Surface(0.1f, 0.2f, 0.3f, 1.0f), Backdrop(0, 0, 0, 1);
+	const SUiButtonState Hovered{true, true, false, false};
+	const SUiButtonState Pressed{true, true, true, false};
+	for(const EUiButtonRole Role : {EUiButtonRole::PRIMARY, EUiButtonRole::SECONDARY, EUiButtonRole::ICON})
+	{
+		SCOPED_TRACE(static_cast<int>(Role));
+		EXPECT_GT(ResolveUiButtonStyle(Role, Surface, Backdrop, Theme, Hovered).m_Border.a, 0.0f);
+		EXPECT_GT(ResolveUiButtonStyle(Role, Surface, Backdrop, Theme, Pressed).m_Border.a, 0.0f);
+	}
+	EXPECT_FLOAT_EQ(ResolveUiButtonStyle(EUiButtonRole::LIST_ENTRY, Surface, Backdrop, Theme, Hovered).m_Border.a, 0.0f);
+	EXPECT_FLOAT_EQ(ResolveUiButtonStyle(EUiButtonRole::LIST_ENTRY, Surface, Backdrop, Theme, Pressed).m_Border.a, 0.0f);
+}
+
 TEST(QmControlSurface, ConfiguredButtonColorAndOpacityRemainIndependentOfInterfaceBackground)
 {
 	struct SRestoreConfig

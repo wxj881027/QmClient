@@ -173,9 +173,6 @@ namespace qm_card_registry
 			{"tclient:visual-font-cursor", "tclient", false, "Font cursor", "font cursor tclient visual", "Choose the menu font and cursor appearance", "tclient", "tclient:font"},
 			{"tclient:visual-nameplates", "tclient", false, "Nameplates", "nameplates tclient visual", "Adjust player nameplate details and visibility"},
 			{"tclient:visual-effects", "tclient", false, "Visual effects", "visual effects tclient", "Tune additional world and player effects"},
-			{"tclient:input", "tclient", false, "Input", "input tclient", "Configure input helpers and cursor behavior"},
-			{"tclient:anti-latency-tools", "tclient", false, "Anti latency tools", "anti latency tools tclient", "Control latency compensation tools"},
-			{"tclient:improved-anti-ping", "tclient", false, "Improved anti ping", "improved anti ping tclient", "Fine-tune improved anti-ping prediction"},
 			{"tclient:execute-on-join", "tclient", false, "Execute on join", "execute on join tclient", "Run selected commands after joining a server"},
 			{"tclient:voting", "tclient", false, "Voting", "voting tclient", "Customize vote display and interaction"},
 			{"tclient:auto-reply", "tclient", false, "Auto reply", "auto reply tclient", "Define automatic chat reply rules"},
@@ -229,6 +226,12 @@ namespace qm_card_registry
 			{"deck:ddnet-gameplay", "ddnet", false, "Gameplay", "gameplay ddnet", "Adjust DDNet gameplay indicators and assists"},
 			{"deck:ddnet-background", "ddnet", false, "Background", "background ddnet", "Choose the menu map and background colors"},
 			{"deck:ddnet-miscellaneous", "ddnet", false, "Miscellaneous", "miscellaneous ddnet", "Configure remaining DDNet client preferences"},
+			// DDNet 页「网络补偿」子页签：客户端预测主卡 + 从 TClient 页迁来的三张预测/延迟补偿卡。
+			// 卡片 id 与实现不随页面搬家改名（迁移只改归属页），行序即该子页签的默认阅读序。
+			{"deck:ddnet-prediction", "ddnet-prediction", false, "Client prediction", "client prediction prediction antiping latency compensation margin redundancy 客户端预测 预测 网络补偿 延迟补偿 预测余量 预测事件 上行冗余 最大包份数 其他玩家", "Client-side prediction and latency compensation"},
+			{"tclient:input", "ddnet-prediction", false, "Input", "input tclient 输入 快速输入 子 tick 瞄准 输入量", "Configure input helpers and cursor behavior"},
+			{"tclient:anti-latency-tools", "ddnet-prediction", false, "Anti latency tools", "anti latency tools tclient 延迟补偿工具 预测余量 冻结预测 解冻 延迟", "Control latency compensation tools"},
+			{"tclient:improved-anti-ping", "ddnet-prediction", false, "Improved anti ping", "improved anti ping tclient 改进版延迟补偿 平滑算法 稳定方向 不确定性 Gores", "Fine-tune improved anti-ping prediction"},
 			{"deck:tclient-bind-wheel-editor", "tclient-bind-wheel", false, "Bind Wheel", "bind wheel tclient", "Assign commands and labels to wheel slots"},
 			{"deck:tclient-bind-wheel-preview", "tclient-bind-wheel", false, "Preview", "preview bind wheel tclient", "Preview the bind wheel layout and selection"},
 			{"deck:tclient-status-bar-settings", "tclient-status-bar", false, "Status Bar", "status bar tclient", "Adjust status bar position and text style"},
@@ -316,6 +319,8 @@ namespace qm_card_registry
 			return Localizable("Configure sound and audio packs");
 		if(str_comp(pTab, "ddnet") == 0)
 			return Localizable("Configure DDNet gameplay preferences");
+		if(str_comp(pTab, "ddnet-prediction") == 0)
+			return Localizable("Configure client-side prediction and latency compensation");
 		if(str_comp(pTab, "controls") == 0)
 			return Localizable("Configure controls and key bindings");
 		if(str_startswith(pTab, "appearance-") != nullptr)
@@ -920,6 +925,28 @@ namespace qm_card_registry
 		// 追加到默认列末尾，保留 HUD 页已有排序；已经放在目标页的自定义位置不再改动。
 		Model.MoveToTab(pStableId, pPlacement->m_pDefaultTab, pPlacement->m_Column, static_cast<int>(Model.ColumnIndices(pPlacement->m_pDefaultTab, pPlacement->m_Column).size()));
 		return true;
+	}
+
+	bool RepairLegacyPredictionCardTabs(qm_card_order::CModel &Model)
+	{
+		// 三张预测卡从 TClient 页（tab=tclient）迁到 DDNet 页的「网络补偿」子页签
+		// （tab=ddnet-prediction）。旧存档里它们仍记在 tclient 下，而 TClient 页的
+		// 目录清单由注册表派生、已不再包含它们，不修就会「两页都不显示」。
+		// 目标位置取默认 placement 的列，追加到该列末尾：网络补偿子页签里已有用户的
+		// 自定顺序（例如把新卡拖到别处）不被改写，重复加载也不会改变结果。
+		bool Changed = false;
+		for(const char *pStableId : {"tclient:input", "tclient:anti-latency-tools", "tclient:improved-anti-ping"})
+		{
+			const int Index = Model.FindByStableId(pStableId);
+			if(Index < 0 || Model.Entry(Index).m_pDefaultTab == nullptr || str_comp(Model.Entry(Index).m_pDefaultTab, "tclient") != 0)
+				continue;
+			const qm_card_order::SEntry *pPlacement = FindDefaultPlacement(pStableId);
+			if(pPlacement == nullptr)
+				continue;
+			Model.MoveToTab(pStableId, pPlacement->m_pDefaultTab, pPlacement->m_Column, static_cast<int>(Model.ColumnIndices(pPlacement->m_pDefaultTab, pPlacement->m_Column).size()));
+			Changed = true;
+		}
+		return Changed;
 	}
 
 	bool RepairLegacyTeeLayout(qm_card_order::CModel &Model)

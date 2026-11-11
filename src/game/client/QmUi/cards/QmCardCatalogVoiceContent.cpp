@@ -120,28 +120,12 @@ void CMenus::RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMet
 	if(s_VoiceEnableRows.Update(g_Config.m_QmVoiceEnable, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 	{
 		const CSettingsContentRevealScope VoiceEnableRevealScope(Ui(), Flow, s_VoiceEnableRows.Fade(g_Config.m_QmUiMotionLevel));
-		// 语音状态分区标题：只保留标题本身（副标题说明和标题挤成两行会把整块读成正文），
-		// 字号取 Headline、颜色取次要色，和下面的紧凑状态行区分开。
+		// 语音状态分区标题：只保留标题本身（副标题说明和标题挤成两行会把整块读成正文）。
+		// §9.1 分区标题统一入口：字号、颜色、段前距全部由 DoSettingsSectionHeading 定档，
+		// 卡内不再自己写标题 lambda。
 		auto AddVoiceSectionLabel = [&](const char *pTitle, const char *pHint) {
 			(void)pHint;
-			const auto Measure = [this](const char *pText, float Width, float FontSize) { return TextRender()->TextBoundingBox(FontSize, pText, -1, Width).m_H + FontSize * 0.25f; };
-			const auto Draw = [this](float FontSize) {
-				return [this, FontSize](const CUIRect &Rect, const char *pText) {
-					SLabelProperties Props;
-					Props.m_MaxWidth = Rect.w;
-					Ui()->DoLabel(&Rect, pText, FontSize, TEXTALIGN_ML, Props);
-				};
-			};
-			const auto DrawTitle = [&](const CUIRect &Rect, const char *pText) {
-				SLabelProperties Props;
-				Props.m_MaxWidth = Rect.w;
-				const ColorRGBA PreviousColor = TextRender()->GetTextColor();
-				TextRender()->TextColor(ui_token::color::TEXT_SECONDARY);
-				Ui()->DoLabel(&Rect, pText, Metrics.m_HeadlineSize, TEXTALIGN_ML, Props);
-				TextRender()->TextColor(PreviousColor);
-			};
-			Flow.Text("voice-status-title", pTitle, 0, Metrics.m_HeadlineSize, 0, Measure, DrawTitle, LineHeight * 0.78f);
-			Flow.Space(ui_token::settings::RowGap(LineSpacing));
+			DoSettingsSectionHeading(Ui(), Flow, "voice-status-title", pTitle, Metrics);
 		};
 
 		const bool NeedVoiceDiagnostics = g_Config.m_QmVoiceShowAdvanced && g_Config.m_QmVoiceShowConnectionStatus;

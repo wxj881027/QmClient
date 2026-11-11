@@ -222,7 +222,9 @@ namespace qm_card_catalog
 	{
 		constexpr const char *s_apStandardTabs[] = {
 			"player", "graphics", "sound", "ddnet", "appearance-hud", "appearance-chat",
-			"appearance-name-plate", "appearance-hook-collision", "appearance-info-messages", "appearance-laser", "tee7"};
+			"appearance-name-plate", "appearance-hook-collision", "appearance-info-messages", "appearance-laser", "tee7",
+			// DDNet 页的「网络补偿」子页签：卡片仍是 DDNet 卡（deck:），只是归属子页不同。
+			"ddnet-prediction"};
 
 	}
 
@@ -248,7 +250,9 @@ namespace qm_card_catalog
 		const auto *pDefault = qm_card_registry::FindByStableId(pStableId);
 		if(pDefault == nullptr || pDefault->m_pDefaultTab == nullptr || pDefault->m_pNavigationStableId != nullptr)
 			return false;
-		constexpr const char *s_apTabs[] = {"tclient", "tclient-bind-wheel", "tclient-chat-binds", "tclient-warlist", "tclient-status-bar", "tclient-profiles", "tclient-configs"};
+		constexpr const char *s_apTabs[] = {"tclient", "tclient-bind-wheel", "tclient-chat-binds", "tclient-warlist", "tclient-status-bar", "tclient-profiles", "tclient-configs",
+			// 已迁到 DDNet 页「网络补偿」子页签的三张卡：实现仍在 TClient 模块，按实现归属分派。
+			"ddnet-prediction"};
 		for(const char *pTab : s_apTabs)
 			if(str_comp(pDefault->m_pDefaultTab, pTab) == 0)
 				return true;

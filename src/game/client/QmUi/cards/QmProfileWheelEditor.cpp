@@ -374,17 +374,24 @@ void CMenus::RenderProfileWheelEditor(const qm_card_catalog::SQmCardBuildContext
 	}
 	Text("profile-wheel-status", Localize(State.m_pStatus));
 	Text("profile-wheel-list-title", Localize("Bind Wheel"));
-	if(!Flow.Control("profile-wheel-list", Metrics.m_ListRowHeight * 5, Row, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
+	// 绑定列表按胶囊行渲染：可见行数取整数行（最多 5 行，沿用原面板高度），
+	// 高度用 RowsHeight 派生，和 CListBox 的自适应上限同源，末行不会被裁一半；
+	// 空轮盘不占高度，不留一块没有背景的空面板。
+	constexpr int MaxWheelRows = 5;
+	const int WheelRows = ui_token::list::VisibleRows((int)Wheel.m_vBinds.size(), 1, 1, MaxWheelRows);
+	if(!Flow.Control("profile-wheel-list", ui_token::list::RowsHeight(WheelRows, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING), Row, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
 		return;
 	auto &List = ReadOnly ? State.m_ReadOnlyList : State.m_List;
 	List.SetActive(!ReadOnly);
 	List.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);
+	List.SetCapsuleRows(Metrics.m_BodySize);
+	List.SetVisibleRowRange(WheelRows, WheelRows);
 	List.DoStart(Metrics.m_ListRowHeight, Wheel.m_vBinds.size(), 1, 3, State.m_Selected, &Row);
 	for(size_t Index = 0; Index < Wheel.m_vBinds.size(); ++Index)
 	{
 		const CListboxItem Item = List.DoNextItem(&State.m_aItemIds[Index], State.m_Selected == static_cast<int>(Index));
 		if(Item.m_Visible)
-			Ui()->DoLabel(&Item.m_Rect, Wheel.m_vBinds[Index].m_aName, Metrics.m_BodySize, TEXTALIGN_ML);
+			Ui()->DoLabel(&Item.m_ContentRect, Wheel.m_vBinds[Index].m_aName, Metrics.m_BodySize, TEXTALIGN_ML);
 	}
 	const int Selected = List.DoEnd();
 	if(Editable && Selected >= 0 && Selected < static_cast<int>(Wheel.m_vBinds.size()) && (Selected != State.m_Selected || List.WasItemActivated()))

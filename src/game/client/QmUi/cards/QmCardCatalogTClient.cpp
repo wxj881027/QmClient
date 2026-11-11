@@ -98,6 +98,9 @@ namespace qm_card_catalog
 			return pMenus->RunTClientProfilesCard(Ctx, pStableId, Content, Pass);
 		if(str_comp(pTab, "tclient-configs") == 0)
 			return pMenus->RunTClientConfigsCard(Ctx, pStableId, Content, Pass);
+		// 迁到 DDNet 页「网络补偿」子页签的 TClient 卡：实现不变，仍由 TClient 主卡分派器按 stableId 取卡。
+		if(str_comp(pTab, "ddnet-prediction") == 0)
+			return pMenus->RunTClientMainCard(Ctx, pStableId, Content, Pass);
 		return {};
 	}
 

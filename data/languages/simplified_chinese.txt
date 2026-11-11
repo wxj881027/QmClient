@@ -23121,3 +23121,9 @@ Included
 [Translation credits: Add your own name here when you update translations]
 English translation by the DDNet Team
 == 简体中文翻译由 DDNet 队伍和 QmClient 贡献者维护
+
+Client prediction
+== 客户端预测
+
+Client-side prediction and latency compensation
+== 客户端预测与延迟补偿

@@ -357,7 +357,7 @@ TEST(SettingsPageLayout, PageListCardsUseExactProductionViewports)
 	EXPECT_EQ(OneAudioPack.m_VisibleRows, 1);
 	EXPECT_FLOAT_EQ(OneAudioPack.m_ListViewportHeight, Metrics.m_ListRowHeight);
 	EXPECT_EQ(EightAudioPacks.m_VisibleRows, 8);
-	EXPECT_FLOAT_EQ(EightAudioPacks.m_ListViewportHeight, 8.0f * Metrics.m_ListRowHeight);
+	EXPECT_FLOAT_EQ(EightAudioPacks.m_ListViewportHeight, ResolveSettingsListViewportHeight(8, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING));
 	EXPECT_FLOAT_EQ(NineAudioPacks.m_ListViewportHeight, EightAudioPacks.m_ListViewportHeight);
 	EXPECT_FLOAT_EQ(OneAudioPack.m_ContentHeight, Metrics.m_LineHeight + Metrics.m_LineSpacing + OneAudioPack.m_ListViewportHeight + 16.0f);
 	EXPECT_NE(ResolveSettingsSoundLayoutRevision(false, true, 7), ResolveSettingsSoundLayoutRevision(false, true, 8));

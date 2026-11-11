@@ -3576,6 +3576,11 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 	};
 
 	static CListBox s_ListBox;
+	// 表头最后一列要给滚动条让位：这个列表保持原外观（没开胶囊行），行宽由非覆盖式
+	// 滚动区裁掉「解析后的轨道厚度」，RowReserveWidth() 在这里返回 0，退回同一个
+	// 解析值（ScrollbarWidthMax 就是行内实际被裁掉的厚度）。不开胶囊行硬套列表 token
+	// 的 8 会比实际轨道窄 8px，列内容又会压到轨道上。
+	const float ColumnScrollbarReserve = s_ListBox.RowReserveWidth() > 0.0f ? s_ListBox.RowReserveWidth() : s_ListBox.ScrollbarWidthMax();
 	const float HeaderHeight = ms_ListheaderHeight + 8.0f;
 	const float HeaderOuterPadding = 2.0f;
 	const float HeaderInnerPadding = 2.0f;
@@ -3592,7 +3597,7 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 		{COL_LENGTH, SORT_LENGTH, Localizable("Length"), 1, false, 84.0f, {0}, nullptr},
 		{-1, -1, "", 1, false, HeaderGap, {0}, nullptr},
 		{COL_DATE, SORT_DATE, Localizable("Date"), 1, false, 156.0f, {0}, nullptr},
-		{-1, -1, "", 1, false, s_ListBox.ScrollbarWidthMax() + HeaderGap, {0}, nullptr},
+		{-1, -1, "", 1, false, ColumnScrollbarReserve + HeaderGap, {0}, nullptr},
 	};
 	aCols[3].m_pCaption = DemoBrowserListColumnLabel(BrowsingScreenshots);
 	aCols[4].m_Width = BrowsingScreenshots ? 0.0f : HeaderGap;

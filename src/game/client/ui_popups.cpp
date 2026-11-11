@@ -889,7 +889,11 @@ void CUi::SSelectionPopupContext::Reset()
 	m_MinimumFontSize = -1.0f;
 	m_Width = 300.0f + (SPopupMenu::POPUP_BORDER + SPopupMenu::POPUP_MARGIN) * 2;
 	m_AlignmentHeight = -1.0f;
-	m_ActiveEntryColor = ColorRGBA(1.0f, 1.0f, 1.0f, 0.22f);
+	// 活动条目的选中叠加色与列表行、下拉框弹层条目同源（QmDropdown.h 的
+	// QmSettingsDropdownVisualStyle 也是取 Theme.m_Selected）。Reset() 里没有 CUi 实例，
+	// 但 CUi::QmControlTheme() 内部调的就是这个函数，所以这里不需要第二份颜色推导，
+	// 也不再回落硬编码的白 22%。
+	m_ActiveEntryColor = ResolveInputFallbackTheme(g_Config.m_QmUiFocusColor).m_Selected;
 	m_HoverEntryColor = std::nullopt;
 	m_TransparentButtons = false;
 	m_AnchorVisible = true;

@@ -89,7 +89,10 @@ inline SUiSecondaryButtonStyle ResolveUiButtonStyle(EUiButtonRole Role, ColorRGB
 	// 选中态常驻悬浮边框，悬浮选中项则收起边框，提示再次点击可取消。
 	if(State.m_Selected && State.m_Enabled && Role != EUiButtonRole::LIST_ENTRY)
 		Style.m_Border = ResolveUiSecondaryButtonStyle(Surface, Backdrop, true, !State.m_Hovered, false).m_Border;
-	if(Role == EUiButtonRole::LIST_ENTRY && (!State.m_Enabled || !State.m_Hovered))
+	// 弹层条目与列表胶囊行是同一个视觉件：选中/悬停只由填充深浅表达，任何状态都不描边。
+	// 描边来自反馈遮罩（0.70 白），会在选中项上勾出一圈白边，与「选中 = 填充」的口径相反；
+	// 这里清空后，上层 DrawButtonSurface 的 ResolveActiveButtonBorder 也对该 role 早退。
+	if(Role == EUiButtonRole::LIST_ENTRY)
 		Style.m_Border = ColorRGBA();
 	return Style;
 }

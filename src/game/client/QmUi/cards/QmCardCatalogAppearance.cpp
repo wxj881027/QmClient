@@ -101,6 +101,10 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 
 	CUIRect ContentView = MainView;
 	// 标题行也是普通行：行距由它自己声明，行后不再补 Space。
+	// 与 §9.1 的 DoSettingsSectionHeading 同档：字号取 Metrics.m_HeadlineSize、段前距取
+	// SectionGap。这里保留局部 lambda 是因为外观卡还要走 SettingsTextElement +
+	// DoSettingsLabelStreamed 的文本复用与搜索高亮，包一层 helper 要多传整套页面上下文；
+	// 与 helper 的差别只剩标题颜色（这里沿用设置页默认文本色，helper 固定次要色）。
 	auto DoAppearanceHeading = [this, AppearanceTab](CUIRect &View, const char *pTextId, const char *pText, float FontSize, float LineHeight, float SpacingBefore) {
 		CSettingsContentLayoutFlow Flow(View);
 		CUIRect Heading;

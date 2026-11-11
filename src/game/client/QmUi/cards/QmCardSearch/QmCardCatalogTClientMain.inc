@@ -170,7 +170,8 @@ namespace
 namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_tclient_improved_anti_ping[] = {
-		{Localizable("Negative stability buffer (for Gores)"), nullptr, "负稳定性缓冲（用于 Gores）"},
+		{Localizable("Negative stability buffer"), nullptr, "负稳定性缓冲 用于 Gores"},
+		{Localizable("for Gores"), nullptr, "用于 Gores"},
 		{Localizable("Optimistic prediction along stable direction"), nullptr, "沿稳定方向更乐观的预测"},
 		{Localizable("Uncertainty duration"), nullptr, "不确定性持续时间"},
 		{Localizable("Use new smoothing algorithm"), nullptr, "使用新的平滑算法"},
@@ -314,8 +315,8 @@ namespace
 namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_tclient_tile_outlines[] = {
-		{Localizable("Deep freeze color"), nullptr, "深度冻结颜色"},
-		{Localizable("Deep unfreeze color"), nullptr, "深度解冻颜色"},
+		{Localizable("Deep freeze"), nullptr, "深度冻结"},
+		{Localizable("Deep unfreeze"), nullptr, "深度解冻"},
 		{Localizable("Freeze"), nullptr, "冻结"},
 		{Localizable("Kill"), nullptr, "自杀"},
 		{Localizable("Only show outlines in the entities layer"), nullptr, "仅在实体层中显示轮廓"},

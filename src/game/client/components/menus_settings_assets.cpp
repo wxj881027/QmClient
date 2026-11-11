@@ -527,11 +527,10 @@ namespace
 		return Tab != ASSETS_TAB_ENTITY_BG;
 	}
 
-	static CUIRect AssetsCardListAreaWithStableScrollbar(CUIRect ListArea, float ScrollbarWidth, float ScrollbarMargin)
+	static CUIRect AssetsCardListAreaWithStableScrollbar(CUIRect ListArea, float ReserveWidth)
 	{
-		(void)ScrollbarMargin;
-		if(ListArea.w > ScrollbarWidth)
-			ListArea.w -= ScrollbarWidth;
+		if(ListArea.w > ReserveWidth)
+			ListArea.w -= ReserveWidth;
 		return ListArea;
 	}
 
@@ -6178,9 +6177,18 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		// 大面积卡片网格：入场纯淡入 + 逐行 stagger，整卡不位移（onetake：
 		// 运动留给小元素，大 ground 稳定；整卡上下浮读作"晃"）。
 		s_ListBox.SetEntryAnimationFadeOnly(true);
-		// 选中/悬浮反馈贴合卡片（格子与卡片之间有半格间隙），选中态带描边。
+		// 胶囊行：选中/悬浮走主题轨道（选中 = Theme.m_Selected 填充、无描边），
+		// 滚动条回到覆盖式细轨。行距必须保持 0——行高里已经含 Margin 档作为卡片
+		// 间距，组件再叠半档行距会让 SkipItems 的可见范围与滚动步进错位。
+		const float LocalRowHeight = TextureHeight + AssetCardTextReserve + AssetCardFooterSpacing + Margin;
+		s_ListBox.SetCapsuleRows(ContentMetrics.m_BodySize);
+		s_ListBox.DoAutoSpacing(0.0f);
+		// 整数行：列表高度停在整行边界，底部不再裁出半张卡。
+		s_ListBox.SetVisibleRowRange(1, maximum(1, (int)std::floor(std::max(0.0f, CustomList.h) / LocalRowHeight)));
+		// 反馈矩形贴合卡片（卡片与格子之间有半格间隙）；白色描边已由列表组件统一取消。
 		s_ListBox.SetItemSelectionInset(Margin / 2.0f);
-		const CUIRect StableCustomList = AssetsCardListAreaWithStableScrollbar(CustomList, s_ListBox.ScrollbarWidthMax(), s_ListBox.ScrollbarMargin());
+		// 列宽按「行让位」这一份宽度算，与行胶囊右缘同源，不再写 ScrollbarWidthMax。
+		const CUIRect StableCustomList = AssetsCardListAreaWithStableScrollbar(CustomList, s_ListBox.RowReserveWidth());
 		const int LocalColumns = maximum(1, (int)(StableCustomList.w / (Margin + TextureWidth)));
 		OldSelected = SelectedCustomAssetIndex(s_CurCustomTab, SearchListSize);
 		static int s_LastEntryRestartSeq = -1;
@@ -6194,7 +6202,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			s_ListBox.ResetScroll();
 			s_AssetsResetListScrollOnTabSwitch = false;
 		}
-		s_ListBox.DoStart(TextureHeight + AssetCardTextReserve + AssetCardFooterSpacing + Margin, SearchListSize, LocalColumns, 1, OldSelected, &CustomList, false);
+		s_ListBox.DoStart(LocalRowHeight, SearchListSize, LocalColumns, 1, OldSelected, &CustomList, false);
 		static std::vector<CButtonContainer> s_vLocalDeleteButtons;
 		s_vLocalDeleteButtons.resize(SearchListSize);
 		static char s_aPendingDeleteName[IO_MAX_PATH_LENGTH] = "";
@@ -6207,7 +6215,6 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		char aDeleteLocalName[IO_MAX_PATH_LENGTH] = "";
 		int FirstVisibleIndex = -1;
 		int LastVisibleIndex = -1;
-		const float LocalRowHeight = TextureHeight + AssetCardTextReserve + AssetCardFooterSpacing + Margin;
 		// 换位追随的时间基准：切页/冷却/关动效时直接对齐，不做插值。
 		{
 			const double ReflowNow = time_get();
@@ -7282,11 +7289,23 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		}
 
 		const size_t CombinedCount = LocalAssetCount + vVisibleDownloadableAssetIndices.size();
+		// 卡片网格的统一外观：本地+商店混合列表与空/加载态共用同一份列宽估算。
+		static CListBox s_WorkshopAssetsListBox;
+		s_WorkshopAssetsListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_OUTER);
+		// 大面积卡片网格：入场纯淡入 + 逐行 stagger，整卡不位移。
+		s_WorkshopAssetsListBox.SetEntryAnimationFadeOnly(true);
+		// 胶囊行：选中/悬浮走主题轨道（选中 = Theme.m_Selected 填充、无描边），
+		// 滚动条回到覆盖式细轨；行高已含 Margin 卡片间距，行距保持 0，
+		// SkipItems 的可见范围与滚动步进才和行高一致。
+		const float WorkshopRowHeight = TextureHeight + AssetCardTextReserve + AssetCardFooterSpacing + Margin;
+		s_WorkshopAssetsListBox.SetCapsuleRows(ContentMetrics.m_BodySize);
+		s_WorkshopAssetsListBox.DoAutoSpacing(0.0f);
+		// 反馈矩形贴合卡片（卡片与格子之间有半格间隙）；描边由列表组件统一取消。
+		s_WorkshopAssetsListBox.SetItemSelectionInset(Margin / 2.0f);
 		if(CombinedCount == 0)
 		{
-			const CUIRect StableWorkshopListArea = AssetsCardListAreaWithStableScrollbar(WorkshopListArea, 20.0f, 5.0f);
+			const CUIRect StableWorkshopListArea = AssetsCardListAreaWithStableScrollbar(WorkshopListArea, s_WorkshopAssetsListBox.RowReserveWidth());
 			const int Columns = std::max(1, static_cast<int>(StableWorkshopListArea.w / (Margin + TextureWidth)));
-			const float WorkshopRowHeight = TextureHeight + AssetCardTextReserve + AssetCardFooterSpacing + Margin;
 			const bool AssetsInitialEntryLoading = m_aAssetLoadStates[s_CurCustomTab] == ASSET_LOAD_STATE_LOADING || WorkshopState.m_pListTask != nullptr;
 			if(AssetsInitialEntryLoading)
 			{
@@ -7311,27 +7330,23 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		}
 		else
 		{
-			static CListBox s_WorkshopAssetsListBox;
-			s_WorkshopAssetsListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_OUTER);
-			// 大面积卡片网格：入场纯淡入 + 逐行 stagger，整卡不位移。
-			s_WorkshopAssetsListBox.SetEntryAnimationFadeOnly(true);
-			// 选中/悬浮反馈贴合卡片，选中态带描边。
-			s_WorkshopAssetsListBox.SetItemSelectionInset(Margin / 2.0f);
 			static int s_WorkshopEntryRestartSeq = -1;
 			if(s_WorkshopEntryRestartSeq != s_AssetsListEntryRestartSeq)
 			{
 				s_WorkshopAssetsListBox.RestartEntryAnimation();
 				s_WorkshopEntryRestartSeq = s_AssetsListEntryRestartSeq;
 			}
-			const CUIRect StableWorkshopListArea = AssetsCardListAreaWithStableScrollbar(WorkshopListArea, s_WorkshopAssetsListBox.ScrollbarWidthMax(), s_WorkshopAssetsListBox.ScrollbarMargin());
+			// 列宽按「行让位」这一份宽度算，与行胶囊右缘同源，不再写 ScrollbarWidthMax。
+			const CUIRect StableWorkshopListArea = AssetsCardListAreaWithStableScrollbar(WorkshopListArea, s_WorkshopAssetsListBox.RowReserveWidth());
 			const int Columns = std::max(1, static_cast<int>(StableWorkshopListArea.w / (Margin + TextureWidth)));
 			const int OldCombinedSelected = SelectedCombinedAssetIndex(s_CurCustomTab, vVisibleLocalAssetIndices);
-			const float WorkshopRowHeight = TextureHeight + AssetCardTextReserve + AssetCardFooterSpacing + Margin;
 			if(s_AssetsResetListScrollOnTabSwitch)
 			{
 				s_WorkshopAssetsListBox.ResetScroll();
 				s_AssetsResetListScrollOnTabSwitch = false;
 			}
+			// 整数行：列表高度停在整行边界，底部不再裁出半张卡。
+			s_WorkshopAssetsListBox.SetVisibleRowRange(1, maximum(1, (int)std::floor(std::max(0.0f, WorkshopListArea.h) / WorkshopRowHeight)));
 			s_WorkshopAssetsListBox.DoStart(WorkshopRowHeight, CombinedCount, Columns, 1, OldCombinedSelected, &WorkshopListArea, false, IGraphics::CORNER_ALL);
 			{
 				const double ReflowNow = time_get();

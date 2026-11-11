@@ -646,8 +646,15 @@ TEST(QmModuleLayoutAdapter, MigrateGlobalCardOrderPreservesLegacyTClientOrder)
 
 	const std::string Result(g_Config.m_QmGlobalCardOrder);
 	EXPECT_NE(Result.find("tclient:visual-nameplates|tclient|left|0;"), std::string::npos);
-	EXPECT_NE(Result.find("tclient:input|tclient|right|0;"), std::string::npos);
-	EXPECT_EQ(Result.find("tclient:input|tclient|left|3;"), std::string::npos);
+	// 旧 tclient 顺序的列/序仍被保留，但归属页跟随注册表：预测三卡已整卡迁到
+	// DDNet 页的「网络补偿」子页签（ddnet-prediction），迁移输出不再写回 tclient。
+	EXPECT_NE(Result.find("tclient:input|ddnet-prediction|right|0;"), std::string::npos);
+	EXPECT_EQ(Result.find("tclient:input|tclient|"), std::string::npos);
+	EXPECT_EQ(Result.find("tclient:anti-latency-tools|tclient|"), std::string::npos);
+	EXPECT_EQ(Result.find("tclient:improved-anti-ping|tclient|"), std::string::npos);
+	// 旧配置里只出现过 tclient:input，所以迁移输出只写这一张；另外两张不在旧序里，
+	// 由注册表默认归属兜底（同样是 ddnet-prediction），不参与这次序列化。
+	EXPECT_NE(Result.find("tclient:input|ddnet-prediction|"), std::string::npos);
 }
 
 // 意图：迁移只有完整写出全局配置后才能覆盖 config 和标记完成；

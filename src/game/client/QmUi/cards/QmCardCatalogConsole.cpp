@@ -276,6 +276,10 @@ CUi::EPopupMenuFunctionResult CGameConsole::PopupSettings(void *pContext, CUIRec
 	const auto Metrics = ResolveSettingsContentMetrics(View.w);
 	vec2 Offset;
 	auto Params = QmScrollRegionParamsForSize(EQmScrollSize::MEDIUM, Metrics.m_UiScale);
+	// 轨道粗细/边距统一取列表 token：弹层滚动面和 CListBox 共用同一条覆盖式滚动条，
+	// 不再按面板档另取一套粗细。
+	Params.m_ScrollbarThickness = ui_token::list::SCROLLBAR_WIDTH;
+	Params.m_ScrollbarMargin = ui_token::list::SCROLLBAR_MARGIN;
 	Params.m_Interactive = Active;
 	Params.m_WheelOwnerPriority = EUiWheelOwnerPriority::POPUP;
 	// 弹层显式登记滚轮所有权，不依赖底层控制台的热滚动区。

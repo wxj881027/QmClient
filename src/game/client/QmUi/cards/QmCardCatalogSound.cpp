@@ -419,7 +419,10 @@ uint64_t CMenus::BuildSoundSettingsCards(const qm_card_catalog::SQmCardBuildCont
 			const int OldSelectedPack = SelectedPack;
 			s_AudioPackListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);
 			s_AudioPackListBox.SetWheelOwnerPriority(EUiWheelOwnerPriority::COMPOSITE_CONTROL);
-			s_AudioPackListBox.SetItemColors(ui_token::color::LIST_ITEM_SELECTED, ui_token::color::LIST_ITEM_SELECTED, ui_token::color::LIST_ITEM_HOVER);
+			// 胶囊行：行距、行内左右内退、胶囊圆角与覆盖式滚动条（8/4）一次拿到，
+			// 选中/悬浮填充走组件默认（选中色、无描边），不再单独覆盖颜色。
+			s_AudioPackListBox.SetCapsuleRows(BodySize);
+			s_AudioPackListBox.SetVisibleRowRange(1, ui_token::list::MAX_VISIBLE_ROWS);
 			s_AudioPackListBox.DoStart(LineHeight + LineSpacing, gs_vAudioPacks.size(), 1, 4, SelectedPack, &ListRow, false);
 
 			// 数量徽章在行内居中，使用紧凑尺寸并保留上下间隙。
@@ -445,8 +448,9 @@ uint64_t CMenus::BuildSoundSettingsCards(const qm_card_catalog::SQmCardBuildCont
 				}
 
 				CUIRect NameRect, BadgeRect;
-				Item.m_Rect.VSplitRight(BadgeWidth, &NameRect, &BadgeRect);
-				NameRect.VMargin(6.0f, &NameRect);
+				// 行内容排在内容区：胶囊行的左右内退与滚动那一列的缝都由组件让出，
+				// 名称/徽章不再贴行边，也不会压在滚动条下面。
+				Item.m_ContentRect.VSplitRight(BadgeWidth, &NameRect, &BadgeRect);
 				BadgeRect.HMargin((BadgeRect.h - BadgeHeight) * 0.5f, &BadgeRect);
 
 				char aBadge[32];

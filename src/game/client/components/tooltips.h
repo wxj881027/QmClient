@@ -35,6 +35,11 @@ enum class EQmTooltipPlacement
 inline constexpr float QM_TOOLTIP_ENTER_SECONDS = 0.18f;
 inline constexpr float QM_TOOLTIP_SIDE_POP_DISTANCE = 8.0f;
 
+// 正文每行至少按当前字号留出这么多字的位置。行宽窄到这个数以下时，文字引擎会走
+// 「一个词里 3 个字都放不下就换下一行」的分支（text.cpp 的逐字裁剪 + 无进展 break），
+// 整段正文一个字形都排不出去，绘制层却仍然会补一个省略号标记，气泡就只剩下一个 …。
+inline constexpr float QM_TOOLTIP_MIN_GLYPHS_PER_LINE = 8.0f;
+
 // 所有气泡共用 ui_token::tooltip 一套尺寸。设置页紧凑小字气泡是基准，
 // qm_tooltip_font_size 的值就是字号本身（默认等于 FONT_SIZE），对全部气泡统一缩放；
 // 默认配置下设置页、服务器列表、好友列表的字号/内边距/外边距/圆角/宽度上限完全一致。
@@ -127,6 +132,63 @@ inline float QmTooltipSidePopOffset(float ElapsedSeconds, bool AnimationEnabled,
 	if(!AnimationEnabled || Distance <= 0.0f)
 		return 0.0f;
 	return (1.0f - QmTooltipEnterEase(ElapsedSeconds, AnimationEnabled)) * Distance;
+}
+
+// 气泡文本排版事实的唯一来源：字号缩放、可读行宽、内边距、外边距、正文行数上限
+// 和省略号标记在这一处算完。测量与绘制读同一份事实，不再由绘制侧从 m_VisibleLines
+// 二次推导行数——那正是「测量说能放、绘制说放不下」这类气泡 bug 的来源。
+// WidthHint <= 0 表示「默认可读宽度」（随字号缩放的阅读行宽），绝不退化成悬浮矩形宽度。
+struct SQmTooltipTextFacts
+{
+	SQmTooltipTextLayout m_Layout;
+	float m_FontSize = 0.0f;
+	float m_UiScale = 1.0f;
+	float m_Padding = 0.0f;
+	float m_Margin = 0.0f;
+	float m_WrapWidth = 1.0f;
+	int m_BodyMaxLines = 0; // 0 = 不限制行数
+	bool m_DrawEllipsis = false;
+};
+
+inline SQmTooltipTextFacts QmResolveTooltipText(ITextRender &TextRender, const char *pText, float FontSize, float WidthHint, const CUIRect &Screen)
+{
+	SQmTooltipTextFacts Facts;
+	Facts.m_FontSize = std::max(1.0f, FontSize);
+	Facts.m_UiScale = Facts.m_FontSize / ui_token::tooltip::FONT_SIZE;
+	Facts.m_Margin = ui_token::tooltip::MARGIN * Facts.m_UiScale;
+	Facts.m_Padding = ui_token::tooltip::PADDING * Facts.m_UiScale;
+	const vec2 Available(std::max(0.0f, Screen.w - 2.0f * Facts.m_Margin), std::max(0.0f, Screen.h - 2.0f * Facts.m_Margin));
+	const float ReadableWidth = ui_token::tooltip::MAX_WIDTH * Facts.m_UiScale;
+	const float RequestedWidth = WidthHint > 0.0f ? WidthHint : ReadableWidth;
+	// 窄视口也不把正文压到「一个词里连 3 个字都放不下」：留一个按字号折算的下限，
+	// 同时不超过真实可用宽度（屏幕更窄时仍按屏幕收缩并正常截断）。
+	const float MinimumWidth = std::min(Available.x, Facts.m_FontSize * QM_TOOLTIP_MIN_GLYPHS_PER_LINE);
+	Facts.m_Layout = QmTooltipMeasureText(TextRender, pText, Facts.m_FontSize, std::max(RequestedWidth, MinimumWidth), Available, Facts.m_Padding);
+	Facts.m_WrapWidth = std::max(1.0f, Facts.m_Layout.m_LineWidth);
+	if(Facts.m_Layout.m_VisibleLines <= 0)
+		return Facts;
+	// 截断的最后一行留给省略号标记；但只有「还能画出一整行正文」时才真的截断。
+	// 旧实现把这一条拆成两处：绘制游标取 max(1, VisibleLines-1)，正文绘制条件却要求
+	// VisibleLines > 1。两者在 VisibleLines == 1 时自相矛盾——正文一行不画，省略号照画，
+	// 气泡里就只剩下一个 …（长说明文本在窄可用高度下的实测现象）。
+	if(Facts.m_Layout.m_Truncated && Facts.m_Layout.m_VisibleLines > 1)
+	{
+		Facts.m_BodyMaxLines = Facts.m_Layout.m_VisibleLines - 1;
+		Facts.m_DrawEllipsis = true;
+	}
+	else if(Facts.m_Layout.m_Truncated)
+	{
+		// 只够一行：这一行画正文，不画省略号标记。宁可少一行说明，
+		// 也不能用 … 顶掉全部正文。
+		Facts.m_BodyMaxLines = 1;
+	}
+	return Facts;
+}
+
+// 省略号标记只在正文真的派生出字形时才画：气泡不允许只剩一个 …。
+inline bool QmTooltipDrawEllipsis(const SQmTooltipTextFacts &Facts, const int BodyGlyphCount)
+{
+	return Facts.m_DrawEllipsis && BodyGlyphCount > 0;
 }
 
 struct CTooltip

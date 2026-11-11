@@ -10,6 +10,10 @@
 
 namespace
 {
+	// 设置页 → DDNet → 游戏玩法卡「预测余量」行的配置说明（含旧名）。
+	// 用户实测该 tooltip 只剩一个 …，完整说明完全看不到。
+	const char *const PREDICTION_MARGIN_HELP = "预测边界（单位：毫秒，增加延迟但可减少因 ping 波动导致的卡顿；旧名「预测边距」）";
+
 	class QmTooltipTextLayout : public qm_ui_test::CRealUiFixture
 	{
 	protected:
@@ -17,6 +21,12 @@ namespace
 		SQmTooltipTextLayout Measure(const char *pText, vec2 Available = vec2(500, 300), float Width = 300, float Font = 14)
 		{
 			return QmTooltipMeasureText(TextRender(), pText, Font, Width, Available, 5);
+		}
+
+		// 气泡排版的生产入口：字号/宽度/屏幕按调用点传入，测试不复制实现里的宽高公式。
+		SQmTooltipTextFacts ResolveFacts(const char *pText, vec2 Screen = vec2(1066.0f, 600.0f), float Font = 10.0f, float WidthHint = -1.0f)
+		{
+			return QmResolveTooltipText(TextRender(), pText, Font, WidthHint, {0.0f, 0.0f, Screen.x, Screen.y});
 		}
 
 		struct CCachedContainer
@@ -405,6 +415,143 @@ TEST_F(QmTooltipTextLayout, CachedTextKeepsFinalGlyphsInsideClipWhileBubbleMoves
 			m_Ui.ClipDisable();
 		}
 	}
+}
+
+TEST_F(QmTooltipTextLayout, SettingsConfigHelpWrapsIntoMultipleReadableLines)
+{
+	const auto Facts = ResolveFacts(PREDICTION_MARGIN_HELP);
+	ASSERT_FALSE(Facts.m_Layout.m_Truncated);
+	ASSERT_GE(Facts.m_Layout.m_LineCount, 2);
+	// 未截断时正文不限行，且不画省略号标记。
+	EXPECT_EQ(Facts.m_BodyMaxLines, 0);
+	EXPECT_FALSE(Facts.m_DrawEllipsis);
+	CContainer Container(TextRender());
+	CTextCursor Cursor = QmTooltipTextCursor({}, Facts.m_FontSize, Facts.m_WrapWidth, Facts.m_BodyMaxLines);
+	TextRender().CreateTextContainer(Container.m_Index, &Cursor, PREDICTION_MARGIN_HELP);
+	ASSERT_TRUE(Container.m_Index.Valid());
+	EXPECT_EQ(Cursor.m_CharCount, str_length(PREDICTION_MARGIN_HELP));
+	EXPECT_FALSE(Cursor.m_Truncated);
+	// 气泡按实际字宽走，不超过可读行宽；高度覆盖全部换行行。
+	EXPECT_LE(Facts.m_Layout.m_Size.x, Facts.m_WrapWidth + 2.0f * Facts.m_Layout.m_Padding + 0.001f);
+}
+
+TEST_F(QmTooltipTextLayout, ShortSettingsHintKeepsASingleNarrowBubble)
+{
+	const auto Facts = ResolveFacts("预测余量");
+	ASSERT_EQ(Facts.m_Layout.m_LineCount, 1);
+	ASSERT_FALSE(Facts.m_Layout.m_Truncated);
+	EXPECT_EQ(Facts.m_BodyMaxLines, 0);
+	EXPECT_FALSE(Facts.m_DrawEllipsis);
+	// 短文本不能被拉成整条可读行宽的气泡。
+	EXPECT_LT(Facts.m_Layout.m_Size.x, Facts.m_WrapWidth);
+}
+
+TEST_F(QmTooltipTextLayout, CompleteSingleLineHintIsNotMarkedTruncated)
+{
+	// 用户实机那条说明的单行子集：整段只占一行、每个字形都完整可见。
+	// 行宽溢出只记在 m_LineOverflow（排版/避让用），不能冒充「截断」——
+	// 否则绘制侧会据此走省略号兜底，把唯一一行正文整段丢掉。
+	const char *pText = "预测边界（毫秒）";
+	const auto Facts = ResolveFacts(pText);
+	ASSERT_EQ(Facts.m_Layout.m_LineCount, 1);
+	ASSERT_EQ(Facts.m_Layout.m_VisibleLines, Facts.m_Layout.m_LineCount);
+	ASSERT_FALSE(Facts.m_Layout.m_Truncated);
+	EXPECT_FALSE(Facts.m_DrawEllipsis);
+	// 完整可见：真实文字引擎把整段文字都排进这一行，并且不画省略号标记。
+	CContainer Container(TextRender());
+	CTextCursor Cursor = QmTooltipTextCursor({}, Facts.m_FontSize, Facts.m_WrapWidth, Facts.m_BodyMaxLines);
+	TextRender().CreateTextContainer(Container.m_Index, &Cursor, pText);
+	ASSERT_TRUE(Container.m_Index.Valid());
+	EXPECT_EQ(Cursor.m_CharCount, str_length(pText));
+	EXPECT_FALSE(Cursor.m_Truncated);
+	EXPECT_FALSE(QmTooltipDrawEllipsis(Facts, Cursor.m_GlyphCount));
+}
+
+TEST_F(QmTooltipTextLayout, SingleVisibleLineNeverLeavesTheEllipsisAsTheOnlyContent)
+{
+	// 只管高度、不管宽度的可用区：从「放不下一行」扫到「能放几行」，
+	// 覆盖「只够一行 + 文本需要多行」这条把正文整段丢掉的边界。
+	int OneVisibleLineCases = 0;
+	for(float Height = 16.0f; Height <= 64.0f; Height += 2.0f)
+	{
+		SCOPED_TRACE(Height);
+		const auto Facts = ResolveFacts(PREDICTION_MARGIN_HELP, vec2(300.0f, Height));
+		EXPECT_LE(Facts.m_Layout.m_Size.x, 300.0f);
+		EXPECT_LE(Facts.m_Layout.m_Size.y, Height);
+		if(Facts.m_Layout.m_VisibleLines <= 0)
+			continue;
+		CContainer Body(TextRender());
+		CTextCursor BodyCursor = QmTooltipTextCursor({}, Facts.m_FontSize, Facts.m_WrapWidth, Facts.m_BodyMaxLines);
+		TextRender().CreateTextContainer(Body.m_Index, &BodyCursor, PREDICTION_MARGIN_HELP);
+		ASSERT_GT(BodyCursor.m_GlyphCount, 0);
+		if(!Facts.m_Layout.m_Truncated)
+		{
+			EXPECT_EQ(Facts.m_BodyMaxLines, 0);
+			EXPECT_FALSE(Facts.m_DrawEllipsis);
+			continue;
+		}
+		// 截断时必须先保证正文有行可画；省略号只能在「正文之后还有更多行」时出现。
+		EXPECT_GE(Facts.m_BodyMaxLines, 1);
+		if(Facts.m_Layout.m_VisibleLines == 1)
+		{
+			++OneVisibleLineCases;
+			EXPECT_FALSE(Facts.m_DrawEllipsis) << "只够一行时仍画省略号，正文会被整段丢掉";
+			EXPECT_FALSE(QmTooltipDrawEllipsis(Facts, BodyCursor.m_GlyphCount));
+		}
+		else
+		{
+			EXPECT_TRUE(Facts.m_DrawEllipsis);
+			EXPECT_TRUE(QmTooltipDrawEllipsis(Facts, BodyCursor.m_GlyphCount));
+		}
+	}
+	// 这一组高度里必须真的出现「只够一行」的测量结果，否则上面的断言没覆盖到 bug 现场。
+	EXPECT_GT(OneVisibleLineCases, 0);
+}
+
+TEST_F(QmTooltipTextLayout, NarrowWidthNeverDrawsTheEllipsisWithoutABodyLine)
+{
+	// 宽度从「一个字形都放不下」扫到默认可读宽度：气泡始终留在给定宽度内，
+	// 且只要画省略号就必须同时留出一整行正文——省略号不能是气泡的唯一内容。
+	for(float Width = 16.0f; Width <= 320.0f; Width += 8.0f)
+	{
+		SCOPED_TRACE(Width);
+		const auto Facts = ResolveFacts(PREDICTION_MARGIN_HELP, vec2(Width, 400.0f));
+		EXPECT_LE(Facts.m_Layout.m_Size.x, Width);
+		if(Facts.m_Layout.m_VisibleLines <= 0)
+			continue;
+		CContainer Body(TextRender());
+		CTextCursor BodyCursor = QmTooltipTextCursor({}, Facts.m_FontSize, Facts.m_WrapWidth, Facts.m_BodyMaxLines);
+		TextRender().CreateTextContainer(Body.m_Index, &BodyCursor, PREDICTION_MARGIN_HELP);
+		if(!QmTooltipDrawEllipsis(Facts, BodyCursor.m_GlyphCount))
+			continue;
+		EXPECT_GT(Facts.m_Layout.m_VisibleLines, 1);
+	}
+}
+
+TEST_F(QmTooltipTextLayout, OverlongHintKeepsTheEllipsisOnTheLastVisibleLineInsideTheScreen)
+{
+	const vec2 Screen(70.0f, 60.0f);
+	const auto Facts = ResolveFacts(PREDICTION_MARGIN_HELP, Screen);
+	ASSERT_TRUE(Facts.m_Layout.m_Truncated);
+	ASSERT_GT(Facts.m_Layout.m_VisibleLines, 1);
+	EXPECT_LE(Facts.m_Layout.m_Size.x, Screen.x);
+	EXPECT_LE(Facts.m_Layout.m_Size.y, Screen.y);
+	EXPECT_TRUE(Facts.m_DrawEllipsis);
+	EXPECT_EQ(Facts.m_BodyMaxLines, Facts.m_Layout.m_VisibleLines - 1);
+	CContainer Body(TextRender()), End(TextRender());
+	CTextCursor BodyCursor = QmTooltipTextCursor({}, Facts.m_FontSize, Facts.m_WrapWidth, Facts.m_BodyMaxLines);
+	TextRender().CreateTextContainer(Body.m_Index, &BodyCursor, PREDICTION_MARGIN_HELP);
+	ASSERT_TRUE(Body.m_Index.Valid());
+	EXPECT_LE(BodyCursor.m_LineCount, Facts.m_Layout.m_VisibleLines - 1);
+	EXPECT_LT(BodyCursor.m_CharCount, str_length(PREDICTION_MARGIN_HELP));
+	EXPECT_TRUE(QmTooltipDrawEllipsis(Facts, BodyCursor.m_GlyphCount));
+	const float EllipsisY = Facts.m_Layout.m_Padding + Facts.m_Layout.m_TextOffsetY + (Facts.m_Layout.m_VisibleLines - 1) * Facts.m_Layout.m_LineHeight;
+	const auto EndCursor = QmTooltipCreateText(TextRender(), Facts.m_Layout, "…", vec2(Facts.m_Layout.m_Padding + Facts.m_Layout.m_TextOffsetX, EllipsisY), End.m_Index, true);
+	ASSERT_TRUE(End.m_Index.Valid());
+	EXPECT_EQ(EndCursor.m_GlyphCount, 1);
+	// 省略号落在气泡内、且在屏幕内：不溢出。
+	ASSERT_TRUE(EndCursor.m_HasVisualBoundingBox);
+	EXPECT_LE(EllipsisY + EndCursor.m_VisualBottom, Facts.m_Layout.m_Size.y + 0.001f);
 }
 
 TEST(QmTooltipFontScale, ConfiguredValueIsTheRenderedFontSize)

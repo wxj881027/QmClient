@@ -2760,6 +2760,15 @@ public:
 		NUMBER_OF_APPEARANCE_TABS = 6,
 	};
 
+	// DDNet 页内子页签（不是一级页签）：常规放原有的四张卡，
+	// 网络补偿放「客户端预测」与从 TClient 页迁来的预测相关卡。
+	enum
+	{
+		DDNET_TAB_GENERAL = 0,
+		DDNET_TAB_PREDICTION = 1,
+		NUMBER_OF_DDNET_TABS = 2,
+	};
+
 	SUIAnimator m_aAnimatorsBigPage[BIG_TAB_LENGTH];
 	SUIAnimator m_aAnimatorsSmallPage[SMALL_TAB_LENGTH];
 	SUIAnimator m_aAnimatorsSettingsTab[SETTINGS_LENGTH];

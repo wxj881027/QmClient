@@ -2,12 +2,16 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_MAP_HISTORY_UI_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_MAP_HISTORY_UI_H
 
+#include <game/client/QmUi/UiTokens.h>
+
 #include <algorithm>
 
 namespace QmMapHistoryUi
 {
 
-	inline constexpr float LIST_SCROLLBAR_WIDTH = 20.0f;
+	// 列表覆盖式滚动条的轨道宽度：直接取 CListBox 的列表档 token，
+	// 网格列数不再按另一套自算宽度预留。
+	inline constexpr float LIST_SCROLLBAR_WIDTH = ui_token::list::SCROLLBAR_WIDTH;
 	inline constexpr float MIN_CARD_ROW_HEIGHT = 54.0f;
 	inline constexpr float MAX_CARD_ROW_HEIGHT = 72.0f;
 

@@ -276,7 +276,7 @@ public:
 	// 行级小列表仍保留淡入+上浮的 wordRise。
 	void SetEntryAnimationFadeOnly(bool FadeOnly) { m_EntryAnimationFadeOnly = FadeOnly; }
 	// 选中/悬浮反馈内缩：网格卡片在格子内有半格间隙，反馈矩形须贴合卡片
-	// 而不是铺满格子；同时选中态附带按钮同款常驻描边。行列表保持 0。
+	// 而不是铺满格子；行列表保持 0。选中态只有填充，不再附描边。
 	void SetItemSelectionInset(float Inset) { m_ItemSelectionInset = Inset; }
 
 	void DoHeader(const CUIRect *pRect, const char *pTitle, float HeaderHeight = 20.0f, float Spacing = 2.0f, int BackgroundCorners = IGraphics::CORNER_ALL);
@@ -295,6 +295,10 @@ public:
 	void SetVisibleRowRange(int MinRows, int MaxRows);
 	// 覆盖式滚动条开关：开启后行宽与有没有滚动条无关（默认随 SetCapsuleRows 打开）。
 	void SetScrollbarOverlay(bool Overlay) { m_ScrollbarOverlay = Overlay; }
+	// 胶囊行/胶囊格右侧为滚动条让出的宽度（厚度 + 外边距 + 行缝）。调用点（表头列宽、
+	// 外框内容宽度）在 DoStart 前就要这份值，所以由 token（或显式覆盖值）直接算，
+	// 不依赖上一帧的滚动条状态；未开胶囊行或非覆盖式轨道时为 0。
+	float RowReserveWidth() const;
 	void DoSpacing(float Spacing = 20.0f);
 	void DoStart(float RowHeight, int NumItems, int ItemsPerRow, int RowsPerScroll, int SelectedIndex, const CUIRect *pRect = nullptr, bool Background = true, int BackgroundCorners = IGraphics::CORNER_ALL);
 	int ItemIndex() const { return m_ListBoxItemIndex; }

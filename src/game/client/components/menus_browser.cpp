@@ -1135,7 +1135,11 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 
 	CUIRect Headers;
 	View.HSplitTop(ms_ListheaderHeight, &Headers, &View);
-	Headers.VSplitRight(s_ListBox.ScrollbarWidthMax(), &Headers, nullptr);
+	// 胶囊行先开：表头列宽要按行让位收，而 RowReserveWidth 由 token 直接算，
+	// 不依赖上一帧解析出的滚动条宽度；表头与行胶囊右缘因此同一条公式。
+	s_ListBox.SetCapsuleRows(SERVER_LIST_TEXT_SIZE);
+	const float BrowserScrollbarReserve = s_ListBox.RowReserveWidth();
+	Headers.VSplitRight(BrowserScrollbarReserve, &Headers, nullptr);
 	// 胶囊行统一外观：表格行的行距并进行高（滚动步进与 SkipItems 都按行高走，
 	// 组件再叠一档行距会把跳过行补不回来），左右内退与行内内边距同源。
 	// 表头跟着同一条内退，列标题、列内容与行胶囊才会落在同一个坐标系里。
@@ -1797,16 +1801,17 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	}
 	// 列表行和滚动条保留原有淡化，不影响上方表头及空列表提示中的按钮。
 	CUiBackgroundAlphaScaleScope ListOpacityScope(Ui(), SERVER_LIST_SCROLLBAR_RAIL_ALPHA_SCALE);
-	// 胶囊行：整行圆角、token 选中/悬浮填充与行内左右内退。行距已经并入
+	// 胶囊行：整行圆角、主题选中/悬浮填充与行内左右内退。行距已经并入
 	// BrowserRowStep，这里显式把组件行距压成 0——可见范围裁剪只用 SkipItems，
 	// 它不补行距，滚过一屏后整张表会向上漂移。行间留白由行内选择内缩给出。
 	// 列表整体按 SERVER_LIST_SCROLLBAR_RAIL_ALPHA_SCALE 淡化（为滚动条轨道），
-	// 胶囊填充要落到与设置页同一强度，先把 token 颜色按同一系数反算回来。
+	// 胶囊填充要落回与下拉弹层相同的那份主题选中色，先把颜色按同一系数反算回来
+	// （ScaleBackgroundAlpha 再乘回去正好等于原色，选中态与弹层逐位一致）。
+	const ColorRGBA ThemeSelected = Ui()->QmControlTheme().m_Selected;
 	const auto RowFeedbackColor = [](const ColorRGBA &TokenColor) {
 		return TokenColor.WithAlpha(TokenColor.a / SERVER_LIST_SCROLLBAR_RAIL_ALPHA_SCALE);
 	};
-	s_ListBox.SetItemColors(RowFeedbackColor(ui_token::color::LIST_ITEM_SELECTED), RowFeedbackColor(ui_token::color::LIST_ITEM_SELECTED), RowFeedbackColor(ui_token::color::LIST_ITEM_HOVER));
-	s_ListBox.SetCapsuleRows(SERVER_LIST_TEXT_SIZE);
+	s_ListBox.SetItemColors(RowFeedbackColor(ThemeSelected), RowFeedbackColor(ThemeSelected), RowFeedbackColor(ui_token::color::LIST_ITEM_HOVER));
 	s_ListBox.DoAutoSpacing(0.0f);
 	s_ListBox.SetItemSelectionInset(ui_token::list::ROW_SPACING * 0.5f);
 	// 可见行取整：按实际可用高度收敛到整数行，首/末行不会被裁掉半行。
@@ -2290,7 +2295,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	{
 		CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
 		CUIRect Fade = ListView;
-		Fade.VSplitRight(s_ListBox.ScrollbarWidthMax(), &Fade, nullptr);
+		Fade.VSplitRight(BrowserScrollbarReserve, &Fade, nullptr);
 		constexpr float FadeHeight = 44.0f;
 		Fade.y += maximum(Fade.h - FadeHeight, 0.0f);
 		Fade.h = minimum(Fade.h, FadeHeight);
@@ -2442,8 +2447,10 @@ void CMenus::RenderServerbrowserStatusBox(CUIRect StatusBox, bool WasListboxItem
 	ScrollRequest.m_RowExtent = 24.0f;
 	ScrollRequest.m_RowsPerStep = 2;
 	CScrollRegionParams ScrollParams = QmScrollRegionParamsFromPolicy(QmResolveScrollPolicy(ScrollRequest));
-	ScrollParams.m_ScrollbarThickness = std::min(ScrollParams.m_ScrollbarThickness, StatusBox.w * 0.1f);
-	ScrollParams.m_ScrollbarMargin = std::min(ScrollParams.m_ScrollbarMargin, ScrollParams.m_ScrollbarThickness * 0.25f);
+	// 轨道粗细/外边距统一取列表 token：不再按面板宽度自算一套，浏览器里所有纵向
+	// 轨道与服务器列表的覆盖式滚动条同宽（8）。
+	ScrollParams.m_ScrollbarThickness = ui_token::list::SCROLLBAR_WIDTH;
+	ScrollParams.m_ScrollbarMargin = ui_token::list::SCROLLBAR_MARGIN;
 	// 首帧就按实际内容判定滚动，避免窄宽度换行与滚动条占宽互相滞后一帧。
 	float ContentHeight = QmBrowserStatusLayout(StatusBox, ShowNotice).m_ContentHeight;
 	if(ContentHeight > StatusBox.h)
@@ -2679,9 +2686,10 @@ void CMenus::RenderServerbrowserFilters(CUIRect View)
 	ScrollRequest.m_Profile = EQmScrollProfile::SETTINGS_GRID;
 	ScrollRequest.m_RowExtent = RowHeight;
 	CScrollRegionParams ScrollParams = QmScrollRegionParamsFromPolicy(QmResolveScrollPolicy(ScrollRequest));
-	// 工具箱三个页签共用同一档滚动条：宽度按内容宽度取紧凑轨道，与好友列表逐像素对齐。
-	ScrollParams.m_ScrollbarThickness = std::clamp(View.w * 0.05f, 6.0f, 10.0f);
-	ScrollParams.m_ScrollbarMargin = std::min(ScrollParams.m_ScrollbarMargin, ScrollParams.m_ScrollbarThickness * 0.25f);
+	// 工具箱三个页签共用同一档滚动条：粗细/外边距取列表 token，与服务器列表的
+	// 覆盖式轨道同宽，不在窄面板里再自己算一套窄轨。
+	ScrollParams.m_ScrollbarThickness = ui_token::list::SCROLLBAR_WIDTH;
+	ScrollParams.m_ScrollbarMargin = ui_token::list::SCROLLBAR_MARGIN;
 	ScrollParams.m_AnimateScrollbarReserve = true;
 	vec2 ScrollOffset(0.0f, 0.0f);
 	s_FilterScrollRegion.Begin(&View, &ScrollOffset, &ScrollParams);
@@ -2844,6 +2852,10 @@ void CMenus::RenderServerbrowserDDNetFilter(CUIRect View,
 	ScrollRequest.m_RowsPerStep = 2;
 	const SQmResolvedScrollPolicy ScrollPolicy = QmResolveScrollPolicy(ScrollRequest);
 	CScrollRegionParams ScrollParams = QmScrollRegionParamsFromPolicy(ScrollPolicy);
+	// 这三张网格列表的轨道与胶囊列表同宽：粗细/外边距取列表 token，不再沿
+	// FILTER_GRID 自己的面板档（10），滚动条在浏览器里只有一个粗细。
+	ScrollParams.m_ScrollbarThickness = ui_token::list::SCROLLBAR_WIDTH;
+	ScrollParams.m_ScrollbarMargin = ui_token::list::SCROLLBAR_MARGIN;
 	ScrollRegion.Begin(&View, &ScrollOffset, &ScrollParams);
 	View.y += ScrollOffset.y;
 
@@ -2968,11 +2980,8 @@ void CMenus::RenderServerbrowserDDNetFilter(CUIRect View,
 		Content.VMargin(std::min(ContentInsetX, std::max(0.0f, Cell.w * 0.5f)), &Content);
 		if(Ui()->HotItem() == pItemId && !ScrollRegion.Animating())
 		{
-			// 悬浮是整格胶囊：填充与设置页列表同源，白色细描边把格子边界交代清楚
-			// （描边跟选中态同一条白色，不参与面板底色的灰度染色）。
-			const float HotAlpha = Ui()->ControlAlphaScale();
-			DrawRoundedSurface(Ui(), Cell, BrowserOpacityColor(ui_token::color::LIST_ITEM_HOVER, HotAlpha),
-				ui_token::feedback::ACTIVE_BORDER, CellRadius, 1.0f);
+			// 悬浮是整格胶囊，只填充不描边：白色描边只属于卡片内的小控件，列表行/格不用。
+			DrawRoundedSurface(Ui(), Cell, BrowserOpacityColor(ui_token::color::LIST_ITEM_HOVER, Ui()->ControlAlphaScale()), ColorRGBA(), CellRadius);
 		}
 		RenderItem(ItemIndex, Content, pItemId, Active);
 	}
@@ -3122,8 +3131,8 @@ CUi::EPopupMenuFunctionResult CMenus::PopupCountrySelection(void *pContext, CUIR
 	s_ListBox.SetActive(Active);
 	s_ListBox.SetWheelOwnerPriority(EUiWheelOwnerPriority::POPUP);
 	s_ListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_GRID);
-	// 选中/悬停填充与选中描边都由 CListBox 的胶囊格轨道统一绘制（与设置页列表同源）。
-	s_ListBox.SetItemColors(ui_token::color::LIST_ITEM_SELECTED, ui_token::color::LIST_ITEM_SELECTED, ui_token::color::LIST_ITEM_HOVER);
+	// 选中填充（主题选中色）与悬停填充都由 CListBox 的胶囊格轨道统一绘制，
+	// 与下拉弹层条目同源；这里不再覆盖颜色，也不补描边。
 	// 多列网格也走胶囊格：行距、左右内退和单列胶囊行同一套；圆角由调用点显式
 	// 传给 DoNextItem——组件对 ItemsPerRow > 1 默认仍取小圆角（多列网格的旧观感）。
 	// 行距并进行高：组件的自动行距在 ItemsPerRow > 1 时按每个格子推进一格
@@ -3665,10 +3674,10 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 	ScrollRequest.m_RowsPerStep = 3;
 	const SQmResolvedScrollPolicy ScrollPolicy = QmResolveScrollPolicy(ScrollRequest);
 	CScrollRegionParams ScrollParams = QmScrollRegionParamsFromPolicy(ScrollPolicy);
-	// 好友面板只有约 185 宽，沿用服务器列表的 20 宽滚动条会吃掉 >10% 内容宽度。
-	// 这里按内容宽度比例收窄到紧凑轨道档位，让卡片尽量贴近上方胶囊的宽度。
-	ScrollParams.m_ScrollbarThickness = std::clamp(List.w * 0.05f, 6.0f, 10.0f);
-	ScrollParams.m_ScrollbarMargin = std::min(ScrollParams.m_ScrollbarMargin, ScrollParams.m_ScrollbarThickness * 0.25f);
+	// 轨道粗细/外边距统一取列表 token：不再按面板宽度自算轨道，浏览器里所有
+	// 纵向轨道同宽，与服务器列表的覆盖式滚动条一致（8）。
+	ScrollParams.m_ScrollbarThickness = ui_token::list::SCROLLBAR_WIDTH;
+	ScrollParams.m_ScrollbarMargin = ui_token::list::SCROLLBAR_MARGIN;
 	ScrollParams.m_AnimateScrollbarReserve = true;
 	s_ScrollRegion.Begin(&List, &ScrollOffset, &ScrollParams);
 	List.y += ScrollOffset.y;

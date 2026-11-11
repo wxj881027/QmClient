@@ -3,6 +3,11 @@
 
 #include "QmListEntryAnimation.h"
 #include "SettingsContentLayout.h"
+#include "SettingsPageLayout.h"
+
+#include <base/dbg.h>
+
+#include <engine/textrender.h>
 
 #include <game/client/ui.h>
 
@@ -425,5 +430,138 @@ private:
 	float m_StartHeight = 0.0f;
 	std::optional<CSettingsContentRevealScope> m_Reveal;
 };
+
+// ---------------------------------------------------------------------------
+// 约定 A：从属行（Dependent row）
+// ---------------------------------------------------------------------------
+// 从属行 = 只有父控件的当前值成立时才存在的行。父项关闭时它**不参与布局、不占高、
+// 不可交互**（不是「变灰的禁用态」，也不是固定高度留白）。父控件叫「主控行」。
+//
+// 实现只有一种：CSettingsConditionalRows + CSettingsContentRevealScope（显隐动画、
+// 测高与绘制同源）。SettingsDependentRows 只是把这两步固化成一行，以后所有从属行
+// 都调它，不允许再手写第二套「if(父项) 声明 / 或者干脆不声明」：
+//
+//   static SettingsDependentRows s_ShowOthersOpacityRows;
+//   if(const auto OpacityRows = s_ShowOthersOpacityRows.Reveal(Ui(), Flow, Cond, FrameDt, g_Config.m_QmUiMotionLevel))
+//   {
+//       ...声明从属行（含它们自留的行距）...
+//   }
+//
+// 作用域析构即收尾（EndReveal），块外面的行按展开系数平滑让位；第一次遇到
+// 「可见」直接就位，打开设置页时不会补播一次入场动画。
+class SettingsDependentRows
+{
+public:
+	// 本帧这一组从属行要不要声明/绘制；可见时同时把展开系数压进 Flow 与整体透明度。
+	class SScope
+	{
+	public:
+		SScope(CUi *pUi, CSettingsContentLayoutFlow &Flow, SettingsDependentRows &Owner, const bool Visible, const float DeltaTime, const int MotionLevel)
+		{
+			if(!Owner.m_Rows.Update(Visible, DeltaTime, MotionLevel))
+				return;
+			m_Visible = true;
+			m_Reveal.emplace(pUi, Flow, Owner.m_Rows.Fade(MotionLevel));
+		}
+
+		SScope(const SScope &) = delete;
+		SScope &operator=(const SScope &) = delete;
+
+		explicit operator bool() const { return m_Visible; }
+
+	private:
+		bool m_Visible = false;
+		std::optional<CSettingsContentRevealScope> m_Reveal;
+	};
+
+	SScope Reveal(CUi *pUi, CSettingsContentLayoutFlow &Flow, const bool Visible, const float DeltaTime, const int MotionLevel)
+	{
+		return SScope(pUi, Flow, *this, Visible, DeltaTime, MotionLevel);
+	}
+
+private:
+	CSettingsConditionalRows m_Rows;
+};
+
+// ---------------------------------------------------------------------------
+// 约定 B：行尾说明（Inline trailing hint）
+// ---------------------------------------------------------------------------
+// 同一行内、右侧（或紧跟控件）的**常显**短提示：
+//   * 字号固定比正文小一档，调用方传 Metrics.m_SmallSize；
+//   * 颜色固定 ui_token::color::TEXT_SECONDARY（用户说的那种暗淡色），不能另挑颜色；
+//   * 不换行、超宽省略；不占独立行高，只借用当前行右侧的空白。
+//
+// 分工：行尾说明是常显的一两词结论；tooltip 是悬浮/ⓘ 才出现的完整解释；
+// 说明行（Flow.Text）是独立一行、占行高，用来放整句解释。
+//
+// RightReserve / Row 的两种用法（都只借用当前行的横向空白，不改行高）：
+//   * 右侧：传完整行 Row + RightReserve（例如 ⓘ 按钮宽度），提示右对齐到保留区左侧；
+//   * 紧跟控件：传「标签列」这类更窄的 Row（RightReserve=0），提示贴在该列右端，
+//     紧挨着后面的滑杆/输入框，不会压住控件。
+// 只在该行真正绘制的那一趟调用（Flow.Drawing()），输入趟重复 DoLabel 没有意义。
+inline void DoSettingsInlineHint(CUi *pUi, const char *pElementId, const CUIRect &Row, const float RightReserve, const char *pText, const float SmallSize)
+{
+	// 稳定行 ID 是调用合同的一部分：搜索定位与后续文本计划都按它取词。
+	dbg_assert(pElementId != nullptr && pElementId[0] != '\0', "inline hint requires a stable element id");
+	if(pUi == nullptr || pText == nullptr || pText[0] == '\0' || !(SmallSize > 0.0f) || !(Row.w > 0.0f))
+		return;
+	ITextRender *pTextRender = pUi->TextRender();
+	if(pTextRender == nullptr)
+		return;
+	const float Reserved = std::clamp(RightReserve, 0.0f, Row.w);
+	const float Available = std::max(0.0f, Row.w - Reserved);
+	if(Available <= 0.0f)
+		return;
+
+	SLabelProperties Props;
+	Props.m_MaxWidth = Available;
+	// 不换行：放不下按省略号截断，行高始终是当前行。
+	Props.m_DisallowNewline = true;
+	Props.m_EllipsisAtEnd = true;
+	Props.m_MinimumFontSize = SmallSize;
+	const float TextWidth = std::min(Available, pTextRender->TextWidth(SmallSize, pText, -1, -1.0f));
+	// 右对齐到保留区左侧：提示贴控件，不贴卡片边缘。
+	const CUIRect Hint{Row.x + Available - TextWidth, Row.y, TextWidth, Row.h};
+	const ColorRGBA PreviousColor = pTextRender->GetTextColor();
+	pTextRender->TextColor(ui_token::color::TEXT_SECONDARY);
+	pUi->DoLabel(&Hint, pText, SmallSize, TEXTALIGN_MR, Props);
+	pTextRender->TextColor(PreviousColor);
+}
+
+// ---------------------------------------------------------------------------
+// §9.1 分区标题（Section heading）
+// ---------------------------------------------------------------------------
+// 卡片内分组标题的唯一入口，替代各卡自己写的标题 lambda / 手写 Flow.Text：
+//   * 字号固定 Metrics.m_HeadlineSize（比正文大一档）；
+//   * 段前距固定 ui_token::settings::SectionGap(行距)（= 2 倍行距），把标题和上一段分开；
+//   * 颜色固定 ui_token::color::TEXT_SECONDARY；
+//   * 标题行本身是普通行，行后不再补 Space（间距只有段前这一档）。
+inline void DoSettingsSectionHeading(CUi *pUi, CSettingsContentLayoutFlow &Flow, const char *pId, const char *pText, const SSettingsContentMetrics &Metrics, const float SpacingBefore = -1.0f)
+{
+	if(pUi == nullptr || pId == nullptr || pText == nullptr || pText[0] == '\0')
+		return;
+	ITextRender *pTextRender = pUi->TextRender();
+	const float FontSize = Metrics.m_HeadlineSize;
+	const float Spacing = SpacingBefore >= 0.0f ? SpacingBefore : ui_token::settings::SectionGap(Metrics.m_LineSpacing);
+	// 段前距记在上一行行后：文本行没有「行前间距」参数，声明在标题前才跟着展开系数缩放。
+	if(Spacing > 0.0f)
+		Flow.Space(Spacing);
+	const auto Measure = [pTextRender](const char *pValue, const float Width, const float Size) {
+		return pTextRender != nullptr ? pTextRender->TextBoundingBox(Size, pValue, -1, std::max(1.0f, Width)).m_H + Size * 0.25f : Size;
+	};
+	const auto Draw = [pUi, pTextRender, FontSize](const CUIRect &Rect, const char *pValue) {
+		SLabelProperties Props;
+		Props.m_MaxWidth = Rect.w;
+		Props.m_EllipsisAtEnd = true;
+		const ColorRGBA PreviousColor = pTextRender != nullptr ? pTextRender->GetTextColor() : ui_token::color::TEXT_PRIMARY;
+		if(pTextRender != nullptr)
+			pTextRender->TextColor(ui_token::color::TEXT_SECONDARY);
+		pUi->DoLabel(&Rect, pValue, FontSize, TEXTALIGN_ML, Props);
+		if(pTextRender != nullptr)
+			pTextRender->TextColor(PreviousColor);
+	};
+	// 标题占一档常规行高：比正文大一档字号，但不再单独占两档。
+	Flow.Text(pId, pText, 0.0f, FontSize, 0.0f, Measure, Draw, Metrics.m_LineHeight);
+}
 
 #endif

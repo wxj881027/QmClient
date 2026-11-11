@@ -194,8 +194,12 @@ void CMenus::RenderQmHudBackground3DContent(CUIRect &Content, const SSettingsCon
 		}
 		Flow.Space(ui_token::settings::RowGap(LineSpacing));
 
-		if(g_Config.m_Qm3DParticlesGlow)
+		// 开关后的从属行统一走条件行展开（与其它设置卡同一套）：主控行本身不动，
+		// 只让从属行的显隐带淡入/收起动画，测高与 DRAW 趟同源，不再整块瞬变。
+		static CSettingsConditionalRows s_ParticleGlowRows;
+		if(s_ParticleGlowRows.Update(g_Config.m_Qm3DParticlesGlow, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 		{
+			const CSettingsContentRevealScope GlowRevealScope(Ui(), Flow, s_ParticleGlowRows.Fade(g_Config.m_QmUiMotionLevel));
 			static int s_Qm3DParticleGlowAlphaInputId;
 			RenderIntOption("hud-Qm3DParticlesGlowAlpha", &s_Qm3DParticleGlowAlphaInputId, Localize("Glow alpha"), &g_Config.m_Qm3DParticlesGlowAlpha, 1, 100, "%");
 			static int s_Qm3DParticleGlowOffsetInputId;
@@ -208,8 +212,10 @@ void CMenus::RenderQmHudBackground3DContent(CUIRect &Content, const SSettingsCon
 		}
 		Flow.Space(ui_token::settings::RowGap(LineSpacing));
 
-		if(g_Config.m_Qm3DParticlesTrail)
+		static CSettingsConditionalRows s_ParticleTrailRows;
+		if(s_ParticleTrailRows.Update(g_Config.m_Qm3DParticlesTrail, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 		{
+			const CSettingsContentRevealScope TrailRevealScope(Ui(), Flow, s_ParticleTrailRows.Fade(g_Config.m_QmUiMotionLevel));
 			static int s_Qm3DParticleTrailLengthInputId;
 			RenderIntOption("hud-Qm3DParticlesTrailLength", &s_Qm3DParticleTrailLengthInputId, Localize("Trail length"), &g_Config.m_Qm3DParticlesTrailLength, 2, 6);
 			static int s_Qm3DParticleTrailAlphaInputId;
@@ -222,8 +228,10 @@ void CMenus::RenderQmHudBackground3DContent(CUIRect &Content, const SSettingsCon
 		}
 		Flow.Space(ui_token::settings::RowGap(LineSpacing));
 
-		if(g_Config.m_Qm3DParticlesPulse)
+		static CSettingsConditionalRows s_ParticlePulseRows;
+		if(s_ParticlePulseRows.Update(g_Config.m_Qm3DParticlesPulse, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 		{
+			const CSettingsContentRevealScope PulseRevealScope(Ui(), Flow, s_ParticlePulseRows.Fade(g_Config.m_QmUiMotionLevel));
 			static int s_Qm3DParticlePulseStrengthInputId;
 			RenderIntOption("hud-Qm3DParticlesPulseStrength", &s_Qm3DParticlePulseStrengthInputId, Localize("Pulse strength"), &g_Config.m_Qm3DParticlesPulseStrength, 0, 50, "%");
 			static int s_Qm3DParticlePulseSpeedInputId;
@@ -234,8 +242,11 @@ void CMenus::RenderQmHudBackground3DContent(CUIRect &Content, const SSettingsCon
 		{
 			DoQmSettingsCheckboxAuto(&g_Config.m_Qm3DParticlesTwinkle, "Particle twinkle", Localize("Particle twinkle"), &g_Config.m_Qm3DParticlesTwinkle, &Row, LineHeight);
 		}
-		if(g_Config.m_Qm3DParticlesTwinkle)
+		// 这一组只有一行，原本行前的缝就写在条件里：留在展开作用域内，收起时和行一起收。
+		static CSettingsConditionalRows s_ParticleTwinkleRows;
+		if(s_ParticleTwinkleRows.Update(g_Config.m_Qm3DParticlesTwinkle, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 		{
+			const CSettingsContentRevealScope TwinkleRevealScope(Ui(), Flow, s_ParticleTwinkleRows.Fade(g_Config.m_QmUiMotionLevel));
 			Flow.Space(ui_token::settings::RowGap(LineSpacing));
 			static int s_Qm3DParticleTwinkleStrengthInputId;
 			RenderIntOption("hud-Qm3DParticlesTwinkleStrength", &s_Qm3DParticleTwinkleStrengthInputId, Localize("Twinkle strength"), &g_Config.m_Qm3DParticlesTwinkleStrength, 0, 100, "%", false);

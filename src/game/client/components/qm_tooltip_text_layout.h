@@ -47,6 +47,13 @@ struct SQmTooltipTextLayout
 	vec2 m_Size{};
 	int m_LineCount = 0;
 	int m_VisibleLines = 0;
+	// 某一行的实际宽度超过了换行宽度（通常是不可断行的长词或单字比行宽还宽）。
+	// 这是排版/避让事实，不是截断事实：单行略宽但所有字形都完整可见时，
+	// m_Truncated 必须为 false，气泡按这个值加宽到字宽即可。
+	bool m_LineOverflow = false;
+	// 只表示「真的丢了内容」：可视行数装不下全部行，或渲染游标没能消费完整段文字。
+	// 不能用行宽溢出置位，否则完整可见的单行说明会被标成截断，绘制侧据此丢掉正文、
+	// 只剩一个省略号（用户实机现象）。
 	bool m_Truncated = false;
 };
 
@@ -78,10 +85,14 @@ inline SQmTooltipTextLayout QmTooltipMeasureText(ITextRender &TextRender, const 
 	// 比较离散行数，避免完整一行因浮点高度误差被省略。
 	const int Capacity = std::max(0, static_cast<int>(std::floor(ContentHeight / Layout.m_LineHeight + 0.0001f)));
 	Layout.m_VisibleLines = std::min(Layout.m_LineCount, Capacity);
-	Layout.m_Truncated = Layout.m_LineCount > Capacity || Cursor.m_CharCount < str_length(pText) || Cursor.m_LongestLineWidth > Layout.m_LineWidth + 0.0001f;
+	// 行宽溢出单独记录：它只影响气泡宽度与排版避让，不再冒充「截断」。
+	Layout.m_LineOverflow = Cursor.m_LongestLineWidth > Layout.m_LineWidth + 0.0001f;
+	// 截断只认真正丢了内容的两条：可视行数装不下全部行，或游标没吃完整段文字。
+	// 单行略宽但字形完整（CharCount 已覆盖全部字符）不再算截断。
+	Layout.m_Truncated = Layout.m_VisibleLines < Layout.m_LineCount || Cursor.m_CharCount < str_length(pText);
 	const int Lines = std::min(Layout.m_LineCount, Layout.m_VisibleLines);
 	Layout.m_Size = vec2(
-		std::min(AvailableSize.x, (Layout.m_Truncated ? std::max(Layout.m_LineWidth, VisualWidth) : VisualWidth) + 2.0f * Layout.m_Padding),
+		std::min(AvailableSize.x, ((Layout.m_Truncated || Layout.m_LineOverflow) ? std::max(Layout.m_LineWidth, VisualWidth) : VisualWidth) + 2.0f * Layout.m_Padding),
 		std::min(AvailableSize.y, Lines * Layout.m_LineHeight + Layout.m_TextOffsetY + BottomOverhang + 2.0f * Layout.m_Padding));
 	return Layout;
 }
