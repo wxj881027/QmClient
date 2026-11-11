@@ -68,13 +68,13 @@ protected:
 		const float CellW = (ContentW - 7.0f * 4.0f) / 8.0f;
 		const float ViewportY = pPopup->y + pPopup->h - Inset - (16.0f + 2.0f + 128.0f) + 16.0f + 2.0f;
 		const int Slot = Index + 1;
-		const vec2 Center = {ContentX + (Slot % 8) * (CellW + 4.0f) + CellW * 0.5f, ViewportY + (Slot / 8) * (22.0f + 11.0f + 4.0f) + 11.0f};
-		fprintf(stderr, "popup=(%.1f,%.1f,%.1fx%.1f) inset=%.1f contentW=%.1f cell=%.1f swatch=(%.1f,%.1f)\n", pPopup->x, pPopup->y, pPopup->w, pPopup->h, Inset, ContentW, CellW, Center.x, Center.y);
-		return Center;
+		return {ContentX + (Slot % 8) * (CellW + 4.0f) + CellW * 0.5f, ViewportY + (Slot / 8) * (22.0f + 11.0f + 4.0f) + 11.0f};
 	}
 
 	void Click(const vec2 &Position)
 	{
+		// 热项来自上一帧渲染：先把指针移过去，再按下，否则这一次点击仍按旧位置判定。
+		FrameAt(Position, false);
 		FrameAt(Position, true);
 		FrameAt(Position, false);
 	}
