@@ -324,17 +324,6 @@ TEST(SettingsPageLayout, PageListCardsUseExactProductionViewports)
 
 	const SSettingsListCardGeometry Theme = ResolveSettingsGeneralThemeListGeometry(12, Metrics);
 	EXPECT_FLOAT_EQ(Theme.m_ContentHeight, Metrics.m_LineHeight + Metrics.m_LineSpacing + 8.0f * Metrics.m_ListRowHeight);
-	EXPECT_FLOAT_EQ(ResolveSettingsGeneralClientContentHeight(Metrics, Theme.m_ContentHeight),
-		Metrics.m_LineHeight + Metrics.m_SectionGap +
-			ResolveSettingsRowsHeight(2, Metrics.m_LineHeight, Metrics.m_LineSpacing) + Metrics.m_SectionGap +
-			ResolveSettingsRowsHeight(2, Metrics.m_ButtonHeight, Metrics.m_LineSpacing) + Metrics.m_SectionGap + Theme.m_ContentHeight);
-
-	SSettingsContentMetrics IndependentSpacingMetrics = Metrics;
-	IndependentSpacingMetrics.m_LineSpacing = 3.0f;
-	IndependentSpacingMetrics.m_SectionGap = 11.0f;
-	EXPECT_FLOAT_EQ(ResolveSettingsGeneralClientContentHeight(IndependentSpacingMetrics, 80.0f),
-		3.0f * IndependentSpacingMetrics.m_LineHeight + 2.0f * IndependentSpacingMetrics.m_ButtonHeight +
-			2.0f * IndependentSpacingMetrics.m_LineSpacing + 3.0f * IndependentSpacingMetrics.m_SectionGap + 80.0f);
 
 	const SSettingsContentMetrics CardMetrics = ResolveSettingsContentMetrics(480.0f);
 	const SSettingsListCardGeometry CompactLanguages = ResolveSettingsGeneralLanguageListGeometry(9, CardMetrics);
@@ -344,8 +333,11 @@ TEST(SettingsPageLayout, PageListCardsUseExactProductionViewports)
 	const SSettingsListCardGeometry OneMode = ResolveSettingsGraphicsModesGeometry(1, Metrics);
 	const SSettingsListCardGeometry ManyModes = ResolveSettingsGraphicsModesGeometry(20, Metrics);
 	EXPECT_FLOAT_EQ(OneMode.m_ContentHeight, Metrics.m_RowStep * 2.0f + Metrics.m_ListRowHeight);
-	EXPECT_FLOAT_EQ(ManyModes.m_ContentHeight, Metrics.m_RowStep * 2.0f + 8.0f * Metrics.m_ListRowHeight);
-	EXPECT_FLOAT_EQ(ManyModes.m_ListViewportHeight, 8.0f * Metrics.m_ListRowHeight);
+	// 视口高度 = 完整行高 + 行间距，行数与行距只由 ui_token::list 定义一次；
+	// 这里引用同一组事实而不是写死数字，防止测高与渲染两套数字回潮。
+	const float ModesViewport = ResolveSettingsListViewportHeight(ui_token::list::MAX_VISIBLE_ROWS, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING);
+	EXPECT_FLOAT_EQ(ManyModes.m_ContentHeight, Metrics.m_RowStep * 2.0f + ModesViewport);
+	EXPECT_FLOAT_EQ(ManyModes.m_ListViewportHeight, ModesViewport);
 
 	const SSettingsListCardGeometry OneAudioPack = ResolveSettingsSoundAudioPackGeometry(1, Metrics);
 	const SSettingsListCardGeometry EightAudioPacks = ResolveSettingsSoundAudioPackGeometry(8, Metrics);
@@ -392,53 +384,6 @@ TEST(SettingsPageLayout, ControllerRadioRowUsesDropdownWithoutAddingASecondLine)
 	EXPECT_FLOAT_EQ(Narrow.m_Height, Narrow.m_ButtonsRect.y + Narrow.m_ButtonsRect.h);
 }
 
-TEST(SettingsPageLayout, ControllerHeightTracksStateWidthAndAxisLimit)
-{
-	constexpr float RowHeight = 20.0f;
-	constexpr float RowSpacing = 5.0f;
-	const float Disabled = ResolveSettingsControllerContentHeight(700.0f, false, false, false, 0, 8, RowHeight, RowSpacing);
-	const float MissingDevice = ResolveSettingsControllerContentHeight(700.0f, true, false, false, 0, 8, RowHeight, RowSpacing);
-	const float Relative = ResolveSettingsControllerContentHeight(700.0f, true, true, false, 4, 8, RowHeight, RowSpacing);
-	const float Absolute = ResolveSettingsControllerContentHeight(700.0f, true, true, true, 4, 8, RowHeight, RowSpacing);
-	const float Narrow = ResolveSettingsControllerContentHeight(240.0f, true, true, false, 4, 8, RowHeight, RowSpacing);
-	const float ClampedAxes = ResolveSettingsControllerContentHeight(700.0f, true, true, false, 99, 8, RowHeight, RowSpacing);
-
-	EXPECT_LT(Disabled, MissingDevice);
-	EXPECT_LT(MissingDevice, Absolute);
-	EXPECT_FLOAT_EQ(Relative - Absolute, RowHeight + RowSpacing);
-	EXPECT_FLOAT_EQ(Narrow, Relative);
-	EXPECT_FLOAT_EQ(ClampedAxes - Relative, 4.0f * (RowHeight + RowSpacing));
-}
-
-TEST(SettingsPageLayout, ControllerHeightMatchesEveryRenderedRowWithoutTrailingSpacing)
-{
-	constexpr float RowHeight = 20.0f;
-	constexpr float RowSpacing = 5.0f;
-	constexpr float RowStep = RowHeight + RowSpacing;
-	const SSettingsContentMetrics WideMetrics = ResolveSettingsContentMetrics(700.0f);
-	const SSettingsRadioRowLayout WideRadio = ResolveSettingsRadioRowLayout({0.0f, 0.0f, 700.0f, 100.0f}, 2, WideMetrics);
-	const float ExpectedRelative =
-		2.0f * RowStep + WideRadio.m_Height + RowStep + 2.0f * RowStep + RowSpacing + 5.0f * RowStep;
-	EXPECT_FLOAT_EQ(ResolveSettingsControllerContentHeight(700.0f, true, true, false, 4, 8, RowHeight, RowSpacing), ExpectedRelative);
-	EXPECT_FLOAT_EQ(ResolveSettingsControllerContentHeight(700.0f, true, true, true, 4, 8, RowHeight, RowSpacing), ExpectedRelative - RowStep);
-	EXPECT_FLOAT_EQ(ResolveSettingsControllerContentHeight(700.0f, false, false, false, 0, 8, RowHeight, RowSpacing), RowStep);
-	EXPECT_FLOAT_EQ(ResolveSettingsControllerContentHeight(700.0f, true, false, false, 0, 8, RowHeight, RowSpacing), 2.0f * RowStep + RowSpacing);
-
-	const SSettingsContentMetrics NarrowMetrics = ResolveSettingsContentMetrics(240.0f);
-	const SSettingsRadioRowLayout NarrowRadio = ResolveSettingsRadioRowLayout({0.0f, 0.0f, 240.0f, 100.0f}, 2, NarrowMetrics);
-	const float ExpectedNarrow =
-		2.0f * RowStep + NarrowRadio.m_Height + RowStep + 2.0f * RowStep + RowSpacing + 5.0f * RowStep;
-	EXPECT_FLOAT_EQ(ResolveSettingsControllerContentHeight(240.0f, true, true, false, 4, 8, RowHeight, RowSpacing), ExpectedNarrow);
-
-	for(int AxisCount = 0; AxisCount <= 12; ++AxisCount)
-	{
-		const int VisibleAxes = std::clamp(AxisCount, 0, 8);
-		EXPECT_FLOAT_EQ(ResolveSettingsControllerAxisPickerHeight(AxisCount, 8, RowHeight, RowSpacing), (VisibleAxes + 1) * RowStep);
-		const float Expected = 2.0f * RowStep + WideRadio.m_Height + RowStep + 2.0f * RowStep + RowSpacing + (VisibleAxes + 1) * RowStep;
-		EXPECT_FLOAT_EQ(ResolveSettingsControllerContentHeight(700.0f, true, true, false, AxisCount, 8, RowHeight, RowSpacing), Expected);
-	}
-}
-
 TEST(SettingsPageLayout, StatusCodeHelpUsesTwoColumnsOnlyWhenWide)
 {
 	EXPECT_EQ(ResolveSettingsStatusCodeRows(20, 700.0f), 10);
@@ -475,14 +420,16 @@ TEST(SettingsPageLayout, TeeQueueListViewportUsesCompleteRowsAndPrioritizesQueue
 	EXPECT_EQ(ResolveSettingsTeeVisiblePresetRows(3), 3);
 	EXPECT_EQ(ResolveSettingsTeeVisiblePresetRows(12), 3);
 	EXPECT_EQ(ResolveSettingsTeeVisibleQueueRows(1), 1);
-	EXPECT_EQ(ResolveSettingsTeeVisibleQueueRows(8), 8);
-	EXPECT_EQ(ResolveSettingsTeeVisibleQueueRows(9), 8);
-	EXPECT_EQ(ResolveSettingsTeeVisibleQueueRows(10), 8);
+	// 皮肤队列超过上限就交给覆盖式滚动条：上限之后无论多少行，可见行数都封顶。
+	EXPECT_EQ(ResolveSettingsTeeVisibleQueueRows(ui_token::list::SKIN_QUEUE_MAX_VISIBLE_ROWS), ui_token::list::SKIN_QUEUE_MAX_VISIBLE_ROWS);
+	EXPECT_EQ(ResolveSettingsTeeVisibleQueueRows(ui_token::list::SKIN_QUEUE_MAX_VISIBLE_ROWS + 1), ui_token::list::SKIN_QUEUE_MAX_VISIBLE_ROWS);
+	EXPECT_EQ(ResolveSettingsTeeVisibleQueueRows(ui_token::list::SKIN_QUEUE_MAX_VISIBLE_ROWS + 2), ui_token::list::SKIN_QUEUE_MAX_VISIBLE_ROWS);
 	const SSettingsTeeQueuePanelGeometry OneQueueItem = ResolveSettingsTeeQueuePanelGeometry(Metrics, 1, 12);
 	const SSettingsTeeQueuePanelGeometry EightQueueItems = ResolveSettingsTeeQueuePanelGeometry(Metrics, 8, 12);
 	const SSettingsTeeQueuePanelGeometry NineQueueItems = ResolveSettingsTeeQueuePanelGeometry(Metrics, 9, 12);
 	EXPECT_FLOAT_EQ(OneQueueItem.m_QueueListViewportHeight, Metrics.m_ListRowHeight);
-	EXPECT_FLOAT_EQ(EightQueueItems.m_QueueListViewportHeight, Metrics.m_ListRowHeight * 8.0f);
+	EXPECT_FLOAT_EQ(EightQueueItems.m_QueueListViewportHeight,
+		ResolveSettingsListViewportHeight(ui_token::list::SKIN_QUEUE_MAX_VISIBLE_ROWS, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING));
 	EXPECT_FLOAT_EQ(NineQueueItems.m_QueueListViewportHeight, EightQueueItems.m_QueueListViewportHeight);
 	EXPECT_FLOAT_EQ(EightQueueItems.m_QueueListSurfaceHeight, Metrics.m_LineHeight + Metrics.m_LineSpacing * 3.0f + EightQueueItems.m_QueueListViewportHeight);
 	EXPECT_EQ(EightQueueItems.m_VisiblePresetRows, 3);
@@ -523,27 +470,6 @@ TEST(SettingsPageLayout, QmHudRevisionsCoverEveryHeightBranch)
 	EXPECT_NE(ResolveQmHudVoiceRevision(true, true, true, 1, true, false), ResolveQmHudVoiceRevision(true, true, true, 1, true, true));
 	EXPECT_NE(ResolveQmHudBackground3DRevision(true, false, false, false, false, false), ResolveQmHudBackground3DRevision(true, true, false, false, false, false));
 	EXPECT_NE(ResolveQmHudBackground3DRevision(true, true, false, false, false, false), ResolveQmHudBackground3DRevision(true, true, true, true, true, true));
-}
-
-TEST(SettingsPageLayout, ConditionalRowsUseFrameSnapshotUntilNextLayout)
-{
-	bool ReplaysEnabled = true;
-	bool RaceGhostEnabled = false;
-	const bool ReplaysFrameSnapshot = ReplaysEnabled;
-	const bool FrameSnapshot = RaceGhostEnabled;
-	EXPECT_FLOAT_EQ(ResolveDDNetDemoRows(ReplaysFrameSnapshot, FrameSnapshot, false), 5.0f);
-
-	ReplaysEnabled = false;
-	RaceGhostEnabled = true;
-	EXPECT_FLOAT_EQ(ResolveDDNetDemoRows(ReplaysFrameSnapshot, FrameSnapshot, false), 5.0f);
-	EXPECT_FLOAT_EQ(ResolveDDNetDemoRows(ReplaysEnabled, RaceGhostEnabled, false), 6.0f);
-	EXPECT_FLOAT_EQ(ResolveDDNetDemoRows(ReplaysEnabled, RaceGhostEnabled, true), 7.0f);
-	EXPECT_FLOAT_EQ(ResolveDDNetDemoRows(true, RaceGhostEnabled, false), 8.0f);
-	EXPECT_FLOAT_EQ(ResolveDDNetDemoRows(true, RaceGhostEnabled, true), 9.0f);
-	EXPECT_FLOAT_EQ(ResolveDDNetGameplayRows(false, false), 9.0f);
-	EXPECT_FLOAT_EQ(ResolveDDNetGameplayRows(true, false), 9.0f);
-	EXPECT_FLOAT_EQ(ResolveDDNetGameplayRows(false, true), 12.0f);
-	EXPECT_FLOAT_EQ(ResolveDDNetGameplayRows(true, true), 12.0f);
 }
 
 TEST(SettingsPageLayout, SettingsShellUsesFluidNarrowAndCappedWideGeometry)

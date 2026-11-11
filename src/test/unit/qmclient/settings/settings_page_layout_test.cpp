@@ -111,27 +111,11 @@ TEST(SettingsPageLayout, LargeUiUsesOneReadableColumnInsteadOfShrinkingTwo)
 TEST(SettingsPageLayout, DynamicVisualCardHeightsUseSharedMetrics)
 {
 	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(1000.0f);
-	EXPECT_FLOAT_EQ(ResolveQmVisualWeaponAnimationHeight(Metrics, false, false), 2.0f * Metrics.m_RowStep + Metrics.m_LineSpacing);
-	EXPECT_FLOAT_EQ(ResolveQmVisualWeaponAnimationHeight(Metrics, false, true), 4.0f * Metrics.m_RowStep + Metrics.m_LineSpacing);
-	EXPECT_FLOAT_EQ(ResolveQmVisualWeaponAnimationHeight(Metrics, true, false), 7.0f * Metrics.m_RowStep + Metrics.m_LineSpacing);
-	EXPECT_FLOAT_EQ(ResolveQmVisualWeaponAnimationHeight(Metrics, true, true), 8.0f * Metrics.m_RowStep + Metrics.m_LineSpacing);
-	EXPECT_FLOAT_EQ(ResolveQmVisualCollisionHitboxHeight(Metrics, false), Metrics.m_RowStep);
-	EXPECT_FLOAT_EQ(ResolveQmVisualCollisionHitboxHeight(Metrics, true), 17.0f * Metrics.m_RowStep);
 	EXPECT_FLOAT_EQ(ResolveQmVisualSkinTransitionHeight(Metrics, true) - ResolveQmVisualSkinTransitionHeight(Metrics, false), 5.0f * Metrics.m_RowStep);
 	EXPECT_FLOAT_EQ(ResolveQmVisualSkinTransitionHeight(Metrics, false), 2.0f * Metrics.m_RowStep);
 }
 
-TEST(SettingsPageLayout, GeneralDynamicCameraConsumesNoHiddenRowWhenCollapsed)
-{
-	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(1000.0f);
-	const float Collapsed = ResolveSettingsGeneralGameContentHeight(Metrics, false);
-	const float Expanded = ResolveSettingsGeneralGameContentHeight(Metrics, true);
-	EXPECT_FLOAT_EQ(Collapsed, ResolveSettingsRowsHeight(3, Metrics.m_LineHeight, Metrics.m_LineSpacing));
-	EXPECT_FLOAT_EQ(Expanded, ResolveSettingsRowsHeight(4, Metrics.m_LineHeight, Metrics.m_LineSpacing));
-	EXPECT_FLOAT_EQ(Expanded - Collapsed, Metrics.m_RowStep);
-}
-
-TEST(SettingsPageLayout, SegmentedControlsKeepReadableSizeInNarrowAndWideContent)
+TEST(SettingsPageLayout, SegmentedControlsFollowBodySizeAcrossWidths)
 {
 	for(const float Width : {240.0f, 600.0f, 960.0f})
 	{
@@ -139,7 +123,10 @@ TEST(SettingsPageLayout, SegmentedControlsKeepReadableSizeInNarrowAndWideContent
 		const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(Width);
 		const CUIRect View{10.0f, 20.0f, Width, 100.0f};
 		const SSettingsRadioRowLayout Row = ResolveSettingsRadioRowLayout(View, 4, Metrics);
-		EXPECT_GE(ResolveSettingsRadioFontSize(Metrics), 12.0f);
+		// 单选行字号跟随设置页正文：窄内容时正文会缩到 10，这里锁「同源 + 有可读下限」，
+		// 而不是写死 12（写死会让窄窗口下的单选行比同页其它文字大一号）。
+		EXPECT_FLOAT_EQ(ResolveSettingsRadioFontSize(Metrics), Metrics.m_BodySize);
+		EXPECT_GE(ResolveSettingsRadioFontSize(Metrics), ui_token::font::SMALL);
 		EXPECT_FLOAT_EQ(Row.m_ButtonsRect.h, Metrics.m_ButtonHeight);
 		EXPECT_LE(Row.m_ButtonsRect.y + Row.m_ButtonsRect.h, View.y + Row.m_Height);
 		EXPECT_LE(Row.m_ButtonsRect.x + Row.m_ButtonsRect.w, View.x + View.w);
@@ -149,22 +136,6 @@ TEST(SettingsPageLayout, SegmentedControlsKeepReadableSizeInNarrowAndWideContent
 		EXPECT_EQ(Nested.m_ContainerRect.h, Row.m_ButtonsRect.h);
 		EXPECT_FLOAT_EQ(Nested.m_ContainerRect.y + Nested.m_ContainerRect.h, View.y + Nested.m_Height);
 	}
-}
-
-TEST(SettingsPageLayout, DynamicIslandHeightMatchesTheRenderedRowsAndColorRow)
-{
-	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(1000.0f);
-	const float OriginalHeight = ResolveQmHudDynamicIslandHeight(Metrics, true, false, 700.0f);
-	const float ExpandedHeight = ResolveQmHudDynamicIslandHeight(Metrics, false, false, 700.0f);
-	const CUIRect ColorRowView{0.0f, 0.0f, 700.0f, 0.0f};
-
-	// 卡片预留 4 行：原版样式、显示队伍、钩子倒计时、开关倒计时。
-	// 展开时再多一行背景色和一行始终显示歌曲信息开关。
-	EXPECT_FLOAT_EQ(OriginalHeight, 4.0f * Metrics.m_RowStep);
-	EXPECT_FLOAT_EQ(ExpandedHeight - OriginalHeight, ResolveSettingsColorRowLayout(ColorRowView, Metrics, false).m_ConsumedHeight + Metrics.m_RowStep);
-	// 开关倒计时启用后再多出「跟随 Tee」「灵动岛」两个位置开关（没有位置标题行）。
-	EXPECT_FLOAT_EQ(ResolveQmHudDynamicIslandHeight(Metrics, true, true, 700.0f) - OriginalHeight, 2.0f * Metrics.m_RowStep);
-	EXPECT_FLOAT_EQ(ResolveQmHudDynamicIslandHeight(Metrics, false, true, 700.0f) - ExpandedHeight, 2.0f * Metrics.m_RowStep);
 }
 
 TEST(SettingsPageLayout, ContentRowFlowKeepsConditionalRowsAndMeasuredHeightInSync)
@@ -517,20 +488,6 @@ TEST(QmConsoleSettingsPanelLayout, ActivePopupWheelOwnerWinsAndConsumesOnlyOnce)
 	Ownership.Register(&Popup, EUiWheelOwnerPriority::POPUP, true);
 	EXPECT_TRUE(Ownership.TryConsume(&Popup, &Delta));
 	EXPECT_FLOAT_EQ(Delta, -1.0f);
-}
-
-TEST(SettingsPageLayout, LegacyRnnoiseModeDoesNotReserveFallbackRows)
-{
-	for(const float Width : {420.0f, 700.0f, 1000.0f})
-	{
-		SCOPED_TRACE(Width);
-		const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(Width);
-		const float DisabledHeight = ResolveQmHudVoiceHeight(Metrics, true, true, true, 0, true, true);
-		EXPECT_FLOAT_EQ(ResolveQmHudVoiceHeight(Metrics, true, true, true, 2, true, true), DisabledHeight);
-		EXPECT_FLOAT_EQ(ResolveQmHudVoiceHeight(Metrics, true, true, true, -1, true, true), DisabledHeight);
-		EXPECT_FLOAT_EQ(ResolveQmHudVoiceHeight(Metrics, true, true, true, 99, true, true), DisabledHeight);
-		EXPECT_GT(ResolveQmHudVoiceHeight(Metrics, true, true, true, 1, true, true), DisabledHeight);
-	}
 }
 
 TEST(SettingsPageLayout, PairedControlsPreservePrimarySpaceAndSupportInPlaceSplitting)

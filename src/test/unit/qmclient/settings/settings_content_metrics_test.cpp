@@ -1,4 +1,4 @@
-// 默认控件尺寸与显式输入下的卡片高度行为；不把主题默认值固化为高度函数的输入。
+// 设置内容度量与行布局基元的行为；卡片高度由内容声明推导，不在此固化预测公式。
 #include <engine/shared/config.h>
 
 #include <game/client/QmUi/SettingsPageLayout.h>
@@ -8,20 +8,6 @@
 #include <array>
 #include <cmath>
 #include <utility>
-
-namespace
-{
-	// 行高是调用方输入：保留既有 16/20 尺寸用例，默认主题统一高度由独立用例验证。
-	SSettingsContentMetrics MetricsWithExplicitControlHeight(float Width, float Height)
-	{
-		SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(Width);
-		Metrics.m_LineHeight = Height;
-		Metrics.m_InputHeight = Height;
-		Metrics.m_ButtonHeight = Height;
-		Metrics.m_RowStep = Height + Metrics.m_LineSpacing;
-		return Metrics;
-	}
-}
 
 TEST(SettingsContentMetrics, ContentMetricsReserveControlWidthWithoutPageMagicNumbers)
 {
@@ -117,56 +103,12 @@ TEST(SettingsContentMetrics, RadioRowsUseMetricsAndDropdownWhenNarrow)
 	EXPECT_FLOAT_EQ(Dropdown.m_ButtonsRect.y, Dropdown.m_LabelRect.y);
 }
 
-TEST(SettingsContentMetrics, AppearanceHeightsRespectExplicitRowMetrics)
-{
-	const SSettingsContentMetrics Compact = MetricsWithExplicitControlHeight(640.0f, 16.0f);
-	EXPECT_FLOAT_EQ(Compact.m_UiScale, 0.78f);
-	EXPECT_NEAR(ResolveAppearanceChatMessagesHeight(Compact), 437.8f, 0.001f);
-	EXPECT_NEAR(ResolveQmHudCoordsHeight(Compact), 155.3f, 0.001f);
-	EXPECT_NEAR(ResolveQmHudNotificationsHeight(Compact, false, false), 95.6f, 0.001f);
-	EXPECT_NEAR(ResolveQmHudNotificationsHeight(Compact, true, false), 311.4f, 0.001f);
-	EXPECT_NEAR(ResolveQmHudNotificationsHeight(Compact, true, true), 391.0f, 0.001f);
-	EXPECT_NEAR(ResolveAppearanceLaserColorsHeight(Compact), 319.8f, 0.001f);
-	EXPECT_NEAR(ResolveAppearanceLaserEnhancedHeight(Compact, false), 95.6f, 0.001f);
-	EXPECT_NEAR(ResolveAppearanceLaserEnhancedHeight(Compact, true), 135.4f, 0.001f);
-
-	const SSettingsContentMetrics Standard = MetricsWithExplicitControlHeight(1000.0f, 20.0f);
-	EXPECT_FLOAT_EQ(Standard.m_UiScale, 1.0f);
-	EXPECT_FLOAT_EQ(ResolveAppearanceChatMessagesHeight(Standard), 550.0f);
-	EXPECT_FLOAT_EQ(ResolveQmHudCoordsHeight(Standard), 195.0f);
-	EXPECT_FLOAT_EQ(ResolveQmHudNotificationsHeight(Standard, false, false), 120.0f);
-	EXPECT_FLOAT_EQ(ResolveQmHudNotificationsHeight(Standard, true, false), 390.0f);
-	EXPECT_FLOAT_EQ(ResolveQmHudNotificationsHeight(Standard, true, true), 490.0f);
-	EXPECT_FLOAT_EQ(ResolveAppearanceLaserColorsHeight(Standard), 400.0f);
-	EXPECT_FLOAT_EQ(ResolveAppearanceLaserEnhancedHeight(Standard, false), 120.0f);
-	EXPECT_FLOAT_EQ(ResolveAppearanceLaserEnhancedHeight(Standard, true), 170.0f);
-}
-
 TEST(SettingsContentMetrics, BothSettingsShellsUseFinalContentWidthMetrics)
 {
 	const SSettingsContentMetrics LegacyMetrics = ResolveSettingsContentMetrics(640.0f);
 	const SSettingsContentMetrics NewMetrics = ResolveSettingsContentMetrics(1000.0f);
 	EXPECT_FLOAT_EQ(ResolveSettingsColorRowLayout({0.0f, 0.0f, 640.0f, 100.0f}, LegacyMetrics, false).m_ConsumedHeight, LegacyMetrics.m_RowStep);
 	EXPECT_FLOAT_EQ(ResolveSettingsColorRowLayout({0.0f, 0.0f, 1000.0f, 100.0f}, NewMetrics, false).m_ConsumedHeight, NewMetrics.m_RowStep);
-}
-
-TEST(SettingsContentMetrics, QmHudHeightsRespectExplicitMetricsAndSelectedStates)
-{
-	const SSettingsContentMetrics Metrics = MetricsWithExplicitControlHeight(1000.0f, 20.0f);
-	EXPECT_FLOAT_EQ(ResolveQmHudPlayerStatsHeight(Metrics, false, false), 70.0f);
-	EXPECT_FLOAT_EQ(ResolveQmHudPlayerStatsHeight(Metrics, true, true), 145.0f);
-	EXPECT_FLOAT_EQ(ResolveQmHudPlayerStatsHeight(Metrics, true, false), 245.0f);
-	EXPECT_FLOAT_EQ(ResolveQmHudInputOverlayHeight(Metrics, false), 20.0f);
-	EXPECT_FLOAT_EQ(ResolveQmHudInputOverlayHeight(Metrics, true), 300.0f);
-	EXPECT_FLOAT_EQ(ResolveQmHudNotificationsHeight(Metrics, true, false), 390.0f);
-	EXPECT_FLOAT_EQ(ResolveQmHudNotificationsHeight(Metrics, true, true), 490.0f);
-	EXPECT_FLOAT_EQ(ResolveQmHudDummyMiniViewHeight(Metrics, false), 25.0f);
-	EXPECT_FLOAT_EQ(ResolveQmHudDummyMiniViewHeight(Metrics, true), 121.0f);
-	EXPECT_FLOAT_EQ(ResolveQmHudVoiceHeight(Metrics, false, false, false, 0, false, false), 20.0f);
-	EXPECT_FLOAT_EQ(ResolveQmHudVoiceHeight(Metrics, true, false, false, 0, false, false), 145.0f);
-	EXPECT_FLOAT_EQ(ResolveQmHudVoiceHeight(Metrics, true, true, false, 0, false, false), 450.75f);
-	EXPECT_NEAR(ResolveQmHudVoiceHeight(Metrics, true, true, true, 1, true, true), 823.7f, 0.001f);
-	EXPECT_FLOAT_EQ(ResolveQmHudBackground3DHeight(Metrics, 600.0f, false, false, false, false, false, false), 20.0f);
 }
 
 TEST(SettingsContentMetrics, SettingsPagesShareTheQmScaleBaseline)
@@ -234,19 +176,6 @@ TEST(SettingsContentMetrics, ChoiceWidthCacheInvalidatesOnTextFontAndRestoresAft
 	EXPECT_FLOAT_EQ(Cache.Resolve({}, 13, 2, Measure), 0);
 	EXPECT_GT(Cache.Resolve(Labels, 13, 2, Measure), 0);
 	EXPECT_EQ(Measures, 10);
-}
-
-TEST(SettingsContentMetrics, Background3DHeightRespondsToSharedChoiceHeightAndOptionalControls)
-{
-	const auto Metrics = MetricsWithExplicitControlHeight(1000, 20);
-	const float Baseline = ResolveQmHudBackground3DHeight(Metrics, 600, true, false, false, false, false, false);
-	EXPECT_GT(Baseline, ResolveQmHudBackground3DHeight(Metrics, 600, false, false, false, false, false, false));
-	auto TallerChoice = Metrics;
-	TallerChoice.m_ButtonHeight += 8;
-	EXPECT_FLOAT_EQ(ResolveQmHudBackground3DHeight(TallerChoice, 600, true, false, false, false, false, false) - Baseline, 8);
-	// 自定义颜色增加一个颜色控件，辉光增加两项参数；验证可见项真实占用的行数。
-	EXPECT_FLOAT_EQ(ResolveQmHudBackground3DHeight(Metrics, 600, true, true, false, false, false, false) - Baseline, Metrics.m_RowStep);
-	EXPECT_FLOAT_EQ(ResolveQmHudBackground3DHeight(Metrics, 600, true, false, true, false, false, false) - Baseline, 2 * Metrics.m_RowStep);
 }
 
 TEST(SettingsContentMetrics, SingleLineControlsKeepTheExistingResponsiveBaseline)
