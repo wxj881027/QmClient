@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QmClient 长期架构改造计划（2026-11-11）</title>
+<style>
+  :root {
+    --bg: #0f1218;
+    --panel: #161b24;
+    --panel-2: #1d2430;
+    --border: #2a3342;
+    --text: #dde4ee;
+    --muted: #8d9aad;
+    --accent: #4cc2ff;
+    --warn: #ffb648;
+    --danger: #ff6b81;
+    --ok: #52d49b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.75 -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 48px 28px 96px; }
+  h1 { font-size: 30px; line-height: 1.3; margin: 0 0 8px; }
+  h2 { font-size: 21px; margin: 48px 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 17px; margin: 28px 0 10px; color: var(--accent); }
+  p, li { color: var(--text); }
+  .meta { color: var(--muted); font-size: 13px; margin-bottom: 28px; }
+  .badge {
+    display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px;
+    border: 1px solid var(--border); background: var(--panel-2); color: var(--muted); margin-right: 6px;
+  }
+  .badge.ok { color: var(--ok); border-color: #245c45; }
+  .badge.warn { color: var(--warn); border-color: #5e4a1f; }
+  .badge.danger { color: var(--danger); border-color: #5e2b34; }
+  nav {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px 22px; margin-bottom: 34px;
+  }
+  nav ol { margin: 0; padding-left: 20px; }
+  nav a { color: var(--accent); text-decoration: none; }
+  nav a:hover { text-decoration: underline; }
+  table { width: 100%; border-collapse: collapse; margin: 14px 0 8px; font-size: 14px; }
+  th, td { border: 1px solid var(--border); padding: 8px 11px; text-align: left; vertical-align: top; }
+  th { background: var(--panel-2); color: var(--muted); font-weight: 600; }
+  code { background: #10151d; border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; font-size: 13px; }
+  pre { background: #10151d; border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; overflow-x: auto; }
+  pre code { border: 0; background: none; padding: 0; }
+  blockquote {
+    margin: 16px 0; padding: 12px 18px; border-left: 3px solid var(--accent);
+    background: var(--panel); border-radius: 0 8px 8px 0; color: var(--muted);
+  }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin: 16px 0; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 14px 0; }
+  .stat { background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+  .stat b { display: block; font-size: 20px; color: var(--accent); }
+  .stat span { font-size: 12px; color: var(--muted); }
+  ul.tight li { margin: 4px 0; }
+  .foot { margin-top: 64px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--border); padding-top: 16px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>QmClient 长期架构改造计划</h1>
+<p class="meta">日期：2026-11-11 ｜ 状态：规划中（未开工） ｜ 归口：本文是长期架构项的单一文档</p>
+
+<nav>
+  <strong>目录</strong>
+  <ol>
+    <li><a href="#why">为什么单独立项</a></li>
+    <li><a href="#base">现状基线</a></li>
+    <li><a href="#a">工作项 A：消除卡片内容声明重放</a></li>
+    <li><a href="#b">工作项 B：CQmClient 分域拆分</a></li>
+    <li><a href="#c">工作项 C：卡片注册表统一与 CMenus 解耦</a></li>
+    <li><a href="#order">排序、依赖与槽位</a></li>
+    <li><a href="#risk">风险登记</a></li>
+    <li><a href="#verify">验收标准</a></li>
+    <li><a href="#out">明确不做的事</a></li>
+    <li><a href="#log">变更记录</a></li>
+  </ol>
+</nav>
+
+<h2 id="why">1. 为什么单独立项</h2>
+<p>2026-11 的调研把客户端改进分成三层：已确认缺陷、每帧固定开销、结构性维护债。前两层中能安全落地的部分已经完成（见第 2 节）。剩下三项<strong>都不适合在共享工作树里随手做</strong>：</p>
+<ul class="tight">
+  <li>改动面横跨 65–197 个文件，与并行会话必然冲突；</li>
+  <li>收益不是"某个函数更快"，而是编译面、可测性和每帧成本的结构性变化，需要基准与对照；</li>
+  <li>一旦中途半成品合入，会同时存在两套布局真值或两套注册表，比不改更糟。</li>
+</ul>
+<p>因此本文只定义边界、顺序和验收，不承诺排期。任何一项开工前，应先在本文件追加"开工记录"，写明基线提交、独占槽位和预期对照数据。</p>
+
+<h2 id="base">2. 现状基线</h2>
+<p>下列数字是 2026-11-11 当前工作树的静态统计，用于日后对照，不代表发布验证结论。</p>
+
+<div class="grid">
+  <div class="stat"><b>197</b><span>QmUi 目录文件数（约 4.7 万行）</span></div>
+  <div class="stat"><b>65</b><span>QmUi 下 include <code>components/menus.h</code> 的 .cpp</span></div>
+  <div class="stat"><b>201</b><span><code>CMenus::</code> 在 QmUi 目录的出现次数</span></div>
+  <div class="stat"><b>163</b><span>已注册设置卡片</span></div>
+  <div class="stat"><b>5–7</b><span>维护同一张卡身份的独立表</span></div>
+  <div class="stat"><b>239</b><span><code>CQmClient</code> 方法数（83 个成员，10+ 领域）</span></div>
+</div>
+
+<p>本轮已完成、且与本文直接相关的改动：</p>
+<table>
+  <tr><th>项</th><th>状态</th><th>说明</th></tr>
+  <tr><td>菜单文本池键去分配</td><td><span class="badge ok">已完成</span></td><td>透明哈希 + 栈上 string_view 查找，命中路径零堆分配；未提交</td></tr>
+  <tr><td>设置页死高度函数清理</td><td><span class="badge ok">已完成</span></td><td>删除 19 个生产零引用的 <code>Resolve*Height</code> 与 9 条镜像测试</td></tr>
+  <tr><td>声明缓冲复用</td><td><span class="badge ok">已完成</span></td><td>消除每帧每卡的 vector 分配；行字符串仍会重建</td></tr>
+  <tr><td>卡片内容声明重放</td><td><span class="badge warn">仅部分</span></td><td>见工作项 A</td></tr>
+  <tr><td>观测接线（heap_allocs / 绘制桥 / 卡片级 diagnostics）</td><td><span class="badge danger">未做</span></td><td>工作项 A 的前置条件</td></tr>
+</table>
+
+<h2 id="a">3. 工作项 A：消除卡片内容声明重放</h2>
+
+<h3>问题</h3>
+<p><code>CSettingsCardDeck::RenderInternal</code> 每帧对所有未折叠卡片调用 <code>m_ResolveContentLayout</code>，以 DECLARE 趟回放整张卡内容并构造行字符串。布局缓存命中只能省掉布局对象，省不掉声明构建。按每页 20+ 卡、每卡 3–20 行估算，单帧可达数百次字符串构造；拖拽与几何变化帧约 3 倍。</p>
+
+<h3>为什么不能"屏幕外就不测"</h3>
+<blockquote>deck 需要<strong>全部</strong>卡片高度来计算滚动范围，而跳过声明的目的恰恰是不算高度。唯一自洽的解法是把"测量"和"重放"拆开：屏幕外保留上一次的高度，只在卡片进入预加载边距时重新声明。这带来"屏幕外内容变化后高度滞后"的窗口，必须在设计里明确接受，否则会反复返工。</blockquote>
+
+<h3>A1 视口延迟测量（先做）</h3>
+<ul class="tight">
+  <li>为每张卡保留"上次有效高度"，卡片矩形与视口加一屏预加载边距不相交时，跳过 <code>m_ResolveContentLayout</code>，用旧高度参与总高计算。</li>
+  <li>以下情况仍强制重新声明：宽度变化、<code>m_MeasureRevision</code> 变化、卡片重新进入视口、存在待提交弹层、正在播放展开动画。</li>
+  <li>页面首次进入没有缓存高度，仍全量测一次；可复用已有设置页 warmup 预算，不额外加帧。</li>
+</ul>
+<p><strong>风险</strong>：滚动条长度在页面刚进入时可能抖动一次。<strong>验证</strong>：基准对比"滚动一页"的 layout 用时与声明次数；客户端滚动到底部与快速上下翻页无空白卡。</p>
+
+<h3>A2 每卡依赖修订号（A1 之后）</h3>
+<ul class="tight">
+  <li><code>SSettingsCardDefinition</code> 增加声明修订号；<code>UseDeclaredContent</code> 接受"本卡依赖"回调。</li>
+  <li>默认值表示"永远重放"，卡片逐张迁移，未迁移的卡行为完全不变。</li>
+  <li>修订号由卡片实际读取的配置项组合而成（位掩码/整数混合），比要求每张卡自己维护缓存更便宜、更不容易漏。</li>
+  <li>迁移顺序：行数多且无弹层的卡（hud、visual、ddnet）→ 带展开动画的卡（tee）→ 带弹层的卡（bind）。</li>
+  <li>收尾条件：加一条静态合同测试，确认 <code>BuildCard</code> 链里每张卡都登记了修订号提供者，防止漏迁。</li>
+</ul>
+<p><strong>前置</strong>：先补 <code>SettingsCardDeck</code> 基准与 <code>heap_allocs</code> 真实赋值。没有对照数据，A2 不应开工。</p>
+
+<h2 id="b">4. 工作项 B：CQmClient 分域拆分</h2>
+<p><code>CQmClient</code> 目前 333 行头、239 个方法、83 个成员，混合 WebSocket 实时服务、匿名表情、新闻/markdown、赞助列表、头衔鉴权、生命周期标记、游玩时长、DDNet 档案抓取、本地统计、开发者认证、地图标签等领域。HTTP/WS 任务与失败回滚交织，无法按服务注入 fake。</p>
+
+<h3>拆分顺序（离网络越远越先拆）</h3>
+<table>
+  <tr><th>#</th><th>域</th><th>难点</th></tr>
+  <tr><td>1</td><td>游玩时长 / 本地统计</td><td>纯数据，无网络；先验证拆分手法本身</td></tr>
+  <tr><td>2</td><td>新闻 / markdown</td><td>缓存与刷新节流</td></tr>
+  <tr><td>3</td><td>赞助列表、作者列表</td><td>静态数据 + 失败回退</td></tr>
+  <tr><td>4</td><td>头衔鉴权</td><td>与中心服交互、失败保持旧状态</td></tr>
+  <tr><td>5</td><td>DDNet 档案抓取、地图标签</td><td>外部 HTTP、取消与代际</td></tr>
+  <tr><td>6</td><td>匿名表情</td><td>上传/下载任务</td></tr>
+  <tr><td>7</td><td>WebSocket 实时服务</td><td>最后做：重连、增量基线、关闭顺序</td></tr>
+</table>
+
+<h3>机械做法</h3>
+<ul class="tight">
+  <li>每个域抽成独立服务类，放在 <code>components/qmclient/</code>；<code>CQmClient</code> 保留同名转发方法，65 个 UI 文件一行不用改。</li>
+  <li>每个域一个独立提交，可单独回退；同一时间只迁一个域。</li>
+  <li>真正的难点是生命周期：谁拥有 job、谁负责 cancel、析构与 <code>CJobPool::Shutdown</code> 的顺序。每个域落地前先写这段说明，再写代码。</li>
+</ul>
+
+<h2 id="c">5. 工作项 C：卡片注册表统一与 CMenus 解耦</h2>
+
+<h3>C1 单一 descriptor 表（先做）</h3>
+<p>新增一张卡目前要同步：默认注册表、页清单、<code>BuildCard</code> if 链、26 个搜索索引、Wiki 文案、布局适配 switch、模块特判。漏一处就出现"搜索有、页面没有"。</p>
+<ol class="tight">
+  <li>先把现有各表<strong>原样</strong>收进一张 descriptor 表，同时写 parity 测试：生成的页清单与搜索列表必须与旧表逐项相等。</li>
+  <li>逐个消费者切换（页清单 → 搜索 → Wiki → 布局适配），每切一个跑 parity。</li>
+  <li>删除旧表；descriptor 表成为唯一真值。</li>
+</ol>
+<p>风险低、机械，但工作量在 163 张卡的数据搬迁上，适合独占槽位慢慢做。</p>
+
+<h3>C2 CMenus 解耦（最后做）</h3>
+<ul class="tight">
+  <li>引入卡片宿主接口（文本渲染、UI 上下文、配置访问、动画运行时），<code>CMenus</code> 实现它。</li>
+  <li>卡片内容函数从 <code>CMenus</code> 成员改为接收宿主的自由函数，按页分批：TClient → hud → visual → bind → credits。</li>
+  <li>收益是编译时间与可单测性，<strong>不是运行时性能</strong>；代价是 65 个文件的改动面。</li>
+</ul>
+
+<h2 id="order">6. 排序、依赖与槽位</h2>
+<table>
+  <tr><th>顺序</th><th>项</th><th>依赖</th><th>建议槽位</th></tr>
+  <tr><td>1</td><td>观测接线 + <code>SettingsCardDeck</code> 基准</td><td>无</td><td>固定槽位</td></tr>
+  <tr><td>2</td><td>A1 视口延迟测量</td><td>观测</td><td>固定槽位</td></tr>
+  <tr><td>3</td><td>C1 descriptor 表</td><td>无（可与 A 并行，但不同槽位）</td><td>独占槽位</td></tr>
+  <tr><td>4</td><td>A2 依赖修订号</td><td>A1 + 基准</td><td>固定槽位</td></tr>
+  <tr><td>5</td><td>B CQmClient 分域</td><td>无，但每域一个提交</td><td>独占槽位</td></tr>
+  <tr><td>6</td><td>C2 CMenus 解耦</td><td>C1 完成</td><td>独占槽位</td></tr>
+</table>
+<p>三项都不应在多人共用的默认工作树里推进：同一目录只允许一个写入会话。开工前确认当前槽位没有其他会话的未提交改动，并在本文追加开工记录。</p>
+
+<h2 id="risk">7. 风险登记</h2>
+<table>
+  <tr><th>风险</th><th>影响</th><th>缓解</th></tr>
+  <tr><td>A1 让屏幕外卡片高度滞后</td><td>滚动条长度短暂不准</td><td>进入预加载边距即重测；页面进入时全量测一次；接受该窗口并写入注释</td></tr>
+  <tr><td>A2 漏登记依赖</td><td>改配置后卡片高度不更新</td><td>默认值语义为"永远重放"；逐张迁移；静态合同检查覆盖</td></tr>
+  <tr><td>B 拆分破坏任务生命周期</td><td>退出卡死、迟到结果覆盖新状态</td><td>每域先写生命周期说明；用 fake 传输补取消/重入测试</td></tr>
+  <tr><td>C1 parity 未覆盖全部消费者</td><td>搜索、Wiki 与页清单漂移</td><td>先建 parity 再迁移；每步都跑</td></tr>
+  <tr><td>C2 大规模改动引入行为差异</td><td>输入路由、焦点与动画回归</td><td>按页分批，每批独立构建与人工验收</td></tr>
+  <tr><td>与并行 UI 会话冲突</td><td>相互覆盖未提交改动</td><td>独占槽位；不在共享工作树开工</td></tr>
+</table>
+
+<h2 id="verify">8. 验收标准</h2>
+<table>
+  <tr><th>工作项</th><th>必要证据</th></tr>
+  <tr><td>A1</td><td>基准：同一页滚动一帧的声明次数与用时前后对照；客户端滚动无空白、无跳变</td></tr>
+  <tr><td>A2</td><td>基准：改一张卡的配置后，只有该卡重新声明；静态合同覆盖全部卡片</td></tr>
+  <tr><td>B</td><td>每域：构建 + 全量 C++ 测试 + 冒烟；网络域补 fake 传输的取消/失败/重入测试</td></tr>
+  <tr><td>C1</td><td>parity 测试在迁移前后逐项相等；搜索、Wiki、页清单三处结果一致</td></tr>
+  <tr><td>C2</td><td>每批：构建 + 相关测试 + 设置页人工交互验收</td></tr>
+</table>
+<p>"构建通过"不等于运行时、端到端、视觉或跨平台行为通过；性能结论以同场景前后数据为准，不以单次测量下结论。</p>
+
+<h2 id="out">9. 明确不做的事</h2>
+<ul class="tight">
+  <li>任何触碰网络协议、快照、输入时序、物理/预测、地图或 demo 格式的架构改动。</li>
+  <li>没有同场景前后数据的"大重构"。</li>
+  <li>性能报表的离线化：该报告已长期不用，按维护者决定放弃（2026-11-11）。</li>
+  <li>为移动观战端单独引入架构约束；移动端只在改动确实落在其专有路径时才纳入评估。</li>
+</ul>
+
+<h2 id="log">10. 变更记录</h2>
+<table>
+  <tr><th>日期</th><th>变更</th></tr>
+  <tr><td>2026-11-11</td><td>建立本文；迁入既有的拆分与性能总纲文档；记录三项长期工作的边界、顺序与验收</td></tr>
+</table>
+
+<p class="foot">本文是长期架构项的归口文档。已完成的实施与修复记录在 <code>docs/归档/</code>；当前功能规格在 <code>docs/规格/</code>。文档不产生实现授权，开工前仍需确认槽位与基线。</p>
+
+</div>
+</body>
+</html>
