@@ -1,12 +1,11 @@
 #include "QmAuthorName.h"
 
-#include <game/client/QmUi/UiSurface.h>
-
 #include "UiTokens.h"
 
 #include <engine/client.h>
 #include <engine/textrender.h>
 
+#include <game/client/QmUi/UiSurface.h>
 #include <game/client/components/qmclient/qm_sponsor_authors.h>
 #include <game/client/ui.h>
 
