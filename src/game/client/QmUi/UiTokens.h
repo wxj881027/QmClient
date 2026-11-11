@@ -161,6 +161,59 @@ namespace ui_token::spacing
 	inline constexpr float XL = 24.0f;
 } // namespace ui_token::spacing
 
+// 弹层条目（下拉框/选择弹窗）的排版事实：行背景占满整行，文字固定退还一段内边距，
+// 否则文字会贴着胶囊圆角。随字号缩放，窄窗口不跟着一起挤。
+namespace ui_token::dropdown
+{
+	inline constexpr float ENTRY_INSET_X_MIN = spacing::SM;
+	inline constexpr float ENTRY_INSET_X_FONT_RATIO = 0.75f;
+
+	inline float EntryInsetX(const float FontSize)
+	{
+		return std::max(ENTRY_INSET_X_MIN, FontSize * ENTRY_INSET_X_FONT_RATIO);
+	}
+
+	// 行高已知时按行高再兜一档：选中行的背景是胶囊，端帽半径 = 行高/2，
+	// 文字内退小于半径就会压在圆弧上，看起来像“贴着边”。
+	// 再兜一档容器内边距：弹层条目和卡片内容都是「圆角容器里的一行文字」，
+	// 文字到容器边缘的距离应当同档（卡片是 spacing::MD + 容器眼皮，条目再加上自己的 padding）。
+	inline float EntryInsetX(const float FontSize, const float RowHeight)
+	{
+		// 第三档用 spacing::LG：条目左右各自再退一档，视觉上明确脱离胶囊端帽，
+		// 与卡片内容的 CARD_PADDING(14) 同量级；MD(12) 在 20 高的行里还是太贴。
+		return std::max({EntryInsetX(FontSize), RowHeight * 0.5f, ui_token::spacing::LG});
+	}
+} // namespace ui_token::dropdown
+
+// 控件的内部排版事实：文字、图标、内边距三者只有一个真值来源。
+// 约定：**图标字形 em = 控件文字字号**，图标盒子由 ICON_INK_RATIO 反推，
+// 与 qm_icon.h 的 QmIconFontSize（盒 × 0.8）严格互逆，所以「盒子 → 字形」
+// 走一圈回来正好等于文字字号，不会再出现图标比文字大/小一截。
+// 入参一律是已经解析好的字号/行高（来自 SSettingsContentMetrics 或调用方自己的
+// 面板字号），这里不重复定义任何绝对像素。
+namespace ui_token::control
+{
+	inline constexpr float ICON_INK_RATIO = 0.8f;
+	// 输入框尾部单位/后缀相对正文的比例，沿用既有观感，只留这一处。
+	inline constexpr float SUFFIX_RATIO = 0.82f;
+
+	inline constexpr float PadX(const float BodySize) { return std::max(spacing::XS, BodySize * 0.5f); }
+	inline constexpr float PadY(const float LineHeight, const float BodySize) { return std::max(0.0f, (LineHeight - BodySize) * 0.5f); }
+	inline constexpr float IconTextGap(const float BodySize) { return std::max(spacing::XS, BodySize * 0.33f); }
+	inline constexpr float LabelControlGap(const float BodySize) { return std::max(spacing::SM, BodySize * 0.5f); }
+	// 字形 → 盒子（与 QmIconFontSize 互逆）。
+	inline constexpr float IconBox(const float GlyphSize) { return GlyphSize / ICON_INK_RATIO; }
+	// 开关轨道最小宽度：2.75 倍正文，@12 得 33，等于原来 max(h*1.65, 30) 在 h=20 的结果。
+	inline constexpr float SwitchMinWidth(const float BodySize) { return 2.75f * BodySize; }
+	// 正文随视口缩放的唯一换算（与设置页度量同一条夹取）：控件拿不到
+	// SSettingsContentMetrics 时用它，保证同一排控件不会一半缩放一半不缩放。
+	inline constexpr float BodySizeFromScale(const float UiScale)
+	{
+		return std::clamp(12.0f * (UiScale > 0.0f ? UiScale : 1.0f), 10.0f, 12.0f);
+	}
+	inline constexpr float SwitchTrackAspect() { return 1.65f; }
+} // namespace ui_token::control
+
 // 圆角标尺集中保存既有用途的数值；调用点选择用途，不再写字面量半径。
 namespace ui_token::radius
 {
@@ -198,7 +251,133 @@ namespace ui_token::settings
 	inline constexpr float CARD_SUMMARY_ALPHA = 0.72f;
 	inline constexpr float CARD_HANDLE_SIZE = 24.0f;
 	inline constexpr float CARD_RADIUS = radius::CARD;
+
+	// 间距语义三档。以前各卡自己乘 0.35/0.4/0.5/0.6/0.75/1.15，或者写 +2.0/+5.0，
+	// 结果同一张卡里相邻两行的距离和「行距」没有关系。现在只允许选档位：
+	//   SubRowGap  —— 缩进后的子行（第二层内容），比常规行距紧一档；
+	//   RowGap     —— 相邻两行（= 页面行距本身）；
+	//   SectionGap —— 卡片内两个分区之间（= 原来的 m_SectionGap，2 倍行距）。
+	// 参数一律传已经算好的 LineSpacing（含 UiScale），这里不再引入新的绝对像素。
+	inline constexpr float SubRowGap(const float LineSpacing) { return LineSpacing * 0.5f; }
+	inline constexpr float RowGap(const float LineSpacing) { return LineSpacing; }
+	inline constexpr float SectionGap(const float LineSpacing) { return LineSpacing * 2.0f; }
+	// 卡片底部动作区：比分区再重一档（例如配色列表之后、整卡级「全部设为…」按钮之前）。
+	// 这个档位只该出现在「卡尾动作」，不要拿来当行间或普通分区。
+	inline constexpr float ActionGap(const float LineSpacing) { return LineSpacing * 4.0f; }
 } // namespace ui_token::settings
+
+// 列表（CListBox）的整行外观与自适应高度：行高、行距、胶囊圆角、行内左右内边距、
+// 可见行数上限、覆盖式滚动条尺寸都从这里取。数值全部由既有 settings/spacing 派生，
+// 调用点不再各写一套字面量。
+namespace ui_token::list
+{
+	// 行高：与设置页列表行同档（SSettingsContentMetrics::m_ListRowHeight 就是它）。
+	inline constexpr float ROW_HEIGHT = settings::ROW_HEIGHT;
+	// 行距只留半档：整行胶囊之间留一条读得出的缝，所有行列表统一这一档。
+	inline constexpr float ROW_SPACING = settings::ROW_GAP * 0.5f;
+
+	// 整行胶囊圆角：行高一半，超过卡片档才夹住。设置页列表行高 20~28 时正好是
+	// 完整胶囊；更高的单列行（好友 36、国家旗 44 等旧列表）停在卡片档，
+	// 不会被拉成体育场；绘制层仍按短边一半兜底。
+	inline float RowRadius(const float RowHeight)
+	{
+		return std::min(std::max(0.0f, RowHeight) * 0.5f, radius::CARD);
+	}
+
+	// 可见行数：默认最多 3 行，显式放宽最多 8 行；皮肤队列单独 6 行，预设栏 2~3 行。
+	inline constexpr int DEFAULT_MAX_VISIBLE_ROWS = 3;
+	inline constexpr int MAX_VISIBLE_ROWS = 8;
+	inline constexpr int SKIN_QUEUE_MAX_VISIBLE_ROWS = 6;
+	inline constexpr int PRESET_MIN_VISIBLE_ROWS = 2;
+	inline constexpr int PRESET_MAX_VISIBLE_ROWS = 3;
+
+	// 行内左右内边距与弹层条目同一条公式（max(8, 字号 × 0.75)）：文字不再贴着
+	// 胶囊左缘，窄窗口里也不会跟着一起挤没。
+	inline float RowInsetX(const float FontSize) { return dropdown::EntryInsetX(FontSize); }
+
+	// 容器圆角按容器长宽推导：上限是短边一半，档位随高度在 MENU→CARD 之间连续增长，
+	// 所以 3 行以下偏菜单档、6 行以上完全到卡片档，列表增减一行也不会跳档。
+	// 与文本按钮「按尺寸取圆角」是同一条思路，列表不再各自写死一个 5。
+	inline float ContainerRadius(const float Width, const float Height)
+	{
+		const float ShortSide = std::max(0.0f, std::min(Width, Height));
+		const float Growth = std::clamp(Height / (ROW_HEIGHT * 6.0f), 0.0f, 1.0f);
+		const float Preferred = radius::MENU + (radius::CARD - radius::MENU) * Growth;
+		return std::min(Preferred, ShortSide * 0.5f);
+	}
+
+	// 覆盖式滚动条：细轨压在内容上、不占内容宽度；出现/消失走同一档淡入 + 横向滑出。
+	inline constexpr float SCROLLBAR_WIDTH = spacing::SM;
+	inline constexpr float SCROLLBAR_MARGIN = spacing::XS;
+	inline constexpr float SCROLLBAR_SLIDE = spacing::XS;
+
+	// 条目数与每行条目数决定可见行数：0 表示空列表不占高度。
+	inline int VisibleRows(const int ItemCount, const int ItemsPerRow, const int MinRows, const int MaxRows)
+	{
+		if(ItemCount <= 0 || MaxRows <= 0)
+			return 0;
+		const int PerRow = std::max(1, ItemsPerRow);
+		const int RequiredRows = (ItemCount + PerRow - 1) / PerRow;
+		return std::clamp(RequiredRows, std::clamp(MinRows, 0, MaxRows), MaxRows);
+	}
+
+	// 行数与行距决定的内容高度：首行之前、末行之后都不留行距。
+	inline float RowsHeight(const int Rows, const float RowHeight, const float RowSpacing)
+	{
+		if(Rows <= 0)
+			return 0.0f;
+		return Rows * std::max(0.0f, RowHeight) + std::max(0, Rows - 1) * std::max(0.0f, RowSpacing);
+	}
+} // namespace ui_token::list
+
+// 设置页行类型：每种行只描述「上间距 + 左缩进」两个尺寸事实，全部由既有 spacing
+// token 派生。这里只增不删，调用点按类型逐步迁移，未迁移的行保持原样。
+namespace ui_token::settings::row
+{
+	struct SRowMetrics
+	{
+		float m_Spacing; // 行上方间距
+		float m_Indent; // 左侧缩进
+	};
+
+	inline constexpr SRowMetrics PRIMARY{spacing::SM, 0.0f};
+	inline constexpr SRowMetrics GROUP_HEADER{spacing::LG, 0.0f};
+	inline constexpr SRowMetrics SUB{spacing::XS, spacing::MD};
+	inline constexpr SRowMetrics DIVIDER{spacing::SM, 0.0f};
+	inline constexpr SRowMetrics FOLD{spacing::SM, 0.0f};
+	inline constexpr SRowMetrics NOTE{spacing::XS, spacing::MD};
+
+	// 分割线厚度：设置页统一 1px 细线，横向线不按圆角绘制。
+	inline constexpr float DIVIDER_THICKNESS = 1.0f;
+	// 折叠行分割线取卡片边框色压暗一档：亮度降到 0.7，透明度不动，
+	// 线永远比卡片轮廓更弱，不会跟卡片描边抢视线。
+	inline constexpr float FOLD_LINE_BRIGHTNESS = 0.7f;
+
+	enum class EType
+	{
+		PRIMARY,
+		GROUP_HEADER,
+		SUB,
+		DIVIDER,
+		FOLD,
+		NOTE,
+	};
+
+	// 按行类型取尺寸事实的唯一入口；未知类型退回 PRIMARY，调用点不用再判空。
+	inline constexpr SRowMetrics Of(const EType Type)
+	{
+		switch(Type)
+		{
+		case EType::PRIMARY: return PRIMARY;
+		case EType::GROUP_HEADER: return GROUP_HEADER;
+		case EType::SUB: return SUB;
+		case EType::DIVIDER: return DIVIDER;
+		case EType::FOLD: return FOLD;
+		case EType::NOTE: return NOTE;
+		}
+		return PRIMARY;
+	}
+} // namespace ui_token::settings::row
 
 // 沿用既有二级面板数值，集中管理不同内容用途，接入组件时不重新定尺寸。
 namespace ui_token::secondary_panel
@@ -437,6 +616,12 @@ namespace ui_token::motion
 	// （QmCriticallyDampedRise），token 只承载时长与距离。求值器保持无状态
 	// 流逝时间模型——虚拟化交错行若用每行引擎轨道会随滚动无限增删键；
 	// 动效分级（Reduced：0.10s / 4px / 无错开）按分级规约在求值器内分支。
+	// 交互控件驱动的显隐（折叠区展开、开关多出来的参数行）不能沿用列表入场的
+	// smoothstep：那条曲线前后都慢，前两帧几乎不动，读作「点了没反应」。这里用
+	// 更短时长 + ease-out（起步立刻见效、收尾平滑），手感才跟手。
+	inline constexpr float INTERACTIVE_REVEAL_SEC = 0.14f;
+	inline constexpr float INTERACTIVE_REVEAL_SEC_REDUCED = 0.09f;
+
 	inline constexpr SUiAnimTransition LIST_ENTRY_FADE{.m_DurationSec = 0.20f, .m_Easing = EEasing::EASE_IN_OUT};
 	inline constexpr SUiAnimTransition LIST_ENTRY_FADE_REDUCED{.m_DurationSec = 0.10f, .m_Easing = EEasing::EASE_IN_OUT};
 	inline constexpr float LIST_ENTRY_RISE_SEC = 0.20f;
@@ -451,5 +636,12 @@ namespace ui_token::motion
 	inline constexpr const SUiAnimTransition &MODAL_IN = MODAL_FADE_SCALE;
 	inline constexpr const SUiSpringConfig &TOGGLE = TOGGLE_SPRING;
 } // namespace ui_token::motion
+
+// 覆盖式滚动条的出现/消失复用菜单悬停反馈的时长与曲线：同一档节奏，不再新开一套。
+// 放在 motion 之后是因为 token 引用声明顺序，语义仍属于列表。
+namespace ui_token::list
+{
+	inline constexpr const SUiAnimTransition &SCROLLBAR_FADE = motion::HOVER_FADE;
+} // namespace ui_token::list
 
 #endif
