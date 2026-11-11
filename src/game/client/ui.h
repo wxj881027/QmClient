@@ -1146,7 +1146,9 @@ public:
 	bool KeyboardFocusFromKeyboard() const { return m_KeyboardFocus.m_FromKeyboard; }
 	int DoButtonGroupKeyboard(const void *const *ppIds, const bool *pEnabled, int Count);
 	void DoTooltip(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint = -1.0f);
-	void DoSmallTooltip(const void *pId, const CUIRect *pNearRect, const char *pText, float FontSize = 12.0f, float WidthHint = -1.0f);
+	// FontSize <= 0 表示按提示令牌取字号：设置页用紧凑小字，页面外用 tooltip 令牌，
+	// 与普通气泡同源，避免调用点自带一个和全局不一致的魔数。
+	void DoSmallTooltip(const void *pId, const CUIRect *pNearRect, const char *pText, float FontSize = -1.0f, float WidthHint = -1.0f);
 	CTooltips *QmTooltips() const { return m_pQmTooltips; }
 	const SUiTheme &QmControlTheme();
 	float DropDownFontSize() const { return m_DropDownFontSize; }
@@ -1587,6 +1589,9 @@ public:
 		EColorPickerMode m_ColorMode = MODE_UNSET;
 		EColorPickerShape m_Shape = SHAPE_SQUARE;
 		bool m_Alpha = false;
+		// A 通道以百分比（0..100）显示与写回。配置里存的是「颜色 + 不透明度百分比」时，
+		// 百分比才是权威值，用 0..255 会让 100 这类值在往返后被舍成 99。
+		bool m_AlphaPercent = false;
 		unsigned int *m_pHslaColor = nullptr; // may be nullptr
 		ColorHSVA m_HsvaColor;
 		ColorRGBA m_RgbaColor;

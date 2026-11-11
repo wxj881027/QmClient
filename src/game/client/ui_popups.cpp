@@ -2016,8 +2016,12 @@ CUi::EPopupMenuFunctionResult CUi::PopupColorPicker(void *pContext, CUIRect View
 		}
 
 		// ===== 通道滑条行：语义渐变轨道 + 圆形滑块 + 数值小输入框（拖动与输入双向）=====
-		const unsigned OldA = round_to_int(PickerColorHSV.a * 255.0f);
-		const auto DoChannelSliderRow = [&](int ChannelIndex, const char *pLabel, unsigned CurValue) -> SEditResult<int64_t> {
+		// A 通道的量程随存储方式变化：直接存 alpha 字节时是 0..255；配置里是
+		// 「颜色 + 不透明度百分比」时，百分比才是权威值，用 0..255 会让 100 这类
+		// 中间值在百分比往返中被舍成 99（100/255 → 39% → 99）。
+		const unsigned AlphaMax = pColorPicker->m_AlphaPercent ? 100u : 255u;
+		const unsigned OldA = round_to_int(PickerColorHSV.a * AlphaMax);
+		const auto DoChannelSliderRow = [&](int ChannelIndex, const char *pLabel, unsigned CurValue, unsigned MaxValue = 255u) -> SEditResult<int64_t> {
 			CUIRect RowRect;
 			RowsZone.HSplitTop(PICKER_ROW_HEIGHT, &RowRect, &RowsZone);
 			RowsZone.HSplitTop(PICKER_ROW_GAP, nullptr, &RowsZone);
@@ -2031,10 +2035,10 @@ CUi::EPopupMenuFunctionResult CUi::PopupColorPicker(void *pContext, CUIRect View
 
 			// 复用滚动条的输入与几何：滑块行程、点击跳转、拖拽与热项语义都与
 			// 设置页滑条同源，这里只把轨道换成通道语义渐变。
-			const float TrackT = std::clamp(CurValue / 255.0f, 0.0f, 1.0f);
+			const float TrackT = std::clamp(CurValue / (float)MaxValue, 0.0f, 1.0f);
 			const float NewTrackT = pUI->DoScrollbarHLogic(&pColorPicker->m_aValueSelectorIds[ChannelIndex], &SliderRect, TrackT);
 			const ui_widget::SHorizontalSliderLayout SliderLayout = ui_widget::ResolveHorizontalSliderLayout(SliderRect, NewTrackT);
-			int64_t NewValue = round_to_int(NewTrackT * 255.0f);
+			int64_t NewValue = round_to_int(NewTrackT * MaxValue);
 			EEditState ResultState = EEditState::NONE;
 			if(NewValue != (int64_t)CurValue)
 				ResultState = pUI->CheckActiveItem(&pColorPicker->m_aValueSelectorIds[ChannelIndex]) ? EEditState::EDITING : EEditState::ONE_GO;
@@ -2069,14 +2073,14 @@ CUi::EPopupMenuFunctionResult CUi::PopupColorPicker(void *pContext, CUIRect View
 				const long Parsed = strtol(pText, &pEnd, 10);
 				if(pEnd != pText && *str_skip_whitespaces(pEnd) == '\0')
 				{
-					NewValue = std::clamp<long>(Parsed, 0, 255);
+					NewValue = std::clamp<long>(Parsed, 0, MaxValue);
 					ResultState = EEditState::ONE_GO;
 				}
 			}
 
 			// 手柄完全复用滚动条样式（强调色实心 + 悬停/按压几何反馈），不再画内圈色点；
 			// 当前颜色由右侧数值框和渐变轨道本身表达。
-			const auto HandleLayout = ui_widget::ResolveHorizontalSliderLayout(SliderRect, std::clamp(NewValue / 255.0f, 0.0f, 1.0f));
+			const auto HandleLayout = ui_widget::ResolveHorizontalSliderLayout(SliderRect, std::clamp(NewValue / (float)MaxValue, 0.0f, 1.0f));
 			ui_widget::DrawScrollbarHandle(ui_widget::ControlContext(pUI), &pColorPicker->m_aValueSelectorIds[ChannelIndex], HandleLayout.m_Handle, true);
 
 			return SEditResult<int64_t>{ResultState, NewValue};
@@ -2095,14 +2099,14 @@ CUi::EPopupMenuFunctionResult CUi::PopupColorPicker(void *pContext, CUIRect View
 			EEditState StateA = EEditState::NONE;
 			if(pColorPicker->m_Alpha)
 			{
-				const auto [StateTmp, ValueTmp] = DoChannelSliderRow(3, "A", OldA);
+				const auto [StateTmp, ValueTmp] = DoChannelSliderRow(3, "A", OldA, AlphaMax);
 				StateA = StateTmp;
 				A = ValueTmp;
 			}
 
 			if(OldH != (unsigned)H || OldS != (unsigned)S || OldV != (unsigned)V || OldA != (unsigned)A)
 			{
-				PickerColorHSV = ColorHSVA(H / 255.0f, S / 255.0f, V / 255.0f, A / 255.0f);
+				PickerColorHSV = ColorHSVA(H / 255.0f, S / 255.0f, V / 255.0f, A / (float)AlphaMax);
 				SyncFromHsv();
 			}
 			for(auto State : {StateH, StateS, StateV, StateA})
@@ -2127,14 +2131,14 @@ CUi::EPopupMenuFunctionResult CUi::PopupColorPicker(void *pContext, CUIRect View
 			EEditState StateA = EEditState::NONE;
 			if(pColorPicker->m_Alpha)
 			{
-				const auto [StateTmp, ValueTmp] = DoChannelSliderRow(3, "A", OldA);
+				const auto [StateTmp, ValueTmp] = DoChannelSliderRow(3, "A", OldA, AlphaMax);
 				StateA = StateTmp;
 				A = ValueTmp;
 			}
 
 			if(OldR != (unsigned)R || OldG != (unsigned)G || OldB != (unsigned)B || OldA != (unsigned)A)
 			{
-				PickerColorRGB = ColorRGBA(R / 255.0f, G / 255.0f, B / 255.0f, A / 255.0f);
+				PickerColorRGB = ColorRGBA(R / 255.0f, G / 255.0f, B / 255.0f, A / (float)AlphaMax);
 				SyncFromRgb();
 			}
 			for(auto State : {StateR, StateG, StateB, StateA})
@@ -2159,14 +2163,14 @@ CUi::EPopupMenuFunctionResult CUi::PopupColorPicker(void *pContext, CUIRect View
 			EEditState StateA = EEditState::NONE;
 			if(pColorPicker->m_Alpha)
 			{
-				const auto [StateTmp, ValueTmp] = DoChannelSliderRow(3, "A", OldA);
+				const auto [StateTmp, ValueTmp] = DoChannelSliderRow(3, "A", OldA, AlphaMax);
 				StateA = StateTmp;
 				A = ValueTmp;
 			}
 
 			if(OldH != (unsigned)H || OldS != (unsigned)S || OldL != (unsigned)L || OldA != (unsigned)A)
 			{
-				PickerColorHSL = ColorHSLA(H / 255.0f, S / 255.0f, L / 255.0f, A / 255.0f);
+				PickerColorHSL = ColorHSLA(H / 255.0f, S / 255.0f, L / 255.0f, A / (float)AlphaMax);
 				SyncFromHsl();
 			}
 			for(auto State : {StateH, StateS, StateL, StateA})

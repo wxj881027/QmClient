@@ -2216,7 +2216,7 @@ bool CMenus::DoSettingsLine_RadioMenu(int Page, int Tab, int Subtab, CUIRect &Vi
 	return Locked ? false : Pressed;
 }
 
-ColorHSLA CMenus::DoLine_ColorPicker(CButtonContainer *pResetId, const SSettingsContentMetrics &Metrics, CUIRect *pMainRect, const char *pText, unsigned int *pColorValue, const ColorRGBA DefaultColor, bool CheckBoxSpacing, int *pCheckBoxValue, bool Alpha, bool TrailingSpacing)
+ColorHSLA CMenus::DoLine_ColorPicker(CButtonContainer *pResetId, const SSettingsContentMetrics &Metrics, CUIRect *pMainRect, const char *pText, unsigned int *pColorValue, const ColorRGBA DefaultColor, bool CheckBoxSpacing, int *pCheckBoxValue, bool Alpha, bool TrailingSpacing, bool AlphaPercent)
 {
 	CUIRect HintRect = *pMainRect;
 	const SSettingsColorRowLayout Layout = ResolveSettingsColorRowLayout(*pMainRect, Metrics, CheckBoxSpacing && pCheckBoxValue == nullptr, TrailingSpacing);
@@ -2246,7 +2246,7 @@ ColorHSLA CMenus::DoLine_ColorPicker(CButtonContainer *pResetId, const SSettings
 		HoverRect.w = Layout.m_ColorButtonRect.x + Layout.m_ColorButtonRect.w - Label.x;
 		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pColorValue, &HoverRect, pColorValue, &Label);
 	}
-	const ColorHSLA PickedColor = DoButton_ColorPicker(&Layout.m_ColorButtonRect, pColorValue, Alpha);
+	const ColorHSLA PickedColor = DoButton_ColorPicker(&Layout.m_ColorButtonRect, pColorValue, Alpha, AlphaPercent);
 
 	// 重置只放回转箭头图标，说明走悬浮提示：颜色行里塞「重置」两个字太占地方，
 	// 而且和旁边那几个图标按钮不是一套语言。
@@ -2267,13 +2267,15 @@ bool CMenus::DoLine_AlphaColorPicker(CButtonContainer *pResetId, const SSettings
 	const bool Editing = Ui()->IsPopupOpen(&m_ColorPickerPopupContext) && m_ColorPickerPopupContext.m_pHslaColor == &State.m_PackedColor;
 	State.RefreshFromConfig(*pColorValue, *pOpacity, Editing);
 
-	DoLine_ColorPicker(pResetId, Metrics, pMainRect, pText, &State.m_PackedColor, color_cast<ColorRGBA>(ColorHSLA(DefaultColor).WithAlpha(DefaultOpacity / 100.0f)), false, nullptr, true);
+	// 这一行的透明度由百分比配置承载，取色器的 A 通道也必须按百分比工作，
+	// 否则 100 这类值写回时会被舍成 99（见 SColorPickerPopupContext::m_AlphaPercent）。
+	DoLine_ColorPicker(pResetId, Metrics, pMainRect, pText, &State.m_PackedColor, color_cast<ColorRGBA>(ColorHSLA(DefaultColor).WithAlpha(DefaultOpacity / 100.0f)), false, nullptr, true, true, true);
 	HintRect.h = pMainRect->y - HintRect.y;
 	Ui()->DoConfigTooltip(&State.m_PackedColor, &HintRect, pColorValue, pOpacity);
 	return State.ApplyToConfig(*pColorValue, *pOpacity);
 }
 
-ColorHSLA CMenus::DoLine_ColorPicker(CButtonContainer *pResetId, const float LineSize, const float LabelSize, const float BottomMargin, CUIRect *pMainRect, const char *pText, unsigned int *pColorValue, const ColorRGBA DefaultColor, bool CheckBoxSpacing, int *pCheckBoxValue, bool Alpha)
+ColorHSLA CMenus::DoLine_ColorPicker(CButtonContainer *pResetId, const float LineSize, const float LabelSize, const float BottomMargin, CUIRect *pMainRect, const char *pText, unsigned int *pColorValue, const ColorRGBA DefaultColor, bool CheckBoxSpacing, int *pCheckBoxValue, bool Alpha, bool AlphaPercent)
 {
 	SSettingsContentMetrics Metrics;
 	Metrics.m_UiScale = std::clamp(LineSize / ui_token::settings::ROW_HEIGHT, 0.5f, 1.5f);
@@ -2281,10 +2283,10 @@ ColorHSLA CMenus::DoLine_ColorPicker(CButtonContainer *pResetId, const float Lin
 	Metrics.m_ButtonHeight = std::max(0.0f, LineSize);
 	Metrics.m_BodySize = std::max(0.0f, LabelSize);
 	Metrics.m_LineSpacing = std::max(0.0f, BottomMargin);
-	return DoLine_ColorPicker(pResetId, Metrics, pMainRect, pText, pColorValue, DefaultColor, CheckBoxSpacing, pCheckBoxValue, Alpha);
+	return DoLine_ColorPicker(pResetId, Metrics, pMainRect, pText, pColorValue, DefaultColor, CheckBoxSpacing, pCheckBoxValue, Alpha, true, AlphaPercent);
 }
 
-ColorHSLA CMenus::DoButton_ColorPicker(const CUIRect *pRect, unsigned int *pHslaColor, bool Alpha)
+ColorHSLA CMenus::DoButton_ColorPicker(const CUIRect *pRect, unsigned int *pHslaColor, bool Alpha, bool AlphaPercent)
 {
 	Ui()->DoConfigTooltip(pHslaColor, pRect, pHslaColor);
 	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
@@ -2295,10 +2297,10 @@ ColorHSLA CMenus::DoButton_ColorPicker(const CUIRect *pRect, unsigned int *pHsla
 
 	DrawRoundedSurface(Ui(), *pRect, color_cast<ColorRGBA>(HslaColor), Outline, 4.0f, 3.0f);
 
-	return DoButton_ColorPickerLogic(pRect, pHslaColor, Alpha);
+	return DoButton_ColorPickerLogic(pRect, pHslaColor, Alpha, AlphaPercent);
 }
 
-ColorHSLA CMenus::DoButton_ColorPickerLogic(const CUIRect *pRect, unsigned int *pHslaColor, bool Alpha)
+ColorHSLA CMenus::DoButton_ColorPickerLogic(const CUIRect *pRect, unsigned int *pHslaColor, bool Alpha, bool AlphaPercent)
 {
 	ColorHSLA HslaColor = ColorHSLA(*pHslaColor, Alpha);
 	if(Ui()->DoButtonLogic(pHslaColor, 0, pRect, BUTTONFLAG_LEFT))
@@ -2308,6 +2310,7 @@ ColorHSLA CMenus::DoButton_ColorPickerLogic(const CUIRect *pRect, unsigned int *
 		m_ColorPickerPopupContext.m_HsvaColor = color_cast<ColorHSVA>(HslaColor);
 		m_ColorPickerPopupContext.m_RgbaColor = color_cast<ColorRGBA>(m_ColorPickerPopupContext.m_HsvaColor);
 		m_ColorPickerPopupContext.m_Alpha = Alpha;
+		m_ColorPickerPopupContext.m_AlphaPercent = AlphaPercent;
 		Ui()->ShowPopupColorPicker(Ui()->MouseX(), Ui()->MouseY(), &m_ColorPickerPopupContext);
 	}
 	else if(Ui()->IsPopupOpen(&m_ColorPickerPopupContext) && m_ColorPickerPopupContext.m_pHslaColor == pHslaColor)

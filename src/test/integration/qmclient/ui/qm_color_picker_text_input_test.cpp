@@ -253,6 +253,30 @@ TEST_F(QmColorPickerTextInput, TypedChannelValueAppliesWhileEditing)
 	EXPECT_FLOAT_EQ(ColorHSLA(m_Color, true).a, 100.0f / 255.0f);
 }
 
+TEST_F(QmColorPickerTextInput, PercentAlphaTreatsTypedValueAsPercent)
+{
+	// 配置里是「颜色 + 不透明度百分比」时，A 通道按 0..100 工作：
+	// A=100 必须是满不透明；按 0..255 解释会把 100 折算成 39%，
+	// 写回百分比配置后再读出来就变成 99。
+	m_Picker.m_AlphaPercent = true;
+	Open();
+	ASSERT_FALSE(HasFatalFailure());
+	CLineInput &Input = m_Picker.m_aChannelInputs[3];
+	Focus(Input);
+	ASSERT_FALSE(HasFatalFailure());
+	Input.SelectAll();
+	TypeText("39");
+	Frame();
+	EXPECT_FLOAT_EQ(m_Picker.m_RgbaColor.a, 39.0f / 100.0f);
+	Input.SelectAll();
+	TypeText("100");
+	Frame();
+	EXPECT_FLOAT_EQ(m_Picker.m_RgbaColor.a, 1.0f);
+	EXPECT_FLOAT_EQ(ColorHSLA(m_Color, true).a, 1.0f);
+	Blur(Input);
+	EXPECT_STREQ(Input.GetString(), "100");
+}
+
 TEST_F(QmColorPickerTextInput, TypedValueSurvivesImmediateAcceptClick)
 {
 	Open();

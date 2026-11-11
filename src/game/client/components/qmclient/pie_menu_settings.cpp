@@ -160,6 +160,8 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 		m_ColorPickerPopupContext.m_HsvaColor = color_cast<ColorHSVA>(HslaColor);
 		m_ColorPickerPopupContext.m_RgbaColor = color_cast<ColorRGBA>(m_ColorPickerPopupContext.m_HsvaColor);
 		m_ColorPickerPopupContext.m_Alpha = Entry.m_Alpha;
+		// 饼菜单颜色直接存 alpha 字节，A 通道沿用 0..255，不继承其它入口的百分比模式。
+		m_ColorPickerPopupContext.m_AlphaPercent = false;
 		Ui()->ShowPopupColorPicker(Ui()->MouseX(), Ui()->MouseY(), &m_ColorPickerPopupContext);
 	};
 	SSettingsContentMetrics ToggleMetrics = CurrentSettingsContentMetrics();

@@ -123,7 +123,10 @@ void CTooltips::DoInfoToolTipForRect(const void *pId, const CUIRect *pNearRect, 
 void CTooltips::DoSmallToolTip(const void *pId, const CUIRect *pNearRect, const char *pText, float FontSize, float WidthHint)
 {
 	const bool Small = GameClient()->m_Menus.IsSettingsPageActive();
-	DoToolTip(pId, pNearRect, pText, WidthHint, Small ? FontSize : ui_token::tooltip::FONT_SIZE, Small, true, true);
+	// 未显式给字号时与普通气泡走同一套解析：设置页取紧凑小字，页面外取 tooltip 令牌。
+	// 以前设置页里直接吃调用点的默认值 12，比同页其它气泡明显大一号。
+	const float ResolvedFontSize = FontSize > 0.0f ? FontSize : (Small ? ResolveSettingsSmallFontSize(QmUiScaleFactor(g_Config.m_QmUiScale)) : ui_token::tooltip::FONT_SIZE);
+	DoToolTip(pId, pNearRect, pText, WidthHint, Small ? ResolvedFontSize : ui_token::tooltip::FONT_SIZE, Small, true, true);
 }
 
 void CTooltips::DoConfigToolTip(const void *pId, const CUIRect *pNearRect, const void *pValue, const void *pSecondValue)
