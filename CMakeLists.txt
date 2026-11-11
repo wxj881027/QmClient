@@ -5272,6 +5272,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/ui/qm_rounded_surface_geometry_test.cpp
     src/test/unit/qmclient/ui/qm_rounded_surface_render_test.cpp
     src/test/unit/qmclient/ui/qm_rounded_surface_matrix_test.cpp
+    src/test/unit/qmclient/ui/settings_search_reveal_test.cpp
     src/test/contract/qmclient/settings/settings_resource_jobs_assets_contract_test.cpp
     src/test/unit/qmclient/settings/settings_resource_jobs_assets_test.cpp
     src/test/unit/qmclient/settings/settings_resource_jobs_skin_plan_test.cpp
