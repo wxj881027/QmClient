@@ -3193,6 +3193,7 @@ if(CLIENT)
     buffer_object_pool.h
     graphics_buffer_pair.h
     screenshot_save.h
+    screenshot_path.h
     quad_container_render.h
     graphics_upload_data.h
     graphics_vertex_budget.h
@@ -3813,6 +3814,9 @@ if(CLIENT)
     components/qmclient/music_lyrics/qm_spotify_crypto.h
     components/qmclient/music_lyrics/qm_spotify_integration.cpp
     components/qmclient/music_lyrics/qm_spotify_integration.h
+    components/qmclient/music_lyrics/qm_spotify_auth.cpp
+    components/qmclient/music_lyrics/qm_spotify_auth.h
+    components/qmclient/music_lyrics/qm_spotify_progress.h
     components/qmclient/music_lyrics/qm_spotify_parser.cpp
     components/qmclient/music_lyrics/qm_spotify_parser.h
     components/qmclient/music_lyrics/qm_spotify_token.cpp
@@ -5666,6 +5670,9 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/music/music_lyrics_qrc_test.cpp
     src/test/unit/qmclient/music/qm_spotify_crypto_test.cpp
     src/test/unit/qmclient/music/qm_spotify_token_test.cpp
+    src/test/integration/qmclient/music/qm_spotify_auth_test.cpp
+    src/test/unit/qmclient/music/qm_spotify_progress_test.cpp
+    src/test/unit/qmclient/music/qm_spotify_numeric_test.cpp
     src/test/unit/qmclient/music/qm_spotify_parser_test.cpp
     src/test/unit/qmclient/client/qm_modes_test.cpp
     src/test/unit/qmclient/client/qm_map_progress_test.cpp
@@ -6175,6 +6182,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/game/client/components/qmclient/music_lyrics/music_lyrics_community_format.cpp
     src/game/client/components/qmclient/music_lyrics/qm_spotify_crypto.cpp
     src/game/client/components/qmclient/music_lyrics/qm_spotify_token.cpp
+    src/game/client/components/qmclient/music_lyrics/qm_spotify_auth.cpp
     src/game/client/components/qmclient/music_lyrics/qm_spotify_parser.cpp
     src/qm/music/qm_music_publication.cpp
     src/game/client/components/qmclient/netease_hook/qm_netease_lyrics_channel.cpp
@@ -6568,6 +6576,10 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/support/qm_settings_card_menu_boundary.cpp
       src/test/integration/qmclient/ui/qm_checkpoint_guide_text_test.cpp
       src/test/integration/qmclient/ui/qm_pie_menu_settings_text_test.cpp
+      src/test/integration/engine/screenshot_path_test.cpp
+      src/test/integration/qmclient/ui/map_covers_admission_test.cpp
+      src/game/client/components/qmclient/map_covers.cpp
+      src/game/client/components/qmclient/map_cover_art.cpp
       src/test/unit/qmclient/settings/settings_search_reveal_allocation_test.cpp
       src/test/integration/qmclient/ui/qm_surface_text_test.cpp
       src/test/integration/qmclient/ui/qm_theme_selection_test.cpp
@@ -6711,6 +6723,13 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/client/map_history_id_allocation_test.cpp
       src/test/integration/qmclient/client/qm_map_history_session_allocation_test.cpp
       src/test/integration/qmclient/client/qm_race_start_detection_test.cpp
+      src/test/unit/qmclient/client/qm_screenshot_request_test.cpp
+      src/game/client/components/qmclient/screenshot_clipboard.cpp
+      src/test/unit/qmclient/music/qm_spotify_parser_allocation_test.cpp
+      src/game/client/components/qmclient/music_lyrics/qm_spotify_token.cpp
+      src/game/client/components/qmclient/music_lyrics/qm_spotify_crypto.cpp
+      src/game/client/components/qmclient/music_lyrics/qm_spotify_parser.cpp
+      src/game/client/components/qmclient/netease/netease_lyric_parser.cpp
       src/test/integration/qmclient/client/qm_race_start_map_index_scan_test.cpp
       src/test/integration/qmclient/client/qm_gores_drown_observation_test.cpp
       src/test/integration/qmclient/client/qm_map_history_rows_allocation_test.cpp

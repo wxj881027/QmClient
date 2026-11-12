@@ -6132,9 +6132,7 @@ void CClient::Con_RenderPoses(IConsole::IResult *pResult, void *pUserData)
 void CClient::Con_Screenshot(IConsole::IResult *pResult, void *pUserData)
 {
 	CClient *pSelf = (CClient *)pUserData;
-	auto Callback = qm_screenshot_clipboard::CaptureCallback(g_Config.m_QmScreenshotClipboard != 0 && qm_screenshot_clipboard::Supported(),
-		[pSelf](CImageInfo &&Image, const char *pPath) { pSelf->GameClient()->OnScreenshotTaken(std::move(Image), pPath); });
-	pSelf->Graphics()->TakeScreenshot(nullptr, std::move(Callback), pSelf->GameClient()->ScreenshotProcessor());
+	qm_screenshot_clipboard::RequestCapture(*pSelf->Graphics(), g_Config.m_QmScreenshotClipboard != 0 && qm_screenshot_clipboard::Supported(), [pSelf](CImageInfo &&Image, const char *pPath) { pSelf->GameClient()->OnScreenshotTaken(std::move(Image), pPath); }, [pSelf] { return pSelf->GameClient()->ScreenshotProcessor(); });
 }
 
 #if defined(CONF_VIDEORECORDER)

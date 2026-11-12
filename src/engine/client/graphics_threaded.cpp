@@ -12,6 +12,7 @@
 #include <engine/client/plausible_sizes.h>
 #include <engine/client/quad_container_render.h>
 #include <engine/client/rounded_rect_geometry.h>
+#include <engine/client/screenshot_path.h>
 #include <engine/client/screenshot_save.h>
 #include <engine/engine.h>
 #include <engine/gfx/image_loader.h>
@@ -4779,31 +4780,22 @@ bool CGraphics_Threaded::PrepareScreenshotPath(const char *pFilename)
 {
 	char aDate[20];
 	str_timestamp(aDate, sizeof(aDate));
-	// 扩展名由调用方决定（png / webp）。名字里带了就沿用，没带按 png。
-	const char *pExtension = ".png";
-	char aBaseName[IO_MAX_PATH_LENGTH];
-	str_copy(aBaseName, pFilename != nullptr && pFilename[0] != '\0' ? pFilename : "screenshot");
-	if(str_endswith_nocase(aBaseName, ".webp") != nullptr)
-	{
-		aBaseName[str_length(aBaseName) - str_length(".webp")] = '\0';
-		pExtension = ".webp";
-	}
-	else if(str_endswith_nocase(aBaseName, ".png") != nullptr)
-	{
-		aBaseName[str_length(aBaseName) - str_length(".png")] = '\0';
-	}
-	str_format(m_aScreenshotName, sizeof(m_aScreenshotName), "screenshots/%s_%s%s", aBaseName, aDate, pExtension);
-	// 目录抽象只有一份：便携包与自定义截图目录都走 media_paths。
-	const std::string Path = qmclient::media_paths::Resolve(m_pStorage, g_Config, m_aScreenshotName);
-	if(!qmclient::media_paths::PrepareWrite(m_pStorage, Path))
+	if(screenshot_path::Prepare(m_pStorage, g_Config, pFilename, aDate, m_aScreenshotName))
+		return true;
+	try
 	{
 		SWarning Warning;
 		str_copy(Warning.m_aWarningMsg, Localize("Failed to save screenshot"));
 		AddWarning(Warning);
-		return false;
 	}
-	str_copy(m_aScreenshotName, Path.c_str());
-	return true;
+	catch(const std::bad_alloc &)
+	{
+		// 失败提示本身申请失败时保留旧请求，避免再次退出截图入口。
+	}
+	catch(const std::length_error &)
+	{
+	}
+	return false;
 }
 
 bool CGraphics_Threaded::QueueScreenshotSave(CImageInfo &&Image, FScreenshotProcessor Processor, FScreenshotCallback Callback)

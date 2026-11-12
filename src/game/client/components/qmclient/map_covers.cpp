@@ -12,6 +12,8 @@
 #include <engine/storage.h>
 
 #include <algorithm>
+#include <new>
+#include <stdexcept>
 #include <utility>
 
 namespace
@@ -126,31 +128,53 @@ bool CQmMapCovers::Get(const char *pUrl, ERole Role, SImage *pOut)
 	if(!QmMapCover::ValidThumbnailUrl(pUrl))
 		return false;
 
-	const SKey Key{pUrl, Role};
-	if(SEntry *pEntry = FindEntry(Key))
+	try
 	{
-		pEntry->m_LastUsedFrame = m_Frame;
-		pOut->m_Texture = pEntry->m_Texture;
-		return pOut->m_Texture.IsValid();
+		SKey Key{pUrl, Role};
+		if(SEntry *pEntry = FindEntry(Key))
+		{
+			pEntry->m_LastUsedFrame = m_Frame;
+			pOut->m_Texture = pEntry->m_Texture;
+			return pOut->m_Texture.IsValid();
+		}
+
+		const auto Failed = m_vFailedUntil.find(Key.m_Url);
+		if(Failed != m_vFailedUntil.end() && m_Now < Failed->second)
+			return false;
+		std::string PendingKey = MakeKeyString(Key);
+		if(m_PendingKeys.find(PendingKey) != m_PendingKeys.end() || FindJob(Key) != nullptr || IsDownloading(Key.m_Url))
+			return false;
+
+		char aCachePath[IO_MAX_PATH_LENGTH];
+		if(!QmMapCover::ThumbnailCacheFileName(pUrl, aCachePath, sizeof(aCachePath)))
+			return false;
+		if((int)m_vQueue.size() >= MAX_QUEUED)
+			return false;
+
+		STask Task{std::move(Key), aCachePath};
+		const auto [Pending, Inserted] = m_PendingKeys.insert(std::move(PendingKey));
+		if(!Inserted)
+			return false;
+		try
+		{
+			m_vQueue.push_back(std::move(Task));
+		}
+		catch(...)
+		{
+			// 只撤回本次准入；旧队列与已就绪纹理仍由原所有者持有。
+			m_PendingKeys.erase(Pending);
+			throw;
+		}
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	catch(const std::length_error &)
+	{
+		return false;
 	}
 
-	const auto Failed = m_vFailedUntil.find(Key.m_Url);
-	if(Failed != m_vFailedUntil.end() && m_Now < Failed->second)
-		return false;
-	if(IsQueued(Key) || FindJob(Key) != nullptr || IsDownloading(Key.m_Url))
-		return false;
-
-	char aCachePath[IO_MAX_PATH_LENGTH];
-	if(!QmMapCover::ThumbnailCacheFileName(pUrl, aCachePath, sizeof(aCachePath)))
-		return false;
-	if((int)m_vQueue.size() >= MAX_QUEUED)
-		return false;
-
-	STask Task;
-	Task.m_Key = Key;
-	Task.m_CachePath = aCachePath;
-	m_vQueue.push_back(std::move(Task));
-	m_PendingKeys.insert(MakeKeyString(Key));
 	return false;
 }
 
@@ -423,11 +447,6 @@ CQmMapCovers::SJob *CQmMapCovers::FindJob(const SKey &Key)
 {
 	auto It = std::find_if(m_vJobs.begin(), m_vJobs.end(), [&](const SJob &Job) { return Job.m_Key == Key; });
 	return It == m_vJobs.end() ? nullptr : &(*It);
-}
-
-bool CQmMapCovers::IsQueued(const SKey &Key) const
-{
-	return m_PendingKeys.find(MakeKeyString(Key)) != m_PendingKeys.end();
 }
 
 bool CQmMapCovers::IsDownloading(const std::string &Url) const

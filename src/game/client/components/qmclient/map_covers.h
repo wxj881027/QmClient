@@ -130,7 +130,6 @@ private:
 	void EvictTextures();
 	SEntry *FindEntry(const SKey &Key);
 	SJob *FindJob(const SKey &Key);
-	bool IsQueued(const SKey &Key) const;
 	bool IsDownloading(const std::string &Url) const;
 
 	IHttp *m_pHttp = nullptr;

@@ -32,7 +32,7 @@ namespace qm_hook_countdown_ui
 	// 渲染可能触及的最大半径：普通钩是倒计时环，无限钩是 ∞ 或彩虹环，都要再叠一圈光晕。
 	inline float RenderClipRadius(const SQmHookCountdownVisual &Visual)
 	{
-		const float HalfExtent = Visual.m_EndlessHook ? QM_HOOK_COUNTDOWN_INFINITY_HALF_WIDTH : OUTER_RADIUS;
+		const float HalfExtent = Visual.m_EndlessHook && !EndlessHookUsesRing() ? QM_HOOK_COUNTDOWN_INFINITY_HALF_WIDTH : OUTER_RADIUS;
 		return (HalfExtent + GLOW_EXTENT) * Visual.m_Scale * CountdownSizeScale();
 	}
 

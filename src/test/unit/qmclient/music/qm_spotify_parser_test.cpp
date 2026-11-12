@@ -174,7 +174,7 @@ TEST(QmSpotifyParser, TokenResponse)
 TEST(QmSpotifyParser, LrclibSynced)
 {
 	const std::string Json =
-		"{\"trackName\":\"T\",\"artistName\":\"A\",\"albumName\":\"Al\",\"duration\":180000,"
+		"{\"trackName\":\"T\",\"artistName\":\"A\",\"albumName\":\"Al\",\"duration\":180,"
 		"\"syncedLyrics\":\"[00:01.00]line one\\n[00:03.00]line two\\n\"}";
 	SLyricsData Lyrics;
 	ASSERT_TRUE(QmSpotify::ParseLrclib(Json, &Lyrics));
