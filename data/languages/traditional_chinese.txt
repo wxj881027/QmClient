@@ -307,6 +307,9 @@
 0 = auto
 == 0 = 自動
 
+0 = never
+== 0 = never
+
 0 disables timed rotation; skins only switch on random start events
 == 0 表示不做時間輪換；僅在隨機起點事件時切換皮膚
 
@@ -2645,6 +2648,9 @@ Client message text gradient color
 Client performance pressure is high
 == 客戶端性能壓力偏高
 
+Client prediction
+== Client prediction
+
 Client prediction time is high
 == 客戶端預測耗時偏高
 
@@ -2659,6 +2665,12 @@ Client self-kill is enabled
 
 Client uptime
 == 客戶端啟動時間
+
+Client-side prediction and latency compensation
+== Client-side prediction and latency compensation
+
+Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, and upstream packet redundancy.
+== Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, and upstream packet redundancy.
 
 Client-side self-kill protection
 == 客戶端側自殺保護
@@ -2893,6 +2905,9 @@ Configure camera, weapon, and gameplay defaults
 
 Configure chat position, size, and visibility
 == Configure chat position, size, and visibility
+
+Configure client-side prediction and latency compensation
+== Configure client-side prediction and latency compensation
 
 Configure controls and key bindings
 == 設定控制與按鍵綁定
@@ -3659,6 +3674,9 @@ DDNet points
 DDNet releases
 == DDNet 發布包
 
+DDNet settings sub-tab: 0=general, 1=network compensation
+== DDNet settings sub-tab: 0=general, 1=network compensation
+
 DDNet staff
 == DDNet 官方開發者
 
@@ -3764,9 +3782,6 @@ Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 Deep freeze
 == Deep freeze
 
-Deep freeze color
-== 深度凍結顏色
-
 Deep freeze opacity
 == 深度凍結不透明度
 
@@ -3778,9 +3793,6 @@ Deep freeze tile outline width
 
 Deep unfreeze
 == Deep unfreeze
-
-Deep unfreeze color
-== 深度解凍顏色
 
 Deep unfreeze opacity
 == 深度解凍不透明度
@@ -5105,9 +5117,6 @@ Enable the highlight and nameplate key presses, then choose the pressed hammer a
 Enable the indicator; choose its distance mode and whether war-list players get a different color.
 == 啟用指示器；選擇它的距離模式，並設定 war-list 玩家是否使用不同顏色。
 
-Enable the indicators you need; each one draws on your own screen only.
-== 只啟用你需要的指示；每一個都只畫在你自己的畫面上。
-
 Enable the message types you want and choose their colors.
 == 啟用你想要的訊息類型並選擇顏色。
 
@@ -5465,6 +5474,9 @@ Exported to %s
 Exporting chat images: %d
 == 正在匯出聊天圖片：%d
 
+Expose IP to servers by default when adding a favorite (last choice on the server info page)
+== Expose IP to servers by default when adding a favorite (last choice on the server info page)
+
 Expose playback controls to the operating system
 == Expose playback controls to the operating system
 
@@ -5645,9 +5657,6 @@ Fastest encode, largest files
 Fat skins (DDFat)
 == 胖胖的皮膚（DDFat）
 
-Favorite
-== 收藏
-
 Favorite friend
 == 最喜歡的好友
 
@@ -5659,6 +5668,9 @@ Favorite map
 
 Favorite maps
 == 收藏地圖
+
+Favorite server
+== 收藏伺服器
 
 Favorites
 == 收藏夾
@@ -5891,6 +5903,9 @@ Fonts without CJK glyphs show fallback squares for Chinese text.
 For Gores
 == 用於 Gores
 
+for Gores
+== for Gores
+
 For more info: /cmdlist
 == 更多指令請查看: /cmdlist
 
@@ -5911,6 +5926,9 @@ Force vote
 
 Format player names after a finish
 == Format player names after a finish
+
+Formerly "prediction margin" (cl_prediction_margin)
+== Formerly "prediction margin" (cl_prediction_margin)
 
 Forms
 == 表單
@@ -6184,6 +6202,9 @@ Gaussian
 
 General
 == 常規
+
+General DDNet gameplay display: showing other players and their shadow opacity, background quads and the default zoom.
+== General DDNet gameplay display: showing other players and their shadow opacity, background quads and the default zoom.
 
 Generated skin outline color
 == 生成描邊顏色
@@ -7183,9 +7204,6 @@ Indicator size
 
 Indicator transparency
 == 指示器透明度
-
-Indicators that read game state can lag behind the server; do not rely on them for frame-perfect input.
-== 讀取遊戲狀態的指示可能落後於伺服器；需要精確到幀的輸入時，別依賴它們。
 
 Infinite hook for super players on/off.
 == 超級玩家開/關的無盡鉤子
@@ -9192,10 +9210,7 @@ Need to have started the map to swap with a player.
 == 你需要先開始地圖，才能和其他玩家交換位置
 
 Negative stability buffer
-== 負穩定性緩衝
-
-Negative stability buffer (for Gores)
-== 負穩定性緩衝（用於 Gores）
+== Negative stability buffer
 
 Net
 == 淨擊殺
@@ -9217,6 +9232,9 @@ Netversion
 
 Network
 == 網絡
+
+Network compensation
+== Network compensation
 
 Network timeout
 == 網絡超時
@@ -9983,6 +10001,9 @@ Other modes
 Other players' hook line width
 == 其他玩家的鉤子輔助線寬度
 
+Other players' shadow opacity
+== Other players' shadow opacity
+
 Other sounds
 == 其他音效
 
@@ -10078,9 +10099,6 @@ Overwrite clan even if empty
 
 Own hook line width
 == 自己的鉤子輔助線寬度
-
-Own team only
-== 僅顯示同隊伍
 
 p = Ping latency
 == p = Ping 延遲
@@ -10799,6 +10817,9 @@ Predicted ghost opacity
 Prediction
 == 預測
 
+Prediction and latency compensation moved to the "Network compensation" sub-tab of the DDNet page.
+== Prediction and latency compensation moved to the "Network compensation" sub-tab of the DDNet page.
+
 Prediction boundary (ms, increases latency but reduces ping jitter)
 == 預測邊界（單位：毫秒，增加延遲但可減少因 ping 波動導致的卡頓）
 
@@ -10825,6 +10846,9 @@ Prediction margin
 
 Prediction margin when frozen
 == 凍結時的預測邊距
+
+Prediction trades accuracy for responsiveness: a larger margin and AntiPing smooth out ping jitter but can mispredict nearby actions, and upstream redundancy may triple upload traffic.
+== Prediction trades accuracy for responsiveness: a larger margin and AntiPing smooth out ping jitter but can mispredict nearby actions, and upstream redundancy may triple upload traffic.
 
 Preparing chat export: %d%%
 == 正在準備聊天匯出：%d%%
@@ -12528,7 +12552,7 @@ Scoreboard point check
 == 計分板積分檢查
 
 Scoreboard row colors
-== Scoreboard row colors
+== 計分板列顏色
 
 Scoreboard score lookup
 == 計分板查分
@@ -12917,12 +12941,6 @@ Server kick/spec votes are no longer actively moderated.
 Server kick/spec votes will now be actively moderated.
 == 伺服器的踢人/旁觀投票現在會被主動管理員模式接管
 
-Server list is more than five minutes old
-== 伺服器列表已超過五分鐘未更新
-
-Server list refresh failed; showing the previous list
-== 伺服器列表重新整理失敗，正在顯示上次列表
-
 Server message
 == 伺服器訊息
 
@@ -12970,6 +12988,9 @@ Set "Display mode" to "Show on key" or "Always show", then pick "Pistol guide li
 
 Set "Ingame mouse sens." for aiming and "UI mouse sens." for menus, then limit the cursor with "Minimum cursor distance" and "Maximum cursor distance".
 == 瞄準用遊戲內鼠標靈敏度，選單用鼠標靈敏度（界面），再用最小光標距離和最大光標距離限制光標位置。
+
+Set "Prediction margin" in milliseconds, tick "AntiPing (latency compensation)" and then choose what to predict; the redundancy switch is experimental and only useful on lossy connections.
+== Set "Prediction margin" in milliseconds, tick "AntiPing (latency compensation)" and then choose what to predict; the redundancy switch is experimental and only useful on lossy connections.
 
 Set "Switch interval" to 0 to stop timed switching and keep the queue for manual or map-join changes.
 == 把切換間隔設為 0 就會停止定時切換，佇列留給手動切換或進圖時使用。
@@ -14606,6 +14627,9 @@ Sound variants
 Sound volume
 == 音量
 
+Sounds and particles
+== Sounds and particles
+
 Source file does not exist.
 == 源文件不存在
 
@@ -15806,6 +15830,9 @@ Tick "Show hitbox mode", choose the ranges you need, then set "Player range" to 
 Tick "Show inputs", then size and place it with "Keyboard size", "Mouse size", "Opacity" and the position sliders.
 == 勾選顯示輸入，然後用鍵盤大小、滑鼠大小、不透明度與位置滑桿調整尺寸與位置。
 
+Tick "Show others" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use "Show background quads" and "Default zoom" for the view.
+== Tick "Show others" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use "Show background quads" and "Default zoom" for the view.
+
 Tick any of "Show key stuck status", "Show hammer status", "Show dummy control status" or "Show dummy copy status".
 == 按需勾選顯示卡鍵狀態、顯示錘子狀態、顯示分身控制狀態或顯示分身同步狀態。
 
@@ -16072,9 +16099,6 @@ Toggle use of custom hand color
 
 Toggles collision
 == 切換碰撞
-
-Toggles DDNet gameplay indicators and assists such as race time, team markers and hints.
-== 開關 DDNet 的遊戲指示與輔助，例如跑圖計時、隊友標記與操作提示。
 
 Toggles hit others
 == 切換打別人

@@ -1599,6 +1599,22 @@ turkish = "Ayar kartları dışındaki yardım balonlarının görünümü"
 polish = "Wygląd podpowiedzi poza kartami ustawień"
 
 [[message]]
+key = "Scoreboard row colors"
+[message.translations]
+simplified_chinese = "计分板行颜色"
+traditional_chinese = "計分板列顏色"
+japanese = "スコアボードの行の色"
+korean = "스코어보드 행 색상"
+russian = "Цвета строк таблицы счёта"
+german = "Farben der Scoreboard-Zeilen"
+spanish = "Colores de las filas de la tabla de puntuación"
+french = "Couleurs des lignes du tableau des scores"
+brazilian_portuguese = "Cores das linhas do placar"
+portuguese = "Cores das linhas da tabela de pontuação"
+turkish = "Skor tablosu satır renkleri"
+polish = "Kolory wierszy tabeli wyników"
+
+[[message]]
 key = "Apple Music media-user-token"
 [message.translations]
 simplified_chinese = "Apple Music 媒体用户令牌"

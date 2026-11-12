@@ -93,6 +93,8 @@ def main() -> None:
     print("Category summary:")
     print(f"  Localize/Localizable records: {summary.localize_or_localizable}")
     print(f"  Register help records: {summary.register_help}")
+    print(f"  Card registry records: {summary.card_registry}")
+    print(f"  Card runtime records: {summary.card_runtime}")
     print(f"  Indirect records: {summary.indirect}")
     print(f"  Extra records: {summary.extra}")
     print(f"  CJK unique strings: {summary.cjk}")
