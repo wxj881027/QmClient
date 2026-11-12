@@ -142,6 +142,8 @@ struct CTooltip
 	bool m_HoverByRect = false;
 	bool m_Immediate = false;
 	bool m_Fallback = false;
+	// 登记时是否位于弹层内：弹层关闭后不能凭旧矩形继续判定悬浮。
+	bool m_FromPopup = false;
 	EQmTooltipPlacement m_Placement = EQmTooltipPlacement::AUTO;
 	uint64_t m_RegisteredFrame = 0;
 	std::array<int, 9> m_RegisteredContext{};

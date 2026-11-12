@@ -2183,6 +2183,8 @@ protected:
 		char m_aGameType[16] = {0};
 		int m_NumPlayers = 0;
 		int m_MaxPlayers = 0;
+		// 预览弹窗的「只看实体」开关；0 = 保留纹理背景。
+		int m_EntityOnly = 0;
 		// 打开时定位起点，后续保持用户拖拽与缩放，直到关闭。
 		CQmBrowserMapPreviewView m_View;
 		bool m_InitialViewSet = false;
@@ -2804,10 +2806,13 @@ public:
 		int m_Slot;
 		bool m_Own;
 		bool m_RankGhost;
+		// 快速练习线路组：m_aFilename 指向组目录（内含多轨 .gho + events.qmevt），
+		// 只能走 View 进入 demo 式回放，不能当单文件 Activate。
+		bool m_PracticeGroup;
 		time_t m_Date;
 
 		CGhostItem() :
-			m_Slot(-1), m_Own(false), m_RankGhost(false) { m_aFilename[0] = 0; }
+			m_Slot(-1), m_Own(false), m_RankGhost(false), m_PracticeGroup(false) { m_aFilename[0] = 0; }
 
 		bool operator<(const CGhostItem &Other) const { return m_Time < Other.m_Time; }
 

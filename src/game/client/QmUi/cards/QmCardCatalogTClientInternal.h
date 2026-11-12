@@ -68,7 +68,8 @@ namespace qm_tclient_cards
 		NUMBER_OF_TCLIENT_TABS
 	};
 
-	constexpr float TCLIENT_BODY_FONT_SIZE = CMenus::TCLIENT_SETTINGS_BODY_FONT_SIZE;
+	// 11.2 沿用 menus.h 移除前的 TCLIENT_SETTINGS_BODY_FONT_SIZE，保持 TClient 页字号不变。
+	constexpr float TCLIENT_BODY_FONT_SIZE = 11.2f;
 	constexpr float TCLIENT_HEADLINE_FONT_SIZE = 20.0f;
 
 	inline SLabelProperties TClientFixedLabelProperties(float FontSize, float MaxWidth = -1.0f)
