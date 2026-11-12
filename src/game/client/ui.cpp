@@ -27,6 +27,7 @@
 #include <engine/keys.h>
 #include <engine/shared/config.h>
 
+#include <game/client/QmUi/UiSurface.h>
 #include <game/localization.h>
 
 #include <algorithm>
@@ -103,6 +104,23 @@ void CUIElement::InitRects(int RequestedRectCount)
 }
 
 CUIElement::SUIElementRect::SUIElementRect() { Reset(); }
+
+CUiScopedClipSuspend::CUiScopedClipSuspend(CUi *pUi) :
+	m_pUi(pUi),
+	m_vSavedClips(pUi->m_vClips.get_allocator())
+{
+	// 先提交外层批次，避免待绘制内容使用临时界面的裁剪状态。
+	m_pUi->FlushQuadBatch();
+	m_vSavedClips.swap(m_pUi->m_vClips);
+	m_pUi->UpdateClipping();
+}
+
+CUiScopedClipSuspend::~CUiScopedClipSuspend()
+{
+	m_pUi->FlushQuadBatch();
+	m_vSavedClips.swap(m_pUi->m_vClips);
+	m_pUi->UpdateClipping();
+}
 
 CUiScopedQuadBatch::CUiScopedQuadBatch(CUi *pUi) :
 	m_pUi(pUi)
@@ -210,6 +228,17 @@ void CUIElement::SUIElementRect::Draw(const CUIRect *pRect, ColorRGBA Color, int
 
 	if(Color.a > 0.0f && Color.a < 1.0f && m_pParent->Ui()->GaussianBlurScopeActive())
 		m_pParent->Ui()->RenderGaussianBlur(*pRect, m_pParent->Ui()->GaussianBlurScopeAlpha(), Corners, Rounding);
+	// 有 SDF 时所有圆角矩形都走同一条形状：边缘抗锯齿一致、连续曲率生效，
+	// 也不再依赖缓存四边形网格（那条网格的圆角环带会出现断续的点状边）。
+	if(Rounding > 0.0f && Corners != 0 && m_pParent->Ui()->Graphics()->HasRoundedRectSdf())
+	{
+		SRoundedSurfaceParams Params;
+		Params.m_Radius = Rounding;
+		Params.m_Corners = Corners;
+		Params.m_PixelSize = 0.0001f;
+		DrawRoundedSurface(m_pParent->Ui(), *pRect, Color, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), Params);
+		return;
+	}
 	m_pParent->Ui()->Graphics()->TextureClear();
 	m_pParent->Ui()->Graphics()->RenderQuadContainerEx(m_UIRectQuadContainer,
 		0, -1, m_X, m_Y, 1, 1);
@@ -683,18 +712,28 @@ void CUi::RenderGaussianBlur(const CUIRect &Rect, float Alpha, int Corners, floa
 
 	Graphics()->ClipEnable(ClipX0, ClipY0, ClipX1 - ClipX0, ClipY1 - ClipY0);
 	Graphics()->BlendNormal();
+	// 掩码必须和面板落在同一块物理像素矩形上：面板走 SDF 前会把矩形对齐到物理像素，
+	// 掩码这层如果还用原始亚像素矩形，两者最多差半个像素——差的那一侧会漏出一条没被
+	// 面板盖住的模糊背景（看起来像一条细白线，且随亚像素位置在上/下边之间跳）。
+	const float MaskPixelSize = std::max(std::abs(MappedWidth) / std::max((float)Graphics()->ScreenWidth(), 1.0f), 0.0001f);
+	const SRoundedRectGeometry MaskGeometry = ResolveRoundedRectGeometry(Rect.x, Rect.y, Rect.w, Rect.h, Rounding, MaskPixelSize);
+	const CUIRect MaskRect{MaskGeometry.m_X, MaskGeometry.m_Y, MaskGeometry.m_W, MaskGeometry.m_H};
 	IGraphics::SRenderTargetDrawParams DrawParams;
-	DrawParams.m_X = Rect.x;
-	DrawParams.m_Y = Rect.y;
-	DrawParams.m_W = Rect.w;
-	DrawParams.m_H = Rect.h;
+	DrawParams.m_X = MaskRect.x;
+	DrawParams.m_Y = MaskRect.y;
+	DrawParams.m_W = MaskRect.w;
+	DrawParams.m_H = MaskRect.h;
 	DrawParams.m_Alpha = std::clamp(Alpha, 0.0f, 1.0f);
 	DrawParams.m_Corners = Corners;
-	DrawParams.m_Rounding = Rounding;
-	DrawParams.m_U0 = (Rect.x - ScreenX0) / MappedWidth;
-	DrawParams.m_U1 = (Rect.x + Rect.w - ScreenX0) / MappedWidth;
-	DrawParams.m_V0 = 1.0f - (Rect.y - ScreenY0) / MappedHeight;
-	DrawParams.m_V1 = 1.0f - (Rect.y + Rect.h - ScreenY0) / MappedHeight;
+	DrawParams.m_Rounding = MaskGeometry.m_Rounding;
+	// 模糊掩码跟着面板用的是同一条圆角曲线，否则角上会漏出没模糊的边。
+	DrawParams.m_CornerSmoothing = std::clamp(g_Config.m_QmUiCornerSmoothing / 100.0f, 0.0f, 1.0f);
+	DrawParams.m_CornerCurve = (float)g_Config.m_QmUiCornerCurve;
+	DrawParams.m_CornerSeam = std::clamp(g_Config.m_QmUiCapsuleSeam / 100.0f, 0.0f, 1.0f);
+	DrawParams.m_U0 = (MaskRect.x - ScreenX0) / MappedWidth;
+	DrawParams.m_U1 = (MaskRect.x + MaskRect.w - ScreenX0) / MappedWidth;
+	DrawParams.m_V0 = 1.0f - (MaskRect.y - ScreenY0) / MappedHeight;
+	DrawParams.m_V1 = 1.0f - (MaskRect.y + MaskRect.h - ScreenY0) / MappedHeight;
 	Graphics()->DrawRenderTarget(m_GaussianBlurTarget, DrawParams);
 	if(IsClipped())
 		UpdateClipping();
@@ -1057,8 +1096,8 @@ bool CUi::MouseHovered(const CUIRect *pRect) const
 {
 	// 输入判定语义：任何非交互趟（测量、背景/回放）一律不响应——
 	// click-outside、DoButtonLogic 等输入路径都依赖这一点。
-	// 视觉侧的悬浮反馈用 VisualMouseHovered / VisualHotItem（内容
-	// DRAW 回放放行），两者不可混用。
+	// 控件外观用 VisualSurfaceHovered / VisualHotItem（内容 DRAW 回放放行），
+	// 两者不可混用。
 	return !RenderOnly() && !UnderlyingPointerInputBlocked() && MouseInside(pRect) && MouseInsideClip();
 }
 
@@ -2512,39 +2551,6 @@ bool CUi::DoClearableEditBox(CLineInput *pLineInput, const CUIRect *pRect, float
 	return ReturnValue;
 }
 
-bool CUi::DoEditBox_Search(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, bool HotkeyEnabled)
-{
-	return DoEditBox_Search(pLineInput, pRect, FontSize, HotkeyEnabled, {});
-}
-
-bool CUi::DoEditBox_Search(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, bool HotkeyEnabled, const SEditBoxRenderOptions &RenderOptions)
-{
-	const ColorRGBA PreviousTextColor = TextRender()->GetTextColor();
-	const ColorRGBA PreviousTextOutlineColor = TextRender()->GetTextOutlineColor();
-	const ColorRGBA PreviousTextSelectionColor = TextRender()->GetTextSelectionColor();
-	const unsigned PreviousRenderFlags = TextRender()->GetRenderFlags();
-	const EFontPreset PreviousFontPreset = TextRender()->GetFontPreset();
-
-	CUIRect QuickSearch = *pRect;
-	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-	DoLabel_QmIcon(&QuickSearch, EQmIcon::SEARCH, FONT_ICON_MAGNIFYING_GLASS, FontSize, TEXTALIGN_ML);
-	const float SearchWidth = TextRender()->TextWidth(FontSize, FONT_ICON_MAGNIFYING_GLASS);
-	TextRender()->SetRenderFlags(PreviousRenderFlags);
-	TextRender()->SetFontPreset(PreviousFontPreset);
-	TextRender()->TextOutlineColor(PreviousTextOutlineColor);
-	TextRender()->TextSelectionColor(PreviousTextSelectionColor);
-	TextRender()->TextColor(PreviousTextColor);
-	QuickSearch.VSplitLeft(SearchWidth + 5.0f, nullptr, &QuickSearch);
-	if(HotkeyEnabled && Input()->ModifierIsPressed() && Input()->KeyPress(KEY_F))
-	{
-		SetActiveItem(pLineInput);
-		pLineInput->SelectAll();
-	}
-	pLineInput->SetEmptyText(Localize("Search"));
-	return DoClearableEditBox(pLineInput, &QuickSearch, FontSize, IGraphics::CORNER_ALL, {}, RenderOptions);
-}
-
 void CUi::DoConfigTooltip(const void *pId, const CUIRect *pRect, const void *pValue, const void *pSecondValue)
 {
 	if(m_pQmTooltips != nullptr)
@@ -3017,90 +3023,6 @@ SEditResult<int64_t> CUi::DoValueSelectorWithState(const void *pId, const CUIRec
 	}
 
 	return SEditResult<int64_t>{State, Current};
-}
-
-float CUi::DoScrollbarV(const void *pId, const CUIRect *pRect, float Current)
-{
-	Current = std::clamp(Current, 0.0f, 1.0f);
-
-	// layout
-	CUIRect Rail;
-	pRect->Margin(5.0f, &Rail);
-
-	CUIRect Handle;
-	Rail.HSplitTop(std::clamp(33.0f, Rail.w, Rail.h / 3.0f), &Handle, nullptr);
-	Handle.y = Rail.y + (Rail.h - Handle.h) * Current;
-
-	// logic
-	const bool InsideRail = MouseHovered(&Rail);
-	const bool InsideHandle = MouseHovered(&Handle);
-	bool Grabbed = false; // whether to apply the offset
-	if(CaptureTouchDrag(pId, &Rail) && !IsActiveItem(pId))
-	{
-		SetActiveItem(pId);
-		m_ActiveScrollbarOffset = InsideHandle ? MouseY() - Handle.y : Handle.h / 2.0f;
-	}
-
-	if(CheckActiveItem(pId))
-	{
-		if(MouseButton(0))
-		{
-			Grabbed = true;
-			if(Input()->ShiftIsPressed())
-				m_MouseSlow = true;
-		}
-		else
-		{
-			SetActiveItem(nullptr);
-		}
-	}
-	else if(HotItem() == pId || (!Input()->TouchFingerStates().empty() && InsideRail))
-	{
-		if(InsideHandle)
-		{
-			if(MouseButton(0))
-			{
-				SetActiveItem(pId);
-				m_ActiveScrollbarOffset = MouseY() - Handle.y;
-				Grabbed = true;
-			}
-		}
-		else if(MouseButtonClicked(0))
-		{
-			SetActiveItem(pId);
-			m_ActiveScrollbarOffset = Handle.h / 2.0f;
-			Grabbed = true;
-		}
-	}
-
-	if(InsideRail && !MouseButton(0))
-	{
-		SetHotItem(pId);
-	}
-
-	float ReturnValue = Current;
-	if(Grabbed)
-	{
-		const float Min = Rail.y;
-		const float Max = Rail.h - Handle.h;
-		const float Cur = MouseY() - m_ActiveScrollbarOffset;
-		ReturnValue = std::clamp((Cur - Min) / Max, 0.0f, 1.0f);
-	}
-
-	// render
-	if(QmAnimationRuntime() != nullptr)
-	{
-		const auto Style = ResolveUiSliderStyle(QmControlTheme(), CUiScopedSurfaceText::CurrentSurface(), HotItem() == pId, CheckActiveItem(pId));
-		DrawRoundedSurface(this, Rail, ScaleControlAlpha(Style.m_Track), ColorRGBA(), ui_token::radius::PILL);
-		ui_widget::DrawScrollbarHandle(ui_widget::ControlContext(this), pId, Handle);
-	}
-	else
-	{
-		DrawRoundedSurface(this, Rail, ScaleControlAlpha(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f)), ColorRGBA(), Rail.w / 2.0f);
-		DrawRoundedSurface(this, Handle, ScaleControlAlpha(ms_ScrollBarColorFunction.GetColor(CheckActiveItem(pId), HotItem() == pId)), ColorRGBA(), Handle.w / 2.0f);
-	}
-
-	return ReturnValue;
 }
 
 void CUi::RenderScrollbarH(const void *pId, const CUIRect *pRect, float Current, const ColorRGBA *pColorInner)

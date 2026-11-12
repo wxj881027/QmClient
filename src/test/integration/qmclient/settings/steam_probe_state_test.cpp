@@ -4,6 +4,7 @@
 
 #include <gtest/gtest.h>
 #include <test/support/async_io_wait.h>
+#include <test/support/prediction_allocation_failure.h>
 
 #include <chrono>
 #include <memory>
@@ -25,6 +26,9 @@ namespace
 
 	SSteamClientInfo FailInspect(const char *) { throw std::bad_alloc(); }
 	SSteamClientInfo EmptyInspect(const char *) { return {}; }
+	constexpr const char *CANONICAL_PATH = "D:/Steam/library-location-with-a-long-directory-name/steam.exe";
+	SSteamClientInfo InspectDetected(const char *) { return Inspect("d:/detected/steam.exe"); }
+	void CanonicalizeDetectedPath(char *pPath) noexcept { str_copy(pPath, CANONICAL_PATH, 1024); }
 
 	class CAbortableProbe : public CSteamProbeJob
 	{
@@ -42,6 +46,7 @@ namespace
 		CJobPool m_Pool;
 		std::shared_ptr<CSteamProbeJob> m_pJob;
 		int m_Submissions = 0;
+		bool m_ResultPublished = false;
 
 		bool Start(const char *pPath, bool Automatic = true, SSteamClientInfo (*pfnInspect)(const char *) = Inspect)
 		{
@@ -51,14 +56,19 @@ namespace
 					return m_Pool.TryAdd(pJob); });
 		}
 
-		bool Finish(const char *pPath)
+		bool WaitForCompletion() const
 		{
 			const auto Deadline = std::chrono::steady_clock::now() + std::chrono::seconds(1);
 			while(m_pJob && !m_pJob->Done() && std::chrono::steady_clock::now() < Deadline)
 				std::this_thread::yield();
-			if(!m_pJob || !m_pJob->Done())
+			return m_pJob && m_pJob->Done();
+		}
+
+		bool Finish(const char *pPath)
+		{
+			if(!WaitForCompletion())
 				return false;
-			m_State.Finish(pPath);
+			m_ResultPublished = m_State.Finish(pPath);
 			return true;
 		}
 	};
@@ -71,6 +81,7 @@ TEST(SteamProbeState, CompletedProbePublishesMatchingResultAndDoesNotRepeat)
 		ASSERT_TRUE(p->m_Pool.TryInit(1));
 		ASSERT_TRUE(p->Start("old"));
 		ASSERT_TRUE(p->Finish("old"));
+		EXPECT_TRUE(p->m_ResultPublished);
 		EXPECT_TRUE(p->m_State.HasResult());
 		EXPECT_FALSE(p->m_State.Pending());
 		EXPECT_STREQ(p->m_State.Info().m_aPath, "old");
@@ -152,6 +163,7 @@ TEST(SteamProbeState, WorkerExceptionDoesNotPublishEmptyInfoAndRetriesRefresh)
 		ASSERT_TRUE(p->Start("old", false, FailInspect));
 		ASSERT_TRUE(p->Finish("old"));
 		EXPECT_EQ(p->m_pJob->State(), IJob::STATE_FAILED);
+		EXPECT_FALSE(p->m_ResultPublished);
 		EXPECT_TRUE(p->m_State.HasResult());
 		EXPECT_STREQ(p->m_State.Info().m_aPath, "old");
 		EXPECT_TRUE(p->m_State.Info().m_Running);
@@ -169,6 +181,7 @@ TEST(SteamProbeState, StaleCompletionKeepsOldResultUntilEditingEnds)
 		ASSERT_TRUE(p->Finish("old"));
 		ASSERT_TRUE(p->Start("outdated"));
 		ASSERT_TRUE(p->Finish("current"));
+		EXPECT_FALSE(p->m_ResultPublished);
 		EXPECT_STREQ(p->m_State.Info().m_aPath, "old");
 		EXPECT_FALSE(p->Start("current", false));
 		ASSERT_TRUE(p->Start("current"));
@@ -231,8 +244,73 @@ TEST(SteamProbeState, AbortedJobPreservesPreviousResultAndRestoresRefresh)
 				return p->m_Pool.TryAdd(pJob); }));
 		ASSERT_TRUE(p->Finish("old"));
 		EXPECT_FALSE(p->m_State.Pending());
+		EXPECT_FALSE(p->m_ResultPublished);
 		EXPECT_STREQ(p->m_State.Info().m_aPath, "old");
 		ASSERT_TRUE(p->Start("old", false));
 		ASSERT_TRUE(p->Finish("old"));
+	}));
+}
+
+TEST(SteamProbeState, AutomaticCompletionPublishesCanonicalPathOnceWithoutAnotherProbe)
+{
+	ASSERT_TRUE(WaitForAsyncIo([] {
+		auto p = std::make_shared<CHarness>();
+		ASSERT_TRUE(p->m_Pool.TryInit(1));
+		ASSERT_TRUE(p->Start("", true, InspectDetected));
+		ASSERT_TRUE(p->WaitForCompletion());
+		EXPECT_TRUE(p->m_State.Finish("", true, CanonicalizeDetectedPath));
+		EXPECT_FALSE(p->m_State.Pending());
+		EXPECT_STREQ(p->m_State.Info().m_aPath, CANONICAL_PATH);
+		EXPECT_FALSE(p->m_State.Finish("", true, CanonicalizeDetectedPath));
+		EXPECT_FALSE(p->Start(CANONICAL_PATH));
+		EXPECT_EQ(p->m_Submissions, 1);
+	}));
+}
+
+TEST(SteamProbeState, AutomaticPathAllocationFailureKeepsCompletedTaskAndOldResultForRetry)
+{
+	ASSERT_TRUE(WaitForAsyncIo([] {
+		auto p = std::make_shared<CHarness>();
+		ASSERT_TRUE(p->m_Pool.TryInit(1));
+		ASSERT_TRUE(p->Start("old"));
+		ASSERT_TRUE(p->Finish("old"));
+		ASSERT_TRUE(p->Start("", true, InspectDetected));
+		ASSERT_TRUE(p->WaitForCompletion());
+		bool Published = true;
+		bool Triggered = false;
+		{
+			CPredictionAllocationFailure Failure;
+			Published = p->m_State.Finish("", true, CanonicalizeDetectedPath);
+			Triggered = Failure.Triggered();
+		}
+		ASSERT_TRUE(Triggered);
+		EXPECT_FALSE(Published);
+		EXPECT_TRUE(p->m_State.Pending());
+		EXPECT_TRUE(p->m_State.HasResult());
+		EXPECT_STREQ(p->m_State.Info().m_aPath, "old");
+		EXPECT_FALSE(p->Start(""));
+		EXPECT_EQ(p->m_Submissions, 2);
+		EXPECT_TRUE(p->m_State.Finish("", true, CanonicalizeDetectedPath));
+		EXPECT_FALSE(p->m_State.Pending());
+		EXPECT_STREQ(p->m_State.Info().m_aPath, CANONICAL_PATH);
+		EXPECT_FALSE(p->Start(CANONICAL_PATH));
+		EXPECT_EQ(p->m_Submissions, 2);
+	}));
+}
+
+TEST(SteamProbeState, StaleAutomaticCompletionDoesNotPublishOrReplaceTheManualSelection)
+{
+	ASSERT_TRUE(WaitForAsyncIo([] {
+		auto p = std::make_shared<CHarness>();
+		ASSERT_TRUE(p->m_Pool.TryInit(1));
+		ASSERT_TRUE(p->Start("old"));
+		ASSERT_TRUE(p->Finish("old"));
+		ASSERT_TRUE(p->Start("", true, InspectDetected));
+		ASSERT_TRUE(p->WaitForCompletion());
+		EXPECT_FALSE(p->m_State.Finish("new-manual-selection", true, CanonicalizeDetectedPath));
+		EXPECT_FALSE(p->m_State.Pending());
+		EXPECT_STREQ(p->m_State.Info().m_aPath, "old");
+		EXPECT_FALSE(p->Start("new-manual-selection", false));
+		EXPECT_EQ(p->m_Submissions, 2);
 	}));
 }

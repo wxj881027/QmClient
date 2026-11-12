@@ -368,6 +368,9 @@ A calm-play mode that hides the HUD, names, effects, chat and sounds you pick, s
 A crowded HUD hides the game, so start with one element and add more if needed.
 == Kalabalık bir HUD oyunu gizler; tek bir öğeyle başlayın, gerekirse ekleyin.
 
+A damped spring drives the offset; reversing slows it before it turns
+== Sönümlü bir yay kaydırmayı sürer; yön değişirken önce yavaşlar
+
 A demo with this name already exists
 == Bu isimde bir demo zaten mevcut
 
@@ -592,9 +595,6 @@ Add friends by entering their name below or by clicking their name in the player
 
 Add function
 == İşlev ekle
-
-Add Group
-== Grup Ekle
 
 Add Item
 == Öğe Ekle
@@ -914,6 +914,9 @@ Always show song title and artist
 Always translate
 == Her zaman çevir
 
+AMLL community lyrics
+== AMLL topluluk şarkı sözleri
+
 Amount
 == Miktar
 
@@ -1126,6 +1129,9 @@ Are you sure that you want to quit?
 
 Are you sure that you want to remove '%s' from your war groups?
 == '%s' öğesini savaş gruplarınızdan kaldırmak istediğinizden emin misiniz?
+
+Are you sure that you want to remove '%s' from your war list?
+== "%s" düşman listesinden kaldırılsın mı?
 
 Are you sure that you want to remove the clan '%s' from your friends list?
 == '%s' klanını arkadaş listenizden kaldırmak istediğinize emin misiniz?
@@ -1586,9 +1592,6 @@ Axiom website
 Axis
 == Eksen
 
-Back
-== Geri
-
 Backdrop blur
 == Arka plan bulanıklığı
 
@@ -1955,6 +1958,9 @@ Bubble opacity
 Build the status text shown above Tees
 == Build the status text shown above Tees
 
+Built-in
+== Dahili
+
 Button - Disabled
 == Düğme - Devre Dışı
 
@@ -2089,6 +2095,12 @@ Cannot update public words. Previous words remain active.
 
 Cannot write the wiki file
 == Wiki dosyası yazılamıyor
+
+Capsule seam
+== Kapsül birleşimi
+
+Capsule seam smoothing: ease the straight-to-cap curvature jump (0 = plain semicircular ends)
+== Kapsül birleşimi yumuşatma: düz ile uç arasındaki eğrilik sıçramasını yumuşatır (0 = saf yarım daire uçlar)
 
 Capture the flag
 == Bayrak kapmaca (CTF)
@@ -2483,20 +2495,11 @@ Clan: %s
 Classic
 == Klasik
 
-Classic Easy
-== Klasik Easy
-
-Classic Next
-== Klasik Next
-
-Classic Nut
-== Klasik Nut
+Classic arc
+== Klasik yay
 
 Classic PowerShell
 == Klasik PowerShell
-
-Classic Pro
-== Klasik Pro
 
 Clear
 == Temizle
@@ -2609,9 +2612,6 @@ Click to remove this player from your friends list.
 Click to select server. Double click to join your friend.
 == Sunucuyu seçmek için tıklayın. Arkadaşınıza katılmak için çift tıklayın.
 
-Click to set color
-== Rengi ayarlamak için tıkla
-
 Client
 == İstemci
 
@@ -2675,6 +2675,9 @@ Collapse
 Collapse console
 == Konsolu daralt
 
+Collect CP %d before teleporting
+== Işınlanmadan önce CP %d noktasını etkinleştir
+
 Collects the remaining DDNet client preferences that do not belong to other cards.
 == Diğer kartlara ait olmayan kalan DDNet istemci tercihlerini toplar.
 
@@ -2731,12 +2734,6 @@ Colors and opacity of the popup list that suggests chat commands and emoticons w
 
 Colors for chat command and emoji completion
 == Sohbette komut ve emoji tamamlama renkleri
-
-Colors in chat
-== Sohbetteki renkler
-
-Colors in scoreboard
-== Skor tablosundaki renkler
 
 Colors of the hook collision line, in case of a possible collision with:
 == Olası çarpma durumunda kanca yardım çizgisi renkleri:
@@ -2843,17 +2840,11 @@ Concurrent requests when refreshing server browser
 Config
 == Yapılandırma
 
-Config Changes
-== Yapılandırma Değişiklikleri
-
 Config directory
 == Yapılandırma dizini (cfg)
 
 Config Files
 == Yapılandırma Dosyaları
-
-Config Filters
-== Yapılandırma Filtreleri
 
 Config version. Helps new client fix old config errors.
 == Yapılandırma sürümü. Yeni istemcinin eski yapılandırma hatalarını düzeltmesine yardımcı olur.
@@ -3014,6 +3005,9 @@ Confirm disconnect after game end (minutes, -1 off, 0 always)
 Confirm quit after game end (minutes, -1 off, 0 always)
 == Oyun bittikten sonra çıkmayı onayla (dakika, -1 kapalı, 0 her zaman)
 
+Conic Bezier
+== Konik Bézier
+
 Connect address error
 == Bağlantı adresi hatası
 
@@ -3080,6 +3074,9 @@ Connlimit: number of connections allowed per IP in a time period
 Connlimit: time window for IP connection count
 == Bağlantı sınırı: IP bağlantı sayısı için zaman penceresi
 
+Consecutive wheel ticks carry their velocity into one continuous glide
+== Ardışık tekerlek adımları hızı devralarak tek bir akıcı kaydırmaya dönüşür
+
 Console
 == Konsol
 
@@ -3145,6 +3142,9 @@ Contents
 
 Continue anyway?
 == Yine de devam edilsin mi?
+
+Continuous-curvature UI corners (0 = classic arc, 100 = strongest)
+== Arayüz köşelerinde sürekli eğrilik (0 = klasik yay, 100 = en güçlü)
 
 Contributors
 == Katkıda Bulunanlar
@@ -3251,6 +3251,12 @@ Copy skin ID
 Copy skin option color
 == Kopyala cilt seçeneği rengi
 
+Corner curvature
+== Köşe eğriliği
+
+Corner curve
+== Köşe eğrisi
+
 Could not add the player as a friend
 == Oyuncu arkadaş olarak eklenemedi
 
@@ -3350,8 +3356,14 @@ Country code
 Country flag for grouping this community (ISO 3166-1 numeric)
 == Bu topluluğu gruplandırmak için ülke bayrağı (ISO 3166-1 sayısal)
 
+CP %d
+== Kontrol noktası %d
+
 CP border overlay alpha (0-100)
 == CP noktası sınırının kaplama varlık alfası (0-100)
+
+CP guide
+== CP rehberi
 
 CP opacity
 == CP opaklığı
@@ -4181,6 +4193,9 @@ Door Laser Outline Color
 Door laser outline color
 == Kapı lazer dış çizgi rengi
 
+Double-tap the bound key within 400 ms to send the current lyric to public chat
+== Geçerli şarkı sözü satırını genel sohbete göndermek için atanan tuşa 400 ms içinde iki kez basın
+
 Download
 == İndir
 
@@ -4600,6 +4615,9 @@ Edit the name and clan fields; the dummy keeps its own values.
 
 Edit this custom command on the Bind Wheel page.
 == Bu özel komutu Komut Çarkı sayfasında düzenleyin.
+
+Edit title style
+== Başlık stilini düzenle
 
 Edit touch controls
 == Dokunmatik kontrolleri düzenle
@@ -5159,6 +5177,9 @@ Encoder:
 End (s)
 == Bitiş (sn)
 
+End bounce
+== Uçta yaylanma
+
 End marker of replay slice
 == Tekrar diliminin bitiş işareti
 
@@ -5234,6 +5255,9 @@ Entity wall outline opacity
 entity_bg (Workshop)
 == entity_bg（Workshop）
 
+Entries in it will fall back to none.
+== İçindeki kayıtlar none'a döner.
+
 Entries with NVENC, AMF, Quick Sync or VideoToolbox use the GPU encoding chip and are several times faster. Only encoders that really work on this machine are listed.
 == NVENC, AMF, Quick Sync veya VideoToolbox içeren seçenekler ekran kartının kodlama birimini kullanır ve birkaç kat hızlıdır. Listede yalnızca bu makinede gerçekten çalışan kodlayıcılar görünür.
 
@@ -5279,6 +5303,9 @@ Event
 Every click applies the skin at once, so star the ones you like before you start browsing.
 == Her tıklama skini anında uygular; beğendiklerini göz atmaya başlamadan önce yıldızla.
 
+Every wheel tick restarts from rest, matching the original client
+== Her tekerlek adımı durarak yeniden başlar, orijinal istemcideki gibi
+
 Exact bound nickname
 == Bağlanacak tam takma ad
 
@@ -5302,6 +5329,9 @@ Exchange (ProRes 422 HQ / MOV)
 
 Exclude
 == Hariç tut
+
+exec
+== exec
 
 Execute before connecting
 == Bağlanmadan önce çalıştır
@@ -5861,9 +5891,6 @@ Format player names after a finish
 Forms
 == Formlar
 
-Found %d global cards
-== %d küresel kart bulundu
-
 Four IP addresses are already online
 == Zaten 4 IP adresi çevrimiçi
 
@@ -6398,6 +6425,9 @@ Ground jump
 Group name
 == Grup adı
 
+Group names are limited to 16 characters
+== Grup adları en fazla 16 karakterdir
+
 Groups input helpers: fast input, automatic margin, sub-tick aiming and cursor behavior.
 == Girdi yardımcılarını gruplar: hızlı girdi, otomatik kenar boşluğu, alt tik nişan alma ve imleç davranışı.
 
@@ -6412,6 +6442,9 @@ Guide line color
 
 Guide lines are computed locally and do not guarantee that a hook will connect.
 == Kılavuz çizgiler yerel olarak hesaplanır ve kancanın tutacağını garanti etmez.
+
+Guide to nearby uncollected teleport checkpoints and warn near checkpoint teleporters
+== Yakındaki etkinleştirilmemiş ışınlanma kontrol noktalarına yol göster ve kontrol noktasına dönüş girişlerinde uyar
 
 Gun fire
 == Tabanca ateşi
@@ -6722,6 +6755,9 @@ Hold gun higher like TW 0.6.1 and earlier
 Hold left click for free camera
 == Serbest kamera için sol tıklamayı basılı tut
 
+Hold still
+== Sabit tut
+
 Hold the wheel key to see the selection move; release it to run the highlighted slot.
 == Seçimin hareket ettiğini görmek için çark tuşunu basılı tut, vurgulanan dilimi çalıştırmak için bırak.
 
@@ -6808,6 +6844,9 @@ Hostname of DNSBL provider for IP verification
 
 Hover for tooltip
 == İpucu için üzerine gel
+
+How far a wheel or drag can push past an end, in UI pixels; 0 disables
+== Tekerlek veya sürüklemenin sonu ne kadar aşabileceği, UI pikseli cinsinden; 0 kapatır
 
 How far the plasma gun tracks a tee
 == Plazma silahının bir tee'yi ne kadar takip edeceği
@@ -7499,6 +7538,9 @@ Keep unsent message on chat close
 Keep vote window open after voting
 == Oylamadan sonra oylama penceresini açık tut
 
+Key
+== Tuş
+
 Key binds
 == Tuş atamaları
 
@@ -7783,9 +7825,6 @@ Leave empty to disable
 
 Leave empty to join public room
 == Genel odaya katılmak için boş bırakın
-
-Leave empty to show everyone
-== Herkesi göstermek için boş bırakın
 
 Leave empty to use default prompt
 == Varsayılan istemi kullanmak için boş bırakın
@@ -8283,7 +8322,7 @@ Map
 == Harita
 
 Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
-== Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
+== Harita tarayıcısı zorluk kategori filtresi bit maskesi (bit 0-14, bkz. map_vote_difficulty.h)
 
 Map browser difficulty star filter bitmask (bits 1-5)
 == Harita tarayıcısı zorluk yıldızı filtresi bit maskesi (bitler 1-5)
@@ -8745,7 +8784,7 @@ Mixed
 == Karışık
 
 Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
-== Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+== Yalnızca mobil: çökme raporunu bir sonraki açılışta Downloads/QmClient konumuna kopyala (0 = uygulama korumalı alanında bırak)
 
 Mobile spectator camera: 0=joystick pad, 1=drag the view
 == Mobil izleyici kamerası: 0=joystick, 1=görünümü sürükle
@@ -8810,6 +8849,9 @@ Mouse speed for aiming and for menus, and how far your cursor may travel from th
 Move a friend category to a position
 == Arkadaş kategorisini bir konuma taşı
 
+Move down
+== Aşağı taşı
+
 Move left
 == Sola hareket et
 
@@ -8824,6 +8866,9 @@ Move the free camera, then add a keyframe at the current demo time.
 
 Move to category
 == Kategoriye taşı
+
+Move up
+== Yukarı taşı
 
 Movement
 == Hareket
@@ -9164,6 +9209,9 @@ New features
 New features (unread)
 == Yeni özellikler (okunmadı)
 
+New group
+== Yeni grup
+
 New IME
 == Yeni IME
 
@@ -9308,6 +9356,9 @@ No downloadable portable package for this version
 No empty team left.
 == Boş takım kalmadı.
 
+No entries yet
+== Henüz kayıt yok
+
 No favorite maps yet
 == Henüz favori harita yok
 
@@ -9385,6 +9436,9 @@ No player nearby
 
 No player with this name found.
 == Bu isimde bir oyuncu bulunamadı.
+
+No players match
+== Eşleşen oyuncu yok
 
 No players match these filters
 == Bu filtrelere uyan oyuncu yok
@@ -9650,6 +9704,9 @@ On
 One key can hold several commands, so remove single entries under "Bound functions" instead of clearing the key.
 == Bir tuş birden çok komut taşıyabilir; tuşu tümden temizlemek yerine Atanmış işlevler altından tek tek sil.
 
+Online
+== Çevrimiçi
+
 Online friends
 == Çevrimiçi arkadaşlar
 
@@ -9884,9 +9941,6 @@ Original only
 Original options
 == Özgün seçenekler
 
-Original scroll feel
-== Özgün kaydırma hissi
-
 Other
 == Diğer
 
@@ -9979,9 +10033,6 @@ Override Entry
 
 Override Freeze Tile Entity Alpha (0-100)
 == Donma Bloklarının Varlık Alfa Değerini Geçersiz Kıl (0-100)
-
-Override Group
-== Grubu Geçersiz Kıl
 
 Override location for ping estimation, available: auto, af, as, as:cn, eu, na, oc, sa (Automatic, Africa, Asia, China, Europe, North America, Oceania/Australia, South America
 == Ping tahmini konumunu geçersiz kıl; seçenekler: auto, af, as, as:cn, eu, na, oc, sa (Otomatik, Afrika, Asya, Çin, Avrupa, Kuzey Amerika, Okyanusya/Avustralya, Güney Amerika)
@@ -11183,6 +11234,9 @@ Queue preset: %s
 Quick action menu for players
 == Oyuncular için hızlı işlem menüsü
 
+Quintic Bezier
+== Beşinci derece Bézier
+
 Quit
 == Çıkış
 
@@ -11729,6 +11783,9 @@ Rename demo
 Rename folder
 == Klasörü yeniden adlandır
 
+Rename group
+== Grubu yeniden adlandır
+
 Rename queue
 == Sırayı yeniden adlandır
 
@@ -12050,9 +12107,6 @@ Restart
 Restart in x seconds (0 = abort)
 == x saniye içinde yeniden başlat (0 = iptal)
 
-Restart smooth scrolling on every wheel tick
-== Her tekerlek kademesinde yumuşak kaydırmayı yeniden başlat
-
 Restart the client
 == İstemciyi yeniden başlat
 
@@ -12073,9 +12127,6 @@ Restore old single-segment hook collision line behavior
 
 Restore recommended
 == Önerilenleri geri yükle
-
-Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
-== Özgün tekerlek kaydırmasını geri getir: her kademe hızı devralmadan yumuşak kaydırmayı yeniden başlatır
 
 Restored the built-in content
 == Paket içeriği geri yüklendi
@@ -12106,6 +12157,9 @@ Reverse gradient colors
 
 Reverse IME gradient colors
 == Gradyan renklerini ters çevir (IME)
+
+Reverse order
+== Ters sıra
 
 Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
 == Karşı zoom tuşuna basınca yönü anında çevir (0=özgün yumuşak zoom korunur)
@@ -12184,6 +12238,9 @@ Rows here usually come from old configs, so test each command before you rely on
 
 RTT
 == RTT
+
+Rubber-band distance in UI pixels when the wheel or a drag pushes past an end (0=off); the content springs back after scrolling stops
+== Tekerlek veya sürükleme bir ucu geçtiğinde lastik bant mesafesi, UI pikseli (0=kapalı); kaydırma durunca içerik geri döner
 
 Rule line 1.
 == Kural satırı 1.
@@ -12428,9 +12485,6 @@ Scoreboard
 Scoreboard cursor
 == Skor tablosu imleci
 
-Scoreboard filter: only show players whose name or clan contains this text
-== Skor tablosu filtresi: adı veya klanı bu metni içeren oyuncuları göster
-
 Scoreboard playtime
 == Skor tablosunda oyun süresi
 
@@ -12502,6 +12556,9 @@ Screenshots
 
 Screenshots directory
 == Ekran görüntüleri dizini
+
+Scroll feel
+== Kaydırma hissi
 
 Scroll mode
 == Kaydırma modu
@@ -12725,8 +12782,8 @@ Send sampling and token limit parameters
 Send specified command to rcon
 == Belirtilen komutu rcon'a gönder
 
-Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines
-== 90 ile 270 saniye arasında rastgele aralıklarla genel sohbete art arda üç şarkı sözü satırı gönder, satırlar arasında 3 saniye bekle
+Send three consecutive lyrics to public chat at random intervals of 360 to 1200 seconds, with 3 seconds between lines. Successfully sending a lyric with Singing cancels pending humming lines and restarts the random wait
+== 360 ile 1200 saniye arasında rastgele aralıklarla genel sohbete art arda üç şarkı sözü satırı gönder, satırlar arasında 3 saniye bekle. “Şarkı söyleme” ile bir satır başarıyla gönderildiğinde “Mırıldanma” işlevinin bekleyen satırlarını iptal et ve yeni bir rastgele bekleme süresi başlat
 
 Send to
 == Şuna gönder
@@ -12814,15 +12871,6 @@ Server hostname (0.7 only)
 
 Server info
 == Sunucu bilgisi
-
-Server information lower left card width (per mille)
-== Sunucu bilgileri sol alt kart genişliği (binde)
-
-Server information upper left card width (per mille)
-== Sunucu bilgileri sol üst kart genişliği (binde)
-
-Server information upper row height (per mille)
-== Sunucu bilgileri üst satır yüksekliği (binde)
 
 Server kick/spec votes are no longer actively moderated.
 == Sunucu atma/seyirci oyları artık aktif olarak yönetilmiyor.
@@ -13022,6 +13070,9 @@ Settings page opacity
 Settings page right panel opacity
 == Ayarlar sayfası sağ panel opaklığı
 
+Settings prewarm default migration done
+== Ayarlar ön ısıtma varsayılanı taşıması tamamlandı
+
 Settings, binds, profiles, chat binds and the war list are included. Select additional cfg files below.
 == Ayarlar, tuş atamaları, görünüm profilleri, sohbet bağlantıları ve savaş listesi dahildir. Aşağıdan ek cfg dosyalarını seçin.
 
@@ -13157,7 +13208,7 @@ Show chat when rendering video
 Show clan above name plates
 == İsim plakalarının üstünde klanı göster
 
-Show clan if war
+Show clan for enemies
 == Savaş varsa klanı göster
 
 Show clan name on nameplate
@@ -13195,9 +13246,6 @@ Show collision and weapon interaction
 
 Show Collision Borders
 == Çarpışma hacmi kenarlığını göster
-
-Show colors in spectator selection
-== Seyirci seçiminde renkleri göster
 
 Show combo hint when hooking or hammering player within 2 seconds
 == 2 saniye içinde bir oyuncuyu art arda kancaladığında veya çekiçlediğinde combo ipucu göster
@@ -13304,6 +13352,12 @@ Show enemy color in scoreboard
 Show enemy color in spectator menu
 == Seyirci menüsünde düşman rengini göster
 
+Show enemy colors in chat
+== Sohbetteki renkler
+
+Show enemy colors in scoreboard
+== Skor tablosundaki renkler
+
 Show enemy group players
 == Düşman grubu oyuncularını göster
 
@@ -13387,6 +13441,9 @@ Show ghost
 
 Show ghost at unpredictable position of other players
 == Diğer oyuncuların tahmin edilemeyen konumunda hayalet göster
+
+Show glowing, floating lyrics in the map. Each new line stays where it appears; previous lines rise and fade out
+== Haritada parlayan ve havada süzülen şarkı sözlerini göster. Her yeni satır belirdiği yerde kalır; önceki satırlar yükselerek yavaşça kaybolur
 
 Show Gores drown board
 == Gores boğulma panosunu göster
@@ -14180,6 +14237,9 @@ Simple noise reduction
 Simple noise reduction strength
 == Basit gürültü azaltma gücü
 
+Singing
+== Şarkı söyleme
+
 Size
 == Boyut
 
@@ -14627,6 +14687,27 @@ Spotify sp_dc cookie (from browser DevTools, long-lived)
 Spree
 == Seri
 
+Spring
+== Yay
+
+Spring damping
+== Yay sönümü
+
+Spring firmness; 100 stops without overshoot, lower bounces past
+== Yay sertliği; 100 hedefi aşmadan durur, küçük değer hedefi geçip geri döner
+
+Spring response
+== Yay tepkisi
+
+Spring scroll feel damping ratio in percent; 100 stops without overshoot
+== Yaylı kaydırma sönüm oranı (yüzde); 100 hedefi aşmadan durur
+
+Spring scroll feel response time in milliseconds; lower reaches the target sooner
+== Yaylı kaydırma tepki süresi (milisaniye); küçük değer hedefe daha çabuk ulaşır
+
+Spring settle time; lower is snappier, higher feels heavier
+== Yayın oturma süresi; küçük daha çabuk tepki verir, büyük daha ağır hissettirir
+
 SQL Server name for record table
 == Kayıt tablosu için SQL Sunucu adı
 
@@ -14881,6 +14962,9 @@ Sun
 
 Super
 == Süper
+
+Superellipse
+== Süperelips
 
 Support is optional; nothing here changes client behavior.
 == Destek isteğe bağlıdır; buradaki hiçbir şey istemci davranışını değiştirmez.
@@ -16025,9 +16109,6 @@ Total play time
 Total: %d save(s)
 == Toplam: %d save
 
-Traditional
-== Geleneksel
-
 Trail alpha
 == İz opaklığı
 
@@ -16364,6 +16445,9 @@ UI color
 UI controller sens.
 == Arayüz kumanda hassasiyeti
 
+UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier
+== Arayüz köşe eğrisi: 0 = klasik yay, 1 = süperelips, 2 = beşinci derece Bézier, 3 = konik Bézier
+
 UI icon color
 == Arayüz simgesi rengi
 
@@ -16696,6 +16780,9 @@ Use alternative world tick calculation making hooks behave as if all players hav
 
 Use animated title style (overrides qm_title_color_mode)
 == Animasyonlu unvan stili kullan (qm_title_color_mode'u geçersiz kılar)
+
+Use cached or online AMLL community lyrics when the music source has no word timing
+== Müzik kaynağında sözcük zamanlaması yoksa önbellekteki veya çevrimiçi AMLL topluluk şarkı sözlerini kullan
 
 Use colored skins for frozen tees
 == Donmuş teeler için renkli görünümler kullan
@@ -17309,6 +17396,9 @@ Wheel distance per tick; hold Alt for 3x
 Wheel label
 == Çark etiketi
 
+Wheel scroll feel: 0=Smooth (velocity carries over), 1=Original (each tick restarts), 2=Spring
+== Tekerlek hissi: 0=Yumuşak (hız devralınır), 1=Özgün (her adımda sıfırlanır), 2=Yay
+
 Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
 == Tekerlek kademesi başına arayüz pikseli; ayar kartı sayfaları her kademede bu değerin 12 katı kayar
 
@@ -17501,6 +17591,9 @@ Word list file exceeds 2 MiB.
 Word list must be UTF-8 text without NUL characters.
 == Kelime listesi NUL karakteri içermeyen UTF-8 metni olmalıdır.
 
+World lyrics
+== Dünyada şarkı sözleri
+
 Write local console contents to a text file
 == Yerel konsol içeriğini bir metin dosyasına yaz
 
@@ -17525,6 +17618,9 @@ Writing item %d failed
 Written %d items
 == %d öğe yazıldı
 
+X
+== X
+
 x = DDNet CPU% / total CPU%
 == x = DDNet CPU% / toplam CPU%
 
@@ -17533,6 +17629,9 @@ X alignment color
 
 X alignment hint with me
 == Benimle X hizalama ipucu
+
+Y
+== Y
 
 y = DDNet memory usage
 == y = DDNet bellek kullanımı

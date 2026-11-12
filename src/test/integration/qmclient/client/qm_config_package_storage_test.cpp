@@ -5,6 +5,7 @@
 #include <gtest/gtest.h>
 #include <test/test.h>
 
+#include <chrono>
 #include <filesystem>
 #include <memory>
 #include <string>
@@ -20,7 +21,8 @@ namespace
 			m_Info.m_DeleteTestStorageFilesOnSuccess = false;
 			static unsigned int s_StorageInstance = 0;
 			const std::string BasePath = m_Info.m_aStoragePath;
-			str_format(m_Info.m_aStoragePath, sizeof(m_Info.m_aStoragePath), "%s-run-%u", BasePath.c_str(), ++s_StorageInstance);
+			const std::string RunId = std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+			str_format(m_Info.m_aStoragePath, sizeof(m_Info.m_aStoragePath), "%s-run-%s-%u", BasePath.c_str(), RunId.c_str(), ++s_StorageInstance);
 			m_pStorage = m_Info.CreateTestStorage();
 			ASSERT_NE(m_pStorage, nullptr);
 			m_pFiles = std::make_unique<qm_config_package::CStorageFiles>(*m_pStorage);

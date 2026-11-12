@@ -166,10 +166,65 @@ TEST_F(CQmWarListModelTest, DuplicateReplacementWithTeamStopsEnemyMatch)
 
 TEST_F(CQmWarListModelTest, RenamingBuiltInEnemyGroupKeepsEnemyMatch)
 {
-	m_Model.AddWarEntry("Alice", "", "", "enemy");
+	ASSERT_TRUE(m_Model.AddWarEntry("Alice", "", "", "enemy"));
+	ASSERT_TRUE(m_Model.AddWarEntry("Bob", "", "", "team"));
+	const CWarType *pEnemy = m_Model.FindWarType("enemy");
 	ASSERT_TRUE(m_Model.MatchesEnemy("Alice", ""));
-	m_Model.UpsertWarType(WARLIST_BUILTIN_GROUP_ENEMY, "blocked", ColorRGBA(1, 0, 0, 1));
+	ASSERT_TRUE(m_Model.UpsertWarType(WARLIST_BUILTIN_GROUP_ENEMY, "blocked", ColorRGBA(1, 0, 0, 1)));
+	EXPECT_EQ(m_Model.FindWarType("blocked"), pEnemy);
+	EXPECT_EQ(m_Model.m_vWarEntries.front().m_pWarType, pEnemy);
 	EXPECT_TRUE(m_Model.MatchesEnemy("Alice", ""));
+	EXPECT_FALSE(m_Model.MatchesEnemy("Bob", ""));
+}
+
+TEST_F(CQmWarListModelTest, RemovingEnemyGroupDoesNotPromoteTeamToEnemy)
+{
+	ASSERT_TRUE(m_Model.AddWarEntry("Alice", "", "", "enemy"));
+	ASSERT_TRUE(m_Model.AddWarEntry("Bob", "", "", "team"));
+	ASSERT_TRUE(m_Model.MatchesEnemy("Alice", ""));
+	const CWarType *pTeam = m_Model.FindWarType("team");
+	m_Model.RemoveWarType("enemy");
+	ASSERT_EQ(m_Model.m_WarTypes.size(), 2u);
+	EXPECT_EQ(m_Model.m_WarTypes[1], pTeam);
+	EXPECT_EQ(m_Model.m_vWarEntries.front().m_pWarType, m_Model.m_pWarTypeNone);
+	EXPECT_FALSE(m_Model.MatchesEnemy("Alice", ""));
+	EXPECT_FALSE(m_Model.MatchesEnemy("Bob", ""));
+}
+
+TEST_F(CQmWarListModelTest, RemovingTeamAndEnemyLeavesOnlyNoneAndQueriesRemainValid)
+{
+	ASSERT_TRUE(m_Model.AddWarEntry("Alice", "", "", "enemy"));
+	ASSERT_TRUE(m_Model.AddWarEntry("Bob", "", "", "team"));
+	ASSERT_TRUE(m_Model.MatchesEnemy("Alice", ""));
+	m_Model.RemoveWarType("team");
+	ASSERT_EQ(m_Model.m_WarTypes.size(), 2u);
+	EXPECT_EQ(m_Model.m_vWarEntries[1].m_pWarType, m_Model.m_pWarTypeNone);
+	EXPECT_TRUE(m_Model.MatchesEnemy("Alice", ""));
+	EXPECT_FALSE(m_Model.MatchesEnemy("Bob", ""));
+	m_Model.RemoveWarType("enemy");
+	ASSERT_EQ(m_Model.m_WarTypes.size(), 1u);
+	EXPECT_EQ(m_Model.m_WarTypes.front(), m_Model.m_pWarTypeNone);
+	EXPECT_FALSE(m_Model.MatchesEnemy("Alice", ""));
+	EXPECT_FALSE(m_Model.MatchesEnemy("Bob", ""));
+	EXPECT_FALSE(m_Model.MatchesEnemy("", ""));
+}
+
+TEST_F(CQmWarListModelTest, ReorderingGroupsKeepsTheBuiltInEnemyIdentity)
+{
+	ASSERT_TRUE(m_Model.AddWarEntry("Alice", "", "", "enemy"));
+	ASSERT_TRUE(m_Model.AddWarEntry("Bob", "", "", "team"));
+	ASSERT_TRUE(m_Model.AddWarEntry("", "Clan", "", "custom"));
+	const CWarType *pEnemy = m_Model.FindWarType("enemy");
+	ASSERT_TRUE(m_Model.MatchesEnemy("Alice", ""));
+	m_Model.MoveWarType(WARLIST_BUILTIN_GROUP_ENEMY, 3);
+	m_Model.RefreshWarTypeIndices();
+	ASSERT_EQ(m_Model.m_WarTypes.size(), 4u);
+	EXPECT_EQ(m_Model.m_WarTypes[3], pEnemy);
+	EXPECT_EQ(pEnemy->m_Index, 3);
+	EXPECT_EQ(m_Model.m_vWarEntries.front().m_pWarType, pEnemy);
+	EXPECT_TRUE(m_Model.MatchesEnemy("Alice", "Clan"));
+	EXPECT_FALSE(m_Model.MatchesEnemy("Bob", "Clan"));
+	EXPECT_FALSE(m_Model.MatchesEnemy("Other", "Clan"));
 }
 
 TEST_F(CQmWarListModelTest, AppendingEntriesKeepsExistingEnemyQueriesValid)

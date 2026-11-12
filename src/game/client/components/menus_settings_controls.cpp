@@ -97,16 +97,19 @@ void CMenusSettingsControls::Render(CUIRect MainView)
 	PrepareSettingsCards(ResolveSettingsContentMetrics(MainView.w), ReadOnly, Ui()->MeasurementOnly() ? nullptr : &m_SettingsScrollRegion);
 	LogControlsPerfStage(GameClient()->Client(), "controls_tab_shell", ShellTimer.ElapsedMs(), false, "page=controls");
 
-	// 控制页把“指令工坊”作为同级页签承载，复用绑定编辑卡的键盘、参数和
-	// 配置持久化逻辑，避免在标准控制卡片中再复制一套绑定状态。
-	// 控制页的子页签必须和其他设置页共用同一套高度与上下间距，避免按按钮高度
-	// 自行切分后胶囊过高、内容卡片整体下移。
+	// 控制页只有一行四个并列页签：「控制 / 绑定 / 指令工坊 / 蓝图」。
+	// 绑定编辑卡（键盘、参数与配置持久化）作为第二个页签承载，标准控制卡片里
+	// 不再复制一套绑定状态；指令工坊与蓝图则直接复用各自的页面入口。
+	// 页签行沿用其他设置页的高度与上下间距，只在最外层解析一次子页签布局：
+	// 页签行以下就是内容区，不再有第二行页签，也就没有第二份高度与间距。
 	const SSettingsSubTabLayoutFrame SubTabs = ResolveSettingsSubTabLayout(MainView, m_CardMetrics.m_UiScale);
 	CUIRect TabBar = SubTabs.m_TabBarRect;
 	MainView = SubTabs.m_ContentRect;
+	// 四个页签整行等分：等宽是胶囊滑块与槽位逐格对齐的前提，也保证页签始终排在
+	// 同一行 —— 按文字宽度排版会让「指令工坊」把后面两个页签挤到下一行。
 	CUIRect aTabSlots[static_cast<size_t>(ETab::NUM)];
 	CUIRect TabRemainder = TabBar;
-	const float TabWidth = TabBar.w / static_cast<float>(ETab::NUM);
+	const float TabWidth = std::max(0.0f, TabBar.w) / static_cast<float>(ETab::NUM);
 	for(size_t Index = 0; Index < static_cast<size_t>(ETab::NUM); ++Index)
 		TabRemainder.VSplitLeft(TabWidth, &aTabSlots[Index], &TabRemainder);
 	const int ActiveTab = static_cast<int>(m_Tab);
@@ -114,12 +117,33 @@ void CMenusSettingsControls::Render(CUIRect MainView)
 	if(!ReadOnly && SelectedTab >= 0)
 		m_Tab = static_cast<ETab>(SelectedTab);
 	static CButtonContainer s_aControlsTabs[static_cast<size_t>(ETab::NUM)] = {};
-	const char *const apTabLabels[] = {Localize("Controls"), Localize("Bind")};
+	// 选中态由 CapsuleTabBar 的滑块承担，DoButton_MenuTab 只负责文字与 hover 反馈。
+	const char *const apTabLabels[] = {Localize("Controls"), Localize("Bind"), Localize("Command Workshop"), Localize("Blueprint")};
+	static_assert(sizeof(apTabLabels) / sizeof(apTabLabels[0]) == static_cast<size_t>(ETab::NUM), "control tab labels must match ETab");
 	for(size_t Index = 0; Index < static_cast<size_t>(ETab::NUM); ++Index)
 		GameClient()->m_Menus.DoButton_MenuTab(&s_aControlsTabs[Index], apTabLabels[Index], m_Tab == static_cast<ETab>(Index), &aTabSlots[Index], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true);
-	if(m_Tab == ETab::BIND_WORKSHOP)
+
+	if(m_Tab != ETab::CONTROLS)
 	{
-		GameClient()->m_Menus.RenderSettingsQmClientBindDeck(MainView, ReadOnly);
+		// 三个卡片页签的渲染入口签名保持不变，各自负责自己的卡片骨架与滚动区。
+		switch(m_Tab)
+		{
+		case ETab::BIND:
+			// deck 自己已有卡片骨架（工具条 + 键位键盘 + 独立滚动区），「绑定」页
+			// 直接把内容区整块交给它：底部键位占用条带已经删除，不再为它留任何高度。
+			// 那份「键 → 命令」数据在 Bind 一览卡和键面冲突标记里已经各有一份，
+			// 条带只会带来重复与第二层滚动。
+			GameClient()->m_Menus.RenderSettingsQmClientBindDeck(MainView, ReadOnly);
+			break;
+		case ETab::WORKSHOP:
+			GameClient()->m_Menus.RenderSettingsBindWorkshop(MainView, ReadOnly);
+			break;
+		case ETab::BLUEPRINT:
+			GameClient()->m_Menus.RenderSettingsBindBlueprint(MainView, ReadOnly);
+			break;
+		default:
+			break;
+		}
 		return;
 	}
 

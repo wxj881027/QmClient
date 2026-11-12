@@ -8,6 +8,8 @@
 
 #include <game/client/ui_rect.h>
 
+#include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <deque>
 #include <functional>
@@ -80,6 +82,76 @@ struct SUiSpringConfig
 		return Config;
 	}
 };
+
+// 阻尼谐振子的解析解积分器：UI 弹簧的唯一实现。以 (Value, Velocity) 为初值在
+// [0, Dt] 上推进到 Target——线性常系数 ODE 下与全局闭式解等价，因此帧率无关，
+// 且无条件稳定，调用方不需要为数值稳定性截断 Dt。弹簧轨道与滚动越界回弹共用
+// 它，避免两处各自演化出手感差异。
+inline void QmSpringAdvance(float &Value, float &Velocity, const float Target, const SUiSpringConfig &Config, const float Dt)
+{
+	if(!(Dt > 0.0f))
+		return;
+
+	const float Mass = std::max(Config.m_Mass, 1e-4f);
+	const float Stiffness = std::max(Config.m_Stiffness, 0.0f);
+	const float Damping = std::max(Config.m_Damping, 0.0f);
+
+	const float Omega0 = std::sqrt(Stiffness / Mass);
+	if(Omega0 <= 1e-6f)
+	{
+		// 无刚度退化：自由阻尼运动（指数衰减）或匀速直线运动。
+		const float Lambda = Damping / Mass;
+		if(Lambda <= 1e-9f)
+		{
+			Value += Velocity * Dt;
+		}
+		else
+		{
+			const float Decay = std::exp(-Lambda * Dt);
+			Value += Velocity * (1.0f - Decay) / Lambda;
+			Velocity *= Decay;
+		}
+		return;
+	}
+
+	const float Zeta = Damping / (2.0f * Mass * Omega0);
+	const float Displacement = Value - Target;
+	const float InitialVelocity = Velocity;
+	if(Zeta < 1.0f)
+	{
+		// 欠阻尼：x(t) = e^(-ζω0 t)·(A·cos(ωd·t) + B·sin(ωd·t))，A=d0，B=(v0+ζω0·d0)/ωd
+		const float OmegaD = Omega0 * std::sqrt(std::max(0.0f, 1.0f - Zeta * Zeta));
+		const float A = Displacement;
+		const float B = (InitialVelocity + Zeta * Omega0 * Displacement) / OmegaD;
+		const float Decay = std::exp(-Zeta * Omega0 * Dt);
+		const float CosDt = std::cos(OmegaD * Dt);
+		const float SinDt = std::sin(OmegaD * Dt);
+		Value = Target + Decay * (A * CosDt + B * SinDt);
+		Velocity = Decay * ((B * OmegaD - A * Zeta * Omega0) * CosDt - (A * OmegaD + B * Zeta * Omega0) * SinDt);
+	}
+	else if(Zeta > 1.0f)
+	{
+		// 过阻尼：x(t) = A·e^(s1·t) + B·e^(s2·t)，s1/s2 为两个负实根
+		const float Root = Omega0 * std::sqrt(std::max(0.0f, Zeta * Zeta - 1.0f));
+		const float S1 = -Zeta * Omega0 + Root;
+		const float S2 = -Zeta * Omega0 - Root;
+		const float A = (InitialVelocity - S2 * Displacement) / (S1 - S2);
+		const float B = (S1 * Displacement - InitialVelocity) / (S1 - S2);
+		const float Exp1 = std::exp(S1 * Dt);
+		const float Exp2 = std::exp(S2 * Dt);
+		Value = Target + A * Exp1 + B * Exp2;
+		Velocity = A * S1 * Exp1 + B * S2 * Exp2;
+	}
+	else
+	{
+		// 临界阻尼：x(t) = (d0 + (v0 + ω0·d0)·t)·e^(-ω0 t)
+		const float A = Displacement;
+		const float B = InitialVelocity + Omega0 * Displacement;
+		const float Decay = std::exp(-Omega0 * Dt);
+		Value = Target + (A + B * Dt) * Decay;
+		Velocity = (InitialVelocity - Omega0 * B * Dt) * Decay;
+	}
+}
 
 struct SUiBezier
 {
@@ -205,6 +277,8 @@ private:
 	float ApplyTrackEasing(float t, const SActiveTrack &Track) const;
 	float TrackProgress(const SActiveTrack &Track) const;
 	void AdvanceSpring(SActiveTrack &Track, float Dt, EUiAnimProperty Property) const;
+	void StoreValue(const STrackKey &Key, float Value);
+	void PruneValueCache();
 	// 统一打断语义：任何打断都以 (当前值, 当前速度) 为初值落到弹簧继续运动。
 	// （请求本身是弹簧用其参数，是 tween 按时长映射接管弹簧；0 时长 tween 仍瞬移）。
 	bool StartTrackInterrupt(const STrackKey &Key, const SUiAnimRequest &Request, const SActiveTrack &Active);
@@ -223,7 +297,20 @@ private:
 	std::deque<SUiAnimGroupCompleteEvent> m_GroupCompletedEvents;
 	uint32_t m_NextTrackId = 1;
 	uint32_t m_NextGroupId = 1;
-	std::unordered_map<STrackKey, float, STrackKeyHasher> m_Values;
+	struct SValueEntry
+	{
+		float m_Value = 0.0f;
+		uint64_t m_LastUseCounter = 0;
+	};
+	// 值缓存是"最后一次已知值"，不是权威状态：条目丢失后 resolver 会把首见当作
+	// 已在目标位（不会补一段进场动画），因此可以安全淘汰。NodeKey 大量来自指针
+	// 地址，界面进出会不断产生新键，不淘汰会让这张表在整个会话里只增不减。
+	mutable std::unordered_map<STrackKey, SValueEntry, STrackKeyHasher> m_Values;
+	mutable uint64_t m_ValueUseCounter = 0;
+	// 硬上限之外的条目按"最近使用帧"淘汰；活跃/排队中的轨道永不淘汰。
+	static constexpr size_t MAX_VALUES_SOFT = 4096;
+	static constexpr size_t MAX_VALUES_HARD = 8192;
+	static constexpr uint64_t MAX_VALUE_IDLE_FRAMES = 1024;
 	std::unordered_map<STrackKey, SActiveTrack, STrackKeyHasher> m_ActiveTracks;
 	std::unordered_map<STrackKey, std::deque<SUiAnimRequest>, STrackKeyHasher> m_QueuedTracks;
 	std::unordered_map<uint32_t, SCustomEasing> m_CustomEasings;

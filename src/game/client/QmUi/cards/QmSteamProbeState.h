@@ -5,6 +5,8 @@
 #include <engine/steam.h>
 
 #include <memory>
+#include <new>
+#include <stdexcept>
 #include <string>
 #include <utility>
 
@@ -45,18 +47,45 @@ public:
 	const SSteamClientInfo &Info() const noexcept { return m_Info; }
 	void RequestRefresh() noexcept { m_RefreshRequested = true; }
 
-	void Finish(const char *pManualPath) noexcept
+	// 采用自动路径时先准备检查键；失败保留已完成任务，配置只在返回成功后回填。
+	bool Finish(const char *pManualPath, bool AdoptDetectedPath = false, void (*pfnNormalizePath)(char *) noexcept = nullptr) noexcept
 	{
 		if(!m_pProbe || !m_pProbe->Done())
-			return;
+			return false;
+		bool Published = false;
 		if(m_pProbe->State() == IJob::STATE_DONE)
 		{
 			if(m_pProbe->m_Succeeded && m_pProbe->m_ManualPath == pManualPath)
 			{
-				// 路径与结果一起无分配发布，失败准备不会破坏已有显示。
-				m_CheckedManualPath.swap(m_pProbe->m_ManualPath);
-				m_Info = m_pProbe->m_Info;
+				if(AdoptDetectedPath && pManualPath[0] == '\0' && m_pProbe->m_Info.m_aPath[0] != '\0')
+				{
+					try
+					{
+						SSteamClientInfo Info = m_pProbe->m_Info;
+						if(pfnNormalizePath != nullptr)
+							pfnNormalizePath(Info.m_aPath);
+						std::string CheckedPath(Info.m_aPath);
+						// 字符串准备完成后，检查键与显示结果一起无分配发布。
+						m_CheckedManualPath.swap(CheckedPath);
+						m_Info = Info;
+					}
+					catch(const std::bad_alloc &)
+					{
+						return false;
+					}
+					catch(const std::length_error &)
+					{
+						return false;
+					}
+				}
+				else
+				{
+					// 路径与结果一起无分配发布，失败准备不会破坏已有显示。
+					m_CheckedManualPath.swap(m_pProbe->m_ManualPath);
+					m_Info = m_pProbe->m_Info;
+				}
 				m_HasResult = true;
+				Published = true;
 			}
 			else if(!m_pProbe->m_Succeeded)
 				m_RefreshRequested = true;
@@ -65,6 +94,7 @@ public:
 			m_RefreshRequested = true;
 		// ABORTED可能仍在运行；不读取其结果，线程池继续持有任务。
 		m_pProbe.reset();
+		return Published;
 	}
 
 	template<typename TFactory, typename TSubmit>

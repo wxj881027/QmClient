@@ -183,6 +183,18 @@ bool CQmWarListModel::AddWarType(const char *pType, ColorRGBA Color) noexcept
 	}
 }
 
+void CQmWarListModel::MoveWarType(int From, int To)
+{
+	const int Count = (int)m_WarTypes.size();
+	// 0 号位是 none，条目兜底依赖它，任何排序都从 1 开始。
+	if(From <= 0 || To <= 0 || From >= Count || To >= Count || From == To)
+		return;
+	CWarType *pType = m_WarTypes[From];
+	m_WarTypes.erase(m_WarTypes.begin() + From);
+	m_WarTypes.insert(m_WarTypes.begin() + To, pType);
+	MarkWarTypesDirty();
+}
+
 void CQmWarListModel::RemoveWarEntry(const char *pName, const char *pClan, const char *pType)
 {
 	CWarType *pWarType = FindWarType(pType);
@@ -315,7 +327,8 @@ bool CQmWarListModel::RebuildWarEntryLookup() const noexcept
 bool CQmWarListModel::MatchesEnemy(const char *pName, const char *pClan) const
 {
 	RebuildWarEntryLookup();
-	const CWarType *pEnemyType = m_WarTypes[WARLIST_BUILTIN_GROUP_ENEMY];
+	// 分组可删除和重排，敌人身份跟随稳定内置对象，不按当前列表位置推断。
+	const CWarType *pEnemyType = &m_aBuiltinTypes[WARLIST_BUILTIN_GROUP_ENEMY];
 	bool Matched = false;
 	VisitMatches(pName, pClan, [&](const CWarEntry &Entry, bool) {
 		Matched = Entry.m_pWarType == pEnemyType;

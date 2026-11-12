@@ -962,14 +962,13 @@ inline SSettingsColorRowLayout ResolveSettingsColorRowLayout(const CUIRect &View
 	Layout.m_RowRect = {View.x, View.y, View.w, RowHeight};
 	Layout.m_ConsumedHeight = RowHeight + (TrailingSpacing ? std::max(0.0f, Metrics.m_LineSpacing) : 0.0f);
 
-	const float MaximumResetWidth = std::max(0.0f, View.w - ColorButtonWidth - Gap * 2.0f);
-	const float MinimumResetWidth = std::min(60.0f * Metrics.m_UiScale, MaximumResetWidth);
-	const float PreferredResetWidth = 72.0f * Metrics.m_UiScale;
-	const float ResetWidth = std::clamp(std::min(PreferredResetWidth, View.w * 0.30f), MinimumResetWidth, MaximumResetWidth);
+	// 色块和重置是右侧的一小组动作按钮：都按行高做成方形，紧挨着贴住行右缘。
+	// 以前按百分比分配宽度，中间会空出一大片，看着像没对齐。
+	const float ButtonSide = std::min(RowHeight, std::max(0.0f, (View.w - Gap * 2.0f) * 0.5f));
 	CUIRect Remaining = Layout.m_RowRect;
-	Remaining.VSplitRight(ResetWidth, &Remaining, &Layout.m_ResetButtonRect);
+	Remaining.VSplitRight(ButtonSide, &Remaining, &Layout.m_ResetButtonRect);
 	Remaining.VSplitRight(Gap, &Remaining, nullptr);
-	Remaining.VSplitRight(ColorButtonWidth, &Remaining, &Layout.m_ColorButtonRect);
+	Remaining.VSplitRight(ButtonSide, &Remaining, &Layout.m_ColorButtonRect);
 	Remaining.VSplitRight(Gap, &Layout.m_LabelRect, nullptr);
 	if(ReserveCheckboxIndent)
 	{

@@ -1,4 +1,5 @@
 #include <game/client/components/qmclient/perf_diagnostics.h>
+#include <game/client/components/qmclient/settings_text_gap_sampler.h>
 
 #include <gtest/gtest.h>
 #include <test/test.h>
@@ -221,4 +222,80 @@ TEST(QmPerfDiagnostics, JsonEscapeBufferRejectsSizeOverflowBeforeAllocating)
 {
 	EXPECT_EQ(QmPerfJsonBufferSize(0), 1u);
 	EXPECT_THROW(QmPerfJsonBufferSize(std::numeric_limits<size_t>::max()), std::length_error);
+}
+
+TEST(QmSettingsTextGapSampler, AlternatingBucketsKeepOnlyTheirFirstSample)
+{
+	CQmSettingsTextGapSampler Sampler;
+	EXPECT_TRUE(Sampler.Allow(1, 10, 0, 1, 2, 3, "missing", "not_built"));
+	EXPECT_TRUE(Sampler.Allow(1, 10, 0, 1, 2, 3, "missing", "key_mismatch"));
+	EXPECT_FALSE(Sampler.Allow(1, 10, 0, 1, 2, 3, "missing", "not_built"));
+	EXPECT_FALSE(Sampler.Allow(1, 10, 0, 1, 2, 3, "missing", "key_mismatch"));
+}
+
+TEST(QmSettingsTextGapSampler, NewCoverageFrameAllowsAnotherSample)
+{
+	CQmSettingsTextGapSampler Sampler;
+	EXPECT_TRUE(Sampler.Allow(1, 10, 0, 1, 2, 3, "missing", "not_built"));
+	EXPECT_TRUE(Sampler.Allow(1, 11, 0, 1, 2, 3, "missing", "not_built"));
+	EXPECT_FALSE(Sampler.Allow(1, 11, 0, 1, 2, 3, "missing", "not_built"));
+}
+
+TEST(QmSettingsTextGapSampler, ReopenedSessionAllowsTheSameCoverageFrame)
+{
+	CQmSettingsTextGapSampler Sampler;
+	EXPECT_TRUE(Sampler.Allow(1, 10, 0, 1, 2, 3, "missing", "not_built"));
+	EXPECT_TRUE(Sampler.Allow(2, 10, 0, 1, 2, 3, "missing", "not_built"));
+	EXPECT_FALSE(Sampler.Allow(2, 10, 0, 1, 2, 3, "missing", "not_built"));
+}
+
+TEST(QmSettingsTextGapSampler, ScopeAndPageCoordinatesHaveIndependentSamples)
+{
+	CQmSettingsTextGapSampler Sampler;
+	EXPECT_TRUE(Sampler.Allow(1, 10, 0, 1, 2, 3, "missing", "not_built"));
+	EXPECT_TRUE(Sampler.Allow(1, 10, 1, 1, 2, 3, "missing", "not_built"));
+	EXPECT_TRUE(Sampler.Allow(1, 10, 0, 2, 2, 3, "missing", "not_built"));
+	EXPECT_TRUE(Sampler.Allow(1, 10, 0, 1, 3, 3, "missing", "not_built"));
+	EXPECT_TRUE(Sampler.Allow(1, 10, 0, 1, 2, 4, "missing", "not_built"));
+	EXPECT_FALSE(Sampler.Allow(1, 10, 0, 1, 2, 3, "missing", "not_built"));
+}
+
+TEST(QmSettingsTextGapSampler, CopiesClassificationNamesInsteadOfBorrowingBuffers)
+{
+	CQmSettingsTextGapSampler Sampler;
+	char aReason[] = "missing";
+	char aPlanStatus[] = "not_built";
+	EXPECT_TRUE(Sampler.Allow(1, 10, 0, 1, 2, 3, aReason, aPlanStatus));
+	aReason[0] = 'x';
+	aPlanStatus[0] = 'x';
+	EXPECT_FALSE(Sampler.Allow(1, 10, 0, 1, 2, 3, "missing", "not_built"));
+	EXPECT_TRUE(Sampler.Allow(1, 10, 0, 1, 2, 3, aReason, aPlanStatus));
+	EXPECT_TRUE(Sampler.Allow(1, 10, 0, 1, 2, 3, "style", "not_built"));
+}
+
+TEST(QmSettingsTextGapSampler, FullCapacitySuppressesNewBucketsUntilTheNextFrame)
+{
+	CQmSettingsTextGapSampler Sampler;
+	for(size_t Page = 0; Page < CQmSettingsTextGapSampler::MAX_BUCKETS; ++Page)
+		EXPECT_TRUE(Sampler.Allow(1, 10, 0, (int)Page, 2, 3, "missing", "not_built")) << Page;
+	EXPECT_FALSE(Sampler.Allow(1, 10, 0, 1000, 2, 3, "missing", "not_built"));
+	EXPECT_FALSE(Sampler.Allow(1, 10, 0, 0, 2, 3, "missing", "not_built"));
+	EXPECT_TRUE(Sampler.Allow(1, 11, 0, 1000, 2, 3, "missing", "not_built"));
+}
+
+TEST(QmSettingsTextGapSampler, MissingNamesShareTheUnknownClassification)
+{
+	CQmSettingsTextGapSampler Sampler;
+	EXPECT_TRUE(Sampler.Allow(1, 10, 0, 1, 2, 3, nullptr, nullptr));
+	EXPECT_FALSE(Sampler.Allow(1, 10, 0, 1, 2, 3, "unknown", "unknown"));
+}
+
+TEST(QmSettingsTextGapSampler, OversizedClassificationIsDroppedWithoutConsumingCapacity)
+{
+	CQmSettingsTextGapSampler Sampler;
+	const std::string LongName(32, 'a');
+	EXPECT_FALSE(Sampler.Allow(1, 10, 0, 1, 2, 3, LongName.c_str(), "not_built"));
+	EXPECT_FALSE(Sampler.Allow(1, 10, 0, 1, 2, 3, "missing", LongName.c_str()));
+	for(size_t Page = 0; Page < CQmSettingsTextGapSampler::MAX_BUCKETS; ++Page)
+		EXPECT_TRUE(Sampler.Allow(1, 10, 0, (int)Page, 2, 3, "missing", "not_built")) << Page;
 }

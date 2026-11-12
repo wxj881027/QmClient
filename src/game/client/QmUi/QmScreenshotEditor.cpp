@@ -146,7 +146,7 @@ void CQmScreenshotEditor::Pump(CMenus *pMenus)
 
 void CQmScreenshotEditor::RenderImage(CMenus *pMenus, CUIRect Rect)
 {
-	Rect.Draw(ColorRGBA(0.06f, 0.07f, 0.09f, 0.95f), IGraphics::CORNER_ALL, 8);
+	Rect.Draw(ui_token::color::SCREENSHOT_EDITOR_BACKDROP, IGraphics::CORNER_ALL, 8);
 	Rect.Margin(14, &Rect);
 	if(!m_Texture.IsValid() || m_Width <= 0 || m_Height <= 0)
 	{
@@ -232,7 +232,7 @@ void CQmScreenshotEditor::Render(CMenus *pMenus, CUIRect Rect)
 	const bool CanSave = !m_Dirty && !m_pPreview && !m_Failed && m_Texture.IsValid();
 	if(!m_pExport && !CanSave)
 	{
-		Save.Draw(ColorRGBA(1, 1, 1, 0.08f), IGraphics::CORNER_ALL, 4);
+		Save.Draw(ui_token::color::SCREENSHOT_EDITOR_DISABLED_ACTION, IGraphics::CORNER_ALL, 4);
 		pUi->DoLabel(&Save, Localize("Save PNG copy"), 12, TEXTALIGN_MC);
 	}
 	else if(pMenus->DoButton_Menu(&m_aButtons[1], m_pExport ? Localize("Cancel") : Localize("Save PNG copy"), 0, &Save))

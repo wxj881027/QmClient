@@ -502,31 +502,41 @@ void CMenus::RenderSettingsTeeOptions(CUIRect Content, const SSettingsContentMet
 	aColumns[1].m_RenderMeasured = [&](CUIRect &Prefix) {
 		CSettingsContentLayoutFlow Column(Prefix);
 		CUIRect Row;
-		if(Column.Control("tee-skin-prefix-label", TeeMetrics.m_InputHeight, Row))
-			DoSettingsMenuLabel(SETTINGS_TEE, -1, -1, "tee_skin_prefix_label", &Row, Localize("Skin prefix"), BodySize, TEXTALIGN_ML);
-		if(Column.Control("tee-skin-prefix-input", TeeMetrics.m_InputHeight, Row, TeeMetrics.m_LineSpacing))
+		// 标签、输入框与预设胶囊同排，比原先三行布局更紧凑。
+		if(Column.Control("tee-skin-prefix-row", TeeMetrics.m_InputHeight, Row))
 		{
+			CUIRect LabelColumn, Controls;
+			SplitSettingsControlRow(Row, TeeMetrics, &LabelColumn, &Controls);
+			DoSettingsMenuLabel(SETTINGS_TEE, -1, -1, "tee_skin_prefix_label", &LabelColumn, Localize("Skin prefix"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
+
+			// 预设胶囊至少占两段可点宽度，输入框留够最小宽度后吃掉剩余；列太窄时控件自身退化成下拉。
+			const float SegmentMinWidth = std::max(72.0f, TeeMetrics.m_InputHeight * 3.0f);
+			CUIRect InputRect, PresetRect;
+			Controls.VSplitRight(std::min(2.0f * SegmentMinWidth, std::max(0.0f, Controls.w - 88.0f * TeeMetrics.m_UiScale)), &InputRect, &PresetRect);
+			InputRect.VSplitRight(TeeMetrics.m_LineSpacing, &InputRect, nullptr);
 			static CLineInput s_SkinPrefixInput(g_Config.m_ClSkinPrefix, sizeof(g_Config.m_ClSkinPrefix));
 			ui_widget::SInputFieldOptions InputOptions;
 			InputOptions.m_Clearable = true;
 			InputOptions.m_FontSize = BodySize;
-			const bool Changed = ui_widget::InputField(SettingsUiContext("settings_tee_skin_prefix_text_input", TeeMetrics.m_UiScale), &s_SkinPrefixInput, Row, InputOptions).m_Changed;
+			const bool Changed = ui_widget::InputField(SettingsUiContext("settings_tee_skin_prefix_text_input", TeeMetrics.m_UiScale), &s_SkinPrefixInput, InputRect, InputOptions).m_Changed;
 			ShouldRefresh = (Changed && Column.Input() && !Ui()->RenderOnly()) || ShouldRefresh;
-		}
-		if(Column.Control("tee-skin-prefix-presets", TeeMetrics.m_InputHeight, Row, TeeMetrics.m_LineSpacing))
-		{
+
 			static const char *s_apPrefixes[] = {"kitty", "santa"};
 			static CButtonContainer s_aPrefixButtons[std::size(s_apPrefixes)];
-			static ui_widget::SSettingsActionGroupState s_PrefixActionWidths;
-			const auto PrefixActions = ui_widget::PrepareSettingsActionGroup(*Ui(), s_PrefixActionWidths, Row, s_apPrefixes, std::size(s_apPrefixes), TeeMetrics);
+			int CurrentPrefix = -1;
 			for(size_t Index = 0; Index < std::size(s_apPrefixes); ++Index)
 			{
-				CUIRect Button = PrefixActions.m_aButtons[Index];
-				if(DoButton_Menu(&s_aPrefixButtons[Index], s_apPrefixes[Index], 0, &Button) && Column.Input() && !Ui()->RenderOnly())
+				if(str_comp(g_Config.m_ClSkinPrefix, s_apPrefixes[Index]) == 0)
 				{
-					str_copy(g_Config.m_ClSkinPrefix, s_apPrefixes[Index]);
-					ShouldRefresh = true;
+					CurrentPrefix = (int)Index;
+					break;
 				}
+			}
+			const int NewPrefix = DoSegmentedChoice(s_aPrefixButtons, s_apPrefixes, (int)std::size(s_apPrefixes), CurrentPrefix, PresetRect, ui_token::radius::BASE, nullptr, BodySize);
+			if(NewPrefix >= 0 && NewPrefix != CurrentPrefix && Column.Input() && !Ui()->RenderOnly())
+			{
+				str_copy(g_Config.m_ClSkinPrefix, s_apPrefixes[NewPrefix]);
+				ShouldRefresh = true;
 			}
 		}
 	};
@@ -880,7 +890,7 @@ void CMenus::RenderSettingsTeeEditor(CUIRect Content, const SSettingsContentMetr
 	{
 		const CUIRect &Slot = SliderLayout.m_aSlotRects[Emote];
 		const bool IsActive = Emote == ActiveEmote;
-		const bool IsHovered = Ui()->VisualMouseHovered(&Slot) && !Ui()->IsPopupOpen();
+		const bool IsHovered = Ui()->VisualSurfaceHovered(&Slot) && !Ui()->IsPopupOpen();
 		if(IsHovered && !IsActive)
 		{
 			CUIRect HoverRect;
@@ -2713,6 +2723,7 @@ void CMenus::RenderSettingsTeeGlow(CUIRect Content, const SSettingsContentMetric
 	if(Flow.Control("tee-team-glow-team0-mode", TeeMetrics.m_LineHeight, TeeGlowRow, TeeMetrics.m_LineSpacing))
 	{
 		CUIRect Team0GlowLabel, Team0GlowDropDown;
+		// 配置下拉沿用标准短选项宽度并贴齐行尾，避免多选颜色名把按钮撑满整行。
 		SplitSettingsControlRow(TeeGlowRow, TeeMetrics, &Team0GlowLabel, &Team0GlowDropDown, ESettingsControlWidth::SHORT_CHOICE);
 		Team0GlowDropDown.x = TeeGlowRow.x + TeeGlowRow.w - Team0GlowDropDown.w;
 		DoSettingsMenuLabel(SETTINGS_TEE, -1, -1, "tee-team-glow-team0-label", &Team0GlowLabel, Localize("Team 0 glow"), BodySize, TEXTALIGN_ML);

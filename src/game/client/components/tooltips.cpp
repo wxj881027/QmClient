@@ -97,20 +97,20 @@ void CTooltips::SetFadeTime(const void *pId, float Time)
 void CTooltips::DoToolTip(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint)
 {
 	const bool Small = GameClient()->m_Menus.IsSettingsPageActive();
-	DoToolTip(pId, pNearRect, pText, WidthHint, Small ? ResolveSettingsSmallFontSize(QmUiScaleFactor(g_Config.m_QmUiScale)) : 14.0f, Small, Small);
+	DoToolTip(pId, pNearRect, pText, WidthHint, Small ? ResolveSettingsSmallFontSize(QmUiScaleFactor(g_Config.m_QmUiScale)) : ui_token::tooltip::FONT_SIZE, Small, Small);
 }
 
 void CTooltips::DoToolTipForRect(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint)
 {
 	const bool Small = GameClient()->m_Menus.IsSettingsPageActive();
-	DoToolTip(pId, pNearRect, pText, WidthHint, Small ? ResolveSettingsSmallFontSize(QmUiScaleFactor(g_Config.m_QmUiScale)) : 14.0f, Small, true);
+	DoToolTip(pId, pNearRect, pText, WidthHint, Small ? ResolveSettingsSmallFontSize(QmUiScaleFactor(g_Config.m_QmUiScale)) : ui_token::tooltip::FONT_SIZE, Small, true);
 }
 
 void CTooltips::DoToolTipFromSide(const void *pId, const CUIRect *pNearRect, const char *pText, EQmTooltipPlacement Placement, float WidthHint)
 {
 	// 侧向布局只用于普通气泡；设置页的紧凑提示保持即时小字，不引入方向差异。
 	const bool Small = GameClient()->m_Menus.IsSettingsPageActive();
-	DoToolTip(pId, pNearRect, pText, WidthHint, Small ? ResolveSettingsSmallFontSize(QmUiScaleFactor(g_Config.m_QmUiScale)) : 14.0f,
+	DoToolTip(pId, pNearRect, pText, WidthHint, Small ? ResolveSettingsSmallFontSize(QmUiScaleFactor(g_Config.m_QmUiScale)) : ui_token::tooltip::FONT_SIZE,
 		Small, Small, false, false, nullptr, Small ? EQmTooltipPlacement::AUTO : Placement);
 }
 
@@ -123,7 +123,7 @@ void CTooltips::DoInfoToolTipForRect(const void *pId, const CUIRect *pNearRect, 
 void CTooltips::DoSmallToolTip(const void *pId, const CUIRect *pNearRect, const char *pText, float FontSize, float WidthHint)
 {
 	const bool Small = GameClient()->m_Menus.IsSettingsPageActive();
-	DoToolTip(pId, pNearRect, pText, WidthHint, Small ? FontSize : 14.0f, Small, true, true);
+	DoToolTip(pId, pNearRect, pText, WidthHint, Small ? FontSize : ui_token::tooltip::FONT_SIZE, Small, true, true);
 }
 
 void CTooltips::DoConfigToolTip(const void *pId, const CUIRect *pNearRect, const void *pValue, const void *pSecondValue)
@@ -144,7 +144,7 @@ void CTooltips::DoConfigToolTip(const void *pId, const CUIRect *pNearRect, const
 	if(pCommand == nullptr && pSecondCommand == nullptr)
 		return;
 	m_ConfigHints[reinterpret_cast<uintptr_t>(pId)].SetCommands(pCommand, pSecondCommand);
-	DoToolTip(pId, pNearRect, nullptr, -1.0f, 14.0f, false, true, false, true);
+	DoToolTip(pId, pNearRect, nullptr, -1.0f, ui_token::tooltip::FONT_SIZE, false, true, false, true);
 }
 
 void CTooltips::DoSettingsToolTipForConfig(const void *pId, const CUIRect *pRect, const void *pConfigValue, const CUIRect *pAnchor, const void *pSecondConfigValue)
@@ -318,12 +318,14 @@ void CTooltips::OnRender()
 	CUiScopedGaussianBlur GaussianBlurScope(Ui(), AlphaFactor);
 	CQmTooltipTextScope TextScope(*TextRender());
 
-	const float BaseFontSize = Tooltip.m_FontSize * std::clamp(g_Config.m_QmTooltipFontSize, 10, 24) / 14.0f;
-	const float UiScale = Tooltip.m_SmallInstant ? BaseFontSize / 10.0f : 1.0f;
-	const float Margin = (Tooltip.m_SmallInstant ? 4.0f : 5.0f) * UiScale;
-	const float BasePadding = (Tooltip.m_SmallInstant ? 3.0f : 5.0f) * UiScale;
+	// 尺寸唯一来源 ui_token::tooltip：设置页紧凑小字气泡是全局标准，
+	// 普通气泡不再另写一套更大的字号/内边距/外边距/宽度。
+	const float BaseFontSize = std::max(1.0f, Tooltip.m_FontSize * QmTooltipFontScale(g_Config.m_QmTooltipFontSize));
+	const float UiScale = BaseFontSize / ui_token::tooltip::FONT_SIZE;
+	const float Margin = ui_token::tooltip::MARGIN * UiScale;
+	const float BasePadding = ui_token::tooltip::PADDING * UiScale;
 	const CUIRect *pScreen = Ui()->Screen();
-	const float WidthLimit = Tooltip.m_WidthHint > 0.0f ? Tooltip.m_WidthHint : 300.0f * UiScale;
+	const float WidthLimit = Tooltip.m_WidthHint > 0.0f ? Tooltip.m_WidthHint : ui_token::tooltip::MAX_WIDTH * UiScale;
 	const SQmTooltipTextLayout Layout = QmTooltipMeasureText(*TextRender(), Tooltip.m_Text.c_str(), BaseFontSize, WidthLimit,
 		vec2(std::max(0.0f, pScreen->w - 2.0f * Margin), std::max(0.0f, pScreen->h - 2.0f * Margin)), BasePadding);
 	if(Layout.m_VisibleLines <= 0)
@@ -343,7 +345,7 @@ void CTooltips::OnRender()
 		return;
 	ColorRGBA Background = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTooltipBackgroundColor, true));
 	Background.a *= AlphaFactor;
-	Rect.Draw(Background, IGraphics::CORNER_ALL, (Tooltip.m_SmallInstant ? 3.0f * UiScale : Layout.m_Padding) * Scale);
+	Rect.Draw(Background, IGraphics::CORNER_ALL, ui_token::tooltip::RADIUS * UiScale * Scale);
 
 	const vec2 TextPosition(Layout.m_Padding + Layout.m_TextOffsetX, Layout.m_Padding + Layout.m_TextOffsetY);
 	const CTextCursor Cursor = QmTooltipTextCursor({}, BaseFontSize, Layout.m_LineWidth, Layout.m_Truncated ? std::max(1, Layout.m_VisibleLines - 1) : 0);

@@ -309,7 +309,8 @@ TEST(QmCardTabRecovery, BindStatusHudSavedInQmHudMovesAfterExistingAppearanceCar
 	ASSERT_TRUE(Model.LoadMerged(
 		"qm:bind_status_hud|hud|left|0;qm:debug_graph|hud|left|1;"
 		"deck:appearance-hud-main|appearance-hud|right|0;"
-		"deck:appearance-hud-ddrace|appearance-hud|right|1;", Defaults));
+		"deck:appearance-hud-ddrace|appearance-hud|right|1;",
+		Defaults));
 	const auto BeforeSource = DeckColumns(Model, "hud", qm_card_catalog::HudCardStableIds());
 	const auto BeforeTarget = DeckColumns(Model, "appearance-hud", qm_card_catalog::CatalogPageStableIds("appearance-hud"));
 	ASSERT_TRUE(qm_card_registry::RepairLegacyBindStatusHudTab(Model));

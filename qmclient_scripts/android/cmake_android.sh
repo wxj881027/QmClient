@@ -315,6 +315,21 @@ fi
 
 # shellcheck disable=SC1091
 source ./build.sh "$GAME_NAME" "$PACKAGE_NAME" "$BUILD_TYPE"
-python3 ../qmclient_scripts/android/check_jni_contract.py "$GAME_NAME.apk" "$SDL3_JAVA_DIR/../../../../.."
+
+# JNI 契约检查要靠 SDL 的 C 源码推导原生端必需的回调；ddnet-libs 的 SDL3 预编译包
+# 只带 java/ 与库、不带源码。源码树在旁边时照旧核对，缺失时明确跳过而不是让打包
+# 失败——与上面 ProGuard 规则缺失时只告警的处理保持一致。
+SDL3_SOURCE_ROOT=""
+for candidate in "$ANDROID_SUB_BUILD_DIR/$ANDROID_BUILD_DUMMY/_deps/sdl3-src" "$SDL3_JAVA_DIR/../../../../.."; do
+	if [ -f "$candidate/src/core/android/SDL_android.c" ]; then
+		SDL3_SOURCE_ROOT="$candidate"
+		break
+	fi
+done
+if [ -n "$SDL3_SOURCE_ROOT" ]; then
+	python3 ../qmclient_scripts/android/check_jni_contract.py "$GAME_NAME.apk" "$SDL3_SOURCE_ROOT"
+else
+	log_warn "SDL3 source tree not available (prebuilt package); skipping JNI contract check"
+fi
 
 cd ..

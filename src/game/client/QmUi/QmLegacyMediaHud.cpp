@@ -1,4 +1,5 @@
 #include "QmLegacyMediaHud.h"
+
 #include "QmLyricsHud.h"
 
 #include <engine/textrender.h>
@@ -30,7 +31,7 @@ namespace
 }
 
 void QmRenderLegacyMediaHud(CUi &Ui, IGraphics &Graphics, ITextRender &TextRender, const CSystemMediaControls::SState &Media,
-	const SQmLegacyMediaHudContent &Content, const SQmLegacyMediaHudLayout &Layout, const char *pLyrics, ColorRGBA LyricsColor, float LyricsElapsedSeconds, int Corners, const char *pTranslation)
+	const SQmLegacyMediaHudContent &Content, const SQmLegacyMediaHudLayout &Layout, const char *pLyrics, ColorRGBA LyricsColor, float LyricsProgress, int Corners, const char *pTranslation)
 {
 	if(!Content.m_Visible || Layout.m_Panel.w <= 0.0f || Layout.m_Panel.h <= 0.0f)
 		return;
@@ -93,7 +94,7 @@ void QmRenderLegacyMediaHud(CUi &Ui, IGraphics &Graphics, ITextRender &TextRende
 			Graphics.DrawRect(Panel.x + 3.0f * Scale, Row.y - Scale, Panel.w - 6.0f * Scale, 0.3f * Scale,
 				ColorRGBA(1.0f, 1.0f, 1.0f, 0.08f), IGraphics::CORNER_ALL, 0.15f * Scale);
 		const char *apRows[] = {pLyrics, pTranslation};
-		QmRenderLyricsRows(Graphics, TextRender, Row, apRows, Content.m_LyricsRowCount, 5.2f * Scale, LyricsColor, LyricsElapsedSeconds);
+		QmRenderLyricsRows(Graphics, TextRender, Row, apRows, Content.m_LyricsRowCount, 5.2f * Scale, LyricsColor, LyricsProgress);
 	}
 
 	TextRender.SetFontPreset(PreviousPreset);

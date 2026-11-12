@@ -545,3 +545,22 @@ TEST(VoiceUtils, BuildVoiceDeviceDropdownEntriesDoesNotDuplicateCurrentDeviceWhe
 	EXPECT_EQ(vEntries[1].m_ConfigValue, "USB DAC");
 	EXPECT_EQ(VoiceFindSelectedDeviceIndex(vEntries, "usb dac"), 1);
 }
+
+TEST(VoiceUtils, ColdStartWaitsForSettingsCardAnimation)
+{
+	// 卡片正在播展开/折叠动画：延后冷启动，别把音频子系统初始化压在动画帧上。
+	EXPECT_TRUE(VoiceShouldDeferColdStart(true, false));
+}
+
+TEST(VoiceUtils, ColdStartStartsWhenNoCardAnimation)
+{
+	// 没有卡片动画（设置页没开、或动画已播完）：立刻启动。
+	EXPECT_FALSE(VoiceShouldDeferColdStart(false, false));
+}
+
+TEST(VoiceUtils, ColdStartStartsAfterDeferDeadline)
+{
+	// 动画标记异常长时间不落：超时兜底放行，避免语音永远不启动。
+	EXPECT_FALSE(VoiceShouldDeferColdStart(true, true));
+	EXPECT_EQ(VOICE_COLD_START_MAX_DEFER_MS, 1000);
+}

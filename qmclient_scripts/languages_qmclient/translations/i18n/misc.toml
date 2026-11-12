@@ -369,7 +369,7 @@ polish = "Dodaj preset kolejki dummy"
 [[message]]
 key = "Add a foe"
 [message.translations]
-simplified_chinese = "添加一个敌人"
+simplified_chinese = "添加一个敌对玩家"
 traditional_chinese = "添加一個敵人"
 japanese = "敵を追加"
 korean = "적 추가"
@@ -3987,7 +3987,7 @@ polish = "Wymień podłączonych graczy z opcjonalnym filtrem podciągów bez ro
 [[message]]
 key = "List foes"
 [message.translations]
-simplified_chinese = "列出敌人"
+simplified_chinese = "列出敌对玩家"
 traditional_chinese = "列出敵人"
 japanese = "敵を一覧表示"
 korean = "적 목록을 표시합니다"
@@ -6067,7 +6067,7 @@ polish = "Usuń kraj z filtra wykluczeń dla konkretnej społeczności (ISO 3166
 [[message]]
 key = "Remove a foe"
 [message.translations]
-simplified_chinese = "移除一个敌人"
+simplified_chinese = "移除一个敌对玩家"
 traditional_chinese = "移除一個敵人"
 japanese = "敵を削除"
 korean = "적 제거"
@@ -11151,7 +11151,7 @@ polish = "Czas gry"
 [[message]]
 key = "Team rank"
 [message.translations]
-simplified_chinese = "团队排名"
+simplified_chinese = "队伍排名"
 traditional_chinese = "團隊排名"
 japanese = "チーム順位"
 korean = "팀 순위"
@@ -12728,7 +12728,7 @@ polish = "Przenieś kategorię znajomych na pozycję"
 [[message]]
 key = "Configure the Gores team drown board"
 [message.translations]
-simplified_chinese = "配置 Gores 团队落水榜"
+simplified_chinese = "配置 Gores 队伍落水榜"
 traditional_chinese = "設定 Gores 團隊落水榜"
 japanese = "Gores チーム溺死ボードを設定"
 korean = "Gores 팀 익사 보드 설정"
@@ -15048,7 +15048,7 @@ polish = "Startuje z losowej pozycji w kolejce przy każdym wejściu na mapę"
 [[message]]
 key = "Use the custom colors below while the hook key is held"
 [message.translations]
-simplified_chinese = "按住钩索键时使用下方的自定义颜色"
+simplified_chinese = "按住钩子键时使用下方的自定义颜色"
 traditional_chinese = "按住鉤索鍵時使用下方的自訂顏色"
 japanese = "フックキー押下中は下のカスタムカラーを使用"
 korean = "훅 키를 누르고 있는 동안 아래의 사용자 지정 색상 사용"
@@ -15624,6 +15624,70 @@ turkish = "Özel renkler kullan"
 polish = "Użyj własnych kolorów"
 
 [[message]]
+key = "How far a wheel or drag can push past an end, in UI pixels; 0 disables"
+[message.translations]
+simplified_chinese = "滚轮或拖拽能把内容推过末端多远（UI 像素）；0 关闭"
+traditional_chinese = "滾輪或拖曳能把內容推過末端多遠（UI 像素）；0 關閉"
+japanese = "ホイールやドラッグで端を越えて押し込める距離（UI ピクセル）。0 で無効"
+korean = "휠이나 드래그로 끝을 넘어 밀 수 있는 거리(UI 픽셀)입니다. 0이면 끕니다"
+russian = "Насколько колесо или перетаскивание может выйти за край, в пикселях UI; 0 отключает"
+german = "Wie weit Mausrad oder Ziehen über das Ende hinausgeht, in UI-Pixeln; 0 deaktiviert"
+spanish = "Cuánto puede pasar del extremo la rueda o el arrastre, en píxeles de UI; 0 lo desactiva"
+french = "Distance dont la molette ou le glissement peut dépasser une extrémité, en pixels UI ; 0 désactive"
+brazilian_portuguese = "Quanto a roda ou o arrasto pode passar do fim, em pixels de UI; 0 desativa"
+portuguese = "Quanto a roda ou o arrasto pode ultrapassar o fim, em píxeis de UI; 0 desativa"
+turkish = "Tekerlek veya sürüklemenin sonu ne kadar aşabileceği, UI pikseli cinsinden; 0 kapatır"
+polish = "Jak daleko kółko lub przeciąganie może wyjść za koniec, w pikselach UI; 0 wyłącza"
+
+[[message]]
+key = "Spring firmness; 100 stops without overshoot, lower bounces past"
+[message.translations]
+simplified_chinese = "弹簧收敛强度；100 直接停住不过冲，越小越会越过目标回弹"
+traditional_chinese = "彈簧收斂強度；100 直接停住不過衝，越小越會越過目標回彈"
+japanese = "バネの収まり具合。100 は行き過ぎずに止まり、小さいほど目標を越えて跳ね返ります"
+korean = "스프링 안정 강도입니다. 100은 목표를 넘지 않고 멈추며, 작을수록 목표를 지나 튕깁니다"
+russian = "Упругость пружины; 100 — без перелёта, меньше — отскакивает за цель"
+german = "Federhärte; 100 stoppt ohne Überschwingen, kleiner schwingt über das Ziel hinaus"
+spanish = "Firmeza del resorte; 100 se detiene sin pasarse, menor rebota más allá del objetivo"
+french = "Fermeté du ressort ; 100 s'arrête sans dépasser, plus faible rebondit au-delà de la cible"
+brazilian_portuguese = "Firmeza da mola; 100 para sem ultrapassar, menor ricocheteia além do alvo"
+portuguese = "Firmeza da mola; 100 para sem ultrapassar, menor ressalta além do alvo"
+turkish = "Yay sertliği; 100 hedefi aşmadan durur, küçük değer hedefi geçip geri döner"
+polish = "Twardość sprężyny; 100 zatrzymuje się bez przeregulowania, mniej odbija za cel"
+
+[[message]]
+key = "Spring settle time; lower is snappier, higher feels heavier"
+[message.translations]
+simplified_chinese = "弹簧落定时间；越小响应越快，越大手感越沉"
+traditional_chinese = "彈簧落定時間；越小反應越快，越大手感越沉"
+japanese = "バネが目標に落ち着くまでの時間。小さいほど機敏に、大きいほど重く感じます"
+korean = "스프링이 목표에 안착하는 시간입니다. 작을수록 빠르게 반응하고, 클수록 묵직합니다"
+russian = "Время стабилизации пружины; меньше — отзывчивее, больше — тяжелее"
+german = "Zeit bis die Feder zur Ruhe kommt; kleiner reagiert schneller, größer wirkt schwerer"
+spanish = "Tiempo de asentamiento del resorte; menor responde antes, mayor se siente más pesado"
+french = "Temps de stabilisation du ressort ; plus court réagit plus vite, plus long paraît plus lourd"
+brazilian_portuguese = "Tempo de acomodação da mola; menor responde mais rápido, maior parece mais pesado"
+portuguese = "Tempo de estabilização da mola; menor responde mais depressa, maior parece mais pesado"
+turkish = "Yayın oturma süresi; küçük daha çabuk tepki verir, büyük daha ağır hissettirir"
+polish = "Czas ustalania sprężyny; mniejszy reaguje szybciej, większy wydaje się cięższy"
+
+[[message]]
+key = "A damped spring drives the offset; reversing slows it before it turns"
+[message.translations]
+simplified_chinese = "阻尼弹簧驱动偏移，反向时先减速再回转"
+traditional_chinese = "阻尼彈簧驅動偏移，反向時先減速再迴轉"
+japanese = "減衰バネが偏移を駆動し、逆方向へは一旦減速してから戻ります"
+korean = "감쇠 스프링이 오프셋을 구동하며, 방향을 바꾸면 먼저 느려졌다가 돌아섭니다"
+russian = "Демпфированная пружина двигает смещение; при развороте она сначала замедляется"
+german = "Eine gedämpfte Feder treibt den Versatz; beim Richtungswechsel bremst sie erst ab"
+spanish = "Un resorte amortiguado impulsa el desplazamiento; al invertir la dirección frena antes de girar"
+french = "Un ressort amorti pilote le décalage ; en sens inverse, il ralentit avant de repartir"
+brazilian_portuguese = "Uma mola amortecida conduz o deslocamento; ao inverter, ela desacelera antes de virar"
+portuguese = "Uma mola amortecida conduz o deslocamento; ao inverter, abranda antes de virar"
+turkish = "Sönümlü bir yay kaydırmayı sürer; yön değişirken önce yavaşlar"
+polish = "Sprężyna z tłumieniem prowadzi przesunięcie; przy zmianie kierunku najpierw zwalnia"
+
+[[message]]
 key = "Alignment"
 [message.translations]
 simplified_chinese = "对齐"
@@ -16086,3 +16150,67 @@ brazilian_portuguese = "Substituir toda a lista de amigos, grupos, notas e amigo
 portuguese = "Substituir toda a lista de amigos, grupos, notas e amigos afixados pelo código colado?"
 turkish = "Tüm arkadaş listesi, gruplar, notlar ve sabitlemeler yapıştırılan kodla değiştirilsin mi?"
 polish = "Zastąpić całą listę znajomych, grupy, notatki i przypięcia danymi z wklejonego kodu?"
+
+[[message]]
+key = "Singing"
+[message.translations]
+simplified_chinese = "唱歌"
+traditional_chinese = "唱歌"
+japanese = "歌う"
+korean = "노래하기"
+russian = "Пение"
+german = "Singen"
+spanish = "Cantar"
+french = "Chanter"
+brazilian_portuguese = "Cantar"
+portuguese = "Cantar"
+turkish = "Şarkı söyleme"
+polish = "Śpiewanie"
+
+[[message]]
+key = "World lyrics"
+[message.translations]
+simplified_chinese = "世界歌词"
+traditional_chinese = "世界歌詞"
+japanese = "ワールド内の歌詞"
+korean = "월드 가사"
+russian = "Текст песни в игровом мире"
+german = "Liedtext in der Spielwelt"
+spanish = "Letra en el mundo"
+french = "Paroles dans le monde"
+brazilian_portuguese = "Letra no mundo"
+portuguese = "Letra no mundo"
+turkish = "Dünyada şarkı sözleri"
+polish = "Tekst w świecie gry"
+
+[[message]]
+key = "AMLL community lyrics"
+[message.translations]
+simplified_chinese = "AMLL 社区歌词"
+traditional_chinese = "AMLL 社群歌詞"
+japanese = "AMLL コミュニティ歌詞"
+korean = "AMLL 커뮤니티 가사"
+russian = "Тексты песен сообщества AMLL"
+german = "Liedtexte der AMLL-Community"
+spanish = "Letras de la comunidad AMLL"
+french = "Paroles de la communauté AMLL"
+brazilian_portuguese = "Letras da comunidade AMLL"
+portuguese = "Letras da comunidade AMLL"
+turkish = "AMLL topluluk şarkı sözleri"
+polish = "Teksty piosenek społeczności AMLL"
+
+[[message]]
+key = "CP guide"
+[message.translations]
+simplified_chinese = "CP 引导"
+traditional_chinese = "CP 引導"
+japanese = "CP ガイド"
+korean = "CP 안내"
+russian = "Подсказки CP"
+german = "CP-Hilfe"
+spanish = "Guía de CP"
+french = "Guidage CP"
+brazilian_portuguese = "Guia de CP"
+portuguese = "Guia de CP"
+turkish = "CP rehberi"
+polish = "Wskazówki CP"

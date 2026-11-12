@@ -617,6 +617,11 @@ namespace VoiceUtils
 		return false;
 	}
 
+	bool VoiceShouldDeferColdStart(const bool CardAnimationActive, const bool DeadlineExpired)
+	{
+		return CardAnimationActive && !DeadlineExpired;
+	}
+
 	void ComputeVoiceEncoderTargets(int LossPerc, float JitterMax, int BitrateProfile, int *pTargetBitrate, int *pTargetLoss, bool *pTargetFec)
 	{
 		int Complexity = 0;

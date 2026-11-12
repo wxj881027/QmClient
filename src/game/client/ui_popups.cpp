@@ -1501,13 +1501,13 @@ namespace
 	void PickerDrawHueStrip(const CUIRect &Area)
 	{
 		static constexpr float s_aaHueStops[7][3] = {
-			{1.0f, 0.0f, 0.0f}, // red
-			{1.0f, 0.0f, 1.0f}, // magenta
-			{0.0f, 0.0f, 1.0f}, // blue
-			{0.0f, 1.0f, 1.0f}, // cyan
-			{0.0f, 1.0f, 0.0f}, // green
-			{1.0f, 1.0f, 0.0f}, // yellow
-			{1.0f, 0.0f, 0.0f}, // red
+			{1.0f, 0.0f, 0.0f}, // 红
+			{1.0f, 1.0f, 0.0f}, // 黄
+			{0.0f, 1.0f, 0.0f}, // 绿
+			{0.0f, 1.0f, 1.0f}, // 青
+			{0.0f, 0.0f, 1.0f}, // 蓝
+			{1.0f, 0.0f, 1.0f}, // 品红
+			{1.0f, 0.0f, 0.0f}, // 红
 		};
 		const float StopWidth = Area.w / (std::size(s_aaHueStops) - 1);
 		CUIRect StopArea;
@@ -1697,9 +1697,14 @@ namespace
 		CUIRect DrawCell = Cell;
 		if(Hovered && !Pressed)
 		{
-			DrawCell.Margin(-1.0f, &DrawCell);
-			const CUIRect Shadow{DrawCell.x, DrawCell.y + 0.8f, DrawCell.w, DrawCell.h};
-			DrawRoundedSurface(pUI, Shadow, ColorRGBA(0.0f, 0.0f, 0.0f, 0.35f), ColorRGBA(), Radius, 0.0f);
+			// 阴影层跟随同一份形状向外偏移，不再「矩形外扩 + 原半径」——
+			// 后者只对圆弧等距，连续曲率下内外轮廓会交叉。
+			SRoundedSurfaceParams ShadowParams;
+			ShadowParams.m_Radius = Radius;
+			ShadowParams.m_ShapeExpand = 1.0f;
+			CUIRect Shadow = Cell;
+			Shadow.y += 0.8f;
+			DrawRoundedSurface(pUI, Shadow, ColorRGBA(0.0f, 0.0f, 0.0f, 0.35f), ColorRGBA(), ShadowParams);
 		}
 		else if(Pressed)
 		{
@@ -2043,9 +2048,11 @@ CUi::EPopupMenuFunctionResult CUi::PopupColorPicker(void *pContext, CUIRect View
 			PickerDrawColorWheel(pUI, WheelArea);
 
 			// SV 方图背景卡片与微边框
-			CUIRect SvBorder = SvArea;
-			SvBorder.Margin(-1.0f, &SvBorder);
-			DrawRoundedSurface(pUI, SvBorder, ColorRGBA(0.0f, 0.0f, 0.0f, 0.45f), ColorRGBA(1.0f, 1.0f, 1.0f, 0.18f), 2.5f, 1.0f);
+			SRoundedSurfaceParams SvBorderParams;
+			SvBorderParams.m_Radius = 2.5f;
+			SvBorderParams.m_BorderWidth = 1.0f;
+			SvBorderParams.m_ShapeExpand = 1.0f;
+			DrawRoundedSurface(pUI, SvArea, ColorRGBA(0.0f, 0.0f, 0.0f, 0.45f), ColorRGBA(1.0f, 1.0f, 1.0f, 0.18f), SvBorderParams);
 			SvArea.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.55f), IGraphics::CORNER_NONE, 0.0f);
 			PickerDrawSvGradient(pUI, SvArea, PickerColorHSV.x);
 		}

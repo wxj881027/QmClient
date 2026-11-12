@@ -1,0 +1,1068 @@
+[[message]]
+key = "Overwrites"
+[message.translations]
+simplified_chinese = "会覆盖"
+
+[[message]]
+key = "overwrites"
+[message.translations]
+simplified_chinese = "处会覆盖"
+
+[[message]]
+key = "(no command)"
+[message.translations]
+simplified_chinese = "（无命令）"
+
+[[message]]
+key = "45 Degree Angle"
+[message.translations]
+simplified_chinese = "45° 精准角"
+
+[[message]]
+key = "Action - Command"
+[message.translations]
+simplified_chinese = "动作 · 命令"
+
+[[message]]
+key = "Action - Echo"
+[message.translations]
+simplified_chinese = "动作 · 提示"
+
+[[message]]
+key = "Announce and join team 101 with one press."
+[message.translations]
+simplified_chinese = "一次按下即可广播并加入 101 队。"
+
+[[message]]
+key = "Apply bind"
+[message.translations]
+simplified_chinese = "应用绑定"
+
+[[message]]
+key = "Apply to key"
+[message.translations]
+simplified_chinese = "应用到按键"
+
+[[message]]
+key = "Auto hammer while firing; press again to cancel."
+[message.translations]
+simplified_chinese = "按住开火时自动挥锤；再按一次取消。"
+
+[[message]]
+key = "Bind applied"
+[message.translations]
+simplified_chinese = "绑定已应用"
+
+[[message]]
+key = "Bind applied - undo available"
+[message.translations]
+simplified_chinese = "绑定已应用 · 可撤销"
+
+[[message]]
+key = "Bind command line too long"
+[message.translations]
+simplified_chinese = "绑定命令行超长"
+
+[[message]]
+key = "Blueprint"
+[message.translations]
+simplified_chinese = "蓝图"
+
+[[message]]
+key = "Clamp mouse max distance for a precise 45 degree angle, restore on release."
+[message.translations]
+simplified_chinese = "限制鼠标最大距离以获得精准 45°，松手恢复。"
+
+[[message]]
+key = "Command Workshop"
+[message.translations]
+simplified_chinese = "指令工坊"
+
+[[message]]
+key = "Copied bind command"
+[message.translations]
+simplified_chinese = "已复制 bind 命令"
+
+[[message]]
+key = "Culling"
+[message.translations]
+simplified_chinese = "可见 / 网格"
+
+[[message]]
+key = "Cycle in flow"
+[message.translations]
+simplified_chinese = "流程存在环"
+
+[[message]]
+key = "Double Hammer Fire"
+[message.translations]
+simplified_chinese = "双锤开火"
+
+[[message]]
+key = "Dummy Hammer (HDF)"
+[message.translations]
+simplified_chinese = "分身锤 HDF"
+
+[[message]]
+key = "Empty command"
+[message.translations]
+simplified_chinese = "命令为空"
+
+[[message]]
+key = "Event - Press"
+[message.translations]
+simplified_chinese = "事件 · 按下"
+
+[[message]]
+key = "Execute once"
+[message.translations]
+simplified_chinese = "执行一次"
+
+[[message]]
+key = "Export cfg"
+[message.translations]
+simplified_chinese = "导出 cfg"
+
+[[message]]
+key = "Fire and dummy hammer alternate while the key is held."
+[message.translations]
+simplified_chinese = "按住时开火与分身锤交替。"
+
+[[message]]
+key = "Flow library"
+[message.translations]
+simplified_chinese = "流程库"
+
+[[message]]
+key = "Flow loaded"
+[message.translations]
+simplified_chinese = "已载入流程"
+
+[[message]]
+key = "Graph"
+[message.translations]
+simplified_chinese = "节点图"
+
+[[message]]
+key = "Hold to Zoom"
+[message.translations]
+simplified_chinese = "按住缩放"
+
+[[message]]
+key = "Hold to zoom out, release to restore."
+[message.translations]
+simplified_chinese = "按住拉远视野，松手恢复。"
+
+[[message]]
+key = "Imported"
+[message.translations]
+simplified_chinese = "导入"
+
+[[message]]
+key = "Group"
+[message.translations]
+simplified_chinese = "分组"
+
+[[message]]
+key = "Group frame"
+[message.translations]
+simplified_chinese = "分组框"
+
+[[message]]
+key = "Join Team"
+[message.translations]
+simplified_chinese = "加入队伍"
+
+[[message]]
+key = "Key occupancy"
+[message.translations]
+simplified_chinese = "键位占用"
+
+[[message]]
+key = "Drag empty space to box-select"
+[message.translations]
+simplified_chinese = "拖动空白处框选"
+
+[[message]]
+key = "Middle-drag to pan"
+[message.translations]
+simplified_chinese = "中键拖动平移画布"
+
+[[message]]
+key = "Badges are informational: a bind can chain several commands, and one command can be bound to several keys."
+[message.translations]
+simplified_chinese = "徽标只是说明：一条绑定可以串多个命令，同一个命令也可以同时绑在别的键上。"
+
+[[message]]
+key = "Same function"
+[message.translations]
+simplified_chinese = "同功能按键"
+
+[[message]]
+key = "Line length"
+[message.translations]
+simplified_chinese = "命令行长度"
+
+[[message]]
+key = "Link deleted"
+[message.translations]
+simplified_chinese = "已删除连线"
+
+[[message]]
+key = "Lock mouse distance at the moment of the jump."
+[message.translations]
+simplified_chinese = "起跳瞬间锁定鼠标距离。"
+
+[[message]]
+key = "Low Sensitivity Aim"
+[message.translations]
+simplified_chinese = "低灵敏度瞄准"
+
+[[message]]
+key = "Missing press event"
+[message.translations]
+simplified_chinese = "缺少按下事件"
+
+[[message]]
+key = "Multi"
+[message.translations]
+simplified_chinese = "多动作"
+
+[[message]]
+key = "New flow"
+[message.translations]
+simplified_chinese = "新建流程"
+
+[[message]]
+key = "No delay: same-frame only"
+[message.translations]
+simplified_chinese = "无延时：全部同帧执行"
+
+[[message]]
+key = "No executable action"
+[message.translations]
+simplified_chinese = "没有可执行的动作"
+
+[[message]]
+key = "Node"
+[message.translations]
+simplified_chinese = "节点"
+
+[[message]]
+key = "Only one press event is allowed"
+[message.translations]
+simplified_chinese = "只能有一个按下事件"
+
+[[message]]
+key = "Precision Jump"
+[message.translations]
+simplified_chinese = "精准跳"
+
+[[message]]
+key = "Quick Hammer"
+[message.translations]
+simplified_chinese = "快速切锤"
+
+[[message]]
+key = "Ctrl+Z to undo"
+[message.translations]
+simplified_chinese = "Ctrl+Z 撤销"
+
+[[message]]
+key = "Nothing to redo"
+[message.translations]
+simplified_chinese = "没有可重做的操作"
+
+[[message]]
+key = "Nothing to undo"
+[message.translations]
+simplified_chinese = "没有可撤销的操作"
+
+[[message]]
+key = "Redo"
+[message.translations]
+simplified_chinese = "重做"
+
+[[message]]
+key = "Restored previous bind"
+[message.translations]
+simplified_chinese = "已恢复原有绑定"
+
+[[message]]
+key = "Send the ready message to the team channel."
+[message.translations]
+simplified_chinese = "向队伍频道发送准备消息。"
+
+[[message]]
+key = "Show hook collision line and drop mouse sensitivity to 66 while held."
+[message.translations]
+simplified_chinese = "显示钩子辅助线，按住时把鼠标灵敏度降到 66。"
+
+[[message]]
+key = "Single"
+[message.translations]
+simplified_chinese = "单动作"
+
+[[message]]
+key = "State - Toggle"
+[message.translations]
+simplified_chinese = "状态 · 切换"
+
+[[message]]
+key = "State - Toggle restore"
+[message.translations]
+simplified_chinese = "状态 · 切换复原"
+
+[[message]]
+key = "Switch Dummy"
+[message.translations]
+simplified_chinese = "切换分身"
+
+[[message]]
+key = "Switch to hammer without changing the camera."
+[message.translations]
+simplified_chinese = "切换至锤子，不改变当前视角。"
+
+[[message]]
+key = "Team Ready"
+[message.translations]
+simplified_chinese = "队伍准备"
+
+[[message]]
+key = "Toggle"
+[message.translations]
+simplified_chinese = "切换"
+
+[[message]]
+key = "Toggle between tee and dummy."
+[message.translations]
+simplified_chinese = "在本体与分身之间切换。"
+
+[[message]]
+key = "Too many nested binds"
+[message.translations]
+simplified_chinese = "嵌套 bind 层数过多"
+
+[[message]]
+key = "Undo"
+[message.translations]
+simplified_chinese = "撤销"
+
+[[message]]
+key = "Unknown error"
+[message.translations]
+simplified_chinese = "未知错误"
+
+[[message]]
+key = "Unreachable node"
+[message.translations]
+simplified_chinese = "存在无法到达的节点"
+
+[[message]]
+key = "Untitled flow"
+[message.translations]
+simplified_chinese = "未命名流程"
+
+[[message]]
+key = "User"
+[message.translations]
+simplified_chinese = "自建"
+
+[[message]]
+key = "Utility"
+[message.translations]
+simplified_chinese = "工具"
+
+[[message]]
+key = "Validate"
+[message.translations]
+simplified_chinese = "校验"
+
+[[message]]
+key = "Validation"
+[message.translations]
+simplified_chinese = "校验"
+
+[[message]]
+key = "Validation passed"
+[message.translations]
+simplified_chinese = "校验通过"
+
+[[message]]
+key = "Variants"
+[message.translations]
+simplified_chinese = "变体"
+
+[[message]]
+key = "occupied"
+[message.translations]
+simplified_chinese = "已占用"
+
+[[message]]
+key = "Output"
+[message.translations]
+simplified_chinese = "输出"
+
+[[message]]
+key = "No matching presets"
+[message.translations]
+simplified_chinese = "没有匹配的预设"
+
+[[message]]
+key = "Start from the flow library, or create a new flow"
+[message.translations]
+simplified_chinese = "从左侧流程库开始，或新建一个流程"
+
+[[message]]
+key = "Nodes"
+[message.translations]
+simplified_chinese = "节点"
+
+[[message]]
+key = "Edges"
+[message.translations]
+simplified_chinese = "连线"
+
+[[message]]
+key = "Selected node"
+[message.translations]
+simplified_chinese = "选中节点"
+
+[[message]]
+key = "No selection"
+[message.translations]
+simplified_chinese = "未选择"
+
+[[message]]
+key = "Scroll to browse"
+[message.translations]
+simplified_chinese = "滚轮浏览"
+
+[[message]]
+key = "Wheel to zoom - drag empty space to pan"
+[message.translations]
+simplified_chinese = "滚轮缩放 · 拖动空白平移"
+
+[[message]]
+key = "(no note)"
+[message.translations]
+simplified_chinese = "（无注释）"
+
+[[message]]
+key = "A node cannot link to itself"
+[message.translations]
+simplified_chinese = "节点不能连到自己"
+
+[[message]]
+key = "Command copied - install the cfg file first"
+[message.translations]
+simplified_chinese = "已复制命令 — 请先安装对应的 cfg 文件"
+
+[[message]]
+key = "connections removed"
+[message.translations]
+simplified_chinese = "条连线被移除"
+
+[[message]]
+key = "Copy command"
+[message.translations]
+simplified_chinese = "复制命令"
+
+[[message]]
+key = "Delay note"
+[message.translations]
+simplified_chinese = "延时说明"
+
+[[message]]
+key = "Double-click empty canvas to add a node"
+[message.translations]
+simplified_chinese = "双击空白画布添加节点"
+
+[[message]]
+key = "Drop on an input port to link"
+[message.translations]
+simplified_chinese = "松开到输入端口即可连线"
+
+[[message]]
+key = "Echo"
+[message.translations]
+simplified_chinese = "提示"
+
+[[message]]
+key = "Export all"
+[message.translations]
+simplified_chinese = "全部导出"
+
+[[message]]
+key = "Exported"
+[message.translations]
+simplified_chinese = "已导出"
+
+[[message]]
+key = "Flow title"
+[message.translations]
+simplified_chinese = "流程标题"
+
+[[message]]
+key = "flows exported"
+[message.translations]
+simplified_chinese = "张流程已导出"
+
+[[message]]
+key = "Link failed"
+[message.translations]
+simplified_chinese = "连线失败"
+
+[[message]]
+key = "Link source is gone"
+[message.translations]
+simplified_chinese = "连线起点已消失"
+
+[[message]]
+key = "Linked"
+[message.translations]
+simplified_chinese = "已连线"
+
+[[message]]
+key = "Make press event"
+[message.translations]
+simplified_chinese = "设为按下事件"
+
+[[message]]
+key = "Needs cfg file - copy only"
+[message.translations]
+simplified_chinese = "需要 cfg 文件 — 仅可复制"
+
+[[message]]
+key = "Nesting depth"
+[message.translations]
+simplified_chinese = "嵌套深度"
+
+[[message]]
+key = "Next type"
+[message.translations]
+simplified_chinese = "下一个类型"
+
+[[message]]
+key = "Node cards"
+[message.translations]
+simplified_chinese = "节点卡片"
+
+[[message]]
+key = "Node created"
+[message.translations]
+simplified_chinese = "已创建节点"
+
+[[message]]
+key = "Node deleted"
+[message.translations]
+simplified_chinese = "已删除节点"
+
+[[message]]
+key = "Node duplicated"
+[message.translations]
+simplified_chinese = "已复制节点"
+
+[[message]]
+key = "Only multi-action"
+[message.translations]
+simplified_chinese = "只看多动作"
+
+[[message]]
+key = "Press event"
+[message.translations]
+simplified_chinese = "按下事件"
+
+[[message]]
+key = "Search presets"
+[message.translations]
+simplified_chinese = "搜索预设"
+
+[[message]]
+key = "Run command"
+[message.translations]
+simplified_chinese = "执行命令"
+
+[[message]]
+key = "That link would close a loop"
+[message.translations]
+simplified_chinese = "这条连线会形成环"
+
+[[message]]
+key = "Those nodes are already linked"
+[message.translations]
+simplified_chinese = "这两个节点已经连过了"
+
+[[message]]
+key = "Toggle restore"
+[message.translations]
+simplified_chinese = "切换后还原"
+
+[[message]]
+key = "Toggle state"
+[message.translations]
+simplified_chinese = "切换状态"
+
+[[message]]
+key = "Passed"
+[message.translations]
+simplified_chinese = "通过"
+
+[[message]]
+key = "Built-in cfg is empty - nothing was installed"
+[message.translations]
+simplified_chinese = "内置 cfg 为空，没有写入任何内容。"
+
+[[message]]
+key = "Cannot create the qm_bind folder in the config directory"
+[message.translations]
+simplified_chinese = "无法在配置目录里创建 qm_bind 文件夹。"
+
+[[message]]
+key = "Cannot install cfg: storage is not ready"
+[message.translations]
+simplified_chinese = "无法安装 cfg：存储尚未就绪。"
+
+[[message]]
+key = "Cannot write cfg file"
+[message.translations]
+simplified_chinese = "无法写入 cfg 文件。"
+
+[[message]]
+key = "Install and apply"
+[message.translations]
+simplified_chinese = "安装并应用"
+
+[[message]]
+key = "Installed - the cfg file is in your config folder"
+[message.translations]
+simplified_chinese = "已安装 · cfg 文件已在配置目录里"
+
+[[message]]
+key = "Mouse distance"
+[message.translations]
+simplified_chinese = "鼠标距离"
+
+[[message]]
+key = "Needs cfg file - install writes it into your config folder"
+[message.translations]
+simplified_chinese = "需要 cfg 文件 · 安装时写入配置目录"
+
+[[message]]
+key = "Presets"
+[message.translations]
+simplified_chinese = "预设"
+
+[[message]]
+key = "Sensitivity"
+[message.translations]
+simplified_chinese = "灵敏度"
+
+[[message]]
+key = "Example flow"
+[message.translations]
+simplified_chinese = "示例流程"
+
+[[message]]
+key = "Pick the key that starts this flow."
+[message.translations]
+simplified_chinese = "选择启动这条流程的按键。"
+
+[[message]]
+key = "Any console command or bind command."
+[message.translations]
+simplified_chinese = "任意控制台指令或绑定指令。"
+
+[[message]]
+key = "Press a key, do a command: drag from the right dot of one node to the left dot of the next. Double-click a node to edit it, right-click a link to delete it, Ctrl+Z to undo."
+[message.translations]
+simplified_chinese = "按下某个键、执行某条指令：从一个节点右侧的圆点拖到下一个节点左侧的圆点即可连线。双击节点改内容，右键连线删除，Ctrl+Z 撤销。"
+
+[[message]]
+key = "This preset has no built-in cfg"
+[message.translations]
+simplified_chinese = "这个预设没有内置 cfg。"
+
+[[message]]
+key = "cfg installed"
+[message.translations]
+simplified_chinese = "cfg 已安装"
+
+[[message]]
+key = "Bytes in the generated bind line; over the limit the server rejects it."
+[message.translations]
+simplified_chinese = "生成的 bind 指令有多少字节；超过上限服务器会拒收。"
+
+[[message]]
+key = "How many cfg files this flow goes through by exec; five at most."
+[message.translations]
+simplified_chinese = "这条流程通过 exec 套了几层 cfg；最多 5 层。"
+
+[[message]]
+key = "Nothing is exported until every check passes."
+[message.translations]
+simplified_chinese = "三项检查都通过才会导出。"
+
+[[message]]
+key = "Node types"
+[message.translations]
+simplified_chinese = "节点类型"
+
+[[message]]
+key = "Links and gestures"
+[message.translations]
+simplified_chinese = "连线与操作"
+
+[[message]]
+key = "Validation and output"
+[message.translations]
+simplified_chinese = "校验与输出"
+
+[[message]]
+key = "How the blueprint works"
+[message.translations]
+simplified_chinese = "蓝图怎么用"
+
+[[message]]
+key = "Flow starts here: when the key is pressed, the nodes after it run in order."
+[message.translations]
+simplified_chinese = "流程起点：按下这个键后，后面的节点依次执行。"
+
+[[message]]
+key = "First press turns it on, the next press turns it off."
+[message.translations]
+simplified_chinese = "第一次按打开，再按一次关闭。"
+
+[[message]]
+key = "Change a setting while the flow runs, then put it back."
+[message.translations]
+simplified_chinese = "流程运行期间临时改一个设置，结束时还原。"
+
+[[message]]
+key = "Run one console or bind command."
+[message.translations]
+simplified_chinese = "执行一条控制台指令或绑定指令。"
+
+[[message]]
+key = "Print one line of text, without running it as a command."
+[message.translations]
+simplified_chinese = "输出一行文字，不当作指令执行。"
+
+[[message]]
+key = "Text for yourself only; it is never compiled into the cfg."
+[message.translations]
+simplified_chinese = "只给自己看的说明，不会编译进 cfg。"
+
+[[message]]
+key = "A frame that carries the nodes inside it; it is never compiled either."
+[message.translations]
+simplified_chinese = "一个框，拖动时带着框里的节点一起走；同样不会编译。"
+
+[[message]]
+key = "The blueprint never runs by itself: it only writes the bind line at the bottom right."
+[message.translations]
+simplified_chinese = "蓝图不会自己运行，它只负责写出右下角那一行 bind。"
+
+[[message]]
+key = "Drag from the dot on the right of one node to the dot on the left of the next to link them."
+[message.translations]
+simplified_chinese = "从一个节点右侧的圆点拖到下一个节点左侧的圆点，就连起来了。"
+
+[[message]]
+key = "Left-drag empty space to box-select, middle-drag to pan, wheel to zoom."
+[message.translations]
+simplified_chinese = "左键拖空白框选，中键拖动平移，滚轮缩放。"
+
+[[message]]
+key = "Double-click empty space to add a node, right-click a link to delete it, Delete removes the selection, Ctrl+Z undoes."
+[message.translations]
+simplified_chinese = "双击空白新建节点，右键连线删除，Delete 删除选中，Ctrl+Z 撤销。"
+
+[[message]]
+key = "A group frame carries the nodes inside it: drag the frame and the whole group moves with it."
+[message.translations]
+simplified_chinese = "分组框会带着框内的节点走：拖动框，整组一起移动。"
+
+[[message]]
+key = "Drag its bottom-right corner to resize. It is never compiled and never appears in the cfg."
+[message.translations]
+simplified_chinese = "拖右下角改尺寸。它不参与编译，也不会出现在 cfg 里。"
+
+[[message]]
+key = "Line length: bytes of the bind line that will be written."
+[message.translations]
+simplified_chinese = "命令行长度：最终写进 cfg 的那一行有多少字节。"
+
+[[message]]
+key = "Nesting depth: how many cfg files the flow goes through by exec, five at most."
+[message.translations]
+simplified_chinese = "嵌套深度：流程通过 exec 套了几层 cfg，最多 5 层。"
+
+[[message]]
+key = "Status: every check has to pass before anything is exported."
+[message.translations]
+simplified_chinese = "状态：全部检查通过才允许导出。"
+
+[[message]]
+key = "Output: exactly the line that lands in the cfg file."
+[message.translations]
+simplified_chinese = "输出：真正会写进 cfg 文件的那一行。"
+
+[[message]]
+key = "Back"
+[message.translations]
+simplified_chinese = "返回"
+
+[[message]]
+key = "Flow starts here: when the key is pressed, the nodes after it run in order. For example Press H, then Command say go."
+[message.translations]
+simplified_chinese = "流程起点：按下这个键后，后面的节点依次执行。例如「按下 H」后面接「执行命令 say go」。"
+
+[[message]]
+key = "First press turns it on, the next press turns it off. For example Press K, then Toggle cl_show_hud."
+[message.translations]
+simplified_chinese = "第一次按打开，再按一次关闭。例如「按下 K」后面接「切换状态 cl_show_hud」。"
+
+[[message]]
+key = "A frame that carries the nodes inside it; it is never compiled either. For example keep every dummy switch inside one frame."
+[message.translations]
+simplified_chinese = "一个框，拖动时带着框里的节点一起走；同样不会编译。例如把所有分身开关的节点放进同一个框里。"
+
+# 工坊预设变体名与分类名：数据层是普通字符串常量，运行时经 Localize() 渲染，
+# 源码没有对应字面量，故由 source_keys.EXTRA_LOCALIZE_STRINGS 登记后在此补译。
+# 同模块其它条目一样只提供简体中文，其余语言按英文回退。
+
+[[message]]
+key = "Body view"
+[message.translations]
+simplified_chinese = "本体视角"
+
+[[message]]
+key = "Connect"
+[message.translations]
+simplified_chinese = "连接"
+
+[[message]]
+key = "Cursor"
+[message.translations]
+simplified_chinese = "光标"
+
+[[message]]
+key = "Deep fly"
+[message.translations]
+simplified_chinese = "深飞"
+
+[[message]]
+key = "Default zoom toggle"
+[message.translations]
+simplified_chinese = "默认视野切换"
+
+[[message]]
+key = "Defaults"
+[message.translations]
+simplified_chinese = "默认值"
+
+[[message]]
+key = "Dummy hammer"
+[message.translations]
+simplified_chinese = "分身锤"
+
+[[message]]
+key = "Dummy only"
+[message.translations]
+simplified_chinese = "仅分身"
+
+[[message]]
+key = "F5 disable"
+[message.translations]
+simplified_chinese = "F5 关闭"
+
+[[message]]
+key = "F6 enable"
+[message.translations]
+simplified_chinese = "F6 开启"
+
+[[message]]
+key = "F7 super kill"
+[message.translations]
+simplified_chinese = "F7 超级自杀"
+
+[[message]]
+key = "Flying"
+[message.translations]
+simplified_chinese = "飞行"
+
+[[message]]
+key = "Full site set"
+[message.translations]
+simplified_chinese = "站点完整设置"
+
+[[message]]
+key = "Hide AFK"
+[message.translations]
+simplified_chinese = "隐藏 AFK"
+
+[[message]]
+key = "Hide all"
+[message.translations]
+simplified_chinese = "全部隐藏"
+
+[[message]]
+key = "Hide ninja"
+[message.translations]
+simplified_chinese = "隐藏忍者"
+
+[[message]]
+key = "Hint"
+[message.translations]
+simplified_chinese = "提示"
+
+[[message]]
+key = "Invincible"
+[message.translations]
+simplified_chinese = "无敌"
+
+[[message]]
+key = "Last teleport"
+[message.translations]
+simplified_chinese = "上次传送"
+
+[[message]]
+key = "Left"
+[message.translations]
+simplified_chinese = "左"
+
+[[message]]
+key = "Lock"
+[message.translations]
+simplified_chinese = "锁定"
+
+[[message]]
+key = "Main only"
+[message.translations]
+simplified_chinese = "仅本体"
+
+[[message]]
+key = "Main view"
+[message.translations]
+simplified_chinese = "主视角"
+
+[[message]]
+key = "Ninja"
+[message.translations]
+simplified_chinese = "忍者"
+
+[[message]]
+key = "No stuck"
+[message.translations]
+simplified_chinese = "不卡锤"
+
+[[message]]
+key = "Plain"
+[message.translations]
+simplified_chinese = "普通"
+
+[[message]]
+key = "Practice"
+[message.translations]
+simplified_chinese = "练习"
+
+[[message]]
+key = "Rescue"
+[message.translations]
+simplified_chinese = "自救"
+
+[[message]]
+key = "Reset both"
+[message.translations]
+simplified_chinese = "全部重置"
+
+[[message]]
+key = "Reset control"
+[message.translations]
+simplified_chinese = "重置控制"
+
+[[message]]
+key = "Reset variant"
+[message.translations]
+simplified_chinese = "还原按键"
+
+[[message]]
+key = "Right"
+[message.translations]
+simplified_chinese = "右"
+
+[[message]]
+key = "Sensitivity only"
+[message.translations]
+simplified_chinese = "仅灵敏度"
+
+[[message]]
+key = "Spec"
+[message.translations]
+simplified_chinese = "旁观"
+
+[[message]]
+key = "Sticky"
+[message.translations]
+simplified_chinese = "粘滞"
+
+[[message]]
+key = "Switch hammer"
+[message.translations]
+simplified_chinese = "切锤"
+
+[[message]]
+key = "Sync"
+[message.translations]
+simplified_chinese = "同步"
+
+[[message]]
+key = "Team 0"
+[message.translations]
+simplified_chinese = "0 队"
+
+[[message]]
+key = "Team 101"
+[message.translations]
+simplified_chinese = "101 队"
+
+[[message]]
+key = "Teleport"
+[message.translations]
+simplified_chinese = "传送"
+
+[[message]]
+key = "Unsolo"
+[message.translations]
+simplified_chinese = "退出单人"
+
+[[message]]
+key = "Wheel down"
+[message.translations]
+simplified_chinese = "滚轮下"
+
+[[message]]
+key = "Wheel up"
+[message.translations]
+simplified_chinese = "滚轮上"
+
+[[message]]
+key = "With main fire"
+[message.translations]
+simplified_chinese = "同时开火"
+
+[[message]]
+key = "Zoom 11"
+[message.translations]
+simplified_chinese = "视野 11"
+
+[[message]]
+key = "Bounding box of the whole selection; edit geometry with a single node selected."
+[message.translations]
+simplified_chinese = "整组选区的外框；只选一个节点才能改尺寸。"
+
+[[message]]
+key = "nodes selected"
+[message.translations]
+simplified_chinese = "个节点已选中"

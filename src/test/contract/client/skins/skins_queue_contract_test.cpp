@@ -138,7 +138,6 @@ TEST(SkinsContract, TeeRenderInfoValidityIncludesSixupBodyTexture)
 	EXPECT_NE(ValidBody.find("IsDrawableTexture(Sixup.PartTexture(protocol7::SKINPART_BODY))"), std::string::npos);
 }
 
-
 TEST(SkinsContract, TeeSourcePathEmitsRequestAndFrameCapPerfLogs)
 {
 	std::ifstream File(TestSourcePath("src/game/client/components/skins.cpp"));
@@ -229,7 +228,6 @@ TEST(SkinsContract, TeeFinishLoadingKeepsPriorityBeforeBackgroundSweep)
 	EXPECT_LT(DeferBackgroundPos, BackgroundListPos);
 	EXPECT_LT(BackgroundListPos, FallbackSweepPos);
 }
-
 
 TEST(SkinsContract, SkinQueueRandomJoinConfigAndCommandAreRegistered)
 {

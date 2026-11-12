@@ -1247,7 +1247,6 @@ void CHud::OnWindowResize()
 
 void CHud::OnReset()
 {
-	m_LyricsMarquee.Reset();
 	m_LyricsIslandAnchorValid = false;
 	m_TimeCpDiff = 0.0f;
 	m_DDRaceTime = 0;
@@ -1267,7 +1266,6 @@ void CHud::OnReset()
 		Progress.Reset();
 	m_MediaIslandAnimState.Reset();
 	m_MediaIslandFrameCache.Reset();
-	m_LegacyMediaLyricState.Reset();
 	m_MediaIslandMuteState.Reset();
 	m_RecordingStatusAnimState.Reset();
 
@@ -2237,6 +2235,9 @@ void CHud::RenderDummyMiniMap()
 				DrawParams.m_H = Frame.m_Content.h;
 				DrawParams.m_Corners = HudEditorScope.m_Corners;
 				DrawParams.m_Rounding = Frame.m_ContentRadius;
+				DrawParams.m_CornerSmoothing = std::clamp(g_Config.m_QmUiCornerSmoothing / 100.0f, 0.0f, 1.0f);
+				DrawParams.m_CornerCurve = (float)g_Config.m_QmUiCornerCurve;
+				DrawParams.m_CornerSeam = std::clamp(g_Config.m_QmUiCapsuleSeam / 100.0f, 0.0f, 1.0f);
 				DrawParams.m_Opaque = true;
 				if(Backend == QmDummyMiniViewLayout::EBackend::VULKAN)
 				{
@@ -2584,8 +2585,14 @@ void CHud::RenderTextInfo()
 			const float FrozenHudY = 0.0f;
 			const float FrozenHudW = TeeSize * std::min(NumInTeam, MaxTees);
 			const float FrozenHudH = TeeSize + 3.0f + (TotalRows - 1) * TeeSize;
-			Ui()->RenderGaussianBlur({FrozenHudX, FrozenHudY, FrozenHudW, FrozenHudH}, 1.0f, IGraphics::CORNER_B, ui_token::radius::BASE);
-			Graphics()->DrawRect(FrozenHudX, FrozenHudY, FrozenHudW, FrozenHudH, ui_token::color::SURFACE_GLASS, IGraphics::CORNER_B, ui_token::radius::BASE);
+			const CUIRect FrozenHudRect{FrozenHudX, FrozenHudY, FrozenHudW, FrozenHudH};
+			Ui()->RenderGaussianBlur(FrozenHudRect, 1.0f, IGraphics::CORNER_B, ui_token::radius::BASE);
+			// 玻璃底必须和模糊遮罩用同一条形状：旧直绘路径的圆角是一圈四边形拼的，
+			// 换连续曲率后边缘对不上，会露出断续的硬边。
+			SRoundedSurfaceParams FrozenHudSurface;
+			FrozenHudSurface.m_Radius = ui_token::radius::BASE;
+			FrozenHudSurface.m_Corners = IGraphics::CORNER_B;
+			DrawRoundedSurface(Ui(), FrozenHudRect, ui_token::color::SURFACE_GLASS, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), FrozenHudSurface);
 
 			bool Overflow = NumInTeam > MaxTees * MaxRows;
 
@@ -5171,11 +5178,11 @@ void CHud::RenderMediaIsland()
 		{
 			const char *apRows[] = {pLyricsIslandBuf, m_MediaIslandFrameCache.m_aLyricsTranslation};
 			const int Count = m_MediaIslandFrameCache.m_LyricsRowCount;
-			const float Elapsed = m_LyricsMarquee.Update(apRows, Count, Now, time_freq());
+			const float Progress = GameClient()->m_LyricsPresentation.Frame().m_Progress;
 			const CUIRect LyricsRect{ContentX, BottomTextY + BottomRowLineHeight * SwapRows.m_LyricsLineIndex,
 				ContentWidth, BottomRowLineHeight * std::max(1, Count)};
 			QmRenderLyricsRows(*Graphics(), *TextRender(), LyricsRect, apRows, Count, LyricsFontSize,
-				LyricsIslandColor.WithMultipliedAlpha(VisibleBottomAlpha), Elapsed);
+				LyricsIslandColor.WithMultipliedAlpha(VisibleBottomAlpha), Progress);
 		}
 	}
 
@@ -5993,8 +6000,12 @@ void CHud::RenderKeyStatus()
 	if(Layout.m_H <= 0.0f)
 		return;
 
-	Ui()->RenderGaussianBlur({Layout.m_X, Layout.m_Y, Layout.m_W, Layout.m_H}, 1.0f, IGraphics::CORNER_ALL, ui_token::radius::BASE);
-	Graphics()->DrawRect(Layout.m_X, Layout.m_Y, Layout.m_W, Layout.m_H, ui_token::color::SURFACE_GLASS, IGraphics::CORNER_ALL, ui_token::radius::BASE);
+	const CUIRect KeyStatusRect{Layout.m_X, Layout.m_Y, Layout.m_W, Layout.m_H};
+	Ui()->RenderGaussianBlur(KeyStatusRect, 1.0f, IGraphics::CORNER_ALL, ui_token::radius::BASE);
+	SRoundedSurfaceParams KeyStatusSurface;
+	KeyStatusSurface.m_Radius = ui_token::radius::BASE;
+	KeyStatusSurface.m_Corners = IGraphics::CORNER_ALL;
+	DrawRoundedSurface(Ui(), KeyStatusRect, ui_token::color::SURFACE_GLASS, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), KeyStatusSurface);
 
 	float TextX = Layout.m_X + Layout.m_PaddingX;
 	float TextY = Layout.m_Y + Layout.m_PaddingY;
@@ -6697,7 +6708,12 @@ void CHud::RenderSpectatorHud()
 	// 手机：四角都要圆，跟计分板卡片同一档半径；编辑器里贴边时按编辑器给的角。
 	const int SpectatorHudCorners = QmUiMobilePlatform() ? IGraphics::CORNER_ALL : HudEditorScope.m_Corners;
 	Ui()->RenderGaussianBlur(BackgroundRect, 1.0f, SpectatorHudCorners, ui_token::radius::CARD);
-	Graphics()->DrawRect(BackgroundRect.x, BackgroundRect.y, BackgroundRect.w, BackgroundRect.h, BackgroundColor, SpectatorHudCorners, ui_token::radius::CARD);
+	{
+		SRoundedSurfaceParams SpectatorSurface;
+		SpectatorSurface.m_Radius = ui_token::radius::CARD;
+		SpectatorSurface.m_Corners = SpectatorHudCorners;
+		DrawRoundedSurface(Ui(), BackgroundRect, BackgroundColor, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), SpectatorSurface);
+	}
 	if(Layout.m_TextWidth > 0.0f)
 	{
 		const CUIRect Label{Layout.m_Left + 6.0f, BackgroundRect.y, Layout.m_TextWidth, BackgroundRect.h};
@@ -6741,8 +6757,12 @@ void CHud::RenderLocalTime(float x)
 		char aTimeStr[6];
 		str_timestamp_format(aTimeStr, sizeof(aTimeStr), "%H:%M");
 		const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::LocalTime, {x - 30.0f, 0.0f, 25.0f, 12.5f});
-		Ui()->RenderGaussianBlur({x - 30.0f, 0.0f, 25.0f, 12.5f}, 1.0f, HudEditorScope.m_Corners, ui_token::radius::BASE);
-		Graphics()->DrawRect(x - 30.0f, 0.0f, 25.0f, 12.5f, ui_token::color::SURFACE_GLASS, HudEditorScope.m_Corners, ui_token::radius::BASE);
+		const CUIRect LocalTimeRect{x - 30.0f, 0.0f, 25.0f, 12.5f};
+		Ui()->RenderGaussianBlur(LocalTimeRect, 1.0f, HudEditorScope.m_Corners, ui_token::radius::BASE);
+		SRoundedSurfaceParams LocalTimeSurface;
+		LocalTimeSurface.m_Radius = ui_token::radius::BASE;
+		LocalTimeSurface.m_Corners = HudEditorScope.m_Corners;
+		DrawRoundedSurface(Ui(), LocalTimeRect, ui_token::color::SURFACE_GLASS, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), LocalTimeSurface);
 		TextRender()->Text(x - 25.0f, (12.5f - 5.f) / 2.f, 5.0f, aTimeStr, -1.0f);
 		GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 		return;
@@ -6835,7 +6855,6 @@ float CHud::RenderLegacyMediaInfoAt(float AnchorX, float CenterY)
 		return CenterY;
 	if(!g_Config.m_QmHudIslandUseOriginalStyle || !g_Config.m_QmSmtcShowHud)
 	{
-		m_LegacyMediaLyricState.Reset();
 		return CenterY;
 	}
 	EnsureMediaIslandFrameCache();
@@ -6858,7 +6877,6 @@ float CHud::RenderLegacyMediaInfoAt(float AnchorX, float CenterY)
 		!g_Config.m_QmLyricsSeparateIsland && m_MediaIslandFrameCache.m_LyricsActive, m_MediaIslandFrameCache.m_LyricsRowCount);
 	if(!Content.m_Visible)
 	{
-		m_LegacyMediaLyricState.Reset();
 		return CenterY;
 	}
 	m_LegacyMediaInfoRendered = true;
@@ -6868,10 +6886,8 @@ float CHud::RenderLegacyMediaInfoAt(float AnchorX, float CenterY)
 	m_LyricsIslandAnchor = QmLyricsHudAnchor(Layout.m_Panel, Layout.m_Panel, HudEditorScope.m_TargetRect);
 	m_LyricsIslandAnchorValid = true;
 	const char *pLyrics = Content.m_ShowLyrics ? m_MediaIslandFrameCache.m_aLyrics : "";
-	const int64_t Now = time_get();
-	m_LegacyMediaLyricState.Update(MediaState, pLyrics, Now, m_MediaIslandFrameCache.m_aLyricsTranslation);
 	QmRenderLegacyMediaHud(*Ui(), *Graphics(), *TextRender(), MediaState, Content, Layout, pLyrics,
-		m_MediaIslandFrameCache.m_LyricsColor, m_LegacyMediaLyricState.ElapsedSeconds(Now, time_freq()), HudEditorScope.m_Corners,
+		m_MediaIslandFrameCache.m_LyricsColor, GameClient()->m_LyricsPresentation.Frame().m_Progress, HudEditorScope.m_Corners,
 		m_MediaIslandFrameCache.m_aLyricsTranslation);
 	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 	return Layout.m_Panel.y + Layout.m_Panel.h;
@@ -6979,8 +6995,6 @@ void CHud::OnNewSnapshot()
 
 void CHud::OnRender()
 {
-	if(!g_Config.m_QmHudIslandUseOriginalStyle || !g_Config.m_QmSmtcShowHud)
-		m_LegacyMediaLyricState.Reset();
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		return;
 
@@ -7457,7 +7471,12 @@ void CHud::RenderGoresDrownBoard()
 	Ui()->RenderGaussianBlur(BoardRect, 1.0f, HudEditorScope.m_Corners, ui_token::radius::BASE);
 	ColorRGBA BackgroundColor = ui_token::color::SURFACE_GLASS;
 	BackgroundColor.a *= RenderAlpha;
-	Graphics()->DrawRect(BoardX, BoardY, BoardWidth, BoardHeight, BackgroundColor, HudEditorScope.m_Corners, ui_token::radius::BASE);
+	{
+		SRoundedSurfaceParams BoardSurface;
+		BoardSurface.m_Radius = ui_token::radius::BASE;
+		BoardSurface.m_Corners = HudEditorScope.m_Corners;
+		DrawRoundedSurface(Ui(), BoardRect, BackgroundColor, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), BoardSurface);
+	}
 
 	const ColorRGBA PreviousTextColor = TextRender()->GetTextColor();
 	const ColorRGBA PreviousOutlineColor = TextRender()->GetTextOutlineColor();
@@ -7585,8 +7604,7 @@ void CHud::RenderLyricsIsland()
 		apRows[1] = Localize("Lyrics translation");
 		Count = g_Config.m_QmLyricsLanguage == 2 ? 2 : 1;
 	}
-	const float Elapsed = m_LyricsMarquee.Update(apRows, Count, time_get(), time_freq());
 	const CUIRect Anchor = m_LyricsIslandAnchorValid ? m_LyricsIslandAnchor : CUIRect{m_Width * 0.5f - 52.5f, 5.0f, 105.0f, 11.2f};
 	QmRenderLyricsIsland(*Graphics(), *TextRender(), GameClient()->m_HudEditor, Anchor, m_Width, m_Height,
-		apRows, Count, Elapsed, MediaIslandBlurBackdrop());
+		apRows, Count, Lyrics.m_Progress, MediaIslandBlurBackdrop());
 }

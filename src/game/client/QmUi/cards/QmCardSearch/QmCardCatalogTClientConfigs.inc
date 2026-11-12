@@ -8,8 +8,6 @@ namespace
 		{Localizable("Changes: %d"), nullptr, "更改数：%d"},
 		{Localizable("Chat"), nullptr, "聊天"},
 		{Localizable("Compact"), nullptr, "紧凑列表"},
-		{Localizable("Config Changes"), nullptr, "配置更改"},
-		{Localizable("Config Filters"), nullptr, "配置过滤器"},
 		{Localizable("DDNet"), nullptr, "DDNet"},
 		{Localizable("Gameplay"), nullptr, "游戏玩法"},
 		{Localizable("HUD"), nullptr, "HUD"},

@@ -15,7 +15,7 @@ PAGE_STABLE_IDS = {
 	"tee7": ("deck:tee7-editor",),
 	"graphics": ("deck:graphics-display", "deck:graphics-visual", "deck:graphics-modes", "deck:graphics-interaction"),
 	"sound": ("deck:sound-toggle", "deck:sound-volume", "deck:sound-audio-pack"),
-	"ddnet": ("deck:ddnet-demo", "deck:ddnet-gameplay", "deck:ddnet-background", "deck:ddnet-miscellaneous", "qm:system_media_controls"),
+	"ddnet": ("deck:ddnet-demo", "deck:ddnet-gameplay", "deck:ddnet-background", "deck:ddnet-miscellaneous", "qm:system_media_controls", "qm:entity_overlay"),
 	"appearance": (
 		"deck:appearance-hud-main",
 		"deck:appearance-hud-ddrace",
@@ -23,6 +23,7 @@ PAGE_STABLE_IDS = {
 		"deck:appearance-chat-messages",
 		"deck:appearance-chat-preview",
 		"qm:chat_bubble",
+		"qm:bind_status_hud",
 		"deck:appearance-name-plate-settings",
 		"deck:appearance-name-plate-preview",
 		"deck:appearance-hook-collision-main",
@@ -54,7 +55,6 @@ PAGE_STABLE_IDS = {
 		"qm:dummy_miniview",
 		"qm:dynamic_island",
 		"qm:lyrics",
-		"qm:bind_status_hud",
 		"qm:background_3d",
 	),
 	"qmclient_function": (
@@ -79,7 +79,6 @@ PAGE_STABLE_IDS = {
 		"qm:camera_view",
 		"qm:focus_mode",
 		"qm:weapon_animation",
-		"qm:entity_overlay",
 		"qm:collision_hitbox",
 		"qm:streamer",
 	),

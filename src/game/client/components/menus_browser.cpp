@@ -31,6 +31,7 @@
 #include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiSurfaceText.h>
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/animstate.h>
 #include <game/client/components/background.h>
 #include <game/client/components/chat.h>
@@ -1051,6 +1052,9 @@ CUi::EPopupMenuFunctionResult CMenus::PopupMapPreview(void *pContext, CUIRect Vi
 	DrawParams.m_Alpha = pUi->ControlAlphaScale();
 	DrawParams.m_Corners = IGraphics::CORNER_ALL;
 	DrawParams.m_Rounding = ui_token::radius::BASE;
+	DrawParams.m_CornerSmoothing = std::clamp(g_Config.m_QmUiCornerSmoothing / 100.0f, 0.0f, 1.0f);
+	DrawParams.m_CornerCurve = (float)g_Config.m_QmUiCornerCurve;
+	DrawParams.m_CornerSeam = std::clamp(g_Config.m_QmUiCapsuleSeam / 100.0f, 0.0f, 1.0f);
 	if(Backend == QmDummyMiniViewLayout::EBackend::VULKAN)
 	{
 		DrawParams.m_V0 = 0.0f;
@@ -2648,7 +2652,11 @@ void CMenus::RenderServerbrowserFilters(CUIRect View)
 	s_FilterScrollRegion.Begin(&View, &ScrollOffset, &ScrollParams);
 	View.y += ScrollOffset.y;
 	const float ContentTop = View.y;
+	// 正文与滚动条之间留出轨道宽度加两侧间隙：滚动条压在内容右缘上，长译文会贴到轨道。
+	const float ContentWidth = View.w;
+	View.w = std::max(0.0f, View.w - (ScrollParams.m_ScrollbarThickness + ScrollParams.m_ScrollbarMargin * 2.0f));
 	RenderServerbrowserFilterForm(View);
+	View.w = ContentWidth;
 
 	// countries and types filters
 	if(ServerBrowser()->CommunityCache().CountriesTypesFilterAvailable())
@@ -2720,8 +2728,12 @@ void CMenus::RenderServerbrowserFilters(CUIRect View)
 	s_FilterScrollRegion.AddRect({View.x, ContentTop, View.w, std::max(0.0f, View.y - ContentTop)});
 	s_FilterScrollRegion.End();
 
-	static CButtonContainer s_ResetButton;
-	if(DoButton_Menu(&s_ResetButton, Localize("Reset filter"), 0, &ResetButton))
+	// 重置按钮和其他筛选按钮用同一套胶囊：同一个面板里不混两种按钮形态。
+	static unsigned char s_ResetFilterChipId = 0;
+	CUIRect ResetChip = ResetButton;
+	ResetChip.h = ui_token::server_filter::CHIP_HEIGHT;
+	ResetChip.y += std::max(0.0f, (ResetButton.h - ResetChip.h) / 2.0f);
+	if(ui_widget::FilterChip(SettingsUiContext("server_browser_filter_reset"), &s_ResetFilterChipId, ResetChip, Localize("Reset filter"), false))
 	{
 		ResetServerbrowserFilters();
 	}
@@ -3198,10 +3210,10 @@ void CMenus::RenderServerbrowserInfo(CUIRect View)
 
 	// 与筛选页共用胶囊开关的绘制入口、字号、行高和间距。
 	SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(Ui()->Screen()->w);
-	Metrics.m_LineHeight = 18.0f;
-	Metrics.m_BodySize = 14.0f * CUi::ms_FontmodHeight;
-	Metrics.m_LineSpacing = 3.0f;
-	Metrics.m_SectionGap = 6.0f;
+	Metrics.m_LineHeight = ui_token::server_info::ROW_HEIGHT;
+	Metrics.m_BodySize = (ui_token::server_info::ROW_HEIGHT - ui_token::server_info::LABEL_FONT_INSET) * CUi::ms_FontmodHeight;
+	Metrics.m_LineSpacing = ui_token::server_info::ROW_GAP;
+	Metrics.m_SectionGap = ui_token::server_info::ROW_GAP * 3.0f;
 	View.Margin(5.0f, &View);
 	View.VSplitRight(std::min(5.0f, View.w), &View, nullptr);
 	View.HSplitTop(ui_token::spacing::MD, nullptr, &View);

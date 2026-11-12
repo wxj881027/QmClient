@@ -73,6 +73,7 @@
 #endif
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/perf_logging.h>
+#include <game/client/components/qmclient/settings_text_gap_sampler.h>
 #include <game/client/components/qmclient/statistics_ring_geometry.h>
 #include <game/client/components/sounds.h>
 #include <game/client/components/theme_scan.h>
@@ -536,39 +537,20 @@ namespace
 	{
 		if(!PerfDebugEnabled())
 			return;
-		static uint64_t s_LastFrame = 0;
-		static int s_LastPage = -1000;
-		static int s_LastTab = -1000;
-		static int s_LastSubtab = -1000;
-		static char s_aLastReason[32] = "";
-		static char s_aLastPlanStatus[32] = "";
-		static int s_SamplesThisBucket = 0;
+		static CQmSettingsTextGapSampler s_Sampler;
 		const char *pSafeReason = pReason != nullptr ? pReason : "unknown";
 		const char *pSafePlanStatus = pPlanStatus != nullptr ? pPlanStatus : "unknown";
-		if(s_LastFrame != Frame || s_LastPage != Page || s_LastTab != Tab || s_LastSubtab != Subtab || str_comp(s_aLastReason, pSafeReason) != 0 || str_comp(s_aLastPlanStatus, pSafePlanStatus) != 0)
-		{
-			s_LastFrame = Frame;
-			s_LastPage = Page;
-			s_LastTab = Tab;
-			s_LastSubtab = Subtab;
-			str_copy(s_aLastReason, pSafeReason, sizeof(s_aLastReason));
-			str_copy(s_aLastPlanStatus, pSafePlanStatus, sizeof(s_aLastPlanStatus));
-			s_SamplesThisBucket = 0;
-		}
-		// 每个页面/原因组合每帧只保留一个样本，避免缺口遥测本身成为热路径。
-		constexpr int MaxGapSamplesPerFrameBucket = 1;
-		if(s_SamplesThisBucket >= MaxGapSamplesPerFrameBucket)
+		if(!s_Sampler.Allow(QmPerfSessionId(), Frame, Scope, Page, Tab, Subtab, pSafeReason, pSafePlanStatus))
 			return;
-		++s_SamplesThisBucket;
 		char aPayload[768];
 		char aPage[32];
 		if(Scope == CMenus::MENU_TEXT_SCOPE_SETTINGS)
 			str_copy(aPage, SettingsPageCacheKey(Page, -1).c_str(), sizeof(aPage));
 		else
 			str_format(aPage, sizeof(aPage), "%d", Page);
-		str_format(aPayload, sizeof(aPayload), "event=%s scope=%s page=%s tab=%d subtab=%d key=%s reason=%s plan_status=%s operation=%s frame=%" PRIu64 " log_sample=%d log_sample_limit=%d",
+		str_format(aPayload, sizeof(aPayload), "event=%s scope=%s page=%s tab=%d subtab=%d key=%s reason=%s plan_status=%s operation=%s coverage_frame=%" PRIu64 " log_sample=1 log_sample_limit=1",
 			pEvent != nullptr ? pEvent : "settings_text_miss", pScopeName != nullptr ? pScopeName : MenuTextScopeName(Scope), aPage, Tab, Subtab,
-			pKey != nullptr ? pKey : "", pSafeReason, pSafePlanStatus, pOperation != nullptr ? pOperation : "unknown", Frame, s_SamplesThisBucket, MaxGapSamplesPerFrameBucket);
+			pKey != nullptr ? pKey : "", pSafeReason, pSafePlanStatus, pOperation != nullptr ? pOperation : "unknown", Frame);
 		QmPerfLogPayload("perf/settings-text", aPayload, pClient, aPage);
 	}
 
@@ -582,7 +564,7 @@ namespace
 			str_copy(aPage, SettingsPageCacheKey(Page, -1).c_str(), sizeof(aPage));
 		else
 			str_format(aPage, sizeof(aPage), "%d", Page);
-		str_format(aPayload, sizeof(aPayload), "event=settings_text_usage scope=%s page=%s tab=%d subtab=%d operation=%s frame=%" PRIu64 " text_class=static_stable scheduler_coverage=%s candidates=%d hits=%d reused=%d miss=%d stale=%d text_new=%d text_reused=%d planned=%d unplanned=%d pool_hit=%d render_ready_hit=%d build_queued=%d fallback_immediate=%d",
+		str_format(aPayload, sizeof(aPayload), "event=settings_text_usage scope=%s page=%s tab=%d subtab=%d operation=%s coverage_frame=%" PRIu64 " text_class=static_stable scheduler_coverage=%s candidates=%d hits=%d reused=%d miss=%d stale=%d text_new=%d text_reused=%d planned=%d unplanned=%d pool_hit=%d render_ready_hit=%d build_queued=%d fallback_immediate=%d",
 			pScopeName != nullptr ? pScopeName : MenuTextScopeName(Scope), aPage, Tab, Subtab, pOperation != nullptr ? pOperation : "unknown", Frame,
 			FallbackImmediate > 0 ? "uncovered" : "budgeted",
 			Candidates, Hits, Reused, Misses, Stales, TextNew, TextReused, Planned, Unplanned, PoolHits, RenderReadyHits, BuildQueued, FallbackImmediate);
@@ -2253,10 +2235,13 @@ ColorHSLA CMenus::DoLine_ColorPicker(CButtonContainer *pResetId, const SSettings
 	}
 	const ColorHSLA PickedColor = DoButton_ColorPicker(&Layout.m_ColorButtonRect, pColorValue, Alpha);
 
-	if(DoButton_Menu(pResetId, Localize("Reset"), 0, &Layout.m_ResetButtonRect, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::BASE, 0.1f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), nullptr, Metrics.m_BodySize))
+	// 重置只放回转箭头图标，说明走悬浮提示：颜色行里塞「重置」两个字太占地方，
+	// 而且和旁边那几个图标按钮不是一套语言。
+	if(Ui()->DoButton_QmIcon(pResetId, EQmIcon::ARROW_ROTATE_RIGHT, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &Layout.m_ResetButtonRect, IGraphics::CORNER_ALL))
 	{
 		*pColorValue = color_cast<ColorHSLA>(DefaultColor).Pack(Alpha);
 	}
+	GameClient()->m_Tooltips.DoToolTip(pResetId, &Layout.m_ResetButtonRect, Localize("Reset"));
 
 	Ui()->DoConfigTooltip(pColorValue, &HintRect, pColorValue);
 	return PickedColor;
@@ -2851,9 +2836,9 @@ void CMenus::RenderLoadingDirect(const char *pCaption, const char *pContent, std
 	// need up date this here to get correct
 	ms_GuiColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_UiColor, true));
 
+	// 设置卡片加载背景时会重入加载界面，返回后还需继续关闭外层裁剪。
+	CUiScopedClipSuspend ClipScope(Ui());
 	Ui()->MapScreen();
-	// ClipDisable 需要与 ClipEnable 配对；统一走 ResetClipState 清理帧边界残留。
-	Ui()->ResetClipState();
 
 	if(GameClient()->m_MenuBackground.IsLoading())
 	{
@@ -4436,6 +4421,7 @@ void CMenus::Render()
 		else
 		{
 			CPerfTimer ShellTimer;
+			const int64_t QmShellStart = time_get();
 			CUIRect TabBar, MainView;
 			Screen.HSplitTop(MENU_MENUBAR_HEIGHT_NEW, &TabBar, &MainView);
 			// 手机端所有菜单页统一对齐设置页壳层：导航栏与内容区一起内缩，
@@ -4503,8 +4489,13 @@ void CMenus::Render()
 				ScrollInputActive,
 				m_SettingsPageSwitchActive || TransitionActive,
 				m_SettingsScrollActive);
+			double QmPrewarmMs = 0.0;
 			if(CanPrewarmSettings && MenuOpenFrame > 0)
+			{
+				const int64_t QmPrewarmStart = time_get();
 				PrewarmVisibleSettingsResources(MainView);
+				QmPrewarmMs = (time_get() - QmPrewarmStart) * 1000.0 / time_freq();
+			}
 			if(m_MenuPage == PAGE_NEWS)
 			{
 				RenderNews(MainView);
@@ -4532,6 +4523,11 @@ void CMenus::Render()
 			char aContentExtra[128];
 			str_format(aContentExtra, sizeof(aContentExtra), "page=%s transition=%d", pPageName, TransitionActive ? 1 : 0);
 			LogPerfStage(Client(), "offline_page_content", ContentTimer.ElapsedMs(), TransitionActive, aContentExtra);
+			{
+				const double QmTotalMs = (time_get() - QmShellStart) * 1000.0 / time_freq();
+				if(QmTotalMs > 20.0)
+					dbg_msg("perf/gap", "shell_total=%.1fms prewarm=%.1fms content=%.1fms page=%s", QmTotalMs, QmPrewarmMs, ContentTimer.ElapsedMs(), pPageName);
+			}
 			if(Client()->State() != ClientState)
 			{
 				if(ContentTransitionActive)
@@ -4961,16 +4957,29 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 		Box.HSplitBottom(24.f, &Box, &Part);
 
 		// additional info
-		Box.VMargin(20.f, &Box);
+		const char *pUnsavedInfo = nullptr;
 		if(GameClient()->Editor()->HasUnsavedData())
-		{
-			str_format(aBuf, sizeof(aBuf), "%s\n\n%s", Localize("There's an unsaved map in the editor, you might want to save it."), Localize("Continue anyway?"));
-			Ui()->DoLabel(&Box, aBuf, 20.0f, TEXTALIGN_ML, {.m_MaxWidth = Part.w - 20.0f});
-		}
+			pUnsavedInfo = Localize("There's an unsaved map in the editor, you might want to save it.");
 		else if(GameClient()->m_TouchControls.HasEditingChanges() || m_MenusIngameTouchControls.UnsavedChanges())
+			pUnsavedInfo = Localize("There's an unsaved change in the touch controls editor, you might want to save it.");
+		if(pUnsavedInfo != nullptr)
 		{
-			str_format(aBuf, sizeof(aBuf), "%s\n\n%s", Localize("There's an unsaved change in the touch controls editor, you might want to save it."), Localize("Continue anyway?"));
-			Ui()->DoLabel(&Box, aBuf, 20.0f, TEXTALIGN_ML, {.m_MaxWidth = Part.w - 20.0f});
+			// 与标题、问句保持同一水平居中。多行标签的对齐只作用于整个文本块，
+			// 逐行绘制才能让第二行也居中，否则它会贴在文本块的左边。
+			Box.VMargin(20.f, &Box);
+			constexpr float InfoFontSize = 20.0f;
+			constexpr float InfoLineHeight = 24.0f;
+			// 原来用 "\n\n" 空一行，逐行绘制时用同一行距保持节奏不变。
+			constexpr float InfoLineGap = 16.0f;
+			constexpr float InfoBlockHeight = InfoLineHeight * 2.0f + InfoLineGap;
+			CUIRect Info = Box;
+			Info.HSplitTop(maximum(0.0f, (Info.h - InfoBlockHeight) * 0.5f), nullptr, &Info);
+			CUIRect InfoLine;
+			Info.HSplitTop(InfoLineHeight, &InfoLine, &Info);
+			Ui()->DoLabel(&InfoLine, pUnsavedInfo, InfoFontSize, TEXTALIGN_MC, {.m_MaxWidth = InfoLine.w});
+			Info.HSplitTop(InfoLineGap, nullptr, &Info);
+			Info.HSplitTop(InfoLineHeight, &InfoLine, &Info);
+			Ui()->DoLabel(&InfoLine, Localize("Continue anyway?"), InfoFontSize, TEXTALIGN_MC);
 		}
 
 		// buttons
@@ -6102,20 +6111,24 @@ void CMenus::RenderThemeSelection(CUIRect MainView, const SSettingsContentMetric
 	const float HeaderSpacing = Metrics.m_LineSpacing;
 	CUIRect HeaderView = MainView;
 	CUIRect Header, HeaderRow;
-	HeaderView.HSplitTop(HeaderHeight + HeaderSpacing, &Header, nullptr);
+	HeaderView.HSplitTop(HeaderHeight + HeaderSpacing * 2.0f, &Header, nullptr);
 	Header.HSplitTop(HeaderHeight, &HeaderRow, nullptr);
 
-	s_ListBox.DoHeader(&MainView, Localize("Theme"), HeaderHeight, HeaderSpacing);
+	s_ListBox.DoHeader(&MainView, Localize("Theme"), HeaderHeight, HeaderSpacing * 2.0f);
 
 	static CButtonContainer s_RefreshButton;
 	CUIRect RefreshButton;
-	HeaderRow.VSplitRight(80.0f * Metrics.m_UiScale, nullptr, &RefreshButton);
-	RefreshButton.VMargin(Metrics.m_LineSpacing * 0.5f, &RefreshButton);
-	if(DoButton_Menu(&s_RefreshButton, Localize("Refresh"), 0, &RefreshButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::BASE, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, Metrics.m_BodySize))
+	const float RefreshSide = std::min(HeaderHeight, 80.0f * Metrics.m_UiScale);
+	HeaderRow.VSplitRight(RefreshSide, nullptr, &RefreshButton);
+	RefreshButton.h = RefreshSide;
+	RefreshButton.y += (HeaderRow.h - RefreshSide) * 0.5f;
+	RefreshButton.Margin(Metrics.m_LineSpacing * 0.5f, &RefreshButton);
+	if(Ui()->DoButton_QmIcon(&s_RefreshButton, EQmIcon::ARROW_ROTATE_RIGHT, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &RefreshButton, IGraphics::CORNER_ALL))
 	{
 		MenuBackground.RefreshThemes();
 		s_ListBox.ResetScroll();
 	}
+	GameClient()->m_Tooltips.DoToolTip(&s_RefreshButton, &RefreshButton, Localize("Refresh"));
 
 	const std::vector<CTheme> &vThemes = MenuBackground.GetThemes();
 
@@ -6461,10 +6474,22 @@ bool CMenus::SetSettingsPageFromCardTab(const char *pTab)
 		g_Config.m_UiSettingsPage = SETTINGS_TCLIENT;
 		m_TClientSettingsTab = 0;
 	}
-	else if(str_comp(pTab, "bind") == 0 || str_comp(pTab, "qmclient-bind") == 0)
+	else if(str_comp(pTab, "bind") == 0 || str_comp(pTab, "qmclient-bind") == 0 || str_comp(pTab, "bind-official") == 0)
+	{
+		// 原来的「官方」子页签已改名为「绑定」并升为一级页签：bind 与旧链接
+		// bind-official 都落在同一个一级页签上，命令名保持不变。
+		g_Config.m_UiSettingsPage = SETTINGS_CONTROLS;
+		m_MenusSettingsControls.SetTab(CMenusSettingsControls::ETab::BIND);
+	}
+	else if(str_comp(pTab, "bind-workshop") == 0)
 	{
 		g_Config.m_UiSettingsPage = SETTINGS_CONTROLS;
-		m_MenusSettingsControls.SetTab(CMenusSettingsControls::ETab::BIND_WORKSHOP);
+		m_MenusSettingsControls.SetTab(CMenusSettingsControls::ETab::WORKSHOP);
+	}
+	else if(str_comp(pTab, "bind-blueprint") == 0)
+	{
+		g_Config.m_UiSettingsPage = SETTINGS_CONTROLS;
+		m_MenusSettingsControls.SetTab(CMenusSettingsControls::ETab::BLUEPRINT);
 	}
 	else if(str_comp(pTab, "tclient-bind-wheel") == 0)
 	{
@@ -7361,7 +7386,13 @@ CMenus::CScopedMenuTextVisibleGuard::CScopedMenuTextVisibleGuard(CMenus *pMenus)
 	m_pMenus(pMenus),
 	m_Previous(pMenus->m_MenuTextPoolVisibleGuard)
 {
-	m_pMenus->EnsureSettingsMenuTextPlanReadyForVisible();
+	{
+		const int64_t GuardStart = time_get();
+		m_pMenus->EnsureSettingsMenuTextPlanReadyForVisible();
+		const double GuardMs = (time_get() - GuardStart) * 1000.0 / time_freq();
+		if(GuardMs > 5.0)
+			dbg_msg("perf/menutext", "ensure_plan_ready=%.1fms", GuardMs);
+	}
 	m_pMenus->m_MenuTextPoolVisibleGuard = true;
 	if(!m_Previous)
 	{

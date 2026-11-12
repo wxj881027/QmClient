@@ -5,6 +5,7 @@
 #include "SettingsCardCollapseState.h"
 #include "SettingsCardContentBridge.h"
 #include "SettingsCardInfo.h"
+#include "SettingsCardMotion.h"
 #include "SettingsCardWidth.h"
 #include "SettingsCardWidthState.h"
 #include "SettingsSearchReveal.h"
@@ -51,6 +52,7 @@ namespace
 void CSettingsCardDeck::ResetDefinitionViewState()
 {
 	m_ObservedContentChanged = false;
+	m_LastContentHeightFrameTimeSec = -1.0f;
 	// Definition state is indexed by the current card-order model. A different
 	// tab or stable-id set may reuse the same indices, so retaining these
 	// values would make the new view inherit heights, animation tracks and
@@ -154,6 +156,9 @@ void CSettingsCardDeck::BeginDisplayCycle(uint64_t DisplayCycle, bool AnimateEnt
 			Runtime.m_ReflowWasActive = false;
 			Runtime.m_ContentHeightInitialized = false;
 			Runtime.m_ContentHeightWasActive = false;
+			Runtime.m_ContentHeightAnimFrom = 0.0f;
+			Runtime.m_ContentHeightAnimTo = 0.0f;
+			Runtime.m_ContentHeightAnimElapsed = 0.0f;
 			Runtime.m_CollapsedInitialized = false;
 			Runtime.m_HasLayoutReference = false;
 			Runtime.m_PointerInsideLastFrame = false;
@@ -306,6 +311,16 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 	m_ObservedContentChanged = false;
 	bool ContentHeightTargetChanged = false;
 	bool ContentHeightAnimationActive = false;
+	// 内容高度补间由 Deck 自己按帧推进。动效运行时的帧时钟每帧只 Advance 一次，
+	// 用它识别帧边界，避免同一帧跑两趟（预布局输入前后各一次）时推进两次。
+	float ContentHeightFrameDt = 0.0f;
+	if(Ctx.m_pAnim != nullptr)
+	{
+		const float AnimFrameTimeSec = Ctx.m_pAnim->TimeSec();
+		if(m_LastContentHeightFrameTimeSec >= 0.0f && AnimFrameTimeSec > m_LastContentHeightFrameTimeSec)
+			ContentHeightFrameDt = AnimFrameTimeSec - m_LastContentHeightFrameTimeSec;
+		m_LastContentHeightFrameTimeSec = AnimFrameTimeSec;
+	}
 	auto BuildPreparedCards = [&](const std::array<std::vector<int>, 3> &aDisplayColumns) {
 		m_vPreparedCards.clear();
 		m_vPreparedCards.reserve(m_vActiveStateIndices.size());
@@ -383,6 +398,9 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 					m_FrameRuntime.MarkFirstLayout();
 				Runtime.m_ContentHeightInitialized = true;
 				Runtime.m_AnimatedContentHeight = TargetContentHeight;
+				Runtime.m_ContentHeightAnimFrom = TargetContentHeight;
+				Runtime.m_ContentHeightAnimTo = TargetContentHeight;
+				Runtime.m_ContentHeightAnimElapsed = 0.0f;
 				if(Ctx.m_pAnim != nullptr)
 					Ctx.m_pAnim->SetValue(SettingsCardHeightNodeKey(pTab, pDefinition->m_Spec.m_pStableId), EUiAnimProperty::HEIGHT, TargetContentHeight);
 			}
@@ -390,13 +408,26 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 			{
 				if(Input.m_pDiagnostics != nullptr)
 					m_FrameRuntime.CountHeightAnimationResolve();
-				const uint64_t HeightKey = SettingsCardHeightNodeKey(pTab, pDefinition->m_Spec.m_pStableId);
-				Runtime.m_AnimatedContentHeight = ResolveUiAnimValue(*Ctx.m_pAnim, HeightKey, EUiAnimProperty::HEIGHT, TargetContentHeight, Motion.m_ContentHeightDuration, EEasing::EASE_OUT_QUART);
-				Runtime.m_ContentHeightWasActive = Ctx.m_pAnim->HasActiveAnimation(HeightKey, EUiAnimProperty::HEIGHT);
+				// 目标变化时从当前显示高度重新起一段过渡；之后每帧只推进有限步长，
+				// 卡顿帧不能一次吃掉整段过渡（否则高度会瞬移到位、动画等于没播）。
+				if(HeightTargetChanged)
+				{
+					Runtime.m_ContentHeightAnimFrom = Runtime.m_AnimatedContentHeight;
+					Runtime.m_ContentHeightAnimTo = TargetContentHeight;
+					Runtime.m_ContentHeightAnimElapsed = 0.0f;
+				}
+				Runtime.m_ContentHeightAnimElapsed += SettingsCardContentHeightStepSeconds(ContentHeightFrameDt, Motion.m_ContentHeightDuration);
+				const float ContentHeightProgress = SettingsCardContentHeightProgress(Runtime.m_ContentHeightAnimElapsed, Motion.m_ContentHeightDuration);
+				Runtime.m_AnimatedContentHeight = ContentHeightProgress >= 1.0f ? Runtime.m_ContentHeightAnimTo : Runtime.m_ContentHeightAnimFrom + (Runtime.m_ContentHeightAnimTo - Runtime.m_ContentHeightAnimFrom) * ContentHeightProgress;
+				Runtime.m_ContentHeightWasActive = ContentHeightProgress < 1.0f;
+				Ctx.m_pAnim->SetValue(SettingsCardHeightNodeKey(pTab, pDefinition->m_Spec.m_pStableId), EUiAnimProperty::HEIGHT, Runtime.m_AnimatedContentHeight);
 			}
 			else if(HeightWork.m_SetHeightTarget)
 			{
 				Runtime.m_AnimatedContentHeight = TargetContentHeight;
+				Runtime.m_ContentHeightAnimFrom = TargetContentHeight;
+				Runtime.m_ContentHeightAnimTo = TargetContentHeight;
+				Runtime.m_ContentHeightAnimElapsed = 0.0f;
 				if(Ctx.m_pAnim != nullptr)
 					Ctx.m_pAnim->SetValue(SettingsCardHeightNodeKey(pTab, pDefinition->m_Spec.m_pStableId), EUiAnimProperty::HEIGHT, TargetContentHeight);
 				Runtime.m_ContentHeightWasActive = false;
@@ -879,6 +910,9 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 	// 入场或重排期间鼠标可能仍停在卡片最终位置；只有布局稳定后再次移动鼠标才恢复 hover 亮度，
 	// 避免动画结束的首帧从普通背景突然跳到高亮背景。
 	const bool LayoutStable = !EntryPending && !EntryPositionActive && !ContentHeightAnimationActive && !ReflowTargetChanged && !ReflowPositionActive;
+	// 把「卡片还在动」发布给外部：语音冷启动这类一次性重活要等动画播完，
+	// 否则展开动画和音频子系统初始化会压在同一帧。
+	qm_settings_motion::PublishCardAnimationActive(!LayoutStable);
 	if(m_SuppressHoverFeedbackOnce && LayoutStable && m_HasPointerPosition &&
 		(std::abs(Input.m_MouseX - m_LastPointerX) > 0.001f || std::abs(Input.m_MouseY - m_LastPointerY) > 0.001f))
 		m_SuppressHoverFeedbackOnce = false;

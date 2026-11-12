@@ -598,6 +598,17 @@ public:
 		CEditorMap *m_pSelectedMap = nullptr;
 		static CUi::EPopupMenuFunctionResult Render(void *pContext, CUIRect View, bool Active);
 
+		// 标签菜单的四个动作同级，行高 / 行距 / 内边距共用同一组数值；
+		// 面板高度直接由它们算出，最后一行不会再越出面板底边。
+		static constexpr int NUM_ROWS = 4;
+		static constexpr float ROW_HEIGHT = 12.0f;
+		static constexpr float ROW_GAP = 6.0f;
+		static constexpr float ROW_PADDING = 6.0f;
+		static constexpr float PanelHeight()
+		{
+			return ROW_PADDING * 2.0f + NUM_ROWS * ROW_HEIGHT + (NUM_ROWS - 1) * ROW_GAP + CUi::PopupMenuContentInset();
+		}
+
 		const char m_CloseButtonId = 0;
 		const char m_CopyNameButtonId = 0;
 		const char m_CopyPathButtonId = 0;

@@ -6870,6 +6870,7 @@ public:
 
 	int RecreateSwapChain()
 	{
+		const int64_t QmRecreateStart = time_get();
 		m_PresentedSnapshotValid = false;
 		int Ret = 0;
 		VkResult WaitIdleResult = DeviceWaitIdle();
@@ -6951,6 +6952,7 @@ public:
 			dbg_msg("vulkan", "recreating swap chain failed.");
 		}
 
+		dbg_msg("gfx/qm", "swapchain_recreate elapsed=%.2fms", (time_get() - QmRecreateStart) * 1000.0 / time_freq());
 		return Ret;
 	}
 

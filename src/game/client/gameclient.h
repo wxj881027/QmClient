@@ -77,6 +77,7 @@
 #include "components/qmclient/axiom_auto_login.h"
 #include "components/qmclient/axiom_scores.h"
 #include "components/qmclient/chat_emoji.h"
+#include "components/qmclient/checkpoint_guide.h"
 #include "components/qmclient/collision_hitbox.h"
 #include "components/qmclient/data_version.h"
 #include "components/qmclient/demo_camera.h"
@@ -312,6 +313,7 @@ public:
 	CQmAxiomScores m_QmAxiomScores;
 	CQmFriendLastSeen m_QmFriendLastSeen;
 	CQmChatEmoji m_QmChatEmoji;
+	CQmCheckpointGuide m_QmCheckpointGuide;
 	CQmMonitoring m_QmMonitoring;
 	CQmMobileSpectator m_QmMobileSpectator;
 	CQmHudNotifications m_QmHudNotifications;
@@ -482,6 +484,8 @@ public:
 	class IGraphics *Graphics() const { return m_pGraphics; }
 	class IClient *Client() const { return m_pClient; }
 	class CUi *Ui() { return &m_UI; }
+	// 引擎在切换垂直同步前问这里：界面动画全停才重建交换链。
+	bool QmUiAnimationsIdle() const override;
 	class CUiRuntimeV2 *UiRuntimeV2() { return &m_UiRuntimeV2; }
 	const class CUiRuntimeV2 *UiRuntimeV2() const { return &m_UiRuntimeV2; }
 	void SyncQmUiIconWeight();

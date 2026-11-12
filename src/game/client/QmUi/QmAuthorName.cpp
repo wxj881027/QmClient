@@ -110,6 +110,9 @@ void CQmAuthorName::Render(CUi *pUi, IGraphics *pGraphics, const QmSponsorAuthor
 			if(pGraphics->GaussianBlurRenderTarget(m_Source, m_aTemporary, m_Blurred, Params))
 			{
 				IGraphics::SRenderTargetDrawParams Draw;
+				Draw.m_CornerSmoothing = std::clamp(g_Config.m_QmUiCornerSmoothing / 100.0f, 0.0f, 1.0f);
+				Draw.m_CornerCurve = (float)g_Config.m_QmUiCornerCurve;
+				Draw.m_CornerSeam = std::clamp(g_Config.m_QmUiCapsuleSeam / 100.0f, 0.0f, 1.0f);
 				Draw.m_X = Area.x;
 				Draw.m_Y = Area.y;
 				Draw.m_W = m_Width * PixelSize.x;

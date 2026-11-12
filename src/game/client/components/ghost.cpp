@@ -15,6 +15,7 @@
 #include <game/client/components/menus.h>
 #include <game/client/components/players.h>
 #include <game/client/components/qmclient/demo_display.h>
+#include <game/client/components/qmclient/ghost_start_detection.h>
 #include <game/client/components/qmclient/ghost_timeline.h>
 #include <game/client/components/qmclient/race_timing.h>
 #include <game/client/components/skins.h>
@@ -184,26 +185,14 @@ void CGhost::CheckStartLocal(bool Predicted)
 	}
 	else // recording
 	{
-		int PrevTick = GameClient()->m_Snap.m_pLocalPrevCharacter->m_Tick;
-		int CurTick = GameClient()->m_Snap.m_pLocalCharacter->m_Tick;
-		vec2 PrevPos = vec2(GameClient()->m_Snap.m_pLocalPrevCharacter->m_X, GameClient()->m_Snap.m_pLocalPrevCharacter->m_Y);
-		vec2 Pos = vec2(GameClient()->m_Snap.m_pLocalCharacter->m_X, GameClient()->m_Snap.m_pLocalCharacter->m_Y);
-
-		// detecting death, needed because race allows immediate respawning
-		if((!m_Recording || m_AllowRestart) && m_LastDeathTick < PrevTick)
+		if(!m_Recording || m_AllowRestart)
 		{
-			// estimate the exact start tick
-			int RecordTick = -1;
-			int TickDiff = CurTick - PrevTick;
-			for(int i = 0; i < TickDiff; i++)
-			{
-				if(GameClient()->RaceHelper()->IsStart(mix(PrevPos, Pos, (float)i / TickDiff), mix(PrevPos, Pos, (float)(i + 1) / TickDiff)))
-				{
-					RecordTick = PrevTick + i + 1;
-					if(!m_AllowRestart)
-						break;
-				}
-			}
+			const auto *pPrev = GameClient()->m_Snap.m_pLocalPrevCharacter;
+			const auto *pCur = GameClient()->m_Snap.m_pLocalCharacter;
+			const qm_ghost_start::SSample Prev{pPrev->m_Tick, Client()->PrevGameTick(g_Config.m_ClDummy), vec2(pPrev->m_X, pPrev->m_Y)};
+			const qm_ghost_start::SSample Cur{pCur->m_Tick, Client()->GameTick(g_Config.m_ClDummy), vec2(pCur->m_X, pCur->m_Y)};
+			const int RecordTick = qm_ghost_start::FindStartTick(Prev, Cur, m_LastDeathTick, m_AllowRestart,
+				[this](vec2 PrevPos, vec2 Pos) { return GameClient()->RaceHelper()->IsStart(PrevPos, Pos); });
 			if(RecordTick != -1)
 			{
 				if(GhostRecorder()->IsRecording()) // race restarted: stop recording

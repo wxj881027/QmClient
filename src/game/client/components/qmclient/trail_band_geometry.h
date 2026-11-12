@@ -7,6 +7,28 @@
 #include <cmath>
 #include <cstddef>
 
+// 生成端从透明窄口过渡到正常截面；只修改头部，保留尾端包络和独立装饰。
+template<typename TBandPoint>
+void QmPrepareTrailBandHead(TBandPoint *pBand, size_t Count)
+{
+	if(Count < 2)
+		return;
+	const float HeadLength = std::clamp(std::max(pBand[0].m_Left, pBand[0].m_Right) * 1.5f, 8.0f, 48.0f);
+	float Distance = 0.0f;
+	for(size_t i = 0; i < Count; ++i)
+	{
+		if(i > 0)
+			Distance += distance(pBand[i - 1].m_Pos, pBand[i].m_Pos);
+		if(Distance >= HeadLength)
+			break;
+		const float T = Distance / HeadLength;
+		const float Gain = T * T * (3.0f - 2.0f * T);
+		pBand[i].m_Left *= Gain;
+		pBand[i].m_Right *= Gain;
+		pBand[i].m_Color = pBand[i].m_Color.WithMultipliedAlpha(Gain);
+	}
+}
+
 // 相邻截面共用内部边的长度与方向；退化边仍按各截面原来的规则选择回退方向。
 template<typename TBandPoint>
 void QmPrepareTrailBandJoins(TBandPoint *pBand, size_t Count, vec2 *pNormals)

@@ -1761,6 +1761,8 @@ public:
 	void SetScreenSize(int Width, int Height);
 	void Swap() override;
 	bool SetVSync(bool State) override;
+	// 垂直同步命令的后端回执：不在界面线程等待，避免重建交换链时卡住动画。
+	bool m_QmVSyncAck = false;
 	bool SetMultiSampling(uint32_t ReqMultiSamplingCount, uint32_t &MultiSamplingCountBackend) override;
 
 	int GetVideoModes(CVideoMode *pModes, int MaxModes, int Index) override;

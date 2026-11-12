@@ -708,7 +708,7 @@ void CVoting::RenderScoreboard(const CUIRect &Scoreboard, bool Interactive, floa
 
 void CVoting::RenderBars(CUIRect Bars, float Alpha) const
 {
-	Bars.Draw(ui_token::color::SURFACE_HIGHLIGHT.WithMultipliedAlpha(2.0f * Alpha), IGraphics::CORNER_ALL, Bars.h / 2.0f);
+	Bars.Draw(ui_token::color::TINT_HUD_BAR.WithMultipliedAlpha(Alpha), IGraphics::CORNER_ALL, Bars.h / 2.0f);
 
 	CUIRect Splitter;
 	Bars.VMargin((Bars.w - 2.0f) / 2.0f, &Splitter);

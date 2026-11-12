@@ -289,7 +289,11 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 	const float InputContentHeight = s_GlobalSearchInputCollapsed ? 0.0f : SearchInputHeight + LineHeight + LineSpacing;
 	const SSettingsCardSpec InputSpec{"deck:global-search-input", Localize("Feature Search"), qm_card_registry::ResolveLocalizedDescription("deck:global-search-input")};
 	const float InputChromeHeight = BuildSettingsCardFrame({0.0f, 0.0f, Page.m_ContentViewport.w, 0.0f}, InputSpec, InputContentHeight, UiScale).m_Rect.h;
-	const auto HeaderLayout = qm_search_header::Layout(Page.m_ContentViewport, InputChromeHeight, UiScale, HasSearchQuery, m_GlobalSearchHeaderSession.LogoIndex());
+	const float SubtitleWidth = qm_search_header::SubtitleWidth(Page.m_ContentViewport);
+	const float SubtitleHeight = !HasSearchQuery && SubtitleWidth > 0.0f ?
+					     TextRender()->TextBoundingBox(14.0f * UiScale, m_GlobalSearchHeaderSession.Text(), -1, SubtitleWidth).m_H + 8.0f * UiScale :
+					     0.0f;
+	const auto HeaderLayout = qm_search_header::Layout(Page.m_ContentViewport, InputChromeHeight, UiScale, HasSearchQuery, m_GlobalSearchHeaderSession.LogoIndex(), SubtitleHeight);
 	const float TargetOffsetY = HeaderLayout.m_InputOffsetY;
 	float InputOffsetY = TargetOffsetY;
 	CUiV2AnimationRuntime *pSearchAnimRuntime = ReadOnly ? nullptr : &GameClient()->UiRuntimeV2()->AnimRuntime();

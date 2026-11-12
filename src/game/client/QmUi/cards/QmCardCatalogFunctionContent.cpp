@@ -487,6 +487,7 @@ void CMenus::RenderQmFunctionMiniFeaturesContent(CUIRect &Content, float LineHei
 		{
 			{&g_Config.m_QmHideJoinServerInfo, "Hide server information on join", Localize("Hide server information on join")},
 			{&g_Config.m_QmShowTuneZoneColors, "Show tune zone colors", Localize("Show tune zone colors"), nullptr, 0, Localize("Color map tune zones by their tune zone number")},
+			{&g_Config.m_QmCheckpointGuide, "CP guide", Localize("CP guide"), nullptr, 0, Localize("Guide to nearby uncollected teleport checkpoints and warn near checkpoint teleporters")},
 			{&g_Config.m_QmBlankAssetFallback, "Blank asset auto fallback", Localize("Blank asset auto fallback"), nullptr, 0, Localize("Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)")},
 		},
 		CurrentSettingsContentMetrics(), !PrewarmOnly);
@@ -499,7 +500,6 @@ void CMenus::RenderQmFunctionMiniFeaturesContent(CUIRect &Content, float LineHei
 	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, Content,
 		{
 			{&g_Config.m_QmRepeatEnabled, "Enable repeat", Localize("Enable repeat")},
-			{&g_Config.m_QmHumming, "Humming", Localize("Humming"), nullptr, 0, Localize("Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines")},
 			{&g_Config.m_QmRandomEmoteOnHit, "Random emoticon", Localize("Random emoticon")},
 		},
 		CurrentSettingsContentMetrics(), !PrewarmOnly);

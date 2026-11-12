@@ -32,7 +32,7 @@ ACTION_USE = "./.github/actions/linux-deps"
 
 # 允许保留独立 apt 步骤的例外场景：纯工具安装，与构建依赖清单无关。
 EXEMPT_STEP_NAMES = {
-	"Install clang-format-22",
+	"Install clang-format-23",
 	"Install Clang 22",
 }
 

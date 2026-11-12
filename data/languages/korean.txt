@@ -368,6 +368,9 @@ A calm-play mode that hides the HUD, names, effects, chat and sounds you pick, s
 A crowded HUD hides the game, so start with one element and add more if needed.
 == HUD가 복잡하면 게임이 가려지니, 하나부터 켜고 필요하면 더 추가하세요.
 
+A damped spring drives the offset; reversing slows it before it turns
+== 감쇠 스프링이 오프셋을 구동하며, 방향을 바꾸면 먼저 느려졌다가 돌아섭니다
+
 A demo with this name already exists
 == 이 이름의 데모가 이미 존재합니다.
 
@@ -592,9 +595,6 @@ Add friends by entering their name below or by clicking their name in the player
 
 Add function
 == 기능 추가
-
-Add Group
-== 그룹 추가
 
 Add Item
 == 아이템 추가
@@ -914,6 +914,9 @@ Always show song title and artist
 Always translate
 == 항상 번역
 
+AMLL community lyrics
+== AMLL 커뮤니티 가사
+
 Amount
 == 양
 
@@ -1126,6 +1129,9 @@ Are you sure that you want to quit?
 
 Are you sure that you want to remove '%s' from your war groups?
 == 전쟁 그룹에서 '%s'을(를) 제거하시겠습니까?
+
+Are you sure that you want to remove '%s' from your war list?
+== 「%s」을(를) 적대 목록에서 삭제할까요?
 
 Are you sure that you want to remove the clan '%s' from your friends list?
 == 정말로 클랜 '%s'을(를) 친구 목록에서 제거하시겠습니까?
@@ -1586,9 +1592,6 @@ Axiom website
 Axis
 == 축
 
-Back
-== 뒤로
-
 Backdrop blur
 == 배경 흐림
 
@@ -1955,6 +1958,9 @@ Bubble opacity
 Build the status text shown above Tees
 == Build the status text shown above Tees
 
+Built-in
+== 내장
+
 Button - Disabled
 == 버튼 - 비활성화
 
@@ -2089,6 +2095,12 @@ Cannot update public words. Previous words remain active.
 
 Cannot write the wiki file
 == Wiki 파일을 쓸 수 없습니다
+
+Capsule seam
+== 캡슐 이음새
+
+Capsule seam smoothing: ease the straight-to-cap curvature jump (0 = plain semicircular ends)
+== 캡슐 이음새 부드럽게: 직선과 끝의 곡률 점프를 완화합니다(0 = 순수 반원 끝)
 
 Capture the flag
 == 깃발 뺏기 (CTF)
@@ -2483,20 +2495,11 @@ Clan: %s
 Classic
 == 클래식
 
-Classic Easy
-== 클래식 Easy
-
-Classic Next
-== 클래식 Next
-
-Classic Nut
-== 클래식 Nut
+Classic arc
+== 클래식 원호
 
 Classic PowerShell
 == 클래식 PowerShell
-
-Classic Pro
-== 클래식 Pro
 
 Clear
 == 지우기
@@ -2609,9 +2612,6 @@ Click to remove this player from your friends list.
 Click to select server. Double click to join your friend.
 == 클릭하여 서버를 선택하세요. 더블 클릭하여 친구의 서버에 접속하세요.
 
-Click to set color
-== 클릭하여 색상 설정
-
 Client
 == 클라이언트
 
@@ -2675,6 +2675,9 @@ Collapse
 Collapse console
 == 콘솔 축소
 
+Collect CP %d before teleporting
+== 텔레포트 전에 CP %d에 닿으세요
+
 Collects the remaining DDNet client preferences that do not belong to other cards.
 == 다른 카드에 속하지 않는 나머지 DDNet 클라이언트 설정을 모아 둡니다.
 
@@ -2731,12 +2734,6 @@ Colors and opacity of the popup list that suggests chat commands and emoticons w
 
 Colors for chat command and emoji completion
 == 채팅 명령어 및 이모지 자동 완성 색상
-
-Colors in chat
-== 채팅에서의 색상
-
-Colors in scoreboard
-== 점수판에서의 색상
 
 Colors of the hook collision line, in case of a possible collision with:
 == 갈고리 보조선 색상 (다음 대상에 충돌 가능할 경우):
@@ -2843,17 +2840,11 @@ Concurrent requests when refreshing server browser
 Config
 == 설정
 
-Config Changes
-== 설정 변경
-
 Config directory
 == 설정 디렉토리
 
 Config Files
 == 설정 파일
-
-Config Filters
-== 설정 필터
 
 Config version. Helps new client fix old config errors.
 == 설정 버전. 새 클라이언트가 이전 설정 오류를 수정하는 데 도움
@@ -3014,6 +3005,9 @@ Confirm disconnect after game end (minutes, -1 off, 0 always)
 Confirm quit after game end (minutes, -1 off, 0 always)
 == 게임 종료 후 종료 확인 (분, -1=끄기, 0=항상)
 
+Conic Bezier
+== 원뿔 베지어
+
 Connect address error
 == 연결 주소 오류
 
@@ -3080,6 +3074,9 @@ Connlimit: number of connections allowed per IP in a time period
 Connlimit: time window for IP connection count
 == Connlimit: IP 연결 수 계산을 위한 시간 창
 
+Consecutive wheel ticks carry their velocity into one continuous glide
+== 연속 휠 입력이 속도를 이어받아 하나의 부드러운 이동으로 이어집니다
+
 Console
 == 콘솔
 
@@ -3145,6 +3142,9 @@ Contents
 
 Continue anyway?
 == 그래도 계속하시겠습니까?
+
+Continuous-curvature UI corners (0 = classic arc, 100 = strongest)
+== UI 모서리 연속 곡률(0 = 클래식 원호, 100 = 최대)
 
 Contributors
 == 기여자
@@ -3251,6 +3251,12 @@ Copy skin ID
 Copy skin option color
 == 스킨 옵션 색상 복사
 
+Corner curvature
+== 모서리 곡률
+
+Corner curve
+== 모서리 곡선
+
 Could not add the player as a friend
 == 플레이어를 친구로 추가할 수 없습니다
 
@@ -3350,8 +3356,14 @@ Country code
 Country flag for grouping this community (ISO 3166-1 numeric)
 == 이 커뮤니티를 그룹화하기 위한 국가 플래그 (ISO 3166-1 숫자)
 
+CP %d
+== 체크포인트 %d
+
 CP border overlay alpha (0-100)
 == CP 경계 오버레이 엔티티 알파 (0-100)
+
+CP guide
+== CP 안내
 
 CP opacity
 == CP 불투명도
@@ -4181,6 +4193,9 @@ Door Laser Outline Color
 Door laser outline color
 == 문 레이저 외곽선 색상
 
+Double-tap the bound key within 400 ms to send the current lyric to public chat
+== 지정한 키를 400밀리초 안에 두 번 눌러 현재 가사를 전체 채팅으로 보냅니다
+
 Download
 == 다운로드
 
@@ -4600,6 +4615,9 @@ Edit the name and clan fields; the dummy keeps its own values.
 
 Edit this custom command on the Bind Wheel page.
 == 이 사용자 지정 명령은 바인드 휠 페이지에서 편집하세요.
+
+Edit title style
+== 칭호 스타일 편집
 
 Edit touch controls
 == 터치 컨트롤 편집
@@ -5159,6 +5177,9 @@ Encoder:
 End (s)
 == 끝 (초)
 
+End bounce
+== 끝단 반동
+
 End marker of replay slice
 == 리플레이 슬라이스의 끝 마커
 
@@ -5234,6 +5255,9 @@ Entity wall outline opacity
 entity_bg (Workshop)
 == entity_bg (Workshop)
 
+Entries in it will fall back to none.
+== 포함된 항목은 none으로 돌아갑니다.
+
 Entries with NVENC, AMF, Quick Sync or VideoToolbox use the GPU encoding chip and are several times faster. Only encoders that really work on this machine are listed.
 == NVENC, AMF, Quick Sync, VideoToolbox가 붙은 항목은 GPU 인코딩 회로를 써서 몇 배 빠릅니다. 이 컴퓨터에서 실제로 동작하는 인코더만 목록에 나옵니다.
 
@@ -5279,6 +5303,9 @@ Event
 Every click applies the skin at once, so star the ones you like before you start browsing.
 == 클릭할 때마다 바로 적용되니, 마음에 드는 스킨은 먼저 별표를 해 두고 둘러보세요.
 
+Every wheel tick restarts from rest, matching the original client
+== 휠 한 칸마다 정지 상태에서 다시 시작해 원본 클라이언트와 같습니다
+
 Exact bound nickname
 == 연결할 정확한 닉네임
 
@@ -5302,6 +5329,9 @@ Exchange (ProRes 422 HQ / MOV)
 
 Exclude
 == 제외
+
+exec
+== exec
 
 Execute before connecting
 == 연결 전 실행
@@ -5861,9 +5891,6 @@ Format player names after a finish
 Forms
 == 양식
 
-Found %d global cards
-== %d개의 전역 카드를 찾았습니다
-
 Four IP addresses are already online
 == 이미 4개 IP가 접속 중입니다
 
@@ -6398,6 +6425,9 @@ Ground jump
 Group name
 == 그룹 이름
 
+Group names are limited to 16 characters
+== 그룹 이름은 최대 16자입니다
+
 Groups input helpers: fast input, automatic margin, sub-tick aiming and cursor behavior.
 == 입력 보조 기능을 묶은 항목입니다. 빠른 입력, 자동 여백, 서브 틱 조준, 커서 동작을 포함합니다.
 
@@ -6412,6 +6442,9 @@ Guide line color
 
 Guide lines are computed locally and do not guarantee that a hook will connect.
 == 안내선은 로컬에서 계산될 뿐, 훅이 붙는다는 것을 보장하지 않습니다.
+
+Guide to nearby uncollected teleport checkpoints and warn near checkpoint teleporters
+== 근처의 미활성 텔레포트 체크포인트로 안내하고 체크포인트 귀환 입구 근처에서 경고
 
 Gun fire
 == 권총 발사
@@ -6722,6 +6755,9 @@ Hold gun higher like TW 0.6.1 and earlier
 Hold left click for free camera
 == 자유 카메라를 위해 왼쪽 클릭 유지
 
+Hold still
+== 정지
+
 Hold the wheel key to see the selection move; release it to run the highlighted slot.
 == 휠 키를 누르고 있으면 선택이 움직이고, 놓으면 강조된 슬롯이 실행됩니다.
 
@@ -6808,6 +6844,9 @@ Hostname of DNSBL provider for IP verification
 
 Hover for tooltip
 == 툴팁을 보려면 마우스를 올리세요
+
+How far a wheel or drag can push past an end, in UI pixels; 0 disables
+== 휠이나 드래그로 끝을 넘어 밀 수 있는 거리(UI 픽셀)입니다. 0이면 끕니다
 
 How far the plasma gun tracks a tee
 == 플라즈마 건이 티를 추적하는 거리
@@ -7499,6 +7538,9 @@ Keep unsent message on chat close
 Keep vote window open after voting
 == 투표 후 투표 창 유지
 
+Key
+== 키
+
 Key binds
 == 키 바인드
 
@@ -7783,9 +7825,6 @@ Leave empty to disable
 
 Leave empty to join public room
 == 공개 방에 입장하려면 비워 두세요
-
-Leave empty to show everyone
-== 비우면 모든 플레이어 표시
 
 Leave empty to use default prompt
 == 기본 프롬프트를 사용하려면 비워 두세요
@@ -8283,7 +8322,7 @@ Map
 == 맵
 
 Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
-== Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
+== 맵 브라우저 난이도 카테고리 필터 비트마스크 (비트 0-14, map_vote_difficulty.h 참고)
 
 Map browser difficulty star filter bitmask (bits 1-5)
 == 맵 브라우저 난이도 별 필터 비트마스크 (비트 1-5)
@@ -8745,7 +8784,7 @@ Mixed
 == 혼합
 
 Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
-== Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+== 모바일 전용: 다음 실행 시 충돌 보고서를 Downloads/QmClient로 복사합니다 (0 = 앱 샌드박스 안에 보관)
 
 Mobile spectator camera: 0=joystick pad, 1=drag the view
 == 모바일 관전 카메라: 0=조이스틱, 1=화면 드래그
@@ -8810,6 +8849,9 @@ Mouse speed for aiming and for menus, and how far your cursor may travel from th
 Move a friend category to a position
 == 친구 분류를 지정 위치로 이동
 
+Move down
+== 아래로 이동
+
 Move left
 == 왼쪽으로 이동
 
@@ -8824,6 +8866,9 @@ Move the free camera, then add a keyframe at the current demo time.
 
 Move to category
 == 카테고리로 이동
+
+Move up
+== 위로 이동
 
 Movement
 == 이동
@@ -9164,6 +9209,9 @@ New features
 New features (unread)
 == 새 기능 (읽지 않음)
 
+New group
+== 새 그룹
+
 New IME
 == 새 IME
 
@@ -9308,6 +9356,9 @@ No downloadable portable package for this version
 No empty team left.
 == 빈 팀이 없습니다.
 
+No entries yet
+== 아직 항목이 없습니다
+
 No favorite maps yet
 == 아직 즐겨찾는 맵 없음
 
@@ -9385,6 +9436,9 @@ No player nearby
 
 No player with this name found.
 == 이 이름의 플레이어를 찾을 수 없습니다.
+
+No players match
+== 일치하는 플레이어가 없습니다
 
 No players match these filters
 == 필터에 맞는 플레이어가 없습니다
@@ -9650,6 +9704,9 @@ On
 One key can hold several commands, so remove single entries under "Bound functions" instead of clearing the key.
 == 키 하나에 명령을 여러 개 둘 수 있으니, 키를 통째로 지우지 말고 지정된 기능에서 하나씩 삭제하세요.
 
+Online
+== 온라인
+
 Online friends
 == 온라인 친구
 
@@ -9884,9 +9941,6 @@ Original only
 Original options
 == 원본 투표 항목
 
-Original scroll feel
-== 기존 스크롤 감각
-
 Other
 == 기타
 
@@ -9979,9 +10033,6 @@ Override Entry
 
 Override Freeze Tile Entity Alpha (0-100)
 == 얼음 타일의 엔티티 알파 덮어쓰기 (0-100)
-
-Override Group
-== 그룹 재정의
 
 Override location for ping estimation, available: auto, af, as, as:cn, eu, na, oc, sa (Automatic, Africa, Asia, China, Europe, North America, Oceania/Australia, South America
 == Ping 추정 위치를 재정의합니다. 사용 가능: auto, af, as, as:cn, eu, na, oc, sa(자동, 아프리카, 아시아, 중국, 유럽, 북미, 오세아니아/호주, 남미)
@@ -11183,6 +11234,9 @@ Queue preset: %s
 Quick action menu for players
 == 플레이어 빠른 작업 메뉴
 
+Quintic Bezier
+== 5차 베지어
+
 Quit
 == 종료
 
@@ -11729,6 +11783,9 @@ Rename demo
 Rename folder
 == 폴더 이름 바꾸기
 
+Rename group
+== 그룹 이름 변경
+
 Rename queue
 == 이름 변경 대기열
 
@@ -12050,9 +12107,6 @@ Restart
 Restart in x seconds (0 = abort)
 == x초 후 재시작 (0 = 중단)
 
-Restart smooth scrolling on every wheel tick
-== 휠 한 눈금마다 부드러운 스크롤을 다시 시작
-
 Restart the client
 == 클라이언트 재시작
 
@@ -12073,9 +12127,6 @@ Restore old single-segment hook collision line behavior
 
 Restore recommended
 == 권장값으로 복원
-
-Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
-== 기존 휠 스크롤 복원: 매 눈금마다 속도를 이어받지 않고 부드러운 스크롤을 다시 시작
 
 Restored the built-in content
 == 내장 콘텐츠로 되돌렸습니다
@@ -12106,6 +12157,9 @@ Reverse gradient colors
 
 Reverse IME gradient colors
 == 그라데이션 색상 반전 (IME)
+
+Reverse order
+== 역순 정렬
 
 Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
 == 반대 줌 키를 누르면 즉시 방향 전환 (0=기존 부드러운 줌 유지)
@@ -12184,6 +12238,9 @@ Rows here usually come from old configs, so test each command before you rely on
 
 RTT
 == RTT
+
+Rubber-band distance in UI pixels when the wheel or a drag pushes past an end (0=off); the content springs back after scrolling stops
+== 휠이나 드래그로 끝을 넘을 때의 고무줄 거리(UI 픽셀, 0=끔). 스크롤을 멈추면 내용이 되돌아옵니다
 
 Rule line 1.
 == 규칙 1번째 줄
@@ -12428,9 +12485,6 @@ Scoreboard
 Scoreboard cursor
 == 점수판 커서
 
-Scoreboard filter: only show players whose name or clan contains this text
-== 스코어보드 필터: 이름 또는 클랜에 이 텍스트가 포함된 플레이어만 표시합니다
-
 Scoreboard playtime
 == 스코어보드 플레이 시간
 
@@ -12502,6 +12556,9 @@ Screenshots
 
 Screenshots directory
 == 스크린샷 디렉터리
+
+Scroll feel
+== 스크롤 느낌
 
 Scroll mode
 == 스크롤 모드
@@ -12725,8 +12782,8 @@ Send sampling and token limit parameters
 Send specified command to rcon
 == 지정된 명령을 rcon 으로 전송
 
-Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines
-== 90~270초의 무작위 간격으로 연속 세 줄의 가사를 전체 채팅에 보내며 줄 사이에 3초 대기
+Send three consecutive lyrics to public chat at random intervals of 360 to 1200 seconds, with 3 seconds between lines. Successfully sending a lyric with Singing cancels pending humming lines and restarts the random wait
+== 360~1200초의 무작위 간격으로 연속 세 줄의 가사를 전체 채팅에 보내며 줄 사이에 3초 대기. ‘노래하기’로 가사를 성공적으로 보내면 흥얼거리기의 남은 가사 전송을 취소하고 무작위 대기 시간을 다시 시작
 
 Send to
 == 보낼 대상
@@ -12814,15 +12871,6 @@ Server hostname (0.7 only)
 
 Server info
 == 서버 정보
-
-Server information lower left card width (per mille)
-== 서버 정보 왼쪽 아래 카드 너비(천분율)
-
-Server information upper left card width (per mille)
-== 서버 정보 왼쪽 위 카드 너비(천분율)
-
-Server information upper row height (per mille)
-== 서버 정보 위쪽 행 높이(천분율)
 
 Server kick/spec votes are no longer actively moderated.
 == 서버 추방/관전 투표가 더 이상 적극적으로 관리되지 않습니다.
@@ -13022,6 +13070,9 @@ Settings page opacity
 Settings page right panel opacity
 == 설정 페이지 오른쪽 패널 불투명도
 
+Settings prewarm default migration done
+== 설정 예열 기본값 마이그레이션이 완료되었습니다
+
 Settings, binds, profiles, chat binds and the war list are included. Select additional cfg files below.
 == 설정, 키 바인드, 스킨 프로필, 채팅 바인드와 전쟁 목록이 포함됩니다. 아래에서 추가 cfg 파일을 선택하세요.
 
@@ -13157,7 +13208,7 @@ Show chat when rendering video
 Show clan above name plates
 == 이름표 위에 클랜 표시
 
-Show clan if war
+Show clan for enemies
 == 전쟁 시 클랜 표시
 
 Show clan name on nameplate
@@ -13195,9 +13246,6 @@ Show collision and weapon interaction
 
 Show Collision Borders
 == 충돌체 테두리 표시
-
-Show colors in spectator selection
-== 관전 선택에서 색상 표시
 
 Show combo hint when hooking or hammering player within 2 seconds
 == 2초 내에 연속으로 갈고리나 망치로 플레이어를 맞추면 콤보 알림 표시
@@ -13304,6 +13352,12 @@ Show enemy color in scoreboard
 Show enemy color in spectator menu
 == 관전 메뉴에서 적 색상 표시
 
+Show enemy colors in chat
+== 채팅에서의 색상
+
+Show enemy colors in scoreboard
+== 점수판에서의 색상
+
 Show enemy group players
 == 적 그룹 플레이어 표시
 
@@ -13387,6 +13441,9 @@ Show ghost
 
 Show ghost at unpredictable position of other players
 == 다른 플레이어의 예측 불가능한 위치에 유령 표시
+
+Show glowing, floating lyrics in the map. Each new line stays where it appears; previous lines rise and fade out
+== 맵에 빛나며 떠 있는 가사를 표시합니다. 새 가사는 나타난 위치에 고정되고 이전 가사는 위로 떠오르며 서서히 사라집니다
 
 Show Gores drown board
 == Gores 익사 보드 표시
@@ -14180,6 +14237,9 @@ Simple noise reduction
 Simple noise reduction strength
 == 간단한 노이즈 감소 강도
 
+Singing
+== 노래하기
+
 Size
 == 크기
 
@@ -14508,7 +14568,7 @@ Source language code for translation (auto=auto-detect)
 == 번역 소스 언어 코드 (auto=자동 감지)
 
 Space
-== 간격
+== 스페이스
 
 Spam protection: prevent spamming of team switching, chat, skin changes, emotes, votes
 == 스팸 방지: 팀 전환, 채팅, 스킨 변경, 이모트, 투표 스팸 방지
@@ -14626,6 +14686,27 @@ Spotify sp_dc cookie (from browser DevTools, long-lived)
 
 Spree
 == 연속 처치
+
+Spring
+== 스프링
+
+Spring damping
+== 스프링 감쇠
+
+Spring firmness; 100 stops without overshoot, lower bounces past
+== 스프링 안정 강도입니다. 100은 목표를 넘지 않고 멈추며, 작을수록 목표를 지나 튕깁니다
+
+Spring response
+== 스프링 응답
+
+Spring scroll feel damping ratio in percent; 100 stops without overshoot
+== 스프링 스크롤 감도의 감쇠비(퍼센트). 100이면 목표를 넘지 않고 멈춥니다
+
+Spring scroll feel response time in milliseconds; lower reaches the target sooner
+== 스프링 스크롤 감도의 응답 시간(밀리초). 작을수록 빨리 도달합니다
+
+Spring settle time; lower is snappier, higher feels heavier
+== 스프링이 목표에 안착하는 시간입니다. 작을수록 빠르게 반응하고, 클수록 묵직합니다
 
 SQL Server name for record table
 == 기록 테이블의 SQL Server 이름
@@ -14881,6 +14962,9 @@ Sun
 
 Super
 == 슈퍼
+
+Superellipse
+== 초타원
 
 Support is optional; nothing here changes client behavior.
 == 지원은 선택 사항이며, 이곳의 내용은 클라이언트 동작을 바꾸지 않습니다.
@@ -16025,9 +16109,6 @@ Total play time
 Total: %d save(s)
 == 총계：%d 개 저장됨
 
-Traditional
-== 번체
-
 Trail alpha
 == 트레일 투명도
 
@@ -16364,6 +16445,9 @@ UI color
 UI controller sens.
 == UI 컨트롤러 감도
 
+UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier
+== UI 모서리 곡선: 0 = 클래식 원호, 1 = 초타원, 2 = 5차 베지어, 3 = 원뿔 베지어
+
 UI icon color
 == UI 아이콘 색상
 
@@ -16696,6 +16780,9 @@ Use alternative world tick calculation making hooks behave as if all players hav
 
 Use animated title style (overrides qm_title_color_mode)
 == 칭호 애니메이션 스타일 사용 (qm_title_color_mode 덮어씀)
+
+Use cached or online AMLL community lyrics when the music source has no word timing
+== 음악 소스에 단어별 타이밍 정보가 없으면 캐시 또는 온라인의 AMLL 커뮤니티 가사를 사용
 
 Use colored skins for frozen tees
 == 얼어붙은 티에 컬러 스킨 사용
@@ -17309,6 +17396,9 @@ Wheel distance per tick; hold Alt for 3x
 Wheel label
 == 휠 표시 이름
 
+Wheel scroll feel: 0=Smooth (velocity carries over), 1=Original (each tick restarts), 2=Spring
+== 휠 감도: 0=부드럽게(속도 이어받기), 1=기본(매번 초기화), 2=스프링
+
 Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
 == 휠 한 눈금당 UI 픽셀 이동량. 설정 카드 페이지는 매 눈금마다 이 값의 12배만큼 이동
 
@@ -17501,6 +17591,9 @@ Word list file exceeds 2 MiB.
 Word list must be UTF-8 text without NUL characters.
 == 단어 목록은 NUL 문자 없는 UTF-8 텍스트여야 합니다.
 
+World lyrics
+== 월드 가사
+
 Write local console contents to a text file
 == 로컬 콘솔 내용을 텍스트 파일로 저장
 
@@ -17525,6 +17618,9 @@ Writing item %d failed
 Written %d items
 == %d개 항목 작성됨
 
+X
+== X
+
 x = DDNet CPU% / total CPU%
 == x = DDNet CPU% / 전체 CPU%
 
@@ -17533,6 +17629,9 @@ X alignment color
 
 X alignment hint with me
 == 나와 X 정렬 힌트
+
+Y
+== Y
 
 y = DDNet memory usage
 == y = DDNet 메모리 사용량

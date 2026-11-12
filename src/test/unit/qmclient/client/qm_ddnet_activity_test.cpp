@@ -1,8 +1,11 @@
 #include <base/str.h>
+
 #include <engine/shared/json.h>
+
 #include <game/client/components/qmclient/ddnet_activity.h>
 
 #include <gtest/gtest.h>
+
 #include <limits>
 
 namespace

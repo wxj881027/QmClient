@@ -368,6 +368,9 @@ A calm-play mode that hides the HUD, names, effects, chat and sounds you pick, s
 A crowded HUD hides the game, so start with one element and add more if needed.
 == Un HUD surchargé masque le jeu ; commencez par un élément et ajoutez-en au besoin.
 
+A damped spring drives the offset; reversing slows it before it turns
+== Un ressort amorti pilote le décalage ; en sens inverse, il ralentit avant de repartir
+
 A demo with this name already exists
 == Une démo avec ce nom existe déjà
 
@@ -592,9 +595,6 @@ Add friends by entering their name below or by clicking their name in the player
 
 Add function
 == Ajouter une fonction
-
-Add Group
-== Ajouter un groupe
 
 Add Item
 == Ajouter un élément
@@ -914,6 +914,9 @@ Always show song title and artist
 Always translate
 == Toujours traduire
 
+AMLL community lyrics
+== Paroles de la communauté AMLL
+
 Amount
 == Quantité
 
@@ -1126,6 +1129,9 @@ Are you sure that you want to quit?
 
 Are you sure that you want to remove '%s' from your war groups?
 == Êtes-vous sûr de vouloir supprimer « %s » de vos groupes ennemis ?
+
+Are you sure that you want to remove '%s' from your war list?
+== Retirer « %s » de la liste des ennemis ?
 
 Are you sure that you want to remove the clan '%s' from your friends list?
 == Êtes-vous sûr de vouloir supprimer le clan '%s' de votre liste d'amis ?
@@ -1586,9 +1592,6 @@ Axiom website
 Axis
 == Axe
 
-Back
-== Retour
-
 Backdrop blur
 == Flou d’arrière-plan
 
@@ -1955,6 +1958,9 @@ Bubble opacity
 Build the status text shown above Tees
 == Build the status text shown above Tees
 
+Built-in
+== Intégré
+
 Button - Disabled
 == Bouton - Désactivé
 
@@ -2089,6 +2095,12 @@ Cannot update public words. Previous words remain active.
 
 Cannot write the wiki file
 == Impossible d’écrire le fichier du wiki
+
+Capsule seam
+== Joint de capsule
+
+Capsule seam smoothing: ease the straight-to-cap curvature jump (0 = plain semicircular ends)
+== Adoucissement du joint de capsule : adoucit le saut de courbure entre le droit et l'extrémité (0 = extrémités en demi-cercle)
 
 Capture the flag
 == Capture du drapeau (CTF)
@@ -2483,20 +2495,11 @@ Clan: %s
 Classic
 == Classique
 
-Classic Easy
-== Classic Easy
-
-Classic Next
-== Classic Next
-
-Classic Nut
-== Classic Nut
+Classic arc
+== Arc classique
 
 Classic PowerShell
 == PowerShell classique
-
-Classic Pro
-== Classic Pro
 
 Clear
 == Effacer
@@ -2609,9 +2612,6 @@ Click to remove this player from your friends list.
 Click to select server. Double click to join your friend.
 == Cliquez pour sélectionner le serveur. Double-cliquez pour rejoindre un(e) ami(e).
 
-Click to set color
-== Cliquez pour définir la couleur
-
 Client
 == Client
 
@@ -2675,6 +2675,9 @@ Collapse
 Collapse console
 == Réduire la console
 
+Collect CP %d before teleporting
+== Activez le CP %d avant de vous téléporter
+
 Collects the remaining DDNet client preferences that do not belong to other cards.
 == Regroupe les autres préférences du client DDNet qui ne relèvent d'aucune autre carte.
 
@@ -2731,12 +2734,6 @@ Colors and opacity of the popup list that suggests chat commands and emoticons w
 
 Colors for chat command and emoji completion
 == Couleurs de la complétion des commandes et émojis du chat
-
-Colors in chat
-== Couleurs dans le tchat
-
-Colors in scoreboard
-== Couleurs dans le tableau des scores
 
 Colors of the hook collision line, in case of a possible collision with:
 == Couleurs de la ligne de guidage du crochet, en cas de collision possible avec :
@@ -2843,17 +2840,11 @@ Concurrent requests when refreshing server browser
 Config
 == Configuration
 
-Config Changes
-== Modifications de configuration
-
 Config directory
 == Répertoire de configuration
 
 Config Files
 == Fichiers de configuration
-
-Config Filters
-== Filtres de configuration
 
 Config version. Helps new client fix old config errors.
 == Version de la configuration. Aide le nouveau client à corriger les anciennes erreurs de configuration.
@@ -3014,6 +3005,9 @@ Confirm disconnect after game end (minutes, -1 off, 0 always)
 Confirm quit after game end (minutes, -1 off, 0 always)
 == Confirmer la sortie après la fin de la partie (minutes, -1 désactivé, 0 toujours)
 
+Conic Bezier
+== Bézier conique
+
 Connect address error
 == Erreur d'adresse de connexion
 
@@ -3080,6 +3074,9 @@ Connlimit: number of connections allowed per IP in a time period
 Connlimit: time window for IP connection count
 == Connlimit : fenêtre de temps pour le comptage des connexions IP
 
+Consecutive wheel ticks carry their velocity into one continuous glide
+== Les crans successifs reprennent la vitesse pour former un seul glissement continu
+
 Console
 == Console
 
@@ -3145,6 +3142,9 @@ Contents
 
 Continue anyway?
 == Continuer quand même ?
+
+Continuous-curvature UI corners (0 = classic arc, 100 = strongest)
+== Courbure continue des coins de l'interface (0 = arc classique, 100 = maximum)
 
 Contributors
 == Contributeurs
@@ -3251,6 +3251,12 @@ Copy skin ID
 Copy skin option color
 == Couleur des options de copie de skin
 
+Corner curvature
+== Courbure de coin
+
+Corner curve
+== Courbe de coin
+
 Could not add the player as a friend
 == Impossible d'ajouter le joueur comme ami
 
@@ -3350,8 +3356,14 @@ Country code
 Country flag for grouping this community (ISO 3166-1 numeric)
 == Drapeau du pays pour regrouper cette communauté (ISO 3166-1 numérique)
 
+CP %d
+== Point de contrôle %d
+
 CP border overlay alpha (0-100)
 == Alpha de l'entité de couverture de la bordure des points de contrôle (0-100)
+
+CP guide
+== Guidage CP
 
 CP opacity
 == Opacité des CP
@@ -4181,6 +4193,9 @@ Door Laser Outline Color
 Door laser outline color
 == Couleur du contour du laser de porte
 
+Double-tap the bound key within 400 ms to send the current lyric to public chat
+== Appuyez deux fois sur la touche assignée en l’espace de 400 ms pour envoyer la ligne actuelle des paroles dans le chat public
+
 Download
 == Télécharger
 
@@ -4600,6 +4615,9 @@ Edit the name and clan fields; the dummy keeps its own values.
 
 Edit this custom command on the Bind Wheel page.
 == Modifiez cette commande personnalisée sur la page Roue de commandes.
+
+Edit title style
+== Modifier le style du titre
 
 Edit touch controls
 == Modifier les contrôles tactiles
@@ -5159,6 +5177,9 @@ Encoder:
 End (s)
 == Fin (s)
 
+End bounce
+== Rebond aux extrémités
+
 End marker of replay slice
 == Marqueur de fin de segment de rediffusion
 
@@ -5234,6 +5255,9 @@ Entity wall outline opacity
 entity_bg (Workshop)
 == entity_bg (Workshop)
 
+Entries in it will fall back to none.
+== Ses entrées passeront à none.
+
 Entries with NVENC, AMF, Quick Sync or VideoToolbox use the GPU encoding chip and are several times faster. Only encoders that really work on this machine are listed.
 == Les entrées NVENC, AMF, Quick Sync ou VideoToolbox utilisent la puce d'encodage du GPU et vont plusieurs fois plus vite. Seuls les encodeurs réellement fonctionnels sur cette machine sont listés.
 
@@ -5279,6 +5303,9 @@ Event
 Every click applies the skin at once, so star the ones you like before you start browsing.
 == Chaque clic applique le skin aussitôt ; mets en favori ceux qui te plaisent avant de parcourir.
 
+Every wheel tick restarts from rest, matching the original client
+== Chaque cran de molette repart de l'arrêt, comme dans le client d'origine
+
 Exact bound nickname
 == Pseudo exact associé
 
@@ -5302,6 +5329,9 @@ Exchange (ProRes 422 HQ / MOV)
 
 Exclude
 == Exclure
+
+exec
+== exec
 
 Execute before connecting
 == Exécuter avant la connexion
@@ -5861,9 +5891,6 @@ Format player names after a finish
 Forms
 == Formulaires
 
-Found %d global cards
-== %d cartes globales trouvées
-
 Four IP addresses are already online
 == 4 adresses IP sont déjà connectées
 
@@ -6398,6 +6425,9 @@ Ground jump
 Group name
 == Nom du groupe
 
+Group names are limited to 16 characters
+== Les noms de groupe sont limités à 16 caractères
+
 Groups input helpers: fast input, automatic margin, sub-tick aiming and cursor behavior.
 == Regroupe les aides à la saisie : entrée rapide, marge automatique, visée par sous-tic et comportement du curseur.
 
@@ -6412,6 +6442,9 @@ Guide line color
 
 Guide lines are computed locally and do not guarantee that a hook will connect.
 == Les lignes guides sont calculées localement et ne garantissent pas que le grappin accroche.
+
+Guide to nearby uncollected teleport checkpoints and warn near checkpoint teleporters
+== Guider vers les points de contrôle de téléportation proches non activés et avertir près des entrées de retour
 
 Gun fire
 == Tir de pistolet
@@ -6722,6 +6755,9 @@ Hold gun higher like TW 0.6.1 and earlier
 Hold left click for free camera
 == Maintenez le clic gauche pour la caméra libre
 
+Hold still
+== Figer
+
 Hold the wheel key to see the selection move; release it to run the highlighted slot.
 == Maintiens la touche de la roue pour déplacer la sélection et relâche-la pour exécuter l'emplacement surligné.
 
@@ -6808,6 +6844,9 @@ Hostname of DNSBL provider for IP verification
 
 Hover for tooltip
 == Survoler pour l'infobulle
+
+How far a wheel or drag can push past an end, in UI pixels; 0 disables
+== Distance dont la molette ou le glissement peut dépasser une extrémité, en pixels UI ; 0 désactive
 
 How far the plasma gun tracks a tee
 == Distance de suivi du tee par le pistolet à plasma
@@ -7499,6 +7538,9 @@ Keep unsent message on chat close
 Keep vote window open after voting
 == Garder la fenêtre de vote ouverte après avoir voté
 
+Key
+== Touche
+
 Key binds
 == Touches de raccourci
 
@@ -7783,9 +7825,6 @@ Leave empty to disable
 
 Leave empty to join public room
 == Laissez vide pour rejoindre une salle publique
-
-Leave empty to show everyone
-== Laissez vide pour afficher tous les joueurs
 
 Leave empty to use default prompt
 == Laissez vide pour utiliser l'invite par défaut
@@ -8283,7 +8322,7 @@ Map
 == Carte
 
 Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
-== Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
+== Masque de bits du filtre de catégories de difficulté du navigateur de cartes (bits 0-14, voir map_vote_difficulty.h)
 
 Map browser difficulty star filter bitmask (bits 1-5)
 == Masque de bits du filtre d'étoiles de difficulté du navigateur de cartes (bits 1-5)
@@ -8745,7 +8784,7 @@ Mixed
 == Mixte
 
 Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
-== Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+== Mobile uniquement : copier le rapport de crash dans Downloads/QmClient au prochain lancement (0 = le garder dans le bac à sable de l'application)
 
 Mobile spectator camera: 0=joystick pad, 1=drag the view
 == Caméra spectateur mobile : 0=joystick, 1=glisser la vue
@@ -8810,6 +8849,9 @@ Mouse speed for aiming and for menus, and how far your cursor may travel from th
 Move a friend category to a position
 == Déplacer une catégorie d'amis à une position
 
+Move down
+== Descendre
+
 Move left
 == Déplacer à gauche
 
@@ -8824,6 +8866,9 @@ Move the free camera, then add a keyframe at the current demo time.
 
 Move to category
 == Déplacer vers la catégorie
+
+Move up
+== Monter
 
 Movement
 == Mouvement
@@ -9164,6 +9209,9 @@ New features
 New features (unread)
 == Nouveautés (non lues)
 
+New group
+== Nouveau groupe
+
 New IME
 == Nouvel IME
 
@@ -9308,6 +9356,9 @@ No downloadable portable package for this version
 No empty team left.
 == Il ne reste plus d'équipe vide.
 
+No entries yet
+== Aucune entrée pour l'instant
+
 No favorite maps yet
 == Aucune carte favorite pour le moment
 
@@ -9385,6 +9436,9 @@ No player nearby
 
 No player with this name found.
 == Aucun joueur avec ce nom trouvé.
+
+No players match
+== Aucun joueur correspondant
 
 No players match these filters
 == Aucun joueur ne correspond à ces filtres
@@ -9650,6 +9704,9 @@ On
 One key can hold several commands, so remove single entries under "Bound functions" instead of clearing the key.
 == Une touche peut porter plusieurs commandes ; supprime les entrées une à une dans Fonctions assignées plutôt que de vider la touche.
 
+Online
+== En ligne
+
 Online friends
 == Amis en ligne
 
@@ -9884,9 +9941,6 @@ Original only
 Original options
 == Options d’origine
 
-Original scroll feel
-== Défilement d’origine
-
 Other
 == Autre
 
@@ -9979,9 +10033,6 @@ Override Entry
 
 Override Freeze Tile Entity Alpha (0-100)
 == Alpha des entités pour les tuiles gelées (0-100)
-
-Override Group
-== Remplacer le groupe
 
 Override location for ping estimation, available: auto, af, as, as:cn, eu, na, oc, sa (Automatic, Africa, Asia, China, Europe, North America, Oceania/Australia, South America
 == Remplacer la région d'estimation du Ping, choix disponibles : auto, af, as, as:cn, eu, na, oc, sa (Automatique, Afrique, Asie, Chine, Europe, Amérique du Nord, Océanie/Australie, Amérique du Sud)
@@ -11183,6 +11234,9 @@ Queue preset: %s
 Quick action menu for players
 == Menu d'action rapide pour les joueurs
 
+Quintic Bezier
+== Bézier quintique
+
 Quit
 == Quitter
 
@@ -11729,6 +11783,9 @@ Rename demo
 Rename folder
 == Renommer le dossier
 
+Rename group
+== Renommer le groupe
+
 Rename queue
 == File d'attente de renommage
 
@@ -12050,9 +12107,6 @@ Restart
 Restart in x seconds (0 = abort)
 == Redémarrer dans x secondes (0 = annuler)
 
-Restart smooth scrolling on every wheel tick
-== relance le défilement fluide à chaque cran de la molette
-
 Restart the client
 == Redémarrer le client
 
@@ -12073,9 +12127,6 @@ Restore old single-segment hook collision line behavior
 
 Restore recommended
 == Restaurer les valeurs recommandées
-
-Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
-== Rétablir le défilement d’origine : chaque cran relance le défilement fluide sans conserver la vitesse
 
 Restored the built-in content
 == Contenu intégré restauré
@@ -12106,6 +12157,9 @@ Reverse gradient colors
 
 Reverse IME gradient colors
 == Inverser les couleurs du dégradé (IME)
+
+Reverse order
+== Ordre inversé
 
 Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
 == Inverser le zoom instantanément avec la touche opposée (0=garder le zoom fluide d'origine)
@@ -12184,6 +12238,9 @@ Rows here usually come from old configs, so test each command before you rely on
 
 RTT
 == RTT
+
+Rubber-band distance in UI pixels when the wheel or a drag pushes past an end (0=off); the content springs back after scrolling stops
+== Distance d'effet élastique en pixels UI quand la molette ou un glissement dépasse une extrémité (0=désactivé) ; le contenu revient à l'arrêt
 
 Rule line 1.
 == Ligne de règle 1.
@@ -12428,9 +12485,6 @@ Scoreboard
 Scoreboard cursor
 == Curseur du tableau des scores
 
-Scoreboard filter: only show players whose name or clan contains this text
-== Filtre du tableau : n'afficher que les joueurs dont le nom ou le clan contient ce texte
-
 Scoreboard playtime
 == Temps de jeu dans le tableau
 
@@ -12502,6 +12556,9 @@ Screenshots
 
 Screenshots directory
 == Répertoire des captures d'écran
+
+Scroll feel
+== Sensation de défilement
 
 Scroll mode
 == Mode de défilement
@@ -12725,8 +12782,8 @@ Send sampling and token limit parameters
 Send specified command to rcon
 == Envoyer la commande spécifiée au rcon
 
-Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines
-== Envoyer trois lignes consécutives des paroles dans le chat public à des intervalles aléatoires de 90 à 270 secondes, avec 3 secondes entre les lignes
+Send three consecutive lyrics to public chat at random intervals of 360 to 1200 seconds, with 3 seconds between lines. Successfully sending a lyric with Singing cancels pending humming lines and restarts the random wait
+== Envoyer trois lignes consécutives des paroles dans le chat public à des intervalles aléatoires de 360 à 1200 secondes, avec 3 secondes entre les lignes. L’envoi réussi d’une ligne avec « Chanter » annule les lignes restantes de « Fredonner » et relance une nouvelle attente aléatoire
 
 Send to
 == Envoyer à
@@ -12814,15 +12871,6 @@ Server hostname (0.7 only)
 
 Server info
 == Informations du serveur
-
-Server information lower left card width (per mille)
-== Largeur de la carte inférieure gauche des informations du serveur (pour mille)
-
-Server information upper left card width (per mille)
-== Largeur de la carte supérieure gauche des informations du serveur (pour mille)
-
-Server information upper row height (per mille)
-== Hauteur de la rangée supérieure des informations du serveur (pour mille)
 
 Server kick/spec votes are no longer actively moderated.
 == Les votes d'exclusion/mise en spectateur du serveur ne sont plus modérés activement.
@@ -13022,6 +13070,9 @@ Settings page opacity
 Settings page right panel opacity
 == Opacité du panneau droit de la page des paramètres
 
+Settings prewarm default migration done
+== Migration de la valeur par défaut du préchauffage des paramètres terminée
+
 Settings, binds, profiles, chat binds and the war list are included. Select additional cfg files below.
 == Les paramètres, touches assignées, profils de skin, touches de discussion et liste de guerre sont inclus. Sélectionnez les fichiers cfg supplémentaires ci-dessous.
 
@@ -13157,7 +13208,7 @@ Show chat when rendering video
 Show clan above name plates
 == Afficher le clan au-dessus des plaques de nom
 
-Show clan if war
+Show clan for enemies
 == Afficher le clan si ennemi
 
 Show clan name on nameplate
@@ -13195,9 +13246,6 @@ Show collision and weapon interaction
 
 Show Collision Borders
 == Afficher les bordures des volumes de collision
-
-Show colors in spectator selection
-== Afficher les couleurs dans la sélection de spectateur
 
 Show combo hint when hooking or hammering player within 2 seconds
 == Afficher un indicateur de combo lorsque vous touchez ou martelez un joueur deux fois en 2 secondes
@@ -13304,6 +13352,12 @@ Show enemy color in scoreboard
 Show enemy color in spectator menu
 == Afficher la couleur ennemie dans le menu spectateur
 
+Show enemy colors in chat
+== Couleurs dans le tchat
+
+Show enemy colors in scoreboard
+== Couleurs dans le tableau des scores
+
 Show enemy group players
 == Afficher les joueurs du groupe ennemi
 
@@ -13387,6 +13441,9 @@ Show ghost
 
 Show ghost at unpredictable position of other players
 == Afficher un fantôme à la position imprévisible des autres joueurs
+
+Show glowing, floating lyrics in the map. Each new line stays where it appears; previous lines rise and fade out
+== Afficher des paroles lumineuses et flottantes sur la carte. Chaque nouvelle ligne reste à l’endroit où elle apparaît ; les précédentes montent et s’estompent
 
 Show Gores drown board
 == Afficher le tableau des noyades Gores
@@ -14180,6 +14237,9 @@ Simple noise reduction
 Simple noise reduction strength
 == Force de réduction de bruit simple
 
+Singing
+== Chanter
+
 Size
 == Taille
 
@@ -14627,6 +14687,27 @@ Spotify sp_dc cookie (from browser DevTools, long-lived)
 Spree
 == Série
 
+Spring
+== Ressort
+
+Spring damping
+== Amortissement du ressort
+
+Spring firmness; 100 stops without overshoot, lower bounces past
+== Fermeté du ressort ; 100 s'arrête sans dépasser, plus faible rebondit au-delà de la cible
+
+Spring response
+== Réponse du ressort
+
+Spring scroll feel damping ratio in percent; 100 stops without overshoot
+== Taux d'amortissement du défilement à ressort en pourcentage ; 100 s'arrête sans dépasser
+
+Spring scroll feel response time in milliseconds; lower reaches the target sooner
+== Temps de réponse du défilement à ressort en millisecondes ; plus court arrive plus vite
+
+Spring settle time; lower is snappier, higher feels heavier
+== Temps de stabilisation du ressort ; plus court réagit plus vite, plus long paraît plus lourd
+
 SQL Server name for record table
 == Nom du serveur SQL pour la table d'enregistrement
 
@@ -14881,6 +14962,9 @@ Sun
 
 Super
 == Super | Référence chinois simplifié : 无敌
+
+Superellipse
+== Superellipse
 
 Support is optional; nothing here changes client behavior.
 == Le soutien est facultatif ; rien ici ne change le comportement du client.
@@ -16025,9 +16109,6 @@ Total play time
 Total: %d save(s)
 == Total : %d save(s)
 
-Traditional
-== Traditionnel
-
 Trail alpha
 == Alpha de la traînée
 
@@ -16364,6 +16445,9 @@ UI color
 UI controller sens.
 == Sensibilité manette (interface)
 
+UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier
+== Courbe de coin de l'interface : 0 = arc classique, 1 = superellipse, 2 = Bézier quintique, 3 = Bézier conique
+
 UI icon color
 == Couleur des icônes de l'interface
 
@@ -16696,6 +16780,9 @@ Use alternative world tick calculation making hooks behave as if all players hav
 
 Use animated title style (overrides qm_title_color_mode)
 == Utiliser le style de titre animé (remplace qm_title_color_mode)
+
+Use cached or online AMLL community lyrics when the music source has no word timing
+== Utiliser les paroles de la communauté AMLL en cache ou en ligne lorsque la source musicale ne fournit pas de synchronisation mot par mot
 
 Use colored skins for frozen tees
 == Utiliser des skins colorés pour les tees gelés
@@ -17309,6 +17396,9 @@ Wheel distance per tick; hold Alt for 3x
 Wheel label
 == Nom dans la roue
 
+Wheel scroll feel: 0=Smooth (velocity carries over), 1=Original (each tick restarts), 2=Spring
+== Sensation de la molette : 0=Doux (vitesse reprise), 1=Original (réinitialisé à chaque cran), 2=Ressort
+
 Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
 == Pas de molette en pixels d’interface ; les pages de réglages défilent de 12 fois cette valeur par cran
 
@@ -17501,6 +17591,9 @@ Word list file exceeds 2 MiB.
 Word list must be UTF-8 text without NUL characters.
 == La liste doit être un texte UTF-8 sans caractères NUL.
 
+World lyrics
+== Paroles dans le monde
+
 Write local console contents to a text file
 == Écrire le contenu de la console locale dans un fichier texte
 
@@ -17525,6 +17618,9 @@ Writing item %d failed
 Written %d items
 == %d éléments écrits
 
+X
+== X
+
 x = DDNet CPU% / total CPU%
 == x = DDNet CPU% / CPU total%
 
@@ -17533,6 +17629,9 @@ X alignment color
 
 X alignment hint with me
 == Indice d'alignement X avec moi
+
+Y
+== Y
 
 y = DDNet memory usage
 == y = Utilisation mémoire DDNet

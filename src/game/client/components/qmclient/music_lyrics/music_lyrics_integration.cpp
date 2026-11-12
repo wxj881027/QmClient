@@ -1,5 +1,6 @@
 #include "music_lyrics_integration.h"
 
+#include "music_lyrics_community_format.h"
 #include "qm_soda_lyric_file.h"
 
 #include <base/color.h>
@@ -111,6 +112,7 @@ struct CMusicLyricsIntegration::SImpl
 	// 歌词数据。
 	QmMusicLyrics::SLyricsData m_Lyrics;
 	bool m_HasLyrics = false;
+	bool m_HasWordTiming = false;
 	std::string m_LoadedFilePath;
 	uint64_t m_LoadedGeneration = 0;
 	uint64_t m_SongId = 0;
@@ -279,6 +281,7 @@ void CMusicLyricsIntegration::ProcessLyricLoadJob()
 	if(Result.m_Parsed && Result.m_Lyrics.HasLyrics())
 	{
 		m_pImpl->m_Lyrics = std::move(Result.m_Lyrics);
+		m_pImpl->m_HasWordTiming = QmMusicLyrics::HasWordTiming(m_pImpl->m_Lyrics);
 		m_pImpl->m_HasLyrics = true;
 		m_pImpl->m_ActiveLyrics = true;
 		m_pImpl->m_NextLyricLoadRetryTick = 0;
@@ -452,12 +455,17 @@ bool CMusicLyricsIntegration::RunKugouSetup(bool Restore)
 
 QmMusicLyrics::SSourceSnapshot CMusicLyricsIntegration::LyricsSnapshot() const
 {
-	if(!m_pImpl->m_HasSong || !m_pImpl->m_HasLyrics)
+	if(!m_pImpl->m_HasSong)
 		return {};
+	if(!m_pImpl->m_HasLyrics)
+		return {m_pImpl->m_SongId, m_pImpl->m_LoadedGeneration, m_pImpl->m_SongProcessId, false, nullptr, {}, {},
+			-1, -1, m_pImpl->m_PositionValid ? m_pImpl->m_PositionMs : -1, m_pImpl->m_MediaId, false};
 	const auto Selected = (m_pImpl->m_Source == 2 || m_pImpl->m_Source == 3) ?
-		NeteaseLyrics::SelectLatestStartedLine(m_pImpl->m_Lyrics.m_Timeline, m_pImpl->m_PositionMs) :
-		NeteaseLyrics::SelectCurrentLine(m_pImpl->m_Lyrics.m_Timeline, m_pImpl->m_PositionMs);
+				      NeteaseLyrics::SelectLatestStartedLine(m_pImpl->m_Lyrics.m_Timeline, m_pImpl->m_PositionMs) :
+				      NeteaseLyrics::SelectCurrentLine(m_pImpl->m_Lyrics.m_Timeline, m_pImpl->m_PositionMs);
 	return {m_pImpl->m_SongId, m_pImpl->m_LoadedGeneration, m_pImpl->m_SongProcessId,
 		m_pImpl->m_ActiveLyrics, &m_pImpl->m_Lyrics, m_pImpl->m_CurrentLyric,
-		m_pImpl->m_PositionValid ? QmMusicLyrics::TranslationAt(m_pImpl->m_Lyrics, Selected.m_Index) : std::string_view()};
+		m_pImpl->m_PositionValid ? QmMusicLyrics::TranslationAt(m_pImpl->m_Lyrics, Selected.m_Index) : std::string_view(),
+		Selected.m_pLine != nullptr ? Selected.m_pLine->m_StartMs : -1,
+		Selected.m_pLine != nullptr ? Selected.m_pLine->m_EndMs : -1, m_pImpl->m_PositionValid ? m_pImpl->m_PositionMs : -1, m_pImpl->m_MediaId, m_pImpl->m_HasWordTiming};
 }

@@ -11,6 +11,9 @@ set "ROOT=%~dp0.."
 if not defined JOBS set JOBS=4
 cd /d "%ROOT%" || exit /b 1
 
+rem 先修复音频设备属性读取，三种 Windows 架构共用同一份实现。
+cmake "-DSDL3_SOURCE_DIR=%SRC%" -P "%ROOT%/cmake/PatchSDL3WindowsAudio.cmake" || exit /b 1
+
 set "VC="
 for /f "usebackq delims=" %%I in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -find Common7\Tools\VsDevCmd.bat`) do set "VC=%%I"
 if not defined VC (
