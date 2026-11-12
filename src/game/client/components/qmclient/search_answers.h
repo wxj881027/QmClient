@@ -27,7 +27,8 @@ namespace qm_search_answers
 	// 问答表随客户端发布，返回的条目地址在进程内保持有效。
 	const std::vector<SAnswer> &Answers();
 	SResult Search(const char *pQuery);
-
+	// 查询及静态索引完整准备后才替换输出；资源不足时保留原结果供后续重试。
+	bool TrySearch(const char *pQuery, SResult &Out);
 }
 
 #endif

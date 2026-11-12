@@ -3883,6 +3883,8 @@ if(CLIENT)
     components/qmclient/settings_asset_search_view.h
     components/qmclient/search_answers.cpp
     components/qmclient/search_answers.h
+    components/qmclient/settings_global_search_cache.cpp
+    components/qmclient/settings_global_search_cache.h
     components/qmclient/screenshot_clipboard.cpp
     components/qmclient/screenshot_clipboard.h
     components/qmclient/screenshot_image_job.cpp
@@ -6510,6 +6512,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/ui/qm_spectator_hud_text_test.cpp
       src/test/integration/qmclient/ui/qm_icon_text_test.cpp
       src/test/integration/qmclient/ui/qm_scaled_label_test.cpp
+      src/test/integration/qmclient/ui/qm_search_answer_card_test.cpp
       src/test/integration/qmclient/ui/qm_surface_text_test.cpp
       src/test/integration/qmclient/ui/qm_theme_selection_test.cpp
       src/test/integration/qmclient/ui/qm_ui_element_lifetime_test.cpp
@@ -6537,6 +6540,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/game/client/QmUi/QmCardRegistry.cpp
       src/game/client/QmUi/QmCardWiki.cpp
       src/game/client/QmUi/cards/QmCardCatalogSearch.cpp
+      src/game/client/QmUi/cards/QmSearchAnswerCard.cpp
+      src/game/client/components/qmclient/search_answers.cpp
       src/game/client/QmUi/QmCardWikiPanel.cpp
       src/game/client/QmUi/QmWikiDocs.cpp
       src/game/client/QmUi/QmWikiEditor.cpp
@@ -6673,6 +6678,13 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/client/qm_hud_editor_visible_frame_allocation_test.cpp
       src/test/integration/qmclient/settings/settings_bind_cache_allocation_test.cpp
       src/test/integration/qmclient/settings/settings_card_collapse_allocation_test.cpp
+      src/test/integration/qmclient/settings/settings_global_search_cache_test.cpp
+      src/test/integration/qmclient/settings/qm_card_search_cache_allocation_test.cpp
+      src/test/unit/qmclient/settings/qm_search_answers_allocation_test.cpp
+      src/test/unit/qmclient/ui/qm_card_order_model_swap_test.cpp
+      src/test/unit/qmclient/ui/settings_card_definitions_cache_test.cpp
+      src/game/client/components/qmclient/search_answers.cpp
+      src/game/client/components/qmclient/settings_global_search_cache.cpp
       src/game/client/QmUi/SettingsCardCollapseState.cpp
       src/game/client/QmUi/QmModuleLayoutAdapter.cpp
       src/game/client/QmUi/QmCardOrderModel.cpp

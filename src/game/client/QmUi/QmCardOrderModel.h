@@ -38,11 +38,13 @@ namespace qm_card_order
 	{
 	public:
 		void SetEntries(std::vector<SEntry> Entries);
+		// 与完整候选交换内容而不分配；两个模型各自推进版本，保留条目与 tab 的所有权配对。
+		void SwapContent(CModel &Other) noexcept;
 		int Count() const { return (int)m_vEntries.size(); }
 		const SEntry &Entry(int Index) const { return m_vEntries[Index]; }
-		// 单调布局版本：仅在 tab/column/order 或 entry 集合改变时递增，供渲染投影缓存失效。
+		// 单调布局版本：布局改变或 entry 内容发布时递增，供渲染投影缓存失效。
 		uint64_t LayoutRevision() const { return m_LayoutRevision; }
-		// stableId 到 state index 的注册表版本。SetEntries/Parse 重新建表时递增，
+		// stableId 到 state index 的注册表版本。SetEntries/Parse 建表或 SwapContent 发布时递增，
 		// 但 Move 只改变布局，不改变 state index，避免打断拖拽和布局动画。
 		uint64_t StateIndexRevision() const { return m_StateIndexRevision; }
 

@@ -13,7 +13,11 @@
 #include <game/client/components/qmclient/search_answers.h>
 
 #include <algorithm>
+#include <new>
+#include <stdexcept>
+#include <type_traits>
 #include <unordered_map>
+#include <utility>
 
 namespace
 {
@@ -27,30 +31,51 @@ namespace
 	};
 }
 
-void qm_card_catalog::BuildSearchAnswerCard(const SSearchAnswerContext &Ctx, const qm_search_answers::SResult &Result, bool ReadOnly, const SSettingsContentMetrics &Metrics, const std::function<void(const char *)> &SelectQuestion, SSettingsCardDefinition &Out)
+struct qm_card_catalog::SSearchAnswerCardState
 {
-	Out.m_Spec = {SEARCH_ANSWER_CARD_ID, "常见问题", "输入常见问法可以查看说明，并在下方直接调整相关设置。"};
-	Out.m_RenderMeasured = [Ctx, Result, ReadOnly, Metrics, SelectQuestion](CUIRect &Content) {
+	std::unordered_map<const qm_search_answers::SAnswer *, SAnswerButtons> m_Buttons;
+};
+
+std::shared_ptr<qm_card_catalog::SSearchAnswerCardState> qm_card_catalog::CreateSearchAnswerCardState()
+{
+	return std::make_shared<SSearchAnswerCardState>();
+}
+
+void qm_card_catalog::BuildSearchAnswerCard(const SSearchAnswerContext &Ctx, const qm_search_answers::SResult &Result, bool ReadOnly, const SSettingsContentMetrics &Metrics, const std::function<void(const char *)> &SelectQuestion, SSettingsCardDefinition &Out, const std::shared_ptr<SSearchAnswerCardState> &State)
+{
+	const auto pState = State ? State : [] {
+		static const auto s_pState = CreateSearchAnswerCardState();
+		return s_pState;
+	}();
+	// 声明、输入和绘制只借用已准备的节点；重排不改变按钮身份。
+	if(Result.m_pAnswer != nullptr)
+		pState->m_Buttons.try_emplace(Result.m_pAnswer);
+	else
+		for(const auto *pCandidate : Result.m_vCandidates)
+			pState->m_Buttons.try_emplace(pCandidate);
+
+	const std::function<void(const CUIRect &, const char *)> DrawText = [Ctx, Metrics](const CUIRect &Rect, const char *pText) {
+		SLabelProperties Props;
+		Props.m_MaxWidth = Rect.w;
+		Props.m_EnableWidthCheck = false;
+		Ctx.m_pUi->DoLabel(&Rect, pText, Metrics.m_BodySize, TEXTALIGN_ML, Props);
+	};
+	const CSettingsContentLayoutCache::FMeasureControlText MeasureButton = [pText = Ctx.m_pTextRender](const SSettingsContentRowDeclaration &Declaration, float Width) {
+		return pText->TextBoundingBox(Declaration.m_FontSize, Declaration.m_Text.c_str(), -1, std::max(1.0f, Width - 8.0f)).m_H + 8.0f;
+	};
+	SSettingsCardDefinition Candidate;
+	Candidate.m_Spec = {SEARCH_ANSWER_CARD_ID, "常见问题", "输入常见问法可以查看说明，并在下方直接调整相关设置。"};
+	Candidate.m_RenderMeasured = [Ctx, Result, ReadOnly, Metrics, SelectQuestion, pState, DrawText, MeasureButton](CUIRect &Content) {
 		// 条目地址属于静态问答表；按钮按条目区分，候选重排不会复用其他问题的按下状态。
-		static std::unordered_map<const qm_search_answers::SAnswer *, SAnswerButtons> s_Buttons;
 		CSettingsContentLayoutFlow Flow(Content);
 		const bool Interactive = Flow.Input() && !ReadOnly && !Ctx.m_pUi->RenderOnly() && !Ctx.m_pUi->MeasurementOnly() && !Ctx.m_pUi->BackgroundRender() && !Ctx.m_pUi->IsPopupOpen();
-		const auto DrawText = [Ctx, Metrics](const CUIRect &Rect, const char *pText) {
-			SLabelProperties Props;
-			Props.m_MaxWidth = Rect.w;
-			Props.m_EnableWidthCheck = false;
-			Ctx.m_pUi->DoLabel(&Rect, pText, Metrics.m_BodySize, TEXTALIGN_ML, Props);
-		};
 		const auto Text = [&](const char *pId, const char *pText) {
 			Flow.Text(pId, pText, 0, Metrics.m_BodySize, Metrics.m_LineSpacing, {}, DrawText, Metrics.m_LineHeight);
 		};
 		const auto Button = [&](const char *pId, const char *pLabel, CButtonContainer &Id) {
 			CUIRect Row;
 			bool Clicked = false;
-			if(Flow.MeasuredControl(pId, pLabel, Metrics.m_ButtonHeight, Metrics.m_BodySize, 0, 0, 4.0f, Row,
-				   [Ctx](const SSettingsContentRowDeclaration &Declaration, float Width) {
-					   return Ctx.m_pTextRender->TextBoundingBox(Declaration.m_FontSize, Declaration.m_Text.c_str(), -1, std::max(1.0f, Width - 8.0f)).m_H + 8.0f;
-				   }))
+			if(Flow.MeasuredControl(pId, pLabel, Metrics.m_ButtonHeight, Metrics.m_BodySize, 0, 0, 4.0f, Row, MeasureButton))
 			{
 				if(Interactive)
 					Clicked = Ctx.m_pUi->DoButtonLogic(&Id, 0, &Row, BUTTONFLAG_LEFT);
@@ -70,14 +95,14 @@ void qm_card_catalog::BuildSearchAnswerCard(const SSearchAnswerContext &Ctx, con
 			Text("answer-choose", "你可能想问以下问题，点击查看答案：");
 			for(const auto *pCandidate : Result.m_vCandidates)
 			{
-				if(Button(pCandidate->m_pId, pCandidate->m_pQuestion, s_Buttons[pCandidate].m_Select))
+				if(Button(pCandidate->m_pId, pCandidate->m_pQuestion, pState->m_Buttons.find(pCandidate)->second.m_Select))
 					SelectQuestion(pCandidate->m_pQuestion);
 			}
 			return;
 		}
 
 		const auto *pAnswer = Result.m_pAnswer;
-		auto &Buttons = s_Buttons[pAnswer];
+		auto &Buttons = pState->m_Buttons.find(pAnswer)->second;
 		Text("answer-question", pAnswer->m_pQuestion);
 		Text("answer-body", pAnswer->m_pAnswer);
 		if(Button("answer-copy", "复制答案", Buttons.m_CopyAnswer))
@@ -96,17 +121,31 @@ void qm_card_catalog::BuildSearchAnswerCard(const SSearchAnswerContext &Ctx, con
 		}
 		if(pAnswer->m_pDirectory != nullptr && Button("answer-open-directory", "打开目录", Buttons.m_OpenDirectory))
 		{
-			if(Ctx.m_pStorage->FolderExists(pAnswer->m_pDirectory, IStorage::TYPE_SAVE))
+			try
 			{
-				char aPath[IO_MAX_PATH_LENGTH];
-				Ctx.m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, pAnswer->m_pDirectory, aPath, sizeof(aPath));
-				Buttons.m_pStatus = Ctx.m_pClient->ViewFile(aPath) ? "已请求打开目录" : "无法打开目录";
+				if(Ctx.m_pStorage->FolderExists(pAnswer->m_pDirectory, IStorage::TYPE_SAVE))
+				{
+					char aPath[IO_MAX_PATH_LENGTH];
+					Ctx.m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, pAnswer->m_pDirectory, aPath, sizeof(aPath));
+					Buttons.m_pStatus = Ctx.m_pClient->ViewFile(aPath) ? "已请求打开目录" : "无法打开目录";
+				}
+				else
+					Buttons.m_pStatus = "目录尚未生成，请先按说明使用对应功能";
 			}
-			else
-				Buttons.m_pStatus = "目录尚未生成，请先按说明使用对应功能";
+			catch(const std::bad_alloc &)
+			{
+				// 只处理已知资源失败，不重放已经请求过的系统操作。
+				Buttons.m_pStatus = "无法打开目录";
+			}
+			catch(const std::length_error &)
+			{
+				Buttons.m_pStatus = "无法打开目录";
+			}
 		}
 		if(Buttons.m_pStatus[0] != '\0')
 			Text("answer-status", Buttons.m_pStatus);
 	};
-	qm_settings_content::UseDeclaredContent(Out, Ctx.m_pUi, Ctx.m_pTextRender);
+	qm_settings_content::UseDeclaredContent(Candidate, Ctx.m_pUi, Ctx.m_pTextRender);
+	static_assert(std::is_nothrow_move_assignable_v<SSettingsCardDefinition>);
+	Out = std::move(Candidate);
 }

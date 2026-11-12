@@ -469,20 +469,19 @@ namespace qm_card_registry
 		static size_t s_LanguageCount = 0;
 		const std::vector<SCardDefault> &vDefaults = DefaultsTable();
 		const char *pLanguage = g_Config.m_ClLanguagefile;
-		const std::string Language = pLanguage != nullptr ? pLanguage : "";
+		std::string Language = pLanguage != nullptr ? pLanguage : "";
 		const size_t LanguageCount = g_Localization.Languages().size();
 		if(s_Language == Language && s_LanguageCount == LanguageCount && s_vHaystacks.size() == vDefaults.size())
 			return s_vHaystacks;
 
-		s_vHaystacks.clear();
-		s_vHaystacks.resize(vDefaults.size());
+		std::vector<std::string> vHaystacks(vDefaults.size());
 		for(size_t CardIndex = 0; CardIndex < vDefaults.size(); ++CardIndex)
 		{
 			const SCardDefault &Default = vDefaults[CardIndex];
 			const qm_card_registry::SCardSettingSearch *pSettings = nullptr;
 			size_t SettingCount = 0;
 			qm_card_catalog::FindSearchMetadata(Default.m_pStableId, &pSettings, &SettingCount);
-			std::string &Haystack = s_vHaystacks[CardIndex];
+			std::string &Haystack = vHaystacks[CardIndex];
 			AppendLowerUtf8(Haystack, Default.m_pTitle);
 			AppendLowerUtf8(Haystack, Default.m_pTitle != nullptr ? Localize(Default.m_pTitle) : nullptr);
 			AppendLowerUtf8(Haystack, Default.m_pSearchKeywords);
@@ -497,7 +496,9 @@ namespace qm_card_registry
 				AppendLowerUtf8(Haystack, Setting.m_pAliases);
 			}
 		}
-		s_Language = Language;
+		// 大小相同不代表内容完整，键与整份检索文本必须一起提交。
+		s_vHaystacks.swap(vHaystacks);
+		s_Language.swap(Language);
 		s_LanguageCount = LanguageCount;
 		return s_vHaystacks;
 	}

@@ -10,7 +10,10 @@
 
 #include <array>
 #include <cstdint>
+#include <new>
+#include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 class CScrollRegion;
@@ -81,6 +84,52 @@ struct SSettingsCardDeckResult
 	bool m_OrderChanged = false;
 };
 
+// 定义与查询键一起发布；失败不能清掉旧回调或把半份定义标为新版本。
+class CSettingsCardDefinitionsCache
+{
+	std::vector<SSettingsCardDefinition> m_vDefinitions;
+	std::string m_Tab;
+	uint64_t m_Revision = 0;
+	ESettingsCardRenderPass m_RenderPass = ESettingsCardRenderPass::INTERACTIVE;
+	bool m_Initialized = false;
+
+public:
+	enum class EPrepareResult
+	{
+		UNCHANGED,
+		PREPARED,
+		DEFERRED,
+	};
+
+	template<typename FBuildDefinitions>
+	EPrepareResult TryPrepare(const char *pTab, uint64_t Revision, ESettingsCardRenderPass RenderPass, FBuildDefinitions &&BuildDefinitions)
+	{
+		if(!SettingsCardDeckDefinitionsCacheKeyChanged(m_Initialized, m_Revision, Revision, m_Tab.c_str(), pTab, m_RenderPass, RenderPass))
+			return EPrepareResult::UNCHANGED;
+		try
+		{
+			std::string Tab(pTab != nullptr ? pTab : "");
+			std::vector<SSettingsCardDefinition> vCandidate;
+			BuildDefinitions(vCandidate);
+			m_vDefinitions.swap(vCandidate);
+			m_Tab.swap(Tab);
+			m_Revision = Revision;
+			m_RenderPass = RenderPass;
+			m_Initialized = true;
+			return EPrepareResult::PREPARED;
+		}
+		catch(const std::bad_alloc &)
+		{
+			return EPrepareResult::DEFERRED;
+		}
+		catch(const std::length_error &)
+		{
+			return EPrepareResult::DEFERRED;
+		}
+	}
+	const std::vector<SSettingsCardDefinition> &Definitions() const { return m_vDefinitions; }
+};
+
 // 设置卡片的 client-only 协调器：唯一负责声明式 definition 的排序、拖拽、滚动与 canonical shell 接线。
 class CSettingsCardDeck
 {
@@ -90,21 +139,18 @@ public:
 	SSettingsCardDeckResult RenderCached(const IUiContext &Ctx, const SSettingsPageLayoutFrame &Layout, const char *pTab, uint64_t DefinitionsRevision, FBuildDefinitions &&BuildDefinitions, qm_card_order::CModel &Model, CScrollRegion *pScrollRegion, const SSettingsCardDeckInput &Input, const SCardMotionSpec &Motion, const SSettingsCardDeckVisualOptions &VisualOptions, uint64_t MeasurementEnvironmentRevision = UINT64_MAX)
 	{
 		const ESettingsCardRenderPass RenderPass = RenderPassMode(Ctx);
-		if(SettingsCardDeckDefinitionsCacheKeyChanged(m_CachedDefinitionsInitialized, m_CachedDefinitionsRevision, DefinitionsRevision, m_CachedDefinitionsTab.c_str(), pTab, m_CachedDefinitionsRenderPass, RenderPass))
+		const auto Prepared = m_DefinitionsCache.TryPrepare(pTab, DefinitionsRevision, RenderPass, std::forward<FBuildDefinitions>(BuildDefinitions));
+		if(Prepared == CSettingsCardDefinitionsCache::EPrepareResult::DEFERRED)
+			return {};
+		if(Prepared == CSettingsCardDefinitionsCache::EPrepareResult::PREPARED)
 		{
-			m_vCachedDefinitions.clear();
-			BuildDefinitions(m_vCachedDefinitions);
-			m_CachedDefinitionsRevision = DefinitionsRevision;
-			m_CachedDefinitionsRenderPass = RenderPass;
-			m_CachedDefinitionsTab = pTab != nullptr ? pTab : "";
-			m_CachedDefinitionsInitialized = true;
 			m_CachedDefinitionsDirty = true;
 			// 定义刷新不等于所有内容变化。显式环境版本允许按单卡版本保留邻卡缓存；
 			// 尚未迁移的调用方继续保留旧的全组失效合同。
 			m_InvalidateMeasurementsOnDefinitionsPrepare = MeasurementEnvironmentRevision == UINT64_MAX || m_MeasurementEnvironmentRevision != MeasurementEnvironmentRevision;
 			m_MeasurementEnvironmentRevision = MeasurementEnvironmentRevision;
 		}
-		return RenderInternal(Ctx, Layout, pTab, m_vCachedDefinitions, Model, pScrollRegion, Input, Motion, VisualOptions, true);
+		return RenderInternal(Ctx, Layout, pTab, m_DefinitionsCache.Definitions(), Model, pScrollRegion, Input, Motion, VisualOptions, true);
 	}
 	void RequestReveal(const char *pStableId);
 	void BeginDisplayCycle(uint64_t DisplayCycle, bool AnimateEntry);
@@ -191,12 +237,8 @@ private:
 	std::vector<uint64_t> m_vMeasureRevisions;
 	std::vector<std::shared_ptr<const CSettingsContentLayout>> m_vContentLayouts;
 	std::vector<CSettingsContentLayoutCache> m_vContentLayoutCaches;
-	std::vector<SSettingsCardDefinition> m_vCachedDefinitions;
-	std::string m_CachedDefinitionsTab;
-	uint64_t m_CachedDefinitionsRevision = 0;
-	ESettingsCardRenderPass m_CachedDefinitionsRenderPass = ESettingsCardRenderPass::INTERACTIVE;
+	CSettingsCardDefinitionsCache m_DefinitionsCache;
 	uint64_t m_MeasurementEnvironmentRevision = UINT64_MAX;
-	bool m_CachedDefinitionsInitialized = false;
 	bool m_CachedDefinitionsDirty = false;
 	bool m_InvalidateMeasurementsOnDefinitionsPrepare = false;
 	int m_PreparedDefinitionModelCount = -1;

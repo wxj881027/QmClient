@@ -3,6 +3,8 @@
 #include <base/str.h>
 
 #include <algorithm>
+#include <new>
+#include <stdexcept>
 #include <string>
 #include <utility>
 
@@ -131,7 +133,13 @@ namespace qm_search_answers
 	SResult Search(const char *pQuery)
 	{
 		SResult Result;
-		if(pQuery == nullptr || str_length(pQuery) > 512 || !str_utf8_check(pQuery))
+		if(pQuery == nullptr)
+			return Result;
+		// 先按既有字节上限截断扫描，超长输入不再先遍历整个 C 字符串。
+		size_t Length = 0;
+		while(Length <= 512 && pQuery[Length] != '\0')
+			++Length;
+		if(Length > 512 || !str_utf8_check(pQuery))
 			return Result;
 		const std::string Query = Normalize(pQuery);
 		if(Query.empty())
@@ -169,4 +177,22 @@ namespace qm_search_answers
 		return Result;
 	}
 
+	bool TrySearch(const char *pQuery, SResult &Out)
+	{
+		try
+		{
+			SResult Candidate = Search(pQuery);
+			Out.m_vCandidates.swap(Candidate.m_vCandidates);
+			std::swap(Out.m_pAnswer, Candidate.m_pAnswer);
+			return true;
+		}
+		catch(const std::bad_alloc &)
+		{
+			return false;
+		}
+		catch(const std::length_error &)
+		{
+			return false;
+		}
+	}
 }

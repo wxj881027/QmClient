@@ -94,6 +94,71 @@ TEST(QmSearchAnswers, InvalidOrOversizedInputDoesNotReturnAnAnswer)
 	EXPECT_TRUE(qm_search_answers::Search(LongQuery.c_str()).m_vCandidates.empty());
 }
 
+TEST(QmSearchAnswers, ExactByteLimitAcceptsACompleteQueryAndTheNextByteRejectsIt)
+{
+	const std::string AtLimit = "截图" + std::string(506, '?');
+	ASSERT_EQ(AtLimit.size(), 512u);
+	const auto Accepted = qm_search_answers::Search(AtLimit.c_str());
+	ASSERT_NE(Accepted.m_pAnswer, nullptr);
+	EXPECT_STREQ(Accepted.m_pAnswer->m_pId, "screenshots");
+	const std::string OverLimit = AtLimit + '?';
+	ASSERT_EQ(OverLimit.size(), 513u);
+	const auto Rejected = qm_search_answers::Search(OverLimit.c_str());
+	EXPECT_EQ(Rejected.m_pAnswer, nullptr);
+	EXPECT_TRUE(Rejected.m_vCandidates.empty());
+}
+
+TEST(QmSearchAnswers, ByteLimitCountsUtf8PunctuationBeforeNormalization)
+{
+	std::string AtLimit = "截图";
+	for(int Index = 0; Index < 168; ++Index)
+		AtLimit += "？";
+	AtLimit += "  ";
+	ASSERT_EQ(AtLimit.size(), 512u);
+	const auto Accepted = qm_search_answers::Search(AtLimit.c_str());
+	ASSERT_NE(Accepted.m_pAnswer, nullptr);
+	EXPECT_STREQ(Accepted.m_pAnswer->m_pId, "screenshots");
+	const auto Rejected = qm_search_answers::Search((AtLimit + ' ').c_str());
+	EXPECT_EQ(Rejected.m_pAnswer, nullptr);
+	EXPECT_TRUE(Rejected.m_vCandidates.empty());
+}
+
+TEST(QmSearchAnswers, MalformedUtf8CannotLeaveAnAnswerFromItsValidPrefix)
+{
+	for(const char *pQuery : {"截图\xc0\xaf", "截图\xed\xa0\x80", "截图\xf4\x90\x80\x80", "截图\xe4\xb8", "截图\x80"})
+	{
+		SCOPED_TRACE(pQuery);
+		const auto Result = qm_search_answers::Search(pQuery);
+		EXPECT_EQ(Result.m_pAnswer, nullptr);
+		EXPECT_TRUE(Result.m_vCandidates.empty());
+	}
+}
+
+TEST(QmSearchAnswers, CandidateLimitKeepsDistinctQuestionsWithoutInventingADirectAnswer)
+{
+	const auto Result = qm_search_answers::Search("截图复读翻译歌词旁观小眼睛游戏没声音");
+	EXPECT_EQ(Result.m_pAnswer, nullptr);
+	ASSERT_EQ(Result.m_vCandidates.size(), 5u);
+	for(const auto *pCandidate : Result.m_vCandidates)
+	{
+		ASSERT_NE(pCandidate, nullptr);
+		EXPECT_EQ(std::count(Result.m_vCandidates.begin(), Result.m_vCandidates.end(), pCandidate), 1);
+	}
+}
+
+TEST(QmSearchAnswers, EqualScoreCandidatesKeepTheirOrderAcrossOtherQueries)
+{
+	const auto First = qm_search_answers::Search("没声音");
+	ASSERT_EQ(First.m_vCandidates.size(), 3u);
+	EXPECT_STREQ(First.m_vCandidates[0]->m_pId, "game-sound");
+	EXPECT_STREQ(First.m_vCandidates[1]->m_pId, "voice-sound");
+	EXPECT_STREQ(First.m_vCandidates[2]->m_pId, "music-sound");
+	ASSERT_NE(qm_search_answers::Search("截图").m_pAnswer, nullptr);
+	const auto Reopened = qm_search_answers::Search("没声音");
+	EXPECT_EQ(Reopened.m_pAnswer, nullptr);
+	EXPECT_EQ(Reopened.m_vCandidates, First.m_vCandidates);
+}
+
 TEST(QmSearchAnswers, QueriesDoNotRetainPreviousAnswerOrSelection)
 {
 	const auto First = qm_search_answers::Search("截图");
