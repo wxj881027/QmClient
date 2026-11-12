@@ -132,6 +132,8 @@ private:
 
 	bool m_Enabled = false;
 	bool m_RequireDummy = false;
+	// 启用时本体所在连接：服务器重进换 id 后，用它把参与者重绑回同一条连接。
+	int m_EnableLocalConn = -1;
 	int m_EnableLocalClientId = -1;
 	int m_EnableDummyClientId = -1;
 	bool m_PracticeWorldInitialized = false;
@@ -139,6 +141,8 @@ private:
 	bool m_RecordingPaused = false;
 	bool m_SuppressFireOnNextPredictTick = false;
 	int m_InputSuppressTicks = 0;
+	// 角色/输入解析瞬态失败的连续 tick 数；服务器重进、分身重连期间不立刻退出。
+	int m_TransientFailureTicks = 0;
 	int m_LastResolvedLocalClientId = -1;
 	int m_LastResolvedDummyClientId = -1;
 	int m_LastResolvedLocalInputConn = -1;
@@ -250,6 +254,11 @@ public:
 
 private:
 	bool AdvanceBaseWorldToTick(int TargetTick, int LocalClientId, int DummyClientId);
+	// 服务器重进会换 client id，重新 fork 前必须把参与者 id 换成本次连接的实际 id。
+	bool TryRebindPracticeParticipants();
+	// 过渡期内角色/输入暂时解析失败时冻结练习世界等待恢复，宽限超时才真正退出。
+	bool SuspendPracticeForTransientFailure(const char *pReason);
+	void HoldPracticeWorldForSuspension();
 	void ResetAttackTickHistory();
 	void TrackPracticeTileFeedback(int ClientId, CCharacter *pChar, const vec2 &BeforePos);
 	void StandbyCharacter(CCharacter *pChar) const;

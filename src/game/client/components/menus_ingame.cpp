@@ -2272,7 +2272,8 @@ void CMenus::GhostlistPopulate()
 				break;
 			}
 		}
-		if(str_comp(Ghost.m_aPlayer, Client()->PlayerName()) == 0 && (!pOwnGhost || Ghost < *pOwnGhost))
+		// 练习线路组指向目录而不是 .gho 文件，自动加载会把目录当回放读并失败。
+		if(!Ghost.m_PracticeGroup && str_comp(Ghost.m_aPlayer, Client()->PlayerName()) == 0 && (!pOwnGhost || Ghost < *pOwnGhost))
 			pOwnGhost = &Ghost;
 	}
 
@@ -2440,6 +2441,8 @@ void CMenus::RenderGhost(CUIRect MainView)
 	const int NumGhosts = m_vGhosts.size();
 	int NumFailed = 0;
 	int NumActivated = 0;
+	// 练习组不走普通影子的槽位，不能参与“全部激活”的完成度判断。
+	int NumPracticeGroups = 0;
 	static int s_SelectedIndex = 0;
 	// 行距只留半档；视口按可用高度收敛到整数行（边界落在行缝里，首/末行不会被裁成
 	// 半个胶囊）。底板由调用方画满，行数固定取这个值即可，不随条目数收高度。
@@ -2455,6 +2458,8 @@ void CMenus::RenderGhost(CUIRect MainView)
 
 		if(pGhost->m_Failed)
 			NumFailed++;
+		if(pGhost->m_PracticeGroup)
+			NumPracticeGroups++;
 		if(pGhost->Active())
 			NumActivated++;
 
@@ -2568,10 +2573,10 @@ void CMenus::RenderGhost(CUIRect MainView)
 	// QmClient: rank 回放功能统一收敛到 Rank 1 页，影子页只管理玩家自己的影子
 
 	Status.VSplitLeft(5.0f, &Button, &Status);
-	if(NumGhosts - NumFailed > 0)
+	if(NumGhosts - NumFailed - NumPracticeGroups > 0)
 	{
 		Status.VSplitLeft(175.0f, &Button, &Status);
-		bool ActivateAll = ((NumGhosts - NumFailed) != NumActivated) && GameClient()->m_Ghost.FreeSlots();
+		bool ActivateAll = ((NumGhosts - NumFailed - NumPracticeGroups) != NumActivated) && GameClient()->m_Ghost.FreeSlots();
 
 		const char *pActionText = ActivateAll ? Localize("Activate all") : Localize("Deactivate all");
 		if(DoIngameMenuButton(PAGE_GHOST, ActivateAll ? "ingame-ghost-activate-all" : "ingame-ghost-deactivate-all", &s_ActivateAll, pActionText, 0, &Button))
@@ -2588,7 +2593,8 @@ void CMenus::RenderGhost(CUIRect MainView)
 				for(int i = 0; i < NumGhosts; i++)
 				{
 					CGhostItem *pGhost = &m_vGhosts[i];
-					if(pGhost->m_Failed || pGhost->m_Slot != -1)
+					// 练习组走 Rank 1 查看模式，不进入普通影子的 Load 槽位。
+					if(pGhost->m_PracticeGroup || pGhost->m_Failed || pGhost->m_Slot != -1)
 						continue;
 					if(!GameClient()->m_Ghost.FreeSlots())
 						break;

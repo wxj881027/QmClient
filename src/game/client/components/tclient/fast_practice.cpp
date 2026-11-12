@@ -254,6 +254,7 @@ void CFastPractice::ResetPracticeState()
 {
 	m_Enabled = false;
 	m_RequireDummy = false;
+	m_EnableLocalConn = -1;
 	m_EnableLocalClientId = -1;
 	m_EnableDummyClientId = -1;
 	m_PracticeWorldInitialized = false;
@@ -261,6 +262,7 @@ void CFastPractice::ResetPracticeState()
 	m_RecordingPaused = false;
 	m_SuppressFireOnNextPredictTick = false;
 	m_InputSuppressTicks = 0;
+	m_TransientFailureTicks = 0;
 	m_LastResolvedLocalClientId = -1;
 	m_LastResolvedDummyClientId = -1;
 	m_LastResolvedLocalInputConn = -1;
@@ -421,6 +423,52 @@ bool CFastPractice::ResolvePracticeRoles(int &LocalClientId, int &DummyClientId)
 	if(m_RequireDummy)
 		DummyClientId = LocalClientId == m_EnableLocalClientId ? m_EnableDummyClientId : m_EnableLocalClientId;
 
+	return true;
+}
+
+bool CFastPractice::TryRebindPracticeParticipants()
+{
+	// 服务器上死亡后重进会分配新的 client id。分支世界按 client id 找角色，
+	// 旧 id 在重新 fork 的世界里已经不存在；不重绑的话本轮练习会被判失效，
+	// 输入锁随之解除——练习中的输入瞬间打到真身上，表现为"莫名其妙切出去然后死了"。
+	if(!m_Enabled)
+		return false;
+
+	// 角色身份跟着连接走：启用时本体来自哪条连接，重绑后仍是同一条连接的新 id，
+	// 这样中途切换 cl_dummy 也不会把两个参与者互换。
+	int LocalConn = m_EnableLocalConn;
+	if(LocalConn < 0)
+		LocalConn = g_Config.m_ClDummy ? IClient::CONN_DUMMY : IClient::CONN_MAIN;
+	const int NewLocalId = GameClient()->m_aLocalIds[LocalConn];
+	if(NewLocalId < 0 || NewLocalId >= MAX_CLIENTS)
+		return false;
+
+	int NewDummyId = -1;
+	if(m_RequireDummy)
+	{
+		// 分身尚未重新连上时按 -1 处理；连回来后的下一次重绑会补上。
+		const int CandidateId = GameClient()->m_aLocalIds[LocalConn ^ 1];
+		if(CandidateId >= 0 && CandidateId < MAX_CLIENTS && CandidateId != NewLocalId)
+			NewDummyId = CandidateId;
+	}
+
+	const int OldLocalId = m_EnableLocalClientId;
+	const int OldDummyId = m_EnableDummyClientId;
+	if(NewLocalId == OldLocalId && NewDummyId == OldDummyId)
+		return false;
+
+	if(g_Config.m_Debug)
+		dbg_msg("fast_practice", "rebind participants: local %d->%d dummy %d->%d",
+			OldLocalId, NewLocalId, OldDummyId, NewDummyId);
+
+	// 检查点、救援点等按 client id 索引；id 换了以后跟着迁移，重进后还能继续用。
+	if(OldLocalId >= 0 && OldLocalId < MAX_CLIENTS && NewLocalId != OldLocalId)
+		m_aPracticeCommandState[NewLocalId] = m_aPracticeCommandState[OldLocalId];
+	if(OldDummyId >= 0 && OldDummyId < MAX_CLIENTS && NewDummyId >= 0 && NewDummyId != OldDummyId)
+		m_aPracticeCommandState[NewDummyId] = m_aPracticeCommandState[OldDummyId];
+
+	m_EnableLocalClientId = NewLocalId;
+	m_EnableDummyClientId = NewDummyId;
 	return true;
 }
 
@@ -718,6 +766,58 @@ void CFastPractice::FreezePracticeWorldForServerPause()
 	m_SuppressFireOnNextPredictTick = true;
 	m_InputSuppressTicks = std::max(m_InputSuppressTicks, 2);
 	GameClient()->m_PredictedDummyId = -1;
+}
+
+void CFastPractice::HoldPracticeWorldForSuspension()
+{
+	// 解析失败时仍由练习接管渲染：把最后一次有效的分支世界铺到预测世界，
+	// 镜头停在练习位置等服务器状态恢复，而不是瞬间弹回真身。
+	if(!m_PracticeWorldInitialized)
+		return;
+
+	const int TargetTick = Client()->PredGameTick(g_Config.m_ClDummy);
+	ShiftPracticeWorldTicks(TargetTick - m_PracticeBaseWorld.GameTick());
+	GameClient()->m_PredictedWorld.CopyWorldClean(&m_PracticeBaseWorld);
+	GameClient()->m_PrevPredictedWorld.CopyWorldClean(&m_PracticeBaseWorld);
+	if(CCharacter *pLocalChar = GameClient()->m_PredictedWorld.GetCharacterById(m_EnableLocalClientId))
+	{
+		GameClient()->m_PredictedChar = pLocalChar->GetCore();
+		GameClient()->m_PredictedPrevChar = pLocalChar->GetCore();
+		GameClient()->m_aClients[m_EnableLocalClientId].m_Predicted = pLocalChar->GetCore();
+		GameClient()->m_aClients[m_EnableLocalClientId].m_PrevPredicted = pLocalChar->GetCore();
+	}
+	if(m_RequireDummy && m_EnableDummyClientId >= 0)
+	{
+		if(CCharacter *pDummyChar = GameClient()->m_PredictedWorld.GetCharacterById(m_EnableDummyClientId))
+		{
+			GameClient()->m_aClients[m_EnableDummyClientId].m_Predicted = pDummyChar->GetCore();
+			GameClient()->m_aClients[m_EnableDummyClientId].m_PrevPredicted = pDummyChar->GetCore();
+		}
+	}
+	GameClient()->m_PredictedTick = m_PracticeBaseWorld.GameTick();
+}
+
+bool CFastPractice::SuspendPracticeForTransientFailure(const char *pReason)
+{
+	// 服务器重进、分身重连等过渡期里角色与 id 会短暂对不上。直接 Disable 会连同
+	// 输入锁一起丢掉，练习输入立刻打到真身上；先冻结练习世界等恢复，宽限超时才退出。
+	const int GraceTicks = std::max(Client()->GameTickSpeed(), 1) * 2;
+	m_TransientFailureTicks++;
+	if(m_TransientFailureTicks <= GraceTicks)
+	{
+		if(g_Config.m_Debug)
+			dbg_msg("fast_practice", "transient failure (%s): %d/%d ticks", pReason, m_TransientFailureTicks, GraceTicks);
+		HoldPracticeWorldForSuspension();
+		// 分支世界还没 fork（例如刚重进）时没有可冻结的内容，这一帧交回普通预测，
+		// 否则本地角色会停在上一次画面、输入也打不进去。
+		return m_PracticeWorldInitialized;
+	}
+
+	if(g_Config.m_Debug)
+		dbg_msg("fast_practice", "practice disabled after persistent failure (%s)", pReason);
+	EchoPractice("fast practice disabled: practice state unavailable (%s)", pReason);
+	Disable();
+	return false;
 }
 
 void CFastPractice::SyncPracticeWorldConfig()
@@ -1302,6 +1402,7 @@ void CFastPractice::Enable(bool PreserveHeldInput)
 	const int ActiveConn = g_Config.m_ClDummy ? IClient::CONN_DUMMY : IClient::CONN_MAIN;
 	const int InactiveConn = ActiveConn ^ 1;
 	const int ActiveClientId = GameClient()->m_aLocalIds[ActiveConn];
+	m_EnableLocalConn = ActiveConn;
 	m_EnableLocalClientId = (ActiveClientId >= 0 && ActiveClientId < MAX_CLIENTS) ? ActiveClientId : GameClient()->m_Snap.m_LocalClientId;
 
 	const int CandidateDummyId = Client()->DummyConnected() ? GameClient()->m_aLocalIds[InactiveConn] : -1;
@@ -1985,6 +2086,18 @@ bool CFastPractice::OverridePredict()
 		GameClient()->m_PredictedDummyId = -1;
 		return false;
 	}
+	// 分身连接断开：降级为本体单人练习，并重新 fork 去掉分支世界里的残留分身。
+	if(m_RequireDummy && !Client()->DummyConnected())
+	{
+		m_RequireDummy = false;
+		m_HasDummyAnchor = false;
+		m_EnableDummyClientId = -1;
+		m_PracticeWorldInitialized = false;
+	}
+
+	// 刚从旁观回到游戏时分支世界还没重新 fork，按本次连接的实际 id 重绑参与者。
+	if(!m_PracticeWorldInitialized)
+		TryRebindPracticeParticipants();
 	if(!m_RequireDummy)
 		TryAttachDummyFromSnapshot();
 
@@ -1992,17 +2105,18 @@ bool CFastPractice::OverridePredict()
 	int DummyClientId = -1;
 	if(!ResolvePracticeRoles(LocalClientId, DummyClientId))
 	{
-		Disable();
-		return false;
+		// 重进过快、没观察到旁观帧时 client id 也可能已经换了：旧分支世界按旧 id
+		// 建立，只有重绑并重新 fork 才能继续，否则会一直解析失败直到宽限退出。
+		if(TryRebindPracticeParticipants())
+			m_PracticeWorldInitialized = false;
+		if(!ResolvePracticeRoles(LocalClientId, DummyClientId))
+			return SuspendPracticeForTransientFailure("resolve roles");
 	}
 
 	int LocalInputConn = -1;
 	int DummyInputConn = -1;
 	if(!ResolveParticipantInputs(LocalClientId, DummyClientId, LocalInputConn, DummyInputConn))
-	{
-		Disable();
-		return false;
-	}
+		return SuspendPracticeForTransientFailure("resolve inputs");
 
 	const bool InputMappingChanged = LocalClientId != m_LastResolvedLocalClientId ||
 					 DummyClientId != m_LastResolvedDummyClientId ||
@@ -2030,10 +2144,7 @@ bool CFastPractice::OverridePredict()
 	GameClient()->m_PredictedDummyId = DummyClientId;
 
 	if(!m_PracticeWorldInitialized && !InitPracticeWorld())
-	{
-		Disable();
-		return false;
-	}
+		return SuspendPracticeForTransientFailure("init practice world");
 
 	SyncPracticeWorldConfig();
 
@@ -2042,10 +2153,10 @@ bool CFastPractice::OverridePredict()
 	CCharacter *pLocalChar = GameClient()->m_PredictedWorld.GetCharacterById(LocalClientId);
 	CCharacter *pDummyChar = m_RequireDummy ? GameClient()->m_PredictedWorld.GetCharacterById(DummyClientId) : nullptr;
 	if(!pLocalChar || (m_RequireDummy && !pDummyChar))
-	{
-		Disable();
-		return false;
-	}
+		return SuspendPracticeForTransientFailure("missing practice character");
+
+	// 角色与输入映射都恢复了，之前的瞬态失败不再累计。
+	m_TransientFailureTicks = 0;
 
 	const int BaseGameTick = m_PracticeBaseWorld.GameTick();
 	const int PredTick = Client()->PredGameTick(g_Config.m_ClDummy);
