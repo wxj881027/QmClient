@@ -8,6 +8,8 @@
 
 #include <base/color.h>
 
+#include <game/client/ui_rect.h>
+
 #include <algorithm>
 
 // Centralized QmUi design tokens. Values are unscaled; callers apply
@@ -173,15 +175,26 @@ namespace ui_token::dropdown
 		return std::max(ENTRY_INSET_X_MIN, FontSize * ENTRY_INSET_X_FONT_RATIO);
 	}
 
-	// 行高已知时按行高再兜一档：选中行的背景是胶囊，端帽半径 = 行高/2，
-	// 文字内退小于半径就会压在圆弧上，看起来像“贴着边”。
-	// 再兜一档容器内边距：弹层条目和卡片内容都是「圆角容器里的一行文字」，
-	// 文字到容器边缘的距离应当同档（卡片是 spacing::MD + 容器眼皮，条目再加上自己的 padding）。
+	// 行高已知时按行高**夹取**：文字内退不该超过胶囊端帽半径（行高一半）。
+	// 注意方向：这是上限，不是「行高越大内退越多」——早先这里写成 max(..., spacing::LG)，
+	// 等于一路加到 16，再叠上轴向用错（见 EntryLabelRect），条目文字反而一直贴着胶囊左缘。
 	inline float EntryInsetX(const float FontSize, const float RowHeight)
 	{
-		// 第三档用 spacing::LG：条目左右各自再退一档，视觉上明确脱离胶囊端帽，
-		// 与卡片内容的 CARD_PADDING(14) 同量级；MD(12) 在 20 高的行里还是太贴。
-		return std::max({EntryInsetX(FontSize), RowHeight * 0.5f, ui_token::spacing::LG});
+		return std::min(EntryInsetX(FontSize), std::max(0.0f, RowHeight) * 0.5f);
+	}
+
+	// 条目文字矩形：行背景占满整行，文字只在**左右**方向退开。
+	// CUIRect 的轴向名字反直觉，踩过一次：HMargin(Cut) == Margin(vec2(0, Cut)) 改的是 y/h
+	// （上下），VMargin(Cut) == Margin(vec2(Cut, 0)) 才是左右。弹层条目曾写成 HMargin，
+	// 于是横向零内退（文字贴着胶囊左缘）、纵向还被压掉两段行高。
+	// 这里把轴向与档位一次算清，调用点（弹层条目、「发送给」弹层、二级面板提示条）共用。
+	inline CUIRect EntryLabelRect(const CUIRect &Row, const float Padding, const float FontSize, const float InsetXOverride = 0.0f)
+	{
+		const float InsetX = InsetXOverride > 0.0f ? InsetXOverride : EntryInsetX(FontSize, Row.h);
+		CUIRect Label = Row;
+		Label.Margin(Padding, &Label);
+		Label.VMargin(InsetX, &Label);
+		return Label;
 	}
 } // namespace ui_token::dropdown
 
@@ -276,6 +289,8 @@ namespace ui_token::list
 	// 行距只留半档：整行胶囊之间留一条读得出的缝，所有行列表统一这一档。
 	inline constexpr float ROW_SPACING = settings::ROW_GAP * 0.5f;
 
+	// 行右侧给覆盖式滚动条让出的缝：行胶囊不能压在滚动条下面（组件内部用）。
+	inline constexpr float SCROLLBAR_ROW_GAP = spacing::XS;
 	// 整行胶囊圆角：行高一半，超过卡片档才夹住。设置页列表行高 20~28 时正好是
 	// 完整胶囊；更高的单列行（好友 36、国家旗 44 等旧列表）停在卡片档，
 	// 不会被拉成体育场；绘制层仍按短边一半兜底。
@@ -290,6 +305,11 @@ namespace ui_token::list
 	inline constexpr int SKIN_QUEUE_MAX_VISIBLE_ROWS = 6;
 	inline constexpr int PRESET_MIN_VISIBLE_ROWS = 2;
 	inline constexpr int PRESET_MAX_VISIBLE_ROWS = 3;
+	// 主题（菜单中的背景图）列表：原来 DoStart 的 RowsPerScroll 是 3，内容区由外层卡片
+	// 给多少吃多少，视图高度停不到整行上，最上/最下一行的胶囊会被切一半。现在最少 3 行
+	// （沿用原 RowsPerScroll 的设计意图，主题至少 3 个内置项，卡片不会因此变矮）、最多 8 行；
+	// 卡片测高与 CListBox 的自适应高度共用这两个数，视图正好停在整个行的边界。
+	inline constexpr int THEME_MIN_VISIBLE_ROWS = 3;
 
 	// 行内左右内边距与弹层条目同一条公式（max(8, 字号 × 0.75)）：文字不再贴着
 	// 胶囊左缘，窄窗口里也不会跟着一起挤没。
@@ -310,6 +330,10 @@ namespace ui_token::list
 	inline constexpr float SCROLLBAR_WIDTH = spacing::SM;
 	inline constexpr float SCROLLBAR_MARGIN = spacing::XS;
 	inline constexpr float SCROLLBAR_SLIDE = spacing::XS;
+
+	// 覆盖式轨道的右侧让位：轨道厚度 + 外边距 + 一条缝。列表行、浏览器面板、弹层共用这一份，
+	// 不要再在调用点写 8+4+4 或 12。
+	inline constexpr float OverlayRailReserve() { return SCROLLBAR_WIDTH + SCROLLBAR_MARGIN + SCROLLBAR_ROW_GAP; }
 
 	// 条目数与每行条目数决定可见行数：0 表示空列表不占高度。
 	inline int VisibleRows(const int ItemCount, const int ItemsPerRow, const int MinRows, const int MaxRows)
@@ -346,12 +370,6 @@ namespace ui_token::settings::row
 	inline constexpr SRowMetrics DIVIDER{spacing::SM, 0.0f};
 	inline constexpr SRowMetrics FOLD{spacing::SM, 0.0f};
 	inline constexpr SRowMetrics NOTE{spacing::XS, spacing::MD};
-
-	// 分割线厚度：设置页统一 1px 细线，横向线不按圆角绘制。
-	inline constexpr float DIVIDER_THICKNESS = 1.0f;
-	// 折叠行分割线取卡片边框色压暗一档：亮度降到 0.7，透明度不动，
-	// 线永远比卡片轮廓更弱，不会跟卡片描边抢视线。
-	inline constexpr float FOLD_LINE_BRIGHTNESS = 0.7f;
 
 	enum class EType
 	{

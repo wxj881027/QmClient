@@ -464,16 +464,15 @@ namespace
 			RenderMetadata(Shell, *pMetadata, Render);
 	}
 
-	constexpr float AssetsCardTitleFontSize = 9.0f;
-	constexpr float AssetsCardAuthorFontSize = 7.0f;
-	constexpr float AssetsCardStatusTagFontSize = 6.0f;
+	// 卡片元数据字号不再写死：标题取页面正文、作者与状态标签取页面小字，
+	// 由 RenderSettingsCustom 里算好的 ContentMetrics 传进来（6/7px 低于小字下限，窄视口还会更小）。
 	constexpr float AssetsCardStatusTagMinWidth = 24.0f;
 	constexpr float AssetsCardStatusTagMaxWidth = 36.0f;
 	constexpr float AssetsCardStatusTagHorizontalPadding = 2.0f;
 	constexpr ColorRGBA AssetsCardStatusReadyColor = ColorRGBA(0.18f, 0.62f, 0.32f, 0.88f);
 	constexpr ColorRGBA AssetsCardStatusNetworkColor = ColorRGBA(0.35f, 0.45f, 0.56f, 0.86f);
 
-	static void RenderAssetsCardMetadataFallback(CUi *pUi, const SSettingsAssetsCardShell &Shell, const char *pTitle, const char *pAuthor, const char *pStatusLabel, bool StatusReady, bool ShowAuthorRow)
+	static void RenderAssetsCardMetadataFallback(CUi *pUi, const SSettingsAssetsCardShell &Shell, const char *pTitle, const char *pAuthor, const char *pStatusLabel, bool StatusReady, bool ShowAuthorRow, float TitleFontSize, float AuthorFontSize, float StatusTagFontSize)
 	{
 		if(pUi == nullptr)
 			return;
@@ -482,14 +481,14 @@ namespace
 		TitleProps.m_MaxWidth = static_cast<int>(Shell.m_TitleRect.w);
 		TitleProps.m_StopAtEnd = true;
 		TitleProps.m_EllipsisAtEnd = true;
-		pUi->DoLabel(&Shell.m_TitleRect, pSafeTitle, AssetsCardTitleFontSize, TEXTALIGN_ML, TitleProps);
+		pUi->DoLabel(&Shell.m_TitleRect, pSafeTitle, TitleFontSize, TEXTALIGN_ML, TitleProps);
 		if(ShowAuthorRow)
 		{
 			SLabelProperties AuthorProps;
 			AuthorProps.m_MaxWidth = static_cast<int>(Shell.m_AuthorRect.w);
 			AuthorProps.m_StopAtEnd = true;
 			AuthorProps.m_EllipsisAtEnd = true;
-			pUi->DoLabel(&Shell.m_AuthorRect, pAuthor != nullptr && pAuthor[0] != '\0' ? pAuthor : "--", AssetsCardAuthorFontSize, TEXTALIGN_ML, AuthorProps);
+			pUi->DoLabel(&Shell.m_AuthorRect, pAuthor != nullptr && pAuthor[0] != '\0' ? pAuthor : "--", AuthorFontSize, TEXTALIGN_ML, AuthorProps);
 		}
 		if(Shell.m_HasStatusTag && pStatusLabel != nullptr && pStatusLabel[0] != '\0')
 		{
@@ -499,7 +498,7 @@ namespace
 			StatusLabelProps.m_MaxWidth = static_cast<int>(StatusRect.w - AssetsCardStatusTagHorizontalPadding * 2.0f);
 			StatusLabelProps.m_StopAtEnd = true;
 			StatusLabelProps.m_EllipsisAtEnd = true;
-			pUi->DoLabel(&StatusRect, pStatusLabel, AssetsCardStatusTagFontSize, TEXTALIGN_MC, StatusLabelProps);
+			pUi->DoLabel(&StatusRect, pStatusLabel, StatusTagFontSize, TEXTALIGN_MC, StatusLabelProps);
 		}
 	}
 
@@ -528,11 +527,10 @@ namespace
 		return Tab != ASSETS_TAB_ENTITY_BG;
 	}
 
-	static CUIRect AssetsCardListAreaWithStableScrollbar(CUIRect ListArea, float ScrollbarWidth, float ScrollbarMargin)
+	static CUIRect AssetsCardListAreaWithStableScrollbar(CUIRect ListArea, float ReserveWidth)
 	{
-		(void)ScrollbarMargin;
-		if(ListArea.w > ScrollbarWidth)
-			ListArea.w -= ScrollbarWidth;
+		if(ListArea.w > ReserveWidth)
+			ListArea.w -= ReserveWidth;
 		return ListArea;
 	}
 
@@ -4740,7 +4738,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	auto ComputeToolbarButtonWidth = [&](const char *pLabel) {
 		constexpr float MinButtonWidth = 90.0f;
 		constexpr float HorizontalPadding = 18.0f;
-		return maximum(MinButtonWidth, TextRender()->TextWidth(10.0f, Localize(pLabel), -1, -1.0f) + HorizontalPadding);
+		// 量宽用与绘制同一个字号（按钮正文），否则长译文会被算窄再截断。
+		return maximum(MinButtonWidth, TextRender()->TextWidth(ContentMetrics.m_BodySize, Localize(pLabel), -1, -1.0f) + HorizontalPadding);
 	};
 	const float AssetsDirButtonWidth = ComputeToolbarButtonWidth("Assets directory");
 	const float AssetsEditorButtonWidth = ComputeToolbarButtonWidth("Assets editor");
@@ -5469,7 +5468,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		StatusLabelProps.m_MaxWidth = static_cast<int>(StatusRect.w - AssetsCardStatusTagHorizontalPadding * 2.0f);
 		StatusLabelProps.m_StopAtEnd = true;
 		StatusLabelProps.m_EllipsisAtEnd = true;
-		Ui()->DoLabel(&StatusRect, pLabel != nullptr && pLabel[0] != '\0' ? pLabel : "--", AssetsCardStatusTagFontSize, TEXTALIGN_MC, StatusLabelProps);
+		Ui()->DoLabel(&StatusRect, pLabel != nullptr && pLabel[0] != '\0' ? pLabel : "--", ContentMetrics.m_SmallSize, TEXTALIGN_MC, StatusLabelProps);
 	};
 
 	auto ComputePreviewDrawRect = [&](const CUIRect &TextureRect, float ContentWidth, float ContentHeight) {
@@ -5540,7 +5539,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		auto ComputeBadgeWidth = [&](const char *pLabel) {
 			if(pLabel == nullptr || pLabel[0] == '\0')
 				return AssetsCardStatusTagMinWidth;
-			const float DesiredBadgeWidth = TextRender()->TextWidth(AssetsCardStatusTagFontSize, pLabel, -1, -1.0f) + AssetsCardStatusTagHorizontalPadding * 2.0f;
+			const float DesiredBadgeWidth = TextRender()->TextWidth(ContentMetrics.m_SmallSize, pLabel, -1, -1.0f) + AssetsCardStatusTagHorizontalPadding * 2.0f;
 			return maximum(AssetsCardStatusTagMinWidth, minimum(AssetsCardStatusTagMaxWidth, DesiredBadgeWidth));
 		};
 		auto ReserveTrailingRect = [&](CUIRect &AvailableRect, float DesiredWidth, float DesiredMinWidth, CUIRect &OutRect, bool &OutVisible) {
@@ -5764,7 +5763,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		TitleProps.m_MaxWidth = static_cast<int>(Shell.m_TitleRect.w);
 		TitleProps.m_StopAtEnd = true;
 		TitleProps.m_EllipsisAtEnd = true;
-		DoMenuLabelStreamed(MENU_TEXT_SCOPE_SETTINGS, *Metadata.m_pTitleElement, &Shell.m_TitleRect, Metadata.m_Title.c_str(), AssetsCardTitleFontSize, TEXTALIGN_ML, TitleProps, -1, nullptr, Render);
+		DoMenuLabelStreamed(MENU_TEXT_SCOPE_SETTINGS, *Metadata.m_pTitleElement, &Shell.m_TitleRect, Metadata.m_Title.c_str(), ContentMetrics.m_BodySize, TEXTALIGN_ML, TitleProps, -1, nullptr, Render);
 
 		if(Shell.m_HasAuthorRow)
 		{
@@ -5776,7 +5775,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			AuthorProps.m_MaxWidth = static_cast<int>(Shell.m_AuthorRect.w);
 			AuthorProps.m_StopAtEnd = true;
 			AuthorProps.m_EllipsisAtEnd = true;
-			DoMenuLabelStreamed(MENU_TEXT_SCOPE_SETTINGS, *Metadata.m_pAuthorElement, &Shell.m_AuthorRect, Metadata.m_Author.c_str(), AssetsCardAuthorFontSize, TEXTALIGN_ML, AuthorProps, -1, nullptr, Render);
+			DoMenuLabelStreamed(MENU_TEXT_SCOPE_SETTINGS, *Metadata.m_pAuthorElement, &Shell.m_AuthorRect, Metadata.m_Author.c_str(), ContentMetrics.m_SmallSize, TEXTALIGN_ML, AuthorProps, -1, nullptr, Render);
 		}
 		if(!Render)
 			return;
@@ -5792,7 +5791,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				Metadata.m_pErrorElement->Init(Ui(), 1);
 			CUIRect ErrorRect = Shell.m_CardRect;
 			ErrorRect.HSplitBottom(14.0f, nullptr, &ErrorRect);
-			DoMenuLabelStreamed(MENU_TEXT_SCOPE_SETTINGS, *Metadata.m_pErrorElement, &ErrorRect, Localize("Download failed"), 9.0f, TEXTALIGN_MC, SLabelProperties(), -1, nullptr, Render);
+			DoMenuLabelStreamed(MENU_TEXT_SCOPE_SETTINGS, *Metadata.m_pErrorElement, &ErrorRect, Localize("Download failed"), ContentMetrics.m_SmallSize, TEXTALIGN_MC, SLabelProperties(), -1, nullptr, Render);
 		}
 	};
 
@@ -5803,7 +5802,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 
 		CUIRect LabelRect = FallbackRect;
 		LabelRect.Margin(8.0f, &LabelRect);
-		Ui()->DoLabel(&LabelRect, Localize("Map Preview TODO"), 11.0f, TEXTALIGN_MC);
+		Ui()->DoLabel(&LabelRect, Localize("Map Preview TODO"), ContentMetrics.m_SmallSize, TEXTALIGN_MC);
 	};
 
 	auto RenderEntityBgVideoFallback = [&](const CUIRect &Rect) {
@@ -5817,7 +5816,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		Ui()->DoLabel_QmIcon(&IconRect, EQmIcon::PLAY, FONT_ICON_PLAY, 30.0f, TEXTALIGN_MC);
 		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 		LabelRect.Margin(6.0f, &LabelRect);
-		Ui()->DoLabel(&LabelRect, Localize("Video Background"), 10.5f, TEXTALIGN_MC);
+		Ui()->DoLabel(&LabelRect, Localize("Video Background"), ContentMetrics.m_SmallSize, TEXTALIGN_MC);
 	};
 
 	if(s_CurCustomTab == ASSETS_TAB_ENTITIES)
@@ -6178,9 +6177,18 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		// 大面积卡片网格：入场纯淡入 + 逐行 stagger，整卡不位移（onetake：
 		// 运动留给小元素，大 ground 稳定；整卡上下浮读作"晃"）。
 		s_ListBox.SetEntryAnimationFadeOnly(true);
-		// 选中/悬浮反馈贴合卡片（格子与卡片之间有半格间隙），选中态带描边。
+		// 胶囊行：选中/悬浮走主题轨道（选中 = Theme.m_Selected 填充、无描边），
+		// 滚动条回到覆盖式细轨。行距必须保持 0——行高里已经含 Margin 档作为卡片
+		// 间距，组件再叠半档行距会让 SkipItems 的可见范围与滚动步进错位。
+		const float LocalRowHeight = TextureHeight + AssetCardTextReserve + AssetCardFooterSpacing + Margin;
+		s_ListBox.SetCapsuleRows(ContentMetrics.m_BodySize);
+		s_ListBox.DoAutoSpacing(0.0f);
+		// 整数行：列表高度停在整行边界，底部不再裁出半张卡。
+		s_ListBox.SetVisibleRowRange(1, maximum(1, (int)std::floor(std::max(0.0f, CustomList.h) / LocalRowHeight)));
+		// 反馈矩形贴合卡片（卡片与格子之间有半格间隙）；白色描边已由列表组件统一取消。
 		s_ListBox.SetItemSelectionInset(Margin / 2.0f);
-		const CUIRect StableCustomList = AssetsCardListAreaWithStableScrollbar(CustomList, s_ListBox.ScrollbarWidthMax(), s_ListBox.ScrollbarMargin());
+		// 列宽按「行让位」这一份宽度算，与行胶囊右缘同源，不再写 ScrollbarWidthMax。
+		const CUIRect StableCustomList = AssetsCardListAreaWithStableScrollbar(CustomList, s_ListBox.RowReserveWidth());
 		const int LocalColumns = maximum(1, (int)(StableCustomList.w / (Margin + TextureWidth)));
 		OldSelected = SelectedCustomAssetIndex(s_CurCustomTab, SearchListSize);
 		static int s_LastEntryRestartSeq = -1;
@@ -6194,7 +6202,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			s_ListBox.ResetScroll();
 			s_AssetsResetListScrollOnTabSwitch = false;
 		}
-		s_ListBox.DoStart(TextureHeight + AssetCardTextReserve + AssetCardFooterSpacing + Margin, SearchListSize, LocalColumns, 1, OldSelected, &CustomList, false);
+		s_ListBox.DoStart(LocalRowHeight, SearchListSize, LocalColumns, 1, OldSelected, &CustomList, false);
 		static std::vector<CButtonContainer> s_vLocalDeleteButtons;
 		s_vLocalDeleteButtons.resize(SearchListSize);
 		static char s_aPendingDeleteName[IO_MAX_PATH_LENGTH] = "";
@@ -6207,7 +6215,6 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		char aDeleteLocalName[IO_MAX_PATH_LENGTH] = "";
 		int FirstVisibleIndex = -1;
 		int LastVisibleIndex = -1;
-		const float LocalRowHeight = TextureHeight + AssetCardTextReserve + AssetCardFooterSpacing + Margin;
 		// 换位追随的时间基准：切页/冷却/关动效时直接对齐，不做插值。
 		{
 			const double ReflowNow = time_get();
@@ -6299,13 +6306,13 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				if(AssetsContentWarmupBlocked)
 				{
 					RenderAssetsCardMetadataCached(Shell, pMetadata, RenderAssetsCardMetadata, false);
-					RenderAssetsCardMetadataFallback(Ui(), Shell, pMetadata->m_Title.c_str(), pMetadata->m_Author.c_str(), pMetadata->m_StatusLabel.c_str(), pMetadata->m_Installed || pMetadata->m_LocalOnly, ShowAuthorRow);
+					RenderAssetsCardMetadataFallback(Ui(), Shell, pMetadata->m_Title.c_str(), pMetadata->m_Author.c_str(), pMetadata->m_StatusLabel.c_str(), pMetadata->m_Installed || pMetadata->m_LocalOnly, ShowAuthorRow, ContentMetrics.m_BodySize, ContentMetrics.m_SmallSize, ContentMetrics.m_SmallSize);
 				}
 				else
 					RenderAssetsCardMetadataCached(Shell, pMetadata, RenderAssetsCardMetadata, true);
 			}
 			else if(AssetsRenderCardMetadataFallback)
-				RenderAssetsCardMetadataFallback(Ui(), Shell, AssetCardDisplayName(pItem), pItem->m_aAuthor[0] != '\0' ? pItem->m_aAuthor : "--", pLocalStatusLabel, true, ShowAuthorRow);
+				RenderAssetsCardMetadataFallback(Ui(), Shell, AssetCardDisplayName(pItem), pItem->m_aAuthor[0] != '\0' ? pItem->m_aAuthor : "--", pLocalStatusLabel, true, ShowAuthorRow, ContentMetrics.m_BodySize, ContentMetrics.m_SmallSize, ContentMetrics.m_SmallSize);
 			SSettingsAssetsCardPreviewState PreviewState;
 			const SResourcePreviewKey PreviewKey = BuildAssetsResourcePreviewKey(pItem->m_aName, s_CurCustomTab, false, Graphics()->ScreenHiDPIScale(), CardRect.w);
 			SResourcePreviewState &ResourcePreviewState = gs_SettingsAssetsResourcePreviewCache.GetOrCreate(PreviewKey);
@@ -7282,11 +7289,23 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		}
 
 		const size_t CombinedCount = LocalAssetCount + vVisibleDownloadableAssetIndices.size();
+		// 卡片网格的统一外观：本地+商店混合列表与空/加载态共用同一份列宽估算。
+		static CListBox s_WorkshopAssetsListBox;
+		s_WorkshopAssetsListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_OUTER);
+		// 大面积卡片网格：入场纯淡入 + 逐行 stagger，整卡不位移。
+		s_WorkshopAssetsListBox.SetEntryAnimationFadeOnly(true);
+		// 胶囊行：选中/悬浮走主题轨道（选中 = Theme.m_Selected 填充、无描边），
+		// 滚动条回到覆盖式细轨；行高已含 Margin 卡片间距，行距保持 0，
+		// SkipItems 的可见范围与滚动步进才和行高一致。
+		const float WorkshopRowHeight = TextureHeight + AssetCardTextReserve + AssetCardFooterSpacing + Margin;
+		s_WorkshopAssetsListBox.SetCapsuleRows(ContentMetrics.m_BodySize);
+		s_WorkshopAssetsListBox.DoAutoSpacing(0.0f);
+		// 反馈矩形贴合卡片（卡片与格子之间有半格间隙）；描边由列表组件统一取消。
+		s_WorkshopAssetsListBox.SetItemSelectionInset(Margin / 2.0f);
 		if(CombinedCount == 0)
 		{
-			const CUIRect StableWorkshopListArea = AssetsCardListAreaWithStableScrollbar(WorkshopListArea, 20.0f, 5.0f);
+			const CUIRect StableWorkshopListArea = AssetsCardListAreaWithStableScrollbar(WorkshopListArea, s_WorkshopAssetsListBox.RowReserveWidth());
 			const int Columns = std::max(1, static_cast<int>(StableWorkshopListArea.w / (Margin + TextureWidth)));
-			const float WorkshopRowHeight = TextureHeight + AssetCardTextReserve + AssetCardFooterSpacing + Margin;
 			const bool AssetsInitialEntryLoading = m_aAssetLoadStates[s_CurCustomTab] == ASSET_LOAD_STATE_LOADING || WorkshopState.m_pListTask != nullptr;
 			if(AssetsInitialEntryLoading)
 			{
@@ -7311,27 +7330,23 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		}
 		else
 		{
-			static CListBox s_WorkshopAssetsListBox;
-			s_WorkshopAssetsListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_OUTER);
-			// 大面积卡片网格：入场纯淡入 + 逐行 stagger，整卡不位移。
-			s_WorkshopAssetsListBox.SetEntryAnimationFadeOnly(true);
-			// 选中/悬浮反馈贴合卡片，选中态带描边。
-			s_WorkshopAssetsListBox.SetItemSelectionInset(Margin / 2.0f);
 			static int s_WorkshopEntryRestartSeq = -1;
 			if(s_WorkshopEntryRestartSeq != s_AssetsListEntryRestartSeq)
 			{
 				s_WorkshopAssetsListBox.RestartEntryAnimation();
 				s_WorkshopEntryRestartSeq = s_AssetsListEntryRestartSeq;
 			}
-			const CUIRect StableWorkshopListArea = AssetsCardListAreaWithStableScrollbar(WorkshopListArea, s_WorkshopAssetsListBox.ScrollbarWidthMax(), s_WorkshopAssetsListBox.ScrollbarMargin());
+			// 列宽按「行让位」这一份宽度算，与行胶囊右缘同源，不再写 ScrollbarWidthMax。
+			const CUIRect StableWorkshopListArea = AssetsCardListAreaWithStableScrollbar(WorkshopListArea, s_WorkshopAssetsListBox.RowReserveWidth());
 			const int Columns = std::max(1, static_cast<int>(StableWorkshopListArea.w / (Margin + TextureWidth)));
 			const int OldCombinedSelected = SelectedCombinedAssetIndex(s_CurCustomTab, vVisibleLocalAssetIndices);
-			const float WorkshopRowHeight = TextureHeight + AssetCardTextReserve + AssetCardFooterSpacing + Margin;
 			if(s_AssetsResetListScrollOnTabSwitch)
 			{
 				s_WorkshopAssetsListBox.ResetScroll();
 				s_AssetsResetListScrollOnTabSwitch = false;
 			}
+			// 整数行：列表高度停在整行边界，底部不再裁出半张卡。
+			s_WorkshopAssetsListBox.SetVisibleRowRange(1, maximum(1, (int)std::floor(std::max(0.0f, WorkshopListArea.h) / WorkshopRowHeight)));
 			s_WorkshopAssetsListBox.DoStart(WorkshopRowHeight, CombinedCount, Columns, 1, OldCombinedSelected, &WorkshopListArea, false, IGraphics::CORNER_ALL);
 			{
 				const double ReflowNow = time_get();
@@ -7637,13 +7652,13 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 						if(AssetsContentWarmupBlocked)
 						{
 							RenderAssetsCardMetadataCached(Shell, pMetadata, RenderAssetsCardMetadata, false);
-							RenderAssetsCardMetadataFallback(Ui(), Shell, pMetadata->m_Title.c_str(), pMetadata->m_Author.c_str(), pMetadata->m_StatusLabel.c_str(), pMetadata->m_Installed || pMetadata->m_LocalOnly, ShowAuthorRow);
+							RenderAssetsCardMetadataFallback(Ui(), Shell, pMetadata->m_Title.c_str(), pMetadata->m_Author.c_str(), pMetadata->m_StatusLabel.c_str(), pMetadata->m_Installed || pMetadata->m_LocalOnly, ShowAuthorRow, ContentMetrics.m_BodySize, ContentMetrics.m_SmallSize, ContentMetrics.m_SmallSize);
 						}
 						else
 							RenderAssetsCardMetadataCached(Shell, pMetadata, RenderAssetsCardMetadata, true);
 					}
 					else if(AssetsRenderCardMetadataFallback)
-						RenderAssetsCardMetadataFallback(Ui(), Shell, AssetCardDisplayName(pItem), pItem->m_aAuthor[0] != '\0' ? pItem->m_aAuthor : "--", pLocalStatusLabel, true, ShowAuthorRow);
+						RenderAssetsCardMetadataFallback(Ui(), Shell, AssetCardDisplayName(pItem), pItem->m_aAuthor[0] != '\0' ? pItem->m_aAuthor : "--", pLocalStatusLabel, true, ShowAuthorRow, ContentMetrics.m_BodySize, ContentMetrics.m_SmallSize, ContentMetrics.m_SmallSize);
 					WorkshopCardLayoutTextMs += CardLayoutTextTimer.ElapsedMs();
 
 					CPerfTimer CardPreviewDrawTimer;
@@ -7785,13 +7800,13 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 						if(AssetsContentWarmupBlocked)
 						{
 							RenderAssetsCardMetadataCached(Shell, pMetadata, RenderAssetsCardMetadata, false);
-							RenderAssetsCardMetadataFallback(Ui(), Shell, pMetadata->m_Title.c_str(), pMetadata->m_Author.c_str(), pMetadata->m_StatusLabel.c_str(), pMetadata->m_Installed || pMetadata->m_LocalOnly, ShowAuthorRow);
+							RenderAssetsCardMetadataFallback(Ui(), Shell, pMetadata->m_Title.c_str(), pMetadata->m_Author.c_str(), pMetadata->m_StatusLabel.c_str(), pMetadata->m_Installed || pMetadata->m_LocalOnly, ShowAuthorRow, ContentMetrics.m_BodySize, ContentMetrics.m_SmallSize, ContentMetrics.m_SmallSize);
 						}
 						else
 							RenderAssetsCardMetadataCached(Shell, pMetadata, RenderAssetsCardMetadata, true);
 					}
 					else if(AssetsRenderCardMetadataFallback)
-						RenderAssetsCardMetadataFallback(Ui(), Shell, Asset.m_Name.c_str(), Asset.m_Author.empty() ? "--" : Asset.m_Author.c_str(), pWorkshopStatusLabel, Asset.m_Installed, ShowAuthorRow);
+						RenderAssetsCardMetadataFallback(Ui(), Shell, Asset.m_Name.c_str(), Asset.m_Author.empty() ? "--" : Asset.m_Author.c_str(), pWorkshopStatusLabel, Asset.m_Installed, ShowAuthorRow, ContentMetrics.m_BodySize, ContentMetrics.m_SmallSize, ContentMetrics.m_SmallSize);
 					WorkshopCardLayoutTextMs += CardLayoutTextTimer.ElapsedMs();
 
 					CPerfTimer CardPreviewDrawTimer;

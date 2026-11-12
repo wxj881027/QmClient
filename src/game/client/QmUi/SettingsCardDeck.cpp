@@ -336,8 +336,9 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 			int LayoutColumn = Column;
 			if(Column == 0 && !FullWidth)
 			{
-				const auto *pDefault = qm_card_registry::FindByStableId(pDefinition->m_Spec.m_pStableId);
-				LayoutColumn = ResolveSettingsCardLayoutColumn(Column, FullWidth, pDefault && pDefault->m_DefaultColumn == qm_card_registry::ECardColumn::Right);
+				// 窄屏把全宽槽位收窄回左右列时按默认 placement 决定落在哪一侧。
+				const qm_card_order::SEntry *pDefaultPlacement = qm_card_registry::FindDefaultPlacement(pDefinition->m_Spec.m_pStableId);
+				LayoutColumn = ResolveSettingsCardLayoutColumn(Column, FullWidth, pDefaultPlacement != nullptr && pDefaultPlacement->m_Column == 2);
 			}
 			if(DrawLayout.m_TwoColumns)
 			{

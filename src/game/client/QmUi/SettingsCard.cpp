@@ -241,13 +241,13 @@ bool CMenus::DoSettingsToggleGroup(int Page, int Tab, int Subtab, CUIRect &Conte
 	// 原来把短开关挤成一排胶囊，扫读困难，也和本页其它开关不是同一套外观。
 	CSettingsContentLayoutFlow Flow(Content);
 	bool Changed = false;
-	size_t Index = 0;
 	for(const auto &Entry : Entries)
 	{
 		CUIRect Row;
-		const float SpacingBefore = Index == 0 ? 0.0f : Metrics.m_LineSpacing;
 		const char *pRowId = Entry.m_pTextId != nullptr ? Entry.m_pTextId : Entry.m_pLabel;
-		const bool HasRow = Flow.Control(pRowId, Metrics.m_LineHeight, Row, SpacingBefore);
+		// 组和普通行用同一条行距规则：每个可见行都在自己这一处声明行距。
+		// 声明阶段的行距会记到上一行末尾，组首行落在卡首时自然归零，所以首项不需要再特判。
+		const bool HasRow = Flow.Control(pRowId, Metrics.m_LineHeight, Row, ui_token::settings::RowGap(Metrics.m_LineSpacing));
 		if(HasRow && Pass == ESettingsToggleGroupPass::RENDER && Entry.m_pValue != nullptr)
 		{
 			ProcessInput = ProcessInput && Flow.Input();
@@ -260,10 +260,9 @@ bool CMenus::DoSettingsToggleGroup(int Page, int Tab, int Subtab, CUIRect &Conte
 			if(Entry.m_pTooltip != nullptr && !m_MenuTextPlanCollecting)
 				Ui()->DoConfigTooltip(pId, &Row, Entry.m_pValue);
 		}
-		Index++;
 	}
-	// 组尾补一个行距：跨组时下一组首行不带间距，整卡任意相邻两行才都是同一个节奏。
-	Flow.Space(Metrics.m_LineSpacing);
+	// 组尾不再补一档行距：组和普通行一样只在自己开头声明行距，
+	// 组和下一段之间的间距由下一行自己声明，组不再自己留尾距。
 	return Changed;
 }
 
@@ -302,9 +301,14 @@ bool CMenus::DoSettingsToggleButtonGroup(int Page, int Tab, int Subtab, CUIRect 
 	CUIRect Area;
 	CSettingsContentLayoutFlow Flow(Content);
 	// 整组作为一个稳定布局块发布：输入和绘制消费同一份坐标，按钮和命中区域不会错位。
+	// 组和逐行开关、普通行用同一条行距规则：整块只在自己开头声明行距，组尾不再补 Space。
 	const char *pGroupId = Entries.begin()->m_pTextId;
-	const bool HasArea = Flow.Control(pGroupId, Grid.Height(), Area);
-	Flow.Space(Metrics.m_LineSpacing);
+	const bool Declarative = CSettingsContentLayoutScope::Current() != nullptr;
+	// 非声明式调用方（服务器筛选面板按 HSplitTop 推进光标）没有上一行的声明可以挂行距，
+	// 而 Control 在内容顶部会跳过行前距，所以这一档在这里补，面板节奏与组总高保持不变。
+	if(!Declarative)
+		Flow.Space(ui_token::settings::RowGap(Metrics.m_LineSpacing));
+	const bool HasArea = Flow.Control(pGroupId, Grid.Height(), Area, Declarative ? Metrics.m_LineSpacing : 0.0f);
 	if(!HasArea)
 		return false;
 	ProcessInput = ProcessInput && Flow.Input();
@@ -375,6 +379,12 @@ bool CMenus::DoSettingsToggleButton(int Page, int Tab, int Subtab, const CUIRect
 	if(!m_MenuTextPlanCollecting)
 		Fill = ui_widget::DrawButtonSurface(Context, CanProcessInput ? pId : nullptr, Button, Options);
 	const CUiScopedSurfaceText SurfaceText(TextRender(), Fill);
+	// 选中只改填充、不改文字前景：选中底来自 qm_ui_selected_color，文字固定用正文色，
+	// 不跟着填充亮度翻成深色。必须直接设 TextRender 的当前色——这里走的标签会进
+	// 设置页文字池的缓存容器，SLabelProperties 的显式颜色在缓存容器路径里不生效，
+	// 只靠 CUiScopedSurfaceText 的自动反差就会在选中底上变成黑字。
+	if(Options.m_Selected && Options.m_Enabled)
+		TextRender()->TextColor(ui_token::color::TEXT_PRIMARY);
 	if(Entry.m_ShowCheckmark && !m_MenuTextPlanCollecting)
 	{
 		CUIRect Indicator = ResolveSettingsToggleButtonLabel(Button, PaddingX, PaddingY);

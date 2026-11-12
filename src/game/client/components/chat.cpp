@@ -1840,13 +1840,15 @@ CUi::EPopupMenuFunctionResult CChat::PopupChatTargetMenu(void *pContext, CUIRect
 		const bool Hovered = Active && pUi->MouseHovered(&ButtonHitRect);
 		const ColorRGBA BackgroundColor = Selected ? Theme.m_SurfaceFocused : (Hovered ? Theme.m_SurfaceHovered : ColorRGBA(1.0f, 1.0f, 1.0f, 0.05f));
 		CUIRect RowRect = Row;
-		RowRect.Draw(BackgroundColor, IGraphics::CORNER_ALL, 5.0f);
-		RowRect.VMargin(7.0f, &RowRect);
+		// 行背景占满整行，文字左右内退与弹层/列表条目同一条公式：否则文字贴着行左缘。
+		// 轴向由 token 收口：左右必须用 VMargin，HMargin 在这个仓库改的是上下。
+		RowRect.Draw(BackgroundColor, IGraphics::CORNER_ALL, ui_token::list::RowRadius(RowRect.h));
+		const CUIRect LabelRect = ui_token::dropdown::EntryLabelRect(RowRect, 0.0f, FontSize);
 		SLabelProperties LabelProps;
-		LabelProps.m_MaxWidth = RowRect.w;
+		LabelProps.m_MaxWidth = LabelRect.w;
 		LabelProps.m_EllipsisAtEnd = true;
 		LabelProps.SetColor(Selected ? AccentColor : ColorRGBA(1.0f, 1.0f, 1.0f, 0.92f));
-		pUi->DoLabel(&RowRect, pText, FontSize, TEXTALIGN_ML, LabelProps);
+		pUi->DoLabel(&LabelRect, pText, FontSize, TEXTALIGN_ML, LabelProps);
 		return Active && pUi->DoButtonLogic(pButton, 0, &ButtonHitRect, BUTTONFLAG_LEFT);
 	};
 
@@ -4855,9 +4857,10 @@ CUi::EPopupMenuFunctionResult CChat::PopupChatLineMenu(void *pContext, CUIRect V
 		const ColorRGBA BackgroundColor = Enabled ?
 							  (Hovered ? Theme.m_SurfaceFocused : ColorRGBA(1.0f, 1.0f, 1.0f, 0.05f)) :
 							  ColorRGBA(0.0f, 0.0f, 0.0f, 0.14f);
-		Button.Draw(BackgroundColor, IGraphics::CORNER_ALL, 5.0f);
+		Button.Draw(BackgroundColor, IGraphics::CORNER_ALL, ui_token::list::RowRadius(Button.h));
 
-		Button.VMargin(7.0f, &Button);
+		// 与上面「发送给」弹层同一条内退：图标与文字都不贴行左缘（左右用 VMargin 的横向轴）。
+		Button = ui_token::dropdown::EntryLabelRect(Button, 0.0f, FontSize);
 		Button.VSplitLeft(IconWidth, &IconRect, &LabelRect);
 
 		pChat->TextRender()->TextColor(Enabled ? AccentColor : ColorRGBA(0.62f, 0.67f, 0.70f, 0.45f));

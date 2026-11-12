@@ -187,7 +187,8 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 	const std::chrono::nanoseconds TotalStart = StartMenuPerfNow(TrackPerf);
 	GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_START);
 
-	const float Rounding = ResolveUiTextButtonRadius(EUiButtonGeometry::START_MENU);
+	// 开始菜单这几个按钮都是宽横条，端头给半圆。
+	const float Rounding = ui_token::radius::PILL;
 	const float VMargin = MainView.w / 2 - 190.0f;
 
 	int NewPage = -1;

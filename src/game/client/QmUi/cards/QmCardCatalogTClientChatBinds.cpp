@@ -76,7 +76,7 @@ using namespace qm_tclient_cards;
 qm_card_catalog::STClientCardResult CMenus::RunTClientChatBindsCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass)
 {
 	CUIRect MainView = Ctx.m_Page.m_ContentViewport;
-	ApplyTClientContentMetrics(Ctx.m_Metrics);
+	const CTClientCardMetricsScope CardMetrics(Ctx.m_Metrics);
 	CPerfTimer RenderTimer;
 	const bool ReadOnly = Ctx.m_ReadOnly || Pass != qm_card_catalog::ETClientCardPass::RENDER;
 	std::unique_ptr<CUiRenderOnlyGuard> pRenderOnlyGuard;
@@ -94,7 +94,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientChatBindsCard(const qm_car
 	auto DoBindchatDefault = [&](CUIRect &Column, CBindChat::CBindDefault &BindDefault) {
 		CUIRect Button, Input, Title;
 		CSettingsContentLayoutFlow Flow(Column);
-		if(!Flow.Control(BindDefault.m_Bind.m_aCommand, LineSize, Button, MarginSmall))
+		if(!Flow.Control(BindDefault.m_Bind.m_aCommand, LineSize, Button, RowSpacing))
 			return;
 		CBindChat::CBind *pOldBind = GameClient()->m_BindChat.GetBind(BindDefault.m_Bind.m_aCommand);
 		static char s_aTempName[BINDCHAT_MAX_NAME] = "";

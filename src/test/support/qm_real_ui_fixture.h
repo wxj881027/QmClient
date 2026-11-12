@@ -81,6 +81,13 @@ namespace qm_ui_test
 			++m_Draws;
 			m_vRectSubmissions.push_back({X, Y, W, H});
 		}
+		// 禁用的图标按钮用自由四边形画“不可用”斜线，圆角面的几何回退也走这条路径；
+		// 同属 GPU 提交边界，记录次数即可，不影响任何布局或输入断言。
+		void QuadsDrawFreeform(const CFreeformItem *, int Num) override
+		{
+			++m_Draws;
+			m_Quads += Num;
+		}
 		bool HasRoundedRectSdf() override { return true; }
 		bool HasRoundedRectSdfTexture() override { return m_HasSdfTexture; }
 		void DestroyRenderTarget(CRenderTargetHandle *pTarget) override
@@ -93,6 +100,9 @@ namespace qm_ui_test
 		// 裁剪、光标与选区只提交 GPU 绘制，不替代真实文字布局和输入行为。
 		void ClipEnable(int, int, int, int) override {}
 		void ClipDisable() override {}
+		// 采样边界只是设备状态：色环纹理需要 clamp，由真实后端生效，测试不关心。
+		void WrapClamp() override {}
+		void WrapNormal() override {}
 		void QuadsDrawTL(const CQuadItem *, int Num) override
 		{
 			++m_Draws;

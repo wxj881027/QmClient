@@ -56,25 +56,26 @@ void CMenus::RenderQmFunctionImeContent(CUIRect &Content, float LineHeight, floa
 	const bool ReadOnly = Ui()->RenderOnly();
 	const auto &Metrics = CurrentSettingsContentMetrics();
 	const float RowHeight = std::max(LineHeight, Metrics.m_ButtonHeight);
+	// 行距由行自己声明（声明阶段记到上一行末尾），行后不再补 Space：
+	// 本卡与渐变色/调色板 helper 共用同一条规则，块与块之间只有一档行距。
 	{
 		CUIRect ToggleRow;
-		if(Flow.Control("Auto manage IME while typing", RowHeight, ToggleRow))
+		if(Flow.Control("Auto manage IME while typing", RowHeight, ToggleRow, ui_token::settings::RowGap(LineSpacing)))
 			RenderQmFunctionCheckbox(&g_Config.m_QmImeAutoManage, "Auto manage IME while typing", Localize("Auto manage IME while typing"), &g_Config.m_QmImeAutoManage, &ToggleRow, ReadOnly);
-		Flow.Space(LineSpacing);
 	}
 	{
 		CUIRect ToggleRow;
-		if(Flow.Control("New IME", RowHeight, ToggleRow))
+		if(Flow.Control("New IME", RowHeight, ToggleRow, ui_token::settings::RowGap(LineSpacing)))
 			RenderQmFunctionCheckbox(&g_Config.m_QmNewIme, "New IME", Localize("New IME"), &g_Config.m_QmNewIme, &ToggleRow, ReadOnly);
-		Flow.Space(LineSpacing);
 	}
-	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:ime", CurrentSettingsContentMetrics(), ReadOnly))
+	float SectionReveal = 0.0f;
+	if(!qm_card_catalog::QmCardRenderHook::PersonalizationReveal(this, Content, "qm:ime", CurrentSettingsContentMetrics(), &SectionReveal, ReadOnly))
 		return;
+	const CSettingsContentRevealScope SectionRevealScope(Ui(), Flow, SectionReveal);
 
 	CUIRect Row, Label, Control;
 	const auto NextRow = [&](const char *pId) {
-		const bool HasRow = Flow.Control(pId, RowHeight, Row);
-		Flow.Space(LineSpacing);
+		const bool HasRow = Flow.Control(pId, RowHeight, Row, ui_token::settings::RowGap(LineSpacing));
 		if(HasRow)
 			SplitSettingsControlRow(Row, Metrics, &Label, &Control);
 		return HasRow;
@@ -90,8 +91,7 @@ void CMenus::RenderQmFunctionImeContent(CUIRect &Content, float LineHeight, floa
 		Ui()->DoLabel(&Row, Localize("IME appearance"), BodySize, TEXTALIGN_ML);
 	}
 	CUIRect Preview;
-	const bool HasPreview = Flow.Control("ime-preview", RowHeight * 4.0f, Preview);
-	Flow.Space(LineSpacing);
+	const bool HasPreview = Flow.Control("ime-preview", RowHeight * 4.0f, Preview, ui_token::settings::RowGap(LineSpacing));
 	if(HasPreview && !PrewarmOnly && Flow.Drawing())
 	{
 		DrawRoundedSurface(Ui(), Preview, ColorRGBA(0.5f, 0.5f, 0.5f, 0.12f), ColorRGBA(), 4.0f);

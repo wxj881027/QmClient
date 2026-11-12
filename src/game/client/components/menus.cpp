@@ -830,6 +830,7 @@ qm_card_order::CModel &CMenus::SettingsCardOrderModelForRenderPass()
 		qm_card_registry::RepairLegacyTeeLayout(m_SettingsCardRenderOnlyOrderModel);
 		qm_card_registry::RepairLegacyChatBubbleTab(m_SettingsCardRenderOnlyOrderModel);
 		qm_card_registry::RepairLegacyBindStatusHudTab(m_SettingsCardRenderOnlyOrderModel);
+		qm_card_registry::RepairLegacyPredictionCardTabs(m_SettingsCardRenderOnlyOrderModel);
 		m_SettingsCardRenderOnlyOrderSource = g_Config.m_QmGlobalCardOrder;
 		m_SettingsCardRenderOnlyOrderInitialized = true;
 	}
@@ -895,7 +896,8 @@ void CMenus::LoadSettingsCardOrderModel()
 	const bool TeeLayoutChanged = qm_card_registry::RepairLegacyTeeLayout(m_SettingsCardOrderModel);
 	const bool ChatBubbleTabChanged = qm_card_registry::RepairLegacyChatBubbleTab(m_SettingsCardOrderModel);
 	const bool BindStatusHudTabChanged = qm_card_registry::RepairLegacyBindStatusHudTab(m_SettingsCardOrderModel);
-	if((ModernTabsChanged || LegacyBindTabChanged || CreditsLayoutChanged || NameplateTitleLayoutChanged || TeeLayoutChanged || ChatBubbleTabChanged || BindStatusHudTabChanged) && !PersistCurrentLayout())
+	const bool PredictionCardTabsChanged = qm_card_registry::RepairLegacyPredictionCardTabs(m_SettingsCardOrderModel);
+	if((ModernTabsChanged || LegacyBindTabChanged || CreditsLayoutChanged || NameplateTitleLayoutChanged || TeeLayoutChanged || ChatBubbleTabChanged || BindStatusHudTabChanged || PredictionCardTabsChanged) && !PersistCurrentLayout())
 	{
 		m_SettingsCardOrderLoaded = true;
 		return;
@@ -1804,7 +1806,7 @@ int CMenus::DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void 
 	return DoSettingsButton_CheckBox(Page, Tab, Subtab, pId, pTextId, pText, Checked, pRect, LabelProps, true);
 }
 
-int CMenus::DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, const SLabelProperties &LabelProps, const bool ProcessInput, const float RequestedFontSize)
+int CMenus::DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, const SLabelProperties &LabelProps, const bool ProcessInput, const float RequestedFontSize, const bool AllowHintSplit)
 {
 	Ui()->DoConfigTooltip(pId, pRect, pId);
 	const float BodySize = RequestedFontSize > 0.0f ? RequestedFontSize : CurrentSettingsContentMetrics().m_BodySize;
@@ -1821,7 +1823,7 @@ int CMenus::DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void 
 	const CUIRect &ToggleRect = Layout.m_ControlRect;
 	SLabelProperties Props = LabelProps;
 	Props.m_MaxWidth = Label.w;
-	DoSettingsMenuLabel(Page, Tab, Subtab, pTextId, &Label, pText, BodySize, TEXTALIGN_ML, Props, -1, false);
+	DoSettingsMenuLabel(Page, Tab, Subtab, pTextId, &Label, pText, BodySize, TEXTALIGN_ML, Props, -1, false, AllowHintSplit);
 	if(!m_MenuTextPlanCollecting)
 		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pId, pRect, pId, &Label);
 	if(m_MenuTextPlanCollecting)
@@ -1900,13 +1902,13 @@ void CMenus::DoSettingsLabel(int Page, int Tab, const char *pTextId, const CUIRe
 	DoSettingsLabelStreamed(Element, pRect, pText, Size, Align, EffectiveProps, -1, nullptr, Render);
 }
 
-void CMenus::DoSettingsMenuLabel(int Page, int Tab, int Subtab, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &Props, int MaxWidth, const bool DrawSearchBackground)
+void CMenus::DoSettingsMenuLabel(int Page, int Tab, int Subtab, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &Props, int MaxWidth, const bool DrawSearchBackground, const bool AllowHintSplit)
 {
 	const auto Presentation = ResolveSettingsLabelPresentation(pTextId, pText, [](const char *pKey) { return Localize(pKey); });
 	pText = Presentation.m_pText;
 	if(Presentation.m_pTip != nullptr && !m_MenuTextPlanCollecting && !Ui()->RenderOnly() && !Ui()->DrawingSuppressed())
 		GameClient()->m_Tooltips.DoSmallToolTip(Presentation.m_pTipId, pRect, Presentation.m_pTip, CurrentSettingsContentMetrics().m_SmallSize);
-	pText = Ui()->PrepareCardLabel(pRect, pText, !m_MenuTextPlanCollecting);
+	pText = Ui()->PrepareCardLabel(pRect, pText, !m_MenuTextPlanCollecting, AllowHintSplit);
 	SLabelProperties EffectiveProps = Props;
 	if(!m_MenuTextPlanCollecting && qm_settings_reveal::OnRow(pTextId, pText, *pRect))
 	{
@@ -6141,7 +6143,18 @@ void CMenus::RenderThemeSelection(CUIRect MainView, const SSettingsContentMetric
 	const SSettingsContentMetrics Metrics = pMetrics != nullptr ? *pMetrics : ResolveSettingsContentMetrics(MainView.w);
 	s_ListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);
 	s_ListBox.SetWheelOwnerPriority(EUiWheelOwnerPriority::COMPOSITE_CONTROL);
-	s_ListBox.SetItemColors(ui_token::color::LIST_ITEM_SELECTED, ui_token::color::LIST_ITEM_SELECTED, ui_token::color::LIST_ITEM_HOVER);
+	// 选中态与下拉框弹层条目同一口径（QmSettingsDropdownVisualStyle().m_ActiveEntryColor
+	// 就是 Theme.m_Selected）：强调色低透明度填充、无描边；悬浮态保持列表 token。
+	// 组件默认（ui_listbox 的 SetCapsuleRows）这一轮还是 LIST_ITEM_SELECTED，
+	// 这里先显式取同一来源；等 ui_listbox 默认值改成 Theme.m_Selected 后这一行可删。
+	const ColorRGBA SelectedItemColor = Ui()->QmControlTheme().m_Selected;
+	s_ListBox.SetItemColors(SelectedItemColor, SelectedItemColor, ui_token::color::LIST_ITEM_HOVER);
+	// 统一行外观：胶囊整行 + token 行距 + 按字号派生的行内内边距，与图形页列表同一套。
+	// 可见行数取整数行（最少 3 行沿用原 RowsPerScroll 的设计意图，最多 8 行），
+	// 卡片测高（ResolveSettingsGeneralThemeListGeometry）用同一组行数，超出的行交给滚动条；
+	// 这样列表体高度正好停在整行边界，最上/最下一行的胶囊不会被裁掉或探出容器背景。
+	s_ListBox.SetCapsuleRows(Metrics.m_BodySize);
+	s_ListBox.SetVisibleRowRange(ui_token::list::THEME_MIN_VISIBLE_ROWS, ui_token::list::MAX_VISIBLE_ROWS);
 
 	const float HeaderHeight = Metrics.m_LineHeight;
 	const float HeaderSpacing = Metrics.m_LineSpacing;
@@ -6197,7 +6210,9 @@ void CMenus::RenderThemeSelection(CUIRect MainView, const SSettingsContentMetric
 		Ui()->DoConfigTooltip(&Theme.m_Name, &Item.m_Rect, g_Config.m_ClMenuMap);
 
 		const std::string Name = ThemeDisplayName(Theme.m_Name.c_str());
-		const auto RowLayout = ResolveThemeSelectionRowLayout(Item.m_Rect, TextRender()->TextWidth(Metrics.m_BodySize, Name.c_str()), Metrics.m_LineSpacing);
+		// 行内容一律排在 m_ContentRect：胶囊行会按字号让出左右内边距，并给覆盖式滚动条
+		// 那一列再让一条缝，用 m_Rect 摆图标/名称会压到滚动条下面。
+		const auto RowLayout = ResolveThemeSelectionRowLayout(Item.m_ContentRect, TextRender()->TextWidth(Metrics.m_BodySize, Name.c_str()), Metrics.m_LineSpacing);
 		CUIRect Icon = RowLayout.m_Icon;
 		const CUIRect Label = RowLayout.m_Label;
 
@@ -6564,7 +6579,16 @@ bool CMenus::SetSettingsPageFromCardTab(const char *pTab)
 	else if(str_comp(pTab, "sound") == 0)
 		g_Config.m_UiSettingsPage = SETTINGS_SOUND;
 	else if(str_comp(pTab, "ddnet") == 0)
+	{
 		g_Config.m_UiSettingsPage = SETTINGS_DDNET;
+		g_Config.m_QmDdnetTab = DDNET_TAB_GENERAL;
+	}
+	else if(str_comp(pTab, "ddnet-prediction") == 0)
+	{
+		// DDNet 页内「网络补偿」子页签：迁过来的预测卡在全局搜索里仍要能直达。
+		g_Config.m_UiSettingsPage = SETTINGS_DDNET;
+		g_Config.m_QmDdnetTab = DDNET_TAB_PREDICTION;
+	}
 	else if(str_comp(pTab, "controls") == 0)
 		g_Config.m_UiSettingsPage = SETTINGS_CONTROLS;
 	else if(str_comp(pTab, "appearance-hud") == 0)

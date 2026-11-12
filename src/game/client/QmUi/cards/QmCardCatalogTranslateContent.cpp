@@ -20,6 +20,7 @@
 
 #include <game/client/QmUi/SettingsContentLayout.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
+#include <game/client/QmUi/SettingsPersonalization.h>
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiSurface.h>
@@ -76,7 +77,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 	};
 	const auto RenderHelp = [this, &Flow, HelpIndent, SmallSize, LineSpacing](const char *pId, const char *pText, float FontSize = 0.0f) {
 		const float TextSize = FontSize > 0.0f ? FontSize : SmallSize;
-		Flow.Text(pId, pText, HelpIndent, TextSize, LineSpacing, [this](const char *pValue, float Width, float Size) { return TextRender()->TextBoundingBox(Size, pValue, -1, Width).m_H + Size * 0.25f; }, [this, TextSize](const CUIRect &HelpRow, const char *pValue) {
+		Flow.Text(pId, pText, HelpIndent, TextSize, ui_token::settings::RowGap(LineSpacing), [this](const char *pValue, float Width, float Size) { return TextRender()->TextBoundingBox(Size, pValue, -1, Width).m_H + Size * 0.25f; }, [this, TextSize](const CUIRect &HelpRow, const char *pValue) {
 				SLabelProperties Props;
 				Props.m_MaxWidth = HelpRow.w;
 				Props.m_EnableWidthCheck = false;
@@ -101,27 +102,23 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 	{
 		RenderCheckbox(&g_Config.m_QmTranslateAuto, "Auto translate received messages", Localize("Auto translate received messages"), &g_Config.m_QmTranslateAuto, &Row, LineHeight);
 	}
-	Flow.Space(LineSpacing);
 
-	if(Flow.Control("translate-row-2", LineHeight, Row))
+	if(Flow.Control("translate-row-2", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		RenderCheckbox(&g_Config.m_QmTranslateAutoOutgoing, "Auto translate sent messages", Localize("Auto translate sent messages"), &g_Config.m_QmTranslateAutoOutgoing, &Row, LineHeight);
 	}
-	Flow.Space(LineSpacing);
 
-	if(Flow.Control("translate-row-3", LineHeight, Row))
+	if(Flow.Control("translate-row-3", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		RenderCheckbox(&g_Config.m_QmTranslateOutgoingShowOriginal, "Show original text below outgoing translation", Localize("Show original text below outgoing translation"), &g_Config.m_QmTranslateOutgoingShowOriginal, &Row, LineHeight);
 	}
-	Flow.Space(LineSpacing);
 
-	if(Flow.Control("translate-row-4", LineHeight, Row))
+	if(Flow.Control("translate-row-4", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		SplitSettingsControlRow(Row, Metrics, &LabelCol, &ControlCol);
 		RenderLabel("qmclient-translation-text-size", &LabelCol, Localize("Translated text size"), BodySize);
 		RenderSliderWithValueInput(&g_Config.m_QmChatTranslationSize, ControlCol, &g_Config.m_QmChatTranslationSize, 50, 100, "%");
 	}
-	Flow.Space(LineSpacing);
 
 	const auto TranslateBackendDropDownNames = NTranslateUi::NamesWithCustom(NTranslateUi::BackendNames());
 	if(!PrewarmOnly && !Ui()->RenderOnly())
@@ -132,7 +129,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 
 	const int BackendSelectedOld = NTranslateUi::BackendIndexForDisplay(g_Config.m_QmTranslateBackend);
 
-	if(Flow.Control("translate-row-5", LineHeight, Row))
+	if(Flow.Control("translate-row-5", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		SplitSettingsControlRow(Row, Metrics, &LabelCol, &ControlCol);
 		CUIElement &TranslationServiceLabel = SettingsTextElement(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-translation-service");
@@ -148,7 +145,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 	const bool IsMymemoryBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "mymemory") == 0;
 	const bool IsBaiduBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "baidu") == 0;
 	const bool IsDeeplBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "deepl") == 0;
-	Flow.Space(LineSpacing);
+	Flow.Space(ui_token::settings::RowGap(LineSpacing));
 
 	// MyMemory 免注册说明
 	if(IsMymemoryBackend && !Flow.Declaring())
@@ -157,8 +154,10 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 	}
 
 	// DeepL 说明与 API Key 输入
-	if(IsDeeplBackend)
+	static CSettingsConditionalRows s_DeeplKeyRows;
+	if(s_DeeplKeyRows.Update(IsDeeplBackend, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 	{
+		const CSettingsContentRevealScope DeeplKeyRevealScope(Ui(), Flow, s_DeeplKeyRows.Fade(g_Config.m_QmUiMotionLevel));
 		if(!Flow.Declaring())
 			GameClient()->m_Tooltips.DoToolTipForRect(&s_TranslateBackendDropDownState, &Row, Localize("DeepL API quota depends on your subscription. Get an API key at deepl.com."));
 
@@ -170,11 +169,13 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 			static ui_widget::SPasswordFieldState s_TranslateDeeplKeyState;
 			RenderPasswordInput(&s_TranslateDeeplKey, ControlCol, &s_TranslateDeeplKeyState, BodySize);
 		}
-		Flow.Space(LineSpacing);
+		Flow.Space(ui_token::settings::RowGap(LineSpacing));
 	}
 
-	if(IsBaiduBackend)
+	static CSettingsConditionalRows s_BaiduKeyRows;
+	if(s_BaiduKeyRows.Update(IsBaiduBackend, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 	{
+		const CSettingsContentRevealScope BaiduKeyRevealScope(Ui(), Flow, s_BaiduKeyRows.Fade(g_Config.m_QmUiMotionLevel));
 		if(Flow.Control("translate-row-7", LineHeight, Row))
 		{
 			SplitSettingsControlRow(Row, Metrics, &LabelCol, &ControlCol);
@@ -182,8 +183,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 			static CLineInput s_TranslateBaiduAppId(g_Config.m_QmTranslateBaiduAppId, sizeof(g_Config.m_QmTranslateBaiduAppId));
 			RenderTextInput(&s_TranslateBaiduAppId, ControlCol, "", BodySize);
 		}
-		Flow.Space(LineSpacing);
-		if(Flow.Control("translate-row-8", LineHeight, Row))
+		if(Flow.Control("translate-row-8", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		{
 			SplitSettingsControlRow(Row, Metrics, &LabelCol, &ControlCol);
 			RenderLabel("qmclient-translate-baidu-key", &LabelCol, Localize("API key"), BodySize);
@@ -191,7 +191,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 			static ui_widget::SPasswordFieldState s_TranslateBaiduKeyState;
 			RenderPasswordInput(&s_TranslateBaiduKey, ControlCol, &s_TranslateBaiduKeyState, BodySize);
 		}
-		Flow.Space(LineSpacing);
+		Flow.Space(ui_token::settings::RowGap(LineSpacing));
 	}
 
 	// 探测通过相同生产后端执行；预热和 RenderOnly 不创建请求或延长 owner。
@@ -215,12 +215,11 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 				m_TranslateProbe.Start(*Http(), "Hello, please hook me.", g_Config.m_QmTranslateTarget, "en");
 		}
 	}
-	Flow.Space(LineSpacing);
-	if(Flow.Control("translate-row-10", LineHeight, Row))
+	if(Flow.Control("translate-row-10", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		RenderCheckbox(&m_TranslateProbeDiagnostics, "Translation diagnostics", Localize("Translation diagnostics"), &m_TranslateProbeDiagnostics, &Row, LineHeight);
 	}
-	Flow.Space(LineSpacing);
+	Flow.Space(ui_token::settings::RowGap(LineSpacing));
 	if(m_TranslateProbe.Pending())
 		RenderHelp("translate-help-1", Localize("Testing translation..."));
 	else if(m_TranslateProbe.HasResult())
@@ -251,13 +250,15 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 	}
 
 	// FTAPI 自动翻译开关（仅在 FTAPI 后端时显示）
-	if(IsFtapiBackend)
+	static CSettingsConditionalRows s_FtapiRows;
+	if(s_FtapiRows.Update(IsFtapiBackend, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 	{
+		const CSettingsContentRevealScope FtapiRevealScope(Ui(), Flow, s_FtapiRows.Fade(g_Config.m_QmUiMotionLevel));
 		if(Flow.Control("translate-row-11", LineHeight, Row))
 		{
 			RenderCheckbox(&g_Config.m_QmTranslateFtapiAutoEnable, "Enable FTAPI auto-translate (may overload the service)", Localize("Enable FTAPI auto-translate (may overload the service)"), &g_Config.m_QmTranslateFtapiAutoEnable, &Row, LineHeight);
 		}
-		Flow.Space(LineSpacing);
+		Flow.Space(ui_token::settings::RowGap(LineSpacing));
 
 		// FTAPI 警告提示
 		if(!Flow.Declaring())
@@ -325,81 +326,104 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 			RenderLanguageDropDownWithCustomInput(Row, ControlCol, LangNames.data(), LangCodes.data(), LangCodes.size(), s_TargetLangDropDown, g_Config.m_QmTranslateTarget, sizeof(g_Config.m_QmTranslateTarget), s_TranslateTarget, "zh");
 		}
 	}
-	Flow.Space(LineSpacing);
-	// Endpoint 配置 - 根据后端类型显示不同的端点输入
-	if(IsTencentCloudBackend)
+	Flow.Space(ui_token::settings::RowGap(LineSpacing));
+	// Endpoint 配置 - 根据后端类型显示不同的端点输入。
+	// 腾讯云与 LibreTranslate 是同一个槽位里的互斥二选一：目标索引直接就是分支号，
+	// 切换后端时旧分支收起、新分支展开共用一条进度，槽高由互补的补齐撑住，
+	// 不会再出现两块同时占位、端点标签叠在一起、卡片高度先涨后缩。
+	const int BackendExclusiveBranch = IsTencentCloudBackend ? 0 : (IsLibreTranslateBackend ? 1 : -1);
+	static CSettingsExclusiveReveal s_TranslateEndpointReveal;
+	s_TranslateEndpointReveal.Update(BackendExclusiveBranch, 2, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel);
 	{
-		if(Flow.Control("translate-row-13", LineHeight, Row))
+		const CSettingsExclusiveBranchScope TencentEndpointBranch(Ui(), Flow, s_TranslateEndpointReveal, 0);
+		if(TencentEndpointBranch.Visible())
 		{
-			SplitSettingsControlRow(Row, Metrics, &LabelCol, &ControlCol);
-			RenderLabel("qmclient-translate-tencent-endpoint", &LabelCol, Localize("Endpoint"), BodySize);
-			static CLineInput s_TranslateEndpoint(g_Config.m_QmTranslateTcEndpoint, sizeof(g_Config.m_QmTranslateTcEndpoint));
-			s_TranslateEndpoint.SetEmptyText("https://tmt.tencentcloudapi.com/");
-			RenderTextInput(&s_TranslateEndpoint, ControlCol, "https://tmt.tencentcloudapi.com/", BodySize);
+			if(Flow.Control("translate-row-13", LineHeight, Row))
+			{
+				SplitSettingsControlRow(Row, Metrics, &LabelCol, &ControlCol);
+				RenderLabel("qmclient-translate-tencent-endpoint", &LabelCol, Localize("Endpoint"), BodySize);
+				static CLineInput s_TranslateEndpoint(g_Config.m_QmTranslateTcEndpoint, sizeof(g_Config.m_QmTranslateTcEndpoint));
+				s_TranslateEndpoint.SetEmptyText("https://tmt.tencentcloudapi.com/");
+				RenderTextInput(&s_TranslateEndpoint, ControlCol, "https://tmt.tencentcloudapi.com/", BodySize);
+			}
+			Flow.Space(ui_token::settings::RowGap(LineSpacing));
 		}
-		Flow.Space(LineSpacing);
 	}
-	else if(IsLibreTranslateBackend)
 	{
-		if(Flow.Control("translate-row-14", LineHeight, Row))
+		const CSettingsExclusiveBranchScope LibreEndpointBranch(Ui(), Flow, s_TranslateEndpointReveal, 1);
+		if(LibreEndpointBranch.Visible())
 		{
-			SplitSettingsControlRow(Row, Metrics, &LabelCol, &ControlCol);
-			RenderLabel("qmclient-translate-aliyun-endpoint", &LabelCol, Localize("Endpoint"), BodySize);
-			static CLineInput s_TranslateEndpoint(g_Config.m_QmTranslateLibreEndpoint, sizeof(g_Config.m_QmTranslateLibreEndpoint));
-			s_TranslateEndpoint.SetEmptyText("http://localhost:5000");
-			RenderTextInput(&s_TranslateEndpoint, ControlCol, "http://localhost:5000", BodySize);
+			if(Flow.Control("translate-row-14", LineHeight, Row))
+			{
+				SplitSettingsControlRow(Row, Metrics, &LabelCol, &ControlCol);
+				RenderLabel("qmclient-translate-aliyun-endpoint", &LabelCol, Localize("Endpoint"), BodySize);
+				static CLineInput s_TranslateEndpoint(g_Config.m_QmTranslateLibreEndpoint, sizeof(g_Config.m_QmTranslateLibreEndpoint));
+				s_TranslateEndpoint.SetEmptyText("http://localhost:5000");
+				RenderTextInput(&s_TranslateEndpoint, ControlCol, "http://localhost:5000", BodySize);
+			}
+			Flow.Space(ui_token::settings::RowGap(LineSpacing));
 		}
-		Flow.Space(LineSpacing);
 	}
+	Flow.Space(s_TranslateEndpointReveal.SlotPadding());
 	// LLM 后端的端点配置在 Provider 选择区域显示
 
-	if(IsTencentCloudBackend)
+	// 腾讯云的区域与密钥行同样是「腾讯云 / LibreTranslate」互斥二选一，用同一套互斥组处理。
+	static CSettingsExclusiveReveal s_TranslateCredentialReveal;
+	s_TranslateCredentialReveal.Update(BackendExclusiveBranch, 2, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel);
 	{
-		if(Flow.Control("translate-row-15", LineHeight, Row))
+		const CSettingsExclusiveBranchScope TencentCredentialBranch(Ui(), Flow, s_TranslateCredentialReveal, 0);
+		if(TencentCredentialBranch.Visible())
 		{
-			SplitSettingsControlRow(Row, Metrics, &LabelCol, &ControlCol);
-			RenderLabel("qmclient-translate-region", &LabelCol, Localize("Region"), BodySize);
-			static CLineInput s_TranslateRegion(g_Config.m_QmTranslateTcRegion, sizeof(g_Config.m_QmTranslateTcRegion));
-			s_TranslateRegion.SetEmptyText("ap-guangzhou");
-			RenderTextInput(&s_TranslateRegion, ControlCol, "ap-guangzhou", BodySize);
-		}
-		Flow.Space(LineSpacing);
+			if(Flow.Control("translate-row-15", LineHeight, Row))
+			{
+				SplitSettingsControlRow(Row, Metrics, &LabelCol, &ControlCol);
+				RenderLabel("qmclient-translate-region", &LabelCol, Localize("Region"), BodySize);
+				static CLineInput s_TranslateRegion(g_Config.m_QmTranslateTcRegion, sizeof(g_Config.m_QmTranslateTcRegion));
+				s_TranslateRegion.SetEmptyText("ap-guangzhou");
+				RenderTextInput(&s_TranslateRegion, ControlCol, "ap-guangzhou", BodySize);
+			}
 
-		if(Flow.Control("translate-row-16", LineHeight, Row))
-		{
-			SplitSettingsControlRow(Row, Metrics, &LabelCol, &ControlCol);
-			RenderLabel("qmclient-translate-secret-id", &LabelCol, Localize("SecretId"), BodySize);
-			static CLineInput s_TranslateSecretId(g_Config.m_QmTranslateTcSecretId, sizeof(g_Config.m_QmTranslateTcSecretId));
-			s_TranslateSecretId.SetEmptyText(Localize("Tencent Cloud SecretId"));
-			RenderTextInput(&s_TranslateSecretId, ControlCol, Localize("Tencent Cloud SecretId"), BodySize);
-		}
-		Flow.Space(LineSpacing);
+			if(Flow.Control("translate-row-16", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
+			{
+				SplitSettingsControlRow(Row, Metrics, &LabelCol, &ControlCol);
+				RenderLabel("qmclient-translate-secret-id", &LabelCol, Localize("SecretId"), BodySize);
+				static CLineInput s_TranslateSecretId(g_Config.m_QmTranslateTcSecretId, sizeof(g_Config.m_QmTranslateTcSecretId));
+				s_TranslateSecretId.SetEmptyText(Localize("Tencent Cloud SecretId"));
+				RenderTextInput(&s_TranslateSecretId, ControlCol, Localize("Tencent Cloud SecretId"), BodySize);
+			}
 
-		if(Flow.Control("translate-row-17", LineHeight, Row))
-		{
-			SplitSettingsControlRow(Row, Metrics, &LabelCol, &ControlCol);
-			RenderLabel("qmclient-translate-secret-key", &LabelCol, Localize("SecretKey"), BodySize);
-			static CLineInput s_TranslateSecretKey(g_Config.m_QmTranslateTcSecretKey, sizeof(g_Config.m_QmTranslateTcSecretKey));
-			static ui_widget::SPasswordFieldState s_TranslateSecretKeyState;
-			RenderPasswordInput(&s_TranslateSecretKey, ControlCol, &s_TranslateSecretKeyState, BodySize, Localize("Tencent Cloud SecretKey"));
+			if(Flow.Control("translate-row-17", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
+			{
+				SplitSettingsControlRow(Row, Metrics, &LabelCol, &ControlCol);
+				RenderLabel("qmclient-translate-secret-key", &LabelCol, Localize("SecretKey"), BodySize);
+				static CLineInput s_TranslateSecretKey(g_Config.m_QmTranslateTcSecretKey, sizeof(g_Config.m_QmTranslateTcSecretKey));
+				static ui_widget::SPasswordFieldState s_TranslateSecretKeyState;
+				RenderPasswordInput(&s_TranslateSecretKey, ControlCol, &s_TranslateSecretKeyState, BodySize, Localize("Tencent Cloud SecretKey"));
+			}
+			Flow.Space(ui_token::settings::RowGap(LineSpacing));
 		}
-		Flow.Space(LineSpacing);
 	}
-	else if(IsLibreTranslateBackend)
 	{
-		if(Flow.Control("translate-row-18", LineHeight, Row))
+		const CSettingsExclusiveBranchScope LibreCredentialBranch(Ui(), Flow, s_TranslateCredentialReveal, 1);
+		if(LibreCredentialBranch.Visible())
 		{
-			SplitSettingsControlRow(Row, Metrics, &LabelCol, &ControlCol);
-			RenderLabel("qmclient-translate-api-key", &LabelCol, Localize("API key"), BodySize);
-			static CLineInput s_TranslateKey(g_Config.m_QmTranslateLibreKey, sizeof(g_Config.m_QmTranslateLibreKey));
-			static ui_widget::SPasswordFieldState s_TranslateKeyState;
-			RenderPasswordInput(&s_TranslateKey, ControlCol, &s_TranslateKeyState, BodySize);
+			if(Flow.Control("translate-row-18", LineHeight, Row))
+			{
+				SplitSettingsControlRow(Row, Metrics, &LabelCol, &ControlCol);
+				RenderLabel("qmclient-translate-api-key", &LabelCol, Localize("API key"), BodySize);
+				static CLineInput s_TranslateKey(g_Config.m_QmTranslateLibreKey, sizeof(g_Config.m_QmTranslateLibreKey));
+				static ui_widget::SPasswordFieldState s_TranslateKeyState;
+				RenderPasswordInput(&s_TranslateKey, ControlCol, &s_TranslateKeyState, BodySize);
+			}
+			Flow.Space(ui_token::settings::RowGap(LineSpacing));
 		}
-		Flow.Space(LineSpacing);
 	}
+	Flow.Space(s_TranslateCredentialReveal.SlotPadding());
 
-	if(IsLlmBackend)
+	static CSettingsConditionalRows s_LlmBackendRows;
+	if(s_LlmBackendRows.Update(IsLlmBackend, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 	{
+		const CSettingsContentRevealScope LlmBackendRevealScope(Ui(), Flow, s_LlmBackendRows.Fade(g_Config.m_QmUiMotionLevel));
 		// LLM Provider 选择
 		const std::array<const char *, 4> LlmProviderDropDownNames = {
 			Localize("Zhipu AI"),
@@ -422,7 +446,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 				g_Config.m_QmTranslateLlmProvider = NewProvider;
 			}
 		}
-		Flow.Space(LineSpacing);
+		Flow.Space(ui_token::settings::RowGap(LineSpacing));
 
 		if(g_Config.m_QmTranslateLlmProvider == 3)
 		{
@@ -436,10 +460,9 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 				if(!PrewarmOnly && !Ui()->RenderOnly() && Auth >= 0 && Auth < 2)
 					g_Config.m_QmTranslateLlmCustomAuth = Auth;
 			}
-			Flow.Space(LineSpacing);
 			const std::array<const char *, 4> ThinkingNames = {Localize("Use server defaults"), "thinking", "enable_thinking", "chat_template_kwargs"};
 			static CUi::SDropDownState s_LlmCustomThinking;
-			if(Flow.Control("translate-row-21", LineHeight, Row))
+			if(Flow.Control("translate-row-21", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 			{
 				SplitSettingsControlRow(Row, Metrics, &LabelCol, &ControlCol);
 				RenderLabel("qmclient-llm-thinking-parameters", &LabelCol, Localize("Thinking parameters"), BodySize);
@@ -448,12 +471,11 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 				if(!PrewarmOnly && !Ui()->RenderOnly() && Thinking >= 0 && Thinking < 4)
 					g_Config.m_QmTranslateLlmCustomThinking = Thinking;
 			}
-			Flow.Space(LineSpacing);
-			if(Flow.Control("translate-row-22", LineHeight, Row))
+			if(Flow.Control("translate-row-22", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 			{
 				RenderCheckbox(&g_Config.m_QmTranslateLlmCustomParameters, "Send sampling and token limit parameters", Localize("Send sampling and token limit parameters"), &g_Config.m_QmTranslateLlmCustomParameters, &Row, LineHeight);
 			}
-			Flow.Space(LineSpacing);
+			Flow.Space(ui_token::settings::RowGap(LineSpacing));
 		}
 
 		// 各 Provider 的 API Key 输入框（静态变量，分别绑定到不同配置）
@@ -506,10 +528,9 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 			if(pActiveKeyInput != nullptr && pActiveKeyState != nullptr)
 				RenderPasswordInput(pActiveKeyInput, ControlCol, pActiveKeyState, BodySize, pKeyPlaceholder);
 		}
-		Flow.Space(LineSpacing);
 
 		// 各 Provider 的模型配置
-		if(Flow.Control("translate-row-24", LineHeight, Row))
+		if(Flow.Control("translate-row-24", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		{
 			SplitSettingsControlRow(Row, Metrics, &LabelCol, &ControlCol);
 			RenderLabel("qmclient-translate-llm-model", &LabelCol, Localize("Model"), BodySize);
@@ -607,7 +628,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 					str_copy(pModelConfigValue, pActiveModelInput->GetString(), ModelConfigSize);
 			}
 		}
-		Flow.Space(LineSpacing);
+		Flow.Space(ui_token::settings::RowGap(LineSpacing));
 	}
 
 	// 出站目标语言（常驻）
@@ -626,19 +647,29 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 			RenderLanguageDropDownWithCustomInput(Row, ControlCol, apOutTargetNames.data(), apOutTargetCodes.data(), apOutTargetCodes.size(), s_OutTargetLangDropDown, g_Config.m_QmTranslateOutgoingTarget, sizeof(g_Config.m_QmTranslateOutgoingTarget), s_TargetLang, "en");
 		}
 	}
-	Flow.Space(LineSpacing);
 
-	// 【高级】选项折叠开关
-	if(Flow.Control("translate-row-26", LineHeight, Row))
+	// 「个性调整」折叠行：展开状态仍写回原配置位（m_QmTranslateShowAdvanced），行 id 不变。
+	// 下面的高级分组各自已由 CSettingsConditionalRows 驱动显隐，折叠行本身不再套第二层
+	// 显隐：两层进度相乘会让动画变成 ease²，收起时还会两处同时缩高。
+	static CButtonContainer s_TranslateAdvancedFoldRowButton;
+	CUIRect TranslateAdvancedFoldRow;
+	// 折叠行就是普通一行，行前只留一档行距（不再画分割线）。
+	if(Flow.Control("translate-row-26", LineHeight, TranslateAdvancedFoldRow, ui_token::settings::RowGap(LineSpacing)))
 	{
-		RenderCheckbox(&g_Config.m_QmTranslateShowAdvanced, "Advanced options", Localize("Advanced options"), &g_Config.m_QmTranslateShowAdvanced, &Row, LineHeight);
+		const SSettingsFoldRowStyle TranslateAdvancedFoldStyle = ResolveSettingsFoldRowStyle(
+			SettingsCardDeckVisualOptions().m_BorderColor,
+			color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(1.0f));
+		const bool TranslateAdvancedClicked = SettingsFoldRow(Ui(), &s_TranslateAdvancedFoldRowButton, TranslateAdvancedFoldRow, Localize("Personal adjustments"), SmallSize, g_Config.m_QmTranslateShowAdvanced != 0, TranslateAdvancedFoldStyle);
+		if(TranslateAdvancedClicked && Flow.Input() && !PrewarmOnly && !Ui()->RenderOnly())
+			g_Config.m_QmTranslateShowAdvanced = g_Config.m_QmTranslateShowAdvanced ? 0 : 1;
 	}
-	Flow.Space(LineSpacing);
 
-	if(g_Config.m_QmTranslateShowAdvanced)
+	static CSettingsConditionalRows s_TranslateAdvancedDetectRows;
+	if(s_TranslateAdvancedDetectRows.Update(g_Config.m_QmTranslateShowAdvanced, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 	{
-		// 本地语言检测阈值
-		if(Flow.Control("translate-row-27", LineHeight, Row))
+		const CSettingsContentRevealScope TranslateAdvancedDetectRevealScope(Ui(), Flow, s_TranslateAdvancedDetectRows.Fade(g_Config.m_QmUiMotionLevel));
+		// 本地语言检测阈值：块首间距按 A 型规则由这一行自己声明（折叠行之后不再补 Space）。
+		if(Flow.Control("translate-row-27", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		{
 			SplitSettingsControlRow(Row, Metrics, &LabelCol, &ControlCol);
 			RenderLabel("qmclient-translate-minimum-match-chars", &LabelCol, Localize("Minimum match chars"), BodySize);
@@ -647,9 +678,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 				RenderSliderWithNumberInput(&s_LocalDetectMinCharsSelectorId, ControlCol, &g_Config.m_QmTranslateLocalDetectMinChars, 1, 12);
 			}
 		}
-		Flow.Space(LineSpacing * 0.5f);
-
-		if(Flow.Control("translate-row-28", LineHeight, Row))
+		if(Flow.Control("translate-row-28", LineHeight, Row, ui_token::settings::SubRowGap(LineSpacing)))
 		{
 			SplitSettingsControlRow(Row, Metrics, &LabelCol, &ControlCol);
 			RenderLabel("qmclient-translate-target-language-ratio", &LabelCol, Localize("Target language ratio"), BodySize);
@@ -658,12 +687,14 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 				RenderSliderWithNumberInput(&s_LocalDetectRatioSelectorId, ControlCol, &g_Config.m_QmTranslateLocalDetectRatio, 50, 100);
 			}
 		}
-		Flow.Space(LineSpacing);
+		Flow.Space(ui_token::settings::RowGap(LineSpacing));
 	}
 
 	// LLM 端点（高级；Custom Provider 必填，始终显示）
-	if(IsLlmBackend && (g_Config.m_QmTranslateShowAdvanced || g_Config.m_QmTranslateLlmProvider == 3))
+	static CSettingsConditionalRows s_LlmEndpointRows;
+	if(s_LlmEndpointRows.Update(IsLlmBackend && (g_Config.m_QmTranslateShowAdvanced || g_Config.m_QmTranslateLlmProvider == 3), GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 	{
+		const CSettingsContentRevealScope LlmEndpointRevealScope(Ui(), Flow, s_LlmEndpointRows.Fade(g_Config.m_QmUiMotionLevel));
 		if(Flow.Control("translate-row-29", LineHeight, Row))
 		{
 			SplitSettingsControlRow(Row, Metrics, &LabelCol, &ControlCol);
@@ -698,12 +729,14 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 			if(pActiveEndpointInput)
 				RenderTextInput(pActiveEndpointInput, ControlCol, pActiveEndpointInput->GetEmptyText(), BodySize);
 		}
-		Flow.Space(LineSpacing);
+		Flow.Space(ui_token::settings::RowGap(LineSpacing));
 	}
 
 	// LLM 并发、思考模式与提示词（高级）
-	if(IsLlmBackend && g_Config.m_QmTranslateShowAdvanced)
+	static CSettingsConditionalRows s_LlmAdvancedRows;
+	if(s_LlmAdvancedRows.Update(IsLlmBackend && g_Config.m_QmTranslateShowAdvanced, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 	{
+		const CSettingsContentRevealScope LlmAdvancedRevealScope(Ui(), Flow, s_LlmAdvancedRows.Fade(g_Config.m_QmUiMotionLevel));
 		if(Flow.Control("translate-row-30", LineHeight, Row))
 		{
 			SplitSettingsControlRow(Row, Metrics, &LabelCol, &ControlCol);
@@ -713,7 +746,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 			if(g_Config.m_QmTranslateLlmProvider == 0)
 				GameClient()->m_Tooltips.DoToolTipForRect(&s_LlmConcurrencySelectorId, &Row, Localize("Zhipu free models allow only 1 concurrent request"));
 		}
-		Flow.Space(LineSpacing);
+		Flow.Space(ui_token::settings::RowGap(LineSpacing));
 
 		// 显示当前有效并发数
 		{
@@ -735,14 +768,13 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 				Ui()->DoLabel(&ControlCol, aBuf, SmallSize, TEXTALIGN_ML);
 			}
 		}
-		Flow.Space(LineSpacing);
 
 		// 思考模式开关
-		if(Flow.Control("translate-row-32", LineHeight, Row))
+		if(Flow.Control("translate-row-32", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		{
 			RenderCheckbox(&g_Config.m_QmTranslateLlmEnableThinking, "Enable thinking mode (slower)", Localize("Enable thinking mode (slower)"), &g_Config.m_QmTranslateLlmEnableThinking, &Row, LineHeight);
 		}
-		Flow.Space(LineSpacing);
+		Flow.Space(ui_token::settings::RowGap(LineSpacing));
 
 		// 思考模式提示
 		if(g_Config.m_QmTranslateLlmEnableThinking && !Flow.Declaring())
@@ -772,11 +804,13 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 			s_CustomPrompt.SetEmptyText(Localize("Leave empty to use default prompt"));
 			RenderTextInput(&s_CustomPrompt, ControlCol, Localize("Leave empty to use default prompt"), BodySize);
 		}
-		Flow.Space(LineSpacing);
+		Flow.Space(ui_token::settings::RowGap(LineSpacing));
 	}
 
-	if(g_Config.m_QmTranslateShowAdvanced)
+	static CSettingsConditionalRows s_TranslateAdvancedMiscRows;
+	if(s_TranslateAdvancedMiscRows.Update(g_Config.m_QmTranslateShowAdvanced, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 	{
+		const CSettingsContentRevealScope TranslateAdvancedMiscRevealScope(Ui(), Flow, s_TranslateAdvancedMiscRows.Fade(g_Config.m_QmUiMotionLevel));
 		// 原文语言由接收、发送翻译共用
 		if(Flow.Control("translate-row-34", LineHeight, Row))
 		{
@@ -795,10 +829,9 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 				RenderLanguageDropDownWithCustomInput(Row, ControlCol, apSourceNames.data(), apSourceCodes.data(), apSourceCodes.size(), s_SourceLangDropDown, g_Config.m_QmTranslateSource, sizeof(g_Config.m_QmTranslateSource), s_SourceLang, "auto");
 			}
 		}
-		Flow.Space(LineSpacing);
 
 		// 接收翻译方式
-		if(Flow.Control("translate-row-35", LineHeight, Row))
+		if(Flow.Control("translate-row-35", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		{
 			SplitSettingsControlRow(Row, Metrics, &LabelCol, &ControlCol);
 			RenderLabel("qmclient-translate-receive-method", &LabelCol, Localize("Receive translation method"), BodySize);
@@ -814,10 +847,9 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 					g_Config.m_QmTranslateAutoMode = NewIncomingMode;
 			}
 		}
-		Flow.Space(LineSpacing);
 
 		// 发送翻译方式
-		if(Flow.Control("translate-row-36", LineHeight, Row))
+		if(Flow.Control("translate-row-36", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		{
 			SplitSettingsControlRow(Row, Metrics, &LabelCol, &ControlCol);
 			RenderLabel("qmclient-translate-send-method", &LabelCol, Localize("Send translation method"), BodySize);
@@ -833,6 +865,6 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 					g_Config.m_QmTranslateAutoOutgoingMode = NewMode;
 			}
 		}
-		Flow.Space(LineSpacing);
+		Flow.Space(ui_token::settings::RowGap(LineSpacing));
 	}
 }

@@ -28,13 +28,26 @@ namespace ui_widget
 		CUIRect m_ControlRect;
 	};
 
-	inline SBooleanControlLayout ResolveBooleanControlLayout(const CUIRect &Rect, bool HasLabel)
+	// 开关/复选框的横向分配只认一个正文字号：轨道按「行高 × SwitchTrackAspect」
+	// 取宽，但不小于 SwitchMinWidth(正文)，窄行里开关仍保持可点尺寸；标签与控件
+	// 之间只留 LabelControlGap(正文)。三处都随字号缩放，不再写死 1.65 / 30 / 8。
+	inline SBooleanControlLayout ResolveBooleanControlLayout(const CUIRect &Rect, bool HasLabel, float BodySize = ui_token::font::BODY)
 	{
 		SBooleanControlLayout Layout{};
-		const float Width = std::min(std::max(0.0f, Rect.w), std::max(Rect.h * 1.65f, 30.0f));
-		Layout.m_ControlRect = {HasLabel ? Rect.x + Rect.w - Width : Rect.x + (Rect.w - Width) * 0.5f, Rect.y, Width, std::max(0.0f, Rect.h)};
-		Layout.m_LabelRect = {Rect.x, Rect.y, HasLabel ? std::max(0.0f, Rect.w - Width - 8.0f) : 0.0f, std::max(0.0f, Rect.h)};
+		const float RowHeight = std::max(0.0f, Rect.h);
+		const float TrackWidth = std::max(ui_token::control::SwitchMinWidth(BodySize), RowHeight * ui_token::control::SwitchTrackAspect());
+		const float Width = std::min(std::max(0.0f, Rect.w), TrackWidth);
+		Layout.m_ControlRect = {HasLabel ? Rect.x + Rect.w - Width : Rect.x + (Rect.w - Width) * 0.5f, Rect.y, Width, RowHeight};
+		Layout.m_LabelRect = {Rect.x, Rect.y, HasLabel ? std::max(0.0f, Rect.w - Width - ui_token::control::LabelControlGap(BodySize)) : 0.0f, RowHeight};
 		return Layout;
+	}
+
+	// 开关行的标签列：行尾说明（约定 B）要贴这一列的右端，才会停在开关左侧；
+	// 直接传整行会把提示推到行右缘，正好压在开关上。这里与 ResolveBooleanControlLayout
+	// 同源，开关宽度或间距令牌改了，提示位置自动跟着走，不用在调用点猜控件宽度。
+	inline CUIRect ResolveSwitchRowLabelColumn(const CUIRect &Rect, float BodySize = ui_token::font::BODY)
+	{
+		return ResolveBooleanControlLayout(Rect, true, BodySize).m_LabelRect;
 	}
 
 	struct SToggleLayout
@@ -47,7 +60,8 @@ namespace ui_widget
 	{
 		SToggleLayout Layout{};
 		const float Width = std::max(0.0f, Rect.w);
-		const float Height = std::min(std::max(0.0f, Rect.h), Width / 1.65f);
+		// 轨道长宽比与开关最小宽度同源：1.65 只在 SwitchTrackAspect 里定义一次。
+		const float Height = std::min(std::max(0.0f, Rect.h), Width / ui_token::control::SwitchTrackAspect());
 		Layout.m_Track = {Rect.x, Rect.y + (Rect.h - Height) * 0.5f, Width, Height};
 		const float Padding = std::min(Height * 0.15f, 3.0f);
 		const float KnobSize = Height - Padding * 2.0f;
@@ -150,7 +164,13 @@ namespace ui_widget
 	struct SInputFieldLayout
 	{
 		CUIRect m_ShellRect;
+		// 内容框：外壳按 control::PadX 左右内退后的整块可用区域。多行输入直接用它，
+		// 因为多行从顶部起排，再上下退让会让首行错位。
 		CUIRect m_ContentRect;
+		// 单行正文框：内容框上下各退 control::PadY，剩余高度正好等于正文字号，
+		// 即 LineHeight = Body + 2 × PadY。DoEditBox 在矩形内垂直居中，对称退让
+		// 不移动文字视觉中心，只是把「可排正文」显式收成正文高度。
+		CUIRect m_TextRect;
 		CUIRect m_IconRect;
 		CUIRect m_ClearRect;
 		CUIRect m_TrailingRect;
@@ -191,21 +211,26 @@ namespace ui_widget
 		return !Empty || (Active && !WasEmpty);
 	}
 
-	inline SInputFieldLayout ResolveInputFieldLayout(const CUIRect &Rect, bool HasIcon, bool Clearable, float UiScale = 1.0f, float TrailingWidth = 0.0f)
+	// 输入框的内边距只有两个来源：外壳左右内退 control::PadX，图标（前导图标、
+	// 清除叉、尾部动作）与文字之间留 control::IconTextGap，都按该输入框实际使用的
+	// 正文字号计算；调用方没给字号时按 UiScale 走与其他控件同一条夹取。
+	inline SInputFieldLayout ResolveInputFieldLayout(const CUIRect &Rect, bool HasIcon, bool Clearable, float UiScale = 1.0f, float TrailingWidth = 0.0f, float BodySize = 0.0f)
 	{
 		SInputFieldLayout Layout{};
 		Layout.m_ShellRect = Rect;
 		const float Scale = std::max(UiScale, 0.1f);
+		const float Body = BodySize > 0.0f ? BodySize : ui_token::control::BodySizeFromScale(Scale);
+		const float InsetX = ui_token::control::PadX(Body);
+		const float IconGapX = ui_token::control::IconTextGap(Body);
 		Layout.m_ContentRect = Rect;
 		const float SlotWidth = std::max(Rect.h, 18.0f * Scale);
-		const float Gap = 6.0f * Scale;
-		Layout.m_ContentRect.x += Gap;
-		Layout.m_ContentRect.w = std::max(0.0f, Layout.m_ContentRect.w - Gap * 2.0f);
+		Layout.m_ContentRect.x += InsetX;
+		Layout.m_ContentRect.w = std::max(0.0f, Layout.m_ContentRect.w - InsetX * 2.0f);
 		if(HasIcon)
 		{
 			Layout.m_IconRect = Layout.m_ContentRect;
 			Layout.m_IconRect.w = std::min(SlotWidth, Layout.m_ContentRect.w);
-			const float Consumed = std::min(Layout.m_ContentRect.w, SlotWidth + Gap);
+			const float Consumed = std::min(Layout.m_ContentRect.w, SlotWidth + IconGapX);
 			Layout.m_ContentRect.x += Consumed;
 			Layout.m_ContentRect.w = std::max(0.0f, Layout.m_ContentRect.w - Consumed);
 		}
@@ -214,7 +239,7 @@ namespace ui_widget
 			Layout.m_ClearRect = Rect;
 			Layout.m_ClearRect.w = std::min(SlotWidth, std::max(0.0f, Rect.w));
 			Layout.m_ClearRect.x = Rect.x + std::max(0.0f, Rect.w - Layout.m_ClearRect.w);
-			const float Consumed = std::min(Layout.m_ContentRect.w, SlotWidth + Gap);
+			const float Consumed = std::min(Layout.m_ContentRect.w, SlotWidth + IconGapX);
 			Layout.m_ContentRect.w = std::max(0.0f, Layout.m_ContentRect.w - Consumed);
 		}
 		if(TrailingWidth > 0.0f)
@@ -224,10 +249,26 @@ namespace ui_widget
 			const float TrailingRight = Clearable ? Layout.m_ClearRect.x : Rect.x + Rect.w;
 			Layout.m_TrailingRect.x = std::max(Rect.x, TrailingRight - Layout.m_TrailingRect.w);
 			Layout.m_TrailingRect.w = std::max(0.0f, TrailingRight - Layout.m_TrailingRect.x);
-			const float Consumed = std::min(Layout.m_ContentRect.w, Layout.m_TrailingRect.w + Gap);
+			const float Consumed = std::min(Layout.m_ContentRect.w, Layout.m_TrailingRect.w + IconGapX);
 			Layout.m_ContentRect.w = std::max(0.0f, Layout.m_ContentRect.w - Consumed);
 		}
+		// 正文框沿用内容框的横向范围，只在纵向退让：行高不变 → 文字视觉中心不变。
+		Layout.m_TextRect = Layout.m_ContentRect;
+		const float PadY = ui_token::control::PadY(Layout.m_TextRect.h, Body);
+		Layout.m_TextRect.y += PadY;
+		Layout.m_TextRect.h = std::max(0.0f, Layout.m_TextRect.h - PadY * 2.0f);
 		return Layout;
+	}
+
+	// 单行输入框的外壳圆角：取行高一半，超过卡片档就夹回 radius::CARD。
+	// 与 ui_token::list::RowRadius 是同一套「按尺寸取圆角」的思路——中高控件（24~28）
+	// 正好落成完整胶囊，比卡片档更高的行停在卡片档，不会被拉成体育场；绘制层仍按
+	// 短边一半兜底。只有外壳走这里：内容框不跟着缩，光标/选区仍用原内容框，
+	// 否则会出现「光标上沿被裁」的老问题（见 InputField 里 TextRect 的注释）。
+	// 多行编辑器（EInputFieldMode::MULTILINE）不走这一档，保持 radius::BASE 方角。
+	inline float ResolveInputCapsuleRadius(const CUIRect &Rect)
+	{
+		return std::min(std::max(0.0f, Rect.h) * 0.5f, ui_token::radius::CARD);
 	}
 	struct STextFieldOptions
 	{

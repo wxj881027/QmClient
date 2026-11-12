@@ -82,7 +82,7 @@ namespace qm_tclient_cards
 qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass)
 {
 	CUIRect MainView = Ctx.m_Page.m_ContentViewport;
-	ApplyTClientContentMetrics(Ctx.m_Metrics);
+	const CTClientCardMetricsScope CardMetrics(Ctx.m_Metrics);
 	CPerfTimer RenderTimer;
 	const bool ReadOnly = Ctx.m_ReadOnly || Pass != qm_card_catalog::ETClientCardPass::RENDER;
 	const float UiScale = SettingsPageUiScale(MainView.w);
@@ -293,7 +293,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 		CUIRect Skin;
 		Profiles.HSplitTop(LineSize, &Label, &Profiles);
 		DoSettingsMenuLabel(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, nullptr, &Label, Localize("Your profile"), FontSize, TEXTALIGN_ML);
-		Profiles.HSplitTop(MarginSmall, nullptr, &Profiles);
+		Profiles.HSplitTop(RowSpacing, nullptr, &Profiles);
 		Profiles.HSplitTop(LineSize * 3.0f, &Skin, &Profiles);
 		DrawRoundedSurface(Ui(), Skin, ColorRGBA(1.0f, 1.0f, 1.0f, 0.035f), ColorRGBA(), 4.0f);
 		Skin.Margin(ProfileMetrics.m_LineSpacing, &Skin);
@@ -302,10 +302,10 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 		RenderProfile(Skin, CurrentProfile, true);
 		if(pConstSelectedProfile())
 		{
-			Profiles.HSplitTop(MarginSmall, nullptr, &Profiles);
+			Profiles.HSplitTop(RowSpacing, nullptr, &Profiles);
 			Profiles.HSplitTop(LineSize, &Label, &Profiles);
 			DoSettingsMenuLabel(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, nullptr, &Label, Localize("After Load"), FontSize, TEXTALIGN_ML);
-			Profiles.HSplitTop(MarginSmall, nullptr, &Profiles);
+			Profiles.HSplitTop(RowSpacing, nullptr, &Profiles);
 			Profiles.HSplitTop(LineSize * 3.0f, &Skin, &Profiles);
 			DrawRoundedSurface(Ui(), Skin, ColorRGBA(0.25f, 0.55f, 0.85f, 0.08f), ColorRGBA(), 4.0f);
 			Skin.Margin(ProfileMetrics.m_LineSpacing, &Skin);
@@ -324,7 +324,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 			if(DoTClientSettingsButton_Menu(&s_LoadButton, "tclient-profile-load", Localize("Load"), 0, &Row) && !ReadOnly && !Ui()->RenderOnly())
 				ApplySelectedProfile();
 		}
-		if(Flow.Control("tclient-profile-save", ProfileMetrics.m_ButtonHeight, Row, MarginSmall))
+		if(Flow.Control("tclient-profile-save", ProfileMetrics.m_ButtonHeight, Row, RowSpacing))
 		{
 			if(DoTClientSettingsButton_Menu(&s_SaveButton, "tclient-profile-save", Localize("Save"), 0, &Row) && !ReadOnly && !Ui()->RenderOnly())
 			{
@@ -333,21 +333,23 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 			}
 		}
 		static CButtonContainer s_WheelButton;
-		if(IsSelectedProfileValid() && Flow.Control("tclient-profile-wheel", ProfileMetrics.m_ButtonHeight, Row, MarginSmall))
+		if(IsSelectedProfileValid() && Flow.Control("tclient-profile-wheel", ProfileMetrics.m_ButtonHeight, Row, RowSpacing))
 		{
 			if(DoTClientSettingsButton_Menu(&s_WheelButton, "tclient-profile-wheel", Localize("Add to bind wheel"), 0, &Row) && !ReadOnly && !Ui()->RenderOnly())
 				EditProfileInWheel(*pConstSelectedProfile(), m_Dummy != 0);
 		}
-		if(Flow.Control("tclient-profile-enable-deleting", LineSize, Row, MarginSmall))
+		if(Flow.Control("tclient-profile-enable-deleting", LineSize, Row, RowSpacing))
 			DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&s_AllowDelete, "tclient-profile-enable-deleting", Localizable("Enable Deleting"), &s_AllowDelete, &Row, LineSize);
-		if(s_AllowDelete)
+		static CSettingsConditionalRows s_ProfileDeleteRows;
+		if(s_ProfileDeleteRows.Update(s_AllowDelete, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 		{
-			if(Flow.Control("tclient-profile-delete", ProfileMetrics.m_ButtonHeight, Row, MarginSmall))
+			const CSettingsContentRevealScope ProfileDeleteRevealScope(Ui(), Flow, s_ProfileDeleteRows.Fade(g_Config.m_QmUiMotionLevel));
+			if(Flow.Control("tclient-profile-delete", ProfileMetrics.m_ButtonHeight, Row, RowSpacing))
 			{
 				if(DoTClientSettingsButton_Menu(&s_DeleteButton, "tclient-profile-delete", Localize("Delete"), 0, &Row) && !ReadOnly && !Ui()->RenderOnly())
 					DeleteSelectedProfile();
 			}
-			if(Flow.Control("tclient-profile-override", ProfileMetrics.m_ButtonHeight, Row, MarginSmall))
+			if(Flow.Control("tclient-profile-override", ProfileMetrics.m_ButtonHeight, Row, RowSpacing))
 			{
 				if(DoTClientSettingsButton_Menu(&s_OverrideButton, "tclient-profile-override", Localize("Override"), 0, &Row) && !ReadOnly && !Ui()->RenderOnly())
 				{
@@ -365,18 +367,18 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 		const float InlineMinimum = ResolveSettingsInlineRowMinimumWidth(ProfileMetrics.m_LabelWidth + 2.0f * ProfileMetrics.m_ButtonHeight, ProfileMetrics.m_SectionGap, 1);
 		const bool Inline = Width >= InlineMinimum;
 		const float PreviewWidth = Inline ? std::min(ProfileMetrics.m_LabelWidth * 2.5f, Width * 0.55f) : Width;
-		const float ActionsWidth = Inline ? std::max(0.0f, Width - PreviewWidth - MarginSmall * 2.0f) : Width;
+		const float ActionsWidth = Inline ? std::max(0.0f, Width - PreviewWidth - RowSpacing * 2.0f) : Width;
 		const auto PreviewContent = [&](CUIRect &Rect) {
 			CSettingsContentLayoutFlow PreviewFlow(Rect);
 			CUIRect Block;
-			const float Height = pConstSelectedProfile() ? LineSize * 8.0f + MarginSmall * 3.0f : LineSize * 4.0f + MarginSmall;
+			const float Height = pConstSelectedProfile() ? LineSize * 8.0f + RowSpacing * 3.0f : LineSize * 4.0f + RowSpacing;
 			if(PreviewFlow.Control("tclient-profile-preview", Height, Block))
 				RenderProfilePreview(Block);
 		};
 		const float PreviewHeight = TClientDeclaredRegion("profile-preview", PreviewWidth, PreviewContent, nullptr);
 		const float ActionsHeight = TClientDeclaredRegion("profile-buttons", ActionsWidth, RenderActionButtons, nullptr);
 		CUIRect Block;
-		if(!Flow.Control("tclient-profile-actions-area", Inline ? std::max(PreviewHeight, ActionsHeight) : PreviewHeight + MarginSmall + ActionsHeight, Block))
+		if(!Flow.Control("tclient-profile-actions-area", Inline ? std::max(PreviewHeight, ActionsHeight) : PreviewHeight + RowSpacing + ActionsHeight, Block))
 			return;
 		CUIRect Preview = Block, Actions = Block;
 		Preview.w = PreviewWidth;
@@ -384,9 +386,9 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 		Actions.w = ActionsWidth;
 		Actions.h = ActionsHeight;
 		if(Inline)
-			Actions.x += PreviewWidth + MarginSmall;
+			Actions.x += PreviewWidth + RowSpacing;
 		else
-			Actions.y += PreviewHeight + MarginSmall;
+			Actions.y += PreviewHeight + RowSpacing;
 		TClientDeclaredRegion("profile-preview", PreviewWidth, PreviewContent, &Preview);
 		TClientDeclaredRegion("profile-buttons", ActionsWidth, RenderActionButtons, &Actions);
 	};
@@ -396,21 +398,21 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 		const auto *pScope = CSettingsContentLayoutScope::Current();
 		const float Width = pScope && pScope->m_pLayout ? pScope->m_pLayout->Width() : Content.w;
 		const bool Inline = Width >= ResolveSettingsInlineRowMinimumWidth(ProfileMetrics.m_LabelWidth + 2.0f * ProfileMetrics.m_ButtonHeight, ProfileMetrics.m_SectionGap, 1);
-		const float ColumnWidth = Inline ? std::max(0.0f, (Width - MarginSmall) * 0.5f) : Width;
+		const float ColumnWidth = Inline ? std::max(0.0f, (Width - RowSpacing) * 0.5f) : Width;
 		const auto RenderSaveLoad = [&](CUIRect &View) {
 			CSettingsContentLayoutFlow Flow(View);
 			CUIRect Row;
-			if(Flow.Control("tclient-profile-save-load-skin", LineSize, Row, MarginSmall))
+			if(Flow.Control("tclient-profile-save-load-skin", LineSize, Row, RowSpacing))
 				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmProfileSkin, "tclient-profile-save-load-skin", Localize("Save/Load Skin"), &g_Config.m_QmProfileSkin, &Row, LineSize);
-			if(Flow.Control("tclient-profile-save-load-colors", LineSize, Row, MarginSmall))
+			if(Flow.Control("tclient-profile-save-load-colors", LineSize, Row, RowSpacing))
 				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmProfileColors, "tclient-profile-save-load-colors", Localize("Save/Load Colors"), &g_Config.m_QmProfileColors, &Row, LineSize);
-			if(Flow.Control("tclient-profile-save-load-emote", LineSize, Row, MarginSmall))
+			if(Flow.Control("tclient-profile-save-load-emote", LineSize, Row, RowSpacing))
 				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmProfileEmote, "tclient-profile-save-load-emote", Localize("Save/Load Emote"), &g_Config.m_QmProfileEmote, &Row, LineSize);
-			if(Flow.Control("tclient-profile-save-load-name", LineSize, Row, MarginSmall))
+			if(Flow.Control("tclient-profile-save-load-name", LineSize, Row, RowSpacing))
 				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmProfileName, "tclient-profile-save-load-name", Localize("Save/Load Name"), &g_Config.m_QmProfileName, &Row, LineSize);
-			if(Flow.Control("tclient-profile-save-load-clan", LineSize, Row, MarginSmall))
+			if(Flow.Control("tclient-profile-save-load-clan", LineSize, Row, RowSpacing))
 				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmProfileClan, "tclient-profile-save-load-clan", Localize("Save/Load Clan"), &g_Config.m_QmProfileClan, &Row, LineSize);
-			if(Flow.Control("tclient-profile-save-load-flag", LineSize, Row, MarginSmall))
+			if(Flow.Control("tclient-profile-save-load-flag", LineSize, Row, RowSpacing))
 				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmProfileFlag, "tclient-profile-save-load-flag", Localize("Save/Load Flag"), &g_Config.m_QmProfileFlag, &Row, LineSize);
 		};
 		const auto RenderIdentityOptions = [&](CUIRect &View) {
@@ -422,7 +424,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 					m_Dummy = 1 - m_Dummy;
 			}
 			static int s_CustomColorId = 0;
-			if(Flow.Control("tclient-profile-custom-colors", LineSize, Row, MarginSmall))
+			if(Flow.Control("tclient-profile-custom-colors", LineSize, Row, RowSpacing))
 			{
 				if(DoTClientSettingsButton_CheckBox(&s_CustomColorId, "tclient-profile-custom-colors", Localize("Custom colors"), *pCurrentUseCustomColor, &Row) && !ReadOnly && !Ui()->RenderOnly())
 				{
@@ -430,7 +432,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 					SetNeedSendInfo();
 				}
 			}
-			if(Flow.Control("tclient-profile-overwrite-empty-clan", LineSize, Row, MarginSmall))
+			if(Flow.Control("tclient-profile-overwrite-empty-clan", LineSize, Row, RowSpacing))
 			{
 				if(DoTClientSettingsButton_CheckBox(&g_Config.m_QmProfileOverwriteClanWithEmpty, "tclient-profile-overwrite-empty-clan", Localize("Overwrite clan even if empty"), g_Config.m_QmProfileOverwriteClanWithEmpty, &Row) && !ReadOnly && !Ui()->RenderOnly())
 					g_Config.m_QmProfileOverwriteClanWithEmpty = 1 - g_Config.m_QmProfileOverwriteClanWithEmpty;
@@ -439,16 +441,16 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 		const float LeftHeight = TClientDeclaredRegion("profile-save-load", ColumnWidth, RenderSaveLoad, nullptr);
 		const float RightHeight = TClientDeclaredRegion("profile-identity", ColumnWidth, RenderIdentityOptions, nullptr);
 		CUIRect Block;
-		if(!Flow.Control("tclient-profile-options-area", Inline ? std::max(LeftHeight, RightHeight) : LeftHeight + MarginSmall + RightHeight, Block))
+		if(!Flow.Control("tclient-profile-options-area", Inline ? std::max(LeftHeight, RightHeight) : LeftHeight + RowSpacing + RightHeight, Block))
 			return;
 		CUIRect Left = Block, Right = Block;
 		Left.w = Right.w = ColumnWidth;
 		Left.h = LeftHeight;
 		Right.h = RightHeight;
 		if(Inline)
-			Right.x += ColumnWidth + MarginSmall;
+			Right.x += ColumnWidth + RowSpacing;
 		else
-			Right.y += LeftHeight + MarginSmall;
+			Right.y += LeftHeight + RowSpacing;
 		TClientDeclaredRegion("profile-save-load", ColumnWidth, RenderSaveLoad, &Left);
 		TClientDeclaredRegion("profile-identity", ColumnWidth, RenderIdentityOptions, &Right);
 	};
@@ -456,7 +458,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 	auto RenderSavedProfiles = [&](CUIRect &MainView) {
 		CSettingsContentLayoutFlow Flow(MainView);
 		CUIRect SelectorRect;
-		if(Flow.Control("tclient-profiles-file", LineSize, SelectorRect))
+		if(Flow.Control("tclient-profiles-file", LineSize, SelectorRect, ui_token::settings::RowGap(ProfileMetrics.m_LineSpacing)))
 		{
 			static CButtonContainer s_ProfilesFile;
 			const float ProfilesButtonWidth = std::clamp(ProfileMetrics.m_LabelWidth, ProfileMetrics.m_ButtonHeight * 4.0f, ProfileMetrics.m_LabelWidth * 1.25f);
@@ -468,7 +470,6 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 				Client()->ViewFile(aBuf);
 			}
 		}
-		Flow.Space(ProfileMetrics.m_LineSpacing);
 		CUIRect List;
 		const float ListHeight = std::max(0.0f, ResolveSettingsProfilesListHeight(ProfileMetrics, MainView.w, (int)vProfiles.size()) - ProfileMetrics.m_ButtonHeight - ProfileMetrics.m_LineSpacing);
 		if(!Flow.Control("tclient-profiles-list", ListHeight, List))
@@ -484,7 +485,23 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 		const float ProfileItemWidth = std::max(ProfileMetrics.m_ListRowHeight * 6.0f, ProfileMetrics.m_LabelWidth + ProfileMetrics.m_ButtonHeight * 2.0f);
 		const int ProfilesPerRow = maximum(1, (int)(MainView.w / ProfileItemWidth));
 		const float ProfileListRowHeight = std::max(ProfileMetrics.m_ListRowHeight * 3.0f, ProfileMetrics.m_ButtonHeight * 3.0f + ProfileMetrics.m_LineSpacing * 2.0f);
-		ProfilesListBox.DoStart(ProfileListRowHeight, vProfiles.size(), ProfilesPerRow, 3, SelectedProfile, &List, true, IGraphics::CORNER_ALL);
+		// 行距并进行高：组件在 ItemsPerRow > 1 时按每个格子推进一次自动行距，多列网格的
+		// 行距会变成 N 倍、行位逐行漂移，底部的行滚不到；这里自己按行步进，自动行距关掉。
+		const float ProfileListRowPitch = ProfileListRowHeight + ui_token::list::ROW_SPACING;
+		ProfilesListBox.SetCapsuleRows(ProfileMetrics.m_BodySize);
+		ProfilesListBox.DoAutoSpacing(0.0f);
+		// 整卡 tile：选中填充只贴条目矩形，内缩保持半档行距，整卡内容仍排 Item.m_Rect
+		// （推进 m_ContentRect 会挤窄卡内布局、破坏 preview cache key）。
+		ProfilesListBox.SetItemSelectionInset(ui_token::list::ROW_SPACING * 0.5f);
+		// 整数行：行高含行距，而测高是「行数 × 行高 + (行数 - 1) × 行距」——最后一行后面没有
+		// 缝，比「行数 × 行步进」正好少一条行距，所以补回那一条再除。直接 floor(高 / 行步进)
+		// 会少算一行，卡片底部空出一整条行高。lround 只为抵掉浮点误差：测出来的高度本来就是
+		// 整数行，不该因为 1 ULP 掉一行。空列表传 (0, 0) 关掉自适应高度：组件会把 0 条目
+		// 收成 0 高，连空态的那块列表面一起收掉。
+		const int ProfileVisibleRows = vProfiles.empty() ? 0 :
+								   (int)std::lround((std::max(0.0f, List.h) + ui_token::list::ROW_SPACING) / ProfileListRowPitch);
+		ProfilesListBox.SetVisibleRowRange(ProfileVisibleRows > 0 ? 1 : 0, ProfileVisibleRows);
+		ProfilesListBox.DoStart(ProfileListRowPitch, vProfiles.size(), ProfilesPerRow, 3, SelectedProfile, &List, true, IGraphics::CORNER_ALL);
 
 		static std::vector<int> s_vProfileItemIds;
 		if(s_vProfileItemIds.size() != vProfiles.size())
@@ -496,7 +513,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 
 		for(size_t i = 0; i < vProfiles.size(); ++i)
 		{
-			CListboxItem Item = ProfilesListBox.DoNextItem(&s_vProfileItemIds[i], SelectedProfile >= 0 && (size_t)SelectedProfile == i);
+			CListboxItem Item = ProfilesListBox.DoNextItem(&s_vProfileItemIds[i], SelectedProfile >= 0 && (size_t)SelectedProfile == i, ui_token::list::RowRadius(ProfileListRowHeight));
 			if(!Item.m_Visible)
 				continue;
 
@@ -529,8 +546,8 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 			for(int Index = 0; Index < 2; ++Index)
 			{
 				CUIRect Tab = Tabs;
-				Tab.w = (Tabs.w - MarginSmall) * 0.5f;
-				Tab.x += Index * (Tab.w + MarginSmall);
+				Tab.w = (Tabs.w - RowSpacing) * 0.5f;
+				Tab.x += Index * (Tab.w + RowSpacing);
 				if(DoTClientSettingsButton_Menu(&s_aTabs[Index], Index ? "profile-tab-wheel" : "profile-tab-profiles", apLabels[Index], m_ProfilePresetsTab == Index, &Tab) && Flow.Input() && !ReadOnly && !Ui()->RenderOnly())
 					m_ProfilePresetsTab = Index;
 			}

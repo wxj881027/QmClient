@@ -37,7 +37,7 @@ void CMenus::RenderQmConsoleContent(CUIRect &Content, const SSettingsContentMetr
 	CUIRect Row;
 	const auto TakeRow = [&](const char *pId, float Height) {
 		const bool HasRow = Flow.Control(pId, Height, Row);
-		Flow.Space(Metrics.m_LineSpacing);
+		Flow.Space(ui_token::settings::RowGap(Metrics.m_LineSpacing));
 		return HasRow;
 	};
 	const auto Numeric = [&](ui_widget::SNumericFieldState &State, int *pValue, const char *pId, const char *pLabel, int Min, int Max, const char *pSuffix) {
@@ -276,6 +276,18 @@ CUi::EPopupMenuFunctionResult CGameConsole::PopupSettings(void *pContext, CUIRec
 	const auto Metrics = ResolveSettingsContentMetrics(View.w);
 	vec2 Offset;
 	auto Params = QmScrollRegionParamsForSize(EQmScrollSize::MEDIUM, Metrics.m_UiScale);
+	// 轨道粗细/边距统一取列表 token：弹层滚动面和 CListBox 共用同一条覆盖式滚动条，
+	// 不再按面板档另取一套粗细。
+	Params.m_ScrollbarThickness = ui_token::list::SCROLLBAR_WIDTH;
+	Params.m_ScrollbarMargin = ui_token::list::SCROLLBAR_MARGIN;
+	// 覆盖式轨道：轨道压在内容上，显隐走和列表同一档淡入 + 横向滑出。
+	// 之前漏置这一位，Begin 按非覆盖式只扣了厚度 8，而轨道被左右外边距挤成 0 宽：
+	// 内容白让 8，轨道根本画不出来。
+	Params.m_ScrollbarOverlay = true;
+	Params.m_ScrollbarRevealSec = ui_token::list::SCROLLBAR_FADE.m_DurationSec;
+	Params.m_ScrollbarSlide = ui_token::list::SCROLLBAR_SLIDE;
+	// 轨道沿长度方向按弹层容器圆角内缩，滑块端头不会从圆角外侧探出来。
+	Params.m_ScrollbarTrackInset = ui_token::radius::CARD;
 	Params.m_Interactive = Active;
 	Params.m_WheelOwnerPriority = EUiWheelOwnerPriority::POPUP;
 	// 弹层显式登记滚轮所有权，不依赖底层控制台的热滚动区。
@@ -285,6 +297,9 @@ CUi::EPopupMenuFunctionResult CGameConsole::PopupSettings(void *pContext, CUIRec
 		Active && QmConsoleSettingsLayout::ContentHeight(Metrics, QmConsoleAppearance::IsCustomScheme(g_Config.m_QmConsoleColorScheme), g_Config.m_QmConsoleFontSize) > View.h);
 	pThis->m_SettingsScrollRegion.SetContentHeightForNextFrame(QmConsoleSettingsLayout::ContentHeight(Metrics, QmConsoleAppearance::IsCustomScheme(g_Config.m_QmConsoleColorScheme), g_Config.m_QmConsoleFontSize));
 	pThis->m_SettingsScrollRegion.Begin(&View, &Offset, &Params);
+	// 覆盖式不占内容宽度，让位必须显式扣一次：厚度 + 外边距 + 缝。
+	// 原来那 8 是非覆盖式自动扣的厚度，现在换成统一的 OverlayRailReserve()。
+	View.w = std::max(0.0f, View.w - ui_token::list::OverlayRailReserve());
 	View.y += Offset.y;
 	const float StartY = View.y;
 	CUIRect Content = View;

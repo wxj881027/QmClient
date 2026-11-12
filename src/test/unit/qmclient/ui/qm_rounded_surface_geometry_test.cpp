@@ -273,7 +273,8 @@ TEST(QmRoundedSurface, AppleCurveExtendsAlongBothEdgesAndKeepsExactArcInMiddle)
 	for(const float Smoothing : {0.35f, 0.6f, 0.9f})
 	{
 		SCOPED_TRACE(Smoothing);
-		const float ExpectedExt = 0.881108f * Smoothing;
+		// 平滑度有上限（再高圆弧段会退化成尖角），测试与实现共用同一个常量。
+		const float ExpectedExt = 0.881108f * std::min(Smoothing, ROUNDED_CORNER_APPLE_MAX_AMOUNT);
 		float StartX = 0.0f, StartY = 0.0f, EndX = 0.0f, EndY = 0.0f;
 		RoundedCornerCurveDirection(ROUNDED_CORNER_CURVE_APPLE, Smoothing, 0, 40, StartX, StartY);
 		RoundedCornerCurveDirection(ROUNDED_CORNER_CURVE_APPLE, Smoothing, 40, 40, EndX, EndY);

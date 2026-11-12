@@ -18,6 +18,18 @@ constexpr bool QmScrollRegionShouldReserveScrollbarSpace(bool AlwaysReserved, bo
 	return AlwaysReserved || ScrollbarShown;
 }
 
+// 覆盖式滚动条不占内容宽度：轨道直接压在内容边缘上，行宽与有没有滚动条完全一致。
+constexpr bool QmScrollRegionReservesScrollbarSpace(bool Overlay, bool AlwaysReserved, bool ScrollbarShown)
+{
+	return !Overlay && QmScrollRegionShouldReserveScrollbarSpace(AlwaysReserved, ScrollbarShown);
+}
+
+// 覆盖式滚动条淡出期间内容已经不溢出，但显示系数还没走完，仍要继续绘制一帧帧渐隐。
+constexpr bool QmScrollRegionOverlayFadingOut(bool Overlay, float Reveal)
+{
+	return Overlay && Reveal > 0.001f;
+}
+
 // 内容区拖动滚动是手机上的主操作：手指按住列表直接带动内容，而不是去够右侧滚动条。
 // 桌面仍以滚轮和滚动条为准，避免和列表内的拖拽交互（卡片排序、滑块）抢同一次按住。
 constexpr bool QmScrollRegionContentDragEnabled()
@@ -75,6 +87,14 @@ struct CScrollRegionParams
 	// 避免宿主表面与强调色对比不足时被前景兜底改写颜色。
 	const ColorRGBA *m_pSliderThemeColor;
 	bool m_HideScrollbar;
+	// 覆盖式滚动条：轨道压在内容上，不预留内容宽度（行宽与有没有滚动条一致）。
+	// 出现/消失只用 RevealSec 的显示系数 + Slide 的横向滑出，0 表示直接切换。
+	bool m_ScrollbarOverlay;
+	float m_ScrollbarRevealSec;
+	float m_ScrollbarSlide;
+	// 轨道沿自身长度方向的内缩：贴边的细轨会在圆角容器里从圆角外侧探出来，
+	// 也会和首/末行的胶囊端头撞在一起。宿主按容器圆角半径传值（列表 = ContainerRadius）。
+	float m_ScrollbarTrackInset = 0.0f;
 	bool m_ScrollHorizontal;
 	const void *m_pWheelOwnerId;
 	bool m_WheelOwnerPreRegistered;
@@ -143,6 +163,9 @@ inline CScrollRegionParams::CScrollRegionParams()
 	m_SliderAlpha = 1.0f;
 	m_pSliderThemeColor = nullptr;
 	m_HideScrollbar = false;
+	m_ScrollbarOverlay = false;
+	m_ScrollbarRevealSec = 0.0f;
+	m_ScrollbarSlide = 0.0f;
 	m_ScrollHorizontal = false;
 	m_pWheelOwnerId = nullptr;
 	m_WheelOwnerPreRegistered = false;
@@ -229,6 +252,9 @@ private:
 	CUIRect m_RailRect;
 	float m_ScrollbarReserveWidth;
 	bool m_ScrollbarReserveInitialized;
+	// 覆盖式滚动条的显示系数：内容溢出时淡入、不再溢出时淡出；1 表示完全显示。
+	float m_OverlayReveal;
+	bool m_OverlayRevealInitialized;
 	// 内容拖动速度估计：用最近一次移动的时间差换算成"滚动偏移/秒"。
 	float m_ContentDragVelocity = 0.0f;
 	int64_t m_ContentDragLastMoveTime = 0;
@@ -275,7 +301,12 @@ public:
 
 private:
 	CUIRect SplitContentArea();
+	// 覆盖式轨道：不缩内容，只把裁剪区的一条边当作轨道位置。
+	CUIRect SplitOverlayRail();
 	void DrawBackground(const CUIRect &ScrollbarBg);
+	// 覆盖式显示系数：目标由「内容是否溢出」决定，回退到 snap 时直接落在目标值。
+	float ResolveOverlayReveal(float Target);
+	void DrawOverlayRail(float Alpha, float SlideOffset);
 	SQmScrollMetrics ScrollMetrics() const;
 	SQmScrollConfig ScrollConfig() const;
 	vec2 ContentScrollOffset() const;

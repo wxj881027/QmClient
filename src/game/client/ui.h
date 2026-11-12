@@ -1138,7 +1138,7 @@ public:
 	void SetQmTooltips(CTooltips *pTooltips) { m_pQmTooltips = pTooltips; }
 	bool CardLabelHintsEnabled() const { return m_CardLabelHintsEnabled; }
 	void SetCardLabelHintsEnabled(bool Enabled) { m_CardLabelHintsEnabled = Enabled; }
-	const char *PrepareCardLabel(const CUIRect *pRect, const char *pText, bool Render = true) const;
+	const char *PrepareCardLabel(const CUIRect *pRect, const char *pText, bool Render = true, bool AllowHintSplit = true) const;
 	void DoConfigTooltip(const void *pId, const CUIRect *pRect, const void *pValue, const void *pSecondValue = nullptr);
 	void DoButtonTooltip(const void *pId, const CUIRect *pRect, const char *pText);
 	void SetKeyboardFocus(const void *pId);
@@ -1406,7 +1406,7 @@ public:
 	CLabelResult DoLabel_QmIcon(const CUIRect *pRect, EQmIcon Icon, const char *pFallbackIcon, float Size, int Align, const SLabelProperties &LabelProps = {}) const;
 	int DoButton_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, unsigned Flags, int Corners = IGraphics::CORNER_ALL, bool Enabled = true, std::optional<ColorRGBA> ButtonColor = std::nullopt, bool ShowSlash = false, bool TransparentInactive = false, const ui_widget::SIconButtonIconDraw *pIconDraw = nullptr);
 	// only used for popup menus
-	int DoButton_PopupMenu(CButtonContainer *pButtonContainer, const char *pText, const CUIRect *pRect, float Size, int Align, float Padding = 0.0f, bool TransparentInactive = false, bool Enabled = true, std::optional<ColorRGBA> ButtonColor = std::nullopt, float MinimumFontSize = -1.0f);
+	int DoButton_PopupMenu(CButtonContainer *pButtonContainer, const char *pText, const CUIRect *pRect, float Size, int Align, float Padding = 0.0f, bool TransparentInactive = false, bool Enabled = true, std::optional<ColorRGBA> ButtonColor = std::nullopt, float MinimumFontSize = -1.0f, float TextInsetX = 0.0f);
 
 	// value selector
 	SEditResult<int64_t> DoValueSelectorWithState(const void *pId, const CUIRect *pRect, const char *pLabel, int64_t Current, int64_t Min, int64_t Max, const SValueSelectorProperties &Props = {});
@@ -1611,6 +1611,16 @@ public:
 		// 单级撤回：记住最近一次删除的色块与插入位置，撤回后清空。
 		qm_picker_palette::SSwatch m_UndoSwatch{};
 		int m_UndoIndex = -1;
+		bool m_UndoWasDraft = false; // 撤销缓冲里的条目是否为本次编辑的草稿
+		// 「自定义 N」草稿：用户首次改动颜色时自动追加到调色板末尾并实时跟随，
+		// ✓ 保留、✕ 撤销；点已有色块只应用颜色，不产生草稿。
+		int m_DraftPaletteIndex = -1;
+		// 关闭帧是否由内容回调自己处理（✓/✕/Esc）。外部点击、ClosePopupMenu 等
+		// 不跑内容回调的关闭路径由弹层的 OnClosed 收尾。
+		bool m_bCloseConsumedByCallback = false;
+		// 关闭前最后一帧仍在编辑的通道/Hex 输入框。弹层关闭会先释放活动项再跑
+		// OnClosed，届时 IsActive() 已为 false，只能靠这份记录补提交文本。
+		CLineInput *m_pLastActiveInput = nullptr;
 		// UI element IDs
 		const char m_HuePickerId = 0;
 		const char m_WheelPickerId = 0;

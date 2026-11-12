@@ -7,6 +7,7 @@
 
 #include <game/client/QmUi/QmAnimResolve.h>
 #include <game/client/QmUi/QmListEntryAnimation.h>
+#include <game/client/QmUi/UiTokens.h>
 
 #include <algorithm>
 #include <cstdint>
@@ -171,7 +172,11 @@ struct CListboxItem
 {
 	bool m_Visible;
 	bool m_Selected;
+	// 整行矩形：行背景、命中区域和调用方自己的按钮都以它为准。
 	CUIRect m_Rect;
+	// 行内容区：胶囊行已经把 token 派生的左右内边距让出来，文字/图标排在这里；
+	// 未启用胶囊行时与 m_Rect 相同，旧调用点用 m_Rect 排版不受影响。
+	CUIRect m_ContentRect;
 	CUi *m_pUi = nullptr;
 	bool m_GaussianBlurSuppressed = false;
 
@@ -228,11 +233,31 @@ private:
 	bool m_EntryBaseIndexCaptured = false;
 	bool m_EntryAnimationFadeOnly = false;
 	float m_ItemSelectionInset = 0.0f;
+	// 统一行外观（胶囊行）：行距、行内左右内边距和覆盖式滚动条都由它开启。
+	bool m_CapsuleRows = false;
+	float m_RowInsetX = 0.0f;
+	// 胶囊行：滚动条压在内容上时，行右侧要给滚动条让出的缝（避免胶囊被压住一角）。
+	float m_RowReserveRight = 0.0f;
+	bool m_AutoSpacingOverridden = false;
+	// 自适应高度：可见行数夹在 [MinRows, MaxRows]；MaxRows <= 0 表示不接管高度。
+	int m_MinVisibleRows = 0;
+	int m_MaxVisibleRows = 0;
+	// 覆盖式滚动条：不预留内容宽度，出现/消失带淡入滑出。
+	bool m_ScrollbarOverlay = false;
+	// 调用点是否显式给过选中/悬停颜色；没给时胶囊行用列表 token 的统一配色。
+	bool m_ItemColorsOverridden = false;
+	// 容器圆角由容器长宽推导；带标题的列表沿用 DoHeader 用整容器算出的那一档。
+	float m_ContainerRadius = ui_token::radius::SMALL_MENU;
+	bool m_HeaderThisFrame = false;
+	// 本帧是否画了容器背板：只有背板才有圆角，胶囊行也才需要为它内退。
+	bool m_BackgroundDrawn = false;
 	CQmListRowFeedback m_SelectedFeedback;
 	CQmListRowFeedback m_HoverFeedback;
 	bool m_ScrollFeedbackSnap = false;
 	int m_FeedbackNumItems = -1;
 	void QmRestoreEntryScope();
+	// 行反馈圆角：调用点没显式给半径时，单列整行是胶囊，多列网格沿用旧的小圆角。
+	float ResolveRowCornerRadius() const;
 	ColorRGBA m_SelectedItemActiveColor;
 	ColorRGBA m_SelectedItemInactiveColor;
 	ColorRGBA m_HoveredItemColor;
@@ -251,11 +276,29 @@ public:
 	// 行级小列表仍保留淡入+上浮的 wordRise。
 	void SetEntryAnimationFadeOnly(bool FadeOnly) { m_EntryAnimationFadeOnly = FadeOnly; }
 	// 选中/悬浮反馈内缩：网格卡片在格子内有半格间隙，反馈矩形须贴合卡片
-	// 而不是铺满格子；同时选中态附带按钮同款常驻描边。行列表保持 0。
+	// 而不是铺满格子；行列表保持 0。选中态只有填充，不再附描边。
 	void SetItemSelectionInset(float Inset) { m_ItemSelectionInset = Inset; }
 
 	void DoHeader(const CUIRect *pRect, const char *pTitle, float HeaderHeight = 20.0f, float Spacing = 2.0f, int BackgroundCorners = IGraphics::CORNER_ALL);
-	void DoAutoSpacing(float Spacing = 20.0f) { m_AutoSpacing = Spacing; }
+	void DoAutoSpacing(float Spacing = 20.0f)
+	{
+		m_AutoSpacing = Spacing;
+		m_AutoSpacingOverridden = true;
+	}
+	// 统一行外观：整行胶囊 + token 行距 + 按字号派生的左右内边距，并默认启用
+	// 覆盖式滚动条（不占行宽）。FontSize 是行内文字字号，行内边距按
+	// ui_token::list::RowInsetX 从它派生，与弹层条目同一条公式。
+	void SetCapsuleRows(float FontSize);
+	// 自适应高度：可见行数 = 条目行数夹在 [MinRows, MaxRows]，组件自己按行高和
+	// 行距算内容高度，调用方只给可用上限，不用再自己 std::min；超过上限就出滚动条。
+	// MaxRows <= 0 关闭接管（默认），高度完全由调用方矩形决定。
+	void SetVisibleRowRange(int MinRows, int MaxRows);
+	// 覆盖式滚动条开关：开启后行宽与有没有滚动条无关（默认随 SetCapsuleRows 打开）。
+	void SetScrollbarOverlay(bool Overlay) { m_ScrollbarOverlay = Overlay; }
+	// 胶囊行/胶囊格右侧为滚动条让出的宽度（厚度 + 外边距 + 行缝）。调用点（表头列宽、
+	// 外框内容宽度）在 DoStart 前就要这份值，所以由 token（或显式覆盖值）直接算，
+	// 不依赖上一帧的滚动条状态；未开胶囊行或非覆盖式轨道时为 0。
+	float RowReserveWidth() const;
 	void DoSpacing(float Spacing = 20.0f);
 	void DoStart(float RowHeight, int NumItems, int ItemsPerRow, int RowsPerScroll, int SelectedIndex, const CUIRect *pRect = nullptr, bool Background = true, int BackgroundCorners = IGraphics::CORNER_ALL);
 	int ItemIndex() const { return m_ListBoxItemIndex; }
@@ -269,7 +312,8 @@ public:
 	// 已保存的选中项不一定是本次浏览目标；调用方可取消初始自动定位，显式定位仍有效。
 	void SuppressInitialSelectionScroll() { m_InitialScrollPending = false; }
 	void SkipItems(int Count);
-	CListboxItem DoNextItem(const void *pId, bool Selected = false, float CornerRadius = 5.0f);
+	// CornerRadius < 0 时按行类型取默认值：单列整行是胶囊，多列网格沿用旧的小圆角。
+	CListboxItem DoNextItem(const void *pId, bool Selected = false, float CornerRadius = -1.0f);
 	CListboxItem DoCustomRow(float Height, bool ScrollHere = false);
 	void ResetScroll()
 	{
@@ -292,6 +336,7 @@ public:
 		m_SelectedItemActiveColor = SelectedActive;
 		m_SelectedItemInactiveColor = SelectedInactive;
 		m_HoveredItemColor = Hovered;
+		m_ItemColorsOverridden = true;
 	}
 
 	// 弹层补画选中描边时与 CListBox 的填充共用同一条 alpha，旧行也能淡出。

@@ -84,7 +84,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientMainCard(const qm_card_cat
 		Revision = HashValueFnv1a64(Revision, TextRender()->GetCustomFaces()->size());
 	if(Pass == qm_card_catalog::ETClientCardPass::REVISION)
 		return {0.0f, Revision};
-	ApplyTClientContentMetrics(Ctx.m_Metrics);
+	const CTClientCardMetricsScope CardMetrics(Ctx.m_Metrics);
 	const bool Render = Pass == qm_card_catalog::ETClientCardPass::RENDER;
 	if(str_comp(pStableId, "tclient:visual-nameplates") == 0)
 		return {LayoutTClientVisualNameplateCard(Ctx, Content, Render), Revision};

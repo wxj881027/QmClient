@@ -81,8 +81,7 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 	RenderSlider(&s_PieMenuMaxDistanceInputId, "qmclient-pie-menu-detection-distance", Localizable("Detection distance"), &g_Config.m_QmPieMenuMaxDistance, 100, 2000);
 	if(Flow.Control("pie-effects", LineHeight, Row))
 		RenderQmFunctionCheckbox(&g_Config.m_QmPieMenuEffects, "Pie menu effects", Localize("Pie menu effects"), &g_Config.m_QmPieMenuEffects, &Row, !CanCommit);
-	Flow.Space(LineSpacing);
-	if(Flow.Control("pie-selected-color", ResolveSettingsColorRowLayout({0, 0, Content.w, LineHeight}, CurrentSettingsContentMetrics(), false).m_ConsumedHeight, Row))
+	if(Flow.Control("pie-selected-color", ResolveSettingsColorRowLayout({0, 0, Content.w, LineHeight}, CurrentSettingsContentMetrics(), false).m_ConsumedHeight, Row, LineSpacing))
 	{
 		static CButtonContainer s_SelectedColor;
 		CSettingsContentLayoutScope ColorScope;
@@ -108,9 +107,8 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 		g_Config.m_QmPieMenuColorScore = DefaultConfig::QmPieMenuColorScore;
 		g_Config.m_QmPieMenuColorCopyName = DefaultConfig::QmPieMenuColorCopyName;
 	}
-	Flow.Space(LineSpacing);
 
-	if(Flow.Control("pie-rename-queue", LineHeight, Row))
+	if(Flow.Control("pie-rename-queue", LineHeight, Row, LineSpacing))
 	{
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
 		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-pie-menu-rename-queue", &LabelColumn, Localize("Rename queue"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
@@ -128,7 +126,6 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 			GameClient()->m_Tooltips.DoSmallToolTip(&s_PieMenuRenameQueue, &ControlColumn, pRenameQueueHelp, HelpFontSize, HelpWidth);
 		}
 	}
-	Flow.Space(LineSpacing * 2.0f);
 
 	struct SPieMenuColorEntry
 	{
@@ -222,11 +219,10 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 	constexpr float PreviewInnerRatio = 108.0f / 288.0f;
 	// 行高同时容纳网格与预览：预览被剩余列宽夹住时，整行跟着夹住后的尺寸走。
 	const float OptionsRowHeight = std::max(Grid.Height(), minimum(PreviewSide, PreviewColumnWidth));
-	if(Flow.Control("pie-option-color-heading", BodySize, Row))
+	if(Flow.Control("pie-option-color-heading", BodySize, Row, LineSpacing * 2.0f))
 		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-pie-menu-option-color", &Row, Localize("Option color"), BodySize, TEXTALIGN_ML, {}, (int)Row.w);
-	Flow.Space(LineSpacing);
 	CUIRect OptionsRow;
-	if(Flow.Control("pie-color-options-row", OptionsRowHeight, OptionsRow))
+	if(Flow.Control("pie-color-options-row", OptionsRowHeight, OptionsRow, LineSpacing))
 	{
 		CUIRect PreviewColumn, ResetColumn, OptionsColumn;
 		// 从左到右：圆饼预览、重置图标、选项按钮网格。

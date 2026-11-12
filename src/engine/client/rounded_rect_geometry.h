@@ -59,6 +59,10 @@ enum
 	ROUNDED_CORNER_CURVE_APPLE = 4,
 };
 
+// 苹果三段式的平滑度上限：再往上圆弧段会退化成一个尖角，着色器与几何兜底
+// 必须在同一档夹取，否则同一条边在 SDF 与多边形路径上形状不同。
+inline constexpr float ROUNDED_CORNER_APPLE_MAX_AMOUNT = 0.85f;
+
 struct SRoundedCornerShape
 {
 	// 实际生效的圆角半径：含连续曲率的沿边拉长，受生长上限约束。
@@ -126,7 +130,7 @@ inline void RoundedCornerCurveDirection(const int Curve, const float Amount, con
 		// 曲线沿直边外扩 0.881*A，所以这里的坐标会超出 [0,1]：调用方按半径放大后
 		// 正好落在直边上。控制点与着色器 AppleCorner 完全一致（手柄 0.3 / 0.382 倍弦长）。
 		// 与着色器一致：平滑度封顶 0.85，再往上圆弧段会退化成一个尖角。
-		const float ClampedA = std::min(A, 0.85f);
+		const float ClampedA = std::min(A, ROUNDED_CORNER_APPLE_MAX_AMOUNT);
 		const float Ext = 0.881108f * ClampedA;
 		const float Phi = 0.7853982f * ClampedA;
 		const float StartX = 1.0f;

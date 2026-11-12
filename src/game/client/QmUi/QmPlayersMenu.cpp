@@ -104,7 +104,9 @@ void CMenus::RenderPlayers(CUIRect MainView)
 	str_format(aCount, sizeof(aCount), Localize("%d players"), Count);
 	Label(Summary, aCount, 12.0f, TEXTALIGN_MR, true);
 	static CListBox s_Players;
-	s_Players.SetItemColors(Ink.WithAlpha(0.12f), Ink.WithAlpha(0.08f), Ink.WithAlpha(0.05f));
+	// 选中/悬浮回落到 CListBox 的统一默认（选中 = 主题选中色、悬浮 = 列表 token），
+	// 不再用本页的 Ink 另调一套；行距取列表 token 的半档，圆角按行高推导成胶囊。
+	s_Players.DoAutoSpacing(ui_token::list::ROW_SPACING);
 	s_Players.SetActive(!Ui()->IsPopupOpen() && !State.m_Search.IsActive());
 	s_Players.DoStart(36.0f, Count, 1, 3, Selected, &List, false);
 	auto DrawTee = [&](int Id, const CUIRect &Rect) {
@@ -118,14 +120,13 @@ void CMenus::RenderPlayers(CUIRect MainView)
 	{
 		const int Id = aIds[i];
 		const auto &Player = GameClient()->m_aClients[Id];
-		const CListboxItem Item = s_Players.DoNextItem(&Player);
+		const CListboxItem Item = s_Players.DoNextItem(&Player, false, ui_token::list::RowRadius(s_Players.RowHeight()));
 		if(!Item.m_Visible)
 			continue;
 		auto Blur = Item.SuppressGaussianBlur();
-		CUIRect Row = Item.m_Rect;
-		if(Item.m_Selected)
-			CUIRect{Row.x, Row.y + 4.0f, 2.0f, Row.h - 8.0f}.Draw(Ink.WithAlpha(0.55f), IGraphics::CORNER_ALL, 1.0f);
-		Row.VMargin(8.0f, &Row);
+		// 行内容排在 CListBox 让出左右内退后的内容区，不再手写 VMargin 补偿；
+		// 选中态由组件统一画（主题选中色胶囊、无描边、无左侧竖条）。
+		CUIRect Row = Item.m_ContentRect;
 		CUIRect Avatar, Flags, Text, Name, Clan;
 		Row.VSplitLeft(38.0f, &Avatar, &Row);
 		Row.VSplitRight(24.0f, &Text, &Flags);

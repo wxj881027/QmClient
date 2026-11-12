@@ -29,8 +29,13 @@ namespace ui_widget
 
 		// 按钮描边的唯一出口：可用按钮进入悬停/按下/选中一律白色描边；禁用、透明
 		// 未激活等状态仍由主题解析结果和调用处的覆盖决定。
-		ColorRGBA ResolveActiveButtonBorder(const SUiSecondaryButtonStyle &Style, const SUiButtonState &State)
+		// 弹层条目（LIST_ENTRY）例外：它和列表胶囊行是同一个视觉件，选中/悬停只由填充
+		// 表达、任何状态都不描边。ResolveUiButtonStyle 里已清过一次，这里必须同样早退，
+		// 否则会把那次清空覆盖回白色描边——用户要的「选中 = 纯填充」就又会带上白边。
+		ColorRGBA ResolveActiveButtonBorder(EUiButtonRole Role, const SUiSecondaryButtonStyle &Style, const SUiButtonState &State)
 		{
+			if(Role == EUiButtonRole::LIST_ENTRY)
+				return ColorRGBA();
 			return State.m_Enabled && (State.m_Hovered || State.m_Selected) ? ActiveBorderColor : Style.m_Border;
 		}
 	}
@@ -76,7 +81,7 @@ namespace ui_widget
 		auto Style = ResolveUiButtonStyle(Options.m_Role, Base, Backdrop, Theme, State);
 		// 描边统一在公共表面这一层收敛，调用点（设置卡片、下拉、页签、键位格等）
 		// 不再各自决定按下态描边颜色。
-		Style.m_Border = ResolveActiveButtonBorder(Style, State);
+		Style.m_Border = ResolveActiveButtonBorder(Options.m_Role, Style, State);
 		if(Options.m_TransparentInactive && !State.m_Hovered && !State.m_Selected)
 			Style.m_Border = ColorRGBA();
 		if(Options.m_BorderOverride.has_value())
@@ -171,7 +176,10 @@ namespace ui_widget
 				return false;
 			SButtonSurfaceOptions Options;
 			Options.m_Role = Role;
-			Options.m_Radius = ResolveUiTextButtonRadius(Geometry);
+			// 长条按钮（宽明显大于高）给胶囊端头；接近方形的按钮仍用小圆角，
+			// 否则方按钮会被压成圆形。
+			const CUIRect &SurfaceRect = pSurfaceRect != nullptr ? *pSurfaceRect : Rect;
+			Options.m_Radius = SurfaceRect.w >= SurfaceRect.h * 1.8f ? ui_token::radius::PILL : ResolveUiTextButtonRadius(Geometry);
 			if(!DrawBorder)
 				Options.m_BorderWidth = 0.0f;
 			Options.m_Corners = Corners;
@@ -182,12 +190,15 @@ namespace ui_widget
 			CUiScopedSurfaceText SurfaceText(Ctx.m_pUi->TextRender(), Fill);
 			if(Disabled)
 				Ctx.m_pUi->TextRender()->TextColor(Ctx.m_pUi->TextRender()->GetTextColor().WithMultipliedAlpha(0.65f));
+			// 按钮字号随视口缩放：写死 12 会让窄窗口下同一排按钮出现两种大小
+			// （设置卡里走 Metrics 的控件会缩到 9.6，这里不会）。
+			const float ButtonBodySize = ui_token::control::BodySizeFromScale(Ctx.m_UiScale);
 			SLabelProperties Props;
-			Props.m_MaxWidth = std::max(0.0f, Rect.w - ui_token::spacing::SM);
-			Props.m_MinimumFontSize = ui_token::font::SMALL;
+			Props.m_MaxWidth = std::max(0.0f, Rect.w - 2.0f * ui_token::control::PadX(ButtonBodySize));
+			Props.m_MinimumFontSize = std::min(ui_token::font::SMALL, ButtonBodySize);
 			Props.m_EllipsisAtEnd = true;
 			if(Props.m_MaxWidth > 0.0f && Rect.h > 0.0f)
-				Ctx.m_pUi->DoLabel(&Rect, pText, ui_token::font::BODY, TEXTALIGN_MC, Props);
+				Ctx.m_pUi->DoLabel(&Rect, pText, ButtonBodySize, TEXTALIGN_MC, Props);
 			if(Disabled && !Ctx.m_pUi->RenderOnly() && Ctx.m_pUi->CheckActiveItem(pBtn))
 				Ctx.m_pUi->SetActiveItem(nullptr);
 			const bool Clicked = !Disabled && !Ctx.m_pUi->RenderOnly() && Ctx.m_pUi->DoButtonLogic(pBtn, 0, &Rect, BUTTONFLAG_LEFT) != 0;
@@ -235,7 +246,7 @@ namespace ui_widget
 			Divider.Draw(Ctx.m_pUi->ScaleBackgroundAlpha(ui_token::color::BORDER_SUBTLE), IGraphics::CORNER_NONE, 0.0f);
 			const SUiTheme &Theme = Ctx.m_pTheme != nullptr ? *Ctx.m_pTheme : Ctx.m_pUi->QmControlTheme();
 			const auto BorderStyle = ResolveUiButtonStyle(EUiButtonRole::SECONDARY, ResolveConfiguredControlSurface(), CUiScopedSurfaceText::CurrentSurface(), Theme, BorderState);
-			const ColorRGBA BorderColor = ResolveActiveButtonBorder(BorderStyle, BorderState);
+			const ColorRGBA BorderColor = ResolveActiveButtonBorder(EUiButtonRole::SECONDARY, BorderStyle, BorderState);
 			DrawRoundedSurface(Ctx, Rect, ColorRGBA(), Ctx.m_pUi->ScaleControlAlpha(BorderColor), ResolveUiTextButtonRadius(Geometry), ui_token::feedback::ICON_BORDER_WIDTH);
 		}
 		Ctx.m_pUi->DoButtonTooltip(pLeft, &Left, pLeftTooltip);

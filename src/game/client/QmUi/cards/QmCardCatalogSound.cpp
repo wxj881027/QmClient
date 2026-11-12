@@ -250,8 +250,7 @@ uint64_t CMenus::BuildSoundSettingsCards(const qm_card_catalog::SQmCardBuildCont
 				m_NeedRestartSound = (g_Config.m_SndEnable && !Sound()->IsSoundEnabled()) || str_comp(g_Config.m_SndPack, s_aSndPack) != 0;
 			if(!g_Config.m_SndEnable)
 				return;
-			Flow.Space(LineSpacing);
-			if(Flow.Control("SndMusic", LineHeight, Button))
+			if(Flow.Control("SndMusic", LineHeight, Button, ui_token::settings::RowGap(LineSpacing)))
 			{
 				if(DoSettingsButton_CheckBox(SETTINGS_SOUND, -1, &g_Config.m_SndMusic, "Play background music", Localize("Play background music"), g_Config.m_SndMusic, &Button) && CanCommit)
 				{
@@ -259,25 +258,25 @@ uint64_t CMenus::BuildSoundSettingsCards(const qm_card_catalog::SQmCardBuildCont
 					UpdateMusicState();
 				}
 			}
-			Flow.Space(LineSpacing);
-			if(Flow.Control("SndNonactiveMute", LineHeight, Button))
+			if(Flow.Control("SndNonactiveMute", LineHeight, Button, ui_token::settings::RowGap(LineSpacing)))
 			{
 				if(DoSettingsButton_CheckBox(SETTINGS_SOUND, -1, &g_Config.m_SndNonactiveMute, "Mute when not active", Localize("Mute when not active"), g_Config.m_SndNonactiveMute, &Button) && CanCommit)
 				{
 					g_Config.m_SndNonactiveMute ^= 1;
 				}
 			}
-			Flow.Space(LineSpacing);
-			if(Flow.Control("SndGame", LineHeight, Button))
+			if(Flow.Control("SndGame", LineHeight, Button, ui_token::settings::RowGap(LineSpacing)))
 			{
 				if(DoSettingsButton_CheckBox(SETTINGS_SOUND, -1, &g_Config.m_SndGame, "Enable game sounds", Localize("Enable game sounds"), g_Config.m_SndGame, &Button) && CanCommit)
 				{
 					g_Config.m_SndGame ^= 1;
 				}
 			}
-			Flow.Space(LineSpacing);
-			if(!qm_card_catalog::QmCardRenderHook::Personalization(this, ContentRect, "deck:sound-toggle", SoundMetrics, RenderOnly))
+			Flow.Space(ui_token::settings::RowGap(LineSpacing));
+			float SectionReveal = 0.0f;
+			if(!qm_card_catalog::QmCardRenderHook::PersonalizationReveal(this, ContentRect, "deck:sound-toggle", SoundMetrics, &SectionReveal, RenderOnly))
 				return;
+			const CSettingsContentRevealScope SectionRevealScope(Ui(), Flow, SectionReveal);
 
 			if(Flow.Control("SndGun", LineHeight, Button))
 			{
@@ -286,40 +285,35 @@ uint64_t CMenus::BuildSoundSettingsCards(const qm_card_catalog::SQmCardBuildCont
 					g_Config.m_SndGun ^= 1;
 				}
 			}
-			Flow.Space(LineSpacing);
-			if(Flow.Control("SndLongPain", LineHeight, Button))
+			if(Flow.Control("SndLongPain", LineHeight, Button, ui_token::settings::RowGap(LineSpacing)))
 			{
 				if(DoSettingsButton_CheckBox(SETTINGS_SOUND, -1, &g_Config.m_SndLongPain, "Enable shout when holding fire while in water", Localize("Enable shout when holding fire while in water"), g_Config.m_SndLongPain, &Button) && CanCommit)
 				{
 					g_Config.m_SndLongPain ^= 1;
 				}
 			}
-			Flow.Space(LineSpacing);
-			if(Flow.Control("SndServerMessage", LineHeight, Button))
+			if(Flow.Control("SndServerMessage", LineHeight, Button, ui_token::settings::RowGap(LineSpacing)))
 			{
 				if(DoSettingsButton_CheckBox(SETTINGS_SOUND, -1, &g_Config.m_SndServerMessage, "Enable server message sound", Localize("Enable server message sound"), g_Config.m_SndServerMessage, &Button) && CanCommit)
 				{
 					g_Config.m_SndServerMessage ^= 1;
 				}
 			}
-			Flow.Space(LineSpacing);
-			if(Flow.Control("SndChat", LineHeight, Button))
+			if(Flow.Control("SndChat", LineHeight, Button, ui_token::settings::RowGap(LineSpacing)))
 			{
 				if(DoSettingsButton_CheckBox(SETTINGS_SOUND, -1, &g_Config.m_SndChat, "Enable regular chat sound", Localize("Enable regular chat sound"), g_Config.m_SndChat, &Button) && CanCommit)
 				{
 					g_Config.m_SndChat ^= 1;
 				}
 			}
-			Flow.Space(LineSpacing);
-			if(Flow.Control("SndTeamChat", LineHeight, Button))
+			if(Flow.Control("SndTeamChat", LineHeight, Button, ui_token::settings::RowGap(LineSpacing)))
 			{
 				if(DoSettingsButton_CheckBox(SETTINGS_SOUND, -1, &g_Config.m_SndTeamChat, "Enable team chat sound", Localize("Enable team chat sound"), g_Config.m_SndTeamChat, &Button) && CanCommit)
 				{
 					g_Config.m_SndTeamChat ^= 1;
 				}
 			}
-			Flow.Space(LineSpacing);
-			if(Flow.Control("SndHighlight", LineHeight, Button))
+			if(Flow.Control("SndHighlight", LineHeight, Button, ui_token::settings::RowGap(LineSpacing)))
 			{
 				if(DoSettingsButton_CheckBox(SETTINGS_SOUND, -1, &g_Config.m_SndHighlight, "Enable highlighted chat sound", Localize("Enable highlighted chat sound"), g_Config.m_SndHighlight, &Button) && CanCommit)
 				{
@@ -331,20 +325,19 @@ uint64_t CMenus::BuildSoundSettingsCards(const qm_card_catalog::SQmCardBuildCont
 			CUIRect VolumeButton;
 			if(Flow.Control("sound-volume", LineHeight, VolumeButton))
 				DoSoundNumericField("sound-volume", &g_Config.m_SndVolume, &g_Config.m_SndVolume, VolumeButton, Localize("Sound volume"));
-			Flow.Space(LineSpacing);
-			if(!qm_card_catalog::QmCardRenderHook::Personalization(this, ContentRect, "deck:sound-volume", SoundMetrics, RenderOnly))
+			Flow.Space(ui_token::settings::RowGap(LineSpacing));
+			float SectionReveal = 0.0f;
+			if(!qm_card_catalog::QmCardRenderHook::PersonalizationReveal(this, ContentRect, "deck:sound-volume", SoundMetrics, &SectionReveal, RenderOnly))
 				return;
+			const CSettingsContentRevealScope SectionRevealScope(Ui(), Flow, SectionReveal);
 
 			if(Flow.Control("sound-game-volume", LineHeight, VolumeButton))
 				DoSoundNumericField("sound-game-volume", &g_Config.m_SndGameVolume, &g_Config.m_SndGameVolume, VolumeButton, Localize("Game sound volume"));
-			Flow.Space(LineSpacing);
-			if(Flow.Control("sound-chat-volume", LineHeight, VolumeButton))
+			if(Flow.Control("sound-chat-volume", LineHeight, VolumeButton, ui_token::settings::RowGap(LineSpacing)))
 				DoSoundNumericField("sound-chat-volume", &g_Config.m_SndChatVolume, &g_Config.m_SndChatVolume, VolumeButton, Localize("Chat sound volume"));
-			Flow.Space(LineSpacing);
-			if(Flow.Control("sound-map-volume", LineHeight, VolumeButton))
+			if(Flow.Control("sound-map-volume", LineHeight, VolumeButton, ui_token::settings::RowGap(LineSpacing)))
 				DoSoundNumericField("sound-map-volume", &g_Config.m_SndMapVolume, &g_Config.m_SndMapVolume, VolumeButton, Localize("Map sound volume"));
-			Flow.Space(LineSpacing);
-			if(Flow.Control("sound-background-music-volume", LineHeight, VolumeButton))
+			if(Flow.Control("sound-background-music-volume", LineHeight, VolumeButton, ui_token::settings::RowGap(LineSpacing)))
 				DoSoundNumericField("sound-background-music-volume", &g_Config.m_SndBackgroundMusicVolume, &g_Config.m_SndBackgroundMusicVolume, VolumeButton, Localize("Background music volume")); }, [] { return g_Config.m_SndEnable != 0; });
 		AddCard(AudioPackSpec, [this, SoundMetrics, LineHeight, LineSpacing, BodySize, RenderOnly](CUIRect &ContentRect) {
 			CSettingsContentLayoutFlow Flow(ContentRect);
@@ -388,8 +381,7 @@ uint64_t CMenus::BuildSoundSettingsCards(const qm_card_catalog::SQmCardBuildCont
 			const auto Geometry = ResolveSettingsSoundAudioPackGeometry(gs_vAudioPacks.size(), SoundMetrics);
 			CUIRect HeaderRow, ListRow;
 			const bool HasHeader = Flow.Control("audio-pack-actions", LineHeight + 2.0f, HeaderRow);
-			Flow.Space(LineSpacing);
-			const bool HasList = Flow.Control("audio-pack-list", Geometry.m_ListViewportHeight + 14.0f, ListRow);
+			const bool HasList = Flow.Control("audio-pack-list", Geometry.m_ListViewportHeight + 14.0f, ListRow, ui_token::settings::RowGap(LineSpacing));
 			if(HasHeader)
 			{
 				HeaderRow.HSplitTop(2.0f, nullptr, &HeaderRow);
@@ -427,7 +419,10 @@ uint64_t CMenus::BuildSoundSettingsCards(const qm_card_catalog::SQmCardBuildCont
 			const int OldSelectedPack = SelectedPack;
 			s_AudioPackListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);
 			s_AudioPackListBox.SetWheelOwnerPriority(EUiWheelOwnerPriority::COMPOSITE_CONTROL);
-			s_AudioPackListBox.SetItemColors(ui_token::color::LIST_ITEM_SELECTED, ui_token::color::LIST_ITEM_SELECTED, ui_token::color::LIST_ITEM_HOVER);
+			// 胶囊行：行距、行内左右内退、胶囊圆角与覆盖式滚动条（8/4）一次拿到，
+			// 选中/悬浮填充走组件默认（选中色、无描边），不再单独覆盖颜色。
+			s_AudioPackListBox.SetCapsuleRows(BodySize);
+			s_AudioPackListBox.SetVisibleRowRange(1, ui_token::list::MAX_VISIBLE_ROWS);
 			s_AudioPackListBox.DoStart(LineHeight + LineSpacing, gs_vAudioPacks.size(), 1, 4, SelectedPack, &ListRow, false);
 
 			// 数量徽章在行内居中，使用紧凑尺寸并保留上下间隙。
@@ -453,8 +448,9 @@ uint64_t CMenus::BuildSoundSettingsCards(const qm_card_catalog::SQmCardBuildCont
 				}
 
 				CUIRect NameRect, BadgeRect;
-				Item.m_Rect.VSplitRight(BadgeWidth, &NameRect, &BadgeRect);
-				NameRect.VMargin(6.0f, &NameRect);
+				// 行内容排在内容区：胶囊行的左右内退与滚动那一列的缝都由组件让出，
+				// 名称/徽章不再贴行边，也不会压在滚动条下面。
+				Item.m_ContentRect.VSplitRight(BadgeWidth, &NameRect, &BadgeRect);
 				BadgeRect.HMargin((BadgeRect.h - BadgeHeight) * 0.5f, &BadgeRect);
 
 				char aBadge[32];

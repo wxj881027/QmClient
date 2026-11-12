@@ -319,16 +319,28 @@ TEST(SettingsPageLayout, PageListCardsUseExactProductionViewports)
 	EXPECT_EQ(OneLanguage.m_VisibleRows, 1);
 	EXPECT_FLOAT_EQ(OneLanguage.m_ContentHeight, Metrics.m_ListRowHeight);
 	EXPECT_EQ(EightLanguages.m_VisibleRows, 8);
-	EXPECT_FLOAT_EQ(EightLanguages.m_ListViewportHeight, 8.0f * Metrics.m_ListRowHeight);
+	// 语言列表同样按胶囊行渲染，视口 = 整数行 + 行距半档（唯一来源 RowsHeight）。
+	EXPECT_FLOAT_EQ(EightLanguages.m_ListViewportHeight, ResolveSettingsListViewportHeight(8, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING));
 	EXPECT_FLOAT_EQ(NineLanguages.m_ListViewportHeight, EightLanguages.m_ListViewportHeight);
 
 	const SSettingsListCardGeometry Theme = ResolveSettingsGeneralThemeListGeometry(12, Metrics);
-	EXPECT_FLOAT_EQ(Theme.m_ContentHeight, Metrics.m_LineHeight + Metrics.m_LineSpacing + 8.0f * Metrics.m_ListRowHeight);
+	// 主题列表按胶囊行渲染：可见行数上限与行距都来自列表 token，卡片测高必须和
+	// CListBox 的自适应高度用同一组事实（整数行 + 行距半档），否则 DoStart 会被 min()
+	// 缩掉，最后一行又被裁一半。这里引用同一来源而不是写死数字。
+	const float ThemeViewport = ResolveSettingsListViewportHeight(ui_token::list::MAX_VISIBLE_ROWS, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING);
+	EXPECT_EQ(Theme.m_VisibleRows, ui_token::list::MAX_VISIBLE_ROWS);
+	EXPECT_FLOAT_EQ(Theme.m_ListViewportHeight, ThemeViewport);
+	// DoHeader 消费 LineHeight + 2 × LineSpacing，两段相加正好是整容器高度。
+	EXPECT_FLOAT_EQ(Theme.m_ContentHeight, ThemeViewport + Metrics.m_LineHeight + 2.0f * Metrics.m_LineSpacing);
+	// 少于最少可见行数时按最少行数测高，卡片不会缩成一行半。
+	const SSettingsListCardGeometry TwoThemes = ResolveSettingsGeneralThemeListGeometry(2, Metrics);
+	EXPECT_EQ(TwoThemes.m_VisibleRows, ui_token::list::THEME_MIN_VISIBLE_ROWS);
+	EXPECT_FLOAT_EQ(TwoThemes.m_ListViewportHeight, ResolveSettingsListViewportHeight(ui_token::list::THEME_MIN_VISIBLE_ROWS, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING));
 
 	const SSettingsContentMetrics CardMetrics = ResolveSettingsContentMetrics(480.0f);
 	const SSettingsListCardGeometry CompactLanguages = ResolveSettingsGeneralLanguageListGeometry(9, CardMetrics);
 	EXPECT_NE(CardMetrics.m_ListRowHeight, Metrics.m_ListRowHeight);
-	EXPECT_FLOAT_EQ(CompactLanguages.m_ContentHeight, 8.0f * CardMetrics.m_ListRowHeight);
+	EXPECT_FLOAT_EQ(CompactLanguages.m_ContentHeight, ResolveSettingsListViewportHeight(8, CardMetrics.m_ListRowHeight, ui_token::list::ROW_SPACING));
 
 	const SSettingsListCardGeometry OneMode = ResolveSettingsGraphicsModesGeometry(1, Metrics);
 	const SSettingsListCardGeometry ManyModes = ResolveSettingsGraphicsModesGeometry(20, Metrics);
@@ -345,7 +357,7 @@ TEST(SettingsPageLayout, PageListCardsUseExactProductionViewports)
 	EXPECT_EQ(OneAudioPack.m_VisibleRows, 1);
 	EXPECT_FLOAT_EQ(OneAudioPack.m_ListViewportHeight, Metrics.m_ListRowHeight);
 	EXPECT_EQ(EightAudioPacks.m_VisibleRows, 8);
-	EXPECT_FLOAT_EQ(EightAudioPacks.m_ListViewportHeight, 8.0f * Metrics.m_ListRowHeight);
+	EXPECT_FLOAT_EQ(EightAudioPacks.m_ListViewportHeight, ResolveSettingsListViewportHeight(8, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING));
 	EXPECT_FLOAT_EQ(NineAudioPacks.m_ListViewportHeight, EightAudioPacks.m_ListViewportHeight);
 	EXPECT_FLOAT_EQ(OneAudioPack.m_ContentHeight, Metrics.m_LineHeight + Metrics.m_LineSpacing + OneAudioPack.m_ListViewportHeight + 16.0f);
 	EXPECT_NE(ResolveSettingsSoundLayoutRevision(false, true, 7), ResolveSettingsSoundLayoutRevision(false, true, 8));

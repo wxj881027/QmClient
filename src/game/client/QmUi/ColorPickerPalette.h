@@ -40,6 +40,32 @@ namespace qm_picker_palette
 		}
 	}
 
+	// 自动命名：取「前缀 N」中第一个未被占用的编号。
+	// pReserved 指向此刻不在列表里、但随时可能插回的条目（例如撤销缓冲）：
+	// 取名时一并视为已占用，否则「删除自定义 1 → 重新改色 → 撤回」会出现两个同名声块。
+	// SkipIndex 是正在改名的条目本身，扫描时跳过，避免回退名被它自己的旧名字挤到下一个编号。
+	inline void NextUniqueName(char *pName, int Size, const char *pPrefix, const std::vector<SSwatch> &vSwatches, const SSwatch *pReserved, int SkipIndex)
+	{
+		// 候选名缓冲比存储上限宽、循环有上界：前缀过长时编号不会被先截掉，
+		// 否则候选名永远相同，扫描找不到空位就会死循环。
+		char aName[MAX_NAME_BYTES * 2];
+		for(int Number = 1; Number <= MAX_SWATCHES + 1; Number++)
+		{
+			str_format(aName, sizeof(aName), "%s %d", pPrefix, Number);
+			bool Taken = pReserved != nullptr && str_comp(pReserved->m_aName, aName) == 0;
+			for(int Index = 0; !Taken && Index < (int)vSwatches.size(); Index++)
+			{
+				if(Index != SkipIndex && str_comp(vSwatches[Index].m_aName, aName) == 0)
+					Taken = true;
+			}
+			if(!Taken)
+			{
+				str_copy(pName, aName, Size);
+				return;
+			}
+		}
+	}
+
 	inline int HexDigitValue(char c)
 	{
 		if(c >= '0' && c <= '9')
@@ -114,6 +140,9 @@ namespace qm_picker_palette
 					for(int i = 0; i < NameLen && i < MAX_NAME_BYTES - 1; ++i)
 						Swatch.m_aName[i] = IsNameSeparator(pEntry[i]) ? ' ' : pEntry[i];
 					Swatch.m_aName[minimum(NameLen, MAX_NAME_BYTES - 1)] = '\0';
+					// 截断可能切在多字节字符中间：修到合法边界，否则 UI 画出替换符，
+					// 下次 Serialize 用 str_copy 又会再缩短，配置往返不收敛。
+					str_utf8_fix_truncation(Swatch.m_aName);
 					// 颜色片段必须按条目长度截断：pSep+1 之后的 str_length 会跨过分号
 					// 读到后续条目，导致第一条目被误判为非法颜色。
 					const int ColorLen = EntryLen - (int)(pSep + 1 - pEntry);

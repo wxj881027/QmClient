@@ -82,7 +82,7 @@ void CMenus::RenderQmHudBackground3DContent(CUIRect &Content, const SSettingsCon
 			RenderSliderWithValueInput(pId, ControlCol, pValue, MinValue, MaxValue, pSuffix);
 		}
 		if(TrailingSpacing)
-			Flow.Space(LineSpacing);
+			Flow.Space(ui_token::settings::RowGap(LineSpacing));
 	};
 
 	if(Flow.Control("Enable 3D background particles", CurrentSettingsContentMetrics().m_LineHeight, Row))
@@ -90,7 +90,7 @@ void CMenus::RenderQmHudBackground3DContent(CUIRect &Content, const SSettingsCon
 		DoQmSettingsCheckboxAuto(&g_Config.m_Qm3DParticles, "Enable 3D background particles", Localize("Enable 3D background particles"), &g_Config.m_Qm3DParticles, &Row, LineHeight);
 	}
 	if(g_Config.m_Qm3DParticles)
-		Flow.Space(LineSpacing);
+		Flow.Space(ui_token::settings::RowGap(LineSpacing));
 
 	if(g_Config.m_Qm3DParticles)
 	{
@@ -126,10 +126,12 @@ void CMenus::RenderQmHudBackground3DContent(CUIRect &Content, const SSettingsCon
 			if(NewTypeIndex >= 0 && NewTypeIndex < static_cast<int>(aQm3DParticleTypeValues.size()) && NewTypeIndex != TypeIndex)
 				g_Config.m_Qm3DParticlesType = aQm3DParticleTypeValues[NewTypeIndex];
 		}
-		Flow.Space(LineSpacing);
+		Flow.Space(ui_token::settings::RowGap(LineSpacing));
 
-		if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:background_3d", Metrics, PrewarmOnly || Ui()->RenderOnly()))
+		float SectionReveal = 0.0f;
+		if(!qm_card_catalog::QmCardRenderHook::PersonalizationReveal(this, Content, "qm:background_3d", Metrics, &SectionReveal, PrewarmOnly || Ui()->RenderOnly()))
 			return;
+		const CSettingsContentRevealScope SectionRevealScope(Ui(), Flow, SectionReveal);
 
 		static int s_Qm3DParticleCountInputId;
 		RenderIntOption("hud-Qm3DParticlesCount", &s_Qm3DParticleCountInputId, Localize("Particle count"), &g_Config.m_Qm3DParticlesCount, 1, 200);
@@ -156,7 +158,7 @@ void CMenus::RenderQmHudBackground3DContent(CUIRect &Content, const SSettingsCon
 		{
 			DoQmSettingsCheckboxAuto(&g_Config.m_Qm3DParticlesCollide, "Particle collision", Localize("Particle collision"), &g_Config.m_Qm3DParticlesCollide, &Row, LineHeight);
 		}
-		Flow.Space(LineSpacing);
+		Flow.Space(ui_token::settings::RowGap(LineSpacing));
 
 		static int s_Qm3DParticlePushRadiusInputId;
 		RenderIntOption("hud-Qm3DParticlesPushRadius", &s_Qm3DParticlePushRadiusInputId, Localize("Push radius"), &g_Config.m_Qm3DParticlesPushRadius, 0, 1000);
@@ -171,7 +173,7 @@ void CMenus::RenderQmHudBackground3DContent(CUIRect &Content, const SSettingsCon
 			if(DoSettingsLine_RadioMenu(SETTINGS_QMCLIENT, m_QmClientSettingsTab, m_QmClientSettingsTab, RadioRow, "qmclient-3d-particle-color-mode-label", Localize("Particle color"), s_vQm3DParticleColorModeButtons, {"qmclient-3d-particle-color-custom", "qmclient-3d-particle-color-random"}, {Localize("Custom"), Localize("Random")}, {1, 2}, ColorMode, Metrics, nullptr, &g_Config.m_Qm3DParticlesColorMode))
 				g_Config.m_Qm3DParticlesColorMode = ColorMode;
 		}
-		Flow.Space(LineSpacing);
+		Flow.Space(ui_token::settings::RowGap(LineSpacing));
 
 		if(ColorModeForLayout == 1)
 		{
@@ -180,9 +182,9 @@ void CMenus::RenderQmHudBackground3DContent(CUIRect &Content, const SSettingsCon
 				CUIRect ColorRow;
 				if(Flow.Control("hud-Qm3DParticlesColor", CurrentSettingsContentMetrics().m_ButtonHeight, ColorRow))
 				{
-					DoLine_ColorPicker(&s_Qm3DParticleColorId, Metrics, &ColorRow, Localize("Particle color"), &g_Config.m_Qm3DParticlesColor, ColorRGBA(0.56f, 0.72f, 0.62f, 1.0f), false, nullptr, true);
+					DoLine_ColorPicker(&s_Qm3DParticleColorId, Metrics, &ColorRow, Localize("Particle color"), &g_Config.m_Qm3DParticlesColor, color_cast<ColorRGBA>(ColorHSLA(CConfig::ms_Qm3DParticlesColor, true)), false, nullptr, true);
 				}
-				Flow.Space(CurrentSettingsContentMetrics().m_LineSpacing);
+				Flow.Space(ui_token::settings::RowGap(CurrentSettingsContentMetrics().m_LineSpacing));
 			}
 		}
 
@@ -190,10 +192,14 @@ void CMenus::RenderQmHudBackground3DContent(CUIRect &Content, const SSettingsCon
 		{
 			DoQmSettingsCheckboxAuto(&g_Config.m_Qm3DParticlesGlow, "Particle glow", Localize("Particle glow"), &g_Config.m_Qm3DParticlesGlow, &Row, LineHeight);
 		}
-		Flow.Space(LineSpacing);
+		Flow.Space(ui_token::settings::RowGap(LineSpacing));
 
-		if(g_Config.m_Qm3DParticlesGlow)
+		// 开关后的从属行统一走条件行展开（与其它设置卡同一套）：主控行本身不动，
+		// 只让从属行的显隐带淡入/收起动画，测高与 DRAW 趟同源，不再整块瞬变。
+		static CSettingsConditionalRows s_ParticleGlowRows;
+		if(s_ParticleGlowRows.Update(g_Config.m_Qm3DParticlesGlow, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 		{
+			const CSettingsContentRevealScope GlowRevealScope(Ui(), Flow, s_ParticleGlowRows.Fade(g_Config.m_QmUiMotionLevel));
 			static int s_Qm3DParticleGlowAlphaInputId;
 			RenderIntOption("hud-Qm3DParticlesGlowAlpha", &s_Qm3DParticleGlowAlphaInputId, Localize("Glow alpha"), &g_Config.m_Qm3DParticlesGlowAlpha, 1, 100, "%");
 			static int s_Qm3DParticleGlowOffsetInputId;
@@ -204,10 +210,12 @@ void CMenus::RenderQmHudBackground3DContent(CUIRect &Content, const SSettingsCon
 		{
 			DoQmSettingsCheckboxAuto(&g_Config.m_Qm3DParticlesTrail, "Particle trail", Localize("Particle trail"), &g_Config.m_Qm3DParticlesTrail, &Row, LineHeight);
 		}
-		Flow.Space(LineSpacing);
+		Flow.Space(ui_token::settings::RowGap(LineSpacing));
 
-		if(g_Config.m_Qm3DParticlesTrail)
+		static CSettingsConditionalRows s_ParticleTrailRows;
+		if(s_ParticleTrailRows.Update(g_Config.m_Qm3DParticlesTrail, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 		{
+			const CSettingsContentRevealScope TrailRevealScope(Ui(), Flow, s_ParticleTrailRows.Fade(g_Config.m_QmUiMotionLevel));
 			static int s_Qm3DParticleTrailLengthInputId;
 			RenderIntOption("hud-Qm3DParticlesTrailLength", &s_Qm3DParticleTrailLengthInputId, Localize("Trail length"), &g_Config.m_Qm3DParticlesTrailLength, 2, 6);
 			static int s_Qm3DParticleTrailAlphaInputId;
@@ -218,10 +226,12 @@ void CMenus::RenderQmHudBackground3DContent(CUIRect &Content, const SSettingsCon
 		{
 			DoQmSettingsCheckboxAuto(&g_Config.m_Qm3DParticlesPulse, "Particle pulse", Localize("Particle pulse"), &g_Config.m_Qm3DParticlesPulse, &Row, LineHeight);
 		}
-		Flow.Space(LineSpacing);
+		Flow.Space(ui_token::settings::RowGap(LineSpacing));
 
-		if(g_Config.m_Qm3DParticlesPulse)
+		static CSettingsConditionalRows s_ParticlePulseRows;
+		if(s_ParticlePulseRows.Update(g_Config.m_Qm3DParticlesPulse, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 		{
+			const CSettingsContentRevealScope PulseRevealScope(Ui(), Flow, s_ParticlePulseRows.Fade(g_Config.m_QmUiMotionLevel));
 			static int s_Qm3DParticlePulseStrengthInputId;
 			RenderIntOption("hud-Qm3DParticlesPulseStrength", &s_Qm3DParticlePulseStrengthInputId, Localize("Pulse strength"), &g_Config.m_Qm3DParticlesPulseStrength, 0, 50, "%");
 			static int s_Qm3DParticlePulseSpeedInputId;
@@ -232,9 +242,12 @@ void CMenus::RenderQmHudBackground3DContent(CUIRect &Content, const SSettingsCon
 		{
 			DoQmSettingsCheckboxAuto(&g_Config.m_Qm3DParticlesTwinkle, "Particle twinkle", Localize("Particle twinkle"), &g_Config.m_Qm3DParticlesTwinkle, &Row, LineHeight);
 		}
-		if(g_Config.m_Qm3DParticlesTwinkle)
+		// 这一组只有一行，原本行前的缝就写在条件里：留在展开作用域内，收起时和行一起收。
+		static CSettingsConditionalRows s_ParticleTwinkleRows;
+		if(s_ParticleTwinkleRows.Update(g_Config.m_Qm3DParticlesTwinkle, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 		{
-			Flow.Space(LineSpacing);
+			const CSettingsContentRevealScope TwinkleRevealScope(Ui(), Flow, s_ParticleTwinkleRows.Fade(g_Config.m_QmUiMotionLevel));
+			Flow.Space(ui_token::settings::RowGap(LineSpacing));
 			static int s_Qm3DParticleTwinkleStrengthInputId;
 			RenderIntOption("hud-Qm3DParticlesTwinkleStrength", &s_Qm3DParticleTwinkleStrengthInputId, Localize("Twinkle strength"), &g_Config.m_Qm3DParticlesTwinkleStrength, 0, 100, "%", false);
 		}

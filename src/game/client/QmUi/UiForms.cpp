@@ -218,18 +218,27 @@ namespace ui_widget
 		// 眼睛因此贴到输入框最右边，也不会和叉号抢点击区域。
 		const bool Clearable = Options.m_Clearable && !HasTrailingAction;
 		const float TrailingWidth = HasTrailingAction ? std::max(Options.m_TrailingWidth, Rect.h) : Options.m_TrailingWidth;
-		const SInputFieldLayout Layout = ResolveInputFieldLayout(Rect, HasIcon, Clearable, Ctx.m_UiScale, InlineTrailingText ? 0.0f : TrailingWidth);
+		// 字号只允许「调用方给定」或「行高兜底」二者之一；以前是 min(给定, 0.8h*0.8)，
+		// 双 0.8 叠加会把正文压到 0.64 行高，行高一大文字就偏小。
+		// 输入框的内边距（PadX / IconTextGap）与文字绘制共用这一个字号，测量与绘制
+		// 不会各拿一套字号；调用方没给字号时按 Ctx.m_UiScale 走与其他控件同一条夹取。
+		const float FontSize = Options.m_FontSize > 0.0f ? std::min(Options.m_FontSize, Rect.h * CUi::ms_FontmodHeight) :
+								   Rect.h * CUi::ms_FontmodHeight * ui_token::control::ICON_INK_RATIO;
+		const float BodySize = FontSize > 0.0f ? FontSize : ui_token::control::BodySizeFromScale(Ctx.m_UiScale);
+		const SInputFieldLayout Layout = ResolveInputFieldLayout(Rect, HasIcon, Clearable, Ctx.m_UiScale, InlineTrailingText ? 0.0f : TrailingWidth, BodySize);
 		const bool ShowClear = Clearable && QmInputFieldClearVisible(pInput->IsEmpty(), WasActive, WasEmpty);
 		const float ClearAlpha = Clearable ? AnimateStateValue(Ctx, pInput->GetClearButtonId(), EUiAnimProperty::ALPHA, ShowClear ? 1.0f : 0.0f, ui_token::motion::HOVER_FADE) : 0.0f;
-		const float FontSize = std::min(Options.m_FontSize, Layout.m_ContentRect.h * CUi::ms_FontmodHeight * 0.8f);
+		// 编辑框始终拿整块内容框：DoEditBox 自己按行高垂直居中，光标高度按字号算，
+		// 若把矩形收成「正文框」会把光标上沿裁掉 1~2px（选区同理）。PadY 只参与
+		// 行高构成与内联文字排版，不做为编辑框矩形，避免用内边距去裁字形。
 		CUIRect TextRect = Layout.m_ContentRect;
 		CUIRect TrailingRect = Layout.m_TrailingRect;
 		if(InlineTrailingText)
 		{
 			const char *pDisplayText = pInput->GetDisplayedString();
 			const float TextWidth = Ctx.m_pUi->TextRender()->TextWidth(FontSize, pDisplayText);
-			const float TrailingTextWidth = Ctx.m_pUi->TextRender()->TextWidth(FontSize * 0.82f, Options.m_pTrailingText);
-			const SInlineTrailingTextLayout InlineLayout = ResolveInlineTrailingTextLayout(Layout.m_ContentRect, TextWidth, TrailingTextWidth, Ctx.m_UiScale);
+			const float TrailingTextWidth = Ctx.m_pUi->TextRender()->TextWidth(FontSize * ui_token::control::SUFFIX_RATIO, Options.m_pTrailingText);
+			const SInlineTrailingTextLayout InlineLayout = ResolveInlineTrailingTextLayout(TextRect, TextWidth, TrailingTextWidth, Ctx.m_UiScale);
 			TextRect = InlineLayout.m_TextRect;
 			TrailingRect = InlineLayout.m_TrailingRect;
 		}
@@ -255,6 +264,10 @@ namespace ui_widget
 					     pFocusAnim->GetValue(FocusKey, EUiAnimProperty::ALPHA, FocusTarget) :
 					     pFocusAnim->ResolveTargetValue(FocusKey, EUiAnimProperty::ALPHA, FocusTarget, ui_token::motion::INPUT_FOCUS_RING);
 		}
+		// 单行输入框 = 胶囊：外壳按行高取圆角（min(高*0.5, radius::CARD)），
+		// 与列表胶囊行同一族；多行编辑器保持 radius::BASE 方角（首个/末个可见行
+		// 贴着矩形边，胶囊会把正文的首尾行切掉一角）。
+		const float ShellRadius = Options.m_Mode == EInputFieldMode::MULTILINE ? ui_token::radius::BASE : ResolveInputCapsuleRadius(Layout.m_ShellRect);
 		if(!Ctx.m_pUi->MeasurementOnly() && FocusAlpha > 0.01f)
 		{
 			const SUiTheme Theme = ThemeFor(Ctx);
@@ -267,11 +280,11 @@ namespace ui_widget
 				NormalBorder.b + (Theme.m_FocusRing.b - NormalBorder.b) * T,
 				NormalBorder.a + (Theme.m_FocusRing.a - NormalBorder.a) * T};
 			const float BorderWidth = 1.0f + T * (Theme.m_FocusRingWidth - 1.0f);
-			DrawTextFieldShell(Ctx, Layout.m_ShellRect, PlateColor, Options.m_Corners, ui_token::radius::BASE, &FocusBorder, BorderWidth);
+			DrawTextFieldShell(Ctx, Layout.m_ShellRect, PlateColor, Options.m_Corners, ShellRadius, &FocusBorder, BorderWidth);
 		}
 		else if(!Ctx.m_pUi->MeasurementOnly())
 		{
-			DrawTextFieldShell(Ctx, Layout.m_ShellRect, PlateColor, Options.m_Corners, ui_token::radius::BASE);
+			DrawTextFieldShell(Ctx, Layout.m_ShellRect, PlateColor, Options.m_Corners, ShellRadius);
 		}
 		const char *pPreviousPlaceholder = pInput->GetEmptyText();
 		pInput->SetEmptyText(Options.m_pPlaceholder != nullptr ? Options.m_pPlaceholder : (Search ? Localize("Search") : nullptr));
@@ -320,6 +333,8 @@ namespace ui_widget
 			ActionOptions.m_Role = EUiButtonRole::ICON;
 			ActionOptions.m_TransparentInactive = true;
 			ActionOptions.m_Corners = IGraphics::CORNER_R;
+			// 图标槽贴着外壳右端：圆角跟外壳同一档，端头才和胶囊外沿共一条曲线。
+			ActionOptions.m_Radius = ShellRadius;
 			DrawButtonSurface(Ctx, pInput->GetClearButtonId(), ClearRect, ActionOptions);
 			DrawInputFieldIcon(Ctx, ClearRect, FontIcons::FONT_ICON_XMARK, InputIconColor.WithMultipliedAlpha(ClearAlpha), static_cast<int>(EQmIcon::CLOSE));
 			if(ShowClear && ProcessInput && Ctx.m_pUi->DoButtonLogic(pInput->GetClearButtonId(), 0, &ClearRect, BUTTONFLAG_LEFT))
@@ -336,13 +351,15 @@ namespace ui_widget
 			ActionOptions.m_Role = EUiButtonRole::ICON;
 			ActionOptions.m_TransparentInactive = true;
 			ActionOptions.m_Corners = Clearable ? IGraphics::CORNER_NONE : IGraphics::CORNER_R;
+			// 与清除槽同一条口径：尾部图标槽的右端跟外壳胶囊外沿对齐。
+			ActionOptions.m_Radius = ShellRadius;
 			DrawButtonSurface(Ctx, Options.m_pTrailingActionId, TrailingRect, ActionOptions);
 			// 尾部图标必须带上动作 id：它是显隐动画的节点键，缺了就一直走静态字形。
 			DrawInputFieldIcon(Ctx, TrailingRect, Options.m_pTrailingActionIcon, InputIconColor, Options.m_TrailingActionQmIcon, Options.m_pTrailingActionId);
 			TrailingAction = ProcessInput && Ctx.m_pUi->DoButtonLogic(Options.m_pTrailingActionId, 0, &TrailingRect, BUTTONFLAG_LEFT) != 0;
 		}
 		if(Options.m_pTrailingText != nullptr && TrailingRect.w > 0.0f)
-			Ctx.m_pUi->DoLabel(&TrailingRect, Options.m_pTrailingText, FontSize * 0.82f, TEXTALIGN_MC);
+			Ctx.m_pUi->DoLabel(&TrailingRect, Options.m_pTrailingText, FontSize * ui_token::control::SUFFIX_RATIO, TEXTALIGN_MC);
 
 		if(!ProcessInput)
 			return {};
@@ -580,7 +597,8 @@ namespace ui_widget
 			const bool ShowMaxText = !pInput->IsActive() && !IsInfinite && Options.m_pMaxText != nullptr && DisplayValue == Max && str_comp(pInput->GetString(), aNumericValue) == 0;
 			CLineInput *pVisibleInput = !Ctx.m_pUi->MeasurementOnly() && pState->m_HasSyncedValue && !ShowMaxText ? pInput : &PreviewInput;
 			SInputFieldOptions FieldOptions;
-			FieldOptions.m_FontSize = std::min(Options.m_FontSize, InputField.h * CUi::ms_FontmodHeight * 0.8f);
+			FieldOptions.m_FontSize = Options.m_FontSize > 0.0f ? std::min(Options.m_FontSize, InputField.h * CUi::ms_FontmodHeight) :
+									      InputField.h * CUi::ms_FontmodHeight * ui_token::control::ICON_INK_RATIO;
 			FieldOptions.m_TextAlign = TEXTALIGN_MC;
 			FieldOptions.m_pTrailingText = HasSuffix ? Options.m_pSuffix : nullptr;
 			FieldOptions.m_InlineTrailingText = HasSuffix;
@@ -813,8 +831,11 @@ namespace ui_widget
 		Options.m_Radius = ui_token::radius::PILL;
 		// 每个胶囊都带自己的胶囊底（静止态也画），只有选中态换成强调色；
 		// 透明底会让整排退化成纯文字，看不出可点区域。
-		const ColorRGBA Fill = DrawButtonSurface(Ctx, pId, Rect, Options);
-		CUiScopedSurfaceText SurfaceText(Ctx.m_pUi->TextRender(), Fill);
+		DrawButtonSurface(Ctx, pId, Rect, Options);
+		// 文字色一律取调用点配置的正文色，不按填充亮度反色：选中只换底色，
+		// 文字不再翻成深色（用户明确要求芯片/开关不随底色变字色）。
+		// 这里也不再挂 CUiScopedSurfaceText——那会把本胶囊的合成底色登记成
+		// 当前表面，后面的字形/图标仍可能按它反色。
 		SLabelProperties Props;
 		Props.m_MaxWidth = Rect.w;
 		Props.m_EllipsisAtEnd = true;

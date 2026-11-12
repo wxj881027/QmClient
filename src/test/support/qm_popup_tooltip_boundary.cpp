@@ -40,9 +40,12 @@ void CTooltips::DoSmallToolTip(const void *, const CUIRect *, const char *, floa
 }
 
 // 只隔离气泡注册与绘制；标签解析仍使用生产缓存与策略，供原始名称作用域验证。
-const char *CTooltips::PrepareCardLabel(const CUIRect *, const char *pText, bool)
+const char *CTooltips::PrepareCardLabel(const CUIRect *, const char *pText, bool, bool AllowHintSplit)
 {
-	return pText != nullptr ? m_CardLabelTexts.Get(pText).m_Label.c_str() : pText;
+	if(pText == nullptr)
+		return pText;
+	// 与生产实现一致：显式退出拆分的调用方拿回整句标签。
+	return AllowHintSplit ? m_CardLabelTexts.Get(pText).m_Label.c_str() : pText;
 }
 
 // 为 Itanium ABI 的 key function 提供定义，sanitizer 的 vptr 检查需要完整 RTTI。

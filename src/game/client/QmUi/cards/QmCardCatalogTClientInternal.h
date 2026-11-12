@@ -68,10 +68,6 @@ namespace qm_tclient_cards
 		NUMBER_OF_TCLIENT_TABS
 	};
 
-	// 11.2 沿用 menus.h 移除前的 TCLIENT_SETTINGS_BODY_FONT_SIZE，保持 TClient 页字号不变。
-	constexpr float TCLIENT_BODY_FONT_SIZE = 11.2f;
-	constexpr float TCLIENT_HEADLINE_FONT_SIZE = 20.0f;
-
 	inline SLabelProperties TClientFixedLabelProperties(float FontSize, float MaxWidth = -1.0f)
 	{
 		SLabelProperties Props;
@@ -97,23 +93,45 @@ namespace qm_tclient_cards
 		return SectionRect.y + SectionRect.h >= Context.m_ViewportTop - Context.m_PrefetchPadding &&
 		       SectionRect.y <= Context.m_ViewportBottom + Context.m_PrefetchPadding;
 	}
-	inline float FontSize = ui_token::font::BODY;
-	inline float EditBoxFontSize = ui_token::font::BODY;
-	inline float LineSize = ui_token::settings::ROW_HEIGHT;
-	inline float ColorPickerLineSize = ui_token::settings::ROW_HEIGHT + ui_token::settings::ROW_GAP;
-	inline float HeadlineFontSize = ui_token::font::HEADLINE;
-	inline float StandardFontSize = ui_token::font::BODY;
-	// 卡片角标一类的小字：与设置页小字号度量同源，避免在业务页散落裸字号。
-	inline float SmallFontSize = ui_token::font::SMALL;
+	// 卡片渲染期共用的字号与间距。卡片入口用 CTClientCardMetricsScope 绑定当前
+	// SSettingsContentMetrics，退出时整份恢复：漏绑的卡只会拿到基础 token，不会
+	// 沿用上一张卡的量；嵌套调用也安全。历史短名保留为引用，调用点无需改动，
+	// 新增代码请直接用 Ctx.m_Metrics，不要再往这里加字段。
+	struct STClientCardMetrics
+	{
+		float FontSize = ui_token::font::BODY;
+		float EditBoxFontSize = ui_token::font::BODY;
+		float LineSize = ui_token::settings::ROW_HEIGHT;
+		float ColorPickerLineSize = ui_token::settings::ROW_HEIGHT + ui_token::settings::ROW_GAP;
+		float HeadlineFontSize = ui_token::font::HEADLINE;
+		float StandardFontSize = ui_token::font::BODY;
+		// 卡片角标一类的小字：与设置页小字号度量同源，避免在业务页散落裸字号。
+		float SmallFontSize = ui_token::font::SMALL;
+		float HeadlineHeight = ui_token::font::HEADLINE;
+		float RowSpacing = ui_token::settings::ROW_GAP;
+		float MarginExtraSmall = ui_token::settings::ROW_GAP;
+		float MarginBetweenSections = ui_token::settings::ROW_GAP * 2.0f;
+		float ColorPickerLabelSize = ui_token::font::BODY;
+		float ColorPickerLineSpacing = ui_token::settings::ROW_GAP;
+	};
 
-	inline float HeadlineHeight = ui_token::font::HEADLINE;
+	inline STClientCardMetrics g_TClientCardMetrics{};
+	inline int g_TClientCardMetricsDepth = 0;
+
+	inline float &FontSize = g_TClientCardMetrics.FontSize;
+	inline float &EditBoxFontSize = g_TClientCardMetrics.EditBoxFontSize;
+	inline float &LineSize = g_TClientCardMetrics.LineSize;
+	inline float &ColorPickerLineSize = g_TClientCardMetrics.ColorPickerLineSize;
+	inline float &HeadlineFontSize = g_TClientCardMetrics.HeadlineFontSize;
+	inline float &StandardFontSize = g_TClientCardMetrics.StandardFontSize;
+	inline float &SmallFontSize = g_TClientCardMetrics.SmallFontSize;
+	inline float &HeadlineHeight = g_TClientCardMetrics.HeadlineHeight;
+	inline float &RowSpacing = g_TClientCardMetrics.RowSpacing;
+	inline float &MarginExtraSmall = g_TClientCardMetrics.MarginExtraSmall;
+	inline float &MarginBetweenSections = g_TClientCardMetrics.MarginBetweenSections;
+	inline float &ColorPickerLabelSize = g_TClientCardMetrics.ColorPickerLabelSize;
+	inline float &ColorPickerLineSpacing = g_TClientCardMetrics.ColorPickerLineSpacing;
 	const float Margin = 10.0f;
-	inline float MarginSmall = ui_token::settings::ROW_GAP;
-	inline float MarginExtraSmall = ui_token::settings::ROW_GAP;
-	inline float MarginBetweenSections = ui_token::settings::ROW_GAP * 2.0f;
-
-	inline float ColorPickerLabelSize = ui_token::font::BODY;
-	inline float ColorPickerLineSpacing = ui_token::settings::ROW_GAP;
 	inline std::vector<CButtonContainer> s_vTinyTeeModeButtons = {{}, {}, {}};
 	inline int s_CountFrozenText = 0;
 	inline CUi::SDropDownState s_TrailDropDownState;
@@ -123,7 +141,7 @@ namespace qm_tclient_cards
 
 	inline float TClientSettingsRowsHeight(const int NumRows)
 	{
-		return NumRows > 0 ? LineSize * NumRows + MarginSmall * (NumRows - 1) : 0.0f;
+		return NumRows > 0 ? LineSize * NumRows + RowSpacing * (NumRows - 1) : 0.0f;
 	}
 
 	class CTClientSettingsRowAllocator
@@ -140,7 +158,7 @@ namespace qm_tclient_cards
 		CUIRect Next(float Height)
 		{
 			if(m_HasPreviousRow)
-				m_Column.HSplitTop(MarginSmall, nullptr, &m_Column);
+				m_Column.HSplitTop(RowSpacing, nullptr, &m_Column);
 			m_HasPreviousRow = true;
 			CUIRect Row;
 			m_Column.HSplitTop(Height, &Row, &m_Column);
@@ -153,27 +171,53 @@ namespace qm_tclient_cards
 		}
 	};
 
-	inline void ApplyTClientContentMetrics(const SSettingsContentMetrics &Metrics)
+	inline STClientCardMetrics ResolveTClientCardMetrics(const SSettingsContentMetrics &Metrics)
 	{
-		FontSize = Metrics.m_BodySize;
-		EditBoxFontSize = Metrics.m_BodySize;
-		LineSize = Metrics.m_LineHeight;
-		ColorPickerLineSize = Metrics.m_ButtonHeight;
-		HeadlineFontSize = Metrics.m_HeadlineSize;
-		StandardFontSize = Metrics.m_BodySize;
-		SmallFontSize = Metrics.m_SmallSize;
-		HeadlineHeight = Metrics.m_LineHeight;
-		MarginSmall = Metrics.m_LineSpacing;
-		MarginExtraSmall = Metrics.m_LineSpacing;
-		MarginBetweenSections = Metrics.m_SectionGap;
-		ColorPickerLabelSize = Metrics.m_BodySize;
-		ColorPickerLineSpacing = Metrics.m_LineSpacing;
+		STClientCardMetrics Result;
+		Result.FontSize = Metrics.m_BodySize;
+		Result.EditBoxFontSize = Metrics.m_BodySize;
+		Result.LineSize = Metrics.m_LineHeight;
+		Result.ColorPickerLineSize = Metrics.m_ButtonHeight;
+		Result.HeadlineFontSize = Metrics.m_HeadlineSize;
+		Result.StandardFontSize = Metrics.m_BodySize;
+		Result.SmallFontSize = Metrics.m_SmallSize;
+		Result.HeadlineHeight = Metrics.m_LineHeight;
+		Result.RowSpacing = Metrics.m_LineSpacing;
+		Result.MarginExtraSmall = Metrics.m_LineSpacing;
+		Result.MarginBetweenSections = Metrics.m_SectionGap;
+		Result.ColorPickerLabelSize = Metrics.m_BodySize;
+		Result.ColorPickerLineSpacing = Metrics.m_LineSpacing;
+		return Result;
 	}
 
-	inline void ApplyTClientContentMetrics(float Width)
+	// 卡片入口的生命周期绑定。整份保存/恢复，不逐个字段抄，避免漏一个字段就串味。
+	class CTClientCardMetricsScope
 	{
-		ApplyTClientContentMetrics(ResolveSettingsContentMetrics(Width));
-	}
+	public:
+		explicit CTClientCardMetricsScope(const SSettingsContentMetrics &Metrics) :
+			m_Previous(g_TClientCardMetrics),
+			m_PreviousDepth(g_TClientCardMetricsDepth)
+		{
+			g_TClientCardMetrics = ResolveTClientCardMetrics(Metrics);
+			g_TClientCardMetricsDepth = m_PreviousDepth + 1;
+		}
+
+		~CTClientCardMetricsScope()
+		{
+			g_TClientCardMetrics = m_Previous;
+			g_TClientCardMetricsDepth = m_PreviousDepth;
+		}
+
+		CTClientCardMetricsScope(const CTClientCardMetricsScope &) = delete;
+		CTClientCardMetricsScope &operator=(const CTClientCardMetricsScope &) = delete;
+
+		// 排查用：当前是否有卡片在渲染（数量为 0 时读到的是基础 token）。
+		static int Depth() { return g_TClientCardMetricsDepth; }
+
+	private:
+		STClientCardMetrics m_Previous;
+		int m_PreviousDepth;
+	};
 
 	inline uint64_t HashBytesFnv1a64(uint64_t Hash, const void *pData, size_t DataSize)
 	{

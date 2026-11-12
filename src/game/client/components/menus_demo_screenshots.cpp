@@ -16,6 +16,7 @@
 #include <game/localization.h>
 
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 #include <iterator>
 
@@ -217,17 +218,32 @@ void CMenus::RenderDemoScreenshotGallery(CUIRect ListBox, bool &WasListboxItemAc
 	for(size_t Index = 0; Index < s_vGalleryItemIds.size(); ++Index)
 		s_vGalleryItemIds[Index] = (int)Index;
 
-	const float CellWidth = ListBox.w / (float)SCREENSHOT_GALLERY_COLUMNS;
-	const float PreviewHeight = std::clamp(CellWidth * 0.60f, 72.0f, 150.0f);
+	// 胶囊格：行列表那一套统一行外观（行距、行内退、覆盖式滚动条、主题选中填充）同样用在
+	// 4 列网格上。行距必须并进行高：组件在 ItemsPerRow > 1 时按每个格子推进一次自动行距，
+	// 4 列网格的行距会变成 4 倍，内容高度少算、行位逐行漂移，底部的图片/文件夹滚不到。
+	s_GalleryListBox.SetCapsuleRows(ui_token::font::BODY);
+	s_GalleryListBox.DoAutoSpacing(0.0f);
+	// 选中填充内缩半档行距：填充贴合卡片（格与格之间那条缝不染色）。
+	s_GalleryListBox.SetItemSelectionInset(ui_token::list::ROW_SPACING * 0.5f);
+	// 轨道压在内容上：列宽按「行让位」这一份宽度算。RowReserveWidth 由 token 直接算，
+	// 不依赖上一帧的滚动条状态；轨道真正出现时组件把列表体整块右缩同一列，格子宽度不跳。
+	const float GalleryCellWidth = std::max(0.0f, ListBox.w - s_GalleryListBox.RowReserveWidth()) / (float)SCREENSHOT_GALLERY_COLUMNS;
+	const float PreviewHeight = std::clamp(GalleryCellWidth * 0.60f, 72.0f, 150.0f);
 	const float RowHeight = PreviewHeight + 42.0f;
-	s_GalleryListBox.SetScrollbarAlwaysReserved(true);
-	s_GalleryListBox.DoAutoSpacing(4.0f);
+	const float RowPitch = RowHeight + ui_token::list::ROW_SPACING;
+	const float CardRadius = ui_token::list::RowRadius(RowHeight);
 	if(m_DemolistSelectedReveal)
 	{
 		s_GalleryListBox.ScrollToSelected();
 		m_DemolistSelectedReveal = false;
 	}
-	s_GalleryListBox.DoStart(RowHeight, (int)m_vpFilteredDemos.size(), SCREENSHOT_GALLERY_COLUMNS, 1, m_DemolistSelectedIndex, &ListBox, false, IGraphics::CORNER_B);
+	// 整数行：行高即 RowPitch（含行距），组件按 RowsHeight(可见行, RowPitch, 0) = 可见行 × RowPitch
+	// 收高度，视图正好停在整格边界，最后一行完整可见而不是半张。空列表没有条目行
+	// （组件会把 0 条目收成 0 高，连自绘的空态占位行一起裁掉），传 (0, 0) 关掉自适应高度。
+	const int GalleryVisibleRows = m_vpFilteredDemos.empty() ? 0 :
+								   (int)std::floor(std::max(0.0f, ListBox.h) / RowPitch);
+	s_GalleryListBox.SetVisibleRowRange(GalleryVisibleRows > 0 ? 1 : 0, GalleryVisibleRows);
+	s_GalleryListBox.DoStart(RowPitch, (int)m_vpFilteredDemos.size(), SCREENSHOT_GALLERY_COLUMNS, 1, m_DemolistSelectedIndex, &ListBox, false, IGraphics::CORNER_B);
 
 	int ItemIndex = -1;
 	int VisibleRows = 0;
@@ -238,7 +254,7 @@ void CMenus::RenderDemoScreenshotGallery(CUIRect ListBox, bool &WasListboxItemAc
 		++ItemIndex;
 		const bool Focused = ItemIndex == m_DemolistSelectedIndex;
 		const bool Selected = IsDemoItemSelected(*pItem);
-		const CListboxItem ListItem = s_GalleryListBox.DoNextItem(&s_vGalleryItemIds[ItemIndex], Focused, ui_token::radius::BASE);
+		const CListboxItem ListItem = s_GalleryListBox.DoNextItem(&s_vGalleryItemIds[ItemIndex], Focused, CardRadius);
 		if(!ListItem.m_Visible)
 			continue;
 
@@ -247,14 +263,20 @@ void CMenus::RenderDemoScreenshotGallery(CUIRect ListBox, bool &WasListboxItemAc
 		if(FirstVisibleIndex < 0)
 			FirstVisibleIndex = ItemIndex;
 		EndVisibleIndex = ItemIndex + 1;
-		CUIRect Card = ListItem.m_Rect;
-		Card.Margin(4.0f, &Card);
+		// 卡片排在这一格的内容区里（左右已含胶囊格的行内退）；纵向夹回行高，
+		// RowPitch 里多出来的那一截行距只当格间缝，不撑高卡片。
+		CUIRect Card = ListItem.m_ContentRect;
+		Card.h = std::min(Card.h, RowHeight);
 		CUIRect Shadow = Card;
 		Shadow.x += 2.0f;
 		Shadow.y += 2.0f;
 		Shadow.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.18f), IGraphics::CORNER_ALL, 4.0f);
-		const ColorRGBA CardColor = Focused ? ui_token::color::ACCENT_PRIMARY_DIM.WithAlpha(0.30f) :
-						      (Selected ? ui_token::color::ACCENT_PRIMARY_DIM.WithAlpha(0.20f) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.09f));
+		// 选中/焦点底色由 CListBox 的胶囊格轨道统一绘制（主题 m_Selected 填充、无描边），
+		// 这里不再自绘那层。多选（Ctrl/Shift）组件不跟踪，用同一主题色补在卡片面上，
+		// 否则多选中的卡片和没选中的长得一样。
+		const ColorRGBA CardColor = Selected && !Focused ?
+						    Ui()->ScaleBackgroundAlpha(Ui()->QmControlTheme().m_Selected) :
+						    ColorRGBA(1.0f, 1.0f, 1.0f, 0.09f);
 		Card.Draw(CardColor, IGraphics::CORNER_ALL, 4.0f);
 		Card.Margin(4.0f, &Card);
 

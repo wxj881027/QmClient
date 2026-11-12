@@ -264,7 +264,7 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 			CUIRect Row;
 			if(Flow.Control(pId, LineHeight, Row))
 				Action(Row);
-			Flow.Space(LineSpacing);
+			Flow.Space(ui_token::settings::RowGap(LineSpacing));
 		};
 		const auto Hint = [pMenus, ReadOnly, TipSize](const void *pId, const CUIRect &Rect, const char *pText) {
 			if(ReadOnly || pMenus->Ui()->RenderOnly() || pMenus->Ui()->IsPopupOpen())
@@ -275,7 +275,7 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 			else
 				pMenus->GameClient()->m_Tooltips.DoToolTipForRect(pId, &Rect, pText, Width);
 		};
-		Flow.Text("title-auth-status", Localize(Auth.TitleStatus()), 0.0f, TipSize, LineSpacing, [pMenus](const char *pText, float Width, float FontSize) { return pMenus->TextRender()->TextBoundingBox(FontSize, pText, -1, Width).m_H + FontSize * 0.25f; }, [&](const CUIRect &Row, const char *pText) {
+		Flow.Text("title-auth-status", Localize(Auth.TitleStatus()), 0.0f, TipSize, ui_token::settings::RowGap(LineSpacing), [pMenus](const char *pText, float Width, float FontSize) { return pMenus->TextRender()->TextBoundingBox(FontSize, pText, -1, Width).m_H + FontSize * 0.25f; }, [&](const CUIRect &Row, const char *pText) {
 				{
 					const ColorRGBA PreviousTextColor = pMenus->TextRender()->GetTextColor();
 					pMenus->TextRender()->TextColor(ui_token::color::TEXT_TIP);
@@ -340,7 +340,7 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 
 			CUIRect ChatPreview, ChatPreviewLabel, ChatPreviewArea;
 			const bool HasPreview = Flow.Control("title-chat-preview", ChatPreviewHeight, ChatPreview);
-			Flow.Space(LineSpacing);
+			Flow.Space(ui_token::settings::RowGap(LineSpacing));
 			if(HasPreview && Flow.Drawing() && !pMenus->Ui()->DrawingSuppressed())
 			{
 				// 标题行按按钮高度开，保存/刷新两个图标就摆在这一行的右端。
@@ -389,7 +389,7 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 			const auto VisibilityToggle = [&](int *pValue, const char *pTextId, const char *pLabel) {
 				CUIRect ToggleRow;
 				const bool HasRow = Flow.Control(pTextId, LineHeight, ToggleRow);
-				Flow.Space(LineSpacing);
+				Flow.Space(ui_token::settings::RowGap(LineSpacing));
 				if(HasRow && pMenus->DoSettingsButton_CheckBox(Page, Tab, -1, pValue, pTextId, pLabel, *pValue, &ToggleRow, SingleLineProps) && !ReadOnly)
 					*pValue ^= 1;
 			};
@@ -403,8 +403,10 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 					g_Config.m_QmSponsorChatEffects ^= 1;
 				Hint(&g_Config.m_QmSponsorChatEffects, Row, Localize("Turning this off only changes your display."));
 			});
-			if(Personalization(pMenus, Content, "deck:qmclient-contributors-title-display", Metrics, ReadOnly))
+			float SectionReveal = 0.0f;
+			if(PersonalizationReveal(pMenus, Content, "deck:qmclient-contributors-title-display", Metrics, &SectionReveal, ReadOnly))
 			{
+				const CSettingsContentRevealScope SectionRevealScope(pMenus->Ui(), Flow, SectionReveal);
 				RowAction("title-nameplate-scale", [&](CUIRect Row) {
 					pMenus->DoSettingsScrollbarOption(Page, Tab, "qm-nameplate-title-scale", &g_Config.m_QmNameplateTitleScale, &g_Config.m_QmNameplateTitleScale, &Row, Localize("Nameplate title size"), 50, 200, &CUi::ms_LinearScrollbarScale, 0, "%");
 				});

@@ -534,6 +534,8 @@ bool CMenusIngameTouchControls::RenderBehaviorSettingBlock(CUIRect Block)
 		CScrollRegionParams ScrollParam;
 		ScrollParam.m_ScrollUnit = QmNativeWheelScrollConfig(1.0f, 0.0f).m_WheelScale * QmPanelWheelStepMultiplier();
 		vec2 ScrollOffset(0.0f, 0.0f);
+		// Begin 已把轨道占位（thickness）从 clip 扣掉并回写，行内不要再手扣
+		// ScrollParam.m_ScrollbarThickness / 2：那是双扣，内容会被压窄 10px。
 		s_BindToggleScrollRegion.Begin(&Block, &ScrollOffset, &ScrollParam);
 		Block.y += ScrollOffset.y;
 		for(unsigned CommandIndex = 0; CommandIndex < m_vBehaviorElements.size(); CommandIndex++)
@@ -543,7 +545,6 @@ bool CMenusIngameTouchControls::RenderBehaviorSettingBlock(CUIRect Block)
 			{
 				EditBox.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.15f), IGraphics::CORNER_T, 5.0f);
 				EditBox.VSplitMid(&EditBox, &RightButton);
-				RightButton.VSplitLeft(ScrollParam.m_ScrollbarThickness / 2.0f, nullptr, &RightButton);
 				EditBox.VSplitLeft(ROWSIZE, &MiddleButton, &EditBox);
 				EditBox.VSplitLeft(SUBMARGIN, nullptr, &LeftButton);
 				Ui()->DoLabel(&LeftButton, Localize("Add command"), FONTSIZE, TEXTALIGN_ML);
@@ -584,7 +585,6 @@ bool CMenusIngameTouchControls::RenderBehaviorSettingBlock(CUIRect Block)
 			{
 				EditBox.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.15f), IGraphics::CORNER_NONE, 0.0f);
 				EditBox.VSplitMid(&LeftButton, &MiddleButton);
-				MiddleButton.VSplitLeft(ScrollParam.m_ScrollbarThickness / 2.0f, nullptr, &MiddleButton);
 				str_format(aBuf, sizeof(aBuf), "%s:", Localize("Command"));
 				Ui()->DoLabel(&LeftButton, aBuf, FONTSIZE, TEXTALIGN_ML);
 				if(ui_widget::InputField(TouchControlsBehaviorTextInputCtx, &m_vBehaviorElements[CommandIndex]->m_InputCommand, MiddleButton, BehaviorInputOptions).m_Changed)
@@ -604,7 +604,6 @@ bool CMenusIngameTouchControls::RenderBehaviorSettingBlock(CUIRect Block)
 			{
 				EditBox.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.15f), IGraphics::CORNER_NONE, 0.0f);
 				EditBox.VSplitMid(&LeftButton, &MiddleButton);
-				MiddleButton.VSplitLeft(ScrollParam.m_ScrollbarThickness / 2.0f, nullptr, &MiddleButton);
 				str_format(aBuf, sizeof(aBuf), "%s:", Localize("Label"));
 				Ui()->DoLabel(&LeftButton, aBuf, FONTSIZE, TEXTALIGN_ML);
 				if(ui_widget::InputField(TouchControlsBehaviorTextInputCtx, &m_vBehaviorElements[CommandIndex]->m_InputLabel, MiddleButton, BehaviorInputOptions).m_Changed)
@@ -624,7 +623,6 @@ bool CMenusIngameTouchControls::RenderBehaviorSettingBlock(CUIRect Block)
 			{
 				EditBox.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.15f), IGraphics::CORNER_B, 5.0f);
 				EditBox.VSplitMid(&LeftButton, &MiddleButton);
-				MiddleButton.VSplitLeft(ScrollParam.m_ScrollbarThickness / 2.0f, nullptr, &MiddleButton);
 				str_format(aBuf, sizeof(aBuf), "%s:", Localize("Label type"));
 				Ui()->DoLabel(&LeftButton, aBuf, FONTSIZE, TEXTALIGN_ML);
 				CTouchControls::CButtonLabel::EType NewButtonLabelType = m_vBehaviorElements[CommandIndex]->m_CachedCommands.m_LabelType;
@@ -679,6 +677,7 @@ bool CMenusIngameTouchControls::RenderVisibilitySettingBlock(CUIRect Block)
 	CScrollRegionParams ScrollParam;
 	ScrollParam.m_ScrollUnit = QmNativeWheelScrollConfig(1.0f, 0.0f).m_WheelScale * QmPanelWheelStepMultiplier();
 	vec2 ScrollOffset(0.0f, 0.0f);
+	// Begin 已占掉轨道那一列，行内不要再手扣 m_ScrollbarThickness / 2（双扣）。
 	s_VisibilityScrollRegion.Begin(&Block, &ScrollOffset, &ScrollParam);
 	Block.y += ScrollOffset.y;
 
@@ -696,7 +695,6 @@ bool CMenusIngameTouchControls::RenderVisibilitySettingBlock(CUIRect Block)
 		if(s_VisibilityScrollRegion.AddRect(EditBox))
 		{
 			EditBox.VSplitRight(EditBox.w / 2.0f + ROWGAP + ROWSIZE, &Label, &MiddleButton);
-			MiddleButton.VSplitLeft(ScrollParam.m_ScrollbarThickness / 2.0f, nullptr, &MiddleButton);
 			MiddleButton.VSplitLeft(ROWSIZE, &HelpButton, &MiddleButton);
 			MiddleButton.VSplitLeft(ROWGAP, nullptr, &MiddleButton);
 			// We'll only do help button for the first extra menu visibility.
@@ -807,7 +805,15 @@ void CMenusIngameTouchControls::RenderTouchButtonBrowser(CUIRect MainView)
 	MainView.HSplitTop(FONTSIZE / CUi::ms_FontmodHeight, &EditBox, &MainView);
 	static CListBox s_PreviewListBox;
 	EditBox.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_T, 5.0f);
-	EditBox.VSplitRight(s_PreviewListBox.ScrollbarWidthMax(), &EditBox, nullptr);
+	// 胶囊行先开：表头让位与行内退都从它派生。RowReserveWidth() 由 token 直接算，
+	// 不依赖上一帧解析出的滚动条宽度，表头与行胶囊右缘因此是同一条公式。
+	s_PreviewListBox.SetCapsuleRows(15.0f);
+	// 表头行给滚动条让位：与行右侧让出的宽度同源。
+	const float PreviewListScrollbarReserve = s_PreviewListBox.RowReserveWidth();
+	EditBox.VSplitRight(PreviewListScrollbarReserve, &EditBox, nullptr);
+	// 表头与行内容同一条左右内退（胶囊行按 RowInsetX(15) 让出），列标题与行内的
+	// Label/Command/坐标列才会落在同一个坐标系里。
+	EditBox.VMargin(ui_token::list::RowInsetX(15.0f), &EditBox);
 	EditBox.VSplitLeft(ROWSIZE, nullptr, &EditBox);
 
 	float PosWidth = EditBox.w * 4.0f / 9.0f; // Total pos width.
@@ -914,6 +920,11 @@ void CMenusIngameTouchControls::RenderTouchButtonBrowser(CUIRect MainView)
 	if(!m_vpMutableButtons.empty())
 	{
 		s_PreviewListBox.SetActive(true);
+		// 行距只留半档；视口按可用高度收敛到整数行（边界落在行缝里，首/末行不会被裁成
+		// 半个胶囊）。列表体高度固定取这个值，仍吃满外层给的 MainView。
+		const int ListVisibleRows = maximum(1, (int)((maximum(0.0f, MainView.h) + ui_token::list::ROW_SPACING) / (ROWSIZE + ui_token::list::ROW_SPACING)));
+		s_PreviewListBox.DoAutoSpacing(ui_token::list::ROW_SPACING);
+		s_PreviewListBox.SetVisibleRowRange(ListVisibleRows, ListVisibleRows);
 		s_PreviewListBox.DoStart(ROWSIZE, m_vpMutableButtons.size(), 1, 4, m_SelectedPreviewButtonIndex, &MainView, true, IGraphics::CORNER_B);
 		for(unsigned ButtonIndex = 0; ButtonIndex < m_vpMutableButtons.size(); ButtonIndex++)
 		{
@@ -921,7 +932,7 @@ void CMenusIngameTouchControls::RenderTouchButtonBrowser(CUIRect MainView)
 			const CListboxItem ListItem = s_PreviewListBox.DoNextItem(&m_vpMutableButtons[ButtonIndex], m_SelectedPreviewButtonIndex == (int)ButtonIndex);
 			if(ListItem.m_Visible)
 			{
-				EditBox = ListItem.m_Rect;
+				EditBox = ListItem.m_ContentRect;
 				EditBox.VSplitLeft(ROWSIZE, &LeftButton, &EditBox);
 				TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 				TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING);
@@ -1095,6 +1106,7 @@ void CMenusIngameTouchControls::RenderPreviewSettings(CUIRect MainView)
 	CScrollRegionParams ScrollParam;
 	ScrollParam.m_ScrollUnit = QmNativeWheelScrollConfig(1.0f, 0.0f).m_WheelScale * QmPanelWheelStepMultiplier();
 	vec2 ScrollOffset(0.0f, 0.0f);
+	// Begin 已占掉轨道那一列，行内不要再手扣 m_ScrollbarThickness / 2（双扣）。
 	s_VirtualVisibilityScrollRegion.Begin(&MainView, &ScrollOffset, &ScrollParam);
 	MainView.y += ScrollOffset.y;
 	std::array<bool, (size_t)CTouchControls::EButtonVisibility::NUM_VISIBILITIES> aVirtualVisibilities = GameClient()->m_TouchControls.VirtualVisibilities();

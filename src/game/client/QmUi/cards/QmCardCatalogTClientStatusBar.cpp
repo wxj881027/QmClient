@@ -76,7 +76,7 @@ using namespace qm_tclient_cards;
 qm_card_catalog::STClientCardResult CMenus::RunTClientStatusBarCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass)
 {
 	CUIRect MainView = Ctx.m_Page.m_ContentViewport;
-	ApplyTClientContentMetrics(Ctx.m_Metrics);
+	const CTClientCardMetricsScope CardMetrics(Ctx.m_Metrics);
 	const bool ReadOnly = Ctx.m_ReadOnly || Pass != qm_card_catalog::ETClientCardPass::RENDER;
 	std::unique_ptr<CUiRenderOnlyGuard> pRenderOnlyGuard;
 	if(ReadOnly && !Ui()->RenderOnly())
@@ -95,7 +95,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientStatusBarCard(const qm_car
 	static CLineInput s_StatusScheme(g_Config.m_QmStatusBarScheme, sizeof(g_Config.m_QmStatusBarScheme));
 	const int StatusBarCodeCount = (int)GameClient()->m_StatusBar.m_vpStatusItemTypes.size();
 	const int StatusBarItemCount = (int)GameClient()->m_StatusBar.m_StatusBarItems.size();
-	const float StatusBarPreviewHeight = LineSize + MarginSmall * 2.0f;
+	const float StatusBarPreviewHeight = LineSize + RowSpacing * 2.0f;
 
 	auto GetStatusBarEditorLabel = [](const CStatusItem *pItem) {
 		return str_comp(pItem->m_aName, "Space") == 0 ? pItem->m_aName : pItem->m_aDisplayName;
@@ -112,12 +112,12 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientStatusBarCard(const qm_car
 			return;
 		}
 
-		const float ItemWidth = (PreviewRect.w - MarginSmall) / (float)PreviewCount;
+		const float ItemWidth = (PreviewRect.w - RowSpacing) / (float)PreviewCount;
 		CUIRect PreviewItem;
 		for(int i = 0; i < PreviewCount; ++i)
 		{
 			PreviewRect.VSplitLeft(ItemWidth, &PreviewItem, &PreviewRect);
-			PreviewItem.HMargin(MarginSmall, &PreviewItem);
+			PreviewItem.HMargin(RowSpacing, &PreviewItem);
 			PreviewItem.VMargin(MarginExtraSmall, &PreviewItem);
 			DrawRoundedSurface(Ui(), PreviewItem, ColorRGBA(1.0f, 1.0f, 1.0f, 0.15f), ColorRGBA(), 5.0f);
 			DoSettingsMenuLabel(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, nullptr, &PreviewItem, Localize(GetStatusBarEditorLabel(GameClient()->m_StatusBar.m_StatusBarItems[i])), FontSize, TEXTALIGN_MC);
@@ -149,7 +149,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientStatusBarCard(const qm_car
 		if(View.w > 360.0f)
 		{
 			CUIRect LeftCodes, RightCodes;
-			View.VSplitMid(&LeftCodes, &RightCodes, MarginSmall);
+			View.VSplitMid(&LeftCodes, &RightCodes, RowSpacing);
 			const int LeftCount = (StatusBarCodeCount + 1) / 2;
 			for(int i = 0; i < StatusBarCodeCount; ++i)
 			{
@@ -157,7 +157,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientStatusBarCard(const qm_car
 				Column.HSplitTop(LineSize, &Label, &Column);
 				Ui()->DoLabel(&Label, apCodes[i], FontSize, TEXTALIGN_ML);
 				if(i + 1 < (i < LeftCount ? LeftCount : StatusBarCodeCount))
-					Column.HSplitTop(MarginSmall, nullptr, &Column);
+					Column.HSplitTop(RowSpacing, nullptr, &Column);
 			}
 		}
 		else
@@ -167,20 +167,20 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientStatusBarCard(const qm_car
 				View.HSplitTop(LineSize, &Label, &View);
 				Ui()->DoLabel(&Label, apCodes[i], FontSize, TEXTALIGN_ML);
 				if(i + 1 < StatusBarCodeCount)
-					View.HSplitTop(MarginSmall, nullptr, &View);
+					View.HSplitTop(RowSpacing, nullptr, &View);
 			}
 		}
 	};
 	const auto MeasureItems = [StatusBarCodeCount](const float ContentWidth) {
 		const int Rows = ResolveSettingsStatusCodeRows(StatusBarCodeCount, ContentWidth);
-		return Rows * LineSize + maximum(0, Rows - 1) * MarginSmall;
+		return Rows * LineSize + maximum(0, Rows - 1) * RowSpacing;
 	};
 
 	const auto RenderSettings = [this, ReadOnly](CUIRect &View) {
 		CPerfTimer SectionsTimer;
 		CUIRect CheckBoxRect, Button, Label;
 		CSettingsContentLayoutFlow Flow(View);
-		if(Flow.Control("tclient-statusbar-show", LineSize, CheckBoxRect, MarginSmall))
+		if(Flow.Control("tclient-statusbar-show", LineSize, CheckBoxRect, RowSpacing))
 		{
 			// 禅模式接管状态栏时：灰化、拒绝点击并提示接管来源。
 			const char *pStatusBarOverrideTooltip = TemporaryOverrideTooltip(&g_Config.m_QmStatusBar);
@@ -201,50 +201,50 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientStatusBarCard(const qm_car
 				DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-show", &CheckBoxRect, Localize("Show status bar"), FontSize, TEXTALIGN_ML, StatusBarLabelProps);
 		}
 		{
-			if(Flow.Control("tclient-statusbar-show-labels", LineSize, CheckBoxRect, MarginSmall))
+			if(Flow.Control("tclient-statusbar-show-labels", LineSize, CheckBoxRect, RowSpacing))
 			{
 				if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, TCLIENT_TAB_STATUSBAR, &g_Config.m_QmStatusBarLabels, "tclient-statusbar-show-labels", Localize("Show labels on status bar items"), g_Config.m_QmStatusBarLabels, &CheckBoxRect) && !ReadOnly && !Ui()->RenderOnly())
 					g_Config.m_QmStatusBarLabels ^= 1;
 			}
-			if(Flow.Control("tclient-statusbar-height", LineSize, Button, MarginSmall))
+			if(Flow.Control("tclient-statusbar-height", LineSize, Button, RowSpacing))
 			{
 				DoSettingsScrollbarOption(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-height", &g_Config.m_QmStatusBarHeight, &g_Config.m_QmStatusBarHeight, &Button, Localize("Status bar height"), 1, 16);
 			}
-			if(Flow.Control("tclient-statusbar-local-time-title", HeadlineHeight, Label, MarginSmall))
+			if(Flow.Control("tclient-statusbar-local-time-title", HeadlineHeight, Label, RowSpacing))
 			{
 				DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-local-time-title", &Label, Localize("Local Time"), HeadlineFontSize, TEXTALIGN_ML);
 			}
-			if(Flow.Control("tclient-statusbar-12-hour-clock", LineSize, CheckBoxRect, MarginSmall))
+			if(Flow.Control("tclient-statusbar-12-hour-clock", LineSize, CheckBoxRect, RowSpacing))
 			{
 				if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, TCLIENT_TAB_STATUSBAR, &g_Config.m_QmStatusBar12HourClock, "tclient-statusbar-12-hour-clock", Localize("Use 12 hour clock"), g_Config.m_QmStatusBar12HourClock, &CheckBoxRect) && !ReadOnly && !Ui()->RenderOnly())
 					g_Config.m_QmStatusBar12HourClock ^= 1;
 			}
-			if(Flow.Control("tclient-statusbar-seconds", LineSize, CheckBoxRect, MarginSmall))
+			if(Flow.Control("tclient-statusbar-seconds", LineSize, CheckBoxRect, RowSpacing))
 			{
 				if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, TCLIENT_TAB_STATUSBAR, &g_Config.m_QmStatusBarLocalTimeSeconds, "tclient-statusbar-seconds", Localize("Show seconds on clock"), g_Config.m_QmStatusBarLocalTimeSeconds, &CheckBoxRect) && !ReadOnly && !Ui()->RenderOnly())
 					g_Config.m_QmStatusBarLocalTimeSeconds ^= 1;
 			}
-			if(Flow.Control("tclient-statusbar-colors-title", HeadlineHeight, Label, MarginSmall))
+			if(Flow.Control("tclient-statusbar-colors-title", HeadlineHeight, Label, RowSpacing))
 			{
 				DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-colors-title", &Label, Localize("Colors"), HeadlineFontSize, TEXTALIGN_ML);
 			}
 
 			static CButtonContainer s_StatusbarColor, s_StatusbarTextColor;
 			CUIRect ColorRow;
-			if(Flow.Control("tclient-statusbar-color", ColorPickerLineSize, ColorRow, MarginSmall))
+			if(Flow.Control("tclient-statusbar-color", ColorPickerLineSize, ColorRow, RowSpacing))
 			{
-				DoLine_ColorPicker(&s_StatusbarColor, CurrentSettingsContentMetrics(), &ColorRow, Localize("Status bar color"), &g_Config.m_QmStatusBarColor, ColorRGBA(0.0f, 0.0f, 0.0f), false);
+				DoLine_ColorPicker(&s_StatusbarColor, CurrentSettingsContentMetrics(), &ColorRow, Localize("Status bar color"), &g_Config.m_QmStatusBarColor, color_cast<ColorRGBA>(ColorHSLA(CConfig::ms_QmStatusBarColor)), false);
 			}
-			if(Flow.Control("tclient-statusbar-text-color", ColorPickerLineSize, ColorRow, MarginSmall))
+			if(Flow.Control("tclient-statusbar-text-color", ColorPickerLineSize, ColorRow, RowSpacing))
 			{
-				DoLine_ColorPicker(&s_StatusbarTextColor, CurrentSettingsContentMetrics(), &ColorRow, Localize("Text color"), &g_Config.m_QmStatusBarTextColor, ColorRGBA(1.0f, 1.0f, 1.0f), false);
+				DoLine_ColorPicker(&s_StatusbarTextColor, CurrentSettingsContentMetrics(), &ColorRow, Localize("Text color"), &g_Config.m_QmStatusBarTextColor, color_cast<ColorRGBA>(ColorHSLA(CConfig::ms_QmStatusBarTextColor)), false);
 			}
 
-			if(Flow.Control("tclient-statusbar-alpha", LineSize, Button, MarginSmall))
+			if(Flow.Control("tclient-statusbar-alpha", LineSize, Button, RowSpacing))
 			{
 				DoSettingsScrollbarOption(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-alpha", &g_Config.m_QmStatusBarAlpha, &g_Config.m_QmStatusBarAlpha, &Button, Localize("Status bar alpha"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
 			}
-			if(Flow.Control("tclient-statusbar-text-alpha", LineSize, Button, MarginSmall))
+			if(Flow.Control("tclient-statusbar-text-alpha", LineSize, Button, RowSpacing))
 			{
 				DoSettingsScrollbarOption(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-text-alpha", &g_Config.m_QmStatusBarTextAlpha, &g_Config.m_QmStatusBarTextAlpha, &Button, Localize("Text alpha"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
 			}
@@ -266,19 +266,15 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientStatusBarCard(const qm_car
 		CUIRect StatusScheme, StatusButtons, ItemLabel, CodesTitle, StatusBar, Codes;
 		if(s_SelectedItem >= 0 && s_SelectedItem < (int)GameClient()->m_StatusBar.m_StatusBarItems.size() && s_TypeSelectedOld >= 0 && s_TypeSelectedOld < StatusItemTypeCount)
 		{
-			if(Flow.Control("tclient-statusbar-item-description", LineSize, ItemLabel))
+			// 行距由行自己声明（这张卡其它行都是这个规则），不在行后补 Space。
+			if(Flow.Control("tclient-statusbar-item-description", LineSize, ItemLabel, RowSpacing))
 				Ui()->DoLabel(&ItemLabel, Localize(GameClient()->m_StatusBar.m_vpStatusItemTypes[s_TypeSelectedOld]->m_aDesc), FontSize, TEXTALIGN_ML);
-			Flow.Space(MarginSmall);
 		}
-		const bool HasPreview = Flow.Control("tclient-statusbar-drag-preview", StatusBarPreviewHeight, StatusBar);
-		Flow.Space(MarginSmall);
-		const bool HasButtons = Flow.Control("tclient-statusbar-item-actions", LineSize, StatusButtons);
-		Flow.Space(MarginSmall);
-		const bool HasScheme = Flow.Control("tclient-statusbar-scheme", LineSize, StatusScheme);
-		Flow.Space(MarginSmall);
-		const bool HasTitle = Flow.Control("tclient-statusbar-codes-title", HeadlineHeight, CodesTitle);
-		Flow.Space(MarginSmall);
-		const bool HasCodes = Flow.Control("tclient-statusbar-codes", MeasureItems(Content.w), Codes);
+		const bool HasPreview = Flow.Control("tclient-statusbar-drag-preview", StatusBarPreviewHeight, StatusBar, RowSpacing);
+		const bool HasButtons = Flow.Control("tclient-statusbar-item-actions", LineSize, StatusButtons, RowSpacing);
+		const bool HasScheme = Flow.Control("tclient-statusbar-scheme", LineSize, StatusScheme, RowSpacing);
+		const bool HasTitle = Flow.Control("tclient-statusbar-codes-title", HeadlineHeight, CodesTitle, RowSpacing);
+		const bool HasCodes = Flow.Control("tclient-statusbar-codes", MeasureItems(Content.w), Codes, RowSpacing);
 		if(Flow.Declaring())
 			return;
 
@@ -289,10 +285,10 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientStatusBarCard(const qm_car
 			CUIRect SchemeLabel, SchemeInput, ApplyButton;
 			const float SchemeLabelWidth = std::min(StatusScheme.w * 0.28f, LineSize * 5.0f);
 			StatusScheme.VSplitLeft(SchemeLabelWidth, &SchemeLabel, &StatusScheme);
-			StatusScheme.VSplitLeft(MarginSmall, nullptr, &StatusScheme);
+			StatusScheme.VSplitLeft(RowSpacing, nullptr, &StatusScheme);
 			const float ApplyWidth = std::min(StatusScheme.w * 0.30f, std::max(LineSize * 2.5f, StatusScheme.w * 0.18f));
 			StatusScheme.VSplitRight(ApplyWidth, &SchemeInput, &ApplyButton);
-			SchemeInput.VSplitRight(MarginSmall, &SchemeInput, nullptr);
+			SchemeInput.VSplitRight(RowSpacing, &SchemeInput, nullptr);
 			if(DoSettingsButton_Menu(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, TCLIENT_TAB_STATUSBAR, &s_ApplyButton, "tclient-statusbar-apply-scheme", Localize("Apply"), 0, &ApplyButton) && !ReadOnly && !Ui()->RenderOnly())
 			{
 				GameClient()->m_StatusBar.ApplyStatusBarScheme(g_Config.m_QmStatusBarScheme);
@@ -305,8 +301,8 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientStatusBarCard(const qm_car
 		}
 		if(HasButtons)
 		{
-			StatusButtons.VSplitMid(&DropDownRect, &StatusButtons, MarginSmall);
-			StatusButtons.VSplitMid(&AddButton, &RemoveButton, MarginSmall);
+			StatusButtons.VSplitMid(&DropDownRect, &StatusButtons, RowSpacing);
+			StatusButtons.VSplitMid(&AddButton, &RemoveButton, RowSpacing);
 			static std::vector<std::string> s_DropDownNameStorage;
 			static std::vector<const char *> s_DropDownNames;
 			static char s_aDropDownLanguage[sizeof(g_Config.m_ClLanguagefile)] = {};
@@ -366,7 +362,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientStatusBarCard(const qm_car
 			else
 			{
 				DrawRoundedSurface(Ui(), StatusBar, ColorRGBA(0, 0, 0, 0.5f), ColorRGBA(), 5.0f);
-				const float ItemWidth = (StatusBar.w - MarginSmall) / (float)ItemCount;
+				const float ItemWidth = (StatusBar.w - RowSpacing) / (float)ItemCount;
 				StatusBar.VSplitLeft(MarginExtraSmall, nullptr, &StatusBar);
 				static std::vector<CButtonContainer *> s_pItemButtons;
 				static std::vector<CButtonContainer> s_ItemButtons;
@@ -403,7 +399,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientStatusBarCard(const qm_car
 				for(int i = 0; i < ItemCount; ++i)
 				{
 					StatusBar.VSplitLeft(ItemWidth, &StatusItemButton, &StatusBar);
-					StatusItemButton.HMargin(MarginSmall, &StatusItemButton);
+					StatusItemButton.HMargin(RowSpacing, &StatusItemButton);
 					StatusItemButton.VMargin(MarginExtraSmall, &StatusItemButton);
 					CStatusItem *pStatusItem = GameClient()->m_StatusBar.m_StatusBarItems[i];
 					const ColorRGBA Color = s_SelectedItem == i ? ColorRGBA(1.0f, 0.35f, 0.35f, 0.75f) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f);
