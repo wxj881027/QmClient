@@ -12767,8 +12767,8 @@ Send sampling and token limit parameters
 Send specified command to rcon
 == Belirtilen komutu rcon'a gönder
 
-Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines
-== 90 ile 270 saniye arasında rastgele aralıklarla genel sohbete art arda üç şarkı sözü satırı gönder, satırlar arasında 3 saniye bekle
+Send three consecutive lyrics to public chat at random intervals of 360 to 1200 seconds, with 3 seconds between lines. Successfully sending a lyric with Singing cancels pending humming lines and restarts the random wait
+== 360 ile 1200 saniye arasında rastgele aralıklarla genel sohbete art arda üç şarkı sözü satırı gönder, satırlar arasında 3 saniye bekle. “Şarkı söyleme” ile bir satır başarıyla gönderildiğinde “Mırıldanma” işlevinin bekleyen satırlarını iptal et ve yeni bir rastgele bekleme süresi başlat
 
 Send to
 == Şuna gönder
@@ -13426,6 +13426,9 @@ Show ghost
 
 Show ghost at unpredictable position of other players
 == Diğer oyuncuların tahmin edilemeyen konumunda hayalet göster
+
+Show glowing, floating lyrics in the map. Each new line stays where it appears; previous lines rise and fade out
+== Haritada parlayan ve havada süzülen şarkı sözlerini göster. Her yeni satır belirdiği yerde kalır; önceki satırlar yükselerek yavaşça kaybolur
 
 Show Gores drown board
 == Gores boğulma panosunu göster
@@ -17569,6 +17572,9 @@ Word list file exceeds 2 MiB.
 
 Word list must be UTF-8 text without NUL characters.
 == Kelime listesi NUL karakteri içermeyen UTF-8 metni olmalıdır.
+
+World lyrics
+== Dünyada şarkı sözleri
 
 Write local console contents to a text file
 == Yerel konsol içeriğini bir metin dosyasına yaz

@@ -13259,8 +13259,8 @@ Send specified command to rcon
 Send the ready message to the team channel.
 == 向队伍频道发送准备消息。
 
-Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines
-== 每隔随机 90 到 270 秒向公共聊天逐句发送连续三句歌词，句间隔 3 秒
+Send three consecutive lyrics to public chat at random intervals of 360 to 1200 seconds, with 3 seconds between lines. Successfully sending a lyric with Singing cancels pending humming lines and restarts the random wait
+== 每隔随机 360 到 1200 秒向公共聊天逐句发送连续三句歌词，句间隔 3 秒。通过“唱歌”成功发送歌词后，取消尚未发送的哼歌歌词并重新随机计时
 
 Send to
 == 发送给
@@ -13930,6 +13930,9 @@ Show ghost
 
 Show ghost at unpredictable position of other players
 == 在其他玩家的不可预测位置显示幽灵
+
+Show glowing, floating lyrics in the map. Each new line stays where it appears; previous lines rise and fade out
+== 在地图中显示发光、漂浮的歌词。每句新歌词固定在出现的位置，旧句向上漂浮并淡出
 
 Show Gores drown board
 == 显示 Gores 落水榜
@@ -18205,6 +18208,9 @@ Word list file exceeds 2 MiB.
 
 Word list must be UTF-8 text without NUL characters.
 == 词表必须是 UTF-8 文本，且不含 NUL 字符。
+
+World lyrics
+== 世界歌词
 
 Write local console contents to a text file
 == 将本地控制台内容写入文本文件

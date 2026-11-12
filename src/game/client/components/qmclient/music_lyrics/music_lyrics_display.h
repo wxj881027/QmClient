@@ -49,6 +49,8 @@ namespace QmMusicLyrics
 		const SLyricsData *m_pData = nullptr;
 		std::string_view m_Original;
 		std::string_view m_Translation;
+		// 相同歌词可以在不同时间重复，用行时间戳区分每次出现。
+		int64_t m_LineStartMs = -1;
 	};
 }
 

@@ -40399,3 +40399,35 @@ brazilian_portuguese = "Pressione a tecla vinculada duas vezes em até 400 ms pa
 portuguese = "Prima a tecla atribuída duas vezes em até 400 ms para enviar a linha atual da letra para o chat público"
 turkish = "Geçerli şarkı sözü satırını genel sohbete göndermek için atanan tuşa 400 ms içinde iki kez basın"
 polish = "Naciśnij dwukrotnie przypisany klawisz w ciągu 400 ms, aby wysłać bieżący wers piosenki na czat publiczny"
+
+[[message]]
+key = "Send three consecutive lyrics to public chat at random intervals of 360 to 1200 seconds, with 3 seconds between lines. Successfully sending a lyric with Singing cancels pending humming lines and restarts the random wait"
+[message.translations]
+simplified_chinese = "每隔随机 360 到 1200 秒向公共聊天逐句发送连续三句歌词，句间隔 3 秒。通过“唱歌”成功发送歌词后，取消尚未发送的哼歌歌词并重新随机计时"
+traditional_chinese = "每隔隨機 360 到 1200 秒向公共聊天逐句傳送連續三句歌詞，句間隔 3 秒。透過「唱歌」成功傳送歌詞後，取消尚未傳送的哼歌歌詞並重新隨機計時"
+japanese = "360～1200秒のランダムな間隔で連続する三行の歌詞を全体チャットに送り、各行の間隔を3秒にする。「歌う」で歌詞を送信できた場合は、口ずさむ機能の未送信の歌詞を取り消し、ランダムな待ち時間を最初から数え直す"
+korean = "360~1200초의 무작위 간격으로 연속 세 줄의 가사를 전체 채팅에 보내며 줄 사이에 3초 대기. ‘노래하기’로 가사를 성공적으로 보내면 흥얼거리기의 남은 가사 전송을 취소하고 무작위 대기 시간을 다시 시작"
+russian = "Отправлять три последовательные строки песни в общий чат через случайные интервалы от 360 до 1200 секунд, с паузой 3 секунды между строками. После успешной отправки строки с помощью функции «Пение» отменять оставшиеся строки напевания и заново отсчитывать случайное время ожидания"
+german = "Drei aufeinanderfolgende Liedtextzeilen in zufälligen Abständen von 360 bis 1200 Sekunden im öffentlichen Chat senden, mit 3 Sekunden zwischen den Zeilen. Wird eine Zeile mit „Singen“ erfolgreich gesendet, werden ausstehende Zeilen von „Mitsummen“ verworfen und eine neue zufällige Wartezeit beginnt"
+spanish = "Enviar tres líneas consecutivas de la letra al chat público a intervalos aleatorios de 360 a 1200 segundos, con 3 segundos entre líneas. Al enviar una línea correctamente con «Cantar», se cancelan las líneas pendientes de «Tararear» y se inicia una nueva espera aleatoria"
+french = "Envoyer trois lignes consécutives des paroles dans le chat public à des intervalles aléatoires de 360 à 1200 secondes, avec 3 secondes entre les lignes. L’envoi réussi d’une ligne avec « Chanter » annule les lignes restantes de « Fredonner » et relance une nouvelle attente aléatoire"
+brazilian_portuguese = "Enviar três linhas consecutivas da letra no chat público em intervalos aleatórios de 360 a 1200 segundos, com 3 segundos entre linhas. Ao enviar uma linha com sucesso usando “Cantar”, as linhas pendentes de “Cantarolar” são canceladas e uma nova espera aleatória começa"
+portuguese = "Enviar três linhas consecutivas da letra no chat público em intervalos aleatórios de 360 a 1200 segundos, com 3 segundos entre linhas. Ao enviar uma linha com sucesso através de «Cantar», as linhas pendentes de «Cantarolar» são canceladas e inicia-se uma nova espera aleatória"
+turkish = "360 ile 1200 saniye arasında rastgele aralıklarla genel sohbete art arda üç şarkı sözü satırı gönder, satırlar arasında 3 saniye bekle. “Şarkı söyleme” ile bir satır başarıyla gönderildiğinde “Mırıldanma” işlevinin bekleyen satırlarını iptal et ve yeni bir rastgele bekleme süresi başlat"
+polish = "Wysyłaj trzy kolejne wersy do czatu publicznego w losowych odstępach od 360 do 1200 sekund, z przerwą 3 sekund między wersami. Pomyślne wysłanie wersu za pomocą funkcji „Śpiewanie” anuluje pozostałe wersy funkcji „Nucenie” i rozpoczyna nowe losowe odliczanie"
+
+[[message]]
+key = "Show glowing, floating lyrics in the map. Each new line stays where it appears; previous lines rise and fade out"
+[message.translations]
+simplified_chinese = "在地图中显示发光、漂浮的歌词。每句新歌词固定在出现的位置，旧句向上漂浮并淡出"
+traditional_chinese = "在地圖中顯示發光、漂浮的歌詞。每句新歌詞固定在出現的位置，舊句向上漂浮並淡出"
+japanese = "マップ内に光りながら浮かぶ歌詞を表示する。新しい歌詞は出現した位置に留まり、前の歌詞は上に漂いながら消えていく"
+korean = "맵에 빛나며 떠 있는 가사를 표시합니다. 새 가사는 나타난 위치에 고정되고 이전 가사는 위로 떠오르며 서서히 사라집니다"
+russian = "Показывать светящийся парящий текст песни на карте. Каждая новая строка остаётся на месте появления, а предыдущая поднимается и плавно исчезает"
+german = "Leuchtende, schwebende Liedtexte auf der Karte anzeigen. Jede neue Zeile bleibt an ihrem Erscheinungsort; vorherige Zeilen steigen auf und verblassen"
+spanish = "Mostrar letras brillantes y flotantes en el mapa. Cada línea nueva permanece donde aparece; las anteriores ascienden y se desvanecen"
+french = "Afficher des paroles lumineuses et flottantes sur la carte. Chaque nouvelle ligne reste à l’endroit où elle apparaît ; les précédentes montent et s’estompent"
+brazilian_portuguese = "Mostrar letras brilhantes e flutuantes no mapa. Cada nova linha fica onde aparece; as anteriores sobem e desaparecem gradualmente"
+portuguese = "Mostrar letras brilhantes e flutuantes no mapa. Cada nova linha permanece onde aparece; as anteriores sobem e desvanecem-se"
+turkish = "Haritada parlayan ve havada süzülen şarkı sözlerini göster. Her yeni satır belirdiği yerde kalır; önceki satırlar yükselerek yavaşça kaybolur"
+polish = "Pokazuj świecące, unoszące się wersy na mapie. Każdy nowy wers pozostaje w miejscu pojawienia się, a poprzednie unoszą się i zanikają"

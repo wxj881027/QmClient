@@ -12767,8 +12767,8 @@ Send sampling and token limit parameters
 Send specified command to rcon
 == 지정된 명령을 rcon 으로 전송
 
-Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines
-== 90~270초의 무작위 간격으로 연속 세 줄의 가사를 전체 채팅에 보내며 줄 사이에 3초 대기
+Send three consecutive lyrics to public chat at random intervals of 360 to 1200 seconds, with 3 seconds between lines. Successfully sending a lyric with Singing cancels pending humming lines and restarts the random wait
+== 360~1200초의 무작위 간격으로 연속 세 줄의 가사를 전체 채팅에 보내며 줄 사이에 3초 대기. ‘노래하기’로 가사를 성공적으로 보내면 흥얼거리기의 남은 가사 전송을 취소하고 무작위 대기 시간을 다시 시작
 
 Send to
 == 보낼 대상
@@ -13426,6 +13426,9 @@ Show ghost
 
 Show ghost at unpredictable position of other players
 == 다른 플레이어의 예측 불가능한 위치에 유령 표시
+
+Show glowing, floating lyrics in the map. Each new line stays where it appears; previous lines rise and fade out
+== 맵에 빛나며 떠 있는 가사를 표시합니다. 새 가사는 나타난 위치에 고정되고 이전 가사는 위로 떠오르며 서서히 사라집니다
 
 Show Gores drown board
 == Gores 익사 보드 표시
@@ -17569,6 +17572,9 @@ Word list file exceeds 2 MiB.
 
 Word list must be UTF-8 text without NUL characters.
 == 단어 목록은 NUL 문자 없는 UTF-8 텍스트여야 합니다.
+
+World lyrics
+== 월드 가사
 
 Write local console contents to a text file
 == 로컬 콘솔 내용을 텍스트 파일로 저장

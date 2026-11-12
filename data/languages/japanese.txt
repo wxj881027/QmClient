@@ -12767,8 +12767,8 @@ Send sampling and token limit parameters
 Send specified command to rcon
 == rcon に指定コマンドを送信
 
-Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines
-== 90～270秒のランダムな間隔で連続する三行の歌詞を全体チャットに送り、各行の間隔を3秒にする
+Send three consecutive lyrics to public chat at random intervals of 360 to 1200 seconds, with 3 seconds between lines. Successfully sending a lyric with Singing cancels pending humming lines and restarts the random wait
+== 360～1200秒のランダムな間隔で連続する三行の歌詞を全体チャットに送り、各行の間隔を3秒にする。「歌う」で歌詞を送信できた場合は、口ずさむ機能の未送信の歌詞を取り消し、ランダムな待ち時間を最初から数え直す
 
 Send to
 == 送信先
@@ -13426,6 +13426,9 @@ Show ghost
 
 Show ghost at unpredictable position of other players
 == 他のプレイヤーの予測不可能な位置にゴーストを表示
+
+Show glowing, floating lyrics in the map. Each new line stays where it appears; previous lines rise and fade out
+== マップ内に光りながら浮かぶ歌詞を表示する。新しい歌詞は出現した位置に留まり、前の歌詞は上に漂いながら消えていく
 
 Show Gores drown board
 == Gores 溺死ボードを表示
@@ -17569,6 +17572,9 @@ Word list file exceeds 2 MiB.
 
 Word list must be UTF-8 text without NUL characters.
 == 単語リストは NUL 文字を含まない UTF-8 テキストである必要があります。
+
+World lyrics
+== ワールド内の歌詞
 
 Write local console contents to a text file
 == ローカルコンソールの内容をテキストファイルに書き出す

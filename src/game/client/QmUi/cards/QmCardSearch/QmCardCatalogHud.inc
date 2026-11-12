@@ -287,6 +287,7 @@ namespace
 namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_lyrics[] = {
+		{Localizable("World lyrics"), "qm_world_lyrics", "世界歌词 地图歌词 发光 漂浮 world lyrics floating glow"},
 		{Localizable("Humming"), nullptr, "哼歌"},
 		{Localizable("Singing"), nullptr, "唱歌 changge 双击歌词 shuangji geci"},
 		{Localizable("Double-tap the bound key within 400 ms to send the current lyric to public chat"), nullptr, "双击绑定按键发送当前一句歌词"},

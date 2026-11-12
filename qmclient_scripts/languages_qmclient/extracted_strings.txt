@@ -4418,7 +4418,7 @@ Send Rate
 Send sampling and token limit parameters
 Send specified command to rcon
 Send the ready message to the team channel.
-Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines
+Send three consecutive lyrics to public chat at random intervals of 360 to 1200 seconds, with 3 seconds between lines. Successfully sending a lyric with Singing cancels pending humming lines and restarts the random wait
 Send to
 Send translation method
 Sending and receiving
@@ -4642,6 +4642,7 @@ Show generated skin outline for local tees
 Show generated skin outline for other tees
 Show ghost
 Show ghost at unpredictable position of other players
+Show glowing, floating lyrics in the map. Each new line stays where it appears; previous lines rise and fade out
 Show Gores drown board
 Show graphics library warnings and errors if GPU supports (0 = none, 1 = minimal, 2 = impacting performance, 3 = verbose, 4 = all).
 Show grenade and laser trajectory preview
@@ -6067,6 +6068,7 @@ Word list exceeds 100000 unique entries.
 Word list file
 Word list file exceeds 2 MiB.
 Word list must be UTF-8 text without NUL characters.
+World lyrics
 Write local console contents to a text file
 Write performance debug logs to dedicated file
 Write remote console contents to a text file

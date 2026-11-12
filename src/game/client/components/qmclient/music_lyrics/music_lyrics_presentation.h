@@ -4,6 +4,7 @@
 #include "music_humming_state.h"
 #include "music_lyrics_display.h"
 #include "music_singing_state.h"
+#include "music_world_lyrics.h"
 
 #include <engine/console.h>
 
@@ -22,7 +23,11 @@ public:
 	int Sizeof() const override { return sizeof(*this); }
 	void OnConsoleInit() override;
 	void OnUpdate() override;
+	void OnRender() override;
 	void OnReset() override;
+	void OnShutdown() override;
+	void OnWindowResize() override;
+	void OnMapLoad() override;
 	void OnStateChange(int NewState, int OldState) override;
 	const SFrame &Frame() const { return m_Frame; }
 
@@ -34,6 +39,8 @@ private:
 	SFrame m_Frame;
 	QmMusicLyrics::CHummingState m_Humming;
 	QmMusicLyrics::CSingingState m_Singing;
+	QmMusicLyrics::CWorldLyricsState m_WorldLyrics;
+	QmMusicLyrics::CWorldLyricsRenderer m_WorldLyricsRenderer;
 };
 
 #endif

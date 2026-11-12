@@ -464,5 +464,5 @@ QmMusicLyrics::SSourceSnapshot CNeteaseIntegration::LyricsSnapshot() const
 		}
 	}
 	return {State.m_SongId, State.m_Generation, m_LastCloudMusicPid, m_ActiveLyrics, pData,
-		State.m_LyricValid ? std::string_view(State.m_CurrentLyric) : std::string_view(), Translation};
+		State.m_LyricValid ? std::string_view(State.m_CurrentLyric) : std::string_view(), Translation, State.m_LyricValid ? State.m_LineStartMs : -1};
 }

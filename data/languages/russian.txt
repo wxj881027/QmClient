@@ -12767,8 +12767,8 @@ Send sampling and token limit parameters
 Send specified command to rcon
 == Отправить указанную команду в rcon
 
-Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines
-== Отправлять три последовательные строки песни в общий чат через случайные интервалы от 90 до 270 секунд, с паузой 3 секунды между строками
+Send three consecutive lyrics to public chat at random intervals of 360 to 1200 seconds, with 3 seconds between lines. Successfully sending a lyric with Singing cancels pending humming lines and restarts the random wait
+== Отправлять три последовательные строки песни в общий чат через случайные интервалы от 360 до 1200 секунд, с паузой 3 секунды между строками. После успешной отправки строки с помощью функции «Пение» отменять оставшиеся строки напевания и заново отсчитывать случайное время ожидания
 
 Send to
 == Отправить
@@ -13426,6 +13426,9 @@ Show ghost
 
 Show ghost at unpredictable position of other players
 == Показывать призрака в непредсказуемой позиции других игроков
+
+Show glowing, floating lyrics in the map. Each new line stays where it appears; previous lines rise and fade out
+== Показывать светящийся парящий текст песни на карте. Каждая новая строка остаётся на месте появления, а предыдущая поднимается и плавно исчезает
 
 Show Gores drown board
 == Показывать доску утонувших Gores
@@ -17569,6 +17572,9 @@ Word list file exceeds 2 MiB.
 
 Word list must be UTF-8 text without NUL characters.
 == Список слов должен быть текстом UTF-8 без символов NUL.
+
+World lyrics
+== Текст песни в игровом мире
 
 Write local console contents to a text file
 == Записать содержимое локальной консоли в текстовый файл

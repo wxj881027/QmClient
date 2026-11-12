@@ -12767,8 +12767,8 @@ Send sampling and token limit parameters
 Send specified command to rcon
 == 向 rcon 發送指定命令
 
-Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines
-== 每隔隨機90到270秒向公共聊天逐句傳送連續三句歌詞，句間隔3秒
+Send three consecutive lyrics to public chat at random intervals of 360 to 1200 seconds, with 3 seconds between lines. Successfully sending a lyric with Singing cancels pending humming lines and restarts the random wait
+== 每隔隨機 360 到 1200 秒向公共聊天逐句傳送連續三句歌詞，句間隔 3 秒。透過「唱歌」成功傳送歌詞後，取消尚未傳送的哼歌歌詞並重新隨機計時
 
 Send to
 == 傳送給
@@ -13426,6 +13426,9 @@ Show ghost
 
 Show ghost at unpredictable position of other players
 == 在其他玩家的不可預測位置顯示幽靈
+
+Show glowing, floating lyrics in the map. Each new line stays where it appears; previous lines rise and fade out
+== 在地圖中顯示發光、漂浮的歌詞。每句新歌詞固定在出現的位置，舊句向上漂浮並淡出
 
 Show Gores drown board
 == 顯示 Gores 落水榜
@@ -17569,6 +17572,9 @@ Word list file exceeds 2 MiB.
 
 Word list must be UTF-8 text without NUL characters.
 == 詞表必須是 UTF-8 文字，且不含 NUL 字元。
+
+World lyrics
+== 世界歌詞
 
 Write local console contents to a text file
 == 將本地控制台內容寫入文本文件

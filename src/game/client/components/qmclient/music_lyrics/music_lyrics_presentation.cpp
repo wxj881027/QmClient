@@ -51,6 +51,32 @@ void CQmLyricsPresentation::OnReset()
 	m_Frame = {};
 	m_Humming.Reset();
 	m_Singing.Reset();
+	OnMapLoad();
+}
+
+void CQmLyricsPresentation::OnMapLoad()
+{
+	m_WorldLyrics.Reset();
+	m_WorldLyricsRenderer.Reset(*TextRender());
+}
+
+void CQmLyricsPresentation::OnShutdown()
+{
+	m_WorldLyricsRenderer.Reset(*TextRender());
+}
+
+void CQmLyricsPresentation::OnWindowResize()
+{
+	m_WorldLyricsRenderer.Reset(*TextRender());
+}
+
+void CQmLyricsPresentation::OnRender()
+{
+	if(!g_Config.m_QmWorldLyrics || Client()->State() != IClient::STATE_ONLINE ||
+		(!m_WorldLyrics.Current().m_Active && !m_WorldLyrics.Previous().m_Active))
+		return;
+	m_WorldLyricsRenderer.Render(*TextRender(), *Graphics(), *RenderTools(), m_WorldLyrics,
+		GameClient()->m_Camera.m_Center, GameClient()->m_Camera.m_Zoom, time_get() / static_cast<double>(time_freq()));
 }
 
 void CQmLyricsPresentation::OnStateChange(int NewState, int OldState)
@@ -116,15 +142,27 @@ void CQmLyricsPresentation::OnUpdate()
 	const int Connection = g_Config.m_ClDummy;
 	const bool Online = Client()->State() == IClient::STATE_ONLINE &&
 			    (Connection == IClient::CONN_MAIN || Client()->DummyConnected());
+	const bool Playing = (g_Config.m_QmHumming || g_Config.m_QmWorldLyrics) && Online &&
+			     GameClient()->m_SystemMediaControls.GetStateSnapshot(Media) && Media.m_Playing;
+	const int64_t Now = time_get();
+	const bool HadWorldLyrics = m_WorldLyrics.Current().m_Active || m_WorldLyrics.Previous().m_Active;
+	if(g_Config.m_QmWorldLyrics || HadWorldLyrics)
+	{
+		// 每句生成时取当前场景上方的位置；后续镜头移动只改变投影。
+		const vec2 Anchor = GameClient()->m_Camera.m_Center + vec2(0.0f, -140.0f * GameClient()->m_Camera.m_Zoom);
+		m_WorldLyrics.Update(g_Config.m_QmWorldLyrics && Online && Playing, SourceId, Source, g_Config.m_QmLyricsLanguage, Anchor, Now / static_cast<double>(time_freq()));
+		if(!m_WorldLyrics.Current().m_Active && !m_WorldLyrics.Previous().m_Active)
+			m_WorldLyricsRenderer.Reset(*TextRender());
+	}
 	const bool Available = g_Config.m_QmHumming && Online && Source.m_SongId != 0 &&
 			       Source.m_Active && Source.m_pData != nullptr && Source.m_pData->HasLyrics() &&
-			       GameClient()->m_SystemMediaControls.GetStateSnapshot(Media) && Media.m_Playing;
+			       Playing;
 	const QmMusicLyrics::SHummingIdentity Identity{SourceId, Source.m_SongId, Source.m_Generation,
 		Source.m_ProducerPid, Connection, Online ? GameClient()->m_aLocalIds[Connection] : -1};
 	m_Humming.Synchronize(Available, Identity);
 	if(!Available)
 		return;
-	const int64_t NowMs = time_get() * 1000 / time_freq();
+	const int64_t NowMs = Now * 1000 / time_freq();
 	if(m_Humming.NeedsSchedule())
 		m_Humming.Schedule(NowMs, NextGroupDelayMs());
 	if(m_Humming.GroupDue(NowMs) && !m_Humming.BeginGroup(Source.m_pData->m_Timeline, secure_rand_below(0x7fffffff), NowMs))
