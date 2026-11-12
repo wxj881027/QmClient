@@ -1054,6 +1054,15 @@ TEST(QmCardRegistry, SearchResultsCarryHostingCardTarget)
 	ExpectSearchTarget("激光", "deck:appearance-laser-enhanced", "appearance-laser", "deck:appearance-laser-enhanced");
 	ExpectSearchTarget("名牌", "deck:appearance-name-plate-text", "appearance-name-plate", "deck:appearance-name-plate-text");
 	ExpectSearchTarget("歌词", "qm:lyrics", "hud", "qm:lyrics");
+	for(const char *pQuery : {"唱歌", "哼歌", "qm_singing", "qm_humming", "qm_sing", "世界歌词", "qm_world_lyrics"})
+	{
+		ExpectSearchTarget(pQuery, "qm:lyrics", "hud", "qm:lyrics");
+		const auto vResults = qm_card_registry::SearchCards(pQuery, Model);
+		const auto MiniFeatures = std::find_if(vResults.begin(), vResults.end(), [](const auto &Result) {
+			return std::string(Result.m_pStableId) == "qm:mini_features";
+		});
+		EXPECT_EQ(MiniFeatures, vResults.end()) << pQuery;
+	}
 }
 
 // 意图：歌词在旧栖梦子布局里有模块条目，适配层也把 Lyrics 映射到 qm:lyrics，

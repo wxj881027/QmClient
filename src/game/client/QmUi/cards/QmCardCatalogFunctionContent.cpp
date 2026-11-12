@@ -532,8 +532,6 @@ void CMenus::RenderQmFunctionMiniFeaturesContent(CUIRect &Content, float LineHei
 	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, Content,
 		{
 			{&g_Config.m_QmRepeatEnabled, "Enable repeat", Localize("Enable repeat")},
-			{&g_Config.m_QmHumming, "Humming", Localize("Humming"), nullptr, 0, Localize("Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines")},
-			{&g_Config.m_QmSinging, "Singing", Localize("Singing"), nullptr, 0, Localize("Double-tap the bound key within 400 ms to send the current lyric to public chat")},
 			{&g_Config.m_QmRandomEmoteOnHit, "Random emoticon", Localize("Random emoticon")},
 		},
 		CurrentSettingsContentMetrics(), !PrewarmOnly);

@@ -287,6 +287,13 @@ namespace
 namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_lyrics[] = {
+		{Localizable("World lyrics"), "qm_world_lyrics", "世界歌词 地图歌词 发光 漂浮 world lyrics floating glow"},
+		{Localizable("Humming"), nullptr, "哼歌"},
+		{Localizable("Singing"), nullptr, "唱歌 changge 双击歌词 shuangji geci"},
+		{Localizable("Double-tap the bound key within 400 ms to send the current lyric to public chat"), nullptr, "双击绑定按键发送当前一句歌词"},
+		{Localizable("Send three consecutive lyrics to public chat at random intervals of 360 to 1200 seconds, with 3 seconds between lines. Successfully sending a lyric with Singing cancels pending humming lines and restarts the random wait"), nullptr, "随机等待 360～1200 秒向公共聊天发送三句歌词，句间 3 秒；唱歌成功后取消剩余哼歌并重新计时"},
+		{nullptr, "qm_singing", nullptr},
+		{nullptr, "qm_humming", nullptr},
 		{Localizable("Enable Kugou Music lyrics"), nullptr, "启用酷狗音乐歌词"},
 		{Localizable("Enable lyrics"), nullptr, "启用歌词"},
 		{Localizable("Enable Netease music Hook"), nullptr, "启用网易云音乐 Hook"},

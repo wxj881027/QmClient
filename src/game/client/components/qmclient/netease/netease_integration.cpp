@@ -7,6 +7,7 @@
 #include <engine/shared/config.h>
 #include <engine/shared/jobs.h>
 
+#include <game/client/components/qmclient/music_lyrics/music_lyrics_community_format.h>
 #include <game/client/components/system_media_controls.h>
 #include <game/client/gameclient.h>
 
@@ -67,6 +68,8 @@ void CNeteaseIntegration::ResetLyricsData()
 {
 	m_pLyricsParseJob.reset();
 	m_LyricsData = {};
+	m_HasWordTiming = false;
+	m_LyricsPositionMs = -1;
 	m_DataSongId = 0;
 	m_DataGeneration = 0;
 	m_DataPid = 0;
@@ -87,6 +90,7 @@ void CNeteaseIntegration::UpdateLyricsData(const QmNeteaseHook::SSnapshotV5 &Sna
 	if(m_pLyricsParseJob && m_pLyricsParseJob->State() == IJob::STATE_DONE)
 	{
 		m_LyricsData = std::move(m_pLyricsParseJob->m_Result);
+		m_HasWordTiming = QmMusicLyrics::HasWordTiming(m_LyricsData);
 		m_pLyricsParseJob.reset();
 	}
 	const uint64_t Now = MonotonicTickMs();
@@ -359,6 +363,11 @@ void CNeteaseIntegration::OnUpdate()
 		m_LastBridgePositionMs);
 	const bool KeepPausedLyric = MediaState.m_PlaybackState == CSystemMediaControls::EPlaybackState::Paused &&
 				     m_LyricState.Snapshot().m_LyricValid && !SongChanged && !PausedPositionChanged;
+	// 原来源没有当前句时，社区仍需要连续播放位置；暂停只接受真实 seek。
+	if(!PositionValid)
+		m_LyricsPositionMs = -1;
+	else if(MediaState.m_Playing || PausedPositionChanged || m_LyricsPositionMs < 0)
+		m_LyricsPositionMs = BridgeSnapshot.m_PositionMs;
 
 	if(BridgeSnapshot.m_Sequence == m_LastBridgeSequence)
 	{
@@ -464,5 +473,6 @@ QmMusicLyrics::SSourceSnapshot CNeteaseIntegration::LyricsSnapshot() const
 		}
 	}
 	return {State.m_SongId, State.m_Generation, m_LastCloudMusicPid, m_ActiveLyrics, pData,
-		State.m_LyricValid ? std::string_view(State.m_CurrentLyric) : std::string_view(), Translation};
+		State.m_LyricValid ? std::string_view(State.m_CurrentLyric) : std::string_view(), Translation, State.m_LyricValid ? State.m_LineStartMs : -1, State.m_LineEndMs,
+		State.m_LyricValid ? State.m_PositionMs : m_LyricsPositionMs, {}, pData != nullptr && m_HasWordTiming};
 }

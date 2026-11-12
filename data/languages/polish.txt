@@ -914,6 +914,9 @@ Always show song title and artist
 Always translate
 == Zawsze tłumacz
 
+AMLL community lyrics
+== Teksty piosenek społeczności AMLL
+
 Amount
 == Ilość
 
@@ -12767,8 +12770,8 @@ Send sampling and token limit parameters
 Send specified command to rcon
 == Wyślij określone polecenie do rcon
 
-Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines
-== Wysyłaj trzy kolejne wersy do czatu publicznego w losowych odstępach od 90 do 270 sekund, z przerwą 3 sekund między wersami
+Send three consecutive lyrics to public chat at random intervals of 360 to 1200 seconds, with 3 seconds between lines. Successfully sending a lyric with Singing cancels pending humming lines and restarts the random wait
+== Wysyłaj trzy kolejne wersy do czatu publicznego w losowych odstępach od 360 do 1200 sekund, z przerwą 3 sekund między wersami. Pomyślne wysłanie wersu za pomocą funkcji „Śpiewanie” anuluje pozostałe wersy funkcji „Nucenie” i rozpoczyna nowe losowe odliczanie
 
 Send to
 == Wyślij do
@@ -13426,6 +13429,9 @@ Show ghost
 
 Show ghost at unpredictable position of other players
 == Pokaż ducha w nieprzewidywalnej pozycji innych graczy
+
+Show glowing, floating lyrics in the map. Each new line stays where it appears; previous lines rise and fade out
+== Pokazuj świecące, unoszące się wersy na mapie. Każdy nowy wers pozostaje w miejscu pojawienia się, a poprzednie unoszą się i zanikają
 
 Show Gores drown board
 == Pokaż tablicę utonięć Gores
@@ -16763,6 +16769,9 @@ Use alternative world tick calculation making hooks behave as if all players hav
 Use animated title style (overrides qm_title_color_mode)
 == Użyj animowanego stylu tytułu (zastępuje qm_title_color_mode)
 
+Use cached or online AMLL community lyrics when the music source has no word timing
+== Używaj tekstów piosenek społeczności AMLL z pamięci podręcznej lub internetu, gdy źródło muzyki nie udostępnia znaczników czasu dla poszczególnych słów
+
 Use colored skins for frozen tees
 == Użyj kolorowych skórek dla zamrożonych tee
 
@@ -17569,6 +17578,9 @@ Word list file exceeds 2 MiB.
 
 Word list must be UTF-8 text without NUL characters.
 == Lista słów musi być tekstem UTF-8 bez znaków NUL.
+
+World lyrics
+== Tekst w świecie gry
 
 Write local console contents to a text file
 == Zapisz zawartość lokalnej konsoli do pliku tekstowego

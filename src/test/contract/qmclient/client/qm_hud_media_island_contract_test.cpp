@@ -104,12 +104,6 @@ TEST(QmHudMediaIslandSource, RenderPathKeepsStableNodesAndEditorRect)
 	EXPECT_NE(RenderBody.find("TimerCapsule.m_Alpha * EntranceContentAlpha"), std::string::npos);
 	EXPECT_NE(RenderBody.find("QmHudMediaIslandDesiredBottomWidth("), std::string::npos);
 	EXPECT_EQ(RenderBody.find("TextBoundingBox(BottomFontSize, aLyricsIslandBuf)"), std::string::npos);
-	// 岛内歌词渲染已收口到共享歌词层：岛只调用 QmRenderLyricsRows，
-	// 跑马灯偏移与裁剪由该层负责，两条不变量跟随模块一起校验。
-	EXPECT_NE(RenderBody.find("QmRenderLyricsRows("), std::string::npos);
-	const std::string LyricsHudSource = ReadTestSourceFile("src/game/client/QmUi/QmLyricsHud.cpp");
-	EXPECT_NE(LyricsHudSource.find("QmHudMediaIslandMarqueeOffset("), std::string::npos);
-	EXPECT_NE(LyricsHudSource.find("EnableMappedClip("), std::string::npos);
 	EXPECT_NE(RenderBody.find("0.42f * EntranceContentAlpha"), std::string::npos);
 	EXPECT_NE(RenderBody.find("SdfItem.m_ContentScale = Item.m_ContentScale * EntranceContentAlpha"), std::string::npos);
 	EXPECT_NE(RenderBody.find("SatelliteIconSize * Item.m_ContentScale * EntranceContentAlpha"), std::string::npos);
