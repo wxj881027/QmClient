@@ -167,6 +167,10 @@ inline void QmApplyPracticeRescueCore(CCharacterCore &Core, int NowTick, const S
 	Core.m_FreezeStart = Tee.m_FreezeStartRelative ? NowTick - Tee.m_FreezeStartRelative : 0;
 	Core.m_DeepFrozen = Tee.m_DeepFrozen;
 	Core.m_LiveFrozen = Tee.m_LiveFrozen;
+	// FreezeEnd 是服务端按剩余冻结量现算的网络字段，CSaveTee 不保存它。
+	// 不重算就会把救援前的状态留在核心上：/deep 后 /r，人已经能动能跳，
+	// 渲染却因为 FreezeEnd == -1 一直把 Tee 画成冻结/深冻皮肤。
+	Core.m_FreezeEnd = Tee.m_DeepFrozen ? -1 : (Tee.m_FreezeTime == 0 ? 0 : NowTick + Tee.m_FreezeTime);
 
 	Core.m_Ninja.m_ActivationDir = Tee.m_NinjaActivationDir;
 	Core.m_Ninja.m_ActivationTick = Tee.m_NinjaActivationTickRelative ? NowTick - Tee.m_NinjaActivationTickRelative : 0;

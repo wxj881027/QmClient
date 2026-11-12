@@ -196,3 +196,38 @@ TEST(QmPracticeRescue, FreezeStartKeepsItsRemainingDuration)
 
 	EXPECT_EQ(Target.m_FreezeStart, 980);
 }
+
+TEST(QmPracticeRescue, RestoringClearsTheStaleDeepFreezeRenderState)
+{
+	// 救援点只能在家园以外的安全状态下保存，所以恢复后必须回到"未冻结"。
+	// FreezeEnd 是渲染层判断冻结皮肤的依据（-1 = 深冻），服务端不保存它，
+	// 恢复时必须现算，否则 /deep 后 /r 会留下"能动却画成冻结"的状态。
+	CCharacterCore Source{};
+	Source.m_Pos = vec2(10.0f, 20.0f);
+
+	SQmPracticeSavedTee Tee;
+	QmCapturePracticeRescueCore(Source, 100, Tee);
+
+	CCharacterCore Target{};
+	Target.m_DeepFrozen = true;
+	Target.m_FreezeStart = 90;
+	Target.m_FreezeEnd = -1;
+	QmApplyPracticeRescueCore(Target, 200, Tee);
+
+	EXPECT_FALSE(Target.m_DeepFrozen);
+	EXPECT_EQ(Target.m_FreezeStart, 0);
+	EXPECT_EQ(Target.m_FreezeEnd, 0);
+}
+
+TEST(QmPracticeRescue, RestoringUsesTheRemainingFreezeDurationForFreezeEnd)
+{
+	SQmPracticeSavedTee Tee;
+	Tee.m_Valid = true;
+	Tee.m_FreezeTime = 60;
+
+	CCharacterCore Target{};
+	Target.m_FreezeEnd = 0;
+	QmApplyPracticeRescueCore(Target, 200, Tee);
+
+	EXPECT_EQ(Target.m_FreezeEnd, 260);
+}

@@ -3711,6 +3711,20 @@ void CFastPractice::ConLocalWorldDump(IConsole::IResult *pResult, void *pUserDat
 			(int)pSelf->m_PracticeBaseWorld.Switchers().size(), Team, State.m_aStatus[0], State.m_aStatus[1]);
 		Print(aBuf);
 	}
+	// 本地 Tee 的冻结状态：/r 之后人能动但渲染还画冻结，就是这里的
+	// FreezeEnd 没从救援快照重算，直接看这一行比截图可靠。
+	CCharacter *pLocal = pSelf->m_Enabled ? pSelf->m_PracticeBaseWorld.GetCharacterById(pSelf->m_EnableLocalClientId) : nullptr;
+	if(pLocal)
+	{
+		const CCharacterCore *pCore = pLocal->Core();
+		str_format(aBuf, sizeof(aBuf), "local_tee: present=1 deep=%d freeze_end=%d freeze_time=%d grounded=%d",
+			pCore->m_DeepFrozen ? 1 : 0, pCore->m_FreezeEnd, pLocal->m_FreezeTime, pLocal->IsGrounded() ? 1 : 0);
+	}
+	else
+	{
+		str_copy(aBuf, "local_tee: present=0 deep=0 freeze_end=0 freeze_time=0 grounded=0");
+	}
+	Print(aBuf);
 	int Characters = 0;
 	for(int Cid = 0; Cid < MAX_CLIENTS; Cid++)
 		if(pSelf->GameClient()->m_PredictedWorld.GetCharacterById(Cid))
