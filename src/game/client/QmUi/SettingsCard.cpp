@@ -235,46 +235,16 @@ SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame 
 // 作为 CMenus 的共享表单入口，沿用文字池、配置提示和临时接管策略。
 bool CMenus::DoSettingsToggleGroup(int Page, int Tab, int Subtab, CUIRect &Content, std::initializer_list<SSettingsToggleEntry> Entries, const SSettingsContentMetrics &Metrics, bool ProcessInput, ESettingsToggleGroupPass Pass)
 {
-	if(Entries.size() == 0)
-		return false;
-	// 组内每一项都按设置页的常规开关排：一行一个标签 + 右侧开关。
-	// 原来把短开关挤成一排胶囊，扫读困难，也和本页其它开关不是同一套外观。
-	CSettingsContentLayoutFlow Flow(Content);
-	bool Changed = false;
-	size_t Index = 0;
-	for(const auto &Entry : Entries)
-	{
-		CUIRect Row;
-		const float SpacingBefore = Index == 0 ? 0.0f : Metrics.m_LineSpacing;
-		const char *pRowId = Entry.m_pTextId != nullptr ? Entry.m_pTextId : Entry.m_pLabel;
-		const bool HasRow = Flow.Control(pRowId, Metrics.m_LineHeight, Row, SpacingBefore);
-		if(HasRow && Pass == ESettingsToggleGroupPass::RENDER && Entry.m_pValue != nullptr)
-		{
-			ProcessInput = ProcessInput && Flow.Input();
-			const int Checked = Entry.m_Mask != 0 ? (*Entry.m_pValue & Entry.m_Mask) != 0 : *Entry.m_pValue != 0;
-			const void *pId = Entry.m_pId != nullptr ? Entry.m_pId : Entry.m_pValue;
-			const char *pOverrideTooltip = TemporaryOverrideTooltip(Entry.m_pValue);
-			const int Clicked = DoSettingsButton_CheckBox(Page, Tab, Subtab, pId, pRowId, Entry.m_pLabel, Checked, &Row);
-			if(ApplySettingsToggleEntry(Entry, Clicked != 0, ProcessInput && !m_MenuTextPlanCollecting && !Ui()->RenderOnly(), pOverrideTooltip != nullptr))
-				Changed = true;
-			if(Entry.m_pTooltip != nullptr && !m_MenuTextPlanCollecting)
-				Ui()->DoConfigTooltip(pId, &Row, Entry.m_pValue);
-		}
-		Index++;
-	}
-	// 组尾补一个行距：跨组时下一组首行不带间距，整卡任意相邻两行才都是同一个节奏。
-	Flow.Space(Metrics.m_LineSpacing);
-	return Changed;
+	// 同组短开关统一使用文字按钮，普通页面与搜索卡片共用同一份布局和交互。
+	return DoSettingsToggleButtonGroup(Page, Tab, Subtab, Content, Entries, Metrics, ProcessInput, Pass);
 }
 
-// 一排小按钮的筛选组：每项左侧带圆形勾选指示，用于「配置过滤器」这类需要一眼横看完的筛选。
-// 与逐行开关的 DoSettingsToggleGroup 分开：普通设置项仍走逐行 toggle，不能因为这里回退成按钮。
+// 共享文字按钮网格；配置过滤器等调用方可按项启用圆形勾选指示。
 bool CMenus::DoSettingsToggleButtonGroup(int Page, int Tab, int Subtab, CUIRect &Content, std::initializer_list<SSettingsToggleEntry> Entries, const SSettingsContentMetrics &Metrics, bool ProcessInput, ESettingsToggleGroupPass Pass)
 {
 	if(Entries.size() == 0)
 		return false;
-	// 组内按钮平摊整组宽度：一排看过去宽度一致，不会因为文字长短参差不齐。
-	// 列数由文字宽度决定，能排几列就排几列，排不下再换行。
+	// 每列按最长项预留宽度，再均分剩余空间；放不下时减少列数并换行。
 	const float Gap = Metrics.m_LineSpacing;
 	const float PaddingX = std::max(Metrics.m_LineSpacing, Metrics.m_BodySize * 0.5f);
 	const float PaddingY = Metrics.m_LineSpacing * 0.5f;

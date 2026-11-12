@@ -6,7 +6,7 @@
 #include <game/localization.h>
 
 // 更好的计分板卡片内容。计分板相关配置集中在独立卡片中，避免与梦的小功能卡片耦合。
-// 行距只由逐行 toggle 组按卡片 metrics 统一给出，卡片自己不再补 Spacing，
+// 组内行距与组尾间距由共享按钮网格按卡片 metrics 统一给出，卡片自己不再补 Spacing，
 // 否则组尾间距和额外间距会叠成双倍空隙。
 void CMenus::RenderQmFunctionBetterScoreboardContent(CUIRect &Content, float, float, float, float, bool PrewarmOnly)
 {
