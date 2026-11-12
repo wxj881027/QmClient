@@ -77,6 +77,7 @@
 #include "components/qmclient/axiom_auto_login.h"
 #include "components/qmclient/axiom_scores.h"
 #include "components/qmclient/chat_emoji.h"
+#include "components/qmclient/checkpoint_guide.h"
 #include "components/qmclient/collision_hitbox.h"
 #include "components/qmclient/data_version.h"
 #include "components/qmclient/demo_camera.h"
@@ -311,6 +312,7 @@ public:
 	CQmAxiomScores m_QmAxiomScores;
 	CQmFriendLastSeen m_QmFriendLastSeen;
 	CQmChatEmoji m_QmChatEmoji;
+	CQmCheckpointGuide m_QmCheckpointGuide;
 	CQmMonitoring m_QmMonitoring;
 	CQmMobileSpectator m_QmMobileSpectator;
 	CQmHudNotifications m_QmHudNotifications;

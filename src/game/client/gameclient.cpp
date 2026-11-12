@@ -665,6 +665,7 @@ void CGameClient::OnConsoleInit()
 	AddComponent(&m_MovingTilesForeground, "moving_tiles_foreground");
 	AddComponent(&m_Outlines, "outlines");
 	AddComponent(&m_CollisionHitbox, "collision_hitbox");
+	AddComponent(&m_QmCheckpointGuide, "checkpoint_guide");
 	AddComponent(&m_LyricsPresentation, "lyrics_presentation");
 	AddComponent(&m_Pet, "pet");
 	AddComponent(&m_Particles.m_RenderExplosions, "particles_explosions");

@@ -2675,6 +2675,9 @@ Collapse
 Collapse console
 == Recolher consola
 
+Collect CP %d before teleporting
+== Ativa o CP %d antes de te teletransportares
+
 Collects the remaining DDNet client preferences that do not belong to other cards.
 == Reúne as restantes preferências do cliente DDNet que não pertencem a outros cartões.
 
@@ -3353,8 +3356,14 @@ Country code
 Country flag for grouping this community (ISO 3166-1 numeric)
 == Bandeira do país para agrupar esta comunidade (ISO 3166-1 numérico)
 
+CP %d
+== Ponto de controlo %d
+
 CP border overlay alpha (0-100)
 == Alpha de sobreposição da entidade do limite do ponto de controlo (0-100)
+
+CP guide
+== Guia de CP
 
 CP opacity
 == Opacidade do CP
@@ -6433,6 +6442,9 @@ Guide line color
 
 Guide lines are computed locally and do not guarantee that a hook will connect.
 == As linhas guia são calculadas localmente e não garantem que o gancho acerte.
+
+Guide to nearby uncollected teleport checkpoints and warn near checkpoint teleporters
+== Guiar até pontos de controlo de teletransporte próximos não ativados e avisar perto das entradas de regresso
 
 Gun fire
 == Disparo de pistola

@@ -2675,6 +2675,9 @@ Collapse
 Collapse console
 == Konsolu daralt
 
+Collect CP %d before teleporting
+== Işınlanmadan önce CP %d noktasını etkinleştir
+
 Collects the remaining DDNet client preferences that do not belong to other cards.
 == Diğer kartlara ait olmayan kalan DDNet istemci tercihlerini toplar.
 
@@ -3353,8 +3356,14 @@ Country code
 Country flag for grouping this community (ISO 3166-1 numeric)
 == Bu topluluğu gruplandırmak için ülke bayrağı (ISO 3166-1 sayısal)
 
+CP %d
+== Kontrol noktası %d
+
 CP border overlay alpha (0-100)
 == CP noktası sınırının kaplama varlık alfası (0-100)
+
+CP guide
+== CP rehberi
 
 CP opacity
 == CP opaklığı
@@ -6433,6 +6442,9 @@ Guide line color
 
 Guide lines are computed locally and do not guarantee that a hook will connect.
 == Kılavuz çizgiler yerel olarak hesaplanır ve kancanın tutacağını garanti etmez.
+
+Guide to nearby uncollected teleport checkpoints and warn near checkpoint teleporters
+== Yakındaki etkinleştirilmemiş ışınlanma kontrol noktalarına yol göster ve kontrol noktasına dönüş girişlerinde uyar
 
 Gun fire
 == Tabanca ateşi

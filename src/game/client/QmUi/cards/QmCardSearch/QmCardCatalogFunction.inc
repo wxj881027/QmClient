@@ -292,6 +292,8 @@ namespace
 		{Localizable("Show Qm badge"), nullptr, "显示 Qm 标识"},
 		{Localizable("Show outdated version warning"), nullptr, "显示版本过旧提示"},
 		{Localizable("Show tune zone colors"), nullptr, "显示 Tune Zone 颜色"},
+		{Localizable("CP guide"), "qm_checkpoint_guide", "CP 引导 吃CP 检查点 传送 寻路 checkpoint guide"},
+		{Localizable("Guide to nearby uncollected teleport checkpoints and warn near checkpoint teleporters"), nullptr, "引导补吃附近遗漏的传送检查点，接近检查点回传入口时提醒"},
 		{Localizable("Sponsor reminder"), nullptr, "赞助提醒"},
 		{Localizable("Show command completion in chat"), nullptr, "聊天中显示命令补全"},
 		{Localizable("Chat emoji completion"), nullptr, "聊天表情补全"},

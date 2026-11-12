@@ -919,6 +919,7 @@ Close window after changing settings
 Cloud bubble
 Collapse
 Collapse console
+Collect CP %d before teleporting
 Collects the remaining DDNet client preferences that do not belong to other cards.
 Collision hitbox
 Collision Line Opacity
@@ -1150,7 +1151,9 @@ Count players only
 Countries
 Country code
 Country flag for grouping this community (ISO 3166-1 numeric)
+CP %d
 CP border overlay alpha (0-100)
+CP guide
 CP opacity
 Crazy shotgun bullet sound on/off
 Create a profile, edit it, then switch profiles before playing on a different server.
@@ -2217,6 +2220,7 @@ GUI cursor
 GUI cursor assets
 Guide line color
 Guide lines are computed locally and do not guarantee that a hook will connect.
+Guide to nearby uncollected teleport checkpoints and warn near checkpoint teleporters
 Gun fire
 Hammer
 Hammer and gun switching made for Gores (KOG) servers, with optional Axiom login and fast input.

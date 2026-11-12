@@ -2762,6 +2762,9 @@ Collapse
 Collapse console
 == 收起控制台
 
+Collect CP %d before teleporting
+== 请先吃 CP %d，再进入回传入口
+
 Collects the remaining DDNet client preferences that do not belong to other cards.
 == 汇总剩下的、不属于其他卡片的 DDNet 客户端偏好设置。
 
@@ -3455,8 +3458,14 @@ Country code
 Country flag for grouping this community (ISO 3166-1 numeric)
 == 将此社区分组的国家/地区标志（ISO 3166-1 数字）
 
+CP %d
+== 检查点 %d
+
 CP border overlay alpha (0-100)
 == 检查点边框覆盖层的实体不透明度（0-100）
+
+CP guide
+== CP 引导
 
 CP opacity
 == CP 点不透明度
@@ -6655,6 +6664,9 @@ Guide line color
 
 Guide lines are computed locally and do not guarantee that a hook will connect.
 == 辅助线仅在本地计算，不能保证钩子一定成功。
+
+Guide to nearby uncollected teleport checkpoints and warn near checkpoint teleporters
+== 引导补吃附近遗漏的传送检查点，接近检查点回传入口时提醒
 
 Gun fire
 == 手枪射击
