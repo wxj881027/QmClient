@@ -935,6 +935,9 @@ Always show song title and artist
 Always translate
 == 始终翻译
 
+AMLL community lyrics
+== AMLL 社区歌词
+
 Amount
 == 预测量
 
@@ -17368,6 +17371,9 @@ Use alternative world tick calculation making hooks behave as if all players hav
 
 Use animated title style (overrides qm_title_color_mode)
 == 使用头衔动态风格（覆盖 qm_title_color_mode）
+
+Use cached or online AMLL community lyrics when the music source has no word timing
+== 音乐来源没有逐字时间时，使用缓存或在线获取的 AMLL 社区歌词
 
 Use colored skins for frozen tees
 == 冻结 Tee 使用彩色皮肤

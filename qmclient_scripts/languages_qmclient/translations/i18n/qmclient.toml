@@ -40431,3 +40431,19 @@ brazilian_portuguese = "Mostrar letras brilhantes e flutuantes no mapa. Cada nov
 portuguese = "Mostrar letras brilhantes e flutuantes no mapa. Cada nova linha permanece onde aparece; as anteriores sobem e desvanecem-se"
 turkish = "Haritada parlayan ve havada süzülen şarkı sözlerini göster. Her yeni satır belirdiği yerde kalır; önceki satırlar yükselerek yavaşça kaybolur"
 polish = "Pokazuj świecące, unoszące się wersy na mapie. Każdy nowy wers pozostaje w miejscu pojawienia się, a poprzednie unoszą się i zanikają"
+
+[[message]]
+key = "Use cached or online AMLL community lyrics when the music source has no word timing"
+[message.translations]
+simplified_chinese = "音乐来源没有逐字时间时，使用缓存或在线获取的 AMLL 社区歌词"
+traditional_chinese = "音樂來源沒有逐字時間時，使用快取或線上取得的 AMLL 社群歌詞"
+japanese = "音楽ソースに単語ごとのタイミング情報がない場合、キャッシュまたはオンラインの AMLL コミュニティ歌詞を使用する"
+korean = "음악 소스에 단어별 타이밍 정보가 없으면 캐시 또는 온라인의 AMLL 커뮤니티 가사를 사용"
+russian = "Использовать тексты песен сообщества AMLL из кэша или интернета, если музыкальный источник не предоставляет время для отдельных слов"
+german = "Zwischengespeicherte oder online verfügbare Liedtexte der AMLL-Community verwenden, wenn die Musikquelle keine Zeitangaben für einzelne Wörter liefert"
+spanish = "Usar letras de la comunidad AMLL almacenadas en caché o disponibles en línea cuando la fuente de música no proporcione tiempos por palabra"
+french = "Utiliser les paroles de la communauté AMLL en cache ou en ligne lorsque la source musicale ne fournit pas de synchronisation mot par mot"
+brazilian_portuguese = "Usar letras da comunidade AMLL em cache ou on-line quando a fonte de música não fornecer tempos por palavra"
+portuguese = "Usar letras da comunidade AMLL em cache ou online quando a fonte de música não fornecer tempos por palavra"
+turkish = "Müzik kaynağında sözcük zamanlaması yoksa önbellekteki veya çevrimiçi AMLL topluluk şarkı sözlerini kullan"
+polish = "Używaj tekstów piosenek społeczności AMLL z pamięci podręcznej lub internetu, gdy źródło muzyki nie udostępnia znaczników czasu dla poszczególnych słów"

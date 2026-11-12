@@ -310,6 +310,7 @@ Always show other players' hook collision lines
 Always show own player's hook collision line
 Always show song title and artist
 Always translate
+AMLL community lyrics
 Amount
 An export preset applies an encoder, container and quality combination. Choose Custom to edit each setting.
 An import replaces settings and binds and then restarts the client, so export your current setup first.
@@ -5788,6 +5789,7 @@ Use a fixed prediction margin while frozen
 Use alternative antiping smoothing, incompatible with cl_antiping_smooth
 Use alternative world tick calculation making hooks behave as if all players have Strong.
 Use animated title style (overrides qm_title_color_mode)
+Use cached or online AMLL community lyrics when the music source has no word timing
 Use colored skins for frozen tees
 Use compact list view for config variables
 Use current map as background

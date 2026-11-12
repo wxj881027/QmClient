@@ -48,6 +48,7 @@ void CQmLyricsPresentation::ConSing(IConsole::IResult *pResult, void *pUserData)
 
 void CQmLyricsPresentation::OnReset()
 {
+	m_CommunityLyrics.Reset();
 	m_Frame = {};
 	m_Humming.Reset();
 	m_Singing.Reset();
@@ -62,6 +63,7 @@ void CQmLyricsPresentation::OnMapLoad()
 
 void CQmLyricsPresentation::OnShutdown()
 {
+	m_CommunityLyrics.Reset();
 	m_WorldLyricsRenderer.Reset(*TextRender());
 }
 
@@ -84,7 +86,7 @@ void CQmLyricsPresentation::OnStateChange(int NewState, int OldState)
 	OnReset();
 }
 
-QmMusicLyrics::SSourceSnapshot CQmLyricsPresentation::CurrentSource(int &SourceId) const
+QmMusicLyrics::SSourceSnapshot CQmLyricsPresentation::RawSource(int &SourceId) const
 {
 	QmMusicLyrics::SSourceSnapshot Source;
 	SourceId = 0;
@@ -106,6 +108,12 @@ QmMusicLyrics::SSourceSnapshot CQmLyricsPresentation::CurrentSource(int &SourceI
 	return Source;
 }
 
+QmMusicLyrics::SSourceSnapshot CQmLyricsPresentation::CurrentSource(int &SourceId) const
+{
+	const auto Source = RawSource(SourceId);
+	return g_Config.m_QmLyricsCommunity ? m_CommunityLyrics.Apply(SourceId, Source) : Source;
+}
+
 void CQmLyricsPresentation::SynchronizeSinging(const QmMusicLyrics::SSourceSnapshot &Source, int SourceId)
 {
 	const int Connection = g_Config.m_ClDummy;
@@ -125,7 +133,12 @@ void CQmLyricsPresentation::SynchronizeSinging(const QmMusicLyrics::SSourceSnaps
 void CQmLyricsPresentation::OnUpdate()
 {
 	int SourceId;
-	const auto Source = CurrentSource(SourceId);
+	const auto Raw = RawSource(SourceId);
+	const bool NeedsLyrics = g_Config.m_QmWorldLyrics || (g_Config.m_QmLyrics && g_Config.m_QmLyricsInMediaIsland) ||
+				 g_Config.m_QmSinging || g_Config.m_QmHumming;
+	m_CommunityLyrics.Update(SourceId, Raw, g_Config.m_QmLyricsCommunity && NeedsLyrics,
+		time_get() * 1000 / time_freq(), Storage(), Engine(), Http());
+	const auto Source = m_CommunityLyrics.Apply(SourceId, Raw);
 	SynchronizeSinging(Source, SourceId);
 
 	m_Frame = {};

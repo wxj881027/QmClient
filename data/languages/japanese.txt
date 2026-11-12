@@ -914,6 +914,9 @@ Always show song title and artist
 Always translate
 == 常に翻訳
 
+AMLL community lyrics
+== AMLL コミュニティ歌詞
+
 Amount
 == 量
 
@@ -16765,6 +16768,9 @@ Use alternative world tick calculation making hooks behave as if all players hav
 
 Use animated title style (overrides qm_title_color_mode)
 == タイトルのアニメーションスタイルを使う（qm_title_color_mode を上書き）
+
+Use cached or online AMLL community lyrics when the music source has no word timing
+== 音楽ソースに単語ごとのタイミング情報がない場合、キャッシュまたはオンラインの AMLL コミュニティ歌詞を使用する
 
 Use colored skins for frozen tees
 == 凍結 Tee にカラースキンを使用

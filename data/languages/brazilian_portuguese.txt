@@ -914,6 +914,9 @@ Always show song title and artist
 Always translate
 == Traduzir sempre
 
+AMLL community lyrics
+== Letras da comunidade AMLL
+
 Amount
 == Quantidade
 
@@ -16765,6 +16768,9 @@ Use alternative world tick calculation making hooks behave as if all players hav
 
 Use animated title style (overrides qm_title_color_mode)
 == Usar estilo de título animado (substitui qm_title_color_mode)
+
+Use cached or online AMLL community lyrics when the music source has no word timing
+== Usar letras da comunidade AMLL em cache ou on-line quando a fonte de música não fornecer tempos por palavra
 
 Use colored skins for frozen tees
 == Usar peles coloridas para tees congelados

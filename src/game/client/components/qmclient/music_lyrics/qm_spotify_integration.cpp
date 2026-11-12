@@ -1,5 +1,6 @@
 #include "qm_spotify_integration.h"
 
+#include "music_lyrics_community_format.h"
 #include "qm_spotify_parser.h"
 #include "qm_spotify_token.h"
 
@@ -194,12 +195,14 @@ struct CSpotifyIntegration::SImpl
 	std::shared_ptr<IHttpRequest> m_pLyricsRequest;
 	int m_RetryCount = 0; // 本首歌已消耗的 token 刷新重试次数(搜索/歌词共用)
 	std::string m_PendingTrackId;
+	std::string m_CatalogTrackId;
 	std::string m_PendingIsrc;
 	std::shared_ptr<IHttpRequest> m_pLrclibRequest;
 
 	// 歌词数据。
 	QmMusicLyrics::SLyricsData m_Lyrics;
 	bool m_HasLyrics = false;
+	bool m_HasWordTiming = false;
 	bool m_ActiveLyrics = false;
 
 	// 进度与当前句。
@@ -243,6 +246,8 @@ struct CSpotifyIntegration::SImpl
 		m_SearchFailed = false;
 		m_RetryCount = 0;
 		m_PendingTrackId.clear();
+		m_CatalogTrackId.clear();
+		m_HasWordTiming = false;
 		m_PendingIsrc.clear();
 		m_Lyrics = {};
 		m_HasLyrics = false;
@@ -645,6 +650,7 @@ void CSpotifyIntegration::PollSongPipeline()
 			// 取第一个非空候选(Spotify 按相关度排序)。
 			const QmSpotify::STrackCandidate &Best = Candidates[0];
 			m_pImpl->m_PendingTrackId = Best.m_Id;
+			m_pImpl->m_CatalogTrackId = Best.m_Id;
 			m_pImpl->m_PendingIsrc = Best.m_Isrc;
 			m_pImpl->m_RetryCount = 0;
 			m_pImpl->m_SearchAttempt = 0;
@@ -712,6 +718,7 @@ void CSpotifyIntegration::PollSongPipelineLyrics()
 			if(Lyrics.m_Song.m_Artist.empty())
 				Lyrics.m_Song.m_Artist = m_pImpl->m_IdentityArtist;
 			m_pImpl->m_Lyrics = std::move(Lyrics);
+			m_pImpl->m_HasWordTiming = QmMusicLyrics::HasWordTiming(m_pImpl->m_Lyrics);
 			m_pImpl->m_HasLyrics = true;
 			m_pImpl->m_PendingTrackId.clear();
 			m_pImpl->m_PendingIsrc.clear();
@@ -781,6 +788,7 @@ void CSpotifyIntegration::PollSongPipelineLrclib()
 			if(Lyrics.m_Song.m_Artist.empty())
 				Lyrics.m_Song.m_Artist = m_pImpl->m_IdentityArtist;
 			m_pImpl->m_Lyrics = std::move(Lyrics);
+			m_pImpl->m_HasWordTiming = QmMusicLyrics::HasWordTiming(m_pImpl->m_Lyrics);
 			m_pImpl->m_HasLyrics = true;
 		}
 	}
@@ -821,11 +829,13 @@ uint64_t CSpotifyIntegration::CurrentSongId() const
 
 QmMusicLyrics::SSourceSnapshot CSpotifyIntegration::LyricsSnapshot() const
 {
-	if(!m_pImpl->m_HasIdentity || !m_pImpl->m_HasLyrics)
+	if(!m_pImpl->m_HasIdentity)
 		return {};
+	if(!m_pImpl->m_HasLyrics)
+		return {m_pImpl->m_SongId, 0, 0, false, nullptr, {}, {}, -1, -1, m_pImpl->m_PositionMs, m_pImpl->m_CatalogTrackId, false};
 	const auto Selected = NeteaseLyrics::SelectCurrentLine(m_pImpl->m_Lyrics.m_Timeline, m_pImpl->m_PositionMs);
 	return {m_pImpl->m_SongId, 0, 0, m_pImpl->m_ActiveLyrics, &m_pImpl->m_Lyrics,
 		m_pImpl->m_CurrentLyric, QmMusicLyrics::TranslationAt(m_pImpl->m_Lyrics, Selected.m_Index),
 		Selected.m_pLine != nullptr ? Selected.m_pLine->m_StartMs : -1,
-		Selected.m_pLine != nullptr ? Selected.m_pLine->m_EndMs : -1, m_pImpl->m_PositionMs};
+		Selected.m_pLine != nullptr ? Selected.m_pLine->m_EndMs : -1, m_pImpl->m_PositionMs, m_pImpl->m_CatalogTrackId, m_pImpl->m_HasWordTiming};
 }

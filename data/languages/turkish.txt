@@ -914,6 +914,9 @@ Always show song title and artist
 Always translate
 == Her zaman çevir
 
+AMLL community lyrics
+== AMLL topluluk şarkı sözleri
+
 Amount
 == Miktar
 
@@ -16765,6 +16768,9 @@ Use alternative world tick calculation making hooks behave as if all players hav
 
 Use animated title style (overrides qm_title_color_mode)
 == Animasyonlu unvan stili kullan (qm_title_color_mode'u geçersiz kılar)
+
+Use cached or online AMLL community lyrics when the music source has no word timing
+== Müzik kaynağında sözcük zamanlaması yoksa önbellekteki veya çevrimiçi AMLL topluluk şarkı sözlerini kullan
 
 Use colored skins for frozen tees
 == Donmuş teeler için renkli görünümler kullan

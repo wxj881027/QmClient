@@ -2,6 +2,7 @@
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_MUSIC_LYRICS_MUSIC_LYRICS_PRESENTATION_H
 
 #include "music_humming_state.h"
+#include "music_lyrics_community.h"
 #include "music_lyrics_display.h"
 #include "music_singing_state.h"
 #include "music_world_lyrics.h"
@@ -34,10 +35,12 @@ public:
 
 private:
 	static void ConSing(IConsole::IResult *pResult, void *pUserData);
+	QmMusicLyrics::SSourceSnapshot RawSource(int &SourceId) const;
 	QmMusicLyrics::SSourceSnapshot CurrentSource(int &SourceId) const;
 	void SynchronizeSinging(const QmMusicLyrics::SSourceSnapshot &Source, int SourceId);
 
 	SFrame m_Frame;
+	QmMusicLyrics::CCommunityLyrics m_CommunityLyrics;
 	QmMusicLyrics::CHummingState m_Humming;
 	QmMusicLyrics::CSingingState m_Singing;
 	QmMusicLyrics::CWorldLyricsState m_WorldLyrics;

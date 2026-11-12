@@ -914,6 +914,9 @@ Always show song title and artist
 Always translate
 == 항상 번역
 
+AMLL community lyrics
+== AMLL 커뮤니티 가사
+
 Amount
 == 양
 
@@ -16765,6 +16768,9 @@ Use alternative world tick calculation making hooks behave as if all players hav
 
 Use animated title style (overrides qm_title_color_mode)
 == 칭호 애니메이션 스타일 사용 (qm_title_color_mode 덮어씀)
+
+Use cached or online AMLL community lyrics when the music source has no word timing
+== 음악 소스에 단어별 타이밍 정보가 없으면 캐시 또는 온라인의 AMLL 커뮤니티 가사를 사용
 
 Use colored skins for frozen tees
 == 얼어붙은 티에 컬러 스킨 사용

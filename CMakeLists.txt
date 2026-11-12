@@ -3659,6 +3659,10 @@ if(CLIENT)
     components/qmclient/music_app_watcher.cpp
     components/qmclient/music_app_watcher.h
     components/qmclient/music_lyrics/music_lyrics_chat.h
+    components/qmclient/music_lyrics/music_lyrics_community.cpp
+    components/qmclient/music_lyrics/music_lyrics_community.h
+    components/qmclient/music_lyrics/music_lyrics_community_format.cpp
+    components/qmclient/music_lyrics/music_lyrics_community_format.h
     components/qmclient/music_lyrics/music_lyrics_display.h
     components/qmclient/music_lyrics/music_humming_state.h
     components/qmclient/music_lyrics/music_lyrics_presentation.cpp
@@ -5040,6 +5044,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/music/music_humming_state_test.cpp
     src/test/unit/qmclient/music/music_singing_state_test.cpp
     src/test/unit/qmclient/music/music_world_lyrics_state_test.cpp
+    src/test/unit/qmclient/music/music_lyrics_community_format_test.cpp
+    src/test/integration/qmclient/music/music_lyrics_community_test.cpp
     src/test/unit/qmclient/client/qm_lyrics_hud_layout_test.cpp
     src/test/unit/qmclient/client/qm_fast_practice_hook_input_test.cpp
     src/test/unit/qmclient/client/qm_fast_practice_cursor_test.cpp
@@ -5489,6 +5495,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/qm/hooks/soda/qm_soda_protocol.cpp
     src/qm/music/qm_kugou_protocol.cpp
     src/qm/music/qm_qqmusic_protocol.cpp
+    src/game/client/components/qmclient/music_lyrics/music_lyrics_community.cpp
+    src/game/client/components/qmclient/music_lyrics/music_lyrics_community_format.cpp
     src/game/client/components/qmclient/music_lyrics/qm_spotify_crypto.cpp
     src/game/client/components/qmclient/music_lyrics/qm_spotify_token.cpp
     src/game/client/components/qmclient/music_lyrics/qm_spotify_parser.cpp

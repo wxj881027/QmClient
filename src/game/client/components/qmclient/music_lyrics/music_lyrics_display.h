@@ -57,6 +57,9 @@ namespace QmMusicLyrics
 		int64_t m_LineStartMs = -1;
 		int64_t m_LineEndMs = -1;
 		int64_t m_PositionMs = -1;
+		// 平台真实曲目 ID；本地歌曲哈希不能用于社区歌词查询。
+		std::string_view m_CatalogId;
+		bool m_HasWordTiming = false;
 	};
 
 	inline float LyricProgress(const SSourceSnapshot &Source)

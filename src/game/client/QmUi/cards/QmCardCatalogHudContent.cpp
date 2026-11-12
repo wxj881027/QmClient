@@ -329,6 +329,7 @@ void CMenus::RenderQmHudLyricsContent(CUIRect &Content, float LineHeight, float 
 		}
 	}
 	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmLyrics, "Enable lyrics", Localize("Enable lyrics"), &g_Config.m_QmLyrics);
+	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmLyricsCommunity, "AMLL community lyrics", Localize("AMLL community lyrics"), &g_Config.m_QmLyricsCommunity);
 	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, Content,
 		{
 			{&g_Config.m_QmWorldLyrics, "World lyrics", Localize("World lyrics"), nullptr, 0, Localize("Show glowing, floating lyrics in the map. Each new line stays where it appears; previous lines rise and fade out")},
