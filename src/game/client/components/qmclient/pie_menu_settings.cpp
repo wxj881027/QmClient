@@ -308,26 +308,12 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 					const float MidAngle = (StartAngle + EndAngle) * 0.5f * pi / 180.0f;
 					const vec2 ItemPos = PreviewCenter + vec2(cos(MidAngle), sin(MidAngle)) * ((InnerRadius + OuterRadius) * 0.5f);
 					const float IconSize = BaseOuterRadius * 0.19f;
-					TextRender()->TextColor(1.0f, 1.0f, 1.0f, PreviewAlpha);
-					const EFontPreset PreviousFont = TextRender()->GetFontPreset();
-					TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-					const float IconWidth = TextRender()->TextWidth(IconSize, Entry.m_pIcon);
-					const CUIRect IconRect{ItemPos.x - IconWidth * 0.5f, ItemPos.y - IconSize * 0.5f, IconWidth, IconSize};
-					Ui()->DoLabel(&IconRect, Entry.m_pIcon, IconSize, TEXTALIGN_MC);
-					TextRender()->SetFontPreset(PreviousFont);
+					QmDrawPieSettingsPreviewIcon(*Ui(), ItemPos, IconSize, Entry.m_pIcon, PreviewAlpha);
 				}
 				const int FocusedSector = HoveredSector >= 0 ? HoveredSector : PopupSectorIndex;
 				const char *pCenterTitle = FocusedSector >= 0 ? apVisibleEntries[FocusedSector]->m_pName : Localize("Set color");
-				float CenterTitleSize = maximum(BodySize, BaseOuterRadius * 0.095f);
-				TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.98f);
-				float CenterTitleWidth = TextRender()->TextWidth(CenterTitleSize, pCenterTitle);
-				if(CenterTitleWidth > CenterRadius * 1.65f)
-				{
-					CenterTitleSize *= CenterRadius * 1.65f / CenterTitleWidth;
-					CenterTitleWidth = TextRender()->TextWidth(CenterTitleSize, pCenterTitle);
-				}
-				TextRender()->Text(PreviewCenter.x - CenterTitleWidth * 0.5f, PreviewCenter.y - CenterTitleSize * 0.5f, CenterTitleSize, pCenterTitle);
-				TextRender()->TextColor(TextRender()->DefaultTextColor());
+				const float CenterTitleSize = maximum(BodySize, BaseOuterRadius * 0.095f);
+				QmDrawPieSettingsPreviewTitle(*TextRender(), PreviewCenter, CenterTitleSize, CenterRadius, pCenterTitle);
 			}
 		}
 	}

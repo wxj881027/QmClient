@@ -190,6 +190,8 @@ private:
 	uint64_t m_LastNeteaseHookReadFrame = 0;
 	bool m_NeteaseHookReadFrameInitialized = false;
 #if SYSTEM_MEDIA_CONTROLS_BACKEND_ENABLED
+	// 主线程发布开关快照；先析构 worker，再结束后台读取的原子值寿命。
+	std::atomic_bool m_BackendEnabled{false};
 	CQmMediaWorker m_Worker;
 
 	void EnsureBackendStarted() noexcept;

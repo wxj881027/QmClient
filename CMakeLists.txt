@@ -3362,6 +3362,7 @@ if(CLIENT)
     QmUi/QmMotion.h
     QmUi/QmPieMenuGeometry.h
     QmUi/QmPieMenuRender.h
+    QmUi/QmPieMenuSettingsControls.h
     QmUi/QmRender.cpp
     QmUi/QmRender.h
     QmUi/QmRt.cpp
@@ -3550,6 +3551,7 @@ if(CLIENT)
     components/qmclient/ghost_path.h
     components/qmclient/ghost_timeline.h
     components/qmclient/race_timing.h
+    components/qmclient/race_start_detection.h
     components/qmclient/ghost_manual.h
     components/qmclient/ghost_render.h
     components/camera.cpp
@@ -3822,6 +3824,7 @@ if(CLIENT)
     components/qmclient/chat_bubble_state.h
     components/qmclient/chat_bubble_geometry.h
     components/qmclient/pie_menu_actions.cpp
+    components/qmclient/pie_menu_friend_action.h
     components/qmclient/pie_menu_follow.cpp
     components/qmclient/pie_menu_points.h
     components/qmclient/pie_menu_settings.cpp
@@ -5115,6 +5118,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/client/qm_chat_post_send_failure_test.cpp
     src/test/integration/qmclient/client/qm_chat_history_test.cpp
     src/test/integration/qmclient/client/qm_chatbind_config_console_test.cpp
+    src/test/integration/qmclient/client/qm_pie_menu_friend_command_test.cpp
     src/test/integration/qmclient/client/qm_markdown_cache_writer_test.cpp
     src/test/integration/qmclient/client/qm_skin_download_session_test.cpp
     src/test/integration/qmclient/client/qm_skin_outline_render_test.cpp
@@ -6561,6 +6565,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/ui/qm_settings_card_deck_consumer_test.cpp
       src/test/support/qm_settings_card_menu_boundary.cpp
       src/test/integration/qmclient/ui/qm_checkpoint_guide_text_test.cpp
+      src/test/integration/qmclient/ui/qm_pie_menu_settings_text_test.cpp
       src/test/unit/qmclient/settings/settings_search_reveal_allocation_test.cpp
       src/test/integration/qmclient/ui/qm_surface_text_test.cpp
       src/test/integration/qmclient/ui/qm_theme_selection_test.cpp
@@ -6703,6 +6708,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/client/map_history_allocation_test.cpp
       src/test/unit/client/map_history_id_allocation_test.cpp
       src/test/integration/qmclient/client/qm_map_history_session_allocation_test.cpp
+      src/test/integration/qmclient/client/qm_race_start_detection_test.cpp
       src/test/integration/qmclient/client/qm_map_history_rows_allocation_test.cpp
       src/game/client/components/tclient/map_history.cpp
       src/test/unit/qmclient/client/qm_bg_draw_publication_test.cpp

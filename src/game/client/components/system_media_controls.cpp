@@ -671,7 +671,7 @@ void CSystemMediaControls::ThreadMain(SRuntime &Runtime, const std::atomic_bool 
 		{
 			try
 			{
-				if(!g_Config.m_QmSmtcEnable)
+				if(!m_BackendEnabled.load(std::memory_order_relaxed))
 				{
 					PlayerVolume.Reset();
 					if(HasMedia)
@@ -922,7 +922,7 @@ void CSystemMediaControls::ThreadMain(SRuntime &Runtime, const std::atomic_bool 
 						try
 						{
 							const auto CurrentSession = Manager.GetCurrentSession();
-							if(!g_Config.m_QmSmtcEnable || !CurrentSession || Command.m_SourceAppId != SourceAppId || winrt::to_string(CurrentSession.SourceAppUserModelId()) != SourceAppId)
+							if(!m_BackendEnabled.load(std::memory_order_relaxed) || !CurrentSession || Command.m_SourceAppId != SourceAppId || winrt::to_string(CurrentSession.SourceAppUserModelId()) != SourceAppId)
 								continue;
 							switch(Command.m_Type)
 							{
@@ -1312,7 +1312,7 @@ void CSystemMediaControls::ThreadMain(SRuntime &Runtime, const std::atomic_bool 
 
 		while(!Stop)
 		{
-			if(!g_Config.m_QmSmtcEnable)
+			if(!m_BackendEnabled.load(std::memory_order_relaxed))
 			{
 				if(HasMedia)
 					ResetMprisSharedState(pShared);
@@ -1522,7 +1522,7 @@ void CSystemMediaControls::ThreadMain(SRuntime &Runtime, const std::atomic_bool 
 			}
 			for(const SMediaCommand &Command : Commands)
 			{
-				if(!g_Config.m_QmSmtcEnable || !SessionIdentity.Accepts(Command.m_Generation))
+				if(!m_BackendEnabled.load(std::memory_order_relaxed) || !SessionIdentity.Accepts(Command.m_Generation))
 					continue;
 				if(Stop.load())
 					break;
@@ -1585,6 +1585,7 @@ void CSystemMediaControls::OnInit()
 	m_NeteaseHookReadFrameInitialized = false;
 	SyncNeteaseHookConfiguration();
 #if SYSTEM_MEDIA_CONTROLS_BACKEND_ENABLED
+	m_BackendEnabled.store(g_Config.m_QmSmtcEnable != 0, std::memory_order_relaxed);
 	EnsureBackendStarted();
 #endif
 }
@@ -1594,6 +1595,7 @@ void CSystemMediaControls::OnShutdown()
 	m_Initialized = false;
 #if SYSTEM_MEDIA_CONTROLS_BACKEND_ENABLED
 	m_Worker.Stop();
+	m_BackendEnabled.store(false, std::memory_order_relaxed);
 #endif
 	m_HookRetry.Reset();
 	if(m_pNeteaseHook)
@@ -1651,6 +1653,7 @@ void CSystemMediaControls::OnUpdate()
 		}
 	}
 #if SYSTEM_MEDIA_CONTROLS_BACKEND_ENABLED
+	m_BackendEnabled.store(g_Config.m_QmSmtcEnable != 0, std::memory_order_relaxed);
 	EnsureBackendStarted();
 	auto *pRuntime = Runtime();
 	auto *pShared = pRuntime ? pRuntime->m_pShared.get() : nullptr;
