@@ -233,6 +233,21 @@ public:
 
 class CUi;
 
+// 临时绘制完整界面，结束后恢复调用方的全部嵌套裁剪。
+class CUiScopedClipSuspend
+{
+public:
+	explicit CUiScopedClipSuspend(CUi *pUi);
+	~CUiScopedClipSuspend();
+
+	CUiScopedClipSuspend(const CUiScopedClipSuspend &) = delete;
+	CUiScopedClipSuspend &operator=(const CUiScopedClipSuspend &) = delete;
+
+private:
+	CUi *m_pUi;
+	std::vector<CUIRect> m_vSavedClips;
+};
+
 class CUiScopedQuadBatch
 {
 public:
@@ -908,6 +923,7 @@ private:
 	CUIRect m_Screen;
 	int m_LastUiScale = -1;
 
+	friend class CUiScopedClipSuspend;
 	std::vector<CUIRect> m_vClips;
 	void UpdateClipping();
 

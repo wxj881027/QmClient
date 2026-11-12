@@ -75,6 +75,22 @@ void CUIElement::InitRects(int RequestedRectCount)
 
 CUIElement::SUIElementRect::SUIElementRect() { Reset(); }
 
+CUiScopedClipSuspend::CUiScopedClipSuspend(CUi *pUi) :
+	m_pUi(pUi)
+{
+	// 先提交外层批次，避免待绘制内容使用临时界面的裁剪状态。
+	m_pUi->FlushQuadBatch();
+	m_vSavedClips.swap(m_pUi->m_vClips);
+	m_pUi->UpdateClipping();
+}
+
+CUiScopedClipSuspend::~CUiScopedClipSuspend()
+{
+	m_pUi->FlushQuadBatch();
+	m_vSavedClips.swap(m_pUi->m_vClips);
+	m_pUi->UpdateClipping();
+}
+
 CUiScopedQuadBatch::CUiScopedQuadBatch(CUi *pUi) :
 	m_pUi(pUi)
 {

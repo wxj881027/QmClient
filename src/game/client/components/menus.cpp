@@ -2849,9 +2849,9 @@ void CMenus::RenderLoadingDirect(const char *pCaption, const char *pContent, std
 	// need up date this here to get correct
 	ms_GuiColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_UiColor, true));
 
+	// 设置卡片加载背景时会重入加载界面，返回后还需继续关闭外层裁剪。
+	CUiScopedClipSuspend ClipScope(Ui());
 	Ui()->MapScreen();
-	// ClipDisable 需要与 ClipEnable 配对；统一走 ResetClipState 清理帧边界残留。
-	Ui()->ResetClipState();
 
 	if(GameClient()->m_MenuBackground.IsLoading())
 	{

@@ -5756,6 +5756,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/client/qm_text_initialization_test.cpp
       src/test/integration/qmclient/client/qm_text_device_recovery_test.cpp
       src/test/integration/qmclient/ui/qm_popup_blur_scope_test.cpp
+      src/test/integration/qmclient/ui/qm_clip_suspend_test.cpp
       src/test/integration/qmclient/ui/qm_author_name_blur_test.cpp
       src/game/client/QmUi/QmAuthorName.cpp
       src/game/client/components/qmclient/qm_sponsor_authors.cpp
