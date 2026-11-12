@@ -247,6 +247,11 @@ namespace qm_card_catalog
 	}
 	bool IsTClientCard(const char *pStableId)
 	{
+		// 标准卡（`deck:` + 标准页签）一律走标准目录：DDNet 页的「网络补偿」子页签里
+		// 也有 `deck:ddnet-prediction`，但它不是 TClient 实现，先命中这里会分派到
+		// RunTClientMainCard 的空分支、卡片变成 0 高的空壳。
+		if(IsStandardCard(pStableId))
+			return false;
 		const auto *pDefault = qm_card_registry::FindByStableId(pStableId);
 		if(pDefault == nullptr || pDefault->m_pDefaultTab == nullptr || pDefault->m_pNavigationStableId != nullptr)
 			return false;

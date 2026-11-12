@@ -1312,3 +1312,34 @@ TEST(QmCardRegistry, FavoriteMapsCardIsRemovedFromSettingsAndSearch)
 		}));
 	}
 }
+
+// 标准卡（deck:）与 TClient 卡是两个互斥的渲染目录：DDNet 页「网络补偿」子页签
+// 里也有 deck: 前缀的卡（deck:ddnet-prediction），若同时被判成 TClient 卡，
+// BuildCard 会先命中 TClient 分派、落到没有该卡分支的实现，卡片变 0 高空壳。
+TEST(QmCardRegistry, StandardCardsAreNeverRoutedThroughTheTClientDirectory)
+{
+	for(const qm_card_registry::SCardDefault &Default : qm_card_registry::Defaults())
+	{
+		if(Default.m_pStableId == nullptr || Default.m_pNavigationStableId != nullptr)
+			continue;
+		if(!qm_card_catalog::IsStandardCard(Default.m_pStableId))
+			continue;
+		SCOPED_TRACE(Default.m_pStableId);
+		EXPECT_FALSE(qm_card_catalog::IsTClientCard(Default.m_pStableId));
+	}
+	// 迁到「网络补偿」子页签的三张卡实现仍在 TClient 模块，必须继续走 TClient 目录。
+	for(const char *pId : {"tclient:input", "tclient:anti-latency-tools", "tclient:improved-anti-ping"})
+	{
+		SCOPED_TRACE(pId);
+		EXPECT_TRUE(qm_card_catalog::IsTClientCard(pId));
+		EXPECT_FALSE(qm_card_catalog::IsStandardCard(pId));
+	}
+	const auto &vPredictionPage = qm_card_catalog::CatalogPageStableIds("ddnet-prediction");
+	for(const char *pId : {"deck:ddnet-prediction", "tclient:input", "tclient:anti-latency-tools", "tclient:improved-anti-ping"})
+	{
+		SCOPED_TRACE(pId);
+		EXPECT_TRUE(std::any_of(vPredictionPage.begin(), vPredictionPage.end(), [pId](const char *pCandidate) {
+			return std::string(pCandidate) == pId;
+		}));
+	}
+}
