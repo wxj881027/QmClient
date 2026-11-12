@@ -2155,29 +2155,19 @@ void CGameClient::OnRender()
 			pComponent->OnRender();
 		}
 	};
-	const bool ProfileComponents = g_Config.m_QmPerfStutterDiagnostics != 0;
-	const bool WorldLyricsEnabled = g_Config.m_QmWorldLyrics && Client()->State() == IClient::STATE_ONLINE;
-	size_t DeferredPlayers = m_vpAll.size();
-	const auto RenderComponentAt = [&](size_t Index) {
-		CPerfTimer ComponentTimer(ProfileComponents);
-		RenderComponent(m_vpAll[Index]);
-		if(ProfileComponents)
-			RecordComponentRender(Index, ComponentTimer.ElapsedMs());
-	};
-	for(size_t i = 0; i < m_vpAll.size(); ++i)
+	if(g_Config.m_QmPerfStutterDiagnostics)
 	{
-		if(WorldLyricsEnabled && m_vpAll[i] == &m_Players)
+		for(size_t i = 0; i < m_vpAll.size(); ++i)
 		{
-			DeferredPlayers = i;
-			continue;
+			CPerfTimer ComponentTimer;
+			RenderComponent(m_vpAll[i]);
+			RecordComponentRender(i, ComponentTimer.ElapsedMs());
 		}
-		RenderComponentAt(i);
-		if(m_vpAll[i] == &m_LyricsPresentation && DeferredPlayers < m_vpAll.size())
-		{
-			// 开启世界歌词时按地图、歌词、Tee 排序；每个组件仍只绘制一次并独立计时。
-			RenderComponentAt(DeferredPlayers);
-			DeferredPlayers = m_vpAll.size();
-		}
+	}
+	else
+	{
+		for(auto &pComponent : m_vpAll)
+			RenderComponent(pComponent);
 	}
 	LogPerfStage(this, "components_total", ComponentsTimer.ElapsedMs());
 
