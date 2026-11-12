@@ -151,7 +151,7 @@ void CQmLyricsPresentation::OnUpdate()
 	{
 		// 每句生成时取当前场景上方的位置；后续镜头移动只改变投影。
 		const vec2 Anchor = GameClient()->m_Camera.m_Center + vec2(0.0f, -140.0f * GameClient()->m_Camera.m_Zoom);
-		m_WorldLyrics.Update(g_Config.m_QmWorldLyrics && Online && Playing, SourceId, Source, g_Config.m_QmLyricsLanguage, Anchor, Now / static_cast<double>(time_freq()));
+		m_WorldLyrics.Update(g_Config.m_QmWorldLyrics && Online, SourceId, Source, g_Config.m_QmLyricsLanguage, Anchor, Now / static_cast<double>(time_freq()));
 		if(!m_WorldLyrics.Current().m_Active && !m_WorldLyrics.Previous().m_Active)
 			m_WorldLyricsRenderer.Reset(*TextRender());
 	}

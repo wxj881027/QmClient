@@ -10,6 +10,21 @@ namespace
 	{
 		return {42, 1, 100, true, nullptr, Text, "译文", Start};
 	}
+
+	SLyricsData TimedLyrics()
+	{
+		SLyricsData Data;
+		Data.m_Timeline.m_HasTiming = true;
+		Data.m_Timeline.m_vLines.push_back({1000, 10000, "你好世界",
+			{{1000, 2000, "你"}, {3000, 3500, "好"}, {5000, 9000, "世界"}}});
+		return Data;
+	}
+
+	SSourceSnapshot TimedSource(const SLyricsData &Data, int64_t Position)
+	{
+		const auto &Line = Data.m_Timeline.m_vLines[0];
+		return {42, 1, 100, true, &Data, Line.m_Text, "译文", Line.m_StartMs, Line.m_EndMs, Position};
+	}
 }
 
 TEST(QmWorldLyrics, MovingThroughTheMapDoesNotMoveAnExistingAnchor)
@@ -176,33 +191,137 @@ TEST(QmWorldLyrics, AFollowingCreditFadesThePreviousLyricWithoutRenderingCredits
 	EXPECT_FALSE(State.Previous().m_Active);
 }
 
-TEST(QmWorldLyrics, TypewriterCountsUtf8CharactersAndKeepsTheCompleteLayoutText)
+TEST(QmWorldLyrics, WordTimingKeepsGapsAndLongNotesInsteadOfFinishingAfterOneAndAHalfSeconds)
 {
+	const auto Data = TimedLyrics();
 	CWorldLyricsState State;
-	State.Update(true, 1, Source(1000, "你好吗"), 0, vec2(100, 200), 0.0);
-	EXPECT_EQ(State.Current().m_aCharacterCounts[0], 3);
-	EXPECT_EQ(WorldLyricVisibleCharacters(State.Current(), 0, 0.0), 0);
-	EXPECT_EQ(WorldLyricVisibleCharacters(State.Current(), 0, 0.02), 1);
-	EXPECT_EQ(WorldLyricVisibleCharacters(State.Current(), 0, 0.07), 2);
-	EXPECT_EQ(WorldLyricVisibleCharacters(State.Current(), 0, 0.2), 3);
-	EXPECT_EQ(State.Current().m_aRows[0], "你好吗");
+	State.Update(true, 1, TimedSource(Data, 1000), 0, vec2(100, 200), 0.0);
+	EXPECT_EQ(WorldLyricVisibleCharacters(State.Current(), 0), 0);
+	State.Update(true, 1, TimedSource(Data, 2500), 0, vec2(100, 200), 1.5);
+	EXPECT_EQ(WorldLyricVisibleCharacters(State.Current(), 0), 1);
+	State.Update(true, 1, TimedSource(Data, 4500), 0, vec2(100, 200), 3.5);
+	EXPECT_EQ(WorldLyricVisibleCharacters(State.Current(), 0), 2);
+	State.Update(true, 1, TimedSource(Data, 6000), 0, vec2(100, 200), 5.0);
+	EXPECT_EQ(WorldLyricVisibleCharacters(State.Current(), 0), 3);
+	State.Update(true, 1, TimedSource(Data, 9000), 0, vec2(100, 200), 8.0);
+	EXPECT_EQ(WorldLyricVisibleCharacters(State.Current(), 0), 4);
+	EXPECT_EQ(State.Current().m_aRows[0], "你好世界");
 }
 
-TEST(QmWorldLyrics, LongLinesFinishRevealingWithinOneAndAHalfSeconds)
+TEST(QmWorldLyrics, PausedPlaybackKeepsVisibleTextAndAnchor)
 {
+	const auto Data = TimedLyrics();
 	CWorldLyricsState State;
-	const std::string Text(200, 'a');
-	State.Update(true, 1, Source(1000, Text), 0, vec2(100, 200), 0.0);
-	EXPECT_LT(WorldLyricVisibleCharacters(State.Current(), 0, 0.7), 200);
-	EXPECT_EQ(WorldLyricVisibleCharacters(State.Current(), 0, 1.5), 200);
+	State.Update(true, 1, TimedSource(Data, 2500), 0, vec2(100, 200), 0.0);
+	State.Update(true, 1, TimedSource(Data, 2500), 0, vec2(800, 900), 20.0);
+	EXPECT_EQ(WorldLyricVisibleCharacters(State.Current(), 0), 1);
+	EXPECT_EQ(State.Current().m_Anchor, vec2(100, 200));
+	EXPECT_FALSE(State.Previous().m_Active);
 }
 
-TEST(QmWorldLyrics, FadingPreviousLineFreezesItsTypewriterPosition)
+TEST(QmWorldLyrics, SeekingWithinTheSameLineUpdatesVisibleCharactersInBothDirections)
+{
+	const auto Data = TimedLyrics();
+	CWorldLyricsState State;
+	State.Update(true, 1, TimedSource(Data, 2500), 0, vec2(100, 200), 0.0);
+	State.Update(true, 1, TimedSource(Data, 9000), 0, vec2(500, 600), 0.1);
+	EXPECT_EQ(WorldLyricVisibleCharacters(State.Current(), 0), 4);
+	State.Update(true, 1, TimedSource(Data, 2500), 0, vec2(500, 600), 0.2);
+	EXPECT_EQ(WorldLyricVisibleCharacters(State.Current(), 0), 1);
+	EXPECT_EQ(State.Current().m_Anchor, vec2(100, 200));
+}
+
+TEST(QmWorldLyrics, MissingWordTimingOrPlaybackPositionShowsTheWholeLine)
 {
 	CWorldLyricsState State;
-	State.Update(true, 1, Source(1000, "abcdefghij"), 0, vec2(100, 200), 0.0);
-	const int Visible = WorldLyricVisibleCharacters(State.Current(), 0, 0.1);
-	State.Update(true, 1, Source(2000, "second"), 0, vec2(500, 600), 0.1);
-	EXPECT_EQ(WorldLyricVisibleCharacters(State.Previous(), 0, 0.8), Visible);
-	EXPECT_EQ(WorldLyricVisibleCharacters(State.Current(), 0, 0.1), 0);
+	State.Update(true, 1, Source(1000, "没有逐字时间"), 0, vec2(100, 200), 0.0);
+	EXPECT_EQ(WorldLyricVisibleCharacters(State.Current(), 0), 6);
+	auto Data = TimedLyrics();
+	State.Update(true, 1, TimedSource(Data, -1), 0, vec2(100, 200), 0.1);
+	EXPECT_EQ(WorldLyricVisibleCharacters(State.Current(), 0), 4);
+	Data.m_Timeline.m_vLines[0].m_vWords.clear();
+	State.Update(true, 1, TimedSource(Data, 1000), 0, vec2(100, 200), 0.2);
+	EXPECT_EQ(WorldLyricVisibleCharacters(State.Current(), 0), 4);
+}
+
+TEST(QmWorldLyrics, LateWordTimingUpdatesTheCurrentLineWithoutRespawningIt)
+{
+	const auto Data = TimedLyrics();
+	CWorldLyricsState State;
+	State.Update(true, 1, Source(1000, "你好世界"), 0, vec2(100, 200), 0.0);
+	State.Update(true, 1, TimedSource(Data, 2500), 0, vec2(500, 600), 0.1);
+	EXPECT_EQ(WorldLyricVisibleCharacters(State.Current(), 0), 1);
+	EXPECT_EQ(State.Current().m_Anchor, vec2(100, 200));
+	EXPECT_FALSE(State.Previous().m_Active);
+}
+
+TEST(QmWorldLyrics, TranslationWithoutWordTimingStaysFullyVisible)
+{
+	const auto Data = TimedLyrics();
+	CWorldLyricsState State;
+	auto Snapshot = TimedSource(Data, 2500);
+	// 即使译文恰好是原文前缀，也不能套用原文词时间。
+	Snapshot.m_Translation = "你好";
+	State.Update(true, 1, Snapshot, 2, vec2(100, 200), 0.0);
+	EXPECT_EQ(WorldLyricVisibleCharacters(State.Current(), 0), 1);
+	EXPECT_EQ(WorldLyricVisibleCharacters(State.Current(), 1), 2);
+	State.Update(true, 1, Snapshot, 1, vec2(500, 600), 0.1);
+	EXPECT_EQ(WorldLyricVisibleCharacters(State.Current(), 0), 2);
+	EXPECT_EQ(State.Current().m_Anchor, vec2(100, 200));
+}
+
+TEST(QmWorldLyrics, TranslationIdenticalToTheOriginalIsStillFullyVisibleInTranslationMode)
+{
+	const auto Data = TimedLyrics();
+	auto Snapshot = TimedSource(Data, 1000);
+	Snapshot.m_Translation = Snapshot.m_Original;
+	CWorldLyricsState State;
+	State.Update(true, 1, Snapshot, 1, vec2(100, 200), 0.0);
+	EXPECT_EQ(WorldLyricVisibleCharacters(State.Current(), 0), 4);
+}
+
+TEST(QmWorldLyrics, ZeroDurationPunctuationAndSpacesKeepTheirCharacterPositions)
+{
+	auto Data = TimedLyrics();
+	Data.m_Timeline.m_vLines[0] = {1000, 6000, "A, B(x)",
+		{{1000, 2000, "A"}, {2000, 2000, ", "}, {4000, 6000, "B(x)"}}};
+	CWorldLyricsState State;
+	State.Update(true, 1, TimedSource(Data, 2000), 0, vec2(100, 200), 0.0);
+	EXPECT_EQ(WorldLyricVisibleCharacters(State.Current(), 0), 3);
+	State.Update(true, 1, TimedSource(Data, 5000), 0, vec2(100, 200), 0.1);
+	EXPECT_EQ(WorldLyricVisibleCharacters(State.Current(), 0), 5);
+}
+
+TEST(QmWorldLyrics, IncompleteWordTextFallsBackToTheWholeLine)
+{
+	auto Data = TimedLyrics();
+	Data.m_Timeline.m_vLines[0].m_vWords.erase(Data.m_Timeline.m_vLines[0].m_vWords.begin());
+	CWorldLyricsState State;
+	State.Update(true, 1, TimedSource(Data, 1000), 0, vec2(100, 200), 0.0);
+	EXPECT_EQ(WorldLyricVisibleCharacters(State.Current(), 0), 4);
+}
+
+TEST(QmWorldLyrics, TruncatedLongWordKeepsTheFullWordsTiming)
+{
+	auto Data = TimedLyrics();
+	std::string Text;
+	for(int Index = 0; Index < 600; ++Index)
+		Text += "歌";
+	Data.m_Timeline.m_vLines[0] = {1000, 11000, Text, {{1000, 11000, Text}}};
+	CWorldLyricsState State;
+	State.Update(true, 1, TimedSource(Data, 3500), 0, vec2(100, 200), 0.0);
+	EXPECT_EQ(WorldLyricVisibleCharacters(State.Current(), 0), 150);
+	EXPECT_EQ(State.Current().m_aCharacterCounts[0], 341);
+}
+
+TEST(QmWorldLyrics, FadingPreviousLineKeepsItsLastPlaybackProgressWithoutBorrowingData)
+{
+	auto Data = TimedLyrics();
+	CWorldLyricsState State;
+	State.Update(true, 1, TimedSource(Data, 2500), 0, vec2(100, 200), 0.0);
+	State.Update(true, 1, Source(11000, "next"), 0, vec2(500, 600), 0.1);
+	Data = {};
+	State.Update(true, 1, Source(11000, "next"), 0, vec2(500, 600), 0.8);
+	EXPECT_EQ(WorldLyricVisibleCharacters(State.Previous(), 0), 1);
+	EXPECT_EQ(WorldLyricVisibleCharacters(State.Current(), 0), 4);
 }

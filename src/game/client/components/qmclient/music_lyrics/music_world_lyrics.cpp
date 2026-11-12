@@ -45,7 +45,7 @@ namespace QmMusicLyrics
 					}
 					continue;
 				}
-				const int VisibleCharacters = WorldLyricVisibleCharacters(Line, Index, Now);
+				const int VisibleCharacters = WorldLyricVisibleCharacters(Line, Index);
 				if(!Cache.m_Initialized || Cache.m_Text != Line.m_aRows[Index] || Cache.m_VisibleCharacters != VisibleCharacters || Cache.m_AtlasRevision != TextRender.GlyphAtlasRevision())
 				{
 					TextRender.DeleteTextContainer(Cache.m_Container);
@@ -56,7 +56,11 @@ namespace QmMusicLyrics
 					Cursor.m_LineWidth = 420.0f;
 					// 按完整句子排版，只隐藏尚未出现的字符，避免逐字居中或换行跳动。
 					if(VisibleCharacters < Line.m_aCharacterCounts[Index])
-						Cursor.m_vColorSplits.emplace_back(VisibleCharacters, Line.m_aCharacterCounts[Index] - VisibleCharacters, ColorRGBA(1.0f, 1.0f, 1.0f, 0.0f));
+					{
+						// 文字渲染器的颜色分段使用 UTF-8 字节位置，不能直接传字符数量。
+						const int VisibleBytes = static_cast<int>(str_utf8_offset_chars_to_bytes(Line.m_aRows[Index].c_str(), VisibleCharacters));
+						Cursor.m_vColorSplits.emplace_back(VisibleBytes, -1, ColorRGBA(1.0f, 1.0f, 1.0f, 0.0f));
+					}
 					Cache.m_VisibleCharacters = VisibleCharacters;
 					Cache.m_Text = Line.m_aRows[Index];
 					TextRender.CreateTextContainer(Cache.m_Container, &Cursor, Cache.m_Text.c_str());
