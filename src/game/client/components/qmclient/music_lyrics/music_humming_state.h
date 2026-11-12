@@ -94,8 +94,15 @@ namespace QmMusicLyrics
 			m_aMessages = {};
 			m_LineCount = 0;
 			m_NextLine = 0;
-			m_NextMs = NowMs + std::clamp(DelayMs, 90000, 270000);
+			m_NextMs = NowMs + std::clamp(DelayMs, 360000, 1200000);
 			m_Scheduled = m_Available;
+		}
+
+		void OnSingingResult(bool Sent, int64_t NowMs, int NextGroupDelayMs)
+		{
+			// 唱歌成功后取消本组剩余歌词，从本次发送重新等待。
+			if(Sent)
+				Schedule(NowMs, NextGroupDelayMs);
 		}
 
 		bool BeginGroup(const NeteaseLyrics::STimeline &Timeline, size_t Choice, int64_t NowMs)

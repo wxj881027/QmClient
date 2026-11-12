@@ -16,8 +16,8 @@ namespace
 {
 	int NextGroupDelayMs()
 	{
-		// 组间随机等待放大三倍，组内句间隔仍由状态机保持 3 秒。
-		return (30 + secure_rand_below(61)) * 3000;
+		// 组间按整秒随机等待 360～1200 秒，组内句间隔仍为 3 秒。
+		return (360 + secure_rand_below(841)) * 1000;
 	}
 }
 
@@ -37,9 +37,13 @@ void CQmLyricsPresentation::ConSing(IConsole::IResult *pResult, void *pUserData)
 	int SourceId;
 	const auto Source = pThis->CurrentSource(SourceId);
 	pThis->SynchronizeSinging(Source, SourceId);
-	const std::string Message = pThis->m_Singing.OnStroke(true, time_get() * 1000 / time_freq(), Source.m_Original);
+	const int64_t NowMs = time_get() * 1000 / time_freq();
+	const std::string Message = pThis->m_Singing.OnStroke(true, NowMs, Source.m_Original);
 	if(!Message.empty())
-		pThis->GameClient()->m_Chat.SendAutomaticChat(g_Config.m_ClDummy, Message.c_str());
+	{
+		const bool Sent = pThis->GameClient()->m_Chat.SendAutomaticChat(g_Config.m_ClDummy, Message.c_str());
+		pThis->m_Humming.OnSingingResult(Sent, NowMs, NextGroupDelayMs());
+	}
 }
 
 void CQmLyricsPresentation::OnReset()
