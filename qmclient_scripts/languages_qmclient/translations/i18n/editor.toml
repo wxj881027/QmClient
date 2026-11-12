@@ -80,139 +80,139 @@ simplified_chinese = "9+ 条新被提及消息"
 key = "[Alt+Down] Move the selected command down."
 context = "Editor"
 [message.translations]
-simplified_chinese = "[Alt+Down] 将选中的命令下移."
+simplified_chinese = "[Alt+Down] 将选中的命令下移。"
 
 [[message]]
 key = "[Alt+Enter] Update the selected command based on the entered value."
 context = "Editor"
 [message.translations]
-simplified_chinese = "[Alt+Enter] 根据输入的值更新选中的命令."
+simplified_chinese = "[Alt+Enter] 根据输入的值更新选中的命令。"
 
 [[message]]
 key = "[Alt+Up] Move the selected command up."
 context = "Editor"
 [message.translations]
-simplified_chinese = "[Alt+Up] 将选中的命令上移."
+simplified_chinese = "[Alt+Up] 将选中的命令上移。"
 
 [[message]]
 key = "[Ctrl+A] Open a map and add everything from that map to the current one."
 context = "Editor"
 [message.translations]
-simplified_chinese = "[Ctrl+A] 将所选地图文件的所有内容添加到当前地图中."
+simplified_chinese = "[Ctrl+A] 将所选地图文件的所有内容添加到当前地图中。"
 
 [[message]]
 key = "[Ctrl+D] Toggle brush draw mode: preserve or override existing tiles."
 context = "Editor"
 [message.translations]
-simplified_chinese = "[Ctrl+D] 切换画笔绘制模式: 保留或覆盖现有图块."
+simplified_chinese = "[Ctrl+D] 切换画笔绘制模式：保留或覆盖现有图块。"
 
 [[message]]
 key = "[Ctrl+F] Find empty slot."
 context = "Editor"
 [message.translations]
-simplified_chinese = "[Ctrl+F] 查找空闲插槽."
+simplified_chinese = "[Ctrl+F] 查找空闲插槽。"
 
 [[message]]
 key = "[Ctrl+F] Find next free checkpoint number."
 context = "Editor"
 [message.translations]
-simplified_chinese = "[Ctrl+F] 查找下一个可用检查点编号."
+simplified_chinese = "[Ctrl+F] 查找下一个可用检查点编号。"
 
 [[message]]
 key = "[Ctrl+F] Find next free tele number."
 context = "Editor"
 [message.translations]
-simplified_chinese = "[Ctrl+F] 查找下一个可用传送编号."
+simplified_chinese = "[Ctrl+F] 查找下一个可用传送编号。"
 
 [[message]]
 key = "[Ctrl+F] Find unused zone."
 context = "Editor"
 [message.translations]
-simplified_chinese = "[Ctrl+F] 查找未使用区域."
+simplified_chinese = "[Ctrl+F] 查找未使用区域。"
 
 [[message]]
 key = "[Ctrl+G] Toggle grid."
 context = "Editor"
 [message.translations]
-simplified_chinese = "[Ctrl+G] 切换网格."
+simplified_chinese = "[Ctrl+G] 切换网格。"
 
 [[message]]
 key = "[Ctrl+H] Toggle high detail."
 context = "Editor"
 [message.translations]
-simplified_chinese = "[Ctrl+H] 切换高清细节."
+simplified_chinese = "[Ctrl+H] 切换高清细节。"
 
 [[message]]
 key = "[Ctrl+I] Show tile information."
 context = "Editor"
 [message.translations]
-simplified_chinese = "[Ctrl+I] 显示图块编号."
+simplified_chinese = "[Ctrl+I] 显示图块编号。"
 
 [[message]]
 key = "[Ctrl+L] Open a map for editing."
 context = "Editor"
 [message.translations]
-simplified_chinese = "按下[Ctrl+L] 打开地图进行编辑."
+simplified_chinese = "按下[Ctrl+L] 打开地图进行编辑。"
 
 [[message]]
 key = "[Ctrl+M] Toggle animation."
 context = "Editor"
 [message.translations]
-simplified_chinese = "[Ctrl+M] 切换动画."
+simplified_chinese = "[Ctrl+M] 切换动画。"
 
 [[message]]
 key = "[Ctrl+N] Create a new map."
 context = "Editor"
 [message.translations]
-simplified_chinese = "[Ctrl+N] 创建一张新地图."
+simplified_chinese = "[Ctrl+N] 创建一张新地图。"
 
 [[message]]
 key = "[Ctrl+Q] Add a new quad."
 context = "Editor"
 [message.translations]
-simplified_chinese = "[Ctrl+Q] 添加一个新的四边形."
+simplified_chinese = "[Ctrl+Q] 添加一个新的四边形。"
 
 [[message]]
 key = "[Ctrl+Q] Add a new sound source."
 context = "Editor"
 [message.translations]
-simplified_chinese = "[Ctrl+Q] 添加一个新的声源."
+simplified_chinese = "[Ctrl+Q] 添加一个新的声源。"
 
 [[message]]
 key = "[Ctrl+S] Save the current map."
 context = "Editor"
 [message.translations]
-simplified_chinese = "按下[Ctrl+S] 保存当前地图."
+simplified_chinese = "按下[Ctrl+S] 保存当前地图。"
 
 [[message]]
 key = "[Ctrl+Shift+Alt+S] Save a copy of the current map under a new name."
 context = "Editor"
 [message.translations]
-simplified_chinese = "按下[Ctrl+Shift+Alt+S] 将当前地图另存为新名称."
+simplified_chinese = "按下[Ctrl+Shift+Alt+S] 将当前地图另存为新名称。"
 
 [[message]]
 key = "[Ctrl+Shift+C] Color pipette. Pick a color from the screen by clicking on it."
 context = "Editor"
 [message.translations]
-simplified_chinese = "[Ctrl+Shift+C] 颜色吸管. 通过点击屏幕即可选取颜色."
+simplified_chinese = "[Ctrl+Shift+C] 颜色吸管。通过点击屏幕即可选取颜色。"
 
 [[message]]
 key = "[Ctrl+Shift+I] Show tile information in hexadecimal."
 context = "Editor"
 [message.translations]
-simplified_chinese = "[Ctrl+Shift+I] 以十六进制显示图块编号."
+simplified_chinese = "[Ctrl+Shift+I] 以十六进制显示图块编号。"
 
 [[message]]
 key = "[Ctrl+Shift+L] Open the current ingame map for editing."
 context = "Editor"
 [message.translations]
-simplified_chinese = "[Ctrl+Shift+L] 打开当前游戏中的地图进行编辑."
+simplified_chinese = "[Ctrl+Shift+L] 打开当前游戏中的地图进行编辑。"
 
 [[message]]
 key = "[Ctrl+Shift+S] Save the current map under a new name."
 context = "Editor"
 [message.translations]
-simplified_chinese = "[Ctrl+Shift+S] 以新名称保存当前地图."
+simplified_chinese = "[Ctrl+Shift+S] 以新名称保存当前地图。"
 
 [[message]]
 key = "[Ctrl+U] Allow placing unused tiles."
@@ -236,7 +236,7 @@ simplified_chinese = "[Ctrl+Y] 重做上一步操作。"
 key = "[Ctrl+Y] Redo the last command edit."
 context = "Editor"
 [message.translations]
-simplified_chinese = "[Ctrl+Y] 重做上次的命令编辑."
+simplified_chinese = "[Ctrl+Y] 重做上次的命令编辑。"
 
 [[message]]
 key = "[Ctrl+Z] Undo the last action."
@@ -248,31 +248,31 @@ simplified_chinese = "[Ctrl+Z] 撤销上一步操作。"
 key = "[Ctrl+Z] Undo the last command edit."
 context = "Editor"
 [message.translations]
-simplified_chinese = "[Ctrl+Z] 撤销上次的命令编辑."
+simplified_chinese = "[Ctrl+Z] 撤销上次的命令编辑。"
 
 [[message]]
 key = "[Delete] Delete the selected command from the command list."
 context = "Editor"
 [message.translations]
-simplified_chinese = "[Delete] 从命令列表中删除选中的命令."
+simplified_chinese = "[Delete] 从命令列表中删除选中的命令。"
 
 [[message]]
 key = "[Enter] Add a command to the command list."
 context = "Editor"
 [message.translations]
-simplified_chinese = "[Enter] 将命令添加到命令列表."
+simplified_chinese = "[Enter] 将命令添加到命令列表。"
 
 [[message]]
 key = "[Enter] Replace the corresponding command in the command list."
 context = "Editor"
 [message.translations]
-simplified_chinese = "[Enter] 替换命令列表中的相应命令."
+simplified_chinese = "[Enter] 替换命令列表中的相应命令。"
 
 [[message]]
 key = "[Escape] Exit from the editor."
 context = "Editor"
 [message.translations]
-simplified_chinese = "[Escape] 退出编辑器."
+simplified_chinese = "[Escape] 退出编辑器。"
 
 [[message]]
 key = "[F1] Open the DDNet Wiki page for the map editor in a web browser."
@@ -284,37 +284,37 @@ simplified_chinese = "[F1] 在网页浏览器中打开地图编辑器维基页�
 key = "[Home] Restore map focus."
 context = "Editor"
 [message.translations]
-simplified_chinese = "[Home] 恢复地图焦点."
+simplified_chinese = "[Home] 恢复地图焦点。"
 
 [[message]]
 key = "[M] Flip the brush vertically."
 context = "Editor"
 [message.translations]
-simplified_chinese = "[M] 垂直翻转画笔."
+simplified_chinese = "[M] 垂直翻转画笔。"
 
 [[message]]
 key = "[N] Flip the brush horizontally."
 context = "Editor"
 [message.translations]
-simplified_chinese = "[N] 水平翻转画笔."
+simplified_chinese = "[N] 水平翻转画笔。"
 
 [[message]]
 key = "[N] Show next switcher with this number."
 context = "Editor"
 [message.translations]
-simplified_chinese = "[N] 显示具有此编号的下一个开关."
+simplified_chinese = "[N] 显示具有此编号的下一个开关。"
 
 [[message]]
 key = "[N] Show next tele with this number."
 context = "Editor"
 [message.translations]
-simplified_chinese = "[N] 显示具有此编号的下一个传送点."
+simplified_chinese = "[N] 显示具有此编号的下一个传送点。"
 
 [[message]]
 key = "[N] Show next tune tile with this number."
 context = "Editor"
 [message.translations]
-simplified_chinese = "[N] 显示具有此编号的下一个物理图块."
+simplified_chinese = "[N] 显示具有此编号的下一个物理图块。"
 
 [[message]]
 key = "[NumPad*] Reset zoom to default value."
@@ -326,7 +326,7 @@ simplified_chinese = "[NumPad*] 重置缩放到默认值。"
 key = "[Numpad*] Zoom to normal and remove editor offset."
 context = "Editor"
 [message.translations]
-simplified_chinese = "[Numpad*] 缩放到正常并移除编辑器偏移."
+simplified_chinese = "[Numpad*] 缩放到正常并移除编辑器偏移。"
 
 [[message]]
 key = "[NumPad+] Zoom in horizontally, hold shift to zoom vertically."
@@ -338,7 +338,7 @@ simplified_chinese = "[NumPad+] 水平放大，按住 Shift 垂直缩放。"
 key = "[Numpad+] Zoom in."
 context = "Editor"
 [message.translations]
-simplified_chinese = "[Numpad+] 放大."
+simplified_chinese = "[Numpad+] 放大。"
 
 [[message]]
 key = "[NumPad-] Zoom out horizontally, hold shift to zoom vertically."
@@ -350,7 +350,7 @@ simplified_chinese = "[NumPad-] 水平缩小，按住 Shift 垂直缩放。"
 key = "[Numpad-] Zoom out."
 context = "Editor"
 [message.translations]
-simplified_chinese = "[Numpad-] 缩小."
+simplified_chinese = "[Numpad-] 缩小。"
 
 [[message]]
 key = "[R] Rotate the brush counter-clockwise."
@@ -362,7 +362,7 @@ simplified_chinese = "[R] 逆时针旋转画笔。"
 key = "[T] Rotate the brush clockwise."
 context = "Editor"
 [message.translations]
-simplified_chinese = "[T] 顺时针旋转画笔."
+simplified_chinese = "[T] 顺时针旋转画笔。"
 
 [[message]]
 key = "Add"
@@ -374,7 +374,7 @@ simplified_chinese = "添加"
 key = "Add a new group."
 context = "Editor"
 [message.translations]
-simplified_chinese = "添加一个新组."
+simplified_chinese = "添加一个新组。"
 
 [[message]]
 key = "Add command"
@@ -476,7 +476,7 @@ simplified_chinese = "添加物理层"
 key = "Adjust the map details of the current map."
 context = "Editor"
 [message.translations]
-simplified_chinese = "调整当前地图的地图详情."
+simplified_chinese = "调整当前地图的地图详情。"
 
 [[message]]
 key = "Air"
@@ -494,7 +494,7 @@ simplified_chinese = "对齐"
 key = "Align coordinates of the quad points."
 context = "Editor"
 [message.translations]
-simplified_chinese = "对齐图形各点的坐标."
+simplified_chinese = "对齐图形各点的坐标。"
 
 [[message]]
 key = "Align quads"
@@ -578,7 +578,7 @@ simplified_chinese = "你确定要删除%s“%s”吗？"
 key = "Are you sure that you want to remove all unused envelopes from this map?"
 context = "Editor"
 [message.translations]
-simplified_chinese = "确定要从此地图中删除所有未使用的导入吗?"
+simplified_chinese = "确定要从此地图中删除所有未使用的导入吗？"
 
 [[message]]
 key = "Aspect ratio"
@@ -596,7 +596,7 @@ simplified_chinese = "作者"
 key = "Author:"
 context = "Editor"
 [message.translations]
-simplified_chinese = "作者:"
+simplified_chinese = "作者："
 
 [[message]]
 key = "Auto map reload"
@@ -674,19 +674,19 @@ simplified_chinese = "蓝色检查点传送"
 key = "BLUE CHECKPOINT TELEPORT: Sends tees to CTO with the same number as the last touched TELEPORT CHECKPOINT. Speed and hook are kept."
 context = "Editor"
 [message.translations]
-simplified_chinese = "蓝色检查点传送: 将tee传送到与最后接触的传送检查点相同编号的CTO.速度和钩子保持不变."
+simplified_chinese = "蓝色检查点传送：将Tee传送到与最后接触的传送检查点相同编号的CTO。速度和钩子保持不变。"
 
 [[message]]
 key = "BLUE SPIKE: Blue team spikes. Gives negative points when killer is in red team. Amount of points given is set inside the server."
 context = "Editor"
 [message.translations]
-simplified_chinese = "蓝色尖刺: 蓝队尖刺.当杀手在红队时给予负分.给予的分数在服务器中设置."
+simplified_chinese = "蓝色尖刺：蓝队尖刺。当杀手在红队时给予负分。给予的分数在服务器中设置。"
 
 [[message]]
 key = "BLUE TELEPORT: After falling into this tile, tees appear on TO with the same number. Speed and hook are kept."
 context = "Editor"
 [message.translations]
-simplified_chinese = "蓝色传送: 掉入此图块后,tee会出现在相同编号的TO上.速度和钩子保持不变."
+simplified_chinese = "蓝色传送：掉入此图块后，Tee会出现在相同编号的TO上。速度和钩子保持不变。"
 
 [[message]]
 key = "Blue value of the envelope."
@@ -698,19 +698,19 @@ simplified_chinese = "动画的蓝色通道值。"
 key = "BONUS: Subtracts time from your current race time. Opposite of PENALTY."
 context = "Editor"
 [message.translations]
-simplified_chinese = "奖励: 从你当前的竞赛时间中减少时间.与惩罚相反."
+simplified_chinese = "奖励：从你当前的竞赛时间中减少时间。与惩罚相反。"
 
 [[message]]
 key = "browser(internet)"
 context = "Editor"
 [message.translations]
-simplified_chinese = "浏览器(互联网)"
+simplified_chinese = "浏览器（互联网）"
 
 [[message]]
 key = "browser(lan)"
 context = "Editor"
 [message.translations]
-simplified_chinese = "浏览器(局域网)"
+simplified_chinese = "浏览器（局域网）"
 
 [[message]]
 key = "Brush coloring"
@@ -728,7 +728,7 @@ simplified_chinese = "画笔绘制（x%d）于 %d 个图层"
 key = "BULLET: Bounces off the walls without explosion. Touching the bullet works like FREEZE tile (freezes for 3 seconds by default)."
 context = "Editor"
 [message.translations]
-simplified_chinese = "子弹: 从墙壁弹开不会爆炸.接触子弹像冻结图块一样工作(默认冻结3秒)."
+simplified_chinese = "子弹：从墙壁弹开不会爆炸。接触子弹像冻结图块一样工作（默认冻结3秒）。"
 
 [[message]]
 key = "Cancel"
@@ -752,7 +752,7 @@ simplified_chinese = "居中枢轴"
 key = "Center the pivot of the current quad."
 context = "Editor"
 [message.translations]
-simplified_chinese = "将当前方块的枢轴点居中."
+simplified_chinese = "将当前方块的枢轴点居中。"
 
 [[message]]
 key = "Centralize"
@@ -764,13 +764,13 @@ simplified_chinese = "居中"
 key = "Change sound source shape."
 context = "Editor"
 [message.translations]
-simplified_chinese = "更改声音源形状."
+simplified_chinese = "更改声音源形状。"
 
 [[message]]
 key = "Change the animation settings."
 context = "Editor"
 [message.translations]
-simplified_chinese = "更改动画设置."
+simplified_chinese = "更改动画设置。"
 
 [[message]]
 key = "Change the grid settings."
@@ -794,13 +794,13 @@ simplified_chinese = "检查点"
 key = "CHECKPOINT TELEPORT TO: Tees will appear here after touching TELEPORT CHECKPOINT with the same number and falling into CFROM TELEPORT."
 context = "Editor"
 [message.translations]
-simplified_chinese = "检查点传送目标: 在接触相同编号的传送检查点并掉入CFROM传送后,tee会出现在这里."
+simplified_chinese = "检查点传送目标：在接触相同编号的传送检查点并掉入CFROM传送后，Tee会出现在这里。"
 
 [[message]]
 key = "CHECKPOINT TELEPORT: After having touched this tile, any CFRM will teleport you to CTO with the same number."
 context = "Editor"
 [message.translations]
-simplified_chinese = "检查点传送: 接触此图块后,任何CFRM都会将你传送到相同编号的CTO."
+simplified_chinese = "检查点传送：接触此图块后，任何CFRM都会将你传送到相同编号的CTO。"
 
 [[message]]
 key = "Choose"
@@ -872,7 +872,7 @@ simplified_chinese = "裁剪纵"
 key = "Close this dialog."
 context = "Editor"
 [message.translations]
-simplified_chinese = "关闭此对话框."
+simplified_chinese = "关闭此对话框。"
 
 [[message]]
 key = "Collaboration"
@@ -896,13 +896,13 @@ simplified_chinese = "折叠全部"
 key = "COLLISION OFF: You can't collide with others."
 context = "Editor"
 [message.translations]
-simplified_chinese = "关闭碰撞: 你不能与其他人碰撞."
+simplified_chinese = "关闭碰撞：你不能与其他人碰撞。"
 
 [[message]]
 key = "COLLISION: You can collide with others."
 context = "Editor"
 [message.translations]
-simplified_chinese = "碰撞: 你可以与其他人碰撞."
+simplified_chinese = "碰撞：你可以与其他人碰撞。"
 
 [[message]]
 key = "Color"
@@ -1016,7 +1016,7 @@ simplified_chinese = "构建“传送”游戏图块（x%d）"
 key = "Construct game tiles from this layer."
 context = "Editor"
 [message.translations]
-simplified_chinese = "从此层构建游戏图块."
+simplified_chinese = "从此层构建游戏图块。"
 
 [[message]]
 key = "Copy the current collaboration room code."
@@ -1058,13 +1058,13 @@ simplified_chinese = "创建新的颜色动画。"
 key = "Create a new folder."
 context = "Editor"
 [message.translations]
-simplified_chinese = "创建一个新文件夹."
+simplified_chinese = "创建一个新文件夹。"
 
 [[message]]
 key = "Create a new item layer."
 context = "Editor"
 [message.translations]
-simplified_chinese = "创建一个新的前景层."
+simplified_chinese = "创建一个新的前景层。"
 
 [[message]]
 key = "Create a new position envelope."
@@ -1076,7 +1076,7 @@ simplified_chinese = "创建新的位置动画。"
 key = "Create a new quads layer."
 context = "Editor"
 [message.translations]
-simplified_chinese = "创建一个新的四边形层."
+simplified_chinese = "创建一个新的四边形层。"
 
 [[message]]
 key = "Create a new sound envelope."
@@ -1088,43 +1088,43 @@ simplified_chinese = "创建新的声音动画。"
 key = "Create a new sound layer."
 context = "Editor"
 [message.translations]
-simplified_chinese = "创建一个新的声音层."
+simplified_chinese = "创建一个新的声音层。"
 
 [[message]]
 key = "Create a new speedup layer."
 context = "Editor"
 [message.translations]
-simplified_chinese = "创建一个新的加速层."
+simplified_chinese = "创建一个新的加速层。"
 
 [[message]]
 key = "Create a new switch layer."
 context = "Editor"
 [message.translations]
-simplified_chinese = "创建一个新的开关层."
+simplified_chinese = "创建一个新的开关层。"
 
 [[message]]
 key = "Create a new tele layer."
 context = "Editor"
 [message.translations]
-simplified_chinese = "创建一个新的传送层."
+simplified_chinese = "创建一个新的传送层。"
 
 [[message]]
 key = "Create a new tile layer."
 context = "Editor"
 [message.translations]
-simplified_chinese = "创建一个新的图块层."
+simplified_chinese = "创建一个新的图块层。"
 
 [[message]]
 key = "Create a new tuning layer."
 context = "Editor"
 [message.translations]
-simplified_chinese = "创建一个新的物理层."
+simplified_chinese = "创建一个新的物理层。"
 
 [[message]]
 key = "Create an identical copy of the selected layer."
 context = "Editor"
 [message.translations]
-simplified_chinese = "创建所选层的相同副本."
+simplified_chinese = "创建所选层的相同副本。"
 
 [[message]]
 key = "Create new folder"
@@ -1166,19 +1166,19 @@ simplified_chinese = "致谢"
 key = "Credits:"
 context = "Editor"
 [message.translations]
-simplified_chinese = "致谢:"
+simplified_chinese = "致谢："
 
 [[message]]
 key = "CREDITS: Who designed the entities."
 context = "Editor"
 [message.translations]
-simplified_chinese = "制作人员: 谁设计了这些实体."
+simplified_chinese = "制作人员：谁设计了这些实体。"
 
 [[message]]
 key = "Current path: %s"
 context = "Editor"
 [message.translations]
-simplified_chinese = "当前路径: %s"
+simplified_chinese = "当前路径：%s"
 
 [[message]]
 key = "Current proof position at"
@@ -1208,31 +1208,31 @@ simplified_chinese = "自定义实体不能与默认实体同名。"
 key = "custom(1)"
 context = "Editor"
 [message.translations]
-simplified_chinese = "自定义(1)"
+simplified_chinese = "自定义（1）"
 
 [[message]]
 key = "custom(2)"
 context = "Editor"
 [message.translations]
-simplified_chinese = "自定义(2)"
+simplified_chinese = "自定义（2）"
 
 [[message]]
 key = "custom(3)"
 context = "Editor"
 [message.translations]
-simplified_chinese = "自定义(3)"
+simplified_chinese = "自定义（3）"
 
 [[message]]
 key = "custom(4)"
 context = "Editor"
 [message.translations]
-simplified_chinese = "自定义(4)"
+simplified_chinese = "自定义（4）"
 
 [[message]]
 key = "custom(5)"
 context = "Editor"
 [message.translations]
-simplified_chinese = "自定义(5)"
+simplified_chinese = "自定义（5）"
 
 [[message]]
 key = "Custom…"
@@ -1250,19 +1250,19 @@ simplified_chinese = "死亡"
 key = "DEATH: Kills the tee."
 context = "Editor"
 [message.translations]
-simplified_chinese = "死亡: 杀死tee."
+simplified_chinese = "死亡：杀死Tee。"
 
 [[message]]
 key = "Decrease animation speed."
 context = "Editor"
 [message.translations]
-simplified_chinese = "减少动画速度."
+simplified_chinese = "减少动画速度。"
 
 [[message]]
 key = "Decrease value."
 context = "Editor"
 [message.translations]
-simplified_chinese = "减小值."
+simplified_chinese = "减小值。"
 
 [[message]]
 key = "Deep Freeze"
@@ -1274,7 +1274,7 @@ simplified_chinese = "深度冻结"
 key = "DEEP FREEZE: Permanent freeze. Only UNDEEP tile can cancel this effect."
 context = "Editor"
 [message.translations]
-simplified_chinese = "深度冻结: 永久冻结.只有深度解冻图块可以取消此效果."
+simplified_chinese = "深度冻结：永久冻结。只有深度解冻图块可以取消此效果。"
 
 [[message]]
 key = "Deep Unfreeze"
@@ -1310,7 +1310,7 @@ simplified_chinese = "删除命令 %d"
 key = "Delete command %d; Edit command %d"
 context = "Editor"
 [message.translations]
-simplified_chinese = "删除命令 %d; 编辑命令 %d"
+simplified_chinese = "删除命令 %d；编辑命令 %d"
 
 [[message]]
 key = "Delete current envelope point in all channels."
@@ -1364,13 +1364,13 @@ simplified_chinese = "删除声音源 %d（图层 %d，组 %d）"
 key = "Delete the current quad."
 context = "Editor"
 [message.translations]
-simplified_chinese = "删除当前方块."
+simplified_chinese = "删除当前方块。"
 
 [[message]]
 key = "Delete the current sound source."
 context = "Editor"
 [message.translations]
-simplified_chinese = "删除当前声音源."
+simplified_chinese = "删除当前声音源。"
 
 [[message]]
 key = "Delete the group."
@@ -1382,19 +1382,19 @@ simplified_chinese = "删除该组。"
 key = "Delete the layer."
 context = "Editor"
 [message.translations]
-simplified_chinese = "删除该层."
+simplified_chinese = "删除该层。"
 
 [[message]]
 key = "Delete the selected file."
 context = "Editor"
 [message.translations]
-simplified_chinese = "删除选中的文件."
+simplified_chinese = "删除选中的文件。"
 
 [[message]]
 key = "Delete the selected folder."
 context = "Editor"
 [message.translations]
-simplified_chinese = "删除选中的文件夹."
+simplified_chinese = "删除选中的文件夹。"
 
 [[message]]
 key = "Delete this command."
@@ -1442,7 +1442,7 @@ simplified_chinese = "禁用/允许未知或无效命令。"
 key = "Do not perform quad alignment to other quads/points when moving quads."
 context = "Editor"
 [message.translations]
-simplified_chinese = "移动四边形时不与其他四边形/点进行对齐。"
+simplified_chinese = "移动四边形时不与其他四边形/点对齐。"
 
 [[message]]
 key = "Do not preview the paths of quads with a position envelope when a quad layer is selected."
@@ -1478,7 +1478,7 @@ simplified_chinese = "移动四边形时不显示边界。"
 key = "Do not show tile information."
 context = "Editor"
 [message.translations]
-simplified_chinese = "不显示图块编号."
+simplified_chinese = "不显示图块编号。"
 
 [[message]]
 key = "Done"
@@ -1490,7 +1490,7 @@ simplified_chinese = "完成"
 key = "DOOR: Combined with LASER LENGTH creates doors. Doesn't allow to go through it (only with NINJA)."
 context = "Editor"
 [message.translations]
-simplified_chinese = "门: 与激光长度结合创建门.不允许通过(只有忍者可以)."
+simplified_chinese = "门：与激光长度结合创建门。不允许通过（只有忍者可以）。"
 
 [[message]]
 key = "Double click to create a new point. Use shift to change the zoom axis. Press S to scale selected envelope points."
@@ -1502,37 +1502,37 @@ simplified_chinese = "双击创建新点。按住 Shift 切换缩放轴，按 S 
 key = "DRAGGING LASER: Grabs and attracts the closest tee to it. Can reach tees through walls but not through LASER BLOCKER. Medium strength."
 context = "Editor"
 [message.translations]
-simplified_chinese = "拖拽激光: 抓取并吸引最近的tee.可以穿过墙壁但不能穿过激光阻挡器到达tee.中等强度."
+simplified_chinese = "拖拽激光：抓取并吸引最近的Tee。可以穿过墙壁但不能穿过激光阻挡器到达Tee。中等强度。"
 
 [[message]]
 key = "DRAGGING LASER: Grabs and attracts the closest tee to it. Can reach tees through walls but not through LASER BLOCKER. Strong."
 context = "Editor"
 [message.translations]
-simplified_chinese = "拖拽激光: 抓取并吸引最近的tee.可以穿过墙壁但不能穿过激光阻挡器到达tee.强."
+simplified_chinese = "拖拽激光：抓取并吸引最近的Tee。可以穿过墙壁但不能穿过激光阻挡器到达Tee。强。"
 
 [[message]]
 key = "DRAGGING LASER: Grabs and attracts the closest tee to it. Can reach tees through walls but not through LASER BLOCKER. Weak."
 context = "Editor"
 [message.translations]
-simplified_chinese = "拖拽激光: 抓取并吸引最近的tee.可以穿过墙壁但不能穿过激光阻挡器到达tee.弱."
+simplified_chinese = "拖拽激光：抓取并吸引最近的Tee。可以穿过墙壁但不能穿过激光阻挡器到达Tee。弱。"
 
 [[message]]
 key = "DRAGGING LASER: Grabs and attracts the closest tee to it. Can't reach tees through walls and LASER BLOCKER. Medium strength."
 context = "Editor"
 [message.translations]
-simplified_chinese = "拖拽激光: 抓取并吸引最近的tee.无法穿过墙壁和激光阻挡器到达tee.中等强度."
+simplified_chinese = "拖拽激光：抓取并吸引最近的Tee。无法穿过墙壁和激光阻挡器到达Tee。中等强度。"
 
 [[message]]
 key = "DRAGGING LASER: Grabs and attracts the closest tee to it. Can't reach tees through walls and LASER BLOCKER. Strong."
 context = "Editor"
 [message.translations]
-simplified_chinese = "拖拽激光: 抓取并吸引最近的tee.无法穿过墙壁和激光阻挡器到达tee.强."
+simplified_chinese = "拖拽激光：抓取并吸引最近的Tee。无法穿过墙壁和激光阻挡器到达Tee。强。"
 
 [[message]]
 key = "DRAGGING LASER: Grabs and attracts the closest tee to it. Can't reach tees through walls and LASER BLOCKER. Weak."
 context = "Editor"
 [message.translations]
-simplified_chinese = "拖拽激光: 抓取并吸引最近的tee.无法穿过墙壁和激光阻挡器到达tee.弱."
+simplified_chinese = "拖拽激光：抓取并吸引最近的Tee。无法穿过墙壁和激光阻挡器到达Tee。弱。"
 
 [[message]]
 key = "Draw after lightly smoothing the mouse path."
@@ -1790,19 +1790,19 @@ simplified_chinese = "嵌入"
 key = "Embed the image into the map file."
 context = "Editor"
 [message.translations]
-simplified_chinese = "将图像嵌入到地图文件中."
+simplified_chinese = "将图像嵌入到地图文件中。"
 
 [[message]]
 key = "Embedding is not possible because the image could not be loaded."
 context = "Editor"
 [message.translations]
-simplified_chinese = "无法嵌入，因为图像无法加载."
+simplified_chinese = "无法嵌入，因为图像无法加载。"
 
 [[message]]
 key = "EMPTY: Can be used as an eraser."
 context = "Editor"
 [message.translations]
-simplified_chinese = "空白: 可用作橡皮擦."
+simplified_chinese = "空白：可用作橡皮擦。"
 
 [[message]]
 key = "Enable brush coloring."
@@ -1814,7 +1814,7 @@ simplified_chinese = "启用画笔着色。"
 key = "Enable quad knife mode."
 context = "Editor"
 [message.translations]
-simplified_chinese = "启用方块刀模式."
+simplified_chinese = "启用方块刀模式。"
 
 [[message]]
 key = "Enable text mode? Pressing letters and numbers on your keyboard will place tiles."
@@ -1838,13 +1838,13 @@ simplified_chinese = "止%"
 key = "ENDLESS HOOK OFF: Deactivates endless hook."
 context = "Editor"
 [message.translations]
-simplified_chinese = "无限钩关闭: 禁用无限钩子."
+simplified_chinese = "无限钩关闭：禁用无限钩子。"
 
 [[message]]
 key = "ENDLESS HOOK: Activates endless hook."
 context = "Editor"
 [message.translations]
-simplified_chinese = "无限钩: 激活无限钩子."
+simplified_chinese = "无限钩：激活无限钩子。"
 
 [[message]]
 key = "Enter a room code to join a collaboration room."
@@ -1868,7 +1868,7 @@ simplified_chinese = "请输入房间码"
 key = "ENTITIES OFF SIGN: Informs people playing with entities about important marks, tips, information or text on the map."
 context = "Editor"
 [message.translations]
-simplified_chinese = "实体关闭标记: 通知使用实体玩游戏的人关于地图上的重要标记、提示、信息或文本."
+simplified_chinese = "实体关闭标记：通知使用实体玩游戏的人关于地图上的重要标记、提示、信息或文本。"
 
 [[message]]
 key = "Entities: %s"
@@ -1940,13 +1940,13 @@ simplified_chinese = "错误：无法转换外部图像“%s”。"
 key = "Error: could not find image '%s' in the mapres folder."
 context = "Editor"
 [message.translations]
-simplified_chinese = "错误: 无法在mapres文件夹中找到图像'%s'."
+simplified_chinese = "错误：无法在mapres文件夹中找到图像'%s'。"
 
 [[message]]
 key = "Error: could not find sound '%s' in the mapres folder."
 context = "Editor"
 [message.translations]
-simplified_chinese = "错误: 无法在mapres文件夹中找到声音'%s'."
+simplified_chinese = "错误：无法在mapres文件夹中找到声音'%s'。"
 
 [[message]]
 key = "Error: could not read embedded image \"%s\"."
@@ -2138,13 +2138,13 @@ simplified_chinese = "展开全部"
 key = "Expand or collapse all groups."
 context = "Editor"
 [message.translations]
-simplified_chinese = "展开或折叠所有组."
+simplified_chinese = "展开或折叠所有组。"
 
 [[message]]
 key = "EXPLODING BULLET: Bounces off the walls with explosion. Touching the bullet works like FREEZE tile (freezes for 3 seconds by default)."
 context = "Editor"
 [message.translations]
-simplified_chinese = "爆炸子弹: 从墙壁弹开时会爆炸.接触子弹像冻结图块一样工作(默认冻结3秒)."
+simplified_chinese = "爆炸子弹：从墙壁弹开时会爆炸。接触子弹像冻结图块一样工作（默认冻结3秒）。"
 
 [[message]]
 key = "Export"
@@ -2156,25 +2156,25 @@ simplified_chinese = "导出"
 key = "Export the image to a separate file."
 context = "Editor"
 [message.translations]
-simplified_chinese = "将图像导出为单独的文件."
+simplified_chinese = "将图像导出为单独的文件。"
 
 [[message]]
 key = "Export the sound to a separate file."
 context = "Editor"
 [message.translations]
-simplified_chinese = "将声音导出为单独的文件."
+simplified_chinese = "将声音导出为单独的文件。"
 
 [[message]]
 key = "Exporting is not possible because the image could not be loaded."
 context = "Editor"
 [message.translations]
-simplified_chinese = "无法导出，因为图像无法加载."
+simplified_chinese = "无法导出，因为图像无法加载。"
 
 [[message]]
 key = "Exporting is not possible because the sound could not be loaded."
 context = "Editor"
 [message.translations]
-simplified_chinese = "无法导出，因为声音无法加载."
+simplified_chinese = "无法导出，因为声音无法加载。"
 
 [[message]]
 key = "External"
@@ -2282,13 +2282,13 @@ simplified_chinese = "无法从文件“%s”加载声音。"
 key = "Failed to load the image (check the local console for details)."
 context = "Editor"
 [message.translations]
-simplified_chinese = "无法加载图像(查看本地控制台获取详细信息)."
+simplified_chinese = "无法加载图像（查看本地控制台获取详细信息）。"
 
 [[message]]
 key = "Failed to load the sound (check the local console for details). Make sure you enabled sounds in the settings."
 context = "Editor"
 [message.translations]
-simplified_chinese = "无法加载声音(查看本地控制台获取详细信息). 确保你在设置中启用了声音."
+simplified_chinese = "无法加载声音（查看本地控制台获取详细信息）。确保你在设置中启用了声音。"
 
 [[message]]
 key = "Failed to open file '%s'."
@@ -2348,7 +2348,7 @@ simplified_chinese = "文件"
 key = "File: %s"
 context = "Editor"
 [message.translations]
-simplified_chinese = "文件: %s"
+simplified_chinese = "文件：%s"
 
 [[message]]
 key = "Filename %s"
@@ -2360,7 +2360,7 @@ simplified_chinese = "文件名 %s"
 key = "Filename:"
 context = "Editor"
 [message.translations]
-simplified_chinese = "文件名:"
+simplified_chinese = "文件名："
 
 [[message]]
 key = "Fill"
@@ -2372,7 +2372,7 @@ simplified_chinese = "填充"
 key = "FINISH: End of race."
 context = "Editor"
 [message.translations]
-simplified_chinese = "终点: 跑图结束."
+simplified_chinese = "终点：跑图结束。"
 
 [[message]]
 key = "Fix"
@@ -2396,37 +2396,37 @@ simplified_chinese = "修复该命令。"
 key = "FLAG: Not used in DDRace. Place where blue team flag is."
 context = "Editor"
 [message.translations]
-simplified_chinese = "旗帜: 在DDRace中未使用.放置蓝队旗帜的地方."
+simplified_chinese = "旗帜：在DDRace中未使用。放置蓝队旗帜的地方。"
 
 [[message]]
 key = "FLAG: Not used in DDRace. Place where red team flag is."
 context = "Editor"
 [message.translations]
-simplified_chinese = "旗帜: 在DDRace中未使用.放置红队旗帜的地方."
+simplified_chinese = "旗帜：在DDRace中未使用。放置红队旗帜的地方。"
 
 [[message]]
 key = "FLAG: Not used in FNG. Place where blue team flag is."
 context = "Editor"
 [message.translations]
-simplified_chinese = "旗帜: 在FNG中未使用.放置蓝队旗帜的地方."
+simplified_chinese = "旗帜：在FNG中未使用。放置蓝队旗帜的地方。"
 
 [[message]]
 key = "FLAG: Not used in FNG. Place where red team flag is."
 context = "Editor"
 [message.translations]
-simplified_chinese = "旗帜: 在FNG中未使用.放置红队旗帜的地方."
+simplified_chinese = "旗帜：在FNG中未使用。放置红队旗帜的地方。"
 
 [[message]]
 key = "FLAG: Place where blue team flag is."
 context = "Editor"
 [message.translations]
-simplified_chinese = "旗帜: 放置蓝队旗帜的地方."
+simplified_chinese = "旗帜：放置蓝队旗帜的地方。"
 
 [[message]]
 key = "FLAG: Place where red team flag is."
 context = "Editor"
 [message.translations]
-simplified_chinese = "旗帜: 放置红队旗帜的地方."
+simplified_chinese = "旗帜：放置红队旗帜的地方。"
 
 [[message]]
 key = "folder"
@@ -2456,13 +2456,13 @@ simplified_chinese = "冻结"
 key = "FREEZE: Freezes tees for 3 seconds."
 context = "Editor"
 [message.translations]
-simplified_chinese = "冻结: 冻结tee 3秒."
+simplified_chinese = "冻结：冻结Tee 3秒。"
 
 [[message]]
 key = "FREEZE: Freezes tees for defined amount of seconds."
 context = "Editor"
 [message.translations]
-simplified_chinese = "冻结: 冻结tee指定的秒数."
+simplified_chinese = "冻结：冻结Tee指定的秒数。"
 
 [[message]]
 key = "Front"
@@ -2504,79 +2504,79 @@ simplified_chinese = "游戏图块：%s"
 key = "Game tiles: Air"
 context = "Editor"
 [message.translations]
-simplified_chinese = "游戏图块: 空气"
+simplified_chinese = "游戏图块：空气"
 
 [[message]]
 key = "Game tiles: Blue Check Tele"
 context = "Editor"
 [message.translations]
-simplified_chinese = "游戏图块: 蓝色检查点传送"
+simplified_chinese = "游戏图块：蓝色检查点传送"
 
 [[message]]
 key = "Game tiles: Death"
 context = "Editor"
 [message.translations]
-simplified_chinese = "游戏图块: 死亡"
+simplified_chinese = "游戏图块：死亡"
 
 [[message]]
 key = "Game tiles: Deep Freeze"
 context = "Editor"
 [message.translations]
-simplified_chinese = "游戏图块: 深度冻结"
+simplified_chinese = "游戏图块：深度冻结"
 
 [[message]]
 key = "Game tiles: Deep Unfreeze"
 context = "Editor"
 [message.translations]
-simplified_chinese = "游戏图块: 深度解冻"
+simplified_chinese = "游戏图块：深度解冻"
 
 [[message]]
 key = "Game tiles: Freeze"
 context = "Editor"
 [message.translations]
-simplified_chinese = "游戏图块: 冻结"
+simplified_chinese = "游戏图块：冻结"
 
 [[message]]
 key = "Game tiles: Hookable"
 context = "Editor"
 [message.translations]
-simplified_chinese = "游戏图块: 可钩"
+simplified_chinese = "游戏图块：可钩"
 
 [[message]]
 key = "Game tiles: Hookthrough"
 context = "Editor"
 [message.translations]
-simplified_chinese = "游戏图块: 可穿透钩"
+simplified_chinese = "游戏图块：可穿透钩"
 
 [[message]]
 key = "Game tiles: Live Freeze"
 context = "Editor"
 [message.translations]
-simplified_chinese = "游戏图块: 实时冻结"
+simplified_chinese = "游戏图块：实时冻结"
 
 [[message]]
 key = "Game tiles: Live Unfreeze"
 context = "Editor"
 [message.translations]
-simplified_chinese = "游戏图块: 实时解冻"
+simplified_chinese = "游戏图块：实时解冻"
 
 [[message]]
 key = "Game tiles: Red Check Tele"
 context = "Editor"
 [message.translations]
-simplified_chinese = "游戏图块: 红色检查点传送"
+simplified_chinese = "游戏图块：红色检查点传送"
 
 [[message]]
 key = "Game tiles: Unfreeze"
 context = "Editor"
 [message.translations]
-simplified_chinese = "游戏图块: 解冻"
+simplified_chinese = "游戏图块：解冻"
 
 [[message]]
 key = "Game tiles: Unhookable"
 context = "Editor"
 [message.translations]
-simplified_chinese = "游戏图块: 不可钩"
+simplified_chinese = "游戏图块：不可钩"
 
 [[message]]
 key = "Generate quadart from image."
@@ -2594,31 +2594,31 @@ simplified_chinese = "从图像生成图块画。"
 key = "GLOBAL COLLISION OFF: Nobody can collide with others. Place only one tile somewhere on the map."
 context = "Editor"
 [message.translations]
-simplified_chinese = "全局关闭碰撞: 没有人可以与其他人碰撞.只在地图某处放置一个图块."
+simplified_chinese = "全局关闭碰撞：没有人可以与其他人碰撞。只在地图某处放置一个图块。"
 
 [[message]]
 key = "GLOBAL ENDLESS HOOK ON: Everyone has endless hook. Place only one tile somewhere on the map."
 context = "Editor"
 [message.translations]
-simplified_chinese = "全局开启无限钩: 所有人都有无限钩子.只在地图某处放置一个图块."
+simplified_chinese = "全局开启无限钩：所有人都有无限钩子。只在地图某处放置一个图块。"
 
 [[message]]
 key = "GLOBAL HIT OTHERS OFF: Nobody can hit others. Place only one tile somewhere on the map."
 context = "Editor"
 [message.translations]
-simplified_chinese = "全局关闭武器命中其他人: 没有人可以用武器攻击其他人.只在地图某处放置一个图块."
+simplified_chinese = "全局关闭武器命中其他人：没有人可以用武器攻击其他人。只在地图某处放置一个图块。"
 
 [[message]]
 key = "GLOBAL HOOK OTHERS OFF: Nobody can hook others. Place only one tile somewhere on the map."
 context = "Editor"
 [message.translations]
-simplified_chinese = "全局关闭钩其他人: 没有人可以钩住其他人.只在地图某处放置一个图块."
+simplified_chinese = "全局关闭钩其他人：没有人可以钩住其他人。只在地图某处放置一个图块。"
 
 [[message]]
 key = "GLOBAL OLD SHOTGUN: Shotgun drags others always towards the shooter, even after having bounced. Shooter can't hit themselves. Place only one tile somewhere on the map."
 context = "Editor"
 [message.translations]
-simplified_chinese = "全局旧激光: 启用旧激光模式. 激光不能击中自己, 霰弹枪会将其他目标始终拉向玩家, 即使目标已经弹开也不例外. 仅可在地图上的任意位置放置一块图块."
+simplified_chinese = "全局旧激光：启用旧激光模式。激光不能击中自己，霰弹枪会将其他目标始终拉向玩家，即使目标已经弹开也不例外。仅可在地图上的任意位置放置一块图块。"
 
 [[message]]
 key = "Go"
@@ -2630,7 +2630,7 @@ simplified_chinese = "前往"
 key = "Go to a specified coordinate point on the map."
 context = "Editor"
 [message.translations]
-simplified_chinese = "将视图移动到地图的特定坐标."
+simplified_chinese = "将视图移动到地图的特定坐标。"
 
 [[message]]
 key = "Go to images management."
@@ -2654,7 +2654,7 @@ simplified_chinese = "转到声音管理。"
 key = "GOLDEN SPIKE: Kills the tee and gives points to the killer. Amount of points given is set inside the server."
 context = "Editor"
 [message.translations]
-simplified_chinese = "金色尖刺: 杀死tee并给予杀手分数.给予的分数在服务器中设置."
+simplified_chinese = "金色尖刺：杀死Tee并给予杀手分数。给予的分数在服务器中设置。"
 
 [[message]]
 key = "Goto position"
@@ -2666,7 +2666,7 @@ simplified_chinese = "转到位置"
 key = "GREEN SPIKE: Kills the tee and gives points to the killer. Amount of points given is set inside the server."
 context = "Editor"
 [message.translations]
-simplified_chinese = "绿色尖刺: 杀死tee并给予杀手分数.给予的分数在服务器中设置."
+simplified_chinese = "绿色尖刺：杀死Tee并给予杀手分数。给予的分数在服务器中设置。"
 
 [[message]]
 key = "Green value of the envelope."
@@ -2678,25 +2678,25 @@ simplified_chinese = "动画的绿色通道值。"
 key = "GRENADE LAUNCHER: Throws exploding bullets. Also known as rocket."
 context = "Editor"
 [message.translations]
-simplified_chinese = "榴弹发射器: 发射可推进tee的榴弹.也称为火箭."
+simplified_chinese = "榴弹发射器：发射可推进Tee的榴弹。也称为火箭。"
 
 [[message]]
 key = "GRENADE SHIELD: Takes grenade away."
 context = "Editor"
 [message.translations]
-simplified_chinese = "榴弹盾牌: 拿走榴弹."
+simplified_chinese = "榴弹盾牌：拿走榴弹。"
 
 [[message]]
 key = "GRENADE: Gives you grenade weapon with 10 charges."
 context = "Editor"
 [message.translations]
-simplified_chinese = "榴弹: 给你带有10发子弹的榴弹武器."
+simplified_chinese = "榴弹：给你带有10发子弹的榴弹武器。"
 
 [[message]]
 key = "GRENADE: Gives you grenade weapon with 10 charges. Not really useful in FNG."
 context = "Editor"
 [message.translations]
-simplified_chinese = "榴弹: 给你带有10发子弹的榴弹武器.在FNG中不太有用."
+simplified_chinese = "榴弹：给你带有10发子弹的榴弹武器。在FNG中不太有用。"
 
 [[message]]
 key = "Group"
@@ -2714,19 +2714,19 @@ simplified_chinese = "高清"
 key = "HEART: Does nothing in FNG."
 context = "Editor"
 [message.translations]
-simplified_chinese = "心: 在FNG中无作用."
+simplified_chinese = "心：在FNG中无作用。"
 
 [[message]]
 key = "HEART: Gives player +1 health"
 context = "Editor"
 [message.translations]
-simplified_chinese = "心: 给玩家+1生命"
+simplified_chinese = "心：给玩家+1生命"
 
 [[message]]
 key = "HEART: Works like a FREEZE tile. Freezes tees for 3 seconds by default."
 context = "Editor"
 [message.translations]
-simplified_chinese = "冻结心: 像冻结图块一样工作.默认冻结tee 3秒."
+simplified_chinese = "冻结心：像冻结图块一样工作。默认冻结Tee 3秒。"
 
 [[message]]
 key = "Height"
@@ -2744,25 +2744,25 @@ simplified_chinese = "历史记录"
 key = "HIT OTHERS: You can activate hitting others for single weapons, using delay number to select which."
 context = "Editor"
 [message.translations]
-simplified_chinese = "攻击其他人: 你可以为单个武器激活攻击其他人,使用延迟编号选择哪个."
+simplified_chinese = "攻击其他人：你可以为单个武器激活攻击其他人，使用延迟编号选择哪个。"
 
 [[message]]
 key = "HIT OTHERS: You can deactivate hitting others for single weapons, using delay number to select which."
 context = "Editor"
 [message.translations]
-simplified_chinese = "攻击其他人: 你可以为单个武器禁用攻击其他人,使用延迟编号选择哪个."
+simplified_chinese = "攻击其他人：你可以为单个武器禁用攻击其他人，使用延迟编号选择哪个。"
 
 [[message]]
 key = "HIT OTHERS: You can hit others."
 context = "Editor"
 [message.translations]
-simplified_chinese = "攻击其他人: 你可以攻击其他人."
+simplified_chinese = "攻击其他人：你可以攻击其他人。"
 
 [[message]]
 key = "HIT OTHERS: You can't hit others."
 context = "Editor"
 [message.translations]
-simplified_chinese = "攻击其他人: 你不能攻击其他人."
+simplified_chinese = "攻击其他人：你不能攻击其他人。"
 
 [[message]]
 key = "Hold shift to keep alignment on one axis."
@@ -2774,19 +2774,19 @@ simplified_chinese = "按住 Shift 可锁定单轴对齐。"
 key = "HOOK OTHERS OFF: You can't hook others."
 context = "Editor"
 [message.translations]
-simplified_chinese = "关闭钩其他人: 你不能钩住其他人."
+simplified_chinese = "关闭钩其他人：你不能钩住其他人。"
 
 [[message]]
 key = "HOOK OTHERS: You can hook others."
 context = "Editor"
 [message.translations]
-simplified_chinese = "可钩其他人: 你可以钩住其他人."
+simplified_chinese = "可钩其他人：你可以钩住其他人。"
 
 [[message]]
 key = "HOOK TELEPORT: Teleports hooks entering into it to TELEPORT TO, where it comes out. Direction, angle and length are kept."
 context = "Editor"
 [message.translations]
-simplified_chinese = "钩子传送: 将进入其中的钩子传送到传送目标,从那里伸出.方向、角度和长度保持不变."
+simplified_chinese = "钩子传送：将进入其中的钩子传送到传送目标，从那里伸出。方向、角度和长度保持不变。"
 
 [[message]]
 key = "Hookable"
@@ -2798,7 +2798,7 @@ simplified_chinese = "可钩"
 key = "HOOKABLE: It's possible to hook and collide with it."
 context = "Editor"
 [message.translations]
-simplified_chinese = "可钩: 可以钩住并与其接触."
+simplified_chinese = "可钩：可以钩住并与其接触。"
 
 [[message]]
 key = "Hookthrough"
@@ -2810,25 +2810,25 @@ simplified_chinese = "穿钩"
 key = "HOOKTHROUGH: Combined with (UN)HOOKABLE tiles, allows to hook through the walls."
 context = "Editor"
 [message.translations]
-simplified_chinese = "钩穿: 与(不)可钩图块结合,允许钩穿墙壁."
+simplified_chinese = "钩穿：与（不）可钩图块结合，允许钩穿墙壁。"
 
 [[message]]
 key = "HOOKTHROUGH: Combined with a collision tile is new hookthrough, otherwise stops hook, from one direction."
 context = "Editor"
 [message.translations]
-simplified_chinese = "钩穿: 与碰撞图块结合是新钩穿,否则从一个方向阻止钩子."
+simplified_chinese = "钩穿：与碰撞图块结合是新钩穿，否则从一个方向阻止钩子。"
 
 [[message]]
 key = "HOOKTHROUGH: Combined with a collision tile is new hookthrough, otherwise stops hooks, from all directions."
 context = "Editor"
 [message.translations]
-simplified_chinese = "钩穿: 与碰撞图块结合是新钩穿,否则从所有方向阻止钩子."
+simplified_chinese = "钩穿：与碰撞图块结合是新钩穿，否则从所有方向阻止钩子。"
 
 [[message]]
 key = "HOOKTHROUGH: Shortcut for new hookthrough."
 context = "Editor"
 [message.translations]
-simplified_chinese = "钩穿: 新钩穿的快捷方式."
+simplified_chinese = "钩穿：新钩穿的快捷方式。"
 
 [[message]]
 key = "https://wiki.ddnet.org/wiki/Mapping"
@@ -2882,13 +2882,13 @@ simplified_chinese = "删除组 %d 的%s图层"
 key = "Increase animation speed."
 context = "Editor"
 [message.translations]
-simplified_chinese = "增加动画速度."
+simplified_chinese = "增加动画速度。"
 
 [[message]]
 key = "Increase value."
 context = "Editor"
 [message.translations]
-simplified_chinese = "增加值."
+simplified_chinese = "增加值。"
 
 [[message]]
 key = "Ingame"
@@ -2906,13 +2906,13 @@ simplified_chinese = "参数值无效：%s（位置 %d，参数“%s”）；超
 key = "JETPACK OFF: You lose your jetpack gun."
 context = "Editor"
 [message.translations]
-simplified_chinese = "关闭喷气背包: 你失去了喷气背包."
+simplified_chinese = "关闭喷气背包：你失去了喷气背包。"
 
 [[message]]
 key = "JETPACK: You have a jetpack gun."
 context = "Editor"
 [message.translations]
-simplified_chinese = "喷气背包: 你有一把喷气背包枪."
+simplified_chinese = "喷气背包：你有一把喷气背包枪。"
 
 [[message]]
 key = "Join room"
@@ -2936,7 +2936,7 @@ simplified_chinese = "正在加入协作房间..."
 key = "JUMP: Sets defined amount of jumps (default is 2)."
 context = "Editor"
 [message.translations]
-simplified_chinese = "跳跃: 设置定义的跳跃次数(默认为2)."
+simplified_chinese = "跳跃：设置定义的跳跃次数（默认为2）。"
 
 [[message]]
 key = "Keep the mouse path as a polyline."
@@ -2948,7 +2948,7 @@ simplified_chinese = "保留鼠标路径折线。"
 key = "KILL: Kills the tee."
 context = "Editor"
 [message.translations]
-simplified_chinese = "杀死: 杀死tee."
+simplified_chinese = "杀死：杀死Tee。"
 
 [[message]]
 key = "L"
@@ -2966,85 +2966,85 @@ simplified_chinese = "大图层"
 key = "LASER BLOCKER: Doesn't let DRAGGING & SPINNING LASER and PLASMA TURRET reach tees through it."
 context = "Editor"
 [message.translations]
-simplified_chinese = "激光阻挡器: 不让拖拽和旋转激光以及炮塔穿过它到达tee."
+simplified_chinese = "激光阻挡器：不让拖拽和旋转激光以及炮塔穿过它到达Tee。"
 
 [[message]]
 key = "LASER LENGTH CHANGE: Put next to LASER LENGTH, causes it to length and shorten constantly. Works only on (NON-)SPINNING LASER, not on DOOR. Lengthen, fast."
 context = "Editor"
 [message.translations]
-simplified_chinese = "激光长度变化: 放在激光长度旁边,使其不断变长和缩短.仅适用于(非)旋转激光,不适用于门.变长,快速."
+simplified_chinese = "激光长度变化：放在激光长度旁边，使其不断变长和缩短。仅适用于（非）旋转激光，不适用于门。变长，快速。"
 
 [[message]]
 key = "LASER LENGTH CHANGE: Put next to LASER LENGTH, causes it to length and shorten constantly. Works only on (NON-)SPINNING LASER, not on DOOR. Lengthen, medium speed."
 context = "Editor"
 [message.translations]
-simplified_chinese = "激光长度变化: 放在激光长度旁边,使其不断变长和缩短.仅适用于(非)旋转激光,不适用于门.变长,中速."
+simplified_chinese = "激光长度变化：放在激光长度旁边，使其不断变长和缩短。仅适用于（非）旋转激光，不适用于门。变长，中速。"
 
 [[message]]
 key = "LASER LENGTH CHANGE: Put next to LASER LENGTH, causes it to length and shorten constantly. Works only on (NON-)SPINNING LASER, not on DOOR. Lengthen, slow."
 context = "Editor"
 [message.translations]
-simplified_chinese = "激光长度变化: 放在激光长度旁边,使其不断变长和缩短.仅适用于(非)旋转激光,不适用于门.变长,慢速."
+simplified_chinese = "激光长度变化：放在激光长度旁边，使其不断变长和缩短。仅适用于（非）旋转激光，不适用于门。变长，慢速。"
 
 [[message]]
 key = "LASER LENGTH CHANGE: Put next to LASER LENGTH, causes it to length and shorten constantly. Works only on (NON-)SPINNING LASER, not on DOOR. Shorten, fast."
 context = "Editor"
 [message.translations]
-simplified_chinese = "激光长度变化: 放在激光长度旁边,使其不断变长和缩短.仅适用于(非)旋转激光,不适用于门.缩短,快速."
+simplified_chinese = "激光长度变化：放在激光长度旁边，使其不断变长和缩短。仅适用于（非）旋转激光，不适用于门。缩短，快速。"
 
 [[message]]
 key = "LASER LENGTH CHANGE: Put next to LASER LENGTH, causes it to length and shorten constantly. Works only on (NON-)SPINNING LASER, not on DOOR. Shorten, medium speed."
 context = "Editor"
 [message.translations]
-simplified_chinese = "激光长度变化: 放在激光长度旁边,使其不断变长和缩短.仅适用于(非)旋转激光,不适用于门.缩短,中速."
+simplified_chinese = "激光长度变化：放在激光长度旁边，使其不断变长和缩短。仅适用于（非）旋转激光，不适用于门。缩短，中速。"
 
 [[message]]
 key = "LASER LENGTH CHANGE: Put next to LASER LENGTH, causes it to length and shorten constantly. Works only on (NON-)SPINNING LASER, not on DOOR. Shorten, slow."
 context = "Editor"
 [message.translations]
-simplified_chinese = "激光长度变化: 放在激光长度旁边,使其不断变长和缩短.仅适用于(非)旋转激光,不适用于门.缩短,慢速."
+simplified_chinese = "激光长度变化：放在激光长度旁边，使其不断变长和缩短。仅适用于（非）旋转激光，不适用于门。缩短，慢速。"
 
 [[message]]
 key = "LASER LENGTH: Put next to DOOR or SPINNING LASER, makes it 3 tiles long."
 context = "Editor"
 [message.translations]
-simplified_chinese = "激光长度: 放在门或旋转激光旁边,使其長3个图块长."
+simplified_chinese = "激光长度：放在门或旋转激光旁边，使其長3个图块长。"
 
 [[message]]
 key = "LASER LENGTH: Put next to DOOR or SPINNING LASER, makes it 6 tiles long."
 context = "Editor"
 [message.translations]
-simplified_chinese = "激光长度: 放在门或旋转激光旁边,使其長6个图块长."
+simplified_chinese = "激光长度：放在门或旋转激光旁边，使其長6个图块长。"
 
 [[message]]
 key = "LASER LENGTH: Put next to DOOR or SPINNING LASER, makes it 9 tiles long."
 context = "Editor"
 [message.translations]
-simplified_chinese = "激光长度: 放在门或旋转激光旁边,使其長9个图块长."
+simplified_chinese = "激光长度：放在门或旋转激光旁边，使其長9个图块长。"
 
 [[message]]
 key = "LASER SHIELD: Takes laser away."
 context = "Editor"
 [message.translations]
-simplified_chinese = "激光盾牌: 拿走激光."
+simplified_chinese = "激光盾牌：拿走激光。"
 
 [[message]]
 key = "LASER: Gives you laser weapon with 10 charges."
 context = "Editor"
 [message.translations]
-simplified_chinese = "激光: 给你带有10发子弹的激光武器."
+simplified_chinese = "激光：给你带有10发子弹的激光武器。"
 
 [[message]]
 key = "LASER: Gives you laser weapon with 10 charges. Not really useful in FNG."
 context = "Editor"
 [message.translations]
-simplified_chinese = "激光: 给你带有10发子弹的激光武器.在FNG中不太有用."
+simplified_chinese = "激光：给你带有10发子弹的激光武器。在FNG中不太有用。"
 
 [[message]]
 key = "LASER: Unfreezes hit tee. Bounces off the walls. Also known as laser."
 context = "Editor"
 [message.translations]
-simplified_chinese = "激光: 解冻被击中的tee,会从墙壁反弹."
+simplified_chinese = "激光：解冻被击中的Tee，会从墙壁反弹。"
 
 [[message]]
 key = "Layer type does not match a sound layer"
@@ -3056,7 +3056,7 @@ simplified_chinese = "图层类型与声音图层不匹配"
 key = "Layer: add image"
 context = "Editor"
 [message.translations]
-simplified_chinese = "层: 添加图像"
+simplified_chinese = "层：添加图像"
 
 [[message]]
 key = "Leave room"
@@ -3146,7 +3146,7 @@ simplified_chinese = "许可"
 key = "License:"
 context = "Editor"
 [message.translations]
-simplified_chinese = "许可证:"
+simplified_chinese = "许可证："
 
 [[message]]
 key = "Line"
@@ -3182,7 +3182,7 @@ simplified_chinese = "实时冻结"
 key = "LIVE FREEZE: Live frozen tees cannot move or jump, while hook and weapons can still be used."
 context = "Editor"
 [message.translations]
-simplified_chinese = "实时冻结: 实时冻结的tee无法移动或跳跃,但仍可使用钩子和武器."
+simplified_chinese = "实时冻结：实时冻结的Tee无法移动或跳跃，但仍可使用钩子和武器。"
 
 [[message]]
 key = "Live Gametiles"
@@ -3200,7 +3200,7 @@ simplified_chinese = "实时解冻"
 key = "LIVE UNFREEZE: Removes LIVE FREEZE effect."
 context = "Editor"
 [message.translations]
-simplified_chinese = "实时解冻: 移除实时冻结效果."
+simplified_chinese = "实时解冻：移除实时冻结效果。"
 
 [[message]]
 key = "Load"
@@ -3212,7 +3212,7 @@ simplified_chinese = "加载"
 key = "Load a new image to use in the map."
 context = "Editor"
 [message.translations]
-simplified_chinese = "加载一个新图像在地图中使用."
+simplified_chinese = "加载一个新图像在地图中使用。"
 
 [[message]]
 key = "Load a new sound to use in the map."
@@ -3434,25 +3434,25 @@ simplified_chinese = "新闻"
 key = "NINJA SHIELD: Takes ninja away."
 context = "Editor"
 [message.translations]
-simplified_chinese = "忍者盾牌: 拿走忍者."
+simplified_chinese = "忍者盾牌：拿走忍者。"
 
 [[message]]
 key = "NINJA: Does nothing in FNG."
 context = "Editor"
 [message.translations]
-simplified_chinese = "忍者: 在FNG中无作用."
+simplified_chinese = "忍者：在FNG中无作用。"
 
 [[message]]
 key = "NINJA: Gives you ninja for a period of time."
 context = "Editor"
 [message.translations]
-simplified_chinese = "忍者: 在一段时间内给你忍者."
+simplified_chinese = "忍者：在一段时间内给你忍者。"
 
 [[message]]
 key = "NINJA: Makes you invisible in the darkest nights."
 context = "Editor"
 [message.translations]
-simplified_chinese = "忍者: 让你在最黑暗的夜晚中隐形XD"
+simplified_chinese = "忍者：让你在最黑暗的夜晚中隐形XD"
 
 [[message]]
 key = "No"
@@ -3470,7 +3470,7 @@ simplified_chinese = "未选择图块层"
 key = "NON-SPINNING LASER: Tile where freezing laser (made with LASER LENGTH) begins."
 context = "Editor"
 [message.translations]
-simplified_chinese = "非旋转激光: 冻结激光(用激光长度制作)开始的图块."
+simplified_chinese = "非旋转激光：冻结激光（用激光长度制作）开始的图块。"
 
 [[message]]
 key = "None"
@@ -3482,13 +3482,13 @@ simplified_chinese = "无"
 key = "None:"
 context = "Editor"
 [message.translations]
-simplified_chinese = "无:"
+simplified_chinese = "无："
 
 [[message]]
 key = "NORMAL SPIKE: Kills the tee and gives points to the killer. Amount of points given is set inside the server."
 context = "Editor"
 [message.translations]
-simplified_chinese = "普通尖刺: 杀死tee并给予杀手分数.给予的分数在服务器中设置."
+simplified_chinese = "普通尖刺：杀死Tee并给予杀手分数。给予的分数在服务器中设置。"
 
 [[message]]
 key = "Not currently in a collaboration room"
@@ -3518,7 +3518,7 @@ simplified_chinese = "N 边形边数。"
 key = "OLD SPEEDUP: Gives tee defined speed. Arrow shows direction and angle. Deprecated."
 context = "Editor"
 [message.translations]
-simplified_chinese = "旧加速: 给tee定义的速度.箭头显示方向和角度.已废弃."
+simplified_chinese = "旧加速：给Tee定义的速度。箭头显示方向和角度。已废弃。"
 
 [[message]]
 key = "Open"
@@ -3530,19 +3530,19 @@ simplified_chinese = "应用"
 key = "Open the current directory in the file browser."
 context = "Editor"
 [message.translations]
-simplified_chinese = "在文件浏览器中打开当前目录."
+simplified_chinese = "在文件浏览器中打开当前目录。"
 
 [[message]]
 key = "Open the selected file."
 context = "Editor"
 [message.translations]
-simplified_chinese = "打开选中的文件."
+simplified_chinese = "打开选中的文件。"
 
 [[message]]
 key = "Open the selected folder."
 context = "Editor"
 [message.translations]
-simplified_chinese = "打开选中的文件夹."
+simplified_chinese = "打开选中的文件夹。"
 
 [[message]]
 key = "Optimize"
@@ -3602,13 +3602,13 @@ simplified_chinese = "视差纵"
 key = "PENALTY: Adds time to your current race time. Opposite of BONUS."
 context = "Editor"
 [message.translations]
-simplified_chinese = "惩罚: 在你当前的竞赛时间上增加时间.与奖励相反."
+simplified_chinese = "惩罚：在你当前的竞赛时间上增加时间。与奖励相反。"
 
 [[message]]
 key = "Pick mapres image for currently selected layer."
 context = "Editor"
 [message.translations]
-simplified_chinese = "为当前选中的层选择mapres图像."
+simplified_chinese = "为当前选中的层选择mapres图像。"
 
 [[message]]
 key = "Pipette"
@@ -3632,31 +3632,31 @@ simplified_chinese = "放置边框图块"
 key = "Place tiles in a 2-tile wide border at the edges of the selected tile layer."
 context = "Editor"
 [message.translations]
-simplified_chinese = "使用选定层的索引为2的贴图向当前层添加两层宽的边框."
+simplified_chinese = "使用选定层的索引为2的贴图向当前层添加两层宽的边框。"
 
 [[message]]
 key = "PLASMA TURRET: Shoots plasma bullets at the closest tee. They explode on an obstactle they hit (wall or tee)."
 context = "Editor"
 [message.translations]
-simplified_chinese = "炮塔: 向最近的tee射击等离子子弹.它们在击中障碍物(墙或tee)时会爆炸."
+simplified_chinese = "炮塔：向最近的Tee射击等离子子弹。它们在击中障碍物（墙或Tee）时会爆炸。"
 
 [[message]]
 key = "PLASMA TURRET: Shoots plasma bullets that work like FREEZE at the closest tee."
 context = "Editor"
 [message.translations]
-simplified_chinese = "炮塔: 向最近的tee射击像冻结一样工作的等离子子弹."
+simplified_chinese = "炮塔：向最近的Tee射击像冻结一样工作的等离子子弹。"
 
 [[message]]
 key = "PLASMA TURRET: Shoots plasma bullets that work like FREEZE at the closest tee. They also explode on an obstactly they hit (wall or tee)."
 context = "Editor"
 [message.translations]
-simplified_chinese = "炮塔: 向最近的tee射击像冻结一样工作的等离子子弹.它们还会在击中障碍物(墙或tee)时爆炸."
+simplified_chinese = "炮塔：向最近的Tee射击像冻结一样工作的等离子子弹。它们还会在击中障碍物（墙或Tee）时爆炸。"
 
 [[message]]
 key = "PLASMA TURRET: Shoots plasma bullets that work like UNFREEZE at the closest tee."
 context = "Editor"
 [message.translations]
-simplified_chinese = "炮塔: 向最近的tee射击像解冻一样工作的等离子子弹."
+simplified_chinese = "炮塔：向最近的Tee射击像解冻一样工作的等离子子弹。"
 
 [[message]]
 key = "Play/pause audio preview."
@@ -3758,7 +3758,7 @@ simplified_chinese = "验证模式"
 key = "PURPLE SPIKE: Kills the tee and gives points to the killer. Amount of points given is set inside the server."
 context = "Editor"
 [message.translations]
-simplified_chinese = "紫色尖刺: 杀死tee并给予杀手分数.给予的分数在服务器中设置."
+simplified_chinese = "紫色尖刺：杀死Tee并给予杀手分数。给予的分数在服务器中设置。"
 
 [[message]]
 key = "Quad pixelsize"
@@ -3806,13 +3806,13 @@ simplified_chinese = "重新导入"
 key = "Re-import the image from the mapres folder."
 context = "Editor"
 [message.translations]
-simplified_chinese = "从mapres文件夹重新导入图像."
+simplified_chinese = "从mapres文件夹重新导入图像。"
 
 [[message]]
 key = "Re-import the sound from the mapres folder."
 context = "Editor"
 [message.translations]
-simplified_chinese = "从mapres文件夹重新导入声音."
+simplified_chinese = "从mapres文件夹重新导入声音。"
 
 [[message]]
 key = "Received a sync update from room %s (%d/%d people)"
@@ -3842,19 +3842,19 @@ simplified_chinese = "红色检查点传送"
 key = "RED CHECKPOINT TELEPORT: Send tees to CTO with the same number as the last touched TELEPORT CHECKPOINT. Speed and hook are reset."
 context = "Editor"
 [message.translations]
-simplified_chinese = "红色检查点传送: 将tee传送到与最后接触的传送检查点相同编号的CTO.速度和钩子被重置."
+simplified_chinese = "红色检查点传送：将Tee传送到与最后接触的传送检查点相同编号的CTO。速度和钩子被重置。"
 
 [[message]]
 key = "RED SPIKE: Red team spikes. Gives negative points when killer is in blue team. Amount of points given is set inside the server."
 context = "Editor"
 [message.translations]
-simplified_chinese = "红色尖刺: 红队尖刺.当杀手在蓝队时给予负分.给予的分数在服务器中设置."
+simplified_chinese = "红色尖刺：红队尖刺。当杀手在蓝队时给予负分。给予的分数在服务器中设置。"
 
 [[message]]
 key = "RED TELEPORT: After falling into this tile, tees appear on TO with the same number. Speed and hooks are reset."
 context = "Editor"
 [message.translations]
-simplified_chinese = "红色传送: 掉入此图块后,tee会出现在相同编号的TO上.速度和钩子被重置."
+simplified_chinese = "红色传送：掉入此图块后，Tee会出现在相同编号的TO上。速度和钩子被重置。"
 
 [[message]]
 key = "Red value of the envelope."
@@ -3872,7 +3872,7 @@ simplified_chinese = "参考"
 key = "REFILL JUMPS: Restores all jumps."
 context = "Editor"
 [message.translations]
-simplified_chinese = "补充跳跃: 恢复所有跳跃次数."
+simplified_chinese = "补充跳跃：恢复所有跳跃次数。"
 
 [[message]]
 key = "Refocus"
@@ -3890,7 +3890,7 @@ simplified_chinese = "刷新"
 key = "Refresh the list of files."
 context = "Editor"
 [message.translations]
-simplified_chinese = "刷新文件列表."
+simplified_chinese = "刷新文件列表。"
 
 [[message]]
 key = "Remove"
@@ -3902,7 +3902,7 @@ simplified_chinese = "移除"
 key = "Remove all unused envelopes from the map."
 context = "Editor"
 [message.translations]
-simplified_chinese = "从地图中删除已导入但未使用的文件."
+simplified_chinese = "从地图中删除已导入但未使用的文件。"
 
 [[message]]
 key = "Remove game tiles that aren't based on a layer."
@@ -3926,19 +3926,19 @@ simplified_chinese = "移除声音"
 key = "Remove the image from the map file."
 context = "Editor"
 [message.translations]
-simplified_chinese = "从地图文件中移除图像."
+simplified_chinese = "从地图文件中移除图像。"
 
 [[message]]
 key = "Remove the image from the map."
 context = "Editor"
 [message.translations]
-simplified_chinese = "从地图中移除图像."
+simplified_chinese = "从地图中移除图像。"
 
 [[message]]
 key = "Remove the sound from the map."
 context = "Editor"
 [message.translations]
-simplified_chinese = "从地图中移除声音."
+simplified_chinese = "从地图中移除声音。"
 
 [[message]]
 key = "Remove unused envelopes"
@@ -3968,43 +3968,43 @@ simplified_chinese = "替换声音"
 key = "Replace the image with a new one."
 context = "Editor"
 [message.translations]
-simplified_chinese = "用新图像替换该图像."
+simplified_chinese = "用新图像替换该图像。"
 
 [[message]]
 key = "Replace the sound with a new one."
 context = "Editor"
 [message.translations]
-simplified_chinese = "用新声音替换该声音."
+simplified_chinese = "用新声音替换该声音。"
 
 [[message]]
 key = "reserved settings(1)"
 context = "Editor"
 [message.translations]
-simplified_chinese = "保留设置(1)"
+simplified_chinese = "保留设置（1）"
 
 [[message]]
 key = "reserved settings(2)"
 context = "Editor"
 [message.translations]
-simplified_chinese = "保留设置(2)"
+simplified_chinese = "保留设置（2）"
 
 [[message]]
 key = "reserved(1)"
 context = "Editor"
 [message.translations]
-simplified_chinese = "保留(1)"
+simplified_chinese = "保留（1）"
 
 [[message]]
 key = "reserved(2)"
 context = "Editor"
 [message.translations]
-simplified_chinese = "保留(2)"
+simplified_chinese = "保留（2）"
 
 [[message]]
 key = "reserved(3)"
 context = "Editor"
 [message.translations]
-simplified_chinese = "保留(3)"
+simplified_chinese = "保留（3）"
 
 [[message]]
 key = "Reset"
@@ -4028,7 +4028,7 @@ simplified_chinese = "将切线点重置为默认值。"
 key = "Reset to normal animation speed."
 context = "Editor"
 [message.translations]
-simplified_chinese = "重置为正常动画速度."
+simplified_chinese = "重置为正常动画速度。"
 
 [[message]]
 key = "Reset to normal grid size."
@@ -4046,7 +4046,7 @@ simplified_chinese = "重置缩放"
 key = "Resize the current quad based on the aspect ratio of its image."
 context = "Editor"
 [message.translations]
-simplified_chinese = "根据其图像的纵横比调整当前方块的大小."
+simplified_chinese = "根据其图像的纵横比调整当前方块的大小。"
 
 [[message]]
 key = "Restart server"
@@ -4100,7 +4100,7 @@ simplified_chinese = "保存地图时（RCON 已认证）在本地服务器执�
 key = "Run a local server with the current map and connect you to it."
 context = "Editor"
 [message.translations]
-simplified_chinese = "运行一个使用当前地图的本地服务器并连接到它."
+simplified_chinese = "运行一个使用当前地图的本地服务器并连接到它。"
 
 [[message]]
 key = "Run the automapper."
@@ -4136,7 +4136,7 @@ simplified_chinese = "保存副本"
 key = "Save file with the specified name."
 context = "Editor"
 [message.translations]
-simplified_chinese = "以指定名称保存文件."
+simplified_chinese = "以指定名称保存文件。"
 
 [[message]]
 key = "Save image"
@@ -4232,19 +4232,19 @@ simplified_chinese = "缩放 %"
 key = "SCORE: Old tile used for showing blue team score using laser text. No longer usable in FNG2."
 context = "Editor"
 [message.translations]
-simplified_chinese = "分数: 用于使用激光文本显示蓝队分数的旧图块.在FNG2中不再可用."
+simplified_chinese = "分数：用于使用激光文本显示蓝队分数的旧图块。在FNG2中不再可用。"
 
 [[message]]
 key = "SCORE: Old tile used for showing red team score using laser text. No longer usable in FNG2."
 context = "Editor"
 [message.translations]
-simplified_chinese = "分数: 用于使用激光文本显示红队分数的旧图块.在FNG2中不再可用."
+simplified_chinese = "分数：用于使用激光文本显示红队分数的旧图块。在FNG2中不再可用。"
 
 [[message]]
 key = "Search:"
 context = "Editor"
 [message.translations]
-simplified_chinese = "搜索:"
+simplified_chinese = "搜索："
 
 [[message]]
 key = "Seed"
@@ -4256,7 +4256,7 @@ simplified_chinese = "种子"
 key = "Select envelope."
 context = "Editor"
 [message.translations]
-simplified_chinese = "选择动画."
+simplified_chinese = "选择动画。"
 
 [[message]]
 key = "Select group. Shift+left click to select all layers. Double click to collapse."
@@ -4298,7 +4298,7 @@ simplified_chinese = "Ctrl+右键图块时选择图层。"
 key = "Select proof mode."
 context = "Editor"
 [message.translations]
-simplified_chinese = "选择验证模式."
+simplified_chinese = "选择验证模式。"
 
 [[message]]
 key = "Select sound."
@@ -4316,13 +4316,13 @@ simplified_chinese = "选择动画。"
 key = "Select the wanted image:"
 context = "Editor"
 [message.translations]
-simplified_chinese = "选择所需的图像:"
+simplified_chinese = "选择所需的图像："
 
 [[message]]
 key = "Select the wanted sound:"
 context = "Editor"
 [message.translations]
-simplified_chinese = "选择所需的声音:"
+simplified_chinese = "选择所需的声音："
 
 [[message]]
 key = "Server settings"
@@ -4340,61 +4340,61 @@ simplified_chinese = "设置"
 key = "settings(appearance)"
 context = "Editor"
 [message.translations]
-simplified_chinese = "设置(外观)"
+simplified_chinese = "设置（外观）"
 
 [[message]]
 key = "settings(assets)"
 context = "Editor"
 [message.translations]
-simplified_chinese = "设置(资源)"
+simplified_chinese = "设置（资源）"
 
 [[message]]
 key = "settings(controls)"
 context = "Editor"
 [message.translations]
-simplified_chinese = "设置(控制)"
+simplified_chinese = "设置（控制）"
 
 [[message]]
 key = "settings(ddnet)"
 context = "Editor"
 [message.translations]
-simplified_chinese = "设置(官方扩展)"
+simplified_chinese = "设置（官方扩展）"
 
 [[message]]
 key = "settings(general)"
 context = "Editor"
 [message.translations]
-simplified_chinese = "设置(通用)"
+simplified_chinese = "设置（通用）"
 
 [[message]]
 key = "settings(graphics)"
 context = "Editor"
 [message.translations]
-simplified_chinese = "设置(图形)"
+simplified_chinese = "设置（图形）"
 
 [[message]]
 key = "settings(language)"
 context = "Editor"
 [message.translations]
-simplified_chinese = "设置(语言)"
+simplified_chinese = "设置（语言）"
 
 [[message]]
 key = "settings(player)"
 context = "Editor"
 [message.translations]
-simplified_chinese = "设置(玩家)"
+simplified_chinese = "设置（玩家）"
 
 [[message]]
 key = "settings(sound)"
 context = "Editor"
 [message.translations]
-simplified_chinese = "设置(声音)"
+simplified_chinese = "设置（声音）"
 
 [[message]]
 key = "settings(tee)"
 context = "Editor"
 [message.translations]
-simplified_chinese = "设置(角色)"
+simplified_chinese = "设置（角色）"
 
 [[message]]
 key = "Shape"
@@ -4412,67 +4412,67 @@ simplified_chinese = "形状粗细：%d"
 key = "SHIELD: Does nothing in FNG."
 context = "Editor"
 [message.translations]
-simplified_chinese = "盾牌: 在FNG中无作用."
+simplified_chinese = "盾牌：在FNG中无作用。"
 
 [[message]]
 key = "SHIELD: Gives player +1 shield."
 context = "Editor"
 [message.translations]
-simplified_chinese = "盾牌: 给玩家+1盾牌."
+simplified_chinese = "盾牌：给玩家+1盾牌。"
 
 [[message]]
 key = "SHIELD: Takes all weapons (except hammer and pistol) away."
 context = "Editor"
 [message.translations]
-simplified_chinese = "盾牌: 拿走所有武器(锤子和手枪除外)."
+simplified_chinese = "盾牌：拿走所有武器（锤子和手枪除外）。"
 
 [[message]]
 key = "Shift down."
 context = "Editor"
 [message.translations]
-simplified_chinese = "下移."
+simplified_chinese = "下移。"
 
 [[message]]
 key = "Shift left."
 context = "Editor"
 [message.translations]
-simplified_chinese = "左移."
+simplified_chinese = "左移。"
 
 [[message]]
 key = "Shift right."
 context = "Editor"
 [message.translations]
-simplified_chinese = "右移."
+simplified_chinese = "右移。"
 
 [[message]]
 key = "Shift up."
 context = "Editor"
 [message.translations]
-simplified_chinese = "上移."
+simplified_chinese = "上移。"
 
 [[message]]
 key = "SHOTGUN SHIELD: Takes shotgun away."
 context = "Editor"
 [message.translations]
-simplified_chinese = "霰弹枪盾牌: 拿走霰弹枪."
+simplified_chinese = "霰弹枪盾牌：拿走霰弹枪。"
 
 [[message]]
 key = "SHOTGUN: Drags the tees towards it. Bounces off the walls."
 context = "Editor"
 [message.translations]
-simplified_chinese = "霰弹枪: 将tee拖向它.会从墙壁反弹."
+simplified_chinese = "霰弹枪：将Tee拖向它。会从墙壁反弹。"
 
 [[message]]
 key = "SHOTGUN: Gives you shotgun weapon with 10 charges."
 context = "Editor"
 [message.translations]
-simplified_chinese = "霰弹枪: 给你带有10发子弹的霰弹枪武器."
+simplified_chinese = "霰弹枪：给你带有10发子弹的霰弹枪武器。"
 
 [[message]]
 key = "SHOTGUN: Not used in FNG. Gives you shotgun with 10 charges."
 context = "Editor"
 [message.translations]
-simplified_chinese = "霰弹枪: 在FNG中未使用.给你带有10发子弹的霰弹枪."
+simplified_chinese = "霰弹枪：在FNG中未使用。给你带有10发子弹的霰弹枪。"
 
 [[message]]
 key = "Show Directory"
@@ -4502,19 +4502,19 @@ simplified_chinese = "显示图块编号"
 key = "Show info: Dec"
 context = "Editor"
 [message.translations]
-simplified_chinese = "显示图块编号: 十进制"
+simplified_chinese = "显示图块编号：十进制"
 
 [[message]]
 key = "Show info: Hex"
 context = "Editor"
 [message.translations]
-simplified_chinese = "显示图块编号: 十六进制"
+simplified_chinese = "显示图块编号：十六进制"
 
 [[message]]
 key = "Show info: Off"
 context = "Editor"
 [message.translations]
-simplified_chinese = "显示图块编号: 关闭"
+simplified_chinese = "显示图块编号：关闭"
 
 [[message]]
 key = "Show ingame entities"
@@ -4562,13 +4562,13 @@ simplified_chinese = "尺寸"
 key = "Size: %d × %d"
 context = "Editor"
 [message.translations]
-simplified_chinese = "尺寸: %d × %d"
+simplified_chinese = "尺寸：%d × %d"
 
 [[message]]
 key = "Size: %zu × %zu"
 context = "Editor"
 [message.translations]
-simplified_chinese = "尺寸: %zu × %zu"
+simplified_chinese = "尺寸：%zu × %zu"
 
 [[message]]
 key = "Slice"
@@ -4592,25 +4592,25 @@ simplified_chinese = "柔化"
 key = "SOLO: You are now in a solo part."
 context = "Editor"
 [message.translations]
-simplified_chinese = "单人: 你现在在单人区域."
+simplified_chinese = "单人：你现在在单人区域。"
 
 [[message]]
 key = "SOLO: You are now out of the solo part."
 context = "Editor"
 [message.translations]
-simplified_chinese = "单人: 你现在离开了单人区域."
+simplified_chinese = "单人：你现在离开了单人区域。"
 
 [[message]]
 key = "Sort by filename."
 context = "Editor"
 [message.translations]
-simplified_chinese = "按文件名排序."
+simplified_chinese = "按文件名排序。"
 
 [[message]]
 key = "Sort by time modified."
 context = "Editor"
 [message.translations]
-simplified_chinese = "按修改时间排序."
+simplified_chinese = "按修改时间排序。"
 
 [[message]]
 key = "Sound"
@@ -4658,37 +4658,37 @@ simplified_chinese = "声音偏移"
 key = "SPAWN: Blue team members spawn here, same as normal spawn in DDRace."
 context = "Editor"
 [message.translations]
-simplified_chinese = "出生点: 蓝队成员在这里出生,与DDRace中的普通出生点相同."
+simplified_chinese = "出生点：蓝队成员在这里出生，与DDRace中的普通出生点相同。"
 
 [[message]]
 key = "SPAWN: Blue team members spawn here."
 context = "Editor"
 [message.translations]
-simplified_chinese = "出生点: 蓝队成员在这里出生."
+simplified_chinese = "出生点：蓝队成员在这里出生。"
 
 [[message]]
 key = "SPAWN: Here tees will appear after joining the game or dying somewhere on the map."
 context = "Editor"
 [message.translations]
-simplified_chinese = "出生点: tee在加入游戏或在地图某处死亡后会出现在这里."
+simplified_chinese = "出生点：Tee在加入游戏或在地图某处死亡后会出现在这里。"
 
 [[message]]
 key = "SPAWN: Here tees will appear after joining the game or dying."
 context = "Editor"
 [message.translations]
-simplified_chinese = "出生点: tee在加入游戏或死亡后会出现在这里."
+simplified_chinese = "出生点：Tee在加入游戏或死亡后会出现在这里。"
 
 [[message]]
 key = "SPAWN: Red team members spawn here, same as normal spawn in DDRace."
 context = "Editor"
 [message.translations]
-simplified_chinese = "出生点: 红队成员在这里出生,与DDRace中的普通出生点相同."
+simplified_chinese = "出生点：红队成员在这里出生，与DDRace中的普通出生点相同。"
 
 [[message]]
 key = "SPAWN: Red team members spawn here."
 context = "Editor"
 [message.translations]
-simplified_chinese = "出生点: 红队成员在这里出生."
+simplified_chinese = "出生点：红队成员在这里出生。"
 
 [[message]]
 key = "Speed"
@@ -4700,13 +4700,13 @@ simplified_chinese = "速度"
 key = "SPEEDER: Causes weapons, SHIELD, HEART and SPINNING LASER to move quickly."
 context = "Editor"
 [message.translations]
-simplified_chinese = "速度器: 使武器、盾牌、冻结心和旋转激光快速移动."
+simplified_chinese = "速度器：使武器、盾牌、冻结心和旋转激光快速移动。"
 
 [[message]]
 key = "SPEEDER: Causes weapons, SHIELD, HEART and SPINNING LASER to move slowly."
 context = "Editor"
 [message.translations]
-simplified_chinese = "速度器: 使武器、盾牌、冻结心和旋转激光缓慢移动."
+simplified_chinese = "速度器：使武器、盾牌、冻结心和旋转激光缓慢移动。"
 
 [[message]]
 key = "Speedup"
@@ -4724,49 +4724,49 @@ simplified_chinese = "加速 副本"
 key = "SPEEDUP: Gives tee defined speed. Arrow shows direction and angle."
 context = "Editor"
 [message.translations]
-simplified_chinese = "加速: 给tee定义的速度.箭头显示方向和角度."
+simplified_chinese = "加速：给Tee定义的速度。箭头显示方向和角度。"
 
 [[message]]
 key = "SPIKE: Old FNG spikes. Deprecated."
 context = "Editor"
 [message.translations]
-simplified_chinese = "尖刺: 旧FNG尖刺.已废弃."
+simplified_chinese = "尖刺：旧FNG尖刺。已废弃。"
 
 [[message]]
 key = "SPINNING LASER: Tile where freezing laser (made with LASER LENGTH) begins. Clockwise, fast."
 context = "Editor"
 [message.translations]
-simplified_chinese = "旋转激光: 冻结激光(用激光长度制作)开始的图块.顺时针,快速."
+simplified_chinese = "旋转激光：冻结激光（用激光长度制作）开始的图块。顺时针，快速。"
 
 [[message]]
 key = "SPINNING LASER: Tile where freezing laser (made with LASER LENGTH) begins. Clockwise, medium speed."
 context = "Editor"
 [message.translations]
-simplified_chinese = "旋转激光: 冻结激光(用激光长度制作)开始的图块.顺时针,中速."
+simplified_chinese = "旋转激光：冻结激光（用激光长度制作）开始的图块。顺时针，中速。"
 
 [[message]]
 key = "SPINNING LASER: Tile where freezing laser (made with LASER LENGTH) begins. Clockwise, slow."
 context = "Editor"
 [message.translations]
-simplified_chinese = "旋转激光: 冻结激光(用激光长度制作)开始的图块.顺时针,慢速."
+simplified_chinese = "旋转激光：冻结激光（用激光长度制作）开始的图块。顺时针，慢速。"
 
 [[message]]
 key = "SPINNING LASER: Tile where freezing laser (made with LASER LENGTH) begins. Counter-Clockwise, fast."
 context = "Editor"
 [message.translations]
-simplified_chinese = "旋转激光: 冻结激光(用激光长度制作)开始的图块.逆时针,快速."
+simplified_chinese = "旋转激光：冻结激光（用激光长度制作）开始的图块。逆时针，快速。"
 
 [[message]]
 key = "SPINNING LASER: Tile where freezing laser (made with LASER LENGTH) begins. Counter-Clockwise, medium speed."
 context = "Editor"
 [message.translations]
-simplified_chinese = "旋转激光: 冻结激光(用激光长度制作)开始的图块.逆时针,中速."
+simplified_chinese = "旋转激光：冻结激光（用激光长度制作）开始的图块。逆时针，中速。"
 
 [[message]]
 key = "SPINNING LASER: Tile where freezing laser (made with LASER LENGTH) begins. Counter-Clockwise, slow."
 context = "Editor"
 [message.translations]
-simplified_chinese = "旋转激光: 冻结激光(用激光长度制作)开始的图块.逆时针,慢速."
+simplified_chinese = "旋转激光：冻结激光（用激光长度制作）开始的图块。逆时针，慢速。"
 
 [[message]]
 key = "Square"
@@ -4778,7 +4778,7 @@ simplified_chinese = "方形化"
 key = "Square the current quad."
 context = "Editor"
 [message.translations]
-simplified_chinese = "将当前方块调整为正方形."
+simplified_chinese = "将当前方块调整为正方形。"
 
 [[message]]
 key = "start"
@@ -4802,7 +4802,7 @@ simplified_chinese = "起%"
 key = "START: Starts counting your race time."
 context = "Editor"
 [message.translations]
-simplified_chinese = "起点: 开始计算你的跑图时间."
+simplified_chinese = "起点：开始计算你的跑图时间。"
 
 [[message]]
 key = "Step"
@@ -4820,25 +4820,25 @@ simplified_chinese = "停止音频预览。"
 key = "STOPPER: You can hook and shoot through it. You can't go through it against the arrow."
 context = "Editor"
 [message.translations]
-simplified_chinese = "阻挡器: 你可以使用钩子和武器穿过它.但逆着箭的方向是无法穿透它的."
+simplified_chinese = "阻挡器：你可以使用钩子和武器穿过它。但逆着箭的方向是无法穿透它的。"
 
 [[message]]
 key = "STOPPER: You can hook and shoot through it. You can't go through it."
 context = "Editor"
 [message.translations]
-simplified_chinese = "阻挡器: 你可以使用钩子和武器穿过它.但是你不能通过它."
+simplified_chinese = "阻挡器：你可以使用钩子和武器穿过它。但是你不能通过它。"
 
 [[message]]
 key = "SUPER JUMP OFF: You don't have unlimited air jumps."
 context = "Editor"
 [message.translations]
-simplified_chinese = "关闭无限跳: 你没有无限跳."
+simplified_chinese = "关闭无限跳：你没有无限跳。"
 
 [[message]]
 key = "SUPER JUMP: You have unlimited air jumps."
 context = "Editor"
 [message.translations]
-simplified_chinese = "无限跳: 你有无限跳!"
+simplified_chinese = "无限跳：你有无限跳！"
 
 [[message]]
 key = "Switch copy"
@@ -4862,13 +4862,13 @@ simplified_chinese = "切换验证位置到"
 key = "SWITCH: Activates switch (e.g. closes door) with the same number."
 context = "Editor"
 [message.translations]
-simplified_chinese = "开关: 激活相同编号的开关(例如关门)."
+simplified_chinese = "开关：激活相同编号的开关（例如关门）。"
 
 [[message]]
 key = "SWITCH: Deactivates switch (e.g. opens door) with the same number."
 context = "Editor"
 [message.translations]
-simplified_chinese = "开关: 禁用相同编号的开关(例如开门)."
+simplified_chinese = "开关：禁用相同编号的开关（例如开门）。"
 
 [[message]]
 key = "Symmetry drawing: Off -> X -> Y -> XY. The center is the tile coordinate where the mouse was pressed."
@@ -4880,25 +4880,25 @@ simplified_chinese = "对称绘制：Off -> X -> Y -> XY。中心为本次按下
 key = "Symmetry: Off"
 context = "Editor"
 [message.translations]
-simplified_chinese = "对称:关"
+simplified_chinese = "对称：关"
 
 [[message]]
 key = "Symmetry: X"
 context = "Editor"
 [message.translations]
-simplified_chinese = "对称:X"
+simplified_chinese = "对称：X"
 
 [[message]]
 key = "Symmetry: XY"
 context = "Editor"
 [message.translations]
-simplified_chinese = "对称:XY"
+simplified_chinese = "对称：XY"
 
 [[message]]
 key = "Symmetry: Y"
 context = "Editor"
 [message.translations]
-simplified_chinese = "对称:Y"
+simplified_chinese = "对称：Y"
 
 [[message]]
 key = "sync"
@@ -5042,67 +5042,67 @@ simplified_chinese = "传送 副本"
 key = "TELEGRENADE OFF: Turn grenade off as telegun weapon."
 context = "Editor"
 [message.translations]
-simplified_chinese = "传送榴弹关闭: 将榴弹关闭作为传送枪武器."
+simplified_chinese = "传送榴弹关闭：将榴弹关闭作为传送枪武器。"
 
 [[message]]
 key = "TELEGRENADE: Turn grenade on as telegun weapon."
 context = "Editor"
 [message.translations]
-simplified_chinese = "传送榴弹: 将榴弹开启为传送枪武器."
+simplified_chinese = "传送榴弹：将榴弹开启为传送枪武器。"
 
 [[message]]
 key = "TELEGUN OFF: Turn gun off as telegun weapon."
 context = "Editor"
 [message.translations]
-simplified_chinese = "传送枪关闭: 将手枪关闭作为传送枪武器."
+simplified_chinese = "传送枪关闭：将手枪关闭作为传送枪武器。"
 
 [[message]]
 key = "TELEGUN: Place on top of a collision tile, activates a spot to teleport to, cancels movement, for single weapons, using delay number to select which."
 context = "Editor"
 [message.translations]
-simplified_chinese = "传送枪: 放在碰撞图块上方,激活一个传送点,取消移动,适用于单个武器,使用延迟编号选择哪个."
+simplified_chinese = "传送枪：放在碰撞图块上方，激活一个传送点，取消移动，适用于单个武器，使用延迟编号选择哪个。"
 
 [[message]]
 key = "TELEGUN: Place on top of a collision tile, activates a spot to teleport to, cancels movement."
 context = "Editor"
 [message.translations]
-simplified_chinese = "传送枪: 放在碰撞图块上方,激活一个传送点,取消移动."
+simplified_chinese = "传送枪：放在碰撞图块上方，激活一个传送点，取消移动。"
 
 [[message]]
 key = "TELEGUN: Place on top of a collision tile, activates a spot to teleport to, preserves movement, for single weapons, using delay number to select which."
 context = "Editor"
 [message.translations]
-simplified_chinese = "传送枪: 放在碰撞图块上方,激活一个传送点,保留移动,适用于单个武器,使用延迟编号选择哪个."
+simplified_chinese = "传送枪：放在碰撞图块上方，激活一个传送点，保留移动，适用于单个武器，使用延迟编号选择哪个。"
 
 [[message]]
 key = "TELEGUN: Place on top of a collision tile, activates a spot to teleport to, preserves movement."
 context = "Editor"
 [message.translations]
-simplified_chinese = "传送枪: 放在碰撞图块上方,激活一个传送点,保留移动."
+simplified_chinese = "传送枪：放在碰撞图块上方，激活一个传送点，保留移动。"
 
 [[message]]
 key = "TELEGUN: Turn gun on as telegun weapon."
 context = "Editor"
 [message.translations]
-simplified_chinese = "传送枪: 将手枪开启为传送枪武器."
+simplified_chinese = "传送枪：将手枪开启为传送枪武器。"
 
 [[message]]
 key = "TELELASER OFF: Turn laser off as telegun weapon."
 context = "Editor"
 [message.translations]
-simplified_chinese = "传送激光关闭: 将激光关闭作为传送枪武器."
+simplified_chinese = "传送激光关闭：将激光关闭作为传送枪武器。"
 
 [[message]]
 key = "TELELASER: Turn laser on as telegun weapon."
 context = "Editor"
 [message.translations]
-simplified_chinese = "传送激光: 将激光开启为传送枪武器."
+simplified_chinese = "传送激光：将激光开启为传送枪武器。"
 
 [[message]]
 key = "TELEPORT TO: Destination tile for FROMs, WEAPON & HOOK TELEPORTs with the same numbers."
 context = "Editor"
 [message.translations]
-simplified_chinese = "传送目标: 相同编号的FROM、武器和钩子传送的目标图块."
+simplified_chinese = "传送目标：相同编号的FROM、武器和钩子传送的目标图块。"
 
 [[message]]
 key = "Test map locally"
@@ -5126,7 +5126,7 @@ simplified_chinese = "纹理纵"
 key = "The animation speed."
 context = "Editor"
 [message.translations]
-simplified_chinese = "动画速度."
+simplified_chinese = "动画速度。"
 
 [[message]]
 key = "The client only allows a maximum of %zu images."
@@ -5228,13 +5228,13 @@ simplified_chinese = "该图像的宽或高不能被 16 整除。图块图层使
 key = "These borders represent what a player maximum can see."
 context = "Editor"
 [message.translations]
-simplified_chinese = "这些边框代表玩家最大可见范围."
+simplified_chinese = "这些边框代表玩家最大可见范围。"
 
 [[message]]
 key = "These borders represent what will be shown in the menu."
 context = "Editor"
 [message.translations]
-simplified_chinese = "这些边框代表菜单中显示的内容."
+simplified_chinese = "这些边框代表菜单中显示的内容。"
 
 [[message]]
 key = "Thickness "
@@ -5258,13 +5258,13 @@ simplified_chinese = "这将覆盖图层边缘周围的所有现有图块。\n\n
 key = "This map has unsaved changes."
 context = "Editor"
 [message.translations]
-simplified_chinese = "此地图有未保存的更改."
+simplified_chinese = "此地图有未保存的更改。"
 
 [[message]]
 key = "This name cannot be used for files and folders."
 context = "Editor"
 [message.translations]
-simplified_chinese = "此名称不能用于文件和文件夹."
+simplified_chinese = "此名称不能用于文件和文件夹。"
 
 [[message]]
 key = "This sound is used in the map. Removing it will reset all layers that use this sound to their default.\\n\\nRemove anyway?"
@@ -5300,7 +5300,7 @@ simplified_chinese = "时间（秒）："
 key = "TIME CHECKPOINT: Compares your current race time with your record to show you whether you are running faster or slower."
 context = "Editor"
 [message.translations]
-simplified_chinese = "时间检查点: 将你当前的跑图时间与你的记录进行比较,显示你跑得更快还是更慢."
+simplified_chinese = "时间检查点：将你当前的跑图时间与你的记录进行比较，显示你跑得更快还是更慢。"
 
 [[message]]
 key = "time delay"
@@ -5318,13 +5318,13 @@ simplified_chinese = "修改时间 %s"
 key = "TIME SWITCH: Activates switch (e.g. closes door) with the same number for a set amount of seconds."
 context = "Editor"
 [message.translations]
-simplified_chinese = "时间开关: 在设定的秒数内激活相同编号的开关(例如关门)."
+simplified_chinese = "时间开关：在设定的秒数内激活相同编号的开关（例如关门）。"
 
 [[message]]
 key = "TIME SWITCH: Deactivates switch (e.g. opens door) with the same number for a set amount of seconds."
 context = "Editor"
 [message.translations]
-simplified_chinese = "时间开关: 在设定的秒数内禁用相同编号的开关(例如开门)."
+simplified_chinese = "时间开关：在设定的秒数内禁用相同编号的开关（例如开门）。"
 
 [[message]]
 key = "Toggle grid"
@@ -5336,19 +5336,19 @@ simplified_chinese = "切换网格"
 key = "Toggle preview of how layers will be zoomed ingame."
 context = "Editor"
 [message.translations]
-simplified_chinese = "切换预览图层在游戏中的缩放方式."
+simplified_chinese = "切换预览图层在游戏中的缩放方式。"
 
 [[message]]
 key = "Toggle previewing the paths of quads with a position envelope when a quad layer is selected."
 context = "Editor"
 [message.translations]
-simplified_chinese = "当选中四边形层时,切换预览带有位置动画的四边形路径."
+simplified_chinese = "当选中四边形层时，切换预览带有位置动画的四边形路径。"
 
 [[message]]
 key = "Toggle proof borders. These borders represent the area that a player can see with default zoom."
 context = "Editor"
 [message.translations]
-simplified_chinese = "切换验证边框. 这些边框代表玩家在默认缩放下可以看到的区域."
+simplified_chinese = "切换验证边框。这些边框代表玩家在默认缩放下可以看到的区域。"
 
 [[message]]
 key = "Toggle solid/outline drawing."
@@ -5360,19 +5360,19 @@ simplified_chinese = "切换实心/轮廓绘制。"
 key = "Toggle the editor history view."
 context = "Editor"
 [message.translations]
-simplified_chinese = "切换编辑器历史记录视图."
+simplified_chinese = "切换编辑器历史记录视图。"
 
 [[message]]
 key = "Toggle the envelope editor."
 context = "Editor"
 [message.translations]
-simplified_chinese = "切换动画编辑器."
+simplified_chinese = "切换动画编辑器。"
 
 [[message]]
 key = "Toggle the server settings editor."
 context = "Editor"
 [message.translations]
-simplified_chinese = "切换服务器设置编辑器."
+simplified_chinese = "切换服务器设置编辑器。"
 
 [[message]]
 key = "Too many colors"
@@ -5432,7 +5432,7 @@ simplified_chinese = "物理 副本"
 key = "TUNE ZONE: Area where defined tunes work."
 context = "Editor"
 [message.translations]
-simplified_chinese = "物理区域: 定义的物理参数生效的区域."
+simplified_chinese = "物理区域：定义的物理参数生效的区域。"
 
 [[message]]
 key = "Type on your keyboard to insert letters and numbers. Press Escape to end text mode."
@@ -5450,7 +5450,7 @@ simplified_chinese = "输入数值后按 Enter 确认。"
 key = "UNDEEP: Removes DEEP FREEZE effect."
 context = "Editor"
 [message.translations]
-simplified_chinese = "深度解冻: 移除深度冻结效果."
+simplified_chinese = "深度解冻：移除深度冻结效果。"
 
 [[message]]
 key = "Unfreeze"
@@ -5462,7 +5462,7 @@ simplified_chinese = "解冻"
 key = "UNFREEZE: Unfreezes tees immediately."
 context = "Editor"
 [message.translations]
-simplified_chinese = "解冻: 立即解冻tee."
+simplified_chinese = "解冻：立即解冻Tee。"
 
 [[message]]
 key = "Unhookable"
@@ -5474,7 +5474,7 @@ simplified_chinese = "不可钩"
 key = "UNHOOKABLE: It's not possible to hook it, but can collide with it."
 context = "Editor"
 [message.translations]
-simplified_chinese = "不可钩: 无法钩住,但可以与其碰撞."
+simplified_chinese = "不可钩：无法钩住，但可以与其碰撞。"
 
 [[message]]
 key = "Unknown"
@@ -5492,7 +5492,7 @@ simplified_chinese = "未知服务器设置：%s"
 key = "UNLOCK TEAM: Forces team to be unlocked so that team doesn't get killed when one dies."
 context = "Editor"
 [message.translations]
-simplified_chinese = "解锁团队: 强制解锁团队,使得一人死亡时团队不会被杀死."
+simplified_chinese = "解锁队伍：强制解除队伍锁定，这样一人死亡时全队不会阵亡。"
 
 [[message]]
 key = "Unused tiles can't be placed by default because they could get a use later and then destroy your map.\\n\\nActivate the 'Allow unused' setting to be able to place every tile."
@@ -5522,7 +5522,7 @@ simplified_chinese = "使用裁剪"
 key = "Use left mouse button to drag and change the value. Hold shift to be more precise. Right click to edit as text."
 context = "Editor"
 [message.translations]
-simplified_chinese = "使用鼠标左键拖动以更改值. 按住shift键更精确. 右键以文本形式编辑."
+simplified_chinese = "使用鼠标左键拖动以更改值。按住shift键更精确。右键以文本形式编辑。"
 
 [[message]]
 key = "Use left mouse button to drag and create a brush."
@@ -5570,7 +5570,7 @@ simplified_chinese = "版本"
 key = "Version:"
 context = "Editor"
 [message.translations]
-simplified_chinese = "版本:"
+simplified_chinese = "版本："
 
 [[message]]
 key = "View"
@@ -5588,13 +5588,13 @@ simplified_chinese = "动画的音量值。"
 key = "WALLJUMP: Placed next to a wall. Enables climbing up the wall."
 context = "Editor"
 [message.translations]
-simplified_chinese = "墙跳: 放置在墙旁边,在玩家贴墙下落的途中补充跳跃"
+simplified_chinese = "墙跳：放置在墙旁边，在玩家贴墙下落的途中补充跳跃"
 
 [[message]]
 key = "WEAPON TELEPORT: Teleports bullets shot into it to TELEPORT TO, where it comes out. Direction, angle and length are kept."
 context = "Editor"
 [message.translations]
-simplified_chinese = "武器传送: 将射入其中的子弹传送到传送目标,从那里射出.方向、角度和长度保持不变."
+simplified_chinese = "武器传送：将射入其中的子弹传送到传送目标，从那里射出。方向、角度和长度保持不变。"
 
 [[message]]
 key = "Width"
@@ -5612,7 +5612,7 @@ simplified_chinese = "动画的横轴值。"
 key = "X: %.1f, Y: %.1f, Z: %.1f, A: %.1f, G: %i  %s"
 context = "Editor"
 [message.translations]
-simplified_chinese = "坐标X: %.1f, 坐标Y: %.1f, 缩放: %.1f, 动画: %.1f, 网格: %i  %s"
+simplified_chinese = "坐标X：%.1f，坐标Y：%.1f，缩放：%.1f，动画：%.1f，网格：%i  %s"
 
 [[message]]
 key = "Y-axis of the envelope."
@@ -5750,13 +5750,13 @@ simplified_chinese = "旋"
 key = "Select next envelope."
 context = "Editor envelope selector"
 [message.translations]
-simplified_chinese = "选择下一个动画."
+simplified_chinese = "选择下一个动画。"
 
 [[message]]
 key = "Select previous envelope."
 context = "Editor envelope selector"
 [message.translations]
-simplified_chinese = "选择上一个动画."
+simplified_chinese = "选择上一个动画。"
 
 [[message]]
 key = "Select next envelope."
@@ -5810,7 +5810,7 @@ simplified_chinese = "数值"
 key = "Name:"
 context = "Editor property label"
 [message.translations]
-simplified_chinese = "名称:"
+simplified_chinese = "名称："
 
 [[message]]
 key = "shift"
@@ -5978,7 +5978,7 @@ simplified_chinese = "原版"
 key = "X: %.1f, Y: %.1f, Z: %.1f, T: %.1f, A: %.1f, G: %i  %s"
 context = "Editor"
 [message.translations]
-simplified_chinese = "坐标 X: %.1f, 坐标 Y: %.1f, 缩放: %.1f, 时间: %.1f, 动画: %.1f, 网格: %i  %s"
+simplified_chinese = "坐标 X：%.1f，坐标 Y：%.1f，缩放：%.1f，时间：%.1f，动画：%.1f，网格：%i  %s"
 
 [[message]]
 key = "[Ctrl+F4] Close the current map."

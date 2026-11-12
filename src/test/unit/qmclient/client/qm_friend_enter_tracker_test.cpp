@@ -2,98 +2,103 @@
 #include <game/client/components/qmclient/friend_online_tracker.h>
 
 #include <gtest/gtest.h>
-#include <test/test.h>
 
 #include <vector>
 
-TEST(QmFriendEnterTracker, InitialRosterIsSilentAndNewFriendEntersOnce)
+TEST(QmFriendPresenceMessage, StandardJoinFormsExtractTheCompleteName)
 {
-	qm_friend_notify::CEnterTracker Tracker;
-	const qm_friend_notify::CEnterTracker::CClient Existing{1, "Existing", "Clan", true, false};
-	const qm_friend_notify::CEnterTracker::CClient NewFriend{2, "NewFriend", "Clan", true, false};
-	EXPECT_TRUE(Tracker.Update({Existing}, 0.0, false).empty());
-	EXPECT_EQ(Tracker.Update({Existing, NewFriend}, 0.2, false), std::vector<std::string>{"NewFriend"});
-	EXPECT_TRUE(Tracker.Update({Existing, NewFriend}, 0.4, false).empty());
-}
-
-TEST(QmFriendEnterTracker, SameSlotIdentityAndFriendChangesAreSilent)
-{
-	qm_friend_notify::CEnterTracker Tracker;
-	EXPECT_TRUE(Tracker.Update({{1, "Stranger", "OldClan", false, false}}, 0.0, false).empty());
-	EXPECT_TRUE(Tracker.Update({{1, "Friend", "OldClan", true, false}}, 0.2, false).empty());
-	EXPECT_TRUE(Tracker.Update({{1, "Friend", "NewClan", true, false}}, 0.4, false).empty());
-	EXPECT_TRUE(Tracker.Update({{1, "Friend", "NewClan", false, false}}, 0.6, false).empty());
-	EXPECT_TRUE(Tracker.Update({{1, "Friend", "NewClan", true, false}}, 0.8, false).empty());
-}
-
-TEST(QmFriendEnterTracker, ShortSnapshotAbsenceDoesNotReannounceFriend)
-{
-	qm_friend_notify::CEnterTracker Tracker;
-	const qm_friend_notify::CEnterTracker::CClient Friend{1, "Friend", "Clan", true, false};
-	EXPECT_TRUE(Tracker.Update({Friend}, 0.0, false).empty());
-	EXPECT_TRUE(Tracker.Update({}, 1.0, false).empty());
-	EXPECT_TRUE(Tracker.Update({}, 3.8, false).empty());
-	EXPECT_TRUE(Tracker.Update({Friend}, 3.9, false).empty());
-	EXPECT_TRUE(Tracker.Update({}, 4.0, false).empty());
-	EXPECT_TRUE(Tracker.Update({Friend}, 6.9, false).empty());
-}
-
-TEST(QmFriendEnterTracker, ConfirmedAbsenceAllowsReentryAtGraceBoundary)
-{
-	qm_friend_notify::CEnterTracker Tracker;
-	const qm_friend_notify::CEnterTracker::CClient Friend{1, "Friend", "Clan", true, false};
-	EXPECT_TRUE(Tracker.Update({Friend}, 0.0, false).empty());
-	EXPECT_TRUE(Tracker.Update({}, 1.0, false).empty());
-	EXPECT_EQ(Tracker.Update({Friend}, 4.0, false), std::vector<std::string>{"Friend"});
-	EXPECT_TRUE(Tracker.Update({Friend}, 4.2, false).empty());
-}
-
-TEST(QmFriendEnterTracker, IdentityMovingSlotsWithinGraceIsSilent)
-{
-	qm_friend_notify::CEnterTracker Tracker;
-	EXPECT_TRUE(Tracker.Update({{1, "Friend", "Clan", true, false}}, 0.0, false).empty());
-	EXPECT_TRUE(Tracker.Update({}, 1.0, false).empty());
-	EXPECT_TRUE(Tracker.Update({{2, "Friend", "Clan", true, false}}, 3.9, false).empty());
-	EXPECT_EQ(Tracker.Update({{1, "NewFriend", "Clan", true, false}, {2, "Friend", "Clan", true, false}}, 4.0, false),
-		std::vector<std::string>{"NewFriend"});
-}
-
-TEST(QmFriendEnterTracker, IdentityMovingSlotsAfterConfirmedAbsenceEnters)
-{
-	qm_friend_notify::CEnterTracker Tracker;
-	EXPECT_TRUE(Tracker.Update({{1, "Friend", "Clan", true, false}}, 0.0, false).empty());
-	EXPECT_TRUE(Tracker.Update({}, 1.0, false).empty());
-	EXPECT_TRUE(Tracker.Update({}, 4.0, false).empty());
-	EXPECT_EQ(Tracker.Update({{2, "Friend", "Clan", true, false}}, 4.2, false), std::vector<std::string>{"Friend"});
-}
-
-TEST(QmFriendEnterTracker, SlotMigrationRespectsIgnoreClan)
-{
-	for(const bool IgnoreClan : {false, true})
+	for(const char *pSuffix : {"' entered and joined the game", "' joined the game",
+		    "' entered and joined the red team", "' entered and joined the blue team",
+		    "' entered and joined the spectators"})
 	{
-		qm_friend_notify::CEnterTracker Tracker;
-		EXPECT_TRUE(Tracker.Update({{1, "Friend", "OldClan", true, false}}, 0.0, IgnoreClan).empty());
-		EXPECT_TRUE(Tracker.Update({}, 1.0, IgnoreClan).empty());
-		const auto vNames = Tracker.Update({{2, "Friend", "NewClan", true, false}}, 1.2, IgnoreClan);
-		EXPECT_EQ(vNames, IgnoreClan ? std::vector<std::string>{} : std::vector<std::string>{"Friend"});
+		SCOPED_TRACE(pSuffix);
+		const auto Message = qm_friend_notify::ParsePresenceMessage(-1, 0, std::string("'O'Brien") + pSuffix);
+		EXPECT_EQ(Message.m_Event, qm_friend_notify::EPresenceEvent::ENTER);
+		EXPECT_EQ(Message.m_Name, "O'Brien");
 	}
 }
 
-TEST(QmFriendEnterTracker, LocalPlayersAndNonFriendsDoNotNotify)
+TEST(QmFriendPresenceMessage, PlayerChatAndOtherChannelsCannotTriggerPresence)
 {
-	qm_friend_notify::CEnterTracker Tracker;
-	EXPECT_TRUE(Tracker.Update({}, 0.0, false).empty());
-	EXPECT_TRUE(Tracker.Update({{1, "Main", "Clan", true, true}, {2, "Dummy", "Clan", true, true}, {3, "Stranger", "Clan", false, false}}, 0.2, false).empty());
-	EXPECT_TRUE(Tracker.Update({{1, "Main", "Clan", true, false}, {2, "Dummy", "Clan", true, false}, {3, "Stranger", "Clan", true, false}}, 0.4, false).empty());
+	const char *pText = "'Alice' entered and joined the game";
+	EXPECT_EQ(qm_friend_notify::ParsePresenceMessage(3, 0, pText).m_Event, qm_friend_notify::EPresenceEvent::NONE);
+	EXPECT_EQ(qm_friend_notify::ParsePresenceMessage(-1, 1, pText).m_Event, qm_friend_notify::EPresenceEvent::NONE);
+	EXPECT_EQ(qm_friend_notify::ParsePresenceMessage(-2, 0, pText).m_Event, qm_friend_notify::EPresenceEvent::NONE);
 }
 
-TEST(QmFriendEnterTracker, ResetBuildsANewSilentBaseline)
+TEST(QmFriendPresenceMessage, Utf8AndMaximumLengthNamesArePreserved)
 {
-	qm_friend_notify::CEnterTracker Tracker;
-	EXPECT_TRUE(Tracker.Update({}, 0.0, false).empty());
-	EXPECT_EQ(Tracker.Update({{1, "Friend", "Clan", true, false}}, 0.2, false), std::vector<std::string>{"Friend"});
-	Tracker.Reset();
-	EXPECT_TRUE(Tracker.Update({{1, "Friend", "Clan", true, false}, {2, "Another", "Clan", true, false}}, 1.0, false).empty());
+	for(const std::string &Name : {std::string("璇梦"), std::string(MAX_NAME_LENGTH - 1, 'A')})
+	{
+		const auto Message = qm_friend_notify::ParsePresenceMessage(-1, 0, "'" + Name + "' entered and joined the game");
+		EXPECT_EQ(Message.m_Event, qm_friend_notify::EPresenceEvent::ENTER);
+		EXPECT_EQ(Message.m_Name, Name);
+	}
+}
+
+TEST(QmFriendPresenceMessage, MalformedOrUnrelatedMessagesAreIgnored)
+{
+	for(const char *pText : {"", "Alice entered and joined the game", "'' entered and joined the game",
+		    "'Alice' entered and joined the game extra", "notice: 'Alice' entered and joined the game",
+		    "'Alice' joined the red team", "'Alice' joined the spectators",
+		    "'Alice\nBob' entered and joined the game", "'1234567890123456' entered and joined the game"})
+	{
+		SCOPED_TRACE(pText);
+		EXPECT_EQ(qm_friend_notify::ParsePresenceMessage(-1, 0, pText).m_Event, qm_friend_notify::EPresenceEvent::NONE);
+	}
+}
+
+TEST(QmFriendPresenceMessage, LeaveMessagesWithOptionalReasonsExtractTheName)
+{
+	for(const char *pText : {"'Alice' has left the game", "'Alice' has left the game (Timeout)",
+		    "'Alice' 离开了游戏", "'Alice' 离开了游戏（超时）"})
+	{
+		SCOPED_TRACE(pText);
+		const auto Message = qm_friend_notify::ParsePresenceMessage(-1, 0, pText);
+		EXPECT_EQ(Message.m_Event, qm_friend_notify::EPresenceEvent::LEAVE);
+		EXPECT_EQ(Message.m_Name, "Alice");
+	}
+	EXPECT_EQ(qm_friend_notify::ParsePresenceMessage(-1, 0, "'Alice' has left the game soon").m_Event, qm_friend_notify::EPresenceEvent::NONE);
+}
+
+TEST(QmFriendGreetQueue, NewFriendCanBeGreetedInTheSameUpdate)
+{
+	qm_friend_notify::CGreetQueue Queue;
+	Queue.Add("Friend");
+	EXPECT_TRUE(Queue.TrySend([](const std::string &Names) {
+		EXPECT_EQ(Names, "Friend");
+		return true;
+	}));
+	EXPECT_FALSE(Queue.TrySend([](const std::string &) { ADD_FAILURE(); return true; }));
+}
+
+TEST(QmFriendGreetQueue, RejectedSendRemainsPendingAndMergesLaterArrival)
+{
+	qm_friend_notify::CGreetQueue Queue;
+	Queue.Add("Alice");
+	EXPECT_FALSE(Queue.TrySend([](const std::string &) { return false; }));
+	Queue.Add("Bob");
+	Queue.Add("Alice");
+	EXPECT_TRUE(Queue.TrySend([](const std::string &Names) {
+		EXPECT_EQ(Names, "Alice Bob");
+		return true;
+	}));
+}
+
+TEST(QmFriendGreetQueue, FriendLeavingBeforeSendIsDiscarded)
+{
+	qm_friend_notify::CGreetQueue Queue;
+	Queue.Add("Alice");
+	Queue.Remove("Alice");
+	EXPECT_FALSE(Queue.TrySend([](const std::string &) { ADD_FAILURE(); return true; }));
+}
+
+TEST(QmFriendGreetQueue, DisablingOrChangingConnectionCancelsPendingGreeting)
+{
+	qm_friend_notify::CGreetQueue Queue;
+	Queue.Add("Alice");
+	Queue.Reset();
+	EXPECT_FALSE(Queue.TrySend([](const std::string &) { ADD_FAILURE(); return true; }));
 }
 
 TEST(QmFriendOnlineScan, InitialAndNewlyCompletedServersAreSilentUntilTheirNextSnapshot)

@@ -46,6 +46,9 @@ protected:
 	bool m_MediaIslandSdfProgramValid;
 	CGLSLRoundedRectSdfProgram *m_pRoundedRectSdfProgram;
 	bool m_RoundedRectSdfProgramValid;
+	// 圆角容器放图专用变体：唯一区别是片段着色器额外采样一张图片。
+	CGLSLRoundedRectSdfProgram *m_pRoundedRectSdfTexturedProgram;
+	bool m_RoundedRectSdfTexturedProgramValid;
 	CGLSLProceduralRingProgram *m_pProceduralRingProgram;
 	bool m_ProceduralRingProgramValid;
 	CGLSLGaussianBlurProgram *m_pGaussianBlurProgram;

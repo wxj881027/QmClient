@@ -32,6 +32,7 @@
 #include <game/localization.h>
 
 #include <algorithm>
+#include <cinttypes>
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -203,20 +204,64 @@ void CScoreboard::SetUiMousePos(vec2 Pos)
 void CScoreboard::ConKeyScoreboard(IConsole::IResult *pResult, void *pUserData)
 {
 	CScoreboard *pSelf = static_cast<CScoreboard *>(pUserData);
+	pSelf->SetActive(pResult->GetInteger(0) != 0);
+}
 
-	pSelf->GameClient()->m_Spectator.OnRelease();
-	pSelf->GameClient()->m_Emoticon.OnRelease();
+void CScoreboard::SetActive(bool Active)
+{
+	GameClient()->m_Spectator.OnRelease();
+	GameClient()->m_Emoticon.OnRelease();
 
-	pSelf->m_Active = pResult->GetInteger(0) != 0;
+	m_Active = Active;
 
-	if(!pSelf->IsActive() && pSelf->m_MouseUnlocked)
+	if(!IsActive() && m_MouseUnlocked)
 	{
-		pSelf->Ui()->ClosePopupMenus();
-		pSelf->m_MouseUnlocked = false;
-		if(pSelf->m_LastMousePos.has_value())
-			pSelf->SetUiMousePos(pSelf->m_LastMousePos.value());
-		pSelf->m_LastMousePos = pSelf->Ui()->MousePos();
+		Ui()->ClosePopupMenus();
+		m_MouseUnlocked = false;
+		if(m_LastMousePos.has_value())
+			SetUiMousePos(m_LastMousePos.value());
+		m_LastMousePos = Ui()->MousePos();
 	}
+}
+
+bool CScoreboard::MobilePanelContains(vec2 NdcPos) const
+{
+	const CUIRect &Panel = m_LastPanelNdc;
+	return Panel.w > 0.0f && Panel.h > 0.0f && Panel.Inside(NdcPos);
+}
+
+bool CScoreboard::MobileRowTapActive() const
+{
+	// 手机端点整行是“跟随”，玩家卡走行尾的「…」；桌面保持整行点开玩家卡。
+	return QmUiMobilePlatform();
+}
+
+void CScoreboard::SpectatePlayer(int ClientId)
+{
+	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
+		return;
+	const bool IsSpectating = GameClient()->m_Snap.m_SpecInfo.m_Active && GameClient()->m_Snap.m_SpecInfo.m_SpectatorId == ClientId;
+	if(IsSpectating)
+	{
+		GameClient()->m_Spectator.Spectate(SPEC_FREEVIEW);
+		Console()->ExecuteLine("say /spec");
+		return;
+	}
+	if(GameClient()->m_Snap.m_SpecInfo.m_Active)
+	{
+		GameClient()->m_Spectator.Spectate(ClientId);
+		return;
+	}
+	// 非旁观时由服务器把客户端切进旁观：/spec "名字"。
+	const char *pName = GameClient()->m_aClients[ClientId].m_aName;
+	if(pName[0] == '\0')
+		return;
+	char aCommand[2 * MAX_NAME_LENGTH + 32];
+	str_copy(aCommand, "say /spec \"");
+	char *pDst = aCommand + str_length(aCommand);
+	str_escape(&pDst, pName, aCommand + sizeof(aCommand));
+	str_append(aCommand, "\"");
+	Console()->ExecuteLine(aCommand);
 }
 
 void CScoreboard::UpdateQmAxiomScoreMode()
@@ -384,6 +429,12 @@ bool CScoreboard::OnInput(const IInput::CEvent &Event)
 {
 	if(m_MouseUnlocked && Event.m_Key == KEY_ESCAPE && (Event.m_Flags & IInput::FLAG_PRESS))
 	{
+		// 手机上的返回键等价于关掉面板；桌面解锁后 ESC 仍然只是把光标锁回去。
+		if(QmUiMobilePlatform() && IsActive())
+		{
+			SetActive(false);
+			return true;
+		}
 		Ui()->ClosePopupMenus();
 		m_MouseUnlocked = false;
 		if(m_LastMousePos.has_value())
@@ -425,10 +476,19 @@ void CScoreboard::RenderTitle(CUIRect TitleLabel, int Team, const char *pTitle, 
 		}
 	}
 
+	// 地图名不省略：宽度不够就等比缩字号（最小 10），标题保持单行。
+	float FontSize = TitleFontSize;
 	SLabelProperties Props;
 	Props.m_MaxWidth = TitleLabel.w;
 	Props.m_EllipsisAtEnd = true;
-	Ui()->DoLabel(&TitleLabel, pTitle, TitleFontSize, Team == TEAM_RED ? TEXTALIGN_ML : TEXTALIGN_MR, Props);
+	const float TextWidth = TextRender()->TextWidth(FontSize, pTitle);
+	if(TextWidth > TitleLabel.w && TextWidth > 0.0f)
+	{
+		// 先缩字号；缩到下限还放不下就退回省略号，绝不越过自己的框去压右侧时间。
+		FontSize = maximum(10.0f, FontSize * TitleLabel.w / TextWidth);
+		Props.m_EllipsisAtEnd = TextRender()->TextWidth(FontSize, pTitle) > TitleLabel.w;
+	}
+	Ui()->DoLabel(&TitleLabel, pTitle, FontSize, Team == TEAM_RED ? TEXTALIGN_ML : TEXTALIGN_MR, Props);
 }
 
 void CScoreboard::RenderTitleScore(CUIRect ScoreLabel, int Team, float TitleFontSize)
@@ -485,6 +545,7 @@ void CScoreboard::RenderTitleBar(CUIRect TitleBar, int Team, const char *pTitle)
 {
 	dbg_assert(Team == TEAM_RED || Team == TEAM_BLUE || Team == TEAM_GAME, "Team invalid");
 
+	// 标题与 rank1 时间共用同一字号：手机不再单独放大，否则时间会压过地图名。
 	const float TitleFontSize = 20.0f;
 	const float ScoreTextWidth = TextRender()->TextWidth(TitleFontSize, "00:00:00");
 
@@ -1025,14 +1086,6 @@ void CScoreboard::BuildPlayerRowPlan(int Team, CScoreboardPlayerRowPlan &Plan)
 	auto &&IsInScoreboardTeam = [&](const CNetObj_PlayerInfo *pInfo) {
 		if(pInfo == nullptr)
 			return false;
-		// 名字/战队子串过滤（不区分大小写）：qm_scoreboard_filter 留空显示全部。
-		const char *pFilter = g_Config.m_QmScoreboardFilter;
-		if(pFilter[0] != '\0')
-		{
-			const auto &ClientData = GameClient()->m_aClients[pInfo->m_ClientId];
-			if(!str_find_nocase(ClientData.m_aName, pFilter) && !str_find_nocase(ClientData.m_aClan, pFilter))
-				return false;
-		}
 		return QmScoreboardEffectivePlayerTeam(pInfo->m_Team, GameClient()->m_aClients[pInfo->m_ClientId].m_Spec, IsTeamPlay) == Team;
 	};
 
@@ -1116,9 +1169,10 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 	const bool TimeScore = GameClient()->m_GameInfo.m_TimeScore;
 	const int NumPlayers = Scroll ? 16 : CountEnd - CountStart;
 	const bool LowScoreboardWidth = Scoreboard.w < 350.0f;
-	// Axiom 积分服上这一列显示当前模式的 Axiom 分数，取代 DDNet 在线点数。
-	const bool AxiomScoreColumn = HasQmAxiomScoreMode();
-	const bool ShowPoints = AxiomScoreColumn || g_Config.m_QmScoreboardPoints != 0;
+	const bool ShowPlaytime = g_Config.m_QmScoreboardPlaytime != 0;
+	// 积分视图在 Axiom 服显示当前模式分数，游玩时间独立使用 DDStats。
+	const bool AxiomScoreColumn = !ShowPlaytime && HasQmAxiomScoreMode();
+	const bool ShowStatistics = ShowPlaytime || AxiomScoreColumn || g_Config.m_QmScoreboardPoints != 0;
 	const float ContentAlpha = m_AnimContentAlpha;
 	const ColorRGBA BaseTextColor = TextRender()->DefaultTextColor().WithMultipliedAlpha(ContentAlpha);
 	const ColorRGBA BaseOutlineColor = TextRender()->DefaultTextOutlineColor().WithMultipliedAlpha(ContentAlpha);
@@ -1191,10 +1245,11 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 	const float ClientBrandOffset = Scoreboard.x + 10.0f;
 	const float ScoreOffset = Scoreboard.x + 20.0f + ClientBrandLength;
 	const float ScoreLength = TextRender()->TextWidth(FontSize, TimeScore ? "00:00:00" : "99999");
-	// Points column: placed between Score and Tee (only when enabled)
-	const float PointsLength = ShowPoints ? (LowScoreboardWidth ? TextRender()->TextWidth(FontSize, "99999") : TextRender()->TextWidth(FontSize, "999999")) : 0.0f;
-	const float PointsOffset = ScoreOffset + ScoreLength + 10.0f;
-	const float TeeOffset = ShowPoints ? (PointsOffset + PointsLength + 10.0f) : (ScoreOffset + ScoreLength + 10.0f);
+	// 统计列复用积分位置，并为带单位的表头预留宽度。
+	const char *pStatsLabel = ShowPlaytime ? Localize("Playtime (h)") : (AxiomScoreColumn ? QmAxiomModeName(m_QmAxiomScoreModeFrame) : Localize("Points"));
+	const float StatsLength = ShowStatistics ? maximum(TextRender()->TextWidth(FontSize, LowScoreboardWidth ? "99999" : "999999"), TextRender()->TextWidth(HeadlineFontsize, pStatsLabel)) : 0.0f;
+	const float StatsOffset = ScoreOffset + ScoreLength + 10.0f;
+	const float TeeOffset = ShowStatistics ? (StatsOffset + StatsLength + 10.0f) : (ScoreOffset + ScoreLength + 10.0f);
 	const float TeeLength = 60.0f * TeeSizeMod;
 	const float NameOffset = TeeOffset + TeeLength;
 	const float CountryLength = (LineHeight - Spacing - TeeSizeMod * 5.0f) * 2.0f;
@@ -1211,12 +1266,9 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 	const float HeadlineY = Headline.y + Headline.h / 2.0f - HeadlineFontsize / 2.0f;
 	const char *pScore = TimeScore ? Localize("Time") : Localize("Score");
 	TextRender()->Text(ScoreOffset + ScoreLength - TextRender()->TextWidth(HeadlineFontsize, pScore), HeadlineY, HeadlineFontsize, pScore);
-	// Points column header: only render when enabled
-	if(ShowPoints)
+	if(ShowStatistics)
 	{
-		// 表头直接写模式名，让玩家知道这一列是哪个模式的分数。
-		const char *pPointsLabel = AxiomScoreColumn ? QmAxiomModeName(m_QmAxiomScoreModeFrame) : Localize("Points");
-		TextRender()->Text(PointsOffset + PointsLength - TextRender()->TextWidth(HeadlineFontsize, pPointsLabel), HeadlineY, HeadlineFontsize, pPointsLabel);
+		TextRender()->Text(StatsOffset + StatsLength - TextRender()->TextWidth(HeadlineFontsize, pStatsLabel), HeadlineY, HeadlineFontsize, pStatsLabel);
 	}
 	TextRender()->Text(NameOffset, HeadlineY, HeadlineFontsize, Localize("Name"));
 	if(RowDetail.m_ShowClan)
@@ -1339,8 +1391,40 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 		if(m_MouseUnlocked && m_RenderInteractions)
 		{
 			CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
-			const int ButtonResult = Ui()->DoButtonLogic(&ClientData, 0, &Row, BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT);
-			if(ButtonResult != 0)
+			// 手机上没有悬停也没有右键：点整行直接跟随，玩家卡交给行尾的「…」按钮。
+			const bool MobileRow = MobileRowTapActive();
+			CUIRect RowHit = Row;
+			CUIRect CardButton = Row;
+			if(MobileRow)
+			{
+				const float CardButtonWidth = minimum(LineHeight, Row.w * 0.5f);
+				RowHit.VSplitRight(CardButtonWidth, &RowHit, &CardButton);
+				CardButton.HMargin(minimum(2.0f, CardButton.h * 0.2f), &CardButton);
+			}
+
+			const int ButtonResult = Ui()->DoButtonLogic(&ClientData, 0, &RowHit, BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT);
+			bool OpenCard = ButtonResult != 0 && !MobileRow;
+			if(ButtonResult != 0 && MobileRow)
+			{
+				// 拖动列表后的松手是滚动，不是点行跟随。
+				if(!m_MobileRowDragScroll)
+				{
+					SpectatePlayer(ClientId);
+					SetActive(false);
+				}
+			}
+			if(MobileRow)
+			{
+				const bool HoveredCard = Ui()->MouseHovered(&CardButton);
+				const bool CardActive = Ui()->IsPopupOpen(&m_ScoreboardPopupContext) && m_ScoreboardPopupContext.m_ClientId == ClientId;
+				CardButton.Draw(HoveredCard || CardActive ? ScoreboardDecorationColor(ui_token::color::TINT_HUD_CARD_ACTIVE.WithMultipliedAlpha(ItemAlpha)) : ScoreboardDecorationColor(ui_token::color::TINT_HUD_CARD.WithMultipliedAlpha(ItemAlpha)), IGraphics::CORNER_ALL, RoundRadius);
+				TextRender()->TextColor(TextRender()->DefaultTextColor().WithMultipliedAlpha(ItemAlpha));
+				Ui()->DoLabel(&CardButton, FontIcons::FONT_ICON_ELLIPSIS, minimum(LineHeight * 0.7f, 10.0f), TEXTALIGN_MC);
+				TextRender()->TextColor(TextRender()->DefaultTextColor());
+				if(Ui()->DoButtonLogic(&m_aRowCardButtons[ClientId], 0, &CardButton, BUTTONFLAG_LEFT) && !m_MobileRowDragScroll)
+					OpenCard = true;
+			}
+			if(OpenCard)
 			{
 				m_ScoreboardPopupContext.m_pScoreboard = this;
 				m_ScoreboardPopupContext.m_ClientId = ClientId;
@@ -1413,11 +1497,23 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 			TextRender()->Text(ClientBrandX, Row.y + (Row.h - FontSize) / 2.0f, FontSize, pClientBrandLabel);
 			TextRender()->TextColor(TextColor);
 		}
-		// Points column: render actual points value, right-aligned (only when enabled)
-		if(ShowPoints)
+		if(ShowStatistics)
 		{
-			char aPointsValue[16];
-			if(AxiomScoreColumn)
+			char aPointsValue[32];
+			if(ShowPlaytime)
+			{
+				if(HideIdentity)
+					aPointsValue[0] = '\0';
+				else
+				{
+					const SPlayerPlaytimeResult Playtime = GameClient()->m_PlayerPoints.GetPlaytime(ClientData.m_aName);
+					if(Playtime.m_Status == EPointsStatus::READY)
+						str_format(aPointsValue, sizeof(aPointsValue), "%" PRId64, Playtime.m_Hours);
+					else
+						str_copy(aPointsValue, Playtime.m_Status == EPointsStatus::FAILED ? "?" : "...");
+				}
+			}
+			else if(AxiomScoreColumn)
 			{
 				// 隐藏主播身份的玩家不暴露 Axiom 分数。
 				const bool PointsVisible = !HideIdentity && !GameClient()->ShouldHideStreamerIdentity(ClientId);
@@ -1440,7 +1536,11 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 				}
 			}
 			if(aPointsValue[0] != '\0')
-				TextRender()->Text(PointsOffset + PointsLength - TextRender()->TextWidth(FontSize, aPointsValue), Row.y + (Row.h - FontSize) / 2.0f, FontSize, aPointsValue);
+			{
+				const float ValueWidth = TextRender()->TextWidth(FontSize, aPointsValue);
+				const float ValueFontSize = ValueWidth > StatsLength ? FontSize * StatsLength / ValueWidth : FontSize;
+				TextRender()->Text(StatsOffset + StatsLength - minimum(ValueWidth, StatsLength), Row.y + (Row.h - ValueFontSize) / 2.0f, ValueFontSize, aPointsValue);
+			}
 		}
 
 		// CTF flag
@@ -1690,10 +1790,10 @@ void CScoreboard::OnRender()
 	if(GetQmFocusModeDecisions().m_HideScoreboard)
 		return;
 
-	// 当记分板可见时（骗你的,不可见也查），为所有活跃玩家触发查询点
+	// 沿用积分预热；切换统计列复用同一份 DDNet 响应。
 	if(HasQmAxiomScoreMode())
 	{
-		// Axiom 积分服：查当前 Axiom 模式的分数，不再请求 DDNet 在线点数。
+		// Axiom 排序继续使用当前模式分数，显示游玩时间不改变排序数据源。
 		GameClient()->m_QmAxiomScores.SetMode(m_QmAxiomScoreModeFrame);
 		// 记分板打开时给足预算铺满一屏，否则只做少量预热；
 		// 真正发请求的速度由组件内每帧搜索上限控制。
@@ -1708,14 +1808,23 @@ void CScoreboard::OnRender()
 			GameClient()->m_QmAxiomScores.EnsureQueried(GameClient()->m_aClients[i].m_aName);
 		}
 	}
-	else if(g_Config.m_QmScoreboardPoints || g_Config.m_QmScoreboardSortMode)
+	else
 	{
 		GameClient()->m_QmAxiomScores.SetMode(EQmAxiomMode::NONE);
+	}
+	const bool NeedDdnetPoints = !HasQmAxiomScoreMode() && (g_Config.m_QmScoreboardPoints || g_Config.m_QmScoreboardSortMode);
+	if(g_Config.m_QmScoreboardPlaytime || NeedDdnetPoints)
+	{
 		for(int i = 0; i < MAX_CLIENTS; i++)
 		{
 			if(GameClient()->m_Snap.m_apPlayerInfos[i] && GameClient()->m_aClients[i].m_Active)
 			{
-				GameClient()->m_PlayerPoints.EnsureQueried(GameClient()->m_aClients[i].m_aName);
+				if(!NeedDdnetPoints && GameClient()->ShouldHideStreamerIdentity(i))
+					continue;
+				if(g_Config.m_QmScoreboardPlaytime && !GameClient()->ShouldHideStreamerIdentity(i))
+					GameClient()->m_PlayerPoints.EnsurePlaytimeQueried(GameClient()->m_aClients[i].m_aName);
+				if(NeedDdnetPoints)
+					GameClient()->m_PlayerPoints.EnsureQueried(GameClient()->m_aClients[i].m_aName);
 			}
 		}
 	}
@@ -1731,6 +1840,12 @@ void CScoreboard::OnRender()
 	}
 
 	const bool WantActive = IsActive();
+	// 手机上没有“锁定光标”这一步：计分板一打开就按已解锁处理，玩家行和「…」按钮直接可点。
+	if(QmUiMobilePlatform() && WantActive && !m_MouseUnlocked)
+	{
+		m_MouseUnlocked = true;
+		m_LastMousePos = std::nullopt;
+	}
 	// 显示状态转换检测：每次由隐藏转为显示（Tab 开合、死亡自动弹出、游戏结束）都重置
 	// 行内国旗的入场动画起点，保证每次打开计分板国旗都重放入场动画。
 	if(WantActive && !m_WasActive)
@@ -1828,18 +1943,41 @@ void CScoreboard::OnRender()
 	const float MaxScoreboardWidth = HasMedia ? QmScoreboardMediaMaxWidth(Screen.w, true) : maximum(200.0f, Screen.w - ScreenMargin);
 	const int ScoreboardColumns = ScrollMode ? 1 : (Teams ? 2 : (NumPlayers <= 16 ? 1 : (NumPlayers <= 64 ? 2 : 3)));
 	const float ClientBrandExtraWidth = g_Config.m_QmClientShowBadge ? maximum(TextRender()->TextWidth(12.0f, "Qm"), TextRender()->TextWidth(12.0f, "Arg")) + CLIENT_BRAND_LABEL_GAP : 0.0f;
-	const float BaseScoreboardSmallWidth = (g_Config.m_QmScoreboardPoints ? (450.0f + 10.0f) : 450.0f) + ClientBrandExtraWidth;
+	const float BaseScoreboardSmallWidth = ((g_Config.m_QmScoreboardPoints || g_Config.m_QmScoreboardPlaytime) ? (450.0f + 10.0f) : 450.0f) + ClientBrandExtraWidth;
 	const float ScoreboardSmallWidth = minimum(BaseScoreboardSmallWidth, MaxScoreboardWidth);
 	const float BaseScoreboardWidth = ScrollMode || (!Teams && NumPlayers <= 16) ? ScoreboardSmallWidth : 850.0f + ClientBrandExtraWidth * ScoreboardColumns;
 	const float ScoreboardWidth = minimum(BaseScoreboardWidth, MaxScoreboardWidth);
 	const float TitleHeight = 30.0f;
 
-	const float ScoreboardTop = 75.0f;
-	CUIRect Scoreboard = {(Screen.w - ScoreboardWidth) / 2.0f, ScoreboardTop, ScoreboardWidth, QmScoreboardPanelHeight(Screen.h, ScoreboardTop)};
+	// 手机：面板顶到更高、整体加高，列表能看到更多行（桌面维持原高度）。
+	const float ScoreboardTop = QmUiMobilePlatform() ? 40.0f : 75.0f;
+	const float ScoreboardHeight = QmUiMobilePlatform() ? QmScoreboardScrollPanelHeight(Screen.h, ScoreboardTop) : QmScoreboardPanelHeight(Screen.h, ScoreboardTop);
+	CUIRect Scoreboard = {(Screen.w - ScoreboardWidth) / 2.0f, ScoreboardTop, ScoreboardWidth, ScoreboardHeight};
 	if(ExtraAnimations)
 	{
 		Scoreboard = ScaleRectAroundCenter(Scoreboard, PanelScale);
 		Scoreboard.y += PanelOffsetY;
+	}
+	if(Screen.w > 0.0f && Screen.h > 0.0f)
+		m_LastPanelNdc = {Scoreboard.x / Screen.w, Scoreboard.y / Screen.h, Scoreboard.w / Screen.w, Scoreboard.h / Screen.h};
+	// 手机：同一根手指拖动列表时，DoButtonLogic 仍会把它判成"点中某行"，
+	// 于是滚动过程中视角被切走。按下后位移超过阈值就按拖动处理，松手不触发跟随。
+	if(MobileRowTapActive())
+	{
+		const vec2 MobileMouse = Ui()->MousePos();
+		if(Ui()->MouseButton(0))
+		{
+			if(!m_MobileRowPressActive)
+			{
+				m_MobileRowPressActive = true;
+				m_MobileRowDragScroll = false;
+				m_MobileRowPressPos = MobileMouse;
+			}
+			else if(distance(MobileMouse, m_MobileRowPressPos) > 8.0f)
+				m_MobileRowDragScroll = true;
+		}
+		else
+			m_MobileRowPressActive = false;
 	}
 	CUIRect ScoreboardContent = Scoreboard;
 	ScoreboardContent.y += ContentOffset;
@@ -1862,6 +2000,18 @@ void CScoreboard::OnRender()
 	auto &&DoSortButton = [&](CUIRect Rect) {
 		if(DoHeaderButton(&s_ScoreboardSortButton, pSortLabel, Rect, SortButtonColor))
 			g_Config.m_QmScoreboardSortMode ^= 1;
+	};
+	static CButtonContainer s_ScoreboardStatisticsButton;
+	const char *pStatisticsLabel = g_Config.m_QmScoreboardPlaytime ? Localize("Show points") : Localize("Show playtime");
+	const float StatisticsButtonWidth = maximum(TextRender()->TextWidth(SortButtonFontSize, Localize("Show points")), TextRender()->TextWidth(SortButtonFontSize, Localize("Show playtime"))) + 18.0f;
+	auto &&DoStatisticsButton = [&](CUIRect Rect) {
+		if(DoHeaderButton(&s_ScoreboardStatisticsButton, pStatisticsLabel, Rect, ScoreboardUiColorSurface(1.0f, 0.18f)))
+		{
+			g_Config.m_QmScoreboardPlaytime ^= 1;
+			// 主动切回积分时保证该列可见，默认关闭积分查询的配置仍可直接使用按钮。
+			if(!g_Config.m_QmScoreboardPlaytime)
+				g_Config.m_QmScoreboardPoints = 1;
+		}
 	};
 
 	// 服务器人数：沿用官方 ESC 服务器信息的「当前 / 上限」，仅真实联机且服务端上报上限时显示。
@@ -1997,8 +2147,11 @@ void CScoreboard::OnRender()
 		RedScoreboard.Draw(ScoreboardGlassSurface(BackgroundAlphaFinal), IGraphics::CORNER_B, ui_token::radius::CARD);
 		BlueScoreboard.Draw(ScoreboardGlassSurface(BackgroundAlphaFinal), IGraphics::CORNER_B, ui_token::radius::CARD);
 
+		CUIRect StatisticsButton;
+		RedTitleContent.VSplitRight(StatisticsButtonWidth, &RedTitleContent, &StatisticsButton);
 		RenderTitleBar(RedTitleContent, TEAM_RED, pRedTeamName == nullptr ? Localize("Red team") : pRedTeamName);
 		RenderTitleBar(BlueTitleContent, TEAM_BLUE, pBlueTeamName == nullptr ? Localize("Blue team") : pBlueTeamName);
+		DoStatisticsButton(StatisticsButton);
 		DoServerPlayers(ServerPlayers);
 		DoSortButton(SortButton);
 		RenderScoreboard(RedScoreboardContent, TEAM_RED, 0, NumPlayers, RedPlayerRows, RenderState);
@@ -2021,9 +2174,11 @@ void CScoreboard::OnRender()
 		CUIRect Title;
 		CUIRect ScoreboardContentBody = ScoreboardContent;
 		ScoreboardContentBody.HSplitTop(TitleHeight, &Title, &ScoreboardContentBody);
+		// 标题保持单行：地图名宽度不够时由 RenderTitle 自动缩字号，不再拆行。
 		CUIRect SortButton;
 		CUIRect ServerPlayers;
 		CUIRect ScrollButton;
+		CUIRect StatisticsButton;
 		const bool ShowScrollButton = !Teams && NumPlayers > 16;
 		const char *pScrollLabel = g_Config.m_QmScoreboardScroll ? Localize("Scroll mode: On") : Localize("Scroll mode: Off");
 		const float ScrollButtonWidth = TextRender()->TextWidth(SortButtonFontSize, pScrollLabel) + 18.0f;
@@ -2041,6 +2196,7 @@ void CScoreboard::OnRender()
 			if(ShowScrollButton)
 				++ChildCount;
 			++ChildCount; // 排序按钮
+			++ChildCount; // 统计列切换按钮
 			vTitleChildren.assign(ChildCount, SUiLayoutChild{});
 			int ChildIndex = 0;
 			vTitleChildren[ChildIndex++].m_Style.m_Width = SUiLength::Flex(1.0f);
@@ -2049,14 +2205,18 @@ void CScoreboard::OnRender()
 			const int ScrollButtonIndex = ShowScrollButton ? ChildIndex++ : -1;
 			if(ShowScrollButton)
 				vTitleChildren[ScrollButtonIndex].m_Style.m_Width = SUiLength::Px(ScrollButtonWidth);
+			const int StatisticsButtonIndex = ChildIndex++;
+			vTitleChildren[StatisticsButtonIndex].m_Style.m_Width = SUiLength::Px(StatisticsButtonWidth);
 			const int SortButtonIndex = ChildIndex++;
 			vTitleChildren[SortButtonIndex].m_Style.m_Width = SUiLength::Px(SortButtonWidth);
 			LayoutEngine.ComputeChildren(TitleSplitStyle, CUiV2LegacyAdapter::FromCUIRect(Title), vTitleChildren);
-			Title = CUiV2LegacyAdapter::ToCUIRect(vTitleChildren[0].m_Box);
+			int BoxIndex = 0;
+			Title = CUiV2LegacyAdapter::ToCUIRect(vTitleChildren[BoxIndex++].m_Box);
 			if(ShowServerPlayers)
-				ServerPlayers = CUiV2LegacyAdapter::ToCUIRect(vTitleChildren[1].m_Box);
+				ServerPlayers = CUiV2LegacyAdapter::ToCUIRect(vTitleChildren[BoxIndex++].m_Box);
 			if(ShowScrollButton)
 				ScrollButton = CUiV2LegacyAdapter::ToCUIRect(vTitleChildren[ScrollButtonIndex].m_Box);
+			StatisticsButton = CUiV2LegacyAdapter::ToCUIRect(vTitleChildren[StatisticsButtonIndex].m_Box);
 			SortButton = CUiV2LegacyAdapter::ToCUIRect(vTitleChildren[SortButtonIndex].m_Box);
 		}
 		RenderTitleBar(Title, TEAM_GAME, pTitle);
@@ -2071,6 +2231,7 @@ void CScoreboard::OnRender()
 				m_ScrollRegion.Reset();
 			}
 		}
+		DoStatisticsButton(StatisticsButton);
 		DoSortButton(SortButton);
 
 		if(ScrollMode)
@@ -2175,7 +2336,7 @@ void CScoreboard::OnRender()
 	{
 		Ui()->RenderPopupMenus();
 
-		if(m_MouseUnlocked)
+		if(m_MouseUnlocked && !QmUiMobilePlatform())
 			RenderTools()->RenderCursor(Ui()->MousePos(), 24.0f);
 
 		Ui()->FinishCheck();
@@ -2422,29 +2583,8 @@ CUi::EPopupMenuFunctionResult CScoreboard::PopupScoreboard(void *pContext, CUIRe
 	ColorRGBA SpectateButtonColor = ColorRGBA(1.0f, 1.0f, 1.0f, (IsSpectating ? 0.25f : 0.5f) * pUi->ButtonColorMul(&pPopupContext->m_SpectateButton));
 	if(pUi->DoButton_PopupMenu(&pPopupContext->m_SpectateButton, Localize("Spectate"), &Container, FontSize, TEXTALIGN_MC, 0.0f, false, true, SpectateButtonColor))
 	{
-		if(IsSpectating)
-		{
-			pScoreboard->GameClient()->m_Spectator.Spectate(SPEC_FREEVIEW);
-			pScoreboard->Console()->ExecuteLine("say /spec");
-		}
-		else
-		{
-			if(pScoreboard->GameClient()->m_Snap.m_SpecInfo.m_Active)
-			{
-				pScoreboard->GameClient()->m_Spectator.Spectate(pPopupContext->m_ClientId);
-			}
-			else
-			{
-				// escape the name
-				char aEscapedCommand[2 * MAX_NAME_LENGTH + 32];
-				str_copy(aEscapedCommand, "say /spec \"");
-				char *pDst = aEscapedCommand + str_length(aEscapedCommand);
-				str_escape(&pDst, Client.m_aName, aEscapedCommand + sizeof(aEscapedCommand));
-				str_append(aEscapedCommand, "\"");
-
-				pScoreboard->Console()->ExecuteLine(aEscapedCommand);
-			}
-		}
+		// 与手机端点整行跟随共用同一套逻辑（切自由视角 / 客户端旁观 / 服务器 /spec）。
+		pScoreboard->SpectatePlayer(pPopupContext->m_ClientId);
 	}
 
 	return CUi::POPUP_KEEP_OPEN;

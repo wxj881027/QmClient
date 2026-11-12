@@ -128,6 +128,9 @@ void CMenus::RenderQmHudBackground3DContent(CUIRect &Content, const SSettingsCon
 		}
 		Flow.Space(LineSpacing);
 
+		if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:background_3d", Metrics, PrewarmOnly || Ui()->RenderOnly()))
+			return;
+
 		static int s_Qm3DParticleCountInputId;
 		RenderIntOption("hud-Qm3DParticlesCount", &s_Qm3DParticleCountInputId, Localize("Particle count"), &g_Config.m_Qm3DParticlesCount, 1, 200);
 		static int s_Qm3DParticleAlphaInputId;

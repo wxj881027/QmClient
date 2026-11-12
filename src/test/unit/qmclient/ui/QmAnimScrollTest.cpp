@@ -627,7 +627,7 @@ TEST(UiV2ScrollPhysics, ScrollRegionParamsUseSharedQmScrollPreset)
 	EXPECT_NEAR(Params.m_ScrollbarThickness, Medium.m_ScrollbarWidth, 0.01f);
 	EXPECT_NEAR(Params.m_ScrollbarMargin, Medium.m_ScrollbarMargin, 0.01f);
 	EXPECT_NEAR(Params.m_SliderMinSize, Medium.m_MinThumbHeight, 0.01f);
-	EXPECT_NEAR(Params.m_ScrollUnit, QmNativeWheelScrollConfig(1.0f, 0.0f).m_WheelScale, 0.01f);
+	EXPECT_NEAR(Params.m_ScrollUnit, QmNativeWheelScrollConfig(1.0f, 0.0f).m_WheelScale * QmPanelWheelStepMultiplier(), 0.01f);
 	EXPECT_FALSE(Params.m_ScrollHorizontal);
 	EXPECT_NEAR(DefaultParams.m_ScrollbarThickness, Medium.m_ScrollbarWidth, 0.01f);
 	EXPECT_NEAR(DefaultParams.m_ScrollbarMargin, Medium.m_ScrollbarMargin, 0.01f);
@@ -658,6 +658,374 @@ TEST(UiV2ScrollPhysics, OverscrollSpringsBackIntoRange)
 		State.Advance(1.0f / 60.0f, Metrics, Config);
 	EXPECT_NEAR(State.Offset(), Metrics.MaxOffset(), 0.75f);
 	EXPECT_NEAR(State.Velocity(), 0.0f, 0.75f);
+}
+TEST(UiV2ScrollPhysics, BounceCompressesPastEndAndSpringsBack)
+{
+	SQmScrollMetrics Metrics{100.0f, 300.0f};
+	SQmScrollConfig Config;
+	Config.m_NativeWheelStep = true;
+	Config.m_NativeWheelAnimationTime = 0.2f;
+	Config.m_MaxOverscroll = 48.0f;
+
+	CQmScrollState State;
+	// 渐进阻力 f(o)=B·o/(o+B)：请求越界 48px 只能得到一半，推得越远越沉。
+	State.SetOffset(Metrics.MaxOffset() + 48.0f, Metrics, Config, true);
+	EXPECT_GT(State.Offset(), Metrics.MaxOffset());
+	EXPECT_NEAR(State.Offset(), Metrics.MaxOffset() + 24.0f, 1.0f);
+
+	// 松手后由阻尼振子回位，不越界。
+	for(int i = 0; i < 240; ++i)
+		State.Advance(1.0f / 60.0f, Metrics, Config);
+	EXPECT_NEAR(State.Offset(), Metrics.MaxOffset(), 0.75f);
+	EXPECT_NEAR(State.Velocity(), 0.0f, 0.75f);
+}
+TEST(UiV2ScrollPhysics, WheelPushesPastEndThenSpringsBackAfterHold)
+{
+	SQmScrollMetrics Metrics{100.0f, 300.0f};
+	SQmScrollConfig Config;
+	Config.m_WheelScale = 10.0f;
+	Config.m_NativeWheelStep = true;
+	Config.m_NativeWheelAnimationTime = 0.2f;
+	Config.m_Feel = EQmScrollFeel::SPRING;
+	Config.m_SpringResponse = 0.20f;
+	Config.m_SpringDamping = 0.90f;
+	Config.m_MaxOverscroll = 48.0f;
+
+	CQmScrollState State;
+	State.SetOffset(Metrics.MaxOffset(), Metrics, Config);
+	// 触底后继续滚：内容被推进橡皮筋区而不是硬停，位移由渐进阻力压缩。
+	State.AddWheelImpulse(-120.0f, Metrics, Config);
+	for(int i = 0; i < 5; ++i)
+		State.Advance(1.0f / 60.0f, Metrics, Config);
+	EXPECT_GT(State.Offset(), Metrics.MaxOffset());
+	EXPECT_LT(State.Offset(), Metrics.MaxOffset() + Config.m_MaxOverscroll);
+
+	// 停止滚动后保持计时耗尽，目标回到边界，弹簧把内容拉回原位。
+	for(int i = 0; i < 120; ++i)
+		State.Advance(1.0f / 60.0f, Metrics, Config);
+	EXPECT_NEAR(State.Offset(), Metrics.MaxOffset(), 0.5f);
+	EXPECT_FALSE(State.Animating());
+}
+TEST(UiV2ScrollPhysics, ReversingWheelLeavesBounceZoneImmediately)
+{
+	SQmScrollMetrics Metrics{100.0f, 300.0f};
+	SQmScrollConfig Config;
+	Config.m_WheelScale = 10.0f;
+	Config.m_NativeWheelStep = true;
+	Config.m_NativeWheelAnimationTime = 0.2f;
+	Config.m_Feel = EQmScrollFeel::SPRING;
+	Config.m_SpringResponse = 0.20f;
+	Config.m_SpringDamping = 0.90f;
+	Config.m_MaxOverscroll = 48.0f;
+
+	CQmScrollState State;
+	State.SetOffset(Metrics.MaxOffset(), Metrics, Config);
+	State.AddWheelImpulse(-120.0f, Metrics, Config);
+	for(int i = 0; i < 4; ++i)
+		State.Advance(1.0f / 60.0f, Metrics, Config);
+	EXPECT_GT(State.Offset(), Metrics.MaxOffset());
+
+	// 在橡皮筋区反向滚一档：起点按边界算，而不是先消化越界量，否则头几档看起来没反应。
+	State.AddWheelImpulse(120.0f, Metrics, Config);
+	for(int i = 0; i < 60; ++i)
+		State.Advance(1.0f / 60.0f, Metrics, Config);
+	EXPECT_LE(State.Offset(), Metrics.MaxOffset());
+	EXPECT_NEAR(State.Offset(), Metrics.MaxOffset() - Config.m_WheelScale, 0.75f);
+}
+TEST(UiV2ScrollPhysics, BounceOffKeepsWheelOnHardStop)
+{
+	SQmScrollMetrics Metrics{100.0f, 300.0f};
+	SQmScrollConfig Config;
+	Config.m_WheelScale = 10.0f;
+	Config.m_NativeWheelStep = true;
+	Config.m_NativeWheelAnimationTime = 0.2f;
+	Config.m_Feel = EQmScrollFeel::SPRING;
+	Config.m_SpringResponse = 0.20f;
+	Config.m_SpringDamping = 0.90f;
+	Config.m_MaxOverscroll = 0.0f;
+
+	CQmScrollState State;
+	State.SetOffset(Metrics.MaxOffset(), Metrics, Config);
+	for(int i = 0; i < 10; ++i)
+	{
+		State.AddWheelImpulse(-120.0f, Metrics, Config);
+		State.Advance(1.0f / 60.0f, Metrics, Config);
+		EXPECT_LE(State.Offset(), Metrics.MaxOffset() + 0.001f);
+	}
+	EXPECT_NEAR(State.Offset(), Metrics.MaxOffset(), 0.75f);
+}
+TEST(UiV2ScrollPhysics, FlingGlideDistanceIsIndependentOfFrameRate)
+{
+	// 指数摩擦的闭式积分：一步内的位移恰为 (v_old - v_new)/friction，滑行总距离
+	// 收敛到 v0/friction。旧实现用衰减后的速度乘 dt，60fps 下会短 7.3%，同一手势
+	// 在不同刷新率上滑出的距离不同。
+	SQmScrollMetrics Metrics;
+	Metrics.m_ViewportSize = 100.0f;
+	Metrics.m_ContentSize = 100000.0f;
+	SQmScrollConfig Config;
+	Config.m_NativeWheelStep = false;
+	Config.m_MaxOverscroll = 0.0f;
+	Config.m_Friction = 9.0f;
+	Config.m_RestVelocity = 0.25f;
+
+	const float StartVelocity = 2000.0f;
+	const float Expected = StartVelocity / Config.m_Friction;
+	const float aFrameRates[] = {1.0f / 60.0f, 1.0f / 144.0f, 1.0f / 240.0f};
+	for(const float Dt : aFrameRates)
+	{
+		CQmScrollState State;
+		State.Fling(StartVelocity, Metrics);
+		for(int i = 0; i < 4000 && State.Velocity() != 0.0f; ++i)
+			State.Advance(Dt, Metrics, Config);
+		EXPECT_NEAR(State.Offset(), Expected, 1.0f) << "Dt=" << Dt;
+	}
+}
+TEST(UiV2ScrollPhysics, LongFrameConsumesFullElapsedTimeLikeAnimationBackend)
+{
+	// 时间基准与动画后端一致：一个长帧就是一段真实经过的时间，不是被截断成 1/15。
+	// 截断会让长帧期间的滚动落后于同一帧里已经跳到终点的 UI 动画。
+	SQmScrollMetrics Metrics;
+	Metrics.m_ViewportSize = 100.0f;
+	Metrics.m_ContentSize = 100000.0f;
+	SQmScrollConfig Config;
+	Config.m_NativeWheelStep = false;
+	Config.m_Friction = 9.0f;
+	Config.m_RestVelocity = 0.25f;
+
+	CQmScrollState State;
+	State.Fling(2000.0f, Metrics);
+	State.Advance(1.0f, Metrics, Config);
+
+	// 1s 足以让 2000px/s 的甩动衰减到静止速度以下。
+	EXPECT_NEAR(State.Offset(), 2000.0f / Config.m_Friction, 1.0f);
+	EXPECT_EQ(State.Velocity(), 0.0f);
+}
+TEST(UiV2ScrollPhysics, SpringFeelSettlesOnAccumulatedWheelTarget)
+{
+	SQmScrollMetrics Metrics;
+	Metrics.m_ViewportSize = 100.0f;
+	Metrics.m_ContentSize = 500.0f;
+	SQmScrollConfig Config;
+	Config.m_WheelScale = 10.0f;
+	Config.m_NativeWheelStep = true;
+	Config.m_NativeWheelAnimationTime = 0.25f;
+	Config.m_Feel = EQmScrollFeel::SPRING;
+
+	CQmScrollState State;
+	// 同一帧内连续三档：目标逐档累加，不会因为每档重置而丢距离。
+	State.AddWheelImpulse(-120.0f, Metrics, Config);
+	State.AddWheelImpulse(-120.0f, Metrics, Config);
+	State.AddWheelImpulse(-120.0f, Metrics, Config);
+	EXPECT_TRUE(State.Animating());
+
+	for(int i = 0; i < 240; ++i)
+		State.Advance(1.0f / 60.0f, Metrics, Config);
+
+	EXPECT_NEAR(State.Offset(), 30.0f, 0.5f);
+	EXPECT_NEAR(State.Velocity(), 0.0f, 0.01f);
+	EXPECT_FALSE(State.Animating());
+}
+TEST(UiV2ScrollPhysics, SpringFeelIsFrameRateIndependent)
+{
+	SQmScrollMetrics Metrics;
+	Metrics.m_ViewportSize = 100.0f;
+	Metrics.m_ContentSize = 500.0f;
+	SQmScrollConfig Config;
+	Config.m_WheelScale = 10.0f;
+	Config.m_NativeWheelStep = true;
+	Config.m_NativeWheelAnimationTime = 0.25f;
+	Config.m_Feel = EQmScrollFeel::SPRING;
+
+	const float Elapsed = 0.05f;
+	CQmScrollState BigStep;
+	BigStep.AddWheelImpulse(-120.0f, Metrics, Config);
+	BigStep.Advance(Elapsed, Metrics, Config);
+
+	CQmScrollState SubStepped;
+	SubStepped.AddWheelImpulse(-120.0f, Metrics, Config);
+	for(int i = 0; i < 10; ++i)
+		SubStepped.Advance(Elapsed / 10.0f, Metrics, Config);
+
+	// 解析解与步长无关：一次大步与十次小步必须落到同一位置。
+	EXPECT_NEAR(SubStepped.Offset(), BigStep.Offset(), 0.01f);
+}
+TEST(UiV2ScrollPhysics, SpringFeelKeepsOffsetInsideRangeWhileReversing)
+{
+	SQmScrollMetrics Metrics;
+	Metrics.m_ViewportSize = 100.0f;
+	Metrics.m_ContentSize = 500.0f;
+	SQmScrollConfig Config;
+	Config.m_WheelScale = 10.0f;
+	Config.m_NativeWheelStep = true;
+	Config.m_NativeWheelAnimationTime = 0.25f;
+	Config.m_Feel = EQmScrollFeel::SPRING;
+
+	CQmScrollState State;
+	State.AddWheelImpulse(-120.0f, Metrics, Config);
+	for(int i = 0; i < 6; ++i)
+		State.Advance(1.0f / 60.0f, Metrics, Config);
+	EXPECT_GT(State.Offset(), 0.0f);
+
+	// 反向滚轮：定位目标回到顶部，弹簧先减速再反向，全程不得越出可视范围。
+	State.AddWheelImpulse(120.0f, Metrics, Config);
+	for(int i = 0; i < 240; ++i)
+	{
+		State.Advance(1.0f / 60.0f, Metrics, Config);
+		EXPECT_GE(State.Offset(), 0.0f);
+		EXPECT_LE(State.Offset(), Metrics.MaxOffset());
+	}
+	EXPECT_NEAR(State.Offset(), 0.0f, 0.5f);
+}
+TEST(UiV2ScrollPhysics, SpringFeelReadsItsOwnResponseInsteadOfTheTweenDuration)
+{
+	SQmScrollMetrics Metrics;
+	Metrics.m_ViewportSize = 100.0f;
+	Metrics.m_ContentSize = 500.0f;
+
+	SQmScrollConfig Base;
+	Base.m_WheelScale = 10.0f;
+	Base.m_NativeWheelStep = true;
+	Base.m_Feel = EQmScrollFeel::SPRING;
+	Base.m_SpringResponse = 0.20f;
+	Base.m_SpringDamping = 0.90f;
+
+	// 平滑时长是固定时长动画的结束时刻，弹簧的固有周期与它无关：只改这一项，
+	// 轨迹必须逐位相同。此前弹簧周期由平滑时长按系数推导，改设置会连带改手感。
+	SQmScrollConfig ShortTween = Base;
+	ShortTween.m_NativeWheelAnimationTime = 0.02f;
+	SQmScrollConfig LongTween = Base;
+	LongTween.m_NativeWheelAnimationTime = 0.80f;
+
+	CQmScrollState ShortState;
+	CQmScrollState LongState;
+	ShortState.AddWheelImpulse(-120.0f, Metrics, ShortTween);
+	LongState.AddWheelImpulse(-120.0f, Metrics, LongTween);
+	for(int i = 0; i < 10; ++i)
+	{
+		ShortState.Advance(1.0f / 60.0f, Metrics, ShortTween);
+		LongState.Advance(1.0f / 60.0f, Metrics, LongTween);
+	}
+	EXPECT_FLOAT_EQ(ShortState.Offset(), LongState.Offset());
+	EXPECT_FLOAT_EQ(ShortState.Velocity(), LongState.Velocity());
+}
+TEST(UiV2ScrollPhysics, ShorterSpringResponseReachesTheTargetSooner)
+{
+	SQmScrollMetrics Metrics;
+	Metrics.m_ViewportSize = 100.0f;
+	Metrics.m_ContentSize = 500.0f;
+	SQmScrollConfig Fast;
+	Fast.m_WheelScale = 10.0f;
+	Fast.m_NativeWheelStep = true;
+	Fast.m_Feel = EQmScrollFeel::SPRING;
+	Fast.m_SpringResponse = 0.10f;
+	Fast.m_SpringDamping = 0.90f;
+	SQmScrollConfig Slow = Fast;
+	Slow.m_SpringResponse = 0.40f;
+
+	CQmScrollState FastState;
+	CQmScrollState SlowState;
+	FastState.AddWheelImpulse(-120.0f, Metrics, Fast);
+	SlowState.AddWheelImpulse(-120.0f, Metrics, Slow);
+	// 阻尼比相同、只差响应周期：0.12s 后快者必须先到位，这是"速度"旋钮的作用。
+	for(int i = 0; i < 8; ++i)
+	{
+		FastState.Advance(1.0f / 60.0f, Metrics, Fast);
+		SlowState.Advance(1.0f / 60.0f, Metrics, Slow);
+	}
+	EXPECT_GT(FastState.Offset(), SlowState.Offset());
+	EXPECT_NEAR(FastState.Offset(), 10.0f, 1.0f);
+
+	// 足够长的时间后两者收敛到同一目标：响应周期只改变过程，不改变终点。
+	for(int i = 0; i < 600; ++i)
+	{
+		FastState.Advance(1.0f / 60.0f, Metrics, Fast);
+		SlowState.Advance(1.0f / 60.0f, Metrics, Slow);
+	}
+	EXPECT_NEAR(FastState.Offset(), 10.0f, 0.05f);
+	EXPECT_NEAR(SlowState.Offset(), 10.0f, 0.05f);
+}
+TEST(UiV2ScrollPhysics, ZeroSpringResponseSnapsWithoutStayingAnimating)
+{
+	SQmScrollMetrics Metrics;
+	Metrics.m_ViewportSize = 100.0f;
+	Metrics.m_ContentSize = 500.0f;
+	SQmScrollConfig Config;
+	Config.m_WheelScale = 10.0f;
+	Config.m_NativeWheelStep = true;
+	Config.m_NativeWheelAnimationTime = 0.25f;
+	Config.m_Feel = EQmScrollFeel::SPRING;
+	Config.m_SpringResponse = 0.30f;
+	Config.m_SpringDamping = 0.90f;
+
+	CQmScrollState State;
+	State.AddWheelImpulse(-120.0f, Metrics, Config);
+	State.Advance(1.0f / 60.0f, Metrics, Config);
+	// 弹簧走了一小段，尚未到目标。
+	EXPECT_GT(State.Offset(), 0.0f);
+	EXPECT_LT(State.Offset(), 10.0f);
+
+	// 运行中把响应周期压到 0（动效等级切到 0 的语义）：下一帧直接落位，
+	// 不能留下半程弹簧让 Animating() 永远为真、按需重绘无法空闲。
+	SQmScrollConfig Instant = Config;
+	Instant.m_SpringResponse = 0.0f;
+	State.Advance(1.0f / 60.0f, Metrics, Instant);
+	EXPECT_FLOAT_EQ(State.Offset(), 10.0f);
+	EXPECT_FLOAT_EQ(State.Velocity(), 0.0f);
+	EXPECT_FALSE(State.Animating());
+}
+TEST(UiV2ScrollPhysics, TopOverscrollSurvivesSmallContentShrink)
+{
+	SQmScrollMetrics Metrics{100.0f, 300.0f};
+	SQmScrollMetrics SlightlyShorter{100.0f, 297.0f};
+	SQmScrollConfig Config;
+	Config.m_WheelScale = 10.0f;
+	Config.m_NativeWheelStep = true;
+	Config.m_NativeWheelAnimationTime = 0.2f;
+	Config.m_Feel = EQmScrollFeel::SPRING;
+	Config.m_SpringResponse = 0.20f;
+	Config.m_SpringDamping = 0.90f;
+	Config.m_MaxOverscroll = 48.0f;
+
+	CQmScrollState State;
+	State.SetOffset(0.0f, Metrics, Config);
+	State.AddWheelImpulse(120.0f, Metrics, Config);
+	for(int i = 0; i < 4; ++i)
+		State.Advance(1.0f / 60.0f, Metrics, Config);
+	EXPECT_LT(State.Offset(), 0.0f);
+
+	// 内容高度测量抖一下（滚动区域的 m_ContentSize 逐 rect 累积，会带少量噪声）：
+	// 只要越界量还在橡皮筋上限内，就属于合法状态，不能据此归零。旧行为是
+	// "offset < 0 且 MaxOffset 变小"就清零，弹簧从 0 重新起步 → 顶部越界逐帧抖动；
+	// 底部因为同样的测量噪声会让 MaxOffset 变大而不触发，才显得只有向上抖。
+	State.Advance(1.0f / 60.0f, SlightlyShorter, Config);
+	EXPECT_LT(State.Offset(), 0.0f);
+	EXPECT_TRUE(State.Animating());
+}
+TEST(UiV2ScrollPhysics, BottomOverscrollSurvivesSmallContentShrink)
+{
+	SQmScrollMetrics Metrics{100.0f, 300.0f};
+	SQmScrollMetrics SlightlyShorter{100.0f, 297.0f};
+	SQmScrollConfig Config;
+	Config.m_WheelScale = 10.0f;
+	Config.m_NativeWheelStep = true;
+	Config.m_NativeWheelAnimationTime = 0.2f;
+	Config.m_Feel = EQmScrollFeel::SPRING;
+	Config.m_SpringResponse = 0.20f;
+	Config.m_SpringDamping = 0.90f;
+	Config.m_MaxOverscroll = 48.0f;
+
+	CQmScrollState State;
+	State.SetOffset(Metrics.MaxOffset(), Metrics, Config);
+	State.AddWheelImpulse(-120.0f, Metrics, Config);
+	for(int i = 0; i < 4; ++i)
+		State.Advance(1.0f / 60.0f, Metrics, Config);
+	EXPECT_GT(State.Offset(), Metrics.MaxOffset());
+
+	// 底部分支同样只能回收"超出橡皮筋上限"的部分。旧条件是 offset 刚超过
+	// 新 MaxOffset 就夹回并清掉动画目标，内容高度波动一下就会把回弹打断。
+	State.Advance(1.0f / 60.0f, SlightlyShorter, Config);
+	EXPECT_GT(State.Offset(), SlightlyShorter.MaxOffset());
+	EXPECT_TRUE(State.Animating());
 }
 TEST(UiV2ScrollPhysics, NonScrollableContentResetsState)
 {

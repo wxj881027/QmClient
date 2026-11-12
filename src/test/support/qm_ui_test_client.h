@@ -40,7 +40,7 @@ namespace qm_ui_test
 		void Quit() override { throw std::logic_error("unexpected UI client boundary call"); }
 		const char *DemoPlayer_Play(const char *pFilename, int StorageType) override { throw std::logic_error("unexpected UI client boundary call"); }
 #if defined(CONF_VIDEORECORDER)
-		const char *DemoPlayer_Render(const char *pFilename, int StorageType, const char *pVideoName, int SpeedIndex, bool StartPaused = false) override { throw std::logic_error("unexpected UI client boundary call"); }
+		const char *DemoPlayer_Render(const char *pFilename, int StorageType, const char *pVideoName, int SpeedIndex, bool StartPaused = false, float RangeStartSec = -1.0f, float RangeEndSec = -1.0f) override { throw std::logic_error("unexpected UI client boundary call"); }
 #endif
 		void DemoRecorder_Start(const char *pFilename, bool WithTimestamp, int Recorder) override { throw std::logic_error("unexpected UI client boundary call"); }
 		void DemoRecorder_HandleAutoStart() override { throw std::logic_error("unexpected UI client boundary call"); }
@@ -52,6 +52,8 @@ namespace qm_ui_test
 		void ServerBrowserUpdate() override { throw std::logic_error("unexpected UI client boundary call"); }
 		void Notify(const char *pTitle, const char *pMessage) override { throw std::logic_error("unexpected UI client boundary call"); }
 		void OnWindowResize() override {}
+		// 垂直同步重建交换链由真实客户端排队处理；UI 测试不碰后端，忽略即可。
+		void QueueVSyncChange(bool State) override {}
 		void UpdateAndSwap() override { throw std::logic_error("unexpected UI client boundary call"); }
 		void EnterGame(int Conn) override { throw std::logic_error("unexpected UI client boundary call"); }
 		const NETADDR *ServerAddress() const override { throw std::logic_error("unexpected UI client boundary call"); }

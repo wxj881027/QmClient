@@ -14,6 +14,7 @@ namespace
 	public:
 		std::vector<SRoundedRectSdfParams> m_vSurfaces;
 		bool HasRoundedRectSdf() override { return true; }
+		bool HasRoundedRectSdfTexture() override { return false; }
 		void ClipEnable(int, int, int, int) override {}
 		void ClipDisable() override {}
 		void RenderRoundedRectSdf(const SRoundedRectSdfParams &Params) override

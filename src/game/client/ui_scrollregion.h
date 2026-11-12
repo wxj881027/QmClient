@@ -18,6 +18,34 @@ constexpr bool QmScrollRegionShouldReserveScrollbarSpace(bool AlwaysReserved, bo
 	return AlwaysReserved || ScrollbarShown;
 }
 
+// 内容区拖动滚动是手机上的主操作：手指按住列表直接带动内容，而不是去够右侧滚动条。
+// 桌面仍以滚轮和滚动条为准，避免和列表内的拖拽交互（卡片排序、滑块）抢同一次按住。
+constexpr bool QmScrollRegionContentDragEnabled()
+{
+#if defined(CONF_PLATFORM_ANDROID) || defined(CONF_PLATFORM_IOS)
+	return true;
+#else
+	return false;
+#endif
+}
+
+// 松手速度低于这个值就当作停住，避免轻点一下也滑出去一段。
+constexpr float QM_SCROLL_FLING_MIN_VELOCITY = 120.0f;
+// 手机上手指一次滑动的位移有限，按 1:1 跟手会显得"滚得慢"；给一点增益让同样的
+// 滑动覆盖更多内容。取值过大时内容会与手指脱节，1.2 左右是手感与精度的折中。
+constexpr float QM_SCROLL_TOUCH_DRAG_GAIN = 1.5f;
+
+// 起手抖动不应被当成拖动：位移超过阈值才把候选按下升级为真正的内容拖动。
+constexpr float QmScrollRegionContentDragThreshold(float PixelSize)
+{
+	return 6.0f * (PixelSize > 0.0f ? PixelSize : 1.0f);
+}
+
+constexpr bool QmScrollRegionContentDragBecomesActive(bool AlreadyActive, float DragDistance, float Threshold)
+{
+	return AlreadyActive || (DragDistance >= Threshold || -DragDistance >= Threshold);
+}
+
 // 相邻布局分割会留下微小的浮点误差。少于四分之一物理像素的尾部不应让滚动条在显示和隐藏间跳变。
 constexpr bool QmScrollRegionContentOverflows(float ContentSize, float ViewportSize, float PixelSize)
 {
@@ -30,6 +58,8 @@ struct CScrollRegionParams
 	float m_ScrollbarThickness;
 	float m_ScrollbarMargin;
 	bool m_ScrollbarAlwaysReserved;
+	// 滚动条出现/消失时让内容宽度随占位一起过渡，避免列表卡片硬跳。
+	bool m_AnimateScrollbarReserve;
 	bool m_ScrollbarNoOuterMargin;
 	float m_SliderMinSize;
 	float m_ScrollUnit;
@@ -71,7 +101,11 @@ inline CScrollRegionParams QmScrollRegionParamsForSize(EQmScrollSize Size, float
 	Params.m_ScrollbarThickness = Style.m_ScrollbarWidth;
 	Params.m_ScrollbarMargin = Style.m_ScrollbarMargin;
 	Params.m_SliderMinSize = Style.m_MinThumbHeight;
-	Params.m_ScrollUnit = Config.m_WheelScale;
+	// 整面板级滚动面（wiki 弹窗、统计页、音频包编辑器、控制台卡等）与设置主区
+	// 同口径：每档 = qm_ui_scroll_step × QmPanelWheelStepMultiplier()。此前直接
+	// 取 step 基准值（默认 10px），只有设置页的 1/12，二级面板的滚轮手感因此
+	// 明显脱节。
+	Params.m_ScrollUnit = Config.m_WheelScale * QmPanelWheelStepMultiplier();
 	Params.m_ScrollHorizontal = Axis == EQmScrollAxis::HORIZONTAL;
 	return Params;
 }
@@ -96,6 +130,7 @@ inline CScrollRegionParams::CScrollRegionParams()
 	m_ScrollbarThickness = Style.m_ScrollbarWidth;
 	m_ScrollbarMargin = Style.m_ScrollbarMargin;
 	m_ScrollbarAlwaysReserved = false;
+	m_AnimateScrollbarReserve = false;
 	m_ScrollbarNoOuterMargin = false;
 	m_SliderMinSize = 25.0f;
 	m_ScrollUnit = Config.m_WheelScale;
@@ -192,6 +227,11 @@ private:
 
 	CUIRect m_ClipRect;
 	CUIRect m_RailRect;
+	float m_ScrollbarReserveWidth;
+	bool m_ScrollbarReserveInitialized;
+	// 内容拖动速度估计：用最近一次移动的时间差换算成"滚动偏移/秒"。
+	float m_ContentDragVelocity = 0.0f;
+	int64_t m_ContentDragLastMoveTime = 0;
 	CUIRect m_LastAddedRect; // saved for ScrollHere()
 	char m_SliderId = 0;
 	CScrollRegionParams m_Params;
@@ -209,7 +249,7 @@ public:
 
 	void Begin(CUIRect *pClipRect, vec2 *pOutOffset, const CScrollRegionParams *pParams = nullptr);
 	void End();
-	bool AddRect(const CUIRect &Rect, bool ShouldScrollHere = false); // returns true if the added rect is visible (not clipped)
+	bool AddRect(const CUIRect &Rect, bool ShouldScrollHere = false, bool IsSelection = false); // returns true if the added rect is visible (not clipped)
 	void ScrollHere(EScrollOption Option = SCROLLHERE_KEEP_IN_VIEW);
 	void ScrollRelative(EScrollRelative Direction, float SpeedMultiplier = 1.0f);
 	void ScrollRelativeDirect(vec2 ScrollAmount);
@@ -217,7 +257,9 @@ public:
 	void SetScrollOffsetY(float OffsetY);
 	void SetContentHeightForNextFrame(float ContentHeight);
 	const CUIRect *ClipRect() const { return &m_ClipRect; }
-	float ContentScrollOffsetY() const { return m_Params.m_ScrollHorizontal ? 0.0f : -m_ScrollState.Offset(); }
+	// 绘制用偏移：通常等于状态偏移；内容骤减（折叠分类）时用短时缓动追上去。
+	float ContentScrollOffsetY() const { return m_Params.m_ScrollHorizontal ? 0.0f : -m_DisplayOffset; }
+	float m_DisplayOffset = 0.0f;
 	void DoEdgeScrolling();
 	bool RectClipped(const CUIRect &Rect) const;
 	bool ContentOverflows() const;
@@ -238,12 +280,19 @@ private:
 	SQmScrollConfig ScrollConfig() const;
 	vec2 ContentScrollOffset() const;
 	void ClampBackgroundScrollOffset();
+	void DoContentDrag();
 	void DoScrollInput();
 	CUIRect WheelHotRect() const;
 	void UpdateHotScrollRegion();
 	void AdvanceAnimation();
 	void MaintainNoScrollSliderActive();
 	void DoSlider();
+
+	// 列表重新出现时把选中项滚进视野：记录本帧条目序号与「选中项」序号。
+	int m_AddRectIndex = 0;
+	int m_SelectionRectIndex = -1;
+	bool m_ReScrollSelection = false;
+	int64_t m_LastDrawTime = 0;
 };
 
 #endif

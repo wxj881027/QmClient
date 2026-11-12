@@ -3,9 +3,25 @@
 
 #include <base/system.h>
 
+#include <engine/graphics.h>
+
 #include <functional>
 
 typedef std::function<void(short *pFinalOut, unsigned Frames)> ISoundMixFunc;
+
+// 录制开始时冻结的 demo 显示配置。渲染与续渲指纹都读这一份，
+// 避免导出途中改配置后不同片段采用不同 HUD、聊天或强弱钩画面。
+struct SVideoDisplaySnapshot
+{
+	int m_Direction = 0;
+	int m_StrongWeak = 0;
+	int m_StrongWeakScope = 0;
+	int m_StrongWeakSize = 0;
+	bool m_Hud = false;
+	bool m_Chat = false;
+	// 仅渲染 demo：导出期间隐藏 HUD/聊天/旁观信息，切换相机仍由玩家控制。
+	bool m_RenderDemoOnly = false;
+};
 
 class IVideo
 {
@@ -17,12 +33,36 @@ public:
 	virtual void Pause(bool Pause) = 0;
 	virtual bool IsRecording() const = 0;
 	virtual bool HasError() const = 0;
+	// 当前录制实例持有的显示配置快照；未录制或实现不支持时为空。
+	virtual const SVideoDisplaySnapshot *DisplaySnapshot() const { return nullptr; }
 
 	virtual void NextVideoFrame() = 0;
 	virtual void NextVideoFrameThread() = 0;
 
+	// 离屏导出模式：主线程把整幅画面画进离屏渲染目标（可选多采样）后经
+	// SubmitOffscreenFrame 提交像素；此模式下 NextVideoFrameThread 不再读窗口帧缓冲。
+	// 默认实现忽略设置：不支持离屏导出的实现保持读窗口路径。
+	virtual void SetOffscreenCapture(bool Offscreen) { (void)Offscreen; }
+	// 提交一帧已读回的离屏像素（所有权转移；实现不接收时必须释放）。
+	virtual void SubmitOffscreenFrame(CImageInfo &&Image) { Image.Free(); }
+	// 显式置位捕获错误（如离屏目标无法建立且没有降级余地）；
+	// HasError 随之为真，录制按既有错误流程停止。
+	virtual void FailCapture() {}
+
 	virtual void NextAudioFrame(ISoundMixFunc Mix) = 0;
 	virtual void NextAudioFrameTimeline(ISoundMixFunc Mix) = 0;
+
+	// 最近一次 Stop() 的最终结果（对象在 Stop 内自删除，调用方只能静态查询）：
+	// Stop 会排空编码器、写 trailer 并关闭文件，这些都可能失败；HasError() 在
+	// Stop() 之前只覆盖录制期错误，收尾失败由此闭锁在 Stop 完成后暴露。
+	// 读取语义：TakeStopResult 清零并返回上一值，保证一次收尾只消费一次。
+	static bool LastStopFailed() { return ms_LastStopFailed; }
+	static bool TakeStopResult()
+	{
+		const bool Failed = ms_LastStopFailed;
+		ms_LastStopFailed = false;
+		return Failed;
+	}
 
 	static IVideo *Current() { return ms_pCurrentVideo; }
 
@@ -33,6 +73,7 @@ public:
 
 protected:
 	static IVideo *ms_pCurrentVideo;
+	static bool ms_LastStopFailed;
 	static int64_t ms_Time;
 	static int64_t ms_LocalStartTime;
 	static float ms_LocalTime;

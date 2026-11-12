@@ -13,6 +13,7 @@
 
 #include <game/client/QmUi/QmAnimResolve.h>
 #include <game/client/QmUi/QmCardRegistry.h>
+#include <game/client/QmUi/QmIconSwap.h>
 #include <game/client/QmUi/QmUiPerf.h>
 #include <game/client/QmUi/SecondaryPanel.h>
 #include <game/client/QmUi/SettingsCard.h>
@@ -39,6 +40,7 @@
 #include <game/client/components/skins.h>
 #include <game/client/gameclient.h>
 #include <game/client/qm_icon.h>
+#include <game/client/qm_icon_label.h>
 #include <game/client/skin.h>
 #include <game/client/ui.h>
 #include <game/client/ui_listbox.h>
@@ -542,31 +544,41 @@ void CMenus::RenderSettingsTeeOptions(CUIRect Content, const SSettingsContentMet
 	aColumns[1].m_RenderMeasured = [&](CUIRect &Prefix) {
 		CSettingsContentLayoutFlow Column(Prefix);
 		CUIRect Row;
-		if(Column.Control("tee-skin-prefix-label", TeeMetrics.m_InputHeight, Row))
-			DoSettingsMenuLabel(SETTINGS_TEE, -1, -1, "tee_skin_prefix_label", &Row, Localize("Skin prefix"), BodySize, TEXTALIGN_ML);
-		if(Column.Control("tee-skin-prefix-input", TeeMetrics.m_InputHeight, Row, TeeMetrics.m_LineSpacing))
+		// 标签、输入框与预设胶囊同排，比原先三行布局更紧凑。
+		if(Column.Control("tee-skin-prefix-row", TeeMetrics.m_InputHeight, Row))
 		{
+			CUIRect LabelColumn, Controls;
+			SplitSettingsControlRow(Row, TeeMetrics, &LabelColumn, &Controls);
+			DoSettingsMenuLabel(SETTINGS_TEE, -1, -1, "tee_skin_prefix_label", &LabelColumn, Localize("Skin prefix"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
+
+			// 预设胶囊至少占两段可点宽度，输入框留够最小宽度后吃掉剩余；列太窄时控件自身退化成下拉。
+			const float SegmentMinWidth = std::max(72.0f, TeeMetrics.m_InputHeight * 3.0f);
+			CUIRect InputRect, PresetRect;
+			Controls.VSplitRight(std::min(2.0f * SegmentMinWidth, std::max(0.0f, Controls.w - 88.0f * TeeMetrics.m_UiScale)), &InputRect, &PresetRect);
+			InputRect.VSplitRight(TeeMetrics.m_LineSpacing, &InputRect, nullptr);
 			static CLineInput s_SkinPrefixInput(g_Config.m_ClSkinPrefix, sizeof(g_Config.m_ClSkinPrefix));
 			ui_widget::SInputFieldOptions InputOptions;
 			InputOptions.m_Clearable = true;
 			InputOptions.m_FontSize = BodySize;
-			const bool Changed = ui_widget::InputField(SettingsUiContext("settings_tee_skin_prefix_text_input", TeeMetrics.m_UiScale), &s_SkinPrefixInput, Row, InputOptions).m_Changed;
+			const bool Changed = ui_widget::InputField(SettingsUiContext("settings_tee_skin_prefix_text_input", TeeMetrics.m_UiScale), &s_SkinPrefixInput, InputRect, InputOptions).m_Changed;
 			ShouldRefresh = (Changed && Column.Input() && !Ui()->RenderOnly()) || ShouldRefresh;
-		}
-		if(Column.Control("tee-skin-prefix-presets", TeeMetrics.m_InputHeight, Row, TeeMetrics.m_LineSpacing))
-		{
+
 			static const char *s_apPrefixes[] = {"kitty", "santa"};
 			static CButtonContainer s_aPrefixButtons[std::size(s_apPrefixes)];
-			static ui_widget::SSettingsActionGroupState s_PrefixActionWidths;
-			const auto PrefixActions = ui_widget::PrepareSettingsActionGroup(*Ui(), s_PrefixActionWidths, Row, s_apPrefixes, std::size(s_apPrefixes), TeeMetrics);
+			int CurrentPrefix = -1;
 			for(size_t Index = 0; Index < std::size(s_apPrefixes); ++Index)
 			{
-				CUIRect Button = PrefixActions.m_aButtons[Index];
-				if(DoButton_Menu(&s_aPrefixButtons[Index], s_apPrefixes[Index], 0, &Button) && Column.Input() && !Ui()->RenderOnly())
+				if(str_comp(g_Config.m_ClSkinPrefix, s_apPrefixes[Index]) == 0)
 				{
-					str_copy(g_Config.m_ClSkinPrefix, s_apPrefixes[Index]);
-					ShouldRefresh = true;
+					CurrentPrefix = (int)Index;
+					break;
 				}
+			}
+			const int NewPrefix = DoSegmentedChoice(s_aPrefixButtons, s_apPrefixes, (int)std::size(s_apPrefixes), CurrentPrefix, PresetRect, ui_token::radius::BASE, nullptr, BodySize);
+			if(NewPrefix >= 0 && NewPrefix != CurrentPrefix && Column.Input() && !Ui()->RenderOnly())
+			{
+				str_copy(g_Config.m_ClSkinPrefix, s_apPrefixes[NewPrefix]);
+				ShouldRefresh = true;
 			}
 		}
 	};
@@ -920,7 +932,7 @@ void CMenus::RenderSettingsTeeEditor(CUIRect Content, const SSettingsContentMetr
 	{
 		const CUIRect &Slot = SliderLayout.m_aSlotRects[Emote];
 		const bool IsActive = Emote == ActiveEmote;
-		const bool IsHovered = Ui()->VisualMouseHovered(&Slot) && !Ui()->IsPopupOpen();
+		const bool IsHovered = Ui()->VisualSurfaceHovered(&Slot) && !Ui()->IsPopupOpen();
 		if(IsHovered && !IsActive)
 		{
 			CUIRect HoverRect;
@@ -1248,18 +1260,25 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 	auto DoButtonSkinQueue = [&](const void *pButtonId, const void *pParentId, bool InQueue, bool Disabled, const CUIRect *pRect) {
 		if(InQueue || (pParentId != nullptr && Ui()->HotItem() == pParentId) || Ui()->HotItem() == pButtonId)
 		{
-			TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-			TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
 			const float Alpha = Ui()->HotItem() == pButtonId ? 0.2f : 0.0f;
 			ColorRGBA Color = InQueue ? ColorRGBA(0.2f, 0.8f, 0.4f, 0.8f + Alpha) : ColorRGBA(0.5f, 0.5f, 0.5f, 0.8f + Alpha);
 			if(Disabled && !InQueue)
 			{
 				Color = ColorRGBA(0.9f, 0.3f, 0.3f, 0.6f + Alpha);
 			}
+			// 排队 ⇄ 退出排队：加/减方框形变（外框常量、竖臂压平），状态色随点击即时切换。
+			IUiContext QueueIconCtx = ui_widget::ControlContext(Ui());
+			ui_widget::SIconSwapBinding QueueBinding = ui_widget::ResolveIconSwapBinding(
+				QueueIconCtx, EQmIconSwapPair::SQUARE_PLUS_MINUS,
+				EQmIcon::SQUARE_PLUS, FONT_ICON_SQUARE_PLUS,
+				EQmIcon::SQUARE_MINUS, FONT_ICON_SQUARE_MINUS,
+				InQueue ? 1.0f : 0.0f, str_quickhash("skin-queue-icon"), pButtonId, 0.22f);
+			TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+			TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
 			TextRender()->TextColor(Color);
 			SLabelProperties Props;
 			Props.m_MaxWidth = pRect->w;
-			Ui()->DoLabel_QmIcon(pRect, InQueue ? EQmIcon::SQUARE_MINUS : EQmIcon::SQUARE_PLUS, InQueue ? FONT_ICON_SQUARE_MINUS : FONT_ICON_SQUARE_PLUS, 12.0f, TEXTALIGN_MC, Props);
+			ui_widget::DrawIconSwapBinding(QueueIconCtx, QmIconLabelRect(*pRect, 12.0f, TEXTALIGN_MC), Color, &QueueBinding);
 			TextRender()->TextColor(TextRender()->DefaultTextColor());
 			TextRender()->SetRenderFlags(0);
 			TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
@@ -2311,7 +2330,7 @@ void CMenus::RenderSettingsTeeSkinQueue(CUIRect Content, const SSettingsContentM
 	{
 		QueueRandomJoin ^= 1;
 	}
-	GameClient()->m_Tooltips.DoToolTip(&QueueRandomJoin, &RandomJoinRow, Localize("Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join."));
+	GameClient()->m_Tooltips.DoToolTip(&QueueRandomJoin, &RandomJoinRow, Localize("Start at a random queue position on every map join"));
 
 	QueueSection.HSplitTop(TeeMetrics.m_LineSpacing, nullptr, &QueueSection);
 	QueueSection.HSplitTop(minimum(QueueSection.h, QueueGeometry.m_QueueListSurfaceHeight), &QueueList, &QueueSection);
@@ -2746,7 +2765,9 @@ void CMenus::RenderSettingsTeeGlow(CUIRect Content, const SSettingsContentMetric
 	if(Flow.Control("tee-team-glow-team0-mode", TeeMetrics.m_LineHeight, TeeGlowRow, TeeMetrics.m_LineSpacing))
 	{
 		CUIRect Team0GlowLabel, Team0GlowDropDown;
+		// 配置下拉沿用标准短选项宽度并贴齐行尾，避免多选颜色名把按钮撑满整行。
 		SplitSettingsControlRow(TeeGlowRow, TeeMetrics, &Team0GlowLabel, &Team0GlowDropDown, ESettingsControlWidth::SHORT_CHOICE);
+		Team0GlowDropDown.x = TeeGlowRow.x + TeeGlowRow.w - Team0GlowDropDown.w;
 		DoSettingsMenuLabel(SETTINGS_TEE, -1, -1, "tee-team-glow-team0-label", &Team0GlowLabel, Localize("Team 0 glow"), BodySize, TEXTALIGN_ML);
 		const char *apTeam0GlowModes[] = {Localize("Off"), Localize("Tee color"), Localize("Custom color"), Localize("Rainbow")};
 		static CUi::SDropDownState s_Team0GlowModeDropDownState;
@@ -2754,6 +2775,10 @@ void CMenus::RenderSettingsTeeGlow(CUIRect Content, const SSettingsContentMetric
 		if(Flow.Input() && !Ui()->RenderOnly() && Team0ModeNew != g_Config.m_QmTeamTeeGlowTeam0Mode)
 			g_Config.m_QmTeamTeeGlowTeam0Mode = Team0ModeNew;
 	}
+	Flow.Space(TeeMetrics.m_LineSpacing);
+	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "deck:tee-glow", TeeMetrics))
+		return;
+
 	const auto Slider = [&](const char *pId, const char *pLabel, int *pValue) {
 		if(Flow.Control(pId, TeeMetrics.m_LineHeight, TeeGlowRow, TeeMetrics.m_LineSpacing))
 			DoSettingsScrollbarOption(SETTINGS_TEE, -1, pId, pValue, pValue, &TeeGlowRow, pLabel, 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");

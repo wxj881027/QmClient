@@ -1,0 +1,196 @@
+# Wiki 面板的编辑与状态文案
+# 维护源：qmclient_scripts/languages_qmclient/translations/i18n/wiki_ui.toml
+# "Edit"/"Save"/"Reset"/"Done"/"Card guide"/"Close" 等通用词复用已有模块，这里只登记 Wiki 专有文案。
+
+[[message]]
+key = "Local draft"
+[message.translations]
+simplified_chinese = "本地草稿"
+traditional_chinese = "本機草稿"
+japanese = "ローカル下書き"
+korean = "로컬 초안"
+russian = "Локальный черновик"
+german = "Lokaler Entwurf"
+spanish = "Borrador local"
+french = "Brouillon local"
+brazilian_portuguese = "Rascunho local"
+portuguese = "Rascunho local"
+turkish = "Yerel taslak"
+polish = "Lokalny szkic"
+
+[[message]]
+key = "Shipped content"
+[message.translations]
+simplified_chinese = "内置内容"
+traditional_chinese = "內建內容"
+japanese = "同梱コンテンツ"
+korean = "내장 콘텐츠"
+russian = "Встроенный текст"
+german = "Mitgelieferter Inhalt"
+spanish = "Contenido incluido"
+french = "Contenu intégré"
+brazilian_portuguese = "Conteúdo incluído"
+portuguese = "Conteúdo incluído"
+turkish = "Paket içeriği"
+polish = "Treść wbudowana"
+
+[[message]]
+key = "Restored the built-in content"
+[message.translations]
+simplified_chinese = "已还原内置内容"
+traditional_chinese = "已還原內建內容"
+japanese = "内蔵コンテンツに戻しました"
+korean = "내장 콘텐츠로 되돌렸습니다"
+russian = "Встроенный текст восстановлен"
+german = "Mitgelieferter Inhalt wiederhergestellt"
+spanish = "Se restauró el contenido incluido"
+french = "Contenu intégré restauré"
+brazilian_portuguese = "Conteúdo incluído restaurado"
+portuguese = "Conteúdo incluído restaurado"
+turkish = "Paket içeriği geri yüklendi"
+polish = "Przywrócono treść wbudowaną"
+
+[[message]]
+key = "Saved"
+[message.translations]
+simplified_chinese = "已保存"
+traditional_chinese = "已儲存"
+japanese = "保存しました"
+korean = "저장했습니다"
+russian = "Сохранено"
+german = "Gespeichert"
+spanish = "Guardado"
+french = "Enregistré"
+brazilian_portuguese = "Salvo"
+portuguese = "Salvo"
+turkish = "Kaydedildi"
+polish = "Zapisano"
+
+[[message]]
+key = "No content yet"
+[message.translations]
+simplified_chinese = "暂无内容"
+traditional_chinese = "尚無內容"
+japanese = "まだ内容がありません"
+korean = "아직 내용이 없습니다"
+russian = "Пока нет содержимого"
+german = "Noch kein Inhalt"
+spanish = "Aún no hay contenido"
+french = "Aucun contenu pour l’instant"
+brazilian_portuguese = "Ainda sem conteúdo"
+portuguese = "Ainda sem conteúdo"
+turkish = "Henüz içerik yok"
+polish = "Brak treści"
+
+[[message]]
+key = "Write the guide here"
+[message.translations]
+simplified_chinese = "在这里写说明"
+traditional_chinese = "在這裡寫說明"
+japanese = "ここに説明を書きます"
+korean = "여기에 설명을 작성하세요"
+russian = "Напишите описание здесь"
+german = "Beschreibung hier eingeben"
+spanish = "Escribe la guía aquí"
+french = "Écrivez le guide ici"
+brazilian_portuguese = "Escreva o guia aqui"
+portuguese = "Escreva o guia aqui"
+turkish = "Açıklamayı buraya yazın"
+polish = "Napisz opis tutaj"
+
+[[message]]
+key = "Image not found"
+[message.translations]
+simplified_chinese = "找不到图片"
+traditional_chinese = "找不到圖片"
+japanese = "画像が見つかりません"
+korean = "이미지를 찾을 수 없습니다"
+russian = "Изображение не найдено"
+german = "Bild nicht gefunden"
+spanish = "Imagen no encontrada"
+french = "Image introuvable"
+brazilian_portuguese = "Imagem não encontrada"
+portuguese = "Imagem não encontrada"
+turkish = "Görsel bulunamadı"
+polish = "Nie znaleziono obrazu"
+
+[[message]]
+key = "Wiki storage is not available"
+[message.translations]
+simplified_chinese = "无法访问 Wiki 存储"
+traditional_chinese = "無法存取 Wiki 儲存空間"
+japanese = "Wiki ストレージを利用できません"
+korean = "Wiki 저장소를 사용할 수 없습니다"
+russian = "Хранилище Wiki недоступно"
+german = "Wiki-Speicher nicht verfügbar"
+spanish = "El almacenamiento del Wiki no está disponible"
+french = "Stockage du wiki indisponible"
+brazilian_portuguese = "Armazenamento do Wiki indisponível"
+portuguese = "Armazenamento do Wiki indisponível"
+turkish = "Wiki depolaması kullanılamıyor"
+polish = "Magazyn Wiki jest niedostępny"
+
+[[message]]
+key = "Cannot write the wiki file"
+[message.translations]
+simplified_chinese = "无法写入 Wiki 文件"
+traditional_chinese = "無法寫入 Wiki 檔案"
+japanese = "Wiki ファイルを書き込めません"
+korean = "Wiki 파일을 쓸 수 없습니다"
+russian = "Не удалось записать файл Wiki"
+german = "Wiki-Datei kann nicht geschrieben werden"
+spanish = "No se puede escribir el archivo del Wiki"
+french = "Impossible d’écrire le fichier du wiki"
+brazilian_portuguese = "Não é possível gravar o arquivo do Wiki"
+portuguese = "Não é possível gravar o ficheiro do Wiki"
+turkish = "Wiki dosyası yazılamıyor"
+polish = "Nie można zapisać pliku Wiki"
+
+[[message]]
+key = "Cannot remove the wiki file"
+[message.translations]
+simplified_chinese = "无法删除 Wiki 文件"
+traditional_chinese = "無法刪除 Wiki 檔案"
+japanese = "Wiki ファイルを削除できません"
+korean = "Wiki 파일을 삭제할 수 없습니다"
+russian = "Не удалось удалить файл Wiki"
+german = "Wiki-Datei kann nicht entfernt werden"
+spanish = "No se pudo eliminar el archivo del Wiki"
+french = "Impossible de supprimer le fichier du wiki"
+brazilian_portuguese = "Não foi possível remover o arquivo do Wiki"
+portuguese = "Não foi possível remover o ficheiro do Wiki"
+turkish = "Wiki dosyası kaldırılamadı"
+polish = "Nie można usunąć pliku Wiki"
+
+[[message]]
+key = "Contents"
+[message.translations]
+simplified_chinese = "目录"
+traditional_chinese = "目錄"
+japanese = "目次"
+korean = "목차"
+russian = "Содержание"
+german = "Inhalt"
+spanish = "Contenido"
+french = "Sommaire"
+brazilian_portuguese = "Sumário"
+portuguese = "Índice"
+turkish = "İçindekiler"
+polish = "Spis treści"
+
+[[message]]
+key = "Document too large for the editor (%d of %d bytes)"
+[message.translations]
+simplified_chinese = "文档过大，无法在客户端编辑器内修改（%d / %d 字节）"
+traditional_chinese = "文件過大，無法在客戶端編輯器內修改（%d / %d 位元組）"
+japanese = "ドキュメントが大きすぎてクライアントのエディターで編集できません（%d / %d バイト）"
+korean = "문서가 너무 커서 클라이언트 편집기에서 수정할 수 없습니다(%d / %d바이트)"
+russian = "Документ слишком большой для редактора клиента (%d из %d байт)"
+german = "Dokument zu groß für den Editor (%d von %d Bytes)"
+spanish = "Documento demasiado grande para el editor (%d de %d bytes)"
+french = "Document trop volumineux pour l’éditeur (%d sur %d octets)"
+brazilian_portuguese = "Documento grande demais para o editor (%d de %d bytes)"
+portuguese = "Documento demasiado grande para o editor (%d de %d bytes)"
+turkish = "Belge istemci düzenleyicisi için çok büyük (%d / %d bayt)"
+polish = "Dokument jest za duży dla edytora (%d z %d bajtów)"
+

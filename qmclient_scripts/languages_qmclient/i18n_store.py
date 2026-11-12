@@ -43,7 +43,9 @@ PENDING_TRANSLATION_RE = re.compile(
     r"^Pending ([a-z_]+) translation(?:\s+.+)?$"
 )
 
-BILINGUAL_FALLBACK_MODULES = frozenset({"editor"})
+# 新模块先只提供简体中文，其余语言按英文原文回退（渐进翻译）。
+# 地图标签按已确认需求同样只维护简中，其余语言使用英文源码回退。
+BILINGUAL_FALLBACK_MODULES = frozenset({"editor", "bind_workshop", "map_tags"})
 VERBATIM_TRANSLATION_MODULES = frozenset({"editor"})
 
 
@@ -78,6 +80,8 @@ def module_name_for_source(source: Path | None) -> str:
         return "misc"
 
     normalized = source.as_posix()
+    if normalized.endswith(("/components/qmclient/map_tags.cpp", "/QmUi/MapTagsPanel.cpp")):
+        return "map_tags"
     if normalized.endswith("src/engine/shared/config_variables.h"):
         return "menus"
     if normalized.endswith("src/engine/shared/config_variables_qmclient.h"):
@@ -103,6 +107,11 @@ def module_name_for_source(source: Path | None) -> str:
         return "tclient"
     if "/menus_" in normalized or "/menus." in normalized:
         return "menus"
+    # Wiki 文案与面板文案各归自己的模块，避免新条目散落到 misc。
+    if normalized.endswith("src/game/client/QmUi/QmCardWiki.cpp") or normalized.endswith("src/game/client/QmUi/QmCardWikiPanel.cpp"):
+        return "card_wiki"
+    if normalized.endswith("src/game/client/QmUi/QmWikiDocs.cpp"):
+        return "wiki_docs"
     return "misc"
 
 
@@ -507,10 +516,6 @@ def _may_keep_source_text(source: str) -> bool:
         "OpenAI",
         "API",
         "Alpha",
-        "Classic Easy",
-        "Classic Next",
-        "Classic Nut",
-        "Classic Pro",
         "Client",
         "Community",
         "Console",

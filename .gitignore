@@ -22,6 +22,7 @@ docs/dyl/BestClient/
 .workbuddy-ai
 .zcode/
 .workbuddy
+.dsh-ops
 
 # Local perf tooling artifacts
 qmclient_scripts/perf/node_modules/

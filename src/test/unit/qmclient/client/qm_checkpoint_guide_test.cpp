@@ -70,6 +70,29 @@ TEST(QmCheckpointGuide, DeathTileBlocksASeparatedCheckpoint)
 	EXPECT_TRUE(Planner.Result().m_vRoute.empty());
 }
 
+TEST(QmCheckpointGuide, FreezeDoesNotMakeBlockedTilesTraversable)
+{
+	for(const int BlockingTile : {TILE_SOLID, TILE_NOHOOK, TILE_DEATH})
+	{
+		for(const bool BlockOnFront : {false, true})
+		{
+			SCOPED_TRACE(BlockingTile);
+			SCOPED_TRACE(BlockOnFront);
+			SGuideMap Map(5, 1);
+			Map.m_vTiles[2] = BlockOnFront ? QmMapProgress::MakeTile(TILE_FREEZE, BlockingTile) : QmMapProgress::MakeTile(BlockingTile, TILE_FREEZE);
+			Map.Set(4, 0, TILE_AIR, TILE_TELECHECK, 1);
+			QmCheckpointGuide::CPlanner Planner;
+			Planner.ObserveCheckpoint(0);
+			Map.Update(Planner, 0, 0);
+			EXPECT_EQ(Planner.Result().m_TargetIndex, -1);
+			EXPECT_TRUE(Planner.Result().m_vRoute.empty());
+			Map.Update(Planner, 2, 0);
+			EXPECT_EQ(Planner.Result().m_TargetIndex, -1);
+			EXPECT_TRUE(Planner.Result().m_vRoute.empty());
+		}
+	}
+}
+
 TEST(QmCheckpointGuide, SafeDetourWinsOverTheShorterFrozenRoute)
 {
 	SGuideMap Map(5, 2);

@@ -23,9 +23,30 @@ namespace ui_token::color
 	inline constexpr ColorRGBA SURFACE_ELEVATED{0.10f, 0.11f, 0.14f, 0.82f};
 	inline constexpr ColorRGBA SURFACE_OVERLAY{0.0f, 0.0f, 0.0f, 0.40f};
 	inline constexpr ColorRGBA SURFACE_HIGHLIGHT{1.0f, 1.0f, 1.0f, 0.05f};
+	// SURFACE_HIGHLIGHT 的语义档：数值等于原来的 WithMultipliedAlpha 结果，换名不改观感。
+	// 按三族分开命名，调一档只改一处，也不会顺手带走别族的手感。
+	// 一、面板/玻璃上的表面反馈（底本身已有 0.70–0.82 不透明度）
+	inline constexpr ColorRGBA TINT_CONTROL_HOVER{1.0f, 1.0f, 1.0f, 0.030f}; // 5% ×0.6
+	inline constexpr ColorRGBA TINT_CONTROL_SELECTED{1.0f, 1.0f, 1.0f, 0.050f}; // 5%
+	inline constexpr ColorRGBA TINT_ZONE_HOVER{1.0f, 1.0f, 1.0f, 0.035f}; // 5% ×0.7
+	inline constexpr ColorRGBA TINT_ZONE_SELECTED{1.0f, 1.0f, 1.0f, 0.060f}; // 5% ×1.2
+	inline constexpr ColorRGBA TINT_ROW_HOVER{1.0f, 1.0f, 1.0f, 0.060f}; // 5% ×1.2
+	// 绑定设置页那种整行可点的大行：悬停时比卡片内小行更亮。数值与
+	// LIST_ITEM_SELECTED 相同但语义不同（这里是悬停，那边是选中），不要合并。
+	inline constexpr ColorRGBA TINT_ROW_ACTIVE{1.0f, 1.0f, 1.0f, 0.140f}; // 5% ×2.8
+	// 二、可辨识的立体部件（滚轮底座、倾斜板）
+	inline constexpr ColorRGBA TINT_PART{1.0f, 1.0f, 1.0f, 0.060f}; // 5% ×1.2
+	inline constexpr ColorRGBA TINT_PART_ACTIVE{1.0f, 1.0f, 1.0f, 0.090f}; // 5% ×1.8
+	// 三、游戏内叠层（直接压在画面上，5% 在亮地图几乎不可见）
+	inline constexpr ColorRGBA TINT_HUD_BAR{1.0f, 1.0f, 1.0f, 0.100f}; // 5% ×2
+	inline constexpr ColorRGBA TINT_HUD_CARD{1.0f, 1.0f, 1.0f, 0.050f}; // 5%
+	inline constexpr ColorRGBA TINT_HUD_CARD_ACTIVE{1.0f, 1.0f, 1.0f, 0.200f}; // 5% ×4
+	inline constexpr ColorRGBA PREVIEW_SURFACE{1.0f, 1.0f, 1.0f, 0.10f};
 	inline constexpr ColorRGBA SURFACE_SHADOW{0.0f, 0.0f, 0.0f, 0.12f};
 	inline constexpr ColorRGBA BORDER_SUBTLE{1.0f, 1.0f, 1.0f, 0.08f};
 	inline constexpr ColorRGBA BORDER_FOCUS{0.4f, 0.753f, 0.957f, 0.85f};
+	// 列表控件（ListBox）的整行悬停/选中：直接压在菜单底图上，比卡片内的
+	// TINT_ROW_* 更亮，才压得住背板。两者不要互相替换。
 	inline constexpr ColorRGBA LIST_ITEM_SELECTED{1.0f, 1.0f, 1.0f, 0.14f};
 	inline constexpr ColorRGBA LIST_ITEM_HOVER{1.0f, 1.0f, 1.0f, 0.08f};
 
@@ -48,6 +69,12 @@ namespace ui_token::color
 	inline constexpr ColorRGBA SUCCESS{0.42f, 0.85f, 0.52f, 1.0f};
 	inline constexpr ColorRGBA WARNING{0.98f, 0.78f, 0.30f, 1.0f};
 	inline constexpr ColorRGBA DANGER{0.95f, 0.41f, 0.38f, 1.0f};
+	// 角色色：好友与收藏在各列表里反复出现，集中一处避免各页各写一份金色/粉色。
+	// 收藏用的金色同时承担"已标记"的软警告语义，不再单独复制一个 WARNING_SOFT。
+	inline constexpr ColorRGBA FAVORITE{1.0f, 0.85f, 0.0f, 1.0f};
+	inline constexpr ColorRGBA FRIEND{0.95f, 0.45f, 0.62f, 1.0f};
+	// 列表分组标题的底色层，比普通行更弱，只用来区分组与组。
+	inline constexpr ColorRGBA SURFACE_SUBHEADER{0.0f, 0.0f, 0.0f, 0.15f};
 
 	// 中性极值：只表达颜色本身，不承载角色；角色语义（正文/强调/危险）一律
 	// 引用上面的 TEXT_*/ACCENT_*/DANGER token。顶点乘法直通（设白让纹理原色
@@ -70,6 +97,8 @@ namespace ui_token::color
 	// 卡片内预览区（皮肤/地图/激光演示等）的暗化背板；跨卡片共享同一档，
 	// 与文件内更深的演示背板（0.3/0.5 档）区分，视觉统一时在此收敛。
 	inline constexpr ColorRGBA PREVIEW_BACKDROP{0.0f, 0.0f, 0.0f, 0.25f};
+	inline constexpr ColorRGBA SCREENSHOT_EDITOR_BACKDROP{0.06f, 0.07f, 0.09f, 0.95f};
+	inline constexpr ColorRGBA SCREENSHOT_EDITOR_DISABLED_ACTION{1.0f, 1.0f, 1.0f, 0.08f};
 
 	// 容器与滚动条的默认外观。与既有 token 的近似值（BORDER_SUBTLE 0.08 等）
 	// 是当前视觉现状，统一视觉时改这里一处生效，不在调用点写死。
@@ -118,6 +147,9 @@ namespace ui_token::feedback
 	inline constexpr float ICON_PRESS_ALPHA = 0.30f;
 	inline constexpr float ICON_BORDER_ALPHA = 0.70f;
 	inline constexpr float ICON_BORDER_WIDTH = 1.0f;
+	// 悬停 / 按下 / 选中统一使用的白色描边。按钮表面、动作组外框、键位行等
+	// 所有「控件处于活动态」的描边都从这里取，禁止在调用文件重写 1,1,1,alpha。
+	inline constexpr ColorRGBA ACTIVE_BORDER{1.0f, 1.0f, 1.0f, ICON_BORDER_ALPHA};
 }
 
 namespace ui_token::spacing
@@ -189,6 +221,56 @@ namespace ui_token::secondary_panel
 	inline constexpr float UPDATE_ACTION_LINE_FACTOR = 2.4f;
 } // namespace ui_token::secondary_panel
 
+// 服务器信息页的键值行：三行信息（版本 / 游戏模式 / 延迟）与收藏 / 暴露 IP
+// 开关行共用同一套行高与行距，步长只在这里定义，调用点不再各写 15 / 18 / 2。
+// 右侧服务器筛选面板：行高、组间距与胶囊网格的度量集中在这里，
+// 底部快捷条与筛选面板共用同一套密度，避免两处各写 18 / 24 / 26。
+namespace ui_token::server_filter
+{
+	inline constexpr float LINE_HEIGHT = 16.0f;
+	inline constexpr float LINE_SPACING = 3.0f;
+	inline constexpr float BODY_FONT_SIZE = 12.0f;
+	inline constexpr float SECTION_GAP = 6.0f;
+	inline constexpr float SECTION_TITLE_SCALE = 1.3f;
+	// 胶囊最小宽度按内容分档：星标档位短，模式名长。给错成 6 会让一行塞满 10 个胶囊，
+	// 每个都只剩省略号。
+	inline constexpr float CHIP_STAR_MIN_WIDTH = 40.0f;
+	inline constexpr float CHIP_LABEL_MIN_WIDTH = 68.0f;
+	inline constexpr float CHIP_HEIGHT = 24.0f;
+	inline constexpr float CHIP_GAP = 4.0f;
+	// FilterChip 是筛选胶囊与设置页二选一胶囊的唯一绘制入口，字号随该组统一。
+	inline constexpr float CHIP_FONT_SIZE = 11.0f;
+	inline constexpr float CHIP_MIN_FONT_SIZE = 9.0f;
+	inline constexpr float DIVIDER_HEIGHT = 2.0f;
+	inline constexpr float DIVIDER_THICKNESS = 1.0f;
+	inline constexpr float DIVIDER_INSET_RATIO = 0.1f;
+	inline constexpr float DIVIDER_INSET_MAX = 16.0f;
+} // namespace ui_token::server_filter
+
+namespace ui_token::server_info
+{
+	inline constexpr float ROW_HEIGHT = 15.0f;
+	inline constexpr float ROW_GAP = 2.0f;
+	inline constexpr float MIN_ROW_HEIGHT = 11.0f;
+	inline constexpr float BLOCK_PADDING = 5.0f;
+	inline constexpr float COPY_BUTTON_HEIGHT = 15.0f;
+	inline constexpr float LABEL_COLUMN_WIDTH = 80.0f;
+	inline constexpr float TOGGLE_WIDTH = 30.0f;
+	inline constexpr float TOGGLE_LABEL_GAP = 6.0f;
+	inline constexpr float LABEL_FONT_INSET = 4.0f;
+	inline constexpr float EXPOSE_APPEAR_DURATION = 0.15f;
+	inline constexpr float EXPOSE_SLIDE = 4.0f;
+	inline constexpr float EXPOSE_SCALE_FROM = 0.85f;
+} // namespace ui_token::server_info
+
+namespace ui_token::confirm_dialog
+{
+	inline constexpr float MIN_WIDTH = 300.0f;
+	inline constexpr float MAX_WIDTH = 380.0f;
+	inline constexpr float TITLE_HEIGHT = 24.0f;
+	inline constexpr float BUTTON_HEIGHT = 28.0f;
+} // namespace ui_token::confirm_dialog
+
 namespace ui_token::elevation
 {
 	inline constexpr float SHADOW_X_LOW = 1.0f;
@@ -209,6 +291,26 @@ namespace ui_token::font
 	inline constexpr float CAPTION = 10.0f;
 	inline constexpr float TIP = 9.0f;
 } // namespace ui_token::font
+
+// 气泡（tooltip）的唯一尺寸来源。设置页的紧凑小字气泡就是全局标准，服务器列表、
+// 好友列表等普通气泡不再各用一套更大的字号/内边距；行距由文字引擎按同一字号
+// 推导，所以字号统一即行距统一，这里不另设行距。
+namespace ui_token::tooltip
+{
+	// 阅读字号，与设置页小字同一档。
+	inline constexpr float FONT_SIZE = font::SMALL;
+	// qm_tooltip_font_size 的值就是字号本身：默认值等于 FONT_SIZE，缩放系数为 1。
+	// 内边距、外边距、圆角、宽度上限都按 FONT_SIZE 的比例定义，所以配置调大时
+	// 它们跟着等比放大。这里不做「配置 14 = 1 倍」的二次换算，否则设置页里的
+	// 「气泡预览」用配置值直接画字，预览会比真实气泡大一号。
+	inline constexpr float FONT_SIZE_CONFIG_REFERENCE = FONT_SIZE;
+	// 相对于 FONT_SIZE 的比例：内边距 0.3 字高、外边距 0.4 字高、圆角 0.3 字高。
+	inline constexpr float PADDING = 3.0f;
+	inline constexpr float MARGIN = 4.0f;
+	inline constexpr float RADIUS = 3.0f;
+	// 默认阅读宽度上限；设置页与普通页面共用同一档，窄视口按比例收窄。
+	inline constexpr float MAX_WIDTH = 300.0f;
+} // namespace ui_token::tooltip
 
 // HUD 基础字号按 300 逻辑高度定义：辅助信息、正文、重点数值、关键提示。
 namespace ui_token::hud::font
@@ -289,6 +391,9 @@ namespace ui_token::motion
 	};
 	inline constexpr SUiAnimTransition PAGE_SLIDE{.m_DurationSec = 0.22f, .m_Easing = EEasing::EASE_OUT_QUART};
 	inline constexpr SUiAnimTransition TAB_SWITCH{.m_DurationSec = 0.16f, .m_Easing = EEasing::EASE_OUT_QUART};
+	// 导航滑块出现／消失：比普通悬停反馈长一档，配合由小到大的缩放才读得出「长出来」，
+	// 0.12 秒的纯淡入在整页切换的同一帧里几乎看不见。
+	inline constexpr SUiAnimTransition NAVIGATION_APPEAR{.m_DurationSec = 0.26f, .m_Easing = EEasing::EASE_OUT_QUART};
 	inline constexpr const SUiAnimTransition &INPUT_FOCUS_RING = HOVER_FADE;
 	inline constexpr SUiAnimTransition TOAST_SLIDE{
 		.m_DurationSec = 0.22f,

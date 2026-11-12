@@ -19,52 +19,6 @@
 #include <game/client/gameclient.h>
 #include <game/localization.h>
 
-namespace
-{
-	bool HasConfusableSubstring(const char *pText, const char *pNeedle)
-	{
-		if(!pText || !pNeedle || pNeedle[0] == '\0')
-			return false;
-
-		int aText[128];
-		int aNeedle[64];
-		const int TextLen = str_utf8_to_skeleton(pText, aText, (int)(sizeof(aText) / sizeof(aText[0])));
-		const int NeedleLen = str_utf8_to_skeleton(pNeedle, aNeedle, (int)(sizeof(aNeedle) / sizeof(aNeedle[0])));
-		if(NeedleLen <= 0 || NeedleLen > TextLen)
-			return false;
-
-		for(int i = 0; i + NeedleLen <= TextLen; ++i)
-		{
-			bool Match = true;
-			for(int j = 0; j < NeedleLen; ++j)
-			{
-				if(aText[i + j] != aNeedle[j])
-				{
-					Match = false;
-					break;
-				}
-			}
-			if(Match)
-				return true;
-		}
-		return false;
-	}
-
-	bool HasTypeVoteMatch(const char *pDescription, const char *pNeedle)
-	{
-		if(!pDescription || !pNeedle || pNeedle[0] == '\0')
-			return false;
-		if(str_utf8_find_nocase(pDescription, pNeedle))
-			return true;
-
-		char aDescLower[256];
-		char aNeedleLower[96];
-		str_utf8_tolower(pDescription, aDescLower, sizeof(aDescLower));
-		str_utf8_tolower(pNeedle, aNeedleLower, sizeof(aNeedleLower));
-		return HasConfusableSubstring(aDescLower, aNeedleLower);
-	}
-}
-
 void CVoting::ConCallvote(IConsole::IResult *pResult, void *pUserData)
 {
 	CVoting *pSelf = (CVoting *)pUserData;
@@ -221,27 +175,14 @@ int CVoting::FindTypeVoteOptionIndex(const char *pTypeKey, const char *pTypeLabe
 	if(!pTypeKey || pTypeKey[0] == '\0')
 		return -1;
 
-	char aTypeLabelPlural[64];
-	char aTypeLabelSingular[64];
-	char aTypeLabelLocalized[64];
-	str_format(aTypeLabelPlural, sizeof(aTypeLabelPlural), "%s Maps", pTypeKey);
-	str_format(aTypeLabelSingular, sizeof(aTypeLabelSingular), "%s Map", pTypeKey);
-	if(pTypeLabel && pTypeLabel[0] != '\0')
-		str_format(aTypeLabelLocalized, sizeof(aTypeLabelLocalized), "%s图", pTypeLabel);
-	else
-		aTypeLabelLocalized[0] = '\0';
-
 	int i = 0;
 	for(const CVoteOptionClient *pOption = m_pFirst; pOption; pOption = pOption->m_pNext, ++i)
 	{
+		// 地图选项不是分类切换项，先跳到下一项，避免把地图名里的分类词当成入口。
 		QmVoteMaps::SMap Map;
 		if(QmVoteMaps::ParseVoteMap(pOption->m_aDescription, Map))
 			continue;
-		if(HasTypeVoteMatch(pOption->m_aDescription, aTypeLabelPlural) || HasTypeVoteMatch(pOption->m_aDescription, aTypeLabelSingular))
-			return i;
-		if(aTypeLabelLocalized[0] != '\0' && HasTypeVoteMatch(pOption->m_aDescription, aTypeLabelLocalized))
-			return i;
-		if(pTypeLabel && pTypeLabel[0] != '\0' && HasTypeVoteMatch(pOption->m_aDescription, pTypeLabel))
+		if(QmVoteMaps::TypeVoteOptionMatches(pOption->m_aDescription, pTypeKey, pTypeLabel))
 			return i;
 	}
 	return -1;
@@ -254,25 +195,7 @@ bool CVoting::MatchTypeVoteDescription(const char *pDescription) const
 	QmVoteMaps::SMap Map;
 	if(QmVoteMaps::ParseVoteMap(pDescription, Map))
 		return false;
-
-	char aTypeLabelPlural[64];
-	char aTypeLabelSingular[64];
-	str_format(aTypeLabelPlural, sizeof(aTypeLabelPlural), "%s Maps", m_aPendingTypeKey);
-	str_format(aTypeLabelSingular, sizeof(aTypeLabelSingular), "%s Map", m_aPendingTypeKey);
-	if(HasTypeVoteMatch(pDescription, aTypeLabelPlural) || HasTypeVoteMatch(pDescription, aTypeLabelSingular))
-		return true;
-
-	if(m_aPendingTypeLabel[0] != '\0')
-	{
-		char aTypeLabelLocalized[64];
-		str_format(aTypeLabelLocalized, sizeof(aTypeLabelLocalized), "%s图", m_aPendingTypeLabel);
-		if(HasTypeVoteMatch(pDescription, aTypeLabelLocalized))
-			return true;
-		if(HasTypeVoteMatch(pDescription, m_aPendingTypeLabel))
-			return true;
-	}
-
-	return false;
+	return QmVoteMaps::TypeVoteOptionMatches(pDescription, m_aPendingTypeKey, m_aPendingTypeLabel);
 }
 
 bool CVoting::TryCallPendingMapVote()
@@ -578,6 +501,10 @@ void CVoting::Render()
 	const bool ScoreboardActive = GameClient()->m_Scoreboard.IsActive() && !GetQmFocusModeDecisions().m_HideScoreboard;
 	if(!ScoreboardActive || HudEditorPreview)
 		ResetScoreboardVoteInteraction();
+	// 手机端投票由顶部横幅承担（CQmMobileSpectator::RenderMobileVoteBar），
+	// 不再画左下角那个带按键提示的小 HUD，避免同一份票况出现两处。
+	if(QmUiMobilePlatform() && Client()->State() == IClient::STATE_ONLINE && !HudEditorPreview)
+		return;
 	if(!QmVoteHudVisible(IsVoting(), TakenChoice(), ScoreboardActive, g_Config.m_ClShowVotesAfterVoting != 0, HudEditorPreview))
 		return;
 	int Seconds = SecondsLeft();
@@ -774,7 +701,7 @@ void CVoting::RenderScoreboard(const CUIRect &Scoreboard, bool Interactive, floa
 
 void CVoting::RenderBars(CUIRect Bars, float Alpha) const
 {
-	Bars.Draw(ui_token::color::SURFACE_HIGHLIGHT.WithMultipliedAlpha(2.0f * Alpha), IGraphics::CORNER_ALL, Bars.h / 2.0f);
+	Bars.Draw(ui_token::color::TINT_HUD_BAR.WithMultipliedAlpha(Alpha), IGraphics::CORNER_ALL, Bars.h / 2.0f);
 
 	CUIRect Splitter;
 	Bars.VMargin((Bars.w - 2.0f) / 2.0f, &Splitter);

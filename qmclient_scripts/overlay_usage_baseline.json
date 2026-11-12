@@ -1,0 +1,12 @@
+{
+ "version": 1,
+ "updated_at": "2026-11-05T00:40:00+00:00",
+ "reason": "批 3 收尾：旧弹窗 0、长 tooltip 0（9 条悬停提示缩短到 80 字符以内，i18n 源同步为短句并保留中英/繁中译文）；记录 qm_upstream_redundancy 灰度实验开关的完整告警（灰度结束后随该开关一起收口）；服务器信息页「暴露 IP」沿用已有完整解释文案（超过 80 字符，避免同一句话再拆一条短译）",
+ "legacy_total": 0,
+ "tooltip_total": 2,
+ "legacy_per_file": {},
+ "tooltips_per_file": {
+  "src/game/client/QmUi/cards/QmCardCatalogDDNet.cpp": 1,
+  "src/game/client/components/menus_browser.cpp": 1
+ }
+}

@@ -15,6 +15,7 @@
 #include <generated/protocol.h>
 
 #include <game/client/QmUi/QmCardRegistry.h>
+#include <game/client/QmUi/QmToast.h>
 #include <game/client/QmUi/SettingsCardContentBridge.h>
 #include <game/client/QmUi/SettingsCardDeck.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
@@ -305,10 +306,31 @@ void CMenus::RenderSettingsTee7Content(CUIRect MainView, const SSettingsContentM
 	else if(pSelectedSkin && (pSelectedSkin->m_Flags & CSkins7::SKINFLAG_STANDARD) == 0)
 	{
 		static CButtonContainer s_CustomSkinDeleteButton;
+		static CUi::SConfirmPopupContext s_DeleteSkinConfirm;
+		static bool s_DeleteSkinPending = false;
 		if(DoButton_Menu(&s_CustomSkinDeleteButton, Localize("Delete"), 0, &SaveDeleteButton) || Ui()->ConsumeHotkey(CUi::HOTKEY_DELETE))
 		{
-			str_format(aBuf, sizeof(aBuf), Localize("Are you sure that you want to delete '%s'?"), pSelectedSkin->m_aName);
-			PopupConfirm(Localize("Delete skin"), aBuf, Localize("Yes"), Localize("No"), &CMenus::PopupConfirmDeleteSkin7);
+			// 删除皮肤不可恢复：Cancel/OK 按钮 + 危险色，正文带皮肤名。
+			s_DeleteSkinConfirm.Reset();
+			s_DeleteSkinConfirm.DefaultButtons();
+			s_DeleteSkinConfirm.m_Tone = CUi::SConfirmPopupContext::ETone::DANGER;
+			str_format(s_DeleteSkinConfirm.m_aMessage, sizeof(s_DeleteSkinConfirm.m_aMessage),
+				Localize("Are you sure that you want to delete '%s'?"), pSelectedSkin->m_aName);
+			Ui()->ShowPopupConfirm(Ui()->MouseX(), Ui()->MouseY(), &s_DeleteSkinConfirm);
+			s_DeleteSkinPending = true;
+		}
+		// 结果下一帧轮询：确认后才真正删，取消只清掉等待状态。
+		if(s_DeleteSkinPending)
+		{
+			if(s_DeleteSkinConfirm.m_Result == CUi::SConfirmPopupContext::CONFIRMED)
+			{
+				s_DeleteSkinPending = false;
+				PopupConfirmDeleteSkin7();
+			}
+			else if(s_DeleteSkinConfirm.m_Result == CUi::SConfirmPopupContext::CANCELED)
+			{
+				s_DeleteSkinPending = false;
+			}
 		}
 	}
 
@@ -368,7 +390,8 @@ void CMenus::PopupConfirmDeleteSkin7()
 
 	if(!GameClient()->m_Skins7.RemoveSkin(m_SelectedSkin7Name.c_str()))
 	{
-		PopupMessage(Localize("Error"), Localize("Unable to delete skin"), Localize("Ok"));
+		// 删除失败只需要知道结果、再点一次就是重试：非阻断提示，不弹模态。
+		qm_ui::Toast(EQmToastKind::FAILED, Localize("Unable to delete skin"));
 		return;
 	}
 	m_DeletedSkinIndex7 = m_SelectedSkinIndex7;

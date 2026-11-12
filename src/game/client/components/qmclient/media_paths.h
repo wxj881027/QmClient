@@ -1,6 +1,7 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_MEDIA_PATHS_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_MEDIA_PATHS_H
 
+#include <base/fs.h>
 #include <base/log.h>
 #include <base/system.h>
 
@@ -129,6 +130,30 @@ namespace qmclient::media_paths
 			}
 		}
 		return Path.size() < IO_MAX_PATH_LENGTH ? Path : std::string();
+	}
+
+	// 重命名目标名：保证结果带受支持的扩展名。
+	// fs_split_file_extension 返回的是不带点的扩展名（"demo" 而不是 ".demo"），
+	// 曾经直接把 "demo" 拼到名字后面、又拿 "demo" 去比后缀，于是
+	// 「q出场demo」被判成「已经有扩展名」而漏拼，文件变成无扩展名后被浏览器过滤掉，
+	// 表现就是重命名之后从列表里消失。这里统一按 ".扩展名" 比较和补齐；
+	// 旧文件本身没有扩展名时，按来源补 ".demo" / ".png"。
+	inline std::string RenameTargetName(const char *pNewName, const char *pOldFilename, bool BrowsingScreenshots)
+	{
+		if(pNewName == nullptr || pNewName[0] == '\0')
+			return {};
+		char aOldName[IO_MAX_PATH_LENGTH];
+		char aExtension[IO_MAX_PATH_LENGTH];
+		fs_split_file_extension(pOldFilename, aOldName, sizeof(aOldName), aExtension, sizeof(aExtension));
+		char aSuffix[IO_MAX_PATH_LENGTH];
+		if(aExtension[0] != '\0')
+			str_format(aSuffix, sizeof(aSuffix), ".%s", aExtension);
+		else
+			str_copy(aSuffix, BrowsingScreenshots ? ".png" : ".demo", sizeof(aSuffix));
+		std::string Target = pNewName;
+		if(str_endswith_nocase(Target.c_str(), aSuffix) == nullptr)
+			Target += aSuffix;
+		return Target;
 	}
 
 	inline bool PrepareWrite(IStorage *pStorage, const std::string &Path)

@@ -5,6 +5,8 @@
 
 #include <engine/shared/config.h>
 
+#include <game/client/components/qmclient/console_appearance.h>
+
 #include <algorithm>
 
 namespace qm_card_catalog
@@ -58,10 +60,9 @@ namespace qm_card_catalog
 		}
 		case EQmModuleId::QiaFen: return Layout.m_KeywordRulesRevision;
 		case EQmModuleId::PieMenu: return g_Config.m_QmPieMenuEnabled ? 1u : 0u;
-		case EQmModuleId::FavoriteMaps: return Layout.m_FavoriteMapsRevision;
 		case EQmModuleId::MapUpload: return 1u;
 		case EQmModuleId::HJAssist: return (g_Config.m_QmAutoTeamLock ? 1u : 0u) | (g_Config.m_QmPausedSpectatorFade ? 2u : 0u);
-		case EQmModuleId::ChatBubble: return g_Config.m_QmChatBubble ? 1u : 0u;
+		case EQmModuleId::ChatBubble: return (g_Config.m_QmChatBubble ? 1u : 0u) | (g_Config.m_QmChatBubbleCustomColors ? 2u : 0u);
 		case EQmModuleId::CameraView:
 			return (g_Config.m_QmCameraDrift ? 1u : 0u) |
 			       (g_Config.m_QmDynamicFov ? 2u : 0u) |
@@ -85,9 +86,9 @@ namespace qm_card_catalog
 			       (g_Config.m_QmHitboxShowFreezeProjectiles ? 1u << 11 : 0u);
 		case EQmModuleId::DummyMiniView: return DummyMiniViewExpanded ? 1u : 0u;
 		case EQmModuleId::Ime: return (g_Config.m_QmNewIme != 0 ? 1u : 0u) | (g_Config.m_QmImeAutoManage != 0 ? 2u : 0u);
-		case EQmModuleId::PlayerStats: return (g_Config.m_QmPlayerStatsMapProgress ? 1u : 0u) | (g_Config.m_QmPlayerStatsMapProgressStyle ? 2u : 0u);
+		case EQmModuleId::PlayerStats: return (g_Config.m_QmPlayerStatsMapProgress ? 1u : 0u) | (static_cast<uint64_t>(g_Config.m_QmPlayerStatsMapProgressStyle) << 1);
 		case EQmModuleId::InputOverlay: return g_Config.m_QmInputOverlay ? 1u : 0u;
-		case EQmModuleId::Console: return static_cast<uint64_t>(g_Config.m_QmConsoleFontSize) | (static_cast<uint64_t>(g_Config.m_QmConsoleColorScheme == 2) << 8);
+		case EQmModuleId::Console: return static_cast<uint64_t>(g_Config.m_QmConsoleFontSize) | (static_cast<uint64_t>(QmConsoleAppearance::IsCustomScheme(g_Config.m_QmConsoleColorScheme)) << 8);
 		case EQmModuleId::Tooltip: return static_cast<uint64_t>(g_Config.m_QmTooltipFontSize);
 		case EQmModuleId::HudNotifications:
 		{
@@ -102,7 +103,7 @@ namespace qm_card_catalog
 		case EQmModuleId::Lyrics: return (g_Config.m_QmSpotifyEnable ? 1u : 0u) | (g_Config.m_QmKugouHookEnable ? 2u : 0u) | (g_Config.m_QmQQMusicHookEnable ? 4u : 0u); // 来源附加行影响布局高度
 		case EQmModuleId::Background3D: return ResolveQmHudBackground3DRevision(g_Config.m_Qm3DParticles != 0, g_Config.m_Qm3DParticlesColorMode == 1, g_Config.m_Qm3DParticlesGlow != 0, g_Config.m_Qm3DParticlesTrail != 0, g_Config.m_Qm3DParticlesPulse != 0, g_Config.m_Qm3DParticlesTwinkle != 0);
 		case EQmModuleId::GoresDrownBoard: return g_Config.m_QmGoresDrownBoard != 0 ? 1u : 0u;
-		case EQmModuleId::SkinTransition: return g_Config.m_QmSkinChangeTransition ? 1u : 0u;
+		case EQmModuleId::SkinAppearance: return g_Config.m_QmSkinChangeTransition ? 1u : 0u;
 		default: return 0u;
 		}
 	}

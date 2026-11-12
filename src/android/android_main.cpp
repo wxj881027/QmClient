@@ -245,13 +245,16 @@ const char *InitAndroid()
 	return nullptr;
 }
 
-// See ClientActivity.java
-constexpr uint32_t COMMAND_USER = 0x8000;
-constexpr uint32_t COMMAND_RESTART_APP = COMMAND_USER + 1;
-
 void RestartAndroidApp()
 {
-	SDL_SendAndroidMessage(COMMAND_RESTART_APP, 0);
+	// 等待启动请求提交后再结束进程，避免 UI 消息队列中的重启请求随进程一起丢失。
+	JNIEnv *pEnv = static_cast<JNIEnv *>(SDL_GetAndroidJNIEnv());
+	jobject Activity = (jobject)SDL_GetAndroidActivity();
+	jclass ActivityClass = pEnv->GetObjectClass(Activity);
+	jmethodID MethodId = pEnv->GetMethodID(ActivityClass, "restartApp", "()V");
+	pEnv->CallVoidMethod(Activity, MethodId);
+	pEnv->DeleteLocalRef(ActivityClass);
+	pEnv->DeleteLocalRef(Activity);
 }
 
 bool StartAndroidServer(const char **ppArguments, size_t NumArguments)
@@ -374,6 +377,93 @@ bool ShowAndroidMediaFiles(const char *pDirectory, bool Videos, const char *cons
 	}
 	if(HasFrame)
 		pEnv->PopLocalFrame(nullptr);
+	pEnv->DeleteLocalRef(Activity);
+	return Success;
+}
+
+bool OpenAndroidDownloadsFolder()
+{
+	JNIEnv *pEnv = static_cast<JNIEnv *>(SDL_GetAndroidJNIEnv());
+	if(pEnv == nullptr)
+		return false;
+	jobject Activity = static_cast<jobject>(SDL_GetAndroidActivity());
+	if(Activity == nullptr)
+		return false;
+	jclass ActivityClass = pEnv->GetObjectClass(Activity);
+	if(ActivityClass == nullptr)
+	{
+		pEnv->DeleteLocalRef(Activity);
+		return false;
+	}
+	jmethodID Method = pEnv->GetMethodID(ActivityClass, "openDownloadsFolder", "()V");
+	bool Success = false;
+	if(Method != nullptr)
+	{
+		pEnv->CallVoidMethod(Activity, Method);
+		Success = !pEnv->ExceptionCheck();
+	}
+	if(pEnv->ExceptionCheck())
+	{
+		pEnv->ExceptionDescribe();
+		pEnv->ExceptionClear();
+	}
+	pEnv->DeleteLocalRef(ActivityClass);
+	pEnv->DeleteLocalRef(Activity);
+	return Success;
+}
+
+bool ExportAndroidMediaFile(const char *pPath)
+{
+	if(pPath == nullptr || pPath[0] == '\0')
+		return false;
+	JNIEnv *pEnv = static_cast<JNIEnv *>(SDL_GetAndroidJNIEnv());
+	if(pEnv == nullptr)
+		return false;
+	jobject Activity = static_cast<jobject>(SDL_GetAndroidActivity());
+	if(Activity == nullptr)
+		return false;
+	const bool HasFrame = pEnv->PushLocalFrame(8) == 0;
+	bool Success = false;
+	if(HasFrame)
+	{
+		jclass ActivityClass = pEnv->GetObjectClass(Activity);
+		if(ActivityClass != nullptr)
+		{
+			jmethodID Method = pEnv->GetMethodID(ActivityClass, "exportToDownloads", "(Ljava/lang/String;)V");
+			if(Method != nullptr)
+			{
+				// JNI 用 modified UTF-8：先把 UTF-8 解码成 UTF-16，路径里的中文才不会乱。
+				std::vector<jchar> vCharacters;
+				for(const char *pCursor = pPath; *pCursor != '\0';)
+				{
+					const int Codepoint = str_utf8_decode(&pCursor);
+					if(Codepoint < 0)
+						vCharacters.push_back(0xfffd);
+					else if(Codepoint <= 0xffff)
+						vCharacters.push_back((jchar)Codepoint);
+					else
+					{
+						vCharacters.push_back((jchar)(0xd800 + ((Codepoint - 0x10000) >> 10)));
+						vCharacters.push_back((jchar)(0xdc00 + ((Codepoint - 0x10000) & 0x3ff)));
+					}
+				}
+				jstring Path = pEnv->NewString(vCharacters.data(), (jsize)vCharacters.size());
+				if(Path != nullptr)
+				{
+					pEnv->CallVoidMethod(Activity, Method, Path);
+					Success = !pEnv->ExceptionCheck();
+					pEnv->DeleteLocalRef(Path);
+				}
+			}
+			pEnv->DeleteLocalRef(ActivityClass);
+		}
+		pEnv->PopLocalFrame(nullptr);
+	}
+	if(pEnv->ExceptionCheck())
+	{
+		pEnv->ExceptionDescribe();
+		pEnv->ExceptionClear();
+	}
 	pEnv->DeleteLocalRef(Activity);
 	return Success;
 }

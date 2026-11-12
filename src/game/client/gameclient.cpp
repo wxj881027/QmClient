@@ -32,6 +32,7 @@
 #include "components/nameplates.h"
 #include "components/particles.h"
 #include "components/players.h"
+#include "components/qmclient/ime_gradient_probe.h"
 #include "components/qmclient/jelly_tee.h"
 #include "components/qmclient/modes.h"
 #include "components/qmclient/perf_logging.h"
@@ -644,6 +645,7 @@ void CGameClient::OnConsoleInit()
 	AddComponent(&m_QmClient, "qmclient");
 	AddComponent(&m_QmAxiomAutoLogin, "axiom_auto_login");
 	AddComponent(&m_QmAxiomScores, "axiom_scores");
+	AddComponent(&m_QmFriendLastSeen, "friend_last_seen");
 	AddComponent(&m_QmChatEmoji, "chat_emoji");
 	AddComponent(&m_QmMonitoring, "monitoring");
 	AddComponent(&m_QmWaterHammerIndicator, "water_hammer_indicator");
@@ -664,6 +666,7 @@ void CGameClient::OnConsoleInit()
 	AddComponent(&m_Outlines, "outlines");
 	AddComponent(&m_CollisionHitbox, "collision_hitbox");
 	AddComponent(&m_QmCheckpointGuide, "checkpoint_guide");
+	AddComponent(&m_LyricsPresentation, "lyrics_presentation");
 	AddComponent(&m_Pet, "pet");
 	AddComponent(&m_Particles.m_RenderExplosions, "particles_explosions");
 	AddComponent(&m_NamePlates, "nameplates");
@@ -693,8 +696,10 @@ void CGameClient::OnConsoleInit()
 	AddComponent(&m_ImportantAlert, "important_alert");
 	AddComponent(&m_DebugHud, "debug_hud");
 	AddComponent(&m_TouchControls, "touch_controls");
-	AddComponent(&m_QmMobileSpectator, "mobile_spectator");
 	AddComponent(&m_Scoreboard, "scoreboard");
+	// 手机观战触控层要压在计分板之上：面板打开时只留“关闭计分板”按钮，位置在右上角，
+	// 必须画在面板之上才点得到。菜单/控制台/提示仍在它上面。
+	AddComponent(&m_QmMobileSpectator, "mobile_spectator");
 	AddComponent(&m_Statboard, "statboard");
 	AddComponent(&m_Motd, "motd");
 	AddComponent(&m_Menus, "menus");
@@ -746,6 +751,8 @@ void CGameClient::OnConsoleInit()
 	pConsole->Register("qm_hook_countdown_flow_style", "?i[value]", CFGFLAG_CLIENT, ConDiscardLegacyHookCountdownFlowStyle, nullptr, "");
 	pConsole->Register("team", "i[team-id]", CFGFLAG_CLIENT, ConTeam, this, "Switch team");
 	pConsole->Register("kill", "", CFGFLAG_CLIENT, ConKill, this, "Kill yourself to restart");
+	pConsole->Register("qm_self_kill_off", "", CFGFLAG_CLIENT, ConQmSelfKillOff, this, "Disable client-initiated self-kill (K key / kill command)");
+	pConsole->Register("qm_self_kill_on", "", CFGFLAG_CLIENT, ConQmSelfKillOn, this, "Enable client-initiated self-kill (K key / kill command)");
 	pConsole->Register("ready_change", "", CFGFLAG_CLIENT, ConReadyChange7, this, "Change ready state (0.7 only)");
 	// 调试用：不计数、不写盘，直接预览启动赞助提醒浮层。
 	pConsole->Register("qm_sponsor_nudge_preview", "", CFGFLAG_CLIENT, ConQmSponsorNudgePreview, this, "Preview the sponsor reminder without changing the launch count");
@@ -842,6 +849,17 @@ static void MigrateJumpHintConfig()
 	MigrateJumpHintDefaults(g_Config.m_QmJumpHintDefaultsMigrated, g_Config.m_QmJumpHint, g_Config.m_QmJumpHintText, sizeof(g_Config.m_QmJumpHintText));
 }
 
+// 设置页预热以前默认关闭，第一次打开图像页会整帧冻结（实测 435ms），而几乎没有
+// 用户知道这条配置存在，存档里的 0 基本都不是主动关闭。这里一次性改成打开；
+// 之后用户在设置里的选择不再被覆盖。
+static void MigrateSettingsPrewarmDefault()
+{
+	if(g_Config.m_QmSettingsPrewarmMigrated)
+		return;
+	g_Config.m_QmSettingsPrewarm = 1;
+	g_Config.m_QmSettingsPrewarmMigrated = 1;
+}
+
 // 昵称显示从 cl_nameplates / cl_nameplates_own 两开关改成 qm_nameplate_show_scope 六档。
 // 远程直接换档、不做迁移，原本关掉名牌的玩家升级后会突然看到所有人；这里把旧意图
 // 一次性映射到对应档位，之后用户在新分段控件里的选择不再被覆盖。
@@ -916,6 +934,7 @@ void CGameClient::OnInit()
 	// 在首次绘制前处理跳跃提示默认文案。
 	MigrateJumpHintConfig();
 	MigrateNameplateShowScopeConfig();
+	MigrateSettingsPrewarmDefault();
 	MigrateTranslateUiColorAlphaConfig(ConfigManager());
 
 	// 启动赞助提醒：跨过阈值才写盘，避免每次启动都重写配置文件。
@@ -1065,6 +1084,8 @@ void CGameClient::OnInit()
 
 	// setup load amount, load textures
 	const char *pLoadingMessageAssets = Localize("Initializing assets");
+	// 测试专用：IME 渐变圆角 SDF 的像素回归探针。玩家不可触发，避免屏幕上出现测试色块。
+	m_QmImeGradientProbeEnabled = std::getenv("QMCLIENT_TEST_IME_GRADIENT_PROBE") != nullptr;
 	// 测试专用：逐项延迟可复现总加载超过看门狗阈值，以及单项真正停滞的两条路径。
 	const char *pTestAssetDelay = std::getenv("QMCLIENT_TEST_ASSET_LOAD_DELAY_MS");
 	const int TestAssetDelayMs = pTestAssetDelay != nullptr ? std::clamp(str_toint(pTestAssetDelay), 0, 20000) : 0;
@@ -1234,6 +1255,8 @@ void CGameClient::OnUpdate()
 
 	HandleLanguageChanged();
 	RefreshStreamerSkinPrivacyAfterStateChange();
+	// 自杀保护的自动开启计时：按墙钟推进，与渲染帧率无关。
+	UpdateQmSelfKillProtection();
 
 	CUIElementBase::Init(Ui()); // update static pointer because game and editor use separate UI
 
@@ -1674,22 +1697,50 @@ bool CGameClient::GetDummyFastInput(CNetObj_PlayerInput &DummyFastInput, const C
 	return false;
 }
 
+void CGameClient::OnMapLoadStart()
+{
+	if(m_ConnectionResourcePreparation.Pending())
+		dbg_msg("client/map", "canceled pending resource preparation for '%s'", Client()->GetCurrentMap());
+	// 取消旧任务并先释放借用地图数据的渲染资源，再让引擎替换地图文件。
+	m_ConnectionResourcePreparation.Cancel();
+	m_MapLayersBackground.UnloadMap();
+	m_MapLayersForeground.UnloadMap();
+	Collision()->Unload();
+	Layers()->Unload();
+}
+
 void CGameClient::OnConnected()
 {
+	const bool PerfEnabled = QmPerfEnabled();
+	CPerfTimer ConnectTimer(PerfEnabled);
+	CPerfTimer StageTimer(PerfEnabled);
+	const auto LogConnectStage = [&](const char *pStage) {
+		if(!PerfEnabled)
+			return;
+		// 冷启动阶段独立保留，避免普通明细限流再次掩盖进服长帧的具体来源。
+		QmPerfLogStage("perf/connect", pStage, StageTimer.ElapsedMs(), true, Client());
+		StageTimer.Reset();
+	};
+
 	m_ConnectionResourcePreparation.Cancel();
 	m_FastPractice.InvalidateBufferedInputState();
 	const char *pConnectCaption = DemoPlayer()->IsPlaying() ? Localize("Preparing demo playback") : Localize("Connected");
 	const char *pLoadMapContent = Localize("Initializing map logic");
 	// render loading before skip is calculated
 	m_Menus.RenderLoading(pConnectCaption, pLoadMapContent, 0);
+	LogConnectStage("loading_screen");
 	m_Layers.Init(Kernel()->RequestInterface<IMap>(), false);
+	LogConnectStage("layers_init");
 	m_Collision.Init(Layers());
+	LogConnectStage("collision_init");
 	m_GameWorld.m_Core.InitSwitchers(m_Collision.m_HighestSwitchNumber);
 	m_GameWorld.m_PredictedEvents.clear();
 	m_RaceHelper.Init(this);
+	LogConnectStage("world_and_race_init");
 
 	// render loading before going through all components
 	m_Menus.RenderLoading(pConnectCaption, pLoadMapContent, 0);
+	LogConnectStage("components_loading_screen");
 	for(size_t ComponentIndex = 0; ComponentIndex < m_vpAll.size(); ++ComponentIndex)
 	{
 		auto *pComponent = m_vpAll[ComponentIndex];
@@ -1704,13 +1755,20 @@ void CGameClient::OnConnected()
 		}
 	}
 
+	LogConnectStage("components_map_load_total");
 	ConfigManager()->ResetGameSettings();
 	LoadMapSettings();
+	LogConnectStage("map_settings");
+
+	// 新一局开始：自杀保护回到配置默认状态，自动开启延迟重新计时。
+	ResetQmSelfKillProtectionRound(true);
 
 	if(Client()->State() != IClient::STATE_DEMOPLAYBACK)
 	{
 		m_ConnectionResourcePreparation.Begin();
 	}
+	if(PerfEnabled)
+		QmPerfLogStage("perf/connect", "connected_total", ConnectTimer.ElapsedMs(), true, Client());
 }
 
 void CGameClient::FinishConnectionResourcePreparation()
@@ -1724,6 +1782,8 @@ void CGameClient::FinishConnectionResourcePreparation()
 
 void CGameClient::OnReset()
 {
+	// 离开对局：自杀保护回到配置默认值，本局自动开启的拦截不会漏到下一局。
+	ResetQmSelfKillProtectionRound(false);
 	m_ConnectionResourcePreparation.Cancel();
 	InvalidateSnapshot();
 	ResetDemoPlaybackState();
@@ -1958,6 +2018,7 @@ void CGameClient::UpdatePositions()
 
 void CGameClient::OnRender()
 {
+	UpdateQmAxiomPrediction();
 	m_HudEditor.BeginRenderFrame();
 	CQmIconFrameColorClock::BeginFrame(static_cast<double>(time_get()) / static_cast<double>(time_freq()));
 	// qm_blank_asset_fallback 兜底轮询：设置页直改 g_Config、控制台命令等任何来源改值后，
@@ -1985,6 +2046,7 @@ void CGameClient::OnRender()
 	}
 
 	const ColorRGBA ClearColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClOverlayEntities ? g_Config.m_ClBackgroundEntitiesColor : g_Config.m_ClBackgroundColor));
+	const bool BackgroundLayerActive = Ui()->BeginBackgroundLayer(ClearColor);
 
 #if defined(CONF_PLATFORM_MACOS)
 	if(g_Config.m_QmMacosGraphicsDiagnostics != 0)
@@ -2007,7 +2069,8 @@ void CGameClient::OnRender()
 		}
 	}
 #endif
-	Graphics()->Clear(ClearColor.r, ClearColor.g, ClearColor.b);
+	if(!BackgroundLayerActive)
+		Graphics()->Clear(ClearColor.r, ClearColor.g, ClearColor.b);
 
 	// check if multi view got activated
 	if(!m_MultiView.m_IsInit && m_MultiViewActivated)
@@ -2068,7 +2131,20 @@ void CGameClient::OnRender()
 
 	// render all systems
 	CPerfTimer ComponentsTimer(PerfEnabled);
+	bool BackgroundBoundaryReached = false;
+	const auto ReachBackgroundBoundary = [&]() {
+		if(BackgroundBoundaryReached)
+			return;
+		BackgroundBoundaryReached = true;
+		// 菜单背景属于背景层；必须在 HUD/文字之前画完并结束离屏层。
+		m_Menus.RenderBackgroundLayer();
+		if(BackgroundLayerActive)
+			Ui()->EndBackgroundLayer();
+		Ui()->BeginBackgroundFrame();
+	};
 	const auto RenderComponent = [&](CComponent *pComponent) {
+		if(pComponent == &m_Hud)
+			ReachBackgroundBoundary();
 		if(pComponent == &m_Menus)
 		{
 			CPerfTimer StageTimer(PerfEnabled);
@@ -2099,7 +2175,6 @@ void CGameClient::OnRender()
 	// clear all events/input for this frame
 	{
 		CPerfTimer StageTimer(PerfEnabled);
-		m_QmImeManager.RenderCandidatePopup();
 		m_QmImeManager.OnFrame();
 		Input()->Clear();
 		LogPerfStage(this, "input_clear_and_candidates", StageTimer.ElapsedMs());
@@ -2122,6 +2197,11 @@ void CGameClient::OnRender()
 	// 开启后永远不会产生 perf/stutter 报告；这里在渲染帧末尾统一消费。
 	ProcessQmStutterFrame();
 	LogQmIconDiagnostics(Client());
+
+	// 像素回归探针：只在测试进程里、由 QMCLIENT_TEST_IME_GRADIENT_PROBE 开启。
+	// 每帧重绘，这样它之后的任意一次 screenshot 都能拍到。
+	if(m_QmImeGradientProbeEnabled)
+		QmImeGradientProbeDraw(this);
 
 	m_pFrameScheduler->EndFrame();
 	// resend player and dummy info if it was filtered by server
@@ -2907,6 +2987,7 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dumm
 	if(MsgId == NETMSGTYPE_SV_CHAT)
 	{
 		CNetMsg_Sv_Chat *pMsg = (CNetMsg_Sv_Chat *)pRawMsg;
+		m_TClient.OnChatMessage(pMsg, Conn);
 		if(pMsg->m_ClientId < 0 && pMsg->m_pMessage != nullptr)
 		{
 			m_TClient.HandleLocalSaveMessage(pMsg, Conn);
@@ -3238,9 +3319,9 @@ void CGameClient::OnStateChange(int NewState, int OldState)
 		pComponent->OnStateChange(NewState, OldState);
 }
 
-void CGameClient::OnScreenshotTaken(CImageInfo &&Image)
+void CGameClient::OnScreenshotTaken(CImageInfo &&Image, const char *pPath)
 {
-	m_UiEffects.StartScreenshotAnimation(std::move(Image));
+	m_UiEffects.StartScreenshotAnimation(std::move(Image), pPath);
 }
 
 IGraphics::FScreenshotProcessor CGameClient::ScreenshotProcessor()
@@ -3249,6 +3330,50 @@ IGraphics::FScreenshotProcessor CGameClient::ScreenshotProcessor()
 	const int State = Client()->State();
 	const char *pMapName = State == IClient::STATE_ONLINE || State == IClient::STATE_DEMOPLAYBACK ? Client()->GetCurrentMap() : "";
 	return CQmScreenshotManager::CaptureProcessor(Storage(), g_Config.m_QmScreenshotWatermark != 0, Options, pMapName, std::time(nullptr));
+}
+
+void CGameClient::SetPoseCamera(vec2 Center, float Zoom)
+{
+	m_Camera.SetDemoView(Center, Zoom);
+	// 自由视角下相机中心取自 m_aMousePos（和 demo 同一套），所以外部给定的取景
+	// 必须同时写进那里，否则「适配取景」和拖动平移会被下一帧的鼠标位置覆盖。
+	m_Controls.m_aMousePos[g_Config.m_ClDummy] = Center;
+}
+
+bool CGameClient::PoseSkinsReady()
+{
+	// 合影是合成快照，没有 demo 播放，也就没有任何"皮肤已经加载"的前置动作。
+	// 这里按快照里真实用到的皮肤名驱动加载，并回报是否都已经是可绘制状态，
+	// 让引擎在开拍前等它们就绪——否则社区皮肤会以 default 出现在成片里。
+	// 只收集快照里真的存在的客户端：m_aClients 是定长数组，未使用的槽位也带着
+	// 默认名字，把它们算进来会让闸门永远在等一批不存在的皮肤。
+	std::vector<std::string> vNames;
+	vNames.reserve(MAX_CLIENTS);
+	for(int i = 0; i < MAX_CLIENTS; ++i)
+	{
+		if(!m_Snap.m_aCharacters[i].m_Active)
+			continue;
+		const CClientData &ClientData = m_aClients[i];
+		if(ClientData.m_aSkinName[0] == 0)
+			continue;
+		// 与 RefreshSkin 取的是同一个字段：名字一致才可能拿到同一份皮肤。
+		vNames.emplace_back(ClientData.m_aSkinName);
+	}
+	if(vNames.empty())
+		return true;
+	std::string PendingName;
+	if(m_Skins.PoseSkinsReady(vNames, &PendingName))
+		return true;
+	// 等待期间必须主动推进皮肤管线：OnUpdate 有最高 500 ms 的节流，
+	// 只靠常规帧循环等待会变成空等，抓帧永远等不到 LOADED。
+	m_Skins.UpdateForSettingsWarmup();
+	return false;
+}
+
+bool CGameClient::QmUiAnimationsIdle() const
+{
+	const CUiV2AnimationRuntime *pRuntime = m_UI.QmAnimationRuntime();
+	return pRuntime == nullptr || pRuntime->ActiveTrackCount() == 0;
 }
 
 void CGameClient::OnShutdown()
@@ -3836,6 +3961,8 @@ void CGameClient::InvalidateSnapshot()
 
 void CGameClient::OnNewSnapshot(bool DummySwapped)
 {
+	UpdateQmAxiomPrediction();
+	CQmAxiomQuadTimeScope QuadTime(m_Collision, Client()->GameTick(g_Config.m_ClDummy), Client()->GameTickSpeed());
 	CPerfTimer SnapshotStageTimer(QmPerfEnabled());
 	// 仅诊断时拆分首次快照的资源与组件耗时，不改变快照处理顺序。
 	const auto LogSnapshotStage = [&](const char *pStage) {
@@ -3844,6 +3971,7 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 		SnapshotStageTimer.Reset();
 	};
 	auto &&Evolve = [this](CNetObj_Character *pCharacter, int Tick) {
+		CQmAxiomQuadTimeScope EvolveQuadTime(m_Collision, pCharacter->m_Tick, Client()->GameTickSpeed());
 		CWorldCore TempWorld;
 		CCharacterCore TempCore = CCharacterCore();
 		CTeamsCore TempTeams = CTeamsCore();
@@ -3854,6 +3982,7 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 		while(pCharacter->m_Tick < Tick)
 		{
 			pCharacter->m_Tick++;
+			m_Collision.SetQmAxiomQuadTick(pCharacter->m_Tick, Client()->GameTickSpeed());
 			TempCore.Tick(false);
 			TempCore.Move();
 			TempCore.Quantize();
@@ -5114,6 +5243,8 @@ void CGameClient::ApplyPreInputs(int Tick, bool Direct, CGameWorld &GameWorld)
 
 void CGameClient::OnPredict()
 {
+	UpdateQmAxiomPrediction();
+	CQmAxiomQuadTimeScope QuadTime(m_Collision, Client()->GameTick(g_Config.m_ClDummy), Client()->GameTickSpeed());
 	// store the previous values so we can detect prediction errors
 	CCharacterCore BeforePrevChar = m_PredictedPrevChar;
 	CCharacterCore BeforeChar = m_PredictedChar;
@@ -5193,6 +5324,7 @@ void CGameClient::OnPredict()
 
 	for(int Tick = Client()->GameTick(g_Config.m_ClDummy) + 1; Tick <= FinalTickSelf; Tick++)
 	{
+		m_Collision.SetQmAxiomQuadTick(Tick, Client()->GameTickSpeed());
 		// fetch the previous characters
 		if(Tick == FinalTickSelf)
 		{
@@ -5484,6 +5616,7 @@ void CGameClient::OnPredict()
 		int PredTime = std::clamp(Client()->GetPredictionTime(), 0, 8000); // Milliseconds for some reason?? TODO: Use more precision
 		const int PredEndTick = FinalTickRegular;
 		const int SmoothTick = PredEndTick;
+		m_Collision.SetQmAxiomQuadTick(SmoothTick, Client()->GameTickSpeed());
 
 		// Nightmare: in order to get 100% accurate comparison to detect mispredictions we must
 		// tick the PREVIOUS predicted world with our CURRENT predicted inputs
@@ -6667,6 +6800,27 @@ void CGameClient::SendKill()
 	if(m_FastPractice.ConsumeKillCommand())
 		return;
 
+	// 自杀保护：只拦截客户端主动发起的自杀（K 键 / kill 命令）。
+	// fast practice 直杀与服务端发起的击杀不受影响；demo 回放路径不拦截。
+	// 拦截状态由 m_QmSelfKillProtection 决定：开局取配置默认值（默认关闭），
+	// 之后只由玩家按键/勾选或显式配置的自动开启延迟改变。
+	if(m_QmSelfKillProtection.BlocksKill() && Client()->State() != IClient::STATE_DEMOPLAYBACK)
+	{
+		// 提示每秒最多刷一次，避免按住 K 键刷屏。
+		const int64_t Now = time_get();
+		if(m_QmSelfKillHintLastTime == 0 || Now - m_QmSelfKillHintLastTime >= time_freq())
+		{
+			m_QmSelfKillHintLastTime = Now;
+			char aBuf[256];
+			str_copy(aBuf, Localize("Client self-kill is disabled (server commands are not affected)"), sizeof(aBuf));
+			// 优先走通知栏本地回显；回显开关关闭时退回控制台输出，保证提示不丢。
+			// 颜色与聊天客户端消息一致（cl_message_client_color），入队固化避免后续配置变化改写旧通知。
+			if(!m_QmHudNotifications.QueueEcho(aBuf, g_Config.m_ClMessageClientColor))
+				dbg_msg("client", "%s", aBuf);
+		}
+		return;
+	}
+
 	CNetMsg_Cl_Kill Msg;
 	Client()->SendPackMsgActive(&Msg, MSGFLAG_VITAL);
 
@@ -6701,6 +6855,75 @@ void CGameClient::ConTeam(IConsole::IResult *pResult, void *pUserData)
 void CGameClient::ConKill(IConsole::IResult *pResult, void *pUserData)
 {
 	((CGameClient *)pUserData)->SendKill();
+}
+
+void CGameClient::ConQmSelfKillOff(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameClient *pSelf = static_cast<CGameClient *>(pUserData);
+	pSelf->SetQmSelfKillProtection(false, true);
+}
+
+void CGameClient::ConQmSelfKillOn(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameClient *pSelf = static_cast<CGameClient *>(pUserData);
+	pSelf->SetQmSelfKillProtection(true, true);
+}
+
+// 手动开关：同时写运行时状态与配置。配置是玩家的默认状态，
+// 让"这次关掉"在换图、重连后仍然有效；自动开启只会读配置里的延迟，
+// 不会把自动触发的结果写回配置（否则下次启动会自己开着）。
+void CGameClient::SetQmSelfKillProtection(bool Enabled, bool Announce)
+{
+	m_QmSelfKillProtection.SetEnabled(Enabled);
+	g_Config.m_QmSelfKillEnabled = Enabled ? 1 : 0;
+	if(!Announce)
+		return;
+	// 幂等回显：重复设置同值也提示，保证按键操作有确认反馈。
+	char aBuf[256];
+	str_copy(aBuf, Localize(Enabled ? "Client self-kill is enabled" : "Client self-kill is disabled (K key / kill command will be ignored)"), sizeof(aBuf));
+	if(!m_QmHudNotifications.QueueEcho(aBuf, g_Config.m_ClMessageClientColor))
+		dbg_msg("client", "%s", aBuf);
+}
+
+// 每帧推进自动开启计时：只有玩家显式设置了延迟才会到点开启，默认永不触发。
+// 用墙钟时间推进而不是渲染帧时间：帧时间被夹在 0.1s，掉帧时"进图 N 分钟"会被拉长。
+void CGameClient::UpdateQmSelfKillProtection()
+{
+	m_QmSelfKillProtection.Configure(g_Config.m_QmSelfKillEnabled != 0, g_Config.m_QmSelfKillAutoDelay * 60);
+	// 只在真正进入对局（在线）时计时：菜单、连接中、demo 回放都不推进，
+	// 玩家看到的"开始游戏后 N 分钟"才是他实际在玩的时间。
+	const bool InGame = Client()->State() == IClient::STATE_ONLINE;
+	if(!InGame)
+	{
+		m_QmSelfKillWallClockLastTime = 0;
+		return;
+	}
+	const int64_t Now = time_get();
+	float DeltaSeconds = 0.0f;
+	if(m_QmSelfKillWallClockLastTime != 0 && Now > m_QmSelfKillWallClockLastTime)
+		DeltaSeconds = static_cast<float>(static_cast<double>(Now - m_QmSelfKillWallClockLastTime) / static_cast<double>(time_freq()));
+	m_QmSelfKillWallClockLastTime = Now;
+	if(!m_QmSelfKillProtection.Update(DeltaSeconds))
+		return;
+	// 自动开启进入拦截态，回显一次让玩家知道 K 键已被接管；
+	// 不写回 qm_self_kill_enabled，重启后不会"自己开着"。
+	char aBuf[256];
+	str_copy(aBuf, Localize("Self-kill protection enabled automatically"), sizeof(aBuf));
+	if(!m_QmHudNotifications.QueueEcho(aBuf, g_Config.m_ClMessageClientColor))
+		dbg_msg("client", "%s", aBuf);
+}
+
+// 进入/离开对局：进入时按配置默认值重新开始，离开时回到默认值，
+// 避免上一局自动开启的状态漏到下一局的开局瞬间。
+void CGameClient::ResetQmSelfKillProtectionRound(bool InRound)
+{
+	m_QmSelfKillProtection.Configure(g_Config.m_QmSelfKillEnabled != 0, g_Config.m_QmSelfKillAutoDelay * 60);
+	// 进出对局都从零开始计，避免把上一段的时间带进这一局的开头。
+	m_QmSelfKillWallClockLastTime = 0;
+	if(InRound)
+		m_QmSelfKillProtection.BeginRound();
+	else
+		m_QmSelfKillProtection.EndRound();
 }
 
 void CGameClient::ConReadyChange7(IConsole::IResult *pResult, void *pUserData)
@@ -6824,11 +7047,13 @@ void CGameClient::UpdateLocalTuning()
 	// update the tuning at the local position with the latest tunings received before the new snapshot
 	if(m_GameWorld.m_WorldConfig.m_UseTuneZones)
 	{
-		int TuneZone =
-			m_Snap.m_aCharacters[m_Snap.m_LocalClientId].m_HasExtendedData &&
-					m_Snap.m_aCharacters[m_Snap.m_LocalClientId].m_ExtendedData.m_TuneZoneOverride != TuneZone::OVERRIDE_NONE ?
-				m_Snap.m_aCharacters[m_Snap.m_LocalClientId].m_ExtendedData.m_TuneZoneOverride :
-				Collision()->IsTune(Collision()->GetMapIndex(LocalPos));
+		const bool HasTuneZoneOverride = m_Snap.m_aCharacters[m_Snap.m_LocalClientId].m_HasExtendedData &&
+						 m_Snap.m_aCharacters[m_Snap.m_LocalClientId].m_ExtendedData.m_TuneZoneOverride != TuneZone::OVERRIDE_NONE;
+		int TuneZone = HasTuneZoneOverride ?
+				       m_Snap.m_aCharacters[m_Snap.m_LocalClientId].m_ExtendedData.m_TuneZoneOverride :
+				       Collision()->IsTune(Collision()->GetMapIndex(LocalPos));
+		if(!HasTuneZoneOverride && TuneZone == 0)
+			TuneZone = Collision()->GetQmAxiomQuadTuneZone(LocalPos);
 
 		if(TuneZone != m_aLocalTuneZone[g_Config.m_ClDummy])
 		{
@@ -6888,6 +7113,7 @@ void CGameClient::UpdateLocalTuning()
 
 void CGameClient::UpdatePrediction()
 {
+	CQmAxiomQuadTimeScope QuadTime(m_Collision, Client()->GameTick(g_Config.m_ClDummy), Client()->GameTickSpeed());
 	m_GameWorld.m_WorldConfig.m_IsVanilla = m_GameInfo.m_PredictVanilla;
 	m_GameWorld.m_WorldConfig.m_IsDDRace = m_GameInfo.m_PredictDDRace;
 	m_GameWorld.m_WorldConfig.m_IsFNG = m_GameInfo.m_PredictFNG;
@@ -6952,6 +7178,7 @@ void CGameClient::UpdatePrediction()
 	{
 		for(int Tick = m_GameWorld.GameTick() + 1; Tick <= Client()->GameTick(g_Config.m_ClDummy); Tick++)
 		{
+			m_Collision.SetQmAxiomQuadTick(Tick, Client()->GameTickSpeed());
 			CNetObj_PlayerInput *pInput = (CNetObj_PlayerInput *)Client()->GetInput(Tick);
 			CNetObj_PlayerInput *pDummyInput = nullptr;
 			if(pDummyChar)
@@ -7289,6 +7516,7 @@ void CGameClient::HandlePredictedEvents(const int Tick)
 
 void CGameClient::DetectStrongHook()
 {
+	CQmAxiomQuadTimeScope QuadTime(m_Collision, Client()->PrevGameTick(g_Config.m_ClDummy), Client()->GameTickSpeed());
 	// attempt to detect strong/weak between players
 	for(int FromPlayer = 0; FromPlayer < MAX_CLIENTS; FromPlayer++)
 	{
@@ -7329,6 +7557,7 @@ void CGameClient::DetectStrongHook()
 
 			for(int Tick = Client()->PrevGameTick(g_Config.m_ClDummy); Tick < Client()->GameTick(g_Config.m_ClDummy); Tick++)
 			{
+				m_Collision.SetQmAxiomQuadTick(Tick + 1, Client()->GameTickSpeed());
 				if(Direction == 0)
 				{
 					FromChar.Tick(false);
@@ -7703,6 +7932,7 @@ void CGameClient::OnGraphicsResourcesReset()
 	LoadInitialGraphicsAssets();
 
 	log_info("gfx", "game assets reloaded after graphics resources reset");
+	m_NamePlates.OnGraphicsResourcesReset();
 }
 
 void CGameClient::LoadGameSkin(const char *pPath, bool AsDir)

@@ -87,3 +87,23 @@ TEST(QmSodaLyricFile, RejectsMalformedJson)
 	EXPECT_FALSE(ParseLyricFileJson("{}", &Data, &Error));
 	EXPECT_FALSE(ParseLyricFileJson(R"({"title":"T","lyricType":"krc","lyricContent":"plain"})", &Data, &Error));
 }
+
+TEST(QmSodaLyricFile, PreservesEmbeddedKrcTranslationWhenNoSeparateTrackExists)
+{
+	const char *pJson = R"({"lyricType":"krc","lyricContent":"[language:eyJjb250ZW50IjpbeyJ0eXBlIjoxLCJseXJpY0NvbnRlbnQiOltbIuesrOS4gOWPpeivkSJdLFsi56ys5LqM6KGM6K+RIl1dfV19]\n[0,4390]第一句歌词\n[4390,2000]第二行歌词\n"})";
+	QmMusicLyrics::SLyricsData Data;
+	ASSERT_TRUE(ParseLyricFileJson(pJson, &Data));
+	ASSERT_EQ(Data.m_vTranslations.size(), 2u);
+	EXPECT_EQ(Data.m_vTranslations[0], "第一句译");
+	EXPECT_EQ(Data.m_vTranslations[1], "第二行译");
+}
+
+TEST(QmSodaLyricFile, SeparateTranslationTrackOverridesEmbeddedKrcTranslation)
+{
+	const char *pJson = R"({"lyricType":"krc","lyricContent":"[language:eyJjb250ZW50IjpbeyJ0eXBlIjoxLCJseXJpY0NvbnRlbnQiOltbIuesrOS4gOWPpeivkSJdLFsi56ys5LqM6KGM6K+RIl1dfV19]\n[0,4390]第一句歌词\n[4390,2000]第二行歌词\n","translationLrc":"[00:00.00]独立译文\n[00:04.39]另一译文"})";
+	QmMusicLyrics::SLyricsData Data;
+	ASSERT_TRUE(ParseLyricFileJson(pJson, &Data));
+	ASSERT_EQ(Data.m_vTranslations.size(), 2u);
+	EXPECT_EQ(Data.m_vTranslations[0], "独立译文");
+	EXPECT_EQ(Data.m_vTranslations[1], "另一译文");
+}

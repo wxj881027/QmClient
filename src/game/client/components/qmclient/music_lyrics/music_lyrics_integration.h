@@ -1,6 +1,7 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_MUSIC_LYRICS_MUSIC_LYRICS_INTEGRATION_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_MUSIC_LYRICS_MUSIC_LYRICS_INTEGRATION_H
 
+#include "music_lyrics_display.h"
 #include "qm_soda_hook_provider.h"
 
 #include <game/client/component.h>
@@ -31,6 +32,7 @@ public:
 	bool GetCurrentLyric(char *pBuffer, size_t BufferSize) const;
 	bool HasCurrentLyric() const;
 	bool HasActiveLyrics() const;
+	QmMusicLyrics::SSourceSnapshot LyricsSnapshot() const;
 	// 当前歌曲身份的稳定数字标记；内部切歌以完整文本和版本判断。
 	uint64_t CurrentSongId() const;
 	bool GetStatus(char *pBuffer, size_t BufferSize) const;

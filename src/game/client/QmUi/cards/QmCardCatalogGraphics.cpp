@@ -19,6 +19,9 @@
 
 #include <game/client/QmUi/QmAnimResolve.h>
 #include <game/client/QmUi/QmCardRegistry.h>
+#include <game/client/QmUi/QmPasswordIcon.h>
+#include <game/client/QmUi/QmScroll.h>
+#include <game/client/QmUi/QmToast.h>
 #include <game/client/QmUi/QmUiPerf.h>
 #include <game/client/QmUi/SecondaryPanel.h>
 #include <game/client/QmUi/SettingsCard.h>
@@ -133,6 +136,10 @@ namespace
 
 uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildContext &Ctx, std::vector<SSettingsCardDefinition> *pCards)
 {
+	// 冷启动时这个函数一次要 600ms，先拆开看是静态初始化（枚举显示模式）
+	// 还是后面的卡片定义构建。
+	const auto QmGfxNowMs = [] { return time_get() * 1000.0 / (double)time_freq(); };
+	const double QmGfxEntryMs = QmGfxNowMs();
 	const SSettingsPageLayoutFrame GraphicsPage = Ctx.m_Page;
 	static bool CheckSettings;
 	CheckSettings = false;
@@ -163,6 +170,8 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 		s_InitDisplayAllVideoModes = g_Config.m_GfxDisplayAllVideoModes;
 	}
 
+	if(pCards == nullptr)
+		dbg_msg("perf/page", "graphics_prepare static_init=%.1fms", QmGfxNowMs() - QmGfxEntryMs);
 	const SSettingsContentMetrics GraphicsMetrics = Ctx.m_Metrics;
 	const float UiScale = GraphicsMetrics.m_UiScale;
 	const float BodySize = GraphicsMetrics.m_BodySize;
@@ -310,6 +319,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 	const uint64_t GraphicsVisualMeasureRevision = static_cast<uint64_t>(GraphicsVisualTextCustomVisible);
 	static CButtonContainer s_aGraphicsIconColorButtons[3];
 	static CButtonContainer s_aGraphicsIconWeightButtons[4];
+	static CButtonContainer s_aGraphicsPasswordIconButtons[2];
 	static CButtonContainer s_aGraphicsBlurModeButtons[3];
 	static CButtonContainer s_aGraphicsSignalColorModeButtons[3];
 	static CButtonContainer s_GraphicsIconCustomColorResetId;
@@ -467,7 +477,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 				str_format(aBuf, sizeof(aBuf), "%s (%s)", Localize("V-Sync"), Localize("may cause delay"));
 				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_GfxVsync, "graphics-vsync-delay-warning", aBuf, g_Config.m_GfxVsync, &Button))
 				{
-					Graphics()->SetVSync(!g_Config.m_GfxVsync);
+					Client()->QueueVSyncChange(!g_Config.m_GfxVsync);
 				}
 			});
 
@@ -694,8 +704,10 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 
 					if(DoSettingsButton_Menu(SETTINGS_GRAPHICS, -1, -1, &s_SystemGraphicsSettings, "graphics-system-gpu-settings", Localize("System graphics settings"), 0, &SystemSettingsRow) && !Ui()->RenderOnly())
 					{
+						// 打不开系统设置页只影响这一次点击，不是需要阅读详情的错误：
+						// 用非阻断失败提示，用户再点一次就是重试。
 						if(!open_link("ms-settings:display-advancedgraphics"))
-							PopupMessage(Localize("Error"), Localize("Could not open system graphics settings."), Localize("Ok"));
+							qm_ui::Toast(EQmToastKind::FAILED, Localize("Could not open system graphics settings."));
 					}
 				});
 
@@ -715,6 +727,68 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 			const bool TextCustomColorVisible = g_Config.m_QmUiTextColorMode == 3;
 			SSettingsContentMetrics ColorMetrics = GraphicsMetrics;
 			ColorMetrics.m_LineSpacing = 0.0f;
+
+			RowAction("graphics-backdrop-blur", GraphicsMetrics.m_LineHeight, [&](CUIRect Button) {
+				const bool BlurSupported = Graphics()->IsBackbufferCaptureSupported() && Graphics()->IsRenderTargetGaussianBlurSupported();
+				char aBlurLabel[192];
+				str_format(aBlurLabel, sizeof(aBlurLabel), "%s%s%s%s", Localize("Enable backdrop blur"), BlurSupported ? "" : " (", BlurSupported ? "" : Localize("Unavailable"), BlurSupported ? "" : ")");
+				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmGaussianBlur, "enable-backdrop-blur", aBlurLabel, g_Config.m_QmGaussianBlur, &Button))
+					g_Config.m_QmGaussianBlur ^= 1;
+			});
+
+			RowAction("graphics-card-borders", GraphicsMetrics.m_LineHeight, [&](CUIRect Button) {
+				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmUiCardBorders, "show-settings-card-borders", Localize("Show settings card borders"), g_Config.m_QmUiCardBorders, &Button))
+					g_Config.m_QmUiCardBorders ^= 1;
+			});
+
+			// 圆角曲线四档：原圆弧是旧外观（同时关掉沿边生长与曲线），其余三档都是
+			// 连续曲率，区别只在曲率沿弧长怎么分布。小控件受 25% 生长上限约束，
+			// 实际会退化成圆弧，所以四档的差别只在卡片和面板这类大表面上看得出来。
+			RowAction("graphics-corner-curve", GraphicsMetrics.m_LineHeight, [&](CUIRect CornerCurveRow) {
+				static CButtonContainer s_aCornerCurveButtons[4];
+				const char *apCornerCurveLabels[] = {
+					Localize("Classic arc"),
+					Localize("Superellipse"),
+					Localize("Quintic Bezier"),
+					Localize("Conic Bezier"),
+				};
+				CUIRect CornerCurveLabel, CornerCurveSegments;
+				SplitSettingsControlRow(CornerCurveRow, GraphicsMetrics, &CornerCurveLabel, &CornerCurveSegments, ESettingsControlWidth::LONG_CHOICE);
+				Ui()->DoLabel(&CornerCurveLabel, Localize("Corner curve"), BodySize, TEXTALIGN_ML);
+				// 四档选择是自绘控件，不经过 NumericField / DropDown 的配置绑定，
+				// 这里给整行补登记配置说明：悬停标题或右侧控件都能看到提示。
+				static const char s_CornerCurveHelpId[] = "graphics-corner-curve-help";
+				GameClient()->m_Tooltips.DoSettingsToolTipForConfig(s_CornerCurveHelpId, &CornerCurveRow, &g_Config.m_QmUiCornerCurve, &CornerCurveLabel);
+				const int CurrentCurve = g_Config.m_QmUiCornerCurve;
+				const int PickedCurve = DoSegmentedChoice(s_aCornerCurveButtons, apCornerCurveLabels, 4, CurrentCurve, CornerCurveSegments);
+				if(PickedCurve != CurrentCurve)
+					g_Config.m_QmUiCornerCurve = PickedCurve;
+			});
+
+			// 圆角强度与胶囊接缝：原圆弧档没有可调项，两行都不占位；
+			// 数值不随切档清空，切回连续曲率档时沿用上一次的值。
+			if(g_Config.m_QmUiCornerCurve != 0)
+			{
+				RowAction("graphics-corner-curvature", GraphicsMetrics.m_LineHeight, [&](CUIRect CornerCurvatureRow) {
+					DoGraphicsNumericField("graphics-corner-curvature", &g_Config.m_QmUiCornerSmoothing, &g_Config.m_QmUiCornerSmoothing, CornerCurvatureRow, Localize("Corner curvature"), 0, 100, &CUi::ms_LinearScrollbarScale, "%", CUi::SCROLLBAR_OPTION_DELAYUPDATE);
+				});
+
+				// 胶囊接缝软化：只加曲线强度、不加半径，曲率在几个像素内从 0 缓升到 1/R。
+				// 只有「有一段直边」的胶囊生效，正圆（滑块圆点、单选按钮）不受影响。
+				// 上限是 min(圆角强度, 接缝)：强度是主强度，接缝只在它之下做分部微调，
+				// 所以强度为 0 时接缝没有任何效果，这一行也不占位。
+				// 0 = 纯半圆端头，与 iOS 一致。
+				if(g_Config.m_QmUiCornerSmoothing > 0)
+				{
+					RowAction("graphics-capsule-seam", GraphicsMetrics.m_LineHeight, [&](CUIRect CapsuleSeamRow) {
+						DoGraphicsNumericField("graphics-capsule-seam", &g_Config.m_QmUiCapsuleSeam, &g_Config.m_QmUiCapsuleSeam, CapsuleSeamRow, Localize("Capsule seam"), 0, 100, &CUi::ms_LinearScrollbarScale, "%", CUi::SCROLLBAR_OPTION_DELAYUPDATE);
+					});
+				}
+			}
+
+
+			if(!qm_card_catalog::QmCardRenderHook::Personalization(this, ContentRect, "deck:graphics-visual", GraphicsMetrics))
+				return;
 
 			RowAction("graphics-surface", GraphicsMetrics.m_ButtonHeight, [&](CUIRect UiColorRow) {
 static CButtonContainer s_UiColorResetId;
@@ -843,16 +917,6 @@ static CButtonContainer s_ScoreboardColorResetId;
 
 			});
 
-			RowAction("graphics-backdrop-blur", GraphicsMetrics.m_LineHeight, [&](CUIRect Button) {
-			const bool BlurSupported = Graphics()->IsBackbufferCaptureSupported() && Graphics()->IsRenderTargetGaussianBlurSupported();
-			char aBlurLabel[192];
-			str_format(aBlurLabel, sizeof(aBlurLabel), "%s%s%s%s", Localize("Enable backdrop blur"), BlurSupported ? "" : " (", BlurSupported ? "" : Localize("Unavailable"), BlurSupported ? "" : ")");
-			if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmGaussianBlur, "enable-backdrop-blur", aBlurLabel, g_Config.m_QmGaussianBlur, &Button))
-				g_Config.m_QmGaussianBlur ^= 1;
-
-
-			});
-
 			RowAction("graphics-blur-mode", GraphicsMetrics.m_LineHeight, [&](CUIRect Button) {
 const char *apBlurModeLabels[] = {Localize("Gaussian"), Localize("Kawase"), Localize("Dual Kawase")};
 			const char *apBlurModeTooltips[] = {
@@ -869,14 +933,6 @@ const char *apBlurModeLabels[] = {Localize("Gaussian"), Localize("Kawase"), Loca
 				g_Config.m_QmBlurMode = NewBlurMode;
 			// 整行 tooltip 跟随当前模式，保留原先逐段的说明文案。
 			GameClient()->m_Tooltips.DoToolTip(&s_aGraphicsBlurModeButtons[0], &Button, apBlurModeTooltips[std::clamp(g_Config.m_QmBlurMode, 0, (int)std::size(apBlurModeTooltips) - 1)]);
-
-
-			});
-
-			RowAction("graphics-card-borders", GraphicsMetrics.m_LineHeight, [&](CUIRect Button) {
-
-			if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmUiCardBorders, "show-settings-card-borders", Localize("Show settings card borders"), g_Config.m_QmUiCardBorders, &Button))
-				g_Config.m_QmUiCardBorders ^= 1;
 
 
 			});
@@ -933,6 +989,9 @@ static CButtonContainer s_CardBorderColorResetId;
 					Client()->OnWindowResize();
 				}
 			});
+			if(!qm_card_catalog::QmCardRenderHook::Personalization(this, ContentRect, "deck:graphics-icons", GraphicsMetrics))
+				return;
+
 			if(CustomColor)
 			{
 				SSettingsContentMetrics ColorMetrics = GraphicsMetrics;
@@ -984,6 +1043,13 @@ static CButtonContainer s_CardBorderColorResetId;
 					GameClient()->SyncQmUiIconWeight();
 				});
 			});
+			// 密码显隐图标的切换动画：淡化沿用旧的双字形交叉，形变走成对烘焙帧条。
+			RowAction("graphics-password-icon-animation", GraphicsMetrics.m_LineHeight, [&](CUIRect Row) {
+				const char *apPasswordIconLabels[] = {Localize("Fade"), Localize("Morph")};
+				DoIconChoiceRow(Row, Localize("Password icon animation"), apPasswordIconLabels, std::size(apPasswordIconLabels), qm_password_icon::ResolveStyle(g_Config.m_QmUiPasswordIconStyle), s_aGraphicsPasswordIconButtons, [](int NewValue) {
+					g_Config.m_QmUiPasswordIconStyle = NewValue;
+				});
+			});
 		});
 		AddCard(InteractionSpec, [this, GraphicsMetrics, BodySize, DoGraphicsNumericField](CUIRect ContentRect) {
 			CSettingsContentLayoutFlow Flow(ContentRect);
@@ -1011,15 +1077,13 @@ static CButtonContainer s_CardBorderColorResetId;
 				else
 					pMotionDescription = Localize("Full: each enabled animation category uses its complete transition");
 
-				GameClient()->m_Tooltips.DoToolTip(&s_aMotionButtons[0], &MotionRow, Localize("This is the master switch for all interface animation categories"));
+				char aMotionTip[256];
+				str_format(aMotionTip, sizeof(aMotionTip), "%s\n%s", Localize("This is the master switch for all interface animation categories"), pMotionDescription);
+				GameClient()->m_Tooltips.DoToolTip(&s_aMotionButtons[0], &MotionRow, aMotionTip);
 			});
-			const char *pDescription = g_Config.m_QmUiMotionLevel == 0 ? Localize("Off: disables all interface animations while preserving the options below") : g_Config.m_QmUiMotionLevel == 1 ? Localize("Reduced: uses shorter transitions and disables presentation animations") :
-																									       Localize("Full: each enabled animation category uses its complete transition");
-			Flow.Text("graphics-motion-description", pDescription, 0.0f, GraphicsMetrics.m_SmallSize, GraphicsMetrics.m_LineSpacing, [this](const char *pValue, float Width, float Size) { return TextRender()->TextBoundingBox(Size, pValue, -1, Width).m_H + Size * 0.25f; }, [this, GraphicsMetrics](const CUIRect &Row, const char *pText) {
-					SLabelProperties Props;
-					Props.m_MaxWidth = Row.w;
-					Props.m_EnableWidthCheck = false;
-					Ui()->DoLabel(&Row, pText, GraphicsMetrics.m_SmallSize, TEXTALIGN_ML, Props); }, GraphicsMetrics.m_LineHeight);
+
+			if(!qm_card_catalog::QmCardRenderHook::Personalization(this, ContentRect, "deck:graphics-interaction", GraphicsMetrics))
+				return;
 
 			RowAction("graphics-ListEntryAnimations", GraphicsMetrics.m_LineHeight, [&](CUIRect ListEntryAnimations) {
 				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmUiListEntryAnimations, "settings-card-list-entry-animations", Localize("Card list entry animation"), g_Config.m_QmUiListEntryAnimations, &ListEntryAnimations))
@@ -1045,15 +1109,55 @@ static CButtonContainer s_CardBorderColorResetId;
 				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmExtraAnimations, &PresentationAnimations, Localize("Animate chat box, emote selector, scoreboard, and spectate selection"));
 			});
 
-			RowAction("graphics-ScrollLegacyWheel", GraphicsMetrics.m_LineHeight, [&](CUIRect ScrollLegacyWheel) {
-				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmUiScrollLegacyWheel, "graphics-scroll-legacy-wheel", Localize("Original scroll feel"), g_Config.m_QmUiScrollLegacyWheel, &ScrollLegacyWheel))
-					g_Config.m_QmUiScrollLegacyWheel ^= 1;
-				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUiScrollLegacyWheel, &ScrollLegacyWheel, Localize("Restore the original wheel scrolling: each tick restarts the smooth scroll instead of inheriting velocity"));
+			RowAction("graphics-ScrollFeel", GraphicsMetrics.m_LineHeight, [&](CUIRect ScrollFeelRow) {
+				CUIRect Label, Segments;
+				SplitSettingsControlRow(ScrollFeelRow, GraphicsMetrics, &Label, &Segments, ESettingsControlWidth::LONG_CHOICE);
+				DoSettingsLabel(SETTINGS_GRAPHICS, -1, "graphics-scroll-feel-label", &Label, Localize("Scroll feel"), BodySize, TEXTALIGN_ML);
+				static CButtonContainer s_aScrollFeelButtons[3];
+				// 展示顺序（原版 → 顺滑 → 弹簧）与枚举值顺序不同：枚举把 SMOOTH 钉在 0
+				// 作为默认档（配置零初始化时必须是生产默认），这里显式映射。
+				static constexpr EQmScrollFeel s_aScrollFeelOrder[] = {EQmScrollFeel::ORIGINAL, EQmScrollFeel::SMOOTH, EQmScrollFeel::SPRING};
+				const char *apScrollFeelLabels[] = {Localize("Original"), Localize("Smooth"), Localize("Spring")};
+				int CurrentScrollFeel = 1;
+				for(int i = 0; i < 3; ++i)
+					if(s_aScrollFeelOrder[i] == static_cast<EQmScrollFeel>(g_Config.m_QmUiScrollFeel))
+						CurrentScrollFeel = i;
+				const int NewScrollFeel = DoSegmentedChoice(s_aScrollFeelButtons, apScrollFeelLabels, 3, CurrentScrollFeel, Segments);
+				if(NewScrollFeel != CurrentScrollFeel)
+					g_Config.m_QmUiScrollFeel = static_cast<int>(s_aScrollFeelOrder[NewScrollFeel]);
+				// 整行 tooltip 跟随当前档位：三档的差别只在"怎么走向目标"，
+				// 所以文案直接说明这一点，而不是重复档位名。
+				const char *apScrollFeelTooltips[] = {
+					Localize("Every wheel tick restarts from rest, matching the original client"),
+					Localize("Consecutive wheel ticks carry their velocity into one continuous glide"),
+					Localize("A damped spring drives the offset; reversing slows it before it turns"),
+				};
+				GameClient()->m_Tooltips.DoToolTip(&s_aScrollFeelButtons[0], &ScrollFeelRow, apScrollFeelTooltips[std::clamp(NewScrollFeel, 0, (int)std::size(apScrollFeelTooltips) - 1)]);
 			});
+
+			// 弹簧档的三个参数只在选中弹簧时出现：另外两档是固定时长补间，不读它们，
+			// 常驻会让"改了没反应"变成新的困惑源。
+			if(static_cast<EQmScrollFeel>(g_Config.m_QmUiScrollFeel) == EQmScrollFeel::SPRING)
+			{
+				RowAction("graphics-ScrollSpringResponse", GraphicsMetrics.m_LineHeight, [&](CUIRect SpringResponseRow) {
+					DoGraphicsNumericField("graphics-scroll-spring-response", &g_Config.m_QmUiScrollSpringResponse, &g_Config.m_QmUiScrollSpringResponse, SpringResponseRow, Localize("Spring response"), 80, 600, &CUi::ms_LinearScrollbarScale, "ms");
+					GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUiScrollSpringResponse, &SpringResponseRow, Localize("Spring settle time; lower is snappier, higher feels heavier"));
+				});
+
+				RowAction("graphics-ScrollSpringDamping", GraphicsMetrics.m_LineHeight, [&](CUIRect SpringDampingRow) {
+					DoGraphicsNumericField("graphics-scroll-spring-damping", &g_Config.m_QmUiScrollSpringDamping, &g_Config.m_QmUiScrollSpringDamping, SpringDampingRow, Localize("Spring damping"), 50, 100, &CUi::ms_LinearScrollbarScale, "%");
+					GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUiScrollSpringDamping, &SpringDampingRow, Localize("Spring firmness; 100 stops without overshoot, lower bounces past"));
+				});
+
+				RowAction("graphics-ScrollBounce", GraphicsMetrics.m_LineHeight, [&](CUIRect ScrollBounceRow) {
+					DoGraphicsNumericField("graphics-scroll-bounce", &g_Config.m_QmUiScrollBounce, &g_Config.m_QmUiScrollBounce, ScrollBounceRow, Localize("End bounce"), 0, 64);
+					GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUiScrollBounce, &ScrollBounceRow, Localize("How far a wheel or drag can push past an end, in UI pixels; 0 disables"));
+				});
+			}
 
 			RowAction("graphics-ScrollStep", GraphicsMetrics.m_LineHeight, [&](CUIRect ScrollStepRow) {
 				DoGraphicsNumericField("graphics-scroll-step", &g_Config.m_QmUiScrollStep, &g_Config.m_QmUiScrollStep, ScrollStepRow, Localize("Scroll step"), 2, 100);
-				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUiScrollStep, &ScrollStepRow, Localize("Customize the wheel scrolling distance per tick. Hold Alt while scrolling for 3x step"));
+				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUiScrollStep, &ScrollStepRow, Localize("Wheel distance per tick; hold Alt for 3x"));
 			});
 		});
 	};
@@ -1065,6 +1169,16 @@ static CButtonContainer s_CardBorderColorResetId;
 	GraphicsLayoutRevision = GraphicsLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(RenderOnly ? 1 : 0);
 	GraphicsLayoutRevision = GraphicsLayoutRevision * 1099511628211ULL ^ GraphicsVisualMeasureRevision;
 	GraphicsLayoutRevision = GraphicsLayoutRevision * 1099511628211ULL ^ GraphicsDisplayMeasureRevision;
+	// 手感档位决定弹簧参数两行是否参与布局，属于"影响行集合"的状态，必须参与
+	// 高度测量缓存键；否则切到弹簧档后行已渲染、卡片高度却还是旧的，内容被裁。
+	GraphicsLayoutRevision = GraphicsLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(std::clamp(g_Config.m_QmUiScrollFeel, 0, 2));
+	// 同理：原圆弧档不显示「圆角强度」与「胶囊接缝」两行，切档会改变行集合。
+	// 四档选择是自绘控件、不走配置绑定，没有别的失效路径，漏了这一项就会在
+	// 从原圆弧档切回来时按旧高度裁剪，或切到原圆弧档时留下两条空行。
+	GraphicsLayoutRevision = GraphicsLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(std::clamp(g_Config.m_QmUiCornerCurve, 0, 3));
+	// 曲率强度为 0 时「胶囊接缝」那一行也不显示（接缝上限是 min(强度, 接缝)），
+	// 同样属于行集合变化。这里只取「是否为零」，避免拖动滑杆时每帧换缓存键。
+	GraphicsLayoutRevision = GraphicsLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(g_Config.m_QmUiCornerSmoothing > 0 ? 1 : 0);
 	if(pCards != nullptr)
 	{
 		BuildDefinitions(*pCards);
@@ -1090,5 +1204,7 @@ static CButtonContainer s_CardBorderColorResetId;
 			qm_card_catalog::UseDeclaredModuleContent(Ctx, Card);
 		}
 	}
+	if(pCards == nullptr)
+		dbg_msg("perf/page", "graphics_prepare total=%.1fms", QmGfxNowMs() - QmGfxEntryMs);
 	return GraphicsLayoutRevision;
 }

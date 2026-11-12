@@ -140,8 +140,7 @@ struct SQmTitleColorStyle
 SQmTitleColorStyle ResolveQmTitleColorStyle(int Mode, unsigned int PackedColor, int Opacity, bool ServerRainbow);
 ColorRGBA QmTitleRainbowColor(int CharIndex, int CharCount, float Alpha);
 
-// 与 qm_title_color / qm_title_opacity 的配置默认值保持一致，供设置页重置按钮使用。
-inline constexpr unsigned int QM_TITLE_COLOR_DEFAULT = 0xFFFFFF;
+// 与 qm_title_opacity 的配置默认值保持一致，供设置页重置按钮使用。
 inline constexpr int QM_TITLE_OPACITY_DEFAULT = 100;
 
 #endif

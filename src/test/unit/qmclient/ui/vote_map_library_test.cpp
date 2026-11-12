@@ -10,15 +10,17 @@ using namespace QmVoteMaps;
 
 TEST(VoteMapLibrary, CatalogKeepsOfficialMetadataAndZeroStarMaps)
 {
-	const char *pJson = R"([{"name":"Zero","type":"Race","mapper":"作者","difficulty":0,"points":0,"release":"2026-10-01 12:00"},{"name":"Alpha","type":"Novice","difficulty":2,"points":3}])";
+	const char *pJson = R"([{"name":"Zero","type":"Race","mapper":"作者","difficulty":0,"points":0,"release":"2026-10-01 12:00","thumbnail":"https://ddnet.org/ranks/maps/Zero.png"},{"name":"Alpha","type":"Novice","difficulty":2,"points":3}])";
 	std::vector<SMap> vMaps;
 	ASSERT_TRUE(ParseCatalog(pJson, str_length(pJson), vMaps));
 	ASSERT_EQ(vMaps.size(), 2u);
 	EXPECT_EQ(vMaps[0].m_Name, "Alpha");
+	EXPECT_TRUE(vMaps[0].m_Thumbnail.empty());
 	EXPECT_EQ(vMaps[1].m_Stars, 0);
 	EXPECT_EQ(vMaps[1].m_Points, 0);
 	EXPECT_EQ(vMaps[1].m_Mapper, "作者");
 	EXPECT_EQ(vMaps[1].m_Release, "2026-10-01 12:00");
+	EXPECT_EQ(vMaps[1].m_Thumbnail, "https://ddnet.org/ranks/maps/Zero.png");
 }
 
 TEST(VoteMapLibrary, MalformedRefreshPreservesLastValidCatalog)
@@ -136,7 +138,7 @@ TEST(VoteMapLibrary, MergePreservesCatalogMetadataAndServerOnlyMaps)
 	str_copy(aOptions[2].m_aDescription, "Restart server");
 	aOptions[0].m_pNext = &aOptions[1];
 	aOptions[1].m_pNext = &aOptions[2];
-	const auto vMerged = MergeCatalog({{"Alpha", "Author", "Novice", "", 2, 3}}, aOptions);
+	const auto vMerged = MergeCatalog({{"Alpha", "Author", "Novice", "", "", 2, 3}}, aOptions);
 	ASSERT_EQ(vMerged.size(), 2u);
 	EXPECT_EQ(vMerged[0].m_Mapper, "Author");
 	EXPECT_EQ(vMerged[1].m_Name, "Custom");
@@ -146,7 +148,7 @@ TEST(VoteMapLibrary, MergePreservesCatalogMetadataAndServerOnlyMaps)
 
 TEST(VoteMapLibrary, CombinesCategoryStarsFavoritesSearchAndCompletion)
 {
-	const SMap Map{"森林", "作者", "Novice", "", 2, 3};
+	const SMap Map{"森林", "作者", "Novice", "", "", 2, 3};
 	SFilter Filter;
 	Filter.m_Category = "Novice";
 	Filter.m_StarMask = (1 << 2) | (1 << 3);
@@ -168,12 +170,12 @@ TEST(VoteMapLibrary, UnfilteredViewIncludesUnknownCompletionAndDifficulty)
 	EXPECT_TRUE(Matches(Map, Filter, false, ECompletion::UNKNOWN));
 	Filter.m_StarMask = 1;
 	EXPECT_FALSE(Matches(Map, Filter, false, ECompletion::UNKNOWN));
-	EXPECT_TRUE(Matches({"Zero", "", "Race", "", 0}, Filter, false, ECompletion::UNKNOWN));
+	EXPECT_TRUE(Matches({"Zero", "", "Race", "", "", 0}, Filter, false, ECompletion::UNKNOWN));
 }
 
 TEST(VoteMapLibrary, SortingUsesMetadataAndKeepsUnknownDifficultyLast)
 {
-	const std::vector<SMap> vMaps = {{"B", "", "", "2026-10-01", 3}, {"A", "", "", "2025-01-01", 0}, {"Custom"}};
+	const std::vector<SMap> vMaps = {{"B", "", "", "2026-10-01", "", 3}, {"A", "", "", "2025-01-01", "", 0}, {"Custom"}};
 	std::vector<int> vIndices{0, 1, 2};
 	Sort(vIndices, vMaps, ESort::DIFFICULTY);
 	EXPECT_EQ(vIndices, (std::vector<int>{1, 0, 2}));
@@ -190,4 +192,105 @@ TEST(VoteMapLibrary, RandomCandidateStaysInFilteredSetAndHandlesEmptySet)
 		const int Result = Pick({2, 9, 17}, Ticket);
 		EXPECT_TRUE(Result == 2 || Result == 9 || Result == 17);
 	}
+}
+
+TEST(VoteMapLibrary, CategoryKeyNormalizesCatalogDotNotation)
+{
+	EXPECT_STREQ(CategoryKey("DDmaX.Easy"), "DDmaX Easy");
+	EXPECT_STREQ(CategoryKey("DDmaX.Next"), "DDmaX Next");
+	EXPECT_STREQ(CategoryKey("ddmax.pro"), "DDmaX Pro");
+	EXPECT_STREQ(CategoryKey("DDmaX Nut"), "DDmaX Nut");
+	EXPECT_STREQ(CategoryKey("DDmaX"), "DDmaX");
+	EXPECT_STREQ(CategoryKey("Novice"), "Novice");
+	EXPECT_STREQ(CategoryKey("New category"), "New category");
+	EXPECT_STREQ(CategoryKey(""), "");
+	EXPECT_STREQ(CategoryKey(nullptr), "");
+}
+
+TEST(VoteMapLibrary, DdmaxParentFilterGroupsEverySubcategory)
+{
+	// 目录没有裸 DDmaX 类型：父项按四个子类归组，而不是永远空列表。
+	SFilter Filter;
+	Filter.m_Category = "DDmaX";
+	const auto MatchesType = [&](const char *pType) {
+		return Matches(SMap{"Map", "", pType}, Filter, false, ECompletion::UNKNOWN);
+	};
+	for(const char *pType : {"DDmaX.Easy", "DDmaX.Next", "DDmaX.Pro", "DDmaX.Nut", "DDmaX Easy"})
+		EXPECT_TRUE(MatchesType(pType)) << pType;
+	for(const char *pType : {"Novice", "", "New category"})
+		EXPECT_FALSE(MatchesType(pType)) << pType;
+}
+
+TEST(VoteMapLibrary, CatalogDotNotationMatchesSpacedSidebarFilters)
+{
+	// ddnet.org 目录把 DDmaX 子类写成点号，侧栏键是空格写法；筛选必须按类出结果。
+	const char *pJson = R"([
+		{"name":"Easy A","type":"DDmaX.Easy","difficulty":2},
+		{"name":"Next A","type":"DDmaX.Next","difficulty":2},
+		{"name":"Next B","type":"DDmaX.Next","difficulty":3},
+		{"name":"Pro A","type":"DDmaX.Pro","difficulty":4},
+		{"name":"Nut A","type":"DDmaX.Nut","difficulty":5},
+		{"name":"Novice A","type":"Novice","difficulty":1}
+	])";
+	std::vector<SMap> vMaps;
+	ASSERT_TRUE(ParseCatalog(pJson, str_length(pJson), vMaps));
+	ASSERT_EQ(vMaps.size(), 6u);
+	// 目录保留接口原文写法，详情接口仍按同一字符串校验。
+	EXPECT_EQ(vMaps[0].m_Category, "DDmaX.Easy");
+	const auto Count = [&](const char *pCategory) {
+		SFilter Filter;
+		Filter.m_Category = pCategory;
+		int Result = 0;
+		for(const auto &Map : vMaps)
+			Result += Matches(Map, Filter, false, ECompletion::UNKNOWN) ? 1 : 0;
+		return Result;
+	};
+	EXPECT_EQ(Count("DDmaX Easy"), 1);
+	EXPECT_EQ(Count("DDmaX Next"), 2);
+	EXPECT_EQ(Count("DDmaX Pro"), 1);
+	EXPECT_EQ(Count("DDmaX Nut"), 1);
+	EXPECT_EQ(Count("DDmaX"), 5);
+	EXPECT_EQ(Count("Novice"), 1);
+}
+
+TEST(VoteMapLibrary, TypeVoteOptionMatchesOfficialFlexVoteLabels)
+{
+	// 官方 ddnet-maps 的切换选项用装饰符号与小型大写字母排版，界面键名是普通写法。
+	EXPECT_TRUE(TypeVoteOptionMatches("☐ DDᴍᴀX.Nᴇxᴛ Mᴀᴘs", "DDmaX.Next", "经典 Next"));
+	EXPECT_TRUE(TypeVoteOptionMatches("☐ Nᴏᴠɪᴄᴇ Mᴀᴘs", "Novice", "简单"));
+	EXPECT_TRUE(TypeVoteOptionMatches("☐ Oʟᴅsᴄʜᴏᴏʟ Mᴀᴘs", "Oldschool", "传统"));
+	EXPECT_TRUE(TypeVoteOptionMatches("☐ DDᴍᴀX.Eᴀsʏ Mᴀᴘs", "DDmaX Easy", "经典 Easy"));
+	// 当前分类的 info 头不是切换项，选中的正是它时也不能投它。
+	EXPECT_FALSE(TypeVoteOptionMatches("☒ DDᴍᴀX.Eᴀsʏ Mᴀᴘs", "DDmaX.Next", "经典 Next"));
+	EXPECT_FALSE(TypeVoteOptionMatches("☒ DDᴍᴀX.Eᴀsʏ Mᴀᴘs", "DDmaX Easy", "经典 Easy"));
+	EXPECT_FALSE(TypeVoteOptionMatches("Make sure no one is racing before voting!", "Novice", "简单"));
+	EXPECT_FALSE(TypeVoteOptionMatches("", "Novice", "简单"));
+	EXPECT_FALSE(TypeVoteOptionMatches("☐ Nᴏᴠɪᴄᴇ Mᴀᴘs", "", ""));
+	// 纯文本与小写写法继续兼容。
+	EXPECT_TRUE(TypeVoteOptionMatches("DDmaX Next Maps", "DDmaX.Next", "经典 Next"));
+	EXPECT_TRUE(TypeVoteOptionMatches("ddmax next maps", "DDmaX Next", "经典 Next"));
+}
+
+TEST(VoteMapLibrary, SelectedMapCommandKeepsSpacesUnicodeAndQuotedNames)
+{
+	EXPECT_EQ(MapVoteCommand("2 To Tango"), "/map \"2 To Tango\"");
+	EXPECT_EQ(MapVoteCommand("森林"), "/map \"森林\"");
+	EXPECT_EQ(MapVoteCommand("\"Quoted\" \\ Map"), "/map \"\\\"Quoted\\\" \\\\ Map\"");
+	EXPECT_EQ(MapVoteCommand("Map; Other"), "/map \"Map; Other\"");
+}
+
+TEST(VoteMapLibrary, MapCommandDoesNotTruncateLongNames)
+{
+	const std::string Name(127, 'a');
+	EXPECT_EQ(MapVoteCommand(Name), "/map \"" + Name + "\"");
+	EXPECT_TRUE(MapVoteCommand(std::string(128, 'a')).empty());
+	EXPECT_TRUE(MapVoteCommand(std::string(127, '"')).empty());
+}
+
+TEST(VoteMapLibrary, MapCommandRejectsEmptyNamesAndControlCharacters)
+{
+	EXPECT_TRUE(MapVoteCommand("").empty());
+	EXPECT_TRUE(MapVoteCommand("Map\nOther").empty());
+	EXPECT_TRUE(MapVoteCommand("Map\rOther").empty());
+	EXPECT_TRUE(MapVoteCommand(std::string("Map\0Other", 9)).empty());
 }

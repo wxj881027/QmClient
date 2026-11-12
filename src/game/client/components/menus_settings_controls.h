@@ -6,6 +6,7 @@
 #include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/component.h>
 #include <game/client/components/binds.h>
+#include <game/client/components/qmclient/bind_overview.h>
 #include <game/client/lineinput.h>
 #include <game/client/ui.h>
 #include <game/client/ui_scrollregion.h>
@@ -19,18 +20,6 @@ namespace qm_card_catalog
 	struct SQmCardBuildContext;
 	struct QmCardRenderHook;
 }
-
-enum class EBindOptionGroup
-{
-	MOVEMENT,
-	WEAPON,
-	VOTING,
-	CHAT,
-	DUMMY,
-	MISCELLANEOUS,
-	CUSTOM,
-	NUM,
-};
 
 class CBindSlotUiElement
 {
@@ -66,12 +55,26 @@ public:
 class CMenusSettingsControls : public CComponentInterfaces
 {
 public:
+	// 控制页只有一层页签，四个页签并列：「控制 / 绑定 / 指令工坊 / 蓝图」。
+	// 原来绑定页内部的「官方 / 指令工坊 / 蓝图」子页签已提升为同级页签，「官方」改名为「绑定」；
+	// 深链接通过 SetTab 直接指定一级页签，组件内不再保存第二份页签状态。
+	enum class ETab
+	{
+		CONTROLS,
+		BIND,
+		WORKSHOP,
+		BLUEPRINT,
+		NUM,
+	};
+
 	void OnInterfacesInit(CGameClient *pClient) override;
 	void Render(CUIRect MainView);
+	void SetTab(ETab Tab) { m_Tab = Tab; }
 
 private:
 	friend struct qm_card_catalog::QmCardRenderHook;
 	SSettingsContentMetrics m_CardMetrics{};
+	ETab m_Tab = ETab::CONTROLS;
 	CScrollRegion *m_pCardScrollRegion = nullptr;
 	void PrepareSettingsCards(const SSettingsContentMetrics &Metrics, bool ReadOnly, CScrollRegion *pScrollRegion);
 	uint64_t SettingsCardsRevision(bool ReadOnly) const;

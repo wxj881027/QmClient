@@ -26,14 +26,22 @@ public:
 
 namespace qm_tee_trail
 {
-	// 0 保留原版；旧配置中的 4、5 由 ResolveStyle 映射到新的艺术风格。
+	class CPixelNoiseCache;
+
+	// 0 保留原版；4、5 是旧配置编号，由 ResolveStyle 映射到漫画与魔法。
+	// 6 起为程序化艺术样式：现有编号不重排，避免已保存的样式选择发生含义漂移。
 	enum
 	{
 		STYLE_ORIGINAL = 0,
 		STYLE_MANGA = 1,
 		STYLE_MAGIC = 2,
 		STYLE_PIXEL = 3,
-		STYLE_COUNT = 4,
+		STYLE_AURORA = 6,
+		STYLE_INK = 7,
+		STYLE_IGNIS = 8,
+		STYLE_STARDUST = 9,
+		STYLE_BLACKFLASH = 10,
+		STYLE_COUNT = 11,
 	};
 
 	constexpr size_t MAX_POINTS = 192;
@@ -101,7 +109,7 @@ namespace qm_tee_trail
 
 	// 同一网格构建器服务全部样式，包括原版。输入从新到旧，输出缓存由调用者复用。
 	// PixelSize 是一个屏幕像素对应的世界单位，放大时增加曲线细分并缩窄抗锯齿边。
-	void BuildEffect(const std::vector<CTrailPart> &vTrail, int Style, bool UsePresetPalette, double CurTime, float Width, int Seed, std::vector<SQuad> &vOut, float PixelSize = 1.0f, bool Taper = true, bool Fade = false);
+	void BuildEffect(const std::vector<CTrailPart> &vTrail, int Style, bool UsePresetPalette, double CurTime, float Width, int Seed, std::vector<SQuad> &vOut, float PixelSize = 1.0f, bool Taper = true, bool Fade = false, CPixelNoiseCache *pPixelNoiseCache = nullptr);
 }
 
 #endif

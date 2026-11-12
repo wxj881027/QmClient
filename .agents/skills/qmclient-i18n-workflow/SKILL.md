@@ -4,6 +4,15 @@ description: 修改或审计翻译、Localize 文本、配置说明及语言生�
 ---
 # QmClient 翻译工作流
 
+## 何时才做（先读这一节）
+
+i18n 变更频繁且生成链开销大，**不要在每个任务里顺手运行**。
+
+- 默认不执行任何 extract / generate / validate：改了 C++ 里的 `Localize` 文案但任务本身与翻译无关时，只写代码，不动 `qmclient_scripts/languages_qmclient/` 与 `data/languages/`。
+- 任务尾声**明确询问用户**是否需要同步翻译，说明新 key 数量、涉及模块和预计影响，由用户决定这次做不做；不要替用户默认执行，也不要在询问前先跑一遍"试试看"。
+- 用户当次明确要求翻译、审计翻译，或本次任务本身就是翻译任务时，才按下面流程完整执行，不必再问。
+- 未经用户确认就改动 `data/languages/*.txt` 这类生成产物，会让工作树混入与本任务无关的大块差异，也浪费 token。
+
 ## 维护源与文本
 
 - 维护源：`qmclient_scripts/languages_qmclient/translations/i18n/*.toml`。
@@ -23,7 +32,7 @@ python qmclient_scripts/languages_qmclient/validate.py
 python qmclient_scripts/languages_qmclient/review_duplicate_entries.py --show-groups 0 --show-unused 0
 ```
 
-源码 key 变化时按此顺序运行；仅译文变化且提取结果仍新鲜时可复用提取结果。只读审查不运行会更新文件的 extract/generate。
+仅在用户确认本次要同步翻译后按此顺序运行；源码 key 变化时全流程跑完，仅译文变化且提取结果仍新鲜时可复用提取结果。只读审查不运行会更新文件的 extract/generate。
 
 extract 默认增量维护完整 active keys；缓存失效或严格重建时才用 `--full`。validate 默认重新扫描新鲜度，本地快速校验可显式用 `--incremental`；不得把增量验证说成完整重扫。
 

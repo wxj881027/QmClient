@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 
+#include <limits>
+
 namespace
 {
 	SPlayerPointsParseResult ParsePoints(const char *pJson)
@@ -44,4 +46,67 @@ TEST(PlayerPointsParse, MalformedJsonDoesNotReportParsedPoints)
 	EXPECT_FALSE(Result.m_JsonParsed);
 	EXPECT_FALSE(Result.m_PointsFound);
 	EXPECT_EQ(Result.m_Points, 0);
+}
+
+TEST(PlayerPlaytimeParse, DdStatsSumsAllModesBeforeRoundingToHours)
+{
+	const char *pJson = R"({"profile":{"name":"player"},"most_played_gametypes":[{"key":"DDrace","seconds_played":1800},{"key":"Gores","seconds_played":1800}]})";
+	EXPECT_EQ(ExtractPlayerDdStatsHours(pJson, str_length(pJson), "player"), 1);
+}
+
+TEST(PlayerPlaytimeParse, EmptyDdStatsHistoryIsAnAvailableZero)
+{
+	const char *pJson = R"({"profile":{"name":"player"},"most_played_gametypes":[]})";
+	EXPECT_EQ(ExtractPlayerDdStatsHours(pJson, str_length(pJson), "player"), 0);
+}
+
+TEST(PlayerPlaytimeParse, OtherPlayersAndInvalidTimesAreRejected)
+{
+	const char *pWrongPlayer = R"({"profile":{"name":"other"},"most_played_gametypes":[]})";
+	EXPECT_EQ(ExtractPlayerDdStatsHours(pWrongPlayer, str_length(pWrongPlayer), "player"), -1);
+	const char *pNegative = R"({"profile":{"name":"player"},"most_played_gametypes":[{"key":"DDrace","seconds_played":-1}]})";
+	EXPECT_EQ(ExtractPlayerDdStatsHours(pNegative, str_length(pNegative), "player"), -1);
+}
+
+TEST(PlayerPlaytimeParse, MissingOrMalformedDdStatsIsUnavailable)
+{
+	EXPECT_EQ(ExtractPlayerDdStatsHours(nullptr, 0, "player"), -1);
+	EXPECT_EQ(ExtractPlayerDdStatsHours("{}", 2, "player"), -1);
+	EXPECT_EQ(ExtractPlayerDdStatsHours("{", 1, "player"), -1);
+}
+
+TEST(PlayerPlaytimeParse, LargeTotalsKeepInt64PrecisionAndRejectOverflow)
+{
+	const char *pMaximum = R"({"profile":{"name":"player"},"most_played_gametypes":[{"key":"DDrace","seconds_played":9223372036854775807}]})";
+	EXPECT_EQ(ExtractPlayerDdStatsHours(pMaximum, str_length(pMaximum), "player"), std::numeric_limits<int64_t>::max() / 3600);
+	const char *pOverflow = R"({"profile":{"name":"player"},"most_played_gametypes":[{"key":"DDrace","seconds_played":9223372036854775807},{"key":"Gores","seconds_played":1}]})";
+	EXPECT_EQ(ExtractPlayerDdStatsHours(pOverflow, str_length(pOverflow), "player"), -1);
+}
+
+TEST(PlayerPlaytimeParse, DdnetActivityIsNotUsedForScoreboardPlaytime)
+{
+	const auto Result = ParsePoints(R"({"points":{"points":123},"activity":[{"hours_played":42}]})");
+	EXPECT_EQ(Result.m_Points, 123);
+	EXPECT_EQ(Result.m_PlaytimeHours, -1);
+}
+
+TEST(PlayerPlaytimeHttp, MissingDdStatsRecordIsAZeroHourResult)
+{
+	// 查无此人：时长查询按 0 小时成功记录，计分板显示 0 而不是问号。
+	EXPECT_TRUE(QmDdStatsPlaytimeMissingRecord(true, 404));
+	// 查分列不受这条规则影响，其他状态码仍是查询失败。
+	EXPECT_FALSE(QmDdStatsPlaytimeMissingRecord(false, 404));
+	EXPECT_FALSE(QmDdStatsPlaytimeMissingRecord(true, 0));
+	EXPECT_FALSE(QmDdStatsPlaytimeMissingRecord(true, 500));
+	EXPECT_FALSE(QmDdStatsPlaytimeMissingRecord(true, 200));
+}
+
+TEST(PlayerPlaytimeCache, MissingDdStatsRecordBecomesReadyZeroHours)
+{
+	CQmPlayerPointsCache Cache;
+	const CQmPlayerPointsCache::SRequestToken Token = Cache.BeginRequest("player");
+	ASSERT_TRUE(Cache.CompleteSuccess("player", Token, 0, 1, 0));
+	const SPlayerPlaytimeResult Result = Cache.GetPlaytime("player");
+	EXPECT_EQ(Result.m_Status, EPointsStatus::READY);
+	EXPECT_EQ(Result.m_Hours, 0);
 }

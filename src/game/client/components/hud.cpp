@@ -14,6 +14,7 @@
 #include <engine/graphics.h>
 #include <engine/image.h>
 #include <engine/shared/config.h>
+#include <engine/shared/video.h>
 #include <engine/textrender.h>
 
 #include <generated/client_data.h>
@@ -29,6 +30,7 @@
 #include <game/client/components/qmclient/dummy_miniview_render.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/perf_logging.h>
+#include <game/client/components/qmclient/player_state_hud_bounds.h>
 #include <game/client/components/qmclient/rank_ghost.h>
 #include <game/client/components/qmclient/score_hud_layout.h>
 #include <game/client/components/qmclient/spectator_hud_layout.h>
@@ -72,12 +74,6 @@ namespace
 	bool IsOpenGlBackend()
 	{
 		return str_comp_nocase(g_Config.m_GfxBackend, "OpenGL") == 0;
-	}
-
-	// island 背景模糊按 1/4 分辨率准备渲染目标（与 UI 半透明面板的模糊分辨率一致）
-	int MediaIslandBlurTargetDimension(int ScreenDimension)
-	{
-		return ScreenDimension > 0 ? (ScreenDimension + 3) / 4 : 0;
 	}
 
 	struct SHudTextInfoLayout
@@ -659,6 +655,78 @@ namespace
 		pGraphics->QuadsEnd();
 	}
 
+	// 分身小窗边框配色：沿用原有分层色，只把整条边框收窄。
+	ColorRGBA DummyMiniViewFrameColor()
+	{
+		return ColorRGBA(0.07f, 0.09f, 0.13f, 0.96f);
+	}
+
+	ColorRGBA DummyMiniViewRimColor()
+	{
+		return ColorRGBA(0.02f, 0.03f, 0.05f, 0.92f);
+	}
+
+	ColorRGBA DummyMiniViewInnerColor()
+	{
+		return ColorRGBA(0.03f, 0.04f, 0.06f, 0.92f);
+	}
+
+	// 分身小窗边框给 HUD 的 SDF 圆角参数：x=边框宽、y=一个屏幕像素对应的 HUD 长度、
+	// z=圆角羽化的外扩留白、w=边框取渐变（关闭）。
+	IGraphics::SRoundedRectSdfParams HudRoundedRectSdfParams(const CUIRect &Rect, float Radius, int Corners, ColorRGBA FillColor, ColorRGBA BorderColor, float BorderWidth, float ScreenPixelSize)
+	{
+		IGraphics::SRoundedRectSdfParams Params;
+		const float PixelSize = std::clamp(ScreenPixelSize, 0.0001f, 4.0f);
+		Params.m_Rect = vec4(Rect.x, Rect.y, Rect.w, Rect.h);
+		Params.m_FillColor = vec4(FillColor.r, FillColor.g, FillColor.b, FillColor.a);
+		Params.m_BorderColor = vec4(BorderColor.r, BorderColor.g, BorderColor.b, BorderColor.a);
+		Params.m_CornerRadii = QmDummyMiniViewLayout::ResolveFrameCornerRadii(Radius, Corners);
+		Params.m_Params = vec4(std::max(0.0f, BorderWidth), PixelSize, PixelSize * 2.0f, 0.0f);
+		return Params;
+	}
+
+	// 边框底层：先铺满画布色与内底色。离屏画面回贴用的圆角遮罩是几何光栅化，
+	// 非整数像素边缘不抗锯齿，先垫底避免漏出背景；画面贴上来后再补环带羽化。
+	void DrawHudDummyMiniViewFrameBase(IGraphics *pGraphics, const QmDummyMiniViewLayout::SFrameGeometry &Frame, int Corners, float ScreenPixelSize, ColorRGBA AccentColor)
+	{
+		if(pGraphics == nullptr || !Frame.m_HasContent)
+			return;
+
+		if(pGraphics->HasRoundedRectSdf())
+		{
+			pGraphics->RenderRoundedRectSdf(HudRoundedRectSdfParams(Frame.m_Outer, Frame.m_Radius, Corners,
+				DummyMiniViewFrameColor(), DummyMiniViewFrameColor(), 0.0f, ScreenPixelSize));
+			pGraphics->RenderRoundedRectSdf(HudRoundedRectSdfParams(Frame.m_Content, Frame.m_ContentRadius, Corners,
+				DummyMiniViewInnerColor(), DummyMiniViewInnerColor(), 0.0f, ScreenPixelSize));
+			return;
+		}
+
+		// 几何回退：引擎的圆角抗锯齿只羽化外缘，逐层内缩即可得到包边与强调线。
+		pGraphics->DrawRoundedRectAntialias(Frame.m_Outer.x, Frame.m_Outer.y, Frame.m_Outer.w, Frame.m_Outer.h, Frame.m_Radius, Corners, DummyMiniViewRimColor());
+		if(Frame.m_AccentWidth > 0.0f)
+			pGraphics->DrawRoundedRectAntialias(Frame.m_Accent.x, Frame.m_Accent.y, Frame.m_Accent.w, Frame.m_Accent.h, Frame.m_AccentRadius, Corners, AccentColor);
+		pGraphics->DrawRoundedRectAntialias(Frame.m_Body.x, Frame.m_Body.y, Frame.m_Body.w, Frame.m_Body.h, Frame.m_BodyRadius, Corners, DummyMiniViewFrameColor());
+		pGraphics->DrawRoundedRectAntialias(Frame.m_Content.x, Frame.m_Content.y, Frame.m_Content.w, Frame.m_Content.h, Frame.m_ContentRadius, Corners, DummyMiniViewInnerColor());
+	}
+
+	// 画面回贴后的边框环带：SDF 环带内缘的 1 像素羽化正好磨平画面圆角遮罩的硬边，
+	// 外面再叠强调线与外圈深色包边。几何回退路径的边框已在底层画完，这里直接跳过。
+	void DrawHudDummyMiniViewFrameBezel(IGraphics *pGraphics, const QmDummyMiniViewLayout::SFrameGeometry &Frame, int Corners, float ScreenPixelSize, ColorRGBA AccentColor)
+	{
+		if(pGraphics == nullptr || !pGraphics->HasRoundedRectSdf() || !Frame.m_HasContent)
+			return;
+
+		const ColorRGBA Transparent(0.0f, 0.0f, 0.0f, 0.0f);
+		pGraphics->RenderRoundedRectSdf(HudRoundedRectSdfParams(Frame.m_Outer, Frame.m_Radius, Corners,
+			Transparent, DummyMiniViewFrameColor(), Frame.m_BezelWidth, ScreenPixelSize));
+		if(Frame.m_AccentWidth > 0.0f)
+			pGraphics->RenderRoundedRectSdf(HudRoundedRectSdfParams(Frame.m_Accent, Frame.m_AccentRadius, Corners,
+				Transparent, AccentColor, Frame.m_AccentWidth, ScreenPixelSize));
+		if(Frame.m_RimWidth > 0.0f)
+			pGraphics->RenderRoundedRectSdf(HudRoundedRectSdfParams(Frame.m_Outer, Frame.m_Radius, Corners,
+				Transparent, DummyMiniViewRimColor(), Frame.m_RimWidth, ScreenPixelSize));
+	}
+
 	vec2 RotatePoint(vec2 Point, float Angle)
 	{
 		const float Sin = std::sin(Angle);
@@ -1088,8 +1156,6 @@ CHud::CHud()
 	m_LocalTimeV2AnimState.Reset();
 	m_MediaIslandAnimState.Reset();
 	m_MediaIslandFrameCache.Reset();
-	m_MediaIslandBlurLastAttemptFrame = 0;
-	m_MediaIslandBlurAttemptInitialized = false;
 	m_RecordingStatusAnimState.Reset();
 	m_SwitchCountdownAnimState.Reset();
 	ResetSwitchCountdownRings();
@@ -1179,8 +1245,6 @@ void CHud::ResetHudContainers()
 	m_LocalTimeV2AnimState.Reset();
 	m_MediaIslandAnimState.Reset();
 	m_MediaIslandFrameCache.Reset();
-	m_MediaIslandBlurLastAttemptFrame = 0;
-	m_MediaIslandBlurAttemptInitialized = false;
 	m_RecordingStatusAnimState.Reset();
 	m_SwitchCountdownAnimState.Reset();
 	ResetSwitchCountdownRings();
@@ -1195,6 +1259,7 @@ void CHud::OnWindowResize()
 
 void CHud::OnReset()
 {
+	m_LyricsIslandAnchorValid = false;
 	m_TimeCpDiff = 0.0f;
 	m_DDRaceTime = 0;
 	m_FinishTimeLastReceivedTick = 0;
@@ -1207,13 +1272,12 @@ void CHud::OnReset()
 	m_aLastPlayerSpeedChange[0] = ESpeedChange::NONE;
 	m_aLastPlayerSpeedChange[1] = ESpeedChange::NONE;
 	m_LastSpectatorCountTick = 0;
-	m_aMapProgressDisplayed[0] = 0.0f;
-	m_aMapProgressDisplayed[1] = 0.0f;
-	m_aMapProgressInitialized[0] = false;
-	m_aMapProgressInitialized[1] = false;
+	for(auto &Progress : m_aIslandMapProgress)
+		Progress.Reset();
+	for(auto &Progress : m_aMapProgress)
+		Progress.Reset();
 	m_MediaIslandAnimState.Reset();
 	m_MediaIslandFrameCache.Reset();
-	m_LegacyMediaLyricState.Reset();
 	m_MediaIslandMuteState.Reset();
 	m_RecordingStatusAnimState.Reset();
 
@@ -1246,21 +1310,6 @@ void CHud::OnInit()
 	Graphics()->QuadContainerUpload(m_HudQuadContainerIndex);
 }
 
-void CHud::DestroyMediaIslandBlurTargets()
-{
-	Graphics()->DestroyRenderTarget(&m_MediaIslandBlurSource);
-	Graphics()->DestroyRenderTarget(&m_MediaIslandBlurDownsample);
-	Graphics()->DestroyRenderTarget(&m_MediaIslandBlurDownsampleTemporary);
-	Graphics()->DestroyRenderTarget(&m_MediaIslandBlurDownsampleTarget);
-	Graphics()->DestroyRenderTarget(&m_MediaIslandBlurTarget);
-	m_MediaIslandBlurWidth = 0;
-	m_MediaIslandBlurHeight = 0;
-	m_MediaIslandBlurMode = -1;
-	m_MediaIslandBlurReady = false;
-	m_MediaIslandBlurLastAttemptFrame = 0;
-	m_MediaIslandBlurAttemptInitialized = false;
-}
-
 void CHud::DestroyDummyMiniViewRenderTarget()
 {
 	if(m_DummyMiniViewGraphicsVersion == Graphics()->GraphicsResourcesResetVersion())
@@ -1275,85 +1324,15 @@ IGraphics::CRenderTargetHandle CHud::MediaIslandBlurBackdrop()
 {
 	if(!QmHudMediaIslandShouldPrepareBackdropBlur(g_Config.m_QmHudIslandBgOpacity, g_Config.m_QmGaussianBlur != 0) || !Graphics()->HasMediaIslandSdf())
 		return IGraphics::CRenderTargetHandle();
-	if(!Graphics()->IsBackbufferCaptureSupported() || !Graphics()->IsRenderTargetGaussianBlurSupported())
-	{
-		if(m_MediaIslandBlurSource.IsValid() || m_MediaIslandBlurDownsample.IsValid() || m_MediaIslandBlurDownsampleTemporary.IsValid() || m_MediaIslandBlurDownsampleTarget.IsValid() || m_MediaIslandBlurTarget.IsValid())
-			DestroyMediaIslandBlurTargets();
+	// HUD 不再自行捕获交换链：共享背景层已冻结，按需触发 1/4 降采样/模糊即可。
+	Ui()->PrepareGaussianBlur();
+	if(!Ui()->GaussianBlurTargetReady())
 		return IGraphics::CRenderTargetHandle();
-	}
-
-	const int BlurWidth = MediaIslandBlurTargetDimension(Graphics()->ScreenWidth());
-	const int BlurHeight = MediaIslandBlurTargetDimension(Graphics()->ScreenHeight());
-	const int BlurMode = std::clamp(g_Config.m_QmBlurMode, 0, 2);
-	if(BlurWidth <= 0 || BlurHeight <= 0)
-	{
-		m_MediaIslandBlurReady = false;
-		m_MediaIslandBlurLastAttemptFrame = 0;
-		m_MediaIslandBlurAttemptInitialized = false;
-		return IGraphics::CRenderTargetHandle();
-	}
-
-	const bool SizeChanged = BlurWidth != m_MediaIslandBlurWidth || BlurHeight != m_MediaIslandBlurHeight;
-	const int DualBlurWidth = std::max(1, (BlurWidth + 1) / 2);
-	const int DualBlurHeight = std::max(1, (BlurHeight + 1) / 2);
-	if(SizeChanged || !m_MediaIslandBlurSource.IsValid() || !m_MediaIslandBlurDownsample.IsValid() || !m_MediaIslandBlurDownsampleTemporary.IsValid() || !m_MediaIslandBlurDownsampleTarget.IsValid() || !m_MediaIslandBlurTarget.IsValid())
-	{
-		DestroyMediaIslandBlurTargets();
-		m_MediaIslandBlurSource = Graphics()->CreateRenderTarget(BlurWidth, BlurHeight);
-		m_MediaIslandBlurDownsample = Graphics()->CreateRenderTarget(DualBlurWidth, DualBlurHeight);
-		m_MediaIslandBlurDownsampleTemporary = Graphics()->CreateRenderTarget(DualBlurWidth, DualBlurHeight);
-		m_MediaIslandBlurDownsampleTarget = Graphics()->CreateRenderTarget(DualBlurWidth, DualBlurHeight);
-		m_MediaIslandBlurTarget = Graphics()->CreateRenderTarget(BlurWidth, BlurHeight);
-		if(!m_MediaIslandBlurSource.IsValid() || !m_MediaIslandBlurDownsample.IsValid() || !m_MediaIslandBlurDownsampleTemporary.IsValid() || !m_MediaIslandBlurDownsampleTarget.IsValid() || !m_MediaIslandBlurTarget.IsValid())
-		{
-			DestroyMediaIslandBlurTargets();
-			return IGraphics::CRenderTargetHandle();
-		}
-		m_MediaIslandBlurWidth = BlurWidth;
-		m_MediaIslandBlurHeight = BlurHeight;
-		m_MediaIslandBlurMode = BlurMode;
-	}
-
-	const uint64_t CurrentFrame = Client()->PerfFrame();
-	const bool Refresh = QmHudMediaIslandShouldRefreshBackdropBlur(CurrentFrame, m_MediaIslandBlurLastAttemptFrame, m_MediaIslandBlurAttemptInitialized);
-	if(Refresh)
-	{
-		m_MediaIslandBlurLastAttemptFrame = CurrentFrame;
-		m_MediaIslandBlurAttemptInitialized = true;
-		Ui()->PrepareGaussianBlur();
-	}
-
-	// QmClient：island 背景与 UI 半透明面板参数一致（同为 1/4 分辨率），UI 已准备同一次捕获/模糊
-	// 结果时直接复用，避免重复模糊；UI 句柄销毁重建期间自然回退到下面的独立渲染目标管线。
-	if(Ui()->GaussianBlurTargetReady())
-		return Ui()->GaussianBlurTarget();
-
-	// 独立管线：非刷新帧沿用上一帧结果，避免每帧重复捕获与模糊
-	if(!Refresh)
-		return m_MediaIslandBlurReady ? m_MediaIslandBlurTarget : IGraphics::CRenderTargetHandle();
-
-	if(!Graphics()->CaptureBackbufferToRenderTarget(m_MediaIslandBlurSource))
-	{
-		m_MediaIslandBlurReady = false;
-		return IGraphics::CRenderTargetHandle();
-	}
-
-	IGraphics::SGaussianBlurParams BlurParams;
-	BlurParams.m_Radius = 5;
-	BlurParams.m_Sigma = 2.5f;
-	m_MediaIslandBlurReady = Graphics()->DualBlurRenderTarget(
-		m_MediaIslandBlurSource,
-		m_MediaIslandBlurDownsample,
-		m_MediaIslandBlurDownsampleTemporary,
-		m_MediaIslandBlurDownsampleTarget,
-		m_MediaIslandBlurTarget,
-		BlurParams);
-	return m_MediaIslandBlurReady ? m_MediaIslandBlurTarget : IGraphics::CRenderTargetHandle();
+	return Ui()->GaussianBlurTarget();
 }
 
 void CHud::OnRelease()
 {
-	DestroyMediaIslandBlurTargets();
 	DestroyDummyMiniViewRenderTarget();
 	m_MediaIslandFrameCache.Reset();
 }
@@ -2147,52 +2126,39 @@ void CHud::RenderDummyMiniMap()
 		str_copy(ViewState.m_aPlaceholderSubtitle, Localize("Graphics backend does not support dummy mini view"));
 	}
 
+	// 边框各层尺寸统一由布局头文件解析：画面矩形与圆角必须和边框环带内缘同源，
+	// 否则离屏画面回贴后会与边框错位或在圆角处露缝。
+	const QmDummyMiniViewLayout::SFrameStyle FrameStyle;
 	const float Radius = std::clamp(MiniH * 0.11f, 5.0f, 7.5f);
-	DrawSmoothRoundedRect(Graphics(), MiniX + 0.8f, MiniY + 1.2f, MiniW, MiniH, Radius, ColorRGBA(0.0f, 0.0f, 0.0f, 0.18f), HudEditorScope.m_Corners);
-	DrawSmoothRoundedRect(Graphics(), MiniX, MiniY, MiniW, MiniH, Radius, ColorRGBA(0.02f, 0.03f, 0.05f, 0.92f), HudEditorScope.m_Corners);
-	DrawSmoothRoundedRect(Graphics(), MiniX + 0.75f, MiniY + 0.75f, maximum(0.0f, MiniW - 1.5f), maximum(0.0f, MiniH - 1.5f), maximum(0.0f, Radius - 0.55f), ViewState.m_TargetAccent.WithAlpha(0.16f), HudEditorScope.m_Corners);
-
-	const float FrameInset = 1.45f;
-	const float FrameX = MiniX + FrameInset;
-	const float FrameY = MiniY + FrameInset;
-	const float FrameW = MiniW - FrameInset * 2.0f;
-	const float FrameH = MiniH - FrameInset * 2.0f;
-	const float FrameRadius = maximum(0.0f, Radius - 1.0f);
-	DrawSmoothRoundedRect(Graphics(), FrameX, FrameY, FrameW, FrameH, FrameRadius, ColorRGBA(0.07f, 0.09f, 0.13f, 0.96f));
-	DrawSmoothRoundedRect(Graphics(), FrameX + 0.65f, FrameY + 0.65f, maximum(0.0f, FrameW - 1.3f), maximum(0.0f, minimum(FrameH - 1.3f, FrameH * 0.48f)), maximum(0.0f, FrameRadius - 0.45f), ColorRGBA(1.0f, 1.0f, 1.0f, 0.035f), IGraphics::CORNER_T);
-
-	const float ContentInset = 1.9f;
-	const float InnerX = FrameX + ContentInset;
-	const float InnerY = FrameY + ContentInset;
-	const float InnerW = FrameW - ContentInset * 2.0f;
-	const float InnerH = FrameH - ContentInset * 2.0f;
-	const float InnerRadius = maximum(0.0f, FrameRadius - 1.1f);
-	if(InnerW <= 0.0f || InnerH <= 0.0f)
+	const auto Frame = QmDummyMiniViewLayout::ResolveFrame({MiniX, MiniY, MiniW, MiniH}, Radius, FrameStyle);
+	if(!Frame.m_HasContent)
 	{
 		GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 		return;
 	}
 
-	DrawSmoothRoundedRect(Graphics(), InnerX, InnerY, InnerW, InnerH, InnerRadius, ColorRGBA(0.03f, 0.04f, 0.06f, 0.92f));
+	float SavedX0 = 0.0f;
+	float SavedY0 = 0.0f;
+	float SavedX1 = 0.0f;
+	float SavedY1 = 0.0f;
+	Graphics()->GetScreen(&SavedX0, &SavedY0, &SavedX1, &SavedY1);
+	const int ScreenW = Graphics()->ScreenWidth();
+	const int ScreenH = Graphics()->ScreenHeight();
+	// 边框已经细到 1~2 屏幕像素，SDF 羽化宽度必须换算到当前映射下的实际像素。
+	const float ScreenPixelSize = QmHudMediaIslandScreenPixelSize(SavedX0, SavedY0, SavedX1, SavedY1, ScreenW, ScreenH);
+	const ColorRGBA MiniViewAccent = ViewState.m_TargetAccent.WithAlpha(0.24f);
+	DrawHudDummyMiniViewFrameBase(Graphics(), Frame, HudEditorScope.m_Corners, ScreenPixelSize, MiniViewAccent);
 
 	if(ViewState.m_HasSignal && MiniViewClientId >= 0)
 	{
 		Graphics()->TextureClear();
 
-		float SavedX0 = 0.0f;
-		float SavedY0 = 0.0f;
-		float SavedX1 = 0.0f;
-		float SavedY1 = 0.0f;
-		Graphics()->GetScreen(&SavedX0, &SavedY0, &SavedX1, &SavedY1);
-
-		const int ScreenW = Graphics()->ScreenWidth();
-		const int ScreenH = Graphics()->ScreenHeight();
 		// 使用 HUD 编辑器变换后的投影计算尺寸；离屏目标保留完整内框，屏幕交集仅判断可见性。
 		const auto Viewport = QmDummyMiniViewLayout::ResolveViewport(
-			{InnerX, InnerY, InnerW, InnerH},
+			{Frame.m_Content.x, Frame.m_Content.y, Frame.m_Content.w, Frame.m_Content.h},
 			{SavedX0, SavedY0, SavedX1 - SavedX0, SavedY1 - SavedY0}, ScreenW, ScreenH);
-		const int ViewW = Viewport.IsVisible() ? maximum(1, (int)std::round(InnerW * ScreenW / (SavedX1 - SavedX0))) : 0;
-		const int ViewH = Viewport.IsVisible() ? maximum(1, (int)std::round(InnerH * ScreenH / (SavedY1 - SavedY0))) : 0;
+		const int ViewW = Viewport.IsVisible() ? maximum(1, (int)std::round(Frame.m_Content.w * ScreenW / (SavedX1 - SavedX0))) : 0;
+		const int ViewH = Viewport.IsVisible() ? maximum(1, (int)std::round(Frame.m_Content.h * ScreenH / (SavedY1 - SavedY0))) : 0;
 		const auto TargetSize = ResolveQmDummyMiniViewTargetSize(ViewW, ViewH,
 			m_DummyMiniViewRenderTargetWidth, m_DummyMiniViewRenderTargetHeight, ScreenW, ScreenH);
 		if(TargetSize.m_W > 0 && TargetSize.m_H > 0)
@@ -2228,6 +2194,8 @@ void CHud::RenderDummyMiniMap()
 				{
 					Graphics()->EndRenderTarget();
 					Graphics()->MapScreen(SavedX0, SavedY0, SavedX1, SavedY1);
+					// 目标位置失效时也要把边框补完，否则只剩底层画布色。
+					DrawHudDummyMiniViewFrameBezel(Graphics(), Frame, HudEditorScope.m_Corners, ScreenPixelSize, MiniViewAccent);
 					GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 					return;
 				}
@@ -2273,12 +2241,15 @@ void CHud::RenderDummyMiniMap()
 				Graphics()->MapScreen(SavedX0, SavedY0, SavedX1, SavedY1);
 
 				IGraphics::SRenderTargetDrawParams DrawParams;
-				DrawParams.m_X = InnerX;
-				DrawParams.m_Y = InnerY;
-				DrawParams.m_W = InnerW;
-				DrawParams.m_H = InnerH;
+				DrawParams.m_X = Frame.m_Content.x;
+				DrawParams.m_Y = Frame.m_Content.y;
+				DrawParams.m_W = Frame.m_Content.w;
+				DrawParams.m_H = Frame.m_Content.h;
 				DrawParams.m_Corners = HudEditorScope.m_Corners;
-				DrawParams.m_Rounding = InnerRadius;
+				DrawParams.m_Rounding = Frame.m_ContentRadius;
+				DrawParams.m_CornerSmoothing = std::clamp(g_Config.m_QmUiCornerSmoothing / 100.0f, 0.0f, 1.0f);
+				DrawParams.m_CornerCurve = (float)g_Config.m_QmUiCornerCurve;
+				DrawParams.m_CornerSeam = std::clamp(g_Config.m_QmUiCapsuleSeam / 100.0f, 0.0f, 1.0f);
 				DrawParams.m_Opaque = true;
 				if(Backend == QmDummyMiniViewLayout::EBackend::VULKAN)
 				{
@@ -2290,6 +2261,10 @@ void CHud::RenderDummyMiniMap()
 		}
 	}
 
+	// 画面回贴之后再补边框环带：SDF 内缘的 1 像素羽化盖住画面圆角遮罩的硬边，
+	// 这也是「毛边」的来源；几何回退路径已在底层画好边框，这里不重复。
+	DrawHudDummyMiniViewFrameBezel(Graphics(), Frame, HudEditorScope.m_Corners, ScreenPixelSize, MiniViewAccent);
+
 	if(!ViewState.m_HasSignal)
 	{
 		const unsigned int PrevFlags = TextRender()->GetRenderFlags();
@@ -2298,10 +2273,10 @@ void CHud::RenderDummyMiniMap()
 		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT);
 		TextRender()->TextOutlineColor(0.0f, 0.0f, 0.0f, 0.36f);
 
-		const float PlaceholderIconSize = std::clamp(minimum(InnerW, InnerH) * 0.14f, 7.0f, 11.0f);
+		const float PlaceholderIconSize = std::clamp(minimum(Frame.m_Content.w, Frame.m_Content.h) * 0.14f, 7.0f, 11.0f);
 		const float PlaceholderTitleSize = std::clamp(MiniH * 0.078f, 5.3f, 6.6f);
 		const float PlaceholderBodySize = std::clamp(MiniH * 0.062f, 4.6f, 5.4f);
-		const vec2 PlaceholderCenter(InnerX + InnerW * 0.5f, InnerY + InnerH * 0.52f);
+		const vec2 PlaceholderCenter(Frame.m_Content.x + Frame.m_Content.w * 0.5f, Frame.m_Content.y + Frame.m_Content.h * 0.52f);
 
 		DrawSmoothCircle(Graphics(), vec2(PlaceholderCenter.x, PlaceholderCenter.y - 7.5f), PlaceholderIconSize * 0.9f, ViewState.m_TargetAccent.WithAlpha(0.16f));
 		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
@@ -2315,7 +2290,7 @@ void CHud::RenderDummyMiniMap()
 		TextRender()->Text(PlaceholderCenter.x - TitleWidth * 0.5f, PlaceholderCenter.y - 3.0f, PlaceholderTitleSize, ViewState.m_aPlaceholderTitle, -1.0f);
 
 		TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.64f);
-		const float SubtitleMaxWidth = maximum(0.0f, InnerW - 16.0f);
+		const float SubtitleMaxWidth = maximum(0.0f, Frame.m_Content.w - 16.0f);
 		RenderHudEllipsizedText(TextRender(), PlaceholderCenter.x - SubtitleMaxWidth * 0.5f, PlaceholderCenter.y + 4.2f, PlaceholderBodySize, SubtitleMaxWidth, ViewState.m_aPlaceholderSubtitle);
 
 		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
@@ -2550,7 +2525,8 @@ void CHud::RenderTextInfo()
 			TextRender()->Text(4.0f, OffsetY, FontSize, aBuf, -1.0f);
 		}
 	}
-	if(g_Config.m_QmRenderCursorSpec && GameClient()->m_Snap.m_SpecInfo.m_SpectatorId == SPEC_FREEVIEW)
+	// 手机上不画这个准星：它本来是给鼠标用户标示屏幕中心，触屏观战只会被当成多余的“光标”。
+	if(g_Config.m_QmRenderCursorSpec && !QmUiMobilePlatform() && GameClient()->m_Snap.m_SpecInfo.m_SpectatorId == SPEC_FREEVIEW)
 	{
 		int CurWeapon = 1;
 		Graphics()->SetColor(1.f, 1.f, 1.f, g_Config.m_QmRenderCursorSpecAlpha / 100.0f);
@@ -2621,8 +2597,14 @@ void CHud::RenderTextInfo()
 			const float FrozenHudY = 0.0f;
 			const float FrozenHudW = TeeSize * std::min(NumInTeam, MaxTees);
 			const float FrozenHudH = TeeSize + 3.0f + (TotalRows - 1) * TeeSize;
-			Ui()->RenderGaussianBlur({FrozenHudX, FrozenHudY, FrozenHudW, FrozenHudH}, 1.0f, IGraphics::CORNER_B, ui_token::radius::BASE);
-			Graphics()->DrawRect(FrozenHudX, FrozenHudY, FrozenHudW, FrozenHudH, ui_token::color::SURFACE_GLASS, IGraphics::CORNER_B, ui_token::radius::BASE);
+			const CUIRect FrozenHudRect{FrozenHudX, FrozenHudY, FrozenHudW, FrozenHudH};
+			Ui()->RenderGaussianBlur(FrozenHudRect, 1.0f, IGraphics::CORNER_B, ui_token::radius::BASE);
+			// 玻璃底必须和模糊遮罩用同一条形状：旧直绘路径的圆角是一圈四边形拼的，
+			// 换连续曲率后边缘对不上，会露出断续的硬边。
+			SRoundedSurfaceParams FrozenHudSurface;
+			FrozenHudSurface.m_Radius = ui_token::radius::BASE;
+			FrozenHudSurface.m_Corners = IGraphics::CORNER_B;
+			DrawRoundedSurface(Ui(), FrozenHudRect, ui_token::color::SURFACE_GLASS, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), FrozenHudSurface);
 
 			bool Overflow = NumInTeam > MaxTees * MaxRows;
 
@@ -3310,7 +3292,9 @@ void CHud::RenderFollowHookCountdown()
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
 	const float ScreenPixelSize = QmHudMediaIslandScreenPixelSize(ScreenX0, ScreenY0, ScreenX1, ScreenY1, Graphics()->ScreenWidth(), Graphics()->ScreenHeight());
-	const float Radius = (Visual.m_EndlessHook ? qm_hook_countdown_ui::INFINITY_OUTER_RADIUS : qm_hook_countdown_ui::OUTER_RADIUS) * Visual.m_Scale + ScreenPixelSize * 2.5f;
+	// 裁剪半径必须跟着可调尺寸一起放大，并且带上彩虹光晕的外圈，
+	// 否则调大后光晕边缘会被提前裁成一条硬边。
+	const float Radius = qm_hook_countdown_ui::RenderClipRadius(Visual) + ScreenPixelSize * 2.5f;
 	if(in_range(Visual.m_Position.x, ScreenX0 - Radius, ScreenX1 + Radius) &&
 		in_range(Visual.m_Position.y, ScreenY0 - Radius, ScreenY1 + Radius))
 		qm_hook_countdown_ui::Render(Graphics(), Visual, ScreenPixelSize);
@@ -3554,6 +3538,7 @@ void CHud::PreparePlayerStateQuads()
 		float Width = WeaponSpec.m_VisualSize * ScaleX * HudWeaponScale;
 		float Height = WeaponSpec.m_VisualSize * ScaleY * HudWeaponScale;
 		m_aWeaponOffset[Weapon] = Graphics()->QuadContainerAddSprite(m_HudQuadContainerIndex, Width, Height);
+		m_aWeaponHudSize[Weapon] = vec2(Width, Height);
 	}
 
 	// Quads for displaying capabilities
@@ -3588,6 +3573,14 @@ void CHud::PreparePlayerStateQuads()
 	m_Team0ModeOffset = Graphics()->QuadContainerAddSprite(m_HudQuadContainerIndex, 0.f, 0.f, 12.f, 12.f);
 }
 
+QmHudMapProgress::ESurface CHud::MapProgressSurface() const
+{
+	const bool Enabled = GameClient()->m_HudEditor.IsActive() ||
+			     (GameClient()->m_TClient.IsGoresMapProgressEnabled() && !GetQmFocusModeDecisions().m_HideMapProgress);
+	return QmHudMapProgress::ResolveSurface(Enabled, g_Config.m_QmPlayerStatsMapProgressStyle,
+		g_Config.m_QmPlayerStatsHud != 0, g_Config.m_QmHudIslandUseOriginalStyle == 0);
+}
+
 void CHud::EnsureMediaIslandFrameCache() const
 {
 	const uint64_t CurrentFrame = Client()->PerfFrame();
@@ -3602,28 +3595,20 @@ void CHud::EnsureMediaIslandFrameCache() const
 	const bool MediaHudEnabled = g_Config.m_QmSmtcShowHud && SystemMediaControls::AnyMediaSourceEnabled(g_Config.m_QmSmtcEnable != 0, g_Config.m_QmNeteaseHookEnable != 0 || MusicLyricsEnabled || g_Config.m_QmSpotifyEnable != 0);
 	Cache.m_HasMediaState = MediaHudEnabled && GameClient()->m_SystemMediaControls.GetStateSnapshot(Cache.m_MediaState);
 
-	// 歌词来源选择:各来源可同时开启(菜单已保证同一时间只启用一个 Hook)。
-	// 若用户手动同时开启，网易云优先，统一歌词组件次之，Spotify 再后备。
-	if(g_Config.m_QmNeteaseHookEnable != 0)
-	{
-		Cache.m_LyricsActive = GameClient()->m_NeteaseIntegration.HasActiveLyrics();
-		Cache.m_ShowLyrics = GameClient()->m_NeteaseIntegration.GetCurrentLyric(Cache.m_aLyrics, sizeof(Cache.m_aLyrics), &Cache.m_LyricsColor);
-	}
-	if(!Cache.m_ShowLyrics && MusicLyricsEnabled)
-	{
-		// 统一歌词组件按开关选择汽水、酷狗或 QQ 音乐。
-		Cache.m_LyricsActive = GameClient()->m_MusicLyricsIntegration.HasActiveLyrics();
-		Cache.m_ShowLyrics = GameClient()->m_MusicLyricsIntegration.GetCurrentLyric(Cache.m_aLyrics, sizeof(Cache.m_aLyrics));
-	}
-	if(!Cache.m_ShowLyrics && g_Config.m_QmSpotifyEnable != 0)
-	{
-		// Spotify 歌词(官方内置 color-lyrics)作为再后备来源。
-		Cache.m_LyricsActive = GameClient()->m_SpotifyIntegration.HasActiveLyrics();
-		Cache.m_ShowLyrics = GameClient()->m_SpotifyIntegration.GetCurrentLyric(Cache.m_aLyrics, sizeof(Cache.m_aLyrics));
-	}
+	const auto &Lyrics = GameClient()->m_LyricsPresentation.Frame();
+	Cache.m_LyricsActive = Lyrics.m_Active;
+	Cache.m_ShowLyrics = Lyrics.m_RowCount > 0;
+	Cache.m_LyricsRowCount = Lyrics.m_RowCount;
+	str_copy(Cache.m_aLyrics, Lyrics.m_aaRows[0], sizeof(Cache.m_aLyrics));
+	str_copy(Cache.m_aLyricsTranslation, Lyrics.m_aaRows[1], sizeof(Cache.m_aLyricsTranslation));
 	if(g_Config.m_QmHudIslandUseOriginalStyle)
 		return;
 	Cache.m_SpectatorCount = GetMediaIslandSpectatorCount(*GameClient(), *Client());
+	if(MapProgressSurface() == QmHudMapProgress::ESurface::ISLAND)
+	{
+		Cache.m_HasVisible = true;
+		return;
+	}
 
 	if(m_MediaIslandAnimState.HasVisibleSatellite())
 	{
@@ -3684,7 +3669,7 @@ void CHud::EnsureMediaIslandFrameCache() const
 		}
 	}
 
-	Cache.m_HasVisible = Cache.m_ShowLyrics || Cache.m_LyricsActive || Cache.m_HasMediaState;
+	Cache.m_HasVisible = (!g_Config.m_QmLyricsSeparateIsland && (Cache.m_ShowLyrics || Cache.m_LyricsActive)) || Cache.m_HasMediaState;
 }
 
 bool CHud::HasVisibleMediaIsland() const
@@ -3724,7 +3709,8 @@ float CHud::GetTopIslandAvoidanceRight() const
 	const CSystemMediaControls::SState &MediaState = m_MediaIslandFrameCache.m_MediaState;
 	const bool HasMediaState = m_MediaIslandFrameCache.m_HasMediaState;
 	const bool ShowTopRow = HasMediaState || ShowInfoStack || TimerCapsule.m_Visible || ShowRecordingStatus || ShowSpectatorSatellite || ShowTeam;
-	if(!ShowTopRow)
+	const bool ShowMapProgress = MapProgressSurface() == QmHudMapProgress::ESurface::ISLAND;
+	if(!ShowTopRow && !ShowMapProgress)
 	{
 		m_MediaIslandFrameCache.m_AvoidanceValid = true;
 		m_MediaIslandFrameCache.m_AvoidanceRight = 0.0f;
@@ -3838,6 +3824,11 @@ float CHud::GetTopIslandAvoidanceRight() const
 	if(TrackDetailsExpanded && TitleWidth > 0.0f)
 		TargetWidth += Gap + TitleWidth;
 
+	if(ShowMapProgress)
+	{
+		const float OtherWidth = (TimerCapsule.m_Visible ? TimerCapsule.m_BoxW + GapToTimer : 0.0f) + RightSlotGap + RightSlotWidth;
+		TargetWidth = std::max(TargetWidth, QmHudMapProgress::MeasureMinimumWidth(*TextRender(), QmHudMediaIslandDesignScale) - OtherWidth);
+	}
 	const float MainToTimerGap = TargetWidth > 0.0f ? GapToTimer : 0.0f;
 	const float PlannedUnifiedWidth = TimerCapsule.m_Visible ?
 						  TargetWidth + MainToTimerGap + TimerCapsule.m_BoxW + RightSlotGap + RightSlotWidth :
@@ -3862,10 +3853,17 @@ void CHud::RenderMediaIsland()
 	const int64_t Now = time_get();
 	const CSystemMediaControls::SState &MediaState = m_MediaIslandFrameCache.m_MediaState;
 	const bool HasMediaState = m_MediaIslandFrameCache.m_HasMediaState;
-	const bool LyricsActive = m_MediaIslandFrameCache.m_LyricsActive;
+	const bool LyricsActive = !g_Config.m_QmLyricsSeparateIsland && m_MediaIslandFrameCache.m_LyricsActive;
+	const bool ShowMapProgress = MapProgressSurface() == QmHudMapProgress::ESurface::ISLAND;
+	if(!ShowMapProgress)
+	{
+		for(auto &Progress : m_aIslandMapProgress)
+			Progress.Reset();
+	}
 	const bool AlwaysShowTrackDetails = g_Config.m_QmHudIslandAlwaysShowTrackDetails != 0;
 	if(!HasMediaState)
 	{
+		AnimState.m_WaveformClock.Reset();
 		AnimState.m_WaveformWasPlaying = false;
 		AnimState.m_WaveformSettling = false;
 		AnimState.m_WaveformSettleStartTick = 0;
@@ -4000,7 +3998,6 @@ void CHud::RenderMediaIsland()
 	const bool ShowLocalTime = ShouldRenderHudLocalTime(*GameClient());
 	const SHudGameTimerInfo TimerInfo = g_Config.m_ClShowhudTimer ? BuildHudGameTimerInfo(*GameClient(), *Client(), TextRender(), m_Width) : SHudGameTimerInfo{};
 	SHudTopTimerCapsuleInfo TimerCapsule = BuildHudTopTimerCapsuleInfo(TimerInfo);
-	const float TimerAnchorWidth = TimerCapsule.m_BoxW;
 	char aRecordingBuf[512];
 	const bool ShowRecordingStatus = TimerCapsule.m_Visible && BuildHudRecordingStatusText(*GameClient(), aRecordingBuf, sizeof(aRecordingBuf));
 	const bool ScoreboardExpanded = GameClient()->m_Scoreboard.IsActive();
@@ -4056,11 +4053,11 @@ void CHud::RenderMediaIsland()
 	const bool ShowTeam = BuildHudTeamText(*GameClient(), aTeamBuf, sizeof(aTeamBuf));
 	const char *pLyricsIslandBuf = m_MediaIslandFrameCache.m_aLyrics;
 	const ColorRGBA &LyricsIslandColor = m_MediaIslandFrameCache.m_LyricsColor;
-	const bool ShowLyricsIslandLine = m_MediaIslandFrameCache.m_ShowLyrics || LyricsActive;
-	const SHudMediaIslandSwapRows SwapRows = QmHudMediaIslandSwapRows(IncomingSwapCount, TimerCapsule.m_Visible, ShowLyricsIslandLine);
+	const bool ShowLyricsIslandLine = !g_Config.m_QmLyricsSeparateIsland && (m_MediaIslandFrameCache.m_ShowLyrics || LyricsActive);
+	const SHudMediaIslandSwapRows SwapRows = QmHudMediaIslandSwapRows(IncomingSwapCount, TimerCapsule.m_Visible, ShowLyricsIslandLine, m_MediaIslandFrameCache.m_LyricsRowCount);
 	const bool ShowTopRow = HasMediaState || ShowInfoStack || TimerCapsule.m_Visible || ShowRecordingStatus || ShowSpectator || ShowTeam;
 
-	if(!ShowTopRow && !ShowLyricsIslandLine && !HasSatellitePresentation)
+	if(!ShowTopRow && !ShowLyricsIslandLine && !HasSatellitePresentation && !ShowMapProgress)
 	{
 		RelaxMediaIslandEntranceSprings(GameClient()->UiRuntimeV2()->AnimRuntime());
 		m_MediaIslandAnimState.Reset();
@@ -4223,9 +4220,11 @@ void CHud::RenderMediaIsland()
 		PlannedStatusWidth = InfoStackWidth;
 	else if(ShowRecordingStatus)
 		PlannedStatusWidth = StatusPaddingLeft + ConnectionSlot.m_Width + (ScoreboardExpanded ? RawExpandedStatusWidth : RawCollapsedStatusWidth);
-	const bool ShowBottomRow = SwapRows.m_BottomLineCount > 0;
-	const int BottomRowLineCount = SwapRows.m_BottomLineCount;
-	const float DesiredBottomUnifiedWidth = QmHudMediaIslandDesiredBottomWidth(
+	const QmHudMapProgress::SIslandRows ProgressRows = QmHudMapProgress::IslandRows(
+		ShowTopRow || HasSatellitePresentation, ShowMapProgress, SwapRows.m_BottomLineCount,
+		BaseIslandHeight, BottomRowLineHeight, BottomRowPaddingY);
+	const bool ShowBottomRow = ProgressRows.m_BottomHeight > 0.0f;
+	float DesiredBottomUnifiedWidth = QmHudMediaIslandDesiredBottomWidth(
 		ShowLyricsIslandLine,
 		ShowTopRow,
 		IncomingSwapCount > 0,
@@ -4233,6 +4232,8 @@ void CHud::RenderMediaIsland()
 		MaxTitleWidth,
 		MaxUnifiedWidth,
 		BottomRowPaddingX);
+	if(ShowMapProgress)
+		DesiredBottomUnifiedWidth = std::min(MaxUnifiedWidth, std::max(DesiredBottomUnifiedWidth, QmHudMapProgress::MeasureMinimumWidth(*TextRender(), QmHudMediaIslandDesignScale)));
 	const bool ShowCover = HasMediaState;
 	const int MetaItemCount = (ShowTeam ? 1 : 0) + (ShowWaveform ? 1 : 0);
 	float BaseWidth = PaddingX;
@@ -4294,7 +4295,7 @@ void CHud::RenderMediaIsland()
 	const float TargetX = TimerCapsule.m_Visible ?
 				      QmHudMediaIslandAnchorTimer(m_Width * 0.5f, TimerCapsule.m_BoxW, TargetWidth, MainToTimerGap).m_MainX :
 				      std::clamp(m_Width * 0.5f - PlannedUnifiedWidth * 0.5f, ScreenPadding, MaxTargetX);
-	const float TargetBottomHeight = ShowBottomRow ? (BottomRowPaddingY * 2.0f + BottomRowLineHeight * BottomRowLineCount) : 0.0f;
+	const float TargetBottomHeight = ProgressRows.m_BottomHeight;
 	const float TargetHeight = BaseIslandHeight + TargetBottomHeight;
 	const float TitleAlphaTarget = TrackDetailsExpanded && TitleWidth > 0.0f ? 1.0f : 0.0f;
 	const float TitleOffsetTarget = TrackDetailsExpanded ? 0.0f : QmHudMediaIslandScaled(4.0f);
@@ -4606,6 +4607,7 @@ void CHud::RenderMediaIsland()
 	static_assert(SHudMediaIslandAnimState::SATELLITE_MAX_ITEMS == QmHudMediaIslandSdfMaxItems);
 	std::array<SSatelliteRenderItem, SHudMediaIslandAnimState::SATELLITE_MAX_ITEMS> aSatelliteRenderItems{};
 	int SatelliteRenderItemCount = 0;
+	float LeftShellVelocity = 0.0f;
 	const bool CountdownUsesTimer = TimerCapsule.m_Visible && !HasMediaState && !ShowTeam;
 	for(auto &Item : AnimState.m_aSatelliteItems)
 	{
@@ -4624,6 +4626,8 @@ void CHud::RenderMediaIsland()
 		const bool Active = Item.m_Active && ActiveIndex >= 0;
 		QmHudAdvanceMediaIslandLiquidProgress(Item.m_LiquidSpring, Item.m_LiquidLastTick, Now, Active, MotionLevel > 0);
 		const SHudMediaIslandBlobPose BlobPose = QmHudMediaIslandBlobPose(Item.m_LiquidSpring);
+		// 多颗副岛共享一次外壳响应，最终由软体状态限制幅度。
+		LeftShellVelocity += BlobPose.m_Velocity;
 		if(!Active && QmHudMediaIslandBlobProgress(Item.m_LiquidSpring) <= 0.0f)
 		{
 			Item.Reset();
@@ -4724,14 +4728,13 @@ void CHud::RenderMediaIsland()
 		SpectatorSatelliteRestGap,
 		SpectatorBlobPose);
 	const float SpectatorVisibleRight = SpectatorLiquidCapsule.m_Rect.x + SpectatorLiquidCapsule.m_Rect.w + QmHudMediaIslandScaled(1.0f);
-	const float EditorX = TimerCapsule.m_Visible ? (m_Width - TimerAnchorWidth) * 0.5f : IslandX;
-	const float EditorWidth = TimerCapsule.m_Visible ? TimerAnchorWidth : UnifiedWidth;
-	const CUIRect EditorTransformRect = {EditorX, IslandY, EditorWidth, TimerCapsule.m_Visible ? BaseIslandHeight : AnimatedIslandHeight};
 	const float EditorVisibleRight = std::max(UnifiedRight, SpectatorVisibleRight);
-	// 屏幕外的副岛不参与整岛平移，避免边界约束把居中的大时间推走。
-	const float VisibleLeft = TimerCapsule.m_Visible ? std::max(0.0f, SatelliteVisibleLeft) : SatelliteVisibleLeft;
-	const float VisibleRight = TimerCapsule.m_Visible ? std::min(m_Width, EditorVisibleRight) : EditorVisibleRight;
-	const CUIRect EditorVisibleRect = {VisibleLeft, IslandY, VisibleRight - VisibleLeft, AnimatedIslandHeight};
+	// 整组可见范围用于命中，定位单独使用时间中心，越界内容不再参与平移约束。
+	const CUIRect EditorVisibleRect = {SatelliteVisibleLeft, IslandY, EditorVisibleRight - SatelliteVisibleLeft, AnimatedIslandHeight};
+	const CUIRect EditorAnchorRect = TimerCapsule.m_Visible ?
+						 CUIRect{TimerBoxX, IslandY, TimerCapsule.m_BoxW, AnimatedIslandHeight} :
+						 CUIRect{IslandX, IslandY, UnifiedWidth, AnimatedIslandHeight};
+	const CUIRect EditorTransformRect = QmHudMediaIslandEditorTransformRect(EditorAnchorRect);
 	const bool RenderLeftSection = ShowCover || ShowTeam || ShowWaveform;
 	const bool ShowTimerSecondaryLine = SwapRows.m_InlineSwapCount > 0 || Checkpoint > 0;
 	const SHudMediaIslandTimerRowLayout TimerRows = QmHudMediaIslandTimerRows(TimerCapsule.m_BoxY, TimerCapsule.m_BoxH, ShowTimerSecondaryLine);
@@ -4743,7 +4746,7 @@ void CHud::RenderMediaIsland()
 	const float CheckpointTextY = TimerRows.m_CheckpointY + (TimerRows.m_CheckpointH - CheckpointFontSize) * 0.5f - QmHudMediaIslandScaled(0.5f);
 	ColorRGBA IslandBackgroundColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmHudIslandBgColor));
 	IslandBackgroundColor.a = std::clamp(g_Config.m_QmHudIslandBgOpacity / 100.0f, 0.0f, 1.0f);
-	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::MediaIsland, EditorTransformRect, EditorVisibleRect);
+	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::MediaIsland, EditorTransformRect, EditorVisibleRect, QmHudEditor::EHorizontalPlacement::TransformOrigin);
 	m_MediaIslandLastVisibleRect = HudEditorScope.m_VisibleRect;
 	m_MediaIslandLastVisibleRectValid = true;
 
@@ -4753,6 +4756,12 @@ void CHud::RenderMediaIsland()
 	const SHudMediaIslandEntrancePose EntrancePose = QmHudMediaIslandEntrancePose(TargetMainIslandSdfRect, Radius, IslandBackgroundColor, EntranceSprings.m_ExpandProgress, EntranceSprings.m_DropProgress, TransformedScreenY0);
 	const float EntranceContentAlpha = EntrancePose.m_ContentAlpha;
 	const CUIRect MainIslandSdfRect = EntrancePose.m_Rect;
+	const float SoftBodyDelta = AnimState.m_SoftBodyLastTick != 0 ? (Now - AnimState.m_SoftBodyLastTick) / static_cast<float>(time_freq()) : 0.0f;
+	AnimState.m_SoftBodyLastTick = Now;
+	const CHudIslandSoftBody::SPose ShellPose = AnimState.m_SoftBody.Update(
+		SoftBodyDelta, vec2(MainIslandSdfRect.w, MainIslandSdfRect.h), LeftShellVelocity, SpectatorBlobPose.m_Velocity, MotionLevel);
+	m_LyricsIslandAnchor = QmLyricsHudAnchor(MainIslandSdfRect, EditorTransformRect, HudEditorScope.m_TargetRect);
+	m_LyricsIslandAnchorValid = true;
 	TextRender()->TextOutlineColor(0.0f, 0.0f, 0.0f, 0.42f * EntranceContentAlpha);
 	const float SpectatorCenterX = SpectatorLiquidCapsule.m_Rect.x + SpectatorLiquidCapsule.m_Rect.w * 0.5f;
 	const float SpectatorCenterY = SpectatorLiquidCapsule.m_Rect.y + SpectatorLiquidCapsule.m_Rect.h * 0.5f;
@@ -4780,7 +4789,9 @@ void CHud::RenderMediaIsland()
 	const float ScreenPixelSize = std::max(
 		(TransformedScreenX1 - TransformedScreenX0) / std::max(1, Graphics()->ScreenWidth()),
 		(TransformedScreenY1 - TransformedScreenY0) / std::max(1, Graphics()->ScreenHeight()));
-	CurrentSdfState.m_MainRect = MainIslandSdfRect;
+	CurrentSdfState.m_MainRect = ShellPose.ShellRect(MainIslandSdfRect);
+	CurrentSdfState.m_ShellRippleAmplitude = ShellPose.RippleAmplitude(MainIslandSdfRect, ScreenPixelSize) * EntranceContentAlpha;
+	CurrentSdfState.m_ShellRipplePhase = ShellPose.m_RipplePhase;
 	CurrentSdfState.m_MainRadius = EntrancePose.m_Radius;
 	CurrentSdfState.m_MainCorners = HudEditorScope.m_Corners;
 	CurrentSdfState.m_MainDisabledCornerRadius = EntrancePose.m_DisabledCornerRadius;
@@ -4965,7 +4976,12 @@ void CHud::RenderMediaIsland()
 		const float WaveWidth = WaveBarCount * WaveBarWidth + (WaveBarCount - 1) * WaveBarGap;
 		const float WaveX = WaveformSlotX + (WaveformSlotWidth - WaveWidth) * 0.5f;
 		const float WaveCenterY = IslandY + BaseIslandHeight * 0.5f;
-		const float WaveTime = Now / static_cast<float>(time_freq());
+		bool UseVideoClock = false;
+#if defined(CONF_VIDEORECORDER)
+		UseVideoClock = IVideo::Current() != nullptr;
+#endif
+		const int64_t WaveNow = AnimState.m_WaveformClock.Update(Now, time(), UseVideoClock);
+		const float WaveTime = WaveNow / static_cast<float>(time_freq());
 		if(MediaState.m_Playing)
 		{
 			AnimState.m_WaveformWasPlaying = true;
@@ -4975,12 +4991,12 @@ void CHud::RenderMediaIsland()
 		{
 			AnimState.m_WaveformWasPlaying = false;
 			AnimState.m_WaveformSettling = true;
-			AnimState.m_WaveformSettleStartTick = Now;
+			AnimState.m_WaveformSettleStartTick = WaveNow;
 			AnimState.m_WaveformSettleSampleTime = WaveTime;
 		}
 		float WaveSettleElapsed = 0.0f;
-		if(AnimState.m_WaveformSettling && Now >= AnimState.m_WaveformSettleStartTick)
-			WaveSettleElapsed = (Now - AnimState.m_WaveformSettleStartTick) / static_cast<float>(time_freq());
+		if(AnimState.m_WaveformSettling && WaveNow >= AnimState.m_WaveformSettleStartTick)
+			WaveSettleElapsed = (WaveNow - AnimState.m_WaveformSettleStartTick) / static_cast<float>(time_freq());
 		const float WaveSampleTime = AnimState.m_WaveformSettling ? AnimState.m_WaveformSettleSampleTime : WaveTime;
 		const bool WaveMotionEnabled = g_Config.m_QmUiMotionLevel > 0;
 		for(int Bar = 0; Bar < WaveBarCount; ++Bar)
@@ -5104,44 +5120,36 @@ void CHud::RenderMediaIsland()
 		}
 	}
 
+	if(ShowMapProgress)
+	{
+		const int DummyIndex = g_Config.m_ClDummy ? 1 : 0;
+		const bool Preview = GameClient()->m_HudEditor.IsActive();
+		const bool HasProgress = Preview || GameClient()->m_TClient.HasGoresMapProgress(DummyIndex);
+		const float TargetProgress = Preview ? 0.426f : GameClient()->m_TClient.GetGoresMapProgress(DummyIndex);
+		const int ProgressClientId = Preview ? -1 : GameClient()->m_TClient.GetGoresMapProgressClientId(DummyIndex);
+		const float Progress = m_aIslandMapProgress[DummyIndex].Update(HasProgress, TargetProgress, Client()->RenderFrameTime(), ProgressClientId);
+		const float RowY = IslandY + ProgressRows.m_ProgressY;
+		const float RowHeight = std::min(BottomRowLineHeight, std::max(0.0f, IslandY + AnimatedIslandHeight - BottomRowPaddingY - RowY));
+		const float ProgressAlpha = EntranceContentAlpha * (ProgressRows.m_ProgressInHeader ? 1.0f : BottomAlpha);
+		const ColorRGBA ProgressColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmPlayerStatsMapProgressColor, true));
+		QmHudMapProgress::RenderIslandStrip(*Graphics(), *TextRender(), {IslandX, RowY, UnifiedWidth, RowHeight},
+			QmHudMediaIslandDesignScale, HasProgress, Progress, ProgressColor, ProgressAlpha);
+	}
+
 	const float VisibleBottomAlpha = BottomAlpha * EntranceContentAlpha;
 	if(VisibleBottomAlpha > 0.01f && AnimatedIslandHeight > BaseIslandHeight + QmHudMediaIslandScaled(0.5f))
 	{
 		const float BottomRowY = IslandY + BaseIslandHeight;
 		const float DividerInset = std::min(BottomRowDividerInset, UnifiedWidth * 0.25f);
 		const float DividerWidth = std::max(0.0f, UnifiedWidth - DividerInset * 2.0f);
-		if(DividerWidth > 0.0f)
+		if(DividerWidth > 0.0f && !ShowMapProgress)
 		{
 			Graphics()->DrawRect(IslandX + DividerInset, BottomRowY, DividerWidth, QmHudMediaIslandScaled(0.75f), ColorRGBA(1.0f, 1.0f, 1.0f, 0.08f * VisibleBottomAlpha), IGraphics::CORNER_ALL, QmHudMediaIslandScaled(0.375f));
 		}
 
-		float BottomTextY = BottomRowY + BottomRowPaddingY;
+		const float BottomTextY = IslandY + ProgressRows.m_TextY;
 		const float ContentX = IslandX + BottomRowPaddingX;
 		const float ContentWidth = std::max(0.0f, UnifiedWidth - BottomRowPaddingX * 2.0f);
-		if(!AnimState.m_LyricsMarqueeInitialized || QmHudMediaIslandShouldResetMarquee(AnimState.m_aLyricsMarquee, pLyricsIslandBuf))
-		{
-			str_copy(AnimState.m_aLyricsMarquee, pLyricsIslandBuf, sizeof(AnimState.m_aLyricsMarquee));
-			AnimState.m_LyricsMarqueeStartTick = Now;
-			AnimState.m_LyricsMarqueeInitialized = true;
-		}
-		const auto EnableMappedClip = [&](const CUIRect &Rect) {
-			float ScreenX0 = 0.0f;
-			float ScreenY0 = 0.0f;
-			float ScreenX1 = 0.0f;
-			float ScreenY1 = 0.0f;
-			Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-			const float MappedWidth = std::max(0.001f, ScreenX1 - ScreenX0);
-			const float MappedHeight = std::max(0.001f, ScreenY1 - ScreenY0);
-			const float PixelScaleX = Graphics()->ScreenWidth() / MappedWidth;
-			const float PixelScaleY = Graphics()->ScreenHeight() / MappedHeight;
-			const int ClipX0 = std::clamp((int)std::floor((Rect.x - ScreenX0) * PixelScaleX), 0, Graphics()->ScreenWidth());
-			const int ClipY0 = std::clamp((int)std::floor((Rect.y - ScreenY0) * PixelScaleY), 0, Graphics()->ScreenHeight());
-			const int ClipX1 = std::clamp((int)std::ceil((Rect.x + Rect.w - ScreenX0) * PixelScaleX), 0, Graphics()->ScreenWidth());
-			const int ClipY1 = std::clamp((int)std::ceil((Rect.y + Rect.h - ScreenY0) * PixelScaleY), 0, Graphics()->ScreenHeight());
-			if(ClipX1 > ClipX0 && ClipY1 > ClipY0)
-				Graphics()->ClipEnable(ClipX0, ClipY0, ClipX1 - ClipX0, ClipY1 - ClipY0);
-			return ClipX1 > ClipX0 && ClipY1 > ClipY0;
-		};
 		const auto RenderBottomTextBlock = [&](float X, float Y, float MaxWidth, const char *pText, const ColorRGBA &Color, bool AlignRight) {
 			if(pText == nullptr || pText[0] == '\0' || MaxWidth <= 0.0f)
 				return;
@@ -5189,31 +5197,13 @@ void CHud::RenderMediaIsland()
 
 		if(ShowLyricsIslandLine)
 		{
-			const float LyricsRowY = BottomTextY + BottomRowLineHeight * SwapRows.m_LyricsLineIndex;
-			ColorRGBA LyricsTextColor = LyricsIslandColor;
-			LyricsTextColor.a *= VisibleBottomAlpha;
-			if(pLyricsIslandBuf[0] != '\0' && ContentWidth > 0.0f)
-			{
-				float LyricsVisualTop = 0.0f;
-				float LyricsVisualBottom = 0.0f;
-				STextSizeProperties LyricsTextSizeProps{};
-				LyricsTextSizeProps.m_pVisualTop = &LyricsVisualTop;
-				LyricsTextSizeProps.m_pVisualBottom = &LyricsVisualBottom;
-				const float LyricsTextWidth = std::round(TextRender()->TextWidth(LyricsFontSize, pLyricsIslandBuf, -1, -1.0f, 0, LyricsTextSizeProps));
-				const float ElapsedSeconds = AnimState.m_LyricsMarqueeStartTick > 0 && Now >= AnimState.m_LyricsMarqueeStartTick ?
-								     (Now - AnimState.m_LyricsMarqueeStartTick) / (float)time_freq() :
-								     0.0f;
-				const float LyricsOffset = QmHudMediaIslandMarqueeOffset(LyricsTextWidth, ContentWidth, ElapsedSeconds, QmHudMediaIslandScaled(32.0f));
-				const CUIRect LyricsRect = {ContentX, LyricsRowY, ContentWidth, BottomRowLineHeight};
-				const float DrawX = LyricsTextWidth <= ContentWidth ? LyricsRect.x + (LyricsRect.w - LyricsTextWidth) * 0.5f : LyricsRect.x - LyricsOffset;
-				const float DrawY = LyricsRect.y + LyricsRect.h * 0.5f - (LyricsVisualTop + LyricsVisualBottom) * 0.5f;
-				TextRender()->TextColor(LyricsTextColor);
-				if(EnableMappedClip(LyricsRect))
-				{
-					TextRender()->Text(DrawX, DrawY, LyricsFontSize, pLyricsIslandBuf, -1.0f);
-					Graphics()->ClipDisable();
-				}
-			}
+			const char *apRows[] = {pLyricsIslandBuf, m_MediaIslandFrameCache.m_aLyricsTranslation};
+			const int Count = m_MediaIslandFrameCache.m_LyricsRowCount;
+			const float Progress = GameClient()->m_LyricsPresentation.Frame().m_Progress;
+			const CUIRect LyricsRect{ContentX, BottomTextY + BottomRowLineHeight * SwapRows.m_LyricsLineIndex,
+				ContentWidth, BottomRowLineHeight * std::max(1, Count)};
+			QmRenderLyricsRows(*Graphics(), *TextRender(), LyricsRect, apRows, Count, LyricsFontSize,
+				LyricsIslandColor.WithMultipliedAlpha(VisibleBottomAlpha), Progress);
 		}
 	}
 
@@ -5226,6 +5216,11 @@ void CHud::RenderMediaIsland()
 
 void CHud::RenderPlayerState(const int ClientId)
 {
+	CQmPlayerStateHudBounds VisibleBounds;
+	const auto RenderStatusIcon = [&](int QuadOffset, float X, float Y) {
+		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, QuadOffset, X, Y);
+		VisibleBounds.AddRect({X, Y, 12.0f, 12.0f});
+	};
 	Graphics()->SetColor(1.f, 1.f, 1.f, 1.f);
 	const bool FastPracticeParticipant = GameClient()->m_FastPractice.IsPracticeParticipant(ClientId);
 
@@ -5277,6 +5272,7 @@ void CHud::RenderPlayerState(const int ClientId)
 		// render available and used jumps
 		int JumpsOffsetY = ((GameClient()->m_GameInfo.m_HudHealthArmor && g_Config.m_ClShowhudHealthAmmo ? 24 : 0) +
 				    (GameClient()->m_GameInfo.m_HudAmmo && g_Config.m_ClShowhudHealthAmmo ? 12 : 0));
+		VisibleBounds.AddRect({5.0f, 29.0f + JumpsOffsetY, TotalJumpsToDisplay * 12.0f, 12.0f});
 		if(JumpsOffsetY > 0)
 		{
 			Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudAirjump);
@@ -5330,6 +5326,7 @@ void CHud::RenderPlayerState(const int ClientId)
 			Graphics()->QuadsSetRotation(pi * 7 / 4);
 			Graphics()->TextureSet(GameClient()->m_GameSkin.m_aSpritePickupWeapons[Weapon]);
 			Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_aWeaponOffset[Weapon], aWeaponTargetX[Weapon], y);
+			VisibleBounds.AddWeapon(aWeaponTargetX[Weapon], y, m_aWeaponHudSize[Weapon]);
 			Graphics()->QuadsSetRotation(0);
 			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 		}
@@ -5342,6 +5339,7 @@ void CHud::RenderPlayerState(const int ClientId)
 			if(NinjaProgress > 0.0f && GameClient()->m_Snap.m_aCharacters[ClientId].m_HasExtendedDisplayInfo)
 			{
 				RenderNinjaBarPos(x, y - 12, 6.f, 24.f, NinjaProgress);
+				VisibleBounds.AddRect({x, y - 12.0f, 6.0f, 24.0f});
 			}
 		}
 	}
@@ -5365,42 +5363,42 @@ void CHud::RenderPlayerState(const int ClientId)
 	{
 		HasCapabilities = true;
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudEndlessJump);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_EndlessJumpOffset, x, y);
+		RenderStatusIcon(m_EndlessJumpOffset, x, y);
 		x += 12;
 	}
 	if(pCharacter->m_EndlessHook)
 	{
 		HasCapabilities = true;
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudEndlessHook);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_EndlessHookOffset, x, y);
+		RenderStatusIcon(m_EndlessHookOffset, x, y);
 		x += 12;
 	}
 	if(pCharacter->m_Jetpack)
 	{
 		HasCapabilities = true;
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudJetpack);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_JetpackOffset, x, y);
+		RenderStatusIcon(m_JetpackOffset, x, y);
 		x += 12;
 	}
 	if(pCharacter->m_HasTelegunGun && pCharacter->m_aWeapons[WEAPON_GUN].m_Got)
 	{
 		HasCapabilities = true;
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudTeleportGun);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_TeleportGunOffset, x, y);
+		RenderStatusIcon(m_TeleportGunOffset, x, y);
 		x += 12;
 	}
 	if(pCharacter->m_HasTelegunGrenade && pCharacter->m_aWeapons[WEAPON_GRENADE].m_Got)
 	{
 		HasCapabilities = true;
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudTeleportGrenade);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_TeleportGrenadeOffset, x, y);
+		RenderStatusIcon(m_TeleportGrenadeOffset, x, y);
 		x += 12;
 	}
 	if(pCharacter->m_HasTelegunLaser && pCharacter->m_aWeapons[WEAPON_LASER].m_Got)
 	{
 		HasCapabilities = true;
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudTeleportLaser);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_TeleportLaserOffset, x, y);
+		RenderStatusIcon(m_TeleportLaserOffset, x, y);
 	}
 
 	// render prohibited capabilities
@@ -5414,56 +5412,56 @@ void CHud::RenderPlayerState(const int ClientId)
 	{
 		HasProhibitedCapabilities = true;
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudSolo);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_SoloOffset, x, y);
+		RenderStatusIcon(m_SoloOffset, x, y);
 		x += 12;
 	}
 	if(pCharacter->m_CollisionDisabled)
 	{
 		HasProhibitedCapabilities = true;
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudCollisionDisabled);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_CollisionDisabledOffset, x, y);
+		RenderStatusIcon(m_CollisionDisabledOffset, x, y);
 		x += 12;
 	}
 	if(pCharacter->m_HookHitDisabled)
 	{
 		HasProhibitedCapabilities = true;
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudHookHitDisabled);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_HookHitDisabledOffset, x, y);
+		RenderStatusIcon(m_HookHitDisabledOffset, x, y);
 		x += 12;
 	}
 	if(pCharacter->m_HammerHitDisabled)
 	{
 		HasProhibitedCapabilities = true;
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudHammerHitDisabled);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_HammerHitDisabledOffset, x, y);
+		RenderStatusIcon(m_HammerHitDisabledOffset, x, y);
 		x += 12;
 	}
 	if((pCharacter->m_GrenadeHitDisabled && pCharacter->m_HasTelegunGun && pCharacter->m_aWeapons[WEAPON_GUN].m_Got))
 	{
 		HasProhibitedCapabilities = true;
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudGunHitDisabled);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_LaserHitDisabledOffset, x, y);
+		RenderStatusIcon(m_LaserHitDisabledOffset, x, y);
 		x += 12;
 	}
 	if((pCharacter->m_ShotgunHitDisabled && pCharacter->m_aWeapons[WEAPON_SHOTGUN].m_Got))
 	{
 		HasProhibitedCapabilities = true;
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudShotgunHitDisabled);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_ShotgunHitDisabledOffset, x, y);
+		RenderStatusIcon(m_ShotgunHitDisabledOffset, x, y);
 		x += 12;
 	}
 	if((pCharacter->m_GrenadeHitDisabled && pCharacter->m_aWeapons[WEAPON_GRENADE].m_Got))
 	{
 		HasProhibitedCapabilities = true;
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudGrenadeHitDisabled);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_GrenadeHitDisabledOffset, x, y);
+		RenderStatusIcon(m_GrenadeHitDisabledOffset, x, y);
 		x += 12;
 	}
 	if((pCharacter->m_LaserHitDisabled && pCharacter->m_aWeapons[WEAPON_LASER].m_Got))
 	{
 		HasProhibitedCapabilities = true;
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudLaserHitDisabled);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_LaserHitDisabledOffset, x, y);
+		RenderStatusIcon(m_LaserHitDisabledOffset, x, y);
 	}
 
 	// render dummy actions and freeze state
@@ -5475,32 +5473,35 @@ void CHud::RenderPlayerState(const int ClientId)
 	if(GameClient()->m_Snap.m_aCharacters[ClientId].m_HasExtendedDisplayInfo && GameClient()->m_Snap.m_aCharacters[ClientId].m_ExtendedData.m_Flags & CHARACTERFLAG_LOCK_MODE)
 	{
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudLockMode);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_LockModeOffset, x, y);
+		RenderStatusIcon(m_LockModeOffset, x, y);
 		x += 12;
 	}
 	if((GameClient()->m_Snap.m_aCharacters[ClientId].m_HasExtendedDisplayInfo && GameClient()->m_Snap.m_aCharacters[ClientId].m_ExtendedData.m_Flags & CHARACTERFLAG_PRACTICE_MODE) || FastPracticeParticipant)
 	{
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudPracticeMode);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_PracticeModeOffset, x, y);
+		RenderStatusIcon(m_PracticeModeOffset, x, y);
 		x += 12;
 	}
 	if(GameClient()->m_Snap.m_aCharacters[ClientId].m_HasExtendedDisplayInfo && GameClient()->m_Snap.m_aCharacters[ClientId].m_ExtendedData.m_Flags & CHARACTERFLAG_TEAM0_MODE)
 	{
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudTeam0Mode);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_Team0ModeOffset, x, y);
+		RenderStatusIcon(m_Team0ModeOffset, x, y);
 		x += 12;
 	}
 	if(pCharacter->m_DeepFrozen)
 	{
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudDeepFrozen);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_DeepFrozenOffset, x, y);
+		RenderStatusIcon(m_DeepFrozenOffset, x, y);
 		x += 12;
 	}
 	if(pCharacter->m_LiveFrozen)
 	{
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudLiveFrozen);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_LiveFrozenOffset, x, y);
+		RenderStatusIcon(m_LiveFrozenOffset, x, y);
 	}
+
+	// 使用实际绘制范围更新选中、拖动和吸附边界；旧式媒体保留自己的编辑元素。
+	GameClient()->m_HudEditor.UpdateVisibleRect(EHudEditorElement::HudPlayerState, VisibleBounds.Rect());
 }
 
 void CHud::RenderNinjaBarPos(const float x, float y, const float Width, const float Height, float Progress, const float Alpha)
@@ -6020,8 +6021,12 @@ void CHud::RenderKeyStatus()
 	if(Layout.m_H <= 0.0f)
 		return;
 
-	Ui()->RenderGaussianBlur({Layout.m_X, Layout.m_Y, Layout.m_W, Layout.m_H}, 1.0f, IGraphics::CORNER_ALL, ui_token::radius::BASE);
-	Graphics()->DrawRect(Layout.m_X, Layout.m_Y, Layout.m_W, Layout.m_H, ui_token::color::SURFACE_GLASS, IGraphics::CORNER_ALL, ui_token::radius::BASE);
+	const CUIRect KeyStatusRect{Layout.m_X, Layout.m_Y, Layout.m_W, Layout.m_H};
+	Ui()->RenderGaussianBlur(KeyStatusRect, 1.0f, IGraphics::CORNER_ALL, ui_token::radius::BASE);
+	SRoundedSurfaceParams KeyStatusSurface;
+	KeyStatusSurface.m_Radius = ui_token::radius::BASE;
+	KeyStatusSurface.m_Corners = IGraphics::CORNER_ALL;
+	DrawRoundedSurface(Ui(), KeyStatusRect, ui_token::color::SURFACE_GLASS, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), KeyStatusSurface);
 
 	float TextX = Layout.m_X + Layout.m_PaddingX;
 	float TextY = Layout.m_Y + Layout.m_PaddingY;
@@ -6090,7 +6095,7 @@ inline float CHud::GetMovementInformationBoxHeight()
 	if(g_Config.m_QmPlayerStatsHud)
 	{
 		BoxHeight += 3.0f * MOVEMENT_INFORMATION_LINE_HEIGHT;
-		if(g_Config.m_QmPlayerStatsMapProgressStyle != 0 && GameClient()->m_TClient.IsGoresMapProgressEnabled())
+		if(MapProgressSurface() == QmHudMapProgress::ESurface::PLAYER_STATS)
 			BoxHeight += 2.0f * MOVEMENT_INFORMATION_LINE_HEIGHT;
 	}
 	if(g_Config.m_ClShowhudPlayerPosition || g_Config.m_ClShowhudPlayerSpeed || g_Config.m_ClShowhudPlayerAngle)
@@ -6443,7 +6448,7 @@ void CHud::RenderMovementInformation()
 				TextRender()->TextColor(TextRender()->DefaultTextColor());
 				y += MOVEMENT_INFORMATION_LINE_HEIGHT;
 
-				if(g_Config.m_QmPlayerStatsMapProgressStyle != 0 && GameClient()->m_TClient.IsGoresMapProgressEnabled())
+				if(MapProgressSurface() == QmHudMapProgress::ESurface::PLAYER_STATS)
 				{
 					const int DummyIndex = g_Config.m_ClDummy ? 1 : 0;
 					const bool HasProgress = GameClient()->m_TClient.HasGoresMapProgress(DummyIndex);
@@ -6602,32 +6607,17 @@ void CHud::RenderProgressBarWithTee(const CUIRect &BarRect, float Progress, cons
 void CHud::RenderMapProgressBar()
 {
 	const bool Preview = GameClient()->m_HudEditor.IsActive();
-	if(GetQmFocusModeDecisions().m_HideMapProgress && !Preview)
-		return;
-	if(!g_Config.m_QmPlayerStatsMapProgress && !Preview)
-		return;
-	if(!GameClient()->m_TClient.IsGoresMapProgressEnabled() && !Preview)
-		return;
-	if(g_Config.m_QmPlayerStatsMapProgressStyle != 0 && g_Config.m_QmPlayerStatsHud)
+	if(MapProgressSurface() != QmHudMapProgress::ESurface::STANDALONE)
 		return;
 
 	const int DummyIndex = g_Config.m_ClDummy ? 1 : 0;
 	const bool HasProgress = Preview || GameClient()->m_TClient.HasGoresMapProgress(DummyIndex);
 	const float TargetProgress = Preview ? 0.426f : (HasProgress ? std::clamp(GameClient()->m_TClient.GetGoresMapProgress(DummyIndex), 0.0f, 1.0f) : 0.0f);
-	const bool ProgressWasInitialized = m_aMapProgressInitialized[DummyIndex];
-	const float PreviousDisplayedProgress = std::clamp(m_aMapProgressDisplayed[DummyIndex], 0.0f, 1.0f);
-	if(!m_aMapProgressInitialized[DummyIndex])
-	{
-		m_aMapProgressDisplayed[DummyIndex] = TargetProgress;
-		m_aMapProgressInitialized[DummyIndex] = true;
-	}
-	else
-	{
-		const float Blend = std::clamp(Client()->RenderFrameTime() * 8.0f, 0.0f, 1.0f);
-		m_aMapProgressDisplayed[DummyIndex] = mix(m_aMapProgressDisplayed[DummyIndex], TargetProgress, Blend);
-	}
-
-	const float DisplayedProgress = std::clamp(m_aMapProgressDisplayed[DummyIndex], 0.0f, 1.0f);
+	const int ProgressClientId = Preview ? -1 : GameClient()->m_TClient.GetGoresMapProgressClientId(DummyIndex);
+	auto &ProgressState = m_aMapProgress[DummyIndex];
+	const bool ProgressWasInitialized = ProgressState.IsTracking(ProgressClientId);
+	const float PreviousDisplayedProgress = ProgressState.Displayed();
+	const float DisplayedProgress = ProgressState.Update(HasProgress, TargetProgress, Client()->RenderFrameTime(), ProgressClientId);
 	const bool ProgressIncreased = ProgressWasInitialized && DisplayedProgress > PreviousDisplayedProgress + 0.000001f;
 	const ColorRGBA ConfiguredColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmPlayerStatsMapProgressColor, true));
 	const ColorRGBA FillColor = ColorRGBA(ConfiguredColor.r, ConfiguredColor.g, ConfiguredColor.b, std::clamp(maximum(ConfiguredColor.a, 0.65f), 0.0f, 1.0f));
@@ -6678,7 +6668,10 @@ void CHud::RenderSpectatorHud()
 
 	// TClient
 	float AdjustedHeight = m_Height - (g_Config.m_QmStatusBar ? g_Config.m_QmStatusBarHeight : 0.0f);
-	float BoundsTop = AdjustedHeight - 15.0f;
+	// 手机：底部还有灵动岛和状态区，观战条往上抬、加高，别贴着屏幕边。
+	// 高度给足，14 的卡片圆角才看得出来（太扁的条会被压成胶囊）。
+	const float SpectatorHudHeight = QmUiMobilePlatform() ? 28.0f : 15.0f;
+	float BoundsTop = AdjustedHeight - SpectatorHudHeight;
 	float BoundsBottom = AdjustedHeight;
 	const bool ShowAutoTag = !GameClient()->m_RankGhost.IsViewModeActive() && Client()->State() != IClient::STATE_DEMOPLAYBACK &&
 				 GameClient()->m_Camera.SpectatingPlayer() &&
@@ -6730,11 +6723,18 @@ void CHud::RenderSpectatorHud()
 	const float SpectatorTextWidth = TextRender()->TextWidth(8.0f, aBuf);
 	const auto Layout = QmSpectatorHudLayout(m_Width, SpectatorTextWidth, ShowAutoTag ? AutoTagWidth + 4.0f : 0.0f);
 	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::SpectatorHud, {Layout.m_Left, BoundsTop, Layout.m_Width, BoundsBottom - BoundsTop});
-	const CUIRect BackgroundRect = {Layout.m_Left, AdjustedHeight - 15.0f, Layout.m_Width, 15.0f};
+	const CUIRect BackgroundRect = {Layout.m_Left, AdjustedHeight - SpectatorHudHeight, Layout.m_Width, SpectatorHudHeight};
 	ColorRGBA BackgroundColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiColor));
 	BackgroundColor.a = std::clamp(g_Config.m_QmUiOpacity / 100.0f, 0.0f, 1.0f);
-	Ui()->RenderGaussianBlur(BackgroundRect, 1.0f, HudEditorScope.m_Corners, ui_token::radius::BASE);
-	Graphics()->DrawRect(BackgroundRect.x, BackgroundRect.y, BackgroundRect.w, BackgroundRect.h, BackgroundColor, HudEditorScope.m_Corners, ui_token::radius::BASE);
+	// 手机：四角都要圆，跟计分板卡片同一档半径；编辑器里贴边时按编辑器给的角。
+	const int SpectatorHudCorners = QmUiMobilePlatform() ? IGraphics::CORNER_ALL : HudEditorScope.m_Corners;
+	Ui()->RenderGaussianBlur(BackgroundRect, 1.0f, SpectatorHudCorners, ui_token::radius::CARD);
+	{
+		SRoundedSurfaceParams SpectatorSurface;
+		SpectatorSurface.m_Radius = ui_token::radius::CARD;
+		SpectatorSurface.m_Corners = SpectatorHudCorners;
+		DrawRoundedSurface(Ui(), BackgroundRect, BackgroundColor, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), SpectatorSurface);
+	}
 	if(Layout.m_TextWidth > 0.0f)
 	{
 		const CUIRect Label{Layout.m_Left + 6.0f, BackgroundRect.y, Layout.m_TextWidth, BackgroundRect.h};
@@ -6778,8 +6778,12 @@ void CHud::RenderLocalTime(float x)
 		char aTimeStr[6];
 		str_timestamp_format(aTimeStr, sizeof(aTimeStr), "%H:%M");
 		const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::LocalTime, {x - 30.0f, 0.0f, 25.0f, 12.5f});
-		Ui()->RenderGaussianBlur({x - 30.0f, 0.0f, 25.0f, 12.5f}, 1.0f, HudEditorScope.m_Corners, ui_token::radius::BASE);
-		Graphics()->DrawRect(x - 30.0f, 0.0f, 25.0f, 12.5f, ui_token::color::SURFACE_GLASS, HudEditorScope.m_Corners, ui_token::radius::BASE);
+		const CUIRect LocalTimeRect{x - 30.0f, 0.0f, 25.0f, 12.5f};
+		Ui()->RenderGaussianBlur(LocalTimeRect, 1.0f, HudEditorScope.m_Corners, ui_token::radius::BASE);
+		SRoundedSurfaceParams LocalTimeSurface;
+		LocalTimeSurface.m_Radius = ui_token::radius::BASE;
+		LocalTimeSurface.m_Corners = HudEditorScope.m_Corners;
+		DrawRoundedSurface(Ui(), LocalTimeRect, ui_token::color::SURFACE_GLASS, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), LocalTimeSurface);
 		TextRender()->Text(x - 25.0f, (12.5f - 5.f) / 2.f, 5.0f, aTimeStr, -1.0f);
 		GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 		return;
@@ -6872,7 +6876,6 @@ float CHud::RenderLegacyMediaInfoAt(float AnchorX, float CenterY)
 		return CenterY;
 	if(!g_Config.m_QmHudIslandUseOriginalStyle || !g_Config.m_QmSmtcShowHud)
 	{
-		m_LegacyMediaLyricState.Reset();
 		return CenterY;
 	}
 	EnsureMediaIslandFrameCache();
@@ -6891,21 +6894,22 @@ float CHud::RenderLegacyMediaInfoAt(float AnchorX, float CenterY)
 	const CSystemMediaControls::SState &MediaState = *pMediaState;
 	const SQmLegacyMediaHudContent Content = QmLegacyMediaHudContent(
 		MediaState.m_aTitle[0] != '\0', MediaState.m_aArtist[0] != '\0',
-		m_MediaIslandFrameCache.m_ShowLyrics, m_MediaIslandFrameCache.m_LyricsActive);
+		!g_Config.m_QmLyricsSeparateIsland && m_MediaIslandFrameCache.m_ShowLyrics,
+		!g_Config.m_QmLyricsSeparateIsland && m_MediaIslandFrameCache.m_LyricsActive, m_MediaIslandFrameCache.m_LyricsRowCount);
 	if(!Content.m_Visible)
 	{
-		m_LegacyMediaLyricState.Reset();
 		return CenterY;
 	}
 	m_LegacyMediaInfoRendered = true;
 
 	const SQmLegacyMediaHudLayout Layout = QmLegacyMediaHudLayout(AnchorX, CenterY, m_Width, m_Height, Content);
 	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::LegacyMediaInfo, Layout.m_Panel);
+	m_LyricsIslandAnchor = QmLyricsHudAnchor(Layout.m_Panel, Layout.m_Panel, HudEditorScope.m_TargetRect);
+	m_LyricsIslandAnchorValid = true;
 	const char *pLyrics = Content.m_ShowLyrics ? m_MediaIslandFrameCache.m_aLyrics : "";
-	const int64_t Now = time_get();
-	m_LegacyMediaLyricState.Update(MediaState, pLyrics, Now);
 	QmRenderLegacyMediaHud(*Ui(), *Graphics(), *TextRender(), MediaState, Content, Layout, pLyrics,
-		m_MediaIslandFrameCache.m_LyricsColor, m_LegacyMediaLyricState.ElapsedSeconds(Now, time_freq()), HudEditorScope.m_Corners);
+		m_MediaIslandFrameCache.m_LyricsColor, GameClient()->m_LyricsPresentation.Frame().m_Progress, HudEditorScope.m_Corners,
+		m_MediaIslandFrameCache.m_aLyricsTranslation);
 	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 	return Layout.m_Panel.y + Layout.m_Panel.h;
 }
@@ -7012,16 +7016,16 @@ void CHud::OnNewSnapshot()
 
 void CHud::OnRender()
 {
-	if(!g_Config.m_QmHudIslandUseOriginalStyle || !g_Config.m_QmSmtcShowHud)
-		m_LegacyMediaLyricState.Reset();
-	if((!QmHudMediaIslandShouldPrepareBackdropBlur(g_Config.m_QmHudIslandBgOpacity, g_Config.m_QmGaussianBlur != 0) || g_Config.m_QmHudIslandUseOriginalStyle || !Graphics()->HasMediaIslandSdf()) &&
-		(m_MediaIslandBlurSource.IsValid() || m_MediaIslandBlurDownsample.IsValid() || m_MediaIslandBlurDownsampleTemporary.IsValid() || m_MediaIslandBlurDownsampleTarget.IsValid() || m_MediaIslandBlurTarget.IsValid()))
-		DestroyMediaIslandBlurTargets();
-
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		return;
 
 	if(!GameClient()->m_Snap.m_pGameInfoObj)
+		return;
+
+	// 合影超采样静帧：抓帧那一帧整块 HUD 都不画，成片只留世界与名字牌。
+	// 开关是 IClient::PoseCaptureActive（只在抓帧的几帧为真），状态栏与聊天
+	// 在各自组件的 OnRender 里用同一个开关收掉。
+	if(Client()->PoseCaptureActive())
 		return;
 
 	m_Width = 300.0f * Graphics()->ScreenAspect();
@@ -7029,11 +7033,14 @@ void CHud::OnRender()
 	Graphics()->MapScreen(0.0f, 0.0f, m_Width, m_Height);
 	m_MovementInfoBoxValid = false;
 	m_LegacyMediaInfoRendered = false;
+	m_LyricsIslandAnchorValid = false;
 	UpdateSwitchCountdownTracker();
 	UpdateHookCountdownTracker();
 	const bool ShowMediaIsland = HasVisibleMediaIsland();
 	if(!ShowMediaIsland)
 	{
+		for(auto &Progress : m_aIslandMapProgress)
+			Progress.Reset();
 		RelaxMediaIslandEntranceSprings(GameClient()->UiRuntimeV2()->AnimRuntime());
 		m_MediaIslandAnimState.Reset();
 		m_MediaIslandLastVisibleRectValid = false;
@@ -7045,12 +7052,14 @@ void CHud::OnRender()
 	const bool VideoRendering = false;
 #endif
 	// 回放/导出走独立显示选项；其余情况沿用 cl_showhud / cl_video_showhud。
-	const bool MainHudVisible = qm_demo_display::Resolve(g_Config, Client()->State() == IClient::STATE_DEMOPLAYBACK || GameClient()->m_RankGhost.IsViewModeActive(), VideoRendering).m_Hud;
-	const bool FocusSpectatorHudVisible = ShouldRenderFocusSpectatorHud(
-		GameClient()->m_Snap.m_SpecInfo.m_Active,
-		g_Config.m_ClShowhudSpectator != 0,
-		MainHudVisible,
-		GetQmFocusModeDecisions().m_HideHud);
+	const auto DisplaySettings = qm_demo_display::Resolve(g_Config, Client()->State() == IClient::STATE_DEMOPLAYBACK || GameClient()->m_RankGhost.IsViewModeActive(), VideoRendering);
+	const bool MainHudVisible = DisplaySettings.m_Hud;
+	const bool RenderDemoOnly = DisplaySettings.m_RenderDemoOnly;
+	const bool FocusSpectatorHudVisible = !RenderDemoOnly && ShouldRenderFocusSpectatorHud(
+									 GameClient()->m_Snap.m_SpecInfo.m_Active,
+									 g_Config.m_ClShowhudSpectator != 0,
+									 MainHudVisible,
+									 GetQmFocusModeDecisions().m_HideHud);
 	const bool LocalCharacterHudVisible = !GameClient()->m_RankGhost.IsViewModeActive() && GameClient()->m_Snap.m_pLocalCharacter &&
 					      !GameClient()->m_Snap.m_SpecInfo.m_Active &&
 					      !(GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_GAMEOVER);
@@ -7138,6 +7147,7 @@ void CHud::OnRender()
 			RenderLocalTime((m_Width / 7) * 3);
 			RenderLegacyMediaInfo();
 		}
+		RenderLyricsIsland();
 		if(LocalCharacterHudVisible || GameClient()->m_RankGhost.IsViewModeActive())
 			RenderDDRaceEffects();
 		RenderGoresDrownBoard();
@@ -7152,8 +7162,11 @@ void CHud::OnRender()
 	{
 		RenderSpectatorHud();
 	}
-	GameClient()->m_Voice.RenderOverlay();
-	RenderCursor();
+	if(!RenderDemoOnly)
+	{
+		GameClient()->m_Voice.RenderOverlay();
+		RenderCursor();
+	}
 }
 
 void CHud::OnMessage(int MsgType, void *pRawMsg)
@@ -7479,7 +7492,12 @@ void CHud::RenderGoresDrownBoard()
 	Ui()->RenderGaussianBlur(BoardRect, 1.0f, HudEditorScope.m_Corners, ui_token::radius::BASE);
 	ColorRGBA BackgroundColor = ui_token::color::SURFACE_GLASS;
 	BackgroundColor.a *= RenderAlpha;
-	Graphics()->DrawRect(BoardX, BoardY, BoardWidth, BoardHeight, BackgroundColor, HudEditorScope.m_Corners, ui_token::radius::BASE);
+	{
+		SRoundedSurfaceParams BoardSurface;
+		BoardSurface.m_Radius = ui_token::radius::BASE;
+		BoardSurface.m_Corners = HudEditorScope.m_Corners;
+		DrawRoundedSurface(Ui(), BoardRect, BackgroundColor, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), BoardSurface);
+	}
 
 	const ColorRGBA PreviousTextColor = TextRender()->GetTextColor();
 	const ColorRGBA PreviousOutlineColor = TextRender()->GetTextOutlineColor();
@@ -7589,4 +7607,25 @@ void CHud::RenderRecord()
 			TextRender()->Text(53, 82, 6, aBuf, -1.0f);
 		}
 	}
+}
+
+void CHud::RenderLyricsIsland()
+{
+	if(!g_Config.m_QmLyricsSeparateIsland || !g_Config.m_QmLyrics || !g_Config.m_QmLyricsInMediaIsland ||
+		(g_Config.m_QmLyricsIslandFollowWidth && !m_LyricsIslandAnchorValid))
+		return;
+	const auto &Lyrics = GameClient()->m_LyricsPresentation.Frame();
+	int Count = Lyrics.m_RowCount;
+	const char *apRows[] = {Lyrics.m_aaRows[0], Lyrics.m_aaRows[1]};
+	if(Count == 0 && !Lyrics.m_Active)
+	{
+		if(!GameClient()->m_HudEditor.IsActive())
+			return;
+		apRows[0] = g_Config.m_QmLyricsLanguage == 1 ? Localize("Lyrics translation") : Localize("Lyrics");
+		apRows[1] = Localize("Lyrics translation");
+		Count = g_Config.m_QmLyricsLanguage == 2 ? 2 : 1;
+	}
+	const CUIRect Anchor = m_LyricsIslandAnchorValid ? m_LyricsIslandAnchor : CUIRect{m_Width * 0.5f - 52.5f, 5.0f, 105.0f, 11.2f};
+	QmRenderLyricsIsland(*Graphics(), *TextRender(), GameClient()->m_HudEditor, Anchor, m_Width, m_Height,
+		apRows, Count, Lyrics.m_Progress, MediaIslandBlurBackdrop());
 }

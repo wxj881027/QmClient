@@ -405,6 +405,22 @@ SSettingsCardHeightAnimationWork ResolveSettingsCardHeightAnimationWork(const bo
 	return Work;
 }
 
+float SettingsCardContentHeightStepSeconds(const float FrameDt, const float Duration)
+{
+	if(!std::isfinite(FrameDt) || FrameDt <= 0.0f || Duration <= 0.0f)
+		return 0.0f;
+	return std::min(FrameDt, Duration * SETTINGS_CARD_CONTENT_HEIGHT_MAX_STEP_FRACTION);
+}
+
+float SettingsCardContentHeightProgress(const float Elapsed, const float Duration)
+{
+	if(Duration <= 0.0f)
+		return 1.0f;
+	const float Clamped = std::clamp(Elapsed / Duration, 0.0f, 1.0f);
+	const float OneMinusT = 1.0f - Clamped;
+	return 1.0f - OneMinusT * OneMinusT * OneMinusT * OneMinusT;
+}
+
 bool SettingsCardDeckShouldClipContent(const bool HasRenderableContent, const bool ContentHeightAnimationActive)
 {
 	return HasRenderableContent && ContentHeightAnimationActive;

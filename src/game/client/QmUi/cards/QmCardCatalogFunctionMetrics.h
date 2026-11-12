@@ -41,7 +41,7 @@ namespace qm_card_catalog
 		// 不加标注翻译提取脚本就看不到这些 source key，语言文件会整行退回英文。
 		// IME 设置已移到独立卡片；本表只保留小功能卡片自己的开关。
 		// 本地差异：远程此表含 g_Config.m_QmProcessHighPriority（"High process priority"），
-		// 该项为本地既定不吸收（本地合同测试断言其不存在），故整行删除且表长保持为实际的 10 项。
+		// 该项为本地既定不吸收（本地合同测试断言其不存在），故整行删除且表长保持为实际行数。
 		static const std::array<SQmMiniFeatureRow, 10> s_aRows = {{
 			{&g_Config.m_QmClientShowBadge, Localizable("Show Qm badge"), &g_Config.m_QmClientShowBadge},
 			{&g_Config.m_QmAutoUpdate, Localizable("Automatic updates"), &g_Config.m_QmAutoUpdate},

@@ -3,6 +3,7 @@
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_QMCLIENT_H
 
 #include "ddnet_player_stats_state.h"
+#include "map_tags.h"
 #include "markdown_cache_writer.h"
 #include "qm_developer_badge.h"
 #include "qm_markdown_broadcast.h"
@@ -46,7 +47,7 @@ struct SQmClientDdnetPlayerStats
 	int64_t m_Points = -1;
 	int64_t m_PointsTotal = -1;
 	// 官方 json2 的 activity[] 逐日 hours_played 求和，即生涯累计游玩小时数。
-	// -1 表示该玩家数据里没有可用的 activity 记录。
+	// 空 activity 为 0；字段缺失或不可用时为 -1。
 	int64_t m_PlaytimeHours = -1;
 	// 官方 hours_played_past_365_days，最近一年游玩小时数，-1 表示缺失。
 	int64_t m_PlaytimeHoursPastYear = -1;
@@ -55,6 +56,7 @@ struct SQmClientDdnetPlayerStats
 class CQmClient : public CComponent
 {
 	std::shared_ptr<IHttpRequest> m_pTitleOperation;
+	int64_t m_TitleProfileRefreshStarted = -1;
 	char m_aTitleToken[65] = "";
 	char m_aTitleText[64] = "";
 	char m_aTitleBoundName[64] = "";
@@ -264,6 +266,7 @@ public:
 	ESponsorsStatus QmSponsorsStatus() const { return m_QmSponsorsStatus; }
 	int QmSponsorsRevision() const { return m_QmSponsors.Revision() + m_QmSponsorsStatusRevision; }
 	bool QmSponsorsPublishing() const { return m_pQmSponsorsPublishTask != nullptr; }
+	QmMapTags::CClient m_MapTags;
 	bool HasDeveloperCredential() const { return m_aQmDeveloperToken[0] != '\0'; }
 	void QmSponsorsRefresh();
 	void QmSponsorsReloadDraft();
@@ -271,7 +274,7 @@ public:
 	void RedeemTitleCode(const char *pCode);
 	void SaveTitleProfile(const char *pTitle, const char *pBoundName, const char *pStyle, EQmSponsorChatStyle ChatStyle, const SQmTitleAppearance &Appearance);
 	void RefreshTitleProfile();
-	bool TitleBusy() const { return m_pTitleOperation != nullptr; }
+	bool TitleBusy() const { return m_pTitleOperation != nullptr || m_TitleProfileRefreshStarted >= 0; }
 	bool TitleAuthenticated() const { return m_TitleAuthenticated; }
 	const char *TitleStatus() const { return m_pTitleStatus; }
 	const char *TitleText() const { return m_aTitleText; }

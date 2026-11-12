@@ -5,6 +5,7 @@
 
 #include <base/log.h>
 #include <base/math.h>
+#include <base/perf_timer.h>
 #include <base/system.h>
 
 #include <engine/config.h>
@@ -1438,11 +1439,21 @@ void CSkins::OnShutdown()
 
 void CSkins::OnUpdate()
 {
+	const bool PerfEnabled = QmPerfEnabled();
+	CPerfTimer StageTimer(PerfEnabled);
+	auto LogStage = [&](const char *pStage) {
+		if(!PerfEnabled)
+			return;
+		// 只记录超出帧预算的阶段，区分同步文件操作、回收和终局上传。
+		QmPerfLogStage("perf/skins", pStage, StageTimer.ElapsedMs(), false, Client());
+		StageTimer.Reset();
+	};
 	const std::chrono::nanoseconds Now = time_get_nanoseconds();
 	for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
 	{
 		UpdateSkinQueue(Now, Dummy);
 	}
+	LogStage("skin_queue");
 
 	// Only update skins periodically to reduce FPS impact
 	const std::chrono::nanoseconds MaxTime = std::chrono::milliseconds(std::clamp(round_to_int(Client()->RenderFrameTime() * 50000.0f), 25, 500));
@@ -1451,6 +1462,7 @@ void CSkins::OnUpdate()
 		CSkinLoadingStats Stats;
 		Stats.m_NumLoading = m_NumLoadingSkins;
 		UpdateFinishLoading(Stats, Now, 1ms);
+		LogStage("finish_loading");
 		return;
 	}
 	m_ContainerUpdateTime = Now;
@@ -1463,16 +1475,24 @@ void CSkins::OnUpdate()
 	// Keep player and dummy skin loaded
 	FindContainerOrNullptr(g_Config.m_ClPlayerSkin);
 	FindContainerOrNullptr(g_Config.m_ClDummySkin);
+	LogStage("managed_skins");
 
 	ProcessOfficialSkinIndexRequest();
+	LogStage("official_index");
 	ProcessSkinDirectoryScanJob();
+	LogStage("directory_results");
 	CSkinLoadingStats Stats = LoadingStats();
 	UpdateUnloadSkins(Stats);
+	LogStage("unload_skins");
 	UpdateStartLoading(Stats);
+	LogStage("start_loading");
 	UpdateSkinDownloads(Stats);
+	LogStage("download_results");
 	// 检查间隔不是主线程预算：终局上传使用独立的 1 ms 预算，首个皮肤始终取得进展。
 	UpdateFinishLoading(Stats, time_get_nanoseconds(), 1ms);
+	LogStage("finish_loading");
 	ProcessSkinListPlanJob();
+	LogStage("list_plan_results");
 	CollectUnresolvedSkins();
 	for(const std::string &SkinName : m_vSkinsUnresolvedThisFrame)
 		GameClient()->OnSkinUpdate(SkinName.c_str());
@@ -1480,6 +1500,7 @@ void CSkins::OnUpdate()
 	for(const std::string &SkinName : m_vSkinsTexturesUnloadedThisFrame)
 		GameClient()->OnSkinUpdate(SkinName.c_str());
 	m_vSkinsTexturesUnloadedThisFrame.clear();
+	LogStage("skin_notifications");
 }
 
 void CSkins::OnRender()
@@ -2749,6 +2770,32 @@ void CSkins::PrewarmByNames(const std::vector<std::string> &vNames, bool Immedia
 
 		const_cast<CSkinContainer *>(pContainer)->RequestLoad(Priority);
 	}
+}
+
+bool CSkins::PoseSkinsReady(const std::vector<std::string> &vNames, std::string *pOutPendingName)
+{
+	for(const std::string &Name : vNames)
+	{
+		if(Name.empty())
+			continue;
+		// 预热必须每帧重试：一次请求可能在准入队列里被后续帧挤掉。
+		const CSkinContainer *pContainer = FindContainerOrNullptr(Name.c_str(), true);
+		if(pContainer == nullptr)
+		{
+			// 名字非法（例如被过滤的特殊皮肤名）：CPlayers 同样会回退 default，
+			// 这里也按"已确定不可用"处理，否则会永远等下去。
+			continue;
+		}
+		if(pContainer->Skin() != nullptr)
+			continue;
+		// 终态提前放行，让成片至少和预览保持一致，而不是一直等到超时。
+		if(PoseSkinWaitIsFutile(pContainer->State()))
+			continue;
+		if(pOutPendingName != nullptr)
+			*pOutPendingName = Name;
+		return false;
+	}
+	return true;
 }
 
 bool CSkins::PrewarmPlayerPreviewReady(int Dummy, int MaxEntries, bool ProgressiveListReady)

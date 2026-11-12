@@ -50,6 +50,13 @@ public:
 
 	EError Error() const { return m_Error.load(std::memory_order_acquire); }
 	bool HasError() const { return Error() != EError::NONE; }
+	// 离屏读回路径复用同一错误通道：主线程在读回失败或像素非法时显式置位，
+	// 让 HasError/IsRecording 与窗口路径的错误语义一致（录制会按既有流程停止）。
+	void FailExternal(EError Error)
+	{
+		if(!HasError())
+			Fail(Error);
+	}
 	const char *ErrorDescription() const
 	{
 		switch(Error())

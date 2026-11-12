@@ -67,6 +67,16 @@ namespace
 			m_Selected = ui_widget::CapsuleTabBar(Ctx, 1234, m_aSlots.data(), static_cast<int>(m_aSlots.size()), m_Selected, m_Style);
 			return m_Selected;
 		}
+
+		// 没有选中槽位时的绘制入口：整页切到不属于这组页签的页面就是这种状态。
+		void DrawWithoutActiveSlot()
+		{
+			Graphics().m_vRoundedSubmissions.clear();
+			IUiContext Ctx;
+			Ctx.m_pUi = &m_Ui;
+			Ctx.m_pAnim = &m_Animation;
+			ui_widget::CapsuleTabBarChrome(Ctx, 1234, m_aSlots.data(), static_cast<int>(m_aSlots.size()), -1, m_Style);
+		}
 	};
 }
 
@@ -228,4 +238,47 @@ TEST_F(QmNavigationSelection, SavedListSelectionCanStayAtTopUntilExplicitlyRevea
 	DrawList(45);
 	DrawList(45);
 	EXPECT_GT(List.ScrollOffsetY(), 0.0f);
+}
+
+TEST_F(QmNavigationSelection, HidingActiveSlotFadesIndicatorInPlaceAndBack)
+{
+	// 进到不属于这组页签的页面时滑块不该瞬间消失，而是停在上一次的位置淡出；
+	// 回到这组页签时再从透明淡回来。
+	ASSERT_EQ(Graphics().m_vRoundedSubmissions.size(), 2u);
+	const IGraphics::SRoundedRectSdfParams Initial = Graphics().m_vRoundedSubmissions.back();
+	ASSERT_GT(Initial.m_FillColor.a, 0.9f);
+
+	// 起的是补间轨道：这一帧先提交目标值，下一帧才开始看到变化。
+	Frame({0, 0}, false);
+	DrawWithoutActiveSlot();
+	Frame({0, 0}, false);
+	DrawWithoutActiveSlot();
+	// 中心不动，只是变淡并向中心缩小。
+	ASSERT_EQ(Graphics().m_vRoundedSubmissions.size(), 2u);
+	const IGraphics::SRoundedRectSdfParams Fading = Graphics().m_vRoundedSubmissions.back();
+	EXPECT_LT(Fading.m_FillColor.a, Initial.m_FillColor.a);
+	EXPECT_LT(Fading.m_Rect.z - Fading.m_Rect.x, Initial.m_Rect.z - Initial.m_Rect.x);
+	// 亚像素级余量：滑块位置由弹簧推进，两次采样之间可能还差不到 1px。
+	EXPECT_NEAR((Fading.m_Rect.x + Fading.m_Rect.z) * 0.5f, (Initial.m_Rect.x + Initial.m_Rect.z) * 0.5f, 1.0f);
+
+	// 淡出结束后不再提交滑块，只留容器。
+	for(int Step = 0; Step < 15; ++Step)
+	{
+		Frame({0, 0}, false);
+		DrawWithoutActiveSlot();
+	}
+	EXPECT_EQ(Graphics().m_vRoundedSubmissions.size(), 1u);
+
+	// 重新选中后从透明淡入，落点就是目标槽位。
+	Frame({0, 0}, false);
+	EXPECT_EQ(Draw(), 0);
+	for(int Step = 0; Step < 15; ++Step)
+	{
+		Frame({0, 0}, false);
+		Draw();
+	}
+	ASSERT_EQ(Graphics().m_vRoundedSubmissions.size(), 2u);
+	const IGraphics::SRoundedRectSdfParams Restored = Graphics().m_vRoundedSubmissions.back();
+	EXPECT_GT(Restored.m_FillColor.a, 0.9f);
+	EXPECT_NEAR(Restored.m_Rect.x, m_aSlots[0].x + m_Style.m_IndicatorInset, 0.5f);
 }

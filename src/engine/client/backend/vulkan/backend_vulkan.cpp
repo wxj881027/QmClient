@@ -21,6 +21,7 @@
 #include <engine/shared/video.h>
 #endif
 
+#include <SDL3/SDL_timer.h>
 #include <SDL3/SDL_video.h>
 #include <SDL3/SDL_vulkan.h>
 #include <vulkan/vk_platform.h>
@@ -510,13 +511,21 @@ class CCommandProcessorFragment_Vulkan : public CCommandProcessorFragment_GLBase
 
 	struct SRenderTarget
 	{
+		// 多采样目标：m_Image 是 MSAA 颜色附件，resolve 到 m_ResolveImage；
+		// m_ImageView 始终是可供采样/回读的单采样视图，因此调用方无需区分目标类型。
 		VkImage m_Image = VK_NULL_HANDLE;
 		SMemoryImageBlock<IMAGE_BUFFER_CACHE_ID> m_ImageMem;
 		VkImageView m_ImageView = VK_NULL_HANDLE;
+		VkImageView m_AttachmentImageView = VK_NULL_HANDLE;
+		VkImage m_ResolveImage = VK_NULL_HANDLE;
+		SMemoryImageBlock<IMAGE_BUFFER_CACHE_ID> m_ResolveImageMem;
 		VkFramebuffer m_Framebuffer = VK_NULL_HANDLE;
+		VkFormat m_Format = VK_FORMAT_UNDEFINED;
 		VkImageLayout m_Layout = VK_IMAGE_LAYOUT_UNDEFINED;
+		VkImageLayout m_MSAALayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		uint32_t m_Width = 0;
 		uint32_t m_Height = 0;
+		uint32_t m_SampleCount = 1;
 		std::array<SDeviceDescriptorSet, 2> m_aVKStandardTexturedDescrSets;
 	};
 
@@ -1293,6 +1302,8 @@ private:
 	// 关闭时不创建、不暴露能力；Core 原生管线保持独立可跑。
 	SPipelineContainer m_MediaIslandSdfPipeline;
 	SPipelineContainer m_RoundedRectSdfPipeline;
+	// 圆角容器放图专用变体：片段着色器额外采样一张图片。
+	SPipelineContainer m_RoundedRectSdfTexturePipeline;
 	SPipelineContainer m_ProceduralRingPipeline;
 	bool m_ProceduralRingPipelineValid = false;
 	bool m_ProceduralRingPipelineRequired = false;
@@ -1300,6 +1311,7 @@ private:
 	bool m_GaussianBlurPipelineValid = false;
 	bool m_QmMediaIslandSdfPipelineValid = false;
 	bool m_QmRoundedRectSdfPipelineValid = false;
+	bool m_QmRoundedRectSdfTexturePipelineValid = false;
 	bool m_QmEnhancedSessionDisabled = false;
 	qm_vulkan_ext::EDisableReason m_QmEnhancedDisableReason = qm_vulkan_ext::EDisableReason::NONE;
 
@@ -1320,6 +1332,7 @@ private:
 	VkRenderPass m_VKRenderPassDiscard = VK_NULL_HANDLE;
 	VkRenderPass m_VKRenderPassLoadDiscard = VK_NULL_HANDLE;
 	VkRenderPass m_VKRenderTargetRenderPass = VK_NULL_HANDLE;
+	VkRenderPass m_VKRenderTargetMsaaRenderPass = VK_NULL_HANDLE;
 
 	VkSurfaceFormatKHR m_VKSurfFormat;
 
@@ -1591,11 +1604,13 @@ protected:
 		case VK_SUCCESS:
 			break;
 		case VK_SUBOPTIMAL_KHR:
+			// 只记录，不重建交换链。部分驱动（实测 Android Adreno）会持续返回
+			// SUBOPTIMAL_KHR，若每次呈现都排队重建，交换链会被反复销毁重建，
+			// 帧率掉到个位数并持续发烫。
 			if(IsVerbose())
 			{
-				dbg_msg("vulkan", "queueing swap chain recreation because the current is sub optimal");
+				dbg_msg("vulkan", "swap chain is sub optimal (ignored)");
 			}
-			m_RecreateSwapChain = true;
 			break;
 		default:
 			pCriticalError = "unknown error";
@@ -2897,7 +2912,10 @@ protected:
 
 		bool CaptureSnapshot = m_PresentedSnapshotRequested;
 #if defined(CONF_VIDEORECORDER)
-		CaptureSnapshot = CaptureSnapshot || (IVideo::Current() && IVideo::Current()->IsRecording());
+		// 指针只读一次；此处处于 RunBuffer 处理中（m_pBuffer 非空），主线程的
+		// CVideo::Stop() 被 WaitForIdle 阻塞，录像对象在本帧内不会销毁。
+		const IVideo *pVideo = IVideo::Current();
+		CaptureSnapshot = CaptureSnapshot || (pVideo && pVideo->IsRecording());
 #endif
 		CaptureSnapshot = CaptureSnapshot && (m_VKSurfFormat.format == VK_FORMAT_B8G8R8A8_UNORM || m_VKSurfFormat.format == VK_FORMAT_R8G8B8A8_UNORM);
 		m_PresentedSnapshotRequested = false;
@@ -3732,6 +3750,7 @@ protected:
 			SourceStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
 			DestinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
 		}
+
 		else if(OldLayout == VK_IMAGE_LAYOUT_UNDEFINED && NewLayout == VK_IMAGE_LAYOUT_GENERAL)
 		{
 			Barrier.srcAccessMask = 0;
@@ -4413,7 +4432,24 @@ public:
 		}
 
 #ifdef VK_KHR_portability_enumeration
-		vVKExtensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+		// 这个扩展是 macOS/iOS 上 MoltenVK 需要的，Android 的 Adreno/Mali 驱动并不提供。
+		// 无条件追加会让 vkCreateInstance 返回 VK_ERROR_EXTENSION_NOT_PRESENT，
+		// 整条 Vulkan 路径直接初始化失败（手机上表现为无法初始化 Vulkan）。
+		// 这里只在实际支持时才请求。
+		bool PortabilityEnumerationSupported = false;
+		uint32_t AvailableCount = 0;
+		if(vkEnumerateInstanceExtensionProperties(nullptr, &AvailableCount, nullptr) == VK_SUCCESS && AvailableCount > 0)
+		{
+			std::vector<VkExtensionProperties> vAvailable(AvailableCount);
+			if(vkEnumerateInstanceExtensionProperties(nullptr, &AvailableCount, vAvailable.data()) == VK_SUCCESS)
+			{
+				PortabilityEnumerationSupported = std::any_of(vAvailable.begin(), vAvailable.end(), [](const VkExtensionProperties &Props) {
+					return str_comp(Props.extensionName, VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME) == 0;
+				});
+			}
+		}
+		if(PortabilityEnumerationSupported)
+			vVKExtensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
 #endif
 
 		return true;
@@ -5088,9 +5124,25 @@ public:
 
 	[[nodiscard]] bool CreateSurface(SDL_Window *pWindow)
 	{
-		if(!SDL_Vulkan_CreateSurface(pWindow, m_VKInstance, nullptr, &m_VKPresentSurface))
+		// 安卓的 ANativeWindow 是异步挂到窗口上的：应用刚启动、刚回到前台，或刚
+		// 重建 Activity 时 SDL 还拿不到有效窗口，这里一失败就直接判致命错误会让
+		// 整个客户端弹「Graphics Error」退出。短暂重试几次把这个抖动吃掉。
+		// 冷启动时窗口表面可能要等到应用真正可见才就绪（锁屏、后台启动、动画期间），
+		// 最多等 ~3 秒；这段时间足够覆盖系统把 ANativeWindow 挂上来的抖动。
+		constexpr int MAX_SURFACE_ATTEMPTS = 60;
+		bool Created = false;
+		for(int Attempt = 0; Attempt < MAX_SURFACE_ATTEMPTS && !Created; ++Attempt)
 		{
-			dbg_msg("vulkan", "error from sdl: %s", SDL_GetError());
+			Created = SDL_Vulkan_CreateSurface(pWindow, m_VKInstance, nullptr, &m_VKPresentSurface);
+			if(!Created)
+			{
+				dbg_msg("vulkan", "creating vulkan surface failed (attempt %d): %s", Attempt + 1, SDL_GetError());
+				if(Attempt + 1 < MAX_SURFACE_ATTEMPTS)
+					SDL_Delay(50);
+			}
+		}
+		if(!Created)
+		{
 			SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Creating a vulkan surface for the SDL window failed.");
 			return false;
 		}
@@ -5308,6 +5360,13 @@ public:
 
 	[[nodiscard]] bool CreateSwapChain(VkSwapchainKHR &OldSwapChain)
 	{
+		// 设备或函数指针已失效（窗口销毁后设备被清理、又走到重建 swapchain）时直接失败，
+		// 交给上层报图形错误：继续调用驱动会拿空句柄进 vkGetSwapchainImagesKHR 段错误。
+		if(m_VKDevice == VK_NULL_HANDLE || m_pfnCreateSwapchainKHR == nullptr || m_VKPresentSurface == VK_NULL_HANDLE)
+		{
+			SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Creating the swap chain failed, the Vulkan device or surface is gone.");
+			return false;
+		}
 		VkSurfaceCapabilitiesKHR VKSurfCap;
 		if(!GetSurfaceProperties(VKSurfCap))
 			return false;
@@ -5369,6 +5428,13 @@ public:
 		}
 		else if(SwapchainCreateRes == VK_ERROR_NATIVE_WINDOW_IN_USE_KHR)
 			return false;
+		else if(SwapchainCreateRes != VK_SUCCESS)
+		{
+			// 非致命但也没成功（例如窗口正在重建时的 VK_ERROR_INITIALIZATION_FAILED）：
+			// 句柄仍是空的，继续取图像同样会崩，这里按失败返回。
+			SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Creating the swap chain failed.");
+			return false;
+		}
 
 		return true;
 	}
@@ -5385,6 +5451,11 @@ public:
 
 	[[nodiscard]] bool GetSwapChainImageHandles()
 	{
+		if(m_VKDevice == VK_NULL_HANDLE || m_VKSwapChain == VK_NULL_HANDLE || m_pfnGetSwapchainImagesKHR == nullptr)
+		{
+			SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Could not get swap chain images, the swap chain is gone.");
+			return false;
+		}
 		uint32_t ImgCount = 0;
 		if(m_pfnGetSwapchainImagesKHR(m_VKDevice, m_VKSwapChain, &ImgCount, nullptr) != VK_SUCCESS)
 		{
@@ -5652,9 +5723,12 @@ public:
 		m_VKRenderPassLoadDiscard = VK_NULL_HANDLE;
 		if(m_VKRenderTargetRenderPass != VK_NULL_HANDLE)
 			vkDestroyRenderPass(m_VKDevice, m_VKRenderTargetRenderPass, nullptr);
+		if(m_VKRenderTargetMsaaRenderPass != VK_NULL_HANDLE)
+			vkDestroyRenderPass(m_VKDevice, m_VKRenderTargetMsaaRenderPass, nullptr);
 		m_VKRenderPass = VK_NULL_HANDLE;
 		m_VKRenderPassLoad = VK_NULL_HANDLE;
 		m_VKRenderTargetRenderPass = VK_NULL_HANDLE;
+		m_VKRenderTargetMsaaRenderPass = VK_NULL_HANDLE;
 	}
 
 	[[nodiscard]] bool CreateFramebuffers()
@@ -6423,6 +6497,7 @@ public:
 	[[nodiscard]] bool CreateMediaIslandSdfGraphicsPipeline(const char *pVertName, const char *pFragName);
 
 	[[nodiscard]] bool CreateRoundedRectSdfGraphicsPipeline(const char *pVertName, const char *pFragName);
+	[[nodiscard]] bool CreateRoundedRectSdfTextureGraphicsPipeline(const char *pVertName, const char *pFragName);
 
 	[[nodiscard]] bool CreateProceduralRingGraphicsPipeline(const char *pVertName, const char *pFragName);
 
@@ -6876,6 +6951,7 @@ public:
 
 	int RecreateSwapChain()
 	{
+		const int64_t QmRecreateStart = time_get();
 		m_PresentedSnapshotValid = false;
 		int Ret = 0;
 		VkResult WaitIdleResult = DeviceWaitIdle();
@@ -6914,6 +6990,31 @@ public:
 		if(!m_SwapchainCreated)
 			Ret = InitVulkanSwapChain(OldSwapChain);
 
+		// 安卓切后台回来：ANativeWindow 换了，旧 Surface 已经失效（VK_ERROR_SURFACE_LOST_KHR），
+		// 拿着旧表面怎么重建 swapchain 都不会成功。这里按当前窗口重建 Surface 再试一次，
+		// 否则会一路落到“图形错误”对话框（之前是直接段错误）。
+		if(Ret != 0 && m_pWindow != nullptr && m_VKInstance != VK_NULL_HANDLE && m_VKDevice != VK_NULL_HANDLE)
+		{
+			// 旧 swapchain 可能还挂在失效的 surface 上：先把它真正销毁，再销毁 surface，
+			// 否则既违反 VUID-vkDestroySurfaceKHR-surface-01266，也会让第二次尝试拿到旧句柄。
+			DestroySwapChain(true);
+			DestroySurface();
+			if(CreateSurface(m_pWindow))
+			{
+				if(IsVerbose())
+					dbg_msg("vulkan", "recreating swap chain on a fresh surface.");
+				OldSwapChain = VK_NULL_HANDLE;
+				Ret = InitVulkanSwapChain(OldSwapChain);
+				if(Ret == 0)
+				{
+					// 第一次失败时 InitVulkanSwapChain 已经把 GFX_ERROR_TYPE_INIT 记成致命错误，
+					// 运行期不会再复位；这里重建成功后必须清掉，否则下一条命令直接早退退出进程。
+					ResetInitializationDiagnostics();
+					dbg_msg("vulkan", "swap chain recreated after surface loss, rendering resumed.");
+				}
+			}
+		}
+
 		Ret = ReinitializeQmVulkanFrameResources(Ret, OldSwapChainImageCount != m_SwapChainImageCount, [this] { CleanupVulkan<false>(); }, [this] { return InitVulkan<false>(); });
 		if(Ret != 0)
 		{
@@ -6932,6 +7033,7 @@ public:
 			dbg_msg("vulkan", "recreating swap chain failed.");
 		}
 
+		dbg_msg("gfx/qm", "swapchain_recreate elapsed=%.2fms", (time_get() - QmRecreateStart) * 1000.0 / time_freq());
 		return Ret;
 	}
 
@@ -7478,9 +7580,22 @@ public:
 			return -1;
 		if(!CreateRenderPass(m_VKRenderTargetRenderPass, true, false, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, true, RenderTargetReadbackFormat()))
 			return -1;
+		// 背景层使用与交换链同采样数的离屏目标：世界渲染进 MSAA 附件，render pass
+		// 结束时 resolve 到单采样图像，模糊/合成只读取该图像，文字随后直接写交换链。
+		if(HasMultiSampling() && !CreateRenderPass(m_VKRenderTargetMsaaRenderPass, true, false, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, false, m_VKSurfFormat.format, false))
+			return -1;
+		if(m_pBackendCapabilities != nullptr)
+		{
+			m_pBackendCapabilities->m_RenderTargetMSAA = m_VKRenderTargetMsaaRenderPass != VK_NULL_HANDLE;
+			// Vulkan 的离屏 MSAA 通道目前与交换链同采样数（通道只在窗口开 FSAA 时创建），
+			// 因此离屏目标上限 = 当前交换链采样数；窗口不开 FSAA 时离屏多采样不可用。
+			m_pBackendCapabilities->m_RenderTargetMaxSamples = m_VKRenderTargetMsaaRenderPass != VK_NULL_HANDLE ? (int)GetSampleCount() : 1;
+		}
 
 		if(!CreateFramebuffers())
 			return -1;
+
+		log_info("vulkan", "swapchain fsaa requested=%u selected=%u multisample=%d", (uint32_t)g_Config.m_GfxFsaaSamples, (uint32_t)GetSampleCount(), HasMultiSampling() ? 1 : 0);
 
 		if(!CreateStandardGraphicsPipeline("shader/vulkan/prim.vert.spv", "shader/vulkan/prim.frag.spv", false, false))
 			return -1;
@@ -8297,6 +8412,9 @@ public:
 
 	VkResult DeviceWaitIdle()
 	{
+		// 设备已被销毁时不能再进驱动，按设备丢失处理，让上层走重建/报错路径。
+		if(m_VKDevice == VK_NULL_HANDLE)
+			return VK_ERROR_DEVICE_LOST;
 		const auto StartTime = m_FrameProfilingActive ? time_get_nanoseconds() : 0ns;
 		VkResult Result = vkDeviceWaitIdle(m_VKDevice);
 		if(m_FrameProfilingActive)
@@ -8460,6 +8578,7 @@ public:
 		pCommand->m_pCapabilities->m_ProceduralRing.store(false, std::memory_order_release);
 		pCommand->m_pCapabilities->m_RenderTargetGaussianBlur = false;
 		pCommand->m_pCapabilities->m_BackbufferCapture = false;
+		pCommand->m_pCapabilities->m_RenderTargetMSAA = false;
 		// 交换链通道结束时已 resolve，捕获读取单采样交换链；离屏管线也独立使用单采样。
 		pCommand->m_pCapabilities->m_RenderTargetExternalPassRequiresSingleSample = false;
 		pCommand->m_pCapabilities->m_TileBuffering = true;

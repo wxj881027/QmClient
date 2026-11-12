@@ -245,6 +245,20 @@ TEST(Skins, LoadingStatsRealInflightExcludesBackgroundRequested)
 	EXPECT_TRUE(Stats.AdmissionInvariantViolated(17));
 }
 
+// 合影皮肤闸门：只有终态才算"等下去没意义"，其余状态都还必须继续等。
+// 这条分派错了会表现为两种真实故障——把可恢复状态当终态（成片用到 default），
+// 或把终态当可恢复（渲染被拖到超时）。
+TEST(Skins, PoseSkinWaitIsOnlyFutileForTerminalStates)
+{
+	using EState = CSkins::CSkinContainer::EState;
+
+	for(const EState State : {EState::ERROR, EState::NOT_FOUND})
+		EXPECT_TRUE(CSkins::PoseSkinWaitIsFutile(State)) << static_cast<int>(State);
+
+	for(const EState State : {EState::UNLOADED, EState::BACKGROUND_REQUESTED, EState::PENDING, EState::LOADING, EState::LOADED})
+		EXPECT_FALSE(CSkins::PoseSkinWaitIsFutile(State)) << static_cast<int>(State);
+}
+
 TEST(Skins, OfficialSkinReleaseDateParserAcceptsIsoDateOnly)
 {
 	EXPECT_EQ(CSkins::ParseOfficialSkinReleaseDateKey("2026-06-14"), 20260614);

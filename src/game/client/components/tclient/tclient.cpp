@@ -83,26 +83,6 @@ static constexpr int QMCLIENT_COMBO_FREEZE_PARTICLE_COUNT = 14;
 static constexpr float QMCLIENT_COMBO_FREEZE_PARTICLE_RADIUS = 42.0f;
 static constexpr ColorRGBA QMCLIENT_POPUP_ROLL_COLOR_FROM = ColorRGBA(0.0f, 1.0f, 1.0f, 1.0f);
 static constexpr ColorRGBA QMCLIENT_POPUP_ROLL_COLOR_TO = ColorRGBA(1.0f, 0.0f, 1.0f, 1.0f);
-static constexpr const char *s_apKeywordNegationWords[] = {
-	"不",
-	"没",
-	"無",
-	"无",
-	"別",
-	"别",
-	"勿",
-	"莫",
-	"非",
-	"未",
-	"沒",
-};
-static constexpr const char *s_apKeywordClauseContrastWords[] = {
-	"但是",
-	"但",
-	"不过",
-	"然而",
-	"可是",
-};
 // 好友进服默认文案：英文 source key（extract 靠下方 Localize 字面量收录）
 static constexpr const char *s_pFriendEnterBroadcastDefaultText = "%s joined this server";
 static constexpr const char *s_pFriendEnterGreetDefaultText = "Hi!";
@@ -130,9 +110,6 @@ static const char *ResolveFriendEnterLocalizeText(const char *pConfigText, const
 	}
 	return Localize(pConfigText);
 }
-
-static int AutoReplySeparatorLength(const char *pStr);
-static bool AppendAutoReplyRuleBlock(char *pOutRules, size_t OutRulesSize, const char *pRules);
 
 namespace
 {
@@ -219,131 +196,6 @@ namespace
 	}
 }
 
-// NOLINTNEXTLINE(misc-use-internal-linkage)
-struct SKeywordReplyRule
-{
-	std::string m_Keywords;
-	std::string m_Reply;
-	bool m_AutoRename = false;
-	bool m_Regex = false;
-	bool m_HasExplicitRenameFlag = false;
-	bool m_HasExplicitRegexFlag = false;
-};
-
-static char *ParseAutoReplyRulePrefixes(char *pLine, bool &OutAutoRename, bool &OutRegex, bool &OutHasExplicitRenameFlag, bool &OutHasExplicitRegexFlag)
-{
-	OutAutoRename = false;
-	OutRegex = false;
-	OutHasExplicitRenameFlag = false;
-	OutHasExplicitRegexFlag = false;
-
-	char *pTrimmedLine = (char *)str_utf8_skip_whitespaces(pLine);
-	while(true)
-	{
-		const char *pAfterPrefix = str_startswith_nocase(pTrimmedLine, "[rename]");
-		if(!pAfterPrefix)
-			pAfterPrefix = str_startswith_nocase(pTrimmedLine, "[r]");
-		if(pAfterPrefix)
-		{
-			OutAutoRename = true;
-			OutHasExplicitRenameFlag = true;
-			pTrimmedLine = (char *)str_utf8_skip_whitespaces(pAfterPrefix);
-			continue;
-		}
-
-		pAfterPrefix = str_startswith_nocase(pTrimmedLine, "[regex]");
-		if(!pAfterPrefix)
-			pAfterPrefix = str_startswith_nocase(pTrimmedLine, "[re]");
-		if(!pAfterPrefix)
-			pAfterPrefix = str_startswith_nocase(pTrimmedLine, "[rx]");
-		if(pAfterPrefix)
-		{
-			OutRegex = true;
-			OutHasExplicitRegexFlag = true;
-			pTrimmedLine = (char *)str_utf8_skip_whitespaces(pAfterPrefix);
-			continue;
-		}
-
-		break;
-	}
-
-	return pTrimmedLine;
-}
-
-[[maybe_unused]] static void ParseKeywordReplyRules(const char *pRules, std::vector<SKeywordReplyRule> &vOutRules)
-{
-	vOutRules.clear();
-	if(!pRules || pRules[0] == '\0')
-		return;
-
-	const char *pCursor = pRules;
-	while(*pCursor)
-	{
-		char aLine[sizeof(g_Config.m_QmKeywordReplyRules)];
-		int LineLen = 0;
-		while(*pCursor && *pCursor != '\n' && *pCursor != '\r')
-		{
-			if(LineLen < (int)sizeof(aLine) - 1)
-				aLine[LineLen++] = *pCursor;
-			++pCursor;
-		}
-		aLine[LineLen] = '\0';
-
-		while(*pCursor == '\n' || *pCursor == '\r')
-			++pCursor;
-
-		char *pLine = (char *)str_utf8_skip_whitespaces(aLine);
-		str_utf8_trim_right(pLine);
-		if(pLine[0] == '\0' || pLine[0] == '#')
-			continue;
-
-		bool AutoRename = false;
-		bool RegexRule = false;
-		bool HasExplicitRenameFlag = false;
-		bool HasExplicitRegexFlag = false;
-		char *pRuleText = ParseAutoReplyRulePrefixes(pLine, AutoRename, RegexRule, HasExplicitRenameFlag, HasExplicitRegexFlag);
-		const char *pArrowConst = str_find(pRuleText, "=>");
-		if(!pArrowConst)
-			continue;
-
-		char *pArrow = pRuleText + (pArrowConst - pRuleText);
-		*pArrow = '\0';
-		pArrow += 2;
-
-		char *pKeywords = (char *)str_utf8_skip_whitespaces(pRuleText);
-		str_utf8_trim_right(pKeywords);
-		char *pReply = (char *)str_utf8_skip_whitespaces(pArrow);
-		str_utf8_trim_right(pReply);
-		if(pKeywords[0] == '\0' || pReply[0] == '\0')
-			continue;
-
-		vOutRules.push_back({pKeywords, pReply, AutoRename, RegexRule, HasExplicitRenameFlag, HasExplicitRegexFlag});
-	}
-}
-
-[[maybe_unused]] static void BuildKeywordReplyRules(const std::vector<SKeywordReplyRule> &vRules, char *pOutRules, size_t OutRulesSize)
-{
-	if(!pOutRules || OutRulesSize == 0)
-		return;
-
-	pOutRules[0] = '\0';
-	for(const auto &Rule : vRules)
-	{
-		if(Rule.m_Keywords.empty() || Rule.m_Reply.empty())
-			continue;
-
-		if(pOutRules[0] != '\0')
-			str_append(pOutRules, "\n", OutRulesSize);
-		if(Rule.m_AutoRename)
-			str_append(pOutRules, "[rename] ", OutRulesSize);
-		if(Rule.m_Regex)
-			str_append(pOutRules, "[regex] ", OutRulesSize);
-		str_append(pOutRules, Rule.m_Keywords.c_str(), OutRulesSize);
-		str_append(pOutRules, "=>", OutRulesSize);
-		str_append(pOutRules, Rule.m_Reply.c_str(), OutRulesSize);
-	}
-}
-
 static std::string BuildFriendEnterBroadcastText(const char *pTemplate, std::string_view FriendNames)
 {
 	const char *pFormat = pTemplate != nullptr && pTemplate[0] != '\0' ? pTemplate : s_pFriendEnterBroadcastDefaultText;
@@ -381,21 +233,7 @@ static std::string BuildFriendEnterBroadcastText(const char *pTemplate, std::str
 	return Result;
 }
 
-static bool IsHardBlockedForGoresDistanceField(int TileIndex)
-{
-	return TileIndex == TILE_SOLID || TileIndex == TILE_NOHOOK;
-}
-
-static bool IsHardBlockedGoresDistanceFieldIndex(const CTile *pGame, const CTile *pFront, int Index)
-{
-	if(!pGame || Index < 0)
-		return true;
-
-	return IsHardBlockedForGoresDistanceField(pGame[Index].m_Index) ||
-	       (pFront && IsHardBlockedForGoresDistanceField(pFront[Index].m_Index));
-}
-
-static bool IsGoresDistanceFieldTileStandable(const CCollision *pCollision, const CTile *pGame, const CTile *pFront, int Index)
+static bool HasGoresTeeClearance(const CCollision *pCollision, const CTile *pGame, const CTile *pFront, int Index)
 {
 	if(!pCollision || !pGame || Index < 0)
 		return false;
@@ -411,55 +249,19 @@ static bool IsGoresDistanceFieldTileStandable(const CCollision *pCollision, cons
 	for(const vec2 SampleOffset : aSamples)
 	{
 		const int SampleIndex = pCollision->GetPureMapIndex(Pos + SampleOffset);
-		if(IsHardBlockedGoresDistanceFieldIndex(pGame, pFront, SampleIndex))
+		if(QmMapProgress::IsSolidGround(pGame[SampleIndex].m_Index, pFront ? pFront[SampleIndex].m_Index : TILE_AIR))
 			return false;
 	}
 	return true;
 }
 
-static int GoresDistanceFieldMoveBlockMask(int FromIndex, int ToIndex, int Width)
-{
-	if(Width <= 0)
-		return 0;
-	if(ToIndex == FromIndex + 1)
-		return CANTMOVE_RIGHT;
-	if(ToIndex == FromIndex - 1)
-		return CANTMOVE_LEFT;
-	if(ToIndex == FromIndex + Width)
-		return CANTMOVE_DOWN;
-	if(ToIndex == FromIndex - Width)
-		return CANTMOVE_UP;
-	return 0;
-}
-
-static bool IsGoresDistanceFieldStepAllowed(const CCollision *pCollision, int FromIndex, int ToIndex, int Width)
-{
-	const int BlockMask = GoresDistanceFieldMoveBlockMask(FromIndex, ToIndex, Width);
-	if(!pCollision || BlockMask == 0)
-		return false;
-
-	const int Restrictions = pCollision->GetMoveRestrictions(nullptr, nullptr, pCollision->GetPos(FromIndex), 18.0f, FromIndex);
-	return (Restrictions & BlockMask) == 0;
-}
-
-static bool IsPenaltyTileForGoresDistanceField(int TileIndex)
-{
-	return TileIndex == TILE_DEATH || TileIndex == TILE_FREEZE || TileIndex == TILE_DFREEZE || TileIndex == TILE_LFREEZE;
-}
-
-static bool IsRewardTileForGoresDistanceField(int TileIndex)
-{
-	return TileIndex == TILE_UNFREEZE || TileIndex == TILE_DUNFREEZE || TileIndex == TILE_LUNFREEZE;
-}
-
 // NOLINTNEXTLINE(misc-use-internal-linkage)
-enum EGoresCMapValue
+enum EGoresRouteTileFlags
 {
-	GORES_CMAP_NORMAL = 0,
-	GORES_CMAP_BLOCKED = 1,
-	GORES_CMAP_TELEPORT = 2,
-	GORES_CMAP_PENALTY = 3,
-	GORES_CMAP_REWARD = 4,
+	GORES_ROUTE_BLOCKED = 1 << 0,
+	GORES_ROUTE_WATER = 1 << 1,
+	GORES_ROUTE_NEAR_DEATH = 1 << 2,
+	GORES_ROUTE_SUPPORTED = 1 << 3,
 };
 
 static bool IsPlayerTeleportInputTileForGoresDistanceField(int TeleType)
@@ -473,42 +275,10 @@ static bool IsDirectTeleportInputTileForGoresDistanceField(int TeleType)
 	return TeleType == TILE_TELEIN || TeleType == TILE_TELEINEVIL;
 }
 
-static unsigned char GoresSemanticImageToCMapValue(const char *pImageName)
+static bool IsGoresWaterImage(const char *pImageName)
 {
-	if(!pImageName || pImageName[0] == '\0')
-		return GORES_CMAP_NORMAL;
-
-	// Gores visual semantics:
-	//   sun        -> unfreeze/reward
-	//   blackwater -> deep freeze/penalty
-	//   water      -> freeze/penalty
-	if(str_find_nocase(pImageName, "sun") != nullptr)
-		return GORES_CMAP_REWARD;
-
-	if(str_find_nocase(pImageName, "blackwater") != nullptr ||
-		str_find_nocase(pImageName, "darkwater") != nullptr ||
-		str_find_nocase(pImageName, "black_water") != nullptr ||
-		str_find_nocase(pImageName, "dark_water") != nullptr ||
-		str_find_nocase(pImageName, "water") != nullptr)
-		return GORES_CMAP_PENALTY;
-
-	return GORES_CMAP_NORMAL;
-}
-
-static int GoresDistanceFieldTraversalCost(unsigned char CMapValue, bool IsStart, bool IsFinish)
-{
-	static constexpr int NORMAL_COST = 100;
-	static constexpr int PENALTY_COST = 4500;
-	static constexpr int REWARD_COST = 70;
-
-	if(IsStart || IsFinish)
-		return NORMAL_COST;
-
-	if(CMapValue == GORES_CMAP_PENALTY)
-		return PENALTY_COST;
-	if(CMapValue == GORES_CMAP_REWARD)
-		return REWARD_COST;
-	return NORMAL_COST;
+	// Gores 地图中的黑水和普通水图集都含有 water。
+	return pImageName && !str_find_nocase(pImageName, "sun") && str_find_nocase(pImageName, "water");
 }
 
 CTClient::CTClient()
@@ -650,13 +420,10 @@ static bool LineShouldHighlight(const char *pLine, const char *pName)
 
 bool CTClient::SendNonDuplicateMessage(int Team, const char *pLine)
 {
-	if(str_comp(pLine, m_PreviousOwnMessage) != 0)
-	{
-		GameClient()->m_Chat.SendChat(Team, pLine);
-		return true;
-	}
+	if(str_comp(pLine, m_PreviousOwnMessage) == 0 || !GameClient()->m_Chat.SendChat(Team, pLine))
+		return false;
 	str_copy(m_PreviousOwnMessage, pLine);
-	return false;
+	return true;
 }
 
 void CTClient::TryAppendKeywordReplyRenameSuffix(bool UseDummy)
@@ -683,472 +450,6 @@ void CTClient::TryAppendKeywordReplyRenameSuffix(bool UseDummy)
 		GameClient()->SendDummyInfo(false);
 	else
 		GameClient()->SendInfo(false);
-}
-
-static int AutoReplySeparatorLength(const char *pStr)
-{
-	const unsigned char C0 = (unsigned char)pStr[0];
-	if(C0 == ',' || C0 == ';' || C0 == '|' || C0 == '\n' || C0 == '\r')
-		return 1;
-	if(C0 == 0xEF && (unsigned char)pStr[1] == 0xBC)
-	{
-		const unsigned char C2 = (unsigned char)pStr[2];
-		if(C2 == 0x8C || C2 == 0x9B)
-			return 3;
-	}
-	// Full-width vertical bar `｜` (U+FF5C), commonly produced by CJK IMEs.
-	if(C0 == 0xEF && (unsigned char)pStr[1] == 0xBD && (unsigned char)pStr[2] == 0x9C)
-		return 3;
-	return 0;
-}
-
-// NOLINTNEXTLINE(misc-use-internal-linkage)
-enum class EAutoReplyTokenMode
-{
-	Literal,
-	RegexAuto,
-	RegexDelimited,
-};
-
-static const char *FindDelimitedAutoReplyTokenEnd(const char *pTokenStart)
-{
-	if(!pTokenStart || pTokenStart[0] != '/')
-		return nullptr;
-
-	// Keep `/.../` together so regex alternation does not collide with the rule separators.
-	bool Escaped = false;
-	for(const char *pCursor = pTokenStart + 1; *pCursor; ++pCursor)
-	{
-		if(Escaped)
-		{
-			Escaped = false;
-			continue;
-		}
-		if(*pCursor == '\\')
-		{
-			Escaped = true;
-			continue;
-		}
-		if(*pCursor != '/')
-			continue;
-
-		++pCursor;
-		if(*pCursor == 'i' || *pCursor == 'I')
-			++pCursor;
-
-		const char *pAfterWhitespace = str_utf8_skip_whitespaces(pCursor);
-		if(*pAfterWhitespace != '\0' && AutoReplySeparatorLength(pAfterWhitespace) == 0)
-			return nullptr;
-		return pAfterWhitespace;
-	}
-
-	return nullptr;
-}
-
-template<typename F>
-static bool ForEachAutoReplyToken(const char *pText, F &&Fn)
-{
-	if(!pText || pText[0] == '\0')
-		return false;
-
-	const char *pCursor = pText;
-	while(*pCursor)
-	{
-		int SepLen = AutoReplySeparatorLength(pCursor);
-		while(*pCursor && SepLen > 0)
-		{
-			pCursor += SepLen;
-			SepLen = AutoReplySeparatorLength(pCursor);
-		}
-
-		if(*pCursor == '\0')
-			break;
-
-		const char *pTokenStart = pCursor;
-		const char *pTokenEnd = nullptr;
-		const char *pTrimmedStart = str_utf8_skip_whitespaces(pTokenStart);
-		if(*pTrimmedStart == '/')
-			pTokenEnd = FindDelimitedAutoReplyTokenEnd(pTrimmedStart);
-
-		if(!pTokenEnd)
-		{
-			pTokenEnd = pCursor;
-			while(*pTokenEnd && AutoReplySeparatorLength(pTokenEnd) == 0)
-				++pTokenEnd;
-		}
-
-		pCursor = pTokenEnd;
-
-		std::string Token(pTokenStart, pTokenEnd - pTokenStart);
-		char *pMutableToken = Token.data();
-		char *pTrimmedToken = (char *)str_utf8_skip_whitespaces(pMutableToken);
-		str_utf8_trim_right(pTrimmedToken);
-		if(pTrimmedToken[0] == '\0')
-			continue;
-
-		if(Fn(std::string_view(pTrimmedToken)))
-			return true;
-	}
-
-	return false;
-}
-
-static bool IsAutoReplyRegexEscapeMarker(char C)
-{
-	switch(C)
-	{
-	case 'd':
-	case 'D':
-	case 's':
-	case 'S':
-	case 'w':
-	case 'W':
-	case 'b':
-	case 'B':
-	case 'A':
-	case 'Z':
-	case 'z':
-	case 't':
-	case 'n':
-	case 'r':
-	case 'v':
-	case 'f':
-	case '\\':
-	case '.':
-	case '+':
-	case '*':
-	case '?':
-	case '^':
-	case '$':
-	case '|':
-	case '(':
-	case ')':
-	case '[':
-	case ']':
-	case '{':
-	case '}':
-		return true;
-	default:
-		return false;
-	}
-}
-
-static bool LooksLikeAutoReplyRegex(std::string_view Token)
-{
-	if(Token.empty())
-		return false;
-
-	if(Token.front() == '^' || Token.back() == '$')
-		return true;
-
-	if(Token.find(".*") != std::string_view::npos ||
-		Token.find(".+") != std::string_view::npos ||
-		Token.find(".?") != std::string_view::npos)
-	{
-		return true;
-	}
-
-	if(Token.find('[') != std::string_view::npos || Token.find(']') != std::string_view::npos ||
-		Token.find('(') != std::string_view::npos || Token.find(')') != std::string_view::npos ||
-		Token.find('{') != std::string_view::npos || Token.find('}') != std::string_view::npos)
-	{
-		return true;
-	}
-
-	for(size_t i = 0; i + 1 < Token.size(); ++i)
-	{
-		if(Token[i] == '\\' && IsAutoReplyRegexEscapeMarker(Token[i + 1]))
-			return true;
-	}
-
-	return false;
-}
-
-static EAutoReplyTokenMode ParseAutoReplyTokenMode(std::string_view Token, std::string &OutPattern, bool &OutCaseInsensitive)
-{
-	OutPattern.clear();
-	OutCaseInsensitive = true;
-
-	if(Token.size() >= 2 && Token.front() == '/')
-	{
-		bool Escaped = false;
-		for(size_t i = 1; i < Token.size(); ++i)
-		{
-			const char C = Token[i];
-			if(Escaped)
-			{
-				Escaped = false;
-				continue;
-			}
-			if(C == '\\')
-			{
-				Escaped = true;
-				continue;
-			}
-			if(C != '/')
-				continue;
-
-			const std::string_view Flags = Token.substr(i + 1);
-			if(Flags.empty() || Flags == "i" || Flags == "I")
-			{
-				OutPattern.assign(Token.substr(1, i - 1));
-				return EAutoReplyTokenMode::RegexDelimited;
-			}
-			break;
-		}
-	}
-
-	if(LooksLikeAutoReplyRegex(Token))
-	{
-		OutPattern.assign(Token.begin(), Token.end());
-		return EAutoReplyTokenMode::RegexAuto;
-	}
-
-	OutPattern.assign(Token.begin(), Token.end());
-	return EAutoReplyTokenMode::Literal;
-}
-
-static void ParseExplicitAutoReplyRegexPattern(std::string_view PatternText, std::string &OutPattern, bool &OutCaseInsensitive)
-{
-	OutCaseInsensitive = true;
-	if(ParseAutoReplyTokenMode(PatternText, OutPattern, OutCaseInsensitive) == EAutoReplyTokenMode::RegexDelimited)
-		return;
-
-	OutPattern.assign(PatternText.begin(), PatternText.end());
-}
-
-[[maybe_unused]] static bool AppendAutoReplyRuleBlock(char *pOutRules, size_t OutRulesSize, const char *pRules)
-{
-	if(!pOutRules || OutRulesSize == 0 || !pRules || pRules[0] == '\0')
-		return false;
-
-	const size_t CurrentLen = str_length(pOutRules);
-	const size_t RulesLen = str_length(pRules);
-	const size_t SeparatorLen = CurrentLen > 0 && pOutRules[CurrentLen - 1] != '\n' ? 1 : 0;
-	if(CurrentLen + SeparatorLen + RulesLen >= OutRulesSize)
-		return false;
-
-	if(SeparatorLen > 0)
-		str_append(pOutRules, "\n", OutRulesSize);
-
-	str_append(pOutRules, pRules, OutRulesSize);
-	return true;
-}
-
-static bool IsKeywordClauseSeparatorCodepoint(int Codepoint)
-{
-	return Codepoint == '\n' || Codepoint == '\r' ||
-	       Codepoint == ',' || Codepoint == '.' || Codepoint == ';' || Codepoint == ':' || Codepoint == '!' || Codepoint == '?' ||
-	       Codepoint == 0xFF0C || Codepoint == 0x3002 || Codepoint == 0xFF1B || Codepoint == 0xFF1A || Codepoint == 0xFF01 || Codepoint == 0xFF1F;
-}
-
-static const char *FindLastKeywordClauseSeparatorBoundary(const char *pMessageStart, const char *pLimit)
-{
-	const char *pBoundary = pMessageStart;
-	const char *pCursor = pMessageStart;
-	while(*pCursor && pCursor < pLimit)
-	{
-		const char *pCharStart = pCursor;
-		const int Codepoint = str_utf8_decode(&pCursor);
-		if(pCharStart >= pLimit)
-			break;
-		if(IsKeywordClauseSeparatorCodepoint(Codepoint))
-			pBoundary = pCursor;
-	}
-	return pBoundary;
-}
-
-static const char *FindLastKeywordContrastBoundary(const char *pMessageStart, const char *pLimit)
-{
-	const char *pBoundary = pMessageStart;
-	for(const char *pContrast : s_apKeywordClauseContrastWords)
-	{
-		const char *pSearchCursor = pMessageStart;
-		while(pSearchCursor && pSearchCursor < pLimit)
-		{
-			const char *pMatchEnd = nullptr;
-			const char *pMatch = str_utf8_find_nocase(pSearchCursor, pContrast, &pMatchEnd);
-			if(!pMatch || pMatch >= pLimit)
-				break;
-			if(pMatchEnd && pMatchEnd <= pLimit && pMatchEnd > pBoundary)
-				pBoundary = pMatchEnd;
-
-			if(!pMatchEnd || pMatchEnd <= pSearchCursor)
-				break;
-			pSearchCursor = pMatchEnd;
-		}
-	}
-	return pBoundary;
-}
-
-static const char *FindKeywordClauseStart(const char *pMessageStart, const char *pMatchStart)
-{
-	const char *pSeparatorBoundary = FindLastKeywordClauseSeparatorBoundary(pMessageStart, pMatchStart);
-	const char *pContrastBoundary = FindLastKeywordContrastBoundary(pMessageStart, pMatchStart);
-	return pSeparatorBoundary > pContrastBoundary ? pSeparatorBoundary : pContrastBoundary;
-}
-
-static int CountKeywordNegationsInRange(const char *pRangeStart, const char *pRangeEnd)
-{
-	if(!pRangeStart || !pRangeEnd || pRangeEnd <= pRangeStart)
-		return 0;
-
-	int NegationCount = 0;
-	for(const char *pNegationWord : s_apKeywordNegationWords)
-	{
-		const char *pSearchCursor = pRangeStart;
-		while(pSearchCursor && pSearchCursor < pRangeEnd)
-		{
-			const char *pMatchEnd = nullptr;
-			const char *pMatch = str_utf8_find_nocase(pSearchCursor, pNegationWord, &pMatchEnd);
-			if(!pMatch || pMatch >= pRangeEnd)
-				break;
-			if(pMatchEnd && pMatchEnd <= pRangeEnd)
-				++NegationCount;
-
-			if(!pMatchEnd || pMatchEnd <= pSearchCursor)
-				break;
-			pSearchCursor = pMatchEnd;
-		}
-	}
-
-	return NegationCount;
-}
-
-static bool HasPositiveKeywordMatch(const char *pMessage, const char *pToken)
-{
-	const char *pSearchCursor = pMessage;
-	while(*pSearchCursor)
-	{
-		const char *pMatchEnd = nullptr;
-		const char *pMatch = str_utf8_find_nocase(pSearchCursor, pToken, &pMatchEnd);
-		if(!pMatch)
-			return false;
-
-		const char *pClauseStart = FindKeywordClauseStart(pMessage, pMatch);
-		const int NegationCount = CountKeywordNegationsInRange(pClauseStart, pMatch);
-		if((NegationCount % 2) == 0)
-			return true;
-
-		if(!pMatchEnd || pMatchEnd <= pSearchCursor)
-			return false;
-		pSearchCursor = pMatchEnd;
-	}
-	return false;
-}
-
-static bool MatchAutoReplyLiteralToken(const char *pMessage, const char *pToken, bool UseNegationFilter)
-{
-	if(!UseNegationFilter)
-		return str_utf8_find_nocase(pMessage, pToken) != nullptr;
-	return HasPositiveKeywordMatch(pMessage, pToken);
-}
-
-static bool MatchAutoReplyRuleKeywords(const char *pMessage, const char *pKeywords, bool UseNegationFilter, bool ForceRegex)
-{
-	if(ForceRegex)
-	{
-		std::string Pattern;
-		bool CaseInsensitive = true;
-		ParseExplicitAutoReplyRegexPattern(pKeywords, Pattern, CaseInsensitive);
-		Regex Re(Pattern, CaseInsensitive);
-		return Re.error().empty() && Re.test(pMessage);
-	}
-
-	return ForEachAutoReplyToken(pKeywords, [&](std::string_view Token) {
-		std::string Pattern;
-		bool CaseInsensitive = true;
-		const EAutoReplyTokenMode Mode = ParseAutoReplyTokenMode(Token, Pattern, CaseInsensitive);
-		if(Mode != EAutoReplyTokenMode::Literal)
-		{
-			Regex Re(Pattern, CaseInsensitive);
-			if(Re.error().empty())
-				return Re.test(pMessage);
-			if(Mode == EAutoReplyTokenMode::RegexDelimited)
-				return false;
-		}
-
-		std::string TokenString(Token);
-		return MatchAutoReplyLiteralToken(pMessage, TokenString.c_str(), UseNegationFilter);
-	});
-}
-
-static bool MatchAutoReplyRules(const char *pMessage, const char *pRules, char *pOutReply, size_t OutReplySize, bool &OutAutoRename, bool UseNegationFilter)
-{
-	OutAutoRename = false;
-	if(!pRules || pRules[0] == '\0')
-		return false;
-
-	static constexpr int MAX_MATCHED_REPLIES = 32;
-	char aaMatchedReplies[MAX_MATCHED_REPLIES][256];
-	bool aMatchedRenameFlags[MAX_MATCHED_REPLIES] = {};
-	int MatchedReplyCount = 0;
-
-	char aDecodedRules[sizeof(g_Config.m_QmKeywordReplyRules)];
-	QmKeywordReplyRules::DecodeFromConfig(pRules, aDecodedRules, sizeof(aDecodedRules));
-	const char *pCursor = aDecodedRules;
-	while(*pCursor)
-	{
-		char aLine[1024];
-		int LineLen = 0;
-		while(*pCursor && *pCursor != '\n' && *pCursor != '\r')
-		{
-			if(LineLen < (int)sizeof(aLine) - 1)
-				aLine[LineLen++] = *pCursor;
-			pCursor++;
-		}
-		aLine[LineLen] = '\0';
-
-		while(*pCursor == '\n' || *pCursor == '\r')
-			pCursor++;
-
-		char *pLine = (char *)str_utf8_skip_whitespaces(aLine);
-		str_utf8_trim_right(pLine);
-		if(pLine[0] == '\0' || pLine[0] == '#')
-			continue;
-
-		bool AutoRename = false;
-		bool RegexRule = false;
-		bool HasExplicitRenameFlag = false;
-		bool HasExplicitRegexFlag = false;
-		char *pRuleText = ParseAutoReplyRulePrefixes(pLine, AutoRename, RegexRule, HasExplicitRenameFlag, HasExplicitRegexFlag);
-		(void)HasExplicitRenameFlag;
-		(void)HasExplicitRegexFlag;
-
-		const char *pArrowConst = str_find(pRuleText, "=>");
-		if(!pArrowConst)
-			continue;
-		char *pArrow = pRuleText + (pArrowConst - pRuleText);
-		*pArrow = '\0';
-		pArrow += 2;
-
-		char *pKeywords = (char *)str_utf8_skip_whitespaces(pRuleText);
-		str_utf8_trim_right(pKeywords);
-		char *pReply = (char *)str_utf8_skip_whitespaces(pArrow);
-		str_utf8_trim_right(pReply);
-		if(pKeywords[0] == '\0' || pReply[0] == '\0')
-			continue;
-
-		if(MatchAutoReplyRuleKeywords(pMessage, pKeywords, UseNegationFilter, RegexRule))
-		{
-			if(MatchedReplyCount < MAX_MATCHED_REPLIES)
-			{
-				if(!QmKeywordReplyRules::PickReply(pReply, aaMatchedReplies[MatchedReplyCount], sizeof(aaMatchedReplies[MatchedReplyCount]), secure_rand_below))
-					continue;
-				aMatchedRenameFlags[MatchedReplyCount] = AutoRename;
-			}
-			MatchedReplyCount++;
-		}
-	}
-
-	if(MatchedReplyCount <= 0)
-		return false;
-
-	const int StoredReplyCount = MatchedReplyCount < MAX_MATCHED_REPLIES ? MatchedReplyCount : MAX_MATCHED_REPLIES;
-	const int PickedIndex = secure_rand_below(StoredReplyCount);
-	str_copy(pOutReply, aaMatchedReplies[PickedIndex], OutReplySize);
-	OutAutoRename = aMatchedRenameFlags[PickedIndex];
-	return true;
 }
 
 const char *CTClient::CurrentCommunityIdForFinishCheck() const
@@ -1193,6 +494,67 @@ bool CTClient::TryHandleRedPacketAutoClaim(const CNetMsg_Sv_Chat *pMsg)
 	return true;
 }
 
+void CTClient::OnChatMessage(const CNetMsg_Sv_Chat *pMsg, int Connection)
+{
+	if(Client()->State() != IClient::STATE_ONLINE || pMsg == nullptr || pMsg->m_pMessage == nullptr ||
+		pMsg->m_ClientId < 0 || pMsg->m_ClientId >= MAX_CLIENTS)
+		return;
+	const int Sender = pMsg->m_ClientId;
+	const bool OwnMessage = GameClient()->IsLocalClientId(Sender);
+	if(!qm_auto_reply::ShouldHandle(Connection, g_Config.m_ClDummy, pMsg->m_Team, OwnMessage))
+		return;
+	const auto &Player = GameClient()->m_aClients[Sender];
+	if(!Player.m_Active)
+		return;
+	const bool Away = g_Config.m_QmAutoReplyMinimized && m_pGraphics && !m_pGraphics->WindowActive();
+	m_AutoReplySendState.UpdateStatus(g_Config.m_QmAutoReplyMuted != 0, Away);
+	const int64_t Now = time_get();
+	const int64_t Cooldown = (int64_t)maximum(0, g_Config.m_QmAutoReplyCooldown) * time_freq();
+	if(!m_AutoReplySendState.Ready(Now, Cooldown))
+		return;
+	const std::string Identity = std::string(Player.m_aName) + "\t" + Player.m_aClan;
+	const auto Send = [&](int Target, qm_auto_reply::EKind Kind, const std::string &Text) {
+		return m_AutoReplySendState.TrySend(Target, Sender, Identity, Kind, Text, Now, Cooldown, [&] {
+			return GameClient()->m_Chat.SendAutomaticChat(Target, Text.c_str());
+		});
+	};
+
+	if(g_Config.m_QmKeywordReplyEnabled && pMsg->m_Team == 0 && pMsg->m_pMessage[0] != '/' && pMsg->m_pMessage[0] != '\0')
+	{
+		m_KeywordReplyRules.SetConfig(g_Config.m_QmKeywordReplyRules);
+		char aReply[256];
+		bool Rename = false;
+		if(m_KeywordReplyRules.Match(pMsg->m_pMessage, aReply, sizeof(aReply), Rename, secure_rand_below))
+		{
+			const bool UseDummy = g_Config.m_QmKeywordReplyUseDummy && Client()->DummyConnected();
+			if(Send(UseDummy ? IClient::CONN_DUMMY : IClient::CONN_MAIN, qm_auto_reply::EKind::KEYWORD, aReply))
+			{
+				if(Rename)
+					TryAppendKeywordReplyRenameSuffix(UseDummy);
+				return;
+			}
+		}
+	}
+
+	bool Ping = pMsg->m_Team == TEAM_WHISPER_RECV;
+	for(int LocalConnection = 0; LocalConnection < NUM_DUMMIES; ++LocalConnection)
+	{
+		const int LocalId = GameClient()->m_aLocalIds[LocalConnection];
+		if(LocalId >= 0 && LocalId < MAX_CLIENTS && (LocalConnection == 0 || Client()->DummyConnected()))
+			Ping |= LineShouldHighlight(pMsg->m_pMessage, GameClient()->m_aClients[LocalId].m_aName);
+	}
+	if(!Ping)
+		return;
+	const bool Muted = g_Config.m_QmAutoReplyMuted && (Player.m_Foe || Player.m_ChatIgnore);
+	const char *pReply = Muted ? g_Config.m_QmAutoReplyMutedMessage : g_Config.m_QmAutoReplyMinimizedMessage;
+	if((!Muted && !Away) || *str_utf8_skip_whitespaces(pReply) == '\0')
+		return;
+	const std::string Text = pMsg->m_Team == TEAM_WHISPER_RECV || ServerCommandExists("w") ?
+					 qm_auto_reply::Whisper(Player.m_aName, pReply) :
+					 std::string(Player.m_aName) + ": " + pReply;
+	Send(Connection, Muted ? qm_auto_reply::EKind::MUTED : qm_auto_reply::EKind::AWAY, Text);
+}
+
 void CTClient::OnMessage(int MsgType, void *pRawMsg)
 {
 	if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
@@ -1222,6 +584,7 @@ void CTClient::OnMessage(int MsgType, void *pRawMsg)
 
 		if(ClientId < 0)
 		{
+			HandleFriendEnterMessage(ClientId, pMsg->m_Team, pMsg->m_pMessage);
 			return;
 		}
 
@@ -1253,85 +616,6 @@ void CTClient::OnMessage(int MsgType, void *pRawMsg)
 				str_copy(m_aLastChatMessage, pMessage, sizeof(m_aLastChatMessage));
 				m_LastChatTeam = pMsg->m_Team;
 			}
-		}
-
-		const auto TrySendAutoReply = [&](const char *pReply, bool UseDummy) -> bool {
-			if(!pReply || pReply[0] == '\0')
-				return false;
-			int Cooldown = g_Config.m_QmAutoReplyCooldown;
-			if(Cooldown < 0)
-				Cooldown = 0;
-			const int64_t Now = time_get();
-			if(Cooldown > 0 && Now - m_LastAutoReplyTime < (int64_t)Cooldown * time_freq())
-				return false;
-
-			const int TargetConn = UseDummy ? IClient::CONN_DUMMY : IClient::CONN_MAIN;
-			GameClient()->m_Chat.SendChatOnConn(TargetConn, 0, pReply);
-			m_LastAutoReplyTime = Now;
-			return true;
-		};
-
-		bool AutoReplyHandled = false;
-
-		// === 关键词回复 ===
-		if(!AutoReplyHandled && g_Config.m_QmKeywordReplyEnabled && !IsOwnMessage && pMsg->m_Team == 0 && pMsg->m_pMessage != nullptr)
-		{
-			const char *pMessage = pMsg->m_pMessage;
-			if(pMessage[0] != '\0' && pMessage[0] != '/')
-			{
-				char aReply[256] = "";
-				bool AutoRename = false;
-				if(MatchAutoReplyRules(pMessage, g_Config.m_QmKeywordReplyRules, aReply, sizeof(aReply), AutoRename, true))
-				{
-					const bool UseDummy = g_Config.m_QmKeywordReplyUseDummy && Client()->DummyConnected();
-					AutoReplyHandled = TrySendAutoReply(aReply, UseDummy);
-					if(AutoReplyHandled && AutoRename)
-						TryAppendKeywordReplyRenameSuffix(UseDummy);
-				}
-			}
-		}
-
-		bool PingMessage = false;
-
-		bool ValidIds = !(GameClient()->m_aLocalIds[0] < 0 || (GameClient()->Client()->DummyConnected() && GameClient()->m_aLocalIds[1] < 0));
-
-		if(ValidIds && ClientId >= 0 && ClientId != GameClient()->m_aLocalIds[0] && (!GameClient()->Client()->DummyConnected() || ClientId != GameClient()->m_aLocalIds[1]))
-		{
-			PingMessage |= LineShouldHighlight(pMsg->m_pMessage, GameClient()->m_aClients[GameClient()->m_aLocalIds[0]].m_aName);
-			PingMessage |= GameClient()->Client()->DummyConnected() && LineShouldHighlight(pMsg->m_pMessage, GameClient()->m_aClients[GameClient()->m_aLocalIds[1]].m_aName);
-		}
-
-		if(pMsg->m_Team == TEAM_WHISPER_RECV)
-			PingMessage = true;
-
-		if(!PingMessage)
-			return;
-
-		char aPlayerName[MAX_NAME_LENGTH];
-		str_copy(aPlayerName, GameClient()->m_aClients[ClientId].m_aName, sizeof(aPlayerName));
-
-		bool PlayerMuted = GameClient()->m_aClients[ClientId].m_Foe || GameClient()->m_aClients[ClientId].m_ChatIgnore;
-		if(g_Config.m_QmAutoReplyMuted && PlayerMuted)
-		{
-			char aBuf[256];
-			if(pMsg->m_Team == TEAM_WHISPER_RECV || ServerCommandExists("w"))
-				str_format(aBuf, sizeof(aBuf), "/w \"%s\" %s", aPlayerName, g_Config.m_QmAutoReplyMutedMessage);
-			else
-				str_format(aBuf, sizeof(aBuf), "%s: %s", aPlayerName, g_Config.m_QmAutoReplyMutedMessage);
-			SendNonDuplicateMessage(0, aBuf);
-			return;
-		}
-
-		bool WindowActive = m_pGraphics && m_pGraphics->WindowActive();
-		if(g_Config.m_QmAutoReplyMinimized && !WindowActive && m_pGraphics)
-		{
-			char aBuf[256];
-			if(pMsg->m_Team == TEAM_WHISPER_RECV || ServerCommandExists("w"))
-				str_format(aBuf, sizeof(aBuf), "/w \"%s\" %s", aPlayerName, g_Config.m_QmAutoReplyMinimizedMessage);
-			else
-				str_format(aBuf, sizeof(aBuf), "%s: %s", aPlayerName, g_Config.m_QmAutoReplyMinimizedMessage);
-			SendNonDuplicateMessage(0, aBuf);
-			return;
 		}
 	}
 
@@ -1983,6 +1267,7 @@ bool CTClient::ServerCommandExists(const char *pCommand)
 
 void CTClient::OnUpdate()
 {
+	m_AutoReplySendState.UpdateStatus(g_Config.m_QmAutoReplyMuted != 0, g_Config.m_QmAutoReplyMinimized && m_pGraphics && !m_pGraphics->WindowActive());
 	const bool PlayerIdsValid = GameClient()->m_aLocalIds[0] >= 0 && GameClient()->m_aLocalIds[1] >= 0;
 	const int SoloSplitAction = m_SoloSplit.TakeReadyAction(Client()->State() == IClient::STATE_ONLINE, Client()->DummyConnected(), PlayerIdsValid, time_get());
 	if(SoloSplitAction != 0)
@@ -2755,29 +2040,25 @@ void CTClient::CheckFriendOnline()
 void CTClient::ResetFriendEnter()
 {
 	m_FriendEnterTracker.Reset();
-	m_FriendEnterPendingNames.clear();
-	m_FriendEnterPendingSendAt = 0.0f;
-	m_FriendEnterNextCheck = 0.0f;
+	m_FriendEnterPending.Reset();
 }
 
-void CTClient::CheckFriendEnterGreet()
+bool CTClient::SyncFriendEnterSettings()
 {
-	if(Client()->State() != IClient::STATE_ONLINE || !GameClient()->m_Snap.m_pLocalInfo)
+	if(Client()->State() != IClient::STATE_ONLINE)
 	{
 		ResetFriendEnter();
-		return;
+		return false;
 	}
 
 	const bool AutoGreetEnabled = g_Config.m_QmFriendEnterAutoGreet != 0;
 	const bool BroadcastEnabled = g_Config.m_QmFriendEnterBroadcast != 0;
-	const int IgnoreClanSetting = g_Config.m_ClFriendsIgnoreClan;
 	const int EnabledMask = (AutoGreetEnabled ? 1 : 0) | (BroadcastEnabled ? 2 : 0);
 	const uint64_t FriendRevision = GameClient()->Friends()->Revision();
-	if(m_FriendEnterPrevEnabled != EnabledMask || m_FriendEnterPrevIgnoreClan != IgnoreClanSetting ||
-		m_FriendEnterPrevDummy != g_Config.m_ClDummy || m_FriendEnterPrevRevision != FriendRevision)
+	if(m_FriendEnterPrevEnabled != EnabledMask || m_FriendEnterPrevDummy != g_Config.m_ClDummy ||
+		m_FriendEnterPrevRevision != FriendRevision)
 	{
 		m_FriendEnterPrevEnabled = EnabledMask;
-		m_FriendEnterPrevIgnoreClan = IgnoreClanSetting;
 		m_FriendEnterPrevDummy = g_Config.m_ClDummy;
 		m_FriendEnterPrevRevision = FriendRevision;
 		ResetFriendEnter();
@@ -2786,89 +2067,59 @@ void CTClient::CheckFriendEnterGreet()
 	if((!AutoGreetEnabled && !BroadcastEnabled) || GameClient()->Friends()->NumFriends() <= 0)
 	{
 		ResetFriendEnter();
+		return false;
+	}
+	if(!AutoGreetEnabled || g_Config.m_QmFriendEnterGreetText[0] == '\0')
+		m_FriendEnterPending.Reset();
+	return true;
+}
+
+void CTClient::CheckFriendEnterGreet()
+{
+	if(!SyncFriendEnterSettings())
 		return;
-	}
-	if(!AutoGreetEnabled)
-	{
-		m_FriendEnterPendingNames.clear();
-		m_FriendEnterPendingSendAt = 0.0f;
-	}
+	m_FriendEnterPending.TrySend([&](const std::string &Names) {
+		char aMessage[256];
+		str_format(aMessage, sizeof(aMessage), "%s: %s", Names.c_str(),
+			ResolveFriendEnterLocalizeText(g_Config.m_QmFriendEnterGreetText, s_pFriendEnterGreetDefaultText));
+		return GameClient()->m_Chat.SendAutomaticChat(g_Config.m_ClDummy, aMessage);
+	});
+}
 
-	static constexpr float FriendEnterGreetDelaySeconds = 3.0f;
-	const float Now = LocalTime();
-	if(AutoGreetEnabled && !m_FriendEnterPendingNames.empty() && Now >= m_FriendEnterPendingSendAt)
-	{
-		// 空配置表示关闭问候；非空则按当前语言 Localize 后再发送
-		if(g_Config.m_QmFriendEnterGreetText[0] != '\0')
-		{
-			char aMsg[256];
-			aMsg[0] = '\0';
-			str_append(aMsg, m_FriendEnterPendingNames.c_str(), sizeof(aMsg));
-			if(aMsg[0] != '\0')
-				str_append(aMsg, ": ", sizeof(aMsg));
-			str_append(aMsg, ResolveFriendEnterLocalizeText(g_Config.m_QmFriendEnterGreetText, s_pFriendEnterGreetDefaultText), sizeof(aMsg));
-
-			if(aMsg[0] != '\0')
-				GameClient()->m_Chat.SendChat(0, aMsg);
-		}
-		m_FriendEnterPendingNames.clear();
-		m_FriendEnterPendingSendAt = 0.0f;
-	}
-
-	if(Now < m_FriendEnterNextCheck)
-		return;
-	m_FriendEnterNextCheck = Now + 0.2f;
-
-	std::vector<qm_friend_notify::CEnterTracker::CClient> vCurrentClients;
-	vCurrentClients.reserve(MAX_CLIENTS);
-	const int LocalMain = GameClient()->m_aLocalIds[0];
-	const int LocalDummy = GameClient()->m_aLocalIds[1];
-	const bool HasDummy = Client()->DummyConnected();
-
-	for(int ClientId = 0; ClientId < MAX_CLIENTS; ++ClientId)
-	{
-		const auto &Client = GameClient()->m_aClients[ClientId];
-		if(!Client.m_Active)
-			continue;
-		vCurrentClients.push_back({ClientId, Client.m_aName, Client.m_aClan,
-			GameClient()->Friends()->IsFriend(Client.m_aName, Client.m_aClan, true),
-			ClientId == LocalMain || (HasDummy && ClientId == LocalDummy)});
-	}
-	const auto NewFriends = m_FriendEnterTracker.Update(vCurrentClients, Now, IgnoreClanSetting != 0);
-
-	if(NewFriends.empty())
+void CTClient::HandleFriendEnterMessage(int Sender, int Team, const char *pMessage)
+{
+	if(Sender != -1 || Team != 0 || pMessage == nullptr || !SyncFriendEnterSettings())
 		return;
 
-	std::string NewNames;
-	NewNames.reserve(64);
-	for(size_t i = 0; i < NewFriends.size(); ++i)
+	const auto LocalName = [&](int Connection) -> const char * {
+		if(Connection == IClient::CONN_DUMMY && !Client()->DummyConnected())
+			return "";
+		const int LocalId = GameClient()->m_aLocalIds[Connection];
+		if(LocalId >= 0 && LocalId < MAX_CLIENTS && GameClient()->m_aClients[LocalId].m_Active)
+			return GameClient()->m_aClients[LocalId].m_aName;
+		return Connection == IClient::CONN_MAIN ? g_Config.m_PlayerName : g_Config.m_ClDummyName;
+	};
+	const auto Message = m_FriendEnterTracker.OnMessage(Sender, Team, pMessage, *GameClient()->Friends(),
+		LocalName(IClient::CONN_MAIN), LocalName(IClient::CONN_DUMMY));
+	if(Message.m_Event == qm_friend_notify::EPresenceEvent::LEAVE)
 	{
-		if(i > 0)
-			NewNames.push_back(' ');
-		NewNames.append(NewFriends[i]);
+		m_FriendEnterPending.Remove(Message.m_Name);
+		return;
 	}
-
-	if(NewNames.empty())
+	if(Message.m_Event != qm_friend_notify::EPresenceEvent::ENTER)
 		return;
 
-	if(BroadcastEnabled)
+	if(g_Config.m_QmFriendEnterBroadcast)
 	{
-		// 配置默认是英文 source；Localize 后替换 %s 好友名
 		const std::string BroadcastText = BuildFriendEnterBroadcastText(
 			ResolveFriendEnterLocalizeText(g_Config.m_QmFriendEnterBroadcastText, s_pFriendEnterBroadcastDefaultText),
-			NewNames);
+			Message.m_Name);
 		if(!BroadcastText.empty())
 			GameClient()->m_Broadcast.DoBroadcast(BroadcastText.c_str());
 	}
-
-	if(!AutoGreetEnabled || g_Config.m_QmFriendEnterGreetText[0] == '\0')
-		return;
-
-	if(!m_FriendEnterPendingNames.empty())
-		m_FriendEnterPendingNames.push_back(' ');
-	m_FriendEnterPendingNames.append(NewNames);
-	if(m_FriendEnterPendingSendAt <= 0.0f)
-		m_FriendEnterPendingSendAt = Now + FriendEnterGreetDelaySeconds;
+	if(g_Config.m_QmFriendEnterAutoGreet && g_Config.m_QmFriendEnterGreetText[0] != '\0')
+		m_FriendEnterPending.Add(Message.m_Name);
+	CheckFriendEnterGreet();
 }
 
 void CTClient::QueueAspectApply()
@@ -2946,7 +2197,8 @@ void CTClient::OnStateChange(int NewState, int OldState)
 		m_LastRepeatTime = 0;
 		m_LastRepeatKeyPressTime = 0;
 		m_RepeatKeyDown = false;
-		m_LastAutoReplyTime = 0;
+		m_AutoReplySendState.Reset();
+		m_PreviousOwnMessage[0] = '\0';
 		m_RedPacketAutoClaim.Reset();
 		m_FinishTextTimeout = 0.0f;
 		for(int i = 0; i < NUM_DUMMIES; ++i)
@@ -3571,6 +2823,51 @@ bool CTClient::IsGoresMapProgressEnabled() const
 	return IsGoresMapProgressMap() && g_Config.m_QmPlayerStatsMapProgress;
 }
 
+int CTClient::GoresMapProgressClientId(int Slot) const
+{
+	if(Slot < NUM_DUMMIES)
+		return GameClient()->m_aLocalIds[Slot];
+	const auto &Spec = GameClient()->m_Snap.m_SpecInfo;
+	return QmMapProgress::ResolveClientId(-1, Spec.m_Active, Spec.m_SpectatorId);
+}
+
+int CTClient::GoresMapProgressSlot(int Dummy) const
+{
+	const int Idx = std::clamp(Dummy, 0, NUM_DUMMIES - 1);
+	return Idx == g_Config.m_ClDummy && GoresMapProgressClientId(NUM_DUMMIES) >= 0 ? NUM_DUMMIES : Idx;
+}
+
+std::optional<vec2> CTClient::GoresMapProgressPosition(int ClientId) const
+{
+	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
+		return std::nullopt;
+	std::optional<vec2> CharacterPosition;
+	std::optional<vec2> SpecCharacterPosition;
+	std::optional<vec2> SpectatorPosition;
+	const auto &Character = GameClient()->m_Snap.m_aCharacters[ClientId];
+	if(Character.m_Active)
+		CharacterPosition = vec2((float)Character.m_Cur.m_X, (float)Character.m_Cur.m_Y);
+	if(ClientId == GoresMapProgressClientId(NUM_DUMMIES))
+	{
+		const auto &Client = GameClient()->m_aClients[ClientId];
+		if(Client.m_SpecCharPresent)
+			SpecCharacterPosition = Client.m_SpecChar;
+		const auto *pSpectator = GameClient()->m_Snap.m_pSpectatorInfo;
+		// 跟随坐标必须属于当前目标，切换目标时不能沿用上一人的位置。
+		if(pSpectator && pSpectator->m_SpectatorId == ClientId)
+			SpectatorPosition = vec2((float)pSpectator->m_X, (float)pSpectator->m_Y);
+	}
+	return QmMapProgress::ResolvePosition(CharacterPosition, SpecCharacterPosition, SpectatorPosition);
+}
+
+bool CTClient::HasGoresMapProgress(int Dummy) const
+{
+	const int Slot = GoresMapProgressSlot(Dummy);
+	const int ClientId = GoresMapProgressClientId(Slot);
+	return GoresMapProgressPosition(ClientId).has_value() &&
+	       m_aMapProgressClientId[Slot] == ClientId && m_aGoresMapProgressValid[Slot];
+}
+
 bool CTClient::IsGoresMapProgressDebugRouteEnabled() const
 {
 	return IsGoresMapProgressMap() && g_Config.m_QmPlayerStatsMapProgressDbgRoute != 0;
@@ -3584,9 +2881,10 @@ void CTClient::InvalidateGoresDistanceField()
 	m_GoresDistanceFieldNextBuildTryTick = 0;
 	m_GoresDistanceFieldWidth = 0;
 	m_GoresDistanceFieldHeight = 0;
+	m_GoresStartDistanceToFinish = -1;
 	m_vGoresCMap.clear();
-	m_vvGoresDirectTeleOuts.clear();
 	m_vGoresDistanceToFinish.clear();
+	m_vGoresRouteNext.clear();
 	m_GoresRouteStartIndex.Reset();
 	ResetGoresDistanceFieldBuild();
 	for(int i = 0; i < NUM_DUMMIES; ++i)
@@ -3597,6 +2895,8 @@ void CTClient::InvalidateGoresDistanceField()
 		m_aGoresMapProgressValid[i] = false;
 		m_aGoresMapProgress[i] = 0.0f;
 	}
+	m_aGoresMapProgressValid[NUM_DUMMIES] = false;
+	m_aGoresMapProgress[NUM_DUMMIES] = 0.0f;
 }
 
 void CTClient::EnsureGoresDistanceField()
@@ -3641,17 +2941,18 @@ void CTClient::ResetGoresDistanceFieldBuild()
 	m_GoresDistanceFieldBuildLayer = 0;
 	m_GoresDistanceFieldBuildLoadedVisualLayerData = -1;
 	m_GoresDistanceFieldBuildHadStart = false;
-	// 访问位图在本轮构建收尾释放，成功构建的起点索引留给路线消费者。
-	m_GoresDebugRouteVisited.Reset();
 	m_pGoresDistanceFieldBuildMap = nullptr;
 	m_pGoresDistanceFieldBuildGameLayer = nullptr;
 	m_pGoresDistanceFieldBuildFrontLayer = nullptr;
 	m_pGoresDistanceFieldBuildTeleLayer = nullptr;
 	m_GoresDistanceFieldBuildPendingTeleNumber = 0;
 	m_GoresDistanceFieldBuildPendingTeleCursor = 0;
-	m_GoresDistanceFieldBuildPendingTeleDistance = 0;
-	m_vGoresDistanceFieldBuildPassable.clear();
-	m_vGoresDistanceFieldBuildImageSemantics.clear();
+	m_GoresDistanceFieldBuildPendingTeleOut = -1;
+	m_GoresDistanceFieldBuildPendingTeleCost = {};
+	m_aGoresDistanceFieldBuildHasTeleOut.fill(false);
+	m_vGoresDistanceFieldBuildRestrictions.clear();
+	m_GoresDebugRouteVisited.Reset();
+	m_vGoresDistanceFieldBuildWaterImages.clear();
 	m_vGoresDistanceFieldBuildFinishIndices.clear();
 	m_vvGoresDistanceFieldBuildDirectTeleInputs.clear();
 	m_GoresDistanceFieldBuildQueue = {};
@@ -3679,8 +2980,8 @@ void CTClient::StartGoresDistanceFieldBuild()
 	m_GoresDistanceFieldWidth = 0;
 	m_GoresDistanceFieldHeight = 0;
 	m_vGoresCMap.clear();
-	m_vvGoresDirectTeleOuts.clear();
 	m_vGoresDistanceToFinish.clear();
+	m_vGoresRouteNext.clear();
 	m_GoresRouteStartIndex.Reset();
 
 	const CCollision *pCollision = Collision();
@@ -3707,9 +3008,8 @@ void CTClient::StartGoresDistanceFieldBuild()
 	m_pGoresDistanceFieldBuildGameLayer = pGame;
 	m_pGoresDistanceFieldBuildFrontLayer = pFront;
 	m_pGoresDistanceFieldBuildTeleLayer = pTele;
-	m_vGoresCMap.assign((size_t)MapSize, GORES_CMAP_NORMAL);
-	m_vvGoresDirectTeleOuts.clear();
-	m_vGoresDistanceFieldBuildPassable.assign((size_t)MapSize, 0);
+	m_vGoresCMap.assign((size_t)MapSize, 0);
+	m_vGoresDistanceFieldBuildRestrictions.assign((size_t)MapSize, 0);
 	m_vGoresDistanceFieldBuildFinishIndices.reserve(16);
 	m_GoresDistanceFieldBuildMapSize = MapSize;
 	m_GoresDistanceFieldWidth = Width;
@@ -3770,9 +3070,10 @@ void CTClient::FailGoresDistanceFieldBuild()
 	m_GoresDistanceFieldValid = false;
 	m_GoresDistanceFieldWidth = 0;
 	m_GoresDistanceFieldHeight = 0;
+	m_GoresStartDistanceToFinish = -1;
 	m_vGoresCMap.clear();
-	m_vvGoresDirectTeleOuts.clear();
 	m_vGoresDistanceToFinish.clear();
+	m_vGoresRouteNext.clear();
 	m_GoresRouteStartIndex.Reset();
 	ResetGoresDistanceFieldBuild();
 }
@@ -3802,35 +3103,37 @@ void CTClient::StepGoresDistanceFieldTileScan(int Budget)
 	const CTile *pFront = pCollision->FrontLayer();
 	const CTeleTile *pTele = pCollision->TeleLayer();
 	const int MapSize = m_GoresDistanceFieldBuildMapSize;
+	const int Width = m_GoresDistanceFieldWidth;
+	const auto FrontAt = [&](int Index) { return pFront ? pFront[Index].m_Index : TILE_AIR; };
+	const auto IsDeath = [&](int Index) { return pGame[Index].m_Index == TILE_DEATH || FrontAt(Index) == TILE_DEATH; };
 	const int Start = m_GoresDistanceFieldBuildCursor;
 	ConsumeQmBudgetedWork(m_GoresDistanceFieldBuildCursor, MapSize, Budget);
 	for(int Index = Start; Index < m_GoresDistanceFieldBuildCursor; ++Index)
 	{
 		const int Tile = pGame[Index].m_Index;
-		const int FrontTile = pFront ? pFront[Index].m_Index : TILE_AIR;
+		const int FrontTile = FrontAt(Index);
 		// 顺带记录潜在起点（游戏层/前景层同格只记一次），供路线显示按需查询，避免每帧全图扫描。
 		const bool IsStart = m_GoresRouteStartIndex.AddTile(Index, Tile, FrontTile);
 		const bool IsFinish = Tile == TILE_FINISH || FrontTile == TILE_FINISH;
-		const bool HasPenalty = IsPenaltyTileForGoresDistanceField(Tile) || IsPenaltyTileForGoresDistanceField(FrontTile);
-		const bool HasReward = IsRewardTileForGoresDistanceField(Tile) || IsRewardTileForGoresDistanceField(FrontTile);
-		const bool HasTeleport = pTele && pTele[Index].m_Type != 0;
-		const bool HasTeeSpace = IsStart || IsFinish || IsGoresDistanceFieldTileStandable(pCollision, pGame, pFront, Index);
-		const bool IsBlocked = !IsStart && !IsFinish &&
-				       (!HasTeeSpace || IsHardBlockedForGoresDistanceField(Tile) || IsHardBlockedForGoresDistanceField(FrontTile));
-		if(IsStart)
-			m_GoresDistanceFieldBuildHadStart = true;
-		if(IsFinish)
-			m_vGoresDistanceFieldBuildFinishIndices.push_back(Index);
-
-		m_vGoresDistanceFieldBuildPassable[(size_t)Index] = (!IsBlocked || IsStart || IsFinish) ? 1 : 0;
-		if(IsBlocked)
-			m_vGoresCMap[(size_t)Index] = GORES_CMAP_BLOCKED;
-		else if(HasPenalty)
-			m_vGoresCMap[(size_t)Index] = GORES_CMAP_PENALTY;
-		else if(HasReward)
-			m_vGoresCMap[(size_t)Index] = GORES_CMAP_REWARD;
-		else if(HasTeleport)
-			m_vGoresCMap[(size_t)Index] = GORES_CMAP_TELEPORT;
+		unsigned char &Flags = m_vGoresCMap[(size_t)Index];
+		if(IsDeath(Index) || !HasGoresTeeClearance(pCollision, pGame, pFront, Index))
+			Flags |= GORES_ROUTE_BLOCKED;
+		else
+		{
+			if(QmMapProgress::IsWaterTile(Tile) || QmMapProgress::IsWaterTile(FrontTile))
+				Flags |= GORES_ROUTE_WATER;
+			if(QmMapProgress::NearDeathTile(Index, Width, MapSize, IsDeath))
+				Flags |= GORES_ROUTE_NEAR_DEATH;
+			const int Restrictions = pCollision->GetMoveRestrictions(nullptr, nullptr, pCollision->GetPos(Index), 18.0f, Index);
+			m_vGoresDistanceFieldBuildRestrictions[(size_t)Index] = (unsigned char)Restrictions;
+			const bool SolidBelow = Index < MapSize - Width && QmMapProgress::IsSolidGround(pGame[Index + Width].m_Index, FrontAt(Index + Width));
+			if(QmMapProgress::IsSupportedGround((Flags & GORES_ROUTE_WATER) != 0, SolidBelow, Restrictions))
+				Flags |= GORES_ROUTE_SUPPORTED;
+			if(IsStart)
+				m_GoresDistanceFieldBuildHadStart = true;
+			if(IsFinish)
+				m_vGoresDistanceFieldBuildFinishIndices.push_back(Index);
+		}
 
 		if(pTele)
 		{
@@ -3843,11 +3146,7 @@ void CTClient::StepGoresDistanceFieldTileScan(int Budget)
 				m_vvGoresDistanceFieldBuildDirectTeleInputs[(size_t)TeleNumber - 1].push_back(Index);
 			}
 			else if(TeleType == TILE_TELEOUT && TeleNumber > 0)
-			{
-				if((int)m_vvGoresDirectTeleOuts.size() < TeleNumber)
-					m_vvGoresDirectTeleOuts.resize(TeleNumber);
-				m_vvGoresDirectTeleOuts[(size_t)TeleNumber - 1].push_back(Index);
-			}
+				m_aGoresDistanceFieldBuildHasTeleOut[(size_t)TeleNumber] = true;
 		}
 	}
 
@@ -3878,12 +3177,12 @@ void CTClient::StepGoresDistanceFieldVisualLayers(int Budget)
 	{
 		if(IMap *pMap = pLayers->Map())
 		{
-			if(m_vGoresDistanceFieldBuildImageSemantics.empty())
+			if(m_vGoresDistanceFieldBuildWaterImages.empty())
 			{
 				int ImageStart = 0;
 				int ImageCount = 0;
 				pMap->GetType(MAPITEMTYPE_IMAGE, &ImageStart, &ImageCount);
-				m_vGoresDistanceFieldBuildImageSemantics.assign((size_t)maximum(ImageCount, 0), GORES_CMAP_NORMAL);
+				m_vGoresDistanceFieldBuildWaterImages.assign((size_t)maximum(ImageCount, 0), 0);
 				for(int ImageIndex = 0; ImageIndex < ImageCount; ++ImageIndex)
 				{
 					const auto *pImage = static_cast<const CMapItemImage_v2 *>(pMap->GetItem(ImageStart + ImageIndex));
@@ -3891,7 +3190,7 @@ void CTClient::StepGoresDistanceFieldVisualLayers(int Budget)
 						continue;
 
 					const char *pImageName = pMap->GetDataString(pImage->m_ImageName);
-					m_vGoresDistanceFieldBuildImageSemantics[(size_t)ImageIndex] = GoresSemanticImageToCMapValue(pImageName);
+					m_vGoresDistanceFieldBuildWaterImages[(size_t)ImageIndex] = IsGoresWaterImage(pImageName);
 					pMap->UnloadData(pImage->m_ImageName);
 				}
 			}
@@ -3914,11 +3213,10 @@ void CTClient::StepGoresDistanceFieldVisualLayers(int Budget)
 						pTilemap->m_Width != m_GoresDistanceFieldWidth ||
 						pTilemap->m_Height != m_GoresDistanceFieldHeight ||
 						pTilemap->m_Image < 0 ||
-						pTilemap->m_Image >= (int)m_vGoresDistanceFieldBuildImageSemantics.size())
+						pTilemap->m_Image >= (int)m_vGoresDistanceFieldBuildWaterImages.size())
 						continue;
 
-					const unsigned char SemanticValue = m_vGoresDistanceFieldBuildImageSemantics[(size_t)pTilemap->m_Image];
-					if(SemanticValue != GORES_CMAP_PENALTY && SemanticValue != GORES_CMAP_REWARD)
+					if(!m_vGoresDistanceFieldBuildWaterImages[(size_t)pTilemap->m_Image])
 						continue;
 
 					if(pMap->GetDataSize(pTilemap->m_Data) < m_GoresDistanceFieldBuildMapSize * (int)sizeof(CTile))
@@ -3942,14 +3240,7 @@ void CTClient::StepGoresDistanceFieldVisualLayers(int Budget)
 						if(pLayerTiles[Index].m_Index == TILE_AIR)
 							continue;
 
-						unsigned char &CellValue = m_vGoresCMap[(size_t)Index];
-						if(CellValue == GORES_CMAP_BLOCKED || CellValue == GORES_CMAP_TELEPORT || CellValue == GORES_CMAP_PENALTY)
-							continue;
-
-						if(SemanticValue == GORES_CMAP_PENALTY)
-							CellValue = GORES_CMAP_PENALTY;
-						else if(CellValue == GORES_CMAP_NORMAL)
-							CellValue = GORES_CMAP_REWARD;
+						m_vGoresCMap[(size_t)Index] |= GORES_ROUTE_WATER;
 					}
 
 					WorkLeft -= End - m_GoresDistanceFieldBuildCursor;
@@ -3969,25 +3260,22 @@ void CTClient::StepGoresDistanceFieldVisualLayers(int Budget)
 		}
 	}
 
-	static constexpr int DISTANCE_INF = std::numeric_limits<int>::max();
-	m_vGoresDistanceToFinish.assign((size_t)m_GoresDistanceFieldBuildMapSize, DISTANCE_INF);
+	m_vGoresDistanceToFinish.assign((size_t)m_GoresDistanceFieldBuildMapSize, {});
+	m_vGoresRouteNext.assign((size_t)m_GoresDistanceFieldBuildMapSize, -1);
 	m_GoresDistanceFieldBuildCursor = 0;
 	m_GoresDistanceFieldBuildStage = EGoresDistanceFieldBuildStage::INIT_QUEUE;
 }
 
 void CTClient::StepGoresDistanceFieldQueueInit(int Budget)
 {
-	static constexpr int DISTANCE_INF = std::numeric_limits<int>::max();
+	const QmMapProgress::SRouteCost Zero{0, 0, 0};
 	const int Total = (int)m_vGoresDistanceFieldBuildFinishIndices.size();
 	const int End = std::min(Total, m_GoresDistanceFieldBuildCursor + maximum(0, Budget));
 	for(int Cursor = m_GoresDistanceFieldBuildCursor; Cursor < End; ++Cursor)
 	{
 		const int FinishIndex = m_vGoresDistanceFieldBuildFinishIndices[(size_t)Cursor];
-		if(FinishIndex < 0 || FinishIndex >= m_GoresDistanceFieldBuildMapSize || !m_vGoresDistanceFieldBuildPassable[(size_t)FinishIndex] ||
-			m_vGoresDistanceToFinish[(size_t)FinishIndex] != DISTANCE_INF)
-			continue;
-		m_vGoresDistanceToFinish[(size_t)FinishIndex] = 0;
-		m_GoresDistanceFieldBuildQueue.emplace(0, FinishIndex);
+		m_vGoresDistanceToFinish[(size_t)FinishIndex] = Zero;
+		m_GoresDistanceFieldBuildQueue.emplace(Zero, FinishIndex);
 	}
 	m_GoresDistanceFieldBuildCursor = End;
 	if(m_GoresDistanceFieldBuildCursor < Total)
@@ -4009,18 +3297,16 @@ void CTClient::StepGoresDistanceFieldDijkstra(int Budget)
 		FailGoresDistanceFieldBuild();
 		return;
 	}
-	const CTile *pGame = pCollision->GameLayer();
-	const CTile *pFront = pCollision->FrontLayer();
 	const CTeleTile *pTele = pCollision->TeleLayer();
 	const int Width = m_GoresDistanceFieldWidth;
 	const int Height = m_GoresDistanceFieldHeight;
-	static constexpr int DISTANCE_INF = std::numeric_limits<int>::max();
 
-	const auto TryRelax = [&](int Index, int NewDistance) {
-		if(NewDistance < m_vGoresDistanceToFinish[(size_t)Index])
+	const auto TryRelax = [&](int Index, int NextIndex, const QmMapProgress::SRouteCost &Cost) {
+		if(!(m_vGoresCMap[(size_t)Index] & GORES_ROUTE_BLOCKED) && Cost < m_vGoresDistanceToFinish[(size_t)Index])
 		{
-			m_vGoresDistanceToFinish[(size_t)Index] = NewDistance;
-			m_GoresDistanceFieldBuildQueue.emplace(NewDistance, Index);
+			m_vGoresDistanceToFinish[(size_t)Index] = Cost;
+			m_vGoresRouteNext[(size_t)Index] = NextIndex;
+			m_GoresDistanceFieldBuildQueue.emplace(Cost, Index);
 		}
 	};
 
@@ -4040,14 +3326,13 @@ void CTClient::StepGoresDistanceFieldDijkstra(int Budget)
 			while(WorkLeft > 0 && m_GoresDistanceFieldBuildPendingTeleCursor < (int)vInputs.size())
 			{
 				--WorkLeft;
-				TryRelax(vInputs[(size_t)m_GoresDistanceFieldBuildPendingTeleCursor], m_GoresDistanceFieldBuildPendingTeleDistance);
+				TryRelax(vInputs[(size_t)m_GoresDistanceFieldBuildPendingTeleCursor], m_GoresDistanceFieldBuildPendingTeleOut, m_GoresDistanceFieldBuildPendingTeleCost);
 				++m_GoresDistanceFieldBuildPendingTeleCursor;
 			}
 			if(m_GoresDistanceFieldBuildPendingTeleCursor < (int)vInputs.size())
 				return;
 			m_GoresDistanceFieldBuildPendingTeleNumber = 0;
 			m_GoresDistanceFieldBuildPendingTeleCursor = 0;
-			m_GoresDistanceFieldBuildPendingTeleDistance = 0;
 			continue;
 		}
 
@@ -4056,7 +3341,7 @@ void CTClient::StepGoresDistanceFieldDijkstra(int Budget)
 
 		{
 			--WorkLeft;
-			const int CurDistance = m_GoresDistanceFieldBuildQueue.top().first;
+			const auto CurDistance = m_GoresDistanceFieldBuildQueue.top().first;
 			const int Cur = m_GoresDistanceFieldBuildQueue.top().second;
 			m_GoresDistanceFieldBuildQueue.pop();
 			if(CurDistance != m_vGoresDistanceToFinish[(size_t)Cur])
@@ -4064,13 +3349,14 @@ void CTClient::StepGoresDistanceFieldDijkstra(int Budget)
 
 			const int X = Cur % Width;
 			const int Y = Cur / Width;
-			const int CurGameTile = pGame[Cur].m_Index;
-			const int CurFrontTile = pFront ? pFront[Cur].m_Index : TILE_AIR;
-			const bool CurIsStart = CurGameTile == TILE_START || CurFrontTile == TILE_START;
-			const bool CurIsFinish = CurGameTile == TILE_FINISH || CurFrontTile == TILE_FINISH;
-			const int CurEnterCost = GoresDistanceFieldTraversalCost(m_vGoresCMap[(size_t)Cur], CurIsStart, CurIsFinish);
+			const unsigned char Flags = m_vGoresCMap[(size_t)Cur];
+			const bool Water = (Flags & GORES_ROUTE_WATER) != 0;
+			const bool NearDeath = (Flags & GORES_ROUTE_NEAR_DEATH) != 0;
+			const bool Standable = !Water && (Flags & GORES_ROUTE_SUPPORTED) != 0;
+			const auto WalkCost = CurDistance.AddTile(Water, NearDeath, 1, Standable);
 			const int aDx[4] = {1, -1, 0, 0};
 			const int aDy[4] = {0, 0, 1, -1};
+			const int aBlockedDirection[4] = {CANTMOVE_LEFT, CANTMOVE_RIGHT, CANTMOVE_UP, CANTMOVE_DOWN};
 
 			for(int Dir = 0; Dir < 4; ++Dir)
 			{
@@ -4080,16 +3366,14 @@ void CTClient::StepGoresDistanceFieldDijkstra(int Budget)
 					continue;
 
 				const int PredIndex = PredY * Width + PredX;
-				if(!m_vGoresDistanceFieldBuildPassable[(size_t)PredIndex])
-					continue;
-				if(!IsGoresDistanceFieldStepAllowed(pCollision, PredIndex, Cur, Width))
+				if(m_vGoresDistanceFieldBuildRestrictions[(size_t)PredIndex] & aBlockedDirection[Dir])
 					continue;
 
 				const int PredTeleType = pTele ? pTele[PredIndex].m_Type : 0;
-				if(IsPlayerTeleportInputTileForGoresDistanceField(PredTeleType))
+				if(PredTeleType == TILE_TELECHECKIN || PredTeleType == TILE_TELECHECKINEVIL ||
+					(IsDirectTeleportInputTileForGoresDistanceField(PredTeleType) && m_aGoresDistanceFieldBuildHasTeleOut[pTele[PredIndex].m_Number]))
 					continue;
-				if(CurDistance <= DISTANCE_INF - CurEnterCost)
-					TryRelax(PredIndex, CurDistance + CurEnterCost);
+				TryRelax(PredIndex, Cur, WalkCost);
 			}
 
 			if(pTele && pTele[Cur].m_Type == TILE_TELEOUT)
@@ -4099,7 +3383,8 @@ void CTClient::StepGoresDistanceFieldDijkstra(int Budget)
 				{
 					m_GoresDistanceFieldBuildPendingTeleNumber = TeleNumber;
 					m_GoresDistanceFieldBuildPendingTeleCursor = 0;
-					m_GoresDistanceFieldBuildPendingTeleDistance = CurDistance;
+					m_GoresDistanceFieldBuildPendingTeleOut = Cur;
+					m_GoresDistanceFieldBuildPendingTeleCost = CurDistance.AddTile(Water, NearDeath, 0, Standable);
 				}
 			}
 		}
@@ -4128,8 +3413,9 @@ void CTClient::StepGoresDistanceFieldReachableStartCheck(int Budget)
 		const int Tile = pGame[Index].m_Index;
 		const int FrontTile = pFront ? pFront[Index].m_Index : TILE_AIR;
 		const bool IsStart = Tile == TILE_START || FrontTile == TILE_START;
-		if(IsStart && m_vGoresDistanceToFinish[(size_t)Index] != DISTANCE_INF)
+		if(IsStart && m_vGoresDistanceToFinish[(size_t)Index].m_Length != DISTANCE_INF)
 		{
+			m_GoresStartDistanceToFinish = m_vGoresDistanceToFinish[(size_t)Index].m_Length;
 			CompleteGoresDistanceFieldBuild();
 			return;
 		}
@@ -4330,16 +3616,12 @@ int CTClient::FindGoresDebugRouteStart(int Dummy) const
 		m_vGoresDistanceToFinish.size() != (size_t)MapCellCount)
 		return -1;
 
-	const int DummyIndex = Dummy < 0 ? 0 : (Dummy >= NUM_DUMMIES ? NUM_DUMMIES - 1 : Dummy);
-	if(DummyIndex == 1 && !Client()->DummyConnected())
+	const int Slot = GoresMapProgressSlot(Dummy);
+	if(Slot == 1 && !Client()->DummyConnected())
 		return -1;
 
-	const int ClientId = GameClient()->m_aLocalIds[DummyIndex];
-	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
-		return -1;
-
-	const auto &Char = GameClient()->m_Snap.m_aCharacters[ClientId];
-	if(!Char.m_Active)
+	const auto Position = GoresMapProgressPosition(GoresMapProgressClientId(Slot));
+	if(!Position)
 		return -1;
 
 	const CTile *pGame = pCollision->GameLayer();
@@ -4347,11 +3629,10 @@ int CTClient::FindGoresDebugRouteStart(int Dummy) const
 		return -1;
 	const CTile *pFront = pCollision->FrontLayer();
 
-	const vec2 RefPos = GameClient()->m_aClients[ClientId].m_RenderPos;
+	const vec2 RefPos = *Position;
 	const auto IsReachableIndex = [&](int Index) {
 		return Index >= 0 && Index < MapCellCount &&
-		       m_vGoresCMap[(size_t)Index] != GORES_CMAP_BLOCKED &&
-		       m_vGoresDistanceToFinish[(size_t)Index] != DISTANCE_INF;
+		       m_vGoresDistanceToFinish[(size_t)Index].m_Length != DISTANCE_INF;
 	};
 
 	int StartIndex = pCollision->GetPureMapIndex(RefPos);
@@ -4382,7 +3663,7 @@ bool CTClient::BuildGoresDebugRoute(std::vector<vec2> &vRoutePoints, int Dummy, 
 	{
 		if(!pCollision)
 			return false;
-		if(!m_aQmDDraceProgress[std::clamp(Dummy, 0, NUM_DUMMIES - 1)].BuildRoute(m_vDDraceDebugRouteIndices))
+		if(!m_aQmDDraceProgress[GoresMapProgressSlot(Dummy)].BuildRoute(m_vDDraceDebugRouteIndices))
 			return false;
 		for(const int Index : m_vDDraceDebugRouteIndices)
 			vRoutePoints.push_back(pCollision->GetPos(Index));
@@ -4397,100 +3678,20 @@ bool CTClient::BuildGoresDebugRoute(std::vector<vec2> &vRoutePoints, int Dummy, 
 	if(MapCellCount64 <= 0 || MapCellCount64 > std::numeric_limits<int>::max())
 		return false;
 	const int MapCellCount = (int)MapCellCount64;
-	static constexpr int DISTANCE_INF = std::numeric_limits<int>::max();
-	if(MapCellCount <= 0 ||
-		m_GoresDistanceFieldWidth != Width ||
-		m_GoresDistanceFieldHeight != Height ||
-		m_vGoresCMap.size() != (size_t)MapCellCount ||
-		m_vGoresDistanceToFinish.size() != (size_t)MapCellCount)
+	if(m_GoresDistanceFieldWidth != Width || m_GoresDistanceFieldHeight != Height ||
+		m_vGoresRouteNext.size() != (size_t)MapCellCount || m_vGoresDistanceToFinish.size() != (size_t)MapCellCount ||
+		StartIndex < 0 || StartIndex >= MapCellCount || m_vGoresDistanceToFinish[(size_t)StartIndex].m_Length == QmMapProgress::INF)
 		return false;
 
-	const CTile *pGame = pCollision->GameLayer();
-	if(!pGame)
-		return false;
-	const CTile *pFront = pCollision->FrontLayer();
-	const CTeleTile *pTele = pCollision->TeleLayer();
-
-	const auto IsReachableIndex = [&](int Index) {
-		return Index >= 0 && Index < MapCellCount &&
-		       m_vGoresCMap[(size_t)Index] != GORES_CMAP_BLOCKED &&
-		       m_vGoresDistanceToFinish[(size_t)Index] != DISTANCE_INF;
-	};
-
-	if(!IsReachableIndex(StartIndex))
-		return false;
-
-	// 只清零上一条路径触及的位图字，不再每帧分配并清零整张地图。
+	// 按距离场保存的后继还原路线，传送入口只连向选中的出口。
 	m_GoresDebugRouteVisited.Begin((size_t)MapCellCount);
-	vRoutePoints.reserve(256);
-	int CurrentIndex = StartIndex;
-	for(int Guard = 0; Guard < MapCellCount + 64; ++Guard)
+	for(int Index = StartIndex; Index >= 0; Index = m_vGoresRouteNext[(size_t)Index])
 	{
-		if(!IsReachableIndex(CurrentIndex) || !m_GoresDebugRouteVisited.Visit((size_t)CurrentIndex))
-			break;
-
-		vRoutePoints.push_back(pCollision->GetPos(CurrentIndex));
-
-		const int CurrentDistance = m_vGoresDistanceToFinish[(size_t)CurrentIndex];
-		if(CurrentDistance == 0)
-			return !vRoutePoints.empty();
-
-		int BestNextIndex = -1;
-		int BestNextDistance = DISTANCE_INF;
-		const auto ConsiderNext = [&](int NextIndex, int ExpectedDistance) {
-			if(!IsReachableIndex(NextIndex) || ExpectedDistance != CurrentDistance)
-				return;
-
-			const int NextDistance = m_vGoresDistanceToFinish[(size_t)NextIndex];
-			if(BestNextIndex < 0 || NextDistance < BestNextDistance)
-			{
-				BestNextIndex = NextIndex;
-				BestNextDistance = NextDistance;
-			}
-		};
-
-		if(pTele && IsDirectTeleportInputTileForGoresDistanceField(pTele[CurrentIndex].m_Type))
-		{
-			const int TeleNumber = pTele[CurrentIndex].m_Number;
-			if(TeleNumber > 0 && (int)m_vvGoresDirectTeleOuts.size() >= TeleNumber)
-			{
-				for(const int TeleOutIndex : m_vvGoresDirectTeleOuts[(size_t)TeleNumber - 1])
-					ConsiderNext(TeleOutIndex, m_vGoresDistanceToFinish[(size_t)TeleOutIndex]);
-			}
-		}
-
-		const int X = CurrentIndex % Width;
-		const int Y = CurrentIndex / Width;
-		const int aDx[4] = {1, -1, 0, 0};
-		const int aDy[4] = {0, 0, 1, -1};
-		for(int Dir = 0; Dir < 4; ++Dir)
-		{
-			const int NextX = X + aDx[Dir];
-			const int NextY = Y + aDy[Dir];
-			if(NextX < 0 || NextY < 0 || NextX >= Width || NextY >= Height)
-				continue;
-
-			const int NextIndex = NextY * Width + NextX;
-			if(!IsReachableIndex(NextIndex))
-				continue;
-			if(!IsGoresDistanceFieldStepAllowed(pCollision, CurrentIndex, NextIndex, Width))
-				continue;
-
-			const int NextTile = pGame[NextIndex].m_Index;
-			const int NextFrontTile = pFront ? pFront[NextIndex].m_Index : TILE_AIR;
-			const bool NextIsStart = NextTile == TILE_START || NextFrontTile == TILE_START;
-			const bool NextIsFinish = NextTile == TILE_FINISH || NextFrontTile == TILE_FINISH;
-			const int StepCost = GoresDistanceFieldTraversalCost(m_vGoresCMap[(size_t)NextIndex], NextIsStart, NextIsFinish);
-			if(m_vGoresDistanceToFinish[(size_t)NextIndex] <= DISTANCE_INF - StepCost)
-				ConsiderNext(NextIndex, m_vGoresDistanceToFinish[(size_t)NextIndex] + StepCost);
-		}
-
-		if(BestNextIndex < 0)
-			break;
-		CurrentIndex = BestNextIndex;
+		if(Index >= MapCellCount || !m_GoresDebugRouteVisited.Visit((size_t)Index))
+			return false;
+		vRoutePoints.push_back(pCollision->GetPos(Index));
 	}
-
-	return !vRoutePoints.empty();
+	return true;
 }
 
 void CTClient::RenderGoresDebugRoute()
@@ -4504,11 +3705,12 @@ void CTClient::RenderGoresDebugRoute()
 	EnsureGoresDistanceField();
 	CQmRouteRenderCache::SKey Key;
 	Key.m_Dummy = std::clamp(g_Config.m_ClDummy, 0, NUM_DUMMIES - 1);
-	Key.m_ClientId = GameClient()->m_aLocalIds[Key.m_Dummy];
+	const int Slot = GoresMapProgressSlot(Key.m_Dummy);
+	Key.m_ClientId = GoresMapProgressClientId(Slot);
 	Key.m_DDrace = IsDDraceMapProgressMap();
 	if(Key.m_DDrace)
 	{
-		const auto &Progress = m_aQmDDraceProgress[Key.m_Dummy];
+		const auto &Progress = m_aQmDDraceProgress[Slot];
 		Key.m_StartIndex = Progress.RouteIndex();
 		Key.m_Revision = Progress.RouteRevision();
 		Key.m_Segment = Progress.UsesSegmentRoute();
@@ -4587,10 +3789,10 @@ void CTClient::ResetDDraceMapProgress()
 	m_GoresDebugRouteCache.Invalidate();
 	m_vDDraceDebugRouteIndices.clear();
 	m_vGoresDebugRouteDots.clear();
-	for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
+	for(int Dummy = 0; Dummy <= NUM_DUMMIES; ++Dummy)
 	{
 		m_aQmDDraceProgress[Dummy].Reset();
-		m_aQmDDraceProgressClientId[Dummy] = -1;
+		m_aMapProgressClientId[Dummy] = -1;
 		m_aQmDDraceTeleCheckpoint[Dummy] = 0;
 		m_aQmDDraceProgressHasPreviousPos[Dummy] = false;
 	}
@@ -4648,39 +3850,39 @@ void CTClient::UpdateDDraceMapProgress()
 	else if(!m_QmDDraceProgressMap.Finalized())
 		m_QmDDraceProgressMap.FinalizeStep(GORES_DISTANCE_FIELD_TILE_SCAN_BUDGET);
 
-	for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
+	for(int Dummy = 0; Dummy <= NUM_DUMMIES; ++Dummy)
 	{
 		auto &Progress = m_aQmDDraceProgress[Dummy];
-		const int ClientId = GameClient()->m_aLocalIds[Dummy];
-		if((Dummy == 1 && !Client()->DummyConnected()) || ClientId < 0 || ClientId >= MAX_CLIENTS ||
-			!GameClient()->m_Snap.m_aCharacters[ClientId].m_Active)
+		const int ClientId = GoresMapProgressClientId(Dummy);
+		const auto Position = GoresMapProgressPosition(ClientId);
+		if((Dummy == 1 && !Client()->DummyConnected()) || !Position)
 		{
-			if(m_aQmDDraceProgressClientId[Dummy] >= 0)
+			if(m_aMapProgressClientId[Dummy] >= 0)
 			{
 				Progress.Reset();
 				m_GoresDebugRouteCache.Invalidate();
 			}
-			m_aQmDDraceProgressClientId[Dummy] = -1;
+			m_aMapProgressClientId[Dummy] = -1;
 			m_aQmDDraceProgressHasPreviousPos[Dummy] = false;
 			m_aQmDDraceTeleCheckpoint[Dummy] = 0;
 			continue;
 		}
-		if(m_aQmDDraceProgressClientId[Dummy] != ClientId)
+		if(m_aMapProgressClientId[Dummy] != ClientId)
 		{
 			Progress.Reset();
 			m_GoresDebugRouteCache.Invalidate();
 			m_aQmDDraceProgressHasPreviousPos[Dummy] = false;
 			m_aQmDDraceTeleCheckpoint[Dummy] = 0;
-			m_aQmDDraceProgressClientId[Dummy] = ClientId;
+			m_aMapProgressClientId[Dummy] = ClientId;
 		}
 		const auto &Character = GameClient()->m_Snap.m_aCharacters[ClientId];
-		const vec2 Pos((float)Character.m_Cur.m_X, (float)Character.m_Cur.m_Y);
+		const vec2 Pos = *Position;
 		const int Index = pCollision->GetPureMapIndex(Pos);
 		if(Index < 0 || Index >= Size)
 			continue;
 		const auto Observe = [&](int TileIndex) {
 			Progress.Observe(ReadTile(TileIndex), TileIndex);
-			if(!Character.m_HasExtendedData && pTele && pTele[TileIndex].m_Type == TILE_TELECHECK)
+			if((!Character.m_Active || !Character.m_HasExtendedData) && pTele && pTele[TileIndex].m_Type == TILE_TELECHECK)
 				m_aQmDDraceTeleCheckpoint[Dummy] = pTele[TileIndex].m_Number;
 		};
 		if(m_aQmDDraceProgressHasPreviousPos[Dummy])
@@ -4698,11 +3900,12 @@ void CTClient::UpdateDDraceMapProgress()
 			}
 		}
 		Observe(Index);
-		if(Character.m_HasExtendedData)
+		if(Character.m_Active && Character.m_HasExtendedData)
 			m_aQmDDraceTeleCheckpoint[Dummy] = Character.m_ExtendedData.m_TeleCheckpoint;
 		m_aQmDDraceProgressPreviousPos[Dummy] = Pos;
 		m_aQmDDraceProgressHasPreviousPos[Dummy] = true;
-		Progress.Update(m_QmDDraceProgressMap, Index, m_aQmDDraceTeleCheckpoint[Dummy], GORES_DISTANCE_FIELD_DIJKSTRA_BUDGET);
+		// 观战只按当前位置到终点估算，不把已观察到的计时 CP 当作进度依据。
+		Progress.Update(m_QmDDraceProgressMap, Index, m_aQmDDraceTeleCheckpoint[Dummy], GORES_DISTANCE_FIELD_DIJKSTRA_BUDGET, Dummy < NUM_DUMMIES);
 		m_aGoresMapProgressValid[Dummy] = Progress.Estimate().m_Valid;
 		m_aGoresMapProgress[Dummy] = Progress.Estimate().m_Progress;
 	}
@@ -4719,6 +3922,9 @@ void CTClient::UpdateGoresMapProgress()
 			m_aGoresMapProgressValid[i] = false;
 			m_aGoresMapProgress[i] = 0.0f;
 		}
+		m_aMapProgressClientId[NUM_DUMMIES] = -1;
+		m_aGoresMapProgressValid[NUM_DUMMIES] = false;
+		m_aGoresMapProgress[NUM_DUMMIES] = 0.0f;
 	};
 
 	if(Client()->State() != IClient::STATE_ONLINE || !IsGoresMapProgressEnabled())
@@ -4754,9 +3960,25 @@ void CTClient::UpdateGoresMapProgress()
 		return;
 	}
 
+	const int SpectatorId = GoresMapProgressClientId(NUM_DUMMIES);
+	m_aMapProgressClientId[NUM_DUMMIES] = SpectatorId;
+	m_aGoresMapProgressValid[NUM_DUMMIES] = false;
+	m_aGoresMapProgress[NUM_DUMMIES] = 0.0f;
+	if(const auto Position = GoresMapProgressPosition(SpectatorId))
+	{
+		const int Index = pCollision->GetPureMapIndex(*Position);
+		if(Index >= 0 && Index < MapCellCount)
+		{
+			const auto Estimate = QmMapProgress::EstimateDistance(m_vGoresDistanceToFinish[(size_t)Index].m_Length, m_GoresStartDistanceToFinish);
+			m_aGoresMapProgressValid[NUM_DUMMIES] = Estimate.m_Valid;
+			m_aGoresMapProgress[NUM_DUMMIES] = Estimate.m_Progress;
+		}
+	}
+
 	for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
 	{
 		m_aGoresMapProgressValid[Dummy] = false;
+		m_aMapProgressClientId[Dummy] = GoresMapProgressClientId(Dummy);
 
 		if(Dummy == 1 && !Client()->DummyConnected())
 			continue;
@@ -4774,6 +3996,9 @@ void CTClient::UpdateGoresMapProgress()
 		if(PosIndex < 0 || PosIndex >= MapCellCount)
 			continue;
 
+		const int CurrentDistanceToFinish = m_vGoresDistanceToFinish[(size_t)PosIndex].m_Length;
+		if(CurrentDistanceToFinish == DISTANCE_INF)
+			continue;
 		const int Tile = pCollision->GetTileIndex(PosIndex);
 		const int FrontTile = pCollision->GetFrontTileIndex(PosIndex);
 		const bool IsOnStart = Tile == TILE_START || FrontTile == TILE_START;
@@ -4781,15 +4006,11 @@ void CTClient::UpdateGoresMapProgress()
 		{
 			m_aGoresWasOnStartLastTick[Dummy] = true;
 			m_aGoresRunStarted[Dummy] = false;
-			m_aGoresRunStartDistanceToFinish[Dummy] = 0;
+			m_aGoresRunStartDistanceToFinish[Dummy] = CurrentDistanceToFinish;
 			m_aGoresMapProgress[Dummy] = 0.0f;
 			m_aGoresMapProgressValid[Dummy] = true;
 			continue;
 		}
-
-		const int CurrentDistanceToFinish = m_vGoresDistanceToFinish[(size_t)PosIndex];
-		if(CurrentDistanceToFinish == DISTANCE_INF)
-			continue;
 
 		if(!m_aGoresRunStarted[Dummy])
 		{
@@ -4799,7 +4020,6 @@ void CTClient::UpdateGoresMapProgress()
 				continue;
 			}
 			m_aGoresRunStarted[Dummy] = true;
-			m_aGoresRunStartDistanceToFinish[Dummy] = CurrentDistanceToFinish;
 		}
 		m_aGoresWasOnStartLastTick[Dummy] = false;
 

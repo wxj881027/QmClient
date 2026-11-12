@@ -1,4 +1,5 @@
 #include <game/client/components/hud_editor.h>
+#include <game/client/components/qmclient/player_state_hud_bounds.h>
 
 #include <gtest/gtest.h>
 
@@ -123,4 +124,62 @@ TEST(QmHudEditorVisibleBounds, SourceOriginMoveKeepsRelativeContentButNewDeclara
 	EXPECT_FLOAT_EQ(Visible.h, 30.0f);
 	const CUIRect NewDeclaration{35.0f, 120.0f, 80.0f, 40.0f};
 	EXPECT_FLOAT_EQ(Bounds.Resolve(Moved, NewDeclaration).w, 80.0f);
+}
+
+TEST(QmPlayerStateHudBounds, CommonLoadoutKeepsOnlyContentAndSmallPadding)
+{
+	CQmPlayerStateHudBounds Bounds;
+	Bounds.AddWeapon(14.0f, 17.0f, vec2(19.2f, 14.4f));
+	Bounds.AddWeapon(30.0f, 17.0f, vec2(14.310835f, 7.1554175f));
+	Bounds.AddRect({5.0f, 29.0f, 24.0f, 12.0f});
+	Bounds.AddRect({5.0f, 41.0f, 12.0f, 12.0f});
+	const CUIRect Rect = Bounds.Rect();
+	EXPECT_GT(Rect.x, 0.0f);
+	EXPECT_GT(Rect.y, 0.0f);
+	EXPECT_LT(Rect.w, 42.0f);
+	EXPECT_LT(Rect.h, 55.0f);
+	EXPECT_FLOAT_EQ(Rect.y + Rect.h, 55.0f);
+}
+
+TEST(QmPlayerStateHudBounds, RotatedWeaponIncludesAllFourCorners)
+{
+	CQmPlayerStateHudBounds Bounds;
+	Bounds.AddWeapon(30.0f, 20.0f, vec2(20.0f, 10.0f));
+	const CUIRect Rect = Bounds.Rect();
+	EXPECT_NEAR(Rect.x, 17.393398f, 0.0001f);
+	EXPECT_NEAR(Rect.y, 7.393398f, 0.0001f);
+	EXPECT_NEAR(Rect.w, 25.213204f, 0.0001f);
+	EXPECT_NEAR(Rect.h, 25.213204f, 0.0001f);
+}
+
+TEST(QmPlayerStateHudBounds, NinjaBarExtendsBounds)
+{
+	CQmPlayerStateHudBounds Bounds;
+	Bounds.AddRect({5.0f, 29.0f, 24.0f, 12.0f});
+	Bounds.AddRect({78.0f, 5.0f, 6.0f, 24.0f});
+	const CUIRect Rect = Bounds.Rect();
+	EXPECT_FLOAT_EQ(Rect.x, 3.0f);
+	EXPECT_FLOAT_EQ(Rect.y, 3.0f);
+	EXPECT_FLOAT_EQ(Rect.x + Rect.w, 86.0f);
+	EXPECT_FLOAT_EQ(Rect.y + Rect.h, 43.0f);
+}
+
+TEST(QmPlayerStateHudBounds, LastStatusIconExtendsRowBounds)
+{
+	CQmPlayerStateHudBounds Bounds;
+	Bounds.AddRect({5.0f, 65.0f, 12.0f, 12.0f});
+	Bounds.AddRect({17.0f, 65.0f, 12.0f, 12.0f});
+	const CUIRect Rect = Bounds.Rect();
+	EXPECT_FLOAT_EQ(Rect.x, 3.0f);
+	EXPECT_FLOAT_EQ(Rect.y, 63.0f);
+	EXPECT_FLOAT_EQ(Rect.x + Rect.w, 31.0f);
+	EXPECT_FLOAT_EQ(Rect.y + Rect.h, 79.0f);
+}
+
+TEST(QmPlayerStateHudBounds, EmptyContentAndZeroJumpRowHaveNoBounds)
+{
+	CQmPlayerStateHudBounds Bounds;
+	Bounds.AddRect({5.0f, 29.0f, 0.0f, 12.0f});
+	EXPECT_FLOAT_EQ(Bounds.Rect().w, 0.0f);
+	EXPECT_FLOAT_EQ(Bounds.Rect().h, 0.0f);
 }

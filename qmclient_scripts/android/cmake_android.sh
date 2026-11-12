@@ -2,6 +2,9 @@
 set -e
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
+# 仓库根目录：构建目录不一定是仓库的直接子目录（Windows 主机上把构建目录放在
+# tmp/ 下可以绕开 clang 在某些目录建临时文件被拒绝的问题），所以不能用 ../ 定位。
+REPO_ROOT="$(cd -- "${SCRIPT_DIR}/../.." &> /dev/null && pwd)"
 # shellcheck source=scripts/compile_libs/_build_common.sh
 source "${SCRIPT_DIR}/../../scripts/compile_libs/_build_common.sh"
 
@@ -173,7 +176,8 @@ function build_for_type() {
 		-DTOOLS=OFF \
 		-DCMAKE_CROSSCOMPILING=ON \
 		-DVULKAN=ON \
-		-DVIDEORECORDER=OFF
+		-DVIDEORECORDER=OFF \
+		-DSECURITY_COMPILER_FLAGS=OFF
 	(
 		cd "${BUILD_FOLDER}/$ANDROID_SUB_BUILD_DIR/$1" || exit 1
 		# We want word splitting
@@ -213,7 +217,7 @@ mkdir -p gradle/wrapper
 
 function copy_dummy_files() {
 	rm -f ./"$2"
-	cp ../"$1" "$2"
+	cp "${REPO_ROOT}/$1" "$2"
 }
 
 copy_dummy_files scripts/android/files/build.sh build.sh
@@ -228,10 +232,10 @@ copy_dummy_files scripts/android/files/settings.gradle settings.gradle
 copy_dummy_files scripts/android/files/AndroidManifest.xml src/main/AndroidManifest.xml
 
 rm -R -f src/main/res
-cp -R ../scripts/android/files/res src/main/
+cp -R "${REPO_ROOT}/scripts/android/files/res" src/main/
 mkdir -p src/main/res/mipmap
-cp ../other/icons/DDNet_256x256x32.png src/main/res/mipmap/ic_launcher.png
-cp ../other/icons/DDNet_256x256x32.png src/main/res/mipmap/ic_launcher_round.png
+cp "${REPO_ROOT}/other/icons/DDNet_256x256x32.png" src/main/res/mipmap/ic_launcher.png
+cp "${REPO_ROOT}/other/icons/DDNet_256x256x32.png" src/main/res/mipmap/ic_launcher_round.png
 chmod +x ./gradlew
 
 log_info "Copying libraries..."
@@ -271,7 +275,8 @@ cp -R "$ANDROID_SUB_BUILD_DIR/$ANDROID_BUILD_DUMMY/data" ./assets/asset_integrit
 log_info "Creating integrity index file..."
 (
 	cd assets/asset_integrity_files || exit 1
-	tmpfile="$(mktemp /tmp/hash_strings.XXX)"
+	# 尊重 TMPDIR：受限沙箱或只读挂载下 /tmp 可能不可写。
+	tmpfile="$(mktemp "${TMPDIR:-/tmp}/hash_strings.XXX")"
 	find data -iname "*" -type f -print0 | xargs -0 sha256sum | awk '{gsub(/^\*/, "", $2); print substr($0, index($0, $2)), $1}' > "$tmpfile"
 	full_hash="$(sha256sum "$tmpfile" | cut -d' ' -f 1)"
 
@@ -286,8 +291,8 @@ log_info "Preparing gradle build..."
 
 rm -R -f src/main/java/org
 mkdir -p src/main/java
-cp -R ../scripts/android/files/java/org/. src/main/java/org/
-# Java 与当前 ABI 使用同一份固定版本的 SDL3 源码。
+cp -R "${REPO_ROOT}/scripts/android/files/java/org/." src/main/java/org/
+# Java 绑定取自 ddnet-libs 的 SDL3 预编译包。
 SDL3_JAVA_DIR=$(cat "$ANDROID_SUB_BUILD_DIR/$ANDROID_BUILD_DUMMY/qm_sdl3_java_dir.txt")
 if [ ! -d "$SDL3_JAVA_DIR/org/libsdl/app" ]; then
 	log_error "SDL3 Java source directory missing: $SDL3_JAVA_DIR"
@@ -295,7 +300,36 @@ if [ ! -d "$SDL3_JAVA_DIR/org/libsdl/app" ]; then
 fi
 cp -R "$SDL3_JAVA_DIR/org/." src/main/java/org/
 
+# JNI 按固定类名和方法签名查找回调。project 模板里的
+# `-keepclassmembers class org.libsdl.app.*` 与 `org.ddnet.client.*` 已覆盖所有
+# JNI 成员，因此 SDL 官方规则是可选的：预编译包附带时追加精确签名，缺失不阻断。
+SDL3_PROGUARD_RULES="$SDL3_JAVA_DIR/../proguard-rules.pro"
+if [ ! -f "$SDL3_PROGUARD_RULES" ]; then
+	SDL3_PROGUARD_RULES="$ANDROID_SUB_BUILD_DIR/$ANDROID_BUILD_DUMMY/_deps/sdl3-src/android-project/app/proguard-rules.pro"
+fi
+if [ -f "$SDL3_PROGUARD_RULES" ]; then
+	cat "$SDL3_PROGUARD_RULES" >> proguard-rules.pro
+else
+	log_warn "SDL3 bundled ProGuard rules not found, relying on the project template keep rules"
+fi
+
 # shellcheck disable=SC1091
 source ./build.sh "$GAME_NAME" "$PACKAGE_NAME" "$BUILD_TYPE"
+
+# JNI 契约检查要靠 SDL 的 C 源码推导原生端必需的回调；ddnet-libs 的 SDL3 预编译包
+# 只带 java/ 与库、不带源码。源码树在旁边时照旧核对，缺失时明确跳过而不是让打包
+# 失败——与上面 ProGuard 规则缺失时只告警的处理保持一致。
+SDL3_SOURCE_ROOT=""
+for candidate in "$ANDROID_SUB_BUILD_DIR/$ANDROID_BUILD_DUMMY/_deps/sdl3-src" "$SDL3_JAVA_DIR/../../../../.."; do
+	if [ -f "$candidate/src/core/android/SDL_android.c" ]; then
+		SDL3_SOURCE_ROOT="$candidate"
+		break
+	fi
+done
+if [ -n "$SDL3_SOURCE_ROOT" ]; then
+	python3 ../qmclient_scripts/android/check_jni_contract.py "$GAME_NAME.apk" "$SDL3_SOURCE_ROOT"
+else
+	log_warn "SDL3 source tree not available (prebuilt package); skipping JNI contract check"
+fi
 
 cd ..

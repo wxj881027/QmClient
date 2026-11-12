@@ -6,6 +6,7 @@
 #include <engine/shared/protocol.h>
 
 #include <game/client/component.h>
+#include <game/client/components/qmclient/tee_trail_styles.h>
 #include <game/client/components/tclient/qm_tee_trail.h>
 
 class CTrails : public CComponent
@@ -32,6 +33,7 @@ private:
 	int m_aPositionSources[MAX_CLIENTS] = {};
 	std::vector<CTrailPart> m_vTrail;
 	std::vector<qm_tee_trail::SQuad> m_vQuads;
+	qm_tee_trail::CPixelNoiseCache m_PixelNoiseCache;
 	int m_LastDummy = -1;
 	int m_LastStyle = -1;
 	int m_LastLength = -1;

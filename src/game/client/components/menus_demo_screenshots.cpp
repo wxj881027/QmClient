@@ -7,7 +7,7 @@
 
 #include <engine/engine.h>
 
-#include <game/client/QmUi/cards/QmCardCatalog.h>
+#include <game/client/QmUi/QmToast.h>
 #include <game/client/components/qmclient/screenshot_viewer.h>
 #include <game/client/gameclient.h>
 #include <game/client/qm_icon.h>
@@ -69,12 +69,6 @@ namespace
 		pGraphics->WrapNormal();
 	}
 
-	CUIRect FitScreenshotImageRect(CUIRect Rect, int Width, int Height)
-	{
-		const float Scale = std::min(Rect.w / Width, Rect.h / Height);
-		return {Rect.x + (Rect.w - Width * Scale) * 0.5f, Rect.y + (Rect.h - Height * Scale) * 0.5f, Width * Scale, Height * Scale};
-	}
-
 	void FormatScreenshotFileSize(int64_t SizeBytes, char *pBuf, size_t BufSize)
 	{
 		const float SizeKiB = SizeBytes / 1024.0f;
@@ -94,8 +88,9 @@ void CMenus::OpenDemoScreenshotViewer(const CDemoItem &Item)
 	str_format(aPath, sizeof(aPath), "%s/%s", m_aCurrentDemoFolder, Item.m_aFilename);
 	char aFullPath[IO_MAX_PATH_LENGTH];
 	Storage()->GetCompletePath(Item.m_StorageType, aPath, aFullPath, sizeof(aFullPath));
+	// 外部查看器起不来只影响这一次点击，再点一次就是重试：用非阻断失败提示。
 	if(!OpenQmScreenshotViewer(Client(), aFullPath, Localize("Error opening screenshot"), Localize("Unable to open the screenshot file")))
-		PopupMessage(Localize("Error opening screenshot"), Localize("Unable to open the screenshot file"), Localize("Ok"));
+		qm_ui::Toast(EQmToastKind::FAILED, Localize("Unable to open the screenshot file"));
 }
 
 void CMenus::RenderDemoScreenshotWatermarkPreview(CUIRect PreviewRect, const CDemoItem &Item)
@@ -110,29 +105,7 @@ void CMenus::RenderDemoScreenshotWatermarkPreview(CUIRect PreviewRect, const CDe
 		return;
 	}
 
-	const CUIRect ImageRect = FitScreenshotImageRect(PreviewRect, m_DemoScreenshotPreviewWidth, m_DemoScreenshotPreviewHeight);
 	RenderScreenshotTexture(Graphics(), m_DemoScreenshotPreviewTexture, m_DemoScreenshotPreviewWidth, m_DemoScreenshotPreviewHeight, PreviewRect);
-
-	char aSourcePath[IO_MAX_PATH_LENGTH];
-	str_format(aSourcePath, sizeof(aSourcePath), "%s/%s", m_aCurrentDemoFolder, Item.m_aFilename);
-	const CQmScreenshotManager::SWatermarkOptions Options = CQmScreenshotManager::CurrentWatermarkOptions();
-	const std::string Text = m_ScreenshotManager.BuildWatermarkText(Storage(), aSourcePath, Item.m_StorageType, Options);
-	if(Text.empty() || ImageRect.w <= 0.0f || ImageRect.h <= 0.0f)
-		return;
-
-	const bool Top = Options.m_Position == CQmScreenshotManager::EWatermarkPosition::TOP_LEFT || Options.m_Position == CQmScreenshotManager::EWatermarkPosition::TOP_RIGHT;
-	const bool Right = Options.m_Position == CQmScreenshotManager::EWatermarkPosition::BOTTOM_RIGHT || Options.m_Position == CQmScreenshotManager::EWatermarkPosition::TOP_RIGHT;
-	CUIRect Band = ImageRect;
-	Band.h = std::clamp(ImageRect.h * 0.24f, 18.0f, 34.0f);
-	if(!Top)
-		Band.y += ImageRect.h - Band.h;
-	Band.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.62f), IGraphics::CORNER_NONE, 0.0f);
-	Band.Margin(5.0f, &Band);
-	SLabelProperties TextProperties;
-	TextProperties.m_MaxWidth = Band.w;
-	TextProperties.m_EllipsisAtEnd = true;
-	TextProperties.m_EnableWidthCheck = false;
-	Ui()->DoLabel(&Band, Text.c_str(), std::clamp(Band.h * 0.48f, 8.0f, 13.0f), Right ? TEXTALIGN_MR : TEXTALIGN_ML, TextProperties);
 }
 
 void CMenus::RenderDemoScreenshotDetails(CUIRect Contents, const CDemoItem &Item, float FontSize)
@@ -143,7 +116,7 @@ void CMenus::RenderDemoScreenshotDetails(CUIRect Contents, const CDemoItem &Item
 	s_DetailsScroll.Begin(&Contents, &ScrollOffset);
 	Contents.y += ScrollOffset.y;
 	const float PreviewHeight = std::clamp(Contents.w * 0.72f, 92.0f, 170.0f);
-	const float WatermarkHeight = 18.0f + 5.0f * 24.0f + 14.0f;
+	const float WatermarkHeight = 74.0f;
 	Contents.h = PreviewHeight + 72.0f + 2.0f * Gap + WatermarkHeight;
 	s_DetailsScroll.AddRect(Contents);
 	CUIRect PreviewCard;
@@ -191,15 +164,13 @@ void CMenus::RenderDemoScreenshotDetails(CUIRect Contents, const CDemoItem &Item
 	WatermarkCard.HSplitTop(18.0f, &Row, &WatermarkCard);
 	Ui()->DoLabel(&Row, Localize("Watermark"), FontSize, TEXTALIGN_ML);
 
-	qm_card_catalog::SQmCardBuildContext WatermarkCtx;
-	WatermarkCtx.m_pMenus = this;
-	WatermarkCtx.m_UiContext = SettingsUiContext("screenshot_watermark_settings");
-	WatermarkCtx.m_Metrics.m_LineHeight = 22.0f;
-	WatermarkCtx.m_Metrics.m_LineSpacing = 2.0f;
-	WatermarkCtx.m_Metrics.m_BodySize = FontSize;
-	qm_card_catalog::QmCardRenderHook::RenderScreenshotWatermarkSettings(WatermarkCtx, WatermarkCard);
+	WatermarkCard.HSplitTop(8.0f, nullptr, &WatermarkCard);
+	WatermarkCard.HSplitTop(26.0f, &Row, &WatermarkCard);
+	static CButtonContainer s_EditButton;
+	if(DoButton_Menu(&s_EditButton, Localize("Watermark editor"), 0, &Row))
+		ApplyDemoScreenshotWatermark(Item);
 
-	// 先处理控件，再绘制预览，使开关、文本和位置在同一帧生效。
+	// 侧栏保留原图预览，编辑操作使用独立的大图工作区。
 	RenderDemoScreenshotWatermarkPreview(PreviewCard, Item);
 	s_DetailsScroll.End();
 }
@@ -211,17 +182,10 @@ bool CMenus::DoDemoScreenshotWatermarkButton(const CUIRect &Rect)
 	const unsigned PreviousFlags = TextRender()->GetRenderFlags();
 	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-	const bool Busy = m_pScreenshotWatermarkJob != nullptr;
-	const bool Clicked = DoButton_Menu_QmIcon(&s_WatermarkButton, Busy ? EQmIcon::CLOSE : EQmIcon::PENCIL, Busy ? FONT_ICON_XMARK : FONT_ICON_PENCIL, Busy ? 1 : 0, &Rect);
+	const bool Clicked = DoButton_Menu_QmIcon(&s_WatermarkButton, EQmIcon::PENCIL, FONT_ICON_PENCIL, 0, &Rect);
 	TextRender()->SetRenderFlags(PreviousFlags);
 	TextRender()->SetFontPreset(PreviousPreset);
-	GameClient()->m_Tooltips.DoToolTip(&s_WatermarkButton, &Rect, Busy ? Localize("Cancel") : Localize("Apply watermark"));
-	if(Busy)
-	{
-		if(Clicked)
-			m_pScreenshotWatermarkJob->Cancel();
-		return false;
-	}
+	GameClient()->m_Tooltips.DoToolTip(&s_WatermarkButton, &Rect, Localize("Watermark editor"));
 	return Clicked;
 }
 
@@ -230,63 +194,19 @@ bool CMenus::ApplyDemoScreenshotWatermark(const CDemoItem &Item)
 	if(!DemoBrowserBrowsingScreenshots() || Item.m_IsDir ||
 		(str_endswith_nocase(Item.m_aFilename, ".png") == nullptr && str_endswith_nocase(Item.m_aFilename, ".webp") == nullptr))
 		return false;
-
 	char aSourcePath[IO_MAX_PATH_LENGTH];
 	str_format(aSourcePath, sizeof(aSourcePath), "%s/%s", m_aCurrentDemoFolder, Item.m_aFilename);
-	char aTargetPath[IO_MAX_PATH_LENGTH];
-	str_copy(aTargetPath, aSourcePath);
-	char *pExtension = strrchr(aTargetPath, '.');
-	if(pExtension == nullptr)
-		pExtension = aTargetPath + str_length(aTargetPath);
-	if(static_cast<size_t>(pExtension - aTargetPath) + str_length("_watermarked.png") >= sizeof(aTargetPath))
-	{
-		PopupMessage(Localize("Screenshot error"), Localize("Unable to save the watermarked screenshot"), Localize("Ok"));
-		return false;
-	}
-	str_copy(pExtension, "_watermarked.png", sizeof(aTargetPath) - (pExtension - aTargetPath));
-
-	const CQmScreenshotManager::SWatermarkOptions Options = CQmScreenshotManager::CurrentWatermarkOptions();
-	if(m_pScreenshotWatermarkJob != nullptr)
-		return false;
-	m_pScreenshotWatermarkJob = m_ScreenshotManager.CreateWatermarkJob(Storage(), aSourcePath, Item.m_StorageType, aTargetPath, Options);
-	if(m_pScreenshotWatermarkJob == nullptr)
-		return false;
-	m_ScreenshotWatermarkFolder = m_aCurrentDemoFolder;
-	Engine()->AddJob(m_pScreenshotWatermarkJob);
+	m_ScreenshotEditor.Open(this, aSourcePath, Item.m_StorageType);
 	return true;
 }
 
 void CMenus::PumpDemoScreenshotWatermark()
 {
-	if(m_pScreenshotWatermarkJob == nullptr)
+	if(!m_ScreenshotEditor.IsOpen())
 		return;
 	const bool InGame = Client()->State() == IClient::STATE_ONLINE || Client()->State() == IClient::STATE_DEMOPLAYBACK;
-	const bool OnSourcePage = IsActive() && (InGame ? m_GamePage : m_MenuPage) == PAGE_DEMOS &&
-				  DemoBrowserBrowsingScreenshots() && m_ScreenshotWatermarkFolder == m_aCurrentDemoFolder;
-	if(!OnSourcePage)
-		m_pScreenshotWatermarkJob->Cancel();
-	if(m_pScreenshotWatermarkJob->State() != IJob::STATE_DONE)
-		return;
-	if(m_pScreenshotWatermarkJob->Canceled())
-	{
-		m_pScreenshotWatermarkJob.reset();
-		return;
-	}
-	// 不覆盖正在显示的其它弹窗，结果等到页面仍有效且弹窗空闲再发布。
-	if(m_Popup != POPUP_NONE)
-		return;
-	const bool Saved = m_pScreenshotWatermarkJob->Saved();
-	m_pScreenshotWatermarkJob.reset();
-	if(Saved)
-	{
-		m_DemoScreenshotPreviewLoadFailed = false;
-		ResetDemoScreenshotPreview();
-		DemolistPopulate();
-		DemolistOnUpdate(false);
-		PopupMessage(Localize("Screenshot saved"), Localize("The watermarked screenshot was saved next to the original"), Localize("Ok"));
-	}
-	else
-		PopupMessage(Localize("Screenshot error"), Localize("Unable to save the watermarked screenshot"), Localize("Ok"));
+	if(!IsActive() || (InGame ? m_GamePage : m_MenuPage) != PAGE_DEMOS || !DemoBrowserBrowsingScreenshots())
+		m_ScreenshotEditor.Close(this);
 }
 
 void CMenus::RenderDemoScreenshotGallery(CUIRect ListBox, bool &WasListboxItemActivated)

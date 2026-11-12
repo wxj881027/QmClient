@@ -81,26 +81,64 @@ TEST(QmNewUiMenuRenderSurfaceContract, ShutdownReleasesUiResourcesBeforeRenderer
 	EXPECT_LT(ComponentsShutdown, UiShutdownCall);
 }
 
+TEST(QmNewUiMenuRenderSurfaceContract, ShaderBackendsShareContinuousCurvatureCurves)
+{
+	// 「圆锥曲线角」只在着色器里实现：CPU 侧只透传曲线类型，几何兜底仍画圆弧，
+	// 所以这里有意义的稳定观察点是三套着色器都携带同一条曲线公式和三处透传。
+	const std::string GlShader = ReadTestSourceFile("data/shader/rounded_rect_sdf.frag");
+	const std::string VulkanShader = ReadTestSourceFile("data/shader/vulkan/rounded_rect_sdf.frag");
+	const std::string MetalShader = ReadTestSourceFile("data/shader/metal/qmclient.metal");
+	for(const std::string *pShader : {&GlShader, &VulkanShader, &MetalShader})
+	{
+		EXPECT_NE(pShader->find("ConicCornerDistance"), std::string::npos);
+		EXPECT_NE(pShader->find("mix(0.70710678, 1.2, Amount)"), std::string::npos);
+		// 四次贝塞尔凑不出两端曲率为 0：三次的控制点条件会退化，五次才有足够自由度。
+		EXPECT_NE(pShader->find("QuinticCornerDistance"), std::string::npos);
+		// 生长上限与强度反解必须在三个后端都是同一套公式，否则换后端就换个圆角。
+		// 胶囊判据（半径贴到短边 9/10，且长边明显长于短边）要和 CPU 侧逐字一致：
+		// 早先 CPU 用完整判据、着色器只看半径，近方形的大半径控件会在两边拿到
+		// 不同的生长上限，几何兜底与 SDF 就此分叉。
+		EXPECT_NE(pShader->find("max(HalfSize.x, HalfSize.y) > MinHalf * 1.2"), std::string::npos);
+		EXPECT_NE(pShader->find("(Capsule ? 0.8 : 0.5)"), std::string::npos);
+		EXPECT_NE(pShader->find("RoundedCornerShape"), std::string::npos);
+	}
+	EXPECT_NE(GlShader.find("ConicCornerDistance"), std::string::npos);
+	EXPECT_NE(VulkanShader.find("gRoundedRectSdfData[17].x"), std::string::npos);
+	EXPECT_NE(MetalShader.find("Params[17].x"), std::string::npos);
+}
+
 TEST(QmNewUiMenuRenderSurfaceContract, ShaderBackendsKeepRoundedSurfaceComposition)
 {
 	// 着色器平台分支不能由 CPU 几何单元测试观察；这里只保留对应资源合同。
 	for(const char *pShaderPath : {"data/shader/rounded_rect_sdf.frag", "data/shader/vulkan/rounded_rect_sdf.frag"})
 	{
 		const std::string Shader = ReadTextFile(pShaderPath);
-		EXPECT_NE(Shader.find("gRoundedRectSdfData[5]"), std::string::npos);
+		EXPECT_NE(Shader.find("gRoundedRectSdfData[18];"), std::string::npos);
 		EXPECT_NE(Shader.find("float CornerRadius(vec2 Point, vec4 CornerRadii)"), std::string::npos);
 		EXPECT_NE(Shader.find("float SdfFeather(float DistanceValue, float PixelSize)"), std::string::npos);
 		EXPECT_NE(Shader.find("return max(PixelSize, length(vec2(dFdx(DistanceValue), dFdy(DistanceValue))));"), std::string::npos);
 		EXPECT_NE(Shader.find("return 1.0 - smoothstep(-Feather * 0.5, Feather * 0.5, DistanceValue);"), std::string::npos);
-		EXPECT_NE(Shader.find("vec4 InnerCornerRadii = max(CornerRadii - vec4(BorderWidth), vec4(0.0));"), std::string::npos);
+		// 内缘由同一份距离场偏移得到：换成连续曲率后「半径减边框」不再是等距内缩。
+		EXPECT_NE(Shader.find("float InnerDistance = OuterDistance + BorderWidth;"), std::string::npos);
 		EXPECT_NE(Shader.find("float BorderCoverage = max(OuterCoverage - InnerCoverage, 0.0);"), std::string::npos);
+		EXPECT_NE(Shader.find("vec4 GradientColor(vec2 UV, vec4 SolidColor)"), std::string::npos);
+		EXPECT_NE(Shader.find("vec4 FillColor = GradientColor(GradientUV, "), std::string::npos);
 		EXPECT_NE(Shader.find("float OuterCoverage = Coverage(OuterDistance, Params.y);"), std::string::npos);
 		EXPECT_NE(Shader.find("InnerCoverage = BorderWidth > 0.0 && min(InnerHalfSize.x, InnerHalfSize.y) > 0.0 ? Coverage(InnerDistance, Params.y) : 0.0;"), std::string::npos);
 		EXPECT_EQ(Shader.find("* 0.8"), std::string::npos);
 		EXPECT_EQ(Shader.find("* 0.9"), std::string::npos);
 		EXPECT_NE(Shader.find("Rect.zw + vec2(Params.z * 2.0)"), std::string::npos);
 		EXPECT_NE(Shader.find("float OutputAlpha = FillAlpha + BorderAlpha;"), std::string::npos);
-		EXPECT_NE(Shader.find("vec3 Premultiplied = FillColor.rgb * FillAlpha + BorderColor.rgb * BorderAlpha;"), std::string::npos);
+		// 边框颜色经 BorderTint 中转：默认为单色 BorderColor，Params.w 置位时改用渐变。
+		EXPECT_NE(Shader.find("vec4 BorderTint = BorderColor;"), std::string::npos);
+		EXPECT_NE(Shader.find("if(Params.w > 0.5)"), std::string::npos);
+		// 只描边与沿带宽羽化：辉光描边靠这两项才连成渐变，而不是硬边环。
+		// 两份后端的数据块前缀不同（gRoundedRectSdfData / gSdf.gRoundedRectSdfData），
+		// 这里只匹配与后端无关的语义片段。
+		EXPECT_NE(Shader.find("[14].y > 0.5;"), std::string::npos);
+		EXPECT_NE(Shader.find("[14].z;"), std::string::npos);
+		EXPECT_NE(Shader.find("float BandT = clamp(InnerDistance / max(BorderWidth, 0.0001), 0.0, 1.0);"), std::string::npos);
+		EXPECT_NE(Shader.find("vec3 Premultiplied = FillColor.rgb * FillAlpha + BorderTint.rgb * BorderAlpha;"), std::string::npos);
 		EXPECT_EQ(Shader.find("BorderAlpha * (1.0 - FillAlpha)"), std::string::npos);
 		EXPECT_EQ(Shader.find("mix(BorderColor, FillColor, InnerCoverage)"), std::string::npos);
 	}
@@ -115,19 +153,28 @@ TEST(QmNewUiMenuRenderSurfaceContract, ShaderBackendsKeepRoundedSurfaceCompositi
 		const std::string MetalSdfFragment = FunctionBody(MetalShader, "fragment float4 qmclient_rounded_rect_sdf_fragment(");
 		ASSERT_FALSE(MetalSdfFragment.empty());
 		EXPECT_NE(MetalShader.find("fragment float4 qmclient_rounded_rect_sdf_fragment("), std::string::npos);
+		EXPECT_NE(MetalShader.find("float4 RoundedRectGradientColor("), std::string::npos);
 		EXPECT_NE(MetalShader.find("constant float4 *Params [[buffer(1)]]"), std::string::npos);
-		EXPECT_NE(MetalShader.find("float RoundedRectDistance(float2 Point, float2 HalfSize, float Radius)"), std::string::npos);
+		EXPECT_NE(MetalShader.find("float RoundedRectDistance(float2 Point, float2 HalfSize, float Radius, float Smoothing, float CurveType, float SeamAmount)"), std::string::npos);
 		EXPECT_NE(MetalShader.find("float RoundedRectCornerRadius(float2 Point, float4 CornerRadii)"), std::string::npos);
 		EXPECT_NE(MetalShader.find("float RoundedRectCoverage(float DistanceValue, float PixelSize)"), std::string::npos);
 		EXPECT_NE(MetalShader.find("const float Feather = max(PixelSize, length(float2(dfdx(DistanceValue), dfdy(DistanceValue))));"), std::string::npos);
 		EXPECT_NE(MetalShader.find("return 1.0 - smoothstep(-Feather * 0.5, Feather * 0.5, DistanceValue);"), std::string::npos);
-		EXPECT_NE(MetalShader.find("const float4 InnerCornerRadii = max(CornerRadii - float4(BorderWidth), float4(0.0));"), std::string::npos);
-		EXPECT_NE(MetalShader.find("const float BorderCoverage = max(OuterCoverage - InnerCoverage, 0.0);"), std::string::npos);
+		EXPECT_NE(MetalShader.find("const float InnerDistance = OuterDistance + BorderWidth;"), std::string::npos);
+		// BorderCoverage 不再 const：只描边模式要在算完边框环带后清掉 InnerCoverage。
+		EXPECT_NE(MetalShader.find("float BorderCoverage = max(OuterCoverage - InnerCoverage, 0.0);"), std::string::npos);
+		EXPECT_NE(MetalShader.find("const bool BorderOnly = Params[14].y > 0.5;"), std::string::npos);
 		EXPECT_NE(MetalShader.find("const float OuterCoverage = RoundedRectCoverage(OuterDistance, RenderParams.y);"), std::string::npos);
-		EXPECT_NE(MetalShader.find("const float InnerCoverage = BorderWidth > 0.0 && min(InnerHalfSize.x, InnerHalfSize.y) > 0.0 ? RoundedRectCoverage(InnerDistance, RenderParams.y) : 0.0;"), std::string::npos);
+		// InnerCoverage 必须可变：只描边模式要在算完边框环带后把它清零，写成 const 时
+		// Metal 编译器直接报 cannot assign to variable，两份 GLSL 后端本来就不是 const。
+		EXPECT_NE(MetalSdfFragment.find("float InnerCoverage = BorderWidth > 0.0 && min(InnerHalfSize.x, InnerHalfSize.y) > 0.0 ? RoundedRectCoverage(InnerDistance, RenderParams.y) : 0.0;"), std::string::npos);
+		EXPECT_EQ(MetalSdfFragment.find("const float InnerCoverage = BorderWidth"), std::string::npos);
 		EXPECT_NE(MetalShader.find("Rect.zw + float2(RenderParams.z * 2.0)"), std::string::npos);
 		EXPECT_NE(MetalShader.find("const float OutputAlpha = FillAlpha + BorderAlpha;"), std::string::npos);
-		EXPECT_NE(MetalShader.find("const float3 Premultiplied = FillColor.rgb * FillAlpha + BorderColor.rgb * BorderAlpha;"), std::string::npos);
+		// 与 GLSL 一致：边框颜色经 BorderTint 中转，RenderParams.w 控制是否沿用渐变色。
+		EXPECT_NE(MetalShader.find("float4 BorderTint = BorderColor;"), std::string::npos);
+		EXPECT_NE(MetalShader.find("if(RenderParams.w > 0.5)"), std::string::npos);
+		EXPECT_NE(MetalShader.find("const float3 Premultiplied = FillColor.rgb * FillAlpha + BorderTint.rgb * BorderAlpha;"), std::string::npos);
 		// 与 OpenGL/Vulkan 一致：圆角 SDF 不做 0.8/0.9 暗化，也不做非预乘的 border/fill 插值。
 		EXPECT_EQ(MetalSdfFragment.find("* 0.8"), std::string::npos);
 		EXPECT_EQ(MetalSdfFragment.find("* 0.9"), std::string::npos);
@@ -152,6 +199,16 @@ TEST(QmNewUiMenuRenderSurfaceContract, ShaderBackendsKeepRoundedSurfaceCompositi
 	const std::string OpenGlSdfShader = ReadTextFile("data/shader/rounded_rect_sdf.frag");
 	const std::string VulkanSdfShader = ReadTextFile("data/shader/vulkan/rounded_rect_sdf.frag");
 	EXPECT_EQ(NormalizeSdfCore(OpenGlSdfShader), NormalizeSdfCore(VulkanSdfShader));
+
+	// 纹理变体的 Vulkan 描述符集号是编译期看不出来的接口：图片采样器在 set 0，
+	// 参数块在 set 1，与 C++ 侧「图片绑 set 0、UBO 绑 set 1」必须一致。set 号写错时
+	// 片元读到的是未绑定内存，会把「启用纹理」当作关闭，照片整块透明——只有实机
+	// 才能看出来，所以在这里用静态合同钉住。
+	EXPECT_NE(VulkanSdfShader.find("layout(set = 0, binding = 0) uniform sampler2D gTextureSampler;"), std::string::npos);
+	EXPECT_NE(VulkanSdfShader.find("layout(std140, set = 1, binding = 1)"), std::string::npos);
+	EXPECT_NE(VulkanSdfShader.find("layout(std140, set = 0, binding = 1)"), std::string::npos);
+	const std::string VulkanPipelines = ReadTextFile("src/engine/client/backend/vulkan/backend_vulkan_qm_pipelines_impl.h");
+	EXPECT_NE(VulkanPipelines.find("const uint32_t ParamSet = Textured ? 1u : 0u;"), std::string::npos);
 
 	// 跨后端几何核心必须一致：从 SDF 距离函数体里抽出「返回表达式」，
 	// 把 Metal 的 float2 语法归一化到 GLSL 的 vec2，再逐字符比对。
@@ -193,16 +250,36 @@ TEST(QmNewUiMenuRenderSurfaceContract, ShaderBackendsKeepRoundedSurfaceCompositi
 	};
 	const std::string MetalSdfShader = ReadTextFile("data/shader/metal/qmclient.metal");
 	ASSERT_FALSE(MetalSdfShader.empty());
-	EXPECT_EQ(
-		ExtractSdfReturnExpression(OpenGlSdfShader, "float RoundedRectSdf(vec2 Point, vec2 HalfSize, float Radius)"),
-		ExtractSdfReturnExpression(MetalSdfShader, "float RoundedRectDistance(float2 Point, float2 HalfSize, float Radius)"));
+	// 三个后端必须共享同一套形状语义：圆弧退化分支、p 范数指数、梯度归一、
+	// 以及曲率/外扩两个参数的读取来源。任何一份漏改，那个平台就还是硬折角或错位叠层。
+	for(const std::string *pShader : {&OpenGlSdfShader, &VulkanSdfShader, &MetalSdfShader})
+	{
+		EXPECT_NE(pShader->find("Amount <= 0.001"), std::string::npos);
+		EXPECT_NE(pShader->find("mix(2.0, 4.0, Amount)"), std::string::npos);
+		// 生长上限只夹生长、不回收已有半径；曲线强度按实际生长反解。
+		// 胶囊判据带上「长边明显长于短边」，与 CPU 侧 ResolveRoundedCornerShape 同一条：
+		// 之前着色器只看半径，近方形的大半径控件在 SDF 与几何兜底之间生长上限不同。
+		EXPECT_NE(pShader->find("(Capsule ? 0.8 : 0.5)"), std::string::npos);
+		EXPECT_NE(pShader->find("max(HalfSize.x, HalfSize.y) > MinHalf * 1.2"), std::string::npos);
+		EXPECT_NE(pShader->find("clamp(ClampedRadius * (1.0 + 1.3 * Amount), ClampedRadius, MaxRadius)"), std::string::npos);
+		// 胶囊接缝软化：胶囊没有生长空间，但半圆端头与直边的曲率跳变要能单独缓，
+		// 否则就只能二选一（要么硬接缝，要么整个端头被压方）。
+		EXPECT_NE(pShader->find("min(Amount, clamp(SeamAmount, 0.0, 1.0))"), std::string::npos);
+		EXPECT_NE(pShader->find("GradientLength"), std::string::npos);
+		EXPECT_NE(pShader->find("[14].w"), std::string::npos);
+		EXPECT_NE(pShader->find("[16].w"), std::string::npos);
+		// 曲率 0 必须严格退回原来的圆弧定理：退化成圆的公式、半径不外扩，
+		// 这样默认值关闭时渲染结果与改动前逐像素一致。
+		EXPECT_NE(pShader->find("return length(Corner) + Flat - EffectiveRadius;"), std::string::npos);
+		EXPECT_NE(pShader->find("if(Amount <= 0.001 ||"), std::string::npos);
+	}
 	EXPECT_EQ(
 		ExtractSdfReturnExpression(OpenGlSdfShader, "float CornerRadius(vec2 Point, vec4 CornerRadii)"),
 		ExtractSdfReturnExpression(MetalSdfShader, "float RoundedRectCornerRadius(float2 Point, float4 CornerRadii)"));
 
 	const std::string GraphicsHeader = ReadTextFile("src/engine/graphics.h");
 	const std::string GraphicsThreaded = ReadTextFile("src/engine/client/graphics_threaded.cpp");
-	EXPECT_NE(GraphicsHeader.find("static_assert(sizeof(SRoundedRectSdfParams) == sizeof(vec4) * 5);"), std::string::npos);
+	EXPECT_NE(GraphicsHeader.find("static_assert(sizeof(SRoundedRectSdfParams) == sizeof(vec4) * 18);"), std::string::npos);
 	const std::string RoundedCommand = FunctionBody(GraphicsThreaded, "void CGraphics_Threaded::RenderRoundedRectSdf");
 	EXPECT_NE(RoundedCommand.find("Params.m_Params.z"), std::string::npos);
 	EXPECT_NE(RoundedCommand.find("if(m_NumVertices > 0)"), std::string::npos);
@@ -220,7 +297,10 @@ TEST(QmNewUiMenuRenderSurfaceContract, OrdinaryUiRoundedSurfacesUseSharedPath)
 	const std::string Effects = ReadTextFile("src/game/client/components/ui_effects.cpp");
 	const std::string HudEditor = ReadTextFile("src/game/client/components/hud_editor.cpp");
 
-	EXPECT_NE(Effects.find("DrawRoundedSurface(Ui(), ShadowRect"), std::string::npos);
+	// 照片卡：照片走共享的圆角贴图路径（四角由圆角覆盖度裁掉），只有能力回退时
+	// 才用一帧四边形 + 单独描边。卡片投影已移除，旧的 ShadowRect 直绘不得回归。
+	EXPECT_NE(Effects.find("DrawRoundedImage(Ui(), CardRect"), std::string::npos);
+	EXPECT_NE(Effects.find("DrawRoundedSurface(Ui(), BorderRect"), std::string::npos);
 	EXPECT_EQ(Effects.find("Graphics()->DrawRect(PreviewX + ShadowOffset"), std::string::npos);
 	EXPECT_NE(HudEditor.find("DrawRoundedSurface(Ui(), HelpRect"), std::string::npos);
 	EXPECT_EQ(HudEditor.find("Graphics()->DrawRect(HelpX, HelpY"), std::string::npos);
@@ -228,12 +308,11 @@ TEST(QmNewUiMenuRenderSurfaceContract, OrdinaryUiRoundedSurfacesUseSharedPath)
 
 TEST(QmNewUiMenuRenderSurfaceContract, LegacyRoundedRectDrawSitesRequireExplicitAllowlist)
 {
+	// 列表只能缩，不能为了过测试把新直绘塞回来。
+	// hud.cpp 保留的唯一原因是这些元素根本没有圆角可统一：0.75px 宽的分隔线、
+	// 1px 圆角的进度条。亚像素元素走 SDF 既看不出差别，还多一次绘制命令。
 	const char *const apAllowlistedFiles[] = {
 		"src/game/client/components/hud.cpp",
-		"src/game/client/components/chat.cpp",
-		"src/game/client/components/nameplates.cpp",
-		"src/game/client/components/spectator.cpp",
-		"src/game/client/components/statboard.cpp",
 	};
 	for(const char *pPath : apAllowlistedFiles)
 	{
@@ -310,8 +389,9 @@ TEST(QmNewUiMenuBranches, NoThemeBackgroundAndFriendRowsUseSharedSdfSurfaces)
 	EXPECT_NE(Background.find("const ColorRGBA CheckerColor = NoMenuTheme"), std::string::npos);
 	EXPECT_NE(Background.find("Graphics()->SetColor(CheckerColor);"), std::string::npos);
 	EXPECT_NE(Browser.find("#include <game/client/QmUi/UiSurface.h>"), std::string::npos);
-	EXPECT_NE(Browser.find("DrawRoundedSurface(Ui(), Header, HeaderColor, ColorRGBA(), 5.0f);"), std::string::npos);
-	EXPECT_NE(Browser.find("DrawRoundedSurface(Ui(), Rect, Color, ColorRGBA(), 5.0f);"), std::string::npos);
+	// 圆角数值已收进 ui_token::radius（SMALL_MENU 即 5.0），断言跟着 token 走。
+	EXPECT_NE(Browser.find("DrawRoundedSurface(Ui(), Header, HeaderColor, ColorRGBA(), ui_token::radius::SMALL_MENU);"), std::string::npos);
+	EXPECT_NE(Browser.find("DrawRoundedSurface(Ui(), Rect, CardFill, ColorRGBA(), ui_token::radius::SMALL_MENU);"), std::string::npos);
 	EXPECT_EQ(Browser.find("Rect.Draw(Color, IGraphics::CORNER_ALL, 5.0f);"), std::string::npos);
 }
 

@@ -17,6 +17,7 @@
 #include <game/client/QmUi/SettingsCardDeck.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/QmUi/UiForms.h>
+#include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/QmUi/cards/QmCardCatalog.h>
@@ -77,64 +78,9 @@ void CMenusSettingsControls::OnInterfacesInit(CGameClient *pClient)
 {
 	CComponentInterfaces::OnInterfacesInit(pClient);
 
-	m_vBindOptions = {
-		{EBindOptionGroup::MOVEMENT, Localizable("Move left"), "+left"},
-		{EBindOptionGroup::MOVEMENT, Localizable("Move right"), "+right"},
-		{EBindOptionGroup::MOVEMENT, Localizable("Jump"), "+jump"},
-		{EBindOptionGroup::MOVEMENT, Localizable("Fire"), "+fire"},
-		{EBindOptionGroup::MOVEMENT, Localizable("Hook"), "+hook"},
-		{EBindOptionGroup::MOVEMENT, Localizable("Hook collisions"), "+showhookcoll"},
-		{EBindOptionGroup::MOVEMENT, Localizable("Pause"), "say /pause"},
-		{EBindOptionGroup::MOVEMENT, Localizable("Kill"), "kill"},
-		{EBindOptionGroup::MOVEMENT, Localizable("Zoom in"), "zoom+"},
-		{EBindOptionGroup::MOVEMENT, Localizable("Zoom out"), "zoom-"},
-		{EBindOptionGroup::MOVEMENT, Localizable("Default zoom"), "zoom"},
-		{EBindOptionGroup::MOVEMENT, Localizable("Show others"), "say /showothers"},
-		{EBindOptionGroup::MOVEMENT, Localizable("Show all"), "say /showall"},
-		{EBindOptionGroup::MOVEMENT, Localizable("Toggle dyncam"), "toggle cl_dyncam 0 1"},
-		{EBindOptionGroup::MOVEMENT, Localizable("Toggle ghost"), "toggle cl_race_show_ghost 0 1"},
-		{EBindOptionGroup::WEAPON, Localizable("Hammer"), "+weapon1"},
-		{EBindOptionGroup::WEAPON, Localizable("Pistol"), "+weapon2"},
-		{EBindOptionGroup::WEAPON, Localizable("Shotgun"), "+weapon3"},
-		{EBindOptionGroup::WEAPON, Localizable("Grenade"), "+weapon4"},
-		{EBindOptionGroup::WEAPON, Localizable("Laser"), "+weapon5"},
-		{EBindOptionGroup::WEAPON, Localizable("Weapon trajectory"), "+showweapontrajectory"},
-		{EBindOptionGroup::WEAPON, Localizable("Next weapon"), "+nextweapon"},
-		{EBindOptionGroup::WEAPON, Localizable("Prev. weapon"), "+prevweapon"},
-		{EBindOptionGroup::VOTING, Localizable("Vote yes"), "vote yes"},
-		{EBindOptionGroup::VOTING, Localizable("Vote no"), "vote no"},
-		{EBindOptionGroup::CHAT, Localizable("Chat"), "+show_chat; chat all"},
-		{EBindOptionGroup::CHAT, Localizable("Team chat"), "+show_chat; chat team"},
-		{EBindOptionGroup::CHAT, Localizable("Converse"), "+show_chat; chat all /c "},
-		{EBindOptionGroup::CHAT, Localizable("Chat command"), "+show_chat; chat all /"},
-		{EBindOptionGroup::CHAT, Localizable("Show chat"), "+show_chat"},
-		{EBindOptionGroup::CHAT, Localizable("Repeat message"), "+qm_repeat"},
-		{EBindOptionGroup::CHAT, Localizable("Voice chat"), "+qm_voice_ptt"},
-		{EBindOptionGroup::DUMMY, Localizable("Toggle dummy"), "toggle cl_dummy 0 1"},
-		{EBindOptionGroup::DUMMY, Localizable("Dummy jump"), "+toggle_restore cl_dummy_jump 1"},
-		{EBindOptionGroup::DUMMY, Localizable("Dummy fire"), "+toggle_restore cl_dummy_fire 1"},
-		{EBindOptionGroup::DUMMY, Localizable("Dummy hook"), "+toggle_restore cl_dummy_hook 1"},
-		{EBindOptionGroup::DUMMY, Localizable("Dummy copy"), "toggle cl_dummy_copy_moves 0 1"},
-		{EBindOptionGroup::DUMMY, Localizable("Dummy hammer fly"), "toggle cl_dummy_hammer 0 1"},
-		{EBindOptionGroup::DUMMY, Localizable("Dummy Control"), "toggle cl_dummy_control 1 0"},
-		{EBindOptionGroup::MISCELLANEOUS, Localizable("Emoticon"), "+emote"},
-		{EBindOptionGroup::MISCELLANEOUS, Localizable("Spectate mode"), "+spectate"},
-		{EBindOptionGroup::MISCELLANEOUS, Localizable("Spectate teleport"), "qm_spec_teleport"},
-		{EBindOptionGroup::MISCELLANEOUS, Localizable("Spectate next"), "spectate_next"},
-		{EBindOptionGroup::MISCELLANEOUS, Localizable("Spectate previous"), "spectate_previous"},
-		{EBindOptionGroup::MISCELLANEOUS, Localizable("Active disconnect"), "qm_timeout_disconnect"},
-		{EBindOptionGroup::MISCELLANEOUS, Localizable("Console"), "toggle_local_console"},
-		{EBindOptionGroup::MISCELLANEOUS, Localizable("Remote console"), "toggle_remote_console"},
-		{EBindOptionGroup::MISCELLANEOUS, Localizable("Screenshot"), "screenshot"},
-		{EBindOptionGroup::MISCELLANEOUS, Localizable("Scoreboard"), "+scoreboard"},
-		{EBindOptionGroup::MISCELLANEOUS, Localizable("Scoreboard cursor"), "toggle_scoreboard_cursor"},
-		{EBindOptionGroup::MISCELLANEOUS, Localizable("Statboard"), "+statboard"},
-		{EBindOptionGroup::MISCELLANEOUS, Localizable("Pie menu"), "+pie_menu"},
-		{EBindOptionGroup::MISCELLANEOUS, Localizable("Fast practice"), "fast_practice_toggle"},
-		{EBindOptionGroup::MISCELLANEOUS, Localizable("Lock team"), "say /lock"},
-		{EBindOptionGroup::MISCELLANEOUS, Localizable("Show entities"), "toggle cl_overlay_entities 0 100"},
-		{EBindOptionGroup::MISCELLANEOUS, Localizable("Show HUD"), "toggle cl_showhud 0 1"},
-	};
+	// 预定义动作来自 bind_overview.h 的共享已知动作表（Bind 一览卡使用同一份表归类）。
+	for(const SKnownBindAction &Action : s_aKnownBindActions)
+		m_vBindOptions.push_back({Action.m_Group, Action.m_pLabel, Action.m_pCommand});
 	m_NumPredefinedBindOptions = m_vBindOptions.size();
 
 	// 此时配置文件尚未加载；持久状态在 Render 中同步，避免提前完成旧配置迁移。
@@ -150,6 +96,56 @@ void CMenusSettingsControls::Render(CUIRect MainView)
 	CPerfTimer ShellTimer;
 	PrepareSettingsCards(ResolveSettingsContentMetrics(MainView.w), ReadOnly, Ui()->MeasurementOnly() ? nullptr : &m_SettingsScrollRegion);
 	LogControlsPerfStage(GameClient()->Client(), "controls_tab_shell", ShellTimer.ElapsedMs(), false, "page=controls");
+
+	// 控制页只有一行四个并列页签：「控制 / 绑定 / 指令工坊 / 蓝图」。
+	// 绑定编辑卡（键盘、参数与配置持久化）作为第二个页签承载，标准控制卡片里
+	// 不再复制一套绑定状态；指令工坊与蓝图则直接复用各自的页面入口。
+	// 页签行沿用其他设置页的高度与上下间距，只在最外层解析一次子页签布局：
+	// 页签行以下就是内容区，不再有第二行页签，也就没有第二份高度与间距。
+	const SSettingsSubTabLayoutFrame SubTabs = ResolveSettingsSubTabLayout(MainView, m_CardMetrics.m_UiScale);
+	CUIRect TabBar = SubTabs.m_TabBarRect;
+	MainView = SubTabs.m_ContentRect;
+	// 四个页签整行等分：等宽是胶囊滑块与槽位逐格对齐的前提，也保证页签始终排在
+	// 同一行 —— 按文字宽度排版会让「指令工坊」把后面两个页签挤到下一行。
+	CUIRect aTabSlots[static_cast<size_t>(ETab::NUM)];
+	CUIRect TabRemainder = TabBar;
+	const float TabWidth = std::max(0.0f, TabBar.w) / static_cast<float>(ETab::NUM);
+	for(size_t Index = 0; Index < static_cast<size_t>(ETab::NUM); ++Index)
+		TabRemainder.VSplitLeft(TabWidth, &aTabSlots[Index], &TabRemainder);
+	const int ActiveTab = static_cast<int>(m_Tab);
+	const int SelectedTab = ui_widget::CapsuleTabBar(GameClient()->m_Menus.TabBarUiContext(), MakeUiScopeHash("settings_controls_tabs_capsule"), aTabSlots, static_cast<int>(ETab::NUM), ActiveTab, GameClient()->m_Menus.SettingsCapsuleTabBarStyle());
+	if(!ReadOnly && SelectedTab >= 0)
+		m_Tab = static_cast<ETab>(SelectedTab);
+	static CButtonContainer s_aControlsTabs[static_cast<size_t>(ETab::NUM)] = {};
+	// 选中态由 CapsuleTabBar 的滑块承担，DoButton_MenuTab 只负责文字与 hover 反馈。
+	const char *const apTabLabels[] = {Localize("Controls"), Localize("Bind"), Localize("Command Workshop"), Localize("Blueprint")};
+	static_assert(sizeof(apTabLabels) / sizeof(apTabLabels[0]) == static_cast<size_t>(ETab::NUM), "control tab labels must match ETab");
+	for(size_t Index = 0; Index < static_cast<size_t>(ETab::NUM); ++Index)
+		GameClient()->m_Menus.DoButton_MenuTab(&s_aControlsTabs[Index], apTabLabels[Index], m_Tab == static_cast<ETab>(Index), &aTabSlots[Index], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true);
+
+	if(m_Tab != ETab::CONTROLS)
+	{
+		// 三个卡片页签的渲染入口签名保持不变，各自负责自己的卡片骨架与滚动区。
+		switch(m_Tab)
+		{
+		case ETab::BIND:
+			// deck 自己已有卡片骨架（工具条 + 键位键盘 + 独立滚动区），「绑定」页
+			// 直接把内容区整块交给它：底部键位占用条带已经删除，不再为它留任何高度。
+			// 那份「键 → 命令」数据在 Bind 一览卡和键面冲突标记里已经各有一份，
+			// 条带只会带来重复与第二层滚动。
+			GameClient()->m_Menus.RenderSettingsQmClientBindDeck(MainView, ReadOnly);
+			break;
+		case ETab::WORKSHOP:
+			GameClient()->m_Menus.RenderSettingsBindWorkshop(MainView, ReadOnly);
+			break;
+		case ETab::BLUEPRINT:
+			GameClient()->m_Menus.RenderSettingsBindBlueprint(MainView, ReadOnly);
+			break;
+		default:
+			break;
+		}
+		return;
+	}
 
 	CPerfTimer InteractiveTimer;
 	CUIRect QuickSearch, SearchMatches, ResetToDefault;
@@ -198,10 +194,30 @@ void CMenusSettingsControls::Render(CUIRect MainView)
 	}
 
 	// Reset to default button
+	static CUi::SConfirmPopupContext s_ResetControlsConfirm;
+	static bool s_ResetControlsPending = false;
 	if(GameClient()->m_Menus.DoSettingsButton_Menu(CMenus::SETTINGS_CONTROLS, -1, -1, &m_ResetToDefaultButton, "controls-reset-to-defaults", Localize("Reset to defaults"), 0, &ResetToDefault))
 	{
-		GameClient()->m_Menus.PopupConfirm(Localize("Reset controls"), Localize("Are you sure that you want to reset the controls to their defaults?"),
-			Localize("Reset"), Localize("Cancel"), &CMenus::ResetSettingsControls);
+		// 重置会丢掉现有绑定：Cancel/OK + 危险色，正文说明后果。
+		s_ResetControlsConfirm.Reset();
+		s_ResetControlsConfirm.DefaultButtons();
+		s_ResetControlsConfirm.m_Tone = CUi::SConfirmPopupContext::ETone::DANGER;
+		str_copy(s_ResetControlsConfirm.m_aMessage, Localize("Are you sure that you want to reset the controls to their defaults?"), sizeof(s_ResetControlsConfirm.m_aMessage));
+		GameClient()->m_Menus.Ui()->ShowPopupConfirm(GameClient()->m_Menus.Ui()->MouseX(), GameClient()->m_Menus.Ui()->MouseY(), &s_ResetControlsConfirm);
+		s_ResetControlsPending = true;
+	}
+	// 结果下一帧轮询：确认后才重置，取消或被页面切换收掉时不动作。
+	if(s_ResetControlsPending)
+	{
+		if(s_ResetControlsConfirm.m_Result == CUi::SConfirmPopupContext::CONFIRMED)
+		{
+			s_ResetControlsPending = false;
+			GameClient()->m_Menus.ResetSettingsControls();
+		}
+		else if(s_ResetControlsConfirm.m_Result == CUi::SConfirmPopupContext::CANCELED || !GameClient()->m_Menus.Ui()->IsPopupOpen(&s_ResetControlsConfirm))
+		{
+			s_ResetControlsPending = false;
+		}
 	}
 	LogControlsPerfStage(GameClient()->Client(), "controls_interactive_layer", InteractiveTimer.ElapsedMs(), false, "page=controls section=interactive");
 	LogControlsPerfStage(GameClient()->Client(), "controls_text_cache", ShellTimer.ElapsedMs(), false, "page=controls section=text_cache");

@@ -1252,7 +1252,7 @@ void CMapSettingsBackend::PossibleConfigVariableCallback(const SConfigVariable *
 		SIntConfigVariable *pIntVariable = (SIntConfigVariable *)pVariable;
 		pBackend->m_vpMapSettings.emplace_back(std::make_shared<SMapSettingInt>(
 			pIntVariable->m_pScriptName,
-			pIntVariable->m_pHelp,
+			pIntVariable->m_pHelpLocalizeKey,
 			pIntVariable->m_Default,
 			pIntVariable->m_Min,
 			pIntVariable->m_Max));
@@ -1341,7 +1341,7 @@ void CMapSettingsBackend::CContext::UpdateFromString(const char *pStr)
 	while(*pIterator != ' ' && *pIterator != '\0')
 		pIterator++;
 
-	str_copy(m_aCommand, aInputString, (pIterator - aInputString) + 1);
+	str_copy(m_aCommand, aInputString, minimum((int)(pIterator - aInputString) + 1, (int)sizeof(m_aCommand)));
 
 	// Get the command if it is a recognized one
 	for(auto &pSetting : m_pBackend->m_vpMapSettings)
@@ -2144,7 +2144,21 @@ void CMapSettingsBackend::CContext::GetCommandHelpText(char *pStr, int Length) c
 	if(!m_pCurrentSetting)
 		return;
 
-	str_copy(pStr, m_pCurrentSetting->m_pHelp, Length);
+	if(m_pCurrentSetting->m_Type == IMapSetting::SETTING_INT)
+	{
+		const auto *pSetting = static_cast<const SMapSettingInt *>(m_pCurrentSetting.get());
+		const char *pHelpText = Localize(pSetting->m_pHelp);
+		if(pSetting->m_Min == 0 && pSetting->m_Max == 0)
+			str_format(pStr, Length, Localize("%s (default: %d)", "Config help"), pHelpText, pSetting->m_Default);
+		else if(pSetting->m_Max == 0)
+			str_format(pStr, Length, Localize("%s (default: %d, min: %d)", "Config help"), pHelpText, pSetting->m_Default, pSetting->m_Min);
+		else
+			str_format(pStr, Length, Localize("%s (default: %d, min: %d, max: %d)", "Config help"), pHelpText, pSetting->m_Default, pSetting->m_Min, pSetting->m_Max);
+	}
+	else
+	{
+		str_copy(pStr, m_pCurrentSetting->m_pHelp, Length);
+	}
 }
 
 template<int N>

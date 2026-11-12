@@ -102,18 +102,23 @@ namespace QmNeteaseBridge
 			if(pValue->type != json_object)
 				return;
 
-			// YRC 具有更精确的行/词时间。先读取精确字段，再读取普通 LRC
-			// 和翻译/罗马音字段，避免 yromalrc 抢在 lrc 之前成为主歌词。
+			// 原文优先读取 YRC，其次读取 LRC；翻译独立保存，不参与原文兜底。
 			if(pOut->m_Yrc.empty())
 				pOut->m_Yrc = LyricField(pValue, "yrc");
-			for(const char *pName : {"lrc", "ytlrc", "tlyric", "ttlrc", "yromalrc", "romalrc"})
-			{
-				if(!pOut->m_Lrc.empty())
-					break;
-				pOut->m_Lrc = LyricField(pValue, pName);
-			}
+			if(pOut->m_Lrc.empty())
+				pOut->m_Lrc = LyricField(pValue, "lrc");
+			for(const char *pName : {"ytlrc", "tlyric", "ttlrc"})
+				if(pOut->m_TranslationLrc.empty())
+					pOut->m_TranslationLrc = LyricField(pValue, pName);
 			for(unsigned int Index = 0; Index < pValue->u.object.length; ++Index)
-				ExtractRaw(pValue->u.object.values[Index].value, pOut, Depth + 1);
+			{
+				const auto &Entry = pValue->u.object.values[Index];
+				if(Entry.name == nullptr)
+					continue;
+				const std::string_view Name(Entry.name, Entry.name_length);
+				if(Name != "ytlrc" && Name != "tlyric" && Name != "ttlrc" && Name != "yromalrc" && Name != "romalrc")
+					ExtractRaw(Entry.value, pOut, Depth + 1);
+			}
 		}
 
 		uint64_t DirectSongId(const json_value *pObject, bool AllowTrackId)
@@ -323,6 +328,9 @@ namespace QmNeteaseBridge
 			m_PositionMs = 0;
 			m_Anchor.Reset();
 			m_Timeline.Clear();
+			m_RawLyrics = {};
+			m_PendingRawLyrics = {};
+			m_RawLyricsDirty = true;
 			m_Source = QmNeteaseHook::ENeteaseLyricSource::None;
 			m_CurrentLyric.clear();
 			m_LineStartMs = -1;
@@ -356,6 +364,7 @@ namespace QmNeteaseBridge
 		if(m_TickThread.joinable())
 			m_TickThread.join();
 		m_Writer.Close();
+		m_LyricsChannel.Close();
 	}
 
 	bool CFrontendLyricBridge::IsConnected() const
@@ -366,6 +375,8 @@ namespace QmNeteaseBridge
 	void CFrontendLyricBridge::ClearLyricsLocked()
 	{
 		m_Timeline.Clear();
+		m_RawLyrics = {};
+		m_RawLyricsDirty = true;
 		m_Source = QmNeteaseHook::ENeteaseLyricSource::None;
 		m_CurrentLyric.clear();
 		m_LineStartMs = -1;
@@ -376,6 +387,7 @@ namespace QmNeteaseBridge
 	{
 		m_PendingLyricsSongId = 0;
 		m_PendingTimeline.Clear();
+		m_PendingRawLyrics = {};
 	}
 
 	bool CFrontendLyricBridge::SwitchSongLocked(uint64_t SongId)
@@ -395,6 +407,8 @@ namespace QmNeteaseBridge
 		if(m_HasSong && m_PendingLyricsSongId == SongId && m_PendingTimeline.m_HasTiming)
 		{
 			m_Timeline = std::move(m_PendingTimeline);
+			m_RawLyrics = std::move(m_PendingRawLyrics);
+			m_RawLyricsDirty = true;
 			m_Source = QmNeteaseHook::ENeteaseLyricSource::Frontend;
 		}
 		ClearPendingLyricsLocked();
@@ -467,6 +481,7 @@ namespace QmNeteaseBridge
 					{
 						m_PendingLyricsSongId = SongId;
 						m_PendingTimeline = std::move(ParsedTimeline);
+						m_PendingRawLyrics = std::move(Raw);
 					}
 					return;
 				}
@@ -475,11 +490,17 @@ namespace QmNeteaseBridge
 				m_LastReportTick = ReportTick;
 				if(ParsedLyrics && m_Source == QmNeteaseHook::ENeteaseLyricSource::Frontend && NeteaseLyrics::AreTimelinesEquivalent(m_Timeline, ParsedTimeline))
 				{
-					// Worker 会周期性重放同一份歌词。仅刷新 heartbeat，不能
-					// 清空当前句，否则 HUD 会收到无效脉冲并反复收起。
+					// 缓存重发可能只有原文，不能覆盖已取得的译文或清空当前句。
+					if(!Raw.m_TranslationLrc.empty() && m_RawLyrics.m_TranslationLrc != Raw.m_TranslationLrc)
+					{
+						m_RawLyrics.m_TranslationLrc = std::move(Raw.m_TranslationLrc);
+						m_RawLyricsDirty = true;
+					}
 					return;
 				}
 				m_Timeline = std::move(ParsedTimeline);
+				m_RawLyrics = std::move(Raw);
+				m_RawLyricsDirty = true;
 				m_Source = QmNeteaseHook::ENeteaseLyricSource::Frontend;
 				m_CurrentLyric.clear();
 				m_LineStartMs = -1;
@@ -543,6 +564,8 @@ namespace QmNeteaseBridge
 		bool HighPriorityTimelineActive = false;
 		{
 			std::scoped_lock Lock(m_Mutex);
+			if(m_RawLyricsDirty && m_LyricsChannel.Publish(m_CloudMusicPid, m_SongId, m_Generation, m_RawLyrics))
+				m_RawLyricsDirty = false;
 			Snapshot.m_CloudMusicPid = m_CloudMusicPid;
 			Snapshot.m_Generation = m_Generation;
 			Snapshot.m_SongId = m_SongId;

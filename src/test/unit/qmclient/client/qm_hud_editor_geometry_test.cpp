@@ -2,6 +2,96 @@
 
 #include <gtest/gtest.h>
 
+TEST(QmHudTransformScale, PositionOnlyElementsIgnoreSavedScale)
+{
+	for(const int SavedScale : {25, 75, 100, 110, 200, 400})
+	{
+		SCOPED_TRACE(SavedScale);
+		EXPECT_FLOAT_EQ(QmHudEditor::ResolveScale(SavedScale, false), 1.0f);
+	}
+}
+
+TEST(QmHudTransformScale, ScalableElementsKeepTheirScaleAndBounds)
+{
+	EXPECT_FLOAT_EQ(QmHudEditor::ResolveScale(125), 1.25f);
+	EXPECT_FLOAT_EQ(QmHudEditor::ResolveScale(10), 0.25f);
+	EXPECT_FLOAT_EQ(QmHudEditor::ResolveScale(500), 4.0f);
+}
+
+TEST(QmHudHorizontalPlacement, PointAnchorIgnoresAsymmetricVisibleBounds)
+{
+	for(const float Width : {80.0f, 300.0f, 1000.0f})
+	{
+		SCOPED_TRACE(Width);
+		for(const float Offset : {-600.0f, -30.0f, 20.0f})
+		{
+			SCOPED_TRACE(Offset);
+			const auto Placement = QmHudEditor::ResolveHorizontalPlacement(QmHudEditor::EHorizontalPlacement::TransformOrigin,
+				true, 0.35f, 300.0f, Width, Offset, 0.0f, 600.0f);
+			EXPECT_FLOAT_EQ(Placement.m_Position, 210.0f);
+			EXPECT_FLOAT_EQ(Placement.m_Width, 0.0f);
+			EXPECT_FLOAT_EQ(Placement.m_Offset, 0.0f);
+		}
+	}
+}
+
+TEST(QmHudHorizontalPlacement, LockedPositionIgnoresSavedXAndIndependentScreenClamp)
+{
+	for(const float X : {-100.0f, 200.0f, 550.0f})
+	{
+		SCOPED_TRACE(X);
+		for(const float Stored : {0.0f, 0.2f, 0.7f, 1.0f})
+		{
+			SCOPED_TRACE(Stored);
+			const auto Placement = QmHudEditor::ResolveHorizontalPlacement(QmHudEditor::EHorizontalPlacement::DefaultPosition,
+				true, Stored, X, 150.0f, 0.0f, 0.0f, 600.0f, 10.0f, 10.0f);
+			EXPECT_FLOAT_EQ(Placement.m_Position, X);
+		}
+	}
+}
+
+TEST(QmHudHorizontalPlacement, VisibleBoundsRetainSavedPositionClampingAndDefaultMargins)
+{
+	const auto Saved = QmHudEditor::ResolveHorizontalPlacement(QmHudEditor::EHorizontalPlacement::VisibleBounds,
+		true, 0.95f, 300.0f, 120.0f, -20.0f, 0.0f, 600.0f);
+	EXPECT_FLOAT_EQ(Saved.m_Position, 500.0f);
+	EXPECT_FLOAT_EQ(Saved.m_Width, 120.0f);
+	EXPECT_FLOAT_EQ(Saved.m_Offset, -20.0f);
+	const auto Default = QmHudEditor::ResolveHorizontalPlacement(QmHudEditor::EHorizontalPlacement::VisibleBounds,
+		false, 0.0f, -5.0f, 120.0f, -20.0f, 0.0f, 600.0f, 10.0f, 10.0f);
+	EXPECT_FLOAT_EQ(Default.m_Position, 30.0f);
+}
+
+TEST(QmHudVerticalPlacement, SavedPositionAboveTheLowerBoundIsPushedDown)
+{
+	const float LowerBound = 40.0f;
+	EXPECT_FLOAT_EQ(QmHudEditor::ClampAnchorYBelowMinimum(12.0f, LowerBound, 10.0f, 0.0f, 300.0f), LowerBound);
+	EXPECT_FLOAT_EQ(QmHudEditor::ClampAnchorYBelowMinimum(LowerBound, LowerBound, 10.0f, 0.0f, 300.0f), LowerBound);
+}
+
+TEST(QmHudVerticalPlacement, SavedPositionBelowTheLowerBoundIsPreserved)
+{
+	const float LowerBound = 40.0f;
+	for(const float SavedY : {40.0f, 60.0f, 180.0f})
+	{
+		SCOPED_TRACE(SavedY);
+		EXPECT_FLOAT_EQ(QmHudEditor::ClampAnchorYBelowMinimum(SavedY, LowerBound, 10.0f, 0.0f, 300.0f), SavedY);
+	}
+}
+
+TEST(QmHudVerticalPlacement, ScreenBottomWinsOverTheLowerBound)
+{
+	// 下限落在屏幕底边之外时保持元素可见：位置取屏幕允许的最大锚点。
+	EXPECT_FLOAT_EQ(QmHudEditor::ClampAnchorYBelowMinimum(20.0f, 290.0f, 30.0f, 0.0f, 300.0f), 270.0f);
+	EXPECT_FLOAT_EQ(QmHudEditor::ClampAnchorYBelowMinimum(20.0f, 290.0f, 30.0f, 10.0f, 280.0f, 4.0f), 256.0f);
+}
+
+TEST(QmHudVerticalPlacement, DisabledLowerBoundKeepsTheSavedPosition)
+{
+	EXPECT_FLOAT_EQ(QmHudEditor::ClampAnchorYBelowMinimum(12.0f, QmHudEditor::NO_MINIMUM_ANCHOR_Y, 10.0f, 0.0f, 300.0f), 12.0f);
+	EXPECT_FLOAT_EQ(QmHudEditor::ClampAnchorYBelowMinimum(-15.0f, QmHudEditor::NO_MINIMUM_ANCHOR_Y, 10.0f, 0.0f, 300.0f), -15.0f);
+}
+
 TEST(QmHudMeasuredGeometry, ReportsLocalContentOffsetAndSizeAfterRendering)
 {
 	QmHudEditor::CVisibleBounds Geometry;

@@ -19,6 +19,7 @@
 #include <game/client/components/menu_background.h>
 #include <game/client/components/menus.h>
 #include <game/client/components/qmclient/mobile_spectator_controls.h>
+#include <game/client/components/qmclient/screenshot_clipboard.h>
 #include <game/client/gameclient.h>
 #include <game/localization.h>
 
@@ -26,7 +27,7 @@
 
 namespace qm_card_catalog
 {
-	void QmCardRenderHook::RenderScreenshotWatermarkSettings(const SQmCardBuildContext &Ctx, CUIRect Content)
+	void QmCardRenderHook::RenderScreenshotWatermarkSettings(const SQmCardBuildContext &Ctx, CUIRect Content, bool ShowEnable)
 	{
 		CMenus *pMenus = Ctx.m_pMenus;
 		const auto &Metrics = Ctx.m_Metrics;
@@ -44,7 +45,8 @@ namespace qm_card_catalog
 			if(pMenus->DoSettingsButton_CheckBox(CMenus::SETTINGS_GENERAL, -1, -1, pOption, pId, pText, *pOption, &Row, LabelProps, true, Metrics.m_BodySize))
 				*pOption ^= 1;
 		};
-		DoToggle(&g_Config.m_QmScreenshotWatermark, "screenshot-watermark", Localize("Automatically add a watermark to screenshots"));
+		if(ShowEnable)
+			DoToggle(&g_Config.m_QmScreenshotWatermark, "screenshot-watermark", Localize("Automatically add a watermark to screenshots"));
 		DoToggle(&g_Config.m_QmScreenshotWatermarkTimestamp, "screenshot-watermark-timestamp", Localize("Timestamp"));
 		DoToggle(&g_Config.m_QmScreenshotWatermarkMap, "screenshot-watermark-map", Localize("Map name"));
 		if(Flow.Control("watermark-text", Metrics.m_LineHeight, Row))
@@ -163,12 +165,15 @@ namespace qm_card_catalog
 				CSettingsContentLayoutFlow Flow(Content);
 				CUIRect Button;
 				char aBuf[128 + IO_MAX_PATH_LENGTH];
+				if(Flow.Control("general-map-tags", GeneralMetrics.m_LineHeight, Button) && pMenus->DoSettingsButton_CheckBox(CMenus::SETTINGS_GENERAL, -1, &g_Config.m_QmMapTags, "general-map-tags", Localize("Show community map tags"), g_Config.m_QmMapTags, &Button))
+					g_Config.m_QmMapTags ^= 1;
+				Flow.Space(GeneralMetrics.m_LineSpacing);
 				if(Flow.Control("general-skip-main-menu", GeneralMetrics.m_LineHeight, Button))
 				{
 					if(pMenus->DoSettingsButton_CheckBox(CMenus::SETTINGS_GENERAL, -1, &g_Config.m_ClSkipStartMenu, "general-skip-main-menu", Localize("Skip the main menu"), g_Config.m_ClSkipStartMenu, &Button))
 						g_Config.m_ClSkipStartMenu ^= 1;
 				}
-				Flow.Space(GeneralMetrics.m_SectionGap);
+				Flow.Space(GeneralMetrics.m_LineSpacing);
 				if(Flow.Control("general-refresh-rate", GeneralMetrics.m_LineHeight, Button))
 				{
 					str_copy(aBuf, " ");
@@ -236,21 +241,50 @@ namespace qm_card_catalog
 			Out.m_Render = [pMenus, DoNumericField, GeneralMetrics, GeneralCardCtx](CUIRect Content) {
 				CSettingsContentLayoutFlow Flow(Content);
 				CUIRect Button;
-				const auto DoAutoRecord = [pMenus, &Flow, &Button, DoNumericField, GeneralMetrics](int *pEnabled, int *pMax, const char *pToggleId, const char *pToggleText, const char *pMaxId, const char *pMaxText) {
-					if(Flow.Control(pToggleId, GeneralMetrics.m_LineHeight, Button) && pMenus->DoSettingsButton_CheckBox(CMenus::SETTINGS_GENERAL, -1, -1, pEnabled, pToggleId, pToggleText, *pEnabled, &Button))
+				const auto DoToggle = [&](int *pEnabled, const char *pId, const char *pText) {
+					if(Flow.Control(pId, GeneralMetrics.m_LineHeight, Button) && pMenus->DoSettingsButton_CheckBox(CMenus::SETTINGS_GENERAL, -1, -1, pEnabled, pId, pText, *pEnabled, &Button))
 						*pEnabled ^= 1;
 					Flow.Space(GeneralMetrics.m_LineSpacing);
-					if(*pEnabled)
-					{
-						if(Flow.Control(pMaxId, GeneralMetrics.m_LineHeight, Button))
-							DoNumericField(pMaxId, pMax, pMax, Button, pMaxText, 1, 1000, CUi::SCROLLBAR_OPTION_INFINITE);
-						Flow.Space(GeneralMetrics.m_SectionGap);
-					}
 				};
-				DoAutoRecord(&g_Config.m_ClAutoDemoRecord, &g_Config.m_ClAutoDemoMax, "general-auto-demo-record", Localize("Automatically record demos"), "general-auto-demo-max", Localize("Max demos"));
-				DoAutoRecord(&g_Config.m_ClAutoScreenshot, &g_Config.m_ClAutoScreenshotMax, "general-auto-screenshot", Localize("Automatically take game over screenshot"), "general-auto-screenshot-max", Localize("Max Screenshots"));
-				DoAutoRecord(&g_Config.m_ClAutoStatboardScreenshot, &g_Config.m_ClAutoStatboardScreenshotMax, "general-auto-statboard-screenshot", Localize("Automatically take statboard screenshot"), "general-auto-statboard-screenshot-max", Localize("Max Screenshots"));
-				DoAutoRecord(&g_Config.m_ClAutoCSV, &g_Config.m_ClAutoCSVMax, "general-auto-csv", Localize("Automatically create statboard csv"), "general-auto-csv-max", Localize("Max CSVs"));
+				DoToggle(&g_Config.m_ClAutoDemoRecord, "general-auto-demo-record", Localize("Automatically record demos"));
+				DoToggle(&g_Config.m_ClAutoScreenshot, "general-auto-screenshot", Localize("Automatically take game over screenshot"));
+				DoToggle(&g_Config.m_ClAutoStatboardScreenshot, "general-auto-statboard-screenshot", Localize("Automatically take statboard screenshot"));
+				DoToggle(&g_Config.m_ClAutoCSV, "general-auto-csv", Localize("Automatically create statboard csv"));
+				if(qm_screenshot_clipboard::Supported())
+				{
+					if(Flow.Control("general-screenshot-clipboard", GeneralMetrics.m_LineHeight, Button) && pMenus->DoSettingsButton_CheckBox(CMenus::SETTINGS_GENERAL, -1, -1, &g_Config.m_QmScreenshotClipboard, "general-screenshot-clipboard", Localize("Automatically copy manual screenshots to clipboard"), g_Config.m_QmScreenshotClipboard, &Button))
+						g_Config.m_QmScreenshotClipboard ^= 1;
+					Flow.Space(GeneralMetrics.m_LineSpacing);
+				}
+				DoToggle(&g_Config.m_QmScreenshotWatermark, "screenshot-watermark", Localize("Automatically add a watermark to screenshots"));
+				if(qm_mobile_spectator::Enabled())
+				{
+					CUIRect MediaRow;
+					if(Flow.Control("general-mobile-media", GeneralMetrics.m_ButtonHeight, MediaRow))
+					{
+						CUIRect Demos, Videos;
+						MediaRow.VSplitMid(&Demos, &Videos, GeneralMetrics.m_LineSpacing);
+						static CButtonContainer s_Demos, s_Videos;
+						if(pMenus->DoButton_Menu(&s_Demos, Localize("Demos directory"), 0, &Demos))
+							pMenus->GameClient()->m_QmMobileSpectator.ShowMediaFiles(false);
+						if(pMenus->DoButton_Menu(&s_Videos, Localize("Videos directory"), 0, &Videos))
+							pMenus->GameClient()->m_QmMobileSpectator.ShowMediaFiles(true);
+					}
+					Flow.Space(GeneralMetrics.m_SectionGap);
+				}
+				if(!Personalization(pMenus, Content, "deck:general-recording", GeneralMetrics))
+					return;
+				const auto DoRetention = [&](bool Enabled, int *pMax, const char *pId, const char *pText) {
+					if(!Enabled)
+						return;
+					if(Flow.Control(pId, GeneralMetrics.m_LineHeight, Button))
+						DoNumericField(pId, pMax, pMax, Button, pText, 1, 1000, CUi::SCROLLBAR_OPTION_INFINITE);
+					Flow.Space(GeneralMetrics.m_LineSpacing);
+				};
+				DoRetention(g_Config.m_ClAutoDemoRecord, &g_Config.m_ClAutoDemoMax, "general-auto-demo-max", Localize("Max demos"));
+				DoRetention(g_Config.m_ClAutoScreenshot, &g_Config.m_ClAutoScreenshotMax, "general-auto-screenshot-max", Localize("Max Screenshots"));
+				DoRetention(g_Config.m_ClAutoStatboardScreenshot, &g_Config.m_ClAutoStatboardScreenshotMax, "general-auto-statboard-screenshot-max", Localize("Max Screenshots"));
+				DoRetention(g_Config.m_ClAutoCSV, &g_Config.m_ClAutoCSVMax, "general-auto-csv-max", Localize("Max CSVs"));
 				Flow.Space(GeneralMetrics.m_SectionGap);
 				static CLineInput s_DemoDirectoryInput(g_Config.m_QmDemoDirectory, sizeof(g_Config.m_QmDemoDirectory));
 				static CLineInput s_VideoDirectoryInput(g_Config.m_QmVideoDirectory, sizeof(g_Config.m_QmVideoDirectory));
@@ -279,13 +313,10 @@ namespace qm_card_catalog
 					CUIRect MediaRow;
 					if(Flow.Control("general-mobile-media", GeneralMetrics.m_ButtonHeight, MediaRow))
 					{
-						CUIRect Demos, Videos;
-						MediaRow.VSplitMid(&Demos, &Videos, GeneralMetrics.m_LineSpacing);
-						static CButtonContainer s_Demos, s_Videos;
-						if(pMenus->DoButton_Menu(&s_Demos, Localize("Demos directory"), 0, &Demos))
+						// 手机上的文件位置交给系统文件管理器；导出的文件统一在「下载/QmClient」。
+						static CButtonContainer s_Downloads;
+						if(pMenus->DoButton_Menu(&s_Downloads, Localize("Open downloads folder"), 0, &MediaRow))
 							pMenus->GameClient()->m_QmMobileSpectator.ShowMediaFiles(false);
-						if(pMenus->DoButton_Menu(&s_Videos, Localize("Videos directory"), 0, &Videos))
-							pMenus->GameClient()->m_QmMobileSpectator.ShowMediaFiles(true);
 					}
 					Flow.Space(GeneralMetrics.m_SectionGap);
 				}
@@ -293,7 +324,7 @@ namespace qm_card_catalog
 				WatermarkCtx.m_pMenus = pMenus;
 				WatermarkCtx.m_UiContext = GeneralCardCtx;
 				WatermarkCtx.m_Metrics = GeneralMetrics;
-				RenderScreenshotWatermarkSettings(WatermarkCtx, Content);
+				RenderScreenshotWatermarkSettings(WatermarkCtx, Content, false);
 			};
 
 			UseDeclared();

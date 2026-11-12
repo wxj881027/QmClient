@@ -16,7 +16,22 @@ namespace
 	using namespace qm_tee_trail;
 	using SSample = SStyleSample;
 
-	constexpr float s_aLifeFactors[STYLE_COUNT] = {1.0f, 0.9f, 1.25f, 1.0f};
+	constexpr float s_aLifeFactors[STYLE_COUNT] = {
+		// 原版与三种旧艺术样式
+		1.0f,
+		0.9f,
+		1.25f,
+		1.0f,
+		// 4、5 是旧配置编号，不会作为已解析样式传入
+		1.0f,
+		1.0f,
+		// 极光、水墨、焰灵、星链、黑闪
+		1.15f,
+		1.35f,
+		1.25f,
+		1.45f,
+		1.2f,
+	};
 
 	float Smooth(float X)
 	{
@@ -211,7 +226,7 @@ float qm_tee_trail::Lifetime(int Style, int Length, float Speed)
 
 namespace
 {
-	void BuildTrailSegment(std::span<const CTrailPart> Trail, int Style, bool UsePresetPalette, double CurTime, float Width, int Seed, std::vector<SQuad> &vOut, float PixelSize, bool Taper, bool Fade)
+	void BuildTrailSegment(std::span<const CTrailPart> Trail, int Style, bool UsePresetPalette, double CurTime, float Width, int Seed, std::vector<SQuad> &vOut, float PixelSize, bool Taper, bool Fade, CPixelNoiseCache *pPixelNoiseCache)
 	{
 		const size_t Count = Trail.size();
 		if(Count < 2)
@@ -286,11 +301,11 @@ namespace
 				const vec2 Tangent = Unit(After - Before);
 				aSamples[i].m_Normal = vec2(-Tangent.y, Tangent.x);
 			}
-			BuildStyledEffect(aSamples.data(), SampleCount, Style, UsePresetPalette, Width, PixelSize, unsigned(Seed) * 0x9e3779b9u, vOut);
+			BuildStyledEffect(aSamples.data(), SampleCount, Style, UsePresetPalette, Width, PixelSize, unsigned(Seed) * 0x9e3779b9u, vOut, pPixelNoiseCache);
 			return;
 		}
 
-		// 原版保留原有主体截面、接缝、柔边及浮点运算顺序。
+		// 原版与艺术样式共用生成端过渡，中后段保留原有截面、接缝与柔边。
 		std::array<SBandPoint, MAX_RENDER_POINTS> aBand;
 		std::array<vec2, MAX_RENDER_POINTS> aNormals;
 		for(size_t i = 0; i < SampleCount; ++i)
@@ -298,6 +313,7 @@ namespace
 			const SSample &S = aSamples[i];
 			aBand[i] = {S.m_Pos, S.m_Width, S.m_Width, S.m_Tint.WithAlpha(S.m_Alpha)};
 		}
+		QmPrepareTrailBandHead(aBand.data(), SampleCount);
 		QmPrepareTrailBandJoins(aBand.data(), SampleCount, aNormals.data());
 		const auto PrepareSection = [&](size_t Index) {
 			const SBandPoint &P = aBand[Index];
@@ -313,7 +329,7 @@ namespace
 	}
 }
 
-void qm_tee_trail::BuildEffect(const std::vector<CTrailPart> &vTrail, int Style, bool UsePresetPalette, double CurTime, float Width, int Seed, std::vector<SQuad> &vOut, float PixelSize, bool Taper, bool Fade)
+void qm_tee_trail::BuildEffect(const std::vector<CTrailPart> &vTrail, int Style, bool UsePresetPalette, double CurTime, float Width, int Seed, std::vector<SQuad> &vOut, float PixelSize, bool Taper, bool Fade, CPixelNoiseCache *pPixelNoiseCache)
 {
 	vOut.clear();
 	if(vTrail.size() < 2 || !std::isfinite(CurTime) || !std::isfinite(Width) || !std::isfinite(PixelSize))
@@ -330,7 +346,7 @@ void qm_tee_trail::BuildEffect(const std::vector<CTrailPart> &vTrail, int Style,
 			++End;
 		// 分段只隔开位置来源的跳变；旧段仍按原始出生时间参与绘制和消散。
 		const size_t PreviousSize = vOut.size();
-		BuildTrailSegment(Trail.subspan(First, End - First), Style, UsePresetPalette, CurTime, Width, Seed, vOut, PixelSize, Taper, Fade);
+		BuildTrailSegment(Trail.subspan(First, End - First), Style, UsePresetPalette, CurTime, Width, Seed, vOut, PixelSize, Taper, Fade, pPixelNoiseCache);
 		size_t NormalEnd = PreviousSize;
 		while(NormalEnd < vOut.size() && !vOut[NormalEnd].m_Additive)
 			++NormalEnd;

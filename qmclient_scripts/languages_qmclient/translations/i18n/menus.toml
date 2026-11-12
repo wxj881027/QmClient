@@ -367,22 +367,6 @@ turkish = "Sistem konsolu ayrıntı düzeyini ayarla (-3=Yok, -2=Yalnızca Hatal
 polish = "Dostosuj szczegółowość konsoli systemowej (-3=Brak, -2=Tylko błędy, -1=Ostrzeżenia, 0=Informacje, 1=Debugowanie, 2=Śledzenie)"
 
 [[message]]
-key = "Adjust the opacity of entities belonging to other teams, such as tees and name plates"
-[message.translations]
-simplified_chinese = "调整其他队伍实体（如 Tee 和名牌）的不透明度"
-traditional_chinese = "調整其他隊伍實體（如 Tee 和名牌）的不透明度"
-japanese = "他のチームのエンティティ（Tee やネームプレートなど）の不透明度を調整"
-korean = "다른 팀의 엔티티(티, 이름표 등)의 불투명도를 조절합니다."
-russian = "Настроить прозрачность объектов других команд, таких как ти и таблички с именами"
-german = "Deckkraft von Entitäten anderer Teams anpassen, z. B. Tees und Namensschilder"
-spanish = "Ajustar la opacidad de entidades de otros equipos, como tees y placas de nombre"
-french = "Ajuster l'opacité des entités des autres équipes, comme les tees et les plaques de nom"
-brazilian_portuguese = "Ajustar a opacidade de entidades de outras equipes, como tees e placas de nome"
-portuguese = "Ajustar a opacidade de entidades de outras equipas, como tees e placas de nome"
-turkish = "Diğer takımlara ait varlıkların (tee'ler ve isim plakaları gibi) opaklığını ayarlayın"
-polish = "Dostosuj przezroczystość elementów należących do innych drużyn, takich jak gracze i tabliczki z nazwami"
-
-[[message]]
 key = "Adjust verbosity in external console (-3 = none, -2 = errors only, -1 = warnings, 0 = info, 1 = debug, 2 = trace)."
 [message.translations]
 simplified_chinese = "调整外部控制台中的信息量（-3 = 无、-2 = 仅错误、-1 = 警告、0 = 信息、1 = 调试、2 = 跟踪）"
@@ -2177,7 +2161,7 @@ polish = "Komenda czatu"
 [[message]]
 key = "Chat command (e.g. showall 1)"
 [message.translations]
-simplified_chinese = "聊天指令（例如：showall 1）"
+simplified_chinese = "聊天框指令（例如：showall 1）"
 traditional_chinese = "聊天指令（例如：showall 1）"
 japanese = "チャットコマンド（例：showall 1）"
 korean = "채팅 명령어 (예: showall 1)"
@@ -2383,70 +2367,6 @@ turkish = "Klan plakası boyutu"
 polish = "Rozmiar tabliczek klanu"
 
 [[message]]
-key = "Classic Easy"
-[message.translations]
-simplified_chinese = "经典 Easy"
-traditional_chinese = "經典 Easy"
-japanese = "クラシック Easy"
-korean = "클래식 Easy"
-russian = "Классический Easy"
-german = "Classic Easy"
-spanish = "Clásico Easy"
-french = "Classic Easy"
-brazilian_portuguese = "Clássico Fácil"
-portuguese = "Classic Easy"
-turkish = "Klasik Easy"
-polish = "Klasyczny Easy"
-
-[[message]]
-key = "Classic Next"
-[message.translations]
-simplified_chinese = "经典 Next"
-traditional_chinese = "經典 Next"
-japanese = "クラシック Next"
-korean = "클래식 Next"
-russian = "Классический Next"
-german = "Classic Next"
-spanish = "Clásico Next"
-french = "Classic Next"
-brazilian_portuguese = "Clássico Next"
-portuguese = "Classic Next"
-turkish = "Klasik Next"
-polish = "Klasyczny Next"
-
-[[message]]
-key = "Classic Nut"
-[message.translations]
-simplified_chinese = "经典 Nut"
-traditional_chinese = "經典 Nut"
-japanese = "クラシック Nut"
-korean = "클래식 Nut"
-russian = "Классический Nut"
-german = "Classic Nut"
-spanish = "Clásico Nut"
-french = "Classic Nut"
-brazilian_portuguese = "Clássico Nut"
-portuguese = "Classic Nut"
-turkish = "Klasik Nut"
-polish = "Klasyczny Nut"
-
-[[message]]
-key = "Classic Pro"
-[message.translations]
-simplified_chinese = "经典 Pro"
-traditional_chinese = "經典 Pro"
-japanese = "クラシック Pro"
-korean = "클래식 Pro"
-russian = "Классический Pro"
-german = "Classic Pro"
-spanish = "Clásico Pro"
-french = "Classic Pro"
-brazilian_portuguese = "Clássico Pro"
-portuguese = "Classic Pro"
-turkish = "Klasik Pro"
-polish = "Klasyczny Pro"
-
-[[message]]
 key = "Clear current queue"
 [message.translations]
 simplified_chinese = "清空当前队列"
@@ -2609,7 +2529,7 @@ polish = "Kolor nazw uwierzytelnionych graczy na tablicy wyników"
 [[message]]
 key = "Color of hook collision line tip segment"
 [message.translations]
-simplified_chinese = "钩索辅助线末端线段的颜色"
+simplified_chinese = "钩子辅助线末端线段的颜色"
 traditional_chinese = "鉤子輔助線末端提示段顏色"
 japanese = "フック補助線の先端セグメントの色"
 korean = "갈고리 보조선 끝 부분 색상"
@@ -2625,7 +2545,7 @@ polish = "Kolor końcowego segmentu linii asysty haka"
 [[message]]
 key = "Color of hook line hitting hookable tile"
 [message.translations]
-simplified_chinese = "击中可钩图块时的钩索线颜色"
+simplified_chinese = "击中可钩图块时的钩子线颜色"
 traditional_chinese = "擊中可掛鈎圖塊的鉤線顏色"
 japanese = "フック可能なタイルに当たったフックラインの色"
 korean = "갈고리 가능 타일에 닿은 갈고리 선 색상"
@@ -2641,7 +2561,7 @@ polish = "Kolor linii haka trafiającej w zaczepialny kafelek"
 [[message]]
 key = "Color of hook line hitting tee"
 [message.translations]
-simplified_chinese = "击中 Tee 时的钩索线颜色"
+simplified_chinese = "击中 Tee 时的钩子线颜色"
 traditional_chinese = "擊中球座的鉤線顏色"
 japanese = "Tee に当たったフックラインの色"
 korean = "티에 맞은 갈고리 선 색상"
@@ -2657,7 +2577,7 @@ polish = "Kolor linii haka trafiającej w tee"
 [[message]]
 key = "Color of hook line not hitting anything"
 [message.translations]
-simplified_chinese = "未击中任何物体时的钩索线颜色"
+simplified_chinese = "未击中任何物体时的钩子线颜色"
 traditional_chinese = "未擊中任何物體的鉤線顏色"
 japanese = "何も当たらなかったフックラインの色"
 korean = "아무것도 맞지 않은 갈고리 선 색상"
@@ -2705,7 +2625,7 @@ polish = "Kolory linii asysty haka, w przypadku możliwej kolizji z:"
 [[message]]
 key = "Comma-separated list of banned clients to be kicked on join"
 [message.translations]
-simplified_chinese = "加入时将被踢出的以逗号分隔的被禁止客户端列表"
+simplified_chinese = "加入时被踢出的禁用客户端列表，以逗号分隔"
 traditional_chinese = "加入時將被踢出的以逗號分隔的被禁止客戶端列表"
 japanese = "参加時にキックされる禁止クライアントのカンマ区切りリスト"
 korean = "입장 시 추방될 금지 클라이언트의 쉼표로 구분된 목록"
@@ -5681,7 +5601,7 @@ polish = "Włącz obsługę UPnP (wymaga -DCONF_UPNP=ON podczas kompilacji)"
 [[message]]
 key = "Enable/disable infinite hook."
 [message.translations]
-simplified_chinese = "启用/禁用无限钩索"
+simplified_chinese = "启用/禁用无限钩子"
 traditional_chinese = "启用/禁用无限钩索"
 japanese = "無限フックの有効/無効"
 korean = "무한 갈고리 활성화/비활성화"
@@ -6273,7 +6193,7 @@ polish = "Filtruj łączących się graczy"
 [[message]]
 key = "Filter empty servers in browser"
 [message.translations]
-simplified_chinese = "过滤服务器浏览器中的空服务器"
+simplified_chinese = "筛选服务器浏览器中的空服务器"
 traditional_chinese = "過濾掉瀏覽器中的空伺服器"
 japanese = "ブラウザで空のサーバーをフィルターする"
 korean = "브라우저에서 빈 서버 필터링"
@@ -6289,7 +6209,7 @@ polish = "Filtruj puste serwery w przeglądarce"
 [[message]]
 key = "Filter full servers in browser"
 [message.translations]
-simplified_chinese = "过滤服务器浏览器中的满人服务器"
+simplified_chinese = "筛选服务器浏览器中的满人服务器"
 traditional_chinese = "在瀏覽器中過濾掉完整的伺服器"
 japanese = "ブラウザで満員のサーバーをフィルターする"
 korean = "브라우저에서 꽉 찬 서버 필터링"
@@ -6305,7 +6225,7 @@ polish = "Filtruj pełne serwery w przeglądarce"
 [[message]]
 key = "Filter game type"
 [message.translations]
-simplified_chinese = "要过滤的游戏类型"
+simplified_chinese = "要筛选的游戏类型"
 traditional_chinese = "要過濾的遊戲類型"
 japanese = "フィルターするゲームタイプ"
 korean = "게임 유형 필터"
@@ -6321,7 +6241,7 @@ polish = "Filtruj typ gry"
 [[message]]
 key = "Filter out password protected servers in browser"
 [message.translations]
-simplified_chinese = "在浏览器中过滤掉受密码保护的服务器"
+simplified_chinese = "在浏览器中筛选掉受密码保护的服务器"
 traditional_chinese = "在瀏覽器中過濾掉受密碼保護的伺服器"
 japanese = "ブラウザでパスワード保護されたサーバーをフィルターする"
 korean = "브라우저에서 비밀번호로 보호된 서버 필터링"
@@ -6337,7 +6257,7 @@ polish = "Filtruj serwery chronione hasłem w przeglądarce"
 [[message]]
 key = "Filter out servers that require login"
 [message.translations]
-simplified_chinese = "过滤掉需要登录的服务器"
+simplified_chinese = "筛选掉需要登录的服务器"
 traditional_chinese = "過濾掉需要登錄的伺服器"
 japanese = "ログインが必要なサーバーをフィルターする"
 korean = "로그인이 필요한 서버 필터링"
@@ -6353,7 +6273,7 @@ polish = "Filtruj serwery wymagające logowania"
 [[message]]
 key = "Filter out servers with player country mismatch (ISO 3166-1 numeric)"
 [message.translations]
-simplified_chinese = "过滤掉玩家所在国家/地区不匹配的服务器（ISO 3166-1 数字）"
+simplified_chinese = "筛选掉玩家所在国家/地区不匹配的服务器（ISO 3166-1 数字）"
 traditional_chinese = "過濾掉玩家所在國家/地區不匹配的伺服器（ISO 3166-1 數字）"
 japanese = "プレイヤーの国不一致のサーバーをフィルタリング（ISO 3166-1 数値）"
 korean = "플레이어 국가 불일치 서버 필터링 (ISO 3166-1 숫자)"
@@ -6369,7 +6289,7 @@ polish = "Odfiltruj serwery z niedopasowaniem kraju gracza (ISO 3166-1 numeryczn
 [[message]]
 key = "Filter out servers without friends"
 [message.translations]
-simplified_chinese = "过滤掉没有好友的服务器"
+simplified_chinese = "筛选掉没有好友的服务器"
 traditional_chinese = "過濾掉沒有好友的伺服器"
 japanese = "フレンドのいないサーバーをフィルター"
 korean = "친구가 없는 서버 필터링"
@@ -6593,7 +6513,7 @@ polish = "Kolor konturu zamrożonego lasera"
 [[message]]
 key = "Friend bar category expand state (1=expanded, 0=collapsed)"
 [message.translations]
-simplified_chinese = "好友栏分类展开状态(1=展开，0=收起)"
+simplified_chinese = "好友栏分类展开状态（1=展开，0=收起）"
 traditional_chinese = "好友欄分類展開狀態(1=展開，0=收起)"
 japanese = "フレンドバーカテゴリの展開状態（1=展開、0=折りたたみ）"
 korean = "친구 바 카테고리 확장 상태 (1=확장, 0=축소)"
@@ -7553,7 +7473,7 @@ polish = "Trzymaj broń wyżej jak w TW 0.6.1 i wcześniejszych"
 [[message]]
 key = "Hook"
 [message.translations]
-simplified_chinese = "钩索"
+simplified_chinese = "钩子"
 traditional_chinese = "鉤索"
 japanese = "フック"
 korean = "갈고리"
@@ -7585,7 +7505,7 @@ polish = "Linia kolizji haka"
 [[message]]
 key = "Hook collision line alpha (0 invisible, 100 fully visible)"
 [message.translations]
-simplified_chinese = "钩索辅助线不透明度（0 不可见，100 完全可见）"
+simplified_chinese = "钩子辅助线不透明度（0 不可见，100 完全可见）"
 traditional_chinese = "鉤子輔助線 Alpha（0 不可見，100 完全可見）"
 japanese = "フック衝突線のアルファ（0 不可視、100 完全可視）"
 korean = "갈고리 충돌선 알파 (0 투명, 100 완전 불투명)"
@@ -7663,9 +7583,105 @@ turkish = "Kanca çizgisi ucu"
 polish = "Wskazówka linii haka"
 
 [[message]]
+key = "Custom pressed hook line colors"
+[message.translations]
+simplified_chinese = "自定义按下后颜色"
+traditional_chinese = "自訂按下後顏色"
+japanese = "押下時のフックラインのカスタム色"
+korean = "누른 후 사용자 지정 갈고리선 색"
+russian = "Свои цвета линии при нажатии"
+german = "Eigene Farben der Hakenlinie beim Drücken"
+spanish = "Colores personalizados de la línea al pulsar"
+french = "Couleurs personnalisées de la ligne lors de l'appui"
+brazilian_portuguese = "Cores personalizadas da linha ao pressionar"
+portuguese = "Cores personalizadas da linha ao premir"
+turkish = "Basınca özel kanca çizgisi renkleri"
+polish = "Niestandardowe kolory linii haka po wciśnięciu"
+
+[[message]]
+key = "Pressed hook line color; always used when custom pressed colors are enabled"
+[message.translations]
+simplified_chinese = "按下后颜色；开启自定义按下后颜色时始终生效"
+traditional_chinese = "按下後顏色；開啟自訂按下後顏色時始終生效"
+japanese = "押下時のフックライン色。カスタム押下色が有効なとき常に使用"
+korean = "누른 후 갈고리선 색. 사용자 지정 누른 후 색이 켜져 있을 때 항상 사용"
+russian = "Цвет линии при нажатии; всегда применяется при включении своих цветов нажатия"
+german = "Farbe der Hakenlinie beim Drücken; wird immer verwendet, wenn eigene Druckfarben aktiviert sind"
+spanish = "Color de la línea al pulsar; se usa siempre cuando los colores personalizados al pulsar están activados"
+french = "Couleur de la ligne lors de l'appui ; toujours utilisée lorsque les couleurs personnalisées d'appui sont activées"
+brazilian_portuguese = "Cor da linha ao pressionar; sempre usada quando cores personalizadas ao pressionar estão ativadas"
+portuguese = "Cor da linha ao premir; sempre usada quando as cores personalizadas ao premir estão ativadas"
+turkish = "Basınca kanca çizgisi rengi; özel basma renkleri etkin olduğunda her zaman kullanılır"
+polish = "Kolor linii haka po wciśnięciu; zawsze używany, gdy włączone są niestandardowe kolory wciśnięcia"
+
+[[message]]
+key = "Pressed: A Tee"
+[message.translations]
+simplified_chinese = "按下后：其他玩家"
+traditional_chinese = "按下後：其他玩家"
+japanese = "押下時：他のプレイヤー"
+korean = "누른 후: 다른 플레이어"
+russian = "При нажатии: Другой игрок"
+german = "Gedrückt: Ein Tee"
+spanish = "Al pulsar: Un Tee"
+french = "Appuyé : Un Tee"
+brazilian_portuguese = "Ao pressionar: Um Tee"
+portuguese = "Ao premir: Um Tee"
+turkish = "Basınca: Bir Tee"
+polish = "Po wciśnięciu: Tee"
+
+[[message]]
+key = "Pressed: Hook line tip"
+[message.translations]
+simplified_chinese = "按下后：辅助线提示"
+traditional_chinese = "按下後：輔助線提示"
+japanese = "押下時：ラインの先端"
+korean = "누른 후: 갈고리선 끝"
+russian = "При нажатии: Кончик линии"
+german = "Gedrückt: Hakenlinien-Spitze"
+spanish = "Al pulsar: Punta de la línea"
+french = "Appuyé : Bout de la ligne"
+brazilian_portuguese = "Ao pressionar: Ponta da linha"
+portuguese = "Ao premir: Ponta da linha"
+turkish = "Basınca: Çizgi ucu"
+polish = "Po wciśnięciu: Koniec linii"
+
+[[message]]
+key = "Pressed: Nothing hookable"
+[message.translations]
+simplified_chinese = "按下后：未瞄准可钩物体"
+traditional_chinese = "按下後：未瞄準可鉤物體"
+japanese = "押下時：フック可能なものはありません"
+korean = "누른 후: 걸 수 있는 대상 없음"
+russian = "При нажатии: Ничего не зацепляется"
+german = "Gedrückt: Nichts einhakbar"
+spanish = "Al pulsar: Nada enganchable"
+french = "Appuyé : Rien d'accrochable"
+brazilian_portuguese = "Ao pressionar: Nada engatável"
+portuguese = "Ao premir: Nada que possa ser agarrado"
+turkish = "Basınca: Kancalanabilir hiçbir şey yok"
+polish = "Po wciśnięciu: Nic do zahaczenia"
+
+[[message]]
+key = "Pressed: Something hookable"
+[message.translations]
+simplified_chinese = "按下后：可钩物体"
+traditional_chinese = "按下後：可鉤物體"
+japanese = "押下時：フック可能なもの"
+korean = "누른 후: 걸 수 있는 대상"
+russian = "При нажатии: Зацепляемое"
+german = "Gedrückt: Einhakbar"
+spanish = "Al pulsar: Algo enganchable"
+french = "Appuyé : Quelque chose d'accrochable"
+brazilian_portuguese = "Ao pressionar: Algo engatável"
+portuguese = "Ao premir: Algo que possa ser agarrado"
+turkish = "Basınca: Kancalanabilir bir şey"
+polish = "Po wciśnięciu: Coś do zahaczenia"
+
+[[message]]
 key = "Hook Strength"
 [message.translations]
-simplified_chinese = "钩索强度"
+simplified_chinese = "钩子强度"
 traditional_chinese = "鉤索強度"
 japanese = "フック強度"
 korean = "갈고리 강도"
@@ -7681,7 +7697,7 @@ polish = "Siła haka"
 [[message]]
 key = "Hook strength scope"
 [message.translations]
-simplified_chinese = "钩索强度范围"
+simplified_chinese = "钩子强度范围"
 traditional_chinese = "鉤索強度範圍"
 japanese = "フック強度範囲"
 korean = "갈고리 강도 범위"
@@ -7697,7 +7713,7 @@ polish = "Zakres siły haka"
 [[message]]
 key = "Hook through teleporters (deprecated, use special entities instead)"
 [message.translations]
-simplified_chinese = "钩索穿过传送器（已弃用，请改用特殊实体）"
+simplified_chinese = "钩子穿过传送器（已弃用，请改用特殊实体）"
 traditional_chinese = "鉤子穿過傳送器（已棄用，請使用特殊實體代替）"
 japanese = "テレポーターを通るフック（非推奨、代わりに特殊エンティティを使用）"
 korean = "텔레포터를 통한 갈고리 (비권장, 대신 특수 엔티티 사용)"
@@ -8145,7 +8161,7 @@ polish = "Czułość kontrolera w grze"
 [[message]]
 key = "Infinite hook for super players on/off."
 [message.translations]
-simplified_chinese = "超级玩家无限钩索开/关"
+simplified_chinese = "超级玩家无限钩子开/关"
 traditional_chinese = "超級玩家開/關的無盡鉤子"
 japanese = "スーパープレイヤーの無限フックのオン/オフ。"
 korean = "슈퍼 플레이어용 무한 갈고리 켜기/끄기"
@@ -8369,7 +8385,7 @@ polish = "Skok"
 [[message]]
 key = "Keep hook when teleporting"
 [message.translations]
-simplified_chinese = "传送时保持钩索"
+simplified_chinese = "传送时保持钩子"
 traditional_chinese = "傳送時保持鉤子"
 japanese = "テレポート時にフックを維持する"
 korean = "순간이동 시 갈고리 유지"
@@ -9679,22 +9695,6 @@ turkish = "Harita oylamaları arasındaki minimum süre (saniye cinsinden)"
 polish = "Minimalny czas między głosowaniami nad mapą (w sekundach)"
 
 [[message]]
-key = "Minimum width for name column in server browser"
-[message.translations]
-simplified_chinese = "服务器浏览器中名称列的最小宽度"
-traditional_chinese = "伺服器瀏覽器中名稱列的最小寬度"
-japanese = "サーバーブラウザの名前列の最小幅"
-korean = "서버 브라우저에서 이름 열의 최소 너비"
-russian = "Минимальная ширина столбца имени в браузере серверов"
-german = "Minimale Breite für die Namensspalte im Server-Browser"
-spanish = "Ancho mínimo para la columna de nombre en el navegador de servidores"
-french = "Largeur minimale pour la colonne du nom dans le navigateur de serveurs"
-brazilian_portuguese = "Largura mínima para a coluna de nome no navegador de servidores"
-portuguese = "Largura mínima para a coluna de nome no navegador de servidores"
-turkish = "Sunucu tarayıcısında isim sütunu için minimum genişlik"
-polish = "Minimalna szerokość kolumny nazwy w przeglądarce serwerów"
-
-[[message]]
 key = "Minutes on server before a player can call a map change vote (0 = disabled)"
 [message.translations]
 simplified_chinese = "玩家发起地图更改投票前必须在服务器上游玩的分钟数（0=禁用）"
@@ -9937,7 +9937,7 @@ polish = "Wycisz dźwięki flagi"
 [[message]]
 key = "Mute hook sound"
 [message.translations]
-simplified_chinese = "静音钩索音效"
+simplified_chinese = "静音钩子音效"
 traditional_chinese = "靜音掛鉤聲音"
 japanese = "フックサウンドをミュート"
 korean = "갈고리 소리 음소거"
@@ -10993,7 +10993,7 @@ polish = "Inne"
 [[message]]
 key = "Other players' hook line width"
 [message.translations]
-simplified_chinese = "其他玩家的钩索辅助线宽度"
+simplified_chinese = "其他玩家的钩子辅助线宽度"
 traditional_chinese = "其他玩家的鉤子輔助線寬度"
 japanese = "他のプレイヤーのフックラインの幅"
 korean = "다른 플레이어의 갈고리 선 너비"
@@ -11122,7 +11122,7 @@ polish = "Zastąp lokalizację szacowania pingu, opcje: auto, af, as, as:cn, eu,
 [[message]]
 key = "Own hook line width"
 [message.translations]
-simplified_chinese = "自己的钩索辅助线宽度"
+simplified_chinese = "自己的钩子辅助线宽度"
 traditional_chinese = "自己的鉤子輔助線寬度"
 japanese = "自分のフックラインの幅"
 korean = "자신의 갈고리 선 너비"
@@ -11426,7 +11426,7 @@ polish = "Kraj gracza (kod numeryczny ISO 3166-1)"
 [[message]]
 key = "Player country filter in server browser (ISO 3166-1 numeric)"
 [message.translations]
-simplified_chinese = "在服务器浏览器中过滤的玩家国家/地区（ISO 3166-1 数字）"
+simplified_chinese = "在服务器浏览器中筛选的玩家国家/地区（ISO 3166-1 数字）"
 traditional_chinese = "在伺服器瀏覽器中過濾的玩家國家/地區（ISO 3166-1 數字）"
 japanese = "サーバーブラウザでのプレイヤーの国フィルター（ISO 3166-1 数値）"
 korean = "서버 브라우저의 플레이어 국가 필터 (ISO 3166-1 숫자)"
@@ -12818,7 +12818,7 @@ polish = "Resetuj wszystko"
 [[message]]
 key = "Reset chat on escape"
 [message.translations]
-simplified_chinese = "按退出键时重置聊天"
+simplified_chinese = "按退出键时重置聊天框"
 traditional_chinese = "按退出鍵時重置聊天"
 japanese = "Escape キーでチャットをリセット"
 korean = "Escape 키로 채팅 초기화"
@@ -13907,8 +13907,8 @@ polish = "Wybrany pakiet"
 [[message]]
 key = "Self"
 [message.translations]
-simplified_chinese = "自身"
-traditional_chinese = "自身"
+simplified_chinese = "本体"
+traditional_chinese = "本體"
 japanese = "自身"
 korean = "자신"
 russian = "Себя"
@@ -13987,7 +13987,7 @@ polish = "Wysyłaj dane wejściowe klienta do innych przed poprawnym wejściem (
 [[message]]
 key = "Server address to filter"
 [message.translations]
-simplified_chinese = "要过滤的服务器地址"
+simplified_chinese = "要筛选的服务器地址"
 traditional_chinese = "要過濾的伺服器地址"
 japanese = "フィルタリングするサーバーアドレス"
 korean = "필터링할 서버 주소"
@@ -14019,7 +14019,7 @@ polish = "Ciąg wykluczający w przeglądarce serwerów"
 [[message]]
 key = "Server browser filter string"
 [message.translations]
-simplified_chinese = "服务器浏览器过滤字符串"
+simplified_chinese = "服务器浏览器筛选字符串"
 traditional_chinese = "伺服器瀏覽器過濾字符串"
 japanese = "サーバーブラウザフィルター文字列"
 korean = "서버 브라우저 필터 문자열"
@@ -14435,7 +14435,7 @@ polish = "Pokaż tła quadów (tylko dla twórców map lub jeśli system jest ba
 [[message]]
 key = "Show bounds of selected quads. Shows bounding rectangle bounds for multiple quads. Useful when aligning a group"
 [message.translations]
-simplified_chinese = "显示所选四边形的边界。如果有多个四边形，它会显示包围矩形的边界。对齐一组四边形时很有帮助"
+simplified_chinese = "显示所选四边形的边界。选中多个四边形时会显示整体包围矩形，对齐一组四边形时很有用"
 traditional_chinese = "顯示所選四邊形的邊界。如果有多個四邊形，它會顯示包圍矩形的邊界。對齊一組四邊形時很有幫助"
 japanese = "選択したクアッドの境界を表示。複数クアッドの場合はバウンディング矩形の境界を表示。グループの整列に便利です"
 korean = "선택한 쿼드의 경계 표시. 여러 쿼드의 경계 사각형을 표시함. 그룹 정렬 시 유용함"
@@ -14467,7 +14467,7 @@ polish = "Pokaż komunikaty rozgłoszeniowe w grze"
 [[message]]
 key = "Show chat (2 always show large chat area)"
 [message.translations]
-simplified_chinese = "显示聊天（2 始终显示大聊天区域）"
+simplified_chinese = "显示聊天框（2 始终显示大聊天区域）"
 traditional_chinese = "顯示聊天（2 始終顯示大聊天區域）"
 japanese = "チャットを表示（2 で常に大きなチャットエリアを表示）"
 korean = "채팅 표시 (2는 항상 큰 채팅 영역 표시)"
@@ -14483,7 +14483,7 @@ polish = "Pokaż czat (2 zawsze pokazuje duży obszar czatu)"
 [[message]]
 key = "Show chat when rendering video"
 [message.translations]
-simplified_chinese = "渲染视频时显示聊天"
+simplified_chinese = "渲染视频时显示聊天框"
 traditional_chinese = "渲染視頻時顯示聊天"
 japanese = "動画レンダリング時にチャットを表示"
 korean = "비디오 렌더링 시 채팅 표시"
@@ -14547,7 +14547,7 @@ polish = "Pokaż ID klienta"
 [[message]]
 key = "Show client ID in scoreboard, chat and spectator menu"
 [message.translations]
-simplified_chinese = "是否在记分板、聊天和观众菜单中显示客户端 ID"
+simplified_chinese = "是否在计分板、聊天框和观众菜单中显示客户端 ID"
 traditional_chinese = "是否在記分板、聊天和觀眾菜單中顯示客戶端 ID"
 japanese = "スコアボード、チャット、観戦メニューにクライアント ID を表示"
 korean = "점수판, 채팅 및 관전자 메뉴에 클라이언트 ID 표시"
@@ -14931,7 +14931,7 @@ polish = "Pokaż zdrowie, tarcze i amunicję"
 [[message]]
 key = "Show hook strength icon indicator"
 [message.translations]
-simplified_chinese = "显示钩索强度图标"
+simplified_chinese = "显示钩子强度图标"
 traditional_chinese = "顯示鉤索強度圖標"
 japanese = "フック強度アイコンインジケーターを表示"
 korean = "갈고리 강도 아이콘 표시"
@@ -14947,7 +14947,7 @@ polish = "Pokaż wskaźnik ikony siły haka"
 [[message]]
 key = "Show hook strength number indicator"
 [message.translations]
-simplified_chinese = "显示钩索强度数值"
+simplified_chinese = "显示钩子强度数值"
 traditional_chinese = "顯示鉤索強度數值"
 japanese = "フック強度数値インジケーターを表示"
 korean = "갈고리 강도 숫자 표시"
@@ -15770,7 +15770,7 @@ polish = "Pokaż linie kolizji haka innych graczy"
 [[message]]
 key = "Show other players' hook collision lines (2 always shown)"
 [message.translations]
-simplified_chinese = "显示其他玩家的钩索辅助线（2 始终显示）"
+simplified_chinese = "显示其他玩家的钩子辅助线（2 始终显示）"
 traditional_chinese = "顯示其他玩家的鉤子輔助線（2 條始終顯示）"
 japanese = "他のプレイヤーのフック衝突線を表示（2 本は常に表示）"
 korean = "다른 플레이어의 갈고리 충돌선 표시 (2개는 항상 표시)"
@@ -15786,7 +15786,7 @@ polish = "Pokaż linie kolizji haka innych graczy (2 zawsze widoczne)"
 [[message]]
 key = "Show other players' hook collision lines when rendering video"
 [message.translations]
-simplified_chinese = "渲染视频时显示其他玩家的钩索辅助线"
+simplified_chinese = "渲染视频时显示其他玩家的钩子辅助线"
 traditional_chinese = "渲染視頻時顯示其他玩家的鉤子輔助線"
 japanese = "動画レンダリング時に他のプレイヤーのフック衝突線を表示"
 korean = "비디오 렌더링 시 다른 플레이어의 갈고리 충돌선 표시"
@@ -15866,7 +15866,7 @@ polish = "Pokaż innych (tylko własna drużyna)"
 [[message]]
 key = "Show own hook collision lines (2 always shown)"
 [message.translations]
-simplified_chinese = "显示自己的钩索辅助线（2 始终显示）"
+simplified_chinese = "显示自己的钩子辅助线（2 始终显示）"
 traditional_chinese = "顯示自己玩家的鉤子輔助線（2 始終顯示）"
 japanese = "自分のフック衝突線を表示（2 本は常に表示）"
 korean = "자신의 갈고리 충돌선 표시 (2개는 항상 표시)"
@@ -16378,7 +16378,7 @@ polish = "Rozmiar danych tekstowych encji (20% do 100%)"
 [[message]]
 key = "Size of hook strength icon and number indicator"
 [message.translations]
-simplified_chinese = "钩索强度图标与数值的大小"
+simplified_chinese = "钩子强度图标与数值的大小"
 traditional_chinese = "鉤索強度圖標與數值的大小"
 japanese = "フック強度アイコンと数値インジケーターのサイズ"
 korean = "갈고리 강도 아이콘 및 숫자 크기"
@@ -18650,7 +18650,7 @@ polish = "URL do pobierania skórek"
 [[message]]
 key = "Use alternative world tick calculation making hooks behave as if all players have Strong."
 [message.translations]
-simplified_chinese = "使用替代的世界 tick 计算，使钩索表现得像所有玩家都拥有强钩。"
+simplified_chinese = "使用替代的世界 tick 计算，使钩子表现得像所有玩家都拥有强钩。"
 traditional_chinese = "是否對世界刻度使用替代計算，這使得鉤子的行為就像所有玩家都具有強項一樣。"
 japanese = "代替ワールドティック計算を使用し、全プレイヤーが Strong を持っているかのようにフックを動作させる。"
 korean = "모든 플레이어가 Strong을 가진 것처럼 갈고리가 작동하도록 대체 월드 틱 계산 사용"
@@ -19256,22 +19256,6 @@ turkish = "DDRace bağlamasının hangi seviyeye ayarlandığı (otomatiktir, ku
 polish = "Poziom ustawienia wiązania DDRace (automatyczny, nie musisz go używać)"
 
 [[message]]
-key = "When you cross the start line, show a ghost tee replicating the movements of your best time"
-[message.translations]
-simplified_chinese = "越过起跑线时，显示复现最佳成绩的影子 Tee"
-traditional_chinese = "越過起跑線時，顯示復現最佳成績的影子 Tee"
-japanese = "スタートラインを越えると、自分のベストタイムの動きを再現するゴーストティーを表示します"
-korean = "출발선을 넘으면 최고 기록의 움직임을 재현하는 고스트 티를 표시합니다"
-russian = "Когда пересекаешь стартовую линию, показывать призрачного ти, повторяющего движения твоего лучшего времени"
-german = "Wenn du die Startlinie überquerst, wird ein Geist-Tee angezeigt, der die Bewegungen deiner Bestzeit wiederholt"
-spanish = "Al cruzar la línea de salida, muestra un fantasma que replica los movimientos de tu mejor tiempo"
-french = "Lorsque tu franchis la ligne de départ, affiche un fantôme reproduisant les mouvements de ton meilleur temps"
-brazilian_portuguese = "Quando você cruza a linha de largada, mostre um fantasma replicando os movimentos do seu melhor tempo"
-portuguese = "Quando cruzares a linha de partida, mostra um fantasma a replicar os movimentos do teu melhor tempo"
-turkish = "Başlangıç çizgisini geçtiğinde, en iyi zamanının hareketlerini gösteren bir hayalet oyuncu belirir"
-polish = "Gdy przekroczysz linię startu, pokaż ducha odtwarzającego ruchy twojego najlepszego czasu"
-
-[[message]]
 key = "Whether dummy copies your movement"
 [message.translations]
 simplified_chinese = "分身是否复制你的移动"
@@ -19594,7 +19578,7 @@ polish = "Szerokość kolumny mapy w przeglądarce serwerów"
 [[message]]
 key = "Width of others' hook collision line"
 [message.translations]
-simplified_chinese = "其他玩家的钩子辅助线线宽度"
+simplified_chinese = "其他玩家的钩子辅助线宽度"
 traditional_chinese = "其他玩家的鉤子輔助線線寬度"
 japanese = "他のプレイヤーのフック衝突線の幅"
 korean = "다른 플레이어의 갈고리 충돌선 너비"
@@ -19642,7 +19626,7 @@ polish = "Szerokość kolumny typu w przeglądarce serwerów"
 [[message]]
 key = "Width of your own hook collision line"
 [message.translations]
-simplified_chinese = "自己的钩子辅助线线宽度"
+simplified_chinese = "自己的钩子辅助线宽度"
 traditional_chinese = "自己的鉤子輔助線線寬度"
 japanese = "自分のフック衝突線の幅"
 korean = "자신의 갈고리 충돌선 너비"
@@ -20091,7 +20075,7 @@ polish = "solo"
 key = "English translation by the DDNet Team"
 context = "Translation credits: Add your own name here when you update translations"
 [message.translations]
-simplified_chinese = "简体中文翻译由 DDNet 团队和 QmClient 贡献者维护"
+simplified_chinese = "简体中文翻译由 DDNet 队伍和 QmClient 贡献者维护"
 traditional_chinese = "簡體中文翻譯由 DDNet 團隊和 QmClient 貢獻者維護"
 japanese = "日本語翻訳は DDNet チームと QmClient コントリビューターによるものです"
 korean = "한국어 번역은 DDNet 팀과 QmClient 기여자가 유지 관리합니다"
@@ -21025,6 +21009,22 @@ turkish = "Uzak istatistikler senkronize ediliyor"
 polish = "Synchronizowanie statystyk zdalnych"
 
 [[message]]
+key = "Statistics"
+[message.translations]
+simplified_chinese = "统计数据"
+traditional_chinese = "統計數據"
+japanese = "統計データ"
+korean = "통계 데이터"
+russian = "Статистика"
+german = "Statistiken"
+spanish = "Estadísticas"
+french = "Statistiques"
+brazilian_portuguese = "Estatísticas"
+portuguese = "Estatísticas"
+turkish = "İstatistikler"
+polish = "Statystyki"
+
+[[message]]
 key = "Retry remote stats"
 [message.translations]
 simplified_chinese = "重试远程统计"
@@ -21489,150 +21489,6 @@ turkish = "Oy kullanmayan oyuncuların yok sayılması (0) veya 'hayır' oyu say
 polish = "Czy ignorować graczy, którzy nie głosują (0), czy uznawać ich za głosy „nie” (1)"
 
 [[message]]
-key = "Could not create report scan request"
-[message.translations]
-simplified_chinese = "创建举报扫描请求失败"
-traditional_chinese = "創建舉報掃描請求失敗"
-japanese = "レポートスキャンリクエストを作成できませんでした"
-korean = "신고 스캔 요청을 생성할 수 없습니다"
-russian = "Не удалось создать запрос сканирования жалобы"
-german = "Meldungs-Scan-Anfrage konnte nicht erstellt werden"
-spanish = "No se pudo crear la solicitud de escaneo de reporte"
-french = "Impossible de créer la demande de scan de signalement"
-brazilian_portuguese = "Não foi possível criar a solicitação de varredura da denúncia"
-portuguese = "Não foi possível criar o pedido de análise da denúncia"
-turkish = "Rapor tarama isteği oluşturulamadı"
-polish = "Nie można utworzyć żądania skanowania zgłoszenia"
-
-[[message]]
-key = "Configure qm_report_app_id and qm_report_secret first"
-[message.translations]
-simplified_chinese = "请先设置 qm_report_app_id 和 qm_report_secret"
-traditional_chinese = "請先設置 qm_report_app_id 和 qm_report_secret"
-japanese = "最初に qm_report_app_id と qm_report_secret を設定してください"
-korean = "먼저 qm_report_app_id와 qm_report_secret을 설정하세요"
-russian = "Сначала настройте qm_report_app_id и qm_report_secret"
-german = "Konfiguriere zuerst qm_report_app_id und qm_report_secret"
-spanish = "Configura primero qm_report_app_id y qm_report_secret"
-french = "Configure d'abord qm_report_app_id et qm_report_secret"
-brazilian_portuguese = "Configure qm_report_app_id e qm_report_secret primeiro"
-portuguese = "Configura primeiro qm_report_app_id e qm_report_secret"
-turkish = "Önce qm_report_app_id ve qm_report_secret ayarla"
-polish = "Najpierw skonfiguruj qm_report_app_id i qm_report_secret"
-
-[[message]]
-key = "Report"
-[message.translations]
-simplified_chinese = "举报"
-traditional_chinese = "舉報"
-japanese = "報告"
-korean = "신고"
-russian = "Пожаловаться"
-german = "Melden"
-spanish = "Reportar"
-french = "Signaler"
-brazilian_portuguese = "Denunciar"
-portuguese = "Denunciar"
-turkish = "Rapor et"
-polish = "Zgłoś"
-
-[[message]]
-key = "Report request canceled"
-[message.translations]
-simplified_chinese = "举报请求已取消"
-traditional_chinese = "舉報請求已取消"
-japanese = "報告リクエストがキャンセルされました"
-korean = "신고 요청이 취소되었습니다"
-russian = "Запрос жалобы отменен"
-german = "Meldungsanfrage abgebrochen"
-spanish = "Solicitud de reporte cancelada"
-french = "Demande de signalement annulée"
-brazilian_portuguese = "Solicitação de denúncia cancelada"
-portuguese = "Pedido de denúncia cancelado"
-turkish = "Rapor isteği iptal edildi"
-polish = "Zgłoszenie anulowane"
-
-[[message]]
-key = "Report request failed due to network error"
-[message.translations]
-simplified_chinese = "举报请求失败，网络请求异常"
-traditional_chinese = "舉報請求失敗，網絡請求異常"
-japanese = "ネットワークエラーのため報告リクエストが失敗しました"
-korean = "네트워크 오류로 인해 신고 요청이 실패했습니다"
-russian = "Запрос жалобы не удался из-за ошибки сети"
-german = "Meldungsanfrage wegen Netzwerkfehler fehlgeschlagen"
-spanish = "La solicitud de reporte falló por un error de red"
-french = "La demande de signalement a échoué à cause du réseau"
-brazilian_portuguese = "A solicitação de denúncia falhou por erro de rede"
-portuguese = "O pedido de denúncia falhou por erro de rede"
-turkish = "Rapor isteği ağ hatası nedeniyle başarısız oldu"
-polish = "Zgłoszenie nie powiodło się z powodu błędu sieci"
-
-[[message]]
-key = "Report request failed with HTTP status: %d"
-[message.translations]
-simplified_chinese = "举报请求失败，HTTP 状态码：%d"
-traditional_chinese = "舉報請求失敗，HTTP 狀態碼：%d"
-japanese = "報告リクエストが HTTP ステータス %d で失敗しました"
-korean = "HTTP 상태 %d로 인해 신고 요청이 실패했습니다"
-russian = "Запрос жалобы не удался, HTTP-статус: %d"
-german = "Meldungsanfrage fehlgeschlagen, HTTP-Status: %d"
-spanish = "La solicitud de reporte falló con estado HTTP: %d"
-french = "La demande de signalement a échoué avec le statut HTTP : %d"
-brazilian_portuguese = "A solicitação de denúncia falhou com status HTTP: %d"
-portuguese = "O pedido de denúncia falhou com estado HTTP: %d"
-turkish = "Rapor isteği HTTP durumuyla başarısız oldu: %d"
-polish = "Zgłoszenie nie powiodło się, status HTTP: %d"
-
-[[message]]
-key = "Report request is already in progress"
-[message.translations]
-simplified_chinese = "举报请求正在处理中"
-traditional_chinese = "舉報請求正在處理中"
-japanese = "報告リクエストは既に進行中です"
-korean = "신고 요청이 이미 진행 중입니다"
-russian = "Запрос жалобы уже выполняется"
-german = "Meldungsanfrage läuft bereits"
-spanish = "La solicitud de reporte ya está en curso"
-french = "La demande de signalement est déjà en cours"
-brazilian_portuguese = "A solicitação de denúncia já está em andamento"
-portuguese = "O pedido de denúncia já está em curso"
-turkish = "Rapor isteği zaten sürüyor"
-polish = "Zgłoszenie jest już przetwarzane"
-
-[[message]]
-key = "Report scan request submitted"
-[message.translations]
-simplified_chinese = "举报扫描请求已提交"
-traditional_chinese = "舉報掃描請求已提交"
-japanese = "報告スキャンリクエストが送信されました"
-korean = "신고 스캔 요청이 제출되었습니다"
-russian = "Запрос сканирования жалобы отправлен"
-german = "Meldungs-Scan-Anfrage gesendet"
-spanish = "Solicitud de escaneo de reporte enviada"
-french = "Demande de scan de signalement envoyée"
-brazilian_portuguese = "Solicitação de varredura da denúncia enviada"
-portuguese = "Pedido de análise da denúncia enviado"
-turkish = "Rapor tarama isteği gönderildi"
-polish = "Żądanie skanowania zgłoszenia wysłane"
-
-[[message]]
-key = "Reports are not available on Axiom servers"
-[message.translations]
-simplified_chinese = "Axiom 服务器内不可使用举报功能"
-traditional_chinese = "Axiom 伺服器內不可使用舉報功能"
-japanese = "Axiom サーバーではレポート機能は利用できません"
-korean = "Axiom 서버에서는 신고 기능을 사용할 수 없습니다"
-russian = "Жалобы недоступны на серверах Axiom"
-german = "Meldungen sind auf Axiom-Servern nicht verfügbar"
-spanish = "Los reportes no están disponibles en servidores Axiom"
-french = "Les signalements ne sont pas disponibles sur les serveurs Axiom"
-brazilian_portuguese = "Denúncias não estão disponíveis em servidores Axiom"
-portuguese = "As denúncias não estão disponíveis em servidores Axiom"
-turkish = "Axiom sunucularında rapor kullanılamaz"
-polish = "Zgłoszenia nie są dostępne na serwerach Axiom"
-
-[[message]]
 key = "Show dummy control status"
 [message.translations]
 simplified_chinese = "显示分身控制状态"
@@ -21807,22 +21663,6 @@ brazilian_portuguese = "Aplicar uma skin aleatória da fila"
 portuguese = "Aplicar uma skin aleatória da fila"
 turkish = "Kuyruktan rastgele bir kaplama uygula"
 polish = "Zastosuj losową skórkę z kolejki"
-
-[[message]]
-key = "Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join."
-[message.translations]
-simplified_chinese = "每次进图（分身连接、重新启用队列时同样生效）从队列随机位置开始轮换；将切换间隔设为 0 则不做时间轮换，仅进图随机换肤"
-traditional_chinese = "每次進圖（分身連接、重新啟用佇列時同樣生效）從皮膚佇列隨機位置開始輪換；將切換間隔設為 0 則不做時間輪換，僅進圖隨機換膚"
-japanese = "マップに参加するたび（ダミー接続・キュー再有効化時も）キューのランダムな位置からローテーションを開始します。切替間隔を 0 にすると時間ローテーションが無効になり、マップ参加時のみ切り替わります"
-korean = "맵에 들어갈 때마다(더미 연결, 큐 재활성화 시에도) 큐의 무작위 위치부터 순환을 시작합니다. 전환 간격을 0으로 하면 시간 순환이 비활성화되고 맵 입장 때만 전환됩니다"
-russian = "Каждый вход на карту (а также подключение Дами или повторное включение очереди) начинает ротацию со случайной позиции очереди. При интервале 0 ротация по времени отключается — скин меняется только при входе на карту"
-german = "Startet bei jedem Kartenbeitritt (auch bei Dummy-Verbindung oder Reaktivierung der Warteschlange) von einer zufälligen Position in der Warteschlange. Bei einem Wechselintervall von 0 ist die zeitgesteuerte Rotation deaktiviert und Skins wechseln nur beim Kartenbeitritt"
-spanish = "Comienza desde una posición aleatoria de la cola en cada entrada al mapa (también al conectar el dummy o reactivar la cola). Con intervalo 0 se desactiva la rotación temporizada y las skins solo cambian al entrar al mapa"
-french = "Démarre depuis une position aléatoire de la file à chaque entrée sur une carte (également à la connexion du dummy ou à la réactivation de la file). Avec un intervalle de 0, la rotation temporisée est désactivée et les skins ne changent qu'en entrant sur une carte"
-brazilian_portuguese = "Começa de uma posição aleatória da fila a cada entrada no mapa (também ao conectar o dummy ou reativar a fila). Com intervalo 0, a rotação temporizada é desativada e as skins só trocam ao entrar no mapa"
-portuguese = "Começa numa posição aleatória da fila sempre que entra no mapa (também ao ligar o dummy ou reativar a fila). Com intervalo 0, a rotação temporizada é desativada e as skins só mudam ao entrar no mapa"
-turkish = "Her haritaya girişte (dummy bağlantısı ve kuyruğun yeniden etkinleştirilmesinde de) kuyruğun rastgele bir konumundan başlar. Geçiş aralığı 0 olduğunda zamanlanmış döndürme devre dışı kalır ve skinler yalnızca haritaya girişte değişir"
-polish = "Każde wejście na mapę (a także połączenie dummy lub ponowne włączenie kolejki) rozpoczyna rotację od losowej pozycji kolejki. Przy interwale 0 rotacja czasowa jest wyłączona, a skórki zmieniają się tylko po wejściu na mapę"
 
 [[message]]
 key = "0 disables timed rotation; skins only switch on random start events"
@@ -22973,22 +22813,6 @@ turkish = "Kaydırma adımı"
 polish = "Krok przewijania"
 
 [[message]]
-key = "Customize the wheel scrolling distance per tick. Hold Alt while scrolling for 3x step"
-[message.translations]
-simplified_chinese = "自定义滚轮每格的滚动距离。按住 Alt 滚动时使用 3 倍步长"
-traditional_chinese = "自訂滾輪每格的捲動距離。按住 Alt 捲動時使用 3 倍步長"
-japanese = "ホイール1刻みの移動距離を設定。Alt を押しながらスクロールすると3倍の幅"
-korean = "휠 한 눈금당 이동 거리를 설정합니다. Alt를 누르고 스크롤하면 간격이 3배가 됩니다"
-russian = "Расстояние прокрутки за шаг колёсика. Удерживайте Alt для увеличения шага в 3 раза"
-german = "Scrollstrecke pro Mausradraste anpassen. Mit gedrückter Alt-Taste ist der Schritt 3-mal so groß"
-spanish = "Personaliza la distancia por paso de la rueda. Mantén Alt al desplazar para un paso 3 veces mayor"
-french = "Personnaliser la distance par cran de molette. Maintenir Alt pour un pas 3 fois plus grand"
-brazilian_portuguese = "Personalize a distância por passo da roda. Segure Alt ao rolar para um passo 3 vezes maior"
-portuguese = "Personalize a distância por passo da roda. Mantenha Alt premido para um passo 3 vezes maior"
-turkish = "Tekerlek kademesi başına kaydırma mesafesini ayarlayın. Alt basılıyken adım 3 katına çıkar"
-polish = "Dostosuj odległość na skok kółka. Przytrzymaj Alt, aby zwiększyć krok 3 razy"
-
-[[message]]
 key = "Width of difficulty column in server browser"
 [message.translations]
 simplified_chinese = "服务器浏览器中难度列的宽度"
@@ -23035,3 +22859,403 @@ brazilian_portuguese = "Bloquear completamente jogadores inimigos"
 portuguese = "Bloquear completamente jogadores inimigos"
 turkish = "Düşman oyuncuları tamamen engelle"
 polish = "Całkowicie blokuj wrogich graczy"
+
+[[message]]
+key = "Upstream redundancy (experimental)"
+[message.translations]
+simplified_chinese = "上行冗余发送（实验性）"
+traditional_chinese = "上行冗餘傳送（實驗性）"
+japanese = "上りパケットの冗長送信（実験的）"
+korean = "상향 패킷 중복 전송 (실험적)"
+russian = "Дублирование исходящих пакетов (экспериментально)"
+german = "Redundanter Paketversand (experimentell)"
+spanish = "Envío redundante de paquetes (experimental)"
+french = "Envoi redondant de paquets (expérimental)"
+brazilian_portuguese = "Envio redundante de pacotes (experimental)"
+portuguese = "Envio redundante de pacotes (experimental)"
+turkish = "Giden paketleri yedekli gönder (deneysel)"
+polish = "Nadmiarowe wysyłanie pakietów (eksperymentalne)"
+
+[[message]]
+key = "Maximum packet copies"
+[message.translations]
+simplified_chinese = "最大包份数"
+traditional_chinese = "封包份數上限"
+japanese = "パケットの最大送信数"
+korean = "최대 패킷 전송 사본 수"
+russian = "Максимальное число копий пакета"
+german = "Maximale Paketkopien"
+spanish = "Máximo de copias por paquete"
+french = "Nombre maximal de copies par paquet"
+brazilian_portuguese = "Máximo de cópias por pacote"
+portuguese = "Máximo de cópias por pacote"
+turkish = "Azami paket kopyası"
+polish = "Maksymalna liczba kopii pakietu"
+
+[[message]]
+key = "Maximum number of copies per outgoing UDP game packet"
+[message.translations]
+simplified_chinese = "每个上行 UDP 游戏包的最大发送份数"
+traditional_chinese = "每個上行 UDP 遊戲封包的傳送份數上限"
+japanese = "上り UDP ゲームパケットごとの最大送信数"
+korean = "상향 UDP 게임 패킷당 최대 전송 사본 수"
+russian = "Максимальное число копий каждого исходящего игрового UDP-пакета"
+german = "Maximale Anzahl der Kopien pro ausgehendem UDP-Spielpaket"
+spanish = "Número máximo de copias de cada paquete UDP saliente del juego"
+french = "Nombre maximal de copies de chaque paquet UDP de jeu sortant"
+brazilian_portuguese = "Número máximo de cópias de cada pacote UDP de saída do jogo"
+portuguese = "Número máximo de cópias de cada pacote UDP enviado pelo jogo"
+turkish = "Giden her UDP oyun paketinin azami kopya sayısı"
+polish = "Maksymalna liczba kopii każdego wychodzącego pakietu UDP gry"
+
+[[message]]
+key = "Experimental: repeats outgoing UDP game packets when round-trip probes go unanswered. Upload traffic may triple; download loss and late duplicate inputs can still cause problems. Disabled with KCP."
+[message.translations]
+simplified_chinese = "实验功能：往返探针未获回复时重复发送上行 UDP 游戏包。上行流量最多增至三倍；下行丢包和晚到的重复输入仍可能造成问题。使用 KCP 时停用。"
+traditional_chinese = "實驗功能：往返探針未獲回覆時重複傳送上行 UDP 遊戲封包。上行流量最多增至三倍；下行丟包和晚到的重複輸入仍可能造成問題。使用 KCP 時停用。"
+japanese = "実験機能：往復プローブに応答がない場合、上り UDP ゲームパケットを繰り返し送信します。送信量は最大三倍になります。下りのパケット損失や遅れて届く重複入力による問題は残ります。KCP 使用時は無効です。"
+korean = "실험 기능: 왕복 탐침에 응답이 없으면 상향 UDP 게임 패킷을 반복 전송합니다. 업로드 트래픽은 최대 세 배가 되며, 하향 패킷 손실이나 늦게 도착한 중복 입력은 여전히 문제를 일으킬 수 있습니다. KCP 사용 시 비활성화됩니다."
+russian = "Экспериментальная функция: повторно отправляет исходящие игровые UDP-пакеты, если нет ответов на проверочные запросы. Исходящий трафик может утроиться; потеря входящих пакетов и запоздалые копии ввода всё ещё могут вызывать проблемы. При KCP отключена."
+german = "Experimentell: Sendet ausgehende UDP-Spielpakete mehrfach, wenn Prüfanfragen unbeantwortet bleiben. Der Upload kann sich verdreifachen; verlorene eingehende Pakete und verspätete Eingabekopien können weiterhin Probleme verursachen. Bei KCP deaktiviert."
+spanish = "Experimental: repite los paquetes UDP salientes del juego cuando las sondas de ida y vuelta no reciben respuesta. El tráfico de subida puede triplicarse; la pérdida de bajada y las entradas duplicadas tardías aún pueden causar problemas. Se desactiva con KCP."
+french = "Expérimental : répète les paquets UDP sortants du jeu lorsque les sondes aller-retour restent sans réponse. Le trafic montant peut tripler ; les pertes descendantes et les entrées dupliquées tardives peuvent toujours poser problème. Désactivé avec KCP."
+brazilian_portuguese = "Experimental: repete pacotes UDP de saída do jogo quando as sondagens de ida e volta ficam sem resposta. O tráfego de envio pode triplicar; perdas no recebimento e entradas duplicadas atrasadas ainda podem causar problemas. Desativado com KCP."
+portuguese = "Experimental: repete pacotes UDP enviados pelo jogo quando as sondagens de ida e volta ficam sem resposta. O tráfego de envio pode triplicar; perdas na receção e entradas duplicadas atrasadas ainda podem causar problemas. Desativado com KCP."
+turkish = "Deneysel: gidiş-dönüş yoklamaları yanıtsız kalırsa giden UDP oyun paketlerini tekrar gönderir. Yükleme trafiği üç katına çıkabilir; indirme kayıpları ve geç ulaşan yinelenmiş girdiler sorun çıkarmaya devam edebilir. KCP kullanılırken devre dışıdır."
+polish = "Eksperymentalnie powtarza wychodzące pakiety UDP gry, gdy sondy nie otrzymują odpowiedzi. Ruch wychodzący może wzrosnąć trzykrotnie; utrata pakietów przychodzących i opóźnione kopie wejścia nadal mogą powodować problemy. Wyłączone przy KCP."
+
+[[message]]
+key = "Could not delete \"%s\""
+[message.translations]
+simplified_chinese = "无法删除\"%s\""
+traditional_chinese = "無法刪除\"%s\""
+japanese = "「%s」を削除できませんでした"
+korean = "\"%s\"을(를) 삭제할 수 없습니다"
+russian = "Не удалось удалить \"%s\""
+german = "\"%s\" konnte nicht gelöscht werden"
+spanish = "No se pudo eliminar \"%s\""
+french = "Impossible de supprimer \"%s\""
+brazilian_portuguese = "Não foi possível excluir \"%s\""
+portuguese = "Não foi possível eliminar \"%s\""
+turkish = "\"%s\" silinemedi"
+polish = "Nie można usunąć \"%s\""
+
+[[message]]
+key = "Could not download \"%s\""
+[message.translations]
+simplified_chinese = "无法下载\"%s\""
+traditional_chinese = "無法下載\"%s\""
+japanese = "「%s」をダウンロードできませんでした"
+korean = "\"%s\"을(를) 다운로드할 수 없습니다"
+russian = "Не удалось скачать \"%s\""
+german = "\"%s\" konnte nicht heruntergeladen werden"
+spanish = "No se pudo descargar \"%s\""
+french = "Impossible de télécharger \"%s\""
+brazilian_portuguese = "Não foi possível baixar \"%s\""
+portuguese = "Não foi possível transferir \"%s\""
+turkish = "\"%s\" indirilemedi"
+polish = "Nie można pobrać \"%s\""
+
+[[message]]
+key = "Delete \"%s\"?"
+[message.translations]
+simplified_chinese = "删除\"%s\"？"
+traditional_chinese = "刪除\"%s\"？"
+japanese = "「%s」を削除しますか？"
+korean = "\"%s\"을(를) 삭제할까요?"
+russian = "Удалить \"%s\"?"
+german = "\"%s\" löschen?"
+spanish = "¿Eliminar \"%s\"?"
+french = "Supprimer \"%s\" ?"
+brazilian_portuguese = "Excluir \"%s\"?"
+portuguese = "Eliminar \"%s\"?"
+turkish = "\"%s\" silinsin mi?"
+polish = "Usunąć \"%s\"?"
+
+[[message]]
+key = "Deleted \"%s\""
+[message.translations]
+simplified_chinese = "已删除\"%s\""
+traditional_chinese = "已刪除\"%s\""
+japanese = "「%s」を削除しました"
+korean = "\"%s\"을(를) 삭제했습니다"
+russian = "\"%s\" удалено"
+german = "\"%s\" gelöscht"
+spanish = "Se eliminó \"%s\""
+french = "\"%s\" supprimé"
+brazilian_portuguese = "\"%s\" excluído"
+portuguese = "\"%s\" eliminado"
+turkish = "\"%s\" silindi"
+polish = "Usunięto \"%s\""
+
+[[message]]
+key = "Download \"%s\"?"
+[message.translations]
+simplified_chinese = "下载\"%s\"？"
+traditional_chinese = "下載\"%s\"？"
+japanese = "「%s」をダウンロードしますか？"
+korean = "\"%s\"을(를) 다운로드할까요?"
+russian = "Скачать \"%s\"?"
+german = "\"%s\" herunterladen?"
+spanish = "¿Descargar \"%s\"?"
+french = "Télécharger \"%s\" ?"
+brazilian_portuguese = "Baixar \"%s\"?"
+portuguese = "Transferir \"%s\"?"
+turkish = "\"%s\" indirilsin mi?"
+polish = "Pobrać \"%s\"?"
+
+[[message]]
+key = "Downloaded \"%s\""
+[message.translations]
+simplified_chinese = "已下载\"%s\""
+traditional_chinese = "已下載\"%s\""
+japanese = "「%s」をダウンロードしました"
+korean = "\"%s\"을(를) 다운로드했습니다"
+russian = "\"%s\" скачано"
+german = "\"%s\" heruntergeladen"
+spanish = "Se descargó \"%s\""
+french = "\"%s\" téléchargé"
+brazilian_portuguese = "\"%s\" baixado"
+portuguese = "\"%s\" transferido"
+turkish = "\"%s\" indirildi"
+polish = "Pobrano \"%s\""
+
+[[message]]
+key = "Downloading…"
+[message.translations]
+simplified_chinese = "下载中…"
+traditional_chinese = "下載中…"
+japanese = "ダウンロード中…"
+korean = "다운로드 중…"
+russian = "Скачивание…"
+german = "Wird heruntergeladen…"
+spanish = "Descargando…"
+french = "Téléchargement…"
+brazilian_portuguese = "Baixando…"
+portuguese = "A transferir…"
+turkish = "İndiriliyor…"
+polish = "Pobieranie…"
+
+[[message]]
+key = "Width of name column in server browser"
+[message.translations]
+simplified_chinese = "服务器浏览器中名称列的宽度"
+traditional_chinese = "伺服器瀏覽器中名稱列的寬度"
+japanese = "サーバーブラウザの名前列の幅"
+korean = "서버 브라우저에서 이름 열의 너비"
+russian = "Ширина столбца имени в браузере серверов"
+german = "Breite der Namensspalte im Server-Browser"
+spanish = "Ancho de la columna de nombre en el navegador de servidores"
+french = "Largeur de la colonne du nom dans le navigateur de serveurs"
+brazilian_portuguese = "Largura da coluna de nome no navegador de servidores"
+portuguese = "Largura da coluna de nome no navegador de servidores"
+turkish = "Sunucu tarayıcısında isim sütununun genişliği"
+polish = "Szerokość kolumny nazwy w przeglądarce serwerów"
+
+[[message]]
+key = "Personal adjustments"
+[message.translations]
+simplified_chinese = "个性调整"
+traditional_chinese = "個性調整"
+japanese = "カスタマイズ"
+korean = "개인 설정"
+russian = "Индивидуальные настройки"
+german = "Individuelle Anpassungen"
+spanish = "Ajustes personalizados"
+french = "Réglages personnalisés"
+brazilian_portuguese = "Ajustes personalizados"
+portuguese = "Ajustes personalizados"
+turkish = "Kişisel ayarlar"
+polish = "Ustawienia osobiste"
+
+[[message]]
+key = "Spring"
+[message.translations]
+simplified_chinese = "弹簧"
+traditional_chinese = "彈簧"
+japanese = "バネ"
+korean = "스프링"
+russian = "Пружина"
+german = "Feder"
+spanish = "Resorte"
+french = "Ressort"
+brazilian_portuguese = "Mola"
+portuguese = "Mola"
+turkish = "Yay"
+polish = "Sprężyna"
+
+[[message]]
+key = "Scroll feel"
+[message.translations]
+simplified_chinese = "滚动手感"
+traditional_chinese = "捲動手感"
+japanese = "スクロールの手触り"
+korean = "스크롤 느낌"
+russian = "Ощущение прокрутки"
+german = "Scrollgefühl"
+spanish = "Sensación de desplazamiento"
+french = "Sensation de défilement"
+brazilian_portuguese = "Sensação de rolagem"
+portuguese = "Sensação de deslocamento"
+turkish = "Kaydırma hissi"
+polish = "Odczucie przewijania"
+
+[[message]]
+key = "End bounce"
+[message.translations]
+simplified_chinese = "边界回弹"
+traditional_chinese = "邊界回彈"
+japanese = "端での跳ね返り"
+korean = "끝단 반동"
+russian = "Отскок на краю"
+german = "Randfederung"
+spanish = "Rebote en el borde"
+french = "Rebond aux extrémités"
+brazilian_portuguese = "Quique nas bordas"
+portuguese = "Ressalto nas extremidades"
+turkish = "Uçta yaylanma"
+polish = "Odbicie na krawędzi"
+
+[[message]]
+key = "Spring response"
+[message.translations]
+simplified_chinese = "弹簧响应"
+traditional_chinese = "彈簧響應"
+japanese = "バネの応答"
+korean = "스프링 응답"
+russian = "Отклик пружины"
+german = "Federreaktion"
+spanish = "Respuesta del resorte"
+french = "Réponse du ressort"
+brazilian_portuguese = "Resposta da mola"
+portuguese = "Resposta da mola"
+turkish = "Yay tepkisi"
+polish = "Odpowiedź sprężyny"
+
+[[message]]
+key = "Spring damping"
+[message.translations]
+simplified_chinese = "弹簧阻尼"
+traditional_chinese = "彈簧阻尼"
+japanese = "バネの減衰"
+korean = "스프링 감쇠"
+russian = "Демпфирование пружины"
+german = "Federdämpfung"
+spanish = "Amortiguación del resorte"
+french = "Amortissement du ressort"
+brazilian_portuguese = "Amortecimento da mola"
+portuguese = "Amortecimento da mola"
+turkish = "Yay sönümü"
+polish = "Tłumienie sprężyny"
+
+[[message]]
+key = "Every wheel tick restarts from rest, matching the original client"
+[message.translations]
+simplified_chinese = "每档滚轮都从静止重新起步，与原版客户端一致"
+traditional_chinese = "每檔滾輪都從靜止重新起步，與原版客戶端一致"
+japanese = "ホイール1目盛ごとに静止状態から始まり、オリジナル版と同じ挙動になります"
+korean = "휠 한 칸마다 정지 상태에서 다시 시작해 원본 클라이언트와 같습니다"
+russian = "Каждый щелчок колеса начинается с покоя, как в оригинальном клиенте"
+german = "Jede Radstufe startet aus der Ruhe, wie im Original-Client"
+spanish = "Cada paso de la rueda reinicia desde el reposo, igual que el cliente original"
+french = "Chaque cran de molette repart de l'arrêt, comme dans le client d'origine"
+brazilian_portuguese = "Cada passo da roda reinicia do repouso, como no cliente original"
+portuguese = "Cada passo da roda reinicia do repouso, como no cliente original"
+turkish = "Her tekerlek adımı durarak yeniden başlar, orijinal istemcideki gibi"
+polish = "Każdy krok kółka startuje od zera, jak w oryginalnym kliencie"
+
+[[message]]
+key = "Consecutive wheel ticks carry their velocity into one continuous glide"
+[message.translations]
+simplified_chinese = "连续滚轮会继承当前速度，连成一段顺滑滑行"
+traditional_chinese = "連續滾輪會繼承目前速度，連成一段順滑滑行"
+japanese = "連続したホイール操作で速度を引き継ぎ、ひと続きの滑らかな動きになります"
+korean = "연속 휠 입력이 속도를 이어받아 하나의 부드러운 이동으로 이어집니다"
+russian = "Непрерывная прокрутка наследует скорость и сливается в одно плавное движение"
+german = "Aufeinanderfolgende Radstufen übernehmen die Geschwindigkeit und laufen in einem Zug weiter"
+spanish = "Los pasos consecutivos heredan la velocidad y se funden en un deslizamiento continuo"
+french = "Les crans successifs reprennent la vitesse pour former un seul glissement continu"
+brazilian_portuguese = "Passos consecutivos herdam a velocidade e formam um deslize contínuo"
+portuguese = "Passos consecutivos herdam a velocidade e formam um deslize contínuo"
+turkish = "Ardışık tekerlek adımları hızı devralarak tek bir akıcı kaydırmaya dönüşür"
+polish = "Kolejne kroki kółka przejmują prędkość i tworzą jeden płynny ruch"
+
+[[message]]
+key = "A damped spring drives the offset, so reversing direction slows down before it turns"
+[message.translations]
+simplified_chinese = "由阻尼弹簧驱动偏移，反向时会先减速再转向"
+traditional_chinese = "由阻尼彈簧驅動位移，反向時會先減速再轉向"
+japanese = "減衰バネが位置を動かすため、逆向きの操作では一度減速してから折り返します"
+korean = "감쇠 스프링이 위치를 구동하므로 방향을 바꾸면 먼저 감속한 뒤 전환됩니다"
+russian = "Смещение ведёт демпфированная пружина, поэтому при смене направления она сначала тормозит"
+german = "Eine gedämpfte Feder treibt den Versatz, daher bremst sie beim Richtungswechsel erst ab"
+spanish = "Un resorte amortiguado mueve el desplazamiento, así que al invertir la dirección frena antes de girar"
+french = "Un ressort amorti pilote le décalage : changer de direction ralentit avant de repartir"
+brazilian_portuguese = "Uma mola amortecida move o deslocamento, então inverter a direção freia antes de virar"
+portuguese = "Uma mola amortecida move o deslocamento, por isso inverter a direção trava antes de virar"
+turkish = "Konumu sönümlü bir yay sürükler, bu yüzden yön değiştirirken önce yavaşlar"
+polish = "Przesunięciem steruje tłumiona sprężyna, więc zmiana kierunku najpierw wyhamowuje"
+
+[[message]]
+key = "Rubber-band distance in UI pixels when dragging or flinging past an end; 0 disables it, and the wheel never bounces"
+[message.translations]
+simplified_chinese = "拖拽或甩动越过边界时的橡皮筋距离（UI 像素）；0 为关闭，滚轮永不回弹"
+traditional_chinese = "拖曳或甩動越過邊界時的橡皮筋距離（UI 像素）；0 為關閉，滾輪永不回彈"
+japanese = "ドラッグやフリックで端を越えたときのゴムバンド距離（UI ピクセル）。0 で無効、ホイールでは弾みません"
+korean = "드래그나 플릭으로 끝을 넘을 때의 고무줄 거리(UI 픽셀)입니다. 0이면 꺼지며 휠로는 절대 튕기지 않습니다"
+russian = "Расстояние «резинки» в пикселях UI при перетаскивании или броске за край; 0 отключает, колесо никогда не отскакивает"
+german = "Gummiband-Abstand in UI-Pixeln beim Ziehen oder Schleudern über ein Ende hinaus; 0 deaktiviert es, das Rad federt nie"
+spanish = "Distancia del efecto goma en píxeles de UI al arrastrar o lanzar más allá de un extremo; 0 lo desactiva y la rueda nunca rebota"
+french = "Distance d'effet élastique en pixels UI lors d'un glissement ou lancer au-delà d'une extrémité ; 0 désactive, la molette ne rebondit jamais"
+brazilian_portuguese = "Distância do efeito elástico em pixels de UI ao arrastar ou arremessar além de um limite; 0 desativa, e a roda nunca quica"
+portuguese = "Distância do efeito elástico em píxeis de UI ao arrastar ou lançar além de uma extremidade; 0 desativa, e a roda nunca ressalta"
+turkish = "Bir ucu aşarken sürükleme veya savurma sırasındaki lastik bant mesafesi (UI pikseli); 0 kapatır ve tekerlek asla yaylanmaz"
+polish = "Odległość efektu gumki w pikselach UI przy przeciąganiu lub rzucie poza krawędź; 0 wyłącza, kółko nigdy nie odbija"
+
+[[message]]
+key = "Time the spring needs to settle on a new target; lower reaches it sooner, higher feels heavier"
+[message.translations]
+simplified_chinese = "弹簧落到新目标所需的时间；越小到位越快，越大手感越沉"
+traditional_chinese = "彈簧落到新目標所需的時間；越小到位越快，越大手感越沉"
+japanese = "バネが新しい目標に落ち着くまでの時間。小さいほど速く到達し、大きいほど重い手触りになります"
+korean = "스프링이 새 목표에 안착하는 데 걸리는 시간입니다. 작을수록 빨리 도달하고 클수록 묵직합니다"
+russian = "Время, за которое пружина достигает новой цели; меньше — быстрее, больше — тяжелее"
+german = "Zeit, bis die Feder ein neues Ziel erreicht; kleiner ist schneller, größer fühlt sich schwerer an"
+spanish = "Tiempo que tarda el resorte en alcanzar un nuevo objetivo; menor llega antes, mayor se siente más pesado"
+french = "Temps que met le ressort à atteindre une nouvelle cible ; plus court est plus vif, plus long plus lourd"
+brazilian_portuguese = "Tempo que a mola leva para atingir um novo alvo; menor chega antes, maior parece mais pesado"
+portuguese = "Tempo que a mola demora a atingir um novo alvo; menor chega antes, maior parece mais pesado"
+turkish = "Yayın yeni hedefe oturma süresi; küçük değer daha çabuk ulaşır, büyük değer daha ağır hissettirir"
+polish = "Czas, w jakim sprężyna osiąga nowy cel; mniejszy dociera szybciej, większy wydaje się cięższy"
+
+[[message]]
+key = "How firmly the spring settles; 100 stops without overshoot, lower values let it bounce past the target"
+[message.translations]
+simplified_chinese = "弹簧收敛的干脆程度；100 不过冲直接停住，越小越过目标回弹越多"
+traditional_chinese = "彈簧收斂的乾脆程度；100 不過衝直接停住，越小越會越過目標回彈"
+japanese = "バネの収まりの強さ。100 は行き過ぎずに停止し、小さいほど目標を越えて跳ね返ります"
+korean = "스프링이 얼마나 단단히 안착하는지입니다. 100이면 목표를 넘지 않고 멈추며, 작을수록 목표를 지나쳐 튕깁니다"
+russian = "Насколько жёстко пружина затухает; 100 — без перелёта, меньше — отскакивает за цель"
+german = "Wie straff die Feder einschwingt; 100 stoppt ohne Überschwingen, kleinere Werte federn über das Ziel hinaus"
+spanish = "Con qué firmeza se asienta el resorte; 100 se detiene sin sobrepasar, valores menores rebotan más allá del objetivo"
+french = "Fermeté avec laquelle le ressort se stabilise ; 100 s'arrête sans dépasser, plus bas rebondit au-delà de la cible"
+brazilian_portuguese = "Firmeza com que a mola se assenta; 100 para sem ultrapassar, valores menores passam do alvo e voltam"
+portuguese = "Firmeza com que a mola assenta; 100 para sem ultrapassar, valores menores passam do alvo e voltam"
+turkish = "Yayın ne kadar sıkı oturduğu; 100 hedefi aşmadan durur, küçük değerler hedefi geçip geri döner"
+polish = "Jak twardo sprężyna się zatrzymuje; 100 zatrzymuje się bez przestrzelenia, mniejsze wartości odbijają za cel"
+
+[[message]]
+key = "How far the wheel or a drag can push past an end, in UI pixels; the content springs back after scrolling stops. 0 disables it"
+[message.translations]
+simplified_chinese = "滚轮或拖拽把内容推过边界的距离（UI 像素）；停止滚动后内容会弹回。0 为关闭"
+traditional_chinese = "滾輪或拖曳把內容推過邊界的距離（UI 像素）；停止捲動後內容會彈回。0 為關閉"
+japanese = "ホイールやドラッグで端を越えて押し出せる距離（UI ピクセル）。スクロールを止めると内容が戻ります。0 で無効"
+korean = "휠이나 드래그로 끝을 넘어 밀 수 있는 거리(UI 픽셀)입니다. 스크롤을 멈추면 내용이 되돌아옵니다. 0이면 끕니다"
+russian = "Насколько колесо или перетаскивание могут вытолкнуть содержимое за край, в пикселях UI; после остановки прокрутки оно возвращается. 0 отключает"
+german = "Wie weit das Rad oder Ziehen den Inhalt über ein Ende hinausschieben kann, in UI-Pixeln; nach dem Ende des Scrollens federt er zurück. 0 deaktiviert"
+spanish = "Cuánto pueden empujar la rueda o el arrastre más allá de un extremo, en píxeles de UI; el contenido vuelve al detenerse el desplazamiento. 0 lo desactiva"
+french = "Distance dont la molette ou un glissement peut pousser le contenu au-delà d'une extrémité, en pixels UI ; le contenu revient à l'arrêt du défilement. 0 désactive"
+brazilian_portuguese = "Quanto a roda ou o arrasto podem empurrar além de um limite, em pixels de UI; o conteúdo volta quando a rolagem para. 0 desativa"
+portuguese = "Quanto a roda ou o arrasto podem empurrar além de uma extremidade, em píxeis de UI; o conteúdo volta quando o deslocamento para. 0 desativa"
+turkish = "Tekerleğin veya sürüklemenin içeriği bir ucun ötesine ne kadar itebileceği (UI pikseli); kaydırma durunca içerik geri döner. 0 kapatır"
+polish = "Jak daleko kółko lub przeciąganie mogą wypchnąć treść poza krawędź, w pikselach UI; po zatrzymaniu przewijania treść wraca. 0 wyłącza"

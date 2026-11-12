@@ -108,7 +108,12 @@ CUi::EPopupMenuFunctionResult CMenus::PopupQmMapUploadPicker(void *pContext, CUI
 	SingleLine.m_EllipsisAtEnd = true;
 	SingleLine.m_EnableWidthCheck = false;
 	pMenus->Ui()->DoLabel(&Path, pPicker->m_aFolder[0] ? pPicker->m_aFolder : Localize("Map folders"), Metrics.m_BodySize, TEXTALIGN_ML, SingleLine);
-	const bool QueryChanged = pMenus->Ui()->DoEditBox_Search(&pPicker->m_SearchInput, &Search, Metrics.m_BodySize, Active);
+	ui_widget::SInputFieldOptions SearchOptions;
+	SearchOptions.m_Mode = ui_widget::EInputFieldMode::SEARCH;
+	SearchOptions.m_FontSize = Metrics.m_BodySize;
+	SearchOptions.m_Clearable = true;
+	SearchOptions.m_SearchHotkeyEnabled = Active;
+	const bool QueryChanged = ui_widget::InputField(Ctx, &pPicker->m_SearchInput, Search, SearchOptions).m_Changed;
 	const bool Searching = !pPicker->m_SearchInput.IsEmpty();
 	// 按下到松开鼠标期间保持列表稳定，避免新增结果挤动正在点击的行。
 	const bool IndexChanged = Active && Searching && !pMenus->Ui()->MouseButton(0) && !pMenus->Ui()->LastMouseButton(0) && pPicker->m_SearchIndex.ScanNext(pMenus->Storage());
@@ -300,11 +305,12 @@ void CMenus::RenderQmFunctionMapUploadContent(CUIRect &Content, float LineHeight
 				Wrapped.m_EnableWidthCheck = false;
 				DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, pId, &TextRect, pText, BodySize, TEXTALIGN_TL, Wrapped); }, MinimumHeight);
 	};
-	TextRow("qmclient-map-upload-status", pStatus, LineHeight * 2.0f);
+	TextRow("qmclient-map-upload-status", pStatus, LineHeight);
 	// 服务端详情保留旧两行最小区域，超出时按真实正文换行测高，不能永久裁剪掉错误原因。
 	char aDetail[768];
 	str_copy(aDetail, m_QmMapUpload.Detail().c_str());
-	TextRow("qmclient-map-upload-detail", aDetail, LineHeight * 2.0f);
+	if(aDetail[0] != '\0')
+		TextRow("qmclient-map-upload-detail", aDetail, LineHeight * 2.0f);
 	const auto Instructions = qm_card_catalog::QmMapUploadInstructions();
 	for(size_t Index = 0; Index < Instructions.size(); ++Index)
 	{

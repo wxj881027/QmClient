@@ -53,7 +53,6 @@ namespace qm_card_catalog
 			Add(Id, "qm:spectator_mode", "Spectate mode", "Smooth the mouse-driven camera in live and demo free spectating", [pMenus, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly](CUIRect &Content) { QmCardRenderHook::RenderQmVisualSpectatorModeContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly); });
 			return true;
 		case EQmModuleId::SkinAppearance:
-		case EQmModuleId::SkinTransition:
 			return BuildSkinCard(Ctx, Id, Out);
 		case EQmModuleId::WeaponAnimation:
 			Add(Id, "qm:weapon_animation", "Weapon animation", "Play a slide-in rotation animation when switching weapons", [pMenus, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly](CUIRect &Content) { qm_card_catalog::QmCardRenderHook::RenderQmVisualWeaponAnimationContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LabelWidth, LineSpacing, ReadOnly); });
@@ -67,17 +66,15 @@ namespace qm_card_catalog
 			return true;
 		}
 		case EQmModuleId::EntityOverlay:
-			Add(Id, "qm:entity_overlay", "Entity Layer Colors", "Adjust opacity of entity layers", [pMenus, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly](CUIRect &Content) { qm_card_catalog::QmCardRenderHook::RenderQmVisualEntityOverlayContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly); });
+			Add(Id, "qm:entity_overlay", "Entity layer adjustments", "Adjust opacity of entity layers", [pMenus, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly](CUIRect &Content) { qm_card_catalog::QmCardRenderHook::RenderQmVisualEntityOverlayContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly); });
 			return true;
 		case EQmModuleId::CollisionHitbox:
 			Add(Id, "qm:collision_hitbox", "Hitbox mode", "Show collision and weapon interaction", [pMenus, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly](CUIRect &Content) { qm_card_catalog::QmCardRenderHook::RenderQmVisualCollisionHitboxContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly); });
 			return true;
 		case EQmModuleId::WaterHammerHighlight:
-			return BuildWaterHammerCard(Ctx, Id, Out);
+			return QmCardRenderHook::BuildWaterHammerCard(Ctx, Id, Out);
 		case EQmModuleId::AppearancePreset:
 			return BuildAppearancePresetCard(Ctx, Out);
-		case EQmModuleId::Console:
-			return BuildConsoleCard(Ctx, Out);
 		case EQmModuleId::Tooltip:
 			return BuildTooltipCard(Ctx, Out);
 		default:

@@ -18,6 +18,7 @@
 #include <game/client/components/qmclient/chat_translation_notes.h>
 #include <game/client/components/qmclient/hud_notifications/hud_notifications.h>
 #include <game/client/components/qmclient/pending_chat_messages.h>
+#include <game/client/components/qmclient/public_word_filter.h>
 #include <game/client/components/qmclient/qm_chat_export_metadata.h>
 #include <game/client/components/qmclient/qm_chat_log_jobs.h>
 #include <game/client/components/qmclient/qm_chat_text_layout.h>
@@ -29,6 +30,7 @@
 #include <game/client/lineinput.h>
 #include <game/client/render.h>
 #include <game/client/ui.h>
+#include <game/client/ui_scrollregion.h>
 
 #include <algorithm>
 #include <array>
@@ -108,12 +110,17 @@ public:
 
 	static void ResetPresentationState(SPresentationState &Presentation);
 	static void BeginLinePresentation(SPresentationState &Presentation, int64_t Now, bool GentleRefresh);
-	static void UpdateLinePresentation(SPresentationState &Presentation, int64_t LineTime, int64_t Now, float DeltaSeconds, bool ShowLargeArea, bool ForceVisible, int64_t LargeAreaOpenTick, float RecallDelaySeconds, bool ExtraAnimations = true);
+	static void UpdateLinePresentation(SPresentationState &Presentation, int64_t LineTime, int64_t Now, float DeltaSeconds, bool ShowLargeArea, bool ForceVisible, int64_t LargeAreaOpenTick, float RecallDelaySeconds, bool ExtraAnimations = true, int ClientId = SERVER_MSG);
 	static float SmoothPresentationY(float CurrentY, float TargetY, float DeltaSeconds);
 	static bool CanMergePlayerMessages(int PreviousClientId, int PreviousTeam, const char *pPreviousText, int64_t PreviousTime, int ClientId, int Team, const char *pText, int64_t Now, bool Highlighted = false);
 	// echo 合并的窗口判定：上一次同文本 echo 发生在 LastTime，当前时间为 Now，
 	// 窗口为 WindowMs 毫秒（0 表示关闭合并）。时间倒流或超出窗口都返回 false。
 	static bool EchoRepeatWithinWindow(int64_t Now, int64_t LastTime, int WindowMs);
+	// 行堆叠公式：在当前 y 基础上消耗本行高度与额外行间隔，随 LayoutVisibility 同步缩放。
+	static float AdvanceChatLineStack(float Y, float LineHeight, float ExtraLineSpacing, float LayoutVisibility)
+	{
+		return Y - (LineHeight + ExtraLineSpacing) * LayoutVisibility;
+	}
 	static bool IsSensitiveChatCommand(const char *pLine)
 	{
 		if(pLine == nullptr)
@@ -198,7 +205,6 @@ private:
 
 		STextContainerIndex m_TextContainerIndex;
 		STextContainerIndex m_BodyTextContainerIndex;
-		CUIRect m_SponsorTextBounds = {};
 		int m_QuadContainerIndex;
 		CUIRect m_BackgroundRect = {};
 		float m_BackgroundRounding = 0.0f;
@@ -232,15 +238,15 @@ private:
 
 	bool m_PrevScoreBoardShowed;
 	bool m_PrevShowChat;
-	std::array<int, 4> m_aPrevTitleVisibility = {};
+	std::array<int, 5> m_aPrevTitleVisibility = {};
 	bool m_PrevSponsorChatEffects = true;
 	int m_LastStreamerFilterWords = -1;
 	uint64_t m_LastStreamerFilterRevision = 0;
+	QmPublicWordFilter::CClient m_PublicWords;
 	QmWordFilterList::CFileList m_BlockWordsFile;
 	QmWordFilterList::CFileList m_StreamerWordsFile;
 	uint64_t m_PreparedGlyphAtlasRevision = 0;
 	std::array<int, 5> m_aPreparedChatTextSettings = {-1, -1, -1, -1, -1};
-	CQmSponsorChatRenderer m_SponsorChatRenderer;
 	int64_t m_LastPresentationUpdateTime;
 	int64_t m_LargeAreaOpenTick;
 	bool m_LastPresentationShowLargeArea;
@@ -257,7 +263,44 @@ private:
 	int m_BacklogCurLine;
 	bool m_ScrollbarDragging;
 	float m_ScrollbarDragOffset;
+
+	// 手机端聊天历史拖动：单指在历史区上下滑动时按行累积滚动，
+	// 最终仍落在 m_BacklogCurLine 上，与滚轮/滚动条共用同一套滚动状态。
+	struct SQmHistoryTouchDrag
+	{
+		bool m_Active = false;
+		IInput::CTouchFinger m_Finger;
+		float m_AccumY = 0.0f;
+	};
+	SQmHistoryTouchDrag m_HistoryTouchDrag;
+
+	// 聊天是每帧自绘的 UI，不在 CUi 的菜单树里；CUi 的鼠标状态在游戏内不一定每帧更新，
+	// 所以这里直接从原始触摸/鼠标输入维护聊天自己的指针状态。
+	struct SQmChatPointer
+	{
+		bool m_Down = false;
+		bool m_Pressed = false;
+		bool m_SecondaryPressed = false;
+		vec2 m_LocalPos{};
+	};
+	SQmChatPointer m_Pointer;
+	std::optional<IInput::CTouchFinger> m_PointerFinger;
+	void UpdatePointerState();
+	vec2 PointerLocalPos() const { return m_Pointer.m_LocalPos; }
+	bool PointerDown() const { return m_Pointer.m_Down; }
+	bool PointerPressed() const { return m_Pointer.m_Pressed; }
+	bool PointerSecondaryPressed() const { return m_Pointer.m_SecondaryPressed; }
 	CUIRect m_ChatInputMapRect{};
+	// 输入行分三段命中：翻译按钮、发送对象前缀、正文区。只有正文区会拉起软键盘。
+	CUIRect m_InputPrefixRect{};
+	CUIRect m_InputModeRect{};
+	CUIRect m_InputTargetRect{};
+	CUIRect m_InputTextRect{};
+	// 触摸落在翻译按钮上时先记一笔，松手再打开翻译弹窗：这条路径不经过 CUi 鼠标，
+	// 避免按钮点击被正文区的“拉起软键盘”逻辑吃掉。
+	bool m_TouchTranslatePressed = false;
+	// ▾ 发送对象列表：按下只记候选，抬手才弹层，避免同一次触摸把弹层点关。
+	bool m_TouchTargetPressed = false;
 	std::optional<vec2> m_LastMousePos;
 	bool m_MouseIsPress;
 	vec2 m_MousePress;
@@ -268,6 +311,8 @@ private:
 		MODE_NONE = 0,
 		MODE_ALL,
 		MODE_TEAM,
+		// 私聊：正文拼成 /w "名字" 消息 发送，目标由 m_WhisperClientId/m_aWhisperName 记录。
+		MODE_WHISPER,
 	};
 
 	enum
@@ -279,6 +324,9 @@ private:
 	};
 
 	int m_Mode;
+	// 私聊目标：ClientId 用于目标离开/改名后的失效判断，名称用于拼 /w 指令和前缀显示。
+	int m_WhisperClientId;
+	char m_aWhisperName[MAX_NAME_LENGTH];
 	bool m_Show;
 	bool m_CompletionUsed;
 	int m_CompletionChosen;
@@ -376,6 +424,7 @@ private:
 	int CountInitializedLines() const;
 	int CountVisibleLinesFrom(int BacklogLine) const;
 	void UpdatePresentationStates(int64_t Now, float DeltaSeconds, bool ShowLargeArea, bool ExtraAnimations);
+	bool UpdateHistoryTouchScroll(const CUIRect &ChatRect, float HeightLimit, float HistoryBottom, float LineHeight, int TotalVisibleLines, int VisibleLineCapacity, bool StartAllowed);
 
 	friend class CBindChat;
 	friend class CTranslate;
@@ -420,6 +469,23 @@ private:
 		CButtonContainer m_CopyNameButton;
 	};
 	CChatLinePopupContext m_ChatLinePopupContext;
+
+	// 发送对象弹层：全体 / 队伍 / 服务器上的其他玩家（私聊目标）。
+	// 手机上点输入行的前缀即可打开，不必依赖键盘快捷键。
+	class CChatTargetPopupContext : public SPopupMenuId
+	{
+	public:
+		CChat *m_pChat = nullptr;
+		CButtonContainer m_AllButton;
+		CButtonContainer m_TeamButton;
+		CButtonContainer m_aPlayerButtons[MAX_CLIENTS];
+		int m_aPlayerIds[MAX_CLIENTS] = {};
+		char m_aaPlayerNames[MAX_CLIENTS][MAX_NAME_LENGTH] = {};
+		int m_NumPlayers = 0;
+		CScrollRegion m_ScrollRegion;
+	};
+	CChatTargetPopupContext m_TargetPopupContext;
+	bool m_TargetMenuOpen = false;
 
 public:
 	CChat();
@@ -580,6 +646,7 @@ public:
 	void OnInit() override;
 	void OnShutdown() override;
 
+	const QmPublicWordFilter::CState &PublicWordFilter() const { return m_PublicWords.State(); }
 	void ReloadWordFilterFile(bool Streamer, bool Force = true);
 	const QmWordFilterList::CFileList &WordFilterFile(bool Streamer) const { return Streamer ? m_StreamerWordsFile : m_BlockWordsFile; }
 	void RebuildChat();
@@ -588,7 +655,12 @@ public:
 	void EnsureCoherentFontSize() const;
 	void EnsureCoherentWidth() const;
 
-	float FontSize() const { return g_Config.m_ClChatFontSize / 10.0f; }
+	// 聊天使用独立的 300 高虚拟屏，不随 qm_ui_scale 放大；手机端默认把字号整体提高，
+	// 让聊天正文和输入行与 1.3 倍的菜单尺度接近。
+	static constexpr float QM_CHAT_MOBILE_FONT_SCALE = 1.3f;
+	float FontSize() const { return g_Config.m_ClChatFontSize / 10.0f * (QmUiMobilePlatform() ? QM_CHAT_MOBILE_FONT_SCALE : 1.0f); }
+	// 手机端左侧有系统手势/边缘误触区，聊天整体右移，给最左侧的翻译按钮留出可点击空间。
+	float HistoryStartX() const;
 	float MessagePaddingX() const { return FontSize() * (5 / 6.f); }
 	float MessagePaddingY() const { return FontSize() * (1 / 6.f); }
 	float MessageTeeSize() const { return FontSize() * (7 / 6.f); }
@@ -611,6 +683,20 @@ public:
 	void OpenChatLineMenu(const CLine &Line, vec2 UiMousePos);
 	void CloseChatLineMenu();
 	static CUi::EPopupMenuFunctionResult PopupChatLineMenu(void *pContext, CUIRect View, bool Active);
+	// 发送对象（全体 / 队伍 / 私聊）：前缀显示与触摸切换共用同一份模式状态。
+	const char *WhisperTargetName() const;
+	const char *ChatTargetLabel() const;
+	// 手机：模式按钮在 全体 / 队伍 之间切换；处于私聊时先退回全体。
+	void ToggleChannelMode();
+	// /w 名字 [内容]：能对上在场玩家就在本地处理，否则交给服务器。
+	bool TryHandleWhisperCommand(const char *pLine);
+	void SetChatMode(int Mode, bool ShowKeyboard = true);
+	void SetWhisperTarget(int ClientId, const char *pName);
+	void ClearWhisperTarget();
+	bool WhisperTargetValid() const;
+	void OpenChatTargetMenu();
+	void CloseChatTargetMenu();
+	static CUi::EPopupMenuFunctionResult PopupChatTargetMenu(void *pContext, CUIRect View, bool Active);
 	void AddTextToBlockWords(const char *pText);
 	void ReplyToChatLine(const CChatLinePopupContext &Context);
 	void RepeatChatLine(const CChatLinePopupContext &Context);
@@ -644,12 +730,13 @@ public:
 	// @param pLine the chat message
 	// 返回是否已发送或由本地命令处理，失败时调用方可保留消息。
 	bool SendChat(int Team, const char *pLine, const char *pLocalOriginal = nullptr, int Connection = -1);
+	bool SendAutomaticChat(int Connection, const char *pLine);
 	void InvalidateOutgoingConnection(int Connection)
 	{
 		m_PendingChatMessages.InvalidateConnection(Connection);
 		m_OutgoingAnnotations.InvalidateConnection(Connection);
 	}
-	EChatSendResult SendChatQueued(int Team, const char *pLine, bool AllowOutgoingTranslation, const char *pLocalOriginal = nullptr, int Connection = -1);
+	EChatSendResult SendChatQueued(int Team, const char *pLine, bool AllowOutgoingTranslation, const char *pLocalOriginal = nullptr, int Connection = -1, bool ManualInput = false);
 	// Sends a chat message using the specified connection (main/dummy).
 	bool SendChatOnConn(int Conn, int Team, const char *pLine, bool AllowWhitespaceOnly = false, bool HandleLocalSaveForLoadCommand = true, const char *pLocalOriginal = nullptr);
 
@@ -761,8 +848,11 @@ inline void CChat::UpdateLinePresentation(
 	bool ForceVisible,
 	int64_t LargeAreaOpenTick,
 	float RecallDelaySeconds,
-	bool ExtraAnimations)
+	bool ExtraAnimations,
+	int ClientId)
 {
+	// 强制显示仍可绕过专注模式过滤；客户端 echo 的展示时长保持有限。
+	ForceVisible = ForceVisible && ClientId != CLIENT_MSG;
 	DeltaSeconds = std::clamp(DeltaSeconds, 0.0f, CHAT_PRESENTATION_MAX_DELTA_SECONDS);
 	(void)DeltaSeconds;
 
@@ -830,7 +920,7 @@ inline void CChat::UpdateLinePresentation(
 		return;
 	}
 
-	// 强制显示消息不参与普通聊天超时逻辑。
+	// 强制显示的非客户端消息不参与普通聊天超时逻辑。
 	if(ForceVisible)
 	{
 		Presentation.m_LayoutVisibility = 1.0f;

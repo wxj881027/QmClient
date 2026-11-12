@@ -3,6 +3,7 @@
 #include "SettingsCard.h"
 
 #include "QmAnimResolve.h"
+#include "QmIconSwap.h"
 #include "SettingsCardInfo.h"
 #include "SettingsCardSubtitle.h"
 #include "SettingsIconFeedback.h"
@@ -22,7 +23,9 @@
 #include <game/client/components/menus.h>
 #include <game/client/components/tooltips.h>
 #include <game/client/qm_icon.h>
+#include <game/client/qm_icon_label.h>
 #include <game/client/ui.h>
+#include <game/localization.h>
 
 #include <algorithm>
 #include <cmath>
@@ -51,34 +54,65 @@ namespace
 		});
 	}
 
+	// 卡片头部图标的「底板 + hover 缩放 + 取色」骨架；具体图标由回调画，
+	// 折叠箭头才有机会把图标换成带过渡的交换实现。
+	template<typename F>
+	void RenderSettingsCardIconFrame(const IUiContext &Ctx, const CUIRect &Rect, const float DrawAlpha, const void *pId, F &&DrawIcon)
+	{
+		const float UiScale = Ctx.m_UiScale > 0.0f ? Ctx.m_UiScale : 1.0f;
+		const bool Hovered = Ctx.m_pUi->MouseHovered(&Rect);
+		const float Alpha = std::clamp(DrawAlpha, 0.0f, 1.0f);
+		const CUIRect &ChromeRect = Rect;
+		const float Radius = std::min(ui_token::radius::TIGHT * UiScale, std::min(ChromeRect.w, ChromeRect.h) * 0.25f);
+		const ColorRGBA ChromeColor(1.0f, 1.0f, 1.0f, (Hovered ? (Ctx.m_pUi->MouseButton(0) ? 0.36f : 0.28f) : 0.18f) * Alpha);
+		if(!Ctx.m_pUi->MeasurementOnly())
+			DrawRoundedSurface(Ctx, ChromeRect, ChromeColor, ChromeColor, Radius);
+		const bool Pressed = Hovered && Ctx.m_pUi->MouseButton(0);
+		const uint64_t NodeKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash ^ str_quickhash("card-icon-feedback"), reinterpret_cast<uint64_t>(pId));
+		// 设置页的 Ctx.m_pAnim 在内容趟会被置空，这里与其它 QmUi 控件一样回退全局运行时，
+		// 否则 hover 缩放与折叠箭头过渡都会静默失效。
+		CUiV2AnimationRuntime *pAnim = Ctx.m_pAnim != nullptr ? Ctx.m_pAnim : Ctx.m_pUi->QmAnimationRuntime();
+		const float Scale = pAnim != nullptr && pId != nullptr ? ResolveSettingsIconScale(*pAnim, NodeKey, Hovered, Pressed, !Ctx.m_pUi->RenderOnly()) : 1.0f;
+		const float IconSize = std::clamp(ui_token::font::BODY * UiScale, 10.0f, ui_token::font::BODY) * Scale;
+		const ColorRGBA IconColor = ResolveUiSurfaceIconColor(ChromeColor, Ctx.m_pUi->TextRender()->GetTextColor().WithAlpha(Alpha));
+		ITextRender *pTextRender = Ctx.m_pUi->TextRender();
+		ExecuteSettingsCardHeaderIcon(*pTextRender, IconColor, [&]() {
+			DrawIcon(ChromeRect, IconSize, IconColor);
+		});
+	}
+
 }
 
 void RenderSettingsCardHeaderIcon(const IUiContext &Ctx, const CUIRect &Rect, const EQmIcon Icon, const char *pGlyph, const float DrawAlpha, const void *pId)
 {
 	if(Ctx.m_pUi == nullptr || Rect.w <= 0.0f || Rect.h <= 0.0f)
 		return;
-	const float UiScale = Ctx.m_UiScale > 0.0f ? Ctx.m_UiScale : 1.0f;
-	const bool Hovered = Ctx.m_pUi->MouseHovered(&Rect);
-	const float Alpha = std::clamp(DrawAlpha, 0.0f, 1.0f);
-	const CUIRect &ChromeRect = Rect;
-	const float Radius = std::min(ui_token::radius::TIGHT * UiScale, std::min(ChromeRect.w, ChromeRect.h) * 0.25f);
-	const ColorRGBA ChromeColor(1.0f, 1.0f, 1.0f, (Hovered ? (Ctx.m_pUi->MouseButton(0) ? 0.36f : 0.28f) : 0.18f) * Alpha);
-	if(!Ctx.m_pUi->MeasurementOnly())
-		DrawRoundedSurface(Ctx, ChromeRect, ChromeColor, ChromeColor, Radius);
-	const bool Pressed = Hovered && Ctx.m_pUi->MouseButton(0);
-	const uint64_t NodeKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash ^ str_quickhash("card-icon-feedback"), reinterpret_cast<uint64_t>(pId));
-	const float Scale = Ctx.m_pAnim != nullptr && pId != nullptr ? ResolveSettingsIconScale(*Ctx.m_pAnim, NodeKey, Hovered, Pressed, !Ctx.m_pUi->RenderOnly()) : 1.0f;
-	const float IconSize = std::clamp(ui_token::font::BODY * UiScale, 10.0f, ui_token::font::BODY) * Scale;
-	const ColorRGBA IconColor = ResolveUiSurfaceIconColor(ChromeColor, Ctx.m_pUi->TextRender()->GetTextColor().WithAlpha(Alpha));
-	ITextRender *pTextRender = Ctx.m_pUi->TextRender();
-	ExecuteSettingsCardHeaderIcon(*pTextRender, IconColor, [&]() {
-		Ctx.m_pUi->DoLabel_QmIcon(&ChromeRect, Icon, pGlyph, IconSize, TEXTALIGN_MC);
+	RenderSettingsCardIconFrame(Ctx, Rect, DrawAlpha, pId, [&](const CUIRect &DrawRect, const float Size, const ColorRGBA &IconColor) {
+		Ctx.m_pUi->DoLabel_QmIcon(&DrawRect, Icon, pGlyph, Size, TEXTALIGN_MC);
 	});
 }
 
 void RenderSettingsCardCollapseButton(const IUiContext &Ctx, const CUIRect &Rect, const bool Collapsed, const float DrawAlpha, const void *pId)
 {
-	RenderSettingsCardHeaderIcon(Ctx, Rect, Collapsed ? EQmIcon::CHEVRON_DOWN : EQmIcon::CHEVRON_UP, Collapsed ? FontIcons::FONT_ICON_CHEVRON_DOWN : FontIcons::FONT_ICON_CHEVRON_UP, DrawAlpha, pId);
+	if(Ctx.m_pUi == nullptr || Rect.w <= 0.0f || Rect.h <= 0.0f)
+		return;
+	// 箭头与卡片内容高度动画同拍：0.26s EASE_IN_OUT，chevron 从 V 匀速转到 ^。
+	// 轨道推进与「帧条 / 静止态字形」的取舍统一交给 QmIconSwap 的绑定，
+	// 排序箭头、下拉箭头用的是同一份实现。
+	const ui_widget::SIconSwapBinding CollapseIcon = ui_widget::ResolveIconSwapBinding(
+		Ctx, EQmIconSwapPair::CHEVRON,
+		EQmIcon::CHEVRON_DOWN, FontIcons::FONT_ICON_CHEVRON_DOWN,
+		EQmIcon::CHEVRON_UP, FontIcons::FONT_ICON_CHEVRON_UP,
+		Collapsed ? 0.0f : 1.0f, str_quickhash("card-collapse-icon"), pId);
+	RenderSettingsCardIconFrame(Ctx, Rect, DrawAlpha, pId, [&](const CUIRect &DrawRect, const float Size, const ColorRGBA &IconColor) {
+		// 静止态与动画态必须落在同一个图标盒和同一个字号上：盒由 QmIconLabelRect 收敛成
+		// Size×Size，字号是盒宽的 0.8 倍（QmIconFontSize）。帧条若按 Size 直接换算画布，
+		// 会比字形大 1/0.8 = 25%，笔画也跟着变粗——观感就是「播放中比静止态大一圈」。
+		const CUIRect IconRect = QmIconLabelRect(DrawRect, Size, TEXTALIGN_MC);
+		ui_widget::DrawIconSwapBinding(Ctx, IconRect, IconColor, &CollapseIcon);
+	});
+	if(Ctx.m_pTooltips != nullptr)
+		Ctx.m_pTooltips->DoToolTip(pId, &Rect, Collapsed ? Localize("Expand") : Localize("Collapse"));
 }
 
 SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const CUIRect &Slot, const SSettingsCardSpec &Spec, const SSettingsCardVisualState &State, const SSettingsCardDeckVisualOptions &VisualOptions, const FSettingsCardMeasure &Measure, const FSettingsCardRender &Render, const FSettingsCardHeaderAction &HeaderAction, const FSettingsCardRenderMeasured &RenderMeasured, bool *pPointerInside, float *pObservedContentHeight)
@@ -97,9 +131,9 @@ SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame 
 	SSettingsCardVisualState DrawState = State;
 	SSettingsCardFrame DrawFrame = ResolveSettingsCardDrawFrame(Frame, State.m_DrawOffsetX, State.m_DrawOffsetY);
 	CUIRect InfoButton{};
-	if(Spec.m_pInfo != nullptr && Spec.m_pInfo[0] != '\0')
+	if(HasSettingsCardInfo(Spec))
 	{
-		InfoButton = ResolveSettingsCardInfoRect(DrawFrame);
+		InfoButton = ResolveSettingsCardInfoRect(DrawFrame, VisualOptions.m_HasWidthButton);
 		DrawFrame.m_TitleRect.w = std::min(DrawFrame.m_TitleRect.w, std::max(0.0f, InfoButton.x - DrawFrame.m_TitleRect.x - ui_token::spacing::XS));
 	}
 	DrawState.m_PointerInside = Ctx.m_pUi != nullptr && Ctx.m_pUi->MouseHovered(&DrawFrame.m_Rect);
@@ -203,6 +237,44 @@ bool CMenus::DoSettingsToggleGroup(int Page, int Tab, int Subtab, CUIRect &Conte
 {
 	if(Entries.size() == 0)
 		return false;
+	// 组内每一项都按设置页的常规开关排：一行一个标签 + 右侧开关。
+	// 原来把短开关挤成一排胶囊，扫读困难，也和本页其它开关不是同一套外观。
+	CSettingsContentLayoutFlow Flow(Content);
+	bool Changed = false;
+	size_t Index = 0;
+	for(const auto &Entry : Entries)
+	{
+		CUIRect Row;
+		const float SpacingBefore = Index == 0 ? 0.0f : Metrics.m_LineSpacing;
+		const char *pRowId = Entry.m_pTextId != nullptr ? Entry.m_pTextId : Entry.m_pLabel;
+		const bool HasRow = Flow.Control(pRowId, Metrics.m_LineHeight, Row, SpacingBefore);
+		if(HasRow && Pass == ESettingsToggleGroupPass::RENDER && Entry.m_pValue != nullptr)
+		{
+			ProcessInput = ProcessInput && Flow.Input();
+			const int Checked = Entry.m_Mask != 0 ? (*Entry.m_pValue & Entry.m_Mask) != 0 : *Entry.m_pValue != 0;
+			const void *pId = Entry.m_pId != nullptr ? Entry.m_pId : Entry.m_pValue;
+			const char *pOverrideTooltip = TemporaryOverrideTooltip(Entry.m_pValue);
+			const int Clicked = DoSettingsButton_CheckBox(Page, Tab, Subtab, pId, pRowId, Entry.m_pLabel, Checked, &Row);
+			if(ApplySettingsToggleEntry(Entry, Clicked != 0, ProcessInput && !m_MenuTextPlanCollecting && !Ui()->RenderOnly(), pOverrideTooltip != nullptr))
+				Changed = true;
+			if(Entry.m_pTooltip != nullptr && !m_MenuTextPlanCollecting)
+				Ui()->DoConfigTooltip(pId, &Row, Entry.m_pValue);
+		}
+		Index++;
+	}
+	// 组尾补一个行距：跨组时下一组首行不带间距，整卡任意相邻两行才都是同一个节奏。
+	Flow.Space(Metrics.m_LineSpacing);
+	return Changed;
+}
+
+// 一排小按钮的筛选组：每项左侧带圆形勾选指示，用于「配置过滤器」这类需要一眼横看完的筛选。
+// 与逐行开关的 DoSettingsToggleGroup 分开：普通设置项仍走逐行 toggle，不能因为这里回退成按钮。
+bool CMenus::DoSettingsToggleButtonGroup(int Page, int Tab, int Subtab, CUIRect &Content, std::initializer_list<SSettingsToggleEntry> Entries, const SSettingsContentMetrics &Metrics, bool ProcessInput, ESettingsToggleGroupPass Pass)
+{
+	if(Entries.size() == 0)
+		return false;
+	// 组内按钮平摊整组宽度：一排看过去宽度一致，不会因为文字长短参差不齐。
+	// 列数由文字宽度决定，能排几列就排几列，排不下再换行。
 	const float Gap = Metrics.m_LineSpacing;
 	const float PaddingX = std::max(Metrics.m_LineSpacing, Metrics.m_BodySize * 0.5f);
 	const float PaddingY = Metrics.m_LineSpacing * 0.5f;
@@ -219,6 +291,7 @@ bool CMenus::DoSettingsToggleGroup(int Page, int Tab, int Subtab, CUIRect &Conte
 	Index = 0;
 	for(const auto &Entry : Entries)
 	{
+		// 先按按钮宽度重算一次文本高度，窄按钮里的换行会抬高整行，不能只信任单行测量。
 		const CUIRect Button{0, 0, Grid.m_aColumnWidths[Index % Grid.m_Columns], Metrics.m_LineHeight};
 		const float IndicatorWidth = Entry.m_ShowCheckmark ? Metrics.m_BodySize + Gap : 0.0f;
 		const CUIRect Label = ResolveSettingsToggleButtonLabel(Button, PaddingX, PaddingY, IndicatorWidth);
@@ -228,7 +301,7 @@ bool CMenus::DoSettingsToggleGroup(int Page, int Tab, int Subtab, CUIRect &Conte
 	Grid.SetItemHeights(m_vSettingsToggleGroupSizes);
 	CUIRect Area;
 	CSettingsContentLayoutFlow Flow(Content);
-	// 分组作为一个稳定布局块发布；输入和绘制消费同一份卡片坐标。
+	// 整组作为一个稳定布局块发布：输入和绘制消费同一份坐标，按钮和命中区域不会错位。
 	const char *pGroupId = Entries.begin()->m_pTextId;
 	const bool HasArea = Flow.Control(pGroupId, Grid.Height(), Area);
 	Flow.Space(Metrics.m_LineSpacing);
@@ -247,8 +320,7 @@ bool CMenus::DoSettingsToggleGroup(int Page, int Tab, int Subtab, CUIRect &Conte
 	}
 	return Changed;
 }
-
-bool CMenus::DoSettingsToggleButton(int Page, int Tab, int Subtab, const CUIRect &Button, const SSettingsToggleEntry &Entry, const SSettingsContentMetrics &Metrics, bool ProcessInput, ESettingsToggleGroupPass Pass)
+bool CMenus::DoSettingsToggleButton(int Page, int Tab, int Subtab, const CUIRect &Button, const SSettingsToggleEntry &Entry, const SSettingsContentMetrics &Metrics, bool ProcessInput, ESettingsToggleGroupPass Pass, bool HoverEmphasis)
 {
 	if(Pass == ESettingsToggleGroupPass::LAYOUT)
 		return false;
@@ -278,22 +350,52 @@ bool CMenus::DoSettingsToggleButton(int Page, int Tab, int Subtab, const CUIRect
 	Options.m_Radius *= Metrics.m_UiScale;
 	// 与 F1 筛选相同，以选中底色表达启用状态，不再另画滑动开关。
 	Options.m_Color = Options.m_Selected ? color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(1.0f) : ResolveConfiguredControlSurface();
+	// 需要突出悬浮位置的场景（成对出现的色块 + 按钮）再加一层明暗差：
+	// 不悬浮时底色压暗，悬浮时回到原亮度并把描边提亮。
+	// 指针位置直接按几何判断：这里是「成对色块」的强调语义，命中区可能小于卡片矩形，
+	// 不复用控件外观判定；普通按钮的悬浮仍走 VisualSurfaceHovered。
+	// 这里不自算亮度：非悬浮用遮罩 token 压暗，悬浮提亮交给公共按钮反馈样式。
+	const float MouseX = Ui()->MouseX();
+	const float MouseY = Ui()->MouseY();
+	const bool Hovered = HoverEmphasis && !m_MenuTextPlanCollecting && MouseX >= Button.x && MouseY >= Button.y && MouseX < Button.x + Button.w && MouseY < Button.y + Button.h;
+	if(HoverEmphasis)
+	{
+		Options.m_HoveredOverride = Hovered;
+		if(!Hovered)
+			Options.m_Color = BlendUiButtonSurface(*Options.m_Color, ui_token::color::PREVIEW_BACKDROP);
+	}
+	// 开关选中后保留浅色描边，不随浅色底翻成深色；文字也维持原前景色。
+	if(Options.m_Selected)
+		Options.m_BorderOverride = ui_token::color::TEXT_PRIMARY.WithAlpha(ui_token::feedback::ICON_BORDER_ALPHA);
+	else
+		Options.m_BorderOverride.reset();
 	ColorRGBA Fill = *Options.m_Color;
 	if(!Options.m_Enabled)
 		Fill.a *= 0.65f;
 	if(!m_MenuTextPlanCollecting)
 		Fill = ui_widget::DrawButtonSurface(Context, CanProcessInput ? pId : nullptr, Button, Options);
 	const CUiScopedSurfaceText SurfaceText(TextRender(), Fill);
-	if(Entry.m_ShowCheckmark && Options.m_Selected && !m_MenuTextPlanCollecting)
+	if(Entry.m_ShowCheckmark && !m_MenuTextPlanCollecting)
 	{
 		CUIRect Indicator = ResolveSettingsToggleButtonLabel(Button, PaddingX, PaddingY);
 		Indicator.w = std::min(Metrics.m_BodySize, Indicator.w);
-		const EFontPreset PreviousFont = TextRender()->GetFontPreset();
-		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-		char aCheck[8] = {};
-		str_utf8_encode(aCheck, CQmIconRegistry::Codepoint(EQmIcon::CHECK));
-		Ui()->DoLabel(&Indicator, aCheck, Metrics.m_BodySize, TEXTALIGN_MC);
-		TextRender()->SetFontPreset(PreviousFont);
+		// 圆形复选框：开关两种状态都画同一个圆环，只让打开态在环内多一个勾，
+		// 这样一排小按钮里能直接看出哪些筛选是开着的。
+		const float Diameter = std::min(Metrics.m_BodySize * 0.78f, std::min(Indicator.w, Indicator.h));
+		CUIRect Ring;
+		Ring.w = Ring.h = Diameter;
+		Ring.x = Indicator.x + (Indicator.w - Diameter) * 0.5f;
+		Ring.y = Indicator.y + (Indicator.h - Diameter) * 0.5f;
+		DrawRoundedSurface(Ui(), Ring, ColorRGBA(), ui_token::color::TEXT_PRIMARY.WithAlpha(Options.m_Selected ? 0.92f : 0.52f), Diameter * 0.5f, 1.0f);
+		if(Options.m_Selected)
+		{
+			const EFontPreset PreviousFont = TextRender()->GetFontPreset();
+			TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+			char aCheck[8] = {};
+			str_utf8_encode(aCheck, CQmIconRegistry::Codepoint(EQmIcon::CHECK));
+			Ui()->DoLabel(&Ring, aCheck, Diameter, TEXTALIGN_MC);
+			TextRender()->SetFontPreset(PreviousFont);
+		}
 	}
 	SLabelProperties Props;
 	Props.m_MaxWidth = Label.w;
@@ -301,8 +403,10 @@ bool CMenus::DoSettingsToggleButton(int Page, int Tab, int Subtab, const CUIRect
 	Props.m_MinimumFontSize = Metrics.m_BodySize;
 	if(pOverrideTooltip != nullptr)
 		Props.SetColor(ui_token::color::TEXT_DISABLED);
+	else if(Options.m_Selected)
+		Props.SetColor(ui_token::color::TEXT_PRIMARY);
 	ExecuteSettingsCardLabel(Label, [&]() {
-		DoSettingsMenuLabel(Page, Tab, Subtab, Entry.m_pTextId, &Label, Entry.m_pLabel, Metrics.m_BodySize, TEXTALIGN_MC, Props);
+		DoSettingsMenuLabel(Page, Tab, Subtab, Entry.m_pTextId, &Label, Entry.m_pLabel, Metrics.m_BodySize, TEXTALIGN_ML, Props);
 	});
 	if(!m_MenuTextPlanCollecting && !Ui()->RenderOnly() && Context.m_pTooltips != nullptr)
 	{

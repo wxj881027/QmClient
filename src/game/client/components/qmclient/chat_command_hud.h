@@ -253,9 +253,10 @@ public:
 		return true;
 	}
 
-	bool MoveSelection(int Direction, const char *pInput, size_t Cursor)
+	bool MoveSelection(int Direction, const char *pInput, size_t Cursor, bool HistoryNavigationActive = false)
 	{
-		if(!MatchesInput(pInput, Cursor) || m_vCandidates.empty() || Direction == 0)
+		// 从历史回填的命令或表情仍可显示候选，上下键继续交给历史浏览。
+		if(HistoryNavigationActive || !MatchesInput(pInput, Cursor) || m_vCandidates.empty() || Direction == 0)
 			return false;
 		if(m_Selected < 0)
 			m_Selected = Direction > 0 ? 0 : Count() - 1;

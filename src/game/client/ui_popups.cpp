@@ -183,9 +183,7 @@ void CUi::RenderPopupMenus()
 	CUiScopedGaussianBlur PopupBlurScope(this);
 	// 禁用弹层模糊时，背景和分隔线的半透明绘制也不能触发自动背板模糊。
 	CUiScopedGaussianBlurSuppression PopupBlurSuppression(this, g_Config.m_QmGaussianBlur == 0);
-	// 页面文字绘制晚于菜单背板捕获；弹层栈需要完整页面的新快照，栈内继续复用。
-	if(!m_vPopupMenus.empty() && g_Config.m_QmGaussianBlur != 0 && GaussianBlurScopeActive())
-		m_GaussianBlurPrepared = false;
+	// 弹层沿用本帧在文字之前冻结的背景层；不能再捕获页面文字作为背板。
 	m_RenderingPopupMenus = true;
 	for(size_t i = 0; i < m_vPopupMenus.size(); ++i)
 	{
@@ -328,7 +326,7 @@ void CUi::RenderPopupMenus()
 			return !Menu.m_Closing && MouseInside(&Menu.m_Rect) && (!Menu.m_Props.m_ClipToViewport || MouseInside(&Menu.m_Props.m_Viewport));
 		});
 		const bool OpeningFrame = PopupMenu.m_Props.m_IgnoreOpeningClick && PopupMenu.m_OpenedFrame == PopupSourceFrame();
-		const SQmPopupPointerInput PointerInput{Active, PopupMenu.m_Props.m_BlockUnderlyingPointerInput, Inside, !OpeningFrame && MouseButtonClicked(0) != 0, !OpeningFrame && MouseButton(0) != 0, CheckActiveItem(pId), HotItem() == pId, InsideGroup};
+		const SQmPopupPointerInput PointerInput{Active, PopupMenu.m_Props.m_BlockUnderlyingPointerInput, Inside, !OpeningFrame && MouseButtonClicked(0) != 0, !OpeningFrame && MouseButton(0) != 0, CheckActiveItem(pId), HotItem() == pId, InsideGroup, PopupMenu.m_Props.m_PressInsideGoesToContent};
 		const EQmPopupPointerAction PointerAction = QmResolvePopupPointerAction(PointerInput);
 		const bool CloseBeforeRender = PointerAction == EQmPopupPointerAction::CLOSE || PointerAction == EQmPopupPointerAction::CLOSE_GROUP;
 		if(PointerAction == EQmPopupPointerAction::CAPTURE)
@@ -782,14 +780,33 @@ void CUi::SConfirmPopupContext::YesNoButtons()
 	str_copy(m_aNegativeButtonLabel, Localize("No"));
 }
 
+void CUi::SConfirmPopupContext::DefaultButtons()
+{
+	str_copy(m_aPositiveButtonLabel, Localize("OK"));
+	str_copy(m_aNegativeButtonLabel, Localize("Cancel"));
+}
+
 void CUi::ShowPopupConfirm(float X, float Y, SConfirmPopupContext *pContext, bool CenterInViewport)
 {
-	const float TextWidth = minimum(std::ceil(TextRender()->TextWidth(SConfirmPopupContext::POPUP_FONT_SIZE, pContext->m_aMessage, -1, -1.0f) + 0.5f), SConfirmPopupContext::POPUP_MAX_WIDTH);
+	const bool Titled = pContext->m_aTitle[0] != '\0';
+	const float FontSize = Titled ? ui_token::font::BODY : SConfirmPopupContext::POPUP_FONT_SIZE;
+	const float Inset = Titled ? ui_token::spacing::LG : PopupMenuContentInset() * 0.5f;
+	const float MessageWidth = std::ceil(TextRender()->TextWidth(FontSize, pContext->m_aMessage, -1, -1.0f) + 0.5f);
+	float PopupWidth = minimum(MessageWidth, SConfirmPopupContext::POPUP_MAX_WIDTH) + 2.0f * Inset;
+	if(Titled)
+	{
+		const float TitleWidth = TextRender()->TextWidth(ui_token::font::HEADLINE_LG, pContext->m_aTitle);
+		const float ButtonWidth = maximum(TextRender()->TextWidth(FontSize, pContext->m_aPositiveButtonLabel), TextRender()->TextWidth(FontSize, pContext->m_aNegativeButtonLabel)) + 2.0f * ui_token::spacing::SM;
+		const float RequiredWidth = std::max({MessageWidth, TitleWidth, 2.0f * ButtonWidth + ui_token::spacing::SM}) + 2.0f * Inset;
+		const float MaxWidth = std::min(ui_token::confirm_dialog::MAX_WIDTH, std::max(2.0f * Inset + 1.0f, Screen()->w - 2.0f * ui_token::spacing::LG));
+		PopupWidth = std::clamp(RequiredWidth, std::min(ui_token::confirm_dialog::MIN_WIDTH, MaxWidth), MaxWidth);
+	}
 	float TextHeight = 0.0f;
 	STextSizeProperties TextSizeProps{};
 	TextSizeProps.m_pHeight = &TextHeight;
-	TextRender()->TextWidth(SConfirmPopupContext::POPUP_FONT_SIZE, pContext->m_aMessage, -1, TextWidth, 0, TextSizeProps);
-	const float PopupHeight = TextHeight + SConfirmPopupContext::POPUP_BUTTON_HEIGHT + SConfirmPopupContext::POPUP_BUTTON_SPACING + 10.0f;
+	TextRender()->TextWidth(FontSize, pContext->m_aMessage, -1, PopupWidth - 2.0f * Inset, 0, TextSizeProps);
+	const float PopupHeight = Titled ? TextHeight + ui_token::confirm_dialog::TITLE_HEIGHT + ui_token::spacing::MD + ui_token::spacing::XL + ui_token::confirm_dialog::BUTTON_HEIGHT + 2.0f * Inset :
+					   TextHeight + SConfirmPopupContext::POPUP_BUTTON_HEIGHT + SConfirmPopupContext::POPUP_BUTTON_SPACING + 2.0f * Inset;
 	pContext->m_pUI = this;
 	pContext->m_Result = SConfirmPopupContext::UNSET;
 	SPopupMenuProperties Props;
@@ -798,7 +815,8 @@ void CUi::ShowPopupConfirm(float X, float Y, SConfirmPopupContext *pContext, boo
 	Props.m_BlockUnderlyingPointerInput = true;
 	Props.m_BlockUnderlyingScroll = true;
 	Props.m_Animate = true;
-	DoPopupMenu(pContext, X, Y, TextWidth + 10.0f, PopupHeight, pContext, PopupConfirm, Props);
+	Props.m_ContentInset = Inset;
+	DoPopupMenu(pContext, X, Y, PopupWidth, PopupHeight, pContext, PopupConfirm, Props);
 }
 
 CUi::EPopupMenuFunctionResult CUi::PopupConfirm(void *pContext, CUIRect View, bool Active)
@@ -806,19 +824,37 @@ CUi::EPopupMenuFunctionResult CUi::PopupConfirm(void *pContext, CUIRect View, bo
 	SConfirmPopupContext *pConfirmPopup = static_cast<SConfirmPopupContext *>(pContext);
 	CUi *pUI = pConfirmPopup->m_pUI;
 
+	const bool Titled = pConfirmPopup->m_aTitle[0] != '\0';
+	const float FontSize = Titled ? ui_token::font::BODY : SConfirmPopupContext::POPUP_FONT_SIZE;
+	const float ButtonHeight = Titled ? ui_token::confirm_dialog::BUTTON_HEIGHT : SConfirmPopupContext::POPUP_BUTTON_HEIGHT;
+	const float ButtonSpacing = Titled ? ui_token::spacing::SM : SConfirmPopupContext::POPUP_BUTTON_SPACING;
+	const float ButtonPadding = Titled ? ui_token::spacing::SM : 0.0f;
+	const float MinimumFontSize = Titled ? ui_token::font::SMALL : -1.0f;
+	if(Titled)
+	{
+		CUIRect Title;
+		View.HSplitTop(ui_token::confirm_dialog::TITLE_HEIGHT, &Title, &View);
+		SLabelProperties TitleProps;
+		TitleProps.m_MaxWidth = Title.w;
+		TitleProps.m_EllipsisAtEnd = true;
+		pUI->DoLabel(&Title, pConfirmPopup->m_aTitle, ui_token::font::HEADLINE_LG, TEXTALIGN_ML, TitleProps);
+		View.HSplitTop(ui_token::spacing::MD, nullptr, &View);
+	}
 	CUIRect Label, ButtonBar, CancelButton, ConfirmButton;
-	View.HSplitBottom(SConfirmPopupContext::POPUP_BUTTON_HEIGHT, &Label, &ButtonBar);
-	ButtonBar.VSplitMid(&CancelButton, &ConfirmButton, SConfirmPopupContext::POPUP_BUTTON_SPACING);
+	View.HSplitBottom(ButtonHeight, &Label, &ButtonBar);
+	ButtonBar.VSplitMid(&CancelButton, &ConfirmButton, ButtonSpacing);
 
-	pUI->TextRender()->Text(Label.x, Label.y, SConfirmPopupContext::POPUP_FONT_SIZE, pConfirmPopup->m_aMessage, Label.w);
+	pUI->TextRender()->Text(Label.x, Label.y, FontSize, pConfirmPopup->m_aMessage, Label.w);
 
-	if(pUI->DoButton_PopupMenu(&pConfirmPopup->m_CancelButton, pConfirmPopup->m_aNegativeButtonLabel, &CancelButton, SConfirmPopupContext::POPUP_FONT_SIZE, TEXTALIGN_MC))
+	if(pUI->DoButton_PopupMenu(&pConfirmPopup->m_CancelButton, pConfirmPopup->m_aNegativeButtonLabel, &CancelButton, FontSize, TEXTALIGN_MC, ButtonPadding, false, true, std::nullopt, MinimumFontSize))
 	{
 		pConfirmPopup->m_Result = SConfirmPopupContext::CANCELED;
 		return CUi::POPUP_CLOSE_CURRENT;
 	}
 
-	if(pUI->DoButton_PopupMenu(&pConfirmPopup->m_ConfirmButton, pConfirmPopup->m_aPositiveButtonLabel, &ConfirmButton, SConfirmPopupContext::POPUP_FONT_SIZE, TEXTALIGN_MC) || (Active && pUI->ConsumeHotkey(HOTKEY_ENTER)))
+	const std::optional<ColorRGBA> ConfirmColor =
+		pConfirmPopup->m_Tone == SConfirmPopupContext::ETone::DANGER ? std::optional<ColorRGBA>(ui_token::color::DANGER) : std::nullopt;
+	if(pUI->DoButton_PopupMenu(&pConfirmPopup->m_ConfirmButton, pConfirmPopup->m_aPositiveButtonLabel, &ConfirmButton, FontSize, TEXTALIGN_MC, ButtonPadding, false, true, ConfirmColor, MinimumFontSize))
 	{
 		pConfirmPopup->m_Result = SConfirmPopupContext::CONFIRMED;
 		return CUi::POPUP_CLOSE_CURRENT;
@@ -1381,13 +1417,13 @@ namespace
 	void PickerDrawHueStrip(const CUIRect &Area)
 	{
 		static constexpr float s_aaHueStops[7][3] = {
-			{1.0f, 0.0f, 0.0f}, // red
-			{1.0f, 0.0f, 1.0f}, // magenta
-			{0.0f, 0.0f, 1.0f}, // blue
-			{0.0f, 1.0f, 1.0f}, // cyan
-			{0.0f, 1.0f, 0.0f}, // green
-			{1.0f, 1.0f, 0.0f}, // yellow
-			{1.0f, 0.0f, 0.0f}, // red
+			{1.0f, 0.0f, 0.0f}, // 红
+			{1.0f, 1.0f, 0.0f}, // 黄
+			{0.0f, 1.0f, 0.0f}, // 绿
+			{0.0f, 1.0f, 1.0f}, // 青
+			{0.0f, 0.0f, 1.0f}, // 蓝
+			{1.0f, 0.0f, 1.0f}, // 品红
+			{1.0f, 0.0f, 0.0f}, // 红
 		};
 		const float StopWidth = Area.w / (std::size(s_aaHueStops) - 1);
 		CUIRect StopArea;
@@ -1577,9 +1613,14 @@ namespace
 		CUIRect DrawCell = Cell;
 		if(Hovered && !Pressed)
 		{
-			DrawCell.Margin(-1.0f, &DrawCell);
-			const CUIRect Shadow{DrawCell.x, DrawCell.y + 0.8f, DrawCell.w, DrawCell.h};
-			DrawRoundedSurface(pUI, Shadow, ColorRGBA(0.0f, 0.0f, 0.0f, 0.35f), ColorRGBA(), Radius, 0.0f);
+			// 阴影层跟随同一份形状向外偏移，不再「矩形外扩 + 原半径」——
+			// 后者只对圆弧等距，连续曲率下内外轮廓会交叉。
+			SRoundedSurfaceParams ShadowParams;
+			ShadowParams.m_Radius = Radius;
+			ShadowParams.m_ShapeExpand = 1.0f;
+			CUIRect Shadow = Cell;
+			Shadow.y += 0.8f;
+			DrawRoundedSurface(pUI, Shadow, ColorRGBA(0.0f, 0.0f, 0.0f, 0.35f), ColorRGBA(), ShadowParams);
 		}
 		else if(Pressed)
 		{
@@ -1923,9 +1964,11 @@ CUi::EPopupMenuFunctionResult CUi::PopupColorPicker(void *pContext, CUIRect View
 			PickerDrawColorWheel(pUI, WheelArea);
 
 			// SV 方图背景卡片与微边框
-			CUIRect SvBorder = SvArea;
-			SvBorder.Margin(-1.0f, &SvBorder);
-			DrawRoundedSurface(pUI, SvBorder, ColorRGBA(0.0f, 0.0f, 0.0f, 0.45f), ColorRGBA(1.0f, 1.0f, 1.0f, 0.18f), 2.5f, 1.0f);
+			SRoundedSurfaceParams SvBorderParams;
+			SvBorderParams.m_Radius = 2.5f;
+			SvBorderParams.m_BorderWidth = 1.0f;
+			SvBorderParams.m_ShapeExpand = 1.0f;
+			DrawRoundedSurface(pUI, SvArea, ColorRGBA(0.0f, 0.0f, 0.0f, 0.45f), ColorRGBA(1.0f, 1.0f, 1.0f, 0.18f), SvBorderParams);
 			SvArea.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.55f), IGraphics::CORNER_NONE, 0.0f);
 			PickerDrawSvGradient(pUI, SvArea, PickerColorHSV.x);
 		}

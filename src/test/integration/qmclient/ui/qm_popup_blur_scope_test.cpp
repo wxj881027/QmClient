@@ -135,7 +135,10 @@ namespace
 	public:
 		bool m_CaptureSupported = true, m_BlurSupported = true;
 		bool m_CaptureSucceeds = true, m_BlurSucceeds = true;
+		bool m_MultisampleTargets = false;
 		int m_Captures = 0, m_Blurs = 0, m_Created = 0;
+		int m_MultisampleTargetsCreated = 0;
+		int m_BeginTargets = 0, m_EndTargets = 0;
 		int m_Surfaces = 0;
 		bool m_HasSdf = true;
 		std::vector<std::pair<CUIRect, ColorRGBA>> m_vRectangles;
@@ -152,6 +155,7 @@ namespace
 			m_vRectangles.emplace_back(CUIRect{X, Y, W, H}, Color);
 		}
 		bool HasRoundedRectSdf() override { return m_HasSdf; }
+		bool HasRoundedRectSdfTexture() override { return false; }
 		void TextureSet(CTextureHandle) override {}
 		void QuadsBegin() override {}
 		void SetColor(ColorRGBA) override {}
@@ -164,8 +168,11 @@ namespace
 			m_vRoundedSubmissions.push_back(Params);
 		}
 		std::vector<SRenderTargetDrawParams> m_vDraws;
+		bool IsRenderTargetSupported() const override { return true; }
 		bool IsBackbufferCaptureSupported() const override { return m_CaptureSupported; }
 		bool IsRenderTargetGaussianBlurSupported() const override { return m_BlurSupported; }
+		bool IsMultisampleRenderTargetSupported() const override { return m_MultisampleTargets; }
+		int MultiSamplingCount() const override { return m_MultisampleTargets ? 4 : 0; }
 		CRenderTargetHandle CreateRenderTarget(int Width, int Height) override
 		{
 			EXPECT_GT(Width, 0);
@@ -179,6 +186,19 @@ namespace
 			++m_Created;
 			return Handle;
 		}
+		CRenderTargetHandle CreateRenderTarget(int Width, int Height, int SampleCount) override
+		{
+			EXPECT_GT(SampleCount, 1);
+			++m_MultisampleTargetsCreated;
+			return CreateRenderTarget(Width, Height);
+		}
+		bool BeginRenderTarget(CRenderTargetHandle Target, ColorRGBA) override
+		{
+			EXPECT_TRUE(Target.IsValid());
+			++m_BeginTargets;
+			return true;
+		}
+		void EndRenderTarget() override { ++m_EndTargets; }
 		void DestroyRenderTarget(CRenderTargetHandle *pTarget) override { pTarget->Invalidate(); }
 		bool CaptureBackbufferToRenderTarget(CRenderTargetHandle Target) override
 		{
@@ -205,8 +225,9 @@ namespace
 			*pX1 = 1920;
 			*pY1 = 1080;
 		}
-		void ClipEnable(int, int, int, int) override {}
-		void ClipDisable() override {}
+		bool m_ClipEnabled = false;
+		void ClipEnable(int, int, int, int) override { m_ClipEnabled = true; }
+		void ClipDisable() override { m_ClipEnabled = false; }
 		void BlendNormal() override {}
 	};
 
@@ -249,9 +270,81 @@ namespace
 	};
 }
 
+TEST_F(QmUiBlurGraphics, ForegroundSurfaceWithoutBackgroundBoundaryDoesNotCapture)
+{
+	m_Ui.RenderGaussianBlur(m_Rect);
+	EXPECT_FALSE(m_Ui.GaussianBlurTargetReady());
+	EXPECT_EQ(m_Graphics.m_Captures, 0);
+	EXPECT_EQ(m_Graphics.m_Blurs, 0);
+	EXPECT_TRUE(m_Graphics.m_vDraws.empty());
+}
+
+TEST_F(QmUiBlurGraphics, CaptureSupportedBackgroundSkipsOffscreenLayer)
+{
+	m_Graphics.m_MultisampleTargets = true;
+	EXPECT_FALSE(m_Ui.BeginBackgroundLayer(ColorRGBA(0.1f, 0.2f, 0.3f, 1.0f)));
+	m_Ui.BeginBackgroundFrame();
+	m_Ui.RenderGaussianBlur(m_Rect);
+	EXPECT_EQ(m_Graphics.m_MultisampleTargetsCreated, 0);
+	EXPECT_EQ(m_Graphics.m_Captures, 1);
+	EXPECT_EQ(m_Graphics.m_Blurs, 1);
+	EXPECT_TRUE(m_Ui.GaussianBlurTargetReady());
+}
+
+TEST_F(QmUiBlurGraphics, LayerFallbackAvoidsSwapchainCaptureWhenCaptureUnsupported)
+{
+	m_Graphics.m_CaptureSupported = false;
+	m_Graphics.m_MultisampleTargets = true;
+	ASSERT_TRUE(m_Ui.BeginBackgroundLayer(ColorRGBA(0.1f, 0.2f, 0.3f, 1.0f)));
+	m_Ui.EndBackgroundLayer();
+	m_Ui.BeginBackgroundFrame();
+	m_Ui.RenderGaussianBlur(m_Rect);
+	EXPECT_EQ(m_Graphics.m_MultisampleTargetsCreated, 1);
+	EXPECT_GE(m_Graphics.m_BeginTargets, 2); // 背景层 + 1/4 降采样
+	EXPECT_EQ(m_Graphics.m_Captures, 0);
+	EXPECT_EQ(m_Graphics.m_Blurs, 1);
+	EXPECT_TRUE(m_Ui.GaussianBlurTargetReady());
+}
+
+TEST_F(QmUiBlurGraphics, ResetClipStateClearsEmptyAndActiveClip)
+{
+	m_Graphics.m_ClipEnabled = true;
+	m_Ui.ResetClipState();
+	EXPECT_FALSE(m_Graphics.m_ClipEnabled);
+	EXPECT_FALSE(m_Ui.IsClipped());
+
+	CUIRect Clip = {0.0f, 0.0f, 100.0f, 100.0f};
+	m_Ui.ClipEnable(&Clip);
+	ASSERT_TRUE(m_Ui.IsClipped());
+	m_Ui.ResetClipState();
+	EXPECT_FALSE(m_Ui.IsClipped());
+	EXPECT_FALSE(m_Graphics.m_ClipEnabled);
+}
+
+TEST_F(QmUiBlurGraphics, BackgroundCompositeClearsStaleClipBeforeFullScreenDraw)
+{
+	m_Graphics.m_CaptureSupported = false;
+	m_Graphics.m_MultisampleTargets = true;
+	m_Graphics.m_ClipEnabled = true;
+	ASSERT_TRUE(m_Ui.BeginBackgroundLayer(ColorRGBA(0.0f, 0.0f, 0.0f, 1.0f)));
+	m_Ui.EndBackgroundLayer();
+	EXPECT_FALSE(m_Graphics.m_ClipEnabled);
+	ASSERT_FALSE(m_Graphics.m_vDraws.empty());
+}
+
+TEST_F(QmUiBlurGraphics, BeginBackgroundFrameIsIdempotentPerFrame)
+{
+	m_Ui.BeginBackgroundFrame();
+	m_Ui.BeginBackgroundFrame();
+	EXPECT_TRUE(m_Ui.BackgroundFrameBegun());
+	EXPECT_EQ(m_Graphics.m_Captures, 1);
+	EXPECT_EQ(m_Graphics.m_Blurs, 1);
+}
+
 TEST_F(QmUiBlurGraphics, MultipleSurfacesCaptureAndBlurOnlyOncePerFrame)
 {
-	ASSERT_TRUE(m_Ui.PrepareGaussianBlur());
+	m_Ui.BeginBackgroundFrame();
+	ASSERT_TRUE(m_Ui.GaussianBlurTargetReady());
 	m_Ui.RenderGaussianBlur(m_Rect, 0.3f);
 	m_Ui.RenderGaussianBlur({150, 30, 80, 40}, 0.7f);
 	EXPECT_EQ(m_Graphics.m_Captures, 1);
@@ -260,6 +353,7 @@ TEST_F(QmUiBlurGraphics, MultipleSurfacesCaptureAndBlurOnlyOncePerFrame)
 	EXPECT_FLOAT_EQ(m_Graphics.m_vDraws[0].m_Alpha, 0.3f);
 	EXPECT_FLOAT_EQ(m_Graphics.m_vDraws[1].m_Alpha, 0.7f);
 	m_Client.AdvanceFrame();
+	m_Ui.BeginBackgroundFrame();
 	m_Ui.RenderGaussianBlur(m_Rect);
 	EXPECT_EQ(m_Graphics.m_Captures, 2);
 	EXPECT_EQ(m_Graphics.m_Blurs, 2);
@@ -269,6 +363,7 @@ TEST_F(QmUiBlurGraphics, MultipleSurfacesCaptureAndBlurOnlyOncePerFrame)
 TEST_F(QmUiBlurGraphics, CaptureFailureDoesNotRetryUntilNextFrameThenRecovers)
 {
 	m_Graphics.m_CaptureSucceeds = false;
+	m_Ui.BeginBackgroundFrame();
 	EXPECT_FALSE(m_Ui.PrepareGaussianBlur());
 	m_Graphics.m_CaptureSucceeds = true;
 	m_Ui.RenderGaussianBlur(m_Rect);
@@ -277,6 +372,7 @@ TEST_F(QmUiBlurGraphics, CaptureFailureDoesNotRetryUntilNextFrameThenRecovers)
 	EXPECT_EQ(m_Graphics.m_Blurs, 0);
 	EXPECT_TRUE(m_Graphics.m_vDraws.empty());
 	m_Client.AdvanceFrame();
+	m_Ui.BeginBackgroundFrame();
 	m_Ui.RenderGaussianBlur(m_Rect);
 	EXPECT_TRUE(m_Ui.GaussianBlurTargetReady());
 	EXPECT_EQ(m_Graphics.m_Captures, 2);
@@ -287,6 +383,7 @@ TEST_F(QmUiBlurGraphics, CaptureFailureDoesNotRetryUntilNextFrameThenRecovers)
 TEST_F(QmUiBlurGraphics, BlurFailureDoesNotRetryUntilNextFrameThenRecovers)
 {
 	m_Graphics.m_BlurSucceeds = false;
+	m_Ui.BeginBackgroundFrame();
 	EXPECT_FALSE(m_Ui.PrepareGaussianBlur());
 	m_Graphics.m_BlurSucceeds = true;
 	m_Ui.RenderGaussianBlur(m_Rect);
@@ -294,6 +391,7 @@ TEST_F(QmUiBlurGraphics, BlurFailureDoesNotRetryUntilNextFrameThenRecovers)
 	EXPECT_EQ(m_Graphics.m_Blurs, 1);
 	EXPECT_TRUE(m_Graphics.m_vDraws.empty());
 	m_Client.AdvanceFrame();
+	m_Ui.BeginBackgroundFrame();
 	m_Ui.RenderGaussianBlur(m_Rect);
 	EXPECT_EQ(m_Graphics.m_Captures, 2);
 	EXPECT_EQ(m_Graphics.m_Blurs, 2);
@@ -305,8 +403,10 @@ TEST_F(QmUiBlurGraphics, UnsupportedCaptureOrBlurReturnsFalseWithoutBackdropDraw
 	for(int Capability : {0, 1})
 	{
 		SCOPED_TRACE(Capability);
+		m_Client.AdvanceFrame();
 		m_Graphics.m_CaptureSupported = Capability != 0;
 		m_Graphics.m_BlurSupported = Capability != 1;
+		m_Ui.BeginBackgroundFrame();
 		EXPECT_FALSE(m_Ui.PrepareGaussianBlur());
 		m_Ui.RenderGaussianBlur(m_Rect);
 		EXPECT_FALSE(m_Ui.GaussianBlurTargetReady());
@@ -319,6 +419,7 @@ TEST_F(QmUiBlurGraphics, UnsupportedCaptureOrBlurReturnsFalseWithoutBackdropDraw
 
 TEST_F(QmUiBlurGraphics, NestedScopePassesFadeAlphaToGpuAndRestoresParent)
 {
+	m_Ui.BeginBackgroundFrame();
 	{
 		CUiScopedGaussianBlur Parent(&m_Ui, 0.25f);
 		{
@@ -479,7 +580,8 @@ TEST_F(QmPopupBlurScope, BackgroundRenderBlocksControlsAndHotkeysWithoutClipping
 TEST_F(QmUiBlurGraphics, PopupStackRefreshesPageSnapshotAndReusesItAcrossDropdowns)
 {
 	g_Config.m_QmGaussianBlur = 1;
-	ASSERT_TRUE(m_Ui.PrepareGaussianBlur());
+	m_Ui.BeginBackgroundFrame();
+	ASSERT_TRUE(m_Ui.GaussianBlurTargetReady());
 	EXPECT_EQ(m_Graphics.m_Captures, 1);
 	SPopupMenuId First, Second;
 	SPopupMenuProperties Props;
@@ -490,14 +592,15 @@ TEST_F(QmUiBlurGraphics, PopupStackRefreshesPageSnapshotAndReusesItAcrossDropdow
 	Props.m_AnchorSurface = {200, 10, 160, 20};
 	m_Ui.DoPopupMenu(&Second, 200, 30, 160, 100, nullptr, KeepCenteredPopupOpen, Props);
 	m_Ui.RenderPopupMenus();
-	EXPECT_EQ(m_Graphics.m_Captures, 2);
-	EXPECT_EQ(m_Graphics.m_Blurs, 2);
+	EXPECT_EQ(m_Graphics.m_Captures, 1);
+	EXPECT_EQ(m_Graphics.m_Blurs, 1);
 	EXPECT_GE(m_Graphics.m_vDraws.size(), 2u);
 }
 
 TEST_F(QmUiBlurGraphics, DisabledBackdropBlurDoesNotRefreshOrDrawCachedMenuBlur)
 {
-	ASSERT_TRUE(m_Ui.PrepareGaussianBlur());
+	m_Ui.BeginBackgroundFrame();
+	ASSERT_TRUE(m_Ui.GaussianBlurTargetReady());
 	g_Config.m_QmGaussianBlur = 0;
 	SPopupMenuId Id;
 	SPopupMenuProperties Props;
@@ -553,6 +656,7 @@ TEST_F(QmUiBlurGraphics, PopupBlurRecoversWhenMasterSwitchIsEnabledAgain)
 	EXPECT_TRUE(m_Graphics.m_vDraws.empty());
 	g_Config.m_QmGaussianBlur = 1;
 	m_Client.AdvanceFrame();
+	m_Ui.BeginBackgroundFrame();
 	m_Ui.RenderPopupMenus();
 	EXPECT_EQ(m_Graphics.m_Captures, 1);
 	EXPECT_FALSE(m_Graphics.m_vDraws.empty());

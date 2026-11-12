@@ -87,6 +87,24 @@ TEST(UiV2AnimSpring, ClampedDtNoExplosion)
 	EXPECT_LE(After, 150.0f);
 }
 
+TEST(UiV2AnimSpring, AnalyticStepIsFrameRateIndependent)
+{
+	// 共用积分器 QmSpringAdvance 对线性常系数 ODE 与步长无关，这是滚动弹簧手感
+	// 能复用同一份实现的前提：一次大步与十次小步必须落到同一状态。
+	const SUiSpringConfig Spring = {1.0f, 280.0f, 26.0f};
+	float BigValue = 0.0f;
+	float BigVelocity = 0.0f;
+	QmSpringAdvance(BigValue, BigVelocity, 100.0f, Spring, 0.1f);
+
+	float SmallValue = 0.0f;
+	float SmallVelocity = 0.0f;
+	for(int i = 0; i < 10; ++i)
+		QmSpringAdvance(SmallValue, SmallVelocity, 100.0f, Spring, 0.01f);
+
+	EXPECT_NEAR(SmallValue, BigValue, 1e-3f);
+	EXPECT_NEAR(SmallVelocity, BigVelocity, 0.05f);
+}
+
 TEST(UiV2AnimSpring, MergeTargetPreservesVelocity)
 {
 	CUiV2AnimationRuntime Runtime;
@@ -172,4 +190,46 @@ TEST(UiV2AnimSpring, CardReorderFlipKeepsReleaseMotionVisible)
 	AdvanceFor(Runtime, 8.0f);
 	EXPECT_NEAR(Runtime.GetValue(NodeKey, EUiAnimProperty::POS_X), NextTarget.x, 1.0f);
 	EXPECT_NEAR(Runtime.GetValue(NodeKey, EUiAnimProperty::POS_Y), NextTarget.y, 1.0f);
+}
+
+// 关闭动效时两条驱动必须同语义：补间也要立刻落到目标并停掉旧轨道，
+// 否则设置卡片折叠箭头、密码图标淡化档会在 motion_level 0 下照样播完整段过渡。
+TEST(UiV2AnimMotionLevel, TweenSnapsToTargetWhenMotionDisabled)
+{
+	CUiV2AnimationRuntime Runtime;
+	const uint64_t NodeKey = 301;
+	Runtime.SetValue(NodeKey, EUiAnimProperty::SCALE, 0.0f);
+
+	g_Config.m_QmUiMotionLevel = 0;
+	const float Resolved = ResolveUiAnimValue(Runtime, NodeKey, EUiAnimProperty::SCALE, 1.0f, 0.26f, EEasing::EASE_IN_OUT);
+	EXPECT_FLOAT_EQ(Resolved, 1.0f);
+	EXPECT_FLOAT_EQ(Runtime.GetValue(NodeKey, EUiAnimProperty::SCALE, -1.0f), 1.0f);
+	EXPECT_FALSE(Runtime.HasActiveAnimation(NodeKey, EUiAnimProperty::SCALE));
+
+	// 反向也要立即生效，不能留着上一段轨道的中间值。
+	const float Back = ResolveUiAnimValue(Runtime, NodeKey, EUiAnimProperty::SCALE, 0.0f, 0.26f, EEasing::EASE_IN_OUT);
+	EXPECT_FLOAT_EQ(Back, 0.0f);
+	EXPECT_FLOAT_EQ(Runtime.GetValue(NodeKey, EUiAnimProperty::SCALE, -1.0f), 0.0f);
+	EXPECT_FALSE(Runtime.HasActiveAnimation(NodeKey, EUiAnimProperty::SCALE));
+
+	g_Config.m_QmUiMotionLevel = 2;
+}
+
+TEST(UiV2AnimMotionLevel, TweenStillInterpolatesWhenMotionEnabled)
+{
+	CUiV2AnimationRuntime Runtime;
+	const uint64_t NodeKey = 302;
+	Runtime.SetValue(NodeKey, EUiAnimProperty::SCALE, 0.0f);
+
+	g_Config.m_QmUiMotionLevel = 2;
+	ResolveUiAnimValue(Runtime, NodeKey, EUiAnimProperty::SCALE, 1.0f, 0.26f, EEasing::EASE_IN_OUT);
+	AdvanceFor(Runtime, 0.05f);
+	const float Mid = Runtime.GetValue(NodeKey, EUiAnimProperty::SCALE, -1.0f);
+	EXPECT_GT(Mid, 0.0f);
+	EXPECT_LT(Mid, 1.0f);
+	EXPECT_TRUE(Runtime.HasActiveAnimation(NodeKey, EUiAnimProperty::SCALE));
+
+	AdvanceFor(Runtime, 2.0f);
+	EXPECT_NEAR(Runtime.GetValue(NodeKey, EUiAnimProperty::SCALE), 1.0f, 0.01f);
+	EXPECT_FALSE(Runtime.HasActiveAnimation(NodeKey, EUiAnimProperty::SCALE));
 }

@@ -181,6 +181,12 @@ class CScoreboard : public CComponent
 	CScrollRegion m_ScrollRegion;
 
 	std::optional<vec2> m_LastMousePos;
+	// 上一帧面板的归一化矩形，手机端点面板外即可关闭。
+	CUIRect m_LastPanelNdc{};
+	// 手机滚动模式：手指拖动列表时不能同时被当成"点行跟随"，记录按下点与位移。
+	bool m_MobileRowPressActive = false;
+	bool m_MobileRowDragScroll = false;
+	vec2 m_MobileRowPressPos{};
 	bool m_MouseUnlocked = false;
 	bool m_RenderInteractions = false;
 	CQmScoreboardMediaControls m_MediaControls;
@@ -221,6 +227,11 @@ class CScoreboard : public CComponent
 
 	void SetUiMousePos(vec2 Pos);
 	void LockMouse();
+
+	// 手机端：点行 = 跟随，行尾「…」打开玩家卡（桌面仍是整行点开玩家卡）。
+	bool MobileRowTapActive() const;
+	// 每行的「…」按钮容器，避免与整行按钮共用同一个 ID。
+	std::array<CButtonContainer, MAX_CLIENTS> m_aRowCardButtons;
 
 	class CScoreboardPopupContext : public SPopupMenuId
 	{
@@ -289,6 +300,15 @@ public:
 	bool OnInput(const IInput::CEvent &Event) override;
 
 	bool IsActive() const;
+	// 打开/关闭计分板与光标解锁共用的入口：控制台 +scoreboard、手机端点行跟随、
+	// 触控层关闭按钮和返回手势都走这里。
+	void SetActive(bool Active);
+	// 跟随某个玩家：旁观中直接切换目标，非旁观时用 /spec 让服务器把客户端切进旁观。
+	// 手机端的「最近 Tee」按钮也复用这套逻辑。
+	void SpectatePlayer(int ClientId);
+	// 手机端：面板矩形（相对屏幕 0..1），用来判断「点在面板外」。
+	CUIRect MobilePanelNdc() const { return m_LastPanelNdc; }
+	bool MobilePanelContains(vec2 NdcPos) const;
 };
 
 #endif

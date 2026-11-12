@@ -1,5 +1,6 @@
 #include "tee_trail_styles.h"
 
+#include "tee_trail_style_common.h"
 #include "trail_band_geometry.h"
 #include "trail_band_section.h"
 
@@ -14,152 +15,7 @@
 namespace
 {
 	using namespace qm_tee_trail;
-
-	struct SBandPoint
-	{
-		vec2 m_Pos;
-		float m_Left, m_Right;
-		ColorRGBA m_Color;
-	};
-
-	float Smooth(float X)
-	{
-		X = std::clamp(X, 0.0f, 1.0f);
-		return X * X * (3.0f - 2.0f * X);
-	}
-
-	unsigned Hash(unsigned X)
-	{
-		X ^= X >> 16;
-		X *= 0x7feb352du;
-		X ^= X >> 15;
-		X *= 0x846ca68bu;
-		return X ^ (X >> 16);
-	}
-
-	float Random(unsigned X)
-	{
-		return (Hash(X) & 0xffffffu) / float(0xffffffu);
-	}
-
-	unsigned CellId(double Distance)
-	{
-		return static_cast<unsigned>(static_cast<int64_t>(std::floor(Distance)));
-	}
-
-	float Noise(double Distance, unsigned Seed)
-	{
-		const double Cell = std::floor(Distance);
-		const unsigned Id = CellId(Cell);
-		return mix(Random(Id + Seed), Random(Id + 1u + Seed), float(Distance - Cell)) * 2.0f - 1.0f;
-	}
-
-	vec2 Unit(vec2 V, vec2 Fallback)
-	{
-		const float Length = length(V);
-		return Length > 0.0001f ? V / Length : Fallback;
-	}
-
-	vec2 Tangent(const SStyleSample &S)
-	{
-		return vec2(S.m_Normal.y, -S.m_Normal.x);
-	}
-
-	ColorRGBA Tint(ColorRGBA A, ColorRGBA B, float T)
-	{
-		return ColorRGBA(mix(A.r, B.r, T), mix(A.g, B.g, T), mix(A.b, B.b, T), 1.0f);
-	}
-
-	void Quad(std::vector<SQuad> &vOut, vec2 A, vec2 B, vec2 C, vec2 D, ColorRGBA Ca, ColorRGBA Cb, ColorRGBA Cc, ColorRGBA Cd, bool Additive)
-	{
-		if(vOut.size() < MAX_QUADS && std::max({Ca.a, Cb.a, Cc.a, Cd.a}) >= 0.001f)
-			vOut.push_back({{A, B, C, D}, {Ca, Cb, Cc, Cd}, Additive});
-	}
-
-	void BandSegment(std::vector<SQuad> &vOut, const SQmTrailBandSection &A, const SQmTrailBandSection &B, bool Additive)
-	{
-		for(int Strip = 0; Strip < 3; ++Strip)
-			Quad(vOut, A.m_aPos[Strip], B.m_aPos[Strip], B.m_aPos[Strip + 1], A.m_aPos[Strip + 1],
-				A.m_aColor[Strip], B.m_aColor[Strip], B.m_aColor[Strip + 1], A.m_aColor[Strip + 1], Additive);
-	}
-
-	void Band(std::vector<SQuad> &vOut, SBandPoint *pBand, size_t Count, float Softness, float PixelSize, bool Additive)
-	{
-		std::array<vec2, MAX_RENDER_POINTS> aNormals;
-		QmPrepareTrailBandJoins(pBand, Count, aNormals.data());
-		const auto Section = [&](size_t Index) {
-			const SBandPoint &P = pBand[Index];
-			return QmPrepareTrailBandSection(P.m_Pos, P.m_Left, P.m_Right, P.m_Color, aNormals[Index], Softness, PixelSize);
-		};
-		SQmTrailBandSection Previous = Section(0);
-		for(size_t i = 1; i < Count; ++i)
-		{
-			const SQmTrailBandSection Current = Section(i);
-			BandSegment(vOut, Previous, Current, Additive);
-			Previous = Current;
-		}
-	}
-
-	void Stroke(std::vector<SQuad> &vOut, vec2 A, vec2 B, float StartWidth, float EndWidth, ColorRGBA Color, float PixelSize, bool Additive)
-	{
-		const vec2 Delta = B - A;
-		if(length(Delta) < 0.001f)
-			return;
-		const vec2 Normal = Unit(vec2(-Delta.y, Delta.x), vec2(0, 1));
-		const auto Start = QmPrepareTrailBandSection(A, StartWidth, StartWidth, Color, Normal, 0.08f, PixelSize);
-		const auto End = QmPrepareTrailBandSection(B, EndWidth, EndWidth, Color, Normal, 0.08f, PixelSize);
-		BandSegment(vOut, Start, End, Additive);
-	}
-
-	SStyleSample Interpolate(const SStyleSample &A, const SStyleSample &B, float T)
-	{
-		SStyleSample S;
-		S.m_Pos = mix(A.m_Pos, B.m_Pos, T);
-		S.m_Normal = Unit(mix(A.m_Normal, B.m_Normal, T), A.m_Normal);
-		S.m_Tint = Tint(A.m_Tint, B.m_Tint, T).WithAlpha(mix(A.m_Tint.a, B.m_Tint.a, T));
-		S.m_Distance = mix(A.m_Distance, B.m_Distance, double(T));
-		S.m_Age = mix(A.m_Age, B.m_Age, T);
-		S.m_Width = mix(A.m_Width, B.m_Width, T);
-		S.m_Alpha = mix(A.m_Alpha, B.m_Alpha, T);
-		S.m_Energy = mix(A.m_Energy, B.m_Energy, T);
-		S.m_Head = mix(A.m_Head, B.m_Head, T);
-		S.m_Remaining = mix(A.m_Remaining, B.m_Remaining, T);
-		return S;
-	}
-
-	// 装饰锚点由累计距离决定，头尾推进及屏幕细分不会重新播种整条拖尾。
-	template<typename F>
-	void Anchors(const SStyleSample *pSamples, size_t Count, float Spacing, float Offset, size_t Limit, F Emit)
-	{
-		const double First = std::floor((pSamples[0].m_Distance - Offset) / Spacing) * Spacing + Offset;
-		size_t Segment = 0;
-		for(size_t Index = 0; Index < Limit; ++Index)
-		{
-			const double Distance = First - double(Index) * Spacing;
-			if(Distance < pSamples[Count - 1].m_Distance)
-				break;
-			while(Segment + 1 < Count && pSamples[Segment + 1].m_Distance > Distance)
-				++Segment;
-			if(Segment + 1 == Count)
-				break;
-			const SStyleSample &A = pSamples[Segment], &B = pSamples[Segment + 1];
-			const double Span = A.m_Distance - B.m_Distance;
-			if(Span < 0.00001)
-				continue;
-			SStyleSample S = Interpolate(A, B, std::clamp(float((A.m_Distance - Distance) / Span), 0.0f, 1.0f));
-			S.m_Distance = Distance;
-			if(S.m_Alpha >= 0.001f && S.m_Width > 0.001f)
-				Emit(S, CellId((Distance - Offset) / Spacing));
-		}
-	}
-
-	float BrushEnvelope(double Distance, unsigned Seed)
-	{
-		const double Phase = Distance / 54.0 + Random(Seed);
-		const float T = float(Phase - std::floor(Phase));
-		// 真正收笔到零宽，留下可透出地图的空隙，而不是用黑色覆盖模拟干刷。
-		return Smooth(T / 0.12f) * (1.0f - Smooth((T - 0.66f) / 0.14f));
-	}
+	using namespace qm_tee_trail::style_detail;
 
 	void Manga(const SStyleSample *pSamples, size_t Count, bool Preset, float PixelSize, unsigned Seed, std::vector<SQuad> &vOut)
 	{
@@ -398,15 +254,13 @@ namespace
 		return true;
 	}
 
-	void ShadePixels(SPixelGrid &Grid, bool Preset, unsigned Seed)
+	void ShadePixels(SPixelGrid &Grid, bool Preset, unsigned Seed, CPixelNoiseCache *pPixelNoiseCache)
 	{
 		for(size_t i = 0; i < Grid.m_Count; ++i)
 		{
 			auto &Cell = Grid.m_aCells[i];
-			// 旋转噪声坐标并混合两种簇尺度，实际像素仍保持世界轴对齐。
-			const double U = Cell.m_X * 0.8 + Cell.m_Y * 0.6, V = Cell.m_Y * 0.8 - Cell.m_X * 0.6;
-			const float Cluster = mix(PixelClusterNoise(U / 3.0, V / 3.0, Seed), PixelClusterNoise(U / 7.0, V / 7.0, Seed + 101u), 0.35f);
-			const float Grain = Random(PixelHash(Cell.m_X, Cell.m_Y, Seed + 43u));
+			const SPixelNoise Noise = pPixelNoiseCache ? pPixelNoiseCache->Get(Cell.m_X, Cell.m_Y, Seed) : SamplePixelNoise(Cell.m_X, Cell.m_Y, Seed);
+			const float Cluster = Noise.m_Cluster, Grain = Noise.m_Grain;
 			const float Boundary = 0.94f + Cluster * 0.16f;
 			const float Threshold = (0.08f + Cluster * 0.70f + Grain * 0.22f) * (0.65f + 0.35f * std::min(Cell.m_Radius, 1.0f));
 			if(Cell.m_Radius > Boundary || Cell.m_Integrity <= Threshold)
@@ -460,7 +314,7 @@ namespace
 		}
 	}
 
-	void Pixels(const SStyleSample *pSamples, size_t Count, bool Preset, float Width, unsigned Seed, std::vector<SQuad> &vOut)
+	void Pixels(const SStyleSample *pSamples, size_t Count, bool Preset, float Width, unsigned Seed, std::vector<SQuad> &vOut, CPixelNoiseCache *pPixelNoiseCache)
 	{
 		SPixelGrid Grid;
 		const size_t FirstQuad = vOut.size();
@@ -470,7 +324,7 @@ namespace
 		{
 			if(!RasterizePixels(Grid, pSamples, Count, CellSize))
 				continue;
-			ShadePixels(Grid, Preset, Seed);
+			ShadePixels(Grid, Preset, Seed, pPixelNoiseCache);
 			size_t QuadCount = FirstQuad;
 			PixelPass(Grid, CellSize, false, QuadCount, vOut);
 			PixelPass(Grid, CellSize, true, QuadCount, vOut);
@@ -482,7 +336,29 @@ namespace
 	}
 }
 
-void qm_tee_trail::BuildStyledEffect(const SStyleSample *pSamples, size_t Count, int Style, bool Preset, float Width, float PixelSize, unsigned Seed, std::vector<SQuad> &vOut)
+qm_tee_trail::SPixelNoise qm_tee_trail::SamplePixelNoise(int X, int Y, unsigned Seed)
+{
+	// 保留原有坐标旋转、两级簇噪声及浮点运算顺序，缓存只省去重复计算。
+	const double U = X * 0.8 + Y * 0.6, V = Y * 0.8 - X * 0.6;
+	return {mix(PixelClusterNoise(U / 3.0, V / 3.0, Seed), PixelClusterNoise(U / 7.0, V / 7.0, Seed + 101u), 0.35f),
+		Random(PixelHash(X, Y, Seed + 43u))};
+}
+
+const qm_tee_trail::SPixelNoise &qm_tee_trail::CPixelNoiseCache::Get(int X, int Y, unsigned Seed)
+{
+	SEntry &Entry = m_aEntries[PixelHash(X, Y, Seed) & (m_aEntries.size() - 1)];
+	if(!Entry.m_Valid || Entry.m_X != X || Entry.m_Y != Y || Entry.m_Seed != Seed)
+	{
+		Entry.m_Noise = SamplePixelNoise(X, Y, Seed);
+		Entry.m_X = X;
+		Entry.m_Y = Y;
+		Entry.m_Seed = Seed;
+		Entry.m_Valid = true;
+	}
+	return Entry.m_Noise;
+}
+
+void qm_tee_trail::BuildStyledEffect(const SStyleSample *pSamples, size_t Count, int Style, bool Preset, float Width, float PixelSize, unsigned Seed, std::vector<SQuad> &vOut, CPixelNoiseCache *pPixelNoiseCache)
 {
 	if(Count < 2 || Count > MAX_RENDER_POINTS)
 		return;
@@ -491,5 +367,15 @@ void qm_tee_trail::BuildStyledEffect(const SStyleSample *pSamples, size_t Count,
 	else if(Style == STYLE_MAGIC)
 		Magic(pSamples, Count, Preset, PixelSize, Seed, vOut);
 	else if(Style == STYLE_PIXEL)
-		Pixels(pSamples, Count, Preset, Width, Seed, vOut);
+		Pixels(pSamples, Count, Preset, Width, Seed, vOut, pPixelNoiseCache);
+	else if(Style == STYLE_AURORA)
+		style_detail::BuildAurora(pSamples, Count, Preset, Width, PixelSize, Seed, vOut);
+	else if(Style == STYLE_INK)
+		style_detail::BuildInk(pSamples, Count, Preset, Width, PixelSize, Seed, vOut);
+	else if(Style == STYLE_IGNIS)
+		style_detail::BuildIgnis(pSamples, Count, Preset, Width, PixelSize, Seed, vOut);
+	else if(Style == STYLE_STARDUST)
+		style_detail::BuildStardust(pSamples, Count, Preset, Width, PixelSize, Seed, vOut);
+	else if(Style == STYLE_BLACKFLASH)
+		style_detail::BuildBlackFlash(pSamples, Count, Preset, Width, PixelSize, Seed, vOut);
 }

@@ -72,19 +72,6 @@ TEST(QmHudMediaIslandBackdrop, TransparentOpacityIncludesPureBlurAndSkipsOpaqueB
 	EXPECT_FALSE(QmHudMediaIslandShouldPrepareBackdropBlur(99, false));
 }
 
-TEST(QmHudMediaIslandBackdrop, RefreshesEveryNewFrameAndReusesTheSameFrameAttempt)
-{
-	EXPECT_TRUE(QmHudMediaIslandShouldRefreshBackdropBlur(10, 0, false));
-	// 同一次主循环里的重复绘制复用结果，下一次绘制不受循环限速方式影响。
-	EXPECT_FALSE(QmHudMediaIslandShouldRefreshBackdropBlur(10, 10, true));
-	EXPECT_TRUE(QmHudMediaIslandShouldRefreshBackdropBlur(11, 10, true));
-	EXPECT_TRUE(QmHudMediaIslandShouldRefreshBackdropBlur(12, 11, true));
-	EXPECT_TRUE(QmHudMediaIslandShouldRefreshBackdropBlur(13, 10, true));
-	EXPECT_TRUE(QmHudMediaIslandShouldRefreshBackdropBlur(9, 10, true));
-	EXPECT_TRUE(QmHudMediaIslandShouldRefreshBackdropBlur(0, UINT64_MAX, true));
-	EXPECT_FALSE(QmHudMediaIslandShouldRefreshBackdropBlur(0, 0, true));
-}
-
 TEST(QmHudMediaIslandBackdrop, MapsTheAnimatedOuterRectToTheCapturedScreenTexture)
 {
 	const CUIRect OuterRect = {120.0f, 30.0f, 80.0f, 40.0f};
@@ -148,6 +135,37 @@ TEST(QmHudMediaIslandSdfGpuPacking, CopiesAllShapeAndAnimationInputs)
 	EXPECT_FLOAT_EQ(Params.Item(0, 1).w, 0.6f);
 	EXPECT_FLOAT_EQ(Params.Item(0, 2).g, 0.9f);
 	EXPECT_FLOAT_EQ(Params.Item(0, 2).a, 0.7f);
+}
+
+TEST(QmHudMediaIslandSdfGpuPacking, ShellRippleWorksWithoutRightSatelliteAndDefaultsToOff)
+{
+	SHudMediaIslandSdfRenderState State;
+	State.m_MainRect = {10.0f, 0.0f, 100.0f, 20.0f};
+	State.m_Rect = QmHudMediaIslandSdfOuterRect(State);
+	IGraphics::SMediaIslandSdfParams Params;
+	ASSERT_TRUE(QmHudMediaIslandBuildGpuSdfParams(State, Params));
+	EXPECT_FLOAT_EQ(Params.m_aData[IGraphics::SMediaIslandSdfParams::DATA_CAPSULE_PARAMS].z, 0.0f);
+	State.m_ShellRippleAmplitude = 0.15f;
+	State.m_ShellRipplePhase = 1.2f;
+	ASSERT_TRUE(QmHudMediaIslandBuildGpuSdfParams(State, Params));
+	EXPECT_FALSE(Params.HasRightCapsule());
+	EXPECT_FLOAT_EQ(Params.m_aData[IGraphics::SMediaIslandSdfParams::DATA_CAPSULE_PARAMS].z, 0.15f);
+	EXPECT_FLOAT_EQ(Params.m_aData[IGraphics::SMediaIslandSdfParams::DATA_CAPSULE_PARAMS].w, 1.2f);
+}
+
+TEST(QmHudMediaIslandSdfBounds, RipplePaddingAlsoContainsTheDisplacedShadow)
+{
+	SHudMediaIslandSdfRenderState State;
+	State.m_MainRect = {10.0f, 0.0f, 100.0f, 20.0f};
+	State.m_OuterShadowSize = 3.0f;
+	State.m_ScreenPixelSize = 0.25f;
+	const CUIRect Rest = QmHudMediaIslandSdfOuterRect(State);
+	State.m_ShellRippleAmplitude = 0.175f;
+	const CUIRect Moving = QmHudMediaIslandSdfOuterRect(State);
+	EXPECT_NEAR(Rest.x - Moving.x, 0.175f, 0.0001f);
+	EXPECT_NEAR(Rest.y - Moving.y, 0.175f, 0.0001f);
+	EXPECT_NEAR(Moving.w - Rest.w, 0.35f, 0.0001f);
+	EXPECT_NEAR(Moving.h - Rest.h, 0.35f, 0.0001f);
 }
 
 TEST(QmMediaIslandGpuSdfContract, UsesFixedStd140FriendlyParameterBlock)

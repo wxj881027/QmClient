@@ -12,6 +12,24 @@ TEST(QmDeveloperBadge, ScalingPreservesDesignAspectRatio)
 	EXPECT_FLOAT_EQ(Large.y, Small.y * 3.0f);
 }
 
+TEST(QmDeveloperBadge, SharedLogoKeepsItsOriginalSvgPlacementWhenScaling)
+{
+	for(const float Height : {7.0f, 24.0f, 48.0f})
+	{
+		SCOPED_TRACE(Height);
+		const vec2 Size = QmDeveloperBadgeSize(Height);
+		const CUIRect Badge{10.0f, 20.0f, Size.x, Size.y};
+		const CUIRect Logo = QmDeveloperBadgeLogoRect(Badge);
+		EXPECT_GT(Logo.x, Badge.x);
+		EXPECT_GT(Logo.y, Badge.y);
+		EXPECT_LT(Logo.y + Logo.h, Badge.y + Badge.h);
+		EXPECT_NEAR(Logo.w, Logo.h, 0.0001f);
+		EXPECT_NEAR(Logo.h, Height * (20.0f / 24.0f), 0.0001f);
+		// 原 SVG 的 Dev 字样从 145.312/4 单位处开始，兔子不能挤入文字区域。
+		EXPECT_LT(Logo.x + Logo.w, Badge.x + 36.328f * Height / 24.0f);
+	}
+}
+
 TEST(QmDeveloperBadge, InlinePlacementReservesSpaceBeforeNickname)
 {
 	CTextCursor Cursor;

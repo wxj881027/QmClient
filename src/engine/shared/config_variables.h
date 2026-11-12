@@ -404,7 +404,7 @@ MACRO_CONFIG_STR(BrCachedBestServerinfoUrl, br_cached_best_serverinfo_url, 256, 
 MACRO_CONFIG_INT(BrSort, br_sort, 4, 0, 256, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Server browser sort column")
 MACRO_CONFIG_INT(BrSortOrder, br_sort_order, 2, 0, 2, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Sort order in server browser")
 MACRO_CONFIG_INT(BrMaxRequests, br_max_requests, 100, 0, 1000, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Concurrent requests when refreshing server browser")
-MACRO_CONFIG_INT(BrColWidthName, br_col_width_name, 120, 60, 1000, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Minimum width for name column in server browser")
+MACRO_CONFIG_INT(BrColWidthName, br_col_width_name, 120, 60, 1000, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Width of name column in server browser")
 MACRO_CONFIG_INT(BrColNameSplit, br_col_name_split, 600, 350, 750, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Share of the server browser name/map split given to the name column (per mille)")
 MACRO_CONFIG_INT(BrColWidthGametype, br_col_width_gametype, 68, 62, 300, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Width of type column in server browser")
 MACRO_CONFIG_INT(BrColWidthMap, br_col_width_map, 120, 60, 800, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Width of map column in server browser")

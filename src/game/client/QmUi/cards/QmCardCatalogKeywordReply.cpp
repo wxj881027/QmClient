@@ -21,13 +21,7 @@
 
 using namespace FontIcons;
 
-struct SAutoReplyRulePlain
-{
-	std::string m_Keywords;
-	std::string m_Reply;
-	bool m_AutoRename = false;
-	bool m_Regex = false;
-};
+using SAutoReplyRulePlain = QmKeywordReplyRules::SRule;
 
 // NOLINTNEXTLINE(misc-use-internal-linkage)
 struct SAutoReplyRuleInputRow
@@ -78,46 +72,6 @@ static void UpdateKeywordRulesLayoutState(size_t RuleCount, bool HalfFilled)
 	++s_KeywordRulesLayoutRevision;
 }
 
-static char *ParseAutoReplyRulePrefixes(char *pLine, bool &OutAutoRename, bool &OutRegex, bool &OutHasExplicitRenameFlag, bool &OutHasExplicitRegexFlag)
-{
-	OutAutoRename = false;
-	OutRegex = false;
-	OutHasExplicitRenameFlag = false;
-	OutHasExplicitRegexFlag = false;
-
-	char *pTrimmedLine = (char *)str_utf8_skip_whitespaces(pLine);
-	while(true)
-	{
-		const char *pAfterPrefix = str_startswith_nocase(pTrimmedLine, "[rename]");
-		if(!pAfterPrefix)
-			pAfterPrefix = str_startswith_nocase(pTrimmedLine, "[r]");
-		if(pAfterPrefix)
-		{
-			OutAutoRename = true;
-			OutHasExplicitRenameFlag = true;
-			pTrimmedLine = (char *)str_utf8_skip_whitespaces(pAfterPrefix);
-			continue;
-		}
-
-		pAfterPrefix = str_startswith_nocase(pTrimmedLine, "[regex]");
-		if(!pAfterPrefix)
-			pAfterPrefix = str_startswith_nocase(pTrimmedLine, "[re]");
-		if(!pAfterPrefix)
-			pAfterPrefix = str_startswith_nocase(pTrimmedLine, "[rx]");
-		if(pAfterPrefix)
-		{
-			OutRegex = true;
-			OutHasExplicitRegexFlag = true;
-			pTrimmedLine = (char *)str_utf8_skip_whitespaces(pAfterPrefix);
-			continue;
-		}
-
-		break;
-	}
-
-	return pTrimmedLine;
-}
-
 static bool CopyTrimmedString(const char *pSrc, char *pOut, size_t OutSize)
 {
 	pOut[0] = '\0';
@@ -144,62 +98,6 @@ static std::unique_ptr<SAutoReplyRuleInputRow> CreateAutoReplyRuleInputRow(const
 	pRow->m_AutoRename = AutoRename ? 1 : 0;
 	pRow->m_Regex = Regex ? 1 : 0;
 	return pRow;
-}
-
-static void ParseAutoReplyRules(const char *pRules, std::vector<SAutoReplyRulePlain> &vOutRules)
-{
-	vOutRules.clear();
-	if(!pRules || pRules[0] == '\0')
-		return;
-
-	const char *pCursor = pRules;
-	while(*pCursor)
-	{
-		char aLine[1024];
-		int LineLen = 0;
-		while(*pCursor && *pCursor != '\n' && *pCursor != '\r')
-		{
-			if(LineLen < (int)sizeof(aLine) - 1)
-				aLine[LineLen++] = *pCursor;
-			pCursor++;
-		}
-		aLine[LineLen] = '\0';
-
-		while(*pCursor == '\n' || *pCursor == '\r')
-			pCursor++;
-
-		char *pLine = (char *)str_utf8_skip_whitespaces(aLine);
-		str_utf8_trim_right(pLine);
-		if(pLine[0] == '\0' || pLine[0] == '#')
-			continue;
-
-		bool AutoRename = false;
-		bool RegexRule = false;
-		bool HasExplicitRenameFlag = false;
-		bool HasExplicitRegexFlag = false;
-		char *pRuleText = ParseAutoReplyRulePrefixes(pLine, AutoRename, RegexRule, HasExplicitRenameFlag, HasExplicitRegexFlag);
-		(void)AutoRename;
-		(void)RegexRule;
-		(void)HasExplicitRenameFlag;
-		(void)HasExplicitRegexFlag;
-
-		const char *pArrowConst = str_find(pRuleText, "=>");
-		if(!pArrowConst)
-			continue;
-
-		char *pArrow = pRuleText + (pArrowConst - pRuleText);
-		*pArrow = '\0';
-		pArrow += 2;
-
-		char *pKeywords = (char *)str_utf8_skip_whitespaces(pRuleText);
-		str_utf8_trim_right(pKeywords);
-		char *pReply = (char *)str_utf8_skip_whitespaces(pArrow);
-		str_utf8_trim_right(pReply);
-		if(pKeywords[0] == '\0' || pReply[0] == '\0')
-			continue;
-
-		vOutRules.push_back({pKeywords, pReply, AutoRename, RegexRule});
-	}
 }
 
 static bool AutoReplyRowsMatchRules(const std::vector<std::unique_ptr<SAutoReplyRuleInputRow>> &vRows, const std::vector<SAutoReplyRulePlain> &vRules)
@@ -240,39 +138,27 @@ static bool IsAutoReplyRuleRowHalfFilled(const SAutoReplyRuleInputRow &Row)
 	return HasTrigger != HasReply;
 }
 
-static void BuildAutoReplyRulesFromRows(const std::vector<std::unique_ptr<SAutoReplyRuleInputRow>> &vRows, char *pOutRules, size_t OutRulesSize)
+static bool BuildAutoReplyRulesFromRows(const std::vector<std::unique_ptr<SAutoReplyRuleInputRow>> &vRows, char *pOutRules, size_t OutRulesSize)
 {
-	pOutRules[0] = '\0';
+	std::vector<QmKeywordReplyRules::SRule> vRules;
 	for(const auto &pRow : vRows)
-	{
-		char aTrigger[512];
-		char aReply[256];
-		const bool HasTrigger = CopyTrimmedString(pRow->m_TriggerInput.GetString(), aTrigger, sizeof(aTrigger));
-		const bool HasReply = CopyTrimmedString(pRow->m_ReplyInput.GetString(), aReply, sizeof(aReply));
-		if(!(HasTrigger && HasReply))
-			continue;
-
-		if(pOutRules[0] != '\0')
-			str_append(pOutRules, "\n", OutRulesSize);
-		if(pRow->m_AutoRename != 0)
-			str_append(pOutRules, "[rename] ", OutRulesSize);
-		if(pRow->m_Regex != 0)
-			str_append(pOutRules, "[regex] ", OutRulesSize);
-		str_append(pOutRules, aTrigger, OutRulesSize);
-		str_append(pOutRules, "=>", OutRulesSize);
-		str_append(pOutRules, aReply, OutRulesSize);
-	}
+		vRules.push_back({QmKeywordReplyRules::Trim(pRow->m_TriggerInput.GetString()), QmKeywordReplyRules::Trim(pRow->m_ReplyInput.GetString()), pRow->m_AutoRename != 0, pRow->m_Regex != 0});
+	return QmKeywordReplyRules::EncodeRules(vRules, pOutRules, OutRulesSize);
 }
+
+static bool s_KeywordRulesSaveFailed = false;
 
 static int s_KeywordReplyTab = 0;
 
 static void SyncKeywordRuleRows()
 {
 	auto SyncRuleRowsFromConfig = [](std::vector<std::unique_ptr<SAutoReplyRuleInputRow>> &vRows, bool &Inited, const char *pConfigRules) {
-		std::vector<SAutoReplyRulePlain> vParsedRules;
-		ParseAutoReplyRules(pConfigRules, vParsedRules);
+		const auto vParsedRules = QmKeywordReplyRules::ParseDecoded(pConfigRules);
 		const auto RebuildRows = [&]() {
 			vRows.clear();
+			if(s_KeywordRulesSaveFailed)
+				++s_KeywordRulesLayoutRevision;
+			s_KeywordRulesSaveFailed = false;
 			for(const auto &Rule : vParsedRules)
 				vRows.push_back(CreateAutoReplyRuleInputRow(Rule.m_Keywords.c_str(), Rule.m_Reply.c_str(), Rule.m_AutoRename, Rule.m_Regex));
 		};
@@ -440,18 +326,20 @@ void CMenus::RenderQmFunctionKeywordReplyContent(CUIRect &Content, float UiScale
 	}
 	if(CanCommit && Changes.ShouldCommit(false))
 	{
-		char aEncodedRules[sizeof(g_Config.m_QmKeywordReplyRules)];
-		BuildAutoReplyRulesFromRows(s_vKeywordRuleRows, aEncodedRules, sizeof(aEncodedRules));
-		QmKeywordReplyRules::EncodeForConfig(aEncodedRules, g_Config.m_QmKeywordReplyRules, sizeof(g_Config.m_QmKeywordReplyRules));
-		str_copy(s_aKeywordRulesConfigCache, g_Config.m_QmKeywordReplyRules, sizeof(s_aKeywordRulesConfigCache));
+		const bool SaveFailed = !BuildAutoReplyRulesFromRows(s_vKeywordRuleRows, g_Config.m_QmKeywordReplyRules, sizeof(g_Config.m_QmKeywordReplyRules));
+		if(s_KeywordRulesSaveFailed != SaveFailed)
+			++s_KeywordRulesLayoutRevision;
+		s_KeywordRulesSaveFailed = SaveFailed;
+		if(!SaveFailed)
+			str_copy(s_aKeywordRulesConfigCache, g_Config.m_QmKeywordReplyRules, sizeof(s_aKeywordRulesConfigCache));
 	}
 	if(CanCommit && Changes.Any())
 	{
 		const bool HalfFilled = std::any_of(s_vKeywordRuleRows.begin(), s_vKeywordRuleRows.end(), [](const auto &pRule) { return IsAutoReplyRuleRowHalfFilled(*pRule); });
 		UpdateKeywordRulesLayoutState(s_vKeywordRuleRows.size(), HalfFilled);
 	}
-	if(s_KeywordRulesLayoutHalfFilled)
-		Flow.Text("keyword-validation", Localize("Both sides of keyword rules must be filled"), 0.0f, SmallSize, LineSpacing, [this](const char *pText, float Width, float Size) { return TextRender()->TextBoundingBox(Size, pText, -1, Width).m_H; }, [this, SmallSize](const CUIRect &Rect, const char *pText) {
+	if(s_KeywordRulesLayoutHalfFilled || s_KeywordRulesSaveFailed)
+		Flow.Text("keyword-validation", s_KeywordRulesSaveFailed ? Localize("Keyword rules are too long. Changes were not saved; shorten or remove a rule.") : Localize("Both sides of keyword rules must be filled"), 0.0f, SmallSize, LineSpacing, [this](const char *pText, float Width, float Size) { return TextRender()->TextBoundingBox(Size, pText, -1, Width).m_H; }, [this, SmallSize](const CUIRect &Rect, const char *pText) {
 				TextRender()->TextColor(1.0f, 0.2f, 0.2f, 1.0f);
 				DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-keyword-reply-rule-validation", &Rect, pText, SmallSize, TEXTALIGN_ML, {}, (int)Rect.w);
 				TextRender()->TextColor(TextRender()->DefaultTextColor()); }, LineHeight);

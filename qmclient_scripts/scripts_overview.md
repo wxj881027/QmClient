@@ -16,7 +16,7 @@
 
 根目录 `scripts/` 视为 DDNet 上游同步目录。QmClient 自有逻辑、gate 入口、生成脚本和检查脚本都放在 `qmclient_scripts/`，不要在 gate 或 GitHub workflow 中直接调用 QmClient 修改过的 `scripts/` 文件。
 
-需要复用上游脚本时，先把脚本复制到 `qmclient_scripts/`，在复制件上做 QmClient 适配；不要让 `qmclient_scripts/` 里的脚本反向依赖根目录 `scripts/` 的 QmClient 特化行为。允许引用明确保持上游原样的通用辅助文件，例如 `scripts/compile_libs/_build_common.sh`。Android 平台构建入口使用 `qmclient_scripts/android/cmake_android.sh`，从当前 CMake 下载的 SDL3 源码同步 Java 绑定。
+需要复用上游脚本时，先把脚本复制到 `qmclient_scripts/`，在复制件上做 QmClient 适配；不要让 `qmclient_scripts/` 里的脚本反向依赖根目录 `scripts/` 的 QmClient 特化行为。允许引用明确保持上游原样的通用辅助文件，例如 `scripts/compile_libs/_build_common.sh`。Android 平台构建入口使用 `qmclient_scripts/android/cmake_android.sh`，Java 绑定从 `ddnet-libs/sdl/java` 同步；SDL3 预编译库由 `qmclient_scripts/build_sdl3_prebuilt.sh` 生成。
 
 ### 1. `gate/`
 
@@ -44,6 +44,7 @@
 当前主要脚本：
 
 - `qmclient_scripts/cmake-windows.cmd` — Windows 构建统一入口，加载 MSVC 环境后调用 `cmake_windows.py`。
+- `qmclient_scripts/build_sdl3_prebuilt_windows.cmd <SDL3 源码目录>` — 重建 Windows SDL3 预编译库之前应用 `cmake/PatchSDL3WindowsAudio.cmake`，使设备名称、格式与 GUID 的读取先校验属性类型和指针。源码补丁实现在 `qmclient_scripts/sdl3/SDL_qm_immdevice_info.h`，由 SDL 构建和行为测试共用；更新补丁后仍须重建并更新 `ddnet-libs/sdl/windows/` 的 DLL，再重新打包客户端，现有 DLL 不会自动获得修复。
 - `qmclient_scripts/cmake_windows.py` — 按规范化后的构建目录持有系统文件锁，覆盖 configure、build、测试目标、打包目标及 install；同目录任务自动等待，最长 10 分钟后明确失败，不同目录可以并行。锁内统一执行 MSVC 前缀检查、旧依赖恢复和规则重生成后的补构建，日志与锁文件保留在 `tmp/`。直接运行 CMake/Ninja 不会获取这把锁，日常操作继续使用 `.cmd` 入口。
 - `qmclient_scripts/darwin_fix_install_names.py`
 - `qmclient_scripts/make_lib_openssl.sh`
@@ -61,14 +62,19 @@
 - `qmclient_scripts/check_config_variables.py`
 - `qmclient_scripts/check_header_guards.py`
 - `qmclient_scripts/check_ci_deps.py` — CI Linux 依赖单一来源守卫：所有 Linux 构建作业的 apt 依赖统一走 `.github/actions/linux-deps` 复合 action；残留 apt 步骤的包、各 workflow 的 `extra` 包、可选特性（MYSQL/WEBSOCKETS/UPNP）与对应系统包的对应关系都在其注册表核对，curl share API 编译探针也在守卫范围内。已在 gate `quick/default/full` 注册为「CI 依赖单一来源守卫」。
+- `qmclient_scripts/check_card_search_index.py` — 设置搜索索引缺口报告：解析 `QmUi/cards/QmCardSearch/*.inc` 的声明式搜索表与 `QM_CARD_SEARCH_REGISTER` 注册（以及 `QmCardCatalogSearch.cpp` 的旧集中表），按 `Add`/`MakeModuleCard`、`pStableId` 分支、`AddCard` 规格与卡片源文件多级映射收集 `Localize` 文案，报告未入索引的卡片文案、失效索引标签和无静态文案可核对的卡片，并校验声明数组注册、聚合器 include 与默认卡登记；默认只报告，`--strict` 才在索引漂移/结构不一致时失败。CI style 作业以非阻断步骤运行并写入 step summary。
 - `qmclient_scripts/bump_version.py`
 - `qmclient_scripts/fix_style.py`
 - `qmclient_scripts/export_settings_commands_table.py`
 - `qmclient_scripts/generate_release_notes.py`
+- `qmclient_scripts/generate_title_logo_sdf.cjs` — 从 `data/qmclient/title_badges/logo.svg` 离线生成 `logo_sdf.png`。需要 Node.js 和 `sharp` 模块，运行 `node qmclient_scripts/generate_title_logo_sdf.cjs`；客户端和正常构建只读取已生成的纹理。生成器回归测试入口为 `node --test qmclient_scripts/test_generate_title_logo_sdf.cjs`。
+- `qmclient_scripts/generate_developer_badge_sdf.cjs` — 从 `developer_badge.svg` 标记的原始路径生成 `developer_wordmark_sdf.png` 和 `developer_code_sdf.png`；共用 Logo 距离场编码，需要同样的 Node.js / `sharp` 环境。正常构建只打包生成的纹理。对应测试入口为 `node --test qmclient_scripts/test_generate_developer_badge_sdf.cjs`。
 
 ### 4. 其他专用脚本
 
 与门禁主链无直接关系，按各自职责独立存在：
+
+- `qmclient_scripts/tests/test_netease_frontend.cjs`：使用 Node.js 隔离执行 helper 的同源注入脚本，检查网易云原文、翻译轨及刷新状态转换。运行 `node --test qmclient_scripts/tests/test_netease_frontend.cjs`；不连接实际播放器。
 
 - `qmclient_scripts/integration/`：QmClient 自有客户端/服务端进程级集成与冒烟测试；不得把 QmClient 特化场景加入根目录上游 `scripts/`
 - `qmclient_scripts/coverage/`：使用独立 clang/Ninja 构建采集 C++ LLVM line/function/region/branch coverage
@@ -87,7 +93,7 @@
 
 ### 5. 独立开源的服务仓库
 
-`qmclient_scripts/` 下另有一组**独立 Git 仓库**（各自有独立 remote，已被根 `.gitignore` 排除，不并入主仓库）：
+`qmclient_scripts/` 下另有独立服务源码目录（已被根 `.gitignore` 排除，不并入主仓库）。中心服与其他服务采用各自更新流程，统一见 `qmclient_scripts/SERVICES.md`：
 
 | 目录 | 仓库 | 语言 |
 |------|------|------|
@@ -116,6 +122,16 @@ python qmclient_scripts/integration/e2e_qmclient.py <build-dir> [connection_fail
 ```
 
 gate 使用 `--run-qm-smoke` 时会在同一进程测试 check 中顺序执行 smoke 与 E2E。
+
+Demo 视频导出的画质/速度基准（手动入口，不计入 gate 与测试库存；阈值来自 2026-10-24 实测基线，见 `docs/规格/2026-10-16-Demo视频导出现代化实施方案.md` 补充 26/27）：
+
+```text
+python qmclient_scripts/integration/perf_video_export.py <build-dir> [speed_hd|quality_codec|quality_aa]
+```
+
+- `speed_hd`：1080p/4K 两档预设的真实客户端导出吞吐（帧/秒，只报告并校验成片帧数）。
+- `quality_codec`：同一批无损帧重编码的确定性画质门（PSNR-Y/VMAF 阈值断言，跨机器稳定）。
+- `quality_aa`：导出 FSAA 生效性门（机制断言：采样数声明 + 无窗口路径回退；像素 Δ 因跨运行特效随机地板 ±1.5dB 仅作参考输出）。
 
 - `source_keys.py`：共享源码 key 提取器，支持全量扫描与 Git diff 增量合并，提取 `Localize` / `Localizable`、`Register` help 和 QmClient 间接 key
 - `extract_strings.py`：默认按 Git diff 增量更新完整 `extracted_strings.txt`、`extracted_records_cache.json` 和 `extracted_audit_report.json`；传 `--full` 时重扫源码并重建缓存；active key 清单继续只承载 i18n 主链 source key，审计报告另外输出 `must_i18n`、`business_data`、`test_only`、`needs_review`、`violation`

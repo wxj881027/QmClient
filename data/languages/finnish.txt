@@ -2695,7 +2695,7 @@ Freeze stars
 Color frozen tee skins
 == 
 
-Show katan on frozen players
+Show katana on frozen players
 == 
 
 Render all custom colored feet as white feet skin

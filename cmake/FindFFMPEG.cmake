@@ -5,48 +5,50 @@ if(NOT CMAKE_CROSSCOMPILING)
   pkg_check_modules(PC_AVUTIL libavutil)
   pkg_check_modules(PC_SWSCALE libswscale)
   pkg_check_modules(PC_SWRESAMPLE libswresample)
-  if(TARGET_OS STREQUAL "linux")
+  # x264 可选探测（系统包）：linux/android/ios 的 bundled FFmpeg 静态库内含 libx264
+  # 编码，静态链接需同源 x264 一并链入；Windows/Mac 用动态库自携带依赖，无需此步。
+  if(TARGET_OS MATCHES "^(linux|android|ios)$")
     pkg_search_module(PC_X264 libx264 x264)
   endif()
 endif()
 
 set_extra_dirs_lib(FFMPEG ffmpeg)
 find_library(AVCODEC_LIBRARY
-  NAMES avcodec.61 avcodec libavcodec
+  NAMES avcodec.63 avcodec libavcodec
   HINTS ${HINTS_FFMPEG_LIBDIR} ${PC_AVCODEC_LIBRARY_DIRS}
   PATHS ${PATHS_AVCODEC_LIBDIR}
   ${CROSSCOMPILING_NO_CMAKE_SYSTEM_PATH}
 )
 
 find_library(AVFORMAT_LIBRARY
-  NAMES avformat.61 avformat libavformat
+  NAMES avformat.63 avformat libavformat
   HINTS ${HINTS_FFMPEG_LIBDIR} ${PC_AVFORMAT_LIBRARY_DIRS}
   PATHS ${PATHS_AVFORMAT_LIBDIR}
   ${CROSSCOMPILING_NO_CMAKE_SYSTEM_PATH}
 )
 
 find_library(AVUTIL_LIBRARY
-  NAMES avutil.59 avutil libavutil
+  NAMES avutil.61 avutil libavutil
   HINTS ${HINTS_FFMPEG_LIBDIR} ${PC_AVUTIL_LIBRARY_DIRS}
   PATHS ${PATHS_AVUTIL_LIBDIR}
   ${CROSSCOMPILING_NO_CMAKE_SYSTEM_PATH}
 )
 
 find_library(SWSCALE_LIBRARY
-  NAMES swscale.8 swscale libswscale
+  NAMES swscale.10 swscale libswscale
   HINTS ${HINTS_FFMPEG_LIBDIR} ${PC_SWSCALE_LIBRARY_DIRS}
   PATHS ${PATHS_SWSCALE_LIBDIR}
   ${CROSSCOMPILING_NO_CMAKE_SYSTEM_PATH}
 )
 
 find_library(SWRESAMPLE_LIBRARY
-  NAMES swresample.5 swresample libswresample
+  NAMES swresample.7 swresample libswresample
   HINTS ${HINTS_FFMPEG_LIBDIR} ${PC_SWRESAMPLE_LIBRARY_DIRS}
   PATHS ${PATHS_SWRESAMPLE_LIBDIR}
   ${CROSSCOMPILING_NO_CMAKE_SYSTEM_PATH}
 )
 
-if(TARGET_OS STREQUAL "linux")
+if(TARGET_OS MATCHES "^(linux|android|ios)$")
   find_library(X264_LIBRARY
     NAMES x264 libx264
     HINTS ${HINTS_FFMPEG_LIBDIR} ${PC_X264_LIBRARY_DIRS}
@@ -90,7 +92,7 @@ find_path(SWRESAMPLE_INCLUDEDIR libswresample
   ${CROSSCOMPILING_NO_CMAKE_SYSTEM_PATH}
 )
 
-if(TARGET_OS STREQUAL "linux")
+if(TARGET_OS MATCHES "^(linux|android|ios)$")
   set_extra_dirs_include(X264 x264 "${X264_LIBRARY}")
 endif()
 
@@ -129,8 +131,12 @@ set(FFMPEG_LIBRARIES
   ${SWRESAMPLE_LIBRARY}
 )
 
-if(TARGET_OS STREQUAL "linux")
-  list(APPEND FFMPEG_LIBRARIES ${X264_LIBRARY})
+if(TARGET_OS MATCHES "^(linux|android|ios)$")
+  # x264 是可选增强：找不到时不影响 FFMPEG_FOUND，仅当 bundled 静态库需要它时
+  # 才必须提供（见上方注释）。
+  if(X264_LIBRARY)
+    list(APPEND FFMPEG_LIBRARIES ${X264_LIBRARY})
+  endif()
 endif()
 
 if(NOT TARGET_OS STREQUAL "windows")

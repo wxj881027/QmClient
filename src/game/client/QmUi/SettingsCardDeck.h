@@ -4,6 +4,7 @@
 #include "QmCardRegistry.h"
 #include "SettingsCard.h"
 #include "SettingsCardDeckLogic.h"
+#include "SettingsCardWidth.h"
 #include "SettingsContentLayout.h"
 #include "SettingsPageLayout.h"
 
@@ -114,6 +115,9 @@ private:
 		const SSettingsCardDefinition *m_pDefinition = nullptr;
 		int m_StateIndex = -1;
 		int m_Column = 0;
+		// 几何排布使用实际半宽列，拖拽与持久化仍使用上面的排序列。
+		int m_LayoutColumn = 0;
+		bool m_FullWidth = false;
 		SSettingsCardFrame m_Frame;
 		float m_TargetContentHeight = 0.0f;
 		bool m_FirstLayout = false;
@@ -127,6 +131,10 @@ private:
 		float m_LastReflowTargetY = 0.0f;
 		float m_AnimatedContentHeight = 0.0f;
 		float m_LastContentHeightTarget = 0.0f;
+		// 内容高度补间由 Deck 自己推进：记录这一段过渡的起点、目标和已累计时长。
+		float m_ContentHeightAnimFrom = 0.0f;
+		float m_ContentHeightAnimTo = 0.0f;
+		float m_ContentHeightAnimElapsed = 0.0f;
 		float m_LastDrawOffsetX = 0.0f;
 		float m_LastDrawOffsetY = 0.0f;
 		bool m_ReflowInitialized = false;
@@ -135,11 +143,13 @@ private:
 		bool m_ContentHeightWasActive = false;
 		bool m_CollapsedInitialized = false;
 		bool m_LastCollapsed = false;
+		// 折叠当帧已经关过该卡的交互来源，避免折叠卡每帧关闭（会把 ⓘ 的面板当帧收掉）。
+		bool m_CollapsedInteractionClosed = false;
 		bool m_DefaultCollapsed = false;
+		bool m_HasLayoutReference = false;
+		CUIRect m_LayoutReference{};
 		char m_DefaultCollapseButtonId = 0;
 		char m_WidthButtonId = 0;
-		int m_RestoreColumn = -1;
-		int m_RestoreOrder = -1;
 		bool m_PointerInsideLastFrame = false;
 	};
 
@@ -169,7 +179,15 @@ private:
 	float m_LastPointerX = 0.0f;
 	float m_LastPointerY = 0.0f;
 	float m_LastScrollOffsetY = 0.0f;
+	float m_WidthScrollFloor = 0.0f;
+	int m_WidthAnchorStateIndex = -1;
+	float m_WidthAnchorY = 0.0f;
+	float m_LastEntryOffsetY = 0.0f;
+	float m_LastWidthViewport = -1.0f;
+	uint64_t m_WidthLayoutRevision = UINT64_MAX;
 	float m_LastViewportHeight = -1.0f;
+	// 动效运行时的帧时钟读数，用于识别渲染帧边界：同一帧里 Deck 可能跑两趟。
+	float m_LastContentHeightFrameTimeSec = -1.0f;
 	std::string m_LastRenderedTab;
 	std::string m_PendingRevealStableId;
 	SDragState m_Drag;
@@ -199,6 +217,8 @@ private:
 	std::vector<int> m_vPreviousActiveStateIndices;
 	std::vector<int> m_vLastRenderedActiveStateIndices;
 	std::vector<SPreparedCard> m_vPreparedCards;
+	std::vector<SSettingsCardWidthPlacement> m_vWidthPlacements;
+	CSettingsCardWidthLayout m_WidthLayout;
 	std::vector<SSettingsCardDeckItemGeometry> m_vDragGeometry;
 	std::array<std::vector<int>, 3> m_aDragColumns;
 	settings_card_deck_logic::CProjectionCache m_ProjectionCache;

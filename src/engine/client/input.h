@@ -137,7 +137,7 @@ private:
 	};
 	std::deque<SWindowsMessage> m_QueuedWindowsMessages;
 	uint32_t m_WindowsMessageEvent = 0;
-	std::optional<SQmImeCandidateList> ReadWindowsImeCandidates(void *pWindow, unsigned CandidateListFlags);
+	std::optional<SQmImeCandidateList> ReadWindowsImeCandidates(void *pWindow, unsigned CandidateListFlags, bool *pHasActiveComposition = nullptr);
 	void ProcessSystemMessage(tagMSG *pMsg);
 	static bool SDLCALL WindowsMessageHook(void *pUser, tagMSG *pMsg);
 #endif
@@ -190,7 +190,7 @@ public:
 	void StopTextInput() override;
 	void EnsureScreenKeyboardShown() override;
 	const char *GetComposition() const override { return m_CompositionString.c_str(); }
-	bool HasComposition() const override { return !m_CompositionString.empty(); }
+	bool HasComposition() const override { return QmImeCompositionIsActive(!m_CompositionString.empty(), GetCandidateCount()); }
 	int GetCompositionCursor() const override { return m_CompositionCursor; }
 	int GetCompositionLength() const override { return m_CompositionString.length(); }
 	const char *GetCandidate(int Index) const override { return in_range<size_t>(Index, 0, m_ImeCandidates.Candidates().m_vCandidates.size()) ? m_ImeCandidates.Candidates().m_vCandidates[Index].c_str() : ""; }

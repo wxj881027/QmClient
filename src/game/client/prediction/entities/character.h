@@ -154,6 +154,12 @@ public:
 	void ShiftTickBase(int TickDelta);
 
 private:
+	void UpdateQmAxiomHook();
+	void HandleQmAxiomQuads();
+	int m_QmAxiomHookQuad = -1;
+	vec2 m_QmAxiomHookLocalPos = vec2(0, 0);
+	bool m_LastQmAxiomRefillJumps = false;
+
 	void BindAntiPingInterferenceCallback();
 
 	// weapon info

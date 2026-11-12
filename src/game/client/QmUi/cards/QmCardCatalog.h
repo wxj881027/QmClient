@@ -34,7 +34,6 @@ namespace qm_card_catalog
 	uint64_t GeneralMeasureContentRevision();
 	uint64_t NameplateMeasureContentRevision();
 	uint64_t BlockWordsLayoutRevision();
-	uint64_t FavoriteMapsLayoutRevision(size_t Count);
 
 	// 该 stableId 是否有可构造的卡片模块（用于搜索页过滤与页面自检）。
 	bool HasCardModule(const char *pStableId);
@@ -66,7 +65,6 @@ namespace qm_card_catalog
 		uint64_t m_KeywordRulesRevision = 1;
 		size_t m_KeywordRulesCount = 0;
 		bool m_KeywordRulesHalfFilled = false;
-		uint64_t m_FavoriteMapsRevision = 1;
 	};
 
 	void FillKeywordReplyLayoutState(SQmFunctionCardLayoutState &State);
@@ -100,6 +98,10 @@ namespace qm_card_catalog
 	// 页面只做"取清单 → 逐张构造 → 交给 CSettingsCardDeck"。
 	bool BuildCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
 	void BuildCards(const SQmCardBuildContext &Ctx, const std::vector<const char *> &vStableIds, std::vector<SSettingsCardDefinition> &vOut);
+	// 卡片构建计时：只用来定位"打开某设置页卡住"是哪些卡片定义吃掉的，
+	// 每张卡两次 time_get，总开关由调用方按帧控制（非调试页面不会有输出）。
+	void ResetCardBuildTimings();
+	void LogCardBuildTimings(const char *pPage);
 
 	// 搜索页用的卡片目录条目：stableId + 该卡当前所在分类（导航目标），
 	// 由 QmCardRegistry 的默认 Placement 表与当前布局模型共同解析。
@@ -120,16 +122,18 @@ namespace qm_card_catalog
 	bool BuildHudCard(const SQmCardBuildContext &Ctx, qm_module::EQmModuleId Id, SSettingsCardDefinition &Out);
 	bool BuildSteamCard(const SQmCardBuildContext &Ctx, qm_module::EQmModuleId Id, SSettingsCardDefinition &Out);
 	bool BuildAppearancePresetCard(const SQmCardBuildContext &Ctx, SSettingsCardDefinition &Out);
-	bool BuildConsoleCard(const SQmCardBuildContext &Ctx, SSettingsCardDefinition &Out);
 	bool BuildTooltipCard(const SQmCardBuildContext &Ctx, SSettingsCardDefinition &Out);
 	bool BuildChatCompletionCard(const SQmCardBuildContext &Ctx, SSettingsCardDefinition &Out);
 	bool BuildBindCard(const SQmCardBuildContext &Ctx, SSettingsCardDefinition &Out);
+	bool BuildBindOverviewCard(const SQmCardBuildContext &Ctx, SSettingsCardDefinition &Out);
+	bool BuildSelfKillProtectionCard(const SQmCardBuildContext &Ctx, SSettingsCardDefinition &Out);
 
 	// 卡片模块调用菜单内容渲染/输入助手的受控入口（CMenus 只对本结构开放友元）。
 	// 卡片模块是独立文件，不能直接触达 CMenus 的私有内容函数；
 	// 这里显式列出“卡片可以调用哪些渲染/输入助手”，避免把整类成员公开出去。
 	struct QmCardRenderHook
 	{
+		static bool Personalization(CMenus *pMenus, CUIRect &Content, const char *pStableId, const SSettingsContentMetrics &Metrics, bool ReadOnly = false);
 		static STClientCardResult RunTClientCard(const SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, ETClientCardPass Pass);
 		static uint64_t PrepareTClientCards(const SQmCardBuildContext &Ctx, const std::vector<const char *> &vIds);
 		static bool BuildTClientCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
@@ -138,11 +142,15 @@ namespace qm_card_catalog
 		static bool BuildStandardCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
 		static uint64_t PrepareControlsCards(CMenus *pMenus, float ContentWidth, bool ReadOnly, CScrollRegion *pScrollRegion);
 		static bool BuildControlsCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
-		static void RenderScreenshotWatermarkSettings(const SQmCardBuildContext &Ctx, CUIRect Content);
+		static void RenderScreenshotWatermarkSettings(const SQmCardBuildContext &Ctx, CUIRect Content, bool ShowEnable = true);
 		static bool BuildGeneralCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
 		static bool BuildConfigFilesCard(const SQmCardBuildContext &Ctx, SSettingsCardDefinition &Out);
+		static void RenderFriendCodeControls(CMenus *pMenus, CUIRect &Content, bool ReadOnly);
 		static bool BuildNameplateCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
+		static bool BuildWaterHammerCard(const SQmCardBuildContext &Ctx, qm_module::EQmModuleId Id, SSettingsCardDefinition &Out);
 		static bool BuildTitleCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
+		// 聊天框里「一条消息」的样子：消息底色 + 发言人名字 + 内容。
+		static void RenderQmSponsorChatMessagePreview(CMenus *pMenus, const CUIRect &Rect, int Style, double TimeSeconds);
 		static bool BuildTeeCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
 		static bool RenderQmFunctionCheckbox(CMenus *pMenus, const void *pId, const char *pTextId, const char *pText, int *pValue, CUIRect *pRect, bool PrewarmOnly);
 		static bool RenderQmFunctionCheckboxRow(CMenus *pMenus, CUIRect &Content, float LineHeight, float LineSpacing, const void *pId, const char *pTextId, const char *pText, int *pValue, bool PrewarmOnly, const char *pTooltip = nullptr);
@@ -156,11 +164,11 @@ namespace qm_card_catalog
 		static void RenderQmVisualSpectatorModeContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 		static void RenderQmVisualCameraViewContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 		static void RenderQmVisualSkinAppearanceContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
-		static void RenderQmVisualSkinTransitionContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 		static void RenderQmFunctionGoresActorContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 		static void RenderQmFunctionGoresContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 		static void RenderQmFunctionKeyBindsContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth);
 		static void RenderQmFunctionEmoticonsContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth);
+		static void RenderQmSelfKillProtectionContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 		// 本地差异：远程的这两个入口已把 BodySize/LabelWidth 从参数表里去掉，本地既有的
 		// CMenus::RenderQmFunctionMiniFeaturesContent / RenderQmHudBindStatusContent 仍需要
 		// 它们来排版，故桥接按**本地签名**保留并透传这两个参数（以本地实现为准，不改本地行为）。
@@ -180,7 +188,6 @@ namespace qm_card_catalog
 		static void RenderQmFunctionKeywordReplyContent(CMenus *pMenus, CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 		static void RenderQmFunctionPieMenuContent(CMenus *pMenus, CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, float ButtonHeight, float CardPadding, float CardCornerRadius, bool PrewarmOnly);
 		static void RenderQmFunctionMapUploadContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, bool PrewarmOnly);
-		static void RenderQmFunctionFavoriteMapsContent(CMenus *pMenus, CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, bool PrewarmOnly);
 		static void RenderQmFunctionHJAssistContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 		static void RenderQmHudDummyMiniViewContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool Expanded, bool PrewarmOnly);
 		static void RenderQmHudCoordsContent(CMenus *pMenus, CUIRect &Content, const SSettingsContentMetrics &Metrics, float LabelWidth, bool PrewarmOnly);
@@ -208,9 +215,9 @@ namespace qm_card_catalog
 		// 设置页统一文案渲染（streamed 托管，卡片目录与分类页标签同源）。
 		static void DoSettingsLabel(CMenus *pMenus, const char *pTextId, const char *pText, const CUIRect *pRect, float Size, int Align);
 		static ITextRender *TextRenderer(CMenus *pMenus);
-		static size_t FavoriteMapCount(CMenus *pMenus);
 		static bool GameConsoleActive(CMenus *pMenus);
 		static void RenderQmBindEditorContent(CMenus *pMenus, CUIRect &Content, bool ReadOnly);
+		static void RenderQmBindOverviewContent(CMenus *pMenus, CUIRect &Content, bool ReadOnly);
 	};
 } // namespace qm_card_catalog
 

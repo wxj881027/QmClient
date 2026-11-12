@@ -32,17 +32,35 @@ namespace ui_widget
 		bool m_Enabled = true;
 		bool m_Selected = false;
 		bool m_TransparentInactive = false;
+		bool m_AlignToPixel = true;
 		int m_Corners = IGraphics::CORNER_ALL;
 		float m_Radius = ui_token::radius::BASE;
 		float m_BorderWidth = ui_token::feedback::ICON_BORDER_WIDTH;
 		std::optional<ColorRGBA> m_Color;
+		// 悬停/按下/选中的描边由 DrawButtonSurface 统一解析成同一条白色描边，
+		// 不随表面前景色变化；需要额外语义时才用这里显式覆盖（优先于统一描边）。
+		std::optional<ColorRGBA> m_BorderOverride;
+		// 由调用方给出悬浮判定：需要按「成对色块」等自有几何判定的场景才覆盖，
+		// 颜色仍走公共反馈 token。
+		std::optional<bool> m_HoveredOverride;
 		const CUIRect *m_pHitRect = nullptr;
 	};
 
 	// 旧菜单入口和新控件共用绘制、主题及动画；上下文由所属 CUi 提供。
 	IUiContext ControlContext(CUi *pUi);
 	ColorRGBA DrawButtonSurface(const IUiContext &Ctx, const void *pId, const CUIRect &Rect, const SButtonSurfaceOptions &Options = {});
-	int DoIconButton(const IUiContext &Ctx, const void *pId, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect &Rect, unsigned Flags, int Corners = IGraphics::CORNER_ALL, bool Enabled = true, std::optional<ColorRGBA> Color = std::nullopt, bool ShowSlash = false, bool TransparentInactive = false, const CUIRect *pHitRect = nullptr);
+
+	// 图标按钮的自定义图标绘制：底色、hover 缩放、命中判定仍归 DoIconButton，图标本身
+	// 交给回调画（形变帧条、双图标过渡等）。Rect 是按钮内部收敛后的图标方框，Color 是
+	// 按钮已算好的前景色——与静止态 DrawQmIcon 拿到的两个入参完全一致。
+	// 用函数指针而不是 std::function：这个回调每帧每按钮都要走一次，不能带分配。
+	struct SIconButtonIconDraw
+	{
+		void (*m_pfnDraw)(const IUiContext &Ctx, const CUIRect &Rect, const ColorRGBA &Color, const void *pUser) = nullptr;
+		const void *m_pUser = nullptr;
+	};
+
+	int DoIconButton(const IUiContext &Ctx, const void *pId, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect &Rect, unsigned Flags, int Corners = IGraphics::CORNER_ALL, bool Enabled = true, std::optional<ColorRGBA> Color = std::nullopt, bool ShowSlash = false, bool TransparentInactive = false, const CUIRect *pHitRect = nullptr, const SIconButtonIconDraw *pIconDraw = nullptr);
 
 	// 主按钮使用主题强调色；禁用时保留外形并停止交互。
 	bool PrimaryButton(const IUiContext &Ctx, CButtonContainer *pBtn, const char *pText, const CUIRect &Rect, bool Disabled = false, EUiButtonGeometry Geometry = EUiButtonGeometry::CONTROL);

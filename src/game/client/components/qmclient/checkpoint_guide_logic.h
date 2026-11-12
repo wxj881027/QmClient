@@ -127,7 +127,7 @@ namespace QmCheckpointGuide
 				return Label;
 			};
 			const int Start = (StartY - Top) * LocalWidth + StartX - Left;
-			if(Read(Start).m_Tile.m_Cost <= 0)
+			if(Read(Start).m_Tile.Blocked())
 				return;
 			m_vLabels[(size_t)Start].m_Cost = 0;
 			m_vQueue.emplace_back(0, Start);
@@ -167,8 +167,10 @@ namespace QmCheckpointGuide
 					if(Next < 0 || Next >= (int)m_vLabels.size() || (Tile.m_Restrictions & aRestriction[Direction]) != 0)
 						continue;
 					auto &NextLabel = Read(Next);
-					const int TileCost = NextLabel.m_Tile.m_Cost;
-					if(TileCost <= 0 || TileCost > MAX_COST - Cost || Cost + TileCost >= NextLabel.m_Cost)
+					if(NextLabel.m_Tile.Blocked())
+						continue;
+					const int TileCost = NextLabel.m_Tile.m_Water ? 300 : 100;
+					if(TileCost > MAX_COST - Cost || Cost + TileCost >= NextLabel.m_Cost)
 						continue;
 					NextLabel.m_Cost = Cost + TileCost;
 					NextLabel.m_Previous = Index;

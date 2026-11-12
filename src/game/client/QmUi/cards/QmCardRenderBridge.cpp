@@ -75,11 +75,6 @@ void qm_card_catalog::QmCardRenderHook::RenderQmVisualSkinAppearanceContent(CMen
 	pMenus->RenderQmVisualSkinAppearanceContent(Content, LineHeight, BodySize, LineSpacing, LabelWidth, ResolvePrewarmOnly(pMenus->Ui(), PrewarmOnly));
 }
 
-void qm_card_catalog::QmCardRenderHook::RenderQmVisualSkinTransitionContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
-{
-	pMenus->RenderQmVisualSkinTransitionContent(Content, LineHeight, BodySize, LineSpacing, LabelWidth, ResolvePrewarmOnly(pMenus->Ui(), PrewarmOnly));
-}
-
 void qm_card_catalog::QmCardRenderHook::RenderQmFunctionGoresActorContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
 {
 	pMenus->RenderQmFunctionGoresActorContent(Content, LineHeight, BodySize, LineSpacing, LabelWidth, ResolvePrewarmOnly(pMenus->Ui(), PrewarmOnly));
@@ -163,11 +158,6 @@ void qm_card_catalog::QmCardRenderHook::RenderQmFunctionPieMenuContent(CMenus *p
 void qm_card_catalog::QmCardRenderHook::RenderQmFunctionMapUploadContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, bool PrewarmOnly)
 {
 	pMenus->RenderQmFunctionMapUploadContent(Content, LineHeight, BodySize, LineSpacing, ResolvePrewarmOnly(pMenus->Ui(), PrewarmOnly));
-}
-
-void qm_card_catalog::QmCardRenderHook::RenderQmFunctionFavoriteMapsContent(CMenus *pMenus, CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, bool PrewarmOnly)
-{
-	pMenus->RenderQmFunctionFavoriteMapsContent(Content, UiScale, LineHeight, BodySize, LineSpacing, ResolvePrewarmOnly(pMenus->Ui(), PrewarmOnly));
 }
 
 void qm_card_catalog::QmCardRenderHook::RenderQmFunctionHJAssistContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
@@ -270,11 +260,6 @@ ITextRender *qm_card_catalog::QmCardRenderHook::TextRenderer(CMenus *pMenus)
 	return pMenus->TextRender();
 }
 
-size_t qm_card_catalog::QmCardRenderHook::FavoriteMapCount(CMenus *pMenus)
-{
-	return pMenus != nullptr ? pMenus->GameClient()->TClientComponent().GetFavoriteMaps().size() : 0;
-}
-
 bool qm_card_catalog::QmCardRenderHook::GameConsoleActive(CMenus *pMenus)
 {
 	return pMenus != nullptr && pMenus->GameClient()->m_GameConsole.IsActive();
@@ -284,6 +269,12 @@ void qm_card_catalog::QmCardRenderHook::RenderQmBindEditorContent(CMenus *pMenus
 {
 	if(pMenus != nullptr)
 		pMenus->RenderSettingsQmClientBindCard(Content, ReadOnly);
+}
+
+void qm_card_catalog::QmCardRenderHook::RenderQmBindOverviewContent(CMenus *pMenus, CUIRect &Content, const bool ReadOnly)
+{
+	if(pMenus != nullptr)
+		pMenus->RenderQmBindOverviewContent(Content, ReadOnly);
 }
 
 void qm_card_catalog::QmCardRenderHook::RenderQmSteamContent(CMenus *pMenus, CUIRect &Content, const SSettingsContentMetrics &Metrics, bool PrewarmOnly)
@@ -309,4 +300,9 @@ void qm_card_catalog::QmCardRenderHook::RenderQmTooltipContent(CMenus *pMenus, C
 void qm_card_catalog::QmCardRenderHook::RenderQmChatCompletionContent(CMenus *pMenus, CUIRect &Content, const SSettingsContentMetrics &Metrics, bool PrewarmOnly)
 {
 	pMenus->RenderQmChatCompletionContent(Content, Metrics, PrewarmOnly);
+}
+
+void qm_card_catalog::QmCardRenderHook::RenderQmSelfKillProtectionContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
+{
+	pMenus->RenderQmSelfKillProtectionContent(Content, LineHeight, BodySize, LineSpacing, LabelWidth, ResolvePrewarmOnly(pMenus->Ui(), PrewarmOnly));
 }

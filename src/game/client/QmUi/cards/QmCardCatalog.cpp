@@ -4,6 +4,7 @@
 
 #include <game/client/QmUi/QmCardRegistry.h>
 #include <game/client/QmUi/SettingsCardContentBridge.h>
+#include <game/client/QmUi/SettingsPersonalization.h>
 #include <game/client/components/menus.h>
 #include <game/client/ui.h>
 #include <game/localization.h>
@@ -16,6 +17,8 @@ namespace qm_card_catalog
 {
 	namespace
 	{
+		CSettingsPersonalizationState s_Personalization;
+
 		bool ContainsStableId(const std::vector<const char *> &vStableIds, const char *pStableId)
 		{
 			if(pStableId == nullptr)
@@ -23,6 +26,15 @@ namespace qm_card_catalog
 			return std::any_of(vStableIds.begin(), vStableIds.end(), [pStableId](const char *pCandidate) { return str_comp(pCandidate, pStableId) == 0; });
 		}
 	} // namespace
+
+	bool QmCardRenderHook::Personalization(CMenus *pMenus, CUIRect &Content, const char *pStableId, const SSettingsContentMetrics &Metrics, bool ReadOnly)
+	{
+		return SettingsPersonalizationSection(s_Personalization, Content, pStableId, std::max(Metrics.m_LineHeight, Metrics.m_ButtonHeight), Metrics.m_LineSpacing,
+			ReadOnly || pMenus->Ui()->RenderOnly() || pMenus->m_MenuTextPlanCollecting,
+			[&](const void *pId, const CUIRect &Row, bool Expanded) {
+				return pMenus->DoButton_CheckBox(pId, Localize("Personal adjustments"), Expanded, &Row, Metrics.m_BodySize) != 0;
+			});
+	}
 
 	void UseDeclaredModuleContent(const SQmCardBuildContext &Ctx, SSettingsCardDefinition &Out)
 	{
@@ -85,6 +97,10 @@ namespace qm_card_catalog
 			return QmCardRenderHook::BuildGeneralCard(Ctx, pStableId, Out);
 		if(str_comp(pStableId, "qm:bind_editor") == 0)
 			return BuildBindCard(Ctx, Out);
+		if(str_comp(pStableId, "qm:bind_overview") == 0)
+			return BuildBindOverviewCard(Ctx, Out);
+		if(str_comp(pStableId, "qm:self_kill_protection") == 0)
+			return BuildSelfKillProtectionCard(Ctx, Out);
 		if(ContainsStableId(TitleCardStableIds(), pStableId))
 			return QmCardRenderHook::BuildTitleCard(Ctx, pStableId, Out);
 		if(ContainsStableId(NameplateCardStableIds(), pStableId))
@@ -104,13 +120,52 @@ namespace qm_card_catalog
 			return BuildChatCompletionCard(Ctx, Out);
 		if(str_comp(pStableId, "qm:steam") == 0)
 			return BuildSteamCard(Ctx, Id, Out);
-		if(ContainsStableId(VisualCardStableIds(), pStableId))
+		if(Id == qm_module::EQmModuleId::ChatBubble || Id == qm_module::EQmModuleId::EntityOverlay || ContainsStableId(VisualCardStableIds(), pStableId))
 			return BuildVisualCard(Ctx, Id, Out);
 		if(ContainsStableId(FunctionCardStableIds(), pStableId))
 			return BuildFunctionCard(Ctx, Id, Out);
-		if(ContainsStableId(HudCardStableIds(), pStableId))
+		if(Id == qm_module::EQmModuleId::SystemMediaControls || Id == qm_module::EQmModuleId::BindStatusHud || ContainsStableId(HudCardStableIds(), pStableId))
 			return BuildHudCard(Ctx, Id, Out);
 		return false;
+	}
+
+	namespace
+	{
+		// 单页最多记 4 张最慢卡片：够定位瓶颈，又不会让日志变成流水账。
+		struct SCardBuildTimingEntry
+		{
+			const char *m_pStableId = nullptr;
+			double m_Ms = 0.0;
+		};
+		struct SCardBuildTimingState
+		{
+			double m_TotalMs = 0.0;
+			int m_BuildCount = 0;
+			SCardBuildTimingEntry m_aSlowest[4];
+		};
+		SCardBuildTimingState s_CardBuildTiming;
+	} // namespace
+
+	void ResetCardBuildTimings()
+	{
+		s_CardBuildTiming = SCardBuildTimingState{};
+	}
+
+	void LogCardBuildTimings(const char *pPage)
+	{
+		if(s_CardBuildTiming.m_BuildCount == 0 || s_CardBuildTiming.m_TotalMs < 20.0)
+			return;
+		char aSlowest[256];
+		aSlowest[0] = '\0';
+		for(const auto &Entry : s_CardBuildTiming.m_aSlowest)
+		{
+			if(Entry.m_pStableId == nullptr)
+				continue;
+			char aEntry[80];
+			str_format(aEntry, sizeof(aEntry), "%s=%.1fms ", Entry.m_pStableId, Entry.m_Ms);
+			str_append(aSlowest, aEntry, sizeof(aSlowest));
+		}
+		dbg_msg("perf/cards", "page=%s build_total=%.1fms cards=%d slowest=[%s]", pPage != nullptr ? pPage : "?", s_CardBuildTiming.m_TotalMs, s_CardBuildTiming.m_BuildCount, aSlowest);
 	}
 
 	void BuildCards(const SQmCardBuildContext &Ctx, const std::vector<const char *> &vStableIds, std::vector<SSettingsCardDefinition> &vOut)
@@ -118,61 +173,27 @@ namespace qm_card_catalog
 		vOut.reserve(vOut.size() + vStableIds.size());
 		for(const char *pStableId : vStableIds)
 		{
+			const int64_t CardStartNs = time_get_nanoseconds().count();
 			SSettingsCardDefinition Definition;
-			if(BuildCard(Ctx, pStableId, Definition))
+			const bool Built = BuildCard(Ctx, pStableId, Definition);
+			const double CardMs = (time_get_nanoseconds().count() - CardStartNs) / 1000000.0;
+			s_CardBuildTiming.m_TotalMs += CardMs;
+			s_CardBuildTiming.m_BuildCount++;
+			// 插入到最慢榜（4 项降序），只在真的比榜尾快时才跳过。
+			for(auto &Entry : s_CardBuildTiming.m_aSlowest)
+			{
+				if(CardMs > Entry.m_Ms)
+				{
+					for(size_t Index = std::size(s_CardBuildTiming.m_aSlowest) - 1; Index > 0; --Index)
+						s_CardBuildTiming.m_aSlowest[Index] = s_CardBuildTiming.m_aSlowest[Index - 1];
+					Entry = SCardBuildTimingEntry{};
+					s_CardBuildTiming.m_aSlowest[0] = SCardBuildTimingEntry{pStableId, CardMs};
+					break;
+				}
+			}
+			if(Built)
 				vOut.push_back(std::move(Definition));
 		}
 	}
 
-	std::vector<SQmSearchResultEntry> SearchResultEntries(const char *pQuery, const qm_card_order::CModel &Model)
-	{
-		std::vector<SQmSearchResultEntry> vEntries;
-		std::vector<qm_card_registry::SCardSearchResult> vMatches;
-		if(pQuery != nullptr && pQuery[0] != '\0')
-		{
-			vMatches = qm_card_registry::SearchCards(pQuery, Model);
-		}
-		else
-		{
-			// 空查询列出全部可构造卡片，供用户浏览（搜索页即卡片目录本身）。
-			vMatches.reserve(qm_card_registry::Defaults().size());
-			for(const qm_card_registry::SCardDefault &Default : qm_card_registry::Defaults())
-			{
-				qm_card_registry::SCardSearchResult Match;
-				Match.m_pStableId = Default.m_pStableId;
-				Match.m_Title = Default.m_pTitle != nullptr ? Localize(Default.m_pTitle) : "";
-				Match.m_Description = Default.m_pDescription != nullptr ? Localize(Default.m_pDescription) : "";
-				Match.m_Target = qm_card_registry::ResolveCardNavigationTarget(Default, Model);
-				vMatches.push_back(std::move(Match));
-			}
-		}
-
-		vEntries.reserve(vMatches.size());
-		for(qm_card_registry::SCardSearchResult &Match : vMatches)
-		{
-			// 只有真正有卡片模块的 stableId 才能在搜索页就地渲染，其余（已下线/纯占位）不展示。
-			if(!HasCardModule(Match.m_pStableId))
-				continue;
-			const char *pTab = Match.m_Target.m_pTab;
-			if(pTab != nullptr && str_comp(pTab, "global-search") == 0)
-				continue;
-			SQmSearchResultEntry Entry;
-			Entry.m_pStableId = Match.m_pStableId;
-			Entry.m_pTab = pTab;
-			Entry.m_Title = std::move(Match.m_Title);
-			Entry.m_Description = std::move(Match.m_Description);
-			vEntries.push_back(std::move(Entry));
-		}
-		return vEntries;
-	}
-
-	std::vector<qm_card_order::SEntry> BuildSearchModelEntries(const std::vector<SQmSearchResultEntry> &vResults)
-	{
-		// 搜索结果每张卡独占整行：Full 列 + 顺序即匹配顺序，搜索页不参与分类内的拖拽排序。
-		std::vector<qm_card_order::SEntry> vEntries;
-		vEntries.reserve(vResults.size());
-		for(size_t Index = 0; Index < vResults.size(); ++Index)
-			vEntries.push_back({vResults[Index].m_pStableId, "global-search", 0, (int)Index});
-		return vEntries;
-	}
 } // namespace qm_card_catalog

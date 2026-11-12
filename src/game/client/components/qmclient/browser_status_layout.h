@@ -23,6 +23,90 @@ inline float QmBrowserLayoutExtent(float Value)
 	return std::isfinite(Value) ? std::max(0.0f, Value) : 0.0f;
 }
 
+struct SQmBrowserChipGrid
+{
+	static constexpr int MAX_CHIPS = 16;
+	CUIRect m_aRects[MAX_CHIPS]{};
+	int m_Count = 0;
+	int m_PerRow = 0;
+	float m_ContentHeight = 0.0f;
+};
+
+// 等宽胶囊网格：宽度决定每行个数，行数决定内容高度；所有矩形都落在 Area 内。
+// 底部快捷条与右侧筛选面板共用同一套度量，避免两处密度不一致。
+inline SQmBrowserChipGrid QmBrowserChipGrid(CUIRect Area, int Count, float MinChipWidth, float ChipHeight = 18.0f, float Gap = 4.0f)
+{
+	SQmBrowserChipGrid Result;
+	const float Width = QmBrowserLayoutExtent(Area.w);
+	Result.m_Count = std::clamp(Count, 0, SQmBrowserChipGrid::MAX_CHIPS);
+	if(Result.m_Count == 0 || Width <= 0.0f)
+		return Result;
+	const float SafeMin = std::max(MinChipWidth, 1.0f);
+	const float SafeGap = std::max(Gap, 0.0f);
+	Result.m_PerRow = std::clamp((int)((Width + SafeGap) / (SafeMin + SafeGap)), 1, Result.m_Count);
+	const float ChipWidth = std::max(0.0f, (Width - SafeGap * (Result.m_PerRow - 1)) / Result.m_PerRow);
+	const int Rows = (Result.m_Count + Result.m_PerRow - 1) / Result.m_PerRow;
+	for(int Index = 0; Index < Result.m_Count; ++Index)
+	{
+		const int Row = Index / Result.m_PerRow;
+		const int Column = Index % Result.m_PerRow;
+		Result.m_aRects[Index] = {Area.x + Column * (ChipWidth + SafeGap), Area.y + Row * (ChipHeight + SafeGap), ChipWidth, ChipHeight};
+	}
+	Result.m_ContentHeight = Rows * (ChipHeight + SafeGap) - SafeGap;
+	return Result;
+}
+
+struct SQmBrowserMapFilterLayout
+{
+	// 沿用厚胶囊滑条：标题 + 左侧档位文本 + 滑条，第二行是空服/收藏开关。
+	CUIRect m_Heading{}, m_CurrentLabel{}, m_Slider{};
+	CUIRect m_EmptyGroup{}, m_EmptyLabel{}, m_EmptyToggle{};
+	CUIRect m_FavoriteGroup{}, m_FavoriteLabel{}, m_FavoriteToggle{}, m_FavoriteIcon{};
+	float m_ContentHeight = 0.0f;
+};
+
+// 标签可省略显示，但滑块、开关与星标的矩形始终位于各自内容列内。
+inline SQmBrowserMapFilterLayout QmBrowserMapFilterLayout(CUIRect Area, float FavoriteTextWidth)
+{
+	SQmBrowserMapFilterLayout Result;
+	const float Width = QmBrowserLayoutExtent(Area.w);
+	Result.m_Heading = {Area.x, Area.y, Width, 14.0f};
+	const float CurrentWidth = std::min(58.0f, Width * 0.4f);
+	const float SliderGap = std::min(4.0f, Width * 0.04f);
+	Result.m_CurrentLabel = {Area.x, Area.y + 18.0f, CurrentWidth, 20.0f};
+	Result.m_Slider = {Area.x + CurrentWidth + SliderGap, Area.y + 18.0f, std::max(0.0f, Width - CurrentWidth - SliderGap), 20.0f};
+
+	const float ToggleY = Area.y + 44.0f;
+	const float HalfWidth = Width * 0.5f;
+	const float LeftWidth = std::max(0.0f, HalfWidth - 4.0f);
+	const float EmptyToggleWidth = std::min(28.0f, LeftWidth * 0.35f);
+	Result.m_EmptyGroup = {Area.x, ToggleY, LeftWidth, 18.0f};
+	Result.m_EmptyLabel = {Area.x, ToggleY, std::max(0.0f, LeftWidth - EmptyToggleWidth - SliderGap), 18.0f};
+	Result.m_EmptyToggle = {Area.x + LeftWidth - EmptyToggleWidth, ToggleY, EmptyToggleWidth, 18.0f};
+
+	const float ToggleWidth = std::min(28.0f, Width * 0.3f);
+	const float IconWidth = std::min(18.0f, Width * 0.2f);
+	const float LabelGap = std::min(6.0f, Width * 0.05f);
+	const float RightX = Area.x + std::min(HalfWidth + 4.0f, Width);
+	const float RightWidth = std::max(0.0f, Area.x + Width - RightX);
+	const float LabelWidth = std::clamp(QmBrowserLayoutExtent(FavoriteTextWidth), 0.0f,
+		std::max(0.0f, RightWidth - ToggleWidth - IconWidth - LabelGap));
+	const float GroupWidth = LabelWidth + LabelGap + ToggleWidth + IconWidth;
+	const float X = RightX + RightWidth - GroupWidth;
+	Result.m_FavoriteGroup = {X, ToggleY, GroupWidth, 18.0f};
+	Result.m_FavoriteLabel = {X, ToggleY, LabelWidth, 18.0f};
+	Result.m_FavoriteToggle = {X + LabelWidth + LabelGap, ToggleY, ToggleWidth, 18.0f};
+	Result.m_FavoriteIcon = {X + LabelWidth + LabelGap + ToggleWidth, ToggleY, IconWidth, 18.0f};
+	Result.m_ContentHeight = ToggleY + 18.0f - Area.y;
+	return Result;
+}
+
+// 状态栏按同一份度量预留筛选块高度，滑条与开关行不会和上方控件重叠。
+inline float QmBrowserMapFilterContentHeight(float Width)
+{
+	return QmBrowserMapFilterLayout({0.0f, 0.0f, Width, 0.0f}, 0.0f).m_ContentHeight;
+}
+
 // 底部控件按内容测量，不从剩余高度反推字号或按钮高度；高度不足由滚动容器承接。
 inline SQmBrowserStatusLayout QmBrowserStatusLayout(CUIRect Area, bool ShowNotice)
 {
@@ -54,12 +138,18 @@ inline SQmBrowserStatusLayout QmBrowserStatusLayout(CUIRect Area, bool ShowNotic
 	Field(1, Result.m_ExcludeLabel, Result.m_ExcludeInput);
 	Field(2, Result.m_AddressLabel, Result.m_AddressInput);
 	float Bottom = FieldsY + 3.0f * RowHeight;
+	// 筛选块高度按滑条+开关行的实际度量预留，宽度变化时不会和上方控件重叠。
+	const float MapFilterWidth = InlineMapFilter ? Width - FieldWidth - 143.0f - 24.0f : Width;
+	const float MapFilterHeight = QmBrowserMapFilterContentHeight(MapFilterWidth);
 	if(InlineMapFilter)
-		Result.m_MapFilter = {Area.x + FieldWidth + 12.0f, FieldsY, Width - FieldWidth - 143.0f - 24.0f, 72.0f};
+	{
+		Result.m_MapFilter = {Area.x + FieldWidth + 12.0f, FieldsY, MapFilterWidth, MapFilterHeight};
+		Bottom = std::max(Bottom, FieldsY + MapFilterHeight);
+	}
 	else
 	{
-		Result.m_MapFilter = {Area.x, Bottom + 8.0f, Width, 64.0f};
-		Bottom += 72.0f;
+		Result.m_MapFilter = {Area.x, Bottom + 8.0f, Width, MapFilterHeight};
+		Bottom += MapFilterHeight + 8.0f;
 	}
 	const float ActionsX = SideActions ? Area.x + Width - 135.0f : Area.x;
 	const float ActionsY = SideActions ? FieldsY : Bottom + 8.0f;
@@ -77,36 +167,6 @@ inline SQmBrowserStatusLayout QmBrowserStatusLayout(CUIRect Area, bool ShowNotic
 		Bottom += 14.0f;
 	}
 	Result.m_ContentHeight = Bottom - Area.y;
-	return Result;
-}
-
-struct SQmBrowserMapFilterLayout
-{
-	CUIRect m_Heading{}, m_CurrentLabel{}, m_Slider{};
-	CUIRect m_FavoriteGroup{}, m_FavoriteLabel{}, m_FavoriteToggle{}, m_FavoriteIcon{};
-};
-
-// 标签可省略显示，但滑块、开关与星标的矩形始终位于各自内容列内。
-inline SQmBrowserMapFilterLayout QmBrowserMapFilterLayout(CUIRect Area, float FavoriteTextWidth)
-{
-	SQmBrowserMapFilterLayout Result;
-	const float Width = QmBrowserLayoutExtent(Area.w);
-	Result.m_Heading = {Area.x, Area.y, Width, 14.0f};
-	const float CurrentWidth = std::min(58.0f, Width * 0.4f);
-	const float SliderGap = std::min(4.0f, Width * 0.04f);
-	Result.m_CurrentLabel = {Area.x, Area.y + 18.0f, CurrentWidth, 20.0f};
-	Result.m_Slider = {Area.x + CurrentWidth + SliderGap, Area.y + 18.0f, Width - CurrentWidth - SliderGap, 20.0f};
-	const float ToggleWidth = std::min(28.0f, Width * 0.3f);
-	const float IconWidth = std::min(18.0f, Width * 0.2f);
-	const float LabelGap = std::min(6.0f, Width * 0.05f);
-	const float LabelWidth = std::min(QmBrowserLayoutExtent(FavoriteTextWidth), Width - ToggleWidth - IconWidth - LabelGap);
-	const float GroupWidth = LabelWidth + LabelGap + ToggleWidth + IconWidth;
-	const float X = Area.x + (Width - GroupWidth) * 0.5f;
-	const float Y = Area.y + 40.0f + std::max(0.0f, QmBrowserLayoutExtent(Area.h) - 40.0f - 18.0f) * 0.5f;
-	Result.m_FavoriteGroup = {X, Y, GroupWidth, 18.0f};
-	Result.m_FavoriteLabel = {X, Y, LabelWidth, 18.0f};
-	Result.m_FavoriteToggle = {X + LabelWidth + LabelGap, Y, ToggleWidth, 18.0f};
-	Result.m_FavoriteIcon = {X + LabelWidth + LabelGap + ToggleWidth, Y, IconWidth, 18.0f};
 	return Result;
 }
 

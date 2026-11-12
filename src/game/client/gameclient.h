@@ -26,6 +26,7 @@
 #include <generated/protocolglue.h>
 
 #include <game/client/components/qmclient/connection_resource_preparation.h>
+#include <game/client/components/qmclient/self_kill_protection.h>
 #include <game/client/components/qmclient/snapshot_entities.h>
 #include <game/client/prediction/gameworld.h>
 #include <game/client/race.h>
@@ -80,6 +81,7 @@
 #include "components/qmclient/collision_hitbox.h"
 #include "components/qmclient/data_version.h"
 #include "components/qmclient/demo_camera.h"
+#include "components/qmclient/friend_last_seen.h"
 #include "components/qmclient/hammer_hit_detection.h"
 #include "components/qmclient/hud_notifications/hud_notifications.h"
 #include "components/qmclient/input_overlay.h"
@@ -87,6 +89,7 @@
 #include "components/qmclient/monitoring/monitoring.h"
 #include "components/qmclient/music_app_watcher.h"
 #include "components/qmclient/music_lyrics/music_lyrics_integration.h"
+#include "components/qmclient/music_lyrics/music_lyrics_presentation.h"
 #include "components/qmclient/music_lyrics/qm_spotify_integration.h"
 #include "components/qmclient/netease/netease_integration.h"
 #include "components/qmclient/qm_hook_coll_candidates.h"
@@ -268,6 +271,7 @@ public:
 	CMusicLyricsIntegration m_MusicLyricsIntegration;
 	CQmMusicAppWatcher m_MusicAppWatcher;
 	CSpotifyIntegration m_SpotifyIntegration;
+	CQmLyricsPresentation m_LyricsPresentation;
 
 	CDamageInd m_DamageInd;
 	CTouchControls m_TouchControls;
@@ -306,6 +310,7 @@ public:
 	CQmClient m_QmClient;
 	CQmAxiomAutoLogin m_QmAxiomAutoLogin;
 	CQmAxiomScores m_QmAxiomScores;
+	CQmFriendLastSeen m_QmFriendLastSeen;
 	CQmChatEmoji m_QmChatEmoji;
 	CQmCheckpointGuide m_QmCheckpointGuide;
 	CQmMonitoring m_QmMonitoring;
@@ -335,6 +340,8 @@ public:
 	CMovingTiles m_MovingTilesForeground = CMovingTiles{true};
 
 private:
+	void UpdateQmAxiomPrediction();
+
 	struct SQmStutterComponentWindowSamples
 	{
 		CQmStutterSampleSeries m_Update;
@@ -474,6 +481,9 @@ private:
 	static void ConTuneZone(IConsole::IResult *pResult, void *pUserData);
 	static void ConMapbug(IConsole::IResult *pResult, void *pUserData);
 	static void ConQmSponsorNudgePreview(IConsole::IResult *pResult, void *pUserData);
+	// 仅由测试环境变量 QMCLIENT_TEST_IME_GRADIENT_PROBE 开启，不提供控制台命令：
+	// 这个探针会在屏幕上画出彩色胶囊，不能成为玩家可触发的正式功能。
+	bool m_QmImeGradientProbeEnabled = false;
 
 	static void ConchainMenuMap(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 
@@ -503,6 +513,8 @@ public:
 	class IGraphics *Graphics() const { return m_pGraphics; }
 	class IClient *Client() const { return m_pClient; }
 	class CUi *Ui() { return &m_UI; }
+	// 引擎在切换垂直同步前问这里：界面动画全停才重建交换链。
+	bool QmUiAnimationsIdle() const override;
 	class CUiRuntimeV2 *UiRuntimeV2() { return &m_UiRuntimeV2; }
 	const class CUiRuntimeV2 *UiRuntimeV2() const { return &m_UiRuntimeV2; }
 	void SyncQmUiIconWeight();
@@ -923,11 +935,14 @@ public:
 	// hooks
 	void OnConnected() override;
 	void OnConnectionResourceUpdate() override;
+	void OnMapLoadStart() override;
 	void OnRender() override;
 	void OnUpdate() override;
 	int RenderThrottleRefreshRate() const override;
-	void OnScreenshotTaken(class CImageInfo &&Image) override;
+	void OnScreenshotTaken(class CImageInfo &&Image, const char *pPath) override;
 	IGraphics::FScreenshotProcessor ScreenshotProcessor() override;
+	void SetPoseCamera(vec2 Center, float Zoom) override;
+	bool PoseSkinsReady() override;
 	void OnDummyDisconnect() override;
 	void OnDummyManualDisconnect() override;
 	virtual void OnRelease();
@@ -1009,6 +1024,18 @@ public:
 	void SendKill();
 	void SendKill() const;
 	void SendReadyChange7();
+	static void ConQmSelfKillOff(IConsole::IResult *pResult, void *pUserData);
+	static void ConQmSelfKillOn(IConsole::IResult *pResult, void *pUserData);
+	// 自杀保护：拦截状态与"开局 N 分钟后自动开启"计时都在这台状态机里，
+	// 默认不拦截，只有玩家自己按键/勾选或被显式配置的延迟到点才开启。
+	void UpdateQmSelfKillProtection();
+	void ResetQmSelfKillProtectionRound(bool InRound);
+	void SetQmSelfKillProtection(bool Enabled, bool Announce);
+	CQmSelfKillProtection m_QmSelfKillProtection;
+	// 自杀保护提示限流时间戳（每秒最多一次），避免按住 K 键刷屏。
+	int64_t m_QmSelfKillHintLastTime = 0;
+	// 自动开启计时用的墙钟采样点；0 表示还没开始计时（离开对局或刚开局）。
+	int64_t m_QmSelfKillWallClockLastTime = 0;
 
 	void ApplyPreInputs(int Tick, bool Direct, CGameWorld &GameWorld);
 	bool GetDummyFastInput(CNetObj_PlayerInput &DummyFastInput, const CNetObj_PlayerInput *pDummyInputData, const class CCharacter *pDummyChar, int LocalTee, int DummyTee) const;

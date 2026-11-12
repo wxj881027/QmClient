@@ -42,6 +42,8 @@ static constexpr const char *const ACTION_NAMES[] = {Localizable("Aim"), Localiz
 static constexpr const char *const ACTION_SWAP_NAMES[] = {/* unused */ "", Localizable("Active: Fire"), Localizable("Active: Hook")};
 static constexpr const char *const ACTION_COMMANDS[] = {/* unused */ "", "+fire", "+hook"};
 
+static bool IsChatToggleCommand(const char *pCommand);
+
 static constexpr std::chrono::milliseconds LONG_TOUCH_DURATION = 500ms;
 static constexpr std::chrono::milliseconds BIND_REPEAT_INITIAL_DELAY = 250ms;
 static constexpr std::chrono::nanoseconds BIND_REPEAT_RATE = std::chrono::nanoseconds(1s) / 15;
@@ -728,6 +730,9 @@ CTouchControls::CButtonLabel CTouchControls::CBindTouchButtonBehavior::GetLabel(
 
 void CTouchControls::CBindTouchButtonBehavior::OnActivate()
 {
+	// 记下聊天按钮打开聊天的时间：同一根手指不能又被“再按一次关闭”的逻辑关掉。
+	if(IsChatToggleCommand(m_Command.c_str()))
+		m_pTouchControls->m_ChatToggleActivationTime = time_get_nanoseconds();
 	m_pTouchControls->Console()->ExecuteLineStroked(1, m_Command.c_str(), IConsole::CLIENT_ID_UNSPECIFIED);
 	m_Repeating = false;
 }
@@ -837,6 +842,77 @@ void CTouchControls::OnWindowResize()
 	}
 }
 
+static bool IsChatToggleCommand(const char *pCommand)
+{
+	if(pCommand == nullptr)
+		return false;
+	pCommand = str_utf8_skip_whitespaces(pCommand);
+	for(const char *pPrefix : {"chat all", "chat team"})
+	{
+		if(!str_startswith(pCommand, pPrefix))
+			continue;
+		const char *pRest = pCommand + str_length(pPrefix);
+		if(*pRest == '\0' || *pRest == ' ' || *pRest == ';')
+			return true;
+	}
+	return false;
+}
+
+bool CTouchControls::IsChatToggleButton(const CTouchButton &Button) const
+{
+	if(Button.m_pBehavior == nullptr ||
+		str_comp(Button.m_pBehavior->GetBehaviorType(), CBindTouchButtonBehavior::BEHAVIOR_TYPE) != 0)
+		return false;
+	const auto *pBind = static_cast<const CBindTouchButtonBehavior *>(Button.m_pBehavior.get());
+	return IsChatToggleCommand(pBind->GetCommand());
+}
+
+void CTouchControls::CloseChatFromTouch(std::vector<IInput::CTouchFingerState> &vTouchFingerStates)
+{
+	if(vTouchFingerStates.empty())
+		return;
+	const vec2 ScreenSize = CalculateScreenSize();
+	for(auto It = vTouchFingerStates.begin(); It != vTouchFingerStates.end(); ++It)
+	{
+		// 打开聊天的那一次按住不算关闭手势（测试已按住时下一次点击会立刻关掉聊天）。
+		if(It->m_PressTime <= m_ChatToggleActivationTime)
+			continue;
+		bool HitsChatButton = false;
+		for(CTouchButton &TouchButton : m_vTouchButtons)
+		{
+			if(!IsChatToggleButton(TouchButton))
+				continue;
+			TouchButton.UpdateScreenFromUnitRect();
+			if(TouchButton.IsInside(It->m_Position * ScreenSize))
+			{
+				HitsChatButton = true;
+				break;
+			}
+		}
+		if(!HitsChatButton)
+			continue;
+		// 该手指只负责关闭聊天：从本帧触摸列表移除并记为失效，松开前不再触发聊天按钮，
+		// 否则关闭后同一次按住会立刻把聊天重新打开。其它手指仍留给聊天输入框。
+		m_vStaleFingers.push_back(It->m_Finger);
+		GameClient()->m_Chat.DisableMode();
+		vTouchFingerStates.erase(It);
+		break;
+	}
+}
+
+void CTouchControls::RenderChatCloseButtons()
+{
+	for(CTouchButton &TouchButton : m_vTouchButtons)
+	{
+		if(!IsChatToggleButton(TouchButton))
+			continue;
+		// 聊天时其它按钮隐藏，仅保留原聊天按钮作为可见的关闭入口。
+		TouchButton.UpdateBackgroundCorners();
+		TouchButton.UpdateScreenFromUnitRect();
+		TouchButton.Render();
+	}
+}
+
 bool CTouchControls::OnTouchState(std::vector<IInput::CTouchFingerState> &vTouchFingerStates)
 {
 	if(qm_mobile_spectator::Enabled())
@@ -853,6 +929,9 @@ bool CTouchControls::OnTouchState(std::vector<IInput::CTouchFingerState> &vTouch
 		m_PreviewAllButtons)
 	{
 		ResetButtons();
+		// 唯一的例外：点原聊天按钮关闭聊天（手机没有 Esc，也没有别的退出入口）。
+		if(GameClient()->m_Chat.IsActive() && !GameClient()->m_Menus.IsActive() && !m_PreviewAllButtons)
+			CloseChatFromTouch(vTouchFingerStates);
 		return false;
 	}
 
@@ -876,6 +955,12 @@ void CTouchControls::OnRender()
 		GameClient()->m_Emoticon.IsActive() ||
 		GameClient()->m_Spectator.IsActive())
 	{
+		if(GameClient()->m_Chat.IsActive() && !GameClient()->m_Menus.IsActive() && !m_EditingActive)
+		{
+			const vec2 ScreenSize = CalculateScreenSize();
+			Graphics()->MapScreen(0.0f, 0.0f, ScreenSize.x, ScreenSize.y);
+			RenderChatCloseButtons();
+		}
 		return;
 	}
 

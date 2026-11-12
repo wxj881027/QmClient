@@ -137,6 +137,10 @@ generate_shader_file("" "" "media_island_sdf.vert" "media_island_sdf.vert.spv")
 generate_shader_file("" "" "rounded_rect_sdf.frag" "rounded_rect_sdf.frag.spv")
 generate_shader_file("" "" "rounded_rect_sdf.vert" "rounded_rect_sdf.vert.spv")
 
+# 圆角 SDF 采样纹理的变体：圆角容器放图时用它把四角真正裁掉。
+generate_shader_file("" "-DTW_ROUNDED_SDF_TEXTURED" "rounded_rect_sdf.frag" "rounded_rect_sdf_textured.frag.spv")
+
+
 # Procedural statistics ring
 generate_shader_file("" "" "procedural_ring.frag" "procedural_ring.frag.spv")
 generate_shader_file("" "" "procedural_ring.vert" "procedural_ring.vert.spv")

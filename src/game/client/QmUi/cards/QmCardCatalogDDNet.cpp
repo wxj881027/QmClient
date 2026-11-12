@@ -217,7 +217,7 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 				{
 					g_Config.m_ClRaceGhost ^= 1;
 				}
-				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_ClRaceGhost, &Button, Localize("When you cross the start line, show a ghost tee replicating the movements of your best time"));
+				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_ClRaceGhost, &Button, Localize("Show a ghost of your best time after crossing the start line"));
 			}
 			Flow.Space(DDNetMetrics.m_LineSpacing);
 			if(g_Config.m_ClRaceGhost)
@@ -267,26 +267,6 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 
 			CUIRect GameplayRow;
 
-			if(Flow.Control("overlay-entities", DDNetMetrics.m_LineHeight, Button))
-			{
-				DoDDNetNumericField("ddnet-overlay-entities", &g_Config.m_ClOverlayEntities, &g_Config.m_ClOverlayEntities, Button, Localize("Overlay entities"), 0, 100);
-			}
-			Flow.Space(DDNetMetrics.m_LineSpacing);
-			if(Flow.Control("text-entities", DDNetMetrics.m_LineHeight, GameplayRow))
-			{
-				SplitSettingsControlRow(GameplayRow, DDNetMetrics, &LeftLeft, &Button);
-
-				if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_ClTextEntities, "Show text entities", Localize("Show text entities"), g_Config.m_ClTextEntities, &LeftLeft) && CanCommit)
-					g_Config.m_ClTextEntities ^= 1;
-
-				if(g_Config.m_ClTextEntities)
-				{
-					if(DoDDNetNumericField("ddnet-text-entities-size", &g_Config.m_ClTextEntitiesSize, &g_Config.m_ClTextEntitiesSize, Button, Localize("Size"), 20, 100, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_DELAYUPDATE) && CanCommit)
-						GameClient()->m_MapImages.SetTextureScale(g_Config.m_ClTextEntitiesSize);
-				}
-			}
-			Flow.Space(DDNetMetrics.m_LineSpacing);
-
 			if(Flow.Control("show-others", DDNetMetrics.m_LineHeight, GameplayRow))
 			{
 				SplitSettingsControlRow(GameplayRow, DDNetMetrics, &LeftLeft, &Button);
@@ -296,7 +276,7 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 
 				DoDDNetNumericField("ddnet-show-others-opacity", &g_Config.m_ClShowOthersAlpha, &g_Config.m_ClShowOthersAlpha, Button, Localize("Opacity"), 0, 100, &CUi::ms_LinearScrollbarScale, 0u, "%");
 
-				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_ClShowOthersAlpha, &Button, Localize("Adjust the opacity of entities belonging to other teams, such as tees and name plates"));
+				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_ClShowOthersAlpha, &Button, Localize("Opacity of other teams' tees and name plates"));
 			}
 			Flow.Space(DDNetMetrics.m_LineSpacing);
 			if(Flow.Control("own-team", DDNetMetrics.m_LineHeight, Button))
@@ -337,6 +317,19 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 				}
 			}
 			Flow.Space(DDNetMetrics.m_LineSpacing);
+			if(Flow.Control("upstream-redundancy", DDNetMetrics.m_LineHeight, Button))
+			{
+				if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_QmUpstreamRedundancy, "Upstream redundancy (experimental)", Localize("Upstream redundancy (experimental)"), g_Config.m_QmUpstreamRedundancy, &Button) && CanCommit)
+					g_Config.m_QmUpstreamRedundancy ^= 1;
+				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUpstreamRedundancy, &Button, Localize("Experimental: repeats outgoing UDP game packets when round-trip probes go unanswered. Upload traffic may triple; download loss and late duplicate inputs can still cause problems. Disabled with KCP."));
+			}
+			Flow.Space(DDNetMetrics.m_LineSpacing);
+			if(g_Config.m_QmUpstreamRedundancy)
+			{
+				if(Flow.Control("upstream-redundancy-copies", DDNetMetrics.m_LineHeight, Button))
+					DoDDNetNumericField("ddnet-upstream-redundancy-copies", &g_Config.m_QmUpstreamRedundancyMaxCopies, &g_Config.m_QmUpstreamRedundancyMaxCopies, Button, Localize("Maximum packet copies"), 2, 3);
+				Flow.Space(DDNetMetrics.m_LineSpacing);
+			}
 			if(Flow.Control("anti-ping", DDNetMetrics.m_LineHeight, Button))
 			{
 				if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_ClAntiPing, "AntiPing (latency compensation)", Localize("AntiPing (latency compensation)"), g_Config.m_ClAntiPing, &Button) && CanCommit)
@@ -514,7 +507,7 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 			}
 			Flow.Space(DDNetMetrics.m_LineSpacing);
 #if defined(CONF_FAMILY_WINDOWS)
-			Flow.Space(10.0f);
+			Flow.Space(DDNetMetrics.m_SectionGap);
 			if(Flow.Control("unregister-shell", DDNetMetrics.m_LineHeight, Button))
 			{
 				static CButtonContainer s_ButtonUnregisterShell;

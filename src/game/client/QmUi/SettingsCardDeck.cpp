@@ -5,7 +5,10 @@
 #include "SettingsCardCollapseState.h"
 #include "SettingsCardContentBridge.h"
 #include "SettingsCardInfo.h"
+#include "SettingsCardMotion.h"
 #include "SettingsCardWidth.h"
+#include "SettingsCardWidthState.h"
+#include "SettingsSearchReveal.h"
 #include "UiContext.h"
 
 #include <base/system.h>
@@ -49,6 +52,7 @@ namespace
 void CSettingsCardDeck::ResetDefinitionViewState()
 {
 	m_ObservedContentChanged = false;
+	m_LastContentHeightFrameTimeSec = -1.0f;
 	// Definition state is indexed by the current card-order model. A different
 	// tab or stable-id set may reuse the same indices, so retaining these
 	// values would make the new view inherit heights, animation tracks and
@@ -73,6 +77,9 @@ void CSettingsCardDeck::ResetDefinitionViewState()
 	m_Drag.Reset();
 	m_HasScrollOffset = false;
 	m_LastScrollOffsetY = 0.0f;
+	m_WidthScrollFloor = 0.0f;
+	m_WidthAnchorStateIndex = -1;
+	m_LastEntryOffsetY = 0.0f;
 	m_LastViewportHeight = -1.0f;
 	m_PreparedDefinitionModelCount = -1;
 	m_PreparedDefinitionStateIndexRevision = UINT64_MAX;
@@ -138,6 +145,9 @@ void CSettingsCardDeck::BeginDisplayCycle(uint64_t DisplayCycle, bool AnimateEnt
 		m_Drag.Reset();
 		m_SuppressHoverFeedbackOnce = true;
 		m_HasScrollOffset = false;
+		m_WidthScrollFloor = 0.0f;
+		m_WidthAnchorStateIndex = -1;
+		m_LastEntryOffsetY = 0.0f;
 		m_vLastRenderedActiveStateIndices.clear();
 		m_FrameRuntime.SetEntryActive(false);
 		for(SRuntimeState &Runtime : m_vRuntimeStates)
@@ -146,7 +156,11 @@ void CSettingsCardDeck::BeginDisplayCycle(uint64_t DisplayCycle, bool AnimateEnt
 			Runtime.m_ReflowWasActive = false;
 			Runtime.m_ContentHeightInitialized = false;
 			Runtime.m_ContentHeightWasActive = false;
+			Runtime.m_ContentHeightAnimFrom = 0.0f;
+			Runtime.m_ContentHeightAnimTo = 0.0f;
+			Runtime.m_ContentHeightAnimElapsed = 0.0f;
 			Runtime.m_CollapsedInitialized = false;
+			Runtime.m_HasLayoutReference = false;
 			Runtime.m_PointerInsideLastFrame = false;
 			Runtime.m_LastDrawOffsetX = 0.0f;
 			Runtime.m_LastDrawOffsetY = 0.0f;
@@ -271,6 +285,14 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 		m_LastViewportHeight = ScrollViewport.h;
 		std::fill(m_vContentHeights.begin(), m_vContentHeights.end(), -1.0f);
 	}
+	if(std::abs(m_LastWidthViewport - ScrollViewport.w) > 0.01f || m_WidthLayoutRevision != Model.LayoutRevision())
+	{
+		m_LastWidthViewport = ScrollViewport.w;
+		m_WidthLayoutRevision = Model.LayoutRevision();
+		m_WidthAnchorStateIndex = -1;
+		for(auto &Runtime : m_vRuntimeStates)
+			Runtime.m_HasLayoutReference = false;
+	}
 	bool ScrollMovedThisFrame = false;
 	if(pScrollRegion != nullptr)
 	{
@@ -284,10 +306,21 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 	OffsetRectY(DrawLayout.m_aColumns[0], ScrollOffset.y);
 	OffsetRectY(DrawLayout.m_aColumns[1], ScrollOffset.y);
 
+	const qm_card_width::CState &WidthState = qm_card_width::CurrentState();
 	bool MeasuredGeometryChanged = m_ObservedContentChanged;
 	m_ObservedContentChanged = false;
 	bool ContentHeightTargetChanged = false;
 	bool ContentHeightAnimationActive = false;
+	// 内容高度补间由 Deck 自己按帧推进。动效运行时的帧时钟每帧只 Advance 一次，
+	// 用它识别帧边界，避免同一帧跑两趟（预布局输入前后各一次）时推进两次。
+	float ContentHeightFrameDt = 0.0f;
+	if(Ctx.m_pAnim != nullptr)
+	{
+		const float AnimFrameTimeSec = Ctx.m_pAnim->TimeSec();
+		if(m_LastContentHeightFrameTimeSec >= 0.0f && AnimFrameTimeSec > m_LastContentHeightFrameTimeSec)
+			ContentHeightFrameDt = AnimFrameTimeSec - m_LastContentHeightFrameTimeSec;
+		m_LastContentHeightFrameTimeSec = AnimFrameTimeSec;
+	}
 	auto BuildPreparedCards = [&](const std::array<std::vector<int>, 3> &aDisplayColumns) {
 		m_vPreparedCards.clear();
 		m_vPreparedCards.reserve(m_vActiveStateIndices.size());
@@ -299,6 +332,22 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 			const SSettingsCardDefinition *pDefinition = m_vDefinitionsByState[StateIndex];
 			if(pDefinition == nullptr)
 				return;
+			const bool FullWidth = WidthState.IsFullWidth(pDefinition->m_Spec.m_pStableId, Column == 0);
+			int LayoutColumn = Column;
+			if(Column == 0 && !FullWidth)
+			{
+				const auto *pDefault = qm_card_registry::FindByStableId(pDefinition->m_Spec.m_pStableId);
+				LayoutColumn = ResolveSettingsCardLayoutColumn(Column, FullWidth, pDefault && pDefault->m_DefaultColumn == qm_card_registry::ECardColumn::Right);
+			}
+			if(DrawLayout.m_TwoColumns)
+			{
+				if(FullWidth)
+					ColumnRect = DrawLayout.m_ContentViewport;
+				else if(Column == 0)
+				{
+					ColumnRect = DrawLayout.m_aColumns[LayoutColumn - 1];
+				}
+			}
 			CUIRect Slot{ColumnRect.x, ColumnRect.y, ColumnRect.w, 0.0f};
 			float &CachedContentHeight = m_vContentHeights[StateIndex];
 			float &CachedContentWidth = m_vContentWidths[StateIndex];
@@ -349,6 +398,9 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 					m_FrameRuntime.MarkFirstLayout();
 				Runtime.m_ContentHeightInitialized = true;
 				Runtime.m_AnimatedContentHeight = TargetContentHeight;
+				Runtime.m_ContentHeightAnimFrom = TargetContentHeight;
+				Runtime.m_ContentHeightAnimTo = TargetContentHeight;
+				Runtime.m_ContentHeightAnimElapsed = 0.0f;
 				if(Ctx.m_pAnim != nullptr)
 					Ctx.m_pAnim->SetValue(SettingsCardHeightNodeKey(pTab, pDefinition->m_Spec.m_pStableId), EUiAnimProperty::HEIGHT, TargetContentHeight);
 			}
@@ -356,13 +408,26 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 			{
 				if(Input.m_pDiagnostics != nullptr)
 					m_FrameRuntime.CountHeightAnimationResolve();
-				const uint64_t HeightKey = SettingsCardHeightNodeKey(pTab, pDefinition->m_Spec.m_pStableId);
-				Runtime.m_AnimatedContentHeight = ResolveUiAnimValue(*Ctx.m_pAnim, HeightKey, EUiAnimProperty::HEIGHT, TargetContentHeight, Motion.m_ContentHeightDuration, EEasing::EASE_OUT_QUART);
-				Runtime.m_ContentHeightWasActive = Ctx.m_pAnim->HasActiveAnimation(HeightKey, EUiAnimProperty::HEIGHT);
+				// 目标变化时从当前显示高度重新起一段过渡；之后每帧只推进有限步长，
+				// 卡顿帧不能一次吃掉整段过渡（否则高度会瞬移到位、动画等于没播）。
+				if(HeightTargetChanged)
+				{
+					Runtime.m_ContentHeightAnimFrom = Runtime.m_AnimatedContentHeight;
+					Runtime.m_ContentHeightAnimTo = TargetContentHeight;
+					Runtime.m_ContentHeightAnimElapsed = 0.0f;
+				}
+				Runtime.m_ContentHeightAnimElapsed += SettingsCardContentHeightStepSeconds(ContentHeightFrameDt, Motion.m_ContentHeightDuration);
+				const float ContentHeightProgress = SettingsCardContentHeightProgress(Runtime.m_ContentHeightAnimElapsed, Motion.m_ContentHeightDuration);
+				Runtime.m_AnimatedContentHeight = ContentHeightProgress >= 1.0f ? Runtime.m_ContentHeightAnimTo : Runtime.m_ContentHeightAnimFrom + (Runtime.m_ContentHeightAnimTo - Runtime.m_ContentHeightAnimFrom) * ContentHeightProgress;
+				Runtime.m_ContentHeightWasActive = ContentHeightProgress < 1.0f;
+				Ctx.m_pAnim->SetValue(SettingsCardHeightNodeKey(pTab, pDefinition->m_Spec.m_pStableId), EUiAnimProperty::HEIGHT, Runtime.m_AnimatedContentHeight);
 			}
 			else if(HeightWork.m_SetHeightTarget)
 			{
 				Runtime.m_AnimatedContentHeight = TargetContentHeight;
+				Runtime.m_ContentHeightAnimFrom = TargetContentHeight;
+				Runtime.m_ContentHeightAnimTo = TargetContentHeight;
+				Runtime.m_ContentHeightAnimElapsed = 0.0f;
 				if(Ctx.m_pAnim != nullptr)
 					Ctx.m_pAnim->SetValue(SettingsCardHeightNodeKey(pTab, pDefinition->m_Spec.m_pStableId), EUiAnimProperty::HEIGHT, TargetContentHeight);
 				Runtime.m_ContentHeightWasActive = false;
@@ -373,10 +438,12 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 			const float ContentHeight = std::max(0.0f, Runtime.m_AnimatedContentHeight);
 			SSettingsCardFrame Frame = ResolveSettingsCardHeaderActions(
 				BuildSettingsCardFrame(Slot, pDefinition->m_Spec, ContentHeight, Ctx.m_UiScale),
-				pDefinition->m_LeadingHeaderActionWidth, pDefinition->m_Spec.m_pInfo != nullptr && pDefinition->m_Spec.m_pInfo[0] != '\0');
-			const SSettingsCardColumnFrame Placement = DrawLayout.m_TwoColumns ? m_PackingPlan.Append(Column, Frame.m_Rect.h, LeadingFullWidth) : SingleColumnPlan.Append(Frame.m_Rect.h);
+				pDefinition->m_LeadingHeaderActionWidth, HasSettingsCardInfo(pDefinition->m_Spec));
+			const SSettingsCardColumnFrame Placement = DrawLayout.m_TwoColumns ? m_PackingPlan.Append(LayoutColumn, Frame.m_Rect.h, LeadingFullWidth) : SingleColumnPlan.Append(Frame.m_Rect.h);
 			Frame = ResolveSettingsCardDrawFrame(Frame, 0.0f, Placement.m_Y - Frame.m_Rect.y);
-			m_vPreparedCards.push_back({pDefinition, StateIndex, Column, Frame, TargetContentHeight, HeightInitializedThisFrame, Runtime.m_ContentHeightWasActive, m_vContentLayouts[StateIndex]});
+			if(StateIndex == m_WidthAnchorStateIndex)
+				Frame = ResolveSettingsCardDrawFrame(Frame, 0.0f, m_WidthAnchorY + ScrollOffset.y - Frame.m_Rect.y);
+			m_vPreparedCards.push_back({pDefinition, StateIndex, Column, LayoutColumn, FullWidth, Frame, TargetContentHeight, HeightInitializedThisFrame, Runtime.m_ContentHeightWasActive, m_vContentLayouts[StateIndex]});
 		};
 		auto AppendColumn = [&](const std::vector<int> &vStateIndices, int Column, CUIRect ColumnRect) {
 			for(const int StateIndex : vStateIndices)
@@ -405,6 +472,24 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 		else
 		{
 			ForEachSettingsCardDeckVisualOrder(aDisplayColumns, [&](int StateIndex, int Column) { AppendCard(StateIndex, Column, DrawLayout.m_ContentViewport); }, VisualOptions.m_LeadingFullWidthCards);
+		}
+		if(DrawLayout.m_TwoColumns && (m_WidthAnchorStateIndex >= 0 || std::any_of(m_vPreparedCards.begin(), m_vPreparedCards.end(), [](const SPreparedCard &Card) { return Card.m_FullWidth && Card.m_Column != 0; })))
+		{
+			m_vWidthPlacements.clear();
+			m_vWidthPlacements.reserve(m_vPreparedCards.size());
+			for(const auto &Card : m_vPreparedCards)
+			{
+				const auto &Runtime = m_vRuntimeStates[Card.m_StateIndex];
+				CUIRect Reference = Runtime.m_LayoutReference;
+				Reference.y += ScrollOffset.y;
+				m_vWidthPlacements.push_back({Card.m_LayoutColumn, Card.m_FullWidth, Card.m_Frame.m_Rect, Reference, Runtime.m_HasLayoutReference && !m_Drag.Active()});
+			}
+			m_WidthLayout.Arrange(m_vWidthPlacements, DrawLayout.m_CardGap);
+			for(size_t i = 0; i < m_vPreparedCards.size(); ++i)
+			{
+				auto &Frame = m_vPreparedCards[i].m_Frame;
+				Frame = ResolveSettingsCardDrawFrame(Frame, 0.0f, m_vWidthPlacements[i].m_Rect.y - Frame.m_Rect.y);
+			}
 		}
 	};
 
@@ -435,12 +520,16 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 			bool CardGeometryChanged = false;
 			const CUIRect WidthButton = SettingsCardWidthButtonRect(PreLayoutFrame);
 			if(ControllerVisible && WidthButton.w > 0.0f && WidthButton.h > 0.0f && Ctx.m_pUi != nullptr && !Ctx.m_pUi->RenderOnly() && !m_Drag.Active() &&
-				Ctx.m_pUi->DoButtonLogic(&Runtime.m_WidthButtonId, Card.m_Column == 0, &WidthButton, BUTTONFLAG_LEFT))
+				Ctx.m_pUi->DoButtonLogic(&Runtime.m_WidthButtonId, Card.m_FullWidth, &WidthButton, BUTTONFLAG_LEFT))
 			{
-				const auto *pDefault = qm_card_registry::FindByStableId(Card.m_pDefinition->m_Spec.m_pStableId);
-				const int DefaultColumn = pDefault && pDefault->m_DefaultColumn == qm_card_registry::ECardColumn::Right ? 2 : 1;
-				CardGeometryChanged = ToggleSettingsCardWidth(Model, Card.m_pDefinition->m_Spec.m_pStableId, DefaultColumn, Runtime.m_RestoreColumn, Runtime.m_RestoreOrder);
-				Result.m_OrderChanged = Result.m_OrderChanged || CardGeometryChanged;
+				CardGeometryChanged = qm_card_width::SetFullWidth(Card.m_pDefinition->m_Spec.m_pStableId, !Card.m_FullWidth);
+				if(CardGeometryChanged)
+				{
+					m_WidthAnchorStateIndex = Card.m_StateIndex;
+					// 接续点击处的重排位置；整页入场偏移仍由共享动画推进。
+					m_WidthAnchorY = PreLayoutFrame.m_Rect.y - ScrollOffset.y - m_LastEntryOffsetY;
+					m_WidthScrollFloor = std::max(m_WidthScrollFloor, -ScrollOffset.y);
+				}
 				Ctx.m_pUi->CloseInteractionSource(this, Card.m_pDefinition->m_Spec.m_pStableId);
 			}
 			const bool HasCustomCollapsedState = static_cast<bool>(Card.m_pDefinition->m_IsCollapsed);
@@ -566,6 +655,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 			}
 		}
 	}
+	m_LastEntryOffsetY = DeckEntryOffsetY;
 	if(!m_Drag.Active() && SettingsCardDeckAllowsDragStart(EntryPending, EntryPositionActive, ReflowTargetChanged, ReflowPositionActive || ContentHeightAnimationActive) && (Input.m_CtrlPressed || Input.m_AllowHeaderDrag) && Input.m_MousePressed)
 	{
 		for(const SPreparedCard &Card : m_vPreparedCards)
@@ -573,9 +663,10 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 			const bool InHeader = PointInRect(Card.m_Frame.m_HeaderRect, Input.m_MouseX, Input.m_MouseY);
 			const bool InHeaderAction = PointInRect(Card.m_Frame.m_HandleRect, Input.m_MouseX, Input.m_MouseY) || PointInRect(SettingsCardWidthButtonRect(Card.m_Frame), Input.m_MouseX, Input.m_MouseY) ||
 						    (Card.m_Frame.m_LeadingHeaderActionRect.w > 0.0f && PointInRect(Card.m_Frame.m_LeadingHeaderActionRect, Input.m_MouseX, Input.m_MouseY)) ||
-						    (Card.m_pDefinition->m_Spec.m_pInfo != nullptr && Card.m_pDefinition->m_Spec.m_pInfo[0] != '\0' && PointInRect(ResolveSettingsCardInfoRect(Card.m_Frame), Input.m_MouseX, Input.m_MouseY));
+						    (HasSettingsCardInfo(Card.m_pDefinition->m_Spec) && PointInRect(ResolveSettingsCardInfoRect(Card.m_Frame), Input.m_MouseX, Input.m_MouseY));
 			if(InHeader && !InHeaderAction)
 			{
+				m_WidthAnchorStateIndex = -1;
 				m_Drag.m_StateIndex = Card.m_StateIndex;
 				m_Drag.m_SourceColumn = Card.m_Column;
 				m_Drag.m_TargetColumn = Card.m_Column;
@@ -657,11 +748,23 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 		const bool Collapsed = SettingsCardDeckResolveCollapsed(HasCustomCollapsedState, HasCustomCollapsedState && Card.m_pDefinition->m_IsCollapsed(), Runtime.m_DefaultCollapsed);
 		if(Ctx.m_pUi != nullptr)
 		{
-			if(Collapsed)
+			// 折叠只在「刚折叠」那一帧关掉该卡的旧交互（内容里的下拉框等）；之后每帧仍要续期来源，
+			// 否则 ⓘ 打开的说明面板也挂在同一来源上，会在下一帧被孤儿清扫收掉（折叠卡点了没反应）。
+			if(Collapsed && !Runtime.m_CollapsedInteractionClosed)
+			{
 				Ctx.m_pUi->CloseInteractionSource(this, pStableId);
+				Runtime.m_CollapsedInteractionClosed = true;
+			}
 			else
+			{
+				if(!Collapsed)
+					Runtime.m_CollapsedInteractionClosed = false;
 				Ctx.m_pUi->RefreshInteractionSource(this, pStableId);
+			}
 		}
+		Runtime.m_LayoutReference = Card.m_Frame.m_Rect;
+		Runtime.m_LayoutReference.y -= ScrollOffset.y;
+		Runtime.m_HasLayoutReference = true;
 		SSettingsCardVisualState State;
 		State.m_DrawOffsetY = DeckEntryOffsetY;
 		State.m_DrawAlpha = DeckEntryAlpha;
@@ -755,16 +858,18 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 				const CUIRect Button = SettingsCardWidthButtonRect(DrawFrame);
 				if(Ctx.m_pTextRender != nullptr && Ctx.m_pUi != nullptr)
 				{
-					RenderSettingsCardHeaderIcon(InputCtx, Button, Card.m_Column == 0 ? EQmIcon::BORDER_ALL : EQmIcon::ARROWS_LEFT_RIGHT, Card.m_Column == 0 ? FontIcons::FONT_ICON_BORDER_ALL : FontIcons::FONT_ICON_ARROWS_LEFT_RIGHT, State.m_DrawAlpha, &Runtime.m_WidthButtonId);
+					RenderSettingsCardHeaderIcon(InputCtx, Button, Card.m_FullWidth ? EQmIcon::BORDER_ALL : EQmIcon::ARROWS_LEFT_RIGHT, Card.m_FullWidth ? FontIcons::FONT_ICON_BORDER_ALL : FontIcons::FONT_ICON_ARROWS_LEFT_RIGHT, State.m_DrawAlpha, &Runtime.m_WidthButtonId);
 					if(Ctx.m_pTooltips != nullptr)
-						Ctx.m_pTooltips->DoSmallToolTip(&Runtime.m_WidthButtonId, &Button, Card.m_Column == 0 ? Localize("Default width") : Localize("Full width"), 10.0f * Ctx.m_UiScale);
+						Ctx.m_pTooltips->DoSmallToolTip(&Runtime.m_WidthButtonId, &Button, Card.m_FullWidth ? Localize("Default width") : Localize("Full width"), 10.0f * Ctx.m_UiScale);
 				}
 			};
 			float ObservedHeight = -1.0f;
 			FSettingsCardRenderMeasured ContentRender = Card.m_pDefinition->m_RenderMeasured;
 			if(Card.m_pContentLayout && Card.m_pDefinition->m_ContentLayoutDraw)
 			{
-				ContentRender = [pLayout = Card.m_pContentLayout, Draw = Card.m_pDefinition->m_ContentLayoutDraw, pUi = Ctx.m_pUi](CUIRect &Content) {
+				const bool RevealInteractive = Ctx.m_pUi != nullptr && !Ctx.m_pUi->RenderOnly() && !Ctx.m_pUi->MeasurementOnly();
+				ContentRender = [pLayout = Card.m_pContentLayout, Draw = Card.m_pDefinition->m_ContentLayoutDraw, pUi = Ctx.m_pUi, pScrollRegion, RevealInteractive, pRevealStableId = Card.m_pDefinition->m_Spec.m_pStableId](CUIRect &Content) {
+					qm_settings_reveal::BeginCard(pRevealStableId, pScrollRegion, RevealInteractive);
 					const CUIRect Origin = Content;
 					// 只读绘制仍提交外观，但不再次处理已经完成的输入。
 					if(pUi != nullptr)
@@ -774,6 +879,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 						pUi->EndBackgroundRender(true);
 					Content.y = Origin.y + pLayout->Height();
 					Content.h = Origin.h - pLayout->Height();
+					qm_settings_reveal::EndCard();
 				};
 			}
 			SettingsCard(InputCtx, Frame, Card.m_pDefinition->m_Spec, State, VisualOptions,
@@ -798,7 +904,14 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 	}
 
 	if(pScrollRegion != nullptr)
+	{
+		// 变窄可能缩短整页；保留当前视口需要的尾部空间，避免滚动边界把卡头挪走。
+		// 玩家向上滚动时同步回收这段空白，不扩大可滚动范围。
+		m_WidthScrollFloor = std::min(m_WidthScrollFloor, std::max(0.0f, -ScrollOffset.y));
+		if(m_WidthScrollFloor > 0.0f)
+			pScrollRegion->AddRect({ScrollViewport.x, ScrollViewport.y + ScrollOffset.y, 0.0f, ScrollViewport.h + m_WidthScrollFloor});
 		pScrollRegion->End();
+	}
 	for(SRuntimeState &Runtime : m_vRuntimeStates)
 	{
 		Runtime.m_DropFeedbackRemaining = std::max(0.0f, Runtime.m_DropFeedbackRemaining - std::max(0.0f, Input.m_FrameDt));
@@ -806,6 +919,9 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 	// 入场或重排期间鼠标可能仍停在卡片最终位置；只有布局稳定后再次移动鼠标才恢复 hover 亮度，
 	// 避免动画结束的首帧从普通背景突然跳到高亮背景。
 	const bool LayoutStable = !EntryPending && !EntryPositionActive && !ContentHeightAnimationActive && !ReflowTargetChanged && !ReflowPositionActive;
+	// 把「卡片还在动」发布给外部：语音冷启动这类一次性重活要等动画播完，
+	// 否则展开动画和音频子系统初始化会压在同一帧。
+	qm_settings_motion::PublishCardAnimationActive(!LayoutStable);
 	if(m_SuppressHoverFeedbackOnce && LayoutStable && m_HasPointerPosition &&
 		(std::abs(Input.m_MouseX - m_LastPointerX) > 0.001f || std::abs(Input.m_MouseY - m_LastPointerY) > 0.001f))
 		m_SuppressHoverFeedbackOnce = false;

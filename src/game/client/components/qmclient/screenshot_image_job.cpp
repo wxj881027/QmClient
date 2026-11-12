@@ -37,9 +37,9 @@ void CQmScreenshotImageJob::Run()
 	}
 }
 
-bool CQmScreenshotImageJob::LoadRgbaImageFromDisk(IStorage *pStorage, const std::string &Path, int StorageType, CImageInfo &Image)
+bool CQmScreenshotImageJob::LoadRgbaImageFromDisk(IStorage *pStorage, const std::string &Path, int StorageType, CImageInfo &Image, size_t MaxDecodedBytes)
 {
-	if(!LoadImageFromDisk(pStorage, Path, StorageType, 0, Image))
+	if(!LoadImageFromDisk(pStorage, Path, StorageType, 0, Image, MaxDecodedBytes))
 		return false;
 	// 旧接口返回原图是否已是 RGBA；转换是否成功应检查转换后的像素和格式。
 	ConvertToRgba(Image);
@@ -51,7 +51,7 @@ bool CQmScreenshotImageJob::LoadRgbaImageFromDisk(IStorage *pStorage, const std:
 	return true;
 }
 
-bool CQmScreenshotImageJob::LoadImageFromDisk(IStorage *pStorage, const std::string &Path, int StorageType, int MaxEdge, CImageInfo &Image)
+bool CQmScreenshotImageJob::LoadImageFromDisk(IStorage *pStorage, const std::string &Path, int StorageType, int MaxEdge, CImageInfo &Image, size_t MaxDecodedBytes)
 {
 	Image.Free();
 	if(pStorage == nullptr || Path.empty())
@@ -64,7 +64,8 @@ bool CQmScreenshotImageJob::LoadImageFromDisk(IStorage *pStorage, const std::str
 	io_seek(File, 0, IOSEEK_END);
 	const int64_t FileSize = io_tell(File);
 	io_seek(File, 0, IOSEEK_START);
-	if(FileSize <= 0 || FileSize > QM_SCREENSHOT_IMAGE_MAX_FILE_SIZE)
+	// 超采样静帧的文件本身也可能超过列表页的 64 MiB 上限：预算由调用方决定。
+	if(FileSize <= 0 || FileSize > (int64_t)MaxDecodedBytes)
 	{
 		io_close(File);
 		return false;
@@ -87,8 +88,8 @@ bool CQmScreenshotImageJob::LoadImageFromDisk(IStorage *pStorage, const std::str
 		return false;
 
 	// 按内容而不是扩展名判断格式：截图目录里可能出现改名或后缀不符的文件。
-	const bool Decoded = CImageLoader::LoadPng(vFileData.data(), vFileData.size(), Path.c_str(), Image, QM_SCREENSHOT_IMAGE_MAX_DECODED_BYTES) ||
-			     CImageLoader::LoadWebP(vFileData.data(), vFileData.size(), Path.c_str(), Image, QM_SCREENSHOT_IMAGE_MAX_DECODED_BYTES);
+	const bool Decoded = CImageLoader::LoadPng(vFileData.data(), vFileData.size(), Path.c_str(), Image, MaxDecodedBytes) ||
+			     CImageLoader::LoadWebP(vFileData.data(), vFileData.size(), Path.c_str(), Image, MaxDecodedBytes);
 	if(!Decoded || Image.m_pData == nullptr || Image.m_Width == 0 || Image.m_Height == 0)
 	{
 		Image.Free();

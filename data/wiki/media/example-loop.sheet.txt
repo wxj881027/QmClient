@@ -1,0 +1,1 @@
+cols=3 rows=3 frames=8 fps=12.5

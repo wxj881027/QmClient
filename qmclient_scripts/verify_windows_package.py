@@ -55,6 +55,36 @@ REMOVED_BUNDLED_RESOURCES = {
 }
 
 
+# FFmpeg 运行时按族发布，族内版本号随上游大版本变化（FFmpeg 7 是 61/59/5/8，
+# FFmpeg 9 是 63/61/7/10）。同一族出现两份说明归档里混入了旧版残留，
+# 客户端会按加载顺序加载到不匹配的 ABI，表现为录像功能崩溃或静默失效。
+FFMPEG_RUNTIME_FAMILIES = ("avcodec-", "avformat-", "avutil-", "swresample-", "swscale-")
+
+
+def check_ffmpeg_runtime(names: list[str], ffmpeg_libdir: Path | None) -> None:
+	"""每个 FFmpeg 族在包根必须恰好一份，且与捆绑库目录的版本一致。"""
+	by_family: dict[str, list[str]] = {family: [] for family in FFMPEG_RUNTIME_FAMILIES}
+	for name in names:
+		parts = PurePosixPath(name).parts
+		if len(parts) != 2:
+			continue
+		for family in FFMPEG_RUNTIME_FAMILIES:
+			if parts[1].casefold().startswith(family):
+				by_family[family].append(parts[1])
+	duplicated = {family: sorted(files) for family, files in by_family.items() if len(files) > 1}
+	if duplicated:
+		raise ValueError(f"Windows package has multiple FFmpeg runtime DLLs per family: {duplicated}")
+	missing = [family for family, files in by_family.items() if not files]
+	if missing:
+		raise ValueError(f"Windows package is missing FFmpeg runtime DLLs: {missing}")
+	if ffmpeg_libdir is None:
+		return
+	expected = {path.name for path in ffmpeg_libdir.iterdir() if path.suffix.casefold() == ".dll" and any(path.name.casefold().startswith(family) for family in FFMPEG_RUNTIME_FAMILIES)}
+	actual = {files[0] for files in by_family.values()}
+	if actual != expected:
+		raise ValueError(f"Windows package FFmpeg runtime does not match bundled libraries: missing={sorted(expected - actual)}, extra={sorted(actual - expected)}")
+
+
 def read_manifest(path: Path) -> set[str]:
 	names = path.read_text(encoding="utf-8").splitlines()
 	if any(not name or Path(name).name != name or "/" in name or "\\" in name or ":" in name for name in names):
@@ -82,7 +112,7 @@ def package_entries(package: Path) -> list[str]:
 	return entries
 
 
-def verify(package: Path, runtime_manifest: Path, tools_manifest: Path, portable: bool) -> None:
+def verify(package: Path, runtime_manifest: Path, tools_manifest: Path, portable: bool, ffmpeg_libdir: Path | None = None) -> None:
 	runtime = read_manifest(runtime_manifest)
 	tools = read_manifest(tools_manifest)
 	required = {"DDNet.exe", "DDNet-Server.exe", "QmClient-Updater.exe"}
@@ -112,6 +142,7 @@ def verify(package: Path, runtime_manifest: Path, tools_manifest: Path, portable
 	# 包根必须携带 steam_appid.txt（SteamAPI_Init 在 CWD 查找），缺失会让非 Steam 位置启动失去运行状态与时长统计。
 	if not any(PurePosixPath(name).parts[1:] == ("steam_appid.txt",) for name in names):
 		raise ValueError("Windows package is missing root steam_appid.txt")
+	check_ffmpeg_runtime(names, ffmpeg_libdir)
 
 
 def main() -> int:
@@ -120,9 +151,10 @@ def main() -> int:
 	parser.add_argument("--runtime-manifest", type=Path, required=True)
 	parser.add_argument("--tools-manifest", type=Path, required=True)
 	parser.add_argument("--portable", action="store_true")
+	parser.add_argument("--ffmpeg-libdir", type=Path, help="bundled FFmpeg DLL directory the package must match")
 	args = parser.parse_args()
 	for package in args.package:
-		verify(package, args.runtime_manifest, args.tools_manifest, args.portable)
+		verify(package, args.runtime_manifest, args.tools_manifest, args.portable, args.ffmpeg_libdir)
 		print(f"Verified Windows runtime and tool executable inventory: {package}")
 	return 0
 

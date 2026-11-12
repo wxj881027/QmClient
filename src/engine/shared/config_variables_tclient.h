@@ -16,7 +16,7 @@ MACRO_CONFIG_INT(QmAllowAnyRes, qm_allow_any_res, 1, 0, 1, CFGFLAG_CLIENT | CFGF
 MACRO_CONFIG_INT(QmShowChatClient, qm_show_chat_client, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show client-generated chat messages, e.g., echo")
 
 MACRO_CONFIG_INT(QmShowFrozenText, qm_frozen_tees_text, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show number of frozen Tees in team (0=Off, 1=Show active Tee, 2=Show frozen Tee)")
-MACRO_CONFIG_INT(QmShowFrozenHud, qm_frozen_tees_hud, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show frozen Tee HUD")
+MACRO_CONFIG_INT(QmShowFrozenHud, qm_frozen_tees_hud, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show frozen Tee HUD")
 MACRO_CONFIG_INT(QmShowFrozenHudSkins, qm_frozen_tees_hud_skins, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use ninja or dark skin in frozen Tee HUD")
 
 MACRO_CONFIG_INT(QmFrozenHudTeeSize, qm_frozen_tees_size, 15, 8, 20, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Tee icon size in frozen Tee HUD (default 15)")
@@ -222,7 +222,7 @@ MACRO_CONFIG_INT(QmTeeTrailTaper, qm_tee_trail_taper, 1, 0, 1, CFGFLAG_CLIENT | 
 MACRO_CONFIG_INT(QmTeeTrailFade, qm_tee_trail_fade, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Fade opacity along trail length")
 MACRO_CONFIG_INT(QmTeeTrailColorMode, qm_tee_trail_color_mode, 1, 1, 5, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Tee trail color mode (1=Solid, 2=Current Tee color, 3=Rainbow, 4=Tee speed, 5=Random)")
 // 继续接受旧配置的 4、5，实际渲染和菜单统一解析为漫画、魔法。
-MACRO_CONFIG_INT(QmTeeTrailStyle, qm_tee_trail_style, 0, 0, 5, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic)")
+MACRO_CONFIG_INT(QmTeeTrailStyle, qm_tee_trail_style, 0, 0, 10, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic, 6=Aurora, 7=Ink, 8=Ignis, 9=Stardust, 10=Black Flash)")
 MACRO_CONFIG_INT(QmTeeTrailStyleColors, qm_tee_trail_style_colors, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use the selected tee trail style palette")
 
 // Chat Reply

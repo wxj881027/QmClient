@@ -36,6 +36,27 @@ namespace
 			m_Ui.Update();
 		}
 
+		void TouchFrame(vec2 Position, bool Pressed)
+		{
+			IInput::CTouchFingerState Finger{};
+			Finger.m_Position = Position / m_Ui.Screen()->Size();
+			Finger.m_PressTime = std::chrono::nanoseconds(1);
+			m_Input.SetTouchFingers(Pressed ? std::vector<IInput::CTouchFingerState>{Finger} : std::vector<IInput::CTouchFingerState>{});
+			Frame(Position, false);
+		}
+
+		void DrawTouchTextList(CScrollRegion &Region, CLineInput &Input)
+		{
+			Region.SetContentHeightForNextFrame(500.0f);
+			CUIRect View{0, 0, 300, 200};
+			vec2 Offset;
+			Region.Begin(&View, &Offset);
+			const CUIRect Edit{40, 40 + Offset.y, 240, 24};
+			m_Ui.DoEditBox(&Input, &Edit, 12);
+			Region.AddRect({View.x, View.y + Offset.y, View.w, 500});
+			Region.End();
+		}
+
 		int Draw(bool LeftDisabled = false)
 		{
 			return ui_widget::SplitActionButton(ui_widget::ControlContext(&m_Ui), &m_Left, "Check for updates", &m_Right, "New features", m_Button, LeftDisabled);
@@ -60,7 +81,7 @@ namespace
 	};
 }
 
-TEST_F(QmSecondaryPanelActions, SplitSurfaceUsesSameFillAndBorderAsOrdinaryButton)
+TEST_F(QmSecondaryPanelActions, SplitSurfaceReusesOrdinaryFillAndSubmitsOneSharedBorder)
 {
 	Frame({0, 0}, false);
 	const auto Ctx = ui_widget::ControlContext(&m_Ui);
@@ -71,15 +92,78 @@ TEST_F(QmSecondaryPanelActions, SplitSurfaceUsesSameFillAndBorderAsOrdinaryButto
 	const auto Ordinary = Graphics.m_vRoundedSubmissions.front();
 	Graphics.m_vRoundedSubmissions.clear();
 	Draw();
-	ASSERT_EQ(Graphics.m_vRoundedSubmissions.size(), 2u);
+	ASSERT_EQ(Graphics.m_vRoundedSubmissions.size(), 3u);
 	EXPECT_FALSE(m_Ui.IsClipped());
-	for(const auto &Half : Graphics.m_vRoundedSubmissions)
+	// 两半只提交底色：与普通按钮同色同圆角，不带边框。
+	for(size_t Index = 0; Index < 2; ++Index)
 	{
+		const auto &Half = Graphics.m_vRoundedSubmissions[Index];
 		EXPECT_EQ(Half.m_Rect, Ordinary.m_Rect);
 		EXPECT_EQ(Half.m_FillColor, Ordinary.m_FillColor);
-		EXPECT_EQ(Half.m_BorderColor, Ordinary.m_BorderColor);
 		EXPECT_EQ(Half.m_CornerRadii, Ordinary.m_CornerRadii);
+		EXPECT_FLOAT_EQ(Half.m_Params.x, 0.0f);
 	}
+	// 外框整条提交一次：没有填充，边框与普通按钮一致。
+	const auto &Border = Graphics.m_vRoundedSubmissions.back();
+	EXPECT_EQ(Border.m_Rect, Ordinary.m_Rect);
+	EXPECT_FLOAT_EQ(Border.m_FillColor.w, 0.0f);
+	EXPECT_EQ(Border.m_BorderColor, Ordinary.m_BorderColor);
+	EXPECT_EQ(Border.m_CornerRadii, Ordinary.m_CornerRadii);
+	EXPECT_FLOAT_EQ(Border.m_Params.x, Ordinary.m_Params.x);
+}
+
+TEST_F(QmSecondaryPanelActions, HoveringOneHalfHighlightsTheWholeSharedBorder)
+{
+	auto &Graphics = *static_cast<qm_ui_test::CRealUiTestGraphics *>(m_Ui.Graphics());
+	Frame({10, 10}, false);
+	Graphics.m_vRoundedSubmissions.clear();
+	Draw();
+	ASSERT_EQ(Graphics.m_vRoundedSubmissions.size(), 3u);
+	const vec4 RestBorder = Graphics.m_vRoundedSubmissions.back().m_BorderColor;
+	const vec4 RestLeftFill = Graphics.m_vRoundedSubmissions[0].m_FillColor;
+	const vec4 RestRightFill = Graphics.m_vRoundedSubmissions[1].m_FillColor;
+
+	Frame({80, 52}, false);
+	Graphics.m_vRoundedSubmissions.clear();
+	Draw();
+	ASSERT_EQ(Graphics.m_vRoundedSubmissions.size(), 3u);
+	const auto &Border = Graphics.m_vRoundedSubmissions.back();
+	// 外框与两半底色使用同一整条矩形，整圈换色，不会只亮被悬停的半边、从中缝断开。
+	EXPECT_EQ(Border.m_Rect, Graphics.m_vRoundedSubmissions[0].m_Rect);
+	EXPECT_NE(Border.m_BorderColor, RestBorder);
+	// 底色反馈仍按半边独立：被悬停的一侧变亮，另一侧保持静止。
+	EXPECT_NE(Graphics.m_vRoundedSubmissions[0].m_FillColor, RestLeftFill);
+	EXPECT_EQ(Graphics.m_vRoundedSubmissions[1].m_FillColor, RestRightFill);
+}
+
+TEST_F(QmSecondaryPanelActions, MouseClickDoesNotLeaveAKeyboardFocusRing)
+{
+	auto &Graphics = *static_cast<qm_ui_test::CRealUiTestGraphics *>(m_Ui.Graphics());
+	Frame({80, 52}, false);
+	Draw();
+	Frame({80, 52}, true);
+	Draw();
+	Frame({80, 52}, false);
+	EXPECT_EQ(Draw(), 0);
+	Graphics.m_vRoundedSubmissions.clear();
+	Draw();
+	// 只剩两半底色和一条整条外框；没有内缩到半边的焦点环。
+	ASSERT_EQ(Graphics.m_vRoundedSubmissions.size(), 3u);
+	for(const auto &Submission : Graphics.m_vRoundedSubmissions)
+		EXPECT_FLOAT_EQ(Submission.m_Rect.z, m_Button.w);
+}
+
+TEST_F(QmSecondaryPanelActions, KeyboardFocusDrawsTheFocusRing)
+{
+	auto &Graphics = *static_cast<qm_ui_test::CRealUiTestGraphics *>(m_Ui.Graphics());
+	Frame({10, 10}, false);
+	Key(KEY_TAB);
+	Graphics.m_vRoundedSubmissions.clear();
+	Draw();
+	ASSERT_EQ(Graphics.m_vRoundedSubmissions.size(), 4u);
+	const auto &Ring = Graphics.m_vRoundedSubmissions.back();
+	EXPECT_LT(Ring.m_Rect.z, m_Button.w);
+	EXPECT_GT(Ring.m_BorderColor.w, 0.0f);
 }
 
 TEST_F(QmSecondaryPanelActions, AnchoredSecondaryPanelKeepsItsPositionAndClosesFromAnOutsideClick)
@@ -225,13 +309,16 @@ TEST_F(QmSecondaryPanelActions, SplitAndRegularButtonsSubmitTheSameOuterRadius)
 	EXPECT_FLOAT_EQ(Radius, 10.0f);
 	Graphics.m_vRoundedSubmissions.clear();
 	ui_widget::SplitActionButton(ui_widget::ControlContext(&m_Ui), &m_Left, "Left", &m_Right, "Right", m_Button, false, false, EUiButtonGeometry::START_MENU);
-	ASSERT_EQ(Graphics.m_vRoundedSubmissions.size(), 2u);
-	for(const auto &Half : Graphics.m_vRoundedSubmissions)
+	ASSERT_EQ(Graphics.m_vRoundedSubmissions.size(), 3u);
+	for(const auto &Part : Graphics.m_vRoundedSubmissions)
 	{
-		EXPECT_FLOAT_EQ(Half.m_CornerRadii.x, Radius);
-		EXPECT_FLOAT_EQ(Half.m_CornerRadii.y, Radius);
-		EXPECT_GT(Half.m_Params.x, 0);
+		EXPECT_FLOAT_EQ(Part.m_CornerRadii.x, Radius);
+		EXPECT_FLOAT_EQ(Part.m_CornerRadii.y, Radius);
 	}
+	// 两半底色不带边框，只有共享外框提交边框宽度。
+	EXPECT_FLOAT_EQ(Graphics.m_vRoundedSubmissions[0].m_Params.x, 0.0f);
+	EXPECT_FLOAT_EQ(Graphics.m_vRoundedSubmissions[1].m_Params.x, 0.0f);
+	EXPECT_GT(Graphics.m_vRoundedSubmissions[2].m_Params.x, 0.0f);
 }
 
 TEST_F(QmSecondaryPanelActions, BackgroundScopeDrawsControlsWithoutConsumingClicksOrEscape)
@@ -258,7 +345,8 @@ TEST_F(QmSecondaryPanelActions, BackgroundScopeDrawsControlsWithoutConsumingClic
 		EXPECT_TRUE(m_Ui.BackgroundRender());
 		EXPECT_EQ(Draw(), -1);
 		EXPECT_FALSE(m_Ui.ConsumeHotkey(CUi::HOTKEY_ESCAPE));
-		EXPECT_EQ(Graphics.m_vRoundedSubmissions.size(), 2u);
+		// 两半底色加一条共享外框；后台绘制保留控件表面但不响应点击。
+		EXPECT_EQ(Graphics.m_vRoundedSubmissions.size(), 3u);
 	}
 	EXPECT_FALSE(m_Ui.RenderOnly());
 	EXPECT_FALSE(m_Ui.BackgroundRender());
@@ -462,6 +550,51 @@ TEST_F(QmSecondaryPanelActions, ClosingParentClearsChildAndNotifiesEachOwnerOnce
 	m_Ui.ClosePopupMenu(&m_Panel);
 	EXPECT_EQ(ParentClosed, 1);
 	EXPECT_EQ(ChildClosed, 1);
+}
+
+TEST_F(QmSecondaryPanelActions, ScrollingFromTextFieldCancelsPendingTextInputActivation)
+{
+	CLineInputBuffered<64> Input;
+	CScrollRegion Region;
+	Input.Set("source");
+	Frame({0, 0}, false);
+	m_Ui.SetDirectTouchInput(true);
+	TouchFrame({70, 55}, true);
+	DrawTouchTextList(Region, Input);
+	ASSERT_EQ(m_Ui.ActiveItem(), &Input);
+	ASSERT_FALSE(Input.IsActive());
+	ASSERT_EQ(m_Input.m_TextInputStarts, 0);
+	TouchFrame({70, 25}, true);
+	DrawTouchTextList(Region, Input);
+	EXPECT_NEAR(Region.State().Offset(), 30.0f, 0.001f);
+	EXPECT_EQ(m_Ui.ActiveItem(), nullptr);
+	EXPECT_FALSE(Input.IsActive());
+	EXPECT_EQ(m_Input.m_TextInputStarts, 0);
+	TouchFrame({70, 25}, false);
+	DrawTouchTextList(Region, Input);
+	EXPECT_FALSE(Input.IsActive());
+	EXPECT_EQ(m_Input.m_TextInputStarts, 0);
+	m_Ui.ReleaseActiveTextInput(&Input);
+}
+
+TEST_F(QmSecondaryPanelActions, CancellingTextFieldTouchPreservesIndependentConsoleInput)
+{
+	CLineInputBuffered<64> Input, ConsoleInput;
+	CScrollRegion Region;
+	Frame({0, 0}, false);
+	m_Ui.SetDirectTouchInput(true);
+	TouchFrame({70, 55}, true);
+	DrawTouchTextList(Region, Input);
+	ASSERT_EQ(m_Ui.ActiveItem(), &Input);
+	ConsoleInput.Activate(EInputPriority::CONSOLE);
+	ASSERT_EQ(CLineInput::GetActiveInput(), &ConsoleInput);
+	TouchFrame({70, 25}, true);
+	DrawTouchTextList(Region, Input);
+	EXPECT_EQ(CLineInput::GetActiveInput(), &ConsoleInput);
+	EXPECT_FALSE(Input.IsActive());
+	EXPECT_EQ(m_Input.m_TextInputStops, 0);
+	ConsoleInput.Deactivate();
+	m_Ui.ReleaseActiveTextInput(&Input);
 }
 
 TEST_F(QmSecondaryPanelActions, ModalRestoresTextOnlyWhenTheSameSourceInputRendersAgain)

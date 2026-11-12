@@ -24,6 +24,7 @@
 #include <game/client/QmUi/QmAnimResolve.h>
 #include <game/client/QmUi/QmCardRegistry.h>
 #include <game/client/QmUi/QmListEntryAnimation.h>
+#include <game/client/QmUi/QmLocalizedLabels.h>
 #include <game/client/QmUi/QmUiPerf.h>
 #include <game/client/QmUi/SecondaryPanel.h>
 #include <game/client/QmUi/SettingsCard.h>
@@ -278,6 +279,8 @@ CUi::EPopupMenuFunctionResult CMenus::PopupSettingsCountrySelection(void *pConte
 	s_ListBox.SetActive(Active);
 	s_ListBox.SetWheelOwnerPriority(EUiWheelOwnerPriority::POPUP);
 	s_ListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_GRID);
+	// 选中/悬停填充由 CListBox 统一绘制；这里只补选中描边，避免同一行画两遍。
+	s_ListBox.SetItemColors(ui_token::color::LIST_ITEM_SELECTED, ui_token::color::LIST_ITEM_SELECTED, ui_token::color::LIST_ITEM_HOVER);
 
 	if(pPopupContext->m_New)
 	{
@@ -364,14 +367,12 @@ CUi::EPopupMenuFunctionResult CMenus::PopupSettingsCountrySelection(void *pConte
 		if(!Item.m_Visible)
 			continue;
 
-		if(IsSelected)
+		const float SelectedAlpha = s_ListBox.SelectionFeedbackAlpha((int)i);
+		if(SelectedAlpha > 0.001f)
 		{
-			// 选中描边与资产卡/列表选中态同源（白 0.7），不用 BORDER_FOCUS 强调蓝。
-			DrawRoundedSurface(pUi, Item.m_Rect, ui_token::color::LIST_ITEM_SELECTED, ui_token::color::NEUTRAL_WHITE.WithAlpha(ui_token::feedback::ICON_BORDER_ALPHA), ui_token::radius::BASE, 1.0f);
-		}
-		else if(pUi->MouseInside(&Item.m_Rect))
-		{
-			DrawRoundedSurface(pUi, Item.m_Rect, ui_token::color::LIST_ITEM_HOVER, ColorRGBA(0, 0, 0, 0), ui_token::radius::BASE);
+			// 选中描边与资产卡/列表选中态同源（白 0.7），不用 BORDER_FOCUS 强调蓝；
+			// 填充交给 CListBox 的选中轨道，这里不再叠第二层。
+			DrawRoundedSurface(pUi, Item.m_Rect, ColorRGBA(), ui_token::color::NEUTRAL_WHITE.WithAlpha(ui_token::feedback::ICON_BORDER_ALPHA * SelectedAlpha), ui_token::radius::BASE, 1.0f);
 		}
 
 		CUIRect FlagRect, Label;
@@ -748,12 +749,18 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMet
 	// 依次淡入 + 上浮：与服务器列表/浏览器过滤列表同一套入场语言（onetake
 	// wordRise：opacity 领先位移）。语言卡片离开渲染超过间隙后重放。
 	static CQmListEntryAnimation s_EntryAnimation;
+	static CQmListRowFeedback s_SelectedFeedback;
+	static CQmListRowFeedback s_HoverFeedback;
+	static bool s_ScrollFeedbackSnap = false;
 	// 设置分类切换时显式重放：间隙启发在该页同样不可靠（后台趟持续渲染），
 	// 与服务器列表同款序号制，保证每次切回设置页都重放。
 	static int s_EntryRestartSeq = -1;
 	if(s_EntryRestartSeq != m_SettingsListEntryRestartSeq)
 	{
 		s_EntryAnimation.Reset();
+		s_SelectedFeedback.Reset();
+		s_HoverFeedback.Reset();
+		s_ScrollFeedbackSnap = false;
 		s_EntryRestartSeq = m_SettingsListEntryRestartSeq;
 	}
 	const int64_t EntryNow = time_get();
@@ -761,6 +768,13 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMet
 	const bool EntryEnabled = g_Config.m_QmUiListEntryAnimations != 0 && g_Config.m_QmUiMotionLevel > 0;
 	const float EntryElapsed = s_EntryAnimation.Resolve(EntryNow, EntryFreq, EntryEnabled, g_Config.m_QmUiMotionLevel,
 		Ui()->MeasurementOnly() ? EQmListEntryRenderPass::MEASUREMENT : EQmListEntryRenderPass::INTERACTIVE);
+	const bool ScrollAnimating = gs_LanguageScrollRegion.Animating();
+	const bool SnapFeedback = g_Config.m_QmUiMotionLevel == 0 || ScrollAnimating || s_ScrollFeedbackSnap;
+	s_ScrollFeedbackSnap = ScrollAnimating;
+	const bool UpdateFeedback = !Ui()->AnimationsBlocked();
+	const uint64_t FeedbackKey = BuildUiAnimNodeKey(MakeUiScopeHash("settings_language_row_feedback"), 0);
+	s_SelectedFeedback.BeginFrame(Ui()->QmAnimationRuntime(), FeedbackKey, SnapFeedback, UpdateFeedback);
+	s_HoverFeedback.BeginFrame(Ui()->QmAnimationRuntime(), FeedbackKey ^ 0x9E3779B97F4A7C15ULL, SnapFeedback, UpdateFeedback);
 	int EntryVisibleRowIndex = 0;
 	for(size_t i = 0; i < g_Localization.Languages().size(); ++i)
 	{
@@ -768,7 +782,7 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMet
 		CUIRect ItemRect;
 		Content.HSplitTop(Metrics.m_ListRowHeight, &ItemRect, &Content);
 		const bool Selected = s_SelectedLanguage == (int)i;
-		const bool Visible = gs_LanguageScrollRegion.AddRect(ItemRect, gs_LanguageScrollToSelected && Selected);
+		const bool Visible = gs_LanguageScrollRegion.AddRect(ItemRect, gs_LanguageScrollToSelected && Selected, Selected);
 		if(!Visible)
 			continue;
 		++VisibleLanguages;
@@ -791,9 +805,15 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMet
 		}
 
 		if(Selected)
-			DrawRoundedSurface(Ui(), ItemRect, Ui()->ScaleBackgroundAlpha(ui_token::color::LIST_ITEM_SELECTED), ColorRGBA(), 5.0f);
+			s_SelectedFeedback.Observe((int)i);
+		const float SelectedAlpha = s_SelectedFeedback.Alpha((int)i);
+		if(SelectedAlpha > 0.001f)
+			DrawRoundedSurface(Ui(), ItemRect, Ui()->ScaleBackgroundAlpha(ui_token::color::LIST_ITEM_SELECTED).WithMultipliedAlpha(SelectedAlpha), ColorRGBA(), 5.0f);
 		if(Ui()->HotItem() == pRowId)
-			DrawRoundedSurface(Ui(), ItemRect, Ui()->ScaleBackgroundAlpha(ui_token::color::LIST_ITEM_HOVER), ColorRGBA(), 5.0f);
+			s_HoverFeedback.Observe((int)i);
+		const float HoverAlpha = s_HoverFeedback.Alpha((int)i);
+		if(HoverAlpha > 0.001f && !gs_LanguageScrollRegion.Animating())
+			DrawRoundedSurface(Ui(), ItemRect, Ui()->ScaleBackgroundAlpha(ui_token::color::LIST_ITEM_HOVER).WithMultipliedAlpha(HoverAlpha), ColorRGBA(), 5.0f);
 
 		CUIRect FlagRect, Label;
 		ItemRect.VSplitLeft(ItemRect.h * 2.0f, &FlagRect, &Label);
@@ -813,6 +833,8 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMet
 		else
 			Ui()->DoLabel(&Label, Language.m_Name.c_str(), Metrics.m_BodySize, TEXTALIGN_ML);
 	}
+	s_SelectedFeedback.EndFrame();
+	s_HoverFeedback.EndFrame();
 	gs_LanguageScrollToSelected = false;
 	CUIRect ScrollRegion;
 	ScrollRegion.x = MainView.x;
@@ -862,6 +884,9 @@ void CMenus::RenderSettings(CUIRect MainView)
 	}
 	if(g_Config.m_UiSettingsPage < 0 || g_Config.m_UiSettingsPage >= SETTINGS_LENGTH)
 		g_Config.m_UiSettingsPage = SETTINGS_GENERAL;
+	// 手机端不呈现的页签（键鼠绑键、资源包等）也不能成为落地页：旧配置或搜索跳转会回落到通用页。
+	if(SettingsPageHiddenForMobile(g_Config.m_UiSettingsPage, SettingsMobilePlatform()))
+		g_Config.m_UiSettingsPage = SETTINGS_GENERAL;
 	if(g_Config.m_UiSettingsPage == SETTINGS_CONFIGS)
 	{
 		g_Config.m_UiSettingsPage = SETTINGS_QMCLIENT;
@@ -894,6 +919,8 @@ void CMenus::RenderSettings(CUIRect MainView)
 	if(!CollectingMenuTextPlan)
 	{
 		TabBar.Draw(SettingsTabbarColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
+		const auto *pAnimation = Ui()->QmAnimationRuntime();
+		m_QmSeasonalSidebar.Render(Ui(), Graphics(), TabBar, pAnimation != nullptr ? pAnimation->TimeSec() : 0.0);
 		Shell.m_ContentPanelRect.Draw(MenuPanelColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
 	}
 	const float PreviousDropDownFontSize = Ui()->DropDownFontSize();
@@ -946,13 +973,25 @@ void CMenus::RenderSettings(CUIRect MainView)
 		const ColorRGBA SettingsNavigationHover = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(0.20f);
 		std::array<CUIRect, SETTINGS_LENGTH> aSlots;
 		std::array<int, SETTINGS_LENGTH> aPages;
+		// 手机端虚拟高度更小（UI 缩放更大），固定的页签高度会把右侧目录撑出面板。
+		// 先算出可见页签需要的总高度，超出可用高度时按比例收缩行高与间距。
+		int VisibleTabCount = 0;
+		for(int i : s_aSettingsTabOrder)
+		{
+			if(SettingsPageVisibleInRightTabBar(i))
+				++VisibleTabCount;
+		}
+		const float TabSlotNeeded = VisibleTabCount * (ui_token::settings::TAB_HEIGHT + ui_token::settings::TAB_GAP);
+		const float TabSlotFit = (TabSlotNeeded > TabBar.h && TabSlotNeeded > 0.0f) ? TabBar.h / TabSlotNeeded : 1.0f;
+		const float TabSlotHeight = ui_token::settings::TAB_HEIGHT * TabSlotFit;
+		const float TabSlotGap = ui_token::settings::TAB_GAP * TabSlotFit;
 		int Count = 0;
 		for(int i : s_aSettingsTabOrder)
 		{
 			if(!SettingsPageVisibleInRightTabBar(i))
 				continue;
-			TabBar.HSplitTop(ui_token::settings::TAB_GAP, nullptr, &TabBar);
-			TabBar.HSplitTop(ui_token::settings::TAB_HEIGHT, &aSlots[Count], &TabBar);
+			TabBar.HSplitTop(TabSlotGap, nullptr, &TabBar);
+			TabBar.HSplitTop(TabSlotHeight, &aSlots[Count], &TabBar);
 			aPages[Count++] = i;
 		}
 		const int Pressed = ui_widget::CapsuleTabBarPressedIndex(TabBarUiContext(), aSlots.data(), Count, 0.0f);
@@ -961,7 +1000,7 @@ void CMenus::RenderSettings(CUIRect MainView)
 		for(int Index = 0; Index < Count; ++Index)
 		{
 			const int Page = aPages[Index];
-			DoButton_MenuTab(&m_aSettingsTabButtons[Page], m_apSettingsTabs[Page], g_Config.m_UiSettingsPage == Page, &aSlots[Index], IGraphics::CORNER_ALL, &m_aAnimatorsSettingsTab[Page], nullptr, &SettingsNavigationSelected, &SettingsNavigationHover, 10.0f, nullptr, &m_aSettingsTabLabelElements[Page]);
+			DoButton_MenuTab(&m_aSettingsTabButtons[Page], m_SettingsTabLabels.Get(Page), g_Config.m_UiSettingsPage == Page, &aSlots[Index], IGraphics::CORNER_ALL, &m_aAnimatorsSettingsTab[Page], nullptr, &SettingsNavigationSelected, &SettingsNavigationHover, 10.0f, nullptr, &m_aSettingsTabLabelElements[Page]);
 		}
 
 		if(SettingsPerfEnabled)
@@ -1004,6 +1043,7 @@ void CMenus::RenderSettings(CUIRect MainView)
 		}
 		else if(g_Config.m_UiSettingsPage != s_PrevSettingsPage)
 		{
+			Ui()->CancelTouchInput();
 			CommitSettingsTeeSkinEdits();
 			// 分类切换序号：主题/语言列表据此重放入场动画。
 			m_SettingsListEntryRestartSeq++;
@@ -1565,20 +1605,16 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 	MainView = AppearanceSubTabs.m_ContentRect;
 	const float TabWidth = TabBar.w / (float)NUMBER_OF_APPEARANCE_TABS;
 	static CButtonContainer s_aPageTabs[NUMBER_OF_APPEARANCE_TABS] = {};
-	static const char *s_apAppearanceTabNames[NUMBER_OF_APPEARANCE_TABS] = {};
-	static char s_aAppearanceLanguageFile[IO_MAX_PATH_LENGTH] = {};
-	static bool s_AppearanceTabNamesInitialized = false;
-	if(!s_AppearanceTabNamesInitialized || str_comp(s_aAppearanceLanguageFile, g_Config.m_ClLanguagefile) != 0)
-	{
-		s_AppearanceTabNamesInitialized = true;
-		str_copy(s_aAppearanceLanguageFile, g_Config.m_ClLanguagefile, sizeof(s_aAppearanceLanguageFile));
-		s_apAppearanceTabNames[APPEARANCE_TAB_HUD] = Localize("HUD");
-		s_apAppearanceTabNames[APPEARANCE_TAB_CHAT] = Localize("Chat");
-		s_apAppearanceTabNames[APPEARANCE_TAB_NAME_PLATE] = Localize("Name Plate");
-		s_apAppearanceTabNames[APPEARANCE_TAB_HOOK_COLLISION] = Localize("Hook Collisions");
-		s_apAppearanceTabNames[APPEARANCE_TAB_INFO_MESSAGES] = Localize("Info Messages");
-		s_apAppearanceTabNames[APPEARANCE_TAB_LASER] = Localize("Laser");
-	}
+	static CQmLocalizedLabelCache s_AppearanceTabNames;
+	s_AppearanceTabNames.Refresh(g_Config.m_ClLanguagefile,
+		{
+			Localizable("HUD"),
+			Localizable("Chat"),
+			Localizable("Name Plate"),
+			Localizable("Hook Collisions"),
+			Localizable("Info Messages"),
+			Localizable("Laser"),
+		});
 
 	CUIRect aAppearanceTabSlots[NUMBER_OF_APPEARANCE_TABS];
 	CUIRect AppearanceTabsRemainder = TabBar;
@@ -1590,7 +1626,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 
 	for(int Tab = APPEARANCE_TAB_HUD; Tab < NUMBER_OF_APPEARANCE_TABS; ++Tab)
 	{
-		DoButton_MenuTab(&s_aPageTabs[Tab], s_apAppearanceTabNames[Tab], m_AppearanceSettingsTab == Tab, &aAppearanceTabSlots[Tab], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true);
+		DoButton_MenuTab(&s_aPageTabs[Tab], s_AppearanceTabNames.Get(Tab), m_AppearanceSettingsTab == Tab, &aAppearanceTabSlots[Tab], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true);
 	}
 
 	static const char *const s_apTabs[] = {"appearance-hud", "appearance-chat", "appearance-name-plate", "appearance-hook-collision", "appearance-info-messages", "appearance-laser"};

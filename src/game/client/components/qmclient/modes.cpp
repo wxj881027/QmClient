@@ -1,6 +1,8 @@
 // 请抬头享受阳光｜日子很好 我很我---------致咩子
 #include "modes.h"
 
+#include "hud_map_progress.h"
+
 #include <base/str.h>
 
 #include <engine/shared/config.h>
@@ -403,9 +405,9 @@ bool ShouldRenderFocusSpectatorHud(bool SpectatorActive, bool SpectatorHudEnable
 	return SpectatorActive && SpectatorHudEnabled && HideHud;
 }
 
-bool ShouldRenderMapProgressBar(bool MapProgressEnabled, int MapProgressStyle, bool PlayerStatsHudEnabled, bool GoresMapProgressEnabled)
+bool ShouldRenderMapProgressBar(bool MapProgressEnabled, int MapProgressStyle, bool PlayerStatsHudEnabled, bool GoresMapProgressEnabled, bool IslandEnabled)
 {
-	return MapProgressEnabled && !(MapProgressStyle != 0 && PlayerStatsHudEnabled) && GoresMapProgressEnabled;
+	return QmHudMapProgress::ResolveSurface(MapProgressEnabled && GoresMapProgressEnabled, MapProgressStyle, PlayerStatsHudEnabled, IslandEnabled) == QmHudMapProgress::ESurface::STANDALONE;
 }
 
 bool ShouldHideFocusGuideLines(bool FocusActive, bool HideGuideLines)

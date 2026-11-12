@@ -3,6 +3,8 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "UiForms.h"
 
+#include "QmIconSwap.h"
+#include "QmPasswordIcon.h"
 #include "SettingsPageLayout.h"
 #include "UiButtons.h"
 #include "UiDiscreteSliderStyle.h"
@@ -12,9 +14,12 @@
 #include "UiSurfaceText.h"
 #include "UiTheme.h"
 
+#include <base/log.h>
+
 #include <engine/graphics.h>
 #include <engine/keys.h>
 #include <engine/shared/config.h>
+#include <engine/storage.h>
 
 #include <game/client/components/tooltips.h>
 #include <game/client/lineinput.h>
@@ -52,7 +57,7 @@ namespace ui_widget
 
 		SInputFieldResult BuildInputFieldResult(const IUiContext &Ctx, CLineInput *pInput, bool Changed, bool WasActive, bool WasEmpty, bool Clearable)
 		{
-			const bool SubmitPressed = Ctx.m_pUi != nullptr && (Ctx.m_pUi->Input()->KeyPress(KEY_RETURN) || Ctx.m_pUi->Input()->KeyPress(KEY_KP_ENTER));
+			const bool SubmitPressed = Ctx.m_pUi != nullptr && Ctx.m_pUi->HotkeyPressed(CUi::HOTKEY_ENTER);
 			return ui_widget::BuildInputFieldResult(WasActive, pInput->IsActive(), Changed, SubmitPressed, WasEmpty, pInput->IsEmpty(), Clearable);
 		}
 
@@ -96,7 +101,7 @@ namespace ui_widget
 			if(Ctx.m_pAnim == nullptr)
 				return;
 			const float TargetAlpha = InputFieldFocusActive(Ctx, pInput, Rect, Multiline) ? 1.0f : 0.0f;
-			const float Alpha = AnimateStateValue(Ctx, pInput, EUiAnimProperty::ALPHA, TargetAlpha, ui_curve::DECELERATE);
+			const float Alpha = AnimateStateValue(Ctx, pInput, EUiAnimProperty::ALPHA, TargetAlpha, ui_token::motion::INPUT_FOCUS_RING);
 			DrawTextFieldFocusBorder(Ctx, Rect, Alpha);
 		}
 
@@ -107,36 +112,76 @@ namespace ui_widget
 
 			bool Active = pInput->IsActive() || Ctx.m_pUi->IsActiveItem(pInput);
 			const bool MousePressed = Ctx.m_pUi->MouseButton(0) || Ctx.m_pUi->MouseButton(1);
-			if(!Multiline && MousePressed && !Ctx.m_pUi->MouseHovered(&Rect))
+			// 指针判定用控件外观语义：设置卡片的出图趟是 RenderOnly 的内容 DRAW 回放，
+			// MouseHovered 在那里恒为 false，按住鼠标时会把聚焦态误判成失焦。
+			if(!Multiline && MousePressed && !Ctx.m_pUi->VisualSurfaceHovered(&Rect))
 				Active = false;
 			if(!Active && Ctx.m_pUi->HotItem() == pInput && Ctx.m_pUi->MouseButton(0))
 				Active = true;
-			if(!Multiline && (Ctx.m_pUi->Input()->KeyPress(KEY_RETURN) || Ctx.m_pUi->Input()->KeyPress(KEY_KP_ENTER)))
+			if(!Multiline && Ctx.m_pUi->HotkeyPressed(CUi::HOTKEY_ENTER))
 				Active = false;
 			return Active;
 		}
 
+		// 显隐过渡的两套驱动：
+		// - 形变档用弹簧（300/32，ζ≈0.92，稳定约 0.26s），帧条本身有"呼吸"感，弹性合适；
+		// - 淡化档改用 EASE_IN_OUT 补间：弹簧是快起步，交叉淡化在头几帧就把两个字形
+		//   同时推上台，观感就是"突兀地糊一下"；补间两头慢、中间快，起步不动声色。
+		constexpr SUiSpringConfig PASSWORD_ICON_SPRING{1.0f, 300.0f, 32.0f, 0.01f, 0.05f};
+		constexpr float PASSWORD_ICON_FADE_SEC = 0.24f;
+
+		void DrawInputFieldIconGlyph(const IUiContext &Ctx, const CUIRect &Rect, const char *pIcon, float FontSize, const ColorRGBA &Color);
+
 		void DrawInputFieldIcon(const IUiContext &Ctx, const CUIRect &Rect, const char *pIcon, const ColorRGBA &Color, const int QmIcon = -1, const void *pAnimationId = nullptr)
 		{
 			const bool HasQmIcon = QmIcon >= 0 && QmIcon < static_cast<int>(EQmIcon::COUNT);
-			if((pIcon == nullptr && !HasQmIcon) || Rect.w <= 0.0f || Rect.h <= 0.0f)
+			if((pIcon == nullptr && !HasQmIcon) || Rect.w <= 0.0f || Rect.h <= 0.0f || Ctx.m_pUi == nullptr)
 				return;
-			const float IconSide = minimum(Rect.w, Rect.h) * 0.58f;
+			// 输入框图标的两档字号：带语义图标沿用 0.58×0.8 倍方框，纯字形图标用 0.65。
+			// 静止态、交叉淡化、形变帧条三条路径必须共用同一个值——字号不一致时，
+			// 同一帧里重复绘制的第二层会变成「大一圈的影子」。
+			const float IconFontSize = HasQmIcon ? minimum(Rect.w, Rect.h) * 0.58f * 0.8f : minimum(Rect.w, Rect.h) * 0.65f;
 			const bool IsEyeMorphIcon = QmIcon == static_cast<int>(EQmIcon::EYE) || QmIcon == static_cast<int>(EQmIcon::EYE_OFF);
-			if(IsEyeMorphIcon && pAnimationId != nullptr && Ctx.m_pAnim != nullptr && Ctx.m_pUi != nullptr && g_Config.m_QmUiMotionLevel > 0 && !Ctx.m_pUi->AnimationsBlocked())
+			if(IsEyeMorphIcon && pAnimationId != nullptr && Ctx.m_pUi != nullptr && g_Config.m_QmUiMotionLevel > 0)
 			{
+				// 设置卡片的内容趟是在 BeginBackgroundRender(true) 里画的，而
+				// SettingsUiContext 见到 RenderOnly() 就会把 m_pAnim 置空——照字面用
+				// Ctx.m_pAnim 会让这段动画在设置页永远不执行（点一下只看到瞬切）。
+				// 与 DrawToggle/DrawButtonSurface 一致：回退到 CUi 的全局运行时。
+				CUiV2AnimationRuntime *pAnim = Ctx.m_pAnim != nullptr ? Ctx.m_pAnim : Ctx.m_pUi->QmAnimationRuntime();
 				const uint64_t NodeKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash ^ 0xE1E0A11ull, reinterpret_cast<uint64_t>(pAnimationId));
 				const float Target = QmIcon == static_cast<int>(EQmIcon::EYE_OFF) ? 1.0f : 0.0f;
-				const float Progress = std::clamp(ResolveUiAnimSpringValue(*Ctx.m_pAnim, NodeKey, EUiAnimProperty::SCALE, Target, ui_token::motion::TOGGLE, 2), 0.0f, 1.0f);
-				if(Ctx.m_pAnim->HasActiveAnimation(NodeKey, EUiAnimProperty::SCALE))
+				const bool WantMorph = qm_password_icon::ResolveStyle(g_Config.m_QmUiPasswordIconStyle) == qm_password_icon::STYLE_MORPH;
+				// 只有真实出图趟推进轨道，测量/纯背景趟只读当前值：一帧内被画多次时，
+				// 每次都必须拿到同一个进度，否则两层会停在相邻的两帧上。
+				const bool DrawPass = !Ctx.m_pUi->AnimationsBlocked();
+				const float Progress = pAnim == nullptr ? Target :
+						       !DrawPass ?
+									  std::clamp(pAnim->GetValue(NodeKey, EUiAnimProperty::SCALE, Target), 0.0f, 1.0f) :
+						       WantMorph ?
+									  std::clamp(ResolveUiAnimSpringValue(*pAnim, NodeKey, EUiAnimProperty::SCALE, Target, PASSWORD_ICON_SPRING, 2), 0.0f, 1.0f) :
+									  std::clamp(ResolveUiAnimValue(*pAnim, NodeKey, EUiAnimProperty::SCALE, Target, PASSWORD_ICON_FADE_SEC, EEasing::EASE_IN_OUT), 0.0f, 1.0f);
+				// 形态只由「样式 + 轨道是否活跃」决定，不看这是第几趟绘制：卡片内容会被
+				// 画进多个渲染目标，只要两层画的不是同一种图，就必然叠出重影。两趟共用
+				// IconFontSize，所以即便重复绘制也完全重合。
+				if(pAnim != nullptr && pAnim->HasActiveAnimation(NodeKey, EUiAnimProperty::SCALE))
 				{
-					const CUIRect IconRect{Rect.x + (Rect.w - IconSide) * 0.5f, Rect.y + (Rect.h - IconSide) * 0.5f, IconSide, IconSide};
-					Ctx.m_pUi->DrawQmIcon(IconRect, EQmIcon::EYE, FontIcons::FONT_ICON_EYE, Color.WithMultipliedAlpha(1.0f - Progress));
-					Ctx.m_pUi->DrawQmIcon(IconRect, EQmIcon::EYE_OFF, FontIcons::FONT_ICON_EYE_SLASH, Color.WithMultipliedAlpha(Progress));
+					// 有资产走烘焙帧条，否则回落交叉淡化；与设置卡片折叠箭头共用
+					// ui_widget::DrawIconSwap，避免两处各写一套过渡。
+					ui_widget::DrawIconSwap(Ctx, Rect, EQmIconSwapPair::EYE, IconFontSize, Progress, Color);
 					return;
 				}
 			}
 			if(pIcon == nullptr)
+				return;
+			DrawInputFieldIconGlyph(Ctx, Rect, pIcon, IconFontSize, Color);
+		}
+
+		// 统一用 DoLabel 画输入框内图标：字号由调用方给定，取色直接用调用方颜色，
+		// 与 DrawQmIcon 的全局图标色管线隔离——输入框里的图标应与框内文字同色。
+		void DrawInputFieldIconGlyph(const IUiContext &Ctx, const CUIRect &Rect, const char *pIcon, const float FontSize, const ColorRGBA &Color)
+		{
+			if(Ctx.m_pUi == nullptr || pIcon == nullptr)
 				return;
 			ITextRender *pTextRender = Ctx.m_pUi->TextRender();
 			const ColorRGBA PreviousColor = pTextRender->GetTextColor();
@@ -147,8 +192,7 @@ namespace ui_widget
 			pTextRender->TextColor(Color);
 			pTextRender->SetFontPreset(EFontPreset::ICON_FONT);
 			pTextRender->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-			const float FallbackFontSize = HasQmIcon ? IconSide * 0.8f : std::min(Rect.w, Rect.h) * 0.65f;
-			Ctx.m_pUi->DoLabel(&Rect, pIcon, FallbackFontSize, TEXTALIGN_MC);
+			Ctx.m_pUi->DoLabel(&Rect, pIcon, FontSize, TEXTALIGN_MC);
 			pTextRender->SetRenderFlags(PreviousFlags);
 			pTextRender->SetFontPreset(PreviousPreset);
 			pTextRender->TextOutlineColor(PreviousOutlineColor);
@@ -170,8 +214,13 @@ namespace ui_widget
 		const bool HasIcon = Options.m_pLeadingIcon != nullptr || Search;
 		const bool HasTrailingAction = Options.m_pTrailingActionId != nullptr && Options.m_pTrailingActionIcon != nullptr;
 		const bool InlineTrailingText = Options.m_InlineTrailingText && Options.m_pTrailingText != nullptr && Options.m_pTrailingText[0] != '\0';
+		// 一个输入框里不放两个尾部图标：有显隐眼睛这类动作时就不再给清空叉号留槽位，
+		// 眼睛因此贴到输入框最右边，也不会和叉号抢点击区域。
+		const bool Clearable = Options.m_Clearable && !HasTrailingAction;
 		const float TrailingWidth = HasTrailingAction ? std::max(Options.m_TrailingWidth, Rect.h) : Options.m_TrailingWidth;
-		const SInputFieldLayout Layout = ResolveInputFieldLayout(Rect, HasIcon, Options.m_Clearable, Ctx.m_UiScale, InlineTrailingText ? 0.0f : TrailingWidth);
+		const SInputFieldLayout Layout = ResolveInputFieldLayout(Rect, HasIcon, Clearable, Ctx.m_UiScale, InlineTrailingText ? 0.0f : TrailingWidth);
+		const bool ShowClear = Clearable && QmInputFieldClearVisible(pInput->IsEmpty(), WasActive, WasEmpty);
+		const float ClearAlpha = Clearable ? AnimateStateValue(Ctx, pInput->GetClearButtonId(), EUiAnimProperty::ALPHA, ShowClear ? 1.0f : 0.0f, ui_token::motion::HOVER_FADE) : 0.0f;
 		const float FontSize = std::min(Options.m_FontSize, Layout.m_ContentRect.h * CUi::ms_FontmodHeight * 0.8f);
 		CUIRect TextRect = Layout.m_ContentRect;
 		CUIRect TrailingRect = Layout.m_TrailingRect;
@@ -191,11 +240,20 @@ namespace ui_widget
 		CUiScopedSurfaceText SurfaceText(Ctx.m_pUi->TextRender(), PlateColor);
 		// 激活态边框单层绘制：颜色与粗细随聚焦动画在常规边框与强调色环之间过渡，
 		// 不再叠加第二层描边——半透明强调环叠在常规边框上会让灰边透出（叠色）。
+		// 聚焦描边必须算在真正出图的那趟：设置卡片的内容是在 RenderOnly 的 DRAW 回放里出图，
+		// 预布局输入趟的圆角面会被 DrawingSuppressed 吃掉，只看 ProcessInput 就永远画不出描边。
 		float FocusAlpha = 0.0f;
-		if(ProcessInput && Ctx.m_pAnim != nullptr)
+		const bool FocusPaintPass = Options.m_ProcessInput && !Ctx.m_pUi->MeasurementOnly() && !Ctx.m_pUi->DrawingSuppressed();
+		CUiV2AnimationRuntime *pFocusAnim = Ctx.m_pAnim != nullptr ? Ctx.m_pAnim : Ctx.m_pUi->QmAnimationRuntime();
+		if(FocusPaintPass && pFocusAnim != nullptr)
 		{
 			const bool FocusActive = InputFieldFocusActive(Ctx, pInput, Layout.m_ShellRect, Options.m_Mode == EInputFieldMode::MULTILINE);
-			FocusAlpha = AnimateStateValue(Ctx, pInput, EUiAnimProperty::ALPHA, FocusActive ? 1.0f : 0.0f, ui_curve::DECELERATE);
+			const uint64_t FocusKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash, reinterpret_cast<uint64_t>(pInput));
+			const float FocusTarget = FocusActive ? 1.0f : 0.0f;
+			// 同一帧可能重复出图：只让真实出图的趟推进轨道，其余趟只读当前进度。
+			FocusAlpha = Ctx.m_pUi->AnimationsBlocked() ?
+					     pFocusAnim->GetValue(FocusKey, EUiAnimProperty::ALPHA, FocusTarget) :
+					     pFocusAnim->ResolveTargetValue(FocusKey, EUiAnimProperty::ALPHA, FocusTarget, ui_token::motion::INPUT_FOCUS_RING);
 		}
 		if(!Ctx.m_pUi->MeasurementOnly() && FocusAlpha > 0.01f)
 		{
@@ -235,7 +293,7 @@ namespace ui_widget
 		RenderOptions.m_DrawBackground = false;
 		RenderOptions.m_ProcessInput = ProcessInput;
 		CUIRect InputHitRect = Layout.m_ShellRect;
-		if(Options.m_Clearable && Layout.m_ClearRect.w > 0.0f)
+		if(Clearable && ShowClear && Layout.m_ClearRect.w > 0.0f)
 			InputHitRect.VSplitRight(Layout.m_ClearRect.w, &InputHitRect, nullptr);
 		if(HasTrailingAction && TrailingRect.w > 0.0f)
 			InputHitRect.VSplitRight(TrailingRect.w, &InputHitRect, nullptr);
@@ -249,32 +307,22 @@ namespace ui_widget
 			else
 				Changed = Ctx.m_pUi->DoEditBox(pInput, &TextRect, FontSize, Options.m_Corners, {}, TextAlign, RenderOptions);
 		}
-		// 单行输入：Enter = 确认并退出编辑态（多行保留换行语义）。此前没有任何
-		// 路径在回车时失焦，Result.m_Submitted（依赖 Deactivated+SubmitPressed）
-		// 永远不成立——数值框的提交分支随之失效，输入后一直停在编辑态。
-		// IME 组词中的回车是候选确认，不退出编辑态（见 QmEditorTextInput 合同）。
-		// 必须走 ReleaseActiveTextInput 而非 Deactivate+SetActiveItem(nullptr)：
-		// SetActiveItem 对空指针不清 m_pLastActiveItem，下一帧 DoEditBox 会凭
-		// m_pLastActiveItem 重新 Activate，输入框复活（实测回归，见
-		// QmNumericFieldEnter.EnterDeactivatesInputAndSubmits）。
-		if(ProcessInput && Options.m_Mode != EInputFieldMode::MULTILINE && pInput->IsActive() && !Ctx.m_pUi->Input()->HasComposition() &&
-			(Ctx.m_pUi->Input()->KeyPress(KEY_RETURN) || Ctx.m_pUi->Input()->KeyPress(KEY_KP_ENTER)))
-		{
-			Ctx.m_pUi->ReleaseActiveTextInput(pInput);
-		}
+		// 确认与失焦统一由 DoEditBox 的路由热键处理，避免 IME 已消费的原始按键再次生效。
 		if(RenderOnly)
 			pInput->SetEmptyText(pPreviousPlaceholder);
 
-		if(Options.m_Clearable && !Ctx.m_pUi->MeasurementOnly())
+		if(Clearable && !Ctx.m_pUi->MeasurementOnly() && ClearAlpha > 0.01f)
 		{
 			const CUIRect &ClearRect = Layout.m_ClearRect;
+			// 清除按钮跟随内容出现/消失；槽位始终保留，文字不因 × 出现而重排。
+			CUiScopedControlAlphaScale ClearFade(Ctx.m_pUi, ClearAlpha);
 			SButtonSurfaceOptions ActionOptions;
 			ActionOptions.m_Role = EUiButtonRole::ICON;
 			ActionOptions.m_TransparentInactive = true;
 			ActionOptions.m_Corners = IGraphics::CORNER_R;
 			DrawButtonSurface(Ctx, pInput->GetClearButtonId(), ClearRect, ActionOptions);
-			DrawInputFieldIcon(Ctx, ClearRect, FontIcons::FONT_ICON_XMARK, InputIconColor, static_cast<int>(EQmIcon::CLOSE));
-			if(ProcessInput && Ctx.m_pUi->DoButtonLogic(pInput->GetClearButtonId(), 0, &ClearRect, BUTTONFLAG_LEFT))
+			DrawInputFieldIcon(Ctx, ClearRect, FontIcons::FONT_ICON_XMARK, InputIconColor.WithMultipliedAlpha(ClearAlpha), static_cast<int>(EQmIcon::CLOSE));
+			if(ShowClear && ProcessInput && Ctx.m_pUi->DoButtonLogic(pInput->GetClearButtonId(), 0, &ClearRect, BUTTONFLAG_LEFT))
 			{
 				pInput->Clear();
 				Ctx.m_pUi->SetActiveItem(pInput);
@@ -287,9 +335,10 @@ namespace ui_widget
 			SButtonSurfaceOptions ActionOptions;
 			ActionOptions.m_Role = EUiButtonRole::ICON;
 			ActionOptions.m_TransparentInactive = true;
-			ActionOptions.m_Corners = Options.m_Clearable ? IGraphics::CORNER_NONE : IGraphics::CORNER_R;
+			ActionOptions.m_Corners = Clearable ? IGraphics::CORNER_NONE : IGraphics::CORNER_R;
 			DrawButtonSurface(Ctx, Options.m_pTrailingActionId, TrailingRect, ActionOptions);
-			DrawInputFieldIcon(Ctx, TrailingRect, Options.m_pTrailingActionIcon, InputIconColor, Options.m_TrailingActionQmIcon);
+			// 尾部图标必须带上动作 id：它是显隐动画的节点键，缺了就一直走静态字形。
+			DrawInputFieldIcon(Ctx, TrailingRect, Options.m_pTrailingActionIcon, InputIconColor, Options.m_TrailingActionQmIcon, Options.m_pTrailingActionId);
 			TrailingAction = ProcessInput && Ctx.m_pUi->DoButtonLogic(Options.m_pTrailingActionId, 0, &TrailingRect, BUTTONFLAG_LEFT) != 0;
 		}
 		if(Options.m_pTrailingText != nullptr && TrailingRect.w > 0.0f)
@@ -337,6 +386,29 @@ namespace ui_widget
 		InputOptions.m_TextAlign = Options.m_TextAlign;
 		return InputField(Ctx, pInput, Rect, InputOptions).m_Changed;
 	}
+	SInputFieldResult PasswordField(const IUiContext &Ctx, CLineInput *pInput, const CUIRect &Rect, SPasswordFieldState *pState, const SPasswordFieldOptions &Options)
+	{
+		if(Ctx.m_pUi == nullptr || pInput == nullptr || pState == nullptr)
+			return {};
+
+		// 隐藏状态先落到输入框，再交给统一的输入框实现；显隐按钮由尾部动作槽位承担。
+		pInput->SetHidden(!pState->m_Visible);
+		SInputFieldOptions FieldOptions;
+		FieldOptions.m_pPlaceholder = Options.m_pPlaceholder;
+		FieldOptions.m_FontSize = Options.m_FontSize;
+		FieldOptions.m_Corners = Options.m_Corners;
+		FieldOptions.m_pTrailingActionId = &pState->m_Toggle;
+		FieldOptions.m_pTrailingActionIcon = pState->m_Visible ? FontIcons::FONT_ICON_EYE_SLASH : FontIcons::FONT_ICON_EYE;
+		FieldOptions.m_TrailingActionQmIcon = static_cast<int>(pState->m_Visible ? EQmIcon::EYE_OFF : EQmIcon::EYE);
+		FieldOptions.m_TrailingWidth = Options.m_TrailingWidth > 0.0f ? Options.m_TrailingWidth : std::max(Rect.h, 18.0f * std::max(Ctx.m_UiScale, 0.1f));
+		FieldOptions.m_Clearable = Options.m_Clearable;
+
+		const SInputFieldResult Result = InputField(Ctx, pInput, Rect, FieldOptions);
+		if(Result.m_TrailingAction)
+			pState->m_Visible = !pState->m_Visible;
+		return Result;
+	}
+
 	void ReadOnlyTextField(const IUiContext &Ctx, CLineInput *pInput, const CUIRect &Rect, const char *pPlaceholder, float FontSize)
 	{
 		if(Ctx.m_pUi == nullptr || pInput == nullptr)
@@ -458,7 +530,11 @@ namespace ui_widget
 			InputField = Controls;
 		if(InputField.w <= 0.0f)
 			InputField = ValueRect;
-		InputField.VMargin(std::min(5.0f, ValueWidth * 0.1f), &InputField);
+		// 内缩只留在左侧：外框右边缘必须落在控件列右边界上，数值框才能和同行开关、
+		// 下拉右对齐。此前两侧各缩 5px，是单位还占独立尾槽时给「外框—单位」留的间距；
+		// 单位已改成框内内联显示，右侧再缩就只剩一条比开关短的错位空隙。
+		// 左侧内缩保留，继续用作滑条轨道与输入框之间的间距。
+		InputField.VSplitLeft(std::min(5.0f, ValueWidth * 0.1f), nullptr, &InputField);
 
 		if(HasLabel)
 		{
@@ -680,14 +756,33 @@ namespace ui_widget
 			const uint64_t TrackKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash ^ 0xA5A5ull, reinterpret_cast<uint64_t>(pId));
 			Track = ResolveUiAnimValueColor(*pAnim, TrackKey, Track, ui_token::motion::BTN_HOVER.m_DurationSec, ui_token::motion::BTN_HOVER.m_Easing);
 			const uint64_t KnobKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash ^ 0x5A5Aull, reinterpret_cast<uint64_t>(pId));
+			// 开关首次出现时用当前状态初始化滑块，避免一露面就自己左右滑一段。
+			if(!pAnim->HasValue(KnobKey, EUiAnimProperty::COLOR_MIX))
+				SetUiPresentationStateValue(*pAnim, KnobKey, EUiAnimProperty::COLOR_MIX, Progress);
 			Progress = ResolveUiAnimSpringValue(*pAnim, KnobKey, EUiAnimProperty::COLOR_MIX, Progress, ui_token::motion::TOGGLE);
 		}
-		const SToggleLayout Layout = ResolveToggleLayout(Rect, Progress);
-		const bool Hovered = Enabled && Ctx.m_pUi->Enabled() && Ctx.m_pUi->VisualMouseHovered(pHitRect != nullptr ? pHitRect : &Rect);
+		// 滑块离目标档位越远拉伸越多：中段最像液体，落位时随弹簧回弹收圆。
+		const float KnobStretch = Animate && Enabled && !Ctx.m_pUi->AnimationsBlocked() ? std::clamp(std::abs(Progress - (Value ? 1.0f : 0.0f)), 0.0f, 1.0f) * 2.0f : 0.0f;
+		const SToggleLayout Layout = ResolveToggleLayout(Rect, Progress, KnobStretch);
+		const bool Hovered = Enabled && Ctx.m_pUi->Enabled() && Ctx.m_pUi->VisualSurfaceHovered(pHitRect != nullptr ? pHitRect : &Rect);
 		const bool Pressed = Hovered && Ctx.m_pUi->CheckActiveItem(pId) && Ctx.m_pUi->MouseButton(0);
 		const auto Feedback = ResolveUiToggleFeedbackStyle(Style, Track, Backdrop, Enabled, Hovered, Pressed);
 		DrawControlSurface(Ctx, Layout.m_Track, Feedback.m_Track, Feedback.m_Border, ui_token::radius::PILL, ui_token::feedback::ICON_BORDER_WIDTH);
 		DrawControlSurface(Ctx, Layout.m_Knob, Feedback.m_Knob, ColorRGBA(), ui_token::radius::PILL);
+	}
+
+	// 两端渐隐的细分隔线：分组标题下用它，比整块背景板轻，不会把标题读成按钮。
+	void DrawFadeDivider(CUi *pUi, const CUIRect &Rect)
+	{
+		if(pUi == nullptr || pUi->MeasurementOnly())
+			return;
+		const float Inset = std::min(Rect.w * ui_token::server_filter::DIVIDER_INSET_RATIO, ui_token::server_filter::DIVIDER_INSET_MAX);
+		CUIRect Bar{Rect.x + Inset, Rect.y + (Rect.h - ui_token::server_filter::DIVIDER_THICKNESS) * 0.5f, std::max(0.0f, Rect.w - 2.0f * Inset), ui_token::server_filter::DIVIDER_THICKNESS};
+		const ColorRGBA Peak = ui_token::color::TEXT_SECONDARY.WithAlpha(0.18f);
+		const ColorRGBA Edge = Peak.WithAlpha(0.0f);
+		const float Half = Bar.w * 0.5f;
+		pUi->Graphics()->DrawRect4(Bar.x, Bar.y, Half, Bar.h, Edge, Peak, Edge, Peak, IGraphics::CORNER_NONE, 0.0f);
+		pUi->Graphics()->DrawRect4(Bar.x + Half, Bar.y, Bar.w - Half, Bar.h, Peak, Edge, Peak, Edge, IGraphics::CORNER_NONE, 0.0f);
 	}
 
 	void DrawMarkedControl(const IUiContext &Ctx, const void *pId, const char *pMark, const CUIRect &Rect, const CUIRect *pHitRect)
@@ -702,6 +797,32 @@ namespace ui_widget
 		CUiScopedSurfaceText SurfaceText(Ctx.m_pUi->TextRender(), Fill);
 		if(pMark != nullptr && pMark[0] != '\0')
 			Ctx.m_pUi->DoLabel(&Rect, pMark, Rect.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
+	}
+
+	bool FilterChip(const IUiContext &Ctx, const void *pId, const CUIRect &Rect, const char *pLabel, bool Selected, bool Enabled)
+	{
+		if(Ctx.m_pUi == nullptr || pId == nullptr)
+			return false;
+		// 禁用时不接输入，也不画选中色：让「这组选项现在不起作用」看得出来。
+		const bool Pressed = Enabled && !Ctx.m_pUi->RenderOnly() && Ctx.m_pUi->DoButtonLogic(pId, 0, &Rect, BUTTONFLAG_LEFT) != 0;
+		if(Ctx.m_pUi->MeasurementOnly() || Ctx.m_pUi->DrawingSuppressed())
+			return Pressed;
+		CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ctx.m_pUi);
+		SButtonSurfaceOptions Options;
+		Options.m_Selected = Selected && Enabled;
+		Options.m_Radius = ui_token::radius::PILL;
+		// 每个胶囊都带自己的胶囊底（静止态也画），只有选中态换成强调色；
+		// 透明底会让整排退化成纯文字，看不出可点区域。
+		const ColorRGBA Fill = DrawButtonSurface(Ctx, pId, Rect, Options);
+		CUiScopedSurfaceText SurfaceText(Ctx.m_pUi->TextRender(), Fill);
+		SLabelProperties Props;
+		Props.m_MaxWidth = Rect.w;
+		Props.m_EllipsisAtEnd = true;
+		Props.m_MinimumFontSize = ui_token::server_filter::CHIP_MIN_FONT_SIZE;
+		Props.SetColor(Enabled ? ui_token::color::TEXT_PRIMARY : ui_token::color::TEXT_DISABLED);
+		CUIRect LabelRect = Rect;
+		Ctx.m_pUi->DoLabel(&LabelRect, pLabel, ui_token::server_filter::CHIP_FONT_SIZE, TEXTALIGN_MC, Props);
+		return Pressed;
 	}
 
 	bool Toggle(const IUiContext &Ctx, const void *pId, bool *pValue, const CUIRect &Rect, bool ProcessInput, bool Animate)
