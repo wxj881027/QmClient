@@ -5387,6 +5387,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/support/translate_http_test_support.h
     src/test/unit/qmclient/translate/translate_detect_test.cpp
     src/test/unit/qmclient/translate/translate_history_test.cpp
+    src/test/unit/qmclient/translate/translate_outgoing_request_test.cpp
     src/test/integration/qmclient/translate/translate_jobs_integration_test.cpp
     src/test/unit/qmclient/translate/translate_responses_test.cpp
     src/test/unit/qmclient/translate/translate_llm_parse_test.cpp

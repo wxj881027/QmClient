@@ -32,6 +32,10 @@ struct STranslateCompletion
 	std::string m_SendText;
 };
 
+// 显式语言后缀优先；单次翻译使用发送目标，空输入和命令不进入翻译。
+// pFallbackTarget 为空时，仅识别显式语言后缀。
+bool PrepareOutgoingTranslateRequest(const char *pLine, const char *pFallbackTarget, std::string &Text, std::string &Target);
+
 // 分发器只调用一次译文发送入口，原文通过独立的本地附注参数传递。
 bool DispatchOutgoingTranslation(const STranslateCompletion &Completed, const std::function<bool(int, const char *, const char *, int)> &SendTranslated);
 
