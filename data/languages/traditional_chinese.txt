@@ -839,6 +839,9 @@ All remaining binds: scoreboard, spectating, console, screenshots, emoticon and 
 All sounds
 == 全部音效
 
+All weapons
+== 全部武器
+
 Allow /map.
 == 是否允許 /map
 
@@ -1027,9 +1030,6 @@ Append saved word list chunk
 
 Append to log file instead of overwriting
 == 追加到日誌文件而不是每次覆蓋
-
-Apple
-== 蘋果
 
 Apple capsule
 == 蘋果膠囊
@@ -1796,6 +1796,9 @@ Bind dummy control and copy actions
 Bind key to execute a command or view keybindings
 == 綁定按鍵以執行命令或查看按鍵綁定
 
+Bind menu layout: 0 = radial wheel, 1 = rounded panel
+== 綁定選單佈局：0 = 徑向輪盤，1 = 圓角面板
+
 Bind movement, jump, hook, and fire actions
 == Bind movement, jump, hook, and fire actions
 
@@ -2106,7 +2109,7 @@ Capsule ends
 == 膠囊端頭
 
 Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
-== Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
+== 膠囊端部：0 = 普通圓弧，1 = 平滑肩部，2 = 蘋果連續曲率
 
 Capture the flag
 == 奪旗模式 (CTF)
@@ -2743,9 +2746,6 @@ Colors of the hook collision line, in case of a possible collision with:
 
 Colors of the translate button in the chat input and of the language menu that button opens.
 == 聊天輸入框裡翻譯按鈕的顏色，以及該按鈕開啟的語言選單的顏色。
-
-Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
-== Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
 
 Colors too close to the map background are hard to read while moving.
 == 顏色若太接近地圖背景，移動時會很難看清。
@@ -3762,7 +3762,7 @@ Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == 專用 WebSocket 位址（留空使用 wss://qmclient.icu/ws）
 
 Deep freeze
-== Deep freeze
+== 深凍
 
 Deep freeze color
 == 深度凍結顏色
@@ -3774,10 +3774,7 @@ Deep freeze tile outline color
 == 深凍圖塊輪廓顏色
 
 Deep freeze tile outline width
-== Deep freeze tile outline width
-
-Deep unfreeze
-== Deep unfreeze
+== 深凍圖塊輪廓寬度
 
 Deep unfreeze color
 == 深度解凍顏色
@@ -3789,7 +3786,7 @@ Deep unfreeze tile outline color
 == 深解凍圖塊輪廓顏色
 
 Deep unfreeze tile outline width
-== Deep unfreeze tile outline width
+== 深解凍圖塊輪廓寬度
 
 Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 == Deepfly 模式（0=正常，1=DF，2=HDF，3=自定義）
@@ -4042,6 +4039,9 @@ Disable client-initiated self-kill (K key / kill command)
 
 Disable clipping
 == 禁用裁剪
+
+Disable fast practice mode
+== 關閉快速練習模式
 
 Disable Gores auto-switch when picking up extra weapon
 == 拿到額外武器時停用 Gores 自動切換
@@ -4514,6 +4514,9 @@ Dummy window size
 Dummy window zoom
 == 分身小窗縮放
 
+Dump the client-side world state (practice branch, tracks, switchers, view session)
+== 列印用戶端世界狀態（練習分支、軌跡、開關、檢視工作階段）
+
 Dump the current savestring
 == 匯出目前存檔字串
 
@@ -4855,6 +4858,9 @@ Enable fast input in Gores mode
 
 Enable fast map download
 == 啟用快速地圖下載
+
+Enable fast practice mode
+== 開啟快速練習模式
 
 Enable fat skin
 == 啟用脂肪皮
@@ -5210,6 +5216,9 @@ End bounce
 End marker of replay slice
 == 回放切片的結束標記
 
+Endless hook
+== 無限鉤
+
 Endless hook has been activated
 == 無限鉤已開啟
 
@@ -5236,6 +5245,9 @@ Enter /practice mode or restart to avoid the entire team being killed in 60 seco
 
 Enter a CP number from 1 to 255.
 == 請輸入 1–255 的 CP 編號
+
+Enter fast practice
+== 進入快速練習
 
 Enter Password
 == 輸入密碼
@@ -5384,6 +5396,9 @@ Existing Player
 Exit and install
 == 結束並安裝
 
+Exit fast practice
+== 退出快速練習
+
 Exit replay view
 == 退出回放檢視
 
@@ -5401,9 +5416,6 @@ Expanded dropdown background color
 
 Expanded dropdown background opacity percentage
 == 展開清單背景 — 不透明度百分比
-
-Expanded personalization sections (format: stableId=1;stableId2=0;)
-== Expanded personalization sections (format: stableId=1;stableId2=0;)
 
 Experimental
 == 實驗性
@@ -6009,7 +6021,7 @@ Freeze tile outline color
 == 凍結圖塊輪廓顏色
 
 Freeze tile outline width
-== Freeze tile outline width
+== 凍結圖塊輪廓寬度
 
 Frequently asked questions
 == 常見問題
@@ -6855,13 +6867,10 @@ Hook through teleporters (deprecated, use special entities instead)
 == 鉤子穿過傳送器（已棄用，請使用特殊實體代替）
 
 Hookable tile outline color
-== Hookable tile outline color
+== 可鉤圖塊輪廓顏色
 
 Hookable tile outline width
-== Hookable tile outline width
-
-Hookable tiles
-== Hookable tiles
+== 可鉤圖塊輪廓寬度
 
 Hooking L/R: %.0f%%/%.0f%%
 == 出鉤 L/R：%.0f%%/%.0f%%
@@ -7460,6 +7469,9 @@ Jelly others
 Jelly strength
 == Q 彈強度
 
+Jetpack
+== 噴射背包
+
 Jitter
 == 抖動
 
@@ -7561,9 +7573,6 @@ Keep the defaults unless you play with high ping; then try one option at a time 
 
 Keep the text light on a dark background; press "Reset tooltip appearance" to return to the defaults.
 == 深色背景配淺色文字最好讀；想恢復建議樣式就點重設提示外觀。
-
-Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
-== Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
 
 Keep unsent message on chat close
 == 關閉聊天時保留未發送內容
@@ -8399,9 +8408,6 @@ Map play history
 Map preview rendering unavailable
 == 目前無法繪製地圖預覽
 
-Map preview shows the entity layer only (hides textures)
-== Map preview shows the entity layer only (hides textures)
-
 Map Preview TODO
 == 地圖預覽待做
 
@@ -9022,6 +9028,9 @@ Muted
 
 Muted players
 == 已封鎖玩家
+
+My binds
+== 我的綁定
 
 my_%s
 == 我的_%s
@@ -10205,6 +10214,15 @@ Path to client key for the MySQL/MariaDB SSL connection
 Pause
 == 暫停
 
+Pause recording
+== 暫停錄製
+
+Pause recording the practice line (the recorded part is kept)
+== 暫停錄製練習線路（已錄部分保留）
+
+Pause recording without discarding what has been recorded so far. Resuming starts a new segment, so the paused stretch is not drawn as a straight line.
+== 暫停錄製，已錄內容不會丟棄。繼續時會開始新的分段，暫停期間的路段不會被畫成一條直線。
+
 Pause the current demo
 == 暫停回放
 
@@ -10303,9 +10321,6 @@ Pick a shape, then tune glow and animation speed.
 
 Pick a slot, type the command and its label, then hold the wheel key in game to test.
 == 選一個槽位，輸入指令和對應標籤，再到遊戲裡按住輪盤鍵測試。
-
-Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
-== Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
 
 Pick result: %s
 == 抽取結果：%s
@@ -10750,6 +10765,9 @@ Position jump tip
 
 Position:
 == 座標
+
+Practice ghosts
+== 練習影子
 
 Practice mode can't be enabled in team 0 mode.
 == 0 隊模式下不能開啟練習模式
@@ -11777,6 +11795,9 @@ Remove war clan:
 Remove war name:
 == 刪除敵對玩家：
 
+Remove weapons
+== 移除武器
+
 Removed %s from friends
 == 已將 %s 移出好友
 
@@ -11966,6 +11987,9 @@ Replaces or hides chat lines that match words on your own list before they are s
 Replay
 == 回放
 
+Replay a saved practice ghost group in demo-style view mode
+== 以 demo 式檢視模式回放已儲存的練習影子組
+
 Replay downloaded
 == 回放已下載
 
@@ -12025,6 +12049,9 @@ Rescan fonts and query resolved Unicode face and glyph when qm_graphics_trace is
 
 Rescue is not enabled on this server and you're not in a team with /practice turned on. Note that you can't earn a rank with practice enabled.
 == 本服未開啟救援功能，且你所在隊伍也沒有開啟 /practice。注意：練習模式下無法獲得排名
+
+Rescue mode
+== 救援模式
 
 Rescue mode changed to auto.
 == 救援模式已切換為 auto。
@@ -12152,6 +12179,9 @@ Restart
 Restart in x seconds (0 = abort)
 == 在 x 秒後重新啟動（0 = 中止）
 
+Restart practice world
+== 重開練習世界
+
 Restart the client
 == 重啟客戶端
 
@@ -12173,6 +12203,12 @@ Restore old single-segment hook collision line behavior
 Restore recommended
 == 恢復建議值
 
+Restore the practice world to the state it had when fast practice was enabled
+== 把練習世界恢復到開啟快速練習時的狀態
+
+Restore the practice world to the state it had when fast practice was enabled. The recorded line is kept and a new segment is started.
+== 把練習世界恢復到開啟快速練習時的狀態。已錄線路保留，並從新分段繼續。
+
 Restored the built-in content
 == 已還原內建內容
 
@@ -12193,6 +12229,9 @@ Retry remote stats
 
 Retrying…
 == 正在重試…
+
+Return to respawn point
+== 回到重生點
 
 Reverse chat gradient colors
 == 反轉漸層顏色 (聊天)
@@ -12220,6 +12259,9 @@ Review the entries and change only what you understand; defaults are tuned for n
 
 Reviews configuration values that differ from their defaults and resets them.
 == 檢查與預設值不同的設定項，並可將其重設。
+
+Rifle
+== 步槍
 
 Rifle Laser Inner Color
 == 激光槍彈道實心顏色
@@ -12416,6 +12458,9 @@ Save power by lowering update rate
 Save power by lowering update rate (higher input latency)
 == 降低更新率以節省電量（輸入延遲較高）
 
+Save practice line
+== 儲存練習線路
+
 Save replay of best time per game
 == 保存每場遊戲最佳記錄的回放
 
@@ -12439,6 +12484,12 @@ Save team with code r.
 
 Save the best demo of each race
 == 保存每場遊戲最佳記錄的回放
+
+Save the current fast-practice line (all tees) as a replayable ghost group
+== 把目前快速練習線路（所有 Tee）存成可回放的影子組
+
+Save the current fast-practice line (all tees) as a replayable ghost group. Only works while fast practice is active. Find the saved group on the Ghost page and press View to replay it as a demo-style ghost without leaving the server.
+== 把目前快速練習線路（本體與分身）存成可回放的影子組。僅在快速練習開啟時有效。儲存後到影子頁選取該組並按 View，即可以 demo 式回放查看，不離開伺服器。
 
 Save the current team
 == 保存當前隊伍
@@ -12535,9 +12586,6 @@ Scoreboard playtime
 
 Scoreboard point check
 == 計分板積分檢查
-
-Scoreboard row colors
-== Scoreboard row colors
 
 Scoreboard score lookup
 == 計分板查分
@@ -13019,6 +13067,9 @@ Set fullscreen mode: 0=off, 1=exclusive, 2=desktop, 3=windowed fullscreen
 Set microphone mute state (0=on, 1=mute)
 == 設置麥克風靜音狀態（0=開啟，1=靜音）
 
+Set practice respawn point
+== 設定練習重生點
+
 Set server to singleplayer mode (no player interaction, must be set before loading map)
 == 將伺服器設置為單人模式（沒有玩家交互，必須在加載地圖之前設置）
 
@@ -13344,10 +13395,10 @@ Show death tile outlines
 == 顯示死亡圖塊輪廓
 
 Show deep freeze tile outlines
-== Show deep freeze tile outlines
+== 顯示深凍圖塊輪廓
 
 Show deep unfreeze tile outlines
-== Show deep unfreeze tile outlines
+== 顯示深解凍圖塊輪廓
 
 Show default flag in scoreboard
 == 在記分牌中顯示默認國旗
@@ -13455,7 +13506,7 @@ Show freeze bars
 == 顯示解凍進度條
 
 Show freeze tile outlines
-== Show freeze tile outlines
+== 顯示凍結圖塊輪廓
 
 Show friend icon in name plates
 == 在暱稱中顯示好友圖標
@@ -13530,7 +13581,7 @@ Show hook strength number indicator
 == 顯示鉤索強度數值
 
 Show hookable tile outlines
-== Show hookable tile outlines
+== 顯示可鉤圖塊輪廓
 
 Show how weapons, shields, snowflakes, and flags appear in game
 == 顯示武器、護盾、雪花與旗幟在遊戲中的外觀
@@ -14106,10 +14157,10 @@ Show tuning parameters affecting own player (0=Off, 1=Show changed, 2=Show all)
 == 顯示影響自身玩家的調整參數信息（0 = 關閉，1 = 顯示已改變的，2 = 顯示全部）
 
 Show unfreeze tile outlines
-== Show unfreeze tile outlines
+== 顯示解凍圖塊輪廓
 
 Show unhookable tile outlines
-== Show unhookable tile outlines
+== 顯示不可鉤圖塊輪廓
 
 Show unknown server messages
 == 顯示未知伺服器消息
@@ -14807,14 +14858,23 @@ Start holding the hook before loading the savegame to keep the hook
 Start marker of replay slice
 == 回放切片的開始標記
 
+Start or resume recording the practice line
+== 開始或繼續錄製練習線路
+
 Start playback of ghosts
 == 開始播放鬼影
+
+Start recording
+== 開始錄製
 
 Start recording a demo
 == 開始錄製回放
 
 Start recording a video
 == 開始錄製視頻
+
+Start recording the fast-practice line, or resume after a pause. Recording is always manual: nothing is recorded until this is pressed.
+== 開始錄製快速練習線路，或在暫停後繼續。錄製始終是手動的：按下之前不會記錄任何內容。
 
 Start skin queue from a random position when entering a map
 == 進入地圖時從皮膚佇列隨機位置開始
@@ -14906,6 +14966,9 @@ Steam profile name
 Still free after %d sponsors. Take a look?
 == 已經靠 %d 位贊助者撐到現在，要看看嗎？
 
+Stop and save recording
+== 結束並儲存錄製
+
 Stop following
 == 停止跟隨
 
@@ -14936,6 +14999,12 @@ Stop recording a demo
 Stop recording a video
 == 停止錄製視頻
 
+Stop recording and save the practice line as a ghost group
+== 結束錄製並把練習線路存為影子組
+
+Stop recording and write the line to disk right away as a ghost group. The saved group can be replayed from the bind menu or the Ghost page.
+== 結束錄製，並立即把線路作為影子組寫入磁碟。儲存後的組可以從綁定選單或影子頁回放。
+
 Stop rendering text overlays in editor or with entities: higher = less detail = faster
 == 停止在編輯器中或使用實體渲染文本覆蓋：高值 = 更少的細節 = 更快的速度
 
@@ -14944,6 +15013,12 @@ Stop server
 
 Stop the current demo
 == 結束回放
+
+Store the current practice tee state as the respawn point
+== 把目前練習 Tee 狀態存為重生點
+
+Store the current tee state (position, weapons, jumps and movement state) as the practice respawn point.
+== 把目前 Tee 狀態（位置、武器、跳躍與移動狀態）存為練習重生點。
 
 Streamer mode
 == 直播模式
@@ -14955,7 +15030,7 @@ Strength icons assets
 == 強弱圖標資源
 
 Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)
-== Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)
+== 蘋果膠囊端部強度（0 = 半圓，100 = 最強）
 
 Stress system (debug builds only).
 == 壓力系統（僅限調試版本）
@@ -15401,6 +15476,12 @@ Tele
 Teleport all weapons (deprecated, use special entities instead)
 == 所有武器的傳送（已棄用，請使用特殊實體代替）
 
+Teleport back to the practice respawn point
+== 傳送回練習重生點
+
+Teleport back to the practice respawn point and restore the tee state saved there. Only the tee is restored; the world keeps running.
+== 傳送回練習重生點，並恢復在那裡儲存的 Tee 狀態。只回滾 Tee，世界照常運行。
+
 Teleport free spectator camera between hovered tele-in/out or checkpoint tele and a matching counterpart
 == 在懸停的傳送入口/出口或檢查點傳送點與其對應點之間傳送自由觀戰鏡頭
 
@@ -15430,6 +15511,9 @@ Teleport tile outline color
 
 Teleport tile outline width
 == 傳送圖塊輪廓寬度
+
+Teleport to cursor
+== 傳送到準心
 
 Teleport yourself out of freeze if auto rescue mode is enabled, otherwise it will set position for rescuing if grounded and teleport you out of freeze if not (use sv_rescue 1 to enable this feature)
 == 若啟用自動救援模式，則直接將你傳送出凍結；否則，落地時會記錄救援位置，未落地則直接傳送出凍結（用 sv_rescue 1 啟用）
@@ -16538,6 +16622,9 @@ UI server address
 UI size percentage
 == UI 大小百分比
 
+Un-solo
+== 解除 solo
+
 Unable to delete %d selected items. The first failing item was '%s'.
 == 無法刪除 %d 個選中項。第一個失敗項是“%s”。
 
@@ -16616,6 +16703,9 @@ Uncertainty duration
 Unclassified audio issue
 == 音頻異常未分類
 
+Undo deep freeze
+== 解除深凍
+
 Unexpected map upload response.
 == 地圖上傳介面傳回了異常回應。
 
@@ -16656,16 +16746,13 @@ Unfreeze tile outline color
 == 解凍圖塊輪廓顏色
 
 Unfreeze tile outline width
-== Unfreeze tile outline width
+== 解凍圖塊輪廓寬度
 
 Unhookable tile outline color
-== Unhookable tile outline color
+== 不可鉤圖塊輪廓顏色
 
 Unhookable tile outline width
-== Unhookable tile outline width
-
-Unhookable tiles
-== Unhookable tiles
+== 不可鉤圖塊輪廓寬度
 
 Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
 == 統一匯出品質（CRF/CQ/QP 標度 0-51，-1 = 使用 cl_video_crf）；映射到各編碼器的原生參數
@@ -17104,6 +17191,9 @@ Video was saved to '%s'
 
 Videos directory
 == 視頻目錄
+
+View
+== 檢視
 
 View details
 == 查看說明

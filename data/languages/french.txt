@@ -839,6 +839,9 @@ All remaining binds: scoreboard, spectating, console, screenshots, emoticon and 
 All sounds
 == Tous les sons
 
+All weapons
+== Toutes les armes
+
 Allow /map.
 == Autoriser /map.
 
@@ -1027,9 +1030,6 @@ Append saved word list chunk
 
 Append to log file instead of overwriting
 == Ajouter au fichier journal au lieu de l'écraser
-
-Apple
-== Apple
 
 Apple capsule
 == Capsule Apple
@@ -1796,6 +1796,9 @@ Bind dummy control and copy actions
 Bind key to execute a command or view keybindings
 == Lier une touche pour exécuter une commande ou afficher les touches liées
 
+Bind menu layout: 0 = radial wheel, 1 = rounded panel
+== Disposition du menu des binds : 0 = roue radiale, 1 = panneau arrondi
+
 Bind movement, jump, hook, and fire actions
 == Bind movement, jump, hook, and fire actions
 
@@ -2106,7 +2109,7 @@ Capsule ends
 == Extrémités de capsule
 
 Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
-== Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
+== Extrémités de capsule : 0 = arc simple, 1 = épaulement doux, 2 = continu Apple
 
 Capture the flag
 == Capture du drapeau (CTF)
@@ -2743,9 +2746,6 @@ Colors of the hook collision line, in case of a possible collision with:
 
 Colors of the translate button in the chat input and of the language menu that button opens.
 == Couleurs du bouton de traduction dans la zone de chat et du menu de langues qu'il ouvre.
-
-Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
-== Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
 
 Colors too close to the map background are hard to read while moving.
 == Des couleurs trop proches du fond de la carte sont illisibles en mouvement.
@@ -3762,7 +3762,7 @@ Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == Point de terminaison WebSocket dédié (vide utilise wss://qmclient.icu/ws)
 
 Deep freeze
-== Deep freeze
+== Gel profond
 
 Deep freeze color
 == Couleur de gel profond
@@ -3774,10 +3774,7 @@ Deep freeze tile outline color
 == Couleur du contour des tuiles de gel profond
 
 Deep freeze tile outline width
-== Deep freeze tile outline width
-
-Deep unfreeze
-== Deep unfreeze
+== Largeur du contour des tuiles de gel profond
 
 Deep unfreeze color
 == Couleur de dégel profond
@@ -3789,7 +3786,7 @@ Deep unfreeze tile outline color
 == Couleur du contour des tuiles de dégel profond
 
 Deep unfreeze tile outline width
-== Deep unfreeze tile outline width
+== Largeur du contour des tuiles de dégel profond
 
 Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 == Mode Deepfly (0=Normal, 1=DF, 2=HDF, 3=Personnalisé)
@@ -4042,6 +4039,9 @@ Disable client-initiated self-kill (K key / kill command)
 
 Disable clipping
 == Désactiver le clipping
+
+Disable fast practice mode
+== Désactiver le mode pratique rapide
 
 Disable Gores auto-switch when picking up extra weapon
 == Désactiver le changement automatique Gores lors de l'obtention d'une arme supplémentaire
@@ -4514,6 +4514,9 @@ Dummy window size
 Dummy window zoom
 == Zoom de la fenêtre du Dummy
 
+Dump the client-side world state (practice branch, tracks, switchers, view session)
+== Afficher l'état du monde côté client (branche d'entraînement, pistes, interrupteurs, session de vue)
+
 Dump the current savestring
 == Exporter la chaîne de sauvegarde actuelle
 
@@ -4855,6 +4858,9 @@ Enable fast input in Gores mode
 
 Enable fast map download
 == Activer le téléchargement rapide de la carte
+
+Enable fast practice mode
+== Activer le mode pratique rapide
 
 Enable fat skin
 == Activer le skin gras
@@ -5210,6 +5216,9 @@ End bounce
 End marker of replay slice
 == Marqueur de fin de segment de rediffusion
 
+Endless hook
+== Grappin infini
+
 Endless hook has been activated
 == Le crochet infini a été activé
 
@@ -5236,6 +5245,9 @@ Enter /practice mode or restart to avoid the entire team being killed in 60 seco
 
 Enter a CP number from 1 to 255.
 == Saisissez un numéro de CP entre 1 et 255.
+
+Enter fast practice
+== Entrer en pratique rapide
 
 Enter Password
 == Entrer le mot de passe
@@ -5384,6 +5396,9 @@ Existing Player
 Exit and install
 == Quitter et installer
 
+Exit fast practice
+== Quitter la pratique rapide
+
 Exit replay view
 == Quitter la vue de la démo
 
@@ -5401,9 +5416,6 @@ Expanded dropdown background color
 
 Expanded dropdown background opacity percentage
 == Couleur de fond de la liste déroulée — opacité en pourcentage
-
-Expanded personalization sections (format: stableId=1;stableId2=0;)
-== Expanded personalization sections (format: stableId=1;stableId2=0;)
 
 Experimental
 == expérimental
@@ -6009,7 +6021,7 @@ Freeze tile outline color
 == Couleur du contour des tuiles de gel
 
 Freeze tile outline width
-== Freeze tile outline width
+== Largeur du contour des tuiles de gel
 
 Frequently asked questions
 == Questions fréquentes
@@ -6855,13 +6867,10 @@ Hook through teleporters (deprecated, use special entities instead)
 == Crochet à travers les téléporteurs (obsolète, utilisez les entités spéciales à la place)
 
 Hookable tile outline color
-== Hookable tile outline color
+== Couleur du contour des tuiles accrochables
 
 Hookable tile outline width
-== Hookable tile outline width
-
-Hookable tiles
-== Hookable tiles
+== Largeur du contour des tuiles accrochables
 
 Hooking L/R: %.0f%%/%.0f%%
 == Accrochage G/D : %.0f%%/%.0f%%
@@ -7460,6 +7469,9 @@ Jelly others
 Jelly strength
 == Force du Jelly
 
+Jetpack
+== Jetpack
+
 Jitter
 == Gigue
 
@@ -7561,9 +7573,6 @@ Keep the defaults unless you play with high ping; then try one option at a time 
 
 Keep the text light on a dark background; press "Reset tooltip appearance" to return to the defaults.
 == Sur un fond sombre, un texte clair se lit mieux ; le bouton de réinitialisation de l'apparence des infobulles rétablit les valeurs par défaut.
-
-Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
-== Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
 
 Keep unsent message on chat close
 == Conserver le contenu non envoyé lors de la fermeture du chat
@@ -8399,9 +8408,6 @@ Map play history
 Map preview rendering unavailable
 == Rendu de l’aperçu de la carte indisponible
 
-Map preview shows the entity layer only (hides textures)
-== Map preview shows the entity layer only (hides textures)
-
 Map Preview TODO
 == Aperçu de la carte à faire
 
@@ -9022,6 +9028,9 @@ Muted
 
 Muted players
 == Joueurs masqués
+
+My binds
+== Mes binds
 
 my_%s
 == mon_%s
@@ -10205,6 +10214,15 @@ Path to client key for the MySQL/MariaDB SSL connection
 Pause
 == Pause
 
+Pause recording
+== Mettre l'enregistrement en pause
+
+Pause recording the practice line (the recorded part is kept)
+== Mettre en pause l'enregistrement de la ligne d'entraînement (la partie enregistrée est conservée)
+
+Pause recording without discarding what has been recorded so far. Resuming starts a new segment, so the paused stretch is not drawn as a straight line.
+== Met l'enregistrement en pause sans perdre ce qui a déjà été enregistré. La reprise démarre un nouveau segment, pour que la pause ne soit pas tracée comme une ligne droite.
+
 Pause the current demo
 == Mettre en pause la démo actuelle
 
@@ -10303,9 +10321,6 @@ Pick a shape, then tune glow and animation speed.
 
 Pick a slot, type the command and its label, then hold the wheel key in game to test.
 == Choisis un emplacement, saisis la commande et son libellé, puis maintiens la touche de la roue en jeu pour tester.
-
-Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
-== Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
 
 Pick result: %s
 == Résultat du tirage : %s
@@ -10750,6 +10765,9 @@ Position jump tip
 
 Position:
 == Position :
+
+Practice ghosts
+== Fantômes d'entraînement
 
 Practice mode can't be enabled in team 0 mode.
 == Le mode entraînement ne peut pas être activé en mode équipe 0.
@@ -11777,6 +11795,9 @@ Remove war clan:
 Remove war name:
 == Supprimer le nom ennemi :
 
+Remove weapons
+== Retirer les armes
+
 Removed %s from friends
 == %s a été retiré des amis
 
@@ -11966,6 +11987,9 @@ Replaces or hides chat lines that match words on your own list before they are s
 Replay
 == Rediffusion
 
+Replay a saved practice ghost group in demo-style view mode
+== Rejouer un groupe de fantômes d'entraînement enregistré en mode vue type démo
+
 Replay downloaded
 == Rediffusion téléchargée
 
@@ -12025,6 +12049,9 @@ Rescan fonts and query resolved Unicode face and glyph when qm_graphics_trace is
 
 Rescue is not enabled on this server and you're not in a team with /practice turned on. Note that you can't earn a rank with practice enabled.
 == Le sauvetage n'est pas activé sur ce serveur et vous n'êtes pas dans une équipe avec /practice activé. Notez que vous ne pouvez pas obtenir de classement avec l'entraînement activé.
+
+Rescue mode
+== Mode sauvetage
 
 Rescue mode changed to auto.
 == Mode de sauvetage changé en auto.
@@ -12152,6 +12179,9 @@ Restart
 Restart in x seconds (0 = abort)
 == Redémarrer dans x secondes (0 = annuler)
 
+Restart practice world
+== Redémarrer le monde d'entraînement
+
 Restart the client
 == Redémarrer le client
 
@@ -12173,6 +12203,12 @@ Restore old single-segment hook collision line behavior
 Restore recommended
 == Restaurer les valeurs recommandées
 
+Restore the practice world to the state it had when fast practice was enabled
+== Replace le monde d'entraînement dans l'état qu'il avait à l'activation de la pratique rapide
+
+Restore the practice world to the state it had when fast practice was enabled. The recorded line is kept and a new segment is started.
+== Replace le monde d'entraînement dans l'état qu'il avait à l'activation de la pratique rapide. La ligne enregistrée est conservée et un nouveau segment commence.
+
 Restored the built-in content
 == Contenu intégré restauré
 
@@ -12193,6 +12229,9 @@ Retry remote stats
 
 Retrying…
 == Nouvelle tentative…
+
+Return to respawn point
+== Retourner au point de réapparition
 
 Reverse chat gradient colors
 == Inverser les couleurs du dégradé (discussion)
@@ -12220,6 +12259,9 @@ Review the entries and change only what you understand; defaults are tuned for n
 
 Reviews configuration values that differ from their defaults and resets them.
 == Vérifie les réglages qui diffèrent de leurs valeurs par défaut et les réinitialise.
+
+Rifle
+== Fusil
 
 Rifle Laser Inner Color
 == Couleur intérieure du laser du fusil
@@ -12416,6 +12458,9 @@ Save power by lowering update rate
 Save power by lowering update rate (higher input latency)
 == Économisez l'énergie en réduisant le taux de rafraîchissement (latence d'entrée plus élevée)
 
+Save practice line
+== Enregistrer la ligne d'entraînement
+
 Save replay of best time per game
 == Sauvegarder la rediffusion du meilleur temps par partie
 
@@ -12439,6 +12484,12 @@ Save team with code r.
 
 Save the best demo of each race
 == Sauvegarder la meilleure démo de chaque course
+
+Save the current fast-practice line (all tees) as a replayable ghost group
+== Enregistrer la ligne d'entraînement actuelle (tous les tees) comme groupe de fantômes rejouable
+
+Save the current fast-practice line (all tees) as a replayable ghost group. Only works while fast practice is active. Find the saved group on the Ghost page and press View to replay it as a demo-style ghost without leaving the server.
+== Enregistre la ligne d'entraînement actuelle (joueur et dummy) comme groupe de fantômes rejouable. Ne fonctionne que pendant l'entraînement rapide. Retrouvez le groupe sur la page des fantômes et appuyez sur View pour le revoir en mode démo sans quitter le serveur.
 
 Save the current team
 == Sauvegarder l’équipe actuelle
@@ -12535,9 +12586,6 @@ Scoreboard playtime
 
 Scoreboard point check
 == Vérification des points du tableau des scores
-
-Scoreboard row colors
-== Scoreboard row colors
 
 Scoreboard score lookup
 == Consulter les scores dans le tableau des scores
@@ -13019,6 +13067,9 @@ Set fullscreen mode: 0=off, 1=exclusive, 2=desktop, 3=windowed fullscreen
 Set microphone mute state (0=on, 1=mute)
 == Définir l'état du muet du microphone (0=activé, 1=muet)
 
+Set practice respawn point
+== Définir le point de réapparition d'entraînement
+
 Set server to singleplayer mode (no player interaction, must be set before loading map)
 == Passer le serveur en mode solo (aucune interaction joueur, doit être défini avant de charger la carte)
 
@@ -13344,10 +13395,10 @@ Show death tile outlines
 == Afficher les contours des tuiles de mort
 
 Show deep freeze tile outlines
-== Show deep freeze tile outlines
+== Afficher les contours des tuiles de gel profond
 
 Show deep unfreeze tile outlines
-== Show deep unfreeze tile outlines
+== Afficher les contours des tuiles de dégel profond
 
 Show default flag in scoreboard
 == Afficher le drapeau par défaut dans le tableau des scores
@@ -13455,7 +13506,7 @@ Show freeze bars
 == Afficher les barres de dégel
 
 Show freeze tile outlines
-== Show freeze tile outlines
+== Afficher les contours des tuiles de gel
 
 Show friend icon in name plates
 == Afficher l'icône d'ami dans les plaques de nom
@@ -13530,7 +13581,7 @@ Show hook strength number indicator
 == Afficher l'indicateur de nombre de force du crochet
 
 Show hookable tile outlines
-== Show hookable tile outlines
+== Afficher les contours des tuiles accrochables
 
 Show how weapons, shields, snowflakes, and flags appear in game
 == Afficher l'apparence des armes, boucliers, flocons et drapeaux en jeu
@@ -14106,10 +14157,10 @@ Show tuning parameters affecting own player (0=Off, 1=Show changed, 2=Show all)
 == Afficher les paramètres de réglage affectant son propre joueur (0 = Désactivé, 1 = Afficher modifiés, 2 = Afficher tout)
 
 Show unfreeze tile outlines
-== Show unfreeze tile outlines
+== Afficher les contours des tuiles de dégel
 
 Show unhookable tile outlines
-== Show unhookable tile outlines
+== Afficher les contours des tuiles non accrochables
 
 Show unknown server messages
 == Afficher les messages serveur inconnus
@@ -14807,14 +14858,23 @@ Start holding the hook before loading the savegame to keep the hook
 Start marker of replay slice
 == Marqueur de début de la tranche de rediffusion
 
+Start or resume recording the practice line
+== Démarrer ou reprendre l'enregistrement de la ligne d'entraînement
+
 Start playback of ghosts
 == Démarrer la lecture des fantômes
+
+Start recording
+== Démarrer l'enregistrement
 
 Start recording a demo
 == Commencer l'enregistrement d'une démo
 
 Start recording a video
 == Commencer l'enregistrement d'une vidéo
+
+Start recording the fast-practice line, or resume after a pause. Recording is always manual: nothing is recorded until this is pressed.
+== Démarre l'enregistrement de la ligne de pratique rapide ou le reprend après une pause. L'enregistrement est toujours manuel : rien n'est enregistré avant l'appui.
 
 Start skin queue from a random position when entering a map
 == Démarrer la file de skins depuis une position aléatoire en rejoignant une carte
@@ -14906,6 +14966,9 @@ Steam profile name
 Still free after %d sponsors. Take a look?
 == Grâce à %d sponsors. Aller voir ?
 
+Stop and save recording
+== Arrêter et enregistrer
+
 Stop following
 == Arrêter le suivi
 
@@ -14936,6 +14999,12 @@ Stop recording a demo
 Stop recording a video
 == Arrêter l'enregistrement d'une vidéo
 
+Stop recording and save the practice line as a ghost group
+== Arrêter l'enregistrement et enregistrer la ligne d'entraînement comme groupe de fantômes
+
+Stop recording and write the line to disk right away as a ghost group. The saved group can be replayed from the bind menu or the Ghost page.
+== Arrête l'enregistrement et écrit immédiatement la ligne sur le disque comme groupe de fantômes. Le groupe enregistré peut être rejoué depuis le menu des binds ou la page des fantômes.
+
 Stop rendering text overlays in editor or with entities: higher = less detail = faster
 == Arrêter le rendu des superpositions de texte dans l'éditeur ou avec des entités : plus élevé = moins de détails = plus rapide
 
@@ -14944,6 +15013,12 @@ Stop server
 
 Stop the current demo
 == Arrêter la démo actuelle
+
+Store the current practice tee state as the respawn point
+== Enregistrer l'état actuel du tee d'entraînement comme point de réapparition
+
+Store the current tee state (position, weapons, jumps and movement state) as the practice respawn point.
+== Enregistre l'état actuel du tee (position, armes, sauts et état de mouvement) comme point de réapparition d'entraînement.
 
 Streamer mode
 == Mode streamer
@@ -14955,7 +15030,7 @@ Strength icons assets
 == Ressources d'icônes de force
 
 Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)
-== Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)
+== Intensité des extrémités de capsule Apple (0 = demi-cercle, 100 = maximale)
 
 Stress system (debug builds only).
 == Système de stress (uniquement pour les versions de débogage)
@@ -15401,6 +15476,12 @@ Tele
 Teleport all weapons (deprecated, use special entities instead)
 == Téléporter toutes les armes (obsolète, utilisez plutôt des entités spéciales)
 
+Teleport back to the practice respawn point
+== Se téléporter au point de réapparition d'entraînement
+
+Teleport back to the practice respawn point and restore the tee state saved there. Only the tee is restored; the world keeps running.
+== Téléporte au point de réapparition d'entraînement et restaure l'état du tee qui y a été enregistré. Seul le tee est restauré ; le monde continue.
+
 Teleport free spectator camera between hovered tele-in/out or checkpoint tele and a matching counterpart
 == Téléporter la caméra libre du spectateur entre le téléporteur d'entrée/sortie survolé ou le téléporteur de checkpoint et une contrepartie correspondante
 
@@ -15430,6 +15511,9 @@ Teleport tile outline color
 
 Teleport tile outline width
 == Largeur du contour des tuiles de téléportation
+
+Teleport to cursor
+== Se téléporter au curseur
 
 Teleport yourself out of freeze if auto rescue mode is enabled, otherwise it will set position for rescuing if grounded and teleport you out of freeze if not (use sv_rescue 1 to enable this feature)
 == Téléportez-vous hors du gel si le mode de sauvetage automatique est activé, sinon cela définira une position de sauvetage si vous êtes au sol et vous téléportera hors du gel sinon (utilisez sv_rescue 1 pour activer cette fonctionnalité)
@@ -16538,6 +16622,9 @@ UI server address
 UI size percentage
 == Taille UI (%)
 
+Un-solo
+== Retirer le solo
+
 Unable to delete %d selected items. The first failing item was '%s'.
 == Impossible de supprimer %d éléments sélectionnés. Le premier élément en échec était '%s'.
 
@@ -16616,6 +16703,9 @@ Uncertainty duration
 Unclassified audio issue
 == Problème audio non classifié
 
+Undo deep freeze
+== Annuler le gel profond
+
 Unexpected map upload response.
 == Réponse inattendue lors de l’envoi de la carte.
 
@@ -16656,16 +16746,13 @@ Unfreeze tile outline color
 == Couleur du contour des tuiles de dégel
 
 Unfreeze tile outline width
-== Unfreeze tile outline width
+== Largeur du contour des tuiles de dégel
 
 Unhookable tile outline color
-== Unhookable tile outline color
+== Couleur du contour des tuiles non accrochables
 
 Unhookable tile outline width
-== Unhookable tile outline width
-
-Unhookable tiles
-== Unhookable tiles
+== Largeur du contour des tuiles non accrochables
 
 Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
 == qualité d'export unifiée (échelle CRF/CQ/QP 0-51, -1 = utiliser cl_video_crf) ; mappée sur le paramètre natif de chaque encodeur
@@ -17104,6 +17191,9 @@ Video was saved to '%s'
 
 Videos directory
 == Répertoire des vidéos
+
+View
+== Voir
 
 View details
 == Voir les détails

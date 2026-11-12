@@ -839,6 +839,9 @@ All remaining binds: scoreboard, spectating, console, screenshots, emoticon and 
 All sounds
 == Все звуки
 
+All weapons
+== Всё оружие
+
 Allow /map.
 == Разрешить /map.
 
@@ -1027,9 +1030,6 @@ Append saved word list chunk
 
 Append to log file instead of overwriting
 == Добавлять в файл журнала вместо перезаписи
-
-Apple
-== Apple
 
 Apple capsule
 == Капсула Apple
@@ -1796,6 +1796,9 @@ Bind dummy control and copy actions
 Bind key to execute a command or view keybindings
 == Привязать клавишу для выполнения команды или просмотреть привязки клавиш
 
+Bind menu layout: 0 = radial wheel, 1 = rounded panel
+== Раскладка меню биндов: 0 = радиальное колесо, 1 = скруглённая панель
+
 Bind movement, jump, hook, and fire actions
 == Bind movement, jump, hook, and fire actions
 
@@ -2106,7 +2109,7 @@ Capsule ends
 == Торцы капсулы
 
 Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
-== Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
+== Концы капсулы: 0 = обычная дуга, 1 = плавный переход, 2 = непрерывная кривая Apple
 
 Capture the flag
 == Захват флага (CTF)
@@ -2743,9 +2746,6 @@ Colors of the hook collision line, in case of a possible collision with:
 
 Colors of the translate button in the chat input and of the language menu that button opens.
 == Цвета кнопки перевода в поле чата и меню языков, которое она открывает.
-
-Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
-== Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
 
 Colors too close to the map background are hard to read while moving.
 == Цвета, близкие к фону карты, плохо видны в движении.
@@ -3762,7 +3762,7 @@ Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == Адрес выделенного WebSocket (пусто — используется wss://qmclient.icu/ws)
 
 Deep freeze
-== Deep freeze
+== Глубокая заморозка
 
 Deep freeze color
 == Цвет глубокой заморозки
@@ -3774,10 +3774,7 @@ Deep freeze tile outline color
 == Цвет контура тайла глубокой заморозки
 
 Deep freeze tile outline width
-== Deep freeze tile outline width
-
-Deep unfreeze
-== Deep unfreeze
+== Ширина контура тайла глубокой заморозки
 
 Deep unfreeze color
 == Цвет глубокой разморозки
@@ -3789,7 +3786,7 @@ Deep unfreeze tile outline color
 == Цвет контура тайла глубокой разморозки
 
 Deep unfreeze tile outline width
-== Deep unfreeze tile outline width
+== Ширина контура тайла глубокой разморозки
 
 Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 == Режим Deepfly (0=нормальный, 1=DF, 2=HDF, 3=пользовательский)
@@ -4042,6 +4039,9 @@ Disable client-initiated self-kill (K key / kill command)
 
 Disable clipping
 == Отключить обрезку.
+
+Disable fast practice mode
+== Отключить режим быстрой практики
 
 Disable Gores auto-switch when picking up extra weapon
 == Отключить автосмену Gores при получении дополнительного оружия
@@ -4514,6 +4514,9 @@ Dummy window size
 Dummy window zoom
 == Масштаб окна Дами
 
+Dump the client-side world state (practice branch, tracks, switchers, view session)
+== Вывести состояние клиентского мира (ветка практики, треки, переключатели, сессия просмотра)
+
 Dump the current savestring
 == Сбросить текущую строку сохранения
 
@@ -4855,6 +4858,9 @@ Enable fast input in Gores mode
 
 Enable fast map download
 == Включить быструю загрузку карт
+
+Enable fast practice mode
+== Включить режим быстрой практики
 
 Enable fat skin
 == Включить толстый скин
@@ -5210,6 +5216,9 @@ End bounce
 End marker of replay slice
 == Конечный маркер фрагмента повтора
 
+Endless hook
+== Бесконечный крюк
+
 Endless hook has been activated
 == Бесконечный крюк активирован
 
@@ -5236,6 +5245,9 @@ Enter /practice mode or restart to avoid the entire team being killed in 60 seco
 
 Enter a CP number from 1 to 255.
 == Введите номер CP от 1 до 255.
+
+Enter fast practice
+== Войти в быструю практику
 
 Enter Password
 == Введите пароль
@@ -5384,6 +5396,9 @@ Existing Player
 Exit and install
 == Выйти и установить
 
+Exit fast practice
+== Выйти из быстрой практики
+
 Exit replay view
 == Выйти из просмотра реплея
 
@@ -5401,9 +5416,6 @@ Expanded dropdown background color
 
 Expanded dropdown background opacity percentage
 == Цвет фона раскрытого списка — непрозрачность в процентах
-
-Expanded personalization sections (format: stableId=1;stableId2=0;)
-== Expanded personalization sections (format: stableId=1;stableId2=0;)
 
 Experimental
 == экспериментально
@@ -6009,7 +6021,7 @@ Freeze tile outline color
 == Цвет контура тайлов заморозки
 
 Freeze tile outline width
-== Freeze tile outline width
+== Ширина контура тайлов заморозки
 
 Frequently asked questions
 == Частые вопросы
@@ -6855,13 +6867,10 @@ Hook through teleporters (deprecated, use special entities instead)
 == Крюк сквозь телепортеры (устарело, используйте специальные сущности)
 
 Hookable tile outline color
-== Hookable tile outline color
+== Цвет контура цепляемых тайлов
 
 Hookable tile outline width
-== Hookable tile outline width
-
-Hookable tiles
-== Hookable tiles
+== Ширина контура цепляемых тайлов
 
 Hooking L/R: %.0f%%/%.0f%%
 == Зацеп крюком В/П: %.0f%%/%.0f%%
@@ -7460,6 +7469,9 @@ Jelly others
 Jelly strength
 == Сила желе
 
+Jetpack
+== Джетпак
+
 Jitter
 == Джиттер
 
@@ -7561,9 +7573,6 @@ Keep the defaults unless you play with high ping; then try one option at a time 
 
 Keep the text light on a dark background; press "Reset tooltip appearance" to return to the defaults.
 == На тёмном фоне лучше читается светлый текст; кнопка сброса вернёт рекомендуемый вид подсказки.
-
-Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
-== Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
 
 Keep unsent message on chat close
 == Сохранять неотправленное содержимое при закрытии чата
@@ -8399,9 +8408,6 @@ Map play history
 Map preview rendering unavailable
 == Предпросмотр карты недоступен
 
-Map preview shows the entity layer only (hides textures)
-== Map preview shows the entity layer only (hides textures)
-
 Map Preview TODO
 == Предпросмотр карты в работе
 
@@ -9022,6 +9028,9 @@ Muted
 
 Muted players
 == Заглушённые игроки
+
+My binds
+== Мои бинды
 
 my_%s
 == моя_%s
@@ -10205,6 +10214,15 @@ Path to client key for the MySQL/MariaDB SSL connection
 Pause
 == Пауза
 
+Pause recording
+== Приостановить запись
+
+Pause recording the practice line (the recorded part is kept)
+== Приостановить запись линии практики (записанное сохраняется)
+
+Pause recording without discarding what has been recorded so far. Resuming starts a new segment, so the paused stretch is not drawn as a straight line.
+== Приостанавливает запись, не удаляя уже записанное. При возобновлении начинается новый участок, поэтому пропущенный отрезок не будет нарисован прямой линией.
+
 Pause the current demo
 == Приостановить текущее демо
 
@@ -10303,9 +10321,6 @@ Pick a shape, then tune glow and animation speed.
 
 Pick a slot, type the command and its label, then hold the wheel key in game to test.
 == Выберите ячейку, введите команду и подпись, затем зажмите клавишу колеса в игре для проверки.
-
-Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
-== Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
 
 Pick result: %s
 == Результат выбора: %s
@@ -10750,6 +10765,9 @@ Position jump tip
 
 Position:
 == Позиция:
+
+Practice ghosts
+== Призраки практики
 
 Practice mode can't be enabled in team 0 mode.
 == Режим тренировки нельзя включить в режиме команды 0.
@@ -11777,6 +11795,9 @@ Remove war clan:
 Remove war name:
 == Удалить враждебное имя:
 
+Remove weapons
+== Убрать оружие
+
 Removed %s from friends
 == %s удален из друзей
 
@@ -11966,6 +11987,9 @@ Replaces or hides chat lines that match words on your own list before they are s
 Replay
 == Повтор
 
+Replay a saved practice ghost group in demo-style view mode
+== Воспроизвести сохранённую группу призраков практики в режиме просмотра как демо
+
 Replay downloaded
 == Реплей загружен
 
@@ -12025,6 +12049,9 @@ Rescan fonts and query resolved Unicode face and glyph when qm_graphics_trace is
 
 Rescue is not enabled on this server and you're not in a team with /practice turned on. Note that you can't earn a rank with practice enabled.
 == Rescue не включён на этом сервере, и вы не в команде с включённым /practice. Обратите внимание, что с включённым тренировочным режимом нельзя получить рейтинг.
+
+Rescue mode
+== Режим спасения
 
 Rescue mode changed to auto.
 == Режим спасения изменён на auto.
@@ -12152,6 +12179,9 @@ Restart
 Restart in x seconds (0 = abort)
 == Перезапуск через x секунд (0 = отмена)
 
+Restart practice world
+== Перезапустить мир практики
+
 Restart the client
 == Перезапустить клиент
 
@@ -12173,6 +12203,12 @@ Restore old single-segment hook collision line behavior
 Restore recommended
 == Вернуть рекомендованные
 
+Restore the practice world to the state it had when fast practice was enabled
+== Вернуть мир практики в состояние на момент включения быстрой практики
+
+Restore the practice world to the state it had when fast practice was enabled. The recorded line is kept and a new segment is started.
+== Возвращает мир практики в состояние на момент включения быстрой практики. Записанная линия сохраняется, запись продолжится с нового участка.
+
 Restored the built-in content
 == Встроенный текст восстановлен
 
@@ -12193,6 +12229,9 @@ Retry remote stats
 
 Retrying…
 == Повторная попытка…
+
+Return to respawn point
+== Вернуться к точке возрождения
 
 Reverse chat gradient colors
 == Обратить цвета градиента (чат)
@@ -12220,6 +12259,9 @@ Review the entries and change only what you understand; defaults are tuned for n
 
 Reviews configuration values that differ from their defaults and resets them.
 == Показывает настройки, отличающиеся от значений по умолчанию, и сбрасывает их.
+
+Rifle
+== Винтовка
 
 Rifle Laser Inner Color
 == Внутренний цвет лазера винтовки
@@ -12416,6 +12458,9 @@ Save power by lowering update rate
 Save power by lowering update rate (higher input latency)
 == Экономия энергии за счёт снижения частоты обновления (более высокая задержка ввода)
 
+Save practice line
+== Сохранить линию практики
+
 Save replay of best time per game
 == Сохранять запись лучшего времени за игру
 
@@ -12439,6 +12484,12 @@ Save team with code r.
 
 Save the best demo of each race
 == Сохранять лучшую демку каждого забега
+
+Save the current fast-practice line (all tees) as a replayable ghost group
+== Сохранить текущую линию практики (все Tee) как воспроизводимую группу призраков
+
+Save the current fast-practice line (all tees) as a replayable ghost group. Only works while fast practice is active. Find the saved group on the Ghost page and press View to replay it as a demo-style ghost without leaving the server.
+== Сохраняет текущую линию практики (игрок и двойник) как воспроизводимую группу призраков. Работает только во время быстрой практики. После сохранения выберите группу на странице призраков и нажмите View, чтобы посмотреть демо-повтор, не выходя с сервера.
 
 Save the current team
 == Сохранить текущую команду
@@ -12535,9 +12586,6 @@ Scoreboard playtime
 
 Scoreboard point check
 == Проверка очков на табло
-
-Scoreboard row colors
-== Scoreboard row colors
 
 Scoreboard score lookup
 == Просмотр очков в таблице лидеров
@@ -13019,6 +13067,9 @@ Set fullscreen mode: 0=off, 1=exclusive, 2=desktop, 3=windowed fullscreen
 Set microphone mute state (0=on, 1=mute)
 == Установить состояние отключения микрофона (0=вкл, 1=выкл)
 
+Set practice respawn point
+== Задать точку возрождения практики
+
 Set server to singleplayer mode (no player interaction, must be set before loading map)
 == Установить сервер в одиночный режим (без взаимодействия игроков, должно быть установлено до загрузки карты)
 
@@ -13344,10 +13395,10 @@ Show death tile outlines
 == Показывать контуры тайлов смерти
 
 Show deep freeze tile outlines
-== Show deep freeze tile outlines
+== Показывать контуры тайлов глубокой заморозки
 
 Show deep unfreeze tile outlines
-== Show deep unfreeze tile outlines
+== Показывать контуры тайлов глубокой разморозки
 
 Show default flag in scoreboard
 == Показывать флаги по умолчанию в таблице результатов
@@ -13455,7 +13506,7 @@ Show freeze bars
 == Показать полосы разморозки
 
 Show freeze tile outlines
-== Show freeze tile outlines
+== Показывать контуры тайлов заморозки
 
 Show friend icon in name plates
 == Показывать иконку друга в табличках с именами
@@ -13530,7 +13581,7 @@ Show hook strength number indicator
 == Показывать числовой индикатор силы крюка
 
 Show hookable tile outlines
-== Show hookable tile outlines
+== Показывать контуры цепляемых тайлов
 
 Show how weapons, shields, snowflakes, and flags appear in game
 == Показывать внешний вид оружия, щитов, снежинок и флагов в игре
@@ -14106,10 +14157,10 @@ Show tuning parameters affecting own player (0=Off, 1=Show changed, 2=Show all)
 == Показывать параметры настройки, влияющие на своего игрока (0 = Выкл, 1 = Показывать изменённые, 2 = Показывать все)
 
 Show unfreeze tile outlines
-== Show unfreeze tile outlines
+== Показывать контуры тайлов разморозки
 
 Show unhookable tile outlines
-== Show unhookable tile outlines
+== Показывать контуры нецепляемых тайлов
 
 Show unknown server messages
 == Показывать неизвестные сообщения сервера
@@ -14807,14 +14858,23 @@ Start holding the hook before loading the savegame to keep the hook
 Start marker of replay slice
 == Начальный маркер фрагмента повтора
 
+Start or resume recording the practice line
+== Начать или продолжить запись линии практики
+
 Start playback of ghosts
 == Начать воспроизведение призраков
+
+Start recording
+== Начать запись
 
 Start recording a demo
 == Начать запись демо
 
 Start recording a video
 == Начать запись видео
+
+Start recording the fast-practice line, or resume after a pause. Recording is always manual: nothing is recorded until this is pressed.
+== Начинает запись линии быстрой практики или продолжает после паузы. Запись всегда ручная: до нажатия ничего не записывается.
 
 Start skin queue from a random position when entering a map
 == Начинать очередь скинов со случайной позиции при входе на карту
@@ -14906,6 +14966,9 @@ Steam profile name
 Still free after %d sponsors. Take a look?
 == Нас держат %d спонсоров. Посмотрите?
 
+Stop and save recording
+== Завершить запись и сохранить
+
 Stop following
 == Прекратить следование
 
@@ -14936,6 +14999,12 @@ Stop recording a demo
 Stop recording a video
 == Остановить запись видео
 
+Stop recording and save the practice line as a ghost group
+== Завершить запись и сохранить линию практики как группу призраков
+
+Stop recording and write the line to disk right away as a ghost group. The saved group can be replayed from the bind menu or the Ghost page.
+== Завершает запись и сразу сохраняет линию на диск как группу призраков. Сохранённую группу можно воспроизвести из меню биндов или со страницы призраков.
+
 Stop rendering text overlays in editor or with entities: higher = less detail = faster
 == Прекратить рендеринг текстовых наложений в редакторе или с сущностями: выше = меньше деталей = быстрее
 
@@ -14944,6 +15013,12 @@ Stop server
 
 Stop the current demo
 == Остановить текущее демо
+
+Store the current practice tee state as the respawn point
+== Сохранить текущее состояние Tee в практике как точку возрождения
+
+Store the current tee state (position, weapons, jumps and movement state) as the practice respawn point.
+== Сохраняет текущее состояние Tee (позицию, оружие, прыжки и состояние движения) как точку возрождения практики.
 
 Streamer mode
 == Режим стримера
@@ -14955,7 +15030,7 @@ Strength icons assets
 == Ресурсы иконок силы
 
 Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)
-== Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)
+== Сила концов капсулы Apple (0 = полукруг, 100 = максимум)
 
 Stress system (debug builds only).
 == Система стресса (только для отладочных сборок).
@@ -15401,6 +15476,12 @@ Tele
 Teleport all weapons (deprecated, use special entities instead)
 == Телепорт всего оружия (устарело, используйте вместо этого специальные сущности)
 
+Teleport back to the practice respawn point
+== Телепортировать к точке возрождения практики
+
+Teleport back to the practice respawn point and restore the tee state saved there. Only the tee is restored; the world keeps running.
+== Телепортирует к точке возрождения практики и восстанавливает сохранённое там состояние Tee. Восстанавливается только Tee, мир продолжает идти.
+
 Teleport free spectator camera between hovered tele-in/out or checkpoint tele and a matching counterpart
 == Телепортировать свободную камеру наблюдателя между наведённым телепортом входа/выхода или чекпоинтом и соответствующим объектом
 
@@ -15430,6 +15511,9 @@ Teleport tile outline color
 
 Teleport tile outline width
 == Ширина контура тайлов телепорта
+
+Teleport to cursor
+== Телепорт к курсору
 
 Teleport yourself out of freeze if auto rescue mode is enabled, otherwise it will set position for rescuing if grounded and teleport you out of freeze if not (use sv_rescue 1 to enable this feature)
 == Телепортироваться из заморозки, если включён режим автоспасения; в противном случае установит позицию для спасения, если на земле, и телепортирует из заморозки, если нет (используйте sv_rescue 1 для включения этой функции)
@@ -16538,6 +16622,9 @@ UI server address
 UI size percentage
 == Размер UI (%)
 
+Un-solo
+== Отменить solo
+
 Unable to delete %d selected items. The first failing item was '%s'.
 == Не удалось удалить %d выбранных элементов. Первый неудачный элемент: «%s».
 
@@ -16616,6 +16703,9 @@ Uncertainty duration
 Unclassified audio issue
 == Неклассифицированная аудио-проблема
 
+Undo deep freeze
+== Снять глубокую заморозку
+
 Unexpected map upload response.
 == Неожиданный ответ при загрузке карты.
 
@@ -16656,16 +16746,13 @@ Unfreeze tile outline color
 == Цвет контура тайлов разморозки
 
 Unfreeze tile outline width
-== Unfreeze tile outline width
+== Ширина контура тайлов разморозки
 
 Unhookable tile outline color
-== Unhookable tile outline color
+== Цвет контура нецепляемых тайлов
 
 Unhookable tile outline width
-== Unhookable tile outline width
-
-Unhookable tiles
-== Unhookable tiles
+== Ширина контура нецепляемых тайлов
 
 Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
 == Единое качество экспорта (шкала CRF/CQ/QP 0-51, -1 = использовать cl_video_crf); отображается на собственный параметр каждого кодировщика
@@ -17104,6 +17191,9 @@ Video was saved to '%s'
 
 Videos directory
 == Каталог видео
+
+View
+== Просмотр
 
 View details
 == Подробнее

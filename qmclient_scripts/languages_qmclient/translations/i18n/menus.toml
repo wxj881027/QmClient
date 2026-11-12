@@ -23259,3 +23259,83 @@ brazilian_portuguese = "Quanto a roda ou o arrasto podem empurrar além de um li
 portuguese = "Quanto a roda ou o arrasto podem empurrar além de uma extremidade, em píxeis de UI; o conteúdo volta quando o deslocamento para. 0 desativa"
 turkish = "Tekerleğin veya sürüklemenin içeriği bir ucun ötesine ne kadar itebileceği (UI pikseli); kaydırma durunca içerik geri döner. 0 kapatır"
 polish = "Jak daleko kółko lub przeciąganie mogą wypchnąć treść poza krawędź, w pikselach UI; po zatrzymaniu przewijania treść wraca. 0 wyłącza"
+
+[[message]]
+key = "Save practice line"
+[message.translations]
+simplified_chinese = "保存练习线路"
+traditional_chinese = "儲存練習線路"
+japanese = "練習ラインを保存"
+korean = "연습 라인 저장"
+russian = "Сохранить линию практики"
+german = "Übungslinie speichern"
+spanish = "Guardar línea de práctica"
+french = "Enregistrer la ligne d'entraînement"
+brazilian_portuguese = "Salvar linha de prática"
+portuguese = "Guardar linha de prática"
+turkish = "Pratik hattını kaydet"
+polish = "Zapisz linię ćwiczeń"
+
+[[message]]
+key = "Save the current fast-practice line (all tees) as a replayable ghost group"
+[message.translations]
+simplified_chinese = "把当前快速练习线路（所有 Tee）保存为可回放的影子组"
+traditional_chinese = "把目前快速練習線路（所有 Tee）存成可回放的影子組"
+japanese = "現在の高速プラクティスライン（全 Tee）を再生可能なゴーストグループとして保存"
+korean = "현재 빠른 연습 라인(모든 Tee)을 재생 가능한 고스트 그룹으로 저장"
+russian = "Сохранить текущую линию практики (все Tee) как воспроизводимую группу призраков"
+german = "Aktuelle Übungslinie (alle Tees) als abspielbare Geistergruppe speichern"
+spanish = "Guardar la línea de práctica actual (todos los tees) como un grupo de fantasmas reproducible"
+french = "Enregistrer la ligne d'entraînement actuelle (tous les tees) comme groupe de fantômes rejouable"
+brazilian_portuguese = "Salvar a linha de prática atual (todos os tees) como um grupo de fantasmas reproduzível"
+portuguese = "Guardar a linha de prática atual (todos os tees) como um grupo de fantasmas reproduzível"
+turkish = "Mevcut pratik hattını (tüm Tee'ler) oynatılabilir hayalet grubu olarak kaydet"
+polish = "Zapisz bieżącą linię ćwiczeń (wszystkie Tee) jako odtwarzalną grupę duchów"
+
+[[message]]
+key = "Save the current fast-practice line (all tees) as a replayable ghost group. Only works while fast practice is active. Find the saved group on the Ghost page and press View to replay it as a demo-style ghost without leaving the server."
+[message.translations]
+simplified_chinese = "把当前快速练习线路（本体与分身）保存为可回放的影子组。仅在快速练习开启时有效。保存后到影子页选中该组并按 View，即可按 demo 式回放查看，不退出服务器。"
+traditional_chinese = "把目前快速練習線路（本體與分身）存成可回放的影子組。僅在快速練習開啟時有效。儲存後到影子頁選取該組並按 View，即可以 demo 式回放查看，不離開伺服器。"
+japanese = "現在の高速プラクティスライン（本体と分身）を再生可能なゴーストグループとして保存します。高速プラクティス中のみ有効。保存後はゴーストページでグループを選び View を押すと、サーバーを離れずに demo 風の再生で確認できます。"
+korean = "현재 빠른 연습 라인(본체와 더미)을 재생 가능한 고스트 그룹으로 저장합니다. 빠른 연습 중에만 동작합니다. 저장 후 고스트 페이지에서 그룹을 선택하고 View를 누르면 서버를 나가지 않고 데모 방식으로 다시 볼 수 있습니다."
+russian = "Сохраняет текущую линию практики (игрок и двойник) как воспроизводимую группу призраков. Работает только во время быстрой практики. После сохранения выберите группу на странице призраков и нажмите View, чтобы посмотреть демо-повтор, не выходя с сервера."
+german = "Speichert die aktuelle Übungslinie (Spieler und Dummy) als abspielbare Geistergruppe. Funktioniert nur während der schnellen Übung. Wähle die Gruppe auf der Geister-Seite und drücke View, um sie als Demo-Wiederholung anzusehen, ohne den Server zu verlassen."
+spanish = "Guarda la línea de práctica actual (jugador y dummy) como un grupo de fantasmas reproducible. Solo funciona mientras la práctica rápida está activa. Busca el grupo en la página de fantasmas y pulsa View para verlo como una repetición tipo demo sin salir del servidor."
+french = "Enregistre la ligne d'entraînement actuelle (joueur et dummy) comme groupe de fantômes rejouable. Ne fonctionne que pendant l'entraînement rapide. Retrouvez le groupe sur la page des fantômes et appuyez sur View pour le revoir en mode démo sans quitter le serveur."
+brazilian_portuguese = "Salva a linha de prática atual (jogador e dummy) como um grupo de fantasmas reproduzível. Só funciona durante a prática rápida. Encontre o grupo na página de fantasmas e pressione View para rever em estilo demo sem sair do servidor."
+portuguese = "Guarda a linha de prática atual (jogador e dummy) como um grupo de fantasmas reproduzível. Só funciona durante a prática rápida. Encontra o grupo na página de fantasmas e prime View para rever em estilo demo sem sair do servidor."
+turkish = "Mevcut pratik hattını (ana Tee ve dummy) oynatılabilir hayalet grubu olarak kaydeder. Yalnızca hızlı pratik açıkken çalışır. Kaydedilen grubu Hayalet sayfasında bulup View'a basarak sunucudan çıkmadan demo tarzında izleyebilirsiniz."
+polish = "Zapisuje bieżącą linię ćwiczeń (gracz i dummy) jako odtwarzalną grupę duchów. Działa tylko podczas szybkich ćwiczeń. Znajdź grupę na stronie duchów i naciśnij View, aby obejrzeć powtórkę w stylu demo bez opuszczania serwera."
+
+[[message]]
+key = "Dump the client-side world state (practice branch, tracks, switchers, view session)"
+[message.translations]
+simplified_chinese = "打印客户端侧世界状态（练习分支、轨迹、开关、查看会话）"
+traditional_chinese = "列印用戶端世界狀態（練習分支、軌跡、開關、檢視工作階段）"
+japanese = "クライアント側の世界状態（練習ブランチ、トラック、スイッチ、表示セッション）を出力"
+korean = "클라이언트 측 세계 상태(연습 분기, 트랙, 스위치, 보기 세션)를 출력"
+russian = "Вывести состояние клиентского мира (ветка практики, треки, переключатели, сессия просмотра)"
+german = "Zustand der clientseitigen Welt ausgeben (Übungszweig, Tracks, Schalter, Ansichtssitzung)"
+spanish = "Mostrar el estado del mundo del cliente (rama de práctica, pistas, interruptores, sesión de vista)"
+french = "Afficher l'état du monde côté client (branche d'entraînement, pistes, interrupteurs, session de vue)"
+brazilian_portuguese = "Exibir o estado do mundo do cliente (ramo de prática, trilhas, interruptores, sessão de visualização)"
+portuguese = "Mostrar o estado do mundo do cliente (ramo de prática, faixas, interruptores, sessão de visualização)"
+turkish = "İstemci tarafı dünya durumunu yazdır (pratik dalı, hatlar, anahtarlar, görüntüleme oturumu)"
+polish = "Wypisz stan świata po stronie klienta (gałąź ćwiczeń, ścieżki, przełączniki, sesja podglądu)"
+
+[[message]]
+key = "View"
+[message.translations]
+simplified_chinese = "查看"
+traditional_chinese = "檢視"
+japanese = "表示"
+korean = "보기"
+russian = "Просмотр"
+german = "Ansehen"
+spanish = "Ver"
+french = "Voir"
+brazilian_portuguese = "Ver"
+portuguese = "Ver"
+turkish = "İzle"
+polish = "Podgląd"

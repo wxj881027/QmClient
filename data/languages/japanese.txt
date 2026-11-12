@@ -839,6 +839,9 @@ All remaining binds: scoreboard, spectating, console, screenshots, emoticon and 
 All sounds
 == すべてのサウンド
 
+All weapons
+== 全武器
+
 Allow /map.
 == /map を許可
 
@@ -1027,9 +1030,6 @@ Append saved word list chunk
 
 Append to log file instead of overwriting
 == 上書きではなくログファイルに追記
-
-Apple
-== Apple
 
 Apple capsule
 == Apple カプセル
@@ -1796,6 +1796,9 @@ Bind dummy control and copy actions
 Bind key to execute a command or view keybindings
 == キーにコマンドをバインド、またはキーバインドを表示
 
+Bind menu layout: 0 = radial wheel, 1 = rounded panel
+== バインドメニューのレイアウト: 0 = 放射状ホイール、1 = 角丸パネル
+
 Bind movement, jump, hook, and fire actions
 == Bind movement, jump, hook, and fire actions
 
@@ -2106,7 +2109,7 @@ Capsule ends
 == カプセル端
 
 Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
-== Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
+== カプセル端: 0 = 通常の円弧、1 = なめらかなショルダー、2 = Apple 連続曲線
 
 Capture the flag
 == キャプチャー・ザ・フラッグ (CTF)
@@ -2743,9 +2746,6 @@ Colors of the hook collision line, in case of a possible collision with:
 
 Colors of the translate button in the chat input and of the language menu that button opens.
 == チャット入力欄の翻訳ボタンと、そのボタンで開く言語メニューの色。
-
-Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
-== Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
 
 Colors too close to the map background are hard to read while moving.
 == マップの背景に近すぎる色は、動いているときに見分けにくくなります。
@@ -3762,7 +3762,7 @@ Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == 専用 WebSocket エンドポイント（空欄なら wss://qmclient.icu/ws を使用）
 
 Deep freeze
-== Deep freeze
+== ディープフリーズ
 
 Deep freeze color
 == ディープフリーズ色
@@ -3774,10 +3774,7 @@ Deep freeze tile outline color
 == ディープフリーズタイルのアウトライン色
 
 Deep freeze tile outline width
-== Deep freeze tile outline width
-
-Deep unfreeze
-== Deep unfreeze
+== ディープフリーズタイルのアウトライン幅
 
 Deep unfreeze color
 == ディープアンフリーズ色
@@ -3789,7 +3786,7 @@ Deep unfreeze tile outline color
 == ディープアンフリーズタイルのアウトライン色
 
 Deep unfreeze tile outline width
-== Deep unfreeze tile outline width
+== ディープアンフリーズタイルのアウトライン幅
 
 Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 == Deepfly モード（0=通常、1=DF、2=HDF、3=カスタム）
@@ -4042,6 +4039,9 @@ Disable client-initiated self-kill (K key / kill command)
 
 Disable clipping
 == クリッピングを無効化
+
+Disable fast practice mode
+== 高速練習モードを無効にする
 
 Disable Gores auto-switch when picking up extra weapon
 == 追加武器取得時に Gores 自動切り替えを無効化
@@ -4514,6 +4514,9 @@ Dummy window size
 Dummy window zoom
 == ダミーウィンドウズーム
 
+Dump the client-side world state (practice branch, tracks, switchers, view session)
+== クライアント側の世界状態（練習ブランチ、トラック、スイッチ、表示セッション）を出力
+
 Dump the current savestring
 == 現在のセーブ文字列をダンプする
 
@@ -4855,6 +4858,9 @@ Enable fast input in Gores mode
 
 Enable fast map download
 == 高速マップダウンロードを有効にする
+
+Enable fast practice mode
+== 高速練習モードを有効にする
 
 Enable fat skin
 == ファットスキンを有効にする
@@ -5210,6 +5216,9 @@ End bounce
 End marker of replay slice
 == リプレイスライスの終了マーカー
 
+Endless hook
+== 無限フック
+
 Endless hook has been activated
 == 無限フックが有効になりました
 
@@ -5236,6 +5245,9 @@ Enter /practice mode or restart to avoid the entire team being killed in 60 seco
 
 Enter a CP number from 1 to 255.
 == 1～255 の CP 番号を入力してください。
+
+Enter fast practice
+== 高速練習に入る
 
 Enter Password
 == パスワードを入力
@@ -5384,6 +5396,9 @@ Existing Player
 Exit and install
 == 終了してインストール
 
+Exit fast practice
+== 高速練習を終了
+
 Exit replay view
 == リプレイ視聴を終了
 
@@ -5401,9 +5416,6 @@ Expanded dropdown background color
 
 Expanded dropdown background opacity percentage
 == 展開リスト背景 — 不透明度（パーセント）
-
-Expanded personalization sections (format: stableId=1;stableId2=0;)
-== Expanded personalization sections (format: stableId=1;stableId2=0;)
 
 Experimental
 == 実験的
@@ -6009,7 +6021,7 @@ Freeze tile outline color
 == フリーズタイルアウトラインの色
 
 Freeze tile outline width
-== Freeze tile outline width
+== フリーズタイルアウトラインの幅
 
 Frequently asked questions
 == よくある質問
@@ -6855,13 +6867,10 @@ Hook through teleporters (deprecated, use special entities instead)
 == テレポーターを通るフック（非推奨、代わりに特殊エンティティを使用）
 
 Hookable tile outline color
-== Hookable tile outline color
+== フック可能タイルのアウトライン色
 
 Hookable tile outline width
-== Hookable tile outline width
-
-Hookable tiles
-== Hookable tiles
+== フック可能タイルアウトラインの幅
 
 Hooking L/R: %.0f%%/%.0f%%
 == フック L/R：%.0f%%/%.0f%%
@@ -7460,6 +7469,9 @@ Jelly others
 Jelly strength
 == ゼリー強度
 
+Jetpack
+== ジェットパック
+
 Jitter
 == ジッター
 
@@ -7561,9 +7573,6 @@ Keep the defaults unless you play with high ping; then try one option at a time 
 
 Keep the text light on a dark background; press "Reset tooltip appearance" to return to the defaults.
 == 暗い背景には明るい文字が見やすいです。既定の見た目に戻すにはヒントの外観をリセットを押します。
-
-Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
-== Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
 
 Keep unsent message on chat close
 == チャットを閉じる時に未送信内容を保持
@@ -8399,9 +8408,6 @@ Map play history
 Map preview rendering unavailable
 == マッププレビューを描画できません
 
-Map preview shows the entity layer only (hides textures)
-== Map preview shows the entity layer only (hides textures)
-
 Map Preview TODO
 == マッププレビュー TODO
 
@@ -9022,6 +9028,9 @@ Muted
 
 Muted players
 == ミュート中のプレイヤー
+
+My binds
+== 自分のバインド
 
 my_%s
 == 私の_%s
@@ -10205,6 +10214,15 @@ Path to client key for the MySQL/MariaDB SSL connection
 Pause
 == 一時停止
 
+Pause recording
+== 録画を一時停止
+
+Pause recording the practice line (the recorded part is kept)
+== 練習ラインの録画を一時停止（録画済み部分は保持）
+
+Pause recording without discarding what has been recorded so far. Resuming starts a new segment, so the paused stretch is not drawn as a straight line.
+== これまでに録画した内容を捨てずに一時停止します。再開時は新しい区間として記録されるため、一時停止中の区間が直線で描かれることはありません。
+
 Pause the current demo
 == 現在のデモを一時停止
 
@@ -10303,9 +10321,6 @@ Pick a shape, then tune glow and animation speed.
 
 Pick a slot, type the command and its label, then hold the wheel key in game to test.
 == スロットを選んでコマンドとラベルを入力し、ゲーム内でホイールキーを押し続けて試します。
-
-Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
-== Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
 
 Pick result: %s
 == 抽選結果：%s
@@ -10750,6 +10765,9 @@ Position jump tip
 
 Position:
 == 位置：
+
+Practice ghosts
+== 練習ゴースト
 
 Practice mode can't be enabled in team 0 mode.
 == チーム 0 モードでは練習モードを有効にできません
@@ -11777,6 +11795,9 @@ Remove war clan:
 Remove war name:
 == 敵対プレイヤー名を削除：
 
+Remove weapons
+== 武器を外す
+
 Removed %s from friends
 == %s をフレンドから削除しました
 
@@ -11966,6 +11987,9 @@ Replaces or hides chat lines that match words on your own list before they are s
 Replay
 == リプレイ
 
+Replay a saved practice ghost group in demo-style view mode
+== 保存済みの練習ゴーストグループをデモ風の表示モードで再生
+
 Replay downloaded
 == リプレイをダウンロードしました
 
@@ -12025,6 +12049,9 @@ Rescan fonts and query resolved Unicode face and glyph when qm_graphics_trace is
 
 Rescue is not enabled on this server and you're not in a team with /practice turned on. Note that you can't earn a rank with practice enabled.
 == このサーバーではレスキューが有効ではなく、/practice が有効なチームにも参加していません。練習モードではランクを獲得できないことに注意してください。
+
+Rescue mode
+== レスキューモード
 
 Rescue mode changed to auto.
 == 救助モードを auto に切り替えました。
@@ -12152,6 +12179,9 @@ Restart
 Restart in x seconds (0 = abort)
 == x 秒後に再起動（0 = 中止）
 
+Restart practice world
+== 練習ワールドを再開始
+
 Restart the client
 == クライアントを再起動
 
@@ -12173,6 +12203,12 @@ Restore old single-segment hook collision line behavior
 Restore recommended
 == 推奨値に戻す
 
+Restore the practice world to the state it had when fast practice was enabled
+== 練習ワールドを高速練習を開始した時点の状態に戻す
+
+Restore the practice world to the state it had when fast practice was enabled. The recorded line is kept and a new segment is started.
+== 練習ワールドを高速練習を開始した時点の状態に戻します。録画済みのラインは保持され、新しい区間から記録が続きます。
+
 Restored the built-in content
 == 内蔵コンテンツに戻しました
 
@@ -12193,6 +12229,9 @@ Retry remote stats
 
 Retrying…
 == 再試行中…
+
+Return to respawn point
+== リスポーン地点に戻る
 
 Reverse chat gradient colors
 == グラデーションの色を反転 (チャット)
@@ -12220,6 +12259,9 @@ Review the entries and change only what you understand; defaults are tuned for n
 
 Reviews configuration values that differ from their defaults and resets them.
 == 既定値と異なる設定値を確認し、リセットできます。
+
+Rifle
+== ライフル
 
 Rifle Laser Inner Color
 == ライフルレーザー内部色
@@ -12416,6 +12458,9 @@ Save power by lowering update rate
 Save power by lowering update rate (higher input latency)
 == 更新レートを下げて省電力（入力遅延増加）
 
+Save practice line
+== 練習ラインを保存
+
 Save replay of best time per game
 == ゲームごとのベストタイムのリプレイを保存
 
@@ -12439,6 +12484,12 @@ Save team with code r.
 
 Save the best demo of each race
 == 各レースのベストデモを保存
+
+Save the current fast-practice line (all tees) as a replayable ghost group
+== 現在の高速プラクティスライン（全 Tee）を再生可能なゴーストグループとして保存
+
+Save the current fast-practice line (all tees) as a replayable ghost group. Only works while fast practice is active. Find the saved group on the Ghost page and press View to replay it as a demo-style ghost without leaving the server.
+== 現在の高速プラクティスライン（本体と分身）を再生可能なゴーストグループとして保存します。高速プラクティス中のみ有効。保存後はゴーストページでグループを選び View を押すと、サーバーを離れずに demo 風の再生で確認できます。
 
 Save the current team
 == 現在のチームを保存
@@ -12535,9 +12586,6 @@ Scoreboard playtime
 
 Scoreboard point check
 == スコアボードポイントチェック
-
-Scoreboard row colors
-== Scoreboard row colors
 
 Scoreboard score lookup
 == スコアボードスコア確認
@@ -13019,6 +13067,9 @@ Set fullscreen mode: 0=off, 1=exclusive, 2=desktop, 3=windowed fullscreen
 Set microphone mute state (0=on, 1=mute)
 == マイクのミュート状態を設定（0=オン、1=ミュート）
 
+Set practice respawn point
+== 練習用リスポーン地点を設定
+
 Set server to singleplayer mode (no player interaction, must be set before loading map)
 == サーバーをシングルプレイヤーモードに設定（プレイヤー間の相互作用なし、マップ読み込み前に設定する必要があります）
 
@@ -13344,10 +13395,10 @@ Show death tile outlines
 == デスタイルの輪郭を表示
 
 Show deep freeze tile outlines
-== Show deep freeze tile outlines
+== ディープフリーズタイルの輪郭を表示
 
 Show deep unfreeze tile outlines
-== Show deep unfreeze tile outlines
+== ディープアンフリーズタイルの輪郭を表示
 
 Show default flag in scoreboard
 == スコアボードにデフォルトの国旗を表示
@@ -13455,7 +13506,7 @@ Show freeze bars
 == フリーズバーを表示
 
 Show freeze tile outlines
-== Show freeze tile outlines
+== フリーズタイルの輪郭を表示
 
 Show friend icon in name plates
 == ネームプレートにフレンドアイコンを表示
@@ -13530,7 +13581,7 @@ Show hook strength number indicator
 == フック強度数値インジケーターを表示
 
 Show hookable tile outlines
-== Show hookable tile outlines
+== フック可能タイルの輪郭を表示
 
 Show how weapons, shields, snowflakes, and flags appear in game
 == 武器、シールド、雪片、旗がゲーム内でどう見えるかを表示
@@ -14106,10 +14157,10 @@ Show tuning parameters affecting own player (0=Off, 1=Show changed, 2=Show all)
 == 自身のプレイヤーに影響するチューニングパラメーターを表示（0 = オフ、1 = 変更のみ表示、2 = すべて表示）
 
 Show unfreeze tile outlines
-== Show unfreeze tile outlines
+== フリーズ解除タイルの輪郭を表示
 
 Show unhookable tile outlines
-== Show unhookable tile outlines
+== フック不可能タイルの輪郭を表示
 
 Show unknown server messages
 == 不明なサーバーメッセージを表示
@@ -14807,14 +14858,23 @@ Start holding the hook before loading the savegame to keep the hook
 Start marker of replay slice
 == リプレイスライスの開始マーカー
 
+Start or resume recording the practice line
+== 練習ラインの録画を開始または再開
+
 Start playback of ghosts
 == ゴーストの再生を開始
+
+Start recording
+== 録画を開始
 
 Start recording a demo
 == デモの録画を開始
 
 Start recording a video
 == 動画の録画を開始
+
+Start recording the fast-practice line, or resume after a pause. Recording is always manual: nothing is recorded until this is pressed.
+== 高速練習ラインの録画を開始するか、一時停止後に再開します。録画は常に手動です。押すまで何も記録されません。
 
 Start skin queue from a random position when entering a map
 == マップ参加時にスキンキューをランダムな位置から開始
@@ -14906,6 +14966,9 @@ Steam profile name
 Still free after %d sponsors. Take a look?
 == %d 人のスポンサーに支えられています。見てみますか？
 
+Stop and save recording
+== 録画を終了して保存
+
 Stop following
 == 追跡を停止
 
@@ -14936,6 +14999,12 @@ Stop recording a demo
 Stop recording a video
 == 動画の録画を停止
 
+Stop recording and save the practice line as a ghost group
+== 録画を終了し、練習ラインをゴーストグループとして保存
+
+Stop recording and write the line to disk right away as a ghost group. The saved group can be replayed from the bind menu or the Ghost page.
+== 録画を終了し、ラインをゴーストグループとしてすぐにディスクへ書き出します。保存したグループはバインドメニューまたはゴーストページから再生できます。
+
 Stop rendering text overlays in editor or with entities: higher = less detail = faster
 == エディターまたはエンティティ使用時のテキストオーバーレイのレンダリングを停止：高いほど詳細が減り、処理が速くなります
 
@@ -14944,6 +15013,12 @@ Stop server
 
 Stop the current demo
 == 現在のデモを停止
+
+Store the current practice tee state as the respawn point
+== 現在の練習 Tee 状態をリスポーン地点として保存
+
+Store the current tee state (position, weapons, jumps and movement state) as the practice respawn point.
+== 現在の Tee の状態（位置、武器、ジャンプ、移動状態）を練習用リスポーン地点として保存します。
 
 Streamer mode
 == ストリーマーモード
@@ -14955,7 +15030,7 @@ Strength icons assets
 == 強さアイコンアセット
 
 Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)
-== Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)
+== Apple カプセル端の強さ（0 = 半円、100 = 最大）
 
 Stress system (debug builds only).
 == ストレスシステム（デバッグビルドのみ）
@@ -15401,6 +15476,12 @@ Tele
 Teleport all weapons (deprecated, use special entities instead)
 == 全武器のテレポート（非推奨、代わりに特殊エンティティを使用してください）
 
+Teleport back to the practice respawn point
+== 練習用リスポーン地点に戻る
+
+Teleport back to the practice respawn point and restore the tee state saved there. Only the tee is restored; the world keeps running.
+== 練習用リスポーン地点に戻り、そこに保存された Tee の状態を復元します。戻るのは Tee だけで、ワールドはそのまま進行します。
+
 Teleport free spectator camera between hovered tele-in/out or checkpoint tele and a matching counterpart
 == ホバーしたテレポート入口/出口またはチェックポイントテレポートと対応する地点の間で自由観戦カメラをテレポート
 
@@ -15430,6 +15511,9 @@ Teleport tile outline color
 
 Teleport tile outline width
 == テレポートタイルのアウトライン幅
+
+Teleport to cursor
+== カーソルへテレポート
 
 Teleport yourself out of freeze if auto rescue mode is enabled, otherwise it will set position for rescuing if grounded and teleport you out of freeze if not (use sv_rescue 1 to enable this feature)
 == 自動レスキューモードが有効な場合はフリーズからテレポートアウト。無効な場合は接地時にレスキュー位置を設定し、非接地時はフリーズからテレポートアウト（sv_rescue 1 でこの機能を有効化）
@@ -16538,6 +16622,9 @@ UI server address
 UI size percentage
 == UI スケールのパーセンテージ
 
+Un-solo
+== solo を解除
+
 Unable to delete %d selected items. The first failing item was '%s'.
 == 選択した %d 個のアイテムを削除できませんでした。最初に失敗したアイテムは「%s」です。
 
@@ -16616,6 +16703,9 @@ Uncertainty duration
 Unclassified audio issue
 == 未分類のオーディオ問題
 
+Undo deep freeze
+== ディープフリーズを解除
+
 Unexpected map upload response.
 == マップのアップロードに対する応答が不正です。
 
@@ -16656,16 +16746,13 @@ Unfreeze tile outline color
 == フリーズ解除タイルのアウトライン色
 
 Unfreeze tile outline width
-== Unfreeze tile outline width
+== フリーズ解除タイルのアウトライン幅
 
 Unhookable tile outline color
-== Unhookable tile outline color
+== フック不可能タイルのアウトライン色
 
 Unhookable tile outline width
-== Unhookable tile outline width
-
-Unhookable tiles
-== Unhookable tiles
+== フック不可能タイルアウトラインの幅
 
 Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
 == 統一書き出し品質（CRF/CQ/QP スケール 0-51、-1 = cl_video_crf を使用）。各エンコーダーのネイティブパラメータにマッピングされます
@@ -17104,6 +17191,9 @@ Video was saved to '%s'
 
 Videos directory
 == ビデオディレクトリ
+
+View
+== 表示
 
 View details
 == 説明を見る

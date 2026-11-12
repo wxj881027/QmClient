@@ -839,6 +839,9 @@ All remaining binds: scoreboard, spectating, console, screenshots, emoticon and 
 All sounds
 == 모든 사운드
 
+All weapons
+== 모든 무기
+
 Allow /map.
 == /map 허용.
 
@@ -1027,9 +1030,6 @@ Append saved word list chunk
 
 Append to log file instead of overwriting
 == 덮어쓰기 대신 로그 파일에 추가
-
-Apple
-== Apple
 
 Apple capsule
 == Apple 캡슐
@@ -1796,6 +1796,9 @@ Bind dummy control and copy actions
 Bind key to execute a command or view keybindings
 == 키를 바인딩하여 명령을 실행하거나 키바인딩을 확인합니다
 
+Bind menu layout: 0 = radial wheel, 1 = rounded panel
+== 바인드 메뉴 레이아웃: 0 = 방사형 휠, 1 = 둥근 패널
+
 Bind movement, jump, hook, and fire actions
 == Bind movement, jump, hook, and fire actions
 
@@ -2106,7 +2109,7 @@ Capsule ends
 == 캡슐 끝
 
 Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
-== Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
+== 캡슐 끝: 0 = 일반 호, 1 = 부드러운 숄더, 2 = Apple 연속 곡선
 
 Capture the flag
 == 깃발 뺏기 (CTF)
@@ -2743,9 +2746,6 @@ Colors of the hook collision line, in case of a possible collision with:
 
 Colors of the translate button in the chat input and of the language menu that button opens.
 == 채팅 입력창의 번역 버튼과 그 버튼으로 여는 언어 메뉴의 색상입니다.
-
-Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
-== Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
 
 Colors too close to the map background are hard to read while moving.
 == 맵 배경과 너무 비슷한 색은 움직이는 동안 보기 어렵습니다.
@@ -3762,7 +3762,7 @@ Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == 전용 WebSocket 주소 (비우면 wss://qmclient.icu/ws 사용)
 
 Deep freeze
-== Deep freeze
+== 깊은 프리즈
 
 Deep freeze color
 == 깊은 얼음 색상
@@ -3774,10 +3774,7 @@ Deep freeze tile outline color
 == 깊은 프리즈 타일 외곽선 색상
 
 Deep freeze tile outline width
-== Deep freeze tile outline width
-
-Deep unfreeze
-== Deep unfreeze
+== 깊은 프리즈 타일 외곽선 두께
 
 Deep unfreeze color
 == 깊은 해동 색상
@@ -3789,7 +3786,7 @@ Deep unfreeze tile outline color
 == 깊은 언프리즈 타일 외곽선 색상
 
 Deep unfreeze tile outline width
-== Deep unfreeze tile outline width
+== 깊은 언프리즈 타일 외곽선 두께
 
 Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 == 딥플라이 모드 (0=일반, 1=DF, 2=HDF, 3=사용자 정의)
@@ -4042,6 +4039,9 @@ Disable client-initiated self-kill (K key / kill command)
 
 Disable clipping
 == 클리핑 비활성화
+
+Disable fast practice mode
+== 빠른 연습 모드 끄기
 
 Disable Gores auto-switch when picking up extra weapon
 == 추가 무기 획득 시 Gores 자동 전환 비활성화
@@ -4514,6 +4514,9 @@ Dummy window size
 Dummy window zoom
 == 더미 창 줌
 
+Dump the client-side world state (practice branch, tracks, switchers, view session)
+== 클라이언트 측 세계 상태(연습 분기, 트랙, 스위치, 보기 세션)를 출력
+
 Dump the current savestring
 == 현재 저장 문자열 덤프
 
@@ -4855,6 +4858,9 @@ Enable fast input in Gores mode
 
 Enable fast map download
 == 빠른 맵 다운로드 활성화
+
+Enable fast practice mode
+== 빠른 연습 모드 켜기
 
 Enable fat skin
 == 뚱뚱한 스킨 활성화
@@ -5210,6 +5216,9 @@ End bounce
 End marker of replay slice
 == 리플레이 슬라이스의 끝 마커
 
+Endless hook
+== 무한 갈고리
+
 Endless hook has been activated
 == 무한 갈고리가 활성화되었습니다
 
@@ -5236,6 +5245,9 @@ Enter /practice mode or restart to avoid the entire team being killed in 60 seco
 
 Enter a CP number from 1 to 255.
 == 1~255 사이의 CP 번호를 입력하세요.
+
+Enter fast practice
+== 빠른 연습 시작
 
 Enter Password
 == 비밀번호 입력
@@ -5384,6 +5396,9 @@ Existing Player
 Exit and install
 == 종료 후 설치
 
+Exit fast practice
+== 빠른 연습 종료
+
 Exit replay view
 == 리플레이 보기 종료
 
@@ -5401,9 +5416,6 @@ Expanded dropdown background color
 
 Expanded dropdown background opacity percentage
 == 펼쳐진 목록 배경색 — 불투명도 백분율
-
-Expanded personalization sections (format: stableId=1;stableId2=0;)
-== Expanded personalization sections (format: stableId=1;stableId2=0;)
 
 Experimental
 == 실험적
@@ -6009,7 +6021,7 @@ Freeze tile outline color
 == 얼음 타일 외곽선 색상
 
 Freeze tile outline width
-== Freeze tile outline width
+== 얼음 타일 외곽선 두께
 
 Frequently asked questions
 == 자주 묻는 질문
@@ -6855,13 +6867,10 @@ Hook through teleporters (deprecated, use special entities instead)
 == 텔레포터를 통한 갈고리 (비권장, 대신 특수 엔티티 사용)
 
 Hookable tile outline color
-== Hookable tile outline color
+== 갈고리 가능 타일 외곽선 색상
 
 Hookable tile outline width
-== Hookable tile outline width
-
-Hookable tiles
-== Hookable tiles
+== 갈고리 가능 타일 외곽선 두께
 
 Hooking L/R: %.0f%%/%.0f%%
 == 갈고리 L/R: %.0f%%/%.0f%%
@@ -7460,6 +7469,9 @@ Jelly others
 Jelly strength
 == 젤리 강도
 
+Jetpack
+== 제트팩
+
 Jitter
 == 지터
 
@@ -7561,9 +7573,6 @@ Keep the defaults unless you play with high ping; then try one option at a time 
 
 Keep the text light on a dark background; press "Reset tooltip appearance" to return to the defaults.
 == 어두운 배경에는 밝은 글자가 읽기 좋습니다. 기본 모양으로 되돌리려면 도움말 모양 초기화를 누르세요.
-
-Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
-== Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
 
 Keep unsent message on chat close
 == 채팅 닫을 때 전송되지 않은 내용 유지
@@ -8399,9 +8408,6 @@ Map play history
 Map preview rendering unavailable
 == 맵 미리보기를 렌더링할 수 없습니다
 
-Map preview shows the entity layer only (hides textures)
-== Map preview shows the entity layer only (hides textures)
-
 Map Preview TODO
 == 맵 미리보기 할 일
 
@@ -9022,6 +9028,9 @@ Muted
 
 Muted players
 == 차단한 플레이어
+
+My binds
+== 내 바인드
 
 my_%s
 == 내_%s
@@ -10205,6 +10214,15 @@ Path to client key for the MySQL/MariaDB SSL connection
 Pause
 == 일시정지
 
+Pause recording
+== 녹화 일시정지
+
+Pause recording the practice line (the recorded part is kept)
+== 연습 라인 녹화 일시정지(녹화된 부분은 유지)
+
+Pause recording without discarding what has been recorded so far. Resuming starts a new segment, so the paused stretch is not drawn as a straight line.
+== 지금까지 녹화한 내용을 버리지 않고 일시정지합니다. 다시 시작하면 새 구간으로 기록되므로 일시정지한 구간이 직선으로 그려지지 않습니다.
+
 Pause the current demo
 == 현재 데모 일시 정지
 
@@ -10303,9 +10321,6 @@ Pick a shape, then tune glow and animation speed.
 
 Pick a slot, type the command and its label, then hold the wheel key in game to test.
 == 슬롯을 고르고 명령과 라벨을 입력한 뒤, 게임에서 휠 키를 눌러 테스트하세요.
-
-Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
-== Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
 
 Pick result: %s
 == 추첨 결과: %s
@@ -10750,6 +10765,9 @@ Position jump tip
 
 Position:
 == 위치:
+
+Practice ghosts
+== 연습 고스트
 
 Practice mode can't be enabled in team 0 mode.
 == 팀 0 모드에서는 연습 모드를 활성화할 수 없습니다
@@ -11777,6 +11795,9 @@ Remove war clan:
 Remove war name:
 == 전쟁 이름 제거:
 
+Remove weapons
+== 무기 제거
+
 Removed %s from friends
 == %s 님을 친구에서 제거했습니다
 
@@ -11966,6 +11987,9 @@ Replaces or hides chat lines that match words on your own list before they are s
 Replay
 == 리플레이
 
+Replay a saved practice ghost group in demo-style view mode
+== 저장된 연습 고스트 그룹을 데모 방식 보기 모드로 재생
+
 Replay downloaded
 == 리플레이 다운로드됨
 
@@ -12025,6 +12049,9 @@ Rescan fonts and query resolved Unicode face and glyph when qm_graphics_trace is
 
 Rescue is not enabled on this server and you're not in a team with /practice turned on. Note that you can't earn a rank with practice enabled.
 == 이 서버에서 Rescue 가 활성화되어 있지 않으며 /practice 가 켜진 팀에도 속해 있지 않습니다. 연습 모드에서는 순위를 얻을 수 없습니다.
+
+Rescue mode
+== 구조 모드
 
 Rescue mode changed to auto.
 == 구조 모드가 auto 로 변경되었습니다.
@@ -12152,6 +12179,9 @@ Restart
 Restart in x seconds (0 = abort)
 == x초 후 재시작 (0 = 중단)
 
+Restart practice world
+== 연습 세계 다시 시작
+
 Restart the client
 == 클라이언트 재시작
 
@@ -12173,6 +12203,12 @@ Restore old single-segment hook collision line behavior
 Restore recommended
 == 권장값으로 복원
 
+Restore the practice world to the state it had when fast practice was enabled
+== 연습 세계를 빠른 연습을 시작한 시점의 상태로 되돌림
+
+Restore the practice world to the state it had when fast practice was enabled. The recorded line is kept and a new segment is started.
+== 연습 세계를 빠른 연습을 시작한 시점의 상태로 되돌립니다. 녹화된 라인은 유지되고 새 구간부터 이어집니다.
+
 Restored the built-in content
 == 내장 콘텐츠로 되돌렸습니다
 
@@ -12193,6 +12229,9 @@ Retry remote stats
 
 Retrying…
 == 재시도 중…
+
+Return to respawn point
+== 리스폰 지점으로 돌아가기
 
 Reverse chat gradient colors
 == 그라데이션 색상 반전 (채팅)
@@ -12220,6 +12259,9 @@ Review the entries and change only what you understand; defaults are tuned for n
 
 Reviews configuration values that differ from their defaults and resets them.
 == 기본값과 다른 설정 값을 검토하고 초기화합니다.
+
+Rifle
+== 라이플
 
 Rifle Laser Inner Color
 == 라이플 레이저 내부 색상
@@ -12416,6 +12458,9 @@ Save power by lowering update rate
 Save power by lowering update rate (higher input latency)
 == 업데이트 속도를 낮춰 전력 절약 (입력 지연 증가)
 
+Save practice line
+== 연습 라인 저장
+
 Save replay of best time per game
 == 게임당 최고 기록의 리플레이 저장
 
@@ -12439,6 +12484,12 @@ Save team with code r.
 
 Save the best demo of each race
 == 각 레이스의 최고 데모 저장
+
+Save the current fast-practice line (all tees) as a replayable ghost group
+== 현재 빠른 연습 라인(모든 Tee)을 재생 가능한 고스트 그룹으로 저장
+
+Save the current fast-practice line (all tees) as a replayable ghost group. Only works while fast practice is active. Find the saved group on the Ghost page and press View to replay it as a demo-style ghost without leaving the server.
+== 현재 빠른 연습 라인(본체와 더미)을 재생 가능한 고스트 그룹으로 저장합니다. 빠른 연습 중에만 동작합니다. 저장 후 고스트 페이지에서 그룹을 선택하고 View를 누르면 서버를 나가지 않고 데모 방식으로 다시 볼 수 있습니다.
 
 Save the current team
 == 현재 팀 저장
@@ -12535,9 +12586,6 @@ Scoreboard playtime
 
 Scoreboard point check
 == 점수판 포인트 확인
-
-Scoreboard row colors
-== Scoreboard row colors
 
 Scoreboard score lookup
 == 스코어보드 점수 확인
@@ -13019,6 +13067,9 @@ Set fullscreen mode: 0=off, 1=exclusive, 2=desktop, 3=windowed fullscreen
 Set microphone mute state (0=on, 1=mute)
 == 마이크 음소거 상태 설정 (0=켜짐, 1=음소거)
 
+Set practice respawn point
+== 연습 리스폰 지점 설정
+
 Set server to singleplayer mode (no player interaction, must be set before loading map)
 == 서버를 싱글플레이어 모드로 설정 (플레이어 상호작용 없음, 맵 로드 전에 설정해야 함)
 
@@ -13344,10 +13395,10 @@ Show death tile outlines
 == 죽음 타일 윤곽선 표시
 
 Show deep freeze tile outlines
-== Show deep freeze tile outlines
+== 깊은 프리즈 타일 윤곽선 표시
 
 Show deep unfreeze tile outlines
-== Show deep unfreeze tile outlines
+== 깊은 언프리즈 타일 윤곽선 표시
 
 Show default flag in scoreboard
 == 점수판에 기본 국기 표시
@@ -13455,7 +13506,7 @@ Show freeze bars
 == 해동 진행바 표시
 
 Show freeze tile outlines
-== Show freeze tile outlines
+== 얼음 타일 윤곽선 표시
 
 Show friend icon in name plates
 == 이름표에 친구 아이콘 표시
@@ -13530,7 +13581,7 @@ Show hook strength number indicator
 == 갈고리 강도 숫자 표시
 
 Show hookable tile outlines
-== Show hookable tile outlines
+== 갈고리 가능 타일 윤곽선 표시
 
 Show how weapons, shields, snowflakes, and flags appear in game
 == 무기, 방패, 눈송이, 깃발이 게임에서 어떻게 보이는지 표시
@@ -14106,10 +14157,10 @@ Show tuning parameters affecting own player (0=Off, 1=Show changed, 2=Show all)
 == 자신의 플레이어에 영향을 미치는 튜닝 파라미터 표시 (0 = 끄기, 1 = 변경된 것만 표시, 2 = 모두 표시)
 
 Show unfreeze tile outlines
-== Show unfreeze tile outlines
+== 언프리즈 타일 윤곽선 표시
 
 Show unhookable tile outlines
-== Show unhookable tile outlines
+== 갈고리 불가능 타일 윤곽선 표시
 
 Show unknown server messages
 == 알 수 없는 서버 메시지 표시
@@ -14807,14 +14858,23 @@ Start holding the hook before loading the savegame to keep the hook
 Start marker of replay slice
 == 리플레이 슬라이스의 시작 마커
 
+Start or resume recording the practice line
+== 연습 라인 녹화 시작 또는 재개
+
 Start playback of ghosts
 == 고스트 재생 시작
+
+Start recording
+== 녹화 시작
 
 Start recording a demo
 == 데모 녹화 시작
 
 Start recording a video
 == 비디오 녹화 시작
+
+Start recording the fast-practice line, or resume after a pause. Recording is always manual: nothing is recorded until this is pressed.
+== 빠른 연습 라인 녹화를 시작하거나 일시정지 후 이어서 녹화합니다. 녹화는 항상 수동이며, 누르기 전에는 아무것도 기록되지 않습니다.
 
 Start skin queue from a random position when entering a map
 == 맵 입장 시 스킨 큐를 무작위 위치에서 시작
@@ -14906,6 +14966,9 @@ Steam profile name
 Still free after %d sponsors. Take a look?
 == %d명의 후원자 덕분입니다. 보시겠어요?
 
+Stop and save recording
+== 녹화 종료 및 저장
+
 Stop following
 == 따라가기 중지
 
@@ -14936,6 +14999,12 @@ Stop recording a demo
 Stop recording a video
 == 비디오 녹화 중지
 
+Stop recording and save the practice line as a ghost group
+== 녹화를 종료하고 연습 라인을 고스트 그룹으로 저장
+
+Stop recording and write the line to disk right away as a ghost group. The saved group can be replayed from the bind menu or the Ghost page.
+== 녹화를 종료하고 라인을 고스트 그룹으로 즉시 디스크에 저장합니다. 저장된 그룹은 바인드 메뉴나 고스트 페이지에서 재생할 수 있습니다.
+
 Stop rendering text overlays in editor or with entities: higher = less detail = faster
 == 편집기 또는 엔티티에서 텍스트 오버레이 렌더링 중지: 높을수록 = 세부 묘사 감소 = 더 빠름
 
@@ -14944,6 +15013,12 @@ Stop server
 
 Stop the current demo
 == 현재 데모 중지
+
+Store the current practice tee state as the respawn point
+== 현재 연습 Tee 상태를 리스폰 지점으로 저장
+
+Store the current tee state (position, weapons, jumps and movement state) as the practice respawn point.
+== 현재 Tee 상태(위치, 무기, 점프, 이동 상태)를 연습 리스폰 지점으로 저장합니다.
 
 Streamer mode
 == 스트리머 모드
@@ -14955,7 +15030,7 @@ Strength icons assets
 == 강도 아이콘 에셋
 
 Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)
-== Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)
+== Apple 캡슐 끝 강도(0 = 반원, 100 = 최대)
 
 Stress system (debug builds only).
 == 스트레스 시스템 (디버그 빌드 전용)
@@ -15401,6 +15476,12 @@ Tele
 Teleport all weapons (deprecated, use special entities instead)
 == 모든 무기 순간이동 (사용 중단됨, 대신 특수 엔티티 사용)
 
+Teleport back to the practice respawn point
+== 연습 리스폰 지점으로 돌아가기
+
+Teleport back to the practice respawn point and restore the tee state saved there. Only the tee is restored; the world keeps running.
+== 연습 리스폰 지점으로 돌아가 그곳에 저장된 Tee 상태를 복원합니다. Tee만 되돌리고 세계는 계속 진행됩니다.
+
 Teleport free spectator camera between hovered tele-in/out or checkpoint tele and a matching counterpart
 == 마우스를 올린 텔레포트 입구/출구 또는 체크포인트 텔레포트와 그에 대응하는 지점 사이에서 자유 관전 카메라를 순간이동합니다
 
@@ -15430,6 +15511,9 @@ Teleport tile outline color
 
 Teleport tile outline width
 == 텔레포트 타일 윤곽선 두께
+
+Teleport to cursor
+== 커서로 텔레포트
 
 Teleport yourself out of freeze if auto rescue mode is enabled, otherwise it will set position for rescuing if grounded and teleport you out of freeze if not (use sv_rescue 1 to enable this feature)
 == 자동 구조 모드가 활성화된 경우 동결 상태에서 순간이동합니다. 그렇지 않은 경우, 땅에 닿았을 때 구조 위치를 설정하고 닿지 않았을 때 동결에서 순간이동합니다 (sv_rescue 1 로 이 기능을 활성화하세요)
@@ -16538,6 +16622,9 @@ UI server address
 UI size percentage
 == UI 크기 백분율
 
+Un-solo
+== solo 해제
+
 Unable to delete %d selected items. The first failing item was '%s'.
 == %d개의 선택된 항목을 삭제할 수 없습니다. 첫 번째 실패 항목은 '%s'입니다.
 
@@ -16616,6 +16703,9 @@ Uncertainty duration
 Unclassified audio issue
 == 분류되지 않은 오디오 문제
 
+Undo deep freeze
+== 깊은 프리즈 해제
+
 Unexpected map upload response.
 == 맵 업로드 응답이 예상과 다릅니다.
 
@@ -16656,16 +16746,13 @@ Unfreeze tile outline color
 == 언프리즈 타일 윤곽선 색상
 
 Unfreeze tile outline width
-== Unfreeze tile outline width
+== 언프리즈 타일 윤곽선 두께
 
 Unhookable tile outline color
-== Unhookable tile outline color
+== 갈고리 불가능 타일 외곽선 색상
 
 Unhookable tile outline width
-== Unhookable tile outline width
-
-Unhookable tiles
-== Unhookable tiles
+== 갈고리 불가능 타일 외곽선 두께
 
 Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
 == 통합 내보내기 품질 (CRF/CQ/QP 척도 0-51, -1 = cl_video_crf 사용). 각 인코더의 고유 매개변수로 매핑됩니다
@@ -17104,6 +17191,9 @@ Video was saved to '%s'
 
 Videos directory
 == 비디오 디렉토리
+
+View
+== 보기
 
 View details
 == 설명 보기
