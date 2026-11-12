@@ -3861,7 +3861,7 @@ void CMenus::RenderStatistics(CUIRect MainView)
 			Highlight.w = maximum(0.0f, TableContentRight + 8.0f - Highlight.x);
 			Highlight.y += 1.0f;
 			Highlight.h -= 2.0f;
-			Highlight.Draw(ui_token::color::LIST_ITEM_HOVER, IGraphics::CORNER_ALL, ui_token::radius::SMALL_MENU);
+			Highlight.Draw(Ui()->QmControlTheme().m_Selected, IGraphics::CORNER_ALL, ui_token::radius::SMALL_MENU);
 		}
 		const ColorRGBA Color = aModeColors[Index % std::size(aModeColors)];
 		CUIRect Dot, Name, Maps, Duration, Score = CUIRect();
@@ -6143,17 +6143,20 @@ void CMenus::RenderThemeSelection(CUIRect MainView, const SSettingsContentMetric
 	const SSettingsContentMetrics Metrics = pMetrics != nullptr ? *pMetrics : ResolveSettingsContentMetrics(MainView.w);
 	s_ListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);
 	s_ListBox.SetWheelOwnerPriority(EUiWheelOwnerPriority::COMPOSITE_CONTROL);
-	// 选中态与下拉框弹层条目同一口径（QmSettingsDropdownVisualStyle().m_ActiveEntryColor
-	// 就是 Theme.m_Selected）：强调色低透明度填充、无描边；悬浮态保持列表 token。
-	// 组件默认（ui_listbox 的 SetCapsuleRows）这一轮还是 LIST_ITEM_SELECTED，
-	// 这里先显式取同一来源；等 ui_listbox 默认值改成 Theme.m_Selected 后这一行可删。
+	// 选中态与悬浮态统一取主题强调色（QmSettingsDropdownVisualStyle().m_ActiveEntryColor
+	// 就是 Theme.m_Selected）：强调色低透明度填充、无描边，两种反馈同一份颜色。
+	// 白色 token（LIST_ITEM_HOVER/LIST_ITEM_SELECTED）不再参与行反馈——实机反馈「悬浮
+	// 颜色要跟强调色走，不是白的一档」。
 	const ColorRGBA SelectedItemColor = Ui()->QmControlTheme().m_Selected;
-	s_ListBox.SetItemColors(SelectedItemColor, SelectedItemColor, ui_token::color::LIST_ITEM_HOVER);
+	s_ListBox.SetItemColors(SelectedItemColor, SelectedItemColor, SelectedItemColor);
 	// 统一行外观：胶囊整行 + token 行距 + 按字号派生的行内内边距，与图形页列表同一套。
 	// 可见行数取整数行（最少 3 行沿用原 RowsPerScroll 的设计意图，最多 8 行），
 	// 卡片测高（ResolveSettingsGeneralThemeListGeometry）用同一组行数，超出的行交给滚动条；
 	// 这样列表体高度正好停在整行边界，最上/最下一行的胶囊不会被裁掉或探出容器背景。
 	s_ListBox.SetCapsuleRows(Metrics.m_BodySize);
+	// 容器内边距显式声明（卡片测高 ResolveSettingsGeneralThemeListGeometry 已按
+	// PaddedRowsHeight 计入两档）：首/末行的胶囊不再压在容器圆角上。
+	s_ListBox.SetContainerPadding(ui_token::list::ContainerPadding(Metrics.m_ListRowHeight));
 	s_ListBox.SetVisibleRowRange(ui_token::list::THEME_MIN_VISIBLE_ROWS, ui_token::list::MAX_VISIBLE_ROWS);
 
 	const float HeaderHeight = Metrics.m_LineHeight;
@@ -7203,7 +7206,11 @@ bool CMenus::MenuTextContainerNeedsBuild(CUIElement &Element, const CUIRect *pRe
 		(StrLen != 0 && StrLen < 0 && str_comp(pElementRect->m_Text.c_str(), pText) != 0);
 	const int ReadCursorGlyphCount = pReadCursor == nullptr ? -1 : pReadCursor->m_GlyphCount;
 	const bool SizeChanged = pElementRect->m_Width != pRect->w || pElementRect->m_Height != pRect->h;
-	const bool StyleChanged = pElementRect->m_FontSize != Size || pElementRect->m_TextAlign != Align || pElementRect->m_LabelMaxWidth != LabelProps.m_MaxWidth || pElementRect->m_LabelFlags != Ui()->GetLabelFlagsForProperties(LabelProps, pReadCursor);
+	// 逐字色段烘在容器顶点里，改了就必须重建；没改继续复用。判定与
+	// CUi::DoLabelStreamed 完全一致（同一个谓词），否则这里排队、那边不重建
+	// 会逐帧空转。
+	const bool BakedColorChanged = !pElementRect->BakedColorMatches(LabelProps.m_vColorSplits, TextRender()->GetTextColor());
+	const bool StyleChanged = BakedColorChanged || pElementRect->m_FontSize != Size || pElementRect->m_TextAlign != Align || pElementRect->m_LabelMaxWidth != LabelProps.m_MaxWidth || pElementRect->m_LabelFlags != Ui()->GetLabelFlagsForProperties(LabelProps, pReadCursor);
 	const bool NeedsBuild =
 		(!pElementRect->m_UITextContainer.Valid() && pText[0] != '\0' && StrLen != 0) ||
 		TextChanged ||

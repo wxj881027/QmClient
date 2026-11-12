@@ -6183,6 +6183,10 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		const float LocalRowHeight = TextureHeight + AssetCardTextReserve + AssetCardFooterSpacing + Margin;
 		s_ListBox.SetCapsuleRows(ContentMetrics.m_BodySize);
 		s_ListBox.DoAutoSpacing(0.0f);
+		// 选中与悬浮反馈统一取主题强调色（qm_ui_selected_color 派生自强调色）：白 8%/14%
+		// 的旧 token 不再参与行反馈，两种反馈同一份颜色、强度由组件统一补偿。
+		const ColorRGBA LocalRowFeedbackColor = Ui()->QmControlTheme().m_Selected;
+		s_ListBox.SetItemColors(LocalRowFeedbackColor, LocalRowFeedbackColor, LocalRowFeedbackColor);
 		// 整数行：列表高度停在整行边界，底部不再裁出半张卡。
 		s_ListBox.SetVisibleRowRange(1, maximum(1, (int)std::floor(std::max(0.0f, CustomList.h) / LocalRowHeight)));
 		// 反馈矩形贴合卡片（卡片与格子之间有半格间隙）；白色描边已由列表组件统一取消。
@@ -7300,6 +7304,9 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		const float WorkshopRowHeight = TextureHeight + AssetCardTextReserve + AssetCardFooterSpacing + Margin;
 		s_WorkshopAssetsListBox.SetCapsuleRows(ContentMetrics.m_BodySize);
 		s_WorkshopAssetsListBox.DoAutoSpacing(0.0f);
+		// 选中与悬浮反馈统一取主题强调色，与本地资源网格、语言/主题列表同一口径。
+		const ColorRGBA WorkshopRowFeedbackColor = Ui()->QmControlTheme().m_Selected;
+		s_WorkshopAssetsListBox.SetItemColors(WorkshopRowFeedbackColor, WorkshopRowFeedbackColor, WorkshopRowFeedbackColor);
 		// 反馈矩形贴合卡片（卡片与格子之间有半格间隙）；描边由列表组件统一取消。
 		s_WorkshopAssetsListBox.SetItemSelectionInset(Margin / 2.0f);
 		if(CombinedCount == 0)

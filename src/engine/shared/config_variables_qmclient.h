@@ -97,6 +97,10 @@ MACRO_CONFIG_INT(QmCardLayoutVersion, qm_card_layout_version, 0, 0, 13, CFGFLAG_
 MACRO_CONFIG_STR(QmSettingsCardOrder, qm_settings_card_order, 2048, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Tclient settings card ordering (format: id:col:order; semicolon-separated)")
 // 服务器浏览器地图预览：「只看实体层」开关原来只存在弹窗上下文里，关掉弹窗就丢，改为落配置。
 MACRO_CONFIG_INT(QmMapPreviewEntityOnly, qm_map_preview_entity_only, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Map preview shows the entity layer only (hides textures)")
+// 服务器信息页的「暴露 IP」：引擎的 CFavorites::Add() 对新收藏项写死 m_AllowPing = false，
+// Remove() 又会整条删掉记录，所以「取消收藏 → 再收藏」必然回到不暴露。这里记住用户最近
+// 一次的选择，作为新建收藏项的默认暴露策略（0 = 不暴露）；只在交互趟读写。
+MACRO_CONFIG_INT(QmBrowserFavoriteExposeIp, qm_browser_favorite_expose_ip, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Expose IP to servers by default when adding a favorite (last choice on the server info page)")
 MACRO_CONFIG_INT(DbgQmUiDogfood, dbg_qm_ui_dogfood, 0, 0, 1, CFGFLAG_CLIENT, "Show feat-003 shared UI primitives dogfood page (takes over QmClient settings page, for visual verification of 11 primitives + spring/easing animations)")
 MACRO_CONFIG_COL(QmUiColor, qm_ui_color, 0x000000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Interface surface color")
 MACRO_CONFIG_COL(QmUiFocusColor, qm_ui_focus_color, 0x97FFA6, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Keyboard focus ring color")

@@ -98,11 +98,12 @@ static constexpr float TYPE_FILTER_ROW_HEIGHT = 13.0f;
 static constexpr int COMMUNITY_FILTER_VISIBLE_ROWS = 4;
 static constexpr int COUNTRY_FILTER_VISIBLE_ROWS = 4;
 
-// 筛选胶囊列表的整数行占位：N 行行高 + 行间 (N-1) 档 + 上下各半档留白，
-// 与列表里「半档留白 → 行高 → 半档留白」的步进严格相等，即 N × (行高 + 行距)。
-static constexpr float FilterGridExtent(int Rows, float RowHeight)
+// 筛选胶囊列表的整数行占位：N 行行高 + 行间 (N-1) 档 + 上下两档容器内边距，
+// 与列表里「内边距 → 行高 → 行距 → … → 行高 → 内边距」的步进严格相等，
+// 即 N × (行高 + 行距) + 2 × ContainerPadding(行高)。
+static inline float FilterGridExtent(int Rows, float RowHeight)
 {
-	return Rows * (RowHeight + ui_token::list::ROW_SPACING);
+	return Rows * (RowHeight + ui_token::list::ROW_SPACING) + 2.0f * ui_token::list::ContainerPadding(RowHeight);
 }
 
 static SQmDropdownVisualStyle FriendsPopupVisualStyle()
@@ -1804,14 +1805,12 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	// 胶囊行：整行圆角、主题选中/悬浮填充与行内左右内退。行距已经并入
 	// BrowserRowStep，这里显式把组件行距压成 0——可见范围裁剪只用 SkipItems，
 	// 它不补行距，滚过一屏后整张表会向上漂移。行间留白由行内选择内缩给出。
-	// 列表整体按 SERVER_LIST_SCROLLBAR_RAIL_ALPHA_SCALE 淡化（为滚动条轨道），
-	// 胶囊填充要落回与下拉弹层相同的那份主题选中色，先把颜色按同一系数反算回来
-	// （ScaleBackgroundAlpha 再乘回去正好等于原色，选中态与弹层逐位一致）。
+	// 行反馈（选中/悬浮胶囊）一律传主题选中色原色：列表反馈只看强调色，悬浮与
+	// 选中是同一份 m_Selected（与下拉弹层同源），不要再掺白色 token 另起一档。
+	// 上面那次整体淡化只服务滚动条轨道，反算已经下沉到 CListBox 内部（组件按
+	// 1/BackgroundAlphaScale 还原一次）；这里再预除一遍会变成二次补偿。
 	const ColorRGBA ThemeSelected = Ui()->QmControlTheme().m_Selected;
-	const auto RowFeedbackColor = [](const ColorRGBA &TokenColor) {
-		return TokenColor.WithAlpha(TokenColor.a / SERVER_LIST_SCROLLBAR_RAIL_ALPHA_SCALE);
-	};
-	s_ListBox.SetItemColors(RowFeedbackColor(ThemeSelected), RowFeedbackColor(ThemeSelected), RowFeedbackColor(ui_token::color::LIST_ITEM_HOVER));
+	s_ListBox.SetItemColors(ThemeSelected, ThemeSelected, ThemeSelected);
 	s_ListBox.DoAutoSpacing(0.0f);
 	s_ListBox.SetItemSelectionInset(ui_token::list::ROW_SPACING * 0.5f);
 	// 可见行取整：按实际可用高度收敛到整数行，首/末行不会被裁掉半行。
@@ -2439,15 +2438,15 @@ void CMenus::RenderServerbrowserMapFilterSelector(CUIRect Selector)
 // 的 ShowNotice）仍然保留，浏览器两处调用一律传 false：既不画字，也不为它预留高度，
 // 不会留下一行空白。IsServerlistError() 的其它用途（空列表态文案、后台加载判定）不受影响。
 
-// 浏览器面板里自绘的三处滚动区（好友列表 / 筛选面板 / 状态栏）统一走**非覆盖式**
-// 轨道：Begin() 会把 thickness 当作占位从 clip 里切走，内容矩形天然内缩，行右缘与
-// 轨道之间由 margin 留出缝隙，调用点不需要也不允许再手写一次让位减法（双扣）。
-// 参数全部由列表 token 派生：可见轨宽 = thickness − 2×margin
-// = (SCROLLBAR_WIDTH + 2×SCROLLBAR_MARGIN) − 2×SCROLLBAR_MARGIN = SCROLLBAR_WIDTH = 8，
-// 内容与轨道之间的缝 = SCROLLBAR_MARGIN = 4。
-// 注意：不能用覆盖式（m_ScrollbarOverlay = true）——覆盖式不占位，这层缝隙会凭空
-// 消失，内容就贴到轨道上了；「轨道隐形」是 thickness/margin 取值把可见宽算成 0，
-// 与是否覆盖无关。
+// 浏览器面板里自绘的三处滚动区（好友列表 / 筛选面板 / 状态栏）现在分两条口径。
+// 静态面板（筛选 / 状态栏）走**非覆盖式**：Begin() 会把 thickness 当作占位从 clip
+// 里切走，内容矩形天然内缩，行右缘与轨道之间由 margin 留出缝隙，调用点不需要也不
+// 允许再手写一次让位减法（双扣）。参数全部由列表 token 派生：可见轨宽 =
+// thickness − 2×margin = (SCROLLBAR_WIDTH + 2×SCROLLBAR_MARGIN) − 2×SCROLLBAR_MARGIN
+// = SCROLLBAR_WIDTH = 8，内容与轨道之间的缝 = SCROLLBAR_MARGIN = 4。
+// 「轨道隐形」是 thickness/margin 取值把可见宽算成 0，与是否覆盖无关。
+// 好友列表例外：它的内容高度在展开/折叠动画里逐帧变化、轨道随时可能进出，
+// 占位必须恒定，见下面的 ApplyFriendsScrollbar。
 static void ApplyBrowserScrollbar(CScrollRegionParams &Params, float TrackInset)
 {
 	Params.m_ScrollbarThickness = ui_token::list::SCROLLBAR_WIDTH + 2.0f * ui_token::list::SCROLLBAR_MARGIN;
@@ -2462,6 +2461,26 @@ static void ApplyBrowserScrollbar(CScrollRegionParams &Params, float TrackInset)
 	Params.m_AnimateScrollbarReserve = false;
 	Params.m_ScrollbarAlwaysReserved = false;
 	// FILTER_GRID 的 policy 默认把轨道设成 HIDDEN；这三处要的是可见、能拖的轨道。
+	Params.m_HideScrollbar = false;
+}
+
+// 好友列表的轨道：与非覆盖式面板同一档（可见宽 8、外边距 4、缝 4），但**开启占位动画**。
+// 没有滚动条时占位为 0，卡片与分类表头占满全宽；轨道出现/消失时占位宽度（0↔16）
+// 走同一档缓动，内容连续让位而不是整段横跳。好友列表的内容高度是展开进度 ExpandT
+// 的函数，逐帧都会跨过溢出阈值，只有占位动画能吸收这个跳变；恒定让位会让没有滚动条
+// 时也永久空出一列（实机反馈：正常情况下应当占满全宽）。
+static void ApplyFriendsScrollbar(CScrollRegionParams &Params, float TrackInset)
+{
+	Params.m_ScrollbarThickness = ui_token::list::SCROLLBAR_WIDTH + 2.0f * ui_token::list::SCROLLBAR_MARGIN;
+	Params.m_ScrollbarMargin = ui_token::list::SCROLLBAR_MARGIN;
+	Params.m_ScrollbarOverlay = false;
+	// 非覆盖式不需要显示系数与横向滑出：轨道显隐直接走占位那一档动画。
+	Params.m_ScrollbarRevealSec = 0.0f;
+	Params.m_ScrollbarSlide = 0.0f;
+	Params.m_ScrollbarTrackInset = std::max(0.0f, TrackInset);
+	// 占位跟着显隐动画走：出现/消失都平滑，展开动画中途跨过阈值也不会闪一列。
+	Params.m_AnimateScrollbarReserve = true;
+	Params.m_ScrollbarAlwaysReserved = false;
 	Params.m_HideScrollbar = false;
 }
 
@@ -2856,9 +2875,20 @@ void CMenus::RenderServerbrowserDDNetFilter(CUIRect View,
 	// 只有几十像素宽，全量内退会把旗标/文字挤小，按更小的一档收敛，格子边界仍由胶囊给出。
 	const float TokenRowInsetX = ui_token::list::RowInsetX(RowHeight * CUi::ms_FontmodHeight);
 	const float ContentInsetX = ItemsPerRow > 1 ? std::min(TokenRowInsetX, ui_token::spacing::XS) : TokenRowInsetX;
+	// 容器内边距：与 CListBox 同一条 token（按行高分档，网格不大所以落在 XS/SM）。
+	// 四边都内缩——首/末列与首/末行的胶囊不再压在容器圆角上，格子与容器边缘之间
+	// 有可见留白（实机反馈：上下左右边距都得做，但不必太大）。
+	const float Padding = ui_token::list::ContainerPadding(RowHeight);
 	// 只按整数行开口：滚动视口边界落在行与行的缝隙里，首/末行不会被裁成半个胶囊。
-	const int VisibleGridRows = maximum(1, (int)std::floor((std::max(0.0f, View.h) - RowHeight - RowSpacing * 0.5f) / RowStep) + 1);
-	View.h = std::min(View.h, VisibleGridRows * RowStep);
+	const int VisibleGridRows = maximum(1, (int)std::floor((std::max(0.0f, View.h - 2.0f * Padding) - RowHeight - RowSpacing * 0.5f) / RowStep) + 1);
+	// 容器总高 = 整数行内容 + 上下两档内边距（调用点测高用 FilterGridExtent 同一条公式）。
+	View.h = std::min(View.h, VisibleGridRows * RowStep + 2.0f * Padding);
+	// 行区排在内边距内侧：滚动区、格宽、左右内退都从这条线开始算。
+	CUIRect Layout = View;
+	Layout.x += Padding;
+	Layout.w = maximum(0.0f, Layout.w - 2.0f * Padding);
+	Layout.y += Padding;
+	Layout.h = maximum(0.0f, Layout.h - 2.0f * Padding);
 
 	vec2 ScrollOffset(0.0f, 0.0f);
 	SQmScrollRequest ScrollRequest;
@@ -2873,8 +2903,8 @@ void CMenus::RenderServerbrowserDDNetFilter(CUIRect View,
 	// 滚轮滚动能力保留；宽度直接取外层面板的内容宽（已扣面板轨道让位），
 	// 所以格子右缘不会伸到面板轨道下面。
 	ScrollParams.m_HideScrollbar = true;
-	ScrollRegion.Begin(&View, &ScrollOffset, &ScrollParams);
-	View.y += ScrollOffset.y;
+	ScrollRegion.Begin(&Layout, &ScrollOffset, &ScrollParams);
+	Layout.y += ScrollOffset.y;
 
 	CUIRect Row;
 	int ColumnIndex = 0;
@@ -2898,7 +2928,7 @@ void CMenus::RenderServerbrowserDDNetFilter(CUIRect View,
 		const int RowIndex = ItemIndex / ItemsPerRow;
 		CUIRect Cell;
 		if(ColumnIndex == 0)
-			View.HSplitTop(RowStep, &Row, &View);
+			Layout.HSplitTop(RowStep, &Row, &Layout);
 		Cell = {Row.x + ColumnIndex * (Row.w / ItemsPerRow), Row.y + RowSpacing * 0.5f, Row.w / ItemsPerRow, RowHeight};
 		ColumnIndex = (ColumnIndex + 1) % ItemsPerRow;
 		if(!ScrollRegion.AddRect(Cell))
@@ -2998,11 +3028,12 @@ void CMenus::RenderServerbrowserDDNetFilter(CUIRect View,
 		if(Ui()->HotItem() == pItemId && !ScrollRegion.Animating())
 		{
 			// 悬浮是整格胶囊，只填充不描边：白色描边只属于卡片内的小控件，列表行/格不用。
-			// 悬浮与选中同源同强度（QmControlTheme().m_Selected = qm_ui_selected_color，
-			// alpha 0.22），与本页服务器列表行的既有观感一致：不要再自己乘 0.58 之类的
-			// 系数——那样只剩 0.13，悬浮几乎看不出来。
+			// 填充取主题选中色（与 CListBox 的选中/悬浮同一份 m_Selected，alpha 0.22），
+			// 不掺白色 token、也不乘任何系数；更不能过 BrowserOpacityColor——那是背板
+			// 与描边的表面染色，会把 alpha 再乘一档 qm_ui_opacity（默认 12%），
+			// 悬浮因此几乎看不出来。这里只叠入场淡入。
 			const ColorRGBA HoverFill = Ui()->QmControlTheme().m_Selected;
-			DrawRoundedSurface(Ui(), Cell, BrowserOpacityColor(HoverFill, Ui()->ControlAlphaScale()), ColorRGBA(), CellRadius);
+			DrawRoundedSurface(Ui(), Cell, HoverFill.WithAlpha(HoverFill.a * Ui()->ControlAlphaScale()), ColorRGBA(), CellRadius);
 		}
 		RenderItem(ItemIndex, Content, pItemId, Active);
 	}
@@ -3299,16 +3330,88 @@ CUi::EPopupMenuFunctionResult CMenus::PopupCountrySelection(void *pContext, CUIR
 	return CUi::POPUP_KEEP_OPEN;
 }
 
+// 本地时间状态机：折叠/展开这类「按帧时间推进」的过渡只在这里有一份缓动
+// （0.15s + smoothstep），好友分类表头与服务器信息页「暴露 IP」行共用同一套。
+//
+// 关键约束：只有交互趟能推进（Retarget），背景/出图趟（RenderOnly）与测量趟
+// （MeasurementOnly，是 RenderOnly 的子集）只读 Current()。菜单一帧里会被渲染
+// 不止一趟，上一版把记账放在所有趟里：非交互趟的闸门收起时直接把 m_From/m_To
+// 推到目标，等交互趟再来时 Current() 已经是终点——动画被吃掉，只剩瞬变。
+static constexpr float LOCAL_EASED_PROGRESS_SEC = 0.15f;
+
+static constexpr float LocalEasedSmoothstep(float Progress)
+{
+	return Progress * Progress * (3.0f - 2.0f * Progress);
+}
+
+// (from, to, startTick, now, freq) → 当前进度。纯函数：不碰任何静态状态，
+// 起止点、半程与越界钳制都在下面用 static_assert 自检（等价于单元测试，
+// 不需要额外测试文件）。
+static constexpr float ResolveLocalEasedProgress(float From, float To, int64_t StartTick, int64_t Now, int64_t Freq)
+{
+	if(From == To || Freq <= 0)
+		return To;
+	const float ElapsedSec = (float)(Now - StartTick) / (float)Freq;
+	const float Progress = std::clamp(ElapsedSec / LOCAL_EASED_PROGRESS_SEC, 0.0f, 1.0f);
+	return From + (To - From) * LocalEasedSmoothstep(Progress);
+}
+
+// 推进条件：只有交互趟、且目标真的变了，才允许重起一段过渡。
+static constexpr bool LocalEasedProgressShouldRetarget(bool InteractivePass, float CurrentTo, float Target)
+{
+	return InteractivePass && CurrentTo != Target;
+}
+
+// 下面这几条 static_assert 就是这条状态机的「单元测试」：起止点、半程与越界钳制，
+// 外加「非交互趟不推进」的闸门。消息保持 ASCII——本工程 MSVC 主目标没开 /utf-8，
+// 中文只出现在注释里。
+static_assert(!LocalEasedProgressShouldRetarget(false, 0.0f, 1.0f), "background/measurement pass must not advance the transition");
+static_assert(!LocalEasedProgressShouldRetarget(false, 1.0f, 0.0f), "background/measurement pass must not advance the transition");
+static_assert(LocalEasedProgressShouldRetarget(true, 0.0f, 1.0f), "interactive pass must restart the transition when the target changes");
+static_assert(!LocalEasedProgressShouldRetarget(true, 1.0f, 1.0f), "unchanged target must not restart the transition");
+static_assert(ResolveLocalEasedProgress(0.0f, 1.0f, 0, 0, 1000) == 0.0f, "progress must start at From");
+static_assert(ResolveLocalEasedProgress(0.0f, 1.0f, 0, 150, 1000) == 1.0f, "progress must reach To after one duration");
+static_assert(ResolveLocalEasedProgress(0.0f, 1.0f, 0, 500, 1000) == 1.0f, "progress must clamp to To past the duration");
+static_assert(ResolveLocalEasedProgress(1.0f, 0.0f, 0, 75, 1000) > 0.45f && ResolveLocalEasedProgress(1.0f, 0.0f, 0, 75, 1000) < 0.55f, "progress must be about halfway at half duration");
+static_assert(ResolveLocalEasedProgress(0.4f, 0.4f, 0, 0, 1000) == 0.4f, "equal From/To must return the resting value");
+
+struct SLocalEasedProgress
+{
+	float m_From = 1.0f;
+	float m_To = 1.0f;
+	int64_t m_StartTick = 0;
+	float Current(int64_t Now, int64_t Freq) const { return ResolveLocalEasedProgress(m_From, m_To, m_StartTick, Now, Freq); }
+	// 目标变了就重新起跑。调用点必须先用 LocalEasedProgressShouldRetarget 判断，
+	// 非交互趟调一次就可能把整段过渡推到终点。
+	void Retarget(float Target, int64_t Now, int64_t Freq)
+	{
+		m_From = Current(Now, Freq);
+		m_To = Target;
+		m_StartTick = Now;
+	}
+	// 直接落在某个静止值上（换页、换服务器这类不该播过渡的场景）。
+	void SnapTo(float Value)
+	{
+		m_From = Value;
+		m_To = Value;
+		m_StartTick = 0;
+	}
+};
+
 void CMenus::RenderServerbrowserInfo(CUIRect View)
 {
 	const CServerInfo *pSelectedServer = ServerBrowser()->SortedGet(m_SelectedIndex);
 
-	// 与筛选页共用胶囊开关的绘制入口、字号、行高和间距。
-	SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(Ui()->Screen()->w);
-	Metrics.m_LineHeight = ui_token::server_info::ROW_HEIGHT;
-	Metrics.m_BodySize = (ui_token::server_info::ROW_HEIGHT - ui_token::server_info::LABEL_FONT_INSET) * CUi::ms_FontmodHeight;
-	Metrics.m_LineSpacing = ui_token::server_info::ROW_GAP;
-	Metrics.m_SectionGap = ui_token::server_info::ROW_GAP * 3.0f;
+	// 本页不再另造一套尺寸：信息行、开关行和复制按钮统一吃设置卡片那份内容度量
+	// （行高、正文字号、行距、分区间距都从本面板的实际内容宽推导，窄面板自动落到
+	// 紧凑档），和卡片同源。之前的写法按屏幕宽取度量、再把行高压成 15px 并反推
+	// 字号 (15-4)×FontmodHeight：正文因此比卡片小一档，开关却仍按标准控件高度
+	// 绘制，同一页里出现两种密度。
+	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(View.w);
+	// 行间距只按卡片语义声明：本页没有分区，只有行——行与行之间、以及进入复制
+	// 按钮和记分板之前统一用 RowGap，不再借用分区的 SectionGap（那一档比行间距大，
+	// 实机反馈「这几处都比行间距大」）。
+	const float RowGap = ui_token::settings::RowGap(Metrics.m_LineSpacing);
 	View.Margin(5.0f, &View);
 	View.VSplitRight(std::min(5.0f, View.w), &View, nullptr);
 	View.HSplitTop(ui_token::spacing::MD, nullptr, &View);
@@ -3319,30 +3422,77 @@ void CMenus::RenderServerbrowserInfo(CUIRect View)
 		return;
 	}
 
+	// 收藏 / 暴露 IP 都以「本页意图」为准：点击那一帧立刻翻转，动画和行高跟着它走，
+	// 不等服务器列表刷新把 m_Favorite / m_FavoriteAllowPing 回写（后台刷新至少滞后
+	// 一帧以上，旧写法让目标每帧在旧值和新值之间来回，实机表现就是开关自己动来动去）。
+	// 记账只在交互趟做：背景/出图/测量趟只读，不推进动画，也不回写配置。
+	const bool InteractivePass = !Ui()->RenderOnly();
+	// 引擎里 CFavorites::Add() 给新收藏项写死 m_AllowPing = false、Remove() 整条删除，
+	// 所以「取消收藏 → 再收藏」必然回到不暴露；而 m_FavoriteAllowPing 只在当前是收藏时
+	// 有意义（IsPingAllowed 对非收藏地址返回 ALL，对「收藏但不暴露」返回 NONE）。
+	// 未收藏时改用持久化的 qm_browser_favorite_expose_ip 作为这次收藏的默认策略。
 	const bool WasFavorite = pSelectedServer->m_Favorite != TRISTATE::NONE;
-	static float s_ExposeRowAnim = 0.0f;
+	const bool ObservedExposeIp = WasFavorite ? pSelectedServer->m_FavoriteAllowPing != TRISTATE::NONE : g_Config.m_QmBrowserFavoriteExposeIp != 0;
+	static char s_aIntentServerAddress[NETADDR_MAXSTRSIZE] = "";
+	static bool s_FavoriteIntent = false;
+	static bool s_ExposeIpIntent = false;
+	static bool s_LastObservedFavorite = false;
+	static bool s_LastObservedExposeIp = false;
+	static SLocalEasedProgress s_ExposeRowAnim;
+	if(str_comp(s_aIntentServerAddress, pSelectedServer->m_aAddress) != 0)
 	{
-		static int64_t s_ExposeLastTick = 0;
-		const int64_t ExposeNow = time_get();
-		const int64_t ExposeFreq = maximum<int64_t>(1, time_freq());
-		const float ExposeDt = s_ExposeLastTick == 0 ? 0.0f : std::clamp((float)(ExposeNow - s_ExposeLastTick) / (float)ExposeFreq, 0.0f, 0.1f);
-		s_ExposeLastTick = ExposeNow;
-		const float Target = WasFavorite ? 1.0f : 0.0f;
-		const float Step = (g_Config.m_QmUiMotionLevel > 0 ? 1.0f / 0.15f : 1000.0f) * ExposeDt;
-		s_ExposeRowAnim = std::clamp(s_ExposeRowAnim + std::clamp(Target - s_ExposeRowAnim, -Step, Step), 0.0f, 1.0f);
+		// 换服务器（按地址认：列表刷新会重建条目，指针不可靠）：直接落在该服务器的
+		// 真实状态上，不播过渡。
+		str_copy(s_aIntentServerAddress, pSelectedServer->m_aAddress, sizeof(s_aIntentServerAddress));
+		s_FavoriteIntent = s_LastObservedFavorite = WasFavorite;
+		s_ExposeIpIntent = s_LastObservedExposeIp = ObservedExposeIp;
+		s_ExposeRowAnim.SnapTo(s_FavoriteIntent ? 1.0f : 0.0f);
 	}
+	else if(InteractivePass && WasFavorite != s_LastObservedFavorite)
+	{
+		// 收藏状态变了：跟随它（外部改动来自服务器列表的星标 / 热键；本页点击的意图
+		// 本来就等于回写值）。暴露 IP 的意图**不跟着清掉**——取消收藏再收藏时开关
+		// 位置必须保持不变，由上面那条持久化配置把这个选择带过来。
+		const bool NewlyFavorited = WasFavorite;
+		s_LastObservedFavorite = WasFavorite;
+		s_FavoriteIntent = WasFavorite;
+		// 外部新建的收藏项（列表星标 / 热键）同样是引擎默认的「不暴露」，按记住的
+		// 策略补一次，否则第四个问题（开关位置被引擎默认值悄悄改掉）只会换个入口复发。
+		if(NewlyFavorited && !ObservedExposeIp && g_Config.m_QmBrowserFavoriteExposeIp != 0)
+			Favorites()->AllowPing(pSelectedServer->m_aAddresses, pSelectedServer->m_NumAddresses, true);
+		s_LastObservedExposeIp = ObservedExposeIp;
+	}
+	else if(InteractivePass && ObservedExposeIp != s_LastObservedExposeIp)
+	{
+		// 本页之外改了暴露策略（控制台的 add_favorite / allow_ping）：跟随它。
+		s_LastObservedExposeIp = ObservedExposeIp;
+		s_ExposeIpIntent = ObservedExposeIp;
+	}
+
+	// 暴露 IP 行的让位：与好友分类同一台状态机、同一条 smoothstep，只有交互趟推进。
+	const int64_t ExposeNow = time_get();
+	const int64_t ExposeFreq = maximum<int64_t>(1, time_freq());
+	const float ExposeTarget = s_FavoriteIntent ? 1.0f : 0.0f;
+	if(LocalEasedProgressShouldRetarget(!Ui()->RenderOnly(), s_ExposeRowAnim.m_To, ExposeTarget))
+		s_ExposeRowAnim.Retarget(ExposeTarget, ExposeNow, ExposeFreq);
+	// 动效关掉（或测量趟）时直接给目标值，状态机本身不因闸门被推着走。
+	const float ExposeRowAnim = g_Config.m_QmUiMotionLevel > 0 && !Ui()->MeasurementOnly() ? s_ExposeRowAnim.Current(ExposeNow, ExposeFreq) : ExposeTarget;
 
 	const char *apLabels[] = {Localize("Version"), Localize("Game type"), Localize("Ping")};
 	float LabelWidth = 0.0f;
 	for(const char *pLabel : apLabels)
 		LabelWidth = std::max(LabelWidth, TextRender()->TextWidth(Metrics.m_BodySize, pLabel));
-	LabelWidth = std::min(LabelWidth + Metrics.m_LineSpacing, View.w * 0.45f);
-	const auto DrawInfoRow = [&](const char *pLabel, const char *pValue, SLabelProperties ValueProps = {}) {
+	LabelWidth = std::min(LabelWidth + RowGap, View.w * 0.45f);
+	// 行前间距，与卡片 Flow.Control(..., SpacingBefore) 同一语义：首行不加，
+	// 之后每行先让一档 RowGap，行与行之间只有这一档。
+	const auto DrawInfoRow = [&](const char *pLabel, const char *pValue, float SpacingBefore, SLabelProperties ValueProps = {}) {
+		if(SpacingBefore > 0.0f)
+			View.HSplitTop(SpacingBefore, nullptr, &View);
 		CUIRect Row, Label, Value;
 		View.HSplitTop(Metrics.m_LineHeight, &Row, &View);
-		View.HSplitTop(Metrics.m_LineSpacing, nullptr, &View);
 		Row.VSplitLeft(LabelWidth, &Label, &Value);
-		Value.VSplitLeft(std::min(Metrics.m_SectionGap, Value.w), nullptr, &Value);
+		// 标签与右对齐数值之间的最小间隔同样取 RowGap，不借用分区间距。
+		Value.VSplitLeft(std::min(RowGap, Value.w), nullptr, &Value);
 		SLabelProperties LabelProps;
 		LabelProps.m_MaxWidth = Label.w;
 		LabelProps.m_EllipsisAtEnd = true;
@@ -3351,41 +3501,48 @@ void CMenus::RenderServerbrowserInfo(CUIRect View)
 		ValueProps.m_EllipsisAtEnd = true;
 		Ui()->DoLabel(&Value, pValue, Metrics.m_BodySize, TEXTALIGN_MR, ValueProps);
 	};
-	DrawInfoRow(apLabels[0], pSelectedServer->m_aVersion);
+	DrawInfoRow(apLabels[0], pSelectedServer->m_aVersion, 0.0f);
 	SLabelProperties GameTypeLabelProps;
 	if(g_Config.m_UiColorizeGametype)
 		GameTypeLabelProps.SetColor(pSelectedServer->m_GametypeColor);
-	DrawInfoRow(apLabels[1], pSelectedServer->m_aGameType, GameTypeLabelProps);
+	DrawInfoRow(apLabels[1], pSelectedServer->m_aGameType, RowGap, GameTypeLabelProps);
 	SLabelProperties PingLabelProps;
 	if(g_Config.m_UiColorizePing)
 		PingLabelProps.SetColor(GetServerListPingColor(pSelectedServer, ServerBrowser()->GetCurrentClientLocation()));
 	char aPingLabel[8];
 	FormatServerbrowserPing(aPingLabel, pSelectedServer);
-	DrawInfoRow(apLabels[2], aPingLabel, PingLabelProps);
-	View.HSplitTop(Metrics.m_SectionGap, nullptr, &View);
+	DrawInfoRow(apLabels[2], aPingLabel, RowGap, PingLabelProps);
+	View.HSplitTop(RowGap, nullptr, &View);
 
-	// 「收藏」与「暴露 IP」两行都走设置页标准开关行：左侧标签 + 右侧 Toggle，
-	// 点击整行或开关都能切。行高必须用设置页标准控件高度（ResolveSettingsControlHeight
-	// ≈ 20），不能沿用本页信息行的 server_info::ROW_HEIGHT(15)——开关的 Track/Knob
-	// 按传入矩形高度算，15 高放不下标准开关（轨道被压扁、滑块顶到轨道外面）。
-	// 行与行之间的节奏仍用本页的 Metrics.m_LineSpacing，和上面三行信息行一致。
-	const float ToggleRowHeight = ResolveSettingsControlHeight(Metrics.m_BodySize);
+	// 「收藏」与「暴露 IP」两行都走设置卡片的开关行同一入口（DoSettingsButton_CheckBox
+	// → ui_widget::DrawToggle）：左侧标签 + 右侧 Toggle，点击整行或开关都能切。
+	// 行高直接取同一份度量的标准控件高度，不再为开关单独放大——开关轨道/滑块的
+	// 尺寸本来就由「行高 + 正文字号」推出，行高统一即开关统一。
+	const float ToggleRowHeight = Metrics.m_LineHeight;
 	CUIRect Button;
 	static int s_AddFavButton = 0;
-	int Favorite = WasFavorite;
+	int Favorite = s_FavoriteIntent ? 1 : 0;
 	View.HSplitTop(ToggleRowHeight, &Button, &View);
-	if(DoSettingsButton_CheckBox(-1, -1, -1, &s_AddFavButton, "Favorite", Localize("Favorite"), Favorite, &Button, SLabelProperties{}, !Ui()->RenderOnly(), Metrics.m_BodySize))
+	// 标签带上作用对象：「收藏服务器」，和相邻的「暴露 IP」同为「动作 + 对象」口径，
+	// 不再只有一个动作词。语义、配置项与提示文案都不变，只换显示文案。
+	if(DoSettingsButton_CheckBox(-1, -1, -1, &s_AddFavButton, "Favorite", Localize("Favorite server"), Favorite, &Button, SLabelProperties{}, !Ui()->RenderOnly(), Metrics.m_BodySize))
 	{
-		Favorite = Favorite == 0 ? 1 : 0;
-		if(Favorite)
+		s_FavoriteIntent = !s_FavoriteIntent;
+		if(s_FavoriteIntent)
 		{
 			Favorites()->Add(pSelectedServer->m_aAddresses, pSelectedServer->m_NumAddresses);
 			// 列表星标据此播一次进场；表只活到那一行被渲染为止。
 			if(gs_FavoriteStarGrowPending.size() >= 64)
 				gs_FavoriteStarGrowPending.clear();
 			gs_FavoriteStarGrowPending.insert(pSelectedServer->m_aAddress);
-			if(g_Config.m_UiPage == PAGE_LAN)
+			// 引擎新建的收藏项一律 m_AllowPing = false：把本页维护的暴露意图写回去，
+			// 否则「打开收藏 → 关闭收藏 → 再打开」会把开关位置悄悄改回关闭（用户点名）。
+			// LAN 另有一档历史行为：添加时自动允许 ping，否则拿不到服务器信息。
+			if(s_ExposeIpIntent || g_Config.m_UiPage == PAGE_LAN)
+			{
 				Favorites()->AllowPing(pSelectedServer->m_aAddresses, pSelectedServer->m_NumAddresses, true);
+				s_ExposeIpIntent = true;
+			}
 		}
 		else
 		{
@@ -3394,26 +3551,31 @@ void CMenus::RenderServerbrowserInfo(CUIRect View)
 		Client()->ServerBrowserUpdate();
 	}
 
-	// 保留收藏后向下展开的过渡，复制按钮与玩家列表随实际行高让位。
-	if(s_ExposeRowAnim > 0.0f)
+	// 收藏后向下展开「暴露 IP」行：进度是上面对 s_ExposeRowAnim 求出的同一个值，
+	// 复制按钮与玩家列表随实际行高让位（不再有第二套缓动）。
+	if(ExposeRowAnim > 0.0f)
 	{
 		static int s_LeakIpButton = 0;
-		int ExposeIp = pSelectedServer->m_FavoriteAllowPing != TRISTATE::NONE;
+		int ExposeIp = s_ExposeIpIntent ? 1 : 0;
 		// 与「收藏」同一套行几何与开关绘制（语义不变：仍然是 m_FavoriteAllowPing）。
 		const float Height = ToggleRowHeight;
-		View.HSplitTop(Metrics.m_LineSpacing * s_ExposeRowAnim, nullptr, &View);
-		View.HSplitTop(Height * s_ExposeRowAnim, &Button, &View);
+		View.HSplitTop(RowGap * ExposeRowAnim, nullptr, &View);
+		View.HSplitTop(Height * ExposeRowAnim, &Button, &View);
 		if(Button.h > 2.0f)
 		{
-			const float Eased = s_ExposeRowAnim * s_ExposeRowAnim * (3.0f - 2.0f * s_ExposeRowAnim);
-			CUiScopedControlAlphaScale ExposeAlpha(Ui(), Eased);
+			CUiScopedControlAlphaScale ExposeAlpha(Ui(), ExposeRowAnim);
 			const CUIRect Clip = Button;
 			Ui()->ClipEnable(&Clip);
 			Button.h = Height;
 			if(DoSettingsButton_CheckBox(-1, -1, -1, &s_LeakIpButton, "Leak IP", Localize("Leak IP"), ExposeIp, &Button, SLabelProperties{}, !Ui()->RenderOnly(), Metrics.m_BodySize))
 			{
-				ExposeIp = ExposeIp == 0 ? 1 : 0;
-				Favorites()->AllowPing(pSelectedServer->m_aAddresses, pSelectedServer->m_NumAddresses, ExposeIp != 0);
+				s_ExposeIpIntent = !s_ExposeIpIntent;
+				Favorites()->AllowPing(pSelectedServer->m_aAddresses, pSelectedServer->m_NumAddresses, s_ExposeIpIntent);
+				// 记住这次选择：它就是新建收藏项的默认暴露策略，也是「取消收藏再收藏」
+				// 之后开关位置保持不变的那份持久化状态（引擎侧记录会随 Remove 丢掉）。
+				// 先写收藏项再落盘，一次 Save 同时带上条目与这条配置。
+				g_Config.m_QmBrowserFavoriteExposeIp = s_ExposeIpIntent ? 1 : 0;
+				ConfigManager()->Save();
 				Client()->ServerBrowserUpdate();
 			}
 			// 行说明保持不变（它不是 g_Config 项，DoSettingsButton_CheckBox 内部的
@@ -3423,10 +3585,13 @@ void CMenus::RenderServerbrowserInfo(CUIRect View)
 		}
 	}
 
-	View.HSplitTop(Metrics.m_SectionGap, nullptr, &View);
-	View.HSplitTop(Metrics.m_LineHeight, &Button, &View);
+	View.HSplitTop(RowGap, nullptr, &View);
+	View.HSplitTop(Metrics.m_ButtonHeight, &Button, &View);
 	static CButtonContainer s_CopyButton;
-	if(DoButton_Menu(&s_CopyButton, Localize("Copy info"), 0, &Button))
+	// 次级按钮与设置卡片里的同档按钮是同一入口（ui_widget::SecondaryButton）：
+	// 字号按 Ctx.m_UiScale 取同一档正文字号，胶囊半径也与卡片一致，不再用菜单
+	// 按钮的「行高 × FontmodHeight」自行推字号。
+	if(ui_widget::SecondaryButton(SettingsUiContext("server_browser_info_copy", Metrics.m_UiScale), &s_CopyButton, Localize("Copy info"), Button))
 	{
 		char aInfo[512];
 		str_format(aInfo, sizeof(aInfo),
@@ -3438,10 +3603,12 @@ void CMenus::RenderServerbrowserInfo(CUIRect View)
 			pSelectedServer->m_aMap);
 		Input()->SetClipboardText(aInfo);
 	}
-	View.HSplitTop(Metrics.m_SectionGap, nullptr, &View);
-	// 玩家列表内部自带左侧间距和滚动条，将外框还原到工具箱边缘。
-	View.x -= 5.0f;
-	View.w += 15.0f;
+	View.HSplitTop(RowGap, nullptr, &View);
+	// 记分板与上面的「复制服务器信息」按钮共用同一个左缘、同一条内容宽，不再做
+	// `View.x -= 5 / View.w += 15` 再由 Scoreboard 里 VSplitLeft(5) 抵消的往返——
+	// 两组内边距对不齐时卡片会左右错开，而宽度也会跟着那 10 个单位走。
+	// 横向让位只剩列表组件自己的滚动条那一列（RowReserveWidth），与可见行数无关：
+	// 暴露 IP 行展开少一行时，卡片宽度保持不变，只有可见行数变。
 	View.h = std::max(0.0f, View.h);
 	RenderServerbrowserInfoScoreboard(View, pSelectedServer);
 }
@@ -3455,7 +3622,6 @@ void CMenus::RenderServerbrowserInfoScoreboard(CUIRect View, const CServerInfo *
 	const float PlayerRowStep = PlayerRowHeight + ui_token::list::ROW_SPACING;
 
 	static CListBox s_ListBox;
-	View.VSplitLeft(5.0f, nullptr, &View);
 	s_ListBox.SetCapsuleRows(FontSize);
 	s_ListBox.DoAutoSpacing(0.0f);
 	s_ListBox.SetItemSelectionInset(ui_token::list::ROW_SPACING * 0.5f);
@@ -3693,13 +3859,17 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 	ScrollRequest.m_RowsPerStep = 3;
 	const SQmResolvedScrollPolicy ScrollPolicy = QmResolveScrollPolicy(ScrollRequest);
 	CScrollRegionParams ScrollParams = QmScrollRegionParamsFromPolicy(ScrollPolicy);
-	// 非覆盖式轨道：Begin() 会把轨道占位从 clip 里切走，卡片/分组标题/拖动提示都按
-	// 回写的 List 排版，右缘与轨道之间天然留出 4 的缝；这里不再手动减让位（会双扣）。
-	ApplyBrowserScrollbar(ScrollParams, ui_token::radius::CARD);
+	// 好友列表与非覆盖式面板共用同一档轨道：**没有滚动条时内容占满全宽**，
+	// 轨道出现时占位宽度动画过渡（m_AnimateScrollbarReserve），卡片与分类表头
+	// 连续让位而不是整段横跳。展开/折叠动画期间内容高度逐帧变化，占位动画把
+	// 「本帧是否溢出」的跳变吸收掉，所以既不需要恒定让位，也不会瞬移。
+	ApplyFriendsScrollbar(ScrollParams, ui_token::radius::CARD);
 	s_ScrollRegion.Begin(&List, &ScrollOffset, &ScrollParams);
 	List.y += ScrollOffset.y;
 
-	const CUIRect ListViewport = *s_ScrollRegion.ClipRect();
+	// 视口宽度直接取滚动区裁剪区：占位（含动画中的占位）已经由 Begin 从裁剪区里扣掉，
+	// 拖动悬停判定与插入提示线都按内容宽算，不会伸到轨道下面去。
+	CUIRect ListViewport = *s_ScrollRegion.ClipRect();
 	const float UiScale = 1.0f;
 	const float CategoryDropPreviewThickness = std::clamp(3.0f * UiScale, 2.0f, 4.0f);
 	const float CategoryDragOutlineThickness = std::clamp(2.0f * UiScale, 1.0f, 2.0f);
@@ -3805,36 +3975,27 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 	vCategoryHeaders.reserve(NumCategories);
 	m_vFriendsCategoryManageButtons.resize(NumCategories);
 
-	// 折叠/展开进度：菜单可能在后台或测量通道渲染，动画运行时不一定逐帧喂值，
-	// 之前依赖 ResolveUiAnimValue 会直接跳变；这里用按帧时间推进的本地状态。
-	struct SFriendCategoryExpandAnim
-	{
-		float m_From = 1.0f;
-		float m_To = 1.0f;
-		int64_t m_StartTick = 0;
-		float Current(int64_t Now, int64_t Freq) const
-		{
-			if(m_From == m_To)
-				return m_To;
-			const float Progress = std::clamp((float)(Now - m_StartTick) / (float)Freq / 0.15f, 0.0f, 1.0f);
-			const float Eased = Progress * Progress * (3.0f - 2.0f * Progress);
-			return m_From + (m_To - m_From) * Eased;
-		}
-	};
-	static std::vector<SFriendCategoryExpandAnim> s_vCategoryExpand;
+	// 折叠/展开进度用文件级的本地时间状态机（同一份 0.15s + smoothstep）。菜单会被
+	// 背景/出图趟与测量趟各渲染一次，动画运行时不一定逐帧喂值，所以不走 ResolveUiAnimValue；
+	// 状态只在交互趟推进，其余趟只读。
+	static std::vector<SLocalEasedProgress> s_vCategoryExpand;
 
 	char aBuf[256];
 	int FriendTooltipIndex = 0;
 	for(int CategoryIndex = 0; CategoryIndex < NumCategories; ++CategoryIndex)
 	{
 		// header
-		CUIRect Header, GroupIcon, GroupLabel, ManageButton;
+		CUIRect Header, HeaderAction, GroupIcon, GroupLabel, ManageButton;
 		List.HSplitTop(ms_ListheaderHeight, &Header, &List);
 		s_ScrollRegion.AddRect(Header);
 		vCategoryHeaders.push_back({CategoryIndex, Header});
 		const char *pCategoryName = GameClient()->Friends()->GetCategory(CategoryIndex);
-		CUIRect HeaderAction;
-		SplitFriendsCategoryHeaderRects(Header, &HeaderAction, nullptr);
+		// 表头矩形是「胶囊 / 切换热区 / 齿轮 / 图标 + 标签」四段派生的唯一来源：两处
+		// Split 都拿同一条未改写的 Header 当输入。此前先 Header.VSplitLeft(...) 改写
+		// 自身，再把改窄后的矩形拿去切齿轮——齿轮位置只是两处宽度差刚好抵消才对得上；
+		// 拖拽描边更糟：用的是改写后的 Header，左端整整少一个图标宽（15），
+		// 和胶囊本身不同宽。
+		SplitFriendsCategoryHeaderRects(Header, &HeaderAction, &ManageButton);
 		const bool HeaderInside = Ui()->MouseHovered(&HeaderAction);
 		const bool FriendDropHovered = DraggingFriend && HeaderInside && Ui()->MouseHovered(&ListViewport);
 		const bool FriendDropAllowed = s_FriendDragState.CanDropTo(pCategoryName);
@@ -3848,29 +4009,33 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 			HeaderColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClFriendsListFriendColor));
 		else if(IsClanMembersCategory(pCategoryName))
 			HeaderColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClFriendsListClanColor));
+		// 三行填充共用同一档 alpha（静止 0.25 / 悬停或弹层 0.4）：基色只承担「好友 /
+		// 战队 / 中立」这一层语义，不再让某一行单独改 alpha。半透明胶囊两端融进背景
+		// 的程度一变，同一张图里的三个表头就会被读成三个不同长度——这正是「宽度不
+		// 一致」的观感来源；宽度本身由上面那次恒定让位保证（有无轨道、展开多少都一样）。
 		HeaderColor.a = HeaderHovered || PopupOpen ? 0.4f : 0.25f;
 		if(FriendDropHovered)
 			HeaderColor = FriendDropAllowed ? ColorRGBA(0.2f, 0.9f, 0.4f, 0.5f) : ColorRGBA(0.9f, 0.25f, 0.2f, 0.4f);
 		// 分类表头是横条，端头直接用半圆：和页面里其它胶囊背景同一种形状。
 		DrawRoundedSurface(Ui(), Header, HeaderColor, ColorRGBA(), ui_token::radius::PILL);
-		Header.VSplitLeft(Header.h, &GroupIcon, &GroupLabel);
+		CUIRect HeaderLabel = Header;
+		HeaderLabel.VSplitLeft(HeaderLabel.h, &GroupIcon, &GroupLabel);
 		GroupIcon.Margin(2.0f, &GroupIcon);
 		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 		TextRender()->TextColor(HeaderHovered ? TextRender()->DefaultTextColor() : ColorRGBA(0.6f, 0.6f, 0.6f, 1.0f));
 		// 分组展开 ⇄ 折叠：加/减方框形变（外框常量、加号竖臂压平），拖拽表头时按折叠显示。
-		// 折叠/展开按高度过渡：进度推动布局高度并裁切内容，不再整块跳变。
+		// 展开进度 ExpandT 是唯一事实：图标形变跟意图，行高与下方内容让位跟进度。
 		const bool WantsExpanded = m_vFriendsCategoryExpanded[CategoryIndex] && !DraggingAnyHeader && !DraggingFriend;
 		const bool ExpandMotion = g_Config.m_QmUiMotionLevel > 0 && !Ui()->MeasurementOnly();
 		if(s_vCategoryExpand.size() < (size_t)NumCategories)
-			s_vCategoryExpand.resize(NumCategories, SFriendCategoryExpandAnim());
-		SFriendCategoryExpandAnim &ExpandAnim = s_vCategoryExpand[CategoryIndex];
+			s_vCategoryExpand.resize(NumCategories, SLocalEasedProgress());
+		SLocalEasedProgress &ExpandAnim = s_vCategoryExpand[CategoryIndex];
 		const float ExpandTarget = WantsExpanded ? 1.0f : 0.0f;
-		if(ExpandAnim.m_To != ExpandTarget)
-		{
-			ExpandAnim.m_From = ExpandAnim.Current(FadeNow, FadeFreq);
-			ExpandAnim.m_To = ExpandTarget;
-			ExpandAnim.m_StartTick = FadeNow;
-		}
+		// 关键：只有交互趟推进状态机。背景/出图/测量趟同样会走这段代码，若它们把
+		// m_From/m_To 推到目标，交互趟再来时 Current() 已经是终点——展开动画被吃掉，
+		// 只剩瞬变（实机「完全没有动画」就是这条路径）。
+		if(LocalEasedProgressShouldRetarget(!Ui()->RenderOnly(), ExpandAnim.m_To, ExpandTarget))
+			ExpandAnim.Retarget(ExpandTarget, FadeNow, FadeFreq);
 		const float ExpandT = ExpandMotion ? ExpandAnim.Current(FadeNow, FadeFreq) : ExpandTarget;
 		const bool GroupExpanded = ExpandT > 0.001f;
 		IUiContext GroupIconCtx = ui_widget::ControlContext(Ui());
@@ -3878,11 +4043,11 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 			GroupIconCtx, EQmIconSwapPair::SQUARE_PLUS_MINUS,
 			EQmIcon::SQUARE_PLUS, FONT_ICON_SQUARE_PLUS,
 			EQmIcon::SQUARE_MINUS, FONT_ICON_SQUARE_MINUS,
-			GroupExpanded ? 1.0f : 0.0f, str_quickhash("friends-category-icon"), pCategoryName);
+			WantsExpanded ? 1.0f : 0.0f, str_quickhash("friends-category-icon"), pCategoryName);
 		ui_widget::DrawIconSwapBinding(GroupIconCtx, QmIconLabelRect(GroupIcon, GroupIcon.h * CUi::ms_FontmodHeight, TEXTALIGN_MC), TextRender()->GetTextColor(), &GroupIconBinding);
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
 		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
-		SplitFriendsCategoryHeaderRects(Header, nullptr, &ManageButton);
+		// 标签右缘收到齿轮左边：两者都来自同一条 Header 派生（见函数开头那次 Split）。
 		GroupLabel.w = maximum(ManageButton.x - GroupLabel.x, 0.0f);
 		str_format(aBuf, sizeof(aBuf), "%s (%d)", LocalizeFriendsCategory(pCategoryName), (int)vvFriends[CategoryIndex].size());
 		Ui()->DoLabel(&GroupLabel, aBuf, FontSize, TEXTALIGN_ML);

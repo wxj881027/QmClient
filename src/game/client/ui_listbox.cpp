@@ -20,6 +20,16 @@ CListBox::CListBox()
 void CListBox::Reset()
 {
 	m_ListBoxView = m_RowView = CUIRect{0.0f, 0.0f, 0.0f, 0.0f};
+	// 未开始列表前也给出合法值：行首步进按 ItemsPerRow 取模，0 会除零。
+	m_ListBoxRowHeight = ui_token::list::ROW_HEIGHT;
+	m_ListBoxNumItems = 0;
+	m_ListBoxItemsPerRow = 1;
+	m_ListBoxItemIndex = 0;
+	m_ListBoxSelectedIndex = -1;
+	m_ListBoxNewSelected = -1;
+	m_ListBoxNewSelOffset = 0;
+	m_RowReserveRight = 0.0f;
+	m_ItemSelectionInset = 0.0f;
 	m_ListBoxUpdateScroll = false;
 	m_ScrollbarShown = false;
 	m_AutoSpacing = 0.0f;
@@ -43,19 +53,21 @@ void CListBox::Reset()
 	m_EntryBaseIndexCaptured = false;
 	m_BackgroundCorners = IGraphics::CORNER_ALL;
 	// 非胶囊列表的默认选中/悬浮与胶囊行同源：选中 = 主题选中色（与下拉弹层一致），
-	// 悬浮 = 列表 token，不再各自写白 0.5/0.33 两档。成员列表在 CUi 就绪前就会
-	// 构造，这里先放 token 占位，真正取值在 DoStart 里按当前主题刷新。
+	// 悬浮 = 同一份主题选中色（列表反馈只看强调色，不再有白色硬编码的第二档）。
+	// 成员列表在 CUi 就绪前就会构造，这里先放 token 占位，真正取值在 DoStart 里
+	// 按当前主题刷新。
 	if(Ui() != nullptr)
 	{
 		m_SelectedItemActiveColor = Ui()->QmControlTheme().m_Selected;
 		m_SelectedItemInactiveColor = Ui()->QmControlTheme().m_Selected;
+		m_HoveredItemColor = Ui()->QmControlTheme().m_Selected;
 	}
 	else
 	{
 		m_SelectedItemActiveColor = ui_token::color::LIST_ITEM_SELECTED;
 		m_SelectedItemInactiveColor = ui_token::color::LIST_ITEM_SELECTED;
+		m_HoveredItemColor = ui_token::color::LIST_ITEM_SELECTED;
 	}
-	m_HoveredItemColor = ui_token::color::LIST_ITEM_HOVER;
 	m_SelectedFeedback.Reset();
 	m_HoverFeedback.Reset();
 	m_ScrollFeedbackSnap = false;
@@ -68,6 +80,10 @@ void CListBox::Reset()
 	m_MaxVisibleRows = 0;
 	m_ScrollbarOverlay = false;
 	m_ContainerRadius = ui_token::radius::SMALL_MENU;
+	m_ContainerPadding = 0.0f;
+	m_ContainerPaddingX = 0.0f;
+	m_ContainerPaddingY = 0.0f;
+	m_ContainerPaddingOverridden = false;
 	m_HeaderThisFrame = false;
 	m_BackgroundDrawn = false;
 }
@@ -85,12 +101,14 @@ void CListBox::SetCapsuleRows(float FontSize)
 		SetVisibleRowRange(1, ui_token::list::DEFAULT_MAX_VISIBLE_ROWS);
 	// 选中/悬停填充统一走主题：选中色与下拉弹层条目同一条来源
 	// （QmSettingsDropdownVisualStyle().m_ActiveEntryColor = Theme.m_Selected），
-	// 列表与弹层不再各持一份「选中底色」。调用点显式 SetItemColors 过就以后者为准。
+	// 列表与弹层不再各持一份「选中底色」，悬浮与选中也共用这份强调色
+	// （实机口径：列表反馈只看强调色，不要白色硬编码的第二档）。
+	// 调用点显式 SetItemColors 过就以后者为准。
 	if(!m_ItemColorsOverridden)
 	{
 		m_SelectedItemActiveColor = Ui()->QmControlTheme().m_Selected;
 		m_SelectedItemInactiveColor = Ui()->QmControlTheme().m_Selected;
-		m_HoveredItemColor = ui_token::color::LIST_ITEM_HOVER;
+		m_HoveredItemColor = Ui()->QmControlTheme().m_Selected;
 	}
 }
 
@@ -176,30 +194,51 @@ void CListBox::DoStart(float RowHeight, int NumItems, int ItemsPerRow, int RowsP
 	m_ListBoxItemIndex = 0;
 	m_ListBoxRowHeight = RowHeight > 0.0f ? RowHeight : ui_token::list::ROW_HEIGHT;
 	m_ListBoxNumItems = NumItems;
-	m_ListBoxItemsPerRow = ItemsPerRow;
+	// 列数至少为 1：行首步进与格宽切分都按它取模/相除，0 是无效调用而不是「不分列」。
+	m_ListBoxItemsPerRow = maximum(1, ItemsPerRow);
 	m_ListBoxItemActivated = false;
 	m_ListBoxItemSelected = false;
 	// 选中/悬浮默认色每帧按当前主题刷新：成员列表构造期 CUi 还没就绪，主题也可以
-	// 热切换；调用点显式 SetItemColors 过就保留调用点那一组。
+	// 热切换；调用点显式 SetItemColors 过就保留调用点那一组。悬浮与选中同源，
+	// 都是主题选中色（强调色派生）。
 	if(!m_ItemColorsOverridden)
 	{
 		m_SelectedItemActiveColor = Ui()->QmControlTheme().m_Selected;
 		m_SelectedItemInactiveColor = Ui()->QmControlTheme().m_Selected;
-		m_HoveredItemColor = ui_token::color::LIST_ITEM_HOVER;
+		m_HoveredItemColor = Ui()->QmControlTheme().m_Selected;
 	}
 	// 胶囊行：行距由组件统一给（调用点显式 DoAutoSpacing 过就不覆盖）。
 	if(m_CapsuleRows && !m_AutoSpacingOverridden)
 		m_AutoSpacing = ui_token::list::ROW_SPACING;
+	// 容器内边距只给**显式声明**的列表：调用点必须同时把 2×padding 算进测高
+	// （ui_token::list::PaddedRowsHeight），组件才在内边距内侧排版。
+	// 不做「按行高自动 + 按富余钳制」：那会让留白随可见行数变化——开关行一展开、
+	// 可见行少一行，留白就变小，间距跟着忽大忽小（实机反馈）。没声明的列表保持 0，
+	// 行为与旧版逐位一致。
+	m_ContainerPaddingX = 0.0f;
+	m_ContainerPaddingY = 0.0f;
+	if(m_ContainerPaddingOverridden && m_ContainerPadding > 0.0f)
+	{
+		// 横向留白只给多列网格：单列胶囊行左右本就有行内内退与滚动条让位，
+		// 再横缩会让行宽随列/行变化（实机反馈：整排卡片跟着变窄）。
+		m_ContainerPaddingX = m_ListBoxItemsPerRow > 1 ? m_ContainerPadding : 0.0f;
+		m_ContainerPaddingY = m_ContainerPadding;
+	}
 	// 包裹式胶囊行不额外上下内缩：滚动区就等于调用方给的矩形，高度是否「严格整数行」
 	// 由调用方用 SetVisibleRowRange + RowsHeight 决定（所有胶囊列表都这样算，见 UiTokens 的
 	// VisibleRows/RowsHeight）。组件在这里再收 8px 只会让别人的整数行变成半行。
 	m_RowReserveRight = 0.0f;
 	// 自适应高度：按条目数和行高算出内容高度，只在调用方给的上限内取，调用点不必
-	// 再自己 std::min；超出的部分交给滚动条。空列表不占高度。
+	// 再自己 std::min；超出的部分交给滚动条。空列表不占高度。内边距计入高度，
+	// 所以行数不会被内边距吃掉（「该 8 行还是 8 行」）。
 	if(m_MaxVisibleRows > 0)
 	{
 		const int VisibleRows = ui_token::list::VisibleRows(m_ListBoxNumItems, m_ListBoxItemsPerRow, m_MinVisibleRows, m_MaxVisibleRows);
-		View.h = minimum(View.h, ui_token::list::RowsHeight(VisibleRows, m_ListBoxRowHeight, m_AutoSpacing));
+		View.h = minimum(View.h, ui_token::list::PaddedRowsHeight(VisibleRows, m_ListBoxRowHeight, m_AutoSpacing, m_ContainerPaddingY));
+		// 兜底：调用方高度不足以容纳「行内容 + 两档内边距」时，留白只在多出来的
+		// 那段里取——宁可没有留白，也不挤掉一行。
+		const float Slack = maximum(0.0f, View.h - ui_token::list::RowsHeight(VisibleRows, m_ListBoxRowHeight, m_AutoSpacing));
+		m_ContainerPaddingY = minimum(m_ContainerPaddingY, Slack * 0.5f);
 	}
 	// 容器圆角按容器长宽推导；带标题的列表沿用 DoHeader 用整容器算出的那一档。
 	if(!m_HeaderThisFrame)
@@ -211,6 +250,18 @@ void CListBox::DoStart(float RowHeight, int NumItems, int ItemsPerRow, int RowsP
 	m_BackgroundDrawn = Background;
 	if(Background)
 		DrawRoundedSurface(Ui(), View, Ui()->ScaleBackgroundAlpha(ColorRGBA(0.0f, 0.0f, 0.0f, 0.15f)), ColorRGBA(), m_ContainerRadius, 0.0f, m_BackgroundCorners & (m_HasHeader ? IGraphics::CORNER_B : IGraphics::CORNER_ALL));
+	// 容器内边距：行区在内边距内侧排版，选中/悬浮胶囊不压在容器圆角上（实机反馈：
+	// 网格首行高亮压在圆角上、看起来「超出列表」）。高度已在上面按
+	// PaddedRowsHeight 计入两档内边距，所以这里只内缩、不减少可见行数。
+	if(m_ContainerPaddingX > 0.0f || m_ContainerPaddingY > 0.0f)
+	{
+		const float PaddingX = std::min(m_ContainerPaddingX, m_ListBoxView.w * 0.25f);
+		const float PaddingY = std::min(m_ContainerPaddingY, m_ListBoxView.h * 0.5f);
+		m_ListBoxView.x += PaddingX;
+		m_ListBoxView.w = maximum(0.0f, m_ListBoxView.w - 2.0f * PaddingX);
+		m_ListBoxView.y += PaddingY;
+		m_ListBoxView.h = maximum(0.0f, m_ListBoxView.h - 2.0f * PaddingY);
+	}
 	const int64_t Now = time_get();
 	const int64_t Frequency = maximum<int64_t>(1, time_freq());
 	// 只有在「上一帧没画过」（切页、关闭后重开）时才算重新出现：连续渲染不重复滚动，
@@ -246,9 +297,9 @@ void CListBox::DoStart(float RowHeight, int NumItems, int ItemsPerRow, int RowsP
 		else if(Ui()->ConsumeHotkey(CUi::HOTKEY_LEFT) && m_ListBoxItemsPerRow > 1)
 			m_ListBoxNewSelOffset -= 1;
 		else if(Ui()->ConsumeHotkey(CUi::HOTKEY_PAGE_UP))
-			m_ListBoxNewSelOffset = -ItemsPerRow * RowsPerScroll * 4;
+			m_ListBoxNewSelOffset = -m_ListBoxItemsPerRow * RowsPerScroll * 4;
 		else if(Ui()->ConsumeHotkey(CUi::HOTKEY_PAGE_DOWN))
-			m_ListBoxNewSelOffset = ItemsPerRow * RowsPerScroll * 4;
+			m_ListBoxNewSelOffset = m_ListBoxItemsPerRow * RowsPerScroll * 4;
 		else if(Ui()->ConsumeHotkey(CUi::HOTKEY_HOME))
 			m_ListBoxNewSelOffset = 1 - m_ListBoxNumItems;
 		else if(Ui()->ConsumeHotkey(CUi::HOTKEY_END))
@@ -284,7 +335,8 @@ void CListBox::DoStart(float RowHeight, int NumItems, int ItemsPerRow, int RowsP
 	ScrollParams.m_ScrollbarThickness = m_ScrollbarWidth;
 	ScrollParams.m_ScrollbarMargin = m_ScrollbarMargin;
 	// 轨道沿长度方向按容器圆角内缩：滑块端头不会贴到（甚至探出）容器圆角。
-	ScrollParams.m_ScrollbarTrackInset = std::max(0.0f, m_ContainerRadius);
+	// 行区已经按容器纵向内边距内缩过一档，所以这里扣掉纵向内边距，两者不叠加。
+	ScrollParams.m_ScrollbarTrackInset = std::max(0.0f, m_ContainerRadius - m_ContainerPaddingY);
 	const int NumRows = (m_ListBoxNumItems + maximum(1, m_ListBoxItemsPerRow) - 1) / maximum(1, m_ListBoxItemsPerRow);
 	const float ContentHeight = ui_token::list::RowsHeight(NumRows, m_ListBoxRowHeight, m_AutoSpacing);
 	// 胶囊行：覆盖式滚动条不占行宽，但行右侧恒定让出滚动条那一列，行胶囊右缘
@@ -315,13 +367,27 @@ void CListBox::DoStart(float RowHeight, int NumItems, int ItemsPerRow, int RowsP
 	m_HoverFeedback.BeginFrame(Ui()->QmAnimationRuntime(), FeedbackKey ^ 0x9E3779B97F4A7C15ULL, Snap, UpdateFeedback);
 }
 
+bool CListBox::BeginRowIfNeeded()
+{
+	// 行距只在「这一格开启新的一行」时给一次，且第一行不给。此前 DoNextItem 对每个
+	// 条目都 DoSpacing 一次，多列网格的实际行距变成 行高 + 列数 × 行距；SkipItems 又
+	// 完全不推进，虚拟化列表随滚动累积上漂。两件事都是同一处语义缺失：行距属于行，
+	// 不属于格。现在行首统一步进，调用点不必再自己把行距折进行高。
+	const int ItemsPerRow = maximum(1, m_ListBoxItemsPerRow);
+	if(m_ListBoxItemIndex % ItemsPerRow != 0)
+		return false;
+	if(m_AutoSpacing > 0.0f && m_ListBoxItemIndex > 0)
+		DoSpacing(m_AutoSpacing);
+	m_ListBoxView.HSplitTop(m_ListBoxRowHeight, &m_RowView, &m_ListBoxView);
+	return true;
+}
+
 CListboxItem CListBox::DoNextRow()
 {
 	QmRestoreEntryScope();
 	CListboxItem Item = {};
 
-	if(m_ListBoxItemIndex % m_ListBoxItemsPerRow == 0)
-		m_ListBoxView.HSplitTop(m_ListBoxRowHeight, &m_RowView, &m_ListBoxView);
+	BeginRowIfNeeded();
 	m_ScrollRegion.AddRect(m_RowView);
 	if(m_ListBoxUpdateScroll && m_ListBoxSelectedIndex == m_ListBoxItemIndex)
 	{
@@ -333,9 +399,10 @@ CListboxItem CListBox::DoNextRow()
 	// 胶囊行沿左右各收一段：容器圆角比行胶囊圆角大出来的那几像素，若贴着容器边，
 	// 顶行/底行的胶囊直角边会从容器圆角外侧探出来。两档都按尺寸推导，所以标准行
 	// （行高 25 对容器 12~14）几乎不用让位，矮行才多让一点；多列网格没有这一层。
+	// 容器内边距已经内缩过的那一档要扣掉，否则两边叠加会把行挤窄。
 	if(m_CapsuleRows && m_ListBoxItemsPerRow <= 1 && m_BackgroundDrawn)
 	{
-		const float TrackInset = maximum(0.0f, m_ContainerRadius - ui_token::list::RowRadius(m_ListBoxRowHeight));
+		const float TrackInset = maximum(0.0f, m_ContainerRadius - ui_token::list::RowRadius(m_ListBoxRowHeight) - m_ContainerPaddingX);
 		Item.m_Rect.x += TrackInset;
 		Item.m_Rect.w = maximum(0.0f, Item.m_Rect.w - 2.0f * TrackInset);
 	}
@@ -381,9 +448,7 @@ void CListBox::QmRestoreEntryScope()
 CListboxItem CListBox::DoNextItem(const void *pId, bool Selected, float CornerRadius)
 {
 	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
-	if(m_AutoSpacing > 0.0f && m_ListBoxItemIndex > 0)
-		DoSpacing(m_AutoSpacing);
-
+	// 行距不在这里推进：DoNextRow 在行首统一给（多列网格只有第一格开启新行）。
 	const int ThisItemIndex = m_ListBoxItemIndex;
 	if(Selected)
 	{
@@ -426,13 +491,18 @@ CListboxItem CListBox::DoNextItem(const void *pId, bool Selected, float CornerRa
 	// 旧选中行即使已经不再被选中，也要继续画到淡出结束，才能和新行走成
 	// 真正的交叉淡变，而不是先消失再淡入。
 	const float RowCornerRadius = CornerRadius >= 0.0f ? CornerRadius : ResolveRowCornerRadius();
+	// 选中/悬浮填充直接取主题选中色（强调色派生），**不过 ScaleBackgroundAlpha**：
+	// 反馈强度是交互语义，不能跟着所在页面的背景透明度作用域走（服务器列表为画滚动条
+	// 轨道把背板淡化到 0.28，以前在调用点手写 /0.28 反算，其余列表没有，于是同一个
+	// token 在不同页面显示成两档——实机反馈「悬浮色不一致、更浅」）。行内容本身也不受
+	// 该作用域影响，所以这里不做任何补偿才是唯一口径。
 	const float SelectionAlpha = m_SelectedFeedback.Alpha(ThisItemIndex);
 	if(SelectionAlpha > 0.001f)
 	{
 		CUIRect SelectionRect = Item.m_Rect;
 		if(m_ItemSelectionInset > 0.0f)
 			SelectionRect.Margin(m_ItemSelectionInset, &SelectionRect);
-		const ColorRGBA SelectionFill = Ui()->ScaleBackgroundAlpha(m_Active ? m_SelectedItemActiveColor : m_SelectedItemInactiveColor).WithMultipliedAlpha(SelectionAlpha);
+		const ColorRGBA SelectionFill = (m_Active ? m_SelectedItemActiveColor : m_SelectedItemInactiveColor).WithMultipliedAlpha(SelectionAlpha);
 		DrawRoundedSurface(Ui(), SelectionRect, SelectionFill, ColorRGBA(), RowCornerRadius);
 	}
 	if(Ui()->HotItem() == pId)
@@ -443,7 +513,7 @@ CListboxItem CListBox::DoNextItem(const void *pId, bool Selected, float CornerRa
 		CUIRect HoverRect = Item.m_Rect;
 		if(m_ItemSelectionInset > 0.0f)
 			HoverRect.Margin(m_ItemSelectionInset, &HoverRect);
-		DrawRoundedSurface(Ui(), HoverRect, Ui()->ScaleBackgroundAlpha(m_HoveredItemColor).WithMultipliedAlpha(HoverAlpha), ColorRGBA(), RowCornerRadius);
+		DrawRoundedSurface(Ui(), HoverRect, m_HoveredItemColor.WithMultipliedAlpha(HoverAlpha), ColorRGBA(), RowCornerRadius);
 	}
 
 	return Item;
@@ -454,11 +524,10 @@ void CListBox::SkipItems(int Count)
 	Count = std::max(0, Count);
 	while(Count > 0 && m_ListBoxItemIndex < m_ListBoxNumItems)
 	{
-		if(m_ListBoxItemIndex % m_ListBoxItemsPerRow == 0)
-		{
-			m_ListBoxView.HSplitTop(m_ListBoxRowHeight, &m_RowView, &m_ListBoxView);
+		// 跳过也要按行推行距：否则可见范围裁剪后的列表每帧漏掉一段行距，
+		// 行会随滚动一路向上漂（与真实内容高度对不上）。
+		if(BeginRowIfNeeded())
 			m_ScrollRegion.AddRect(m_RowView);
-		}
 
 		const int ItemIndexInRow = m_ListBoxItemIndex % m_ListBoxItemsPerRow;
 		const int ItemsLeftInRow = m_ListBoxItemsPerRow - ItemIndexInRow;
@@ -485,6 +554,8 @@ CListboxItem CListBox::DoCustomRow(float Height, bool ScrollHere)
 {
 	QmRestoreEntryScope();
 	CListboxItem Item = {};
+	// 自定义行给多少高度就走多少：它不走行首步进，也不吃 DoAutoSpacing。
+	// 间距由调用方自己折进 Height（画廊空态行传 RowHeight、demo 列表提示行传表头行高）。
 	m_ListBoxView.HSplitTop(Height, &Item.m_Rect, &m_ListBoxView);
 	m_ScrollRegion.AddRect(Item.m_Rect, ScrollHere);
 	if(!m_EntryBaseIndexCaptured)

@@ -5768,6 +5768,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/ui/qm_direct_touch_test.cpp
       src/test/integration/qmclient/ui/qm_background_controls_test.cpp
       src/test/integration/qmclient/ui/qm_navigation_selection_test.cpp
+      src/test/integration/qmclient/ui/qm_listbox_row_spacing_test.cpp
       src/test/integration/qmclient/ui/qm_editor_text_input_test.cpp
       src/test/integration/qmclient/ui/qm_offscreen_cursor_test.cpp
       src/test/unit/qmclient/ui/qm_line_input_multiline_test.cpp
@@ -5788,6 +5789,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/ui/qm_spectator_hud_text_test.cpp
       src/test/integration/qmclient/ui/qm_icon_text_test.cpp
       src/test/integration/qmclient/ui/qm_scaled_label_test.cpp
+      src/test/integration/qmclient/ui/qm_streamed_label_color_test.cpp
       src/test/integration/qmclient/ui/qm_surface_text_test.cpp
       src/test/integration/qmclient/ui/qm_theme_selection_test.cpp
       src/test/integration/qmclient/ui/qm_ui_element_lifetime_test.cpp

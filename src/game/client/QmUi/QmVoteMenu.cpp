@@ -490,15 +490,16 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		if(!Item.m_Visible)
 			continue;
 		auto Blur = Item.SuppressGaussianBlur();
-		// 行矩形含行距，胶囊只画行高那一截；选中/悬浮改用列表统一来源（主题选中色 /
-		// 列表 token），不再有左侧竖条，也不再写死圆角。
+		// 行矩形含行距，胶囊只画行高那一截；选中/悬浮统一用主题选中色（强调色派生），
+		// 不再有左侧竖条，也不再写死圆角，更不用白色 token 当第二档。
 		CUIRect RowRect = Item.m_Rect;
 		RowRect.h = RowHeight;
+		const ColorRGBA RowFeedback = Ui()->QmControlTheme().m_Selected;
 		const float SelectionAlpha = s_Maps.SelectionFeedbackAlpha(Row);
 		if(SelectionAlpha > 0.001f)
-			DrawRoundedSurface(Ui(), RowRect, Ui()->ScaleBackgroundAlpha(Ui()->QmControlTheme().m_Selected).WithMultipliedAlpha(SelectionAlpha), ColorRGBA(), ui_token::list::RowRadius(RowHeight));
+			DrawRoundedSurface(Ui(), RowRect, RowFeedback.WithMultipliedAlpha(SelectionAlpha), ColorRGBA(), ui_token::list::RowRadius(RowHeight));
 		if(Ui()->HotItem() == &Map)
-			DrawRoundedSurface(Ui(), RowRect, Ui()->ScaleBackgroundAlpha(ui_token::color::LIST_ITEM_HOVER), ColorRGBA(), ui_token::list::RowRadius(RowHeight));
+			DrawRoundedSurface(Ui(), RowRect, RowFeedback, ColorRGBA(), ui_token::list::RowRadius(RowHeight));
 		// 行内容排在组件让出左右内退后的内容区（高度仍按行本身，行距不参与排版）。
 		CUIRect RowContent = Item.m_ContentRect;
 		RowContent.h = RowHeight;

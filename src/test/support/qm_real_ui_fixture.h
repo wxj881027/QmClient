@@ -46,6 +46,25 @@ namespace qm_ui_test
 			ColorRGBA m_OutlineColor;
 		};
 		std::vector<STextSubmission> m_vTextSubmissions;
+		// 文字缓冲默认开启，其他测试观察到的设备提交与后端行为保持不变；
+		// 关掉后引擎改走逐字符上色的回退分支（text.cpp 的逐 quad 填充），
+		// 于是每个字形的最终填充色会经 ChangeColorOfQuadVertices 暴露出来。
+		bool m_TextBuffering = true;
+		bool IsTextBufferingEnabled() override { return m_TextBuffering; }
+		struct SQuadVertexColor
+		{
+			size_t m_QuadOffset;
+			unsigned char m_r;
+			unsigned char m_g;
+			unsigned char m_b;
+			unsigned char m_a;
+		};
+		std::vector<SQuadVertexColor> m_vQuadVertexColors;
+		// 逐字填充色是「容器顶点色 × 绘制 tint」，只有关掉缓冲才能观察到。
+		void ChangeColorOfQuadVertices(size_t QuadOffset, unsigned char r, unsigned char g, unsigned char b, unsigned char a) override
+		{
+			m_vQuadVertexColors.push_back({QuadOffset, r, g, b, a});
+		}
 		void RenderText(int BufferContainerIndex, int TextQuadNum, int TextureSize, CTextureHandle TextTexture, CTextureHandle TextOutlineTexture, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor) override
 		{
 			CIconBenchmarkGraphics::RenderText(BufferContainerIndex, TextQuadNum, TextureSize, TextTexture, TextOutlineTexture, TextColor, TextOutlineColor);

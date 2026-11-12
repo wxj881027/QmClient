@@ -489,6 +489,10 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 		// 行距会变成 N 倍、行位逐行漂移，底部的行滚不到；这里自己按行步进，自动行距关掉。
 		const float ProfileListRowPitch = ProfileListRowHeight + ui_token::list::ROW_SPACING;
 		ProfilesListBox.SetCapsuleRows(ProfileMetrics.m_BodySize);
+		// 容器内边距：卡片测高已在 ResolveSettingsProfilesListHeight 里按 PaddedRowsHeight
+		// 计入两档留白（行高 = ProfileListRowHeight），这里声明同一档，列数仍按整宽推导。
+		// 空列表不声明留白，保持原来那两行占位的样子。
+		ProfilesListBox.SetContainerPadding(vProfiles.empty() ? 0.0f : ui_token::list::ContainerPadding(ProfileListRowHeight));
 		ProfilesListBox.DoAutoSpacing(0.0f);
 		// 整卡 tile：选中填充只贴条目矩形，内缩保持半档行距，整卡内容仍排 Item.m_Rect
 		// （推进 m_ContentRect 会挤窄卡内布局、破坏 preview cache key）。

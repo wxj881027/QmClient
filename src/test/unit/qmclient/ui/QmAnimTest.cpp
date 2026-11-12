@@ -317,7 +317,9 @@ TEST(SettingsPageLayout, PageListCardsUseExactProductionViewports)
 	const SSettingsListCardGeometry EightLanguages = ResolveSettingsGeneralLanguageListGeometry(8, Metrics);
 	const SSettingsListCardGeometry NineLanguages = ResolveSettingsGeneralLanguageListGeometry(9, Metrics);
 	EXPECT_EQ(OneLanguage.m_VisibleRows, 1);
-	EXPECT_FLOAT_EQ(OneLanguage.m_ContentHeight, Metrics.m_ListRowHeight);
+	// 语言卡片测高 = 可见行内容 + 上下两档容器内边距（唯一来源 PaddedRowsHeight）：
+	// 末行的高亮不再贴着容器下缘，行数仍由可见行数决定。
+	EXPECT_FLOAT_EQ(OneLanguage.m_ContentHeight, ui_token::list::PaddedRowsHeight(1, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING, ui_token::list::ContainerPadding(Metrics.m_ListRowHeight)));
 	EXPECT_EQ(EightLanguages.m_VisibleRows, 8);
 	// 语言列表同样按胶囊行渲染，视口 = 整数行 + 行距半档（唯一来源 RowsHeight）。
 	EXPECT_FLOAT_EQ(EightLanguages.m_ListViewportHeight, ResolveSettingsListViewportHeight(8, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING));
@@ -330,8 +332,9 @@ TEST(SettingsPageLayout, PageListCardsUseExactProductionViewports)
 	const float ThemeViewport = ResolveSettingsListViewportHeight(ui_token::list::MAX_VISIBLE_ROWS, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING);
 	EXPECT_EQ(Theme.m_VisibleRows, ui_token::list::MAX_VISIBLE_ROWS);
 	EXPECT_FLOAT_EQ(Theme.m_ListViewportHeight, ThemeViewport);
-	// DoHeader 消费 LineHeight + 2 × LineSpacing，两段相加正好是整容器高度。
-	EXPECT_FLOAT_EQ(Theme.m_ContentHeight, ThemeViewport + Metrics.m_LineHeight + 2.0f * Metrics.m_LineSpacing);
+	// DoHeader 消费 LineHeight + 2 × LineSpacing，列表体再带上下两档容器内边距，
+	// 两段相加正好是整容器高度。
+	EXPECT_FLOAT_EQ(Theme.m_ContentHeight, ui_token::list::PaddedRowsHeight(ui_token::list::MAX_VISIBLE_ROWS, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING, ui_token::list::ContainerPadding(Metrics.m_ListRowHeight)) + Metrics.m_LineHeight + 2.0f * Metrics.m_LineSpacing);
 	// 少于最少可见行数时按最少行数测高，卡片不会缩成一行半。
 	const SSettingsListCardGeometry TwoThemes = ResolveSettingsGeneralThemeListGeometry(2, Metrics);
 	EXPECT_EQ(TwoThemes.m_VisibleRows, ui_token::list::THEME_MIN_VISIBLE_ROWS);
@@ -340,14 +343,14 @@ TEST(SettingsPageLayout, PageListCardsUseExactProductionViewports)
 	const SSettingsContentMetrics CardMetrics = ResolveSettingsContentMetrics(480.0f);
 	const SSettingsListCardGeometry CompactLanguages = ResolveSettingsGeneralLanguageListGeometry(9, CardMetrics);
 	EXPECT_NE(CardMetrics.m_ListRowHeight, Metrics.m_ListRowHeight);
-	EXPECT_FLOAT_EQ(CompactLanguages.m_ContentHeight, ResolveSettingsListViewportHeight(8, CardMetrics.m_ListRowHeight, ui_token::list::ROW_SPACING));
+	EXPECT_FLOAT_EQ(CompactLanguages.m_ContentHeight, ui_token::list::PaddedRowsHeight(8, CardMetrics.m_ListRowHeight, ui_token::list::ROW_SPACING, ui_token::list::ContainerPadding(CardMetrics.m_ListRowHeight)));
 
 	const SSettingsListCardGeometry OneMode = ResolveSettingsGraphicsModesGeometry(1, Metrics);
 	const SSettingsListCardGeometry ManyModes = ResolveSettingsGraphicsModesGeometry(20, Metrics);
-	EXPECT_FLOAT_EQ(OneMode.m_ContentHeight, Metrics.m_RowStep * 2.0f + Metrics.m_ListRowHeight);
-	// 视口高度 = 完整行高 + 行间距，行数与行距只由 ui_token::list 定义一次；
+	EXPECT_FLOAT_EQ(OneMode.m_ContentHeight, Metrics.m_RowStep * 2.0f + ui_token::list::PaddedRowsHeight(1, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING, ui_token::list::ContainerPadding(Metrics.m_ListRowHeight)));
+	// 视口高度 = 完整行内容 + 上下两档容器内边距，行数与行距只由 ui_token::list 定义一次；
 	// 这里引用同一组事实而不是写死数字，防止测高与渲染两套数字回潮。
-	const float ModesViewport = ResolveSettingsListViewportHeight(ui_token::list::MAX_VISIBLE_ROWS, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING);
+	const float ModesViewport = ui_token::list::PaddedRowsHeight(ui_token::list::MAX_VISIBLE_ROWS, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING, ui_token::list::ContainerPadding(Metrics.m_ListRowHeight));
 	EXPECT_FLOAT_EQ(ManyModes.m_ContentHeight, Metrics.m_RowStep * 2.0f + ModesViewport);
 	EXPECT_FLOAT_EQ(ManyModes.m_ListViewportHeight, ModesViewport);
 
@@ -355,9 +358,10 @@ TEST(SettingsPageLayout, PageListCardsUseExactProductionViewports)
 	const SSettingsListCardGeometry EightAudioPacks = ResolveSettingsSoundAudioPackGeometry(8, Metrics);
 	const SSettingsListCardGeometry NineAudioPacks = ResolveSettingsSoundAudioPackGeometry(9, Metrics);
 	EXPECT_EQ(OneAudioPack.m_VisibleRows, 1);
-	EXPECT_FLOAT_EQ(OneAudioPack.m_ListViewportHeight, Metrics.m_ListRowHeight);
+	// 音频包列表的 viewport 同样按 PaddedRowsHeight 计入上下两档容器内边距。
+	EXPECT_FLOAT_EQ(OneAudioPack.m_ListViewportHeight, ui_token::list::PaddedRowsHeight(1, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING, ui_token::list::ContainerPadding(Metrics.m_ListRowHeight)));
 	EXPECT_EQ(EightAudioPacks.m_VisibleRows, 8);
-	EXPECT_FLOAT_EQ(EightAudioPacks.m_ListViewportHeight, ResolveSettingsListViewportHeight(8, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING));
+	EXPECT_FLOAT_EQ(EightAudioPacks.m_ListViewportHeight, ui_token::list::PaddedRowsHeight(8, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING, ui_token::list::ContainerPadding(Metrics.m_ListRowHeight)));
 	EXPECT_FLOAT_EQ(NineAudioPacks.m_ListViewportHeight, EightAudioPacks.m_ListViewportHeight);
 	EXPECT_FLOAT_EQ(OneAudioPack.m_ContentHeight, Metrics.m_LineHeight + Metrics.m_LineSpacing + OneAudioPack.m_ListViewportHeight + 16.0f);
 	EXPECT_NE(ResolveSettingsSoundLayoutRevision(false, true, 7), ResolveSettingsSoundLayoutRevision(false, true, 8));
@@ -439,9 +443,10 @@ TEST(SettingsPageLayout, TeeQueueListViewportUsesCompleteRowsAndPrioritizesQueue
 	const SSettingsTeeQueuePanelGeometry OneQueueItem = ResolveSettingsTeeQueuePanelGeometry(Metrics, 1, 12);
 	const SSettingsTeeQueuePanelGeometry EightQueueItems = ResolveSettingsTeeQueuePanelGeometry(Metrics, 8, 12);
 	const SSettingsTeeQueuePanelGeometry NineQueueItems = ResolveSettingsTeeQueuePanelGeometry(Metrics, 9, 12);
-	EXPECT_FLOAT_EQ(OneQueueItem.m_QueueListViewportHeight, Metrics.m_ListRowHeight);
+	// 队列列表的 viewport 与 CListBox 的自适应上限同源：可见行内容 + 上下两档容器内边距。
+	EXPECT_FLOAT_EQ(OneQueueItem.m_QueueListViewportHeight, ui_token::list::PaddedRowsHeight(1, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING, ui_token::list::ContainerPadding(Metrics.m_ListRowHeight)));
 	EXPECT_FLOAT_EQ(EightQueueItems.m_QueueListViewportHeight,
-		ResolveSettingsListViewportHeight(ui_token::list::SKIN_QUEUE_MAX_VISIBLE_ROWS, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING));
+		ui_token::list::PaddedRowsHeight(ui_token::list::SKIN_QUEUE_MAX_VISIBLE_ROWS, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING, ui_token::list::ContainerPadding(Metrics.m_ListRowHeight)));
 	EXPECT_FLOAT_EQ(NineQueueItems.m_QueueListViewportHeight, EightQueueItems.m_QueueListViewportHeight);
 	EXPECT_FLOAT_EQ(EightQueueItems.m_QueueListSurfaceHeight, Metrics.m_LineHeight + Metrics.m_LineSpacing * 3.0f + EightQueueItems.m_QueueListViewportHeight);
 	EXPECT_EQ(EightQueueItems.m_VisiblePresetRows, 3);

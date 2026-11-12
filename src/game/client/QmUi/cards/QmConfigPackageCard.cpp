@@ -139,13 +139,15 @@ bool qm_card_catalog::QmCardRenderHook::BuildConfigFilesCard(const SQmCardBuildC
 				Action(Rect);
 			Flow.Space(ui_token::settings::RowGap(Metrics.m_LineSpacing));
 		};
-		// 列表行按胶囊行渲染：高度按整数行派生（RowsHeight），与 CListBox 的自适应上限
-		// 同源；行数取实际条目数，空列表不占高度（留一块没有背景的空面板没有意义）。
+		// 列表行按胶囊行渲染：高度按整数行派生（PaddedRowsHeight），与 CListBox 的自适应上限
+		// 同源；行数取实际条目数，空列表不占高度（留一块没有背景的空面板没有意义），
+		// 所以容器内边距也一并随行数走：0 行时留白为 0，不会凭空多出一小块面板。
 		const auto ListRowAction = [&](const char *pId, int ItemCount, int MaxRows, auto &&Action) {
 			CUIRect Rect;
 			const int Rows = ui_token::list::VisibleRows(ItemCount, 1, 1, MaxRows);
-			if(Flow.Control(pId, ui_token::list::RowsHeight(Rows, RowHeight, ui_token::list::ROW_SPACING), Rect))
-				Action(Rect, Rows);
+			const float Padding = Rows > 0 ? ui_token::list::ContainerPadding(RowHeight) : 0.0f;
+			if(Flow.Control(pId, ui_token::list::PaddedRowsHeight(Rows, RowHeight, ui_token::list::ROW_SPACING, Padding), Rect))
+				Action(Rect, Rows, Padding);
 			Flow.Space(ui_token::settings::RowGap(Metrics.m_LineSpacing));
 		};
 		const auto Text = [&](const char *pId, const char *pValue, float Rows = 1) {
@@ -218,11 +220,12 @@ bool qm_card_catalog::QmCardRenderHook::BuildConfigFilesCard(const SQmCardBuildC
 		if(!State.m_Import)
 		{
 			Text("config-export-help", Localize("Settings, binds, profiles, chat binds and the war list are included. Select additional cfg files below."), 2);
-			ListRowAction("config-export-files", (int)State.m_vCustomFiles.size(), 8, [&](CUIRect ListRect, int Rows) {
+			ListRowAction("config-export-files", (int)State.m_vCustomFiles.size(), 8, [&](CUIRect ListRect, int Rows, float Padding) {
 				State.m_CustomList.SetActive(Interactive);
 				State.m_CustomList.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);
 				// 胶囊行 + 锁死整数可见行：行距与行内退走列表 token，末行不会被裁一半。
 				State.m_CustomList.SetCapsuleRows(Metrics.m_BodySize);
+				State.m_CustomList.SetContainerPadding(Padding);
 				State.m_CustomList.SetVisibleRowRange(Rows, Rows);
 				State.m_CustomList.DoStart(RowHeight, State.m_vCustomFiles.size(), 1, 4, State.m_CustomSelection, &ListRect);
 				for(auto &Item : State.m_vCustomFiles)
@@ -270,10 +273,11 @@ bool qm_card_catalog::QmCardRenderHook::BuildConfigFilesCard(const SQmCardBuildC
 			Text("config-import-help", Localize("Copy a .qmconfig file into the package folder, then refresh."));
 			if(HasPackages)
 			{
-				ListRowAction("config-package-list", (int)State.m_vPackages.size(), 5, [&](CUIRect ListRect, int Rows) {
+				ListRowAction("config-package-list", (int)State.m_vPackages.size(), 5, [&](CUIRect ListRect, int Rows, float Padding) {
 					State.m_PackageList.SetActive(Interactive);
 					State.m_PackageList.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);
 					State.m_PackageList.SetCapsuleRows(Metrics.m_BodySize);
+					State.m_PackageList.SetContainerPadding(Padding);
 					State.m_PackageList.SetVisibleRowRange(Rows, Rows);
 					State.m_PackageList.DoStart(RowHeight, State.m_vPackages.size(), 1, 4, State.m_SelectedPackage, &ListRect);
 					for(auto &Item : State.m_vPackages)
@@ -297,10 +301,11 @@ bool qm_card_catalog::QmCardRenderHook::BuildConfigFilesCard(const SQmCardBuildC
 			{
 				std::string Metadata = State.m_Preview.m_ClientVersion + " | " + State.m_Preview.m_ExportedAt;
 				Text("config-package-metadata", Metadata.c_str(), 2);
-				ListRowAction("config-package-preview", (int)State.m_Preview.m_vFiles.size(), 7, [&](CUIRect ListRect, int Rows) {
+				ListRowAction("config-package-preview", (int)State.m_Preview.m_vFiles.size(), 7, [&](CUIRect ListRect, int Rows, float Padding) {
 					State.m_PreviewList.SetActive(false);
 					State.m_PreviewList.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);
 					State.m_PreviewList.SetCapsuleRows(Metrics.m_BodySize);
+					State.m_PreviewList.SetContainerPadding(Padding);
 					State.m_PreviewList.SetVisibleRowRange(Rows, Rows);
 					State.m_PreviewList.DoStart(RowHeight, State.m_Preview.m_vFiles.size(), 1, 4, -1, &ListRect);
 					for(size_t Index = 0; Index < State.m_Preview.m_vFiles.size(); ++Index)

@@ -1064,8 +1064,10 @@ void CMenus::RenderSnapshotTextContainer(CUIElement &Element, const CUIRect *pRe
 	if(pRect == nullptr)
 		return;
 	const CUIElement::SUIElementRect *pElementRect = Element.Rect(0);
+	// 快照容器与设置页文字池共用 CUi::DoLabel 的烘色模型：烘了逐字色段就必须
+	// 用白色底色绘制，否则色段会被 m_TextColor 再乘一次。
 	if(pElementRect != nullptr && pElementRect->m_UITextContainer.Valid())
-		TextRender()->RenderTextContainer(pElementRect->m_UITextContainer, pElementRect->m_TextColor, pElementRect->m_TextOutlineColor, pRect->x, pRect->y);
+		TextRender()->RenderTextContainer(pElementRect->m_UITextContainer, pElementRect->TextContainerTint(), pElementRect->m_TextOutlineColor, pRect->x, pRect->y);
 }
 
 bool CMenus::RequestSnapshotTextContainer(const char *pScope, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps, CUIElement **ppReadyElement)
@@ -1586,7 +1588,7 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 		Actions.HSplitBottom(20.0f * ServerScale, &Actions, &Button);
 		Actions.HSplitBottom(5.0f * ServerScale, &Actions, nullptr);
 		static int s_AddFavButton = 0;
-		if(DoIngameMenuCheckBox(PAGE_SERVER_INFO, "ingame-server-info-favorite", &s_AddFavButton, Localize("Favorite"), IsFavorite != TRISTATE::NONE, &Button))
+		if(DoIngameMenuCheckBox(PAGE_SERVER_INFO, "ingame-server-info-favorite", &s_AddFavButton, Localize("Favorite server"), IsFavorite != TRISTATE::NONE, &Button))
 		{
 			if(IsFavorite != TRISTATE::NONE)
 				Favorites()->Remove(CurrentServerInfo.m_aAddresses, CurrentServerInfo.m_NumAddresses);
@@ -2341,6 +2343,9 @@ void CMenus::RenderGhost(CUIRect MainView)
 	// RowReserveWidth()，它由 token 直接算，不依赖上一帧解析出的滚动条宽度。
 	static CListBox s_ListBox;
 	s_ListBox.SetCapsuleRows(12.0f);
+	// 容器内边距：行区在面板四边内缩，档位按做行的行高（17.0f，与 DoStart 同一个数）
+	// 派生。可见行数仍按可用高度反推，组件为保行数只把留白收敛到富余的那一段。
+	s_ListBox.SetContainerPadding(ui_token::list::ContainerPadding(17.0f));
 
 	// split of the scrollbar
 	Headers.Draw(ColorRGBA(1, 1, 1, 0.25f), IGraphics::CORNER_T, 5.0f);
@@ -2692,6 +2697,8 @@ void CMenus::RenderRankDemo(CUIRect MainView)
 	// 与影子列表一致的列定义与表头样式
 	static CListBox s_ListBox;
 	s_ListBox.SetCapsuleRows(12.0f);
+	// 容器内边距：与影子列表同一档（行高 17.0f 派生），行区四边内缩。
+	s_ListBox.SetContainerPadding(ui_token::list::ContainerPadding(17.0f));
 	Headers.Draw(ColorRGBA(1, 1, 1, 0.25f), IGraphics::CORNER_T, 5.0f);
 	// 表头与行同一套列预算（同影子列表）：右侧让出滚动条那一列，左侧让一档内退；
 	// 17px 行 + 全量 9 内退 + 16 让位会把窄窗口下的列挤窄，这一档收敛到 6。

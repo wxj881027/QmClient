@@ -415,7 +415,12 @@ void CMenus::RenderAudioPackEditorScreen(CUIRect MainView)
 	const float GroupRowHeight = EditorLineSize * 2.0f;
 	const int GroupRowsFit = std::max(1, (int)((Catalog.h + ui_token::list::ROW_SPACING) / (GroupRowHeight + ui_token::list::ROW_SPACING)));
 	const int GroupRows = std::min(GroupRowsFit, ui_token::list::VisibleRows((int)vVisible.size(), 1, 1, GroupRowsFit));
+	// 容器内边距：行区在目录面板四边内缩，档位由行高派生。行数仍按面板高度反推，
+	// 组件为保行数会把留白收敛到富余的那一段，所以可见行数不随留白变化；
+	// 没有匹配分组时不声明留白，空面板保持原样。
+	const float GroupListPadding = vVisible.empty() ? 0.0f : ui_token::list::ContainerPadding(GroupRowHeight);
 	s_GroupList.SetCapsuleRows(EditorFontSize);
+	s_GroupList.SetContainerPadding(GroupListPadding);
 	s_GroupList.SetVisibleRowRange(GroupRows, GroupRows);
 	s_GroupList.DoStart(GroupRowHeight, (int)vVisible.size(), 1, 3, VisibleSelection, &Catalog, false);
 	for(int Index = 0; Index < (int)vVisible.size(); ++Index)
@@ -557,12 +562,15 @@ void CMenus::RenderAudioPackEditorScreen(CUIRect MainView)
 		if(vCandidates[Index] == m_AudioPackEditorState.m_SelectedCandidateIndex)
 			CandidateSelection = Index;
 	// 候选列表最多 3 行（沿用原面板高度），行数按实际候选数收；
-	// 高度用 RowsHeight 派生，和 CListBox 的自适应上限同源。
+	// 高度用 PaddedRowsHeight 派生（行内容 + 上下两档容器内边距），和 CListBox 的
+	// 自适应上限同源；没有候选文件时不声明留白——0 条目时留白只会多出一块空面板。
 	const float CandidateRowHeight = EditorLineSize * 2.0f;
 	const int CandidateRows = std::clamp((int)vCandidates.size(), 1, 3);
-	const CUIRect CandidateRect = Take(ui_token::list::RowsHeight(CandidateRows, CandidateRowHeight, ui_token::list::ROW_SPACING));
+	const float CandidateListPadding = vCandidates.empty() ? 0.0f : ui_token::list::ContainerPadding(CandidateRowHeight);
+	const CUIRect CandidateRect = Take(ui_token::list::PaddedRowsHeight(CandidateRows, CandidateRowHeight, ui_token::list::ROW_SPACING, CandidateListPadding));
 	s_CandidateList.SetWheelOwnerPriority(EUiWheelOwnerPriority::COMPOSITE_CONTROL);
 	s_CandidateList.SetCapsuleRows(EditorFontSize);
+	s_CandidateList.SetContainerPadding(CandidateListPadding);
 	s_CandidateList.SetVisibleRowRange(CandidateRows, CandidateRows);
 	s_CandidateList.DoStart(CandidateRowHeight, (int)vCandidates.size(), 1, 3, CandidateSelection, &CandidateRect);
 	for(int Index = 0; Index < (int)vCandidates.size(); ++Index)

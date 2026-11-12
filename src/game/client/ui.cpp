@@ -147,6 +147,8 @@ void CUIElement::SUIElementRect::Reset()
 	m_Cursor = CTextCursor();
 	m_TextColor = ColorRGBA(-1, -1, -1, -1);
 	m_TextOutlineColor = ColorRGBA(-1, -1, -1, -1);
+	m_TextColorBaked = false;
+	m_TextColorBakedBase = ColorRGBA(-1, -1, -1, -1);
 	m_QuadColor = ColorRGBA(-1, -1, -1, -1);
 	m_ReadCursorGlyphCount = -1;
 	m_aQmIcons.fill(EQmIcon::COUNT);
@@ -2081,6 +2083,9 @@ void CUi::DoLabel(CUIElement::SUIElementRect &RectEl, const CUIRect *pRect, cons
 		Cursor.m_Flags |= Flags;
 	}
 	Cursor.m_LineWidth = LabelProps.m_MaxWidth;
+	// 与立即路径同源：色段是本次标签的权威着色。读光标自带的色段属于上一段
+	// 布局的残留，套用到本段会整体错位，所以这里总是按本次调用重新指定。
+	Cursor.m_vColorSplits = LabelProps.m_vColorSplits;
 
 	RectEl.m_FontSize = Size;
 	RectEl.m_TextAlign = Align;
@@ -2090,11 +2095,23 @@ void CUi::DoLabel(CUIElement::SUIElementRect &RectEl, const CUIRect *pRect, cons
 	RectEl.m_BiggestCharacterHeight = TextBounds.m_BiggestCharacterHeight;
 	RectEl.m_TextColor = TextRender()->GetTextColor();
 	RectEl.m_TextOutlineColor = TextRender()->GetTextOutlineColor();
-	TextRender()->TextColor(TextRender()->DefaultTextColor());
-	TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor());
+	// 有逐字色段的标签把颜色烘进容器顶点：未被色段覆盖的字符沿用调用方当前
+	// 文字颜色（与立即路径 TextEx 一致），绘制时底色回到白色，不再「白底 + 乘色」。
+	// 没有色段时保持旧模型：容器烘默认白底，绘制时乘 m_TextColor 即可换色。
+	RectEl.m_TextColorBaked = !LabelProps.m_vColorSplits.empty();
+	if(!RectEl.m_TextColorBaked)
+	{
+		TextRender()->TextColor(TextRender()->DefaultTextColor());
+		TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor());
+	}
 	TextRender()->CreateTextContainer(RectEl.m_UITextContainer, &Cursor, pText, StrLen);
-	TextRender()->TextColor(RectEl.m_TextColor);
-	TextRender()->TextOutlineColor(RectEl.m_TextOutlineColor);
+	if(!RectEl.m_TextColorBaked)
+	{
+		TextRender()->TextColor(RectEl.m_TextColor);
+		TextRender()->TextOutlineColor(RectEl.m_TextOutlineColor);
+	}
+	// 底色只在烘色时参与重建判定（色段没覆盖全文才有字符用它）。
+	RectEl.m_TextColorBakedBase = RectEl.m_TextColorBaked ? RectEl.m_TextColor : ColorRGBA(-1, -1, -1, -1);
 	RectEl.m_Cursor = Cursor;
 }
 
@@ -2106,15 +2123,24 @@ void CUi::RenderLabelTextContainerAligned(const CUIElement::SUIElementRect &Rect
 	const float *pBiggestCharHeight = RectEl.m_LineCount == 1 ? &RectEl.m_BiggestCharacterHeight : nullptr;
 	const vec2 CursorPos = CalcAlignedCursorPos(pRect, vec2(RectEl.m_Cursor.m_LongestLineWidth, RectEl.m_Cursor.Height()), Align, pBiggestCharHeight);
 	FlushQuadBatch();
-	// 颜色在绘制时解析，彩虹和即时切换无需重建缓存文本容器。
+	// 没有逐字色段时颜色在绘制时解析，彩虹和即时切换无需重建缓存文本容器；
+	// 烘了色段的容器颜色已固定在顶点里，改色走重建（见 DoLabelStreamed 的样式判定）。
 	// 父层显隐系数（ControlAlphaScale）在此一并生效：列表行淡入、弹窗内容
 	// 淡出等层级行为对 streamed 标签与裸 TextRender 文字一视同仁。
 	const EQmIcon Icon = RectEl.m_NumQmIcons == 1 ? RectEl.m_aQmIcons[0] : EQmIcon::COUNT;
+	// 底色取 TextContainerTint()：烘了逐字色段的容器已经自带调用方要的颜色，
+	// 底色必须是白色，否则色段会被调用方颜色再乘一次（那就是本次修复前的
+	// 「SetColor() 静默失效」）。
+	// 图标预设色与表面对比色只在未烘色的容器上生效：烘色容器的顶点色已经由
+	// 色段确定，再乘一次图标预设色就是双重染色。烘色 + 单图标时图标本体和普通
+	// 文字一样由色段决定，描边继续用调用方描边色，不再另算图标对比色。
+	const bool IconTintApplies = RectEl.m_NumQmIcons > 0 && !QmSignalIconFamily(Icon) && !RectEl.m_TextColorBaked;
+	const ColorRGBA BaseTint = RectEl.TextContainerTint();
 	// 信号家族颜色由调用方决定（RectEl.m_TextColor 即调用方算好的最终色），
 	// 不叠加全局图标色；对比色也直接跟随，避免弱档琥珀被解析成黑描边。
-	const ColorRGBA Color = ScaleControlAlpha(RectEl.m_NumQmIcons > 0 && !QmSignalIconFamily(Icon) ? ConfiguredQmUiIconColor(RectEl.m_TextColor, Icon) : RectEl.m_TextColor);
+	const ColorRGBA Color = ScaleControlAlpha(IconTintApplies ? ConfiguredQmUiIconColor(BaseTint, Icon) : BaseTint);
 	const CQmIconSemanticColorScope SemanticColorScope(QmUiIconHasSemanticColor(Icon));
-	const ColorRGBA OutlineColor = ScaleControlAlpha(RectEl.m_NumQmIcons > 0 && !QmSignalIconFamily(Icon) ? ConfiguredQmUiIconContrastColor(Color) : RectEl.m_TextOutlineColor);
+	const ColorRGBA OutlineColor = ScaleControlAlpha(IconTintApplies ? ConfiguredQmUiIconContrastColor(Color) : RectEl.m_TextOutlineColor);
 	TextRender()->RenderTextContainer(RectEl.m_UITextContainer, Color, OutlineColor, CursorPos.x, CursorPos.y);
 	CQmIconDrawDiagnostics::Record(RectEl.m_NumQmIcons);
 }
@@ -2130,7 +2156,12 @@ void CUi::DoLabelStreamed(CUIElement::SUIElementRect &RectEl, const CUIRect *pRe
 	bool ColorChanged = RectEl.m_TextColor != TextRender()->GetTextColor() || RectEl.m_TextOutlineColor != TextRender()->GetTextOutlineColor();
 	const auto Icons = pReadCursor == nullptr ? QmIconLabelGlyphs(TextRender()->GetFontPreset(), pText, StrLen) : SQmIconLabelGlyphs{};
 	const CQmIconLabelFontScope FontScope(*TextRender(), Icons);
-	bool StyleChanged = RectEl.m_FontPreset != TextRender()->GetFontPreset() || RectEl.m_NumQmIcons != Icons.m_Count || RectEl.m_aQmIcons != Icons.m_aIcons || RectEl.m_FontSize != Size || RectEl.m_TextAlign != Align || RectEl.m_LabelMaxWidth != LabelProps.m_MaxWidth || RectEl.m_LabelFlags != Flags;
+	// 色段必须烘进顶点，所以它属于样式而不是绘制时颜色：变了就得重建容器，
+	// 没变也必须继续复用（色段相同的标签不逐帧重建）。比较只对着缓存里烘入的
+	// 那一份做，没有逐帧文本扫描。
+	const bool BakedColorChanged = !RectEl.BakedColorMatches(LabelProps.m_vColorSplits, TextRender()->GetTextColor());
+	bool StyleChanged = BakedColorChanged || RectEl.m_FontPreset != TextRender()->GetFontPreset() || RectEl.m_NumQmIcons != Icons.m_Count || RectEl.m_aQmIcons != Icons.m_aIcons || RectEl.m_FontSize != Size || RectEl.m_TextAlign != Align || RectEl.m_LabelMaxWidth != LabelProps.m_MaxWidth || RectEl.m_LabelFlags != Flags;
+
 	if(ColorChanged)
 	{
 		RectEl.m_TextColor = TextRender()->GetTextColor();

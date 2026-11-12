@@ -399,6 +399,9 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 			// 统一行外观：胶囊整行 + token 行距 + 按字号派生的行内内边距；
 			// 可见行上限 8，超过就出覆盖式滚动条（细轨不占行宽，不再整条隐藏）。
 			s_ListBox.SetCapsuleRows(FontSizeResList);
+			// 卡片测高已把两档容器内边距算进列表高度（ResolveSettingsGraphicsModesGeometry
+			// 用 PaddedRowsHeight），这里显式声明同一个档位，组件才会在内边距内侧排版。
+			s_ListBox.SetContainerPadding(ui_token::list::ContainerPadding(RowHeightResList));
 			s_ListBox.SetVisibleRowRange(1, ui_token::list::MAX_VISIBLE_ROWS);
 			s_ListBox.DoStart(RowHeightResList, s_NumNodes, 1, 3, SelectedOld, &ModeList);
 

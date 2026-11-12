@@ -148,6 +148,10 @@ namespace
 		// 胶囊行右侧恒定为滚动条列让出的宽度：细轨 + 外边距 + 行与轨道之间的缝，
 		// 与 CListBox 胶囊行的 m_RowReserveRight 同一条公式；滚动条显隐都不改变行宽。
 		float m_RowReserveRight = 0.0f;
+		// 容器内边距：行胶囊不贴容器圆角，选中/悬浮填充不会从容器圆角外侧溢出去
+		// （实机反馈：最后一行的高亮与容器下缘粘在一起）。按行高分档，与 CListBox
+		// 的自动内边距同一条 token，手绘列表也走同一档，不和组件列表各写一套。
+		float m_ContainerPadding = 0.0f;
 	};
 
 	SLanguageListRowLayout ResolveLanguageListRowLayout(const SSettingsContentMetrics &Metrics)
@@ -164,14 +168,21 @@ namespace
 		// 滚动条统一成列表胶囊行的细轨：粗细/外边距都取列表 token（设置页内层策略
 		// 自带的那一档比列表粗），轨道贴边的那一列再整体让给胶囊行。
 		Layout.m_RowReserveRight = ui_token::list::SCROLLBAR_WIDTH + ui_token::list::SCROLLBAR_MARGIN + ui_token::list::SCROLLBAR_ROW_GAP;
+		// 容器内边距只由行高决定，与容器高度无关：所以它不影响「只按宽度可复现」的
+		// 缓存键，预热缓存与逐帧绘制的文字宽度仍然一致。
+		Layout.m_ContainerPadding = ui_token::list::ContainerPadding(Layout.m_RowHeight);
 		return Layout;
 	}
 
-	// 行矩形：整行包含胶囊背景、命中区和行距之间的行宽；滚动条列恒定预留，
-	// 滚动条出现/消失时文字宽度不横跳，缓存键也随之稳定。
+	// 行矩形：整行包含胶囊背景、命中区和行距之间的行宽；先按容器内边距左右各内退一档
+	// （选中/悬浮填充不压容器圆角），再恒定预留滚动条列，滚动条出现/消失时文字宽度
+	// 不横跳，缓存键也随之稳定。
 	CUIRect LanguageListRowRect(const CUIRect &ListRect, const SLanguageListRowLayout &Layout)
 	{
 		CUIRect RowRect = ListRect;
+		const float PaddingX = minimum(Layout.m_ContainerPadding, RowRect.w * 0.5f);
+		RowRect.x += PaddingX;
+		RowRect.w = maximum(0.0f, RowRect.w - 2.0f * PaddingX);
 		RowRect.w = maximum(0.0f, RowRect.w - Layout.m_RowReserveRight);
 		return RowRect;
 	}
@@ -195,6 +206,8 @@ namespace
 	// 可见行数 = 容器可用高度能完整容纳的行数（首行之前、末行之后都不留行距）。
 	// 容器高度再严格按「可见行数 × 行高 + (可见行数 - 1) × 行距」反推，首/末行
 	// 胶囊因此不会被容器圆角或卡片裁剪切掉一角。
+	// 可用高度里已经含了卡片测高留出的两档内边距（ResolveSettingsGeneralLanguageListGeometry），
+	// 行数按同一条公式从它推导，内边距不会换掉一行。
 	int ResolveLanguageListVisibleRows(const float AvailableHeight, const int ItemCount, const SLanguageListRowLayout &Layout)
 	{
 		if(ItemCount <= 0 || AvailableHeight <= 0.0f || Layout.m_RowHeight <= 0.0f)
@@ -202,6 +215,24 @@ namespace
 		const float RowPitch = Layout.m_RowHeight + Layout.m_RowSpacing;
 		const int FitRows = (int)std::floor((AvailableHeight + Layout.m_RowSpacing) / RowPitch);
 		return std::clamp(FitRows, 1, ItemCount);
+	}
+
+	// 手绘列表的容器几何：容器高度 = 可见行内容 + 上下两档内边距，行区整体在内边距
+	// 内侧排版。公式与 CListBox::DoStart 完全一致（先按 PaddedRowsHeight 收敛，再取
+	// 富余的一半作为纵向内边距），父矩形比测高更矮时只吃富余，绝不因此少画一行。
+	struct SLanguageListContainer
+	{
+		float m_Height = 0.0f;
+		float m_PaddingY = 0.0f;
+	};
+
+	SLanguageListContainer ResolveLanguageListContainer(const float AvailableHeight, const int VisibleRows, const SLanguageListRowLayout &Layout)
+	{
+		SLanguageListContainer Container;
+		const float RowContentHeight = ui_token::list::RowsHeight(VisibleRows, Layout.m_RowHeight, Layout.m_RowSpacing);
+		Container.m_Height = minimum(ui_token::list::PaddedRowsHeight(VisibleRows, Layout.m_RowHeight, Layout.m_RowSpacing, Layout.m_ContainerPadding), maximum(0.0f, AvailableHeight));
+		Container.m_PaddingY = maximum(0.0f, (Container.m_Height - RowContentHeight) * 0.5f);
+		return Container;
 	}
 
 	bool UseLanguagePageCache()
@@ -796,21 +827,30 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMet
 	const SLanguageListRowLayout RowLayout = ResolveLanguageListRowLayout(Metrics);
 	const int NumLanguages = (int)g_Localization.Languages().size();
 	const int VisibleRows = ResolveLanguageListVisibleRows(MainView.h, NumLanguages, RowLayout);
-	// 容器高度只按完整的行算：首/末行胶囊不会被容器圆角或卡片裁剪切掉一角。
-	// 仅在父矩形连一行都放不下（窗口极窄）时才退回父矩形高度，避免画到卡片外。
-	const float ContainerHeight = minimum(ui_token::list::RowsHeight(VisibleRows, RowLayout.m_RowHeight, RowLayout.m_RowSpacing), maximum(0.0f, MainView.h));
+	// 容器高度按「完整行 + 上下两档内边距」反推（与 CListBox 同一条 PaddedRowsHeight）：
+	// 首/末行胶囊既不会被容器圆角切掉，也不会因为让出内边距而少显示一行。父矩形连
+	// 一行都放不下（窗口极窄）时按它的实际高度收敛，避免画到卡片外。
+	const SLanguageListContainer Container = ResolveLanguageListContainer(MainView.h, VisibleRows, RowLayout);
+	const float ContainerHeight = Container.m_Height;
 	const float ContainerRadius = ui_token::list::ContainerRadius(MainView.w, ContainerHeight);
-	// 首/末行胶囊按「容器圆角 − 行胶囊圆角」横向内缩：胶囊直边与容器圆角切点对齐，
-	// 端头不会从容器圆角外侧探出来（与 CListBox 胶囊行同一条公式）。
-	const float CapsuleInsetX = maximum(0.0f, ContainerRadius - ui_token::list::RowRadius(RowLayout.m_RowHeight));
+	// 首/末行胶囊按「容器圆角 − 行胶囊圆角 − 容器内边距」横向内缩：胶囊直边与容器圆角
+	// 切点对齐，端头不会从容器圆角外侧探出来。容器内边距已经内缩过的那一档要扣掉，
+	// 否则两边叠加会把行挤窄——与 CListBox 胶囊行的同一条公式。
+	const float CapsuleInsetX = maximum(0.0f, ContainerRadius - ui_token::list::RowRadius(RowLayout.m_RowHeight) - RowLayout.m_ContainerPadding);
 	if(VisibleRows > 0)
 	{
-		CUIRect Container = MainView;
-		Container.h = ContainerHeight;
-		DrawRoundedSurface(Ui(), Container, Ui()->ScaleBackgroundAlpha(ColorRGBA(0.0f, 0.0f, 0.0f, 0.15f)), ColorRGBA(), ContainerRadius);
+		CUIRect ContainerRect = MainView;
+		ContainerRect.h = ContainerHeight;
+		DrawRoundedSurface(Ui(), ContainerRect, Ui()->ScaleBackgroundAlpha(ColorRGBA(0.0f, 0.0f, 0.0f, 0.15f)), ColorRGBA(), ContainerRadius);
 	}
-	CUIRect ScrollView = MainView;
-	ScrollView.h = minimum(ScrollView.h, ContainerHeight);
+	// 行区（滚动裁剪区）落在容器内边距内侧：滚出视口的行不会画进容器上下的留白里。
+	// 行区高度 = 容器高度 − 上下两档内边距，正好是可见行的整数范围。
+	CUIRect RowsView = MainView;
+	RowsView.y += Container.m_PaddingY;
+	RowsView.h = maximum(0.0f, ContainerHeight - 2.0f * Container.m_PaddingY);
+	CUIRect ScrollView = RowsView;
+	// 裁剪区左右各让一档内边距（VMargin 收的是左右两条竖边）。
+	ScrollView.VMargin(RowLayout.m_ContainerPadding, &ScrollView);
 	SQmScrollRequest ScrollRequest;
 	ScrollRequest.m_Profile = EQmScrollProfile::SETTINGS_INNER;
 	ScrollRequest.m_RowExtent = RowLayout.m_RowHeight + RowLayout.m_RowSpacing;
@@ -824,15 +864,16 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMet
 	ScrollParams.m_ScrollbarOverlay = true;
 	ScrollParams.m_ScrollbarThickness = ui_token::list::SCROLLBAR_WIDTH;
 	ScrollParams.m_ScrollbarMargin = ui_token::list::SCROLLBAR_MARGIN;
-	// 轨道两端按容器圆角内缩：细轨端头不会从容器圆角外侧探出来。
-	ScrollParams.m_ScrollbarTrackInset = ContainerRadius;
+	// 轨道两端按容器圆角内缩：细轨端头不会从容器圆角外侧探出来。行区已经按容器内边距
+	// 内缩过一档，这里扣掉内边距，两者不叠加（与 CListBox 的轨道内缩同一条公式）。
+	ScrollParams.m_ScrollbarTrackInset = maximum(0.0f, ContainerRadius - RowLayout.m_ContainerPadding);
 	SSettingsScrollRegionFrame ScrollFrame = BeginSettingsScrollRegion(gs_LanguageScrollRegion, &ScrollView, ScrollParams, s_PrevLanguageScrollY);
 	ScrollOffset = ScrollFrame.m_BeginOffset;
 
 	// 行宽按「恒定预留滚动条列」算：细轨 + 外边距 + 行与轨道之间的缝
 	// （SCROLLBAR_ROW_GAP），与 CListBox 胶囊行同一公式；预热缓存的宽度键也走这里，
-	// 所以滚动条显隐、内容是否溢出都不改变文字宽度。
-	CUIRect Content = LanguageListRowRect(MainView, RowLayout);
+	// 所以滚动条显隐、内容是否溢出都不改变文字宽度。行的起点同样落在行区内边距内侧。
+	CUIRect Content = LanguageListRowRect(RowsView, RowLayout);
 	Content.y += ScrollOffset.y;
 	int VisibleLanguages = 0;
 	int CacheHits = 0;
@@ -904,19 +945,19 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMet
 			s_HoverFeedback.Observe((int)i);
 		const float HoverAlpha = s_HoverFeedback.Alpha((int)i);
 		// 整行胶囊：圆角取自行高，宽高与绘制都走公共 DrawRoundedSurface。
-		// 选中态与下拉框弹层条目同源（QmControlTheme().m_Selected 强调色整行填充、
-		// 不加描边），悬浮仍用列表 token；悬浮先画、选中后叠。
+		// 悬浮与选中同一份强调色（QmControlTheme().m_Selected = qm_ui_selected_color，
+		// 由强调色派生、alpha 0.22），都按 token 原色整行填充、不加描边；悬浮先画、
+		// 选中后叠。白色 token（LIST_ITEM_HOVER）不再参与行反馈——实机反馈「悬浮颜色
+		// 要跟强调色走，别硬编码成白的」。
+		const ColorRGBA RowFeedback = Ui()->QmControlTheme().m_Selected;
 		CUIRect CapsuleRect = ItemRect;
 		CapsuleRect.x += CapsuleInsetX;
 		CapsuleRect.w = maximum(0.0f, CapsuleRect.w - 2.0f * CapsuleInsetX);
 		const float RowRadius = ui_token::list::RowRadius(RowLayout.m_RowHeight);
 		if(HoverAlpha > 0.001f && !gs_LanguageScrollRegion.Animating())
-			DrawRoundedSurface(Ui(), CapsuleRect, Ui()->ScaleBackgroundAlpha(ui_token::color::LIST_ITEM_HOVER).WithMultipliedAlpha(HoverAlpha), ColorRGBA(), RowRadius);
+			DrawRoundedSurface(Ui(), CapsuleRect, RowFeedback.WithMultipliedAlpha(HoverAlpha), ColorRGBA(), RowRadius);
 		if(SelectedAlpha > 0.001f)
-		{
-			const ColorRGBA SelectedFill = Ui()->ScaleBackgroundAlpha(Ui()->QmControlTheme().m_Selected).WithMultipliedAlpha(SelectedAlpha);
-			DrawRoundedSurface(Ui(), CapsuleRect, SelectedFill, ColorRGBA(), RowRadius);
-		}
+			DrawRoundedSurface(Ui(), CapsuleRect, RowFeedback.WithMultipliedAlpha(SelectedAlpha), ColorRGBA(), RowRadius);
 
 		CUIRect FlagRect, Label;
 		CUIRect RowContent = LanguageListRowContentRect(ItemRect, RowLayout);

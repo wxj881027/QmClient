@@ -232,6 +232,9 @@ void CMenus::RenderDemoScreenshotGallery(CUIRect ListBox, bool &WasListboxItemAc
 	const float RowHeight = PreviewHeight + 42.0f;
 	const float RowPitch = RowHeight + ui_token::list::ROW_SPACING;
 	const float CardRadius = ui_token::list::RowRadius(RowHeight);
+	// 容器内边距：格内容区在容器四边内缩（档位由行高派生），首/末行的卡片不再贴着
+	// 容器圆角。可见行数仍按整格高度反推，组件为保行数只把留白收敛到富余的那一段。
+	s_GalleryListBox.SetContainerPadding(ui_token::list::ContainerPadding(RowHeight));
 	if(m_DemolistSelectedReveal)
 	{
 		s_GalleryListBox.ScrollToSelected();

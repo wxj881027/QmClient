@@ -422,6 +422,9 @@ uint64_t CMenus::BuildSoundSettingsCards(const qm_card_catalog::SQmCardBuildCont
 			// 胶囊行：行距、行内左右内退、胶囊圆角与覆盖式滚动条（8/4）一次拿到，
 			// 选中/悬浮填充走组件默认（选中色、无描边），不再单独覆盖颜色。
 			s_AudioPackListBox.SetCapsuleRows(BodySize);
+			// 容器内边距：卡片测高已在 ResolveSettingsSoundAudioPackGeometry 里按
+			// PaddedRowsHeight 计入两档留白，这里声明同一档（行高 = LineHeight + LineSpacing）。
+			s_AudioPackListBox.SetContainerPadding(ui_token::list::ContainerPadding(SoundMetrics.m_ListRowHeight));
 			s_AudioPackListBox.SetVisibleRowRange(1, ui_token::list::MAX_VISIBLE_ROWS);
 			s_AudioPackListBox.DoStart(LineHeight + LineSpacing, gs_vAudioPacks.size(), 1, 4, SelectedPack, &ListRow, false);
 

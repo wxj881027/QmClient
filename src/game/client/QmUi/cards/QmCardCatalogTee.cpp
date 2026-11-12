@@ -109,6 +109,31 @@ namespace
 		return QmPerfEnabled();
 	}
 
+	// 皮肤网格列表（皮肤格子，多列网格）的容器几何：行高、容器内边距与容器高度只在
+	// 这里定义一次，卡片测高与交给 CListBox 的矩形都从它取——内边距只加在一处会把
+	// 最后一行裁掉。可见行数固定 6 行（原来按 300 × UiScale 的固定 viewport 反算，
+	// 与行高 50 × UiScale 等价），两档内边距只让卡片变高，不减少可见行数。
+	constexpr int SETTINGS_TEE_SKIN_LIST_VISIBLE_ROWS = 6;
+
+	struct SSettingsTeeSkinListGeometry
+	{
+		float m_RowHeight = 0.0f;
+		// 网格行距保持 0：行高本身已含格子间距，组件也不再给非胶囊网格叠加行距。
+		float m_RowSpacing = 0.0f;
+		float m_ContainerPadding = 0.0f;
+		// 容器高度 = 可见行内容 + 上下两档内边距。
+		float m_Height = 0.0f;
+	};
+
+	SSettingsTeeSkinListGeometry ResolveSettingsTeeSkinListGeometry(const SSettingsContentMetrics &Metrics)
+	{
+		SSettingsTeeSkinListGeometry Geometry;
+		Geometry.m_RowHeight = 50.0f * Metrics.m_UiScale;
+		Geometry.m_ContainerPadding = ui_token::list::ContainerPadding(Geometry.m_RowHeight);
+		Geometry.m_Height = ui_token::list::PaddedRowsHeight(SETTINGS_TEE_SKIN_LIST_VISIBLE_ROWS, Geometry.m_RowHeight, Geometry.m_RowSpacing, Geometry.m_ContainerPadding);
+		return Geometry;
+	}
+
 	struct SSettingsPreviewSkinKey
 	{
 		char m_aSkinName[MAX_SKIN_LENGTH] = {};
@@ -1237,10 +1262,26 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 		}
 	}
 	const auto ListFrameStartTime = time_get_nanoseconds();
-	const float TeeSkinListRowHeight = 50.0f * UiScale;
+	// 行高、容器内边距与容器高度和卡片测高同源（同一个 helper），所以两档内边距只吃
+	// 卡片变高的那一段，可见行数仍是 SETTINGS_TEE_SKIN_LIST_VISIBLE_ROWS 行。
+	const SSettingsTeeSkinListGeometry SkinListGeometry = ResolveSettingsTeeSkinListGeometry(TeeMetrics);
+	const float TeeSkinListRowHeight = SkinListGeometry.m_RowHeight;
+	// 列数仍按容器整宽推导（与改前完全一致）：内边距只让每格窄一点，不会多切一列，
+	// 行数因此也不会跟着变。
 	const int TeeSkinListItemsPerRow = ResolveSettingsTeeSkinColumns(MainView.w, UiScale);
 	s_ListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_GRID);
 	s_ListBox.SetWheelOwnerPriority(EUiWheelOwnerPriority::COMPOSITE_CONTROL);
+	// 网格不是胶囊行，组件不会替它接管内边距，所以在调用点显式给同一份 token：
+	// 选中/悬浮填充不再压在容器圆角上（实机反馈「背景超出列表」）。
+	s_ListBox.SetContainerPadding(SkinListGeometry.m_ContainerPadding);
+	// 选中与悬浮反馈统一取主题强调色，与语言/主题列表、资源网格同一口径：白 8%/14%
+	// 的旧 token 不再参与行反馈。
+	const ColorRGBA SkinListRowFeedbackColor = Ui()->QmControlTheme().m_Selected;
+	s_ListBox.SetItemColors(SkinListRowFeedbackColor, SkinListRowFeedbackColor, SkinListRowFeedbackColor);
+	// 格子之间要有缝：网格行距是 0（行高已含卡片间距），相邻两格的选中/悬浮填充会连成
+	// 一整条。反馈矩形按 token 内缩一档，横向与纵向都留出可见缝隙（实机反馈：
+	// 「两两之间的悬浮态背景之间要有间距」）。
+	s_ListBox.SetItemSelectionInset(ui_token::spacing::XS);
 	s_ListBox.DoStart(TeeSkinListRowHeight, vSkinList.size(), TeeSkinListItemsPerRow, 2, OldSelected, &MainView);
 	if(m_SkinListScrollToSelected && OldSelected >= 0)
 	{
@@ -2426,6 +2467,9 @@ void CMenus::RenderSettingsTeeSkinQueue(CUIRect Content, const SSettingsContentM
 		// 统一行外观：胶囊整行 + token 行距 + 按字号派生的行内内边距；皮肤队列最多
 		// 显示 6 行，滚动条改成覆盖式细轨（不再预留宽度，行宽不随队列长度横跳）。
 		s_QueueListBox.SetCapsuleRows(BodySize);
+		// 容器内边距：容器高度已在 ResolveSettingsTeeQueuePanelGeometry 里按
+		// PaddedRowsHeight 计入两档留白，这里声明同一档，首/末行的胶囊不贴容器圆角。
+		s_QueueListBox.SetContainerPadding(ui_token::list::ContainerPadding(TeeMetrics.m_ListRowHeight));
 		s_QueueListBox.SetVisibleRowRange(1, ui_token::list::SKIN_QUEUE_MAX_VISIBLE_ROWS);
 		s_QueueListBox.DoStart(TeeMetrics.m_ListRowHeight, (int)SkinQueue.size(), 1, 1, -1, &QueueListBody, true, IGraphics::CORNER_ALL);
 		for(size_t i = 0; i < SkinQueue.size(); ++i)
@@ -2670,6 +2714,9 @@ void CMenus::RenderSettingsTeeSkinQueue(CUIRect Content, const SSettingsContentM
 			// 统一行外观：胶囊整行 + token 行距（预设栏原本就用这半档行距）+ 按字号
 			// 派生的行内内边距，可见 2~3 行，滚动条覆盖在行右侧不占行宽。
 			s_PresetListBox.SetCapsuleRows(BodySize);
+			// 容器内边距：预设栏高度同样在测高处（ResolveSettingsTeeQueuePresetHeight）按
+			// PaddedRowsHeight 计入两档留白，这里声明同一档。
+			s_PresetListBox.SetContainerPadding(ui_token::list::ContainerPadding(TeeMetrics.m_ListRowHeight));
 			s_PresetListBox.SetVisibleRowRange(ui_token::list::PRESET_MIN_VISIBLE_ROWS, ui_token::list::PRESET_MAX_VISIBLE_ROWS);
 			s_PresetListBox.DoStart(TeeMetrics.m_ListRowHeight, (int)vQueuePresets.size(), 1, 1, PresetSelectedOld, &PresetList, true, IGraphics::CORNER_ALL);
 			for(size_t i = 0; i < vQueuePresets.size(); ++i)
@@ -2870,7 +2917,11 @@ namespace qm_card_catalog
 		}
 		else if(str_comp(pStableId, "deck:tee-skin-list") == 0)
 		{
-			MeasureBlock = [Metrics](float Width) { return ResolveSettingsTeeToolbarLayout({0.0f, 0.0f, Width, 0.0f}, Metrics).m_Height + 300.0f * Metrics.m_UiScale; };
+			// 工具栏 + 列表容器：容器高度取自与 DoStart 同一个 helper（可见行内容 +
+			// 上下两档内边距），测高与传矩形因此永远同源。
+			MeasureBlock = [Metrics](float Width) {
+				return ResolveSettingsTeeToolbarLayout({0.0f, 0.0f, Width, 0.0f}, Metrics).m_Height + ResolveSettingsTeeSkinListGeometry(Metrics).m_Height;
+			};
 			Out.m_RenderWhenClipped = true;
 			Out.m_Render = [pMenus, Metrics, Viewport = Ctx.m_Page.m_ScrollViewport](CUIRect Content) {
 				if(pMenus->Ui()->RenderOnly() || Content.Intersection(Viewport).h > 0.0f)

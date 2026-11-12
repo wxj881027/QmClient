@@ -315,6 +315,22 @@ namespace ui_token::list
 	// 胶囊左缘，窄窗口里也不会跟着一起挤没。
 	inline float RowInsetX(const float FontSize) { return dropdown::EntryInsetX(FontSize); }
 
+	// 容器内边距：行胶囊不能贴着容器圆角，选中/悬浮填充才不会从圆角外侧探出去
+	// （实机反馈：网格里第一行的高亮压在容器圆角上，看起来「超出列表」）。
+	// 三档全部由行高派生，行高越大档位越高；调用点不再各写像素，也不再新增 token。
+	inline float ContainerPadding(const float RowHeight)
+	{
+		if(RowHeight <= 24.0f)
+			return spacing::XS;
+		if(RowHeight <= 40.0f)
+			return spacing::SM;
+		return spacing::MD;
+	}
+
+	// 容器内容高度 = 可见行内容 + 上下内边距，定义见本节末尾（PaddedRowsHeight）：
+	// 调用点测高与组件收敛高度共用同一个函数，加内边距不会把最后一行挤掉
+	// （「该 8 行还是 8 行」），也不会让卡片按旧公式少算两档内边距。
+
 	// 容器圆角按容器长宽推导：上限是短边一半，档位随高度在 MENU→CARD 之间连续增长，
 	// 所以 3 行以下偏菜单档、6 行以上完全到卡片档，列表增减一行也不会跳档。
 	// 与文本按钮「按尺寸取圆角」是同一条思路，列表不再各自写死一个 5。
@@ -351,6 +367,12 @@ namespace ui_token::list
 		if(Rows <= 0)
 			return 0.0f;
 		return Rows * std::max(0.0f, RowHeight) + std::max(0, Rows - 1) * std::max(0.0f, RowSpacing);
+	}
+
+	// 容器内容高度 = 可见行内容 + 上下内边距（与上面的前向声明同一份定义）。
+	inline float PaddedRowsHeight(const int Rows, const float RowHeight, const float RowSpacing, const float Padding)
+	{
+		return RowsHeight(Rows, RowHeight, RowSpacing) + 2.0f * std::max(0.0f, Padding);
 	}
 } // namespace ui_token::list
 
@@ -444,21 +466,9 @@ namespace ui_token::server_filter
 	inline constexpr float DIVIDER_INSET_MAX = 16.0f;
 } // namespace ui_token::server_filter
 
-namespace ui_token::server_info
-{
-	inline constexpr float ROW_HEIGHT = 15.0f;
-	inline constexpr float ROW_GAP = 2.0f;
-	inline constexpr float MIN_ROW_HEIGHT = 11.0f;
-	inline constexpr float BLOCK_PADDING = 5.0f;
-	inline constexpr float COPY_BUTTON_HEIGHT = 15.0f;
-	inline constexpr float LABEL_COLUMN_WIDTH = 80.0f;
-	inline constexpr float TOGGLE_WIDTH = 30.0f;
-	inline constexpr float TOGGLE_LABEL_GAP = 6.0f;
-	inline constexpr float LABEL_FONT_INSET = 4.0f;
-	inline constexpr float EXPOSE_APPEAR_DURATION = 0.15f;
-	inline constexpr float EXPOSE_SLIDE = 4.0f;
-	inline constexpr float EXPOSE_SCALE_FROM = 0.85f;
-} // namespace ui_token::server_info
+// ui_token::server_info 已删除：服务器信息页改用设置页卡片同一份派生链
+// （ResolveSettingsContentMetrics + RowGap/SectionGap + 标准开关行），
+// 原来那套 15 高行、8.8 字号与独立开关宽度正是「同一页三套字号」的来源。
 
 namespace ui_token::confirm_dialog
 {

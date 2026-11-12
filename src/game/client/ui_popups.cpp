@@ -894,7 +894,9 @@ void CUi::SSelectionPopupContext::Reset()
 	// 但 CUi::QmControlTheme() 内部调的就是这个函数，所以这里不需要第二份颜色推导，
 	// 也不再回落硬编码的白 22%。
 	m_ActiveEntryColor = ResolveInputFallbackTheme(g_Config.m_QmUiFocusColor).m_Selected;
-	m_HoverEntryColor = std::nullopt;
+	// 悬浮与选中同一份底色：弹层条目的悬浮不再叠一层白（实机反馈「下拉框弹层的悬浮态
+	// 也要用强调色，保持和选中态背景一致」）。列表行与弹层条目因此逐位同源。
+	m_HoverEntryColor = m_ActiveEntryColor;
 	m_TransparentButtons = false;
 	m_AnchorVisible = true;
 	m_PopupVisible = true;
@@ -1300,6 +1302,7 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 		State.m_SelectionPopupContext.m_Props.m_BorderColor = VisualStyle.m_PopupBorderColor;
 		State.m_SelectionPopupContext.m_Props.m_BackgroundColor = VisualStyle.m_PopupBackgroundColor;
 		State.m_SelectionPopupContext.m_ActiveEntryColor = DropDownProps.m_VisualStyle.m_ActiveEntryColor;
+		State.m_SelectionPopupContext.m_HoverEntryColor = DropDownProps.m_VisualStyle.m_ActiveEntryColor;
 		State.m_SelectionPopupContext.m_TransparentButtons = DropDownProps.m_VisualStyle.m_TransparentEntries;
 		ShowPopupSelection(pRect->x, pRect->y, &State.m_SelectionPopupContext);
 		PopupOpen = IsPopupOpen(&State.m_SelectionPopupContext);
@@ -1323,6 +1326,7 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 		State.m_SelectionPopupContext.m_Props.m_BorderColor = VisualStyle.m_PopupBorderColor;
 		State.m_SelectionPopupContext.m_Props.m_BackgroundColor = VisualStyle.m_PopupBackgroundColor;
 		State.m_SelectionPopupContext.m_ActiveEntryColor = DropDownProps.m_VisualStyle.m_ActiveEntryColor;
+		State.m_SelectionPopupContext.m_HoverEntryColor = DropDownProps.m_VisualStyle.m_ActiveEntryColor;
 		for(int i = 0; i < Num; ++i)
 			State.m_SelectionPopupContext.m_vEntries.emplace_back(pStrs[i]);
 		State.m_SelectionPopupContext.m_Search.Update(State.m_SelectionPopupContext.m_vEntries, State.m_SelectionPopupContext.m_SearchInput.GetString());
