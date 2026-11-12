@@ -2299,12 +2299,16 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		constexpr float FadeHeight = 44.0f;
 		Fade.y += maximum(Fade.h - FadeHeight, 0.0f);
 		Fade.h = minimum(Fade.h, FadeHeight);
+		// 渐变的下沿必须跟容器圆角走：它是列表体最底下 44px 的压暗层，方形下沿会正好
+		// 把卡片底部的两个圆角盖成直角（用户实机看到的就是这一条）。上沿接在内容中间，
+		// 保持直边——那里加圆角会把跨过渐变起点的行切出缺口。
+		const float FadeRadius = ui_token::list::ContainerRadius(ListView.w, ListView.h);
 		Fade.Draw4(
 			BrowserOpacityColor(ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f)),
 			BrowserOpacityColor(ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f)),
 			BrowserOpacityColor(ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)),
 			BrowserOpacityColor(ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)),
-			IGraphics::CORNER_NONE, 0.0f);
+			IGraphics::CORNER_BL | IGraphics::CORNER_BR, FadeRadius);
 	}
 	if(NewSelected != m_SelectedIndex)
 	{
@@ -2430,50 +2434,62 @@ void CMenus::RenderServerbrowserMapFilterSelector(CUIRect Selector)
 	GameClient()->m_Tooltips.DoToolTip(&s_FavoriteToggleId, &FavoriteGroup, Localize("Favorite maps"));
 }
 
-static bool BrowserStatusHasNotice(IServerBrowser *pBrowser)
+// 状态栏不再有提示行：用户明确说「服务器列表刷新失败，正在显示上次列表」这一行没必要，
+// 所以这里连绘制带占位一起删掉。布局接口（QmBrowserStatusLayout / QmBrowserPanelLayout
+// 的 ShowNotice）仍然保留，浏览器两处调用一律传 false：既不画字，也不为它预留高度，
+// 不会留下一行空白。IsServerlistError() 的其它用途（空列表态文案、后台加载判定）不受影响。
+
+// 浏览器面板里的纵向滚动区统一走覆盖式轨道：与服务器列表胶囊行同一条口径
+// （CListBox 的 m_ScrollbarOverlay 轨道：细轨压在内容右缘、不占内容宽度，
+// 出现/消失走显示系数淡入 + 横向滑出）。不能继续用非覆盖式：那里可见轨道宽是
+// thickness − 2×margin，列表 token 的 8/4 正好算成 0，轨道与滑块整条宽度为 0、
+// 一帧都画不出来——实机表现就是「滚动条不见了」。
+static constexpr float BROWSER_SCROLLBAR_RESERVE = ui_token::list::SCROLLBAR_WIDTH + ui_token::list::SCROLLBAR_MARGIN;
+
+static void ApplyBrowserOverlayScrollbar(CScrollRegionParams &Params, float TrackInset)
 {
-	return pBrowser->GetCurrentType() != IServerBrowser::TYPE_LAN && pBrowser->NumServers() > 0 &&
-	       !pBrowser->IsGettingServerlist() && (pBrowser->IsServerlistError() || pBrowser->IsServerlistStale());
+	Params.m_ScrollbarThickness = ui_token::list::SCROLLBAR_WIDTH;
+	Params.m_ScrollbarMargin = ui_token::list::SCROLLBAR_MARGIN;
+	Params.m_ScrollbarOverlay = true;
+	Params.m_ScrollbarRevealSec = ui_token::list::SCROLLBAR_FADE.m_DurationSec;
+	Params.m_ScrollbarSlide = ui_token::list::SCROLLBAR_SLIDE;
+	// 宿主按容器圆角给长度方向内缩：滑块端头不会压到（或探出）面板圆角。
+	Params.m_ScrollbarTrackInset = std::max(0.0f, TrackInset);
+	// 覆盖式轨道不占内容宽度，占位动画和「始终预留」都没有意义。
+	Params.m_AnimateScrollbarReserve = false;
+	Params.m_ScrollbarAlwaysReserved = false;
+	// FILTER_GRID 的 policy 会把轨道设成 HIDDEN（QmScroll.cpp 的 EQmScrollProfile
+	// 分支），国家/模式/社区这三张胶囊网格因此从来没有可见轨道——上一轮只改
+	// thickness/margin 对它们完全无效。浏览器面板里要的是「能看到、能拖」的轨道，
+	// 这里统一按可见处理。
+	Params.m_HideScrollbar = false;
 }
 
 void CMenus::RenderServerbrowserStatusBox(CUIRect StatusBox, bool WasListboxItemActivated)
 {
 	if(StatusBox.w <= 0.0f || StatusBox.h <= 0.0f)
 		return;
-	const bool ShowNotice = BrowserStatusHasNotice(ServerBrowser());
 	static CScrollRegion s_StatusScrollRegion;
 	SQmScrollRequest ScrollRequest;
 	ScrollRequest.m_Profile = EQmScrollProfile::SETTINGS_INNER;
 	ScrollRequest.m_RowExtent = 24.0f;
 	ScrollRequest.m_RowsPerStep = 2;
 	CScrollRegionParams ScrollParams = QmScrollRegionParamsFromPolicy(QmResolveScrollPolicy(ScrollRequest));
-	// 轨道粗细/外边距统一取列表 token：不再按面板宽度自算一套，浏览器里所有纵向
-	// 轨道与服务器列表的覆盖式滚动条同宽（8）。
-	ScrollParams.m_ScrollbarThickness = ui_token::list::SCROLLBAR_WIDTH;
-	ScrollParams.m_ScrollbarMargin = ui_token::list::SCROLLBAR_MARGIN;
-	// 首帧就按实际内容判定滚动，避免窄宽度换行与滚动条占宽互相滞后一帧。
-	float ContentHeight = QmBrowserStatusLayout(StatusBox, ShowNotice).m_ContentHeight;
-	if(ContentHeight > StatusBox.h)
-	{
-		CUIRect ScrollContent = StatusBox;
-		ScrollContent.w -= ScrollParams.m_ScrollbarThickness;
-		ContentHeight = QmBrowserStatusLayout(ScrollContent, ShowNotice).m_ContentHeight;
-	}
-	s_StatusScrollRegion.SetContentHeightForNextFrame(ContentHeight);
+	// 轨道口径与好友列表、筛选面板相同：覆盖式、不占内容宽度。
+	ApplyBrowserOverlayScrollbar(ScrollParams, ui_token::radius::CARD);
+	// 内容宽度不再随「有没有滚动条」变化，测高只做一次就能和绘制同宽；
+	// 卡片右缘按覆盖式轨道让出一列，轨道压在内容上也盖不到控件。
+	CUIRect StatusContent = StatusBox;
+	StatusContent.w = std::max(0.0f, StatusContent.w - BROWSER_SCROLLBAR_RESERVE);
+	// 提示行已删除：布局按「无提示行」测高，下面也不再画那条文案（不留空行）。
+	s_StatusScrollRegion.SetContentHeightForNextFrame(QmBrowserStatusLayout(StatusContent, false).m_ContentHeight);
 	vec2 ScrollOffset(0.0f, 0.0f);
 	s_StatusScrollRegion.Begin(&StatusBox, &ScrollOffset, &ScrollParams);
 	StatusBox.y += ScrollOffset.y;
-	const SQmBrowserStatusLayout Layout = QmBrowserStatusLayout(StatusBox, ShowNotice);
+	StatusBox.w = StatusContent.w;
+	const SQmBrowserStatusLayout Layout = QmBrowserStatusLayout(StatusBox, false);
 	s_StatusScrollRegion.AddRect({StatusBox.x, StatusBox.y, StatusBox.w, Layout.m_ContentHeight});
 	CUIRect RefreshBar = Layout.m_RefreshBar;
-	if(ShowNotice)
-	{
-		SLabelProperties Props;
-		Props.m_MaxWidth = Layout.m_Notice.w;
-		Props.m_EllipsisAtEnd = true;
-		Props.SetColor(ColorRGBA(1.0f, 0.75f, 0.35f, 1.0f));
-		Ui()->DoLabel(&Layout.m_Notice, ServerBrowser()->IsServerlistError() ? Localize("Server list refresh failed; showing the previous list") : Localize("Server list is more than five minutes old"), 10.0f, TEXTALIGN_ML, Props);
-	}
 	const auto DoFieldLabel = [&](const CUIRect &Rect, const char *pText) {
 		SLabelProperties Props;
 		Props.m_MaxWidth = Rect.w;
@@ -2614,6 +2630,9 @@ void CMenus::RenderServerbrowserStatusBox(CUIRect StatusBox, bool WasListboxItem
 			Props.m_HintRequiresStringCheck = true;
 			Props.m_HintCanChangePositionOrSize = true;
 			Props.m_UseIconFont = true;
+			// 工具条按钮是长条控件：端头直接给胶囊档，绘制层按短边一半裁，
+			// 与列表胶囊行/输入框外壳同一族圆角。
+			Props.m_Rounding = ui_token::radius::PILL;
 
 			static CButtonContainer s_RefreshButton;
 			if(Ui()->DoButton_Menu(m_RefreshButton, &s_RefreshButton, RefreshLabelFunc, &ButtonRefresh, Props) || (!Ui()->IsPopupOpen() && (Input()->KeyPress(KEY_F5) || (Input()->KeyPress(KEY_R) && Input()->ModifierIsPressed()))))
@@ -2629,6 +2648,8 @@ void CMenus::RenderServerbrowserStatusBox(CUIRect StatusBox, bool WasListboxItem
 			SMenuButtonProperties Props;
 			Props.m_UseIconFont = true;
 			Props.m_HintCanChangePositionOrSize = true;
+			// 与刷新按钮同一条工具条，圆角同档：长条按钮按胶囊绘制。
+			Props.m_Rounding = ui_token::radius::PILL;
 			// 连接动作保留绿色语义，颜色改由统一语义色板提供（原为裸字面量 0.5/1.0/0.5）。
 			Props.m_Color = ui_token::color::SUCCESS.WithAlpha(0.5f);
 
@@ -2686,18 +2707,16 @@ void CMenus::RenderServerbrowserFilters(CUIRect View)
 	ScrollRequest.m_Profile = EQmScrollProfile::SETTINGS_GRID;
 	ScrollRequest.m_RowExtent = RowHeight;
 	CScrollRegionParams ScrollParams = QmScrollRegionParamsFromPolicy(QmResolveScrollPolicy(ScrollRequest));
-	// 工具箱三个页签共用同一档滚动条：粗细/外边距取列表 token，与服务器列表的
-	// 覆盖式轨道同宽，不在窄面板里再自己算一套窄轨。
-	ScrollParams.m_ScrollbarThickness = ui_token::list::SCROLLBAR_WIDTH;
-	ScrollParams.m_ScrollbarMargin = ui_token::list::SCROLLBAR_MARGIN;
-	ScrollParams.m_AnimateScrollbarReserve = true;
+	// 工具箱三个页签共用同一档滚动条：覆盖式轨道，粗细/外边距取列表 token，
+	// 与服务器列表、好友列表逐像素同宽，不占表单宽度。
+	ApplyBrowserOverlayScrollbar(ScrollParams, ui_token::radius::CARD);
 	vec2 ScrollOffset(0.0f, 0.0f);
 	s_FilterScrollRegion.Begin(&View, &ScrollOffset, &ScrollParams);
 	View.y += ScrollOffset.y;
 	const float ContentTop = View.y;
-	// 正文与滚动条之间留出轨道宽度加两侧间隙：滚动条压在内容右缘上，长译文会贴到轨道。
+	// 表单右缘让出轨道那一列：轨道压在内容右缘上，长译文和输入框不会被压住。
 	const float ContentWidth = View.w;
-	View.w = std::max(0.0f, View.w - (ScrollParams.m_ScrollbarThickness + ScrollParams.m_ScrollbarMargin * 2.0f));
+	View.w = std::max(0.0f, View.w - BROWSER_SCROLLBAR_RESERVE);
 	RenderServerbrowserFilterForm(View);
 	View.w = ContentWidth;
 
@@ -2852,12 +2871,17 @@ void CMenus::RenderServerbrowserDDNetFilter(CUIRect View,
 	ScrollRequest.m_RowsPerStep = 2;
 	const SQmResolvedScrollPolicy ScrollPolicy = QmResolveScrollPolicy(ScrollRequest);
 	CScrollRegionParams ScrollParams = QmScrollRegionParamsFromPolicy(ScrollPolicy);
-	// 这三张网格列表的轨道与胶囊列表同宽：粗细/外边距取列表 token，不再沿
-	// FILTER_GRID 自己的面板档（10），滚动条在浏览器里只有一个粗细。
-	ScrollParams.m_ScrollbarThickness = ui_token::list::SCROLLBAR_WIDTH;
-	ScrollParams.m_ScrollbarMargin = ui_token::list::SCROLLBAR_MARGIN;
+	// 这三张网格列表的轨道与胶囊列表同一条口径：覆盖式、粗细/外边距取列表 token。
+	// 长度方向按胶囊格自身的圆角内缩（而不是卡片的 radius::CARD）：网格只有 4 行高
+	// （社区/模式 60、国家 80），按卡片圆角内缩会让轨道只剩 24 高的短桩，滑块既看不出
+	// 位置也拖不动；胶囊圆角同样能让端头留在卡片圆角以内。
+	ApplyBrowserOverlayScrollbar(ScrollParams, ui_token::list::RowRadius(RowHeight));
 	ScrollRegion.Begin(&View, &ScrollOffset, &ScrollParams);
 	View.y += ScrollOffset.y;
+	// 溢出时整块网格让出轨道那一列（不是每格各收，否则格子宽窄不一）：
+	// 轨道压在内容上，最右一列不会被压住；不溢出时不多缩一列。
+	if(MaxItems > VisibleGridRows * ItemsPerRow)
+		View.w = std::max(0.0f, View.w - BROWSER_SCROLLBAR_RESERVE);
 
 	CUIRect Row;
 	int ColumnIndex = 0;
@@ -2981,7 +3005,11 @@ void CMenus::RenderServerbrowserDDNetFilter(CUIRect View,
 		if(Ui()->HotItem() == pItemId && !ScrollRegion.Animating())
 		{
 			// 悬浮是整格胶囊，只填充不描边：白色描边只属于卡片内的小控件，列表行/格不用。
-			DrawRoundedSurface(Ui(), Cell, BrowserOpacityColor(ui_token::color::LIST_ITEM_HOVER, Ui()->ControlAlphaScale()), ColorRGBA(), CellRadius);
+			// 填充与选中同源（QmControlTheme().m_Selected = qm_ui_selected_color），
+			// 只把 alpha 收到 0.58 这一档：悬浮与选中是同一块颜色的深浅，不换成白色覆盖层。
+			constexpr float HoverFillAlphaRatio = 0.58f;
+			const ColorRGBA HoverFill = Ui()->QmControlTheme().m_Selected.WithMultipliedAlpha(HoverFillAlphaRatio);
+			DrawRoundedSurface(Ui(), Cell, BrowserOpacityColor(HoverFill, Ui()->ControlAlphaScale()), ColorRGBA(), CellRadius);
 		}
 		RenderItem(ItemIndex, Content, pItemId, Active);
 	}
@@ -3355,11 +3383,15 @@ void CMenus::RenderServerbrowserInfo(CUIRect View)
 	CUIRect Button;
 	static int s_AddFavButton = 0;
 	int Favorite = WasFavorite;
-	SSettingsToggleEntry FavoriteEntry{&Favorite, "Favorite", Localize("Favorite"), &s_AddFavButton};
-	FavoriteEntry.m_ShowCheckmark = true;
-	View.HSplitTop(ToggleHeight(FavoriteEntry.m_pLabel), &Button, &View);
-	if(DoSettingsToggleButton(-1, -1, -1, Button, FavoriteEntry, Metrics))
+	// 收藏回到设置页统一的开关语义：左侧「收藏」标签 + 右侧 Toggle，点击整行或开关都能切。
+	// 之前走的是 DoSettingsToggleButton + m_ShowCheckmark，那条路径画的是「胶囊里一个
+	// 小圆圈 + 文字」的勾选条（选中只改胶囊底色），和设置页开关不是同一套外观。
+	// 行高沿用本页其它行的 server_info::ROW_HEIGHT；收藏的增删、星标进场与 tooltip
+	// 全部保持原样，只换绘制入口。
+	View.HSplitTop(Metrics.m_LineHeight, &Button, &View);
+	if(DoSettingsButton_CheckBox(-1, -1, -1, &s_AddFavButton, "Favorite", Localize("Favorite"), Favorite, &Button, SLabelProperties{}, !Ui()->RenderOnly(), Metrics.m_BodySize))
 	{
+		Favorite = Favorite == 0 ? 1 : 0;
 		if(Favorite)
 		{
 			Favorites()->Add(pSelectedServer->m_aAddresses, pSelectedServer->m_NumAddresses);
@@ -3674,13 +3706,12 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 	ScrollRequest.m_RowsPerStep = 3;
 	const SQmResolvedScrollPolicy ScrollPolicy = QmResolveScrollPolicy(ScrollRequest);
 	CScrollRegionParams ScrollParams = QmScrollRegionParamsFromPolicy(ScrollPolicy);
-	// 轨道粗细/外边距统一取列表 token：不再按面板宽度自算轨道，浏览器里所有
-	// 纵向轨道同宽，与服务器列表的覆盖式滚动条一致（8）。
-	ScrollParams.m_ScrollbarThickness = ui_token::list::SCROLLBAR_WIDTH;
-	ScrollParams.m_ScrollbarMargin = ui_token::list::SCROLLBAR_MARGIN;
-	ScrollParams.m_AnimateScrollbarReserve = true;
+	// 覆盖式轨道：与服务器列表胶囊行同一条口径，不占卡片宽度，面板里只有一种轨道粗细。
+	ApplyBrowserOverlayScrollbar(ScrollParams, ui_token::radius::CARD);
 	s_ScrollRegion.Begin(&List, &ScrollOffset, &ScrollParams);
 	List.y += ScrollOffset.y;
+	// 卡片右缘让出轨道那一列：轨道压在内容上，行卡片不会被压住一角。
+	List.w = std::max(0.0f, List.w - BROWSER_SCROLLBAR_RESERVE);
 
 	const CUIRect ListViewport = *s_ScrollRegion.ClipRect();
 	const float UiScale = 1.0f;
@@ -5822,7 +5853,8 @@ void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 	}
 
 	const CUIRect View = MainView;
-	const SQmBrowserPanelLayout PanelLayout = QmBrowserPanelLayout(View, BrowserStatusHasNotice(ServerBrowser()));
+	// 状态栏提示行已删除，列表/状态栏分割按「无提示行」算（见 RenderServerbrowserStatusBox 上方的说明）。
+	const SQmBrowserPanelLayout PanelLayout = QmBrowserPanelLayout(View, false);
 	PanelLayout.m_List.Draw(BrowserPanelColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
 	PanelLayout.m_Status.Draw(BrowserPanelElevatedColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
 	if(PanelLayout.m_Toolbox.w > 0.0f)

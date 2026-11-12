@@ -2004,10 +2004,10 @@ bool CUi::DrawCachedQmIconLabel(const CUIRect &Rect, const char *pText, float Si
 	return true;
 }
 
-const char *CUi::PrepareCardLabel(const CUIRect *pRect, const char *pText, bool Render) const
+const char *CUi::PrepareCardLabel(const CUIRect *pRect, const char *pText, bool Render, bool AllowHintSplit) const
 {
 	return m_CardLabelHintsEnabled && m_pQmTooltips != nullptr && TextRender()->GetFontPreset() != EFontPreset::ICON_FONT ?
-		       m_pQmTooltips->PrepareCardLabel(pRect, pText, Render && !RenderOnly()) :
+		       m_pQmTooltips->PrepareCardLabel(pRect, pText, Render && !RenderOnly(), AllowHintSplit) :
 		       pText;
 }
 

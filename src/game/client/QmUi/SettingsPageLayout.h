@@ -787,7 +787,9 @@ inline float ResolveSettingsProfilesListHeight(const SSettingsContentMetrics &Me
 	const int RequiredRows = ProfileCount > 0 ? (ProfileCount + ItemsPerRow - 1) / ItemsPerRow : 0;
 	const int VisibleRows = std::clamp(RequiredRows, 1, 3);
 	const float ItemHeight = std::max(Metrics.m_ListRowHeight * 3.0f, Metrics.m_ButtonHeight * 3.0f + Metrics.m_LineSpacing * 2.0f);
-	const float ListHeight = ProfileCount > 0 ? VisibleRows * ItemHeight : Metrics.m_ListRowHeight * 2.0f;
+	// 行距必须算进来：列表按「行高 + 行距」步进（行距并进行高的多列网格），只按
+	// VisibleRows × ItemHeight 测高会少掉行与行之间的缝，卡片底部最后一行被裁一截。
+	const float ListHeight = ProfileCount > 0 ? ResolveSettingsListViewportHeight(VisibleRows, ItemHeight, ui_token::list::ROW_SPACING) : Metrics.m_ListRowHeight * 2.0f;
 	return Metrics.m_ButtonHeight + Metrics.m_LineSpacing + ListHeight;
 }
 

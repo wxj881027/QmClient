@@ -1806,7 +1806,7 @@ int CMenus::DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void 
 	return DoSettingsButton_CheckBox(Page, Tab, Subtab, pId, pTextId, pText, Checked, pRect, LabelProps, true);
 }
 
-int CMenus::DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, const SLabelProperties &LabelProps, const bool ProcessInput, const float RequestedFontSize)
+int CMenus::DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, const SLabelProperties &LabelProps, const bool ProcessInput, const float RequestedFontSize, const bool AllowHintSplit)
 {
 	Ui()->DoConfigTooltip(pId, pRect, pId);
 	const float BodySize = RequestedFontSize > 0.0f ? RequestedFontSize : CurrentSettingsContentMetrics().m_BodySize;
@@ -1823,7 +1823,7 @@ int CMenus::DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void 
 	const CUIRect &ToggleRect = Layout.m_ControlRect;
 	SLabelProperties Props = LabelProps;
 	Props.m_MaxWidth = Label.w;
-	DoSettingsMenuLabel(Page, Tab, Subtab, pTextId, &Label, pText, BodySize, TEXTALIGN_ML, Props, -1, false);
+	DoSettingsMenuLabel(Page, Tab, Subtab, pTextId, &Label, pText, BodySize, TEXTALIGN_ML, Props, -1, false, AllowHintSplit);
 	if(!m_MenuTextPlanCollecting)
 		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pId, pRect, pId, &Label);
 	if(m_MenuTextPlanCollecting)
@@ -1902,13 +1902,13 @@ void CMenus::DoSettingsLabel(int Page, int Tab, const char *pTextId, const CUIRe
 	DoSettingsLabelStreamed(Element, pRect, pText, Size, Align, EffectiveProps, -1, nullptr, Render);
 }
 
-void CMenus::DoSettingsMenuLabel(int Page, int Tab, int Subtab, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &Props, int MaxWidth, const bool DrawSearchBackground)
+void CMenus::DoSettingsMenuLabel(int Page, int Tab, int Subtab, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &Props, int MaxWidth, const bool DrawSearchBackground, const bool AllowHintSplit)
 {
 	const auto Presentation = ResolveSettingsLabelPresentation(pTextId, pText, [](const char *pKey) { return Localize(pKey); });
 	pText = Presentation.m_pText;
 	if(Presentation.m_pTip != nullptr && !m_MenuTextPlanCollecting && !Ui()->RenderOnly() && !Ui()->DrawingSuppressed())
 		GameClient()->m_Tooltips.DoSmallToolTip(Presentation.m_pTipId, pRect, Presentation.m_pTip, CurrentSettingsContentMetrics().m_SmallSize);
-	pText = Ui()->PrepareCardLabel(pRect, pText, !m_MenuTextPlanCollecting);
+	pText = Ui()->PrepareCardLabel(pRect, pText, !m_MenuTextPlanCollecting, AllowHintSplit);
 	SLabelProperties EffectiveProps = Props;
 	if(!m_MenuTextPlanCollecting && qm_settings_reveal::OnRow(pTextId, pText, *pRect))
 	{

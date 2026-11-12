@@ -42,6 +42,14 @@ namespace ui_widget
 		return Layout;
 	}
 
+	// 开关行的标签列：行尾说明（约定 B）要贴这一列的右端，才会停在开关左侧；
+	// 直接传整行会把提示推到行右缘，正好压在开关上。这里与 ResolveBooleanControlLayout
+	// 同源，开关宽度或间距令牌改了，提示位置自动跟着走，不用在调用点猜控件宽度。
+	inline CUIRect ResolveSwitchRowLabelColumn(const CUIRect &Rect, float BodySize = ui_token::font::BODY)
+	{
+		return ResolveBooleanControlLayout(Rect, true, BodySize).m_LabelRect;
+	}
+
 	struct SToggleLayout
 	{
 		CUIRect m_Track;
@@ -250,6 +258,17 @@ namespace ui_widget
 		Layout.m_TextRect.y += PadY;
 		Layout.m_TextRect.h = std::max(0.0f, Layout.m_TextRect.h - PadY * 2.0f);
 		return Layout;
+	}
+
+	// 单行输入框的外壳圆角：取行高一半，超过卡片档就夹回 radius::CARD。
+	// 与 ui_token::list::RowRadius 是同一套「按尺寸取圆角」的思路——中高控件（24~28）
+	// 正好落成完整胶囊，比卡片档更高的行停在卡片档，不会被拉成体育场；绘制层仍按
+	// 短边一半兜底。只有外壳走这里：内容框不跟着缩，光标/选区仍用原内容框，
+	// 否则会出现「光标上沿被裁」的老问题（见 InputField 里 TextRect 的注释）。
+	// 多行编辑器（EInputFieldMode::MULTILINE）不走这一档，保持 radius::BASE 方角。
+	inline float ResolveInputCapsuleRadius(const CUIRect &Rect)
+	{
+		return std::min(std::max(0.0f, Rect.h) * 0.5f, ui_token::radius::CARD);
 	}
 	struct STextFieldOptions
 	{

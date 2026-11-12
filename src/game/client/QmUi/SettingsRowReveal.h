@@ -498,6 +498,8 @@ private:
 //   * 右侧：传完整行 Row + RightReserve（例如 ⓘ 按钮宽度），提示右对齐到保留区左侧；
 //   * 紧跟控件：传「标签列」这类更窄的 Row（RightReserve=0），提示贴在该列右端，
 //     紧挨着后面的滑杆/输入框，不会压住控件。
+// 开关行没有可传的标签列时，用 ui_widget::ResolveSwitchRowLabelColumn(Row, 正文字号)：
+// 直接传整行会把提示推到行右缘，正好画在开关上（被裁且看似开关的一部分）。
 // 只在该行真正绘制的那一趟调用（Flow.Drawing()），输入趟重复 DoLabel 没有意义。
 inline void DoSettingsInlineHint(CUi *pUi, const char *pElementId, const CUIRect &Row, const float RightReserve, const char *pText, const float SmallSize)
 {

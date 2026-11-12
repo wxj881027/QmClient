@@ -379,6 +379,12 @@ bool CMenus::DoSettingsToggleButton(int Page, int Tab, int Subtab, const CUIRect
 	if(!m_MenuTextPlanCollecting)
 		Fill = ui_widget::DrawButtonSurface(Context, CanProcessInput ? pId : nullptr, Button, Options);
 	const CUiScopedSurfaceText SurfaceText(TextRender(), Fill);
+	// 选中只改填充、不改文字前景：选中底来自 qm_ui_selected_color，文字固定用正文色，
+	// 不跟着填充亮度翻成深色。必须直接设 TextRender 的当前色——这里走的标签会进
+	// 设置页文字池的缓存容器，SLabelProperties 的显式颜色在缓存容器路径里不生效，
+	// 只靠 CUiScopedSurfaceText 的自动反差就会在选中底上变成黑字。
+	if(Options.m_Selected && Options.m_Enabled)
+		TextRender()->TextColor(ui_token::color::TEXT_PRIMARY);
 	if(Entry.m_ShowCheckmark && !m_MenuTextPlanCollecting)
 	{
 		CUIRect Indicator = ResolveSettingsToggleButtonLabel(Button, PaddingX, PaddingY);

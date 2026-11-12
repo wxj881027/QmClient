@@ -2337,9 +2337,20 @@ void CMenus::RenderGhost(CUIRect MainView)
 	View.HSplitTop(17.0f, &Headers, &View);
 	View.HSplitBottom(28.0f, &View, &Status);
 
+	// 胶囊行先开：行距、行内内退、胶囊圆角和覆盖式滚动条一次给齐；表头让位要用
+	// RowReserveWidth()，它由 token 直接算，不依赖上一帧解析出的滚动条宽度。
+	static CListBox s_ListBox;
+	s_ListBox.SetCapsuleRows(12.0f);
+
 	// split of the scrollbar
 	Headers.Draw(ColorRGBA(1, 1, 1, 0.25f), IGraphics::CORNER_T, 5.0f);
-	Headers.VSplitRight(20.0f, &Headers, nullptr);
+	// 表头与行同一套列预算：右侧让出滚动条那一列，左侧让一档内退，行内列沿用表头列矩形。
+	// 17px 的行比标准行矮、列又多，左右各让 9 再让右 16 会把窄窗口下的列再挤掉 6px，
+	// 所以这一档收敛到 min(RowInsetX(12), 6) = 6；行胶囊名义内容内退仍由组件按 9 给，
+	// 差出的 3px 落在胶囊端帽里，不挪动任何列边界。
+	const float RowInsetX = std::min(ui_token::list::RowInsetX(12.0f), 6.0f);
+	Headers.VSplitRight(s_ListBox.RowReserveWidth(), &Headers, nullptr);
+	Headers.VMargin(RowInsetX, &Headers);
 
 	class CColumn
 	{
@@ -2402,7 +2413,11 @@ void CMenus::RenderGhost(CUIRect MainView)
 	int NumFailed = 0;
 	int NumActivated = 0;
 	static int s_SelectedIndex = 0;
-	static CListBox s_ListBox;
+	// 行距只留半档；视口按可用高度收敛到整数行（边界落在行缝里，首/末行不会被裁成
+	// 半个胶囊）。底板由调用方画满，行数固定取这个值即可，不随条目数收高度。
+	const int ListVisibleRows = maximum(1, (int)((maximum(0.0f, View.h) + ui_token::list::ROW_SPACING) / (17.0f + ui_token::list::ROW_SPACING)));
+	s_ListBox.DoAutoSpacing(ui_token::list::ROW_SPACING);
+	s_ListBox.SetVisibleRowRange(ListVisibleRows, ListVisibleRows);
 	s_ListBox.DoStart(17.0f, NumGhosts, 1, 3, s_SelectedIndex, &View, false);
 
 	for(int i = 0; i < NumGhosts; i++)
@@ -2432,9 +2447,10 @@ void CMenus::RenderGhost(CUIRect MainView)
 		for(int c = 0; c < NumCols; c++)
 		{
 			CUIRect Button;
+			// 列位置沿用表头列矩形（x/w 是同一份列预算）；纵向取行内容矩形。
 			Button.x = s_aCols[c].m_Rect.x;
-			Button.y = Item.m_Rect.y;
-			Button.h = Item.m_Rect.h;
+			Button.y = Item.m_ContentRect.y;
+			Button.h = Item.m_ContentRect.h;
 			Button.w = s_aCols[c].m_Rect.w;
 
 			int Id = s_aCols[c].m_Id;
@@ -2674,8 +2690,14 @@ void CMenus::RenderRankDemo(CUIRect MainView)
 	View.HSplitBottom(28.0f, &View, &Status);
 
 	// 与影子列表一致的列定义与表头样式
+	static CListBox s_ListBox;
+	s_ListBox.SetCapsuleRows(12.0f);
 	Headers.Draw(ColorRGBA(1, 1, 1, 0.25f), IGraphics::CORNER_T, 5.0f);
-	Headers.VSplitRight(20.0f, &Headers, nullptr);
+	// 表头与行同一套列预算（同影子列表）：右侧让出滚动条那一列，左侧让一档内退；
+	// 17px 行 + 全量 9 内退 + 16 让位会把窄窗口下的列挤窄，这一档收敛到 6。
+	const float RowInsetX = std::min(ui_token::list::RowInsetX(12.0f), 6.0f);
+	Headers.VSplitRight(s_ListBox.RowReserveWidth(), &Headers, nullptr);
+	Headers.VMargin(RowInsetX, &Headers);
 
 	enum
 	{
@@ -2728,7 +2750,10 @@ void CMenus::RenderRankDemo(CUIRect MainView)
 		s_SelectedIndex = NumEntries - 1;
 	if(s_SelectedIndex < 0)
 		s_SelectedIndex = 0;
-	static CListBox s_ListBox;
+	// 行距只留半档；视口按可用高度收敛到整数行（同影子列表），不随条目数收高度。
+	const int ListVisibleRows = maximum(1, (int)((maximum(0.0f, View.h) + ui_token::list::ROW_SPACING) / (17.0f + ui_token::list::ROW_SPACING)));
+	s_ListBox.DoAutoSpacing(ui_token::list::ROW_SPACING);
+	s_ListBox.SetVisibleRowRange(ListVisibleRows, ListVisibleRows);
 	s_ListBox.DoStart(17.0f, NumEntries, 1, 3, s_SelectedIndex, &View, false);
 
 	char aBuf[256];
@@ -2753,10 +2778,11 @@ void CMenus::RenderRankDemo(CUIRect MainView)
 		for(int c = 0; c < NUM_COLS; c++)
 		{
 			CUIRect Cell;
+			// 列位置沿用表头列矩形（x/w 是同一份列预算）；纵向取行内容矩形。
 			Cell.x = s_aCols[c].m_Rect.x;
-			Cell.y = Item.m_Rect.y;
+			Cell.y = Item.m_ContentRect.y;
 			Cell.w = s_aCols[c].m_Rect.w;
-			Cell.h = Item.m_Rect.h;
+			Cell.h = Item.m_ContentRect.h;
 
 			const int Id = s_aCols[c].m_Id;
 			if(Id == COL_ACTIVE)

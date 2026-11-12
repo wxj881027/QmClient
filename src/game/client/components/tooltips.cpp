@@ -58,9 +58,9 @@ void CTooltips::ClearActiveTooltip()
 	ResetPresentation();
 }
 
-const char *CTooltips::PrepareCardLabel(const CUIRect *pRect, const char *pText, bool Render)
+const char *CTooltips::PrepareCardLabel(const CUIRect *pRect, const char *pText, bool Render, bool AllowHintSplit)
 {
-	if(pText == nullptr || (str_find(pText, "(") == nullptr && str_find(pText, "（") == nullptr))
+	if(pText == nullptr || !AllowHintSplit || (str_find(pText, "(") == nullptr && str_find(pText, "（") == nullptr))
 		return pText;
 	const SQmCardLabelText &Text = m_CardLabelTexts.Get(pText);
 	// 只刷新已显示的同一标签；本帧已悬浮登记的目标不被后续未悬浮绘制覆盖。

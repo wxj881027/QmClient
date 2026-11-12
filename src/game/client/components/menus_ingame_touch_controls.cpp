@@ -807,11 +807,15 @@ void CMenusIngameTouchControls::RenderTouchButtonBrowser(CUIRect MainView)
 	MainView.HSplitTop(FONTSIZE / CUi::ms_FontmodHeight, &EditBox, &MainView);
 	static CListBox s_PreviewListBox;
 	EditBox.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_T, 5.0f);
-	// 列表头/搜索行给滚动条让位：该列表保持原外观（没开胶囊行），行宽由滚动区裁掉
-	// 「解析后的轨道厚度」；RowReserveWidth() 在非胶囊列表上返回 0，退回同一个解析值
-	// （ScrollbarWidthMax 就是行内实际被裁掉的厚度），表头与列不再各算一套。
-	const float PreviewListScrollbarReserve = s_PreviewListBox.RowReserveWidth() > 0.0f ? s_PreviewListBox.RowReserveWidth() : s_PreviewListBox.ScrollbarWidthMax();
+	// 胶囊行先开：表头让位与行内退都从它派生。RowReserveWidth() 由 token 直接算，
+	// 不依赖上一帧解析出的滚动条宽度，表头与行胶囊右缘因此是同一条公式。
+	s_PreviewListBox.SetCapsuleRows(15.0f);
+	// 表头行给滚动条让位：与行右侧让出的宽度同源。
+	const float PreviewListScrollbarReserve = s_PreviewListBox.RowReserveWidth();
 	EditBox.VSplitRight(PreviewListScrollbarReserve, &EditBox, nullptr);
+	// 表头与行内容同一条左右内退（胶囊行按 RowInsetX(15) 让出），列标题与行内的
+	// Label/Command/坐标列才会落在同一个坐标系里。
+	EditBox.VMargin(ui_token::list::RowInsetX(15.0f), &EditBox);
 	EditBox.VSplitLeft(ROWSIZE, nullptr, &EditBox);
 
 	float PosWidth = EditBox.w * 4.0f / 9.0f; // Total pos width.
@@ -918,6 +922,11 @@ void CMenusIngameTouchControls::RenderTouchButtonBrowser(CUIRect MainView)
 	if(!m_vpMutableButtons.empty())
 	{
 		s_PreviewListBox.SetActive(true);
+		// 行距只留半档；视口按可用高度收敛到整数行（边界落在行缝里，首/末行不会被裁成
+		// 半个胶囊）。列表体高度固定取这个值，仍吃满外层给的 MainView。
+		const int ListVisibleRows = maximum(1, (int)((maximum(0.0f, MainView.h) + ui_token::list::ROW_SPACING) / (ROWSIZE + ui_token::list::ROW_SPACING)));
+		s_PreviewListBox.DoAutoSpacing(ui_token::list::ROW_SPACING);
+		s_PreviewListBox.SetVisibleRowRange(ListVisibleRows, ListVisibleRows);
 		s_PreviewListBox.DoStart(ROWSIZE, m_vpMutableButtons.size(), 1, 4, m_SelectedPreviewButtonIndex, &MainView, true, IGraphics::CORNER_B);
 		for(unsigned ButtonIndex = 0; ButtonIndex < m_vpMutableButtons.size(); ButtonIndex++)
 		{
@@ -925,7 +934,7 @@ void CMenusIngameTouchControls::RenderTouchButtonBrowser(CUIRect MainView)
 			const CListboxItem ListItem = s_PreviewListBox.DoNextItem(&m_vpMutableButtons[ButtonIndex], m_SelectedPreviewButtonIndex == (int)ButtonIndex);
 			if(ListItem.m_Visible)
 			{
-				EditBox = ListItem.m_Rect;
+				EditBox = ListItem.m_ContentRect;
 				EditBox.VSplitLeft(ROWSIZE, &LeftButton, &EditBox);
 				TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 				TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING);

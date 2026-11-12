@@ -165,11 +165,14 @@ float CMenus::LayoutTClientAntiPingSmoothingCard(const qm_card_catalog::SQmCardB
 		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmAntiPingStableDirection, "tclient-antiping-stable-direction", Localize("Optimistic prediction along stable direction"), &g_Config.m_QmAntiPingStableDirection, &Row, LineSize);
 	if(Flow.Control("negative-buffer", LineSize, Row, RowSpacing))
 	{
+		// 行尾说明挂在开关左侧的标签列右端：整行右缘就是开关本身，贴过去会互相压住。
+		// 开关只画本行顶部 LineSize 那一档，且下面的按钮调用会消耗 Row，所以先量出这一列。
+		const CUIRect HintColumn = ui_widget::ResolveSwitchRowLabelColumn(CUIRect{Row.x, Row.y, Row.w, LineSize}, Ctx.m_Metrics.m_BodySize);
 		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmAntiPingNegativeBuffer, "tclient-antiping-negative-buffer", Localize("Negative stability buffer"), &g_Config.m_QmAntiPingNegativeBuffer, &Row, LineSize);
 		// 约定 B：原来的括号注解塞在标签里，改成同一行的行尾说明——标签只留正题，
 		// 注解常显、小一档字号、次要色，且不占独立行高。
 		if(Flow.Drawing())
-			DoSettingsInlineHint(Ui(), "negative-buffer", Row, 0.0f, Localize("for Gores"), Ctx.m_Metrics.m_SmallSize);
+			DoSettingsInlineHint(Ui(), "negative-buffer", HintColumn, 0.0f, Localize("for Gores"), Ctx.m_Metrics.m_SmallSize);
 	}
 	if(Flow.Control("uncertainty", LineSize, Button, RowSpacing))
 		DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-antiping-uncertainty-scale", &g_Config.m_QmAntiPingUncertaintyScale, &g_Config.m_QmAntiPingUncertaintyScale, &Button, Localize("Uncertainty duration"), 50, 400, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE, "%");

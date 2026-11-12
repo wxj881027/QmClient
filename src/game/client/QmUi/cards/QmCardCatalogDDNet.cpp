@@ -298,7 +298,11 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 			if(Flow.Control("own-team", DDNetMetrics.m_LineHeight, Button))
 			{
 				static int s_ShowOwnTeamId = 0;
-				if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &s_ShowOwnTeamId, "Show others (own team only)", Localize("Show others (own team only)"), g_Config.m_ClShowOthers == SHOW_OTHERS_ONLY_TEAM, &Button) && CanCommit)
+				// 本行显式退出「标签缩略」：既不进 SettingsLabelMetadata 的缩略表，也不做括号拆分。
+				// 标签源串与上一行同源，缩略后的主标签就是同一个「Show others」→「显示其他玩家」，
+				// 同一张卡里两行同名，玩家分不清第三个开关到底管什么；整句「仅显示同队伍」才是正题。
+				// 搜索/高亮仍按 pTextId 定位，不受显示文案影响。
+				if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, -1, &s_ShowOwnTeamId, "Show others (own team only)", Localize("Show others (own team only)"), g_Config.m_ClShowOthers == SHOW_OTHERS_ONLY_TEAM, &Button, SLabelProperties{}, true, -1.0f, false) && CanCommit)
 				{
 					g_Config.m_ClShowOthers = g_Config.m_ClShowOthers != SHOW_OTHERS_ONLY_TEAM ? SHOW_OTHERS_ONLY_TEAM : SHOW_OTHERS_OFF;
 				}
@@ -383,8 +387,9 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 				{
 					g_Config.m_ClPredictEvents ^= 1;
 				}
+				// 行尾说明贴标签列右端（开关左侧），不贴整行右缘——那正好是开关的位置。
 				if(Flow.Drawing())
-					DoSettingsInlineHint(Ui(), "predict-events", Button, 0.0f, Localize("Sounds and particles"), DDNetMetrics.m_SmallSize);
+					DoSettingsInlineHint(Ui(), "predict-events", ui_widget::ResolveSwitchRowLabelColumn(Button, DDNetMetrics.m_BodySize), 0.0f, Localize("Sounds and particles"), DDNetMetrics.m_SmallSize);
 			}
 			if(Flow.Control("upstream-redundancy", DDNetMetrics.m_LineHeight, Button, ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing)))
 			{

@@ -23127,3 +23127,29 @@ Client prediction
 
 Client-side prediction and latency compensation
 == 客户端预测与延迟补偿
+Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, and upstream packet redundancy.
+== 客户端预测与延迟补偿：预测余量、AntiPing 与其预测实体、预测事件，以及上行数据包冗余。
+
+Configure client-side prediction and latency compensation
+== 配置客户端预测与延迟补偿
+
+Network compensation
+== 网络补偿
+
+Other players' shadow opacity
+== 其他玩家的影子不透明度
+
+Sounds and particles
+== 声音与粒子
+
+0 = never
+== 0 = 从不
+
+Formerly "prediction margin" (cl_prediction_margin)
+== 旧名「预测边距」（prediction margin，cl_prediction_margin）
+
+for Gores
+== 用于 Gores
+
+DDNet settings sub-tab: 0=general, 1=network compensation
+== DDNet 设置子页签：0 = 常规，1 = 网络补偿

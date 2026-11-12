@@ -485,7 +485,23 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 		const float ProfileItemWidth = std::max(ProfileMetrics.m_ListRowHeight * 6.0f, ProfileMetrics.m_LabelWidth + ProfileMetrics.m_ButtonHeight * 2.0f);
 		const int ProfilesPerRow = maximum(1, (int)(MainView.w / ProfileItemWidth));
 		const float ProfileListRowHeight = std::max(ProfileMetrics.m_ListRowHeight * 3.0f, ProfileMetrics.m_ButtonHeight * 3.0f + ProfileMetrics.m_LineSpacing * 2.0f);
-		ProfilesListBox.DoStart(ProfileListRowHeight, vProfiles.size(), ProfilesPerRow, 3, SelectedProfile, &List, true, IGraphics::CORNER_ALL);
+		// 行距并进行高：组件在 ItemsPerRow > 1 时按每个格子推进一次自动行距，多列网格的
+		// 行距会变成 N 倍、行位逐行漂移，底部的行滚不到；这里自己按行步进，自动行距关掉。
+		const float ProfileListRowPitch = ProfileListRowHeight + ui_token::list::ROW_SPACING;
+		ProfilesListBox.SetCapsuleRows(ProfileMetrics.m_BodySize);
+		ProfilesListBox.DoAutoSpacing(0.0f);
+		// 整卡 tile：选中填充只贴条目矩形，内缩保持半档行距，整卡内容仍排 Item.m_Rect
+		// （推进 m_ContentRect 会挤窄卡内布局、破坏 preview cache key）。
+		ProfilesListBox.SetItemSelectionInset(ui_token::list::ROW_SPACING * 0.5f);
+		// 整数行：行高含行距，而测高是「行数 × 行高 + (行数 - 1) × 行距」——最后一行后面没有
+		// 缝，比「行数 × 行步进」正好少一条行距，所以补回那一条再除。直接 floor(高 / 行步进)
+		// 会少算一行，卡片底部空出一整条行高。lround 只为抵掉浮点误差：测出来的高度本来就是
+		// 整数行，不该因为 1 ULP 掉一行。空列表传 (0, 0) 关掉自适应高度：组件会把 0 条目
+		// 收成 0 高，连空态的那块列表面一起收掉。
+		const int ProfileVisibleRows = vProfiles.empty() ? 0 :
+								   (int)std::lround((std::max(0.0f, List.h) + ui_token::list::ROW_SPACING) / ProfileListRowPitch);
+		ProfilesListBox.SetVisibleRowRange(ProfileVisibleRows > 0 ? 1 : 0, ProfileVisibleRows);
+		ProfilesListBox.DoStart(ProfileListRowPitch, vProfiles.size(), ProfilesPerRow, 3, SelectedProfile, &List, true, IGraphics::CORNER_ALL);
 
 		static std::vector<int> s_vProfileItemIds;
 		if(s_vProfileItemIds.size() != vProfiles.size())
@@ -497,7 +513,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 
 		for(size_t i = 0; i < vProfiles.size(); ++i)
 		{
-			CListboxItem Item = ProfilesListBox.DoNextItem(&s_vProfileItemIds[i], SelectedProfile >= 0 && (size_t)SelectedProfile == i);
+			CListboxItem Item = ProfilesListBox.DoNextItem(&s_vProfileItemIds[i], SelectedProfile >= 0 && (size_t)SelectedProfile == i, ui_token::list::RowRadius(ProfileListRowHeight));
 			if(!Item.m_Visible)
 				continue;
 

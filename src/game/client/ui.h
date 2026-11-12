@@ -1138,7 +1138,7 @@ public:
 	void SetQmTooltips(CTooltips *pTooltips) { m_pQmTooltips = pTooltips; }
 	bool CardLabelHintsEnabled() const { return m_CardLabelHintsEnabled; }
 	void SetCardLabelHintsEnabled(bool Enabled) { m_CardLabelHintsEnabled = Enabled; }
-	const char *PrepareCardLabel(const CUIRect *pRect, const char *pText, bool Render = true) const;
+	const char *PrepareCardLabel(const CUIRect *pRect, const char *pText, bool Render = true, bool AllowHintSplit = true) const;
 	void DoConfigTooltip(const void *pId, const CUIRect *pRect, const void *pValue, const void *pSecondValue = nullptr);
 	void DoButtonTooltip(const void *pId, const CUIRect *pRect, const char *pText);
 	void SetKeyboardFocus(const void *pId);

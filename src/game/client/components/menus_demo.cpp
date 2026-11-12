@@ -3576,14 +3576,14 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 	};
 
 	static CListBox s_ListBox;
-	// 表头最后一列要给滚动条让位：这个列表保持原外观（没开胶囊行），行宽由非覆盖式
-	// 滚动区裁掉「解析后的轨道厚度」，RowReserveWidth() 在这里返回 0，退回同一个
-	// 解析值（ScrollbarWidthMax 就是行内实际被裁掉的厚度）。不开胶囊行硬套列表 token
-	// 的 8 会比实际轨道窄 8px，列内容又会压到轨道上。
-	const float ColumnScrollbarReserve = s_ListBox.RowReserveWidth() > 0.0f ? s_ListBox.RowReserveWidth() : s_ListBox.ScrollbarWidthMax();
+	// 胶囊行先开：行距、行内左右内退、胶囊圆角和覆盖式滚动条一次给齐。表头列宽要按行
+	// 让位收，而 RowReserveWidth() 由 token 直接算（厚度 + 外边距 + 行缝 = 16），不依赖
+	// 上一帧解析出的滚动条宽度，表头与行胶囊右缘因此是同一条公式。
+	s_ListBox.SetCapsuleRows(12.0f);
+	// 表头最后一列给滚动条让位：与行右侧让出的宽度同源。
+	const float ColumnScrollbarReserve = s_ListBox.RowReserveWidth();
 	const float HeaderHeight = ms_ListheaderHeight + 8.0f;
 	const float HeaderOuterPadding = 2.0f;
-	const float HeaderInnerPadding = 2.0f;
 	const float HeaderGap = 4.0f;
 	const float RowHeight = ms_ListheaderHeight + 1.0f;
 	CColumn aCols[] = {
@@ -3611,7 +3611,11 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 	ListView.HSplitTop(HeaderHeight, &HeaderArea, &ListBox);
 	HeaderArea.Draw(MenuPanelElevatedColor(), IGraphics::CORNER_T, ui_token::radius::BASE);
 	HeaderArea.Margin(HeaderOuterPadding, &Headers);
-	Headers.VMargin(HeaderInnerPadding, &Headers);
+	// 表头内容区与行内容区同一坐标系：胶囊行按 RowInsetX(12) 左右内退，表头补到同一档。
+	// 外圈 HeaderOuterPadding 已经算在里面，再叠一档会让列标题比行内列右移 4px、右缘短 4px。
+	Headers.VMargin(ui_token::list::RowInsetX(12.0f) - HeaderOuterPadding, &Headers);
+	// 列布局会吃掉 Headers，先留一份内容区原点，行内列按它重定基准。
+	const CUIRect HeaderContent = Headers;
 	ListBox.Draw(MenuPanelColor(0.72f), IGraphics::CORNER_B, ui_token::radius::BASE);
 
 	for(auto &Col : aCols)
@@ -3691,7 +3695,14 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 		m_DemolistSelectedReveal = false;
 	}
 
-	s_ListBox.DoAutoSpacing(1.0f);
+	// 行距只留半档：胶囊行之间留一条读得出的缝。这个列表没有 SkipItems，行距走
+	// DoAutoSpacing 就行，不需要把行距并进行高再补回来。
+	s_ListBox.DoAutoSpacing(ui_token::list::ROW_SPACING);
+	// 视口按可用高度收敛到整数行：滚动边界落在行与行的缝隙里，首/末行不会被裁成半个
+	// 胶囊。最小与最大行数都取这个值——列表要填满外层给的 ListBox，而且末尾还跟着
+	// 缓存为空时的提示行，按条目数收高度会把提示行裁掉。
+	const int ListVisibleRows = maximum(1, (int)((maximum(0.0f, ListBox.h) + ui_token::list::ROW_SPACING) / (RowHeight + ui_token::list::ROW_SPACING)));
+	s_ListBox.SetVisibleRowRange(ListVisibleRows, ListVisibleRows);
 	s_ListBox.DoStart(RowHeight, m_vpFilteredDemos.size(), 1, 3, m_DemolistSelectedIndex, &ListBox, false, IGraphics::CORNER_ALL);
 
 	char aBuf[64];
@@ -3717,12 +3728,14 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 				FirstVisibleIndex = ItemIndex;
 			EndVisibleIndex = ItemIndex + 1;
 			if(Selected && !Focused)
-				ListItem.m_Rect.Draw(ui_token::color::ACCENT_PRIMARY_DIM.WithMultipliedAlpha(1.35f), IGraphics::CORNER_ALL, ui_token::radius::BASE);
+				ListItem.m_Rect.Draw(ui_token::color::ACCENT_PRIMARY_DIM.WithMultipliedAlpha(1.35f), IGraphics::CORNER_ALL, ui_token::list::RowRadius(RowHeight));
 
 			for(const auto &Col : aCols)
 			{
 				CUIRect Button;
-				Button.x = Col.m_Rect.x;
+				// 列位置相对表头内容区定义，再落到行的内容区上：行内列不会探出胶囊的
+				// 左右内退（表头内容区与行内容区同一条内退，两者逐像素对齐）。
+				Button.x = ListItem.m_ContentRect.x + (Col.m_Rect.x - HeaderContent.x);
 				Button.y = ListItem.m_Rect.y;
 				Button.h = ListItem.m_Rect.h;
 				Button.w = Col.m_Rect.w;
@@ -3820,7 +3833,7 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 			if(HintItem.m_Visible)
 			{
 				TextRender()->TextColor(0.55f, 0.55f, 0.55f, 1.0f);
-				Ui()->DoLabel(&HintItem.m_Rect, Localize("No Rank 1 replays cached yet. Search and download from the Rank 1 page."), 12.0f, TEXTALIGN_ML);
+				Ui()->DoLabel(&HintItem.m_ContentRect, Localize("No Rank 1 replays cached yet. Search and download from the Rank 1 page."), 12.0f, TEXTALIGN_ML);
 				TextRender()->TextColor(TextRender()->DefaultTextColor());
 			}
 		}

@@ -560,7 +560,9 @@ public:
 	// 从已有配置描述取得选项帮助；命中整行时仍可锚定到标题文本。
 	void DoSettingsToolTipForConfig(const void *pId, const CUIRect *pRect, const void *pConfigValue, const CUIRect *pAnchor = nullptr, const void *pSecondConfigValue = nullptr);
 
-	const char *PrepareCardLabel(const CUIRect *pRect, const char *pText, bool Render);
+	// AllowHintSplit=false 是显式退出括号拆分的通道：标签保持整句，不拆成「主标签 + 悬浮注解」。
+	// 通用拆分能力默认开启（很多长标签靠它缩略），只有同一张卡里两行会拆成同名时才关掉。
+	const char *PrepareCardLabel(const CUIRect *pRect, const char *pText, bool Render, bool AllowHintSplit = true);
 
 	void OnReset() override;
 	void OnRender() override;
