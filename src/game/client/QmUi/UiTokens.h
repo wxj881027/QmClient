@@ -450,7 +450,10 @@ namespace ui_token::server_filter
 	inline constexpr float LINE_SPACING = 3.0f;
 	inline constexpr float BODY_FONT_SIZE = 12.0f;
 	inline constexpr float SECTION_GAP = 6.0f;
-	inline constexpr float SECTION_TITLE_SCALE = 1.3f;
+	// 分区标题不再比正文大一档：面板里的层级由「主/次文本色 + 分区间距」承担，
+	// 字号只保留正文一档（实机反馈：分区标题明显大于正文，看起来不像同一套排版）。
+	// 需要更大号的场合请用 ui_token::font::TITLE（卡片标题），不要在这里造放大系数。
+	inline constexpr float SECTION_TITLE_SCALE = 1.0f;
 	// 胶囊最小宽度按内容分档：星标档位短，模式名长。给错成 6 会让一行塞满 10 个胶囊，
 	// 每个都只剩省略号。
 	inline constexpr float CHIP_STAR_MIN_WIDTH = 40.0f;

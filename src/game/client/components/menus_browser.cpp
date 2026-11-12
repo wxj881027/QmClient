@@ -2814,7 +2814,8 @@ void CMenus::RenderServerbrowserFilters(CUIRect View)
 	// 与表单内容同宽（View.w 仍是 Begin() 回写的 clip 宽）：右缘和 chip / 输入框右缘
 	// 对齐，不伸到轨道下面，也不在轨道消失时留下一段空边。
 	ResetChip.w = View.w;
-	ResetChip.h = ui_token::server_filter::CHIP_HEIGHT;
+	// 与筛选 chip 同高：都是从正文档派生的标准控件高度。
+	ResetChip.h = ResolveSettingsControlHeight(ResolveSettingsContentMetrics(View.w).m_BodySize);
 	ResetChip.y += std::max(0.0f, (ResetButton.h - ResetChip.h) / 2.0f);
 	if(ui_widget::FilterChip(SettingsUiContext("server_browser_filter_reset"), &s_ResetFilterChipId, ResetChip, Localize("Reset filter"), false))
 	{

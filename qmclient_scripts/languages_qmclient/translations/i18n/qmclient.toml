@@ -40783,3 +40783,158 @@ brazilian_portuguese = "DDNet settings sub-tab: 0=general, 1=network compensatio
 portuguese = "DDNet settings sub-tab: 0=general, 1=network compensation"
 turkish = "DDNet settings sub-tab: 0=general, 1=network compensation"
 polish = "DDNet settings sub-tab: 0=general, 1=network compensation"
+
+[[message]]
+key = "Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous"
+[message.translations]
+simplified_chinese = "胶囊端头：0 = 普通圆弧，1 = 丝滑端点，2 = 苹果连续曲率"
+
+[[message]]
+key = "Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list."
+[message.translations]
+simplified_chinese = "给计分板行上色：已认证玩家、同战队玩家、好友，以及好友列表里的战队成员。"
+
+[[message]]
+key = "Deep freeze"
+[message.translations]
+simplified_chinese = "深层冻结"
+
+[[message]]
+key = "Deep freeze tile outline width"
+[message.translations]
+simplified_chinese = "深层冻结块的描边宽度"
+
+[[message]]
+key = "Deep unfreeze"
+[message.translations]
+simplified_chinese = "深层解冻"
+
+[[message]]
+key = "Deep unfreeze tile outline width"
+[message.translations]
+simplified_chinese = "深层解冻块的描边宽度"
+
+[[message]]
+key = "Expanded personalization sections (format: stableId=1;stableId2=0;)"
+[message.translations]
+simplified_chinese = "已展开的个性调整分区（格式：stableId=1;stableId2=0;）"
+
+[[message]]
+key = "Expose IP to servers by default when adding a favorite (last choice on the server info page)"
+[message.translations]
+simplified_chinese = "添加收藏时默认向该服务器暴露 IP（记住服务器信息页上的上次选择）"
+
+[[message]]
+key = "Freeze tile outline width"
+[message.translations]
+simplified_chinese = "冻结块的描边宽度"
+
+[[message]]
+key = "General DDNet gameplay display: showing other players and their shadow opacity, background quads and the default zoom."
+[message.translations]
+simplified_chinese = "DDNet 通用显示：显示其他玩家及其影子不透明度、背景方块与默认缩放。"
+
+[[message]]
+key = "Hookable tile outline color"
+[message.translations]
+simplified_chinese = "可钩方块描边颜色"
+
+[[message]]
+key = "Hookable tile outline width"
+[message.translations]
+simplified_chinese = "可钩方块描边宽度"
+
+[[message]]
+key = "Hookable tiles"
+[message.translations]
+simplified_chinese = "可钩方块"
+
+[[message]]
+key = "Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read."
+[message.translations]
+simplified_chinese = "这些颜色要与队伍色区分开，否则同战队名字会融进队伍面板、难以辨认。"
+
+[[message]]
+key = "Map preview shows the entity layer only (hides textures)"
+[message.translations]
+simplified_chinese = "地图预览只显示实体层（隐藏贴图）"
+
+[[message]]
+key = "Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list."
+[message.translations]
+simplified_chinese = "逐行选择颜色：已认证与同战队颜色作用于计分板，两个列表颜色作用于好友列表。"
+
+[[message]]
+key = "Prediction and latency compensation moved to the \"Network compensation\" sub-tab of the DDNet page."
+[message.translations]
+simplified_chinese = "预测与延迟补偿已移到 DDNet 页的「网络补偿」子页签。"
+
+[[message]]
+key = "Prediction trades accuracy for responsiveness: a larger margin and AntiPing smooth out ping jitter but can mispredict nearby actions, and upstream redundancy may triple upload traffic."
+[message.translations]
+simplified_chinese = "预测用精度换取响应速度：更大的余量和 AntiPing 能抹平 ping 抖动，但可能误判近处动作，上游冗余最多会让上行流量增至三倍。"
+
+[[message]]
+key = "Set \"Prediction margin\" in milliseconds, tick \"AntiPing (latency compensation)\" and then choose what to predict; the redundancy switch is experimental and only useful on lossy connections."
+[message.translations]
+simplified_chinese = "以毫秒设置「预测余量」，勾选「AntiPing（延迟补偿）」，再选择要预测什么；冗余开关是实验性的，只在丢包链路上有用。"
+
+[[message]]
+key = "Show deep freeze tile outlines"
+[message.translations]
+simplified_chinese = "显示深层冻结块描边"
+
+[[message]]
+key = "Show deep unfreeze tile outlines"
+[message.translations]
+simplified_chinese = "显示深层解冻块描边"
+
+[[message]]
+key = "Show freeze tile outlines"
+[message.translations]
+simplified_chinese = "显示冻结块描边"
+
+[[message]]
+key = "Show hookable tile outlines"
+[message.translations]
+simplified_chinese = "显示可钩方块描边"
+
+[[message]]
+key = "Show unfreeze tile outlines"
+[message.translations]
+simplified_chinese = "显示解冻块描边"
+
+[[message]]
+key = "Show unhookable tile outlines"
+[message.translations]
+simplified_chinese = "显示不可钩方块描边"
+
+[[message]]
+key = "Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)"
+[message.translations]
+simplified_chinese = "苹果胶囊端头强度（0 = 半圆，100 = 最强）"
+
+[[message]]
+key = "Tick \"Show others\" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use \"Show background quads\" and \"Default zoom\" for the view."
+[message.translations]
+simplified_chinese = "勾选「显示其他队伍」可半透明绘制其他队伍，其影子不透明度在下方从属行设置；视野相关还有「显示背景方块」和「默认缩放」。"
+
+[[message]]
+key = "Unfreeze tile outline width"
+[message.translations]
+simplified_chinese = "解冻块描边宽度"
+
+[[message]]
+key = "Unhookable tile outline color"
+[message.translations]
+simplified_chinese = "不可钩方块描边颜色"
+
+[[message]]
+key = "Unhookable tile outline width"
+[message.translations]
+simplified_chinese = "不可钩方块描边宽度"
+
+[[message]]
+key = "Unhookable tiles"
+[message.translations]
+simplified_chinese = "不可钩方块"

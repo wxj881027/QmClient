@@ -2190,7 +2190,7 @@ Capsule ends
 == 胶囊端头
 
 Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
-== Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
+== 胶囊端头：0 = 普通圆弧，1 = 丝滑端点，2 = 苹果连续曲率
 
 Capture the flag
 == 夺旗模式 (CTF)
@@ -2844,7 +2844,7 @@ Colors of the translate button in the chat input and of the language menu that b
 == 聊天输入框里翻译按钮的颜色，以及该按钮打开的语言菜单的颜色。
 
 Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
-== Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
+== 给计分板行上色：已认证玩家、同战队玩家、好友，以及好友列表里的战队成员。
 
 Colors too close to the map background are hard to read while moving.
 == 颜色与地图背景过于接近时，移动中很难看清。
@@ -3894,7 +3894,7 @@ Deep fly
 == 深飞
 
 Deep freeze
-== Deep freeze
+== 深层冻结
 
 Deep freeze opacity
 == 深度冻结不透明度
@@ -3903,10 +3903,10 @@ Deep freeze tile outline color
 == 深冻图块轮廓颜色
 
 Deep freeze tile outline width
-== Deep freeze tile outline width
+== 深层冻结块的描边宽度
 
 Deep unfreeze
-== Deep unfreeze
+== 深层解冻
 
 Deep unfreeze opacity
 == 深度解冻不透明度
@@ -3915,7 +3915,7 @@ Deep unfreeze tile outline color
 == 深解冻图块轮廓颜色
 
 Deep unfreeze tile outline width
-== Deep unfreeze tile outline width
+== 深层解冻块的描边宽度
 
 Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 == Deepfly 模式（0=正常，1=DF，2=HDF，3=自定义）
@@ -5577,7 +5577,7 @@ Expanded dropdown background opacity percentage
 == 展开列表背景 — 不透明度百分比
 
 Expanded personalization sections (format: stableId=1;stableId2=0;)
-== Expanded personalization sections (format: stableId=1;stableId2=0;)
+== 已展开的个性调整分区（格式：stableId=1;stableId2=0;）
 
 Experimental
 == 实验性
@@ -5655,7 +5655,7 @@ Exporting chat images: %d
 == 正在导出聊天图片：%d
 
 Expose IP to servers by default when adding a favorite (last choice on the server info page)
-== Expose IP to servers by default when adding a favorite (last choice on the server info page)
+== 添加收藏时默认向该服务器暴露 IP（记住服务器信息页上的上次选择）
 
 Expose playback controls to the operating system
 == 向操作系统提供播放控制
@@ -6234,7 +6234,7 @@ Freeze tile outline color
 == 冻结图块轮廓颜色
 
 Freeze tile outline width
-== Freeze tile outline width
+== 冻结块的描边宽度
 
 Frequently asked questions
 == 常见问题
@@ -6420,7 +6420,7 @@ General
 == 常规
 
 General DDNet gameplay display: showing other players and their shadow opacity, background quads and the default zoom.
-== General DDNet gameplay display: showing other players and their shadow opacity, background quads and the default zoom.
+== DDNet 通用显示：显示其他玩家及其影子不透明度、背景方块与默认缩放。
 
 Generated skin outline color
 == 生成描边颜色
@@ -7110,13 +7110,13 @@ Hook through teleporters (deprecated, use special entities instead)
 == 钩子穿过传送器（已弃用，请改用特殊实体）
 
 Hookable tile outline color
-== Hookable tile outline color
+== 可钩方块描边颜色
 
 Hookable tile outline width
-== Hookable tile outline width
+== 可钩方块描边宽度
 
 Hookable tiles
-== Hookable tiles
+== 可钩方块
 
 Hooking L/R: %.0f%%/%.0f%%
 == 出钩 L/R：%.0f%%/%.0f%%
@@ -7836,7 +7836,7 @@ Keep the text light on a dark background; press "Reset tooltip appearance" to re
 == 深色背景配浅色文字最好读；想恢复推荐样式就点重置提示外观。
 
 Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
-== Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
+== 这些颜色要与队伍色区分开，否则同战队名字会融进队伍面板、难以辨认。
 
 Keep unsent message on chat close
 == 关闭聊天框时保留未发送内容
@@ -8724,7 +8724,7 @@ Map preview rendering unavailable
 == 当前无法渲染地图预览
 
 Map preview shows the entity layer only (hides textures)
-== Map preview shows the entity layer only (hides textures)
+== 地图预览只显示实体层（隐藏贴图）
 
 Map Preview TODO
 == 地图预览待做
@@ -10743,7 +10743,7 @@ Pick a slot, type the command and its label, then hold the wheel key in game to 
 == 选一个槽位，输入指令和对应标签，再在游戏中按住轮盘键测试。
 
 Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
-== Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
+== 逐行选择颜色：已认证与同战队颜色作用于计分板，两个列表颜色作用于好友列表。
 
 Pick result: %s
 == 抽取结果：%s
@@ -11259,7 +11259,7 @@ Prediction
 == 预测
 
 Prediction and latency compensation moved to the "Network compensation" sub-tab of the DDNet page.
-== Prediction and latency compensation moved to the "Network compensation" sub-tab of the DDNet page.
+== 预测与延迟补偿已移到 DDNet 页的「网络补偿」子页签。
 
 Prediction boundary (ms, increases latency but reduces ping jitter)
 == 预测边界（单位：毫秒，增加延迟但可减少因 ping 波动导致的卡顿）
@@ -11289,7 +11289,7 @@ Prediction margin when frozen
 == 冻结时的预测边距
 
 Prediction trades accuracy for responsiveness: a larger margin and AntiPing smooth out ping jitter but can mispredict nearby actions, and upstream redundancy may triple upload traffic.
-== Prediction trades accuracy for responsiveness: a larger margin and AntiPing smooth out ping jitter but can mispredict nearby actions, and upstream redundancy may triple upload traffic.
+== 预测用精度换取响应速度：更大的余量和 AntiPing 能抹平 ping 抖动，但可能误判近处动作，上游冗余最多会让上行流量增至三倍。
 
 Preparing chat export: %d%%
 == 正在准备聊天导出：%d%%
@@ -13488,7 +13488,7 @@ Set "Ingame mouse sens." for aiming and "UI mouse sens." for menus, then limit t
 == 瞄准用游戏内鼠标灵敏度，菜单用鼠标灵敏度（界面），再用最小光标距离和最大光标距离限制光标位置。
 
 Set "Prediction margin" in milliseconds, tick "AntiPing (latency compensation)" and then choose what to predict; the redundancy switch is experimental and only useful on lossy connections.
-== Set "Prediction margin" in milliseconds, tick "AntiPing (latency compensation)" and then choose what to predict; the redundancy switch is experimental and only useful on lossy connections.
+== 以毫秒设置「预测余量」，勾选「AntiPing（延迟补偿）」，再选择要预测什么；冗余开关是实验性的，只在丢包链路上有用。
 
 Set "Switch interval" to 0 to stop timed switching and keep the queue for manual or map-join changes.
 == 把切换间隔设为 0 就会停止定时切换，队列留给手动切换或进图时使用。
@@ -13860,10 +13860,10 @@ Show death tile outlines
 == 显示死亡图块轮廓
 
 Show deep freeze tile outlines
-== Show deep freeze tile outlines
+== 显示深层冻结块描边
 
 Show deep unfreeze tile outlines
-== Show deep unfreeze tile outlines
+== 显示深层解冻块描边
 
 Show default flag in scoreboard
 == 在记分牌中显示默认国旗
@@ -13971,7 +13971,7 @@ Show freeze bars
 == 显示解冻进度条
 
 Show freeze tile outlines
-== Show freeze tile outlines
+== 显示冻结块描边
 
 Show friend icon in name plates
 == 在昵称中显示好友图标
@@ -14049,7 +14049,7 @@ Show hook strength number indicator
 == 显示钩子强度数值
 
 Show hookable tile outlines
-== Show hookable tile outlines
+== 显示可钩方块描边
 
 Show how weapons, shields, snowflakes, and flags appear in game
 == 显示武器、护盾、雪花和旗帜在游戏中的外观
@@ -14625,10 +14625,10 @@ Show tuning parameters affecting own player (0=Off, 1=Show changed, 2=Show all)
 == 显示影响自身玩家的调整参数信息（0 = 关闭，1 = 显示已改变的，2 = 显示全部）
 
 Show unfreeze tile outlines
-== Show unfreeze tile outlines
+== 显示解冻块描边
 
 Show unhookable tile outlines
-== Show unhookable tile outlines
+== 显示不可钩方块描边
 
 Show unknown server messages
 == 显示未知服务器消息
@@ -15498,7 +15498,7 @@ Strength icons assets
 == 强弱图标资源
 
 Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)
-== Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)
+== 苹果胶囊端头强度（0 = 半圆，100 = 最强）
 
 Stress system (debug builds only).
 == 压力系统（仅限调试版本）
@@ -16404,7 +16404,7 @@ Tick "Show inputs", then size and place it with "Keyboard size", "Mouse size", "
 == 勾选显示输入，然后用键盘大小、鼠标大小、不透明度和位置滑块调整尺寸与位置。
 
 Tick "Show others" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use "Show background quads" and "Default zoom" for the view.
-== Tick "Show others" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use "Show background quads" and "Default zoom" for the view.
+== 勾选「显示其他队伍」可半透明绘制其他队伍，其影子不透明度在下方从属行设置；视野相关还有「显示背景方块」和「默认缩放」。
 
 Tick any of "Show key stuck status", "Show hammer status", "Show dummy control status" or "Show dummy copy status".
 == 按需勾选显示卡键状态、显示锤子状态、显示分身控制状态或显示分身同步状态。
@@ -17259,16 +17259,16 @@ Unfreeze tile outline color
 == 解冻图块轮廓颜色
 
 Unfreeze tile outline width
-== Unfreeze tile outline width
+== 解冻块描边宽度
 
 Unhookable tile outline color
-== Unhookable tile outline color
+== 不可钩方块描边颜色
 
 Unhookable tile outline width
-== Unhookable tile outline width
+== 不可钩方块描边宽度
 
 Unhookable tiles
-== Unhookable tiles
+== 不可钩方块
 
 Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
 == 统一导出质量（CRF/CQ/QP 标度 0-51，-1 = 使用 cl_video_crf）；映射到各编码器的原生参数
