@@ -51,7 +51,8 @@ namespace QmMusicLyrics
 					// 使用固定烘焙密度，缩放镜头只改变投影，不逐帧重建文字。
 					Graphics.MapScreenToGameInterface(Camera.x, Camera.y, 1.0f);
 					CTextCursor Cursor;
-					TextRender.SetCursor(&Cursor, 0.0f, 0.0f, Index == 0 ? 22.0f : 16.0f, TEXTFLAG_RENDER | TEXTFLAG_ELLIPSIS_AT_END);
+					Cursor.m_FontSize = Index == 0 ? 22.0f : 16.0f;
+					Cursor.m_Flags = TEXTFLAG_RENDER | TEXTFLAG_ELLIPSIS_AT_END;
 					Cursor.m_LineWidth = 420.0f;
 					Cursor.m_MaxLines = 2;
 					Cache.m_Text = Line.m_aRows[Index];
