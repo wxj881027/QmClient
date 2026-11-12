@@ -534,6 +534,8 @@ bool CMenusIngameTouchControls::RenderBehaviorSettingBlock(CUIRect Block)
 		CScrollRegionParams ScrollParam;
 		ScrollParam.m_ScrollUnit = QmNativeWheelScrollConfig(1.0f, 0.0f).m_WheelScale * QmPanelWheelStepMultiplier();
 		vec2 ScrollOffset(0.0f, 0.0f);
+		// Begin 已把轨道占位（thickness）从 clip 扣掉并回写，行内不要再手扣
+		// ScrollParam.m_ScrollbarThickness / 2：那是双扣，内容会被压窄 10px。
 		s_BindToggleScrollRegion.Begin(&Block, &ScrollOffset, &ScrollParam);
 		Block.y += ScrollOffset.y;
 		for(unsigned CommandIndex = 0; CommandIndex < m_vBehaviorElements.size(); CommandIndex++)
@@ -543,7 +545,6 @@ bool CMenusIngameTouchControls::RenderBehaviorSettingBlock(CUIRect Block)
 			{
 				EditBox.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.15f), IGraphics::CORNER_T, 5.0f);
 				EditBox.VSplitMid(&EditBox, &RightButton);
-				RightButton.VSplitLeft(ScrollParam.m_ScrollbarThickness / 2.0f, nullptr, &RightButton);
 				EditBox.VSplitLeft(ROWSIZE, &MiddleButton, &EditBox);
 				EditBox.VSplitLeft(SUBMARGIN, nullptr, &LeftButton);
 				Ui()->DoLabel(&LeftButton, Localize("Add command"), FONTSIZE, TEXTALIGN_ML);
@@ -584,7 +585,6 @@ bool CMenusIngameTouchControls::RenderBehaviorSettingBlock(CUIRect Block)
 			{
 				EditBox.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.15f), IGraphics::CORNER_NONE, 0.0f);
 				EditBox.VSplitMid(&LeftButton, &MiddleButton);
-				MiddleButton.VSplitLeft(ScrollParam.m_ScrollbarThickness / 2.0f, nullptr, &MiddleButton);
 				str_format(aBuf, sizeof(aBuf), "%s:", Localize("Command"));
 				Ui()->DoLabel(&LeftButton, aBuf, FONTSIZE, TEXTALIGN_ML);
 				if(ui_widget::InputField(TouchControlsBehaviorTextInputCtx, &m_vBehaviorElements[CommandIndex]->m_InputCommand, MiddleButton, BehaviorInputOptions).m_Changed)
@@ -604,7 +604,6 @@ bool CMenusIngameTouchControls::RenderBehaviorSettingBlock(CUIRect Block)
 			{
 				EditBox.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.15f), IGraphics::CORNER_NONE, 0.0f);
 				EditBox.VSplitMid(&LeftButton, &MiddleButton);
-				MiddleButton.VSplitLeft(ScrollParam.m_ScrollbarThickness / 2.0f, nullptr, &MiddleButton);
 				str_format(aBuf, sizeof(aBuf), "%s:", Localize("Label"));
 				Ui()->DoLabel(&LeftButton, aBuf, FONTSIZE, TEXTALIGN_ML);
 				if(ui_widget::InputField(TouchControlsBehaviorTextInputCtx, &m_vBehaviorElements[CommandIndex]->m_InputLabel, MiddleButton, BehaviorInputOptions).m_Changed)
@@ -624,7 +623,6 @@ bool CMenusIngameTouchControls::RenderBehaviorSettingBlock(CUIRect Block)
 			{
 				EditBox.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.15f), IGraphics::CORNER_B, 5.0f);
 				EditBox.VSplitMid(&LeftButton, &MiddleButton);
-				MiddleButton.VSplitLeft(ScrollParam.m_ScrollbarThickness / 2.0f, nullptr, &MiddleButton);
 				str_format(aBuf, sizeof(aBuf), "%s:", Localize("Label type"));
 				Ui()->DoLabel(&LeftButton, aBuf, FONTSIZE, TEXTALIGN_ML);
 				CTouchControls::CButtonLabel::EType NewButtonLabelType = m_vBehaviorElements[CommandIndex]->m_CachedCommands.m_LabelType;
@@ -679,6 +677,7 @@ bool CMenusIngameTouchControls::RenderVisibilitySettingBlock(CUIRect Block)
 	CScrollRegionParams ScrollParam;
 	ScrollParam.m_ScrollUnit = QmNativeWheelScrollConfig(1.0f, 0.0f).m_WheelScale * QmPanelWheelStepMultiplier();
 	vec2 ScrollOffset(0.0f, 0.0f);
+	// Begin 已占掉轨道那一列，行内不要再手扣 m_ScrollbarThickness / 2（双扣）。
 	s_VisibilityScrollRegion.Begin(&Block, &ScrollOffset, &ScrollParam);
 	Block.y += ScrollOffset.y;
 
@@ -696,7 +695,6 @@ bool CMenusIngameTouchControls::RenderVisibilitySettingBlock(CUIRect Block)
 		if(s_VisibilityScrollRegion.AddRect(EditBox))
 		{
 			EditBox.VSplitRight(EditBox.w / 2.0f + ROWGAP + ROWSIZE, &Label, &MiddleButton);
-			MiddleButton.VSplitLeft(ScrollParam.m_ScrollbarThickness / 2.0f, nullptr, &MiddleButton);
 			MiddleButton.VSplitLeft(ROWSIZE, &HelpButton, &MiddleButton);
 			MiddleButton.VSplitLeft(ROWGAP, nullptr, &MiddleButton);
 			// We'll only do help button for the first extra menu visibility.
@@ -1108,6 +1106,7 @@ void CMenusIngameTouchControls::RenderPreviewSettings(CUIRect MainView)
 	CScrollRegionParams ScrollParam;
 	ScrollParam.m_ScrollUnit = QmNativeWheelScrollConfig(1.0f, 0.0f).m_WheelScale * QmPanelWheelStepMultiplier();
 	vec2 ScrollOffset(0.0f, 0.0f);
+	// Begin 已占掉轨道那一列，行内不要再手扣 m_ScrollbarThickness / 2（双扣）。
 	s_VirtualVisibilityScrollRegion.Begin(&MainView, &ScrollOffset, &ScrollParam);
 	MainView.y += ScrollOffset.y;
 	std::array<bool, (size_t)CTouchControls::EButtonVisibility::NUM_VISIBILITIES> aVirtualVisibilities = GameClient()->m_TouchControls.VirtualVisibilities();

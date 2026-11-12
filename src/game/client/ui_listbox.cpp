@@ -109,7 +109,11 @@ float CListBox::RowReserveWidth() const
 	// 不能用上一帧才解析出来的 m_ScrollbarWidth（首帧还是 20 的那一档）。
 	const float Thickness = m_ScrollbarWidthOverridden ? m_ScrollbarWidth : ui_token::list::SCROLLBAR_WIDTH;
 	const float Margin = m_ScrollbarMarginOverridden ? m_ScrollbarMargin : ui_token::list::SCROLLBAR_MARGIN;
-	return Thickness + Margin + ui_token::list::SCROLLBAR_ROW_GAP;
+	// 默认路径直接取统一 token（厚度 + 外边距 + 缝只有一份定义）；只有显式覆盖过
+	// 粗细/边距时才按差分补齐，覆盖值仍然生效。全仓目前没有调用点覆盖这两项。
+	if(m_ScrollbarWidthOverridden || m_ScrollbarMarginOverridden)
+		return Thickness + Margin + ui_token::list::SCROLLBAR_ROW_GAP;
+	return ui_token::list::OverlayRailReserve();
 }
 
 float CListBox::ResolveRowCornerRadius() const

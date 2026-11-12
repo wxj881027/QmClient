@@ -2439,29 +2439,29 @@ void CMenus::RenderServerbrowserMapFilterSelector(CUIRect Selector)
 // 的 ShowNotice）仍然保留，浏览器两处调用一律传 false：既不画字，也不为它预留高度，
 // 不会留下一行空白。IsServerlistError() 的其它用途（空列表态文案、后台加载判定）不受影响。
 
-// 浏览器面板里的纵向滚动区统一走覆盖式轨道：与服务器列表胶囊行同一条口径
-// （CListBox 的 m_ScrollbarOverlay 轨道：细轨压在内容右缘、不占内容宽度，
-// 出现/消失走显示系数淡入 + 横向滑出）。不能继续用非覆盖式：那里可见轨道宽是
-// thickness − 2×margin，列表 token 的 8/4 正好算成 0，轨道与滑块整条宽度为 0、
-// 一帧都画不出来——实机表现就是「滚动条不见了」。
-static constexpr float BROWSER_SCROLLBAR_RESERVE = ui_token::list::SCROLLBAR_WIDTH + ui_token::list::SCROLLBAR_MARGIN;
-
-static void ApplyBrowserOverlayScrollbar(CScrollRegionParams &Params, float TrackInset)
+// 浏览器面板里自绘的三处滚动区（好友列表 / 筛选面板 / 状态栏）统一走**非覆盖式**
+// 轨道：Begin() 会把 thickness 当作占位从 clip 里切走，内容矩形天然内缩，行右缘与
+// 轨道之间由 margin 留出缝隙，调用点不需要也不允许再手写一次让位减法（双扣）。
+// 参数全部由列表 token 派生：可见轨宽 = thickness − 2×margin
+// = (SCROLLBAR_WIDTH + 2×SCROLLBAR_MARGIN) − 2×SCROLLBAR_MARGIN = SCROLLBAR_WIDTH = 8，
+// 内容与轨道之间的缝 = SCROLLBAR_MARGIN = 4。
+// 注意：不能用覆盖式（m_ScrollbarOverlay = true）——覆盖式不占位，这层缝隙会凭空
+// 消失，内容就贴到轨道上了；「轨道隐形」是 thickness/margin 取值把可见宽算成 0，
+// 与是否覆盖无关。
+static void ApplyBrowserScrollbar(CScrollRegionParams &Params, float TrackInset)
 {
-	Params.m_ScrollbarThickness = ui_token::list::SCROLLBAR_WIDTH;
+	Params.m_ScrollbarThickness = ui_token::list::SCROLLBAR_WIDTH + 2.0f * ui_token::list::SCROLLBAR_MARGIN;
 	Params.m_ScrollbarMargin = ui_token::list::SCROLLBAR_MARGIN;
-	Params.m_ScrollbarOverlay = true;
-	Params.m_ScrollbarRevealSec = ui_token::list::SCROLLBAR_FADE.m_DurationSec;
-	Params.m_ScrollbarSlide = ui_token::list::SCROLLBAR_SLIDE;
+	Params.m_ScrollbarOverlay = false;
+	// 非覆盖式不需要显示系数与横向滑出：轨道显隐直接走占位那一档。
+	Params.m_ScrollbarRevealSec = 0.0f;
+	Params.m_ScrollbarSlide = 0.0f;
 	// 宿主按容器圆角给长度方向内缩：滑块端头不会压到（或探出）面板圆角。
 	Params.m_ScrollbarTrackInset = std::max(0.0f, TrackInset);
-	// 覆盖式轨道不占内容宽度，占位动画和「始终预留」都没有意义。
+	// 占位不跟着显隐动画：面板里的行宽只在轨道出现时收一档，不会逐帧抖。
 	Params.m_AnimateScrollbarReserve = false;
 	Params.m_ScrollbarAlwaysReserved = false;
-	// FILTER_GRID 的 policy 会把轨道设成 HIDDEN（QmScroll.cpp 的 EQmScrollProfile
-	// 分支），国家/模式/社区这三张胶囊网格因此从来没有可见轨道——上一轮只改
-	// thickness/margin 对它们完全无效。浏览器面板里要的是「能看到、能拖」的轨道，
-	// 这里统一按可见处理。
+	// FILTER_GRID 的 policy 默认把轨道设成 HIDDEN；这三处要的是可见、能拖的轨道。
 	Params.m_HideScrollbar = false;
 }
 
@@ -2475,18 +2475,17 @@ void CMenus::RenderServerbrowserStatusBox(CUIRect StatusBox, bool WasListboxItem
 	ScrollRequest.m_RowExtent = 24.0f;
 	ScrollRequest.m_RowsPerStep = 2;
 	CScrollRegionParams ScrollParams = QmScrollRegionParamsFromPolicy(QmResolveScrollPolicy(ScrollRequest));
-	// 轨道口径与好友列表、筛选面板相同：覆盖式、不占内容宽度。
-	ApplyBrowserOverlayScrollbar(ScrollParams, ui_token::radius::CARD);
-	// 内容宽度不再随「有没有滚动条」变化，测高只做一次就能和绘制同宽；
-	// 卡片右缘按覆盖式轨道让出一列，轨道压在内容上也盖不到控件。
+	// 轨道口径与好友列表、筛选面板相同：非覆盖式，可见轨宽 8、内容与轨道之间留 4 的缝。
+	ApplyBrowserScrollbar(ScrollParams, ui_token::radius::CARD);
+	// 内容矩形只从 Begin() 回写的 clip 取（非覆盖式已把轨道占位切走），调用点不再减法。
+	// 首帧测高按「滚动条已占位」的宽度算，与随后 Begin 回写的宽度同宽，避免开面板时先错一帧。
 	CUIRect StatusContent = StatusBox;
-	StatusContent.w = std::max(0.0f, StatusContent.w - BROWSER_SCROLLBAR_RESERVE);
+	StatusContent.w = std::max(0.0f, StatusContent.w - ScrollParams.m_ScrollbarThickness);
 	// 提示行已删除：布局按「无提示行」测高，下面也不再画那条文案（不留空行）。
 	s_StatusScrollRegion.SetContentHeightForNextFrame(QmBrowserStatusLayout(StatusContent, false).m_ContentHeight);
 	vec2 ScrollOffset(0.0f, 0.0f);
 	s_StatusScrollRegion.Begin(&StatusBox, &ScrollOffset, &ScrollParams);
 	StatusBox.y += ScrollOffset.y;
-	StatusBox.w = StatusContent.w;
 	const SQmBrowserStatusLayout Layout = QmBrowserStatusLayout(StatusBox, false);
 	s_StatusScrollRegion.AddRect({StatusBox.x, StatusBox.y, StatusBox.w, Layout.m_ContentHeight});
 	CUIRect RefreshBar = Layout.m_RefreshBar;
@@ -2697,9 +2696,6 @@ void CMenus::RenderServerbrowserFilters(CUIRect View)
 	CUIRect Button, ResetButton;
 	View.HSplitBottom(RowHeight, &View, &ResetButton);
 	View.HSplitBottom(3.0f, &View, nullptr);
-	// 右内边距让给滚动条：滚动区域一直画到面板右缘，滚动条位置与好友列表一致。
-	ResetButton.w = std::max(0.0f, ResetButton.w - 5.0f);
-	View.w += 5.0f;
 
 	// 长译文或较矮窗口通过整体滚动保留全部筛选项，重置按钮固定在底部。
 	static CScrollRegion s_FilterScrollRegion;
@@ -2707,18 +2703,15 @@ void CMenus::RenderServerbrowserFilters(CUIRect View)
 	ScrollRequest.m_Profile = EQmScrollProfile::SETTINGS_GRID;
 	ScrollRequest.m_RowExtent = RowHeight;
 	CScrollRegionParams ScrollParams = QmScrollRegionParamsFromPolicy(QmResolveScrollPolicy(ScrollRequest));
-	// 工具箱三个页签共用同一档滚动条：覆盖式轨道，粗细/外边距取列表 token，
-	// 与服务器列表、好友列表逐像素同宽，不占表单宽度。
-	ApplyBrowserOverlayScrollbar(ScrollParams, ui_token::radius::CARD);
+	// 工具箱三个页签共用同一档滚动条：非覆盖式，可见轨宽 8，
+	// 内容与轨道之间由 margin 天然留出 4 的缝，与服务器列表、好友列表同一口径。
+	ApplyBrowserScrollbar(ScrollParams, ui_token::radius::CARD);
 	vec2 ScrollOffset(0.0f, 0.0f);
 	s_FilterScrollRegion.Begin(&View, &ScrollOffset, &ScrollParams);
 	View.y += ScrollOffset.y;
 	const float ContentTop = View.y;
-	// 表单右缘让出轨道那一列：轨道压在内容右缘上，长译文和输入框不会被压住。
-	const float ContentWidth = View.w;
-	View.w = std::max(0.0f, View.w - BROWSER_SCROLLBAR_RESERVE);
+	// 表单宽度直接取 Begin() 回写的 clip：轨道占位已经切走一档，这里再减就是双扣。
 	RenderServerbrowserFilterForm(View);
-	View.w = ContentWidth;
 
 	// countries and types filters
 	if(ServerBrowser()->CommunityCache().CountriesTypesFilterAvailable())
@@ -2794,6 +2787,9 @@ void CMenus::RenderServerbrowserFilters(CUIRect View)
 	// 重置按钮和其他筛选按钮用同一套胶囊：同一个面板里不混两种按钮形态。
 	static unsigned char s_ResetFilterChipId = 0;
 	CUIRect ResetChip = ResetButton;
+	// 与表单内容同宽（View.w 仍是 Begin() 回写的 clip 宽）：右缘和 chip / 输入框右缘
+	// 对齐，不伸到轨道下面，也不在轨道消失时留下一段空边。
+	ResetChip.w = View.w;
 	ResetChip.h = ui_token::server_filter::CHIP_HEIGHT;
 	ResetChip.y += std::max(0.0f, (ResetButton.h - ResetChip.h) / 2.0f);
 	if(ui_widget::FilterChip(SettingsUiContext("server_browser_filter_reset"), &s_ResetFilterChipId, ResetChip, Localize("Reset filter"), false))
@@ -2871,17 +2867,14 @@ void CMenus::RenderServerbrowserDDNetFilter(CUIRect View,
 	ScrollRequest.m_RowsPerStep = 2;
 	const SQmResolvedScrollPolicy ScrollPolicy = QmResolveScrollPolicy(ScrollRequest);
 	CScrollRegionParams ScrollParams = QmScrollRegionParamsFromPolicy(ScrollPolicy);
-	// 这三张网格列表的轨道与胶囊列表同一条口径：覆盖式、粗细/外边距取列表 token。
-	// 长度方向按胶囊格自身的圆角内缩（而不是卡片的 radius::CARD）：网格只有 4 行高
-	// （社区/模式 60、国家 80），按卡片圆角内缩会让轨道只剩 24 高的短桩，滑块既看不出
-	// 位置也拖不动；胶囊圆角同样能让端头留在卡片圆角以内。
-	ApplyBrowserOverlayScrollbar(ScrollParams, ui_token::list::RowRadius(RowHeight));
+	// 这三张胶囊网格（社区 / 国家 / 模式）固定可见行数、内容本来就放得下：不画轨道
+	// （回到 FILTER_GRID policy 的 HIDDEN 默认），也不为轨道让位。上一轮为了修
+	// 「轨道隐形」把它们强制改成常显轨道，结果最右一列格子反被轨道压住。
+	// 滚轮滚动能力保留；宽度直接取外层面板的内容宽（已扣面板轨道让位），
+	// 所以格子右缘不会伸到面板轨道下面。
+	ScrollParams.m_HideScrollbar = true;
 	ScrollRegion.Begin(&View, &ScrollOffset, &ScrollParams);
 	View.y += ScrollOffset.y;
-	// 溢出时整块网格让出轨道那一列（不是每格各收，否则格子宽窄不一）：
-	// 轨道压在内容上，最右一列不会被压住；不溢出时不多缩一列。
-	if(MaxItems > VisibleGridRows * ItemsPerRow)
-		View.w = std::max(0.0f, View.w - BROWSER_SCROLLBAR_RESERVE);
 
 	CUIRect Row;
 	int ColumnIndex = 0;
@@ -3005,10 +2998,10 @@ void CMenus::RenderServerbrowserDDNetFilter(CUIRect View,
 		if(Ui()->HotItem() == pItemId && !ScrollRegion.Animating())
 		{
 			// 悬浮是整格胶囊，只填充不描边：白色描边只属于卡片内的小控件，列表行/格不用。
-			// 填充与选中同源（QmControlTheme().m_Selected = qm_ui_selected_color），
-			// 只把 alpha 收到 0.58 这一档：悬浮与选中是同一块颜色的深浅，不换成白色覆盖层。
-			constexpr float HoverFillAlphaRatio = 0.58f;
-			const ColorRGBA HoverFill = Ui()->QmControlTheme().m_Selected.WithMultipliedAlpha(HoverFillAlphaRatio);
+			// 悬浮与选中同源同强度（QmControlTheme().m_Selected = qm_ui_selected_color，
+			// alpha 0.22），与本页服务器列表行的既有观感一致：不要再自己乘 0.58 之类的
+			// 系数——那样只剩 0.13，悬浮几乎看不出来。
+			const ColorRGBA HoverFill = Ui()->QmControlTheme().m_Selected;
 			DrawRoundedSurface(Ui(), Cell, BrowserOpacityColor(HoverFill, Ui()->ControlAlphaScale()), ColorRGBA(), CellRadius);
 		}
 		RenderItem(ItemIndex, Content, pItemId, Active);
@@ -3371,24 +3364,16 @@ void CMenus::RenderServerbrowserInfo(CUIRect View)
 	DrawInfoRow(apLabels[2], aPingLabel, PingLabelProps);
 	View.HSplitTop(Metrics.m_SectionGap, nullptr, &View);
 
-	// 开关占满内容宽度；长译文按同一标签内边距测量，避免挤入下一行控件。
-	const auto ToggleHeight = [&](const char *pLabel) {
-		const float PaddingX = std::max(Metrics.m_LineSpacing, Metrics.m_BodySize * 0.5f);
-		const float PaddingY = Metrics.m_LineSpacing * 0.5f;
-		const float IndicatorWidth = Metrics.m_BodySize + Metrics.m_LineSpacing;
-		const CUIRect Label = ResolveSettingsToggleButtonLabel(View, PaddingX, PaddingY, IndicatorWidth);
-		const float LabelHeight = TextRender()->TextBoundingBox(Metrics.m_BodySize, pLabel, -1, std::max(1.0f, Label.w)).m_H;
-		return ResolveSettingsToggleButtonSize(0.0f, LabelHeight, Metrics.m_LineHeight, PaddingX, PaddingY).m_Height;
-	};
+	// 「收藏」与「暴露 IP」两行都走设置页标准开关行：左侧标签 + 右侧 Toggle，
+	// 点击整行或开关都能切。行高必须用设置页标准控件高度（ResolveSettingsControlHeight
+	// ≈ 20），不能沿用本页信息行的 server_info::ROW_HEIGHT(15)——开关的 Track/Knob
+	// 按传入矩形高度算，15 高放不下标准开关（轨道被压扁、滑块顶到轨道外面）。
+	// 行与行之间的节奏仍用本页的 Metrics.m_LineSpacing，和上面三行信息行一致。
+	const float ToggleRowHeight = ResolveSettingsControlHeight(Metrics.m_BodySize);
 	CUIRect Button;
 	static int s_AddFavButton = 0;
 	int Favorite = WasFavorite;
-	// 收藏回到设置页统一的开关语义：左侧「收藏」标签 + 右侧 Toggle，点击整行或开关都能切。
-	// 之前走的是 DoSettingsToggleButton + m_ShowCheckmark，那条路径画的是「胶囊里一个
-	// 小圆圈 + 文字」的勾选条（选中只改胶囊底色），和设置页开关不是同一套外观。
-	// 行高沿用本页其它行的 server_info::ROW_HEIGHT；收藏的增删、星标进场与 tooltip
-	// 全部保持原样，只换绘制入口。
-	View.HSplitTop(Metrics.m_LineHeight, &Button, &View);
+	View.HSplitTop(ToggleRowHeight, &Button, &View);
 	if(DoSettingsButton_CheckBox(-1, -1, -1, &s_AddFavButton, "Favorite", Localize("Favorite"), Favorite, &Button, SLabelProperties{}, !Ui()->RenderOnly(), Metrics.m_BodySize))
 	{
 		Favorite = Favorite == 0 ? 1 : 0;
@@ -3414,10 +3399,8 @@ void CMenus::RenderServerbrowserInfo(CUIRect View)
 	{
 		static int s_LeakIpButton = 0;
 		int ExposeIp = pSelectedServer->m_FavoriteAllowPing != TRISTATE::NONE;
-		SSettingsToggleEntry ExposeEntry{&ExposeIp, "Leak IP", Localize("Leak IP"), &s_LeakIpButton};
-		ExposeEntry.m_pTooltip = Localize("Leaks your IP address to this server by pinging it, also acquiring the latency in the process");
-		ExposeEntry.m_ShowCheckmark = true;
-		const float Height = ToggleHeight(ExposeEntry.m_pLabel);
+		// 与「收藏」同一套行几何与开关绘制（语义不变：仍然是 m_FavoriteAllowPing）。
+		const float Height = ToggleRowHeight;
 		View.HSplitTop(Metrics.m_LineSpacing * s_ExposeRowAnim, nullptr, &View);
 		View.HSplitTop(Height * s_ExposeRowAnim, &Button, &View);
 		if(Button.h > 2.0f)
@@ -3427,11 +3410,15 @@ void CMenus::RenderServerbrowserInfo(CUIRect View)
 			const CUIRect Clip = Button;
 			Ui()->ClipEnable(&Clip);
 			Button.h = Height;
-			if(DoSettingsToggleButton(-1, -1, -1, Button, ExposeEntry, Metrics, Favorite != 0))
+			if(DoSettingsButton_CheckBox(-1, -1, -1, &s_LeakIpButton, "Leak IP", Localize("Leak IP"), ExposeIp, &Button, SLabelProperties{}, !Ui()->RenderOnly(), Metrics.m_BodySize))
 			{
+				ExposeIp = ExposeIp == 0 ? 1 : 0;
 				Favorites()->AllowPing(pSelectedServer->m_aAddresses, pSelectedServer->m_NumAddresses, ExposeIp != 0);
 				Client()->ServerBrowserUpdate();
 			}
+			// 行说明保持不变（它不是 g_Config 项，DoSettingsButton_CheckBox 内部的
+			// 配置提示查不到它，这里显式挂一次）。
+			GameClient()->m_Tooltips.DoToolTip(&s_LeakIpButton, &Button, Localize("Leaks your IP address to this server by pinging it, also acquiring the latency in the process"));
 			Ui()->ClipDisable();
 		}
 	}
@@ -3706,12 +3693,11 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 	ScrollRequest.m_RowsPerStep = 3;
 	const SQmResolvedScrollPolicy ScrollPolicy = QmResolveScrollPolicy(ScrollRequest);
 	CScrollRegionParams ScrollParams = QmScrollRegionParamsFromPolicy(ScrollPolicy);
-	// 覆盖式轨道：与服务器列表胶囊行同一条口径，不占卡片宽度，面板里只有一种轨道粗细。
-	ApplyBrowserOverlayScrollbar(ScrollParams, ui_token::radius::CARD);
+	// 非覆盖式轨道：Begin() 会把轨道占位从 clip 里切走，卡片/分组标题/拖动提示都按
+	// 回写的 List 排版，右缘与轨道之间天然留出 4 的缝；这里不再手动减让位（会双扣）。
+	ApplyBrowserScrollbar(ScrollParams, ui_token::radius::CARD);
 	s_ScrollRegion.Begin(&List, &ScrollOffset, &ScrollParams);
 	List.y += ScrollOffset.y;
-	// 卡片右缘让出轨道那一列：轨道压在内容上，行卡片不会被压住一角。
-	List.w = std::max(0.0f, List.w - BROWSER_SCROLLBAR_RESERVE);
 
 	const CUIRect ListViewport = *s_ScrollRegion.ClipRect();
 	const float UiScale = 1.0f;

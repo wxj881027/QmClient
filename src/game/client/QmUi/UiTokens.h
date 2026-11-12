@@ -331,6 +331,10 @@ namespace ui_token::list
 	inline constexpr float SCROLLBAR_MARGIN = spacing::XS;
 	inline constexpr float SCROLLBAR_SLIDE = spacing::XS;
 
+	// 覆盖式轨道的右侧让位：轨道厚度 + 外边距 + 一条缝。列表行、浏览器面板、弹层共用这一份，
+	// 不要再在调用点写 8+4+4 或 12。
+	inline constexpr float OverlayRailReserve() { return SCROLLBAR_WIDTH + SCROLLBAR_MARGIN + SCROLLBAR_ROW_GAP; }
+
 	// 条目数与每行条目数决定可见行数：0 表示空列表不占高度。
 	inline int VisibleRows(const int ItemCount, const int ItemsPerRow, const int MinRows, const int MaxRows)
 	{

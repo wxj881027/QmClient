@@ -271,10 +271,21 @@ namespace
 			// 不再按面板档另取一套粗细。
 			ScrollParams.m_ScrollbarThickness = ui_token::list::SCROLLBAR_WIDTH;
 			ScrollParams.m_ScrollbarMargin = ui_token::list::SCROLLBAR_MARGIN;
+			// 覆盖式轨道：轨道压在内容上，显隐走和列表同一档淡入 + 横向滑出。
+			// 之前漏置这一位，Begin 按非覆盖式只扣了厚度 8，而轨道又被左右外边距
+			// 挤成 0 宽：内容白让 8，轨道根本画不出来。
+			ScrollParams.m_ScrollbarOverlay = true;
+			ScrollParams.m_ScrollbarRevealSec = ui_token::list::SCROLLBAR_FADE.m_DurationSec;
+			ScrollParams.m_ScrollbarSlide = ui_token::list::SCROLLBAR_SLIDE;
+			// 轨道沿长度方向按弹窗容器圆角内缩，滑块端头不会从圆角外侧探出来。
+			ScrollParams.m_ScrollbarTrackInset = ui_token::radius::CARD;
 			ScrollParams.m_WheelOwnerPriority = EUiWheelOwnerPriority::POPUP;
 			ScrollParams.m_pSliderThemeColor = &Theme.m_Accent;
 			vec2 ScrollOffset;
 			gs_WikiScroll.Begin(&Content, &ScrollOffset, &ScrollParams);
+			// 覆盖式不占内容宽度，让位必须显式扣一次：厚度 + 外边距 + 缝。
+			// 原来那 8 是非覆盖式自动扣的厚度，现在换成统一的 OverlayRailReserve()。
+			Content.w = std::max(0.0f, Content.w - ui_token::list::OverlayRailReserve());
 			CUIRect Body = Content;
 			Body.x += ScrollOffset.x;
 			Body.y += ScrollOffset.y;
