@@ -5598,6 +5598,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/unit/engine/input_sdl3_test.cpp
       src/test/integration/engine/audio_sdl3_test.cpp
     )
+    if(TARGET_OS STREQUAL "windows")
+      list(APPEND TESTS src/test/unit/engine/sdl3_windows_audio_properties_test.cpp)
+    endif()
   endif()
   set(TARGET_TESTRUNNER testrunner)
   add_executable(${TARGET_TESTRUNNER} EXCLUDE_FROM_ALL
