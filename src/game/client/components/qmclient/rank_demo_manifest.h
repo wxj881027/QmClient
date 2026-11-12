@@ -206,6 +206,37 @@ namespace qmclient::rank_demo
 		return !Entries.empty();
 	}
 
+	// Demo 浏览器下载 Rank 1 回放时的文件名：
+	//   <安全地图名>_rank<N>_<ts>_<去掉 .gz/.demo 后缀并清理的 demo 名>.demo
+	// 浏览器写盘与 Rank 1 页面复用必须用同一份完整身份；只按地图名前缀匹配
+	// 会把同一地图的其它场次误认成当前条目。
+	inline std::string BrowserDemoFileName(const char *pMap, const char *pDemo, int64_t Ts, int Rank)
+	{
+		if(pMap == nullptr || pDemo == nullptr || pMap[0] == '\0' || pDemo[0] == '\0')
+			return {};
+
+		char aSafeMap[128];
+		str_copy(aSafeMap, pMap, sizeof(aSafeMap));
+		str_sanitize_filename(aSafeMap);
+
+		std::string Demo = pDemo;
+		if(Demo.size() > 3 && Demo.compare(Demo.size() - 3, 3, ".gz") == 0)
+			Demo.resize(Demo.size() - 3);
+		if(Demo.size() > 5 && Demo.compare(Demo.size() - 5, 5, ".demo") == 0)
+			Demo.resize(Demo.size() - 5);
+		char aSafeDemo[256];
+		str_copy(aSafeDemo, Demo.c_str(), sizeof(aSafeDemo));
+		str_sanitize_filename(aSafeDemo);
+
+		const int64_t SafeTs = Ts == std::numeric_limits<int64_t>::min() ? 0 : Ts;
+		char aName[512];
+		const int Written = str_format(aName, sizeof(aName), "%s_rank%d_%lld_%s.demo",
+			aSafeMap, Rank, (long long)SafeTs, aSafeDemo);
+		if(Written < 0 || Written >= (int)sizeof(aName))
+			return {};
+		return aName;
+	}
+
 	inline const SEntry *FindLatest(const std::vector<SEntry> &Entries, const char *pMap, int Rank)
 	{
 		const SEntry *pBest = nullptr;

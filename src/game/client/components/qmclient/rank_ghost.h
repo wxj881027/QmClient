@@ -318,6 +318,8 @@ private:
 
 	void StartManifestFetch();
 	void StartDemoFetch();
+	// 仅下载请求：确保选中场次的 demo 落到精确缓存路径，不经过影子缓存/解析
+	void EnsureDemoOnlyReady();
 	// demo 下载完成后的公共收尾：校验并按请求模式收尾（仅下载 → 提示；影子 → 解析）
 	void FinishDemoFetch();
 	void StartParse();

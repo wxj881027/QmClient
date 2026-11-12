@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 
+#include <cstdint>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -112,4 +114,25 @@ TEST(QmRankDemoManifest, CollectRankEntriesHandlesEmptyInputs)
 	EXPECT_TRUE(Collected.empty());
 	qmclient::rank_demo::CollectRankEntries(Entries, "", 1, Collected);
 	EXPECT_TRUE(Collected.empty());
+}
+
+TEST(QmRankDemoManifest, BrowserDemoFileNameUsesFullEntryIdentity)
+{
+	// 浏览器落盘名必须带 ts 与 demo 名：只按地图前缀复用会把同图其它场次当成当前条目。
+	EXPECT_EQ(qmclient::rank_demo::BrowserDemoFileName("Map", "uuid-a-hash.demo.gz", 1700, 1),
+		"Map_rank1_1700_uuid-a-hash.demo");
+	EXPECT_NE(qmclient::rank_demo::BrowserDemoFileName("Map", "uuid-a-hash.demo.gz", 1700, 1),
+		qmclient::rank_demo::BrowserDemoFileName("Map", "uuid-b-hash.demo.gz", 1700, 1));
+
+	// 地图与 demo 名中的非法文件名字符统一替换为空格，后缀只去掉一次。
+	EXPECT_EQ(qmclient::rank_demo::BrowserDemoFileName("A/B:C", "u?x.demo", 0, 1),
+		"A B C_rank1_0_u x.demo");
+
+	// manifest 缺 ts 时按 0 兜底，避免生成异常文件名。
+	EXPECT_EQ(qmclient::rank_demo::BrowserDemoFileName("Map", "demo.demo.gz", std::numeric_limits<int64_t>::min(), 1),
+		"Map_rank1_0_demo.demo");
+
+	EXPECT_TRUE(qmclient::rank_demo::BrowserDemoFileName(nullptr, "demo.demo.gz", 1, 1).empty());
+	EXPECT_TRUE(qmclient::rank_demo::BrowserDemoFileName("", "demo.demo.gz", 1, 1).empty());
+	EXPECT_TRUE(qmclient::rank_demo::BrowserDemoFileName("Map", "", 1, 1).empty());
 }

@@ -3426,21 +3426,19 @@ void CMenus::UpdateRankDemoDownload()
 			return;
 		}
 
-		char aSafeMap[128];
-		char aSafeDemo[256];
-		str_copy(aSafeMap, m_RankDemoMap.c_str(), sizeof(aSafeMap));
-		str_sanitize_filename(aSafeMap);
-		str_copy(aSafeDemo, DemoName.c_str(), sizeof(aSafeDemo));
-		if(str_endswith_nocase(aSafeDemo, ".gz") != nullptr)
-			aSafeDemo[str_length(aSafeDemo) - 3] = '\0';
-		if(str_endswith_nocase(aSafeDemo, ".demo") != nullptr)
-			aSafeDemo[str_length(aSafeDemo) - 5] = '\0';
-		str_sanitize_filename(aSafeDemo);
+		// 与 Rank 1 页面复用同一套完整场次命名，避免两处各自拼接后漂移。
+		const std::string BrowserName = qmclient::rank_demo::BrowserDemoFileName(
+			m_RankDemoMap.c_str(), DemoName.c_str(), DemoTs, 1);
+		if(BrowserName.empty() || BrowserName.size() >= IO_MAX_PATH_LENGTH)
+		{
+			FinishRankDemoDownload(false, Localize("Failed to save demo"));
+			return;
+		}
 		char aDirectory[IO_MAX_PATH_LENGTH];
 		str_copy(aDirectory, m_aRankDemoTempPath);
 		fs_parent_dir(aDirectory);
 		char aName[IO_MAX_PATH_LENGTH];
-		str_format(aName, sizeof(aName), "%s_rank1_%lld_%s.demo", aSafeMap, (long long)DemoTs, aSafeDemo);
+		str_copy(aName, BrowserName.c_str(), sizeof(aName));
 		const std::string Destination = qmclient::media_paths::Join(aDirectory, aName);
 		if(Destination.empty())
 		{

@@ -22,6 +22,7 @@
 #include <generated/protocol.h>
 #include <generated/protocol7.h>
 
+#include <game/client/QmUi/QmToast.h>
 #include <game/client/components/effects.h>
 #include <game/client/components/ghost.h>
 #include <game/client/components/menus.h>
@@ -197,34 +198,29 @@ namespace
 			str_copy(pPath, aPath, PathSize);
 	}
 
-	// 查找 demo 浏览器下载按钮落盘的该图 rank1 回放（命名 <安全地图名>_rank1_<ts>_<demo>.demo）；
-	// 命中说明同一份内容已从浏览器下载过，可复用避免重复下载
+	// 查找 demo 浏览器下载按钮落盘的同一场次回放。
+	// 必须匹配完整文件名（地图 + 名次 + ts + demo 名），不能只按地图前缀：
+	// 同一地图存在多条历史 Rank 1，前缀匹配会把别的场次误当成当前条目。
 	bool FindBrowserDownloadedDemo(IStorage *pStorage, const qmclient::rank_demo::SEntry &Entry, char *pPath, size_t PathSize)
 	{
-		char aSafeMap[64];
-		str_copy(aSafeMap, Entry.m_Map.c_str(), sizeof(aSafeMap));
-		str_sanitize_filename(aSafeMap);
-		char aPrefix[96];
-		str_format(aPrefix, sizeof(aPrefix), "%s_rank1_", aSafeMap);
+		const std::string ExpectedName = qmclient::rank_demo::BrowserDemoFileName(
+			Entry.m_Map.c_str(), Entry.m_Demo.c_str(), Entry.m_Ts, Entry.m_Rank);
+		if(ExpectedName.empty())
+			return false;
 		const std::string Directory = qmclient::media_paths::Directory(pStorage, g_Config, qmclient::media_paths::EKind::DEMOS);
 		if(Directory.empty())
 			return false;
-		const std::vector<SCacheNameTime> vFiles = ListCacheFiles(pStorage, Directory.c_str(), ".demo");
-		const SCacheNameTime *pBest = nullptr;
-		for(const SCacheNameTime &File : vFiles)
+		for(const SCacheNameTime &File : ListCacheFiles(pStorage, Directory.c_str(), ".demo"))
 		{
-			if(!str_startswith(File.m_Name.c_str(), aPrefix))
+			if(str_comp_nocase(File.m_Name.c_str(), ExpectedName.c_str()) != 0)
 				continue;
-			if(pBest == nullptr || File.m_Modified > pBest->m_Modified)
-				pBest = &File;
+			const std::string Path = qmclient::media_paths::Join(Directory, File.m_Name);
+			if(Path.empty() || Path.size() >= PathSize)
+				return false;
+			str_copy(pPath, Path.c_str(), PathSize);
+			return true;
 		}
-		if(pBest == nullptr)
-			return false;
-		const std::string Path = qmclient::media_paths::Join(Directory, pBest->m_Name);
-		if(Path.empty() || Path.size() >= PathSize)
-			return false;
-		str_copy(pPath, Path.c_str(), PathSize);
-		return true;
+		return false;
 	}
 
 	// 同存储文件流式复制（固定 4 MiB 缓冲，demo 可达数十 MB，不整块进内存）
@@ -855,6 +851,9 @@ void CRankGhost::Fail(const char *pMessage)
 {
 	log_error("rank_ghost", "%s", pMessage != nullptr ? pMessage : "unknown error");
 	Echo(pMessage);
+	// Rank 1 页的“下载回放”在菜单内触发，聊天区被菜单挡住；失败必须同时给出可见提示。
+	if(m_PendingMode == EPendingMode::DEMO_ONLY)
+		qm_ui::Toast(EQmToastKind::FAILED, pMessage);
 	// 任务失败后不应再自动进入查看模式
 	m_PendingView = false;
 	AbortTask();
@@ -1379,7 +1378,7 @@ void CRankGhost::UpdateManifestStage()
 		m_pManifestRequest = nullptr;
 		m_ManifestFailed = true;
 		m_ManifestFailedAt = time_get();
-		Fail(Localize("Rank ghost: failed to fetch the replay list"));
+		Fail(m_PendingMode == EPendingMode::DEMO_ONLY ? Localize("Failed to fetch the replay list") : Localize("Rank ghost: failed to fetch the replay list"));
 		return;
 	}
 
@@ -1391,7 +1390,7 @@ void CRankGhost::UpdateManifestStage()
 	{
 		m_ManifestFailed = true;
 		m_ManifestFailedAt = time_get();
-		Fail(Localize("Rank ghost: the replay list is empty or malformed"));
+		Fail(m_PendingMode == EPendingMode::DEMO_ONLY ? Localize("The replay list is empty or malformed") : Localize("Rank ghost: the replay list is empty or malformed"));
 		return;
 	}
 
@@ -1446,7 +1445,7 @@ void CRankGhost::LookupInManifest()
 		{
 			char aBuf[256];
 			str_format(aBuf, sizeof(aBuf), Localize("Rank ghost: no official replay found for '%s'"), m_PendingDemo.c_str());
-			Fail(aBuf);
+			Fail(m_PendingMode == EPendingMode::DEMO_ONLY ? Localize("No rank 1 replay was found for this map") : aBuf);
 			return;
 		}
 	}
@@ -1460,7 +1459,7 @@ void CRankGhost::LookupInManifest()
 		char aBuf[256];
 		str_format(aBuf, sizeof(aBuf), Localize("Rank ghost: no official replay for '%s' rank %d"),
 			m_PendingMap.c_str(), m_PendingRank);
-		Fail(aBuf);
+		Fail(m_PendingMode == EPendingMode::DEMO_ONLY ? Localize("No rank 1 replay was found for this map") : aBuf);
 		return;
 	}
 
@@ -1485,6 +1484,14 @@ void CRankGhost::LookupInManifest()
 		str_format(aLegacyNamedDemo, sizeof(aLegacyNamedDemo), "%s/%s_%lld.demo", LEGACY_DEMO_DIR, aSafeDemo, (long long)DemoModifiedAt);
 		MigrateLegacyDemos(Storage(), m_aDemoStoragePath, aOldNamedDemo, aLegacyNamedDemo);
 	}
+	// 仅下载回放：不复用已有影子，也不进入解析。否则“下载”会被影子缓存或
+	// 前缀去重截走，页面却仍显示未下载，玩家看到的就是“点了没反应”。
+	if(m_PendingMode == EPendingMode::DEMO_ONLY)
+	{
+		EnsureDemoOnlyReady();
+		return;
+	}
+
 	char aRankGhostDir[IO_MAX_PATH_LENGTH];
 	str_format(aRankGhostDir, sizeof(aRankGhostDir), "%s/%s", RANK1_ROOT, GHOST_SUBDIR);
 
@@ -1551,6 +1558,23 @@ void CRankGhost::LookupInManifest()
 	StartDemoFetch();
 }
 
+// 仅下载回放：把选中的这一场 demo 确保到条目的精确缓存路径。
+// 不走影子加载/解析，也不复用其它 uuid 的同图回放，保证页面状态与实际文件一致。
+void CRankGhost::EnsureDemoOnlyReady()
+{
+	if(Storage()->FileExists(m_aDemoStoragePath, IStorage::TYPE_SAVE))
+	{
+		m_Stage = EStage::IDLE;
+		char aBuf[IO_MAX_PATH_LENGTH + 128];
+		str_format(aBuf, sizeof(aBuf), Localize("Rank 1 demo already cached under 'Rank 1 replays': %s"), m_aDemoStoragePath);
+		Echo(aBuf);
+		qm_ui::Toast(EQmToastKind::SUCCESS, aBuf);
+		log_info("rank_ghost", "demo already cached: '%s'", m_aDemoStoragePath);
+		return;
+	}
+	StartDemoFetch();
+}
+
 void CRankGhost::OnGhostsUnloaded()
 {
 	// 引擎侧已清空全部槽位，这里只同步本地记录
@@ -1606,24 +1630,15 @@ void CRankGhost::StartDemoFetch()
 {
 	if(Http() == nullptr)
 	{
-		Fail(Localize("Rank ghost: HTTP is not available"));
+		Fail(m_PendingMode == EPendingMode::DEMO_ONLY ? Localize("HTTP is not available") : Localize("Rank ghost: HTTP is not available"));
 		return;
 	}
 
-	// QmClient：demo 浏览器目录已有同一份 rank1 回放时复用，避免重复下载
+	// QmClient：demo 浏览器目录已有同一场次回放时复用，避免重复下载。
+	// 无论下载还是影子转换都复制到自己的缓存路径，页面状态才有可观察的文件。
 	char aBrowserDemo[IO_MAX_PATH_LENGTH];
 	if(FindBrowserDownloadedDemo(Storage(), m_ActiveEntry, aBrowserDemo, sizeof(aBrowserDemo)))
 	{
-		if(m_PendingMode == EPendingMode::DEMO_ONLY)
-		{
-			m_Stage = EStage::IDLE;
-			char aBuf[IO_MAX_PATH_LENGTH + 64];
-			str_format(aBuf, sizeof(aBuf), Localize("Rank demo already available in the demo browser: %s"), aBrowserDemo);
-			Echo(aBuf);
-			log_info("rank_ghost", "demo already downloaded by demo browser: '%s'", aBrowserDemo);
-			return;
-		}
-		// 影子转换需要自己缓存目录里的副本：本地复制代替重新下载
 		if(CopyStorageFile(Storage(), aBrowserDemo, m_aDemoStoragePath))
 		{
 			log_info("rank_ghost", "reusing demo downloaded by demo browser: '%s'", aBrowserDemo);
@@ -1646,7 +1661,10 @@ void CRankGhost::StartDemoFetch()
 
 	m_Stage = EStage::FETCH_DEMO;
 	log_info("rank_ghost", "downloading demo from '%s'", aUrl);
-	Echo(Localize("Rank ghost: downloading the replay ..."));
+	if(m_PendingMode == EPendingMode::DEMO_ONLY)
+		qm_ui::Toast(EQmToastKind::INFO, Localize("Downloading rank 1 demo"));
+	else
+		Echo(Localize("Rank ghost: downloading the replay ..."));
 }
 
 void CRankGhost::UpdateDemoStage()
@@ -1659,7 +1677,7 @@ void CRankGhost::UpdateDemoStage()
 
 	if(!Ok)
 	{
-		Fail(Localize("Rank ghost: failed to download the replay"));
+		Fail(m_PendingMode == EPendingMode::DEMO_ONLY ? Localize("Failed to download the rank 1 demo") : Localize("Rank ghost: failed to download the replay"));
 		return;
 	}
 
@@ -1672,7 +1690,7 @@ void CRankGhost::FinishDemoFetch()
 	if(!ValidateOrUnpackDemo(Storage(), m_aDemoStoragePath))
 	{
 		Storage()->RemoveFile(m_aDemoStoragePath, IStorage::TYPE_SAVE);
-		Fail(Localize("Rank ghost: the downloaded replay is not a valid demo"));
+		Fail(m_PendingMode == EPendingMode::DEMO_ONLY ? Localize("The downloaded file is not a valid demo") : Localize("Rank ghost: the downloaded replay is not a valid demo"));
 		return;
 	}
 
@@ -1680,9 +1698,10 @@ void CRankGhost::FinishDemoFetch()
 	if(m_PendingMode == EPendingMode::DEMO_ONLY)
 	{
 		m_Stage = EStage::IDLE;
-		char aBuf[320];
-		str_format(aBuf, sizeof(aBuf), Localize("Rank demo downloaded: %s. Play it from the Rank 1 list or the demo browser."), m_aDemoStoragePath);
+		char aBuf[IO_MAX_PATH_LENGTH + 64];
+		str_format(aBuf, sizeof(aBuf), Localize("Rank 1 demo downloaded to '%s'"), m_aDemoStoragePath);
 		Echo(aBuf);
+		qm_ui::Toast(EQmToastKind::SUCCESS, aBuf);
 		log_info("rank_ghost", "demo cached: '%s'", m_aDemoStoragePath);
 		return;
 	}
