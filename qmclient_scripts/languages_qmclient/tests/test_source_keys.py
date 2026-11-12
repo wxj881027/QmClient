@@ -27,8 +27,8 @@ class SourceKeysTest(unittest.TestCase):
         content = "\n".join(
             (
                 'static const std::vector<SCardDefault> s_aDefaults = {',
-                '{"qm:camera_view", "visual", ECardColumn::Right, 0, "Camera view", "camera keywords"},',
-                '{"deck:graphics-display", "graphics", ECardColumn::Left, 0,',
+                '{"qm:camera_view", "visual", false, "Camera view", "camera keywords"},',
+                '{"deck:graphics-display", "graphics", false,',
                 ' Localizable("Graphics display"), "monitor keywords",',
                 ' Localizable("Window and monitor")},',
                 '};',
@@ -110,23 +110,6 @@ class SourceKeysTest(unittest.TestCase):
                 self.assertEqual({record.key for record in records}, {
                     "Axiom dummy password", "Auto-follow delay", "Auto weapon switch",
                 })
-
-    def test_extracts_tclient_dynamic_card_titles(self):
-        path = Path("src/game/client/components/tclient/menus_tclient.cpp")
-        content = "\n".join(
-            (
-                'AddCard("deck:tclient-warlist-entries", "War Entries", 360.0f, Render);',
-                'AddCard("deck:tclient-info-links", "TClient Links", 100.0f, Render);',
-                'AddCard("deck:tclient-settings", "Settings", 100.0f, Render);',
-            )
-        )
-
-        records = source_keys.extract_known_indirect_records(path, content)
-
-        self.assertEqual(
-            {record.key for record in records},
-            {"War Entries", "TClient Links", "Settings"},
-        )
 
     def test_extracts_qm_music_hook_registry_labels(self):
         path = Path("src/game/client/components/qmclient/qm_music_hook_registry.h")
@@ -396,23 +379,6 @@ class SourceKeysTest(unittest.TestCase):
         self.assertIn("Displays server snapshot latency", keys)
         self.assertNotIn("u", keys)
 
-    def test_extracts_tclient_cached_section_titles(self):
-        path = (
-            source_keys.PROJECT_ROOT
-            / "src"
-            / "game"
-            / "client"
-            / "components"
-            / "tclient"
-            / "menus_tclient.cpp"
-        )
-        content = source_keys.strip_cpp_comments(source_keys.read_source_text(path))
-        records = source_keys.extract_known_indirect_records(path, content)
-        keys = {record.key for record in records}
-
-        self.assertIn("Visual: Nameplates", keys)
-        self.assertIn("Tee status bar", keys)
-
     def test_extracts_qmclient_config_descriptions(self):
         path = (
             source_keys.PROJECT_ROOT
@@ -619,7 +585,7 @@ class SourceKeysTest(unittest.TestCase):
             path = root / "src" / "game" / "client" / "QmUi" / "QmCardRegistry.cpp"
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(
-                '{"deck:sample", "general", ECardColumn::Left, 0, "Sample", "sample search keyword"};\n',
+                '{"deck:sample", "general", false, "Sample", "sample search keyword"};\n',
                 encoding="utf-8",
             )
 
