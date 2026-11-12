@@ -3652,6 +3652,7 @@ if(CLIENT)
     components/qmclient/item_render_math.h
     components/qmclient/collision_position.h
     components/qmclient/gores_drown_tracker.h
+    components/qmclient/gores_drown_observation.h
     components/players.cpp
     components/players.h
     components/qm_console_log_filter.h
@@ -5511,6 +5512,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_media_island_motion_test.cpp
     src/test/unit/qmclient/client/qm_media_island_track_state_test.cpp
     src/test/unit/qmclient/client/qm_media_volume_test.cpp
+    src/test/unit/qmclient/client/qm_media_timeline_test.cpp
     src/test/unit/qmclient/client/qm_media_command_queue_test.cpp
     src/test/integration/qmclient/client/qm_media_command_handoff_test.cpp
     src/test/unit/qmclient/client/qm_media_worker_startup_test.cpp
@@ -6709,6 +6711,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/client/map_history_id_allocation_test.cpp
       src/test/integration/qmclient/client/qm_map_history_session_allocation_test.cpp
       src/test/integration/qmclient/client/qm_race_start_detection_test.cpp
+      src/test/integration/qmclient/client/qm_race_start_map_index_scan_test.cpp
+      src/test/integration/qmclient/client/qm_gores_drown_observation_test.cpp
       src/test/integration/qmclient/client/qm_map_history_rows_allocation_test.cpp
       src/game/client/components/tclient/map_history.cpp
       src/test/unit/qmclient/client/qm_bg_draw_publication_test.cpp

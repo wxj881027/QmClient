@@ -51,6 +51,8 @@
 #include <cinttypes>
 #include <cmath>
 #include <cstdint>
+#include <new>
+#include <stdexcept>
 #include <vector>
 
 namespace
@@ -7388,6 +7390,7 @@ void CHud::RenderDDRaceEffects()
 }
 
 void CHud::RenderGoresDrownBoard()
+try
 {
 	if(!g_Config.m_QmGoresDrownBoard || !GameClient()->m_TClient.IsGoresDrownBoardMode())
 		return;
@@ -7412,29 +7415,30 @@ void CHud::RenderGoresDrownBoard()
 		int m_ClientId;
 		int m_Count;
 	};
-	std::vector<SEntry> vEntries;
+	std::array<SEntry, MAX_CLIENTS> aEntries{};
+	int EntriesCount = 0;
 	for(int ClientId = 0; ClientId < MAX_CLIENTS; ++ClientId)
 	{
 		if(!GameClient()->m_aClients[ClientId].m_Active ||
 			!GameClient()->m_Snap.m_apPlayerInfos[ClientId] ||
 			!CQmGoresDrownTracker::IsSameTrackedTeam(LocalTeam, GameClient()->m_Teams.Team(ClientId), IncludeTeamZero))
 			continue;
-		vEntries.push_back({ClientId, GameClient()->m_TClient.GetGoresDrownCount(ClientId)});
+		aEntries[EntriesCount++] = {ClientId, GameClient()->m_TClient.GetGoresDrownCount(ClientId)};
 	}
-	if(vEntries.empty() && Preview)
-		vEntries.push_back({-1, 0});
-	if(vEntries.empty())
+	if(EntriesCount == 0 && Preview)
+		aEntries[EntriesCount++] = {-1, 0};
+	if(EntriesCount == 0)
 		return;
 
-	std::stable_sort(vEntries.begin(), vEntries.end(), [](const SEntry &Left, const SEntry &Right) {
+	std::sort(aEntries.begin(), aEntries.begin() + EntriesCount, [](const SEntry &Left, const SEntry &Right) {
 		if(Left.m_Count != Right.m_Count)
 			return Left.m_Count > Right.m_Count;
 		return Left.m_ClientId < Right.m_ClientId;
 	});
 
 	const int MaxRows = std::clamp(g_Config.m_QmGoresDrownBoardMaxPlayers, 1, 16);
-	const int RowCount = minimum((int)vEntries.size(), MaxRows);
-	const bool HasMoreRows = (int)vEntries.size() > RowCount;
+	const int RowCount = minimum(EntriesCount, MaxRows);
+	const bool HasMoreRows = EntriesCount > RowCount;
 	const bool ShowTee = g_Config.m_QmGoresDrownBoardShowTee != 0;
 	const char *pTitle = Localize("Drown deaths");
 	constexpr float TitleFontSize = ui_token::hud::font::BODY;
@@ -7454,8 +7458,8 @@ void CHud::RenderGoresDrownBoard()
 	for(int Index = 0; Index < RowCount; ++Index)
 	{
 		char aCount[16];
-		const char *pName = vEntries[Index].m_ClientId >= 0 ? GameClient()->m_aClients[vEntries[Index].m_ClientId].m_aName : Localize("Teammate");
-		str_format(aCount, sizeof(aCount), "%d", vEntries[Index].m_Count);
+		const char *pName = aEntries[Index].m_ClientId >= 0 ? GameClient()->m_aClients[aEntries[Index].m_ClientId].m_aName : Localize("Teammate");
+		str_format(aCount, sizeof(aCount), "%d", aEntries[Index].m_Count);
 		BoardWidth = maximum(BoardWidth, TeeColumnWidth + TextRender()->TextWidth(RowFontSize, pName) + CountGap + TextRender()->TextWidth(RowFontSize, aCount));
 	}
 	if(HasMoreRows)
@@ -7467,6 +7471,13 @@ void CHud::RenderGoresDrownBoard()
 	const float BoardY = QmHudTopEffectY(35.0f, BoardHeight, BoardX, BoardX + BoardWidth, m_MediaIslandLastVisibleRect, m_MediaIslandLastVisibleRectValid);
 	const CUIRect BoardRect{BoardX, BoardY, BoardWidth, BoardHeight};
 	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::GoresDrownBoard, BoardRect);
+	struct SRestoreHudTransform
+	{
+		CHudEditor &m_Editor;
+		const CHudEditor::STransformScope &m_Scope;
+		~SRestoreHudTransform() { m_Editor.EndTransform(m_Scope); }
+	};
+	const SRestoreHudTransform RestoreTransform{GameClient()->m_HudEditor, HudEditorScope};
 
 	Ui()->RenderGaussianBlur(BoardRect, 1.0f, HudEditorScope.m_Corners, ui_token::radius::BASE);
 	ColorRGBA BackgroundColor = ui_token::color::SURFACE_GLASS;
@@ -7478,8 +7489,7 @@ void CHud::RenderGoresDrownBoard()
 		DrawRoundedSurface(Ui(), BoardRect, BackgroundColor, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), BoardSurface);
 	}
 
-	const ColorRGBA PreviousTextColor = TextRender()->GetTextColor();
-	const ColorRGBA PreviousOutlineColor = TextRender()->GetTextOutlineColor();
+	const CUiScopedTextRenderState TextState(*TextRender());
 	// 榜内文字保持可读性：透明度只作用于榜面和 Tee，不能把排名信息一起淡掉。
 	const ColorRGBA BoardTextColor = TextRender()->DefaultTextColor();
 	const ColorRGBA BoardOutlineColor = TextRender()->DefaultTextOutlineColor();
@@ -7493,9 +7503,9 @@ void CHud::RenderGoresDrownBoard()
 	for(int Index = 0; Index < RowCount; ++Index)
 	{
 		char aCount[16];
-		const int ClientId = vEntries[Index].m_ClientId;
+		const int ClientId = aEntries[Index].m_ClientId;
 		const char *pName = ClientId >= 0 ? GameClient()->m_aClients[ClientId].m_aName : Localize("Teammate");
-		str_format(aCount, sizeof(aCount), "%d", vEntries[Index].m_Count);
+		str_format(aCount, sizeof(aCount), "%d", aEntries[Index].m_Count);
 		const float Y = BoardY + PaddingY + TitleHeight + Index * RowHeight;
 		const float CountWidth = TextRender()->TextWidth(RowFontSize, aCount);
 		CTextCursor NameCursor;
@@ -7539,10 +7549,15 @@ void CHud::RenderGoresDrownBoard()
 		TextRender()->TextColor(BoardTextColor.WithMultipliedAlpha(0.65f));
 		TextRender()->Text(ContentCenterX - TextRender()->TextWidth(MoreFontSize, pMore) / 2.0f, BoardY + PaddingY + TitleHeight + RowCount * RowHeight, MoreFontSize, pMore);
 	}
-
-	TextRender()->TextColor(PreviousTextColor);
-	TextRender()->TextOutlineColor(PreviousOutlineColor);
-	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
+}
+catch(const std::bad_alloc &)
+{
+	// 资源失败只跳过本榜当前帧，作用域已恢复文字与投影，下帧重新准备。
+	return;
+}
+catch(const std::length_error &)
+{
+	return;
 }
 
 void CHud::RenderRecord()

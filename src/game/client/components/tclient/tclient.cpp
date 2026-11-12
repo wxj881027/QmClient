@@ -30,6 +30,7 @@
 #include <game/client/components/hud_editor.h>
 #include <game/client/components/qmclient/auto_vote.h>
 #include <game/client/components/qmclient/data_version.h>
+#include <game/client/components/qmclient/gores_drown_observation.h>
 #include <game/client/components/qmclient/keyword_reply_rules.h>
 #include <game/client/components/qmclient/map_history_storage.h>
 #include <game/client/components/qmclient/modes.h>
@@ -2478,14 +2479,9 @@ void CTClient::UpdateGoresDrownCounts()
 		const auto &Character = GameClient()->m_Snap.m_aCharacters[ClientId];
 		const bool Active = Player.m_Active && GameClient()->m_Snap.m_apPlayerInfos[ClientId] != nullptr;
 		const bool Hooking = Character.m_Active && (Character.m_Cur.m_HookState == HOOK_FLYING || Character.m_Cur.m_HookState == HOOK_GRABBED);
-		bool OnStart = false;
-		if(Active && Character.m_Active)
-		{
-			const int Index = pCollision->GetPureMapIndex(vec2((float)Character.m_Cur.m_X, (float)Character.m_Cur.m_Y));
-			OnStart = pCollision->GetTileIndex(Index) == TILE_START || pCollision->GetFrontTileIndex(Index) == TILE_START;
-		}
-		m_GoresDrownTracker.Observe(ClientId, Active, Player.m_aName, Player.m_aClan, GameClient()->m_Teams.Team(ClientId),
-			Character.m_Active, Player.m_FreezeEnd != 0, Hooking, OnStart, g_Config.m_QmGoresDrownBoardIncludeTeam0 != 0);
+		QmObserveGoresDrownPlayer(m_GoresDrownTracker, *pCollision, ClientId, Active, Player.m_aName, Player.m_aClan, GameClient()->m_Teams.Team(ClientId),
+			Character.m_Active, Player.m_FreezeEnd != 0, Hooking, vec2(static_cast<float>(Character.m_Cur.m_X), static_cast<float>(Character.m_Cur.m_Y)),
+			g_Config.m_QmGoresDrownBoardIncludeTeam0 != 0);
 	}
 }
 

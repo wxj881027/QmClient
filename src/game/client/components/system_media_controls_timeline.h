@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <limits>
 
 namespace SystemMediaControls
 {
@@ -59,22 +60,38 @@ namespace SystemMediaControls
 			return 0;
 		const int64_t WholeSeconds = Age100ns / HUNDRED_NS_PER_SECOND;
 		const int64_t Remainder100ns = Age100ns % HUNDRED_NS_PER_SECOND;
-		return WholeSeconds * TickFreq + Remainder100ns * TickFreq / HUNDRED_NS_PER_SECOND;
+		// 先拆频率，保留最终商可表示、但直接乘积不可表示的亚秒部分。
+		const int64_t FractionTicks = (TickFreq / HUNDRED_NS_PER_SECOND) * Remainder100ns +
+					      (TickFreq % HUNDRED_NS_PER_SECOND) * Remainder100ns / HUNDRED_NS_PER_SECOND;
+		constexpr int64_t MaxTicks = std::numeric_limits<int64_t>::max();
+		if(WholeSeconds > (MaxTicks - FractionTicks) / TickFreq)
+			return MaxTicks;
+		return WholeSeconds * TickFreq + FractionTicks;
 	}
 
 	inline STimelineSnapshot NormalizeTimelineProperties(const STimelineProperties &Properties, int64_t ObservedUtc100ns, int64_t ObservedSteadyTick, int64_t TickFreq)
 	{
 		STimelineSnapshot Snapshot;
-		const int64_t Duration100ns = std::max<int64_t>(0, Properties.m_End100ns - Properties.m_Start100ns);
-		const int64_t Position100ns = std::max<int64_t>(0, Properties.m_Position100ns - Properties.m_Start100ns);
-		Snapshot.m_DurationMs = Duration100ns / 10000;
-		Snapshot.m_PositionMs = (Duration100ns > 0 ? std::min(Position100ns, Duration100ns) : Position100ns) / 10000;
+		// 两个有符号时间点的正差可占满 uint64_t，换成毫秒后仍在 int64_t 范围内。
+		const auto PositiveDifference = [](int64_t Value, int64_t Base) -> uint64_t {
+			return Value > Base ? static_cast<uint64_t>(Value) - static_cast<uint64_t>(Base) : 0;
+		};
+		const uint64_t Duration100ns = PositiveDifference(Properties.m_End100ns, Properties.m_Start100ns);
+		const uint64_t Position100ns = PositiveDifference(Properties.m_Position100ns, Properties.m_Start100ns);
+		Snapshot.m_DurationMs = static_cast<int64_t>(Duration100ns / 10000);
+		Snapshot.m_PositionMs = static_cast<int64_t>((Duration100ns > 0 ? std::min(Position100ns, Duration100ns) : Position100ns) / 10000);
 		Snapshot.m_PositionUpdatedTick = ObservedSteadyTick;
 
-		const int64_t TimelineAge100ns = ObservedUtc100ns - Properties.m_LastUpdatedUtc100ns;
-		if(Properties.m_LastUpdatedUtc100ns > 0 && TimelineAge100ns >= 0 && TimelineAge100ns <= MAX_TIMELINE_AGE_100NS)
+		if(Properties.m_LastUpdatedUtc100ns > 0 && ObservedUtc100ns >= Properties.m_LastUpdatedUtc100ns)
 		{
-			Snapshot.m_PositionUpdatedTick = ObservedSteadyTick - TimelineAgeToTicks(TimelineAge100ns, TickFreq);
+			const int64_t TimelineAge100ns = ObservedUtc100ns - Properties.m_LastUpdatedUtc100ns;
+			if(TimelineAge100ns <= MAX_TIMELINE_AGE_100NS)
+			{
+				const int64_t AgeTicks = TimelineAgeToTicks(TimelineAge100ns, TickFreq);
+				// 无法表示的回溯时间沿用无效时间戳的观测时刻回退。
+				if(ObservedSteadyTick >= std::numeric_limits<int64_t>::min() + AgeTicks)
+					Snapshot.m_PositionUpdatedTick = ObservedSteadyTick - AgeTicks;
+			}
 		}
 		return Snapshot;
 	}
