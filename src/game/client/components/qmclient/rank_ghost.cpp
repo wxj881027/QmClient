@@ -26,6 +26,7 @@
 #include <game/client/components/ghost.h>
 #include <game/client/components/menus.h>
 #include <game/client/components/qmclient/modes.h>
+#include <game/client/components/qmclient/world_event_gate.h>
 #include <game/client/components/sounds.h>
 #include <game/client/gameclient.h>
 #include <game/gamecore.h>
@@ -2120,7 +2121,12 @@ IDemoPlayer::CInfo CRankGhost::PlaybackInfo() const
 }
 
 int CRankGhost::PlaybackTickSpeed() const { return Client()->GameTickSpeed(); }
-IDemoPlayer *CRankGhost::PlaybackMetadataReader() const { return DemoPlayer(); }
+IDemoPlayer *CRankGhost::PlaybackMetadataReader() const
+{
+	// 练习 /pg 组没有源 demo，不能把在线 demo player 的元数据借来回放；
+	// 查看模式自己的 m_ViewPlaybackMetadata 已足够驱动进度条与播放头。
+	return m_aLoadedReplayFilename[0] == '\0' ? nullptr : DemoPlayer();
+}
 void CRankGhost::PlaybackSeek(int Tick)
 {
 	if(IsViewModeActive())
@@ -2170,6 +2176,27 @@ bool CRankGhost::ViewMemberPosition(int Index, vec2 *pPosition) const
 	return IsViewModeActive() && Index >= 0 && Index < (int)m_vLoadedSlots.size() && GameClient()->m_Ghost.GetManualRenderPos(m_vLoadedSlots[Index], pPosition);
 }
 
+bool CRankGhost::ViewPracticeGroup(const char *pGroupDir)
+{
+	if(pGroupDir == nullptr || pGroupDir[0] == '\0' || !Storage()->FolderExists(pGroupDir, IStorage::TYPE_SAVE))
+		return false;
+
+	// 组目录 + ".gho"：ViewTimelinePath / LoadGhostTarget 都用"去掉 .gho 后缀 = 组目录"
+	// 这一约定，练习回放因此直接复用 Rank 1 的组加载与 .qmevt 读取，不另写一套。
+	str_format(m_aGhostStoragePath, sizeof(m_aGhostStoragePath), "%s.gho", pGroupDir);
+	// 练习是客户端分叉世界，没有源 demo；元数据回退到 ManualEndTick 计算，
+	// 进度条与虚影位置仍在同一时间基上。
+	m_aDemoStoragePath[0] = '\0';
+	m_PendingView = true;
+	if(!LoadGhostGroup(pGroupDir))
+	{
+		m_PendingView = false;
+		return false;
+	}
+	LoadViewTimeline();
+	return IsViewModeActive();
+}
+
 void CRankGhost::EnterViewMode()
 {
 	if(m_vLoadedSlots.empty())
@@ -2179,9 +2206,10 @@ void CRankGhost::EnterViewMode()
 		return;
 	m_ViewPlaybackMetadata = {};
 	str_copy(m_aViewPlaybackFilename, m_aLoadedReplayFilename);
-	// 只扫描源文件的 tick 与标记；不播放快照，不改变在线服务器状态。
+	// 练习 /pg 组没有源 demo，跳过元数据扫描；其余情况只读 tick 与标记，
+	// 不播放快照，不改变在线服务器状态。
 	CDemoPlayer Metadata(nullptr, nullptr, false);
-	if(Metadata.Load(Storage(), nullptr, m_aViewPlaybackFilename, IStorage::TYPE_SAVE) != -1)
+	if(m_aViewPlaybackFilename[0] != '\0' && Metadata.Load(Storage(), nullptr, m_aViewPlaybackFilename, IStorage::TYPE_SAVE) != -1)
 	{
 		m_ViewPlaybackMetadata = *Metadata.BaseInfo();
 		if(m_ViewPlaybackMetadata.m_NumTimelineMarkers >= 2)
@@ -2203,6 +2231,9 @@ void CRankGhost::EnterViewMode()
 	m_ViewMembers.Reset(m_vLoadedSlots.size());
 	++m_ViewGeneration;
 	m_ViewMode = true;
+	// 只在父集登记会话状态；播放链（CGhost 独立时钟 + CRankGhost 事件派发）
+	// 保持原样，Rank 1 与练习组回放的观感完全一致。
+	GameClient()->m_LocalWorld.BeginViewSession((int)m_vLoadedSlots.size());
 	GameClient()->m_Spectator.OnReset();
 	// 查看模式不跟跑，清掉对齐标记，退出后由下一次跑图重新对齐
 	m_LastAlignedRaceTick = -1;
@@ -2287,6 +2318,7 @@ bool CRankGhost::GetViewState(SViewState &Out) const
 void CRankGhost::ViewStop()
 {
 	m_PendingView = false;
+	GameClient()->m_LocalWorld.EndViewSession();
 	GameClient()->m_Spectator.OnReset();
 	if(!m_ViewMode && !GameClient()->m_Ghost.ManualModeActive())
 		return;
@@ -2587,19 +2619,14 @@ void CRankGhost::DispatchViewEvent(const SViewEvent &Event)
 	{
 		// 普通世界音效走游戏音效；地图世界音效必须走地图音效容器，
 		// 否则机关音效的地图专属资源与音量语义会丢失。
-		// 门控条件与 CGameClient::ProcessEvents 的快照事件分发一致：关闭游戏音效、
-		// 专注模式静音跳跃/死亡音、赛道音效的枪声/长痛音开关。否则查看模式会播出
-		// 在线跑图时被过滤掉的声音，与 demo 播放听感不一致。
-		if(!Config()->m_SndGame)
-			break;
+		// 与预测侧播放、练习录制共用同一份门控（world_event_gate.h）：
+		// 关闭游戏音效、专注模式静音跳跃/死亡音、赛道音效的枪声/长痛音开关。
+		// 三处判定不一致会让同一条线路在游玩/练习/回放进播出不同的声音。
 		const int SoundId = Event.m_aData[2];
 		const SQmFocusModeDecisions Focus = GetQmFocusModeDecisions();
-		if(SoundId == SOUND_PLAYER_JUMP && !Focus.m_AirJump.m_PlaySound)
-			break;
-		if(SoundId == SOUND_PLAYER_DIE && !Focus.m_PlayDeathOrSpawnSound)
-			break;
-		if(pGameClient->m_GameInfo.m_RaceSounds &&
-			((SoundId == SOUND_GUN_FIRE && !g_Config.m_SndGun) || (SoundId == SOUND_PLAYER_PAIN_LONG && !g_Config.m_SndLongPain)))
+		if(!QmShouldPlayWorldSound(SoundId, Config()->m_SndGame, Focus.m_AirJump.m_PlaySound,
+			   Focus.m_PlayDeathOrSpawnSound, pGameClient->m_GameInfo.m_RaceSounds,
+			   g_Config.m_SndGun, g_Config.m_SndLongPain))
 			break;
 		pGameClient->m_Sounds.PlayAt(CSounds::CHN_WORLD, SoundId, 1.0f, Pos);
 		break;
@@ -2762,6 +2789,7 @@ void CRankGhost::UnloadGhost()
 {
 	m_LastAlignedRaceTick = -1;
 	m_ViewMode = false;
+	GameClient()->m_LocalWorld.EndViewSession();
 	// 注意：这里不能清 m_PendingView —— 加载管线（LoadGhostFile/LoadGhostGroup）
 	// 第一步就会调用本函数卸载旧影子，而 m_PendingView 正是"加载完成后进入查看
 	// 模式"的请求标记；显式卸载/失败路径各自负责清除它。

@@ -88,6 +88,10 @@ public:
 	// Setters/Getters because i don't want to modify vanilla vars access modifiers
 	int GetLastWeapon() const { return m_LastWeapon; }
 	void SetLastWeapon(int LastWeap) { m_LastWeapon = LastWeap; }
+	int GetQueuedWeapon() const { return m_QueuedWeapon; }
+	void SetQueuedWeapon(int QueuedWeap) { m_QueuedWeapon = QueuedWeap; }
+	int GetReloadTimer() const { return m_ReloadTimer; }
+	void SetReloadTimer(int Timer) { m_ReloadTimer = Timer; }
 	int GetActiveWeapon() const { return m_Core.m_ActiveWeapon; }
 	void SetActiveWeapon(int ActiveWeapon);
 	CCharacterCore GetCore() { return m_Core; }

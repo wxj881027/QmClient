@@ -11,12 +11,17 @@
 
 #include <game/client/animstate.h>
 #include <game/client/components/binds.h>
+#include <game/client/components/ghost.h>
 #include <game/client/components/particles.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/practice_cursor.h>
+#include <game/client/components/qmclient/practice_rescue.h>
+#include <game/client/components/qmclient/world_event_gate.h>
 #include <game/client/gameclient.h>
+#include <game/client/laser_data.h>
 #include <game/client/prediction/entities/character.h>
 #include <game/client/prediction/entities/laser.h>
+#include <game/client/prediction/entities/pickup.h>
 #include <game/client/prediction/entities/plasma.h>
 #include <game/client/prediction/entities/projectile.h>
 #include <game/client/projectile_data.h>
@@ -60,9 +65,9 @@ namespace
 		return FireState;
 	}
 
-	void SuppressActionInput(CNetObj_PlayerInput &Input, int ReleasedFire)
+	void SuppressActionInput(CNetObj_PlayerInput &Input, int FireState)
 	{
-		Input.m_Fire = ReleasedFire & INPUT_STATE_MASK;
+		Input.m_Fire = FireState & INPUT_STATE_MASK;
 		Input.m_WantedWeapon = 0;
 		Input.m_NextWeapon = 0;
 		Input.m_PrevWeapon = 0;
@@ -253,6 +258,7 @@ void CFastPractice::ResetPracticeState()
 	m_EnableDummyClientId = -1;
 	m_PracticeWorldInitialized = false;
 	m_HasDummyAnchor = false;
+	m_RecordingPaused = false;
 	m_SuppressFireOnNextPredictTick = false;
 	m_InputSuppressTicks = 0;
 	m_LastResolvedLocalClientId = -1;
@@ -266,6 +272,9 @@ void CFastPractice::ResetPracticeState()
 	m_DummyAnchor = {};
 	m_aPracticeInputFilterStates = {};
 	m_PracticeBaseWorld.Clear();
+	// 退出练习即销毁分支，重开快照随分支一起丢弃；下次进入重新采样。
+	m_PracticeStartWorld.Clear();
+	m_HasPracticeStartSnapshot = false;
 	ResetAttackTickHistory();
 	ResetCommandState();
 }
@@ -517,12 +526,160 @@ void CFastPractice::PrunePracticeWorld(CGameWorld &World) const
 	}
 }
 
+void CFastPractice::BeginPracticeTrack(int StartTick)
+{
+	GameClient()->m_LocalWorld.BeginTrack(StartTick);
+	// 多轨身份：本体轨恒为 0，分身存在时占轨 1。名字用于回放成员列表，
+	// 与服务器快照里的名字同源（练习里没有别的玩家）。
+	const int LocalId = m_EnableLocalClientId;
+	const int DummyId = m_EnableDummyClientId;
+	if(LocalId >= 0 && LocalId < MAX_CLIENTS)
+		GameClient()->m_LocalWorld.SetTrackIdentity(0, LocalId, GameClient()->m_aClients[LocalId].m_aName);
+	if(DummyId >= 0 && DummyId < MAX_CLIENTS)
+		GameClient()->m_LocalWorld.SetTrackIdentity(1, DummyId, GameClient()->m_aClients[DummyId].m_aName);
+}
+
+void CFastPractice::RecordPracticeFrames(CGameWorld &World, int Tick, int LocalClientId, int DummyClientId)
+{
+	if(!GameClient()->m_LocalWorld.TrackActive() || m_RecordingPaused)
+		return;
+
+	const auto Record = [&](int TrackIndex, int ClientId) {
+		if(ClientId < 0)
+			return;
+		CCharacter *pChar = World.GetCharacterById(ClientId);
+		if(!pChar)
+			return;
+
+		// 采样源是分支世界的角色，不是服务器快照：练习中服务器侧的自己被锁了输入，
+		// 一直停在开练习那一刻，用快照录出来的只会是一条静止的线。
+		const CCharacterCore *pCore = pChar->Core();
+		SLocalActorFrame Frame = {};
+		Frame.m_Tick = Tick;
+		Frame.m_X = (int)pCore->m_Pos.x;
+		Frame.m_Y = (int)pCore->m_Pos.y;
+		// 协议里速度是 1/256 单位，写回去再由 GetGhostCharacter 转成幽灵格式。
+		Frame.m_VelX = (int)(pCore->m_Vel.x * 256.0f);
+		Frame.m_VelY = (int)(pCore->m_Vel.y * 256.0f);
+		Frame.m_Angle = pCore->m_Angle;
+		Frame.m_Direction = pCore->m_Direction;
+		Frame.m_Weapon = pCore->m_ActiveWeapon;
+		Frame.m_HookState = pCore->m_HookState;
+		Frame.m_HookX = (int)pCore->m_HookPos.x;
+		Frame.m_HookY = (int)pCore->m_HookPos.y;
+		Frame.m_AttackTick = pChar->GetAttackTick();
+		GameClient()->m_LocalWorld.AddTrackFrame(TrackIndex, Frame);
+	};
+	Record(0, LocalClientId);
+	Record(1, DummyClientId);
+}
+
+void CFastPractice::RecordPracticeEvents(CGameWorld &World, int Tick)
+{
+	// 与 HandlePredictedEvents 同一门控：被压制的 tick 当时就没播特效/音效，
+	// 回放里也不该凭空多出来。
+	if(!GameClient()->m_LocalWorld.TrackActive() || m_RecordingPaused || GameClient()->m_SuppressEvents)
+		return;
+
+	// 分支世界里真实发生的交互（枪声/锤击音、锤击环、爆炸、伤害指示）要跟轨迹
+	// 一起存，回放时查看模式才会像 demo 一样播特效/音效。只收 .qmevt 读取器认识
+	// 且 HandlePredictedEvents 当时确实会播的类型；音效走与播放侧完全相同的门控，
+	// 否则回看会冒出练习时根本没听见的声音。
+	const SQmFocusModeDecisions Focus = GetQmFocusModeDecisions();
+	for(const CGameWorld::CPredictedEvent &Event : World.m_PredictedEvents)
+	{
+		// m_Handled / m_ServerConfirmed 是主世界快照确认事件：属于另一条时间线，
+		// 练习画面里不播，也绝不能录进这条分支的回放。
+		if(Event.m_Tick != Tick || Event.m_Handled || Event.m_ServerConfirmed)
+			continue;
+		switch(Event.m_EventId)
+		{
+		case NETEVENTTYPE_HAMMERHIT:
+		case NETEVENTTYPE_EXPLOSION:
+		case NETEVENTTYPE_DAMAGEIND:
+			break;
+		case NETEVENTTYPE_SOUNDWORLD:
+			if(!QmShouldPlayWorldSound(Event.m_ExtraInfo, g_Config.m_SndGame, Focus.m_AirJump.m_PlaySound,
+				   Focus.m_PlayDeathOrSpawnSound, GameClient()->m_GameInfo.m_RaceSounds,
+				   g_Config.m_SndGun, g_Config.m_SndLongPain))
+				continue;
+			break;
+		default:
+			continue;
+		}
+		SLocalActorEvent Local = {};
+		Local.m_Tick = Tick;
+		Local.m_Type = Event.m_EventId;
+		Local.m_aData[0] = (int)Event.m_Pos.x;
+		Local.m_aData[1] = (int)Event.m_Pos.y;
+		Local.m_aData[2] = Event.m_ExtraInfo;
+		GameClient()->m_LocalWorld.AddTrackEvent(Local);
+	}
+}
+
+void CFastPractice::RecordPracticeSwitchState(CGameWorld &World, int Tick)
+{
+	if(!GameClient()->m_LocalWorld.TrackActive() || m_RecordingPaused || World.Switchers().empty())
+		return;
+
+	// 队伍与查看模式 ApplyViewSwitchState 用同一个来源，保证录进去的状态
+	// 回放时能落回同一批 switcher 槽位。分支世界的开关由预测角色踩 tile
+	// 更新（character.cpp HandleTiles）+ CGameWorld::Tick 处理定时到期，
+	// 这里只做全量采样，去重由 CLocalWorld 负责。
+	const int Team = std::clamp(GameClient()->SwitchStateTeam(), (int)TEAM_FLOCK, NUM_DDRACE_TEAMS - 1);
+	GameClient()->m_LocalWorld.AddTrackSwitchState(QmEncodeLocalSwitchState(Tick, World.Switchers(), Team));
+}
+
+void CFastPractice::OnPracticePositionJump()
+{
+	// 低频诊断点：位置突变必须切段，否则 /pg 出来的线路会带一道穿墙直线。
+	dbg_msg("fast_practice", "segment boundary: frames=%d events=%d switches=%d",
+		GameClient()->m_LocalWorld.CurrentFrameCount(), GameClient()->m_LocalWorld.CurrentEventCount(),
+		GameClient()->m_LocalWorld.CurrentSwitchStateCount());
+	GameClient()->m_LocalWorld.MarkSegmentBoundary();
+}
+
+bool CFastPractice::SavePracticeGhost(const char *pName)
+{
+	SLocalSegment Segment;
+	if(!GameClient()->m_LocalWorld.BestSegment(&Segment))
+	{
+		EchoPractice("no practice line to save yet (run for at least a second)");
+		return false;
+	}
+	if(!GameClient()->m_Ghost.SavePracticeTrack(pName, Segment))
+	{
+		EchoPractice("could not save practice line (ghost recorder busy)");
+		return false;
+	}
+	// 保存不等于播放：用户到影子页点 View 才进入 demo 式回放，不退出服务器。
+	dbg_msg("fast_practice", "ghost saved: tracks=%d frames=%d events=%d switches=%d start_tick=%d",
+		(int)Segment.m_vTracks.size(), (int)Segment.m_vTracks.front().m_vFrames.size(),
+		(int)Segment.m_vEvents.size(), (int)Segment.m_vSwitchStates.size(), Segment.m_StartTick);
+	GameClient()->m_Menus.GhostlistPopulate();
+	EchoPractice("practice line saved (%d tracks, %d ticks); open the Ghost page and press View to replay it",
+		(int)Segment.m_vTracks.size(), (int)Segment.m_vTracks.front().m_vFrames.size());
+	return true;
+}
+
 void CFastPractice::ShiftPracticeWorldTicks(int TickDelta)
 {
 	if(TickDelta <= 0)
 		return;
 
+	// 低频诊断点：暂停恢复后分支时钟被平移，轨迹/事件/开关的 tick 必须同步。
+	dbg_msg("fast_practice", "tick shift: +%d branch_tick=%d track_start=%d frames=%d",
+		TickDelta, m_PracticeBaseWorld.GameTick(), GameClient()->m_LocalWorld.TrackStartTick(),
+		GameClient()->m_LocalWorld.CurrentFrameCount());
+	// 轨迹里的绝对 tick 跟着世界时钟一起走，否则暂停恢复后存成幽灵会错开一截。
+	GameClient()->m_LocalWorld.ShiftTrackTicks(TickDelta);
+
 	m_PracticeBaseWorld.m_GameTick += TickDelta;
+	// 预测事件队列会随 CopyWorldClean 一起进入预测世界（gameworld.cpp:672/725）。
+	// tick 留在旧基准上，QmProcessPredictedEvents 只判 m_Tick <= Tick，
+	// 平移后的第一帧就会把积压的事件一次性播出来（特效/音效集中爆发）。
+	for(auto &Event : m_PracticeBaseWorld.m_PredictedEvents)
+		Event.m_Tick += TickDelta;
 	for(auto &Switcher : m_PracticeBaseWorld.Switchers())
 	{
 		for(int Team = 0; Team < NUM_DDRACE_TEAMS; Team++)
@@ -571,13 +728,182 @@ void CFastPractice::SyncPracticeWorldConfig()
 	m_PracticeBaseWorld.m_WorldConfig.m_PredictTiles = true;
 	m_PracticeBaseWorld.m_WorldConfig.m_PredictDDRace = true;
 	m_PracticeBaseWorld.m_WorldConfig.m_PredictTeleport = true;
-	m_PracticeBaseWorld.m_Teams = GameClient()->m_Teams;
+	// 队伍号跟随服务器，但 solo 是分支世界的本地状态（/solo /unsolo）。
+	// 整份覆盖会把练习里的 solo 每帧冲掉，表现为 solo 不生效、分身仍是实体。
+	CTeamsCore Teams = GameClient()->m_Teams;
+	for(int ClientId = 0; ClientId < MAX_CLIENTS; ClientId++)
+		Teams.SetSolo(ClientId, m_PracticeBaseWorld.m_Teams.GetSolo(ClientId));
+	m_PracticeBaseWorld.m_Teams = Teams;
+}
+
+void CFastPractice::LoadPracticeGuns()
+{
+	m_vPracticeGuns.clear();
+	m_PracticeGunsLoaded = true;
+
+	const CTile *pGame = Collision()->GameLayer();
+	const CTile *pFront = Collision()->FrontLayer();
+	const CSwitchTile *pSwitch = Collision()->SwitchLayer();
+	if(!pGame)
+		return;
+
+	// 与 CGameContext::CreateAllEntities 一致：实体层的 tile index 减 ENTITY_OFFSET
+	// 就是实体编号，冻结/爆炸属性由 ENTITY_PLASMA* 决定。
+	const int Width = Collision()->GetWidth();
+	const int Height = Collision()->GetHeight();
+	for(int y = 0; y < Height; y++)
+	{
+		for(int x = 0; x < Width; x++)
+		{
+			const int Index = y * Width + x;
+			const vec2 Pos(x * 32.0f + 16.0f, y * 32.0f + 16.0f);
+
+			const auto AddGun = [&](int EntityIndex, int Layer, int Number) {
+				SPracticeGun Gun;
+				switch(EntityIndex)
+				{
+				case ENTITY_PLASMAE:
+					Gun.m_Freeze = false;
+					Gun.m_Explosive = true;
+					break;
+				case ENTITY_PLASMAF:
+					Gun.m_Freeze = true;
+					Gun.m_Explosive = false;
+					break;
+				case ENTITY_PLASMA:
+					Gun.m_Freeze = true;
+					Gun.m_Explosive = true;
+					break;
+				case ENTITY_PLASMAU:
+					Gun.m_Freeze = false;
+					Gun.m_Explosive = false;
+					break;
+				default: return;
+				}
+				Gun.m_Pos = Pos;
+				Gun.m_Layer = Layer;
+				Gun.m_Number = Number;
+				Gun.m_EvalTick = m_PracticeBaseWorld.GameTick();
+				m_vPracticeGuns.push_back(Gun);
+			};
+
+			if(pGame[Index].m_Index >= ENTITY_OFFSET)
+				AddGun(pGame[Index].m_Index - ENTITY_OFFSET, LAYER_GAME, 0);
+			if(pFront && pFront[Index].m_Index >= ENTITY_OFFSET)
+				AddGun(pFront[Index].m_Index - ENTITY_OFFSET, LAYER_FRONT, 0);
+			if(pSwitch && pSwitch[Index].m_Type >= ENTITY_OFFSET)
+				AddGun(pSwitch[Index].m_Type - ENTITY_OFFSET, LAYER_SWITCH, pSwitch[Index].m_Number);
+		}
+	}
+}
+
+void CFastPractice::TickPracticeGuns(CGameWorld &World, int Tick)
+{
+	if(!m_PracticeGunsLoaded)
+		LoadPracticeGuns();
+	if(m_vPracticeGuns.empty())
+		return;
+
+	const int TickSpeed = Client()->GameTickSpeed();
+	const int MoveInterval = (int)(TickSpeed * 0.15f);
+	for(SPracticeGun &Gun : m_vPracticeGuns)
+	{
+		// 与 CGun::Tick 一致：机关坐标每 0.15 秒跟随一次移动平台。
+		if(MoveInterval > 0 && Tick % MoveInterval == 0)
+		{
+			Gun.m_EvalTick = Tick;
+			Collision()->MoverSpeed(Gun.m_Pos.x, Gun.m_Pos.y, &Gun.m_Core);
+			Gun.m_Pos += Gun.m_Core;
+		}
+		if(g_Config.m_SvPlasmaPerSec > 0)
+			FirePracticeGun(World, Gun, Tick);
+	}
+}
+
+void CFastPractice::FirePracticeGun(CGameWorld &World, SPracticeGun &Gun, int Tick)
+{
+	const int FireDelay = Client()->GameTickSpeed() / g_Config.m_SvPlasmaPerSec;
+
+	// 复刻 CGun::Fire：solo 玩家单独计时，其余按队伍取最近目标。
+	int aMinDistInTeam[MAX_CLIENTS] = {};
+	int aTargetIdInTeam[MAX_CLIENTS];
+	bool aIsTarget[MAX_CLIENTS] = {};
+	std::fill(std::begin(aTargetIdInTeam), std::end(aTargetIdInTeam), -1);
+
+	for(CCharacter *pTarget = (CCharacter *)World.FindFirst(CGameWorld::ENTTYPE_CHARACTER); pTarget; pTarget = (CCharacter *)pTarget->TypeNext())
+	{
+		const int TargetClientId = pTarget->GetCid();
+		if(TargetClientId < 0 || TargetClientId >= MAX_CLIENTS)
+			continue;
+		const int TargetTeam = pTarget->Team();
+		if(TargetTeam == TEAM_SUPER)
+			continue;
+		if(Gun.m_Layer == LAYER_SWITCH && Gun.m_Number > 0 &&
+			!World.Switchers()[Gun.m_Number].m_aStatus[TargetTeam])
+			continue;
+
+		const bool TargetIsSolo = World.m_Teams.GetSolo(TargetClientId);
+		if((TargetIsSolo && Gun.m_aLastFireSolo[TargetClientId] + FireDelay > Tick) ||
+			(!TargetIsSolo && Gun.m_aLastFireTeam[TargetTeam] + FireDelay > Tick))
+			continue;
+
+		if(distance(pTarget->m_Pos, Gun.m_Pos) > g_Config.m_SvPlasmaRange)
+			continue;
+		if(Collision()->IntersectLine(Gun.m_Pos, pTarget->m_Pos, nullptr, nullptr))
+			continue;
+
+		if(TargetIsSolo)
+		{
+			aIsTarget[TargetClientId] = true;
+			Gun.m_aLastFireSolo[TargetClientId] = Tick;
+		}
+		else
+		{
+			const int Distance = distance(pTarget->m_Pos, Gun.m_Pos);
+			if(aMinDistInTeam[TargetTeam] == 0 || aMinDistInTeam[TargetTeam] > Distance)
+			{
+				aMinDistInTeam[TargetTeam] = Distance;
+				aTargetIdInTeam[TargetTeam] = TargetClientId;
+			}
+		}
+	}
+
+	for(int Team = 0; Team < MAX_CLIENTS; Team++)
+	{
+		if(aTargetIdInTeam[Team] != -1)
+		{
+			aIsTarget[aTargetIdInTeam[Team]] = true;
+			Gun.m_aLastFireTeam[Team] = Tick;
+		}
+	}
+
+	for(int ClientId = 0; ClientId < MAX_CLIENTS; ClientId++)
+	{
+		if(!aIsTarget[ClientId])
+			continue;
+		CCharacter *pTarget = World.GetCharacterById(ClientId);
+		if(!pTarget)
+			continue;
+		CLaserData Data = {};
+		Data.m_From = Gun.m_Pos;
+		Data.m_StartTick = Tick;
+		Data.m_Owner = ClientId;
+		Data.m_SwitchNumber = Gun.m_Number;
+		Data.m_Subtype = (Gun.m_Explosive ? 1 : 0) | (Gun.m_Freeze ? 2 : 0);
+		new CPlasma(&World, m_NextPracticePlasmaId++, &Data);
+	}
 }
 
 bool CFastPractice::InitPracticeWorld()
 {
+	// 重新 fork（/r、重进、追赶失败）会让角色回到锚点，轨迹上是一次瞬移，
+	// 必须先切段，否则存出来的幽灵会带一道穿墙的直线。
+	if(GameClient()->m_LocalWorld.TrackActive())
+		GameClient()->m_LocalWorld.MarkSegmentBoundary();
+
 	m_PracticeBaseWorld.CopyWorldClean(&GameClient()->m_GameWorld);
 	PrunePracticeWorld(m_PracticeBaseWorld);
+	SanitizePracticeWorldHooks(m_PracticeBaseWorld);
 	SyncPracticeWorldConfig();
 	m_PracticeWorldInitialized = true;
 
@@ -593,7 +919,122 @@ bool CFastPractice::InitPracticeWorld()
 		return false;
 	}
 
+	if(!m_HasPracticeStartSnapshot)
+	{
+		// 重开快照只取第一次 fork 的结果。主世界一直在推进，之后的 InitPracticeWorld
+		// 重新 fork 出来的是“现在”，不再是进入练习那一刻的机关与开关状态。
+		m_PracticeStartWorld.CopyWorldClean(&m_PracticeBaseWorld);
+		m_HasPracticeStartSnapshot = true;
+	}
+
 	return true;
+}
+
+bool CFastPractice::SanitizePracticeWorldHooks(CGameWorld &World) const
+{
+	bool Changed = false;
+	const int aParticipants[] = {m_EnableLocalClientId, m_EnableDummyClientId};
+	for(const int ClientId : aParticipants)
+	{
+		CCharacter *pChar = ClientId >= 0 ? World.GetCharacterById(ClientId) : nullptr;
+		if(!pChar)
+			continue;
+
+		CCharacterCore Core = pChar->GetCore();
+		bool CharChanged = false;
+
+		const int HookedPlayer = Core.HookedPlayer();
+		if(HookedPlayer >= 0 && HookedPlayer < MAX_CLIENTS &&
+			(QmPracticeHookShouldRelease(HookedPlayer, aParticipants[0], aParticipants[1]) || World.GetCharacterById(HookedPlayer) == nullptr))
+		{
+			// 目标可能已被 PrunePracticeWorld 销毁，SetHookedPlayer 会安全跳过空槽。
+			Core.SetHookedPlayer(-1);
+			Core.m_HookState = HOOK_RETRACTED;
+			Core.m_HookPos = Core.m_Pos;
+			Core.m_HookDir = vec2(0.0f, 0.0f);
+			Core.m_HookTick = 0;
+			Core.m_NewHook = false;
+			CharChanged = true;
+		}
+
+		// 被裁掉的玩家可能仍挂在 m_AttachedPlayers 里，留下无效 Cid。
+		for(auto It = Core.m_AttachedPlayers.begin(); It != Core.m_AttachedPlayers.end();)
+		{
+			if(World.GetCharacterById(*It) == nullptr)
+			{
+				It = Core.m_AttachedPlayers.erase(It);
+				CharChanged = true;
+			}
+			else
+			{
+				++It;
+			}
+		}
+
+		if(CharChanged)
+		{
+			pChar->SetCore(Core);
+			pChar->ResetHook();
+			Changed = true;
+		}
+	}
+	return Changed;
+}
+
+bool CFastPractice::ResolvePracticeSpectatorPosition(vec2 &Position)
+{
+	if(!m_Enabled || !m_PracticeWorldInitialized)
+		return false;
+
+	const auto &SpecInfo = GameClient()->m_Snap.m_SpecInfo;
+	if(!SpecInfo.m_Active || !SpecInfo.m_UsePosition)
+		return false;
+	if(SpecInfo.m_SpectatorId != m_EnableLocalClientId && SpecInfo.m_SpectatorId != m_EnableDummyClientId)
+		return false;
+
+	// 被跟随的只能在分支世界内找：裁剪后其他玩家不存在，快照位置更是另一个世界线。
+	CCharacter *pChar = m_PracticeBaseWorld.GetCharacterById(SpecInfo.m_SpectatorId);
+	if(!pChar)
+		return false;
+
+	Position = pChar->Core()->m_Pos;
+	return true;
+}
+
+bool CFastPractice::ResolvePracticeSoloState(int ClientId, bool &Solo) const
+{
+	if(!m_Enabled || !m_PracticeWorldInitialized)
+		return false;
+	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
+		return false;
+	if(ClientId != m_EnableLocalClientId && ClientId != m_EnableDummyClientId)
+		return false;
+
+	Solo = m_PracticeBaseWorld.m_Teams.GetSolo(ClientId);
+	return true;
+}
+
+bool CFastPractice::ResolvePracticePlaybackTick(int &PlaybackTick) const
+{
+	if(!m_Enabled || !m_PracticeWorldInitialized)
+		return false;
+	// 分支世界的 GameTick 才是这条世界线的当前时刻。正常帧它等于 PredGameTick，
+	// 但服务器暂停/冻结时练习世界会停住而 PredGameTick 继续推进——此时幽灵必须
+	// 也停住，否则暂停回来会看到虚影凭空跑到前面去。
+	PlaybackTick = m_PracticeBaseWorld.GameTick() - GameClient()->m_Ghost.RunningPlaybackStartTick();
+	return true;
+}
+
+vec2 CFastPractice::ResolvePracticeCursorTarget()
+{
+	const auto &Camera = GameClient()->m_Camera;
+	const auto &SpecInfo = GameClient()->m_Snap.m_SpecInfo;
+	vec2 SpecPosition = SpecInfo.m_Position;
+	ResolvePracticeSpectatorPosition(SpecPosition);
+	return QmPracticeCursorWorldPosition(
+		GameClient()->m_Controls.m_aTargetPos[g_Config.m_ClDummy],
+		Camera.m_Center, SpecPosition, Camera.m_Zoom,
+		QmPracticeCursorSpaceFor(SpecInfo.m_Active, SpecInfo.m_UsePosition));
 }
 
 void CFastPractice::CaptureAnchorsFromSnapshot()
@@ -893,6 +1334,8 @@ void CFastPractice::Enable(bool PreserveHeldInput)
 	ReleaseBufferedActionInputState();
 	m_Enabled = true;
 	m_PracticeBaseWorld.m_GameTick = Client()->PredGameTick(g_Config.m_ClDummy);
+	// 录制是全手动的：进入练习不再自动开录，由“开始录制”按键启动轨迹。
+	m_RecordingPaused = false;
 	GameClient()->m_PredictedDummyId = CurrentPracticeDummyId();
 	ResetCommandState();
 	ResetAttackTickHistory();
@@ -1012,6 +1455,14 @@ void CFastPractice::Disable()
 	m_aHasServerLockedInputs.fill(false);
 	if(WasEnabled)
 		ReleaseBufferedActionInputState();
+	// 机关炮缓存绑定当前地图，下次启用时重新解析。
+	m_PracticeGunsLoaded = false;
+	m_vPracticeGuns.clear();
+	// 世界树：主服务器世界 m_GameWorld 一直独立推进，练习是其 fork 出的分支。
+	// 退出即销毁分支——EndTrack 丢弃轨迹会话，ResetPracticeState 里的
+	// m_PracticeBaseWorld.Clear() 销毁所有实体；下次进入重新 fork。
+	// 已 /pg 落盘的 .gho 组是独立文件，分支销毁后依然存在。
+	GameClient()->m_LocalWorld.EndTrack();
 	ResetPracticeState();
 	if(WasEnabled)
 		m_aPostPracticeInputSuppressTicks.fill(2);
@@ -1157,6 +1608,171 @@ void CFastPractice::ResetPracticeToAnchor()
 	}
 
 	m_PracticeBaseWorld.m_GameTick = Client()->PredGameTick(g_Config.m_ClDummy);
+	PublishPracticeWorldState();
+}
+
+void CFastPractice::ResetPracticeTimelineState()
+{
+	for(auto &State : m_aPracticeCommandState)
+	{
+		// 救援模式是用户偏好，重开后保留；其余记录都指向旧时间线，必须清空。
+		State.m_HasRescueAuto = false;
+		State.m_HasRescueManual = false;
+		State.m_RescueAutoPos = vec2(0.0f, 0.0f);
+		State.m_RescueManualPos = vec2(0.0f, 0.0f);
+		State.m_AutoTee = {};
+		State.m_ManualTee = {};
+		State.m_HasLastTeleport = false;
+		State.m_HasLastDeath = false;
+		State.m_LastTeleportPos = vec2(0.0f, 0.0f);
+		State.m_LastDeathPos = vec2(0.0f, 0.0f);
+		State.m_vSafePositions.clear();
+	}
+}
+
+bool CFastPractice::RestartPracticeFromStart()
+{
+	if(!m_Enabled || !m_PracticeWorldInitialized || !m_HasPracticeStartSnapshot)
+		return false;
+
+	// 快照采样时分身可能还没接入。这条时间线里没有分身，重开无法同时还原两个角色，
+	// 与其恢复出半个世界，不如明确拒绝；/unpractice 后重进会重新采样。
+	if(!m_PracticeStartWorld.GetCharacterById(m_EnableLocalClientId) ||
+		(m_RequireDummy && !m_PracticeStartWorld.GetCharacterById(m_EnableDummyClientId)))
+	{
+		EchoPractice("restart unavailable: the participant set changed since practice started");
+		return false;
+	}
+
+	// 记录当前开火状态：CopyWorldClean 会销毁旧角色，重开后用它避免把"仍按住"误判成
+	// 一次新的按下，落地就挥一锤。
+	int LocalFire = 0;
+	int DummyFire = 0;
+	if(CCharacter *pMain = m_PracticeBaseWorld.GetCharacterById(m_EnableLocalClientId))
+		LocalFire = pMain->LatestInput()->m_Fire;
+	if(m_RequireDummy)
+		if(CCharacter *pDummy = m_PracticeBaseWorld.GetCharacterById(m_EnableDummyClientId))
+			DummyFire = pDummy->LatestInput()->m_Fire;
+
+	// 世界树：主世界一直在推进，重新 fork 只会得到“现在”。这里改用启用练习那一刻的
+	// 快照，机关、移动方块、投射物、开关与角色一起回到入口状态。
+	m_PracticeBaseWorld.CopyWorldClean(&m_PracticeStartWorld);
+	SanitizePracticeWorldHooks(m_PracticeBaseWorld);
+	SyncPracticeWorldConfig();
+
+	const auto NeutralizeRestartedInput = [](CCharacter *pChar, int Fire) {
+		if(!pChar)
+			return;
+		CNetObj_PlayerInput NeutralInput = {};
+		NeutralInput.m_TargetY = -1;
+		NeutralInput.m_Fire = Fire;
+		pChar->SetInput(&NeutralInput);
+		pChar->ResetInput();
+	};
+	NeutralizeRestartedInput(m_PracticeBaseWorld.GetCharacterById(m_EnableLocalClientId), LocalFire);
+	if(m_RequireDummy)
+		NeutralizeRestartedInput(m_PracticeBaseWorld.GetCharacterById(m_EnableDummyClientId), DummyFire);
+
+	ResetPracticeTimelineState();
+	m_PracticeBaseWorld.m_GameTick = Client()->PredGameTick(g_Config.m_ClDummy);
+	PublishPracticeWorldState();
+
+	// 重开是一次瞬移。轨迹历史保留，只切段，避免回放里连出一条穿墙直线。
+	GameClient()->m_LocalWorld.MarkSegmentBoundary();
+	return true;
+}
+
+void CFastPractice::SetPracticeCheckpoint()
+{
+	if(!m_Enabled || !m_PracticeWorldInitialized)
+		return;
+	CCharacter *pChar = m_PracticeBaseWorld.GetCharacterById(m_EnableLocalClientId);
+	if(!pChar)
+		return;
+	auto &State = m_aPracticeCommandState[m_EnableLocalClientId];
+	State.m_HasCheckpoint = true;
+	CapturePracticeRescueTee(pChar, m_PracticeBaseWorld.GameTick(), State.m_CheckpointTee);
+	EchoPractice("practice checkpoint set");
+}
+
+void CFastPractice::RestorePracticeCheckpoint()
+{
+	if(!m_Enabled || !m_PracticeWorldInitialized)
+		return;
+	auto &State = m_aPracticeCommandState[m_EnableLocalClientId];
+	if(!State.m_HasCheckpoint || !State.m_CheckpointTee.m_Valid)
+	{
+		EchoPractice("no practice checkpoint set");
+		return;
+	}
+	CCharacter *pChar = m_PracticeBaseWorld.GetCharacterById(m_EnableLocalClientId);
+	if(!pChar)
+		return;
+	// 与 /r 相同，重生点只回滚 tee，不动世界状态。
+	OnPracticePositionJump();
+	ApplyPracticeRescueTee(pChar, State.m_CheckpointTee);
+	pChar->Unfreeze();
+	PublishPracticeWorldState();
+}
+
+void CFastPractice::StartPracticeRecording()
+{
+	if(!m_Enabled)
+	{
+		EchoPractice("practice recording: fast practice is not active");
+		return;
+	}
+	if(GameClient()->m_LocalWorld.TrackActive())
+	{
+		if(!m_RecordingPaused)
+		{
+			EchoPractice("practice recording is already running");
+			return;
+		}
+		// 暂停后按开始 = 继续。先切段：暂停期间的空洞不能连成一条直线。
+		m_RecordingPaused = false;
+		GameClient()->m_LocalWorld.MarkSegmentBoundary();
+		EchoPractice("practice recording resumed");
+		return;
+	}
+	BeginPracticeTrack(m_PracticeBaseWorld.GameTick());
+	m_RecordingPaused = false;
+	EchoPractice("practice recording started");
+}
+
+void CFastPractice::PausePracticeRecording()
+{
+	if(!m_Enabled || !GameClient()->m_LocalWorld.TrackActive() || m_RecordingPaused)
+	{
+		EchoPractice("practice recording is not running");
+		return;
+	}
+	m_RecordingPaused = true;
+	// 暂停期间 tee 照常跑，采样必须停：继续录会把空洞连成一条直线，回放里是假轨迹。
+	EchoPractice("practice recording paused (resuming starts a new take)");
+}
+
+void CFastPractice::StopPracticeRecording()
+{
+	if(!m_Enabled || !GameClient()->m_LocalWorld.TrackActive())
+	{
+		EchoPractice("practice recording is not running");
+		return;
+	}
+	// 先落盘再结束：EndTrack 会清空轨迹缓冲，顺序反了就什么都存不下来。
+	// 保存失败（线路太短或录音器忙）时不清空轨迹，暂停住让用户接着跑再结束。
+	if(!SavePracticeGhost(""))
+	{
+		m_RecordingPaused = true;
+		return;
+	}
+	m_RecordingPaused = false;
+	GameClient()->m_LocalWorld.EndTrack();
+	EchoPractice("practice recording stopped and saved");
+}
+
+void CFastPractice::PublishPracticeWorldState()
+{
 	ResetAttackTickHistory();
 	if(CCharacter *pMain = m_PracticeBaseWorld.GetCharacterById(m_EnableLocalClientId))
 		TrackSafeRescuePosition(m_EnableLocalClientId, pMain);
@@ -1263,18 +1879,17 @@ bool CFastPractice::AdvanceBaseWorldToTick(int TargetTick, int LocalClientId, in
 		if(!pLocalChar || (m_RequireDummy && !pDummyChar))
 			return false;
 
-		CNetObj_PlayerInput *pInputData = (CNetObj_PlayerInput *)Client()->GetInput(Tick, LocalInputConn);
-		CNetObj_PlayerInput *pDummyInputData = pDummyChar ? (CNetObj_PlayerInput *)Client()->GetInput(Tick, DummyInputConn) : nullptr;
+		CNetObj_PlayerInput *pInputData = (CNetObj_PlayerInput *)Client()->GetInputExact(Tick, LocalInputConn);
+		CNetObj_PlayerInput *pDummyInputData = pDummyChar ? (CNetObj_PlayerInput *)Client()->GetInputExact(Tick, DummyInputConn) : nullptr;
 		CNetObj_PlayerInput LocalPracticeInput = {};
 		CNetObj_PlayerInput DummyPracticeInput = {};
-		if(pInputData)
+		// 该 tick 没有输入记录时沿用角色上一 tick 的输入。GetInput 会回退到更早
+		// 的一条记录，多 tick 追赶时同一输入被重复消费，钩子边沿会重复触发或倒退。
+		LocalPracticeInput = pInputData ? *pInputData : *pLocalChar->LatestInput();
+		pInputData = &LocalPracticeInput;
+		if(pDummyChar)
 		{
-			LocalPracticeInput = *pInputData;
-			pInputData = &LocalPracticeInput;
-		}
-		if(pDummyInputData)
-		{
-			DummyPracticeInput = *pDummyInputData;
+			DummyPracticeInput = pDummyInputData ? *pDummyInputData : *pDummyChar->LatestInput();
 			pDummyInputData = &DummyPracticeInput;
 		}
 
@@ -1282,10 +1897,12 @@ bool CFastPractice::AdvanceBaseWorldToTick(int TargetTick, int LocalClientId, in
 		const bool SuppressCooldownTick = Tick >= FirstBaseTick && m_InputSuppressTicks > 0;
 		if(SuppressTransitionTick || SuppressCooldownTick)
 		{
+			// 保持上一 tick 的按下状态，不能用"强制松开"压制：松开再恢复会被
+			// CountInput 记成一次新的按下，传送落地后立刻挥一下锤子。
 			if(pInputData)
-				SuppressActionInput(*pInputData, ReleasedFireState(pLocalChar->LatestInput()->m_Fire));
+				SuppressActionInput(*pInputData, pLocalChar->LatestInput()->m_Fire);
 			if(pDummyInputData)
-				SuppressActionInput(*pDummyInputData, ReleasedFireState(pDummyChar->LatestInput()->m_Fire));
+				SuppressActionInput(*pDummyInputData, pDummyChar->LatestInput()->m_Fire);
 			if(m_InputSuppressTicks > 0)
 				m_InputSuppressTicks--;
 			m_SuppressFireOnNextPredictTick = false;
@@ -1486,18 +2103,17 @@ bool CFastPractice::OverridePredict()
 				GameClient()->m_aClients[DummyClientId].m_PrevPredicted = pDummyChar->GetCore();
 		}
 
-		CNetObj_PlayerInput *pInputData = (CNetObj_PlayerInput *)Client()->GetInput(Tick, LocalInputConn);
-		CNetObj_PlayerInput *pDummyInputData = pDummyChar ? (CNetObj_PlayerInput *)Client()->GetInput(Tick, DummyInputConn) : nullptr;
+		CNetObj_PlayerInput *pInputData = (CNetObj_PlayerInput *)Client()->GetInputExact(Tick, LocalInputConn);
+		CNetObj_PlayerInput *pDummyInputData = pDummyChar ? (CNetObj_PlayerInput *)Client()->GetInputExact(Tick, DummyInputConn) : nullptr;
 		CNetObj_PlayerInput LocalPracticeInput = {};
 		CNetObj_PlayerInput DummyPracticeInput = {};
-		if(pInputData)
+		// 该 tick 没有输入记录时沿用角色上一 tick 的输入。GetInput 会回退到更早
+		// 的一条记录，多 tick 追赶时同一输入被重复消费，钩子边沿会重复触发或倒退。
+		LocalPracticeInput = pInputData ? *pInputData : *pLocalChar->LatestInput();
+		pInputData = &LocalPracticeInput;
+		if(pDummyChar)
 		{
-			LocalPracticeInput = *pInputData;
-			pInputData = &LocalPracticeInput;
-		}
-		if(pDummyInputData)
-		{
-			DummyPracticeInput = *pDummyInputData;
+			DummyPracticeInput = pDummyInputData ? *pDummyInputData : *pDummyChar->LatestInput();
 			pDummyInputData = &DummyPracticeInput;
 		}
 
@@ -1505,10 +2121,12 @@ bool CFastPractice::OverridePredict()
 		const bool SuppressCooldownTick = Tick >= BaseGameTick + 1 && m_InputSuppressTicks > 0;
 		if(SuppressTransitionTick || SuppressCooldownTick)
 		{
+			// 同上：压制只清武器切换请求，开火状态必须沿用上一 tick，
+			// 否则松手边沿会被当成新的一次开火。
 			if(pInputData)
-				SuppressActionInput(*pInputData, ReleasedFireState(pLocalChar->LatestInput()->m_Fire));
+				SuppressActionInput(*pInputData, pLocalChar->LatestInput()->m_Fire);
 			if(pDummyInputData)
-				SuppressActionInput(*pDummyInputData, ReleasedFireState(pDummyChar->LatestInput()->m_Fire));
+				SuppressActionInput(*pDummyInputData, pDummyChar->LatestInput()->m_Fire);
 			if(m_InputSuppressTicks > 0)
 				m_InputSuppressTicks--;
 			m_SuppressFireOnNextPredictTick = false;
@@ -1557,7 +2175,14 @@ bool CFastPractice::OverridePredict()
 		GameClient()->ApplyPreInputs(Tick, false, GameClient()->m_PredictedWorld);
 
 		CollectTrackedProjectiles(GameClient()->m_PredictedWorld, LocalClientId, DummyClientId, vTrackedProjectilesBefore);
+		// 机关炮在实体 tick 之前发射，新生成的 plasma 同一 tick 就开始移动。
+		TickPracticeGuns(GameClient()->m_PredictedWorld, Tick);
 		GameClient()->m_PredictedWorld.Tick();
+		// 采样分叉时空里本体与分身的这一 tick（多轨），连同本 tick 的交互事件，
+		// 供 /pg 存成 demo 式可回看的幽灵。Rank 1 幽灵是另一个平行时空，只参与渲染。
+		RecordPracticeFrames(GameClient()->m_PredictedWorld, Tick, LocalClientId, DummyClientId);
+		RecordPracticeEvents(GameClient()->m_PredictedWorld, Tick);
+		RecordPracticeSwitchState(GameClient()->m_PredictedWorld, Tick);
 
 		TrackSafeRescuePosition(LocalClientId, pLocalChar);
 		if(pDummyChar)
@@ -2097,6 +2722,9 @@ void CFastPractice::NormalizeCharacterAfterReset(CCharacter *pChar, bool KeepFre
 
 	CNetObj_PlayerInput NeutralInput = {};
 	NeutralInput.m_TargetY = -1;
+	// SetInput 会连"最新输入"一起覆盖。开火状态一旦被清零，下一 tick 恢复按住
+	// 就会被 CountInput 记成一次新的按下——传送落地后莫名挥一锤。
+	NeutralInput.m_Fire = pChar->LatestInput()->m_Fire;
 	pChar->SetInput(&NeutralInput);
 	pChar->ResetInput();
 }
@@ -2219,26 +2847,94 @@ bool CFastPractice::IsSafeRescuePosition(const vec2 &Pos, float ProximityRadius)
 	return Grounded;
 }
 
+bool CFastPractice::IsInFreezePickupRange(CCharacter *pChar) const
+{
+	// 对齐服务器 CCharacter::TrySetRescue：站在冻结拾取物的作用范围内时不能刷新救援点。
+	// 服务器只在不处于冻结区域时才扫描，调用方已经先判断了 m_IsInFreeze。
+	if(!pChar || pChar->Core()->m_IsInFreeze)
+		return false;
+
+	CEntity *apEnts[9];
+	const int Num = pChar->GameWorld()->FindEntities(pChar->m_Pos,
+		pChar->GetProximityRadius() + CPickup::ms_CollisionExtraSize, apEnts, 9, CGameWorld::ENTTYPE_PICKUP);
+	for(int i = 0; i < Num; i++)
+	{
+		if(static_cast<CPickup *>(apEnts[i])->Type() == POWERUP_FREEZE)
+			return true;
+	}
+	return false;
+}
+
+void CFastPractice::CapturePracticeRescueTee(const CCharacter *pChar, int NowTick, SQmPracticeSavedTee &Tee) const
+{
+	if(!pChar)
+		return;
+	// 核心字段与服务器 CSaveTee 对应；角色侧字段单独补齐，Rescue() 不恢复的那部分
+	//（速度、钩子、触发事件）由 QmApplyPracticeRescueCore 统一清空。
+	QmCapturePracticeRescueCore(*pChar->Core(), NowTick, Tee);
+	Tee.m_FreezeTime = pChar->m_FreezeTime;
+	Tee.m_ReloadTimer = pChar->GetReloadTimer();
+	Tee.m_LastWeapon = pChar->GetLastWeapon();
+	Tee.m_QueuedWeapon = pChar->GetQueuedWeapon();
+	Tee.m_NinjaJetpack = pChar->m_NinjaJetpack;
+	Tee.m_TuneZone = pChar->GetPureTuneZone();
+}
+
+void CFastPractice::ApplyPracticeRescueTee(CCharacter *pChar, const SQmPracticeSavedTee &Tee) const
+{
+	if(!pChar || !Tee.m_Valid)
+		return;
+
+	CCharacterCore Core = pChar->GetCore();
+	QmApplyPracticeRescueCore(Core, pChar->GameWorld()->GameTick(), Tee);
+	pChar->SetCore(Core);
+
+	pChar->m_Pos = Tee.m_Pos;
+	pChar->m_PrevPos = Tee.m_Pos;
+	pChar->m_PrevPrevPos = Tee.m_Pos;
+	pChar->m_FreezeTime = Tee.m_FreezeTime;
+	pChar->m_NinjaJetpack = Tee.m_NinjaJetpack;
+	pChar->SetReloadTimer(Tee.m_ReloadTimer);
+	pChar->SetLastWeapon(Tee.m_LastWeapon);
+	pChar->SetQueuedWeapon(Tee.m_QueuedWeapon);
+	pChar->SetTuneZone(Tee.m_TuneZone);
+	// 服务器 CSaveTee::Load 末尾用 SetSolo 同时更新角色核心与队伍核心。
+	pChar->SetSolo(Tee.m_Solo);
+
+	// 与 NormalizeCharacterAfterReset 相同的输入处理：保留开火按下状态，
+	// 否则松手后的第一 tick 会被 CountInput 记成新的按下，落地就挥一锤。
+	CNetObj_PlayerInput NeutralInput = {};
+	NeutralInput.m_TargetY = -1;
+	NeutralInput.m_Fire = pChar->LatestInput()->m_Fire;
+	pChar->SetInput(&NeutralInput);
+	pChar->ResetInput();
+}
+
 void CFastPractice::TrackSafeRescuePosition(int ClientId, CCharacter *pChar)
 {
 	if(ClientId < 0 || ClientId >= MAX_CLIENTS || !pChar)
 		return;
-	if(IsFrozenState(pChar) || !pChar->IsGrounded())
+	// 对齐服务器 CCharacter::TrySetRescue(RESCUEMODE_AUTO)：救援点在
+	// “不在冻结区域、非深度冻结、站在地面、不在冻结拾取物范围内”时每个 tick 覆盖。
+	// 不看 m_FreezeTime——被普通冻结但落在普通平台上时服务器同样会刷新救援点，
+	// 这里若跳过，/r 就会带人回溯到更早的位置，而不是就地解冻。
+	const CCharacterCore *pCore = pChar->Core();
+	if(!QmPracticeCanSetRescuePoint(pCore->m_IsInFreeze, pCore->m_DeepFrozen, pChar->IsGrounded(), IsInFreezePickupRange(pChar)))
 		return;
 
-	const vec2 Pos = pChar->Core()->m_Pos;
-	if(!IsSafeRescuePosition(Pos, pChar->GetProximityRadius()))
-		return;
-
+	const vec2 Pos = pCore->m_Pos;
 	auto &State = m_aPracticeCommandState[ClientId];
+	// 服务器每个 tick 都覆盖救援点，/r 的落点就是最近一帧的合法位置。48px 去重只作用于
+	// 给其它命令使用的历史列表，不能让它拖慢救援点本身，否则 /r 会偏离服务器语义。
+	State.m_HasRescueAuto = true;
+	State.m_RescueAutoPos = Pos;
+	CapturePracticeRescueTee(pChar, pChar->GameWorld()->GameTick(), State.m_AutoTee);
 	if(!State.m_vSafePositions.empty() && distance(State.m_vSafePositions.front(), Pos) < 48.0f)
 		return;
 
 	State.m_vSafePositions.push_front(Pos);
 	if((int)State.m_vSafePositions.size() > SPracticeCommandState::MAX_SAFE_POSITIONS)
 		State.m_vSafePositions.pop_back();
-	State.m_HasRescueAuto = true;
-	State.m_RescueAutoPos = Pos;
 }
 
 bool CFastPractice::FindNearestSafeRescuePosition(int ClientId, const vec2 &From, vec2 &OutPos) const
@@ -2310,6 +3006,8 @@ bool CFastPractice::ExecutePracticeCommand(int Team, int LocalClientId, CCharact
 	};
 	const auto ApplyTeleport = [&](const vec2 &Pos) {
 		SaveTeleportPos(Pos);
+		// 传送会在轨迹上造成瞬移，先封存当前段再跳。
+		OnPracticePositionJump();
 		TeleportCharacter(pChar, Pos);
 	};
 	const auto GiveWeapon = [&](int Weapon, bool Remove) {
@@ -2389,7 +3087,15 @@ bool CFastPractice::ExecutePracticeCommand(int Team, int LocalClientId, CCharact
 	}
 	if(Cmd == "practicecmdlist")
 	{
-		EchoPractice("available commands: /r /back /rescuemode /tp /teleport /tpxy /lasttp /tc /telecursor /totele /totelecp /tofinish /solo /unsolo /deep /undeep /livefreeze /unlivefreeze /shotgun /grenade /laser /rifle /unshotgun /ungrenade /unlaser /unrifle /weapons /unweapons /addweapon /removeweapon /jetpack /unjetpack /infjump /uninfjump /setjumps /ninja /unninja /endless /unendless /invincible /collision /hookcollision /hitothers /practice /unpractice");
+		EchoPractice("available commands: /r /back /rescuemode /restart /tp /teleport /tpxy /lasttp /tc /telecursor /totele /totelecp /tofinish /pg /solo /unsolo /deep /undeep /livefreeze /unlivefreeze /shotgun /grenade /laser /rifle /unshotgun /ungrenade /unlaser /unrifle /weapons /unweapons /addweapon /removeweapon /jetpack /unjetpack /infjump /uninfjump /setjumps /ninja /unninja /endless /unendless /invincible /collision /hookcollision /hitothers /practice /unpractice");
+		return true;
+	}
+	if(Cmd == "pg" || Cmd == "practiceghost")
+	{
+		// /pg [名字]：把刚跑通的那一段存成幽灵。名字只是给文件加个可辨认的后缀，
+		// 留空也完全可用（时间戳已经能区分）。
+		const char *pName = vArgs.size() > 1 ? vArgs[1].c_str() : "";
+		SavePracticeGhost(pName);
 		return true;
 	}
 	if(Cmd == "kill")
@@ -2430,40 +3136,33 @@ bool CFastPractice::ExecutePracticeCommand(int Team, int LocalClientId, CCharact
 
 	if(Cmd == "r" || Cmd == "rescue")
 	{
-		const bool Frozen = IsFrozenState(pChar);
-		if(State.m_RescueManual)
+		// 逐条对齐服务器 ConRescue / TrySetRescue / Rescue：
+		// 救援点条件不看 m_FreezeTime；manual 模式下 /r 优先就地设点，设点成功不传送；
+		// super/invincible 只拒绝传送，不影响设点。
+		const CCharacterCore *pCore = pChar->Core();
+		const bool CanSetNow = QmPracticeCanSetRescuePoint(pCore->m_IsInFreeze, pCore->m_DeepFrozen,
+			pChar->IsGrounded(), IsInFreezePickupRange(pChar));
+		const bool HasSavedPoint = State.m_RescueManual ? State.m_HasRescueManual : State.m_HasRescueAuto;
+		const bool TeleportBlocked = pCore->m_Super || pCore->m_Invincible;
+		const SQmPracticeRescueDecision Decision = QmEvaluatePracticeRescue(
+			State.m_RescueManual, CanSetNow, HasSavedPoint, TeleportBlocked);
+
+		if(Decision.m_SavePoint)
 		{
-			if(pChar->IsGrounded() && !Frozen && IsSafeRescuePosition(CurrentPos, pChar->GetProximityRadius()))
-			{
-				State.m_HasRescueManual = true;
-				State.m_RescueManualPos = pChar->Core()->m_Pos;
-				EchoPractice("manual rescue point saved");
-				TrackSafeRescuePosition(LocalClientId, pChar);
-			}
-			else if(State.m_HasRescueManual && IsSafeRescuePosition(State.m_RescueManualPos, pChar->GetProximityRadius()))
-			{
-				ApplyTeleport(State.m_RescueManualPos);
-			}
-			else
-			{
-				EchoPractice("can't set manual rescue while not grounded");
-			}
-			return true;
+			State.m_HasRescueManual = true;
+			State.m_RescueManualPos = pCore->m_Pos;
+			CapturePracticeRescueTee(pChar, pChar->GameWorld()->GameTick(), State.m_ManualTee);
+			EchoPractice("manual rescue point saved");
 		}
 
-		if(State.m_HasRescueAuto && IsSafeRescuePosition(State.m_RescueAutoPos, pChar->GetProximityRadius()))
+		const SQmPracticeSavedTee &Tee = State.m_RescueManual ? State.m_ManualTee : State.m_AutoTee;
+		if(Decision.m_Teleport && Tee.m_Valid)
 		{
-			ApplyTeleport(State.m_RescueAutoPos);
-			return true;
-		}
-		if(IsSafeRescuePosition(CurrentPos, pChar->GetProximityRadius()))
-		{
-			TrackSafeRescuePosition(LocalClientId, pChar);
-			EchoPractice("safe position updated");
-		}
-		else
-		{
-			EchoPractice("no safe rescue position found");
+			// 服务器 Rescue() 不更新 /lasttp 与 /back 的记录，这里同样不碰这两个状态。
+			OnPracticePositionJump();
+			ApplyPracticeRescueTee(pChar, Tee);
+			// 服务器在 Rescue() 成功后立刻 Unfreeze()。
+			pChar->Unfreeze();
 		}
 		return true;
 	}
@@ -2501,14 +3200,21 @@ bool CFastPractice::ExecutePracticeCommand(int Team, int LocalClientId, CCharact
 				EchoPractice("no player with this name found");
 				return true;
 			}
-			Target = vec2((float)GameClient()->m_Snap.m_aCharacters[TargetId].m_Cur.m_X, (float)GameClient()->m_Snap.m_aCharacters[TargetId].m_Cur.m_Y);
+			// 分支世界只保留本体与分身，其他玩家在练习世界里不存在。
+			// 按服务器快照传送只会落到另一条世界线的空地上，因此直接拒绝。
+			CCharacter *pPracticeTarget = nullptr;
+			if(TargetId == m_EnableLocalClientId || TargetId == m_EnableDummyClientId)
+				pPracticeTarget = m_PracticeBaseWorld.GetCharacterById(TargetId);
+			if(!pPracticeTarget)
+			{
+				EchoPractice("player is not in the practice world");
+				return true;
+			}
+			Target = pPracticeTarget->Core()->m_Pos;
 		}
 		else
 		{
-			const auto &Camera = GameClient()->m_Camera;
-			const auto &SpecInfo = GameClient()->m_Snap.m_SpecInfo;
-			Target = QmPracticeCursorWorldPosition(GameClient()->m_Controls.m_aTargetPos[g_Config.m_ClDummy],
-				Camera.m_Center, Camera.m_Zoom, SpecInfo.m_Active && !SpecInfo.m_UsePosition);
+			Target = ResolvePracticeCursorTarget();
 		}
 		ApplyTeleport(ClampToPlayableBounds(Target));
 		return true;
@@ -2822,6 +3528,14 @@ bool CFastPractice::ConsumePracticeChatCommand(int Team, const char *pLine)
 	if(!ParseCommandArgs(pLine, vArgs))
 		return false;
 
+	if(!vArgs.empty() && str_comp_nocase(vArgs[0].c_str(), "/restart") == 0)
+	{
+		// 重开会替换整个世界（连同角色），不能继续使用下面缓存的 pBaseChar，
+		// 所以放在解析角色之前处理。
+		RestartPracticeFromStart();
+		return true;
+	}
+
 	int LocalClientId = -1;
 	int DummyClientId = -1;
 	if(!ResolvePracticeRoles(LocalClientId, DummyClientId))
@@ -2892,7 +3606,142 @@ bool CFastPractice::ConsumePracticeChatCommand(int Team, const char *pLine)
 	return true;
 }
 
+void CFastPractice::ConSavePracticeGhost(IConsole::IResult *pResult, void *pUserData)
+{
+	auto *pSelf = static_cast<CFastPractice *>(pUserData);
+	if(!pSelf->m_Enabled)
+	{
+		pSelf->EchoPractice("save practice ghost: fast practice is not active");
+		return;
+	}
+	pSelf->SavePracticeGhost(pResult->NumArguments() > 0 ? pResult->GetString(0) : "");
+}
+
+void CFastPractice::ConPracticeEnter(IConsole::IResult *pResult, void *pUserData)
+{
+	(void)pResult;
+	auto *pSelf = static_cast<CFastPractice *>(pUserData);
+	pSelf->Enable();
+}
+
+void CFastPractice::ConPracticeExit(IConsole::IResult *pResult, void *pUserData)
+{
+	(void)pResult;
+	auto *pSelf = static_cast<CFastPractice *>(pUserData);
+	pSelf->Disable();
+}
+
+void CFastPractice::ConPracticeRestart(IConsole::IResult *pResult, void *pUserData)
+{
+	(void)pResult;
+	auto *pSelf = static_cast<CFastPractice *>(pUserData);
+	pSelf->RestartPracticeFromStart();
+}
+
+void CFastPractice::ConPracticeSetCheckpoint(IConsole::IResult *pResult, void *pUserData)
+{
+	(void)pResult;
+	auto *pSelf = static_cast<CFastPractice *>(pUserData);
+	pSelf->SetPracticeCheckpoint();
+}
+
+void CFastPractice::ConPracticeRestoreCheckpoint(IConsole::IResult *pResult, void *pUserData)
+{
+	(void)pResult;
+	auto *pSelf = static_cast<CFastPractice *>(pUserData);
+	pSelf->RestorePracticeCheckpoint();
+}
+
+void CFastPractice::ConPracticeRecordStart(IConsole::IResult *pResult, void *pUserData)
+{
+	(void)pResult;
+	auto *pSelf = static_cast<CFastPractice *>(pUserData);
+	pSelf->StartPracticeRecording();
+}
+
+void CFastPractice::ConPracticeRecordPause(IConsole::IResult *pResult, void *pUserData)
+{
+	(void)pResult;
+	auto *pSelf = static_cast<CFastPractice *>(pUserData);
+	pSelf->PausePracticeRecording();
+}
+
+void CFastPractice::ConPracticeRecordStop(IConsole::IResult *pResult, void *pUserData)
+{
+	(void)pResult;
+	auto *pSelf = static_cast<CFastPractice *>(pUserData);
+	pSelf->StopPracticeRecording();
+}
+
+void CFastPractice::ConPracticeViewGhost(IConsole::IResult *pResult, void *pUserData)
+{
+	auto *pSelf = static_cast<CFastPractice *>(pUserData);
+	if(!pSelf->GameClient()->m_RankGhost.ViewPracticeGroup(pResult->GetString(0)))
+		pSelf->EchoPractice("could not play practice ghost group '%s'", pResult->GetString(0));
+}
+
+void CFastPractice::ConLocalWorldDump(IConsole::IResult *pResult, void *pUserData)
+{
+	(void)pResult;
+	auto *pSelf = static_cast<CFastPractice *>(pUserData);
+	const auto Print = [pSelf](const char *pText) {
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "local_world", pText);
+	};
+	char aBuf[512];
+	const CLocalWorld &Local = pSelf->GameClient()->m_LocalWorld;
+
+	str_format(aBuf, sizeof(aBuf), "practice=%d branch_tick=%d local_id=%d dummy_id=%d",
+		pSelf->m_Enabled ? 1 : 0, pSelf->m_PracticeBaseWorld.GameTick(), pSelf->m_EnableLocalClientId, pSelf->m_EnableDummyClientId);
+	Print(aBuf);
+	str_format(aBuf, sizeof(aBuf), "track: active=%d start=%d frames=%d events=%d switches=%d completed=%d",
+		Local.TrackActive() ? 1 : 0, Local.TrackStartTick(), Local.CurrentFrameCount(),
+		Local.CurrentEventCount(), Local.CurrentSwitchStateCount(), Local.CompletedFrameCount());
+	Print(aBuf);
+	str_format(aBuf, sizeof(aBuf), "view: session=%d slots=%d manual=%d playback_tick=%d",
+		Local.ViewSessionActive() ? 1 : 0, Local.ViewSessionSlotCount(),
+		pSelf->GameClient()->m_Ghost.ManualModeActive() ? 1 : 0,
+		pSelf->GameClient()->m_Ghost.ManualPlaybackTick());
+	Print(aBuf);
+
+	if(!pSelf->m_PracticeBaseWorld.Switchers().empty())
+	{
+		const int Team = std::clamp(pSelf->GameClient()->SwitchStateTeam(), (int)TEAM_FLOCK, NUM_DDRACE_TEAMS - 1);
+		const SLocalSwitchState State = QmEncodeLocalSwitchState(0, pSelf->m_PracticeBaseWorld.Switchers(), Team);
+		str_format(aBuf, sizeof(aBuf), "switchers: count=%d team=%d bits0_31=0x%08x bits32_63=0x%08x",
+			(int)pSelf->m_PracticeBaseWorld.Switchers().size(), Team, State.m_aStatus[0], State.m_aStatus[1]);
+		Print(aBuf);
+	}
+	int Characters = 0;
+	for(int Cid = 0; Cid < MAX_CLIENTS; Cid++)
+		if(pSelf->GameClient()->m_PredictedWorld.GetCharacterById(Cid))
+			Characters++;
+	str_format(aBuf, sizeof(aBuf), "predicted_world: characters=%d pending_events=%d",
+		Characters, (int)pSelf->GameClient()->m_PredictedWorld.m_PredictedEvents.size());
+	Print(aBuf);
+}
+
 void CFastPractice::OnConsoleInit()
 {
 	Console()->Register("fast_practice_toggle", "", CFGFLAG_CLIENT, ConFastPracticeToggle, this, "Toggle fast practice mode");
+	// 控制页可绑定的练习按键。全部刻意不设默认键，只提供命令。
+	Console()->Register("fast_practice_enter", "", CFGFLAG_CLIENT, ConPracticeEnter, this, "Enable fast practice mode");
+	Console()->Register("fast_practice_exit", "", CFGFLAG_CLIENT, ConPracticeExit, this, "Disable fast practice mode");
+	Console()->Register("practice_restart", "", CFGFLAG_CLIENT, ConPracticeRestart, this,
+		"Restore the practice world to the state it had when fast practice was enabled");
+	Console()->Register("practice_set_checkpoint", "", CFGFLAG_CLIENT, ConPracticeSetCheckpoint, this,
+		"Store the current practice tee state as the respawn point");
+	Console()->Register("practice_restore_checkpoint", "", CFGFLAG_CLIENT, ConPracticeRestoreCheckpoint, this,
+		"Teleport back to the practice respawn point");
+	Console()->Register("practice_record_start", "", CFGFLAG_CLIENT, ConPracticeRecordStart, this,
+		"Start or resume recording the practice line");
+	Console()->Register("practice_record_pause", "", CFGFLAG_CLIENT, ConPracticeRecordPause, this,
+		"Pause recording the practice line (the recorded part is kept)");
+	Console()->Register("practice_record_stop", "", CFGFLAG_CLIENT, ConPracticeRecordStop, this,
+		"Stop recording and save the practice line as a ghost group");
+	Console()->Register("practice_view_ghost", "r[group]", CFGFLAG_CLIENT, ConPracticeViewGhost, this,
+		"Replay a saved practice ghost group in demo-style view mode");
+	Console()->Register("practice_save_ghost", "?r[name]", CFGFLAG_CLIENT, ConSavePracticeGhost, this,
+		"Save the current fast-practice line (all tees) as a replayable ghost group");
+	Console()->Register("qm_local_world_dump", "", CFGFLAG_CLIENT, ConLocalWorldDump, this,
+		"Dump the client-side world state (practice branch, tracks, switchers, view session)");
 }

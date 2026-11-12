@@ -7,8 +7,11 @@
 
 #include <game/client/component.h>
 #include <game/client/components/menus.h>
+#include <game/client/components/qmclient/local_world.h>
 #include <game/client/components/qmclient/online_replay_player.h>
 #include <game/client/render.h>
+
+#include <vector>
 
 struct CNetObj_Character;
 
@@ -184,6 +187,27 @@ public:
 
 	// QmClient: 影子加载时玩家可能已经在跑图中，需要立即按当前 run 进度开始播放
 	void StartRender(int Tick);
+
+	// 分支世界时钟与幽灵播放头的换算基准。
+	int RunningPlaybackStartTick() const { return m_StartRenderTick; }
+
+	// 快速练习线路：把分叉时空里录下的多轨连续线路 + 交互事件写成一个影子组
+	// （组目录内 trackN.gho 与 events.qmevt），与 Rank 1 组回放共用同一套格式。
+	// 保存不等于播放：用户在影子页点 View 才进入 demo 式查看模式，不退出服务器。
+	// 不走 StopRecord 的"个人最佳"逻辑——练习段时长不是成绩；玩家名带 [P] 标记。
+	bool SavePracticeTrack(const char *pName, const SLocalSegment &Segment);
+
+	// 当前地图可回放的练习影子组（ghosts/<dir>/events.qmevt）。菜单面板用它生成
+	// “直接播放”入口；只列出能读出 track0.gho 文件头且属于当前地图的组。
+	struct SPracticeGroup
+	{
+		char m_aDir[IO_MAX_PATH_LENGTH] = "";
+		char m_aOwner[MAX_NAME_LENGTH] = "";
+		int m_Time = 0;
+		// 目录修改时间，仅用于"最近的排前面"。练习组没有成绩语义，按时间排就够。
+		int64_t m_TimeModified = 0;
+	};
+	void ListPracticeGroups(std::vector<SPracticeGroup> &vOut) const;
 
 	// QmClient: 查看模式——独立时间线播放（进度/暂停/拖动由 CRankGhost 控制）
 	void StartRenderManual(const std::vector<int> &vSlots);

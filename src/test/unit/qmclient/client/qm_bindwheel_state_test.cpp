@@ -71,3 +71,31 @@ TEST(QmBindWheelState, CenterReleaseStillRequestsMouseReset)
 	ASSERT_TRUE(Pending.has_value());
 	EXPECT_EQ(*Pending, -1);
 }
+
+TEST(QmBindWheelState, ListSelectionReturnsTheRowUnderTheCursor)
+{
+	// 条目区从 (300, 200) 开始，宽 400、行高 28；鼠标落在某行内即选中该行。
+	EXPECT_EQ(CQmBindWheelState::SelectedListBind(vec2(320.0f, 210.0f), 300.0f, 200.0f, 400.0f, 28.0f, 8, 0), 0);
+	EXPECT_EQ(CQmBindWheelState::SelectedListBind(vec2(320.0f, 240.0f), 300.0f, 200.0f, 400.0f, 28.0f, 8, 0), 1);
+	EXPECT_EQ(CQmBindWheelState::SelectedListBind(vec2(320.0f, 396.0f), 300.0f, 200.0f, 400.0f, 28.0f, 8, 0), 7);
+}
+
+TEST(QmBindWheelState, ListSelectionIgnoresPointsOutsideTheItemArea)
+{
+	EXPECT_EQ(CQmBindWheelState::SelectedListBind(vec2(290.0f, 210.0f), 300.0f, 200.0f, 400.0f, 28.0f, 8, 0), -1);
+	EXPECT_EQ(CQmBindWheelState::SelectedListBind(vec2(710.0f, 210.0f), 300.0f, 200.0f, 400.0f, 28.0f, 8, 0), -1);
+	EXPECT_EQ(CQmBindWheelState::SelectedListBind(vec2(320.0f, 190.0f), 300.0f, 200.0f, 400.0f, 28.0f, 8, 0), -1);
+	EXPECT_EQ(CQmBindWheelState::SelectedListBind(vec2(320.0f, 430.0f), 300.0f, 200.0f, 400.0f, 28.0f, 8, 0), -1);
+}
+
+TEST(QmBindWheelState, ListSelectionAppliesTheScrollOffset)
+{
+	EXPECT_EQ(CQmBindWheelState::SelectedListBind(vec2(320.0f, 210.0f), 300.0f, 200.0f, 400.0f, 28.0f, 64, 3), 3);
+	EXPECT_EQ(CQmBindWheelState::SelectedListBind(vec2(320.0f, 322.0f), 300.0f, 200.0f, 400.0f, 28.0f, 64, 3), 7);
+}
+
+TEST(QmBindWheelState, ListSelectionIgnoresEmptyPages)
+{
+	EXPECT_EQ(CQmBindWheelState::SelectedListBind(vec2(320.0f, 210.0f), 300.0f, 200.0f, 400.0f, 28.0f, 0, 0), -1);
+	EXPECT_EQ(CQmBindWheelState::SelectedListBind(vec2(320.0f, 210.0f), 300.0f, 200.0f, 400.0f, 0.0f, 8, 0), -1);
+}

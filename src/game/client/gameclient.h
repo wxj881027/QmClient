@@ -26,6 +26,7 @@
 #include <generated/protocolglue.h>
 
 #include <game/client/components/qmclient/connection_resource_preparation.h>
+#include <game/client/components/qmclient/local_world.h>
 #include <game/client/components/qmclient/self_kill_protection.h>
 #include <game/client/components/qmclient/snapshot_entities.h>
 #include <game/client/prediction/gameworld.h>
@@ -297,6 +298,12 @@ public:
 	CRaceDemo m_RaceDemo;
 	CGhost m_Ghost;
 	CHudEditor m_HudEditor;
+
+	// 客户端侧权威世界的公共层（不是 CComponent）。所有"没有服务器"的世界能力
+	// 共用它管理轨迹会话：快速练习是当前的使用方，Rank 1 回放、以后的本地
+	// 场景都可以另起一个实例或共用这一个。放在客户端级而不是练习组件内部，
+	// 是为了让幽灵组件与练习组件共享同一条时间线与轨迹记录。
+	CLocalWorld m_LocalWorld;
 
 	CTooltips m_Tooltips;
 

@@ -456,6 +456,7 @@ public:
 
 	// TODO: OPT: do this a lot smarter!
 	int *GetInput(int Tick, int IsDummy) const override;
+	int *GetInputExact(int Tick, int IsDummy) const override;
 
 	const char *LatestVersion() const override;
 

@@ -410,7 +410,11 @@ void CControls::OnRender()
 	}
 	else if(GameClient()->m_Snap.m_SpecInfo.m_Active && GameClient()->m_Snap.m_SpecInfo.m_UsePosition)
 	{
-		m_aTargetPos[g_Config.m_ClDummy] = GameClient()->m_Snap.m_SpecInfo.m_Position + m_aMousePos[g_Config.m_ClDummy];
+		// 快速练习在分支世界里推进，服务器快照的旁观坐标属于另一条世界线；
+		// 能解析出分支世界的目标时以它为准，否则落点会整体偏移。
+		vec2 SpecPosition = GameClient()->m_Snap.m_SpecInfo.m_Position;
+		GameClient()->m_FastPractice.ResolvePracticeSpectatorPosition(SpecPosition);
+		m_aTargetPos[g_Config.m_ClDummy] = SpecPosition + m_aMousePos[g_Config.m_ClDummy];
 	}
 	else
 	{

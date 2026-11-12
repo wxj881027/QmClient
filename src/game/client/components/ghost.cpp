@@ -15,7 +15,9 @@
 #include <game/client/components/menus.h>
 #include <game/client/components/players.h>
 #include <game/client/components/qmclient/demo_display.h>
+#include <game/client/components/qmclient/rank_view_timeline.h>
 #include <game/client/components/skins.h>
+#include <game/client/components/tclient/fast_practice.h>
 #include <game/client/gameclient.h>
 #include <game/client/race.h>
 
@@ -314,6 +316,179 @@ void CGhost::OnNewPredictedSnapshot()
 		CheckStartLocal(true);
 }
 
+// 练习组里的交互时间线：与 Rank 1 查看模式读取的 .qmevt 完全同格式
+// （事件 / 开关状态 / 消息 三段）。消息段练习里没有，写 0 条。
+static void WritePracticeViewTimeline(IStorage *pStorage, const char *pGroupDir,
+	const std::vector<SLocalActorEvent> &vEvents, const std::vector<SLocalSwitchState> &vSwitchStates)
+{
+	char aPath[IO_MAX_PATH_LENGTH];
+	str_format(aPath, sizeof(aPath), "%s/events.qmevt", pGroupDir);
+	IOHANDLE File = pStorage->OpenFile(aPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	if(File == nullptr)
+		return;
+
+	io_write(File, qmclient::rank_ghost::VIEW_TIMELINE_MAGIC, sizeof(qmclient::rank_ghost::VIEW_TIMELINE_MAGIC));
+	uint32_t Count = (uint32_t)vEvents.size();
+	io_write(File, &Count, sizeof(Count));
+	for(const SLocalActorEvent &Event : vEvents)
+	{
+		io_write(File, &Event.m_Tick, sizeof(Event.m_Tick));
+		io_write(File, &Event.m_Type, sizeof(Event.m_Type));
+		io_write(File, Event.m_aData, sizeof(Event.m_aData));
+	}
+	// 机关开关状态：解密型地图回放时门/定时开关必须跟着当时的状态走。
+	Count = (uint32_t)vSwitchStates.size();
+	io_write(File, &Count, sizeof(Count));
+	for(const SLocalSwitchState &State : vSwitchStates)
+	{
+		io_write(File, &State.m_Tick, sizeof(State.m_Tick));
+		io_write(File, &State.m_HighestSwitchNumber, sizeof(State.m_HighestSwitchNumber));
+		io_write(File, State.m_aStatus, sizeof(State.m_aStatus));
+	}
+	Count = 0;
+	io_write(File, &Count, sizeof(Count)); // messages
+	io_close(File);
+}
+
+bool CGhost::SavePracticeTrack(const char *pName, const SLocalSegment &Segment)
+{
+	if(Segment.m_vTracks.empty() || Segment.m_vTracks.front().m_vFrames.empty() || GhostRecorder()->IsRecording())
+		return false;
+
+	const auto &vMainFrames = Segment.m_vTracks.front().m_vFrames;
+	// 这里的"时间"只是影子页的可读标签（这段练习跑了多久），不是竞速成绩。
+	const int TickSpeed = std::max(1, Client()->GameTickSpeed());
+	const int TimeMs = std::max(1, (int)((vMainFrames.back().m_Tick - Segment.m_StartTick) * 1000.0f / TickSpeed));
+
+	// 练习线路不是成绩：玩家名带 [P]，且整条路径都不经过 StopRecord 的
+	// GetOwnGhost / cl_race_ghost_save_best 比较，不会顶掉个人最佳。
+	char aBaseName[MAX_NAME_LENGTH];
+	if(pName && pName[0])
+		str_format(aBaseName, sizeof(aBaseName), "[P] %s", pName);
+	else
+		str_copy(aBaseName, "[P] practice");
+
+	// 组目录名沿用标准 ghost 命名（地图 / 名字 / 时长 / 时间戳 / sha），
+	// 去掉 .gho 后缀即是 Rank 1 组回放认的目录；LoadGhostGroup 会扫其中所有轨。
+	char aGroupFile[IO_MAX_PATH_LENGTH];
+	GetPath(aGroupFile, sizeof(aGroupFile), aBaseName, TimeMs);
+	char aGroupDir[IO_MAX_PATH_LENGTH];
+	str_copy(aGroupDir, aGroupFile, sizeof(aGroupDir));
+	const size_t Len = str_length(aGroupDir);
+	if(Len <= 4 || !str_endswith(aGroupDir, ".gho"))
+		return false;
+	aGroupDir[Len - 4] = '\0';
+	if(!Storage()->CreateFolder(aGroupDir, IStorage::TYPE_SAVE) && !Storage()->FolderExists(aGroupDir, IStorage::TYPE_SAVE))
+		return false;
+
+	// 皮肤取本地 Tee；两条轨共用一套皮肤，回放成员靠名字区分。
+	const CGameClient::CClientData *pData = &GameClient()->m_aClients[GameClient()->m_Snap.m_LocalClientId];
+	CGhostSkin Skin;
+	SetGhostSkinData(&Skin, pData->m_aSkinName, pData->m_UseCustomColor, pData->m_ColorBody, pData->m_ColorFeet);
+
+	for(size_t TrackIndex = 0; TrackIndex < Segment.m_vTracks.size(); TrackIndex++)
+	{
+		const SLocalTrack &Track = Segment.m_vTracks[TrackIndex];
+		if(Track.m_vFrames.empty())
+			continue;
+
+		char aPlayer[MAX_NAME_LENGTH];
+		if(TrackIndex == 0)
+			str_copy(aPlayer, aBaseName, sizeof(aPlayer));
+		else
+			str_format(aPlayer, sizeof(aPlayer), "%s (dummy)", aBaseName);
+
+		char aTmp[IO_MAX_PATH_LENGTH];
+		str_format(aTmp, sizeof(aTmp), "%s/track%d_tmp_%d.gho", aGroupDir, (int)TrackIndex, pid());
+		if(GhostRecorder()->Start(aTmp, Client()->GetCurrentMap(), GameClient()->Map()->Sha256(), aPlayer) != 0)
+			return false;
+
+		GhostRecorder()->WriteData(GHOSTDATA_TYPE_START_TICK, &Segment.m_StartTick, sizeof(int));
+		GhostRecorder()->WriteData(GHOSTDATA_TYPE_SKIN, &Skin, sizeof(CGhostSkin));
+		for(const SLocalActorFrame &LocalFrame : Track.m_vFrames)
+		{
+			CNetObj_Character Obj = QmLocalWorldFrameToNetObj(LocalFrame);
+			CGhostCharacter GhostChar;
+			GetGhostCharacter(&GhostChar, &Obj, nullptr);
+			GhostRecorder()->WriteData(GHOSTDATA_TYPE_CHARACTER, &GhostChar, sizeof(CGhostCharacter));
+		}
+		GhostRecorder()->Stop((int)Track.m_vFrames.size(), TimeMs);
+
+		char aFinal[IO_MAX_PATH_LENGTH];
+		str_format(aFinal, sizeof(aFinal), "%s/track%d.gho", aGroupDir, (int)TrackIndex);
+		Storage()->RemoveFile(aFinal, IStorage::TYPE_SAVE);
+		Storage()->RenameFile(aTmp, aFinal, IStorage::TYPE_SAVE);
+	}
+
+	WritePracticeViewTimeline(Storage(), aGroupDir, Segment.m_vEvents, Segment.m_vSwitchStates);
+	return true;
+}
+
+namespace
+{
+	struct SPracticeGroupScanContext
+	{
+		IStorage *m_pStorage = nullptr;
+		IGhostLoader *m_pLoader = nullptr;
+		// ms_pGhostDir 是私有静态成员，由 ListPracticeGroups 传进来，回调不直接碰。
+		const char *m_pGhostDir = nullptr;
+		const char *m_pMap = nullptr;
+		SHA256_DIGEST m_MapSha256{};
+		unsigned m_MapCrc = 0;
+		std::vector<CGhost::SPracticeGroup> *m_pOut = nullptr;
+	};
+
+	int PracticeGroupScanCallback(const CFsFileInfo *pInfo, int IsDir, int StorageType, void *pUser)
+	{
+		(void)StorageType;
+		auto *pCtx = static_cast<SPracticeGroupScanContext *>(pUser);
+		if(!IsDir)
+			return 0;
+
+		char aDir[IO_MAX_PATH_LENGTH];
+		char aEvents[IO_MAX_PATH_LENGTH];
+		char aMain[IO_MAX_PATH_LENGTH];
+		str_format(aDir, sizeof(aDir), "%s/%s", pCtx->m_pGhostDir, pInfo->m_pName);
+		str_format(aEvents, sizeof(aEvents), "%s/events.qmevt", aDir);
+		str_format(aMain, sizeof(aMain), "%s/track0.gho", aDir);
+		if(!pCtx->m_pStorage->FileExists(aEvents, IStorage::TYPE_SAVE))
+			return 0;
+
+		CGhostInfo Info;
+		if(!pCtx->m_pLoader->GetGhostInfo(aMain, &Info, pCtx->m_pMap, pCtx->m_MapSha256, pCtx->m_MapCrc))
+			return 0;
+
+		CGhost::SPracticeGroup Group;
+		str_copy(Group.m_aDir, aDir);
+		str_copy(Group.m_aOwner, Info.m_aOwner);
+		Group.m_Time = Info.m_Time;
+		Group.m_TimeModified = pInfo->m_TimeModified;
+		pCtx->m_pOut->push_back(Group);
+		return 0;
+	}
+} // namespace
+
+void CGhost::ListPracticeGroups(std::vector<SPracticeGroup> &vOut) const
+{
+	vOut.clear();
+	if(!m_pGhostLoader || !GameClient()->Map())
+		return;
+
+	SPracticeGroupScanContext Ctx;
+	Ctx.m_pStorage = Storage();
+	Ctx.m_pLoader = m_pGhostLoader;
+	Ctx.m_pGhostDir = ms_pGhostDir;
+	Ctx.m_pMap = Client()->GetCurrentMap();
+	Ctx.m_MapSha256 = GameClient()->Map()->Sha256();
+	Ctx.m_MapCrc = GameClient()->Map()->Crc();
+	Ctx.m_pOut = &vOut;
+	Storage()->ListDirectoryInfo(IStorage::TYPE_SAVE, ms_pGhostDir, PracticeGroupScanCallback, &Ctx);
+	// 目录遍历顺序由文件系统决定，菜单要稳定顺序：最近的组排前面。
+	std::sort(vOut.begin(), vOut.end(), [](const SPracticeGroup &Left, const SPracticeGroup &Right) {
+		return Left.m_TimeModified > Right.m_TimeModified;
+	});
+}
+
 void CGhost::OnRender()
 {
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
@@ -335,7 +510,14 @@ void CGhost::OnRender()
 		}
 	}
 	else
+	{
 		PlaybackTick = Client()->PredGameTick(g_Config.m_ClDummy) - m_StartRenderTick;
+		// 快速练习接管了客户端侧权威世界：它的时钟在暂停/冻结时会与
+		// PredGameTick 分叉，幽灵必须跟着分支世界走，否则会凭空超前。
+		int PracticePlaybackTick;
+		if(GameClient()->m_FastPractice.ResolvePracticePlaybackTick(PracticePlaybackTick))
+			PlaybackTick = PracticePlaybackTick;
+	}
 
 	CScreenRect ScreenRect = Graphics()->GetScreen();
 

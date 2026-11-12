@@ -2174,9 +2174,37 @@ int CMenus::GhostlistFetchCallback(const CFsFileInfo *pInfo, int IsDir, int Stor
 {
 	CMenus *pSelf = (CMenus *)pUser;
 	const char *pMap = pSelf->Client()->GetCurrentMap();
+	// QmClient: /pg 保存的练习线路是"影子组"目录（多轨 .gho + events.qmevt）。
+	// 组不是单个文件，不能被下面的 .gho 规则过滤掉；用 events.qmevt 识别，
+	// 并取 track0.gho 的文件头作为列表项信息。
+	if(IsDir)
+	{
+		char aDir[IO_MAX_PATH_LENGTH];
+		char aEvents[IO_MAX_PATH_LENGTH];
+		char aMain[IO_MAX_PATH_LENGTH];
+		str_format(aDir, sizeof(aDir), "%s/%s", pSelf->m_aGhostScanDir, pInfo->m_pName);
+		str_format(aEvents, sizeof(aEvents), "%s/events.qmevt", aDir);
+		str_format(aMain, sizeof(aMain), "%s/track0.gho", aDir);
+		if(!pSelf->Storage()->FileExists(aEvents, IStorage::TYPE_SAVE))
+			return 0;
+		CGhostInfo Info;
+		if(!pSelf->GameClient()->m_Ghost.GhostLoader()->GetGhostInfo(aMain, &Info, pMap,
+			   pSelf->GameClient()->Map()->Sha256(), pSelf->GameClient()->Map()->Crc()))
+			return 0;
+		CMenus::CGhostItem Item;
+		str_copy(Item.m_aFilename, aDir);
+		str_copy(Item.m_aPlayer, Info.m_aOwner);
+		Item.m_PracticeGroup = true;
+		Item.m_Failed = false;
+		Item.m_Date = pInfo->m_TimeModified;
+		Item.m_Time = Info.m_Time;
+		if(Item.m_Time > 0)
+			pSelf->m_vGhosts.push_back(Item);
+		return 0;
+	}
 	// QmClient: rank 影子位于独立子目录，文件名不要求以地图名开头
 	// （地图匹配由下面的 GetGhostInfo 完成）；普通影子维持原有前缀规则。
-	if(IsDir || !str_endswith(pInfo->m_pName, ".gho"))
+	if(!str_endswith(pInfo->m_pName, ".gho"))
 		return 0;
 	if(!pSelf->m_GhostScanIsRankDir && !str_startswith(pInfo->m_pName, pMap))
 		return 0;
@@ -2423,6 +2451,8 @@ void CMenus::RenderGhost(CUIRect MainView)
 			Color = color_cast<ColorRGBA>(ColorHSLA(0.33f, 1.0f, 0.75f));
 		else if(pGhost->m_RankGhost)
 			Color = color_cast<ColorRGBA>(ColorHSLA(0.12f, 1.0f, 0.7f)); // 官方 rank 影子用金色区分
+		else if(pGhost->m_PracticeGroup)
+			Color = color_cast<ColorRGBA>(ColorHSLA(0.52f, 1.0f, 0.75f)); // 练习线路组用青色区分
 
 		if(pGhost->m_Failed)
 			Color = ColorRGBA(0.6f, 0.6f, 0.6f, 1.0f);
@@ -2460,6 +2490,12 @@ void CMenus::RenderGhost(CUIRect MainView)
 				{
 					char aNameBuf[MAX_NAME_LENGTH + 16];
 					str_format(aNameBuf, sizeof(aNameBuf), "[Rank] %s", pGhost->m_aPlayer);
+					Ui()->DoLabel(&Button, aNameBuf, 12.0f, TEXTALIGN_ML);
+				}
+				else if(pGhost->m_PracticeGroup)
+				{
+					char aNameBuf[MAX_NAME_LENGTH + 16];
+					str_format(aNameBuf, sizeof(aNameBuf), "[Practice] %s", pGhost->m_aPlayer);
 					Ui()->DoLabel(&Button, aNameBuf, 12.0f, TEXTALIGN_ML);
 				}
 				else
@@ -2558,7 +2594,17 @@ void CMenus::RenderGhost(CUIRect MainView)
 
 	CGhostItem *pOwnGhost = GetOwnGhost();
 	int ReservedSlots = !pGhost->m_Own && !(pOwnGhost && pOwnGhost->Active());
-	if(!pGhost->m_Failed && pGhost->HasFile() && (pGhost->Active() || GameClient()->m_Ghost.FreeSlots() > ReservedSlots))
+	if(pGhost->m_PracticeGroup)
+	{
+		// 练习线路组：点 View（或双击条目）加载组内所有轨，进入 Rank 1 同款
+		// demo 式查看模式——独立时间线、交互特效、虚影成员，且不会退出服务器。
+		Status.VSplitRight(120.0f, &Status, &Button);
+		static CButtonContainer s_ViewButton;
+		if(DoIngameMenuButton(PAGE_GHOST, "ingame-ghost-view", &s_ViewButton, Localize("View"), 0, &Button) || s_ListBox.WasItemActivated())
+			GameClient()->m_RankGhost.ViewPracticeGroup(pGhost->m_aFilename);
+		Status.VSplitRight(5.0f, &Status, nullptr);
+	}
+	else if(!pGhost->m_Failed && pGhost->HasFile() && (pGhost->Active() || GameClient()->m_Ghost.FreeSlots() > ReservedSlots))
 	{
 		Status.VSplitRight(120.0f, &Status, &Button);
 
@@ -2593,6 +2639,19 @@ void CMenus::RenderGhost(CUIRect MainView)
 		{
 			GameClient()->m_Ghost.Unload(pGhost->m_Slot);
 			GameClient()->m_RankGhost.OnGhostUnloaded(pGhost->m_Slot);
+		}
+		if(pGhost->m_PracticeGroup)
+		{
+			// 组目录里是 trackN.gho + events.qmevt，逐个删；空目录留着也不会
+			// 再被扫描到（缺 events.qmevt 就不算练习组）。
+			char aFile[IO_MAX_PATH_LENGTH];
+			for(int i = 0; i < 8; i++)
+			{
+				str_format(aFile, sizeof(aFile), "%s/track%d.gho", pGhost->m_aFilename, i);
+				Storage()->RemoveFile(aFile, IStorage::TYPE_SAVE);
+			}
+			str_format(aFile, sizeof(aFile), "%s/events.qmevt", pGhost->m_aFilename);
+			Storage()->RemoveFile(aFile, IStorage::TYPE_SAVE);
 		}
 		DeleteGhostItem(s_SelectedIndex);
 		s_SelectedIndex = std::min(s_SelectedIndex, (int)m_vGhosts.size() - 1);

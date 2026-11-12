@@ -80,7 +80,7 @@ void CMenusSettingsControls::OnInterfacesInit(CGameClient *pClient)
 
 	// 预定义动作来自 bind_overview.h 的共享已知动作表（Bind 一览卡使用同一份表归类）。
 	for(const SKnownBindAction &Action : s_aKnownBindActions)
-		m_vBindOptions.push_back({Action.m_Group, Action.m_pLabel, Action.m_pCommand});
+		m_vBindOptions.push_back({Action.m_Group, Action.m_pLabel, Action.m_pCommand, Action.m_pDescription});
 	m_NumPredefinedBindOptions = m_vBindOptions.size();
 
 	// 此时配置文件尚未加载；持久状态在 Render 中同步，避免提前完成旧配置迁移。

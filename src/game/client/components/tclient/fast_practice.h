@@ -10,7 +10,9 @@
 #include <generated/protocol.h>
 
 #include <game/client/component.h>
+#include <game/client/components/qmclient/local_world.h>
 #include <game/client/components/qmclient/practice_hook_input.h>
+#include <game/client/components/qmclient/practice_rescue.h>
 #include <game/client/prediction/gameworld.h>
 #include <game/gamecore.h>
 
@@ -33,6 +35,15 @@ public:
 	void PrepareForSpectating();
 	bool ConsumePracticeChatCommand(int Team, const char *pLine);
 	void ResetPracticeToAnchor();
+	// 把练习分支世界恢复到启用练习那一刻的快照（记录保留，只切段）。
+	bool RestartPracticeFromStart();
+	// 重生点：显式保存/回溯当前 tee 状态，与 /r 的救援点相互独立。
+	void SetPracticeCheckpoint();
+	void RestorePracticeCheckpoint();
+	// 录制是全手动的：开始/继续、暂停、结束并直接落盘成影子组。
+	void StartPracticeRecording();
+	void PausePracticeRecording();
+	void StopPracticeRecording();
 
 	void PrepareInputForSend(int *pData, int Size, bool Dummy);
 	bool OverridePredict();
@@ -112,6 +123,11 @@ private:
 		vec2 m_LastTeleportPos = vec2(0.0f, 0.0f);
 		vec2 m_LastDeathPos = vec2(0.0f, 0.0f);
 		std::deque<vec2> m_vSafePositions;
+		SQmPracticeSavedTee m_AutoTee;
+		SQmPracticeSavedTee m_ManualTee;
+		// 用户显式设置的重生点，独立于救援点，重开世界后依然保留。
+		bool m_HasCheckpoint = false;
+		SQmPracticeSavedTee m_CheckpointTee;
 	};
 
 	bool m_Enabled = false;
@@ -120,6 +136,7 @@ private:
 	int m_EnableDummyClientId = -1;
 	bool m_PracticeWorldInitialized = false;
 	bool m_HasDummyAnchor = false;
+	bool m_RecordingPaused = false;
 	bool m_SuppressFireOnNextPredictTick = false;
 	int m_InputSuppressTicks = 0;
 	int m_LastResolvedLocalClientId = -1;
@@ -140,8 +157,48 @@ private:
 	std::array<SPracticeCommandState, MAX_CLIENTS> m_aPracticeCommandState{};
 
 	CGameWorld m_PracticeBaseWorld;
+	// 启用练习那一刻的分支世界。主世界持续推进，之后无法再从 m_GameWorld 取回这一刻的
+	// 机关、移动方块与开关状态，所以“重开练习”只能回到这里的深拷贝。
+	CGameWorld m_PracticeStartWorld;
+	bool m_HasPracticeStartSnapshot = false;
+
+	// 分支世界里的机关炮（地图实体层的 ENTITY_PLASMA*）。服务器由 CGun 驱动，
+	// 客户端预测世界没有这套实体，练习世界必须自己复刻发射逻辑。
+	struct SPracticeGun
+	{
+		vec2 m_Pos = vec2(0.0f, 0.0f);
+		vec2 m_Core = vec2(0.0f, 0.0f);
+		bool m_Freeze = false;
+		bool m_Explosive = false;
+		int m_Layer = 0;
+		int m_Number = 0;
+		int m_EvalTick = 0;
+		int m_aLastFireTeam[MAX_CLIENTS] = {};
+		int m_aLastFireSolo[MAX_CLIENTS] = {};
+	};
+
+	std::vector<SPracticeGun> m_vPracticeGuns;
+	bool m_PracticeGunsLoaded = false;
+	int m_NextPracticePlasmaId = 100000;
+	void LoadPracticeGuns();
+	void TickPracticeGuns(CGameWorld &World, int Tick);
+	void FirePracticeGun(CGameWorld &World, SPracticeGun &Gun, int Tick);
 
 	static void ConFastPracticeToggle(IConsole::IResult *pResult, void *pUserData);
+	// 控制页可绑定的"保存练习线路"按键：不设默认键，只提供命令。
+	static void ConSavePracticeGhost(IConsole::IResult *pResult, void *pUserData);
+	// 控制页可绑定的"重开练习世界"按键：不设默认键，只提供命令。
+	static void ConPracticeRestart(IConsole::IResult *pResult, void *pUserData);
+	static void ConPracticeEnter(IConsole::IResult *pResult, void *pUserData);
+	static void ConPracticeExit(IConsole::IResult *pResult, void *pUserData);
+	static void ConPracticeSetCheckpoint(IConsole::IResult *pResult, void *pUserData);
+	static void ConPracticeRestoreCheckpoint(IConsole::IResult *pResult, void *pUserData);
+	static void ConPracticeRecordStart(IConsole::IResult *pResult, void *pUserData);
+	static void ConPracticeRecordPause(IConsole::IResult *pResult, void *pUserData);
+	static void ConPracticeRecordStop(IConsole::IResult *pResult, void *pUserData);
+	static void ConPracticeViewGhost(IConsole::IResult *pResult, void *pUserData);
+	// 诊断：一次性打印客户端侧世界状态（分支 tick、轨迹、开关、查看会话）。
+	static void ConLocalWorldDump(IConsole::IResult *pResult, void *pUserData);
 
 	void ResetPracticeState();
 	void ResetCommandState();
@@ -161,6 +218,37 @@ private:
 	bool ApplyAnchorToCharacter(CGameWorld &World, const SAnchorData &Anchor) const;
 	bool InitPracticeWorld();
 	void PrunePracticeWorld(CGameWorld &World) const;
+	// 练习线路录制：Rank 1 是另一个平行时空，只能看；这里录的是我们自己这条
+	// 分叉时空里的 Tee（本体 + 分身多轨），连同世界里发生的交互事件一起存，
+	// 回放时走 Rank 1 同款 demo 式查看模式，而不是普通跟跑影子。
+	void BeginPracticeTrack(int StartTick);
+	void RecordPracticeFrames(CGameWorld &World, int Tick, int LocalClientId, int DummyClientId);
+	void RecordPracticeEvents(CGameWorld &World, int Tick);
+	void RecordPracticeSwitchState(CGameWorld &World, int Tick);
+	// 任何位置突变（/r、传送、死亡、重进练习）都要切段，段内保证无瞬移。
+	void OnPracticePositionJump();
+	bool SavePracticeGhost(const char *pName);
+	// fork 后清理指向被裁掉玩家的钩子状态：HOOK_GRABBED 会按旧世界的 HookPos
+	// 继续施加拖拽力，不清洗就会表现为人被钩子甩飞。
+	bool SanitizePracticeWorldHooks(CGameWorld &World) const;
+	// /tc 与 /tp（无参）的落点。按当前视角选取与 HUD 准心同源的基准点。
+	vec2 ResolvePracticeCursorTarget();
+
+public:
+	// 跟随旁观时把服务器快照里的位置替换为分支世界里的坐标。
+	// 分支世界与服务器世界各自推进，快照位置对练习世界没有意义。
+	// 只有旁观目标就在分支世界内（本体/分身）时才替换，返回是否生效。
+	bool ResolvePracticeSpectatorPosition(vec2 &Position);
+	// 分支世界的 solo 状态才是权威：练习里的 /solo /unsolo 只改预测世界，
+	// 服务器快照的 solo 标志不会跟着变，渲染层据此仍把分身画成实体。
+	bool ResolvePracticeSoloState(int ClientId, bool &Solo) const;
+	// 分支世界是当前客户端侧权威世界的时钟。幽灵播放头必须问这里，而不是
+	// 直接用 PredGameTick：服务器暂停时练习世界冻结、PredGameTick 继续走，
+	// 两者会分叉，幽灵就会相对练习世界超前。返回 false 表示由调用方用默认值。
+	bool ResolvePracticePlaybackTick(int &PlaybackTick) const;
+	bool PracticeWorldClockActive() const { return m_Enabled && m_PracticeWorldInitialized; }
+
+private:
 	bool AdvanceBaseWorldToTick(int TargetTick, int LocalClientId, int DummyClientId);
 	void ResetAttackTickHistory();
 	void TrackPracticeTileFeedback(int ClientId, CCharacter *pChar, const vec2 &BeforePos);
@@ -186,7 +274,12 @@ private:
 	bool TryAttachDummyFromSnapshot();
 	bool IsSafeRescueTile(int Tile) const;
 	bool IsSafeRescuePosition(const vec2 &Pos, float ProximityRadius) const;
+	bool IsInFreezePickupRange(CCharacter *pChar) const;
+	void CapturePracticeRescueTee(const CCharacter *pChar, int NowTick, SQmPracticeSavedTee &Tee) const;
+	void ApplyPracticeRescueTee(CCharacter *pChar, const SQmPracticeSavedTee &Tee) const;
 	void TrackSafeRescuePosition(int ClientId, CCharacter *pChar);
+	void ResetPracticeTimelineState();
+	void PublishPracticeWorldState();
 	bool FindNearestSafeRescuePosition(int ClientId, const vec2 &From, vec2 &OutPos) const;
 	bool FindFinishPosition(vec2 &OutPos) const;
 	void NormalizeDefaultPracticeWeapons(CCharacter *pChar, bool HasExplicitWeaponFlags) const;

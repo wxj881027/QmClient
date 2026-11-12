@@ -72,6 +72,40 @@ public:
 	void ExecuteBind(int Bind);
 
 	bool IsActive() const { return m_State.IsActive(); }
+
+private:
+	struct SPage
+	{
+		char m_aName[BINDWHEEL_MAX_NAME] = "";
+		std::vector<CBind> m_vBinds;
+	};
+
+	// 页 0 永远是用户自己的 bind 列表；内置页在每次打开时按上下文重建，不写配置。
+	std::vector<SPage> m_vBuiltinPages;
+	int m_CurrentPage = 0;
+	int m_ListScroll = 0;
+
+	// 面板布局每帧更新的命中几何；释放按键时同一次交互复用。
+	float m_ListRowsLeft = 0.0f;
+	float m_ListRowsTop = 0.0f;
+	float m_ListRowsWidth = 0.0f;
+	float m_ListRowHeight = 0.0f;
+	int m_ListVisibleRows = 0;
+	float m_TabsLeft = 0.0f;
+	float m_TabsTop = 0.0f;
+	float m_TabsWidth = 0.0f;
+	float m_TabsHeight = 0.0f;
+
+	void RebuildMenuPages();
+	bool InNormalPractice() const;
+	void SwitchPage(int Index);
+	void ClampListScroll();
+	const std::vector<CBind> &CurrentBinds() const;
+	const char *PageName(int Index) const;
+	int PageCount() const { return 1 + static_cast<int>(m_vBuiltinPages.size()); }
+	int CurrentSelection() const;
+	int HitTestPage(vec2 Mouse) const;
+	void RenderListLayout(float ScreenW, float ScreenH, float Alpha);
 };
 
 #endif

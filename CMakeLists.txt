@@ -3750,6 +3750,9 @@ if(CLIENT)
     components/qmclient/rank_view_timeline.h
     components/qmclient/rank_ghost.cpp
     components/qmclient/rank_ghost.h
+    components/qmclient/local_world.cpp
+    components/qmclient/local_world.h
+    components/qmclient/world_event_gate.h
     components/qmclient/online_replay_player.h
     components/qmclient/route_render_cache.h
     components/qmclient/route_start_index.h
@@ -5041,6 +5044,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_lyrics_hud_layout_test.cpp
     src/test/unit/qmclient/client/qm_fast_practice_hook_input_test.cpp
     src/test/unit/qmclient/client/qm_fast_practice_cursor_test.cpp
+    src/test/unit/qmclient/client/qm_fast_practice_rescue_test.cpp
+    src/test/unit/qmclient/client/qm_local_world_frame_test.cpp
     src/test/unit/qmclient/client/qm_media_island_content_test.cpp
     src/test/unit/qmclient/client/qm_media_island_satellite_test.cpp
     src/test/unit/qmclient/client/qm_media_island_motion_test.cpp
@@ -5390,6 +5395,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/client/voice_spatial_utils_test.cpp
   )
   set(TESTS_EXTRA
+    src/game/client/components/qmclient/local_world.cpp
     src/game/editor/collab_camera.cpp
     src/game/editor/mapitems/envelope.cpp
     src/game/map/envelope_eval.cpp
@@ -5894,6 +5900,8 @@ endif()
 if(TARGET benchmark::benchmark AND SERVER AND FREETYPE_FOUND)
   # 对象库集合与 testrunner 一致，基准可覆盖 base/engine/game 各层代码
   add_executable(qm-benchmarks EXCLUDE_FROM_ALL
+    src/test/benchmark/qm_local_world_benchmark.cpp
+    src/game/client/components/qmclient/local_world.cpp
     src/test/benchmark/qm_skin_download_benchmark.cpp
     src/test/benchmark/qm_startup_info_benchmark.cpp
     src/test/benchmark/qm_benchmark_main.cpp

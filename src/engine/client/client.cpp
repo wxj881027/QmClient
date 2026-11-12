@@ -1156,6 +1156,14 @@ int *CClient::GetInput(int Tick, int IsDummy) const
 	return nullptr;
 }
 
+int *CClient::GetInputExact(int Tick, int IsDummy) const
+{
+	const int d = IsDummy ^ g_Config.m_ClDummy;
+	if(m_aInputs[d][Tick % 200].m_Tick != Tick)
+		return nullptr;
+	return (int *)m_aInputs[d][Tick % 200].m_aData;
+}
+
 // ------ state handling -----
 void CClient::SetState(EClientState State)
 {

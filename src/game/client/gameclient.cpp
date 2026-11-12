@@ -42,6 +42,7 @@
 #include "components/qmclient/screenshot_manager.h"
 #include "components/qmclient/streamer_word_filter.h"
 #include "components/qmclient/translate/translate_ui_settings.h"
+#include "components/qmclient/world_event_gate.h"
 #include "components/race_demo.h"
 #include "components/scoreboard.h"
 #include "components/settings_resource_jobs.h"
@@ -3540,6 +3541,11 @@ void CGameClient::ProcessEvents()
 	if(m_aLastProcessedEventTick[EventDummy] == EventTick)
 		return;
 	m_aLastProcessedEventTick[EventDummy] = EventTick;
+	// 快速练习：服务器快照里的事件属于主世界那条时间线。在分支里播出来
+	// 就是"开枪却冒锤击特效 / 听见另一条世界线的爆炸声"。分支只播自己
+	// 预测世界产生的事件（HandlePredictedEvents），这里只保留上面的记账。
+	if(m_FastPractice.Enabled())
+		return;
 	auto RememberConfirmedEvent = [this, EventTick](int EventId, vec2 Pos, int ExtraInfo = -1) {
 		CGameWorld::CPredictedEvent Event(EventId, Pos, -1, EventTick, ExtraInfo);
 		Event.m_Handled = true;
@@ -3677,6 +3683,13 @@ void CGameClient::ProcessEvents()
 
 void CGameClient::FinalizeHammerHitEvents()
 {
+	// 与 ProcessEvents 同一条世界线边界：练习时服务器确认的锤击事件不能
+	// 在分支里补播，也不能把"已确认"记录写进分支的预测事件队列。
+	if(m_FastPractice.Enabled())
+	{
+		m_vPendingHammerHitEvents.clear();
+		return;
+	}
 	auto RememberConfirmedEvent = [this](vec2 Pos, int AttackerId, int TargetId, int SnapshotTick) {
 		CGameWorld::CPredictedEvent Event(NETEVENTTYPE_HAMMERHIT, Pos, AttackerId, SnapshotTick, TargetId);
 		Event.m_Handled = true;
@@ -7486,11 +7499,15 @@ void CGameClient::UpdateRenderedCharacters()
 void CGameClient::HandlePredictedEvents(const int Tick)
 {
 	const float Alpha = 1.0f;
+	// 与查看模式回放、练习录制共用同一份音效门控：三处判定一致，
+	// 同一条线路才不会在游玩/练习/回放里播出不同的声音。
+	const SQmFocusModeDecisions Focus = GetQmFocusModeDecisions();
 
-	QmProcessPredictedEvents(m_PredictedWorld.m_PredictedEvents, Tick, Client()->GameTickSpeed(), [this, Alpha](const CGameWorld::CPredictedEvent &Event) {
+	QmProcessPredictedEvents(m_PredictedWorld.m_PredictedEvents, Tick, Client()->GameTickSpeed(), [this, Alpha, &Focus](const CGameWorld::CPredictedEvent &Event) {
 		if(Event.m_EventId == NETEVENTTYPE_SOUNDWORLD)
 		{
-			if(m_GameInfo.m_RaceSounds && ((Event.m_ExtraInfo == SOUND_GUN_FIRE && !g_Config.m_SndGun) || (Event.m_ExtraInfo == SOUND_PLAYER_PAIN_LONG && !g_Config.m_SndLongPain)))
+			if(!QmShouldPlayWorldSound(Event.m_ExtraInfo, g_Config.m_SndGame, Focus.m_AirJump.m_PlaySound,
+				   Focus.m_PlayDeathOrSpawnSound, m_GameInfo.m_RaceSounds, g_Config.m_SndGun, g_Config.m_SndLongPain))
 				return false;
 			if(g_Config.m_DbgPredictEvents)
 				dbg_msg("pred_event", "predict-play sound=%d tick=%d pos=%.1f,%.1f", Event.m_ExtraInfo, Event.m_Tick, Event.m_Pos.x, Event.m_Pos.y);
@@ -7759,6 +7776,15 @@ bool CGameClient::IsOtherTeam(int ClientId) const
 {
 	bool Local = m_Snap.m_LocalClientId == ClientId;
 
+	// 快速练习的分支世界有自己的 solo 状态：练习里的 /solo /unsolo 只改预测
+	// 世界，服务器快照的 solo 标志不会跟着变，直接用快照会把分身画成实体。
+	auto SoloOf = [this](int Id) {
+		bool Solo = Id >= 0 && Id < MAX_CLIENTS && m_aClients[Id].m_Solo;
+		if(Id >= 0 && Id < MAX_CLIENTS)
+			m_FastPractice.ResolvePracticeSoloState(Id, Solo);
+		return Solo;
+	};
+
 	if(m_Snap.m_LocalClientId < 0)
 	{
 		return false;
@@ -7773,13 +7799,13 @@ bool CGameClient::IsOtherTeam(int ClientId) const
 		// 跟随视角沿用被旁观者的 solo 语义：任一方处于 solo 即视为其他队伍
 		//（冻结条、碰撞显示等据此隐藏/减淡）；自由视角由外层分支返回 false，仍能看到所有玩家。
 		if(SpectatorId >= 0 && SpectatorId < MAX_CLIENTS && ClientId != SpectatorId &&
-			(m_aClients[SpectatorId].m_Solo || m_aClients[ClientId].m_Solo))
+			(SoloOf(SpectatorId) || SoloOf(ClientId)))
 			return true;
 		if(m_Teams.Team(ClientId) == m_Teams.TeamSuper() || m_Teams.Team(SpectatorId) == m_Teams.TeamSuper())
 			return false;
 		return m_Teams.Team(ClientId) != m_Teams.Team(SpectatorId);
 	}
-	else if((m_aClients[m_Snap.m_LocalClientId].m_Solo || m_aClients[ClientId].m_Solo) && !Local)
+	else if((SoloOf(m_Snap.m_LocalClientId) || SoloOf(ClientId)) && !Local)
 	{
 		return true;
 	}

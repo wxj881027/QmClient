@@ -537,7 +537,12 @@ void CCamera::OnRender()
 		}
 
 		if(GameClient()->m_Snap.m_SpecInfo.m_Active)
-			m_Center = GameClient()->m_Snap.m_SpecInfo.m_Position + m_aDyncamCurrentCameraOffset[g_Config.m_ClDummy];
+		{
+			// 快速练习的跟随旁观必须落在分支世界坐标上，快照位置属于服务器世界线。
+			vec2 SpecPosition = GameClient()->m_Snap.m_SpecInfo.m_Position;
+			GameClient()->m_FastPractice.ResolvePracticeSpectatorPosition(SpecPosition);
+			m_Center = SpecPosition + m_aDyncamCurrentCameraOffset[g_Config.m_ClDummy];
+		}
 		else
 			m_Center = GameClient()->m_LocalCharacterPos + m_aDyncamCurrentCameraOffset[g_Config.m_ClDummy] + m_DriftCurrentOffset;
 	}

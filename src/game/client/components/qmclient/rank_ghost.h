@@ -106,6 +106,9 @@ public:
 	// ===== 查看模式：影子按独立时间线播放（游戏内 demo 播放器，不与跑图同步） =====
 	// 请求加载该 demo 的影子并直接进入查看模式；已加载时直接切换
 	void RequestGhostViewForDemo(const char *pDemoName);
+	// 快速练习 /pg 保存的影子组：加载组内所有轨 + events.qmevt，进入同一套查看模式。
+	// 没有源 demo（练习是客户端分叉世界），播放效果与 Rank 1 完全一致。
+	bool ViewPracticeGroup(const char *pGroupDir);
 	bool IsViewModeActive() const;
 	IDemoPlayer *ViewPlayer() { return &m_ViewPlayer; }
 	uint64_t ViewGeneration() const { return m_ViewGeneration; }

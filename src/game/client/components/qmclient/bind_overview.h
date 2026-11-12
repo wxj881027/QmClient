@@ -28,6 +28,10 @@ struct SKnownBindAction
 	EBindOptionGroup m_Group;
 	const char *m_pLabel;
 	const char *m_pCommand;
+	// 悬浮 Tips 的详细说明（Localize key）。nullptr = 沿用默认"只显示命令串"。
+	// 需要解释语义的动作（例如只在特定模式下生效的命令）必须写清楚，
+	// 否则控制页只有一行命令，用户不知道这个按键什么时候能用。
+	const char *m_pDescription = nullptr;
 };
 
 inline constexpr SKnownBindAction s_aKnownBindActions[] = {
@@ -85,6 +89,22 @@ inline constexpr SKnownBindAction s_aKnownBindActions[] = {
 	{EBindOptionGroup::MISCELLANEOUS, Localizable("Statboard"), "+statboard"},
 	{EBindOptionGroup::MISCELLANEOUS, Localizable("Pie menu"), "+pie_menu"},
 	{EBindOptionGroup::MISCELLANEOUS, Localizable("Fast practice"), "fast_practice_toggle"},
+	{EBindOptionGroup::MISCELLANEOUS, Localizable("Enter fast practice"), "fast_practice_enter"},
+	{EBindOptionGroup::MISCELLANEOUS, Localizable("Exit fast practice"), "fast_practice_exit"},
+	{EBindOptionGroup::MISCELLANEOUS, Localizable("Restart practice world"), "practice_restart",
+		Localizable("Restore the practice world to the state it had when fast practice was enabled. The recorded line is kept and a new segment is started.")},
+	{EBindOptionGroup::MISCELLANEOUS, Localizable("Set practice respawn point"), "practice_set_checkpoint",
+		Localizable("Store the current tee state (position, weapons, jumps and movement state) as the practice respawn point.")},
+	{EBindOptionGroup::MISCELLANEOUS, Localizable("Return to respawn point"), "practice_restore_checkpoint",
+		Localizable("Teleport back to the practice respawn point and restore the tee state saved there. Only the tee is restored; the world keeps running.")},
+	{EBindOptionGroup::MISCELLANEOUS, Localizable("Save practice line"), "practice_save_ghost",
+		Localizable("Save the current fast-practice line (all tees) as a replayable ghost group. Only works while fast practice is active. Find the saved group on the Ghost page and press View to replay it as a demo-style ghost without leaving the server.")},
+	{EBindOptionGroup::MISCELLANEOUS, Localizable("Start recording"), "practice_record_start",
+		Localizable("Start recording the fast-practice line, or resume after a pause. Recording is always manual: nothing is recorded until this is pressed.")},
+	{EBindOptionGroup::MISCELLANEOUS, Localizable("Pause recording"), "practice_record_pause",
+		Localizable("Pause recording without discarding what has been recorded so far. Resuming starts a new segment, so the paused stretch is not drawn as a straight line.")},
+	{EBindOptionGroup::MISCELLANEOUS, Localizable("Stop and save recording"), "practice_record_stop",
+		Localizable("Stop recording and write the line to disk right away as a ghost group. The saved group can be replayed from the bind menu or the Ghost page.")},
 	{EBindOptionGroup::MISCELLANEOUS, Localizable("Lock team"), "say /lock"},
 	{EBindOptionGroup::MISCELLANEOUS, Localizable("Show entities"), "toggle cl_overlay_entities 0 100"},
 	{EBindOptionGroup::MISCELLANEOUS, Localizable("Show HUD"), "toggle cl_showhud 0 1"},
