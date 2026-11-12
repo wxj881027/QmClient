@@ -163,8 +163,6 @@ public:
 	int LoadedGhostCountForEntry(const qmclient::rank_demo::SEntry &Entry) const;
 	// 条目缓存状态查询（路径出参返回可读缓存路径）
 	bool IsEntryDemoCached(const qmclient::rank_demo::SEntry &Entry, char *pDemoPath, size_t DemoPathSize) const;
-	// demo 浏览器下载按钮去重：查缓存目录里该图指定名次的最新 demo（false = 未缓存）
-	bool FindCachedRankDemo(const char *pMap, int Rank, char *pDemoPath, size_t DemoPathSize) const;
 	bool IsEntryGhostCached(const qmclient::rank_demo::SEntry &Entry, char *pGhostPath, size_t GhostPathSize) const;
 	// 该条目的影子是否已加载激活
 	bool IsEntryGhostActive(const qmclient::rank_demo::SEntry &Entry) const;
@@ -368,8 +366,12 @@ private:
 	void AlignToCurrentRun();
 	void NotifyLoaded(const char *pOwner, const char *pTimeText);
 
+	// 失败提示：下载/影子两套文案由这里按当前模式选择，调用点只提供文字
+	void Fail(const char *pDownloadMessage, const char *pGhostMessage);
 	void Fail(const char *pMessage);
 	void AbortTask();
+	// 请求到达终态（成功/失败/等待地图）后清空目标，避免清单刷新时重放上次请求
+	void ClearPendingRequest();
 	void Echo(const char *pMessage) const;
 
 	// CDemoPlayer::IListener

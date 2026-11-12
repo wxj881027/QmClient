@@ -108,7 +108,9 @@ namespace
 	constexpr size_t RANK_DEMO_MAX_DOWNLOAD_BYTES = 128 * 1024 * 1024;
 	constexpr size_t RANK_DEMO_MAX_UNPACKED_BYTES = 256 * 1024 * 1024;
 
-	bool FindRankOneDemo(const unsigned char *pData, size_t DataSize, const char *pMapName, std::string &DemoName, int64_t &DemoTs)
+	// 取该图最新一条 Rank 1 记录：后续的缓存判定与落盘命名都要用完整条目身份，
+	// 只拿 demo 名和 ts 无法构造出与 Rank 1 页一致的缓存路径。
+	bool FindRankOneDemo(const unsigned char *pData, size_t DataSize, const char *pMapName, qmclient::rank_demo::SEntry &Entry)
 	{
 		std::vector<qmclient::rank_demo::SEntry> Entries;
 		if(!qmclient::rank_demo::ParseManifest(pData, DataSize, Entries))
@@ -116,8 +118,7 @@ namespace
 		const qmclient::rank_demo::SEntry *pEntry = qmclient::rank_demo::FindLatest(Entries, pMapName, 1);
 		if(pEntry == nullptr)
 			return false;
-		DemoName = pEntry->m_Demo;
-		DemoTs = pEntry->m_Ts == std::numeric_limits<int64_t>::min() ? 0 : pEntry->m_Ts;
+		Entry = *pEntry;
 		return true;
 	}
 
@@ -3356,16 +3357,8 @@ void CMenus::StartRankDemoDownload(const char *pMapName)
 		return;
 	}
 
-	// QmClient：Rank 1 页缓存已有该图回放时不再重复下载，直接提示缓存位置
-	char aCachedRankDemo[IO_MAX_PATH_LENGTH];
-	if(GameClient()->m_RankGhost.FindCachedRankDemo(pMapName, 1, aCachedRankDemo, sizeof(aCachedRankDemo)))
-	{
-		char aMessage[IO_MAX_PATH_LENGTH + 128];
-		str_format(aMessage, sizeof(aMessage), Localize("Rank 1 demo already cached under 'Rank 1 replays': %s"), aCachedRankDemo);
-		FinishRankDemoDownload(true, aMessage);
-		return;
-	}
-
+	// 这里不再按“地图 + 名次”猜测 Rank 1 页是否已经缓存：必须先拿到 manifest
+	// 里的完整条目，才能判断缓存的是不是同一场次（同一地图有多条历史 Rank 1）。
 	const std::string ManifestPath = qmclient::media_paths::Resolve(Storage(), g_Config, "demos/.qm_rank_watchable.jsonl");
 	const std::string TempPath = qmclient::media_paths::Resolve(Storage(), g_Config, "demos/.qm_rank1_download.demo.gz");
 	if(!qmclient::media_paths::PrepareWrite(Storage(), ManifestPath) || TempPath.empty())
@@ -3415,9 +3408,8 @@ void CMenus::UpdateRankDemoDownload()
 			return;
 		}
 
-		std::string DemoName;
-		int64_t DemoTs = 0;
-		const bool Found = FindRankOneDemo(static_cast<const unsigned char *>(pData), DataSize, m_RankDemoMap.c_str(), DemoName, DemoTs);
+		qmclient::rank_demo::SEntry Entry;
+		const bool Found = FindRankOneDemo(static_cast<const unsigned char *>(pData), DataSize, m_RankDemoMap.c_str(), Entry);
 		free(pData);
 		Storage()->RemoveFile(m_aRankDemoManifestPath, qmclient::media_paths::StorageType(m_aRankDemoManifestPath));
 		if(!Found)
@@ -3426,9 +3418,22 @@ void CMenus::UpdateRankDemoDownload()
 			return;
 		}
 
+		// Rank 1 页已经缓存过同一场次：按完整条目身份判断。
+		// 按“地图 + 名次”取最新文件会把同图另一条历史 Rank 1 当成已下载。
+		char aCachedRankDemo[IO_MAX_PATH_LENGTH];
+		if(GameClient()->m_RankGhost.IsEntryDemoCached(Entry, aCachedRankDemo, sizeof(aCachedRankDemo)))
+		{
+			char aMessage[IO_MAX_PATH_LENGTH + 128];
+			str_format(aMessage, sizeof(aMessage), Localize("Rank 1 demo already cached under 'Rank 1 replays': %s"), aCachedRankDemo);
+			FinishRankDemoDownload(true, aMessage);
+			return;
+		}
+
 		// 与 Rank 1 页面复用同一套完整场次命名，避免两处各自拼接后漂移。
+		// 地图名取 manifest 里的条目值：浏览器写盘与后续复用查找必须算出同一个名字。
+		const int64_t DemoTs = Entry.m_Ts == std::numeric_limits<int64_t>::min() ? 0 : Entry.m_Ts;
 		const std::string BrowserName = qmclient::rank_demo::BrowserDemoFileName(
-			m_RankDemoMap.c_str(), DemoName.c_str(), DemoTs, 1);
+			Entry.m_Map.c_str(), Entry.m_Demo.c_str(), DemoTs, 1);
 		if(BrowserName.empty() || BrowserName.size() >= IO_MAX_PATH_LENGTH)
 		{
 			FinishRankDemoDownload(false, Localize("Failed to save demo"));
@@ -3457,7 +3462,7 @@ void CMenus::UpdateRankDemoDownload()
 		}
 
 		char aUrl[1024];
-		str_format(aUrl, sizeof(aUrl), "%s/%s", RANK_DEMO_URL_PREFIX, DemoName.c_str());
+		str_format(aUrl, sizeof(aUrl), "%s/%s", RANK_DEMO_URL_PREFIX, Entry.m_Demo.c_str());
 		m_pRankDemoRequest = HttpGetFile(aUrl, Storage(), m_aRankDemoTempPath, qmclient::media_paths::StorageType(m_aRankDemoTempPath));
 		m_pRankDemoRequest->MaxResponseSize(RANK_DEMO_MAX_DOWNLOAD_BYTES);
 		m_pRankDemoRequest->Timeout(CTimeout{5000, 120000, 200, 10});

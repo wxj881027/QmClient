@@ -136,3 +136,16 @@ TEST(QmRankDemoManifest, BrowserDemoFileNameUsesFullEntryIdentity)
 	EXPECT_TRUE(qmclient::rank_demo::BrowserDemoFileName("", "demo.demo.gz", 1, 1).empty());
 	EXPECT_TRUE(qmclient::rank_demo::BrowserDemoFileName("Map", "", 1, 1).empty());
 }
+
+TEST(QmRankDemoManifest, BrowserDemoFileNameStripsSuffixIgnoringCase)
+{
+	// 旧版浏览器用 str_endswith_nocase 剥离后缀：大小写不同的 demo 名必须算出
+	// 同一个落盘名，否则升级后同一场次的旧缓存永远命不中，会被重复下载。
+	EXPECT_EQ(qmclient::rank_demo::BrowserDemoFileName("Map", "uuid.demo.gz", 1700, 1),
+		qmclient::rank_demo::BrowserDemoFileName("Map", "uuid.DEMO.GZ", 1700, 1));
+	EXPECT_EQ(qmclient::rank_demo::BrowserDemoFileName("Map", "uuid.DEMO.GZ", 1700, 1),
+		"Map_rank1_1700_uuid.demo");
+	// 只剥一层：单独以 .demo 结尾时不再当成 .gz
+	EXPECT_EQ(qmclient::rank_demo::BrowserDemoFileName("Map", "uuid.demo", 1700, 1),
+		"Map_rank1_1700_uuid.demo");
+}

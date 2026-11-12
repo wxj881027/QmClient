@@ -206,6 +206,19 @@ namespace qmclient::rank_demo
 		return !Entries.empty();
 	}
 
+	// 去掉 demo 名的 .gz / .demo 后缀（大小写不敏感）。
+	// 旧版 demo 浏览器用 str_endswith_nocase 生成落盘名，这里必须保持同一规则：
+	// 规则一变，同一场次在升级前后会算出两个文件名，旧缓存永远命不中。
+	inline void StripDemoSuffixNoCase(std::string &Name, const char *pSuffix)
+	{
+		const size_t Len = str_length(pSuffix);
+		if(Len == 0 || Name.size() <= Len)
+			return;
+		if(str_comp_nocase(Name.c_str() + Name.size() - Len, pSuffix) != 0)
+			return;
+		Name.resize(Name.size() - Len);
+	}
+
 	// Demo 浏览器下载 Rank 1 回放时的文件名：
 	//   <安全地图名>_rank<N>_<ts>_<去掉 .gz/.demo 后缀并清理的 demo 名>.demo
 	// 浏览器写盘与 Rank 1 页面复用必须用同一份完整身份；只按地图名前缀匹配
@@ -220,10 +233,8 @@ namespace qmclient::rank_demo
 		str_sanitize_filename(aSafeMap);
 
 		std::string Demo = pDemo;
-		if(Demo.size() > 3 && Demo.compare(Demo.size() - 3, 3, ".gz") == 0)
-			Demo.resize(Demo.size() - 3);
-		if(Demo.size() > 5 && Demo.compare(Demo.size() - 5, 5, ".demo") == 0)
-			Demo.resize(Demo.size() - 5);
+		StripDemoSuffixNoCase(Demo, ".gz");
+		StripDemoSuffixNoCase(Demo, ".demo");
 		char aSafeDemo[256];
 		str_copy(aSafeDemo, Demo.c_str(), sizeof(aSafeDemo));
 		str_sanitize_filename(aSafeDemo);
