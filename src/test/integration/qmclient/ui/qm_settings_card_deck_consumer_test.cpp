@@ -1,4 +1,4 @@
-// 执行真实 Deck、卡片壳、模型和 CUi；仅由共享 fixture 替换设备边界。
+// 执行真实 Deck、卡片壳、模型和 CUi；设备由 fixture 提供，完整菜单入口由 fail-loud 边界阻断。
 #include <engine/keys.h>
 
 #include <game/client/QmUi/SettingsCardDeck.h>

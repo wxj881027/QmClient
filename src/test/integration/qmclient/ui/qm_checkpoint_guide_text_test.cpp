@@ -1,4 +1,4 @@
-// CP 标签执行真实文字布局、容器创建与绘制，故障只注入设备边界。
+// CP 标签执行真实文字布局、容器创建与绘制，使用设备边界和原生分配故障注入。
 #include <game/client/components/qmclient/checkpoint_guide_render.h>
 
 #include <test/support/prediction_allocation_failure.h>
