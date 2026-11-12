@@ -3751,6 +3751,7 @@ if(CLIENT)
     components/qmclient/route_visited.h
     components/qmclient/settings_resource_preview.cpp
     components/qmclient/settings_resource_preview.h
+    components/qmclient/settings_text_gap_sampler.h
     components/qmclient/search_answers.cpp
     components/qmclient/search_answers.h
     components/qmclient/screenshot_clipboard.cpp
@@ -4108,6 +4109,7 @@ if(CLIENT)
     map_preview_common.h
     map_renderer.cpp
     map_renderer.h
+    qm_entity_overlay_build_plan.h
     render_component.cpp
     render_component.h
     render_interfaces.h
@@ -5025,6 +5027,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_dummy_mini_view_layout_test.cpp
     src/test/unit/qmclient/client/qm_browser_map_preview_test.cpp
     src/test/unit/qmclient/client/qm_map_render_pass_test.cpp
+    src/test/unit/qmclient/client/qm_entity_overlay_build_plan_test.cpp
     src/test/integration/qmclient/client/qm_browser_map_preview_loader_test.cpp
     src/test/unit/qmclient/client/qm_hud_editor_visible_bounds_test.cpp
     src/test/unit/qmclient/client/qm_hud_hook_countdown_test.cpp
