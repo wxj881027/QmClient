@@ -413,7 +413,10 @@ uint64_t CMenus::BuildSoundSettingsCards(const qm_card_catalog::SQmCardBuildCont
 				return;
 			ListRow.VMargin(2.0f, &ListRow);
 			ListRow.h -= 2.0f;
-			DrawRoundedSurface(Ui(), ListRow, ColorRGBA(0.0f, 0.0f, 0.0f, 0.12f), ColorRGBA(), 6.0f);
+			// 列表容器的圆角与承载它的设置卡片同档（CARD_RADIUS）：之前这里写死 6，
+		// 卡片是大圆角、内部列表是小圆角，两层圆角不成套（实机反馈：「列表的背景容器
+		// 圆角不够大、不统一」）。边距不动，只统一圆角。
+		DrawRoundedSurface(Ui(), ListRow, ColorRGBA(0.0f, 0.0f, 0.0f, 0.12f), ColorRGBA(), ui_token::settings::CARD_RADIUS);
 			ListRow.Margin(6.0f, &ListRow);
 
 			const int OldSelectedPack = SelectedPack;
