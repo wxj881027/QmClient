@@ -1,6 +1,7 @@
 #include "QmCardCatalog.h"
 #include "QmCardCatalogInternal.h"
 #include "QmCardCatalogTClientInternal.h"
+#include "QmTClientDeclaredRegions.h"
 
 #include <base/str.h>
 
@@ -10,32 +11,18 @@
 #include <game/client/components/menus.h>
 #include <game/localization.h>
 
-#include <map>
 #include <optional>
 
 namespace qm_tclient_cards
 {
-	struct SDeclaredRegion
-	{
-		CSettingsContentLayoutCache m_Cache;
-		std::shared_ptr<const CSettingsContentLayout> m_pLayout;
-	};
-	struct SDeclaredRegions
-	{
-		std::map<std::string, SDeclaredRegion> m_Regions;
-		CUi *m_pUi = nullptr;
-		ITextRender *m_pText = nullptr;
-		bool m_ReadOnly = false;
-	};
-	static thread_local SDeclaredRegions *s_pDeclaredRegions = nullptr;
-
 	// 多列专用区块保留各自原点；普通控件仍用子 Flow 的不可变行快照。
 	// 状态由 builder 持有，搜索页与原设置页不会互相覆盖输入快照。
 	float TClientDeclaredRegion(const char *pId, float Width, const std::function<void(CUIRect &)> &Render, CUIRect *pRect)
 	{
-		dbg_assert(s_pDeclaredRegions != nullptr, "missing TClient declaration owner");
+		auto *pRegions = CDeclaredRegionsScope::Current();
+		dbg_assert(pRegions != nullptr, "missing TClient declaration owner");
 		Width = std::isfinite(Width) ? std::max(0.0f, Width) : 0.0f;
-		auto &Region = s_pDeclaredRegions->m_Regions[pId];
+		auto &Region = pRegions->m_Regions[pId];
 		const auto *pScope = CSettingsContentLayoutScope::Current();
 		if(pScope && pScope->m_Pass == ESettingsContentPass::DECLARE)
 		{
@@ -44,11 +31,11 @@ namespace qm_tclient_cards
 				std::vector<SSettingsContentRowDeclaration> vRows;
 				CUIRect Content{0, 0, Width, 0};
 				{
-					qm_settings_content::CContentDeclarationUiGuard Guard(s_pDeclaredRegions->m_pUi);
+					qm_settings_content::CContentDeclarationUiGuard Guard(pRegions->m_pUi);
 					CSettingsContentLayoutScope Scope(vRows);
 					Render(Content);
 				}
-				auto *pText = s_pDeclaredRegions->m_pText;
+				auto *pText = pRegions->m_pText;
 				Region.m_pLayout = Region.m_Cache.Resolve(vRows, Width, pText ? pText->GlyphAtlasRevision() : 0, [pText](const char *pValue, float TextWidth, float FontSize) { return pText ? pText->TextBoundingBox(FontSize, pValue, -1, std::max(1.0f, TextWidth)).m_H + FontSize * 0.25f : FontSize; }, [pText](const SSettingsContentRowDeclaration &Row, float TextWidth) {
 						const char *pValue = Row.m_Text.empty() ? " " : Row.m_Text.c_str();
 						return pText ? pText->TextBoundingBox(Row.m_FontSize, pValue, -1, std::max(1.0f, TextWidth - 2.0f * Row.m_TextPadding), Row.m_TextLineSpacing).m_H + 2.0f * Row.m_TextPadding : Row.m_MinimumHeight; });
@@ -59,11 +46,11 @@ namespace qm_tclient_cards
 			if(Region.m_pLayout->Width() <= 0.0f || !(pRect->w > 0.0f))
 				return Region.m_pLayout->Height();
 			auto Pass = pScope ? pScope->m_Pass : ESettingsContentPass::DRAW;
-			if(Pass == ESettingsContentPass::INPUT && (s_pDeclaredRegions->m_ReadOnly || (s_pDeclaredRegions->m_pUi && s_pDeclaredRegions->m_pUi->RenderOnly())))
+			if(Pass == ESettingsContentPass::INPUT && (pRegions->m_ReadOnly || (pRegions->m_pUi && pRegions->m_pUi->RenderOnly())))
 				return Region.m_pLayout->Height();
 			std::optional<CUiScopedBackgroundRender> Guard;
-			if(Pass == ESettingsContentPass::DRAW && s_pDeclaredRegions->m_pUi)
-				Guard.emplace(s_pDeclaredRegions->m_pUi, true);
+			if(Pass == ESettingsContentPass::DRAW && pRegions->m_pUi)
+				Guard.emplace(pRegions->m_pUi, true);
 			CSettingsContentLayoutScope Scope(*Region.m_pLayout, Pass);
 			Render(*pRect);
 		}
@@ -128,10 +115,8 @@ namespace qm_card_catalog
 		pRegions->m_pText = Ctx.m_pMenus->TextRender();
 		pRegions->m_ReadOnly = Ctx.m_ReadOnly;
 		Out.m_RenderMeasured = [Ctx, pStableId, pRegions](CUIRect &Rect) {
-			auto *pPrevious = qm_tclient_cards::s_pDeclaredRegions;
-			qm_tclient_cards::s_pDeclaredRegions = pRegions.get();
+			const qm_tclient_cards::CDeclaredRegionsScope Scope(*pRegions);
 			RunTClientCard(Ctx, pStableId, Rect, ETClientCardPass::RENDER);
-			qm_tclient_cards::s_pDeclaredRegions = pPrevious;
 		};
 		if(!Ctx.m_ReadOnly && str_comp(pStableId, "tclient:tee-trails") == 0)
 		{

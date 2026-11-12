@@ -88,7 +88,11 @@
 #include <cinttypes>
 #include <cmath>
 #include <limits>
+#include <new>
+#include <stdexcept>
+#include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 extern bool gs_SettingsAssetsEntityGamePreview;
@@ -6566,11 +6570,38 @@ bool CMenus::SetSettingsPageFromCardTab(const char *pTab)
 	return true;
 }
 
-void CMenus::NavigateToSettingsCard(const qm_card_registry::SCardNavigationTarget &Target)
+bool CMenus::NavigateToSettingsCard(const qm_card_registry::SCardNavigationTarget &Target, const char *pHighlightStableId, const std::vector<std::string> &vHighlightKeys)
 {
-	if(Target.m_pStableId == nullptr || Target.m_pStableId[0] == '\0' || !SetSettingsPageFromCardTab(Target.m_pTab))
-		return;
-	m_SettingsCardDeck.RequestReveal(Target.m_pStableId);
+	if(Target.m_pStableId == nullptr || Target.m_pStableId[0] == '\0')
+		return false;
+	try
+	{
+		// 定位与高亮先完整准备；切页只改标量和页签，之后无分配提交。
+		std::string RevealStableId(Target.m_pStableId);
+		std::string HighlightStableId;
+		std::vector<std::string> vHighlightKeysCandidate;
+		if(!vHighlightKeys.empty())
+		{
+			if(pHighlightStableId == nullptr || pHighlightStableId[0] == '\0')
+				return false;
+			HighlightStableId = pHighlightStableId;
+			vHighlightKeysCandidate = vHighlightKeys;
+		}
+		if(!SetSettingsPageFromCardTab(Target.m_pTab))
+			return false;
+		m_SettingsCardDeck.RequestReveal(std::move(RevealStableId));
+		if(!vHighlightKeys.empty())
+			qm_settings_reveal::PublishRequest(std::move(HighlightStableId), std::move(vHighlightKeysCandidate));
+		return true;
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	catch(const std::length_error &)
+	{
+		return false;
+	}
 }
 
 void CMenus::RequestSettingsCardFocus(const char *pStableId)

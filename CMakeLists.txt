@@ -3484,6 +3484,7 @@ if(CLIENT)
     QmUi/cards/QmCardCatalogTClientVisual.cpp
     QmUi/cards/QmCardCatalogTClientGameplay.cpp
     QmUi/cards/QmCardCatalogTClientInternal.h
+    QmUi/cards/QmTClientDeclaredRegions.h
     QmUi/cards/TClientConfigSource.h
     QmUi/cards/QmCardCatalogControls.cpp
     QmUi/cards/QmCardCatalogVisualContent.cpp
@@ -4032,7 +4033,9 @@ if(CLIENT)
     components/qmclient/weapon_trajectory_geometry.h
     components/qmclient/checkpoint_guide.cpp
     components/qmclient/checkpoint_guide.h
+    components/qmclient/checkpoint_guide_geometry.h
     components/qmclient/checkpoint_guide_logic.h
+    components/qmclient/checkpoint_guide_render.h
     components/qmclient/friend_heart_icon.h
     components/race_demo.cpp
     components/race_demo.h
@@ -5661,6 +5664,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_modes_test.cpp
     src/test/unit/qmclient/client/qm_map_progress_test.cpp
     src/test/unit/qmclient/client/qm_checkpoint_guide_test.cpp
+    src/test/unit/qmclient/client/qm_checkpoint_guide_geometry_test.cpp
     src/test/unit/qmclient/client/qm_hud_map_progress_test.cpp
     src/test/unit/qmclient/client/qm_config_save_value_override_test.cpp
     src/test/integration/qmclient/client/qm_removed_ui_config_test.cpp
@@ -6554,6 +6558,10 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/ui/qm_icon_text_test.cpp
       src/test/integration/qmclient/ui/qm_scaled_label_test.cpp
       src/test/integration/qmclient/ui/qm_search_answer_card_test.cpp
+      src/test/integration/qmclient/ui/qm_settings_card_deck_consumer_test.cpp
+      src/test/support/qm_settings_card_menu_boundary.cpp
+      src/test/integration/qmclient/ui/qm_checkpoint_guide_text_test.cpp
+      src/test/unit/qmclient/settings/settings_search_reveal_allocation_test.cpp
       src/test/integration/qmclient/ui/qm_surface_text_test.cpp
       src/test/integration/qmclient/ui/qm_theme_selection_test.cpp
       src/test/integration/qmclient/ui/qm_ui_element_lifetime_test.cpp
@@ -6568,6 +6576,13 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/game/client/ui_scrollregion.cpp
       src/game/client/lineinput.cpp
       src/game/client/QmUi/SettingsCardGeometry.cpp
+      src/game/client/QmUi/SettingsCard.cpp
+      src/game/client/QmUi/SettingsCardDeck.cpp
+      src/game/client/QmUi/SettingsCardDeckLogic.cpp
+      src/game/client/QmUi/SettingsCardInfo.cpp
+      src/game/client/QmUi/SettingsCardCollapseState.cpp
+      src/game/client/QmUi/SettingsCardWidthState.cpp
+      src/game/client/QmUi/QmModuleLayoutAdapter.cpp
       src/game/client/QmUi/QmLineInputMotion.cpp
       src/game/client/QmUi/UiButtons.cpp
       src/game/client/QmUi/UiSurface.cpp
@@ -6656,6 +6671,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/client/qm_chatbind_mutation_test.cpp
       src/test/unit/qmclient/client/qm_chatbind_config_test.cpp
       src/test/unit/qmclient/client/qm_markdown_allocation_test.cpp
+      src/test/unit/qmclient/client/qm_checkpoint_guide_allocation_test.cpp
       src/test/unit/qmclient/client/qm_markdown_cache_allocation_test.cpp
       src/test/integration/qmclient/client/qm_chat_log_allocation_test.cpp
       src/test/unit/qmclient/client/qm_markdown_broadcast_allocation_test.cpp
@@ -6716,6 +6732,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/settings/settings_choice_width_failure_test.cpp
       src/test/unit/qmclient/settings/settings_card_collapse_allocation_test.cpp
       src/test/unit/qmclient/settings/settings_bind_cache_allocation_test.cpp
+      src/test/unit/qmclient/settings/settings_content_layout_allocation_test.cpp
+      src/test/unit/qmclient/settings/tclient_declared_regions_scope_test.cpp
       src/test/unit/client/binds_rebind_allocation_test.cpp
       src/test/unit/qmclient/client/qm_hud_editor_visible_frame_allocation_test.cpp
       src/test/integration/qmclient/settings/settings_bind_cache_allocation_test.cpp

@@ -327,12 +327,14 @@ void CMenus::RenderQmNewFeaturesPopup(CUIRect Screen)
 						qm_card_registry::SCardNavigationTarget Target;
 						Target.m_pTab = pCard->m_pDefaultTab;
 						Target.m_pStableId = pCard->m_pStableId;
-						NavigateToSettingsCard(Target);
-						m_Popup = POPUP_NONE;
-						SetShowStart(false);
-						SetMenuPage(PAGE_SETTINGS);
-						s_ScrollRegion.End();
-						return;
+						if(NavigateToSettingsCard(Target))
+						{
+							m_Popup = POPUP_NONE;
+							SetShowStart(false);
+							SetMenuPage(PAGE_SETTINGS);
+							s_ScrollRegion.End();
+							return;
+						}
 					}
 				}
 				++BroadcastButtonIndex;
@@ -458,12 +460,14 @@ void CMenus::RenderQmNewFeaturesPopup(CUIRect Screen)
 				qm_card_registry::SCardNavigationTarget Target;
 				Target.m_pTab = Entry.m_pCardTab;
 				Target.m_pStableId = Entry.m_pCardStableId;
-				NavigateToSettingsCard(Target);
-				m_Popup = POPUP_NONE;
-				SetShowStart(false);
-				SetMenuPage(PAGE_SETTINGS);
-				s_ScrollRegion.End();
-				return;
+				if(NavigateToSettingsCard(Target))
+				{
+					m_Popup = POPUP_NONE;
+					SetShowStart(false);
+					SetMenuPage(PAGE_SETTINGS);
+					s_ScrollRegion.End();
+					return;
+				}
 			}
 		}
 

@@ -17,6 +17,7 @@ class CQmCheckpointGuide : public CComponent
 		QmCheckpointGuide::CPlanner m_Planner;
 		int m_ClientId = -1;
 		int64_t m_NextSearch = 0;
+		bool m_ObservationReady = false;
 	};
 	std::array<SPlayer, NUM_DUMMIES> m_aPlayers;
 	bool m_WasEnabled = false;

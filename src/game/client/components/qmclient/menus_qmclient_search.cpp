@@ -31,6 +31,8 @@
 
 #include <algorithm>
 #include <array>
+#include <new>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -152,14 +154,24 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 	{
 		if(HasSearchQuery)
 		{
-			std::vector<qm_settings_reveal::SPreview> vPreviews;
-			vPreviews.reserve(SearchVisibleGlobalCards.size());
-			for(const SQmGlobalSearchCard &Card : SearchVisibleGlobalCards)
+			try
 			{
-				if(!Card.m_vMatchKeys.empty())
-					vPreviews.push_back({Card.m_pStableId, Card.m_vMatchKeys});
+				std::vector<qm_settings_reveal::SPreview> vPreviews;
+				vPreviews.reserve(SearchVisibleGlobalCards.size());
+				for(const SQmGlobalSearchCard &Card : SearchVisibleGlobalCards)
+				{
+					if(!Card.m_vMatchKeys.empty())
+						vPreviews.push_back({Card.m_pStableId, Card.m_vMatchKeys});
+				}
+				qm_settings_reveal::SetPreviews(vPreviews);
 			}
-			qm_settings_reveal::SetPreviews(vPreviews);
+			catch(const std::bad_alloc &)
+			{
+				// 候选未备齐时保留旧预览及原期限，下帧重新准备。
+			}
+			catch(const std::length_error &)
+			{
+			}
 		}
 		else
 		{
@@ -219,8 +231,8 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 						return;
 					if(!ReadOnly && Ui()->DoButtonLogic(pOpenButton, 0, &LocateButton, BUTTONFLAG_LEFT))
 					{
-						qm_settings_reveal::Request(StableId, Keys);
-						NavigateToSettingsCard({HasTargetTab ? TargetTab.c_str() : nullptr, TargetStableId});
+						if(!NavigateToSettingsCard({HasTargetTab ? TargetTab.c_str() : nullptr, TargetStableId}, StableId, Keys))
+							return;
 						Ui()->ReleaseActiveTextInput(&m_GlobalCardSearchInput);
 						m_GlobalCardSearchInput.Deactivate();
 						return;
@@ -245,8 +257,8 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 					return;
 				if(Ui()->DoButtonLogic(pLocateButton, 0, &LocateButton, BUTTONFLAG_LEFT))
 				{
-					qm_settings_reveal::Request(StableId, Keys);
-					NavigateToSettingsCard({HasTargetTab ? TargetTab.c_str() : nullptr, TargetStableId});
+					if(!NavigateToSettingsCard({HasTargetTab ? TargetTab.c_str() : nullptr, TargetStableId}, StableId, Keys))
+						return;
 					Ui()->ReleaseActiveTextInput(&m_GlobalCardSearchInput);
 					m_GlobalCardSearchInput.Deactivate();
 					return;

@@ -1,5 +1,7 @@
 #include "checkpoint_guide.h"
 
+#include "checkpoint_guide_geometry.h"
+#include "checkpoint_guide_render.h"
 #include "modes.h"
 
 #include <base/color.h>
@@ -39,6 +41,7 @@ void CQmCheckpointGuide::OnReset()
 		Player.m_Planner.Reset();
 		Player.m_ClientId = -1;
 		Player.m_NextSearch = 0;
+		Player.m_ObservationReady = false;
 	}
 	m_WasEnabled = false;
 }
@@ -65,6 +68,7 @@ void CQmCheckpointGuide::ObservePlayers()
 			Player.m_Planner.Reset();
 			Player.m_ClientId = -1;
 			Player.m_NextSearch = 0;
+			Player.m_ObservationReady = false;
 			continue;
 		}
 		if(Player.m_ClientId != ClientId)
@@ -72,6 +76,7 @@ void CQmCheckpointGuide::ObservePlayers()
 			Player.m_Planner.Reset();
 			Player.m_ClientId = ClientId;
 			Player.m_NextSearch = 0;
+			Player.m_ObservationReady = false;
 		}
 		const auto &Character = GameClient()->m_Snap.m_aCharacters[ClientId];
 		int Checkpoint = -1;
@@ -81,7 +86,7 @@ void CQmCheckpointGuide::ObservePlayers()
 			Checkpoint = pCharacter->m_TeleCheckpoint;
 		if(Player.m_Planner.Checkpoint() != Checkpoint)
 			Player.m_NextSearch = 0;
-		Player.m_Planner.ObserveCheckpoint(Checkpoint);
+		Player.m_ObservationReady = Player.m_Planner.ObserveCheckpoint(Checkpoint);
 	}
 }
 
@@ -105,6 +110,7 @@ void CQmCheckpointGuide::OnMessage(int MsgType, void *pRawMsg)
 		{
 			Player.m_Planner.Reset();
 			Player.m_NextSearch = 0;
+			Player.m_ObservationReady = false;
 		}
 	}
 }
@@ -128,12 +134,19 @@ void CQmCheckpointGuide::OnRender()
 	ObservePlayers();
 	const int Dummy = std::clamp(g_Config.m_ClDummy, 0, NUM_DUMMIES - 1);
 	auto &Player = m_aPlayers[Dummy];
-	if(Player.m_ClientId < 0)
+	if(Player.m_ClientId < 0 || !Player.m_ObservationReady)
 		return;
 	CCollision *pCollision = Collision();
 	if(!pCollision || !pCollision->GameLayer() || !pCollision->TeleLayer())
 		return;
 	const vec2 Position = GameClient()->m_aClients[Player.m_ClientId].m_RenderPos;
+	if(!QmCheckpointGuide::IsSafeCollisionPosition(Position))
+	{
+		Player.m_Planner.ClearRoute();
+		return;
+	}
+	const int Width = pCollision->GetWidth();
+	const int Height = pCollision->GetHeight();
 	const int StartIndex = pCollision->GetPureMapIndex(Position);
 	const int64_t Now = time_get();
 	if(Now >= Player.m_NextSearch)
@@ -143,14 +156,19 @@ void CQmCheckpointGuide::OnRender()
 			pCharacter = GameClient()->m_PredictedWorld.GetCharacterById(Player.m_ClientId);
 		if(!pCharacter)
 			return;
-		Player.m_Planner.Update(pCollision->GetWidth(), pCollision->GetHeight(), StartIndex, [&](int Index) {
+		const bool Updated = Player.m_Planner.Update(Width, Height, StartIndex, [&](int Index) {
+			const auto Center = QmCheckpointGuide::TileCenter(Width, Height, Index);
+			if(!Center)
+				return QmMapProgress::MakeTile(TILE_SOLID);
 			const CTeleTile &Tele = pCollision->TeleLayer()[Index];
-			const int Restrictions = pCollision->GetMoveRestrictions(IsGuideSwitchActive, pCharacter, pCollision->GetPos(Index), 18.0f, Index);
+			const int Restrictions = pCollision->GetMoveRestrictions(IsGuideSwitchActive, pCharacter, *Center, QmCheckpointGuide::MOVE_RESTRICTION_DISTANCE, Index);
 			return QmMapProgress::MakeTile(pCollision->GameLayer()[Index].m_Index,
 				pCollision->FrontLayer() ? pCollision->FrontLayer()[Index].m_Index : TILE_AIR,
 				Tele.m_Type, Tele.m_Number, Restrictions);
 		});
 		Player.m_NextSearch = Now + time_freq() / 10;
+		if(!Updated)
+			return;
 	}
 	const auto &Result = Player.m_Planner.Result();
 	if(Result.m_TargetIndex < 0)
@@ -159,25 +177,46 @@ void CQmCheckpointGuide::OnRender()
 	// 移出已计算的路线后等待下一轮局部搜索，不把旧路线直接接过墙角。
 	if(Begin == Result.m_vRoute.end())
 		return;
+	const auto TargetCenter = QmCheckpointGuide::TileCenter(Width, Height, Result.m_TargetIndex);
+	std::array<vec2, QmCheckpointGuide::SEARCH_RADIUS + 1> aRoute;
+	const auto RouteCount = std::distance(Begin, Result.m_vRoute.end());
+	if(!TargetCenter || static_cast<size_t>(RouteCount) > aRoute.size())
+	{
+		Player.m_Planner.ClearRoute();
+		return;
+	}
+	size_t RouteIndex = 0;
+	for(auto It = Begin; It != Result.m_vRoute.end(); ++It)
+	{
+		const auto Center = QmCheckpointGuide::TileCenter(Width, Height, *It);
+		if(!Center)
+		{
+			Player.m_Planner.ClearRoute();
+			return;
+		}
+		aRoute[RouteIndex++] = *Center;
+	}
+	const vec2 Target = *TargetCenter;
+	const bool Warning = Result.m_Warning;
+	const int Checkpoint = Result.m_Checkpoint;
 	const ColorRGBA Color = Result.m_Warning ? ui_token::color::WARNING : ui_token::color::ACCENT_PRIMARY;
 	Graphics()->TextureClear();
 	Graphics()->QuadsBegin();
 	Graphics()->SetColor(Color.WithAlpha(0.85f));
 	vec2 From = Position;
-	for(auto It = Begin; It != Result.m_vRoute.end(); ++It)
+	for(size_t Index = 0; Index < RouteIndex; ++Index)
 	{
-		const vec2 To = pCollision->GetPos(*It);
+		const vec2 To = aRoute[Index];
 		const vec2 Delta = To - From;
 		if(length_squared(Delta) > 0.01f)
 		{
-			const vec2 Normal = vec2(-Delta.y, Delta.x) / length(Delta) * (Result.m_Warning ? 2.5f : 1.5f);
+			const vec2 Normal = vec2(-Delta.y, Delta.x) / length(Delta) * (Warning ? 2.5f : 1.5f);
 			IGraphics::CFreeformItem Segment(From + Normal, To + Normal, From - Normal, To - Normal);
 			Graphics()->QuadsDrawFreeform(&Segment, 1);
 		}
 		From = To;
 	}
-	const vec2 Target = pCollision->GetPos(Result.m_TargetIndex);
-	const float Pulse = Result.m_Warning ? 2.0f * std::sin((float)(Now % time_freq()) / time_freq() * 2.0f * pi) : 0.0f;
+	const float Pulse = Warning ? 2.0f * std::sin((float)(Now % time_freq()) / time_freq() * 2.0f * pi) : 0.0f;
 	const float Half = 18.0f + Pulse;
 	IGraphics::CQuadItem aBorder[] = {
 		{Target.x - Half, Target.y - Half, Half * 2.0f, 3.0f},
@@ -187,18 +226,5 @@ void CQmCheckpointGuide::OnRender()
 	};
 	Graphics()->QuadsDrawTL(aBorder, (int)std::size(aBorder));
 	Graphics()->QuadsEnd();
-	char aText[256];
-	str_format(aText, sizeof(aText), Localize("CP %d"), Result.m_Checkpoint);
-	const ColorRGBA OldText = TextRender()->GetTextColor();
-	const ColorRGBA OldOutline = TextRender()->GetTextOutlineColor();
-	TextRender()->TextColor(Color);
-	TextRender()->TextOutlineColor(ui_token::color::NEUTRAL_BLACK.WithAlpha(0.8f));
-	TextRender()->Text(Target.x - TextRender()->TextWidth(14.0f, aText) / 2.0f, Target.y - 38.0f, 14.0f, aText);
-	if(Result.m_Warning)
-	{
-		str_format(aText, sizeof(aText), Localize("Collect CP %d before teleporting"), Result.m_Checkpoint);
-		TextRender()->Text(Position.x - TextRender()->TextWidth(16.0f, aText) / 2.0f, Position.y - 66.0f, 16.0f, aText);
-	}
-	TextRender()->TextColor(OldText);
-	TextRender()->TextOutlineColor(OldOutline);
+	QmCheckpointGuide::RenderLabels(*TextRender(), Position, Target, Checkpoint, Warning, Color);
 }

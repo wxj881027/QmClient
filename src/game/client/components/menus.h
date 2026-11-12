@@ -3152,7 +3152,7 @@ private:
 	SSettingsContentMetrics CurrentSettingsContentMetrics() const;
 	SSettingsPageLayoutFrame SettingsPageLayout(const CUIRect &ContentView, float UiScale) const;
 	bool SetSettingsPageFromCardTab(const char *pTab);
-	void NavigateToSettingsCard(const qm_card_registry::SCardNavigationTarget &Target);
+	bool NavigateToSettingsCard(const qm_card_registry::SCardNavigationTarget &Target, const char *pHighlightStableId = nullptr, const std::vector<std::string> &vHighlightKeys = {});
 	void RequestSettingsCardFocus(const char *pStableId);
 	void PrepareSettingsAdaptiveBudgetInput(SSettingsAdaptiveBudgetInput &Input);
 	SSettingsAdaptiveBudgetOutput BeginSettingsUiFrameScheduler(EFrameSchedulerConsumer Consumer, const char *pSource, SSettingsAdaptiveBudgetInput Input);
