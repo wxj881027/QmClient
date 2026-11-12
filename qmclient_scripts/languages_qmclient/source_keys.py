@@ -347,7 +347,10 @@ def extract_qm_card_registry_records(content: str) -> list[SourceKeyRecord]:
         if len(args) < 6:
             continue
         line_number = _line_number(content, match.start())
-        for index in (4, 6):
+        # SCardDefault 当前布局：stableId、tab、全宽、标题、搜索词、描述、[导航目标…]。
+        # 旧布局（tab 后还有列枚举和列号）已随设置页迁移移除；按旧下标取会把搜索词
+        # 当成标题，并在全量提取时丢掉真正的卡片标题与描述。
+        for index in (3, 5):
             if index >= len(args):
                 continue
             literals = _extract_string_literals(args[index])

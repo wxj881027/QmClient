@@ -307,6 +307,9 @@
 0 = auto
 == 0 = automatycznie
 
+0 = never
+== 0 = never
+
 0 disables timed rotation; skins only switch on random start events
 == 0 wyłącza rotację czasową; skórki zmieniają się tylko przy losowym starcie
 
@@ -1030,6 +1033,9 @@ Append saved word list chunk
 
 Append to log file instead of overwriting
 == Dołączaj do pliku dziennika zamiast go nadpisywać
+
+Apple
+== Apple
 
 Apple capsule
 == Kapsuła Apple
@@ -2648,6 +2654,9 @@ Client message text gradient color
 Client performance pressure is high
 == Wydajność klienta jest pod dużym obciążeniem
 
+Client prediction
+== Client prediction
+
 Client prediction time is high
 == Czas przewidywania klienta jest wysoki
 
@@ -2662,6 +2671,12 @@ Client self-kill is enabled
 
 Client uptime
 == Czas działania klienta
+
+Client-side prediction and latency compensation
+== Client-side prediction and latency compensation
+
+Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, and upstream packet redundancy.
+== Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, and upstream packet redundancy.
 
 Client-side self-kill protection
 == Ochrona przed samobójstwem po stronie klienta
@@ -2746,6 +2761,9 @@ Colors of the hook collision line, in case of a possible collision with:
 
 Colors of the translate button in the chat input and of the language menu that button opens.
 == Kolory przycisku tłumaczenia w polu czatu i menu języków, które ten przycisk otwiera.
+
+Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
+== Koloruje wiersze tablicy wyników: zweryfikowani gracze, gracze tego samego klanu, znajomi oraz członkowie klanu na liście znajomych.
 
 Colors too close to the map background are hard to read while moving.
 == Kolory zbyt bliskie tłu mapy są trudne do odczytania w ruchu.
@@ -2893,6 +2911,9 @@ Configure camera, weapon, and gameplay defaults
 
 Configure chat position, size, and visibility
 == Configure chat position, size, and visibility
+
+Configure client-side prediction and latency compensation
+== Configure client-side prediction and latency compensation
 
 Configure controls and key bindings
 == Skonfiguruj sterowanie i przypisania klawiszy
@@ -3659,6 +3680,9 @@ DDNet points
 DDNet releases
 == Wydania DDNet
 
+DDNet settings sub-tab: 0=general, 1=network compensation
+== Podkarta ustawień DDNet: 0 = ogólne, 1 = kompensacja sieci
+
 DDNet staff
 == Zespół DDNet
 
@@ -3764,9 +3788,6 @@ Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 Deep freeze
 == Głębokie zamrożenie
 
-Deep freeze color
-== Kolor głębokiego zamrożenia
-
 Deep freeze opacity
 == Przezroczystość głębokiego zamrożenia
 
@@ -3776,8 +3797,8 @@ Deep freeze tile outline color
 Deep freeze tile outline width
 == Szerokość konturu kafelka głębokiego zamrożenia
 
-Deep unfreeze color
-== Kolor głębokiego odmrożenia
+Deep unfreeze
+== Głębokie rozmrożenie
 
 Deep unfreeze opacity
 == Przezroczystość głębokiego rozmrożenia
@@ -5117,9 +5138,6 @@ Enable the highlight and nameplate key presses, then choose the pressed hammer a
 Enable the indicator; choose its distance mode and whether war-list players get a different color.
 == Włącz wskaźnik, wybierz tryb odległości oraz czy gracze z war-list mają dostawać inny kolor.
 
-Enable the indicators you need; each one draws on your own screen only.
-== Włącz potrzebne wskaźniki; każdy rysuje tylko na twoim ekranie.
-
 Enable the message types you want and choose their colors.
 == Włącz wybrane typy wiadomości i wybierz ich kolory.
 
@@ -5416,6 +5434,9 @@ Expanded dropdown background color
 
 Expanded dropdown background opacity percentage
 == Kolor tła rozwiniętej listy — nieprzezroczystość w procentach
+
+Expanded personalization sections (format: stableId=1;stableId2=0;)
+== Rozwinięte sekcje personalizacji (format: stableId=1;stableId2=0;)
 
 Experimental
 == eksperymentalne
@@ -5909,6 +5930,9 @@ Fonts without CJK glyphs show fallback squares for Chinese text.
 For Gores
 == dla Gores
 
+for Gores
+== for Gores
+
 For more info: /cmdlist
 == Więcej informacji: /cmdlist
 
@@ -5929,6 +5953,9 @@ Force vote
 
 Format player names after a finish
 == Format player names after a finish
+
+Formerly "prediction margin" (cl_prediction_margin)
+== Formerly "prediction margin" (cl_prediction_margin)
 
 Forms
 == Formularze
@@ -6202,6 +6229,9 @@ Gaussian
 
 General
 == Ogólne
+
+General DDNet gameplay display: showing other players and their shadow opacity, background quads and the default zoom.
+== Ogólne wyświetlanie DDNet: pokazywanie innych graczy i krycia ich cieni, czworokątów tła i domyślnego powiększenia.
 
 Generated skin outline color
 == Kolor generowanego obrysu
@@ -6872,6 +6902,9 @@ Hookable tile outline color
 Hookable tile outline width
 == Szerokość konturu kafelka możliwego do zahaczenia
 
+Hookable tiles
+== Kafelki zaczepialne
+
 Hooking L/R: %.0f%%/%.0f%%
 == Hakowanie L/P: %.0f%%/%.0f%%
 
@@ -7198,9 +7231,6 @@ Indicator size
 
 Indicator transparency
 == Przezroczystość wskaźnika
-
-Indicators that read game state can lag behind the server; do not rely on them for frame-perfect input.
-== Wskaźniki odczytujące stan gry mogą odstawać od serwera; nie opieraj na nich wejścia co do klatki.
 
 Infinite hook for super players on/off.
 == Nieskończony hak dla super graczy włączony/wyłączony.
@@ -7573,6 +7603,9 @@ Keep the defaults unless you play with high ping; then try one option at a time 
 
 Keep the text light on a dark background; press "Reset tooltip appearance" to return to the defaults.
 == Na ciemnym tle najlepiej czyta się jasny tekst; przycisk przywrócenia wyglądu dymka wraca do zalecanych ustawień.
+
+Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
+== Trzymaj je z dala od kolorów drużyny, inaczej nazwy z tego samego klanu zleją się z panelem drużyny i staną się nieczytelne.
 
 Keep unsent message on chat close
 == Zachowaj niewysłaną treść przy zamykaniu czatu
@@ -8408,6 +8441,9 @@ Map play history
 Map preview rendering unavailable
 == Renderowanie podglądu mapy niedostępne
 
+Map preview shows the entity layer only (hides textures)
+== Podgląd mapy pokazuje tylko warstwę encji (ukrywa tekstury)
+
 Map Preview TODO
 == Podgląd mapy do zrobienia
 
@@ -9212,9 +9248,6 @@ Need to have started the map to swap with a player.
 Negative stability buffer
 == Bufor ujemnej stabilności
 
-Negative stability buffer (for Gores)
-== Bufor ujemnej stabilności (dla Gores)
-
 Net
 == Netto
 
@@ -9235,6 +9268,9 @@ Netversion
 
 Network
 == Sieć
+
+Network compensation
+== Network compensation
 
 Network timeout
 == Limit czasu sieci
@@ -10001,6 +10037,9 @@ Other modes
 Other players' hook line width
 == Szerokość linii haka innych graczy
 
+Other players' shadow opacity
+== Other players' shadow opacity
+
 Other sounds
 == Inne dźwięki
 
@@ -10096,9 +10135,6 @@ Overwrite clan even if empty
 
 Own hook line width
 == Szerokość linii własnego haka
-
-Own team only
-== tylko własna drużyna
 
 p = Ping latency
 == p = Opóźnienie ping
@@ -10321,6 +10357,9 @@ Pick a shape, then tune glow and animation speed.
 
 Pick a slot, type the command and its label, then hold the wheel key in game to test.
 == Wybierz pole, wpisz polecenie i jego etykietę, a potem przytrzymaj w grze klawisz koła, aby przetestować.
+
+Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
+== Wybierz kolor w każdym wierszu; kolory zweryfikowanych i tego samego klanu dotyczą tablicy wyników, a dwa kolory listy — listy znajomych.
 
 Pick result: %s
 == Wynik losowania: %s
@@ -10826,6 +10865,9 @@ Predicted ghost opacity
 Prediction
 == Predykcja
 
+Prediction and latency compensation moved to the "Network compensation" sub-tab of the DDNet page.
+== Przewidywanie i kompensacja opóźnień zostały przeniesione do podkarty „Kompensacja sieci” na stronie DDNet.
+
 Prediction boundary (ms, increases latency but reduces ping jitter)
 == Granica przewidywania (ms, zwiększa opóźnienie, ale redukuje fluktuacje pingu)
 
@@ -10852,6 +10894,9 @@ Prediction margin
 
 Prediction margin when frozen
 == Margines predykcji podczas zamrożenia
+
+Prediction trades accuracy for responsiveness: a larger margin and AntiPing smooth out ping jitter but can mispredict nearby actions, and upstream redundancy may triple upload traffic.
+== Przewidywanie wymienia dokładność na responsywność: większy margines i AntiPing wygładzają drgania pingu, ale mogą błędnie przewidzieć pobliskie akcje, a redundancja wysyłania może potroić ruch wychodzący.
 
 Preparing chat export: %d%%
 == Przygotowywanie eksportu czatu: %d%%
@@ -11392,12 +11437,6 @@ Rank 1 demo downloaded to '%s'
 
 Rank 1 replays
 == Nagrania rangi 1
-
-Rank demo already available in the demo browser: %s
-== Nagranie jest już dostępne w przeglądarce nagrań: %s
-
-Rank demo downloaded: %s. Play it from the Rank 1 list or the demo browser.
-== Demo rangi pobrana: %s. Odtwórz z listy Ranga 1 lub przeglądarki dem.
 
 Rank ghost loaded: %s, %s s. It follows your current run.
 == Duch rangi wczytany: %s, %s s. Podąża za twoim bieżącym przebiegiem.
@@ -12587,6 +12626,9 @@ Scoreboard playtime
 Scoreboard point check
 == Sprawdzanie punktów na tablicy wyników
 
+Scoreboard row colors
+== Kolory wierszy tablicy wyników
+
 Scoreboard score lookup
 == Sprawdzanie wyników na tablicy wyników
 
@@ -12974,12 +13016,6 @@ Server kick/spec votes are no longer actively moderated.
 Server kick/spec votes will now be actively moderated.
 == Głosowania za wyrzuceniem/przeniesieniem do widzów będą teraz aktywnie moderowane.
 
-Server list is more than five minutes old
-== Lista serwerów ma więcej niż pięć minut
-
-Server list refresh failed; showing the previous list
-== Nie udało się odświeżyć listy serwerów; wyświetlono poprzednią listę
-
 Server message
 == Wiadomość serwera
 
@@ -13027,6 +13063,9 @@ Set "Display mode" to "Show on key" or "Always show", then pick "Pistol guide li
 
 Set "Ingame mouse sens." for aiming and "UI mouse sens." for menus, then limit the cursor with "Minimum cursor distance" and "Maximum cursor distance".
 == Do celowania ustaw czułość myszy (w grze), do menu czułość myszy (interfejs), a potem ogranicz kursor minimalną i maksymalną odległością kursora.
+
+Set "Prediction margin" in milliseconds, tick "AntiPing (latency compensation)" and then choose what to predict; the redundancy switch is experimental and only useful on lossy connections.
+== Ustaw „Margines przewidywania” w milisekundach, zaznacz „AntiPing (kompensacja opóźnień)” i wybierz, co przewidywać; przełącznik redundancji jest eksperymentalny i przydaje się tylko przy stratach pakietów.
 
 Set "Switch interval" to 0 to stop timed switching and keep the queue for manual or map-join changes.
 == Ustaw interwał zmiany na 0, by wyłączyć zmianę czasową; kolejka zostanie do zmian ręcznych lub przy wejściu na mapę.
@@ -14666,6 +14705,9 @@ Sound variants
 Sound volume
 == Głośność dźwięku
 
+Sounds and particles
+== Sounds and particles
+
 Source file does not exist.
 == Plik źródłowy nie istnieje.
 
@@ -15899,6 +15941,9 @@ Tick "Show hitbox mode", choose the ranges you need, then set "Player range" to 
 Tick "Show inputs", then size and place it with "Keyboard size", "Mouse size", "Opacity" and the position sliders.
 == Zaznacz pokazuj wejścia, potem ustaw rozmiar i położenie rozmiarem klawiatury, rozmiarem myszy, kryciem i suwakami pozycji.
 
+Tick "Show others" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use "Show background quads" and "Default zoom" for the view.
+== Zaznacz „Pokaż innych”, aby rysować inne drużyny półprzezroczyście, ustaw krycie ich cieni w zależnej linii poniżej i użyj „Pokaż czworokąty tła” oraz „Domyślne powiększenie” do widoku.
+
 Tick any of "Show key stuck status", "Show hammer status", "Show dummy control status" or "Show dummy copy status".
 == Zaznacz dowolne z: pokazuj stan zablokowanych klawiszy, pokazuj stan młotka, pokazuj stan sterowania dummy lub pokazuj stan kopii dummy.
 
@@ -16165,9 +16210,6 @@ Toggle use of custom hand color
 
 Toggles collision
 == Przełącz kolizję
-
-Toggles DDNet gameplay indicators and assists such as race time, team markers and hints.
-== Włącza wskaźniki i asysty rozgrywki DDNet, takie jak czas wyścigu, znaczniki drużyny i podpowiedzi.
 
 Toggles hit others
 == Przełącz trafianie innych
@@ -16753,6 +16795,9 @@ Unhookable tile outline color
 
 Unhookable tile outline width
 == Szerokość konturu kafelka niemożliwego do zahaczenia
+
+Unhookable tiles
+== Kafelki niezaczepialne
 
 Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
 == Ujednolicona jakość eksportu (skala CRF/CQ/QP 0-51, -1 = użyj cl_video_crf); mapowana na natywny parametr każdego kodera

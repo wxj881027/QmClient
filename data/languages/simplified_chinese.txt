@@ -313,6 +313,9 @@
 0 = auto
 == 0 = 自动
 
+0 = never
+== 0 = 从不
+
 0 disables timed rotation; skins only switch on random start events
 == 0 表示不做时间轮换；仅在随机起点事件时切换皮肤
 
@@ -1057,6 +1060,9 @@ Append saved word list chunk
 
 Append to log file instead of overwriting
 == 追加到日志文件而不是每次覆盖
+
+Apple
+== 苹果
 
 Apple capsule
 == 苹果胶囊
@@ -2735,6 +2741,9 @@ Client message text gradient color
 Client performance pressure is high
 == 客户端性能压力偏高
 
+Client prediction
+== 客户端预测
+
 Client prediction time is high
 == 客户端预测耗时偏高
 
@@ -2749,6 +2758,12 @@ Client self-kill is enabled
 
 Client uptime
 == 客户端启动时间
+
+Client-side prediction and latency compensation
+== 客户端预测与延迟补偿
+
+Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, and upstream packet redundancy.
+== 客户端预测与延迟补偿：预测余量、AntiPing 与其预测实体、预测事件，以及上行数据包冗余。
 
 Client-side self-kill protection
 == 客户端侧自杀保护
@@ -2833,6 +2848,9 @@ Colors of the hook collision line, in case of a possible collision with:
 
 Colors of the translate button in the chat input and of the language menu that button opens.
 == 聊天输入框里翻译按钮的颜色，以及该按钮打开的语言菜单的颜色。
+
+Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
+== 为计分板各行着色：已认证玩家、同战队玩家、好友，以及好友列表中的战队成员。
 
 Colors too close to the map background are hard to read while moving.
 == 颜色与地图背景过于接近时，移动中很难看清。
@@ -2986,6 +3004,9 @@ Configure camera, weapon, and gameplay defaults
 
 Configure chat position, size, and visibility
 == 配置聊天框位置、大小和可见性
+
+Configure client-side prediction and latency compensation
+== 配置客户端预测与延迟补偿
 
 Configure controls and key bindings
 == 配置控制与按键绑定
@@ -3770,6 +3791,9 @@ DDNet points
 DDNet releases
 == DDNet 发布包
 
+DDNet settings sub-tab: 0=general, 1=network compensation
+== DDNet 设置子页签：0 = 常规，1 = 网络补偿
+
 DDNet staff
 == DDNet 官方开发者
 
@@ -3878,9 +3902,6 @@ Deep fly
 Deep freeze
 == 深冻
 
-Deep freeze color
-== 深度冻结颜色
-
 Deep freeze opacity
 == 深度冻结不透明度
 
@@ -3890,8 +3911,8 @@ Deep freeze tile outline color
 Deep freeze tile outline width
 == 深冻图块轮廓宽度
 
-Deep unfreeze color
-== 深度解冻颜色
+Deep unfreeze
+== 深解冻
 
 Deep unfreeze opacity
 == 深度解冻不透明度
@@ -5279,9 +5300,6 @@ Enable the highlight and nameplate key presses, then choose the pressed hammer a
 Enable the indicator; choose its distance mode and whether war-list players get a different color.
 == 启用指示器，选择距离模式，并决定敌对列表玩家是否使用不同颜色。
 
-Enable the indicators you need; each one draws on your own screen only.
-== 启用你需要的指示；每一项只绘制在你自己的屏幕上。
-
 Enable the message types you want and choose their colors.
 == 启用需要的消息类型，并为其选择颜色。
 
@@ -5587,6 +5605,9 @@ Expanded dropdown background color
 
 Expanded dropdown background opacity percentage
 == 展开列表背景 — 不透明度百分比
+
+Expanded personalization sections (format: stableId=1;stableId2=0;)
+== 已展开的个性化分区（格式：stableId=1;stableId2=0;）
 
 Experimental
 == 实验性
@@ -6122,6 +6143,9 @@ Fonts without CJK glyphs show fallback squares for Chinese text.
 For Gores
 == 用于 Gores
 
+for Gores
+== 用于 Gores
+
 For more info: /cmdlist
 == 更多命令请查看：/cmdlist
 
@@ -6142,6 +6166,9 @@ Force vote
 
 Format player names after a finish
 == 完成后格式化玩家名称
+
+Formerly "prediction margin" (cl_prediction_margin)
+== 旧名「预测边距」（prediction margin，cl_prediction_margin）
 
 Forms
 == 表单
@@ -6418,6 +6445,9 @@ Gaussian
 
 General
 == 常规
+
+General DDNet gameplay display: showing other players and their shadow opacity, background quads and the default zoom.
+== DDNet 通用玩法显示：显示其他玩家及其影子不透明度、背景贴图和默认缩放。
 
 Generated skin outline color
 == 生成描边颜色
@@ -7112,6 +7142,9 @@ Hookable tile outline color
 Hookable tile outline width
 == 可钩图块轮廓宽度
 
+Hookable tiles
+== 可钩图块
+
 Hooking L/R: %.0f%%/%.0f%%
 == 出钩 L/R：%.0f%%/%.0f%%
 
@@ -7447,9 +7480,6 @@ Indicator size
 
 Indicator transparency
 == 指示器透明度
-
-Indicators that read game state can lag behind the server; do not rely on them for frame-perfect input.
-== 读取游戏状态的指示可能比服务器滞后；不要依赖它们做逐帧精确的输入。
 
 Infinite hook for super players on/off.
 == 超级玩家无限钩子开/关
@@ -7834,6 +7864,9 @@ Keep the defaults unless you play with high ping; then try one option at a time 
 
 Keep the text light on a dark background; press "Reset tooltip appearance" to return to the defaults.
 == 深色背景配浅色文字最好读；想恢复推荐样式就点重置提示外观。
+
+Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
+== 这些颜色要和队伍颜色区分开，否则同战队名字会融进队伍面板里，变得难以辨认。
 
 Keep unsent message on chat close
 == 关闭聊天框时保留未发送内容
@@ -8723,6 +8756,9 @@ Map play history
 Map preview rendering unavailable
 == 当前无法渲染地图预览
 
+Map preview shows the entity layer only (hides textures)
+== 地图预览只显示实体层（隐藏贴图）
+
 Map Preview TODO
 == 地图预览待做
 
@@ -9545,9 +9581,6 @@ Needs cfg file - install writes it into your config folder
 Negative stability buffer
 == 负稳定性缓冲
 
-Negative stability buffer (for Gores)
-== 负稳定性缓冲（用于 Gores）
-
 Nesting depth
 == 嵌套深度
 
@@ -9574,6 +9607,9 @@ Netversion
 
 Network
 == 网络
+
+Network compensation
+== 网络补偿
 
 Network timeout
 == 网络超时
@@ -10415,6 +10451,9 @@ Other modes
 Other players' hook line width
 == 其他玩家的钩子辅助线宽度
 
+Other players' shadow opacity
+== 其他玩家的影子不透明度
+
 Other sounds
 == 其他音效
 
@@ -10522,9 +10561,6 @@ overwrites
 
 Own hook line width
 == 自己的钩子辅助线宽度
-
-Own team only
-== 仅显示同队伍
 
 p = Ping latency
 == p = Ping 延迟
@@ -10750,6 +10786,9 @@ Pick a shape, then tune glow and animation speed.
 
 Pick a slot, type the command and its label, then hold the wheel key in game to test.
 == 选一个槽位，输入指令和对应标签，再在游戏中按住轮盘键测试。
+
+Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
+== 逐行选择颜色；已认证和同战队颜色作用于计分板，两个列表颜色作用于好友列表。
 
 Pick result: %s
 == 抽取结果：%s
@@ -11267,6 +11306,9 @@ Predicted ghost opacity
 Prediction
 == 预测
 
+Prediction and latency compensation moved to the "Network compensation" sub-tab of the DDNet page.
+== 预测与延迟补偿已移到 DDNet 页面的「网络补偿」子页签。
+
 Prediction boundary (ms, increases latency but reduces ping jitter)
 == 预测边界（单位：毫秒，增加延迟但可减少因 ping 波动导致的卡顿）
 
@@ -11293,6 +11335,9 @@ Prediction margin
 
 Prediction margin when frozen
 == 冻结时的预测边距
+
+Prediction trades accuracy for responsiveness: a larger margin and AntiPing smooth out ping jitter but can mispredict nearby actions, and upstream redundancy may triple upload traffic.
+== 预测用准确性换取响应速度：更大的余量和 AntiPing 能抹平 ping 抖动，但可能误判附近动作；上行冗余最多会让上传流量增至三倍。
 
 Preparing chat export: %d%%
 == 正在准备聊天导出：%d%%
@@ -11845,12 +11890,6 @@ Rank 1 demo downloaded to '%s'
 
 Rank 1 replays
 == Rank 1 回放
-
-Rank demo already available in the demo browser: %s
-== 该回放已存在于 demo 浏览器目录：%s
-
-Rank demo downloaded: %s. Play it from the Rank 1 list or the demo browser.
-== Rank 演示已下载：%s。可从 Rank 1 列表或演示浏览器播放。
 
 Rank ghost loaded: %s, %s s. It follows your current run.
 == Rank 影子已加载：%s，%s 秒。正在跟随你当前的跑图进度。
@@ -13475,12 +13514,6 @@ Server kick/spec votes are no longer actively moderated.
 Server kick/spec votes will now be actively moderated.
 == 服务器的踢人/旁观投票现在会被主动管理员模式接管
 
-Server list is more than five minutes old
-== 服务器列表已超过五分钟未更新
-
-Server list refresh failed; showing the previous list
-== 服务器列表刷新失败，正在显示上次列表
-
 Server message
 == 服务端消息
 
@@ -13528,6 +13561,9 @@ Set "Display mode" to "Show on key" or "Always show", then pick "Pistol guide li
 
 Set "Ingame mouse sens." for aiming and "UI mouse sens." for menus, then limit the cursor with "Minimum cursor distance" and "Maximum cursor distance".
 == 瞄准用游戏内鼠标灵敏度，菜单用鼠标灵敏度（界面），再用最小光标距离和最大光标距离限制光标位置。
+
+Set "Prediction margin" in milliseconds, tick "AntiPing (latency compensation)" and then choose what to predict; the redundancy switch is experimental and only useful on lossy connections.
+== 以毫秒设置「预测余量」，勾选「延迟补偿（AntiPing）」，再选择要预测的内容；冗余开关是实验性的，只在丢包严重的连接上有用。
 
 Set "Switch interval" to 0 to stop timed switching and keep the queue for manual or map-join changes.
 == 把切换间隔设为 0 就会停止定时切换，队列留给手动切换或进图时使用。
@@ -15179,6 +15215,9 @@ Sound variants
 Sound volume
 == 音量
 
+Sounds and particles
+== 声音与粒子
+
 Source file does not exist.
 == 源文件不存在
 
@@ -16475,6 +16514,9 @@ Tick "Show hitbox mode", choose the ranges you need, then set "Player range" to 
 Tick "Show inputs", then size and place it with "Keyboard size", "Mouse size", "Opacity" and the position sliders.
 == 勾选显示输入，然后用键盘大小、鼠标大小、不透明度和位置滑块调整尺寸与位置。
 
+Tick "Show others" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use "Show background quads" and "Default zoom" for the view.
+== 勾选「显示其他玩家」会半透明绘制其他队伍，在它下方的依赖行里设置影子不透明度，并用「显示背景贴图」和「默认缩放」调整视图。
+
 Tick any of "Show key stuck status", "Show hammer status", "Show dummy control status" or "Show dummy copy status".
 == 按需勾选显示卡键状态、显示锤子状态、显示分身控制状态或显示分身同步状态。
 
@@ -16753,9 +16795,6 @@ Toggle use of custom hand color
 
 Toggles collision
 == 切换碰撞
-
-Toggles DDNet gameplay indicators and assists such as race time, team markers and hints.
-== 开关 DDNet 的玩法指示与辅助功能，例如竞速时间、队友标记和提示。
 
 Toggles hit others
 == 切换打别人
@@ -17347,6 +17386,9 @@ Unhookable tile outline color
 
 Unhookable tile outline width
 == 不可钩图块轮廓宽度
+
+Unhookable tiles
+== 不可钩图块
 
 Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
 == 统一导出质量（CRF/CQ/QP 标度 0-51，-1 = 使用 cl_video_crf）；映射到各编码器的原生参数
@@ -23226,35 +23268,3 @@ Included
 [Translation credits: Add your own name here when you update translations]
 English translation by the DDNet Team
 == 简体中文翻译由 DDNet 队伍和 QmClient 贡献者维护
-
-Client prediction
-== 客户端预测
-
-Client-side prediction and latency compensation
-== 客户端预测与延迟补偿
-Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, and upstream packet redundancy.
-== 客户端预测与延迟补偿：预测余量、AntiPing 与其预测实体、预测事件，以及上行数据包冗余。
-
-Configure client-side prediction and latency compensation
-== 配置客户端预测与延迟补偿
-
-Network compensation
-== 网络补偿
-
-Other players' shadow opacity
-== 其他玩家的影子不透明度
-
-Sounds and particles
-== 声音与粒子
-
-0 = never
-== 0 = 从不
-
-Formerly "prediction margin" (cl_prediction_margin)
-== 旧名「预测边距」（prediction margin，cl_prediction_margin）
-
-for Gores
-== 用于 Gores
-
-DDNet settings sub-tab: 0=general, 1=network compensation
-== DDNet 设置子页签：0 = 常规，1 = 网络补偿

@@ -307,6 +307,9 @@
 0 = auto
 == 0 = otomatik
 
+0 = never
+== 0 = never
+
 0 disables timed rotation; skins only switch on random start events
 == 0, zamanlanmış döndürmeyi devre dışı bırakır; skinler yalnızca rastgele başlangıç olaylarında değişir
 
@@ -1030,6 +1033,9 @@ Append saved word list chunk
 
 Append to log file instead of overwriting
 == Günlük dosyasının üzerine yazmak yerine sonuna ekle
+
+Apple
+== Apple
 
 Apple capsule
 == Apple kapsül
@@ -2648,6 +2654,9 @@ Client message text gradient color
 Client performance pressure is high
 == İstemci performans baskısı yüksek
 
+Client prediction
+== Client prediction
+
 Client prediction time is high
 == İstemci tahmin süresi yüksek
 
@@ -2662,6 +2671,12 @@ Client self-kill is enabled
 
 Client uptime
 == İstemci çalışma süresi
+
+Client-side prediction and latency compensation
+== Client-side prediction and latency compensation
+
+Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, and upstream packet redundancy.
+== Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, and upstream packet redundancy.
 
 Client-side self-kill protection
 == İstemci tarafı intihar koruması
@@ -2746,6 +2761,9 @@ Colors of the hook collision line, in case of a possible collision with:
 
 Colors of the translate button in the chat input and of the language menu that button opens.
 == Sohbet girişindeki çeviri düğmesinin ve bu düğmenin açtığı dil menüsünün renkleri.
+
+Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
+== Skor tablosu satırlarını renklendirir: kimliği doğrulanmış oyuncular, aynı klan oyuncuları, arkadaşlar ve arkadaş listesindeki klan üyeleri.
 
 Colors too close to the map background are hard to read while moving.
 == Harita arka planına çok yakın renkler hareket halindeyken zor okunur.
@@ -2893,6 +2911,9 @@ Configure camera, weapon, and gameplay defaults
 
 Configure chat position, size, and visibility
 == Configure chat position, size, and visibility
+
+Configure client-side prediction and latency compensation
+== Configure client-side prediction and latency compensation
 
 Configure controls and key bindings
 == Kontrolleri ve tuş atamalarını yapılandır
@@ -3659,6 +3680,9 @@ DDNet points
 DDNet releases
 == DDNet sürümleri
 
+DDNet settings sub-tab: 0=general, 1=network compensation
+== DDNet ayarları alt sekmesi: 0 = genel, 1 = ağ telafisi
+
 DDNet staff
 == DDNet Ekibi
 
@@ -3764,9 +3788,6 @@ Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 Deep freeze
 == Derin donma
 
-Deep freeze color
-== Derin donma rengi
-
 Deep freeze opacity
 == Derin donma opaklığı.
 
@@ -3776,8 +3797,8 @@ Deep freeze tile outline color
 Deep freeze tile outline width
 == Derin donma bloğu anahat genişliği
 
-Deep unfreeze color
-== Derin çözülme rengi
+Deep unfreeze
+== Derin çözülme
 
 Deep unfreeze opacity
 == Derin çözülme opaklığı.
@@ -5117,9 +5138,6 @@ Enable the highlight and nameplate key presses, then choose the pressed hammer a
 Enable the indicator; choose its distance mode and whether war-list players get a different color.
 == Göstergeyi açın; mesafe modunu ve war-list oyuncularının farklı renk alıp almayacağını seçin.
 
-Enable the indicators you need; each one draws on your own screen only.
-== İhtiyacınız olan göstergeleri etkinleştirin; her biri yalnızca kendi ekranınızda çizilir.
-
 Enable the message types you want and choose their colors.
 == İstediğiniz mesaj türlerini etkinleştirin ve renklerini seçin.
 
@@ -5416,6 +5434,9 @@ Expanded dropdown background color
 
 Expanded dropdown background opacity percentage
 == Açılan liste arka plan rengi — opaklık yüzdesi
+
+Expanded personalization sections (format: stableId=1;stableId2=0;)
+== Genişletilmiş kişiselleştirme bölümleri (biçim: stableId=1;stableId2=0;)
 
 Experimental
 == deneysel
@@ -5909,6 +5930,9 @@ Fonts without CJK glyphs show fallback squares for Chinese text.
 For Gores
 == Gores için
 
+for Gores
+== for Gores
+
 For more info: /cmdlist
 == Daha fazla bilgi: /cmdlist
 
@@ -5929,6 +5953,9 @@ Force vote
 
 Format player names after a finish
 == Format player names after a finish
+
+Formerly "prediction margin" (cl_prediction_margin)
+== Formerly "prediction margin" (cl_prediction_margin)
 
 Forms
 == Formlar
@@ -6202,6 +6229,9 @@ Gaussian
 
 General
 == Genel
+
+General DDNet gameplay display: showing other players and their shadow opacity, background quads and the default zoom.
+== Genel DDNet görünümü: diğer oyuncuları ve gölge opaklıklarını, arka plan dörtlülerini ve varsayılan yakınlaştırmayı gösterir.
 
 Generated skin outline color
 == Oluşturulan dış çizgi rengi
@@ -6872,6 +6902,9 @@ Hookable tile outline color
 Hookable tile outline width
 == Kancalanabilir döşeme ana hattı genişliği
 
+Hookable tiles
+== Kancalanabilir karolar
+
 Hooking L/R: %.0f%%/%.0f%%
 == Kanca S/S: %.0f%%/%.0f%%
 
@@ -7198,9 +7231,6 @@ Indicator size
 
 Indicator transparency
 == Gösterge şeffaflığı
-
-Indicators that read game state can lag behind the server; do not rely on them for frame-perfect input.
-== Oyun durumunu okuyan göstergeler sunucunun gerisinde kalabilir; kare hassasiyetli girdi için bunlara güvenmeyin.
 
 Infinite hook for super players on/off.
 == Süper oyuncular için sonsuz kanca açık/kapalı.
@@ -7573,6 +7603,9 @@ Keep the defaults unless you play with high ping; then try one option at a time 
 
 Keep the text light on a dark background; press "Reset tooltip appearance" to return to the defaults.
 == Koyu zeminde açık renk yazı daha okunaklıdır; yardım görünümünü sıfırla düğmesi önerilen görünümü geri getirir.
+
+Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
+== Bunları takım renklerinden ayrı tutun; aksi halde aynı klan adları takım paneliyle karışır ve okunması zorlaşır.
 
 Keep unsent message on chat close
 == Sohbet kapatılırken gönderilmemiş içeriği sakla
@@ -8408,6 +8441,9 @@ Map play history
 Map preview rendering unavailable
 == Harita önizlemesi oluşturulamıyor
 
+Map preview shows the entity layer only (hides textures)
+== Harita önizlemesi yalnızca varlık katmanını gösterir (dokuları gizler)
+
 Map Preview TODO
 == Harita önizlemesi yapılacak
 
@@ -9212,9 +9248,6 @@ Need to have started the map to swap with a player.
 Negative stability buffer
 == Negatif stabilite tamponu
 
-Negative stability buffer (for Gores)
-== Negatif stabilite tamponu (Gores için)
-
 Net
 == Net
 
@@ -9235,6 +9268,9 @@ Netversion
 
 Network
 == Ağ
+
+Network compensation
+== Network compensation
 
 Network timeout
 == Ağ zaman aşımı
@@ -10001,6 +10037,9 @@ Other modes
 Other players' hook line width
 == Diğer oyuncuların kanca çizgisi genişliği
 
+Other players' shadow opacity
+== Other players' shadow opacity
+
 Other sounds
 == Diğer sesler
 
@@ -10096,9 +10135,6 @@ Overwrite clan even if empty
 
 Own hook line width
 == Kendi kanca çizgisi genişliği
-
-Own team only
-== yalnızca kendi takımı
 
 p = Ping latency
 == p = Ping gecikmesi
@@ -10321,6 +10357,9 @@ Pick a shape, then tune glow and animation speed.
 
 Pick a slot, type the command and its label, then hold the wheel key in game to test.
 == Bir dilim seç, komutu ve etiketini yaz, sonra oyunda çark tuşunu basılı tutarak dene.
+
+Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
+== Her renk satırında bir renk seçin; kimliği doğrulanmış ve aynı klan renkleri skor tablosuna, iki liste rengi de arkadaş listesine uygulanır.
 
 Pick result: %s
 == Seçim sonucu: %s
@@ -10826,6 +10865,9 @@ Predicted ghost opacity
 Prediction
 == Tahmin
 
+Prediction and latency compensation moved to the "Network compensation" sub-tab of the DDNet page.
+== Tahmin ve gecikme telafisi DDNet sayfasındaki „Ağ telafisi“ alt sekmesine taşındı.
+
 Prediction boundary (ms, increases latency but reduces ping jitter)
 == Tahmin sınırı (ms, gecikmeyi artırır ancak ping dalgalanmasını azaltır)
 
@@ -10852,6 +10894,9 @@ Prediction margin
 
 Prediction margin when frozen
 == Donduğunda tahmin marjı
+
+Prediction trades accuracy for responsiveness: a larger margin and AntiPing smooth out ping jitter but can mispredict nearby actions, and upstream redundancy may triple upload traffic.
+== Tahmin, tepkisellik karşılığında doğruluktan ödün verir: daha büyük bir pay ve AntiPing ping dalgalanmasını yumuşatır ancak yakındaki eylemleri yanlış tahmin edebilir; yukarı akış yedekliliği yükleme trafiğini üçe katlayabilir.
 
 Preparing chat export: %d%%
 == Sohbet dışa aktarımı hazırlanıyor: %d%%
@@ -11392,12 +11437,6 @@ Rank 1 demo downloaded to '%s'
 
 Rank 1 replays
 == Rank 1 demoları
-
-Rank demo already available in the demo browser: %s
-== Demo zaten demo tarayıcısında mevcut: %s
-
-Rank demo downloaded: %s. Play it from the Rank 1 list or the demo browser.
-== Rank demosu indirildi: %s. Rank 1 listesinden veya demo tarayıcısından oynatın.
 
 Rank ghost loaded: %s, %s s. It follows your current run.
 == Rank hayaleti yüklendi: %s, %s sn. Mevcut koşunu takip ediyor.
@@ -12587,6 +12626,9 @@ Scoreboard playtime
 Scoreboard point check
 == Skor tablosu puan kontrolü
 
+Scoreboard row colors
+== Skor tablosu satır renkleri
+
 Scoreboard score lookup
 == Skor Tablosu Puan Sorgulama
 
@@ -12974,12 +13016,6 @@ Server kick/spec votes are no longer actively moderated.
 Server kick/spec votes will now be actively moderated.
 == Sunucu atma/seyirci oyları artık aktif olarak yönetilecek.
 
-Server list is more than five minutes old
-== Sunucu listesi beş dakikadan eski
-
-Server list refresh failed; showing the previous list
-== Sunucu listesi yenilenemedi; önceki liste gösteriliyor
-
 Server message
 == Sunucu mesajı
 
@@ -13027,6 +13063,9 @@ Set "Display mode" to "Show on key" or "Always show", then pick "Pistol guide li
 
 Set "Ingame mouse sens." for aiming and "UI mouse sens." for menus, then limit the cursor with "Minimum cursor distance" and "Maximum cursor distance".
 == Nişan için oyunda fare hassasiyetini, menüler için arayüz fare hassasiyetini ayarla; ardından minimum ve maksimum imleç mesafesiyle imleci sınırla.
+
+Set "Prediction margin" in milliseconds, tick "AntiPing (latency compensation)" and then choose what to predict; the redundancy switch is experimental and only useful on lossy connections.
+== „Tahmin payı“nı milisaniye olarak ayarlayın, „AntiPing (gecikme telafisi)“ni işaretleyin ve neyin tahmin edileceğini seçin; yedeklilik anahtarı deneyseldir ve yalnızca paket kaybı olan bağlantılarda işe yarar.
 
 Set "Switch interval" to 0 to stop timed switching and keep the queue for manual or map-join changes.
 == Değiştirme aralığını 0 yapmak zamanlı değişimi durdurur; sıra yalnızca elle ya da haritaya girişte kullanılır.
@@ -14666,6 +14705,9 @@ Sound variants
 Sound volume
 == Ses seviyesi
 
+Sounds and particles
+== Sounds and particles
+
 Source file does not exist.
 == Kaynak dosya mevcut değil.
 
@@ -15899,6 +15941,9 @@ Tick "Show hitbox mode", choose the ranges you need, then set "Player range" to 
 Tick "Show inputs", then size and place it with "Keyboard size", "Mouse size", "Opacity" and the position sliders.
 == Girdileri göster seçeneğini işaretle, sonra klavye boyutu, fare boyutu, saydamlık ve konum kaydırıcılarıyla boyutunu ve yerini ayarla.
 
+Tick "Show others" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use "Show background quads" and "Default zoom" for the view.
+== Diğer takımları yarı saydam çizmek için „Diğerlerini göster“i işaretleyin, gölge opaklıklarını altındaki bağımlı satırda ayarlayın ve görünüm için „Arka plan dörtlülerini göster“ ile „Varsayılan yakınlaştırma“yı kullanın.
+
 Tick any of "Show key stuck status", "Show hammer status", "Show dummy control status" or "Show dummy copy status".
 == Tuş takılı durumunu göster, çekiç durumunu göster, dummy kontrol durumunu göster veya dummy kopya durumunu göster seçeneklerinden istediklerini işaretle.
 
@@ -16165,9 +16210,6 @@ Toggle use of custom hand color
 
 Toggles collision
 == Çarpışmayı değiştir
-
-Toggles DDNet gameplay indicators and assists such as race time, team markers and hints.
-== Yarış süresi, takım işaretleri ve ipuçları gibi DDNet oyun göstergelerini ve yardımcılarını açar ya da kapatır.
 
 Toggles hit others
 == Başkalarına vurmayı değiştir
@@ -16753,6 +16795,9 @@ Unhookable tile outline color
 
 Unhookable tile outline width
 == Kancalanamaz döşeme ana hattı genişliği
+
+Unhookable tiles
+== Kancalanamaz karolar
 
 Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
 == Birleşik dışa aktarma kalitesi (CRF/CQ/QP ölçeği 0-51, -1 = cl_video_crf kullan); her kodlayıcının yerel parametresine eşlenir
