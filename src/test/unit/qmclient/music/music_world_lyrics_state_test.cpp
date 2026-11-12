@@ -135,12 +135,12 @@ TEST(QmWorldLyrics, SnapshotTextIsOwnedAndLongUtf8RowsStayBounded)
 {
 	CWorldLyricsState State;
 	std::string Text;
-	for(int Index = 0; Index < 300; ++Index)
+	for(int Index = 0; Index < 600; ++Index)
 		Text += "歌";
 	State.Update(true, 1, Source(1000, Text), 0, vec2(100, 200), 0.0);
 	Text.clear();
 	EXPECT_FALSE(State.Current().m_aRows[0].empty());
-	EXPECT_LE(State.Current().m_aRows[0].size(), 512u);
+	EXPECT_LE(State.Current().m_aRows[0].size(), 1023u);
 	EXPECT_TRUE(NeteaseLyrics::IsValidUtf8(State.Current().m_aRows[0]));
 }
 
@@ -152,4 +152,57 @@ TEST(QmWorldLyrics, ClockRewindRestartsAppearanceWithoutKeepingOldFade)
 	EXPECT_FALSE(State.Previous().m_Active);
 	EXPECT_EQ(State.Current().m_Anchor, vec2(500, 600));
 	EXPECT_FLOAT_EQ(WorldLyricVisual(State.Current(), 2.0).m_Alpha, 0.0f);
+}
+
+TEST(QmWorldLyrics, CreditLinesAreSkippedAndTheNextLyricUsesItsOwnScene)
+{
+	CWorldLyricsState State;
+	State.Update(true, 1, Source(1000, "作曲：Tomas"), 2, vec2(100, 200), 0.0);
+	EXPECT_FALSE(State.Current().m_Active);
+	State.Update(true, 1, Source(2000, "歌词正文"), 2, vec2(500, 600), 1.0);
+	EXPECT_EQ(State.Current().m_Anchor, vec2(500, 600));
+	EXPECT_EQ(State.Current().m_aRows[0], "歌词正文");
+	EXPECT_FALSE(State.Previous().m_Active);
+}
+
+TEST(QmWorldLyrics, AFollowingCreditFadesThePreviousLyricWithoutRenderingCredits)
+{
+	CWorldLyricsState State;
+	State.Update(true, 1, Source(), 0, vec2(100, 200), 0.0);
+	State.Update(true, 1, Source(2000, "编曲 李四"), 0, vec2(500, 600), 1.0);
+	EXPECT_FALSE(State.Current().m_Active);
+	EXPECT_EQ(State.Previous().m_Original, "first");
+	State.Update(true, 1, Source(2000, "编曲 李四"), 0, vec2(500, 600), 2.3);
+	EXPECT_FALSE(State.Previous().m_Active);
+}
+
+TEST(QmWorldLyrics, TypewriterCountsUtf8CharactersAndKeepsTheCompleteLayoutText)
+{
+	CWorldLyricsState State;
+	State.Update(true, 1, Source(1000, "你好吗"), 0, vec2(100, 200), 0.0);
+	EXPECT_EQ(State.Current().m_aCharacterCounts[0], 3);
+	EXPECT_EQ(WorldLyricVisibleCharacters(State.Current(), 0, 0.0), 0);
+	EXPECT_EQ(WorldLyricVisibleCharacters(State.Current(), 0, 0.02), 1);
+	EXPECT_EQ(WorldLyricVisibleCharacters(State.Current(), 0, 0.07), 2);
+	EXPECT_EQ(WorldLyricVisibleCharacters(State.Current(), 0, 0.2), 3);
+	EXPECT_EQ(State.Current().m_aRows[0], "你好吗");
+}
+
+TEST(QmWorldLyrics, LongLinesFinishRevealingWithinOneAndAHalfSeconds)
+{
+	CWorldLyricsState State;
+	const std::string Text(200, 'a');
+	State.Update(true, 1, Source(1000, Text), 0, vec2(100, 200), 0.0);
+	EXPECT_LT(WorldLyricVisibleCharacters(State.Current(), 0, 0.7), 200);
+	EXPECT_EQ(WorldLyricVisibleCharacters(State.Current(), 0, 1.5), 200);
+}
+
+TEST(QmWorldLyrics, FadingPreviousLineFreezesItsTypewriterPosition)
+{
+	CWorldLyricsState State;
+	State.Update(true, 1, Source(1000, "abcdefghij"), 0, vec2(100, 200), 0.0);
+	const int Visible = WorldLyricVisibleCharacters(State.Current(), 0, 0.1);
+	State.Update(true, 1, Source(2000, "second"), 0, vec2(500, 600), 0.1);
+	EXPECT_EQ(WorldLyricVisibleCharacters(State.Previous(), 0, 0.8), Visible);
+	EXPECT_EQ(WorldLyricVisibleCharacters(State.Current(), 0, 0.1), 0);
 }

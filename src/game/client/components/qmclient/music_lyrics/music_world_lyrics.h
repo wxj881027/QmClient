@@ -17,6 +17,7 @@ namespace QmMusicLyrics
 			std::string m_Text;
 			vec2 m_Size = vec2(0.0f, 0.0f);
 			uint64_t m_AtlasRevision = 0;
+			int m_VisibleCharacters = -1;
 			bool m_Initialized = false;
 		};
 		// 只保留当前句与上一句，双语各占一行缓存。

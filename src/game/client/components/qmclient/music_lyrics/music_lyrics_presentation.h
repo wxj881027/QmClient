@@ -17,6 +17,7 @@ public:
 	{
 		bool m_Active = false;
 		int m_RowCount = 0;
+		float m_Progress = -1.0f;
 		char m_aaRows[2][1024] = {};
 	};
 

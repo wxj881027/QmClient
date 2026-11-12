@@ -3673,6 +3673,7 @@ if(CLIENT)
     components/qmclient/music_lyrics/music_lyrics_integration.h
     components/qmclient/music_lyrics/music_lyrics_krc.cpp
     components/qmclient/music_lyrics/music_lyrics_krc.h
+    components/qmclient/music_lyrics/music_lyrics_metadata.h
     components/qmclient/music_lyrics/music_lyrics_model.h
     components/qmclient/music_lyrics/music_lyrics_qrc.cpp
     components/qmclient/music_lyrics/music_lyrics_qrc.h

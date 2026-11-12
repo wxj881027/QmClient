@@ -131,7 +131,8 @@ void CQmLyricsPresentation::OnUpdate()
 	m_Frame = {};
 	if(g_Config.m_QmLyrics && g_Config.m_QmLyricsInMediaIsland)
 	{
-		m_Frame.m_Active = Source.m_Active;
+		m_Frame.m_Active = Source.m_Active && !QmMusicLyrics::IsLyricCredit(Source.m_Original);
+		m_Frame.m_Progress = QmMusicLyrics::LyricProgress(Source);
 		const auto Rows = QmMusicLyrics::DisplayRows(Source.m_Original, Source.m_Translation, g_Config.m_QmLyricsLanguage);
 		m_Frame.m_RowCount = Rows.m_Count;
 		for(int Index = 0; Index < Rows.m_Count; ++Index)

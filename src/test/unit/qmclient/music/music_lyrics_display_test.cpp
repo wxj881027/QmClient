@@ -74,3 +74,78 @@ TEST(QmLyricsDisplay, InvalidTranslationTrackClearsPreviousTranslations)
 	AlignTranslations(Data.m_Timeline, "invalid", &Data.m_vTranslations);
 	EXPECT_TRUE(Data.m_vTranslations.empty());
 }
+
+TEST(QmLyricsDisplay, CreditsDoNotAppearInAnyLanguageMode)
+{
+	for(const char *pText : {"作曲：Tomas", "作词: 张三", "【編曲】 李四", "Produced by Someone", "混音 / Alice"})
+	{
+		SCOPED_TRACE(pText);
+		for(int Language = 0; Language < 3; ++Language)
+			EXPECT_EQ(DisplayRows(pText, "translated credits", Language).m_Count, 0);
+	}
+}
+
+TEST(QmLyricsDisplay, NormalLyricsWithColonsOrCreditWordsRemainVisible)
+{
+	for(const char *pText : {"我想为你作词", "录音机里的旧旋律", "Music brings us together", "角色：歌词"})
+	{
+		SCOPED_TRACE(pText);
+		EXPECT_EQ(DisplayRows(pText, "", 0).m_aRows[0], pText);
+	}
+}
+
+TEST(QmLyricsDisplay, TranslationCreditFallsBackToTheOriginal)
+{
+	EXPECT_EQ(DisplayRows("normal lyric", "作曲：某某", 1).m_aRows[0], "normal lyric");
+	EXPECT_EQ(DisplayRows("normal lyric", "作曲：某某", 2).m_Count, 1);
+}
+
+TEST(QmLyricsDisplay, CreditClassifierRespectsStringViewBounds)
+{
+	const std::string Text = "作曲家在写歌";
+	EXPECT_TRUE(IsLyricCredit(std::string_view(Text.data(), std::string_view("作曲").size())));
+	EXPECT_FALSE(IsLyricCredit(Text));
+	EXPECT_FALSE(IsLyricCredit({}));
+}
+
+TEST(QmLyricProgress, TimestampProgressClampsBeforeAndAfterTheLine)
+{
+	SSourceSnapshot Source{42, 1, 100, true, nullptr, "lyric", "", 1000, 5000, 3000};
+	EXPECT_FLOAT_EQ(LyricProgress(Source), 0.5f);
+	Source.m_PositionMs = 500;
+	EXPECT_FLOAT_EQ(LyricProgress(Source), 0.0f);
+	Source.m_PositionMs = 6000;
+	EXPECT_FLOAT_EQ(LyricProgress(Source), 1.0f);
+}
+
+TEST(QmLyricProgress, PauseAndSeekFollowTheReportedPlaybackPosition)
+{
+	SSourceSnapshot Source{42, 1, 100, true, nullptr, "lyric", "", 1000, 5000, 4000};
+	const float Paused = LyricProgress(Source);
+	EXPECT_FLOAT_EQ(LyricProgress(Source), Paused);
+	Source.m_PositionMs = 2000;
+	EXPECT_FLOAT_EQ(LyricProgress(Source), 0.25f);
+	EXPECT_LT(LyricProgress(Source), Paused);
+}
+
+TEST(QmLyricProgress, NextTimestampSuppliesAMissingEnd)
+{
+	SLyricsData Data;
+	ASSERT_TRUE(NeteaseLyrics::ParseLrc("[00:01]first\n[00:05]second", &Data.m_Timeline));
+	SSourceSnapshot Source{42, 1, 100, true, &Data, "first", "", 1000, -1, 3000};
+	EXPECT_FLOAT_EQ(LyricProgress(Source), 0.5f);
+	Source.m_LineStartMs = 5000;
+	EXPECT_FLOAT_EQ(LyricProgress(Source), -1.0f);
+}
+
+TEST(QmLyricProgress, UnknownPositionOrMissingTimingDoesNotInventProgress)
+{
+	SSourceSnapshot Source{42, 1, 100, true, nullptr, "lyric", "", 1000, 5000, -1};
+	EXPECT_FLOAT_EQ(LyricProgress(Source), -1.0f);
+	Source.m_PositionMs = 3000;
+	Source.m_LineEndMs = -1;
+	EXPECT_FLOAT_EQ(LyricProgress(Source), -1.0f);
+	Source.m_LineEndMs = 5000;
+	Source.m_Active = false;
+	EXPECT_FLOAT_EQ(LyricProgress(Source), -1.0f);
+}

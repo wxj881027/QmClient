@@ -454,5 +454,6 @@ QmMusicLyrics::SSourceSnapshot CMusicLyricsIntegration::LyricsSnapshot() const
 	return {m_pImpl->m_SongId, m_pImpl->m_LoadedGeneration, m_pImpl->m_SongProcessId,
 		m_pImpl->m_ActiveLyrics, &m_pImpl->m_Lyrics, m_pImpl->m_CurrentLyric,
 		m_pImpl->m_PositionValid ? QmMusicLyrics::TranslationAt(m_pImpl->m_Lyrics, Selected.m_Index) : std::string_view(),
-		Selected.m_pLine != nullptr ? Selected.m_pLine->m_StartMs : -1};
+		Selected.m_pLine != nullptr ? Selected.m_pLine->m_StartMs : -1,
+		Selected.m_pLine != nullptr ? Selected.m_pLine->m_EndMs : -1, m_pImpl->m_PositionValid ? m_pImpl->m_PositionMs : -1};
 }

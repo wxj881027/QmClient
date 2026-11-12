@@ -2,6 +2,7 @@
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_MUSIC_LYRICS_MUSIC_HUMMING_STATE_H
 
 #include "music_lyrics_chat.h"
+#include "music_lyrics_metadata.h"
 #include "music_lyrics_model.h"
 
 #include <base/str.h>
@@ -27,37 +28,6 @@ namespace QmMusicLyrics
 		bool operator==(const SHummingIdentity &Other) const = default;
 	};
 
-	inline bool IsHummingCredit(const char *pText)
-	{
-		// 署名标签可能带空白或括号，只在标签后有分隔符时匹配，避免误伤“录音机”等歌词。
-		while(*pText != '\0')
-		{
-			const char *pNext = pText;
-			const int Code = str_utf8_decode(&pNext);
-			if(!str_utf8_isspace(Code) && Code != '[' && Code != '(' && Code != 0x3010 && Code != 0xff08)
-				break;
-			pText = pNext;
-		}
-		constexpr const char *apCreditLabels[] = {
-			"作词", "作詞", "作词人", "作詞人", "作曲", "编曲", "編曲", "词曲", "詞曲", "填词", "填詞", "词", "詞", "曲",
-			"制作人", "製作人", "制作", "製作", "监制", "監製", "出品", "发行", "發行", "策划", "策劃",
-			"录音", "錄音", "混音", "缩混", "縮混", "母带", "母帶", "和声", "和聲", "和音", "配唱",
-			"演唱", "原唱", "翻唱", "吉他", "贝斯", "貝斯", "贝司", "貝司", "钢琴", "鋼琴", "键盘", "鍵盤", "弦乐", "弦樂", "鼓",
-			"lyrics by", "words by", "music by", "written by", "composed by", "arranged by", "produced by", "recorded by", "mixed by", "mastered by",
-			"lyricist", "composer", "arranger", "producer", "mixing", "mastering"};
-		for(const char *pLabel : apCreditLabels)
-		{
-			const char *pSuffix = str_startswith_nocase(pText, pLabel);
-			if(pSuffix == nullptr)
-				continue;
-			const int Code = str_utf8_decode(&pSuffix);
-			if(Code == 0 || str_utf8_isspace(Code) || Code == '/' || Code == '\\' || Code == '-' || Code == '|' ||
-				Code == '(' || Code == ')' || Code == ']' || Code == 0xff0f || Code == 0xff08 || Code == 0xff09 || Code == 0x3011)
-				return true;
-		}
-		return false;
-	}
-
 	inline std::string HummingMessage(std::string_view Text)
 	{
 		if(Text.find(':') != std::string_view::npos || Text.find("：") != std::string_view::npos)
@@ -65,7 +35,7 @@ namespace QmMusicLyrics
 		const std::string Clean = CleanLyricChatText(Text);
 		if(Clean.empty())
 			return {};
-		if(IsHummingCredit(Clean.c_str()))
+		if(IsLyricCredit(Clean))
 			return {};
 		// 固定音符前缀使以斜杠开头的歌词也只能作为聊天文字发送。
 		return "♪ " + NeteaseLyrics::TruncateUtf8(Clean, 251);

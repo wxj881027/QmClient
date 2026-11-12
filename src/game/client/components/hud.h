@@ -458,7 +458,6 @@ class CHud : public CComponent
 	IGraphics::CRenderTargetHandle MediaIslandBlurBackdrop();
 	void RenderMediaIsland();
 	void RenderLyricsIsland();
-	CQmLyricsMarqueeState m_LyricsMarquee;
 	CUIRect m_LyricsIslandAnchor{};
 	bool m_LyricsIslandAnchorValid = false;
 
@@ -576,7 +575,6 @@ private:
 	CUIRect m_MediaIslandLastVisibleRect{};
 	bool m_MediaIslandLastVisibleRectValid = false;
 	bool m_LegacyMediaInfoRendered = false;
-	CQmLegacyMediaHudLyricState m_LegacyMediaLyricState;
 	std::array<QmHudMapProgress::CProgressState, NUM_DUMMIES> m_aIslandMapProgress;
 	std::array<QmHudMapProgress::CProgressState, NUM_DUMMIES> m_aMapProgress;
 };

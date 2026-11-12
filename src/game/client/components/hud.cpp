@@ -1259,7 +1259,6 @@ void CHud::OnWindowResize()
 
 void CHud::OnReset()
 {
-	m_LyricsMarquee.Reset();
 	m_LyricsIslandAnchorValid = false;
 	m_TimeCpDiff = 0.0f;
 	m_DDRaceTime = 0;
@@ -1279,7 +1278,6 @@ void CHud::OnReset()
 		Progress.Reset();
 	m_MediaIslandAnimState.Reset();
 	m_MediaIslandFrameCache.Reset();
-	m_LegacyMediaLyricState.Reset();
 	m_MediaIslandMuteState.Reset();
 	m_RecordingStatusAnimState.Reset();
 
@@ -5201,11 +5199,11 @@ void CHud::RenderMediaIsland()
 		{
 			const char *apRows[] = {pLyricsIslandBuf, m_MediaIslandFrameCache.m_aLyricsTranslation};
 			const int Count = m_MediaIslandFrameCache.m_LyricsRowCount;
-			const float Elapsed = m_LyricsMarquee.Update(apRows, Count, Now, time_freq());
+			const float Progress = GameClient()->m_LyricsPresentation.Frame().m_Progress;
 			const CUIRect LyricsRect{ContentX, BottomTextY + BottomRowLineHeight * SwapRows.m_LyricsLineIndex,
 				ContentWidth, BottomRowLineHeight * std::max(1, Count)};
 			QmRenderLyricsRows(*Graphics(), *TextRender(), LyricsRect, apRows, Count, LyricsFontSize,
-				LyricsIslandColor.WithMultipliedAlpha(VisibleBottomAlpha), Elapsed);
+				LyricsIslandColor.WithMultipliedAlpha(VisibleBottomAlpha), Progress);
 		}
 	}
 
@@ -6878,7 +6876,6 @@ float CHud::RenderLegacyMediaInfoAt(float AnchorX, float CenterY)
 		return CenterY;
 	if(!g_Config.m_QmHudIslandUseOriginalStyle || !g_Config.m_QmSmtcShowHud)
 	{
-		m_LegacyMediaLyricState.Reset();
 		return CenterY;
 	}
 	EnsureMediaIslandFrameCache();
@@ -6901,7 +6898,6 @@ float CHud::RenderLegacyMediaInfoAt(float AnchorX, float CenterY)
 		!g_Config.m_QmLyricsSeparateIsland && m_MediaIslandFrameCache.m_LyricsActive, m_MediaIslandFrameCache.m_LyricsRowCount);
 	if(!Content.m_Visible)
 	{
-		m_LegacyMediaLyricState.Reset();
 		return CenterY;
 	}
 	m_LegacyMediaInfoRendered = true;
@@ -6911,10 +6907,8 @@ float CHud::RenderLegacyMediaInfoAt(float AnchorX, float CenterY)
 	m_LyricsIslandAnchor = QmLyricsHudAnchor(Layout.m_Panel, Layout.m_Panel, HudEditorScope.m_TargetRect);
 	m_LyricsIslandAnchorValid = true;
 	const char *pLyrics = Content.m_ShowLyrics ? m_MediaIslandFrameCache.m_aLyrics : "";
-	const int64_t Now = time_get();
-	m_LegacyMediaLyricState.Update(MediaState, pLyrics, Now, m_MediaIslandFrameCache.m_aLyricsTranslation);
 	QmRenderLegacyMediaHud(*Ui(), *Graphics(), *TextRender(), MediaState, Content, Layout, pLyrics,
-		m_MediaIslandFrameCache.m_LyricsColor, m_LegacyMediaLyricState.ElapsedSeconds(Now, time_freq()), HudEditorScope.m_Corners,
+		m_MediaIslandFrameCache.m_LyricsColor, GameClient()->m_LyricsPresentation.Frame().m_Progress, HudEditorScope.m_Corners,
 		m_MediaIslandFrameCache.m_aLyricsTranslation);
 	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 	return Layout.m_Panel.y + Layout.m_Panel.h;
@@ -7022,8 +7016,6 @@ void CHud::OnNewSnapshot()
 
 void CHud::OnRender()
 {
-	if(!g_Config.m_QmHudIslandUseOriginalStyle || !g_Config.m_QmSmtcShowHud)
-		m_LegacyMediaLyricState.Reset();
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		return;
 
@@ -7633,8 +7625,7 @@ void CHud::RenderLyricsIsland()
 		apRows[1] = Localize("Lyrics translation");
 		Count = g_Config.m_QmLyricsLanguage == 2 ? 2 : 1;
 	}
-	const float Elapsed = m_LyricsMarquee.Update(apRows, Count, time_get(), time_freq());
 	const CUIRect Anchor = m_LyricsIslandAnchorValid ? m_LyricsIslandAnchor : CUIRect{m_Width * 0.5f - 52.5f, 5.0f, 105.0f, 11.2f};
 	QmRenderLyricsIsland(*Graphics(), *TextRender(), GameClient()->m_HudEditor, Anchor, m_Width, m_Height,
-		apRows, Count, Elapsed, MediaIslandBlurBackdrop());
+		apRows, Count, Lyrics.m_Progress, MediaIslandBlurBackdrop());
 }

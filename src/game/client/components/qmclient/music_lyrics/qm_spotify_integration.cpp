@@ -826,5 +826,6 @@ QmMusicLyrics::SSourceSnapshot CSpotifyIntegration::LyricsSnapshot() const
 	const auto Selected = NeteaseLyrics::SelectCurrentLine(m_pImpl->m_Lyrics.m_Timeline, m_pImpl->m_PositionMs);
 	return {m_pImpl->m_SongId, 0, 0, m_pImpl->m_ActiveLyrics, &m_pImpl->m_Lyrics,
 		m_pImpl->m_CurrentLyric, QmMusicLyrics::TranslationAt(m_pImpl->m_Lyrics, Selected.m_Index),
-		Selected.m_pLine != nullptr ? Selected.m_pLine->m_StartMs : -1};
+		Selected.m_pLine != nullptr ? Selected.m_pLine->m_StartMs : -1,
+		Selected.m_pLine != nullptr ? Selected.m_pLine->m_EndMs : -1, m_pImpl->m_PositionMs};
 }

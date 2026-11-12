@@ -658,7 +658,6 @@ void CGameClient::OnConsoleInit()
 	AddComponent(&m_NeteaseIntegration, "netease_integration");
 	AddComponent(&m_MusicLyricsIntegration, "music_lyrics_integration");
 	AddComponent(&m_SpotifyIntegration, "spotify_integration");
-	AddComponent(&m_LyricsPresentation, "lyrics_presentation");
 	AddComponent(&m_MusicAppWatcher, "music_app_watcher");
 	AddComponent(&m_Players, "players");
 	AddComponent(&m_MovingTilesBackground, "moving_tiles_background");
@@ -666,6 +665,7 @@ void CGameClient::OnConsoleInit()
 	AddComponent(&m_MovingTilesForeground, "moving_tiles_foreground");
 	AddComponent(&m_Outlines, "outlines");
 	AddComponent(&m_CollisionHitbox, "collision_hitbox");
+	AddComponent(&m_LyricsPresentation, "lyrics_presentation");
 	AddComponent(&m_Pet, "pet");
 	AddComponent(&m_Particles.m_RenderExplosions, "particles_explosions");
 	AddComponent(&m_NamePlates, "nameplates");
@@ -2155,19 +2155,29 @@ void CGameClient::OnRender()
 			pComponent->OnRender();
 		}
 	};
-	if(g_Config.m_QmPerfStutterDiagnostics)
+	const bool ProfileComponents = g_Config.m_QmPerfStutterDiagnostics != 0;
+	const bool WorldLyricsEnabled = g_Config.m_QmWorldLyrics && Client()->State() == IClient::STATE_ONLINE;
+	size_t DeferredPlayers = m_vpAll.size();
+	const auto RenderComponentAt = [&](size_t Index) {
+		CPerfTimer ComponentTimer(ProfileComponents);
+		RenderComponent(m_vpAll[Index]);
+		if(ProfileComponents)
+			RecordComponentRender(Index, ComponentTimer.ElapsedMs());
+	};
+	for(size_t i = 0; i < m_vpAll.size(); ++i)
 	{
-		for(size_t i = 0; i < m_vpAll.size(); ++i)
+		if(WorldLyricsEnabled && m_vpAll[i] == &m_Players)
 		{
-			CPerfTimer ComponentTimer;
-			RenderComponent(m_vpAll[i]);
-			RecordComponentRender(i, ComponentTimer.ElapsedMs());
+			DeferredPlayers = i;
+			continue;
 		}
-	}
-	else
-	{
-		for(auto &pComponent : m_vpAll)
-			RenderComponent(pComponent);
+		RenderComponentAt(i);
+		if(m_vpAll[i] == &m_LyricsPresentation && DeferredPlayers < m_vpAll.size())
+		{
+			// 开启世界歌词时按地图、歌词、Tee 排序；每个组件仍只绘制一次并独立计时。
+			RenderComponentAt(DeferredPlayers);
+			DeferredPlayers = m_vpAll.size();
+		}
 	}
 	LogPerfStage(this, "components_total", ComponentsTimer.ElapsedMs());
 

@@ -24,6 +24,7 @@ namespace QmMusicLyrics
 		std::string m_Original;
 		std::string m_Translation;
 		std::array<std::string, 2> m_aRows;
+		std::array<int, 2> m_aCharacterCounts{};
 		int m_RowCount = 0;
 	};
 
@@ -44,6 +45,17 @@ namespace QmMusicLyrics
 		const float Alpha = Line.m_FadeAt >= 0.0 ? Line.m_FadeAlpha * (1.0f - Fade) : static_cast<float>(std::clamp(Age / 0.25, 0.0, 1.0));
 		// 仅在固定世界锚点附近浮动，镜头与角色的后续移动不改变锚点。
 		return {Line.m_Anchor + vec2(0.0f, -static_cast<float>(std::sin(Age * 1.8)) * 3.0f - Fade * 32.0f), Alpha};
+	}
+
+	inline int WorldLyricVisibleCharacters(const SWorldLyric &Line, size_t Row, double Now)
+	{
+		if(!Line.m_Active || Row >= Line.m_aCharacterCounts.size())
+			return 0;
+		const int Count = Line.m_aCharacterCounts[Row];
+		// 每秒约 25 个字符，长句最多用 1.5 秒展完；淡出时冻结已经出现的部分。
+		const double Duration = std::clamp(Count / 25.0, 0.12, 1.5);
+		const double Age = (Line.m_FadeAt >= 0.0 ? Line.m_FadeAt : Now) - Line.m_CreatedAt;
+		return static_cast<int>(std::ceil(Count * std::clamp(Age / Duration, 0.0, 1.0)));
 	}
 
 	class CWorldLyricsState
@@ -96,7 +108,7 @@ namespace QmMusicLyrics
 			m_LastNow = Now;
 			if(m_Previous.m_Active && Now - m_Previous.m_FadeAt >= WORLD_LYRIC_FADE_SECONDS)
 				m_Previous = {};
-			if(!Source.m_Active || Source.m_Original.empty())
+			if(!Source.m_Active || Source.m_Original.empty() || IsLyricCredit(Source.m_Original))
 			{
 				FadeCurrent(Now);
 				return;
@@ -118,7 +130,12 @@ namespace QmMusicLyrics
 				const SDisplayRows Rows = DisplayRows(Source.m_Original, Source.m_Translation, Language);
 				m_Current.m_RowCount = Rows.m_Count;
 				for(size_t Index = 0; Index < m_Current.m_aRows.size(); ++Index)
-					m_Current.m_aRows[Index] = NeteaseLyrics::TruncateUtf8(Rows.m_aRows[Index], 512);
+				{
+					m_Current.m_aRows[Index] = NeteaseLyrics::TruncateUtf8(Rows.m_aRows[Index], 1023);
+					size_t Bytes, Characters;
+					str_utf8_stats(m_Current.m_aRows[Index].c_str(), m_Current.m_aRows[Index].size(), m_Current.m_aRows[Index].size(), &Bytes, &Characters);
+					m_Current.m_aCharacterCounts[Index] = static_cast<int>(Characters);
+				}
 			}
 		}
 	};
