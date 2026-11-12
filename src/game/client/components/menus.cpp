@@ -68,6 +68,7 @@
 #endif
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/perf_logging.h>
+#include <game/client/components/qmclient/settings_text_gap_sampler.h>
 #include <game/client/components/qmclient/statistics_ring_geometry.h>
 #include <game/client/components/sounds.h>
 #include <game/client/components/theme_scan.h>
@@ -531,39 +532,20 @@ namespace
 	{
 		if(!PerfDebugEnabled())
 			return;
-		static uint64_t s_LastFrame = 0;
-		static int s_LastPage = -1000;
-		static int s_LastTab = -1000;
-		static int s_LastSubtab = -1000;
-		static char s_aLastReason[32] = "";
-		static char s_aLastPlanStatus[32] = "";
-		static int s_SamplesThisBucket = 0;
+		static CQmSettingsTextGapSampler s_Sampler;
 		const char *pSafeReason = pReason != nullptr ? pReason : "unknown";
 		const char *pSafePlanStatus = pPlanStatus != nullptr ? pPlanStatus : "unknown";
-		if(s_LastFrame != Frame || s_LastPage != Page || s_LastTab != Tab || s_LastSubtab != Subtab || str_comp(s_aLastReason, pSafeReason) != 0 || str_comp(s_aLastPlanStatus, pSafePlanStatus) != 0)
-		{
-			s_LastFrame = Frame;
-			s_LastPage = Page;
-			s_LastTab = Tab;
-			s_LastSubtab = Subtab;
-			str_copy(s_aLastReason, pSafeReason, sizeof(s_aLastReason));
-			str_copy(s_aLastPlanStatus, pSafePlanStatus, sizeof(s_aLastPlanStatus));
-			s_SamplesThisBucket = 0;
-		}
-		// 每个页面/原因组合每帧只保留一个样本，避免缺口遥测本身成为热路径。
-		constexpr int MaxGapSamplesPerFrameBucket = 1;
-		if(s_SamplesThisBucket >= MaxGapSamplesPerFrameBucket)
+		if(!s_Sampler.Allow(QmPerfSessionId(), Frame, Scope, Page, Tab, Subtab, pSafeReason, pSafePlanStatus))
 			return;
-		++s_SamplesThisBucket;
 		char aPayload[768];
 		char aPage[32];
 		if(Scope == CMenus::MENU_TEXT_SCOPE_SETTINGS)
 			str_copy(aPage, SettingsPageCacheKey(Page, -1).c_str(), sizeof(aPage));
 		else
 			str_format(aPage, sizeof(aPage), "%d", Page);
-		str_format(aPayload, sizeof(aPayload), "event=%s scope=%s page=%s tab=%d subtab=%d key=%s reason=%s plan_status=%s operation=%s frame=%" PRIu64 " log_sample=%d log_sample_limit=%d",
+		str_format(aPayload, sizeof(aPayload), "event=%s scope=%s page=%s tab=%d subtab=%d key=%s reason=%s plan_status=%s operation=%s coverage_frame=%" PRIu64 " log_sample=1 log_sample_limit=1",
 			pEvent != nullptr ? pEvent : "settings_text_miss", pScopeName != nullptr ? pScopeName : MenuTextScopeName(Scope), aPage, Tab, Subtab,
-			pKey != nullptr ? pKey : "", pSafeReason, pSafePlanStatus, pOperation != nullptr ? pOperation : "unknown", Frame, s_SamplesThisBucket, MaxGapSamplesPerFrameBucket);
+			pKey != nullptr ? pKey : "", pSafeReason, pSafePlanStatus, pOperation != nullptr ? pOperation : "unknown", Frame);
 		QmPerfLogPayload("perf/settings-text", aPayload, pClient, aPage);
 	}
 
@@ -577,7 +559,7 @@ namespace
 			str_copy(aPage, SettingsPageCacheKey(Page, -1).c_str(), sizeof(aPage));
 		else
 			str_format(aPage, sizeof(aPage), "%d", Page);
-		str_format(aPayload, sizeof(aPayload), "event=settings_text_usage scope=%s page=%s tab=%d subtab=%d operation=%s frame=%" PRIu64 " text_class=static_stable scheduler_coverage=%s candidates=%d hits=%d reused=%d miss=%d stale=%d text_new=%d text_reused=%d planned=%d unplanned=%d pool_hit=%d render_ready_hit=%d build_queued=%d fallback_immediate=%d",
+		str_format(aPayload, sizeof(aPayload), "event=settings_text_usage scope=%s page=%s tab=%d subtab=%d operation=%s coverage_frame=%" PRIu64 " text_class=static_stable scheduler_coverage=%s candidates=%d hits=%d reused=%d miss=%d stale=%d text_new=%d text_reused=%d planned=%d unplanned=%d pool_hit=%d render_ready_hit=%d build_queued=%d fallback_immediate=%d",
 			pScopeName != nullptr ? pScopeName : MenuTextScopeName(Scope), aPage, Tab, Subtab, pOperation != nullptr ? pOperation : "unknown", Frame,
 			FallbackImmediate > 0 ? "uncovered" : "budgeted",
 			Candidates, Hits, Reused, Misses, Stales, TextNew, TextReused, Planned, Unplanned, PoolHits, RenderReadyHits, BuildQueued, FallbackImmediate);
