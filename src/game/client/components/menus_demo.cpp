@@ -3580,6 +3580,8 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 	// 让位收，而 RowReserveWidth() 由 token 直接算（厚度 + 外边距 + 行缝 = 16），不依赖
 	// 上一帧解析出的滚动条宽度，表头与行胶囊右缘因此是同一条公式。
 	s_ListBox.SetCapsuleRows(12.0f);
+	// 容器内边距（显式能力）：demo 列表与其它胶囊列表同一条留白，首/末行不再贴容器圆角。
+	s_ListBox.SetContainerPadding(ui_token::list::ContainerPadding(ui_token::list::ROW_HEIGHT));
 	// 表头最后一列给滚动条让位：与行右侧让出的宽度同源。
 	const float ColumnScrollbarReserve = s_ListBox.RowReserveWidth();
 	const float HeaderHeight = ms_ListheaderHeight + 8.0f;

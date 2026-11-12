@@ -817,7 +817,7 @@ namespace ui_widget
 			Ctx.m_pUi->DoLabel(&Rect, pMark, Rect.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
 	}
 
-	bool FilterChip(const IUiContext &Ctx, const void *pId, const CUIRect &Rect, const char *pLabel, bool Selected, bool Enabled)
+	bool FilterChip(const IUiContext &Ctx, const void *pId, const CUIRect &Rect, const char *pLabel, bool Selected, bool Enabled, float FontSize)
 	{
 		if(Ctx.m_pUi == nullptr || pId == nullptr)
 			return false;
@@ -839,10 +839,11 @@ namespace ui_widget
 		SLabelProperties Props;
 		Props.m_MaxWidth = Rect.w;
 		Props.m_EllipsisAtEnd = true;
-		Props.m_MinimumFontSize = ui_token::server_filter::CHIP_MIN_FONT_SIZE;
+		Props.m_MinimumFontSize = std::min(FontSize, ui_token::server_filter::CHIP_MIN_FONT_SIZE);
 		Props.SetColor(Enabled ? ui_token::color::TEXT_PRIMARY : ui_token::color::TEXT_DISABLED);
 		CUIRect LabelRect = Rect;
-		Ctx.m_pUi->DoLabel(&LabelRect, pLabel, ui_token::server_filter::CHIP_FONT_SIZE, TEXTALIGN_MC, Props);
+		// 按钮字号由调用点给（设置面板里就是正文档），不再固定一档比正文更大的字号。
+		Ctx.m_pUi->DoLabel(&LabelRect, pLabel, FontSize, TEXTALIGN_MC, Props);
 		return Pressed;
 	}
 

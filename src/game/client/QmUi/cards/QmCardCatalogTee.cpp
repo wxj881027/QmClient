@@ -1446,6 +1446,25 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 				gs_TeeListPreviewCache.Remember(PreviewCacheKey, pManagedPreview);
 			}
 		}
+		// 右上角功能图标条：只按本帧真的会画的动作从右到左排（隐藏的动作不占位），
+		// 出现/消失走同一条缓动；下面的名称/元数据用 Reserve 收缩可用宽度，
+		// 文字不会画进图标底下（公共约定的消费方式见 QmUi/UiIconActionStrip.h）。
+		const int64_t ActionNow = time_get();
+		const int64_t ActionFreq = maximum<int64_t>(1, time_freq());
+		const float ActionEaseSeconds = ui_token::motion::HOVER_FADE.m_DurationSec;
+		const bool ActionMotion = g_Config.m_QmUiMotionLevel > 0;
+		const bool ActionInteractive = !Ui()->MeasurementOnly() && !Ui()->RenderOnly();
+		const float ActionIconSize = ui_token::control::IconBox(BodySize);
+		const float ActionGap = ui_token::spacing::XS * 0.5f;
+		const bool InSkinQueue = GameClient()->m_Skins.IsInSkinQueue(pSkinContainer->Name(), EntryUseCustomColor, EntryColorBody, EntryColorFeet, QueueDummy);
+		// 队列按钮只在「已在队列 / 本行悬浮 / 按钮自身悬浮」时存在；不存在就不占位。
+		const bool QueueActionPresent = InSkinQueue || Ui()->HotItem() == &RowIds.m_ListItem || Ui()->HotItem() == &RowIds.m_Queue;
+		RowIds.m_ActionStrip.Update(ActionNow, ActionFreq, ActionMotion, (QueueActionPresent ? 1u : 0u) | (1u << 1), ActionEaseSeconds, ActionInteractive);
+		CUIRect IconRow;
+		Item.m_Rect.HSplitTop(std::min(Item.m_Rect.h, 20.0f), &IconRow, nullptr);
+		CUIRect aActionRects[2];
+		RowIds.m_ActionStrip.Layout(IconRow, ActionIconSize, ActionGap, ActionNow, ActionFreq, ActionEaseSeconds, aActionRects);
+		const float ActionReserve = RowIds.m_ActionStrip.ReserveWidth(ActionIconSize, ActionGap, ActionNow, ActionFreq, ActionEaseSeconds);
 		{
 			CUIRect LabelContent = Label;
 			if(EntryColorKey.has_value())
@@ -1462,7 +1481,10 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 				FeetSwatch.Draw(FeetColor, IGraphics::CORNER_ALL, ui_token::radius::TIGHT);
 			}
 			SLabelProperties Props;
-			Props.m_MaxWidth = LabelContent.w - 5.0f;
+			// 可用宽度 = 行宽 − 图标条当前占位 − 文本缝；名称既不许换行也不许钻到图标下面。
+			Props.m_MaxWidth = maximum(0.0f, LabelContent.w - ActionReserve - 5.0f);
+			Props.m_DisallowNewline = true;
+			Props.m_EllipsisAtEnd = true;
 			const auto &NameMatch = SkinListEntry.NameMatch();
 			if(NameMatch.has_value())
 			{
@@ -1493,7 +1515,7 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 				Ui()->DoLabel(&NameLine, pSkinContainer->Name(), BodySize, TEXTALIGN_ML, Props);
 				MetadataLine.HSplitTop(16.0f, &MetadataLine, nullptr);
 				SLabelProperties MetadataProps;
-				MetadataProps.m_MaxWidth = MetadataLine.w - 5.0f;
+				MetadataProps.m_MaxWidth = maximum(0.0f, MetadataLine.w - ActionReserve - 5.0f);
 				MetadataProps.m_DisallowNewline = true;
 				MetadataProps.m_StopAtEnd = true;
 				TextRender()->TextColor(ColorRGBA(0.8f, 0.8f, 0.8f, 0.8f));
@@ -1516,37 +1538,41 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 			Graphics()->QuadsEnd();
 		}
 
-		// render skin favorite icon + queue icon
+		// 队列 / 收藏动作：矩形由上面的图标条按「实际存在的动作」给出；存在度为 0 时
+		// 不画也不接点击（不存在就不占位，也不会留下空槽）。
 		{
-			CUIRect IconRow, FavIcon, QueueIcon;
-			Item.m_Rect.HSplitTop(20.0f, &IconRow, nullptr);
-			IconRow.VSplitRight(20.0f, &IconRow, &FavIcon);
-			IconRow.VSplitRight(2.0f, &IconRow, nullptr);
-			IconRow.VSplitRight(20.0f, &IconRow, &QueueIcon);
-			const bool InQueue = GameClient()->m_Skins.IsInSkinQueue(pSkinContainer->Name(), EntryUseCustomColor, EntryColorBody, EntryColorFeet, QueueDummy);
-			if(DoButtonSkinQueue(&RowIds.m_Queue, &RowIds.m_ListItem, InQueue, false, &QueueIcon))
+			const float QueueActionAlpha = RowIds.m_ActionStrip.Presence(0, ActionNow, ActionFreq, ActionEaseSeconds);
+			if(QueueActionAlpha > 0.01f)
 			{
-				if(InQueue)
+				CUiScopedControlAlphaScale QueueActionFade(Ui(), QueueActionAlpha);
+				if(DoButtonSkinQueue(&RowIds.m_Queue, &RowIds.m_ListItem, InSkinQueue, false, &aActionRects[0]))
 				{
-					GameClient()->m_Skins.RemoveActiveSkinQueue(pSkinContainer->Name(), EntryUseCustomColor, EntryColorBody, EntryColorFeet, QueueDummy);
+					if(InSkinQueue)
+					{
+						GameClient()->m_Skins.RemoveActiveSkinQueue(pSkinContainer->Name(), EntryUseCustomColor, EntryColorBody, EntryColorFeet, QueueDummy);
+					}
+					else
+					{
+						GameClient()->m_Skins.AddActiveSkinQueue(pSkinContainer->Name(), EntryUseCustomColor, EntryColorBody, EntryColorFeet, QueueDummy);
+					}
 				}
-				else
-				{
-					GameClient()->m_Skins.AddActiveSkinQueue(pSkinContainer->Name(), EntryUseCustomColor, EntryColorBody, EntryColorFeet, QueueDummy);
-				}
+				const char *pQueueTooltip = InSkinQueue ? Localize("Remove from queue") : Localize("Add to queue");
+				GameClient()->m_Tooltips.DoToolTip(&RowIds.m_Queue, &aActionRects[0], pQueueTooltip);
 			}
-			const char *pQueueTooltip = InQueue ? Localize("Remove from queue") : Localize("Add to queue");
-			GameClient()->m_Tooltips.DoToolTip(&RowIds.m_Queue, &QueueIcon, pQueueTooltip);
-
-			if(DoButton_Favorite(&RowIds.m_Favorite, &RowIds.m_ListItem, SkinListEntry.IsFavorite(), &FavIcon))
+			const float FavoriteActionAlpha = RowIds.m_ActionStrip.Presence(1, ActionNow, ActionFreq, ActionEaseSeconds);
+			if(FavoriteActionAlpha > 0.01f)
 			{
-				if(SkinListEntry.IsFavorite())
+				CUiScopedControlAlphaScale FavoriteActionFade(Ui(), FavoriteActionAlpha);
+				if(DoButton_Favorite(&RowIds.m_Favorite, &RowIds.m_ListItem, SkinListEntry.IsFavorite(), &aActionRects[1]))
 				{
-					GameClient()->m_Skins.RemoveFavorite(pSkinContainer->Name());
-				}
-				else
-				{
-					GameClient()->m_Skins.AddFavorite(pSkinContainer->Name());
+					if(SkinListEntry.IsFavorite())
+					{
+						GameClient()->m_Skins.RemoveFavorite(pSkinContainer->Name());
+					}
+					else
+					{
+						GameClient()->m_Skins.AddFavorite(pSkinContainer->Name());
+					}
 				}
 			}
 		}

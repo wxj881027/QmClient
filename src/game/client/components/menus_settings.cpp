@@ -374,6 +374,8 @@ CUi::EPopupMenuFunctionResult CMenus::PopupSettingsCountrySelection(void *pConte
 	const float FlagCellStep = FlagCellHeight + ui_token::list::ROW_SPACING;
 	const float FlagCellRadius = ui_token::list::RowRadius(FlagCellHeight);
 	s_ListBox.SetCapsuleRows(ui_token::font::SMALL);
+	// 容器内边距：与列表同一能力，格子与弹层容器四边留白。
+	s_ListBox.SetContainerPadding(ui_token::list::ContainerPadding(FlagCellHeight));
 	s_ListBox.DoAutoSpacing(0.0f);
 	s_ListBox.SetItemSelectionInset(ui_token::list::ROW_SPACING * 0.5f);
 

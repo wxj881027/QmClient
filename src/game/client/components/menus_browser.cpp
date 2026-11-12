@@ -1814,7 +1814,9 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	s_ListBox.DoAutoSpacing(0.0f);
 	s_ListBox.SetItemSelectionInset(ui_token::list::ROW_SPACING * 0.5f);
 	// 可见行取整：按实际可用高度收敛到整数行，首/末行不会被裁掉半行。
-	const int ServerVisibleRows = maximum(1, (int)std::floor(std::max(0.0f, View.h) / BrowserRowStep));
+	// 容器内边距（显式能力）：服务器列表也要首/末行与容器边缘留白。
+	s_ListBox.SetContainerPadding(ui_token::list::ContainerPadding(BrowserRowStep));
+	const int ServerVisibleRows = maximum(1, (int)std::floor(std::max(0.0f, View.h - 2.0f * ui_token::list::ContainerPadding(BrowserRowStep)) / BrowserRowStep));
 	s_ListBox.SetVisibleRowRange(1, ServerVisibleRows);
 	s_ListBox.DoStart(BrowserRowStep, NumServers, 1, 3, SelectedServerIndex, &View, false);
 
@@ -2737,6 +2739,9 @@ void CMenus::RenderServerbrowserFilters(CUIRect View)
 	{
 		const ColorRGBA ColorActive = BrowserOpacityColor(ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f));
 		const ColorRGBA ColorInactive = BrowserOpacityColor(ColorRGBA(0.0f, 0.0f, 0.0f, 0.15f));
+		// 页签的**选中态**只表达「当前在哪一页」，用主题选中色（强调色派生），与列表行/格、
+		// 下拉弹层条目同一份；内容区背板仍用上面那档暗色（它表达的是容器，不是选中）。
+		const ColorRGBA TabSelectedColor = Ui()->QmControlTheme().m_Selected;
 
 		CUIRect TabContents, CountriesTab, TypesTab;
 		View.HSplitTop(6.0f, nullptr, &View);
@@ -2762,10 +2767,10 @@ void CMenus::RenderServerbrowserFilters(CUIRect View)
 			s_ActiveTab = static_cast<EFilterTab>(Pressed);
 
 		static CButtonContainer s_CountriesButton;
-		DoButton_MenuTab(&s_CountriesButton, Localize("Countries"), s_ActiveTab == FILTERTAB_COUNTRIES, &CountriesTab, IGraphics::CORNER_TL, nullptr, &ColorInactive, &ColorActive, nullptr, ui_token::radius::MENU);
+		DoButton_MenuTab(&s_CountriesButton, Localize("Countries"), s_ActiveTab == FILTERTAB_COUNTRIES, &CountriesTab, IGraphics::CORNER_TL, nullptr, &ColorInactive, &TabSelectedColor, nullptr, ui_token::radius::MENU);
 
 		static CButtonContainer s_TypesButton;
-		DoButton_MenuTab(&s_TypesButton, Localize("Types"), s_ActiveTab == FILTERTAB_TYPES, &TypesTab, IGraphics::CORNER_TR, nullptr, &ColorInactive, &ColorActive, nullptr, ui_token::radius::MENU);
+		DoButton_MenuTab(&s_TypesButton, Localize("Types"), s_ActiveTab == FILTERTAB_TYPES, &TypesTab, IGraphics::CORNER_TR, nullptr, &ColorInactive, &TabSelectedColor, nullptr, ui_token::radius::MENU);
 
 		if(s_ActiveTab != s_PrevFilterTab)
 		{
@@ -3194,6 +3199,8 @@ CUi::EPopupMenuFunctionResult CMenus::PopupCountrySelection(void *pContext, CUIR
 	const float FlagCellStep = FlagCellHeight + ui_token::list::ROW_SPACING;
 	const float FlagCellRadius = ui_token::list::RowRadius(FlagCellHeight);
 	s_ListBox.SetCapsuleRows(10.0f);
+	// 容器内边距：格子与弹层容器四边留白，选中/悬浮胶囊不再压在圆角上（与列表同一能力）。
+	s_ListBox.SetContainerPadding(ui_token::list::ContainerPadding(FlagCellHeight));
 	s_ListBox.DoAutoSpacing(0.0f);
 	s_ListBox.SetItemSelectionInset(ui_token::list::ROW_SPACING * 0.5f);
 
@@ -3272,7 +3279,8 @@ CUi::EPopupMenuFunctionResult CMenus::PopupCountrySelection(void *pContext, CUIR
 	}
 
 	// 整数行：可见行由可用高度收敛，最后一行完整可见；列表再高也不越出内容区。
-	s_ListBox.SetVisibleRowRange(1, maximum(1, (int)std::floor(std::max(0.0f, GridArea.h) / FlagCellStep)));
+	// 可见行按「可用高 − 上下两档内边距」取整：内边距不会挤掉一行。
+	s_ListBox.SetVisibleRowRange(1, maximum(1, (int)std::floor(std::max(0.0f, GridArea.h - 2.0f * ui_token::list::ContainerPadding(FlagCellHeight)) / FlagCellStep)));
 	s_ListBox.DoStart(FlagCellStep, s_vFiltered.size(), Columns, 1, SelectedIndex, &GridArea, false);
 
 	for(size_t i = 0; i < s_vFiltered.size(); ++i)
