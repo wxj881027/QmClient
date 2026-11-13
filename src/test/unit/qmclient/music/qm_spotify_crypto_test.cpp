@@ -51,3 +51,21 @@ TEST(QmSpotifyCrypto, HmacSha1Rfc2202Case3)
 	const std::string Digest = QmSpotifyCrypto::HmacSha1(Key.data(), Key.size(), Data.data(), Data.size());
 	EXPECT_EQ(Hex(Digest), "125d7342b9ac11cd91a39af48aa17b4f63f175d3");
 }
+
+TEST(QmSpotifyCrypto, HmacSha1Rfc2202Case6)
+{
+	const std::vector<uint8_t> Key(80, 0xAA);
+	const std::string Data = "Test Using Larger Than Block-Size Key - Hash Key First";
+	ASSERT_EQ(Data.size(), 54u);
+	const std::string Digest = QmSpotifyCrypto::HmacSha1(Key.data(), Key.size(), (const unsigned char *)Data.data(), Data.size());
+	EXPECT_EQ(Hex(Digest), "aa4ae5e15272d00e95705637ce8a3b55ed402112");
+}
+
+TEST(QmSpotifyCrypto, HmacSha1Rfc2202Case7)
+{
+	const std::vector<uint8_t> Key(80, 0xAA);
+	const std::string Data = "Test Using Larger Than Block-Size Key and Larger Than One Block-Size Data";
+	ASSERT_EQ(Data.size(), 73u);
+	const std::string Digest = QmSpotifyCrypto::HmacSha1(Key.data(), Key.size(), (const unsigned char *)Data.data(), Data.size());
+	EXPECT_EQ(Hex(Digest), "e8e99d0f45237d786d6bbaa7965c7808bbff1a91");
+}

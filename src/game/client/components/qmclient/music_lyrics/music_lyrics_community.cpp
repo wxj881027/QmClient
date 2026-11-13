@@ -13,6 +13,8 @@
 #include <game/client/components/qmclient/netease/netease_lyric_timeline.h>
 
 #include <memory>
+#include <new>
+#include <stdexcept>
 #include <utility>
 
 namespace QmMusicLyrics
@@ -123,6 +125,7 @@ namespace QmMusicLyrics
 
 	void CCommunityLyrics::Update(int SourceId, const SSourceSnapshot &Source, bool Enabled, int64_t NowMs,
 		IStorage *pStorage, IEngine *pEngine, IHttp *pHttp)
+	try
 	{
 		if(!Enabled || Source.m_SongId == 0 || Source.m_HasWordTiming ||
 			(SourceId != 1 && SourceId != 4 && SourceId != 5))
@@ -133,13 +136,16 @@ namespace QmMusicLyrics
 		}
 		if(!m_pImpl->Matches(SourceId, Source))
 		{
+			std::string CatalogId(Source.m_CatalogId);
+			SCommunitySong Song = CommunitySong(SourceId, Source.m_SongId, CatalogId);
 			Reset();
 			m_pImpl->m_SourceId = SourceId;
 			m_pImpl->m_SongId = Source.m_SongId;
 			m_pImpl->m_Generation = Source.m_Generation;
 			m_pImpl->m_Pid = Source.m_ProducerPid;
-			m_pImpl->m_CatalogId = Source.m_CatalogId;
-			m_pImpl->m_Song = CommunitySong(SourceId, Source.m_SongId, Source.m_CatalogId);
+			m_pImpl->m_CatalogId.swap(CatalogId);
+			m_pImpl->m_Song.m_Source = Song.m_Source;
+			m_pImpl->m_Song.m_Id.swap(Song.m_Id);
 			// 允许原来源的解析任务先完成；缓存读取无需等待网络。
 			m_pImpl->m_NextAttemptMs = NowMs + 500;
 		}
@@ -162,18 +168,19 @@ namespace QmMusicLyrics
 			return;
 		if(!m_pImpl->m_CacheRead)
 		{
+			auto pJob = std::make_shared<CLyricsJob>(pStorage, CommunityCachePath(m_pImpl->m_Song), m_pImpl->m_Epoch);
+			if(!pEngine->TryAddJob(pJob))
+				return;
+			m_pImpl->m_pJob = std::move(pJob);
 			m_pImpl->m_CacheRead = true;
-			m_pImpl->m_pJob = std::make_shared<CLyricsJob>(pStorage, CommunityCachePath(m_pImpl->m_Song), m_pImpl->m_Epoch);
-			pEngine->AddJob(m_pImpl->m_pJob);
 			return;
 		}
 		if(m_pImpl->m_pRequest)
 		{
 			if(!m_pImpl->m_pRequest->Done())
 				return;
-			auto pRequest = std::move(m_pImpl->m_pRequest);
+			const auto &pRequest = m_pImpl->m_pRequest;
 			const int Status = pRequest->State() == EHttpState::DONE ? pRequest->StatusCode() : -1;
-			m_pImpl->m_NextAttemptMs = NowMs + (Status == 404 ? NOT_FOUND_RETRY_MS : RETRY_MS);
 			if(Status == 200)
 			{
 				unsigned char *pData = nullptr;
@@ -181,23 +188,47 @@ namespace QmMusicLyrics
 				pRequest->Result(&pData, &Size);
 				if(pData && Size > 0 && Size <= COMMUNITY_LYRICS_MAX_BYTES)
 				{
-					m_pImpl->m_pJob = std::make_shared<CLyricsJob>(pStorage, CommunityCachePath(m_pImpl->m_Song),
+					auto pJob = std::make_shared<CLyricsJob>(pStorage, CommunityCachePath(m_pImpl->m_Song),
 						m_pImpl->m_Epoch, true, std::string(reinterpret_cast<const char *>(pData), Size));
-					pEngine->AddJob(m_pImpl->m_pJob);
+					if(!pEngine->TryAddJob(pJob))
+						return;
+					m_pImpl->m_pJob = std::move(pJob);
 				}
 			}
+			m_pImpl->m_NextAttemptMs = NowMs + (Status == 404 ? NOT_FOUND_RETRY_MS : RETRY_MS);
+			m_pImpl->m_pRequest.reset();
 			return;
 		}
 		if(NowMs < m_pImpl->m_NextAttemptMs)
 			return;
 		const auto Url = CommunityUrl(m_pImpl->m_Song);
 		std::shared_ptr<IHttpRequest> pRequest = m_pImpl->m_CreateRequest ? m_pImpl->m_CreateRequest(Url.c_str()) : HttpGet(Url.c_str());
+		if(!pRequest)
+			return;
 		pRequest->Timeout(CTimeout{4000, 10000, 500, 5});
 		pRequest->MaxResponseSize(COMMUNITY_LYRICS_MAX_BYTES);
 		pRequest->FailOnErrorStatus(false);
 		pRequest->LogProgress(HTTPLOG::FAILURE);
 		m_pImpl->m_pRequest = pRequest;
-		pHttp->Run(std::move(pRequest));
+		try
+		{
+			pHttp->Run(pRequest);
+		}
+		catch(...)
+		{
+			// Run是否接纳不能由QUEUED判断；取消本次请求，下次只创建新对象。
+			pRequest->Abort();
+			if(m_pImpl->m_pRequest == pRequest)
+				m_pImpl->m_pRequest.reset();
+			throw;
+		}
+	}
+	catch(const std::bad_alloc &)
+	{
+		// 候选准备失败时保留当前阶段及其来源，由下帧重试。
+	}
+	catch(const std::length_error &)
+	{
 	}
 
 	SSourceSnapshot CCommunityLyrics::Apply(int SourceId, const SSourceSnapshot &Source) const

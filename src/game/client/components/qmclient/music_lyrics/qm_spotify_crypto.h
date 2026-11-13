@@ -5,7 +5,7 @@
 #include <string>
 
 // Spotify TOTP(open.spotify.com/api/token)所需的 SHA1 / HMAC-SHA1。
-// 仅用于 TOTP 挑战,不用于任何安全敏感场景。
+// 输入仅在本次调用中借用，摘要按值返回。
 namespace QmSpotifyCrypto
 {
 	// 计算 HMAC-SHA1,返回 20 字节原始摘要。

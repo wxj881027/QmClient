@@ -13,6 +13,8 @@
 
 #include <algorithm>
 #include <chrono>
+#include <new>
+#include <stdexcept>
 #include <string_view>
 
 namespace
@@ -102,13 +104,27 @@ void CNeteaseIntegration::UpdateLyricsData(const QmNeteaseHook::SSnapshotV5 &Sna
 	if(Now < m_NextLyricsReadTick)
 		return;
 	m_NextLyricsReadTick = Now + 250;
-	NeteaseLyrics::SRawLyrics Raw;
-	if(m_LyricsChannel.Read(m_DataPid, m_DataSongId, m_DataGeneration, m_DataRevision, Raw))
+	try
 	{
+		NeteaseLyrics::SRawLyrics Raw;
+		uint64_t Revision = m_DataRevision;
+		if(!m_LyricsChannel.Read(m_DataPid, m_DataSongId, m_DataGeneration, Revision, Raw))
+			return;
 		auto pJob = std::make_shared<CLyricsParseJob>();
 		pJob->m_Raw = std::move(Raw);
-		m_pLyricsParseJob = pJob;
-		Engine()->AddJob(pJob);
+		if(!Engine()->TryAddJob(pJob))
+			return;
+		// 接纳后只移动发布；准备或准入失败时，下次仍能读取同一修订。
+		m_pLyricsParseJob = std::move(pJob);
+		m_DataRevision = Revision;
+	}
+	catch(const std::bad_alloc &)
+	{
+		return;
+	}
+	catch(const std::length_error &)
+	{
+		return;
 	}
 }
 
