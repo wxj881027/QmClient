@@ -138,6 +138,47 @@ namespace qmclient::rank_ghost
 		Output = std::move(Candidate);
 		return true;
 	}
+
+	// 写出 .qmevt：事件 / 开关状态 / 消息三段，布局与 ReadViewTimeline 严格对应。
+	// Rank 1 解析与练习 /pg 共用这一份写出逻辑，避免两边各自维护字节顺序。
+	inline bool WriteViewTimeline(IOHANDLE File, const std::vector<SViewEvent> &vEvents, const std::vector<SViewSwitchState> &vSwitchStates, const std::vector<SViewMessage> &vMessages)
+	{
+		if(File == nullptr)
+			return false;
+		io_write(File, VIEW_TIMELINE_MAGIC, sizeof(VIEW_TIMELINE_MAGIC));
+		uint32_t Count = (uint32_t)vEvents.size();
+		io_write(File, &Count, sizeof(Count));
+		for(const SViewEvent &Event : vEvents)
+		{
+			io_write(File, &Event.m_RelTick, sizeof(Event.m_RelTick));
+			io_write(File, &Event.m_Type, sizeof(Event.m_Type));
+			io_write(File, Event.m_aData, sizeof(Event.m_aData));
+		}
+		Count = (uint32_t)vSwitchStates.size();
+		io_write(File, &Count, sizeof(Count));
+		for(const SViewSwitchState &State : vSwitchStates)
+		{
+			io_write(File, &State.m_RelTick, sizeof(State.m_RelTick));
+			io_write(File, &State.m_HighestSwitchNumber, sizeof(State.m_HighestSwitchNumber));
+			io_write(File, State.m_aStatus, sizeof(State.m_aStatus));
+		}
+		Count = (uint32_t)vMessages.size();
+		io_write(File, &Count, sizeof(Count));
+		for(const SViewMessage &Message : vMessages)
+		{
+			// 枚举按 int 落盘：底层宽度由实现决定，按字节写会破坏跨版本读取。
+			const int Type = (int)Message.m_Type;
+			io_write(File, &Message.m_RelTick, sizeof(Message.m_RelTick));
+			io_write(File, &Type, sizeof(Type));
+			io_write(File, Message.m_aData, sizeof(Message.m_aData));
+		}
+		return true;
+	}
+
+	inline bool WriteViewTimeline(IOHANDLE File, const SViewTimeline &Timeline)
+	{
+		return WriteViewTimeline(File, Timeline.m_vEvents, Timeline.m_vSwitchStates, Timeline.m_vMessages);
+	}
 }
 
 #endif

@@ -2423,33 +2423,8 @@ void CRankGhost::WriteViewTimeline()
 		return;
 	}
 
-	io_write(File, VIEW_TIMELINE_MAGIC, sizeof(VIEW_TIMELINE_MAGIC));
-	uint32_t Count = (uint32_t)m_vViewEvents.size();
-	io_write(File, &Count, sizeof(Count));
-	for(const SViewEvent &Event : m_vViewEvents)
-	{
-		io_write(File, &Event.m_RelTick, sizeof(Event.m_RelTick));
-		io_write(File, &Event.m_Type, sizeof(Event.m_Type));
-		io_write(File, Event.m_aData, sizeof(Event.m_aData));
-	}
-	Count = (uint32_t)m_vViewSwitchStates.size();
-	io_write(File, &Count, sizeof(Count));
-	for(const SViewSwitchState &State : m_vViewSwitchStates)
-	{
-		io_write(File, &State.m_RelTick, sizeof(State.m_RelTick));
-		io_write(File, &State.m_HighestSwitchNumber, sizeof(State.m_HighestSwitchNumber));
-		io_write(File, State.m_aStatus, sizeof(State.m_aStatus));
-	}
-	Count = (uint32_t)m_vViewMessages.size();
-	io_write(File, &Count, sizeof(Count));
-	for(const SViewMessage &Message : m_vViewMessages)
-	{
-		// 枚举按 int 落盘：m_Type 的底层宽度是实现定义的，写字节会破坏跨版本读取
-		const int Type = (int)Message.m_Type;
-		io_write(File, &Message.m_RelTick, sizeof(Message.m_RelTick));
-		io_write(File, &Type, sizeof(Type));
-		io_write(File, Message.m_aData, sizeof(Message.m_aData));
-	}
+	if(!qmclient::rank_ghost::WriteViewTimeline(File, m_vViewEvents, m_vViewSwitchStates, m_vViewMessages))
+		log_error("rank_ghost", "failed to write view timeline '%s'", aPath);
 	io_close(File);
 	log_info("rank_ghost", "view timeline written: %d events, %d switch states, %d messages ('%s')",
 		(int)m_vViewEvents.size(), (int)m_vViewSwitchStates.size(), (int)m_vViewMessages.size(), aPath);

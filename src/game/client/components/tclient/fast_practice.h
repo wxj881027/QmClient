@@ -12,6 +12,7 @@
 #include <game/client/component.h>
 #include <game/client/components/qmclient/local_world.h>
 #include <game/client/components/qmclient/practice_hook_input.h>
+#include <game/client/components/qmclient/practice_recorder.h>
 #include <game/client/components/qmclient/practice_rescue.h>
 #include <game/client/prediction/gameworld.h>
 #include <game/gamecore.h>
@@ -138,7 +139,7 @@ private:
 	int m_EnableDummyClientId = -1;
 	bool m_PracticeWorldInitialized = false;
 	bool m_HasDummyAnchor = false;
-	bool m_RecordingPaused = false;
+	CPracticeRecorder m_Recorder;
 	bool m_SuppressFireOnNextPredictTick = false;
 	int m_InputSuppressTicks = 0;
 	// 角色/输入解析瞬态失败的连续 tick 数；服务器重进、分身重连期间不立刻退出。
@@ -253,7 +254,6 @@ public:
 	bool PracticeWorldClockActive() const { return m_Enabled && m_PracticeWorldInitialized; }
 
 private:
-	bool AdvanceBaseWorldToTick(int TargetTick, int LocalClientId, int DummyClientId);
 	// 服务器重进会换 client id，重新 fork 前必须把参与者 id 换成本次连接的实际 id。
 	bool TryRebindPracticeParticipants();
 	// 过渡期内角色/输入暂时解析失败时冻结练习世界等待恢复，宽限超时才真正退出。

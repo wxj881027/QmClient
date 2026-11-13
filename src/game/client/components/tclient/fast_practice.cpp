@@ -14,6 +14,7 @@
 #include <game/client/components/ghost.h>
 #include <game/client/components/particles.h>
 #include <game/client/components/qmclient/modes.h>
+#include <game/client/components/qmclient/practice_branch_state.h>
 #include <game/client/components/qmclient/practice_cursor.h>
 #include <game/client/components/qmclient/practice_rescue.h>
 #include <game/client/components/qmclient/world_event_gate.h>
@@ -55,22 +56,6 @@ namespace
 			Input.m_TargetX = 1;
 			Input.m_TargetY = 0;
 		}
-	}
-
-	int ReleasedFireState(int FireState)
-	{
-		FireState &= INPUT_STATE_MASK;
-		if((FireState & 1) != 0)
-			FireState = (FireState + 1) & INPUT_STATE_MASK;
-		return FireState;
-	}
-
-	void SuppressActionInput(CNetObj_PlayerInput &Input, int FireState)
-	{
-		Input.m_Fire = FireState & INPUT_STATE_MASK;
-		Input.m_WantedWeapon = 0;
-		Input.m_NextWeapon = 0;
-		Input.m_PrevWeapon = 0;
 	}
 
 	float EffectiveFastInputOffsetTicks(const CGameClient *pGameClient)
@@ -259,7 +244,7 @@ void CFastPractice::ResetPracticeState()
 	m_EnableDummyClientId = -1;
 	m_PracticeWorldInitialized = false;
 	m_HasDummyAnchor = false;
-	m_RecordingPaused = false;
+	m_Recorder.Reset();
 	m_SuppressFireOnNextPredictTick = false;
 	m_InputSuppressTicks = 0;
 	m_TransientFailureTicks = 0;
@@ -439,36 +424,23 @@ bool CFastPractice::TryRebindPracticeParticipants()
 	int LocalConn = m_EnableLocalConn;
 	if(LocalConn < 0)
 		LocalConn = g_Config.m_ClDummy ? IClient::CONN_DUMMY : IClient::CONN_MAIN;
-	const int NewLocalId = GameClient()->m_aLocalIds[LocalConn];
-	if(NewLocalId < 0 || NewLocalId >= MAX_CLIENTS)
-		return false;
-
-	int NewDummyId = -1;
-	if(m_RequireDummy)
-	{
-		// 分身尚未重新连上时按 -1 处理；连回来后的下一次重绑会补上。
-		const int CandidateId = GameClient()->m_aLocalIds[LocalConn ^ 1];
-		if(CandidateId >= 0 && CandidateId < MAX_CLIENTS && CandidateId != NewLocalId)
-			NewDummyId = CandidateId;
-	}
-
-	const int OldLocalId = m_EnableLocalClientId;
-	const int OldDummyId = m_EnableDummyClientId;
-	if(NewLocalId == OldLocalId && NewDummyId == OldDummyId)
+	const SQmPracticeRebindDecision Decision = QmResolvePracticeRebind(
+		GameClient()->m_aLocalIds, LocalConn, m_EnableLocalClientId, m_EnableDummyClientId, m_RequireDummy);
+	if(!Decision.m_Changed)
 		return false;
 
 	if(g_Config.m_Debug)
 		dbg_msg("fast_practice", "rebind participants: local %d->%d dummy %d->%d",
-			OldLocalId, NewLocalId, OldDummyId, NewDummyId);
+			m_EnableLocalClientId, Decision.m_LocalClientId, m_EnableDummyClientId, Decision.m_DummyClientId);
 
 	// 检查点、救援点等按 client id 索引；id 换了以后跟着迁移，重进后还能继续用。
-	if(OldLocalId >= 0 && OldLocalId < MAX_CLIENTS && NewLocalId != OldLocalId)
-		m_aPracticeCommandState[NewLocalId] = m_aPracticeCommandState[OldLocalId];
-	if(OldDummyId >= 0 && OldDummyId < MAX_CLIENTS && NewDummyId >= 0 && NewDummyId != OldDummyId)
-		m_aPracticeCommandState[NewDummyId] = m_aPracticeCommandState[OldDummyId];
+	if(Decision.m_MigrateLocalState)
+		m_aPracticeCommandState[Decision.m_LocalClientId] = m_aPracticeCommandState[m_EnableLocalClientId];
+	if(Decision.m_MigrateDummyState)
+		m_aPracticeCommandState[Decision.m_DummyClientId] = m_aPracticeCommandState[m_EnableDummyClientId];
 
-	m_EnableLocalClientId = NewLocalId;
-	m_EnableDummyClientId = NewDummyId;
+	m_EnableLocalClientId = Decision.m_LocalClientId;
+	m_EnableDummyClientId = Decision.m_DummyClientId;
 	return true;
 }
 
@@ -576,20 +548,18 @@ void CFastPractice::PrunePracticeWorld(CGameWorld &World) const
 
 void CFastPractice::BeginPracticeTrack(int StartTick)
 {
-	GameClient()->m_LocalWorld.BeginTrack(StartTick);
 	// 多轨身份：本体轨恒为 0，分身存在时占轨 1。名字用于回放成员列表，
 	// 与服务器快照里的名字同源（练习里没有别的玩家）。
 	const int LocalId = m_EnableLocalClientId;
 	const int DummyId = m_EnableDummyClientId;
-	if(LocalId >= 0 && LocalId < MAX_CLIENTS)
-		GameClient()->m_LocalWorld.SetTrackIdentity(0, LocalId, GameClient()->m_aClients[LocalId].m_aName);
-	if(DummyId >= 0 && DummyId < MAX_CLIENTS)
-		GameClient()->m_LocalWorld.SetTrackIdentity(1, DummyId, GameClient()->m_aClients[DummyId].m_aName);
+	const char *pLocalName = LocalId >= 0 && LocalId < MAX_CLIENTS ? GameClient()->m_aClients[LocalId].m_aName : "";
+	const char *pDummyName = DummyId >= 0 && DummyId < MAX_CLIENTS ? GameClient()->m_aClients[DummyId].m_aName : "";
+	m_Recorder.Begin(GameClient()->m_LocalWorld, StartTick, LocalId, DummyId, pLocalName, pDummyName);
 }
 
 void CFastPractice::RecordPracticeFrames(CGameWorld &World, int Tick, int LocalClientId, int DummyClientId)
 {
-	if(!GameClient()->m_LocalWorld.TrackActive() || m_RecordingPaused)
+	if(!GameClient()->m_LocalWorld.TrackActive() || m_Recorder.Paused())
 		return;
 
 	const auto Record = [&](int TrackIndex, int ClientId) {
@@ -626,7 +596,7 @@ void CFastPractice::RecordPracticeEvents(CGameWorld &World, int Tick)
 {
 	// 与 HandlePredictedEvents 同一门控：被压制的 tick 当时就没播特效/音效，
 	// 回放里也不该凭空多出来。
-	if(!GameClient()->m_LocalWorld.TrackActive() || m_RecordingPaused || GameClient()->m_SuppressEvents)
+	if(!GameClient()->m_LocalWorld.TrackActive() || m_Recorder.Paused() || GameClient()->m_SuppressEvents)
 		return;
 
 	// 分支世界里真实发生的交互（枪声/锤击音、锤击环、爆炸、伤害指示）要跟轨迹
@@ -667,7 +637,7 @@ void CFastPractice::RecordPracticeEvents(CGameWorld &World, int Tick)
 
 void CFastPractice::RecordPracticeSwitchState(CGameWorld &World, int Tick)
 {
-	if(!GameClient()->m_LocalWorld.TrackActive() || m_RecordingPaused || World.Switchers().empty())
+	if(!GameClient()->m_LocalWorld.TrackActive() || m_Recorder.Paused() || World.Switchers().empty())
 		return;
 
 	// 队伍与查看模式 ApplyViewSwitchState 用同一个来源，保证录进去的状态
@@ -684,7 +654,7 @@ void CFastPractice::OnPracticePositionJump()
 	dbg_msg("fast_practice", "segment boundary: frames=%d events=%d switches=%d",
 		GameClient()->m_LocalWorld.CurrentFrameCount(), GameClient()->m_LocalWorld.CurrentEventCount(),
 		GameClient()->m_LocalWorld.CurrentSwitchStateCount());
-	GameClient()->m_LocalWorld.MarkSegmentBoundary();
+	m_Recorder.MarkBoundary(GameClient()->m_LocalWorld);
 }
 
 bool CFastPractice::SavePracticeGhost(const char *pName)
@@ -723,11 +693,9 @@ void CFastPractice::ShiftPracticeWorldTicks(int TickDelta)
 	GameClient()->m_LocalWorld.ShiftTrackTicks(TickDelta);
 
 	m_PracticeBaseWorld.m_GameTick += TickDelta;
-	// 预测事件队列会随 CopyWorldClean 一起进入预测世界（gameworld.cpp:672/725）。
-	// tick 留在旧基准上，QmProcessPredictedEvents 只判 m_Tick <= Tick，
-	// 平移后的第一帧就会把积压的事件一次性播出来（特效/音效集中爆发）。
-	for(auto &Event : m_PracticeBaseWorld.m_PredictedEvents)
-		Event.m_Tick += TickDelta;
+	// 预测事件队列会随 CopyWorldClean 一起进入预测世界，tick 必须跟着平移，
+	// 否则平移后的第一帧会把积压事件一次性播出来（特效/音效集中爆发）。
+	QmShiftPracticePredictedEventTicks(m_PracticeBaseWorld.m_PredictedEvents, TickDelta);
 	for(auto &Switcher : m_PracticeBaseWorld.Switchers())
 	{
 		for(int Team = 0; Team < NUM_DDRACE_TEAMS; Team++)
@@ -801,9 +769,9 @@ bool CFastPractice::SuspendPracticeForTransientFailure(const char *pReason)
 {
 	// 服务器重进、分身重连等过渡期里角色与 id 会短暂对不上。直接 Disable 会连同
 	// 输入锁一起丢掉，练习输入立刻打到真身上；先冻结练习世界等恢复，宽限超时才退出。
-	const int GraceTicks = std::max(Client()->GameTickSpeed(), 1) * 2;
+	const int GraceTicks = QmPracticeTransientGraceTicks(Client()->GameTickSpeed());
 	m_TransientFailureTicks++;
-	if(m_TransientFailureTicks <= GraceTicks)
+	if(QmResolvePracticeTransientFailure(m_TransientFailureTicks, GraceTicks) == EQmPracticeTransientFailureAction::HOLD)
 	{
 		if(g_Config.m_Debug)
 			dbg_msg("fast_practice", "transient failure (%s): %d/%d ticks", pReason, m_TransientFailureTicks, GraceTicks);
@@ -998,8 +966,7 @@ bool CFastPractice::InitPracticeWorld()
 {
 	// 重新 fork（/r、重进、追赶失败）会让角色回到锚点，轨迹上是一次瞬移，
 	// 必须先切段，否则存出来的幽灵会带一道穿墙的直线。
-	if(GameClient()->m_LocalWorld.TrackActive())
-		GameClient()->m_LocalWorld.MarkSegmentBoundary();
+	m_Recorder.MarkBoundary(GameClient()->m_LocalWorld);
 
 	m_PracticeBaseWorld.CopyWorldClean(&GameClient()->m_GameWorld);
 	PrunePracticeWorld(m_PracticeBaseWorld);
@@ -1209,16 +1176,16 @@ void CFastPractice::ReleaseBufferedInputState()
 	{
 		NeutralizeInput(GameClient()->m_Controls.m_aInputData[Conn]);
 		NeutralizeInput(GameClient()->m_Controls.m_aLastData[Conn]);
-		GameClient()->m_Controls.m_aInputData[Conn].m_Fire = ReleasedFireState(GameClient()->m_Controls.m_aInputData[Conn].m_Fire);
-		GameClient()->m_Controls.m_aLastData[Conn].m_Fire = ReleasedFireState(GameClient()->m_Controls.m_aLastData[Conn].m_Fire);
+		GameClient()->m_Controls.m_aInputData[Conn].m_Fire = QmPracticeReleasedFireState(GameClient()->m_Controls.m_aInputData[Conn].m_Fire);
+		GameClient()->m_Controls.m_aLastData[Conn].m_Fire = QmPracticeReleasedFireState(GameClient()->m_Controls.m_aLastData[Conn].m_Fire);
 	}
 	NeutralizeInput(GameClient()->m_Controls.m_aFastInput[g_Config.m_ClDummy]);
-	GameClient()->m_Controls.m_aFastInput[g_Config.m_ClDummy].m_Fire = ReleasedFireState(GameClient()->m_Controls.m_aFastInput[g_Config.m_ClDummy].m_Fire);
+	GameClient()->m_Controls.m_aFastInput[g_Config.m_ClDummy].m_Fire = QmPracticeReleasedFireState(GameClient()->m_Controls.m_aFastInput[g_Config.m_ClDummy].m_Fire);
 
 	NeutralizeInput(GameClient()->m_DummyInput);
-	GameClient()->m_DummyInput.m_Fire = ReleasedFireState(GameClient()->m_DummyInput.m_Fire);
+	GameClient()->m_DummyInput.m_Fire = QmPracticeReleasedFireState(GameClient()->m_DummyInput.m_Fire);
 	NeutralizeInput(GameClient()->m_HammerInput);
-	GameClient()->m_HammerInput.m_Fire = ReleasedFireState(GameClient()->m_HammerInput.m_Fire);
+	GameClient()->m_HammerInput.m_Fire = QmPracticeReleasedFireState(GameClient()->m_HammerInput.m_Fire);
 	GameClient()->m_DummyFire = 0;
 }
 
@@ -1231,7 +1198,7 @@ void CFastPractice::CaptureServerReleasedFireStates()
 			FireState = GameClient()->m_Controls.m_aLastData[Slot].m_Fire;
 		else if(g_Config.m_ClDummyHammer)
 			FireState = GameClient()->m_HammerInput.m_Fire;
-		m_aServerReleasedFireStates[Slot] = ReleasedFireState(FireState);
+		m_aServerReleasedFireStates[Slot] = QmPracticeReleasedFireState(FireState);
 	}
 }
 
@@ -1240,15 +1207,15 @@ void CFastPractice::ReleaseBufferedActionInputState()
 	for(int Conn = 0; Conn < NUM_DUMMIES; Conn++)
 	{
 		const int ReleasedFire = m_aServerReleasedFireStates[Conn];
-		SuppressActionInput(GameClient()->m_Controls.m_aInputData[Conn], ReleasedFire);
-		SuppressActionInput(GameClient()->m_Controls.m_aLastData[Conn], ReleasedFire);
-		SuppressActionInput(GameClient()->m_Controls.m_aFastInput[Conn], ReleasedFire);
+		QmPracticeSuppressActionInput(GameClient()->m_Controls.m_aInputData[Conn], ReleasedFire);
+		QmPracticeSuppressActionInput(GameClient()->m_Controls.m_aLastData[Conn], ReleasedFire);
+		QmPracticeSuppressActionInput(GameClient()->m_Controls.m_aFastInput[Conn], ReleasedFire);
 	}
 
 	const int DummySlot = !g_Config.m_ClDummy;
 	const int DummyReleasedFire = m_aServerReleasedFireStates[DummySlot];
-	SuppressActionInput(GameClient()->m_DummyInput, DummyReleasedFire);
-	SuppressActionInput(GameClient()->m_HammerInput, DummyReleasedFire);
+	QmPracticeSuppressActionInput(GameClient()->m_DummyInput, DummyReleasedFire);
+	QmPracticeSuppressActionInput(GameClient()->m_HammerInput, DummyReleasedFire);
 	GameClient()->m_DummyFire = 0;
 }
 
@@ -1366,7 +1333,7 @@ void CFastPractice::CaptureServerLockedInputs()
 	for(int Slot = 0; Slot < NUM_DUMMIES; Slot++)
 	{
 		// 练习中接入分身时，主角色继续沿用进入练习前锁定的输入。
-		if(m_Enabled && m_aHasServerLockedInputs[Slot] && GameClient()->m_aLocalIds[Slot] == m_EnableLocalClientId)
+		if(!QmPracticeShouldCaptureServerLockedInput(m_Enabled, m_aHasServerLockedInputs[Slot], GameClient()->m_aLocalIds[Slot], m_EnableLocalClientId))
 			continue;
 
 		CNetObj_PlayerInput Input = {};
@@ -1380,14 +1347,7 @@ void CFastPractice::CaptureServerLockedInputs()
 			Input = g_Config.m_ClDummyHammer ? GameClient()->m_HammerInput : GameClient()->m_DummyInput;
 		}
 
-		if(Input.m_TargetX == 0 && Input.m_TargetY == 0)
-			Input.m_TargetX = 1;
-
-		// 保留瞄准和钩子，避免挂墙本体松钩掉落；释放移动、跳跃和开火。
-		Input.m_Direction = 0;
-		Input.m_Jump = 0;
-		SuppressActionInput(Input, ReleasedFireState(Input.m_Fire));
-		m_aServerLockedInputs[Slot] = Input;
+		m_aServerLockedInputs[Slot] = QmBuildPracticeServerLockedInput(Input);
 		m_aHasServerLockedInputs[Slot] = true;
 	}
 }
@@ -1436,7 +1396,7 @@ void CFastPractice::Enable(bool PreserveHeldInput)
 	m_Enabled = true;
 	m_PracticeBaseWorld.m_GameTick = Client()->PredGameTick(g_Config.m_ClDummy);
 	// 录制是全手动的：进入练习不再自动开录，由“开始录制”按键启动轨迹。
-	m_RecordingPaused = false;
+	m_Recorder.Reset();
 	GameClient()->m_PredictedDummyId = CurrentPracticeDummyId();
 	ResetCommandState();
 	ResetAttackTickHistory();
@@ -1563,7 +1523,7 @@ void CFastPractice::Disable()
 	// 退出即销毁分支——EndTrack 丢弃轨迹会话，ResetPracticeState 里的
 	// m_PracticeBaseWorld.Clear() 销毁所有实体；下次进入重新 fork。
 	// 已 /pg 落盘的 .gho 组是独立文件，分支销毁后依然存在。
-	GameClient()->m_LocalWorld.EndTrack();
+	m_Recorder.End(GameClient()->m_LocalWorld);
 	ResetPracticeState();
 	if(WasEnabled)
 		m_aPostPracticeInputSuppressTicks.fill(2);
@@ -1779,7 +1739,7 @@ bool CFastPractice::RestartPracticeFromStart()
 	PublishPracticeWorldState();
 
 	// 重开是一次瞬移。轨迹历史保留，只切段，避免回放里连出一条穿墙直线。
-	GameClient()->m_LocalWorld.MarkSegmentBoundary();
+	m_Recorder.MarkBoundary(GameClient()->m_LocalWorld);
 	return true;
 }
 
@@ -1823,52 +1783,49 @@ void CFastPractice::StartPracticeRecording()
 		EchoPractice("practice recording: fast practice is not active");
 		return;
 	}
-	if(GameClient()->m_LocalWorld.TrackActive())
+	if(m_Recorder.Active(GameClient()->m_LocalWorld))
 	{
-		if(!m_RecordingPaused)
+		if(!m_Recorder.Paused())
 		{
 			EchoPractice("practice recording is already running");
 			return;
 		}
-		// 暂停后按开始 = 继续。先切段：暂停期间的空洞不能连成一条直线。
-		m_RecordingPaused = false;
-		GameClient()->m_LocalWorld.MarkSegmentBoundary();
+		// 暂停后按开始 = 继续；Recorder 先切段，暂停期间的空洞不会连成一条直线。
+		m_Recorder.Resume(GameClient()->m_LocalWorld);
 		EchoPractice("practice recording resumed");
 		return;
 	}
 	BeginPracticeTrack(m_PracticeBaseWorld.GameTick());
-	m_RecordingPaused = false;
 	EchoPractice("practice recording started");
 }
 
 void CFastPractice::PausePracticeRecording()
 {
-	if(!m_Enabled || !GameClient()->m_LocalWorld.TrackActive() || m_RecordingPaused)
+	if(!m_Enabled || !m_Recorder.Active(GameClient()->m_LocalWorld) || m_Recorder.Paused())
 	{
 		EchoPractice("practice recording is not running");
 		return;
 	}
-	m_RecordingPaused = true;
+	m_Recorder.Pause();
 	// 暂停期间 tee 照常跑，采样必须停：继续录会把空洞连成一条直线，回放里是假轨迹。
 	EchoPractice("practice recording paused (resuming starts a new take)");
 }
 
 void CFastPractice::StopPracticeRecording()
 {
-	if(!m_Enabled || !GameClient()->m_LocalWorld.TrackActive())
+	if(!m_Enabled || !m_Recorder.Active(GameClient()->m_LocalWorld))
 	{
 		EchoPractice("practice recording is not running");
 		return;
 	}
-	// 先落盘再结束：EndTrack 会清空轨迹缓冲，顺序反了就什么都存不下来。
+	// 先落盘再结束：End 会清空轨迹缓冲，顺序反了就什么都存不下来。
 	// 保存失败（线路太短或录音器忙）时不清空轨迹，暂停住让用户接着跑再结束。
 	if(!SavePracticeGhost(""))
 	{
-		m_RecordingPaused = true;
+		m_Recorder.Pause();
 		return;
 	}
-	m_RecordingPaused = false;
-	GameClient()->m_LocalWorld.EndTrack();
+	m_Recorder.End(GameClient()->m_LocalWorld);
 	EchoPractice("practice recording stopped and saved");
 }
 
@@ -1915,7 +1872,7 @@ void CFastPractice::PrepareInputForSend(int *pData, int Size, bool Dummy)
 	{
 		if(Slot >= 0 && Slot < NUM_DUMMIES && m_aPostPracticeInputSuppressTicks[Slot] > 0)
 		{
-			SuppressActionInput(*pInput, m_aServerReleasedFireStates[Slot]);
+			QmPracticeSuppressActionInput(*pInput, m_aServerReleasedFireStates[Slot]);
 			m_aPostPracticeInputSuppressTicks[Slot]--;
 		}
 		return;
@@ -1955,113 +1912,6 @@ void CFastPractice::TrackPracticeTileFeedback(int ClientId, CCharacter *pChar, c
 	if(FeedbackDecision.m_PlayDeathFeedback && g_Config.m_SndGame && !GameClient()->m_SuppressEvents)
 		if(GetQmFocusModeDecisions().m_PlayDeathOrSpawnSound)
 			GameClient()->m_Sounds.PlayAndRecord(CSounds::CHN_WORLD, SOUND_PLAYER_DIE, 1.0f, AfterPos);
-}
-
-bool CFastPractice::AdvanceBaseWorldToTick(int TargetTick, int LocalClientId, int DummyClientId)
-{
-	if(!m_PracticeWorldInitialized)
-		return false;
-
-	if(m_PracticeBaseWorld.GameTick() > TargetTick)
-		return InitPracticeWorld();
-
-	int LocalInputConn = -1;
-	int DummyInputConn = -1;
-	if(!ResolveParticipantInputs(LocalClientId, DummyClientId, LocalInputConn, DummyInputConn))
-		return false;
-
-	const int FirstBaseTick = m_PracticeBaseWorld.GameTick() + 1;
-	CQmAxiomQuadTimeScope BaseQuadTime(Collision(), m_PracticeBaseWorld.GameTick(), Client()->GameTickSpeed());
-	for(int Tick = m_PracticeBaseWorld.GameTick() + 1; Tick <= TargetTick; Tick++)
-	{
-		Collision()->SetQmAxiomQuadTick(Tick, Client()->GameTickSpeed());
-		CCharacter *pLocalChar = m_PracticeBaseWorld.GetCharacterById(LocalClientId);
-		CCharacter *pDummyChar = m_RequireDummy ? m_PracticeBaseWorld.GetCharacterById(DummyClientId) : nullptr;
-		if(!pLocalChar || (m_RequireDummy && !pDummyChar))
-			return false;
-
-		CNetObj_PlayerInput *pInputData = (CNetObj_PlayerInput *)Client()->GetInputExact(Tick, LocalInputConn);
-		CNetObj_PlayerInput *pDummyInputData = pDummyChar ? (CNetObj_PlayerInput *)Client()->GetInputExact(Tick, DummyInputConn) : nullptr;
-		CNetObj_PlayerInput LocalPracticeInput = {};
-		CNetObj_PlayerInput DummyPracticeInput = {};
-		// 该 tick 没有输入记录时沿用角色上一 tick 的输入。GetInput 会回退到更早
-		// 的一条记录，多 tick 追赶时同一输入被重复消费，钩子边沿会重复触发或倒退。
-		LocalPracticeInput = pInputData ? *pInputData : *pLocalChar->LatestInput();
-		pInputData = &LocalPracticeInput;
-		if(pDummyChar)
-		{
-			DummyPracticeInput = pDummyInputData ? *pDummyInputData : *pDummyChar->LatestInput();
-			pDummyInputData = &DummyPracticeInput;
-		}
-
-		const bool SuppressTransitionTick = Tick == FirstBaseTick && m_SuppressFireOnNextPredictTick;
-		const bool SuppressCooldownTick = Tick >= FirstBaseTick && m_InputSuppressTicks > 0;
-		if(SuppressTransitionTick || SuppressCooldownTick)
-		{
-			// 保持上一 tick 的按下状态，不能用"强制松开"压制：松开再恢复会被
-			// CountInput 记成一次新的按下，传送落地后立刻挥一下锤子。
-			if(pInputData)
-				SuppressActionInput(*pInputData, pLocalChar->LatestInput()->m_Fire);
-			if(pDummyInputData)
-				SuppressActionInput(*pDummyInputData, pDummyChar->LatestInput()->m_Fire);
-			if(m_InputSuppressTicks > 0)
-				m_InputSuppressTicks--;
-			m_SuppressFireOnNextPredictTick = false;
-		}
-
-		if(pInputData)
-			FilterPracticeInput(*pInputData, LocalInputConn, true);
-		if(pDummyInputData)
-			FilterPracticeInput(*pDummyInputData, DummyInputConn, true);
-
-		if(pDummyChar && g_Config.m_ClDummyHammer)
-		{
-			if(!pDummyInputData)
-			{
-				DummyPracticeInput = {};
-				pDummyInputData = &DummyPracticeInput;
-			}
-			const vec2 Dir = pLocalChar->Core()->m_Pos - pDummyChar->Core()->m_Pos;
-			pDummyInputData->m_TargetX = (int)Dir.x;
-			pDummyInputData->m_TargetY = (int)Dir.y;
-			if(pDummyInputData->m_TargetX == 0 && pDummyInputData->m_TargetY == 0)
-				pDummyInputData->m_TargetY = -1;
-		}
-
-		const bool DummyFirst = pInputData && pDummyInputData && pDummyChar->GetCid() < pLocalChar->GetCid();
-
-		if(DummyFirst)
-			pDummyChar->OnDirectInput(pDummyInputData);
-		if(pInputData)
-			pLocalChar->OnDirectInput(pInputData);
-		if(pDummyInputData && !DummyFirst)
-			pDummyChar->OnDirectInput(pDummyInputData);
-
-		const vec2 LocalPosBeforeTick = pLocalChar->Core()->m_Pos;
-		const vec2 DummyPosBeforeTick = pDummyChar ? pDummyChar->Core()->m_Pos : vec2(0.0f, 0.0f);
-
-		GameClient()->ApplyPreInputs(Tick, true, m_PracticeBaseWorld);
-
-		m_PracticeBaseWorld.m_GameTick = Tick;
-		if(pInputData)
-			pLocalChar->OnPredictedInput(pInputData);
-		if(pDummyInputData)
-			pDummyChar->OnPredictedInput(pDummyInputData);
-
-		GameClient()->ApplyPreInputs(Tick, false, m_PracticeBaseWorld);
-
-		m_PracticeBaseWorld.Tick();
-
-		TrackPracticeTileFeedback(LocalClientId, pLocalChar, LocalPosBeforeTick);
-		if(pDummyChar)
-			TrackPracticeTileFeedback(DummyClientId, pDummyChar, DummyPosBeforeTick);
-
-		TrackSafeRescuePosition(LocalClientId, pLocalChar);
-		if(pDummyChar)
-			TrackSafeRescuePosition(DummyClientId, pDummyChar);
-	}
-
-	return true;
 }
 
 bool CFastPractice::OverridePredict()
@@ -2235,9 +2085,9 @@ bool CFastPractice::OverridePredict()
 			// 同上：压制只清武器切换请求，开火状态必须沿用上一 tick，
 			// 否则松手边沿会被当成新的一次开火。
 			if(pInputData)
-				SuppressActionInput(*pInputData, pLocalChar->LatestInput()->m_Fire);
+				QmPracticeSuppressActionInput(*pInputData, pLocalChar->LatestInput()->m_Fire);
 			if(pDummyInputData)
-				SuppressActionInput(*pDummyInputData, pDummyChar->LatestInput()->m_Fire);
+				QmPracticeSuppressActionInput(*pDummyInputData, pDummyChar->LatestInput()->m_Fire);
 			if(m_InputSuppressTicks > 0)
 				m_InputSuppressTicks--;
 			m_SuppressFireOnNextPredictTick = false;

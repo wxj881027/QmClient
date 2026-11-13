@@ -15,6 +15,7 @@
 #include <game/client/components/menus.h>
 #include <game/client/components/players.h>
 #include <game/client/components/qmclient/demo_display.h>
+#include <game/client/components/qmclient/practice_timeline.h>
 #include <game/client/components/qmclient/rank_view_timeline.h>
 #include <game/client/components/skins.h>
 #include <game/client/components/tclient/fast_practice.h>
@@ -327,26 +328,10 @@ static void WritePracticeViewTimeline(IStorage *pStorage, const char *pGroupDir,
 	if(File == nullptr)
 		return;
 
-	io_write(File, qmclient::rank_ghost::VIEW_TIMELINE_MAGIC, sizeof(qmclient::rank_ghost::VIEW_TIMELINE_MAGIC));
-	uint32_t Count = (uint32_t)vEvents.size();
-	io_write(File, &Count, sizeof(Count));
-	for(const SLocalActorEvent &Event : vEvents)
-	{
-		io_write(File, &Event.m_Tick, sizeof(Event.m_Tick));
-		io_write(File, &Event.m_Type, sizeof(Event.m_Type));
-		io_write(File, Event.m_aData, sizeof(Event.m_aData));
-	}
-	// 机关开关状态：解密型地图回放时门/定时开关必须跟着当时的状态走。
-	Count = (uint32_t)vSwitchStates.size();
-	io_write(File, &Count, sizeof(Count));
-	for(const SLocalSwitchState &State : vSwitchStates)
-	{
-		io_write(File, &State.m_Tick, sizeof(State.m_Tick));
-		io_write(File, &State.m_HighestSwitchNumber, sizeof(State.m_HighestSwitchNumber));
-		io_write(File, State.m_aStatus, sizeof(State.m_aStatus));
-	}
-	Count = 0;
-	io_write(File, &Count, sizeof(Count)); // messages
+	// 写出逻辑统一在 rank_view_timeline：练习只负责把中性轨迹适配成查看格式。
+	const qmclient::rank_ghost::SViewTimeline Timeline = QmBuildPracticeViewTimeline(vEvents, vSwitchStates);
+	if(!qmclient::rank_ghost::WriteViewTimeline(File, Timeline))
+		log_error("ghost", "failed to write practice view timeline '%s'", aPath);
 	io_close(File);
 }
 

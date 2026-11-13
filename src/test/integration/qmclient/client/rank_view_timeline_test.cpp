@@ -49,6 +49,27 @@ namespace
 			io_close(File);
 		return Success;
 	}
+
+	// 走生产写出函数落盘，再用生产读取函数读回：验证写读两侧的字节布局一致。
+	bool WriteThenRead(const SViewTimeline &Timeline, SViewTimeline &Out)
+	{
+		CTestInfo Info;
+		auto pStorage = Info.CreateTestStorage();
+		if(!pStorage)
+			return false;
+		IOHANDLE File = pStorage->OpenFile("timeline.events", IOFLAG_WRITE, IStorage::TYPE_SAVE);
+		if(!File)
+			return false;
+		const bool Written = WriteViewTimeline(File, Timeline);
+		io_close(File);
+		if(!Written)
+			return false;
+		File = pStorage->OpenFile("timeline.events", IOFLAG_READ, IStorage::TYPE_SAVE);
+		const bool Success = ReadViewTimeline(File, Out);
+		if(File)
+			io_close(File);
+		return Success;
+	}
 }
 
 TEST(RankViewTimeline, ReadsValidEventSwitchAndMessageSections)
@@ -120,4 +141,58 @@ TEST(RankViewTimeline, RejectsTrailingData)
 {
 	SViewTimeline Timeline;
 	EXPECT_FALSE(ReadData(TimelineData() + "x", Timeline));
+}
+
+TEST(RankViewTimeline, WriteAndReadRoundTripsAllSections)
+{
+	SViewTimeline Source;
+	SViewEvent Event = {};
+	Event.m_RelTick = 12;
+	Event.m_Type = NETEVENTTYPE_DEATH;
+	Event.m_aData[0] = 100;
+	Event.m_aData[1] = 200;
+	Event.m_aData[2] = MAX_CLIENTS - 1;
+	Source.m_vEvents.push_back(Event);
+
+	SViewSwitchState Switch = {};
+	Switch.m_RelTick = 20;
+	Switch.m_HighestSwitchNumber = 2;
+	Switch.m_aStatus[0] = 0x5;
+	Source.m_vSwitchStates.push_back(Switch);
+
+	SViewMessage Message = {};
+	Message.m_RelTick = 30;
+	Message.m_Type = EViewMessageType::RACE_TIME;
+	Message.m_aData[0] = 1234;
+	Source.m_vMessages.push_back(Message);
+
+	SViewTimeline Read;
+	ASSERT_TRUE(WriteThenRead(Source, Read));
+	ASSERT_EQ(Read.m_vEvents.size(), 1u);
+	EXPECT_EQ(Read.m_vEvents[0].m_RelTick, 12);
+	EXPECT_EQ(Read.m_vEvents[0].m_Type, NETEVENTTYPE_DEATH);
+	EXPECT_EQ(Read.m_vEvents[0].m_aData[2], MAX_CLIENTS - 1);
+	ASSERT_EQ(Read.m_vSwitchStates.size(), 1u);
+	EXPECT_EQ(Read.m_vSwitchStates[0].m_RelTick, 20);
+	EXPECT_EQ(Read.m_vSwitchStates[0].m_aStatus[0], 0x5u);
+	ASSERT_EQ(Read.m_vMessages.size(), 1u);
+	EXPECT_EQ(Read.m_vMessages[0].m_Type, EViewMessageType::RACE_TIME);
+	EXPECT_EQ(Read.m_vMessages[0].m_aData[0], 1234);
+}
+
+TEST(RankViewTimeline, PracticeStyleTimelineWithEmptyMessageSectionRoundTrips)
+{
+	// 练习 /pg 写出的文件没有消息段；读取器必须接受 0 条并保留事件。
+	SViewTimeline Source;
+	SViewEvent Event = {};
+	Event.m_RelTick = 0;
+	Event.m_Type = NETEVENTTYPE_EXPLOSION;
+	Source.m_vEvents.push_back(Event);
+
+	SViewTimeline Read;
+	ASSERT_TRUE(WriteThenRead(Source, Read));
+	ASSERT_EQ(Read.m_vEvents.size(), 1u);
+	EXPECT_EQ(Read.m_vEvents[0].m_Type, NETEVENTTYPE_EXPLOSION);
+	EXPECT_TRUE(Read.m_vSwitchStates.empty());
+	EXPECT_TRUE(Read.m_vMessages.empty());
 }
