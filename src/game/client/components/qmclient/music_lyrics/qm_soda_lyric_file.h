@@ -14,7 +14,7 @@
 namespace QmSodaLyricFile
 {
 	// 解析 JSON 文本为统一歌词数据。成功返回 true。
-	// m_vTranslations 由独立翻译轨 LRC 按时间戳与主歌词行对齐填充。
+	// 非空独立翻译轨 LRC 按时间戳覆盖；否则 KRC 使用与主轨共同过滤、排序的内嵌译文。
 	bool ParseLyricFileJson(std::string_view Json, QmMusicLyrics::SLyricsData *pOut, std::string *pError = nullptr);
 } // namespace QmSodaLyricFile
 

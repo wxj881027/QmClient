@@ -13,6 +13,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace QmSodaLyricFile
@@ -79,7 +80,20 @@ namespace QmSodaLyricFile
 		bool Parsed = false;
 		std::string Error;
 		if(LyricType == "krc")
-			Parsed = QmMusicLyrics::ParseKrcText(LyricContent, &pOut->m_Timeline, &Error);
+		{
+			if(!TranslationLrc.empty())
+				Parsed = QmMusicLyrics::ParseKrcText(LyricContent, &pOut->m_Timeline, &Error);
+			else
+			{
+				QmMusicLyrics::SLyricsData Lyrics;
+				Parsed = QmMusicLyrics::ParseKrcTextData(LyricContent, &Lyrics, &Error);
+				if(Parsed)
+				{
+					pOut->m_Timeline = std::move(Lyrics.m_Timeline);
+					pOut->m_vTranslations = std::move(Lyrics.m_vTranslations);
+				}
+			}
+		}
 		else if(LyricType == "qrc")
 		{
 			std::string Content;
@@ -101,12 +115,6 @@ namespace QmSodaLyricFile
 		}
 		if(!TranslationLrc.empty())
 			QmMusicLyrics::AlignTranslations(pOut->m_Timeline, TranslationLrc, &pOut->m_vTranslations);
-		else if(LyricType == "krc")
-		{
-			pOut->m_vTranslations = QmMusicLyrics::ExtractKrcTranslation(LyricContent);
-			if(!pOut->m_vTranslations.empty())
-				pOut->m_vTranslations.resize(pOut->m_Timeline.m_vLines.size());
-		}
 		return true;
 	}
 } // namespace QmSodaLyricFile

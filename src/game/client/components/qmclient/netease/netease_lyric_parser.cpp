@@ -189,22 +189,7 @@ namespace NeteaseLyrics
 
 	void FinalizeTimelineLines(std::vector<SLine> &vLines)
 	{
-		std::stable_sort(vLines.begin(), vLines.end(), [](const SLine &A, const SLine &B) { return A.m_StartMs < B.m_StartMs; });
-		for(size_t First = 0; First < vLines.size();)
-		{
-			size_t Next = First + 1;
-			while(Next < vLines.size() && vLines[Next].m_StartMs == vLines[First].m_StartMs)
-				++Next;
-			if(Next == vLines.size())
-				break;
-			// 同起点整组共用下一组边界，不为每一行重复扫描相同后缀。
-			for(size_t Index = First; Index < Next; ++Index)
-			{
-				if(vLines[Index].m_EndMs <= vLines[Index].m_StartMs)
-					vLines[Index].m_EndMs = vLines[Next].m_StartMs;
-			}
-			First = Next;
-		}
+		FinalizeTimelineLines(vLines, [](auto &Line) -> auto & { return Line; });
 	}
 
 	bool IsValidUtf8(std::string_view Text)

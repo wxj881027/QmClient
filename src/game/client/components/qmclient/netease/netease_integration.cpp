@@ -15,6 +15,7 @@
 #include <chrono>
 #include <new>
 #include <stdexcept>
+#include <string>
 #include <string_view>
 
 namespace
@@ -253,6 +254,26 @@ void CNeteaseIntegration::OnUpdate()
 	}
 	const std::string_view MediaTitle(MediaState.m_aTitle);
 	const std::string_view MediaArtist(MediaState.m_aArtist);
+	const bool UpdateTitle = !MediaTitle.empty() && m_LastMediaTitle != MediaTitle;
+	const bool UpdateArtist = !MediaTitle.empty() && m_LastMediaArtist != MediaArtist;
+	std::string PreparedTitle;
+	std::string PreparedArtist;
+	try
+	{
+		if(UpdateTitle)
+			PreparedTitle.assign(MediaTitle);
+		if(UpdateArtist)
+			PreparedArtist.assign(MediaArtist);
+	}
+	catch(const std::bad_alloc &)
+	{
+		return;
+	}
+	catch(const std::length_error &)
+	{
+		return;
+	}
+	// 两字段都准备完整后才推进切歌阻断，资源失败不会清掉当前歌词。
 	if(NeteaseLyrics::IsMeaningfulMediaIdentityChange(m_LastMediaTitle, m_LastMediaArtist, MediaTitle, MediaArtist))
 	{
 		// 只使用上一次已经和 SMTC 元数据对齐的 Bridge 身份作为基线。
@@ -267,13 +288,10 @@ void CNeteaseIntegration::OnUpdate()
 		m_LastBridgePositionMs = 0;
 		m_LastBridgePositionValid = false;
 	}
-	if(!MediaTitle.empty())
-	{
-		if(m_LastMediaTitle != MediaTitle)
-			m_LastMediaTitle.assign(MediaTitle);
-		if(m_LastMediaArtist != MediaArtist)
-			m_LastMediaArtist.assign(MediaArtist);
-	}
+	if(UpdateTitle)
+		m_LastMediaTitle.swap(PreparedTitle);
+	if(UpdateArtist)
+		m_LastMediaArtist.swap(PreparedArtist);
 	if(!HasBridgeSnapshot)
 	{
 		const uint64_t HookTimeout = (uint64_t)std::max(1, g_Config.m_QmNeteaseHookTimeoutMs);

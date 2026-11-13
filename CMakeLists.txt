@@ -6588,6 +6588,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/music/music_lyrics_community_failure_test.cpp
       src/test/integration/qmclient/music/music_lyrics_community_admission_test.cpp
       src/test/integration/qmclient/music/qm_netease_lyrics_channel_allocation_test.cpp
+      src/test/integration/qmclient/music/qm_soda_hook_provider_allocation_test.cpp
       src/test/integration/qmclient/music/music_world_lyrics_renderer_test.cpp
       src/test/unit/qmclient/music/netease_lyric_state_allocation_test.cpp
       src/test/unit/qmclient/music/music_lyrics_krc_allocation_test.cpp
@@ -6599,6 +6600,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/game/client/components/qmclient/music_lyrics/music_lyrics_community_format.cpp
       src/game/client/components/qmclient/music_lyrics/music_lyrics_krc.cpp
       src/game/client/components/qmclient/music_lyrics/music_lyrics_qrc.cpp
+      src/game/client/components/qmclient/music_lyrics/qm_soda_hook_provider.cpp
+      src/qm/hooks/soda/qm_soda_protocol.cpp
       src/game/client/components/qmclient/music_lyrics/music_world_lyrics.cpp
       src/game/client/components/qmclient/netease/netease_lyric_parser.cpp
       src/game/client/components/qmclient/netease/netease_lyric_state.cpp
@@ -6751,6 +6754,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/game/client/components/qmclient/screenshot_clipboard.cpp
       src/test/unit/qmclient/music/qm_spotify_parser_allocation_test.cpp
       src/test/unit/qmclient/music/qm_soda_lyric_file_allocation_test.cpp
+      src/test/integration/qmclient/music/qm_soda_krc_translation_test.cpp
       src/game/client/components/qmclient/music_lyrics/qm_spotify_token.cpp
       src/game/client/components/qmclient/music_lyrics/qm_spotify_crypto.cpp
       src/game/client/components/qmclient/music_lyrics/qm_spotify_parser.cpp

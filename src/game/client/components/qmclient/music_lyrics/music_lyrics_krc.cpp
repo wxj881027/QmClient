@@ -17,6 +17,12 @@ namespace QmMusicLyrics
 	{
 		constexpr char KRC_MAGIC[4] = {'k', 'r', 'c', '1'};
 
+		struct SKrcLine
+		{
+			NeteaseLyrics::SLine m_Line;
+			size_t m_SourceOrdinal;
+		};
+
 		bool HasMagic(std::string_view Data)
 		{
 			return Data.size() >= 4 && std::memcmp(Data.data(), KRC_MAGIC, 4) == 0;
@@ -29,6 +35,33 @@ namespace QmMusicLyrics
 			while(!Value.empty() && std::isspace((unsigned char)Value.back()) != 0)
 				Value.remove_suffix(1);
 			return Value;
+		}
+
+		bool IsAsciiDigits(std::string_view Value)
+		{
+			if(Value.empty())
+				return false;
+			for(const char C : Value)
+				if(C < '0' || C > '9')
+					return false;
+			return true;
+		}
+
+		bool IsNumericTimeHeader(std::string_view Value)
+		{
+			Value = Trim(Value);
+			const size_t Comma = Value.find(',');
+			if(Comma != std::string_view::npos)
+				return IsAsciiDigits(Trim(Value.substr(0, Comma))) && IsAsciiDigits(Trim(Value.substr(Comma + 1)));
+			const size_t Colon = Value.find(':');
+			if(Colon == std::string_view::npos || !IsAsciiDigits(Value.substr(0, Colon)))
+				return false;
+			const std::string_view Seconds = Value.substr(Colon + 1);
+			const size_t Dot = Seconds.find('.');
+			if(Dot == std::string_view::npos)
+				return IsAsciiDigits(Seconds);
+			const std::string_view Fraction = Seconds.substr(Dot + 1);
+			return IsAsciiDigits(Seconds.substr(0, Dot)) && Fraction.size() <= 3 && IsAsciiDigits(Fraction);
 		}
 
 		bool ParseUnsigned(std::string_view Value, int64_t *pOut)
@@ -222,18 +255,16 @@ namespace QmMusicLyrics
 		return false;
 	}
 
-	bool ParseKrcText(std::string_view Text, NeteaseLyrics::STimeline *pOut, std::string *pError)
+	static bool ParseKrcLines(std::string_view Text, std::vector<SKrcLine> &vOut, std::string *pError)
 	{
-		if(pOut == nullptr)
-			return false;
-		pOut->Clear();
 		if(!NeteaseLyrics::IsValidUtf8(Text))
 		{
 			if(pError)
 				*pError = "invalid UTF-8";
 			return false;
 		}
-		std::vector<NeteaseLyrics::SLine> vLines;
+		std::vector<SKrcLine> vLines;
+		size_t SourceOrdinal = 0;
 		size_t Offset = 0;
 		while(Offset <= Text.size())
 		{
@@ -260,6 +291,11 @@ namespace QmMusicLyrics
 				continue;
 			}
 			const std::string_view Inside = Line.substr(1, BracketEnd - 1);
+			const size_t LineOrdinal = SourceOrdinal;
+			const bool NumericHeader = IsNumericTimeHeader(Inside);
+			// 数字时间头先占源槽位，超界时间、空正文和坏词行不能把后续译文前移。
+			if(NumericHeader)
+				++SourceOrdinal;
 			NeteaseLyrics::SLine Parsed;
 			const size_t Comma = Inside.find(',');
 			if(Comma != std::string_view::npos)
@@ -286,6 +322,9 @@ namespace QmMusicLyrics
 				Offset = Newline + 1;
 				continue;
 			}
+			// 沿用原解析器接受的特殊数值写法，例如 -0，不改变正文接受范围。
+			if(!NumericHeader)
+				++SourceOrdinal;
 			std::string_view Body = Line.substr(BracketEnd + 1);
 			std::string PlainText;
 			bool Malformed = false;
@@ -342,7 +381,7 @@ namespace QmMusicLyrics
 			{
 				Parsed.m_Text = std::move(PlainText);
 				if(!Parsed.m_Text.empty())
-					vLines.push_back(std::move(Parsed));
+					vLines.push_back({std::move(Parsed), LineOrdinal});
 			}
 			if(Newline == std::string_view::npos)
 				break;
@@ -354,9 +393,25 @@ namespace QmMusicLyrics
 				*pError = "no valid timed lyric lines";
 			return false;
 		}
-		NeteaseLyrics::FinalizeTimelineLines(vLines);
-		pOut->m_vLines = std::move(vLines);
-		pOut->m_HasTiming = true;
+		NeteaseLyrics::FinalizeTimelineLines(vLines, [](auto &Record) -> auto & { return Record.m_Line; });
+		vOut = std::move(vLines);
+		return true;
+	}
+
+	bool ParseKrcText(std::string_view Text, NeteaseLyrics::STimeline *pOut, std::string *pError)
+	{
+		if(pOut == nullptr)
+			return false;
+		pOut->Clear();
+		std::vector<SKrcLine> vLines;
+		if(!ParseKrcLines(Text, vLines, pError))
+			return false;
+		NeteaseLyrics::STimeline Result;
+		Result.m_vLines.reserve(vLines.size());
+		for(auto &Record : vLines)
+			Result.m_vLines.push_back(std::move(Record.m_Line));
+		Result.m_HasTiming = true;
+		*pOut = std::move(Result);
 		return true;
 	}
 
@@ -433,21 +488,41 @@ namespace QmMusicLyrics
 		return Result;
 	}
 
+	bool ParseKrcTextData(std::string_view Text, SLyricsData *pOut, std::string *pError)
+	{
+		if(pOut == nullptr)
+			return false;
+		std::vector<SKrcLine> vLines;
+		if(!ParseKrcLines(Text, vLines, pError))
+			return false;
+		std::vector<std::string> RawTranslations = ExtractKrcTranslation(Text);
+		SLyricsData Result;
+		Result.m_Timeline.m_vLines.reserve(vLines.size());
+		if(!RawTranslations.empty())
+			Result.m_vTranslations.reserve(vLines.size());
+		for(auto &Record : vLines)
+		{
+			Result.m_Timeline.m_vLines.push_back(std::move(Record.m_Line));
+			if(!RawTranslations.empty())
+			{
+				if(Record.m_SourceOrdinal < RawTranslations.size())
+					Result.m_vTranslations.push_back(std::move(RawTranslations[Record.m_SourceOrdinal]));
+				else
+					Result.m_vTranslations.emplace_back();
+			}
+		}
+		Result.m_Timeline.m_HasTiming = true;
+		*pOut = std::move(Result);
+		return true;
+	}
+
 	bool ParseKrcData(std::string_view Data, SLyricsData *pOut, std::string *pError)
 	{
 		if(pOut == nullptr)
 			return false;
-		SLyricsData Result;
 		std::string Text;
 		if(!DecryptKrc(Data, &Text, pError))
 			return false;
-		if(!ParseKrcText(Text, &Result.m_Timeline, pError))
-			return false;
-		Result.m_vTranslations = ExtractKrcTranslation(Text);
-		// 翻译轨按行序号对齐;行数不一致时保留可对齐部分,不影响主时间轴。
-		if(Result.m_vTranslations.size() > Result.m_Timeline.m_vLines.size())
-			Result.m_vTranslations.resize(Result.m_Timeline.m_vLines.size());
-		*pOut = std::move(Result);
-		return true;
+		return ParseKrcTextData(Text, pOut, pError);
 	}
 } // namespace QmMusicLyrics

@@ -17,7 +17,9 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <new>
 #include <sstream>
+#include <stdexcept>
 #include <string_view>
 #include <utility>
 
@@ -35,6 +37,21 @@ namespace
 		for(const unsigned char Byte : Text)
 			Result = (Result ^ Byte) * 1099511628211ULL;
 		return Text.empty() ? 0 : Result;
+	}
+
+	void UpdateDiagnostic(std::string &Text, const char *pMessage)
+	{
+		try
+		{
+			Text = pMessage;
+		}
+		catch(const std::bad_alloc &)
+		{
+			// 提示准备失败保留旧文字，不阻断失活清理或改变操作结果。
+		}
+		catch(const std::length_error &)
+		{
+		}
 	}
 
 	constexpr uint64_t LYRIC_LOAD_RETRY_DELAY_MS = 1000;
@@ -182,7 +199,8 @@ void CMusicLyricsIntegration::OnReset()
 	ClearForStaleMedia();
 }
 
-void CMusicLyricsIntegration::SyncHookConfiguration()
+bool CMusicLyricsIntegration::SyncHookConfiguration()
+try
 {
 	const int Source = g_Config.m_QmSodaHookEnable ? 1 : g_Config.m_QmKugouHookEnable ? 2 :
 						     g_Config.m_QmQQMusicHookEnable       ? 3 :
@@ -190,23 +208,39 @@ void CMusicLyricsIntegration::SyncHookConfiguration()
 	const char *pPath = Source == 1 ? g_Config.m_QmSodaHookHelperPath : Source == 2 ? g_Config.m_QmKugouHookHelperPath :
 								    Source == 3         ? g_Config.m_QmQQMusicHookHelperPath :
 											  "";
-	m_pImpl->m_TimeoutMs = Source == 1 ? g_Config.m_QmSodaHookTimeoutMs : Source == 2 ? g_Config.m_QmKugouHookTimeoutMs :
-											    g_Config.m_QmQQMusicHookTimeoutMs;
-	const bool ConfigurationChanged = !m_pImpl->m_HookConfigInitialized || Source != m_pImpl->m_Source || m_pImpl->m_LastHelperPath != pPath;
+	const int TimeoutMs = Source == 1 ? g_Config.m_QmSodaHookTimeoutMs : Source == 2 ? g_Config.m_QmKugouHookTimeoutMs :
+											   g_Config.m_QmQQMusicHookTimeoutMs;
+	const bool PathChanged = m_pImpl->m_LastHelperPath != pPath;
+	const bool ConfigurationChanged = !m_pImpl->m_HookConfigInitialized || Source != m_pImpl->m_Source || PathChanged;
 	if(ConfigurationChanged)
 	{
+		std::string PreparedPath;
+		if(PathChanged)
+			PreparedPath = pPath;
 		m_pImpl->m_Provider.Stop();
 		ClearForStaleMedia();
 		m_pImpl->m_HookConfigInitialized = true;
 		m_pImpl->m_Source = Source;
-		m_pImpl->m_LastHelperPath = pPath;
+		if(PathChanged)
+			m_pImpl->m_LastHelperPath.swap(PreparedPath);
 		m_pImpl->m_Status.clear();
 		m_pImpl->m_SetupError.clear();
 	}
+	m_pImpl->m_TimeoutMs = TimeoutMs;
 	// Start 自带重启节流，异常退出的采集器不会永久停止或每帧重启。
+	// 来源准备失败时结束本帧，避免从 Provider 旧来源继续读取。
 	if(Source != 0)
-		m_pImpl->m_Provider.Start(pPath, Source == 1 ? "soda" : Source == 2 ? "kugou" :
-										      "qqmusic");
+		return m_pImpl->m_Provider.Start(pPath, Source == 1 ? "soda" : Source == 2 ? "kugou" :
+											     "qqmusic");
+	return true;
+}
+catch(const std::bad_alloc &)
+{
+	return false;
+}
+catch(const std::length_error &)
+{
+	return false;
 }
 
 void CMusicLyricsIntegration::ClearForStaleMedia()
@@ -232,16 +266,18 @@ void CMusicLyricsIntegration::ClearForStaleMedia()
 }
 
 void CMusicLyricsIntegration::LoadLyricFile(const char *pPath)
+try
 {
 	if(pPath == nullptr || pPath[0] == '\0')
 		return;
-	const std::string Path(pPath);
+	const std::string_view Path(pPath);
 	const bool IdentityChanged = Path != m_pImpl->m_LyricLoadPath ||
 				     m_pImpl->m_LyricLoadSongId != m_pImpl->m_SongId ||
 				     m_pImpl->m_LyricLoadGeneration != m_pImpl->m_LoadedGeneration;
 	if(IdentityChanged)
 	{
-		m_pImpl->m_LyricLoadPath = Path;
+		std::string PreparedPath(Path);
+		m_pImpl->m_LyricLoadPath.swap(PreparedPath);
 		m_pImpl->m_LyricLoadSongId = m_pImpl->m_SongId;
 		m_pImpl->m_LyricLoadGeneration = m_pImpl->m_LoadedGeneration;
 		++m_pImpl->m_LyricLoadEpoch;
@@ -257,8 +293,15 @@ void CMusicLyricsIntegration::LoadLyricFile(const char *pPath)
 		m_pImpl->m_LyricLoadSongId,
 		m_pImpl->m_LyricLoadGeneration,
 		m_pImpl->m_LyricLoadEpoch);
-	m_pImpl->m_pLyricLoadJob = pJob;
-	Engine()->AddJob(pJob);
+	if(Engine()->TryAddJob(pJob))
+		m_pImpl->m_pLyricLoadJob = std::move(pJob);
+}
+catch(const std::bad_alloc &)
+{
+	// 尚未入队的准备可在后续快照重试，不把候选登记为在途作业。
+}
+catch(const std::length_error &)
+{
 }
 
 void CMusicLyricsIntegration::ProcessLyricLoadJob()
@@ -277,7 +320,7 @@ void CMusicLyricsIntegration::ProcessLyricLoadJob()
 		Result.m_Generation != m_pImpl->m_LoadedGeneration || Result.m_Path != m_pImpl->m_LyricLoadPath ||
 		Result.m_Epoch != m_pImpl->m_LyricLoadEpoch)
 		return;
-	m_pImpl->m_LoadedFilePath = Result.m_Path;
+	m_pImpl->m_LoadedFilePath.swap(Result.m_Path);
 	if(Result.m_Parsed && Result.m_Lyrics.HasLyrics())
 	{
 		m_pImpl->m_Lyrics = std::move(Result.m_Lyrics);
@@ -296,7 +339,8 @@ void CMusicLyricsIntegration::ProcessLyricLoadJob()
 
 void CMusicLyricsIntegration::OnUpdate()
 {
-	SyncHookConfiguration();
+	if(!SyncHookConfiguration())
+		return;
 	if(m_pImpl->m_Source == 0)
 	{
 		ClearForStaleMedia();
@@ -308,7 +352,7 @@ void CMusicLyricsIntegration::OnUpdate()
 	if(!HasSnapshot)
 	{
 		char aError[256];
-		m_pImpl->m_Status = m_pImpl->m_Provider.GetStatus(aError, sizeof(aError)) ? aError : "等待音乐应用的歌词采集器";
+		UpdateDiagnostic(m_pImpl->m_Status, m_pImpl->m_Provider.GetStatus(aError, sizeof(aError)) ? aError : "等待音乐应用的歌词采集器");
 		// 短暂读取失败保留有限窗口,避免闪烁;超时后清理。
 		if(m_pImpl->m_HasSnapshot)
 		{
@@ -321,21 +365,34 @@ void CMusicLyricsIntegration::OnUpdate()
 	}
 	if(!m_pImpl->m_HasSnapshot || m_pImpl->m_Snapshot.m_Sequence != Snapshot.m_Sequence)
 		m_pImpl->m_LastReadTick = MonotonicTickMs();
-	m_pImpl->m_Status = Snapshot.m_aError[0] != '\0'                         ? Snapshot.m_aError :
-			    (Snapshot.m_Flags & QmSodaHook::FLAG_HAS_LYRIC_FILE) ? "已连接，正在跟随歌词" :
-			    (Snapshot.m_Flags & QmSodaHook::FLAG_HAS_SONG)       ? "已连接，等待当前歌曲歌词" :
-										   "等待音乐应用播放歌曲";
+	UpdateDiagnostic(m_pImpl->m_Status, Snapshot.m_aError[0] != '\0'                         ? Snapshot.m_aError :
+					    (Snapshot.m_Flags & QmSodaHook::FLAG_HAS_LYRIC_FILE) ? "已连接，正在跟随歌词" :
+					    (Snapshot.m_Flags & QmSodaHook::FLAG_HAS_SONG)       ? "已连接，等待当前歌曲歌词" :
+												   "等待音乐应用播放歌曲");
 	m_pImpl->m_Snapshot = Snapshot;
 	m_pImpl->m_HasSnapshot = true;
 
 	const bool HasSong = (Snapshot.m_Flags & QmSodaHook::FLAG_HAS_SONG) != 0;
-	const std::string MediaId = Snapshot.m_aMediaId;
+	const std::string_view MediaId = Snapshot.m_aMediaId;
 	const uint64_t SongId = MediaIdToken(MediaId);
 	const uint64_t Generation = Snapshot.m_Generation;
 	const bool SongChanged = HasSong && (!m_pImpl->m_HasSong || m_pImpl->m_MediaId != MediaId || m_pImpl->m_SongProcessId != Snapshot.m_SodaMusicPid || m_pImpl->m_LoadedGeneration != Generation ||
 						    (Snapshot.m_aLyricFilePath[0] != '\0' && !m_pImpl->m_LoadedFilePath.empty() && m_pImpl->m_LoadedFilePath != Snapshot.m_aLyricFilePath));
 	if(SongChanged)
 	{
+		std::string PreparedMediaId;
+		try
+		{
+			PreparedMediaId = MediaId;
+		}
+		catch(const std::bad_alloc &)
+		{
+			return;
+		}
+		catch(const std::length_error &)
+		{
+			return;
+		}
 		// 歌曲或 generation 变化:清空旧歌词并加载新歌词文件。
 		m_pImpl->m_HasLyrics = false;
 		m_pImpl->m_CurrentLyric.clear();
@@ -343,7 +400,7 @@ void CMusicLyricsIntegration::OnUpdate()
 		m_pImpl->m_LineEndMs = -1;
 		m_pImpl->m_HasSong = true;
 		m_pImpl->m_SongId = SongId;
-		m_pImpl->m_MediaId = MediaId;
+		m_pImpl->m_MediaId.swap(PreparedMediaId);
 		m_pImpl->m_SongProcessId = Snapshot.m_SodaMusicPid;
 		m_pImpl->m_PositionValid = false;
 		m_pImpl->m_LoadedGeneration = Generation;
@@ -366,21 +423,17 @@ void CMusicLyricsIntegration::OnUpdate()
 		LoadLyricFile(Snapshot.m_aLyricFilePath);
 
 	// 进度有效性每次取快照，不能沿用上一首歌或断连前的进度。
-	m_pImpl->m_PositionValid = false;
-	if((Snapshot.m_Flags & QmSodaHook::FLAG_POSITION_VALID) != 0)
-	{
-		m_pImpl->m_PositionMs = Snapshot.m_PositionMs;
-		m_pImpl->m_PositionValid = true;
-	}
+	const bool PositionValid = (Snapshot.m_Flags & QmSodaHook::FLAG_POSITION_VALID) != 0;
+	const int64_t PositionMs = PositionValid ? Snapshot.m_PositionMs : m_pImpl->m_PositionMs;
 
 	// 选择当前句(使用统一时间轴选择逻辑)。
-	if(m_pImpl->m_HasLyrics && m_pImpl->m_PositionValid)
+	if(m_pImpl->m_HasLyrics && PositionValid)
 	{
 		const NeteaseLyrics::STimeline &Timeline = m_pImpl->m_Lyrics.m_Timeline;
 		// 酷狗和 QQ 歌词的显式行时长可能短于下一句起点,间奏中继续显示最近已开始的一句。
 		const NeteaseLyrics::SSelectedLine Selected = (m_pImpl->m_Source == 2 || m_pImpl->m_Source == 3) ?
-								      NeteaseLyrics::SelectLatestStartedLine(Timeline, m_pImpl->m_PositionMs) :
-								      NeteaseLyrics::SelectCurrentLine(Timeline, m_pImpl->m_PositionMs);
+								      NeteaseLyrics::SelectLatestStartedLine(Timeline, PositionMs) :
+								      NeteaseLyrics::SelectCurrentLine(Timeline, PositionMs);
 		if(Selected.m_pLine == nullptr)
 		{
 			m_pImpl->m_CurrentLyric.clear();
@@ -389,14 +442,28 @@ void CMusicLyricsIntegration::OnUpdate()
 		}
 		else
 		{
-			m_pImpl->m_CurrentLyric = Selected.m_pLine->m_Text;
+			try
+			{
+				// 文字准备保留已有容量；失败时进度和行边界也不提前发布。
+				m_pImpl->m_CurrentLyric = Selected.m_pLine->m_Text;
+			}
+			catch(const std::bad_alloc &)
+			{
+				return;
+			}
+			catch(const std::length_error &)
+			{
+				return;
+			}
 			m_pImpl->m_LineStartMs = Selected.m_pLine->m_StartMs;
 			m_pImpl->m_LineEndMs = Selected.m_pLine->m_EndMs;
 		}
 		m_pImpl->m_ActiveLyrics = true;
 	}
-	else if(!m_pImpl->m_PositionValid)
+	else if(!PositionValid)
 		m_pImpl->m_CurrentLyric.clear();
+	m_pImpl->m_PositionMs = PositionMs;
+	m_pImpl->m_PositionValid = PositionValid;
 }
 
 bool CMusicLyricsIntegration::GetCurrentLyric(char *pBuffer, size_t BufferSize) const
@@ -445,11 +512,24 @@ int CMusicLyricsIntegration::ActiveSource() const
 
 bool CMusicLyricsIntegration::RunKugouSetup(bool Restore)
 {
-	m_pImpl->m_SetupError.clear();
-	if(m_pImpl->m_Provider.RunKugouSetup(Restore))
-		return true;
+	try
+	{
+		if(m_pImpl->m_Provider.RunKugouSetup(Restore))
+		{
+			m_pImpl->m_SetupError.clear();
+			return true;
+		}
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	catch(const std::length_error &)
+	{
+		return false;
+	}
 	char aError[256];
-	m_pImpl->m_SetupError = m_pImpl->m_Provider.GetStatus(aError, sizeof(aError)) ? aError : "无法启动酷狗接入程序，请检查 qm-music-helper.exe";
+	UpdateDiagnostic(m_pImpl->m_SetupError, m_pImpl->m_Provider.GetStatus(aError, sizeof(aError)) ? aError : "无法启动酷狗接入程序，请检查 qm-music-helper.exe");
 	return false;
 }
 
