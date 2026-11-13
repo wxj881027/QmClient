@@ -155,6 +155,30 @@ TEST(QmFastPracticeRebind, MissingLocalIdLeavesTheBindingUntouched)
 	EXPECT_FALSE(Decision.m_MigrateDummyState);
 }
 
+TEST(QmFastPracticeRebind, OutOfRangeLocalIdLeavesTheBindingUntouched)
+{
+	// 服务器 id 越界时同样不能迁移检查点或改写旧绑定。
+	const int aLocalIds[NUM_DUMMIES] = {MAX_CLIENTS, -1};
+	const SQmPracticeRebindDecision Decision = QmResolvePracticeRebind(aLocalIds, CONN_MAIN, 5, 3, true);
+	EXPECT_FALSE(Decision.m_Changed);
+	EXPECT_EQ(Decision.m_LocalClientId, -1);
+	EXPECT_FALSE(Decision.m_MigrateLocalState);
+	EXPECT_FALSE(Decision.m_MigrateDummyState);
+}
+
+TEST(QmFastPracticeRebind, InvalidConnectionSlotKeepsThePreviousBinding)
+{
+	const int aLocalIds[NUM_DUMMIES] = {5, 3};
+
+	const SQmPracticeRebindDecision Negative = QmResolvePracticeRebind(aLocalIds, -1, 5, 3, true);
+	EXPECT_FALSE(Negative.m_Changed);
+	EXPECT_EQ(Negative.m_LocalClientId, -1);
+
+	const SQmPracticeRebindDecision TooHigh = QmResolvePracticeRebind(aLocalIds, NUM_DUMMIES, 5, 3, true);
+	EXPECT_FALSE(TooHigh.m_Changed);
+	EXPECT_EQ(TooHigh.m_LocalClientId, -1);
+}
+
 TEST(QmFastPracticeTransientFailure, HoldsForTheWholeGraceWindow)
 {
 	const int GraceTicks = QmPracticeTransientGraceTicks(50);

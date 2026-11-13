@@ -299,7 +299,7 @@ private:
 	void PublishPracticePredictedPositions(CGameWorld &World, int Tick);
 	// 新预测 tick 的跳跃/钩子反馈。本体与分身走同一入口，按输入槽位去重。
 	// 返回 true 表示该 tick 被本槽位消费（调用方据此置 m_NewPredictedTick）。
-	bool PublishPracticeNewPredictedFeedback(int Slot, CCharacter *pChar, int Tick, int MaxTick);
+	bool PublishPracticeNewPredictedFeedback(int Slot, CCharacter *pChar, int Tick);
 	bool FindNearestSafeRescuePosition(int ClientId, const vec2 &From, vec2 &OutPos) const;
 	bool FindFinishPosition(vec2 &OutPos) const;
 	void NormalizeDefaultPracticeWeapons(CCharacter *pChar, bool HasExplicitWeaponFlags) const;

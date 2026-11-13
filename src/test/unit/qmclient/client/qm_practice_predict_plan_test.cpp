@@ -53,51 +53,75 @@ TEST(QmPracticePredictPlan, VisualLoopExtendsPastTheRealFinalTick)
 
 TEST(QmPracticePredictPlan, VisualLoopKeepsOtherPlayersAtTheRealFinalTick)
 {
-	// 关闭快速输入作用于他人时，其他玩家的核心不能停在视觉外推帧上，
-	// 否则画面会把别人画到未来位置。
+	// 关闭快速输入作用于他人时，他人最终 tick 落在循环范围之外。
+	// 主循环已经发布过他人核心，外推帧不能再写他人。
 	const SPracticePredictTickPlan Plan = QmBuildPracticePredictTickPlan(104, 104, 6, false);
 
 	EXPECT_EQ(Plan.m_FinalTickOthers, 104);
-	EXPECT_TRUE(Plan.PublishesOthersFinal(104));
-	EXPECT_FALSE(Plan.PublishesOthersFinal(110));
-	EXPECT_TRUE(Plan.PublishesSelfFinal(110));
-
-	// 真实末帧先发布他人，之后外推帧只更新本体。
-	EXPECT_NE(Plan.PublishesOthersFinal(104), Plan.PublishesSelfFinal(104));
+	EXPECT_FALSE(Plan.Covers(Plan.m_FinalTickOthers));
+	for(int Tick = Plan.m_FirstTick; Tick <= Plan.m_FinalTickSelf; Tick++)
+	{
+		EXPECT_FALSE(Plan.PublishesOthersFinal(Tick)) << "tick " << Tick;
+		EXPECT_EQ(Plan.PublishesSelfFinal(Tick), Tick == 110) << "tick " << Tick;
+	}
 }
 
-TEST(QmPracticePredictPlan, NegativeFastInputTicksDoNotShrinkTheRange)
+TEST(QmPracticePredictPlan, CoversMatchesTheExecutedRange)
 {
-	const SPracticePredictTickPlan Plan = QmBuildPracticePredictTickPlan(100, 104, -3, false);
+	const SPracticePredictTickPlan Plan = QmBuildPracticePredictTickPlan(104, 104, 6, true);
+	EXPECT_FALSE(Plan.Covers(104));
+	EXPECT_TRUE(Plan.Covers(105));
+	EXPECT_TRUE(Plan.Covers(110));
+	EXPECT_FALSE(Plan.Covers(111));
 
-	EXPECT_EQ(Plan.m_FinalTickSelf, 104);
-	EXPECT_EQ(Plan.m_FinalTickOthers, 104);
-	EXPECT_EQ(Plan.StepCount(), 4);
+	const SPracticePredictTickPlan Empty = QmBuildPracticePredictTickPlan(104, 100, 0, true);
+	EXPECT_FALSE(Empty.Covers(100));
+	EXPECT_FALSE(Empty.Covers(105));
+}
+
+TEST(QmPracticePredictPlan, PublishActionsOnlyFireInsideThePlannedTicks)
+{
+	const SPracticePredictTickPlan Plan = QmBuildPracticePredictTickPlan(100, 104, 0, true);
+
+	const SPracticePublishActions BeforeRange = QmResolvePracticePublishActions(Plan, 100);
+	EXPECT_FALSE(BeforeRange.m_CopyPrevWorld);
+	EXPECT_FALSE(BeforeRange.m_PublishPrevRole);
+	EXPECT_FALSE(BeforeRange.m_PublishPrevOthers);
+	EXPECT_FALSE(BeforeRange.m_PublishPredRole);
+	EXPECT_FALSE(BeforeRange.m_PublishPredOthers);
+
+	const SPracticePublishActions AfterRange = QmResolvePracticePublishActions(Plan, 105);
+	EXPECT_FALSE(AfterRange.m_CopyPrevWorld);
+	EXPECT_FALSE(AfterRange.m_PublishPredRole);
+	EXPECT_FALSE(AfterRange.m_PublishPredOthers);
 }
 
 TEST(QmPracticePredictPlan, NewPredictedTickConsumesEachAdvancedTickOnce)
 {
 	int LastConsumedTick = 104;
 
-	EXPECT_TRUE(QmPracticeConsumeNewPredictedTick(105, 110, LastConsumedTick));
+	EXPECT_TRUE(QmPracticeConsumeNewPredictedTick(105, LastConsumedTick));
 	EXPECT_EQ(LastConsumedTick, 105);
 	// 同一 tick 在分身/本体两个槽位回放时不能重复触发音效。
-	EXPECT_FALSE(QmPracticeConsumeNewPredictedTick(105, 110, LastConsumedTick));
+	EXPECT_FALSE(QmPracticeConsumeNewPredictedTick(105, LastConsumedTick));
 	EXPECT_EQ(LastConsumedTick, 105);
 
-	EXPECT_TRUE(QmPracticeConsumeNewPredictedTick(106, 110, LastConsumedTick));
+	EXPECT_TRUE(QmPracticeConsumeNewPredictedTick(106, LastConsumedTick));
 	EXPECT_EQ(LastConsumedTick, 106);
 }
 
-TEST(QmPracticePredictPlan, VisualExtrapolatedTicksDoNotConsumeFeedback)
+TEST(QmPracticePredictPlan, NewPredictedTickStartsAtZeroAndRejectsRegression)
 {
-	int LastConsumedTick = 109;
+	// 进入对局后的首批预测 tick 从 0 开始，初始哨兵为 -1。
+	int LastConsumedTick = -1;
+	EXPECT_TRUE(QmPracticeConsumeNewPredictedTick(0, LastConsumedTick));
+	EXPECT_EQ(LastConsumedTick, 0);
+	EXPECT_FALSE(QmPracticeConsumeNewPredictedTick(0, LastConsumedTick));
 
-	// 视觉外推帧（111）超过真实末帧 110，不播放跳跃/钩子反馈。
-	EXPECT_FALSE(QmPracticeConsumeNewPredictedTick(111, 110, LastConsumedTick));
-	EXPECT_EQ(LastConsumedTick, 109);
-
-	// 真实末帧本身仍可消费。
-	EXPECT_TRUE(QmPracticeConsumeNewPredictedTick(110, 110, LastConsumedTick));
-	EXPECT_EQ(LastConsumedTick, 110);
+	// 乱序或回退的 tick 不消费，也不改记录。
+	EXPECT_FALSE(QmPracticeConsumeNewPredictedTick(-1, LastConsumedTick));
+	EXPECT_EQ(LastConsumedTick, 0);
+	EXPECT_TRUE(QmPracticeConsumeNewPredictedTick(1, LastConsumedTick));
+	EXPECT_FALSE(QmPracticeConsumeNewPredictedTick(0, LastConsumedTick));
+	EXPECT_EQ(LastConsumedTick, 1);
 }

@@ -146,34 +146,79 @@ TEST_F(CPracticePredictPublishRuntime, StepPublishesPreviousAndCurrentCoresSepar
 TEST_F(CPracticePredictPublishRuntime, VisualExtrapolationStopsOtherCoresAtTheRealFinalTick)
 {
 	CTestPracticePredictSink Sink;
-	const SPracticePredictTickPlan Plan = QmBuildPracticePredictTickPlan(104, 104, 6, false);
-
-	// 真实末帧：本体与分身都收口。
-	QmPublishPracticePredictionBeforeStep(Sink, m_Source, Plan, 104, true, 4);
+	// 主循环先跑到真实末帧 104，发布本体与分身。
+	const SPracticePredictTickPlan MainPlan = QmBuildPracticePredictTickPlan(100, 104, 0, true);
+	QmPublishPracticePredictionBeforeStep(Sink, m_Source, MainPlan, 104, false, 4);
 	MoveCharacter(m_pLocalChar, vec2(400.0f, 200.0f));
-	QmPublishPracticePredictionAfterStep(Sink, m_Source, Plan, 104, 4);
-	EXPECT_FLOAT_EQ(Sink.m_aPredicted[7].m_Pos.x, 640.0f);
-
-	// 外推帧：只更新本体；分身即使移动也不写回。
-	QmPublishPracticePredictionBeforeStep(Sink, m_Source, Plan, 110, true, 4);
-	MoveCharacter(m_pLocalChar, vec2(420.0f, 210.0f));
 	MoveCharacter(m_pDummyChar, vec2(700.0f, 300.0f));
-	QmPublishPracticePredictionAfterStep(Sink, m_Source, Plan, 110, 4);
+	QmPublishPracticePredictionAfterStep(Sink, m_Source, MainPlan, 104, 4);
+	EXPECT_FLOAT_EQ(Sink.m_aPredicted[4].m_Pos.x, 400.0f);
+	EXPECT_FLOAT_EQ(Sink.m_aPredicted[7].m_Pos.x, 700.0f);
+
+	// 视觉循环接管后关闭他人外推：外推帧只更新本体。
+	const SPracticePredictTickPlan VisualPlan = QmBuildPracticePredictTickPlan(104, 104, 6, false);
+	QmPublishPracticePredictionBeforeStep(Sink, m_Source, VisualPlan, 110, true, 4);
+	MoveCharacter(m_pLocalChar, vec2(420.0f, 210.0f));
+	MoveCharacter(m_pDummyChar, vec2(900.0f, 500.0f));
+	QmPublishPracticePredictionAfterStep(Sink, m_Source, VisualPlan, 110, 4);
 
 	EXPECT_FLOAT_EQ(Sink.m_aPredicted[4].m_Pos.x, 420.0f);
-	EXPECT_FLOAT_EQ(Sink.m_aPredicted[7].m_Pos.x, 640.0f);
+	EXPECT_FLOAT_EQ(Sink.m_aPredicted[7].m_Pos.x, 700.0f);
+}
+
+TEST_F(CPracticePredictPublishRuntime, RepeatedPublishAtTheFinalTickKeepsTheSameState)
+{
+	CTestPracticePredictSink Sink;
+	const SPracticePredictTickPlan Plan = QmBuildPracticePredictTickPlan(100, 104, 0, true);
+
+	QmPublishPracticePredictionBeforeStep(Sink, m_Source, Plan, 104, false, 4);
+	MoveCharacter(m_pLocalChar, vec2(400.0f, 200.0f));
+	QmPublishPracticePredictionAfterStep(Sink, m_Source, Plan, 104, 4);
+	const CCharacterCore FirstPredicted = Sink.m_aPredicted[4];
+	const int FirstTick = Sink.m_PredictedTick;
+
+	// 重复调用是纯赋值：状态与预测 tick 都不累计、不抖动。
+	QmPublishPracticePredictionBeforeStep(Sink, m_Source, Plan, 104, false, 4);
+	QmPublishPracticePredictionAfterStep(Sink, m_Source, Plan, 104, 4);
+	EXPECT_FLOAT_EQ(Sink.m_aPredicted[4].m_Pos.x, FirstPredicted.m_Pos.x);
+	EXPECT_EQ(Sink.m_PredictedTick, FirstTick);
+	EXPECT_EQ(Sink.m_PrevPredictedWorld.GameTick(), 104);
+}
+
+TEST_F(CPracticePredictPublishRuntime, CopyToPredictedOnlyHappensAtTheFinalTick)
+{
+	CTestPracticePredictSink Sink;
+	const SPracticePredictTickPlan Plan = QmBuildPracticePredictTickPlan(100, 104, 0, true);
+
+	// 中间 tick 即使请求复制当前世界也不执行，视觉循环只在末帧接管预测世界。
+	QmPublishPracticePredictionBeforeStep(Sink, m_Source, Plan, 101, true, 4);
+	EXPECT_EQ(Sink.m_PredictedWorld.GameTick(), 0);
+	EXPECT_EQ(Sink.m_PrevPredictedWorld.GameTick(), 0);
+
+	QmPublishPracticePredictionBeforeStep(Sink, m_Source, Plan, 104, true, 4);
+	EXPECT_EQ(Sink.m_PredictedWorld.GameTick(), 104);
 	EXPECT_EQ(Sink.m_PrevPredictedWorld.GameTick(), 104);
 }
 
 TEST_F(CPracticePredictPublishRuntime, PositionsRingUsesTheTickModuloSlot)
 {
 	CTestPracticePredictSink Sink;
-	QmPublishPracticePredictedPositions(Sink, m_Source, 305);
 
+	// 槽位 0 与末槽位 199 都按 tick % 200 写入。
+	QmPublishPracticePredictedPositions(Sink, m_Source, 0);
+	EXPECT_FLOAT_EQ(Sink.m_aPredPos[4][0].x, 320.0f);
+	EXPECT_EQ(Sink.m_aPredTick[4][0], 0);
+
+	QmPublishPracticePredictedPositions(Sink, m_Source, 199);
+	EXPECT_FLOAT_EQ(Sink.m_aPredPos[4][199].x, 320.0f);
+	EXPECT_EQ(Sink.m_aPredTick[4][199], 199);
+
+	// 305 与 105 共用同一个环槽；记录必须被新 tick 覆盖。
+	QmPublishPracticePredictedPositions(Sink, m_Source, 305);
 	EXPECT_FLOAT_EQ(Sink.m_aPredPos[4][105].x, 320.0f);
 	EXPECT_EQ(Sink.m_aPredTick[4][105], 305);
 	EXPECT_FLOAT_EQ(Sink.m_aPredPos[7][105].x, 640.0f);
 	EXPECT_EQ(Sink.m_aPredTick[7][105], 305);
 	// 其他槽位不被写。
-	EXPECT_EQ(Sink.m_aPredTick[4][0], 0);
+	EXPECT_EQ(Sink.m_aPredTick[4][1], 0);
 }

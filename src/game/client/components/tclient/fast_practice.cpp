@@ -1465,11 +1465,11 @@ void CFastPractice::PublishPracticePredictedPositions(CGameWorld &World, int Tic
 	QmPublishPracticePredictedPositions(Sink, World, Tick);
 }
 
-bool CFastPractice::PublishPracticeNewPredictedFeedback(int Slot, CCharacter *pChar, int Tick, int MaxTick)
+bool CFastPractice::PublishPracticeNewPredictedFeedback(int Slot, CCharacter *pChar, int Tick)
 {
 	if(!pChar)
 		return false;
-	if(!QmPracticeConsumeNewPredictedTick(Tick, MaxTick, GameClient()->m_aLastNewPredictedTick[Slot]))
+	if(!QmPracticeConsumeNewPredictedTick(Tick, GameClient()->m_aLastNewPredictedTick[Slot]))
 		return false;
 
 	const vec2 Pos = pChar->Core()->m_Pos;
@@ -1761,10 +1761,10 @@ bool CFastPractice::OverridePredict()
 		PublishPracticePredictionAfterStep(GameClient()->m_PredictedWorld, TickPlan, Tick, LocalClientId);
 		PublishPracticePredictedPositions(GameClient()->m_PredictedWorld, Tick);
 
-		if(PublishPracticeNewPredictedFeedback(LocalTickSlot, pLocalChar, Tick, FinalTickRegular))
+		if(PublishPracticeNewPredictedFeedback(LocalTickSlot, pLocalChar, Tick))
 			GameClient()->m_NewPredictedTick = true;
 		if(pDummyChar)
-			PublishPracticeNewPredictedFeedback(DummyTickSlot, pDummyChar, Tick, FinalTickRegular);
+			PublishPracticeNewPredictedFeedback(DummyTickSlot, pDummyChar, Tick);
 	}
 
 	m_PracticeBaseWorld.CopyWorldClean(&GameClient()->m_PredictedWorld);

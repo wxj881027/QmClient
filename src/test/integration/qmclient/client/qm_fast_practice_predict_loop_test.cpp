@@ -96,42 +96,40 @@ TEST(QmFastPracticePredictLoopRecovery, PauseResumeShiftLeavesNoBacklogBeforeThe
 	EXPECT_EQ(vEvents[1].m_Tick, 4811);
 }
 
-TEST(QmFastPracticePredictLoopRecovery, LateDummyAttachAddsTheOtherPlayerToTheRealFinalTick)
+TEST(QmFastPracticePredictLoopRecovery, LateDummyAttachLeavesTheOtherCoreToTheMainLoop)
 {
-	// 分身晚接入：旧 id -1（重连中），新 id 3，检查点需要迁移到新 id。
+	// 分身晚接入：旧 id 7（重连中），新 id 3，检查点需要迁移到新 id。
 	const int aLocalIds[NUM_DUMMIES] = {9, 3};
 	const SQmPracticeRebindDecision Rebind = QmResolvePracticeRebind(aLocalIds, CONN_MAIN, 9, 7, true);
 	ASSERT_EQ(Rebind.m_DummyClientId, 3);
 	EXPECT_TRUE(Rebind.m_MigrateDummyState);
 
-	// 关闭快速输入作用于他人：视觉外推只延长本体，其他玩家停在真实末帧。
+	// 关闭快速输入作用于他人：他人最终 tick 落在视觉循环范围之外，
+	// 主循环已在真实末帧发布过他人核心，外推帧不再写他人。
 	const SPracticePredictTickPlan Plan = QmBuildPracticePredictTickPlan(104, 104, 6, false);
+	EXPECT_EQ(Plan.m_FinalTickOthers, 104);
+	EXPECT_FALSE(Plan.Covers(Plan.m_FinalTickOthers));
 
-	const SPracticePublishActions AtRealFinal = QmResolvePracticePublishActions(Plan, 104);
-	EXPECT_TRUE(AtRealFinal.m_PublishPrevOthers);
-	EXPECT_TRUE(AtRealFinal.m_PublishPredOthers);
-	EXPECT_FALSE(AtRealFinal.m_PublishPrevRole);
-	EXPECT_FALSE(AtRealFinal.m_PublishPredRole);
-
-	const SPracticePublishActions AtVisualFinal = QmResolvePracticePublishActions(Plan, 110);
-	EXPECT_FALSE(AtVisualFinal.m_PublishPrevOthers);
-	EXPECT_FALSE(AtVisualFinal.m_PublishPredOthers);
-	EXPECT_TRUE(AtVisualFinal.m_PublishPrevRole);
-	EXPECT_TRUE(AtVisualFinal.m_PublishPredRole);
+	for(int Tick = Plan.m_FirstTick; Tick <= Plan.m_FinalTickSelf; Tick++)
+	{
+		const SPracticePublishActions Actions = QmResolvePracticePublishActions(Plan, Tick);
+		EXPECT_FALSE(Actions.m_PublishPrevOthers) << "tick " << Tick;
+		EXPECT_FALSE(Actions.m_PublishPredOthers) << "tick " << Tick;
+	}
 }
 
 TEST(QmFastPracticePredictLoopRecovery, VisualOthersExtensionPublishesEveryoneAtTheVisualFinalTick)
 {
-	// 打开快速输入作用于他人时，其他玩家与本体的核心都在视觉末帧收口。
+	// 打开快速输入作用于他人时，其他玩家与本体都在视觉末帧收口。
 	const SPracticePredictTickPlan Plan = QmBuildPracticePredictTickPlan(104, 104, 6, true);
 	EXPECT_EQ(Plan.m_FinalTickOthers, 110);
 
-	const SPracticePublishActions AtRealFinal = QmResolvePracticePublishActions(Plan, 104);
-	EXPECT_FALSE(AtRealFinal.m_PublishPrevOthers);
-	EXPECT_FALSE(AtRealFinal.m_PublishPredRole);
-
-	const SPracticePublishActions AtVisualFinal = QmResolvePracticePublishActions(Plan, 110);
-	EXPECT_TRUE(AtVisualFinal.m_PublishPrevOthers);
-	EXPECT_TRUE(AtVisualFinal.m_PublishPredOthers);
-	EXPECT_TRUE(AtVisualFinal.m_PublishPredRole);
+	for(int Tick = Plan.m_FirstTick; Tick <= Plan.m_FinalTickSelf; Tick++)
+	{
+		const SPracticePublishActions Actions = QmResolvePracticePublishActions(Plan, Tick);
+		const bool Final = Tick == 110;
+		EXPECT_EQ(Actions.m_PublishPrevOthers, Final) << "tick " << Tick;
+		EXPECT_EQ(Actions.m_PublishPredOthers, Final) << "tick " << Tick;
+		EXPECT_EQ(Actions.m_PublishPredRole, Final) << "tick " << Tick;
+	}
 }
