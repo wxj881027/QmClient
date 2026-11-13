@@ -47,6 +47,21 @@ inline CNetObj_PlayerInput QmBuildPracticeServerLockedInput(const CNetObj_Player
 	return Input;
 }
 
+// 没有可锁定的服务器输入时使用的中性输入：清掉移动/跳跃/钩子/换武器，
+// 保留瞄准方向（零向量时补一个合法方向），开火位图改为已释放。
+inline void QmNeutralizePracticeInput(CNetObj_PlayerInput &Input)
+{
+	Input.m_Direction = 0;
+	Input.m_Jump = 0;
+	Input.m_Hook = 0;
+	QmPracticeSuppressActionInput(Input, QmPracticeReleasedFireState(Input.m_Fire));
+	if(Input.m_TargetX == 0 && Input.m_TargetY == 0)
+	{
+		Input.m_TargetX = 1;
+		Input.m_TargetY = 0;
+	}
+}
+
 // 分身晚接入时，主角色必须继续沿用进入练习前的锁定输入；只有还没锁过的槽位
 // （新接入的分身）才重新采样。按连接槽位对应的 client id 判断，而不是槽位号，
 // 因为 cl_dummy 切换会改变哪个槽位控制哪个角色。

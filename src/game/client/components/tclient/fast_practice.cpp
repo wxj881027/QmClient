@@ -37,25 +37,43 @@
 
 namespace
 {
-	void NeutralizeInput(CNetObj_PlayerInput &Input)
+	// 两个预测循环共用的分身锤瞄准：让分身朝向本体所在方向挥锤。
+	void ApplyDummyHammerAim(CCharacter *pLocalChar, CCharacter *pDummyChar, CNetObj_PlayerInput &DummyInput)
 	{
-		Input.m_Direction = 0;
-		Input.m_Jump = 0;
-		Input.m_Hook = 0;
+		const vec2 Dir = pLocalChar->Core()->m_Pos - pDummyChar->Core()->m_Pos;
+		DummyInput.m_TargetX = (int)Dir.x;
+		DummyInput.m_TargetY = (int)Dir.y;
+		if(DummyInput.m_TargetX == 0 && DummyInput.m_TargetY == 0)
+			DummyInput.m_TargetY = -1;
+	}
 
-		if((Input.m_Fire & 1) != 0)
-			Input.m_Fire++;
-		Input.m_Fire &= INPUT_STATE_MASK;
+	// 两个预测循环共用的输入落地顺序：冻结期可移动判定、cid 顺序、OnDirectInput。
+	void ApplyPracticeActorInputs(CCharacter *pLocalChar, CCharacter *pDummyChar, CNetObj_PlayerInput *pLocalInput, CNetObj_PlayerInput *pDummyInput, int Tick, int FreezeReferenceTick)
+	{
+		pLocalChar->m_CanMoveInFreeze = g_Config.m_ClPredictFreeze == 2 && FreezeReferenceTick - 1 - FreezeReferenceTick % 2 <= Tick;
+		if(pDummyChar)
+			pDummyChar->m_CanMoveInFreeze = false;
 
-		Input.m_NextWeapon = 0;
-		Input.m_PrevWeapon = 0;
-		Input.m_WantedWeapon = 0;
+		const bool DummyFirst = pLocalInput && pDummyInput && pDummyChar && pDummyChar->GetCid() < pLocalChar->GetCid();
+		if(DummyFirst)
+			pDummyChar->OnDirectInput(pDummyInput);
+		if(pLocalInput)
+			pLocalChar->OnDirectInput(pLocalInput);
+		if(pDummyInput && !DummyFirst)
+			pDummyChar->OnDirectInput(pDummyInput);
+	}
 
-		if(Input.m_TargetX == 0 && Input.m_TargetY == 0)
-		{
-			Input.m_TargetX = 1;
-			Input.m_TargetY = 0;
-		}
+	// 两个预测循环共用的单 tick 推进：PreInputs → 输入 → PreInputs。
+	// 调用方负责额外步骤（机关炮、事件消费、采样）与最后的 World.Tick()。
+	void StepPracticeWorld(CGameClient *pGameClient, CGameWorld &World, int Tick, CCharacter *pLocalChar, CCharacter *pDummyChar, CNetObj_PlayerInput *pLocalInput, CNetObj_PlayerInput *pDummyInput)
+	{
+		pGameClient->ApplyPreInputs(Tick, true, World);
+		World.m_GameTick = Tick;
+		if(pLocalInput)
+			pLocalChar->OnPredictedInput(pLocalInput);
+		if(pDummyInput)
+			pDummyChar->OnPredictedInput(pDummyInput);
+		pGameClient->ApplyPreInputs(Tick, false, World);
 	}
 
 	float EffectiveFastInputOffsetTicks(const CGameClient *pGameClient)
@@ -252,9 +270,7 @@ void CFastPractice::ResetPracticeState()
 	m_LastResolvedDummyClientId = -1;
 	m_LastResolvedLocalInputConn = -1;
 	m_LastResolvedDummyInputConn = -1;
-	m_aHasServerLockedInputs.fill(false);
-	m_aServerLockedInputs = {};
-	m_aPostPracticeInputSuppressTicks.fill(0);
+	m_InputLock.Reset();
 	m_MainAnchor = {};
 	m_DummyAnchor = {};
 	m_aPracticeInputFilterStates = {};
@@ -1174,17 +1190,17 @@ void CFastPractice::ReleaseBufferedInputState()
 	// buffers should not survive into a different server-side input stream.
 	for(int Conn = 0; Conn < NUM_DUMMIES; Conn++)
 	{
-		NeutralizeInput(GameClient()->m_Controls.m_aInputData[Conn]);
-		NeutralizeInput(GameClient()->m_Controls.m_aLastData[Conn]);
+		QmNeutralizePracticeInput(GameClient()->m_Controls.m_aInputData[Conn]);
+		QmNeutralizePracticeInput(GameClient()->m_Controls.m_aLastData[Conn]);
 		GameClient()->m_Controls.m_aInputData[Conn].m_Fire = QmPracticeReleasedFireState(GameClient()->m_Controls.m_aInputData[Conn].m_Fire);
 		GameClient()->m_Controls.m_aLastData[Conn].m_Fire = QmPracticeReleasedFireState(GameClient()->m_Controls.m_aLastData[Conn].m_Fire);
 	}
-	NeutralizeInput(GameClient()->m_Controls.m_aFastInput[g_Config.m_ClDummy]);
+	QmNeutralizePracticeInput(GameClient()->m_Controls.m_aFastInput[g_Config.m_ClDummy]);
 	GameClient()->m_Controls.m_aFastInput[g_Config.m_ClDummy].m_Fire = QmPracticeReleasedFireState(GameClient()->m_Controls.m_aFastInput[g_Config.m_ClDummy].m_Fire);
 
-	NeutralizeInput(GameClient()->m_DummyInput);
+	QmNeutralizePracticeInput(GameClient()->m_DummyInput);
 	GameClient()->m_DummyInput.m_Fire = QmPracticeReleasedFireState(GameClient()->m_DummyInput.m_Fire);
-	NeutralizeInput(GameClient()->m_HammerInput);
+	QmNeutralizePracticeInput(GameClient()->m_HammerInput);
 	GameClient()->m_HammerInput.m_Fire = QmPracticeReleasedFireState(GameClient()->m_HammerInput.m_Fire);
 	GameClient()->m_DummyFire = 0;
 }
@@ -1198,7 +1214,7 @@ void CFastPractice::CaptureServerReleasedFireStates()
 			FireState = GameClient()->m_Controls.m_aLastData[Slot].m_Fire;
 		else if(g_Config.m_ClDummyHammer)
 			FireState = GameClient()->m_HammerInput.m_Fire;
-		m_aServerReleasedFireStates[Slot] = QmPracticeReleasedFireState(FireState);
+		m_InputLock.SetReleasedFireState(Slot, FireState);
 	}
 }
 
@@ -1206,14 +1222,14 @@ void CFastPractice::ReleaseBufferedActionInputState()
 {
 	for(int Conn = 0; Conn < NUM_DUMMIES; Conn++)
 	{
-		const int ReleasedFire = m_aServerReleasedFireStates[Conn];
+		const int ReleasedFire = m_InputLock.ReleasedFireState(Conn);
 		QmPracticeSuppressActionInput(GameClient()->m_Controls.m_aInputData[Conn], ReleasedFire);
 		QmPracticeSuppressActionInput(GameClient()->m_Controls.m_aLastData[Conn], ReleasedFire);
 		QmPracticeSuppressActionInput(GameClient()->m_Controls.m_aFastInput[Conn], ReleasedFire);
 	}
 
 	const int DummySlot = !g_Config.m_ClDummy;
-	const int DummyReleasedFire = m_aServerReleasedFireStates[DummySlot];
+	const int DummyReleasedFire = m_InputLock.ReleasedFireState(DummySlot);
 	QmPracticeSuppressActionInput(GameClient()->m_DummyInput, DummyReleasedFire);
 	QmPracticeSuppressActionInput(GameClient()->m_HammerInput, DummyReleasedFire);
 	GameClient()->m_DummyFire = 0;
@@ -1333,7 +1349,7 @@ void CFastPractice::CaptureServerLockedInputs()
 	for(int Slot = 0; Slot < NUM_DUMMIES; Slot++)
 	{
 		// 练习中接入分身时，主角色继续沿用进入练习前锁定的输入。
-		if(!QmPracticeShouldCaptureServerLockedInput(m_Enabled, m_aHasServerLockedInputs[Slot], GameClient()->m_aLocalIds[Slot], m_EnableLocalClientId))
+		if(!QmPracticeShouldCaptureServerLockedInput(m_Enabled, m_InputLock.HasLockedInput(Slot), GameClient()->m_aLocalIds[Slot], m_EnableLocalClientId))
 			continue;
 
 		CNetObj_PlayerInput Input = {};
@@ -1347,8 +1363,7 @@ void CFastPractice::CaptureServerLockedInputs()
 			Input = g_Config.m_ClDummyHammer ? GameClient()->m_HammerInput : GameClient()->m_DummyInput;
 		}
 
-		m_aServerLockedInputs[Slot] = QmBuildPracticeServerLockedInput(Input);
-		m_aHasServerLockedInputs[Slot] = true;
+		m_InputLock.Capture(Slot, Input);
 	}
 }
 
@@ -1513,7 +1528,7 @@ void CFastPractice::Disable()
 	const bool WasEnabled = m_Enabled;
 	if(m_Enabled)
 		GameClient()->m_PredictedDummyId = -1;
-	m_aHasServerLockedInputs.fill(false);
+	m_InputLock.ClearLocks();
 	if(WasEnabled)
 		ReleaseBufferedActionInputState();
 	// 机关炮缓存绑定当前地图，下次启用时重新解析。
@@ -1526,7 +1541,7 @@ void CFastPractice::Disable()
 	m_Recorder.End(GameClient()->m_LocalWorld);
 	ResetPracticeState();
 	if(WasEnabled)
-		m_aPostPracticeInputSuppressTicks.fill(2);
+		m_InputLock.BeginPostPracticeSuppression(2);
 }
 
 void CFastPractice::Toggle(bool PreserveHeldInput)
@@ -1551,7 +1566,7 @@ void CFastPractice::StandbyCharacter(CCharacter *pChar) const
 		return;
 
 	CNetObj_PlayerInput NeutralInput = *pChar->LatestInput();
-	NeutralizeInput(NeutralInput);
+	QmNeutralizePracticeInput(NeutralInput);
 	pChar->SetInput(&NeutralInput);
 
 	CCharacterCore Core = pChar->GetCore();
@@ -1868,22 +1883,9 @@ void CFastPractice::PrepareInputForSend(int *pData, int Size, bool Dummy)
 		return;
 	auto *pInput = reinterpret_cast<CNetObj_PlayerInput *>(pData);
 	const int Slot = g_Config.m_ClDummy ^ (int)Dummy;
-	if(!m_Enabled)
-	{
-		if(Slot >= 0 && Slot < NUM_DUMMIES && m_aPostPracticeInputSuppressTicks[Slot] > 0)
-		{
-			QmPracticeSuppressActionInput(*pInput, m_aServerReleasedFireStates[Slot]);
-			m_aPostPracticeInputSuppressTicks[Slot]--;
-		}
-		return;
-	}
-
 	// Keep the real server stream locked to the exact input state that was
 	// active when fast practice was opened. Practice inputs must not move it.
-	if(Slot >= 0 && Slot < NUM_DUMMIES && m_aHasServerLockedInputs[Slot])
-		*pInput = m_aServerLockedInputs[Slot];
-	else
-		NeutralizeInput(*pInput);
+	m_InputLock.PrepareForSend(*pInput, Slot, m_Enabled);
 }
 
 void CFastPractice::TrackPracticeTileFeedback(int ClientId, CCharacter *pChar, const vec2 &BeforePos)
@@ -2105,35 +2107,11 @@ bool CFastPractice::OverridePredict()
 				DummyPracticeInput = {};
 				pDummyInputData = &DummyPracticeInput;
 			}
-			const vec2 Dir = pLocalChar->Core()->m_Pos - pDummyChar->Core()->m_Pos;
-			pDummyInputData->m_TargetX = (int)Dir.x;
-			pDummyInputData->m_TargetY = (int)Dir.y;
-			if(pDummyInputData->m_TargetX == 0 && pDummyInputData->m_TargetY == 0)
-				pDummyInputData->m_TargetY = -1;
+			ApplyDummyHammerAim(pLocalChar, pDummyChar, *pDummyInputData);
 		}
 
-		const bool DummyFirst = pInputData && pDummyInputData && pDummyChar->GetCid() < pLocalChar->GetCid();
-
-		pLocalChar->m_CanMoveInFreeze = g_Config.m_ClPredictFreeze == 2 && PredTick - 1 - PredTick % 2 <= Tick;
-		if(pDummyChar)
-			pDummyChar->m_CanMoveInFreeze = false;
-
-		if(DummyFirst)
-			pDummyChar->OnDirectInput(pDummyInputData);
-		if(pInputData)
-			pLocalChar->OnDirectInput(pInputData);
-		if(pDummyInputData && !DummyFirst)
-			pDummyChar->OnDirectInput(pDummyInputData);
-
-		GameClient()->ApplyPreInputs(Tick, true, GameClient()->m_PredictedWorld);
-
-		GameClient()->m_PredictedWorld.m_GameTick = Tick;
-		if(pInputData)
-			pLocalChar->OnPredictedInput(pInputData);
-		if(pDummyInputData)
-			pDummyChar->OnPredictedInput(pDummyInputData);
-
-		GameClient()->ApplyPreInputs(Tick, false, GameClient()->m_PredictedWorld);
+		ApplyPracticeActorInputs(pLocalChar, pDummyChar, pInputData, pDummyInputData, Tick, PredTick);
+		StepPracticeWorld(GameClient(), GameClient()->m_PredictedWorld, Tick, pLocalChar, pDummyChar, pInputData, pDummyInputData);
 
 		CollectTrackedProjectiles(GameClient()->m_PredictedWorld, LocalClientId, DummyClientId, vTrackedProjectilesBefore);
 		// 机关炮在实体 tick 之前发射，新生成的 plasma 同一 tick 就开始移动。
@@ -2338,8 +2316,6 @@ int CFastPractice::ApplyVisualFastInputPrediction(int FinalTickRegular, int Loca
 		CNetObj_PlayerInput LocalFastInput = GameClient()->m_Controls.m_aFastInput[LocalTee];
 		CNetObj_PlayerInput DummyFastInput = {};
 		CNetObj_PlayerInput DummyVisualInput = {};
-		const bool DummyFirst = pInputData && pDummyInputData && pDummyChar->GetCid() < pLocalChar->GetCid();
-
 		pInputData = &LocalFastInput;
 		FilterPracticeInput(*pInputData, LocalInputConn, false);
 		if(pDummyInputData)
@@ -2358,34 +2334,14 @@ int CFastPractice::ApplyVisualFastInputPrediction(int FinalTickRegular, int Loca
 				DummyFastInput = pDummyInputData ? *pDummyInputData : CNetObj_PlayerInput{};
 				pDummyInputData = &DummyFastInput;
 			}
-			const vec2 Dir = pLocalChar->Core()->m_Pos - pDummyChar->Core()->m_Pos;
-			pDummyInputData->m_TargetX = (int)Dir.x;
-			pDummyInputData->m_TargetY = (int)Dir.y;
-			if(pDummyInputData->m_TargetX == 0 && pDummyInputData->m_TargetY == 0)
-				pDummyInputData->m_TargetY = -1;
+			ApplyDummyHammerAim(pLocalChar, pDummyChar, *pDummyInputData);
 		}
-		pLocalChar->m_CanMoveInFreeze = g_Config.m_ClPredictFreeze == 2 && FinalTickRegular - 1 - FinalTickRegular % 2 <= Tick;
-		if(pDummyChar)
-			pDummyChar->m_CanMoveInFreeze = false;
 
 		const bool TempPredEventState = VisualWorld.m_WorldConfig.m_PredictEvents;
 		VisualWorld.m_WorldConfig.m_PredictEvents = false;
 
-		if(DummyFirst)
-			pDummyChar->OnDirectInput(pDummyInputData);
-		if(pInputData)
-			pLocalChar->OnDirectInput(pInputData);
-		if(pDummyInputData && !DummyFirst)
-			pDummyChar->OnDirectInput(pDummyInputData);
-
-		GameClient()->ApplyPreInputs(Tick, true, VisualWorld);
-
-		VisualWorld.m_GameTick = Tick;
-		pLocalChar->OnPredictedInput(pInputData);
-		if(pDummyInputData)
-			pDummyChar->OnPredictedInput(pDummyInputData);
-
-		GameClient()->ApplyPreInputs(Tick, false, VisualWorld);
+		ApplyPracticeActorInputs(pLocalChar, pDummyChar, pInputData, pDummyInputData, Tick, FinalTickRegular);
+		StepPracticeWorld(GameClient(), VisualWorld, Tick, pLocalChar, pDummyChar, pInputData, pDummyInputData);
 
 		VisualWorld.Tick();
 		VisualWorld.m_WorldConfig.m_PredictEvents = TempPredEventState;

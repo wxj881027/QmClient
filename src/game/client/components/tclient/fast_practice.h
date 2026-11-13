@@ -12,6 +12,7 @@
 #include <game/client/component.h>
 #include <game/client/components/qmclient/local_world.h>
 #include <game/client/components/qmclient/practice_hook_input.h>
+#include <game/client/components/qmclient/practice_input_lock.h>
 #include <game/client/components/qmclient/practice_recorder.h>
 #include <game/client/components/qmclient/practice_rescue.h>
 #include <game/client/prediction/gameworld.h>
@@ -148,10 +149,7 @@ private:
 	int m_LastResolvedDummyClientId = -1;
 	int m_LastResolvedLocalInputConn = -1;
 	int m_LastResolvedDummyInputConn = -1;
-	std::array<CNetObj_PlayerInput, NUM_DUMMIES> m_aServerLockedInputs{};
-	std::array<bool, NUM_DUMMIES> m_aHasServerLockedInputs{};
-	std::array<int, NUM_DUMMIES> m_aPostPracticeInputSuppressTicks{};
-	std::array<int, NUM_DUMMIES> m_aServerReleasedFireStates{};
+	CPracticeInputLock m_InputLock;
 	std::array<SPracticeInputFilterState, NUM_DUMMIES> m_aPracticeInputFilterStates{};
 
 	SGhostData m_MainGhost;
