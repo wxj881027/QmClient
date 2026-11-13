@@ -5349,6 +5349,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/perf_file_switch_test.cpp
     src/test/unit/client/map_difficulty_catalog_test.cpp
     src/test/unit/qmclient/ui/qm_map_cover_art_test.cpp
+    src/test/unit/qmclient/ui/qm_map_cover_result_test.cpp
     src/test/unit/qmclient/ui/vote_map_library_test.cpp
     src/test/unit/qmclient/ui/server_vote_list_test.cpp
     src/test/unit/qmclient/ui/qm_scoreboard_team_mode_lifecycle_test.cpp
@@ -5815,6 +5816,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/race_test.cpp
     src/test/unit/server/score_test.cpp
     src/test/unit/engine/image_decode_budget_test.cpp
+    src/test/unit/engine/image_decode_result_test.cpp
     src/test/unit/engine/storage_replace_test.cpp
     src/test/integration/engine/storage_replace_transaction_test.cpp
     src/test/unit/engine/legacy_updater_test.cpp
@@ -6580,8 +6582,14 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/engine/screenshot_path_test.cpp
       src/test/integration/qmclient/ui/map_covers_admission_test.cpp
       src/test/integration/qmclient/ui/map_covers_pipeline_test.cpp
+      src/test/integration/qmclient/ui/map_covers_decode_retry_test.cpp
+      src/test/integration/qmclient/music/music_lyrics_community_failure_test.cpp
       src/game/client/components/qmclient/map_covers.cpp
       src/game/client/components/qmclient/map_cover_art.cpp
+      src/game/client/components/qmclient/music_lyrics/music_lyrics_community.cpp
+      src/game/client/components/qmclient/music_lyrics/music_lyrics_community_format.cpp
+      src/game/client/components/qmclient/netease/netease_lyric_parser.cpp
+      src/game/client/components/qmclient/netease/netease_lyric_timeline.cpp
       src/test/unit/qmclient/settings/settings_search_reveal_allocation_test.cpp
       src/test/integration/qmclient/ui/qm_surface_text_test.cpp
       src/test/integration/qmclient/ui/qm_theme_selection_test.cpp
@@ -6728,10 +6736,14 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/client/qm_screenshot_request_test.cpp
       src/game/client/components/qmclient/screenshot_clipboard.cpp
       src/test/unit/qmclient/music/qm_spotify_parser_allocation_test.cpp
+      src/test/unit/qmclient/music/qm_soda_lyric_file_allocation_test.cpp
       src/game/client/components/qmclient/music_lyrics/qm_spotify_token.cpp
       src/game/client/components/qmclient/music_lyrics/qm_spotify_crypto.cpp
       src/game/client/components/qmclient/music_lyrics/qm_spotify_parser.cpp
       src/game/client/components/qmclient/netease/netease_lyric_parser.cpp
+      src/game/client/components/qmclient/music_lyrics/qm_soda_lyric_file.cpp
+      src/game/client/components/qmclient/music_lyrics/music_lyrics_krc.cpp
+      src/game/client/components/qmclient/music_lyrics/music_lyrics_qrc.cpp
       src/test/integration/qmclient/client/qm_race_start_map_index_scan_test.cpp
       src/test/integration/qmclient/client/qm_gores_drown_observation_test.cpp
       src/test/integration/qmclient/client/qm_map_history_rows_allocation_test.cpp

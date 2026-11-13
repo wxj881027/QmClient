@@ -37,7 +37,8 @@ void CQmLyricsPresentation::ConSing(IConsole::IResult *pResult, void *pUserData)
 	int SourceId;
 	const auto Source = pThis->CurrentSource(SourceId);
 	pThis->SynchronizeSinging(Source, SourceId);
-	const int64_t NowMs = time_get() * 1000 / time_freq();
+	// time_freq 固定为纳秒频率，先除避免长时间运行后中间乘法溢出。
+	const int64_t NowMs = time_get() / (time_freq() / 1000);
 	const std::string Message = pThis->m_Singing.OnStroke(true, NowMs, Source.m_Original);
 	if(!Message.empty())
 	{
@@ -137,7 +138,7 @@ void CQmLyricsPresentation::OnUpdate()
 	const bool NeedsLyrics = g_Config.m_QmWorldLyrics || (g_Config.m_QmLyrics && g_Config.m_QmLyricsInMediaIsland) ||
 				 g_Config.m_QmSinging || g_Config.m_QmHumming;
 	m_CommunityLyrics.Update(SourceId, Raw, g_Config.m_QmLyricsCommunity && NeedsLyrics,
-		time_get() * 1000 / time_freq(), Storage(), Engine(), Http());
+		time_get() / (time_freq() / 1000), Storage(), Engine(), Http());
 	const auto Source = m_CommunityLyrics.Apply(SourceId, Raw);
 	SynchronizeSinging(Source, SourceId);
 
@@ -176,7 +177,7 @@ void CQmLyricsPresentation::OnUpdate()
 	m_Humming.Synchronize(Available, Identity);
 	if(!Available)
 		return;
-	const int64_t NowMs = Now * 1000 / time_freq();
+	const int64_t NowMs = Now / (time_freq() / 1000);
 	if(m_Humming.NeedsSchedule())
 		m_Humming.Schedule(NowMs, NextGroupDelayMs());
 	if(m_Humming.GroupDue(NowMs) && !m_Humming.BeginGroup(Source.m_pData->m_Timeline, secure_rand_below(0x7fffffff), NowMs))

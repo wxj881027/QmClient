@@ -12,6 +12,7 @@
 
 #include <game/client/components/qmclient/netease/netease_lyric_timeline.h>
 
+#include <memory>
 #include <utility>
 
 namespace QmMusicLyrics
@@ -31,17 +32,16 @@ namespace QmMusicLyrics
 			{
 				if(!m_Downloaded)
 				{
-					const IOHANDLE File = m_pStorage->OpenFile(m_Path.c_str(), IOFLAG_READ, IStorage::TYPE_SAVE);
+					const std::unique_ptr<void, decltype(&io_close)> File(m_pStorage->OpenFile(m_Path.c_str(), IOFLAG_READ, IStorage::TYPE_SAVE), io_close);
 					if(!File)
 						return;
-					const int64_t Length = io_length(File);
+					const int64_t Length = io_length(File.get());
 					if(Length > 0 && static_cast<uint64_t>(Length) <= COMMUNITY_LYRICS_MAX_BYTES)
 					{
 						m_Text.resize(static_cast<size_t>(Length));
-						if(io_read(File, m_Text.data(), static_cast<unsigned>(Length)) != static_cast<unsigned>(Length))
+						if(io_read(File.get(), m_Text.data(), static_cast<unsigned>(Length)) != static_cast<unsigned>(Length))
 							m_Text.clear();
 					}
-					io_close(File);
 				}
 				m_Parsed = ParseCommunityLyrics(m_Text, &m_Data);
 				if(!m_Parsed || !m_Downloaded)
@@ -147,10 +147,10 @@ namespace QmMusicLyrics
 			return;
 		if(m_pImpl->m_pJob)
 		{
-			if(m_pImpl->m_pJob->State() != IJob::STATE_DONE)
+			if(!m_pImpl->m_pJob->Finished())
 				return;
 			auto pJob = std::move(m_pImpl->m_pJob);
-			if(pJob->m_Epoch == m_pImpl->m_Epoch)
+			if(pJob->State() == IJob::STATE_DONE && pJob->m_Epoch == m_pImpl->m_Epoch)
 			{
 				if(pJob->m_Parsed)
 					m_pImpl->m_Data = std::move(pJob->m_Data);

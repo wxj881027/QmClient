@@ -124,10 +124,36 @@ public:
 	virtual int Close(IOHANDLE File) noexcept;
 };
 
+// 只在同步 PNG 解码期间借用；像素须与 free 兼容，成功后由 CImageInfo 持有。
+class CPngReadAllocator
+{
+public:
+	enum class EKind
+	{
+		STATE,
+		PIXELS,
+		ROWS,
+		LIBPNG,
+	};
+
+	virtual ~CPngReadAllocator() = default;
+	// STATE、ROWS 的默认分配分别与 operator delete、operator delete[] 配对。
+	virtual void *Allocate(EKind Kind, size_t Size) noexcept;
+	// 接受空指针；STATE、ROWS、LIBPNG 由解码器配对释放，PIXELS 使用 CImageInfo::Free。
+	virtual void Deallocate(EKind Kind, void *pData) noexcept;
+};
+
 class CImageLoader
 {
 public:
 	CImageLoader() = delete;
+
+	enum class EPngLoadResult
+	{
+		SUCCESS,
+		INVALID,
+		RESOURCE_ERROR,
+	};
 
 	enum
 	{
@@ -141,6 +167,8 @@ public:
 	static bool LoadPng(CByteBufferReader &Reader, const char *pContextName, CImageInfo &Image, int &PngliteIncompatible, size_t MaxDecodedBytes = std::numeric_limits<size_t>::max());
 	static bool LoadPng(IOHANDLE File, const char *pFilename, CImageInfo &Image, int &PngliteIncompatible);
 	static bool LoadPng(const void *pData, size_t Size, const char *pContextName, CImageInfo &Image, size_t MaxDecodedBytes = std::numeric_limits<size_t>::max());
+	static EPngLoadResult LoadPngChecked(CByteBufferReader &Reader, const char *pContextName, CImageInfo &Image, int &PngliteIncompatible, size_t MaxDecodedBytes = std::numeric_limits<size_t>::max(), CPngReadAllocator *pAllocator = nullptr);
+	static EPngLoadResult LoadPngChecked(const void *pData, size_t Size, const char *pContextName, CImageInfo &Image, size_t MaxDecodedBytes = std::numeric_limits<size_t>::max(), CPngReadAllocator *pAllocator = nullptr);
 
 	static bool LoadWebP(CByteBufferReader &Reader, const char *pContextName, CImageInfo &Image, size_t MaxDecodedBytes = std::numeric_limits<size_t>::max());
 	static bool LoadWebP(IOHANDLE File, const char *pFilename, CImageInfo &Image);

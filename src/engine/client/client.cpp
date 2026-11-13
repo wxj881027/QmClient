@@ -5722,32 +5722,48 @@ bool CClient::EnterPoseSession(const char *pPosesPath, int &TeeCountOut, const c
 {
 	// 三条入口共用的准备逻辑：读文件 → 解析 → 合成快照 → 应用两次 → 记住会话状态。
 	// 合影与 demo 同构：先建立「当前画面」的数据源，再由调用方决定是观看还是导出。
-	const std::string WholePath = qmclient::media_paths::CompletePath(Storage(),
-		qmclient::media_paths::Resolve(Storage(), g_Config, pPosesPath));
-	IOHANDLE File = io_open(WholePath.c_str(), IOFLAG_READ);
-	if(!File)
-	{
-		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "could not open the .poses file");
-		return false;
-	}
-	const int64_t Size = io_length(File);
-	if(Size <= 0 || Size > 64 * 1024 * 1024)
-	{
-		io_close(File);
-		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "the .poses file is empty or too large");
-		return false;
-	}
-	std::vector<unsigned char> vData((size_t)Size);
-	io_read(File, vData.data(), vData.size());
-	io_close(File);
-
 	std::vector<SPoseTee> vPoses;
-	const qm_pose::ELoadResult Result = qm_pose::Load(vData.data(), vData.size(), vPoses);
-	if(Result != qm_pose::ELoadResult::OK)
+	try
 	{
-		char aBuf[160];
-		str_format(aBuf, sizeof(aBuf), "could not parse the .poses file: %s", qm_pose::LoadResultName(Result));
-		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", aBuf);
+		const std::string WholePath = qmclient::media_paths::CompletePath(Storage(),
+			qmclient::media_paths::Resolve(Storage(), g_Config, pPosesPath));
+		std::unique_ptr<void, decltype(&io_close)> File(io_open(WholePath.c_str(), IOFLAG_READ), &io_close);
+		if(!File)
+		{
+			m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "could not open the .poses file");
+			return false;
+		}
+		const int64_t Size = io_length(File.get());
+		if(Size <= 0 || Size > 64 * 1024 * 1024)
+		{
+			File.reset();
+			m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "the .poses file is empty or too large");
+			return false;
+		}
+		std::vector<unsigned char> vData((size_t)Size);
+		const unsigned Read = io_read(File.get(), vData.data(), vData.size());
+		File.reset();
+		if(Read != vData.size())
+		{
+			m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "could not read the .poses file");
+			return false;
+		}
+		const qm_pose::ELoadResult Result = qm_pose::Load(vData.data(), vData.size(), vPoses);
+		if(Result != qm_pose::ELoadResult::OK)
+		{
+			char aBuf[160];
+			str_format(aBuf, sizeof(aBuf), "could not parse the .poses file: %s", qm_pose::LoadResultName(Result));
+			m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", aBuf);
+			return false;
+		}
+	}
+	catch(const std::bad_alloc &)
+	{
+		// 准备阶段失败不暂停回放，也不发布半份合影；文件随作用域关闭。
+		return false;
+	}
+	catch(const std::length_error &)
+	{
 		return false;
 	}
 

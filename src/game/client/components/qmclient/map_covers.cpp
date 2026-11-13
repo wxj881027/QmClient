@@ -56,7 +56,9 @@ public:
 			return;
 		try
 		{
-			m_Success = QmMapCover::DecodeAndCompose(m_Data.data(), m_Data.size(), "map_cover", m_Width, m_Height, m_Art, m_Image);
+			const auto Result = QmMapCover::DecodeAndComposeChecked(m_Data.data(), m_Data.size(), "map_cover", m_Width, m_Height, m_Art, m_Image);
+			m_Success = Result == QmMapCover::EPrepareResult::SUCCESS;
+			m_Retry = Result == QmMapCover::EPrepareResult::RESOURCE_ERROR;
 		}
 		catch(const std::bad_alloc &)
 		{

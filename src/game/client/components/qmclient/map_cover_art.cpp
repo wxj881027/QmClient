@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <cstring>
 
 namespace
@@ -175,14 +176,14 @@ float QmMapCover::TailAlpha(const SArt &Art, int X, int Y, int Width, int Height
 	return std::clamp(std::max({Main, Second, Third}), 0.0f, 1.0f) * EdgeFade;
 }
 
-bool QmMapCover::Compose(const CImageInfo &Source, int OutWidth, int OutHeight, const SArt &Art, CImageInfo &Out)
+QmMapCover::EPrepareResult QmMapCover::ComposeChecked(const CImageInfo &Source, int OutWidth, int OutHeight, const SArt &Art, CImageInfo &Out, const SOutputAllocation *pAllocation)
 {
 	if(Source.m_pData == nullptr || Source.m_Width == 0 || Source.m_Height == 0)
-		return false;
+		return EPrepareResult::INVALID;
 	if(Source.m_Format != CImageInfo::FORMAT_RGB && Source.m_Format != CImageInfo::FORMAT_RGBA)
-		return false;
+		return EPrepareResult::INVALID;
 	if(OutWidth <= 0 || OutHeight <= 0 || OutWidth > MAX_WIDTH || OutHeight > MAX_HEIGHT || OutWidth < 2)
-		return false;
+		return EPrepareResult::INVALID;
 
 	const int ImageWidth = std::clamp(static_cast<int>(std::lround(static_cast<float>(OutWidth) * std::clamp(Art.m_ImageFraction, 0.3f, 0.95f))), 1, OutWidth - 1);
 	const int ChannelCount = Source.m_Format == CImageInfo::FORMAT_RGBA ? 4 : 3;
@@ -199,9 +200,11 @@ bool QmMapCover::Compose(const CImageInfo &Source, int OutWidth, int OutHeight, 
 	const float Radius = std::clamp(Art.m_CornerRadius, 0.0f, static_cast<float>(std::min(ImageWidth, OutHeight)) * 0.5f);
 
 	const size_t OutputSize = static_cast<size_t>(OutWidth) * static_cast<size_t>(OutHeight) * 4;
-	auto *pOutput = static_cast<uint8_t *>(malloc(OutputSize));
+	auto *pOutput = static_cast<uint8_t *>(pAllocation != nullptr && pAllocation->m_pfnAllocate != nullptr ?
+						       pAllocation->m_pfnAllocate(OutputSize, pAllocation->m_pUser) :
+						       malloc(OutputSize));
 	if(pOutput == nullptr)
-		return false;
+		return EPrepareResult::RESOURCE_ERROR;
 
 	for(int Y = 0; Y < OutHeight; ++Y)
 	{
@@ -246,24 +249,38 @@ bool QmMapCover::Compose(const CImageInfo &Source, int OutWidth, int OutHeight, 
 	Out.m_Height = static_cast<size_t>(OutHeight);
 	Out.m_Format = CImageInfo::FORMAT_RGBA;
 	Out.m_pData = pOutput;
-	return true;
+	return EPrepareResult::SUCCESS;
+}
+
+bool QmMapCover::Compose(const CImageInfo &Source, int OutWidth, int OutHeight, const SArt &Art, CImageInfo &Out)
+{
+	return ComposeChecked(Source, OutWidth, OutHeight, Art, Out) == EPrepareResult::SUCCESS;
+}
+
+QmMapCover::EPrepareResult QmMapCover::DecodeAndComposeChecked(const void *pPngData, size_t DataSize, const char *pContextName, int OutWidth, int OutHeight, const SArt &Art, CImageInfo &Out,
+	CPngReadAllocator *pPngAllocator, const SOutputAllocation *pOutputAllocation)
+{
+	if(pPngData == nullptr || DataSize < 8)
+		return EPrepareResult::INVALID;
+	static constexpr uint8_t s_aPngSignature[8] = {0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'};
+	if(mem_comp(pPngData, s_aPngSignature, sizeof(s_aPngSignature)) != 0)
+		return EPrepareResult::INVALID;
+
+	CImageInfo Source;
+	struct SFreeSource
+	{
+		CImageInfo &m_Image;
+		~SFreeSource() { m_Image.Free(); }
+	} FreeSource{Source};
+	const auto Decoded = CImageLoader::LoadPngChecked(pPngData, DataSize, pContextName != nullptr ? pContextName : "map_cover", Source, MAX_DECODED_BYTES, pPngAllocator);
+	if(Decoded == CImageLoader::EPngLoadResult::RESOURCE_ERROR)
+		return EPrepareResult::RESOURCE_ERROR;
+	if(Decoded != CImageLoader::EPngLoadResult::SUCCESS)
+		return EPrepareResult::INVALID;
+	return ComposeChecked(Source, OutWidth, OutHeight, Art, Out, pOutputAllocation);
 }
 
 bool QmMapCover::DecodeAndCompose(const void *pPngData, size_t DataSize, const char *pContextName, int OutWidth, int OutHeight, const SArt &Art, CImageInfo &Out)
 {
-	if(pPngData == nullptr || DataSize < 8)
-		return false;
-	static constexpr uint8_t s_aPngSignature[8] = {0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'};
-	if(mem_comp(pPngData, s_aPngSignature, sizeof(s_aPngSignature)) != 0)
-		return false;
-
-	CImageInfo Source;
-	if(!CImageLoader::LoadPng(pPngData, DataSize, pContextName != nullptr ? pContextName : "map_cover", Source, MAX_DECODED_BYTES))
-	{
-		Source.Free();
-		return false;
-	}
-	const bool Success = Compose(Source, OutWidth, OutHeight, Art, Out);
-	Source.Free();
-	return Success;
+	return DecodeAndComposeChecked(pPngData, DataSize, pContextName, OutWidth, OutHeight, Art, Out) == EPrepareResult::SUCCESS;
 }

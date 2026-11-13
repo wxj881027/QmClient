@@ -8,7 +8,9 @@
 #include <game/client/components/qmclient/netease/netease_lyric_parser.h>
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -42,9 +44,11 @@ namespace QmSodaLyricFile
 			if(pValue == nullptr)
 				return 0;
 			if(pValue->type == json_integer)
-				return (int64_t)pValue->u.integer;
-			if(pValue->type == json_double)
-				return (int64_t)pValue->u.dbl;
+				return static_cast<int64_t>(pValue->u.integer);
+			// INT64_MAX转double会舍入到2^63，转换前须排除这个上界。
+			if(pValue->type == json_double && std::isfinite(pValue->u.dbl) &&
+				pValue->u.dbl >= -0x1p63 && pValue->u.dbl < 0x1p63)
+				return static_cast<int64_t>(pValue->u.dbl);
 			return 0;
 		}
 	}
@@ -54,24 +58,23 @@ namespace QmSodaLyricFile
 		if(pOut == nullptr)
 			return false;
 		*pOut = {};
-		json_value *pRoot = json_parse(Json.data(), Json.size());
-		if(pRoot == nullptr || pRoot->type != json_object)
+		std::unique_ptr<json_value, decltype(&json_value_free)> pRoot(json_parse(Json.data(), Json.size()), json_value_free);
+		if(!pRoot || pRoot->type != json_object)
 		{
-			if(pRoot != nullptr)
-				json_value_free(pRoot);
+			pRoot.reset();
 			if(pError)
 				*pError = "invalid json";
 			return false;
 		}
-		pOut->m_Song.m_Title = StringValue(Field(pRoot, "title"));
-		pOut->m_Song.m_Artist = StringValue(Field(pRoot, "artist"));
-		pOut->m_Song.m_Album = StringValue(Field(pRoot, "album"));
-		pOut->m_Song.m_CoverPath = StringValue(Field(pRoot, "coverUrl"));
-		pOut->m_Song.m_DurationMs = Int64Value(Field(pRoot, "durationMs"));
-		const std::string LyricType = StringValue(Field(pRoot, "lyricType"));
-		const std::string LyricContent = StringValue(Field(pRoot, "lyricContent"));
-		const std::string TranslationLrc = StringValue(Field(pRoot, "translationLrc"));
-		json_value_free(pRoot);
+		pOut->m_Song.m_Title = StringValue(Field(pRoot.get(), "title"));
+		pOut->m_Song.m_Artist = StringValue(Field(pRoot.get(), "artist"));
+		pOut->m_Song.m_Album = StringValue(Field(pRoot.get(), "album"));
+		pOut->m_Song.m_CoverPath = StringValue(Field(pRoot.get(), "coverUrl"));
+		pOut->m_Song.m_DurationMs = Int64Value(Field(pRoot.get(), "durationMs"));
+		const std::string LyricType = StringValue(Field(pRoot.get(), "lyricType"));
+		const std::string LyricContent = StringValue(Field(pRoot.get(), "lyricContent"));
+		const std::string TranslationLrc = StringValue(Field(pRoot.get(), "translationLrc"));
+		pRoot.reset();
 
 		bool Parsed = false;
 		std::string Error;
