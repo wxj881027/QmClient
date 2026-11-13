@@ -11,6 +11,7 @@
 #include <engine/favorites.h>
 #include <engine/shared/config.h>
 #include <engine/shared/json.h>
+#include <engine/shared/masterserver.h>
 #include <engine/sqlite.h>
 #include <engine/storage.h>
 
@@ -552,6 +553,7 @@ public:
 	static IServerBrowser::CServerEntry &FirstEntry(CServerBrowser &Browser) { return *Browser.m_vpServerlist[0]; }
 	static IServerBrowser::CServerEntry &Entry(CServerBrowser &Browser, int Index) { return *Browser.m_vpServerlist[Index]; }
 	static int NumQueuedRequests(const CServerBrowser &Browser) { return Browser.m_NumRequests; }
+	static int GenerateToken(CServerBrowser &Browser, const NETADDR &Addr) { return Browser.GenerateToken(Addr); }
 	static void ReleaseQueuedRequest(CServerBrowser &Browser)
 	{
 		if(Browser.m_pFirstReqServer != nullptr)
@@ -978,6 +980,46 @@ TEST_F(CServerBrowserStateTest, RequestServerPingDeduplicatesByIpAddress)
 	EXPECT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 1);
 }
 
+TEST_F(CServerBrowserStateTest, PingReplyUpdatesEveryInstanceOnSameIpAndStopsRemeasuring)
+{
+	AddServer("127.0.0.1:8303", "First", "Kobra");
+	AddServer("127.0.0.1:8304", "Second", "Kobra");
+	auto &First = CServerBrowserTestAccess::Entry(m_Browser, 0);
+	auto &Second = CServerBrowserTestAccess::Entry(m_Browser, 1);
+	for(IServerBrowser::CServerEntry *pEntry : {&First, &Second})
+	{
+		pEntry->m_Info.m_Location = CServerInfo::LOC_CHINA;
+		pEntry->m_Info.m_LatencyIsEstimated = true;
+		pEntry->m_Info.m_Latency = 199;
+		pEntry->m_GotInfo = 1;
+	}
+	CServerBrowserTestAccess::SetPingCache(m_Browser, new CTestPingCache());
+
+	NETADDR Address;
+	ASSERT_FALSE(net_addr_from_str(&Address, "127.0.0.1:8303"));
+	m_Browser.RequestServerPing(Address);
+	ASSERT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 1);
+
+	// 模拟 GETINFO 回复：请求约 10ms 前发出，测得延迟应远小于估算值 199。
+	First.m_RequestTime = time_get() - time_freq() / 100;
+	CServerInfo Reply{};
+	Reply.m_Type = SERVERINFO_EXTENDED;
+	m_Browser.OnServerInfoUpdate(Address, CServerBrowserTestAccess::GenerateToken(m_Browser, Address), &Reply);
+
+	// 同一 IP 的所有端口实例都获得实测值并退出估计状态。
+	EXPECT_FALSE(First.m_Info.m_LatencyIsEstimated);
+	EXPECT_FALSE(Second.m_Info.m_LatencyIsEstimated);
+	EXPECT_EQ(First.m_Info.m_Latency, Second.m_Info.m_Latency);
+	EXPECT_GE(First.m_Info.m_Latency, 0);
+	EXPECT_LT(First.m_Info.m_Latency, 150);
+	EXPECT_FALSE(First.m_RequestQueued);
+	EXPECT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 0);
+
+	// 已有实测值后，行再次可见也不会重复测速。
+	m_Browser.RequestServerPing(Address);
+	EXPECT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 0);
+}
+
 TEST_F(CServerBrowserStateTest, PingUpdateRequestsResortOnlyWhenOrderDependsOnPing)
 {
 	AddServer("127.0.0.1:8303", "Server", "Kobra");
@@ -1209,6 +1251,32 @@ TEST(ServerBrowser, PingCacheIgnoresExpiredEntries)
 	EXPECT_EQ(pPingCache->GetPing(&OldAddr, 1), 171);
 
 	g_Config.m_QmPingCacheMaxAgeHours = OldMaxAgeHours;
+}
+
+TEST(ServerBrowser, PingCacheNeverExpiresWithDefaultConfig)
+{
+	// 默认配置必须永不过期（0）：30 天前的记录仍作为实测延迟使用，
+	// 延迟列不会因为缓存老化退回地区估算。
+	EXPECT_EQ(g_Config.m_QmPingCacheMaxAgeHours, 0);
+
+	CTestInfo Info;
+	Info.m_DeleteTestStorageFilesOnSuccess = true;
+	auto pConsole = CreateConsole(CFGFLAG_CLIENT);
+	std::unique_ptr<IStorage> pStorage = Info.CreateTestStorage();
+	ASSERT_NE(pStorage, nullptr) << "Error creating test storage";
+
+	NETADDR OldAddr;
+	ASSERT_FALSE(net_addr_from_str(&OldAddr, "127.0.0.1:8303"));
+	{
+		CSqlite pDisk = SqliteOpen(pConsole.get(), pStorage.get(), "ddnet-cache.sqlite3");
+		ASSERT_TRUE(pDisk) << "Error opening ping cache database";
+		ASSERT_EQ(sqlite3_exec(pDisk.get(), "CREATE TABLE IF NOT EXISTS server_pings (ip_address TEXT PRIMARY KEY NOT NULL, ping INTEGER NOT NULL, utc_timestamp TEXT NOT NULL)", nullptr, nullptr, nullptr), SQLITE_OK);
+		ASSERT_EQ(sqlite3_exec(pDisk.get(), "INSERT OR REPLACE INTO server_pings (ip_address, ping, utc_timestamp) VALUES ('127.0.0.1', 171, datetime('now', '-30 days'))", nullptr, nullptr, nullptr), SQLITE_OK);
+	}
+
+	auto pPingCache = std::unique_ptr<IServerBrowserPingCache>(CreateServerBrowserPingCache(pConsole.get(), pStorage.get()));
+	pPingCache->Load();
+	EXPECT_EQ(pPingCache->GetPing(&OldAddr, 1), 171);
 }
 
 namespace
