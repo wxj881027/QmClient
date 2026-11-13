@@ -3909,6 +3909,7 @@ if(CLIENT)
     components/tclient/fast_practice.cpp
     components/tclient/fast_practice_commands.cpp
     components/tclient/fast_practice_recording.cpp
+    components/tclient/fast_practice_input.cpp
     components/tclient/fast_practice.h
     components/tclient/map_history.cpp
     components/tclient/map_history.h
