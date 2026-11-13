@@ -559,6 +559,15 @@ public:
 		if(Browser.m_pFirstReqServer != nullptr)
 			Browser.RemoveRequest(Browser.m_pFirstReqServer);
 	}
+	static void AgePingRequestWindow(CServerBrowser &Browser, const NETADDR &Addr)
+	{
+		NETADDR IpAddr = Addr;
+		IpAddr.type &= ~NETTYPE_TW7;
+		IpAddr.port = 0;
+		auto It = Browser.m_PingRequestTimeByIp.find(IpAddr);
+		if(It != Browser.m_PingRequestTimeByIp.end())
+			It->second -= 2 * CServerBrowser::PING_SAME_IP_DEDUP_SECONDS * time_freq();
+	}
 };
 
 namespace
@@ -930,9 +939,12 @@ TEST_F(CServerBrowserStateTest, RequestServerPingQueuesOnceAndRespectsFailureCoo
 	m_Browser.RequestServerPing(Address);
 	EXPECT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 1);
 
-	// 超时释放后进入失败冷却，不会立刻重新入队。
+	// 请求已发出后超时被释放：条目标记为补测失败，不会立刻重新入队。
+	Entry.m_RequestTime = time_get();
 	CServerBrowserTestAccess::ReleaseQueuedRequest(m_Browser);
 	ASSERT_FALSE(Entry.m_RequestQueued);
+	EXPECT_FALSE(Entry.m_PingProbePending);
+	EXPECT_TRUE(Entry.m_PingProbeFailed);
 	m_Browser.RequestServerPing(Address);
 	EXPECT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 0);
 
@@ -1010,14 +1022,114 @@ TEST_F(CServerBrowserStateTest, PingReplyUpdatesEveryInstanceOnSameIpAndStopsRem
 	EXPECT_FALSE(First.m_Info.m_LatencyIsEstimated);
 	EXPECT_FALSE(Second.m_Info.m_LatencyIsEstimated);
 	EXPECT_EQ(First.m_Info.m_Latency, Second.m_Info.m_Latency);
-	EXPECT_GE(First.m_Info.m_Latency, 0);
-	EXPECT_LT(First.m_Info.m_Latency, 150);
+	EXPECT_NE(First.m_Info.m_Latency, 199);
+	EXPECT_TRUE(CServerInfo::IsUsableLatency(First.m_Info.m_Latency));
 	EXPECT_FALSE(First.m_RequestQueued);
+	EXPECT_FALSE(First.m_PingProbePending);
+	EXPECT_FALSE(First.m_PingProbeFailed);
 	EXPECT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 0);
 
 	// 已有实测值后，行再次可见也不会重复测速。
 	m_Browser.RequestServerPing(Address);
 	EXPECT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 0);
+}
+
+TEST_F(CServerBrowserStateTest, FailedProbeLetsSiblingPortOnSameIpTryLater)
+{
+	// 同一 IP 的两个端口：先探测的实例无响应时，不能长期占住整个 IP 的探测机会。
+	AddServer("127.0.0.1:8303", "First", "Kobra");
+	AddServer("127.0.0.1:8304", "Second", "Kobra");
+	for(int Index = 0; Index < 2; Index++)
+	{
+		auto &Entry = CServerBrowserTestAccess::Entry(m_Browser, Index);
+		Entry.m_Info.m_Location = CServerInfo::LOC_CHINA;
+		Entry.m_Info.m_LatencyIsEstimated = true;
+		Entry.m_GotInfo = 1;
+	}
+	auto &First = CServerBrowserTestAccess::Entry(m_Browser, 0);
+	auto &Second = CServerBrowserTestAccess::Entry(m_Browser, 1);
+	NETADDR FirstAddress, SecondAddress;
+	ASSERT_FALSE(net_addr_from_str(&FirstAddress, "127.0.0.1:8303"));
+	ASSERT_FALSE(net_addr_from_str(&SecondAddress, "127.0.0.1:8304"));
+
+	m_Browser.RequestServerPing(FirstAddress);
+	ASSERT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 1);
+	First.m_RequestTime = time_get();
+	CServerBrowserTestAccess::ReleaseQueuedRequest(m_Browser);
+	ASSERT_TRUE(First.m_PingProbeFailed);
+
+	// 同 IP 的去重窗口内仍不重复探测。
+	m_Browser.RequestServerPing(SecondAddress);
+	EXPECT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 0);
+
+	// 窗口过后，失败实例保持静默，探测机会交给存活的另一个实例。
+	CServerBrowserTestAccess::AgePingRequestWindow(m_Browser, FirstAddress);
+	m_Browser.RequestServerPing(FirstAddress);
+	EXPECT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 0);
+	m_Browser.RequestServerPing(SecondAddress);
+	EXPECT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 1);
+	EXPECT_TRUE(Second.m_PingProbePending);
+}
+
+TEST_F(CServerBrowserStateTest, RefreshingServerListClearsProbeState)
+{
+	// 列表刷新会重建条目：失败标记和按 IP 的探测记录都不能残留，否则刷新后
+	// 同一服务器永远不再补测。
+	NETADDR Address;
+	ASSERT_FALSE(net_addr_from_str(&Address, "127.0.0.1:8303"));
+	AddServer("127.0.0.1:8303", "Server", "Kobra");
+	auto &Entry = CServerBrowserTestAccess::FirstEntry(m_Browser);
+	Entry.m_Info.m_Location = CServerInfo::LOC_CHINA;
+	Entry.m_Info.m_LatencyIsEstimated = true;
+	Entry.m_GotInfo = 1;
+	m_Browser.RequestServerPing(Address);
+	ASSERT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 1);
+	Entry.m_RequestTime = time_get();
+	CServerBrowserTestAccess::ReleaseQueuedRequest(m_Browser);
+	ASSERT_TRUE(Entry.m_PingProbeFailed);
+
+	CServerBrowserTestAccess::CleanUp(m_Browser);
+	AddServer("127.0.0.1:8303", "Server", "Kobra");
+	auto &Refreshed = CServerBrowserTestAccess::FirstEntry(m_Browser);
+	Refreshed.m_Info.m_Location = CServerInfo::LOC_CHINA;
+	Refreshed.m_Info.m_LatencyIsEstimated = true;
+	Refreshed.m_GotInfo = 1;
+	m_Browser.RequestServerPing(Address);
+	EXPECT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 1);
+}
+
+TEST_F(CServerBrowserStateTest, RequestServerPingAlsoMeasuresChineseNamedServerWithoutChinaLocation)
+{
+	// 国服也挂在 DDraceNetwork 社区下，master 的 location 可能不是 as:cn；
+	// 名称带 CHN 时同样要补测，与名称列短名使用同一判定口径。
+	AddServer("127.0.0.1:8303", "CHN1 北京", "Kobra");
+	auto &Entry = CServerBrowserTestAccess::FirstEntry(m_Browser);
+	Entry.m_Info.m_Location = CServerInfo::LOC_ASIA;
+	Entry.m_Info.m_LatencyIsEstimated = true;
+	Entry.m_GotInfo = 1;
+
+	NETADDR Address;
+	ASSERT_FALSE(net_addr_from_str(&Address, "127.0.0.1:8303"));
+	m_Browser.RequestServerPing(Address);
+	EXPECT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 1);
+}
+
+TEST(ServerBrowserLatencyDisplay, FormatsUsableValuesAndPlaceholder)
+{
+	char aBuffer[8];
+	CServerInfo::FormatLatency(aBuffer, 42);
+	EXPECT_STREQ(aBuffer, "42");
+	CServerInfo::FormatLatency(aBuffer, 199);
+	EXPECT_STREQ(aBuffer, "199");
+	CServerInfo::FormatLatency(aBuffer, CServerInfo::LATENCY_UNKNOWN);
+	EXPECT_STREQ(aBuffer, "--");
+	CServerInfo::FormatLatency(aBuffer, -1);
+	EXPECT_STREQ(aBuffer, "--");
+
+	EXPECT_TRUE(CServerInfo::IsUsableLatency(0));
+	EXPECT_TRUE(CServerInfo::IsUsableLatency(CServerInfo::LATENCY_UNKNOWN - 1));
+	EXPECT_FALSE(CServerInfo::IsUsableLatency(CServerInfo::LATENCY_UNKNOWN));
+	EXPECT_FALSE(CServerInfo::IsUsableLatency(-1));
 }
 
 TEST_F(CServerBrowserStateTest, PingUpdateRequestsResortOnlyWhenOrderDependsOnPing)
@@ -1215,6 +1327,23 @@ TEST(ServerBrowser, PingCache)
 	EXPECT_EQ(pPingCache->GetPing(&Localhost6, 1), 345);
 }
 
+namespace
+{
+	// 配置项在测试失败提前返回时也要还原，避免污染后续用例看到的“默认值”。
+	class CScopedPingCacheMaxAge
+	{
+		int m_Previous;
+
+	public:
+		explicit CScopedPingCacheMaxAge(int Value) : m_Previous(g_Config.m_QmPingCacheMaxAgeHours)
+		{
+			g_Config.m_QmPingCacheMaxAgeHours = Value;
+		}
+		~CScopedPingCacheMaxAge() { g_Config.m_QmPingCacheMaxAgeHours = m_Previous; }
+		void Set(int Value) { g_Config.m_QmPingCacheMaxAgeHours = Value; }
+	};
+}
+
 TEST(ServerBrowser, PingCacheIgnoresExpiredEntries)
 {
 	// 过期缓存值不能当实测延迟用：延迟列应回落到地区估算，而不是显示很久以前的测量值。
@@ -1237,8 +1366,7 @@ TEST(ServerBrowser, PingCacheIgnoresExpiredEntries)
 		ASSERT_EQ(sqlite3_exec(pDisk.get(), "INSERT OR REPLACE INTO server_pings (ip_address, ping, utc_timestamp) VALUES ('127.0.0.1', 171, datetime('now', '-30 days')), ('127.0.0.2', 123, datetime('now'))", nullptr, nullptr, nullptr), SQLITE_OK);
 	}
 
-	const int OldMaxAgeHours = g_Config.m_QmPingCacheMaxAgeHours;
-	g_Config.m_QmPingCacheMaxAgeHours = 72;
+	CScopedPingCacheMaxAge MaxAgeHours(72);
 
 	auto pPingCache = std::unique_ptr<IServerBrowserPingCache>(CreateServerBrowserPingCache(pConsole.get(), pStorage.get()));
 	pPingCache->Load();
@@ -1247,10 +1375,8 @@ TEST(ServerBrowser, PingCacheIgnoresExpiredEntries)
 	EXPECT_EQ(pPingCache->GetPing(&FreshAddr, 1), 123);
 
 	// 0 表示永不过期：旧记录重新可见。
-	g_Config.m_QmPingCacheMaxAgeHours = 0;
+	MaxAgeHours.Set(0);
 	EXPECT_EQ(pPingCache->GetPing(&OldAddr, 1), 171);
-
-	g_Config.m_QmPingCacheMaxAgeHours = OldMaxAgeHours;
 }
 
 TEST(ServerBrowser, PingCacheNeverExpiresWithDefaultConfig)

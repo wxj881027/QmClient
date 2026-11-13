@@ -588,20 +588,6 @@ static ColorRGBA PlayerBackgroundColor(bool Friend, bool Clan, bool Afk, bool In
 	return (Afk ? COLORS_AFK[i] : COLORS[i]).WithAlpha(0.3f + (Inside ? 0.15f : 0.0f) + (InSelectedServer ? 0.12f : 0.0f));
 }
 
-template<size_t N>
-static void FormatServerbrowserPing(char (&aBuffer)[N], const CServerInfo *pInfo)
-{
-	// QmClient: 延迟列始终显示数值。没有可用实测值时 m_Latency 是地区估算
-	// （同区 99 / 跨区 199），服务器行可见时会补测并用真实值替换；连地区都
-	// 未知时是 999（与测量超时同一哨兵），显示占位符而不是假装有数值。
-	if(pInfo->m_Latency >= CServerInfo::LATENCY_UNKNOWN)
-	{
-		str_copy(aBuffer, "--");
-		return;
-	}
-	str_format(aBuffer, sizeof(aBuffer), "%d", pInfo->m_Latency);
-}
-
 static ColorRGBA GetPingTextColor(int Latency)
 {
 	return color_cast<ColorRGBA>(ColorHSLA((300.0f - std::clamp(Latency, 0, 300)) / 1000.0f, 1.0f, 0.5f));
@@ -1890,7 +1876,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 
 		// QmClient: 可见行补测延迟。没有可用实测值的行在浏览时排队发一次 GETINFO，
 		// 几秒内把地区估算换成真实数值；结果写入 ping 缓存，之后打开直接显示。
-		// 同一行重复调用由 RequestServerPing 的队列/冷却判断去重。
+		// 同一行重复调用由 RequestServerPing 的队列/失败/同 IP 窗口判断去重。
 		ServerBrowser()->RequestServerPing(pItem->m_aAddresses[0]);
 
 		// Resolve row-only data after visibility is known. The list can contain
@@ -1911,11 +1897,9 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 
 		const float FontSize = SERVER_LIST_TEXT_SIZE;
 		char aTemp[64];
-		// 短名仅对国服生效（用户校准：默认开、只对国服）。命中判定：社区 id 含
-		// "chn"（覆盖 chn/ddnet-cn 等命名）**或名称含 "CHN"**——DDNet CHN 系
-		// 国服挂在 DDraceNetwork 社区（id="ddnet"）下，纯 id 门控会全部漏掉。
-		const bool ShortNameAllowed = (pCommunity != nullptr && str_find_nocase(pCommunity->Id(), "chn") != nullptr) ||
-					      str_find_nocase(pItem->m_aName, "CHN") != nullptr;
+		// 短名仅对国服生效（用户校准：默认开、只对国服）。国服判定与可见行
+		// 补测共用 ServerBrowser()->IsChineseServer，避免两处口径分叉。
+		const bool ShortNameAllowed = ServerBrowser()->IsChineseServer(*pItem);
 		char aDisplayServerName[sizeof(pItem->m_aName)];
 		char aParsedShortName[sizeof(pItem->m_aName)];
 		const char *pDisplayServerName = pItem->m_aName;
@@ -2234,9 +2218,9 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			else if(Id == COL_PING)
 			{
 				Button.VMargin(4.0f, &Button);
-				FormatServerbrowserPing(aTemp, pItem);
+				CServerInfo::FormatLatency(aTemp, pItem->m_Latency);
 				// 占位符 "--"（地区未知/测量超时）保持默认色，不按 999ms 涂红。
-				if(g_Config.m_UiColorizePing && pItem->m_Latency < CServerInfo::LATENCY_UNKNOWN)
+				if(g_Config.m_UiColorizePing && CServerInfo::IsUsableLatency(pItem->m_Latency))
 				{
 					TextRender()->TextColor(GetServerListPingColor(pItem, ServerBrowser()->GetCurrentClientLocation()));
 				}
@@ -3350,10 +3334,10 @@ void CMenus::RenderServerbrowserInfo(CUIRect View)
 		GameTypeLabelProps.SetColor(pSelectedServer->m_GametypeColor);
 	DrawInfoRow(apLabels[1], pSelectedServer->m_aGameType, GameTypeLabelProps);
 	SLabelProperties PingLabelProps;
-	if(g_Config.m_UiColorizePing && pSelectedServer->m_Latency < CServerInfo::LATENCY_UNKNOWN)
+	if(g_Config.m_UiColorizePing && CServerInfo::IsUsableLatency(pSelectedServer->m_Latency))
 		PingLabelProps.SetColor(GetServerListPingColor(pSelectedServer, ServerBrowser()->GetCurrentClientLocation()));
 	char aPingLabel[8];
-	FormatServerbrowserPing(aPingLabel, pSelectedServer);
+	CServerInfo::FormatLatency(aPingLabel, pSelectedServer->m_Latency);
 	DrawInfoRow(apLabels[2], aPingLabel, PingLabelProps);
 	View.HSplitTop(Metrics.m_SectionGap, nullptr, &View);
 
@@ -4190,7 +4174,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 
 					// server info text
 					char aLatency[16];
-					FormatServerbrowserPing(aLatency, Friend.ServerInfo());
+					CServerInfo::FormatLatency(aLatency, Friend.ServerInfo()->m_Latency);
 					if(aLatency[0] != '\0')
 						str_format(aBuf, sizeof(aBuf), "%s | %s | %s", Friend.ServerInfo()->m_aMap, Friend.ServerInfo()->m_aGameType, aLatency);
 					else
