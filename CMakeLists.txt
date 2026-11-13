@@ -5874,6 +5874,47 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     add_test(NAME qm-ui-popup-tests COMMAND $<TARGET_FILE:qm-ui-popup-tests>)
   endif()
 
+  # 客户端预测写回测试：预测世界与角色只存在于 game-client，testrunner 不链接
+  # 这组源码（服务端有同名 CGameWorld/CCharacter）。这里单独编一个最小目标。
+  if(CLIENT)
+    add_executable(qm-practice-predict-tests EXCLUDE_FROM_ALL
+      src/test/test.cpp
+      src/test/support/qm_exit_process_probe.cpp
+      src/test/support/qm_open_link_probe.cpp
+      src/test/integration/qmclient/client/qm_fast_practice_predict_publish_test.cpp
+      src/generated/client_data.cpp
+      src/game/client/prediction/entity.cpp
+      src/game/client/prediction/gameworld.cpp
+      src/game/client/prediction/entities/character.cpp
+      src/game/client/prediction/entities/door.cpp
+      src/game/client/prediction/entities/dragger.cpp
+      src/game/client/prediction/entities/laser.cpp
+      src/game/client/prediction/entities/pickup.cpp
+      src/game/client/prediction/entities/plasma.cpp
+      src/game/client/prediction/entities/projectile.cpp
+      src/game/client/projectile_data.cpp
+      src/game/client/laser_data.cpp
+      src/game/client/pickup_data.cpp
+      $<TARGET_OBJECTS:engine-shared>
+      $<TARGET_OBJECTS:game-shared>
+      $<TARGET_OBJECTS:rust-bridge-shared>
+      ${DEPS}
+    )
+    add_dependencies(qm-practice-predict-tests generate_protocol)
+    target_link_libraries(qm-practice-predict-tests ${PNG_LIBRARIES} ${WebP_LIBRARIES} ${GTEST_LIBRARIES} ${LIBS_SERVER})
+    target_include_directories(qm-practice-predict-tests SYSTEM PRIVATE ${GTEST_INCLUDE_DIRS} ${PNG_INCLUDE_DIRS} ${WebP_INCLUDE_DIRS})
+    target_compile_definitions(qm-practice-predict-tests PRIVATE DDNET_TEST_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+    if(MSVC)
+      target_compile_options(qm-practice-predict-tests PRIVATE /bigobj /utf-8)
+    endif()
+    if(TARGET_OS STREQUAL "windows")
+      target_link_libraries(qm-practice-predict-tests bcrypt winhttp ws2_32)
+      add_test(NAME qm-practice-predict-tests COMMAND $<TARGET_FILE:qm-practice-predict-tests>)
+    endif()
+    list(APPEND TARGETS_OWN qm-practice-predict-tests)
+    list(APPEND TARGETS_LINK qm-practice-predict-tests)
+  endif()
+
   # Windows 的独立音乐目标也必须进入日常 C++ gate，避免只有注册却从未执行。
   set(CXX_TEST_COMMANDS COMMAND $<TARGET_FILE:${TARGET_TESTRUNNER}> ${TESTRUNNER_ARGS})
   set(CXX_TEST_DEPENDS ${TARGET_TESTRUNNER})
@@ -5884,6 +5925,10 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   if(TARGET qm-ui-popup-tests)
     list(APPEND CXX_TEST_COMMANDS COMMAND $<TARGET_FILE:qm-ui-popup-tests> ${TESTRUNNER_ARGS})
     list(APPEND CXX_TEST_DEPENDS qm-ui-popup-tests)
+  endif()
+  if(TARGET qm-practice-predict-tests)
+    list(APPEND CXX_TEST_COMMANDS COMMAND $<TARGET_FILE:qm-practice-predict-tests> ${TESTRUNNER_ARGS})
+    list(APPEND CXX_TEST_DEPENDS qm-practice-predict-tests)
   endif()
   add_custom_target(run_cxx_tests
     ${CXX_TEST_COMMANDS}

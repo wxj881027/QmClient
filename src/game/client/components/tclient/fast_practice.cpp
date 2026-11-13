@@ -16,6 +16,7 @@
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/practice_branch_state.h>
 #include <game/client/components/qmclient/practice_cursor.h>
+#include <game/client/components/qmclient/practice_predict_publish.h>
 #include <game/client/components/qmclient/practice_rescue.h>
 #include <game/client/components/qmclient/world_event_gate.h>
 #include <game/client/gameclient.h>
@@ -37,6 +38,26 @@
 
 namespace
 {
+	// 预测写回的 CGameClient 适配器：模板只认字段槽位，不依赖客户端类型。
+	class CPracticePredictStateSink
+	{
+	public:
+		explicit CPracticePredictStateSink(CGameClient *pGameClient) :
+			m_pGameClient(pGameClient) {}
+
+		CGameWorld &PredictedWorld() { return m_pGameClient->m_PredictedWorld; }
+		CGameWorld &PrevPredictedWorld() { return m_pGameClient->m_PrevPredictedWorld; }
+		CCharacterCore &PredictedChar() { return m_pGameClient->m_PredictedChar; }
+		CCharacterCore &PredictedPrevChar() { return m_pGameClient->m_PredictedPrevChar; }
+		CCharacterCore &ClientPredicted(int ClientId) { return m_pGameClient->m_aClients[ClientId].m_Predicted; }
+		CCharacterCore &ClientPrevPredicted(int ClientId) { return m_pGameClient->m_aClients[ClientId].m_PrevPredicted; }
+		vec2 &ClientPredPos(int ClientId, int Slot) { return m_pGameClient->m_aClients[ClientId].m_aPredPos[Slot]; }
+		int &ClientPredTick(int ClientId, int Slot) { return m_pGameClient->m_aClients[ClientId].m_aPredTick[Slot]; }
+
+	private:
+		CGameClient *m_pGameClient;
+	};
+
 	// 两个预测循环共用的分身锤瞄准：让分身朝向本体所在方向挥锤。
 	void ApplyDummyHammerAim(CCharacter *pLocalChar, CCharacter *pDummyChar, CNetObj_PlayerInput &DummyInput)
 	{
@@ -1422,80 +1443,26 @@ void CFastPractice::PublishPracticeWorldState()
 
 void CFastPractice::PublishPracticeWorldSnapshot(CGameWorld &World, int LocalClientId, int DummyClientId)
 {
-	GameClient()->m_PredictedWorld.CopyWorldClean(&World);
-	GameClient()->m_PrevPredictedWorld.CopyWorldClean(&World);
-	if(CCharacter *pLocalChar = World.GetCharacterById(LocalClientId))
-	{
-		GameClient()->m_PredictedChar = pLocalChar->GetCore();
-		GameClient()->m_PredictedPrevChar = pLocalChar->GetCore();
-		GameClient()->m_aClients[LocalClientId].m_Predicted = pLocalChar->GetCore();
-		GameClient()->m_aClients[LocalClientId].m_PrevPredicted = pLocalChar->GetCore();
-	}
-	if(DummyClientId >= 0)
-	{
-		if(CCharacter *pDummyChar = World.GetCharacterById(DummyClientId))
-		{
-			GameClient()->m_aClients[DummyClientId].m_Predicted = pDummyChar->GetCore();
-			GameClient()->m_aClients[DummyClientId].m_PrevPredicted = pDummyChar->GetCore();
-		}
-	}
-	GameClient()->m_PredictedTick = World.GameTick();
+	CPracticePredictStateSink Sink(GameClient());
+	QmPublishPracticeWorldSnapshot(Sink, World, LocalClientId, DummyClientId, GameClient()->m_PredictedTick);
 }
 
 void CFastPractice::PublishPracticePredictionBeforeStep(CGameWorld &World, const SPracticePredictTickPlan &Plan, int Tick, bool CopyWorldToPredicted, int LocalClientId)
 {
-	const SPracticePublishActions Actions = QmResolvePracticePublishActions(Plan, Tick);
-	if(Actions.m_CopyPrevWorld)
-	{
-		GameClient()->m_PrevPredictedWorld.CopyWorldClean(&World);
-		if(CopyWorldToPredicted)
-			GameClient()->m_PredictedWorld.CopyWorldClean(&World);
-	}
-	if(Actions.m_PublishPrevRole)
-	{
-		if(CCharacter *pLocalChar = World.GetCharacterById(LocalClientId))
-		{
-			GameClient()->m_PredictedPrevChar = pLocalChar->GetCore();
-			GameClient()->m_aClients[LocalClientId].m_PrevPredicted = pLocalChar->GetCore();
-		}
-	}
-	if(Actions.m_PublishPrevOthers)
-	{
-		for(int i = 0; i < MAX_CLIENTS; i++)
-			if(CCharacter *pChar = World.GetCharacterById(i))
-				GameClient()->m_aClients[i].m_PrevPredicted = pChar->GetCore();
-	}
+	CPracticePredictStateSink Sink(GameClient());
+	QmPublishPracticePredictionBeforeStep(Sink, World, Plan, Tick, CopyWorldToPredicted, LocalClientId);
 }
 
 void CFastPractice::PublishPracticePredictionAfterStep(CGameWorld &World, const SPracticePredictTickPlan &Plan, int Tick, int LocalClientId)
 {
-	const SPracticePublishActions Actions = QmResolvePracticePublishActions(Plan, Tick);
-	if(Actions.m_PublishPredRole)
-	{
-		if(CCharacter *pLocalChar = World.GetCharacterById(LocalClientId))
-		{
-			GameClient()->m_PredictedChar = pLocalChar->GetCore();
-			GameClient()->m_aClients[LocalClientId].m_Predicted = pLocalChar->GetCore();
-		}
-	}
-	if(Actions.m_PublishPredOthers)
-	{
-		for(int i = 0; i < MAX_CLIENTS; i++)
-			if(CCharacter *pChar = World.GetCharacterById(i))
-				GameClient()->m_aClients[i].m_Predicted = pChar->GetCore();
-	}
+	CPracticePredictStateSink Sink(GameClient());
+	QmPublishPracticePredictionAfterStep(Sink, World, Plan, Tick, LocalClientId);
 }
 
 void CFastPractice::PublishPracticePredictedPositions(CGameWorld &World, int Tick)
 {
-	// 200 tick 环形缓冲供延迟补偿与实体位置回查读取，两条循环必须写同一索引。
-	const int Slot = Tick % 200;
-	for(int i = 0; i < MAX_CLIENTS; i++)
-		if(CCharacter *pChar = World.GetCharacterById(i))
-		{
-			GameClient()->m_aClients[i].m_aPredPos[Slot] = pChar->Core()->m_Pos;
-			GameClient()->m_aClients[i].m_aPredTick[Slot] = Tick;
-		}
+	CPracticePredictStateSink Sink(GameClient());
+	QmPublishPracticePredictedPositions(Sink, World, Tick);
 }
 
 bool CFastPractice::PublishPracticeNewPredictedFeedback(int Slot, CCharacter *pChar, int Tick, int MaxTick)
