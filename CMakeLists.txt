@@ -3749,6 +3749,7 @@ if(CLIENT)
     components/qmclient/solo_split_state.h
     components/qmclient/rank_view_timeline.h
     components/qmclient/rank_ghost.cpp
+    components/qmclient/rank_ghost_view.cpp
     components/qmclient/rank_ghost.h
     components/qmclient/local_world.cpp
     components/qmclient/local_world.h
