@@ -157,7 +157,11 @@ void CMotd::OnMessage(int MsgType, void *pRawMsg)
 					str_copy(Server.m_aGameType, pEntry->m_Info.m_aGameType);
 			}
 		}
-		str_copy(Server.m_aMap, Client()->GetCurrentMap());
+		// 公告可能在地图下载期间到达；下载中的目标地图比上一张地图的名字可靠。
+		const char *pMap = Client()->MapDownloadName();
+		if(pMap[0] == '\0')
+			pMap = Client()->GetCurrentMap();
+		str_copy(Server.m_aMap, pMap);
 		auto &DifficultyCatalog = GameClient()->m_Menus.MapDifficultyCatalog();
 		if(DifficultyCatalog.RecordAxiomMotd(Server, m_aServerMotd))
 		{
