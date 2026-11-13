@@ -78,8 +78,7 @@ namespace
 				if(m_ProxyRoute)
 					pResult->Proxy("http://127.0.0.1:7890");
 				m_vRequests.push_back(pResult);
-				return pResult;
-			}, [this] { return m_Now; }, Tiers, {}, std::move(SaveWriter)));
+				return pResult; }, [this] { return m_Now; }, Tiers, {}, std::move(SaveWriter)));
 		}
 		bool Until(const std::function<bool()> &Condition)
 		{
