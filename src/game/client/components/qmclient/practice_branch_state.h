@@ -6,6 +6,7 @@
 
 #include <generated/protocol.h>
 
+#include <game/client/components/qmclient/input_state.h>
 #include <game/client/components/qmclient/world_event_gate.h>
 #include <game/client/prediction/gameworld.h>
 
@@ -20,10 +21,7 @@
 // 练习期间一直按住的键当成一次新的按下（退出或重开落地时立刻挥锤、开枪）。
 inline int QmPracticeReleasedFireState(int FireState)
 {
-	FireState &= INPUT_STATE_MASK;
-	if((FireState & 1) != 0)
-		FireState = (FireState + 1) & INPUT_STATE_MASK;
-	return FireState;
+	return QmReleasedFireState(FireState) & INPUT_STATE_MASK;
 }
 
 // 压制动作请求：只改开火位图与换武器请求，不动瞄准、移动或钩子。

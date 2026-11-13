@@ -200,6 +200,72 @@ TEST_F(CPracticePredictPublishRuntime, CopyToPredictedOnlyHappensAtTheFinalTick)
 	EXPECT_EQ(Sink.m_PrevPredictedWorld.GameTick(), 104);
 }
 
+TEST_F(CPracticePredictPublishRuntime, SnapshotWithoutLocalCharacterStillPublishesWorld)
+{
+	// 重进后的第一帧本地角色可能尚未解析出来；世界快照照常发布，
+	// 本体核心保持旧值，不能把空指针写成零位置。
+	CTestPracticePredictSink Sink;
+	Sink.m_PredictedChar.m_Pos = vec2(11.0f, 22.0f);
+	Sink.m_PredictedPrevChar.m_Pos = vec2(33.0f, 44.0f);
+
+	QmPublishPracticeWorldSnapshot(Sink, m_Source, 99, 7, Sink.m_PredictedTick);
+
+	EXPECT_EQ(Sink.m_PredictedTick, 104);
+	EXPECT_EQ(Sink.m_PredictedWorld.GameTick(), 104);
+	EXPECT_FLOAT_EQ(Sink.m_PredictedChar.m_Pos.x, 11.0f);
+	EXPECT_FLOAT_EQ(Sink.m_PredictedPrevChar.m_Pos.x, 33.0f);
+	// 分身角色仍在世界里，核心正常写回。
+	EXPECT_FLOAT_EQ(Sink.m_aPredicted[7].m_Pos.x, 640.0f);
+}
+
+TEST_F(CPracticePredictPublishRuntime, SnapshotSkipsAMissingDummyCharacter)
+{
+	CTestPracticePredictSink Sink;
+	Sink.m_aPredicted[9].m_Pos = vec2(1.0f, 2.0f);
+	Sink.m_aPrevPredicted[9].m_Pos = vec2(1.0f, 2.0f);
+
+	// 分身连接已建立但角色实体不在世界（晚接入的空窗期）。
+	QmPublishPracticeWorldSnapshot(Sink, m_Source, 4, 9, Sink.m_PredictedTick);
+
+	EXPECT_FLOAT_EQ(Sink.m_aPredicted[4].m_Pos.x, 320.0f);
+	EXPECT_FLOAT_EQ(Sink.m_aPredicted[9].m_Pos.x, 1.0f);
+	EXPECT_FLOAT_EQ(Sink.m_aPrevPredicted[9].m_Pos.x, 1.0f);
+}
+
+TEST_F(CPracticePredictPublishRuntime, MissingLocalCharacterSkipsRoleCoresButPublishesOthers)
+{
+	CTestPracticePredictSink Sink;
+	Sink.m_PredictedPrevChar.m_Pos = vec2(11.0f, 22.0f);
+	Sink.m_PredictedChar.m_Pos = vec2(33.0f, 44.0f);
+	const SPracticePredictTickPlan Plan = QmBuildPracticePredictTickPlan(100, 104, 0, true);
+
+	QmPublishPracticePredictionBeforeStep(Sink, m_Source, Plan, 104, false, 99);
+	MoveCharacter(m_pLocalChar, vec2(400.0f, 200.0f));
+	MoveCharacter(m_pDummyChar, vec2(700.0f, 300.0f));
+	QmPublishPracticePredictionAfterStep(Sink, m_Source, Plan, 104, 99);
+
+	// 本体核心不写；其他玩家核心每个 tick 都按世界实际角色发布。
+	EXPECT_FLOAT_EQ(Sink.m_PredictedPrevChar.m_Pos.x, 11.0f);
+	EXPECT_FLOAT_EQ(Sink.m_PredictedChar.m_Pos.x, 33.0f);
+	EXPECT_FLOAT_EQ(Sink.m_aPrevPredicted[4].m_Pos.x, 320.0f);
+	EXPECT_FLOAT_EQ(Sink.m_aPredicted[4].m_Pos.x, 400.0f);
+	EXPECT_FLOAT_EQ(Sink.m_aPredicted[7].m_Pos.x, 700.0f);
+}
+
+TEST_F(CPracticePredictPublishRuntime, IntermediateStepDoesNotPublishCurrentCores)
+{
+	CTestPracticePredictSink Sink;
+	Sink.m_PredictedChar.m_Pos = vec2(11.0f, 22.0f);
+	Sink.m_aPredicted[4].m_Pos = vec2(33.0f, 44.0f);
+	const SPracticePredictTickPlan Plan = QmBuildPracticePredictTickPlan(100, 104, 0, true);
+
+	// 追赶循环的中间 tick 只推进世界；当前帧核心留到末帧统一发布。
+	QmPublishPracticePredictionAfterStep(Sink, m_Source, Plan, 101, 4);
+
+	EXPECT_FLOAT_EQ(Sink.m_PredictedChar.m_Pos.x, 11.0f);
+	EXPECT_FLOAT_EQ(Sink.m_aPredicted[4].m_Pos.x, 33.0f);
+}
+
 TEST_F(CPracticePredictPublishRuntime, PositionsRingUsesTheTickModuloSlot)
 {
 	CTestPracticePredictSink Sink;

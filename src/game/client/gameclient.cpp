@@ -32,6 +32,7 @@
 #include "components/nameplates.h"
 #include "components/particles.h"
 #include "components/players.h"
+#include "components/qmclient/dummy_input.h"
 #include "components/qmclient/ime_gradient_probe.h"
 #include "components/qmclient/jelly_tee.h"
 #include "components/qmclient/modes.h"
@@ -98,8 +99,6 @@
 
 namespace
 {
-	constexpr int DUMMY_HAMMER_RESENDS = 2;
-
 	void NormalizeSixupSkinName(char *pSkinName, int SkinNameSize)
 	{
 		if(!CSkin::IsValidName(pSkinName))
@@ -1595,15 +1594,13 @@ void CGameClient::OnInput(const IInput::CEvent &Event)
 
 void CGameClient::OnDummySwap()
 {
-	if(g_Config.m_ClDummyResetOnSwitch)
+	const int ResetSlot = QmDummyResetSlot(g_Config.m_ClDummyResetOnSwitch, g_Config.m_ClDummy);
+	if(ResetSlot >= 0)
 	{
-		int PlayerOrDummy = (g_Config.m_ClDummyResetOnSwitch == 2) ? g_Config.m_ClDummy : (!g_Config.m_ClDummy);
-		m_Controls.ResetInput(PlayerOrDummy);
-		m_Controls.m_aInputData[PlayerOrDummy].m_Hook = 0;
+		m_Controls.ResetInput(ResetSlot);
+		m_Controls.m_aInputData[ResetSlot].m_Hook = 0;
 	}
-	const int PrevDummyFire = m_DummyInput.m_Fire;
-	m_DummyInput = m_Controls.m_aInputData[!g_Config.m_ClDummy];
-	m_Controls.m_aInputData[g_Config.m_ClDummy].m_Fire = PrevDummyFire;
+	QmApplyDummySwap(m_Controls.m_aInputData[!g_Config.m_ClDummy], m_DummyInput, m_Controls.m_aInputData[g_Config.m_ClDummy]);
 	m_IsDummySwapping = 1;
 }
 
@@ -1624,7 +1621,7 @@ int CGameClient::OnSnapInput(int *pData, bool Dummy, bool Force)
 		m_DummyHammerResends = 0;
 		if(m_DummyFire != 0)
 		{
-			m_DummyInput.m_Fire = (m_HammerInput.m_Fire + 1) & ~1;
+			m_DummyInput.m_Fire = QmReleasedFireState(m_HammerInput.m_Fire);
 			m_DummyFire = 0;
 		}
 
@@ -1637,22 +1634,19 @@ int CGameClient::OnSnapInput(int *pData, bool Dummy, bool Force)
 		return sizeof(m_DummyInput);
 	}
 
-	if(m_DummyFire % 25 != 0)
-	{
-		m_DummyFire++;
-		// 重复发送最新的 Fire counter，避免单个非 Vital 输入包丢失导致吞锤。
-		if(m_DummyHammerResends > 0)
-		{
-			m_DummyHammerResends--;
-			mem_copy(pData, &m_HammerInput, sizeof(m_HammerInput));
-			return sizeof(m_HammerInput);
-		}
+	const SDummyHammerSnapDecision HammerSnap = QmResolveDummyHammerSnap(m_DummyFire, m_DummyHammerResends);
+	m_DummyFire = HammerSnap.m_DummyFire;
+	m_DummyHammerResends = HammerSnap.m_DummyHammerResends;
+	if(HammerSnap.m_Action == EDummyHammerSnapAction::NONE)
 		return 0;
+	if(HammerSnap.m_Action == EDummyHammerSnapAction::RESEND)
+	{
+		// 重复发送最新的 Fire counter，避免单个非 Vital 输入包丢失导致吞锤。
+		mem_copy(pData, &m_HammerInput, sizeof(m_HammerInput));
+		return sizeof(m_HammerInput);
 	}
-	m_DummyFire++;
 
-	m_HammerInput.m_Fire = (m_HammerInput.m_Fire + 1) | 1;
-	m_DummyHammerResends = DUMMY_HAMMER_RESENDS;
+	m_HammerInput.m_Fire = QmPressedFireState(m_HammerInput.m_Fire);
 	m_HammerInput.m_WantedWeapon = WEAPON_HAMMER + 1;
 	if(!g_Config.m_ClDummyRestoreWeapon)
 		m_DummyInput.m_WantedWeapon = WEAPON_HAMMER + 1;

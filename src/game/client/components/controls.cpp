@@ -13,6 +13,7 @@
 #include <game/client/components/camera.h>
 #include <game/client/components/chat.h>
 #include <game/client/components/menus.h>
+#include <game/client/components/qmclient/input_state.h>
 #include <game/client/components/scoreboard.h>
 #include <game/client/gameclient.h>
 #include <game/collision.h>
@@ -87,9 +88,7 @@ void CControls::ConKeyInputCounter(IConsole::IResult *pResult, void *pUserData)
 		return;
 
 	int *pVariable = pState->m_apVariables[g_Config.m_ClDummy];
-	if(((*pVariable) & 1) != pResult->GetInteger(0))
-		(*pVariable)++;
-	*pVariable &= INPUT_STATE_MASK;
+	*pVariable = QmInputCounterAfterEvent(*pVariable, pResult->GetInteger(0));
 }
 
 // NOLINTNEXTLINE(misc-use-internal-linkage)

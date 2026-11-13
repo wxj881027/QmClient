@@ -4847,7 +4847,6 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/integration/qmclient/client/custom_community_info_test.cpp
     src/test/integration/qmclient/client/qm_sponsors_draft_test.cpp
     src/test/integration/qmclient/client/rank_view_timeline_test.cpp
-    src/test/integration/qmclient/client/qm_fast_practice_predict_loop_test.cpp
     src/test/integration/qmclient/client/qm_rank_demo_cache_test.cpp
     src/test/integration/qmclient/music/netease_shared_memory_readonly_test.cpp
     src/test/integration/qmclient/client/qm_screenshot_image_job_test.cpp
@@ -5054,7 +5053,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_fast_practice_cursor_test.cpp
     src/test/unit/qmclient/client/qm_fast_practice_rescue_test.cpp
     src/test/unit/qmclient/client/qm_fast_practice_branch_state_test.cpp
-    src/test/unit/qmclient/client/qm_practice_predict_plan_test.cpp
+    src/test/unit/qmclient/client/qm_dummy_input_test.cpp
     src/test/unit/qmclient/client/qm_practice_input_lock_test.cpp
     src/test/unit/qmclient/client/qm_replay_session_test.cpp
     src/test/unit/qmclient/client/qm_practice_recorder_test.cpp
@@ -5881,8 +5880,13 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/test.cpp
       src/test/support/qm_exit_process_probe.cpp
       src/test/support/qm_open_link_probe.cpp
+      src/test/integration/qmclient/client/qm_fast_practice_predict_loop_test.cpp
       src/test/integration/qmclient/client/qm_fast_practice_predict_publish_test.cpp
+      src/test/unit/qmclient/client/qm_practice_predict_plan_test.cpp
       src/generated/client_data.cpp
+      # 同时列出生成头，CMake 才会为编译加上生成规则的顺序依赖；
+      # 缺少客户端数据头时增量构建会先编译 client_data.cpp 而失败。
+      src/generated/client_data.h
       src/game/client/prediction/entity.cpp
       src/game/client/prediction/gameworld.cpp
       src/game/client/prediction/entities/character.cpp
