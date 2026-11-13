@@ -291,6 +291,7 @@ public:
 	int LoadingProgression() const override;
 	uint64_t FriendListRevision() const override { return m_FriendListRevision; }
 	int GetCurrentClientLocation() const override { return DetermineOwnLocation(); }
+	void RequestServerPing(const NETADDR &Addr) override;
 	void RequestResort() { m_NeedResort = true; }
 
 	int NumServers() const override { return m_vpServerlist.size(); }
@@ -380,6 +381,10 @@ private:
 	std::vector<CServerEntry *> m_vpServerlist;
 	std::vector<int> m_vSortedServerlist;
 	std::unordered_map<NETADDR, int> m_ByAddr;
+	// 可见行补测延迟：IP（去端口）→ 最近一次探测时间。同一 IP 的多个端口实例
+	// 共用一个测量结果；冷却期同时用于并发去重和失败重测节流。跨列表刷新保留，
+	// 避免服务器列表频繁更新时对同一 IP 重复探测。
+	std::unordered_map<NETADDR, int64_t> m_PingRequestTimeByIp;
 	std::unordered_map<std::string, int> m_QmClientServerCounts;
 
 	std::vector<CCommunity> m_vCommunities;

@@ -549,6 +549,14 @@ public:
 	{
 		Browser.m_MapDifficultyStarsFunction = std::move(Function);
 	}
+	static IServerBrowser::CServerEntry &FirstEntry(CServerBrowser &Browser) { return *Browser.m_vpServerlist[0]; }
+	static IServerBrowser::CServerEntry &Entry(CServerBrowser &Browser, int Index) { return *Browser.m_vpServerlist[Index]; }
+	static int NumQueuedRequests(const CServerBrowser &Browser) { return Browser.m_NumRequests; }
+	static void ReleaseQueuedRequest(CServerBrowser &Browser)
+	{
+		if(Browser.m_pFirstReqServer != nullptr)
+			Browser.RemoveRequest(Browser.m_pFirstReqServer);
+	}
 };
 
 namespace
@@ -898,6 +906,92 @@ TEST_F(CServerBrowserStateTest, FriendListRefreshesLatencyAfterPingUpdate)
 	ASSERT_EQ(List.Groups()[Default].size(), 1u);
 	EXPECT_NE(OldLatency, 42);
 	EXPECT_EQ(List.Groups()[Default][0].ServerInfo()->m_Latency, 42);
+}
+
+TEST_F(CServerBrowserStateTest, RequestServerPingQueuesOnceAndRespectsFailureCooldown)
+{
+	NETADDR Address;
+	ASSERT_FALSE(net_addr_from_str(&Address, "127.0.0.1:8303"));
+	AddServer("127.0.0.1:8303", "Server", "Kobra");
+	auto &Entry = CServerBrowserTestAccess::FirstEntry(m_Browser);
+	Entry.m_Info.m_Location = CServerInfo::LOC_CHINA;
+	Entry.m_Info.m_LatencyIsEstimated = true;
+	Entry.m_GotInfo = 1;
+
+	m_Browser.RequestServerPing(Address);
+	EXPECT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 1);
+	EXPECT_TRUE(Entry.m_RequestQueued);
+	EXPECT_TRUE(Entry.m_RequestIgnoreInfo);
+	EXPECT_EQ(Entry.m_RequestTime, 0);
+
+	// 重复调用（同一行每帧渲染）不重复入队。
+	m_Browser.RequestServerPing(Address);
+	EXPECT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 1);
+
+	// 超时释放后进入失败冷却，不会立刻重新入队。
+	CServerBrowserTestAccess::ReleaseQueuedRequest(m_Browser);
+	ASSERT_FALSE(Entry.m_RequestQueued);
+	m_Browser.RequestServerPing(Address);
+	EXPECT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 0);
+
+	// 已有可用实测值后不再补测。
+	Entry.m_Info.m_LatencyIsEstimated = false;
+	Entry.m_Info.m_Latency = 42;
+	m_Browser.RequestServerPing(Address);
+	EXPECT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 0);
+}
+
+TEST_F(CServerBrowserStateTest, RequestServerPingOnlyMeasuresChinaServers)
+{
+	AddServer("127.0.0.1:8303", "Foreign", "Kobra");
+	auto &Entry = CServerBrowserTestAccess::FirstEntry(m_Browser);
+	Entry.m_Info.m_Location = CServerInfo::LOC_EUROPE;
+	Entry.m_Info.m_LatencyIsEstimated = true;
+	Entry.m_GotInfo = 1;
+
+	NETADDR Address;
+	ASSERT_FALSE(net_addr_from_str(&Address, "127.0.0.1:8303"));
+	m_Browser.RequestServerPing(Address);
+	EXPECT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 0);
+}
+
+TEST_F(CServerBrowserStateTest, RequestServerPingDeduplicatesByIpAddress)
+{
+	// 同一 IP 上的两个端口实例：只排队一个探测请求。
+	AddServer("127.0.0.1:8303", "First", "Kobra");
+	AddServer("127.0.0.1:8304", "Second", "Kobra");
+	for(int Index = 0; Index < 2; Index++)
+	{
+		auto &Entry = CServerBrowserTestAccess::Entry(m_Browser, Index);
+		Entry.m_Info.m_Location = CServerInfo::LOC_CHINA;
+		Entry.m_Info.m_LatencyIsEstimated = true;
+		Entry.m_GotInfo = 1;
+	}
+
+	NETADDR FirstAddress;
+	ASSERT_FALSE(net_addr_from_str(&FirstAddress, "127.0.0.1:8303"));
+	NETADDR SecondAddress;
+	ASSERT_FALSE(net_addr_from_str(&SecondAddress, "127.0.0.1:8304"));
+	m_Browser.RequestServerPing(FirstAddress);
+	EXPECT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 1);
+	m_Browser.RequestServerPing(SecondAddress);
+	EXPECT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 1);
+}
+
+TEST_F(CServerBrowserStateTest, PingUpdateRequestsResortOnlyWhenOrderDependsOnPing)
+{
+	AddServer("127.0.0.1:8303", "Server", "Kobra");
+	NETADDR Address;
+	ASSERT_FALSE(net_addr_from_str(&Address, "127.0.0.1:8303"));
+	CServerBrowserTestAccess::SetPingCache(m_Browser, new CTestPingCache());
+
+	g_Config.m_BrSort = IServerBrowser::SORT_NAME;
+	CServerBrowserTestAccess::SetLatency(m_Browser, Address, 42);
+	EXPECT_FALSE(CServerBrowserTestAccess::NeedsResort(m_Browser));
+
+	g_Config.m_BrSort = IServerBrowser::SORT_PING;
+	CServerBrowserTestAccess::SetLatency(m_Browser, Address, 43);
+	EXPECT_TRUE(CServerBrowserTestAccess::NeedsResort(m_Browser));
 }
 
 TEST_F(CServerBrowserStateTest, FriendListIgnoreClanMovesMatchedNameOutOfOffline)

@@ -115,7 +115,8 @@ public:
 	bool m_LatencyIsEstimated;
 	int m_Latency; // in ms
 	// 延迟测量上限：达到该值表示这次测量触到 1 秒超时，不视为可用延迟。
-	// 浏览器只在存在可用实测值时才显示数字，否则显示地区名（见 FormatServerbrowserPing）。
+	// 延迟列对无可用实测值的服务器显示地区估算值，估算不可得时显示占位符
+	// （见 FormatServerbrowserPing）。
 	static constexpr int LATENCY_UNKNOWN = 999;
 	ERankState m_HasRank;
 	char m_aGameType[16];
@@ -338,6 +339,9 @@ public:
 		int64_t m_RequestTime;
 		bool m_RequestIgnoreInfo;
 		int m_GotInfo;
+		// QmClient: 可见行补测延迟用。表示条目已在请求队列中（含尚未发出的），
+		// 避免同一服务器重复入队。按 IP 的冷却/去重记录在浏览器上。
+		bool m_RequestQueued = false;
 		bool m_FriendStateValid = false;
 		uint64_t m_FriendStateRevision = 0;
 		bool m_FriendStateIgnoreClan = false;
@@ -371,6 +375,9 @@ public:
 	// QmClient: 当前客户端自身的位置分类（br_location 或 geoip 推断）。
 	// 与服务器 m_Location 同一套枚举；用于「同地区服务器延迟列显示绿色」。
 	virtual int GetCurrentClientLocation() const = 0;
+	// QmClient: 给单个服务器补测一次延迟（GETINFO 只测 ping，不回写服务器信息）。
+	// 已有可用实测值、已在请求队列中或仍在失败冷却期时忽略。
+	virtual void RequestServerPing(const NETADDR &Addr) = 0;
 
 	virtual int NumServers() const = 0;
 	virtual const CServerInfo *Get(int Index) const = 0;

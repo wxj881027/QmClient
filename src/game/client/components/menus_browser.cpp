@@ -591,28 +591,15 @@ static ColorRGBA PlayerBackgroundColor(bool Friend, bool Clan, bool Afk, bool In
 template<size_t N>
 static void FormatServerbrowserPing(char (&aBuffer)[N], const CServerInfo *pInfo)
 {
-	if(!pInfo->m_LatencyIsEstimated)
+	// QmClient: 延迟列始终显示数值。没有可用实测值时 m_Latency 是地区估算
+	// （同区 99 / 跨区 199），服务器行可见时会补测并用真实值替换；连地区都
+	// 未知时是 999（与测量超时同一哨兵），显示占位符而不是假装有数值。
+	if(pInfo->m_Latency >= CServerInfo::LATENCY_UNKNOWN)
 	{
-		str_format(aBuffer, sizeof(aBuffer), "%d", pInfo->m_Latency);
+		str_copy(aBuffer, "--");
 		return;
 	}
-	static const char *const LOCATION_NAMES[CServerInfo::NUM_LOCS] = {
-		"", // LOC_UNKNOWN
-		Localizable("AFR"), // LOC_AFRICA
-		Localizable("ASI"), // LOC_ASIA
-		Localizable("AUS"), // LOC_AUSTRALIA
-		Localizable("EUR"), // LOC_EUROPE
-		Localizable("NA"), // LOC_NORTH_AMERICA
-		Localizable("SA"), // LOC_SOUTH_AMERICA
-		Localizable("CHN"), // LOC_CHINA
-	};
-	if(pInfo->m_Location < 0 || pInfo->m_Location >= CServerInfo::NUM_LOCS)
-	{
-		log_warn("serverbrowser", "Invalid estimated ping location %d", pInfo->m_Location);
-		str_copy(aBuffer, Localize(LOCATION_NAMES[CServerInfo::LOC_UNKNOWN]));
-		return;
-	}
-	str_copy(aBuffer, Localize(LOCATION_NAMES[pInfo->m_Location]));
+	str_format(aBuffer, sizeof(aBuffer), "%d", pInfo->m_Latency);
 }
 
 static ColorRGBA GetPingTextColor(int Latency)
@@ -1901,6 +1888,11 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			continue;
 		}
 
+		// QmClient: 可见行补测延迟。没有可用实测值的行在浏览时排队发一次 GETINFO，
+		// 几秒内把地区估算换成真实数值；结果写入 ping 缓存，之后打开直接显示。
+		// 同一行重复调用由 RequestServerPing 的队列/冷却判断去重。
+		ServerBrowser()->RequestServerPing(pItem->m_aAddresses[0]);
+
 		// Resolve row-only data after visibility is known. The list can contain
 		// hundreds of servers while only a few rows are on screen; doing these
 		// lookups and allocating the streamed UI element for every hidden row
@@ -2243,7 +2235,8 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			{
 				Button.VMargin(4.0f, &Button);
 				FormatServerbrowserPing(aTemp, pItem);
-				if(g_Config.m_UiColorizePing)
+				// 占位符 "--"（地区未知/测量超时）保持默认色，不按 999ms 涂红。
+				if(g_Config.m_UiColorizePing && pItem->m_Latency < CServerInfo::LATENCY_UNKNOWN)
 				{
 					TextRender()->TextColor(GetServerListPingColor(pItem, ServerBrowser()->GetCurrentClientLocation()));
 				}
@@ -3357,7 +3350,7 @@ void CMenus::RenderServerbrowserInfo(CUIRect View)
 		GameTypeLabelProps.SetColor(pSelectedServer->m_GametypeColor);
 	DrawInfoRow(apLabels[1], pSelectedServer->m_aGameType, GameTypeLabelProps);
 	SLabelProperties PingLabelProps;
-	if(g_Config.m_UiColorizePing)
+	if(g_Config.m_UiColorizePing && pSelectedServer->m_Latency < CServerInfo::LATENCY_UNKNOWN)
 		PingLabelProps.SetColor(GetServerListPingColor(pSelectedServer, ServerBrowser()->GetCurrentClientLocation()));
 	char aPingLabel[8];
 	FormatServerbrowserPing(aPingLabel, pSelectedServer);

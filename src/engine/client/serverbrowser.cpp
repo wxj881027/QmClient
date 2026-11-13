@@ -809,6 +809,7 @@ void CServerBrowser::Sort()
 
 void CServerBrowser::RemoveRequest(CServerEntry *pEntry)
 {
+	pEntry->m_RequestQueued = false;
 	if(pEntry->m_pPrevReq || pEntry->m_pNextReq || m_pFirstReqServer == pEntry)
 	{
 		if(pEntry->m_pPrevReq)
@@ -839,7 +840,10 @@ CServerBrowser::CServerEntry *CServerBrowser::Find(const NETADDR &Addr)
 
 void CServerBrowser::QueueRequest(CServerEntry *pEntry)
 {
+	if(pEntry->m_RequestQueued)
+		return; // 已在队列中：重复入队会破坏请求链表
 	// add it to the list of servers that we should request info from
+	pEntry->m_RequestQueued = true;
 	pEntry->m_pPrevReq = m_pLastReqServer;
 	if(m_pLastReqServer)
 		m_pLastReqServer->m_pNextReq = pEntry;
@@ -976,6 +980,7 @@ void CServerBrowser::SetLatency(NETADDR Addr, int Latency)
 	}
 	m_pPingCache->CachePing(Addr, Latency);
 
+	bool LatencyChanged = false;
 	Addr.port = 0;
 	for(CServerEntry *pEntry : m_vpServerlist)
 	{
@@ -1004,9 +1009,19 @@ void CServerBrowser::SetLatency(NETADDR Addr, int Latency)
 			continue;
 		}
 		if(pEntry->m_Info.m_Latency != Ping || pEntry->m_Info.m_LatencyIsEstimated)
+		{
 			++m_FriendListRevision;
+			LatencyChanged = true;
+		}
 		pEntry->m_Info.m_Latency = Ping;
 		pEntry->m_Info.m_LatencyIsEstimated = false;
+	}
+	// 可见行自动补测会让延迟在浏览过程中从估算值变成实测值；按延迟排序时
+	// 必须重新排序，否则显示的顺序停留在补测前。
+	if(LatencyChanged && (g_Config.m_BrSort == IServerBrowser::SORT_PING ||
+				     (g_Config.m_BrSort == IServerBrowser::SORT_NUMPLAYERS && g_Config.m_BrSortOrder == 2)))
+	{
+		RequestResort();
 	}
 }
 
@@ -1341,6 +1356,39 @@ void CServerBrowser::RequestCurrentServerWithRandomToken(const NETADDR &Addr, in
 void CServerBrowser::SetCurrentServerPing(const NETADDR &Addr, int Ping)
 {
 	SetLatency(Addr, minimum(Ping, CServerInfo::LATENCY_UNKNOWN));
+}
+
+void CServerBrowser::RequestServerPing(const NETADDR &Addr)
+{
+	CServerEntry *pEntry = Find(Addr);
+	if(pEntry == nullptr)
+		return;
+	// 只补测中国服务器：国服列表里大量实例没有实测值，跨区服务器不值得为
+	// 一个数值额外发探测包。
+	if(pEntry->m_Info.m_Location != CServerInfo::LOC_CHINA)
+		return;
+	// 已有可用实测值就不再补测；只有估计值（从未测过或缓存已过期）才需要。
+	if(!pEntry->m_Info.m_LatencyIsEstimated)
+		return;
+	if(pEntry->m_RequestQueued)
+		return;
+	// 同一 IP 往往挂多个端口实例，只测其中一个：SetLatency 按 IP 把结果广播给
+	// 同 IP 的所有条目并写入 ping 缓存。冷却期同时挡住并发入队和失败重测。
+	NETADDR IpAddr = Addr;
+	IpAddr.type &= ~NETTYPE_TW7;
+	IpAddr.port = 0;
+	constexpr int64_t RETRY_COOLDOWN_SECONDS = 30;
+	const int64_t Now = time_get();
+	const auto It = m_PingRequestTimeByIp.find(IpAddr);
+	if(It != m_PingRequestTimeByIp.end() && Now - It->second < RETRY_COOLDOWN_SECONDS * time_freq())
+		return;
+	m_PingRequestTimeByIp[IpAddr] = Now;
+	// 超时释放请求时 m_RequestTime 会保留旧时间戳，不清零则 Update 不会再发送。
+	pEntry->m_RequestTime = 0;
+	// 已有信息的条目只测延迟，避免回复里的信息覆盖列表数据。
+	if(pEntry->m_GotInfo)
+		pEntry->m_RequestIgnoreInfo = true;
+	QueueRequest(pEntry);
 }
 
 void CServerBrowser::UpdateFromHttp()
@@ -1896,7 +1944,7 @@ void CServerBrowser::UpdateServerLatency(CServerInfo *pInfo, int OwnLocation) co
 {
 	const int Ping = m_pPingCache->GetPing(pInfo->m_aAddresses, pInfo->m_NumAddresses);
 	// 没有缓存值（-1，含已过期条目）或缓存值触到测量上限时都按"没有实测"处理，
-	// 让延迟列显示地区名而不是一个看似实测的数字。
+	// 延迟列先显示地区估算值；列表行可见时会经 RequestServerPing 补测并替换。
 	pInfo->m_LatencyIsEstimated = !IsUsableLatency(Ping);
 	if(pInfo->m_LatencyIsEstimated)
 	{
