@@ -3796,6 +3796,7 @@ if(CLIENT)
     components/qmclient/music_lyrics/music_world_lyrics.cpp
     components/qmclient/music_lyrics/music_world_lyrics.h
     components/qmclient/music_lyrics/music_world_lyrics_state.h
+    components/qmclient/qm_text_effect_render.h
     components/qmclient/netease_hook/qm_netease_lyrics_channel.cpp
     components/qmclient/netease_hook/qm_netease_lyrics_channel.h
     components/qmclient/music_lyrics/music_lyrics_integration.cpp
@@ -5508,6 +5509,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/music/music_world_lyrics_state_test.cpp
     src/test/unit/qmclient/music/music_lyrics_community_format_test.cpp
     src/test/integration/qmclient/music/music_lyrics_community_test.cpp
+    src/test/integration/qmclient/music/qm_qqmusic_qrc_pipeline_test.cpp
     src/test/unit/qmclient/client/qm_lyrics_hud_layout_test.cpp
     src/test/unit/qmclient/client/qm_fast_practice_hook_input_test.cpp
     src/test/unit/qmclient/client/qm_fast_practice_cursor_test.cpp
@@ -6586,11 +6588,20 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/music/music_lyrics_community_failure_test.cpp
       src/test/integration/qmclient/music/music_lyrics_community_admission_test.cpp
       src/test/integration/qmclient/music/qm_netease_lyrics_channel_allocation_test.cpp
+      src/test/integration/qmclient/music/music_world_lyrics_renderer_test.cpp
+      src/test/unit/qmclient/music/netease_lyric_state_allocation_test.cpp
+      src/test/unit/qmclient/music/music_lyrics_krc_allocation_test.cpp
+      src/test/unit/qmclient/music/music_lyrics_qrc_allocation_test.cpp
+      src/test/unit/qmclient/music/music_world_lyrics_state_allocation_test.cpp
       src/game/client/components/qmclient/map_covers.cpp
       src/game/client/components/qmclient/map_cover_art.cpp
       src/game/client/components/qmclient/music_lyrics/music_lyrics_community.cpp
       src/game/client/components/qmclient/music_lyrics/music_lyrics_community_format.cpp
+      src/game/client/components/qmclient/music_lyrics/music_lyrics_krc.cpp
+      src/game/client/components/qmclient/music_lyrics/music_lyrics_qrc.cpp
+      src/game/client/components/qmclient/music_lyrics/music_world_lyrics.cpp
       src/game/client/components/qmclient/netease/netease_lyric_parser.cpp
+      src/game/client/components/qmclient/netease/netease_lyric_state.cpp
       src/game/client/components/qmclient/netease/netease_lyric_timeline.cpp
       src/game/client/components/qmclient/netease_hook/qm_netease_lyrics_channel.cpp
       src/test/unit/qmclient/settings/settings_search_reveal_allocation_test.cpp

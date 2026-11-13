@@ -3,12 +3,12 @@
 #include <engine/external/json-parser/json.h>
 #include <engine/external/zlib/zlib.h>
 
-#include <algorithm>
 #include <array>
 #include <cctype>
 #include <charconv>
 #include <cstring>
 #include <limits>
+#include <memory>
 #include <vector>
 
 namespace QmMusicLyrics
@@ -156,24 +156,6 @@ namespace QmMusicLyrics
 			if(Data.size() < 5)
 				return false;
 			return TryDecryptWithKey(Data.substr(4), KRC_KEY16, sizeof(KRC_KEY16), pOutText);
-		}
-
-		void SetDerivedEnds(std::vector<NeteaseLyrics::SLine> &vLines)
-		{
-			std::stable_sort(vLines.begin(), vLines.end(), [](const NeteaseLyrics::SLine &A, const NeteaseLyrics::SLine &B) { return A.m_StartMs < B.m_StartMs; });
-			for(size_t Index = 0; Index < vLines.size(); ++Index)
-			{
-				if(vLines[Index].m_EndMs > vLines[Index].m_StartMs)
-					continue;
-				for(size_t Next = Index + 1; Next < vLines.size(); ++Next)
-				{
-					if(vLines[Next].m_StartMs > vLines[Index].m_StartMs)
-					{
-						vLines[Index].m_EndMs = vLines[Next].m_StartMs;
-						break;
-					}
-				}
-			}
 		}
 
 		unsigned char Base64Value(char C)
@@ -372,7 +354,7 @@ namespace QmMusicLyrics
 				*pError = "no valid timed lyric lines";
 			return false;
 		}
-		SetDerivedEnds(vLines);
+		NeteaseLyrics::FinalizeTimelineLines(vLines);
 		pOut->m_vLines = std::move(vLines);
 		pOut->m_HasTiming = true;
 		return true;
@@ -392,11 +374,9 @@ namespace QmMusicLyrics
 		std::vector<uint8_t> JsonBytes;
 		if(!Base64Decode(Text.substr(ContentStart, End - ContentStart), &JsonBytes) || JsonBytes.empty())
 			return Result;
-		json_value *pRoot = json_parse((const char *)JsonBytes.data(), JsonBytes.size());
+		std::unique_ptr<json_value, decltype(&json_value_free)> pRoot(json_parse((const char *)JsonBytes.data(), JsonBytes.size()), json_value_free);
 		if(pRoot == nullptr || pRoot->type != json_object)
 		{
-			if(pRoot != nullptr)
-				json_value_free(pRoot);
 			return Result;
 		}
 		const auto FindField = [](const json_value *pObject, const char *pName) -> const json_value * {
@@ -410,7 +390,7 @@ namespace QmMusicLyrics
 			}
 			return nullptr;
 		};
-		const json_value *pContent = FindField(pRoot, "content");
+		const json_value *pContent = FindField(pRoot.get(), "content");
 		if(pContent != nullptr && pContent->type == json_array)
 		{
 			for(unsigned int BlockIndex = 0; BlockIndex < pContent->u.array.length; ++BlockIndex)
@@ -440,16 +420,16 @@ namespace QmMusicLyrics
 						if(pFragment != nullptr && pFragment->type == json_string && pFragment->u.string.ptr != nullptr)
 							LineText.append(pFragment->u.string.ptr, pFragment->u.string.length);
 					}
-					while(!LineText.empty() && std::isspace((unsigned char)LineText.front()) != 0)
-						LineText.erase(LineText.begin());
-					while(!LineText.empty() && std::isspace((unsigned char)LineText.back()) != 0)
-						LineText.pop_back();
+					const std::string_view Trimmed = Trim(LineText);
+					const size_t Prefix = Trimmed.data() - LineText.data();
+					LineText.erase(Prefix + Trimmed.size());
+					LineText.erase(0, Prefix);
 					Result.push_back(std::move(LineText));
 				}
 				break;
 			}
 		}
-		json_value_free(pRoot);
+		pRoot.reset();
 		return Result;
 	}
 

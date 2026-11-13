@@ -7,6 +7,7 @@
 #include <charconv>
 #include <cstring>
 #include <limits>
+#include <memory>
 #include <vector>
 
 namespace QmMusicLyrics
@@ -222,6 +223,7 @@ namespace QmMusicLyrics
 			Stream.avail_in = (uInt)std::min<size_t>(Input.size(), UINT_MAX);
 			if(inflateInit(&Stream) != Z_OK)
 				return false;
+			std::unique_ptr<z_stream, decltype(&inflateEnd)> StreamOwner(&Stream, inflateEnd);
 			std::vector<uint8_t> Output;
 			Output.resize(std::max<size_t>(Input.size() * 4 + 1024, 16384));
 			// next_out 必须从缓冲起点开始,否则 total_out 与缓冲位置错位。
@@ -248,7 +250,7 @@ namespace QmMusicLyrics
 				if(Stream.avail_in == 0 && Ret == Z_BUF_ERROR)
 					break;
 			}
-			inflateEnd(&Stream);
+			StreamOwner.reset();
 			if(!Success)
 				return false;
 			pOut->assign((const char *)Output.data(), Stream.total_out);
@@ -276,24 +278,6 @@ namespace QmMusicLyrics
 				return false;
 			*pOut = Number;
 			return true;
-		}
-
-		void SetDerivedEnds(std::vector<NeteaseLyrics::SLine> &vLines)
-		{
-			std::stable_sort(vLines.begin(), vLines.end(), [](const NeteaseLyrics::SLine &A, const NeteaseLyrics::SLine &B) { return A.m_StartMs < B.m_StartMs; });
-			for(size_t Index = 0; Index < vLines.size(); ++Index)
-			{
-				if(vLines[Index].m_EndMs > vLines[Index].m_StartMs)
-					continue;
-				for(size_t Next = Index + 1; Next < vLines.size(); ++Next)
-				{
-					if(vLines[Next].m_StartMs > vLines[Index].m_StartMs)
-					{
-						vLines[Index].m_EndMs = vLines[Next].m_StartMs;
-						break;
-					}
-				}
-			}
 		}
 	}
 
@@ -502,15 +486,15 @@ namespace QmMusicLyrics
 			size_t BodyOffset = 0;
 			while(BodyOffset < Body.size())
 			{
-				if(Body[BodyOffset] != '(')
+				const size_t Marker = Body.find('(', BodyOffset);
+				if(Marker == std::string_view::npos)
 				{
-					const size_t Next = Body.find('(', BodyOffset);
-					const size_t End = Next == std::string_view::npos ? Body.size() : Next;
-					PlainText.append(Body.substr(BodyOffset, End - BodyOffset));
-					BodyOffset = End;
-					continue;
+					PlainText.append(Body.substr(BodyOffset));
+					break;
 				}
-				const size_t PairClose = Body.find(')', BodyOffset + 1);
+				const std::string WordText(Body.substr(BodyOffset, Marker - BodyOffset));
+				PlainText += WordText;
+				const size_t PairClose = Body.find(')', Marker + 1);
 				if(PairClose == std::string_view::npos)
 				{
 					Malformed = true;
@@ -518,25 +502,20 @@ namespace QmMusicLyrics
 				}
 				int64_t WordOffsetMs = 0;
 				int64_t WordDurationMs = 0;
-				const std::string_view Pair = Body.substr(BodyOffset + 1, PairClose - BodyOffset - 1);
+				const std::string_view Pair = Body.substr(Marker + 1, PairClose - Marker - 1);
 				const size_t PairComma = Pair.find(',');
 				if(PairComma == std::string_view::npos || !ParseUnsigned(Trim(Pair.substr(0, PairComma)), &WordOffsetMs) || !ParseUnsigned(Trim(Pair.substr(PairComma + 1)), &WordDurationMs))
 				{
 					Malformed = true;
 					break;
 				}
-				const size_t WordStart = PairClose + 1;
-				const size_t NextMarker = Body.find('(', WordStart);
-				const size_t WordEnd = NextMarker == std::string_view::npos ? Body.size() : NextMarker;
-				const std::string WordText(Body.substr(WordStart, WordEnd - WordStart));
-				PlainText += WordText;
-				// QRC 词偏移是绝对时间戳(首词通常等于行起点),不是相对行偏移。
+				// QRC 时间标记跟在对应词文后，时间戳是绝对值（首词通常等于行起点）。
 				if(WordDurationMs > 0 && WordOffsetMs >= 0)
 				{
 					if(WordOffsetMs <= std::numeric_limits<int64_t>::max() - WordDurationMs)
 						Parsed.m_vWords.push_back({WordOffsetMs, WordOffsetMs + WordDurationMs, WordText});
 				}
-				BodyOffset = WordEnd;
+				BodyOffset = PairClose + 1;
 			}
 			if(!Malformed)
 			{
@@ -554,7 +533,7 @@ namespace QmMusicLyrics
 				*pError = "no valid timed lyric lines";
 			return false;
 		}
-		SetDerivedEnds(vLines);
+		NeteaseLyrics::FinalizeTimelineLines(vLines);
 		pOut->m_vLines = std::move(vLines);
 		pOut->m_HasTiming = true;
 		return true;

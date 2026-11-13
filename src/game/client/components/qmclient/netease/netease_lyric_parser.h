@@ -42,6 +42,9 @@ namespace NeteaseLyrics
 		std::string m_TranslationLrc;
 	};
 
+	// 稳定排序；仅对 end <= start 的未确定边界取下一严格更晚的行起点，末组保留原值。
+	void FinalizeTimelineLines(std::vector<SLine> &vLines);
+
 	// 解析网易云 LRC。无有效时间戳时返回 false，不构造虚假时间轴。
 	bool ParseLrc(std::string_view Text, STimeline *pOut, std::string *pError = nullptr);
 	// 解析网易云 YRC（行级 [start,duration]，可选词级 (offset,duration)）。

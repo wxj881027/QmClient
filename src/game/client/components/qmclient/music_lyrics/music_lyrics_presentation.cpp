@@ -12,6 +12,10 @@
 #include <game/client/components/qmclient/netease_hook/qm_netease_hook_protocol.h>
 #include <game/client/gameclient.h>
 
+#include <new>
+#include <stdexcept>
+#include <string>
+
 namespace
 {
 	int NextGroupDelayMs()
@@ -34,12 +38,25 @@ void CQmLyricsPresentation::ConSing(IConsole::IResult *pResult, void *pUserData)
 		pThis->m_Singing.OnStroke(false, 0, {});
 		return;
 	}
-	int SourceId;
-	const auto Source = pThis->CurrentSource(SourceId);
-	pThis->SynchronizeSinging(Source, SourceId);
-	// time_freq 固定为纳秒频率，先除避免长时间运行后中间乘法溢出。
-	const int64_t NowMs = time_get() / (time_freq() / 1000);
-	const std::string Message = pThis->m_Singing.OnStroke(true, NowMs, Source.m_Original);
+	int64_t NowMs = 0;
+	std::string Message;
+	try
+	{
+		int SourceId;
+		const auto Source = pThis->CurrentSource(SourceId);
+		pThis->SynchronizeSinging(Source, SourceId);
+		// time_freq 固定为纳秒频率，先除避免长时间运行后中间乘法溢出。
+		NowMs = time_get() / (time_freq() / 1000);
+		Message = pThis->m_Singing.OnStroke(true, NowMs, Source.m_Original);
+	}
+	catch(const std::bad_alloc &)
+	{
+		return;
+	}
+	catch(const std::length_error &)
+	{
+		return;
+	}
 	if(!Message.empty())
 	{
 		const bool Sent = pThis->GameClient()->m_Chat.SendAutomaticChat(g_Config.m_ClDummy, Message.c_str());
@@ -78,7 +95,7 @@ void CQmLyricsPresentation::OnRender()
 	if(!g_Config.m_QmWorldLyrics || Client()->State() != IClient::STATE_ONLINE ||
 		(!m_WorldLyrics.Current().m_Active && !m_WorldLyrics.Previous().m_Active))
 		return;
-	m_WorldLyricsRenderer.Render(*TextRender(), *Graphics(), *RenderTools(), m_WorldLyrics,
+	m_WorldLyricsRenderer.Render(*TextRender(), *Graphics(), m_WorldLyrics,
 		GameClient()->m_Camera.m_Center, GameClient()->m_Camera.m_Zoom, time_get() / static_cast<double>(time_freq()));
 }
 
@@ -133,56 +150,72 @@ void CQmLyricsPresentation::SynchronizeSinging(const QmMusicLyrics::SSourceSnaps
 
 void CQmLyricsPresentation::OnUpdate()
 {
-	int SourceId;
-	const auto Raw = RawSource(SourceId);
-	const bool NeedsLyrics = g_Config.m_QmWorldLyrics || (g_Config.m_QmLyrics && g_Config.m_QmLyricsInMediaIsland) ||
-				 g_Config.m_QmSinging || g_Config.m_QmHumming;
-	m_CommunityLyrics.Update(SourceId, Raw, g_Config.m_QmLyricsCommunity && NeedsLyrics,
-		time_get() / (time_freq() / 1000), Storage(), Engine(), Http());
-	const auto Source = m_CommunityLyrics.Apply(SourceId, Raw);
-	SynchronizeSinging(Source, SourceId);
-
-	m_Frame = {};
-	if(g_Config.m_QmLyrics && g_Config.m_QmLyricsInMediaIsland)
+	int Connection = 0;
+	int64_t NowMs = 0;
+	const std::string *pMessage = nullptr;
+	try
 	{
-		m_Frame.m_Active = Source.m_Active && !QmMusicLyrics::IsLyricCredit(Source.m_Original);
-		m_Frame.m_Progress = QmMusicLyrics::LyricProgress(Source);
-		const auto Rows = QmMusicLyrics::DisplayRows(Source.m_Original, Source.m_Translation, g_Config.m_QmLyricsLanguage);
-		m_Frame.m_RowCount = Rows.m_Count;
-		for(int Index = 0; Index < Rows.m_Count; ++Index)
-			QmNeteaseHook::CopyUtf8Truncated(m_Frame.m_aaRows[Index], sizeof(m_Frame.m_aaRows[Index]), Rows.m_aRows[Index].data(), Rows.m_aRows[Index].size());
-	}
+		int SourceId;
+		const auto Raw = RawSource(SourceId);
+		const bool NeedsLyrics = g_Config.m_QmWorldLyrics || (g_Config.m_QmLyrics && g_Config.m_QmLyricsInMediaIsland) ||
+					 g_Config.m_QmSinging || g_Config.m_QmHumming;
+		m_CommunityLyrics.Update(SourceId, Raw, g_Config.m_QmLyricsCommunity && NeedsLyrics,
+			time_get() / (time_freq() / 1000), Storage(), Engine(), Http());
+		const auto Source = m_CommunityLyrics.Apply(SourceId, Raw);
+		SynchronizeSinging(Source, SourceId);
 
-	CSystemMediaControls::SState Media;
-	const int Connection = g_Config.m_ClDummy;
-	const bool Online = Client()->State() == IClient::STATE_ONLINE &&
-			    (Connection == IClient::CONN_MAIN || Client()->DummyConnected());
-	const bool Playing = (g_Config.m_QmHumming || g_Config.m_QmWorldLyrics) && Online &&
-			     GameClient()->m_SystemMediaControls.GetStateSnapshot(Media) && Media.m_Playing;
-	const int64_t Now = time_get();
-	const bool HadWorldLyrics = m_WorldLyrics.Current().m_Active || m_WorldLyrics.Previous().m_Active;
-	if(g_Config.m_QmWorldLyrics || HadWorldLyrics)
-	{
-		// 每句生成时取当前场景上方的位置；后续镜头移动只改变投影。
-		const vec2 Anchor = GameClient()->m_Camera.m_Center + vec2(0.0f, -140.0f * GameClient()->m_Camera.m_Zoom);
-		m_WorldLyrics.Update(g_Config.m_QmWorldLyrics && Online, SourceId, Source, g_Config.m_QmLyricsLanguage, Anchor, Now / static_cast<double>(time_freq()));
-		if(!m_WorldLyrics.Current().m_Active && !m_WorldLyrics.Previous().m_Active)
-			m_WorldLyricsRenderer.Reset(*TextRender());
+		m_Frame = {};
+		if(g_Config.m_QmLyrics && g_Config.m_QmLyricsInMediaIsland)
+		{
+			m_Frame.m_Active = Source.m_Active && !QmMusicLyrics::IsLyricCredit(Source.m_Original);
+			m_Frame.m_Progress = QmMusicLyrics::LyricProgress(Source);
+			const auto Rows = QmMusicLyrics::DisplayRows(Source.m_Original, Source.m_Translation, g_Config.m_QmLyricsLanguage);
+			m_Frame.m_RowCount = Rows.m_Count;
+			for(int Index = 0; Index < Rows.m_Count; ++Index)
+				QmNeteaseHook::CopyUtf8Truncated(m_Frame.m_aaRows[Index], sizeof(m_Frame.m_aaRows[Index]), Rows.m_aRows[Index].data(), Rows.m_aRows[Index].size());
+		}
+
+		CSystemMediaControls::SState Media;
+		Connection = g_Config.m_ClDummy;
+		const bool Online = Client()->State() == IClient::STATE_ONLINE &&
+				    (Connection == IClient::CONN_MAIN || Client()->DummyConnected());
+		const bool Playing = (g_Config.m_QmHumming || g_Config.m_QmWorldLyrics) && Online &&
+				     GameClient()->m_SystemMediaControls.GetStateSnapshot(Media) && Media.m_Playing;
+		const int64_t Now = time_get();
+		const bool HadWorldLyrics = m_WorldLyrics.Current().m_Active || m_WorldLyrics.Previous().m_Active;
+		if(g_Config.m_QmWorldLyrics || HadWorldLyrics)
+		{
+			// 每句生成时取当前场景上方的位置；后续镜头移动只改变投影。
+			const vec2 Anchor = GameClient()->m_Camera.m_Center + vec2(0.0f, -140.0f * GameClient()->m_Camera.m_Zoom);
+			m_WorldLyrics.Update(g_Config.m_QmWorldLyrics && Online, SourceId, Source, g_Config.m_QmLyricsLanguage, Anchor, Now / static_cast<double>(time_freq()));
+			if(!m_WorldLyrics.Current().m_Active && !m_WorldLyrics.Previous().m_Active)
+				m_WorldLyricsRenderer.Reset(*TextRender());
+		}
+		const bool Available = g_Config.m_QmHumming && Online && Source.m_SongId != 0 &&
+				       Source.m_Active && Source.m_pData != nullptr && Source.m_pData->HasLyrics() &&
+				       Playing;
+		const QmMusicLyrics::SHummingIdentity Identity{SourceId, Source.m_SongId, Source.m_Generation,
+			Source.m_ProducerPid, Connection, Online ? GameClient()->m_aLocalIds[Connection] : -1};
+		m_Humming.Synchronize(Available, Identity);
+		if(!Available)
+			return;
+		NowMs = Now / (time_freq() / 1000);
+		if(m_Humming.NeedsSchedule())
+			m_Humming.Schedule(NowMs, NextGroupDelayMs());
+		if(m_Humming.GroupDue(NowMs) && !m_Humming.BeginGroup(Source.m_pData->m_Timeline, secure_rand_below(0x7fffffff), NowMs))
+			m_Humming.Schedule(NowMs, NextGroupDelayMs());
+		pMessage = m_Humming.PendingLine(NowMs);
 	}
-	const bool Available = g_Config.m_QmHumming && Online && Source.m_SongId != 0 &&
-			       Source.m_Active && Source.m_pData != nullptr && Source.m_pData->HasLyrics() &&
-			       Playing;
-	const QmMusicLyrics::SHummingIdentity Identity{SourceId, Source.m_SongId, Source.m_Generation,
-		Source.m_ProducerPid, Connection, Online ? GameClient()->m_aLocalIds[Connection] : -1};
-	m_Humming.Synchronize(Available, Identity);
-	if(!Available)
+	catch(const std::bad_alloc &)
+	{
+		// 只保护发送前的准备；尚未完成的歌词组沿后续帧继续准备。
 		return;
-	const int64_t NowMs = Now / (time_freq() / 1000);
-	if(m_Humming.NeedsSchedule())
-		m_Humming.Schedule(NowMs, NextGroupDelayMs());
-	if(m_Humming.GroupDue(NowMs) && !m_Humming.BeginGroup(Source.m_pData->m_Timeline, secure_rand_below(0x7fffffff), NowMs))
-		m_Humming.Schedule(NowMs, NextGroupDelayMs());
-	if(const std::string *pMessage = m_Humming.PendingLine(NowMs))
+	}
+	catch(const std::length_error &)
+	{
+		return;
+	}
+	if(pMessage)
 	{
 		const bool Sent = GameClient()->m_Chat.SendAutomaticChat(Connection, pMessage->c_str());
 		m_Humming.FinishLine(Sent, NowMs, NextGroupDelayMs());

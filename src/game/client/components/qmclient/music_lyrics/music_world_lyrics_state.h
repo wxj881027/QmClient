@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <new>
+#include <stdexcept>
 #include <string>
 #include <utility>
 
@@ -133,6 +135,20 @@ namespace QmMusicLyrics
 			m_Current = {};
 		}
 
+		static void UpdateVisibleCharacters(SWorldLyric &Line, const SSourceSnapshot &Source, int Language)
+		{
+			const bool TranslationOnly = Language == static_cast<int>(EDisplayLanguage::TRANSLATION) &&
+						     !Source.m_Translation.empty() && !IsLyricCredit(Source.m_Translation);
+			for(size_t Index = 0; Index < Line.m_aRows.size(); ++Index)
+			{
+				const auto &Text = Line.m_aRows[Index];
+				// 译文没有与原文逐字对应的时间轴，保留整句显示。
+				Line.m_aVisibleCharacters[Index] = Index == 0 && !TranslationOnly ?
+									   WorldLyricTimedCharacters(Source, Text, Line.m_aCharacterCounts[Index]) :
+									   Line.m_aCharacterCounts[Index];
+			}
+		}
+
 	public:
 		void Reset() { *this = {}; }
 		const SWorldLyric &Current() const { return m_Current; }
@@ -146,7 +162,46 @@ namespace QmMusicLyrics
 				return;
 			}
 			const SIdentity Identity{SourceId, Source.m_SongId, Source.m_Generation, Source.m_ProducerPid};
-			if(!m_HasIdentity || !(m_Identity == Identity) || Now < m_LastNow)
+			const bool ResetIdentity = !m_HasIdentity || !(m_Identity == Identity) || Now < m_LastNow;
+			const bool HasLine = Source.m_Active && !Source.m_Original.empty() && !IsLyricCredit(Source.m_Original);
+			const bool NewLine = HasLine && (ResetIdentity || !m_Current.m_Active ||
+								m_Current.m_LineStartMs != Source.m_LineStartMs || m_Current.m_Original != Source.m_Original);
+			const bool RowsChanged = HasLine && (NewLine || m_Language != Language || m_Current.m_Translation != Source.m_Translation);
+			SWorldLyric Prepared;
+			if(RowsChanged)
+			{
+				try
+				{
+					if(NewLine)
+					{
+						Prepared.m_Active = true;
+						Prepared.m_Anchor = Anchor;
+						Prepared.m_CreatedAt = Now;
+						Prepared.m_LineStartMs = Source.m_LineStartMs;
+						Prepared.m_Original = Source.m_Original;
+					}
+					Prepared.m_Translation = Source.m_Translation;
+					const SDisplayRows Rows = DisplayRows(Source.m_Original, Source.m_Translation, Language);
+					Prepared.m_RowCount = Rows.m_Count;
+					for(size_t Index = 0; Index < Prepared.m_aRows.size(); ++Index)
+					{
+						Prepared.m_aRows[Index] = NeteaseLyrics::TruncateUtf8(Rows.m_aRows[Index], 1023);
+						const auto &Text = Prepared.m_aRows[Index];
+						Prepared.m_aCharacterCounts[Index] = static_cast<int>(str_utf8_offset_bytes_to_chars(Text.c_str(), Text.size()));
+					}
+					UpdateVisibleCharacters(Prepared, Source, Language);
+				}
+				catch(const std::bad_alloc &)
+				{
+					return;
+				}
+				catch(const std::length_error &)
+				{
+					return;
+				}
+			}
+			// 完整候选准备成功后，才推进身份、时钟和旧句淡出；失败的同一输入可在后帧重试。
+			if(ResetIdentity)
 			{
 				Reset();
 				m_HasIdentity = true;
@@ -155,44 +210,28 @@ namespace QmMusicLyrics
 			m_LastNow = Now;
 			if(m_Previous.m_Active && Now - m_Previous.m_FadeAt >= WORLD_LYRIC_FADE_SECONDS)
 				m_Previous = {};
-			if(!Source.m_Active || Source.m_Original.empty() || IsLyricCredit(Source.m_Original))
+			if(!HasLine)
 			{
 				FadeCurrent(Now);
 				return;
 			}
-			const bool NewLine = !m_Current.m_Active || m_Current.m_LineStartMs != Source.m_LineStartMs || m_Current.m_Original != Source.m_Original;
 			if(NewLine)
 			{
 				FadeCurrent(Now);
-				m_Current.m_Active = true;
-				m_Current.m_Anchor = Anchor;
-				m_Current.m_CreatedAt = Now;
-				m_Current.m_LineStartMs = Source.m_LineStartMs;
-				m_Current.m_Original = Source.m_Original;
+				m_Current = std::move(Prepared);
 			}
-			const SDisplayRows Rows = DisplayRows(Source.m_Original, Source.m_Translation, Language);
-			if(NewLine || m_Language != Language || m_Current.m_Translation != Source.m_Translation)
+			else if(RowsChanged)
 			{
+				m_Current.m_Translation.swap(Prepared.m_Translation);
+				m_Current.m_aRows.swap(Prepared.m_aRows);
+				m_Current.m_aCharacterCounts = Prepared.m_aCharacterCounts;
+				m_Current.m_aVisibleCharacters = Prepared.m_aVisibleCharacters;
+				m_Current.m_RowCount = Prepared.m_RowCount;
+			}
+			else
+				UpdateVisibleCharacters(m_Current, Source, Language);
+			if(RowsChanged)
 				m_Language = Language;
-				m_Current.m_Translation = Source.m_Translation;
-				m_Current.m_RowCount = Rows.m_Count;
-				for(size_t Index = 0; Index < m_Current.m_aRows.size(); ++Index)
-				{
-					m_Current.m_aRows[Index] = NeteaseLyrics::TruncateUtf8(Rows.m_aRows[Index], 1023);
-					const auto &Text = m_Current.m_aRows[Index];
-					m_Current.m_aCharacterCounts[Index] = static_cast<int>(str_utf8_offset_bytes_to_chars(Text.c_str(), Text.size()));
-				}
-			}
-			const bool TranslationOnly = Language == static_cast<int>(EDisplayLanguage::TRANSLATION) &&
-						     !Source.m_Translation.empty() && !IsLyricCredit(Source.m_Translation);
-			for(size_t Index = 0; Index < m_Current.m_aRows.size(); ++Index)
-			{
-				const auto &Text = m_Current.m_aRows[Index];
-				// 译文没有与原文逐字对应的时间轴，保留整句显示。
-				m_Current.m_aVisibleCharacters[Index] = Index == 0 && !TranslationOnly ?
-										WorldLyricTimedCharacters(Source, Text, m_Current.m_aCharacterCounts[Index]) :
-										m_Current.m_aCharacterCounts[Index];
-			}
 		}
 	};
 }

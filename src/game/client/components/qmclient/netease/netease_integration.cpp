@@ -401,36 +401,57 @@ void CNeteaseIntegration::OnUpdate()
 		}
 		return;
 	}
-	m_LastBridgeSequence = BridgeSnapshot.m_Sequence;
-	m_ActiveLyrics = (BridgeSnapshot.m_Flags & QmNeteaseHook::V5_FLAG_LYRIC_TIMELINE_VALID) != 0 ||
-			 ((BridgeSnapshot.m_Flags & QmNeteaseHook::V5_FLAG_LYRIC_VALID) != 0 && BridgeSnapshot.m_LyricSource != (uint32_t)QmNeteaseHook::ENeteaseLyricSource::None);
-	if(PositionAnchored)
-	{
-		m_LastBridgePositionMs = BridgeSnapshot.m_PositionMs;
-		m_LastBridgePositionValid = true;
-	}
+	// 文字准备成功或正常拒绝后才消费；资源失败也保留暂停 seek 的旧锚点供重试。
+	const auto ConsumeSnapshot = [&] {
+		m_LastBridgeSequence = BridgeSnapshot.m_Sequence;
+		m_ActiveLyrics = (BridgeSnapshot.m_Flags & QmNeteaseHook::V5_FLAG_LYRIC_TIMELINE_VALID) != 0 ||
+				 ((BridgeSnapshot.m_Flags & QmNeteaseHook::V5_FLAG_LYRIC_VALID) != 0 && BridgeSnapshot.m_LyricSource != (uint32_t)QmNeteaseHook::ENeteaseLyricSource::None);
+		if(PositionAnchored)
+		{
+			m_LastBridgePositionMs = BridgeSnapshot.m_PositionMs;
+			m_LastBridgePositionValid = true;
+		}
+	};
 	if((BridgeSnapshot.m_Flags & QmNeteaseHook::V5_FLAG_LYRIC_VALID) == 0 || BridgeSnapshot.m_aCurrentLyric[0] == '\0')
 	{
 		if(!KeepPausedLyric)
 			m_LyricState.ClearLyrics();
+		ConsumeSnapshot();
 		return;
 	}
 
 	// SMTC 暂停时保留已经选中的句子；新歌曲仍可接受第一句，只有检测到
 	// Bridge 进度锚点发生 seek 时才允许暂停快照重新定位当前句。
 	if(KeepPausedLyric)
+	{
+		ConsumeSnapshot();
 		return;
+	}
 
 	NeteaseLyrics::ESource Source = NeteaseLyrics::ESource::Frontend;
 	switch((QmNeteaseHook::ENeteaseLyricSource)BridgeSnapshot.m_LyricSource)
 	{
 	case QmNeteaseHook::ENeteaseLyricSource::DesktopLyricsFallback: Source = NeteaseLyrics::ESource::DesktopLyricsFallback; break;
 	case QmNeteaseHook::ENeteaseLyricSource::Frontend: Source = NeteaseLyrics::ESource::Frontend; break;
-	case QmNeteaseHook::ENeteaseLyricSource::None: return;
-	case QmNeteaseHook::ENeteaseLyricSource::ReservedLegacyApi: return;
+	case QmNeteaseHook::ENeteaseLyricSource::None:
+	case QmNeteaseHook::ENeteaseLyricSource::ReservedLegacyApi:
+		ConsumeSnapshot();
+		return;
 	}
 	const int64_t PositionMs = PositionValid ? BridgeSnapshot.m_PositionMs : m_LyricState.Snapshot().m_PositionMs;
-	m_LyricState.ApplyCurrentLine(Source, BridgeSnapshot.m_aCurrentLyric, BridgeSnapshot.m_LineStartMs, BridgeSnapshot.m_LineEndMs, PositionMs);
+	try
+	{
+		m_LyricState.ApplyCurrentLine(Source, BridgeSnapshot.m_aCurrentLyric, BridgeSnapshot.m_LineStartMs, BridgeSnapshot.m_LineEndMs, PositionMs);
+	}
+	catch(const std::bad_alloc &)
+	{
+		return;
+	}
+	catch(const std::length_error &)
+	{
+		return;
+	}
+	ConsumeSnapshot();
 }
 
 bool CNeteaseIntegration::GetCurrentLyric(char *pBuffer, size_t BufferSize, ColorRGBA *pColor) const

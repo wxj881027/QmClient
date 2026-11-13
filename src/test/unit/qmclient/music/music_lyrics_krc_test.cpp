@@ -1,3 +1,5 @@
+#include <base/str.h>
+
 #include <engine/external/zlib/zlib.h>
 
 #include <game/client/components/qmclient/music_lyrics/music_lyrics_krc.h>
@@ -6,6 +8,7 @@
 
 #include <cstring>
 #include <string>
+#include <string_view>
 #include <vector>
 
 using namespace QmMusicLyrics;
@@ -44,6 +47,14 @@ namespace
 		"[00:00.00]<0,1200>第一句歌词\n"
 		"[00:01.20]<0,100>逐<100,80>字<180,150>歌<330,120>词<450,200>!\n"
 		"[00:03.00]第二句\n";
+
+	std::string TranslationTag(std::string_view Json)
+	{
+		std::string Encoded((Json.size() + 2) / 3 * 4 + 1, '\0');
+		str_base64(Encoded.data(), (int)Encoded.size(), Json.data(), (int)Json.size());
+		Encoded.pop_back();
+		return "[language:" + Encoded + "]\n";
+	}
 }
 
 TEST(MusicLyricsKrc, DecryptsStandardKrcFile)
@@ -249,4 +260,45 @@ TEST(MusicLyricsKrc, SkipsOverflowingEndTime)
 	ASSERT_TRUE(ParseKrcText("[9223372036854775807,1]bad\n[2000,500]valid\n", &Timeline));
 	ASSERT_EQ(Timeline.m_vLines.size(), 1u);
 	EXPECT_EQ(Timeline.m_vLines[0].m_EndMs, 2500);
+}
+
+TEST(MusicLyricsKrc, UnknownEndsUseTheNextDistinctStartAndKeepStableDuplicateOrder)
+{
+	NeteaseLyrics::STimeline Timeline;
+	ASSERT_TRUE(ParseKrcText("[2000,0]last-unknown\n[1000,0]first-unknown\n[0,25]explicit\n[1000,50]second-explicit\n[1000,0]third-unknown\n[2000,10]last-explicit\n", &Timeline));
+	ASSERT_EQ(Timeline.m_vLines.size(), 6u);
+	EXPECT_EQ(Timeline.m_vLines[0].m_Text, "explicit");
+	EXPECT_EQ(Timeline.m_vLines[0].m_EndMs, 25);
+	EXPECT_EQ(Timeline.m_vLines[1].m_Text, "first-unknown");
+	EXPECT_EQ(Timeline.m_vLines[1].m_EndMs, 2000);
+	EXPECT_EQ(Timeline.m_vLines[2].m_Text, "second-explicit");
+	EXPECT_EQ(Timeline.m_vLines[2].m_EndMs, 1050);
+	EXPECT_EQ(Timeline.m_vLines[3].m_Text, "third-unknown");
+	EXPECT_EQ(Timeline.m_vLines[3].m_EndMs, 2000);
+	EXPECT_EQ(Timeline.m_vLines[4].m_Text, "last-unknown");
+	EXPECT_EQ(Timeline.m_vLines[4].m_EndMs, -1);
+	EXPECT_EQ(Timeline.m_vLines[5].m_Text, "last-explicit");
+	EXPECT_EQ(Timeline.m_vLines[5].m_EndMs, 2010);
+}
+
+TEST(MusicLyricsKrc, TranslationTrimsJoinedFragmentsAndPreservesOtherControlBytes)
+{
+	const std::string Text = TranslationTag(R"({"content":[{"type":0,"lyricContent":[["ignored"]]},{"type":1,"lyricContent":[[" \t","translated",5,"\r\n "],[],null,[" \t"],["\u0000\u0001\u001f"]]},{"type":1,"lyricContent":[["later track"]]}]})");
+	const std::vector<std::string> Translation = ExtractKrcTranslation(Text);
+	ASSERT_EQ(Translation.size(), 5u);
+	EXPECT_EQ(Translation[0], "translated");
+	EXPECT_TRUE(Translation[1].empty());
+	EXPECT_TRUE(Translation[2].empty());
+	EXPECT_TRUE(Translation[3].empty());
+	EXPECT_EQ(Translation[4], std::string("\0\x01\x1F", 3));
+}
+
+TEST(MusicLyricsKrc, LongTranslationWhitespaceWithinTheTextBudgetIsTrimmed)
+{
+	const std::string Json = "{\"content\":[{\"type\":1,\"lyricContent\":[[\"" + std::string(1024 * 1024, ' ') + "translated \"]]}]}";
+	const std::string Text = TranslationTag(Json);
+	ASSERT_LT(Text.size(), KRC_MAX_TEXT_BYTES);
+	const std::vector<std::string> Translation = ExtractKrcTranslation(Text);
+	ASSERT_EQ(Translation.size(), 1u);
+	EXPECT_EQ(Translation[0], "translated");
 }

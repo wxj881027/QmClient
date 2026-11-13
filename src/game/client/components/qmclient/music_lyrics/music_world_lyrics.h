@@ -5,8 +5,6 @@
 
 #include <engine/textrender.h>
 
-class CRenderTools;
-
 namespace QmMusicLyrics
 {
 	class CWorldLyricsRenderer
@@ -25,7 +23,7 @@ namespace QmMusicLyrics
 
 	public:
 		void Reset(ITextRender &TextRender);
-		void Render(ITextRender &TextRender, IGraphics &Graphics, const CRenderTools &RenderTools, const CWorldLyricsState &State, vec2 Camera, float Zoom, double Now);
+		void Render(ITextRender &TextRender, IGraphics &Graphics, const CWorldLyricsState &State, vec2 Camera, float Zoom, double Now);
 	};
 }
 

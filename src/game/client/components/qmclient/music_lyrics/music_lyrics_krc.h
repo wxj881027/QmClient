@@ -45,7 +45,7 @@ namespace QmMusicLyrics
 
 	// 从 KRC 文本提取内嵌翻译轨 [language:base64json]。
 	// base64 解码后为 JSON: {"content":[{"lyricContent":[["译文片段"...],...],"type":1}]}
-	// type=1 为中文翻译、type=0 为罗马音;返回与主歌词行序号对齐的译文数组。
+	// type=1 为中文翻译、type=0 为罗马音；返回 lyricContent 原次序，调用方负责与主轨共同过滤和排序。
 	// 无翻译轨或解码失败时返回空数组。
 	std::vector<std::string> ExtractKrcTranslation(std::string_view Text);
 

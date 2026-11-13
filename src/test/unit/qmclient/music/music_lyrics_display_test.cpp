@@ -2,7 +2,25 @@
 
 #include <gtest/gtest.h>
 
+#include <cstdint>
+#include <initializer_list>
+#include <limits>
+#include <string>
+#include <vector>
+
 using namespace QmMusicLyrics;
+
+namespace
+{
+	NeteaseLyrics::STimeline MainTimeline(std::initializer_list<int64_t> Starts)
+	{
+		NeteaseLyrics::STimeline Result;
+		Result.m_HasTiming = true;
+		for(const int64_t Start : Starts)
+			Result.m_vLines.push_back({Start, -1, "main", {}});
+		return Result;
+	}
+}
 
 TEST(QmLyricsDisplay, OriginalModeKeepsOriginal)
 {
@@ -73,6 +91,60 @@ TEST(QmLyricsDisplay, InvalidTranslationTrackClearsPreviousTranslations)
 	Data.m_vTranslations = {"old"};
 	AlignTranslations(Data.m_Timeline, "invalid", &Data.m_vTranslations);
 	EXPECT_TRUE(Data.m_vTranslations.empty());
+}
+
+TEST(QmLyricsDisplay, NearestTranslationGroupsPreserveUnsortedMainOrder)
+{
+	const auto Main = MainTimeline({3120, 900, 2080, 2880, 5000, 1960});
+	std::vector<std::string> Translations;
+	AlignTranslations(Main, "[00:03.000]three\n[00:01.000]one\n[00:02.000]two", &Translations);
+	const std::vector<std::string> Expected{"three", "one", "two", "three", "", "two"};
+	EXPECT_EQ(Translations, Expected);
+}
+
+TEST(QmLyricsDisplay, EqualDistancesAndDuplicateGroupsKeepTheFirstStableTranslation)
+{
+	const auto Main = MainTimeline({1100, 1200, 1250, 1050, 1150, 950, 1000});
+	std::vector<std::string> Translations;
+	AlignTranslations(Main, "[00:01.200]later-first\n[00:01.000]earlier-first\n[00:01.200]later-second\n[00:01.000]earlier-second", &Translations);
+	const std::vector<std::string> Expected{"earlier-first", "later-first", "later-first", "earlier-first", "later-first", "earlier-first", "earlier-first"};
+	EXPECT_EQ(Translations, Expected);
+}
+
+TEST(QmLyricsDisplay, TranslationToleranceIncludesBoth150MillisecondEdges)
+{
+	const auto Main = MainTimeline({849, 850, 851, 1000, 1149, 1150, 1151});
+	std::vector<std::string> Translations;
+	AlignTranslations(Main, "[00:01.000]translated", &Translations);
+	const std::vector<std::string> Expected{"", "translated", "translated", "translated", "translated", "translated", ""};
+	EXPECT_EQ(Translations, Expected);
+}
+
+TEST(QmLyricsDisplay, ExtremeMainTimestampsDoNotWrapIntoTheTranslationTolerance)
+{
+	constexpr int64_t Lowest = std::numeric_limits<int64_t>::min();
+	constexpr int64_t Highest = std::numeric_limits<int64_t>::max();
+	const auto Main = MainTimeline({Lowest, Lowest + 150, Highest - 151, Highest - 150, Highest - 1, Highest});
+	std::vector<std::string> Translations;
+	AlignTranslations(Main, "[153722867280912:55.807]maximum", &Translations);
+	const std::vector<std::string> Expected{"", "", "", "maximum", "maximum", "maximum"};
+	EXPECT_EQ(Translations, Expected);
+}
+
+TEST(QmLyricsDisplay, RepeatedAlignmentClearsOldResultsForMissingOrInvalidTracks)
+{
+	const auto Main = MainTimeline({2000, 1000});
+	std::vector<std::string> Translations;
+	const char *apUnavailableTracks[] = {"", "invalid", "[ti:metadata only]", "\xff"};
+	for(const char *pTrack : apUnavailableTracks)
+	{
+		SCOPED_TRACE(pTrack);
+		AlignTranslations(Main, "[00:01.000]one\n[00:02.000]two", &Translations);
+		const std::vector<std::string> Expected{"two", "one"};
+		ASSERT_EQ(Translations, Expected);
+		AlignTranslations(Main, pTrack, &Translations);
+		EXPECT_TRUE(Translations.empty());
+	}
 }
 
 TEST(QmLyricsDisplay, CreditsDoNotAppearInAnyLanguageMode)
