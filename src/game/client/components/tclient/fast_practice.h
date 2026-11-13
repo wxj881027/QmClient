@@ -13,6 +13,7 @@
 #include <game/client/components/qmclient/local_world.h>
 #include <game/client/components/qmclient/practice_hook_input.h>
 #include <game/client/components/qmclient/practice_input_lock.h>
+#include <game/client/components/qmclient/practice_predict_plan.h>
 #include <game/client/components/qmclient/practice_recorder.h>
 #include <game/client/components/qmclient/practice_rescue.h>
 #include <game/client/prediction/gameworld.h>
@@ -286,7 +287,19 @@ private:
 	void ApplyPracticeRescueTee(CCharacter *pChar, const SQmPracticeSavedTee &Tee) const;
 	void TrackSafeRescuePosition(int ClientId, CCharacter *pChar);
 	void ResetPracticeTimelineState();
+	// 把一份分支世界整体铺到渲染/预测读取面：两个预测世界、角色核心与预测 tick。
+	// 启用、延迟接入分身、进入旁观、服务器暂停冻结与复位都走同一入口。
+	void PublishPracticeWorldSnapshot(CGameWorld &World, int LocalClientId, int DummyClientId);
 	void PublishPracticeWorldState();
+	// 两条预测循环共用的预测状态发布。主循环追赶真实 tick，视觉循环外推快速输入，
+	// 两者必须写出同一套 m_PrevPredictedWorld / m_PredictedChar / m_aClients 状态，
+	// 否则镜头插值、分身预测和位置回查会在两条循环之间跳变。
+	void PublishPracticePredictionBeforeStep(CGameWorld &World, const SPracticePredictTickPlan &Plan, int Tick, bool CopyWorldToPredicted, int LocalClientId);
+	void PublishPracticePredictionAfterStep(CGameWorld &World, const SPracticePredictTickPlan &Plan, int Tick, int LocalClientId);
+	void PublishPracticePredictedPositions(CGameWorld &World, int Tick);
+	// 新预测 tick 的跳跃/钩子反馈。本体与分身走同一入口，按输入槽位去重。
+	// 返回 true 表示该 tick 被本槽位消费（调用方据此置 m_NewPredictedTick）。
+	bool PublishPracticeNewPredictedFeedback(int Slot, CCharacter *pChar, int Tick, int MaxTick);
 	bool FindNearestSafeRescuePosition(int ClientId, const vec2 &From, vec2 &OutPos) const;
 	bool FindFinishPosition(vec2 &OutPos) const;
 	void NormalizeDefaultPracticeWeapons(CCharacter *pChar, bool HasExplicitWeaponFlags) const;

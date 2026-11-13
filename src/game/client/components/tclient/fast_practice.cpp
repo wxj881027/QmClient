@@ -622,24 +622,7 @@ void CFastPractice::HoldPracticeWorldForSuspension()
 
 	const int TargetTick = Client()->PredGameTick(g_Config.m_ClDummy);
 	ShiftPracticeWorldTicks(TargetTick - m_PracticeBaseWorld.GameTick());
-	GameClient()->m_PredictedWorld.CopyWorldClean(&m_PracticeBaseWorld);
-	GameClient()->m_PrevPredictedWorld.CopyWorldClean(&m_PracticeBaseWorld);
-	if(CCharacter *pLocalChar = GameClient()->m_PredictedWorld.GetCharacterById(m_EnableLocalClientId))
-	{
-		GameClient()->m_PredictedChar = pLocalChar->GetCore();
-		GameClient()->m_PredictedPrevChar = pLocalChar->GetCore();
-		GameClient()->m_aClients[m_EnableLocalClientId].m_Predicted = pLocalChar->GetCore();
-		GameClient()->m_aClients[m_EnableLocalClientId].m_PrevPredicted = pLocalChar->GetCore();
-	}
-	if(m_RequireDummy && m_EnableDummyClientId >= 0)
-	{
-		if(CCharacter *pDummyChar = GameClient()->m_PredictedWorld.GetCharacterById(m_EnableDummyClientId))
-		{
-			GameClient()->m_aClients[m_EnableDummyClientId].m_Predicted = pDummyChar->GetCore();
-			GameClient()->m_aClients[m_EnableDummyClientId].m_PrevPredicted = pDummyChar->GetCore();
-		}
-	}
-	GameClient()->m_PredictedTick = m_PracticeBaseWorld.GameTick();
+	PublishPracticeWorldSnapshot(m_PracticeBaseWorld, m_EnableLocalClientId, m_RequireDummy ? m_EnableDummyClientId : -1);
 }
 
 bool CFastPractice::SuspendPracticeForTransientFailure(const char *pReason)
@@ -1102,24 +1085,7 @@ void CFastPractice::Enable(bool PreserveHeldInput)
 	m_InputSuppressTicks = std::max(m_InputSuppressTicks, 2);
 
 	// Snap renderer/camera prediction state to the local practice world immediately.
-	GameClient()->m_PredictedWorld.CopyWorldClean(&m_PracticeBaseWorld);
-	GameClient()->m_PrevPredictedWorld.CopyWorldClean(&m_PracticeBaseWorld);
-	if(CCharacter *pPredChar = GameClient()->m_PredictedWorld.GetCharacterById(m_EnableLocalClientId))
-	{
-		GameClient()->m_PredictedChar = pPredChar->GetCore();
-		GameClient()->m_PredictedPrevChar = pPredChar->GetCore();
-		GameClient()->m_aClients[m_EnableLocalClientId].m_Predicted = pPredChar->GetCore();
-		GameClient()->m_aClients[m_EnableLocalClientId].m_PrevPredicted = pPredChar->GetCore();
-	}
-	if(m_RequireDummy && m_EnableDummyClientId >= 0)
-	{
-		if(CCharacter *pPredDummy = GameClient()->m_PredictedWorld.GetCharacterById(m_EnableDummyClientId))
-		{
-			GameClient()->m_aClients[m_EnableDummyClientId].m_Predicted = pPredDummy->GetCore();
-			GameClient()->m_aClients[m_EnableDummyClientId].m_PrevPredicted = pPredDummy->GetCore();
-		}
-	}
-	GameClient()->m_PredictedTick = m_PracticeBaseWorld.GameTick();
+	PublishPracticeWorldSnapshot(m_PracticeBaseWorld, m_EnableLocalClientId, m_RequireDummy ? m_EnableDummyClientId : -1);
 }
 
 bool CFastPractice::TryAttachDummyFromSnapshot()
@@ -1183,21 +1149,7 @@ bool CFastPractice::TryAttachDummyFromSnapshot()
 	m_InputSuppressTicks = std::max(m_InputSuppressTicks, 2);
 	GameClient()->m_PredictedDummyId = CurrentPracticeDummyId();
 
-	GameClient()->m_PredictedWorld.CopyWorldClean(&m_PracticeBaseWorld);
-	GameClient()->m_PrevPredictedWorld.CopyWorldClean(&m_PracticeBaseWorld);
-	if(CCharacter *pPredChar = GameClient()->m_PredictedWorld.GetCharacterById(m_EnableLocalClientId))
-	{
-		GameClient()->m_PredictedChar = pPredChar->GetCore();
-		GameClient()->m_PredictedPrevChar = pPredChar->GetCore();
-		GameClient()->m_aClients[m_EnableLocalClientId].m_Predicted = pPredChar->GetCore();
-		GameClient()->m_aClients[m_EnableLocalClientId].m_PrevPredicted = pPredChar->GetCore();
-	}
-	if(CCharacter *pPredDummy = GameClient()->m_PredictedWorld.GetCharacterById(m_EnableDummyClientId))
-	{
-		GameClient()->m_aClients[m_EnableDummyClientId].m_Predicted = pPredDummy->GetCore();
-		GameClient()->m_aClients[m_EnableDummyClientId].m_PrevPredicted = pPredDummy->GetCore();
-	}
-	GameClient()->m_PredictedTick = m_PracticeBaseWorld.GameTick();
+	PublishPracticeWorldSnapshot(m_PracticeBaseWorld, m_EnableLocalClientId, m_EnableDummyClientId);
 	return true;
 }
 
@@ -1299,24 +1251,7 @@ void CFastPractice::PrepareForSpectating()
 	m_SuppressFireOnNextPredictTick = true;
 	m_InputSuppressTicks = std::max(m_InputSuppressTicks, 2);
 
-	GameClient()->m_PredictedWorld.CopyWorldClean(&m_PracticeBaseWorld);
-	GameClient()->m_PrevPredictedWorld.CopyWorldClean(&m_PracticeBaseWorld);
-	if(CCharacter *pPredChar = GameClient()->m_PredictedWorld.GetCharacterById(LocalClientId))
-	{
-		GameClient()->m_PredictedChar = pPredChar->GetCore();
-		GameClient()->m_PredictedPrevChar = pPredChar->GetCore();
-		GameClient()->m_aClients[LocalClientId].m_Predicted = pPredChar->GetCore();
-		GameClient()->m_aClients[LocalClientId].m_PrevPredicted = pPredChar->GetCore();
-	}
-	if(m_RequireDummy && DummyClientId >= 0)
-	{
-		if(CCharacter *pPredDummy = GameClient()->m_PredictedWorld.GetCharacterById(DummyClientId))
-		{
-			GameClient()->m_aClients[DummyClientId].m_Predicted = pPredDummy->GetCore();
-			GameClient()->m_aClients[DummyClientId].m_PrevPredicted = pPredDummy->GetCore();
-		}
-	}
-	GameClient()->m_PredictedTick = m_PracticeBaseWorld.GameTick();
+	PublishPracticeWorldSnapshot(m_PracticeBaseWorld, LocalClientId, m_RequireDummy ? DummyClientId : -1);
 	GameClient()->m_PredictedDummyId = CurrentPracticeDummyId();
 	ResetAttackTickHistory();
 }
@@ -1482,24 +1417,117 @@ void CFastPractice::PublishPracticeWorldState()
 	ReleaseBufferedActionInputState();
 
 	// Keep camera interpolation coherent after hard reset.
-	GameClient()->m_PredictedWorld.CopyWorldClean(&m_PracticeBaseWorld);
-	GameClient()->m_PrevPredictedWorld.CopyWorldClean(&m_PracticeBaseWorld);
-	if(CCharacter *pPredChar = GameClient()->m_PredictedWorld.GetCharacterById(m_EnableLocalClientId))
+	PublishPracticeWorldSnapshot(m_PracticeBaseWorld, m_EnableLocalClientId, m_RequireDummy ? m_EnableDummyClientId : -1);
+}
+
+void CFastPractice::PublishPracticeWorldSnapshot(CGameWorld &World, int LocalClientId, int DummyClientId)
+{
+	GameClient()->m_PredictedWorld.CopyWorldClean(&World);
+	GameClient()->m_PrevPredictedWorld.CopyWorldClean(&World);
+	if(CCharacter *pLocalChar = World.GetCharacterById(LocalClientId))
 	{
-		GameClient()->m_PredictedChar = pPredChar->GetCore();
-		GameClient()->m_PredictedPrevChar = pPredChar->GetCore();
-		GameClient()->m_aClients[m_EnableLocalClientId].m_Predicted = pPredChar->GetCore();
-		GameClient()->m_aClients[m_EnableLocalClientId].m_PrevPredicted = pPredChar->GetCore();
+		GameClient()->m_PredictedChar = pLocalChar->GetCore();
+		GameClient()->m_PredictedPrevChar = pLocalChar->GetCore();
+		GameClient()->m_aClients[LocalClientId].m_Predicted = pLocalChar->GetCore();
+		GameClient()->m_aClients[LocalClientId].m_PrevPredicted = pLocalChar->GetCore();
 	}
-	if(m_RequireDummy && m_EnableDummyClientId >= 0)
+	if(DummyClientId >= 0)
 	{
-		if(CCharacter *pPredDummy = GameClient()->m_PredictedWorld.GetCharacterById(m_EnableDummyClientId))
+		if(CCharacter *pDummyChar = World.GetCharacterById(DummyClientId))
 		{
-			GameClient()->m_aClients[m_EnableDummyClientId].m_Predicted = pPredDummy->GetCore();
-			GameClient()->m_aClients[m_EnableDummyClientId].m_PrevPredicted = pPredDummy->GetCore();
+			GameClient()->m_aClients[DummyClientId].m_Predicted = pDummyChar->GetCore();
+			GameClient()->m_aClients[DummyClientId].m_PrevPredicted = pDummyChar->GetCore();
 		}
 	}
-	GameClient()->m_PredictedTick = m_PracticeBaseWorld.GameTick();
+	GameClient()->m_PredictedTick = World.GameTick();
+}
+
+void CFastPractice::PublishPracticePredictionBeforeStep(CGameWorld &World, const SPracticePredictTickPlan &Plan, int Tick, bool CopyWorldToPredicted, int LocalClientId)
+{
+	const SPracticePublishActions Actions = QmResolvePracticePublishActions(Plan, Tick);
+	if(Actions.m_CopyPrevWorld)
+	{
+		GameClient()->m_PrevPredictedWorld.CopyWorldClean(&World);
+		if(CopyWorldToPredicted)
+			GameClient()->m_PredictedWorld.CopyWorldClean(&World);
+	}
+	if(Actions.m_PublishPrevRole)
+	{
+		if(CCharacter *pLocalChar = World.GetCharacterById(LocalClientId))
+		{
+			GameClient()->m_PredictedPrevChar = pLocalChar->GetCore();
+			GameClient()->m_aClients[LocalClientId].m_PrevPredicted = pLocalChar->GetCore();
+		}
+	}
+	if(Actions.m_PublishPrevOthers)
+	{
+		for(int i = 0; i < MAX_CLIENTS; i++)
+			if(CCharacter *pChar = World.GetCharacterById(i))
+				GameClient()->m_aClients[i].m_PrevPredicted = pChar->GetCore();
+	}
+}
+
+void CFastPractice::PublishPracticePredictionAfterStep(CGameWorld &World, const SPracticePredictTickPlan &Plan, int Tick, int LocalClientId)
+{
+	const SPracticePublishActions Actions = QmResolvePracticePublishActions(Plan, Tick);
+	if(Actions.m_PublishPredRole)
+	{
+		if(CCharacter *pLocalChar = World.GetCharacterById(LocalClientId))
+		{
+			GameClient()->m_PredictedChar = pLocalChar->GetCore();
+			GameClient()->m_aClients[LocalClientId].m_Predicted = pLocalChar->GetCore();
+		}
+	}
+	if(Actions.m_PublishPredOthers)
+	{
+		for(int i = 0; i < MAX_CLIENTS; i++)
+			if(CCharacter *pChar = World.GetCharacterById(i))
+				GameClient()->m_aClients[i].m_Predicted = pChar->GetCore();
+	}
+}
+
+void CFastPractice::PublishPracticePredictedPositions(CGameWorld &World, int Tick)
+{
+	// 200 tick 环形缓冲供延迟补偿与实体位置回查读取，两条循环必须写同一索引。
+	const int Slot = Tick % 200;
+	for(int i = 0; i < MAX_CLIENTS; i++)
+		if(CCharacter *pChar = World.GetCharacterById(i))
+		{
+			GameClient()->m_aClients[i].m_aPredPos[Slot] = pChar->Core()->m_Pos;
+			GameClient()->m_aClients[i].m_aPredTick[Slot] = Tick;
+		}
+}
+
+bool CFastPractice::PublishPracticeNewPredictedFeedback(int Slot, CCharacter *pChar, int Tick, int MaxTick)
+{
+	if(!pChar)
+		return false;
+	if(!QmPracticeConsumeNewPredictedTick(Tick, MaxTick, GameClient()->m_aLastNewPredictedTick[Slot]))
+		return false;
+
+	const vec2 Pos = pChar->Core()->m_Pos;
+	const int Events = pChar->Core()->m_TriggeredEvents;
+	if(!GameClient()->m_SuppressEvents)
+	{
+		if(Events & COREEVENT_AIR_JUMP)
+		{
+			GameClient()->m_aLastPredictedAirJumpTick[Slot] = Tick;
+			GameClient()->m_Effects.AirJump(Pos, 1.0f, 1.0f);
+		}
+	}
+	if(g_Config.m_SndGame && !GameClient()->m_SuppressEvents)
+	{
+		if(Events & COREEVENT_GROUND_JUMP)
+			if(GetQmFocusModeDecisions().m_AirJump.m_PlaySound)
+				GameClient()->m_Sounds.PlayAndRecord(CSounds::CHN_WORLD, SOUND_PLAYER_JUMP, 1.0f, Pos);
+		if(Events & COREEVENT_HOOK_ATTACH_PLAYER)
+			GameClient()->m_Sounds.PlayAndRecord(CSounds::CHN_WORLD, SOUND_HOOK_ATTACH_PLAYER, 1.0f, Pos);
+		if(Events & COREEVENT_HOOK_ATTACH_GROUND)
+			GameClient()->m_Sounds.PlayAndRecord(CSounds::CHN_WORLD, SOUND_HOOK_ATTACH_GROUND, 1.0f, Pos);
+		if(Events & COREEVENT_HOOK_HIT_NOHOOK)
+			GameClient()->m_Sounds.PlayAndRecord(CSounds::CHN_WORLD, SOUND_HOOK_NOATTACH, 1.0f, Pos);
+	}
+	return true;
 }
 
 void CFastPractice::TrackPracticeTileFeedback(int ClientId, CCharacter *pChar, const vec2 &BeforePos)
@@ -1627,13 +1655,13 @@ bool CFastPractice::OverridePredict()
 	const int BaseGameTick = m_PracticeBaseWorld.GameTick();
 	const int PredTick = Client()->PredGameTick(g_Config.m_ClDummy);
 	const int FinalTickRegular = PredTick;
-	const int FinalTickSelf = FinalTickRegular;
-	const int FinalTickOthers = FinalTickSelf;
+	// 主循环追赶真实预测 tick：从分支世界当前 tick 补齐到 PredTick，所有参与者都发布。
+	const SPracticePredictTickPlan TickPlan = QmBuildPracticePredictTickPlan(BaseGameTick, FinalTickRegular, 0, true);
 
 	const int LocalTickSlot = LocalInputConn;
 	const int DummyTickSlot = m_RequireDummy ? DummyInputConn : (LocalTickSlot ^ 1);
 
-	if(FinalTickSelf <= BaseGameTick)
+	if(TickPlan.Empty())
 	{
 		GameClient()->m_PredictedChar = pLocalChar->GetCore();
 		GameClient()->m_aClients[LocalClientId].m_Predicted = pLocalChar->GetCore();
@@ -1646,7 +1674,7 @@ bool CFastPractice::OverridePredict()
 	}
 
 	CQmAxiomQuadTimeScope PredictedQuadTime(Collision(), BaseGameTick, Client()->GameTickSpeed());
-	for(int Tick = BaseGameTick + 1; Tick <= FinalTickSelf; Tick++)
+	for(int Tick = TickPlan.m_FirstTick; Tick <= TickPlan.m_FinalTickSelf; Tick++)
 	{
 		Collision()->SetQmAxiomQuadTick(Tick, Client()->GameTickSpeed());
 		std::vector<STrackedProjectile> vTrackedProjectilesBefore;
@@ -1660,25 +1688,7 @@ bool CFastPractice::OverridePredict()
 			return false;
 		}
 
-		if(Tick == FinalTickSelf)
-		{
-			GameClient()->m_PrevPredictedWorld.CopyWorldClean(&GameClient()->m_PredictedWorld);
-			GameClient()->m_PredictedPrevChar = pLocalChar->GetCore();
-			GameClient()->m_aClients[LocalClientId].m_PrevPredicted = pLocalChar->GetCore();
-		}
-		if(Tick == FinalTickOthers)
-		{
-			for(int i = 0; i < MAX_CLIENTS; i++)
-				if(CCharacter *pChar = GameClient()->m_PredictedWorld.GetCharacterById(i))
-					GameClient()->m_aClients[i].m_PrevPredicted = pChar->GetCore();
-		}
-		if(Tick == PredTick)
-		{
-			GameClient()->m_PredictedPrevChar = pLocalChar->GetCore();
-			GameClient()->m_aClients[LocalClientId].m_PrevPredicted = pLocalChar->GetCore();
-			if(pDummyChar)
-				GameClient()->m_aClients[DummyClientId].m_PrevPredicted = pDummyChar->GetCore();
-		}
+		PublishPracticePredictionBeforeStep(GameClient()->m_PredictedWorld, TickPlan, Tick, false, LocalClientId);
 
 		CNetObj_PlayerInput *pInputData = (CNetObj_PlayerInput *)Client()->GetInputExact(Tick, LocalInputConn);
 		CNetObj_PlayerInput *pDummyInputData = pDummyChar ? (CNetObj_PlayerInput *)Client()->GetInputExact(Tick, DummyInputConn) : nullptr;
@@ -1781,82 +1791,13 @@ bool CFastPractice::OverridePredict()
 		if(!GameClient()->m_SuppressEvents)
 			GameClient()->HandlePredictedEvents(Tick);
 
-		if(Tick == FinalTickSelf)
-		{
-			GameClient()->m_PredictedChar = pLocalChar->GetCore();
-			GameClient()->m_aClients[LocalClientId].m_Predicted = pLocalChar->GetCore();
-		}
-		if(Tick == FinalTickOthers)
-		{
-			for(int i = 0; i < MAX_CLIENTS; i++)
-				if(CCharacter *pChar = GameClient()->m_PredictedWorld.GetCharacterById(i))
-					GameClient()->m_aClients[i].m_Predicted = pChar->GetCore();
-		}
-		if(Tick == PredTick)
-		{
-			GameClient()->m_PredictedChar = pLocalChar->GetCore();
-			GameClient()->m_aClients[LocalClientId].m_Predicted = pLocalChar->GetCore();
-			if(pDummyChar)
-				GameClient()->m_aClients[DummyClientId].m_Predicted = pDummyChar->GetCore();
-		}
+		PublishPracticePredictionAfterStep(GameClient()->m_PredictedWorld, TickPlan, Tick, LocalClientId);
+		PublishPracticePredictedPositions(GameClient()->m_PredictedWorld, Tick);
 
-		for(int i = 0; i < MAX_CLIENTS; i++)
-			if(CCharacter *pChar = GameClient()->m_PredictedWorld.GetCharacterById(i))
-			{
-				GameClient()->m_aClients[i].m_aPredPos[Tick % 200] = pChar->Core()->m_Pos;
-				GameClient()->m_aClients[i].m_aPredTick[Tick % 200] = Tick;
-			}
-
-		if(Tick > GameClient()->m_aLastNewPredictedTick[LocalTickSlot] && Tick <= FinalTickRegular)
-		{
-			GameClient()->m_aLastNewPredictedTick[LocalTickSlot] = Tick;
+		if(PublishPracticeNewPredictedFeedback(LocalTickSlot, pLocalChar, Tick, FinalTickRegular))
 			GameClient()->m_NewPredictedTick = true;
-			const vec2 Pos = pLocalChar->Core()->m_Pos;
-			const int Events = pLocalChar->Core()->m_TriggeredEvents;
-			if(!GameClient()->m_SuppressEvents)
-				if(Events & COREEVENT_AIR_JUMP)
-				{
-					GameClient()->m_aLastPredictedAirJumpTick[LocalTickSlot] = Tick;
-					GameClient()->m_Effects.AirJump(Pos, 1.0f, 1.0f);
-				}
-			if(g_Config.m_SndGame && !GameClient()->m_SuppressEvents)
-			{
-				if(Events & COREEVENT_GROUND_JUMP)
-					if(GetQmFocusModeDecisions().m_AirJump.m_PlaySound)
-						GameClient()->m_Sounds.PlayAndRecord(CSounds::CHN_WORLD, SOUND_PLAYER_JUMP, 1.0f, Pos);
-				if(Events & COREEVENT_HOOK_ATTACH_PLAYER)
-					GameClient()->m_Sounds.PlayAndRecord(CSounds::CHN_WORLD, SOUND_HOOK_ATTACH_PLAYER, 1.0f, Pos);
-				if(Events & COREEVENT_HOOK_ATTACH_GROUND)
-					GameClient()->m_Sounds.PlayAndRecord(CSounds::CHN_WORLD, SOUND_HOOK_ATTACH_GROUND, 1.0f, Pos);
-				if(Events & COREEVENT_HOOK_HIT_NOHOOK)
-					GameClient()->m_Sounds.PlayAndRecord(CSounds::CHN_WORLD, SOUND_HOOK_NOATTACH, 1.0f, Pos);
-			}
-		}
-
-		if(pDummyChar && Tick > GameClient()->m_aLastNewPredictedTick[DummyTickSlot])
-		{
-			GameClient()->m_aLastNewPredictedTick[DummyTickSlot] = Tick;
-			const vec2 Pos = pDummyChar->Core()->m_Pos;
-			const int Events = pDummyChar->Core()->m_TriggeredEvents;
-			if(!GameClient()->m_SuppressEvents)
-				if(Events & COREEVENT_AIR_JUMP)
-				{
-					GameClient()->m_aLastPredictedAirJumpTick[DummyTickSlot] = Tick;
-					GameClient()->m_Effects.AirJump(Pos, 1.0f, 1.0f);
-				}
-			if(g_Config.m_SndGame && !GameClient()->m_SuppressEvents)
-			{
-				if(Events & COREEVENT_GROUND_JUMP)
-					if(GetQmFocusModeDecisions().m_AirJump.m_PlaySound)
-						GameClient()->m_Sounds.PlayAndRecord(CSounds::CHN_WORLD, SOUND_PLAYER_JUMP, 1.0f, Pos);
-				if(Events & COREEVENT_HOOK_ATTACH_PLAYER)
-					GameClient()->m_Sounds.PlayAndRecord(CSounds::CHN_WORLD, SOUND_HOOK_ATTACH_PLAYER, 1.0f, Pos);
-				if(Events & COREEVENT_HOOK_ATTACH_GROUND)
-					GameClient()->m_Sounds.PlayAndRecord(CSounds::CHN_WORLD, SOUND_HOOK_ATTACH_GROUND, 1.0f, Pos);
-				if(Events & COREEVENT_HOOK_HIT_NOHOOK)
-					GameClient()->m_Sounds.PlayAndRecord(CSounds::CHN_WORLD, SOUND_HOOK_NOATTACH, 1.0f, Pos);
-			}
-		}
+		if(pDummyChar)
+			PublishPracticeNewPredictedFeedback(DummyTickSlot, pDummyChar, Tick, FinalTickRegular);
 	}
 
 	m_PracticeBaseWorld.CopyWorldClean(&GameClient()->m_PredictedWorld);
@@ -1886,10 +1827,9 @@ int CFastPractice::ApplyVisualFastInputPrediction(int FinalTickRegular, int Loca
 	if(!pLocalChar || (m_RequireDummy && !pDummyChar))
 		return FinalTickRegular;
 
-	const int FinalTickSelf = FinalTickRegular + FastInputTicks;
-	int FinalTickOthers = FinalTickSelf;
-	if(!EffectiveFastInputOthers(GameClient()))
-		FinalTickOthers = FinalTickRegular;
+	// 视觉外推从真实末帧继续往前跑；他人是否一起外推由快速输入设置决定，
+	// 关闭时停在真实末帧，避免把其他玩家画到未来位置。
+	const SPracticePredictTickPlan TickPlan = QmBuildPracticePredictTickPlan(FinalTickRegular, FinalTickRegular, FastInputTicks, EffectiveFastInputOthers(GameClient()));
 
 	const auto ResolveInputSlotByClientId = [&](int ClientId, int FallbackSlot) {
 		for(int Slot = 0; Slot < NUM_DUMMIES; Slot++)
@@ -1903,7 +1843,7 @@ int CFastPractice::ApplyVisualFastInputPrediction(int FinalTickRegular, int Loca
 	const int DummyTee = ResolveInputSlotByClientId(DummyClientId, LocalTee ^ 1);
 
 	CQmAxiomQuadTimeScope VisualQuadTime(Collision(), FinalTickRegular, Client()->GameTickSpeed());
-	for(int Tick = FinalTickRegular + 1; Tick <= FinalTickSelf; Tick++)
+	for(int Tick = TickPlan.m_FirstTick; Tick <= TickPlan.m_FinalTickSelf; Tick++)
 	{
 		Collision()->SetQmAxiomQuadTick(Tick, Client()->GameTickSpeed());
 		pLocalChar = VisualWorld.GetCharacterById(LocalClientId);
@@ -1911,19 +1851,7 @@ int CFastPractice::ApplyVisualFastInputPrediction(int FinalTickRegular, int Loca
 		if(!pLocalChar || (m_RequireDummy && !pDummyChar))
 			return FinalTickRegular;
 
-		if(Tick == FinalTickSelf)
-		{
-			GameClient()->m_PredictedWorld.CopyWorldClean(&VisualWorld);
-			GameClient()->m_PrevPredictedWorld.CopyWorldClean(&VisualWorld);
-			GameClient()->m_PredictedPrevChar = pLocalChar->GetCore();
-			GameClient()->m_aClients[LocalClientId].m_PrevPredicted = pLocalChar->GetCore();
-		}
-		if(Tick == FinalTickOthers)
-		{
-			for(int i = 0; i < MAX_CLIENTS; i++)
-				if(CCharacter *pChar = VisualWorld.GetCharacterById(i))
-					GameClient()->m_aClients[i].m_PrevPredicted = pChar->GetCore();
-		}
+		PublishPracticePredictionBeforeStep(VisualWorld, TickPlan, Tick, true, LocalClientId);
 
 		CNetObj_PlayerInput *pInputData = (CNetObj_PlayerInput *)Client()->GetInput(Tick, LocalInputConn);
 		CNetObj_PlayerInput *pDummyInputData = pDummyChar ? (CNetObj_PlayerInput *)Client()->GetInput(Tick, DummyInputConn) : nullptr;
@@ -1960,27 +1888,11 @@ int CFastPractice::ApplyVisualFastInputPrediction(int FinalTickRegular, int Loca
 		VisualWorld.Tick();
 		VisualWorld.m_WorldConfig.m_PredictEvents = TempPredEventState;
 
-		if(Tick == FinalTickSelf)
-		{
-			GameClient()->m_PredictedChar = pLocalChar->GetCore();
-			GameClient()->m_aClients[LocalClientId].m_Predicted = pLocalChar->GetCore();
-		}
-		if(Tick == FinalTickOthers)
-		{
-			for(int i = 0; i < MAX_CLIENTS; i++)
-				if(CCharacter *pChar = VisualWorld.GetCharacterById(i))
-					GameClient()->m_aClients[i].m_Predicted = pChar->GetCore();
-		}
-
-		for(int i = 0; i < MAX_CLIENTS; i++)
-			if(CCharacter *pChar = VisualWorld.GetCharacterById(i))
-			{
-				GameClient()->m_aClients[i].m_aPredPos[Tick % 200] = pChar->Core()->m_Pos;
-				GameClient()->m_aClients[i].m_aPredTick[Tick % 200] = Tick;
-			}
+		PublishPracticePredictionAfterStep(VisualWorld, TickPlan, Tick, LocalClientId);
+		PublishPracticePredictedPositions(VisualWorld, Tick);
 	}
 
-	return FinalTickSelf;
+	return TickPlan.m_FinalTickSelf;
 }
 
 void CFastPractice::UpdateGhostForClientId(int ClientId, SGhostData &Ghost)

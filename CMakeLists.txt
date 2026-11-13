@@ -4847,6 +4847,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/integration/qmclient/client/custom_community_info_test.cpp
     src/test/integration/qmclient/client/qm_sponsors_draft_test.cpp
     src/test/integration/qmclient/client/rank_view_timeline_test.cpp
+    src/test/integration/qmclient/client/qm_fast_practice_predict_loop_test.cpp
     src/test/integration/qmclient/client/qm_rank_demo_cache_test.cpp
     src/test/integration/qmclient/music/netease_shared_memory_readonly_test.cpp
     src/test/integration/qmclient/client/qm_screenshot_image_job_test.cpp
@@ -5053,6 +5054,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_fast_practice_cursor_test.cpp
     src/test/unit/qmclient/client/qm_fast_practice_rescue_test.cpp
     src/test/unit/qmclient/client/qm_fast_practice_branch_state_test.cpp
+    src/test/unit/qmclient/client/qm_practice_predict_plan_test.cpp
     src/test/unit/qmclient/client/qm_practice_input_lock_test.cpp
     src/test/unit/qmclient/client/qm_replay_session_test.cpp
     src/test/unit/qmclient/client/qm_practice_recorder_test.cpp
@@ -5914,6 +5916,7 @@ if(TARGET benchmark::benchmark AND SERVER AND FREETYPE_FOUND)
   # 对象库集合与 testrunner 一致，基准可覆盖 base/engine/game 各层代码
   add_executable(qm-benchmarks EXCLUDE_FROM_ALL
     src/test/benchmark/qm_local_world_benchmark.cpp
+    src/test/benchmark/qm_practice_predict_benchmark.cpp
     src/game/client/components/qmclient/local_world.cpp
     src/test/benchmark/qm_skin_download_benchmark.cpp
     src/test/benchmark/qm_startup_info_benchmark.cpp
