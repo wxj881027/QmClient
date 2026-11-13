@@ -5,8 +5,11 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <map>
+#include <new>
 #include <string>
+#include <utility>
 
 struct SQmRealtimeMessage;
 
@@ -26,20 +29,46 @@ public:
 		RESYNC,
 	};
 
+	// 合并分配失败保留旧名单并请求全量；同修订全量可恢复需要同步的状态。
 	EApplyResult Apply(const json_value *pData, const char *pExpectedServer);
+	// 发布器失败前不得修改外部状态；接收成功后才提交内部修订和名单。
+	template<typename TPublish>
+	EApplyResult ApplyAndPublish(const json_value *pData, const char *pExpectedServer, TPublish &&Publish)
+	{
+		try
+		{
+			return ApplyCandidate(pData, pExpectedServer, FPublish(std::forward<TPublish>(Publish)));
+		}
+		catch(const std::bad_alloc &)
+		{
+			m_NeedsFull = true;
+			return EApplyResult::RESYNC;
+		}
+	}
 	SQmClientUsersParseResult Result() const;
 	void Reset();
-	bool NeedsFull() const { return m_NeedsFull; }
+	// 已发布的现代名单租约过期时请求刷新，保留旧名单及可验证增量。
+	void RequestExpiredLeaseRefresh(const SQmClientDistributionSnapshot &Snapshot, int64_t NowTick)
+	{
+		if(m_Revision > 0 && Snapshot.IsStale(NowTick))
+			m_LeaseRefreshRequested = true;
+	}
+	bool NeedsFull() const { return m_NeedsFull || m_LeaseRefreshRequested; }
 	int LeaseSeconds() const { return m_LeaseSeconds; }
 	int64_t Revision() const { return m_Revision; }
 
 private:
+	using FPublish = std::function<bool(SQmClientUsersParseResult, int)>;
+	EApplyResult ApplyCandidate(const json_value *pData, const char *pExpectedServer, const FPublish &Publish);
+	static SQmClientUsersParseResult BuildResult(const std::map<std::string, SQmClientServerDistribution> &Servers, const std::map<std::string, SQmClientRecognitionMark> &Players, bool Parsed);
+
 	std::map<std::string, SQmClientServerDistribution> m_Servers;
 	std::map<std::string, SQmClientRecognitionMark> m_Players;
 	std::string m_ServerAddress;
 	int64_t m_Revision = 0;
 	int m_LeaseSeconds = 0;
 	bool m_NeedsFull = false;
+	bool m_LeaseRefreshRequested = false;
 };
 
 #endif

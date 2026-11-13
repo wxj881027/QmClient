@@ -11,6 +11,7 @@
 #include <game/client/gameclient.h>
 #include <game/layers.h>
 #include <game/localization.h>
+#include <game/map/map_render_items.h>
 #include <game/mapitems.h>
 
 CMapSounds::CMapSounds()
@@ -69,11 +70,18 @@ void CMapSounds::OnMapLoad()
 	bool ShowWarning = false;
 	for(int i = 0; i < m_Count; i++)
 	{
-		CMapItemSound *pSound = (CMapItemSound *)pMap->GetItem(Start + i);
-		const char *pName = pMap->GetDataString(pSound->m_SoundName);
+		const auto SoundItem = MapRenderItems::ReadSound(*pMap, Start + i);
+		if(!SoundItem)
+		{
+			log_error("mapsounds", "Failed to load map sound %d: invalid header.", i);
+			ShowWarning = true;
+			m_aSounds[i] = -1;
+			continue;
+		}
+		const char *pName = pMap->GetDataString(SoundItem->m_SoundName);
 		if(pName == nullptr || pName[0] == '\0')
 		{
-			if(pSound->m_External)
+			if(SoundItem->m_External)
 			{
 				log_error("mapsounds", "Failed to load map sound %d: failed to load name.", i);
 				ShowWarning = true;
@@ -83,16 +91,16 @@ void CMapSounds::OnMapLoad()
 			pName = "(error)";
 		}
 
-		if(pSound->m_External)
+		if(SoundItem->m_External)
 		{
 			char aBuf[IO_MAX_PATH_LENGTH];
 			str_format(aBuf, sizeof(aBuf), "mapres/%s.opus", pName);
 			m_aSounds[i] = Sound()->LoadOpus(aBuf);
-			pMap->UnloadData(pSound->m_SoundName);
+			pMap->UnloadData(SoundItem->m_SoundName);
 		}
 		else
 		{
-			const void *pData = pMap->GetData(pSound->m_SoundData);
+			const void *pData = pMap->GetData(SoundItem->m_SoundData);
 			if(pData == nullptr)
 			{
 				log_error("mapsounds", "Failed to load map sound %d: failed to load data.", i);
@@ -100,52 +108,32 @@ void CMapSounds::OnMapLoad()
 				m_aSounds[i] = -1;
 				continue;
 			}
-			const int SoundDataSize = pMap->GetDataSize(pSound->m_SoundData);
+			const int SoundDataSize = pMap->GetDataSize(SoundItem->m_SoundData);
 			m_aSounds[i] = Sound()->LoadOpusFromMem(pData, SoundDataSize, false, pName);
-			pMap->UnloadData(pSound->m_SoundData);
+			pMap->UnloadData(SoundItem->m_SoundData);
 		}
 		ShowWarning = ShowWarning || m_aSounds[i] == -1;
 	}
+	if(!PrepareMapSoundSourceQueue(*Layers(), std::span<const int>(m_aSounds, m_Count), m_vSourceQueue))
+	{
+		ShowWarning = true;
+		// 分配失败后的诊断也可能分配，不能再次中断地图加载。
+		try
+		{
+			log_error("mapsounds", "Failed to prepare map sound sources.");
+		}
+		catch(...)
+		{
+		}
+	}
 	if(ShowWarning)
 	{
-		Client()->AddWarning(SWarning(Localize("Some map sounds could not be loaded. Check the local console for details.")));
-	}
-
-	// enqueue sound sources
-	for(int GroupIndex = 0; GroupIndex < Layers()->NumGroups(); GroupIndex++)
-	{
-		const CMapItemGroup *pGroup = Layers()->GetGroup(GroupIndex);
-		if(!pGroup)
-			continue;
-
-		for(int LayerIndex = 0; LayerIndex < pGroup->m_NumLayers; LayerIndex++)
+		try
 		{
-			const CMapItemLayer *pLayer = Layers()->GetLayer(pGroup->m_StartLayer + LayerIndex);
-			if(!pLayer)
-				continue;
-			if(pLayer->m_Type != LAYERTYPE_SOUNDS)
-				continue;
-
-			const CMapItemLayerSounds *pSoundLayer = reinterpret_cast<const CMapItemLayerSounds *>(pLayer);
-			if(pSoundLayer->m_Version < 1 || pSoundLayer->m_Version > 2)
-				continue;
-			if(pSoundLayer->m_Sound < 0 || pSoundLayer->m_Sound >= m_Count || m_aSounds[pSoundLayer->m_Sound] == -1)
-				continue;
-
-			const CSoundSource *pSources = static_cast<CSoundSource *>(Layers()->Map()->GetDataSwapped(pSoundLayer->m_Data));
-			if(!pSources)
-				continue;
-
-			const size_t NumSources = minimum<size_t>(pSoundLayer->m_NumSources, Layers()->Map()->GetDataSize(pSoundLayer->m_Data) / sizeof(CSoundSource));
-			for(size_t SourceIndex = 0; SourceIndex < NumSources; SourceIndex++)
-			{
-				CSourceQueueEntry Source;
-				Source.m_Sound = pSoundLayer->m_Sound;
-				Source.m_HighDetail = pLayer->m_Flags & LAYERFLAG_DETAIL;
-				Source.m_pGroup = pGroup;
-				Source.m_pSource = &pSources[SourceIndex];
-				m_vSourceQueue.push_back(Source);
-			}
+			Client()->AddWarning(SWarning(Localize("Some map sounds could not be loaded. Check the local console for details.")));
+		}
+		catch(...)
+		{
 		}
 	}
 }

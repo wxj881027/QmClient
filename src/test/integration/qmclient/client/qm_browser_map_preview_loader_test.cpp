@@ -1,7 +1,14 @@
+#include <engine/shared/datafile.h>
+
 #include <game/client/components/qmclient/browser_map_preview_loader.h>
+#include <game/gamecore.h>
 
 #include <gtest/gtest.h>
 #include <test/test.h>
+
+#include <array>
+#include <cstddef>
+#include <optional>
 
 class QmBrowserMapPreviewLoader : public ::testing::Test
 {
@@ -35,6 +42,61 @@ protected:
 		Pool.Add(pJob);
 		Pool.Shutdown();
 		ASSERT_EQ(pJob->State(), IJob::STATE_DONE);
+	}
+	// 保留有效游戏层，仅改变预览要读取的可选条目尺寸。
+	void WritePreviewMap(const CMapItemImage_v2 &Image, size_t ImageSize, int TileImage = 0, std::optional<size_t> QuadSize = std::nullopt)
+	{
+		CDataFileWriter Writer;
+		ASSERT_TRUE(Writer.Open(m_pStorage.get(), "maps/preview.map"));
+		CMapItemVersion Version{};
+		Version.m_Version = 1;
+		Writer.AddItem(MAPITEMTYPE_VERSION, 0, sizeof(Version), &Version);
+
+		CMapItemImage_v2 ImageItem = Image;
+		ImageItem.m_ImageName = Writer.AddDataString("embedded");
+		const std::array<uint8_t, 4> aPixel{73, 2, 3, 255};
+		ImageItem.m_ImageData = Writer.AddData(aPixel.size(), aPixel.data());
+		Writer.AddItem(MAPITEMTYPE_IMAGE, 0, ImageSize, &ImageItem);
+
+		std::array<CTile, 4> aTiles{};
+		CMapItemLayerTilemap Tilemap{};
+		Tilemap.m_Layer.m_Type = LAYERTYPE_TILES;
+		Tilemap.m_Version = 4;
+		Tilemap.m_Width = 2;
+		Tilemap.m_Height = 2;
+		Tilemap.m_Flags = TILESLAYERFLAG_GAME;
+		Tilemap.m_Color = CColor(255, 255, 255, 255);
+		Tilemap.m_ColorEnv = -1;
+		Tilemap.m_Image = TileImage;
+		Tilemap.m_Data = Writer.AddData(sizeof(aTiles), aTiles.data());
+		Tilemap.m_Tele = Tilemap.m_Speedup = Tilemap.m_Front = Tilemap.m_Switch = Tilemap.m_Tune = -1;
+		StrToInts(Tilemap.m_aName, std::size(Tilemap.m_aName), "Game");
+		Writer.AddItem(MAPITEMTYPE_LAYER, 0, sizeof(Tilemap), &Tilemap);
+		if(QuadSize)
+		{
+			CQuad Quad{};
+			CMapItemLayerQuads Quads{};
+			Quads.m_Layer.m_Type = LAYERTYPE_QUADS;
+			Quads.m_Version = 1;
+			Quads.m_NumQuads = 1;
+			Quads.m_Data = Writer.AddDataSwapped(sizeof(Quad), &Quad);
+			Quads.m_Image = -1;
+			Writer.AddItem(MAPITEMTYPE_LAYER, 1, *QuadSize, &Quads);
+		}
+		CMapItemGroup Group{};
+		Group.m_Version = 3;
+		Group.m_ParallaxX = Group.m_ParallaxY = 100;
+		Group.m_NumLayers = QuadSize ? 2 : 1;
+		Writer.AddItem(MAPITEMTYPE_GROUP, 0, sizeof(Group), &Group);
+		Writer.Finish();
+	}
+	static CMapItemImage_v2 EmbeddedImage(int Version)
+	{
+		CMapItemImage_v2 Image{};
+		Image.m_Version = Version;
+		Image.m_Width = Image.m_Height = 1;
+		Image.m_MustBe1 = 1;
+		return Image;
 	}
 };
 
@@ -100,4 +162,95 @@ TEST_F(QmBrowserMapPreviewLoader, InvalidMapDoesNotPublishLayers)
 	Run(pJob);
 	EXPECT_FALSE(pJob->m_Success);
 	EXPECT_EQ(pJob->m_pLayers, nullptr);
+}
+
+TEST_F(QmBrowserMapPreviewLoader, VersionOneImageWithoutExtensionStillDecodesPixels)
+{
+	WritePreviewMap(EmbeddedImage(1), sizeof(CMapItemImage_v1));
+	auto pJob = std::make_shared<CQmBrowserMapPreviewLoadJob>(m_pStorage.get(), "preview", "", false);
+	Run(pJob);
+	ASSERT_TRUE(pJob->m_Success);
+	ASSERT_EQ(pJob->m_vImages.size(), 1u);
+	ASSERT_NE(pJob->m_vImages[0].m_pData, nullptr);
+	EXPECT_EQ(pJob->m_vImages[0].m_pData[0], 73);
+}
+
+TEST_F(QmBrowserMapPreviewLoader, VersionTwoImageWithExtensionStillDecodesPixels)
+{
+	WritePreviewMap(EmbeddedImage(2), sizeof(CMapItemImage_v2));
+	auto pJob = std::make_shared<CQmBrowserMapPreviewLoadJob>(m_pStorage.get(), "preview", "", false);
+	Run(pJob);
+	ASSERT_TRUE(pJob->m_Success);
+	ASSERT_NE(pJob->m_vImages[0].m_pData, nullptr);
+	EXPECT_EQ(pJob->m_vImages[0].m_pData[0], 73);
+}
+
+TEST_F(QmBrowserMapPreviewLoader, TruncatedImageItemStopsPreviewPublication)
+{
+	WritePreviewMap(EmbeddedImage(1), sizeof(CMapItemImage_v1) - sizeof(int));
+	CMap Map(m_pStorage.get());
+	ASSERT_TRUE(Map.Load("maps/preview.map", IStorage::TYPE_SAVE));
+	auto pJob = std::make_shared<CQmBrowserMapPreviewLoadJob>(m_pStorage.get(), "preview", "", false);
+	Run(pJob);
+	EXPECT_FALSE(pJob->m_Success);
+	ASSERT_EQ(pJob->m_vImages.size(), 1u);
+	EXPECT_EQ(pJob->m_vImages[0].m_pData, nullptr);
+}
+
+TEST_F(QmBrowserMapPreviewLoader, VersionTwoImageMissingExtensionDoesNotBecomeSuccessfulPreview)
+{
+	WritePreviewMap(EmbeddedImage(2), sizeof(CMapItemImage_v1));
+	auto pJob = std::make_shared<CQmBrowserMapPreviewLoadJob>(m_pStorage.get(), "preview", "", false);
+	Run(pJob);
+	EXPECT_FALSE(pJob->m_Success);
+}
+
+TEST_F(QmBrowserMapPreviewLoader, TruncatedQuadHeaderStopsBeforeDataAndImageFields)
+{
+	WritePreviewMap(EmbeddedImage(1), sizeof(CMapItemImage_v1), 0, sizeof(CMapItemLayer));
+	auto pJob = std::make_shared<CQmBrowserMapPreviewLoadJob>(m_pStorage.get(), "preview", "", false);
+	Run(pJob);
+	EXPECT_FALSE(pJob->m_Success);
+}
+
+TEST_F(QmBrowserMapPreviewLoader, LegacyQuadWithoutNameKeepsItsPreview)
+{
+	WritePreviewMap(EmbeddedImage(1), sizeof(CMapItemImage_v1), 0, offsetof(CMapItemLayerQuads, m_aName));
+	auto pJob = std::make_shared<CQmBrowserMapPreviewLoadJob>(m_pStorage.get(), "preview", "", false);
+	Run(pJob);
+	EXPECT_TRUE(pJob->m_Success);
+}
+
+TEST_F(QmBrowserMapPreviewLoader, UnusedTruncatedImageKeepsUntexturedPreviewAvailable)
+{
+	WritePreviewMap(EmbeddedImage(1), sizeof(int), -1);
+	auto pJob = std::make_shared<CQmBrowserMapPreviewLoadJob>(m_pStorage.get(), "preview", "", false);
+	Run(pJob);
+	ASSERT_TRUE(pJob->m_Success);
+	EXPECT_EQ(pJob->m_vUsage[0], 0);
+	EXPECT_EQ(pJob->m_vImages[0].m_pData, nullptr);
+}
+
+TEST_F(QmBrowserMapPreviewLoader, UnsupportedCompleteImageTypeKeepsExistingMissingTextureFallback)
+{
+	auto Image = EmbeddedImage(2);
+	Image.m_MustBe1 = 0;
+	WritePreviewMap(Image, sizeof(Image));
+	auto pJob = std::make_shared<CQmBrowserMapPreviewLoadJob>(m_pStorage.get(), "preview", "", false);
+	Run(pJob);
+	ASSERT_TRUE(pJob->m_Success);
+	EXPECT_EQ(pJob->m_vImages[0].m_pData, nullptr);
+}
+
+TEST_F(QmBrowserMapPreviewLoader, CorrectedFileCanBeLoadedAfterTruncatedImageFailure)
+{
+	WritePreviewMap(EmbeddedImage(2), sizeof(CMapItemImage_v1));
+	auto pFailed = std::make_shared<CQmBrowserMapPreviewLoadJob>(m_pStorage.get(), "preview", "", false);
+	Run(pFailed);
+	ASSERT_FALSE(pFailed->m_Success);
+	pFailed.reset();
+	WritePreviewMap(EmbeddedImage(2), sizeof(CMapItemImage_v2));
+	auto pRetry = std::make_shared<CQmBrowserMapPreviewLoadJob>(m_pStorage.get(), "preview", "", false);
+	Run(pRetry);
+	EXPECT_TRUE(pRetry->m_Success);
 }

@@ -66,15 +66,15 @@ class CCommandProcessor_EGL_GL : public CGraphicsBackend_Threaded::ICommandProce
 public:
 	CCommandProcessor_EGL_GL(EBackendType BackendType, int GLMajor, int GLMinor, int GLPatch);
 	~CCommandProcessor_EGL_GL() override;
-	void RunBuffer(CCommandBuffer *pBuffer) override;
+	void RunBuffer(CCommandBuffer *pBuffer) noexcept override;
 
 	const SGfxErrorContainer &GetError() const override;
 	void ClearError() override { m_Error = {}; }
 	void ErroneousCleanup() override;
 	const SGfxWarningContainer &GetWarning() const override;
 
-	void HandleError();
-	void HandleWarning();
+	void HandleError() noexcept;
+	void HandleWarning() noexcept;
 };
 
 class CGraphicsBackend_EGL : public CGraphicsBackend_Threaded

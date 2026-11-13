@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 
+#include <limits>
+
 using namespace NeteaseLyrics;
 
 namespace
@@ -82,6 +84,30 @@ TEST(NeteaseLyricTimeline, PlaybackAnchorPausesAndResumesWithoutRenderClockGuess
 	EXPECT_EQ(Anchor.Estimate(Start + std::chrono::seconds(10)), 1250);
 	Anchor.Update(1250, true, Start + std::chrono::seconds(10));
 	EXPECT_EQ(Anchor.Estimate(Start + std::chrono::milliseconds(10500)), 1750);
+}
+
+TEST(NeteaseLyricTimeline, PlaybackAnchorKeepsTheObservedPositionWhenAdvanceWouldOverflow)
+{
+	SPlaybackAnchor Anchor;
+	const auto Start = std::chrono::steady_clock::time_point(std::chrono::milliseconds(100));
+	const int64_t Maximum = std::numeric_limits<int64_t>::max();
+	Anchor.Update(Maximum - 100, true, Start);
+	EXPECT_EQ(Anchor.Estimate(Start + std::chrono::milliseconds(100)), Maximum);
+	EXPECT_EQ(Anchor.Estimate(Start + std::chrono::milliseconds(101)), Maximum - 100);
+}
+
+TEST(NeteaseLyricTimeline, ResetClearsAnActivePlaybackAnchorAndAllowsReuse)
+{
+	SPlaybackAnchor Anchor;
+	const auto Start = std::chrono::steady_clock::time_point(std::chrono::milliseconds(100));
+	Anchor.Update(750, true, Start);
+	EXPECT_EQ(Anchor.Estimate(Start + std::chrono::milliseconds(250)), 1000);
+	Anchor.Reset();
+	EXPECT_EQ(Anchor.Estimate(Start + std::chrono::seconds(1)), 0);
+	Anchor.Reset();
+	EXPECT_EQ(Anchor.Estimate(Start + std::chrono::seconds(1)), 0);
+	Anchor.Update(200, true, Start + std::chrono::seconds(1));
+	EXPECT_EQ(Anchor.Estimate(Start + std::chrono::milliseconds(1250)), 450);
 }
 
 TEST(NeteaseLyricTimeline, GenerationChangesImmediatelyOnSongSwitch)

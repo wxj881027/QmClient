@@ -116,16 +116,26 @@ std::optional<std::string> windows_wide_to_utf8_bounded(const wchar_t *wide_str,
 		return {};
 	return String;
 }
-// See https://learn.microsoft.com/en-us/windows/win32/learnwin32/initializing-the-com-library
-CWindowsComLifecycle::CWindowsComLifecycle(bool HasWindow)
+
+std::optional<std::string> windows_registry_string_to_utf8(const wchar_t *wide_str, size_t capacity, size_t bytes)
 {
-	HRESULT result = CoInitializeEx(nullptr, (HasWindow ? COINIT_APARTMENTTHREADED : COINIT_MULTITHREADED) | COINIT_DISABLE_OLE1DDE);
-	dbg_assert(result != S_FALSE, "COM library already initialized on this thread");
-	dbg_assert(result == S_OK, "COM library initialization failed");
+	if(!wide_str || bytes == 0 || bytes % sizeof(wchar_t) != 0 || bytes / sizeof(wchar_t) > capacity)
+		return std::nullopt;
+	return windows_wide_to_utf8_bounded(wide_str, wide_str + bytes / sizeof(wchar_t));
+}
+
+// See https://learn.microsoft.com/en-us/windows/win32/learnwin32/initializing-the-com-library
+CWindowsComLifecycle::CWindowsComLifecycle(bool HasWindow, EInitMode InitMode)
+{
+	const HRESULT Result = CoInitializeEx(nullptr, (HasWindow ? COINIT_APARTMENTTHREADED : COINIT_MULTITHREADED) | COINIT_DISABLE_OLE1DDE);
+	m_Initialized = SUCCEEDED(Result);
+	if(InitMode == EInitMode::REQUIRED)
+		dbg_assert(m_Initialized, "COM library initialization failed");
 }
 CWindowsComLifecycle::~CWindowsComLifecycle()
 {
-	CoUninitialize();
+	if(m_Initialized)
+		CoUninitialize();
 }
 
 static void windows_print_error(const char *system, const char *prefix, HRESULT error)

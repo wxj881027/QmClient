@@ -6,6 +6,8 @@
 
 #include <engine/shared/config.h>
 
+#include <new>
+#include <stdexcept>
 #include <utility>
 
 namespace qm_card_collapse
@@ -46,14 +48,42 @@ namespace qm_card_collapse
 			return true;
 		}
 
-		bool PersistGlobalState()
+		bool TrySyncFromConfig()
 		{
-			char aSerialized[sizeof(g_Config.m_QmSettingsCardCollapsed)];
-			if(GlobalState().Serialize(aSerialized, sizeof(aSerialized)))
-			{
-				str_copy(g_Config.m_QmSettingsCardCollapsed, aSerialized, sizeof(g_Config.m_QmSettingsCardCollapsed));
-				str_copy(s_aSerializedCache, g_Config.m_QmSettingsCardCollapsed, sizeof(s_aSerializedCache));
+			const bool ConfigChanged = !s_Initialized || str_comp(s_aSerializedCache, g_Config.m_QmSettingsCardCollapsed) != 0;
+			if(!ConfigChanged && g_Config.m_QmSettingsCardCollapseMigrated)
 				return true;
+
+			try
+			{
+				// 配置解析与既有导入全部完成后再发布，失败不留下半份状态。
+				CState Candidate;
+				if(!Candidate.Load(g_Config.m_QmSettingsCardCollapsed))
+					return false;
+				const bool NeedsImport = !g_Config.m_QmSettingsCardCollapseMigrated;
+				char aSerialized[sizeof(g_Config.m_QmSettingsCardCollapsed)];
+				if(NeedsImport)
+				{
+					if(g_Config.m_QmSettingsCardCollapsed[0] == '\0')
+						Candidate.ImportLegacyQm(g_Config.m_QmSidebarCardCollapsed);
+					if(!Candidate.Serialize(aSerialized, sizeof(aSerialized)))
+						return false;
+				}
+				GlobalState() = std::move(Candidate);
+				if(NeedsImport)
+				{
+					str_copy(g_Config.m_QmSettingsCardCollapsed, aSerialized, sizeof(g_Config.m_QmSettingsCardCollapsed));
+					g_Config.m_QmSettingsCardCollapseMigrated = 1;
+				}
+				str_copy(s_aSerializedCache, g_Config.m_QmSettingsCardCollapsed, sizeof(s_aSerializedCache));
+				s_Initialized = true;
+				return true;
+			}
+			catch(const std::bad_alloc &)
+			{
+			}
+			catch(const std::length_error &)
+			{
 			}
 			return false;
 		}
@@ -117,42 +147,36 @@ namespace qm_card_collapse
 		if(pOut == nullptr || OutSize == 0)
 			return false;
 		pOut[0] = '\0';
-		std::string Serialized;
+		size_t Remaining = OutSize - 1;
+		bool First = true;
 		for(const auto &[StableId, Collapsed] : m_States)
 		{
-			if(!Serialized.empty())
-				Serialized += ';';
-			if(!Collapsed)
-				Serialized += '!';
-			Serialized += StableId;
+			const size_t Prefix = (First ? 0 : 1) + (Collapsed ? 0 : 1);
+			if(Prefix > Remaining)
+				return false;
+			Remaining -= Prefix;
+			if(StableId.size() > Remaining)
+				return false;
+			Remaining -= StableId.size();
+			First = false;
 		}
-		if(Serialized.size() >= OutSize)
-			return false;
-		str_copy(pOut, Serialized.c_str(), OutSize);
+		char *pWrite = pOut;
+		for(const auto &[StableId, Collapsed] : m_States)
+		{
+			if(pWrite != pOut)
+				*pWrite++ = ';';
+			if(!Collapsed)
+				*pWrite++ = '!';
+			mem_copy(pWrite, StableId.data(), StableId.size());
+			pWrite += StableId.size();
+		}
+		*pWrite = '\0';
 		return true;
 	}
 
 	void SyncFromConfig()
 	{
-		const bool ConfigChanged = !s_Initialized || str_comp(s_aSerializedCache, g_Config.m_QmSettingsCardCollapsed) != 0;
-		if(!ConfigChanged && g_Config.m_QmSettingsCardCollapseMigrated)
-			return;
-
-		GlobalState().Load(g_Config.m_QmSettingsCardCollapsed);
-		if(!g_Config.m_QmSettingsCardCollapseMigrated)
-		{
-			const CState Previous = GlobalState();
-			if(g_Config.m_QmSettingsCardCollapsed[0] == '\0')
-				GlobalState().ImportLegacyQm(g_Config.m_QmSidebarCardCollapsed);
-			if(!PersistGlobalState())
-			{
-				GlobalState() = Previous;
-				return;
-			}
-			g_Config.m_QmSettingsCardCollapseMigrated = 1;
-		}
-		str_copy(s_aSerializedCache, g_Config.m_QmSettingsCardCollapsed, sizeof(s_aSerializedCache));
-		s_Initialized = true;
+		TrySyncFromConfig();
 	}
 
 	const CState &CurrentState()
@@ -168,20 +192,29 @@ namespace qm_card_collapse
 
 	bool SetCollapsed(const char *pStableId, const bool Collapsed)
 	{
-		SyncFromConfig();
-		CState &State = GlobalState();
-		CState Previous = State;
-		if(!State.SetCollapsed(pStableId, Collapsed))
+		// 同步失败时拒绝本次点击，避免用旧缓存覆盖刚修改的配置。
+		if(!TrySyncFromConfig())
 			return false;
-		char aSerialized[sizeof(g_Config.m_QmSettingsCardCollapsed)];
-		if(!State.Serialize(aSerialized, sizeof(aSerialized)))
+		try
 		{
-			State = std::move(Previous);
-			return false;
+			CState Candidate = GlobalState();
+			if(!Candidate.SetCollapsed(pStableId, Collapsed))
+				return false;
+			char aSerialized[sizeof(g_Config.m_QmSettingsCardCollapsed)];
+			if(!Candidate.Serialize(aSerialized, sizeof(aSerialized)))
+				return false;
+			GlobalState() = std::move(Candidate);
+			str_copy(g_Config.m_QmSettingsCardCollapsed, aSerialized, sizeof(g_Config.m_QmSettingsCardCollapsed));
+			str_copy(s_aSerializedCache, g_Config.m_QmSettingsCardCollapsed, sizeof(s_aSerializedCache));
+			return true;
 		}
-		str_copy(g_Config.m_QmSettingsCardCollapsed, aSerialized, sizeof(g_Config.m_QmSettingsCardCollapsed));
-		str_copy(s_aSerializedCache, g_Config.m_QmSettingsCardCollapsed, sizeof(s_aSerializedCache));
-		return true;
+		catch(const std::bad_alloc &)
+		{
+		}
+		catch(const std::length_error &)
+		{
+		}
+		return false;
 	}
 
 	void SyncQmModules(std::array<bool, qm_module::QmModuleCount> &Collapsed)

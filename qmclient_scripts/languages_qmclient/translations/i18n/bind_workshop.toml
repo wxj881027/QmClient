@@ -1066,4 +1066,3 @@ simplified_chinese = "整组选区的外框；只选一个节点才能改尺寸�
 key = "nodes selected"
 [message.translations]
 simplified_chinese = "个节点已选中"
-

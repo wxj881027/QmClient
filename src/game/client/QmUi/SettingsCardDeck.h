@@ -10,7 +10,11 @@
 
 #include <array>
 #include <cstdint>
+#include <new>
+#include <optional>
+#include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 class CScrollRegion;
@@ -81,6 +85,60 @@ struct SSettingsCardDeckResult
 	bool m_OrderChanged = false;
 };
 
+// 定义与查询键一起发布；失败不能清掉旧回调或把半份定义标为新版本。
+class CSettingsCardDefinitionsCache
+{
+	std::vector<SSettingsCardDefinition> m_vDefinitions;
+	std::string m_Tab;
+	uint64_t m_Revision = 0;
+	ESettingsCardRenderPass m_RenderPass = ESettingsCardRenderPass::INTERACTIVE;
+	bool m_Initialized = false;
+
+public:
+	enum class EPrepareResult
+	{
+		UNCHANGED,
+		PREPARED,
+		DEFERRED,
+	};
+
+	template<typename FBuildDefinitions>
+	EPrepareResult TryPrepare(const char *pTab, uint64_t Revision, ESettingsCardRenderPass RenderPass, FBuildDefinitions &&BuildDefinitions)
+	{
+		return TryPrepare(pTab, Revision, RenderPass, std::forward<FBuildDefinitions>(BuildDefinitions), [](const auto &) { return true; });
+	}
+	template<typename FBuildDefinitions, typename FBeforePublish>
+	EPrepareResult TryPrepare(const char *pTab, uint64_t Revision, ESettingsCardRenderPass RenderPass, FBuildDefinitions &&BuildDefinitions, FBeforePublish &&BeforePublish)
+	{
+		if(!SettingsCardDeckDefinitionsCacheKeyChanged(m_Initialized, m_Revision, Revision, m_Tab.c_str(), pTab, m_RenderPass, RenderPass))
+			return EPrepareResult::UNCHANGED;
+		try
+		{
+			std::string Tab(pTab != nullptr ? pTab : "");
+			std::vector<SSettingsCardDefinition> vCandidate;
+			BuildDefinitions(vCandidate);
+			// 消费者尚不能撤回旧视图来源时，显式延迟整份发布。
+			if(!BeforePublish(vCandidate))
+				return EPrepareResult::DEFERRED;
+			m_vDefinitions.swap(vCandidate);
+			m_Tab.swap(Tab);
+			m_Revision = Revision;
+			m_RenderPass = RenderPass;
+			m_Initialized = true;
+			return EPrepareResult::PREPARED;
+		}
+		catch(const std::bad_alloc &)
+		{
+			return EPrepareResult::DEFERRED;
+		}
+		catch(const std::length_error &)
+		{
+			return EPrepareResult::DEFERRED;
+		}
+	}
+	const std::vector<SSettingsCardDefinition> &Definitions() const { return m_vDefinitions; }
+};
+
 // 设置卡片的 client-only 协调器：唯一负责声明式 definition 的排序、拖拽、滚动与 canonical shell 接线。
 class CSettingsCardDeck
 {
@@ -90,23 +148,41 @@ public:
 	SSettingsCardDeckResult RenderCached(const IUiContext &Ctx, const SSettingsPageLayoutFrame &Layout, const char *pTab, uint64_t DefinitionsRevision, FBuildDefinitions &&BuildDefinitions, qm_card_order::CModel &Model, CScrollRegion *pScrollRegion, const SSettingsCardDeckInput &Input, const SCardMotionSpec &Motion, const SSettingsCardDeckVisualOptions &VisualOptions, uint64_t MeasurementEnvironmentRevision = UINT64_MAX)
 	{
 		const ESettingsCardRenderPass RenderPass = RenderPassMode(Ctx);
-		if(SettingsCardDeckDefinitionsCacheKeyChanged(m_CachedDefinitionsInitialized, m_CachedDefinitionsRevision, DefinitionsRevision, m_CachedDefinitionsTab.c_str(), pTab, m_CachedDefinitionsRenderPass, RenderPass))
+		std::optional<SDefinitionPreparation> Preparation;
+		const auto Prepared = m_DefinitionsCache.TryPrepare(pTab, DefinitionsRevision, RenderPass, std::forward<FBuildDefinitions>(BuildDefinitions), [&](const auto &vCandidate) {
+			if(pTab != nullptr)
+			{
+				if(ShouldDeferDefinitionView(Ctx, pTab, vCandidate, Model))
+					return false;
+				Preparation.emplace(PrepareDefinitions(pTab, vCandidate, Model));
+				if(Preparation->m_View)
+				{
+					// 回调关闭已生效就不回滚；旧定义仍在，旧 runtime 地址也尚未退休。
+					ClosePreparedInteractionSources(Ctx);
+					Preparation->m_InteractionsClosed = true;
+					if(Preparation->m_ModelCount != Model.Count() || Preparation->m_StateIndexRevision != Model.StateIndexRevision())
+					{
+						Preparation.emplace(PrepareDefinitions(pTab, vCandidate, Model));
+						Preparation->m_InteractionsClosed = true;
+					}
+				}
+			}
+			return true;
+		});
+		if(Prepared == CSettingsCardDefinitionsCache::EPrepareResult::DEFERRED)
+			return {};
+		if(Prepared == CSettingsCardDefinitionsCache::EPrepareResult::PREPARED)
 		{
-			m_vCachedDefinitions.clear();
-			BuildDefinitions(m_vCachedDefinitions);
-			m_CachedDefinitionsRevision = DefinitionsRevision;
-			m_CachedDefinitionsRenderPass = RenderPass;
-			m_CachedDefinitionsTab = pTab != nullptr ? pTab : "";
-			m_CachedDefinitionsInitialized = true;
 			m_CachedDefinitionsDirty = true;
 			// 定义刷新不等于所有内容变化。显式环境版本允许按单卡版本保留邻卡缓存；
 			// 尚未迁移的调用方继续保留旧的全组失效合同。
 			m_InvalidateMeasurementsOnDefinitionsPrepare = MeasurementEnvironmentRevision == UINT64_MAX || m_MeasurementEnvironmentRevision != MeasurementEnvironmentRevision;
 			m_MeasurementEnvironmentRevision = MeasurementEnvironmentRevision;
 		}
-		return RenderInternal(Ctx, Layout, pTab, m_vCachedDefinitions, Model, pScrollRegion, Input, Motion, VisualOptions, true);
+		return RenderInternal(Ctx, Layout, pTab, m_DefinitionsCache.Definitions(), Model, pScrollRegion, Input, Motion, VisualOptions, true, Preparation ? &*Preparation : nullptr);
 	}
 	void RequestReveal(const char *pStableId);
+	void RequestReveal(std::string StableId) noexcept;
 	void BeginDisplayCycle(uint64_t DisplayCycle, bool AnimateEntry);
 
 private:
@@ -166,10 +242,41 @@ private:
 		void Reset() { *this = {}; }
 	};
 
+	struct SDefinitionViewState
+	{
+		std::vector<SRuntimeState> m_vRuntimeStates;
+		std::vector<float> m_vContentHeights;
+		std::vector<float> m_vContentWidths;
+		std::vector<uint64_t> m_vMeasureRevisions;
+		std::vector<std::shared_ptr<const CSettingsContentLayout>> m_vContentLayouts;
+		std::vector<CSettingsContentLayoutCache> m_vContentLayoutCaches;
+		std::vector<int> m_vActiveStateIndices;
+		settings_card_deck_logic::CProjectionCache m_ProjectionCache;
+	};
+
+	struct SDefinitionPreparation
+	{
+		std::vector<const SSettingsCardDefinition *> m_vDefinitionsByState;
+		std::vector<int> m_vBoundStateIndices;
+		std::vector<std::string> m_vStableIds;
+		std::string m_Tab;
+		std::string m_RenderedTab;
+		const SSettingsCardDefinition *m_pData = nullptr;
+		size_t m_Count = 0;
+		int m_ModelCount = 0;
+		uint64_t m_StateIndexRevision = 0;
+		std::optional<SDefinitionViewState> m_View;
+		bool m_InteractionsClosed = false;
+	};
+
 	static ESettingsCardRenderPass RenderPassMode(const IUiContext &Ctx);
-	void PrepareDefinitions(const std::vector<SSettingsCardDefinition> &vCards, const qm_card_order::CModel &Model);
-	void ResetDefinitionViewState();
-	SSettingsCardDeckResult RenderInternal(const IUiContext &Ctx, const SSettingsPageLayoutFrame &Layout, const char *pTab, const std::vector<SSettingsCardDefinition> &vCards, qm_card_order::CModel &Model, CScrollRegion *pScrollRegion, const SSettingsCardDeckInput &Input, const SCardMotionSpec &Motion, const SSettingsCardDeckVisualOptions &VisualOptions, bool PersistentDefinitions);
+	bool DefinitionViewChanged(const char *pTab, const std::vector<SSettingsCardDefinition> &vCards, const qm_card_order::CModel &Model) const;
+	bool ShouldDeferDefinitionView(const IUiContext &Ctx, const char *pTab, const std::vector<SSettingsCardDefinition> &vCards, const qm_card_order::CModel &Model) const;
+	SDefinitionPreparation PrepareDefinitions(const char *pTab, const std::vector<SSettingsCardDefinition> &vCards, const qm_card_order::CModel &Model) const;
+	void CommitDefinitions(SDefinitionPreparation &Preparation) noexcept;
+	void ClosePreparedInteractionSources(const IUiContext &Ctx);
+	void ResetDefinitionViewState() noexcept;
+	SSettingsCardDeckResult RenderInternal(const IUiContext &Ctx, const SSettingsPageLayoutFrame &Layout, const char *pTab, const std::vector<SSettingsCardDefinition> &vCards, qm_card_order::CModel &Model, CScrollRegion *pScrollRegion, const SSettingsCardDeckInput &Input, const SCardMotionSpec &Motion, const SSettingsCardDeckVisualOptions &VisualOptions, bool PersistentDefinitions, SDefinitionPreparation *pPreparation = nullptr);
 
 	CSettingsCardDeckFrameRuntime m_FrameRuntime;
 	bool m_SuppressHoverFeedbackOnce = false;
@@ -197,12 +304,8 @@ private:
 	std::vector<uint64_t> m_vMeasureRevisions;
 	std::vector<std::shared_ptr<const CSettingsContentLayout>> m_vContentLayouts;
 	std::vector<CSettingsContentLayoutCache> m_vContentLayoutCaches;
-	std::vector<SSettingsCardDefinition> m_vCachedDefinitions;
-	std::string m_CachedDefinitionsTab;
-	uint64_t m_CachedDefinitionsRevision = 0;
-	ESettingsCardRenderPass m_CachedDefinitionsRenderPass = ESettingsCardRenderPass::INTERACTIVE;
+	CSettingsCardDefinitionsCache m_DefinitionsCache;
 	uint64_t m_MeasurementEnvironmentRevision = UINT64_MAX;
-	bool m_CachedDefinitionsInitialized = false;
 	bool m_CachedDefinitionsDirty = false;
 	bool m_InvalidateMeasurementsOnDefinitionsPrepare = false;
 	int m_PreparedDefinitionModelCount = -1;
@@ -210,7 +313,7 @@ private:
 	const SSettingsCardDefinition *m_pPreparedDefinitionData = nullptr;
 	size_t m_PreparedDefinitionCount = 0;
 	std::string m_PreparedDefinitionTab;
-	std::vector<const char *> m_vPreparedStableIds;
+	std::vector<std::string> m_vPreparedStableIds;
 	std::vector<const SSettingsCardDefinition *> m_vDefinitionsByState;
 	std::vector<int> m_vBoundDefinitionStateIndices;
 	std::vector<int> m_vActiveStateIndices;
@@ -221,7 +324,7 @@ private:
 	CSettingsCardWidthLayout m_WidthLayout;
 	std::vector<SSettingsCardDeckItemGeometry> m_vDragGeometry;
 	std::array<std::vector<int>, 3> m_aDragColumns;
-	settings_card_deck_logic::CProjectionCache m_ProjectionCache;
+	std::optional<settings_card_deck_logic::CProjectionCache> m_ProjectionCache;
 	CSettingsCardDeckPackingPlan m_PackingPlan;
 };
 

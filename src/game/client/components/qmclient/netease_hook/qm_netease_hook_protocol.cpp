@@ -1,29 +1,29 @@
 #include "qm_netease_hook_protocol.h"
 
 #include <algorithm>
+#include <array>
+#include <cmath>
 #include <cstring>
 #include <limits>
-#include <mutex>
 
 namespace QmNeteaseHook
 {
 	namespace
 	{
-		uint32_t CrcTable[256];
-		std::once_flag CrcTableOnce;
-
-		void InitCrcTable()
+		// 表只依赖固定多项式，在编译期准备，读取快照时无需一次性同步。
+		constexpr std::array<uint32_t, 256> MakeCrcTable()
 		{
-			std::call_once(CrcTableOnce, [] {
-				for(uint32_t i = 0; i < 256; ++i)
-				{
-					uint32_t Value = i;
-					for(int Bit = 0; Bit < 8; ++Bit)
-						Value = (Value & 1) != 0 ? (Value >> 1) ^ 0xEDB88320U : Value >> 1;
-					CrcTable[i] = Value;
-				}
-			});
+			std::array<uint32_t, 256> Table{};
+			for(uint32_t i = 0; i < Table.size(); ++i)
+			{
+				uint32_t Value = i;
+				for(int Bit = 0; Bit < 8; ++Bit)
+					Value = (Value & 1) != 0 ? (Value >> 1) ^ 0xEDB88320U : Value >> 1;
+				Table[i] = Value;
+			}
+			return Table;
 		}
+		constexpr auto CrcTable = MakeCrcTable();
 
 		// 返回一个完整且严格合法的 UTF-8 codepoint 宽度。网易云前端数据
 		// 直接来自 JS，不能把过长编码、代理区或超出 Unicode 范围的字节
@@ -94,7 +94,6 @@ namespace QmNeteaseHook
 
 	uint32_t Crc32(const void *pData, size_t Size)
 	{
-		InitCrcTable();
 		const auto *pBytes = static_cast<const uint8_t *>(pData);
 		uint32_t Result = 0xFFFFFFFFU;
 		for(size_t i = 0; i < Size; ++i)
@@ -127,18 +126,21 @@ namespace QmNeteaseHook
 			return false;
 		if(Snapshot.m_Sequence == 0 || (Snapshot.m_Sequence & 1) != 0)
 			return false;
-		if(Snapshot.m_PlaybackRate < 0.0 || Snapshot.m_PlaybackRate > 8.0)
+		if(!std::isfinite(Snapshot.m_PlaybackRate) || Snapshot.m_PlaybackRate < 0.0 || Snapshot.m_PlaybackRate > 8.0)
 			return false;
 		if((Snapshot.m_Status & STATUS_HAS_COVER) != 0 && !HasCover(Snapshot))
 			return false;
-		if(Snapshot.m_DurationMs < 0 || Snapshot.m_PositionMs < 0 || (Snapshot.m_DurationMs > 0 && Snapshot.m_PositionMs > Snapshot.m_DurationMs + 1000))
+		// 先确认两端非负且有序再相减，保留一秒容差而不对最大时长继续相加。
+		const auto ExceedsDuration = [&Snapshot](int64_t Value) {
+			return Snapshot.m_DurationMs > 0 && Value > Snapshot.m_DurationMs && Value - Snapshot.m_DurationMs > 1000;
+		};
+		if(Snapshot.m_DurationMs < 0 || Snapshot.m_PositionMs < 0 || ExceedsDuration(Snapshot.m_PositionMs))
 			return false;
 		if(HasCurrentLine(Snapshot))
 		{
 			const bool UnknownBoundaries = Snapshot.m_CurrentLineStartMs == -1 && Snapshot.m_CurrentLineEndMs == -1;
 			if(!UnknownBoundaries && (Snapshot.m_CurrentLineStartMs < 0 || Snapshot.m_CurrentLineEndMs <= Snapshot.m_CurrentLineStartMs ||
-							 (Snapshot.m_DurationMs > 0 && Snapshot.m_CurrentLineStartMs > Snapshot.m_DurationMs + 1000) ||
-							 (Snapshot.m_DurationMs > 0 && Snapshot.m_CurrentLineEndMs > Snapshot.m_DurationMs + 1000)))
+							 ExceedsDuration(Snapshot.m_CurrentLineStartMs) || ExceedsDuration(Snapshot.m_CurrentLineEndMs)))
 				return false;
 		}
 		return Snapshot.m_Checksum == CalculateChecksum(Snapshot);

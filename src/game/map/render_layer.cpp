@@ -1,6 +1,7 @@
 #include "render_layer.h"
 
 #include "qm_entity_overlay_build_plan.h"
+#include "render_screen.h"
 
 #include <base/log.h>
 
@@ -10,6 +11,7 @@
 #include <engine/storage.h>
 
 #include <game/localization.h>
+#include <game/map/map_render_items.h>
 #include <game/mapitems.h>
 
 #include <array>
@@ -248,27 +250,37 @@ void CRenderLayerGroup::Init()
 {
 }
 
+std::optional<std::array<float, 4>> CRenderLayerGroup::ScreenForGroup(const CRenderLayerParams &Params) const
+{
+	const int ParallaxZoom = std::clamp(maximum(m_pGroup->m_ParallaxX, m_pGroup->m_ParallaxY), 0, 100);
+	std::array<float, 4> aPoints;
+	Graphics()->MapScreenToWorld(Params.m_Center.x, Params.m_Center.y, m_pGroup->m_ParallaxX, m_pGroup->m_ParallaxY, static_cast<float>(ParallaxZoom),
+		m_pGroup->m_OffsetX, m_pGroup->m_OffsetY, Graphics()->GameScreenAspect(), Params.m_Zoom, aPoints.data());
+	return MapRenderScreen::IsValidScreen(aPoints) ? std::make_optional(aPoints) : std::nullopt;
+}
+
 bool CRenderLayerGroup::DoRender(const CRenderLayerParams &Params)
 {
+	// 组没有 clip 时也不能发布坏投影；失败关闭旧裁剪并跳过组成员。
+	if(!ScreenForGroup(Params))
+	{
+		Graphics()->ClipDisable();
+		return false;
+	}
+
 	if(!g_Config.m_GfxNoclip || Params.m_RenderType == ERenderType::RENDERTYPE_FULL_DESIGN)
 	{
 		Graphics()->ClipDisable();
 		if(m_pGroup->m_Version >= 2 && m_pGroup->m_UseClipping)
 		{
-			// set clipping
-			Graphics()->MapScreenToGameInterface(Params.m_Center.x, Params.m_Center.y, Params.m_Zoom);
-
-			float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
-			Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-			float ScreenWidth = ScreenX1 - ScreenX0;
-			float ScreenHeight = ScreenY1 - ScreenY0;
-			float Left = m_pGroup->m_ClipX - ScreenX0;
-			float Top = m_pGroup->m_ClipY - ScreenY0;
-			float Right = m_pGroup->m_ClipX + m_pGroup->m_ClipW - ScreenX0;
-			float Bottom = m_pGroup->m_ClipY + m_pGroup->m_ClipH - ScreenY0;
-
-			if(Right < 0.0f || Left > ScreenWidth || Bottom < 0.0f || Top > ScreenHeight)
+			std::array<float, 4> aPoints;
+			Graphics()->MapScreenToWorld(Params.m_Center.x, Params.m_Center.y, 100.0f, 100.0f, 100.0f,
+				0, 0, Graphics()->GameScreenAspect(), Params.m_Zoom, aPoints.data());
+			const auto Clip = MapRenderScreen::GroupClip(aPoints, Graphics()->ScreenWidth(), Graphics()->ScreenHeight(),
+				{m_pGroup->m_ClipX, m_pGroup->m_ClipY, m_pGroup->m_ClipW, m_pGroup->m_ClipH});
+			if(!Clip)
 				return false;
+			Graphics()->MapScreen(aPoints[0], aPoints[1], aPoints[2], aPoints[3]);
 
 			// Render debug before enabling the clip
 			if(Params.m_DebugRenderGroupClips)
@@ -278,14 +290,7 @@ bool CRenderLayerGroup::DoRender(const CRenderLayerParams &Params)
 				RenderMap()->RenderDebugClip(m_pGroup->m_ClipX, m_pGroup->m_ClipY, m_pGroup->m_ClipW, m_pGroup->m_ClipH, ColorRGBA(1.0f, 0.0f, 0.0f, 1.0f), Params.m_Zoom, aDebugText);
 			}
 
-			int ClipX = (int)std::round(Left * Graphics()->ScreenWidth() / ScreenWidth);
-			int ClipY = (int)std::round(Top * Graphics()->ScreenHeight() / ScreenHeight);
-
-			Graphics()->ClipEnable(
-				ClipX,
-				ClipY,
-				(int)std::round(Right * Graphics()->ScreenWidth() / ScreenWidth) - ClipX,
-				(int)std::round(Bottom * Graphics()->ScreenHeight() / ScreenHeight) - ClipY);
+			Graphics()->ClipEnable(Clip->m_X, Clip->m_Y, Clip->m_Width, Clip->m_Height);
 		}
 	}
 	return true;
@@ -293,11 +298,13 @@ bool CRenderLayerGroup::DoRender(const CRenderLayerParams &Params)
 
 void CRenderLayerGroup::Render(const CRenderLayerParams &Params)
 {
-	int ParallaxZoom = std::clamp((maximum(m_pGroup->m_ParallaxX, m_pGroup->m_ParallaxY)), 0, 100);
-	float aPoints[4];
-	Graphics()->MapScreenToWorld(Params.m_Center.x, Params.m_Center.y, m_pGroup->m_ParallaxX, m_pGroup->m_ParallaxY, (float)ParallaxZoom,
-		m_pGroup->m_OffsetX, m_pGroup->m_OffsetY, Graphics()->GameScreenAspect(), Params.m_Zoom, aPoints);
-	Graphics()->MapScreen(aPoints[0], aPoints[1], aPoints[2], aPoints[3]);
+	const auto Screen = ScreenForGroup(Params);
+	if(!Screen)
+	{
+		Graphics()->ClipDisable();
+		return;
+	}
+	Graphics()->MapScreen((*Screen)[0], (*Screen)[1], (*Screen)[2], (*Screen)[3]);
 }
 
 /**************
@@ -321,10 +328,13 @@ void CRenderLayerTile::RenderTileLayer(const ColorRGBA &Color, const CRenderLaye
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
 
-	int ScreenRectY0 = std::floor(ScreenY0 / 32);
-	int ScreenRectX0 = std::floor(ScreenX0 / 32);
-	int ScreenRectY1 = std::ceil(ScreenY1 / 32);
-	int ScreenRectX1 = std::ceil(ScreenX1 / 32);
+	const auto ScreenRectRange = MapRenderScreen::TileRange(ScreenX0, ScreenY0, ScreenX1, ScreenY1, 32.0f, MapRenderScreen::ETileRangeMode::BUFFERED);
+	if(!ScreenRectRange)
+		return;
+	int ScreenRectY0 = ScreenRectRange->m_Y0;
+	int ScreenRectX0 = ScreenRectRange->m_X0;
+	int ScreenRectY1 = ScreenRectRange->m_Y1;
+	int ScreenRectX1 = ScreenRectRange->m_X1;
 
 	if(IsVisibleInClipRegion(m_LayerClip))
 	{
@@ -345,58 +355,61 @@ void CRenderLayerTile::RenderTileLayer(const ColorRGBA &Color, const CRenderLaye
 		m_vpRenderTileLayerIndexOffsets.clear();
 		m_vRenderTileLayerDrawCounts.clear();
 
-		int VisibleRectY0 = std::floor(VisibleY0 / 32);
-		int VisibleRectX0 = std::floor(VisibleX0 / 32);
-		int VisibleRectY1 = std::ceil(VisibleY1 / 32);
-		int VisibleRectX1 = std::ceil(VisibleX1 / 32);
-
-		int X0 = std::max(VisibleRectX0, 0);
-		int X1 = std::min(VisibleRectX1, (int)Visuals.m_Width);
-		int XR = X1 == std::numeric_limits<int>::min() ? X1 : X1 - 1;
-		if(X0 <= XR)
+		const auto VisibleRectRange = MapRenderScreen::TileRange(VisibleX0, VisibleY0, VisibleX1, VisibleY1, 32.0f, MapRenderScreen::ETileRangeMode::BUFFERED);
+		if(VisibleRectRange)
 		{
+			int VisibleRectY0 = VisibleRectRange->m_Y0;
+			int VisibleRectX0 = VisibleRectRange->m_X0;
+			int VisibleRectY1 = VisibleRectRange->m_Y1;
+			int VisibleRectX1 = VisibleRectRange->m_X1;
+
+			int X0 = std::max(VisibleRectX0, 0);
+			int X1 = std::min(VisibleRectX1, (int)Visuals.m_Width);
+			int XR = X1 == std::numeric_limits<int>::min() ? X1 : X1 - 1;
 			int Y0 = std::max(VisibleRectY0, 0);
 			int Y1 = std::min(VisibleRectY1, (int)Visuals.m_Height);
-
-			unsigned long long Reserve = absolute(Y1 - Y0) + 1;
-			m_vpRenderTileLayerIndexOffsets.reserve(Reserve);
-			m_vRenderTileLayerDrawCounts.reserve(Reserve);
-
-			for(int y = Y0; y < Y1; ++y)
+			if(X0 <= XR && Y0 < Y1)
 			{
-				const auto &StartTileVisual = Visuals.m_vTilesOfLayer[y * Visuals.m_Width + X0];
-				const auto &EndTileVisual = Visuals.m_vTilesOfLayer[y * Visuals.m_Width + XR];
-				const offset_ptr RowStartOffset = StartTileVisual.IndexBufferByteOffset();
-				const offset_ptr RowEndOffset = EndTileVisual.IndexBufferByteOffset();
-				dbg_assert(RowEndOffset >= RowStartOffset, "Tile offsets are not monotone.");
-				unsigned int NumVertices = ((RowEndOffset - RowStartOffset) / sizeof(unsigned int)) + (EndTileVisual.DoDraw() ? 6lu : 0lu);
+				const size_t Reserve = static_cast<size_t>(Y1 - Y0) + 1;
+				m_vpRenderTileLayerIndexOffsets.reserve(Reserve);
+				m_vRenderTileLayerDrawCounts.reserve(Reserve);
 
-				if(NumVertices)
+				for(int y = Y0; y < Y1; ++y)
 				{
-					if(!m_vpRenderTileLayerIndexOffsets.empty())
+					const auto &StartTileVisual = Visuals.m_vTilesOfLayer[y * Visuals.m_Width + X0];
+					const auto &EndTileVisual = Visuals.m_vTilesOfLayer[y * Visuals.m_Width + XR];
+					const offset_ptr RowStartOffset = StartTileVisual.IndexBufferByteOffset();
+					const offset_ptr RowEndOffset = EndTileVisual.IndexBufferByteOffset();
+					dbg_assert(RowEndOffset >= RowStartOffset, "Tile offsets are not monotone.");
+					unsigned int NumVertices = ((RowEndOffset - RowStartOffset) / sizeof(unsigned int)) + (EndTileVisual.DoDraw() ? 6lu : 0lu);
+
+					if(NumVertices)
 					{
-						const offset_ptr LastOffset = (offset_ptr)m_vpRenderTileLayerIndexOffsets.back();
-						const offset_ptr LastEndOffset = LastOffset + (offset_ptr)m_vRenderTileLayerDrawCounts.back() * sizeof(unsigned int);
-						if(LastEndOffset == RowStartOffset)
+						if(!m_vpRenderTileLayerIndexOffsets.empty())
 						{
-							unsigned int &MergedDrawCount = m_vRenderTileLayerDrawCounts.back();
-							if(std::numeric_limits<unsigned int>::max() - MergedDrawCount >= NumVertices)
+							const offset_ptr LastOffset = (offset_ptr)m_vpRenderTileLayerIndexOffsets.back();
+							const offset_ptr LastEndOffset = LastOffset + (offset_ptr)m_vRenderTileLayerDrawCounts.back() * sizeof(unsigned int);
+							if(LastEndOffset == RowStartOffset)
 							{
-								MergedDrawCount += NumVertices;
-								continue;
+								unsigned int &MergedDrawCount = m_vRenderTileLayerDrawCounts.back();
+								if(std::numeric_limits<unsigned int>::max() - MergedDrawCount >= NumVertices)
+								{
+									MergedDrawCount += NumVertices;
+									continue;
+								}
 							}
 						}
+
+						m_vpRenderTileLayerIndexOffsets.push_back((offset_ptr_size)RowStartOffset);
+						m_vRenderTileLayerDrawCounts.push_back(NumVertices);
 					}
-
-					m_vpRenderTileLayerIndexOffsets.push_back((offset_ptr_size)RowStartOffset);
-					m_vRenderTileLayerDrawCounts.push_back(NumVertices);
 				}
-			}
 
-			int DrawCount = m_vpRenderTileLayerIndexOffsets.size();
-			if(DrawCount != 0)
-			{
-				Graphics()->RenderTileLayer(Visuals.m_BufferContainerIndex, Color, m_vpRenderTileLayerIndexOffsets.data(), m_vRenderTileLayerDrawCounts.data(), DrawCount);
+				int DrawCount = m_vpRenderTileLayerIndexOffsets.size();
+				if(DrawCount != 0)
+				{
+					Graphics()->RenderTileLayer(Visuals.m_BufferContainerIndex, Color, m_vpRenderTileLayerIndexOffsets.data(), m_vRenderTileLayerDrawCounts.data(), DrawCount);
+				}
 			}
 		}
 	}
@@ -517,10 +530,13 @@ void CRenderLayerTile::RenderKillTileBorder(const ColorRGBA &Color)
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
 
-	int BorderY0 = std::floor(ScreenY0 / 32);
-	int BorderX0 = std::floor(ScreenX0 / 32);
-	int BorderY1 = std::ceil(ScreenY1 / 32);
-	int BorderX1 = std::ceil(ScreenX1 / 32);
+	const auto BorderRange = MapRenderScreen::TileRange(ScreenX0, ScreenY0, ScreenX1, ScreenY1, 32.0f, MapRenderScreen::ETileRangeMode::BUFFERED);
+	if(!BorderRange)
+		return;
+	int BorderY0 = BorderRange->m_Y0;
+	int BorderX0 = BorderRange->m_X0;
+	int BorderY1 = BorderRange->m_Y1;
+	int BorderX1 = BorderRange->m_X1;
 
 	if(BorderX0 >= -BorderRenderDistance && BorderY0 >= -BorderRenderDistance && BorderX1 <= (int)Visuals.m_Width + BorderRenderDistance && BorderY1 <= (int)Visuals.m_Height + BorderRenderDistance)
 		return;
@@ -1123,9 +1139,7 @@ void CRenderLayerQuads::RenderQuadLayer(float Alpha, const CRenderLayerParams &P
 void CRenderLayerQuads::OnInit(IGraphics *pGraphics, ITextRender *pTextRender, CRenderMap *pRenderMap, std::shared_ptr<CEnvelopeManager> &pEnvelopeManager, IMap *pMap, IMapImages *pMapImages)
 {
 	CRenderLayer::OnInit(pGraphics, pTextRender, pRenderMap, pEnvelopeManager, pMap, pMapImages);
-	int DataSize = m_pMap->GetDataSize(m_pLayerQuads->m_Data);
-	if(m_pLayerQuads->m_NumQuads > 0 && DataSize / (int)sizeof(CQuad) >= m_pLayerQuads->m_NumQuads)
-		m_pQuads = (CQuad *)m_pMap->GetDataSwapped(m_pLayerQuads->m_Data);
+	m_pQuads = MapRenderItems::QuadData(*m_pMap, *m_pLayerQuads).data();
 }
 
 void CRenderLayerQuads::Init()

@@ -16,7 +16,10 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdlib>
+#include <limits>
 #include <memory>
+#include <new>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -25,6 +28,41 @@ namespace
 {
 	constexpr const char *MAP_DIFFICULTY_SQL = "qmclient/map_difficulty.sql";
 	constexpr size_t MAX_MAP_DIFFICULTY_SQL_BYTES = 2 * 1024 * 1024;
+	class CScopedFile
+	{
+		IOHANDLE m_File;
+
+	public:
+		explicit CScopedFile(IOHANDLE File) :
+			m_File(File) {}
+		CScopedFile(const CScopedFile &) = delete;
+		CScopedFile &operator=(const CScopedFile &) = delete;
+		~CScopedFile() { Close(); }
+		IOHANDLE Get() const { return m_File; }
+		bool Close() { return !m_File || io_close(std::exchange(m_File, nullptr)) == 0; }
+	};
+
+	void ReportLoadFailure(IConsole *pConsole) noexcept
+	{
+		try
+		{
+			log_warn("map_difficulty", "failed to load '%s'", MAP_DIFFICULTY_SQL);
+		}
+		catch(...)
+		{
+		}
+		if(pConsole != nullptr)
+		{
+			try
+			{
+				pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "map_difficulty", "map difficulty SQL is unavailable or invalid");
+			}
+			catch(...)
+			{
+			}
+		}
+	}
+
 	constexpr const char *AXIOM_CACHE_PATH = "qmclient/axiom_map_difficulty.json";
 	constexpr size_t MAX_AXIOM_CACHE_BYTES = 2 * 1024 * 1024;
 	constexpr size_t MAX_AXIOM_ENTRIES = 4096;
@@ -103,6 +141,7 @@ const char *CQmMapDifficultyCatalog::SEntry::StarLabel() const
 }
 
 bool CQmMapDifficultyCatalog::RecordAxiomMotd(const CServerInfo &Server, const char *pMotd)
+try
 {
 	const int MaxStars = AxiomMaxStars(Server);
 	if(MaxStars == 0 || pMotd == nullptr || str_length(pMotd) > 4096 || !str_utf8_check(pMotd))
@@ -145,8 +184,17 @@ bool CQmMapDifficultyCatalog::RecordAxiomMotd(const CServerInfo &Server, const c
 	m_AxiomCacheDirty = true;
 	return true;
 }
+catch(const std::bad_alloc &)
+{
+	return false;
+}
+catch(const std::length_error &)
+{
+	return false;
+}
 
 bool CQmMapDifficultyCatalog::LoadAxiomCacheJson(const char *pJson, size_t Length)
+try
 {
 	if(pJson == nullptr || Length == 0 || Length > MAX_AXIOM_CACHE_BYTES)
 		return false;
@@ -187,6 +235,14 @@ bool CQmMapDifficultyCatalog::LoadAxiomCacheJson(const char *pJson, size_t Lengt
 	m_AxiomCacheDirty = false;
 	return true;
 }
+catch(const std::bad_alloc &)
+{
+	return false;
+}
+catch(const std::length_error &)
+{
+	return false;
+}
 
 std::string CQmMapDifficultyCatalog::SerializeAxiomCache() const
 {
@@ -215,128 +271,167 @@ std::string CQmMapDifficultyCatalog::SerializeAxiomCache() const
 }
 
 void CQmMapDifficultyCatalog::LoadAxiomCache(IStorage *pStorage)
+try
 {
-	m_AxiomEntries.clear();
-	m_AxiomCacheDirty = false;
 	if(pStorage == nullptr)
 		return;
-	IOHANDLE File = pStorage->OpenFile(AXIOM_CACHE_PATH, IOFLAG_READ, IStorage::TYPE_SAVE);
-	if(!File)
+	CScopedFile File(pStorage->OpenFile(AXIOM_CACHE_PATH, IOFLAG_READ, IStorage::TYPE_SAVE));
+	if(!File.Get())
 		return;
-	const int64_t Length = io_length(File);
+	const int64_t Length = io_length(File.Get());
 	bool Loaded = false;
 	if(Length > 0 && Length <= (int64_t)MAX_AXIOM_CACHE_BYTES)
 	{
 		std::string Json((size_t)Length, '\0');
-		if(io_read(File, Json.data(), (unsigned)Json.size()) == Json.size())
+		if(io_read(File.Get(), Json.data(), (unsigned)Json.size()) == Json.size() && io_error(File.Get()) == 0 && File.Close())
 			Loaded = LoadAxiomCacheJson(Json.data(), Json.size());
 	}
-	io_close(File);
 	if(!Loaded)
 		log_warn("map_difficulty", "ignoring invalid Axiom map cache");
 }
+catch(const std::bad_alloc &)
+{
+}
+catch(const std::length_error &)
+{
+}
 
 bool CQmMapDifficultyCatalog::SaveAxiomCache(IStorage *pStorage)
+try
 {
 	if(pStorage == nullptr)
 		return false;
+	// 候选内容先准备，资源失败不能截断候选文件或留下未关闭的句柄。
+	const std::string Json = SerializeAxiomCache();
 	pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE);
 	char aTempPath[IO_MAX_PATH_LENGTH];
 	str_format(aTempPath, sizeof(aTempPath), "%s.%d.tmp", AXIOM_CACHE_PATH, pid());
-	IOHANDLE File = pStorage->OpenFile(aTempPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-	if(!File)
+	CScopedFile File(pStorage->OpenFile(aTempPath, IOFLAG_WRITE, IStorage::TYPE_SAVE));
+	if(!File.Get())
 		return false;
-	const std::string Json = SerializeAxiomCache();
-	const bool Written = io_write(File, Json.data(), (unsigned)Json.size()) == Json.size();
-	const bool Closed = io_close(File) == 0;
+	const bool Written = io_write(File.Get(), Json.data(), (unsigned)Json.size()) == Json.size();
+	const bool Closed = File.Close();
 	if(!Written || !Closed || !pStorage->RenameFile(aTempPath, AXIOM_CACHE_PATH, IStorage::TYPE_SAVE, false))
 		return false;
 	m_AxiomCacheDirty = false;
 	return true;
 }
+catch(const std::bad_alloc &)
+{
+	return false;
+}
+catch(const std::length_error &)
+{
+	return false;
+}
 
 bool CQmMapDifficultyCatalog::LoadSqlText(const char *pSql, size_t Length)
+try
 {
-	m_vEntries.clear();
-	if(pSql == nullptr || Length == 0 || Length > MAX_MAP_DIFFICULTY_SQL_BYTES)
+	if(pSql == nullptr || Length == 0 || Length > MAX_MAP_DIFFICULTY_SQL_BYTES || std::char_traits<char>::find(pSql, Length, '\0') != nullptr)
 		return false;
 
 	sqlite3 *pRawDb = nullptr;
-	if(sqlite3_open(":memory:", &pRawDb) != SQLITE_OK || pRawDb == nullptr)
-	{
-		if(pRawDb != nullptr)
-			sqlite3_close(pRawDb);
-		return false;
-	}
+	const int OpenResult = sqlite3_open(":memory:", &pRawDb);
 	CSqlite pDb{pRawDb};
+	if(OpenResult != SQLITE_OK || !pDb)
+		return false;
 	const std::string SqlText(pSql, Length);
 
 	char *pError = nullptr;
 	const int ExecResult = sqlite3_exec(pDb.get(), SqlText.c_str(), nullptr, nullptr, &pError);
+	const std::unique_ptr<char, decltype(&sqlite3_free)> Error(pError, sqlite3_free);
 	if(ExecResult != SQLITE_OK)
 	{
 		if(pError != nullptr)
 		{
 			log_warn("map_difficulty", "failed to load SQL: %s", pError);
-			sqlite3_free(pError);
 		}
 		return false;
 	}
 
-	CSqliteStmt pStatement{nullptr};
 	const char *pQuery = "SELECT map_name, category, stars FROM map_difficulty ORDER BY map_name COLLATE NOCASE, category COLLATE NOCASE";
 	sqlite3_stmt *pRawStatement = nullptr;
-	if(sqlite3_prepare_v2(pDb.get(), pQuery, -1, &pRawStatement, nullptr) != SQLITE_OK || pRawStatement == nullptr)
+	const int PrepareResult = sqlite3_prepare_v2(pDb.get(), pQuery, -1, &pRawStatement, nullptr);
+	CSqliteStmt pStatement{pRawStatement};
+	if(PrepareResult != SQLITE_OK || !pStatement)
 		return false;
-	pStatement.reset(pRawStatement);
 
+	std::vector<SEntry> vEntries;
 	while(true)
 	{
 		const int StepResult = sqlite3_step(pStatement.get());
 		if(StepResult == SQLITE_DONE)
 			break;
 		if(StepResult != SQLITE_ROW)
-		{
-			m_vEntries.clear();
 			return false;
-		}
 
 		const char *pMapName = reinterpret_cast<const char *>(sqlite3_column_text(pStatement.get(), 0));
+		if(pMapName == nullptr && sqlite3_errcode(pDb.get()) == SQLITE_NOMEM)
+			return false;
 		const char *pCategory = reinterpret_cast<const char *>(sqlite3_column_text(pStatement.get(), 1));
-		const int Stars = sqlite3_column_int(pStatement.get(), 2);
-		if(pMapName == nullptr || pMapName[0] == '\0' || pCategory == nullptr || pCategory[0] == '\0' || Stars < 0 || Stars > 5)
+		if(pCategory == nullptr && sqlite3_errcode(pDb.get()) == SQLITE_NOMEM)
+			return false;
+		const int StarType = sqlite3_column_type(pStatement.get(), 2);
+		const sqlite3_int64 Stars = StarType == SQLITE_INTEGER ? sqlite3_column_int64(pStatement.get(), 2) : -1;
+		if(pMapName == nullptr || pMapName[0] == '\0' || pCategory == nullptr || pCategory[0] == '\0' ||
+			Stars < 0 || Stars > 5 ||
+			str_length(pMapName) != sqlite3_column_bytes(pStatement.get(), 0) ||
+			str_length(pCategory) != sqlite3_column_bytes(pStatement.get(), 1) || !str_utf8_check(pMapName) || !str_utf8_check(pCategory))
 			continue;
+		if(vEntries.size() >= static_cast<size_t>(std::numeric_limits<int>::max()))
+			return false;
 
 		SEntry Entry;
 		Entry.m_MapName = pMapName;
 		Entry.m_Category = pCategory;
-		Entry.m_Stars = Stars;
-		m_vEntries.push_back(std::move(Entry));
+		Entry.m_Stars = static_cast<int>(Stars);
+		vEntries.push_back(std::move(Entry));
 	}
 
-	std::sort(m_vEntries.begin(), m_vEntries.end(), EntryLess);
-	return !m_vEntries.empty();
+	if(vEntries.empty())
+		return false;
+	std::sort(vEntries.begin(), vEntries.end(), EntryLess);
+	m_vEntries.swap(vEntries);
+	return true;
+}
+catch(...)
+{
+	return false;
 }
 
 bool CQmMapDifficultyCatalog::Load(IStorage *pStorage, IConsole *pConsole)
 {
-	LoadAxiomCache(pStorage);
-	m_vEntries.clear();
-	if(pStorage == nullptr)
-		return false;
-
-	void *pData = nullptr;
-	unsigned DataSize = 0;
-	if(!pStorage->ReadFile(MAP_DIFFICULTY_SQL, IStorage::TYPE_ALL, &pData, &DataSize))
+	try
 	{
-		log_warn("map_difficulty", "failed to read '%s'", MAP_DIFFICULTY_SQL);
-		return false;
+		LoadAxiomCache(pStorage);
+		CScopedFile File(pStorage != nullptr ? pStorage->OpenFile(MAP_DIFFICULTY_SQL, IOFLAG_READ, IStorage::TYPE_ALL) : nullptr);
+		if(File.Get())
+		{
+			std::string Sql;
+			char aBuffer[4096];
+			while(true)
+			{
+				// 按实际读取计数，达到旧上限后仅探测一个字节，不先整文件分配。
+				const unsigned Want = static_cast<unsigned>(std::min(sizeof(aBuffer), MAX_MAP_DIFFICULTY_SQL_BYTES - Sql.size() + 1));
+				const unsigned Count = io_read(File.Get(), aBuffer, Want);
+				if(Count == 0)
+				{
+					if(io_error(File.Get()) == 0 && File.Close() && LoadSqlText(Sql.data(), Sql.size()))
+						return true;
+					break;
+				}
+				if(Count > MAX_MAP_DIFFICULTY_SQL_BYTES - Sql.size())
+					break;
+				Sql.append(aBuffer, Count);
+			}
+		}
 	}
-	const bool Loaded = LoadSqlText(static_cast<const char *>(pData), DataSize);
-	free(pData);
-	if(!Loaded && pConsole != nullptr)
-		pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "map_difficulty", "map difficulty SQL is unavailable or invalid");
-	return Loaded;
+	catch(...)
+	{
+	}
+	ReportLoadFailure(pConsole);
+	return false;
 }
 
 const CQmMapDifficultyCatalog::SEntry *CQmMapDifficultyCatalog::FindForServer(const CServerInfo &Server, const char *pCategoryHint) const

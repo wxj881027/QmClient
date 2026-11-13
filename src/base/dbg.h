@@ -101,6 +101,10 @@ typedef std::function<void(const char *message)> DBG_ASSERT_HANDLER;
  *
  * @see dbg_assert
  */
+// 允许并发注册/注销；注销只移除尚未取出的回调，不等待已取出的回调。
+// 断言遇到正在修改的槽位时可跳过回调；值捕获独立持有，借用资源须保持有效。
+// 回调异常不会跳过默认终止，回调及其捕获的析构不得抛异常。
+// 槽位不参与静态析构；需要释放待调用回调的捕获时须显式注销。
 void dbg_assert_set_handler(DBG_ASSERT_HANDLER handler);
 
 /**

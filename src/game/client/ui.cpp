@@ -8,6 +8,7 @@
 #include "QmUi/UiForms.h"
 #include "QmUi/UiSurface.h"
 #include "QmUi/UiSurfaceText.h"
+#include "QmUi/UiTextRenderState.h"
 #include "components/qmclient/perf_logging.h"
 #include "components/tooltips.h"
 #include "qm_icon.h"
@@ -32,6 +33,9 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <memory>
+#include <new>
+#include <stdexcept>
 
 using namespace FontIcons;
 
@@ -52,11 +56,37 @@ namespace
 void CUIElement::Init(CUi *pUI, int RequestedRectCount)
 {
 	dbg_assert(m_pUI == nullptr, "UI element can only be registered once.");
-	m_pUI = pUI;
-	pUI->AddUIElement(this);
+	// 矩形和注册表均准备成功后再发布，构造失败时不留下登记。
 	if(RequestedRectCount > 0 && !AreRectsInit())
-		InitRects(RequestedRectCount);
-	dbg_assert(RequestedRectCount <= 0 || m_vUIRects.size() == (size_t)RequestedRectCount, "UI element rect count changed.");
+	{
+		std::vector<SUIElementRect> vNewRects(RequestedRectCount);
+		pUI->AddUIElement(this);
+		m_vUIRects.swap(vNewRects);
+		for(auto &Rect : m_vUIRects)
+			Rect.m_pParent = this;
+	}
+	else
+	{
+		dbg_assert(RequestedRectCount <= 0 || m_vUIRects.size() == (size_t)RequestedRectCount, "UI element rect count changed.");
+		pUI->AddUIElement(this);
+	}
+	m_pUI = pUI;
+}
+
+bool CUIElement::TryInit(CUi *pUI, int RequestedRectCount)
+{
+	try
+	{
+		Init(pUI, RequestedRectCount);
+		return true;
+	}
+	catch(const std::bad_alloc &)
+	{
+	}
+	catch(const std::length_error &)
+	{
+	}
+	return false;
 }
 
 CUIElement::~CUIElement()
@@ -76,7 +106,8 @@ void CUIElement::InitRects(int RequestedRectCount)
 CUIElement::SUIElementRect::SUIElementRect() { Reset(); }
 
 CUiScopedClipSuspend::CUiScopedClipSuspend(CUi *pUi) :
-	m_pUi(pUi)
+	m_pUi(pUi),
+	m_vSavedClips(pUi->m_vClips.get_allocator())
 {
 	// 先提交外层批次，避免待绘制内容使用临时界面的裁剪状态。
 	m_pUi->FlushQuadBatch();
@@ -249,7 +280,19 @@ void CUi::Init(IKernel *pKernel)
 	CUIElementBase::Init(this);
 }
 
-CUi::CUi()
+CUi::CUi() :
+	CUi(nullptr)
+{
+}
+
+CUi::CUi(IAllocationResource *pPopupCallbackMemory) :
+	CUi(pPopupCallbackMemory, nullptr)
+{
+}
+
+CUi::CUi(IAllocationResource *pPopupCallbackMemory, IAllocationResource *pClipMemory) :
+	m_vClips(CBorrowedAllocator<CUIRect>(pClipMemory)),
+	m_vPopupCloseCallbacks(CBorrowedAllocator<std::shared_ptr<FPopupMenuClosedCallback>>(pPopupCallbackMemory))
 {
 	m_Enabled = true;
 #if defined(CONF_PLATFORM_ANDROID)
@@ -289,11 +332,11 @@ void CUi::OnShutdown()
 
 CUIElement *CUi::GetNewUIElement(int RequestedRectCount)
 {
-	CUIElement *pNewEl = new CUIElement(this, RequestedRectCount);
+	std::unique_ptr<CUIElement> pNewEl(new CUIElement(this, RequestedRectCount));
 
-	m_vpOwnUIElements.push_back(pNewEl);
+	m_vpOwnUIElements.push_back(pNewEl.get());
 
-	return pNewEl;
+	return pNewEl.release();
 }
 
 void CUi::AddUIElement(CUIElement *pElement)
@@ -1408,7 +1451,7 @@ float CUi::PixelSize()
 
 void CUi::BeginRenderOnly()
 {
-	if(m_RenderOnlyDepth++ == 0)
+	if(m_RenderOnlyDepth == 0)
 	{
 		CUIRect RenderOnlyClip = IsClipped() ? *ClipArea() : *Screen();
 		// 锚定在现有裁剪区右下角，确保后续嵌套裁剪不会产生负宽高。
@@ -1418,6 +1461,8 @@ void CUi::BeginRenderOnly()
 		RenderOnlyClip.h = 0.0f;
 		ClipEnable(&RenderOnlyClip);
 	}
+	// 裁剪准备失败时尚未进入测量，构造失败的RAII对象无需恢复深度。
+	++m_RenderOnlyDepth;
 }
 
 void CUi::EndRenderOnly()
@@ -2701,9 +2746,7 @@ bool CUi::DrawQmIcon(const CUIRect &Rect, const EQmIcon Icon, const char *pFallb
 		return false;
 
 	ITextRender *pTextRender = TextRender();
-	const ColorRGBA PreviousColor = pTextRender->GetTextColor();
-	const unsigned PreviousFlags = pTextRender->GetRenderFlags();
-	const EFontPreset PreviousPreset = pTextRender->GetFontPreset();
+	const CUiScopedTextRenderState TextState(*pTextRender);
 	// 连接质量图标的颜色由调用方按"档位/全局/自定义"三模式算好传入
 	//（ConfiguredQmSignalIconColor），这里不再叠加全局图标色，否则档位色
 	// 与自定义色会被内部策略覆盖回全局色（用户实测自定义不生效）。
@@ -2716,9 +2759,6 @@ bool CUi::DrawQmIcon(const CUIRect &Rect, const EQmIcon Icon, const char *pFallb
 	// 信号柱家族按 bbox 占比补足字号，四档可视尺寸趋近常规图标；其余图标走通用字号。
 	const float FontSize = QmSignalIconFamily(Icon) ? QmSignalIconFontSize(Rect, Icon) : QmIconFontSize(Rect);
 	DoLabel(&Rect, pFallbackIcon, FontSize, TEXTALIGN_MC);
-	pTextRender->SetRenderFlags(PreviousFlags);
-	pTextRender->SetFontPreset(PreviousPreset);
-	pTextRender->TextColor(PreviousColor);
 	return true;
 }
 

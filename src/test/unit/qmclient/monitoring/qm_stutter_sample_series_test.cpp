@@ -52,3 +52,51 @@ TEST(QmStutterSampleSeries, RepeatedPercentilesKeepTheSameValuesAndFrameAttribut
 		EXPECT_EQ(Samples.MaxFrame(), 11u);
 	}
 }
+
+TEST(QmStutterSampleSeries, PreparingCapacityDoesNotChangeSamplesOrStatistics)
+{
+	CQmStutterSampleSeries Samples;
+	Samples.Record(8.0, 1);
+	Samples.PrepareRecord(6.0);
+	Samples.PrepareRecord(6.0);
+	EXPECT_EQ(Samples.Count(), 1u);
+	EXPECT_DOUBLE_EQ(Samples.Total(), 8.0);
+	EXPECT_EQ(Samples.MaxFrame(), 1u);
+	Samples.Record(6.0, 2);
+	EXPECT_EQ(Samples.Count(), 2u);
+	EXPECT_DOUBLE_EQ(Samples.Average(), 7.0);
+}
+
+TEST(QmStutterSampleSeries, InvalidPreparationDoesNotAddAnEmptySample)
+{
+	CQmStutterSampleSeries Samples;
+	Samples.PrepareRecord(-1.0);
+	Samples.PrepareRecord(std::numeric_limits<double>::quiet_NaN());
+	EXPECT_TRUE(Samples.Empty());
+	Samples.PrepareRecord(0.0);
+	EXPECT_TRUE(Samples.Empty());
+	Samples.Record(0.0, 9);
+	EXPECT_EQ(Samples.Count(), 1u);
+	EXPECT_EQ(Samples.MaxFrame(), 9u);
+}
+
+TEST(QmStutterSampleSeries, NanPercentileDoesNotConvertToAnIndexOrChangeSamples)
+{
+	CQmStutterSampleSeries Samples;
+	Samples.Record(8.0, 1);
+	Samples.Record(2.0, 2);
+	EXPECT_DOUBLE_EQ(Samples.Percentile(std::numeric_limits<double>::quiet_NaN()), 0.0);
+	EXPECT_EQ(Samples.Count(), 2u);
+	EXPECT_DOUBLE_EQ(Samples.Total(), 10.0);
+	EXPECT_EQ(Samples.MaxFrame(), 1u);
+	EXPECT_DOUBLE_EQ(Samples.Percentile(50.0), 2.0);
+}
+
+TEST(QmStutterSampleSeries, InfinitePercentilesContinueToClampToSampleEndpoints)
+{
+	CQmStutterSampleSeries Samples;
+	Samples.Record(8.0, 1);
+	Samples.Record(2.0, 2);
+	EXPECT_DOUBLE_EQ(Samples.Percentile(std::numeric_limits<double>::infinity()), 8.0);
+	EXPECT_DOUBLE_EQ(Samples.Percentile(-std::numeric_limits<double>::infinity()), 2.0);
+}

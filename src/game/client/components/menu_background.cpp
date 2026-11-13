@@ -1,8 +1,9 @@
 #include "menu_background.h"
 
+#include "qmclient/menu_background_prepare.h"
+#include "qmclient/theme_icon_load_job.h"
 #include "theme_scan.h"
 
-#include <base/lock.h>
 #include <base/log.h>
 #include <base/math.h>
 #include <base/system.h>
@@ -26,152 +27,6 @@
 #include <chrono>
 
 using namespace std::chrono_literals;
-
-namespace
-{
-	constexpr int MAX_THEME_ICON_DIMENSION = 512;
-
-	void ResizeThemeIconIfNeeded(CImageInfo &Image)
-	{
-		if(Image.m_Width <= MAX_THEME_ICON_DIMENSION && Image.m_Height <= MAX_THEME_ICON_DIMENSION)
-			return;
-
-		const double Scale = minimum(
-			(double)MAX_THEME_ICON_DIMENSION / (double)Image.m_Width,
-			(double)MAX_THEME_ICON_DIMENSION / (double)Image.m_Height);
-		const int NewWidth = maximum(1, (int)std::floor((double)Image.m_Width * Scale));
-		const int NewHeight = maximum(1, (int)std::floor((double)Image.m_Height * Scale));
-		ResizeImage(Image, NewWidth, NewHeight);
-	}
-}
-
-class CMenuBackground::CThemeListLoadJob : public IJob
-{
-public:
-	using SThemeEntry = SThemeFileEntry;
-
-private:
-	IStorage *m_pStorage;
-	mutable CLock m_Lock;
-	std::vector<SThemeEntry> m_vEntries;
-	bool m_Completed = false;
-
-protected:
-	static int ScanCallback(const char *pName, int IsDir, int DirType, void *pUser)
-	{
-		(void)DirType;
-		auto *pEntries = static_cast<std::vector<SThemeEntry> *>(pUser);
-		AppendThemeFileEntry(*pEntries, pName, IsDir != 0);
-		return 0;
-	}
-
-	void Run() override REQUIRES(!m_Lock)
-	{
-		std::vector<SThemeEntry> vEntries;
-		m_pStorage->ListDirectory(IStorage::TYPE_ALL, "themes", ScanCallback, &vEntries);
-		std::sort(vEntries.begin(), vEntries.end(), [](const SThemeEntry &Left, const SThemeEntry &Right) {
-			return Left.m_Name < Right.m_Name;
-		});
-
-		const CLockScope Lock(m_Lock);
-		m_vEntries = std::move(vEntries);
-		m_Completed = true;
-	}
-
-public:
-	explicit CThemeListLoadJob(IStorage *pStorage) :
-		m_pStorage(pStorage)
-	{
-	}
-
-	bool IsCompleted() const REQUIRES(!m_Lock)
-	{
-		const CLockScope Lock(m_Lock);
-		return m_Completed;
-	}
-
-	std::vector<SThemeEntry> Entries() const REQUIRES(!m_Lock)
-	{
-		const CLockScope Lock(m_Lock);
-		return m_vEntries;
-	}
-};
-
-class CMenuBackground::CThemeIconLoadJob : public IJob
-{
-public:
-	struct SResult
-	{
-		std::string m_ThemeName;
-		CImageInfo m_Image;
-		bool m_Success = false;
-	};
-
-private:
-	IStorage *m_pStorage;
-	std::string m_ThemeName;
-	std::string m_IconPath;
-	mutable CLock m_Lock;
-	SResult m_Result;
-	bool m_Completed = false;
-
-protected:
-	void Run() override REQUIRES(!m_Lock)
-	{
-		void *pFileData = nullptr;
-		unsigned FileSize = 0;
-		if(!m_pStorage->ReadFile(m_IconPath.c_str(), IStorage::TYPE_ALL, &pFileData, &FileSize))
-		{
-			const CLockScope Lock(m_Lock);
-			m_Completed = true;
-			return;
-		}
-
-		CImageInfo Image;
-		bool Loaded = LoadBackgroundImageData(pFileData, FileSize, m_IconPath.c_str(), Image);
-		free(pFileData);
-		if(Loaded)
-			Loaded = ConvertToRgba(Image) || (Image.m_pData != nullptr && Image.m_Format == CImageInfo::FORMAT_RGBA);
-
-		const CLockScope Lock(m_Lock);
-		if(Loaded)
-		{
-			ResizeThemeIconIfNeeded(Image);
-			m_Result.m_Image = std::move(Image);
-			m_Result.m_Success = true;
-		}
-		m_Completed = true;
-	}
-
-public:
-	CThemeIconLoadJob(const char *pThemeName, const char *pIconPath, IStorage *pStorage) :
-		m_pStorage(pStorage),
-		m_ThemeName(pThemeName),
-		m_IconPath(pIconPath)
-	{
-		m_Result.m_ThemeName = pThemeName;
-		Abortable(true);
-	}
-
-	~CThemeIconLoadJob()
-	{
-		m_Result.m_Image.Free();
-	}
-
-	bool IsCompleted() const REQUIRES(!m_Lock)
-	{
-		const CLockScope Lock(m_Lock);
-		return m_Completed;
-	}
-
-	SResult TakeResult() REQUIRES(!m_Lock)
-	{
-		const CLockScope Lock(m_Lock);
-		SResult Result = std::move(m_Result);
-		m_Result = SResult();
-		return Result;
-	}
-};
 
 std::array<vec2, CMenuBackground::NUM_POS> GenerateMenuBackgroundPositions()
 {
@@ -273,8 +128,8 @@ void CMenuBackground::OnInit()
 
 	m_IsInit = true;
 
-	EnsureThemeEntries();
-	EnsureThemeListJob();
+	if(EnsureThemeEntries())
+		EnsureThemeListJob();
 	if(g_Config.m_ClMenuMap[0] != '\0')
 		LoadMenuBackground();
 
@@ -301,6 +156,7 @@ void CMenuBackground::OnInit()
 
 void CMenuBackground::OnShutdown()
 {
+	RefreshThemes();
 	ReleasePreviousBackground();
 	CBackground::OnShutdown();
 }
@@ -314,27 +170,48 @@ void CMenuBackground::AdvanceLoading()
 		m_Loading = false;
 }
 
-void CMenuBackground::PreserveCurrentBackground()
+bool CMenuBackground::PreserveCurrentBackground()
 {
 	if(!m_Loaded || m_ImageBackground || m_VideoBackground || m_pBackgroundMap == nullptr || m_pBackgroundLayers == nullptr || m_pBackgroundImages == nullptr)
-		return;
+		return true;
 
-	m_pPreviousBackground = std::make_unique<SPreviousBackground>();
-	m_pPreviousBackground->m_pMap = std::move(m_pOwnedBackgroundMap);
-	m_pPreviousBackground->m_pLayers.reset(m_pBackgroundLayers);
-	m_pPreviousBackground->m_pImages.reset(m_pBackgroundImages);
-	m_pPreviousBackground->m_pRenderer = std::make_unique<CMapLayers>(ERenderType::RENDERTYPE_FULL_DESIGN, false);
-	m_pPreviousBackground->m_pRenderer->OnInterfacesInit(GameClient());
-	SwapState(*m_pPreviousBackground->m_pRenderer);
+	using SPrepared = SMenuBackgroundPrepared<CMenuMap, CLayers, CMapImages, CMapLayers>;
+	SPrepared Prepared;
+	std::unique_ptr<SPreviousBackground> pPrevious;
+	try
+	{
+		pPrevious = std::make_unique<SPreviousBackground>();
+		Prepared = PrepareMenuBackgroundResources(
+			[this] { return std::make_unique<CMenuMap>(Storage()); },
+			[] { return std::make_unique<CLayers>(); },
+			[] { return std::make_unique<CMapImages>(); },
+			[] { return std::make_unique<CMapLayers>(ERenderType::RENDERTYPE_FULL_DESIGN, false); },
+			[this](auto &Candidate) {
+				Candidate.m_pRenderer->OnInterfacesInit(GameClient());
+				Candidate.m_pImages->OnInterfacesInit(GameClient());
+			});
+	}
+	catch(const std::bad_alloc &)
+	{
+		// 尚未交接当前资源；保持当前地图及借用指针，沿既有切换入口重试。
+		return false;
+	}
 
-	m_pOwnedBackgroundMap = std::make_unique<CMenuMap>(Storage());
+	// 后续只移动所有者、交换已初始化的状态及重绑指针，不再构造或分配资源。
+	pPrevious->m_pRenderer = std::move(Prepared.m_pRenderer);
+	pPrevious->m_pMap = std::move(m_pOwnedBackgroundMap);
+	pPrevious->m_pLayers.reset(m_pBackgroundLayers);
+	pPrevious->m_pImages.reset(m_pBackgroundImages);
+	SwapState(*pPrevious->m_pRenderer);
+	m_pOwnedBackgroundMap = std::move(Prepared.m_pMap);
 	m_pBackgroundMap = m_pOwnedBackgroundMap.get();
-	m_pBackgroundLayers = new CLayers;
-	m_pBackgroundImages = new CMapImages;
+	m_pBackgroundLayers = Prepared.m_pLayers.release();
+	m_pBackgroundImages = Prepared.m_pImages.release();
 	m_pMap = m_pBackgroundMap;
 	m_pLayers = m_pBackgroundLayers;
 	m_pImages = m_pBackgroundImages;
-	m_pImages->OnInterfacesInit(GameClient());
+	m_pPreviousBackground = std::move(pPrevious);
+	return true;
 }
 
 void CMenuBackground::ReleasePreviousBackground()
@@ -351,53 +228,20 @@ void CMenuBackground::ResetPositions()
 	m_aPositions = GenerateMenuBackgroundPositions();
 }
 
-void CMenuBackground::EnsureThemeEntries()
+bool CMenuBackground::EnsureThemeEntries()
 {
-	if(!m_vThemes.empty())
-		return;
-
-	m_vThemes.emplace_back("", true, true); // no theme
-	m_vThemes.back().m_IconPath = ThemeIconPathFromName("");
-
-	m_vThemes.emplace_back("auto", true, true); // auto theme
-	m_vThemes.back().m_IconPath = ThemeIconPathFromName("auto");
-
-	m_vThemes.emplace_back("rand", true, true); // random theme
-	m_vThemes.back().m_IconPath = ThemeIconPathFromName("rand");
+	return EnsureDefaultThemeEntries(m_vThemes);
 }
 
 void CMenuBackground::EnsureThemeListJob()
 {
-	if(m_pThemeListLoadJob)
-		return;
-	m_ThemeScanStartTime = time_get_nanoseconds();
-	m_pThemeListLoadJob = std::make_shared<CThemeListLoadJob>(Storage());
-	Engine()->AddJob(m_pThemeListLoadJob);
+	m_ThemeListRequest.TryStart(*Storage(), *Engine(), time_get_nanoseconds());
 }
 
 void CMenuBackground::ProcessThemeListJob()
 {
-	if(!m_pThemeListLoadJob || !m_pThemeListLoadJob->IsCompleted())
-		return;
-
-	for(const auto &Entry : m_pThemeListLoadJob->Entries())
-	{
-		auto It = std::find_if(m_vThemes.begin(), m_vThemes.end(), [&](const CTheme &Theme) {
-			return str_comp(Theme.m_Name.c_str(), Entry.m_Name.c_str()) == 0;
-		});
-		if(It != m_vThemes.end())
-			continue;
-
-		CTheme Theme(Entry.m_Name.c_str(), Entry.m_HasDay, Entry.m_HasNight);
-		Theme.m_IconPath = Entry.m_IconPath;
-		m_vThemes.push_back(std::move(Theme));
-	}
-
-	if(m_vThemes.size() > PREDEFINED_THEMES_COUNT)
-		std::sort(m_vThemes.begin() + PREDEFINED_THEMES_COUNT, m_vThemes.end());
-
-	m_ThemeListLoaded = true;
-	m_pThemeListLoadJob.reset();
+	if(m_ThemeListRequest.Poll(m_vThemes, PREDEFINED_THEMES_COUNT, time_get_nanoseconds()))
+		m_ThemeListLoaded = true;
 }
 
 void CMenuBackground::QueueNextThemeIconLoad()
@@ -414,18 +258,7 @@ void CMenuBackground::QueueNextThemeIconLoad()
 
 void CMenuBackground::QueueThemeIconLoad(CTheme &Theme)
 {
-	if(Theme.m_IconLoadRequested || Theme.m_IconLoadFailed || Theme.m_IconPath.empty())
-		return;
-	if(!Storage()->FileExists(Theme.m_IconPath.c_str(), IStorage::TYPE_ALL))
-	{
-		Theme.m_IconLoadFailed = true;
-		return;
-	}
-
-	Theme.m_IconLoadRequested = true;
-	auto pJob = std::make_shared<CThemeIconLoadJob>(Theme.m_Name.c_str(), Theme.m_IconPath.c_str(), Storage());
-	Engine()->AddJob(pJob);
-	m_vThemeIconLoadJobs.push_back(pJob);
+	TryQueueThemeIcon(Theme, m_vThemeIconLoadJobs, *Storage(), *Engine(), LoadBackgroundImageData);
 }
 
 void CMenuBackground::ProcessThemeIconJobs()
@@ -440,7 +273,7 @@ void CMenuBackground::ProcessThemeIconJobs()
 			continue;
 		}
 
-		CThemeIconLoadJob::SResult Result = pJob->TakeResult();
+		CQmThemeIconLoadJob::SResult Result = pJob->TakeResult();
 		auto ThemeIt = std::find_if(m_vThemes.begin(), m_vThemes.end(), [&](const CTheme &Theme) {
 			return str_comp(Theme.m_Name.c_str(), Result.m_ThemeName.c_str()) == 0;
 		});
@@ -449,7 +282,7 @@ void CMenuBackground::ProcessThemeIconJobs()
 			ThemeIt->m_IconLoadRequested = false;
 			ThemeIt->m_IconLoadFailed = !Result.m_Success;
 			if(Result.m_Success)
-				ThemeIt->m_IconTexture = Graphics()->LoadTextureRawMove(const_cast<CImageInfo &>(Result.m_Image), 0, Result.m_ThemeName.c_str());
+				ThemeIt->m_IconTexture = Graphics()->LoadTextureRawMove(Result.m_Image, 0, Result.m_ThemeName.c_str());
 		}
 
 		It = m_vThemeIconLoadJobs.erase(It);
@@ -463,7 +296,8 @@ void CMenuBackground::LoadMenuBackground(bool HasDayHint, bool HasNightHint)
 		return;
 
 	ReleasePreviousBackground();
-	PreserveCurrentBackground();
+	if(!PreserveCurrentBackground())
+		return;
 	if(m_pMap != nullptr && m_pMap == m_pBackgroundMap && m_pPreviousBackground == nullptr)
 		m_pMap->Unload();
 
@@ -871,21 +705,34 @@ void CMenuBackground::InvalidateCurrentPosition()
 
 void CMenuBackground::RefreshThemes()
 {
-	m_vThemes.clear();
-	m_pThemeListLoadJob.reset();
+	m_ThemeRefreshPending = true;
+	m_ThemeListRequest.Reset();
 	m_vThemeIconLoadJobs.clear();
 	m_ThemeListLoaded = false;
+	m_ThemeRefreshPending = !ClearThemeCatalog(m_vThemes, InterfacesInitialized() ? Graphics() : nullptr);
 }
 
-std::vector<CTheme> &CMenuBackground::GetThemes()
+const std::vector<CTheme> &CMenuBackground::GetThemes()
 {
+	if(m_ThemeRefreshPending)
+	{
+		static const std::vector<CTheme> s_vEmptyThemes;
+		return s_vEmptyThemes;
+	}
 	EnsureThemeEntries();
 	return m_vThemes;
 }
 
 void CMenuBackground::UpdateThemeLoading()
 {
-	EnsureThemeEntries();
+	if(m_ThemeRefreshPending)
+	{
+		if(!ClearThemeCatalog(m_vThemes, Graphics()))
+			return;
+		m_ThemeRefreshPending = false;
+	}
+	if(!EnsureThemeEntries())
+		return;
 	ProcessThemeListJob();
 	ProcessThemeIconJobs();
 	if(!m_ThemeListLoaded)

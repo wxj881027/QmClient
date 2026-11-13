@@ -6,6 +6,7 @@
 #include <engine/textrender.h>
 
 #include <game/client/QmUi/QmScroll.h>
+#include <game/client/QmUi/SettingsBindCache.h>
 #include <game/client/QmUi/SettingsContentLayout.h>
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiForms.h>
@@ -23,13 +24,10 @@
 #include <algorithm>
 #include <cmath>
 #include <optional>
-#include <string>
-#include <unordered_map>
 
 using namespace qm_tclient_cards;
 
-std::unordered_map<std::string, CBindSlot> g_CommandBindCache;
-bool g_CommandBindCacheInitialized = false;
+CSettingsBindCache g_CommandBindCache;
 
 void CMenus::RenderQmSettingsSliderWithValueInput(const void *pId, const CUIRect &ControlColumn, int *pValue, int MinValue, int MaxValue, const char *pSuffix, bool PrewarmOnly, unsigned Flags)
 {
@@ -161,10 +159,7 @@ void CMenus::RenderQmHudLabel(const char *pTextId, CUIRect *pRect, const char *p
 
 void CMenus::RenderQmHudKeyBindRow(CUIRect &Content, CButtonContainer &ReaderButton, CButtonContainer &ClearButton, const char *pLabel, const char *pCommand, float LineHeight, float BodySize, float LineSpacing, float LabelWidth)
 {
-	CBindSlot Bind(KEY_UNKNOWN, KeyModifier::NONE);
-	const auto CurrentBindIt = g_CommandBindCache.find(pCommand);
-	if(CurrentBindIt != g_CommandBindCache.end())
-		Bind = CurrentBindIt->second;
+	const CBindSlot Bind = g_CommandBindCache.Find(GameClient()->m_Binds, pCommand);
 
 	CUIRect BindRow, BindLabel, BindKey;
 	Content.HSplitTop(LineHeight, &BindRow, &Content);
@@ -174,17 +169,8 @@ void CMenus::RenderQmHudKeyBindRow(CUIRect &Content, CButtonContainer &ReaderBut
 	const auto Result = GameClient()->m_KeyBinder.DoKeyReader(&ReaderButton, &ClearButton, &BindKey, Bind, false);
 	if(Result.m_Bind != Bind)
 	{
-		if(Bind.m_Key != KEY_UNKNOWN)
-			GameClient()->m_Binds.Bind(Bind.m_Key, "", false, Bind.m_ModifierMask);
-		if(Result.m_Bind.m_Key != KEY_UNKNOWN)
-		{
-			GameClient()->m_Binds.Bind(Result.m_Bind.m_Key, pCommand, false, Result.m_Bind.m_ModifierMask);
-			g_CommandBindCache.insert_or_assign(std::string(pCommand), Result.m_Bind);
-		}
-		else
-		{
-			g_CommandBindCache.erase(pCommand);
-		}
+		if(GameClient()->m_Binds.Rebind(Bind, Result.m_Bind, pCommand))
+			g_CommandBindCache.Invalidate();
 	}
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
 }
@@ -225,32 +211,7 @@ int CMenus::DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(const void *pId, c
 
 bool CMenus::DoLine_KeyReader(CUIRect &View, CButtonContainer &ReaderButton, CButtonContainer &ClearButton, const char *pName, const char *pCommand)
 {
-	CBindSlot Bind(0, 0);
-	if(g_CommandBindCacheInitialized)
-	{
-		const auto It = g_CommandBindCache.find(pCommand);
-		if(It != g_CommandBindCache.end())
-			Bind = It->second;
-	}
-	else
-	{
-		for(int Mod = 0; Mod < KeyModifier::COMBINATION_COUNT; Mod++)
-		{
-			for(int KeyId = 0; KeyId < KEY_LAST; KeyId++)
-			{
-				const char *pBind = GameClient()->m_Binds.Get(KeyId, Mod);
-				if(!pBind[0])
-					continue;
-
-				if(str_comp(pBind, pCommand) == 0)
-				{
-					Bind.m_Key = KeyId;
-					Bind.m_ModifierMask = Mod;
-					break;
-				}
-			}
-		}
-	}
+	const CBindSlot Bind = g_CommandBindCache.Find(GameClient()->m_Binds, pCommand, CSettingsBindCache::EFallback::LAST_MODIFIER_MATCH);
 
 	CUIRect KeyButton, KeyLabel;
 	View.HSplitTop(LineSize, &KeyButton, &View);
@@ -265,11 +226,9 @@ bool CMenus::DoLine_KeyReader(CUIRect &View, CButtonContainer &ReaderButton, CBu
 	const auto Result = GameClient()->m_KeyBinder.DoKeyReader(&ReaderButton, &ClearButton, &KeyButton, Bind, false, TCLIENT_BODY_FONT_SIZE);
 	if(Result.m_Bind != Bind)
 	{
-		if(Bind.m_Key != KEY_UNKNOWN)
-			GameClient()->m_Binds.Bind(Bind.m_Key, "", false, Bind.m_ModifierMask);
-		if(Result.m_Bind.m_Key != KEY_UNKNOWN)
-			GameClient()->m_Binds.Bind(Result.m_Bind.m_Key, pCommand, false, Result.m_Bind.m_ModifierMask);
-		g_CommandBindCacheInitialized = false;
+		if(!GameClient()->m_Binds.Rebind(Bind, Result.m_Bind, pCommand))
+			return false;
+		g_CommandBindCache.Invalidate();
 		return true;
 	}
 	return false;

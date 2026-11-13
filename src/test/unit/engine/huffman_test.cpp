@@ -4,6 +4,8 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
+
 TEST(Huffman, CompressionInputSizeZero)
 {
 	CHuffman Huffman;
@@ -139,4 +141,65 @@ TEST(Huffman, DecompressionTableLookupIntegerOverflow)
 	EXPECT_EQ(Huffman.Decompress(aInput1, sizeof(aInput1), aUncompressed, sizeof(aUncompressed)), -1);
 	EXPECT_EQ(Huffman.Decompress(aInput2, sizeof(aInput2), aUncompressed, sizeof(aUncompressed)), -1);
 	EXPECT_EQ(Huffman.Decompress(aInput3, sizeof(aInput3), aUncompressed, sizeof(aUncompressed)), -1);
+}
+
+TEST(Huffman, TruncatedInputCannotEmitSymbolsFromMissingBits)
+{
+	CHuffman Huffman;
+	Huffman.Init();
+	unsigned char aInput[8];
+	unsigned char aCompressed[64];
+	unsigned char aOutput[64];
+	for(int Symbol = 0; Symbol < 256; ++Symbol)
+	{
+		for(int Padding = 0; Padding < 8; ++Padding)
+		{
+			SCOPED_TRACE(testing::Message() << Symbol << ":" << Padding);
+			mem_zero(aInput, sizeof(aInput));
+			aInput[Padding] = Symbol;
+			const int Size = Huffman.Compress(aInput, Padding + 1, aCompressed, sizeof(aCompressed));
+			ASSERT_GT(Size, 0);
+			for(int Prefix = 1; Prefix < Size && Prefix <= 4; ++Prefix)
+			{
+				SCOPED_TRACE(Prefix);
+				for(size_t i = 0; i < sizeof(aOutput); ++i)
+					aOutput[i] = i % 2 ? 0xa5 : 0x5a;
+				EXPECT_EQ(Huffman.Decompress(aCompressed, Prefix, aOutput, sizeof(aOutput)), -1);
+				// 每个符号至少消耗一位；失败也不能用不存在的比特输出更多符号。
+				for(size_t i = Prefix * 8; i < sizeof(aOutput); ++i)
+					EXPECT_EQ(aOutput[i], i % 2 ? 0xa5 : 0x5a) << i;
+			}
+		}
+	}
+}
+
+TEST(Huffman, DecompressionExactCapacityAndShortCapacityPreserveOuterGuards)
+{
+	CHuffman Huffman;
+	Huffman.Init();
+	const unsigned char aInput[] = {0, 1, 2, 3, 4, 5, 6, 7};
+	unsigned char aCompressed[64];
+	const int Size = Huffman.Compress(aInput, sizeof(aInput), aCompressed, sizeof(aCompressed));
+	ASSERT_GT(Size, 0);
+	unsigned char aOutput[sizeof(aInput) + 2];
+	std::fill_n(aOutput, sizeof(aOutput), 0xa5);
+	ASSERT_EQ(Huffman.Decompress(aCompressed, Size, aOutput + 1, sizeof(aInput)), sizeof(aInput));
+	EXPECT_EQ(mem_comp(aOutput + 1, aInput, sizeof(aInput)), 0);
+	EXPECT_EQ(aOutput[0], 0xa5);
+	EXPECT_EQ(aOutput[sizeof(aOutput) - 1], 0xa5);
+	std::fill_n(aOutput, sizeof(aOutput), 0xa5);
+	EXPECT_EQ(Huffman.Decompress(aCompressed, Size, aOutput + 1, sizeof(aInput) - 1), -1);
+	EXPECT_EQ(aOutput[0], 0xa5);
+	EXPECT_EQ(aOutput[sizeof(aInput)], 0xa5);
+	EXPECT_EQ(aOutput[sizeof(aOutput) - 1], 0xa5);
+}
+
+TEST(Huffman, TruncatedStreamFailureDoesNotAffectNextDecode)
+{
+	CHuffman Huffman;
+	Huffman.Init();
+	const unsigned char aEmptyStream[] = {0x8a, 0x1b};
+	unsigned char aOutput[16];
+	EXPECT_EQ(Huffman.Decompress(aEmptyStream, 1, aOutput, sizeof(aOutput)), -1);
+	EXPECT_EQ(Huffman.Decompress(aEmptyStream, sizeof(aEmptyStream), aOutput, sizeof(aOutput)), 0);
 }

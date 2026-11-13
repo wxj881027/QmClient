@@ -1,5 +1,6 @@
 #include "steam_client_path.h"
 #include "steam_probe.h"
+#include "steam_startup.h"
 
 #include <base/fs.h>
 #include <base/system.h>
@@ -185,39 +186,27 @@ namespace
 	bool SteamFindClientUnix(char *pBuffer, int BufferSize)
 	{
 #if defined(CONF_PLATFORM_MACOS)
-		if(fs_is_dir("/Applications/Steam.app"))
-		{
-			str_copy(pBuffer, "/Applications/Steam.app", BufferSize);
-			return true;
-		}
-		return false;
+		return steam_path::Accept("/Applications/Steam.app", pBuffer, BufferSize, fs_is_dir);
 #else
 		const char *apSystemCandidates[] = {"/usr/bin/steam", "/usr/local/bin/steam"};
 		for(const char *pCandidate : apSystemCandidates)
 		{
-			if(fs_is_file(pCandidate))
-			{
-				str_copy(pBuffer, pCandidate, BufferSize);
+			if(steam_path::Accept(pCandidate, pBuffer, BufferSize, fs_is_file))
 				return true;
-			}
 		}
 		const char *pHome = getenv("HOME");
 		if(pHome == nullptr || pHome[0] == '\0')
 			return false;
-		char aPath[1024];
 		const char *apHomeCandidates[] = {
-			".steam/steam/steam.sh",
-			".steam/root/steam.sh",
-			".local/share/Steam/steam.sh",
+			"/.steam/steam/steam.sh",
+			"/.steam/root/steam.sh",
+			"/.local/share/Steam/steam.sh",
 		};
 		for(const char *pCandidate : apHomeCandidates)
 		{
-			str_format(aPath, (int)sizeof(aPath), "%s/%s", pHome, pCandidate);
-			if(fs_is_file(aPath))
-			{
-				str_copy(pBuffer, aPath, BufferSize);
+			const auto Path = steam_path::Join(pHome, pCandidate);
+			if(Path && steam_path::Accept(Path->data(), pBuffer, BufferSize, fs_is_file))
 				return true;
-			}
 		}
 		return false;
 #endif
@@ -241,13 +230,11 @@ bool SteamFindClient(char *pBuffer, int BufferSize, ESteamClientSource *pSource,
 #else
 #if defined(CONF_PLATFORM_MACOS)
 	const std::string ManualPath = SteamManualPathCandidate(pManualPath, ESteamClientPlatform::MACOS);
-	ManualFound = !ManualPath.empty() && fs_is_dir(ManualPath.c_str());
+	ManualFound = steam_path::Accept(ManualPath.c_str(), pBuffer, BufferSize, fs_is_dir);
 #else
 	const std::string ManualPath = SteamManualPathCandidate(pManualPath, ESteamClientPlatform::UNIX);
-	ManualFound = !ManualPath.empty() && fs_is_file(ManualPath.c_str());
+	ManualFound = steam_path::Accept(ManualPath.c_str(), pBuffer, BufferSize, fs_is_file);
 #endif
-	if(ManualFound)
-		str_copy(pBuffer, ManualPath.c_str(), BufferSize);
 #endif
 	if(ManualFound)
 	{
@@ -287,36 +274,44 @@ bool SteamOpenClient()
 #else
 	// 智能识别：先定位 Steam 客户端再启动；未安装时直接放弃，
 	// 绝不把找不到的名字交给 shell，避免触发系统「找不到文件」弹窗。
-	char aSteamPath[1024];
 	ESteamClientSource Source;
-	if(!SteamFindClient(aSteamPath, (int)sizeof(aSteamPath), &Source, g_Config.m_QmSteamClientPath))
-	{
-		dbg_msg("steam", "steam client not found, skip launch");
-		return false;
-	}
-	if(g_Config.m_Debug)
-		dbg_msg("steam", "found steam client: '%s', source=%s", aSteamPath, SteamSourceName(Source));
+	return steam_startup::Open([&Source](char *pPath, int Size) {
+		const bool Found = SteamFindClient(pPath, Size, &Source, g_Config.m_QmSteamClientPath);
+		if(!Found)
+			dbg_msg("steam", "steam client not found, skip launch");
+		return Found; }, [&Source](const char *pPath) {
+		if(g_Config.m_Debug)
+			dbg_msg("steam", "found steam client: '%s', source=%s", pPath, SteamSourceName(Source));
 #if defined(CONF_PLATFORM_MACOS)
-	// macOS：用 open 启动检测到的应用包。
-	const char *apOpenArguments[] = {aSteamPath};
-	return shell_execute("open", EShellExecuteWindowState::BACKGROUND, apOpenArguments, 1) != INVALID_PROCESS;
+		// macOS：用 open 启动检测到的应用包。
+		const char *apOpenArguments[] = {pPath};
+		return shell_execute("open", EShellExecuteWindowState::BACKGROUND, apOpenArguments, 1) != INVALID_PROCESS;
 #else
-	const char *apArguments[] = {STEAM_SILENT_ARGUMENT};
-	return shell_execute(aSteamPath, EShellExecuteWindowState::BACKGROUND, apArguments, 1) != INVALID_PROCESS;
+		const char *apArguments[] = {STEAM_SILENT_ARGUMENT};
+		return shell_execute(pPath, EShellExecuteWindowState::BACKGROUND, apArguments, 1) != INVALID_PROCESS;
 #endif
+	});
 #endif
 }
 
 ISteam *CreateSteam()
 {
-	if(!SteamAPI_Init())
+	// 在SDK初始化前准备禁用实现，失败回退不再依赖另一次对象分配。
+	std::unique_ptr<ISteam> pFallback = std::make_unique<CSteamStub>();
+	auto pSteam = steam_startup::Create(pFallback, [] { return SteamAPI_Init(); }, [] { return std::make_unique<CSteam>(); }, []() noexcept { SteamAPI_Shutdown(); });
+	if(!pFallback)
 	{
-		// SteamAPI_Init 失败时降级为 stub：Steam 侧不会显示运行状态、不计时长，
+		// 初始化失败时降级为 stub：Steam 侧不会显示运行状态、不计时长，
 		// Rich Presence 与 connect 参数全部不可用。此处打日志避免静默降级难以定位，
 		// 常见原因：CWD 缺 steam_appid.txt（Steam 只在当前工作目录查找）、
 		// Steam 未运行/未登录、进程与 Steam 客户端权限上下文不一致、账号无该 AppID license。
-		dbg_msg("steam", "SteamAPI_Init() failed, steam integration disabled (no presence, no playtime)");
-		return new CSteamStub();
+		try
+		{
+			dbg_msg("steam", "Steam initialization failed, steam integration disabled (no presence, no playtime)");
+		}
+		catch(...)
+		{
+		}
 	}
-	return new CSteam();
+	return pSteam.release();
 }

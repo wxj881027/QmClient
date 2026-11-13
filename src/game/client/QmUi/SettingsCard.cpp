@@ -166,11 +166,7 @@ SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame 
 
 	if(Ctx.m_pUi != nullptr && Ctx.m_pTextRender != nullptr)
 	{
-		const ColorRGBA PreviousTextColor = Ctx.m_pTextRender->GetTextColor();
-		const ColorRGBA PreviousTextOutlineColor = Ctx.m_pTextRender->GetTextOutlineColor();
-		const ColorRGBA PreviousTextSelectionColor = Ctx.m_pTextRender->GetTextSelectionColor();
-		const unsigned PreviousRenderFlags = Ctx.m_pTextRender->GetRenderFlags();
-		const EFontPreset PreviousFontPreset = Ctx.m_pTextRender->GetFontPreset();
+		CUiScopedTextRenderState HeaderTextState(*Ctx.m_pTextRender);
 		CUiScopedSurfaceText HeaderSurfaceText(Ctx.m_pTextRender, Surface);
 		// 卡片标题不按普通设置标签规则拆括号。
 		const CQmCardLabelHintScope HeaderLabelHints(Ctx.m_pUi, false);
@@ -195,11 +191,7 @@ SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame 
 		Ctx.m_pTextRender->TextColor(SubtitleColor);
 		RenderSettingsCardSubtitle(Ctx, DrawFrame, Spec, DrawState.m_PointerInside);
 		// 标题只影响本卡片，不能把调用方的文本状态写死为默认白色。
-		Ctx.m_pTextRender->SetRenderFlags(PreviousRenderFlags);
-		Ctx.m_pTextRender->SetFontPreset(PreviousFontPreset);
-		Ctx.m_pTextRender->TextOutlineColor(PreviousTextOutlineColor);
-		Ctx.m_pTextRender->TextSelectionColor(PreviousTextSelectionColor);
-		Ctx.m_pTextRender->TextColor(PreviousTextColor);
+		HeaderTextState.Restore();
 		if(DrawCardChrome && DrawState.m_ShowDefaultCollapseButton)
 			RenderSettingsCardCollapseButton(Ctx, DrawFrame.m_HandleRect, DrawState.m_Collapsed, DrawState.m_DrawAlpha, Spec.m_pStableId);
 	}
@@ -389,12 +381,11 @@ bool CMenus::DoSettingsToggleButton(int Page, int Tab, int Subtab, const CUIRect
 		DrawRoundedSurface(Ui(), Ring, ColorRGBA(), ui_token::color::TEXT_PRIMARY.WithAlpha(Options.m_Selected ? 0.92f : 0.52f), Diameter * 0.5f, 1.0f);
 		if(Options.m_Selected)
 		{
-			const EFontPreset PreviousFont = TextRender()->GetFontPreset();
+			const CUiScopedTextRenderState IconTextState(*TextRender());
 			TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 			char aCheck[8] = {};
 			str_utf8_encode(aCheck, CQmIconRegistry::Codepoint(EQmIcon::CHECK));
 			Ui()->DoLabel(&Ring, aCheck, Diameter, TEXTALIGN_MC);
-			TextRender()->SetFontPreset(PreviousFont);
 		}
 	}
 	SLabelProperties Props;

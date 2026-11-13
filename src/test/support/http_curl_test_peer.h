@@ -22,6 +22,11 @@ public:
 	static void HeadersReceivedAgo(CHttpRequestCurl &Request, int Seconds) { Request.m_ResultHeadersReceivedAt = time_get_nanoseconds() - std::chrono::seconds(Seconds); }
 	static CURLSH *DnsShare(CHttpRequestCurl &Request) { return Request.m_pDnsShare; }
 	static const curl_slist *DnsBootstrap(CHttpRequestCurl &Request) { return Request.m_pDnsBootstrap; }
+	static const curl_slist *RequestHeaders(CHttpRequestCurl &Request) { return Request.m_pRequestHeaders; }
+	static size_t HeaderCallback(CHttpRequestCurl &Request, char *pData, size_t Length)
+	{
+		return CHttpRequestCurl::HeaderCallback(pData, 1, Length, &Request);
+	}
 	static size_t Header(CHttpRequestCurl &Request, std::string Text)
 	{
 		return Request.OnHeader(Text.data(), Text.size());
@@ -29,6 +34,14 @@ public:
 	static size_t Body(CHttpRequestCurl &Request, std::string Text)
 	{
 		return CHttpRequestCurl::WriteCallback(Text.data(), 1, Text.size(), &Request);
+	}
+	static size_t BodySize(CHttpRequestCurl &Request, char *pData, size_t Size, size_t Number)
+	{
+		return CHttpRequestCurl::WriteCallback(pData, Size, Number, &Request);
+	}
+	static int Progress(CHttpRequestCurl &Request, double Total, double Current)
+	{
+		return CHttpRequestCurl::ProgressCallback(&Request, Total, Current, 0, 0);
 	}
 	static void Complete(CHttpRequestCurl &Request, CURL *pHandle = nullptr, CURLcode Code = CURLE_OK)
 	{

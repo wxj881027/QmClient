@@ -284,10 +284,34 @@ enum class CONNECTIVITY
 
 class CStun
 {
+public:
+	// 时钟须单调且Frequency为正；随机填充和发送沿用原生接口合同。
+	class IOperations
+	{
+	public:
+		virtual ~IOperations() = default;
+		virtual int64_t Now() = 0;
+		virtual int64_t Frequency() = 0;
+		virtual void RandomFill(void *pData, unsigned Size) = 0;
+		virtual int Send(NETSOCKET Socket, const NETADDR *pAddr, const void *pData, int Size) = 0;
+	};
+
+private:
+	class CDefaultOperations final : public IOperations
+	{
+	public:
+		int64_t Now() override;
+		int64_t Frequency() override;
+		void RandomFill(void *pData, unsigned Size) override;
+		int Send(NETSOCKET Socket, const NETADDR *pAddr, const void *pData, int Size) override;
+	};
+	CDefaultOperations m_DefaultOperations;
+
 	class CProtocol
 	{
 		int m_Index;
 		NETSOCKET m_Socket;
+		IOperations *m_pOperations;
 		CStunData m_Stun;
 		bool m_HaveStunServer = false;
 		NETADDR m_StunServer;
@@ -299,7 +323,7 @@ class CStun
 		int m_NumSendFailures = 0;
 
 	public:
-		CProtocol(int Index, NETSOCKET Socket);
+		CProtocol(int Index, NETSOCKET Socket, IOperations *pOperations);
 		void FeedStunServer(NETADDR StunServer);
 		void Refresh();
 		void Update();
@@ -309,7 +333,10 @@ class CStun
 	CProtocol m_aProtocols[2];
 
 public:
-	CStun(NETSOCKET Socket);
+	// 注入操作仅借用，须比本对象存活更久；默认操作由本对象拥有，不新增堆分配。
+	CStun(NETSOCKET Socket, IOperations *pOperations = nullptr);
+	CStun(const CStun &) = delete;
+	CStun &operator=(const CStun &) = delete;
 	void FeedStunServer(NETADDR StunServer);
 	void Refresh();
 	void Update();

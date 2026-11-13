@@ -84,10 +84,12 @@ public:
 		Width = std::isfinite(Width) ? std::max(0.0f, Width) : 0.0f;
 		if(m_pLayout && m_pLayout->Width() == Width && m_FontRevision == FontRevision && m_vDeclarations == vRows)
 			return m_pLayout;
+		// 声明键与几何共用同一候选快照，准备失败不修改已发布缓存。
+		std::vector<SSettingsContentRowDeclaration> Declarations(vRows);
 		auto pLayout = std::make_shared<CSettingsContentLayout>();
 		pLayout->m_Width = Width;
-		pLayout->m_vRows.reserve(vRows.size());
-		for(const auto &Declaration : vRows)
+		pLayout->m_vRows.reserve(Declarations.size());
+		for(const auto &Declaration : Declarations)
 		{
 			const float Indent = std::clamp(Declaration.m_Indent, 0.0f, Width);
 			const float RowWidth = std::max(0.0f, Width - Indent);
@@ -114,9 +116,9 @@ public:
 			pLayout->m_vRows.push_back({Declaration, {Declaration.m_ControlText ? 0.0f : Indent, pLayout->m_Height, Declaration.m_ControlText ? Width : RowWidth, Height}});
 			pLayout->m_Height += Height + std::max(0.0f, Declaration.m_Spacing);
 		}
-		m_vDeclarations = vRows;
+		m_vDeclarations.swap(Declarations);
 		m_FontRevision = FontRevision;
-		m_pLayout = pLayout;
+		m_pLayout = std::move(pLayout);
 		return m_pLayout;
 	}
 };

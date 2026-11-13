@@ -1,8 +1,11 @@
 #include "map_renderer.h"
 
+#include "render_screen.h"
+
 #include <base/log.h>
 
 #include <game/map/envelope_manager.h>
+#include <game/map/map_render_items.h>
 
 #include <algorithm>
 
@@ -68,8 +71,15 @@ void CMapRenderer::LoadStep(int MaxLayers)
 {
 	if(m_LoadFinished || m_pLoadLayers == nullptr)
 		return;
+	if(m_pLoadLayers->Map() == nullptr)
+	{
+		m_LoadFinished = true;
+		return;
+	}
 
 	MaxLayers = maximum(MaxLayers, 1);
+	int LayersStart, LayersCount;
+	m_pLoadLayers->Map()->GetType(MAPITEMTYPE_LAYER, &LayersStart, &LayersCount);
 	int ProcessedLayers = 0;
 	while(ProcessedLayers < MaxLayers && m_LoadGroupId < m_pLoadLayers->NumGroups())
 	{
@@ -145,7 +155,9 @@ void CMapRenderer::LoadStep(int MaxLayers)
 		}
 		else if(pLayer->m_Type == LAYERTYPE_QUADS)
 		{
-			pRenderLayer = std::make_unique<CRenderLayerQuads>(m_LoadGroupId, m_LoadLayerId, pLayer->m_Flags, (CMapItemLayerQuads *)pLayer);
+			auto *pQuadLayer = MapRenderItems::QuadLayer(*m_pLoadLayers->Map(), LayersStart + pGroup->m_StartLayer + m_LoadLayerId);
+			if(pQuadLayer != nullptr)
+				pRenderLayer = std::make_unique<CRenderLayerQuads>(m_LoadGroupId, m_LoadLayerId, pLayer->m_Flags, pQuadLayer);
 		}
 		if(pRenderLayer)
 		{
@@ -180,8 +192,8 @@ void CMapRenderer::Load(ERenderType Type, CLayers *pLayers, IMapImages *pMapImag
 
 void CMapRenderer::Render(const CRenderLayerParams &Params)
 {
-	float ScreenXLeft, ScreenYTop, ScreenXRight, ScreenYBottom;
-	Graphics()->GetScreen(&ScreenXLeft, &ScreenYTop, &ScreenXRight, &ScreenYBottom);
+	std::array<float, 4> aRestoreScreen;
+	Graphics()->GetScreen(&aRestoreScreen[0], &aRestoreScreen[1], &aRestoreScreen[2], &aRestoreScreen[3]);
 
 	bool DoRenderGroup = true;
 	for(auto &pRenderLayer : m_vpRenderLayers)
@@ -201,17 +213,17 @@ void CMapRenderer::Render(const CRenderLayerParams &Params)
 	// Reset clip from last group
 	Graphics()->ClipDisable();
 
-	// don't reset screen on background
-	if(Params.m_RenderType != ERenderType::RENDERTYPE_BACKGROUND && Params.m_RenderType != ERenderType::RENDERTYPE_BACKGROUND_FORCE)
+	if(Params.m_RenderType == ERenderType::RENDERTYPE_BACKGROUND || Params.m_RenderType == ERenderType::RENDERTYPE_BACKGROUND_FORCE)
 	{
-		// reset the screen like it was before
-		Graphics()->MapScreen(ScreenXLeft, ScreenYTop, ScreenXRight, ScreenYBottom);
+		std::array<float, 4> aInterface;
+		Graphics()->MapScreenToWorld(Params.m_Center.x, Params.m_Center.y, 100.0f, 100.0f, 100.0f,
+			0, 0, Graphics()->GameScreenAspect(), Params.m_Zoom, aInterface.data());
+		if(MapRenderScreen::IsValidScreen(aInterface))
+			aRestoreScreen = aInterface;
 	}
-	else
-	{
-		// reset the screen to the default interface
-		Graphics()->MapScreenToGameInterface(Params.m_Center.x, Params.m_Center.y, Params.m_Zoom);
-	}
+	// 背景目标无效时回到进入渲染器时的有效视口，避免收尾再次发布坏投影。
+	if(MapRenderScreen::IsValidScreen(aRestoreScreen))
+		Graphics()->MapScreen(aRestoreScreen[0], aRestoreScreen[1], aRestoreScreen[2], aRestoreScreen[3]);
 }
 
 int CMapRenderer::GetLayerType(const CMapItemLayer *pLayer) const

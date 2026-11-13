@@ -17,6 +17,10 @@ public:
 	int m_Subtype;
 	int m_SwitchNumber;
 	int m_Flags = 0;
+
+	bool HasValidPosition() const;
+	// 失败保留Out；成功沿原float转int截断，不改snapshot字段。
+	bool TryFillNetObj(CNetObj_Pickup &Out) const;
 };
 
 CPickupData ExtractPickupInfo(int NetObjType, const void *pData, const CNetObj_EntityEx *pEntEx);

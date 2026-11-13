@@ -4,6 +4,8 @@
 #include <base/lock.h>
 
 #include <engine/client/video_frame_capture.h>
+#include <engine/client/video_frame_index_queue.h>
+#include <engine/client/video_recorder_lifecycle.h>
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -14,7 +16,6 @@ extern "C" {
 
 #include <atomic>
 #include <condition_variable>
-#include <deque>
 #include <mutex>
 #include <thread>
 #include <vector>
@@ -57,6 +58,7 @@ public:
 	void Pause(bool Pause) override;
 	bool IsRecording() const override { return m_Recording && !HasError(); }
 	bool HasError() const override { return m_FrameCapture.HasError() || m_EncodeError.load(std::memory_order_acquire); }
+	bool HasAudio() const override { return m_HasAudio; }
 	const SVideoDisplaySnapshot *DisplaySnapshot() const override { return &m_DisplaySnapshot; }
 
 	void NextVideoFrame() override;
@@ -73,7 +75,7 @@ public:
 
 private:
 	void RunVideoConvertThread(size_t ThreadIndex) REQUIRES(!m_WriteLock);
-	void FillVideoFrame(size_t ThreadIndex, size_t SlotIndex) REQUIRES(!m_WriteLock);
+	bool FillVideoFrame(size_t ThreadIndex, size_t SlotIndex) REQUIRES(!m_WriteLock);
 	bool UpdateVideoBufferFromGraphics(size_t SlotIndex);
 	// 捕获槽的公共收尾：反压等待空闲槽、失败归还、就绪发布。
 	// 窗口路径（NextVideoFrameThread）与离屏路径（SubmitOffscreenFrame）共用，
@@ -155,22 +157,16 @@ private:
 	std::condition_variable m_VideoSlotFreeCond; // 生产端等待空闲槽
 	std::condition_variable m_VideoSlotReadyCond; // 转换线程等待就绪帧
 	std::condition_variable m_VideoSubmitCond; // 按序提交等待
-	std::deque<size_t> m_vPendingSlots; // 就绪队列（槽索引，FIFO）
+	CVideoFrameIndexQueue<> m_PendingSlots; // 预分配的就绪槽索引 FIFO
 	std::vector<size_t> m_vFreeSlots; // 空闲槽索引栈
 	uint64_t m_NextVideoFrameToCapture = 0; // 渲染线程下一个捕获帧号（仅渲染线程访问）
 	uint64_t m_NextVideoFrameToSubmit = 0; // 下一个允许提交编码的帧号
 	bool m_VideoStop = false; // 停止标志（排空队列后线程退出）
 	bool m_VideoPipelineError = false; // m_EncodeError 的队列锁内镜像，用于唤醒全部等待者
 
-	class CAudioRecorderThread
+	class CAudioRecorderThread : public CVideoRecorderWorker
 	{
 	public:
-		std::thread m_Thread;
-		std::mutex m_Mutex;
-		std::condition_variable m_Cond;
-
-		bool m_Started = false;
-		bool m_Finished = false;
 		bool m_HasAudioFrame = false;
 
 		std::mutex m_AudioFillMutex;
@@ -183,7 +179,7 @@ private:
 
 	std::atomic<int32_t> m_ProcessingAudioFrame;
 
-	bool m_HasAudio;
+	const bool m_HasAudio;
 
 	class CAudioBuffer
 	{

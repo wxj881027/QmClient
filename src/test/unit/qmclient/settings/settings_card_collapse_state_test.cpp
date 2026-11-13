@@ -94,6 +94,20 @@ namespace
 		EXPECT_FALSE(State.Serialize(aSerialized, sizeof(aSerialized)));
 	}
 
+	TEST(SettingsCardCollapseState, ExplicitExpansionAndSeparatorsFitExactlyOrReturnEmpty)
+	{
+		CState State;
+		ASSERT_TRUE(State.Load("b;!a;b"));
+		char aExact[5];
+		ASSERT_TRUE(State.Serialize(aExact, sizeof(aExact)));
+		EXPECT_STREQ(aExact, "!a;b");
+		char aShort[4] = {'x', 'x', 'x', 'x'};
+		EXPECT_FALSE(State.Serialize(aShort, sizeof(aShort)));
+		EXPECT_EQ(aShort[0], '\0');
+		EXPECT_FALSE(State.IsCollapsed("a", true));
+		EXPECT_TRUE(State.IsCollapsed("b", false));
+	}
+
 	TEST(SettingsCardCollapseState, ImportsLegacyQmKeysAsStableIds)
 	{
 		CState State;

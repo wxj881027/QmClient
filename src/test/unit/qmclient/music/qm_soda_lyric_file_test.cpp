@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 
+#include <cstdint>
+#include <limits>
 #include <string>
 
 using namespace QmSodaLyricFile;
@@ -106,4 +108,65 @@ TEST(QmSodaLyricFile, SeparateTranslationTrackOverridesEmbeddedKrcTranslation)
 	ASSERT_EQ(Data.m_vTranslations.size(), 2u);
 	EXPECT_EQ(Data.m_vTranslations[0], "独立译文");
 	EXPECT_EQ(Data.m_vTranslations[1], "另一译文");
+}
+
+TEST(QmSodaLyricFile, DurationUsesTheSafeInt64DomainAndExistingZeroFallback)
+{
+	struct SCase
+	{
+		const char *m_pNumber;
+		int64_t m_Expected;
+	};
+	const SCase aCases[] = {
+		{nullptr, 0},
+		{"null", 0},
+		{"\"123\"", 0},
+		{"true", 0},
+		{"1250.75", 1250},
+		{"-1250.75", -1250},
+		{"9223372036854775807", std::numeric_limits<int64_t>::max()},
+		{"-9223372036854775808", std::numeric_limits<int64_t>::min()},
+		{"9223372036854774784.0", 9223372036854774784LL},
+		{"-9223372036854775808.0", std::numeric_limits<int64_t>::min()},
+		{"9223372036854775808.0", 0},
+		{"-9223372036854777856.0", 0},
+		{"1e100", 0},
+		{"-1e100", 0},
+		{"1e400", 0},
+		{"-1e400", 0},
+	};
+	for(const auto &Case : aCases)
+	{
+		SCOPED_TRACE(Case.m_pNumber == nullptr ? "missing" : Case.m_pNumber);
+		const std::string Duration = Case.m_pNumber == nullptr ? "" : "\"durationMs\":" + std::string(Case.m_pNumber) + ",";
+		const std::string Json = "{" + Duration + R"("lyricType":"lrc","lyricContent":"[00:01.00]kept"})";
+		QmMusicLyrics::SLyricsData Data;
+		ASSERT_TRUE(ParseLyricFileJson(Json, &Data));
+		EXPECT_EQ(Data.m_Song.m_DurationMs, Case.m_Expected);
+		ASSERT_EQ(Data.m_Timeline.m_vLines.size(), 1u);
+		EXPECT_EQ(Data.m_Timeline.m_vLines[0].m_Text, "kept");
+	}
+}
+
+TEST(QmSodaLyricFile, FailedCallsReplaceOldOutputUsingTheExistingFailureShape)
+{
+	const char *pOldJson = R"({"title":"old title","lyricType":"lrc","lyricContent":"[00:01.00]old line","translationLrc":"[00:01.00]old translation"})";
+	QmMusicLyrics::SLyricsData Data;
+	std::string Error;
+	ASSERT_TRUE(ParseLyricFileJson(pOldJson, &Data, &Error));
+	ASSERT_TRUE(Data.HasTranslation());
+	EXPECT_FALSE(ParseLyricFileJson("[]", &Data, &Error));
+	EXPECT_TRUE(Data.m_Song.m_Title.empty());
+	EXPECT_TRUE(Data.m_Timeline.m_vLines.empty());
+	EXPECT_TRUE(Data.m_vTranslations.empty());
+	ASSERT_TRUE(ParseLyricFileJson(pOldJson, &Data, &Error));
+	EXPECT_FALSE(ParseLyricFileJson(R"({"title":"new metadata","lyricType":"krc","lyricContent":"plain"})", &Data, &Error));
+	EXPECT_EQ(Data.m_Song.m_Title, "new metadata");
+	EXPECT_TRUE(Data.m_Timeline.m_vLines.empty());
+	EXPECT_TRUE(Data.m_vTranslations.empty());
+	EXPECT_FALSE(Error.empty());
+	ASSERT_TRUE(ParseLyricFileJson(R"({"title":"retry","lyricType":"lrc","lyricContent":"[00:02.00]new line"})", &Data, &Error));
+	EXPECT_EQ(Data.m_Song.m_Title, "retry");
+	ASSERT_EQ(Data.m_Timeline.m_vLines.size(), 1u);
+	EXPECT_EQ(Data.m_Timeline.m_vLines[0].m_Text, "new line");
 }

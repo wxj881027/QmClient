@@ -3858,9 +3858,9 @@ int CServer::Run()
 							InitDnsbl(ClientId);
 						}
 						else if(m_aClients[ClientId].m_DnsblState == EDnsblState::PENDING &&
-							m_aClients[ClientId].m_pDnsblLookup->State() == IJob::STATE_DONE)
+							m_aClients[ClientId].m_pDnsblLookup->Finished())
 						{
-							if(m_aClients[ClientId].m_pDnsblLookup->Result() != 0)
+							if(m_aClients[ClientId].m_pDnsblLookup->State() != IJob::STATE_DONE || m_aClients[ClientId].m_pDnsblLookup->Result() != 0)
 							{
 								// entry not found -> whitelisted
 								m_aClients[ClientId].m_DnsblState = EDnsblState::WHITELISTED;

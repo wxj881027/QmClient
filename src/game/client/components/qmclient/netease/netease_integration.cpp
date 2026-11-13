@@ -13,6 +13,9 @@
 
 #include <algorithm>
 #include <chrono>
+#include <new>
+#include <stdexcept>
+#include <string>
 #include <string_view>
 
 namespace
@@ -87,23 +90,42 @@ void CNeteaseIntegration::UpdateLyricsData(const QmNeteaseHook::SSnapshotV5 &Sna
 		m_DataGeneration = Snapshot.m_Generation;
 		m_DataPid = Snapshot.m_CloudMusicPid;
 	}
-	if(m_pLyricsParseJob && m_pLyricsParseJob->State() == IJob::STATE_DONE)
+	if(m_pLyricsParseJob && m_pLyricsParseJob->Finished())
 	{
-		m_LyricsData = std::move(m_pLyricsParseJob->m_Result);
-		m_HasWordTiming = QmMusicLyrics::HasWordTiming(m_LyricsData);
+		if(m_pLyricsParseJob->State() == IJob::STATE_DONE)
+		{
+			m_LyricsData = std::move(m_pLyricsParseJob->m_Result);
+			m_HasWordTiming = QmMusicLyrics::HasWordTiming(m_LyricsData);
+		}
+		else
+			m_DataRevision = 0;
 		m_pLyricsParseJob.reset();
 	}
 	const uint64_t Now = MonotonicTickMs();
 	if(Now < m_NextLyricsReadTick)
 		return;
 	m_NextLyricsReadTick = Now + 250;
-	NeteaseLyrics::SRawLyrics Raw;
-	if(m_LyricsChannel.Read(m_DataPid, m_DataSongId, m_DataGeneration, m_DataRevision, Raw))
+	try
 	{
+		NeteaseLyrics::SRawLyrics Raw;
+		uint64_t Revision = m_DataRevision;
+		if(!m_LyricsChannel.Read(m_DataPid, m_DataSongId, m_DataGeneration, Revision, Raw))
+			return;
 		auto pJob = std::make_shared<CLyricsParseJob>();
 		pJob->m_Raw = std::move(Raw);
-		m_pLyricsParseJob = pJob;
-		Engine()->AddJob(pJob);
+		if(!Engine()->TryAddJob(pJob))
+			return;
+		// 接纳后只移动发布；准备或准入失败时，下次仍能读取同一修订。
+		m_pLyricsParseJob = std::move(pJob);
+		m_DataRevision = Revision;
+	}
+	catch(const std::bad_alloc &)
+	{
+		return;
+	}
+	catch(const std::length_error &)
+	{
+		return;
 	}
 }
 
@@ -232,6 +254,26 @@ void CNeteaseIntegration::OnUpdate()
 	}
 	const std::string_view MediaTitle(MediaState.m_aTitle);
 	const std::string_view MediaArtist(MediaState.m_aArtist);
+	const bool UpdateTitle = !MediaTitle.empty() && m_LastMediaTitle != MediaTitle;
+	const bool UpdateArtist = !MediaTitle.empty() && m_LastMediaArtist != MediaArtist;
+	std::string PreparedTitle;
+	std::string PreparedArtist;
+	try
+	{
+		if(UpdateTitle)
+			PreparedTitle.assign(MediaTitle);
+		if(UpdateArtist)
+			PreparedArtist.assign(MediaArtist);
+	}
+	catch(const std::bad_alloc &)
+	{
+		return;
+	}
+	catch(const std::length_error &)
+	{
+		return;
+	}
+	// 两字段都准备完整后才推进切歌阻断，资源失败不会清掉当前歌词。
 	if(NeteaseLyrics::IsMeaningfulMediaIdentityChange(m_LastMediaTitle, m_LastMediaArtist, MediaTitle, MediaArtist))
 	{
 		// 只使用上一次已经和 SMTC 元数据对齐的 Bridge 身份作为基线。
@@ -246,13 +288,10 @@ void CNeteaseIntegration::OnUpdate()
 		m_LastBridgePositionMs = 0;
 		m_LastBridgePositionValid = false;
 	}
-	if(!MediaTitle.empty())
-	{
-		if(m_LastMediaTitle != MediaTitle)
-			m_LastMediaTitle.assign(MediaTitle);
-		if(m_LastMediaArtist != MediaArtist)
-			m_LastMediaArtist.assign(MediaArtist);
-	}
+	if(UpdateTitle)
+		m_LastMediaTitle.swap(PreparedTitle);
+	if(UpdateArtist)
+		m_LastMediaArtist.swap(PreparedArtist);
 	if(!HasBridgeSnapshot)
 	{
 		const uint64_t HookTimeout = (uint64_t)std::max(1, g_Config.m_QmNeteaseHookTimeoutMs);
@@ -380,36 +419,57 @@ void CNeteaseIntegration::OnUpdate()
 		}
 		return;
 	}
-	m_LastBridgeSequence = BridgeSnapshot.m_Sequence;
-	m_ActiveLyrics = (BridgeSnapshot.m_Flags & QmNeteaseHook::V5_FLAG_LYRIC_TIMELINE_VALID) != 0 ||
-			 ((BridgeSnapshot.m_Flags & QmNeteaseHook::V5_FLAG_LYRIC_VALID) != 0 && BridgeSnapshot.m_LyricSource != (uint32_t)QmNeteaseHook::ENeteaseLyricSource::None);
-	if(PositionAnchored)
-	{
-		m_LastBridgePositionMs = BridgeSnapshot.m_PositionMs;
-		m_LastBridgePositionValid = true;
-	}
+	// 文字准备成功或正常拒绝后才消费；资源失败也保留暂停 seek 的旧锚点供重试。
+	const auto ConsumeSnapshot = [&] {
+		m_LastBridgeSequence = BridgeSnapshot.m_Sequence;
+		m_ActiveLyrics = (BridgeSnapshot.m_Flags & QmNeteaseHook::V5_FLAG_LYRIC_TIMELINE_VALID) != 0 ||
+				 ((BridgeSnapshot.m_Flags & QmNeteaseHook::V5_FLAG_LYRIC_VALID) != 0 && BridgeSnapshot.m_LyricSource != (uint32_t)QmNeteaseHook::ENeteaseLyricSource::None);
+		if(PositionAnchored)
+		{
+			m_LastBridgePositionMs = BridgeSnapshot.m_PositionMs;
+			m_LastBridgePositionValid = true;
+		}
+	};
 	if((BridgeSnapshot.m_Flags & QmNeteaseHook::V5_FLAG_LYRIC_VALID) == 0 || BridgeSnapshot.m_aCurrentLyric[0] == '\0')
 	{
 		if(!KeepPausedLyric)
 			m_LyricState.ClearLyrics();
+		ConsumeSnapshot();
 		return;
 	}
 
 	// SMTC 暂停时保留已经选中的句子；新歌曲仍可接受第一句，只有检测到
 	// Bridge 进度锚点发生 seek 时才允许暂停快照重新定位当前句。
 	if(KeepPausedLyric)
+	{
+		ConsumeSnapshot();
 		return;
+	}
 
 	NeteaseLyrics::ESource Source = NeteaseLyrics::ESource::Frontend;
 	switch((QmNeteaseHook::ENeteaseLyricSource)BridgeSnapshot.m_LyricSource)
 	{
 	case QmNeteaseHook::ENeteaseLyricSource::DesktopLyricsFallback: Source = NeteaseLyrics::ESource::DesktopLyricsFallback; break;
 	case QmNeteaseHook::ENeteaseLyricSource::Frontend: Source = NeteaseLyrics::ESource::Frontend; break;
-	case QmNeteaseHook::ENeteaseLyricSource::None: return;
-	case QmNeteaseHook::ENeteaseLyricSource::ReservedLegacyApi: return;
+	case QmNeteaseHook::ENeteaseLyricSource::None:
+	case QmNeteaseHook::ENeteaseLyricSource::ReservedLegacyApi:
+		ConsumeSnapshot();
+		return;
 	}
 	const int64_t PositionMs = PositionValid ? BridgeSnapshot.m_PositionMs : m_LyricState.Snapshot().m_PositionMs;
-	m_LyricState.ApplyCurrentLine(Source, BridgeSnapshot.m_aCurrentLyric, BridgeSnapshot.m_LineStartMs, BridgeSnapshot.m_LineEndMs, PositionMs);
+	try
+	{
+		m_LyricState.ApplyCurrentLine(Source, BridgeSnapshot.m_aCurrentLyric, BridgeSnapshot.m_LineStartMs, BridgeSnapshot.m_LineEndMs, PositionMs);
+	}
+	catch(const std::bad_alloc &)
+	{
+		return;
+	}
+	catch(const std::length_error &)
+	{
+		return;
+	}
+	ConsumeSnapshot();
 }
 
 bool CNeteaseIntegration::GetCurrentLyric(char *pBuffer, size_t BufferSize, ColorRGBA *pColor) const

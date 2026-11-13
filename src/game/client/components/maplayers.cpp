@@ -162,6 +162,9 @@ void CMapLayers::SwapState(CMapLayers &Other)
 	swap(m_Params, Other.m_Params);
 	swap(m_MapRenderer, Other.m_MapRenderer);
 	swap(m_EnvEvaluator, Other.m_EnvEvaluator);
+	// 求值器按值交换后地址不变，共享管理器必须指向接收该地图状态的组件。
+	m_MapRenderer.RebindEnvelopeEval(&m_EnvEvaluator);
+	Other.m_MapRenderer.RebindEnvelopeEval(&Other.m_EnvEvaluator);
 	swap(m_MapLoaded, Other.m_MapLoaded);
 	swap(m_MapLoadInProgress, Other.m_MapLoadInProgress);
 }

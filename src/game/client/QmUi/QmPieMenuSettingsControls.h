@@ -3,9 +3,13 @@
 
 #include "UiButtonStyle.h"
 #include "UiSurface.h"
+#include "UiTextRenderState.h"
 #include "UiTokens.h"
 
 #include <game/client/ui.h>
+
+#include <new>
+#include <stdexcept>
 
 inline CUIRect QmPieOptionSwatchRect(const CUIRect &Cell, float LineHeight)
 {
@@ -37,6 +41,57 @@ inline bool QmDrawPieOptionColorControl(const IUiContext &Ctx, const void *pColo
 	const ColorRGBA Border = ui_token::color::TEXT_PRIMARY.WithAlpha(ui_token::feedback::ICON_BORDER_ALPHA);
 	DrawRoundedSurface(Ctx, Swatch, Fill, Border, CornerRadius, ui_token::feedback::ICON_BORDER_WIDTH);
 	return ProcessInput && !Ctx.m_pUi->RenderOnly() && Ctx.m_pUi->DoButtonLogic(pColorId, 0, &Swatch, BUTTONFLAG_LEFT) != 0;
+}
+
+inline bool QmDrawPieSettingsPreviewIcon(CUi &Ui, const vec2 &Position, float IconSize, const char *pIcon, float Alpha)
+{
+	auto &TextRender = *Ui.TextRender();
+	const CUiScopedTextRenderState TextState(TextRender);
+	try
+	{
+		TextRender.TextColor(1.0f, 1.0f, 1.0f, Alpha);
+		TextRender.SetFontPreset(EFontPreset::ICON_FONT);
+		const float Width = TextRender.TextWidth(IconSize, pIcon);
+		const CUIRect Rect{Position.x - Width * 0.5f, Position.y - IconSize * 0.5f, Width, IconSize};
+		Ui.DoLabel(&Rect, pIcon, IconSize, TEXTALIGN_MC);
+		return true;
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	catch(const std::length_error &)
+	{
+		return false;
+	}
+}
+
+inline bool QmDrawPieSettingsPreviewTitle(ITextRender &TextRender, const vec2 &Center, float FontSize, float CenterRadius, const char *pTitle)
+{
+	CUiScopedTextRenderState TextState(TextRender);
+	try
+	{
+		TextRender.TextColor(1.0f, 1.0f, 1.0f, 0.98f);
+		float Width = TextRender.TextWidth(FontSize, pTitle);
+		if(Width > CenterRadius * 1.65f)
+		{
+			FontSize *= CenterRadius * 1.65f / Width;
+			Width = TextRender.TextWidth(FontSize, pTitle);
+		}
+		TextRender.Text(Center.x - Width * 0.5f, Center.y - FontSize * 0.5f, FontSize, pTitle);
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	catch(const std::length_error &)
+	{
+		return false;
+	}
+	TextState.Restore();
+	// 正常绘制继续沿用预览末尾恢复默认文字色的行为。
+	TextRender.TextColor(TextRender.DefaultTextColor());
+	return true;
 }
 
 #endif

@@ -7,13 +7,18 @@
 #include <game/client/components/qmclient/netease/netease_lyric_parser.h>
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <cstring>
+#include <limits>
+#include <memory>
 
 namespace QmSpotify
 {
 	namespace
 	{
+		using TJson = std::unique_ptr<json_value, decltype(&json_value_free)>;
+
 		const json_value *Field(const json_value *pObject, const char *pName)
 		{
 			if(pObject == nullptr || pObject->type != json_object || pName == nullptr)
@@ -34,15 +39,47 @@ namespace QmSpotify
 			return std::string(pValue->u.string.ptr, pValue->u.string.length);
 		}
 
-		int64_t Int64Value(const json_value *pValue)
+		bool TryInt64Value(const json_value *pValue, int64_t &Value)
+		{
+			if(pValue == nullptr)
+				return false;
+			if(pValue->type == json_integer)
+			{
+				Value = pValue->u.integer;
+				return true;
+			}
+			// INT64_MAX转double会舍入到2^63，故上界必须使用严格小于。
+			if(pValue->type != json_double || !std::isfinite(pValue->u.dbl) ||
+				pValue->u.dbl < -0x1p63 || pValue->u.dbl >= 0x1p63)
+				return false;
+			Value = static_cast<int64_t>(pValue->u.dbl);
+			return true;
+		}
+
+		int64_t Int64Value(const json_value *pValue, int64_t Fallback = 0)
+		{
+			int64_t Value;
+			return TryInt64Value(pValue, Value) ? Value : Fallback;
+		}
+
+		int64_t LrclibDurationMs(const json_value *pValue)
 		{
 			if(pValue == nullptr)
 				return 0;
 			if(pValue->type == json_integer)
-				return (int64_t)pValue->u.integer;
-			if(pValue->type == json_double)
-				return (int64_t)pValue->u.dbl;
-			return 0;
+			{
+				const int64_t Seconds = pValue->u.integer;
+				if(Seconds < 0 || Seconds > std::numeric_limits<int64_t>::max() / 1000)
+					return 0;
+				return Seconds * 1000;
+			}
+			if(pValue->type != json_double)
+				return 0;
+			// LRCLIB使用秒，小数部分须先换算为毫秒再截断。
+			const double Milliseconds = pValue->u.dbl * 1000.0;
+			if(!std::isfinite(Milliseconds) || Milliseconds < 0.0 || Milliseconds >= 0x1p63)
+				return 0;
+			return static_cast<int64_t>(Milliseconds);
 		}
 
 		// color-lyrics 的时间戳字段是字符串,兼容数字。
@@ -51,7 +88,7 @@ namespace QmSpotify
 			if(pValue == nullptr)
 				return Fallback;
 			if(pValue->type == json_integer || pValue->type == json_double)
-				return Int64Value(pValue);
+				return Int64Value(pValue, Fallback);
 			if(pValue->type != json_string || pValue->u.string.ptr == nullptr)
 				return Fallback;
 			const std::string_view Text(pValue->u.string.ptr, pValue->u.string.length);
@@ -61,7 +98,7 @@ namespace QmSpotify
 			bool Any = false;
 			for(char C : Text)
 			{
-				if(C < '0' || C > '9')
+				if(C < '0' || C > '9' || Result > (std::numeric_limits<int64_t>::max() - (C - '0')) / 10)
 					return Fallback;
 				Result = Result * 10 + (C - '0');
 				Any = true;
@@ -92,12 +129,12 @@ namespace QmSpotify
 			return Offset;
 		}
 
-		json_value *ParseJson(std::string_view Json)
+		TJson ParseJson(std::string_view Json)
 		{
 			if(Json.empty())
-				return nullptr;
+				return {nullptr, json_value_free};
 			const std::string Copy(Json);
-			return json_parse(Copy.c_str(), Copy.size());
+			return {json_parse(Copy.c_str(), Copy.size()), json_value_free};
 		}
 
 		// pathfinder 与 /v1/search 共用的行解析(兼容两种节点形状)。
@@ -197,24 +234,19 @@ namespace QmSpotify
 			return true;
 		}
 
-		// 把 alternatives[0] 的翻译行按下标对齐到主歌词。
-		void ApplyTranslations(const json_value *pLyricsObject, QmMusicLyrics::SLyricsData *pOut)
+		// 首个翻译轨的下标对应过滤前的主行。
+		const json_value *FirstTranslationLines(const json_value *pLyricsObject)
 		{
-			pOut->m_vTranslations.clear();
 			const json_value *pAlternatives = Field(pLyricsObject, "alternatives");
 			if(pAlternatives == nullptr || pAlternatives->type != json_array || pAlternatives->u.array.length == 0)
-				return;
+				return nullptr;
 			const json_value *pFirst = pAlternatives->u.array.values[0];
 			if(pFirst == nullptr)
-				return;
+				return nullptr;
 			const json_value *pLines = Field(pFirst, "lines");
 			if(pLines == nullptr || pLines->type != json_array)
-				return;
-			const size_t MainCount = pOut->m_Timeline.m_vLines.size();
-			const size_t Count = std::min<size_t>(MainCount, pLines->u.array.length);
-			pOut->m_vTranslations.resize(MainCount);
-			for(size_t i = 0; i < Count; ++i)
-				pOut->m_vTranslations[i] = StringValue(pLines->u.array.values[i]);
+				return nullptr;
+			return pLines;
 		}
 	} // namespace
 
@@ -222,17 +254,24 @@ namespace QmSpotify
 	{
 		if(pOut == nullptr)
 			return false;
-		json_value *pRoot = ParseJson(Json);
-		if(pRoot == nullptr)
+		const auto pRoot = ParseJson(Json);
+		if(!pRoot)
 			return false;
-		const json_value *pLyrics = Field(pRoot, "lyrics");
+		const json_value *pLyrics = Field(pRoot.get(), "lyrics");
 		const bool HasLyrics = pLyrics != nullptr && pLyrics->type == json_object;
 		const std::string SyncType = HasLyrics ? StringValue(Field(pLyrics, "syncType")) : "";
 		const json_value *pLines = HasLyrics ? Field(pLyrics, "lines") : nullptr;
 		const bool HasLines = pLines != nullptr && pLines->type == json_array;
 		const bool Timed = HasLines && SyncType != "UNSYNCED";
+		const json_value *pTranslationLines = FirstTranslationLines(pLyrics);
+		struct SLineCandidate
+		{
+			NeteaseLyrics::SLine m_Line;
+			std::string m_Translation;
+		};
 
 		QmMusicLyrics::SLyricsData Result;
+		std::vector<SLineCandidate> vCandidates;
 		if(HasLines)
 		{
 			for(unsigned int Index = 0; Index < pLines->u.array.length; ++Index)
@@ -247,7 +286,8 @@ namespace QmSpotify
 				const int64_t EndMs = ParseTimeMs(Field(pLine, "endTimeMs"), -1);
 				if(Timed && StartMs < 0)
 					continue;
-				NeteaseLyrics::SLine Line;
+				SLineCandidate Candidate;
+				NeteaseLyrics::SLine &Line = Candidate.m_Line;
 				Line.m_StartMs = StartMs;
 				Line.m_EndMs = EndMs;
 				Line.m_Text = Words;
@@ -279,21 +319,29 @@ namespace QmSpotify
 							break;
 					}
 				}
-				Result.m_Timeline.m_vLines.push_back(std::move(Line));
+				if(pTranslationLines != nullptr && Index < pTranslationLines->u.array.length)
+					Candidate.m_Translation = StringValue(pTranslationLines->u.array.values[Index]);
+				vCandidates.push_back(std::move(Candidate));
 			}
 		}
-		Result.m_Timeline.m_HasTiming = Timed && !Result.m_Timeline.m_vLines.empty();
-		// 行级歌词可能有跨行覆盖(合唱),保持 Spotify 顺序并做稳定排序,保证二分选择正确。
+		Result.m_Timeline.m_HasTiming = Timed && !vCandidates.empty();
+		// 主行与译文一起稳定排序，过滤和同刻行都保留原始对应关系。
 		if(Result.m_Timeline.m_HasTiming)
 		{
-			std::stable_sort(Result.m_Timeline.m_vLines.begin(), Result.m_Timeline.m_vLines.end(),
-				[](const NeteaseLyrics::SLine &Left, const NeteaseLyrics::SLine &Right) {
-					return Left.m_StartMs < Right.m_StartMs;
+			std::stable_sort(vCandidates.begin(), vCandidates.end(),
+				[](const SLineCandidate &Left, const SLineCandidate &Right) {
+					return Left.m_Line.m_StartMs < Right.m_Line.m_StartMs;
 				});
 		}
-		if(HasLyrics)
-			ApplyTranslations(pLyrics, &Result);
-		json_value_free(pRoot);
+		Result.m_Timeline.m_vLines.reserve(vCandidates.size());
+		if(pTranslationLines != nullptr)
+			Result.m_vTranslations.reserve(vCandidates.size());
+		for(auto &Candidate : vCandidates)
+		{
+			Result.m_Timeline.m_vLines.push_back(std::move(Candidate.m_Line));
+			if(pTranslationLines != nullptr)
+				Result.m_vTranslations.push_back(std::move(Candidate.m_Translation));
+		}
 		*pOut = std::move(Result);
 		return true;
 	}
@@ -303,10 +351,10 @@ namespace QmSpotify
 		if(pOut == nullptr)
 			return false;
 		pOut->clear();
-		json_value *pRoot = ParseJson(Json);
-		if(pRoot == nullptr)
+		const auto pRoot = ParseJson(Json);
+		if(!pRoot)
 			return false;
-		const json_value *pData = Field(pRoot, "data");
+		const json_value *pData = Field(pRoot.get(), "data");
 		const json_value *pTracks = nullptr;
 		if(pData != nullptr)
 		{
@@ -322,7 +370,7 @@ namespace QmSpotify
 		}
 		if(pTracks == nullptr)
 		{
-			const json_value *pTracksV1 = Field(pRoot, "tracks");
+			const json_value *pTracksV1 = Field(pRoot.get(), "tracks");
 			if(pTracksV1 != nullptr)
 				pTracks = Field(pTracksV1, "items");
 		}
@@ -335,7 +383,6 @@ namespace QmSpotify
 					pOut->push_back(std::move(Candidate));
 			}
 		}
-		json_value_free(pRoot);
 		return !pOut->empty();
 	}
 
@@ -343,29 +390,23 @@ namespace QmSpotify
 	{
 		if(pOut == nullptr)
 			return false;
-		json_value *pRoot = ParseJson(Json);
-		if(pRoot == nullptr)
+		const auto pRoot = ParseJson(Json);
+		if(!pRoot)
 			return false;
-		const json_value *pServerTime = Field(pRoot, "serverTime");
-		const bool Ok = pServerTime != nullptr && (pServerTime->type == json_integer || pServerTime->type == json_double);
-		if(Ok)
-			*pOut = Int64Value(pServerTime);
-		json_value_free(pRoot);
-		return Ok;
+		return TryInt64Value(Field(pRoot.get(), "serverTime"), *pOut);
 	}
 
 	bool ParseTokenResponse(std::string_view Json, std::string *pAccessToken, int64_t *pExpirationMs)
 	{
 		if(pAccessToken == nullptr || pExpirationMs == nullptr)
 			return false;
-		json_value *pRoot = ParseJson(Json);
-		if(pRoot == nullptr)
+		const auto pRoot = ParseJson(Json);
+		if(!pRoot)
 			return false;
-		const std::string Token = StringValue(Field(pRoot, "accessToken"));
-		const int64_t Expiration = Int64Value(Field(pRoot, "accessTokenExpirationTimestampMs"));
-		const json_value *pAnonymous = Field(pRoot, "isAnonymous");
+		const std::string Token = StringValue(Field(pRoot.get(), "accessToken"));
+		const int64_t Expiration = Int64Value(Field(pRoot.get(), "accessTokenExpirationTimestampMs"));
+		const json_value *pAnonymous = Field(pRoot.get(), "isAnonymous");
 		const bool Anonymous = pAnonymous != nullptr && pAnonymous->type == json_boolean && pAnonymous->u.boolean != 0;
-		json_value_free(pRoot);
 		if(Token.empty() || Expiration <= 0 || Anonymous)
 			return false;
 		*pAccessToken = Token;
@@ -377,15 +418,15 @@ namespace QmSpotify
 	{
 		if(pOut == nullptr)
 			return false;
-		json_value *pRoot = ParseJson(Json);
-		if(pRoot == nullptr)
+		const auto pRoot = ParseJson(Json);
+		if(!pRoot)
 			return false;
 		QmMusicLyrics::SLyricsData Result;
-		Result.m_Song.m_Title = StringValue(Field(pRoot, "trackName"));
-		Result.m_Song.m_Artist = StringValue(Field(pRoot, "artistName"));
-		Result.m_Song.m_Album = StringValue(Field(pRoot, "albumName"));
-		Result.m_Song.m_DurationMs = Int64Value(Field(pRoot, "duration"));
-		const std::string Synced = StringValue(Field(pRoot, "syncedLyrics"));
+		Result.m_Song.m_Title = StringValue(Field(pRoot.get(), "trackName"));
+		Result.m_Song.m_Artist = StringValue(Field(pRoot.get(), "artistName"));
+		Result.m_Song.m_Album = StringValue(Field(pRoot.get(), "albumName"));
+		Result.m_Song.m_DurationMs = LrclibDurationMs(Field(pRoot.get(), "duration"));
+		const std::string Synced = StringValue(Field(pRoot.get(), "syncedLyrics"));
 		bool Ok = false;
 		if(!Synced.empty())
 		{
@@ -396,7 +437,7 @@ namespace QmSpotify
 		if(!Ok)
 		{
 			// 无时间轴时退回纯文本(整首作为无时间轴行,由 HasLyrics 判定不可用)。
-			const std::string Plain = StringValue(Field(pRoot, "plainLyrics"));
+			const std::string Plain = StringValue(Field(pRoot.get(), "plainLyrics"));
 			if(!Plain.empty())
 			{
 				NeteaseLyrics::SLine Line;
@@ -405,7 +446,6 @@ namespace QmSpotify
 				Ok = true;
 			}
 		}
-		json_value_free(pRoot);
 		if(!Ok)
 			return false;
 		*pOut = std::move(Result);

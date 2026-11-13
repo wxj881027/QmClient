@@ -5,6 +5,8 @@
 #include <gtest/gtest.h>
 
 #include <initializer_list>
+#include <new>
+#include <stdexcept>
 #include <vector>
 
 namespace
@@ -28,6 +30,64 @@ namespace
 
 		const CVoteOptionClient *First() const { return m_vOptions.data(); }
 	};
+
+	class CFailingPreparation : public CQmServerVoteList::CPreparationOperations
+	{
+	public:
+		enum class EStage
+		{
+			NONE,
+			SEARCH,
+			OPTION,
+			VISIBLE,
+		};
+		EStage m_FailStage = EStage::NONE;
+		int m_FailAt = 1;
+		bool m_After = false;
+		int m_Exception = 0;
+		int m_SearchCalls = 0;
+		int m_OptionCalls = 0;
+		int m_VisibleCalls = 0;
+
+		void FailAt(EStage Stage, int Call, bool After)
+		{
+			m_FailStage = Stage;
+			m_FailAt = Call;
+			m_After = After;
+			m_SearchCalls = m_OptionCalls = m_VisibleCalls = 0;
+		}
+		void Check(EStage Stage, int Call, bool After)
+		{
+			if(m_FailStage != Stage || Call != m_FailAt || After != m_After)
+				return;
+			if(m_Exception == 1)
+				throw std::length_error("vote list preparation");
+			if(m_Exception == 2)
+				throw 7;
+			throw std::bad_alloc();
+		}
+		void AssignSearch(std::string &Search, const char *pSearch) override
+		{
+			const int Call = ++m_SearchCalls;
+			Check(EStage::SEARCH, Call, false);
+			CPreparationOperations::AssignSearch(Search, pSearch);
+			Check(EStage::SEARCH, Call, true);
+		}
+		void AppendOption(std::vector<std::string> &vOptions, const char *pDescription) override
+		{
+			const int Call = ++m_OptionCalls;
+			Check(EStage::OPTION, Call, false);
+			CPreparationOperations::AppendOption(vOptions, pDescription);
+			Check(EStage::OPTION, Call, true);
+		}
+		void AppendVisible(std::vector<int> &vVisible, int Index) override
+		{
+			const int Call = ++m_VisibleCalls;
+			Check(EStage::VISIBLE, Call, false);
+			CPreparationOperations::AppendVisible(vVisible, Index);
+			Check(EStage::VISIBLE, Call, true);
+		}
+	};
 }
 
 TEST(QmServerVoteList, UnfilteredListKeepsServerOrderAndNonMapOptionsVerbatim)
@@ -47,7 +107,9 @@ TEST(QmServerVoteList, SearchKeepsOriginalOptionIndexAndSelectionWhenStillVisibl
 	CQmServerVoteList List;
 	List.Update(Options.First(), 7, "");
 	List.Select(3);
+	const auto *pDescriptions = List.Options().data();
 	ASSERT_TRUE(List.Update(Options.First(), 7, "PROFILE"));
+	EXPECT_EQ(List.Options().data(), pDescriptions);
 	EXPECT_EQ(List.Visible(), (std::vector<int>{1, 3}));
 	EXPECT_EQ(List.SelectedRow(), 1);
 	EXPECT_EQ(List.SelectedOption(7), 3);
@@ -121,4 +183,208 @@ TEST(QmServerVoteList, CachedDescriptionsRemainValidWhenServerStorageChanges)
 	}
 	ASSERT_EQ(List.Options().size(), 1u);
 	EXPECT_EQ(List.Options()[0], "Profile");
+}
+
+TEST(QmServerVoteList, InitialPreparationFailureDoesNotPublishPartialTextOrIndices)
+{
+	using EStage = CFailingPreparation::EStage;
+	COptions Options{"Start", "Profile", "Shop"};
+	for(EStage Stage : {EStage::SEARCH, EStage::OPTION, EStage::VISIBLE})
+		for(bool After : {false, true})
+		{
+			SCOPED_TRACE(static_cast<int>(Stage));
+			SCOPED_TRACE(After);
+			CFailingPreparation Operations;
+			Operations.FailAt(Stage, Stage == EStage::SEARCH ? 1 : 2, After);
+			CQmServerVoteList List(&Operations);
+			EXPECT_FALSE(List.Update(Options.First(), 1, ""));
+			EXPECT_TRUE(List.Options().empty());
+			EXPECT_TRUE(List.Visible().empty());
+			EXPECT_EQ(List.SelectedOption(1), -1);
+			EXPECT_TRUE(List.NeedsUpdate(1, ""));
+			Operations.m_FailStage = EStage::NONE;
+			ASSERT_TRUE(List.Update(Options.First(), 1, ""));
+			EXPECT_EQ(List.Options().size(), 3u);
+			EXPECT_EQ(List.Visible(), (std::vector<int>{0, 1, 2}));
+		}
+}
+
+TEST(QmServerVoteList, ReplacementCopyFailurePreservesOwnedRowsAndRejectsNewRevisionTarget)
+{
+	COptions Old{"Start", "Profile"}, New{"Other", "Shop", "Back"};
+	CFailingPreparation Operations;
+	CQmServerVoteList List(&Operations);
+	ASSERT_TRUE(List.Update(Old.First(), 1, ""));
+	List.Select(1);
+	const auto *pDescriptions = List.Options().data();
+	Operations.FailAt(CFailingPreparation::EStage::OPTION, 2, true);
+	EXPECT_FALSE(List.Update(New.First(), 2, ""));
+	EXPECT_EQ(List.Options().data(), pDescriptions);
+	EXPECT_EQ(List.Options(), (std::vector<std::string>{"Start", "Profile"}));
+	EXPECT_EQ(List.Visible(), (std::vector<int>{0, 1}));
+	EXPECT_EQ(List.SelectedRow(), 1);
+	EXPECT_EQ(List.SelectedOption(1), 1);
+	EXPECT_EQ(List.SelectedOption(2), -1);
+	EXPECT_TRUE(List.NeedsUpdate(2, ""));
+	Operations.m_FailStage = CFailingPreparation::EStage::NONE;
+	ASSERT_TRUE(List.Update(New.First(), 2, ""));
+	EXPECT_EQ(List.Options(), (std::vector<std::string>{"Other", "Shop", "Back"}));
+	EXPECT_EQ(List.SelectedRow(), -1);
+}
+
+TEST(QmServerVoteList, SearchProjectionFailureKeepsSelectionAndRetriesWithoutRecopyingOptions)
+{
+	COptions Options{"Start", "Profile", "Player profile"};
+	CFailingPreparation Operations;
+	CQmServerVoteList List(&Operations);
+	ASSERT_TRUE(List.Update(Options.First(), 1, ""));
+	List.Select(0);
+	Operations.FailAt(CFailingPreparation::EStage::VISIBLE, 1, true);
+	EXPECT_FALSE(List.Update(Options.First(), 1, "profile"));
+	EXPECT_EQ(List.SelectedRow(), 0);
+	EXPECT_EQ(List.Visible(), (std::vector<int>{0, 1, 2}));
+	EXPECT_EQ(Operations.m_OptionCalls, 0);
+	EXPECT_TRUE(List.NeedsUpdate(1, "profile"));
+	Operations.m_FailStage = CFailingPreparation::EStage::NONE;
+	ASSERT_TRUE(List.Update(nullptr, 1, "profile"));
+	EXPECT_EQ(Operations.m_OptionCalls, 0);
+	EXPECT_EQ(List.Visible(), (std::vector<int>{1, 2}));
+	EXPECT_EQ(List.SelectedRow(), -1);
+}
+
+TEST(QmServerVoteList, SearchAssignmentExceptionsLeaveThePreviousRequestIntact)
+{
+	for(int Exception = 0; Exception < 3; ++Exception)
+		for(bool After : {false, true})
+		{
+			SCOPED_TRACE(Exception);
+			SCOPED_TRACE(After);
+			COptions Options{"Start", "Profile"};
+			CFailingPreparation Operations;
+			CQmServerVoteList List(&Operations);
+			ASSERT_TRUE(List.Update(Options.First(), 1, ""));
+			List.Select(1);
+			Operations.m_Exception = Exception;
+			Operations.FailAt(CFailingPreparation::EStage::SEARCH, 1, After);
+			const char *pSearch = "a search long enough to require owned string storage";
+			EXPECT_FALSE(List.Update(Options.First(), 1, pSearch));
+			EXPECT_FALSE(List.NeedsUpdate(1, ""));
+			EXPECT_TRUE(List.NeedsUpdate(1, pSearch));
+			EXPECT_EQ(List.SelectedOption(1), 1);
+			EXPECT_EQ(Operations.m_OptionCalls, 0);
+			EXPECT_EQ(Operations.m_VisibleCalls, 0);
+		}
+}
+
+TEST(QmServerVoteList, NewOptionProjectionFailureDoesNotCommitTheNewRevision)
+{
+	COptions Old{"Start", "Profile"}, New{"Shop", "Player profile"};
+	CFailingPreparation Operations;
+	CQmServerVoteList List(&Operations);
+	ASSERT_TRUE(List.Update(Old.First(), 1, ""));
+	List.Select(1);
+	Operations.FailAt(CFailingPreparation::EStage::VISIBLE, 1, true);
+	EXPECT_FALSE(List.Update(New.First(), 2, "profile"));
+	EXPECT_EQ(Operations.m_OptionCalls, 2);
+	EXPECT_EQ(List.Options()[1], "Profile");
+	EXPECT_EQ(List.Visible(), (std::vector<int>{0, 1}));
+	EXPECT_EQ(List.SelectedOption(2), -1);
+	Operations.m_FailStage = CFailingPreparation::EStage::NONE;
+	ASSERT_TRUE(List.Update(New.First(), 2, "profile"));
+	EXPECT_EQ(List.Options()[1], "Player profile");
+	EXPECT_EQ(List.Visible(), (std::vector<int>{1}));
+	EXPECT_EQ(List.SelectedRow(), -1);
+}
+
+TEST(QmServerVoteList, FailedClearKeepsOldSnapshotUntilTheEmptyReplacementIsPrepared)
+{
+	COptions Options{"Start", "Profile"};
+	CFailingPreparation Operations;
+	CQmServerVoteList List(&Operations);
+	ASSERT_TRUE(List.Update(Options.First(), 1, ""));
+	List.Select(1);
+	Operations.FailAt(CFailingPreparation::EStage::SEARCH, 1, true);
+	EXPECT_FALSE(List.Update(nullptr, 2, ""));
+	EXPECT_EQ(List.Options().size(), 2u);
+	EXPECT_EQ(List.SelectedOption(2), -1);
+	Operations.m_FailStage = CFailingPreparation::EStage::NONE;
+	ASSERT_TRUE(List.Update(nullptr, 2, ""));
+	EXPECT_TRUE(List.Options().empty());
+	EXPECT_TRUE(List.Visible().empty());
+	EXPECT_EQ(List.SelectedRow(), -1);
+}
+
+TEST(QmServerVoteList, UnchangedRequestDoesNotEnterFailingPreparation)
+{
+	COptions Options{"Start", "Profile"};
+	CFailingPreparation Operations;
+	CQmServerVoteList List(&Operations);
+	ASSERT_TRUE(List.Update(Options.First(), 1, ""));
+	List.Select(1);
+	Operations.FailAt(CFailingPreparation::EStage::SEARCH, 1, false);
+	EXPECT_FALSE(List.Update(nullptr, 1, ""));
+	EXPECT_EQ(Operations.m_SearchCalls, 0);
+	EXPECT_EQ(List.SelectedOption(1), 1);
+	EXPECT_FALSE(List.NeedsUpdate(1, ""));
+}
+
+TEST(QmServerVoteList, LaterRequestSupersedesAnUncommittedRevisionAndSearch)
+{
+	COptions Old{"Start", "Profile"}, Failed{"Shop"}, Latest{"Back", "商店"};
+	CFailingPreparation Operations;
+	CQmServerVoteList List(&Operations);
+	ASSERT_TRUE(List.Update(Old.First(), 1, ""));
+	Operations.FailAt(CFailingPreparation::EStage::OPTION, 1, true);
+	EXPECT_FALSE(List.Update(Failed.First(), 2, "Shop"));
+	Operations.m_FailStage = CFailingPreparation::EStage::NONE;
+	ASSERT_TRUE(List.Update(Latest.First(), 3, "商店"));
+	EXPECT_EQ(List.Options(), (std::vector<std::string>{"Back", "商店"}));
+	EXPECT_EQ(List.Visible(), (std::vector<int>{1}));
+	EXPECT_FALSE(List.NeedsUpdate(3, "商店"));
+	List.Select(0);
+	EXPECT_EQ(List.SelectedOption(3), 1);
+	EXPECT_EQ(List.SelectedOption(2), -1);
+}
+
+TEST(QmServerVoteList, FailedBorrowedCandidateCanBeDestroyedWithoutDamagingOwnedSnapshot)
+{
+	CFailingPreparation Operations;
+	CQmServerVoteList List(&Operations);
+	{
+		COptions Old{"Start", "Profile"};
+		ASSERT_TRUE(List.Update(Old.First(), 1, ""));
+	}
+	List.Select(1);
+	{
+		COptions New{"Shop", "Back"};
+		Operations.FailAt(CFailingPreparation::EStage::OPTION, 2, true);
+		EXPECT_FALSE(List.Update(New.First(), 2, ""));
+	}
+	EXPECT_EQ(List.Options()[1], "Profile");
+	EXPECT_EQ(List.SelectedOption(1), 1);
+	COptions Latest{"Latest"};
+	Operations.m_FailStage = CFailingPreparation::EStage::NONE;
+	ASSERT_TRUE(List.Update(Latest.First(), 3, ""));
+	EXPECT_EQ(List.Options(), (std::vector<std::string>{"Latest"}));
+}
+
+TEST(QmServerVoteList, RepeatedFailuresDoNotPoisonTheLastCommittedSelection)
+{
+	using EStage = CFailingPreparation::EStage;
+	COptions Old{"Start", "Profile"}, New{"Shop", "Back"};
+	CFailingPreparation Operations;
+	CQmServerVoteList List(&Operations);
+	ASSERT_TRUE(List.Update(Old.First(), 1, ""));
+	List.Select(1);
+	for(EStage Stage : {EStage::SEARCH, EStage::OPTION, EStage::VISIBLE})
+	{
+		Operations.FailAt(Stage, 1, true);
+		EXPECT_FALSE(List.Update(New.First(), 2, ""));
+		EXPECT_EQ(List.Options()[1], "Profile");
+		EXPECT_EQ(List.SelectedOption(1), 1);
+		EXPECT_TRUE(List.NeedsUpdate(2, ""));
+	}
+	Operations.m_FailStage = EStage::NONE;
+	ASSERT_TRUE(List.Update(New.First(), 2, ""));
+	EXPECT_EQ(List.SelectedRow(), -1);
 }

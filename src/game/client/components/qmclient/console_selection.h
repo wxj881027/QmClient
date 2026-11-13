@@ -8,9 +8,34 @@
 
 #include <algorithm>
 #include <cmath>
+#include <new>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <utility>
+
+// 完整选区准备成功后才交给剪贴板；发布边界不在准备异常恢复范围内。
+template<typename TBuild, typename TCopy>
+bool QmTryCopyConsoleSelection(TBuild &&Build, TCopy &&Copy)
+{
+	std::string Candidate;
+	try
+	{
+		if(!std::forward<TBuild>(Build)(Candidate))
+			return false;
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	catch(const std::length_error &)
+	{
+		return false;
+	}
+	if(!Candidate.empty())
+		std::forward<TCopy>(Copy)(Candidate.c_str());
+	return true;
+}
 
 // 选区使用日志的稳定编号和已解码字符位置，不随视口滚动、换行或新日志移动。
 class CQmConsoleSelection

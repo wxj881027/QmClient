@@ -7,7 +7,11 @@
 #include <game/client/ui_scrollregion.h>
 
 #include <chrono>
+#include <cstddef>
+#include <new>
+#include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 // 搜索结果的逐行定位：搜索页可为多张结果卡设置预览键，卡片绘制时只让
@@ -60,42 +64,97 @@ namespace qm_settings_reveal
 		return false;
 	}
 
-	inline void Clear()
+	inline void EndCard()
 	{
 		SState &S = State();
-		S.m_TargetCard.clear();
-		S.m_vKeys.clear();
-		S.m_vPreviews.clear();
 		S.m_ActiveCard.clear();
 		S.m_pActiveKeys = nullptr;
 		S.m_pScrollRegion = nullptr;
 		S.m_Interactive = false;
+	}
+
+	inline void Clear()
+	{
+		SState &S = State();
+		// 先撤销当前卡片的借用，再释放对应的请求与预览存储。
+		EndCard();
+		S.m_TargetCard.clear();
+		S.m_vKeys.clear();
+		S.m_vPreviews.clear();
 		S.m_Scrolled = false;
 		S.m_ExpireSeconds = 0.0;
 		S.m_PreviewExpireSeconds = 0.0;
 	}
 
-	inline void Request(const char *pCardStableId, const std::vector<std::string> &vKeys)
+	// 候选由调用方完整持有，切页等外部状态提交后不再分配。
+	inline bool PublishRequest(std::string TargetCard, std::vector<std::string> Keys) noexcept
 	{
-		if(pCardStableId == nullptr || pCardStableId[0] == '\0' || vKeys.empty())
-			return;
+		if(TargetCard.empty() || Keys.empty())
+			return false;
 		SState &S = State();
-		S.m_TargetCard = pCardStableId;
-		S.m_vKeys = vKeys;
+		const double ExpireSeconds = NowSeconds() + 5.0;
+		EndCard();
+		S.m_TargetCard.swap(TargetCard);
+		S.m_vKeys.swap(Keys);
 		S.m_vPreviews.clear();
 		S.m_PreviewExpireSeconds = 0.0;
 		S.m_Scrolled = false;
 		// 墙钟到期：折叠卡/不在当前 tab 时不会永远挂着，也不随刷新率缩短。
-		S.m_ExpireSeconds = NowSeconds() + 5.0;
+		S.m_ExpireSeconds = ExpireSeconds;
+		return true;
+	}
+
+	inline bool Request(const char *pCardStableId, const std::vector<std::string> &vKeys)
+	{
+		if(pCardStableId == nullptr || pCardStableId[0] == '\0' || vKeys.empty())
+			return false;
+		try
+		{
+			std::string TargetCard(pCardStableId);
+			std::vector<std::string> Keys(vKeys);
+			return PublishRequest(std::move(TargetCard), std::move(Keys));
+		}
+		catch(const std::bad_alloc &)
+		{
+			return false;
+		}
+		catch(const std::length_error &)
+		{
+			return false;
+		}
 	}
 
 	// 搜索结果页每帧刷新：每张可见结果卡各自持有命中键，多卡可同时高亮。
 	// 预览不滚动、不抢“定位”请求，1 秒内没有刷新就自然失效。
-	inline void SetPreviews(const std::vector<SPreview> &vPreviews)
+	inline bool SetPreviews(const std::vector<SPreview> &vPreviews)
 	{
-		SState &S = State();
-		S.m_vPreviews = vPreviews;
-		S.m_PreviewExpireSeconds = vPreviews.empty() ? 0.0 : NowSeconds() + 1.0;
+		try
+		{
+			SState &S = State();
+			bool Unchanged = S.m_vPreviews.size() == vPreviews.size();
+			for(size_t Index = 0; Unchanged && Index < vPreviews.size(); ++Index)
+				Unchanged = S.m_vPreviews[Index].m_Card == vPreviews[Index].m_Card && S.m_vPreviews[Index].m_vKeys == vPreviews[Index].m_vKeys;
+			if(Unchanged)
+			{
+				// 每帧相同预览只续期，继续借用原存储，不重新复制命中键。
+				S.m_PreviewExpireSeconds = vPreviews.empty() ? 0.0 : NowSeconds() + 1.0;
+				return true;
+			}
+			std::vector<SPreview> Candidate(vPreviews);
+			const double ExpireSeconds = vPreviews.empty() ? 0.0 : NowSeconds() + 1.0;
+			EndCard();
+			S.m_vPreviews.swap(Candidate);
+			S.m_PreviewExpireSeconds = ExpireSeconds;
+			return true;
+		}
+		catch(const std::bad_alloc &)
+		{
+			return false;
+		}
+		catch(const std::length_error &)
+		{
+			return false;
+		}
 	}
 
 	inline bool Pending()
@@ -116,35 +175,60 @@ namespace qm_settings_reveal
 		if(pCardStableId == nullptr)
 			return;
 		const double Now = NowSeconds();
-		if(!S.m_TargetCard.empty() && S.m_TargetCard == pCardStableId && Now < S.m_ExpireSeconds)
+		const bool TargetRequest = !S.m_TargetCard.empty() && S.m_TargetCard == pCardStableId && Now < S.m_ExpireSeconds;
+		const std::vector<std::string> *pActiveKeys = nullptr;
+		if(TargetRequest)
 		{
+			pActiveKeys = &S.m_vKeys;
+		}
+		else
+		{
+			if(Now >= S.m_PreviewExpireSeconds)
+				return;
+			for(const SPreview &Preview : S.m_vPreviews)
+			{
+				if(Preview.m_Card == pCardStableId && !Preview.m_vKeys.empty())
+				{
+					pActiveKeys = &Preview.m_vKeys;
+					break;
+				}
+			}
+		}
+		if(pActiveKeys == nullptr)
+			return;
+		try
+		{
+			// 复用已分配的名称容量；首次激活失败时不发布高亮或滚动借用。
 			S.m_ActiveCard = pCardStableId;
-			S.m_pActiveKeys = &S.m_vKeys;
-			S.m_pScrollRegion = pScrollRegion;
-			S.m_Interactive = Interactive;
+		}
+		catch(const std::bad_alloc &)
+		{
 			return;
 		}
-		if(Now >= S.m_PreviewExpireSeconds)
-			return;
-		for(const SPreview &Preview : S.m_vPreviews)
+		catch(const std::length_error &)
 		{
-			if(Preview.m_Card == pCardStableId && !Preview.m_vKeys.empty())
-			{
-				S.m_ActiveCard = pCardStableId;
-				S.m_pActiveKeys = &Preview.m_vKeys;
-				return;
-			}
+			return;
+		}
+		S.m_pActiveKeys = pActiveKeys;
+		if(TargetRequest)
+		{
+			S.m_pScrollRegion = pScrollRegion;
+			S.m_Interactive = Interactive;
 		}
 	}
 
-	inline void EndCard()
+	// 绘制异常也清除当前卡片的借用指针和滚动归属。
+	class CCardScope
 	{
-		SState &S = State();
-		S.m_ActiveCard.clear();
-		S.m_pActiveKeys = nullptr;
-		S.m_pScrollRegion = nullptr;
-		S.m_Interactive = false;
-	}
+	public:
+		CCardScope(const char *pCardStableId, CScrollRegion *pScrollRegion, bool Interactive)
+		{
+			BeginCard(pCardStableId, pScrollRegion, Interactive);
+		}
+		~CCardScope() { EndCard(); }
+		CCardScope(const CCardScope &) = delete;
+		CCardScope &operator=(const CCardScope &) = delete;
+	};
 
 	// 纯匹配规则：当前卡片是否有命中行（预览卡不滚动）。
 	inline bool ShouldReveal(const char *pTextId, const char *pText)

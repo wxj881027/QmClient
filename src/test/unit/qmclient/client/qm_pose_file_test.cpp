@@ -186,9 +186,18 @@ TEST(QmPoseFile, PackedStringStopsAtZeroAndKeepsBytesVerbatim)
 	qm_pose::ReadPackedString(aPacked, 1, aOut, sizeof(aOut));
 	EXPECT_STREQ(aOut, "ab");
 
-	// 中文名在该格式里写端就已溢出丢位，读回不保证是原文；解析层原样保留字节，
-	// 不做二次加工，避免伪造一个看起来正确的名字。
+	// 每个打包字节按模 256 减去 128，保留原始字节。
 	const int32_t aHigh[1] = {(int32_t)0xff000000u};
 	qm_pose::ReadPackedString(aHigh, 1, aOut, sizeof(aOut));
 	EXPECT_EQ((unsigned char)aOut[0], 0x7fu);
+}
+
+TEST(QmPoseFile, PackedUtf8NamesAndClansKeepTheirOriginalBytes)
+{
+	const auto vFile = BuildFile({{"星光", "猫"}});
+	std::vector<SPoseTee> vPoses;
+	ASSERT_EQ(qm_pose::Load(vFile.data(), vFile.size(), vPoses), qm_pose::ELoadResult::OK);
+	ASSERT_EQ(vPoses.size(), 1u);
+	EXPECT_STREQ(vPoses[0].m_aName, "星光");
+	EXPECT_STREQ(vPoses[0].m_aClan, "猫");
 }

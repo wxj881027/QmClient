@@ -4,6 +4,40 @@
 
 #include <string>
 
+TEST(TranslateDetectBoundary, InvalidUtf8DoesNotConsumeFollowingValidScripts)
+{
+	const auto Stats = qm_translate::AnalyzeLanguage("a\xE4"
+							 "b好");
+	EXPECT_EQ(Stats.m_Latin, 2);
+	EXPECT_EQ(Stats.m_Han, 1);
+	EXPECT_EQ(Stats.m_Other, 0);
+	EXPECT_EQ(Stats.m_ScriptTotal, 3);
+}
+
+TEST(TranslateDetectBoundary, TruncatedUtf8AtTerminatorPreservesEarlierStats)
+{
+	const auto Stats = qm_translate::AnalyzeLanguage("好\xE4\xBD");
+	EXPECT_EQ(Stats.m_Han, 1);
+	EXPECT_EQ(Stats.m_ScriptTotal, 1);
+	EXPECT_EQ(Stats.m_Meaningful, 1);
+}
+
+TEST(TranslateDetectBoundary, PlayerNameLongerThanInputDoesNotConsumePrefix)
+{
+	const qm_translate::SPlayerReference aPlayers[] = {{"DYLlongname", 7}};
+	const auto Stats = qm_translate::AnalyzeLanguage("@DY", aPlayers, 1);
+	EXPECT_EQ(Stats.m_Latin, 2);
+	EXPECT_EQ(Stats.m_ScriptTotal, 2);
+}
+
+TEST(TranslateDetectBoundary, ThresholdUsesClampedRatioAndRejectsEmptyCounts)
+{
+	EXPECT_TRUE(qm_translate::PassLocalDetectThreshold(3, 4, 0));
+	EXPECT_FALSE(qm_translate::PassLocalDetectThreshold(3, 4, 200));
+	EXPECT_FALSE(qm_translate::PassLocalDetectThreshold(0, 4, 50));
+	EXPECT_FALSE(qm_translate::PassLocalDetectThreshold(3, 0, 50));
+}
+
 namespace
 {
 	bool ShouldTranslate(const char *pText, const qm_translate::SPlayerReference *pPlayers = nullptr, int NumPlayers = 0, const char *pTarget = "zh", bool Always = false)

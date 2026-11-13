@@ -33,14 +33,23 @@ CUIRect CUiV2Tree::ResolveLayoutTransition(CUiV2AnimationRuntime &AnimRuntime, u
 	const uint64_t CurrentUseCounter = ++m_LayoutUseCounter;
 	PruneLayoutTransitionCache(CurrentUseCounter);
 
-	auto [It, Inserted] = m_LayoutTransitions.try_emplace(NodeKey, SLayoutTransitionState{Target, true, CurrentUseCounter});
+	auto [It, Inserted] = m_LayoutTransitions.try_emplace(NodeKey);
 	if(Inserted || !It->second.m_HasLastTarget || !Animate)
 	{
+		try
+		{
+			AnimRuntime.SetValue(NodeKey, EUiAnimProperty::POS_X, Target.x);
+			AnimRuntime.SetValue(NodeKey, EUiAnimProperty::POS_Y, Target.y);
+		}
+		catch(...)
+		{
+			if(Inserted)
+				m_LayoutTransitions.erase(It);
+			throw;
+		}
 		It->second.m_LastTarget = Target;
 		It->second.m_HasLastTarget = true;
 		It->second.m_LastUseCounter = CurrentUseCounter;
-		AnimRuntime.SetValue(NodeKey, EUiAnimProperty::POS_X, Target.x);
-		AnimRuntime.SetValue(NodeKey, EUiAnimProperty::POS_Y, Target.y);
 		return Target;
 	}
 
@@ -67,16 +76,7 @@ CUIRect CUiV2Tree::ResolveLayoutTransition(CUiV2AnimationRuntime &AnimRuntime, u
 
 CUIRect CUiV2Tree::SyncLayoutTransition(CUiV2AnimationRuntime &AnimRuntime, uint64_t NodeKey, const CUIRect &Target)
 {
-	const uint64_t CurrentUseCounter = ++m_LayoutUseCounter;
-	PruneLayoutTransitionCache(CurrentUseCounter);
-
-	SLayoutTransitionState &State = m_LayoutTransitions[NodeKey];
-	State.m_LastTarget = Target;
-	State.m_HasLastTarget = true;
-	State.m_LastUseCounter = CurrentUseCounter;
-	AnimRuntime.SetValue(NodeKey, EUiAnimProperty::POS_X, Target.x);
-	AnimRuntime.SetValue(NodeKey, EUiAnimProperty::POS_Y, Target.y);
-	return Target;
+	return ResolveLayoutTransition(AnimRuntime, NodeKey, Target, SUiSpringConfig{}, 1, false);
 }
 
 SUiPresenceResult CUiV2Tree::ResolvePresence(CUiV2AnimationRuntime &AnimRuntime, uint64_t NodeKey, bool Visible, const SUiAnimTransition &Transition)
@@ -92,11 +92,11 @@ SUiPresenceResult CUiV2Tree::ResolvePresence(CUiV2AnimationRuntime &AnimRuntime,
 		State.m_LastUseCounter = CurrentUseCounter;
 		if(State.m_Phase != EPresencePhase::EXITING)
 		{
-			State.m_Phase = EPresencePhase::EXITING;
 			SUiAnimTransition ExitTransition = Transition;
 			ExitTransition.m_Interrupt = EUiAnimInterruptPolicy::MERGE_TARGET;
 			ExitTransition.m_Priority = std::max(ExitTransition.m_Priority, 1000);
 			AnimRuntime.ResolveTargetValue(NodeKey, EUiAnimProperty::ALPHA, 0.0f, ExitTransition);
+			State.m_Phase = EPresencePhase::EXITING;
 		}
 
 		const float Alpha = AnimRuntime.GetValue(NodeKey, EUiAnimProperty::ALPHA, 0.0f);
@@ -109,31 +109,45 @@ SUiPresenceResult CUiV2Tree::ResolvePresence(CUiV2AnimationRuntime &AnimRuntime,
 		return {true, Alpha, false};
 	}
 
-	TouchNode(NodeKey);
-	auto [It, Inserted] = m_PresenceStates.try_emplace(NodeKey, SPresenceState{EPresencePhase::ENTERING, true, CurrentUseCounter});
-	SPresenceState &State = It->second;
-	State.m_TouchedThisFrame = true;
-	State.m_LastUseCounter = CurrentUseCounter;
-
-	if(Inserted)
+	const bool FrameInserted = m_FrameNodeKeys.insert(NodeKey).second;
+	try
 	{
-		AnimRuntime.SetValue(NodeKey, EUiAnimProperty::ALPHA, 0.0f);
+		auto [It, Inserted] = m_PresenceStates.try_emplace(NodeKey);
+		SPresenceState &State = It->second;
+		try
+		{
+			if(Inserted)
+				AnimRuntime.SetValue(NodeKey, EUiAnimProperty::ALPHA, 0.0f);
+			if(Inserted || State.m_Phase == EPresencePhase::EXITING)
+			{
+				SUiAnimTransition EnterTransition = Transition;
+				EnterTransition.m_Interrupt = EUiAnimInterruptPolicy::MERGE_TARGET;
+				EnterTransition.m_Priority = std::max(EnterTransition.m_Priority, 1);
+				AnimRuntime.ResolveTargetValue(NodeKey, EUiAnimProperty::ALPHA, 1.0f, EnterTransition);
+				State.m_Phase = EPresencePhase::ENTERING;
+			}
+			else if(!AnimRuntime.HasActiveAnimation(NodeKey, EUiAnimProperty::ALPHA))
+			{
+				AnimRuntime.SetValue(NodeKey, EUiAnimProperty::ALPHA, 1.0f);
+				State.m_Phase = EPresencePhase::PRESENT;
+			}
+		}
+		catch(...)
+		{
+			if(Inserted)
+				m_PresenceStates.erase(It);
+			throw;
+		}
+		State.m_TouchedThisFrame = true;
+		State.m_LastUseCounter = CurrentUseCounter;
+		return {true, AnimRuntime.GetValue(NodeKey, EUiAnimProperty::ALPHA, 1.0f), Inserted};
 	}
-	if(Inserted || State.m_Phase == EPresencePhase::EXITING)
+	catch(...)
 	{
-		State.m_Phase = EPresencePhase::ENTERING;
-		SUiAnimTransition EnterTransition = Transition;
-		EnterTransition.m_Interrupt = EUiAnimInterruptPolicy::MERGE_TARGET;
-		EnterTransition.m_Priority = std::max(EnterTransition.m_Priority, 1);
-		AnimRuntime.ResolveTargetValue(NodeKey, EUiAnimProperty::ALPHA, 1.0f, EnterTransition);
+		if(FrameInserted)
+			m_FrameNodeKeys.erase(NodeKey);
+		throw;
 	}
-	else if(!AnimRuntime.HasActiveAnimation(NodeKey, EUiAnimProperty::ALPHA))
-	{
-		State.m_Phase = EPresencePhase::PRESENT;
-		AnimRuntime.SetValue(NodeKey, EUiAnimProperty::ALPHA, 1.0f);
-	}
-
-	return {true, AnimRuntime.GetValue(NodeKey, EUiAnimProperty::ALPHA, 1.0f), Inserted};
 }
 
 float CUiV2Tree::ResolvePresenceAlpha(CUiV2AnimationRuntime &AnimRuntime, uint64_t NodeKey, const SUiAnimTransition &Transition)
@@ -153,9 +167,12 @@ void CUiV2Tree::EndFrame(CUiV2AnimationRuntime &AnimRuntime)
 
 void CUiV2Tree::ResolveEndFrame(CUiV2AnimationRuntime *pAnimRuntime)
 {
-	m_LastNodeCount = static_cast<int>(m_FrameNodeKeys.size());
+	const int FrameNodeCount = static_cast<int>(m_FrameNodeKeys.size());
 	if(pAnimRuntime == nullptr)
+	{
+		m_LastNodeCount = FrameNodeCount;
 		return;
+	}
 
 	SUiAnimTransition ExitTransition;
 	ExitTransition.m_DurationSec = 0.16f;
@@ -169,15 +186,14 @@ void CUiV2Tree::ResolveEndFrame(CUiV2AnimationRuntime *pAnimRuntime)
 		SPresenceState &State = It->second;
 		if(State.m_TouchedThisFrame)
 		{
-			State.m_TouchedThisFrame = false;
 			++It;
 			continue;
 		}
 
 		if(State.m_Phase != EPresencePhase::EXITING)
 		{
-			State.m_Phase = EPresencePhase::EXITING;
 			pAnimRuntime->ResolveTargetValue(NodeKey, EUiAnimProperty::ALPHA, 0.0f, ExitTransition);
+			State.m_Phase = EPresencePhase::EXITING;
 			++It;
 			continue;
 		}
@@ -190,12 +206,14 @@ void CUiV2Tree::ResolveEndFrame(CUiV2AnimationRuntime *pAnimRuntime)
 			++It;
 	}
 	int ExitingNodeCount = 0;
-	for(const auto &Pair : m_PresenceStates)
+	// 所有动画请求完成后再清触碰标记，异常重试不能把本帧可见节点当成缺席。
+	for(auto &Pair : m_PresenceStates)
 	{
 		if(!m_FrameNodeKeys.contains(Pair.first))
 			++ExitingNodeCount;
+		Pair.second.m_TouchedThisFrame = false;
 	}
-	m_LastNodeCount += ExitingNodeCount;
+	m_LastNodeCount = FrameNodeCount + ExitingNodeCount;
 }
 
 void CUiV2Tree::PruneLayoutTransitionCache(uint64_t CurrentUseCounter)

@@ -40,20 +40,32 @@ SOURCE_DEFINITION = re.compile(
 )
 
 
-# 直接打开仓库源码/清单同样是静态读取；参数化字体等测试输入不凭路径 helper 判为合同。
-# data/fonts/ 整目录豁免：字体二进制与 index.json 是随包资源、生产字体扫描器的输入，
-# 不是源码字符串合同。按目录豁免而不是只认某一种读取写法，避免新增读取 API 后
-# 又把真实的行为测试误判成 mixed。
+# 源码路径继续保守计数；资源路径只在读取内容或查询目录结构时计数。
+# data/fonts/ 是生产字体扫描器的输入，保留 master 对字体目录的资源分类。
 DIRECT_REPO_READ = re.compile(
-	r'TestSourcePath\s*\(\s*"(?:src/|qmclient_scripts/|data/(?!fonts/)|datasrc/|other/|scripts/|CMakeLists\.txt)'
+	r'TestSourcePath\s*\(\s*"(?:src/|qmclient_scripts/|datasrc/|other/|scripts/|CMakeLists\.txt)'
 	r'|std::ifstream\s+\w+\s*\([^;\n]*DDNET_TEST_SOURCE_DIR'
+)
+DIRECT_RESOURCE_READ = re.compile(
+	r'(?:std::ifstream\s+\w+|fs_is_dir|fs_exists|std::filesystem::(?:exists|is_directory))\s*\(\s*'
+	r'(TestSourcePath\s*\(\s*"data/(?!fonts/)[^"\n]+"\s*\))'
 )
 
 
 def count_source_reads(text: str) -> int:
-	# 源码、文本清单以及 ReadRepoFile 等合同 helper 全部计数；字体资源已在上面的
-	# 路径正则里按目录排除，这里不再需要逐条识别 binary 打开方式。
-	return len(SOURCE_READ.findall(text)) - len(SOURCE_DEFINITION.findall(text)) + len(DIRECT_REPO_READ.findall(text))
+	# 二进制数据资源是生产解析器的输入，不是源码合同；仅排除明确以 binary
+	# 打开的字体资源。源码、文本清单以及 ReadRepoFile 等合同 helper 仍全部计数。
+	binary_font_reads = {
+		match.start(1)
+		for match in re.finditer(
+			r'std::ifstream\s+\w+\s*\(\s*(TestSourcePath\s*\(\s*"data/[^"\n]+\.(?:ttf|otf|ttc)"\s*\))\s*,\s*std::ios::binary\s*\)',
+			text,
+			re.IGNORECASE,
+		)
+	}
+	direct_reads = len(DIRECT_REPO_READ.findall(text))
+	direct_reads += sum(match.start(1) not in binary_font_reads for match in DIRECT_RESOURCE_READ.finditer(text))
+	return len(SOURCE_READ.findall(text)) - len(SOURCE_DEFINITION.findall(text)) + direct_reads
 
 
 def cpp_test_files(root: Path) -> list[Path]:

@@ -300,9 +300,9 @@ void CMenus::RenderQmNewFeaturesPopup(CUIRect Screen)
 	{
 		static std::vector<qm_md::SBlock> s_vBroadcastBlocks;
 		static int s_BroadcastRevision = -1;
-		if(s_BroadcastRevision != QmClient.QmMarkdownBroadcastRevision())
+		if(s_BroadcastRevision != QmClient.QmMarkdownBroadcastRevision() &&
+			qm_md::TryParse(QmClient.QmMarkdownBroadcast(), s_vBroadcastBlocks))
 		{
-			s_vBroadcastBlocks = qm_md::Parse(QmClient.QmMarkdownBroadcast());
 			s_BroadcastRevision = QmClient.QmMarkdownBroadcastRevision();
 		}
 		static CButtonContainer s_aBroadcastButtons[16] = {};
@@ -327,12 +327,14 @@ void CMenus::RenderQmNewFeaturesPopup(CUIRect Screen)
 						qm_card_registry::SCardNavigationTarget Target;
 						Target.m_pTab = pCard->m_pDefaultTab;
 						Target.m_pStableId = pCard->m_pStableId;
-						NavigateToSettingsCard(Target);
-						m_Popup = POPUP_NONE;
-						SetShowStart(false);
-						SetMenuPage(PAGE_SETTINGS);
-						s_ScrollRegion.End();
-						return;
+						if(NavigateToSettingsCard(Target))
+						{
+							m_Popup = POPUP_NONE;
+							SetShowStart(false);
+							SetMenuPage(PAGE_SETTINGS);
+							s_ScrollRegion.End();
+							return;
+						}
 					}
 				}
 				++BroadcastButtonIndex;
@@ -458,12 +460,14 @@ void CMenus::RenderQmNewFeaturesPopup(CUIRect Screen)
 				qm_card_registry::SCardNavigationTarget Target;
 				Target.m_pTab = Entry.m_pCardTab;
 				Target.m_pStableId = Entry.m_pCardStableId;
-				NavigateToSettingsCard(Target);
-				m_Popup = POPUP_NONE;
-				SetShowStart(false);
-				SetMenuPage(PAGE_SETTINGS);
-				s_ScrollRegion.End();
-				return;
+				if(NavigateToSettingsCard(Target))
+				{
+					m_Popup = POPUP_NONE;
+					SetShowStart(false);
+					SetMenuPage(PAGE_SETTINGS);
+					s_ScrollRegion.End();
+					return;
+				}
 			}
 		}
 
@@ -545,9 +549,9 @@ void CMenus::RenderQmUpdatePopup(CUIRect Screen)
 		Content.HSplitBottom(Gap, &Content, nullptr);
 	}
 	// 下载进度固定在说明滚动区外，长发布说明不会遮住下载结果。
-	if(Update.IsUpdateDownloading() && Update.m_pUpdatePackageTask)
+	if(Update.IsUpdateDownloading() && Update.m_UpdateDownloadTasks.Get(qm_update::CDownloadTasks::PACKAGE))
 	{
-		const auto &Task = Update.m_pUpdatePackageTask;
+		const auto &Task = Update.m_UpdateDownloadTasks.Get(qm_update::CDownloadTasks::PACKAGE);
 		char aProgress[128];
 		const bool KnownSize = Task->Size() > 0;
 		const int Percent = std::clamp(Task->Progress(), 0, 100);

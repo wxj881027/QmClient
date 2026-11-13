@@ -72,3 +72,69 @@ TEST(QmConsoleTextPipeline, SearchOverridesLinkAndCommandSyntaxWithoutChangingUt
 	EXPECT_EQ(ColorAt(vMatches[0].m_StartByte), Palette.m_aColors[QmConsoleAppearance::SEARCH_SELECTED]);
 	EXPECT_EQ(ColorAt(vMatches[0].m_EndByte), Palette.m_aColors[QmConsoleAppearance::LINK]);
 }
+
+TEST(QmConsoleTextPipeline, PreparedDecorationKeepsMarkerSyntaxLinkAndSearchPriority)
+{
+	const CColoredParts Text("> echo \"中文 [[red]]https://example.test\"", true);
+	CTextCursor Cursor;
+	Text.AddSplitsToCursor(Cursor);
+	ASSERT_EQ(Cursor.m_vColorSplits.size(), 1u);
+	const auto Palette = QmConsoleAppearance::ResolvePalette(0, 96, {});
+	std::vector<QmConsoleText::SRange> vMatches;
+	QmConsoleText::CollectSearchMatches(Text.Text(), "example", vMatches);
+	ASSERT_EQ(vMatches.size(), 1u);
+	QmConsoleText::CColorPreparation Preparation;
+	ASSERT_TRUE(Preparation.Prepare(Text.Text(), Cursor.m_vColorSplits, [&](auto &vLayers, const auto &vLinks) {
+		vLayers.emplace_back(0, str_length(Text.Text()), Palette.m_aColors[QmConsoleAppearance::TEXT]);
+		QmConsoleSyntax::AppendColors(Text.Text() + 2, Palette, vLayers, 2);
+		vLayers.insert(vLayers.end(), Cursor.m_vColorSplits.begin(), Cursor.m_vColorSplits.end());
+		for(const auto &Range : vLinks)
+			vLayers.emplace_back(Range.m_StartByte, Range.m_EndByte - Range.m_StartByte, Palette.m_aColors[QmConsoleAppearance::LINK]);
+		vLayers.emplace_back(vMatches[0].m_StartByte, vMatches[0].m_EndByte - vMatches[0].m_StartByte, Palette.m_aColors[QmConsoleAppearance::SEARCH_SELECTED]);
+		return true;
+	}));
+	ASSERT_EQ(Preparation.Links().size(), 1u);
+	EXPECT_EQ(Preparation.Links()[0].m_StartByte, 15);
+	EXPECT_EQ(Preparation.Links()[0].m_StartChar, 11);
+	const auto ColorAt = [&](int Byte) {
+		for(const auto &Split : Cursor.m_vColorSplits)
+			if(Byte >= Split.m_CharIndex && Byte < Split.m_CharIndex + Split.m_Length)
+				return Split.m_Color;
+		return ColorRGBA();
+	};
+	EXPECT_EQ(ColorAt(2), Palette.m_aColors[QmConsoleAppearance::COMMAND]);
+	EXPECT_EQ(ColorAt(9), Palette.m_aColors[QmConsoleAppearance::STRING]);
+	EXPECT_EQ(ColorAt(15), Palette.m_aColors[QmConsoleAppearance::LINK]);
+	EXPECT_EQ(ColorAt(vMatches[0].m_StartByte), Palette.m_aColors[QmConsoleAppearance::SEARCH_SELECTED]);
+	EXPECT_EQ(ColorAt(vMatches[0].m_EndByte), Palette.m_aColors[QmConsoleAppearance::LINK]);
+}
+
+TEST(QmConsoleTextPipeline, PreviewLinksKeepTheirUtf8AndNewlineCoordinatesWhenNormalized)
+{
+	const char *pText = "> echo \"中文\"\nWWW.example.test/path.";
+	const auto Palette = QmConsoleAppearance::ResolvePalette(0, 96, {});
+	QmConsoleText::CColorPreparation Preparation;
+	CTextCursor Cursor;
+	ASSERT_TRUE(Preparation.Prepare(pText, Cursor.m_vColorSplits, [&](auto &vLayers, const auto &vLinks) {
+		QmConsoleSyntax::AppendColors(pText + 2, Palette, vLayers, 2);
+		for(const auto &Range : vLinks)
+			vLayers.emplace_back(Range.m_StartByte, Range.m_EndByte - Range.m_StartByte, Palette.m_aColors[QmConsoleAppearance::LINK]);
+		return true;
+	}));
+	ASSERT_EQ(Preparation.Links().size(), 1u);
+	const auto &Link = Preparation.Links()[0];
+	EXPECT_EQ(Link.m_StartByte, 16);
+	EXPECT_EQ(Link.m_StartChar, 11);
+	std::string Url;
+	ASSERT_TRUE(QmConsoleText::TryLinkUrl(pText, Link, Url));
+	EXPECT_EQ(Url, "https://WWW.example.test/path");
+	bool LinkColored = false;
+	for(const auto &Split : Cursor.m_vColorSplits)
+		if(Split.m_CharIndex == Link.m_StartByte)
+		{
+			EXPECT_EQ(Split.m_Color, Palette.m_aColors[QmConsoleAppearance::LINK]);
+			EXPECT_EQ(Split.m_Length, Link.m_EndByte - Link.m_StartByte);
+			LinkColored = true;
+		}
+	EXPECT_TRUE(LinkColored);
+}

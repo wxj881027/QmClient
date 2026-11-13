@@ -131,7 +131,8 @@ namespace ui_widget
 		{
 			if(!State.m_Initialized)
 			{
-				State.m_Element.Init(m_Ctx.m_pUi, 1);
+				if(!State.m_Element.TryInit(m_Ctx.m_pUi, 1))
+					return;
 				State.m_Initialized = true;
 			}
 			SLabelProperties Props;

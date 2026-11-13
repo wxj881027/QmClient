@@ -5,13 +5,22 @@
 
 #include "gameworld.h"
 
+#include <base/system.h>
 #include <base/vmath.h>
 
-#include <game/alloc.h>
+#include <new>
 
 class CEntity
 {
-	MACRO_ALLOC_HEAP()
+public:
+	// 保留实体堆分配清零约定，标准分配失败由调用边界捕获。
+	void *operator new(size_t Size)
+	{
+		void *pMemory = ::operator new(Size);
+		mem_zero(pMemory, Size);
+		return pMemory;
+	}
+	void operator delete(void *pMemory) noexcept { ::operator delete(pMemory); }
 
 private:
 	friend CGameWorld; // entity list handling
@@ -28,6 +37,8 @@ public:
 	int GetId() const { return m_Id; }
 
 	CEntity(CGameWorld *pGameWorld, int Objtype, vec2 Pos = vec2(0, 0), int ProximityRadius = 0);
+	// 复制数据但不复制列表身份，派生成员准备失败时不能从源世界移除实体。
+	CEntity(const CEntity &Other);
 	virtual ~CEntity();
 
 	std::vector<SSwitchers> &Switchers() { return m_pGameWorld->Switchers(); }
@@ -65,11 +76,7 @@ public:
 		m_MarkedForDestroy = false;
 	}
 
-	CEntity()
-	{
-		m_Id = -1;
-		m_pGameWorld = nullptr;
-	}
+	CEntity() = delete;
 };
 
 #endif

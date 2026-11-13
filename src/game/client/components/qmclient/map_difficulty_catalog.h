@@ -25,11 +25,11 @@ public:
 		const char *StarLabel() const;
 	};
 
-	// 读取随客户端发布的 DDNet 分类 SQL 和本地 Axiom 公告缓存，不访问网络。
+	// 沿现有存储路径读取 DDNet 分类 SQL 和本地 Axiom 公告缓存；失败保留可用目录。
 	bool Load(IStorage *pStorage, IConsole *pConsole);
 	// 供行为测试和生成数据校验使用的 SQL 加载入口。
 	bool LoadSqlText(const char *pSql, size_t Length);
-	// 只记录已确认属于 Axiom 的当前地图公告，返回是否产生变化。
+	// 只记录已确认属于 Axiom 的当前地图公告；资源失败返回 false 并保留旧记录。
 	bool RecordAxiomMotd(const CServerInfo &Server, const char *pMotd);
 	bool LoadAxiomCacheJson(const char *pJson, size_t Length);
 	std::string SerializeAxiomCache() const;

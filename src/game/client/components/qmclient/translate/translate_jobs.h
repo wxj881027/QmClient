@@ -3,8 +3,13 @@
 
 #include "translate_backend.h"
 
+#include <base/borrowed_allocator.h>
+
 #include <functional>
+#include <new>
 #include <string>
+#include <string_view>
+#include <utility>
 #include <vector>
 
 struct STranslateJob
@@ -29,24 +34,59 @@ struct STranslateCompletion
 	STranslateJob m_Job;
 	bool m_Success;
 	// 仅成功译文可作为发送内容；失败、拒绝、取消均不回退发送原文。
-	std::string m_SendText;
+	std::basic_string<char, std::char_traits<char>, CBorrowedAllocator<char>> m_SendText;
 };
 
 // 分发器只调用一次译文发送入口，原文通过独立的本地附注参数传递。
 bool DispatchOutgoingTranslation(const STranslateCompletion &Completed, const std::function<bool(int, const char *, const char *, int)> &SendTranslated);
 
+struct SOutgoingTranslateText
+{
+	std::string_view m_Text;
+	std::string_view m_Target;
+};
+
+// 返回值借用输入，仅在调用期间创建任务时使用，不跨帧保存。
+std::optional<SOutgoingTranslateText> ParseOutgoingTranslateTarget(const char *pLine);
+
 // 收发任务共用容量，完成或取消时统一释放后端。
 class CTranslateJobQueue
 {
-	std::vector<STranslateJob> m_vJobs;
+	struct SPending
+	{
+		STranslateJob m_Job;
+		// 已完成后端不因结果存储失败而再次轮询。
+		std::optional<bool> m_Completion;
+	};
+	std::vector<SPending, CBorrowedAllocator<SPending>> m_vJobs;
 
 public:
+	// 自定义队列内存源须存活到队列销毁，不影响完成结果的独立内存域。
+	explicit CTranslateJobQueue(IAllocationResource *pMemory = nullptr) :
+		m_vJobs(pMemory) {}
 	bool CanSubmit(int Limit) const;
+	// 拒绝或扩容失败均释放传入任务，不发布响应或进度状态。
 	bool Submit(STranslateJob Job, int Limit);
+	// 创建回调不得重入队列或发布UI；构造失败与入队失败共用拒绝路径。
+	template<typename FCreateJob>
+	bool CreateAndSubmit(FCreateJob &&CreateJob, int Limit)
+	{
+		if(!CanSubmit(Limit))
+			return false;
+		try
+		{
+			return Submit(std::forward<FCreateJob>(CreateJob)(), Limit);
+		}
+		catch(const std::bad_alloc &)
+		{
+			return false;
+		}
+	}
 	size_t Size() const { return m_vJobs.size(); }
 	void Clear() { m_vJobs.clear(); }
 	void CancelOutgoing(int Connection);
-	std::vector<STranslateCompletion> Update(const std::function<bool(const STranslateJob &)> &IncomingStillValid);
+	// 自定义结果内存源须存活到返回列表及其发送文本销毁；回调不得重入本队列。
+	std::vector<STranslateCompletion, CBorrowedAllocator<STranslateCompletion>> Update(const std::function<bool(const STranslateJob &)> &IncomingStillValid, IAllocationResource *pResultMemory = nullptr);
 };
 
 bool IsTranslateResponseCurrent(bool Initialized, unsigned int TranslationId, const std::shared_ptr<CTranslateResponse> &pResponse, const STranslateJob &Job);

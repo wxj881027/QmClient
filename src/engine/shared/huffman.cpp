@@ -286,6 +286,10 @@ int CHuffman::Decompress(const void *pInput, int InputSize, void *pOutput, int O
 			// walk the tree bit by bit
 			while(true)
 			{
+				// 查表可能恰好耗尽比特，不能先走树再递减无符号计数。
+				if(Bitcount == 0)
+					return -1;
+
 				// traverse tree
 				pNode = &m_aNodes[pNode->m_aLeaves[Bits & 1]];
 
@@ -296,10 +300,6 @@ int CHuffman::Decompress(const void *pInput, int InputSize, void *pOutput, int O
 				// check if we hit a symbol
 				if(pNode->m_NumBits)
 					break;
-
-				// no more bits, decoding error
-				if(Bitcount == 0)
-					return -1;
 			}
 		}
 

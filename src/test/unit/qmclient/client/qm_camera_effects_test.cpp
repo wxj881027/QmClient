@@ -7,6 +7,55 @@
 #include <limits>
 #include <string>
 
+TEST(QmCameraZoomValidation, RejectsNonFiniteValues)
+{
+	for(float Value : {std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity()})
+		EXPECT_FALSE(QmCameraEffects::IsValidZoom(Value, 0.01f, 240.0f));
+}
+
+TEST(QmCameraZoomValidation, KeepsInclusiveLimitsAndRejectsValuesOutsideThem)
+{
+	EXPECT_TRUE(QmCameraEffects::IsValidZoom(0.01f, 0.01f, 240.0f));
+	EXPECT_TRUE(QmCameraEffects::IsValidZoom(240.0f, 0.01f, 240.0f));
+	EXPECT_TRUE(QmCameraEffects::IsValidZoom(1.0f, 0.01f, 240.0f));
+	EXPECT_FALSE(QmCameraEffects::IsValidZoom(0.0f, 0.01f, 240.0f));
+	EXPECT_FALSE(QmCameraEffects::IsValidZoom(0.005f, 0.01f, 240.0f));
+	EXPECT_FALSE(QmCameraEffects::IsValidZoom(241.0f, 0.01f, 240.0f));
+}
+
+TEST(QmCameraZoomValidation, UnlimitedModeKeepsLargestFiniteTarget)
+{
+	EXPECT_TRUE(QmCameraEffects::IsValidZoom(std::numeric_limits<float>::max(), 0.01f, std::numeric_limits<float>::max()));
+}
+
+TEST(QmCameraTransition, PreservesPositiveIntervalProgress)
+{
+	EXPECT_FLOAT_EQ(QmCameraEffects::TransitionProgress(10.0f, 10.0f, 12.0f), 0.0f);
+	EXPECT_FLOAT_EQ(QmCameraEffects::TransitionProgress(11.0f, 10.0f, 12.0f), 0.5f);
+	EXPECT_FLOAT_EQ(QmCameraEffects::TransitionProgress(12.0f, 10.0f, 12.0f), 1.0f);
+	EXPECT_FLOAT_EQ(QmCameraEffects::TransitionProgress(9.0f, 10.0f, 12.0f), -0.5f);
+	EXPECT_FLOAT_EQ(QmCameraEffects::TransitionProgress(13.0f, 10.0f, 12.0f), 1.5f);
+}
+
+TEST(QmCameraTransition, ZeroIntervalIsAlreadyComplete)
+{
+	EXPECT_FLOAT_EQ(QmCameraEffects::TransitionProgress(10.0f, 10.0f, 10.0f), 1.0f);
+	EXPECT_FLOAT_EQ(QmCameraEffects::TransitionProgress(11.0f, 10.0f, 10.0f), 1.0f);
+}
+
+TEST(QmCameraTransition, FloatTimestampCollapseIsAlreadyComplete)
+{
+	constexpr float Start = 33554432.0f;
+	const float End = Start + 0.001f;
+	ASSERT_EQ(Start, End);
+	EXPECT_FLOAT_EQ(QmCameraEffects::TransitionProgress(Start, Start, End), 1.0f);
+}
+
+TEST(QmCameraTransition, ReversedIntervalIsAlreadyComplete)
+{
+	EXPECT_FLOAT_EQ(QmCameraEffects::TransitionProgress(10.0f, 10.0f, 9.0f), 1.0f);
+}
+
 TEST(QmCameraEffects, DynamicFovRemovalKeepsBaseZoomStable)
 {
 	EXPECT_FLOAT_EQ(QmCameraEffects::ZoomWithoutDynamicFov(2.0f, 1.25f), 1.6f);

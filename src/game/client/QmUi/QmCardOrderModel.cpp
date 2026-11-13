@@ -224,6 +224,20 @@ namespace qm_card_order
 		BuildStateIndex(); // 维护 stableId→index 注册表（让位 lerp O(1) 地基）
 	}
 
+	void CModel::SwapContent(CModel &Other) noexcept
+	{
+		if(this == &Other)
+			return;
+		m_vEntries.swap(Other.m_vEntries);
+		m_vOwnedTabs.swap(Other.m_vOwnedTabs);
+		m_StableIdToState.swap(Other.m_StableIdToState);
+		std::swap(m_Dirty, Other.m_Dirty);
+		++m_LayoutRevision;
+		++m_StateIndexRevision;
+		++Other.m_LayoutRevision;
+		++Other.m_StateIndexRevision;
+	}
+
 	int CModel::FindByStableId(const char *pStableId) const
 	{
 		return StateIndexForStableId(pStableId);

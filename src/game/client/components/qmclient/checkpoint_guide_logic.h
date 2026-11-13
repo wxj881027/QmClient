@@ -8,7 +8,10 @@
 #include <cstdint>
 #include <functional>
 #include <limits>
+#include <new>
+#include <stdexcept>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 namespace QmCheckpointGuide
@@ -65,12 +68,13 @@ namespace QmCheckpointGuide
 			m_Result.m_vRoute.clear();
 		}
 
-		void ObserveCheckpoint(int Checkpoint)
+		// 新历史项准备失败时保留已确认状态，调用方稍后重试同一个 CP。
+		bool ObserveCheckpoint(int Checkpoint)
 		{
 			if(Checkpoint < 0 || Checkpoint > 255)
 				Checkpoint = -1;
 			if(Checkpoint == m_Checkpoint)
-				return;
+				return true;
 			if(Checkpoint <= 0)
 			{
 				m_Collected.reset();
@@ -87,22 +91,60 @@ namespace QmCheckpointGuide
 					m_vCheckpointHistory.erase(Previous + 1, m_vCheckpointHistory.end());
 				}
 				else
-					m_vCheckpointHistory.push_back(Checkpoint);
+				{
+					try
+					{
+						m_vCheckpointHistory.push_back(Checkpoint);
+					}
+					catch(const std::bad_alloc &)
+					{
+						ClearRoute();
+						return false;
+					}
+					catch(const std::length_error &)
+					{
+						ClearRoute();
+						return false;
+					}
+				}
 				m_Collected.set((size_t)Checkpoint);
 			}
 			m_Checkpoint = Checkpoint;
 			ClearRoute();
+			return true;
 		}
 
 		int Checkpoint() const { return m_Checkpoint; }
 		const SResult &Result() const { return m_Result; }
 
 		// 读取回调与地图进度共用 STile/MakeTile，生产端实时补入当前角色的阻挡状态。
+		// false 只表示资源失败；没有可达目标仍是正常完成，未知异常继续传播。
 		template<typename FReadTile>
-		void Update(int Width, int Height, int StartIndex, FReadTile &&ReadTile)
+		bool Update(int Width, int Height, int StartIndex, FReadTile &&ReadTile)
 		{
 			const int PreviousTarget = m_Result.m_TargetIndex;
 			ClearRoute();
+			try
+			{
+				UpdateRoute(Width, Height, StartIndex, PreviousTarget, std::forward<FReadTile>(ReadTile));
+				return true;
+			}
+			catch(const std::bad_alloc &)
+			{
+				ClearRoute();
+				return false;
+			}
+			catch(const std::length_error &)
+			{
+				ClearRoute();
+				return false;
+			}
+		}
+
+	private:
+		template<typename FReadTile>
+		void UpdateRoute(int Width, int Height, int StartIndex, int PreviousTarget, FReadTile &&ReadTile)
+		{
 			const int64_t Size = (int64_t)Width * Height;
 			if(m_Checkpoint < 0 || Width <= 0 || Height <= 0 || Size > std::numeric_limits<int>::max() || StartIndex < 0 || StartIndex >= Size)
 				return;
@@ -183,12 +225,13 @@ namespace QmCheckpointGuide
 			// 代价接近时保留目标，避免玩家在两个 CP 之间移动时引导线反复跳动。
 			if(StickyTarget >= 0 && m_vLabels[(size_t)StickyTarget].m_Cost <= m_vLabels[(size_t)Target].m_Cost + 200)
 				Target = StickyTarget;
-			m_Result.m_Checkpoint = m_vLabels[(size_t)Target].m_Tile.m_TeleNumber;
-			m_Result.m_TargetIndex = GlobalIndex(Target);
-			m_Result.m_Warning = ReturnCost <= WARNING_COST;
 			for(int Index = Target; Index >= 0; Index = m_vLabels[(size_t)Index].m_Previous)
 				m_Result.m_vRoute.push_back(GlobalIndex(Index));
 			std::reverse(m_Result.m_vRoute.begin(), m_Result.m_vRoute.end());
+			// 完整路线准备好才发布目标；资源不足时外层清理，后帧可重新搜索。
+			m_Result.m_Checkpoint = m_vLabels[(size_t)Target].m_Tile.m_TeleNumber;
+			m_Result.m_TargetIndex = GlobalIndex(Target);
+			m_Result.m_Warning = ReturnCost <= WARNING_COST;
 		}
 	};
 }

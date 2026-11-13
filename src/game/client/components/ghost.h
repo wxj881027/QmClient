@@ -7,6 +7,9 @@
 
 #include <game/client/component.h>
 #include <game/client/components/menus.h>
+#include <game/client/components/qmclient/ghost_manual.h>
+#include <game/client/components/qmclient/ghost_path.h>
+#include <game/client/components/qmclient/ghost_render.h>
 #include <game/client/components/qmclient/online_replay_player.h>
 #include <game/client/render.h>
 
@@ -57,29 +60,7 @@ public:
 	};
 
 private:
-	class CGhostPath
-	{
-		int m_ChunkSize;
-		int m_NumItems;
-
-		std::vector<CGhostCharacter *> m_vpChunks;
-
-	public:
-		CGhostPath() { Reset(); }
-		~CGhostPath() { Reset(); }
-		CGhostPath(const CGhostPath &Other) = delete;
-		CGhostPath &operator=(const CGhostPath &Other) = delete;
-
-		CGhostPath(CGhostPath &&Other) noexcept;
-		CGhostPath &operator=(CGhostPath &&Other) noexcept;
-
-		void Reset(int ChunkSize = 25 * 60); // one minute with default snap rate
-		void SetSize(int Items);
-		int Size() const { return m_NumItems; }
-
-		void Add(const CGhostCharacter &Char);
-		CGhostCharacter *Get(int Index);
-	};
+	using CGhostPath = qm_ghost_path::CChunkedPath<CGhostCharacter>;
 
 	class CGhostItem
 	{
@@ -125,7 +106,7 @@ private:
 		CTeeRenderInfo m_OwnRenderInfo;
 		const CTeeRenderInfo *m_pSharedRenderInfo = nullptr;
 	};
-	std::vector<SGhostDrawData> m_vGhostDraws;
+	qm_ghost_render::CFrameCache<SGhostDrawData, MAX_ACTIVE_GHOSTS> m_GhostDraws;
 
 	char m_aTmpFilename[IO_MAX_PATH_LENGTH] = "";
 
@@ -137,12 +118,9 @@ private:
 	bool m_RenderingStartedByServer = false;
 
 	// QmClient: 查看模式——影子按独立时间线播放（游戏内 demo 播放器），不与玩家跑图同步
-	bool m_aManualSlots[MAX_ACTIVE_GHOSTS] = {};
+	qm_ghost_manual::CPlan<MAX_ACTIVE_GHOSTS> m_ManualPlan;
 	bool m_ManualMode = false;
 	COnlineReplayClock m_ManualClock;
-	int m_ManualPrimarySlot = -1;
-	std::vector<int> m_vManualSampleTicks;
-	int m_ManualEndTick = 0; // 本回放最长成员轨迹
 	vec2 m_aManualRenderPos[MAX_ACTIVE_GHOSTS] = {}; // 每个槽位虚影当前插值位置（供镜头跟随）
 	bool m_aManualRenderPosValid[MAX_ACTIVE_GHOSTS] = {};
 
@@ -186,7 +164,7 @@ public:
 	void StartRender(int Tick);
 
 	// QmClient: 查看模式——独立时间线播放（进度/暂停/拖动由 CRankGhost 控制）
-	void StartRenderManual(const std::vector<int> &vSlots);
+	bool StartRenderManual(const std::vector<int> &vSlots, int FirstTick = 0);
 	void ManualSetPlaying(bool Playing);
 	void ManualSeek(int RelativeTick);
 	void ManualSetSpeed(float Speed);
@@ -195,10 +173,11 @@ public:
 	bool ManualModeActive() const { return m_ManualMode; }
 	bool ManualPlaying() const { return m_ManualClock.Playing(); }
 	int ManualPlaybackTick() const;
-	int ManualAdjacentTick(int Current, IDemoPlayer::ETickOffset Offset) const { return OnlineReplayAdjacentTick(m_vManualSampleTicks, Current, Offset); }
+	int ManualAdjacentTick(int Current, IDemoPlayer::ETickOffset Offset) const { return OnlineReplayAdjacentTick(m_ManualPlan.m_vSampleTicks, Current, Offset); }
 	// 手动播放的 tick 内插值相位（0–1）；暂停时冻结，不随本地预测波动（避免画面抖动）
 	float ManualRenderIntra() const;
-	int ManualEndTick() const { return m_ManualEndTick; }
+	int ManualEndTick() const { return m_ManualPlan.m_Range.Duration(); }
+	const qm_ghost_timeline::CViewRange &ManualTimeline() const { return m_ManualPlan.m_Range; }
 	// 槽位虚影当前插值位置（查看模式下供镜头跟随选中成员）；false = 该槽位本帧未渲染
 	bool GetManualRenderPos(int Slot, vec2 *pOut) const
 	{

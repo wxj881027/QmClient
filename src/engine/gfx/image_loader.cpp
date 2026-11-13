@@ -6,6 +6,9 @@
 #include <base/system.h>
 
 #include <png.h>
+#if !defined(PNG_USER_MEM_SUPPORTED)
+#error "PNG decoding requires libpng user memory callbacks for resource failure classification."
+#endif
 #if defined(CONF_WEBP)
 #include <webp/decode.h>
 #include <webp/encode.h>
@@ -24,9 +27,10 @@ bool CByteBufferReader::Read(void *pData, size_t Size)
 	if(m_Error)
 		return false;
 
-	if(m_ReadOffset + Size <= m_Size)
+	if(Size <= m_Size - m_ReadOffset)
 	{
-		mem_copy(pData, &m_pData[m_ReadOffset], Size);
+		if(Size != 0)
+			mem_copy(pData, &m_pData[m_ReadOffset], Size);
 		m_ReadOffset += Size;
 		return true;
 	}
@@ -37,18 +41,50 @@ bool CByteBufferReader::Read(void *pData, size_t Size)
 	}
 }
 
-void CByteBufferWriter::Write(const void *pData, size_t Size)
+bool CByteBufferWriter::Write(const void *pData, size_t Size) noexcept
 {
 	if(!Size)
-		return;
-
+		return true;
 	const size_t WriteOffset = m_vBuffer.size();
-	m_vBuffer.resize(WriteOffset + Size);
+	if(!pData || Size > m_vBuffer.max_size() - WriteOffset)
+		return false;
+	try
+	{
+		m_vBuffer.resize(WriteOffset + Size);
+	}
+	catch(...)
+	{
+		return false;
+	}
 	mem_copy(&m_vBuffer[WriteOffset], pData, Size);
+	return true;
 }
 
 namespace
 {
+	template<typename TEncode>
+	bool SaveImageFile(IOHANDLE File, const char *pFilename, const char *pFormat, CImageFileOperations &Operations, TEncode &&Encode)
+	{
+		if(File == nullptr)
+		{
+			log_error(pFormat, "failed to open file for writing. filename='%s'", pFilename);
+			return false;
+		}
+		// 编码异常也关闭句柄；显式关闭先交出所有权，关闭失败不能再关一次。
+		const auto Close = [&Operations](void *pFile) { Operations.Close(pFile); };
+		std::unique_ptr<void, decltype(Close)> Owned(File, Close);
+		CByteBufferWriter Writer;
+		if(!Encode(Writer))
+			return false;
+		const bool Written = Writer.Size() <= std::numeric_limits<unsigned>::max() &&
+				     Operations.Write(Owned.get(), Writer.Data(), static_cast<unsigned>(Writer.Size())) == Writer.Size();
+		const bool Closed = Operations.Close(Owned.release()) == 0;
+		if(!Written)
+			log_error(pFormat, "failed to write image data to file. filename='%s'", pFilename);
+		if(!Closed)
+			log_error(pFormat, "failed to close image file. filename='%s'", pFilename);
+		return Written && Closed;
+	}
 
 	class CUserErrorStruct
 	{
@@ -58,7 +94,87 @@ namespace
 		std::jmp_buf m_JmpBuf;
 	};
 
+	struct SPngReadState
+	{
+		CUserErrorStruct m_Error;
+		CPngReadAllocator &m_Allocator;
+		png_structp m_pPng = nullptr;
+		png_infop m_pInfo = nullptr;
+		png_bytepp m_pRows = nullptr;
+		bool m_AllocationFailed = false;
+
+		explicit SPngReadState(CPngReadAllocator &Allocator) noexcept :
+			m_Allocator(Allocator) {}
+		~SPngReadState()
+		{
+			m_Allocator.Deallocate(CPngReadAllocator::EKind::ROWS, m_pRows);
+			if(m_pPng != nullptr)
+				png_destroy_read_struct(&m_pPng, &m_pInfo, nullptr);
+		}
+	};
+
+	struct SPngReadStateDeleter
+	{
+		CPngReadAllocator &m_Allocator;
+		void operator()(SPngReadState *pState) const noexcept
+		{
+			if(pState)
+			{
+				pState->~SPngReadState();
+				m_Allocator.Deallocate(CPngReadAllocator::EKind::STATE, pState);
+			}
+		}
+	};
+
+	png_voidp AllocatePngRead(png_structp pPng, png_alloc_size_t Size) noexcept
+	{
+		auto &State = *static_cast<SPngReadState *>(png_get_mem_ptr(pPng));
+		void *pData = State.m_Allocator.Allocate(CPngReadAllocator::EKind::LIBPNG, Size);
+		if(pData == nullptr)
+			State.m_AllocationFailed = true;
+		return pData;
+	}
+
+	void DeallocatePngRead(png_structp pPng, png_voidp pData) noexcept
+	{
+		auto &State = *static_cast<SPngReadState *>(png_get_mem_ptr(pPng));
+		State.m_Allocator.Deallocate(CPngReadAllocator::EKind::LIBPNG, pData);
+	}
+
 } // namespace
+
+void *CPngReadAllocator::Allocate(EKind Kind, size_t Size) noexcept
+{
+	switch(Kind)
+	{
+	case EKind::STATE: return ::operator new(Size, std::nothrow);
+	case EKind::ROWS: return ::operator new[](Size, std::nothrow);
+	case EKind::PIXELS:
+	case EKind::LIBPNG: return malloc(Size);
+	}
+	return nullptr;
+}
+
+void CPngReadAllocator::Deallocate(EKind Kind, void *pData) noexcept
+{
+	switch(Kind)
+	{
+	case EKind::STATE: ::operator delete(pData); break;
+	case EKind::ROWS: ::operator delete[](pData); break;
+	case EKind::PIXELS:
+	case EKind::LIBPNG: free(pData); break;
+	}
+}
+
+unsigned CImageFileOperations::Write(IOHANDLE File, const void *pData, unsigned Size) noexcept
+{
+	return io_write(File, pData, Size);
+}
+
+int CImageFileOperations::Close(IOHANDLE File) noexcept
+{
+	return io_close(File);
+}
 
 [[noreturn]] static void PngErrorCallback(png_structp pPngStruct, png_const_charp pErrorMessage)
 {
@@ -169,41 +285,36 @@ static int PngliteIncompatibility(png_structp pPngStruct, png_infop pPngInfo)
 
 bool CImageLoader::LoadPng(CByteBufferReader &Reader, const char *pContextName, CImageInfo &Image, int &PngliteIncompatible, size_t MaxDecodedBytes)
 {
-	// libpng 错误会 longjmp，清理状态放在堆上，避免读取被跳转失效的局部指针。
-	struct SReadState
-	{
-		CUserErrorStruct m_Error;
-		png_structp m_pPng = nullptr;
-		png_infop m_pInfo = nullptr;
-		png_bytepp m_pRows = nullptr;
-		~SReadState()
-		{
-			delete[] m_pRows;
-			if(m_pPng != nullptr)
-				png_destroy_read_struct(&m_pPng, &m_pInfo, nullptr);
-		}
-	};
-	std::unique_ptr<SReadState> pState(new(std::nothrow) SReadState{});
-	if(pState == nullptr)
-		return false;
+	return LoadPngChecked(Reader, pContextName, Image, PngliteIncompatible, MaxDecodedBytes) == EPngLoadResult::SUCCESS;
+}
+
+CImageLoader::EPngLoadResult CImageLoader::LoadPngChecked(CByteBufferReader &Reader, const char *pContextName, CImageInfo &Image, int &PngliteIncompatible, size_t MaxDecodedBytes, CPngReadAllocator *pAllocator)
+{
+	CPngReadAllocator DefaultAllocator;
+	CPngReadAllocator &Allocator = pAllocator != nullptr ? *pAllocator : DefaultAllocator;
+	void *pStateMemory = Allocator.Allocate(CPngReadAllocator::EKind::STATE, sizeof(SPngReadState));
+	if(pStateMemory == nullptr)
+		return EPngLoadResult::RESOURCE_ERROR;
+	// owner 在 setjmp 前建立；回跳后只读取堆上的错误标记和已登记指针。
+	const std::unique_ptr<SPngReadState, SPngReadStateDeleter> pState(new(pStateMemory) SPngReadState(Allocator), SPngReadStateDeleter{Allocator});
 	pState->m_Error = {&Reader, pContextName, {}};
-	pState->m_pPng = png_create_read_struct(PNG_LIBPNG_VER_STRING, &pState->m_Error, PngErrorCallback, PngWarningCallback);
-	if(pState->m_pPng == nullptr)
-		return false;
 	if(setjmp(pState->m_Error.m_JmpBuf))
 	{
 		Image.Free();
-		return false;
+		return pState->m_AllocationFailed ? EPngLoadResult::RESOURCE_ERROR : EPngLoadResult::INVALID;
 	}
+	pState->m_pPng = png_create_read_struct_2(PNG_LIBPNG_VER_STRING, &pState->m_Error, PngErrorCallback, PngWarningCallback, pState.get(), AllocatePngRead, DeallocatePngRead);
+	if(pState->m_pPng == nullptr)
+		return pState->m_AllocationFailed ? EPngLoadResult::RESOURCE_ERROR : EPngLoadResult::INVALID;
 	pState->m_pInfo = png_create_info_struct(pState->m_pPng);
 	if(pState->m_pInfo == nullptr)
-		return false;
+		return pState->m_AllocationFailed ? EPngLoadResult::RESOURCE_ERROR : EPngLoadResult::INVALID;
 
 	png_byte aSignature[8];
 	if(!Reader.Read(aSignature, sizeof(aSignature)) || png_sig_cmp(aSignature, 0, sizeof(aSignature)) != 0)
 	{
 		log_error("png", "file is not a valid PNG file (signature mismatch).");
-		return false;
+		return EPngLoadResult::INVALID;
 	}
 
 	png_set_read_fn(pState->m_pPng, (png_bytep)&Reader, PngReadDataCallback);
@@ -221,7 +332,7 @@ bool CImageLoader::LoadPng(CByteBufferReader &Reader, const char *pContextName, 
 	if(Reader.Error())
 	{
 		// error already logged
-		return false;
+		return EPngLoadResult::INVALID;
 	}
 
 	const png_uint_32 PngWidth = png_get_image_width(pState->m_pPng, pState->m_pInfo);
@@ -232,7 +343,7 @@ bool CImageLoader::LoadPng(CByteBufferReader &Reader, const char *pContextName, 
 	if(PngWidth == 0 || PngHeight == 0 || PngWidth > (png_uint_32)std::numeric_limits<int>::max() || PngHeight > (png_uint_32)std::numeric_limits<int>::max())
 	{
 		log_error("png", "image has invalid dimensions. width=%u height=%u", (unsigned)PngWidth, (unsigned)PngHeight);
-		return false;
+		return EPngLoadResult::INVALID;
 	}
 	const int Width = (int)PngWidth;
 	const int Height = (int)PngHeight;
@@ -241,7 +352,7 @@ bool CImageLoader::LoadPng(CByteBufferReader &Reader, const char *pContextName, 
 	if(!ImageDataSize(Width, Height, CImageInfo::FORMAT_RGBA, RgbaDataSize) || RgbaDataSize > MaxDecodedBytes)
 	{
 		log_error("png", "image exceeds decoded byte budget. width=%d height=%d", Width, Height);
-		return false;
+		return EPngLoadResult::INVALID;
 	}
 
 	if(BitDepth == 16)
@@ -251,7 +362,7 @@ bool CImageLoader::LoadPng(CByteBufferReader &Reader, const char *pContextName, 
 	else if(BitDepth > 8 || BitDepth == 0)
 	{
 		log_error("png", "bit depth %d not supported.", BitDepth);
-		return false;
+		return EPngLoadResult::INVALID;
 	}
 
 	if(ColorType == PNG_COLOR_TYPE_PALETTE)
@@ -280,21 +391,21 @@ bool CImageLoader::LoadPng(CByteBufferReader &Reader, const char *pContextName, 
 		!ImageDataSize(Width, Height, ImageFormat, ExpectedDataSize))
 	{
 		log_error("png", "image dimensions are too large. width=%d height=%d rowbytes=%" PRIzu " channels=%d", Width, Height, BytesInRow, ColorChannelCount);
-		return false;
+		return EPngLoadResult::INVALID;
 	}
 
-	Image.m_pData = static_cast<uint8_t *>(malloc(ExpectedDataSize));
+	Image.m_pData = static_cast<uint8_t *>(Allocator.Allocate(CPngReadAllocator::EKind::PIXELS, ExpectedDataSize));
 	if(Image.m_pData == nullptr)
 	{
 		log_error("png", "failed to allocate image data. width=%d height=%d bytes=%" PRIzu, Width, Height, ExpectedDataSize);
-		return false;
+		return EPngLoadResult::RESOURCE_ERROR;
 	}
-	pState->m_pRows = new(std::nothrow) png_bytep[Height];
+	pState->m_pRows = static_cast<png_bytepp>(Allocator.Allocate(CPngReadAllocator::EKind::ROWS, static_cast<size_t>(Height) * sizeof(png_bytep)));
 	if(pState->m_pRows == nullptr)
 	{
 		Image.Free();
 		log_error("png", "failed to allocate row pointers. height=%d", Height);
-		return false;
+		return EPngLoadResult::RESOURCE_ERROR;
 	}
 	for(int y = 0; y < Height; ++y)
 		pState->m_pRows[y] = &Image.m_pData[(size_t)y * BytesInRow];
@@ -309,7 +420,8 @@ bool CImageLoader::LoadPng(CByteBufferReader &Reader, const char *pContextName, 
 		Image.m_Format = ImageFormat;
 		PngliteIncompatible = PngliteIncompatibility(pState->m_pPng, pState->m_pInfo);
 	}
-	return !Reader.Error();
+	// libpng 可跳过非关键元数据的分配失败；正文仍成功时保留旧 bool 成功语义。
+	return Reader.Error() ? EPngLoadResult::INVALID : EPngLoadResult::SUCCESS;
 }
 
 bool CImageLoader::LoadPng(IOHANDLE File, const char *pFilename, CImageInfo &Image, int &PngliteIncompatible)
@@ -350,10 +462,12 @@ bool CImageLoader::LoadPng(IOHANDLE File, const char *pFilename, CImageInfo &Ima
 	return true;
 }
 
-static void PngWriteDataCallback(png_structp pPngStruct, png_bytep pOutBytes, png_size_t ByteCountToWrite)
+static void PngWriteDataCallback(png_structp pPngStruct, png_bytep pOutBytes, png_size_t ByteCountToWrite) noexcept
 {
 	CByteBufferWriter *pWriter = static_cast<CByteBufferWriter *>(png_get_io_ptr(pPngStruct));
-	pWriter->Write(pOutBytes, ByteCountToWrite);
+	// Write已完成C++展开并返回，之后才进入libpng自己的错误跳转。
+	if(!pWriter->Write(pOutBytes, ByteCountToWrite))
+		png_error(pPngStruct, "Could not append encoded PNG bytes");
 }
 
 static void PngOutputFlushCallback(png_structp pPngStruct)
@@ -447,6 +561,8 @@ bool CImageLoader::SavePng(CByteBufferWriter &Writer, const CImageInfo &Image, c
 	size_t DataSize = 0;
 	if(!ImageDataSize((int)Image.m_Width, (int)Image.m_Height, Image.m_Format, DataSize))
 		return false;
+	// scope在setjmp之前建立，成功标志只在全部png调用结束后设置。
+	CByteBufferWriter::CWriteScope Output(Writer);
 	// 清理状态置于堆上，libpng longjmp 后不会读取值已改变的自动局部变量。
 	struct SWriteState
 	{
@@ -489,44 +605,48 @@ bool CImageLoader::SavePng(CByteBufferWriter &Writer, const CImageInfo &Image, c
 		pState->m_pRows[Y] = Image.m_pData + Y * Image.m_Width * CImageInfo::PixelSize(Image.m_Format);
 	png_write_image(pState->m_pPng, pState->m_pRows);
 	png_write_end(pState->m_pPng, pState->m_pInfo);
+	Output.Commit();
 	return true;
 }
 
 bool CImageLoader::SavePng(IOHANDLE File, const char *pFilename, const CImageInfo &Image, const char *pComment)
 {
-	if(!File)
-	{
-		log_error("png", "failed to open file for writing. filename='%s'", pFilename);
-		return false;
-	}
+	CImageFileOperations Operations;
+	return SavePng(File, pFilename, Image, pComment, Operations);
+}
 
-	CByteBufferWriter Writer;
-	if(!CImageLoader::SavePng(Writer, Image, pComment))
-	{
-		// error already logged
-		io_close(File);
-		return false;
-	}
-
-	const bool WriteSuccess = io_write(File, Writer.Data(), Writer.Size()) == Writer.Size();
-	if(!WriteSuccess)
-	{
-		log_error("png", "failed to write PNG data to file. filename='%s'", pFilename);
-	}
-	io_close(File);
-	return WriteSuccess;
+bool CImageLoader::SavePng(IOHANDLE File, const char *pFilename, const CImageInfo &Image, const char *pComment, CImageFileOperations &Operations)
+{
+	return SaveImageFile(File, pFilename, "png", Operations, [&](CByteBufferWriter &Writer) { return SavePng(Writer, Image, pComment); });
 }
 
 bool CImageLoader::SaveWebP(CByteBufferWriter &Writer, const CImageInfo &Image)
 {
 #if defined(CONF_WEBP)
-	CImageInfo RgbaImage;
+	if(!Image.m_pData || Image.m_Width == 0 || Image.m_Height == 0 ||
+		Image.m_Width > WEBP_MAX_DIMENSION || Image.m_Height > WEBP_MAX_DIMENSION ||
+		Image.m_Format < CImageInfo::FORMAT_RGB || Image.m_Format > CImageInfo::FORMAT_RA)
+		return false;
+	size_t DataSize;
+	if(!ImageDataSize(Image.m_Width, Image.m_Height, Image.m_Format, DataSize))
+		return false;
+	CByteBufferWriter::CWriteScope Output(Writer);
+	struct SRgbaOwner
+	{
+		CImageInfo m_Image;
+		~SRgbaOwner() { m_Image.Free(); }
+	} Rgba;
 	const CImageInfo *pEncodeImage = &Image;
 	if(Image.m_Format != CImageInfo::FORMAT_RGBA)
 	{
-		RgbaImage = Image.DeepCopy();
-		ConvertToRgba(RgbaImage);
-		pEncodeImage = &RgbaImage;
+		// ConvertToRgbaAlloc的布尔值表示是否原本RGBA，实际转换成功以目标指针确认。
+		ConvertToRgbaAlloc(Rgba.m_Image.m_pData, Image);
+		if(!Rgba.m_Image.m_pData)
+			return false;
+		Rgba.m_Image.m_Width = Image.m_Width;
+		Rgba.m_Image.m_Height = Image.m_Height;
+		Rgba.m_Image.m_Format = CImageInfo::FORMAT_RGBA;
+		pEncodeImage = &Rgba.m_Image;
 	}
 
 	uint8_t *pOutput = nullptr;
@@ -536,16 +656,17 @@ bool CImageLoader::SaveWebP(CByteBufferWriter &Writer, const CImageInfo &Image)
 		(int)pEncodeImage->m_Height,
 		(int)(pEncodeImage->m_Width * 4),
 		&pOutput);
-	if(RgbaImage.m_pData != nullptr)
-		RgbaImage.Free();
-	if(EncodedSize == 0 || pOutput == nullptr)
+	std::unique_ptr<uint8_t, decltype(&WebPFree)> Encoded(pOutput, WebPFree);
+	Rgba.m_Image.Free();
+	if(EncodedSize == 0 || !Encoded)
 	{
 		log_error("webp", "failed to encode WebP image");
 		return false;
 	}
 
-	Writer.Write(pOutput, EncodedSize);
-	WebPFree(pOutput);
+	if(!Writer.Write(Encoded.get(), EncodedSize))
+		return false;
+	Output.Commit();
 	return true;
 #else
 	(void)Writer;
@@ -557,26 +678,13 @@ bool CImageLoader::SaveWebP(CByteBufferWriter &Writer, const CImageInfo &Image)
 
 bool CImageLoader::SaveWebP(IOHANDLE File, const char *pFilename, const CImageInfo &Image)
 {
-	if(!File)
-	{
-		log_error("webp", "failed to open file for writing. filename='%s'", pFilename);
-		return false;
-	}
+	CImageFileOperations Operations;
+	return SaveWebP(File, pFilename, Image, Operations);
+}
 
-	CByteBufferWriter Writer;
-	if(!CImageLoader::SaveWebP(Writer, Image))
-	{
-		io_close(File);
-		return false;
-	}
-
-	const bool WriteSuccess = io_write(File, Writer.Data(), Writer.Size()) == Writer.Size();
-	if(!WriteSuccess)
-	{
-		log_error("webp", "failed to write WebP data to file. filename='%s'", pFilename);
-	}
-	io_close(File);
-	return WriteSuccess;
+bool CImageLoader::SaveWebP(IOHANDLE File, const char *pFilename, const CImageInfo &Image, CImageFileOperations &Operations)
+{
+	return SaveImageFile(File, pFilename, "webp", Operations, [&](CByteBufferWriter &Writer) { return SaveWebP(Writer, Image); });
 }
 
 bool CImageLoader::LoadWebP(CByteBufferReader &Reader, const char *pContextName, CImageInfo &Image, size_t MaxDecodedBytes)
@@ -716,9 +824,14 @@ bool CImageLoader::LoadWebP(IOHANDLE File, const char *pFilename, CImageInfo &Im
 
 bool CImageLoader::LoadPng(const void *pData, size_t Size, const char *pContextName, CImageInfo &Image, size_t MaxDecodedBytes)
 {
+	return LoadPngChecked(pData, Size, pContextName, Image, MaxDecodedBytes) == EPngLoadResult::SUCCESS;
+}
+
+CImageLoader::EPngLoadResult CImageLoader::LoadPngChecked(const void *pData, size_t Size, const char *pContextName, CImageInfo &Image, size_t MaxDecodedBytes, CPngReadAllocator *pAllocator)
+{
 	CByteBufferReader Reader(static_cast<const uint8_t *>(pData), Size);
 	int PngliteIncompatible = 0;
-	return LoadPng(Reader, pContextName, Image, PngliteIncompatible, MaxDecodedBytes);
+	return LoadPngChecked(Reader, pContextName, Image, PngliteIncompatible, MaxDecodedBytes, pAllocator);
 }
 
 bool CImageLoader::LoadWebP(const void *pData, size_t Size, const char *pContextName, CImageInfo &Image, size_t MaxDecodedBytes)

@@ -36,39 +36,47 @@ const unsigned char *CVariableInt::Unpack(const unsigned char *pSrc, int *pInOut
 
 long CVariableInt::Decompress(const void *pSrc, int SrcSize, void *pDst, int DstSize)
 {
-	dbg_assert(DstSize % sizeof(int) == 0, "invalid bounds");
+	if(SrcSize < 0 || DstSize < 0 || DstSize % sizeof(int) != 0 ||
+		(SrcSize > 0 && !pSrc) || (DstSize > 0 && !pDst))
+		return -1;
 
-	const unsigned char *pCharSrc = (unsigned char *)pSrc;
-	const unsigned char *pCharSrcEnd = pCharSrc + SrcSize;
-	int *pIntDst = (int *)pDst;
-	const int *pIntDstEnd = pIntDst + DstSize / sizeof(int); // NOLINT(bugprone-sizeof-expression)
-	while(pCharSrc < pCharSrcEnd)
+	const auto *pCharSrc = (const unsigned char *)pSrc;
+	auto *pCharDst = (unsigned char *)pDst;
+	int InputSize = 0;
+	int OutputSize = 0;
+	while(InputSize < SrcSize)
 	{
-		if(pIntDst >= pIntDstEnd)
+		if(DstSize - OutputSize < (int)sizeof(int))
 			return -1;
-		pCharSrc = CVariableInt::Unpack(pCharSrc, pIntDst, pCharSrcEnd - pCharSrc);
-		if(!pCharSrc)
+		int Value;
+		const unsigned char *pNext = CVariableInt::Unpack(pCharSrc + InputSize, &Value, SrcSize - InputSize);
+		if(!pNext)
 			return -1;
-		pIntDst++;
+		InputSize = pNext - pCharSrc;
+		// 接口接收字节缓冲，不能依赖调用方的int对齐。
+		mem_copy(pCharDst + OutputSize, &Value, sizeof(Value));
+		OutputSize += sizeof(Value);
 	}
-	return (long)((unsigned char *)pIntDst - (unsigned char *)pDst);
+	return OutputSize;
 }
 
 long CVariableInt::Compress(const void *pSrc, int SrcSize, void *pDst, int DstSize)
 {
-	dbg_assert(SrcSize % sizeof(int) == 0, "invalid bounds");
+	if(SrcSize < 0 || DstSize < 0 || SrcSize % sizeof(int) != 0 ||
+		(SrcSize > 0 && (!pSrc || DstSize == 0)) || (DstSize > 0 && !pDst))
+		return -1;
 
-	const int *pIntSrc = (int *)pSrc;
-	unsigned char *pCharDst = (unsigned char *)pDst;
-	const unsigned char *pCharDstEnd = pCharDst + DstSize;
-	SrcSize /= sizeof(int);
-	while(SrcSize)
+	const auto *pCharSrc = (const unsigned char *)pSrc;
+	auto *pCharDst = (unsigned char *)pDst;
+	int OutputSize = 0;
+	for(int InputSize = 0; InputSize < SrcSize; InputSize += sizeof(int))
 	{
-		pCharDst = CVariableInt::Pack(pCharDst, *pIntSrc, pCharDstEnd - pCharDst);
-		if(!pCharDst)
+		int Value;
+		mem_copy(&Value, pCharSrc + InputSize, sizeof(Value));
+		unsigned char *pNext = CVariableInt::Pack(pCharDst + OutputSize, Value, DstSize - OutputSize);
+		if(!pNext)
 			return -1;
-		SrcSize--;
-		pIntSrc++;
+		OutputSize = pNext - pCharDst;
 	}
-	return (long)(pCharDst - (unsigned char *)pDst);
+	return OutputSize;
 }

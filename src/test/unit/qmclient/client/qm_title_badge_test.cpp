@@ -98,6 +98,21 @@ TEST(QmTitleBadge, VisualBoundsAreRelativeToTheBakedTextOrigin)
 	EXPECT_FLOAT_EQ(Bounds.h, 14.0f);
 }
 
+TEST(QmTitleBadge, MissingVisualBoundsUsesTheMeasuredCursorHeight)
+{
+	CTextCursor Cursor;
+	Cursor.SetPosition(vec2(10.0f, 20.0f));
+	Cursor.m_LongestLineWidth = 55.0f;
+	Cursor.m_LineCount = 3;
+	Cursor.m_AlignedFontSize = 14.0f;
+	Cursor.m_AlignedLineSpacing = 2.0f;
+	const CUIRect Bounds = QmTitleBadgeVisualBounds(Cursor);
+	EXPECT_FLOAT_EQ(Bounds.x, 0.0f);
+	EXPECT_FLOAT_EQ(Bounds.y, 0.0f);
+	EXPECT_FLOAT_EQ(Bounds.w, 55.0f);
+	EXPECT_FLOAT_EQ(Bounds.h, 48.0f);
+}
+
 TEST(QmTitleBadge, DefaultMoonPaletteMatchesDarkFigmaVariant)
 {
 	const auto Palette = QmTitleBadgePalette({});
@@ -205,10 +220,14 @@ TEST(QmTitleBadge, PresenceCarriesAppearanceForMainAndDummy)
 		{"server_address":"test:8303","player_id":3,"player_name":"Main","title":"自选文字","appearance":{"style":"sun","color":1193046,"opacity":35},"issued_at":1000,"expires_at":1015},
 		{"server_address":"test:8303","player_id":4,"player_name":"Dummy","title":"Legacy","issued_at":1000,"expires_at":1015}
 	]})");
-	const auto Presences = ParseQmTitlePresences(Json.get(), "test:8303");
+	SQmTitlePresenceParseResult Result;
+	ASSERT_TRUE(ParseQmTitlePresencesJson(Json.get(), "test:8303", Result));
+	const auto &Presences = Result.m_vPresences;
 	ASSERT_EQ(Presences.size(), 2u);
 	EXPECT_EQ(Presences[0].m_Appearance, (SQmTitleAppearance{EQmTitleBadgeStyle::SUN, 0x123456, 35}));
 	EXPECT_EQ(Presences[0].m_Title, "自选文字");
 	EXPECT_EQ(Presences[1].m_Appearance, SQmTitleAppearance{});
-	EXPECT_TRUE(ParseQmTitlePresences(Json.get(), "other:8303").empty());
+	SQmTitlePresenceParseResult Other;
+	ASSERT_TRUE(ParseQmTitlePresencesJson(Json.get(), "other:8303", Other));
+	EXPECT_TRUE(Other.m_vPresences.empty());
 }

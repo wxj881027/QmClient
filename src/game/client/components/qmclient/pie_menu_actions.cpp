@@ -1,3 +1,5 @@
+#include "pie_menu_friend_action.h"
+
 #include <base/str.h>
 #include <base/system.h>
 
@@ -145,12 +147,10 @@ void CPieMenu::ExecuteOption(EMenuOption Option)
 	{
 	case EMenuOption::FRIEND:
 	{
-		// Toggle friend status using console command (more reliable)
-		char aBuf[256];
+		// 沿原控制台刷新链切换好友，名字与战队只作为转义参数传递。
 		if(GameClient()->m_aClients[m_TargetClientId].m_Friend)
 		{
-			str_format(aBuf, sizeof(aBuf), "remove_friend \"%s\" \"%s\"", pPlayerName, pPlayerClan);
-			Console()->ExecuteLine(aBuf);
+			qm_pie_menu::ExecuteFriendCommand(*Console(), true, pPlayerName, pPlayerClan);
 
 			char aMsg[128];
 			str_format(aMsg, sizeof(aMsg), Localize("Removed %s from friends"), pPlayerName);
@@ -158,8 +158,7 @@ void CPieMenu::ExecuteOption(EMenuOption Option)
 		}
 		else
 		{
-			str_format(aBuf, sizeof(aBuf), "add_friend \"%s\" \"%s\"", pPlayerName, pPlayerClan);
-			Console()->ExecuteLine(aBuf);
+			qm_pie_menu::ExecuteFriendCommand(*Console(), false, pPlayerName, pPlayerClan);
 
 			char aMsg[128];
 			str_format(aMsg, sizeof(aMsg), Localize("Added %s as friend"), pPlayerName);

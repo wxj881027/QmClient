@@ -4,6 +4,7 @@
 #define GAME_CLIENT_QMUI_SETTINGSCARD_H
 
 #include "SettingsCardGeometry.h"
+#include "UiTextRenderState.h"
 #include "UiTokens.h"
 
 #include <engine/textrender.h>
@@ -20,20 +21,11 @@ enum class EQmIcon;
 template<typename TTextRender, typename TDraw>
 void ExecuteSettingsCardHeaderIcon(TTextRender &TextRender, ColorRGBA Color, TDraw &&Draw)
 {
-	const ColorRGBA PreviousColor = TextRender.GetTextColor();
-	const ColorRGBA PreviousOutline = TextRender.GetTextOutlineColor();
-	const ColorRGBA PreviousSelection = TextRender.GetTextSelectionColor();
-	const unsigned PreviousFlags = TextRender.GetRenderFlags();
-	const EFontPreset PreviousPreset = TextRender.GetFontPreset();
+	const CUiScopedTextRenderState TextState(TextRender);
 	TextRender.TextColor(Color);
 	TextRender.SetFontPreset(EFontPreset::ICON_FONT_BOLD);
 	TextRender.SetRenderFlags(TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | TEXT_RENDER_FLAG_NO_X_BEARING | TEXT_RENDER_FLAG_NO_Y_BEARING | TEXT_RENDER_FLAG_NO_OVERSIZE);
 	Draw();
-	TextRender.SetRenderFlags(PreviousFlags);
-	TextRender.SetFontPreset(PreviousPreset);
-	TextRender.TextOutlineColor(PreviousOutline);
-	TextRender.TextSelectionColor(PreviousSelection);
-	TextRender.TextColor(PreviousColor);
 }
 
 // 零宽会在文字引擎中关闭限宽；共享标题入口仅提交可见文字区域。

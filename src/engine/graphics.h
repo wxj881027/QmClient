@@ -20,6 +20,13 @@
 #include <string>
 #include <vector>
 
+// 命令区只复制这两个字段；接收方在像素释放后归还自有上下文。
+struct SGraphicsUploadRelease
+{
+	void *m_pContext = nullptr;
+	void (*m_pfnRelease)(void *) noexcept = nullptr;
+};
+
 #define GRAPHICS_TYPE_UNSIGNED_BYTE 0x1401
 #define GRAPHICS_TYPE_UNSIGNED_SHORT 0x1403
 #define GRAPHICS_TYPE_INT 0x1404
@@ -665,6 +672,13 @@ public:
 	virtual void UnloadTexture(CTextureHandle *pIndex) = 0;
 	virtual CTextureHandle LoadTextureRaw(const CImageInfo &Image, int Flags, const char *pTexName = nullptr) = 0;
 	virtual CTextureHandle LoadTextureRawMove(CImageInfo &Image, int Flags, const char *pTexName = nullptr) = 0;
+	// false 保留图像和上下文供延期；true 已接管二者，纹理仍可能创建失败。
+	// 调用方在进入前须为原图及格式转换、后端缩放的并存像素预留额度。
+	virtual bool TryLoadTextureRawMoveOwned(CImageInfo &, int, const char *, SGraphicsUploadRelease &, CTextureHandle &Texture)
+	{
+		Texture.Invalidate();
+		return false;
+	}
 	virtual CTextureHandle LoadTexture(const char *pFilename, int StorageType, int Flags = 0) = 0;
 	/**
 	 * 判断句柄当前是否真的还指向一张已分配贴图。
@@ -1090,12 +1104,15 @@ public:
 	// 宽高比回绘到窗口（导出期间预览不冻结）。读回是 PBO 异步的：这里排队本帧 DMA；
 	// 有完成信号的后端维持两笔在途并返回「上上帧」的像素（主线程与渲染线程按帧重叠），
 	// 其余后端逐帧等待并返回「上一帧」。在途帧由 FlushVideoFrameReadbacks 收尾。
-	virtual void EndVideoFrame(CImageInfo &Image)
+	// true 且图像为空表示正常预热；false 表示本帧申请或较早帧读回失败。
+	virtual bool EndVideoFrame(CImageInfo &Image)
 	{
 		(void)Image;
+		return false;
 	}
 	// 结算离屏视频的全部在途读回（录制收尾时调用）：按序把成功帧写入 pOutImages
-	// （最多 MaxImages 帧），返回写入数；没有在途请求返回 0。
+	// （最多 MaxImages 帧），返回写入数；没有在途请求返回 0。失败返回 -1，
+	// 调用方仍需释放输出数组中已转移的图像。
 	virtual int FlushVideoFrameReadbacks(CImageInfo *pOutImages, int MaxImages)
 	{
 		(void)pOutImages;

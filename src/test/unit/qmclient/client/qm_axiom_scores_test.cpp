@@ -120,10 +120,11 @@ namespace
 		int64_t m_Now = time_freq();
 
 	protected:
-		int64_t CurrentTick() const override { return m_Now; }
-		void SubmitDdStatsParseJob(const std::shared_ptr<CQmAxiomDdStatsParseJob> &pJob) override
+		int64_t CurrentTick() const noexcept override { return m_Now; }
+		bool SubmitDdStatsParseJob(const std::shared_ptr<CQmAxiomDdStatsParseJob> &pJob) override
 		{
 			m_vParseJobs.push_back(pJob);
+			return true;
 		}
 
 	public:
@@ -511,53 +512,6 @@ TEST(QmAxiomScoresComponent, NewServerCancelsOldActiveQueryAndRefreshesBothModes
 	EXPECT_EQ(pResult->m_Match.m_UserId, 5528);
 	EXPECT_EQ(pResult->Mode(EQmAxiomMode::GORES).m_Score.m_Points, 10);
 	EXPECT_EQ(pResult->Mode(EQmAxiomMode::AXRACE).m_Score.m_Points, 20);
-}
-
-TEST(QmStatisticsFile, DistinguishesMissingInvalidAndValidDocuments)
-{
-	CTestInfo Info;
-	std::unique_ptr<IStorage> pStorage = Info.CreateTestStorage();
-	ASSERT_NE(pStorage, nullptr);
-	ASSERT_TRUE(pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE));
-
-	json_value *pRoot = nullptr;
-	EXPECT_EQ(QmLoadStatisticsFile(pStorage.get(), "qmclient/statistics.json", &pRoot), EQmStatisticsFileLoadResult::NOT_FOUND);
-	EXPECT_EQ(pRoot, nullptr);
-
-	const char *pInvalidJson = "{\"local\":";
-	WriteStorageFile(pStorage.get(), "qmclient/statistics.json", pInvalidJson);
-	EXPECT_EQ(QmLoadStatisticsFile(pStorage.get(), "qmclient/statistics.json", &pRoot), EQmStatisticsFileLoadResult::INVALID);
-	EXPECT_EQ(pRoot, nullptr);
-	EXPECT_EQ(ReadStorageFile(pStorage.get(), "qmclient/statistics.json"), pInvalidJson);
-
-	const char *pInvalidStructure = "{\"local\":{}}";
-	WriteStorageFile(pStorage.get(), "qmclient/statistics.json", pInvalidStructure);
-	EXPECT_EQ(QmLoadStatisticsFile(pStorage.get(), "qmclient/statistics.json", &pRoot), EQmStatisticsFileLoadResult::INVALID);
-	EXPECT_EQ(pRoot, nullptr);
-	EXPECT_EQ(ReadStorageFile(pStorage.get(), "qmclient/statistics.json"), pInvalidStructure);
-
-	WriteStorageFile(pStorage.get(), "qmclient/statistics.json", "{\"local\":{\"modes\":[]},\"remote\":{}}");
-	ASSERT_EQ(QmLoadStatisticsFile(pStorage.get(), "qmclient/statistics.json", &pRoot), EQmStatisticsFileLoadResult::VALID);
-	ASSERT_NE(pRoot, nullptr);
-	EXPECT_EQ(json_object_get(json_object_get(pRoot, "local"), "modes")->type, json_array);
-	json_value_free(pRoot);
-}
-
-TEST(QmStatisticsFile, ClearsOutputForInvalidArguments)
-{
-	json_value DummyRoot;
-	json_value *pRoot = &DummyRoot;
-	EXPECT_EQ(QmLoadStatisticsFile(nullptr, "qmclient/statistics.json", &pRoot), EQmStatisticsFileLoadResult::INVALID);
-	EXPECT_EQ(pRoot, nullptr);
-
-	pRoot = &DummyRoot;
-	EXPECT_EQ(QmLoadStatisticsFile(nullptr, nullptr, &pRoot), EQmStatisticsFileLoadResult::INVALID);
-	EXPECT_EQ(pRoot, nullptr);
-
-	pRoot = &DummyRoot;
-	EXPECT_EQ(QmLoadStatisticsFile(nullptr, "", &pRoot), EQmStatisticsFileLoadResult::INVALID);
-	EXPECT_EQ(pRoot, nullptr);
-	EXPECT_EQ(QmLoadStatisticsFile(nullptr, "qmclient/statistics.json", nullptr), EQmStatisticsFileLoadResult::INVALID);
 }
 
 TEST(QmDdnetPlayerStatsState, PendingRefreshStartsImmediatelyAfterCompletedParse)
@@ -1401,7 +1355,7 @@ TEST(QmAxiomScoresAsync, InvalidResponsePreservesVisibleDataAndAllowsRefresh)
 	EXPECT_EQ(Http.m_vRequests.size(), 6u);
 }
 
-TEST(QmAxiomScoresAsync, ShutdownDiscardsQueuedParseWithoutBorrowingComponent)
+TEST(QmAxiomScoresAsync, ShutdownCancelsQueuedParseWithoutBorrowingComponent)
 {
 	CFakeAxiomHttp Http;
 	CTestAxiomScores Scores(&Http, true);
@@ -1412,7 +1366,7 @@ TEST(QmAxiomScoresAsync, ShutdownDiscardsQueuedParseWithoutBorrowingComponent)
 	Scores.OnShutdown();
 	Http.m_vRequests.clear();
 	Scores.m_vParseJobs[0]->Parse();
-	EXPECT_TRUE(Scores.m_vParseJobs[0]->Ready());
+	EXPECT_FALSE(Scores.m_vParseJobs[0]->Ready());
 	Scores.OnUpdate();
 	EXPECT_EQ(Scores.GetDdStatsGameTypes("async_player"), nullptr);
 }

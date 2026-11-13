@@ -24,6 +24,29 @@ namespace
 			m_Ui.DoLabelStreamed(m_Label, &m_Rect, pGlyph, 14, TEXTALIGN_MC, {}, -1, nullptr, true, &Recreated);
 			return Recreated;
 		}
+		void PrepareCallerState()
+		{
+			g_Config.m_QmUiFriendIconFilled = 1;
+			auto *pText = m_Ui.TextRender();
+			pText->SetFontPreset(EFontPreset::DEFAULT_FONT);
+			pText->SetRenderFlags(TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT);
+			pText->TextColor({0.2f, 0.3f, 0.4f, 0.5f});
+			pText->TextOutlineColor({0.7f, 0.6f, 0.5f, 0.4f});
+			pText->TextSelectionColor({0.8f, 0.7f, 0.6f, 0.3f});
+		}
+		void ExpectCallerState()
+		{
+			const auto *pText = m_Ui.TextRender();
+			EXPECT_EQ(pText->GetFontPreset(), EFontPreset::DEFAULT_FONT);
+			EXPECT_EQ(pText->GetRenderFlags(), TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT);
+			EXPECT_EQ(pText->GetTextColor(), ColorRGBA(0.2f, 0.3f, 0.4f, 0.5f));
+			EXPECT_EQ(pText->GetTextOutlineColor(), ColorRGBA(0.7f, 0.6f, 0.5f, 0.4f));
+			EXPECT_EQ(pText->GetTextSelectionColor(), ColorRGBA(0.8f, 0.7f, 0.6f, 0.3f));
+		}
+		bool DrawDirect()
+		{
+			return m_Ui.DrawQmIcon(m_Rect, EQmIcon::HEART, FontIcons::FONT_ICON_HEART, {0.9f, 0.3f, 0.1f, 0.4f});
+		}
 	};
 }
 
@@ -138,4 +161,53 @@ TEST_F(QmIconText, CellSignalGlyphsDrawThroughQmIconApi)
 		EXPECT_EQ(m_Ui.TextRender()->GetTextColor(), PrevColor);
 		EXPECT_EQ(m_Ui.TextRender()->GetRenderFlags(), PrevFlags);
 	}
+}
+
+TEST_F(QmIconText, FilledIconDrawRestoresCallerFontFlagsAndAllColors)
+{
+	PrepareCallerState();
+	const auto Draws = Graphics().m_Draws;
+	const auto Buffers = Graphics().m_Buffers.size(), Containers = Graphics().m_Containers.size();
+	EXPECT_TRUE(DrawDirect());
+	EXPECT_GT(Graphics().m_Draws, Draws);
+	ExpectCallerState();
+	EXPECT_EQ(Graphics().m_Buffers.size(), Buffers);
+	EXPECT_EQ(Graphics().m_Containers.size(), Containers);
+}
+
+TEST_F(QmIconText, PartialIconUploadRestoresOuterStateBeforeDeferredCleanupAndRetry)
+{
+	PrepareCallerState();
+	const auto Buffers = Graphics().m_Buffers.size(), Containers = Graphics().m_Containers.size();
+	Graphics().m_FailBufferContainerCreate = true;
+	EXPECT_THROW(DrawDirect(), std::bad_alloc);
+	EXPECT_FALSE(Graphics().m_FailBufferContainerCreate);
+	ExpectCallerState();
+	EXPECT_EQ(Graphics().m_Buffers.size(), Buffers + 1);
+	EXPECT_EQ(Graphics().m_Containers.size(), Containers);
+	EXPECT_NO_THROW(m_Ui.TextRender()->QmTextFrameEnd());
+	EXPECT_EQ(Graphics().m_Buffers.size(), Buffers);
+	EXPECT_TRUE(DrawDirect());
+	ExpectCallerState();
+	EXPECT_EQ(Graphics().m_Buffers.size(), Buffers);
+	EXPECT_EQ(Graphics().m_Containers.size(), Containers);
+}
+
+TEST_F(QmIconText, IconDrawFailureRestoresOuterStateAndAllowsFollowingFrameToDraw)
+{
+	PrepareCallerState();
+	const auto Buffers = Graphics().m_Buffers.size(), Containers = Graphics().m_Containers.size();
+	Graphics().m_FailTextDraw = true;
+	EXPECT_THROW(DrawDirect(), std::bad_alloc);
+	EXPECT_FALSE(Graphics().m_FailTextDraw);
+	ExpectCallerState();
+	EXPECT_EQ(Graphics().m_Buffers.size(), Buffers + 1);
+	EXPECT_EQ(Graphics().m_Containers.size(), Containers + 1);
+	EXPECT_NO_THROW(m_Ui.TextRender()->QmTextFrameEnd());
+	EXPECT_EQ(Graphics().m_Buffers.size(), Buffers);
+	EXPECT_EQ(Graphics().m_Containers.size(), Containers);
+	EXPECT_TRUE(DrawDirect());
+	ExpectCallerState();
+	EXPECT_EQ(Graphics().m_Buffers.size(), Buffers);
+	EXPECT_EQ(Graphics().m_Containers.size(), Containers);
 }

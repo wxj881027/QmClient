@@ -49,8 +49,7 @@ unsigned CSound::AdvanceVoice(CVoice &Voice, unsigned Frames)
 		}
 		else
 		{
-			Voice.m_pSample = nullptr;
-			Voice.m_Age++;
+			Voice.Release();
 		}
 	}
 
@@ -77,17 +76,16 @@ void CSound::Mix(short *pFinalOut, unsigned Frames)
 
 		const CSample *pSample = Voice.m_pSample;
 		const int Step = pSample->m_Channels; // setup input sources
-		short *pInL = &pSample->m_pData[Voice.m_Tick * Step];
-		short *pInR = &pSample->m_pData[Voice.m_Tick * Step + 1];
-
+		const int StartTick = Voice.m_Tick;
 		const unsigned End = AdvanceVoice(Voice, Frames);
+		if(End == 0)
+			continue;
+
+		const short *pInL = &pSample->m_pData[StartTick * Step];
+		const short *pInR = Step == 1 ? pInL : pInL + 1;
 
 		int VolumeR = round_truncate(Voice.m_pChannel->m_Vol * (Voice.m_Vol / 255.0f));
 		int VolumeL = VolumeR;
-
-		// check if we have a mono sound
-		if(pSample->m_Channels == 1)
-			pInR = pInL;
 
 		// volume calculation
 		if(Voice.m_Flags & ISound::FLAG_POS && Voice.m_pChannel->m_Pan)
@@ -164,10 +162,8 @@ void CSound::Mix(short *pFinalOut, unsigned Frames)
 		// process all frames
 		for(unsigned s = 0; s < End; s++)
 		{
-			*pOut++ += (*pInL) * VolumeL;
-			*pOut++ += (*pInR) * VolumeR;
-			pInL += Step;
-			pInR += Step;
+			*pOut++ += pInL[s * Step] * VolumeL;
+			*pOut++ += pInR[s * Step] * VolumeR;
 		}
 	}
 
@@ -175,7 +171,7 @@ void CSound::Mix(short *pFinalOut, unsigned Frames)
 
 	// clamp accumulated values
 	for(unsigned i = 0; i < Frames * 2; i++)
-		pFinalOut[i] = std::clamp<int>(((m_pMixBuffer[i] * MasterVol) / 101) >> 8, std::numeric_limits<short>::min(), std::numeric_limits<short>::max());
+		pFinalOut[i] = QmSoundMixSample(m_pMixBuffer[i], MasterVol);
 
 #if defined(CONF_ARCH_ENDIAN_BIG)
 	swap_endian(pFinalOut, sizeof(short), Frames * 2);
@@ -184,17 +180,9 @@ void CSound::Mix(short *pFinalOut, unsigned Frames)
 
 void CSound::FillAudioStream(SDL_AudioStream *pStream, int AdditionalAmount)
 {
-#if defined(CONF_VIDEORECORDER)
-	const bool VideoRecorderTakesSound = IVideo::Current() != nullptr && g_Config.m_ClVideoSndEnable;
-#else
-	const bool VideoRecorderTakesSound = false;
-#endif
-	FillSdlAudioStream(pStream, AdditionalAmount, 2, m_pCallbackBuffer, m_MaxFrames,
-		[this, VideoRecorderTakesSound](int16_t *pBuffer, int Frames) {
-			if(VideoRecorderTakesSound)
-				mem_zero(pBuffer, Frames * 2 * sizeof(int16_t));
-			else
-				Mix(pBuffer, Frames);
+	FillSdlPlaybackAudioStream(pStream, AdditionalAmount, 2, m_pCallbackBuffer, m_MaxFrames,
+		[this](int16_t *pBuffer, int Frames) {
+			Mix(pBuffer, Frames);
 		});
 }
 
@@ -336,7 +324,7 @@ void CSound::UpdateDevice()
 bool CSound::HasAudioOutput() const
 {
 #if defined(CONF_VIDEORECORDER)
-	if(IVideo::Current() && g_Config.m_ClVideoSndEnable)
+	if(IVideo::Current() && IVideo::Current()->HasAudio())
 		return true;
 #endif
 	return m_pDevice != nullptr;
@@ -862,7 +850,7 @@ void CSound::UnloadSample(int SampleId)
 		{
 			if(Voice.m_pSample == &Sample)
 			{
-				Voice.m_pSample = nullptr;
+				Voice.Release();
 			}
 		}
 
@@ -1027,10 +1015,11 @@ void CSound::SetVoiceTimeOffset(CVoiceHandle Voice, float TimeOffset)
 
 	// at least 200msec off, else depend on buffer size
 	float Threshold = std::max(0.2f * m_aVoices[VoiceId].m_pSample->m_Rate, (float)m_MaxFrames);
-	if(absolute(m_aVoices[VoiceId].m_Tick - Tick) > Threshold)
+	const int TickDistance = absolute(m_aVoices[VoiceId].m_Tick - Tick);
+	if(TickDistance > Threshold)
 	{
-		// take care of looping (modulo!)
-		if(!(IsLooping && (std::min(m_aVoices[VoiceId].m_Tick, Tick) + m_aVoices[VoiceId].m_pSample->m_NumFrames - std::max(m_aVoices[VoiceId].m_Tick, Tick)) <= Threshold))
+		// 先求合法帧位置的距离，避免先将当前位置与总帧数相加溢出。
+		if(!(IsLooping && (m_aVoices[VoiceId].m_pSample->m_NumFrames - TickDistance) <= Threshold))
 		{
 			m_aVoices[VoiceId].m_Tick = Tick;
 		}
@@ -1140,7 +1129,7 @@ void CSound::Pause(int SampleId)
 		if(Voice.m_pSample == pSample)
 		{
 			Voice.m_pSample->m_PausedAt = Voice.m_Tick;
-			Voice.m_pSample = nullptr;
+			Voice.Release();
 		}
 	}
 }
@@ -1161,7 +1150,7 @@ void CSound::Stop(int SampleId)
 				Voice.m_pSample->m_PausedAt = Voice.m_Tick;
 			else
 				Voice.m_pSample->m_PausedAt = 0;
-			Voice.m_pSample = nullptr;
+			Voice.Release();
 		}
 	}
 }
@@ -1178,8 +1167,8 @@ void CSound::StopAll()
 				Voice.m_pSample->m_PausedAt = Voice.m_Tick;
 			else
 				Voice.m_pSample->m_PausedAt = 0;
+			Voice.Release();
 		}
-		Voice.m_pSample = nullptr;
 	}
 }
 
@@ -1194,8 +1183,7 @@ void CSound::StopVoice(CVoiceHandle Voice)
 	if(m_aVoices[VoiceId].m_Age != Voice.Age())
 		return;
 
-	m_aVoices[VoiceId].m_pSample = nullptr;
-	m_aVoices[VoiceId].m_Age++;
+	m_aVoices[VoiceId].Release();
 }
 
 bool CSound::IsPlaying(int SampleId)

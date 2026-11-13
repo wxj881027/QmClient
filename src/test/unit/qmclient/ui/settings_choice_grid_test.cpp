@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 
+#include <limits>
+
 TEST(SettingsChoiceGrid, FullWidthUsesFourColumnsAndHalfWidthKeepsAtMostTwo)
 {
 	const auto Full = ResolveSettingsToggleGrid(700, 100, 45, 10, 11, 4);
@@ -50,4 +52,38 @@ TEST(SettingsChoiceGrid, EmptyOrTinyAreasKeepNonnegativeDimensions)
 	const auto Tiny = ResolveSettingsToggleGrid(20, 100, 50, 10, 2, 4);
 	EXPECT_EQ(Tiny.m_Columns, 1);
 	EXPECT_FLOAT_EQ(Tiny.m_CellWidth, 20);
+}
+
+TEST(SettingsChoiceGrid, LargeFittingCountsAreClampedBeforeIntegerConversion)
+{
+	for(float Width : {std::numeric_limits<float>::max(), std::numeric_limits<float>::infinity()})
+	{
+		SCOPED_TRACE(Width);
+		const auto Grid = ResolveSettingsToggleGrid(Width, 1, 20, 0, 2, 4);
+		EXPECT_EQ(Grid.m_Columns, 4);
+		EXPECT_EQ(Grid.m_Rows, 1);
+	}
+}
+
+TEST(SettingsChoiceGrid, IndeterminateFittingCountUsesOneColumnWithoutIntegerConversion)
+{
+	const auto Grid = ResolveSettingsToggleGrid(std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity(), 20, 0, 2, 4);
+	EXPECT_EQ(Grid.m_Columns, 1);
+	EXPECT_EQ(Grid.m_Rows, 2);
+}
+
+TEST(SettingsChoiceGrid, MaximumItemCountRoundsRowsUpWithoutSignedAdditionOverflow)
+{
+	struct SCase
+	{
+		int m_Columns;
+		int m_ExpectedRows;
+	};
+	for(const auto Case : {SCase{2, 1073741824}, SCase{3, 715827883}, SCase{4, 536870912}})
+	{
+		SCOPED_TRACE(Case.m_Columns);
+		const auto Grid = ResolveSettingsToggleGrid(1000, 100, 0, 0, std::numeric_limits<int>::max(), Case.m_Columns);
+		EXPECT_EQ(Grid.m_Columns, Case.m_Columns);
+		EXPECT_EQ(Grid.m_Rows, Case.m_ExpectedRows);
+	}
 }

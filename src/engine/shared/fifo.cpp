@@ -2,6 +2,13 @@
 
 #include <base/log.h>
 #include <base/system.h>
+
+#include <cstdint>
+#include <cstdlib>
+#include <limits>
+#include <memory>
+#include <utility>
+
 #if defined(CONF_FAMILY_UNIX)
 
 #include <fcntl.h>
@@ -10,86 +17,82 @@
 #include <unistd.h>
 
 #include <cerrno>
-#include <cstdlib>
 
-void CFifo::Init(IConsole *pConsole, const char *pFifoFile, int Flag)
+void CFifo::Init(IConsole *pConsole, const char *pFifoFile, int Flag) noexcept
+try
 {
-	m_File = -1;
-
+	Shutdown();
 	m_pConsole = pConsole;
 	m_IsInit = true;
 	if(pFifoFile[0] == '\0')
+		return;
+	if(str_length(pFifoFile) >= static_cast<int>(sizeof(m_aFilename)))
 		return;
 
 	str_copy(m_aFilename, pFifoFile);
 	m_Flag = Flag;
 
-	bool IsFifo;
-	if(mkfifo(m_aFilename, 0600) == 0)
+	const bool Created = mkfifo(m_aFilename, 0600) == 0;
+	if(!Created && errno != EEXIST)
 	{
-		struct stat Attribute;
-		if(stat(m_aFilename, &Attribute) == 0)
-		{
-			IsFifo = S_ISFIFO(Attribute.st_mode);
-		}
-		else
-		{
-			log_warn("fifo", "Failed to stat fifo '%s' (%d '%s')", m_aFilename, errno, strerror(errno));
-			IsFifo = false;
-		}
+		log_error("fifo", "Failed to create fifo '%s' (%d '%s')", m_aFilename, errno, strerror(errno));
+		return;
 	}
-	else
+	struct stat Attribute;
+	if(lstat(m_aFilename, &Attribute) != 0 || !S_ISFIFO(Attribute.st_mode))
 	{
-		log_warn("fifo", "Failed to create fifo '%s' (%d '%s')", m_aFilename, errno, strerror(errno));
-		IsFifo = false;
+		log_error("fifo", "Path '%s' is not an accessible fifo; keeping existing entry", m_aFilename);
+		return;
 	}
-	if(!IsFifo)
+	if(Created)
 	{
-		log_warn("fifo", "File '%s' is not a fifo, removing", m_aFilename);
-		if(fs_remove(m_aFilename) != 0)
-		{
-			log_error("fifo", "Failed to remove non-fifo '%s'", m_aFilename); // details logged in fs_remove
-			return;
-		}
-		if(mkfifo(m_aFilename, 0600) != 0)
-		{
-			log_error("fifo", "Failed to create fifo '%s' (%d '%s')", m_aFilename, errno, strerror(errno));
-			return;
-		}
-		struct stat Attribute;
-		if(stat(m_aFilename, &Attribute) != 0)
-		{
-			log_error("fifo", "Failed to stat fifo '%s' (%d '%s')", m_aFilename, errno, strerror(errno));
-			return;
-		}
-		if(!S_ISFIFO(Attribute.st_mode))
-		{
-			log_error("fifo", "File '%s' is not a fifo", m_aFilename);
-			return;
-		}
+		m_OwnsFifo = true;
+		m_Device = Attribute.st_dev;
+		m_Inode = Attribute.st_ino;
 	}
 
-	m_File = open(m_aFilename, O_RDONLY | O_NONBLOCK);
+	int OpenFlags = O_RDONLY | O_NONBLOCK;
+#if defined(O_NOFOLLOW)
+	OpenFlags |= O_NOFOLLOW;
+#endif
+	m_File = open(m_aFilename, OpenFlags);
 	if(m_File < 0)
 	{
 		log_error("fifo", "Failed to open fifo '%s' (%d '%s')", m_aFilename, errno, strerror(errno));
+	}
+	else if(fstat(m_File, &Attribute) != 0 || !S_ISFIFO(Attribute.st_mode) ||
+		(m_OwnsFifo && (Attribute.st_dev != m_Device || Attribute.st_ino != m_Inode)))
+	{
+		close(std::exchange(m_File, -1));
+		log_error("fifo", "Opened path '%s' does not match the fifo", m_aFilename);
 	}
 	else
 	{
 		log_info("fifo", "Opened fifo '%s'", m_aFilename);
 	}
 }
-
-void CFifo::Shutdown()
+catch(...)
 {
-	if(m_File < 0)
-		return;
-
-	close(m_File);
-	(void)fs_remove(m_aFilename);
+	Shutdown();
+	m_IsInit = true;
 }
 
-void CFifo::Update()
+void CFifo::Shutdown() noexcept
+{
+	if(m_File >= 0)
+		close(std::exchange(m_File, -1));
+	if(std::exchange(m_OwnsFifo, false))
+	{
+		struct stat Attribute;
+		if(lstat(m_aFilename, &Attribute) == 0 && S_ISFIFO(Attribute.st_mode) &&
+			Attribute.st_dev == m_Device && Attribute.st_ino == m_Inode)
+			(void)fs_remove(m_aFilename);
+	}
+	m_IsInit = false;
+}
+
+void CFifo::Update() noexcept
+try
 {
 	if(m_File < 0)
 		return;
@@ -117,6 +120,10 @@ void CFifo::Update()
 		m_pConsole->ExecuteLineFlag(pCur, m_Flag, IConsole::CLIENT_ID_UNSPECIFIED);
 	}
 }
+catch(...)
+{
+	// 本批字节已消费，异常时不重放已执行命令；后续Update仍可接收新输入。
+}
 
 #elif defined(CONF_FAMILY_WINDOWS)
 
@@ -124,17 +131,20 @@ void CFifo::Update()
 
 #include <windows.h>
 
-void CFifo::Init(IConsole *pConsole, const char *pFifoFile, int Flag)
+void CFifo::Init(IConsole *pConsole, const char *pFifoFile, int Flag) noexcept
+try
 {
+	Shutdown();
 	m_pConsole = pConsole;
 	m_IsInit = true;
 	if(pFifoFile[0] == '\0')
 	{
-		m_pPipe = INVALID_HANDLE_VALUE;
 		return;
 	}
 
 	str_copy(m_aFilename, "\\\\.\\pipe\\");
+	if(static_cast<size_t>(str_length(pFifoFile)) >= sizeof(m_aFilename) - str_length(m_aFilename))
+		return;
 	str_append(m_aFilename, pFifoFile);
 	m_Flag = Flag;
 
@@ -150,6 +160,7 @@ void CFifo::Init(IConsole *pConsole, const char *pFifoFile, int Flag)
 	if(m_pPipe == INVALID_HANDLE_VALUE)
 	{
 		const DWORD LastError = GetLastError();
+		m_pPipe = nullptr;
 		log_error("fifo", "Failed to create named pipe '%s' (%ld '%s')", m_aFilename, LastError, windows_format_system_message(LastError).c_str());
 	}
 	else
@@ -157,20 +168,27 @@ void CFifo::Init(IConsole *pConsole, const char *pFifoFile, int Flag)
 		log_info("fifo", "Created named pipe '%s'", m_aFilename);
 	}
 }
-
-void CFifo::Shutdown()
+catch(...)
 {
-	if(m_pPipe == INVALID_HANDLE_VALUE)
-		return;
-
-	DisconnectNamedPipe(m_pPipe);
-	CloseHandle(m_pPipe);
-	m_pPipe = INVALID_HANDLE_VALUE;
+	Shutdown();
+	m_IsInit = true;
 }
 
-void CFifo::Update()
+void CFifo::Shutdown() noexcept
 {
-	if(m_pPipe == INVALID_HANDLE_VALUE)
+	m_IsInit = false;
+	const auto Pipe = std::exchange(m_pPipe, nullptr);
+	if(!Pipe)
+		return;
+
+	DisconnectNamedPipe(Pipe);
+	CloseHandle(Pipe);
+}
+
+void CFifo::Update() noexcept
+try
+{
+	if(!m_pPipe)
 		return;
 
 	if(!ConnectNamedPipe(m_pPipe, nullptr))
@@ -191,7 +209,7 @@ void CFifo::Update()
 		}
 	}
 
-	while(true) // read all messages from the pipe
+	while(m_pPipe) // read all messages from the pipe
 	{
 		DWORD BytesAvailable;
 		if(!PeekNamedPipe(m_pPipe, nullptr, 0, nullptr, &BytesAvailable, nullptr))
@@ -212,13 +230,17 @@ void CFifo::Update()
 		if(BytesAvailable == 0) // pipe connected but no data available
 			return;
 
-		char *pBuf = static_cast<char *>(malloc(BytesAvailable + 1));
+		if(static_cast<uint64_t>(BytesAvailable) >= std::numeric_limits<size_t>::max())
+			return;
+		std::unique_ptr<char, decltype(&free)> Buffer(static_cast<char *>(malloc(static_cast<size_t>(BytesAvailable) + 1)), &free);
+		if(!Buffer)
+			return;
+		char *pBuf = Buffer.get();
 		DWORD Length;
 		if(!ReadFile(m_pPipe, pBuf, BytesAvailable, &Length, nullptr))
 		{
 			const DWORD LastError = GetLastError();
 			log_error("fifo", "Failed to read from pipe '%s' (%ld '%s')", m_aFilename, LastError, windows_format_system_message(LastError).c_str());
-			free(pBuf);
 			return;
 		}
 		pBuf[Length] = '\0';
@@ -246,8 +268,10 @@ void CFifo::Update()
 		{
 			m_pConsole->ExecuteLineFlag(pCur, m_Flag, IConsole::CLIENT_ID_UNSPECIFIED);
 		}
-
-		free(pBuf);
 	}
+}
+catch(...)
+{
+	// 缓冲由局部owner释放；命令可能已有副作用，不能自动重放本批数据。
 }
 #endif

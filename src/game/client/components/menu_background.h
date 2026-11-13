@@ -3,6 +3,8 @@
 
 #include <game/client/components/background.h>
 #include <game/client/components/camera.h>
+#include <game/client/components/qmclient/theme_catalog.h>
+#include <game/client/components/qmclient/theme_list_load_request.h>
 
 #include <array>
 #include <chrono>
@@ -10,6 +12,8 @@
 #include <mutex>
 #include <string>
 #include <vector>
+
+class CQmThemeIconLoadJob;
 
 class CMenuMap : public CBackgroundEngineMap
 {
@@ -19,29 +23,8 @@ public:
 	using CBackgroundEngineMap::CBackgroundEngineMap;
 };
 
-// themes
-class CTheme
-{
-public:
-	CTheme(const char *pName, bool HasDay, bool HasNight) :
-		m_Name(pName), m_HasDay(HasDay), m_HasNight(HasNight) {}
-
-	std::string m_Name;
-	bool m_HasDay;
-	bool m_HasNight;
-	IGraphics::CTextureHandle m_IconTexture;
-	std::string m_IconPath;
-	bool m_IconLoadRequested = false;
-	bool m_IconLoadFailed = false;
-	bool operator<(const CTheme &Other) const { return m_Name < Other.m_Name; }
-};
-
 class CMenuBackground : public CBackground
 {
-	std::chrono::nanoseconds m_ThemeScanStartTime{0};
-	class CThemeListLoadJob;
-	class CThemeIconLoadJob;
-
 public:
 	enum
 	{
@@ -117,7 +100,7 @@ private:
 
 	void ResetPositions();
 
-	void EnsureThemeEntries();
+	bool EnsureThemeEntries();
 	void EnsureThemeListJob();
 	void ProcessThemeListJob();
 	void QueueNextThemeIconLoad();
@@ -125,14 +108,15 @@ private:
 	void ProcessThemeIconJobs();
 	void UpdateThemeLoading();
 	void InvalidateCurrentPosition();
-	void PreserveCurrentBackground();
+	bool PreserveCurrentBackground();
 	void ReleasePreviousBackground();
 	void InitializeLoadedMap();
 
 	std::vector<CTheme> m_vThemes;
-	std::shared_ptr<CThemeListLoadJob> m_pThemeListLoadJob;
-	std::vector<std::shared_ptr<CThemeIconLoadJob>> m_vThemeIconLoadJobs;
+	CQmThemeListLoadRequest m_ThemeListRequest;
+	std::vector<std::shared_ptr<CQmThemeIconLoadJob>> m_vThemeIconLoadJobs;
 	bool m_ThemeListLoaded = false;
+	bool m_ThemeRefreshPending = false;
 
 public:
 	CMenuBackground();
@@ -157,7 +141,7 @@ public:
 	void ChangePosition(int PositionNumber);
 
 	void RefreshThemes();
-	std::vector<CTheme> &GetThemes();
+	const std::vector<CTheme> &GetThemes();
 };
 
 std::array<vec2, CMenuBackground::NUM_POS> GenerateMenuBackgroundPositions();

@@ -7,6 +7,7 @@
 #include <game/client/QmUi/SettingsContentLayout.h>
 #include <game/client/components/menus.h>
 #include <game/client/components/qmclient/friend_code.h>
+#include <game/client/components/qmclient/friend_code_publication.h>
 #include <game/client/gameclient.h>
 #include <game/localization.h>
 
@@ -18,6 +19,7 @@ struct SQmFriendCodeUiState
 	CFriendList m_Preview;
 	bool m_HasPreview = false;
 	int m_Replace = 0;
+	qm_friend_code::CImportPublication m_Publication;
 	bool m_ConfirmPending = false;
 	CUi::SConfirmPopupContext m_Confirm;
 	uint64_t m_LastFrame = 0;
@@ -26,28 +28,29 @@ struct SQmFriendCodeUiState
 
 void qm_card_catalog::QmCardRenderHook::RenderFriendCodeControls(CMenus *pMenus, CUIRect &Content, bool ReadOnly)
 {
-	if(!pMenus->m_pFriendCodeUiState)
-		pMenus->m_pFriendCodeUiState = std::make_shared<SQmFriendCodeUiState>();
+	if(!qm_friend_code::TryCreateUiState(pMenus->m_pFriendCodeUiState))
+		return;
 	auto &State = *pMenus->m_pFriendCodeUiState;
 	const auto Metrics = pMenus->CurrentSettingsContentMetrics();
 	const bool Interactive = !ReadOnly && !pMenus->Ui()->RenderOnly() && !pMenus->Ui()->MeasurementOnly() && !pMenus->Ui()->BackgroundRender();
+	const uint64_t Frame = pMenus->Ui()->PopupSourceFrame();
+	const auto Publish = [&] {
+		const bool Saved = State.m_Publication.TryPublish(Frame, Interactive, [pMenus] { pMenus->Client()->ServerBrowserUpdate(); }, [pMenus] { pMenus->FriendlistOnUpdate(); }, [pMenus] { return pMenus->Kernel()->RequestInterface<IConfigManager>()->Save(); });
+		State.m_pStatus = Saved ? Localizable("Friends imported and saved.") : Localizable("Friends imported for this session, but saving settings failed.");
+	};
 	const auto Apply = [&](qm_friend_code::EImportMode Mode) {
-		if(!qm_friend_code::Import(*pMenus->GameClient()->Friends(), State.m_Preview, Mode))
+		if(!State.m_Publication.TryCommit(State.m_HasPreview, State.m_Replace,
+			   [&] { return qm_friend_code::Import(*pMenus->GameClient()->Friends(), State.m_Preview, Mode); }))
 		{
 			State.m_pStatus = Localizable("Cannot import: invalid data or too many friends or categories.");
 			return;
 		}
-		pMenus->Client()->ServerBrowserUpdate();
-		pMenus->FriendlistOnUpdate();
-		State.m_HasPreview = false;
-		State.m_Replace = 0;
-		State.m_pStatus = pMenus->Kernel()->RequestInterface<IConfigManager>()->Save() ?
-					  Localizable("Friends imported and saved.") :
-					  Localizable("Friends imported for this session, but saving settings failed.");
+		Publish();
 	};
 	if(Interactive)
 	{
-		const uint64_t Frame = pMenus->Ui()->PopupSourceFrame();
+		if(State.m_Publication.Pending())
+			Publish();
 		if(State.m_ConfirmPending)
 		{
 			// 离页后不补执行旧确认；同帧的测量与重绘不会消耗结果。
@@ -78,12 +81,13 @@ void qm_card_catalog::QmCardRenderHook::RenderFriendCodeControls(CMenus *pMenus,
 			Clicked = pMenus->DoSettingsButton_Menu(CMenus::SETTINGS_QMCLIENT, CMenus::QMCLIENT_SETTINGS_TAB_FUNCTION, CMenus::QMCLIENT_SETTINGS_TAB_FUNCTION, &State.m_aButtons[Index], pId, pLabel, 0, &Row, Metrics);
 		}
 		Flow.Space(Metrics.m_LineSpacing);
-		return Clicked && Interactive && !State.m_ConfirmPending;
+		return Clicked && Interactive && !State.m_ConfirmPending && (Index != 2 || !State.m_Publication.Pending());
 	};
 	if(Button(0, "friend-code-copy", Localize("Copy friend code")))
 	{
 		std::string Code;
-		if(qm_friend_code::Encode(qm_friend_code::Capture(*pMenus->GameClient()->Friends()), Code))
+		CFriendList Captured;
+		if(qm_friend_code::TryCapture(*pMenus->GameClient()->Friends(), Captured) && qm_friend_code::Encode(Captured, Code))
 		{
 			pMenus->Input()->SetClipboardText(Code.c_str());
 			State.m_pStatus = Localizable("Friend code copied, including categories, notes and pins.");

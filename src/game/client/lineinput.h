@@ -258,6 +258,7 @@ public:
 	void SetCalculateOffsetCallback(const FCalculateOffsetCallback &pfnCalculateOffsetCallback) { m_pfnCalculateOffsetCallback = pfnCalculateOffsetCallback; }
 
 	bool ProcessInput(const IInput::CEvent &Event);
+	bool HasPendingChanges() const { return m_WasChanged; }
 	bool WasChanged()
 	{
 		const bool Changed = m_WasChanged;

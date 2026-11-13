@@ -12,6 +12,10 @@
 #include <engine/storage.h>
 
 #include <algorithm>
+#include <cstdlib>
+#include <new>
+#include <stdexcept>
+#include <type_traits>
 #include <utility>
 
 namespace
@@ -33,6 +37,7 @@ public:
 	QmMapCover::SArt m_Art;
 	CImageInfo m_Image;
 	bool m_Success = false;
+	bool m_Retry = false;
 
 	CComposeJob(std::vector<unsigned char> Data, int Width, int Height, const QmMapCover::SArt &Art) :
 		m_Data(std::move(Data)), m_Width(Width), m_Height(Height), m_Art(Art)
@@ -49,7 +54,20 @@ public:
 	{
 		if(IsAbortable() && State() == STATE_ABORTED)
 			return;
-		m_Success = QmMapCover::DecodeAndCompose(m_Data.data(), m_Data.size(), "map_cover", m_Width, m_Height, m_Art, m_Image);
+		try
+		{
+			const auto Result = QmMapCover::DecodeAndComposeChecked(m_Data.data(), m_Data.size(), "map_cover", m_Width, m_Height, m_Art, m_Image);
+			m_Success = Result == QmMapCover::EPrepareResult::SUCCESS;
+			m_Retry = Result == QmMapCover::EPrepareResult::RESOURCE_ERROR;
+		}
+		catch(const std::bad_alloc &)
+		{
+			m_Retry = true;
+		}
+		catch(const std::length_error &)
+		{
+			m_Retry = true;
+		}
 	}
 };
 
@@ -103,6 +121,8 @@ void CQmMapCovers::Update(IHttp *pHttp, IEngine *pEngine, IGraphics *pGraphics, 
 {
 	if(pHttp == nullptr || pEngine == nullptr || pGraphics == nullptr || pStorage == nullptr)
 		return;
+	if(m_ShutdownPending && pGraphics != m_pGraphics)
+		return;
 	m_pHttp = pHttp;
 	m_pEngine = pEngine;
 	m_pGraphics = pGraphics;
@@ -113,9 +133,26 @@ void CQmMapCovers::Update(IHttp *pHttp, IEngine *pEngine, IGraphics *pGraphics, 
 	if(!Loading())
 		return;
 
-	PollJobs();
-	PollDownloads();
-	StartQueued();
+	try
+	{
+		if(m_ShutdownPending)
+		{
+			DrainTextures();
+			return;
+		}
+		// 上帧已登记的纹理可能还在等待卸载旧项，先收尾再接纳新上传。
+		EvictTextures();
+		PollJobs();
+		PollDownloads();
+		StartQueued();
+	}
+	catch(const std::bad_alloc &)
+	{
+		// 各阶段在移交前保留来源，下一帧从现有 owner 继续。
+	}
+	catch(const std::length_error &)
+	{
+	}
 }
 
 bool CQmMapCovers::Get(const char *pUrl, ERole Role, SImage *pOut)
@@ -123,34 +160,58 @@ bool CQmMapCovers::Get(const char *pUrl, ERole Role, SImage *pOut)
 	if(pOut == nullptr)
 		return false;
 	*pOut = {};
+	if(m_ShutdownPending)
+		return false;
 	if(!QmMapCover::ValidThumbnailUrl(pUrl))
 		return false;
 
-	const SKey Key{pUrl, Role};
-	if(SEntry *pEntry = FindEntry(Key))
+	try
 	{
-		pEntry->m_LastUsedFrame = m_Frame;
-		pOut->m_Texture = pEntry->m_Texture;
-		return pOut->m_Texture.IsValid();
+		SKey Key{pUrl, Role};
+		if(SEntry *pEntry = FindEntry(Key))
+		{
+			pEntry->m_LastUsedFrame = m_Frame;
+			pOut->m_Texture = pEntry->m_Texture;
+			return pOut->m_Texture.IsValid();
+		}
+
+		const auto Failed = m_vFailedUntil.find(Key.m_Url);
+		if(Failed != m_vFailedUntil.end() && m_Now < Failed->second)
+			return false;
+		std::string PendingKey = MakeKeyString(Key);
+		if(m_PendingKeys.find(PendingKey) != m_PendingKeys.end() || FindJob(Key) != nullptr || IsDownloading(Key.m_Url))
+			return false;
+
+		char aCachePath[IO_MAX_PATH_LENGTH];
+		if(!QmMapCover::ThumbnailCacheFileName(pUrl, aCachePath, sizeof(aCachePath)))
+			return false;
+		if((int)m_vQueue.size() >= MAX_QUEUED)
+			return false;
+
+		STask Task{std::move(Key), aCachePath, PendingKey};
+		const auto [Pending, Inserted] = m_PendingKeys.insert(std::move(PendingKey));
+		if(!Inserted)
+			return false;
+		try
+		{
+			m_vQueue.push_back(std::move(Task));
+		}
+		catch(...)
+		{
+			// 只撤回本次准入；旧队列与已就绪纹理仍由原所有者持有。
+			m_PendingKeys.erase(Pending);
+			throw;
+		}
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	catch(const std::length_error &)
+	{
+		return false;
 	}
 
-	const auto Failed = m_vFailedUntil.find(Key.m_Url);
-	if(Failed != m_vFailedUntil.end() && m_Now < Failed->second)
-		return false;
-	if(IsQueued(Key) || FindJob(Key) != nullptr || IsDownloading(Key.m_Url))
-		return false;
-
-	char aCachePath[IO_MAX_PATH_LENGTH];
-	if(!QmMapCover::ThumbnailCacheFileName(pUrl, aCachePath, sizeof(aCachePath)))
-		return false;
-	if((int)m_vQueue.size() >= MAX_QUEUED)
-		return false;
-
-	STask Task;
-	Task.m_Key = Key;
-	Task.m_CachePath = aCachePath;
-	m_vQueue.push_back(std::move(Task));
-	m_PendingKeys.insert(MakeKeyString(Key));
 	return false;
 }
 
@@ -175,20 +236,46 @@ void CQmMapCovers::CancelPending()
 
 void CQmMapCovers::Shutdown(IGraphics *pGraphics)
 {
+	// 未卸载完的句柄仍属于旧设备，不能借重初始化后的接口收尾。
+	if(m_ShutdownPending && pGraphics != m_pGraphics)
+		return;
 	CancelPending();
-	if(pGraphics != nullptr)
-	{
-		for(auto &Entry : m_vEntries)
-			pGraphics->UnloadTexture(&Entry.m_Texture);
-	}
-	m_vEntries.clear();
 	m_vFailedUntil.clear();
+	m_pGraphics = pGraphics;
+	m_ShutdownPending = pGraphics != nullptr && !m_vEntries.empty();
+	if(pGraphics == nullptr)
+		m_vEntries.clear();
+	else
+	{
+		try
+		{
+			DrainTextures();
+		}
+		catch(const std::bad_alloc &)
+		{
+			return;
+		}
+		catch(const std::length_error &)
+		{
+			return;
+		}
+	}
 	m_pGraphics = nullptr;
+}
+
+void CQmMapCovers::DrainTextures()
+{
+	while(!m_vEntries.empty())
+	{
+		m_pGraphics->UnloadTexture(&m_vEntries.front().m_Texture);
+		m_vEntries.erase(m_vEntries.begin());
+	}
+	m_ShutdownPending = false;
 }
 
 bool CQmMapCovers::Loading() const
 {
-	return !m_vQueue.empty() || !m_vJobs.empty() || !m_vDownloads.empty();
+	return m_ShutdownPending || !m_vQueue.empty() || !m_vJobs.empty() || !m_vDownloads.empty() || (int)m_vEntries.size() > MAX_TEXTURES;
 }
 
 void CQmMapCovers::EnsureCacheFolder()
@@ -205,21 +292,33 @@ void CQmMapCovers::EnsureCacheFolder()
 	m_CacheFolderReady = m_pStorage->FolderExists(QmMapCover::CACHE_FOLDER, IStorage::TYPE_SAVE);
 }
 
-void CQmMapCovers::MarkFailed(const SKey &Key, const char *pReason)
+void CQmMapCovers::MarkFailed(const STask &Task, const char *pReason)
 {
-	log_debug("map_covers", "failed to prepare cover (%s): %s", pReason != nullptr ? pReason : "unknown", Key.m_Url.c_str());
-	m_vFailedUntil[Key.m_Url] = m_Now + FAILURE_RETRY_SECONDS;
-	m_PendingKeys.erase(MakeKeyString(Key));
+	// 唯一可能分配的冷却登记先完成；失败时队列、结果和 pending 均保持原样。
+	m_vFailedUntil.insert_or_assign(Task.m_Key.m_Url, m_Now + FAILURE_RETRY_SECONDS);
+	log_debug("map_covers", "failed to prepare cover (%s): %s", pReason != nullptr ? pReason : "unknown", Task.m_Key.m_Url.c_str());
+	m_PendingKeys.erase(Task.m_PendingKey);
 	// 同一地图的其它用途也一并冷却，避免一个坏 URL 被每个可见行反复排队。
 	for(auto It = m_vQueue.begin(); It != m_vQueue.end();)
 	{
-		if(It->m_Key.m_Url != Key.m_Url)
+		if(It->m_Key.m_Url != Task.m_Key.m_Url)
 		{
 			++It;
 			continue;
 		}
-		m_PendingKeys.erase(MakeKeyString(It->m_Key));
+		m_PendingKeys.erase(It->m_PendingKey);
 		It = m_vQueue.erase(It);
+	}
+}
+
+void CQmMapCovers::EraseQueued(const SKey &Key)
+{
+	for(auto It = m_vQueue.begin(); It != m_vQueue.end();)
+	{
+		if(It->m_Key == Key)
+			It = m_vQueue.erase(It);
+		else
+			++It;
 	}
 }
 
@@ -230,6 +329,28 @@ void CQmMapCovers::PollJobs()
 	{
 		SJob &Job = m_vJobs[Index];
 		const IJob::EJobState State = Job.m_pJob != nullptr ? Job.m_pJob->State() : IJob::STATE_ABORTED;
+		if(Job.m_pJob != nullptr && !Job.m_pJob->Finished())
+		{
+			++Index;
+			continue;
+		}
+		if(State == IJob::STATE_DONE && Job.m_pJob->m_Retry)
+		{
+			// 拒收或资源不足后的旧 job 不能再次入池；编码数据仍由旧 owner 保留。
+			auto pRetry = std::make_shared<CComposeJob>(Job.m_pJob->m_Data, Job.m_pJob->m_Width, Job.m_pJob->m_Height, Job.m_pJob->m_Art);
+			try
+			{
+				if(m_pEngine->TryAddJob(pRetry))
+					Job.m_pJob = std::move(pRetry);
+			}
+			catch(...)
+			{
+				pRetry->Abort();
+				throw;
+			}
+			++Index;
+			continue;
+		}
 		if(State == IJob::STATE_DONE && Job.m_pJob->m_Success)
 		{
 			if(Uploads >= MAX_UPLOADS_PER_FRAME)
@@ -237,18 +358,28 @@ void CQmMapCovers::PollJobs()
 				++Index;
 				continue;
 			}
-			AddTexture(Job);
+			const bool Uploaded = AddTexture(Job);
 			++Uploads;
-			m_PendingKeys.erase(MakeKeyString(Job.m_Key));
+			if(!Uploaded)
+			{
+				++Index;
+				continue;
+			}
+			m_PendingKeys.erase(Job.m_Task.m_PendingKey);
 			m_vJobs.erase(m_vJobs.begin() + Index);
+			EvictTextures();
 			continue;
 		}
-		if(State == IJob::STATE_DONE || State == IJob::STATE_ABORTED)
+		if(State == IJob::STATE_DONE || State == IJob::STATE_ABORTED || State == IJob::STATE_FAILED)
 		{
 			// 解码/合成失败：缓存文件可能损坏，删除后冷却重试。
-			if(State == IJob::STATE_DONE && m_pStorage != nullptr && !Job.m_CachePath.empty())
-				m_pStorage->RemoveFile(Job.m_CachePath.c_str(), IStorage::TYPE_SAVE);
-			MarkFailed(Job.m_Key, "compose");
+			if(!Job.m_FailureRecorded)
+			{
+				MarkFailed(Job.m_Task, "compose");
+				Job.m_FailureRecorded = true;
+			}
+			if(State == IJob::STATE_DONE && m_pStorage != nullptr && !Job.m_Task.m_CachePath.empty())
+				m_pStorage->RemoveFile(Job.m_Task.m_CachePath.c_str(), IStorage::TYPE_SAVE);
 			m_vJobs.erase(m_vJobs.begin() + Index);
 			continue;
 		}
@@ -267,26 +398,47 @@ void CQmMapCovers::PollDownloads()
 			continue;
 		}
 
-		bool Success = false;
-		std::vector<unsigned char> Data;
+		unsigned char *pData = nullptr;
+		size_t Length = 0;
 		if(Download.m_pRequest->State() == EHttpState::DONE)
 		{
-			unsigned char *pData = nullptr;
-			size_t Length = 0;
 			Download.m_pRequest->Result(&pData, &Length);
-			if(PngHeaderMatches(pData, Length) && Length <= static_cast<size_t>(MAX_RESPONSE_BYTES))
+		}
+		const bool Success = PngHeaderMatches(pData, Length) && Length <= static_cast<size_t>(MAX_RESPONSE_BYTES);
+		if(Success)
+		{
+			if((int)m_vJobs.size() >= MAX_JOBS)
 			{
-				Data.assign(pData, pData + Length);
-				Success = true;
+				++Index;
+				continue;
+			}
+			// Result 是借用。先备齐所有合成输入及登记容量，准备失败时不确认也不丢结果。
+			SJob Prepared = PrepareComposeJob(Download.m_Task, pData, Length);
+			if(!Download.m_Validated)
+			{
+				Download.m_pRequest->OnValidation(true);
+				Download.m_Validated = true;
+			}
+			if(Download.m_pRequest->State() == EHttpState::DONE)
+			{
+				if(!SubmitComposeJob(Prepared))
+				{
+					++Index;
+					continue;
+				}
+				EraseQueued(Download.m_Task.m_Key);
+				m_DownloadingUrls.erase(Download.m_Task.m_Key.m_Url);
+				m_vDownloads.erase(m_vDownloads.begin() + Index);
+				continue;
 			}
 		}
-		// ValidateBeforeOverwrite 模式下必须在这里决定临时文件去留：成功才落到缓存路径。
-		Download.m_pRequest->OnValidation(Success);
-		m_DownloadingUrls.erase(Download.m_Key.m_Url);
-		if(Success)
-			StartComposeJob(STask{Download.m_Key, Download.m_CachePath}, Data.data(), Data.size());
-		else
-			MarkFailed(Download.m_Key, "download");
+		MarkFailed(Download.m_Task, "download");
+		if(!Download.m_Validated)
+		{
+			Download.m_pRequest->OnValidation(false);
+			Download.m_Validated = true;
+		}
+		m_DownloadingUrls.erase(Download.m_Task.m_Key.m_Url);
 		m_vDownloads.erase(m_vDownloads.begin() + Index);
 	}
 }
@@ -300,7 +452,7 @@ void CQmMapCovers::StartQueued()
 	{
 		if((int)m_vJobs.size() >= MAX_JOBS)
 			return;
-		const STask Task = *It;
+		const STask &Task = *It;
 		if(IsDownloading(Task.m_Key.m_Url) || FindJob(Task.m_Key) != nullptr)
 		{
 			++It;
@@ -311,21 +463,22 @@ void CQmMapCovers::StartQueued()
 			return;
 		void *pFileData = nullptr;
 		unsigned FileSize = 0;
-		if(m_pStorage != nullptr && m_pStorage->ReadFile(Task.m_CachePath.c_str(), IStorage::TYPE_SAVE, &pFileData, &FileSize))
+		const bool Read = m_pStorage != nullptr && m_pStorage->ReadFile(Task.m_CachePath.c_str(), IStorage::TYPE_SAVE, &pFileData, &FileSize);
+		const std::unique_ptr<void, decltype(&std::free)> FileData(pFileData, &std::free);
+		if(Read)
 		{
 			++Reads;
 			const bool Valid = pFileData != nullptr && FileSize >= 8 && FileSize <= static_cast<size_t>(MAX_RESPONSE_BYTES) &&
 					   PngHeaderMatches(static_cast<const unsigned char *>(pFileData), FileSize);
 			if(Valid)
 			{
-				StartComposeJob(Task, static_cast<const unsigned char *>(pFileData), FileSize);
-				free(pFileData);
+				if(!StartComposeJob(Task, static_cast<const unsigned char *>(pFileData), FileSize))
+					return;
 				It = m_vQueue.erase(It);
 			}
 			else
 			{
 				// 损坏的缓存删掉重新下载；下载槽位不足时保留任务等下一帧。
-				free(pFileData);
 				if(m_pStorage != nullptr)
 					m_pStorage->RemoveFile(Task.m_CachePath.c_str(), IStorage::TYPE_SAVE);
 				if(!StartDownload(Task))
@@ -345,6 +498,7 @@ bool CQmMapCovers::StartDownload(const STask &Task)
 {
 	if(m_pHttp == nullptr || (int)m_vDownloads.size() >= MAX_DOWNLOADS)
 		return false;
+	SDownload Download{Task, {}};
 	std::shared_ptr<IHttpRequest> pRequest(m_CreateRequest(Task.m_Key.m_Url.c_str()));
 	if(!pRequest)
 		return false;
@@ -354,48 +508,84 @@ bool CQmMapCovers::StartDownload(const STask &Task)
 	// 先落在临时文件：只有确认是合法 PNG 才由 OnValidation(true) 移到缓存路径。
 	pRequest->ValidateBeforeOverwrite(true);
 	pRequest->LogProgress(HTTPLOG::FAILURE);
-	m_pHttp->Run(pRequest);
-	m_DownloadingUrls.insert(Task.m_Key.m_Url);
-	m_vDownloads.push_back(SDownload{Task.m_Key, Task.m_CachePath, pRequest});
+	Download.m_pRequest = pRequest;
+	m_vDownloads.reserve(m_vDownloads.size() + 1);
+	if(!m_DownloadingUrls.insert(Task.m_Key.m_Url).second)
+		return false;
+	static_assert(std::is_nothrow_move_constructible_v<SDownload>);
+	m_vDownloads.push_back(std::move(Download));
+	// 从这里开始已有持久 owner。Run 即使异常退出也不能遗失可能已提交的请求。
+	try
+	{
+		m_pHttp->Run(std::move(pRequest));
+	}
+	catch(...)
+	{
+		m_vDownloads.back().m_pRequest->Abort();
+		throw;
+	}
 	return true;
 }
 
-void CQmMapCovers::StartComposeJob(const STask &Task, const unsigned char *pPngData, size_t PngSize)
+CQmMapCovers::SJob CQmMapCovers::PrepareComposeJob(const STask &Task, const unsigned char *pPngData, size_t PngSize)
 {
-	if(m_pEngine == nullptr || pPngData == nullptr || PngSize == 0)
-	{
-		MarkFailed(Task.m_Key, "empty response");
-		return;
-	}
 	int Width = 0;
 	int Height = 0;
 	ComposeSize(Task.m_Key.m_Role, &Width, &Height);
 	std::vector<unsigned char> Data(pPngData, pPngData + PngSize);
 	auto pJob = std::make_shared<CComposeJob>(std::move(Data), Width, Height, StyleForUrl(Task.m_Key.m_Url.c_str(), Task.m_Key.m_Role));
-	m_vJobs.push_back(SJob{Task.m_Key, Task.m_CachePath, pJob});
-	m_PendingKeys.insert(MakeKeyString(Task.m_Key));
-	m_pEngine->AddJob(pJob);
+	SJob Prepared{Task, std::move(pJob)};
+	m_vJobs.reserve(m_vJobs.size() + 1);
+	return Prepared;
 }
 
-void CQmMapCovers::AddTexture(SJob &Job)
+bool CQmMapCovers::SubmitComposeJob(SJob &Job)
 {
-	if(m_pGraphics == nullptr || Job.m_pJob == nullptr || Job.m_pJob->m_Image.m_pData == nullptr)
+	try
 	{
-		MarkFailed(Job.m_Key, "empty image");
-		return;
+		if(!m_pEngine->TryAddJob(Job.m_pJob))
+			return false;
 	}
-	const IGraphics::CTextureHandle Texture = m_pGraphics->LoadTextureRawMove(Job.m_pJob->m_Image, 0, "qm_map_cover");
+	catch(...)
+	{
+		Job.m_pJob->Abort();
+		throw;
+	}
+	static_assert(std::is_nothrow_move_constructible_v<SJob>);
+	m_vJobs.push_back(std::move(Job));
+	return true;
+}
+
+bool CQmMapCovers::StartComposeJob(const STask &Task, const unsigned char *pPngData, size_t PngSize)
+{
+	SJob Prepared = PrepareComposeJob(Task, pPngData, PngSize);
+	return SubmitComposeJob(Prepared);
+}
+
+bool CQmMapCovers::AddTexture(SJob &Job)
+{
+	if(Job.m_pJob->m_Image.m_pData == nullptr)
+	{
+		Job.m_pJob->m_Retry = true;
+		return false;
+	}
+	// 元数据与容量必须在上传接受前备齐；接受后只移动登记句柄。
+	SEntry Entry{Job.m_Task.m_Key, {}, m_Frame};
+	m_vEntries.reserve(m_vEntries.size() + 1);
+	SGraphicsUploadRelease Release{};
+	IGraphics::CTextureHandle Texture;
+	if(!m_pGraphics->TryLoadTextureRawMoveOwned(Job.m_pJob->m_Image, 0, "qm_map_cover", Release, Texture))
+		return false;
 	if(!Texture.IsValid())
 	{
-		MarkFailed(Job.m_Key, "upload");
-		return;
+		// 已消费但没有可用句柄：编码输入仍保留，可重新合成而不把缓存标坏。
+		Job.m_pJob->m_Retry = true;
+		return false;
 	}
-	SEntry Entry;
-	Entry.m_Key = Job.m_Key;
 	Entry.m_Texture = Texture;
-	Entry.m_LastUsedFrame = m_Frame;
+	static_assert(std::is_nothrow_move_constructible_v<SEntry>);
 	m_vEntries.push_back(std::move(Entry));
-	EvictTextures();
+	return true;
 }
 
 void CQmMapCovers::EvictTextures()
@@ -421,13 +611,8 @@ CQmMapCovers::SEntry *CQmMapCovers::FindEntry(const SKey &Key)
 
 CQmMapCovers::SJob *CQmMapCovers::FindJob(const SKey &Key)
 {
-	auto It = std::find_if(m_vJobs.begin(), m_vJobs.end(), [&](const SJob &Job) { return Job.m_Key == Key; });
+	auto It = std::find_if(m_vJobs.begin(), m_vJobs.end(), [&](const SJob &Job) { return Job.m_Task.m_Key == Key; });
 	return It == m_vJobs.end() ? nullptr : &(*It);
-}
-
-bool CQmMapCovers::IsQueued(const SKey &Key) const
-{
-	return m_PendingKeys.find(MakeKeyString(Key)) != m_PendingKeys.end();
 }
 
 bool CQmMapCovers::IsDownloading(const std::string &Url) const

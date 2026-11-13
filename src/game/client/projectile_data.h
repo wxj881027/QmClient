@@ -26,6 +26,11 @@ public:
 	int m_SwitchNumber;
 	// TuneZone is introduced locally
 	int m_TuneZone;
+
+	// 起点须可安全取整，速度分量须有限；不限制正常速度或地图外位置。
+	bool HasValidStart() const;
+	// 两个轨迹点均准备并校验成功后才写入输出。
+	bool TryCalcPositions(float Curvature, float Speed, float FromTime, float ToTime, vec2 &From, vec2 &To) const;
 };
 
 CProjectileData ExtractProjectileInfo(int NetObjType, const void *pData, class CGameWorld *pGameWorld, const CNetObj_EntityEx *pEntEx);

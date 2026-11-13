@@ -108,7 +108,7 @@ void CCharacter::HandleNinja()
 	if(m_Core.m_ActiveWeapon != WEAPON_NINJA)
 		return;
 
-	if((GameWorld()->GameTick() - m_Core.m_Ninja.m_ActivationTick) > (g_pData->m_Weapons.m_Ninja.m_Duration * GameWorld()->GameTickSpeed() / 1000))
+	if((static_cast<int64_t>(GameWorld()->GameTick()) - m_Core.m_Ninja.m_ActivationTick) > (g_pData->m_Weapons.m_Ninja.m_Duration * GameWorld()->GameTickSpeed() / 1000))
 	{
 		// time's up, return
 		RemoveNinja();
@@ -971,33 +971,11 @@ void CCharacter::HandleTiles(int Index)
 	const int SwitchType = Collision()->GetSwitchType(MapIndex);
 	const int SwitchNumber = Collision()->GetSwitchNumber(MapIndex);
 	const int SwitchDelay = Collision()->GetSwitchDelay(MapIndex);
-	if(SwitchType == TILE_SWITCHOPEN && Team() != TeamsCore()->TeamSuper() && SwitchNumber > 0)
+	if((SwitchType == TILE_SWITCHOPEN || SwitchType == TILE_SWITCHCLOSE || SwitchType == TILE_SWITCHTIMEDOPEN || SwitchType == TILE_SWITCHTIMEDCLOSE) &&
+		Team() != TeamsCore()->TeamSuper() && SwitchNumber > 0)
 	{
-		Switchers()[SwitchNumber].m_aStatus[Team()] = true;
-		Switchers()[SwitchNumber].m_aEndTick[Team()] = 0;
-		Switchers()[SwitchNumber].m_aType[Team()] = TILE_SWITCHOPEN;
-		Switchers()[SwitchNumber].m_aLastUpdateTick[Team()] = GameWorld()->GameTick();
-	}
-	else if(SwitchType == TILE_SWITCHTIMEDOPEN && Team() != TeamsCore()->TeamSuper() && SwitchNumber > 0)
-	{
-		Switchers()[SwitchNumber].m_aStatus[Team()] = true;
-		Switchers()[SwitchNumber].m_aEndTick[Team()] = GameWorld()->GameTick() + 1 + SwitchDelay * GameWorld()->GameTickSpeed();
-		Switchers()[SwitchNumber].m_aType[Team()] = TILE_SWITCHTIMEDOPEN;
-		Switchers()[SwitchNumber].m_aLastUpdateTick[Team()] = GameWorld()->GameTick();
-	}
-	else if(SwitchType == TILE_SWITCHTIMEDCLOSE && Team() != TeamsCore()->TeamSuper() && SwitchNumber > 0)
-	{
-		Switchers()[SwitchNumber].m_aStatus[Team()] = false;
-		Switchers()[SwitchNumber].m_aEndTick[Team()] = GameWorld()->GameTick() + 1 + SwitchDelay * GameWorld()->GameTickSpeed();
-		Switchers()[SwitchNumber].m_aType[Team()] = TILE_SWITCHTIMEDCLOSE;
-		Switchers()[SwitchNumber].m_aLastUpdateTick[Team()] = GameWorld()->GameTick();
-	}
-	else if(SwitchType == TILE_SWITCHCLOSE && Team() != TeamsCore()->TeamSuper() && SwitchNumber > 0)
-	{
-		Switchers()[SwitchNumber].m_aStatus[Team()] = false;
-		Switchers()[SwitchNumber].m_aEndTick[Team()] = 0;
-		Switchers()[SwitchNumber].m_aType[Team()] = TILE_SWITCHCLOSE;
-		Switchers()[SwitchNumber].m_aLastUpdateTick[Team()] = GameWorld()->GameTick();
+		// 无效更新保留旧开关，后续其它 tile 处理继续。
+		(void)GameWorld()->TrySetSwitchState(SwitchNumber, Team(), SwitchType, SwitchDelay);
 	}
 	else if(SwitchType == TILE_FREEZE && Team() != TeamsCore()->TeamSuper() && !m_Core.m_Invincible)
 	{
@@ -1227,7 +1205,7 @@ void CCharacter::DDRaceTick()
 	}
 	else
 	{
-		m_FreezeAccumulation = std::min(m_FreezeAccumulation, m_FreezeTime);
+		m_FreezeAccumulation = static_cast<int>(std::min<int64_t>(m_FreezeAccumulation, m_FreezeTime));
 	}
 	m_Core.m_IsInFreeze |= (Collision()->GetCollisionAt(m_Pos.x + GetProximityRadius() / 3.f, m_Pos.y - GetProximityRadius() / 3.f) == TILE_DEATH ||
 				Collision()->GetCollisionAt(m_Pos.x + GetProximityRadius() / 3.f, m_Pos.y + GetProximityRadius() / 3.f) == TILE_DEATH ||
@@ -1300,16 +1278,18 @@ bool CCharacter::Freeze(int Seconds)
 {
 	if(!GameWorld()->m_WorldConfig.m_PredictFreeze)
 		return false;
-	if(Seconds <= 0 || m_Core.m_Super || m_Core.m_Invincible || m_FreezeTime > Seconds * GameWorld()->GameTickSpeed())
+	const int64_t FreezeTicks = static_cast<int64_t>(Seconds) * GameWorld()->GameTickSpeed();
+	if(Seconds <= 0 || m_Core.m_Super || m_Core.m_Invincible || m_FreezeTime > FreezeTicks)
 		return false;
-	if(m_Core.m_FreezeStart < GameWorld()->GameTick() - GameWorld()->GameTickSpeed())
-	{
-		m_FreezeTime = Seconds * GameWorld()->GameTickSpeed();
-		m_Core.m_FreezeStart = GameWorld()->GameTick();
-		m_Core.m_FreezeEnd = m_Core.m_DeepFrozen ? -1 : (m_FreezeTime == 0 ? 0 : GameWorld()->GameTick() + m_FreezeTime);
-		return true;
-	}
-	return false;
+	if(m_Core.m_FreezeStart >= static_cast<int64_t>(GameWorld()->GameTick()) - GameWorld()->GameTickSpeed())
+		return false;
+	// 核心结束 tick 保持原 int 字段，无法表示时不发布半份冻结状态。
+	if(!m_Core.m_DeepFrozen && !QmTickShift::CanShift(GameWorld()->GameTick(), FreezeTicks))
+		return false;
+	m_FreezeTime = FreezeTicks;
+	m_Core.m_FreezeStart = GameWorld()->GameTick();
+	m_Core.m_FreezeEnd = m_Core.m_DeepFrozen ? -1 : static_cast<int>(static_cast<int64_t>(GameWorld()->GameTick()) + FreezeTicks);
+	return true;
 }
 
 bool CCharacter::Freeze()
@@ -1402,22 +1382,9 @@ void CCharacter::ApplyMoveRestrictions()
 	m_Core.m_Vel = ClampVel(m_MoveRestrictions, m_Core.m_Vel);
 }
 
-void CCharacter::ShiftTickBase(int TickDelta)
+bool CCharacter::ShiftTickBase(int64_t TickDelta, QmTickShift::EMode Mode)
 {
-	if(TickDelta == 0)
-		return;
-
-	m_AttackTick += TickDelta;
-	if(m_LastDamageTick >= 0)
-		m_LastDamageTick += TickDelta;
-	m_LastWeaponSwitchTick += TickDelta;
-	m_LastTuneZoneTick += TickDelta;
-	if(m_Core.m_aWeapons[WEAPON_NINJA].m_Got)
-		m_Core.m_Ninja.m_ActivationTick += TickDelta;
-	if(m_Core.m_FreezeStart > 0)
-		m_Core.m_FreezeStart += TickDelta;
-	if(m_Core.m_FreezeEnd > 0)
-		m_Core.m_FreezeEnd += TickDelta;
+	return QmTickShift::TryShiftFields(TickDelta, Mode, {&m_AttackTick, m_LastDamageTick >= 0 ? &m_LastDamageTick : nullptr, &m_LastWeaponSwitchTick, &m_LastTuneZoneTick, m_Core.m_aWeapons[WEAPON_NINJA].m_Got ? &m_Core.m_Ninja.m_ActivationTick : nullptr, m_Core.m_FreezeStart > 0 ? &m_Core.m_FreezeStart : nullptr, m_Core.m_FreezeEnd > 0 ? &m_Core.m_FreezeEnd : nullptr});
 }
 
 CTeamsCore *CCharacter::TeamsCore()
@@ -1567,7 +1534,7 @@ void CCharacter::Read(CNetObj_Character *pChar, CNetObj_DDNetCharacter *pExtende
 			{
 				if(m_FreezeTime == 0)
 					Freeze();
-				m_FreezeTime = maximum(1, pExtended->m_FreezeEnd - GameWorld()->GameTick());
+				m_FreezeTime = maximum<int64_t>(1, static_cast<int64_t>(pExtended->m_FreezeEnd) - GameWorld()->GameTick());
 			}
 			else if(pExtended->m_FreezeEnd == -1)
 			{
@@ -1729,10 +1696,10 @@ void CCharacter::Read(CNetObj_Character *pChar, CNetObj_DDNetCharacter *pExtende
 	// (this is only needed for autofire weapons to prevent the predicted reload timer from desyncing)
 	if(IsLocal && m_Core.m_ActiveWeapon != -1 && m_Core.m_ActiveWeapon != WEAPON_HAMMER && !m_Core.m_aWeapons[WEAPON_NINJA].m_Got)
 	{
-		if(maximum(m_LastTuneZoneTick, m_LastWeaponSwitchTick) + GameWorld()->GameTickSpeed() < GameWorld()->GameTick())
+		if(static_cast<int64_t>(maximum(m_LastTuneZoneTick, m_LastWeaponSwitchTick)) + GameWorld()->GameTickSpeed() < GameWorld()->GameTick())
 		{
 			const int FireDelayTicks = GetTuning(GetOverriddenTuneZone())->GetWeaponFireDelay(m_Core.m_ActiveWeapon) * GameWorld()->GameTickSpeed();
-			m_ReloadTimer = maximum(0, m_AttackTick + FireDelayTicks - GameWorld()->GameTick());
+			m_ReloadTimer = maximum<int64_t>(0, static_cast<int64_t>(m_AttackTick) + FireDelayTicks - GameWorld()->GameTick());
 		}
 	}
 }

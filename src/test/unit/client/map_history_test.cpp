@@ -1,13 +1,9 @@
 // 请抬头享受阳光｜日子很好 我很我---------致咩子
-#include <engine/storage.h>
-
-#include <game/client/components/qmclient/local_save_display.h>
 #include <game/client/components/qmclient/map_history_ui.h>
 #include <game/client/components/qmclient/map_vote_difficulty.h>
 #include <game/client/components/tclient/map_history.h>
 
 #include <gtest/gtest.h>
-#include <test/test.h>
 
 #include <limits>
 
@@ -246,96 +242,6 @@ TEST(MapHistory, SortedIndicesRebuildAfterRemovalAndClear)
 	History.Clear();
 	History.SortedIndices(EMapHistoryFilter::RECENT, vIndices);
 	EXPECT_TRUE(vIndices.empty());
-}
-
-TEST(LocalSaveDisplay, ParsingPreservesQuotedFieldsHeaderAndRawLine)
-{
-	const char *pText = "Time,Players,Map,Code\n2026-09-20,\"A, B\", Map ,\"say \"\"hi\"\"\"\r\n\n";
-	const auto vEntries = qm_local_saves::ParseEntries(pText);
-	ASSERT_EQ(vEntries.size(), 1u);
-	EXPECT_EQ(vEntries[0].m_Time, "2026-09-20");
-	EXPECT_EQ(vEntries[0].m_Players, "A, B");
-	EXPECT_EQ(vEntries[0].m_Map, "Map");
-	EXPECT_EQ(vEntries[0].m_Code, "say \"hi\"");
-	EXPECT_EQ(vEntries[0].m_RawLine, "2026-09-20,\"A, B\", Map ,\"say \"\"hi\"\"\"");
-	EXPECT_TRUE(qm_local_saves::ParseEntries("").empty());
-	EXPECT_EQ(qm_local_saves::ParseEntries("date,player,map,code").size(), 1u);
-}
-
-TEST(LocalSaveDisplay, PublishesOnlyFinishedJobsAndKeepsSnapshotDuringRefresh)
-{
-	CTestInfo Info;
-	auto pStorage = Info.CreateTestStorage();
-	ASSERT_NE(pStorage, nullptr);
-	char aPath[IO_MAX_PATH_LENGTH];
-	pStorage->GetCompletePath(IStorage::TYPE_SAVE, "saves.csv", aPath, sizeof(aPath));
-	IOHANDLE File = io_open(aPath, IOFLAG_WRITE);
-	ASSERT_NE(File, nullptr);
-	const char *pText = "date,player,map,code\n";
-	io_write(File, pText, str_length(pText));
-	io_close(File);
-
-	CQmLocalSaveDisplayCache Cache;
-	auto pJob = Cache.Refresh(aPath, 100, 20);
-	ASSERT_NE(pJob, nullptr);
-	EXPECT_FALSE(Cache.Ready());
-	EXPECT_EQ(Cache.Refresh(aPath, 101, 20), nullptr);
-	CJobPool Pool;
-	Pool.Init(1);
-	Pool.Add(pJob);
-	Pool.Shutdown();
-	EXPECT_EQ(Cache.Refresh(aPath, 101, 20), nullptr);
-	ASSERT_TRUE(Cache.Ready());
-	ASSERT_TRUE(Cache.FileExists());
-	ASSERT_EQ(Cache.Entries().size(), 1u);
-	EXPECT_EQ(Cache.Entries()[0].m_Code, "code");
-
-	ASSERT_EQ(fs_remove(aPath), 0);
-	pJob = Cache.Refresh(aPath, 121, 20);
-	ASSERT_NE(pJob, nullptr);
-	EXPECT_TRUE(Cache.FileExists());
-	EXPECT_EQ(Cache.Entries().size(), 1u);
-	Pool.Init(1);
-	Pool.Add(pJob);
-	Pool.Shutdown();
-	EXPECT_EQ(Cache.Refresh(aPath, 122, 20), nullptr);
-	EXPECT_TRUE(Cache.Ready());
-	EXPECT_FALSE(Cache.FileExists());
-	EXPECT_TRUE(Cache.Entries().empty());
-	Cache.Reset();
-	EXPECT_FALSE(Cache.Ready());
-}
-
-TEST(LocalSaveDisplay, EmptyFileIsDistinctFromMissingAndJobOutlivesReset)
-{
-	CTestInfo Info;
-	auto pStorage = Info.CreateTestStorage();
-	ASSERT_NE(pStorage, nullptr);
-	char aPath[IO_MAX_PATH_LENGTH];
-	pStorage->GetCompletePath(IStorage::TYPE_SAVE, "empty.csv", aPath, sizeof(aPath));
-	IOHANDLE File = io_open(aPath, IOFLAG_WRITE);
-	ASSERT_NE(File, nullptr);
-	io_close(File);
-	CQmLocalSaveDisplayCache Cache;
-	auto pJob = Cache.Refresh(aPath, 100, 20);
-	CJobPool Pool;
-	Pool.Init(1);
-	Pool.Add(pJob);
-	Pool.Shutdown();
-	EXPECT_EQ(Cache.Refresh(aPath, 101, 20), nullptr);
-	EXPECT_TRUE(Cache.Ready());
-	EXPECT_TRUE(Cache.FileExists());
-	EXPECT_TRUE(Cache.Entries().empty());
-
-	pJob = Cache.Refresh(aPath, 121, 20);
-	ASSERT_NE(pJob, nullptr);
-	Cache.Reset();
-	Pool.Init(1);
-	Pool.Add(pJob);
-	Pool.Shutdown();
-	EXPECT_EQ(pJob->State(), IJob::STATE_DONE);
-	EXPECT_FALSE(Cache.Ready());
-	EXPECT_TRUE(Cache.Entries().empty());
 }
 
 TEST(MapVoteDifficulty, KeepsFirstValidMatchAndCaseInsensitiveExactNames)

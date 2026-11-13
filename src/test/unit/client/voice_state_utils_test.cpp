@@ -122,6 +122,53 @@ TEST(VoiceUtils, VoiceNeedsAudioRefreshStaysIdleWhenEverythingIsReady)
 	EXPECT_FALSE(VoiceNeedsAudioRefresh(State));
 }
 
+TEST(VoiceUtils, InitializingWorkerDoesNotRequestAnotherAudioRefresh)
+{
+	SVoiceAudioRefreshState State;
+	State.m_WorkerRunning = true;
+	EXPECT_FALSE(VoiceNeedsAudioRefresh(State));
+}
+
+TEST(VoiceUtils, RunningWorkerOwnsEncoderFailureRecovery)
+{
+	SVoiceAudioRefreshState State;
+	State.m_WorkerRunning = true;
+	State.m_OutputReady = true;
+	State.m_CaptureReady = true;
+	State.m_EncoderReady = false;
+	EXPECT_FALSE(VoiceNeedsAudioRefresh(State));
+}
+
+TEST(VoiceUtils, RunningWorkerCanPublishTheNewChannelLayout)
+{
+	SVoiceAudioRefreshState State;
+	State.m_WorkerRunning = true;
+	State.m_EncoderReady = true;
+	State.m_OutputReady = true;
+	State.m_CaptureReady = true;
+	State.m_CurrentOutputChannels = 1;
+	State.m_DesiredOutputChannels = 2;
+	EXPECT_FALSE(VoiceNeedsAudioRefresh(State));
+}
+
+TEST(VoiceUtils, UserConfigurationChangesStillRefreshRunningAudio)
+{
+	bool SVoiceAudioRefreshState::*apChanges[] = {
+		&SVoiceAudioRefreshState::m_BackendChanged,
+		&SVoiceAudioRefreshState::m_InputDeviceChanged,
+		&SVoiceAudioRefreshState::m_OutputDeviceChanged,
+		&SVoiceAudioRefreshState::m_StereoChanged,
+	};
+	for(int i = 0; i < 4; ++i)
+	{
+		SCOPED_TRACE(i);
+		SVoiceAudioRefreshState State;
+		State.m_WorkerRunning = true;
+		State.*apChanges[i] = true;
+		EXPECT_TRUE(VoiceNeedsAudioRefresh(State));
+	}
+}
+
 TEST(VoiceUtils, VoiceRuntimeResetFlagsStayIdleWhenContextAndTokenStaySame)
 {
 	EXPECT_EQ(VoiceRuntimeResetFlags(false, true, 0x11u, 0x11u), 0u);

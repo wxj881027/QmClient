@@ -3,6 +3,7 @@
 
 #include <gtest/gtest.h>
 
+#include <cmath>
 #include <limits>
 
 TEST(SettingsRuntimeCache, BudgetStopsEveryMainThreadCost)
@@ -169,6 +170,20 @@ TEST(SettingsRuntimeCache, NumericKeysRejectNonFiniteValues)
 	EXPECT_EQ(SettingsRuntimeCacheRoundedKey(std::numeric_limits<float>::infinity(), 7), 7);
 }
 
+TEST(SettingsRuntimeCache, WindowIdentityChangeRejectsOtherwiseMatchingRuntimeMetadata)
+{
+	SSettingsRuntimeCacheKey Current;
+	Current.m_WindowWidth = 900;
+	Current.m_WindowHeight = 620;
+	Current.m_WindowHash = 42;
+	auto Persisted = Current;
+	EXPECT_TRUE(SettingsRuntimeCacheKeyMatches(Current, Persisted));
+	Persisted.m_WindowHash = 43;
+	EXPECT_FALSE(SettingsRuntimeCacheKeyMatches(Current, Persisted));
+	Persisted.m_WindowHash = Current.m_WindowHash;
+	EXPECT_TRUE(SettingsRuntimeCacheKeyMatches(Current, Persisted));
+}
+
 TEST(SettingsRuntimeCache, NumericKeysClampBeforeIntConversion)
 {
 	EXPECT_EQ(SettingsRuntimeCacheDimensionKey(0.0f), 1);
@@ -177,6 +192,17 @@ TEST(SettingsRuntimeCache, NumericKeysClampBeforeIntConversion)
 	EXPECT_EQ(SettingsRuntimeCacheRoundedKey(12.6f), 13);
 	EXPECT_EQ(SettingsRuntimeCacheDimensionKey(std::numeric_limits<float>::max()), std::numeric_limits<int>::max());
 	EXPECT_EQ(SettingsRuntimeCacheRoundedKey(-std::numeric_limits<float>::max()), std::numeric_limits<int>::min());
+}
+
+TEST(SettingsRuntimeCache, FiniteDimensionsBelowOneClampBeforeIntegerConversion)
+{
+	for(float Value : {-std::numeric_limits<float>::max(),
+		    std::nextafter(static_cast<float>(std::numeric_limits<int>::min()), -std::numeric_limits<float>::infinity()),
+		    static_cast<float>(std::numeric_limits<int>::min()), -1.0f, -0.0f, 0.5f, 1.0f})
+	{
+		SCOPED_TRACE(Value);
+		EXPECT_EQ(SettingsRuntimeCacheDimensionKey(Value), 1);
+	}
 }
 
 TEST(SettingsRuntimeCache, CompactVisibleTextIsRejected)

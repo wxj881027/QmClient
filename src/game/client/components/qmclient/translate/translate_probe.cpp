@@ -5,6 +5,7 @@
 #include <engine/shared/config.h>
 
 #include <algorithm>
+#include <new>
 
 uint64_t TranslateConfigurationRevision()
 {
@@ -59,7 +60,16 @@ bool CTranslateProbe::Start(IHttp &Http, const char *pText, const char *pTarget,
 	Cancel();
 	m_Configuration = TranslateConfigurationRevision();
 	m_Touched = true;
-	m_pBackend = CreateTranslateBackend(Http, pText, pTarget, pSource, pCreateRequest);
+	try
+	{
+		m_pBackend = CreateTranslateBackend(Http, pText, pTarget, pSource, pCreateRequest);
+	}
+	catch(const std::bad_alloc &)
+	{
+		// 创建失败没有待轮询的任务，清理旧结果后允许再次测试。
+		Cancel();
+		return false;
+	}
 	if(!m_pBackend)
 	{
 		m_Response.m_Error = true;
@@ -85,7 +95,16 @@ void CTranslateProbe::AdvanceFrame()
 	m_Touched = false;
 	if(!m_pBackend)
 		return;
-	const std::optional<bool> Done = m_pBackend->Update(m_Response);
+	std::optional<bool> Done;
+	try
+	{
+		Done = m_pBackend->Update(m_Response);
+	}
+	catch(const std::bad_alloc &)
+	{
+		// 与聊天队列一致，保留当前后端供后续可见帧重试；离页仍可取消。
+		return;
+	}
 	if(!Done)
 		return;
 	m_Response.m_Error = !*Done;

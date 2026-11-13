@@ -1,0 +1,356 @@
+#!/usr/bin/env python3
+"""使用已构建的testrunner验证Windows原生异常与崩溃文件，不启动完整客户端。"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+from pathlib import Path
+import subprocess
+import tempfile
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+TIMEOUT_SECONDS = 20
+
+
+def run_probe(binary: Path, directory: Path, mode: str, log: Path | None = None) -> subprocess.CompletedProcess[bytes]:
+	arguments = [str(binary), "--qm-test-crashdump", mode]
+	if log is not None:
+		arguments.append(str(log))
+	process = subprocess.Popen(
+		arguments,
+		cwd=directory,
+		stdout=subprocess.PIPE,
+		stderr=subprocess.PIPE,
+		creationflags=subprocess.CREATE_NO_WINDOW,
+	)
+	timed_out = False
+	try:
+		stdout, stderr = process.communicate(timeout=TIMEOUT_SECONDS)
+	except subprocess.TimeoutExpired:
+		timed_out = True
+		process.kill()
+		stdout, stderr = process.communicate(timeout=5)
+	finally:
+		if process.poll() is None:
+			process.kill()
+			process.wait(timeout=5)
+	(directory / "probe.stdout.log").write_bytes(stdout)
+	(directory / "probe.stderr.log").write_bytes(stderr)
+	(directory / "probe.exit.json").write_text(
+		json.dumps({"mode": mode, "returncode": process.returncode, "timed_out": timed_out}), encoding="utf-8"
+	)
+	if timed_out:
+		raise AssertionError(f"crashdump probe timed out; artifacts: {directory}")
+	return subprocess.CompletedProcess(arguments, process.returncode, stdout, stderr)
+
+
+def paths(directory: Path) -> tuple[Path, Path, Path, Path]:
+	return (
+		directory / "probe.RPT",
+		directory / "probe_fatal_report.txt",
+		directory / "probe_fatal_dump.dmp",
+		directory / "probe_fatal_report.txt.confirmed",
+	)
+
+
+def require_exit(result: subprocess.CompletedProcess[bytes], expected: int) -> None:
+	if result.returncode != expected:
+		raise AssertionError(f"expected exit {expected}, got {result.returncode}: {result.stderr!r}")
+
+
+def check_fatal_report(directory: Path, reason: str, *, exception: str | None = None) -> None:
+	_, report, dump, confirmed = paths(directory)
+	text = report.read_text(encoding="utf-8")
+	if "Report type: fatal-crash" not in text or f"Reason: {reason}" not in text:
+		raise AssertionError(f"wrong fatal report: {report}")
+	if "Fallback minidump written: yes" not in text:
+		raise AssertionError(f"native minidump failed: {report}")
+	if exception is not None and exception not in text:
+		raise AssertionError(f"wrong native exception attribution: {report}")
+	if "Vectored exception fallback" in text or "EXCEPTION_ACCESS_VIOLATION" in text:
+		raise AssertionError(f"previous recovered exception replaced the fatal event: {report}")
+	with dump.open("rb") as file:
+		if file.read(4) != b"MDMP":
+			raise AssertionError(f"invalid native minidump signature: {dump}")
+	if confirmed.read_bytes() != b"confirmed fatal crash\r\n":
+		raise AssertionError(f"missing or partial confirmation: {confirmed}")
+
+
+def check_assert_termination(binary: Path, directory: Path, mode: str, marker: bytes) -> subprocess.CompletedProcess[bytes]:
+	log, report, dump, confirmed = paths(directory)
+	result = run_probe(binary, directory, mode, log)
+	if result.returncode in (0, 2, 4, 5, 6, 7, 8, 77):
+		raise AssertionError(f"assert probe did not reach the fatal exit: {result.returncode}")
+	if result.stderr.count(marker) != 1:
+		raise AssertionError(f"missing or repeated assert diagnostic marker: {result.stderr!r}")
+	text = report.read_text(encoding="utf-8")
+	if "Report type: fatal-crash" not in text or "Fallback minidump written: yes" not in text:
+		raise AssertionError(f"assert did not produce a native fatal artifact: {report}")
+	if "Reason: Fatal signal" in text and "SIGABRT" in text:
+		# MSVC的dbg_break走abort；信号路径不创建报告进程，也不要求confirmed。
+		pass
+	elif "Reason: Unhandled structured exception" in text and "EXCEPTION_ILLEGAL_INSTRUCTION" in text:
+		if confirmed.read_bytes() != b"confirmed fatal crash\r\n":
+			raise AssertionError(f"trap report lacks confirmation: {confirmed}")
+	else:
+		raise AssertionError(f"diagnostic exception replaced the original assertion exit: {report}")
+	with dump.open("rb") as file:
+		if file.read(4) != b"MDMP":
+			raise AssertionError(f"assert minidump is invalid: {dump}")
+	return result
+
+
+def scenario_assert_snapshot_does_not_copy_failing_target(binary: Path, directory: Path) -> None:
+	check_assert_termination(binary, directory, "assert-copy-failure", b"assert-copy-target-invoked")
+
+
+def scenario_assert_handler_exception_keeps_assert_exit(binary: Path, directory: Path) -> None:
+	check_assert_termination(binary, directory, "assert-handler-throws", b"assert-throwing-handler-invoked")
+
+
+def scenario_assert_reentry_does_not_repeat_diagnostics(binary: Path, directory: Path) -> None:
+	result = check_assert_termination(binary, directory, "assert-reenter", b"assert-reentrant-handler-cleared")
+	if b"recursive-diagnostic-must-not-run" in result.stdout + result.stderr:
+		raise AssertionError("recursive assertion reentered diagnostic logging")
+
+
+def scenario_assert_finish_exception_keeps_assert_exit(binary: Path, directory: Path) -> None:
+	check_assert_termination(binary, directory, "assert-finish-throws", b"assert-finish-entered")
+
+
+def scenario_assert_slot_remains_alive_during_static_cleanup(binary: Path, directory: Path) -> None:
+	check_assert_termination(binary, directory, "assert-at-exit", b"assert-exit-handler-invoked")
+
+
+def scenario_recovered_exception_does_not_create_fatal_files(binary: Path, directory: Path) -> None:
+	log, report, dump, confirmed = paths(directory)
+	require_exit(run_probe(binary, directory, "recovered", log), 0)
+	if any(path.exists() for path in (report, dump, confirmed)):
+		raise AssertionError("recovered first-chance exception created fatal artifacts")
+
+
+def scenario_recovered_exception_preserves_existing_report(binary: Path, directory: Path) -> None:
+	log, report, dump, confirmed = paths(directory)
+	for path in (report, dump, confirmed):
+		path.write_bytes(b"previous-run:" + path.name.encode("ascii"))
+	require_exit(run_probe(binary, directory, "recovered", log), 0)
+	for path in (report, dump, confirmed):
+		if path.read_bytes() != b"previous-run:" + path.name.encode("ascii"):
+			raise AssertionError(f"recovered exception overwrote existing artifact: {path}")
+
+
+def scenario_fatal_after_recovery_uses_current_reason(binary: Path, directory: Path) -> None:
+	log, _, _, _ = paths(directory)
+	require_exit(run_probe(binary, directory, "recovered-then-terminate", log), 3)
+	check_fatal_report(directory, "Unhandled C++ exception (std::terminate)")
+
+
+def scenario_unhandled_seh_still_writes_current_exception(binary: Path, directory: Path) -> None:
+	log, _, _, _ = paths(directory)
+	result = run_probe(binary, directory, "unhandled", log)
+	# Windows/CRT或前置filter可决定终止码；必须是异常终止并有真实故障报告。
+	if result.returncode in (0, 2, 4, 5, 6, 7, 77):
+		raise AssertionError(f"native unhandled exception did not terminate as expected: {result.returncode}")
+	check_fatal_report(directory, "Unhandled structured exception", exception="EXCEPTION_ILLEGAL_INSTRUCTION")
+
+
+def scenario_unicode_directory_keeps_all_fatal_artifacts(binary: Path, directory: Path) -> None:
+	unicode_directory = directory / "崩溃-🚀"
+	unicode_directory.mkdir()
+	log, _, _, _ = paths(unicode_directory)
+	require_exit(run_probe(binary, directory, "terminate", log), 3)
+	check_fatal_report(unicode_directory, "Unhandled C++ exception (std::terminate)")
+
+
+def candidate_paths(directory: Path) -> tuple[Path, Path, Path]:
+	_, report, dump, confirmed = paths(directory)
+	return report.with_suffix(".tmp"), dump.with_suffix(".tmp"), confirmed.with_suffix(".tmp")
+
+
+def scenario_complete_files_replace_previous_artifacts(binary: Path, directory: Path) -> None:
+	log, report, dump, confirmed = paths(directory)
+	for path in (report, dump, confirmed):
+		path.write_bytes(b"previous artifact")
+	require_exit(run_probe(binary, directory, "terminate", log), 3)
+	check_fatal_report(directory, "Unhandled C++ exception (std::terminate)")
+	if any(path.exists() for path in candidate_paths(directory)):
+		raise AssertionError("successful publication left a candidate instead of moving it")
+
+
+def scenario_report_candidate_open_failure_preserves_existing_file(binary: Path, directory: Path) -> None:
+	log, report, _, confirmed = paths(directory)
+	report.write_bytes(b"previous report")
+	confirmed.write_bytes(b"previous confirmation")
+	report_candidate, _, _ = candidate_paths(directory)
+	report_candidate.mkdir()
+	require_exit(run_probe(binary, directory, "terminate", log), 3)
+	if report.read_bytes() != b"previous report" or confirmed.read_bytes() != b"previous confirmation":
+		raise AssertionError("failed report candidate changed a previous official artifact")
+
+
+def scenario_report_publish_failure_keeps_complete_candidate(binary: Path, directory: Path) -> None:
+	log, report, _, confirmed = paths(directory)
+	report.mkdir()
+	require_exit(run_probe(binary, directory, "terminate", log), 3)
+	if not report.is_dir() or confirmed.exists():
+		raise AssertionError("failed report publication was treated as a completed report")
+	report_candidate, _, _ = candidate_paths(directory)
+	text = report_candidate.read_text(encoding="utf-8")
+	if "Reason: Unhandled C++ exception (std::terminate)" not in text or "Loaded modules:" not in text:
+		raise AssertionError("report publication failure did not retain the completed candidate")
+
+
+def scenario_dump_publish_failure_is_reported_as_unsaved(binary: Path, directory: Path) -> None:
+	log, report, dump, confirmed = paths(directory)
+	dump.mkdir()
+	require_exit(run_probe(binary, directory, "terminate", log), 3)
+	text = report.read_text(encoding="utf-8")
+	if "Fallback minidump written: no" not in text or "Final minidump error:" not in text:
+		raise AssertionError("failed native dump publication was reported as saved")
+	if "Final minidump error: 0x00000000" in text or not dump.is_dir():
+		raise AssertionError("failed dump publication lost its error or replaced a directory")
+	_, dump_candidate, _ = candidate_paths(directory)
+	with dump_candidate.open("rb") as file:
+		if file.read(4) != b"MDMP":
+			raise AssertionError("completed native dump candidate was lost after publication failed")
+	if confirmed.read_bytes() != b"confirmed fatal crash\r\n":
+		raise AssertionError("valid text report was not confirmed independently of the failed dump")
+
+
+def scenario_confirmation_publish_failure_keeps_candidate(binary: Path, directory: Path) -> None:
+	log, report, dump, confirmed = paths(directory)
+	confirmed.mkdir()
+	require_exit(run_probe(binary, directory, "terminate", log), 3)
+	if not confirmed.is_dir():
+		raise AssertionError("confirmation publication replaced an existing directory")
+	_, _, candidate = candidate_paths(directory)
+	if candidate.read_bytes() != b"confirmed fatal crash\r\n":
+		raise AssertionError("failed confirmation publication did not preserve its complete candidate")
+	if "Report type: fatal-crash" not in report.read_text(encoding="utf-8"):
+		raise AssertionError("confirmation failure damaged the valid official report")
+	with dump.open("rb") as file:
+		if file.read(4) != b"MDMP":
+			raise AssertionError("confirmation failure damaged the valid official native dump")
+
+
+def check_hangdump_result(result: subprocess.CompletedProcess[bytes], stage: str, error: int | None, written: bool, closes: int) -> None:
+	require_exit(result, 0)
+	fields = dict(part.split("=", 1) for part in result.stdout.decode("ascii").strip().split() if "=" in part)
+	if fields.get("stage") != stage or fields.get("written") != str(int(written)) or fields.get("closes") != str(closes):
+		raise AssertionError(f"wrong hang dump completion: {result.stdout!r}")
+	actual_error = int(fields["error"])
+	if (error is None and actual_error == 0) or (error is not None and actual_error != error):
+		raise AssertionError(f"wrong hang dump error: {result.stdout!r}")
+
+
+def require_native_dump(path: Path) -> None:
+	with path.open("rb") as file:
+		if file.read(4) != b"MDMP":
+			raise AssertionError(f"invalid real MiniDump signature: {path}")
+
+
+def scenario_hangdump_publishes_after_complete_native_output(binary: Path, directory: Path) -> None:
+	_, _, dump, _ = paths(directory)
+	dump.write_bytes(b"previous dump")
+	result = run_probe(binary, directory, "hangdump-native", dump)
+	check_hangdump_result(result, "complete", 0, True, 1)
+	require_native_dump(dump)
+	if Path(str(dump) + ".tmp").exists():
+		raise AssertionError("successful hang dump publication retained the candidate")
+
+
+def scenario_hangdump_candidate_open_failure_preserves_old_dump(binary: Path, directory: Path) -> None:
+	_, _, dump, _ = paths(directory)
+	dump.write_bytes(b"previous dump")
+	Path(str(dump) + ".tmp").mkdir()
+	check_hangdump_result(run_probe(binary, directory, "hangdump-native", dump), "open_file", None, False, 0)
+	if dump.read_bytes() != b"previous dump":
+		raise AssertionError("candidate open failure changed the official hang dump")
+
+
+def scenario_hangdump_publish_failure_preserves_target_and_candidate(binary: Path, directory: Path) -> None:
+	_, _, dump, _ = paths(directory)
+	dump.mkdir()
+	check_hangdump_result(run_probe(binary, directory, "hangdump-native", dump), "publish_file", None, False, 1)
+	if not dump.is_dir():
+		raise AssertionError("failed hang dump publication replaced a directory")
+	require_native_dump(Path(str(dump) + ".tmp"))
+
+
+def check_failed_hangdump_completion(binary: Path, directory: Path, mode: str, stage: str, error: int) -> None:
+	_, _, dump, _ = paths(directory)
+	dump.write_bytes(b"previous dump")
+	check_hangdump_result(run_probe(binary, directory, mode, dump), stage, error, False, 1)
+	if dump.read_bytes() != b"previous dump":
+		raise AssertionError("failed hang dump completion overwrote the official file")
+	require_native_dump(Path(str(dump) + ".tmp"))
+
+
+def scenario_hangdump_flush_feedback_failure_preserves_old_dump(binary: Path, directory: Path) -> None:
+	check_failed_hangdump_completion(binary, directory, "hangdump-flush-failure", "flush_file", 112)
+
+
+def scenario_hangdump_close_feedback_failure_preserves_old_dump(binary: Path, directory: Path) -> None:
+	check_failed_hangdump_completion(binary, directory, "hangdump-close-failure", "close_file", 29)
+
+
+def scenario_hangdump_first_error_survives_later_close_failure(binary: Path, directory: Path) -> None:
+	check_failed_hangdump_completion(binary, directory, "hangdump-both-failure", "flush_file", 112)
+
+
+SCENARIOS = {
+	"hangdump_complete": scenario_hangdump_publishes_after_complete_native_output,
+	"hangdump_candidate_failure": scenario_hangdump_candidate_open_failure_preserves_old_dump,
+	"hangdump_publish_failure": scenario_hangdump_publish_failure_preserves_target_and_candidate,
+	"hangdump_flush_failure": scenario_hangdump_flush_feedback_failure_preserves_old_dump,
+	"hangdump_close_failure": scenario_hangdump_close_feedback_failure_preserves_old_dump,
+	"hangdump_first_error": scenario_hangdump_first_error_survives_later_close_failure,
+	"complete_publication": scenario_complete_files_replace_previous_artifacts,
+	"report_candidate_failure": scenario_report_candidate_open_failure_preserves_existing_file,
+	"report_publish_failure": scenario_report_publish_failure_keeps_complete_candidate,
+	"dump_publish_failure": scenario_dump_publish_failure_is_reported_as_unsaved,
+	"confirmation_publish_failure": scenario_confirmation_publish_failure_keeps_candidate,
+	"assert_copy_failure": scenario_assert_snapshot_does_not_copy_failing_target,
+	"assert_handler_exception": scenario_assert_handler_exception_keeps_assert_exit,
+	"assert_reentry": scenario_assert_reentry_does_not_repeat_diagnostics,
+	"assert_finish_exception": scenario_assert_finish_exception_keeps_assert_exit,
+	"assert_static_cleanup": scenario_assert_slot_remains_alive_during_static_cleanup,
+	"recovered_no_artifacts": scenario_recovered_exception_does_not_create_fatal_files,
+	"recovered_preserves_existing": scenario_recovered_exception_preserves_existing_report,
+	"fatal_after_recovery": scenario_fatal_after_recovery_uses_current_reason,
+	"unhandled_seh": scenario_unhandled_seh_still_writes_current_exception,
+	"unicode_directory": scenario_unicode_directory_keeps_all_fatal_artifacts,
+}
+
+
+def main() -> int:
+	parser = argparse.ArgumentParser(description=__doc__)
+	parser.add_argument("testrunner", type=Path, help="当前源码已构建且EXCEPTION_HANDLING=ON的Windows测试程序")
+	parser.add_argument("scenario", nargs="?", choices=["all", *SCENARIOS], default="all")
+	args = parser.parse_args()
+	if os.name != "nt":
+		parser.error("requires Windows")
+	binary = args.testrunner.resolve()
+	if not binary.is_relative_to(REPO_ROOT) or not binary.is_file():
+		parser.error("testrunner must already be built inside this workspace for the current source")
+	root = REPO_ROOT / "tmp" / "tests"
+	root.mkdir(parents=True, exist_ok=True)
+	output = Path(tempfile.mkdtemp(prefix="crashdump-", dir=root))
+	capabilities = output / "capabilities"
+	capabilities.mkdir()
+	result = run_probe(binary, capabilities, "capabilities")
+	if result.returncode != 0 or b"windows-crashdump=enabled" not in result.stdout:
+		parser.error(f"requires current probe and EXCEPTION_HANDLING=ON; artifacts: {output}")
+	names = list(SCENARIOS) if args.scenario == "all" else [args.scenario]
+	for name in names:
+		directory = output / name
+		directory.mkdir()
+		SCENARIOS[name](binary, directory)
+	print(json.dumps({"scenarios": names, "logs": str(output)}, ensure_ascii=False))
+	return 0
+
+
+if __name__ == "__main__":
+	raise SystemExit(main())

@@ -17,3 +17,19 @@ TEST(Os, LocaleStr)
 	os_locale_str(aLocale, sizeof(aLocale));
 	EXPECT_STRNE(aLocale, "");
 }
+
+TEST(Os, LocaleZeroCapacityDoesNotWrite)
+{
+	char Guard = '!';
+	os_locale_str(&Guard, 0);
+	os_locale_str(nullptr, 0);
+	EXPECT_EQ(Guard, '!');
+}
+
+TEST(Os, LocaleSingleByteBufferPreservesGuard)
+{
+	char aOutput[] = {'!', '?'};
+	os_locale_str(aOutput, 1);
+	EXPECT_EQ(aOutput[0], '\0');
+	EXPECT_EQ(aOutput[1], '?');
+}

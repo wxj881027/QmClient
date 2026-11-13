@@ -1,6 +1,8 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_DDNET_ACTIVITY_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_DDNET_ACTIVITY_H
 
+#include "qm_json_fields.h"
+
 #include <engine/shared/json.h>
 
 #include <cstdint>
@@ -11,7 +13,7 @@ inline int64_t QmDdnetActivityHours(const json_value *pRoot)
 {
 	if(!pRoot || pRoot->type != json_object)
 		return -1;
-	const json_value *pActivity = json_object_get(pRoot, "activity");
+	const json_value *pActivity = qm_json::Field(pRoot, "activity");
 	if(pActivity->type != json_array)
 		return -1;
 
@@ -22,7 +24,7 @@ inline int64_t QmDdnetActivityHours(const json_value *pRoot)
 		const json_value &Entry = (*pActivity)[i];
 		if(Entry.type != json_object)
 			continue;
-		const json_value *pHours = json_object_get(&Entry, "hours_played");
+		const json_value *pHours = qm_json::Field(&Entry, "hours_played");
 		if(pHours->type != json_integer || pHours->u.integer < 0)
 			continue;
 		if(pHours->u.integer > std::numeric_limits<int64_t>::max() - TotalHours)

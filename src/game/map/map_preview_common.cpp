@@ -7,6 +7,7 @@
 #include <engine/shared/map.h>
 
 #include <game/layers.h>
+#include <game/map/map_render_items.h>
 #include <game/map/map_renderer.h>
 #include <game/mapitems.h>
 
@@ -206,19 +207,9 @@ namespace MapPreview
 
 	void ExtendQuadLayerBounds(SBounds &Bounds, const CMapItemGroup *pGroup, const CMapItemLayerQuads *pQuadLayer, IMap *pMap, IEnvelopeEval *pEnvelopeEval)
 	{
-		CQuad *pQuads = static_cast<CQuad *>(pMap->GetData(pQuadLayer->m_Data));
-		if(!pQuads)
-			return;
-		const size_t ExpectedSize = (size_t)pQuadLayer->m_NumQuads * sizeof(CQuad);
-		if((size_t)pMap->GetDataSize(pQuadLayer->m_Data) < ExpectedSize)
+		const auto Quads = MapRenderItems::QuadData(*pMap, *pQuadLayer, false);
+		for(const CQuad &Quad : Quads)
 		{
-			pMap->UnloadData(pQuadLayer->m_Data);
-			return;
-		}
-
-		for(int QuadIndex = 0; QuadIndex < pQuadLayer->m_NumQuads; ++QuadIndex)
-		{
-			const CQuad &Quad = pQuads[QuadIndex];
 			ColorRGBA Color(1.0f, 1.0f, 1.0f, 1.0f);
 			if(Quad.m_ColorEnv >= 0)
 				pEnvelopeEval->EnvelopeEval(Quad.m_ColorEnvOffset, Quad.m_ColorEnv, Color, 4);
@@ -268,6 +259,10 @@ namespace MapPreview
 	std::vector<SGroupBounds> CollectGroupBounds(const CLayers &Layers, IEnvelopeEval *pEnvelopeEval)
 	{
 		std::vector<SGroupBounds> vGroups;
+		if(Layers.Map() == nullptr)
+			return vGroups;
+		int LayersStart, LayersCount;
+		Layers.Map()->GetType(MAPITEMTYPE_LAYER, &LayersStart, &LayersCount);
 		for(int GroupIndex = 0; GroupIndex < Layers.NumGroups(); ++GroupIndex)
 		{
 			const CMapItemGroup *pGroup = Layers.GetGroup(GroupIndex);
@@ -290,7 +285,11 @@ namespace MapPreview
 				if(pLayer->m_Type == LAYERTYPE_TILES)
 					ExtendTileLayerBounds(GroupBounds.m_Bounds, pGroup, reinterpret_cast<const CMapItemLayerTilemap *>(pLayer), Layers.Map());
 				else if(pLayer->m_Type == LAYERTYPE_QUADS)
-					ExtendQuadLayerBounds(GroupBounds.m_Bounds, pGroup, reinterpret_cast<const CMapItemLayerQuads *>(pLayer), Layers.Map(), pEnvelopeEval);
+				{
+					const auto *pQuadLayer = MapRenderItems::QuadLayer(*Layers.Map(), LayersStart + pGroup->m_StartLayer + LayerIndex);
+					if(pQuadLayer != nullptr)
+						ExtendQuadLayerBounds(GroupBounds.m_Bounds, pGroup, pQuadLayer, Layers.Map(), pEnvelopeEval);
+				}
 			}
 
 			if(!GroupBounds.m_Bounds.m_Valid)
@@ -391,8 +390,8 @@ namespace MapPreview
 		pMap->GetType(MAPITEMTYPE_IMAGE, &Start, &Num);
 		for(int i = 0; i < Num; ++i)
 		{
-			const CMapItemImage_v2 *pImg = static_cast<const CMapItemImage_v2 *>(pMap->GetItem(Start + i));
-			if(pImg != nullptr && pImg->m_External)
+			const auto ImageItem = MapRenderItems::ReadImage(*pMap, Start + i);
+			if(ImageItem && ImageItem->m_External)
 				return true;
 		}
 		return false;
@@ -418,6 +417,8 @@ namespace MapPreview
 		m_vTextures.resize(Num);
 
 		std::vector<unsigned char> vTextureUsageFlags(Num, 0);
+		int LayersStart, LayersCount;
+		m_pMap->GetType(MAPITEMTYPE_LAYER, &LayersStart, &LayersCount);
 		for(int GroupIndex = 0; GroupIndex < pLayers->NumGroups(); ++GroupIndex)
 		{
 			const CMapItemGroup *pGroup = pLayers->GetGroup(GroupIndex);
@@ -438,7 +439,9 @@ namespace MapPreview
 				}
 				else if(pLayer->m_Type == LAYERTYPE_QUADS)
 				{
-					const CMapItemLayerQuads *pQuadLayer = reinterpret_cast<const CMapItemLayerQuads *>(pLayer);
+					const auto *pQuadLayer = MapRenderItems::QuadLayer(*m_pMap, LayersStart + pGroup->m_StartLayer + LayerIndex);
+					if(pQuadLayer == nullptr)
+						continue;
 					if(pQuadLayer->m_Image >= 0 && pQuadLayer->m_Image < Num)
 						vTextureUsageFlags[pQuadLayer->m_Image] |= 2;
 				}
@@ -451,18 +454,18 @@ namespace MapPreview
 			if(vTextureUsageFlags[i] == 0)
 				continue;
 
-			const CMapItemImage_v2 *pImg = static_cast<const CMapItemImage_v2 *>(m_pMap->GetItem(Start + i));
-			if(!pImg)
+			const auto ImageItem = MapRenderItems::ReadImage(*m_pMap, Start + i);
+			if(!ImageItem)
 				continue;
 
-			const char *pName = m_pMap->GetDataString(pImg->m_ImageName);
+			const char *pName = m_pMap->GetDataString(ImageItem->m_ImageName);
 			if(!pName || !pName[0])
 				continue;
 
 			const int LoadFlag = (((vTextureUsageFlags[i] & 1) != 0) ? TextureLoadFlag : 0) |
 					     (((vTextureUsageFlags[i] & 2) != 0) ? 0 : (m_pGraphics->HasTextureArraysSupport() ? IGraphics::TEXLOAD_NO_2D_TEXTURE : 0));
 
-			if(pImg->m_External)
+			if(ImageItem->m_External)
 			{
 				++m_LoadStats.m_ExpectedExternal;
 				char aPath[IO_MAX_PATH_LENGTH];
@@ -477,25 +480,25 @@ namespace MapPreview
 			else
 			{
 				CImageInfo ImageInfo;
-				ImageInfo.m_Width = pImg->m_Width;
-				ImageInfo.m_Height = pImg->m_Height;
+				ImageInfo.m_Width = ImageItem->m_Width;
+				ImageInfo.m_Height = ImageItem->m_Height;
 				ImageInfo.m_Format = CImageInfo::FORMAT_RGBA;
-				ImageInfo.m_pData = static_cast<uint8_t *>(m_pMap->GetData(pImg->m_ImageData));
+				ImageInfo.m_pData = static_cast<uint8_t *>(m_pMap->GetData(ImageItem->m_ImageData));
 				size_t ImageDataSize = 0;
-				const int FileDataSize = m_pMap->GetDataSize(pImg->m_ImageData);
+				const int FileDataSize = m_pMap->GetDataSize(ImageItem->m_ImageData);
 				if(!ImageInfo.m_pData || FileDataSize < 0 || !ImageInfo.DataSize(ImageDataSize) || (size_t)FileDataSize < ImageDataSize)
 				{
-					m_pMap->UnloadData(pImg->m_ImageData);
-					m_pMap->UnloadData(pImg->m_ImageName);
+					m_pMap->UnloadData(ImageItem->m_ImageData);
+					m_pMap->UnloadData(ImageItem->m_ImageName);
 					continue;
 				}
 
 				char aTexName[IO_MAX_PATH_LENGTH];
 				str_format(aTexName, sizeof(aTexName), "embedded: %s", pName);
 				m_vTextures[i] = m_pGraphics->LoadTextureRaw(ImageInfo, LoadFlag, aTexName);
-				m_pMap->UnloadData(pImg->m_ImageData);
+				m_pMap->UnloadData(ImageItem->m_ImageData);
 			}
-			m_pMap->UnloadData(pImg->m_ImageName);
+			m_pMap->UnloadData(ImageItem->m_ImageName);
 			if(m_vTextures[i].IsValid())
 				++m_LoadStats.m_Loaded;
 		}
@@ -545,12 +548,12 @@ namespace MapPreview
 		if(EnvelopeIndex < 0 || EnvelopeIndex >= EnvelopeNum)
 			return;
 
-		const CMapItemEnvelope *pItem = static_cast<const CMapItemEnvelope *>(m_pMap->GetItem(EnvelopeStart + EnvelopeIndex));
-		if(!pItem || pItem->m_Channels <= 0)
+		const auto Item = MapRenderItems::ReadEnvelope(*m_pMap, EnvelopeStart + EnvelopeIndex);
+		if(!Item || Item->m_Channels <= 0)
 			return;
 
-		Channels = minimum<size_t>(Channels, pItem->m_Channels, CEnvPoint::MAX_CHANNELS);
-		m_pEnvelopePoints->SetPointsRange(pItem->m_StartPoint, pItem->m_NumPoints);
+		Channels = minimum<size_t>(Channels, Item->m_Channels, CEnvPoint::MAX_CHANNELS);
+		m_pEnvelopePoints->SetPointsRange(Item->m_StartPoint, Item->m_NumPoints);
 		if(m_pEnvelopePoints->NumPoints() == 0)
 			return;
 

@@ -12,6 +12,9 @@
 #include <array>
 #include <cmath>
 #include <cstring>
+#include <new>
+#include <span>
+#include <stdexcept>
 #include <vector>
 
 namespace QmHudEditor
@@ -366,6 +369,57 @@ enum class EHudEditorElement
 
 namespace QmHudEditor
 {
+	struct SVisibleElement
+	{
+		EHudEditorElement m_Element = EHudEditorElement::HudMain;
+		CUIRect m_Rect{};
+		CUIRect m_TransformRect{};
+		CUIRect m_DeclaredVisibleRect{};
+		CUIRect m_TargetUiRect{};
+		float m_BaseWidth = 0.0f;
+		float m_BaseHeight = 0.0f;
+		float m_StateOffsetX = 0.0f;
+		float m_StateOffsetY = 0.0f;
+		EHorizontalPlacement m_HorizontalPlacement = EHorizontalPlacement::VisibleBounds;
+		bool m_Scalable = true;
+	};
+
+	class CVisibleFrame
+	{
+		std::vector<SVisibleElement> m_vElements;
+		bool m_Complete = true;
+
+	public:
+		void BeginFrame() noexcept
+		{
+			m_vElements.clear();
+			m_Complete = true;
+		}
+		bool Complete() const noexcept { return m_Complete; }
+		std::span<SVisibleElement> Elements() noexcept { return m_vElements; }
+		std::span<const SVisibleElement> Elements() const noexcept { return m_vElements; }
+		bool Register(const SVisibleElement &Element) noexcept
+		{
+			if(!m_Complete)
+				return false;
+			try
+			{
+				m_vElements.push_back(Element);
+				return true;
+			}
+			catch(const std::bad_alloc &)
+			{
+			}
+			catch(const std::length_error &)
+			{
+			}
+			// 不让部分登记参与本帧拖动或缩放；HUD 的实际变换由调用方继续应用。
+			m_vElements.clear();
+			m_Complete = false;
+			return false;
+		}
+	};
+
 	inline const char *ElementToken(EHudEditorElement Element)
 	{
 		switch(Element)
@@ -466,20 +520,7 @@ private:
 		int m_ScalePercent = 100;
 	};
 
-	struct SVisibleElement
-	{
-		EHudEditorElement m_Element = EHudEditorElement::HudMain;
-		CUIRect m_Rect{};
-		CUIRect m_TransformRect{};
-		CUIRect m_DeclaredVisibleRect{};
-		CUIRect m_TargetUiRect{};
-		float m_BaseWidth = 0.0f;
-		float m_BaseHeight = 0.0f;
-		float m_StateOffsetX = 0.0f;
-		float m_StateOffsetY = 0.0f;
-		QmHudEditor::EHorizontalPlacement m_HorizontalPlacement = QmHudEditor::EHorizontalPlacement::VisibleBounds;
-		bool m_Scalable = true;
-	};
+	using SVisibleElement = QmHudEditor::SVisibleElement;
 
 	struct SAlignmentReferences
 	{
@@ -507,8 +548,9 @@ private:
 	char m_aLayoutCache[2048] = {};
 	std::array<SElementState, ELEMENT_COUNT> m_aElementStates{};
 	std::array<QmHudEditor::CVisibleBounds, ELEMENT_COUNT> m_aVisibleBounds{};
-	std::vector<SVisibleElement> m_vVisibleElements;
+	QmHudEditor::CVisibleFrame m_VisibleFrame;
 	bool m_InteractionUiActive = false;
+	bool m_InteractionFrameSkipped = false;
 	bool m_JumpHintTextEditorActive = false;
 	bool m_JumpHintTextEditorNeedsFocus = false;
 	CLineInputBuffered<512> m_JumpHintTextInput;

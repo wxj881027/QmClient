@@ -18,6 +18,7 @@
 #include <engine/storage.h>
 #include <engine/textrender.h>
 
+#include <game/client/QmUi/SettingsBindCache.h>
 #include <game/client/QmUi/SettingsContentLayout.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/QmUi/UiButtons.h>
@@ -47,8 +48,6 @@
 #include <vector>
 
 using namespace FontIcons;
-
-extern std::unordered_map<std::string, CBindSlot> g_CommandBindCache;
 
 void CMenus::RenderQmFunctionKeyBindsContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth)
 
@@ -218,24 +217,12 @@ void CMenus::RenderQmFunctionGoresContent(CUIRect &Content, float LineHeight, fl
 	CUIRect BindLabel, BindKey;
 	SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &BindLabel, &BindKey);
 	DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-gores-mode-key", &BindLabel, Localize("Gores mode key"), BodySize, TEXTALIGN_ML, {}, (int)BindLabel.w);
-	CBindSlot GoresBind(KEY_UNKNOWN, KeyModifier::NONE);
-	const auto GoresIt = g_CommandBindCache.find("toggle qm_gores 0 1");
-	if(GoresIt != g_CommandBindCache.end())
-		GoresBind = GoresIt->second;
+	const CBindSlot GoresBind = g_CommandBindCache.Find(GameClient()->m_Binds, "toggle qm_gores 0 1");
 	const auto Result = GameClient()->m_KeyBinder.DoKeyReader(&s_ReaderButtonGoresToggle, &s_ClearButtonGoresToggle, &BindKey, GoresBind, false);
 	if(!Flow.Input() || PrewarmOnly || Ui()->RenderOnly() || Result.m_Bind == GoresBind)
 		return;
-	if(GoresBind.m_Key != KEY_UNKNOWN)
-		GameClient()->m_Binds.Bind(GoresBind.m_Key, "", false, GoresBind.m_ModifierMask);
-	if(Result.m_Bind.m_Key != KEY_UNKNOWN)
-	{
-		GameClient()->m_Binds.Bind(Result.m_Bind.m_Key, "toggle qm_gores 0 1", false, Result.m_Bind.m_ModifierMask);
-		g_CommandBindCache.insert_or_assign("toggle qm_gores 0 1", Result.m_Bind);
-	}
-	else
-	{
-		g_CommandBindCache.erase("toggle qm_gores 0 1");
-	}
+	if(GameClient()->m_Binds.Rebind(GoresBind, Result.m_Bind, "toggle qm_gores 0 1"))
+		g_CommandBindCache.Invalidate();
 	(void)PrewarmOnly;
 }
 
@@ -271,22 +258,12 @@ void CMenus::RenderQmFunctionSoloSplitContent(CUIRect &Content, float LineHeight
 	{
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &BindLabel, &BindKey);
 		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-solo-split-key", &BindLabel, Localize("Solo split key"), BodySize, TEXTALIGN_ML, {}, (int)BindLabel.w);
-		CBindSlot SoloSplitBind(KEY_UNKNOWN, KeyModifier::NONE);
-		const auto SoloSplitIt = g_CommandBindCache.find("qm_solo_split");
-		if(SoloSplitIt != g_CommandBindCache.end())
-			SoloSplitBind = SoloSplitIt->second;
+		const CBindSlot SoloSplitBind = g_CommandBindCache.Find(GameClient()->m_Binds, "qm_solo_split");
 		const auto Result = GameClient()->m_KeyBinder.DoKeyReader(&s_ReaderButtonSoloSplit, &s_ClearButtonSoloSplit, &BindKey, SoloSplitBind, false);
 		if(Flow.Input() && !PrewarmOnly && !Ui()->RenderOnly() && Result.m_Bind != SoloSplitBind)
 		{
-			if(SoloSplitBind.m_Key != KEY_UNKNOWN)
-				GameClient()->m_Binds.Bind(SoloSplitBind.m_Key, "", false, SoloSplitBind.m_ModifierMask);
-			if(Result.m_Bind.m_Key != KEY_UNKNOWN)
-			{
-				GameClient()->m_Binds.Bind(Result.m_Bind.m_Key, "qm_solo_split", false, Result.m_Bind.m_ModifierMask);
-				g_CommandBindCache.insert_or_assign("qm_solo_split", Result.m_Bind);
-			}
-			else
-				g_CommandBindCache.erase("qm_solo_split");
+			if(GameClient()->m_Binds.Rebind(SoloSplitBind, Result.m_Bind, "qm_solo_split"))
+				g_CommandBindCache.Invalidate();
 		}
 	}
 	Flow.Space(LineSpacing);
@@ -298,22 +275,12 @@ void CMenus::RenderQmFunctionSoloSplitContent(CUIRect &Content, float LineHeight
 		}
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &BindLabel, &BindKey);
 		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, pTextId, &BindLabel, pText, BodySize, TEXTALIGN_ML, {}, (int)BindLabel.w);
-		CBindSlot Bind(KEY_UNKNOWN, KeyModifier::NONE);
-		const auto It = g_CommandBindCache.find(pCommand);
-		if(It != g_CommandBindCache.end())
-			Bind = It->second;
+		const CBindSlot Bind = g_CommandBindCache.Find(GameClient()->m_Binds, pCommand);
 		const auto Result = GameClient()->m_KeyBinder.DoKeyReader(&Reader, &Clear, &BindKey, Bind, false);
 		if(Flow.Input() && !PrewarmOnly && !Ui()->RenderOnly() && Result.m_Bind != Bind)
 		{
-			if(Bind.m_Key != KEY_UNKNOWN)
-				GameClient()->m_Binds.Bind(Bind.m_Key, "", false, Bind.m_ModifierMask);
-			if(Result.m_Bind.m_Key != KEY_UNKNOWN)
-			{
-				GameClient()->m_Binds.Bind(Result.m_Bind.m_Key, pCommand, false, Result.m_Bind.m_ModifierMask);
-				g_CommandBindCache.insert_or_assign(pCommand, Result.m_Bind);
-			}
-			else
-				g_CommandBindCache.erase(pCommand);
+			if(GameClient()->m_Binds.Rebind(Bind, Result.m_Bind, pCommand))
+				g_CommandBindCache.Invalidate();
 		}
 		Flow.Space(LineSpacing);
 	};

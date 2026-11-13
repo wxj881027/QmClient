@@ -1,6 +1,10 @@
 #ifndef ENGINE_CLIENT_AUDIO_SDL3_H
 #define ENGINE_CLIENT_AUDIO_SDL3_H
 
+#if defined(CONF_VIDEORECORDER)
+#include <engine/shared/video.h>
+#endif
+
 #include <SDL3/SDL_audio.h>
 
 #include <algorithm>
@@ -55,6 +59,24 @@ bool FillSdlAudioStream(SDL_AudioStream *pStream, int AdditionalBytes, int Chann
 		Frames -= Chunk;
 	}
 	return true;
+}
+
+// 游戏音频只能由声卡或当前录像推进；录像选项的后续修改留给下一次录制。
+template<typename TMix>
+bool FillSdlPlaybackAudioStream(SDL_AudioStream *pStream, int AdditionalBytes, int Channels, int16_t *pBuffer, int CapacityFrames, TMix Mix)
+{
+#if defined(CONF_VIDEORECORDER)
+	const IVideo *pVideo = IVideo::Current();
+	const bool RecorderTakesSound = pVideo != nullptr && pVideo->HasAudio();
+#else
+	const bool RecorderTakesSound = false;
+#endif
+	return FillSdlAudioStream(pStream, AdditionalBytes, Channels, pBuffer, CapacityFrames, [&](int16_t *pSamples, int Frames) {
+		if(RecorderTakesSound)
+			std::fill_n(pSamples, Frames * Channels, int16_t{0});
+		else
+			Mix(pSamples, Frames);
+	});
 }
 
 #endif // ENGINE_CLIENT_AUDIO_SDL3_H

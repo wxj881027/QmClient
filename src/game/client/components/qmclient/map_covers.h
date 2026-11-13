@@ -51,9 +51,9 @@ public:
 	void Update(IHttp *pHttp, IEngine *pEngine, IGraphics *pGraphics, IStorage *pStorage, float Now);
 	// 取某张地图在指定用途下的封面图；未就绪时返回 false 并排队生成。
 	bool Get(const char *pUrl, ERole Role, SImage *pOut);
-	// 客户端关闭：释放全部 GPU 纹理（图形接口此刻仍存活）。
+	// 客户端关闭：图形接口仍存活；资源拒收保留待卸载句柄，由 Update 或再次调用重试。
 	void Shutdown(IGraphics *pGraphics);
-	// 还有封面在排队/下载/合成（供性能日志与调试使用）。
+	// 还有封面在排队/下载/合成，或纹理等待卸载（供性能日志与调试使用）。
 	bool Loading() const;
 
 	// 两种用途的固定输出尺寸（像素）。列表行缩略图约等于绘制高度的 2.4 倍，
@@ -86,21 +86,22 @@ private:
 	{
 		SKey m_Key;
 		std::string m_CachePath;
+		std::string m_PendingKey;
 	};
 
 	struct SDownload
 	{
-		SKey m_Key;
-		std::string m_CachePath;
+		STask m_Task;
 		std::shared_ptr<IHttpRequest> m_pRequest;
+		bool m_Validated = false;
 	};
 
 	class CComposeJob;
 	struct SJob
 	{
-		SKey m_Key;
-		std::string m_CachePath;
+		STask m_Task;
 		std::shared_ptr<CComposeJob> m_pJob;
+		bool m_FailureRecorded = false;
 	};
 
 	// 每帧/总量预算：打开页面时一屏十几行，分帧补齐避免卡顿；纹理缓存要足够大，
@@ -119,18 +120,21 @@ private:
 	static void ComposeSize(ERole Role, int *pWidth, int *pHeight);
 
 	void CancelPending();
+	void DrainTextures();
 	void PollJobs();
 	void PollDownloads();
 	void StartQueued();
 	void EnsureCacheFolder();
-	void MarkFailed(const SKey &Key, const char *pReason);
+	void MarkFailed(const STask &Task, const char *pReason);
+	void EraseQueued(const SKey &Key);
 	bool StartDownload(const STask &Task);
-	void StartComposeJob(const STask &Task, const unsigned char *pPngData, size_t PngSize);
-	void AddTexture(SJob &Job);
+	SJob PrepareComposeJob(const STask &Task, const unsigned char *pPngData, size_t PngSize);
+	bool SubmitComposeJob(SJob &Job);
+	bool StartComposeJob(const STask &Task, const unsigned char *pPngData, size_t PngSize);
+	bool AddTexture(SJob &Job);
 	void EvictTextures();
 	SEntry *FindEntry(const SKey &Key);
 	SJob *FindJob(const SKey &Key);
-	bool IsQueued(const SKey &Key) const;
 	bool IsDownloading(const std::string &Url) const;
 
 	IHttp *m_pHttp = nullptr;
@@ -141,6 +145,7 @@ private:
 	float m_Now = 0.0f;
 	int64_t m_Frame = 0;
 	bool m_CacheFolderReady = false;
+	bool m_ShutdownPending = false;
 
 	std::vector<SEntry> m_vEntries;
 	std::deque<STask> m_vQueue;

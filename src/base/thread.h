@@ -26,6 +26,12 @@
  */
 void *thread_init(void (*threadfunc)(void *), void *user, const char *name);
 
+// 分配、系统线程创建或 Windows 工作线程 COM 准备失败时返回空，不调用入口或接管 user。
+// Windows 成功路径只等待 COM 准备完成，不等待业务回调；准备失败先回收已创建线程。
+// 命名属于尽力完成的附加操作，不影响已成功创建线程的句柄归属。
+void *thread_try_init(void (*threadfunc)(void *), void *user, const char *name) noexcept;
+using THREAD_CREATE = decltype(&thread_try_init);
+
 /**
  * Waits for a thread to be done or destroyed.
  *

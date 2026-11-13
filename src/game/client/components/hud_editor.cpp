@@ -40,13 +40,14 @@ void CHudEditor::ResetRuntimeState()
 {
 	m_DraggingElement = -1;
 	m_DragGrabOffset = vec2(0.0f, 0.0f);
+	m_VisibleFrame.BeginFrame();
+	m_InteractionFrameSkipped = false;
 	// 手机缩放状态一并复位：否则中途退出编辑器会带着上次的起始距离，
 	// 下次进来第一帧就把元素缩放改成一个随机值并落盘。
 	m_MobileSelectedElement = -1;
 	m_MobileScaling = false;
 	m_MobileScaleStartPercent = 100.0f;
 	m_MobileScaleStartDistance = 1.0f;
-	m_vVisibleElements.clear();
 	m_aVisibleBounds = {};
 }
 
@@ -74,7 +75,7 @@ void CHudEditor::BeginRenderFrame()
 {
 	for(QmHudEditor::CVisibleBounds &Bounds : m_aVisibleBounds)
 		Bounds.BeginRenderFrame();
-	m_vVisibleElements.clear();
+	m_VisibleFrame.BeginFrame();
 }
 
 bool CHudEditor::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
@@ -166,7 +167,7 @@ void CHudEditor::UpdateVisibleRect(EHudEditorElement Element, const CUIRect &Ren
 	if(pUiScreen == nullptr || pUiScreen->w <= 0.0f || pUiScreen->h <= 0.0f)
 		return;
 
-	SVisibleElement &Visible = m_vVisibleElements[VisibleIndex];
+	SVisibleElement &Visible = m_VisibleFrame.Elements()[VisibleIndex];
 	Visible.m_Rect = {
 		pUiScreen->x + (RenderedRect.x - ScreenX0) * pUiScreen->w / ScreenW,
 		pUiScreen->y + (RenderedRect.y - ScreenY0) * pUiScreen->h / ScreenH,
@@ -497,7 +498,7 @@ CHudEditor::STransformScope CHudEditor::BeginTransform(EHudEditorElement Element
 	SVisibleElement Visible;
 	if(!ComputeTransformPlacement(Element, TransformRect, VisibleRect, Scalable, Scope, &Visible, EdgeMargin, HorizontalPlacement, MinimumAnchorY))
 		return Scope;
-	m_vVisibleElements.push_back(Visible);
+	m_VisibleFrame.Register(Visible);
 
 	const float Scale = TransformRect.w > EPSILON ? Scope.m_TargetRect.w / TransformRect.w : 1.0f;
 	const bool Transformed =
@@ -527,9 +528,9 @@ void CHudEditor::EndTransform(const STransformScope &Scope)
 
 int CHudEditor::FindVisibleElementIndex(EHudEditorElement Element) const
 {
-	for(size_t i = 0; i < m_vVisibleElements.size(); ++i)
+	for(size_t i = 0; i < m_VisibleFrame.Elements().size(); ++i)
 	{
-		if(m_vVisibleElements[i].m_Element == Element)
+		if(m_VisibleFrame.Elements()[i].m_Element == Element)
 			return static_cast<int>(i);
 	}
 	return -1;
@@ -538,9 +539,9 @@ int CHudEditor::FindVisibleElementIndex(EHudEditorElement Element) const
 int CHudEditor::FindHoveredVisibleElement() const
 {
 	const vec2 Mouse(Ui()->MouseX(), Ui()->MouseY());
-	for(int i = (int)m_vVisibleElements.size() - 1; i >= 0; --i)
+	for(int i = (int)m_VisibleFrame.Elements().size() - 1; i >= 0; --i)
 	{
-		if(m_vVisibleElements[i].m_Rect.Inside(Mouse))
+		if(m_VisibleFrame.Elements()[i].m_Rect.Inside(Mouse))
 			return i;
 	}
 	return -1;
@@ -549,7 +550,7 @@ int CHudEditor::FindHoveredVisibleElement() const
 CHudEditor::SAlignmentReferences CHudEditor::BuildAlignmentReferences(EHudEditorElement DraggingElement) const
 {
 	SAlignmentReferences References;
-	for(const SVisibleElement &Visible : m_vVisibleElements)
+	for(const SVisibleElement &Visible : m_VisibleFrame.Elements())
 	{
 		if(Visible.m_Element == DraggingElement || Visible.m_Rect.w <= 0.0f || Visible.m_Rect.h <= 0.0f)
 			continue;
@@ -775,12 +776,19 @@ void CHudEditor::OnRender()
 {
 	if(!m_Active)
 		return;
+	if(!m_VisibleFrame.Complete() && !m_JumpHintTextEditorActive)
+	{
+		m_InteractionFrameSkipped = true;
+		return;
+	}
 
 	const CUIRect *pUiScreen = Ui()->Screen();
 	if(pUiScreen == nullptr)
 		return;
 
 	UpdateInteractionUi();
+	const bool InteractionFrameSkipped = m_InteractionFrameSkipped;
+	m_InteractionFrameSkipped = false;
 
 	if(m_JumpHintTextEditorActive)
 	{
@@ -836,7 +844,7 @@ void CHudEditor::OnRender()
 			MobileSelectedIndex = FindVisibleElementIndex(static_cast<EHudEditorElement>(m_MobileSelectedElement));
 		if(MobileSelectedIndex >= 0)
 		{
-			const SVisibleElement &Selected = m_vVisibleElements[MobileSelectedIndex];
+			const SVisibleElement &Selected = m_VisibleFrame.Elements()[MobileSelectedIndex];
 			const float HandleSize = 22.0f;
 			MobileScaleHandle = {Selected.m_Rect.x + Selected.m_Rect.w - HandleSize * 0.5f, Selected.m_Rect.y + Selected.m_Rect.h - HandleSize * 0.5f, HandleSize, HandleSize};
 			MobileHandleHovered = MobileScaleHandle.Inside(vec2(Ui()->MouseX(), Ui()->MouseY()));
@@ -850,7 +858,7 @@ void CHudEditor::OnRender()
 	if(m_DraggingElement >= 0)
 	{
 		const bool MouseReleased = !Ui()->MouseButton(0) && Ui()->LastMouseButton(0);
-		if(MouseReleased || FindVisibleElementIndex(static_cast<EHudEditorElement>(m_DraggingElement)) < 0)
+		if(MouseReleased || InteractionFrameSkipped || FindVisibleElementIndex(static_cast<EHudEditorElement>(m_DraggingElement)) < 0)
 		{
 			m_DraggingElement = -1;
 			m_DragGrabOffset = vec2(0.0f, 0.0f);
@@ -862,6 +870,13 @@ void CHudEditor::OnRender()
 	// 手机：先处理缩放把手，再处理拖动/选中。拖把手时不允许同时拖动元素。
 	if(QmUiMobilePlatform())
 	{
+		if(m_MobileScaling && InteractionFrameSkipped)
+		{
+			// 可见元数据缺失期间不能沿用旧缩放起点；与旧拖动一样结束本次手势。
+			m_MobileScaling = false;
+			if(m_DirtyLayout)
+				SaveLayoutConfig();
+		}
 		if(m_MobileScaling && MobileSelectedIndex < 0)
 		{
 			// 选中的元素中途消失（切 Spectate/换层）：必须退出缩放，否则永远挡住拖动。
@@ -869,7 +884,7 @@ void CHudEditor::OnRender()
 		}
 		else if(m_MobileScaling && MobileSelectedIndex >= 0)
 		{
-			const SVisibleElement &Selected = m_vVisibleElements[MobileSelectedIndex];
+			const SVisibleElement &Selected = m_VisibleFrame.Elements()[MobileSelectedIndex];
 			SElementState &State = EnsureState(Selected.m_Element);
 			const vec2 Center = {Selected.m_Rect.x + Selected.m_Rect.w * 0.5f, Selected.m_Rect.y + Selected.m_Rect.h * 0.5f};
 			const float Distance = maximum(1.0f, length(vec2(Ui()->MouseX(), Ui()->MouseY()) - Center));
@@ -886,7 +901,7 @@ void CHudEditor::OnRender()
 		}
 		else if(MobileHandleHovered && Ui()->MouseButtonClicked(0))
 		{
-			const SVisibleElement &Selected = m_vVisibleElements[MobileSelectedIndex];
+			const SVisibleElement &Selected = m_VisibleFrame.Elements()[MobileSelectedIndex];
 			SElementState &State = EnsureState(Selected.m_Element);
 			const vec2 Center = {Selected.m_Rect.x + Selected.m_Rect.w * 0.5f, Selected.m_Rect.y + Selected.m_Rect.h * 0.5f};
 			m_MobileScaling = true;
@@ -896,17 +911,17 @@ void CHudEditor::OnRender()
 		}
 		else if(HoveredIndex >= 0 && Ui()->MouseButtonClicked(0) && Ui()->ActiveItem() == nullptr)
 		{
-			m_MobileSelectedElement = static_cast<int>(m_vVisibleElements[HoveredIndex].m_Element);
+			m_MobileSelectedElement = static_cast<int>(m_VisibleFrame.Elements()[HoveredIndex].m_Element);
 		}
 	}
 
 	if(HoveredIndex >= 0 && m_DraggingElement < 0 && !m_MobileScaling && Ui()->MouseButtonClicked(0) && Ui()->ActiveItem() == nullptr)
 	{
-		const EHudEditorElement Element = m_vVisibleElements[HoveredIndex].m_Element;
+		const EHudEditorElement Element = m_VisibleFrame.Elements()[HoveredIndex].m_Element;
 		if(!HandleElementDoubleClick(Element))
 		{
 			m_DraggingElement = static_cast<int>(Element);
-			const SVisibleElement &Visible = m_vVisibleElements[HoveredIndex];
+			const SVisibleElement &Visible = m_VisibleFrame.Elements()[HoveredIndex];
 			const float GrabX = Visible.m_HorizontalPlacement == QmHudEditor::EHorizontalPlacement::TransformOrigin ? Visible.m_TargetUiRect.x : Visible.m_Rect.x;
 			m_DragGrabOffset = vec2(Ui()->MouseX() - GrabX, Ui()->MouseY() - Visible.m_Rect.y);
 		}
@@ -917,7 +932,7 @@ void CHudEditor::OnRender()
 		const int VisibleIndex = FindVisibleElementIndex(static_cast<EHudEditorElement>(m_DraggingElement));
 		if(VisibleIndex >= 0)
 		{
-			const SVisibleElement &Visible = m_vVisibleElements[VisibleIndex];
+			const SVisibleElement &Visible = m_VisibleFrame.Elements()[VisibleIndex];
 			SElementState &State = EnsureState(Visible.m_Element);
 			BeginCustomPosition(State, Visible, *pUiScreen);
 			const float Scale = QmHudEditor::ResolveScale(State.m_ScalePercent, Visible.m_Scalable);
@@ -945,7 +960,7 @@ void CHudEditor::OnRender()
 
 	if(HoveredIndex >= 0)
 	{
-		const SVisibleElement &Visible = m_vVisibleElements[HoveredIndex];
+		const SVisibleElement &Visible = m_VisibleFrame.Elements()[HoveredIndex];
 		SElementState &State = EnsureState(Visible.m_Element);
 		int DeltaScale = 0;
 		if(Visible.m_Scalable && Input()->KeyPress(KEY_MOUSE_WHEEL_UP))
@@ -978,28 +993,28 @@ void CHudEditor::OnRender()
 			Graphics()->DrawRect(pUiScreen->x, DragGuideY - 0.5f, pUiScreen->w, 1.0f, GuideColor, IGraphics::CORNER_NONE, 0.0f);
 	}
 
-	for(size_t i = 0; i < m_vVisibleElements.size(); ++i)
+	for(size_t i = 0; i < m_VisibleFrame.Elements().size(); ++i)
 	{
 		const bool Hovered = static_cast<int>(i) == HoveredIndex;
-		const bool Dragging = m_DraggingElement >= 0 && static_cast<int>(m_vVisibleElements[i].m_Element) == m_DraggingElement;
+		const bool Dragging = m_DraggingElement >= 0 && static_cast<int>(m_VisibleFrame.Elements()[i].m_Element) == m_DraggingElement;
 		if(!Hovered && !Dragging)
 			continue;
 
 		const ColorRGBA FillColor = Dragging ? ColorRGBA(1.0f, 0.75f, 0.15f, 0.10f) : (Hovered ? ColorRGBA(0.35f, 0.75f, 1.0f, 0.10f) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.04f));
 		const ColorRGBA BorderColor = Dragging ? ColorRGBA(1.0f, 0.82f, 0.20f, 0.95f) : (Hovered ? ColorRGBA(0.35f, 0.80f, 1.0f, 0.90f) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.55f));
 		const float BorderSize = Dragging ? 2.5f : 1.5f;
-		m_vVisibleElements[i].m_Rect.Draw(FillColor, IGraphics::CORNER_ALL, 6.0f);
+		m_VisibleFrame.Elements()[i].m_Rect.Draw(FillColor, IGraphics::CORNER_ALL, 6.0f);
 
-		CUIRect Line = m_vVisibleElements[i].m_Rect;
+		CUIRect Line = m_VisibleFrame.Elements()[i].m_Rect;
 		Line.HSplitTop(BorderSize, &Line, nullptr);
 		Line.Draw(BorderColor, IGraphics::CORNER_NONE, 0.0f);
-		Line = m_vVisibleElements[i].m_Rect;
+		Line = m_VisibleFrame.Elements()[i].m_Rect;
 		Line.HSplitBottom(BorderSize, nullptr, &Line);
 		Line.Draw(BorderColor, IGraphics::CORNER_NONE, 0.0f);
-		Line = m_vVisibleElements[i].m_Rect;
+		Line = m_VisibleFrame.Elements()[i].m_Rect;
 		Line.VSplitLeft(BorderSize, &Line, nullptr);
 		Line.Draw(BorderColor, IGraphics::CORNER_NONE, 0.0f);
-		Line = m_vVisibleElements[i].m_Rect;
+		Line = m_VisibleFrame.Elements()[i].m_Rect;
 		Line.VSplitRight(BorderSize, nullptr, &Line);
 		Line.Draw(BorderColor, IGraphics::CORNER_NONE, 0.0f);
 	}
@@ -1036,7 +1051,7 @@ void CHudEditor::OnRender()
 	// 手机：选中的元素右下角画缩放把手，指示这里可以拖。
 	if(QmUiMobilePlatform() && MobileSelectedIndex >= 0)
 	{
-		const SVisibleElement &Selected = m_vVisibleElements[MobileSelectedIndex];
+		const SVisibleElement &Selected = m_VisibleFrame.Elements()[MobileSelectedIndex];
 		const CUIRect Outline = {Selected.m_Rect.x - 1.0f, Selected.m_Rect.y - 1.0f, Selected.m_Rect.w + 2.0f, Selected.m_Rect.h + 2.0f};
 		Outline.Draw(ColorRGBA(0.25f, 0.62f, 1.0f, 0.18f), IGraphics::CORNER_ALL, 4.0f);
 		MobileScaleHandle.Draw(ColorRGBA(0.25f, 0.62f, 1.0f, 0.9f), IGraphics::CORNER_ALL, 6.0f);

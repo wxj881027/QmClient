@@ -113,3 +113,78 @@ TEST(QmRankDemoManifest, CollectRankEntriesHandlesEmptyInputs)
 	qmclient::rank_demo::CollectRankEntries(Entries, "", 1, Collected);
 	EXPECT_TRUE(Collected.empty());
 }
+
+TEST(QmRankDemoManifest, NamePrefixDoesNotSuppressADifferentMember)
+{
+	std::string Names = "Alice2, Bob";
+	qmclient::rank_demo::AppendUniqueName(Names, "Alice");
+	EXPECT_EQ(Names, "Alice2, Bob, Alice");
+
+	Names = "张三丰, 李四";
+	qmclient::rank_demo::AppendUniqueName(Names, "张三");
+	EXPECT_EQ(Names, "张三丰, 李四, 张三");
+}
+
+TEST(QmRankDemoManifest, NameSuffixDoesNotSuppressADifferentMember)
+{
+	std::string Names = "Alice, SuperBob";
+	qmclient::rank_demo::AppendUniqueName(Names, "Bob");
+	EXPECT_EQ(Names, "Alice, SuperBob, Bob");
+
+	Names = "张三, 小李四";
+	qmclient::rank_demo::AppendUniqueName(Names, "李四");
+	EXPECT_EQ(Names, "张三, 小李四, 李四");
+}
+
+TEST(QmRankDemoManifest, ExactMemberIsNotRepeatedAtAnyListPosition)
+{
+	for(const std::string Name : {"Alice", "Bob", "Carol"})
+	{
+		SCOPED_TRACE(Name);
+		std::string Names = "Alice, Bob, Carol";
+		qmclient::rank_demo::AppendUniqueName(Names, Name);
+		EXPECT_EQ(Names, "Alice, Bob, Carol");
+	}
+}
+
+TEST(QmRankDemoManifest, EmptyMemberDoesNotAddASeparator)
+{
+	for(std::string Names : {"", "Alice"})
+	{
+		SCOPED_TRACE(Names);
+		const std::string Previous = Names;
+		qmclient::rank_demo::AppendUniqueName(Names, "");
+		EXPECT_EQ(Names, Previous);
+	}
+}
+
+TEST(QmRankDemoManifest, FirstMemberAndCaseDistinctNamesKeepTheirText)
+{
+	std::string Names;
+	qmclient::rank_demo::AppendUniqueName(Names, "Alice");
+	EXPECT_EQ(Names, "Alice");
+	qmclient::rank_demo::AppendUniqueName(Names, "Alice");
+	EXPECT_EQ(Names, "Alice");
+	qmclient::rank_demo::AppendUniqueName(Names, "alice");
+	EXPECT_EQ(Names, "Alice, alice");
+}
+
+TEST(QmRankDemoManifest, TeamRecordMergeRetainsSimilarMembersAndSkipsExactDuplicates)
+{
+	const std::string Manifest =
+		R"({"status":"ok","kind":"team","map":"Map","rank":1,"demo":"team.demo.gz","ts":10,"names":["Alice2","SuperBob"],"finishers":[1,2]})"
+		"\n"
+		R"({"status":"ok","kind":"team","map":"Map","rank":1,"demo":"team.demo.gz","ts":20,"names":["Alice","Bob"],"finishers":[3,4]})"
+		"\n"
+		R"({"status":"ok","kind":"team","map":"Map","rank":1,"demo":"team.demo.gz","ts":30,"names":["Alice2","Alice","Bob"],"finishers":[1,3,4]})";
+	std::vector<qmclient::rank_demo::SEntry> Entries;
+	ASSERT_TRUE(qmclient::rank_demo::ParseManifest(reinterpret_cast<const unsigned char *>(Manifest.data()), Manifest.size(), Entries));
+	std::vector<qmclient::rank_demo::SEntry> Collected;
+	qmclient::rank_demo::CollectRankEntries(Entries, "Map", 1, Collected);
+
+	ASSERT_EQ(Collected.size(), 1U);
+	EXPECT_EQ(Collected[0].m_Names, "Alice2, SuperBob, Alice, Bob");
+	EXPECT_EQ(Collected[0].m_vFinishers, (std::vector<int>{1, 2, 3, 4}));
+	EXPECT_EQ(Collected[0].m_Ts, 30);
+	EXPECT_EQ(Collected[0].m_Demo, "team.demo.gz");
+}

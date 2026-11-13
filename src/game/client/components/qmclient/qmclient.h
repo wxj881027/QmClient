@@ -7,6 +7,7 @@
 #include "markdown_cache_writer.h"
 #include "qm_developer_badge.h"
 #include "qm_markdown_broadcast.h"
+#include "qm_markdown_broadcast_payload.h"
 #include "qm_realtime.h"
 #include "qm_realtime_users.h"
 #include "qm_sponsors.h"
@@ -88,8 +89,11 @@ class CQmClient : public CComponent
 	std::shared_ptr<IJob> m_pQmDdnetPlayerParseJob = nullptr;
 	CQmDdnetPlayerStatsState m_QmDdnetPlayerState;
 	CQmMarkdownBroadcast m_QmMarkdownBroadcast;
+	qm_news::CReceiver m_QmMarkdownBroadcastReceiver;
 	// 每个缓存文件一个写作业实例：界面立即更新，磁盘只保留最新完整快照。
 	CQmMarkdownCacheWriter m_QmMarkdownBroadcastCacheWriter;
+	bool m_QmMarkdownBroadcastCacheDirty = false;
+	int64_t m_QmMarkdownCacheNextRetryTick = 0;
 	std::string m_QmNewsDraft;
 	std::shared_ptr<IHttpRequest> m_pQmNewsPublishTask;
 	enum class EQmNewsStatus
@@ -103,6 +107,7 @@ class CQmClient : public CComponent
 	};
 	EQmNewsStatus m_QmNewsStatus = EQmNewsStatus::IDLE;
 	CQmMarkdownCacheWriter m_QmSponsorsCacheWriter;
+	bool m_QmSponsorsCacheDirty = false;
 	qm_sponsors::CSnapshot m_QmSponsors;
 	std::string m_QmSponsorsDraft;
 	std::vector<std::string> m_vQmSponsorDraftNames;
@@ -169,14 +174,15 @@ class CQmClient : public CComponent
 	int64_t m_QmDdnetPlaytimeHours = -1;
 	int64_t m_QmDdnetPlaytimeHoursPastYear = -1;
 	std::string SerializeQmClientStatistics() const;
+	void RetryQmStatisticsSave(int64_t Now) const noexcept;
 	mutable std::shared_ptr<CQmStatisticsSaveJob> m_pQmStatisticsSaveJob;
 	mutable bool m_QmStatisticsFileExists = false;
 	mutable bool m_QmStatisticsFileInvalid = false;
 	mutable int64_t m_QmStatisticsNextSaveRetryTick = 0;
 	// 本地统计在会话内被修改后置脏；落盘按 m_QmStatisticsLocalSaveDueTick
 	// 节流，避免逐秒游玩时长触发逐秒写文件。崩溃时最多丢一个节流窗口。
-	bool m_QmStatisticsLocalStatsDirty = false;
-	int64_t m_QmStatisticsLocalSaveDueTick = 0;
+	mutable bool m_QmStatisticsLocalStatsDirty = false;
+	mutable int64_t m_QmStatisticsLocalSaveDueTick = 0;
 	// 完成事件有两条通道：0.6 是聊天广播，0.7 是 RaceFinish 事件；官方
 	// 服务端按协议二选一，个别魔改服可能都发，用 1 秒窗口去重兜底。
 	int64_t m_QmLastLocalFinishRecordTime = -1;
@@ -200,7 +206,7 @@ class CQmClient : public CComponent
 
 	void InitQmClientLifecycle();
 	void UpdateQmClientLifecycleAndServerTime();
-	void EnsureQmClientPlaytimeClientId();
+	bool EnsureQmClientPlaytimeClientId();
 	bool ReadQmClientLifecycleMarker(int64_t &OutStartedAt, int64_t &OutLastSeenAt);
 	void TouchQmClientLifecycleMarker(bool ForceWrite);
 	void WriteQmClientLifecycleMarker();
@@ -208,10 +214,10 @@ class CQmClient : public CComponent
 
 	void UpdateQmClientRecognition();
 	void FinishQmClientUsers();
-	void ApplyQmClientUsersResult(SQmClientUsersParseResult Result, int64_t ExpireTick);
+	bool ApplyQmClientUsersResult(SQmClientUsersParseResult &Result, int64_t ExpireTick);
 	void ApplyQmRealtimeUsersSync(const SQmRealtimeMessage &Message);
 	bool EnsureQmClientMachineHash();
-	void PushQmClientServerCounts();
+	bool PushQmClientServerCounts(const std::vector<SQmClientServerDistribution> &vServers);
 	void InitQmDeveloperAuthentication();
 	void ResetQmDeveloperPresenceTasks();
 
@@ -221,7 +227,7 @@ class CQmClient : public CComponent
 	void StoreQmDdnetPlayerStats(const char *pPlayerName, const std::string &FavoritePartner, int TotalFinishes, int64_t Points, int64_t PointsTotal, int64_t PlaytimeHours, int64_t PlaytimeHoursPastYear);
 	void SelectQmDdnetPlayerStats(const char *pFallbackPlayerName = nullptr);
 	const SQmClientDdnetPlayerStats *FindQmDdnetPlayerStats(const char *pPlayerName) const;
-	void LoadQmClientLocalModeStats();
+	void LoadQmClientLocalModeStats() noexcept;
 	void UpdateQmClientLocalModePlaytime();
 	void AccumulateQmClientLocalModePlaytime(int64_t Now);
 	void EndQmClientLocalModePlaytime();
@@ -232,14 +238,15 @@ class CQmClient : public CComponent
 	void UpdateQmAnonymousEmotes();
 	void StopQmAnonymousEmotes();
 	std::string BuildQmAnonymousEmoteHello() const;
-	void SendQmAnonymousEmoteHello();
+	void SendQmAnonymousEmoteHello(bool ForceSend);
 	void QueueQmAnonymousEmoticonEvent(SQmRealtimeMessage Message);
 	void ApplyQmRealtimeServiceData(const SQmRealtimeMessage &Message);
-	void ApplyQmRealtimeBroadcast(const SQmRealtimeMessage &Message);
+	void ApplyQmRealtimeBroadcast(SQmRealtimeMessage &Message);
 	void ApplyQmRealtimeTitles(const SQmRealtimeMessage &Message);
 	void ApplyQmRealtimeUsers(const SQmRealtimeMessage &Message);
 	void ApplyQmRealtimeDevelopers(const SQmRealtimeMessage &Message);
 	std::string BuildQmRealtimePresence(bool Hello) const;
+	bool SendQmRealtimePresence(bool Hello, bool ForceSend);
 	bool RequestQmRealtimeTitleRefresh();
 	void SendQmRealtimeStop();
 	// 广播 markdown 的磁盘缓存：Apply 成功后落盘（交给作业），启动时读回上次内容。
@@ -340,7 +347,7 @@ public:
 	int64_t QmStatisticsLastSuccessfulSyncTimestamp() const;
 	const std::vector<SQmClientLocalModeStats> &QmClientLocalModeStats() const { return m_vQmClientLocalModeStats; }
 	const std::vector<SQmClientDdnetPlayerStats> &QmClientDdnetPlayerStats() const { return m_vQmClientDdnetPlayerStats; }
-	bool SaveQmClientStatistics() const;
+	bool SaveQmClientStatistics() const noexcept;
 	void RecordQmClientLocalMapFinish(const char *pGameMode, int Score);
 	void OnMessage(int MsgType, void *pRawMsg) override;
 	void UseCurrentQmDdnetPlayerName();

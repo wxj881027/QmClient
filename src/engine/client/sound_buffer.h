@@ -8,6 +8,13 @@
 #include <limits>
 #include <memory>
 
+// 先用宽整数计算主音量，再限制到 PCM 范围，保留原来的音量缩放规则。
+inline short QmSoundMixSample(int MixedSample, int MasterVolume)
+{
+	const int64_t Scaled = ((static_cast<int64_t>(MixedSample) * MasterVolume) / 101) >> 8;
+	return static_cast<short>(std::clamp<int64_t>(Scaled, std::numeric_limits<short>::min(), std::numeric_limits<short>::max()));
+}
+
 // 混音索引和解码器的缓冲区长度均使用 int，先检查完整的交错采样数。
 inline bool QmSoundSampleCount(int64_t Frames, int Channels, size_t &Count)
 {

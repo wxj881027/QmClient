@@ -1,7 +1,7 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_DEMO_CAMERA_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_DEMO_CAMERA_H
 
-#include "demo_camera_file.h"
+#include "demo_camera_session.h"
 
 #include <engine/demo.h>
 
@@ -9,21 +9,19 @@
 
 class CQmDemoCamera : public CComponent
 {
-	qm_demo_camera::SProject m_Project;
-	std::string m_Filename;
-	std::string m_Sidecar;
-	std::string m_PendingFilename;
-	std::string m_PendingSidecar;
+	qm_demo_camera::CSessionStore m_Sessions;
+	char m_aPendingFilename[IO_MAX_PATH_LENGTH]{};
+	int m_PendingStorageType = IStorage::TYPE_ALL_OR_ABSOLUTE;
+	bool m_SessionReady = false;
 	bool m_Editing = false;
-	bool m_Dirty = false;
-	bool m_LoadFailed = false;
-	bool m_SaveFailed = false;
 	bool m_EditFailed = false;
 	bool m_PanelOpen = false;
 	bool m_ShowGuides = true;
 	int m_Selected = -1;
 
-	void EnsureSession();
+	bool EnsureSession();
+	bool IsCurrentSession() const;
+	bool SaveProject(const std::string &Path, const qm_demo_camera::SProject &Project) noexcept;
 	void Changed();
 
 public:
@@ -32,16 +30,16 @@ public:
 	void OnRender() override;
 	void OnShutdown() override;
 
-	const qm_demo_camera::CTrack &Track() const { return m_Project.m_Track; }
-	bool Enabled() const { return m_Project.m_Enabled; }
-	bool Editing() const { return m_Editing; }
+	const qm_demo_camera::CTrack &Track() const;
+	bool Enabled() const { return IsCurrentSession() && m_Sessions.Project().m_Enabled; }
+	bool Editing() const { return IsCurrentSession() && m_Editing; }
 	bool PanelOpen() const { return m_PanelOpen; }
 	bool ShowGuides() const { return m_ShowGuides; }
-	bool Dirty() const { return m_Dirty; }
-	bool LoadFailed() const { return m_LoadFailed; }
-	bool SaveFailed() const { return m_SaveFailed; }
+	bool Dirty() const { return m_Sessions.Dirty(); }
+	bool LoadFailed() const { return m_Sessions.LoadFailed(); }
+	bool SaveFailed() const { return m_Sessions.SaveFailed(); }
 	bool EditFailed() const { return m_EditFailed; }
-	int Selected() const { return m_Selected; }
+	int Selected() const { return IsCurrentSession() ? m_Selected : -1; }
 	void Select(int Index);
 	void PrepareSource(const char *pFilename, int StorageType);
 	void SetPanelOpen(bool Open);

@@ -1353,12 +1353,12 @@ bool SettingsResourceOversizedUploadAllowed(const SSettingsResourceFrameContext 
 	return false;
 }
 
-size_t SettingsAssetPreviewResidentBudgetBytes(size_t OverrideMb, int Percent, float GpuBudgetMb)
+uint64_t SettingsAssetPreviewResidentBudgetBytes(size_t OverrideMb, int Percent, float GpuBudgetMb)
 {
-	return PreviewBudgetBytes(OverrideMb, Percent, GpuBudgetMb);
+	return PreviewBudgetBytes<uint64_t>(OverrideMb, Percent, GpuBudgetMb);
 }
 
-int SettingsAssetPreviewBudgetedTextureSize(int MaxTextureSize, int MinTextureSize, size_t TextureBudgetBytes, size_t CurrentTextureMemoryBytes, size_t ResidentPreviewBytes)
+int SettingsAssetPreviewBudgetedTextureSize(int MaxTextureSize, int MinTextureSize, uint64_t TextureBudgetBytes, uint64_t CurrentTextureMemoryBytes, uint64_t ResidentPreviewBytes)
 {
 	const int BudgetedTextureSize = ComputePreviewBudgetedTextureSize(MaxTextureSize, MinTextureSize, TextureBudgetBytes, CurrentTextureMemoryBytes, ResidentPreviewBytes);
 	return PreviewUploadBudgetTextureSize(BudgetedTextureSize, MinTextureSize, ASSET_PREVIEW_UPLOAD_MAX_BYTES_PER_FRAME);

@@ -27,6 +27,8 @@
 #include <deque>
 #include <initializer_list>
 #include <iterator>
+#include <new>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -175,11 +177,16 @@ namespace
 	}
 
 	// 写回成功后的中性提示：文案只用已有翻译键（删除命令 + 撤销），不新增英文条目。
-	void SetBindEditorDeletedStatus(SBindEditorUiState &State)
+	std::string BindEditorDeletedStatus()
 	{
 		char aStatus[128];
 		str_format(aStatus, sizeof(aStatus), "%s · %s", Localize("Delete command"), Localize("Undo"));
-		State.m_Status = aStatus;
+		return aStatus;
+	}
+
+	void SetBindEditorDeletedStatus(SBindEditorUiState &State)
+	{
+		State.m_Status = BindEditorDeletedStatus();
 	}
 
 	// 键面二级揭示：卡片级 RequestReveal 只能把整张键盘卡拉进视口，窗口很矮时
@@ -715,7 +722,6 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 		if(Flow.Control("bind-key-capture", LineHeight, CaptureRow))
 		{
 			const CBindSlot PreviousSlot = ActiveSlot;
-			const std::string PreviousBinding = GameClient()->m_Binds.Get(PreviousSlot.m_Key, PreviousSlot.m_ModifierMask);
 			const CKeyBinder::CKeyReaderResult CaptureResult = GameClient()->m_KeyBinder.DoKeyReader(&State.m_CaptureButton, &State.m_ClearCaptureButton, &CaptureRow, PreviousSlot, false, BodySize);
 			const bool CaptureStarted = !KeyCaptureActive && GameClient()->m_KeyBinder.IsActive();
 			if(!ReadOnly && CaptureStarted)
@@ -736,29 +742,57 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 					// 写回前先记撤销点，状态栏给"可撤销"提示——不再弹确认、不留待办状态。
 					// 这条分支只由显式清空（垃圾桶 / 右键键名按钮）触发，按 Esc 中断捕获
 					// 走的是 m_Aborted，m_Bind 保持原值，不会进到这里。
-					RecordBindUndo(State.m_vBindUndo, GameClient()->m_Binds, PreviousSlot);
-					GameClient()->m_Binds.Bind(PreviousSlot.m_Key, "", false, PreviousSlot.m_ModifierMask);
-					State.m_Error.clear();
-					SetBindEditorDeletedStatus(State);
+					try
+					{
+						auto vUndo = State.m_vBindUndo;
+						RecordBindUndo(vUndo, GameClient()->m_Binds, PreviousSlot);
+						std::string Status = BindEditorDeletedStatus();
+						if(GameClient()->m_Binds.Rebind(PreviousSlot, CaptureResult.m_Bind, ""))
+						{
+							State.m_vBindUndo.swap(vUndo);
+							State.m_Status.swap(Status);
+							State.m_Error.clear();
+						}
+					}
+					catch(const std::bad_alloc &)
+					{
+					}
+					catch(const std::length_error &)
+					{
+					}
 				}
 				else
 				{
 					char aNewKeyName[128];
 					GameClient()->m_Binds.GetKeyBindName(CaptureResult.m_Bind.m_Key, CaptureResult.m_Bind.m_ModifierMask, aNewKeyName, sizeof(aNewKeyName));
-					if(qm_bind_editor::FitsConfigLine(aNewKeyName, PreviousBinding))
+					const char *pPreviousBinding = GameClient()->m_Binds.Get(PreviousSlot.m_Key, PreviousSlot.m_ModifierMask);
+					// 行限制校验也会构造序列化字符串，失败时保留原绑定和选中位置。
+					try
 					{
-						// 换键会同时解绑旧键、写入新键，撤销时要两个槽位一起还原。
-						RecordBindUndoTwo(State.m_vBindUndo, GameClient()->m_Binds, PreviousSlot, CaptureResult.m_Bind);
-						GameClient()->m_Binds.Bind(PreviousSlot.m_Key, "", false, PreviousSlot.m_ModifierMask);
-						GameClient()->m_Binds.Bind(CaptureResult.m_Bind.m_Key, PreviousBinding.c_str(), false, CaptureResult.m_Bind.m_ModifierMask);
-						State.m_Selected = CaptureResult.m_Bind;
-						State.m_ModifierMask = CaptureResult.m_Bind.m_ModifierMask;
-						State.m_HasSelected = true;
-						State.m_KeySelectionHeld = true;
-						State.m_Error.clear();
+						if(qm_bind_editor::FitsConfigLine(aNewKeyName, pPreviousBinding))
+						{
+							// 撤销记录和新命令都准备成功，才一起发布；失败不挤掉旧撤销点。
+							auto vUndo = State.m_vBindUndo;
+							RecordBindUndoTwo(vUndo, GameClient()->m_Binds, PreviousSlot, CaptureResult.m_Bind);
+							if(GameClient()->m_Binds.Rebind(PreviousSlot, CaptureResult.m_Bind, pPreviousBinding))
+							{
+								State.m_vBindUndo.swap(vUndo);
+								State.m_Selected = CaptureResult.m_Bind;
+								State.m_ModifierMask = CaptureResult.m_Bind.m_ModifierMask;
+								State.m_HasSelected = true;
+								State.m_KeySelectionHeld = true;
+								State.m_Error.clear();
+							}
+						}
+						else
+							SetBindEditorError(State, Localize("This bind is already over the local config line limit."));
 					}
-					else
-						SetBindEditorError(State, Localize("This bind is already over the local config line limit."));
+					catch(const std::bad_alloc &)
+					{
+					}
+					catch(const std::length_error &)
+					{
+					}
 				}
 				ActiveSlot = State.m_Selected;
 				GameClient()->m_Binds.GetKeyBindName(ActiveSlot.m_Key, ActiveSlot.m_ModifierMask, aActiveKeyName, sizeof(aActiveKeyName));

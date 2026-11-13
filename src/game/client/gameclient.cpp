@@ -5,6 +5,7 @@
 
 #include "gameclient.h"
 
+#include "QmUi/UiTextRenderState.h"
 #include "components/assets_resource_registry.h"
 #include "components/background.h"
 #include "components/binds.h"
@@ -32,14 +33,19 @@
 #include "components/nameplates.h"
 #include "components/particles.h"
 #include "components/players.h"
+#include "components/qmclient/camera_network.h"
+#include "components/qmclient/collision_position.h"
 #include "components/qmclient/ime_gradient_probe.h"
+#include "components/qmclient/item_render_math.h"
 #include "components/qmclient/jelly_tee.h"
 #include "components/qmclient/modes.h"
 #include "components/qmclient/perf_logging.h"
 #include "components/qmclient/player_display_privacy.h"
 #include "components/qmclient/predicted_event_queue.h"
 #include "components/qmclient/qmclient_utils.h"
+#include "components/qmclient/race_timing.h"
 #include "components/qmclient/screenshot_manager.h"
+#include "components/qmclient/spectator_selection.h"
 #include "components/qmclient/streamer_word_filter.h"
 #include "components/qmclient/translate/translate_ui_settings.h"
 #include "components/race_demo.h"
@@ -164,24 +170,6 @@ namespace
 		QmPerfLogStage("perf/gameclient", pStage, DurationMs, Force, pGameClient != nullptr ? pGameClient->Client() : nullptr, nullptr, nullptr, pExtra);
 	}
 
-	bool IsQmStutterFeatureConfigName(const char *pName)
-	{
-		return str_startswith(pName, "qm_") != nullptr ||
-		       str_startswith(pName, "tc_") != nullptr ||
-		       str_startswith(pName, "cl_") != nullptr;
-	}
-
-	void CollectQmStutterFeatureConfig(const SConfigVariable *pVariable, void *pUserData)
-	{
-		if(pVariable == nullptr || pVariable->m_Type != SConfigVariable::VAR_INT || !IsQmStutterFeatureConfigName(pVariable->m_pScriptName))
-			return;
-		const SIntConfigVariable *pIntVariable = static_cast<const SIntConfigVariable *>(pVariable);
-		if(pIntVariable->m_Max <= 0 || pIntVariable->m_Min != 0 || *pIntVariable->m_pVariable == 0)
-			return;
-		auto *pSnapshot = static_cast<std::vector<std::pair<std::string, int>> *>(pUserData);
-		pSnapshot->emplace_back(pVariable->m_pScriptName, *pIntVariable->m_pVariable);
-	}
-
 	void ConDiscardLegacyHudIslandEdgeMargin(IConsole::IResult *, void *)
 	{
 	}
@@ -284,7 +272,7 @@ namespace
 
 	void QmAddExplosionProjectileCandidate(CGameClient *pGameClient, int &Owner, bool &Ambiguous, const CProjectileData &Projectile, vec2 Pos)
 	{
-		if(!Projectile.m_ExtraInfo || !Projectile.m_Explosive || Projectile.m_Owner < 0 || Projectile.m_Owner >= MAX_CLIENTS)
+		if(!Projectile.HasValidStart() || !Projectile.m_ExtraInfo || !Projectile.m_Explosive || Projectile.m_Owner < 0 || Projectile.m_Owner >= MAX_CLIENTS)
 			return;
 
 		float Curvature = 0.0f;
@@ -293,13 +281,14 @@ namespace
 		if(!QmProjectileMotion(Projectile, pGameClient->GetTuning(TuneZone), Curvature, Speed))
 			return;
 
-		const float FromTime = std::max(0.0f, (pGameClient->Client()->PrevGameTick(g_Config.m_ClDummy) - Projectile.m_StartTick) / (float)pGameClient->Client()->GameTickSpeed());
-		const float ToTime = std::max(0.0f, (pGameClient->Client()->GameTick(g_Config.m_ClDummy) - Projectile.m_StartTick) / (float)pGameClient->Client()->GameTickSpeed());
+		const float FromTime = std::max(0.0f, QmItemTickDelta(pGameClient->Client()->PrevGameTick(g_Config.m_ClDummy), Projectile.m_StartTick) / (float)pGameClient->Client()->GameTickSpeed());
+		const float ToTime = std::max(0.0f, QmItemTickDelta(pGameClient->Client()->GameTick(g_Config.m_ClDummy), Projectile.m_StartTick) / (float)pGameClient->Client()->GameTickSpeed());
 		if(ToTime <= 0.0f && Projectile.m_StartTick > pGameClient->Client()->GameTick(g_Config.m_ClDummy))
 			return;
 
-		const vec2 From = CalcPos(Projectile.m_StartPos, Projectile.m_StartVel, Curvature, Speed, FromTime);
-		const vec2 To = CalcPos(Projectile.m_StartPos, Projectile.m_StartVel, Curvature, Speed, ToTime);
+		vec2 From, To;
+		if(!Projectile.TryCalcPositions(Curvature, Speed, FromTime, ToTime, From, To))
+			return;
 		constexpr float MaxExplosionOwnerDistance = 96.0f;
 		if(QmDistancePointSegment(Pos, From, To) <= MaxExplosionOwnerDistance)
 			QmAddUniqueOwnerCandidate(Owner, Ambiguous, Projectile.m_Owner);
@@ -712,9 +701,6 @@ void CGameClient::OnConsoleInit()
 	AddComponent(&m_MenuBackground, "menu_background");
 	AddComponent(&m_UiEffects, "ui_effects");
 	dbg_assert(m_vpAll.size() == m_vpAllPerfNames.size(), "component profiler IDs must stay aligned");
-	m_vQmStutterPendingUpdateMs.resize(m_vpAll.size());
-	m_vQmStutterPendingRenderMs.resize(m_vpAll.size());
-	m_vQmStutterComponentSamples.resize(m_vpAll.size());
 
 	// build the input stack
 	m_vpInput.insert(m_vpInput.end(), {&m_KeyBinder, // this will take over all input when we want to bind a key
@@ -1298,11 +1284,12 @@ void CGameClient::OnUpdate()
 
 	if(g_Config.m_QmPerfStutterDiagnostics)
 	{
+		m_QmStutterCapture.PrepareComponents(m_vpAll.size());
 		for(size_t i = 0; i < m_vpAll.size(); ++i)
 		{
 			CPerfTimer ComponentTimer;
 			m_vpAll[i]->OnUpdate();
-			RecordComponentUpdate(i, ComponentTimer.ElapsedMs());
+			m_QmStutterCapture.RecordUpdate(i, ComponentTimer.ElapsedMs());
 		}
 	}
 	else
@@ -1332,7 +1319,7 @@ void CGameClient::PrewarmQmIconGlyphs(int MaxGlyphs, int64_t BudgetTicks)
 	m_QmIconPrewarm.Configure(Graphics()->ScreenHeight() / ScreenHeight, g_Config.m_QmUiIconWeight);
 	if(m_QmIconPrewarm.Complete())
 		return;
-	const EFontPreset PreviousPreset = TextRender()->GetFontPreset();
+	const CUiScopedTextRenderState TextState(*TextRender());
 	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 	const int64_t Start = time_get();
 	int Codepoint, PixelSize;
@@ -1342,7 +1329,6 @@ void CGameClient::PrewarmQmIconGlyphs(int MaxGlyphs, int64_t BudgetTicks)
 		if(time_get() - Start >= BudgetTicks)
 			break;
 	}
-	TextRender()->SetFontPreset(PreviousPreset);
 }
 
 void CGameClient::SyncQmUiIconWeight()
@@ -1826,7 +1812,7 @@ void CGameClient::OnReset()
 	m_NewTick = false;
 	m_NewPredictedTick = false;
 	m_HammerHitTracker.Reset();
-	m_vPendingHammerHitEvents.clear();
+	m_PendingHammerHits.Reset();
 	std::fill(std::begin(m_aConfirmedHammerHitEvent), std::end(m_aConfirmedHammerHitEvent), false);
 
 	m_aFlagDropTick[TEAM_RED] = 0;
@@ -1871,10 +1857,34 @@ void CGameClient::OnReset()
 	m_GameWorld.Clear();
 	m_GameWorld.m_PredictedEvents.clear();
 	m_GameWorld.m_WorldConfig.m_InfiniteAmmo = true;
-	m_PredictedWorld.CopyWorld(&m_GameWorld);
-	m_PrevPredictedWorld.CopyWorld(&m_PredictedWorld);
-	m_RegularPredictedWorld.CopyWorldClean(&m_PredictedWorld);
-	m_PrevRegularPredictedWorld.CopyWorldClean(&m_PredictedWorld);
+	if(!m_PredictedWorld.CopyWorld(&m_GameWorld))
+	{
+		m_PredictedWorld.Clear();
+		m_PredictedWorld.m_PredictedEvents.clear();
+		m_PredictedWorld.m_IsValidCopy = false;
+		m_PredictedWorld.OnModified();
+	}
+	if(!m_PrevPredictedWorld.CopyWorld(&m_PredictedWorld))
+	{
+		m_PrevPredictedWorld.Clear();
+		m_PrevPredictedWorld.m_PredictedEvents.clear();
+		m_PrevPredictedWorld.m_IsValidCopy = false;
+		m_PrevPredictedWorld.OnModified();
+	}
+	if(!m_RegularPredictedWorld.CopyWorldClean(&m_PredictedWorld))
+	{
+		m_RegularPredictedWorld.Clear();
+		m_RegularPredictedWorld.m_PredictedEvents.clear();
+		m_RegularPredictedWorld.m_IsValidCopy = false;
+		m_RegularPredictedWorld.OnModified();
+	}
+	if(!m_PrevRegularPredictedWorld.CopyWorldClean(&m_PredictedWorld))
+	{
+		m_PrevRegularPredictedWorld.Clear();
+		m_PrevRegularPredictedWorld.m_PredictedEvents.clear();
+		m_PrevRegularPredictedWorld.m_IsValidCopy = false;
+		m_PrevRegularPredictedWorld.OnModified();
+	}
 
 	m_vSnapEntities.clear();
 
@@ -1912,8 +1922,8 @@ void CGameClient::OnReset()
 	m_LastShowDistanceZoom = 0.0f;
 	m_LastZoom = 0.0f;
 	m_LastScreenAspect = 0.0f;
-	m_LastDeadzone = 0.0f;
-	m_LastFollowFactor = 0.0f;
+	m_LastDeadzone = 0;
+	m_LastFollowFactor = 0;
 	m_LastDummyConnected = false;
 
 	m_MultiViewPersonalZoom = 0.0f;
@@ -2158,11 +2168,12 @@ void CGameClient::OnRender()
 	};
 	if(g_Config.m_QmPerfStutterDiagnostics)
 	{
+		m_QmStutterCapture.PrepareComponents(m_vpAll.size());
 		for(size_t i = 0; i < m_vpAll.size(); ++i)
 		{
 			CPerfTimer ComponentTimer;
 			RenderComponent(m_vpAll[i]);
-			RecordComponentRender(i, ComponentTimer.ElapsedMs());
+			m_QmStutterCapture.RecordRender(i, ComponentTimer.ElapsedMs());
 		}
 	}
 	else
@@ -2274,215 +2285,40 @@ void CGameClient::OnRender()
 	UpdateManagedTeeRenderInfos();
 }
 
-void CGameClient::RecordComponentUpdate(size_t ComponentIndex, double DurationMs)
+CQmStutterCapture::SFrame CGameClient::QmStutterFrameContext()
 {
-	if(ComponentIndex < m_vQmStutterPendingUpdateMs.size())
-		m_vQmStutterPendingUpdateMs[ComponentIndex] += DurationMs;
-}
-
-void CGameClient::RecordComponentRender(size_t ComponentIndex, double DurationMs)
-{
-	if(ComponentIndex < m_vQmStutterPendingRenderMs.size())
-		m_vQmStutterPendingRenderMs[ComponentIndex] += DurationMs;
-}
-
-void CGameClient::CaptureQmStutterFeatureSnapshot()
-{
-	m_vQmStutterFeatureSnapshot.clear();
-	ConfigManager()->PossibleConfigVariables("", CFGFLAG_CLIENT, CollectQmStutterFeatureConfig, &m_vQmStutterFeatureSnapshot);
-	std::sort(m_vQmStutterFeatureSnapshot.begin(), m_vQmStutterFeatureSnapshot.end());
-
-	const char *pPage = m_Menus.CurrentQmUiPerfPage();
-	const char *pOperation = m_Menus.CurrentQmUiPerfOperation();
-	m_QmStutterPage = pPage != nullptr && pPage[0] != '\0' ? pPage : "game";
-	m_QmStutterOperation = pOperation != nullptr && pOperation[0] != '\0' ? pOperation : "none";
-
-	int ConfiguredLimit = 0;
-	if(g_Config.m_GfxRefreshRate > 0)
-		ConfiguredLimit = g_Config.m_GfxRefreshRate;
-	if(g_Config.m_ClRefreshRate > 0 && (ConfiguredLimit == 0 || g_Config.m_ClRefreshRate < ConfiguredLimit))
-		ConfiguredLimit = g_Config.m_ClRefreshRate;
-	const int IdleLimit = m_Menus.IdleRenderFrameRate();
-	IEngineGraphics *pEngineGraphics = Kernel()->RequestInterface<IEngineGraphics>();
-	const bool WindowActive = pEngineGraphics == nullptr || pEngineGraphics->WindowActive() != 0;
-	m_QmStutterLimitCause = QmDetermineStutterLimitCause(
-		g_Config.m_GfxVsync != 0,
-		ConfiguredLimit,
-		g_Config.m_ClRefreshRateInactive,
-		WindowActive,
-		IdleLimit);
-}
-
-void CGameClient::ResetQmStutterWindowSamples()
-{
-	m_QmStutterFrameSamples.Reset();
-	for(SQmStutterComponentWindowSamples &Samples : m_vQmStutterComponentSamples)
+	CQmStutterCapture::SFrame Frame;
+	Frame.m_Enabled = g_Config.m_QmPerfStutterDiagnostics != 0;
+	Frame.m_ComponentCount = m_vpAllPerfNames.size();
+	Frame.m_ppComponentNames = m_vpAllPerfNames.data();
+	Frame.m_pClient = Client();
+	Frame.m_pConfig = ConfigManager();
+	if(Frame.m_Enabled || m_QmStutterCapture.Active())
 	{
-		Samples.m_Update.Reset();
-		Samples.m_Render.Reset();
+		Frame.m_Frame = Client()->PerfFrame();
+		Frame.m_FrameMs = Client()->RenderFrameTime() * 1000.0;
+		Frame.m_Online = Client()->State() == IClient::STATE_ONLINE;
 	}
-	m_vQmStutterFeatureSnapshot.clear();
-	m_QmStutterWindowStartFrame = 0;
-	m_QmStutterWorstFrame = 0;
-	m_QmStutterWorstFrameMs = 0.0;
-	m_QmStutterLimitCause = EQmStutterLimitCause::NONE;
-	m_QmStutterPage.clear();
-	m_QmStutterOperation.clear();
-}
-
-void CGameClient::FlushQmStutterWindow(const SQmStutterFrameDecision &Decision, bool ForceLog)
-{
-	if(!Decision.m_FlushWindow || m_QmStutterFrameSamples.Empty())
-		return;
-
-	const double SampleSeconds = m_QmStutterFrameSamples.Total() / 1000.0;
-	const double FrameMsP95 = m_QmStutterFrameSamples.Percentile(95.0);
-	const double FrameMsP99 = m_QmStutterFrameSamples.Percentile(99.0);
-	const double FpsAverage = SampleSeconds > 0.0 ? m_QmStutterFrameSamples.Count() / SampleSeconds : 0.0;
-	const double FpsMinimum = m_QmStutterFrameSamples.Max() > 0.0 ? 1000.0 / m_QmStutterFrameSamples.Max() : 0.0;
-	const double FpsOnePctLow = FrameMsP99 > 0.0 ? 1000.0 / FrameMsP99 : 0.0;
-	const bool CapLimited = m_QmStutterLimitCause != EQmStutterLimitCause::NONE;
-	const char *pClassification = SampleSeconds >= 1.0 || Decision.m_Reason == EQmStutterFlushReason::PERIODIC ? "sustained_low" : "frame_drop";
-
-	char aPayload[1024];
-	str_format(aPayload, sizeof(aPayload),
-		"schema=1 event=stutter_event stutter_id=%" PRIu64 " segment=%" PRIu64 " classification=%s end_reason=%s window_start_frame=%" PRIu64 " window_end_frame=%" PRIu64 " worst_frame=%" PRIu64 " target_fps=300 target_ms=%.6f sample_frames=%d sample_seconds=%.3f below_target_frames=%d fps_avg=%.3f fps_min=%.3f fps_1pct_low=%.3f frame_ms_avg=%.3f frame_ms_p95=%.3f frame_ms_p99=%.3f frame_ms_max=%.3f cap_limited=%d cap_reason=%s context=%s page=%s tab=%s",
-		Decision.m_StutterId,
-		Decision.m_Segment,
-		pClassification,
-		QmStutterFlushReasonName(Decision.m_Reason),
-		m_QmStutterWindowStartFrame,
-		m_QmStutterEpisodeTracker.LastBelowTargetFrame(),
-		m_QmStutterWorstFrame,
-		QmStutterFrameBudgetMs(),
-		(int)m_QmStutterFrameSamples.Count(),
-		SampleSeconds,
-		(int)m_QmStutterFrameSamples.Count(),
-		FpsAverage,
-		FpsMinimum,
-		FpsOnePctLow,
-		m_QmStutterFrameSamples.Average(),
-		FrameMsP95,
-		FrameMsP99,
-		m_QmStutterFrameSamples.Max(),
-		CapLimited ? 1 : 0,
-		QmStutterLimitCauseName(m_QmStutterLimitCause),
-		Client()->State() == IClient::STATE_ONLINE ? "online" : "offline",
-		m_QmStutterPage.empty() ? "game" : m_QmStutterPage.c_str(),
-		m_QmStutterOperation.empty() ? "none" : m_QmStutterOperation.c_str());
-	if(ForceLog)
-		QmPerfLogPayloadForce("perf/stutter", aPayload, Client());
-	else
-		QmPerfLogPayload("perf/stutter", aPayload, Client());
-
-	for(size_t i = 0; i < m_vQmStutterComponentSamples.size(); ++i)
-	{
-		const auto LogSamples = [&](const char *pCallback, CQmStutterSampleSeries &Samples) {
-			if(Samples.Empty())
-				return;
-			char aComponentPayload[512];
-			str_format(aComponentPayload, sizeof(aComponentPayload),
-				"schema=1 event=component_sample stutter_id=%" PRIu64 " segment=%" PRIu64 " scope=component owner=client module=%s callback=%s sample_count=%d total_ms=%.3f avg_ms=%.3f p95_ms=%.3f max_ms=%.3f max_frame=%" PRIu64,
-				Decision.m_StutterId,
-				Decision.m_Segment,
-				m_vpAllPerfNames[i],
-				pCallback,
-				(int)Samples.Count(),
-				Samples.Total(),
-				Samples.Average(),
-				Samples.Percentile(95.0),
-				Samples.Max(),
-				Samples.MaxFrame());
-			if(ForceLog)
-				QmPerfLogPayloadForce("perf/stutter", aComponentPayload, Client());
-			else
-				QmPerfLogPayload("perf/stutter", aComponentPayload, Client());
-		};
-		LogSamples("on_update", m_vQmStutterComponentSamples[i].m_Update);
-		LogSamples("on_render", m_vQmStutterComponentSamples[i].m_Render);
-	}
-
-	for(const auto &[Name, Value] : m_vQmStutterFeatureSnapshot)
-	{
-		const char *pOwner = str_startswith(Name.c_str(), "qm_") != nullptr ? "qmclient" :
-				     str_startswith(Name.c_str(), "tc_") != nullptr ? "tclient" :
-										      "ddnet";
-		char aFeaturePayload[512];
-		str_format(aFeaturePayload, sizeof(aFeaturePayload),
-			"schema=1 event=feature_snapshot stutter_id=%" PRIu64 " segment=%" PRIu64 " frame=%" PRIu64 " owner=%s feature=%s module=unmapped config_enabled=1 config_value=%d hud_visible=-1 settings_visible=-1 executed_in_frame=-1 executed_in_window=-1 current_page=%s current_tab=%s",
-			Decision.m_StutterId,
-			Decision.m_Segment,
-			m_QmStutterWorstFrame,
-			pOwner,
-			Name.c_str(),
-			Value,
-			m_QmStutterPage.empty() ? "game" : m_QmStutterPage.c_str(),
-			m_QmStutterOperation.empty() ? "none" : m_QmStutterOperation.c_str());
-		if(ForceLog)
-			QmPerfLogPayloadForce("perf/stutter", aFeaturePayload, Client());
-		else
-			QmPerfLogPayload("perf/stutter", aFeaturePayload, Client());
-	}
+	Frame.m_pUser = this;
+	Frame.m_pfnUiContext = [](void *pUser) {
+		auto &Game = *static_cast<CGameClient *>(pUser);
+		CQmStutterCapture::SUiContext Context;
+		Context.m_pPage = Game.m_Menus.CurrentQmUiPerfPage();
+		Context.m_pOperation = Game.m_Menus.CurrentQmUiPerfOperation();
+		int ConfiguredLimit = g_Config.m_GfxRefreshRate > 0 ? g_Config.m_GfxRefreshRate : 0;
+		if(g_Config.m_ClRefreshRate > 0 && (ConfiguredLimit == 0 || g_Config.m_ClRefreshRate < ConfiguredLimit))
+			ConfiguredLimit = g_Config.m_ClRefreshRate;
+		IEngineGraphics *pGraphics = Game.Kernel()->RequestInterface<IEngineGraphics>();
+		Context.m_LimitCause = QmDetermineStutterLimitCause(g_Config.m_GfxVsync != 0, ConfiguredLimit,
+			g_Config.m_ClRefreshRateInactive, pGraphics == nullptr || pGraphics->WindowActive() != 0, Game.m_Menus.IdleRenderFrameRate());
+		return Context;
+	};
+	return Frame;
 }
 
 void CGameClient::ProcessQmStutterFrame()
 {
-	const bool Enabled = g_Config.m_QmPerfStutterDiagnostics != 0;
-	if(!Enabled)
-	{
-		if(m_QmStutterDiagnosticsWasEnabled)
-		{
-			const SQmStutterFrameDecision Decision = m_QmStutterEpisodeTracker.Flush(EQmStutterFlushReason::DISABLED);
-			FlushQmStutterWindow(Decision, true);
-			ResetQmStutterWindowSamples();
-		}
-		m_QmStutterDiagnosticsWasEnabled = false;
-		std::fill(m_vQmStutterPendingUpdateMs.begin(), m_vQmStutterPendingUpdateMs.end(), 0.0);
-		std::fill(m_vQmStutterPendingRenderMs.begin(), m_vQmStutterPendingRenderMs.end(), 0.0);
-		return;
-	}
-
-	if(!m_QmStutterDiagnosticsWasEnabled)
-	{
-		m_QmStutterEpisodeTracker = CQmStutterEpisodeTracker();
-		ResetQmStutterWindowSamples();
-		m_QmStutterDiagnosticsWasEnabled = true;
-	}
-
-	const uint64_t FrameId = Client()->PerfFrame();
-	const double FrameMs = Client()->RenderFrameTime() * 1000.0;
-	const SQmStutterFrameDecision Decision = m_QmStutterEpisodeTracker.RecordFrame(FrameId, FrameMs);
-	if(Decision.m_Started)
-	{
-		ResetQmStutterWindowSamples();
-		m_QmStutterWindowStartFrame = FrameId;
-	}
-
-	if(Decision.m_BelowTarget)
-	{
-		if(m_QmStutterFrameSamples.Empty())
-			m_QmStutterWindowStartFrame = FrameId;
-		m_QmStutterFrameSamples.Record(FrameMs, FrameId);
-		for(size_t i = 0; i < m_vQmStutterComponentSamples.size(); ++i)
-		{
-			m_vQmStutterComponentSamples[i].m_Update.Record(m_vQmStutterPendingUpdateMs[i], FrameId);
-			m_vQmStutterComponentSamples[i].m_Render.Record(m_vQmStutterPendingRenderMs[i], FrameId);
-		}
-		if(FrameMs > m_QmStutterWorstFrameMs)
-		{
-			m_QmStutterWorstFrameMs = FrameMs;
-			m_QmStutterWorstFrame = FrameId;
-			CaptureQmStutterFeatureSnapshot();
-		}
-	}
-
-	std::fill(m_vQmStutterPendingUpdateMs.begin(), m_vQmStutterPendingUpdateMs.end(), 0.0);
-	std::fill(m_vQmStutterPendingRenderMs.begin(), m_vQmStutterPendingRenderMs.end(), 0.0);
-	if(Decision.m_FlushWindow)
-	{
-		FlushQmStutterWindow(Decision, false);
-		ResetQmStutterWindowSamples();
-	}
+	m_QmStutterCapture.ProcessFrame(QmStutterFrameContext());
 }
 
 void CGameClient::OnDummyDisconnect()
@@ -2499,7 +2335,7 @@ void CGameClient::OnDummyDisconnect()
 	m_aLastPredictedAirJumpTick[1] = -1;
 	m_PredictedDummyId = -1;
 	m_HammerHitTracker.Reset();
-	m_vPendingHammerHitEvents.clear();
+	m_PendingHammerHits.Reset();
 	std::fill(std::begin(m_aConfirmedHammerHitEvent), std::end(m_aConfirmedHammerHitEvent), false);
 	m_FastPractice.InvalidateBufferedInputState();
 }
@@ -2517,10 +2353,8 @@ int CGameClient::LastRaceTick() const
 int CGameClient::CurrentRaceTime() const
 {
 	if(m_LastRaceTick < 0)
-	{
 		return 0;
-	}
-	return (Client()->GameTick(g_Config.m_ClDummy) - m_LastRaceTick) / Client()->GameTickSpeed();
+	return qm_race_timing::ElapsedSeconds(Client()->GameTick(g_Config.m_ClDummy), m_LastRaceTick, Client()->GameTickSpeed());
 }
 
 bool CGameClient::IsTeamPlay() const
@@ -3303,7 +3137,7 @@ void CGameClient::ResetDemoPlaybackState()
 	m_DemoHudPlaybackState = {};
 	m_DemoInputPlaybackState = {};
 	m_HammerHitTracker.Reset();
-	m_vPendingHammerHitEvents.clear();
+	m_PendingHammerHits.Reset();
 	for(auto &Client : m_aClients)
 		Client.m_HudFrozenTeeState = {};
 }
@@ -3379,11 +3213,8 @@ bool CGameClient::QmUiAnimationsIdle() const
 void CGameClient::OnShutdown()
 {
 	// 退出前结算进行中的 stutter 窗口，避免最后的诊断数据丢失
-	if(m_QmStutterEpisodeTracker.Active())
-	{
-		const SQmStutterFrameDecision Decision = m_QmStutterEpisodeTracker.Flush(EQmStutterFlushReason::SHUTDOWN);
-		FlushQmStutterWindow(Decision, true);
-	}
+	if(m_QmStutterCapture.Active())
+		m_QmStutterCapture.Finish(QmStutterFrameContext());
 
 	for(auto &pComponent : m_vpAll)
 		pComponent->OnShutdown();
@@ -3507,7 +3338,7 @@ void CGameClient::ProcessDemoSnapshot(CSnapshot *pSnap)
 			// always record local camera info as follow mode
 			CNetObj_DDNetSpectatorInfo *pDDNetSpectatorInfo = (CNetObj_DDNetSpectatorInfo *)((void *)pItem->Data());
 			pDDNetSpectatorInfo->m_HasCameraInfo = true;
-			pDDNetSpectatorInfo->m_Zoom = (m_Camera.m_Zooming ? m_Camera.m_ZoomSmoothingTarget : m_Camera.BaseZoom()) * 1000.0f;
+			pDDNetSpectatorInfo->m_Zoom = QmCameraEffects::EncodeZoom(m_Camera.m_Zooming ? m_Camera.m_ZoomSmoothingTarget : m_Camera.BaseZoom());
 			pDDNetSpectatorInfo->m_Deadzone = m_Camera.Deadzone();
 			pDDNetSpectatorInfo->m_FollowFactor = m_Camera.FollowFactor();
 		}
@@ -3526,7 +3357,7 @@ void CGameClient::OnRconLine(const char *pLine)
 
 void CGameClient::ProcessEvents()
 {
-	m_vPendingHammerHitEvents.clear();
+	m_PendingHammerHits.Reset();
 	std::fill(std::begin(m_aConfirmedHammerHitEvent), std::end(m_aConfirmedHammerHitEvent), false);
 	const int EventDummy = g_Config.m_ClDummy;
 	const int EventTick = Client()->GameTick(EventDummy);
@@ -3542,9 +3373,11 @@ void CGameClient::ProcessEvents()
 	m_aLastProcessedEventTick[EventDummy] = EventTick;
 	auto RememberConfirmedEvent = [this, EventTick](int EventId, vec2 Pos, int ExtraInfo = -1) {
 		CGameWorld::CPredictedEvent Event(EventId, Pos, -1, EventTick, ExtraInfo);
+		if(!Event.HasValidPosition())
+			return;
 		Event.m_Handled = true;
 		Event.m_ServerConfirmed = true;
-		m_PredictedWorld.m_PredictedEvents.push_back(Event);
+		(void)m_PredictedWorld.TryAppendPredictedEvent(Event);
 	};
 
 	int SnapType = IClient::SNAP_CURRENT;
@@ -3552,6 +3385,28 @@ void CGameClient::ProcessEvents()
 	for(int Index = 0; Index < Num; Index++)
 	{
 		const IClient::CSnapItem Item = Client()->SnapGetItem(SnapType, Index);
+
+		// 事件公共坐标先校验，避免构造确认记录或提交音效/粒子后才遇到越界取整。
+		switch(Item.m_Type)
+		{
+		case NETEVENTTYPE_DAMAGEIND:
+		case NETEVENTTYPE_EXPLOSION:
+		case NETEVENTTYPE_HAMMERHIT:
+		case NETEVENTTYPE_BIRTHDAY:
+		case NETEVENTTYPE_FINISH:
+		case NETEVENTTYPE_SPAWN:
+		case NETEVENTTYPE_DEATH:
+		case NETEVENTTYPE_SOUNDWORLD:
+		case NETEVENTTYPE_MAPSOUNDWORLD:
+		{
+			const auto *pEvent = static_cast<const CNetEvent_Common *>(Item.m_pData);
+			if(!QmCollision::CanRoundPosition(vec2(pEvent->m_X, pEvent->m_Y)))
+				continue;
+			break;
+		}
+		default:
+			break;
+		}
 
 		// TODO: We don't have enough info about us, others, to know a correct alpha or volume value.
 		const float Alpha = 1.0f;
@@ -3600,7 +3455,7 @@ void CGameClient::ProcessEvents()
 			const CNetEvent_HammerHit *pEvent = (const CNetEvent_HammerHit *)Item.m_pData;
 			const vec2 HammerHitPos(pEvent->m_X, pEvent->m_Y);
 			bool RenderEffect = true;
-			m_vPendingHammerHitEvents.push_back({HammerHitPos,
+			(void)m_PendingHammerHits.TryAppend({HammerHitPos,
 				Client()->GameTick(g_Config.m_ClDummy),
 				g_Config.m_ClDummy,
 				Index,
@@ -3679,12 +3534,14 @@ void CGameClient::FinalizeHammerHitEvents()
 {
 	auto RememberConfirmedEvent = [this](vec2 Pos, int AttackerId, int TargetId, int SnapshotTick) {
 		CGameWorld::CPredictedEvent Event(NETEVENTTYPE_HAMMERHIT, Pos, AttackerId, SnapshotTick, TargetId);
+		if(!Event.HasValidPosition())
+			return;
 		Event.m_Handled = true;
 		Event.m_ServerConfirmed = true;
-		m_PredictedWorld.m_PredictedEvents.push_back(Event);
+		(void)m_PredictedWorld.TryAppendPredictedEvent(Event);
 	};
 
-	for(const SPendingHammerHitEvent &Event : m_vPendingHammerHitEvents)
+	for(const CQmPendingHammerHits::SEvent &Event : m_PendingHammerHits.Events())
 	{
 		const SQmHammerHitMatch Match = QmInferHammerHit(this, Event.m_Pos, Event.m_SnapshotTick);
 		bool TargetWoke = false;
@@ -3740,7 +3597,7 @@ void CGameClient::FinalizeHammerHitEvents()
 			}
 		}
 	}
-	m_vPendingHammerHitEvents.clear();
+	m_PendingHammerHits.Reset();
 }
 
 static CGameInfo GetGameInfo(const CNetObj_GameInfoEx *pInfoEx, int InfoExSize, const CServerInfo *pFallbackServerInfo)
@@ -4670,8 +4527,8 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 			Zoom = m_Camera.m_ZoomSmoothingTarget;
 		}
 
-		float Deadzone = m_Camera.Deadzone();
-		float FollowFactor = m_Camera.FollowFactor();
+		int Deadzone = m_Camera.Deadzone();
+		int FollowFactor = m_Camera.FollowFactor();
 
 		if(m_Snap.m_SpecInfo.m_Active)
 		{
@@ -4685,20 +4542,15 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 		if(Client()->DummyConnected() && !m_LastDummyConnected)
 		{
 			{
-				CNetMsg_Cl_ShowDistance Msg;
 				float x, y;
 				Graphics()->CalcScreenParams(Graphics()->GameScreenAspect(), ShowDistanceZoom, &x, &y);
-				Msg.m_X = x;
-				Msg.m_Y = y;
+				auto Msg = QmCameraNetwork::ShowDistance(x, y);
 				CMsgPacker Packer(&Msg);
 				Msg.Pack(&Packer);
 				Client()->SendMsg(IClient::CONN_DUMMY, &Packer, MSGFLAG_VITAL);
 			}
 			{
-				CNetMsg_Cl_CameraInfo Msg;
-				Msg.m_Zoom = round_truncate(Zoom * 1000.f);
-				Msg.m_Deadzone = Deadzone;
-				Msg.m_FollowFactor = FollowFactor;
+				auto Msg = QmCameraNetwork::CameraInfo(Zoom, Deadzone, FollowFactor);
 				CMsgPacker Packer(&Msg);
 				Msg.Pack(&Packer);
 				Client()->SendMsg(IClient::CONN_DUMMY, &Packer, MSGFLAG_VITAL);
@@ -4708,11 +4560,9 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 		// send show distance
 		if(ShowDistanceZoom != m_LastShowDistanceZoom || Graphics()->GameScreenAspect() != m_LastScreenAspect)
 		{
-			CNetMsg_Cl_ShowDistance Msg;
 			float x, y;
 			Graphics()->CalcScreenParams(Graphics()->GameScreenAspect(), ShowDistanceZoom, &x, &y);
-			Msg.m_X = x;
-			Msg.m_Y = y;
+			auto Msg = QmCameraNetwork::ShowDistance(x, y);
 			Client()->ChecksumData()->m_Zoom = ShowDistanceZoom;
 			CMsgPacker Packer(&Msg);
 			Msg.Pack(&Packer);
@@ -4725,10 +4575,7 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 		// send camera info
 		if(Zoom != m_LastZoom || Deadzone != m_LastDeadzone || FollowFactor != m_LastFollowFactor)
 		{
-			CNetMsg_Cl_CameraInfo Msg;
-			Msg.m_Zoom = round_truncate(Zoom * 1000.f);
-			Msg.m_Deadzone = Deadzone;
-			Msg.m_FollowFactor = FollowFactor;
+			auto Msg = QmCameraNetwork::CameraInfo(Zoom, Deadzone, FollowFactor);
 			CMsgPacker Packer(&Msg);
 			Msg.Pack(&Packer);
 
@@ -4873,7 +4720,7 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 		m_Snap.m_pLocalPrevCharacter)
 	{
 		const bool RaceFlag = m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_RACETIME;
-		m_LastRaceTick = RaceFlag ? -m_Snap.m_pGameInfoObj->m_WarmupTimer : -1;
+		m_LastRaceTick = qm_race_timing::UpdateLastTick(m_LastRaceTick, RaceFlag, m_Snap.m_pGameInfoObj->m_WarmupTimer);
 	}
 
 	SnapCollectEntities(); // creates a collection that associates EntityEx snap items with the entities they belong to
@@ -5280,8 +5127,16 @@ void CGameClient::OnPredict()
 	bool Dummy = g_Config.m_ClDummy ^ m_IsDummySwapping;
 
 	// PredictedEvents are only handled in predicted world, so update them here
-	m_GameWorld.m_PredictedEvents = m_PredictedWorld.m_PredictedEvents;
-	m_PredictedWorld.CopyWorld(&m_GameWorld);
+	try
+	{
+		m_GameWorld.m_PredictedEvents = m_PredictedWorld.m_PredictedEvents;
+	}
+	catch(...)
+	{
+		return;
+	}
+	if(!m_PredictedWorld.CopyWorld(&m_GameWorld))
+		return;
 
 	// don't predict inactive players, or entities from other teams
 	for(int i = 0; i < MAX_CLIENTS; i++)
@@ -5328,7 +5183,8 @@ void CGameClient::OnPredict()
 		// fetch the previous characters
 		if(Tick == FinalTickSelf)
 		{
-			m_PrevPredictedWorld.CopyWorld(&m_PredictedWorld);
+			if(!m_PrevPredictedWorld.CopyWorld(&m_PredictedWorld))
+				return;
 			m_PredictedPrevChar = pLocalChar->GetCore();
 			m_aClients[m_Snap.m_LocalClientId].m_PrevPredicted = pLocalChar->GetCore();
 		}
@@ -5349,7 +5205,8 @@ void CGameClient::OnPredict()
 		}
 
 		if(Tick == FinalTickRegular)
-			m_PrevRegularPredictedWorld.CopyWorldClean(&m_PredictedWorld);
+			if(!m_PrevRegularPredictedWorld.CopyWorldClean(&m_PredictedWorld))
+				return;
 
 		// optionally allow some movement in freeze by not predicting freeze the last one to two ticks
 		if(g_Config.m_ClPredictFreeze == 2 && Client()->PredGameTick(g_Config.m_ClDummy) - 1 - Client()->PredGameTick(g_Config.m_ClDummy) % 2 <= Tick)
@@ -5412,7 +5269,8 @@ void CGameClient::OnPredict()
 		}
 		if(Tick == FinalTickRegular)
 		{
-			m_RegularPredictedWorld.CopyWorldClean(&m_PredictedWorld);
+			if(!m_RegularPredictedWorld.CopyWorldClean(&m_PredictedWorld))
+				return;
 			for(int i = 0; i < MAX_CLIENTS; i++)
 				if(CCharacter *pChar = m_PredictedWorld.GetCharacterById(i))
 					m_aClients[i].m_RegularPredicted = pChar->GetCore();
@@ -5498,11 +5356,13 @@ void CGameClient::OnPredict()
 	}
 
 	if(FastInputTicks > 0)
-		m_PredictedWorld.CopyWorld(&m_RegularPredictedWorld);
+		if(!m_PredictedWorld.CopyWorld(&m_RegularPredictedWorld))
+			return;
 
 	if(g_Config.m_QmRemoveAnti)
 	{
-		m_ExtraPredictedWorld.CopyWorldClean(&m_PredictedWorld);
+		if(!m_ExtraPredictedWorld.CopyWorldClean(&m_PredictedWorld))
+			return;
 
 		// Remove other tees to reduce lag and because they aren't really important in this case
 		for(int i = 0; i < MAX_CLIENTS; i++)
@@ -5822,7 +5682,8 @@ void CGameClient::OnPredict()
 	}
 	// Copy the current pred world so on the next tick we have the "previous" pred world to advance and test against
 	if(m_NewPredictedTick && g_Config.m_QmAntiPingImproved)
-		m_PredSmoothingWorld.CopyWorldClean(&m_RegularPredictedWorld);
+		if(!m_PredSmoothingWorld.CopyWorldClean(&m_RegularPredictedWorld))
+			return;
 
 	for(int i = 0; i < MAX_CLIENTS; i++)
 	{
@@ -7693,7 +7554,7 @@ vec2 CGameClient::GetFreezePos(int ClientId)
 
 	int AdjustTicks = 0;
 	int DelayTicks = g_Config.m_QmUnfreezeLagDelayTicks;
-	int FreezeTime = 0;
+	int64_t FreezeTime = 0;
 	if(pExtraChar && pChar)
 	{
 		AdjustTicks = pChar->m_FreezeAccumulation;
@@ -7703,7 +7564,7 @@ vec2 CGameClient::GetFreezePos(int ClientId)
 		AdjustTicks = std::max(AdjustTicks, 0);
 		FreezeTime = pChar->m_FreezeTime;
 
-		AdjustTicks = std::min(FreezeTime, AdjustTicks);
+		AdjustTicks = static_cast<int>(std::min<int64_t>(FreezeTime, AdjustTicks));
 	}
 	if(g_Config.m_QmRemoveAnti && pChar && AdjustTicks > 0 && FreezeTime > 0)
 		MixAmount = mix(0.0f, 1.0f, 1.0f - AdjustTicks / (float)DelayTicks);
@@ -9308,8 +9169,6 @@ bool CGameClient::InitMultiView(int Team)
 	if(IsMultiViewIdSet())
 	{
 		int SpectatorId = m_Snap.m_SpecInfo.m_SpectatorId;
-		int NewSpectatorId = -1;
-
 		vec2 CurPosition(m_Camera.m_Center);
 		if(SpectatorId != SPEC_FREEVIEW)
 		{
@@ -9318,7 +9177,7 @@ bool CGameClient::InitMultiView(int Team)
 			CurPosition.y = CurCharacter.m_Y;
 		}
 
-		int ClosestDistance = std::numeric_limits<int>::max();
+		QmSpectatorSelection::CClosest Closest(CurPosition);
 		for(int ClientId = 0; ClientId < MAX_CLIENTS; ClientId++)
 		{
 			if(!m_Snap.m_apPlayerInfos[ClientId] || m_Snap.m_apPlayerInfos[ClientId]->m_Team == TEAM_SPECTATORS || m_Teams.Team(ClientId) != m_MultiViewTeam)
@@ -9332,16 +9191,11 @@ bool CGameClient::InitMultiView(int Team)
 			else
 				continue;
 
-			int Distance = distance(CurPosition, PlayerPos);
-			if(NewSpectatorId == -1 || Distance < ClosestDistance)
-			{
-				NewSpectatorId = ClientId;
-				ClosestDistance = Distance;
-			}
+			Closest.Consider(ClientId, PlayerPos);
 		}
 
-		if(NewSpectatorId > -1)
-			m_Spectator.Spectate(NewSpectatorId);
+		if(Closest.SelectedId() >= 0)
+			m_Spectator.Spectate(Closest.SelectedId());
 	}
 
 	return IsMultiViewIdSet();

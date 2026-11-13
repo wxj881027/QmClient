@@ -7,7 +7,83 @@
 #include <gtest/gtest.h>
 #include <test/test.h>
 
+#include <cstdlib>
 #include <limits>
+#include <memory>
+#include <type_traits>
+#include <utility>
+
+TEST(Image, MoveAndReleaseHaveNoThrowContracts)
+{
+	EXPECT_TRUE(std::is_nothrow_move_constructible_v<CImageInfo>);
+	EXPECT_TRUE(std::is_nothrow_move_assignable_v<CImageInfo>);
+	EXPECT_TRUE(noexcept(std::declval<CImageInfo &>().Free()));
+}
+
+TEST(Image, MoveConstructionTransfersPixelsAndClearsSource)
+{
+	std::unique_ptr<uint8_t, decltype(&std::free)> pPixels(static_cast<uint8_t *>(std::malloc(8)), &std::free);
+	ASSERT_NE(pPixels, nullptr);
+	pPixels.get()[0] = 73;
+	CImageInfo Source;
+	Source.m_Width = 2;
+	Source.m_Height = 1;
+	Source.m_Format = CImageInfo::FORMAT_RGBA;
+	Source.m_pData = pPixels.get();
+	CImageInfo Moved(std::move(Source));
+	ASSERT_EQ(Moved.m_pData, pPixels.get());
+	EXPECT_EQ(Moved.m_pData[0], 73);
+	EXPECT_EQ(Moved.m_Width, 2u);
+	EXPECT_EQ(Moved.m_Height, 1u);
+	EXPECT_EQ(Moved.m_Format, CImageInfo::FORMAT_RGBA);
+	EXPECT_EQ(Source.m_pData, nullptr);
+	EXPECT_EQ(Source.m_Width, 0u);
+	EXPECT_EQ(Source.m_Height, 0u);
+	EXPECT_EQ(Source.m_Format, CImageInfo::FORMAT_UNDEFINED);
+}
+
+TEST(Image, MoveAssignmentTransfersPixelsIntoAnOccupiedDestination)
+{
+	std::unique_ptr<uint8_t, decltype(&std::free)> pPixels(static_cast<uint8_t *>(std::malloc(8)), &std::free);
+	std::unique_ptr<uint8_t, decltype(&std::free)> pPrevious(static_cast<uint8_t *>(std::malloc(4)), &std::free);
+	ASSERT_NE(pPixels, nullptr);
+	ASSERT_NE(pPrevious, nullptr);
+	CImageInfo Source;
+	Source.m_Width = 2;
+	Source.m_Height = 1;
+	Source.m_Format = CImageInfo::FORMAT_RGBA;
+	Source.m_pData = pPixels.get();
+	CImageInfo Target;
+	Target.m_Width = Target.m_Height = 1;
+	Target.m_Format = CImageInfo::FORMAT_RGBA;
+	Target.m_pData = pPrevious.release();
+	CImageInfo &Assigned = Target = std::move(Source);
+	EXPECT_EQ(&Assigned, &Target);
+	EXPECT_EQ(Target.m_pData, pPixels.get());
+	EXPECT_EQ(Target.m_Width, 2u);
+	EXPECT_EQ(Target.m_Height, 1u);
+	EXPECT_EQ(Target.m_Format, CImageInfo::FORMAT_RGBA);
+	EXPECT_EQ(Source.m_pData, nullptr);
+	EXPECT_EQ(Source.m_Format, CImageInfo::FORMAT_UNDEFINED);
+}
+
+TEST(Image, SelfMoveKeepsPixelsAndDimensions)
+{
+	std::unique_ptr<uint8_t, decltype(&std::free)> pPixels(static_cast<uint8_t *>(std::malloc(4)), &std::free);
+	ASSERT_NE(pPixels, nullptr);
+	pPixels.get()[0] = 19;
+	CImageInfo Image;
+	Image.m_Width = Image.m_Height = 1;
+	Image.m_Format = CImageInfo::FORMAT_RGBA;
+	Image.m_pData = pPixels.get();
+	CImageInfo &Alias = Image;
+	Image = std::move(Alias);
+	ASSERT_EQ(Image.m_pData, pPixels.get());
+	EXPECT_EQ(Image.m_pData[0], 19);
+	EXPECT_EQ(Image.m_Width, 1u);
+	EXPECT_EQ(Image.m_Height, 1u);
+	EXPECT_EQ(Image.m_Format, CImageInfo::FORMAT_RGBA);
+}
 
 TEST(Image, FormatNamesMatchFormatValues)
 {

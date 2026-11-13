@@ -7,10 +7,9 @@
 #include <game/collision.h>
 #include <game/mapitems.h>
 
-const float PLASMA_ACCEL = 1.1f;
-
 CPlasma::CPlasma(CGameWorld *pGameWorld, int Id, const CLaserData *pData) :
-	CEntity(pGameWorld, CGameWorld::ENTTYPE_PLASMA)
+	CEntity(pGameWorld, CGameWorld::ENTTYPE_PLASMA),
+	m_Core(0.0f, 0.0f)
 {
 	m_Id = Id;
 
@@ -72,16 +71,14 @@ void CPlasma::Tick()
 		return;
 	}
 	m_LifeTime--;
-	Move();
+	if(!TryAdvance(m_Pos, m_Core))
+	{
+		Reset();
+		return;
+	}
 	HitCharacter(pTarget);
 	// Plasma bullets may explode twice if they would hit both a player and an obstacle in the next move step
 	HitObstacle(pTarget);
-}
-
-void CPlasma::Move()
-{
-	m_Pos += m_Core;
-	m_Core *= PLASMA_ACCEL;
 }
 
 bool CPlasma::HitCharacter(CCharacter *pTarget)

@@ -146,8 +146,8 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientBindWheelCard(const qm_car
 			{
 				CBindWheel::CBind TempBind;
 				str_copy(TempBind.m_aName, str_length(s_aBindName) == 0 ? "*" : s_aBindName);
-				GameClient()->m_BindWheel.AddBind(TempBind.m_aName, s_aBindCommand);
-				s_SelectedBindIndex = static_cast<int>(GameClient()->m_BindWheel.m_vBinds.size()) - 1;
+				if(GameClient()->m_BindWheel.AddBind(TempBind.m_aName, s_aBindCommand))
+					s_SelectedBindIndex = static_cast<int>(GameClient()->m_BindWheel.m_vBinds.size()) - 1;
 			}
 			if(DoSettingsButton_Menu(SETTINGS_TCLIENT, TCLIENT_TAB_BINDWHEEL, TCLIENT_TAB_BINDWHEEL, &s_RemoveButton, "tclient-bindwheel-remove-bind", Localize("Remove Bind"), 0, &ButtonRemove) && !ReadOnly && !Ui()->RenderOnly() && s_SelectedBindIndex >= 0)
 			{

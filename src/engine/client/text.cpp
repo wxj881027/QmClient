@@ -1,9 +1,13 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "font_size_cache.h"
+#include "glyph_atlas.h"
 #include "glyph_atlas_growth.h"
 #include "glyph_lookup_cache.h"
 #include "glyph_outline.h"
+#include "glyph_render_retry.h"
+#include "graphics_buffer_pair.h"
+#include "graphics_vertex_budget.h"
 #include "qm_font_category.h"
 #include "qm_font_collection.h"
 #include "qm_font_face_registry.h"
@@ -13,7 +17,9 @@
 #include "qm_font_resource_policy.h"
 #include "qm_font_restore.h"
 #include "qm_font_scan_job.h"
+#include "qm_recent_glyphs.h"
 #include "qm_system_fonts.h"
+#include "text_container_pool.h"
 #include "text_gradient.h"
 #include "text_layout_string.h"
 #include "text_sweep.h"
@@ -94,12 +100,7 @@ enum
 
 struct SGlyph
 {
-	enum class EState
-	{
-		UNINITIALIZED,
-		RENDERED,
-		ERROR,
-	};
+	using EState = EQmGlyphState;
 	EState m_State = EState::UNINITIALIZED;
 
 	int m_FontSize;
@@ -142,206 +143,6 @@ struct SGlyphKeyEquals
 	bool operator()(const std::tuple<FT_Face, int, int, bool> &Lhs, const std::tuple<FT_Face, int, int, bool> &Rhs) const
 	{
 		return std::get<0>(Lhs) == std::get<0>(Rhs) && std::get<1>(Lhs) == std::get<1>(Rhs) && std::get<2>(Lhs) == std::get<2>(Rhs) && std::get<3>(Lhs) == std::get<3>(Rhs);
-	}
-};
-
-class CAtlas
-{
-	struct SSectionKeyHash
-	{
-		size_t operator()(const std::tuple<size_t, size_t> &Key) const
-		{
-			// Width and height should never be above 2^16 so this hash should cause no collisions
-			return (std::get<0>(Key) << 16) ^ std::get<1>(Key);
-		}
-	};
-
-	struct SSectionKeyEquals
-	{
-		bool operator()(const std::tuple<size_t, size_t> &Lhs, const std::tuple<size_t, size_t> &Rhs) const
-		{
-			return std::get<0>(Lhs) == std::get<0>(Rhs) && std::get<1>(Lhs) == std::get<1>(Rhs);
-		}
-	};
-
-	struct SSection
-	{
-		size_t m_X;
-		size_t m_Y;
-		size_t m_W;
-		size_t m_H;
-
-		SSection() = default;
-
-		SSection(size_t X, size_t Y, size_t W, size_t H) :
-			m_X(X), m_Y(Y), m_W(W), m_H(H)
-		{
-		}
-	};
-
-	/**
-	 * Sections with a smaller width or height will not be created
-	 * when cutting larger sections, to prevent collecting many
-	 * small, mostly unusable sections.
-	 */
-	static constexpr size_t MIN_SECTION_DIMENSION = 6;
-
-	/**
-	 * Sections with larger width or height will be stored in m_vSections.
-	 * Sections with width and height equal or smaller will be stored in m_SectionsMap.
-	 * This achieves a good balance between the size of the vector storing all large
-	 * sections and the map storing vectors of all sections with specific small sizes.
-	 * Lowering this value will result in the size of m_vSections becoming the bottleneck.
-	 * Increasing this value will result in the map becoming the bottleneck.
-	 */
-	static constexpr size_t MAX_SECTION_DIMENSION_MAPPED = 8 * MIN_SECTION_DIMENSION;
-
-	size_t m_TextureDimension;
-	std::vector<SSection> m_vSections;
-	std::unordered_map<std::tuple<size_t, size_t>, std::vector<SSection>, SSectionKeyHash, SSectionKeyEquals> m_SectionsMap;
-
-	void AddSection(size_t X, size_t Y, size_t W, size_t H)
-	{
-		std::vector<SSection> &vSections = W <= MAX_SECTION_DIMENSION_MAPPED && H <= MAX_SECTION_DIMENSION_MAPPED ? m_SectionsMap[std::make_tuple(W, H)] : m_vSections;
-		vSections.emplace_back(X, Y, W, H);
-	}
-
-	void UseSection(const SSection &Section, size_t Width, size_t Height, int &PosX, int &PosY)
-	{
-		PosX = Section.m_X;
-		PosY = Section.m_Y;
-
-		// Create cut sections
-		const size_t CutW = Section.m_W - Width;
-		const size_t CutH = Section.m_H - Height;
-		if(CutW == 0)
-		{
-			if(CutH >= MIN_SECTION_DIMENSION)
-				AddSection(Section.m_X, Section.m_Y + Height, Section.m_W, CutH);
-		}
-		else if(CutH == 0)
-		{
-			if(CutW >= MIN_SECTION_DIMENSION)
-				AddSection(Section.m_X + Width, Section.m_Y, CutW, Section.m_H);
-		}
-		else if(CutW > CutH)
-		{
-			if(CutW >= MIN_SECTION_DIMENSION)
-				AddSection(Section.m_X + Width, Section.m_Y, CutW, Section.m_H);
-			if(CutH >= MIN_SECTION_DIMENSION)
-				AddSection(Section.m_X, Section.m_Y + Height, Width, CutH);
-		}
-		else
-		{
-			if(CutH >= MIN_SECTION_DIMENSION)
-				AddSection(Section.m_X, Section.m_Y + Height, Section.m_W, CutH);
-			if(CutW >= MIN_SECTION_DIMENSION)
-				AddSection(Section.m_X + Width, Section.m_Y, CutW, Height);
-		}
-	}
-
-public:
-	void Clear(size_t TextureDimension)
-	{
-		m_TextureDimension = TextureDimension;
-		m_vSections.clear();
-		m_vSections.emplace_back(0, 0, m_TextureDimension, m_TextureDimension);
-		m_SectionsMap.clear();
-	}
-
-	void IncreaseDimension(size_t NewTextureDimension)
-	{
-		dbg_assert(NewTextureDimension == m_TextureDimension * 2, "New atlas dimension must be twice the old one");
-		// Create 3 square sections to cover the new area, add the sections
-		// to the beginning of the vector so they are considered last.
-		m_vSections.emplace_back(m_TextureDimension, m_TextureDimension, m_TextureDimension, m_TextureDimension);
-		m_vSections.emplace_back(m_TextureDimension, 0, m_TextureDimension, m_TextureDimension);
-		m_vSections.emplace_back(0, m_TextureDimension, m_TextureDimension, m_TextureDimension);
-		std::rotate(m_vSections.rbegin(), m_vSections.rbegin() + 3, m_vSections.rend());
-		m_TextureDimension = NewTextureDimension;
-	}
-
-	bool Add(size_t Width, size_t Height, int &PosX, int &PosY)
-	{
-		if(m_vSections.empty() || m_TextureDimension < Width || m_TextureDimension < Height)
-			return false;
-
-		// Find small section more efficiently by using maps
-		if(Width <= MAX_SECTION_DIMENSION_MAPPED && Height <= MAX_SECTION_DIMENSION_MAPPED)
-		{
-			const auto UseSectionFromMap = [&](size_t CheckWidth, size_t CheckHeight) {
-				// 查询不存在的尺寸不应创建空桶，只有实际切出空区时才插入。
-				const auto It = m_SectionsMap.find(std::make_tuple(CheckWidth, CheckHeight));
-				if(It == m_SectionsMap.end())
-					return false;
-				std::vector<SSection> &vSections = It->second;
-				if(!vSections.empty())
-				{
-					const SSection Section = vSections.back();
-					vSections.pop_back();
-					UseSection(Section, Width, Height, PosX, PosY);
-					return true;
-				}
-				return false;
-			};
-
-			if(UseSectionFromMap(Width, Height))
-				return true;
-
-			for(size_t CheckWidth = Width + 1; CheckWidth <= MAX_SECTION_DIMENSION_MAPPED; ++CheckWidth)
-			{
-				if(UseSectionFromMap(CheckWidth, Height))
-					return true;
-			}
-
-			for(size_t CheckHeight = Height + 1; CheckHeight <= MAX_SECTION_DIMENSION_MAPPED; ++CheckHeight)
-			{
-				if(UseSectionFromMap(Width, CheckHeight))
-					return true;
-			}
-
-			// We don't iterate sections in the map with increasing width and height at the same time,
-			// because it's slower and doesn't noticeable increase the atlas utilization.
-		}
-
-		// Check vector for larger section
-		size_t SmallestLossValue = std::numeric_limits<size_t>::max();
-		size_t SmallestLossIndex = m_vSections.size();
-		size_t SectionIndex = m_vSections.size();
-		do
-		{
-			--SectionIndex;
-			const SSection &Section = m_vSections[SectionIndex];
-			if(Section.m_W < Width || Section.m_H < Height)
-				continue;
-
-			const size_t LossW = Section.m_W - Width;
-			const size_t LossH = Section.m_H - Height;
-
-			size_t Loss;
-			if(LossW == 0)
-				Loss = LossH;
-			else if(LossH == 0)
-				Loss = LossW;
-			else
-				Loss = LossW * LossH;
-
-			if(Loss < SmallestLossValue)
-			{
-				SmallestLossValue = Loss;
-				SmallestLossIndex = SectionIndex;
-				if(SmallestLossValue == 0)
-					break;
-			}
-		} while(SectionIndex > 0);
-		if(SmallestLossIndex == m_vSections.size())
-			return false; // No usable section found in vector
-
-		// Use the section with the smallest loss
-		const SSection Section = m_vSections[SmallestLossIndex];
-		m_vSections.erase(m_vSections.begin() + SmallestLossIndex);
-		UseSection(Section, Width, Height, PosX, PosY);
-		return true;
 	}
 };
 
@@ -408,7 +209,8 @@ private:
 	size_t m_TextureDimension = INITIAL_ATLAS_DIMENSION;
 	// Keep the full texture data, because OpenGL doesn't provide texture copying
 	std::unique_ptr<uint8_t[]> m_apTextureData[NUM_FONT_TEXTURES];
-	CAtlas m_TextureAtlas;
+	CGlyphAtlas<> m_TextureAtlas;
+	CQmGlyphRenderRetry m_GlyphRenderRetry;
 	std::unordered_map<std::tuple<FT_Face, int, int, bool>, SGlyph, SGlyphKeyHash, SGlyphKeyEquals> m_Glyphs;
 	// QmClient: 近期字形命中的直接索引。字形表在热路径上被按 (face, chr, size) 反复查询，
 	// 这里用固定容量、零分配的缓存挡掉大部分哈希查找；冲突只导致回落到原查找路径。
@@ -420,13 +222,7 @@ private:
 	// QmClient: 最近缓存未命中（需要光栅化）的字形 (Chr, FontSize)，供菜单在关闭时的
 	// 空闲帧分帧预热，避免下次打开菜单时一次性光栅化上百个字形造成掉帧；集合会持久化，
 	// 使重启客户端后的第一次打开也能命中缓存。
-	static constexpr size_t QM_MAX_RECENT_GLYPH_MISSES = 4096;
-	std::vector<std::pair<int, int>> m_vQmRecentGlyphMisses;
-	std::unordered_set<uint64_t> m_QmRecentGlyphMissKeys;
-	// 预热进度游标：集合本身保留（供退出时持久化），游标只前进不回退；
-	// 游标之后新增的缺失字形会被继续预热。
-	size_t m_QmRecentGlyphPrewarmCursor = 0;
-	bool m_QmRecordGlyphMisses = true;
+	QmRecentGlyphs::CCollection m_RecentGlyphs;
 	bool m_QmTraceFirstCjkGlyph = true;
 
 	// Font faces
@@ -523,7 +319,7 @@ private:
 		}
 
 		// 分区和上传缓冲也先准备完整，失败时不能留下新旧尺寸混用的图集。
-		CAtlas NewAtlas;
+		CGlyphAtlas<> NewAtlas;
 		try
 		{
 			NewAtlas = m_TextureAtlas;
@@ -666,11 +462,18 @@ private:
 		return GlyphIndex;
 	}
 
-	bool EnsureFacePixelSize(FT_Face Face, int FontSize) const
+	bool EnsureFacePixelSize(FT_Face Face, int FontSize, FT_Error *pError = nullptr) const
 	{
 		// 同一 face 连续用同一字号时跳过重复的 FT_Set_Pixel_Sizes；
 		// 任何绕过此入口直接设置字号的路径都必须先 InvalidateFacePixelSizeCache()。
-		return m_FacePixelSizeCache.Ensure(Face, FontSize, [&]() { return FT_Set_Pixel_Sizes(Face, 0, FontSize); });
+		FT_Error Error = Face == nullptr ? FT_Err_Invalid_Face_Handle : FT_Err_Ok;
+		const bool Success = m_FacePixelSizeCache.Ensure(Face, FontSize, [&]() {
+			Error = FT_Set_Pixel_Sizes(Face, 0, FontSize);
+			return Error;
+		});
+		if(pError != nullptr)
+			*pError = Error;
+		return Success;
 	}
 
 	int AdjustOutlineThicknessToFontSize(int OutlineThickness, int FontSize) const
@@ -812,16 +615,18 @@ private:
 		return m_TextureAtlas.Add(Width, Height, PosX, PosY);
 	}
 
-	bool RenderGlyph(SGlyph &Glyph)
+	EQmGlyphRenderResult RenderGlyph(SGlyph &Glyph)
 	{
 		const auto RasterizeStart = QmPerfEnabled() ? time_get_nanoseconds() : std::chrono::nanoseconds(0);
-		if(!EnsureFacePixelSize(Glyph.m_Face, Glyph.m_FontSize))
-			return false;
+		FT_Error Error;
+		if(!EnsureFacePixelSize(Glyph.m_Face, Glyph.m_FontSize, &Error))
+			return Error == FT_Err_Out_Of_Memory ? EQmGlyphRenderResult::RETRY : EQmGlyphRenderResult::UNSUPPORTED;
 
-		if(FT_Load_Glyph(Glyph.m_Face, Glyph.m_GlyphIndex, FT_LOAD_RENDER | FT_LOAD_NO_BITMAP | (Glyph.m_Nameplate ? FT_LOAD_NO_HINTING : 0)))
+		Error = FT_Load_Glyph(Glyph.m_Face, Glyph.m_GlyphIndex, FT_LOAD_RENDER | FT_LOAD_NO_BITMAP | (Glyph.m_Nameplate ? FT_LOAD_NO_HINTING : 0));
+		if(Error)
 		{
 			log_debug("textrender", "Error loading glyph. Chr=%d GlyphIndex=%u", Glyph.m_Chr, Glyph.m_GlyphIndex);
-			return false;
+			return Error == FT_Err_Out_Of_Memory ? EQmGlyphRenderResult::RETRY : EQmGlyphRenderResult::UNSUPPORTED;
 		}
 
 		// 中文首次实际光栅化时记录真实字体面和轴坐标，供启动回归与字体回退诊断使用。
@@ -845,7 +650,7 @@ private:
 		if(pBitmap->pixel_mode != FT_PIXEL_MODE_GRAY)
 		{
 			log_debug("textrender", "Error loading glyph, unsupported pixel mode. Chr=%d GlyphIndex=%u PixelMode=%d", Glyph.m_Chr, Glyph.m_GlyphIndex, pBitmap->pixel_mode);
-			return false;
+			return EQmGlyphRenderResult::UNSUPPORTED;
 		}
 
 		const unsigned RealWidth = pBitmap->width;
@@ -864,6 +669,8 @@ private:
 			y += (OutlineThickness + 1);
 		}
 
+		if(RealWidth > MAXIMUM_ATLAS_DIMENSION - x * 2 || RealHeight > MAXIMUM_ATLAS_DIMENSION - y * 2)
+			return EQmGlyphRenderResult::UNSUPPORTED;
 		const unsigned Width = RealWidth + x * 2;
 		const unsigned Height = RealHeight + y * 2;
 
@@ -872,16 +679,6 @@ private:
 
 		if(Width > 0 && Height > 0)
 		{
-			// find space in atlas, or increase size if necessary
-			while(!FitGlyph(Width, Height, X, Y))
-			{
-				if(!IncreaseGlyphMapSize())
-				{
-					log_debug("textrender", "Cannot fit glyph into atlas or grow it. Chr=%d GlyphIndex=%u", Glyph.m_Chr, Glyph.m_GlyphIndex);
-					return false;
-				}
-			}
-
 			// prepare glyph data
 			const size_t GlyphDataSize = (size_t)Width * Height * sizeof(uint8_t);
 			std::unique_ptr<uint8_t, decltype(&free)> pGlyphDataFill(static_cast<uint8_t *>(malloc(GlyphDataSize)), free);
@@ -889,7 +686,7 @@ private:
 			if(pGlyphDataFill == nullptr || pGlyphDataOutline == nullptr)
 			{
 				log_debug("textrender", "Failed to allocate glyph data. Chr=%d GlyphIndex=%u", Glyph.m_Chr, Glyph.m_GlyphIndex);
-				return false;
+				return EQmGlyphRenderResult::RETRY;
 			}
 			mem_zero(pGlyphDataFill.get(), GlyphDataSize);
 			for(unsigned py = 0; py < pBitmap->rows; ++py)
@@ -900,6 +697,18 @@ private:
 				QmGrowGlyphOutlineContinuous(pGlyphDataFill.get(), pGlyphDataOutline.get(), Width, Height, OutlineRadius);
 			else
 				QmGrowGlyphOutline(pGlyphDataFill.get(), pGlyphDataOutline.get(), Width, Height, OutlineThickness);
+
+			// 临时像素准备成功后才占用图集，失败重试不会吞掉空闲区。
+			while(!FitGlyph(Width, Height, X, Y))
+			{
+				if(m_TextureDimension >= MAXIMUM_ATLAS_DIMENSION)
+					return EQmGlyphRenderResult::UNSUPPORTED;
+				if(!IncreaseGlyphMapSize())
+				{
+					log_debug("textrender", "Cannot fit glyph into atlas or grow it. Chr=%d GlyphIndex=%u", Glyph.m_Chr, Glyph.m_GlyphIndex);
+					return EQmGlyphRenderResult::RETRY;
+				}
+			}
 
 			// upload the glyph
 			UploadGlyph(FONT_TEXTURE_FILL, X, Y, Width, Height, pGlyphDataFill.get());
@@ -928,7 +737,6 @@ private:
 			Glyph.m_aUVs[2] = Glyph.m_aUVs[0] + Width;
 			Glyph.m_aUVs[3] = Glyph.m_aUVs[1] + Height;
 
-			Glyph.m_State = SGlyph::EState::RENDERED;
 			if(Glyph.m_Nameplate)
 			{
 				m_QmNameplateGlyphSizes.set(Glyph.m_FontSize);
@@ -938,7 +746,7 @@ private:
 					m_QmNameplateFrameRasterizeMs += std::chrono::duration<double, std::milli>(time_get_nanoseconds() - RasterizeStart).count();
 			}
 		}
-		return true;
+		return EQmGlyphRenderResult::SUCCESS;
 	}
 
 public:
@@ -1356,6 +1164,7 @@ public:
 
 	void Clear()
 	{
+		m_GlyphRenderRetry.Reset();
 		// 已有容器的 UV 随图集清空失效，即使其索引和文字内容仍然有效。
 		++*m_pGlyphAtlasRevision;
 		DiscardPendingGlyphUploads();
@@ -1380,50 +1189,29 @@ public:
 
 	// QmClient: 记录/消费“最近缺失字形”。预热集合与缓存无关，字体图集重建（语言切换）
 	// 后正好需要重新预热，因此这里不清空集合。
-	static uint64_t QmRecentGlyphMissKey(int Chr, int FontSize)
-	{
-		return ((uint64_t)(uint32_t)Chr << 32) | (uint32_t)FontSize;
-	}
+	void QmRecordRecentGlyphMiss(int Chr, int FontSize) { m_RecentGlyphs.Record(Chr, FontSize); }
+	size_t QmRecentGlyphMissCount() const { return m_RecentGlyphs.Items().size(); }
+	bool QmLoadRecentGlyphs(IStorage *pStorage, const char *pPath) { return QmRecentGlyphs::LoadFile(pStorage, pPath, m_RecentGlyphs); }
+	bool QmSaveRecentGlyphs(IStorage *pStorage, const char *pPath) const { return QmRecentGlyphs::SaveFile(pStorage, pPath, m_RecentGlyphs); }
 
-	void QmRecordRecentGlyphMiss(int Chr, int FontSize)
-	{
-		if(Chr <= 0 || m_vQmRecentGlyphMisses.size() >= QM_MAX_RECENT_GLYPH_MISSES)
-			return;
-		if(m_QmRecentGlyphMissKeys.insert(QmRecentGlyphMissKey(Chr, FontSize)).second)
-			m_vQmRecentGlyphMisses.emplace_back(Chr, FontSize);
-	}
-
-	size_t QmRecentGlyphMissCount() const
-	{
-		return m_vQmRecentGlyphMisses.size();
-	}
-
-	const std::vector<std::pair<int, int>> &QmRecentGlyphMisses() const
-	{
-		return m_vQmRecentGlyphMisses;
-	}
-
-	// 按游标预热缺失字形（集合保留，供持久化）；已缓存时 GetGlyph 几乎零成本。
 	int QmPrewarmRecentGlyphMisses(int MaxCount)
 	{
-		const bool PreviousRecording = m_QmRecordGlyphMisses;
-		m_QmRecordGlyphMisses = false;
-		int Prewarmed = 0;
-		while(Prewarmed < MaxCount && m_QmRecentGlyphPrewarmCursor < m_vQmRecentGlyphMisses.size())
+		return m_RecentGlyphs.Prewarm(MaxCount, [this](int Chr, int Size) { return GetGlyph(Chr, Size) != nullptr; });
+	}
+
+	void RetryFailedGlyphs()
+	{
+		if(m_GlyphRenderRetry.BeginRetry(time_get_nanoseconds()))
 		{
-			const std::pair<int, int> Miss = m_vQmRecentGlyphMisses[m_QmRecentGlyphPrewarmCursor++];
-			if(GetGlyph(Miss.first, Miss.second) != nullptr)
-				++Prewarmed;
+			// 替代字符的度量可能不同。通知旧容器和布局缓存重建，但保留有效图集。
+			m_GlyphLookupCache.Reset();
+			++*m_pGlyphAtlasRevision;
 		}
-		m_QmRecordGlyphMisses = PreviousRecording;
-		return Prewarmed;
 	}
 
 	const SGlyph *GetGlyph(int Chr, int FontSize, bool Nameplate = false)
 	{
 		FontSize = std::clamp(FontSize, MIN_FONT_SIZE, MAX_FONT_SIZE);
-
-		// 命中近期索引时直接返回，省掉一次哈希查找；索引与字形表同生共死。
 		const FT_Face LookupFace = m_SelectedFace != nullptr ? m_SelectedFace : m_PreviewFace;
 		if(const SGlyph *pCached = m_GlyphLookupCache.Find(LookupFace, Chr, FontSize, Nameplate))
 			return pCached;
@@ -1431,50 +1219,42 @@ public:
 			m_GlyphLookupCache.Store(LookupFace, Chr, FontSize, pGlyph, Nameplate);
 			return pGlyph;
 		};
+		const auto Replacement = [&]() -> const SGlyph * {
+			return Chr == REPLACEMENT_CHARACTER ? nullptr : GetGlyph(REPLACEMENT_CHARACTER, FontSize, Nameplate);
+		};
 
-		// Find glyph index and most appropriate font face.
-		FT_Face Face;
-		FT_UInt GlyphIndex = GetCharGlyph(Chr, &Face, false);
-		if(GlyphIndex == 0)
+		try
 		{
-			// Use replacement character if glyph could not be found,
-			// also retrieve replacement character from the atlas.
-			return RememberGlyph(Chr == REPLACEMENT_CHARACTER ? nullptr : GetGlyph(REPLACEMENT_CHARACTER, FontSize, Nameplate));
+			FT_Face Face;
+			const FT_UInt GlyphIndex = GetCharGlyph(Chr, &Face, false);
+			if(GlyphIndex == 0)
+				return RememberGlyph(Replacement());
+
+			const auto Key = std::make_tuple(Face, Chr, FontSize, Nameplate);
+			const auto Existing = m_Glyphs.find(Key);
+			if(Existing == m_Glyphs.end() && m_GlyphRenderRetry.Blocked())
+				return Replacement();
+			SGlyph &Glyph = Existing != m_Glyphs.end() ? Existing->second : m_Glyphs[Key];
+			if(Glyph.m_State == SGlyph::EState::RENDERED)
+				return RememberGlyph(&Glyph);
+			Glyph.m_FontSize = FontSize;
+			Glyph.m_Nameplate = Nameplate;
+			Glyph.m_Face = Face;
+			Glyph.m_Chr = Chr;
+			Glyph.m_GlyphIndex = GlyphIndex;
+			const SGlyph *pGlyph = m_GlyphRenderRetry.Resolve(Glyph, time_get_nanoseconds(), [&]() {
+				if(!Nameplate)
+					QmRecordRecentGlyphMiss(Chr, FontSize);
+				return RenderGlyph(Glyph); }, Replacement);
+			// 暂时失败的替代字符不能进入原字符的快速成功缓存。
+			return Glyph.m_State == SGlyph::EState::RETRY ? pGlyph : RememberGlyph(pGlyph);
 		}
-
-		// Check if glyph for this (font face, character, font size)-combination was already rendered.
-		SGlyph &Glyph = m_Glyphs[std::make_tuple(Face, Chr, FontSize, Nameplate)];
-		if(Glyph.m_State == SGlyph::EState::RENDERED)
-			return RememberGlyph(&Glyph);
-		else if(Glyph.m_State == SGlyph::EState::ERROR)
-			return nullptr;
-
-		// Else, render it.
-		if(m_QmRecordGlyphMisses && !Nameplate)
-			QmRecordRecentGlyphMiss(Chr, FontSize);
-		Glyph.m_FontSize = FontSize;
-		Glyph.m_Nameplate = Nameplate;
-		Glyph.m_Face = Face;
-		Glyph.m_Chr = Chr;
-		Glyph.m_GlyphIndex = GlyphIndex;
-
-		const bool Rendered = RenderGlyph(Glyph);
-		if(Rendered)
-			return RememberGlyph(&Glyph);
-
-		// Use replacement character if the glyph could not be rendered,
-		// also retrieve replacement character from the atlas.
-		const SGlyph *pReplacementCharacter = Chr == REPLACEMENT_CHARACTER ? nullptr : GetGlyph(REPLACEMENT_CHARACTER, FontSize, Nameplate);
-		if(pReplacementCharacter)
+		catch(const std::bad_alloc &)
 		{
-			Glyph = *pReplacementCharacter;
-			return RememberGlyph(&Glyph);
+			// 字形表或最近缺字记录也可能分配失败；帧末统一恢复重试。
+			m_GlyphRenderRetry.Failed(time_get_nanoseconds());
+			return Replacement();
 		}
-
-		// Keep failed glyph in the cache so we don't attempt to render it again,
-		// but set its state to ERROR so we don't return it to the text render.
-		Glyph.m_State = SGlyph::EState::ERROR;
-		return nullptr;
 	}
 
 	vec2 Kerning(const SGlyph *pLeft, const SGlyph *pRight) const
@@ -1685,6 +1465,8 @@ struct STextContainer
 	char m_aDebugText[32];
 
 	std::shared_ptr<STextContainerUsages> m_pContainerUseCount;
+	// -2 表示未登记待删除，-1 表示链表终点；槽位归还前先解除链接。
+	int m_NextPendingDeletion;
 
 	void Reset()
 	{
@@ -1711,6 +1493,7 @@ struct STextContainer
 		m_aDebugText[0] = '\0';
 
 		m_pContainerUseCount.reset();
+		m_NextPendingDeletion = -2;
 	}
 };
 
@@ -1756,9 +1539,8 @@ class CTextRender : public IEngineTextRender
 
 	FT_Library m_FTLibrary;
 
-	std::vector<STextContainer *> m_vpTextContainers;
-	std::vector<int> m_vTextContainerIndices;
-	int m_FirstFreeTextContainerIndex;
+	CTextContainerPool<STextContainer> m_TextContainers;
+	int m_FirstPendingTextContainer = -1;
 
 	SBufferContainerInfo m_DefaultTextContainerInfo;
 	std::vector<STextCharQuad> m_vTextEffectQuads;
@@ -1768,11 +1550,7 @@ class CTextRender : public IEngineTextRender
 
 	void ClearTextEffectBuffers()
 	{
-		if(m_TextEffectBufferContainer != -1)
-			Graphics()->DeleteBufferContainer(m_TextEffectBufferContainer, true);
-		else if(m_TextEffectBufferObject != -1)
-			Graphics()->DeleteBufferObject(m_TextEffectBufferObject);
-		m_TextEffectBufferObject = m_TextEffectBufferContainer = -1;
+		DeleteGraphicsBufferPair(Graphics(), m_TextEffectBufferContainer, m_TextEffectBufferObject);
 		m_vTextEffectQuads.clear();
 	}
 
@@ -1786,6 +1564,7 @@ class CTextRender : public IEngineTextRender
 		float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 		Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
 		const vec2 Offset = AlignTextContainerOffset(TextContainer, vec2(X, Y), ScreenX1 - ScreenX0, ScreenY1 - ScreenY0);
+		const CScreenMappingScope ScreenMapping(*Graphics(), ScreenX0, ScreenY0, ScreenX1, ScreenY1);
 		Graphics()->MapScreen(ScreenX0 - Offset.x, ScreenY0 - Offset.y, ScreenX1 - Offset.x, ScreenY1 - Offset.y);
 		if(Graphics()->IsTextBufferingEnabled())
 		{
@@ -1833,8 +1612,21 @@ class CTextRender : public IEngineTextRender
 			Graphics()->QuadsEnd();
 			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 		}
-		Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
 	}
+
+	// MapScreen只写现有坐标；正常返回和异常展开都恢复，不在析构中提交GPU命令。
+	class CScreenMappingScope
+	{
+		IGraphics &m_Graphics;
+		CScreenRect m_Screen;
+
+	public:
+		CScreenMappingScope(IGraphics &Graphics, float X0, float Y0, float X1, float Y1) :
+			m_Graphics(Graphics), m_Screen(vec2(X0, Y0), vec2(X1, Y1)) {}
+		~CScreenMappingScope() { m_Graphics.MapScreen(m_Screen); }
+		CScreenMappingScope(const CScreenMappingScope &) = delete;
+		CScreenMappingScope &operator=(const CScreenMappingScope &) = delete;
+	};
 
 	vec2 AlignTextContainerOffset(const STextContainer &TextContainer, vec2 Offset, float ScreenWidth, float ScreenHeight)
 	{
@@ -1973,11 +1765,13 @@ class CTextRender : public IEngineTextRender
 	{
 		if(m_pGlyphMap == nullptr)
 			return;
+		RetryPendingTextContainerDeletions();
 
 		// 失败时至多每秒重试一次，避免每个标签或高帧率循环反复复制整张图集。
 		if(!m_pGlyphMap->TexturesReady() && time_get_nanoseconds() >= m_NextGraphicsRestoreAttempt)
 			RestoreGraphicsResources();
 		UpdateSystemFontScan();
+		m_pGlyphMap->RetryFailedGlyphs();
 
 		// QmClient: 帧末兜底提交——本帧只构建未渲染时（如菜单预构建）脏区
 		// 失败区域每帧末重试一次；先提交再消费统计，包含合批提交成本。
@@ -2041,135 +1835,114 @@ class CTextRender : public IEngineTextRender
 	// QmClient: 跨会话持久化缺失字形集合（文本格式，每行 "Chr Size"）。
 	void QmLoadRecentGlyphs(IStorage *pStorage, const char *pPath) override
 	{
-		if(m_pGlyphMap == nullptr || pStorage == nullptr || pPath == nullptr)
-			return;
-		void *pData = nullptr;
-		unsigned DataSize = 0;
-		if(!pStorage->ReadFile(pPath, IStorage::TYPE_SAVE, &pData, &DataSize) || pData == nullptr || DataSize == 0)
-			return;
-		const char *pCursor = (const char *)pData;
-		const char *pEnd = pCursor + DataSize;
-		while(pCursor < pEnd)
-		{
-			const char *pLineEnd = pCursor;
-			while(pLineEnd < pEnd && *pLineEnd != '\n' && *pLineEnd != '\r')
-				++pLineEnd;
-			int Chr = -1;
-			int Size = -1;
-			bool HasSize = false;
-			const char *pParse = pCursor;
-			while(pParse < pLineEnd)
-			{
-				while(pParse < pLineEnd && (*pParse < '0' || *pParse > '9'))
-					++pParse;
-				int Value = 0;
-				bool HasValue = false;
-				while(pParse < pLineEnd && *pParse >= '0' && *pParse <= '9')
-				{
-					Value = Value * 10 + (*pParse - '0');
-					++pParse;
-					HasValue = true;
-				}
-				if(!HasValue)
-					break;
-				if(Chr < 0)
-					Chr = Value;
-				else
-				{
-					Size = Value;
-					HasSize = true;
-					break;
-				}
-			}
-			if(Chr > 0 && HasSize && Size > 0)
-				m_pGlyphMap->QmRecordRecentGlyphMiss(Chr, Size);
-			pCursor = pLineEnd;
-			while(pCursor < pEnd && (*pCursor == '\n' || *pCursor == '\r'))
-				++pCursor;
-		}
-		free(pData);
+		if(m_pGlyphMap != nullptr)
+			m_pGlyphMap->QmLoadRecentGlyphs(pStorage, pPath);
 	}
 
 	void QmSaveRecentGlyphs(IStorage *pStorage, const char *pPath) override
 	{
-		if(m_pGlyphMap == nullptr || pStorage == nullptr || pPath == nullptr)
-			return;
-		const std::vector<std::pair<int, int>> &vMisses = m_pGlyphMap->QmRecentGlyphMisses();
-		if(vMisses.empty())
-			return;
-		IOHANDLE File = pStorage->OpenFile(pPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-		if(!File)
-			return;
-		for(const std::pair<int, int> &Miss : vMisses)
+		if(m_pGlyphMap != nullptr && !m_pGlyphMap->QmSaveRecentGlyphs(pStorage, pPath))
 		{
-			char aBuf[48];
-			str_format(aBuf, sizeof(aBuf), "%d %d\n", Miss.first, Miss.second);
-			io_write(File, aBuf, str_length(aBuf));
-		}
-		io_close(File);
-	}
-
-	int GetFreeTextContainerIndex()
-	{
-		if(m_FirstFreeTextContainerIndex == -1)
-		{
-			const int Index = (int)m_vTextContainerIndices.size();
-			m_vTextContainerIndices.push_back(Index);
-			return Index;
-		}
-		else
-		{
-			const int Index = m_FirstFreeTextContainerIndex;
-			m_FirstFreeTextContainerIndex = m_vTextContainerIndices[Index];
-			m_vTextContainerIndices[Index] = Index;
-			return Index;
+			try
+			{
+				log_warn("text", "Could not save recent glyph cache");
+			}
+			catch(...)
+			{
+			}
 		}
 	}
 
-	void FreeTextContainerIndex(STextContainerIndex &Index)
+	void DetachPendingTextContainer(int Index) noexcept
 	{
-		m_vTextContainerIndices[Index.m_Index] = m_FirstFreeTextContainerIndex;
-		m_FirstFreeTextContainerIndex = Index.m_Index;
-		Index.Reset();
+		STextContainer &Container = m_TextContainers.Get(Index);
+		if(Container.m_NextPendingDeletion == -2)
+			return;
+		// 临时句柄不会交给外部 owner，待清理槽位只从链首领取。
+		dbg_assert(m_FirstPendingTextContainer == Index, "Pending text container was released out of order.");
+		m_FirstPendingTextContainer = Container.m_NextPendingDeletion;
+		Container.m_NextPendingDeletion = -2;
+	}
+
+	void FreeTextContainerSlot(int Index)
+	{
+		// 副本句柄也随释放失效，不能因槽位复用重新指向另一段文字。
+		STextContainer &Container = m_TextContainers.Get(Index);
+		Container.m_pContainerUseCount->Invalidate();
+		DetachPendingTextContainer(Index);
+		Container.Reset();
+		m_TextContainers.Release(Index);
 	}
 
 	void FreeTextContainer(STextContainerIndex &Index)
 	{
-		// 副本句柄也随释放失效，不能因槽位复用重新指向另一段文字。
-		Index.m_UseCount->Invalidate();
-		m_vpTextContainers[Index.m_Index]->Reset();
-		FreeTextContainerIndex(Index);
+		FreeTextContainerSlot(Index.m_Index);
+		Index.Reset();
+	}
+
+	void DeleteTextContainerResources(STextContainer &Container)
+	{
+		if(Graphics()->IsTextBufferingEnabled())
+			DeleteGraphicsBufferPair(Graphics(), Container.m_StringInfo.m_QuadBufferContainerIndex, Container.m_StringInfo.m_QuadBufferObjectIndex);
+		Graphics()->DeleteQuadContainer(Container.m_StringInfo.m_SelectionQuadContainerIndex);
+	}
+
+	void QueueTextContainerDeletion(const STextContainerIndex &Index) noexcept
+	{
+		if(!m_TextContainers.IsAllocated(Index.m_Index) || !Index.m_UseCount)
+			return;
+		STextContainer &Container = m_TextContainers.Get(Index.m_Index);
+		if(Container.m_pContainerUseCount.get() != Index.m_UseCount.get() || Container.m_NextPendingDeletion != -2)
+			return;
+		// 直接借用现有槽位串联，不在异常展开时申请内存或执行 GPU 删除。
+		Container.m_NextPendingDeletion = m_FirstPendingTextContainer;
+		m_FirstPendingTextContainer = Index.m_Index;
+	}
+
+	void RetryPendingTextContainerDeletions()
+	{
+		while(m_FirstPendingTextContainer != -1)
+		{
+			const int Index = m_FirstPendingTextContainer;
+			try
+			{
+				DeleteTextContainerResources(m_TextContainers.Get(Index));
+			}
+			catch(const std::bad_alloc &)
+			{
+				return;
+			}
+			catch(const std::length_error &)
+			{
+				return;
+			}
+			FreeTextContainerSlot(Index);
+		}
 	}
 
 	STextContainer &GetTextContainer(const STextContainerIndex &Index)
 	{
 		// 图集失效的容器仍需通过原槽位归还 CPU/GPU 资源。
-		dbg_assert(Index.m_Index >= 0, "Text container index was invalid.");
-		if(Index.m_Index >= (int)m_vpTextContainers.size())
+		dbg_assert(m_TextContainers.IsAllocated(Index.m_Index), "Text container index was invalid.");
+		STextContainer &TextContainer = m_TextContainers.Get(Index.m_Index);
+		if(TextContainer.m_pContainerUseCount.get() != Index.m_UseCount.get())
 		{
-			for(int i = 0; i < Index.m_Index + 1 - (int)m_vpTextContainers.size(); ++i)
-				m_vpTextContainers.push_back(new STextContainer());
+			TextContainer.m_pContainerUseCount = Index.m_UseCount;
 		}
-
-		if(m_vpTextContainers[Index.m_Index]->m_pContainerUseCount.get() != Index.m_UseCount.get())
-		{
-			m_vpTextContainers[Index.m_Index]->m_pContainerUseCount = Index.m_UseCount;
-		}
-		return *m_vpTextContainers[Index.m_Index];
+		return TextContainer;
 	}
 
 	// 设备重建或引擎关闭时清理 CPU 容器；GPU 生命周期由对应的重建或关闭流程处理。
 	void InvalidateTextContainers()
 	{
-		for(auto *pTextCont : m_vpTextContainers)
+		m_FirstPendingTextContainer = -1;
+		for(size_t Index = 0; Index < m_TextContainers.Size(); ++Index)
 		{
+			auto *pTextCont = &m_TextContainers.Get(Index);
 			if(pTextCont->m_pContainerUseCount != nullptr)
 				pTextCont->m_pContainerUseCount->Invalidate();
-			delete pTextCont;
 		}
-		m_vpTextContainers.clear();
-		m_vTextContainerIndices.clear();
-		m_FirstFreeTextContainerIndex = -1;
+		m_TextContainers.Clear();
 	}
 
 	int WordLength(const char *pText) const
@@ -2339,8 +2112,6 @@ public:
 				log_info("textrender", "Freetype version %d.%d.%d (compiled = %d.%d.%d)", LMajor, LMinor, LPatch, FREETYPE_MAJOR, FREETYPE_MINOR, FREETYPE_PATCH);
 			}
 
-			m_FirstFreeTextContainerIndex = -1;
-
 			m_DefaultTextContainerInfo.m_Stride = sizeof(STextCharQuadVertex);
 			m_DefaultTextContainerInfo.m_VertBufferBindingIndex = -1;
 
@@ -2383,6 +2154,7 @@ public:
 		// 主循环已 ShutdownJobs，未接收的文件字节在此释放。
 		m_pQmSystemFontScan.reset();
 		m_QmFontRestore.Reset();
+		RetryPendingTextContainerDeletions();
 		ClearTextEffectBuffers();
 		InvalidateTextContainers();
 
@@ -3319,21 +3091,37 @@ public:
 			return;
 		}
 
-		const unsigned OldRenderFlags = m_RenderFlags;
-		m_RenderFlags |= TEXT_RENDER_FLAG_ONE_TIME_USE;
 		STextContainerIndex TextCont;
-		CreateTextContainer(TextCont, pCursor, pText, Length);
-		m_RenderFlags = OldRenderFlags;
-		if(TextCont.Valid())
+		try
 		{
-			if((pCursor->m_Flags & TEXTFLAG_RENDER) != 0)
 			{
-				ColorRGBA TextColor = DefaultTextColor();
-				ColorRGBA TextColorOutline = DefaultTextOutlineColor();
-				RenderTextContainer(TextCont, TextColor, TextColorOutline);
+				// 只恢复标量标志，不在析构中调用可能再次失败的 GPU 清理。
+				struct SRestoreFlags
+				{
+					unsigned &m_Target;
+					unsigned m_Previous;
+					~SRestoreFlags() { m_Target = m_Previous; }
+				};
+				const SRestoreFlags Restore{m_RenderFlags, m_RenderFlags};
+				m_RenderFlags |= TEXT_RENDER_FLAG_ONE_TIME_USE;
+				CreateTextContainer(TextCont, pCursor, pText, Length);
 			}
+			if(TextCont.Valid())
+			{
+				if((pCursor->m_Flags & TEXTFLAG_RENDER) != 0)
+				{
+					ColorRGBA TextColor = DefaultTextColor();
+					ColorRGBA TextColorOutline = DefaultTextOutlineColor();
+					RenderTextContainer(TextCont, TextColor, TextColorOutline);
+				}
+			}
+			DeleteTextContainer(TextCont);
 		}
-		DeleteTextContainer(TextCont);
+		catch(...)
+		{
+			QueueTextContainerDeletion(TextCont);
+			throw;
+		}
 	}
 
 	bool CreateTextContainer(STextContainerIndex &TextContainerIndex, CTextCursor *pCursor, const char *pText, int Length = -1) override
@@ -3352,7 +3140,9 @@ public:
 		++m_QmFrameContainerCreates;
 
 		TextContainerIndex.Reset();
-		TextContainerIndex.m_Index = GetFreeTextContainerIndex();
+		TextContainerIndex.m_Index = m_TextContainers.Allocate();
+		if(TextContainerIndex.m_Index < 0)
+			return false;
 
 		STextContainer &TextContainer = GetTextContainer(TextContainerIndex);
 		InitTextContainer(TextContainer, pCursor);
@@ -4170,10 +3960,14 @@ public:
 		}
 
 		STextContainer &TextContainer = GetTextContainer(TextContainerIndex);
-		if(Graphics()->IsTextBufferingEnabled())
-			Graphics()->DeleteBufferContainer(TextContainer.m_StringInfo.m_QuadBufferContainerIndex, true);
-		Graphics()->DeleteQuadContainer(TextContainer.m_StringInfo.m_SelectionQuadContainerIndex);
+		DeleteTextContainerResources(TextContainer);
 		FreeTextContainer(TextContainerIndex);
+	}
+
+	void ReleaseTemporaryTextContainer(STextContainerIndex &TextContainerIndex) noexcept override
+	{
+		QueueTextContainerDeletion(TextContainerIndex);
+		TextContainerIndex.Reset();
 	}
 
 	void UploadTextContainer(STextContainerIndex TextContainerIndex) override
@@ -4264,43 +4058,53 @@ public:
 			}
 			else
 			{
-				// render tiles
 				const float UVScale = 1.0f / m_pGlyphMap->TextureDimension();
-
+				const bool RetainVertices = GraphicsCanRetainTextQuads(TextContainer.m_StringInfo.m_vCharacterQuads.size());
+				const auto DrawPass = [&](size_t TextureIndex, const ColorRGBA &Tint, bool KeepVertices, bool Fill) {
+					Graphics()->TextureSet(m_pGlyphMap->Texture(TextureIndex));
+					Graphics()->QuadsBegin();
+					for(const STextCharQuad &Quad : TextContainer.m_StringInfo.m_vCharacterQuads)
+					{
+						const auto &Vertex = Quad.m_aVertices[0];
+						if(Fill)
+						{
+							// 重画填充时保留旧重着色路径的字节截断，避免边界颜色跳变。
+							Graphics()->SetColor(static_cast<unsigned char>(Vertex.m_Color.r * Tint.r) / 255.0f,
+								static_cast<unsigned char>(Vertex.m_Color.g * Tint.g) / 255.0f,
+								static_cast<unsigned char>(Vertex.m_Color.b * Tint.b) / 255.0f,
+								static_cast<unsigned char>(Vertex.m_Color.a * Tint.a) / 255.0f);
+						}
+						else
+							Graphics()->SetColor(Vertex.m_Color.r / 255.0f * Tint.r, Vertex.m_Color.g / 255.0f * Tint.g, Vertex.m_Color.b / 255.0f * Tint.b, Vertex.m_Color.a / 255.0f * Tint.a);
+						Graphics()->QuadsSetSubset(Vertex.m_U * UVScale, Vertex.m_V * UVScale, Quad.m_aVertices[2].m_U * UVScale, Quad.m_aVertices[2].m_V * UVScale);
+						IGraphics::CQuadItem Item(Vertex.m_X, Vertex.m_Y, Quad.m_aVertices[1].m_X - Vertex.m_X, Quad.m_aVertices[2].m_Y - Vertex.m_Y);
+						Graphics()->QuadsDrawTL(&Item, 1);
+					}
+					if(KeepVertices)
+						Graphics()->QuadsEndKeepVertices();
+					else
+						Graphics()->QuadsEnd();
+				};
 				Graphics()->FlushVertices();
-				Graphics()->TextureSet(m_pGlyphMap->Texture(CGlyphMap::FONT_TEXTURE_OUTLINE));
-
-				Graphics()->QuadsBegin();
-
-				for(const STextCharQuad &TextCharQuad : TextContainer.m_StringInfo.m_vCharacterQuads)
-				{
-					Graphics()->SetColor(TextCharQuad.m_aVertices[0].m_Color.r / 255.f * TextOutlineColor.r, TextCharQuad.m_aVertices[0].m_Color.g / 255.f * TextOutlineColor.g, TextCharQuad.m_aVertices[0].m_Color.b / 255.f * TextOutlineColor.b, TextCharQuad.m_aVertices[0].m_Color.a / 255.f * TextOutlineColor.a);
-					Graphics()->QuadsSetSubset(TextCharQuad.m_aVertices[0].m_U * UVScale, TextCharQuad.m_aVertices[0].m_V * UVScale, TextCharQuad.m_aVertices[2].m_U * UVScale, TextCharQuad.m_aVertices[2].m_V * UVScale);
-					IGraphics::CQuadItem QuadItem(TextCharQuad.m_aVertices[0].m_X, TextCharQuad.m_aVertices[0].m_Y, TextCharQuad.m_aVertices[1].m_X - TextCharQuad.m_aVertices[0].m_X, TextCharQuad.m_aVertices[2].m_Y - TextCharQuad.m_aVertices[0].m_Y);
-					Graphics()->QuadsDrawTL(&QuadItem, 1);
-				}
-
+				DrawPass(CGlyphMap::FONT_TEXTURE_OUTLINE, TextOutlineColor, RetainVertices && TextColor.a != 0, false);
 				if(TextColor.a != 0)
 				{
-					Graphics()->QuadsEndKeepVertices();
-					Graphics()->TextureSet(m_pGlyphMap->Texture(CGlyphMap::FONT_TEXTURE_FILL));
-
-					int TextCharQuadIndex = 0;
-					for(const STextCharQuad &TextCharQuad : TextContainer.m_StringInfo.m_vCharacterQuads)
+					if(RetainVertices)
 					{
-						unsigned char CR = (unsigned char)((float)(TextCharQuad.m_aVertices[0].m_Color.r) * TextColor.r);
-						unsigned char CG = (unsigned char)((float)(TextCharQuad.m_aVertices[0].m_Color.g) * TextColor.g);
-						unsigned char CB = (unsigned char)((float)(TextCharQuad.m_aVertices[0].m_Color.b) * TextColor.b);
-						unsigned char CA = (unsigned char)((float)(TextCharQuad.m_aVertices[0].m_Color.a) * TextColor.a);
-						Graphics()->ChangeColorOfQuadVertices(TextCharQuadIndex, CR, CG, CB, CA);
-						++TextCharQuadIndex;
+						Graphics()->TextureSet(m_pGlyphMap->Texture(CGlyphMap::FONT_TEXTURE_FILL));
+						size_t TextCharQuadIndex = 0;
+						for(const STextCharQuad &Quad : TextContainer.m_StringInfo.m_vCharacterQuads)
+						{
+							const auto &Color = Quad.m_aVertices[0].m_Color;
+							Graphics()->ChangeColorOfQuadVertices(TextCharQuadIndex++,
+								static_cast<unsigned char>(Color.r * TextColor.r), static_cast<unsigned char>(Color.g * TextColor.g),
+								static_cast<unsigned char>(Color.b * TextColor.b), static_cast<unsigned char>(Color.a * TextColor.a));
+						}
+						Graphics()->QuadsDrawCurrentVertices(false);
 					}
-
-					// render non outlined
-					Graphics()->QuadsDrawCurrentVertices(false);
+					else
+						DrawPass(CGlyphMap::FONT_TEXTURE_FILL, TextColor, false, true);
 				}
-				else
-					Graphics()->QuadsEnd();
 
 				// reset
 				Graphics()->SetColor(1.f, 1.f, 1.f, 1.f);
@@ -4355,9 +4159,9 @@ public:
 		TextContainer.m_BoundingBox.m_X = X;
 		TextContainer.m_BoundingBox.m_Y = Y;
 
+		const CScreenMappingScope ScreenMapping(*Graphics(), ScreenX0, ScreenY0, ScreenX1, ScreenY1);
 		Graphics()->MapScreen(ScreenX0 - X, ScreenY0 - Y, ScreenX1 - X, ScreenY1 - Y);
 		RenderTextContainer(TextContainerIndex, TextColor, TextOutlineColor);
-		Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
 	}
 
 	void RenderTextContainerSweep(STextContainerIndex TextContainerIndex, const STextSweepParams &Params, float X, float Y) override
@@ -4562,10 +4366,12 @@ public:
 
 	void OnPreWindowResize() override
 	{
+		RetryPendingTextContainerDeletions();
 		ClearTextEffectBuffers();
-		for(auto *pTextContainer : m_vpTextContainers)
+		for(size_t Index = 0; Index < m_TextContainers.Size(); ++Index)
 		{
-			if(pTextContainer->m_pContainerUseCount != nullptr && pTextContainer->m_pContainerUseCount.use_count() <= 1)
+			auto *pTextContainer = &m_TextContainers.Get(Index);
+			if(pTextContainer->m_NextPendingDeletion == -2 && pTextContainer->m_pContainerUseCount != nullptr && pTextContainer->m_pContainerUseCount.use_count() <= 1)
 			{
 				log_error("textrender", "Found non empty text container with index %d with %" PRIzu " quads '%s'", pTextContainer->m_StringInfo.m_QuadBufferContainerIndex, pTextContainer->m_StringInfo.m_vCharacterQuads.size(), pTextContainer->m_aDebugText);
 				dbg_assert_failed("Text container was forgotten by the implementation (the index was overwritten).");
@@ -4607,8 +4413,11 @@ public:
 	void OnWindowResize() override
 	{
 		bool HasNonEmptyTextContainer = false;
-		for(auto *pTextContainer : m_vpTextContainers)
+		for(size_t Index = 0; Index < m_TextContainers.Size(); ++Index)
 		{
+			auto *pTextContainer = &m_TextContainers.Get(Index);
+			if(pTextContainer->m_NextPendingDeletion != -2)
+				continue;
 			if(pTextContainer->m_StringInfo.m_QuadBufferContainerIndex != -1)
 			{
 				log_error("textrender", "Found non empty text container with index %d with %" PRIzu " quads '%s'", pTextContainer->m_StringInfo.m_QuadBufferContainerIndex, pTextContainer->m_StringInfo.m_vCharacterQuads.size(), pTextContainer->m_aDebugText);
@@ -4625,31 +4434,18 @@ public:
 		// 遗留 quad 会被重绘成幽灵文本，而且每次窗口尺寸或 UI 缩放变化都会再次触发
 		// text.cpp 的“container was forgotten”断言。回收只针对已无所有者的槽位，
 		// 不会影响仍有所有者的容器。
-		for(auto *pTextContainer : m_vpTextContainers)
+		for(size_t Index = 0; Index < m_TextContainers.Size(); ++Index)
 		{
-			if(pTextContainer->m_pContainerUseCount == nullptr || pTextContainer->m_pContainerUseCount.use_count() > 1)
+			auto *pTextContainer = &m_TextContainers.Get(Index);
+			if(pTextContainer->m_NextPendingDeletion != -2 || pTextContainer->m_pContainerUseCount == nullptr || pTextContainer->m_pContainerUseCount.use_count() > 1)
 				continue;
 
 			// 用槽位下标构造索引，保证归还的是同一个文本容器。
-			int ContainerIndex = -1;
-			for(size_t i = 0; i < m_vpTextContainers.size(); ++i)
-			{
-				if(m_vpTextContainers[i] == pTextContainer)
-				{
-					ContainerIndex = (int)i;
-					break;
-				}
-			}
-			if(ContainerIndex < 0)
-				continue;
-
 			STextContainerIndex OrphanIndex;
-			OrphanIndex.m_Index = ContainerIndex;
+			OrphanIndex.m_Index = static_cast<int>(Index);
 			OrphanIndex.m_UseCount = pTextContainer->m_pContainerUseCount;
 			STextContainer &Orphan = GetTextContainer(OrphanIndex);
-			if(Graphics()->IsTextBufferingEnabled())
-				Graphics()->DeleteBufferContainer(Orphan.m_StringInfo.m_QuadBufferContainerIndex, true);
-			Graphics()->DeleteQuadContainer(Orphan.m_StringInfo.m_SelectionQuadContainerIndex);
+			DeleteTextContainerResources(Orphan);
 			log_error("textrender", "Reclaimed forgotten text container '%s'", pTextContainer->m_aDebugText);
 			FreeTextContainer(OrphanIndex);
 		}

@@ -30,7 +30,9 @@
 #include <game/client/components/hud_editor.h>
 #include <game/client/components/qmclient/auto_vote.h>
 #include <game/client/components/qmclient/data_version.h>
+#include <game/client/components/qmclient/gores_drown_observation.h>
 #include <game/client/components/qmclient/keyword_reply_rules.h>
+#include <game/client/components/qmclient/map_history_storage.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/weapon_animation.h>
 #include <game/client/gameclient.h>
@@ -40,6 +42,7 @@
 #include <game/gamecore.h>
 #include <game/layers.h>
 #include <game/localization.h>
+#include <game/map/map_render_items.h>
 #include <game/mapitems.h>
 #include <game/version.h>
 
@@ -65,7 +68,6 @@ static constexpr const char *MAP_CATEGORY_CACHE_FILE = "qmclient/map_categories.
 static constexpr int64_t MAP_CATEGORY_CACHE_SAVE_DELAY_SEC = 5;
 static constexpr const char *MAP_NOTES_FILE = "qmclient/map_notes.json";
 static constexpr int64_t MAP_NOTES_SAVE_DELAY_SEC = 5;
-static constexpr const char *MAP_HISTORY_FILE = "qmclient/map_history.json";
 static constexpr const char *QMCLIENT_FREEZE_WAKEUP_TEXT = "快醒醒!";
 static constexpr int LOCAL_SAVE_JOIN_HINT_MAX_ITEMS = 12;
 static constexpr int GORES_DISTANCE_FIELD_TILE_SCAN_BUDGET = 4096;
@@ -778,10 +780,7 @@ bool CTClient::ChatDoSpecId(const char *pInput)
 	if(!pNumber)
 		return false;
 
-	const int Length = str_length(pInput);
-	CChat::CHistoryEntry *pEntry = GameClient()->m_Chat.m_History.Allocate(sizeof(CChat::CHistoryEntry) + Length);
-	pEntry->m_Team = 0;
-	str_copy(pEntry->m_aText, pInput, Length + 1);
+	QmAppendChatHistory(GameClient()->m_Chat.m_History, 0, pInput);
 
 	int ClientId = 0;
 	if(!str_toint(pNumber, &ClientId))
@@ -1857,19 +1856,6 @@ void CTClient::CheckWaterFall()
 	}
 }
 
-static void BuildFriendNotifyKey(const char *pName, const char *pClan, bool IgnoreClan, std::string &OutKey)
-{
-	OutKey.clear();
-	if(pName)
-		OutKey.append(pName);
-	if(!IgnoreClan)
-	{
-		OutKey.push_back('\t');
-		if(pClan)
-			OutKey.append(pClan);
-	}
-}
-
 void CTClient::CheckFriendOnline()
 {
 	const int Enabled = g_Config.m_QmFriendOnlineNotify;
@@ -1881,13 +1867,8 @@ void CTClient::CheckFriendOnline()
 		m_FriendNotifyPrevIgnoreClan = IgnoreClanSetting;
 		m_FriendNotifyPrevRevision = FriendRevision;
 		m_FriendNotifyNextCheck = 0.0f;
-		m_FriendOnline.clear();
-		m_FriendOnlineTracker.Reset();
-		m_vFriendOnlineScan.clear();
-		m_FriendOnlineAvailableServers.clear();
-		m_FriendOnlineNames.clear();
-		m_FriendNotifyScanRunning = false;
-		m_FriendNotifyScanIndex = 0;
+		m_FriendOnlineNotifier.Reset();
+		m_FriendOnlineScanner.Reset();
 		m_FriendAutoRefreshNext = 0.0f;
 	}
 
@@ -1925,122 +1906,43 @@ void CTClient::CheckFriendOnline()
 
 	if(GameClient()->Friends()->NumFriends() <= 0)
 	{
-		m_FriendOnline.clear();
-		m_FriendOnlineTracker.Reset();
-		m_vFriendOnlineScan.clear();
-		m_FriendOnlineAvailableServers.clear();
-		m_FriendOnlineNames.clear();
-		m_FriendNotifyScanRunning = false;
-		m_FriendNotifyScanIndex = 0;
+		m_FriendOnlineNotifier.Reset();
+		m_FriendOnlineScanner.Reset();
 		return;
 	}
 
-	constexpr float FriendOfflineTimeout = 10.0f;
-	auto PruneFriendOffline = [&]() {
-		for(auto It = m_FriendOnline.begin(); It != m_FriendOnline.end();)
-		{
-			if(Now - It->second.m_LastSeen > FriendOfflineTimeout)
-				It = m_FriendOnline.erase(It);
-			else
-				++It;
-		}
-	};
-	PruneFriendOffline();
+	m_FriendOnlineNotifier.Prune(Now);
 
 	const bool IgnoreClan = IgnoreClanSetting != 0;
 	if(pServerBrowser->IsGettingServerlist() || pServerBrowser->IsServerlistError())
 	{
-		m_FriendNotifyScanRunning = false;
-		m_FriendNotifyScanIndex = 0;
-		m_vFriendOnlineScan.clear();
-		m_FriendOnlineAvailableServers.clear();
+		m_FriendOnlineScanner.Reset();
 		return;
 	}
-	if(!m_FriendNotifyScanRunning)
+	if(!m_FriendOnlineScanner.Running() && Now < m_FriendNotifyNextCheck)
+		return;
+
+	const auto *pSnapshot = m_FriendOnlineScanner.Step(*GameClient()->Friends(), *pServerBrowser, IgnoreClan);
+	if(pSnapshot == nullptr)
 	{
-		if(Now < m_FriendNotifyNextCheck)
-			return;
-
-		m_FriendNotifyScanRunning = true;
-		m_FriendNotifyScanIndex = 0;
-		m_vFriendOnlineScan.clear();
-		m_FriendOnlineAvailableServers.clear();
-		m_FriendOnlineNames.clear();
-		for(int Index = 0; Index < GameClient()->Friends()->NumFriends(); ++Index)
-		{
-			const CFriendInfo *pFriend = GameClient()->Friends()->GetFriend(Index);
-			if(pFriend->m_aName[0] != '\0')
-				m_FriendOnlineNames.insert(pFriend->m_aName);
-		}
-	}
-
-	const int NumServers = pServerBrowser->NumHttpServers();
-	if(NumServers <= 0)
-	{
-		m_FriendNotifyScanRunning = false;
-		m_FriendNotifyScanIndex = 0;
-		m_vFriendOnlineScan.clear();
-		m_FriendOnlineAvailableServers.clear();
-		m_FriendNotifyNextCheck = Now + 1.0f;
-	}
-	else
-	{
-		constexpr int ServersPerFrame = 32;
-		int ProcessedServers = 0;
-		std::string Key;
-		Key.reserve(MAX_NAME_LENGTH + MAX_CLAN_LENGTH + 1);
-		while(m_FriendNotifyScanIndex < NumServers && ProcessedServers < ServersPerFrame)
-		{
-			const CServerInfo *pEntry = pServerBrowser->HttpGet(m_FriendNotifyScanIndex);
-			++m_FriendNotifyScanIndex;
-			++ProcessedServers;
-			if(!pEntry || pEntry->m_NumAddresses <= 0)
-				continue;
-			char aAddress[NETADDR_MAXSTRSIZE];
-			net_addr_str(&pEntry->m_aAddresses[0], aAddress, sizeof(aAddress), true);
-			if(pEntry->m_NumClients >= 0 && pEntry->m_vClients.size() >= (size_t)pEntry->m_NumClients)
-				m_FriendOnlineAvailableServers.insert(aAddress);
-
-			for(const CServerInfo::CClient &Client : pEntry->m_vClients)
-			{
-				if(Client.m_aName[0] == '\0' || m_FriendOnlineNames.find(Client.m_aName) == m_FriendOnlineNames.end())
-					continue;
-
-				BuildFriendNotifyKey(Client.m_aName, Client.m_aClan, IgnoreClan, Key);
-				m_vFriendOnlineScan.push_back({Key, Client.m_aName, pEntry->m_aMap, aAddress,
-					GameClient()->Friends()->IsFriend(Client.m_aName, Client.m_aClan, true)});
-			}
-		}
-
-		if(m_FriendNotifyScanIndex >= NumServers)
-		{
-			// 仅在整轮扫描后提交快照，首次看到某服务器时只建立静默基线。
-			const auto vNotifications = m_FriendOnlineTracker.Update(m_vFriendOnlineScan, m_FriendOnlineAvailableServers);
-			for(const auto &Friend : vNotifications)
-			{
-				if(m_FriendOnline.find(Friend.m_Key) != m_FriendOnline.end())
-					continue;
-				char aBuf[256];
-				const char *pMap = Friend.m_Map.empty() ? Localize("Unknown") : Friend.m_Map.c_str();
-				str_format(aBuf, sizeof(aBuf), Localize("Your friend %s is online and currently on map %s!"), Friend.m_Name.c_str(), pMap);
-				GameClient()->m_Chat.Echo(aBuf);
-			}
-			for(const auto &Friend : m_vFriendOnlineScan)
-				if(Friend.m_IsFriend)
-					m_FriendOnline[Friend.m_Key].m_LastSeen = Now;
-			m_vFriendOnlineScan.clear();
-			m_FriendOnlineAvailableServers.clear();
-			m_FriendNotifyScanRunning = false;
-			m_FriendNotifyScanIndex = 0;
+		if(!m_FriendOnlineScanner.Running())
 			m_FriendNotifyNextCheck = Now + 1.0f;
-		}
+		return;
 	}
+	// 仅在同一来源的整轮扫描后提交快照，首次看到某服务器时只建立静默基线。
+	m_FriendOnlineNotifier.Update(pSnapshot->m_vFriends, pSnapshot->m_AvailableServers, Now, [&](const qm_friend_notify::CFriend &Friend) {
+		char aBuf[256];
+		const char *pMap = Friend.m_Map.empty() ? Localize("Unknown") : Friend.m_Map.c_str();
+		str_format(aBuf, sizeof(aBuf), Localize("Your friend %s is online and currently on map %s!"), Friend.m_Name.c_str(), pMap);
+		GameClient()->m_Chat.Echo(aBuf);
+	});
+	m_FriendOnlineScanner.Reset();
+	m_FriendNotifyNextCheck = Now + 1.0f;
 }
 
 void CTClient::ResetFriendEnter()
 {
-	m_FriendEnterTracker.Reset();
-	m_FriendEnterPending.Reset();
+	m_FriendEnterNotifier.Reset();
 }
 
 bool CTClient::SyncFriendEnterSettings()
@@ -2070,7 +1972,7 @@ bool CTClient::SyncFriendEnterSettings()
 		return false;
 	}
 	if(!AutoGreetEnabled || g_Config.m_QmFriendEnterGreetText[0] == '\0')
-		m_FriendEnterPending.Reset();
+		m_FriendEnterNotifier.CancelPending();
 	return true;
 }
 
@@ -2078,7 +1980,8 @@ void CTClient::CheckFriendEnterGreet()
 {
 	if(!SyncFriendEnterSettings())
 		return;
-	m_FriendEnterPending.TrySend([&](const std::string &Names) {
+	const qm_friend_notify::CEnterNotifier::CSettings Settings{g_Config.m_QmFriendEnterAutoGreet != 0, g_Config.m_QmFriendEnterGreetText[0] != '\0', g_Config.m_QmFriendEnterBroadcast != 0};
+	m_FriendEnterNotifier.TrySend(Settings, [&](const std::string &Names) {
 		char aMessage[256];
 		str_format(aMessage, sizeof(aMessage), "%s: %s", Names.c_str(),
 			ResolveFriendEnterLocalizeText(g_Config.m_QmFriendEnterGreetText, s_pFriendEnterGreetDefaultText));
@@ -2099,27 +2002,10 @@ void CTClient::HandleFriendEnterMessage(int Sender, int Team, const char *pMessa
 			return GameClient()->m_aClients[LocalId].m_aName;
 		return Connection == IClient::CONN_MAIN ? g_Config.m_PlayerName : g_Config.m_ClDummyName;
 	};
-	const auto Message = m_FriendEnterTracker.OnMessage(Sender, Team, pMessage, *GameClient()->Friends(),
-		LocalName(IClient::CONN_MAIN), LocalName(IClient::CONN_DUMMY));
-	if(Message.m_Event == qm_friend_notify::EPresenceEvent::LEAVE)
-	{
-		m_FriendEnterPending.Remove(Message.m_Name);
-		return;
-	}
-	if(Message.m_Event != qm_friend_notify::EPresenceEvent::ENTER)
-		return;
-
-	if(g_Config.m_QmFriendEnterBroadcast)
-	{
-		const std::string BroadcastText = BuildFriendEnterBroadcastText(
-			ResolveFriendEnterLocalizeText(g_Config.m_QmFriendEnterBroadcastText, s_pFriendEnterBroadcastDefaultText),
-			Message.m_Name);
-		if(!BroadcastText.empty())
-			GameClient()->m_Broadcast.DoBroadcast(BroadcastText.c_str());
-	}
-	if(g_Config.m_QmFriendEnterAutoGreet && g_Config.m_QmFriendEnterGreetText[0] != '\0')
-		m_FriendEnterPending.Add(Message.m_Name);
-	CheckFriendEnterGreet();
+	const qm_friend_notify::CEnterNotifier::CSettings Settings{g_Config.m_QmFriendEnterAutoGreet != 0, g_Config.m_QmFriendEnterGreetText[0] != '\0', g_Config.m_QmFriendEnterBroadcast != 0};
+	const bool Entered = m_FriendEnterNotifier.OnMessage(Settings, [&](qm_friend_notify::CEnterTracker &Tracker) { return Tracker.OnMessage(Sender, Team, pMessage, *GameClient()->Friends(), LocalName(IClient::CONN_MAIN), LocalName(IClient::CONN_DUMMY)); }, [&](const std::string &Name) { return BuildFriendEnterBroadcastText(ResolveFriendEnterLocalizeText(g_Config.m_QmFriendEnterBroadcastText, s_pFriendEnterBroadcastDefaultText), Name); }, [&](const std::string &Text) { GameClient()->m_Broadcast.DoBroadcast(Text.c_str()); });
+	if(Entered)
+		CheckFriendEnterGreet();
 }
 
 void CTClient::QueueAspectApply()
@@ -2217,13 +2103,8 @@ void CTClient::OnStateChange(int NewState, int OldState)
 		}
 		ResetComboState();
 		InvalidateGoresDistanceField();
-		m_FriendOnline.clear();
-		m_FriendOnlineTracker.Reset();
-		m_vFriendOnlineScan.clear();
-		m_FriendOnlineAvailableServers.clear();
-		m_FriendOnlineNames.clear();
-		m_FriendNotifyScanRunning = false;
-		m_FriendNotifyScanIndex = 0;
+		m_FriendOnlineNotifier.Reset();
+		m_FriendOnlineScanner.Reset();
 		m_FriendNotifyNextCheck = 0.0f;
 		ResetFriendEnter();
 		m_aLastLocalSaveHintMap[0] = '\0';
@@ -2598,14 +2479,9 @@ void CTClient::UpdateGoresDrownCounts()
 		const auto &Character = GameClient()->m_Snap.m_aCharacters[ClientId];
 		const bool Active = Player.m_Active && GameClient()->m_Snap.m_apPlayerInfos[ClientId] != nullptr;
 		const bool Hooking = Character.m_Active && (Character.m_Cur.m_HookState == HOOK_FLYING || Character.m_Cur.m_HookState == HOOK_GRABBED);
-		bool OnStart = false;
-		if(Active && Character.m_Active)
-		{
-			const int Index = pCollision->GetPureMapIndex(vec2((float)Character.m_Cur.m_X, (float)Character.m_Cur.m_Y));
-			OnStart = pCollision->GetTileIndex(Index) == TILE_START || pCollision->GetFrontTileIndex(Index) == TILE_START;
-		}
-		m_GoresDrownTracker.Observe(ClientId, Active, Player.m_aName, Player.m_aClan, GameClient()->m_Teams.Team(ClientId),
-			Character.m_Active, Player.m_FreezeEnd != 0, Hooking, OnStart, g_Config.m_QmGoresDrownBoardIncludeTeam0 != 0);
+		QmObserveGoresDrownPlayer(m_GoresDrownTracker, *pCollision, ClientId, Active, Player.m_aName, Player.m_aClan, GameClient()->m_Teams.Team(ClientId),
+			Character.m_Active, Player.m_FreezeEnd != 0, Hooking, vec2(static_cast<float>(Character.m_Cur.m_X), static_cast<float>(Character.m_Cur.m_Y)),
+			g_Config.m_QmGoresDrownBoardIncludeTeam0 != 0);
 	}
 }
 
@@ -3185,13 +3061,13 @@ void CTClient::StepGoresDistanceFieldVisualLayers(int Budget)
 				m_vGoresDistanceFieldBuildWaterImages.assign((size_t)maximum(ImageCount, 0), 0);
 				for(int ImageIndex = 0; ImageIndex < ImageCount; ++ImageIndex)
 				{
-					const auto *pImage = static_cast<const CMapItemImage_v2 *>(pMap->GetItem(ImageStart + ImageIndex));
-					if(!pImage)
+					const auto ImageItem = MapRenderItems::ReadImage(*pMap, ImageStart + ImageIndex);
+					if(!ImageItem)
 						continue;
 
-					const char *pImageName = pMap->GetDataString(pImage->m_ImageName);
+					const char *pImageName = pMap->GetDataString(ImageItem->m_ImageName);
 					m_vGoresDistanceFieldBuildWaterImages[(size_t)ImageIndex] = IsGoresWaterImage(pImageName);
-					pMap->UnloadData(pImage->m_ImageName);
+					pMap->UnloadData(ImageItem->m_ImageName);
 				}
 			}
 
@@ -4368,52 +4244,24 @@ void CTClient::SetMapNote(const char *pMapName, const char *pNote)
 
 void CTClient::LoadMapHistory()
 {
-	char *pJson = Storage()->ReadFileStr(MAP_HISTORY_FILE, IStorage::TYPE_SAVE);
-	if(pJson == nullptr)
-		return;
-
 	char aError[256] = "";
-	if(!m_MapHistory.FromJson(pJson, aError, sizeof(aError)))
+	switch(qm_map_history_storage::Load(Storage(), m_MapHistory, g_Config.m_QmAutoSaveHistoryCount, m_MapHistoryDirty, aError, sizeof(aError)))
 	{
+	case qm_map_history_storage::ELoadResult::READ_FAILED:
+		log_error("qmclient", "map history read failed; previous history retained");
+		break;
+	case qm_map_history_storage::ELoadResult::PARSE_FAILED:
 		log_error("qmclient", "map history json parse error: %s", aError);
+		break;
+	default:
+		break;
 	}
-	free(pJson);
-
-	const size_t OldSize = m_MapHistory.Size();
-	m_MapHistory.ApplyLimit(g_Config.m_QmAutoSaveHistoryCount);
-	m_MapHistoryDirty = m_MapHistory.Size() != OldSize;
 }
 
 void CTClient::SaveMapHistory()
 {
-	Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
-
-	char aTempFilename[IO_MAX_PATH_LENGTH];
-	IStorage::FormatTmpPath(aTempFilename, sizeof(aTempFilename), MAP_HISTORY_FILE);
-	IOHANDLE File = Storage()->OpenFile(aTempFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-	if(!File)
-	{
-		log_error("qmclient", "map history temp file open failed");
-		return;
-	}
-
-	const std::string Json = m_MapHistory.ToJson();
-	const bool Written = io_write(File, Json.data(), (unsigned)Json.size()) == Json.size();
-	io_close(File);
-	if(!Written)
-	{
-		Storage()->RemoveFile(aTempFilename, IStorage::TYPE_SAVE);
-		log_error("qmclient", "map history temp file write failed");
-		return;
-	}
-
-	char aBackupFilename[2 * IO_MAX_PATH_LENGTH];
-	if(!IStorage::ReplaceFileSafely(Storage(), aTempFilename, MAP_HISTORY_FILE, aBackupFilename, sizeof(aBackupFilename)))
-	{
-		log_error("qmclient", "map history replacement failed; previous history was restored or remains at %s", aBackupFilename[0] != '\0' ? aBackupFilename : MAP_HISTORY_FILE);
-		return;
-	}
-	m_MapHistoryDirty = false;
+	if(!qm_map_history_storage::Save(Storage(), m_MapHistory, m_MapHistoryDirty))
+		log_error("qmclient", "map history save failed; previous history and pending changes retained");
 }
 void CTClient::MarkMapHistoryDirty()
 {
@@ -4424,33 +4272,29 @@ void CTClient::MarkMapHistoryDirty()
 		log_info("qmclient", "Trimmed map history to %d entries", g_Config.m_QmAutoSaveHistoryCount);
 }
 
-std::string CTClient::CurrentMapHistoryId() const
+bool CTClient::TryCurrentMapHistoryId(std::string &Output) const
 {
 	const char *pMapName = Client()->GetCurrentMap();
-	if(pMapName == nullptr || pMapName[0] == '\0')
-		return {};
-
-	const char *pMapPath = Client()->GetCurrentMapPath();
-	if(pMapPath != nullptr && pMapPath[0] != '\0')
-		return std::string("path:") + pMapPath;
-	return std::string("name:") + pMapName;
+	const char *pMapPath = pMapName && pMapName[0] ? Client()->GetCurrentMapPath() : nullptr;
+	return QmMapHistory::TrySessionMapId(pMapName, pMapPath, Output);
 }
 
 int64_t CTClient::CurrentMapHistoryPlayTimeMs() const
 {
-	if(!m_MapHistorySessionActive || m_MapHistorySessionStart <= 0)
+	if(!m_MapHistorySession.Active() || m_MapHistorySession.StartTime() <= 0)
 		return 0;
-	const int64_t Elapsed = time_get() - m_MapHistorySessionStart;
+	const int64_t Elapsed = time_get() - m_MapHistorySession.StartTime();
 	if(Elapsed <= 0)
 		return 0;
-	return Elapsed * 1000 / time_freq();
+	// 时间源固定为纳秒，先约去换算因子，避免长期会话先乘1000溢出。
+	return Elapsed / (time_freq() / 1000);
 }
 
 void CTClient::TouchMapHistoryPlayTime()
 {
-	if(!m_MapHistorySessionActive || m_MapHistoryActiveMapId.empty())
+	if(!m_MapHistorySession.Active() || m_MapHistorySession.MapId().empty())
 		return;
-	m_MapHistory.UpdatePlayTime(m_MapHistoryActiveMapId, CurrentMapHistoryPlayTimeMs());
+	m_MapHistory.UpdatePlayTime(m_MapHistorySession.MapId(), CurrentMapHistoryPlayTimeMs());
 }
 
 void CTClient::StartMapHistorySession()
@@ -4462,13 +4306,18 @@ void CTClient::StartMapHistorySession()
 	if(pMapName == nullptr || pMapName[0] == '\0')
 		return;
 
-	const std::string MapId = CurrentMapHistoryId();
+	std::string MapId;
+	if(!TryCurrentMapHistoryId(MapId))
+	{
+		EndMapHistorySession(true);
+		return;
+	}
 	if(MapId.empty())
 		return;
 	if(m_MapHistorySuppressedMapId == MapId)
 		return;
 
-	if(m_MapHistorySessionActive && m_MapHistoryActiveMapId == MapId)
+	if(m_MapHistorySession.Active() && m_MapHistorySession.MapId() == MapId)
 	{
 		TouchMapHistoryPlayTime();
 		return;
@@ -4478,23 +4327,16 @@ void CTClient::StartMapHistorySession()
 
 	char aDate[32];
 	str_timestamp_format(aDate, sizeof(aDate), "%Y-%m-%d");
-	m_MapHistory.RecordVisit(pMapName, MapId, time_timestamp(), aDate);
-	m_MapHistorySessionActive = true;
-	m_MapHistorySessionStart = time_get();
-	m_MapHistoryActiveMapId = MapId;
-	m_MapHistoryActiveMapName = pMapName;
-	MarkMapHistoryDirty();
+	if(m_MapHistorySession.TryStart(m_MapHistory, pMapName, std::move(MapId), time_timestamp(), aDate, []() noexcept { return time_get(); }))
+		MarkMapHistoryDirty();
 }
 
 void CTClient::EndMapHistorySession(bool SaveNow)
 {
-	if(!m_MapHistorySessionActive)
+	if(!m_MapHistorySession.Active())
 		return;
 	TouchMapHistoryPlayTime();
-	m_MapHistorySessionActive = false;
-	m_MapHistorySessionStart = 0;
-	m_MapHistoryActiveMapId.clear();
-	m_MapHistoryActiveMapName.clear();
+	m_MapHistorySession.Reset();
 	MarkMapHistoryDirty();
 	if(SaveNow)
 		SaveMapHistory();
@@ -4508,7 +4350,12 @@ void CTClient::UpdateMapHistorySession()
 		return;
 	}
 
-	const std::string MapId = CurrentMapHistoryId();
+	std::string MapId;
+	if(!TryCurrentMapHistoryId(MapId))
+	{
+		EndMapHistorySession(true);
+		return;
+	}
 	if(MapId.empty())
 	{
 		EndMapHistorySession(true);
@@ -4519,14 +4366,14 @@ void CTClient::UpdateMapHistorySession()
 	if(m_MapHistorySuppressedMapId == MapId)
 		return;
 
-	if(m_MapHistorySessionActive && m_MapHistoryActiveMapId != MapId)
+	if(m_MapHistorySession.Active() && m_MapHistorySession.MapId() != MapId)
 		EndMapHistorySession(true);
 	StartMapHistorySession();
 }
 
 void CTClient::HandleMapHistoryDeath(int ClientId)
 {
-	if(g_Config.m_QmAutoSaveHistoryCount <= 0 || !m_MapHistorySessionActive || ClientId < 0)
+	if(g_Config.m_QmAutoSaveHistoryCount <= 0 || !m_MapHistorySession.Active() || ClientId < 0)
 		return;
 
 	const bool OwnMain = ClientId == GameClient()->m_aLocalIds[0];
@@ -4534,13 +4381,13 @@ void CTClient::HandleMapHistoryDeath(int ClientId)
 	if(!OwnMain && !OwnDummy)
 		return;
 
-	if(m_MapHistory.AddDeath(m_MapHistoryActiveMapId))
+	if(m_MapHistory.AddDeath(m_MapHistorySession.MapId()))
 		MarkMapHistoryDirty();
 }
 
 void CTClient::HandleMapHistoryTeamDeath(int Team)
 {
-	if(g_Config.m_QmAutoSaveHistoryCount <= 0 || !m_MapHistorySessionActive)
+	if(g_Config.m_QmAutoSaveHistoryCount <= 0 || !m_MapHistorySession.Active())
 		return;
 
 	for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
@@ -4550,7 +4397,7 @@ void CTClient::HandleMapHistoryTeamDeath(int Team)
 		const int ClientId = GameClient()->m_aLocalIds[Dummy];
 		if(ClientId >= 0 && GameClient()->m_Teams.Team(ClientId) == Team)
 		{
-			if(m_MapHistory.AddDeath(m_MapHistoryActiveMapId))
+			if(m_MapHistory.AddDeath(m_MapHistorySession.MapId()))
 				MarkMapHistoryDirty();
 			return;
 		}
@@ -4559,7 +4406,7 @@ void CTClient::HandleMapHistoryTeamDeath(int Team)
 
 void CTClient::HandleMapHistoryFinish(int ClientId, int FinishTimeMs)
 {
-	if(g_Config.m_QmAutoSaveHistoryCount <= 0 || !m_MapHistorySessionActive || ClientId < 0 || ClientId >= MAX_CLIENTS)
+	if(g_Config.m_QmAutoSaveHistoryCount <= 0 || !m_MapHistorySession.Active() || ClientId < 0 || ClientId >= MAX_CLIENTS)
 		return;
 
 	bool OwnFinish = false;
@@ -4586,7 +4433,7 @@ void CTClient::HandleMapHistoryFinish(int ClientId, int FinishTimeMs)
 	if(!OwnFinish)
 		return;
 
-	m_MapHistory.MarkFinished(m_MapHistoryActiveMapId, FinishTimeMs, CurrentMapHistoryPlayTimeMs());
+	m_MapHistory.MarkFinished(m_MapHistorySession.MapId(), FinishTimeMs, CurrentMapHistoryPlayTimeMs());
 	MarkMapHistoryDirty();
 	SaveMapHistory();
 }
@@ -4595,20 +4442,18 @@ void CTClient::RemoveMapHistoryRecord(const char *pMapId)
 {
 	if(pMapId == nullptr || pMapId[0] == '\0')
 		return;
+	std::string CurrentMapId;
+	if(Client()->State() == IClient::STATE_ONLINE && !TryCurrentMapHistoryId(CurrentMapId))
+		return;
+	// pMapId可能借用待删除的记录，删除后不再读取它。
+	const bool SuppressCurrent = !CurrentMapId.empty() && CurrentMapId == pMapId;
+	const bool EndSession = m_MapHistorySession.MapId() == pMapId;
 	if(m_MapHistory.Remove(pMapId))
 	{
-		std::string CurrentMapId;
-		if(Client()->State() == IClient::STATE_ONLINE)
-			CurrentMapId = CurrentMapHistoryId();
-		if(!CurrentMapId.empty() && CurrentMapId == pMapId)
-			m_MapHistorySuppressedMapId = CurrentMapId;
-		if(m_MapHistoryActiveMapId == pMapId)
-		{
-			m_MapHistorySessionActive = false;
-			m_MapHistorySessionStart = 0;
-			m_MapHistoryActiveMapId.clear();
-			m_MapHistoryActiveMapName.clear();
-		}
+		if(SuppressCurrent)
+			m_MapHistorySuppressedMapId.swap(CurrentMapId);
+		if(EndSession)
+			m_MapHistorySession.Reset();
 		m_MapHistoryDirty = true;
 		SaveMapHistory();
 	}
@@ -4625,14 +4470,12 @@ void CTClient::ClearFinishedMapHistory()
 
 void CTClient::ClearAllMapHistory()
 {
+	std::string SuppressedMapId;
+	if(Client()->State() == IClient::STATE_ONLINE && !TryCurrentMapHistoryId(SuppressedMapId))
+		return;
 	m_MapHistory.Clear();
-	m_MapHistorySessionActive = false;
-	m_MapHistorySessionStart = 0;
-	m_MapHistorySuppressedMapId.clear();
-	if(Client()->State() == IClient::STATE_ONLINE)
-		m_MapHistorySuppressedMapId = CurrentMapHistoryId();
-	m_MapHistoryActiveMapId.clear();
-	m_MapHistoryActiveMapName.clear();
+	m_MapHistorySession.Reset();
+	m_MapHistorySuppressedMapId.swap(SuppressedMapId);
 	m_MapHistoryDirty = true;
 	SaveMapHistory();
 }
@@ -4647,51 +4490,56 @@ bool CTClient::LoadLocalSaveEntries(std::vector<SLocalSaveEntry> &vEntries, bool
 		return false;
 	if(pFileExists)
 		*pFileExists = true;
-	char *pContent = io_read_all_str(File);
+	std::unique_ptr<char, decltype(&free)> pContent(io_read_all_str(File), free);
 	io_close(File);
 	if(!pContent)
 		return false;
-	vEntries = QmLocalSaves::ParseEntries(pContent);
-	free(pContent);
+	vEntries = QmLocalSaves::ParseEntries(pContent.get());
 	return true;
 }
 
 bool CTClient::RemoveLocalSaveByCode(const char *pMap, const char *pCode)
 {
-	IOHANDLE File = Storage()->OpenFile(SAVES_FILE, IOFLAG_READ, IStorage::TYPE_SAVE);
-	if(!File)
-		return false;
-	char *pContent = io_read_all_str(File);
-	io_close(File);
-	if(!pContent)
-		return false;
-	const std::string Original(pContent);
-	free(pContent);
-	if(Original.size() > std::numeric_limits<unsigned>::max())
-		return false;
-	std::string Updated;
-	if(!QmLocalSaves::RemoveEntries(Original, pMap, pCode, Updated))
-		return false;
-
-	// 先完整写入临时文件，再替换存档列表，避免写入中断损坏其他记录。
-	constexpr const char *pTempFile = "ddnet-saves.txt.tmp";
-	File = Storage()->OpenFile(pTempFile, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-	if(!File)
-		return false;
-	const bool Written = io_write(File, Updated.data(), (unsigned)Updated.size()) == Updated.size() && io_flush(File) == 0 && io_error(File) == 0;
-	const int CloseResult = io_close(File);
-	if(!Written || CloseResult != 0)
+	try
 	{
-		Storage()->RemoveFile(pTempFile, IStorage::TYPE_SAVE);
+		IOHANDLE File = Storage()->OpenFile(SAVES_FILE, IOFLAG_READ, IStorage::TYPE_SAVE);
+		if(!File)
+			return false;
+		std::unique_ptr<char, decltype(&free)> pContent(io_read_all_str(File), free);
+		io_close(File);
+		if(!pContent)
+			return false;
+		const std::string_view Original(pContent.get());
+		if(Original.size() > std::numeric_limits<unsigned>::max())
+			return false;
+		std::string Updated;
+		if(!QmLocalSaves::RemoveEntries(Original, pMap, pCode, Updated))
+			return false;
+
+		// 先完整写入临时文件，再替换存档列表，避免写入中断损坏其他记录。
+		constexpr const char *pTempFile = "ddnet-saves.txt.tmp";
+		File = Storage()->OpenFile(pTempFile, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+		if(!File)
+			return false;
+		const bool Written = io_write(File, Updated.data(), (unsigned)Updated.size()) == Updated.size() && io_flush(File) == 0 && io_error(File) == 0;
+		const int CloseResult = io_close(File);
+		if(!Written || CloseResult != 0)
+		{
+			Storage()->RemoveFile(pTempFile, IStorage::TYPE_SAVE);
+			return false;
+		}
+		char aBackupFile[IO_MAX_PATH_LENGTH];
+		if(IStorage::ReplaceFileSafely(Storage(), pTempFile, SAVES_FILE, aBackupFile, sizeof(aBackupFile)))
+			return true;
+
+		// 替换失败时保留临时文件与备份，便于恢复其他存档记录。
+		log_error("saves", "Failed to replace saves file; remaining records are in %s, backup %s", pTempFile, aBackupFile);
 		return false;
 	}
-	char aBackupFile[IO_MAX_PATH_LENGTH];
-	if(IStorage::ReplaceFileSafely(Storage(), pTempFile, SAVES_FILE, aBackupFile, sizeof(aBackupFile)))
-		return true;
-
-	// 替换失败时保留临时文件与备份，便于恢复其他存档记录。
-	log_error("saves", "Failed to replace saves file; remaining records are in %s, backup %s", pTempFile, aBackupFile);
-	return false;
+	catch(...)
+	{
+		return false;
+	}
 }
 
 QmLocalSaves::CRestore::SWorld CTClient::LocalSaveWorld() const
@@ -4729,39 +4577,40 @@ QmLocalSaves::CRestore::SWorld CTClient::LocalSaveWorld() const
 
 void CTClient::TrackLocalSaveLoadCommand(int Conn, const char *pLine)
 {
-	const std::string Code = QmLocalSaves::LoadCode(pLine);
-	if(Code.empty() || Client()->State() != IClient::STATE_ONLINE || Conn < 0 || Conn > 1)
-		return;
-	const int Id = GameClient()->m_aLocalIds[Conn];
-	if(Id < 0 || Id >= MAX_CLIENTS || !GameClient()->m_aClients[Id].m_Active)
-		return;
-	const int64_t Now = time_get();
-	if(m_LocalSaveConfirmation.Active() && Now > m_LocalSaveConfirmation.Request().m_Deadline)
-		m_LocalSaveConfirmation.Reset();
-	const char *pMap = Client()->GetCurrentMap();
-	std::vector<SLocalSaveEntry> vEntries;
-	LoadLocalSaveEntries(vEntries);
-	const bool KnownCode = std::any_of(vEntries.begin(), vEntries.end(), [&](const SLocalSaveEntry &Entry) {
-		return Entry.m_Code == Code && str_comp_nocase(Entry.m_Map.c_str(), pMap) == 0;
+	QmLocalSaves::TrackAfterSend(m_LocalSaveConfirmation, m_LocalSaveRestore, [&] {
+		const std::string Code = QmLocalSaves::LoadCode(pLine);
+		if(Code.empty() || Client()->State() != IClient::STATE_ONLINE || Conn < 0 || Conn > 1)
+			return;
+		const int Id = GameClient()->m_aLocalIds[Conn];
+		if(Id < 0 || Id >= MAX_CLIENTS || !GameClient()->m_aClients[Id].m_Active)
+			return;
+		const int64_t Now = time_get();
+		if(m_LocalSaveConfirmation.Active() && Now > m_LocalSaveConfirmation.Request().m_Deadline)
+			m_LocalSaveConfirmation.Reset();
+		const char *pMap = Client()->GetCurrentMap();
+		std::vector<SLocalSaveEntry> vEntries;
+		LoadLocalSaveEntries(vEntries);
+		const bool KnownCode = std::any_of(vEntries.begin(), vEntries.end(), [&](const SLocalSaveEntry &Entry) {
+			return Entry.m_Code == Code && str_comp_nocase(Entry.m_Map.c_str(), pMap) == 0;
+		});
+		if(!KnownCode && !m_LocalSaveConfirmation.Active())
+			return;
+		const auto World = LocalSaveWorld();
+		const int Team = GameClient()->m_Teams.Team(Id);
+		const bool CanObserveClock = GameClient()->m_Snap.m_pGameInfoObj && GameClient()->m_Snap.m_pLocalCharacter &&
+					     World.m_aTeams[g_Config.m_ClDummy] == Team && !GameClient()->m_Snap.m_SpecInfo.m_Active;
+		m_LocalSaveConfirmation.Track({pMap, Code, Conn, Team, Client()->GameTick(Conn), World.m_Racing || !CanObserveClock, Now + 30 * time_freq()});
+		if(m_LocalSaveRestore.Active() && m_LocalSaveRestore.Entry().m_Code != Code)
+			m_LocalSaveRestore.Reset();
 	});
-	if(!KnownCode && !m_LocalSaveConfirmation.Active())
-		return;
-	const auto World = LocalSaveWorld();
-	const int Team = GameClient()->m_Teams.Team(Id);
-	const bool CanObserveClock = GameClient()->m_Snap.m_pGameInfoObj && GameClient()->m_Snap.m_pLocalCharacter &&
-				     World.m_aTeams[g_Config.m_ClDummy] == Team && !GameClient()->m_Snap.m_SpecInfo.m_Active;
-	m_LocalSaveConfirmation.Track({pMap, Code, Conn, Team, Client()->GameTick(Conn), World.m_Racing || !CanObserveClock, Now + 30 * time_freq()});
-	if(m_LocalSaveRestore.Active() && m_LocalSaveRestore.Entry().m_Code != Code)
-		m_LocalSaveRestore.Reset();
 }
 
 void CTClient::CompleteLocalSaveLoad(bool Success)
 {
 	if(!m_LocalSaveConfirmation.Active())
 		return;
-	const auto Request = m_LocalSaveConfirmation.Request();
+	const auto Request = m_LocalSaveConfirmation.TakeRequest();
 	const bool Automatic = m_LocalSaveRestore.Active();
-	m_LocalSaveConfirmation.Reset();
 	m_LocalSaveRestore.Reset();
 	if(Success)
 	{
@@ -4869,7 +4718,7 @@ void CTClient::UpdateLocalSaveRestore()
 		{
 			const CNetObj_GameInfo *pInfo = GameClient()->m_Snap.m_pGameInfoObj;
 			if(pInfo && World.m_Racing && GameClient()->m_Snap.m_pLocalCharacter &&
-				m_LocalSaveConfirmation.RestoredRace(World.m_Map.c_str(), World.m_aTeams[g_Config.m_ClDummy], Client()->GameTick(g_Config.m_ClDummy), -pInfo->m_WarmupTimer, Client()->GameTickSpeed(), Now))
+				m_LocalSaveConfirmation.RestoredRaceFromWarmupTimer(World.m_Map.c_str(), World.m_aTeams[g_Config.m_ClDummy], Client()->GameTick(g_Config.m_ClDummy), pInfo->m_WarmupTimer, Client()->GameTickSpeed(), Now))
 				CompleteLocalSaveLoad(true);
 		}
 	}

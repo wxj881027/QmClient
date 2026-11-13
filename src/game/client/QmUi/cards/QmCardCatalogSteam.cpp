@@ -1,8 +1,8 @@
 #include "QmCardCatalogInternal.h"
+#include "QmSteamProbeState.h"
 
 #include <engine/engine.h>
 #include <engine/shared/config.h>
-#include <engine/shared/jobs.h>
 #include <engine/steam.h>
 #include <engine/textrender.h>
 
@@ -18,23 +18,9 @@
 
 #include <algorithm>
 #include <memory>
-#include <string>
-
-namespace
-{
-	class CSteamProbeJob : public IJob
-	{
-		void Run() override { m_Info = SteamInspectClient(m_ManualPath.c_str()); }
-
-	public:
-		const std::string m_ManualPath;
-		SSteamClientInfo m_Info;
-		explicit CSteamProbeJob(const char *pManualPath) : m_ManualPath(pManualPath) {}
-	};
-}
 
 // Windows 探测结果经常是 d:\... 这种小写盘符，直接回填会和用户手写的 D:\ 看起来像两条路径。
-void NormalizeSteamDriveLetter(char *pPath)
+void NormalizeSteamDriveLetter(char *pPath) noexcept
 {
 	if(pPath == nullptr || pPath[0] == '\0' || pPath[1] != ':')
 		return;
@@ -45,39 +31,20 @@ void CMenus::RenderQmSteamContent(CUIRect &Content, const SSettingsContentMetric
 {
 	CSettingsContentLayoutFlow Flow(Content);
 	const bool ReadOnly = PrewarmOnly || Ui()->RenderOnly() || Flow.Declaring();
-	static std::shared_ptr<CSteamProbeJob> s_pProbe;
-	static SSteamClientInfo s_Info;
-	static bool s_HasResult = false;
-	static bool s_RefreshRequested = false;
+	static CSteamProbeState s_Probe;
 	// 自动回填只做一次，避免用户清空输入框后又被检测结果填回去。
 	static bool s_AutoPathFilled = false;
-	static std::string s_CheckedManualPath;
 	static CLineInputBuffered<1024> s_ManualPathInput;
 	static CButtonContainer s_DetectButton;
 	if(Flow.Input() && !s_ManualPathInput.IsActive() && str_comp(s_ManualPathInput.GetString(), g_Config.m_QmSteamClientPath) != 0)
 		s_ManualPathInput.Set(g_Config.m_QmSteamClientPath);
-	if(!ReadOnly && s_pProbe != nullptr && s_pProbe->Done())
+	const bool AutoFillPath = !s_AutoPathFilled && g_Config.m_QmSteamClientPath[0] == '\0' && !s_ManualPathInput.IsActive();
+	if(!ReadOnly && s_Probe.Finish(g_Config.m_QmSteamClientPath, AutoFillPath, NormalizeSteamDriveLetter) && AutoFillPath && s_Probe.Info().m_aPath[0] != '\0')
 	{
-		// 只读取已完成任务；编辑路径期间返回的旧结果不覆盖新选择。
-		if(s_pProbe->State() == IJob::STATE_DONE && s_pProbe->m_ManualPath == g_Config.m_QmSteamClientPath)
-		{
-			s_Info = s_pProbe->m_Info;
-			s_CheckedManualPath = s_pProbe->m_ManualPath;
-			s_HasResult = true;
-			// 自动检测到 Steam 时把路径回填进配置和输入框，输入框里直接能看到结果。
-			// 只在本次运行第一次自动检测时回填：配置里已有路径说明用户指定过，
-			// 用户手动清空输入框是想回到自动检测，都不该被再写回去。
-			if(!s_AutoPathFilled && g_Config.m_QmSteamClientPath[0] == '\0' && s_Info.m_aPath[0] != '\0' && !s_ManualPathInput.IsActive())
-			{
-				NormalizeSteamDriveLetter(s_Info.m_aPath);
-				str_copy(g_Config.m_QmSteamClientPath, s_Info.m_aPath);
-				s_ManualPathInput.Set(s_Info.m_aPath);
-				// 回填的这条路径就是本次检测的输入，记下来免得为它再跑一轮检测。
-				s_CheckedManualPath = s_Info.m_aPath;
-				s_AutoPathFilled = true;
-			}
-		}
-		s_pProbe.reset();
+		// 完整检查键已与本次结果一起发布，回填只复制固定缓冲，不再分配。
+		str_copy(g_Config.m_QmSteamClientPath, s_Probe.Info().m_aPath);
+		s_ManualPathInput.Set(s_Probe.Info().m_aPath);
+		s_AutoPathFilled = true;
 	}
 	IUiContext Ctx = SettingsUiContext("settings_steam", Metrics.m_UiScale);
 	CUIRect Row;
@@ -106,25 +73,22 @@ void CMenus::RenderQmSteamContent(CUIRect &Content, const SSettingsContentMetric
 		if(ui_widget::InputField(Ctx, &s_ManualPathInput, PathInput, "", Metrics.m_BodySize) && !ReadOnly)
 			str_copy(g_Config.m_QmSteamClientPath, s_ManualPathInput.GetString());
 		// 重新检测只留图标，说明走悬浮提示，和卡片里其它刷新图标保持一致。
-		if(Ui()->DoButton_QmIcon(&s_DetectButton, EQmIcon::ARROW_ROTATE_RIGHT, "\xEE\x80\xB6", 0, &PathDetectButton, IGraphics::CORNER_ALL) && Flow.Input() && !ReadOnly && s_pProbe == nullptr)
-			s_RefreshRequested = true;
+		if(Ui()->DoButton_QmIcon(&s_DetectButton, EQmIcon::ARROW_ROTATE_RIGHT, "\xEE\x80\xB6", 0, &PathDetectButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, !PrewarmOnly && !s_Probe.Pending()) && Flow.Input() && !ReadOnly)
+			s_Probe.RequestRefresh();
 		GameClient()->m_Tooltips.DoToolTip(&s_DetectButton, &PathDetectButton, Localize("Detect Steam again"));
 	}
 	Flow.Space(Metrics.m_LineSpacing);
-	if(!ReadOnly && s_pProbe == nullptr && (s_RefreshRequested || (!s_ManualPathInput.IsActive() && (!s_HasResult || s_CheckedManualPath != g_Config.m_QmSteamClientPath))))
-	{
-		s_pProbe = std::make_shared<CSteamProbeJob>(g_Config.m_QmSteamClientPath);
-		Engine()->AddJob(s_pProbe);
-		s_RefreshRequested = false;
-	}
+	if(!ReadOnly)
+		s_Probe.TryStart(g_Config.m_QmSteamClientPath, !s_ManualPathInput.IsActive(), [](const char *pPath) { return std::make_shared<CSteamProbeJob>(pPath, SteamInspectClient); }, [this](const auto &pJob) { return Engine()->TryAddJob(pJob); });
+	const SSteamClientInfo &Info = s_Probe.Info();
 	const char *pStatus;
-	if(s_pProbe != nullptr || !s_HasResult)
+	if(s_Probe.Pending() || !s_Probe.HasResult())
 		pStatus = Localize("Checking Steam...");
-	else if(s_Info.m_aPath[0] == '\0')
+	else if(Info.m_aPath[0] == '\0')
 		pStatus = Localize("Steam not found");
-	else if(s_Info.m_Running)
+	else if(Info.m_Running)
 		pStatus = Localize("Steam is running");
-	else if(s_Info.m_RunningKnown)
+	else if(Info.m_RunningKnown)
 		pStatus = Localize("Steam is installed but not running");
 	else
 		pStatus = Localize("Steam is installed");
@@ -132,7 +96,7 @@ void CMenus::RenderQmSteamContent(CUIRect &Content, const SSettingsContentMetric
 	Flow.Space(Metrics.m_LineSpacing);
 	const char *pInvalidPath = Localize("Manual Steam path is invalid; using automatic detection");
 	const char *pSelectHelp = Localize("Enter the Steam client program path, without command arguments");
-	TextRow("qm-steam-help", s_HasResult && s_Info.m_ManualPathRejected ? pInvalidPath : pSelectHelp, Metrics.m_SmallSize);
+	TextRow("qm-steam-help", s_Probe.HasResult() && Info.m_ManualPathRejected ? pInvalidPath : pSelectHelp, Metrics.m_SmallSize);
 }
 
 namespace qm_card_catalog

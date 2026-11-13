@@ -1,7 +1,9 @@
 #include "qm_spotify_integration.h"
 
 #include "music_lyrics_community_format.h"
+#include "qm_spotify_auth.h"
 #include "qm_spotify_parser.h"
+#include "qm_spotify_progress.h"
 #include "qm_spotify_token.h"
 
 #include <base/system.h>
@@ -25,7 +27,6 @@ namespace
 	constexpr const char *SPOTIFY_USER_AGENT =
 		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 	constexpr const char *LRCLIB_USER_AGENT = "QmClient/1.0 (+https://github.com/Q1menG/QmClient)";
-	constexpr const char *SERVER_TIME_URL = "https://open.spotify.com/api/server-time";
 	constexpr const char *PATHFINDER_URL_BASE = "https://api-partner.spotify.com/pathfinder/v1/query";
 	constexpr const char *LYRICS_URL_BASE = "https://spclient.wg.spotify.com/color-lyrics/v2/track/";
 	constexpr const char *LRCLIB_GET_URL = "https://lrclib.net/api/get";
@@ -35,15 +36,6 @@ namespace
 		"0dff51c99e552b992377a2a6f40d213dc42b62db86ca0bcf16cf3934aec1aae6",
 		"75bbf6bfcfdf85b8fc828417bfad92b7cd66bf7f556d85670f4da8292373ebec",
 	};
-	// open.spotify.com/api/token 的 TOTP secret 镜像(社区维护,按序轮询)。
-	constexpr const char *SECRET_MIRROR_URLS[3] = {
-		"https://code.thetadev.de/ThetaDev/spotify-secrets/raw/branch/main/secrets/secretDict.json",
-		"https://raw.githubusercontent.com/Thereallo1026/spotify-secrets/refs/heads/main/secrets/secretDict.json",
-		"https://raw.githubusercontent.com/xyloflake/spot-secrets-go/main/secrets/secretDict.json",
-	};
-	constexpr int64_t TOKEN_REFRESH_SKEW_MS = 60 * 1000; // token 过期前 1 分钟视为需刷新
-	constexpr int64_t RETRY_DELAY_MS = 5000;
-	constexpr int64_t TOKEN_FAILURE_DELAY_MS = 30 * 1000; // sp_dc 无效等持久失败
 	constexpr int64_t MAX_RESPONSE_SIZE = 2 << 20;
 
 	bool ContainsAsciiInsensitive(std::string_view Text, std::string_view Needle)
@@ -74,9 +66,14 @@ namespace
 		return ContainsAsciiInsensitive(SourceAppId, "spotify");
 	}
 
-	uint64_t MonotonicTickMs()
+	int64_t MonotonicTickMs()
 	{
-		return (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+		return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+	}
+
+	int64_t UnixTickMs()
+	{
+		return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	}
 
 	// FNV-1a 64:歌曲身份(title+artist)的稳定哈希。
@@ -152,16 +149,6 @@ namespace
 
 struct CSpotifyIntegration::SImpl
 {
-	enum class ETokenState : uint8_t
-	{
-		None,
-		FetchSecret,
-		FetchServerTime,
-		FetchToken,
-		Valid,
-		Failed,
-	};
-
 	// 配置。
 	bool m_ConfigInitialized = false;
 	bool m_LastEnabled = false;
@@ -169,18 +156,7 @@ struct CSpotifyIntegration::SImpl
 	std::string m_LastSpDc;
 	std::string m_SpDc;
 
-	// token 状态。
-	ETokenState m_TokenState = ETokenState::None;
-	int m_SecretMirrorIndex = 0;
-	bool m_SecretFromBundled = false;
-	QmSpotifyToken::STotpSecret m_Secret;
-	std::string m_AccessToken;
-	int64_t m_TokenExpirationMs = 0;
-	bool m_TokenLegacyAttempted = false;
-	std::shared_ptr<IHttpRequest> m_pSecretRequest;
-	std::shared_ptr<IHttpRequest> m_pServerTimeRequest;
-	std::shared_ptr<IHttpRequest> m_pTokenRequest;
-	int64_t m_NextTokenRetryTick = 0;
+	CSpotifyAuthPipeline m_Auth;
 
 	// 歌曲身份。
 	std::string m_IdentityTitle;
@@ -224,15 +200,7 @@ struct CSpotifyIntegration::SImpl
 
 	void AbortTokenRequests()
 	{
-		if(m_pSecretRequest)
-			m_pSecretRequest->Abort();
-		if(m_pServerTimeRequest)
-			m_pServerTimeRequest->Abort();
-		if(m_pTokenRequest)
-			m_pTokenRequest->Abort();
-		m_pSecretRequest.reset();
-		m_pServerTimeRequest.reset();
-		m_pTokenRequest.reset();
+		m_Auth.AbortRequests();
 	}
 
 	void ResetSongData()
@@ -258,15 +226,7 @@ struct CSpotifyIntegration::SImpl
 
 	void ResetTokenState()
 	{
-		AbortTokenRequests();
-		m_TokenState = ETokenState::None;
-		m_SecretMirrorIndex = 0;
-		m_SecretFromBundled = false;
-		m_Secret = {};
-		m_AccessToken.clear();
-		m_TokenExpirationMs = 0;
-		m_TokenLegacyAttempted = false;
-		m_NextTokenRetryTick = 0;
+		m_Auth.Reset();
 	}
 };
 
@@ -375,10 +335,7 @@ void CSpotifyIntegration::OnUpdate()
 	if(MediaState.m_Playing && MediaState.m_PositionUpdatedTick > 0)
 	{
 		// SMTC 进度约 1s 更新一次,用本地时钟外推平滑选句。
-		const int64_t ElapsedTicks = time() - MediaState.m_PositionUpdatedTick;
-		const double Rate = MediaState.m_PlaybackRate > 0.0 ? MediaState.m_PlaybackRate : 1.0;
-		if(ElapsedTicks > 0)
-			PositionMs += (int64_t)(ElapsedTicks * Rate * 1000.0 / (double)time_freq());
+		PositionMs = QmSpotify::ExtrapolatePositionMs(PositionMs, MediaState.m_PositionUpdatedTick, time(), time_freq(), MediaState.m_PlaybackRate);
 	}
 	m_pImpl->m_PositionMs = std::max<int64_t>(0, PositionMs);
 
@@ -409,194 +366,13 @@ void CSpotifyIntegration::OnUpdate()
 
 void CSpotifyIntegration::PollTokenPipeline()
 {
-	const int64_t NowMs = MonotonicTickMs();
-
-	// 已有有效 token 且未临近过期 → 直接可用。
-	if(m_pImpl->m_TokenState == SImpl::ETokenState::Valid)
-	{
-		if(m_pImpl->m_TokenExpirationMs > NowMs + TOKEN_REFRESH_SKEW_MS)
-			return;
-		m_pImpl->m_TokenState = SImpl::ETokenState::None;
-		m_pImpl->m_TokenLegacyAttempted = false;
-	}
-	if(m_pImpl->m_NextTokenRetryTick > NowMs)
-		return;
-	// 退避到期:Failed → None 重新走完整链路。
-	if(m_pImpl->m_TokenState == SImpl::ETokenState::Failed)
-		m_pImpl->m_TokenState = SImpl::ETokenState::None;
-
-	auto FinishTokenFailure = [&](int64_t DelayMs) {
-		m_pImpl->m_TokenState = SImpl::ETokenState::Failed;
-		m_pImpl->m_NextTokenRetryTick = MonotonicTickMs() + DelayMs;
-		m_pImpl->AbortTokenRequests();
-	};
-
-	// 阶段 1:secret 获取(镜像轮询,全部失败用内置兜底)。
-	if(m_pImpl->m_TokenState == SImpl::ETokenState::None)
-	{
-		// 已有 secret(token 过期刷新场景)直接进入 server-time 阶段。
-		if(!m_pImpl->m_Secret.m_Secret.empty())
-		{
-			m_pImpl->m_TokenState = SImpl::ETokenState::FetchServerTime;
-			return;
-		}
-		if(m_pImpl->m_SecretMirrorIndex < 3)
-		{
-			m_pImpl->m_TokenState = SImpl::ETokenState::FetchSecret;
-			auto pRequest = std::shared_ptr<IHttpRequest>(HttpGet(SECRET_MIRROR_URLS[m_pImpl->m_SecretMirrorIndex]));
-			pRequest->LogProgress(HTTPLOG::FAILURE);
-			pRequest->FailOnErrorStatus(false);
-			pRequest->Timeout(CTimeout{5000, 10000, 500, 10});
-			pRequest->MaxResponseSize(MAX_RESPONSE_SIZE);
-			pRequest->HeaderString("User-Agent", LRCLIB_USER_AGENT);
-			m_pImpl->m_pSecretRequest = pRequest;
-			Http()->Run(pRequest);
-			return;
-		}
-		// 内置兜底(同步)。
-		m_pImpl->m_SecretFromBundled = true;
-		m_pImpl->m_SecretMirrorIndex = 3;
-		if(!QmSpotifyToken::ParseSecretPayload(QmSpotifyToken::BundledSecretPayload(), &m_pImpl->m_Secret))
-		{
-			FinishTokenFailure(TOKEN_FAILURE_DELAY_MS);
-			return;
-		}
-		m_pImpl->m_TokenState = SImpl::ETokenState::FetchServerTime;
-	}
-	if(m_pImpl->m_TokenState == SImpl::ETokenState::FetchSecret)
-	{
-		std::shared_ptr<IHttpRequest> pRequest = m_pImpl->m_pSecretRequest;
-		if(pRequest == nullptr || !pRequest->Done())
-			return;
-		m_pImpl->m_pSecretRequest.reset();
-		bool Ok = false;
-		if(pRequest->State() == EHttpState::DONE && pRequest->StatusCode() == 200)
-		{
-			unsigned char *pData = nullptr;
-			size_t DataLength = 0;
-			pRequest->Result(&pData, &DataLength);
-			if(pData != nullptr)
-			{
-				const std::string_view Json((const char *)pData, DataLength);
-				Ok = QmSpotifyToken::ParseSecretPayload(Json, &m_pImpl->m_Secret);
-			}
-		}
-		if(Ok)
-		{
-			m_pImpl->m_TokenState = SImpl::ETokenState::FetchServerTime;
-		}
-		else
-		{
-			++m_pImpl->m_SecretMirrorIndex;
-			m_pImpl->m_TokenState = SImpl::ETokenState::None;
-		}
-		return;
-	}
-	// 阶段 2:服务器时间。
-	if(m_pImpl->m_TokenState == SImpl::ETokenState::FetchServerTime)
-	{
-		auto pRequest = std::shared_ptr<IHttpRequest>(HttpGet(SERVER_TIME_URL));
-		pRequest->LogProgress(HTTPLOG::FAILURE);
-		pRequest->FailOnErrorStatus(false);
-		pRequest->Timeout(CTimeout{5000, 10000, 500, 10});
-		pRequest->MaxResponseSize(MAX_RESPONSE_SIZE);
-		pRequest->HeaderString("User-Agent", SPOTIFY_USER_AGENT);
-		m_pImpl->m_pServerTimeRequest = pRequest;
-		m_pImpl->m_TokenState = SImpl::ETokenState::FetchToken;
-		m_pImpl->m_pTokenRequest = nullptr;
-		Http()->Run(pRequest);
-		return;
-	}
-	// 阶段 3:token。
-	if(m_pImpl->m_TokenState == SImpl::ETokenState::FetchToken)
-	{
-		std::shared_ptr<IHttpRequest> pTimeRequest = m_pImpl->m_pServerTimeRequest;
-		if(pTimeRequest == nullptr)
-		{
-			// server-time 已完成并发出 token 请求时,等待其完成;否则视为状态异常。
-			if(m_pImpl->m_pTokenRequest != nullptr)
-				return;
-			FinishTokenFailure(RETRY_DELAY_MS);
-			return;
-		}
-		if(!pTimeRequest->Done())
-			return;
-		m_pImpl->m_pServerTimeRequest.reset();
-		int64_t ServerTime = 0;
-		if(pTimeRequest->State() == EHttpState::DONE && pTimeRequest->StatusCode() == 200)
-		{
-			unsigned char *pData = nullptr;
-			size_t DataLength = 0;
-			pTimeRequest->Result(&pData, &DataLength);
-			if(pData != nullptr)
-				QmSpotify::ParseServerTime(std::string_view((const char *)pData, DataLength), &ServerTime);
-		}
-		if(ServerTime <= 0)
-		{
-			FinishTokenFailure(RETRY_DELAY_MS);
-			return;
-		}
-		const std::string TokenUrl = QmSpotifyToken::BuildTokenUrl(m_pImpl->m_Secret, ServerTime, m_pImpl->m_TokenLegacyAttempted);
-		auto pRequest = std::shared_ptr<IHttpRequest>(HttpGet(TokenUrl.c_str()));
-		pRequest->LogProgress(HTTPLOG::FAILURE);
-		pRequest->FailOnErrorStatus(false);
-		pRequest->Timeout(CTimeout{5000, 10000, 500, 10});
-		pRequest->MaxResponseSize(MAX_RESPONSE_SIZE);
-		pRequest->HeaderString("User-Agent", SPOTIFY_USER_AGENT);
-		pRequest->HeaderString("Accept", "application/json");
-		pRequest->HeaderString("App-Platform", "WebPlayer");
-		pRequest->HeaderString("Origin", "https://open.spotify.com");
-		pRequest->HeaderString("Referer", "https://open.spotify.com/");
-		const std::string Cookie = "sp_dc=" + m_pImpl->m_SpDc;
-		pRequest->HeaderString("Cookie", Cookie.c_str());
-		m_pImpl->m_pTokenRequest = pRequest;
-		Http()->Run(pRequest);
-		return;
-	}
-	// 阶段 4:token 完成。
-	if(m_pImpl->m_pTokenRequest != nullptr && m_pImpl->m_pTokenRequest->Done())
-	{
-		std::shared_ptr<IHttpRequest> pRequest = m_pImpl->m_pTokenRequest;
-		m_pImpl->m_pTokenRequest.reset();
-		// 网络失败时终态非 DONE，读取 StatusCode 会触发断言；以 -1 走通用失败路径
-		const int Status = pRequest->State() == EHttpState::DONE ? pRequest->StatusCode() : -1;
-		if(pRequest->State() == EHttpState::DONE && Status == 200)
-		{
-			unsigned char *pData = nullptr;
-			size_t DataLength = 0;
-			pRequest->Result(&pData, &DataLength);
-			std::string AccessToken;
-			int64_t ExpirationMs = 0;
-			if(pData != nullptr &&
-				QmSpotify::ParseTokenResponse(std::string_view((const char *)pData, DataLength), &AccessToken, &ExpirationMs))
-			{
-				m_pImpl->m_AccessToken = std::move(AccessToken);
-				m_pImpl->m_TokenExpirationMs = ExpirationMs;
-				m_pImpl->m_TokenState = SImpl::ETokenState::Valid;
-				return;
-			}
-		}
-		if(Status == 400 && !m_pImpl->m_TokenLegacyAttempted)
-		{
-			// 新参数被拒 → 降级旧参数重试一次。
-			m_pImpl->m_TokenLegacyAttempted = true;
-			m_pImpl->m_TokenState = SImpl::ETokenState::FetchServerTime;
-			return;
-		}
-		if(Status == 401 || Status == 403)
-		{
-			dbg_msg("spotify", "sp_dc cookie rejected (HTTP %d), check qm_spotify_sp_dc", Status);
-			FinishTokenFailure(TOKEN_FAILURE_DELAY_MS);
-			return;
-		}
-		FinishTokenFailure(RETRY_DELAY_MS);
-	}
+	m_pImpl->m_Auth.Poll(Http(), m_pImpl->m_SpDc, MonotonicTickMs(), UnixTickMs());
 }
 
 void CSpotifyIntegration::PollSongPipeline()
 {
 	// 需要 token 才能搜索/取歌词;失败时不打扰已有歌词显示。
-	if(m_pImpl->m_TokenState != SImpl::ETokenState::Valid || m_pImpl->m_AccessToken.empty())
+	if(!m_pImpl->m_Auth.HasToken())
 		return;
 	if(!m_pImpl->m_HasIdentity || m_pImpl->m_HasLyrics)
 		return;
@@ -626,7 +402,7 @@ void CSpotifyIntegration::PollSongPipeline()
 		pRequest->MaxResponseSize(MAX_RESPONSE_SIZE);
 		pRequest->HeaderString("User-Agent", SPOTIFY_USER_AGENT);
 		pRequest->HeaderString("Accept", "application/json");
-		pRequest->HeaderString("Authorization", ("Bearer " + m_pImpl->m_AccessToken).c_str());
+		pRequest->HeaderString("Authorization", ("Bearer " + m_pImpl->m_Auth.AccessToken()).c_str());
 		m_pImpl->m_pSearchRequest = pRequest;
 		Http()->Run(pRequest);
 		return;
@@ -663,8 +439,7 @@ void CSpotifyIntegration::PollSongPipeline()
 		if(m_pImpl->m_RetryCount < 1)
 		{
 			m_pImpl->m_RetryCount = 1;
-			m_pImpl->m_TokenState = SImpl::ETokenState::None;
-			m_pImpl->m_TokenLegacyAttempted = false;
+			m_pImpl->m_Auth.RequestRefresh();
 			return;
 		}
 	}
@@ -681,7 +456,7 @@ void CSpotifyIntegration::PollSongPipelineLyrics()
 	// 歌词(未开始或完成)。
 	if(m_pImpl->m_pLyricsRequest == nullptr)
 	{
-		if(m_pImpl->m_PendingTrackId.empty())
+		if(!m_pImpl->m_Auth.HasToken() || m_pImpl->m_PendingTrackId.empty())
 			return;
 		const std::string Url = std::string(LYRICS_URL_BASE) + m_pImpl->m_PendingTrackId + "?format=json&market=from_token";
 		auto pRequest = std::shared_ptr<IHttpRequest>(HttpGet(Url.c_str()));
@@ -692,7 +467,7 @@ void CSpotifyIntegration::PollSongPipelineLyrics()
 		pRequest->HeaderString("User-Agent", SPOTIFY_USER_AGENT);
 		pRequest->HeaderString("Accept", "application/json");
 		pRequest->HeaderString("App-platform", "WebPlayer");
-		pRequest->HeaderString("Authorization", ("Bearer " + m_pImpl->m_AccessToken).c_str());
+		pRequest->HeaderString("Authorization", ("Bearer " + m_pImpl->m_Auth.AccessToken()).c_str());
 		m_pImpl->m_pLyricsRequest = pRequest;
 		Http()->Run(pRequest);
 		return;
@@ -730,8 +505,7 @@ void CSpotifyIntegration::PollSongPipelineLyrics()
 		if(m_pImpl->m_RetryCount < 2)
 		{
 			m_pImpl->m_RetryCount = 2;
-			m_pImpl->m_TokenState = SImpl::ETokenState::None;
-			m_pImpl->m_TokenLegacyAttempted = false;
+			m_pImpl->m_Auth.RequestRefresh();
 			return;
 		}
 	}

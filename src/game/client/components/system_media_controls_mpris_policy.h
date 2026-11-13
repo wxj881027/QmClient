@@ -2,6 +2,7 @@
 #ifndef GAME_CLIENT_COMPONENTS_SYSTEM_MEDIA_CONTROLS_MPRIS_POLICY_H
 #define GAME_CLIENT_COMPONENTS_SYSTEM_MEDIA_CONTROLS_MPRIS_POLICY_H
 #include <algorithm>
+#include <atomic>
 #include <cstdint>
 #include <limits>
 #include <string>
@@ -85,13 +86,47 @@ namespace SystemMediaControls
 		int64_t m_Deadline;
 
 	public:
-		CMprisPollBudget(int64_t NowMs, int64_t DurationMs) : m_Deadline(NowMs + DurationMs) {}
+		CMprisPollBudget(int64_t NowMs, int64_t DurationMs) :
+			m_Deadline(NowMs + DurationMs) {}
 		int Remaining(int64_t NowMs, bool Stop) const { return Stop ? 0 : static_cast<int>(std::clamp<int64_t>(m_Deadline - NowMs, 0, 1000)); }
 	};
 	inline int MprisRequestTimeout(int RemainingMs, int ReservedMs)
 	{
 		return std::clamp(RemainingMs - ReservedMs, 0, 250);
 	}
+	class CMprisRequestContextScope;
+	// 请求只借用当前轮询作用域的停止标记和预算，离开作用域后不能继续读取栈对象。
+	class CMprisRequestContext
+	{
+		friend class CMprisRequestContextScope;
+		const std::atomic_bool *m_pStop = nullptr;
+		const CMprisPollBudget *m_pBudget = nullptr;
+		int m_ReservedMs = 0;
+
+	public:
+		bool StopRequested() const { return !m_pStop || m_pStop->load(); }
+		int Remaining(int64_t NowMs) const { return m_pBudget && m_pStop ? m_pBudget->Remaining(NowMs, StopRequested()) : 0; }
+		bool Allowed(int64_t NowMs) const { return m_pBudget && m_pStop && Remaining(NowMs) > m_ReservedMs; }
+		int Timeout(int64_t NowMs) const { return MprisRequestTimeout(Remaining(NowMs), m_ReservedMs); }
+		void SetReserved(int ReservedMs) { m_ReservedMs = std::max(0, ReservedMs); }
+	};
+	class CMprisRequestContextScope
+	{
+		CMprisRequestContext &m_Context;
+		const CMprisRequestContext m_Previous;
+
+	public:
+		CMprisRequestContextScope(CMprisRequestContext &Context, const std::atomic_bool &Stop, const CMprisPollBudget *pBudget = nullptr, int ReservedMs = 0) :
+			m_Context(Context), m_Previous(Context)
+		{
+			m_Context.m_pStop = &Stop;
+			m_Context.m_pBudget = pBudget;
+			m_Context.m_ReservedMs = std::max(0, ReservedMs);
+		}
+		~CMprisRequestContextScope() { m_Context = m_Previous; }
+		CMprisRequestContextScope(const CMprisRequestContextScope &) = delete;
+		CMprisRequestContextScope &operator=(const CMprisRequestContextScope &) = delete;
+	};
 	// 活动源优先；其他候选按跨轮游标轮转，保留位置读取预算，失败源不能永远占据队首。
 	class CMprisCandidateScheduler
 	{

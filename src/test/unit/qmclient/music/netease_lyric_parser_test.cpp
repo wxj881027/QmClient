@@ -147,3 +147,46 @@ TEST(NeteaseLyricParser, KeepsVeryLongTimedLyricForAbiBoundaryTruncation)
 	ASSERT_EQ(Timeline.m_vLines.size(), 1u);
 	EXPECT_EQ(Timeline.m_vLines[0].m_Text, LongText);
 }
+
+TEST(NeteaseLyricParser, FinalizeUsesTheNextDistinctStartAndKeepsStableOrderAndExplicitEnds)
+{
+	std::vector<SLine> Lines{
+		{3000, -1, "last first", {}},
+		{1000, -1, "first", {{1000, 1100, "word"}}},
+		{2000, 2200, "explicit middle", {}},
+		{1000, 0, "second", {}},
+		{1000, 9000, "explicit overlap", {}},
+		{3000, 3000, "last second", {}},
+	};
+	FinalizeTimelineLines(Lines);
+	ASSERT_EQ(Lines.size(), 6u);
+	EXPECT_EQ(Lines[0].m_Text, "first");
+	EXPECT_EQ(Lines[0].m_EndMs, 2000);
+	ASSERT_EQ(Lines[0].m_vWords.size(), 1u);
+	EXPECT_EQ(Lines[0].m_vWords[0].m_Text, "word");
+	EXPECT_EQ(Lines[1].m_Text, "second");
+	EXPECT_EQ(Lines[1].m_EndMs, 2000);
+	EXPECT_EQ(Lines[2].m_Text, "explicit overlap");
+	EXPECT_EQ(Lines[2].m_EndMs, 9000);
+	EXPECT_EQ(Lines[3].m_Text, "explicit middle");
+	EXPECT_EQ(Lines[3].m_EndMs, 2200);
+	EXPECT_EQ(Lines[4].m_Text, "last first");
+	EXPECT_EQ(Lines[4].m_EndMs, -1);
+	EXPECT_EQ(Lines[5].m_Text, "last second");
+	EXPECT_EQ(Lines[5].m_EndMs, 3000);
+}
+
+TEST(NeteaseLyricParser, RepeatedLrcTimestampsStillEndAtTheFilteredEmptyGroup)
+{
+	STimeline Timeline;
+	ASSERT_TRUE(ParseLrc("[00:01]first\n[00:01]second\n[00:02]\n[00:03]third\n[00:03]fourth", &Timeline));
+	ASSERT_EQ(Timeline.m_vLines.size(), 4u);
+	EXPECT_EQ(Timeline.m_vLines[0].m_Text, "first");
+	EXPECT_EQ(Timeline.m_vLines[0].m_EndMs, 2000);
+	EXPECT_EQ(Timeline.m_vLines[1].m_Text, "second");
+	EXPECT_EQ(Timeline.m_vLines[1].m_EndMs, 2000);
+	EXPECT_EQ(Timeline.m_vLines[2].m_Text, "third");
+	EXPECT_EQ(Timeline.m_vLines[2].m_EndMs, -1);
+	EXPECT_EQ(Timeline.m_vLines[3].m_Text, "fourth");
+	EXPECT_EQ(Timeline.m_vLines[3].m_EndMs, -1);
+}

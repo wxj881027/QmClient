@@ -4,8 +4,9 @@
 #define GAME_CLIENT_COMPONENTS_RACE_DEMO_H
 
 #include <game/client/component.h>
+#include <game/client/components/qmclient/race_demo_storage.h>
 
-#include <chrono>
+class IDemoRecorder;
 
 class CRaceDemo : public CComponent
 {
@@ -21,20 +22,22 @@ class CRaceDemo : public CComponent
 	static const char *ms_pRaceDemoDir;
 
 	char m_aTmpFilename[IO_MAX_PATH_LENGTH];
+	char m_aCaptureMap[IO_MAX_PATH_LENGTH] = "";
+	IDemoRecorder *m_pRecorder = nullptr;
 
 	int m_RaceState;
 	int m_RaceStartTick;
 	int m_RecordStopTick;
 	int m_Time;
 
-	std::chrono::nanoseconds m_RaceDemosLoadStartTime{0};
+	qm_race_demo::CFinalizer m_Finalizer;
 
-	static int RaceDemolistFetchCallback(const CFsFileInfo *pInfo, int IsDir, int StorageType, void *pUser);
-
-	void GetPath(char *pBuf, int Size, int Time = -1) const;
-
-	void StopRecord(int Time = -1);
-	bool CheckDemo(int Time);
+	void GetPath(char *pBuf, int Size) const;
+	bool StartRecord() noexcept;
+	void StopRecord(int Time = -1, bool Force = false) noexcept;
+	void FinishPending(bool Force = false) noexcept;
+	void ResetRaceState() noexcept;
+	void ReportSaveFailure(bool AfterCommit) noexcept;
 
 public:
 	bool m_AllowRestart;
@@ -46,6 +49,7 @@ public:
 	void OnStateChange(int NewState, int OldState) override;
 	void OnMessage(int MsgType, void *pRawMsg) override;
 	void OnMapLoad() override;
+	void OnUpdate() override;
 	void OnShutdown() override;
 	void OnNewSnapshot() override;
 };

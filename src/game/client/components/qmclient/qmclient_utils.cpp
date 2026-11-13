@@ -1,6 +1,9 @@
 // 请抬头享受阳光｜日子很好 我很我---------致咩子
 #include "qmclient_utils.h"
 
+#include "qm_json_fields.h"
+#include "qm_presence_prepare.h"
+
 #include <base/str.h>
 
 #include <engine/shared/json.h>
@@ -8,7 +11,9 @@
 
 #include <algorithm>
 #include <cctype>
+#include <new>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 
@@ -18,12 +23,6 @@ namespace
 	constexpr float QM_TITLE_RAINBOW_SATURATION = 0.8f;
 	constexpr float QM_TITLE_RAINBOW_LIGHTNESS = 0.65f;
 
-	const json_value *JsonObjectField(const json_value *pObject, const char *pName)
-	{
-		if(!pObject || pObject->type != json_object)
-			return &json_value_none;
-		return json_object_get(pObject, pName);
-	}
 	bool JsonReadBoolean(const json_value *pValue, bool &OutValue)
 	{
 		if(!pValue)
@@ -64,10 +63,10 @@ namespace
 	}
 	EClientBrand JsonReadClientBrand(const json_value *pEntry)
 	{
-		const json_value *pClientType = JsonObjectField(pEntry, "client_type");
+		const json_value *pClientType = qm_json::Field(pEntry, "client_type");
 		if(pClientType == &json_value_none)
-			pClientType = JsonObjectField(pEntry, "type");
-		if(pClientType == &json_value_none || pClientType->type != json_string)
+			pClientType = qm_json::Field(pEntry, "type");
+		if(!qm_json::Text(pClientType))
 			return EClientBrand::QM;
 
 		const char *pType = pClientType->u.string.ptr;
@@ -81,55 +80,63 @@ namespace
 
 std::string NormalizeQmServerAddress(const char *pServerAddress)
 {
-	std::string Address = pServerAddress ? pServerAddress : "";
-	while(!Address.empty() && std::isspace((unsigned char)Address.front()))
-		Address.erase(Address.begin());
-	while(!Address.empty() && std::isspace((unsigned char)Address.back()))
-		Address.pop_back();
-	std::transform(Address.begin(), Address.end(), Address.begin(), [](unsigned char Character) { return (char)std::tolower(Character); });
-	const size_t Scheme = Address.find("://");
-	if(Scheme != std::string::npos)
-		Address.erase(0, Scheme + 3);
-	while(!Address.empty() && Address.back() == '/')
-		Address.pop_back();
-	if(Address.empty())
-		return {};
-	std::string Host = Address;
-	std::string Port;
-	if(Address.front() == '[')
+	try
 	{
-		const size_t Close = Address.find(']');
-		if(Close == std::string::npos)
+		std::string_view Input = pServerAddress ? pServerAddress : "";
+		while(!Input.empty() && std::isspace(static_cast<unsigned char>(Input.front())))
+			Input.remove_prefix(1);
+		while(!Input.empty() && std::isspace(static_cast<unsigned char>(Input.back())))
+			Input.remove_suffix(1);
+		std::string Address(Input);
+		std::transform(Address.begin(), Address.end(), Address.begin(), [](unsigned char Character) { return (char)std::tolower(Character); });
+		const size_t Scheme = Address.find("://");
+		if(Scheme != std::string::npos)
+			Address.erase(0, Scheme + 3);
+		while(!Address.empty() && Address.back() == '/')
+			Address.pop_back();
+		if(Address.empty())
 			return {};
-		Host = Address.substr(1, Close - 1);
-		if(Close + 1 < Address.size() && Address[Close + 1] == ':')
-			Port = Address.substr(Close + 2);
-	}
-	else if(std::count(Address.begin(), Address.end(), ':') == 1)
-	{
-		const size_t Separator = Address.rfind(':');
-		Host = Address.substr(0, Separator);
-		Port = Address.substr(Separator + 1);
-	}
-	while(!Host.empty() && Host.back() == '.')
-		Host.pop_back();
-	if(Host.empty() || (!Port.empty() && !std::all_of(Port.begin(), Port.end(), [](unsigned char Character) { return std::isdigit(Character) != 0; })))
-		return {};
-	if(!Port.empty())
-	{
-		try
+		std::string Host = Address;
+		std::string Port;
+		if(Address.front() == '[')
 		{
-			const unsigned long NumericPort = std::stoul(Port);
-			if(NumericPort < 1 || NumericPort > 65535)
+			const size_t Close = Address.find(']');
+			if(Close == std::string::npos)
 				return {};
-			Port = std::to_string(NumericPort);
+			Host = Address.substr(1, Close - 1);
+			if(Close + 1 < Address.size() && Address[Close + 1] == ':')
+				Port = Address.substr(Close + 2);
 		}
-		catch(...)
+		else if(std::count(Address.begin(), Address.end(), ':') == 1)
 		{
-			return {};
+			const size_t Separator = Address.rfind(':');
+			Host = Address.substr(0, Separator);
+			Port = Address.substr(Separator + 1);
 		}
+		while(!Host.empty() && Host.back() == '.')
+			Host.pop_back();
+		if(Host.empty() || (!Port.empty() && !std::all_of(Port.begin(), Port.end(), [](unsigned char Character) { return std::isdigit(Character) != 0; })))
+			return {};
+		if(!Port.empty())
+		{
+			try
+			{
+				const unsigned long NumericPort = std::stoul(Port);
+				if(NumericPort < 1 || NumericPort > 65535)
+					return {};
+				Port = std::to_string(NumericPort);
+			}
+			catch(...)
+			{
+				return {};
+			}
+		}
+		return Host.find(':') != std::string::npos ? "[" + Host + "]" + (Port.empty() ? "" : ":" + Port) : Host + (Port.empty() ? "" : ":" + Port);
 	}
-	return Host.find(':') != std::string::npos ? "[" + Host + "]" + (Port.empty() ? "" : ":" + Port) : Host + (Port.empty() ? "" : ":" + Port);
+	catch(const std::bad_alloc &)
+	{
+		return {};
+	}
 }
 
 bool SQmClientDistributionSnapshot::Apply(SQmClientUsersParseResult &Result, int64_t ExpireTick)
@@ -148,9 +155,9 @@ bool IsQmClientUsersSnapshotForContext(const json_value *pRoot, const char *pCur
 	if(!pRoot || pRoot->type != json_object)
 		return false;
 
-	const json_value *pAddress = JsonObjectField(pRoot, "server_address");
-	const json_value *pUsers = JsonObjectField(pRoot, "users");
-	if(pAddress->type != json_string || pUsers->type != json_array)
+	const json_value *pAddress = qm_json::Field(pRoot, "server_address");
+	const json_value *pUsers = qm_json::Field(pRoot, "users");
+	if(!qm_json::Text(pAddress) || pUsers->type != json_array)
 		return false;
 
 	if(str_comp(pAddress->u.string.ptr, QMCLIENT_REALTIME_USERS_GLOBAL) == 0)
@@ -169,7 +176,7 @@ bool ParseQmClientUsersJson(const json_value *pRoot, const char *pServerAddress,
 	const json_value *pUsers = pRoot;
 	if(pUsers->type == json_object)
 	{
-		const json_value *pUsersField = JsonObjectField(pUsers, "users");
+		const json_value *pUsersField = qm_json::Field(pUsers, "users");
 		if(pUsersField != &json_value_none)
 			pUsers = pUsersField;
 	}
@@ -189,24 +196,24 @@ bool ParseQmClientUsersJson(const json_value *pRoot, const char *pServerAddress,
 		if(!pEntry || pEntry->type != json_object)
 			continue;
 
-		const json_value *pServerAddressField = JsonObjectField(pEntry, "server_address");
+		const json_value *pServerAddressField = qm_json::Field(pEntry, "server_address");
 		if(pServerAddressField == &json_value_none)
-			pServerAddressField = JsonObjectField(pEntry, "server");
-		if(pServerAddressField == &json_value_none || pServerAddressField->type != json_string)
+			pServerAddressField = qm_json::Field(pEntry, "server");
+		if(!qm_json::Text(pServerAddressField))
 			continue;
 
-		const json_value *pPlayerName = JsonObjectField(pEntry, "player_name");
+		const json_value *pPlayerName = qm_json::Field(pEntry, "player_name");
 		if(pPlayerName == &json_value_none)
-			pPlayerName = JsonObjectField(pEntry, "name");
-		if(pPlayerName == &json_value_none || pPlayerName->type != json_string || pPlayerName->u.string.ptr[0] == '\0')
+			pPlayerName = qm_json::Field(pEntry, "name");
+		if(!qm_json::Text(pPlayerName, false))
 			continue;
 
 		bool Dummy = false;
-		const json_value *pDummy = JsonObjectField(pEntry, "dummy");
+		const json_value *pDummy = qm_json::Field(pEntry, "dummy");
 		if(pDummy != &json_value_none)
 			JsonReadBoolean(pDummy, Dummy);
 
-		const std::string ServerAddress = pServerAddressField->u.string.ptr;
+		const std::string ServerAddress(pServerAddressField->u.string.ptr, pServerAddressField->u.string.length);
 		const auto ItServer = ServerIndexByAddress.find(ServerAddress);
 		if(ItServer == ServerIndexByAddress.end())
 		{
@@ -229,21 +236,21 @@ bool ParseQmClientUsersJson(const json_value *pRoot, const char *pServerAddress,
 			continue;
 
 		SQmClientRecognitionMark &Mark = OutResult.m_vLocalServerMarks.emplace_back();
-		Mark.m_Name = pPlayerName->u.string.ptr;
+		Mark.m_Name.assign(pPlayerName->u.string.ptr, pPlayerName->u.string.length);
 		Mark.m_ClientBrand = JsonReadClientBrand(pEntry);
 
-		const json_value *pQidField = JsonObjectField(pEntry, "qid");
-		if(pQidField != &json_value_none && pQidField->type == json_string)
-			Mark.m_Qid = pQidField->u.string.ptr;
+		const json_value *pQidField = qm_json::Field(pEntry, "qid");
+		if(qm_json::Text(pQidField))
+			Mark.m_Qid.assign(pQidField->u.string.ptr, pQidField->u.string.length);
 
-		const json_value *pFootParticlesEnabled = JsonObjectField(pEntry, "foot_particles_enabled");
+		const json_value *pFootParticlesEnabled = qm_json::Field(pEntry, "foot_particles_enabled");
 		JsonReadBoolean(pFootParticlesEnabled, Mark.m_FootParticlesEnabled);
 
-		const json_value *pRemoteParticlesEnabled = JsonObjectField(pEntry, "remote_particles_enabled");
+		const json_value *pRemoteParticlesEnabled = qm_json::Field(pEntry, "remote_particles_enabled");
 		JsonReadBoolean(pRemoteParticlesEnabled, Mark.m_RemoteParticlesEnabled);
 
 		Mark.m_VoiceSupported = true;
-		const json_value *pVoiceSupported = JsonObjectField(pEntry, "voice_supported");
+		const json_value *pVoiceSupported = qm_json::Field(pEntry, "voice_supported");
 		if(pVoiceSupported != &json_value_none)
 			JsonReadBoolean(pVoiceSupported, Mark.m_VoiceSupported);
 	}
@@ -260,74 +267,73 @@ bool ParseQmClientUsersJson(const json_value *pRoot, const char *pServerAddress,
 
 bool ParseQmDeveloperPresencesJson(const json_value *pRoot, const char *pServerAddress, SQmDeveloperPresenceParseResult &OutResult)
 {
-	OutResult = SQmDeveloperPresenceParseResult();
-	if(!pRoot || pRoot->type != json_object)
-		return false;
+	return TryPrepareQmPresenceResult(OutResult, [&](auto &Candidate) {
+		if(!pRoot || pRoot->type != json_object)
+			return false;
 
-	int64_t ServerTime;
-	if(!JsonReadInteger(JsonObjectField(pRoot, "server_time"), ServerTime) || ServerTime <= 0)
-		return false;
-	const json_value *pPresences = JsonObjectField(pRoot, "presences");
+		int64_t ServerTime;
+		if(!JsonReadInteger(qm_json::Field(pRoot, "server_time"), ServerTime) || ServerTime <= 0)
+			return false;
+		const json_value *pPresences = qm_json::Field(pRoot, "presences");
 
-	if(pPresences->type != json_array)
-		return false;
+		if(pPresences->type != json_array)
+			return false;
 
-	OutResult.m_Parsed = true;
-	OutResult.m_ServerTime = ServerTime;
-	OutResult.m_vPresences.reserve(pPresences->u.array.length);
-	const char *pLocalServerAddress = pServerAddress ? pServerAddress : "";
-	if(pLocalServerAddress[0] == '\0')
+		Candidate.m_Parsed = true;
+		Candidate.m_ServerTime = ServerTime;
+		const char *pLocalServerAddress = pServerAddress ? pServerAddress : "";
+		if(pLocalServerAddress[0] == '\0')
+			return true;
+
+		Candidate.m_vPresences.reserve(std::min<size_t>(pPresences->u.array.length, MAX_CLIENTS));
+		for(unsigned Index = 0; Index < pPresences->u.array.length; ++Index)
+		{
+			const json_value *pEntry = pPresences->u.array.values[Index];
+			if(!pEntry || pEntry->type != json_object)
+				continue;
+
+			const json_value *pDeveloperId = qm_json::Field(pEntry, "developer_id");
+			const json_value *pEntryServerAddress = qm_json::Field(pEntry, "server_address");
+			const json_value *pPlayerName = qm_json::Field(pEntry, "player_name");
+			const json_value *pDummy = qm_json::Field(pEntry, "dummy");
+			if(!qm_json::Text(pDeveloperId, false) || !qm_json::Text(pEntryServerAddress, false) || !qm_json::Text(pPlayerName, false) ||
+				pDummy == &json_value_none || pDummy->type != json_boolean)
+			{
+				continue;
+			}
+
+			if(!qm_json::TextEquals(pEntryServerAddress, pLocalServerAddress))
+				continue;
+
+			int64_t PlayerId;
+			int64_t IssuedAt;
+			int64_t ExpiresAt;
+			int64_t StyleBucket;
+			if(!JsonReadInteger(qm_json::Field(pEntry, "player_id"), PlayerId) ||
+				!JsonReadInteger(qm_json::Field(pEntry, "issued_at"), IssuedAt) ||
+				!JsonReadInteger(qm_json::Field(pEntry, "expires_at"), ExpiresAt) ||
+				!JsonReadInteger(qm_json::Field(pEntry, "style_bucket"), StyleBucket) ||
+				PlayerId < 0 || PlayerId >= MAX_CLIENTS ||
+				StyleBucket < 0 || StyleBucket >= 100)
+			{
+				continue;
+			}
+
+			SQmDeveloperPresence Presence;
+			Presence.m_DeveloperId = pDeveloperId->u.string.ptr;
+			Presence.m_ServerAddress = pEntryServerAddress->u.string.ptr;
+			Presence.m_PlayerId = (int)PlayerId;
+			Presence.m_PlayerName = pPlayerName->u.string.ptr;
+			Presence.m_Dummy = json_boolean_get(pDummy) != 0;
+			Presence.m_IssuedAt = IssuedAt;
+			Presence.m_ExpiresAt = ExpiresAt;
+			Presence.m_StyleBucket = (int)StyleBucket;
+			if(IsDeveloperPresenceValidAt(Presence, ServerTime))
+				Candidate.m_vPresences.push_back(std::move(Presence));
+		}
+
 		return true;
-
-	for(unsigned Index = 0; Index < pPresences->u.array.length; ++Index)
-	{
-		const json_value *pEntry = pPresences->u.array.values[Index];
-		if(!pEntry || pEntry->type != json_object)
-			continue;
-
-		const json_value *pDeveloperId = JsonObjectField(pEntry, "developer_id");
-		const json_value *pEntryServerAddress = JsonObjectField(pEntry, "server_address");
-		const json_value *pPlayerName = JsonObjectField(pEntry, "player_name");
-		const json_value *pDummy = JsonObjectField(pEntry, "dummy");
-		if(pDeveloperId == &json_value_none || pDeveloperId->type != json_string || pDeveloperId->u.string.ptr[0] == '\0' ||
-			pEntryServerAddress == &json_value_none || pEntryServerAddress->type != json_string || pEntryServerAddress->u.string.ptr[0] == '\0' ||
-			pPlayerName == &json_value_none || pPlayerName->type != json_string || pPlayerName->u.string.ptr[0] == '\0' ||
-			pDummy == &json_value_none || pDummy->type != json_boolean)
-		{
-			continue;
-		}
-
-		if(str_comp(pEntryServerAddress->u.string.ptr, pLocalServerAddress) != 0)
-			continue;
-
-		int64_t PlayerId;
-		int64_t IssuedAt;
-		int64_t ExpiresAt;
-		int64_t StyleBucket;
-		if(!JsonReadInteger(JsonObjectField(pEntry, "player_id"), PlayerId) ||
-			!JsonReadInteger(JsonObjectField(pEntry, "issued_at"), IssuedAt) ||
-			!JsonReadInteger(JsonObjectField(pEntry, "expires_at"), ExpiresAt) ||
-			!JsonReadInteger(JsonObjectField(pEntry, "style_bucket"), StyleBucket) ||
-			PlayerId < 0 || PlayerId >= MAX_CLIENTS ||
-			StyleBucket < 0 || StyleBucket >= 100)
-		{
-			continue;
-		}
-
-		SQmDeveloperPresence Presence;
-		Presence.m_DeveloperId = pDeveloperId->u.string.ptr;
-		Presence.m_ServerAddress = pEntryServerAddress->u.string.ptr;
-		Presence.m_PlayerId = (int)PlayerId;
-		Presence.m_PlayerName = pPlayerName->u.string.ptr;
-		Presence.m_Dummy = json_boolean_get(pDummy) != 0;
-		Presence.m_IssuedAt = IssuedAt;
-		Presence.m_ExpiresAt = ExpiresAt;
-		Presence.m_StyleBucket = (int)StyleBucket;
-		if(IsDeveloperPresenceValidAt(Presence, ServerTime))
-			OutResult.m_vPresences.push_back(Presence);
-	}
-
-	return true;
+	});
 }
 
 const SQmDeveloperPresence *FindQmDeveloperPresence(const std::vector<SQmDeveloperPresence> &vPresences, const char *pServerAddress, int PlayerId, const char *pPlayerName, int64_t Now)
@@ -338,8 +344,8 @@ const SQmDeveloperPresence *FindQmDeveloperPresence(const std::vector<SQmDevelop
 	{
 		if(IsDeveloperPresenceValidAt(Presence, Now) &&
 			Presence.m_PlayerId == PlayerId &&
-			str_comp(Presence.m_ServerAddress.c_str(), pExpectedServerAddress) == 0 &&
-			str_comp(Presence.m_PlayerName.c_str(), pExpectedPlayerName) == 0)
+			Presence.m_ServerAddress == pExpectedServerAddress &&
+			Presence.m_PlayerName == pExpectedPlayerName)
 		{
 			return &Presence;
 		}
@@ -389,12 +395,12 @@ bool IsValidQmTitle(const char *pTitle)
 bool ParseQmTitleAppearance(const json_value *pValue, SQmTitleAppearance &Out)
 {
 	Out = {};
-	const json_value *pStyle = JsonObjectField(pValue, "style");
+	const json_value *pStyle = qm_json::Field(pValue, "style");
 	int64_t Color, Opacity;
-	if(pStyle->type != json_string ||
+	if(!qm_json::Text(pStyle) ||
 		(str_comp(pStyle->u.string.ptr, "moon") != 0 && str_comp(pStyle->u.string.ptr, "sun") != 0) ||
-		!JsonReadInteger(JsonObjectField(pValue, "color"), Color) || Color < 0 || Color > 0xffffff ||
-		!JsonReadInteger(JsonObjectField(pValue, "opacity"), Opacity) || Opacity < 0 || Opacity > 100)
+		!JsonReadInteger(qm_json::Field(pValue, "color"), Color) || Color < 0 || Color > 0xffffff ||
+		!JsonReadInteger(qm_json::Field(pValue, "opacity"), Opacity) || Opacity < 0 || Opacity > 100)
 		return false;
 	Out.m_Style = str_comp(pStyle->u.string.ptr, "sun") == 0 ? EQmTitleBadgeStyle::SUN : EQmTitleBadgeStyle::MOON;
 	Out.m_Color = static_cast<unsigned>(Color);
@@ -402,41 +408,39 @@ bool ParseQmTitleAppearance(const json_value *pValue, SQmTitleAppearance &Out)
 	return true;
 }
 
-std::vector<SQmTitlePresence> ParseQmTitlePresences(const json_value *pRoot, const char *pServerAddress, int64_t *pServerTime)
+bool ParseQmTitlePresencesJson(const json_value *pRoot, const char *pServerAddress, SQmTitlePresenceParseResult &OutResult)
 {
-	std::vector<SQmTitlePresence> Result;
-	if(pServerTime)
-		*pServerTime = 0;
-	const json_value *pServerTimeValue = JsonObjectField(pRoot, "server_time");
-	if(pServerTime && pServerTimeValue && pServerTimeValue->type == json_integer)
-		*pServerTime = pServerTimeValue->u.integer;
-	int64_t Now;
-	if(!pServerAddress || !JsonReadInteger(JsonObjectField(pRoot, "server_time"), Now) || Now <= 0)
-		return Result;
-	const json_value *pEntries = JsonObjectField(pRoot, "presences");
-	if(pEntries->type != json_array)
-		return Result;
-	for(unsigned i = 0; i < pEntries->u.array.length; ++i)
-	{
-		const json_value *pEntry = pEntries->u.array.values[i];
-		const json_value *pServer = JsonObjectField(pEntry, "server_address");
-		const json_value *pName = JsonObjectField(pEntry, "player_name");
-		const json_value *pTitle = JsonObjectField(pEntry, "title");
-		const json_value *pStyle = JsonObjectField(pEntry, "style");
-		const json_value *pChatStyle = JsonObjectField(pEntry, "chat_style");
-		int64_t Id, Issued, Expires;
-		if(pServer->type != json_string || str_comp(pServer->u.string.ptr, pServerAddress) != 0 ||
-			pName->type != json_string || !pName->u.string.ptr[0] || pName->u.string.length >= MAX_NAME_LENGTH ||
-			pTitle->type != json_string || !IsValidQmTitle(pTitle->u.string.ptr) ||
-			!JsonReadInteger(JsonObjectField(pEntry, "player_id"), Id) || Id < 0 || Id >= MAX_CLIENTS ||
-			!JsonReadInteger(JsonObjectField(pEntry, "issued_at"), Issued) || Issued > Now ||
-			!JsonReadInteger(JsonObjectField(pEntry, "expires_at"), Expires) || Expires <= Now)
-			continue;
-		Result.push_back({(int)Id, pName->u.string.ptr, pTitle->u.string.ptr, pStyle && pStyle->type == json_string ? pStyle->u.string.ptr : "", std::min<int64_t>(Expires - Now, 15),
-			QmSponsorChatStyleFromId(pChatStyle->type == json_string ? pChatStyle->u.string.ptr : ""), {}});
-		ParseQmTitleAppearance(JsonObjectField(pEntry, "appearance"), Result.back().m_Appearance);
-	}
-	return Result;
+	return TryPrepareQmPresenceResult(OutResult, [&](auto &Candidate) {
+		int64_t Now;
+		if(!pServerAddress || !JsonReadInteger(qm_json::Field(pRoot, "server_time"), Now) || Now <= 0)
+			return false;
+		const json_value *pEntries = qm_json::Field(pRoot, "presences");
+		if(pEntries->type != json_array)
+			return false;
+		Candidate.m_Parsed = true;
+		Candidate.m_ServerTime = Now;
+		for(unsigned i = 0; i < pEntries->u.array.length; ++i)
+		{
+			const json_value *pEntry = pEntries->u.array.values[i];
+			const json_value *pServer = qm_json::Field(pEntry, "server_address");
+			const json_value *pName = qm_json::Field(pEntry, "player_name");
+			const json_value *pTitle = qm_json::Field(pEntry, "title");
+			const json_value *pStyle = qm_json::Field(pEntry, "style");
+			const json_value *pChatStyle = qm_json::Field(pEntry, "chat_style");
+			int64_t Id, Issued, Expires;
+			if(!qm_json::TextEquals(pServer, pServerAddress) ||
+				pName->type != json_string || pName->u.string.length >= MAX_NAME_LENGTH || !qm_json::Text(pName, false) ||
+				!qm_json::Text(pTitle) || !IsValidQmTitle(pTitle->u.string.ptr) ||
+				!JsonReadInteger(qm_json::Field(pEntry, "player_id"), Id) || Id < 0 || Id >= MAX_CLIENTS ||
+				!JsonReadInteger(qm_json::Field(pEntry, "issued_at"), Issued) || Issued > Now ||
+				!JsonReadInteger(qm_json::Field(pEntry, "expires_at"), Expires) || Expires <= Now)
+				continue;
+			Candidate.m_vPresences.push_back({static_cast<int>(Id), pName->u.string.ptr, pTitle->u.string.ptr, qm_json::Text(pStyle) ? pStyle->u.string.ptr : "", std::min<int64_t>(Expires - Now, 15),
+				QmSponsorChatStyleFromId(qm_json::Text(pChatStyle) ? pChatStyle->u.string.ptr : ""), {}});
+			ParseQmTitleAppearance(qm_json::Field(pEntry, "appearance"), Candidate.m_vPresences.back().m_Appearance);
+		}
+		return true;
+	});
 }
 
 SQmTitleColorStyle ResolveQmTitleColorStyle(const int Mode, const unsigned int PackedColor, const int Opacity, const bool ServerRainbow)

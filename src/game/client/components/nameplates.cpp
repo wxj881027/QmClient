@@ -19,12 +19,15 @@
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/animstate.h>
 #include <game/client/components/nameplate_text_effects.h>
+#include <game/client/components/qmclient/chat_bubble_state.h>
 #include <game/client/components/qmclient/chat_emoji.h>
 #include <game/client/components/qmclient/demo_display.h>
 #include <game/client/components/qmclient/friend_heart_icon.h>
 #include <game/client/components/qmclient/modes.h>
+#include <game/client/components/qmclient/nameplate_coordinates.h>
 #include <game/client/components/qmclient/nameplate_layout.h>
-#include <game/client/components/qmclient/nameplate_text_cache.h>
+#include <game/client/components/qmclient/nameplate_text_build.h>
+#include <game/client/components/qmclient/nameplate_update.h>
 #include <game/client/components/qmclient/qm_title_badge.h>
 #include <game/client/components/qmclient/qmclient_utils.h>
 #include <game/client/gameclient.h>
@@ -78,24 +81,7 @@ static bool FocusModeHidesChat()
 	return GetQmFocusModeDecisions().m_HidePlayerMessages;
 }
 
-struct SChatBubbleAnimState
-{
-	bool m_Initialized = false;
-	bool m_LastVisible = false;
-	bool m_LastTyping = false;
-	int64_t m_LastChatBubbleStartTick = 0;
-	float m_LastTargetAlpha = std::numeric_limits<float>::quiet_NaN();
-	float m_LastTargetScale = std::numeric_limits<float>::quiet_NaN();
-	float m_LastTargetSlide = std::numeric_limits<float>::quiet_NaN();
-	float m_LastTargetFillChars = std::numeric_limits<float>::quiet_NaN();
-	STextContainerIndex m_TextContainerIndex;
-	float m_CachedTextWidth = 0.0f;
-	float m_CachedTextHeight = 0.0f;
-	float m_CachedFontSize = -INFINITY;
-	float m_CachedLineWidth = -INFINITY;
-	char m_aCachedText[256] = "";
-	char m_aLayoutText[256] = "";
-};
+using SChatBubbleAnimState = CQmChatBubbleState;
 
 struct SCoordXAlignState
 {
@@ -110,13 +96,13 @@ struct SCoordXAlignFrameState
 	bool m_LocalAligned = false;
 	bool m_aClientAligned[MAX_CLIENTS] = {};
 	int m_LocalClientId = -1;
-	int m_LocalRoundedX = 0;
+	int64_t m_LocalRoundedX = 0;
 };
 
 struct SCoordXAlignReference
 {
 	int m_ClientId = -1;
-	int m_RoundedX = 0;
+	int64_t m_RoundedX = 0;
 };
 
 static uint64_t ChatBubbleAnimNodeKey(int ClientId)
@@ -493,6 +479,7 @@ protected:
 	// 空文字也可能渲染出无效容器，故「是否已算过」必须用显式标志记录，
 	// 不能拿容器是否存在来推断（否则空文字部件每帧重跑整条文字更新路径）。
 	CQmNameplateTextCache m_TextCache;
+	CQmNameplateTextBuild m_TextBuild;
 	vec2 m_RenderSize = vec2(0.0f, 0.0f);
 	uint64_t m_BakedDensityRevision = 0;
 	virtual bool UpdateNeeded(CGameClient &This, const CNamePlateData &Data) = 0;
@@ -512,7 +499,9 @@ protected:
 
 public:
 	void Update(CGameClient &This, const CNamePlateData &Data) override
+	try
 	{
+		m_TextBuild.Cleanup(*This.TextRender());
 		// 字体或字重设置可能清空字体图集：旧索引仍有效，但 UV 已指向其他字形。
 		// 图集代际变化先释放旧容器；单纯密度换代则在下面完成候选容器交换。
 		if(m_TextCache.ResourcesChanged(This.TextRender()->GlyphAtlasRevision()))
@@ -533,7 +522,6 @@ public:
 		}
 
 		// Set flags
-		const unsigned PreviousFlags = This.TextRender()->GetRenderFlags();
 		unsigned int Flags = ETextRenderFlags::TEXT_RENDER_FLAG_QM_NAMEPLATE | ETextRenderFlags::TEXT_RENDER_FLAG_NO_FIRST_CHARACTER_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_LAST_CHARACTER_ADVANCE;
 		bool UsePhysicalPixelAlignment = false;
 #if defined(CONF_PLATFORM_MACOS)
@@ -541,51 +529,19 @@ public:
 #endif
 		if(Data.m_InGame && !UsePhysicalPixelAlignment)
 			Flags |= ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT; // Prevent jittering from rounding
-		This.TextRender()->SetRenderFlags(Flags);
-
 		// 切到整块名牌共同选定的烘焙密度，保留有限采样余量，
 		// 且同帧所有部件使用同一密度，布局不会因各部件重建时机不同而互相错位。
-		float ScreenX0 = 0.0f, ScreenY0 = 0.0f, ScreenX1 = 0.0f, ScreenY1 = 0.0f;
-		if(Data.m_InGame && BakeDensity > 0.0f)
-		{
-			This.Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-			This.Graphics()->MapScreenToGameInterface(This.m_Camera.m_Center.x, This.m_Camera.m_Center.y, 1.0f / BakeDensity);
-		}
+		const bool MapBakedScreen = Data.m_InGame && BakeDensity > 0.0f;
+		CQmNameplateTextContext Context(*This.TextRender(), *This.Graphics(), MapBakedScreen);
 		// 密度换代时先在旧容器旁边创建候选容器，成功后再交换，避免玩家看到空帧。
 		const bool KeepPreviousContainer = DensityChanged && m_TextContainerIndex.Valid();
-		STextContainerIndex PreviousTextContainer;
-		const bool PreviousReuseTextContainer = m_ReuseTextContainer;
-		if(KeepPreviousContainer)
-		{
-			PreviousTextContainer = m_TextContainerIndex;
-			m_TextContainerIndex.Reset();
-			m_ReuseTextContainer = false;
-		}
-		else if(!m_ReuseTextContainer)
-			This.TextRender()->DeleteTextContainer(m_TextContainerIndex);
-		UpdateText(This, Data);
-		if(Data.m_InGame && BakeDensity > 0.0f)
-			This.Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
-
-		This.TextRender()->SetRenderFlags(PreviousFlags);
-
-		if(KeepPreviousContainer)
-		{
-			STextContainerIndex CandidateTextContainer = m_TextContainerIndex;
-			m_TextContainerIndex.Reset();
-			m_ReuseTextContainer = PreviousReuseTextContainer;
-			if(CandidateTextContainer.Valid())
-			{
-				This.TextRender()->DeleteTextContainer(PreviousTextContainer);
-				m_TextContainerIndex = CandidateTextContainer;
-			}
-			else
-			{
-				// 新密度暂时无法创建时继续显示上一代，并保留本次更新以便下一帧重试。
-				m_TextContainerIndex = PreviousTextContainer;
-				return;
-			}
-		}
+		Context.Apply(Flags, [&] { This.Graphics()->MapScreenToGameInterface(This.m_Camera.m_Center.x, This.m_Camera.m_Center.y, 1.0f / BakeDensity); });
+		const bool Completed = m_TextBuild.Run(*This.TextRender(), m_TextContainerIndex, m_ReuseTextContainer, KeepPreviousContainer, m_TextCache, [&] {
+			UpdateText(This, Data);
+			Context.Finish();
+		});
+		if(!Completed)
+			return;
 
 		if(!m_TextContainerIndex.Valid())
 		{
@@ -597,21 +553,26 @@ public:
 			return;
 		}
 
-		// 同一代密度在整块名牌内同时生效。
-		m_BakedDensityRevision = Data.m_DensityRevision;
-
 		const STextBoundingBox Container = This.TextRender()->GetBoundingBoxTextContainer(m_TextContainerIndex);
 		m_RenderSize = vec2(Container.m_W, Container.m_H);
 		const float EffectPadding = m_UseTextEffects ? QmNameplateTextEffectPadding(g_Config.m_QmNameplateTextEffects, g_Config.m_QmNameplateTextBorderRange, g_Config.m_QmNameplateTextGlowRange) : 0.0f;
 		m_Size = m_RenderSize + vec2(EffectPadding * 2.0f, EffectPadding * 2.0f + ExtraVerticalPadding() * 2.0f);
+		// 测量和尺寸也成功后才发布本部件的密度与缓存代际。
+		m_BakedDensityRevision = Data.m_DensityRevision;
 		m_TextCache.OnUpdate(This.TextRender()->GlyphAtlasRevision());
+	}
+	catch(...)
+	{
+		// UpdateText可能已改写子类字段；即使下帧内容相同也必须重试。
+		m_TextCache.Reset();
+		throw;
 	}
 	int TextRebuildCost() const override { return m_Visible && m_TextContainerIndex.Valid() ? 1 : 0; }
 	void Reset(CGameClient &This) override
 	{
-		This.TextRender()->DeleteTextContainer(m_TextContainerIndex);
 		m_TextCache.Reset();
 		m_BakedDensityRevision = 0;
+		m_TextBuild.Reset(*This.TextRender(), m_TextContainerIndex);
 	}
 	void Render(CGameClient &This, vec2 Pos) const override
 	{
@@ -885,10 +846,9 @@ protected:
 		CTextCursor Cursor;
 		Cursor.m_FontSize = m_FontSize;
 		Cursor.m_CalculateVisualBoundingBox = true;
-		const ColorRGBA PreviousColor = This.TextRender()->GetTextColor();
-		This.TextRender()->TextColor(ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
-		This.TextRender()->CreateOrAppendTextContainer(m_TextContainerIndex, &Cursor, QmTitleBadgeText(m_aText).c_str());
-		This.TextRender()->TextColor(PreviousColor);
+		QmWithNameplateTextColor(*This.TextRender(), ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), [&] {
+			This.TextRender()->CreateOrAppendTextContainer(m_TextContainerIndex, &Cursor, QmTitleBadgeText(m_aText).c_str());
+		});
 		m_TextVisualBounds = QmTitleBadgeVisualBounds(Cursor);
 	}
 
@@ -1278,11 +1238,6 @@ private:
 	bool m_Aligned = false;
 	char m_aText[32] = "";
 
-	static int RoundCoordToCentitiles(float Value)
-	{
-		return round_to_int(Value * 100.0f);
-	}
-
 protected:
 	bool UpdateNeeded(CGameClient &This, const CNamePlateData &Data) override
 	{
@@ -1290,17 +1245,28 @@ protected:
 		m_Visible = Show;
 		if(!m_Visible)
 			return false;
+		const auto Coord = QmNameplateDisplayCoordinate(m_IsX ? Data.m_Coords.x : Data.m_Coords.y);
+		if(!Coord)
+		{
+			m_Visible = false;
+			return false;
+		}
 		const bool Aligned = m_IsX && Data.m_CoordXAligned;
 		m_Color = Aligned ? Data.m_CoordXAlignColor : Data.m_Color;
-		const float Coord = RoundCoordToCentitiles(m_IsX ? Data.m_Coords.x : Data.m_Coords.y) / 100.0f;
-		return m_FontSize != Data.m_FontSizeCoords || m_Show != Show || m_Aligned != Aligned || m_Coord != Coord;
+		return m_FontSize != Data.m_FontSizeCoords || m_Show != Show || m_Aligned != Aligned || m_Coord != *Coord;
 	}
 	void UpdateText(CGameClient &This, const CNamePlateData &Data) override
 	{
+		const auto Coord = QmNameplateDisplayCoordinate(m_IsX ? Data.m_Coords.x : Data.m_Coords.y);
+		if(!Coord)
+		{
+			m_Visible = false;
+			return;
+		}
 		m_FontSize = Data.m_FontSizeCoords;
 		m_Show = Data.m_ShowCoords && (m_IsX ? Data.m_ShowCoordX : Data.m_ShowCoordY);
 		m_Aligned = m_IsX && Data.m_CoordXAligned;
-		m_Coord = RoundCoordToCentitiles(m_IsX ? Data.m_Coords.x : Data.m_Coords.y) / 100.0f;
+		m_Coord = *Coord;
 		str_format(m_aText, sizeof(m_aText), "%c:%.2f", m_IsX ? 'X' : 'Y', m_Coord);
 
 		CTextCursor Cursor;
@@ -1373,11 +1339,10 @@ protected:
 	{
 		m_FontSize = Data.m_FontSize;
 		CTextCursor Cursor;
-		const EFontPreset PreviousPreset = This.TextRender()->GetFontPreset();
-		This.TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 		Cursor.m_FontSize = m_FontSize;
-		This.TextRender()->CreateOrAppendTextContainer(m_TextContainerIndex, &Cursor, FontIcons::FONT_ICON_COMMENT_SLASH);
-		This.TextRender()->SetFontPreset(PreviousPreset);
+		QmWithNameplateFontPreset(*This.TextRender(), EFontPreset::ICON_FONT, [&] {
+			This.TextRender()->CreateOrAppendTextContainer(m_TextContainerIndex, &Cursor, FontIcons::FONT_ICON_COMMENT_SLASH);
+		});
 	}
 
 public:
@@ -1404,6 +1369,7 @@ private:
 
 	bool m_Inited = false;
 	bool m_InGame = false;
+	CQmNameplateUpdate m_Update;
 	CQmNameplateDensity m_Density;
 	PartsVector m_vpParts;
 	std::vector<SCoreRowParts> m_vCoreRows;
@@ -1562,6 +1528,8 @@ public:
 	{
 		HasFrame = false;
 		HasTargetRow = false;
+		if(!m_Update.Ready())
+			return;
 		const auto aPositions = CoreRowPositions(pLayoutReference, false);
 		for(const SCoreRowParts &CoreRow : m_vCoreRows)
 		{
@@ -1604,6 +1572,8 @@ public:
 	}
 	float ContentSpan(const CNamePlate *pLayoutReference = nullptr) const
 	{
+		if(!m_Update.Ready())
+			return 0.0f;
 		return QmNameplatePreviewContentSpan(LayoutCoreRowHeights(pLayoutReference));
 	}
 
@@ -1721,56 +1691,57 @@ private:
 
 public:
 	CNamePlate() = default;
-	CNamePlate(CGameClient &This, const CNamePlateData &Data)
-	{
-		// Convenience constructor
-		Update(This, Data);
-	}
 	void Reset(CGameClient &This)
 	{
+		m_Update.Reset();
 		for(auto &Part : m_vpParts)
 			Part->Reset(This);
 		m_Density.Reset();
 	}
-	void Update(CGameClient &This, const CNamePlateData &Data)
+	bool Update(CGameClient &This, const CNamePlateData &Data)
 	{
-		Init(This);
-		if(m_InGame != Data.m_InGame)
-			Reset(This);
-		m_InGame = Data.m_InGame;
-		CNamePlateData BakeData = Data;
-		if(Data.m_InGame)
-		{
-			float X0, Y0, X1, Y1, RefWidth, RefHeight;
-			This.Graphics()->GetScreen(&X0, &Y0, &X1, &Y1);
-			This.Graphics()->CalcScreenParams(This.Graphics()->GameScreenAspect(), 1.0f, &RefWidth, &RefHeight);
-			if(Y1 > Y0 && RefHeight > 0.0f)
+		return m_Update.Run([&] {
+			Init(This);
+			if(m_InGame != Data.m_InGame)
+				Reset(This);
+			m_InGame = Data.m_InGame;
+			CNamePlateData BakeData = Data;
+			if(Data.m_InGame)
 			{
-				int Cost = 0;
-				for(const auto &Part : m_vpParts)
-					Cost += Part->TextRebuildCost();
-				// 小像素姓名只增加有限采样密度，整块名牌继续共用档位、滞回和重建预算。
-				const float SamplingScale = QmNameplateSmallTextSamplingScale(Data.m_FontSize, This.Graphics()->ScreenHeight() / (Y1 - Y0));
-				const bool DensityChanged = m_Density.Update(SamplingScale * RefHeight / (Y1 - Y0), This.Graphics()->ScreenHeight() / RefHeight,
-					QM_NAMEPLATE_BAKE_DENSITY_LOG_GRID, This.m_Camera.m_Zooming, Cost,
-					NAMEPLATE_TEXT_REBUILD_BUDGET_PER_FRAME, s_NameplateTextRebuildBudget, RefHeight / (Y1 - Y0));
-				if(DensityChanged && QmPerfEnabled())
+				float X0, Y0, X1, Y1, RefWidth, RefHeight;
+				This.Graphics()->GetScreen(&X0, &Y0, &X1, &Y1);
+				This.Graphics()->CalcScreenParams(This.Graphics()->GameScreenAspect(), 1.0f, &RefWidth, &RefHeight);
+				if(Y1 > Y0 && RefHeight > 0.0f)
 				{
-					char aPayload[256];
-					str_format(aPayload, sizeof(aPayload), "event=nameplate_density_commit client_id=%d requested_density=%.6f bake_density=%.6f text_parts=%d budget_remaining=%d zooming=%d",
-						Data.m_ClientId, This.Graphics()->ScreenHeight() / (Y1 - Y0), m_Density.Ratio() * This.Graphics()->ScreenHeight() / RefHeight,
-						Cost, s_NameplateTextRebuildBudget, int(This.m_Camera.m_Zooming));
-					QmPerfLogPayload("perf/nameplates", aPayload, This.Client());
+					int Cost = 0;
+					for(const auto &Part : m_vpParts)
+						Cost += Part->TextRebuildCost();
+					// 小像素姓名只增加有限采样密度，整块名牌继续共用档位、滞回和重建预算。
+					const float SamplingScale = QmNameplateSmallTextSamplingScale(Data.m_FontSize, This.Graphics()->ScreenHeight() / (Y1 - Y0));
+					const bool DensityChanged = m_Density.Update(SamplingScale * RefHeight / (Y1 - Y0), This.Graphics()->ScreenHeight() / RefHeight,
+						QM_NAMEPLATE_BAKE_DENSITY_LOG_GRID, This.m_Camera.m_Zooming, Cost,
+						NAMEPLATE_TEXT_REBUILD_BUDGET_PER_FRAME, s_NameplateTextRebuildBudget, RefHeight / (Y1 - Y0));
+					if(DensityChanged && QmPerfEnabled())
+					{
+						char aPayload[256];
+						str_format(aPayload, sizeof(aPayload), "event=nameplate_density_commit client_id=%d requested_density=%.6f bake_density=%.6f text_parts=%d budget_remaining=%d zooming=%d",
+							Data.m_ClientId, This.Graphics()->ScreenHeight() / (Y1 - Y0), m_Density.Ratio() * This.Graphics()->ScreenHeight() / RefHeight,
+							Cost, s_NameplateTextRebuildBudget, int(This.m_Camera.m_Zooming));
+						QmPerfLogPayload("perf/nameplates", aPayload, This.Client());
+					}
 				}
+				BakeData.m_BakeDensity = m_Density.Ratio();
+				BakeData.m_DensityRevision = m_Density.Revision();
 			}
-			BakeData.m_BakeDensity = m_Density.Ratio();
-			BakeData.m_DensityRevision = m_Density.Revision();
-		}
-		for(auto &Part : m_vpParts)
-			Part->Update(This, BakeData);
+			for(auto &Part : m_vpParts)
+				Part->Update(This, BakeData);
+			return true;
+		});
 	}
 	void Render(CGameClient &This, const vec2 &PositionBottomMiddle, const CNamePlate *pLayoutReference = nullptr)
 	{
+		if(!m_Update.Ready())
+			return;
 		dbg_assert(m_Inited, "Tried to render uninited nameplate");
 		const auto aPositions = CoreRowPositions(pLayoutReference);
 		for(const SCoreRowParts &CoreRow : m_vCoreRows)
@@ -1783,10 +1754,12 @@ public:
 	}
 	bool IsInitialized() const
 	{
-		return m_Inited;
+		return m_Inited && m_Update.Ready();
 	}
 	float TopY(const vec2 &PositionBottomMiddle, const CNamePlate *pLayoutReference = nullptr) const
 	{
+		if(!m_Update.Ready())
+			return PositionBottomMiddle.y;
 		dbg_assert(m_Inited, "Tried to get top of uninited nameplate");
 		float Top = std::numeric_limits<float>::infinity();
 		// 气泡使用与绘制一致的位置，包含独立拖动后的卡锤和卡钩。
@@ -1797,6 +1770,8 @@ public:
 	}
 	vec2 Size() const
 	{
+		if(!m_Update.Ready())
+			return vec2(0.0f, 0.0f);
 		dbg_assert(m_Inited, "Tried to get size of uninited nameplate");
 		// 独立图标共享按键行基线，尺寸使用默认包围框，不累计为额外两行。
 		bool HasFrame = false;
@@ -1809,6 +1784,8 @@ public:
 	{
 		for(SNameplateCoreRowRect &Rect : aRects)
 			Rect = SNameplateCoreRowRect();
+		if(!m_Update.Ready())
+			return;
 
 		const auto aPositions = CoreRowPositions(pLayoutReference);
 		for(const SCoreRowParts &CoreRow : m_vCoreRows)
@@ -1834,6 +1811,7 @@ public:
 	CNamePlate m_aNamePlateFrameReferences[MAX_CLIENTS];
 	CNamePlate m_aPreviewNamePlates[2];
 	CNamePlate m_aPreviewFrameReferences[2];
+	float m_PreviewContentSpan = 0.0f;
 	SChatBubbleAnimState m_aChatBubbleAnim[MAX_CLIENTS];
 	qm_chat_bubble::CCloudRenderer m_CloudRenderer;
 	SCoordXAlignState m_aCoordXAlign[MAX_CLIENTS];
@@ -1850,11 +1828,6 @@ static bool NameplateCoreRowRectContains(const SNameplateCoreRowRect &Rect, vec2
 	       Position.x <= Rect.m_Max.x &&
 	       Position.y >= Rect.m_Min.y &&
 	       Position.y <= Rect.m_Max.y;
-}
-
-static int RoundCoordToCentitiles(float Value)
-{
-	return round_to_int(Value * 100.0f);
 }
 
 void CNamePlates::UpdateCoordXAlignFrameState()
@@ -1883,7 +1856,10 @@ void CNamePlates::UpdateCoordXAlignFrameState()
 		const vec2 LocalPos = LocalClientId == GameClient()->m_Snap.m_LocalClientId ?
 					      GameClient()->m_LocalCharacterPos :
 					      GameClient()->m_aClients[LocalClientId].m_RenderPos;
-		aLocalRefs[NumLocalRefs++] = {LocalClientId, RoundCoordToCentitiles(LocalPos.x / 32.0f)};
+		const auto RoundedX = QmNameplateCentitiles(LocalPos.x / 32.0f);
+		if(!RoundedX)
+			continue;
+		aLocalRefs[NumLocalRefs++] = {LocalClientId, *RoundedX};
 	}
 
 	if(NumLocalRefs == 0)
@@ -1896,7 +1872,7 @@ void CNamePlates::UpdateCoordXAlignFrameState()
 	FrameState.m_LocalClientId = aLocalRefs[0].m_ClientId;
 	FrameState.m_LocalRoundedX = aLocalRefs[0].m_RoundedX;
 
-	const int MaxAllowedDiff = g_Config.m_QmNameplateCoordXAlignHintStrict ? 0 : 3;
+	const uint64_t MaxAllowedDiff = g_Config.m_QmNameplateCoordXAlignHintStrict ? 0 : 3;
 	const float WindowSeconds = std::clamp(g_Config.m_QmNameplateCoordXAlignHintWindowMs / 1000.0f, 0.1f, 3.0f);
 	const float Now = Client()->LocalTime();
 	for(int ClientId = 0; ClientId < MAX_CLIENTS; ++ClientId)
@@ -1918,7 +1894,7 @@ void CNamePlates::UpdateCoordXAlignFrameState()
 			continue;
 		}
 
-		int RoundedX = RoundCoordToCentitiles(GameClient()->m_aClients[ClientId].m_RenderPos.x / 32.0f);
+		auto RoundedX = QmNameplateCentitiles(GameClient()->m_aClients[ClientId].m_RenderPos.x / 32.0f);
 		for(int i = 0; i < NumLocalRefs; ++i)
 		{
 			if(aLocalRefs[i].m_ClientId == ClientId)
@@ -1928,20 +1904,25 @@ void CNamePlates::UpdateCoordXAlignFrameState()
 			}
 		}
 
+		if(!RoundedX)
+		{
+			CoordXAlignState = SCoordXAlignState();
+			continue;
+		}
 		int ReferenceClientId = -1;
-		int RoundedXDiff = std::numeric_limits<int>::max();
+		uint64_t RoundedXDiff = 0;
 		for(int i = 0; i < NumLocalRefs; ++i)
 		{
 			if(aLocalRefs[i].m_ClientId == ClientId)
 				continue;
-			const int Diff = absolute(RoundedX - aLocalRefs[i].m_RoundedX);
-			if(Diff < RoundedXDiff)
+			const uint64_t Diff = QmNameplateCoordinateDistance(*RoundedX, aLocalRefs[i].m_RoundedX);
+			if(ReferenceClientId < 0 || Diff < RoundedXDiff)
 			{
 				RoundedXDiff = Diff;
 				ReferenceClientId = aLocalRefs[i].m_ClientId;
 			}
 		}
-		if(RoundedXDiff == std::numeric_limits<int>::max())
+		if(ReferenceClientId < 0)
 		{
 			CoordXAlignState = SCoordXAlignState();
 			continue;
@@ -2194,13 +2175,15 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 			FrameData.m_ShowClan = true;
 
 		CNamePlate &FrameNamePlate = m_pData->m_aNamePlateFrameReferences[ClientId];
-		FrameNamePlate.Update(*GameClient(), FrameData);
+		if(!FrameNamePlate.Update(*GameClient(), FrameData))
+			return;
 		pLayoutReference = &FrameNamePlate;
 	}
 
 	// Check if the nameplate is actually on screen
 	CNamePlate &NamePlate = m_pData->m_aNamePlates[ClientId];
-	NamePlate.Update(*GameClient(), Data);
+	if(!NamePlate.Update(*GameClient(), Data))
+		return;
 	if(Alpha > 0.0f)
 	{
 		// 昵称和战队行共用一块名牌的档位人数，只在真正绘制时计一次。
@@ -2322,26 +2305,33 @@ static void BuildNamePlatePreviewData(CGameClient &This, int DummyIdx, CNamePlat
 float CNamePlates::MeasurePreviewAreaHeight() const
 {
 	float MaxContentSpan = 0.0f;
-	for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
-	{
-		CNamePlateData Data;
-		BuildNamePlatePreviewData(*GameClient(), Dummy, Data);
-		CNamePlate PreviewPlate(*GameClient(), Data);
-		CNamePlate FramePlate;
-		CNamePlate *pFramePlate = nullptr;
-		if(NameplateFreeMoveEnabled())
-		{
-			CNamePlateData FrameData;
-			BuildNamePlatePreviewData(*GameClient(), Dummy, FrameData, true);
-			FramePlate.Update(*GameClient(), FrameData);
-			pFramePlate = &FramePlate;
-		}
-		MaxContentSpan = std::max(MaxContentSpan, PreviewPlate.ContentSpan(pFramePlate));
-		PreviewPlate.Reset(*GameClient());
-		if(pFramePlate != nullptr)
-			pFramePlate->Reset(*GameClient());
-	}
-	return NAMEPLATE_PREVIEW_AREA_MARGIN * 2.0f + MaxContentSpan + (float)g_Config.m_ClNamePlatesOffset + NAMEPLATE_PREVIEW_TEE_SIZE / 2.0f;
+	CQmNameplateUpdate Measurement;
+	if(Measurement.Run([&] {
+		   for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
+		   {
+			   CNamePlateData Data;
+			   BuildNamePlatePreviewData(*GameClient(), Dummy, Data);
+			   // 测量与绘制复用已有持久owner，异常不会销毁仍持有文字槽的临时名牌。
+			   CNamePlate &PreviewPlate = m_pData->m_aPreviewNamePlates[Dummy];
+			   if(!PreviewPlate.Update(*GameClient(), Data))
+				   return false;
+			   CNamePlate *pFramePlate = nullptr;
+			   if(NameplateFreeMoveEnabled())
+			   {
+				   CNamePlateData FrameData;
+				   BuildNamePlatePreviewData(*GameClient(), Dummy, FrameData, true);
+				   CNamePlate &FramePlate = m_pData->m_aPreviewFrameReferences[Dummy];
+				   if(!FramePlate.Update(*GameClient(), FrameData))
+					   return false;
+				   pFramePlate = &FramePlate;
+			   }
+			   MaxContentSpan = std::max(MaxContentSpan, PreviewPlate.ContentSpan(pFramePlate));
+		   }
+		   return true;
+	   }))
+		m_pData->m_PreviewContentSpan = MaxContentSpan;
+	// 失败时保留上次完整测量的高度；首次失败沿用不含文字的基础高度。
+	return NAMEPLATE_PREVIEW_AREA_MARGIN * 2.0f + m_pData->m_PreviewContentSpan + (float)g_Config.m_ClNamePlatesOffset + NAMEPLATE_PREVIEW_TEE_SIZE / 2.0f;
 }
 
 void CNamePlates::RenderNamePlatePreview(const CUIRect &PreviewArea, int Dummy)
@@ -2349,7 +2339,8 @@ void CNamePlates::RenderNamePlatePreview(const CUIRect &PreviewArea, int Dummy)
 	CNamePlateData Data;
 	BuildNamePlatePreviewData(*GameClient(), Dummy, Data);
 	CNamePlate &NamePlate = m_pData->m_aPreviewNamePlates[Dummy];
-	NamePlate.Update(*GameClient(), Data);
+	if(!NamePlate.Update(*GameClient(), Data))
+		return;
 
 	CTeeRenderInfo TeeRenderInfo;
 	if(Dummy == 0)
@@ -2370,7 +2361,8 @@ void CNamePlates::RenderNamePlatePreview(const CUIRect &PreviewArea, int Dummy)
 		CNamePlateData FrameData;
 		BuildNamePlatePreviewData(*GameClient(), Dummy, FrameData, true);
 		CNamePlate &FrameNamePlate = m_pData->m_aPreviewFrameReferences[Dummy];
-		FrameNamePlate.Update(*GameClient(), FrameData);
+		if(!FrameNamePlate.Update(*GameClient(), FrameData))
+			return;
 		pFrameNamePlate = &FrameNamePlate;
 	}
 
@@ -2554,26 +2546,29 @@ void CNamePlates::ResetChatBubbleAnimState(int ClientId, bool IsDestructing)
 	SChatBubbleAnimState &AnimState = m_pData->m_aChatBubbleAnim[ClientId];
 	if(IsDestructing)
 	{
-		TextRender()->DeleteTextContainer(AnimState.m_TextContainerIndex);
-		AnimState = SChatBubbleAnimState();
+		AnimState.Reset(*TextRender());
 		return;
 	}
-	CUiV2AnimationRuntime &AnimRuntime = GameClient()->UiRuntimeV2()->AnimRuntime();
-	const uint64_t NodeKey = ChatBubbleAnimNodeKey(ClientId);
-	const bool RuntimeInitialized = AnimRuntime.GetValue(NodeKey, EUiAnimProperty::ALPHA, -1.0f) >= -0.5f;
-	if(!AnimState.m_Initialized && AnimState.m_aCachedText[0] == '\0' && !RuntimeInitialized)
-		return;
+	CQmChatBubbleFrame Frame;
+	Frame.Run([&] {
+		CUiV2AnimationRuntime &AnimRuntime = GameClient()->UiRuntimeV2()->AnimRuntime();
+		const uint64_t NodeKey = ChatBubbleAnimNodeKey(ClientId);
+		const bool RuntimeInitialized = AnimRuntime.GetValue(NodeKey, EUiAnimProperty::ALPHA, -1.0f) >= -0.5f;
+		if(!AnimState.m_Initialized && AnimState.m_aCachedText[0] == '\0' && !RuntimeInitialized && !AnimState.HasTextResources())
+			return;
 
-	TextRender()->DeleteTextContainer(AnimState.m_TextContainerIndex);
-	AnimState = SChatBubbleAnimState();
-	SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::ALPHA, 0.0f);
-	SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::SCALE, 1.0f);
-	SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::POS_Y, 0.0f);
-	SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::WIDTH, 0.0f);
+		AnimState.Reset(*TextRender());
+		SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::ALPHA, 0.0f);
+		SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::SCALE, 1.0f);
+		SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::POS_Y, 0.0f);
+		SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::WIDTH, 0.0f);
+	});
 }
 
 void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
 {
+	if(!std::isfinite(Alpha) || Alpha < 0.0f)
+		return;
 	// Check if chat bubbles are enabled
 	if(!g_Config.m_QmChatBubble)
 		return;
@@ -2583,325 +2578,301 @@ void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
 	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
 		return;
 
-	auto &ClientData = GameClient()->m_aClients[ClientId];
-	CUiV2AnimationRuntime &AnimRuntime = GameClient()->UiRuntimeV2()->AnimRuntime();
-	SChatBubbleAnimState &AnimState = m_pData->m_aChatBubbleAnim[ClientId];
-	const uint64_t NodeKey = ChatBubbleAnimNodeKey(ClientId);
-	const bool RuntimeNeedsInit = AnimRuntime.GetValue(NodeKey, EUiAnimProperty::ALPHA, -1.0f) < -0.5f;
-	if(!AnimState.m_Initialized || RuntimeNeedsInit)
-	{
-		TextRender()->DeleteTextContainer(AnimState.m_TextContainerIndex);
-		AnimState = SChatBubbleAnimState();
-		AnimState.m_Initialized = true;
-		SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::ALPHA, 0.0f);
-		SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::SCALE, 1.0f);
-		SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::POS_Y, 0.0f);
-		SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::WIDTH, 0.0f);
-	}
-
-	// Determine what text to show
-	const char *pBubbleText = nullptr;
-	bool IsTyping = false;
-	int64_t Now = time();
-
-	// Check if this is local player who is currently typing
-	const bool IsLocalPlayer = (GameClient()->m_Snap.m_LocalClientId == ClientId);
-	if(IsLocalPlayer && GameClient()->m_Chat.IsActive())
-	{
-		const char *pInputText = GameClient()->m_Chat.GetInputText();
-		if(pInputText && pInputText[0] != '\0')
+	CQmChatBubbleFrame Frame;
+	Frame.Run([&] {
+		auto &ClientData = GameClient()->m_aClients[ClientId];
+		CUiV2AnimationRuntime &AnimRuntime = GameClient()->UiRuntimeV2()->AnimRuntime();
+		SChatBubbleAnimState &AnimState = m_pData->m_aChatBubbleAnim[ClientId];
+		AnimState.Cleanup(*TextRender());
+		const uint64_t NodeKey = ChatBubbleAnimNodeKey(ClientId);
+		const bool RuntimeNeedsInit = AnimRuntime.GetValue(NodeKey, EUiAnimProperty::ALPHA, -1.0f) < -0.5f;
+		if(!AnimState.m_Initialized || RuntimeNeedsInit)
 		{
-			pBubbleText = pInputText;
-			IsTyping = true;
+			AnimState.Initialize(*TextRender(), [&] {
+				SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::ALPHA, 0.0f);
+				SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::SCALE, 1.0f);
+				SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::POS_Y, 0.0f);
+				SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::WIDTH, 0.0f);
+			});
 		}
-	}
 
-	// If not typing, check for existing chat bubble
-	if(!pBubbleText)
-	{
-		if(ClientData.m_aChatBubbleText[0] != '\0' && Now < ClientData.m_ChatBubbleExpireTick)
-			pBubbleText = ClientData.m_aChatBubbleText;
-	}
+		// Determine what text to show
+		const char *pBubbleText = nullptr;
+		bool IsTyping = false;
+		int64_t Now = time();
 
-	const bool HasSourceText = pBubbleText && pBubbleText[0] != '\0';
-	if(HasSourceText)
-		str_copy(AnimState.m_aCachedText, pBubbleText, sizeof(AnimState.m_aCachedText));
-
-	if(!HasSourceText && AnimState.m_aCachedText[0] == '\0')
-	{
-		AnimState.m_LastVisible = false;
-		AnimState.m_LastTyping = false;
-		return;
-	}
-
-	const auto BubbleStyle = qm_chat_bubble::StyleFromConfig(g_Config.m_QmChatBubbleStyle);
-	const bool IsCloud = BubbleStyle == qm_chat_bubble::EStyle::CLOUD;
-	const float ExitDuration = IsCloud ? qm_chat_bubble::CloudExitDuration(static_cast<float>(ClientData.m_ChatBubbleExpireTick - ClientData.m_ChatBubbleStartTick) / time_freq()) : 1.0f;
-	const bool TimedDisappearWindow = HasSourceText && !IsTyping && (ClientData.m_ChatBubbleExpireTick - Now <= time_freq() * ExitDuration);
-	const bool NewTimedBubble = HasSourceText && !IsTyping && ClientData.m_ChatBubbleStartTick != AnimState.m_LastChatBubbleStartTick;
-	if(NewTimedBubble)
-		AnimState.m_LastChatBubbleStartTick = ClientData.m_ChatBubbleStartTick;
-
-	const bool BecameVisible = HasSourceText && !AnimState.m_LastVisible;
-	// 云团沿当前聚散进度接续，连续输入或退场中收到消息时不跳回初始位置。
-	if((BecameVisible || NewTimedBubble) && !IsCloud)
-	{
-		SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::ALPHA, 0.0f);
-		SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::SCALE, 0.82f);
-		SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::POS_Y, 8.0f);
-		if(IsTyping)
-			SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::WIDTH, 0.0f);
-		AnimState.m_LastTargetAlpha = std::numeric_limits<float>::quiet_NaN();
-		AnimState.m_LastTargetScale = std::numeric_limits<float>::quiet_NaN();
-		AnimState.m_LastTargetSlide = std::numeric_limits<float>::quiet_NaN();
-		AnimState.m_LastTargetFillChars = std::numeric_limits<float>::quiet_NaN();
-	}
-
-	float TargetAlpha = HasSourceText ? Alpha : 0.0f;
-	float TargetScale = 1.0f;
-	float TargetSlideOffset = 0.0f;
-	float AlphaDuration = IsCloud ? 0.48f : (HasSourceText ? 0.20f : 0.16f);
-	float TransformDuration = HasSourceText ? 0.24f : 0.16f;
-
-	if(TimedDisappearWindow)
-	{
-		TargetAlpha = 0.0f;
-		AlphaDuration = ExitDuration;
-		TransformDuration = ExitDuration;
-		int AnimationType = IsCloud ? 0 : g_Config.m_QmChatBubbleAnimation;
-		switch(AnimationType)
+		// Check if this is local player who is currently typing
+		const bool IsLocalPlayer = (GameClient()->m_Snap.m_LocalClientId == ClientId);
+		if(IsLocalPlayer && GameClient()->m_Chat.IsActive())
 		{
-		case 1:
-			TargetScale = 0.2f;
-			break;
-		case 2:
-			TargetSlideOffset = 50.0f;
-			break;
-		case 0:
-		default:
-			break;
+			const char *pInputText = GameClient()->m_Chat.GetInputText();
+			if(pInputText && pInputText[0] != '\0')
+			{
+				pBubbleText = pInputText;
+				IsTyping = true;
+			}
 		}
-	}
 
-	const float BubbleAlpha = std::clamp(ResolveChatBubbleAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::ALPHA, TargetAlpha, AlphaDuration, EEasing::EASE_OUT, AnimState.m_LastTargetAlpha), 0.0f, Alpha);
-	// 出现时轻微回弹；收起仍遵循玩家选择的淡出、缩小或位移动画。
-	const EEasing ScaleEasing = HasSourceText && !TimedDisappearWindow ? EEasing::EASE_OUT_BACK : EEasing::EASE_OUT;
-	const float AnimScale = IsCloud ? 1.0f : std::max(0.0f, ResolveChatBubbleAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::SCALE, TargetScale, TransformDuration, ScaleEasing, AnimState.m_LastTargetScale));
-	const float AnimSlideOffset = IsCloud ? 0.0f : ResolveChatBubbleAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::POS_Y, TargetSlideOffset, TransformDuration, EEasing::EASE_OUT, AnimState.m_LastTargetSlide);
-	const float CloudAssembly = Alpha > 0.0f ? BubbleAlpha / Alpha : 0.0f;
-
-	AnimState.m_LastVisible = HasSourceText;
-	AnimState.m_LastTyping = IsTyping;
-
-	const char *pRenderText = HasSourceText ? pBubbleText : AnimState.m_aCachedText;
-	const EQmChatEmoji ChatEmoji = QmChatEmojiFromText(pRenderText);
-	const bool RenderChatEmoji = GameClient()->m_QmChatEmoji.CanRender(ChatEmoji);
-	char aAnimatedText[sizeof(AnimState.m_aCachedText)];
-	aAnimatedText[0] = '\0';
-	const char *pDisplayText = pRenderText;
-
-	size_t RenderBytes = 0;
-	size_t RenderCharCountSize = 0;
-	str_utf8_stats(pRenderText, std::numeric_limits<size_t>::max(), std::numeric_limits<size_t>::max(), &RenderBytes, &RenderCharCountSize);
-	(void)RenderBytes;
-	const int RenderCharCount = static_cast<int>(RenderCharCountSize);
-
-	if(IsTyping && !RenderChatEmoji)
-	{
-		const float TargetFillChars = static_cast<float>(RenderCharCount);
-		const float CurrentFillChars = AnimRuntime.GetValue(NodeKey, EUiAnimProperty::WIDTH, TargetFillChars);
-		const float DeltaChars = std::abs(TargetFillChars - CurrentFillChars);
-		float FillDuration = std::clamp(DeltaChars * 0.035f, 0.05f, 0.25f);
-		if(TargetFillChars < CurrentFillChars)
-			FillDuration = 0.08f;
-		const float AnimatedFillChars = ResolveChatBubbleAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::WIDTH, TargetFillChars, FillDuration, EEasing::EASE_OUT, AnimState.m_LastTargetFillChars);
-		const int VisibleChars = std::clamp(round_to_int(AnimatedFillChars), 0, RenderCharCount);
-		str_utf8_copy_num(aAnimatedText, pRenderText, sizeof(aAnimatedText), VisibleChars);
-		pDisplayText = aAnimatedText;
-	}
-	else
-	{
-		SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::WIDTH, static_cast<float>(RenderCharCount));
-		AnimState.m_LastTargetFillChars = std::numeric_limits<float>::quiet_NaN();
-	}
-
-	if(BubbleAlpha <= 0.001f)
-	{
-		if(!HasSourceText)
-			AnimState.m_aCachedText[0] = '\0';
-		return;
-	}
-
-	// Get current screen bounds (world coordinates with current zoom)
-	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
-	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-
-	// Check if position is on screen
-	if(!(in_range(Position.x, ScreenX0 - 400, ScreenX1 + 400) && in_range(Position.y, ScreenY0 - 400, ScreenY1 + 400)))
-		return;
-
-	// Calculate screen-space position (0-1 range) for zoom independence
-	float ScreenWidth = ScreenX1 - ScreenX0;
-	float ScreenHeight = ScreenY1 - ScreenY0;
-	float ScreenPosX = (Position.x - ScreenX0) / ScreenWidth;
-
-	// Map to interface coordinates for text rendering (fixed zoom)
-	Graphics()->MapScreenToInterface(GameClient()->m_Camera.m_Center.x, GameClient()->m_Camera.m_Center.y);
-
-	// Get interface screen bounds (fixed regardless of zoom)
-	float InterfaceX0, InterfaceY0, InterfaceX1, InterfaceY1;
-	Graphics()->GetScreen(&InterfaceX0, &InterfaceY0, &InterfaceX1, &InterfaceY1);
-	float InterfaceWidth = InterfaceX1 - InterfaceX0;
-	float InterfaceHeight = InterfaceY1 - InterfaceY0;
-
-	// Convert screen-space position to interface coordinates
-	float InterfaceX = InterfaceX0 + ScreenPosX * InterfaceWidth;
-
-	// Keep bubble sizing in screen space so rapid camera zoom does not force
-	// a full text relayout every frame.
-	const float FontSize = static_cast<float>(g_Config.m_QmChatBubbleFontSize);
-	const float MaxWidth = qm_chat_bubble::MAX_TEXT_WIDTH;
-
-	// Anchor bubble to the top of the nameplate plus default nameplate spacing.
-	float NameplateTopWorldY = Position.y - (float)g_Config.m_ClNamePlatesOffset;
-	const vec2 NameplateBottomMiddleWorld = Position - vec2(0.0f, (float)g_Config.m_ClNamePlatesOffset);
-	const CNamePlate &NamePlate = m_pData->m_aNamePlates[ClientId];
-	if(NamePlate.IsInitialized())
-	{
-		const CNamePlate &Frame = m_pData->m_aNamePlateFrameReferences[ClientId];
-		const bool UseFrame = NameplateFreeMoveEnabled() && NameplateRenderValue(ConfigManager(), &g_Config.m_QmNameplateShowScope) != QM_NAMEPLATE_SHOW_SCOPE_ALL && Frame.IsInitialized();
-		NameplateTopWorldY = NamePlate.TopY(NameplateBottomMiddleWorld, UseFrame ? &Frame : nullptr);
-	}
-	const float ScreenPosNameplateTopY = (NameplateTopWorldY - ScreenY0) / ScreenHeight;
-	const float InterfaceNameplateTopY = InterfaceY0 + ScreenPosNameplateTopY * InterfaceHeight;
-
-	unsigned int PrevFlags = TextRender()->GetRenderFlags();
-	const ColorRGBA PreviousTextColor = TextRender()->GetTextColor();
-	const ColorRGBA PreviousOutlineColor = TextRender()->GetTextOutlineColor();
-	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT);
-	// 缓存只保存白色字形，最终颜色在绘制时应用，避免继承名牌颜色后再次相乘。
-	TextRender()->TextColor(ColorRGBA(1, 1, 1, 1));
-
-	const bool UseTextContainer = !RenderChatEmoji && !IsTyping && std::abs(AnimScale - 1.0f) <= 0.001f;
-	const bool LayoutDirty = !AnimState.m_TextContainerIndex.Valid() ||
-				 str_comp(AnimState.m_aLayoutText, pDisplayText) != 0 ||
-				 AnimState.m_CachedFontSize != FontSize ||
-				 AnimState.m_CachedLineWidth != MaxWidth;
-
-	if(RenderChatEmoji && AnimState.m_TextContainerIndex.Valid())
-	{
-		TextRender()->DeleteTextContainer(AnimState.m_TextContainerIndex);
-		AnimState.m_aLayoutText[0] = '\0';
-	}
-	else if(!RenderChatEmoji && !IsTyping && LayoutDirty)
-	{
-		TextRender()->DeleteTextContainer(AnimState.m_TextContainerIndex);
-
-		CTextCursor LayoutCursor;
-		LayoutCursor.m_FontSize = FontSize;
-		LayoutCursor.m_LineWidth = MaxWidth;
-		if(TextRender()->CreateTextContainer(AnimState.m_TextContainerIndex, &LayoutCursor, pDisplayText))
+		// If not typing, check for existing chat bubble
+		if(!pBubbleText)
 		{
-			const STextBoundingBox BoundingBox = TextRender()->GetBoundingBoxTextContainer(AnimState.m_TextContainerIndex);
-			AnimState.m_CachedTextWidth = BoundingBox.m_W;
-			AnimState.m_CachedTextHeight = BoundingBox.m_H;
-			AnimState.m_CachedFontSize = FontSize;
-			AnimState.m_CachedLineWidth = MaxWidth;
-			str_copy(AnimState.m_aLayoutText, pDisplayText, sizeof(AnimState.m_aLayoutText));
+			if(ClientData.m_aChatBubbleText[0] != '\0' && Now < ClientData.m_ChatBubbleExpireTick)
+				pBubbleText = ClientData.m_aChatBubbleText;
+		}
+
+		const bool HasSourceText = pBubbleText && pBubbleText[0] != '\0';
+		if(HasSourceText)
+			str_copy(AnimState.m_aCachedText, pBubbleText, sizeof(AnimState.m_aCachedText));
+
+		if(!HasSourceText && AnimState.m_aCachedText[0] == '\0')
+		{
+			AnimState.m_LastVisible = false;
+			AnimState.m_LastTyping = false;
+			return;
+		}
+
+		const auto BubbleStyle = qm_chat_bubble::StyleFromConfig(g_Config.m_QmChatBubbleStyle);
+		const bool IsCloud = BubbleStyle == qm_chat_bubble::EStyle::CLOUD;
+		const float ExitDuration = IsCloud ? qm_chat_bubble::CloudExitDuration(static_cast<float>(ClientData.m_ChatBubbleExpireTick - ClientData.m_ChatBubbleStartTick) / time_freq()) : 1.0f;
+		const bool TimedDisappearWindow = HasSourceText && !IsTyping && (ClientData.m_ChatBubbleExpireTick - Now <= time_freq() * ExitDuration);
+		const bool NewTimedBubble = HasSourceText && !IsTyping && ClientData.m_ChatBubbleStartTick != AnimState.m_LastChatBubbleStartTick;
+
+		const bool BecameVisible = HasSourceText && !AnimState.m_LastVisible;
+		if((BecameVisible || NewTimedBubble) && !IsCloud)
+		{
+			SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::ALPHA, 0.0f);
+			SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::SCALE, 0.82f);
+			SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::POS_Y, 8.0f);
+			if(IsTyping)
+				SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::WIDTH, 0.0f);
+			AnimState.m_LastTargetAlpha = std::numeric_limits<float>::quiet_NaN();
+			AnimState.m_LastTargetScale = std::numeric_limits<float>::quiet_NaN();
+			AnimState.m_LastTargetSlide = std::numeric_limits<float>::quiet_NaN();
+			AnimState.m_LastTargetFillChars = std::numeric_limits<float>::quiet_NaN();
+		}
+
+		float TargetAlpha = HasSourceText ? Alpha : 0.0f;
+		float TargetScale = 1.0f;
+		float TargetSlideOffset = 0.0f;
+		float AlphaDuration = IsCloud ? 0.48f : (HasSourceText ? 0.20f : 0.16f);
+		float TransformDuration = HasSourceText ? 0.24f : 0.16f;
+
+		if(TimedDisappearWindow)
+		{
+			TargetAlpha = 0.0f;
+			AlphaDuration = ExitDuration;
+			TransformDuration = ExitDuration;
+			int AnimationType = IsCloud ? 0 : g_Config.m_QmChatBubbleAnimation;
+			switch(AnimationType)
+			{
+			case 1:
+				TargetScale = 0.2f;
+				break;
+			case 2:
+				TargetSlideOffset = 50.0f;
+				break;
+			case 0:
+			default:
+				break;
+			}
+		}
+
+		const float ResolvedAlpha = ResolveChatBubbleAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::ALPHA, TargetAlpha, AlphaDuration, EEasing::EASE_OUT, AnimState.m_LastTargetAlpha);
+		const EEasing ScaleEasing = HasSourceText && !TimedDisappearWindow ? EEasing::EASE_OUT_BACK : EEasing::EASE_OUT;
+		const float ResolvedScale = IsCloud ? 1.0f : ResolveChatBubbleAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::SCALE, TargetScale, TransformDuration, ScaleEasing, AnimState.m_LastTargetScale);
+		const float AnimSlideOffset = IsCloud ? 0.0f : ResolveChatBubbleAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::POS_Y, TargetSlideOffset, TransformDuration, EEasing::EASE_OUT, AnimState.m_LastTargetSlide);
+		if(!std::isfinite(ResolvedAlpha) || !std::isfinite(ResolvedScale) || !std::isfinite(AnimSlideOffset))
+		{
+			AnimState.m_Initialized = false;
+			return;
+		}
+		const float BubbleAlpha = std::clamp(ResolvedAlpha, 0.0f, Alpha);
+		const float AnimScale = std::max(0.0f, ResolvedScale);
+		const float CloudAssembly = Alpha > 0.0f ? BubbleAlpha / Alpha : 0.0f;
+
+		const char *pRenderText = HasSourceText ? pBubbleText : AnimState.m_aCachedText;
+		const EQmChatEmoji ChatEmoji = QmChatEmojiFromText(pRenderText);
+		const bool RenderChatEmoji = GameClient()->m_QmChatEmoji.CanRender(ChatEmoji);
+		char aAnimatedText[sizeof(AnimState.m_aCachedText)];
+		aAnimatedText[0] = '\0';
+		const char *pDisplayText = pRenderText;
+
+		size_t RenderBytes = 0;
+		size_t RenderCharCountSize = 0;
+		str_utf8_stats(pRenderText, std::numeric_limits<size_t>::max(), std::numeric_limits<size_t>::max(), &RenderBytes, &RenderCharCountSize);
+		(void)RenderBytes;
+		if(RenderCharCountSize > static_cast<size_t>(std::numeric_limits<int>::max()))
+			return;
+		const int RenderCharCount = static_cast<int>(RenderCharCountSize);
+
+		if(IsTyping && !RenderChatEmoji)
+		{
+			const float TargetFillChars = static_cast<float>(RenderCharCount);
+			const float CurrentFillChars = AnimRuntime.GetValue(NodeKey, EUiAnimProperty::WIDTH, TargetFillChars);
+			if(!std::isfinite(CurrentFillChars))
+			{
+				AnimState.m_Initialized = false;
+				return;
+			}
+			const float DeltaChars = std::abs(TargetFillChars - CurrentFillChars);
+			float FillDuration = std::clamp(DeltaChars * 0.035f, 0.05f, 0.25f);
+			if(TargetFillChars < CurrentFillChars)
+				FillDuration = 0.08f;
+			const float AnimatedFillChars = ResolveChatBubbleAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::WIDTH, TargetFillChars, FillDuration, EEasing::EASE_OUT, AnimState.m_LastTargetFillChars);
+			const auto VisibleChars = QmChatBubbleVisibleCharacters(AnimatedFillChars, RenderCharCount);
+			if(!VisibleChars)
+			{
+				AnimState.m_Initialized = false;
+				return;
+			}
+			str_utf8_copy_num(aAnimatedText, pRenderText, sizeof(aAnimatedText), *VisibleChars);
+			pDisplayText = aAnimatedText;
 		}
 		else
 		{
-			AnimState.m_CachedTextWidth = 0.0f;
-			AnimState.m_CachedTextHeight = 0.0f;
-			AnimState.m_CachedFontSize = FontSize;
-			AnimState.m_CachedLineWidth = MaxWidth;
-			AnimState.m_aLayoutText[0] = '\0';
+			SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::WIDTH, static_cast<float>(RenderCharCount));
+			AnimState.m_LastTargetFillChars = std::numeric_limits<float>::quiet_NaN();
 		}
-	}
 
-	float TextHeight = 0.0f;
-	float TextWidth = 0.0f;
-	if(RenderChatEmoji)
-	{
-		TextHeight = QmChatEmojiBubbleDisplaySize(FontSize);
-		TextWidth = TextHeight;
-	}
-	else if(IsTyping)
-	{
-		CTextCursor MeasureCursor;
-		MeasureCursor.m_FontSize = FontSize;
-		MeasureCursor.m_LineWidth = MaxWidth;
-		MeasureCursor.m_Flags = 0;
-		TextRender()->TextEx(&MeasureCursor, pDisplayText);
-		TextHeight = MeasureCursor.Height();
-		TextWidth = MeasureCursor.m_LongestLineWidth;
-	}
-	else
-	{
-		TextHeight = AnimState.m_CachedTextHeight;
-		TextWidth = AnimState.m_CachedTextWidth;
-	}
-
-	const qm_chat_bubble::SLayout Bubble = qm_chat_bubble::Layout(
-		vec2(InterfaceX, InterfaceNameplateTopY - DEFAULT_PADDING + AnimSlideOffset),
-		vec2(TextWidth, TextHeight), FontSize, AnimScale, BubbleStyle);
-	const float ConfigAlpha = g_Config.m_QmChatBubbleAlpha / 100.0f;
-	const ColorRGBA BgColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmChatBubbleBgColor, true));
-	auto BubbleColors = qm_chat_bubble::Palette(BubbleStyle, g_Config.m_QmChatBubbleCustomColors != 0, BgColor,
-		color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmChatBubbleTextColor, false)), (IsCloud ? Alpha : BubbleAlpha) * ConfigAlpha);
-	if(IsCloud)
-	{
-		RenderCloudBubble(Bubble, BubbleColors, CloudAssembly);
-		BubbleColors.m_Text.a *= qm_chat_bubble::CloudTextOpacity(CloudAssembly);
-	}
-	else
-		qm_chat_bubble::Render(Graphics(), Bubble, BubbleColors);
-
-	if(RenderChatEmoji)
-	{
-		const float EmojiWidth = TextWidth * AnimScale;
-		const float EmojiHeight = TextHeight * AnimScale;
-		GameClient()->m_QmChatEmoji.Render(
-			ChatEmoji,
-			Bubble.m_TextPosition.x,
-			Bubble.m_TextPosition.y,
-			EmojiWidth,
-			EmojiHeight,
-			BubbleColors.m_Text.a);
-	}
-	else
-	{
-		const ColorRGBA TextColor = BubbleColors.m_Text;
-
-		ColorRGBA OutlineColor = TextRender()->DefaultTextOutlineColor();
-		// 预设浅色底上的深色字无需黑色外描边，自定义模式保留原来的文字效果。
-		OutlineColor.a *= (g_Config.m_QmChatBubbleCustomColors || BubbleStyle == qm_chat_bubble::EStyle::DEFAULT) ? TextColor.a : 0.0f;
-
-		TextRender()->TextColor(TextColor);
-		TextRender()->TextOutlineColor(OutlineColor);
-
-		if(UseTextContainer && AnimState.m_TextContainerIndex.Valid())
+		// 动画请求全部准备成功后再推进这些标记，失败仍能重试入场初始化。
+		if(NewTimedBubble)
+			AnimState.m_LastChatBubbleStartTick = ClientData.m_ChatBubbleStartTick;
+		AnimState.m_LastVisible = HasSourceText;
+		AnimState.m_LastTyping = IsTyping;
+		if(BubbleAlpha <= 0.001f)
 		{
-			const float TextX = Bubble.m_Position.x + (Bubble.m_Size.x - TextWidth) / 2.0f;
-			const float TextY = Bubble.m_Position.y + (Bubble.m_Size.y - TextHeight) / 2.0f;
-			TextRender()->RenderTextContainer(AnimState.m_TextContainerIndex, TextColor, OutlineColor, TextX, TextY);
+			if(!HasSourceText)
+				AnimState.m_aCachedText[0] = '\0';
+			return;
+		}
+
+		// Get current screen bounds (world coordinates with current zoom)
+		float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
+		Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+
+		// Check if position is on screen
+		if(!(in_range(Position.x, ScreenX0 - 400, ScreenX1 + 400) && in_range(Position.y, ScreenY0 - 400, ScreenY1 + 400)))
+			return;
+
+		// Map to interface coordinates for text rendering (fixed zoom)
+		CQmChatBubbleRenderContext Context(*TextRender(), *Graphics());
+		Context.Apply([&] { Graphics()->MapScreenToInterface(GameClient()->m_Camera.m_Center.x, GameClient()->m_Camera.m_Center.y); });
+
+		// Get interface screen bounds (fixed regardless of zoom)
+		float InterfaceX0, InterfaceY0, InterfaceX1, InterfaceY1;
+		Graphics()->GetScreen(&InterfaceX0, &InterfaceY0, &InterfaceX1, &InterfaceY1);
+		float InterfaceHeight = InterfaceY1 - InterfaceY0;
+
+		// Keep bubble sizing in screen space so rapid camera zoom does not force
+		// a full text relayout every frame.
+		const float FontSize = static_cast<float>(g_Config.m_QmChatBubbleFontSize);
+		const float MaxWidth = qm_chat_bubble::MAX_TEXT_WIDTH;
+
+		// Anchor bubble to the top of the nameplate plus default nameplate spacing.
+		float NameplateTopWorldY = Position.y - (float)g_Config.m_ClNamePlatesOffset;
+		const vec2 NameplateBottomMiddleWorld = Position - vec2(0.0f, (float)g_Config.m_ClNamePlatesOffset);
+		const CNamePlate &NamePlate = m_pData->m_aNamePlates[ClientId];
+		if(NamePlate.IsInitialized())
+		{
+			const CNamePlate &Reference = m_pData->m_aNamePlateFrameReferences[ClientId];
+			const bool UseFrame = NameplateFreeMoveEnabled() && NameplateRenderValue(ConfigManager(), &g_Config.m_QmNameplateShowScope) != QM_NAMEPLATE_SHOW_SCOPE_ALL && Reference.IsInitialized();
+			NameplateTopWorldY = NamePlate.TopY(NameplateBottomMiddleWorld, UseFrame ? &Reference : nullptr);
+		}
+		const auto Anchor = QmChatBubbleProjectAnchor({ScreenX0, ScreenY0, ScreenX1, ScreenY1},
+			{InterfaceX0, InterfaceY0, InterfaceX1, InterfaceY1}, vec2(Position.x, NameplateTopWorldY));
+		if(!Anchor || (!RenderChatEmoji && !QmChatBubbleTextSizeSafe(FontSize, InterfaceHeight, Graphics()->ScreenHeight())))
+			return;
+
+		const bool UseTextContainer = !RenderChatEmoji && !IsTyping && std::abs(AnimScale - 1.0f) <= 0.001f;
+		if(RenderChatEmoji)
+			AnimState.ClearLayout(*TextRender());
+		else if(!IsTyping)
+			AnimState.PrepareLayout(*TextRender(), FontSize, MaxWidth, pDisplayText);
+
+		float TextHeight = 0.0f;
+		float TextWidth = 0.0f;
+		if(RenderChatEmoji)
+		{
+			TextHeight = QmChatEmojiBubbleDisplaySize(FontSize);
+			TextWidth = TextHeight;
+		}
+		else if(IsTyping)
+		{
+			CTextCursor MeasureCursor;
+			MeasureCursor.m_FontSize = FontSize;
+			MeasureCursor.m_LineWidth = MaxWidth;
+			MeasureCursor.m_Flags = 0;
+			TextRender()->TextEx(&MeasureCursor, pDisplayText);
+			TextHeight = MeasureCursor.Height();
+			TextWidth = MeasureCursor.m_LongestLineWidth;
 		}
 		else
 		{
-			CTextCursor Cursor;
-			Cursor.m_FontSize = FontSize * AnimScale;
-			Cursor.m_LineWidth = MaxWidth * AnimScale;
-			Cursor.m_Flags = TEXTFLAG_RENDER;
-			Cursor.SetPosition(Bubble.m_TextPosition);
-			qm_chat_bubble::RenderText(TextRender(), Cursor, pDisplayText, TextColor, OutlineColor);
+			TextHeight = AnimState.m_CachedTextHeight;
+			TextWidth = AnimState.m_CachedTextWidth;
 		}
-	}
 
-	TextRender()->TextColor(PreviousTextColor);
-	TextRender()->TextOutlineColor(PreviousOutlineColor);
-	TextRender()->SetRenderFlags(PrevFlags);
+		const bool CachedContent = UseTextContainer && AnimState.m_TextContainerIndex.Valid();
+		const auto Geometry = QmChatBubbleGeometry(*Anchor, vec2(TextWidth, TextHeight), AnimScale, AnimSlideOffset, DEFAULT_PADDING, CachedContent, FontSize, BubbleStyle);
+		if(!Geometry)
+			return;
+		float DrawFontSize = FontSize, DrawLineWidth = MaxWidth;
+		if(!RenderChatEmoji && !CachedContent)
+		{
+			DrawFontSize = FontSize * AnimScale;
+			DrawLineWidth = MaxWidth * AnimScale;
+			if(!std::isfinite(DrawLineWidth) || !QmChatBubbleTextSizeSafe(DrawFontSize, InterfaceHeight, Graphics()->ScreenHeight()))
+				return;
+		}
 
-	Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
+		const float ConfigAlpha = g_Config.m_QmChatBubbleAlpha / 100.0f;
+		const ColorRGBA BgColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmChatBubbleBgColor, true));
+		auto BubbleColors = qm_chat_bubble::Palette(BubbleStyle, g_Config.m_QmChatBubbleCustomColors != 0, BgColor,
+			color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmChatBubbleTextColor, false)), (IsCloud ? Alpha : BubbleAlpha) * ConfigAlpha);
+		Frame.BeginDrawing();
+		if(IsCloud)
+		{
+			RenderCloudBubble(Geometry->m_Layout, BubbleColors, CloudAssembly);
+			BubbleColors.m_Text.a *= qm_chat_bubble::CloudTextOpacity(CloudAssembly);
+		}
+		else
+			qm_chat_bubble::Render(Graphics(), Geometry->m_Layout, BubbleColors);
+
+		if(RenderChatEmoji)
+		{
+			GameClient()->m_QmChatEmoji.Render(
+				ChatEmoji,
+				Geometry->m_ContentPosition.x, Geometry->m_ContentPosition.y,
+				Geometry->m_ContentSize.x, Geometry->m_ContentSize.y,
+				BubbleColors.m_Text.a);
+		}
+		else
+		{
+			const ColorRGBA TextColor = BubbleColors.m_Text;
+
+			ColorRGBA OutlineColor = TextRender()->DefaultTextOutlineColor();
+			OutlineColor.a *= (g_Config.m_QmChatBubbleCustomColors || BubbleStyle == qm_chat_bubble::EStyle::DEFAULT) ? TextColor.a : 0.0f;
+
+			TextRender()->TextColor(TextColor);
+			TextRender()->TextOutlineColor(OutlineColor);
+
+			if(CachedContent)
+			{
+				TextRender()->RenderTextContainer(AnimState.m_TextContainerIndex, TextColor, OutlineColor, Geometry->m_ContentPosition.x, Geometry->m_ContentPosition.y);
+			}
+			else
+			{
+				CTextCursor Cursor;
+				Cursor.m_FontSize = DrawFontSize;
+				Cursor.m_LineWidth = DrawLineWidth;
+				Cursor.m_Flags = TEXTFLAG_RENDER;
+				Cursor.SetPosition(Geometry->m_ContentPosition);
+				qm_chat_bubble::RenderText(TextRender(), Cursor, pDisplayText, TextColor, OutlineColor);
+			}
+		}
+
+		Context.Finish();
+	});
 }
 
 void CNamePlates::OnRender()

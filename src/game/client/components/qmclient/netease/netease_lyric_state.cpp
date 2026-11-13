@@ -142,11 +142,12 @@ namespace NeteaseLyrics
 		if(LineStartMs < -1 || LineEndMs < -1 || (LineStartMs == -1 && LineEndMs != -1) ||
 			(LineStartMs >= 0 && LineEndMs >= 0 && LineEndMs <= LineStartMs))
 			return false;
+		// 字符串准备失败时保留旧状态；成功后只提交不会分配的来源、位置和边界。
+		m_State.m_CurrentLyric.assign(Text);
 		m_TimelineSource = Source;
 		m_State.m_Source = Source;
 		m_State.m_PositionMs = PositionMs < 0 ? 0 : PositionMs;
 		m_State.m_LyricValid = true;
-		m_State.m_CurrentLyric.assign(Text);
 		m_State.m_LineStartMs = LineStartMs;
 		m_State.m_LineEndMs = LineEndMs;
 		return true;

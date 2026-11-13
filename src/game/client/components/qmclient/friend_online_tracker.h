@@ -2,6 +2,7 @@
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_FRIEND_ONLINE_TRACKER_H
 
 #include <algorithm>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -29,15 +30,8 @@ namespace qm_friend_notify
 		std::unordered_map<std::string, CState> m_Online;
 		std::unordered_set<std::string> m_ObservedServers;
 
-	public:
-		void Reset()
-		{
-			m_Online.clear();
-			m_ObservedServers.clear();
-		}
-
-		// 每次传入独立成功刷新的完整快照；可用集合只包含玩家资料完整的服务器。
-		std::vector<CFriend> Update(const std::vector<CFriend> &vFriends, const std::unordered_set<std::string> &AvailableServers)
+		template<typename TCopyFriend>
+		std::vector<CFriend> UpdateCandidate(const std::vector<CFriend> &vFriends, const std::unordered_set<std::string> &AvailableServers, const std::unordered_set<std::string> &ObservedServers, const TCopyFriend &CopyFriend)
 		{
 			std::vector<CFriend> vNotifications;
 			std::unordered_set<std::string> Seen;
@@ -55,9 +49,9 @@ namespace qm_friend_notify
 					if(Known)
 						m_Online.erase(It);
 				}
-				if(!Known && Friend.m_IsFriend && m_ObservedServers.find(Friend.m_Server) != m_ObservedServers.end())
+				if(!Known && Friend.m_IsFriend && ObservedServers.find(Friend.m_Server) != ObservedServers.end())
 					vNotifications.push_back(Friend);
-				m_Online[Friend.m_Key] = {Friend, 0};
+				m_Online[Friend.m_Key] = {CopyFriend(Friend), 0};
 				Seen.insert(Friend.m_Key);
 			}
 
@@ -80,9 +74,48 @@ namespace qm_friend_notify
 					++It;
 			}
 
-			// 各服首次完整出现时单独建立静默基线，避免暂缺服务器补齐后误报。
-			m_ObservedServers.insert(AvailableServers.begin(), AvailableServers.end());
 			return vNotifications;
+		}
+
+	public:
+		void Reset() noexcept
+		{
+			m_Online.clear();
+			m_ObservedServers.clear();
+		}
+
+		// 每次传入完整快照；准备失败不发布通知、不改变身份、缺席证据或各服基线。
+		template<typename TCopyFriend>
+		std::optional<std::vector<CFriend>> Update(const std::vector<CFriend> &vFriends, const std::unordered_set<std::string> &AvailableServers, const TCopyFriend &CopyFriend) noexcept
+		{
+			try
+			{
+				COnlineTracker Candidate;
+				Candidate.m_Online = m_Online;
+				const bool NewServers = std::any_of(AvailableServers.begin(), AvailableServers.end(), [&](const auto &Server) {
+					return m_ObservedServers.find(Server) == m_ObservedServers.end();
+				});
+				if(NewServers)
+				{
+					// 仅首次观察到完整服务器时准备新基线，常规刷新复用原集合。
+					Candidate.m_ObservedServers = m_ObservedServers;
+					Candidate.m_ObservedServers.insert(AvailableServers.begin(), AvailableServers.end());
+				}
+				std::optional<std::vector<CFriend>> Notifications(Candidate.UpdateCandidate(vFriends, AvailableServers, m_ObservedServers, CopyFriend));
+				m_Online.swap(Candidate.m_Online);
+				if(NewServers)
+					m_ObservedServers.swap(Candidate.m_ObservedServers);
+				return Notifications;
+			}
+			catch(...)
+			{
+				return std::nullopt;
+			}
+		}
+
+		std::optional<std::vector<CFriend>> Update(const std::vector<CFriend> &vFriends, const std::unordered_set<std::string> &AvailableServers) noexcept
+		{
+			return Update(vFriends, AvailableServers, [](const CFriend &Friend) { return Friend; });
 		}
 	};
 }

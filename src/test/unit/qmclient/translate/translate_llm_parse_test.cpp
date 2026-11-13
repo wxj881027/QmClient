@@ -8,6 +8,8 @@
 #include <gtest/gtest.h>
 #include <test/test.h>
 
+#include <string>
+
 // 通过生产解析器验证服务返回的成功内容与失败分类。
 
 TEST(ParseLlmResponseJson, RefusalCannotBecomeTranslation)
@@ -454,4 +456,25 @@ TEST(TranslateLlmParse, RejectsTokenLimitedTextAndEmbeddedNul)
 		EXPECT_STREQ(Result.m_aText, "");
 		json_value_free(pJson);
 	}
+}
+
+TEST(NormalizeLlmEndpointBoundary, MaximumLengthIsPreservedWithoutTruncation)
+{
+	const std::string Prefix = "https://boundary.test/";
+	const std::string Url = Prefix + std::string(255 - Prefix.size(), 'x');
+	SLlmEndpointInfo Info;
+	ASSERT_TRUE(NormalizeLlmEndpoint(Url.c_str(), Info));
+	EXPECT_EQ(std::string(Info.m_aBaseUrl), Url);
+	EXPECT_EQ(Info.m_Style, ELlmApiStyle::AUTO);
+}
+
+TEST(NormalizeLlmEndpointBoundary, OverlongInputClearsPreviousResult)
+{
+	SLlmEndpointInfo Info;
+	ASSERT_TRUE(NormalizeLlmEndpoint("https://boundary.test/responses", Info));
+	const std::string Prefix = "https://boundary.test/";
+	const std::string Url = Prefix + std::string(256 - Prefix.size(), 'x');
+	EXPECT_FALSE(NormalizeLlmEndpoint(Url.c_str(), Info));
+	EXPECT_STREQ(Info.m_aBaseUrl, "");
+	EXPECT_EQ(Info.m_Style, ELlmApiStyle::AUTO);
 }

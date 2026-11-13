@@ -10,8 +10,16 @@
 #include <game/client/component.h>
 #include <game/client/components/qmclient/shortcut_held_bind.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <cstdlib>
+#include <limits>
+#include <memory>
+#include <new>
+#include <stdexcept>
+#include <string>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 class IConfigManager;
@@ -51,6 +59,47 @@ class CBindStorage
 	friend class CBinds;
 	char *m_aapKeyBindings[KeyModifier::COMBINATION_COUNT][KEY_LAST]{};
 	uint64_t m_Revision = 0;
+	struct CFreeCommand
+	{
+		void operator()(char *pCommand) const noexcept { std::free(pCommand); }
+	};
+	using CCommand = std::unique_ptr<char, CFreeCommand>;
+
+	static bool PrepareCommand(const char *pCommand, CCommand &Out, void *(*pAllocate)(size_t))
+	{
+		CCommand Candidate;
+		if(pCommand[0])
+		{
+			try
+			{
+				const std::string Migrated = QmLegacyConfig::MigrateBindCommand(pCommand);
+				if(Migrated.size() >= static_cast<size_t>(std::numeric_limits<int>::max()))
+					return false;
+				const int Size = static_cast<int>(Migrated.size()) + 1;
+				Candidate.reset(static_cast<char *>(pAllocate(static_cast<size_t>(Size))));
+				if(Candidate == nullptr)
+					return false;
+				str_copy(Candidate.get(), Migrated.c_str(), Size);
+			}
+			catch(const std::bad_alloc &)
+			{
+				return false;
+			}
+			catch(const std::length_error &)
+			{
+				return false;
+			}
+		}
+		Out.swap(Candidate);
+		return true;
+	}
+
+	void Commit(int Key, int Modifiers, CCommand Command) noexcept
+	{
+		free(m_aapKeyBindings[Modifiers][Key]);
+		m_aapKeyBindings[Modifiers][Key] = Command.release();
+		++m_Revision;
+	}
 
 public:
 	CBindStorage() = default;
@@ -64,24 +113,41 @@ public:
 		dbg_assert(Modifiers >= KeyModifier::NONE && Modifiers < KeyModifier::COMBINATION_COUNT, "Modifiers invalid");
 		return m_aapKeyBindings[Modifiers][Key] ? m_aapKeyBindings[Modifiers][Key] : "";
 	}
-	bool Bind(int Key, const char *pCommand, bool FreeOnly = false, int Modifiers = KeyModifier::NONE)
+	// 分配器返回的非空缓冲必须能够由 free 释放。
+	bool Bind(int Key, const char *pCommand, bool FreeOnly = false, int Modifiers = KeyModifier::NONE, void *(*pAllocate)(size_t) = std::malloc)
 	{
 		if(FreeOnly && Get(Key, Modifiers)[0])
 			return false;
 		Get(Key, Modifiers);
-		// 先复制后释放，允许用同一槽位的当前值覆盖自身。
-		char *pCopy = nullptr;
-		if(pCommand[0])
+		CCommand Command;
+		if(!PrepareCommand(pCommand, Command, pAllocate))
+			return false;
+		Commit(Key, Modifiers, std::move(Command));
+		return true;
+	}
+
+	// 先准备新命令，再保留原来的解绑/写入与通知阶段；通知不能中断提交。
+	template<typename F>
+	bool Rebind(CBindSlot Old, CBindSlot Target, const char *pCommand, F &&OnChanged, void *(*pAllocate)(size_t) = std::malloc)
+	{
+		static_assert(std::is_nothrow_invocable_v<F &, const CBindSlot &>);
+		if(Old.m_Key != KEY_UNKNOWN)
+			Get(Old.m_Key, Old.m_ModifierMask);
+		if(Target.m_Key != KEY_UNKNOWN)
+			Get(Target.m_Key, Target.m_ModifierMask);
+		CCommand Command;
+		if(Target.m_Key != KEY_UNKNOWN && !PrepareCommand(pCommand, Command, pAllocate))
+			return false;
+		if(Old.m_Key != KEY_UNKNOWN)
 		{
-			const std::string Migrated = QmLegacyConfig::MigrateBindCommand(pCommand);
-			const int Size = static_cast<int>(Migrated.size()) + 1;
-			pCopy = static_cast<char *>(malloc(Size));
-			dbg_assert(pCopy != nullptr, "bind allocation failed");
-			str_copy(pCopy, Migrated.c_str(), Size);
+			Commit(Old.m_Key, Old.m_ModifierMask, {});
+			OnChanged(Old);
 		}
-		free(m_aapKeyBindings[Modifiers][Key]);
-		m_aapKeyBindings[Modifiers][Key] = pCopy;
-		++m_Revision;
+		if(Target.m_Key != KEY_UNKNOWN)
+		{
+			Commit(Target.m_Key, Target.m_ModifierMask, std::move(Command));
+			OnChanged(Target);
+		}
 		return true;
 	}
 	void UnbindAll()
@@ -96,6 +162,119 @@ public:
 	}
 };
 
+// 回调可以重置组件；当前调用持有记录所有权，并以单调身份重新定位容器条目。
+class CActiveBindStorage
+{
+public:
+	using CId = uint64_t;
+	struct CActiveBind : CBindSlot
+	{
+		const CId m_Id;
+		CQmShortcutHeldBind m_ShortcutState;
+		CActiveBind(int Key, int ModifierMask, CId Id) noexcept :
+			CBindSlot(Key, ModifierMask), m_Id(Id) {}
+	};
+
+private:
+	std::vector<std::shared_ptr<CActiveBind>> m_vBinds;
+	CId m_LastId = 0;
+	size_t m_PendingAdmissions = 0;
+
+	auto FindId(CId Id)
+	{
+		return std::find_if(m_vBinds.begin(), m_vBinds.end(), [&](const auto &pBind) { return pBind->m_Id == Id; });
+	}
+
+public:
+	CActiveBindStorage() = default;
+	CActiveBindStorage(const CActiveBindStorage &) = delete;
+	CActiveBindStorage &operator=(const CActiveBindStorage &) = delete;
+
+	void Clear() noexcept
+	{
+		m_vBinds.clear();
+	}
+
+	template<typename F>
+	CId Find(F &&Matches) const
+	{
+		const auto It = std::find_if(m_vBinds.begin(), m_vBinds.end(), [&](const auto &pBind) { return Matches(static_cast<const CActiveBind &>(*pBind)); });
+		return It == m_vBinds.end() ? 0 : (*It)->m_Id;
+	}
+
+	bool Erase(CId Id)
+	{
+		const auto It = FindId(Id);
+		if(It == m_vBinds.end())
+			return false;
+		m_vBinds.erase(It);
+		return true;
+	}
+
+	template<typename F>
+	bool Press(int Key, int ModifierMask, F &&Execute)
+	{
+		const size_t Limit = m_vBinds.max_size();
+		if(m_LastId == std::numeric_limits<CId>::max() || m_PendingAdmissions >= Limit - m_vBinds.size())
+			throw std::length_error("active bind capacity exceeded");
+		// 嵌套按键也为外层尚未发布的记录保留空间。
+		const size_t Required = m_vBinds.size() + m_PendingAdmissions + 1;
+		if(Required > m_vBinds.capacity())
+		{
+			const size_t Capacity = m_vBinds.capacity();
+			const size_t Growth = std::min(std::max(Capacity / 2, size_t{1}), Limit - Capacity);
+			m_vBinds.reserve(std::max(Required, Capacity + Growth));
+		}
+		const CId Id = ++m_LastId;
+		auto pBind = std::make_shared<CActiveBind>(Key, ModifierMask, Id);
+		++m_PendingAdmissions;
+		try
+		{
+			Execute();
+		}
+		catch(...)
+		{
+			--m_PendingAdmissions;
+			throw;
+		}
+		--m_PendingAdmissions;
+		m_vBinds.push_back(std::move(pBind));
+		return true;
+	}
+
+	template<typename F>
+	bool Update(CId Id, F &&Process)
+	{
+		auto It = FindId(Id);
+		if(It == m_vBinds.end())
+			return false;
+		const auto pBind = *It;
+		const bool Keep = Process(*pBind);
+		// Clear、删除和重新按下后，即便键位相同，也不能删除新记录。
+		It = FindId(Id);
+		if(!Keep && It != m_vBinds.end())
+			m_vBinds.erase(It);
+		return true;
+	}
+
+	template<typename F>
+	void Visit(F &&Process)
+	{
+		std::vector<CId> vIds;
+		vIds.reserve(m_vBinds.size());
+		for(const auto &pBind : m_vBinds)
+			vIds.push_back(pBind->m_Id);
+		for(CId Id : vIds)
+		{
+			const auto It = FindId(Id);
+			if(It == m_vBinds.end())
+				continue;
+			const auto pBind = *It;
+			Process(static_cast<const CActiveBind &>(*pBind));
+		}
+	}
+};
+
 class CBinds : public CComponent
 {
 	static void ConBind(IConsole::IResult *pResult, void *pUserData);
@@ -107,6 +286,7 @@ class CBinds : public CComponent
 
 	CBindSlot GetBindSlot(const char *pBindString) const;
 	int DetectDeepflyModeFromAllBinds() const;
+	void OnBindChanged(int Key, int Modifiers) const noexcept;
 
 	// free buffer after use
 	char *GetKeyBindCommand(int ModifierCombination, int Key) const;
@@ -129,6 +309,7 @@ public:
 	CBindsSpecial m_SpecialBinds;
 
 	void Bind(int KeyId, const char *pStr, bool FreeOnly = false, int ModifierCombination = KeyModifier::NONE);
+	bool Rebind(const CBindSlot &Old, const CBindSlot &Target, const char *pCommand);
 	void SetDefaults();
 	void UnbindAll();
 	uint64_t Revision() const { return m_Storage.Revision(); }
@@ -165,11 +346,31 @@ public:
 	static const char *GetModifierName(int Modifier);
 	void GetKeyBindName(int Key, int ModifierMask, char *pBuf, size_t BufSize) const;
 	void RefreshActiveBinds();
+	static void ExecuteCommand(IConsole *pConsole, const char *pBind, bool AppendGoresPrevWeapon, int Stroke, int ClientId)
+	{
+		if(pBind == nullptr)
+			return;
+		// 命令回调可能重绑或清空原槽位，控制台解析后续分号时必须继续持有副本。
+		std::string Command(pBind);
+		if(AppendGoresPrevWeapon && str_find(Command.c_str(), "+fire") != nullptr && str_find(Command.c_str(), "+prevweapon") == nullptr)
+			Command += ";+prevweapon";
+		pConsole->ExecuteLineStroked(Stroke, Command.c_str(), ClientId);
+	}
+	static void RefreshCommand(IConsole *pConsole, const char *pBind, int ClientId)
+	{
+		if(pBind == nullptr || pBind[0] == '\0')
+			return;
+		const std::string Command(pBind);
+		ForEachTopLevelBindCommand(Command.c_str(), [&](const char *pCommand) {
+			if(pCommand[0] == '+')
+				pConsole->ExecuteLineStroked(1, pCommand, ClientId);
+		});
+	}
 
 	void OnConsoleInit() override;
 	void OnRender() override;
-	void OnReset() override { m_vActiveBinds.clear(); }
-	void OnRelease() override { m_vActiveBinds.clear(); }
+	void OnReset() override { m_ActiveBinds.Clear(); }
+	void OnRelease() override { m_ActiveBinds.Clear(); }
 	bool OnInput(const IInput::CEvent &Event) override;
 
 	// DDRace
@@ -178,11 +379,7 @@ public:
 
 private:
 	CBindStorage m_Storage;
-	struct CActiveBind : CBindSlot
-	{
-		CQmShortcutHeldBind m_ShortcutState;
-		CActiveBind(int Key, int ModifierMask) : CBindSlot(Key, ModifierMask) {}
-	};
-	std::vector<CActiveBind> m_vActiveBinds;
+	using CActiveBind = CActiveBindStorage::CActiveBind;
+	CActiveBindStorage m_ActiveBinds;
 };
 #endif
