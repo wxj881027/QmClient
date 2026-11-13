@@ -5674,6 +5674,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/music/qm_spotify_progress_test.cpp
     src/test/unit/qmclient/music/qm_spotify_numeric_test.cpp
     src/test/unit/qmclient/music/qm_spotify_parser_test.cpp
+    src/test/unit/qmclient/music/qm_spotify_translation_test.cpp
     src/test/unit/qmclient/client/qm_modes_test.cpp
     src/test/unit/qmclient/client/qm_map_progress_test.cpp
     src/test/unit/qmclient/client/qm_checkpoint_guide_test.cpp
@@ -6578,6 +6579,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/ui/qm_pie_menu_settings_text_test.cpp
       src/test/integration/engine/screenshot_path_test.cpp
       src/test/integration/qmclient/ui/map_covers_admission_test.cpp
+      src/test/integration/qmclient/ui/map_covers_pipeline_test.cpp
       src/game/client/components/qmclient/map_covers.cpp
       src/game/client/components/qmclient/map_cover_art.cpp
       src/test/unit/qmclient/settings/settings_search_reveal_allocation_test.cpp

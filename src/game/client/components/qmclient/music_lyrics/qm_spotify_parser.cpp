@@ -234,24 +234,19 @@ namespace QmSpotify
 			return true;
 		}
 
-		// 把 alternatives[0] 的翻译行按下标对齐到主歌词。
-		void ApplyTranslations(const json_value *pLyricsObject, QmMusicLyrics::SLyricsData *pOut)
+		// 首个翻译轨的下标对应过滤前的主行。
+		const json_value *FirstTranslationLines(const json_value *pLyricsObject)
 		{
-			pOut->m_vTranslations.clear();
 			const json_value *pAlternatives = Field(pLyricsObject, "alternatives");
 			if(pAlternatives == nullptr || pAlternatives->type != json_array || pAlternatives->u.array.length == 0)
-				return;
+				return nullptr;
 			const json_value *pFirst = pAlternatives->u.array.values[0];
 			if(pFirst == nullptr)
-				return;
+				return nullptr;
 			const json_value *pLines = Field(pFirst, "lines");
 			if(pLines == nullptr || pLines->type != json_array)
-				return;
-			const size_t MainCount = pOut->m_Timeline.m_vLines.size();
-			const size_t Count = std::min<size_t>(MainCount, pLines->u.array.length);
-			pOut->m_vTranslations.resize(MainCount);
-			for(size_t i = 0; i < Count; ++i)
-				pOut->m_vTranslations[i] = StringValue(pLines->u.array.values[i]);
+				return nullptr;
+			return pLines;
 		}
 	} // namespace
 
@@ -268,8 +263,15 @@ namespace QmSpotify
 		const json_value *pLines = HasLyrics ? Field(pLyrics, "lines") : nullptr;
 		const bool HasLines = pLines != nullptr && pLines->type == json_array;
 		const bool Timed = HasLines && SyncType != "UNSYNCED";
+		const json_value *pTranslationLines = FirstTranslationLines(pLyrics);
+		struct SLineCandidate
+		{
+			NeteaseLyrics::SLine m_Line;
+			std::string m_Translation;
+		};
 
 		QmMusicLyrics::SLyricsData Result;
+		std::vector<SLineCandidate> vCandidates;
 		if(HasLines)
 		{
 			for(unsigned int Index = 0; Index < pLines->u.array.length; ++Index)
@@ -284,7 +286,8 @@ namespace QmSpotify
 				const int64_t EndMs = ParseTimeMs(Field(pLine, "endTimeMs"), -1);
 				if(Timed && StartMs < 0)
 					continue;
-				NeteaseLyrics::SLine Line;
+				SLineCandidate Candidate;
+				NeteaseLyrics::SLine &Line = Candidate.m_Line;
 				Line.m_StartMs = StartMs;
 				Line.m_EndMs = EndMs;
 				Line.m_Text = Words;
@@ -316,20 +319,29 @@ namespace QmSpotify
 							break;
 					}
 				}
-				Result.m_Timeline.m_vLines.push_back(std::move(Line));
+				if(pTranslationLines != nullptr && Index < pTranslationLines->u.array.length)
+					Candidate.m_Translation = StringValue(pTranslationLines->u.array.values[Index]);
+				vCandidates.push_back(std::move(Candidate));
 			}
 		}
-		Result.m_Timeline.m_HasTiming = Timed && !Result.m_Timeline.m_vLines.empty();
-		// 行级歌词可能有跨行覆盖(合唱),保持 Spotify 顺序并做稳定排序,保证二分选择正确。
+		Result.m_Timeline.m_HasTiming = Timed && !vCandidates.empty();
+		// 主行与译文一起稳定排序，过滤和同刻行都保留原始对应关系。
 		if(Result.m_Timeline.m_HasTiming)
 		{
-			std::stable_sort(Result.m_Timeline.m_vLines.begin(), Result.m_Timeline.m_vLines.end(),
-				[](const NeteaseLyrics::SLine &Left, const NeteaseLyrics::SLine &Right) {
-					return Left.m_StartMs < Right.m_StartMs;
+			std::stable_sort(vCandidates.begin(), vCandidates.end(),
+				[](const SLineCandidate &Left, const SLineCandidate &Right) {
+					return Left.m_Line.m_StartMs < Right.m_Line.m_StartMs;
 				});
 		}
-		if(HasLyrics)
-			ApplyTranslations(pLyrics, &Result);
+		Result.m_Timeline.m_vLines.reserve(vCandidates.size());
+		if(pTranslationLines != nullptr)
+			Result.m_vTranslations.reserve(vCandidates.size());
+		for(auto &Candidate : vCandidates)
+		{
+			Result.m_Timeline.m_vLines.push_back(std::move(Candidate.m_Line));
+			if(pTranslationLines != nullptr)
+				Result.m_vTranslations.push_back(std::move(Candidate.m_Translation));
+		}
 		*pOut = std::move(Result);
 		return true;
 	}

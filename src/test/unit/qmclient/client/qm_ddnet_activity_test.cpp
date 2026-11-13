@@ -79,3 +79,15 @@ TEST(QmDdnetActivity, RepeatedParsingDoesNotAccumulatePreviousResponses)
 	EXPECT_EQ(ParseActivity(R"({"activity":[{"hours_played":5}]})"), 5);
 	EXPECT_EQ(ParseActivity("{"), -1);
 }
+
+TEST(QmDdnetActivity, EmbeddedNullActivityKeyDoesNotShadowTheCompleteField)
+{
+	EXPECT_EQ(ParseActivity(R"({"activity\u0000extra":[{"hours_played":99}],"activity":[{"hours_played":5}]})"), 5);
+	EXPECT_EQ(ParseActivity(R"({"activity\u0000extra":[{"hours_played":99}]})"), -1);
+}
+
+TEST(QmDdnetActivity, EmbeddedNullHourKeyDoesNotContributeOrShadowTheCompleteField)
+{
+	EXPECT_EQ(ParseActivity(R"({"activity":[{"hours_played\u0000extra":99,"hours_played":5},{"hours_played\u0000extra":80}]})"), 5);
+	EXPECT_EQ(ParseActivity(R"({"activity":[{"hours_played\u0000extra":99}]})"), -1);
+}

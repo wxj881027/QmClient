@@ -99,9 +99,9 @@ TEST(QmSpotifyParserAllocation, ColorLyricsPreparationFailuresStillPropagateAndR
 {
 	const std::string Words(96, 'w'), Translation(64, 't');
 	const std::string Json = "{\"lyrics\":{\"syncType\":\"LINE_SYNCED\",\"lines\":["
-				 "{\"startTimeMs\":\"1000\",\"words\":\"earlier-" +
+				 "{\"startTimeMs\":\"3000\",\"words\":\"later-" +
 				 Words + "\"},"
-					 "{\"startTimeMs\":\"3000\",\"words\":\"later-" +
+					 "{\"startTimeMs\":\"1000\",\"words\":\"earlier-" +
 				 Words + "\"}],"
 					 "\"alternatives\":[{\"lines\":[\"" +
 				 Translation + "\",\"second\"]}]}}";
@@ -112,7 +112,8 @@ TEST(QmSpotifyParserAllocation, ColorLyricsPreparationFailuresStillPropagateAndR
 			EXPECT_EQ(Out.m_Timeline.m_vLines[0].m_StartMs, 1000);
 			EXPECT_EQ(Out.m_Timeline.m_vLines[0].m_Text, "earlier-" + Words);
 			ASSERT_EQ(Out.m_vTranslations.size(), 2u);
-			EXPECT_EQ(Out.m_vTranslations[0], Translation);
+			EXPECT_EQ(Out.m_vTranslations[0], "second");
+			EXPECT_EQ(Out.m_vTranslations[1], Translation);
 		});
 }
 
