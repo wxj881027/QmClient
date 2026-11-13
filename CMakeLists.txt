@@ -3750,6 +3750,7 @@ if(CLIENT)
     components/qmclient/rank_view_timeline.h
     components/qmclient/rank_ghost.cpp
     components/qmclient/rank_ghost_view.cpp
+    components/qmclient/rank_ghost_parse.cpp
     components/qmclient/rank_ghost.h
     components/qmclient/local_world.cpp
     components/qmclient/local_world.h
