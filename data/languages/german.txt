@@ -349,6 +349,12 @@
 ?!Stuck keys!?
 == ?!Gehaltene Tasten!?
 
+Enable focus glow
+== Fokus-Leuchten aktivieren
+
+Show an accent glow around the focused input field
+== Zeigt ein Leuchten in Akzentfarbe um das fokussierte Eingabefeld
+
 []
 [%s] %s (Map: %s, Time: %s)
 == [%s] %s (Map: %s, Zeit: %s)

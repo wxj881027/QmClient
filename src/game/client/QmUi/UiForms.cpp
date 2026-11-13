@@ -268,6 +268,33 @@ namespace ui_widget
 		// 与列表胶囊行同一族；多行编辑器保持 radius::BASE 方角（首个/末个可见行
 		// 贴着矩形边，胶囊会把正文的首尾行切掉一角）。
 		const float ShellRadius = Options.m_Mode == EInputFieldMode::MULTILINE ? ui_token::radius::BASE : ResolveInputCapsuleRadius(Layout.m_ShellRect);
+		// 激活态光晕：外壳描边之外再铺两层光晕（内窄而亮、外宽而淡）。
+		// 光晕与焦点描边共用同一个判定与同一条淡入轨道，所以**任何**输入框聚焦都发光：
+		// 同一张卡片里搜索框、排除框、服务器地址框并排时，焦点落在哪个框上，哪个框就亮——
+		// 只给 SEARCH 模式发光会让地址框看起来"点了没反应"，就像它不是一个输入框。
+		// 开关在「图像 → 视觉效果 → 界面主题」里（qm_ui_focus_glow）：关掉只影响光晕，
+		// 焦点描边照旧，玩家不会因为关掉效果而失去焦点提示。
+		// 必须画在外壳之前：光晕最亮处贴着外壳边缘，外壳随后盖住内侧那一半，
+		// 剩下的才是「从边缘向外散开」的光，而不是盖在填充上的一层雾。
+		if(FocusPaintPass && FocusAlpha > 0.01f && !Ctx.m_pUi->MeasurementOnly())
+		{
+			const SUiTheme Theme = ThemeFor(Ctx);
+			// 浅色卡片上的光晕按表面亮度再压一档：白底上 0.22 的强调色淡光已经接近
+			// 参考设计里"贴着边框的一圈淡光"，深底上则保持令牌原强度。
+			const float GlowScale = ResolveUiSurfaceGlowScale(Theme.m_Surface);
+			const bool GlowEnabled = g_Config.m_QmUiFocusGlow != 0;
+			for(const SInputFocusGlowLayer &Layer : ResolveInputFocusGlowLayers(Layout.m_ShellRect, FocusAlpha, GlowEnabled))
+			{
+				if(Layer.m_Alpha <= 0.004f || Layer.m_Spread <= 0.0f)
+					continue;
+				SRoundedGlowParams GlowParams;
+				GlowParams.m_Radius = ShellRadius;
+				GlowParams.m_Spread = Layer.m_Spread;
+				GlowParams.m_Falloff = Layer.m_Falloff;
+				GlowParams.m_Corners = Options.m_Corners;
+				DrawRoundedSurfaceGlow(Ctx, Layout.m_ShellRect, Ctx.m_pUi->ScaleControlAlpha(Theme.m_FocusRing.WithAlpha(Layer.m_Alpha * GlowScale)), GlowParams);
+			}
+		}
 		if(!Ctx.m_pUi->MeasurementOnly() && FocusAlpha > 0.01f)
 		{
 			const SUiTheme Theme = ThemeFor(Ctx);

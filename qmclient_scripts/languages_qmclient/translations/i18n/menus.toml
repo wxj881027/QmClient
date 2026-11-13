@@ -23259,3 +23259,19 @@ brazilian_portuguese = "Quanto a roda ou o arrasto podem empurrar além de um li
 portuguese = "Quanto a roda ou o arrasto podem empurrar além de uma extremidade, em píxeis de UI; o conteúdo volta quando o deslocamento para. 0 desativa"
 turkish = "Tekerleğin veya sürüklemenin içeriği bir ucun ötesine ne kadar itebileceği (UI pikseli); kaydırma durunca içerik geri döner. 0 kapatır"
 polish = "Jak daleko kółko lub przeciąganie mogą wypchnąć treść poza krawędź, w pikselach UI; po zatrzymaniu przewijania treść wraca. 0 wyłącza"
+
+[[message]]
+key = "Enable focus glow"
+[message.translations]
+simplified_chinese = "启用聚焦光晕"
+traditional_chinese = "啟用聚焦光暈"
+japanese = "フォーカスグローを有効化"
+korean = "포커스 광채 사용"
+russian = "Включить свечение фокуса"
+german = "Fokus-Leuchten aktivieren"
+spanish = "Activar resplandor de foco"
+french = "Activer la lueur de focus"
+brazilian_portuguese = "Ativar brilho de foco"
+portuguese = "Ativar brilho de foco"
+turkish = "Odak parıltısını etkinleştir"
+polish = "Włącz poświatę fokusu"

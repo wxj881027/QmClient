@@ -118,6 +118,8 @@
 === All Local Saves ===
 === Saves for '%s' ===
 ?!Stuck keys!?
+Enable focus glow
+Show an accent glow around the focused input field
 [%s] %s (Map: %s, Time: %s)
 _ or ' ' = blank spacer
 a = View angle

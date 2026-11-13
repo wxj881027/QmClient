@@ -358,6 +358,12 @@
 ?!Stuck keys!?
 == ?!卡键!?
 
+Enable focus glow
+== 启用聚焦光晕
+
+Show an accent glow around the focused input field
+== 为聚焦的输入框显示强调色光晕
+
 []
 [%s] %s (Map: %s, Time: %s)
 == [%s] %s (地图：%s，时间：%s)

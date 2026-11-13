@@ -349,6 +349,12 @@
 ?!Stuck keys!?
 == ?!Basılı tuşlar!?
 
+Enable focus glow
+== Odak parıltısını etkinleştir
+
+Show an accent glow around the focused input field
+== Odaklanan giriş alanının çevresinde vurgu renginde parıltı göster
+
 []
 [%s] %s (Map: %s, Time: %s)
 == [%s] %s (harita: %s, zaman: %s)

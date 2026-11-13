@@ -13,6 +13,7 @@
 #include <game/client/ui.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 
 class CLineInput;
@@ -271,6 +272,35 @@ namespace ui_widget
 	{
 		return std::min(std::max(0.0f, Rect.h) * 0.5f, ui_token::radius::CARD);
 	}
+
+	// 输入框聚焦光晕的一层：宽度、衰减指数与外壳边缘处的强度。
+	struct SInputFocusGlowLayer
+	{
+		float m_Spread = 0.0f;
+		float m_Falloff = 1.0f;
+		float m_Alpha = 0.0f;
+	};
+
+	// 输入框聚焦光晕的层表（外层在前、内层在后，按这个顺序绘制）。
+	// FocusAlpha 是外壳聚焦描边那条淡入轨道的当前进度：光晕不另开动画，
+	// 聚焦淡入多少，光晕就亮多少；进度为 0 时返回两层全零，调用点直接跳过绘制。
+	// 宽度按外壳高度取比例并夹取，非法矩形（宽或高 <= 0）不产生任何层。
+	// 与输入框模式无关：文本、搜索、多行三种模式共用同一份层表，
+	// 「哪个框亮」只由焦点决定，不由控件类型决定。
+	// Enabled 来自 qm_ui_focus_glow：关掉时返回两层全零，绘制路径与未聚焦完全一致，
+	// 不会留下「描边还在、光晕没了」之外的多余分支。
+	inline std::array<SInputFocusGlowLayer, 2> ResolveInputFocusGlowLayers(const CUIRect &ShellRect, const float FocusAlpha, const bool Enabled = true)
+	{
+		std::array<SInputFocusGlowLayer, 2> aLayers{};
+		if(!Enabled || ShellRect.w <= 0.0f || ShellRect.h <= 0.0f || FocusAlpha <= 0.001f)
+			return aLayers;
+		const float Intensity = std::clamp(FocusAlpha, 0.0f, 1.0f);
+		const float Spread = ui_token::glow::InputFocusSpread(ShellRect.h);
+		aLayers[0] = {Spread, ui_token::glow::INPUT_FOCUS_OUTER_FALLOFF, Intensity * ui_token::glow::INPUT_FOCUS_OUTER_ALPHA};
+		aLayers[1] = {Spread * ui_token::glow::INPUT_FOCUS_INNER_RATIO, ui_token::glow::INPUT_FOCUS_INNER_FALLOFF, Intensity * ui_token::glow::INPUT_FOCUS_INNER_ALPHA};
+		return aLayers;
+	}
+
 	struct STextFieldOptions
 	{
 		const char *m_pPlaceholder = nullptr;

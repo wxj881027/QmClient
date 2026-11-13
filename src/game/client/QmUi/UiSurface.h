@@ -165,6 +165,28 @@ struct SRoundedImageParams
 };
 
 bool DrawRoundedGradientSurface(IGraphics *pGraphics, const CUIRect &Rect, const SQmColorGradient &Gradient, float Alpha, const ColorRGBA &Border, const SRoundedSurfaceParams &Params);
+
+// 光晕：沿同一圆角形状向外铺开的一条衰减带。
+// 走 SDF 的「只描边 + 带宽羽化」：带宽内按幂次连续淡出，才是一团晕；叠几道窄环
+// 在带宽较宽时会看到彼此的分界。形状外扩用距离场（m_ShapeExpand）而不是「矩形放大
+// 加半径加宽」，换圆角曲线档位时才是同一条曲线的等距外扩。
+struct SRoundedGlowParams
+{
+	// 必须与控件外壳同档：光晕和外壳错开半档就会在胶囊端头露出月牙。
+	float m_Radius = 0.0f;
+	// 光晕宽度（逻辑像素），从外壳边缘向外量。
+	float m_Spread = 0.0f;
+	// 带宽内的衰减指数；<= 0 时按 1 处理（线性淡出）。
+	float m_Falloff = 1.0f;
+	int m_Corners = IGraphics::CORNER_ALL;
+	float m_PixelSize = 0.0f;
+};
+
+// Color 的 alpha 就是外壳边缘处的强度，向外逐渐衰减到 0。
+// 设备不支持圆角 SDF 时退化为几道窄环（见实现注释），只是近似，不是同一条衰减带。
+bool DrawRoundedSurfaceGlow(IGraphics *pGraphics, const CUIRect &Rect, const ColorRGBA &Color, const SRoundedGlowParams &Params);
+bool DrawRoundedSurfaceGlow(CUi *pUi, const CUIRect &Rect, const ColorRGBA &Color, const SRoundedGlowParams &Params);
+bool DrawRoundedSurfaceGlow(const IUiContext &Ctx, const CUIRect &Rect, const ColorRGBA &Color, const SRoundedGlowParams &Params);
 // 圆角图片的 UV 变换：把「矩形内局部像素坐标 → 图片 UV」的仿射折算进 SDF 参数。
 // 抽成纯函数，渲染与单元测试共用同一套换算，避免两边各写一份。
 // 语义：UV = 局部像素坐标 * UVScale + UVOffset；着色器里的 Point 以矩形中心为原点，

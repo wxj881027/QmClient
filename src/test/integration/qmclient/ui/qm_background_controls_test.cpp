@@ -265,6 +265,9 @@ namespace
 			if(HasFatalFailure())
 				return;
 			g_Config.m_QmUiAccentOpacity = 60;
+			// 测试基座用 CConfig() 清零所有配置：焦点光晕开关显式打开，
+			// 否则后台趟的「聚焦输入框两层光晕」永远不会出现。
+			g_Config.m_QmUiFocusGlow = 1;
 			g_Config.m_QmUiDropdownOpacity = 40;
 			g_Config.m_QmUiInputOpacity = 60;
 			m_pRecordingKernel = std::make_unique<qm_ui_test::CRealUiTestKernel>(&m_Recording, m_Ui.TextRender(), &m_Input, &m_Client);
@@ -1022,7 +1025,10 @@ TEST_F(QmBackgroundControlsIntegration, BackgroundSubmitsFillAndBorderWithoutCha
 	m_Ui.BeginBackgroundRender();
 	DrawControls();
 	m_Ui.EndBackgroundRender();
-	ASSERT_EQ(m_Recording.m_vSurfaces.size(), 9u);
+	// 外壳、焦点描边、开关轨道等共 9 条；后台趟同样要出「聚焦输入框的两层光晕」，
+	// 否则控制台打开时的背景快照里，焦点描边有、光晕没有。
+	ASSERT_EQ(m_Recording.m_vSurfaces.size(), 11u);
+	EXPECT_EQ(std::count_if(m_Recording.m_vSurfaces.begin(), m_Recording.m_vSurfaces.end(), [](const auto &Surface) { return Surface.m_GradientParams2.y > 0.5f; }), 2);
 	EXPECT_GT(m_Recording.m_vSurfaces.front().m_FillColor.a, 0.0f);
 	EXPECT_GT(m_Recording.m_vSurfaces[1].m_BorderColor.a, 0.0f);
 	EXPECT_EQ(m_Ui.ActiveItem(), pActive);

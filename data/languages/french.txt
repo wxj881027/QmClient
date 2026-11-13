@@ -349,6 +349,12 @@
 ?!Stuck keys!?
 == ?!Touches maintenues!?
 
+Enable focus glow
+== Activer la lueur de focus
+
+Show an accent glow around the focused input field
+== Afficher une lueur de la couleur d'accent autour du champ de saisie sélectionné
+
 []
 [%s] %s (Map: %s, Time: %s)
 == [%s] %s (map: %s, heure: %s)

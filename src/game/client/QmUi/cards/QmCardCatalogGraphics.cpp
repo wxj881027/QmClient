@@ -822,6 +822,13 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 				return;
 			const CSettingsContentRevealScope SectionRevealScope(Ui(), Flow, SectionReveal);
 
+			// 聚焦光晕与背景模糊同属「界面效果」，两行挨着放。光晕颜色取强调色，
+			// 这里只有开关，不额外给光晕开一条颜色配置（见 UI 视觉分组与自定义边界）。
+			RowAction("graphics-focus-glow", GraphicsMetrics.m_LineHeight, [&](CUIRect Button) {
+				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmUiFocusGlow, "enable-focus-glow", Localize("Enable focus glow"), g_Config.m_QmUiFocusGlow, &Button))
+					g_Config.m_QmUiFocusGlow ^= 1;
+			});
+
 			RowAction("graphics-surface", GraphicsMetrics.m_ButtonHeight, [&](CUIRect UiColorRow) {
 static CButtonContainer s_UiColorResetId;
 

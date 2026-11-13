@@ -40938,3 +40938,19 @@ simplified_chinese = "不可钩方块描边宽度"
 key = "Unhookable tiles"
 [message.translations]
 simplified_chinese = "不可钩方块"
+
+[[message]]
+key = "Show an accent glow around the focused input field"
+[message.translations]
+simplified_chinese = "为聚焦的输入框显示强调色光晕"
+traditional_chinese = "為聚焦的輸入框顯示強調色光暈"
+japanese = "フォーカス中の入力欄にアクセント色のグローを表示"
+korean = "포커스된 입력란에 강조색 광채를 표시"
+russian = "Показывать свечение акцентного цвета вокруг поля ввода в фокусе"
+german = "Zeigt ein Leuchten in Akzentfarbe um das fokussierte Eingabefeld"
+spanish = "Mostrar un resplandor del color de acento alrededor del campo de entrada enfocado"
+french = "Afficher une lueur de la couleur d'accent autour du champ de saisie sélectionné"
+brazilian_portuguese = "Mostrar um brilho na cor de destaque ao redor do campo de entrada em foco"
+portuguese = "Mostrar um brilho na cor de destaque à volta do campo de entrada em foco"
+turkish = "Odaklanan giriş alanının çevresinde vurgu renginde parıltı göster"
+polish = "Pokazuj poświatę w kolorze akcentu wokół aktywnego pola tekstowego"

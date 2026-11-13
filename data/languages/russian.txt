@@ -349,6 +349,12 @@
 ?!Stuck keys!?
 == ?!Зажатые клавиши!?
 
+Enable focus glow
+== Включить свечение фокуса
+
+Show an accent glow around the focused input field
+== Показывать свечение акцентного цвета вокруг поля ввода в фокусе
+
 []
 [%s] %s (Map: %s, Time: %s)
 == [%s] %s (карта: %s, время: %s)

@@ -34,6 +34,16 @@ inline ColorRGBA ResolveUiSurfaceForeground(ColorRGBA Surface, ColorRGBA Backdro
 	return Luminance > 0.179f ? ui_token::color::NEUTRAL_BLACK : ui_token::color::NEUTRAL_WHITE;
 }
 
+// 外溢光（搜索框聚焦光晕这类"从控件边缘散出去的光"）在浅色表面上会明显更亮：
+// 同一份 alpha 压在白卡上，比压在深色卡上扎眼得多。按表面亮度线性压一档——
+// 最亮表面只留 55% 强度，深色主题几乎不变。这样同一个令牌在浅/深两套主题里
+// 都落在"看得出、但不抢描边"的区间，而不是各自换一套数值。
+inline float ResolveUiSurfaceGlowScale(ColorRGBA Surface)
+{
+	const float Luminance = std::clamp(UiSurfaceLuminance(CompositeUiSurface(Surface)), 0.0f, 1.0f);
+	return 1.0f - Luminance * ui_token::glow::LIGHT_SURFACE_DIM;
+}
+
 // 手动文本模式保持用户选择；非法模式回退自动，图标策略独立。
 inline ColorRGBA ResolveUiTextColor(ColorRGBA Surface, int Mode, unsigned CustomColor, ColorRGBA Backdrop = ui_token::color::SURFACE_BACKDROP)
 {

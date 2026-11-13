@@ -237,6 +237,8 @@ MACRO_CONFIG_INT(QmEnhancedProceduralRing, qm_enhanced_procedural_ring, 1, 0, 1,
 // UI / 界面
 MACRO_CONFIG_INT(QmGaussianBlur, qm_gaussian_blur, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable backdrop blur for translucent interface and selected HUD backgrounds")
 MACRO_CONFIG_INT(QmBlurMode, qm_blur_mode, 2, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Backdrop blur algorithm: 0=Gaussian, 1=Kawase, 2=Dual Kawase")
+// 聚焦光晕属于「界面效果」开关，只控制画不画；光晕颜色仍取强调色，不单开一条颜色配置。
+MACRO_CONFIG_INT(QmUiFocusGlow, qm_ui_focus_glow, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show an accent glow around the focused input field")
 
 // Sponsor nudge / 赞助提醒
 MACRO_CONFIG_INT(QmLaunchCount, qm_launch_count, 0, 0, 1000000000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Accumulated client launch count (used by the sponsor reminder)")

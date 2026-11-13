@@ -154,6 +154,45 @@ namespace ui_token::feedback
 	inline constexpr ColorRGBA ACTIVE_BORDER{1.0f, 1.0f, 1.0f, ICON_BORDER_ALPHA};
 }
 
+// 输入框聚焦光晕：从外壳边缘向外铺开的衰减光带，与输入框模式无关——
+// 文本、搜索、多行三种模式共用这一份令牌，哪个框亮只由焦点决定。
+// 宽度跟着控件高度走并夹在上下限内——同一个令牌在 20 高的服务器筛选框和 32 高的
+// 设置页搜索卡上都不会顶着一团比例失调的光。内外两层的分工：内层窄而亮、
+// 贴着外壳收口；外层宽而淡，负责氤氲。只叠一层会看到「硬边」，只叠外层又不够亮。
+// 强度刻意压得很低：参考设计里真正抓住眼睛的是那条强调色描边，光晕只是描边外面
+// 的一圈淡光；光晕抢戏就会变成霓虹灯，浅色表面上尤其明显（见 LIGHT_SURFACE_DIM）。
+namespace ui_token::glow
+{
+	// 光晕宽度相对外壳高度的比例：外壳越高，光带越宽。
+	inline constexpr float INPUT_FOCUS_SPREAD_RATIO = 0.20f;
+	// 宽度下限：再小的输入框也要留得住一圈可见的光。
+	inline constexpr float INPUT_FOCUS_SPREAD_MIN = 2.5f;
+	// 宽度上限：高输入框不让光带继续涨，否则会盖住相邻控件。
+	inline constexpr float INPUT_FOCUS_SPREAD_MAX = 5.0f;
+	// 内层宽度相对外层的比例；两层共用同一个衰减带宽基准，叠起来才是连续的晕。
+	inline constexpr float INPUT_FOCUS_INNER_RATIO = 0.50f;
+	// 衰减指数：越小越像一片氤氲，越大越贴着边缘收成一道细光。
+	inline constexpr float INPUT_FOCUS_OUTER_FALLOFF = 3.2f;
+	inline constexpr float INPUT_FOCUS_INNER_FALLOFF = 1.6f;
+	// 强度取「聚焦进度 × 令牌」：聚焦淡入时整团光跟着亮起，不额外开一条动画轨道。
+	// 这组值已经是「看得出有光、但不会盖过描边」的档位；再往上加会先亮成霓虹，
+	// 再往外扩成一圈雾。要更明显请先调描边，不要只加倍光晕。
+	inline constexpr float INPUT_FOCUS_OUTER_ALPHA = 0.12f;
+	inline constexpr float INPUT_FOCUS_INNER_ALPHA = 0.22f;
+	// 表面亮度对光晕的压暗比例：同一份 alpha 压在白卡上比压在深色卡上亮一档，
+	// 最亮表面压到 55%。深色主题几乎不受影响。
+	inline constexpr float LIGHT_SURFACE_DIM = 0.45f;
+	// 焦点安全裁剪要为光晕放行的最大距离：卡片内容区裁剪按它外扩，
+	// 否则光晕会在卡片内被切成一条直边；外扩后仍与卡片矩形取交集，永远不出卡。
+	inline constexpr float FOCUS_CLIP_ALLOWANCE = INPUT_FOCUS_SPREAD_MAX;
+
+	// 光晕宽度：按外壳高度取比例后夹取，调用点不再自己算像素。
+	inline constexpr float InputFocusSpread(const float ShellHeight)
+	{
+		return std::clamp(std::max(0.0f, ShellHeight) * INPUT_FOCUS_SPREAD_RATIO, INPUT_FOCUS_SPREAD_MIN, INPUT_FOCUS_SPREAD_MAX);
+	}
+} // namespace ui_token::glow
+
 namespace ui_token::spacing
 {
 	inline constexpr float XS = 4.0f;

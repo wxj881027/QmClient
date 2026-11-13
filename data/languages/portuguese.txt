@@ -349,6 +349,12 @@
 ?!Stuck keys!?
 == ?!Teclas premidas!?
 
+Enable focus glow
+== Ativar brilho de foco
+
+Show an accent glow around the focused input field
+== Mostrar um brilho na cor de destaque à volta do campo de entrada em foco
+
 []
 [%s] %s (Map: %s, Time: %s)
 == [%s] %s (mapa: %s, hora: %s)

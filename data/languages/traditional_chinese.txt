@@ -349,6 +349,12 @@
 ?!Stuck keys!?
 == ?!卡鍵!?
 
+Enable focus glow
+== 啟用聚焦光暈
+
+Show an accent glow around the focused input field
+== 為聚焦的輸入框顯示強調色光暈
+
 []
 [%s] %s (Map: %s, Time: %s)
 == [%s] %s（地圖：%s，時間：%s）

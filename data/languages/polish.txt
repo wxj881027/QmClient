@@ -349,6 +349,12 @@
 ?!Stuck keys!?
 == ?!Przytrzymane klawisze!?
 
+Enable focus glow
+== Włącz poświatę fokusu
+
+Show an accent glow around the focused input field
+== Pokazuj poświatę w kolorze akcentu wokół aktywnego pola tekstowego
+
 []
 [%s] %s (Map: %s, Time: %s)
 == [%s] %s (mapa: %s, czas: %s)

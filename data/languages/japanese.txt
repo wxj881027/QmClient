@@ -349,6 +349,12 @@
 ?!Stuck keys!?
 == ?!押しっぱなし!?
 
+Enable focus glow
+== フォーカスグローを有効化
+
+Show an accent glow around the focused input field
+== フォーカス中の入力欄にアクセント色のグローを表示
+
 []
 [%s] %s (Map: %s, Time: %s)
 == [%s] %s（マップ: %s、時間: %s）

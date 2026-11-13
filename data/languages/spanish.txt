@@ -349,6 +349,12 @@
 ?!Stuck keys!?
 == ?!Teclas mantenidas!?
 
+Enable focus glow
+== Activar resplandor de foco
+
+Show an accent glow around the focused input field
+== Mostrar un resplandor del color de acento alrededor del campo de entrada enfocado
+
 []
 [%s] %s (Map: %s, Time: %s)
 == [%s] %s (Mapa: %s, hora: %s)

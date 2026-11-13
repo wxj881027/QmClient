@@ -84,7 +84,7 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 
 - 定义：圆角按尺寸与曲线档推导，表面统一走同一个绘制入口，描边与光晕只是参数。
 - 唯一实现：`DrawRoundedSurface(...)`、`DrawRoundedSurfaceGlow(...)`、`ResolveRoundedSurfacePlan(...)`、`ResolveRoundedSurfaceCornerRadii(...)`、`QmCornerSmoothingForCurve` / `QmEffectiveCornerSmoothing`（`src/game/client/QmUi/UiSurface.h`、`UiSurface.cpp`）；圆角档 `ui_token::radius::*`、列表档 `ui_token::list::RowRadius(H)` 与 `ContainerRadius(W,H)`。
-- 禁止的反面写法：用 `Row.Draw(Color, CORNER_ALL, 5.0f)` 写死圆角；自己按 `min(w,h)/2` 算胶囊；两套描边宽度并存。
+- 禁止的反面写法：用 `Row.Draw(Color, CORNER_ALL, 5.0f)` 写死圆角；自己按 `min(w,h)/2` 算胶囊；两套描边宽度并存；用「矩形放大 + 半径加宽」手拼光晕。
 
 ### 2.6 动效运行时（animation runtime）
 
@@ -187,9 +187,9 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 
 ### 3.9 输入框（Input field）
 
-- 定义：单行输入是胶囊、多行保持方角；聚焦光晕由 token 推导。
+- 定义：单行输入是胶囊、多行保持方角；聚焦光晕由 token 推导，开关 `qm_ui_focus_glow` 只关光晕、不关焦点描边与文本焦点。
 - 唯一实现：`ui_widget::InputField` / `ReadOnlyTextField` / `PasswordField` / `IntegerField`（`src/game/client/QmUi/UiForms.h`）、`ResolveInputFieldLayout`、`ResolveInputCapsuleRadius`、`ResolveInputFocusGlowLayers`、`ResolveInlineTrailingTextLayout`；光晕 `ui_token::glow::*`。
-- 禁止的反面写法：直接用 `CLineInput` 自绘外壳；单行输入写成方角；聚焦描边跟随强调色之外的第四种颜色。
+- 禁止的反面写法：直接用 `CLineInput` 自绘外壳；单行输入写成方角；聚焦描边跟随强调色之外的第四种颜色；给光晕再开一条颜色配置；用强调色不透明度冒充光晕开关。
 
 ### 3.10 开关（Toggle）
 

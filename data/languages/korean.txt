@@ -349,6 +349,12 @@
 ?!Stuck keys!?
 == ?!누른 키!?
 
+Enable focus glow
+== 포커스 광채 사용
+
+Show an accent glow around the focused input field
+== 포커스된 입력란에 강조색 광채를 표시
+
 []
 [%s] %s (Map: %s, Time: %s)
 == [%s] %s (맵: %s, 시간: %s)

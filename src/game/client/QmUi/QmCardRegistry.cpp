@@ -215,7 +215,7 @@ namespace qm_card_registry
 			{"qm:skin_appearance", "tee", false, "Tee appearance", "Tee外观 tee waiguan 皮肤描边 pifu miaobian skin outline 边缘 bianyuan 颜色 yanse 粗细 cuxi 透明度 toumingdu 循环色调 xunhuan sediao hue 速度 sudu 分身 fenshen dummy 表情阴影 biaoqing yinying emoticon shadow 表情弹射时长 tanshe shichang projectile duration 皮肤切换 pifu qiehuan skin transition animation 换皮 huanpi 动画 donghua 锤中偷皮 chuizhong toupi hammer skin steal visual", "Configure Tee appearance and skins"},
 			{"deck:tee7-editor", "tee7", true, "Skin", "tee sixup skin editor", "Edit individual Tee 7 skin parts"},
 			{"deck:graphics-display", "graphics", false, Localizable("Graphics display"), "graphics display monitor window", "Window and monitor"},
-			{"deck:graphics-visual", "graphics", false, Localizable("Visual"), "graphics visual rendering card appearance settings card border corner segments rainbow title capsule ends silky plain 胶囊 端头 圆角曲线 曲率", "Rendering options"},
+			{"deck:graphics-visual", "graphics", false, Localizable("Visual"), "graphics visual rendering card appearance settings card border corner segments rainbow title capsule ends silky plain 胶囊 端头 圆角曲线 曲率 focus glow input halo 聚焦光晕 输入框光晕 focus glow input halo 聚焦光晕 输入框光晕", "Rendering options"},
 			{"deck:graphics-icons", "graphics", false, Localizable("Icons"), "graphics UI icon color white black weight regular bold phosphor", "Configure UI icon appearance"},
 			{"deck:graphics-modes", "graphics", false, Localizable("Display modes"), "display modes graphics resolutions", "Available resolutions"},
 			{"deck:graphics-interaction", "graphics", false, Localizable("Interface animations"), "interface ui motion animations focus rainbow", "Motion and focus feedback"},
