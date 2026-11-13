@@ -6677,7 +6677,7 @@ void CHud::RenderSpectatorHud()
 	const float SpectatorHudHeight = QmUiMobilePlatform() ? 28.0f : 15.0f;
 	float BoundsTop = AdjustedHeight - SpectatorHudHeight;
 	float BoundsBottom = AdjustedHeight;
-	const bool ShowAutoTag = !GameClient()->m_RankGhost.IsViewModeActive() && Client()->State() != IClient::STATE_DEMOPLAYBACK &&
+	const bool ShowAutoTag = !GameClient()->ReplaySessionStatus().ViewMode() && Client()->State() != IClient::STATE_DEMOPLAYBACK &&
 				 GameClient()->m_Camera.SpectatingPlayer() &&
 				 GameClient()->m_Camera.CanUseAutoSpecCamera() &&
 				 g_Config.m_ClSpecAutoSync;
@@ -6688,7 +6688,7 @@ void CHud::RenderSpectatorHud()
 	}
 	// draw the text
 	char aBuf[128];
-	if(GameClient()->m_RankGhost.IsViewModeActive())
+	if(GameClient()->ReplaySessionStatus().ViewMode())
 	{
 		const auto &Replay = GameClient()->m_RankGhost;
 		if(Replay.ViewCameraMode() == CRankGhost::EViewCameraMode::ALL_MEMBERS)
@@ -7062,7 +7062,7 @@ void CHud::OnRender()
 	const bool VideoRendering = false;
 #endif
 	// 回放/导出走独立显示选项；其余情况沿用 cl_showhud / cl_video_showhud。
-	const auto DisplaySettings = qm_demo_display::Resolve(g_Config, Client()->State() == IClient::STATE_DEMOPLAYBACK || GameClient()->m_RankGhost.IsViewModeActive(), VideoRendering);
+	const auto DisplaySettings = qm_demo_display::Resolve(g_Config, Client()->State() == IClient::STATE_DEMOPLAYBACK || GameClient()->ReplaySessionStatus().ViewMode(), VideoRendering);
 	const bool MainHudVisible = DisplaySettings.m_Hud;
 	const bool RenderDemoOnly = DisplaySettings.m_RenderDemoOnly;
 	const bool FocusSpectatorHudVisible = !RenderDemoOnly && ShouldRenderFocusSpectatorHud(
@@ -7070,7 +7070,7 @@ void CHud::OnRender()
 									 g_Config.m_ClShowhudSpectator != 0,
 									 MainHudVisible,
 									 GetQmFocusModeDecisions().m_HideHud);
-	const bool LocalCharacterHudVisible = !GameClient()->m_RankGhost.IsViewModeActive() && GameClient()->m_Snap.m_pLocalCharacter &&
+	const bool LocalCharacterHudVisible = !GameClient()->ReplaySessionStatus().ViewMode() && GameClient()->m_Snap.m_pLocalCharacter &&
 					      !GameClient()->m_Snap.m_SpecInfo.m_Active &&
 					      !(GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_GAMEOVER);
 	if(MainHudVisible)
@@ -7107,9 +7107,9 @@ void CHud::OnRender()
 			}
 			RenderJumpHint();
 		}
-		else if(GameClient()->m_Snap.m_SpecInfo.m_Active || GameClient()->m_RankGhost.IsViewModeActive())
+		else if(GameClient()->m_Snap.m_SpecInfo.m_Active || GameClient()->ReplaySessionStatus().ViewMode())
 		{
-			const int SpectatorId = !GameClient()->m_RankGhost.IsViewModeActive() && GameClient()->m_Snap.m_SpecInfo.m_Active ? GameClient()->m_Snap.m_SpecInfo.m_SpectatorId : SPEC_FREEVIEW;
+			const int SpectatorId = !GameClient()->ReplaySessionStatus().ViewMode() && GameClient()->m_Snap.m_SpecInfo.m_Active ? GameClient()->m_Snap.m_SpecInfo.m_SpectatorId : SPEC_FREEVIEW;
 			if(SpectatorId != SPEC_FREEVIEW && g_Config.m_ClShowhudHealthAmmo)
 			{
 				float HudMainHeight = 0.0f;
@@ -7158,7 +7158,7 @@ void CHud::OnRender()
 			RenderLegacyMediaInfo();
 		}
 		RenderLyricsIsland();
-		if(LocalCharacterHudVisible || GameClient()->m_RankGhost.IsViewModeActive())
+		if(LocalCharacterHudVisible || GameClient()->ReplaySessionStatus().ViewMode())
 			RenderDDRaceEffects();
 		RenderGoresDrownBoard();
 		if(Client()->State() != IClient::STATE_DEMOPLAYBACK)

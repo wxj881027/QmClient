@@ -18,7 +18,7 @@ static vec2 DirectionTo(vec2 Src, vec2 Dst)
 
 void CPlayerIndicator::OnRender()
 {
-	if(GameClient()->m_RankGhost.IsViewModeActive())
+	if(GameClient()->ReplaySessionStatus().ViewMode())
 		return;
 	if(g_Config.m_QmPlayerIndicator != 1)
 		return;

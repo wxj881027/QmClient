@@ -342,9 +342,9 @@ void CMenus::RenderDemoDisplaySettings(CUIRect View, bool Enabled, bool WithTogg
 	const char *apDirection[] = {Localize("None", "Show players' key presses"), Localize("Others", "Show players' key presses"), Localize("All", "Show players' key presses"), Localize("Own", "Show players' key presses")};
 	Segments(Localize("Show key presses"), &g_Config.m_QmDemoShowDirection, apDirection, std::size(apDirection), s_aDirectionButtons);
 	const char *apStrength[] = {Localize("Off"), Localize("Icons"), Localize("Icon and number")};
-	Segments(Localize("Strong Weak Hook"), &g_Config.m_QmDemoShowStrongWeak, apStrength, std::size(apStrength), s_aStrongWeakButtons, !GameClient()->m_RankGhost.IsViewModeActive());
+	Segments(Localize("Strong Weak Hook"), &g_Config.m_QmDemoShowStrongWeak, apStrength, std::size(apStrength), s_aStrongWeakButtons, !GameClient()->ReplaySessionStatus().ViewMode());
 	const char *apScope[] = {Localize("Self"), Localize("Others"), Localize("Strong hook"), Localize("Weak hook"), Localize("All")};
-	Segments(Localize("Hook strength scope"), &g_Config.m_QmDemoStrongWeakScope, apScope, std::size(apScope), s_aScopeButtons, !GameClient()->m_RankGhost.IsViewModeActive());
+	Segments(Localize("Hook strength scope"), &g_Config.m_QmDemoStrongWeakScope, apScope, std::size(apScope), s_aScopeButtons, !GameClient()->ReplaySessionStatus().ViewMode());
 
 	// 渲染回放弹窗的 HUD 与聊天开关由主区提供，显示分组内不重复绘制。
 	if(!WithToggles)
@@ -368,7 +368,7 @@ void CMenus::RenderDemoDisplaySettings(CUIRect View, bool Enabled, bool WithTogg
 		if(ui_widget::Toggle(Context, pValue, &Value, Switch, Enabled))
 			*pValue = Value;
 	};
-	const auto Bindings = qm_demo_display::ConfigBindings(g_Config, GameClient()->m_RankGhost.IsViewModeActive());
+	const auto Bindings = qm_demo_display::ConfigBindings(g_Config, GameClient()->ReplaySessionStatus().ViewMode());
 	Toggle(Hud, Localize("Show ingame HUD"), Bindings.m_pHud);
 	Toggle(Chat, Localize("Show chat"), Bindings.m_pChat);
 }
@@ -1069,17 +1069,17 @@ bool CMenus::DemoFilterChat(const void *pData, int Size, void *pUser)
 
 IDemoPlayer *CMenus::PlaybackPlayer() const
 {
-	return GameClient()->m_RankGhost.IsViewModeActive() ? GameClient()->m_RankGhost.ViewPlayer() : DemoPlayer();
+	return GameClient()->ReplaySessionStatus().ViewMode() ? GameClient()->m_RankGhost.ViewPlayer() : DemoPlayer();
 }
 
 bool CMenus::PlaybackShortcutsActive() const
 {
-	return !GameClient()->m_GameConsole.IsActive() && !GameClient()->m_Spectator.IsEditingTeleNumber() && m_DemoPlayerState == DEMOPLAYER_NONE && g_Config.m_ClDemoKeyboardShortcuts && !Ui()->IsPopupOpen() && !GameClient()->m_Chat.IsActive() && (!GameClient()->m_RankGhost.IsViewModeActive() || !m_MenuActive) && !GameClient()->m_Spectator.IsActive() && !GameClient()->m_HudEditor.IsActive();
+	return !GameClient()->m_GameConsole.IsActive() && !GameClient()->m_Spectator.IsEditingTeleNumber() && m_DemoPlayerState == DEMOPLAYER_NONE && g_Config.m_ClDemoKeyboardShortcuts && !Ui()->IsPopupOpen() && !GameClient()->m_Chat.IsActive() && (!GameClient()->ReplaySessionStatus().ViewMode() || !m_MenuActive) && !GameClient()->m_Spectator.IsActive() && !GameClient()->m_HudEditor.IsActive();
 }
 
 bool CMenus::ClaimOnlineReplaySpectatorBind(int Key)
 {
-	if(!GameClient()->m_RankGhost.IsViewModeActive() || GameClient()->m_RankGhost.ViewCameraMode() != CRankGhost::EViewCameraMode::FREE ||
+	if(!GameClient()->ReplaySessionStatus().ViewMode() || GameClient()->m_RankGhost.ViewCameraMode() != CRankGhost::EViewCameraMode::FREE ||
 		m_MenuActive || OnlineReplayPopupActive() || Ui()->IsPopupOpen() || GameClient()->m_GameConsole.IsActive() || GameClient()->m_Chat.IsActive() || GameClient()->m_HudEditor.IsActive() ||
 		Key <= KEY_UNKNOWN || Key >= KEY_LAST)
 		return false;
@@ -1098,7 +1098,7 @@ void CMenus::HandleDemoSeeking(float PositionToSeek, float TimeToSeek, int TickT
 	if((PositionToSeek >= 0.0f && PositionToSeek <= 1.0f) || TimeToSeek != 0.0f || TickToSeek >= 0)
 	{
 		m_DemoCutPreview.Reset();
-		if(GameClient()->m_RankGhost.IsViewModeActive())
+		if(GameClient()->ReplaySessionStatus().ViewMode())
 		{
 			if(TickToSeek >= 0)
 				PlaybackPlayer()->SetPos(TickToSeek);
@@ -1147,7 +1147,7 @@ bool CMenus::DemoSeekToTick(int Tick)
 void CMenus::DemoSeekTick(IDemoPlayer::ETickOffset TickOffset)
 {
 	m_DemoCutPreview.Reset();
-	if(GameClient()->m_RankGhost.IsViewModeActive())
+	if(GameClient()->ReplaySessionStatus().ViewMode())
 	{
 		PlaybackPlayer()->SeekTick(TickOffset);
 		PlaybackPlayer()->Pause();
@@ -1216,7 +1216,7 @@ void CMenus::SyncDemoBrowserDirectory()
 void CMenus::RenderDemoPlayer(CUIRect MainView)
 {
 	SyncDemoBrowserDirectory();
-	const bool OnlineReplay = GameClient()->m_RankGhost.IsViewModeActive();
+	const bool OnlineReplay = GameClient()->ReplaySessionStatus().ViewMode();
 	const bool ControlsActive = OnlineReplay ? GameClient()->m_Spectator.PlaybackControlsActive() : m_MenuActive;
 	const uint64_t Generation = OnlineReplay ? GameClient()->m_RankGhost.ViewGeneration() : 0;
 	if(m_DemoControlsWereOnline != OnlineReplay || m_OnlineReplayControlsGeneration != Generation)
@@ -2367,7 +2367,7 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 	}
 #if defined(CONF_VIDEORECORDER)
 	static int s_RenderCut = 0;
-	if(GameClient()->m_RankGhost.IsViewModeActive())
+	if(GameClient()->ReplaySessionStatus().ViewMode())
 	{
 		const ColorRGBA PreviousColor = TextRender()->GetTextColor();
 		TextRender()->TextColor(PreviousColor.WithMultipliedAlpha(0.4f));
@@ -2482,7 +2482,7 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 		for(const auto &Segment : vExportSegments)
 			vDemoSliceSegments.push_back({Segment.m_StartTick, Segment.m_EndTick});
 		static CUi::SMessagePopupContext s_MessagePopupContext;
-		const bool Exported = GameClient()->m_RankGhost.IsViewModeActive() ?
+		const bool Exported = GameClient()->ReplaySessionStatus().ViewMode() ?
 					      GameClient()->m_RankGhost.ExportViewCut(aPath, vDemoSliceSegments, CMenus::DemoFilterChat, &s_RemoveChat) :
 					      Client()->DemoSlice(aPath, vDemoSliceSegments, CMenus::DemoFilterChat, &s_RemoveChat);
 		if(!Exported)
@@ -2492,7 +2492,7 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 			Ui()->ShowPopupMessage(Ui()->MouseX(), ButtonBar.y - 5.0f, &s_MessagePopupContext);
 			return;
 		}
-		if(!GameClient()->m_RankGhost.IsViewModeActive() && !GameClient()->m_DemoCamera.ExportCut(aPath, vDemoSliceSegments))
+		if(!GameClient()->ReplaySessionStatus().ViewMode() && !GameClient()->m_DemoCamera.ExportCut(aPath, vDemoSliceSegments))
 		{
 			s_MessagePopupContext.ErrorColor();
 			str_copy(s_MessagePopupContext.m_aMessage, Localize("Demo cut saved, but its camera path could not be saved"));
@@ -2505,7 +2505,7 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 		m_DemoCutPreview.Reset();
 		m_DemoPlayerState = DEMOPLAYER_NONE;
 #if defined(CONF_VIDEORECORDER)
-		if(s_RenderCut && !GameClient()->m_RankGhost.IsViewModeActive())
+		if(s_RenderCut && !GameClient()->ReplaySessionStatus().ViewMode())
 		{
 			m_HasPendingDemoRenderSource = true;
 			str_copy(m_aPendingDemoRenderFolder, m_aCurrentDemoFolder, sizeof(m_aPendingDemoRenderFolder));

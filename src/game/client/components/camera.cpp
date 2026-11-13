@@ -147,7 +147,7 @@ float CCamera::MinZoomLevel()
 
 bool CCamera::GhostMultiViewZoomActive() const
 {
-	return GameClient()->m_RankGhost.IsViewModeActive() &&
+	return GameClient()->ReplaySessionStatus().ViewMode() &&
 	       GameClient()->m_RankGhost.ViewCameraMode() == CRankGhost::EViewCameraMode::ALL_MEMBERS;
 }
 

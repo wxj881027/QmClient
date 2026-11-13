@@ -560,6 +560,18 @@ const char *CGameClient::DDNetVersionStr() const { return m_aDDNetVersionStr; }
 int CGameClient::ClientVersion7() const { return CLIENT_VERSION7; }
 const char *CGameClient::GetItemName(int Type) const { return m_NetObjHandler.GetObjName(Type); }
 
+qmclient::replay::SReplaySessionStatus CGameClient::ReplaySessionStatus() const
+{
+	qmclient::replay::SReplaySessionInputs Inputs;
+	Inputs.m_ViewModeActive = m_RankGhost.IsViewModeActive();
+	Inputs.m_ManualActive = m_Ghost.ManualModeActive();
+	Inputs.m_ManualPlaying = m_Ghost.ManualPlaying();
+	Inputs.m_ManualTick = m_Ghost.ManualPlaybackTick();
+	Inputs.m_ManualEndTick = m_Ghost.ManualEndTick();
+	Inputs.m_ManualSpeed = m_Ghost.ManualSpeed();
+	return qmclient::replay::QmResolveReplaySessionStatus(Inputs);
+}
+
 bool CGameClient::CanRunRuntimeConfigConchainEffects() const
 {
 	return m_pClient != nullptr && m_pClient->GlobalTime();

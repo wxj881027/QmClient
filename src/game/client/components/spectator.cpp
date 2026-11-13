@@ -86,7 +86,7 @@ namespace
 
 bool CSpectator::CanChangeSpectatorId()
 {
-	if(GameClient()->m_RankGhost.IsViewModeActive())
+	if(GameClient()->ReplaySessionStatus().ViewMode())
 		return true;
 	// don't change SpectatorId when not spectating
 	if(!GameClient()->m_Snap.m_SpecInfo.m_Active)
@@ -101,7 +101,7 @@ bool CSpectator::CanChangeSpectatorId()
 
 void CSpectator::SpectateNext(bool Reverse)
 {
-	if(GameClient()->m_RankGhost.IsViewModeActive())
+	if(GameClient()->ReplaySessionStatus().ViewMode())
 	{
 		const int Count = GameClient()->m_RankGhost.ViewMemberCount();
 		if(Count > 0)
@@ -178,7 +178,7 @@ void CSpectator::ConKeySpectator(IConsole::IResult *pResult, void *pUserData)
 
 	// QmClient：影子查看模式下同样允许打开选择器（成员面板统一入口）
 	if(pSelf->GameClient()->m_Snap.m_SpecInfo.m_Active || pSelf->Client()->State() == IClient::STATE_DEMOPLAYBACK ||
-		pSelf->GameClient()->m_RankGhost.IsViewModeActive())
+		pSelf->GameClient()->ReplaySessionStatus().ViewMode())
 		pSelf->m_Active = pResult->GetInteger(0) != 0;
 	else
 		pSelf->m_Active = false;
@@ -223,7 +223,7 @@ void CSpectator::ConMultiView(IConsole::IResult *pResult, void *pUserData)
 {
 	CSpectator *pSelf = (CSpectator *)pUserData;
 	int Input = pResult->GetInteger(0);
-	if(pSelf->GameClient()->m_RankGhost.IsViewModeActive())
+	if(pSelf->GameClient()->ReplaySessionStatus().ViewMode())
 	{
 		if(Input >= 0)
 			pSelf->GameClient()->m_RankGhost.ViewToggleMultiMember(Input);
@@ -258,7 +258,7 @@ void CSpectator::OnConsoleInit()
 // 否则它们的光标会失灵；控制台与聊天排在前面，会先一步吞掉增量，无需在此判断
 bool CSpectator::GhostFreeCameraCanPan() const
 {
-	if(!GameClient()->m_RankGhost.IsViewModeActive() ||
+	if(!GameClient()->ReplaySessionStatus().ViewMode() ||
 		GameClient()->m_RankGhost.ViewCameraMode() != CRankGhost::EViewCameraMode::FREE ||
 		Client()->State() == IClient::STATE_DEMOPLAYBACK)
 		return false;
@@ -271,7 +271,7 @@ bool CSpectator::GhostFreeCameraCanPan() const
 // 镜头或选择器。与 demo 播放一致：UI 只在面板出现时才占用鼠标，屏幕上也只有一个光标。
 bool CSpectator::PlaybackControlsActive() const
 {
-	if(!GameClient()->m_RankGhost.IsViewModeActive() || Client()->State() == IClient::STATE_DEMOPLAYBACK)
+	if(!GameClient()->ReplaySessionStatus().ViewMode() || Client()->State() == IClient::STATE_DEMOPLAYBACK)
 		return false;
 	if(GameClient()->m_Menus.IsActive() || GameClient()->m_GameConsole.IsActive() || GameClient()->m_HudEditor.IsActive())
 		return false;
@@ -281,7 +281,7 @@ bool CSpectator::PlaybackControlsActive() const
 
 bool CSpectator::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
 {
-	const bool ViewMode = GameClient()->m_RankGhost.IsViewModeActive();
+	const bool ViewMode = GameClient()->ReplaySessionStatus().ViewMode();
 	const bool GhostFreeCamera = GhostFreeCameraCanPan();
 	if(ViewMode && (GameClient()->m_Menus.IsActive() || GameClient()->m_GameConsole.IsActive() || GameClient()->m_Chat.IsActive()))
 		return false;
@@ -372,7 +372,7 @@ bool CSpectator::OnInput(const IInput::CEvent &Event)
 	// 控制层与菜单分别处理 Esc，播放会话保持不变。
 	if(Event.m_Key == KEY_ESCAPE && (Event.m_Flags & IInput::FLAG_RELEASE))
 		m_ReplayUi.ReleaseEscape();
-	if(GameClient()->m_RankGhost.IsViewModeActive() && !GameClient()->m_GameConsole.IsActive() && !GameClient()->m_Chat.IsActive() && !GameClient()->m_Menus.IsActive() && !Ui()->IsPopupOpen() && !GameClient()->m_Menus.OnlineReplayPopupActive())
+	if(GameClient()->ReplaySessionStatus().ViewMode() && !GameClient()->m_GameConsole.IsActive() && !GameClient()->m_Chat.IsActive() && !GameClient()->m_Menus.IsActive() && !Ui()->IsPopupOpen() && !GameClient()->m_Menus.OnlineReplayPopupActive())
 	{
 		if((Event.m_Flags & IInput::FLAG_PRESS) && Event.m_Key == KEY_ESCAPE)
 			return m_ReplayUi.PressEscape(Client()->LocalTime()) != COnlineReplayUiState::EAction::OPEN_MENU;
@@ -380,7 +380,7 @@ bool CSpectator::OnInput(const IInput::CEvent &Event)
 	else
 		m_ReplayUi.CancelEscape();
 
-	if(!GameClient()->m_RankGhost.IsViewModeActive() && g_Config.m_ClSpectatorMouseclicks)
+	if(!GameClient()->ReplaySessionStatus().ViewMode() && g_Config.m_ClSpectatorMouseclicks)
 	{
 		if(GameClient()->m_Snap.m_SpecInfo.m_Active && !IsActive() && !GameClient()->m_MultiViewActivated &&
 			!Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive() && !GameClient()->m_Menus.IsActive())
@@ -396,7 +396,7 @@ bool CSpectator::OnInput(const IInput::CEvent &Event)
 		}
 	}
 
-	if(!GameClient()->m_RankGhost.IsViewModeActive() && GameClient()->m_Camera.SpectatingPlayer() && GameClient()->m_Camera.CanUseAutoSpecCamera())
+	if(!GameClient()->ReplaySessionStatus().ViewMode() && GameClient()->m_Camera.SpectatingPlayer() && GameClient()->m_Camera.CanUseAutoSpecCamera())
 	{
 		if(Event.m_Flags & IInput::FLAG_PRESS && Event.m_Key == KEY_MOUSE_2)
 		{
@@ -411,7 +411,7 @@ bool CSpectator::OnInput(const IInput::CEvent &Event)
 
 	// QmClient：查看模式下鼠标归 UI 光标时吞掉鼠标键，点击控制条不再误触发射击/钩爪。
 	// 鼠标事件交给共用播放 HUD，滚轮保持普通 demo 的倍速语义。
-	if(PlaybackControlsActive() || (GameClient()->m_RankGhost.IsViewModeActive() && GameClient()->m_Menus.OnlineReplayPopupActive()))
+	if(PlaybackControlsActive() || (GameClient()->ReplaySessionStatus().ViewMode() && GameClient()->m_Menus.OnlineReplayPopupActive()))
 	{
 		const bool Consumed = Ui()->OnInput(Event);
 		if(Consumed || (Event.m_Key >= KEY_MOUSE_1 && Event.m_Key <= KEY_MOUSE_WHEEL_DOWN))
@@ -419,7 +419,7 @@ bool CSpectator::OnInput(const IInput::CEvent &Event)
 	}
 
 	// 共用播放快捷键先取得输入，避免同一方向键同时触发旁观绑定。
-	if(GameClient()->m_RankGhost.IsViewModeActive() && GameClient()->m_Menus.PlaybackShortcutsActive())
+	if(GameClient()->ReplaySessionStatus().ViewMode() && GameClient()->m_Menus.PlaybackShortcutsActive())
 	{
 		switch(Event.m_Key)
 		{
@@ -473,7 +473,7 @@ void CSpectator::OnRender()
 		return;
 	}
 
-	const bool ViewModeActive = GameClient()->m_RankGhost.IsViewModeActive();
+	const bool ViewModeActive = GameClient()->ReplaySessionStatus().ViewMode();
 	if(ViewModeActive && (GameClient()->m_Menus.IsActive() || GameClient()->m_GameConsole.IsActive() || GameClient()->m_Chat.IsActive() || GameClient()->m_Menus.OnlineReplayPopupActive()))
 	{
 		m_Active = false;
@@ -1251,7 +1251,7 @@ void CSpectator::OnReset()
 
 void CSpectator::Spectate(int SpectatorId)
 {
-	if(GameClient()->m_RankGhost.IsViewModeActive())
+	if(GameClient()->ReplaySessionStatus().ViewMode())
 	{
 		using EMode = CRankGhost::EViewCameraMode;
 		if(SpectatorId == SPEC_FREEVIEW)
@@ -1306,7 +1306,7 @@ void CSpectator::Spectate(int SpectatorId)
 
 void CSpectator::SpectateClosest()
 {
-	if(GameClient()->m_RankGhost.IsViewModeActive())
+	if(GameClient()->ReplaySessionStatus().ViewMode())
 	{
 		int Closest = -1;
 		float ClosestDistance = std::numeric_limits<float>::max();

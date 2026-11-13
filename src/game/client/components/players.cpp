@@ -725,7 +725,7 @@ void CPlayers::RenderHook(
 	{
 		// QmClient: 查看模式（独立时间线）下回放是主内容，用不透明渲染；
 		// 跑图模式保持半透明参照物语义
-		Alpha = GameClient()->m_Ghost.ManualModeActive() ? 1.0f : g_Config.m_ClRaceGhostAlpha / 100.0f;
+		Alpha = GameClient()->ReplaySessionStatus().ManualActive() ? 1.0f : g_Config.m_ClRaceGhostAlpha / 100.0f;
 	}
 	if(ClientId >= 0 && GameClient()->m_FastPractice.Enabled() && !GameClient()->m_Snap.m_SpecInfo.m_Active && !GameClient()->m_FastPractice.IsPracticeParticipant(ClientId))
 		Alpha = std::min(Alpha, 0.5f);
@@ -824,7 +824,7 @@ float CPlayers::PlayerRenderAlpha(int ClientId) const
 	if(ClientId == -2)
 	{
 		// QmClient: 查看模式下回放是主内容，用不透明渲染；跑图模式保持半透明参照物语义。
-		Alpha = GameClient()->m_Ghost.ManualModeActive() ? 1.0f : g_Config.m_ClRaceGhostAlpha / 100.0f;
+		Alpha = GameClient()->ReplaySessionStatus().ManualActive() ? 1.0f : g_Config.m_ClRaceGhostAlpha / 100.0f;
 	}
 	if(ClientId >= 0 && GameClient()->m_FastPractice.Enabled() && !GameClient()->m_Snap.m_SpecInfo.m_Active && !GameClient()->m_FastPractice.IsPracticeParticipant(ClientId))
 		Alpha = std::min(Alpha, 0.5f);
@@ -1960,7 +1960,7 @@ bool CPlayers::ShouldRenderWeaponAnimation(int ClientId) const
 
 void CPlayers::OnRender()
 {
-	if(GameClient()->m_RankGhost.IsViewModeActive())
+	if(GameClient()->ReplaySessionStatus().ViewMode())
 		return;
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		return;

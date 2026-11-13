@@ -3017,7 +3017,7 @@ void CMenus::RenderRankDemo(CUIRect MainView)
 		Status.VSplitRight(5.0f, &Status, nullptr);
 		Status.VSplitRight(120.0f, &Status, &Button);
 		static CButtonContainer s_ViewButton;
-		const bool ViewActiveHere = GhostActive && RankGhost.IsViewModeActive();
+		const bool ViewActiveHere = GhostActive && GameClient()->ReplaySessionStatus().ViewMode();
 		if(DoIngameMenuButton(PAGE_RANK_DEMO, ViewActiveHere ? "ingame-rank-demo-view-off" : "ingame-rank-demo-view-on", &s_ViewButton,
 			   ViewActiveHere ? Localize("Exit replay view") : Localize("View replay"), 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, 5.0f, TaskBusy && !ViewActiveHere))
 		{

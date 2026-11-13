@@ -97,6 +97,7 @@
 #include "components/qmclient/qm_hook_coll_spatial_index.h"
 #include "components/qmclient/qmclient.h"
 #include "components/qmclient/rank_ghost.h"
+#include "components/qmclient/replay_session.h"
 #include "components/qmclient/scripting.h"
 #include "components/qmclient/stutter_diagnostics.h"
 #include "components/qmclient/translate/translate.h"
@@ -345,6 +346,10 @@ public:
 	CInputOverlay m_InputOverlay;
 	CMovingTiles m_MovingTilesBackground = CMovingTiles{false};
 	CMovingTiles m_MovingTilesForeground = CMovingTiles{true};
+
+	// 回放会话的统一查询入口：HUD、相机、菜单只读这一个状态，
+	// 避免各自组合 CGhost::ManualModeActive 与 CRankGhost::IsViewModeActive。
+	qmclient::replay::SReplaySessionStatus ReplaySessionStatus() const;
 
 private:
 	void UpdateQmAxiomPrediction();

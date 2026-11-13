@@ -828,13 +828,13 @@ void CCollisionHitbox::RenderWeaponHitboxes()
 
 	Graphics()->TextureClear();
 	Graphics()->LinesBegin();
-	if(!GameClient()->m_RankGhost.IsViewModeActive() && g_Config.m_QmHitboxShowHammer)
+	if(!GameClient()->ReplaySessionStatus().ViewMode() && g_Config.m_QmHitboxShowHammer)
 		RenderHammerHitboxes();
 	if(g_Config.m_QmHitboxShowProjectiles || g_Config.m_QmHitboxShowFreezeProjectiles)
 		RenderProjectileHitboxes();
 	if(g_Config.m_QmHitboxShowLasers || g_Config.m_QmHitboxShowFreezeLasers)
 		RenderLaserHitboxes();
-	if(!GameClient()->m_RankGhost.IsViewModeActive() && g_Config.m_QmHitboxShowHook)
+	if(!GameClient()->ReplaySessionStatus().ViewMode() && g_Config.m_QmHitboxShowHook)
 		RenderHookHitboxes();
 	Graphics()->LinesEnd();
 }
@@ -846,7 +846,7 @@ void CCollisionHitbox::OnRender()
 
 #if defined(CONF_VIDEORECORDER)
 	// 回放/导出跟随回放显示配置，普通录制跟随 cl_video_showhud，避免碰撞箱被一起录进视频。
-	if(IVideo::Current() && !qm_demo_display::Resolve(g_Config, Client()->State() == IClient::STATE_DEMOPLAYBACK || GameClient()->m_RankGhost.IsViewModeActive(), true).m_Hud)
+	if(IVideo::Current() && !qm_demo_display::Resolve(g_Config, Client()->State() == IClient::STATE_DEMOPLAYBACK || GameClient()->ReplaySessionStatus().ViewMode(), true).m_Hud)
 		return;
 #endif
 
@@ -872,7 +872,7 @@ void CCollisionHitbox::OnRender()
 		RenderTileHitboxes();
 	}
 
-	if(!GameClient()->m_RankGhost.IsViewModeActive() && (LegacyMode || g_Config.m_QmHitboxShowTeeCollision || g_Config.m_QmHitboxShowTeeFreeze || g_Config.m_QmHitboxShowTeeDeath))
+	if(!GameClient()->ReplaySessionStatus().ViewMode() && (LegacyMode || g_Config.m_QmHitboxShowTeeCollision || g_Config.m_QmHitboxShowTeeFreeze || g_Config.m_QmHitboxShowTeeDeath))
 	{
 		// 按 Tee↔Tee、Tee↔Freeze 和 Tee↔Death 语义分别绘制。
 		RenderTeeHitboxes();

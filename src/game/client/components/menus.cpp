@@ -4361,7 +4361,7 @@ void CMenus::Render()
 		m_SettingsCardDeckDisplayState.LeaveSettings();
 
 	CUIRect Screen = *Ui()->Screen();
-	if((Client()->State() != IClient::STATE_DEMOPLAYBACK && !(GameClient()->m_RankGhost.IsViewModeActive() && !IsActive())) || m_Popup != POPUP_NONE)
+	if((Client()->State() != IClient::STATE_DEMOPLAYBACK && !(GameClient()->ReplaySessionStatus().ViewMode() && !IsActive())) || m_Popup != POPUP_NONE)
 	{
 		// 全局安全区 = 统一边距基准：菜单内所有页面到窗口四边的基础距离，
 		// 内部元素（导航胶囊/内容面板）直接对齐安全区边缘，不再叠加额外内缩。
@@ -4597,7 +4597,7 @@ void CMenus::Render()
 		break;
 
 	case IClient::STATE_ONLINE:
-		if(GameClient()->m_RankGhost.IsViewModeActive() && !IsActive())
+		if(GameClient()->ReplaySessionStatus().ViewMode() && !IsActive())
 		{
 			RenderDemoPlayer(Screen);
 			break;
@@ -8546,7 +8546,7 @@ void CMenus::OnRender()
 			}
 			SetActive(true);
 		}
-		else if(Client()->State() != IClient::STATE_DEMOPLAYBACK && !GameClient()->m_RankGhost.IsViewModeActive())
+		else if(Client()->State() != IClient::STATE_DEMOPLAYBACK && !GameClient()->ReplaySessionStatus().ViewMode())
 		{
 			if(!GameClient()->m_GameConsole.IsActive())
 				Ui()->ClearHotkeys();
@@ -8559,7 +8559,7 @@ void CMenus::OnRender()
 	}
 
 	// 在线控制层让出输入时结束拖动，恢复拖动前的播放状态。
-	if(!GameClient()->m_GameConsole.IsActive() && GameClient()->m_RankGhost.IsViewModeActive() && !GameClient()->m_Spectator.PlaybackControlsActive() && Ui()->CheckActiveItem(&m_DemoSeekBarId))
+	if(!GameClient()->m_GameConsole.IsActive() && GameClient()->ReplaySessionStatus().ViewMode() && !GameClient()->m_Spectator.PlaybackControlsActive() && Ui()->CheckActiveItem(&m_DemoSeekBarId))
 	{
 		if(!m_PausedBeforeSeeking)
 			GameClient()->m_RankGhost.ViewPlayer()->Unpause();
@@ -8582,7 +8582,7 @@ void CMenus::OnRender()
 	{
 		// 中断会先清除 UI active；独立结束拖动会话，恢复拖动前的播放状态。
 		m_DemoTouchSeeking = false;
-		if((Client()->State() == IClient::STATE_DEMOPLAYBACK || GameClient()->m_RankGhost.IsViewModeActive()) && !m_PausedBeforeSeeking)
+		if((Client()->State() == IClient::STATE_DEMOPLAYBACK || GameClient()->ReplaySessionStatus().ViewMode()) && !m_PausedBeforeSeeking)
 			PlaybackPlayer()->Unpause();
 		if(Ui()->IsActiveItem(&m_DemoSeekBarId))
 			Ui()->SetActiveItem(nullptr);
@@ -8642,7 +8642,7 @@ void CMenus::OnRender()
 	}
 
 	if(IsActive() || GameClient()->m_Spectator.PlaybackControlsActive() || QmPoseMapPopupOpen() || QmPoseHudActive() ||
-		(GameClient()->m_RankGhost.IsViewModeActive() && OnlineReplayPopupActive()))
+		(GameClient()->ReplaySessionStatus().ViewMode() && OnlineReplayPopupActive()))
 	{
 		CPerfTimer StageTimer;
 		if(IsActive())
