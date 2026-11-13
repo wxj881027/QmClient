@@ -170,16 +170,22 @@ namespace ui_widget
 
 	namespace
 	{
+		// 按钮表面圆角：长条按钮（宽明显大于高）给胶囊端头；接近方形的按钮仍用
+		// 几何档位的小圆角，否则方按钮会被压成圆形。分体按钮的两半底色和共享外框
+		// 必须共用这一个判定：外框若按几何档位另算一次，就会比胶囊填充更方。
+		float ResolveButtonSurfaceRadius(const CUIRect &SurfaceRect, const EUiButtonGeometry Geometry)
+		{
+			return SurfaceRect.w >= SurfaceRect.h * 1.8f ? ui_token::radius::PILL : ResolveUiTextButtonRadius(Geometry);
+		}
+
 		bool DoStyledButton(const IUiContext &Ctx, CButtonContainer *pBtn, const char *pText, const CUIRect &Rect, bool Disabled, EUiButtonRole Role, const int Corners = IGraphics::CORNER_ALL, const bool DrawBorder = true, const EUiButtonGeometry Geometry = EUiButtonGeometry::CONTROL, const CUIRect *pSurfaceRect = nullptr, bool Selected = false)
 		{
 			if(Ctx.m_pUi == nullptr || pBtn == nullptr)
 				return false;
 			SButtonSurfaceOptions Options;
 			Options.m_Role = Role;
-			// 长条按钮（宽明显大于高）给胶囊端头；接近方形的按钮仍用小圆角，
-			// 否则方按钮会被压成圆形。
 			const CUIRect &SurfaceRect = pSurfaceRect != nullptr ? *pSurfaceRect : Rect;
-			Options.m_Radius = SurfaceRect.w >= SurfaceRect.h * 1.8f ? ui_token::radius::PILL : ResolveUiTextButtonRadius(Geometry);
+			Options.m_Radius = ResolveButtonSurfaceRadius(SurfaceRect, Geometry);
 			if(!DrawBorder)
 				Options.m_BorderWidth = 0.0f;
 			Options.m_Corners = Corners;
@@ -247,7 +253,7 @@ namespace ui_widget
 			const SUiTheme &Theme = Ctx.m_pTheme != nullptr ? *Ctx.m_pTheme : Ctx.m_pUi->QmControlTheme();
 			const auto BorderStyle = ResolveUiButtonStyle(EUiButtonRole::SECONDARY, ResolveConfiguredControlSurface(), CUiScopedSurfaceText::CurrentSurface(), Theme, BorderState);
 			const ColorRGBA BorderColor = ResolveActiveButtonBorder(EUiButtonRole::SECONDARY, BorderStyle, BorderState);
-			DrawRoundedSurface(Ctx, Rect, ColorRGBA(), Ctx.m_pUi->ScaleControlAlpha(BorderColor), ResolveUiTextButtonRadius(Geometry), ui_token::feedback::ICON_BORDER_WIDTH);
+			DrawRoundedSurface(Ctx, Rect, ColorRGBA(), Ctx.m_pUi->ScaleControlAlpha(BorderColor), ResolveButtonSurfaceRadius(Rect, Geometry), ui_token::feedback::ICON_BORDER_WIDTH);
 		}
 		Ctx.m_pUi->DoButtonTooltip(pLeft, &Left, pLeftTooltip);
 		Ctx.m_pUi->DoButtonTooltip(pRight, &Right, pRightTooltip);

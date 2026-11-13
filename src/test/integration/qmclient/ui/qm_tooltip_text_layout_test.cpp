@@ -551,7 +551,9 @@ TEST_F(QmTooltipTextLayout, OverlongHintKeepsTheEllipsisOnTheLastVisibleLineInsi
 	EXPECT_EQ(EndCursor.m_GlyphCount, 1);
 	// 省略号落在气泡内、且在屏幕内：不溢出。
 	ASSERT_TRUE(EndCursor.m_HasVisualBoundingBox);
-	EXPECT_LE(EllipsisY + EndCursor.m_VisualBottom, Facts.m_Layout.m_Size.y + 0.001f);
+	// m_VisualBottom 是字形在游标坐标系里的绝对下边缘（创建时已含 EllipsisY），
+	// 不能再加一次游标起点；它落在气泡高度内就说明省略号没有溢出。
+	EXPECT_LE(EndCursor.m_VisualBottom, Facts.m_Layout.m_Size.y + 0.001f);
 }
 
 TEST(QmTooltipFontScale, ConfiguredValueIsTheRenderedFontSize)

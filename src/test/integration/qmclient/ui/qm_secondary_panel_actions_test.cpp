@@ -306,7 +306,9 @@ TEST_F(QmSecondaryPanelActions, SplitAndRegularButtonsSubmitTheSameOuterRadius)
 	ui_widget::SecondaryButton(ui_widget::ControlContext(&m_Ui), &m_Left, "Regular", m_Button, false, EUiButtonGeometry::START_MENU);
 	ASSERT_EQ(Graphics.m_vRoundedSubmissions.size(), 1u);
 	const float Radius = Graphics.m_vRoundedSubmissions[0].m_CornerRadii.x;
-	EXPECT_FLOAT_EQ(Radius, 10.0f);
+	// 宽按钮按胶囊端头绘制：半径取短边一半（像素对齐后允许亚像素偏差），
+	// 不再固定为 START_MENU 的小圆角。分体两半与共享外框都必须跟随同一半径。
+	EXPECT_NEAR(Radius, m_Button.h * 0.5f, 1.0f);
 	Graphics.m_vRoundedSubmissions.clear();
 	ui_widget::SplitActionButton(ui_widget::ControlContext(&m_Ui), &m_Left, "Left", &m_Right, "Right", m_Button, false, false, EUiButtonGeometry::START_MENU);
 	ASSERT_EQ(Graphics.m_vRoundedSubmissions.size(), 3u);
