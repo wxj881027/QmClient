@@ -195,3 +195,28 @@ TEST(QmFastPracticePauseShift, ShiftedEventsDoNotBurstOnTheFirstResumedTick)
 	QmProcessPredictedEvents(vEvents, 140, SERVER_TICK_SPEED, Play);
 	EXPECT_EQ(vPlayed, (std::vector<int>{1}));
 }
+
+TEST(QmFastPracticeRecordFilter, AcceptsVisualAndSoundEventsThatPlaybackWouldShow)
+{
+	// 特效类事件与音效开关无关，总是录制。
+	EXPECT_TRUE(QmShouldRecordPracticeEvent(NETEVENTTYPE_HAMMERHIT, 0, false, false, false, false, false, false));
+	EXPECT_TRUE(QmShouldRecordPracticeEvent(NETEVENTTYPE_EXPLOSION, 0, false, false, false, false, false, false));
+	EXPECT_TRUE(QmShouldRecordPracticeEvent(NETEVENTTYPE_DAMAGEIND, 0, false, false, false, false, false, false));
+	// 世界音效沿用播放侧门控：关掉游戏音效就不录。
+	EXPECT_TRUE(QmShouldRecordPracticeEvent(NETEVENTTYPE_SOUNDWORLD, SOUND_GUN_FIRE, true, true, true, false, true, true));
+	EXPECT_FALSE(QmShouldRecordPracticeEvent(NETEVENTTYPE_SOUNDWORLD, SOUND_GUN_FIRE, false, true, true, false, true, true));
+}
+
+TEST(QmFastPracticeRecordFilter, MapWorldSoundFollowsTheGameSoundSwitch)
+{
+	// 与 DispatchViewEvent 的 MAPSOUNDWORLD 分支一致：只看游戏音效总开关。
+	EXPECT_TRUE(QmShouldRecordPracticeEvent(NETEVENTTYPE_MAPSOUNDWORLD, 3, true, false, false, false, false, false));
+	EXPECT_FALSE(QmShouldRecordPracticeEvent(NETEVENTTYPE_MAPSOUNDWORLD, 3, false, false, false, false, false, false));
+}
+
+TEST(QmFastPracticeRecordFilter, DropsEventTypesTheTimelineReaderWouldReject)
+{
+	EXPECT_FALSE(QmShouldRecordPracticeEvent(NETEVENTTYPE_DEATH, 0, true, true, true, true, true, true));
+	EXPECT_FALSE(QmShouldRecordPracticeEvent(NETEVENTTYPE_SPAWN, 0, true, true, true, true, true, true));
+	EXPECT_FALSE(QmShouldRecordPracticeEvent(9999, 0, true, true, true, true, true, true));
+}

@@ -80,21 +80,10 @@ void CFastPractice::RecordPracticeEvents(CGameWorld &World, int Tick)
 		// 练习画面里不播，也绝不能录进这条分支的回放。
 		if(Event.m_Tick != Tick || Event.m_Handled || Event.m_ServerConfirmed)
 			continue;
-		switch(Event.m_EventId)
-		{
-		case NETEVENTTYPE_HAMMERHIT:
-		case NETEVENTTYPE_EXPLOSION:
-		case NETEVENTTYPE_DAMAGEIND:
-			break;
-		case NETEVENTTYPE_SOUNDWORLD:
-			if(!QmShouldPlayWorldSound(Event.m_ExtraInfo, g_Config.m_SndGame, Focus.m_AirJump.m_PlaySound,
-				   Focus.m_PlayDeathOrSpawnSound, GameClient()->m_GameInfo.m_RaceSounds,
-				   g_Config.m_SndGun, g_Config.m_SndLongPain))
-				continue;
-			break;
-		default:
+		if(!QmShouldRecordPracticeEvent(Event.m_EventId, Event.m_ExtraInfo, g_Config.m_SndGame,
+			   Focus.m_AirJump.m_PlaySound, Focus.m_PlayDeathOrSpawnSound,
+			   GameClient()->m_GameInfo.m_RaceSounds, g_Config.m_SndGun, g_Config.m_SndLongPain))
 			continue;
-		}
 		SLocalActorEvent Local = {};
 		Local.m_Tick = Tick;
 		Local.m_Type = Event.m_EventId;

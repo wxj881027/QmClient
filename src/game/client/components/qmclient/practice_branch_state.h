@@ -6,6 +6,7 @@
 
 #include <generated/protocol.h>
 
+#include <game/client/components/qmclient/world_event_gate.h>
 #include <game/client/prediction/gameworld.h>
 
 #include <algorithm>
@@ -59,6 +60,27 @@ inline void QmNeutralizePracticeInput(CNetObj_PlayerInput &Input)
 	{
 		Input.m_TargetX = 1;
 		Input.m_TargetY = 0;
+	}
+}
+
+// 练习录制的事件过滤：只保留 .qmevt 读取器认识、且播放侧当时确实会发声/画特效
+// 的类型。世界音效与查看模式共用 QmShouldPlayWorldSound；地图世界音效与
+// DispatchViewEvent 一样只看游戏音效总开关。
+inline bool QmShouldRecordPracticeEvent(int EventId, int ExtraInfo, bool SndGame, bool PlayJumpSound,
+	bool PlayDeathOrSpawnSound, bool RaceSounds, bool SndGun, bool SndLongPain)
+{
+	switch(EventId)
+	{
+	case NETEVENTTYPE_HAMMERHIT:
+	case NETEVENTTYPE_EXPLOSION:
+	case NETEVENTTYPE_DAMAGEIND:
+		return true;
+	case NETEVENTTYPE_SOUNDWORLD:
+		return QmShouldPlayWorldSound(ExtraInfo, SndGame, PlayJumpSound, PlayDeathOrSpawnSound, RaceSounds, SndGun, SndLongPain);
+	case NETEVENTTYPE_MAPSOUNDWORLD:
+		return SndGame;
+	default:
+		return false;
 	}
 }
 
