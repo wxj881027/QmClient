@@ -20,13 +20,21 @@ struct SQmScoreboardFooterLayout
 {
 	CUIRect m_Media{};
 	CUIRect m_Spectators{};
+	// 未解锁光标时在底栏最下方提示怎么打开光标。
+	CUIRect m_Hint{};
 };
 
 // 媒体条只在有歌曲信息时占位；它和旁观者区域之间保留一个间隙。
 // 旁观者区域先拿到可用上限，实际背景高度在文字测量后再收缩。
-inline SQmScoreboardFooterLayout QmScoreboardFooterLayout(CUIRect Area, bool HasMedia, bool HasSpectators)
+inline SQmScoreboardFooterLayout QmScoreboardFooterLayout(CUIRect Area, bool HasMedia, bool HasSpectators, bool HasHint = false)
 {
 	SQmScoreboardFooterLayout Layout;
+	if(HasHint)
+	{
+		Area.HSplitBottom(20.0f, &Area, &Layout.m_Hint);
+		if(HasMedia || HasSpectators)
+			Area.HSplitBottom(5.0f, &Area, nullptr);
+	}
 	if(HasMedia)
 	{
 		Area.HSplitTop(25.0f, &Layout.m_Media, &Area);

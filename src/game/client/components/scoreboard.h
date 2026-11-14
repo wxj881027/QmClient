@@ -149,6 +149,7 @@ class CScoreboard : public CComponent
 	void RenderGoals(CUIRect Goals);
 	void RenderFooter(CUIRect Footer);
 	void RenderSpectators(CUIRect Spectators);
+	void RenderCursorHint(CUIRect Hint);
 	void RenderSoundMuteBar(CUIRect ScoreboardRect);
 	void RenderTeamModeIcons(float x, float y, float IconSize, const SQmScoreboardTeamModeState &State, float Alpha);
 	void UpdateTeamModeCache();

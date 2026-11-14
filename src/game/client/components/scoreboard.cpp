@@ -790,7 +790,8 @@ void CScoreboard::RenderFooter(CUIRect Footer)
 			str_copy(aMediaBuf, MediaState.m_aArtist, sizeof(aMediaBuf));
 	}
 
-	const SQmScoreboardFooterLayout Layout = QmScoreboardFooterLayout(Footer, aMediaBuf[0] != '\0', HasSpectators);
+	const bool ShowCursorHint = !m_MouseUnlocked;
+	const SQmScoreboardFooterLayout Layout = QmScoreboardFooterLayout(Footer, aMediaBuf[0] != '\0', HasSpectators, ShowCursorHint);
 	if(Layout.m_Media.h > 0.0f)
 	{
 		Layout.m_Media.Draw(ScoreboardUiColorSurface(ContentAlpha), IGraphics::CORNER_ALL, SCOREBOARD_PANEL_RADIUS);
@@ -806,6 +807,32 @@ void CScoreboard::RenderFooter(CUIRect Footer)
 	}
 	if(Layout.m_Spectators.h > 0.0f)
 		RenderSpectators(Layout.m_Spectators);
+	if(Layout.m_Hint.h > 0.0f)
+		RenderCursorHint(Layout.m_Hint);
+}
+
+void CScoreboard::RenderCursorHint(CUIRect Hint)
+{
+	const float ContentAlpha = m_AnimContentAlpha;
+	char aKey[64];
+	GameClient()->m_Binds.GetKey("toggle_scoreboard_cursor", aKey, sizeof(aKey));
+
+	char aHint[128];
+	if(aKey[0] == '\0')
+		str_format(aHint, sizeof(aHint), Localize("'%s' not bound."), "toggle_scoreboard_cursor");
+	else
+		str_format(aHint, sizeof(aHint), Localize("Press '%s' to show cursor."), aKey);
+
+	Hint.Draw(ScoreboardUiColorSurface(ContentAlpha), IGraphics::CORNER_ALL, SCOREBOARD_PANEL_RADIUS);
+	CUIRect Label = Hint;
+	Label.Margin(4.0f, &Label);
+	TextRender()->TextColor(TextRender()->DefaultTextColor().WithMultipliedAlpha(ContentAlpha));
+	TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor().WithMultipliedAlpha(ContentAlpha));
+	SLabelProperties Props;
+	Props.m_MaxWidth = Label.w;
+	Props.m_EllipsisAtEnd = true;
+	Props.m_MinimumFontSize = 9.0f;
+	Ui()->DoLabel(&Label, aHint, 11.0f, TEXTALIGN_MC, Props);
 }
 
 void CScoreboard::RenderSoundMuteBar(CUIRect ScoreboardRect)
