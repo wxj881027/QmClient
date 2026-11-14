@@ -3289,6 +3289,7 @@ void CCachedText::Update(ITextRender *pTextRender, const char *pText, float Font
 
 	m_BoundingBox = Cursor.BoundingBox();
 	m_MaxCharacterHeight = Cursor.m_MaxCharacterHeight;
+	m_AlignedFontSize = Cursor.m_AlignedFontSize;
 }
 
 void CCachedText::Render(ITextRender *pTextRender, vec2 Pos, ColorRGBA Color) const
@@ -3337,27 +3338,31 @@ void CUi::RenderTime(CUIRect TimeRect, float FontSize, int Seconds, bool NotFini
 	// 显示毫秒或百分秒（不足一小时时）
 	if(Millis >= 0 && Seconds < 60 * 60)
 	{
-		constexpr float GoldenRatio = 0.61803398875f;
-		const float CentisecondFontSize = FontSize * GoldenRatio;
+		constexpr float Ratio = 0.7f;
+		const float CentisecondFontSize = FontSize * Ratio;
 
-		// 2 或 3 位数字
-		char aMillis[4];
+		// 小数点加 2 或 3 位数字
+		char aMillis[5];
 		Millis %= 1000;
 		if(!TrueMilliseconds)
-			str_format(aMillis, sizeof(aMillis), "%02d", (int)std::round(Millis / 10));
+			str_format(aMillis, sizeof(aMillis), ".%02d", (int)std::round(Millis / 10));
 		else
-			str_format(aMillis, sizeof(aMillis), "%03d", Millis);
+			str_format(aMillis, sizeof(aMillis), ".%03d", Millis);
 		MillisText.Update(TextRender(), aMillis, CentisecondFontSize);
 
 		const float MillisWidth = MillisText.Width();
 
-		// 为毫秒腾出空间，但间距收紧 1/6 字符
-		Cursor.x -= MillisWidth - (TrueMilliseconds ? MillisWidth / (3 * 6) : MillisWidth / (2 * 6));
+		// 把「小数点 + 小数位」整体向秒数靠拢，但保留可读间距。
+		constexpr float FractionKern = 0.35f;
+		const float DotWidth = MillisWidth / (TrueMilliseconds ? 4 : 3);
+		const float Kern = DotWidth * FractionKern;
+		Cursor.x -= MillisWidth - Kern;
 
 		vec2 CursorMillis = TimeRect.TopLeft();
 		CursorMillis.x += TimeRect.w - MillisWidth; // 右对齐
-		CursorMillis.y += ((TimeRect.h - MillisText.MaxCharacterHeight()) / 2.0f - (CentisecondFontSize - MillisText.MaxCharacterHeight()));
-		CursorMillis.y -= (CursorMillis.y - Cursor.y) * GoldenRatio;
+
+		// 小数块底线与秒数对齐
+		CursorMillis.y = Cursor.y + (SecondsText.AlignedFontSize() - MillisText.AlignedFontSize());
 
 		SecondsText.Render(TextRender(), Cursor, Color);
 		MillisText.Render(TextRender(), CursorMillis, Color);

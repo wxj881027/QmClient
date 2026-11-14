@@ -190,6 +190,7 @@ bool CLocalizationDatabase::Load(const char *pFilename, IStorage *pStorage, ICon
 	}
 	char aContext[512];
 	char aOrigin[512];
+	char aReplacement[512];
 	int Line = 0;
 	while(const char *pLine = LineReader.Get())
 	{
@@ -218,6 +219,8 @@ bool CLocalizationDatabase::Load(const char *pFilename, IStorage *pStorage, ICon
 		}
 
 		str_copy(aOrigin, pLine);
+		// 语言文件里的 \n 是转义写法，入库前还原成真实换行，否则含换行的文案不可翻译。
+		str_unescape_newlines(aOrigin);
 		const char *pReplacement = LineReader.Get();
 		if(!pReplacement)
 		{
@@ -235,8 +238,9 @@ bool CLocalizationDatabase::Load(const char *pFilename, IStorage *pStorage, ICon
 		if(str_comp(pReplacement, "== ") == 0)
 			continue;
 
-		pReplacement += 3;
-		AddString(aOrigin, pReplacement, aContext);
+		str_copy(aReplacement, pReplacement + 3);
+		str_unescape_newlines(aReplacement);
+		AddString(aOrigin, aReplacement, aContext);
 	}
 	std::sort(m_vStrings.begin(), m_vStrings.end());
 	return true;

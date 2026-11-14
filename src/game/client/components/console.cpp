@@ -2156,6 +2156,14 @@ void CGameConsole::OnRender()
 				LinkClickPos = ReleasePos;
 				LinkClickPress = pConsole->m_MousePress;
 			}
+#if !defined(CONF_PLATFORM_IOS) && !defined(CONF_PLATFORM_ANDROID)
+			// 桌面端：在控制台面板下方按下并松开鼠标即关闭，排除拖拽滚动条与面板边框。
+			else if(m_ConsoleState == CONSOLE_OPEN && !pConsole->m_ScrollbarDragging &&
+				pConsole->m_MousePress.y > ConsoleHeight + 1.0f && ReleasePos.y > ConsoleHeight + 1.0f)
+			{
+				Toggle(m_ConsoleType);
+			}
+#endif
 		}
 		const bool ButtonReleased = WasMousePressed && !pConsole->m_MouseIsPress;
 		const bool MousePressedThisFrame = !WasMousePressed && pConsole->m_MouseIsPress;

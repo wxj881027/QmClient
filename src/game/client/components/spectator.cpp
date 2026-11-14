@@ -5,6 +5,7 @@
 
 #include "camera.h"
 
+#include <base/log.h>
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
 #include <engine/textrender.h>
@@ -192,7 +193,15 @@ void CSpectator::ConSpectate(IConsole::IResult *pResult, void *pUserData)
 	if(!pSelf->CanChangeSpectatorId())
 		return;
 
-	pSelf->Spectate(pResult->GetInteger(0));
+	const int SpectatorId = pResult->GetInteger(0);
+	if(SpectatorId != SPEC_FREEVIEW &&
+		SpectatorId != SPEC_FOLLOW &&
+		!in_range(SpectatorId, 0, (int)MAX_CLIENTS - 1))
+	{
+		log_error("spectator", "Invalid spectator ID: %d", SpectatorId);
+		return;
+	}
+	pSelf->Spectate(SpectatorId);
 }
 
 void CSpectator::ConSpectateNext(IConsole::IResult *pResult, void *pUserData)
