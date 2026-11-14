@@ -83,7 +83,7 @@ namespace
 		static CUi::SMessagePopupContext s_Context;
 		if(pUi->IsPopupOpen(&s_Context))
 			return;
-		str_copy(s_Context.m_aMessage, pMessage, sizeof(s_Context.m_aMessage));
+		str_copy(s_Context.m_aMessage, pMessage);
 		s_Context.ErrorColor();
 		pUi->ShowPopupMessage(0.0f, 0.0f, &s_Context);
 	}
@@ -97,7 +97,7 @@ namespace
 		gs_DemoConfirm.Reset();
 		gs_DemoConfirm.DefaultButtons();
 		gs_DemoConfirm.m_Tone = CUi::SConfirmPopupContext::ETone::DANGER;
-		str_copy(gs_DemoConfirm.m_aMessage, pMessage, sizeof(gs_DemoConfirm.m_aMessage));
+		str_copy(gs_DemoConfirm.m_aMessage, pMessage);
 		pUi->ShowPopupConfirm(pUi->MouseX(), pUi->MouseY(), &gs_DemoConfirm);
 		gs_DemoConfirmAction = Action;
 	}
@@ -2507,7 +2507,7 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 		if(s_RenderCut && !GameClient()->m_RankGhost.IsViewModeActive())
 		{
 			m_HasPendingDemoRenderSource = true;
-			str_copy(m_aPendingDemoRenderFolder, m_aCurrentDemoFolder, sizeof(m_aPendingDemoRenderFolder));
+			str_copy(m_aPendingDemoRenderFolder, m_aCurrentDemoFolder);
 			str_format(m_aPendingDemoRenderSelectionName, sizeof(m_aPendingDemoRenderSelectionName), "%s.demo", m_DemoSliceInput.GetString());
 			m_PendingDemoRenderStorageType = qmclient::media_paths::StorageType(aPath);
 			m_Popup = POPUP_RENDER_DEMO;
@@ -2621,10 +2621,10 @@ void CMenus::EnsureAllDemoDates()
 	m_DemoDateFetchComplete = false;
 	SSettingsAdaptiveBudgetInput Input;
 	Input.m_FrameId = Client()->PerfFrame();
-	str_copy(Input.m_aOperation, SettingsPerfActiveOperation(), sizeof(Input.m_aOperation));
-	str_copy(Input.m_aPage, "demo_browser", sizeof(Input.m_aPage));
-	str_copy(Input.m_aTab, "metadata", sizeof(Input.m_aTab));
-	str_copy(Input.m_aContext, SettingsPerfContextName(), sizeof(Input.m_aContext));
+	str_copy(Input.m_aOperation, SettingsPerfActiveOperation());
+	str_copy(Input.m_aPage, "demo_browser");
+	str_copy(Input.m_aTab, "metadata");
+	str_copy(Input.m_aContext, SettingsPerfContextName());
 	Input.m_FrameMsAverage = (float)GameClient()->m_QmMonitoring.Snapshot().m_Performance.m_FrameTimeMs;
 	Input.m_FrameMsP95 = Input.m_FrameMsAverage;
 	Input.m_TargetFrameMs = 8.333f;
@@ -2834,7 +2834,7 @@ void CMenus::DemolistPopulate()
 				CDemoItem Item;
 				str_copy(Item.m_aFilename, pBaseFolder);
 				Storage()->GetCompletePath(StorageType, pBaseFolder, Item.m_aName, sizeof(Item.m_aName));
-				str_append(Item.m_aName, "/", sizeof(Item.m_aName));
+				str_append(Item.m_aName, "/");
 				Item.m_InfosLoaded = false;
 				Item.m_Valid = false;
 				Item.m_Date = 0;
@@ -3428,9 +3428,9 @@ void CMenus::UpdateRankDemoDownload()
 
 		char aSafeMap[128];
 		char aSafeDemo[256];
-		str_copy(aSafeMap, m_RankDemoMap.c_str(), sizeof(aSafeMap));
+		str_copy(aSafeMap, m_RankDemoMap.c_str());
 		str_sanitize_filename(aSafeMap);
-		str_copy(aSafeDemo, DemoName.c_str(), sizeof(aSafeDemo));
+		str_copy(aSafeDemo, DemoName.c_str());
 		if(str_endswith_nocase(aSafeDemo, ".gz") != nullptr)
 			aSafeDemo[str_length(aSafeDemo) - 3] = '\0';
 		if(str_endswith_nocase(aSafeDemo, ".demo") != nullptr)
@@ -3883,10 +3883,10 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 			abs((EndVisibleIndex - 1) - (s_DemoLastEndVisibleIndex - 1)) >= DemoJumpThreshold);
 	SSettingsAdaptiveBudgetInput AdaptiveBudgetInput;
 	AdaptiveBudgetInput.m_FrameId = Client()->PerfFrame();
-	str_copy(AdaptiveBudgetInput.m_aOperation, SettingsPerfActiveOperation(), sizeof(AdaptiveBudgetInput.m_aOperation));
-	str_copy(AdaptiveBudgetInput.m_aPage, "demo_browser", sizeof(AdaptiveBudgetInput.m_aPage));
-	str_copy(AdaptiveBudgetInput.m_aTab, "list", sizeof(AdaptiveBudgetInput.m_aTab));
-	str_copy(AdaptiveBudgetInput.m_aContext, SettingsPerfContextName(), sizeof(AdaptiveBudgetInput.m_aContext));
+	str_copy(AdaptiveBudgetInput.m_aOperation, SettingsPerfActiveOperation());
+	str_copy(AdaptiveBudgetInput.m_aPage, "demo_browser");
+	str_copy(AdaptiveBudgetInput.m_aTab, "list");
+	str_copy(AdaptiveBudgetInput.m_aContext, SettingsPerfContextName());
 	AdaptiveBudgetInput.m_FrameMsAverage = (float)GameClient()->m_QmMonitoring.Snapshot().m_Performance.m_FrameTimeMs;
 	AdaptiveBudgetInput.m_FrameMsP95 = AdaptiveBudgetInput.m_FrameMsAverage;
 	AdaptiveBudgetInput.m_TargetFrameMs = 8.333f;
@@ -5063,7 +5063,7 @@ void CMenus::RenderQmPoseMapPopup(CUIRect View)
 		// 当前已加载的地图先填进输入框：直接回车就等于沿用当前地图。
 		const char *pCurrentMap = Client()->GetCurrentMapPath();
 		State.m_Input.Set(pCurrentMap != nullptr ? pCurrentMap : "");
-		str_copy(State.m_aProgrammaticInput, State.m_Input.GetString(), sizeof(State.m_aProgrammaticInput));
+		str_copy(State.m_aProgrammaticInput, State.m_Input.GetString());
 	}
 
 	// 每帧只扫一个目录：地图目录很大时也不会卡住界面。
@@ -5074,7 +5074,7 @@ void CMenus::RenderQmPoseMapPopup(CUIRect View)
 		State.m_SearchMode = true;
 	if(Scanned || QueryChanged)
 	{
-		str_copy(State.m_aCachedQuery, State.m_Input.GetString(), sizeof(State.m_aCachedQuery));
+		str_copy(State.m_aCachedQuery, State.m_Input.GetString());
 		State.m_vMatches = State.m_Index.Find(State.m_Input.GetString());
 		State.m_vKnownPaths.clear();
 		for(const QmMapUpload::SMapFile &Known : State.m_Index.Find(""))
@@ -5305,10 +5305,10 @@ void CMenus::RenderQmPoseMapPopup(CUIRect View)
 		if(Entry.m_IsDirectory)
 		{
 			if(str_comp(Entry.m_aFilename, "..") == 0)
-				str_copy(State.m_aFolder, qm_pose_map::BrowseParent(State.m_aFolder).c_str(), sizeof(State.m_aFolder));
+				str_copy(State.m_aFolder, qm_pose_map::BrowseParent(State.m_aFolder).c_str());
 			else
 			{
-				str_copy(State.m_aFolder, qm_pose_map::BrowseChild(State.m_aFolder, Entry.m_aFilename).c_str(), sizeof(State.m_aFolder));
+				str_copy(State.m_aFolder, qm_pose_map::BrowseChild(State.m_aFolder, Entry.m_aFilename).c_str());
 				State.m_StorageType = Entry.m_StorageType;
 			}
 			State.m_SearchMode = false;
@@ -5322,9 +5322,9 @@ void CMenus::RenderQmPoseMapPopup(CUIRect View)
 		else
 		{
 			// 点选地图：记下完整相对路径（同名地图可能有两份），输入框回填人能认出的名字。
-			str_copy(State.m_aSelectedPath, Entry.m_aPath, sizeof(State.m_aSelectedPath));
+			str_copy(State.m_aSelectedPath, Entry.m_aPath);
 			State.m_Input.Set(qm_pose_map::DisplayName(Entry.m_aFilename).c_str());
-			str_copy(State.m_aProgrammaticInput, State.m_Input.GetString(), sizeof(State.m_aProgrammaticInput));
+			str_copy(State.m_aProgrammaticInput, State.m_Input.GetString());
 			State.m_Attempted = false;
 			State.m_FocusInput = false;
 		}
@@ -5342,13 +5342,13 @@ void CMenus::RenderQmPoseMapPopup(CUIRect View)
 		switch(State.m_Selection.Status())
 		{
 		case qm_pose_map::EStatus::EMPTY:
-			str_copy(aError, Localize("Type a map name or choose one from the list."), sizeof(aError));
+			str_copy(aError, Localize("Type a map name or choose one from the list."));
 			break;
 		case qm_pose_map::EStatus::NOT_FOUND:
 			str_format(aError, sizeof(aError), Localize("No map named '%s' was found in maps/ or downloadedmaps/"), State.m_Input.GetString());
 			break;
 		case qm_pose_map::EStatus::INVALID:
-			str_copy(aError, Localize("This map path cannot be used."), sizeof(aError));
+			str_copy(aError, Localize("This map path cannot be used."));
 			break;
 		case qm_pose_map::EStatus::OK:
 			break;

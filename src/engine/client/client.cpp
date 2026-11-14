@@ -1830,11 +1830,11 @@ void CClient::RenderDebug()
 		if(HasSample && SendCountersValid)
 			str_format(aSendRateBuf, sizeof(aSendRateBuf), "%" PRIu64, RateKibitPerSec(SendTotal));
 		else
-			str_copy(aSendRateBuf, "--", sizeof(aSendRateBuf));
+			str_copy(aSendRateBuf, "--");
 		if(HasSample && RecvCountersValid)
 			str_format(aRecvRateBuf, sizeof(aRecvRateBuf), "%" PRIu64, RateKibitPerSec(RecvTotal));
 		else
-			str_copy(aRecvRateBuf, "--", sizeof(aRecvRateBuf));
+			str_copy(aRecvRateBuf, "--");
 
 		str_format(aBuffer, sizeof(aBuffer), "Process UDP TX (estimated): %3" PRIu64 " %5" PRIu64 "+%4" PRIu64 "=%5" PRIu64 " (%s Kibit/s) avg payload: %5" PRIu64,
 			SendPackets, SendBytes, SendPackets * OverheadSize, SendTotal, aSendRateBuf, SendPackets == 0 ? 0 : SendBytes / SendPackets);
@@ -2286,7 +2286,7 @@ void CClient::ProcessServerInfo(int RawType, NETADDR *pFrom, const void *pData, 
 	CUnpacker Up;
 	Up.Reset(pData, DataSize);
 
-#define GET_STRING(array) str_copy(array, Up.GetString(CUnpacker::SANITIZE_CC | CUnpacker::SKIP_START_WHITESPACES), sizeof(array))
+#define GET_STRING(array) str_copy(array, Up.GetString(CUnpacker::SANITIZE_CC | CUnpacker::SKIP_START_WHITESPACES))
 #define GET_INT(integer) (integer) = str_toint(Up.GetString())
 
 	int Token;
@@ -5847,7 +5847,7 @@ bool CClient::EnterPoseSession(const char *pPosesPath, int &TeeCountOut, const c
 		// 没有地图时不静默失败，也不退回 dm1：把这份合影交给界面，
 		// 由玩家选好地图后再走同一条 poses_open（Windows 双击 .poses 也在这里）。
 		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "no map is loaded for this .poses file; waiting for a map selection");
-		str_copy(m_aPendingPoseMapPath, pPosesPath, sizeof(m_aPendingPoseMapPath));
+		str_copy(m_aPendingPoseMapPath, pPosesPath);
 		return false;
 	}
 
@@ -6351,7 +6351,7 @@ CClient::EVideoExportStartResult CClient::StartSegmentedVideoExport(const char *
 		str_format(aWithExt, sizeof(aWithExt), "%s.%s", pLogicalPath, ContainerName());
 		const std::string Whole = qmclient::media_paths::CompletePath(Storage(),
 			qmclient::media_paths::Resolve(Storage(), g_Config, aWithExt));
-		str_copy(aWhole, Whole.c_str(), sizeof(aWhole));
+		str_copy(aWhole, Whole.c_str());
 		return Whole.empty() ? nullptr : aWhole;
 	});
 
@@ -7271,17 +7271,17 @@ void CClient::UpdateHangHeartbeat()
 {
 	QmHangDiagnostics::SSnapshot Info;
 	Info.m_State = m_State;
-	str_copy(Info.m_aCurrentMap, m_aCurrentMap, sizeof(Info.m_aCurrentMap));
+	str_copy(Info.m_aCurrentMap, m_aCurrentMap);
 	const NETADDR *pAddr = ServerAddress();
 	if(!pAddr || pAddr->type == NETTYPE_INVALID)
 	{
-		str_copy(Info.m_aServerAddr, "unknown", sizeof(Info.m_aServerAddr));
+		str_copy(Info.m_aServerAddr, "unknown");
 	}
 	else
 	{
 		char aAddr[NETADDR_MAXSTRSIZE];
 		net_addr_str(pAddr, aAddr, sizeof(aAddr), true);
-		str_copy(Info.m_aServerAddr, aAddr, sizeof(Info.m_aServerAddr));
+		str_copy(Info.m_aServerAddr, aAddr);
 	}
 	// 心跳使用单调时钟纳秒，与客户端状态作为同一份快照发布。
 	Info.m_LastHeartbeat = time_get_nanoseconds().count();
@@ -7546,7 +7546,7 @@ int CClient::HandleChecksum(int Conn, CUuid Uuid, CUnpacker *pUnpacker)
 #define MACRO_CONFIG_STR(Name, ScriptName, Len, Def, Flags, Desc) \
 	if(CHECKSUM_RECORD(Flags)) \
 	{ \
-		str_copy(m_Checksum.m_Data.m_Config.m_##Name, g_Config.m_##Name, sizeof(m_Checksum.m_Data.m_Config.m_##Name)); \
+		str_copy(m_Checksum.m_Data.m_Config.m_##Name, g_Config.m_##Name); \
 	}
 #include <engine/shared/config_variables.h>
 #undef CHECKSUM_RECORD

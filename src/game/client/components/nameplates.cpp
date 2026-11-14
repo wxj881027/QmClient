@@ -976,7 +976,7 @@ protected:
 	void UpdateText(CGameClient &This, const CNamePlateData &Data) override
 	{
 		m_FontSize = Data.m_FontSize;
-		str_copy(m_aText, Data.m_aName, sizeof(m_aText));
+		str_copy(m_aText, Data.m_aName);
 		CTextCursor Cursor;
 		Cursor.m_FontSize = m_FontSize;
 		m_GradientEnabled = m_UseTextEffects && (g_Config.m_QmNameplateTextEffects & QM_TEXT_EFFECT_GRADIENT) != 0;
@@ -1030,7 +1030,7 @@ protected:
 	void UpdateText(CGameClient &This, const CNamePlateData &Data) override
 	{
 		m_FontSize = Data.m_FontSizeClan;
-		str_copy(m_aText, Data.m_aClan[0] != '\0' ? Data.m_aClan : " ", sizeof(m_aText));
+		str_copy(m_aText, Data.m_aClan[0] != '\0' ? Data.m_aClan : " ");
 		CTextCursor Cursor;
 		Cursor.m_FontSize = m_FontSize;
 		m_GradientEnabled = m_UseTextEffects && (g_Config.m_QmNameplateTextEffects & QM_TEXT_EFFECT_GRADIENT) != 0;
@@ -1257,7 +1257,7 @@ protected:
 	{
 		m_FontSize = Data.m_FontSizeClan;
 		const char *pSkin = Data.m_InGame ? This.m_aClients[Data.m_ClientId].m_aSkinName : (Data.m_ClientId == 0 ? g_Config.m_ClPlayerSkin : g_Config.m_ClDummySkin);
-		str_copy(m_aText, pSkin, sizeof(m_aText));
+		str_copy(m_aText, pSkin);
 		CTextCursor Cursor;
 		Cursor.m_FontSize = m_FontSize;
 		This.TextRender()->CreateOrAppendTextContainer(m_TextContainerIndex, &Cursor, m_aText);
@@ -1341,7 +1341,7 @@ protected:
 	{
 		m_FontSize = Data.m_FontSizeClan;
 		const char *pReason = This.m_WarList.GetWarData(Data.m_ClientId).m_aReason;
-		str_copy(m_aText, pReason, sizeof(m_aText));
+		str_copy(m_aText, pReason);
 		CTextCursor Cursor;
 		Cursor.m_FontSize = m_FontSize;
 		This.TextRender()->CreateOrAppendTextContainer(m_TextContainerIndex, &Cursor, m_aText);
@@ -2625,7 +2625,7 @@ void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
 
 	const bool HasSourceText = pBubbleText && pBubbleText[0] != '\0';
 	if(HasSourceText)
-		str_copy(AnimState.m_aCachedText, pBubbleText, sizeof(AnimState.m_aCachedText));
+		str_copy(AnimState.m_aCachedText, pBubbleText);
 
 	if(!HasSourceText && AnimState.m_aCachedText[0] == '\0')
 	{
@@ -2807,7 +2807,7 @@ void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
 			AnimState.m_CachedTextHeight = BoundingBox.m_H;
 			AnimState.m_CachedFontSize = FontSize;
 			AnimState.m_CachedLineWidth = MaxWidth;
-			str_copy(AnimState.m_aLayoutText, pDisplayText, sizeof(AnimState.m_aLayoutText));
+			str_copy(AnimState.m_aLayoutText, pDisplayText);
 		}
 		else
 		{

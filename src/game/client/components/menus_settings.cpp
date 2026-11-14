@@ -796,7 +796,7 @@ void CMenus::PrepareLanguagePageCache(float MainViewWidth, bool ForceComplete)
 
 	gs_LanguageLabelWidth = LabelWidth;
 	gs_LanguageLabelFontSize = Metrics.m_BodySize;
-	str_copy(gs_aLanguageCacheLanguageFile, g_Config.m_ClLanguagefile, sizeof(gs_aLanguageCacheLanguageFile));
+	str_copy(gs_aLanguageCacheLanguageFile, g_Config.m_ClLanguagefile);
 	gs_LanguagePageCacheComplete = true;
 }
 
@@ -817,7 +817,7 @@ void CMenus::RenderLanguageSettings(CUIRect MainView)
 	static CUi::SMessagePopupContext s_CreditsPopup;
 	if(DoSettingsButton_Menu(SETTINGS_LANGUAGE, -1, -1, &s_CreditsButton, "language-credits", Localize("Credits"), 0, &CreditsButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, Metrics.m_BodySize))
 	{
-		str_copy(s_CreditsPopup.m_aMessage, pCreditsText, sizeof(s_CreditsPopup.m_aMessage));
+		str_copy(s_CreditsPopup.m_aMessage, pCreditsText);
 		s_CreditsPopup.DefaultColor(TextRender());
 		Ui()->ShowPopupMessage(CreditsButton.x, CreditsButton.y + CreditsButton.h + 5.0f, &s_CreditsPopup);
 	}
@@ -1942,7 +1942,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupMapPicker(void *pContext, CUIRect Vie
 		else
 			str_copy(aLabelText, Map.m_aFilename);
 		if(Map.m_IsDirectory)
-			str_append(aLabelText, "/", sizeof(aLabelText));
+			str_append(aLabelText, "/");
 
 		EQmIcon IconType;
 		const char *pIconType;
@@ -1984,8 +1984,8 @@ CUi::EPopupMenuFunctionResult CMenus::PopupMapPicker(void *pContext, CUIRect Vie
 			}
 			else
 			{
-				str_append(pPopupContext->m_aCurrentMapFolder, "/", sizeof(pPopupContext->m_aCurrentMapFolder));
-				str_append(pPopupContext->m_aCurrentMapFolder, SelectedItem.m_aFilename, sizeof(pPopupContext->m_aCurrentMapFolder));
+				str_append(pPopupContext->m_aCurrentMapFolder, "/");
+				str_append(pPopupContext->m_aCurrentMapFolder, SelectedItem.m_aFilename);
 			}
 			pPopupContext->MapListPopulate();
 		}
@@ -2021,7 +2021,7 @@ void CMenus::CPopupMapPickerContext::MapListPopulate()
 	const auto ListRoot = [&](const char *pRootPath, const char *pValuePrefix) {
 		if(pRootPath == nullptr || pRootPath[0] == '\0')
 			return;
-		str_copy(m_aListingValuePrefix, pValuePrefix != nullptr ? pValuePrefix : "", sizeof(m_aListingValuePrefix));
+		str_copy(m_aListingValuePrefix, pValuePrefix != nullptr ? pValuePrefix : "");
 		char aTemp[IO_MAX_PATH_LENGTH];
 		if(m_aCurrentMapFolder[0] != '\0')
 			str_format(aTemp, sizeof(aTemp), "%s/%s", pRootPath, m_aCurrentMapFolder);
@@ -2051,7 +2051,7 @@ int CMenus::CPopupMapPickerContext::MapListFetchCallback(const CFsFileInfo *pInf
 
 	CMapListItem Item;
 	str_copy(Item.m_aFilename, pInfo->m_pName);
-	str_copy(Item.m_aValuePrefix, pRealUser->m_aListingValuePrefix, sizeof(Item.m_aValuePrefix));
+	str_copy(Item.m_aValuePrefix, pRealUser->m_aListingValuePrefix);
 	Item.m_IsDirectory = IsDir;
 
 	pRealUser->m_vMaps.emplace_back(Item);
