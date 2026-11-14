@@ -3242,6 +3242,9 @@ Copy a .qmconfig file into the package folder, then refresh.
 Copy all
 == Копировать все
 
+Copy clan
+== Скопировать клан
+
 Copy friend code
 == Копировать код друзей
 
@@ -15514,6 +15517,9 @@ Text alpha
 
 Text before each key press count
 == Префикс счётчика нажатий
+
+Text caret style: 0=bar, 1=underscore, 2=block
+== Стиль курсора ввода: 0=черта, 1=подчёркивание, 2=блок
 
 Text color
 == Цвет текста

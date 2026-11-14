@@ -3242,6 +3242,9 @@ Copy a .qmconfig file into the package folder, then refresh.
 Copy all
 == すべてコピー
 
+Copy clan
+== クランをコピー
+
 Copy friend code
 == フレンドコードをコピー
 
@@ -15514,6 +15517,9 @@ Text alpha
 
 Text before each key press count
 == キー入力回数の接頭辞
+
+Text caret style: 0=bar, 1=underscore, 2=block
+== 入力カーソルのスタイル：0=縦線、1=下線、2=ブロック
 
 Text color
 == テキスト色

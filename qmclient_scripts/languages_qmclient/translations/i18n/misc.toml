@@ -16514,3 +16514,19 @@ brazilian_portuguese = "Interruptor principal de todas as animações da interfa
 portuguese = "Interruptor principal de todas as animações da interface"
 turkish = "Tüm arayüz animasyonlarının ana anahtarı"
 polish = "Główny przełącznik wszystkich animacji interfejsu"
+
+[[message]]
+key = "Text caret style: 0=bar, 1=underscore, 2=block"
+[message.translations]
+simplified_chinese = "输入光标样式：0=竖线，1=下划线，2=方块"
+traditional_chinese = "輸入游標樣式：0=直線，1=底線，2=方塊"
+japanese = "入力カーソルのスタイル：0=縦線、1=下線、2=ブロック"
+korean = "입력 커서 스타일: 0=세로선, 1=밑줄, 2=블록"
+russian = "Стиль курсора ввода: 0=черта, 1=подчёркивание, 2=блок"
+german = "Eingabecursor-Stil: 0=Strich, 1=Unterstrich, 2=Block"
+spanish = "Estilo del cursor de entrada: 0=barra, 1=subrayado, 2=bloque"
+french = "Style du curseur de saisie : 0=barre, 1=souligné, 2=bloc"
+brazilian_portuguese = "Estilo do cursor de entrada: 0=barra, 1=sublinhado, 2=bloco"
+portuguese = "Estilo do cursor de entrada: 0=barra, 1=sublinhado, 2=bloco"
+turkish = "Giriş imleci stili: 0=çubuk, 1=alt çizgi, 2=blok"
+polish = "Styl kursora: 0=kreska, 1=podkreślenie, 2=blok"

@@ -10861,3 +10861,213 @@ brazilian_portuguese = "As entradas dela voltam para none."
 portuguese = "As entradas dela voltam para none."
 turkish = "İçindeki kayıtlar none'a döner."
 polish = "Zawarte w niej wpisy wrócą do none."
+
+[[message]]
+key = "Deep freeze tile outline width"
+[message.translations]
+traditional_chinese = "深層凍結方塊的描邊寬度"
+japanese = "ディープフリーズタイルの輪郭幅"
+korean = "깊은 동결 타일 외곽선 두께"
+russian = "Ширина контура блоков глубокого замораживания"
+german = "Konturbreite der Tiefkühl-Kacheln"
+spanish = "Grosor del contorno de los bloques de congelación profunda"
+french = "Épaisseur du contour des tuiles de gel profond"
+brazilian_portuguese = "Espessura do contorno dos blocos de congelamento profundo"
+portuguese = "Espessura do contorno dos blocos de congelamento profundo"
+turkish = "Derin dondurma karolarının kenar kalınlığı"
+polish = "Grubość obrysu kafelków głębokiego zamrożenia"
+
+[[message]]
+key = "Deep unfreeze tile outline width"
+[message.translations]
+traditional_chinese = "深層解凍方塊的描邊寬度"
+japanese = "ディープ解凍タイルの輪郭幅"
+korean = "깊은 해동 타일 외곽선 두께"
+russian = "Ширина контура блоков глубокого размораживания"
+german = "Konturbreite der Tiefauftau-Kacheln"
+spanish = "Grosor del contorno de los bloques de descongelación profunda"
+french = "Épaisseur du contour des tuiles de dégel profond"
+brazilian_portuguese = "Espessura do contorno dos blocos de descongelamento profundo"
+portuguese = "Espessura do contorno dos blocos de descongelamento profundo"
+turkish = "Derin çözme karolarının kenar kalınlığı"
+polish = "Grubość obrysu kafelków głębokiego rozmrożenia"
+
+[[message]]
+key = "Freeze tile outline width"
+[message.translations]
+traditional_chinese = "凍結方塊的描邊寬度"
+japanese = "フリーズタイルの輪郭幅"
+korean = "동결 타일 외곽선 두께"
+russian = "Ширина контура блоков замораживания"
+german = "Konturbreite der Einfrier-Kacheln"
+spanish = "Grosor del contorno de los bloques de congelación"
+french = "Épaisseur du contour des tuiles de gel"
+brazilian_portuguese = "Espessura do contorno dos blocos de congelamento"
+portuguese = "Espessura do contorno dos blocos de congelamento"
+turkish = "Dondurma karolarının kenar kalınlığı"
+polish = "Grubość obrysu kafelków zamrożenia"
+
+[[message]]
+key = "Hookable tile outline color"
+[message.translations]
+traditional_chinese = "可鉤方塊描邊顏色"
+japanese = "フック可能タイルの輪郭色"
+korean = "갈고리 가능 타일 외곽선 색상"
+russian = "Цвет контура блоков, за которые можно зацепиться"
+german = "Konturfarbe der haktbaren Kacheln"
+spanish = "Color del contorno de los bloques enganchables"
+french = "Couleur du contour des tuiles accrochables"
+brazilian_portuguese = "Cor do contorno dos blocos gancháveis"
+portuguese = "Cor do contorno dos blocos gancháveis"
+turkish = "Kancalanabilir karoların kenar rengi"
+polish = "Kolor obrysu kafelków zaczepialnych"
+
+[[message]]
+key = "Hookable tile outline width"
+[message.translations]
+traditional_chinese = "可鉤方塊描邊寬度"
+japanese = "フック可能タイルの輪郭幅"
+korean = "갈고리 가능 타일 외곽선 두께"
+russian = "Ширина контура блоков, за которые можно зацепиться"
+german = "Konturbreite der haktbaren Kacheln"
+spanish = "Grosor del contorno de los bloques enganchables"
+french = "Épaisseur du contour des tuiles accrochables"
+brazilian_portuguese = "Espessura do contorno dos blocos gancháveis"
+portuguese = "Espessura do contorno dos blocos gancháveis"
+turkish = "Kancalanabilir karoların kenar kalınlığı"
+polish = "Grubość obrysu kafelków zaczepialnych"
+
+[[message]]
+key = "Show deep freeze tile outlines"
+[message.translations]
+traditional_chinese = "顯示深層凍結方塊描邊"
+japanese = "ディープフリーズタイルの輪郭を表示"
+korean = "깊은 동결 타일 외곽선 표시"
+russian = "Показывать контуры блоков глубокого замораживания"
+german = "Konturen der Tiefkühl-Kacheln anzeigen"
+spanish = "Mostrar el contorno de los bloques de congelación profunda"
+french = "Afficher le contour des tuiles de gel profond"
+brazilian_portuguese = "Mostrar contorno dos blocos de congelamento profundo"
+portuguese = "Mostrar contorno dos blocos de congelamento profundo"
+turkish = "Derin dondurma karolarının kenarlarını göster"
+polish = "Pokaż obrysy kafelków głębokiego zamrożenia"
+
+[[message]]
+key = "Show deep unfreeze tile outlines"
+[message.translations]
+traditional_chinese = "顯示深層解凍方塊描邊"
+japanese = "ディープ解凍タイルの輪郭を表示"
+korean = "깊은 해동 타일 외곽선 표시"
+russian = "Показывать контуры блоков глубокого размораживания"
+german = "Konturen der Tiefauftau-Kacheln anzeigen"
+spanish = "Mostrar el contorno de los bloques de descongelación profunda"
+french = "Afficher le contour des tuiles de dégel profond"
+brazilian_portuguese = "Mostrar contorno dos blocos de descongelamento profundo"
+portuguese = "Mostrar contorno dos blocos de descongelamento profundo"
+turkish = "Derin çözme karolarının kenarlarını göster"
+polish = "Pokaż obrysy kafelków głębokiego rozmrożenia"
+
+[[message]]
+key = "Show freeze tile outlines"
+[message.translations]
+traditional_chinese = "顯示凍結方塊描邊"
+japanese = "フリーズタイルの輪郭を表示"
+korean = "동결 타일 외곽선 표시"
+russian = "Показывать контуры блоков замораживания"
+german = "Konturen der Einfrier-Kacheln anzeigen"
+spanish = "Mostrar el contorno de los bloques de congelación"
+french = "Afficher le contour des tuiles de gel"
+brazilian_portuguese = "Mostrar contorno dos blocos de congelamento"
+portuguese = "Mostrar contorno dos blocos de congelamento"
+turkish = "Dondurma karolarının kenarlarını göster"
+polish = "Pokaż obrysy kafelków zamrożenia"
+
+[[message]]
+key = "Show hookable tile outlines"
+[message.translations]
+traditional_chinese = "顯示可鉤方塊描邊"
+japanese = "フック可能タイルの輪郭を表示"
+korean = "갈고리 가능 타일 외곽선 표시"
+russian = "Показывать контуры блоков, за которые можно зацепиться"
+german = "Konturen der haktbaren Kacheln anzeigen"
+spanish = "Mostrar el contorno de los bloques enganchables"
+french = "Afficher le contour des tuiles accrochables"
+brazilian_portuguese = "Mostrar contorno dos blocos gancháveis"
+portuguese = "Mostrar contorno dos blocos gancháveis"
+turkish = "Kancalanabilir karoların kenarlarını göster"
+polish = "Pokaż obrysy kafelków zaczepialnych"
+
+[[message]]
+key = "Show unfreeze tile outlines"
+[message.translations]
+traditional_chinese = "顯示解凍方塊描邊"
+japanese = "解凍タイルの輪郭を表示"
+korean = "해동 타일 외곽선 표시"
+russian = "Показывать контуры блоков размораживания"
+german = "Konturen der Auftau-Kacheln anzeigen"
+spanish = "Mostrar el contorno de los bloques de descongelación"
+french = "Afficher le contour des tuiles de dégel"
+brazilian_portuguese = "Mostrar contorno dos blocos de descongelamento"
+portuguese = "Mostrar contorno dos blocos de descongelamento"
+turkish = "Çözme karolarının kenarlarını göster"
+polish = "Pokaż obrysy kafelków rozmrożenia"
+
+[[message]]
+key = "Show unhookable tile outlines"
+[message.translations]
+traditional_chinese = "顯示不可鉤方塊描邊"
+japanese = "フック不可タイルの輪郭を表示"
+korean = "갈고리 불가 타일 외곽선 표시"
+russian = "Показывать контуры блоков, за которые нельзя зацепиться"
+german = "Konturen der nicht haktbaren Kacheln anzeigen"
+spanish = "Mostrar el contorno de los bloques no enganchables"
+french = "Afficher le contour des tuiles non accrochables"
+brazilian_portuguese = "Mostrar contorno dos blocos não gancháveis"
+portuguese = "Mostrar contorno dos blocos não gancháveis"
+turkish = "Kancalanamaz karoların kenarlarını göster"
+polish = "Pokaż obrysy kafelków niezaczepialnych"
+
+[[message]]
+key = "Unfreeze tile outline width"
+[message.translations]
+traditional_chinese = "解凍方塊的描邊寬度"
+japanese = "解凍タイルの輪郭幅"
+korean = "해동 타일 외곽선 두께"
+russian = "Ширина контура блоков размораживания"
+german = "Konturbreite der Auftau-Kacheln"
+spanish = "Grosor del contorno de los bloques de descongelación"
+french = "Épaisseur du contour des tuiles de dégel"
+brazilian_portuguese = "Espessura do contorno dos blocos de descongelamento"
+portuguese = "Espessura do contorno dos blocos de descongelamento"
+turkish = "Çözme karolarının kenar kalınlığı"
+polish = "Grubość obrysu kafelków rozmrożenia"
+
+[[message]]
+key = "Unhookable tile outline color"
+[message.translations]
+traditional_chinese = "不可鉤方塊描邊顏色"
+japanese = "フック不可タイルの輪郭色"
+korean = "갈고리 불가 타일 외곽선 색상"
+russian = "Цвет контура блоков, за которые нельзя зацепиться"
+german = "Konturfarbe der nicht haktbaren Kacheln"
+spanish = "Color del contorno de los bloques no enganchables"
+french = "Couleur du contour des tuiles non accrochables"
+brazilian_portuguese = "Cor do contorno dos blocos não gancháveis"
+portuguese = "Cor do contorno dos blocos não gancháveis"
+turkish = "Kancalanamaz karoların kenar rengi"
+polish = "Kolor obrysu kafelków niezaczepialnych"
+
+[[message]]
+key = "Unhookable tile outline width"
+[message.translations]
+traditional_chinese = "不可鉤方塊描邊寬度"
+japanese = "フック不可タイルの輪郭幅"
+korean = "갈고리 불가 타일 외곽선 두께"
+russian = "Ширина контура блоков, за которые нельзя зацепиться"
+german = "Konturbreite der nicht haktbaren Kacheln"
+spanish = "Grosor del contorno de los bloques no enganchables"
+french = "Épaisseur du contour des tuiles non accrochables"
+brazilian_portuguese = "Espessura do contorno dos blocos não gancháveis"
+portuguese = "Espessura do contorno dos blocos não gancháveis"
+turkish = "Kancalanamaz karoların kenar kalınlığı"
+polish = "Kolor obrysu kafelków niezaczepialnych"

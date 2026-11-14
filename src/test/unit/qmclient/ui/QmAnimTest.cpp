@@ -14,6 +14,7 @@
 #include <game/client/QmUi/UiFormLogic.h>
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiMotion.h>
+#include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiOverlays.h>
 #include <game/client/QmUi/UiTheme.h>
 #include <game/client/QmUi/UiTokens.h>
@@ -525,8 +526,8 @@ TEST(SettingsPageLayout, SettingsShellReservesRestartBarBeforeContent)
 
 TEST(UiTheme, RuntimeThemeTracksBaseColorAndOpacity)
 {
-	const SUiTheme Blue = ResolveUiTheme(ColorHSLA(0.60f, 0.75f, 0.45f, 1.0f), 1.0f, ColorHSLA(0.60f, 0.78f, 0.52f, 1.0f), ColorHSLA(0.60f, 0.75f, 0.45f, 1.0f));
-	const SUiTheme RedHalf = ResolveUiTheme(ColorHSLA(0.00f, 0.75f, 0.45f, 1.0f), 0.5f, ColorHSLA(0.60f, 0.78f, 0.52f, 1.0f), ColorHSLA(0.00f, 0.75f, 0.45f, 1.0f));
+	const SUiTheme Blue = ResolveUiTheme(ColorHSLA(0.60f, 0.75f, 0.45f, 1.0f), 1.0f, ColorHSLA(0.60f, 0.75f, 0.45f, 1.0f));
+	const SUiTheme RedHalf = ResolveUiTheme(ColorHSLA(0.00f, 0.75f, 0.45f, 1.0f), 0.5f, ColorHSLA(0.00f, 0.75f, 0.45f, 1.0f));
 	EXPECT_NE(Blue.m_Accent.r, RedHalf.m_Accent.r);
 	EXPECT_NE(Blue.m_Accent.b, RedHalf.m_Accent.b);
 	EXPECT_LT(RedHalf.m_Surface.a, Blue.m_Surface.a);
@@ -748,13 +749,33 @@ TEST(UiTheme, FocusRingKeepsInputFillStable)
 	EXPECT_GT(Theme.m_FocusRing.a, Theme.m_Border.a);
 }
 
-TEST(UiTheme, InputFallbackTracksConfiguredFocusColor)
+TEST(UiTheme, InputFallbackDerivesFocusRingFromAccent)
 {
-	const SUiTheme Theme = ResolveInputFallbackTheme(0x97FFA6);
-
-	EXPECT_NEAR(Theme.m_FocusRing.r, 0x4D / 255.0f, 0.01f);
-	EXPECT_NEAR(Theme.m_FocusRing.g, 0x9C / 255.0f, 0.01f);
-	EXPECT_NEAR(Theme.m_FocusRing.b, 1.0f, 0.01f);
+	// 焦点环跟随强调色：不再有独立的「焦点环颜色」，否则同一界面会出现两个强调色。
+	struct SAccentGuard
+	{
+		unsigned m_Color = g_Config.m_QmUiAccentColor;
+		int m_Opacity = g_Config.m_QmUiAccentOpacity;
+		~SAccentGuard()
+		{
+			g_Config.m_QmUiAccentColor = m_Color;
+			g_Config.m_QmUiAccentOpacity = m_Opacity;
+		}
+	} Guard;
+	// 界面颜色配置是打包的 HSLA（取色器读写同一份），这里用同一个 Pack 构造。
+	const ColorHSLA Accent(0.72f, 0.85f, 0.55f, 1.0f);
+	g_Config.m_QmUiAccentColor = Accent.Pack();
+	g_Config.m_QmUiAccentOpacity = 100;
+	const SUiTheme Theme = ResolveInputFallbackTheme();
+	const ColorRGBA AccentRgb = color_cast<ColorRGBA>(Accent);
+	EXPECT_NEAR(Theme.m_FocusRing.r, AccentRgb.r, 0.01f);
+	EXPECT_NEAR(Theme.m_FocusRing.g, AccentRgb.g, 0.01f);
+	EXPECT_NEAR(Theme.m_FocusRing.b, AccentRgb.b, 0.01f);
+	// 焦点环不随低表面透明度弱化到不可辨认。
+	EXPECT_GE(Theme.m_FocusRing.a, 0.60f);
+	EXPECT_FLOAT_EQ(Theme.m_FocusRing.r, Theme.m_Accent.r);
+	EXPECT_FLOAT_EQ(Theme.m_FocusRing.g, Theme.m_Accent.g);
+	EXPECT_FLOAT_EQ(Theme.m_FocusRing.b, Theme.m_Accent.b);
 }
 
 TEST(UiV2WidgetPresence, AnimatePresenceRendersWhileExiting)
@@ -1393,4 +1414,54 @@ TEST(UiV2InputField, DeclaresEditingCapabilitiesPerPublicFieldType)
 	EXPECT_TRUE(HasCapability(SearchCaps, ui_widget::EInputFieldCapability::CLEAR_BUTTON));
 	EXPECT_TRUE(HasCapability(SearchCaps, ui_widget::EInputFieldCapability::SEARCH_HOTKEY));
 	EXPECT_EQ((SearchCaps & ClearableCaps), ClearableCaps);
+}
+TEST(UiTheme, SelectionFollowsAccentAndControlHighlightsStayWhite)
+{
+	// 选中项不再单独配置：选中就是强调色；边框高亮固定白色，不参与强调色语义。
+	struct SAccentGuard
+	{
+		unsigned m_Color = g_Config.m_QmUiAccentColor;
+		int m_Opacity = g_Config.m_QmUiAccentOpacity;
+		int m_TextMode = g_Config.m_QmUiTextColorMode;
+		~SAccentGuard()
+		{
+			g_Config.m_QmUiAccentColor = m_Color;
+			g_Config.m_QmUiAccentOpacity = m_Opacity;
+			g_Config.m_QmUiTextColorMode = m_TextMode;
+		}
+	} Guard;
+	const ColorHSLA Accent(0.02f, 0.85f, 0.55f, 1.0f);
+	// 配置是打包值：期望值必须从打包后的配置读回，不能拿打包前的浮点比较。
+	g_Config.m_QmUiAccentColor = Accent.Pack();
+	g_Config.m_QmUiAccentOpacity = 100;
+	g_Config.m_QmUiTextColorMode = 0;
+	const ColorRGBA AccentRgb = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiAccentColor));
+
+	const SUiTheme Theme = ResolveUiTheme(ColorHSLA(0.0f, 0.0f, 0.2f), 1.0f, ColorHSLA(g_Config.m_QmUiAccentColor));
+	// 选中反馈取强调色 RGB，透明度固定 22%（行反馈档）。
+	EXPECT_FLOAT_EQ(Theme.m_Selected.r, AccentRgb.r);
+	EXPECT_FLOAT_EQ(Theme.m_Selected.g, AccentRgb.g);
+	EXPECT_FLOAT_EQ(Theme.m_Selected.b, AccentRgb.b);
+	EXPECT_FLOAT_EQ(Theme.m_Selected.a, 0.22f);
+	// 悬停/聚焦边框固定白色：偏红的强调色也不该把按钮边框染红。
+	for(const ColorRGBA &Border : {Theme.m_BorderHovered, Theme.m_BorderFocused})
+	{
+		EXPECT_FLOAT_EQ(Border.r, 1.0f);
+		EXPECT_FLOAT_EQ(Border.g, 1.0f);
+		EXPECT_FLOAT_EQ(Border.b, 1.0f);
+	}
+	EXPECT_FLOAT_EQ(Theme.m_BorderHovered.a, 0.45f);
+	EXPECT_FLOAT_EQ(Theme.m_BorderFocused.a, 0.75f);
+
+	// 胶囊滑块 = 选中项 = 强调色；滑块文字 = 文本颜色模式的固定色，与容器明暗无关。
+	const ColorRGBA Indicator = ui_widget::CapsuleTabBarIndicatorColor(ColorRGBA(0.1f, 0.1f, 0.1f, 1.0f));
+	EXPECT_FLOAT_EQ(Indicator.r, AccentRgb.r);
+	EXPECT_FLOAT_EQ(Indicator.g, AccentRgb.g);
+	EXPECT_FLOAT_EQ(Indicator.b, AccentRgb.b);
+	const ColorRGBA LabelOnDark = ui_widget::CapsuleTabBarActiveLabelColor(ColorRGBA(0.1f, 0.1f, 0.1f, 1.0f));
+	const ColorRGBA LabelOnLight = ui_widget::CapsuleTabBarActiveLabelColor(ColorRGBA(0.95f, 0.95f, 0.95f, 1.0f));
+	EXPECT_EQ(LabelOnDark, ResolveConfiguredTextColor());
+	// 关键行为：以前浅色容器会把滑块文字翻成深色，现在不再随容器变。
+	EXPECT_EQ(LabelOnLight, LabelOnDark);
+	EXPECT_EQ(LabelOnDark, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
 }

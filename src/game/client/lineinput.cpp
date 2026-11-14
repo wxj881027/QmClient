@@ -3,6 +3,7 @@
 #include "lineinput.h"
 
 #include "QmUi/QmTheme.h"
+#include "QmUi/UiTextCaret.h"
 #include "ui.h"
 
 #include <engine/external/tinyexpr.h>
@@ -13,8 +14,6 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
-
-using namespace std::chrono_literals;
 
 IInput *CLineInput::ms_pInput = nullptr;
 ITextRender *CLineInput::ms_pTextRender = nullptr;
@@ -128,7 +127,6 @@ void CLineInput::SetBuffer(char *pStr, size_t MaxSize, size_t MaxChars)
 		m_ScrollOffset = m_ScrollOffsetChange = 0.0f;
 		m_ScrollOffsetY = m_ScrollOffsetYChange = 0.0f;
 		m_CaretPosition = vec2(0.0f, 0.0f);
-		m_CaretBlinkStartTime = std::chrono::nanoseconds::zero();
 		m_MouseSelection.m_Selecting = false;
 		m_Hidden = false;
 		m_pEmptyText = nullptr;
@@ -694,11 +692,13 @@ STextBoundingBox CLineInput::Render(const CUIRect *pRect, float FontSize, int Al
 		if(Cursor.m_HasCursorRenderedPosition)
 		{
 			m_CaretPosition = Cursor.m_CursorRenderedPosition;
-			// INPUT 消费编辑通知后，DRAW 仍应从可见光标周期开始。
-			if(!Draw && Cursor.m_ForceCursorRendering)
-				m_CaretBlinkStartTime = time_get_nanoseconds();
+			// INPUT 趟只消费编辑通知；DRAW 趟由 Cursor.m_ForceCursorRendering 直接给出恒亮。
+			// 闪烁相位统一由绝对时间推导，这里不再保存每个输入框各自的闪烁起点。
 			if(Draw)
-				RenderCaret(Cursor, Cursor.m_ForceCursorRendering, TextRender()->GetTextColor(), TextRender()->GetTextOutlineColor());
+			{
+				const CUIRect CaretBounds = pRect != nullptr ? *pRect : CUIRect{};
+				RenderCaret(Cursor, Cursor.m_ForceCursorRendering, TextRender()->GetTextColor(), TextRender()->GetTextOutlineColor(), CaretBounds);
+			}
 			// 主 Cursor 已完成文本、选择区、光标和 IME 锚点位置计算，不能再创建一套
 			// 重复文字容器。第二次 TextEx 会为同一输入额外插入图形命令，并在 caret
 			// 闪烁边界与主容器交错。
@@ -743,48 +743,37 @@ void CLineInput::RenderSelection(const CTextCursor &Cursor, ColorRGBA SelectionC
 	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 }
 
-void CLineInput::RenderCaret(const CTextCursor &Cursor, bool ForceVisible, ColorRGBA TextColor, ColorRGBA TextOutlineColor)
+void CLineInput::RenderCaret(const CTextCursor &Cursor, bool ForceVisible, ColorRGBA TextColor, ColorRGBA TextOutlineColor, const CUIRect &Bounds)
 {
 	if(!Cursor.m_HasCursorRenderedPosition)
 		return;
 	const vec2 DrawPosition = m_InputMotion.ResolveCaret(Cursor.m_CursorRenderedPosition, Cursor.m_AlignedFontSize,
 		m_MouseSelection.m_Selecting || (!Input()->HasComposition() && HasSelection()) || m_ScrollOffsetChange != 0.0f);
 
-	const auto Now = time_get_nanoseconds();
-	if(ForceVisible || m_CaretBlinkStartTime == std::chrono::nanoseconds::zero())
-		m_CaretBlinkStartTime = Now;
-	Graphics()->TextureClear();
-	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
-	if(!ForceVisible && !qm_lineinput::CaretVisibleForElapsed(Now - m_CaretBlinkStartTime))
+	const float CaretHeight = maximum(0.0f, Cursor.m_AlignedFontSize);
+	if(CaretHeight <= 0.0f)
 		return;
 
+	// 光标粗细以物理像素为准：把「世界坐标 → 屏幕像素」的换算交给几何组件，
+	// 换分辨率或换 UI 缩放时不改变观感，调用点也不出现像素常量。
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-	const float CursorInnerWidth = ((ScreenX1 - ScreenX0) / maximum(Graphics()->ScreenWidth(), 1)) * 2.0f;
-	const float CursorOuterWidth = CursorInnerWidth * 2.0f;
-	const float CursorOuterInnerDiff = (CursorOuterWidth - CursorInnerWidth) / 2.0f;
-	const float CursorHeight = maximum(0.0f, Cursor.m_AlignedFontSize);
-	if(CursorHeight <= 0.0f)
+	const float WorldPerPixel = (ScreenX1 - ScreenX0) / (float)maximum(Graphics()->ScreenWidth(), 1);
+
+	qm_text_caret::SCaretParams Params;
+	Params.m_Style = qm_text_caret::StyleFromConfig(g_Config.m_QmTextCaretStyle);
+	Params.m_Cell = {DrawPosition.x, DrawPosition.y, 0.0f, CaretHeight};
+	Params.m_WorldPerPixel = WorldPerPixel;
+	// 相位只由绝对时间推导：所有输入框同相位，组件本身不保存跨帧状态。
+	Params.m_TimeSec = std::chrono::duration<double>(time_get_nanoseconds()).count();
+	// 选区与输入法组合期间恒亮（与既有观感一致）；动效等级关闭时同样恒亮，不闪成半周期可见。
+	Params.m_Blink = !ForceVisible && g_Config.m_QmUiMotionLevel > 0;
+	Params.m_HorizBounds = Bounds;
+
+	const qm_text_caret::SCaretShape Shape = qm_text_caret::ResolveShape(Params);
+	if(!Shape.m_Visible)
 		return;
-
-	const IGraphics::CQuadItem OuterCaret(
-		DrawPosition.x - CursorOuterInnerDiff,
-		DrawPosition.y,
-		CursorOuterWidth,
-		CursorHeight);
-	const IGraphics::CQuadItem InnerCaret(
-		DrawPosition.x,
-		DrawPosition.y + CursorOuterInnerDiff,
-		CursorInnerWidth,
-		maximum(0.0f, CursorHeight - CursorOuterInnerDiff * 2.0f));
-
-	Graphics()->QuadsBegin();
-	Graphics()->SetColor(TextOutlineColor);
-	Graphics()->QuadsDrawTL(&OuterCaret, 1);
-	Graphics()->SetColor(TextColor);
-	Graphics()->QuadsDrawTL(&InnerCaret, 1);
-	Graphics()->QuadsEnd();
-	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+	qm_text_caret::Render(Graphics(), Shape, TextColor, TextOutlineColor);
 }
 
 bool CLineInput::ValidateActiveInputRenderedThisFrame()
@@ -916,7 +905,6 @@ void CLineInput::Deactivate() const
 void CLineInput::OnActivate()
 {
 	m_InputMotion.Reset();
-	m_CaretBlinkStartTime = time_get_nanoseconds();
 	if(!TextInputAutoManaged())
 		Input()->StartTextInput();
 }

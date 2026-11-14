@@ -525,6 +525,61 @@ namespace ui_token::list
 	}
 } // namespace ui_token::list
 
+// 游戏内聊天框（滚动条 + 消息气泡）的尺寸。注意单位：聊天视口由
+// Graphics()->MapScreen(0, 0, W, 300) 映射，这里的长度都是"聊天逻辑单位"
+// （1 单位 ≈ 屏幕高度 / 300），不是 UI 像素。列表滚动条的
+// ui_token::list::SCROLLBAR_WIDTH 是 UI 像素，同一个视觉量在两个坐标空间里
+// 数值本来就不同，不要互相抄数字；需要跨空间换算时由绘制点按聊天像素尺寸折算。
+namespace ui_token::chat
+{
+	// 滚动条轨道宽度：旧实现写死 3 单位，这里比它略宽一档，窄屏与高缩放下也抓得住。
+	inline constexpr float SCROLLBAR_WIDTH = spacing::XS;
+	// 轨道离聊天区边缘的外边距（与旧实现同值）；沿长度方向两端也各让出这一档，
+	// 滑块端头不会顶到聊天区上下边缘，整条轨道也不会顶满历史区那么高。
+	inline constexpr float SCROLLBAR_MARGIN = spacing::XS * 0.5f;
+	// 滑块最短长度：再短就抓不住，与旧实现同一档。
+	inline constexpr float SCROLLBAR_MIN_THUMB = spacing::MD;
+	// 滑块最长占轨道的比例：内容只比一屏多一点时，按「可见/内容」比例算出来的滑块
+	// 会拉成几乎整条轨道（旧实现就是这个观感）；压到一半以内才读得出还能滚多少。
+	inline constexpr float SCROLLBAR_MAX_THUMB_RATIO = 0.5f;
+	// 轨道与滑块的圆角：胶囊端头，和列表覆盖式滚动条同一档（绘制层按短边一半兜底）。
+	inline constexpr float SCROLLBAR_RADIUS = radius::PILL;
+
+	// 消息气泡单行判定的容差：行高不超过「一行行高」的 1.25 倍就算单行，
+	// 留出行距与装饰的余量；超过即按多行处理。
+	inline constexpr float BUBBLE_SINGLE_LINE_TOLERANCE = 0.25f;
+	// 多行气泡圆角相对「一行行高」的比例：旧实现按字号一半算（≈行高的 0.43），
+	// 提一档到 0.6 后比旧观感略圆，又随字号/行高一起缩放——固定像素会让大字号
+	// 聊天反而显得更方。
+	inline constexpr float BUBBLE_MULTI_LINE_RADIUS_RATIO = 0.6f;
+
+	// 单行气泡圆角 = 行高一半（完整胶囊），不再另外夹取：绘制层本来就把半径
+	// 夹在短边一半以内，夹在这里会让单行看起来仍是圆角矩形而不是胶囊。
+	inline float BubbleSingleLineRadius(const float LineHeight)
+	{
+		return std::max(0.0f, LineHeight) * 0.5f;
+	}
+
+	// 多行气泡圆角 = 一行行高 × 比例；绘制层仍按短边一半兜底，所以再矮的多行行也不会自交。
+	inline float BubbleMultiLineRadius(const float RowHeight)
+	{
+		return std::max(0.0f, RowHeight) * BUBBLE_MULTI_LINE_RADIUS_RATIO;
+	}
+
+	// 单行判定：调用点只回答「行高是多少」，判定阈值只有这一处。
+	inline bool BubbleIsSingleLine(const float LineHeight, const float RowHeight)
+	{
+		return LineHeight <= std::max(0.0f, RowHeight) * (1.0f + BUBBLE_SINGLE_LINE_TOLERANCE);
+	}
+
+	// 消息气泡圆角的唯一入口：单行胶囊、多行圆角矩形。
+	// LineHeight 是这一行实际占用的高度，RowHeight 是「一行文字」的高度。
+	inline float BubbleRadius(const bool SingleLine, const float LineHeight, const float RowHeight)
+	{
+		return SingleLine ? BubbleSingleLineRadius(LineHeight) : BubbleMultiLineRadius(RowHeight);
+	}
+} // namespace ui_token::chat
+
 // 设置页行类型：每种行只描述「上间距 + 左缩进」两个尺寸事实，全部由既有 spacing
 // token 派生。这里只增不删，调用点按类型逐步迁移，未迁移的行保持原样。
 namespace ui_token::settings::row
@@ -785,6 +840,64 @@ namespace ui_token::font
 	inline constexpr float TIP = 9.0f;
 } // namespace ui_token::font
 
+// 玩家页（ESC 菜单「玩家」== PAGE_PLAYERS）的左右两栏与右侧玩家信息卡。
+// 卡内分区固定为「头部（皮肤/名字/国家）→ 操作胶囊 → 图标复制 → 状态 → 玩家信息细节」，
+// 分区高度、分区之间的缝、图标按钮边长与列表行度量都在这里；调用点只选档位。
+// 这是一组「同一张卡片内部的分区尺寸」，不新增玩家可配置项。
+namespace ui_token::player_card
+{
+	// 左右两栏的最小宽度：窄于它就把信息卡堆到列表下方，避免两栏都挤成细条。
+	inline constexpr float SIDE_BY_SIDE_MIN_WIDTH = 640.0f;
+	// 右栏（信息卡）的宽度上限与占宽比例：卡片再宽也只是「一排操作」，不横向铺满整页。
+	inline constexpr float CARD_MAX_WIDTH = 340.0f;
+	inline constexpr float CARD_WIDTH_RATIO = 0.46f;
+	// 堆叠布局时信息卡占内容区的高度比例。
+	inline constexpr float STACK_CARD_HEIGHT_RATIO = 0.52f;
+	// 列表与信息卡之间的缝：直接用页面级面板间距，两栏与其它页面读起来是同一条缝。
+	inline constexpr float LIST_CARD_GAP = panel::GAP;
+	// 信息卡四周内边距与圆角。
+	inline constexpr float PADDING = spacing::SM;
+	inline constexpr float RADIUS = radius::BASE;
+	// 卡内两个分区之间的缝（头部、操作区、图标行、状态区、细节区之间）。
+	inline constexpr float SECTION_GAP = spacing::SM;
+	// 头部：头像方形、名字/氏族两行的行高、右侧国家旗高度（宽度按 2:1 反推）。
+	inline constexpr float HEADER_HEIGHT = 44.0f;
+	inline constexpr float HEADER_AVATAR_SIZE = 36.0f;
+	inline constexpr float HEADER_NAME_HEIGHT = 18.0f;
+	inline constexpr float HEADER_FLAG_HEIGHT = 13.0f;
+	inline constexpr float HEADER_FLAG_ASPECT = 2.0f;
+	// 操作区：胶囊按钮两列网格，行高与行内缝隙。
+	inline constexpr int ACTION_COLUMNS = 2;
+	inline constexpr int ACTION_COUNT = 5;
+	inline constexpr float ACTION_HEIGHT = 22.0f;
+	inline constexpr float ACTION_GAP = spacing::XS;
+	// 图标复制区：正方形图标按钮的边长、缝隙与个数。
+	inline constexpr int ICON_COUNT = 3;
+	inline constexpr float ICON_BUTTON_SIZE = 22.0f;
+	inline constexpr float ICON_BUTTON_GAP = spacing::XS;
+	// 状态区（在线 / 旁观 / 加入）：行高与状态之间留出的空。
+	inline constexpr float STATUS_HEIGHT = 16.0f;
+	inline constexpr float STATUS_GAP = spacing::MD;
+	// 细节区（玩家信息）：标签列宽、行高与字号。
+	inline constexpr float DETAIL_LABEL_WIDTH = 56.0f;
+	inline constexpr float DETAIL_ROW_HEIGHT = 16.0f;
+	inline constexpr float DETAIL_FONT_SIZE = font::SMALL;
+	// 次级文字相对表面前景的透明度：与 color::TEXT_SECONDARY 同档，
+	// 但用于「由表面推导出的前景色」，所以只能乘在 Ink 上，不能直接换成固定白色。
+	inline constexpr float TEXT_MUTED_ALPHA = 0.72f;
+	// 国家旗相对表面前景的透明度：略淡一档，不抢名字的注意力。
+	inline constexpr float FLAG_ALPHA = 0.8f;
+	// 列表行：行高、头像方形边长、行尾好友标记占宽、名字行高。
+	inline constexpr float LIST_ROW_HEIGHT = 36.0f;
+	inline constexpr float LIST_AVATAR_SIZE = 32.0f;
+	inline constexpr float LIST_BADGE_WIDTH = 22.0f;
+	inline constexpr float LIST_NAME_HEIGHT = 19.0f;
+	// 页面搜索框高度：与筛选胶囊同高，两条并排读作一行。
+	inline constexpr float SEARCH_HEIGHT = 24.0f;
+	// 复制成功的轻提示停留时长（秒）：足够读完「已复制」，又不挡下一步操作。
+	inline constexpr float COPY_TOAST_SECONDS = 1.4f;
+} // namespace ui_token::player_card
+
 // 气泡（tooltip）的唯一尺寸来源。设置页的紧凑小字气泡就是全局标准，服务器列表、
 // 好友列表等普通气泡不再各用一套更大的字号/内边距；行距由文字引擎按同一字号
 // 推导，所以字号统一即行距统一，这里不另设行距。
@@ -929,6 +1042,23 @@ namespace ui_token::ime
 	inline constexpr float MAX_CANDIDATE_TEXT_WIDTH = 1000.0f;
 } // namespace ui_token::ime
 
+// 输入光标（caret）组件内部角色：竖线/下划线的线宽、方块宽度兜底比例与圆角。
+// 这里是同一组件内部的形态档位，不是给玩家逐项自定义的配色：颜色取当前文字色与描边色。
+// 线宽按物理像素给出，调用点只提供「一个物理像素对应多少世界单位」，换分辨率不改变粗细。
+namespace ui_token::text_caret
+{
+	// 竖线与下划线的线宽（物理像素）：两像素，与既有光标观感一致。
+	inline constexpr float THICKNESS_PX = 2.0f;
+	// 竖线与下划线的圆角（物理像素）：半个线宽，端头读作胶囊。
+	inline constexpr float RADIUS_PX = 1.0f;
+	// 方块圆角（物理像素）：方形光标也保留一点圆角，压在深色底上不显生硬。
+	inline constexpr float BLOCK_RADIUS_PX = 1.5f;
+	// 方块与下划线在没有字符格宽时的兜底宽度：按字号的比例给出，三种样式都有确定宽度。
+	inline constexpr float WIDTH_RATIO = 0.6f;
+	// 光标外描边宽度（物理像素）：让光标压在任意底色和字形上都读得清。
+	inline constexpr float OUTLINE_PX = 1.0f;
+} // namespace ui_token::text_caret
+
 // 动效令牌：界面所有过渡的时长、曲线与弹簧参数。按「节奏分级」组织——
 // 同一档交互用同一套时长，跨页面拖动感受一致；不要为单个控件新造一条时长。
 // 每个 SUiAnimTransition 同时带 duration 与 easing，需要弹簧时带 m_Spring（ζ 决定回弹）。
@@ -1025,6 +1155,12 @@ namespace ui_token::motion
 	inline constexpr float LIST_ENTRY_STAGGER_STEP_SEC = 0.014f;
 	// 错开生效的最大行数：超过之后一起启动，避免长列表末尾等太久。
 	inline constexpr int LIST_ENTRY_STAGGER_MAX_ROWS = 28;
+
+	// 输入光标闪烁：所有输入框共用同一条周期与占空比。相位只由绝对时间推导，
+	// 组件不保存跨帧起点，所以并排的两个输入框不会各闪各的。
+	inline constexpr float CARET_BLINK_PERIOD_SEC = 1.0f;
+	// 一个周期内可见的比例：0.5 表示亮半周期、灭半周期。
+	inline constexpr float CARET_BLINK_DUTY = 0.5f;
 
 	// 语义别名：调用点按「哪个控件」取，不必记具体是哪条时长。
 	// 按钮悬停：与 HOVER_FADE 同一条曲线，按控件命名方便调用点取用。

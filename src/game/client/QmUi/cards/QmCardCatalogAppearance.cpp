@@ -794,12 +794,15 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				const ColorRGBA BackgroundColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClChatBackgroundColor, true));
 
 				float TempY = Y;
-				const float RealBackgroundRounding = pChat->MessageRounding() * 2.0f;
+				// 预览是 2 倍尺度：单行行高按同一倍数折算，圆角与聊天框同一条派生
+				// （单行胶囊、多行圆角矩形），预览里多行消息才能看到应有的圆角矩形。
+				const float SingleLinePreviewHeight = (pChat->FontSize() + pChat->MessagePaddingY()) * 2.0f;
 
 				auto &&RenderMessageBackground = [&](int LineIndex) {
 					const auto Size = RenderPreview(LineIndex, 0, 0, false);
 					const CUIRect MessageBackground{PreviewView.x, TempY - RealMsgPaddingY / 2.0f, PreviewView.w, Size.y - RealLineSpacing};
-					DrawRoundedSurface(pMenus->Ui(), MessageBackground, BackgroundColor, ColorRGBA(), RealBackgroundRounding);
+					const bool SingleLine = ui_token::chat::BubbleIsSingleLine(MessageBackground.h, SingleLinePreviewHeight);
+					DrawRoundedSurface(pMenus->Ui(), MessageBackground, BackgroundColor, ColorRGBA(), ui_token::chat::BubbleRadius(SingleLine, MessageBackground.h, SingleLinePreviewHeight));
 					return Size.y;
 				};
 
@@ -871,7 +874,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				const CUIRect Rail = QmChatScrollbarRail(PreviewRailBounds, PreviewRailBounds.y, std::min(PreviewRailBounds.h, std::max(RealFontSize, Y - PreviewRailBounds.y)), g_Config.m_QmChatScrollbarRight != 0, 2.0f);
 				const float HandleHeight = QmChatScrollbarHandleHeight(Rail.h, 3, 6, 2.0f);
 				const CUIRect Handle = QmChatScrollbarHandle(Rail, HandleHeight, 1.0f);
-				QmDrawChatScrollbar(pMenus->Ui(), Rail, Handle.y, Handle.h, false);
+				QmDrawChatScrollbar(pMenus->Ui(), Rail, Handle, false);
 			} });
 		}
 		else if(AppearanceTab == APPEARANCE_TAB_NAME_PLATE)

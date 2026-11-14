@@ -464,8 +464,10 @@ namespace
 			RenderMetadata(Shell, *pMetadata, Render);
 	}
 
-	// 卡片元数据字号不再写死：标题取页面正文、作者与状态标签取页面小字，
-	// 由 RenderSettingsCustom 里算好的 ContentMetrics 传进来（6/7px 低于小字下限，窄视口还会更小）。
+	// 卡片元数据字号不再写死：标题取页面大标题档（比正文大一档）、副标题（作者）
+	// 与状态标签取页面小字，由 RenderSettingsCustom 里算好的 ContentMetrics 传进来
+	// （6/7px 低于小字下限，窄视口还会更小）。标题与副标题的字号差是这张卡的
+	// 唯一层级手段，两档必须来自 ui_token::font，不要在这里写放大系数。
 	constexpr float AssetsCardStatusTagMinWidth = 24.0f;
 	constexpr float AssetsCardStatusTagMaxWidth = 36.0f;
 	constexpr float AssetsCardStatusTagHorizontalPadding = 2.0f;
@@ -488,7 +490,11 @@ namespace
 			AuthorProps.m_MaxWidth = static_cast<int>(Shell.m_AuthorRect.w);
 			AuthorProps.m_StopAtEnd = true;
 			AuthorProps.m_EllipsisAtEnd = true;
+			// 副标题比标题暗一档：标题是资源名（这张卡的主信息），作者只是来源说明。
+			const ColorRGBA PrimaryColor = pUi->TextRender()->GetTextColor();
+			pUi->TextRender()->TextColor(ui_token::color::TEXT_SUBTITLE);
 			pUi->DoLabel(&Shell.m_AuthorRect, pAuthor != nullptr && pAuthor[0] != '\0' ? pAuthor : "--", AuthorFontSize, TEXTALIGN_ML, AuthorProps);
+			pUi->TextRender()->TextColor(PrimaryColor);
 		}
 		if(Shell.m_HasStatusTag && pStatusLabel != nullptr && pStatusLabel[0] != '\0')
 		{
@@ -5577,7 +5583,9 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		}
 		Shell.m_HasAuthorRow = ShowAuthorRow;
 		if(Shell.m_HasAuthorRow)
-			TitleRect.HSplitTop(11.0f, &Shell.m_TitleRect, &Shell.m_AuthorRect);
+			// 标题行高跟着标题字号走（大标题档）：写死 11 是当年正文一档的尺寸，
+			// 换成大一号标题后会把 14 号字压在 11 高的行里。
+			TitleRect.HSplitTop(ContentMetrics.m_HeadlineSize, &Shell.m_TitleRect, &Shell.m_AuthorRect);
 		else
 			Shell.m_TitleRect = TitleRect;
 		return Shell;
@@ -5763,7 +5771,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		TitleProps.m_MaxWidth = static_cast<int>(Shell.m_TitleRect.w);
 		TitleProps.m_StopAtEnd = true;
 		TitleProps.m_EllipsisAtEnd = true;
-		DoMenuLabelStreamed(MENU_TEXT_SCOPE_SETTINGS, *Metadata.m_pTitleElement, &Shell.m_TitleRect, Metadata.m_Title.c_str(), ContentMetrics.m_BodySize, TEXTALIGN_ML, TitleProps, -1, nullptr, Render);
+		DoMenuLabelStreamed(MENU_TEXT_SCOPE_SETTINGS, *Metadata.m_pTitleElement, &Shell.m_TitleRect, Metadata.m_Title.c_str(), ContentMetrics.m_HeadlineSize, TEXTALIGN_ML, TitleProps, -1, nullptr, Render);
 
 		if(Shell.m_HasAuthorRow)
 		{
@@ -5775,7 +5783,12 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			AuthorProps.m_MaxWidth = static_cast<int>(Shell.m_AuthorRect.w);
 			AuthorProps.m_StopAtEnd = true;
 			AuthorProps.m_EllipsisAtEnd = true;
+			// 副标题与标题分色：streamed 文本容器按绘制时的文字色缓存，这里切换一次
+			// 并立刻还原，标题、状态标签和后续卡片都不受影响。
+			const ColorRGBA PrimaryColor = TextRender()->GetTextColor();
+			TextRender()->TextColor(ui_token::color::TEXT_SUBTITLE);
 			DoMenuLabelStreamed(MENU_TEXT_SCOPE_SETTINGS, *Metadata.m_pAuthorElement, &Shell.m_AuthorRect, Metadata.m_Author.c_str(), ContentMetrics.m_SmallSize, TEXTALIGN_ML, AuthorProps, -1, nullptr, Render);
+			TextRender()->TextColor(PrimaryColor);
 		}
 		if(!Render)
 			return;
@@ -6183,7 +6196,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		const float LocalRowHeight = TextureHeight + AssetCardTextReserve + AssetCardFooterSpacing + Margin;
 		s_ListBox.SetCapsuleRows(ContentMetrics.m_BodySize);
 		s_ListBox.DoAutoSpacing(0.0f);
-		// 选中与悬浮反馈统一取主题强调色（qm_ui_selected_color 派生自强调色）：白 8%/14%
+		// 选中与悬浮反馈统一取主题强调色（qm_ui_accent_color）：白 8%/14%
 		// 的旧 token 不再参与行反馈，两种反馈同一份颜色、强度由组件统一补偿。
 		const ColorRGBA LocalRowFeedbackColor = Ui()->QmControlTheme().m_Selected;
 		s_ListBox.SetItemColors(LocalRowFeedbackColor, LocalRowFeedbackColor, LocalRowFeedbackColor);
@@ -6310,13 +6323,13 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				if(AssetsContentWarmupBlocked)
 				{
 					RenderAssetsCardMetadataCached(Shell, pMetadata, RenderAssetsCardMetadata, false);
-					RenderAssetsCardMetadataFallback(Ui(), Shell, pMetadata->m_Title.c_str(), pMetadata->m_Author.c_str(), pMetadata->m_StatusLabel.c_str(), pMetadata->m_Installed || pMetadata->m_LocalOnly, ShowAuthorRow, ContentMetrics.m_BodySize, ContentMetrics.m_SmallSize, ContentMetrics.m_SmallSize);
+					RenderAssetsCardMetadataFallback(Ui(), Shell, pMetadata->m_Title.c_str(), pMetadata->m_Author.c_str(), pMetadata->m_StatusLabel.c_str(), pMetadata->m_Installed || pMetadata->m_LocalOnly, ShowAuthorRow, ContentMetrics.m_HeadlineSize, ContentMetrics.m_SmallSize, ContentMetrics.m_SmallSize);
 				}
 				else
 					RenderAssetsCardMetadataCached(Shell, pMetadata, RenderAssetsCardMetadata, true);
 			}
 			else if(AssetsRenderCardMetadataFallback)
-				RenderAssetsCardMetadataFallback(Ui(), Shell, AssetCardDisplayName(pItem), pItem->m_aAuthor[0] != '\0' ? pItem->m_aAuthor : "--", pLocalStatusLabel, true, ShowAuthorRow, ContentMetrics.m_BodySize, ContentMetrics.m_SmallSize, ContentMetrics.m_SmallSize);
+				RenderAssetsCardMetadataFallback(Ui(), Shell, AssetCardDisplayName(pItem), pItem->m_aAuthor[0] != '\0' ? pItem->m_aAuthor : "--", pLocalStatusLabel, true, ShowAuthorRow, ContentMetrics.m_HeadlineSize, ContentMetrics.m_SmallSize, ContentMetrics.m_SmallSize);
 			SSettingsAssetsCardPreviewState PreviewState;
 			const SResourcePreviewKey PreviewKey = BuildAssetsResourcePreviewKey(pItem->m_aName, s_CurCustomTab, false, Graphics()->ScreenHiDPIScale(), CardRect.w);
 			SResourcePreviewState &ResourcePreviewState = gs_SettingsAssetsResourcePreviewCache.GetOrCreate(PreviewKey);
@@ -7659,13 +7672,13 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 						if(AssetsContentWarmupBlocked)
 						{
 							RenderAssetsCardMetadataCached(Shell, pMetadata, RenderAssetsCardMetadata, false);
-							RenderAssetsCardMetadataFallback(Ui(), Shell, pMetadata->m_Title.c_str(), pMetadata->m_Author.c_str(), pMetadata->m_StatusLabel.c_str(), pMetadata->m_Installed || pMetadata->m_LocalOnly, ShowAuthorRow, ContentMetrics.m_BodySize, ContentMetrics.m_SmallSize, ContentMetrics.m_SmallSize);
+							RenderAssetsCardMetadataFallback(Ui(), Shell, pMetadata->m_Title.c_str(), pMetadata->m_Author.c_str(), pMetadata->m_StatusLabel.c_str(), pMetadata->m_Installed || pMetadata->m_LocalOnly, ShowAuthorRow, ContentMetrics.m_HeadlineSize, ContentMetrics.m_SmallSize, ContentMetrics.m_SmallSize);
 						}
 						else
 							RenderAssetsCardMetadataCached(Shell, pMetadata, RenderAssetsCardMetadata, true);
 					}
 					else if(AssetsRenderCardMetadataFallback)
-						RenderAssetsCardMetadataFallback(Ui(), Shell, AssetCardDisplayName(pItem), pItem->m_aAuthor[0] != '\0' ? pItem->m_aAuthor : "--", pLocalStatusLabel, true, ShowAuthorRow, ContentMetrics.m_BodySize, ContentMetrics.m_SmallSize, ContentMetrics.m_SmallSize);
+						RenderAssetsCardMetadataFallback(Ui(), Shell, AssetCardDisplayName(pItem), pItem->m_aAuthor[0] != '\0' ? pItem->m_aAuthor : "--", pLocalStatusLabel, true, ShowAuthorRow, ContentMetrics.m_HeadlineSize, ContentMetrics.m_SmallSize, ContentMetrics.m_SmallSize);
 					WorkshopCardLayoutTextMs += CardLayoutTextTimer.ElapsedMs();
 
 					CPerfTimer CardPreviewDrawTimer;
@@ -7807,13 +7820,13 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 						if(AssetsContentWarmupBlocked)
 						{
 							RenderAssetsCardMetadataCached(Shell, pMetadata, RenderAssetsCardMetadata, false);
-							RenderAssetsCardMetadataFallback(Ui(), Shell, pMetadata->m_Title.c_str(), pMetadata->m_Author.c_str(), pMetadata->m_StatusLabel.c_str(), pMetadata->m_Installed || pMetadata->m_LocalOnly, ShowAuthorRow, ContentMetrics.m_BodySize, ContentMetrics.m_SmallSize, ContentMetrics.m_SmallSize);
+							RenderAssetsCardMetadataFallback(Ui(), Shell, pMetadata->m_Title.c_str(), pMetadata->m_Author.c_str(), pMetadata->m_StatusLabel.c_str(), pMetadata->m_Installed || pMetadata->m_LocalOnly, ShowAuthorRow, ContentMetrics.m_HeadlineSize, ContentMetrics.m_SmallSize, ContentMetrics.m_SmallSize);
 						}
 						else
 							RenderAssetsCardMetadataCached(Shell, pMetadata, RenderAssetsCardMetadata, true);
 					}
 					else if(AssetsRenderCardMetadataFallback)
-						RenderAssetsCardMetadataFallback(Ui(), Shell, Asset.m_Name.c_str(), Asset.m_Author.empty() ? "--" : Asset.m_Author.c_str(), pWorkshopStatusLabel, Asset.m_Installed, ShowAuthorRow, ContentMetrics.m_BodySize, ContentMetrics.m_SmallSize, ContentMetrics.m_SmallSize);
+						RenderAssetsCardMetadataFallback(Ui(), Shell, Asset.m_Name.c_str(), Asset.m_Author.empty() ? "--" : Asset.m_Author.c_str(), pWorkshopStatusLabel, Asset.m_Installed, ShowAuthorRow, ContentMetrics.m_HeadlineSize, ContentMetrics.m_SmallSize, ContentMetrics.m_SmallSize);
 					WorkshopCardLayoutTextMs += CardLayoutTextTimer.ElapsedMs();
 
 					CPerfTimer CardPreviewDrawTimer;

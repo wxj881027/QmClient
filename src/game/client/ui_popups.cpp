@@ -893,7 +893,7 @@ void CUi::SSelectionPopupContext::Reset()
 	// QmSettingsDropdownVisualStyle 也是取 Theme.m_Selected）。Reset() 里没有 CUi 实例，
 	// 但 CUi::QmControlTheme() 内部调的就是这个函数，所以这里不需要第二份颜色推导，
 	// 也不再回落硬编码的白 22%。
-	m_ActiveEntryColor = ResolveInputFallbackTheme(g_Config.m_QmUiFocusColor).m_Selected;
+	m_ActiveEntryColor = ResolveInputFallbackTheme().m_Selected;
 	// 悬浮与选中同一份底色：弹层条目的悬浮不再叠一层白（实机反馈「下拉框弹层的悬浮态
 	// 也要用强调色，保持和选中态背景一致」）。列表行与弹层条目因此逐位同源。
 	m_HoverEntryColor = m_ActiveEntryColor;

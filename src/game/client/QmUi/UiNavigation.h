@@ -5,6 +5,7 @@
 #define GAME_CLIENT_QMUI_UINAVIGATION_H
 
 #include "UiContext.h"
+#include "UiTheme.h"
 #include "UiTokens.h"
 
 #include <game/client/ui_rect.h>
@@ -115,8 +116,9 @@ namespace ui_widget
 	// 先解析本帧按下，再绘制选中滑块；调用方用返回值绘制文字和正文。
 	int CapsuleTabBar(const IUiContext &Ctx, uint64_t GroupId, const CUIRect *pSlots, int Count, int ActiveIndex, const SCapsuleTabBarStyle &Style, const ColorRGBA *pSlotTints = nullptr);
 
-	// 胶囊配色推导：滑块与文字色由容器表面色明暗自适应 —— 容器偏暗用亮滑块 + 深字，
-	// 容器偏亮反过来，避免"白底白滑块"或"深底深字"。各 Tabbar 传入自己的容器表面色。
+	// 胶囊配色：滑块就是「选中项」，因此取强调色；滑块上的文字固定取文本颜色模式
+	// 解析出的颜色（默认白色），不再按容器明暗翻转。翻转逻辑在强调色滑块上会把文字
+	// 压成深色，和强调色撞在一起；容器明暗只影响未选中态与 hover 反馈。
 	inline bool CapsuleTabBarSurfaceIsLight(const ColorRGBA &SurfaceColor)
 	{
 		return SurfaceColor.r * 0.299f + SurfaceColor.g * 0.587f + SurfaceColor.b * 0.114f >= 0.5f;
@@ -124,12 +126,14 @@ namespace ui_widget
 
 	inline ColorRGBA CapsuleTabBarIndicatorColor(const ColorRGBA &SurfaceColor)
 	{
-		return CapsuleTabBarSurfaceIsLight(SurfaceColor) ? ui_token::color::ADAPTIVE_ON_LIGHT.WithAlpha(0.92f) : ui_token::color::ADAPTIVE_ON_DARK.WithAlpha(0.94f);
+		(void)SurfaceColor;
+		return ResolveConfiguredAccentColor().WithAlpha(0.92f);
 	}
 
 	inline ColorRGBA CapsuleTabBarActiveLabelColor(const ColorRGBA &SurfaceColor)
 	{
-		return CapsuleTabBarSurfaceIsLight(SurfaceColor) ? ui_token::color::TEXT_PRIMARY : ui_token::color::TEXT_ON_ACCENT;
+		(void)SurfaceColor;
+		return ResolveConfiguredTextColor();
 	}
 
 	inline ColorRGBA CapsuleTabBarInactiveLabelColor(const ColorRGBA &SurfaceColor)

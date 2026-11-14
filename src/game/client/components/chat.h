@@ -205,7 +205,7 @@ private:
 
 		STextContainerIndex m_TextContainerIndex;
 		STextContainerIndex m_BodyTextContainerIndex;
-		int m_QuadContainerIndex;
+		// 气泡底色几何：布局趟写入，绘制趟按它走公共圆角表面链（不再缓存直绘四边形容器）。
 		CUIRect m_BackgroundRect = {};
 		float m_BackgroundRounding = 0.0f;
 		std::vector<SQmTitleBadgePlacement> m_vTitleBadges;
@@ -664,7 +664,6 @@ public:
 	float MessagePaddingX() const { return FontSize() * (5 / 6.f); }
 	float MessagePaddingY() const { return FontSize() * (1 / 6.f); }
 	float MessageTeeSize() const { return FontSize() * (7 / 6.f); }
-	float MessageRounding() const { return FontSize() * (1 / 2.f); }
 
 	// 翻译按钮相关方法
 	vec2 GetChatMousePos() const;

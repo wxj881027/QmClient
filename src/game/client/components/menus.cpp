@@ -1165,6 +1165,21 @@ void CMenus::LoadSettingsCardOrderModel()
 		}
 		g_Config.m_QmCardLayoutVersion = 13;
 	}
+	if(g_Config.m_QmCardLayoutVersion < 14)
+	{
+		// 图像页分组调整：图标与界面动效两张卡从「显示选项」搬到「视觉效果」。
+		// 已保存的卡片顺序里这两张仍记着旧 tab，顺序模型按 tab 投影，不搬过去
+		// 它们会从两页同时消失（新页的 id 列表里没有它们旧的 tab）。
+		qm_card_order::CModel Candidate;
+		MakeCandidate(Candidate);
+		const bool CandidateChanged = qm_card_registry::RepairLegacyGraphicsVisualCards(Candidate);
+		if(!PersistCandidate(Candidate, CandidateChanged, true))
+		{
+			m_SettingsCardOrderLoaded = true;
+			return;
+		}
+		g_Config.m_QmCardLayoutVersion = 14;
+	}
 	m_SettingsCardOrderLoaded = true;
 }
 

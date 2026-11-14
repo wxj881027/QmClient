@@ -10,8 +10,8 @@
 //      而不是拿整行宽度去排版（实机反馈：皮肤名跑到收藏星下面）。
 //   4. 只在交互趟推进状态机（与全仓本地时钟动画同一条规则）：出图/测量趟只读，
 //      否则动画会在背景趟跑完、交互趟直接看到终点。
-#ifndef GAME_CLIENT_QMUI_UI_ICON_ACTION_STRIP_H
-#define GAME_CLIENT_QMUI_UI_ICON_ACTION_STRIP_H
+#ifndef GAME_CLIENT_QMUI_UIICONACTIONSTRIP_H
+#define GAME_CLIENT_QMUI_UIICONACTIONSTRIP_H
 
 #include <base/system.h>
 #include <base/vmath.h>

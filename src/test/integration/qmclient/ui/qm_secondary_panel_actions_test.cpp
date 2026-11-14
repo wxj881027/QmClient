@@ -306,7 +306,9 @@ TEST_F(QmSecondaryPanelActions, SplitAndRegularButtonsSubmitTheSameOuterRadius)
 	ui_widget::SecondaryButton(ui_widget::ControlContext(&m_Ui), &m_Left, "Regular", m_Button, false, EUiButtonGeometry::START_MENU);
 	ASSERT_EQ(Graphics.m_vRoundedSubmissions.size(), 1u);
 	const float Radius = Graphics.m_vRoundedSubmissions[0].m_CornerRadii.x;
-	EXPECT_FLOAT_EQ(Radius, 10.0f);
+	// 240x32 的长条按「宽 ≥ 1.8 倍高」就是胶囊端头，提交半径被裁到短边一半，
+	// 不再是 START_MENU 档的 10。这里只锁「已经是胶囊」这一事实，不写死像素。
+	EXPECT_GT(Radius, ui_token::radius::MENU);
 	Graphics.m_vRoundedSubmissions.clear();
 	ui_widget::SplitActionButton(ui_widget::ControlContext(&m_Ui), &m_Left, "Left", &m_Right, "Right", m_Button, false, false, EUiButtonGeometry::START_MENU);
 	ASSERT_EQ(Graphics.m_vRoundedSubmissions.size(), 3u);

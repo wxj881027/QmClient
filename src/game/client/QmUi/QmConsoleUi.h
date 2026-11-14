@@ -3,6 +3,7 @@
 
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiSurfaceText.h>
+#include <game/client/QmUi/UiTextCaret.h>
 #include <game/client/components/qmclient/console_appearance.h>
 #include <game/client/qm_icon.h>
 #include <game/client/ui.h>
@@ -192,6 +193,19 @@ namespace QmConsoleUi
 		Rect.Draw(Color, IGraphics::CORNER_NONE, 0.0f);
 	}
 
+	// 日志选区光标：几何由 qm_text_caret 统一解析，这里只按解析出的圆角把整块画出来。
+	// 日志光标是「选中位置」标记而不是输入光标，因此恒亮、不参与闪烁相位。
+	inline void DrawCaret(CUi *pUi, const qm_text_caret::SCaretShape &Shape, ColorRGBA Color)
+	{
+		if(pUi == nullptr || !Shape.m_Visible || Shape.m_Rect.w <= 0.0f || Shape.m_Rect.h <= 0.0f)
+			return;
+		const CUiScopedGaussianBlurSuppression GaussianBlurSuppression(pUi);
+		SRoundedSurfaceParams Params;
+		Params.m_Radius = Shape.m_Radius;
+		Params.m_PixelSize = std::max(Shape.m_PixelSize, 0.0001f);
+		DrawRoundedSurface(pUi, Shape.m_Rect, Color, ColorRGBA(), Params);
+	}
+
 	// 控制台使用独立的鼠标/触摸按下位置；统一在按钮内松开时触发一次。
 	inline bool Button(CUi *pUi, const CUIRect &Rect, const char *pLabel, float FontSize, bool Selected,
 		vec2 PressPosition, vec2 MousePosition, bool MouseDown, bool Released, bool Enabled, float FilterIndicatorWidth = 0.0f, const QmConsoleAppearance::SPalette *pPalette = nullptr, uint64_t AnimationKey = 0)
@@ -209,7 +223,7 @@ namespace QmConsoleUi
 			Fill = ColorRGBA(mix(From.r, To.r, Blend), mix(From.g, To.g, Blend), mix(From.b, To.b, Blend), mix(From.a, To.a, Blend));
 		}
 		else
-			Fill = Selected ? color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(Enabled ? 1.0f : 0.65f) : ResolveConfiguredControlSurface(Enabled);
+			Fill = Selected ? ResolveConfiguredAccentColor().WithAlpha(Enabled ? 1.0f : 0.65f) : ResolveConfiguredControlSurface(Enabled);
 		const CUiScopedGaussianBlurSuppression GaussianBlurSuppression(pUi);
 		DrawRoundedSurface(pUi, Rect, Fill, ColorRGBA(), ui_token::radius::BASE);
 		const ColorRGBA Feedback = ResolveUiIconButtonFeedback(CompositeUiSurface(Fill), Enabled, Hovered, Pressed);

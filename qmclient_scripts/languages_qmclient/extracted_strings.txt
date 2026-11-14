@@ -1113,6 +1113,7 @@ Copied bind command
 Copy
 Copy a .qmconfig file into the package folder, then refresh.
 Copy all
+Copy clan
 Copy friend code
 Copy info
 Copy name
@@ -5356,6 +5357,7 @@ Testing translation...
 Text
 Text alpha
 Text before each key press count
+Text caret style: 0=bar, 1=underscore, 2=block
 Text color
 Text color mode
 Text color mode: 0 white, 1 black, 2 rainbow, 3 custom

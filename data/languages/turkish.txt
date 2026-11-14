@@ -3242,6 +3242,9 @@ Copy a .qmconfig file into the package folder, then refresh.
 Copy all
 == Tümünü kopyala
 
+Copy clan
+== Klanı kopyala
+
 Copy friend code
 == Arkadaş kodunu kopyala
 
@@ -15514,6 +15517,9 @@ Text alpha
 
 Text before each key press count
 == Tuş sayacı ön eki
+
+Text caret style: 0=bar, 1=underscore, 2=block
+== Giriş imleci stili: 0=çubuk, 1=alt çizgi, 2=blok
 
 Text color
 == Metin rengi

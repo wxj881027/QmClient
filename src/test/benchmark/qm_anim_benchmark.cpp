@@ -374,7 +374,7 @@ static void BM_TextColorPolicy(benchmark::State &State)
 		benchmark::DoNotOptimize(Surface);
 		benchmark::DoNotOptimize(Custom);
 		benchmark::DoNotOptimize(Mode);
-		const ColorRGBA Color = ResolveUiTextColor(Surface, Mode, Custom);
+		const ColorRGBA Color = ResolveUiTextColor(Mode, Custom, 0.37f);
 		benchmark::DoNotOptimize(Color);
 	}
 }

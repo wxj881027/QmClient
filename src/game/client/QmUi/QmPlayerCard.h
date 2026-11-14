@@ -1,0 +1,240 @@
+// 请抬头享受阳光｜日子很好 我很我---------致咩子
+/* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
+/* If you are missing that file, acquire a complete release at teeworlds.com.                */
+#ifndef GAME_CLIENT_QMUI_QMPLAYERCARD_H
+#define GAME_CLIENT_QMUI_QMPLAYERCARD_H
+
+#include "UiButtons.h"
+#include "UiOverlays.h"
+#include "UiTokens.h"
+
+#include <engine/input.h>
+#include <engine/textrender.h>
+
+#include <game/client/ui.h>
+#include <game/client/ui_rect.h>
+
+#include <algorithm>
+#include <array>
+
+// 玩家页右侧的「玩家信息卡」：分区几何 + 两个操作网格。
+// 全部按钮都走既有组件（ui_widget::SecondaryButton / ui_widget::DoIconButton），
+// 这里只负责「排在哪、多大、点了算哪个动作」，不自己画底色、描边或图标。
+// 尺寸一律取 ui_token::player_card，调用点不再写 36 / 22 / 8 这类字面量。
+namespace QmPlayersUi
+{
+	// 卡片操作区（胶囊按钮）的动作：顺序即按钮容器数组的下标。
+	enum class EPlayerCardAction
+	{
+		NONE = -1,
+		FRIEND = 0,
+		FOLLOW,
+		MUTE,
+		MUTE_EMOTICONS,
+		COPY_SKIN,
+		COUNT,
+	};
+
+	// 图标复制区的动作：点一下就把对应文本写进剪贴板。
+	enum class EPlayerCardCopy
+	{
+		NONE = -1,
+		NAME = 0,
+		CLAN,
+		SKIN,
+		COUNT,
+	};
+
+	// 分区尺寸的最高档位来自 token：枚举个数与 token 个数必须一致，
+	// 加减一个按钮时两边同时改，不会出现「枚举 5 个、网格按 6 个排」的错位。
+	static_assert(static_cast<int>(EPlayerCardAction::COUNT) == ui_token::player_card::ACTION_COUNT, "操作区动作个数必须与 ui_token::player_card::ACTION_COUNT 一致");
+	static_assert(static_cast<int>(EPlayerCardCopy::COUNT) == ui_token::player_card::ICON_COUNT, "图标复制区个数必须与 ui_token::player_card::ICON_COUNT 一致");
+
+	struct SPlayerCardLayout
+	{
+		CUIRect m_Header; // 皮肤、名字、国家
+		CUIRect m_Actions; // 胶囊操作区
+		CUIRect m_IconRow; // 小方形图标按钮行
+		CUIRect m_Status; // 在线 / 旁观 / 加入
+		CUIRect m_Details; // 玩家信息细节（占剩余高度）
+	};
+
+	// 操作区行数：两列网格向上取整，最后一行只有一个动作时占满整行。
+	inline int PlayerCardActionRows(const int ActionCount)
+	{
+		const int Columns = std::max(1, ui_token::player_card::ACTION_COLUMNS);
+		return std::max(0, (ActionCount + Columns - 1) / Columns);
+	}
+
+	inline float PlayerCardActionsHeight(const int ActionCount)
+	{
+		const int Rows = PlayerCardActionRows(ActionCount);
+		if(Rows <= 0)
+			return 0.0f;
+		return Rows * ui_token::player_card::ACTION_HEIGHT + (Rows - 1) * ui_token::player_card::ACTION_GAP;
+	}
+
+	// 卡片内容的自然高度：滚动区按它排版，卡片再矮也只是滚动，不会把分区压成负高度。
+	inline float PlayerCardContentHeight(const int ActionCount, const int DetailRows)
+	{
+		return ui_token::player_card::HEADER_HEIGHT +
+		       ui_token::player_card::SECTION_GAP +
+		       PlayerCardActionsHeight(ActionCount) +
+		       ui_token::player_card::SECTION_GAP +
+		       ui_token::player_card::ICON_BUTTON_SIZE +
+		       ui_token::player_card::SECTION_GAP +
+		       ui_token::player_card::STATUS_HEIGHT +
+		       ui_token::player_card::SECTION_GAP +
+		       std::max(0, DetailRows) * ui_token::player_card::DETAIL_ROW_HEIGHT;
+	}
+
+	// 分区自上而下依次切分：每个分区都被夹在当前剩余高度内，
+	// 高度不够时后面的分区直接归零，保证任何窗口尺寸下都不会越出卡片。
+	inline SPlayerCardLayout PlayerCardLayout(const CUIRect &Card, const int ActionCount)
+	{
+		SPlayerCardLayout Layout;
+		CUIRect Body = Card;
+		float Remaining = std::max(0.0f, Body.h);
+		const auto Take = [&](const float Height) {
+			CUIRect Rect{Body.x, Body.y, Body.w, std::max(0.0f, std::min(Height, Remaining))};
+			Remaining = std::max(0.0f, Remaining - Rect.h);
+			const float Space = std::min(ui_token::player_card::SECTION_GAP, Remaining);
+			Body.y += Rect.h + Space;
+			Remaining = std::max(0.0f, Remaining - Space);
+			Body.h = Remaining;
+			return Rect;
+		};
+		Layout.m_Header = Take(ui_token::player_card::HEADER_HEIGHT);
+		Layout.m_Actions = Take(PlayerCardActionsHeight(ActionCount));
+		Layout.m_IconRow = Take(ui_token::player_card::ICON_BUTTON_SIZE);
+		Layout.m_Status = Take(ui_token::player_card::STATUS_HEIGHT);
+		Layout.m_Details = Body;
+		return Layout;
+	}
+
+	struct SPlayerCardActionGrid
+	{
+		std::array<CUIRect, static_cast<int>(EPlayerCardAction::COUNT)> m_aCells;
+		int m_Rows = 0;
+	};
+
+	// 胶囊操作区的两列网格：末行只剩一个动作时占满整行，不把按钮挤成半宽。
+	inline SPlayerCardActionGrid PlayerCardActionGrid(const CUIRect &Actions, const int ActionCount)
+	{
+		SPlayerCardActionGrid Grid;
+		const int Columns = std::max(1, ui_token::player_card::ACTION_COLUMNS);
+		Grid.m_Rows = PlayerCardActionRows(ActionCount);
+		if(Grid.m_Rows <= 0 || Actions.w <= 0.0f)
+			return Grid;
+		const int Count = std::min(ActionCount, static_cast<int>(EPlayerCardAction::COUNT));
+		const float CellWidth = std::max(0.0f, (Actions.w - (Columns - 1) * ui_token::player_card::ACTION_GAP) / Columns);
+		int Index = 0;
+		for(int Row = 0; Row < Grid.m_Rows && Index < Count; ++Row)
+		{
+			const int InRow = std::min(Columns, Count - Index);
+			const float Y = Actions.y + Row * (ui_token::player_card::ACTION_HEIGHT + ui_token::player_card::ACTION_GAP);
+			for(int Column = 0; Column < InRow; ++Column)
+			{
+				const float Width = InRow == 1 ? Actions.w : CellWidth;
+				const float X = InRow == 1 ? Actions.x : Actions.x + Column * (CellWidth + ui_token::player_card::ACTION_GAP);
+				Grid.m_aCells[Index] = CUIRect{X, Y, Width, ui_token::player_card::ACTION_HEIGHT};
+				++Index;
+			}
+		}
+		return Grid;
+	}
+
+	struct SPlayerCardIconRow
+	{
+		std::array<CUIRect, static_cast<int>(EPlayerCardCopy::COUNT)> m_aCells;
+	};
+
+	// 图标复制行：小方形按钮靠右排成一行。行宽不足时等比缩小边长，
+	// 而不是把最后一个按钮推出行外——命中区永远留在行内。
+	// 为什么不用 ui_widget::CIconActionStrip：那套的语义是「不存在 = 不占位」并要求出现/消失
+	// 过渡，复制按钮在这里是「恒存在、可能置灰」——置灰仍要占槽，否则三个图标会随玩家数据
+	// 左右横跳。等哪天真有「可隐藏」的图标动作，再切到图标条组件。
+	inline SPlayerCardIconRow PlayerCardIconRowLayout(const CUIRect &Row, const int IconCount)
+	{
+		SPlayerCardIconRow Layout;
+		const int Count = std::max(0, std::min(IconCount, static_cast<int>(EPlayerCardCopy::COUNT)));
+		if(Count <= 0 || Row.w <= 0.0f)
+			return Layout;
+		const float Gap = ui_token::player_card::ICON_BUTTON_GAP;
+		const float TotalGap = (Count - 1) * Gap;
+		float Size = ui_token::player_card::ICON_BUTTON_SIZE;
+		if(Size * Count + TotalGap > Row.w)
+			Size = std::max(0.0f, (Row.w - TotalGap) / Count);
+		const float Total = Size * Count + TotalGap;
+		float X = Row.x + std::max(0.0f, Row.w - Total);
+		const float Y = Row.y + std::max(0.0f, (Row.h - Size) * 0.5f);
+		for(int Index = 0; Index < Count; ++Index)
+		{
+			Layout.m_aCells[Index] = CUIRect{X, Y, Size, Size};
+			X += Size + Gap;
+		}
+		return Layout;
+	}
+
+	// 一个操作胶囊的显示事实：文案、是否处于选中态、是否可点。
+	struct SPlayerCardActionSpec
+	{
+		const char *m_pLabel = nullptr;
+		bool m_Selected = false;
+		bool m_Enabled = true;
+	};
+
+	// 胶囊操作区：全部走 ui_widget::SecondaryButton，返回被点中的动作。
+	inline EPlayerCardAction PlayerCardActions(const IUiContext &Ctx, CButtonContainer *pButtons, const CUIRect &Actions, const SPlayerCardActionSpec *pSpecs, const int Count)
+	{
+		if(Ctx.m_pUi == nullptr || pButtons == nullptr || pSpecs == nullptr || Count <= 0)
+			return EPlayerCardAction::NONE;
+		const auto Grid = PlayerCardActionGrid(Actions, Count);
+		const int Clamped = std::min(Count, static_cast<int>(EPlayerCardAction::COUNT));
+		for(int Index = 0; Index < Clamped; ++Index)
+		{
+			const SPlayerCardActionSpec &Spec = pSpecs[Index];
+			if(Spec.m_pLabel == nullptr)
+				continue;
+			if(ui_widget::SecondaryButton(Ctx, &pButtons[Index], Spec.m_pLabel, Grid.m_aCells[Index], !Spec.m_Enabled, EUiButtonGeometry::CONTROL, Spec.m_Selected))
+				return static_cast<EPlayerCardAction>(Index);
+			ui_widget::Tooltip(Ctx, &pButtons[Index], Grid.m_aCells[Index], Spec.m_pLabel);
+		}
+		return EPlayerCardAction::NONE;
+	}
+
+	// 一个图标复制按钮的显示事实：图标、文案、要说给玩家的提示。
+	struct SPlayerCardCopySpec
+	{
+		EQmIcon m_Icon = EQmIcon::COPY;
+		const char *m_pFallbackIcon = nullptr;
+		// 点击后写进剪贴板的文本；空文本表示这一项当前不可复制（按钮置灰）。
+		const char *m_pText = nullptr;
+		const char *m_pTooltip = nullptr;
+	};
+
+	// 图标复制区：点一下即复制。非空文本才写剪贴板，空文本不覆盖玩家原有内容。
+	// 返回被点中的复制项，调用方据此弹一条轻提示。
+	inline EPlayerCardCopy PlayerCardCopies(const IUiContext &Ctx, CButtonContainer *pButtons, const CUIRect &Row, const SPlayerCardCopySpec *pSpecs, const int Count)
+	{
+		if(Ctx.m_pUi == nullptr || pButtons == nullptr || pSpecs == nullptr || Count <= 0)
+			return EPlayerCardCopy::NONE;
+		const auto Layout = PlayerCardIconRowLayout(Row, Count);
+		const int Clamped = std::min(Count, static_cast<int>(EPlayerCardCopy::COUNT));
+		for(int Index = 0; Index < Clamped; ++Index)
+		{
+			const SPlayerCardCopySpec &Spec = pSpecs[Index];
+			const bool Enabled = Spec.m_pText != nullptr && Spec.m_pText[0] != '\0';
+			if(ui_widget::DoIconButton(Ctx, &pButtons[Index], Spec.m_Icon, Spec.m_pFallbackIcon, 0, Layout.m_aCells[Index], BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Enabled) != 0)
+			{
+				if(Enabled && Ctx.m_pUi->Input() != nullptr)
+					Ctx.m_pUi->Input()->SetClipboardText(Spec.m_pText);
+				return static_cast<EPlayerCardCopy>(Index);
+			}
+			ui_widget::Tooltip(Ctx, &pButtons[Index], Layout.m_aCells[Index], Spec.m_pTooltip);
+		}
+		return EPlayerCardCopy::NONE;
+	}
+} // namespace QmPlayersUi
+
+#endif

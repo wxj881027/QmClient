@@ -20,6 +20,7 @@
 #include <generated/protocol7.h>
 
 #include <game/client/QmUi/QmChatLineMenuLayout.h>
+#include <game/client/QmUi/UiButtonStyle.h>
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiTheme.h>
 #include <game/client/QmUi/UiTokens.h>
@@ -372,7 +373,6 @@ CChat::CLine::CLine()
 {
 	m_TextContainerIndex.Reset();
 	m_BodyTextContainerIndex.Reset();
-	m_QuadContainerIndex = -1;
 	m_aYOffset[0] = -1.0f;
 	m_aYOffset[1] = -1.0f;
 	m_TextYOffset = 0.0f;
@@ -400,8 +400,9 @@ void CChat::CLine::DeleteTextContainers(ITextRender *pTextRender)
 void CChat::CLine::Reset(CChat &This)
 {
 	DeleteTextContainers(This.TextRender());
-	This.Graphics()->DeleteQuadContainer(m_QuadContainerIndex);
-	m_QuadContainerIndex = -1;
+	// 气泡几何按行缓存：清行时一起清掉，避免旧半径/旧矩形被下一帧继续用。
+	m_BackgroundRect = {};
+	m_BackgroundRounding = 0.0f;
 	m_Initialized = false;
 	m_Time = 0;
 	m_aText[0] = '\0';
@@ -649,7 +650,8 @@ void CChat::RebuildChat()
 			continue;
 		RefreshMessageNamePrefix(Line.m_ClientId, Line.m_aName, sizeof(Line.m_aName), g_Config.m_QmChatHideSystemPrefix != 0);
 		Line.DeleteTextContainers(TextRender());
-		Graphics()->DeleteQuadContainer(Line.m_QuadContainerIndex);
+		Line.m_BackgroundRect = {};
+		Line.m_BackgroundRounding = 0.0f;
 		// recalculate sizes
 		Line.m_aYOffset[0] = -1.0f;
 		Line.m_aYOffset[1] = -1.0f;
@@ -2642,7 +2644,8 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible
 		}
 		PreviousLine.m_ConsoleSuppressed |= BlockWordsConsolePrinted;
 		PreviousLine.DeleteTextContainers(TextRender());
-		Graphics()->DeleteQuadContainer(PreviousLine.m_QuadContainerIndex);
+		PreviousLine.m_BackgroundRect = {};
+		PreviousLine.m_BackgroundRounding = 0.0f;
 		PreviousLine.m_Time = Now;
 		PreviousLine.m_aYOffset[0] = -1.0f;
 		PreviousLine.m_aYOffset[1] = -1.0f;
@@ -3441,17 +3444,15 @@ bool CChat::OnPrepareLines(float y)
 			Line.m_ContentWidth = maximum(0.0f, FullWidth);
 			if(!g_Config.m_ClChatOld)
 			{
-				const CUIRect Rect = {Begin, TargetY, FullWidth, LineHeight};
-				const float Rounding = MessageRounding();
-				if(Line.m_QuadContainerIndex == -1 || Line.m_BackgroundRect.x != Rect.x || Line.m_BackgroundRect.y != Rect.y ||
-					Line.m_BackgroundRect.w != Rect.w || Line.m_BackgroundRect.h != Rect.h || Line.m_BackgroundRounding != Rounding)
-				{
-					Graphics()->DeleteQuadContainer(Line.m_QuadContainerIndex);
-					Graphics()->SetColor(1, 1, 1, 1);
-					Line.m_QuadContainerIndex = Graphics()->CreateRectQuadContainer(Begin, TargetY, FullWidth, LineHeight, Rounding, IGraphics::CORNER_ALL);
-					Line.m_BackgroundRect = Rect;
-					Line.m_BackgroundRounding = Rounding;
-				}
+				// 消息气泡：单行取整行高一半 → 完整胶囊，多行保持圆角矩形（圆角比旧的一档大）。
+				// 这里只记录几何与圆角，绘制交给 DrawRoundedSurface 走公共圆角曲线链；旧实现
+				// 缓存一个直绘四边形容器，只认圆弧，换曲线档位后气泡与它自己的背景模糊会错位，
+				// 也没法让单行/多行用两种圆角。
+				// 局部 FontSize 已是本帧字号（见 OnPrepareLines 开头），不能再当函数调用。
+				const float SingleLineHeight = FontSize + MessagePaddingY();
+				const bool SingleLineBubble = ui_token::chat::BubbleIsSingleLine(LineHeight, SingleLineHeight);
+				Line.m_BackgroundRect = {Begin, TargetY, FullWidth, LineHeight};
+				Line.m_BackgroundRounding = ui_token::chat::BubbleRadius(SingleLineBubble, LineHeight, SingleLineHeight);
 			}
 		}
 
@@ -3880,12 +3881,15 @@ void CChat::OnRender()
 	}
 
 	// 行间隔按配置像素换算到聊天虚拟坐标，0 保持默认行距。
+	// ChatPixelSize 是一物理像素折成的聊天逻辑单位数，圆角表面也要用它：不传的话
+	// DrawRoundedSurface 会按菜单屏幕的像素尺寸抗锯齿，聊天气泡边缘会糊一圈。
 	float ExtraLineSpacing = 0.0f;
+	float ChatPixelSize = 1.0f;
 	{
 		float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 		Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-		const float PixelSize = (ScreenY1 - ScreenY0) / Graphics()->ScreenHeight();
-		ExtraLineSpacing = (float)g_Config.m_QmChatLineSpacing * PixelSize;
+		ChatPixelSize = (ScreenY1 - ScreenY0) / maximum(1, Graphics()->ScreenHeight());
+		ExtraLineSpacing = (float)g_Config.m_QmChatLineSpacing * ChatPixelSize;
 	}
 
 	const float HistoryBottom = y;
@@ -3927,6 +3931,17 @@ void CChat::OnRender()
 		}
 		if(!PointerDown())
 			m_ScrollbarDragging = false;
+		// 公共滑块绘制入口读 CUi 的悬浮/按下登记：只登记滚动条自己的 id，松手立刻收回，
+		// 不占用其它控件的热项/活动项（与 ui_widget::ScrollContainer 同一套做法）。
+		if(!Ui()->RenderOnly())
+		{
+			if(InsideRail || m_ScrollbarDragging)
+				Ui()->SetHotItem(QmChatScrollbarId());
+			if(m_ScrollbarDragging)
+				Ui()->SetActiveItem(QmChatScrollbarId());
+			else if(Ui()->CheckActiveItem(QmChatScrollbarId()))
+				Ui()->SetActiveItem(nullptr);
+		}
 		if(m_ScrollbarDragging)
 		{
 			const float HandleTop = std::clamp(MousePos.y - m_ScrollbarDragOffset, ScrollbarRect.y, ScrollbarRect.y + TrackRange);
@@ -4107,35 +4122,37 @@ void CChat::OnRender()
 				str_comp(m_ChatLinePopupContext.m_aText, Line.m_aText) == 0) ||
 			(ChatLineMenuRequested && pMenuLine == &Line);
 
-		// Draw backgrounds for messages in one batch
-		if(!g_Config.m_ClChatOld)
+		// 消息气泡底色：与背景模糊用同一个矩形、同一档圆角，一起走公共圆角表面链
+		// （曲线档位、圆角强度、SDF 与几何兜底都在里面，和卡片/面板同一条路）。
+		if(!g_Config.m_ClChatOld && Line.m_BackgroundRounding > 0.0f && Line.m_BackgroundRect.w > 0.0f)
 		{
-			Graphics()->TextureClear();
-			if(Line.m_QuadContainerIndex != -1)
+			const float QuadScale = RenderScale;
+			const float QuadY = Line.m_TextYOffset - RealMsgPaddingY / 2.0f;
+			const float QuadOffsetX = AnimOffsetX + x * (1.0f - QuadScale);
+			const float QuadOffsetY = AnimOffsetY + QuadY * (1.0f - QuadScale);
+			const auto &Rect = Line.m_BackgroundRect;
+			const CUIRect BubbleRect{Rect.x * QuadScale + QuadOffsetX, Rect.y * QuadScale + QuadOffsetY, Rect.w * QuadScale, Rect.h * QuadScale};
+			if(BackgroundBaseColor.a > 0.0f && BubbleRect.w > 0.0f && BubbleRect.h > 0.0f)
 			{
-				const float QuadScale = RenderScale;
-				const float QuadY = Line.m_TextYOffset - RealMsgPaddingY / 2.0f;
-				const float QuadOffsetX = AnimOffsetX + x * (1.0f - QuadScale);
-				const float QuadOffsetY = AnimOffsetY + QuadY * (1.0f - QuadScale);
-				if(BackgroundBaseColor.a > 0.0f)
-				{
-					const auto &Rect = Line.m_BackgroundRect;
-					Ui()->RenderGaussianBlur({Rect.x * QuadScale + QuadOffsetX, Rect.y * QuadScale + QuadOffsetY, Rect.w * QuadScale, Rect.h * QuadScale}, AnimAlpha, IGraphics::CORNER_ALL, Line.m_BackgroundRounding * QuadScale);
-				}
-				Graphics()->TextureClear();
-				Graphics()->SetColor(BackgroundBaseColor.WithMultipliedAlpha(AnimAlpha));
-				Graphics()->RenderQuadContainerEx(Line.m_QuadContainerIndex, 0, -1, QuadOffsetX, QuadOffsetY, QuadScale, QuadScale);
+				const float BubbleRounding = Line.m_BackgroundRounding * QuadScale;
+				Ui()->RenderGaussianBlur(BubbleRect, AnimAlpha, IGraphics::CORNER_ALL, BubbleRounding);
+				SRoundedSurfaceParams BubbleParams;
+				BubbleParams.m_Radius = BubbleRounding;
+				BubbleParams.m_PixelSize = ChatPixelSize;
+				DrawRoundedSurface(Ui(), BubbleRect, BackgroundBaseColor.WithMultipliedAlpha(AnimAlpha), ui_token::color::COLOR_TRANSPARENT, BubbleParams);
 			}
 		}
 		if(IsPopupTarget && RenderedTextRect.w > 0.0f && RenderedTextRect.h > 0.0f)
 		{
 			Graphics()->TextureClear();
 			const ColorRGBA SelectionColor = ColorRGBA(0.20f, 0.55f, 0.88f, 0.35f * AnimAlpha);
-			const float Rounding = g_Config.m_ClChatOld ? 0.0f : MessageRounding();
+			// 选区与气泡取同一档半径：选区就压在气泡上，两档半径会露出月牙。
+			const float Rounding = g_Config.m_ClChatOld ? 0.0f : Line.m_BackgroundRounding;
 			SRoundedSurfaceParams SelectionSurface;
 			SelectionSurface.m_Radius = Rounding;
 			SelectionSurface.m_Corners = IGraphics::CORNER_ALL;
-			DrawRoundedSurface(Ui(), CUIRect{RenderedTextRect.x, RenderedTextRect.y, RenderedTextRect.w, RenderedTextRect.h}, SelectionColor, ColorRGBA(), SelectionSurface);
+			SelectionSurface.m_PixelSize = ChatPixelSize;
+			DrawRoundedSurface(Ui(), CUIRect{RenderedTextRect.x, RenderedTextRect.y, RenderedTextRect.w, RenderedTextRect.h}, SelectionColor, ui_token::color::COLOR_TRANSPARENT, SelectionSurface);
 		}
 
 		const bool RenderChatEmoji = Line.m_ChatEmojiRect.w > 0.0f && GameClient()->m_QmChatEmoji.CanRender(Line.m_ChatEmoji);
@@ -4223,7 +4240,8 @@ void CChat::OnRender()
 
 	if(ShowChatScrollbar)
 	{
-		QmDrawChatScrollbar(Ui(), ScrollbarRect, ScrollbarHandleY, ScrollbarHandleH, m_ScrollbarDragging || InsideScrollbar);
+		const CUIRect ScrollbarThumb{ScrollbarRect.x, ScrollbarHandleY, ScrollbarRect.w, ScrollbarHandleH};
+		QmDrawChatScrollbar(Ui(), ScrollbarRect, ScrollbarThumb, true);
 		ExtendBounds(ScrollbarRect.x, ScrollbarRect.y, ScrollbarRect.w, ScrollbarRect.h);
 	}
 
@@ -4254,12 +4272,15 @@ void CChat::OnRender()
 
 			if(!g_Config.m_ClChatOld)
 			{
+				// 预览行都是单行，与真实单行气泡同一条半径派生，预览看起来才和实机一致。
+				const float PreviewRounding = ui_token::chat::BubbleRadius(true, RowHeight, RowHeight);
 				if(BackgroundBaseColor.a > 0.0f)
-					Ui()->RenderGaussianBlur({x, PreviewY, PreviewWidth, RowHeight}, 1.0f, IGraphics::CORNER_ALL, MessageRounding());
+					Ui()->RenderGaussianBlur({x, PreviewY, PreviewWidth, RowHeight}, 1.0f, IGraphics::CORNER_ALL, PreviewRounding);
 				SRoundedSurfaceParams PreviewSurface;
-				PreviewSurface.m_Radius = MessageRounding();
+				PreviewSurface.m_Radius = PreviewRounding;
 				PreviewSurface.m_Corners = IGraphics::CORNER_ALL;
-				DrawRoundedSurface(Ui(), CUIRect{x, PreviewY, PreviewWidth, RowHeight}, BackgroundBaseColor, ColorRGBA(), PreviewSurface);
+				PreviewSurface.m_PixelSize = ChatPixelSize;
+				DrawRoundedSurface(Ui(), CUIRect{x, PreviewY, PreviewWidth, RowHeight}, BackgroundBaseColor, ui_token::color::COLOR_TRANSPARENT, PreviewSurface);
 			}
 
 			TextRender()->TextColor(Line.m_TextColor);
@@ -4576,33 +4597,26 @@ void CChat::RenderTranslateButton(const CUIRect &ButtonRect)
 	m_TranslateButton.m_AutoTranslateEnabled = g_Config.m_QmTranslateAutoOutgoing != 0;
 	const bool IsEnabled = m_TranslateButton.m_AutoTranslateEnabled;
 
-	ColorRGBA ButtonColor;
-	if(IsEnabled)
-	{
-		ButtonColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateBtnColorEnabled, true));
-	}
-	else if(IsOpen)
-	{
-		ButtonColor = ColorRGBA(0.35f, 0.45f, 0.70f, 0.90f);
-	}
-	else if(Hovered)
-	{
-		ButtonColor = ColorRGBA(0.28f, 0.28f, 0.28f, 0.90f);
-	}
-	else
-	{
-		ButtonColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateBtnColorDisabled, true));
-	}
-	const float ButtonRounding = maximum(6.0f, ButtonRect.h * 0.28f);
-
-	// 自动翻译已启用时也保留悬浮/按下反馈，不被启用颜色分支遮住。
+	// 圆形图标按钮：按钮区本身就是正方形（宽高都取字号），按胶囊档绘制即正圆。
+	const float Diameter = minimum(ButtonRect.w, ButtonRect.h);
+	const CUIRect Circle{ButtonRect.x + (ButtonRect.w - Diameter) * 0.5f, ButtonRect.y + (ButtonRect.h - Diameter) * 0.5f, Diameter, Diameter};
+	// 底色只有「自动翻译启用/关闭」两条玩家配置；悬浮、按下、展开三种反馈统一走公共
+	// 按钮样式与反馈 token（主题强调色 + ui_token::feedback），这里不再写裸 ColorRGBA。
 	const SUiTheme &Theme = Ui()->QmControlTheme();
 	const bool Pressed = Hovered && PointerDown();
-	DrawRoundedSurface(Ui(), ButtonRect, ButtonColor, Hovered ? Theme.m_Accent : ColorRGBA(), ButtonRounding, Hovered ? (Pressed ? 1.0f : 0.65f) : 0.0f);
+	SUiButtonState ButtonState;
+	ButtonState.m_Hovered = Hovered;
+	ButtonState.m_Pressed = Pressed;
+	ButtonState.m_Selected = IsOpen;
+	const ColorRGBA ButtonSurface = IsEnabled ?
+						color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateBtnColorEnabled, true)) :
+						color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateBtnColorDisabled, true));
+	const SUiSecondaryButtonStyle ButtonStyle = ResolveUiButtonStyle(EUiButtonRole::ICON, ButtonSurface, Theme.m_Surface, Theme, ButtonState);
+	DrawRoundedSurface(Ui(), Circle, ButtonStyle.m_Fill, ButtonStyle.m_Border, ui_token::radius::PILL, ui_token::feedback::ICON_BORDER_WIDTH);
 
 	CUIRect IconRect;
-	ButtonRect.Margin(1.0f, &IconRect);
-	const float IconSize = IconRect.h * CUi::ms_FontmodHeight;
+	Circle.Margin(minimum(ui_token::spacing::XS * 0.5f, Circle.h * 0.25f), &IconRect);
+	const float IconSize = IconRect.h * ui_token::control::ICON_INK_RATIO;
 
 	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH |

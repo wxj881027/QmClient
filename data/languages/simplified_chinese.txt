@@ -3344,6 +3344,9 @@ Copy a .qmconfig file into the package folder, then refresh.
 Copy all
 == 复制全部
 
+Copy clan
+== 复制氏族
+
 Copy friend code
 == 复制好友码
 
@@ -16072,6 +16075,9 @@ Text alpha
 
 Text before each key press count
 == 按键计数前缀文字
+
+Text caret style: 0=bar, 1=underscore, 2=block
+== 输入光标样式：0=竖线，1=下划线，2=方块
 
 Text color
 == 文本颜色

@@ -3242,6 +3242,9 @@ Copy a .qmconfig file into the package folder, then refresh.
 Copy all
 == Copiar todo
 
+Copy clan
+== Copiar clan
+
 Copy friend code
 == Copiar código de amigos
 
@@ -15514,6 +15517,9 @@ Text alpha
 
 Text before each key press count
 == Prefijo del contador de pulsaciones
+
+Text caret style: 0=bar, 1=underscore, 2=block
+== Estilo del cursor de entrada: 0=barra, 1=subrayado, 2=bloque
 
 Text color
 == Color del texto

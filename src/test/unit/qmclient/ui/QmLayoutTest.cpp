@@ -754,17 +754,25 @@ TEST(QmSurfaceForeground, TransparencyUsesBackdropInsteadOfInvisibleRgb)
 	EXPECT_EQ(ResolveUiSurfaceForeground(Light.WithAlpha(0.9f)), ColorRGBA(0, 0, 0, 1));
 }
 
-TEST(QmSurfaceForeground, ThemeResolvesAfterUserOpacity)
+TEST(QmSurfaceForeground, ThemeTextColorIgnoresSurfaceAfterAutoModeRemoved)
 {
+	struct SRestoreConfig
+	{
+		CConfig m_Previous = g_Config;
+		~SRestoreConfig() { g_Config = m_Previous; }
+	} Restore;
+	g_Config.m_QmUiTextColorMode = 0;
 	const unsigned White = ColorHSLA(0, 0, 1, 1).Pack(false);
 	const SUiTheme Light = ResolveSecondaryPanelTheme(White, 100, 0);
-	EXPECT_EQ(Light.m_TextBody, ResolveUiSurfaceForeground(Light.m_Surface));
-	EXPECT_EQ(Light.m_TextTitle, Light.m_TextBody);
-	EXPECT_EQ(Light.m_TextSmall, Light.m_TextBody);
+	// 文本颜色是显式四选一：主题不再按表面明暗推导，也不会随面板透明度翻转。
+	const ColorRGBA Expected = ResolveUiTextColor(0, g_Config.m_QmUiTextCustomColor);
+	EXPECT_EQ(Light.m_TextBody, Expected);
+	EXPECT_EQ(Light.m_TextTitle, Expected);
+	EXPECT_EQ(Light.m_TextSmall, Expected);
 	const SUiTheme Transparent = ResolveSecondaryPanelTheme(White, 0, 0);
-	EXPECT_NE(Transparent.m_TextBody, Light.m_TextBody);
+	EXPECT_EQ(Transparent.m_TextBody, Light.m_TextBody);
 	const SUiTheme Base = ResolveUiTheme(ColorHSLA(White), 1);
-	EXPECT_EQ(Base.m_TextBody, ResolveUiSurfaceForeground(Base.m_Surface));
+	EXPECT_EQ(Base.m_TextBody, Expected);
 }
 
 TEST(QmSurfaceForeground, IconOverridePreservesReadableColorAndFallsBackWhenInvisible)
@@ -862,18 +870,32 @@ TEST(QmSurfaceForeground, PopupModeButtonUsesItsDrawnSurfaceAndRestoresParent)
 	EXPECT_EQ(Popup.Surface(), ColorRGBA(0, 0, 0, 1));
 }
 
-TEST(QmTextColorPolicy, AutomaticFollowsBackgroundButManualChoicesRemainFixed)
+TEST(QmTextColorPolicy, FourExplicitModesAreSurfaceIndependent)
 {
 	const unsigned Custom = ColorHSLA(0.65f, 0.8f, 0.4f).Pack(false);
-	const ColorRGBA Black(0, 0, 0, 1), White(1, 1, 1, 1);
-	EXPECT_EQ(ResolveUiTextColor(Black, 0, Custom), White);
-	EXPECT_EQ(ResolveUiTextColor(White, 0, Custom), Black);
-	for(const ColorRGBA Surface : {Black, White, ColorRGBA(1, 0, 0, 0)})
+	EXPECT_EQ(ResolveUiTextColor(0, Custom), ColorRGBA(1, 1, 1, 1));
+	EXPECT_EQ(ResolveUiTextColor(1, Custom), ColorRGBA(0, 0, 0, 1));
+	EXPECT_EQ(ResolveUiTextColor(3, Custom), color_cast<ColorRGBA>(ColorHSLA(Custom)).WithAlpha(1));
+	// 越界值按白处理：手动改坏的配置不该让整屏文字变黑压在深色表面上。
+	for(const int Mode : {-1, 4, 99})
+		EXPECT_EQ(ResolveUiTextColor(Mode, Custom), ColorRGBA(1, 1, 1, 1));
+}
+
+TEST(QmTextColorPolicy, RainbowFollowsTheSharedPhaseAndStaysVisible)
+{
+	const unsigned Custom = ColorHSLA(0.65f, 0.8f, 0.4f).Pack(false);
+	const ColorRGBA Start = ResolveUiTextColor(2, Custom, 0.0f);
+	const ColorRGBA Quarter = ResolveUiTextColor(2, Custom, 0.25f);
+	const ColorRGBA Wrapped = ResolveUiTextColor(2, Custom, 1.25f);
+	// 相位绕一圈回到同一点：配置与时间相位都不会越界成黑色。
+	EXPECT_EQ(Wrapped, Quarter);
+	EXPECT_NE(Start, Quarter);
+	for(const float Phase : {0.0f, 0.13f, 0.5f, 0.87f, 1.0f})
 	{
-		EXPECT_EQ(ResolveUiTextColor(Surface, 1, Custom), White);
-		EXPECT_EQ(ResolveUiTextColor(Surface, 2, Custom), Black);
-		EXPECT_EQ(ResolveUiTextColor(Surface, 3, Custom), color_cast<ColorRGBA>(ColorHSLA(Custom)).WithAlpha(1));
-		EXPECT_EQ(ResolveUiTextColor(Surface, -1, Custom), ResolveUiSurfaceForeground(Surface));
+		SCOPED_TRACE(Phase);
+		const ColorRGBA Color = ResolveUiTextColor(2, Custom, Phase);
+		EXPECT_FLOAT_EQ(Color.a, 1.0f);
+		EXPECT_GT(std::max({Color.r, Color.g, Color.b}), 0.5f);
 	}
 }
 
@@ -903,9 +925,9 @@ TEST(QmIconButtonSurface, OrdinaryButtonsUseConfiguredSurfaceAndDisabledOpacity)
 		CConfig m_Previous = g_Config;
 		~SRestoreConfig() { g_Config = m_Previous; }
 	} Restore;
-	g_Config.m_QmUiDropdownColor = ColorHSLA(0.3f, 0.7f, 0.25f).Pack(false);
-	g_Config.m_QmUiDropdownOpacity = 80;
-	const ColorRGBA Expected = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiDropdownColor)).WithAlpha(0.8f);
+	g_Config.m_QmUiControlColor = ColorHSLA(0.3f, 0.7f, 0.25f).Pack(false);
+	g_Config.m_QmUiControlOpacity = 80;
+	const ColorRGBA Expected = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiControlColor)).WithAlpha(0.8f);
 	EXPECT_EQ(ResolveConfiguredIconButtonSurface(std::nullopt), Expected);
 	EXPECT_EQ(ResolveConfiguredIconButtonSurface(std::nullopt, false), Expected.WithMultipliedAlpha(0.65f));
 }
@@ -926,37 +948,41 @@ TEST(QmIconButtonFeedback, HoverAndPressAreVisibleOnBothSurfacesButDisabledStays
 	}
 }
 
-TEST(QmSurfaceRoles, ConfiguredRolesRemainIndependentAtLowAndZeroOpacity)
+TEST(QmSurfaceRoles, ControlAndLayerSurfacesAreTheOnlyTwoConfigurableRoles)
 {
 	struct SRestoreConfig
 	{
 		CConfig m_Previous = g_Config;
 		~SRestoreConfig() { g_Config = m_Previous; }
 	} Restore;
-	g_Config.m_QmUiDropdownColor = ColorHSLA(0, 1, 0.5f).Pack(false);
-	g_Config.m_QmUiDropdownOpacity = 100;
-	g_Config.m_QmUiInputColor = ColorHSLA(0.3f, 1, 0.5f).Pack(false);
-	g_Config.m_QmUiInputOpacity = 50;
-	g_Config.m_QmUiDropdownListColor = ColorHSLA(0.6f, 1, 0.5f).Pack(false);
-	g_Config.m_QmUiDropdownListOpacity = 10;
-	g_Config.m_QmUiPopupColor = 0;
-	g_Config.m_QmUiPopupOpacity = 0;
-	const ColorRGBA Button = ResolveConfiguredControlSurface();
-	const ColorRGBA Input = ResolveConfiguredInputSurface();
-	const ColorRGBA List = ResolveConfiguredDropdownListTheme().m_Surface;
-	EXPECT_EQ(ResolveConfiguredDropdownSurface(), Button);
-	EXPECT_NE(Button, Input);
-	EXPECT_NE(Input, List);
-	EXPECT_FLOAT_EQ(List.a, 0.1f);
-	EXPECT_FLOAT_EQ(ResolveConfiguredSecondaryPanelTheme().m_Surface.a, 0);
-	g_Config.m_QmUiPopupColor = ColorHSLA(0, 0, 1).Pack(false);
-	g_Config.m_QmUiPopupOpacity = 100;
-	EXPECT_EQ(ResolveConfiguredControlSurface(), Button);
-	EXPECT_EQ(ResolveConfiguredInputSurface(), Input);
-	EXPECT_EQ(ResolveConfiguredDropdownListTheme().m_Surface, List);
-	g_Config.m_QmUiTextColorMode = 2;
+	// 控件底（按钮/输入框）与弹层底（展开列表/二级菜单）各只有一份配置。
+	g_Config.m_QmUiControlColor = ColorHSLA(0, 1, 0.5f).Pack(false);
+	g_Config.m_QmUiControlOpacity = 100;
+	g_Config.m_QmUiLayerColor = ColorHSLA(0.6f, 1, 0.5f).Pack(false);
+	g_Config.m_QmUiLayerOpacity = 10;
+	const ColorRGBA Control = ResolveConfiguredControlSurface();
+	const ColorRGBA Layer = ResolveConfiguredDropdownListTheme().m_Surface;
+	// 按钮、下拉触发器与输入框同底：三者在界面上是同一角色。
+	EXPECT_EQ(ResolveConfiguredInputSurface(), Control);
+	EXPECT_EQ(ResolveConfiguredDropdownSurface(), Control);
+	// 展开列表与二级菜单同底：两者都是浮在内容之上的那一层。
+	EXPECT_EQ(ResolveConfiguredSecondaryPanelTheme().m_Surface, Layer);
+	EXPECT_NE(Control, Layer);
+	EXPECT_FLOAT_EQ(Layer.a, 0.1f);
+
+	// 两个角色互相独立：改控件透明度不影响弹层，反之亦然。
+	g_Config.m_QmUiControlOpacity = 0;
+	EXPECT_FLOAT_EQ(ResolveConfiguredControlSurface().a, 0.0f);
+	EXPECT_EQ(ResolveConfiguredDropdownListTheme().m_Surface, Layer);
+	g_Config.m_QmUiControlOpacity = 100;
+	g_Config.m_QmUiLayerColor = 0;
+	EXPECT_FLOAT_EQ(ResolveConfiguredSecondaryPanelTheme().m_Surface.a, 0.1f);
+	EXPECT_EQ(ResolveConfiguredControlSurface(), Control);
+
+	// 文本颜色与面板颜色解耦：手工选黑之后，换面板底色不会再把文字翻回白色。
+	g_Config.m_QmUiTextColorMode = 1;
 	EXPECT_EQ(ResolveConfiguredSecondaryPanelTheme().m_TextBody, ColorRGBA(0, 0, 0, 1));
-	g_Config.m_QmUiPopupColor = 0;
+	g_Config.m_QmUiLayerOpacity = 100;
 	EXPECT_EQ(ResolveConfiguredSecondaryPanelTheme().m_TextBody, ColorRGBA(0, 0, 0, 1));
 }
 

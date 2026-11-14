@@ -185,7 +185,7 @@ void CMenus::RenderQmNewFeaturesPopup(CUIRect Screen)
 	IUiContext Ctx = SettingsUiContext("qm_new_features_popup");
 	Ctx.m_pTheme = &PanelTheme;
 	CUiScopedSurfaceText PanelText(TextRender(), PanelTheme.m_Surface);
-	const ColorRGBA PanelForeground = ResolveConfiguredTextColor(PanelText.Surface());
+	const ColorRGBA PanelForeground = ResolveConfiguredTextColor();
 	const float UiScale = std::clamp(QmUiScaleFactor(g_Config.m_QmUiScale), 0.5f, 2.0f);
 	const float HeadlineSize = ui_token::font::HEADLINE * UiScale;
 	const float BodySize = ui_token::font::BODY * UiScale;

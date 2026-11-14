@@ -10,15 +10,17 @@
 // 正文宽度由行宽、按钮区和前缀宽度决定，光标与选区都从正文起点开始，不与按钮重叠。
 constexpr float QM_CHAT_TRANSLATE_BUTTON_GAP = 4.0f;
 
+// 圆形图标按钮：宽高都与字号同档（正方形 ⇒ 绘制层按胶囊档裁成正圆），
+// 于是按钮与同一行「全体」文字等高，首行垂直居中后两者视觉齐平。
 inline float QmChatTranslateButtonSize(float FontSize)
 {
-	return std::max(16.0f, FontSize * 1.35f);
+	return std::max(0.0f, FontSize);
 }
 
-// 按钮与输入首行垂直居中，多行输入时仍固定在第一行。
+// 按钮与输入首行垂直居中，多行输入时仍固定在第一行；高度就是字号本身。
 inline float QmChatTranslateButtonHeight(float FontSize)
 {
-	return std::max(FontSize + 4.0f, 16.0f);
+	return QmChatTranslateButtonSize(FontSize);
 }
 
 inline float QmChatInputMessageWidth(float LineWidth, float FontSize, float PrefixWidth)

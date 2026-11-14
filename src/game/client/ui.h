@@ -817,7 +817,7 @@ private:
 	CTooltips *m_pQmTooltips = nullptr;
 	bool m_CardLabelHintsEnabled = false;
 	SUiTheme m_QmControlTheme{};
-	std::array<unsigned, 8> m_aQmControlThemeConfig{};
+	std::array<unsigned, 6> m_aQmControlThemeConfig{};
 	bool m_HasQmControlTheme = false;
 	mutable int m_QuadBatchDepth = 0;
 	mutable int m_QuadBatchContainerIndex = -1;

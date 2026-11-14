@@ -179,7 +179,7 @@ namespace ui_widget
 			// 长条按钮（宽明显大于高）给胶囊端头；接近方形的按钮仍用小圆角，
 			// 否则方按钮会被压成圆形。
 			const CUIRect &SurfaceRect = pSurfaceRect != nullptr ? *pSurfaceRect : Rect;
-			Options.m_Radius = SurfaceRect.w >= SurfaceRect.h * 1.8f ? ui_token::radius::PILL : ResolveUiTextButtonRadius(Geometry);
+			Options.m_Radius = ResolveUiSurfaceRadius(SurfaceRect, Geometry);
 			if(!DrawBorder)
 				Options.m_BorderWidth = 0.0f;
 			Options.m_Corners = Corners;
@@ -247,7 +247,9 @@ namespace ui_widget
 			const SUiTheme &Theme = Ctx.m_pTheme != nullptr ? *Ctx.m_pTheme : Ctx.m_pUi->QmControlTheme();
 			const auto BorderStyle = ResolveUiButtonStyle(EUiButtonRole::SECONDARY, ResolveConfiguredControlSurface(), CUiScopedSurfaceText::CurrentSurface(), Theme, BorderState);
 			const ColorRGBA BorderColor = ResolveActiveButtonBorder(EUiButtonRole::SECONDARY, BorderStyle, BorderState);
-			DrawRoundedSurface(Ctx, Rect, ColorRGBA(), Ctx.m_pUi->ScaleControlAlpha(BorderColor), ResolveUiTextButtonRadius(Geometry), ui_token::feedback::ICON_BORDER_WIDTH);
+			// 外框与被裁剪的两半填充共用「长条即胶囊」这条规则：分配器按 1.8 倍宽高比
+			// 选过胶囊端头，边框却还停在用途档位，悬浮时两者就不是同一条曲线。
+			DrawRoundedSurface(Ctx, Rect, ColorRGBA(), Ctx.m_pUi->ScaleControlAlpha(BorderColor), ResolveUiSurfaceRadius(Rect, Geometry), ui_token::feedback::ICON_BORDER_WIDTH);
 		}
 		Ctx.m_pUi->DoButtonTooltip(pLeft, &Left, pLeftTooltip);
 		Ctx.m_pUi->DoButtonTooltip(pRight, &Right, pRightTooltip);
@@ -260,7 +262,9 @@ namespace ui_widget
 				CUIRect FocusRect = pFocus == pLeft ? Left : Right;
 				FocusRect.Margin(std::min(2.0f, std::min(FocusRect.w, FocusRect.h) * 0.25f), &FocusRect);
 				const SUiTheme &Theme = Ctx.m_pTheme != nullptr ? *Ctx.m_pTheme : Ctx.m_pUi->QmControlTheme();
-				DrawRoundedSurface(Ctx, FocusRect, ColorRGBA(), Theme.m_FocusRing, ResolveUiTextButtonRadius(Geometry), ui_token::feedback::ICON_BORDER_WIDTH);
+				// 焦点环贴的是整条按钮的外缘（不是半边的边），半径取整条的解析结果，
+				// 否则半边按自己的长宽比再选一次会得出半圆，勾在分割线上。
+				DrawRoundedSurface(Ctx, FocusRect, ColorRGBA(), Theme.m_FocusRing, ResolveUiSurfaceRadius(Rect, Geometry), ui_token::feedback::ICON_BORDER_WIDTH);
 			}
 		}
 		return LeftClicked ? 0 : RightClicked ? 1 :

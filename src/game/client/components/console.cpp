@@ -2667,13 +2667,20 @@ void CGameConsole::OnRender()
 			if(CaretCharacter && SelectionCursor.m_HasCursorRenderedPosition)
 			{
 				// 日志只显示定位光标，键盘输入仍由命令输入框接收。
-				const float CaretWidth = 2.0f / maximum(XScale, 0.001f);
+				// 几何走公共光标组件：线宽、圆角与样式来自 Token 与 qm_text_caret_style，
+				// 日志光标是「选中位置」标记，所以恒亮、不参与闪烁相位。
 				const vec2 Position = pConsole->m_LogCaretMotion.Resolve(pConsole->m_Selection.CursorPosition(), SelectionCursor.m_CursorRenderedPosition,
 					SelectionCursor.m_AlignedFontSize, time_get_nanoseconds(), g_Config.m_QmUiMotionLevel, pConsole->m_Selection.HasSelection());
 				LogCaretRendered = true;
-				const CUIRect Caret = {Position.x, Position.y, CaretWidth, SelectionCursor.m_AlignedFontSize};
+				qm_text_caret::SCaretParams CaretParams;
+				CaretParams.m_Style = qm_text_caret::StyleFromConfig(g_Config.m_QmTextCaretStyle);
+				CaretParams.m_Cell = {Position.x, Position.y, 0.0f, SelectionCursor.m_AlignedFontSize};
+				// XScale 是「屏幕像素 / 世界单位」，取倒数即一个世界单位占多少像素。
+				CaretParams.m_WorldPerPixel = 1.0f / maximum(XScale, 0.001f);
+				CaretParams.m_Blink = false;
+				const qm_text_caret::SCaretShape CaretShape = qm_text_caret::ResolveShape(CaretParams);
 				const ColorRGBA CaretColor = LocalConsole ? Palette.m_aColors[QmConsoleAppearance::TEXT] : TextRender()->DefaultTextColor();
-				QmConsoleUi::DrawPanel(Ui(), Caret, CaretColor.WithAlpha(CaretColor.a * ContentAlpha));
+				QmConsoleUi::DrawCaret(Ui(), CaretShape, CaretColor.WithAlpha(CaretColor.a * ContentAlpha));
 			}
 			pEntry = pConsole->m_Backlog.Prev(pEntry);
 

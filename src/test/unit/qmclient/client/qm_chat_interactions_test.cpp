@@ -271,6 +271,19 @@ TEST(QmChatInputLayout, ButtonStaysCenteredOnFirstInputLine)
 	EXPECT_GE(Layout.m_ButtonH, FontSize);
 }
 
+TEST(QmChatInputLayout, TranslateButtonIsSquareAndAsTallAsTheFont)
+{
+	for(const float FontSize : {8.0f, 12.0f, 32.0f})
+	{
+		SCOPED_TRACE(FontSize);
+		const SQmChatInputLayout Layout = QmChatResolveInputLayout(5.0f, 100.0f, 400.0f, FontSize, 40.0f);
+		// 圆形图标按钮：宽高相等（绘制层按胶囊档裁成正圆），高度与字号一致。
+		EXPECT_FLOAT_EQ(Layout.m_ButtonW, Layout.m_ButtonH);
+		EXPECT_FLOAT_EQ(Layout.m_ButtonH, FontSize);
+		EXPECT_FLOAT_EQ(Layout.m_ButtonY, 100.0f);
+	}
+}
+
 TEST(QmChatInputLayout, WidePrefixStillLeavesBodyRoomToTheRightOfTheButton)
 {
 	const float FontSize = 20.0f;
@@ -370,10 +383,14 @@ TEST(QmChatScrollbar, SideSwitchMovesRailInsideBoundsWithoutChangingSize)
 	const auto Right = QmChatScrollbarRail(Bounds, 80.0f, 100.0f, true);
 	EXPECT_FLOAT_EQ(Left.x, 22.0f);
 	EXPECT_FLOAT_EQ(Right.x + Right.w, 268.0f);
-	EXPECT_FLOAT_EQ(Left.w, 3.0f);
+	// 轨道比旧实现（3 单位）略宽，左右两侧尺寸一致。
+	EXPECT_GT(Left.w, 3.0f);
 	EXPECT_FLOAT_EQ(Left.w, Right.w);
 	EXPECT_FLOAT_EQ(Left.y, Right.y);
 	EXPECT_FLOAT_EQ(Left.h, Right.h);
+	// 轨道沿长度方向两端各让出一档外边距，不再顶满历史区高度。
+	EXPECT_FLOAT_EQ(Left.y, 80.0f + QM_CHAT_SCROLLBAR_MARGIN);
+	EXPECT_FLOAT_EQ(Left.h, 100.0f - QM_CHAT_SCROLLBAR_MARGIN * 2.0f);
 }
 
 TEST(QmChatScrollbar, HandleFitsShortHistoryAndMapsBothBacklogEnds)
@@ -386,7 +403,30 @@ TEST(QmChatScrollbar, HandleFitsShortHistoryAndMapsBothBacklogEnds)
 	EXPECT_FLOAT_EQ(Latest.y + Latest.h, Rail.y + Rail.h);
 	EXPECT_FLOAT_EQ(QmChatScrollbarHandleHeight(5.0f, 1, 100), 5.0f);
 	EXPECT_FLOAT_EQ(QmChatScrollbarHandleHeight(0.0f, 1, 100), 0.0f);
-	EXPECT_FLOAT_EQ(QmChatScrollbarHandleHeight(100.0f, 10, 0), 100.0f);
+	// 极长内容下滑块停在最短长度，不会被压成一条缝（内容再多也不变短）。
+	const float LongContentThumb = QmChatScrollbarHandleHeight(100.0f, 1, 100);
+	EXPECT_FLOAT_EQ(LongContentThumb, QmChatScrollbarHandleHeight(100.0f, 1, 1000));
+	EXPECT_GT(LongContentThumb, 0.0f);
+	// 内容只比一屏多一点时滑块被压到轨道一半以内，不再是几乎满轨的长条。
+	const float NearlyWholeContentThumb = QmChatScrollbarHandleHeight(100.0f, 10, 0);
+	EXPECT_LE(NearlyWholeContentThumb, 50.0f);
+	EXPECT_GE(NearlyWholeContentThumb, LongContentThumb);
+}
+
+TEST(QmChatScrollbar, ShortenedThumbStillMapsBothBacklogEnds)
+{
+	const CUIRect Rail{0.0f, 0.0f, 4.0f, 200.0f};
+	const float ThumbHeight = QmChatScrollbarHandleHeight(Rail.h, 9, 10);
+	ASSERT_LE(ThumbHeight, Rail.h * 0.5f);
+	// 滑块变短不改变映射：最新消息仍贴轨道下沿，最旧消息仍贴轨道上沿。
+	const auto Latest = QmChatScrollbarHandle(Rail, ThumbHeight, CChat::BacklogLineToScrollbarValue(0, 1));
+	EXPECT_FLOAT_EQ(Latest.y, Rail.y + Rail.h - ThumbHeight);
+	EXPECT_FLOAT_EQ(Latest.y + Latest.h, Rail.y + Rail.h);
+	const auto Oldest = QmChatScrollbarHandle(Rail, ThumbHeight, CChat::BacklogLineToScrollbarValue(1, 1));
+	EXPECT_FLOAT_EQ(Oldest.y, Rail.y);
+	// 轨道比滑块还短时滑块收敛到轨道长度，不会溢出。
+	const auto Clamped = QmChatScrollbarHandle(Rail, 1000.0f, 1.0f);
+	EXPECT_FLOAT_EQ(Clamped.h, Rail.h);
 }
 
 TEST(QmChatScrollbar, PreviewUsesTheSameScaledRailAndHandleGeometry)
@@ -423,9 +463,13 @@ TEST(QmChatScrollbar, HiddenRailKeepsBothSidesInTheNextHudBounds)
 		EXPECT_GE(Bounds.Rect().x + Bounds.Rect().w, Rail.x + Rail.w);
 		EXPECT_FLOAT_EQ(Bounds.Rect().y, 250.0f);
 		EXPECT_FLOAT_EQ(Bounds.Rect().h, 20.0f);
+		// 轨道现在沿长度两端各内缩一档（滑块更长、轨道更短），所以轨道比聊天区矮。
+		EXPECT_GT(Rail.y, ChatRect.y);
+		EXPECT_LT(Rail.y + Rail.h, ChatRect.y + ChatRect.h);
 		Bounds.Extend(Rail);
-		EXPECT_FLOAT_EQ(Bounds.Rect().y, 50.0f);
-		EXPECT_FLOAT_EQ(Bounds.Rect().h, 220.0f);
+		// 上沿跟着轨道走；下沿仍由历史区底部那一行决定，不再等于聊天区底边。
+		EXPECT_FLOAT_EQ(Bounds.Rect().y, Rail.y);
+		EXPECT_FLOAT_EQ(Bounds.Rect().y + Bounds.Rect().h, 270.0f);
 	}
 }
 
