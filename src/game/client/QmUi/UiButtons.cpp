@@ -84,6 +84,9 @@ namespace ui_widget
 		Style.m_Border = ResolveActiveButtonBorder(Options.m_Role, Style, State);
 		if(Options.m_TransparentInactive && !State.m_Hovered && !State.m_Selected)
 			Style.m_Border = ColorRGBA();
+		// 图标按钮的描边只表达「悬浮/选中」：静止态留白，避免每个图标都套一圈常驻边框。
+		if(Options.m_Role == EUiButtonRole::ICON && !State.m_Hovered && !State.m_Selected)
+			Style.m_Border = ColorRGBA();
 		if(Options.m_BorderOverride.has_value())
 			Style.m_Border = *Options.m_BorderOverride;
 		if(pUi->DrawingSuppressed())
@@ -127,7 +130,9 @@ namespace ui_widget
 		Options.m_Radius = ButtonRect.h * 0.5f;
 		Options.m_Enabled = Enabled && Checked >= 0;
 		Options.m_Selected = Checked > 0;
-		Options.m_Corners = Corners;
+		// 图标按钮恒为正圆：调用点传的 Corners 只表达「方角/圆角」的历史习惯，
+		// 这里统一忽略，形状只由半高半径决定，避免同一批按钮一半是圆一半是圆角方块。
+		Options.m_Corners = IGraphics::CORNER_NONE;
 		Options.m_Color = Color;
 		Options.m_TransparentInactive = TransparentInactive;
 		Options.m_pHitRect = &HitRect;
