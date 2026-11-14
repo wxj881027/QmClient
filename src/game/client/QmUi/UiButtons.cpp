@@ -100,7 +100,9 @@ namespace ui_widget
 			const uint64_t NodeKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash, reinterpret_cast<uint64_t>(pId));
 			const SUiAnimTransition &Transition = State.m_Pressed ? ui_token::motion::BTN_PRESS : ui_token::motion::BTN_HOVER;
 			Style.m_Fill = ResolveUiAnimValueColor(*pAnim, NodeKey, Style.m_Fill, Transition.m_DurationSec, Transition.m_Easing);
-			const float TargetScale = State.m_Pressed ? 0.97f : 1.0f;
+			// 悬浮反馈形态由 qm_ui_hover_style 决定：0 = 缩放，1 = 只有边框高亮（不缩）。
+			const bool BorderHoverOnly = g_Config.m_QmUiHoverStyle != 0;
+			const float TargetScale = BorderHoverOnly ? 1.0f : (State.m_Pressed ? 0.97f : 1.0f);
 			const float Scale = std::clamp(ResolveUiAnimSpringValue(*pAnim, NodeKey, EUiAnimProperty::SCALE, TargetScale, ui_token::motion::TWITCH_SPRING, 2), 0.90f, 1.05f);
 			if(std::abs(Scale - 1.0f) > 0.001f)
 			{
@@ -246,10 +248,10 @@ namespace ui_widget
 		// 两半只提交状态底色；外框在最后按整条按钮的合并状态统一提交一圈，
 		// 悬浮/按下时不会只有被悬停的半边发亮、中缝断开。
 		Ctx.m_pUi->ClipEnable(&Left);
-		const bool LeftClicked = DoStyledButton(Ctx, pLeft, pLeftText, Left, LeftDisabled, EUiButtonRole::SECONDARY, IGraphics::CORNER_ALL, false, Geometry, &Rect);
+		const bool LeftClicked = DoStyledButton(Ctx, pLeft, "", Left, LeftDisabled, EUiButtonRole::SECONDARY, IGraphics::CORNER_ALL, false, Geometry, &Rect);
 		Ctx.m_pUi->ClipDisable();
 		Ctx.m_pUi->ClipEnable(&Right);
-		const bool RightClicked = DoStyledButton(Ctx, pRight, pRightText, Right, RightDisabled, EUiButtonRole::SECONDARY, IGraphics::CORNER_ALL, false, Geometry, &Rect);
+		const bool RightClicked = DoStyledButton(Ctx, pRight, "", Right, RightDisabled, EUiButtonRole::SECONDARY, IGraphics::CORNER_ALL, false, Geometry, &Rect);
 		Ctx.m_pUi->ClipDisable();
 		const bool LeftHovered = !LeftDisabled && Ctx.m_pUi->VisualSurfaceHovered(&Left);
 		const bool RightHovered = !RightDisabled && Ctx.m_pUi->VisualSurfaceHovered(&Right);
@@ -281,6 +283,21 @@ namespace ui_widget
 			// 中缝跟着被悬停的半边走强调色：左悬停时中线是左按钮的右边界，右悬停时是右按钮的左边界。
 			const ColorRGBA DividerColor = (LeftHovered || RightHovered) ? Theme.m_Accent : ui_token::color::BORDER_SUBTLE;
 			Divider.Draw(Ctx.m_pUi->ScaleBackgroundAlpha(DividerColor), IGraphics::CORNER_NONE, 0.0f);
+		}
+		// 文字自己画：半宽矩形会把可用宽度压小，DoLabel 会为了塞下而自动缩字号，
+		// 于是双操作按钮的字比同一排其它按钮小一号。这里固定正文档，放不下就用省略号。
+		if(!Ctx.m_pUi->DrawingSuppressed())
+		{
+			const float LabelSize = ui_token::control::BodySizeFromScale(Ctx.m_UiScale);
+			SLabelProperties TextProps;
+			TextProps.m_MaxWidth = std::max(0.0f, Left.w - 2.0f * ui_token::control::PadX(LabelSize));
+			TextProps.m_MinimumFontSize = LabelSize;
+			TextProps.m_EllipsisAtEnd = true;
+			if(!LeftDisabled && pLeftText != nullptr && Left.w > 0.0f)
+				Ctx.m_pUi->DoLabel(&Left, pLeftText, LabelSize, TEXTALIGN_MC, TextProps);
+			TextProps.m_MaxWidth = std::max(0.0f, Right.w - 2.0f * ui_token::control::PadX(LabelSize));
+			if(!RightDisabled && pRightText != nullptr && Right.w > 0.0f)
+				Ctx.m_pUi->DoLabel(&Right, pRightText, LabelSize, TEXTALIGN_MC, TextProps);
 		}
 		Ctx.m_pUi->DoButtonTooltip(pLeft, &Left, pLeftTooltip);
 		Ctx.m_pUi->DoButtonTooltip(pRight, &Right, pRightTooltip);

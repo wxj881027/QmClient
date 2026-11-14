@@ -989,6 +989,19 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 					Client()->OnWindowResize();
 				}
 			});
+			// 悬浮反馈形态：缩放与边框高亮二选一，整站按钮共用同一个配置。
+			RowAction("graphics-hover-style", GraphicsMetrics.m_LineHeight, [&](CUIRect HoverRow) {
+				CUIRect Label, Segments;
+				SplitSettingsControlRow(HoverRow, GraphicsMetrics, &Label, &Segments, ESettingsControlWidth::LONG_CHOICE);
+				DoSettingsLabel(SETTINGS_GRAPHICS, -1, "graphics-hover-style-label", &Label, Localize("Hover feedback"), BodySize, TEXTALIGN_ML);
+				static CButtonContainer s_aHoverStyleButtons[2];
+				const char *apHoverLabels[] = {Localize("Scale"), Localize("Border highlight")};
+				const int CurrentHover = std::clamp(g_Config.m_QmUiHoverStyle, 0, 1);
+				const int NewHover = DoSegmentedChoice(s_aHoverStyleButtons, apHoverLabels, 2, CurrentHover, Segments);
+				if(NewHover != CurrentHover)
+					g_Config.m_QmUiHoverStyle = NewHover;
+			});
+
 			float SectionReveal = 0.0f;
 			if(!qm_card_catalog::QmCardRenderHook::PersonalizationReveal(this, ContentRect, "deck:graphics-icons", GraphicsMetrics, &SectionReveal))
 				return;
