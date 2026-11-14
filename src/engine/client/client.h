@@ -252,7 +252,7 @@ class CClient : public IClient, public CDemoPlayer::IListener
 #endif
 
 	// graphs
-	CGraph m_InputtimeMarginGraph;
+	CGraph m_aInputtimeMarginGraphs[NUM_DUMMIES];
 	CGraph m_aGametimeMarginGraphs[NUM_DUMMIES];
 	CGraph m_FpsGraph;
 	float m_aLastGameTimeMarginMs[NUM_DUMMIES] = {0.0f, 0.0f};

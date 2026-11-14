@@ -624,7 +624,7 @@ CClient::CClient() :
 	m_pSnapshotDelta(CSnapshotDelta::New()),
 	m_pSnapshotDeltaSixup(CSnapshotDelta::New()),
 	m_DemoPlayer(&*m_pSnapshotDelta, &*m_pSnapshotDeltaSixup, true, [&]() { UpdateDemoIntraTimers(); }),
-	m_InputtimeMarginGraph(128, 2, true),
+	m_aInputtimeMarginGraphs{{128, 2, true}, {128, 2, true}},
 	m_aGametimeMarginGraphs{{128, 2, true}, {128, 2, true}},
 	m_FpsGraph(4096, 0, true)
 {
@@ -1485,7 +1485,7 @@ void CClient::Connect(const char *pAddress, const char *pPassword)
 	m_aNetClient[CONN_MAIN].RefreshStun();
 	SetState(IClient::STATE_CONNECTING);
 
-	m_InputtimeMarginGraph.Init(-150.0f, 150.0f);
+	m_aInputtimeMarginGraphs[CONN_MAIN].Init(-150.0f, 150.0f);
 	m_aGametimeMarginGraphs[CONN_MAIN].Init(-150.0f, 150.0f);
 
 	GenerateTimeoutCodes(aConnectAddrs, NumConnectAddrs);
@@ -1658,6 +1658,7 @@ void CClient::DummyConnect()
 		m_aNetClient[CONN_DUMMY].Connect(pMainAddr, 1);
 
 	m_aGametimeMarginGraphs[CONN_DUMMY].Init(-150.0f, 150.0f);
+	m_aInputtimeMarginGraphs[CONN_DUMMY].Init(-150.0f, 150.0f);
 }
 
 void CClient::DummyDisconnect(const char *pReason)
@@ -3087,7 +3088,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 
 			if(Target)
 			{
-				const CSmoothTime::EUpdateStatus UpdateStatus = m_PredictedTime.Update(&m_InputtimeMarginGraph, Target, TimeLeft, CSmoothTime::ADJUSTDIRECTION_UP);
+				const CSmoothTime::EUpdateStatus UpdateStatus = m_PredictedTime.Update(&m_aInputtimeMarginGraphs[Conn], Target, TimeLeft, CSmoothTime::ADJUSTDIRECTION_UP);
 				switch(UpdateStatus)
 				{
 				case CSmoothTime::EUpdateStatus::IGNORED_SPIKE:
@@ -8410,7 +8411,7 @@ int main(int argc, const char **argv)
 		char aBufName[IO_MAX_PATH_LENGTH];
 		char aDate[64];
 		str_timestamp(aDate, sizeof(aDate));
-		str_format(aBufName, sizeof(aBufName), "%s/" GAME_NAME "_%s_crash_log_%s_%d_%s.RTP", gs_pQmCrashDumpDir, CONF_PLATFORM_STRING, aDate, pid(), GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "");
+		str_format(aBufName, sizeof(aBufName), "%s/" GAME_NAME "_%s_%s_%s_crash_log_%s_%d_%s.RTP", gs_pQmCrashDumpDir, GAME_RELEASE_VERSION, CONF_PLATFORM_STRING, CONF_ARCH_STRING, aDate, pid(), GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "");
 		pStorage->GetCompletePath(IStorage::TYPE_SAVE, aBufName, aBufPath, sizeof(aBufPath));
 		fs_makedir_rec_for(aBufPath);
 		crashdump_init_if_available(aBufPath);

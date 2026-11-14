@@ -1619,8 +1619,7 @@ void CCharacter::SetTimeCheckpoint(int TimeCheckpoint)
 				if(Server()->IsSixup(m_pPlayer->GetCid()))
 				{
 					protocol7::CNetMsg_Sv_Checkpoint Msg;
-					float Diff = (m_aCurrentTimeCp[m_LastTimeCp] - pData->m_aBestTimeCp[m_LastTimeCp]) * 1000;
-					Msg.m_Diff = (int)Diff;
+					Msg.m_Diff = static_cast<int>(time_milliseconds_from_seconds(m_aCurrentTimeCp[m_LastTimeCp]) - time_milliseconds_from_seconds(pData->m_aBestTimeCp[m_LastTimeCp]));
 					Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, m_pPlayer->GetCid());
 				}
 				else

@@ -659,7 +659,7 @@ namespace
 		{
 			if(Image.m_pData == nullptr)
 				return;
-			const int ArrayFlag = Graphics()->Uses2DTextureArrays() ? IGraphics::TEXLOAD_TO_2D_ARRAY_TEXTURE : IGraphics::TEXLOAD_TO_3D_TEXTURE;
+			const int ArrayFlag = Graphics()->TextureLoadFlags();
 			const int Flags = ((Usage & 1) ? ArrayFlag : 0) | ((Usage & 2) ? 0 : (Graphics()->HasTextureArraysSupport() ? IGraphics::TEXLOAD_NO_2D_TEXTURE : 0));
 			m_vTextures[Index] = Graphics()->LoadTextureRaw(Image, Flags, "browser-map-preview");
 		}

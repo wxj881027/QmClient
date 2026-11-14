@@ -137,7 +137,7 @@ namespace MapRenderer
 			int Start;
 			m_pMap->GetType(MAPITEMTYPE_IMAGE, &Start, &m_Count);
 			m_Count = std::clamp<int>(m_Count, 0, MAX_MAPIMAGES);
-			const int TextureLoadFlag = m_pGraphics->Uses2DTextureArrays() ? IGraphics::TEXLOAD_TO_2D_ARRAY_TEXTURE : IGraphics::TEXLOAD_TO_3D_TEXTURE;
+			const int TextureLoadFlag = m_pGraphics->TextureLoadFlags();
 
 			constexpr LOG_COLOR WarningLogColor = LOG_COLOR{255, 255, 0};
 

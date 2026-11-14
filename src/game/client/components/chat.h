@@ -400,6 +400,8 @@ private:
 	static void ConChat(IConsole::IResult *pResult, void *pUserData);
 	static void ConShowChat(IConsole::IResult *pResult, void *pUserData);
 	static void ConEcho(IConsole::IResult *pResult, void *pUserData);
+	static void ConEchoConfig(IConsole::IResult *pResult, void *pUserData);
+	void EchoConfig(const char *pName);
 	static void ConClearChat(IConsole::IResult *pResult, void *pUserData);
 	static void ConAppendBlockWords(IConsole::IResult *pResult, void *pUserData);
 	static void ConReloadWordFiles(IConsole::IResult *pResult, void *pUserData);

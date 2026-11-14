@@ -1631,6 +1631,13 @@ std::string CMenusIngameTouchControls::CBehaviorElements::ParseLabel(const char 
 	{
 		return pLabel;
 	}
+	if(pJsonLabel->type != json_string)
+	{
+		// 解析成功但不是字符串说明上游 JSON 生成有误，退回原始标签而不是读错联合体。
+		dbg_assert(pJsonLabel->type == json_string, "Parsed label must be string");
+		json_value_free(pJsonLabel);
+		return pLabel;
+	}
 	std::string ParsedString = pJsonLabel->u.string.ptr;
 	json_value_free(pJsonLabel);
 	return ParsedString;

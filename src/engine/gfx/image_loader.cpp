@@ -187,7 +187,7 @@ bool CImageLoader::LoadPng(CByteBufferReader &Reader, const char *pContextName, 
 	if(pState == nullptr)
 		return false;
 	pState->m_Error = {&Reader, pContextName, {}};
-	pState->m_pPng = png_create_read_struct(PNG_LIBPNG_VER_STRING, &pState->m_Error, PngErrorCallback, PngWarningCallback);
+	pState->m_pPng = png_create_read_struct(png_get_libpng_ver(nullptr), &pState->m_Error, PngErrorCallback, PngWarningCallback);
 	if(pState->m_pPng == nullptr)
 		return false;
 	if(setjmp(pState->m_Error.m_JmpBuf))
@@ -387,7 +387,7 @@ bool CImageLoader::ReadPngComment(IOHANDLE File, const char *pFilename, std::str
 		return false;
 
 	CUserErrorStruct UserErrorStruct = {nullptr, pFilename, {}};
-	png_structp pPngStruct = png_create_read_struct(PNG_LIBPNG_VER_STRING, &UserErrorStruct, PngErrorCallback, PngWarningCallback);
+	png_structp pPngStruct = png_create_read_struct(png_get_libpng_ver(nullptr), &UserErrorStruct, PngErrorCallback, PngWarningCallback);
 	if(pPngStruct == nullptr)
 	{
 		io_close(File);
@@ -464,7 +464,7 @@ bool CImageLoader::SavePng(CByteBufferWriter &Writer, const CImageInfo &Image, c
 		}
 	};
 	auto pState = std::make_unique<SWriteState>();
-	pState->m_pPng = png_create_write_struct(PNG_LIBPNG_VER_STRING, &pState->m_Error, PngErrorCallback, PngWarningCallback);
+	pState->m_pPng = png_create_write_struct(png_get_libpng_ver(nullptr), &pState->m_Error, PngErrorCallback, PngWarningCallback);
 	if(pState->m_pPng == nullptr)
 		return false;
 	if(setjmp(pState->m_Error.m_JmpBuf))

@@ -102,4 +102,4 @@ public:
 	bool AddRole(const char *pName, int Rank);
 };
 
-#endif //ENGINE_SERVER_AUTHMANAGER_H
+#endif // ENGINE_SERVER_AUTHMANAGER_H

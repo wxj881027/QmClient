@@ -244,6 +244,7 @@ public:
 	IEngineMap *m_pMap;
 
 	int64_t m_GameStartTime;
+	int64_t m_StartTime;
 
 	enum
 	{
@@ -458,6 +459,7 @@ public:
 	static void ConKick(IConsole::IResult *pResult, void *pUser);
 	static void ConStatus(IConsole::IResult *pResult, void *pUser);
 	static void ConShutdown(IConsole::IResult *pResult, void *pUser);
+	static void ConUptime(IConsole::IResult *pResult, void *pUser);
 	static void ConRecord(IConsole::IResult *pResult, void *pUser);
 	static void ConStopRecord(IConsole::IResult *pResult, void *pUser);
 	static void ConKcpStatus(IConsole::IResult *pResult, void *pUser);

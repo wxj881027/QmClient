@@ -223,7 +223,7 @@ void CMapImages::OnMapLoadImpl(class CLayers *pLayers, IMap *pMap)
 		}
 	}
 
-	const int TextureLoadFlag = Graphics()->Uses2DTextureArrays() ? IGraphics::TEXLOAD_TO_2D_ARRAY_TEXTURE : IGraphics::TEXLOAD_TO_3D_TEXTURE;
+	const int TextureLoadFlag = Graphics()->TextureLoadFlags();
 
 	// load new textures
 	bool ShowWarning = false;
@@ -399,7 +399,7 @@ IGraphics::CTextureHandle CMapImages::GetEntities(EMapImageEntityLayerType Entit
 
 		int TextureLoadFlag = 0;
 		if(Graphics()->HasTextureArraysSupport())
-			TextureLoadFlag = (Graphics()->Uses2DTextureArrays() ? IGraphics::TEXLOAD_TO_2D_ARRAY_TEXTURE : IGraphics::TEXLOAD_TO_3D_TEXTURE) | IGraphics::TEXLOAD_NO_2D_TEXTURE;
+			TextureLoadFlag = (Graphics()->TextureLoadFlags()) | IGraphics::TEXLOAD_NO_2D_TEXTURE;
 
 		CImageInfo ImgInfo;
 		char aPath[IO_MAX_PATH_LENGTH];
@@ -531,7 +531,7 @@ IGraphics::CTextureHandle CMapImages::GetSpeedupArrow()
 {
 	if(!m_SpeedupArrowIsLoaded)
 	{
-		int TextureLoadFlag = (Graphics()->Uses2DTextureArrays() ? IGraphics::TEXLOAD_TO_2D_ARRAY_TEXTURE : IGraphics::TEXLOAD_TO_3D_TEXTURE) | IGraphics::TEXLOAD_NO_2D_TEXTURE;
+		int TextureLoadFlag = (Graphics()->TextureLoadFlags()) | IGraphics::TEXLOAD_NO_2D_TEXTURE;
 		m_SpeedupArrowTexture = Graphics()->LoadTexture("editor/speed_arrow_array.png", IStorage::TYPE_ALL, TextureLoadFlag);
 		m_SpeedupArrowIsLoaded = true;
 	}
@@ -769,7 +769,7 @@ IGraphics::CTextureHandle CMapImages::UploadEntityLayerText(int TextureSize, int
 	UpdateEntityLayerText(TextImage, TextureSize, MaxWidth, YOffset, 1);
 	UpdateEntityLayerText(TextImage, TextureSize, MaxWidth, YOffset, 2, 255);
 
-	const int TextureLoadFlag = (Graphics()->Uses2DTextureArrays() ? IGraphics::TEXLOAD_TO_2D_ARRAY_TEXTURE : IGraphics::TEXLOAD_TO_3D_TEXTURE) | IGraphics::TEXLOAD_NO_2D_TEXTURE;
+	const int TextureLoadFlag = (Graphics()->TextureLoadFlags()) | IGraphics::TEXLOAD_NO_2D_TEXTURE;
 	return Graphics()->LoadTextureRawMove(TextImage, TextureLoadFlag);
 }
 

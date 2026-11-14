@@ -61,7 +61,6 @@ void CServerBan::InitServerBan(IConsole *pConsole, IStorage *pStorage, CServer *
 
 	m_pServer = pServer;
 
-	// overwrites base command, todo: improve this
 	Console()->Register("ban", "s[ip|id] ?i[minutes] r[reason]", CFGFLAG_SERVER | CFGFLAG_STORE, ConBanExt, this, "Ban player with ip/client id for x minutes for any reason");
 	Console()->Register("ban_region", "s[region] s[ip|id] ?i[minutes] r[reason]", CFGFLAG_SERVER | CFGFLAG_STORE, ConBanRegion, this, "Ban player in a region");
 	Console()->Register("ban_region_range", "s[region] s[first ip] s[last ip] ?i[minutes] r[reason]", CFGFLAG_SERVER | CFGFLAG_STORE, ConBanRegionRange, this, "Ban range in a region");
@@ -619,6 +618,8 @@ int64_t CServer::TickStartTime(int Tick)
 
 int CServer::Init()
 {
+	m_StartTime = time_get();
+
 	for(auto &Client : m_aClients)
 	{
 		Client.m_State = CClient::STATE_EMPTY;
@@ -1902,7 +1903,7 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 		}
 	}
 
-	if(Config()->m_SvNetlimit && Msg != NETMSG_REQUEST_MAP_DATA)
+	if(Config()->m_SvNetlimit && (Msg != NETMSG_REQUEST_MAP_DATA || m_aClients[ClientId].m_State != CClient::STATE_CONNECTING))
 	{
 		int64_t Now = time_get();
 		int64_t Diff = Now - m_aClients[ClientId].m_TrafficSince;
@@ -2098,7 +2099,7 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 		}
 		else if(Msg == NETMSG_REQUEST_MAP_DATA)
 		{
-			if(m_aClients[ClientId].m_State < CClient::STATE_CONNECTING)
+			if(m_aClients[ClientId].m_State != CClient::STATE_CONNECTING)
 				return;
 
 			if(m_aClients[ClientId].m_Sixup)
@@ -4375,6 +4376,16 @@ void CServer::ConShutdown(IConsole::IResult *pResult, void *pUser)
 	}
 }
 
+void CServer::ConUptime(IConsole::IResult *pResult, void *pUser)
+{
+	CServer *pThis = static_cast<CServer *>(pUser);
+	// str_time 接收厘秒，直接换算避免毫秒溢出。
+	const int64_t UptimeCentisecs = (time_get() - pThis->m_StartTime) / (time_freq() / 100);
+	char aTime[64];
+	str_time(UptimeCentisecs, TIME_DAYS, aTime, sizeof(aTime));
+	log_info("server", "Uptime %s", aTime);
+}
+
 void CServer::DemoRecorder_HandleAutoStart()
 {
 	if(Config()->m_SvAutoDemoRecord)
@@ -4945,6 +4956,7 @@ void CServer::RegisterCommands()
 	Console()->Register("kick", "v[id] ?r[reason]", CFGFLAG_SERVER, ConKick, this, "Kick player with specified id for any reason");
 	Console()->Register("status", "?r[name]", CFGFLAG_SERVER, ConStatus, this, "List players containing name or all players");
 	Console()->Register("shutdown", "?r[reason]", CFGFLAG_SERVER, ConShutdown, this, "Shut down");
+	Console()->Register("uptime", "", CFGFLAG_SERVER, ConUptime, this, "Show server uptime");
 	Console()->Register("logout", "", CFGFLAG_SERVER, ConLogout, this, "Logout of rcon");
 	Console()->Register("show_ips", "?i[show]", CFGFLAG_SERVER, ConShowIps, this, "Show IP addresses in rcon commands (1 = on, 0 = off)");
 	Console()->Register("hide_auth_status", "?i[hide]", CFGFLAG_SERVER, ConHideAuthStatus, this, "Opt out of spectator count and hide auth status to non-authed players (1 = hidden, 0 = shown)");
