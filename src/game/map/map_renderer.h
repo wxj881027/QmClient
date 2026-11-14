@@ -21,7 +21,7 @@ public:
 	void BeginLoad(ERenderType Type, CLayers *pLayers, IMapImages *pMapImages, const IEnvelopeEval *pEnvelopeEval, std::optional<FCallbackMapRendererInit> CallbackMapRendererInitOptional = std::nullopt);
 	void LoadStep(int MaxLayers = 1);
 	bool IsLoadFinished() const { return m_LoadFinished; }
-	void Load(ERenderType Type, CLayers *pLayers, IMapImages *pMapImages, const IEnvelopeEval *pEnvelopeEval, std::optional<FCallbackMapRendererInit> CallbackMapRendererInitOptional);
+	void Load(ERenderType Type, CLayers *pLayers, IMapImages *pMapImages, const IEnvelopeEval *pEnvelopeEval, std::optional<FCallbackMapRendererInit> CallbackMapRendererInitOptional, bool TileAndQuadBuffering = true);
 	void Render(const CRenderLayerParams &Params);
 
 private:
@@ -31,6 +31,7 @@ private:
 	ERenderType m_LoadType = ERenderType::RENDERTYPE_FULL_DESIGN;
 	CLayers *m_pLoadLayers = nullptr;
 	IMapImages *m_pLoadImages = nullptr;
+	bool m_TileAndQuadBuffering = true;
 	std::shared_ptr<CEnvelopeManager> m_pLoadEnvelopeManager;
 	std::optional<FCallbackMapRendererInit> m_LoadCallback;
 	std::unique_ptr<CRenderLayer> m_pLoadGroup;

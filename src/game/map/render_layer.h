@@ -52,7 +52,6 @@ public:
 	float m_Zoom;
 	bool m_RenderText;
 	bool m_RenderInvalidTiles;
-	bool m_TileAndQuadBuffering;
 	bool m_RenderTileBorder;
 	bool m_DebugRenderGroupClips;
 	bool m_DebugRenderQuadClips;
@@ -64,13 +63,14 @@ class CRenderLayer : public CRenderComponent
 {
 public:
 	CRenderLayer(int GroupId, int LayerId, int Flags);
-	virtual void OnInit(IGraphics *pGraphics, ITextRender *pTextRender, CRenderMap *pRenderMap, std::shared_ptr<CEnvelopeManager> &pEnvelopeManager, IMap *pMap, IMapImages *pMapImages);
+	virtual void OnInit(IGraphics *pGraphics, ITextRender *pTextRender, CRenderMap *pRenderMap, std::shared_ptr<CEnvelopeManager> &pEnvelopeManager, IMap *pMap, IMapImages *pMapImages, bool TileAndQuadBuffering);
 
 	virtual void Init() = 0;
 	virtual void Render(const CRenderLayerParams &Params) = 0;
 	virtual bool DoRender(const CRenderLayerParams &Params) = 0;
 	virtual bool IsValid() const { return true; }
 	virtual bool IsGroup() const { return false; }
+	virtual bool IsDesignLayer() const { return true; }
 	virtual void Unload() = 0;
 
 	bool IsVisibleInClipRegion(const std::optional<CClipRegion> &ClipRegion) const;
@@ -78,6 +78,7 @@ public:
 	int GetLayer() const { return m_LayerId; }
 
 protected:
+	bool m_TileAndQuadBuffering = true;
 	int m_GroupId;
 	int m_LayerId;
 	int m_Flags;
@@ -117,10 +118,16 @@ public:
 	void Render(const CRenderLayerParams &Params) override;
 	bool DoRender(const CRenderLayerParams &Params) override;
 	void Init() override;
-	void OnInit(IGraphics *pGraphics, ITextRender *pTextRender, CRenderMap *pRenderMap, std::shared_ptr<CEnvelopeManager> &pEnvelopeManager, IMap *pMap, IMapImages *pMapImages) override;
+	void OnInit(IGraphics *pGraphics, ITextRender *pTextRender, CRenderMap *pRenderMap, std::shared_ptr<CEnvelopeManager> &pEnvelopeManager, IMap *pMap, IMapImages *pMapImages, bool TileAndQuadBuffering) override;
 
 	virtual int GetDataIndex() const;
-	bool IsValid() const override { return GetRawData() != nullptr; }
+	bool IsValid() const override
+	{
+		// 设计层上传 GPU 后会释放原始 tile 数据，有效性不能只看 map 数据。
+		return m_pLayerTilemap != nullptr && m_pLayerTilemap->m_Width > 0 && m_pLayerTilemap->m_Height > 0 &&
+		       (m_pTiles != nullptr || (m_VisualTiles.has_value() && m_VisualTiles->m_BufferContainerIndex != -1) ||
+			       (m_pMap != nullptr && m_pMap->GetDataSize(GetDataIndex()) > 0));
+	}
 	void Unload() override;
 
 protected:
@@ -230,7 +237,7 @@ class CRenderLayerQuads : public CRenderLayer
 {
 public:
 	CRenderLayerQuads(int GroupId, int LayerId, int Flags, CMapItemLayerQuads *pLayerQuads);
-	void OnInit(IGraphics *pGraphics, ITextRender *pTextRender, CRenderMap *pRenderMap, std::shared_ptr<CEnvelopeManager> &pEnvelopeManager, IMap *pMap, IMapImages *pMapImages) override;
+	void OnInit(IGraphics *pGraphics, ITextRender *pTextRender, CRenderMap *pRenderMap, std::shared_ptr<CEnvelopeManager> &pEnvelopeManager, IMap *pMap, IMapImages *pMapImages, bool TileAndQuadBuffering) override;
 	void Init() override;
 	bool IsValid() const override { return m_pLayerQuads->m_NumQuads > 0 && m_pQuads; }
 	void Render(const CRenderLayerParams &Params) override;
@@ -291,6 +298,8 @@ public:
 protected:
 	ColorRGBA GetRenderColor(const CRenderLayerParams &Params) const override { return ColorRGBA(1.0f, 1.0f, 1.0f, Params.m_EntityOverlayVal / 100.0f); }
 	IGraphics::CTextureHandle GetTexture() const override;
+	// 实体层在运行期仍要读取 tile 数据，不能在上传 GPU 后释放。
+	bool IsDesignLayer() const override { return false; }
 };
 
 class CRenderLayerEntityGame final : public CRenderLayerEntityBase
