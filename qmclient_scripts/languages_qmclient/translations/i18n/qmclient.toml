@@ -5759,6 +5759,22 @@ turkish = "Zen modu tarafından yönetiliyor"
 polish = "Kontrolowane przez tryb Zen"
 
 [[message]]
+key = "Converting %d%%"
+[message.translations]
+simplified_chinese = "正在转换 %d%%"
+traditional_chinese = "正在轉換 %d%%"
+japanese = "変換中 %d%%"
+korean = "변환 중 %d%%"
+russian = "Преобразование %d%%"
+german = "Konvertieren %d%%"
+spanish = "Convirtiendo %d%%"
+french = "Conversion %d%%"
+brazilian_portuguese = "Convertendo %d%%"
+portuguese = "A converter %d%%"
+turkish = "Dönüştürülüyor %d%%"
+polish = "Konwertowanie %d%%"
+
+[[message]]
 key = "Copy all"
 [message.translations]
 simplified_chinese = "复制全部"
@@ -7645,6 +7661,22 @@ brazilian_portuguese = "Baixar a demo de rank 1 deste mapa"
 portuguese = "Descarregar a demo de rank 1 deste mapa"
 turkish = "Bu harita için Rank 1 demosunu indir"
 polish = "Pobierz demo rangi 1 dla tej mapy"
+
+[[message]]
+key = "Downloading %d%%"
+[message.translations]
+simplified_chinese = "正在下载 %d%%"
+traditional_chinese = "正在下載 %d%%"
+japanese = "ダウンロード中 %d%%"
+korean = "다운로드 중 %d%%"
+russian = "Загрузка %d%%"
+german = "Herunterladen %d%%"
+spanish = "Descargando %d%%"
+french = "Téléchargement %d%%"
+brazilian_portuguese = "Baixando %d%%"
+portuguese = "A descarregar %d%%"
+turkish = "İndiriliyor %d%%"
+polish = "Pobieranie %d%%"
 
 [[message]]
 key = "Downloading rank 1 demo"
@@ -24370,6 +24402,22 @@ brazilian_portuguese = "Buscar mapas locais"
 portuguese = "Procurar mapas locais"
 turkish = "Yerel haritaları ara"
 polish = "Szukaj lokalnych map"
+
+[[message]]
+key = "Search ghosts"
+[message.translations]
+simplified_chinese = "搜索影子"
+traditional_chinese = "搜尋影子"
+japanese = "ゴーストを検索"
+korean = "고스트 검색"
+russian = "Поиск призраков"
+german = "Geister suchen"
+spanish = "Buscar fantasmas"
+french = "Rechercher des fantômes"
+brazilian_portuguese = "Buscar fantasmas"
+portuguese = "Procurar fantasmas"
+turkish = "Hayaletleri ara"
+polish = "Szukaj duchów"
 
 [[message]]
 key = "Search maps for Rank 1 replays ..."

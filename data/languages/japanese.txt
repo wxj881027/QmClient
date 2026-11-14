@@ -755,9 +755,6 @@ Advanced
 Advanced options
 == 詳細オプション
 
-AFR
-== アフリカ
-
 After a successful upload, log in with F2 and run the change_map command; files must stay under 64 MiB.
 == アップロードに成功したら F2 でログインし、change_map コマンドを実行します。ファイルは 64 MiB 未満である必要があります。
 
@@ -1166,9 +1163,6 @@ Arrow
 Arrow assets
 == 矢印アセット
 
-ASI
-== アジア
-
 Aspect ratio preset
 == アスペクト比プリセット
 
@@ -1234,9 +1228,6 @@ Audio packs
 
 Aurora: Polar Veil
 == オーロラ：極夜の帳
-
-AUS
-== オーストラリア
 
 Authed name color in scoreboard
 == スコアボードでの認証済みプレイヤー名の色
@@ -2384,9 +2375,6 @@ Chinese (Traditional)
 Chinese font:
 == 中国語フォント：
 
-CHN
-== 中国
-
 Choose "Show players' key presses" as "Own", "Others" or "All", then adjust "Size of key press icons".
 == プレイヤーのキー入力表示を自分、他のプレイヤー、すべてから選び、キー入力アイコンのサイズを調整します。
 
@@ -3229,6 +3217,9 @@ Converse
 
 Converse with the last person you whispered to (private message)
 == 最後にささやいた相手と会話（プライベートメッセージ）
+
+Converting %d%%
+== 変換中 %d%%
 
 Coordinate size on nameplate
 == ネームプレート上の座標のサイズ
@@ -4279,6 +4270,9 @@ Downloaded "%s"
 
 Downloaded: %.1f MiB (total size unknown)
 == ダウンロード済み：%.1f MiB（総サイズ不明）
+
+Downloading %d%%
+== ダウンロード中 %d%%
 
 Downloading map
 == マップをダウンロード中
@@ -5347,9 +5341,6 @@ Error saving touch controls
 
 ESC replay minutes
 == ESC リプレイ保存時間（分）
-
-EUR
-== ヨーロッパ
 
 Evaluate an expression
 == 式を評価
@@ -9080,9 +9071,6 @@ MyMemory needs no registration (anonymous daily quota)
 n = Prediction latency
 == n = 予測レイテンシ
 
-NA
-== 北米
-
 Name
 == 名前
 
@@ -12422,9 +12410,6 @@ Run server
 Runs commands automatically when you connect to a server, split into a connect part and a join part.
 == サーバーに接続したときにコマンドを自動で実行します。接続時と参加時の二段階に分かれています。
 
-SA
-== 南米
-
 Same as "vote no"
 == 「vote no」と同じ
 
@@ -12727,6 +12712,9 @@ Search country flag…
 
 Search donor asset
 == ドナーアセットを検索
+
+Search ghosts
+== ゴーストを検索
 
 Search main asset
 == メインアセットを検索

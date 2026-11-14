@@ -28,6 +28,7 @@
 #include <generated/protocol.h>
 
 #include <game/client/QmUi/QmAnimResolve.h>
+#include <game/client/QmUi/QmListToolbar.h>
 #include <game/client/QmUi/QmServerInfoGeometry.h>
 #include <game/client/QmUi/QmTree.h>
 #include <game/client/QmUi/UiButtons.h>
@@ -38,6 +39,7 @@
 #include <game/client/components/countryflags.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/qmclient/rank_demo_sort.h>
+#include <game/client/components/qmclient/rank_list_layout.h>
 #include <game/client/components/qmclient/scoreboard_skin.h>
 #include <game/client/components/touch_controls.h>
 #include <game/client/frame_scheduler.h>
@@ -2391,47 +2393,30 @@ void CMenus::RenderGhost(CUIRect MainView)
 	// 顶部工具栏：搜索框 + 圆形刷新 + 圆形目录，与 Rank 1 页面同一套排布。
 	static CButtonContainer s_ReloadButton;
 	static CButtonContainer s_DirectoryButton;
-	CUIRect Toolbar;
-	View.HSplitTop(ui_token::font::BODY + 2.0f * ui_token::spacing::SM, &Toolbar, &View);
-	View.HSplitTop(ui_token::spacing::SM, nullptr, &View);
+	ui_widget::SListToolbarOptions ToolbarOptions;
+	ToolbarOptions.m_pPlaceholder = Localize("Search ghosts");
+	ToolbarOptions.m_pRefreshButton = &s_ReloadButton;
+	ToolbarOptions.m_pFolderButton = &s_DirectoryButton;
+	const ui_widget::SListToolbarResult Toolbar = ui_widget::ListToolbar(ui_widget::ControlContext(Ui()), &m_GhostSearchInput, View, ToolbarOptions);
+	if(Toolbar.m_SearchChanged)
+		s_SelectedIndex = -1;
+	if(Toolbar.m_RefreshPressed || Input()->KeyPress(KEY_F5) || (Input()->KeyPress(KEY_R) && Input()->ModifierIsPressed()))
 	{
-		const float ButtonSize = Toolbar.h;
-		CUIRect ReloadButton, DirectoryButton;
-		Toolbar.VSplitRight(ButtonSize, &Toolbar, &DirectoryButton);
-		Toolbar.VSplitRight(ui_token::spacing::XS, &Toolbar, nullptr);
-		Toolbar.VSplitRight(ButtonSize, &Toolbar, &ReloadButton);
-		Toolbar.VSplitRight(ui_token::spacing::XS, &Toolbar, nullptr);
-
-		ui_widget::SInputFieldOptions Options;
-		Options.m_pPlaceholder = Localize("Search ghosts");
-		Options.m_FontSize = ui_token::font::BODY;
-		Options.m_Mode = ui_widget::EInputFieldMode::SEARCH;
-		Options.m_Clearable = true;
-		if(ui_widget::InputField(ui_widget::ControlContext(Ui()), &m_GhostSearchInput, Toolbar, Options).m_Changed)
-			s_SelectedIndex = -1;
-
-		if(Ui()->DoButton_QmIcon(&s_ReloadButton, EQmIcon::ARROW_ROTATE_RIGHT, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &ReloadButton,
-			   BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, true, std::nullopt, false, false, nullptr, ReloadButton.h * 0.5f) ||
-			Input()->KeyPress(KEY_F5) || (Input()->KeyPress(KEY_R) && Input()->ModifierIsPressed()))
-		{
-			GameClient()->m_Ghost.UnloadAll();
-			GameClient()->m_RankGhost.OnGhostsUnloaded();
-			for(CGhostItem &Ghost : m_vGhosts)
-				Ghost.m_Slot = -1;
-			GhostlistPopulate();
-		}
-		GameClient()->m_Tooltips.DoToolTip(&s_ReloadButton, &ReloadButton, Localize("Reload"));
-
-		if(Ui()->DoButton_QmIcon(&s_DirectoryButton, EQmIcon::FOLDER, FONT_ICON_FOLDER, 0, &DirectoryButton,
-			   BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, true, std::nullopt, false, false, nullptr, DirectoryButton.h * 0.5f))
-		{
-			char aBuf[IO_MAX_PATH_LENGTH];
-			Storage()->GetCompletePath(IStorage::TYPE_SAVE, "ghosts", aBuf, sizeof(aBuf));
-			Storage()->CreateFolder("ghosts", IStorage::TYPE_SAVE);
-			Client()->ViewFile(aBuf);
-		}
-		GameClient()->m_Tooltips.DoToolTip(&s_DirectoryButton, &DirectoryButton, Localize("Ghosts directory"));
+		GameClient()->m_Ghost.UnloadAll();
+		GameClient()->m_RankGhost.OnGhostsUnloaded();
+		for(CGhostItem &Ghost : m_vGhosts)
+			Ghost.m_Slot = -1;
+		GhostlistPopulate();
 	}
+	GameClient()->m_Tooltips.DoToolTip(&s_ReloadButton, &Toolbar.m_Layout.m_RefreshRect, Localize("Reload"));
+	if(Toolbar.m_FolderPressed)
+	{
+		char aBuf[IO_MAX_PATH_LENGTH];
+		Storage()->GetCompletePath(IStorage::TYPE_SAVE, "ghosts", aBuf, sizeof(aBuf));
+		Storage()->CreateFolder("ghosts", IStorage::TYPE_SAVE);
+		Client()->ViewFile(aBuf);
+	}
+	GameClient()->m_Tooltips.DoToolTip(&s_DirectoryButton, &Toolbar.m_Layout.m_FolderRect, Localize("Ghosts directory"));
 
 	View.HSplitTop(17.0f, &Headers, &View);
 	View.HSplitBottom(ui_token::font::BODY + 2.0f * ui_token::spacing::SM, &View, &Status);
@@ -2803,44 +2788,27 @@ void CMenus::RenderRankDemo(CUIRect MainView)
 	static std::string s_SelectedDemo;
 	static CButtonContainer s_RefreshButton;
 	static CButtonContainer s_DirectoryButton;
-	CUIRect Toolbar;
-	View.HSplitTop(ui_token::font::BODY + 2.0f * ui_token::spacing::SM, &Toolbar, &View);
-	View.HSplitTop(ui_token::spacing::SM, nullptr, &View);
+	ui_widget::SListToolbarOptions ToolbarOptions;
+	ToolbarOptions.m_pPlaceholder = Localize("Search maps for Rank 1 replays ...");
+	ToolbarOptions.m_pRefreshButton = &s_RefreshButton;
+	ToolbarOptions.m_pFolderButton = &s_DirectoryButton;
+	const ui_widget::SListToolbarResult Toolbar = ui_widget::ListToolbar(ui_widget::ControlContext(Ui()), &m_RankSearchInput, View, ToolbarOptions);
+	if(Toolbar.m_SearchChanged)
+		s_SelectedIndex = -1;
+	if(Toolbar.m_RefreshPressed || Input()->KeyPress(KEY_F5))
 	{
-		const float ButtonSize = Toolbar.h;
-		CUIRect RefreshButton, DirectoryButton;
-		Toolbar.VSplitRight(ButtonSize, &Toolbar, &DirectoryButton);
-		Toolbar.VSplitRight(ui_token::spacing::XS, &Toolbar, nullptr);
-		Toolbar.VSplitRight(ButtonSize, &Toolbar, &RefreshButton);
-		Toolbar.VSplitRight(ui_token::spacing::XS, &Toolbar, nullptr);
-
-		ui_widget::SInputFieldOptions Options;
-		Options.m_pPlaceholder = Localize("Search maps for Rank 1 replays ...");
-		Options.m_FontSize = ui_token::font::BODY;
-		Options.m_Mode = ui_widget::EInputFieldMode::SEARCH;
-		Options.m_Clearable = true;
-		if(ui_widget::InputField(ui_widget::ControlContext(Ui()), &m_RankSearchInput, Toolbar, Options).m_Changed)
-			s_SelectedIndex = -1;
-
-		if(Ui()->DoButton_QmIcon(&s_RefreshButton, EQmIcon::ARROW_ROTATE_RIGHT, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &RefreshButton,
-			   BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, true, std::nullopt, false, false, nullptr, RefreshButton.h * 0.5f) ||
-			Input()->KeyPress(KEY_F5))
-		{
-			s_SelectedIndex = -1;
-			RankGhost.RefreshManifest();
-		}
-		GameClient()->m_Tooltips.DoToolTip(&s_RefreshButton, &RefreshButton, Localize("Refresh"));
-
-		if(Ui()->DoButton_QmIcon(&s_DirectoryButton, EQmIcon::FOLDER, FONT_ICON_FOLDER, 0, &DirectoryButton,
-			   BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, true, std::nullopt, false, false, nullptr, DirectoryButton.h * 0.5f))
-		{
-			char aPath[IO_MAX_PATH_LENGTH];
-			CRankGhost::EnsureFolders(Storage());
-			Storage()->GetCompletePath(IStorage::TYPE_SAVE, CRankGhost::DEMO_CACHE_DIR, aPath, sizeof(aPath));
-			Client()->ViewFile(aPath);
-		}
-		GameClient()->m_Tooltips.DoToolTip(&s_DirectoryButton, &DirectoryButton, Localize("Replays directory"));
+		s_SelectedIndex = -1;
+		RankGhost.RefreshManifest();
 	}
+	GameClient()->m_Tooltips.DoToolTip(&s_RefreshButton, &Toolbar.m_Layout.m_RefreshRect, Localize("Refresh"));
+	if(Toolbar.m_FolderPressed)
+	{
+		char aPath[IO_MAX_PATH_LENGTH];
+		CRankGhost::EnsureFolders(Storage());
+		Storage()->GetCompletePath(IStorage::TYPE_SAVE, CRankGhost::DEMO_CACHE_DIR, aPath, sizeof(aPath));
+		Client()->ViewFile(aPath);
+	}
+	GameClient()->m_Tooltips.DoToolTip(&s_DirectoryButton, &Toolbar.m_Layout.m_FolderRect, Localize("Replays directory"));
 
 	View.HSplitTop(17.0f, &Headers, &View);
 	View.HSplitBottom(ui_token::font::BODY + 2.0f * ui_token::spacing::SM, &View, &Status);
@@ -2873,40 +2841,39 @@ void CMenus::RenderRankDemo(CUIRect MainView)
 	public:
 		const char *m_pCaption;
 		int m_Id;
-		float m_Width;
 		CUIRect m_Rect;
 	};
 
-	// 列宽：标识列与模式/时间/日期按内容宽度从 token 内边距推导，玩家与状态两列
-	// 按比例吃掉剩余宽度；列表永远铺满内容区，右端不再留大片空白。
+	// 列宽：固定列按内容宽度申请，玩家与状态列按 6:4 吃掉剩余宽度；
+	// 极端窄窗口由布局原语等比压缩固定列，绝不产生负宽度。
+	// 测量与行内绘制统一用 BODY，避免用 SMALL 量、用 BODY 画导致文字越界。
 	const float ColumnGap = ui_token::spacing::SM;
 	const float CellPadX = 2.0f * ui_token::spacing::SM;
-	const float ActiveWidth = ui_token::spacing::XL;
-	const float ModeWidth = maximum(TextRender()->TextWidth(ui_token::font::SMALL, Localize("Mode")), TextRender()->TextWidth(ui_token::font::SMALL, Localize("Team"))) + CellPadX;
-	const float TimeWidth = maximum(TextRender()->TextWidth(ui_token::font::SMALL, Localize("Time")), TextRender()->TextWidth(ui_token::font::SMALL, "1h02m03s")) + CellPadX;
-	const float DateWidth = maximum(TextRender()->TextWidth(ui_token::font::SMALL, Localize("Date")), TextRender()->TextWidth(ui_token::font::SMALL, "2000-01-01 00:00")) + CellPadX;
-	const float FlexWidth = maximum(0.0f, Headers.w - (ActiveWidth + ModeWidth + TimeWidth + DateWidth) - ColumnGap * (NUM_COLS - 1));
+	qmclient::rank_demo::SRankListColumnMetrics ColumnMetrics;
+	ColumnMetrics.m_AvailableWidth = Headers.w;
+	ColumnMetrics.m_Gap = ColumnGap;
+	ColumnMetrics.m_ActiveWidth = ui_token::spacing::XL;
+	ColumnMetrics.m_ModeWidth = maximum(TextRender()->TextWidth(ui_token::font::BODY, Localize("Mode")), TextRender()->TextWidth(ui_token::font::BODY, Localize("Team"))) + CellPadX;
+	ColumnMetrics.m_TimeWidth = maximum(TextRender()->TextWidth(ui_token::font::BODY, Localize("Time")), TextRender()->TextWidth(ui_token::font::BODY, "1h02m03s")) + CellPadX;
+	ColumnMetrics.m_DateWidth = maximum(TextRender()->TextWidth(ui_token::font::BODY, Localize("Date")), TextRender()->TextWidth(ui_token::font::BODY, "2000-01-01 00:00")) + CellPadX;
+	const qmclient::rank_demo::SRankListColumns Columns = qmclient::rank_demo::LayoutRankListColumns(ColumnMetrics);
 
 	static CColumn s_aCols[] = {
-		{"", COL_ACTIVE, 0.0f, {0}},
-		{Localizable("Mode"), COL_MODE, 0.0f, {0}},
-		{Localizable("Players"), COL_NAME, 0.0f, {0}},
-		{Localizable("Time"), COL_TIME, 0.0f, {0}},
-		{Localizable("Date"), COL_DATE, 0.0f, {0}},
-		{Localizable("Status"), COL_STATE, 0.0f, {0}},
+		{"", COL_ACTIVE, {0}},
+		{Localizable("Mode"), COL_MODE, {0}},
+		{Localizable("Players"), COL_NAME, {0}},
+		{Localizable("Time"), COL_TIME, {0}},
+		{Localizable("Date"), COL_DATE, {0}},
+		{Localizable("Status"), COL_STATE, {0}},
 	};
-	s_aCols[COL_ACTIVE].m_Width = ActiveWidth;
-	s_aCols[COL_MODE].m_Width = ModeWidth;
-	s_aCols[COL_NAME].m_Width = FlexWidth * 0.6f;
-	s_aCols[COL_TIME].m_Width = TimeWidth;
-	s_aCols[COL_DATE].m_Width = DateWidth;
-	s_aCols[COL_STATE].m_Width = FlexWidth - s_aCols[COL_NAME].m_Width;
+	static_assert(std::size(s_aCols) == qmclient::rank_demo::RANK_LIST_COLUMN_COUNT);
 
 	for(int i = 0; i < NUM_COLS; i++)
 	{
-		Headers.VSplitLeft(s_aCols[i].m_Width, &s_aCols[i].m_Rect, &Headers);
+		const float Width = std::min(Columns.m_aWidths[i], maximum(0.0f, Headers.w));
+		Headers.VSplitLeft(Width, &s_aCols[i].m_Rect, &Headers);
 		if(i + 1 < NUM_COLS)
-			Headers.VSplitLeft(ColumnGap, nullptr, &Headers);
+			Headers.VSplitLeft(std::min(ColumnGap, maximum(0.0f, Headers.w)), nullptr, &Headers);
 	}
 
 	// 表头点击排序：同一列翻转方向，换列从升序开始；状态列依赖缓存与激活状态，不排序。
@@ -3138,12 +3105,45 @@ void CMenus::RenderRankDemo(CUIRect MainView)
 		const bool TaskBusy = RankGhost.IsBusy();
 		const bool ItemActivated = s_ListBox.WasItemActivated();
 
-		// 右侧动作（全部常驻，不可用/进行中置灰）：删除 | 播放回放 | 下载回放 | 画面内回放 | 影子加载
-		static CButtonContainer s_DeleteButton;
+		// 右侧动作（全部常驻，不可用/进行中置灰）：影子加载 | 画面内回放 | 下载回放 | 播放回放 | 删除。
+		// 主操作固定在最右、删除固定在最后，与影子页的动作栏顺序一致。
+		static CButtonContainer s_GhostButton;
+		const char *pGhostText = GhostActive ? Localize("Deactivate ghost") : Localize("Load as ghost");
 		{
-			const CUIRect Button = NextIngameActionButton(Status, Localize("Delete"));
-			if(Button.w > 0.0f && DoIngameMenuButton(PAGE_RANK_DEMO, "ingame-rank-demo-delete", &s_DeleteButton, Localize("Delete"), 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::PILL, TaskBusy))
-				RankGhost.DeleteEntryCache(Entry);
+			const CUIRect Button = NextIngameActionButton(Status, pGhostText);
+			if(Button.w > 0.0f && (DoIngameMenuButton(PAGE_RANK_DEMO, GhostActive ? "ingame-rank-demo-ghost-off" : "ingame-rank-demo-ghost-on", &s_GhostButton,
+						       pGhostText, 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::PILL, TaskBusy) ||
+						      (ItemActivated && !GhostActive && !TaskBusy && DemoCached)))
+			{
+				if(GhostActive)
+					RankGhost.RequestGhostOff();
+				else
+					RankGhost.RequestGhostForDemo(Entry.m_Demo.c_str());
+			}
+		}
+
+		static CButtonContainer s_ViewButton;
+		const bool ViewActiveHere = GhostActive && GameClient()->ReplaySessionStatus().ViewMode();
+		{
+			const char *pViewText = ViewActiveHere ? Localize("Exit replay view") : Localize("View replay");
+			const CUIRect Button = NextIngameActionButton(Status, pViewText);
+			if(Button.w > 0.0f && DoIngameMenuButton(PAGE_RANK_DEMO, ViewActiveHere ? "ingame-rank-demo-view-off" : "ingame-rank-demo-view-on", &s_ViewButton,
+						      pViewText, 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::PILL, TaskBusy && !ViewActiveHere))
+			{
+				if(ViewActiveHere)
+					RankGhost.ViewStop();
+				else
+					RankGhost.RequestGhostViewForDemo(Entry.m_Demo.c_str());
+			}
+		}
+
+		static CButtonContainer s_DownloadButton;
+		{
+			const CUIRect Button = NextIngameActionButton(Status, Localize("Download replay"));
+			// 双击行等同「下载回放」：未缓存且没有其它任务时直接开始下载。
+			if(Button.w > 0.0f && (DoIngameMenuButton(PAGE_RANK_DEMO, "ingame-rank-demo-download", &s_DownloadButton, Localize("Download replay"), 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::PILL, TaskBusy || DemoCached) ||
+						      (ItemActivated && !TaskBusy && !DemoCached)))
+				RankGhost.RequestDemoDownload(Entry.m_Demo.c_str());
 		}
 
 		static CButtonContainer s_PlayButton;
@@ -3170,43 +3170,11 @@ void CMenus::RenderRankDemo(CUIRect MainView)
 			}
 		}
 
-		static CButtonContainer s_DownloadButton;
+		static CButtonContainer s_DeleteButton;
 		{
-			const CUIRect Button = NextIngameActionButton(Status, Localize("Download replay"));
-			// 双击行等同「下载回放」：未缓存且没有其它任务时直接开始下载。
-			if(Button.w > 0.0f && (DoIngameMenuButton(PAGE_RANK_DEMO, "ingame-rank-demo-download", &s_DownloadButton, Localize("Download replay"), 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::PILL, TaskBusy || DemoCached) ||
-						      (ItemActivated && !TaskBusy && !DemoCached)))
-				RankGhost.RequestDemoDownload(Entry.m_Demo.c_str());
-		}
-
-		static CButtonContainer s_ViewButton;
-		const bool ViewActiveHere = GhostActive && GameClient()->ReplaySessionStatus().ViewMode();
-		{
-			const char *pViewText = ViewActiveHere ? Localize("Exit replay view") : Localize("View replay");
-			const CUIRect Button = NextIngameActionButton(Status, pViewText);
-			if(Button.w > 0.0f && DoIngameMenuButton(PAGE_RANK_DEMO, ViewActiveHere ? "ingame-rank-demo-view-off" : "ingame-rank-demo-view-on", &s_ViewButton,
-						      pViewText, 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::PILL, TaskBusy && !ViewActiveHere))
-			{
-				if(ViewActiveHere)
-					RankGhost.ViewStop();
-				else
-					RankGhost.RequestGhostViewForDemo(Entry.m_Demo.c_str());
-			}
-		}
-
-		static CButtonContainer s_GhostButton;
-		const char *pGhostText = GhostActive ? Localize("Deactivate ghost") : Localize("Load as ghost");
-		{
-			const CUIRect Button = NextIngameActionButton(Status, pGhostText);
-			if(Button.w > 0.0f && (DoIngameMenuButton(PAGE_RANK_DEMO, GhostActive ? "ingame-rank-demo-ghost-off" : "ingame-rank-demo-ghost-on", &s_GhostButton,
-						       pGhostText, 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::PILL, TaskBusy) ||
-						      (ItemActivated && !GhostActive && !TaskBusy && DemoCached)))
-			{
-				if(GhostActive)
-					RankGhost.RequestGhostOff();
-				else
-					RankGhost.RequestGhostForDemo(Entry.m_Demo.c_str());
-			}
+			const CUIRect Button = NextIngameActionButton(Status, Localize("Delete"));
+			if(Button.w > 0.0f && DoIngameMenuButton(PAGE_RANK_DEMO, "ingame-rank-demo-delete", &s_DeleteButton, Localize("Delete"), 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::PILL, TaskBusy))
+				RankGhost.DeleteEntryCache(Entry);
 		}
 	}
 }

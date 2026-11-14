@@ -755,9 +755,6 @@ Advanced
 Advanced options
 == 고급 옵션
 
-AFR
-== 아프리카
-
 After a successful upload, log in with F2 and run the change_map command; files must stay under 64 MiB.
 == 업로드에 성공하면 F2로 로그인해 change_map 명령을 실행합니다. 파일은 64 MiB 미만이어야 합니다.
 
@@ -1166,9 +1163,6 @@ Arrow
 Arrow assets
 == 화살표 에셋
 
-ASI
-== 아시아
-
 Aspect ratio preset
 == 화면 비율 프리셋
 
@@ -1234,9 +1228,6 @@ Audio packs
 
 Aurora: Polar Veil
 == 오로라: 극야의 장막
-
-AUS
-== 호주
 
 Authed name color in scoreboard
 == 점수판에서 인증된 이름 색상
@@ -2384,9 +2375,6 @@ Chinese (Traditional)
 Chinese font:
 == 중국어 글꼴:
 
-CHN
-== 중국
-
 Choose "Show players' key presses" as "Own", "Others" or "All", then adjust "Size of key press icons".
 == 플레이어 키 입력 표시를 자신, 다른 플레이어, 모두 중에서 고르고 키 입력 아이콘 크기를 맞춥니다.
 
@@ -3229,6 +3217,9 @@ Converse
 
 Converse with the last person you whispered to (private message)
 == 마지막으로 귓속말한 사람과 대화합니다 (개인 메시지)
+
+Converting %d%%
+== 변환 중 %d%%
 
 Coordinate size on nameplate
 == 이름표에 표시되는 좌표 크기
@@ -4279,6 +4270,9 @@ Downloaded "%s"
 
 Downloaded: %.1f MiB (total size unknown)
 == 다운로드됨: %.1f MiB (전체 크기 알 수 없음)
+
+Downloading %d%%
+== 다운로드 중 %d%%
 
 Downloading map
 == 맵 다운로드 중
@@ -5347,9 +5341,6 @@ Error saving touch controls
 
 ESC replay minutes
 == ESC 리플레이 분
-
-EUR
-== 유럽
 
 Evaluate an expression
 == 표현식 평가
@@ -9080,9 +9071,6 @@ MyMemory needs no registration (anonymous daily quota)
 n = Prediction latency
 == n = 예측 지연 시간
 
-NA
-== 북미
-
 Name
 == 이름
 
@@ -12422,9 +12410,6 @@ Run server
 Runs commands automatically when you connect to a server, split into a connect part and a join part.
 == 서버에 연결하면 명령어를 자동으로 실행하며, 연결 단계와 참가 단계로 나뉩니다.
 
-SA
-== 남미
-
 Same as "vote no"
 == "투표 반대"와 동일
 
@@ -12727,6 +12712,9 @@ Search country flag…
 
 Search donor asset
 == 기증자 에셋 검색
+
+Search ghosts
+== 고스트 검색
 
 Search main asset
 == 메인 에셋 검색

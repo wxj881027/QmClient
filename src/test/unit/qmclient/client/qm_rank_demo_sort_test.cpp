@@ -118,6 +118,23 @@ TEST(QmRankDemoSort, TimeSortComparesNumericNotLexicographic)
 	EXPECT_EQ(DemoOrder(vEntries), (std::vector<std::string>{"short.demo", "long.demo"}));
 }
 
+TEST(QmRankDemoSort, TimeSortDescendingFlipsTieBreakWithPrimaryKey)
+{
+	std::vector<qmclient::rank_demo::SEntry> vEntries = {
+		MakeEntry("b.demo", "b", "90.0", 1),
+		MakeEntry("a.demo", "a", "90.0", 2),
+		MakeEntry("c.demo", "c", "80.0", 3),
+	};
+	qmclient::rank_demo::SSortState State;
+	State.m_Column = qmclient::rank_demo::ESortColumn::TIME;
+	qmclient::rank_demo::SortEntries(vEntries, State);
+	EXPECT_EQ(DemoOrder(vEntries), (std::vector<std::string>{"c.demo", "a.demo", "b.demo"}));
+
+	State.m_Descending = true;
+	qmclient::rank_demo::SortEntries(vEntries, State);
+	EXPECT_EQ(DemoOrder(vEntries), (std::vector<std::string>{"b.demo", "a.demo", "c.demo"}));
+}
+
 TEST(QmRankDemoSort, DateSortUsesTimestampAndBreaksTiesByDemoName)
 {
 	std::vector<qmclient::rank_demo::SEntry> vEntries = {

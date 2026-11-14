@@ -755,9 +755,6 @@ Advanced
 Advanced options
 == 高級選項
 
-AFR
-== 非洲
-
 After a successful upload, log in with F2 and run the change_map command; files must stay under 64 MiB.
 == 上傳成功後用 F2 登入並執行 change_map 指令；檔案須小於 64 MiB。
 
@@ -1166,9 +1163,6 @@ Arrow
 Arrow assets
 == 箭頭資源
 
-ASI
-== 亞洲
-
 Aspect ratio preset
 == 縱橫比預設
 
@@ -1234,9 +1228,6 @@ Audio packs
 
 Aurora: Polar Veil
 == 極光：極夜光幕
-
-AUS
-== 澳洲
 
 Authed name color in scoreboard
 == 管理權限者名字在計分板上的顏色
@@ -2384,9 +2375,6 @@ Chinese (Traditional)
 Chinese font:
 == 中文字型：
 
-CHN
-== 中國
-
 Choose "Show players' key presses" as "Own", "Others" or "All", then adjust "Size of key press icons".
 == 把顯示按鍵設為自己的、其他玩家或全部，再調按鍵顯示圖示大小。
 
@@ -3229,6 +3217,9 @@ Converse
 
 Converse with the last person you whispered to (private message)
 == 與上一個私聊對象繼續對話（私聊）
+
+Converting %d%%
+== 正在轉換 %d%%
 
 Coordinate size on nameplate
 == 銘牌中座標的大小
@@ -4279,6 +4270,9 @@ Downloaded "%s"
 
 Downloaded: %.1f MiB (total size unknown)
 == 已下載：%.1f MiB（總大小未知）
+
+Downloading %d%%
+== 正在下載 %d%%
 
 Downloading map
 == 正在下載地圖
@@ -5347,9 +5341,6 @@ Error saving touch controls
 
 ESC replay minutes
 == ESC 保存回放分鐘數
-
-EUR
-== 歐洲
 
 Evaluate an expression
 == 評估表達式
@@ -9080,9 +9071,6 @@ MyMemory needs no registration (anonymous daily quota)
 n = Prediction latency
 == n = 預測延遲
 
-NA
-== 北美
-
 Name
 == 名稱
 
@@ -12422,9 +12410,6 @@ Run server
 Runs commands automatically when you connect to a server, split into a connect part and a join part.
 == 連線到伺服器時自動執行指令，分成連線階段和加入階段。
 
-SA
-== 南美
-
 Same as "vote no"
 == 與“投反對票”相同
 
@@ -12727,6 +12712,9 @@ Search country flag…
 
 Search donor asset
 == 搜索來源材質
+
+Search ghosts
+== 搜尋影子
 
 Search main asset
 == 搜索主材質

@@ -18,6 +18,15 @@ namespace
 {
 	constexpr uint64_t HELPER_RETRY_MS = 5000;
 
+	// 启动结果必须区分“按设计不启动”和“启动失败”：测试存储构建属于前者，
+	// 不能当成失败去报告系统错误，也不能进入重试节奏。
+	enum class ELaunchResult
+	{
+		LAUNCHED,
+		FAILED,
+		DISABLED,
+	};
+
 	std::wstring Utf8ToWide(const char *pText)
 	{
 		if(pText == nullptr || pText[0] == '\0')
@@ -46,18 +55,27 @@ namespace
 		return Path;
 	}
 
-	HANDLE LaunchHelper(const char *pHelperPath, const std::string &Source)
+	ELaunchResult LaunchHelper(const char *pHelperPath, const std::string &Source, HANDLE *pOutProcess, DWORD *pOutError)
 	{
 #if defined(CONF_QMCLIENT_TEST_STORAGE)
 		// 测试存储构建不启动音乐 hook 助手，理由同网易云接入：
 		// 测试客户端不注入玩家正在运行的音乐应用，也不触发系统安全弹窗。
-		return nullptr;
+		(void)pHelperPath;
+		(void)Source;
+		(void)pOutProcess;
+		(void)pOutError;
+		return ELaunchResult::DISABLED;
 #endif
+		*pOutProcess = nullptr;
+		*pOutError = ERROR_SUCCESS;
 		std::wstring Path = Utf8ToWide(pHelperPath);
 		if(Path.empty())
 			Path = DefaultHelperPath(Source != "soda");
 		if(Path.empty())
-			return nullptr;
+		{
+			*pOutError = ERROR_FILE_NOT_FOUND;
+			return ELaunchResult::FAILED;
+		}
 		const std::wstring CommandLine = L"\"" + Path + L"\" --parent-pid " + std::to_wstring(GetCurrentProcessId()) +
 						 (Source == "soda" ? L"" : L" --source " + Utf8ToWide(Source.c_str()));
 		STARTUPINFOW Startup{};
@@ -68,9 +86,12 @@ namespace
 		if(CreateProcessW(Path.c_str(), Mutable.data(), nullptr, nullptr, FALSE, CREATE_NO_WINDOW | CREATE_UNICODE_ENVIRONMENT, nullptr, nullptr, &Startup, &Process))
 		{
 			CloseHandle(Process.hThread);
-			return Process.hProcess;
+			*pOutProcess = Process.hProcess;
+			return ELaunchResult::LAUNCHED;
 		}
-		return nullptr;
+		// 错误码必须在 CreateProcessW 失败后立刻取，返回后再调用其它函数可能覆盖它。
+		*pOutError = GetLastError();
+		return ELaunchResult::FAILED;
 	}
 }
 
@@ -147,11 +168,20 @@ void CQmSodaHookProvider::Start(const char *pHelperPath, const char *pSource)
 	if(Now < m_pImpl->m_NextLaunchTick)
 		return;
 	m_pImpl->m_NextLaunchTick = Now + HELPER_RETRY_MS;
-	m_pImpl->m_hHelperProcess = LaunchHelper(pHelperPath, Source);
-	if(m_pImpl->m_hHelperProcess == nullptr)
+	HANDLE hHelper = nullptr;
+	DWORD LaunchError = ERROR_SUCCESS;
+	const ELaunchResult LaunchResult = LaunchHelper(pHelperPath, Source, &hHelper, &LaunchError);
+	if(LaunchResult == ELaunchResult::DISABLED)
+	{
+		// 测试存储构建不启动助手是预期行为，不清错也不报错。
+		m_pImpl->m_Error.clear();
+		return;
+	}
+	m_pImpl->m_hHelperProcess = hHelper;
+	if(LaunchResult == ELaunchResult::FAILED)
 	{
 		char aError[128];
-		std::snprintf(aError, sizeof(aError), "歌词采集器启动失败（Windows 错误 %lu）", (unsigned long)GetLastError());
+		std::snprintf(aError, sizeof(aError), "歌词采集器启动失败（Windows 错误 %lu）", (unsigned long)LaunchError);
 		m_pImpl->m_Error = aError;
 	}
 	else

@@ -755,9 +755,6 @@ Advanced
 Advanced options
 == Opções avançadas
 
-AFR
-== AFR
-
 After a successful upload, log in with F2 and run the change_map command; files must stay under 64 MiB.
 == Após um envio bem-sucedido, entre com F2 e rode o comando change_map; os arquivos devem ficar abaixo de 64 MiB.
 
@@ -1166,9 +1163,6 @@ Arrow
 Arrow assets
 == Recursos de seta
 
-ASI
-== ASI
-
 Aspect ratio preset
 == Predefinição de proporção
 
@@ -1234,9 +1228,6 @@ Audio packs
 
 Aurora: Polar Veil
 == Aurora: véu polar
-
-AUS
-== AUS
 
 Authed name color in scoreboard
 == Cor do nome autenticado no placar
@@ -2384,9 +2375,6 @@ Chinese (Traditional)
 Chinese font:
 == Fonte chinesa:
 
-CHN
-== CHN
-
 Choose "Show players' key presses" as "Own", "Others" or "All", then adjust "Size of key press icons".
 == Em Mostrar teclas pressionadas dos jogadores escolha Próprias, Outros ou Todas e ajuste o tamanho dos ícones.
 
@@ -3229,6 +3217,9 @@ Converse
 
 Converse with the last person you whispered to (private message)
 == Conversar com a última pessoa com quem você sussurrou (mensagem privada)
+
+Converting %d%%
+== Convertendo %d%%
 
 Coordinate size on nameplate
 == Tamanho da coordenada na placa de identificação
@@ -4279,6 +4270,9 @@ Downloaded "%s"
 
 Downloaded: %.1f MiB (total size unknown)
 == Baixado: %.1f MiB (tamanho total desconhecido)
+
+Downloading %d%%
+== Baixando %d%%
 
 Downloading map
 == Baixando mapa
@@ -5347,9 +5341,6 @@ Error saving touch controls
 
 ESC replay minutes
 == Minutos de replay do ESC
-
-EUR
-== EUR
 
 Evaluate an expression
 == Avaliar uma expressão
@@ -9080,9 +9071,6 @@ MyMemory needs no registration (anonymous daily quota)
 n = Prediction latency
 == n = Latência de previsão
 
-NA
-== NA
-
 Name
 == Nome
 
@@ -12422,9 +12410,6 @@ Run server
 Runs commands automatically when you connect to a server, split into a connect part and a join part.
 == Executa comandos automaticamente ao conectar em um servidor, divididos em uma parte de conexão e uma de entrada.
 
-SA
-== SA
-
 Same as "vote no"
 == Igual a "votar não"
 
@@ -12727,6 +12712,9 @@ Search country flag…
 
 Search donor asset
 == Pesquisar asset doador
+
+Search ghosts
+== Buscar fantasmas
 
 Search main asset
 == Pesquisar asset principal

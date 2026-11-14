@@ -325,6 +325,15 @@ private:
 	void StartPendingLookup(const char *pDemoName, EPendingMode Mode);
 	void LookupInManifest();
 
+	// 下载/转换阶段与百分比只在这里计算一次，状态栏文案与列表行进度条共用，
+	// 避免两套分支对“任务是否已真正开始”给出不同答案。
+	struct STaskProgress
+	{
+		EStage m_Stage = EStage::IDLE;
+		int m_Percent = 0;
+	};
+	STaskProgress TaskProgress() const;
+
 	void StartManifestFetch();
 	void StartDemoFetch();
 	// 仅下载请求：确保选中场次的 demo 落到精确缓存路径，不经过影子缓存/解析

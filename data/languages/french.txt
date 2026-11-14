@@ -755,9 +755,6 @@ Advanced
 Advanced options
 == Options avancées
 
-AFR
-== AFR
-
 After a successful upload, log in with F2 and run the change_map command; files must stay under 64 MiB.
 == Après un envoi réussi, connectez-vous avec F2 et lancez la commande change_map ; les fichiers doivent rester sous 64 MiB.
 
@@ -1166,9 +1163,6 @@ Arrow
 Arrow assets
 == Ressources de flèches
 
-ASI
-== ASI
-
 Aspect ratio preset
 == Préréglage du rapport hauteur/largeur
 
@@ -1234,9 +1228,6 @@ Audio packs
 
 Aurora: Polar Veil
 == Aurore : voile polaire
-
-AUS
-== AUS
 
 Authed name color in scoreboard
 == Couleur du nom authentifié dans le tableau des scores
@@ -2384,9 +2375,6 @@ Chinese (Traditional)
 Chinese font:
 == Police chinoise :
 
-CHN
-== CHN
-
 Choose "Show players' key presses" as "Own", "Others" or "All", then adjust "Size of key press icons".
 == Choisis dans Afficher les pressions de touches des joueurs entre Les miennes, Autres ou Toutes, puis règle la taille des icônes.
 
@@ -3229,6 +3217,9 @@ Converse
 
 Converse with the last person you whispered to (private message)
 == Converser avec la dernière personne à qui vous avez chuchoté (message privé)
+
+Converting %d%%
+== Conversion %d%%
 
 Coordinate size on nameplate
 == Taille des coordonnées sur la plaque signalétique
@@ -4279,6 +4270,9 @@ Downloaded "%s"
 
 Downloaded: %.1f MiB (total size unknown)
 == Téléchargé : %.1f MiB (taille totale inconnue)
+
+Downloading %d%%
+== Téléchargement %d%%
 
 Downloading map
 == Téléchargement de la carte
@@ -5347,9 +5341,6 @@ Error saving touch controls
 
 ESC replay minutes
 == Minutes de rediffusion ESC
-
-EUR
-== EUR
 
 Evaluate an expression
 == Évaluer une expression
@@ -9080,9 +9071,6 @@ MyMemory needs no registration (anonymous daily quota)
 n = Prediction latency
 == n = Latence de prédiction
 
-NA
-== NA
-
 Name
 == Nom
 
@@ -12422,9 +12410,6 @@ Run server
 Runs commands automatically when you connect to a server, split into a connect part and a join part.
 == Exécute des commandes automatiquement lors de la connexion à un serveur, réparties en une partie pour la connexion et une partie pour rejoindre le serveur.
 
-SA
-== SA
-
 Same as "vote no"
 == Identique à "vote non"
 
@@ -12727,6 +12712,9 @@ Search country flag…
 
 Search donor asset
 == Rechercher un élément donneur
+
+Search ghosts
+== Rechercher des fantômes
 
 Search main asset
 == Rechercher un élément principal

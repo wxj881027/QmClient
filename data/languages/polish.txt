@@ -755,9 +755,6 @@ Advanced
 Advanced options
 == Opcje zaawansowane
 
-AFR
-== AFR
-
 After a successful upload, log in with F2 and run the change_map command; files must stay under 64 MiB.
 == Po udanym przesłaniu zaloguj się klawiszem F2 i uruchom polecenie change_map; pliki muszą być mniejsze niż 64 MiB.
 
@@ -1166,9 +1163,6 @@ Arrow
 Arrow assets
 == Zasoby strzałek
 
-ASI
-== ASI
-
 Aspect ratio preset
 == Predefiniowany współczynnik proporcji
 
@@ -1234,9 +1228,6 @@ Audio packs
 
 Aurora: Polar Veil
 == Zorza: polarna zasłona
-
-AUS
-== AUS
 
 Authed name color in scoreboard
 == Kolor nazwy autoryzowanego gracza na tablicy wyników
@@ -2384,9 +2375,6 @@ Chinese (Traditional)
 Chinese font:
 == Czcionka chińska:
 
-CHN
-== CHN
-
 Choose "Show players' key presses" as "Own", "Others" or "All", then adjust "Size of key press icons".
 == W Pokaż naciśnięcia klawiszy graczy wybierz Własne, Inni lub Wszyscy, a potem dostosuj Rozmiar ikon naciśnięć klawiszy.
 
@@ -3229,6 +3217,9 @@ Converse
 
 Converse with the last person you whispered to (private message)
 == Rozmawiaj z ostatnią osobą, do której szeptałeś (prywatna wiadomość)
+
+Converting %d%%
+== Konwertowanie %d%%
 
 Coordinate size on nameplate
 == Rozmiar współrzędnych na tabliczce
@@ -4279,6 +4270,9 @@ Downloaded "%s"
 
 Downloaded: %.1f MiB (total size unknown)
 == Pobrano: %.1f MiB (łączny rozmiar nieznany)
+
+Downloading %d%%
+== Pobieranie %d%%
 
 Downloading map
 == Pobieranie mapy
@@ -5347,9 +5341,6 @@ Error saving touch controls
 
 ESC replay minutes
 == Minuty powtórki ESC
-
-EUR
-== EUR
 
 Evaluate an expression
 == Oblicz wyrażenie
@@ -9080,9 +9071,6 @@ MyMemory needs no registration (anonymous daily quota)
 n = Prediction latency
 == n = Opóźnienie przewidywania
 
-NA
-== NA
-
 Name
 == Nazwa
 
@@ -12422,9 +12410,6 @@ Run server
 Runs commands automatically when you connect to a server, split into a connect part and a join part.
 == Automatycznie wykonuje polecenia po połączeniu z serwerem, podzielone na część połączenia i część dołączania.
 
-SA
-== SA
-
 Same as "vote no"
 == To samo co „głosuj nie”
 
@@ -12727,6 +12712,9 @@ Search country flag…
 
 Search donor asset
 == Szukaj zasobu dawcy
+
+Search ghosts
+== Szukaj duchów
 
 Search main asset
 == Szukaj głównego zasobu

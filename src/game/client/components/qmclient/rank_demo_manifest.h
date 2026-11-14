@@ -10,6 +10,7 @@
 #include <cstring>
 #include <limits>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -334,6 +335,27 @@ namespace qmclient::rank_demo
 				return !LeftTeam; // solo 在前
 			return Right.m_Ts < Left.m_Ts;
 		});
+	}
+
+	// 全清单搜索：按地图名子串（大小写不敏感）匹配指定名次的条目，按 demo 去重。
+	// 不在这里按展示条数提前退出：先收集全部匹配项，调用方排序后再截断，
+	// 否则表头排序只是清单前 N 条的局部排序。
+	inline void CollectSearchEntries(const std::vector<SEntry> &Entries, const char *pQuery, int Rank, std::vector<SEntry> &Out)
+	{
+		Out.clear();
+		if(pQuery == nullptr || pQuery[0] == '\0')
+			return;
+		std::set<std::string> SeenDemos;
+		for(const SEntry &Entry : Entries)
+		{
+			if(Entry.m_Rank != Rank)
+				continue;
+			if(str_find_nocase(Entry.m_Map.c_str(), pQuery) == nullptr)
+				continue;
+			if(!SeenDemos.insert(Entry.m_Demo).second)
+				continue;
+			Out.push_back(Entry);
+		}
 	}
 } // namespace qmclient::rank_demo
 

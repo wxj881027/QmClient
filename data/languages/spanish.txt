@@ -755,9 +755,6 @@ Advanced
 Advanced options
 == Opciones avanzadas
 
-AFR
-== África
-
 After a successful upload, log in with F2 and run the change_map command; files must stay under 64 MiB.
 == Tras una subida correcta, inicia sesión con F2 y ejecuta el comando change_map; los archivos deben quedar por debajo de 64 MiB.
 
@@ -1166,9 +1163,6 @@ Arrow
 Arrow assets
 == Recursos de flecha
 
-ASI
-== Asia
-
 Aspect ratio preset
 == Preajuste de relación de aspecto
 
@@ -1234,9 +1228,6 @@ Audio packs
 
 Aurora: Polar Veil
 == Aurora: velo polar
-
-AUS
-== Australia
 
 Authed name color in scoreboard
 == Color del nombre autenticado en la tabla de puntuaciones
@@ -2384,9 +2375,6 @@ Chinese (Traditional)
 Chinese font:
 == Fuente china:
 
-CHN
-== China
-
 Choose "Show players' key presses" as "Own", "Others" or "All", then adjust "Size of key press icons".
 == Elige en Mostrar pulsaciones de teclas de los jugadores entre Propias, Otros o Todos y ajusta el tamaño de los iconos.
 
@@ -3229,6 +3217,9 @@ Converse
 
 Converse with the last person you whispered to (private message)
 == Conversar con la última persona a la que le susurraste (mensaje privado)
+
+Converting %d%%
+== Convirtiendo %d%%
 
 Coordinate size on nameplate
 == Tamaño de coordenadas en la placa
@@ -4279,6 +4270,9 @@ Downloaded "%s"
 
 Downloaded: %.1f MiB (total size unknown)
 == Descargado: %.1f MiB (tamaño total desconocido)
+
+Downloading %d%%
+== Descargando %d%%
 
 Downloading map
 == Descargando mapa
@@ -5347,9 +5341,6 @@ Error saving touch controls
 
 ESC replay minutes
 == Minutos de repetición de ESC
-
-EUR
-== Europa
 
 Evaluate an expression
 == Evaluar una expresión
@@ -9080,9 +9071,6 @@ MyMemory needs no registration (anonymous daily quota)
 n = Prediction latency
 == n = Latencia de predicción
 
-NA
-== Norteamérica
-
 Name
 == Nombre
 
@@ -12422,9 +12410,6 @@ Run server
 Runs commands automatically when you connect to a server, split into a connect part and a join part.
 == Ejecuta comandos automáticamente al conectarte a un servidor, divididos en una parte de conexión y una de entrada.
 
-SA
-== Sudamérica
-
 Same as "vote no"
 == Igual que "votar no"
 
@@ -12727,6 +12712,9 @@ Search country flag…
 
 Search donor asset
 == Buscar activo donante
+
+Search ghosts
+== Buscar fantasmas
 
 Search main asset
 == Buscar activo principal

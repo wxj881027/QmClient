@@ -755,9 +755,6 @@ Advanced
 Advanced options
 == Gelişmiş seçenekler
 
-AFR
-== Afrika
-
 After a successful upload, log in with F2 and run the change_map command; files must stay under 64 MiB.
 == Yükleme başarılıysa F2 ile giriş yapıp change_map komutunu çalıştırın; dosyalar 64 MiB'nin altında kalmalı.
 
@@ -1166,9 +1163,6 @@ Arrow
 Arrow assets
 == Ok varlıkları
 
-ASI
-== Asya
-
 Aspect ratio preset
 == En boy oranı ön ayarı
 
@@ -1234,9 +1228,6 @@ Audio packs
 
 Aurora: Polar Veil
 == Kutup ışığı: kutup örtüsü
-
-AUS
-== Avustralya
 
 Authed name color in scoreboard
 == Skor tablosunda yetkilendirilmiş isim rengi
@@ -2384,9 +2375,6 @@ Chinese (Traditional)
 Chinese font:
 == Çince yazı tipi:
 
-CHN
-== Çin
-
 Choose "Show players' key presses" as "Own", "Others" or "All", then adjust "Size of key press icons".
 == Oyuncuların tuş vuruşlarını göster ayarını Kendim, Diğerleri veya Tümü olarak seç, sonra tuş vuruşu simgelerinin boyutunu ayarla.
 
@@ -3229,6 +3217,9 @@ Converse
 
 Converse with the last person you whispered to (private message)
 == Son fısıldadığın kişiyle konuş (özel mesaj)
+
+Converting %d%%
+== Dönüştürülüyor %d%%
 
 Coordinate size on nameplate
 == İsim plakasında koordinat boyutu
@@ -4279,6 +4270,9 @@ Downloaded "%s"
 
 Downloaded: %.1f MiB (total size unknown)
 == İndirilen: %.1f MiB (toplam boyut bilinmiyor)
+
+Downloading %d%%
+== İndiriliyor %d%%
 
 Downloading map
 == Harita indiriliyor
@@ -5347,9 +5341,6 @@ Error saving touch controls
 
 ESC replay minutes
 == ESC tekrar oynatma dakikası
-
-EUR
-== Avrupa
 
 Evaluate an expression
 == Bir ifadeyi değerlendir
@@ -9080,9 +9071,6 @@ MyMemory needs no registration (anonymous daily quota)
 n = Prediction latency
 == n = Tahmin gecikmesi
 
-NA
-== Kuzey Amerika
-
 Name
 == İsim
 
@@ -12422,9 +12410,6 @@ Run server
 Runs commands automatically when you connect to a server, split into a connect part and a join part.
 == Bir sunucuya bağlandığınızda komutları otomatik çalıştırır; bağlanma ve katılma olarak iki bölüme ayrılır.
 
-SA
-== Güney Amerika
-
 Same as "vote no"
 == "hayır oyu" ile aynı
 
@@ -12727,6 +12712,9 @@ Search country flag…
 
 Search donor asset
 == Kaynak varlık ara
+
+Search ghosts
+== Hayaletleri ara
 
 Search main asset
 == Ana varlık ara

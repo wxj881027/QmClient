@@ -257,7 +257,6 @@ Adjusts helpers that hide latency, such as removing anti-ping and predicting mar
 Adjusts TClient-specific HUD elements that are not part of the standard DDNet HUD.
 Advanced
 Advanced options
-AFR
 After a successful upload, log in with F2 and run the change_map command; files must stay under 64 MiB.
 After hammer fly, whether dummy switches back to previous weapon
 After Load
@@ -398,7 +397,6 @@ Are you sure that you want to restart?
 Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.
 Arrow
 Arrow assets
-ASI
 Aspect ratio preset
 Aspect ratio preset (0=off, 1=5:4, 2=4:3, 3=3:2, 4=16:9, 5=21:9, 6=custom)
 Asset preset
@@ -421,7 +419,6 @@ Audio pack exported.
 Audio packets
 Audio packs
 Aurora: Polar Veil
-AUS
 Authed name color in scoreboard
 Authenticate to rcon
 Authenticate to rcon with a username
@@ -821,7 +818,6 @@ Checking Steam...
 Chinese (Simplified)
 Chinese (Traditional)
 Chinese font:
-CHN
 Choose "Show players' key presses" as "Own", "Others" or "All", then adjust "Size of key press icons".
 Choose a position, then adjust width and size; the preview card shows the result.
 Choose a preset, or Custom to enter width and height. Follow window uses the current render size.
@@ -1108,6 +1104,7 @@ Controls laser shape, glow and animation.
 Controls what appears next to other players' names, such as clan tags, friend marks and client identifiers.
 Converse
 Converse with the last person you whispered to (private message)
+Converting %d%%
 Coordinate size on nameplate
 Coordinates
 Coords size
@@ -1469,6 +1466,7 @@ Download verified. Exit and install to replace this version; your settings are p
 Downloaded
 Downloaded "%s"
 Downloaded: %.1f MiB (total size unknown)
+Downloading %d%%
 Downloading map
 Downloading rank 1 demo
 Downloading update...
@@ -1835,7 +1833,6 @@ Error playing demo
 Error saving settings
 Error saving touch controls
 ESC replay minutes
-EUR
 Evaluate an expression
 Event
 Event - Press
@@ -3135,7 +3132,6 @@ my_%s
 MyMemory (free)
 MyMemory needs no registration (anonymous daily quota)
 n = Prediction latency
-NA
 Name
 Name Plate
 Name plate clan line X offset
@@ -4298,7 +4294,6 @@ Run profiler to check 3D/2D array texture sampling works correctly
 Run selected commands after joining a server
 Run server
 Runs commands automatically when you connect to a server, split into a connect part and a join part.
-SA
 Same as "vote no"
 Same clan color in scoreboard
 Same function
@@ -4402,6 +4397,7 @@ Search
 Search and navigate settings
 Search country flag…
 Search donor asset
+Search ghosts
 Search main asset
 Search maps and downloadedmaps, including subfolders
 Search maps for Rank 1 replays ...

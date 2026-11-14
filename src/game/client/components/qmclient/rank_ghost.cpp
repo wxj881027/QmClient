@@ -613,21 +613,8 @@ std::vector<qmclient::rank_demo::SEntry> CRankGhost::CollectRankEntries(const ch
 std::vector<qmclient::rank_demo::SEntry> CRankGhost::CollectSearchEntries(const char *pQuery, int Rank) const
 {
 	std::vector<SEntry> Out;
-	if(!m_ManifestLoaded || pQuery == nullptr || pQuery[0] == '\0')
-		return Out;
-	std::set<std::string> SeenDemos;
-	// 不在这里按展示条数提前退出：先收集全部匹配项，调用方排序后再截断，
-	// 否则表头排序只是清单前 N 条的局部排序。
-	for(const SEntry &Entry : m_vEntries)
-	{
-		if(Entry.m_Rank != Rank)
-			continue;
-		if(str_find_nocase(Entry.m_Map.c_str(), pQuery) == nullptr)
-			continue;
-		if(!SeenDemos.insert(Entry.m_Demo).second)
-			continue;
-		Out.push_back(Entry);
-	}
+	if(m_ManifestLoaded)
+		qmclient::rank_demo::CollectSearchEntries(m_vEntries, pQuery, Rank, Out);
 	return Out;
 }
 
@@ -693,6 +680,32 @@ bool CRankGhost::IsBusy() const
 	return m_Stage != EStage::IDLE || m_StartPending;
 }
 
+CRankGhost::STaskProgress CRankGhost::TaskProgress() const
+{
+	STaskProgress Progress;
+	Progress.m_Stage = m_Stage;
+	switch(m_Stage)
+	{
+	case EStage::FETCH_DEMO:
+	case EStage::FETCH_DEMO_ONLY:
+		if(m_pDemoRequest)
+			Progress.m_Percent = std::clamp(m_pDemoRequest->Progress(), 0, 100);
+		break;
+	case EStage::PARSE:
+		if(m_pParse && m_pParse->m_Context.m_pPlayer)
+		{
+			const SParseContext &Parse = m_pParse->m_Context;
+			const int Cur = Parse.m_pPlayer->Info()->m_Info.m_CurrentTick;
+			const int RunTicks = Parse.m_RunEnd - Parse.m_RunStart;
+			Progress.m_Percent = RunTicks > 0 ? std::clamp((Cur - Parse.m_RunStart) * 100 / RunTicks, 0, 100) : 0;
+		}
+		break;
+	default:
+		break;
+	}
+	return Progress;
+}
+
 bool CRankGhost::EntryTaskProgress(const SEntry &Entry, EEntryTaskPhase &Phase, int &Percent) const
 {
 	Phase = EEntryTaskPhase::NONE;
@@ -702,32 +715,19 @@ bool CRankGhost::EntryTaskProgress(const SEntry &Entry, EEntryTaskPhase &Phase, 
 	const bool Matches = !m_PendingDemo.empty() ? Entry.m_Demo == m_PendingDemo : Entry.m_Demo == m_ActiveEntry.m_Demo;
 	if(!Matches)
 		return false;
-	switch(m_Stage)
+	// 请求已登记但主循环还没开始下载（m_StartPending / m_PendingView）不是下载进度，
+	// 不能先报一个 0%；等真正进入 FETCH_DEMO 再显示。
+	const STaskProgress Progress = TaskProgress();
+	switch(Progress.m_Stage)
 	{
-	case EStage::IDLE:
-		// 请求已登记但主循环还没开始下载。
-		if(m_StartPending || m_PendingView)
-		{
-			Phase = EEntryTaskPhase::DOWNLOAD;
-			return true;
-		}
-		return false;
-	case EStage::FETCH_MANIFEST:
-		return false;
 	case EStage::FETCH_DEMO:
 	case EStage::FETCH_DEMO_ONLY:
 		Phase = EEntryTaskPhase::DOWNLOAD;
-		Percent = m_pDemoRequest ? m_pDemoRequest->Progress() : 0;
+		Percent = Progress.m_Percent;
 		return true;
 	case EStage::PARSE:
 		Phase = EEntryTaskPhase::CONVERT;
-		if(m_pParse && m_pParse->m_Context.m_pPlayer)
-		{
-			const SParseContext &Parse = m_pParse->m_Context;
-			const int Cur = Parse.m_pPlayer->Info()->m_Info.m_CurrentTick;
-			const int RunTicks = Parse.m_RunEnd - Parse.m_RunStart;
-			Percent = RunTicks > 0 ? std::clamp((Cur - Parse.m_RunStart) * 100 / RunTicks, 0, 100) : 0;
-		}
+		Percent = Progress.m_Percent;
 		return true;
 	default:
 		return false;
@@ -737,34 +737,26 @@ bool CRankGhost::EntryTaskProgress(const SEntry &Entry, EEntryTaskPhase &Phase, 
 bool CRankGhost::DescribeTask(char *pBuf, size_t BufSize) const
 {
 	pBuf[0] = '\0';
-	switch(m_Stage)
+	const STaskProgress Progress = TaskProgress();
+	switch(Progress.m_Stage)
 	{
 	case EStage::FETCH_MANIFEST:
 		str_copy(pBuf, Localize("Rank ghost: fetching the replay list ..."), BufSize);
 		return true;
 	case EStage::FETCH_DEMO:
 	case EStage::FETCH_DEMO_ONLY:
-		if(m_pDemoRequest)
-		{
-			const int Percent = m_pDemoRequest->Progress();
-			if(Percent > 0)
-				str_format(pBuf, BufSize, Localize("Rank ghost: downloading the replay (%d%%)"), Percent);
-			else
-				str_copy(pBuf, Localize("Rank ghost: downloading the replay ..."), BufSize);
-			return true;
-		}
-		return false;
+		if(m_pDemoRequest == nullptr)
+			return false;
+		if(Progress.m_Percent > 0)
+			str_format(pBuf, BufSize, Localize("Rank ghost: downloading the replay (%d%%)"), Progress.m_Percent);
+		else
+			str_copy(pBuf, Localize("Rank ghost: downloading the replay ..."), BufSize);
+		return true;
 	case EStage::PARSE:
-		if(m_pParse && m_pParse->m_Context.m_pPlayer)
-		{
-			const SParseContext &Parse = m_pParse->m_Context;
-			const int Cur = Parse.m_pPlayer->Info()->m_Info.m_CurrentTick;
-			const int RunTicks = Parse.m_RunEnd - Parse.m_RunStart;
-			const int Percent = RunTicks > 0 ? std::clamp((Cur - Parse.m_RunStart) * 100 / RunTicks, 0, 100) : 0;
-			str_format(pBuf, BufSize, Localize("Rank ghost: converting the replay (%d%%)"), Percent);
-			return true;
-		}
-		return false;
+		if(m_pParse == nullptr || m_pParse->m_Context.m_pPlayer == nullptr)
+			return false;
+		str_format(pBuf, BufSize, Localize("Rank ghost: converting the replay (%d%%)"), Progress.m_Percent);
+		return true;
 	default:
 		return false;
 	}

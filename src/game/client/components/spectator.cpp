@@ -461,6 +461,9 @@ bool CSpectator::OnInput(const IInput::CEvent &Event)
 	if(GameClient()->ReplaySessionStatus().ViewMode() && g_Config.m_ClSpectatorMouseclicks &&
 		(Event.m_Flags & IInput::FLAG_PRESS) && Event.m_Key == KEY_MOUSE_1 &&
 		!GameClient()->m_Menus.IsActive() && !GameClient()->m_GameConsole.IsActive() && !GameClient()->m_Chat.IsActive() &&
+		// PieMenu 与 HudEditor 在组件顺序上排在 Spectator 之后：这里先返回 true
+		// 会把落在它们面板上的点击吞掉，所以打开时同样不接管鼠标。
+		!GameClient()->m_PieMenu.IsActive() && !GameClient()->m_HudEditor.IsActive() &&
 		!Ui()->IsPopupOpen() && !GameClient()->m_Menus.OnlineReplayPopupActive() && !PlaybackControlsActive() && !m_Active)
 	{
 		vec2 Center;

@@ -755,9 +755,6 @@ Advanced
 Advanced options
 == Расширенные настройки
 
-AFR
-== Африка
-
 After a successful upload, log in with F2 and run the change_map command; files must stay under 64 MiB.
 == После успешной загрузки войдите по F2 и выполните команду change_map; файл должен быть меньше 64 MiB.
 
@@ -1166,9 +1163,6 @@ Arrow
 Arrow assets
 == Ресурсы стрелок
 
-ASI
-== Азия
-
 Aspect ratio preset
 == Пресет соотношения сторон
 
@@ -1234,9 +1228,6 @@ Audio packs
 
 Aurora: Polar Veil
 == Полярное сияние: полярная вуаль
-
-AUS
-== Австралия
 
 Authed name color in scoreboard
 == Цвет имени авторизованного в таблице лидеров
@@ -2384,9 +2375,6 @@ Chinese (Traditional)
 Chinese font:
 == Китайский шрифт:
 
-CHN
-== Китай
-
 Choose "Show players' key presses" as "Own", "Others" or "All", then adjust "Size of key press icons".
 == Выберите для Показывать нажатия клавиш игроков вариант Свои, Другие или Все, затем настройте Размер иконок нажатий клавиш.
 
@@ -3229,6 +3217,9 @@ Converse
 
 Converse with the last person you whispered to (private message)
 == Поговорить с последним человеком, которому вы шептали (личное сообщение)
+
+Converting %d%%
+== Преобразование %d%%
 
 Coordinate size on nameplate
 == Размер координат на табличке
@@ -4279,6 +4270,9 @@ Downloaded "%s"
 
 Downloaded: %.1f MiB (total size unknown)
 == Загружено: %.1f MiB (общий размер неизвестен)
+
+Downloading %d%%
+== Загрузка %d%%
 
 Downloading map
 == Загрузка карты
@@ -5347,9 +5341,6 @@ Error saving touch controls
 
 ESC replay minutes
 == Минуты повтора ESC
-
-EUR
-== Европа
 
 Evaluate an expression
 == Вычислить выражение
@@ -9080,9 +9071,6 @@ MyMemory needs no registration (anonymous daily quota)
 n = Prediction latency
 == n = Задержка предсказания
 
-NA
-== Северная Америка
-
 Name
 == Имя
 
@@ -12422,9 +12410,6 @@ Run server
 Runs commands automatically when you connect to a server, split into a connect part and a join part.
 == Автоматически выполняет команды при подключении к серверу, разделив их на часть подключения и часть входа.
 
-SA
-== Южная Америка
-
 Same as "vote no"
 == То же, что и "vote no"
 
@@ -12727,6 +12712,9 @@ Search country flag…
 
 Search donor asset
 == Поиск ресурса донора
+
+Search ghosts
+== Поиск призраков
 
 Search main asset
 == Поиск основного ресурса
