@@ -60,16 +60,6 @@ static constexpr ColorRGBA LINK_UNDERLINE_COLOR = ColorRGBA(0.2f, 0.65f, 1.0f, 0
 
 namespace
 {
-	// 滚动运行态按控制台类型（本地 / 远程）唯一确定：滚动只是纯数值状态，不持有任何 UI 指针，
-	// 所以放在这里不会留下悬空引用；ClearBacklog / 筛选切换 / OnReset 时统一清零。
-	// 远程控制台与本地控制台共用同一套推进，只是各自独立一份偏移。
-	CQmConsoleScrollRuntime g_aConsoleScrollRuntimes[CGameConsole::NUM_CONSOLETYPES];
-
-	CQmConsoleScrollRuntime &ConsoleScrollRuntime(int ConsoleType)
-	{
-		return g_aConsoleScrollRuntimes[std::clamp(ConsoleType, 0, (int)CGameConsole::NUM_CONSOLETYPES - 1)];
-	}
-
 	// 控制台特化：一档滚轮 = QmConsoleWheelLines 折算出来的行数，不是设置页那种像素档；
 	// 手感档位、弹簧响应与阻尼、橡皮筋距离仍然全部来自公共配置 QmNativeWheelScrollConfig。
 	SQmScrollConfig ConsoleScrollConfig(float LineHeight)
@@ -650,7 +640,7 @@ void CGameConsole::CInstance::ClearBacklog()
 	m_BacklogLastActiveLine = -1;
 	m_ScrollbarDragging = false;
 	m_ScrollbarDragOffset = 0.0f;
-	ConsoleScrollRuntime(m_Type).Reset();
+	m_Scroll.Reset();
 	InvalidateTotalBacklogLines();
 	m_ChatExportAnchorId = -1;
 	m_ChatExportMode = false;
@@ -1075,36 +1065,36 @@ bool CGameConsole::CInstance::OnInput(const IInput::CEvent &Event)
 		else if(Event.m_Key == KEY_PAGEUP)
 		{
 			// 翻页也走统一推进：位移交给 CQmScrollState，逐帧逼近而不是整屏瞬移。
-			ConsoleScrollRuntime(m_Type).Page(1);
+			m_Scroll.Page(1);
 			Handled = true;
 		}
 		else if(Event.m_Key == KEY_PAGEDOWN)
 		{
-			ConsoleScrollRuntime(m_Type).Page(-1);
+			m_Scroll.Page(-1);
 			Handled = true;
 		}
 		else if(Event.m_Key == KEY_MOUSE_WHEEL_UP)
 		{
 			// 每档滚多行。原先上下都只走一行，控制台滚起来慢得几乎没反应；
 			// 行数按 qm_ui_scroll_step 折算，由公共滚动物理逐帧逼近（见 QmConsoleScroll.h）。
-			ConsoleScrollRuntime(m_Type).Wheel(1);
+			m_Scroll.Wheel(1);
 			Handled = true;
 		}
 		else if(Event.m_Key == KEY_MOUSE_WHEEL_DOWN)
 		{
-			ConsoleScrollRuntime(m_Type).Wheel(-1);
+			m_Scroll.Wheel(-1);
 			Handled = true;
 		}
 		// in order not to conflict with CLineInput's handling of Home/End only
 		// react to it when the input is empty
 		else if(Event.m_Key == KEY_HOME && m_Input.IsEmpty())
 		{
-			ConsoleScrollRuntime(m_Type).ScrollToOldest();
+			m_Scroll.ScrollToOldest();
 			Handled = true;
 		}
 		else if(Event.m_Key == KEY_END && m_Input.IsEmpty())
 		{
-			ConsoleScrollRuntime(m_Type).ScrollToNewest();
+			m_Scroll.ScrollToNewest();
 			Handled = true;
 		}
 		else if(Event.m_Key == KEY_ESCAPE && m_SearchInput.IsSearching())
@@ -1235,7 +1225,7 @@ void CGameConsole::CInstance::SetLogFilterMask(int Mask)
 	m_BacklogLastActiveLine = -1;
 	m_NewLineCounter = 0;
 	// 筛选改变内容总高：滚动运行态一起归零，避免停在已经不存在的位置。
-	ConsoleScrollRuntime(m_Type).Reset();
+	m_Scroll.Reset();
 	InvalidateTotalBacklogLines();
 	m_Selection.Clear();
 	m_MouseIsPress = false;
@@ -1409,7 +1399,7 @@ void CGameConsole::CInstance::ScrollToCenter(int StartLine, int EndLine)
 	// 搜索跳转属于"选中项回看"：位移交给统一滚动物理，弹簧档会顺着当前方向转向新目标，
 	// 不再直接写死整型行锚（否则滚动模拟与行锚会各说一套，下一帧就被覆盖）。
 	const int ResultLine = Direction == -1 ? m_BacklogCurLine + ComputedLines : m_BacklogCurLine - ComputedLines;
-	ConsoleScrollRuntime(m_Type).ScrollToLine(ResultLine);
+	m_Scroll.ScrollToLine(ResultLine);
 }
 
 float CGameConsole::CInstance::FontSize() const
@@ -1792,8 +1782,8 @@ void CGameConsole::OnReset()
 	m_RemoteConsole.m_Selection.Finish();
 	m_RemoteConsole.m_ScrollbarDragging = false;
 	m_RemoteConsole.m_ScrollbarDragOffset = 0.0f;
-	ConsoleScrollRuntime(CONSOLETYPE_LOCAL).Reset();
-	ConsoleScrollRuntime(CONSOLETYPE_REMOTE).Reset();
+	m_LocalConsole.m_Scroll.Reset();
+	m_RemoteConsole.m_Scroll.Reset();
 }
 
 int CGameConsole::PossibleMaps(const char *pStr, IConsole::FPossibleCallback pfnCallback, void *pUser)
@@ -2011,7 +2001,7 @@ void CGameConsole::OnRender()
 		else
 		{
 			AddAction(EToolbarAction::SEARCH, pConsole->m_SearchInput.IsSearching() ? Localize("Cancel") : Localize("Search"), pConsole->m_SearchInput.IsSearching());
-			AddAction(EToolbarAction::FOLLOW, Localize("Following"), ConsoleScrollRuntime(pConsole->m_Type).Following());
+			AddAction(EToolbarAction::FOLLOW, Localize("Following"), pConsole->m_Scroll.Following());
 			AddAction(EToolbarAction::EXPORT, Localize("Select export"));
 			// 控制台报「failed to open」时，下一步通常是去配置目录里放脚本或改 cfg，
 			// 所以把入口直接放在工具栏上，不必再翻到设置页的「通用」卡片。
@@ -2212,12 +2202,12 @@ void CGameConsole::OnRender()
 			const float DragPixels = (float)Steps * LineHeight;
 			if(m_TouchState.m_ScrollAmount.y > 0.0f)
 			{
-				ConsoleScrollRuntime(m_ConsoleType).DragBy(DragPixels);
+				CurrentConsole()->m_Scroll.DragBy(DragPixels);
 				m_TouchState.m_ScrollAmount.y -= (float)Steps * ScaledLineHeight;
 			}
 			else
 			{
-				ConsoleScrollRuntime(m_ConsoleType).DragBy(-DragPixels);
+				CurrentConsole()->m_Scroll.DragBy(-DragPixels);
 				m_TouchState.m_ScrollAmount.y += (float)Steps * ScaledLineHeight;
 			}
 		}
@@ -2404,7 +2394,7 @@ void CGameConsole::OnRender()
 		// 滚动推进：滚轮、翻页、滑块与触控拖动都写进同一份 CQmScrollState（弹簧 + 橡皮筋），
 		// 每帧在这里结算一次，读回「整行 + 亚行余量」。行锚继续服务选区、状态栏与搜索跳转，
 		// 亚行余量交给绘制与命中，两边读同一份结果，不会各留一套滚动值。
-		CQmConsoleScrollRuntime &Scroll = ConsoleScrollRuntime(m_ConsoleType);
+		CQmConsoleScrollRuntime &Scroll = CurrentConsole()->m_Scroll;
 		const CQmConsoleScrollRuntime::SFrame ScrollFrame = Scroll.Advance(Client()->RenderFrameTime(), LogHeight, TotalBacklogLines, LineHeight, ConsoleScrollConfig(LineHeight));
 		const float SubLine = ScrollFrame.m_SubLine;
 		const int MaxScroll = maximum(0, TotalBacklogLines - VisibleBacklogLines);
@@ -2791,7 +2781,7 @@ void CGameConsole::OnRender()
 					case EToolbarAction::SEARCH: pConsole->SetSearching(!pConsole->m_SearchInput.IsSearching()); break;
 					case EToolbarAction::FOLLOW:
 						// 回到跟随态也走统一滚动：弹簧档会顺着当前方向滑回最新一行。
-						ConsoleScrollRuntime(pConsole->m_Type).ScrollToNewest();
+						pConsole->m_Scroll.ScrollToNewest();
 						pConsole->m_Selection.Clear();
 						break;
 					case EToolbarAction::EXPORT: pConsole->SetChatExportMode(true); break;
@@ -3048,25 +3038,25 @@ void CGameConsole::ConDumpRemoteConsole(IConsole::IResult *pResult, void *pUserD
 void CGameConsole::ConConsolePageUp(IConsole::IResult *pResult, void *pUserData)
 {
 	CInstance *pConsole = ((CGameConsole *)pUserData)->CurrentConsole();
-	ConsoleScrollRuntime(pConsole->m_Type).Page(1);
+	pConsole->m_Scroll.Page(1);
 }
 
 void CGameConsole::ConConsolePageDown(IConsole::IResult *pResult, void *pUserData)
 {
 	CInstance *pConsole = ((CGameConsole *)pUserData)->CurrentConsole();
-	ConsoleScrollRuntime(pConsole->m_Type).Page(-1);
+	pConsole->m_Scroll.Page(-1);
 }
 
 void CGameConsole::ConConsolePageTop(IConsole::IResult *pResult, void *pUserData)
 {
 	CInstance *pConsole = ((CGameConsole *)pUserData)->CurrentConsole();
-	ConsoleScrollRuntime(pConsole->m_Type).ScrollToOldest();
+	pConsole->m_Scroll.ScrollToOldest();
 }
 
 void CGameConsole::ConConsolePageBottom(IConsole::IResult *pResult, void *pUserData)
 {
 	CInstance *pConsole = ((CGameConsole *)pUserData)->CurrentConsole();
-	ConsoleScrollRuntime(pConsole->m_Type).ScrollToNewest();
+	pConsole->m_Scroll.ScrollToNewest();
 }
 
 void CGameConsole::ConchainConsoleOutputLevel(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
