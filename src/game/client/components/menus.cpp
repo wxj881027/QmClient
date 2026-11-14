@@ -2452,7 +2452,7 @@ int CMenus::DoMenuTabV2Internal(CButtonContainer *pButtonContainer, const char *
 		// 页签字号只有一档：ESC 顶部主导航（游戏/玩家/服务器信息/浏览/影子/Rank）与下方页面页签同档，
 		// 高度仍由调用点的行高 token 决定。以前这里乘了内容缩放（1.10）得 16.5，
 		// 和下方 TAB_FONT_SIZE(15) 并排就能看出大小差；缩放只留给外边距与自查圆角。
-		const float LabelFontSize = ui_token::settings::TAB_FONT_SIZE;
+		const float LabelFontSize = ui_token::settings::MENU_NAV_FONT_SIZE;
 		if(Icon != EQmIcon::COUNT)
 		{
 			Ui()->DoLabel_QmIcon(&Label, Icon, pFallbackIcon, LabelFontSize, TEXTALIGN_MC);
@@ -6936,7 +6936,7 @@ int CMenus::DoIngameMenuTab(CButtonContainer *pButtonContainer, int Page, const 
 	Props.m_MaxWidth = Text.w;
 	// 字号与 DoMenuTabV2Internal 同一条解析：ESC 顶部主导航取页签唯一字号档，
 	// 不再乘内容缩放，避免文字测量与真实绘制两个字号。
-	const float FontSize = ui_token::settings::TAB_FONT_SIZE;
+	const float FontSize = ui_token::settings::MENU_NAV_FONT_SIZE;
 	const SMenuTextStyleKey StyleKey = BuildMenuTextStyleKey(&Text, FontSize, TEXTALIGN_MC, Props);
 	if(m_MenuTextPlanCollecting)
 	{

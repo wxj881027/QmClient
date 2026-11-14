@@ -69,7 +69,8 @@ void CMenus::RenderPlayers(CUIRect MainView)
 	// ── 顶部一行：左边胶囊筛选（全体 / 好友 / 已屏蔽），右边搜索框，最右在线人数。
 	// 页面标题删掉：顶部导航已经高亮「玩家」，再写一次大标题是重复占位。
 	CUIRect TopRow, FilterRow, RightSide, CountLabel, SearchField;
-	MainView.HSplitTop(ui_token::settings::TAB_HEIGHT, &TopRow, &MainView);
+	// 顶部一行与 ESC 顶部导航同高：筛胶囊、搜索框、在线人数都压在这一档里。
+	MainView.HSplitTop(ui_token::settings::MENU_NAV_HEIGHT, &TopRow, &MainView);
 	MainView.HSplitTop(ui_token::panel::GAP, nullptr, &MainView);
 	const float RightWidth = std::min(TopRow.w * 0.62f,
 		ui_token::player_card::SEARCH_WIDTH + ui_token::player_card::COUNT_WIDTH + ui_token::spacing::SM * 2.0f);
@@ -114,8 +115,8 @@ void CMenus::RenderPlayers(CUIRect MainView)
 		aIds[Count++] = Id;
 	}
 
-	// ── 列表：与服务器浏览器「好友」页同一种卡片——每行一名玩家，整行一张卡，
-	// 头像在左、名字与战队两行、右侧一排动作图标。没有选中态，也不再弹出右侧展示页。
+	// ── 列表：与皮肤列表同一种多列小卡——每格一名玩家，左边头像、名字与战队两行、
+	// 右侧一排动作图标。没有选中态，也没有右侧展示页。
 	CUIRect ListArea = MainView;
 	const bool Online = Client()->State() == IClient::STATE_ONLINE;
 	const bool Sixup = Client()->IsSixup();
@@ -126,7 +127,7 @@ void CMenus::RenderPlayers(CUIRect MainView)
 		CRenderTools::GetRenderTeeOffsetToRenderedTee(CAnimState::GetIdle(), &TeeInfo, Offset);
 		RenderTools()->RenderTee(CAnimState::GetIdle(), &TeeInfo, EMOTE_NORMAL, vec2(1.0f, 0.0f), Rect.Center() + Offset);
 	};
-	struct SRowAction
+	struct STileAction
 	{
 		EQmIcon m_Icon;
 		const char *m_pFallback;
@@ -135,12 +136,12 @@ void CMenus::RenderPlayers(CUIRect MainView)
 		bool m_Enabled;
 	};
 
+	const int Columns = QmPlayersUi::PlayerTileColumns(ListArea.w);
 	static CListBox s_Players;
 	s_Players.DoAutoSpacing(ui_token::list::ROW_SPACING);
 	s_Players.SetActive(!Ui()->IsPopupOpen() && !State.m_Search.IsActive());
-	// 单列整行卡：翻页按一屏行数，跨度为可视行而不是默认最大行数。
-	s_Players.DoStart(ui_token::player_card::LIST_ROW_HEIGHT, Count, 1, 1, -1, &ListArea, false);
-	static CButtonContainer s_aRowButtons[MAX_CLIENTS][5];
+	s_Players.DoStart(ui_token::player_card::TILE_HEIGHT, Count, Columns, 1, -1, &ListArea, false);
+	static CButtonContainer s_aTileButtons[MAX_CLIENTS][5];
 	for(int i = 0; i < Count; ++i)
 	{
 		const int Id = aIds[i];
@@ -149,24 +150,23 @@ void CMenus::RenderPlayers(CUIRect MainView)
 		if(!Item.m_Visible)
 			continue;
 		auto Blur = Item.SuppressGaussianBlur();
-		CUIRect Row = Item.m_ContentRect;
-		const auto Layout = QmPlayersUi::PlayerRowLayout(Row, 5);
-		Item.m_ContentRect.Draw(ui_token::color::SURFACE_HIGHLIGHT, IGraphics::CORNER_ALL, ui_token::list::RowRadius(Row.h));
+		const CUIRect Tile = Item.m_ContentRect;
+		const auto Layout = QmPlayersUi::PlayerTileLayout(Tile, 5);
+		Tile.Draw(ui_token::color::SURFACE_HIGHLIGHT, IGraphics::CORNER_ALL, ui_token::list::RowRadius(Tile.h));
 
 		char aName[MAX_NAME_LENGTH], aClan[MAX_CLAN_LENGTH];
 		GameClient()->FormatStreamerName(Id, aName, sizeof(aName));
 		GameClient()->FormatStreamerClan(Id, aClan, sizeof(aClan));
 		DrawTee(Id, QmUiSquareIconButtonRect(Layout.m_Avatar));
-		Label(Layout.m_Name, aName, ui_token::font::HEADLINE);
-		Label(Layout.m_Clan, aClan, ui_token::font::BODY, TEXTALIGN_ML, true);
+		Label(Layout.m_Name, aName, ui_token::font::BODY);
+		Label(Layout.m_Clan, aClan, ui_token::font::SMALL, TEXTALIGN_ML, true);
 
 		const bool Following = GameClient()->m_PieMenu.IsFollowingPlayer(Player.m_aName, Player.m_aClan) ||
 				       (m_FriendAutoFollowState.m_Active && str_comp(m_FriendAutoFollowState.m_aName, Player.m_aName) == 0 && str_comp(m_FriendAutoFollowState.m_aClan, Player.m_aClan) == 0);
 		const bool ForcedMute = g_Config.m_ClShowChatFriends && !Player.m_Friend;
 		const bool ForcedChatMute = ForcedMute && !g_Config.m_QmChatRelatedOnly;
 		const bool CanCopySkin = Online && !Sixup;
-		// 跟随沿用好友列表那一对字形：跟随 = 播放，取消跟随 = 停止；复制沿用复制字形。
-		const SRowAction aActions[] = {
+		const STileAction aActions[] = {
 			{EQmIcon::HEART, FontIcons::FONT_ICON_HEART, Localize("Friends"), Player.m_Friend, true},
 			{EQmIcon::BAN, FontIcons::FONT_ICON_BAN, Localize("Mute"), ForcedChatMute || Player.m_ChatIgnore, !ForcedChatMute},
 			{EQmIcon::HEART_CRACK, FontIcons::FONT_ICON_HEART_CRACK, Localize("Mute emoticons"), ForcedMute || Player.m_EmoticonIgnore, !ForcedMute},
@@ -175,13 +175,13 @@ void CMenus::RenderPlayers(CUIRect MainView)
 				Online && !GameClient()->IsLocalClientId(Id)},
 			{EQmIcon::COPY, FontIcons::FONT_ICON_COPY, Localize("Copy skin"), false, CanCopySkin},
 		};
-		const auto Slots = QmPlayersUi::PlayerIconRow(Layout.m_Icons, (int)std::size(aActions));
+		const auto Slots = QmPlayersUi::PlayerTileIconRow(Layout.m_Icons, (int)std::size(aActions));
 		for(int Action = (int)std::size(aActions) - 1; Action >= 0; --Action)
 		{
 			const CUIRect Slot = Slots.m_aCells[Action];
 			const auto &Spec = aActions[Action];
-			const int Clicked = Ui()->DoButton_QmIcon(&s_aRowButtons[Id][Action], Spec.m_Icon, Spec.m_pFallback, Spec.m_Active ? 1 : 0, &Slot, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Spec.m_Enabled);
-			ui_widget::Tooltip(Ctx, &s_aRowButtons[Id][Action], Slot, Spec.m_pTooltip);
+			const int Clicked = Ui()->DoButton_QmIcon(&s_aTileButtons[Id][Action], Spec.m_Icon, Spec.m_pFallback, Spec.m_Active ? 1 : 0, &Slot, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Spec.m_Enabled);
+			ui_widget::Tooltip(Ctx, &s_aTileButtons[Id][Action], Slot, Spec.m_pTooltip);
 			if(Clicked == 0 || !Spec.m_Enabled)
 				continue;
 			switch(Action)

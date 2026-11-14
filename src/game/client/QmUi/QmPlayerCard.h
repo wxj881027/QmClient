@@ -253,9 +253,9 @@ namespace QmPlayersUi
 		return std::max(1, (int)((AvailableWidth + Gap) / (Tile + Gap)));
 	}
 
-	// 玩家行卡：与服务器浏览器「好友」页同一种读法——整行一张卡，
-	// 左边头像、中间名字与战队两行、右侧一排动作图标。没有选中态，也没有右侧展示页。
-	struct SPlayerRow
+	// 玩家瓦片：与皮肤列表同一种读法——多列小卡，左边角色头像、中间名字与战队两行、
+	// 右侧一排较小的动作图标（好友 / 静音 / 屏蔽表情 / 跟随 / 复制）。
+	struct SPlayerTile
 	{
 		CUIRect m_Card{};
 		CUIRect m_Avatar{};
@@ -264,15 +264,15 @@ namespace QmPlayersUi
 		CUIRect m_Icons{};
 	};
 
-	// 动作图标行：数量由调用点给（好友 / 静音 / 屏蔽表情 / 跟随 / 复制），从右往左排。
-	inline SPlayerShowcaseIconRow PlayerIconRow(const CUIRect &Row, const int IconCount)
+	// 瓦片图标条：按瓦片自己的图标档排（比整行卡小一档），从右往左。
+	inline SPlayerShowcaseIconRow PlayerTileIconRow(const CUIRect &Row, const int IconCount)
 	{
 		SPlayerShowcaseIconRow Layout;
 		const int Count = std::max(0, std::min(IconCount, static_cast<int>(std::size(Layout.m_aCells))));
 		if(Count <= 0 || Row.w <= 0.0f)
 			return Layout;
 		const float Gap = ui_token::player_card::ICON_BUTTON_GAP;
-		float Size = ui_token::player_card::ICON_BUTTON_SIZE;
+		float Size = ui_token::player_card::TILE_ICON_SIZE;
 		const float TotalGap = (Count - 1) * Gap;
 		if(Size * Count + TotalGap > Row.w)
 			Size = std::max(0.0f, (Row.w - TotalGap) / (float)Count);
@@ -291,31 +291,30 @@ namespace QmPlayersUi
 		return Layout;
 	}
 
-	// 行内排版：卡片自身先留内边距，再从左取头像、从右取动作图标条，中间是两行文字。
-	inline SPlayerRow PlayerRowLayout(const CUIRect &Row, const int IconCount)
+	// 瓦片内排版：内边距后从左取头像、从右取动作图标条，中间两行文字。
+	inline SPlayerTile PlayerTileLayout(const CUIRect &Tile, const int IconCount)
 	{
-		SPlayerRow Result;
-		if(Row.w <= 0.0f || Row.h <= 0.0f)
+		SPlayerTile Result;
+		if(Tile.w <= 0.0f || Tile.h <= 0.0f)
 			return Result;
-		Result.m_Card = Row;
-		CUIRect Content = Row;
+		Result.m_Card = Tile;
+		CUIRect Content = Tile;
 		Content.Margin(ui_token::player_card::PADDING, &Content);
 
 		const int Count = std::max(0, IconCount);
-		const float IconSize = ui_token::player_card::ICON_BUTTON_SIZE;
 		if(Count > 0)
 		{
+			const float IconSize = ui_token::player_card::TILE_ICON_SIZE;
 			const float IconsWidth = Count * IconSize + (Count - 1) * ui_token::player_card::ICON_BUTTON_GAP;
 			Content.VSplitRight(std::min(IconsWidth, Content.w), &Content, &Result.m_Icons);
 			Content.VSplitRight(std::min(ui_token::spacing::XS, Content.w), &Content, nullptr);
 		}
 
-		const float AvatarSize = std::min(Content.h, ui_token::player_card::LIST_AVATAR_SIZE);
+		const float AvatarSize = std::min(Content.h, ui_token::player_card::TILE_AVATAR_SIZE);
 		Content.VSplitLeft(std::min(AvatarSize, Content.w), &Result.m_Avatar, &Content);
 		Result.m_Avatar.h = std::min(Result.m_Avatar.h, AvatarSize);
-		Content.VSplitLeft(std::min(ui_token::spacing::SM, Content.w), nullptr, &Content);
+		Content.VSplitLeft(std::min(ui_token::spacing::XS, Content.w), nullptr, &Content);
 
-		// 名字一行、战队一行，两行都在剩余高度里垂直居中，行高变矮也不会把文字挤出卡片。
 		const float TextBlock = std::min(Content.h, 2.0f * ui_token::player_card::LIST_NAME_HEIGHT);
 		Content.HSplitTop(std::min(Content.h, std::max(0.0f, (Content.h - TextBlock) * 0.5f)), nullptr, &Content);
 		Content.HSplitTop(std::min(ui_token::player_card::LIST_NAME_HEIGHT, Content.h), &Result.m_Name, &Content);

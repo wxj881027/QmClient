@@ -371,6 +371,10 @@ namespace ui_token::settings
 	inline constexpr float TAB_GAP = 10.0f;
 	// 页签字号（未缩放）。
 	inline constexpr float TAB_FONT_SIZE = 15.0f;
+	// ESC 顶部主导航：行高与字号都比页签再小一档。导航本身带选中滑块，
+	// 字号跟页签一样大会在滑块里显得挤，这里单独降一档。
+	inline constexpr float MENU_NAV_HEIGHT = 26.0f;
+	inline constexpr float MENU_NAV_FONT_SIZE = 13.0f;
 	// 子页签高度：与一级页签同档，切换时布局不跳动。
 	inline constexpr float SUB_TAB_HEIGHT = TAB_HEIGHT;
 	// 子页签间距：同上，与一级页签一致。
@@ -935,8 +939,12 @@ namespace ui_token::player_card
 	// 列表与信息卡之间的缝：直接用页面级面板间距，两栏与其它页面读起来是同一条缝。
 	inline constexpr float LIST_CARD_GAP = panel::GAP;
 	// 玩家列表是网格卡片（与皮肤列表同一种读法）：每格最小宽度、格高、格间缝与格内头像边长。
-	inline constexpr float TILE_MIN_WIDTH = 176.0f;
-	inline constexpr float TILE_HEIGHT = 56.0f;
+	// 玩家瓦片按皮肤列表那种小卡：头像 + 两行文字 + 右侧/右上动作图标，
+	// 因此比纯文字格宽一档，高度容纳两行文字。
+	inline constexpr float TILE_MIN_WIDTH = 296.0f;
+	inline constexpr float TILE_HEIGHT = 64.0f;
+	// 瓦片内动作图标边长：比整行卡的小一档，五枚才排得下。
+	inline constexpr float TILE_ICON_SIZE = 18.0f;
 	inline constexpr float TILE_GAP = spacing::SM;
 	inline constexpr float TILE_AVATAR_SIZE = 36.0f;
 	// 顶部一行：搜索框与在线人数占的固定宽度。

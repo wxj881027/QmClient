@@ -4323,7 +4323,10 @@ void CChat::OnRender()
 
 	if(ShowChatScrollbar)
 	{
-		QmDrawChatScrollbar(Ui(), ScrollbarFrame.m_Rail, ScrollbarFrame.m_Thumb, true, ScrollbarHovered, m_ScrollbarDragging);
+		// 热项登记走公共按钮逻辑：滑块据此拿到悬浮/按下的几何反馈（变大），
+	// 与控制台、设置页滚动条用同一套，不在聊天里另写放大。
+	Ui()->DoButtonLogic(QmChatScrollbarId(), 0, &ScrollbarFrame.m_Rail, BUTTONFLAG_LEFT);
+	QmDrawChatScrollbar(Ui(), ScrollbarFrame.m_Rail, ScrollbarFrame.m_Thumb, true, ScrollbarHovered, m_ScrollbarDragging);
 		ExtendBounds(ScrollbarFrame.m_Rail.x, ScrollbarFrame.m_Rail.y, ScrollbarFrame.m_Rail.w, ScrollbarFrame.m_Rail.h);
 	}
 
