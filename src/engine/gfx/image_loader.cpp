@@ -228,6 +228,8 @@ bool CImageLoader::LoadPng(CByteBufferReader &Reader, const char *pContextName, 
 	const png_uint_32 PngHeight = png_get_image_height(pState->m_pPng, pState->m_pInfo);
 	const png_byte BitDepth = png_get_bit_depth(pState->m_pPng, pState->m_pInfo);
 	const int ColorType = png_get_color_type(pState->m_pPng, pState->m_pInfo);
+	// 兼容性判断必须在任何 png_set_* 变换前读取原始色彩类型。
+	const int PngliteCompatible = PngliteIncompatibility(pState->m_pPng, pState->m_pInfo);
 
 	if(PngWidth == 0 || PngHeight == 0 || PngWidth > (png_uint_32)std::numeric_limits<int>::max() || PngHeight > (png_uint_32)std::numeric_limits<int>::max())
 	{
@@ -307,7 +309,7 @@ bool CImageLoader::LoadPng(CByteBufferReader &Reader, const char *pContextName, 
 		Image.m_Width = Width;
 		Image.m_Height = Height;
 		Image.m_Format = ImageFormat;
-		PngliteIncompatible = PngliteIncompatibility(pState->m_pPng, pState->m_pInfo);
+		PngliteIncompatible = PngliteCompatible;
 	}
 	return !Reader.Error();
 }

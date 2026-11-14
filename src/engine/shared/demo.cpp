@@ -121,6 +121,8 @@ int CDemoRecorder::Start(class IStorage *pStorage, class IConsole *pConsole, con
 				str_format(aBuf, sizeof(aBuf), "Unable to open mapfile '%s'", pMap);
 				m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo_recorder", aBuf, gs_DemoPrintColor);
 			}
+			// 地图文件打不开时录制文件已经创建，必须关闭，否则每次录制都泄漏句柄。
+			io_close(DemoFile);
 			return -1;
 		}
 
