@@ -456,6 +456,39 @@ bool CSpectator::OnInput(const IInput::CEvent &Event)
 		}
 	}
 
+	// 查看模式：左键跟随离镜头中心最近的成员，对齐 demo/旁观的点选习惯。
+	// 控制条、弹窗、选择器与菜单都优先处理鼠标，以上分支已提前返回。
+	if(GameClient()->ReplaySessionStatus().ViewMode() && g_Config.m_ClSpectatorMouseclicks &&
+		(Event.m_Flags & IInput::FLAG_PRESS) && Event.m_Key == KEY_MOUSE_1 &&
+		!GameClient()->m_Menus.IsActive() && !GameClient()->m_GameConsole.IsActive() && !GameClient()->m_Chat.IsActive() &&
+		!Ui()->IsPopupOpen() && !GameClient()->m_Menus.OnlineReplayPopupActive() && !PlaybackControlsActive() && !m_Active)
+	{
+		vec2 Center;
+		if(GameClient()->m_RankGhost.ViewFreeCameraCenter(&Center) || GameClient()->m_RankGhost.ViewFocus(&Center))
+		{
+			int Closest = -1;
+			float ClosestDistance = 0.0f;
+			for(int Index = 0; Index < GameClient()->m_RankGhost.ViewMemberCount(); Index++)
+			{
+				vec2 Position;
+				if(!GameClient()->m_RankGhost.ViewMemberPosition(Index, &Position))
+					continue;
+				const float MemberDistance = distance(Position, Center);
+				if(Closest < 0 || MemberDistance < ClosestDistance)
+				{
+					Closest = Index;
+					ClosestDistance = MemberDistance;
+				}
+			}
+			if(Closest >= 0)
+			{
+				GameClient()->m_RankGhost.ViewSelectMember(Closest);
+				GameClient()->m_RankGhost.ViewSetCameraMode(CRankGhost::EViewCameraMode::MEMBER);
+				return true;
+			}
+		}
+	}
+
 	return false;
 }
 

@@ -837,7 +837,8 @@ void CPlayers::RenderPlayer(
 	const CNetObj_Character *pPlayerChar,
 	const CTeeRenderInfo *pRenderInfo,
 	int ClientId,
-	float Intra)
+	float Intra,
+	std::optional<float> AttackTimeOverride)
 {
 	// 禅模式判定只取一次，避免在逐玩家渲染路径里重复解析配置。
 	const SQmFocusModeDecisions Focus = GetQmFocusModeDecisions();
@@ -885,6 +886,14 @@ void CPlayers::RenderPlayer(
 		PredictLocalWeapons = true;
 		AttackTime = (Client()->PredIntraGameTick(g_Config.m_ClDummy) + (Client()->PredGameTick(g_Config.m_ClDummy) - 1 - Player.m_AttackTick)) / (float)Client()->GameTickSpeed();
 		LastAttackTime = (s_LastPredIntraTick + (Client()->PredGameTick(g_Config.m_ClDummy) - 1 - Player.m_AttackTick)) / (float)Client()->GameTickSpeed();
+	}
+	// 查看模式：挥锤/开枪相位由回放播放头推导。实时 tick 在暂停时仍在走，
+	// 直接沿用会让暂停画面的锤子一直上下摆动。
+	if(AttackTimeOverride.has_value())
+	{
+		PredictLocalWeapons = false;
+		AttackTime = *AttackTimeOverride;
+		LastAttackTime = *AttackTimeOverride;
 	}
 	float AttackTicksPassed = AttackTime * (float)Client()->GameTickSpeed();
 

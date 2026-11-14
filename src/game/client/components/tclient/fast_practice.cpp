@@ -1657,12 +1657,14 @@ bool CFastPractice::OverridePredict()
 
 		PublishPracticePredictionBeforeStep(GameClient()->m_PredictedWorld, TickPlan, Tick, false, LocalClientId);
 
-		CNetObj_PlayerInput *pInputData = (CNetObj_PlayerInput *)Client()->GetInputExact(Tick, LocalInputConn);
-		CNetObj_PlayerInput *pDummyInputData = pDummyChar ? (CNetObj_PlayerInput *)Client()->GetInputExact(Tick, DummyInputConn) : nullptr;
+		// 和原生预测循环一样取“不晚于该 tick 的最新记录”。输入环按发送序号写入，
+		// 发送频率低于 tick 频率，按 tick 取模定位（旧的 GetInputExact）几乎总是落空，
+		// 跳跃/钩子只能靠偶发命中的旧记录生效，表现为按键延迟数秒。
+		CNetObj_PlayerInput *pInputData = (CNetObj_PlayerInput *)Client()->GetInput(Tick, LocalInputConn);
+		CNetObj_PlayerInput *pDummyInputData = pDummyChar ? (CNetObj_PlayerInput *)Client()->GetInput(Tick, DummyInputConn) : nullptr;
 		CNetObj_PlayerInput LocalPracticeInput = {};
 		CNetObj_PlayerInput DummyPracticeInput = {};
-		// 该 tick 没有输入记录时沿用角色上一 tick 的输入。GetInput 会回退到更早
-		// 的一条记录，多 tick 追赶时同一输入被重复消费，钩子边沿会重复触发或倒退。
+		// 连接初期还没有任何记录时沿用角色上一 tick 的输入。
 		LocalPracticeInput = pInputData ? *pInputData : *pLocalChar->LatestInput();
 		pInputData = &LocalPracticeInput;
 		if(pDummyChar)

@@ -4825,6 +4825,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_friends_category_drag_test.cpp
     src/test/unit/engine/friends_revision_test.cpp
     src/test/unit/engine/friends_pin_test.cpp
+    src/test/unit/engine/input_ring_test.cpp
     src/test/integration/engine/friends_pin_persistence_test.cpp
     src/test/integration/qmclient/client/qm_browser_friend_pin_test.cpp
     src/test/unit/qmclient/monitoring/qm_perf_diagnostics_test.cpp
@@ -5221,6 +5222,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/tee_skin_apply_test.cpp
     src/test/contract/qmclient/client/qm_weapon_trajectory_contract_test.cpp
     src/test/unit/qmclient/client/qm_rank_demo_manifest_test.cpp
+    src/test/unit/qmclient/client/qm_rank_demo_sort_test.cpp
+    src/test/unit/qmclient/client/qm_ghost_freeze_bar_test.cpp
     src/test/unit/qmclient/client/qmclient_update_version_test.cpp
     src/test/unit/qmclient/client/qmclient_update_manifest_test.cpp
     src/test/unit/qmclient/client/qmclient_update_sources_test.cpp

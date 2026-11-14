@@ -1980,6 +1980,8 @@ protected:
 	char m_aPendingRankDemoPlayPath[IO_MAX_PATH_LENGTH] = "";
 	// Rank 1 页面：地图搜索（跨全清单查找指定名次的官方回放）
 	CLineInputBuffered<64> m_RankSearchInput;
+	// 影子页面：按玩家名过滤当前影子列表（只影响展示，不改动底层条目）
+	CLineInputBuffered<64> m_GhostSearchInput;
 
 	SDemoSelectionEntry DemoSelectionEntryFromItem(const CDemoItem &Item) const;
 	bool IsDemoItemSelected(const CDemoItem &Item) const;
@@ -2953,6 +2955,9 @@ public:
 	void DoMenuLabelStreamed(EMenuTextScope Scope, CUIElement &Element, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps = {}, int StrLen = -1, const CTextCursor *pReadCursor = nullptr, bool Render = true);
 	int DoIngameMenuTab(CButtonContainer *pButtonContainer, int Page, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, int Corners);
 	int DoIngameMenuButton(int Page, const char *pTextId, CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, int Flags = BUTTONFLAG_LEFT, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE, bool Disabled = false);
+	// 游戏内菜单底部动作栏：按文案宽度 + token 内边距从行内切出按钮矩形，
+	// 窄窗口下收敛到剩余宽度。FromRight = false 时从左侧切。
+	CUIRect NextIngameActionButton(CUIRect &Row, const char *pText, bool FromRight = true);
 	int DoIngameMenuCheckBox(int Page, const char *pTextId, const void *pId, const char *pText, int Checked, const CUIRect *pRect);
 	void DoIngameMenuLabel(int Page, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps = {});
 	void DoIngameMenuTitleLabel(int Page, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps = {});

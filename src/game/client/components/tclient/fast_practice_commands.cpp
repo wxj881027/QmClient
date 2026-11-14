@@ -753,16 +753,57 @@ void CFastPractice::ConLocalWorldDump(IConsole::IResult *pResult, void *pUserDat
 	}
 	// 本地 Tee 的冻结状态：/r 之后人能动但渲染还画冻结，就是这里的
 	// FreezeEnd 没从救援快照重算，直接看这一行比截图可靠。
+	// 位置、速度与跳跃位用来判断“按键没进分支世界”还是“进了但物理被状态挡住”：
+	// grounded 为 0 且 jumped 已置满时，落地判定的分支世界有问题。
 	CCharacter *pLocal = pSelf->m_Enabled ? pSelf->m_PracticeBaseWorld.GetCharacterById(pSelf->m_EnableLocalClientId) : nullptr;
 	if(pLocal)
 	{
 		const CCharacterCore *pCore = pLocal->Core();
-		str_format(aBuf, sizeof(aBuf), "local_tee: present=1 deep=%d freeze_end=%d freeze_time=%d grounded=%d",
-			pCore->m_DeepFrozen ? 1 : 0, pCore->m_FreezeEnd, pLocal->m_FreezeTime, pLocal->IsGrounded() ? 1 : 0);
+		str_format(aBuf, sizeof(aBuf), "local_tee: present=1 deep=%d freeze_end=%d freeze_time=%d grounded=%d pos=%d,%d vel=%d,%d jumped=%d jumps=%d hook_state=%d",
+			pCore->m_DeepFrozen ? 1 : 0, pCore->m_FreezeEnd, pLocal->m_FreezeTime, pLocal->IsGrounded() ? 1 : 0,
+			round_to_int(pCore->m_Pos.x), round_to_int(pCore->m_Pos.y),
+			round_to_int(pCore->m_Vel.x), round_to_int(pCore->m_Vel.y),
+			pCore->m_Jumped, pCore->m_Jumps, pCore->m_HookState);
 	}
 	else
 	{
-		str_copy(aBuf, "local_tee: present=0 deep=0 freeze_end=0 freeze_time=0 grounded=0");
+		str_copy(aBuf, "local_tee: present=0 deep=0 freeze_end=0 freeze_time=0 grounded=0 pos=0,0 vel=0,0 jumped=0 jumps=0 hook_state=0");
+	}
+	Print(aBuf);
+	// 时钟对照：分支世界 tick、服务器游戏 tick 与预测 tick。分支世界如果落后预测 tick，
+	// 它消费的输入就是旧的，表现为按键延迟好几帧才生效。
+	{
+		const int GameTick = pSelf->Client()->GameTick(g_Config.m_ClDummy);
+		const int PredTick = pSelf->Client()->PredGameTick(g_Config.m_ClDummy);
+		str_format(aBuf, sizeof(aBuf), "ticks: game=%d pred=%d branch=%d",
+			GameTick, PredTick, pSelf->m_PracticeBaseWorld.GameTick());
+		Print(aBuf);
+		const CNetObj_PlayerInput *pPredInput = (const CNetObj_PlayerInput *)pSelf->Client()->GetInput(PredTick, 0);
+		str_format(aBuf, sizeof(aBuf), "pred_input: present=%d direction=%d jump=%d hook=%d",
+			pPredInput ? 1 : 0,
+			pPredInput ? pPredInput->m_Direction : 0,
+			pPredInput ? pPredInput->m_Jump : 0,
+			pPredInput ? pPredInput->m_Hook : 0);
+		Print(aBuf);
+	}
+	// 实时控制层输入：与分支角色最后消费的输入对照，可以看出输入过滤是否吞掉跳跃/钩子，
+	// 或者按键根本没进控制层。
+	{
+		const CNetObj_PlayerInput &Live = pSelf->GameClient()->m_Controls.m_aInputData[g_Config.m_ClDummy];
+		str_format(aBuf, sizeof(aBuf), "live_input: direction=%d jump=%d hook=%d fire=%d target=%d,%d flags=0x%x",
+			Live.m_Direction, Live.m_Jump, Live.m_Hook, Live.m_Fire, Live.m_TargetX, Live.m_TargetY, Live.m_PlayerFlags);
+		Print(aBuf);
+	}
+	// 分支世界角色最后消费的输入：与实时按键对照，可以看出输入过滤是否吞掉跳跃/钩子。
+	if(pLocal)
+	{
+		const CNetObj_PlayerInput *pInput = pLocal->LatestInput();
+		str_format(aBuf, sizeof(aBuf), "local_input: direction=%d jump=%d hook=%d fire=%d target=%d,%d flags=0x%x",
+			pInput->m_Direction, pInput->m_Jump, pInput->m_Hook, pInput->m_Fire, pInput->m_TargetX, pInput->m_TargetY, pInput->m_PlayerFlags);
+	}
+	else
+	{
+		str_copy(aBuf, "local_input: direction=0 jump=0 hook=0 fire=0 target=0,0 flags=0x0");
 	}
 	Print(aBuf);
 	int Characters = 0;

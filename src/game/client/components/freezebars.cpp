@@ -2,12 +2,24 @@
 
 #include <game/client/gameclient.h>
 
+namespace
+{
+	constexpr float FREEZE_BAR_WIDTH = 64.0f;
+	constexpr float FREEZE_BAR_HALF_WIDTH = FREEZE_BAR_WIDTH / 2.0f;
+	constexpr float FREEZE_BAR_HEIGHT = 16.0f;
+	// 与实机冻结条一致的挂点：Tee 中心下方 32 单位（屏幕坐标向下为正）。
+	constexpr float FREEZE_BAR_OFFSET_Y = 32.0f;
+}
+
+void CFreezeBars::RenderBarAt(const vec2 TeePos, const float Progress, const float Alpha)
+{
+	if(!g_Config.m_ClShowFreezeBars)
+		return;
+	RenderFreezeBarPos(TeePos.x - FREEZE_BAR_HALF_WIDTH, TeePos.y + FREEZE_BAR_OFFSET_Y, FREEZE_BAR_WIDTH, FREEZE_BAR_HEIGHT, Progress, Alpha);
+}
+
 void CFreezeBars::RenderFreezeBar(const int ClientId)
 {
-	const float FreezeBarWidth = 64.0f;
-	const float FreezeBarHalfWidth = 32.0f;
-	const float FreezeBarHeight = 16.0f;
-
 	// pCharacter contains the predicted character for local players or the last snap for players who are spectated
 	CCharacterCore *pCharacter = &GameClient()->m_aClients[ClientId].m_Predicted;
 
@@ -23,10 +35,6 @@ void CFreezeBars::RenderFreezeBar(const int ClientId)
 		return;
 	}
 
-	vec2 Position = GameClient()->m_aClients[ClientId].m_RenderPos;
-	Position.x -= FreezeBarHalfWidth;
-	Position.y += 32;
-
 	float Alpha = 1.0f;
 	if(GameClient()->IsOtherTeam(ClientId))
 		Alpha = g_Config.m_ClShowOthersAlpha / 100.0f;
@@ -35,7 +43,7 @@ void CFreezeBars::RenderFreezeBar(const int ClientId)
 		Alpha *= g_Config.m_ClFreezeBarsAlphaInsideFreeze / 100.0f;
 	}
 
-	RenderFreezeBarPos(Position.x, Position.y, FreezeBarWidth, FreezeBarHeight, FreezeProgress, Alpha);
+	RenderBarAt(GameClient()->m_aClients[ClientId].m_RenderPos, FreezeProgress, Alpha);
 }
 
 void CFreezeBars::RenderFreezeBarPos(float x, const float y, const float Width, const float Height, float Progress, const float Alpha)

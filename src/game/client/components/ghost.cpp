@@ -556,7 +556,17 @@ void CGhost::OnRender()
 			Draw.m_IntraTick = (GhostTick - Draw.m_Prev.m_Tick - 1 + IntraPhase) / TickDiff;
 		}
 
-		Draw.m_Player.m_AttackTick += Client()->GameTick(g_Config.m_ClDummy) - GhostTick;
+		if(m_ManualMode)
+		{
+			// 查看模式：挥锤/开枪相位只跟回放播放头走。实时游戏 tick 在暂停时仍在推进，
+			// 沿用它会让暂停画面里的锤子一直上下摆动。
+			const float PlaybackTick = GhostTick + ManualRenderIntra();
+			Draw.m_AttackTimeOverride = maximum(0.0f, (PlaybackTick - 1.0f - Draw.m_Prev.m_AttackTick) / (float)Client()->GameTickSpeed());
+		}
+		else
+		{
+			Draw.m_Player.m_AttackTick += Client()->GameTick(g_Config.m_ClDummy) - GhostTick;
+		}
 
 		// QmClient：转换侧以 WEAPON_NINJA 标记冻结段（幽灵格式无独立冻结字段）。
 		// 冻结表现完全复刻 demo 播放的玩家渲染（players.cpp）：冰冻着色 + 隐藏武器、
@@ -636,11 +646,21 @@ void CGhost::OnRender()
 		return;
 	}
 
-	// 查看模式：全部 hook -> 全部 Tee -> 名字与方向指示叠加
+	// 查看模式：全部 hook -> 全部 Tee -> 冻结进度条 -> 名字与方向指示叠加
 	for(const SGhostDrawData &Draw : m_vGhostDraws)
 		GameClient()->m_Players.RenderHook(ScreenRect, &Draw.m_Prev, &Draw.m_Player, ResolveRenderInfo(Draw), -2, Draw.m_IntraTick);
 	for(const SGhostDrawData &Draw : m_vGhostDraws)
-		GameClient()->m_Players.RenderPlayer(ScreenRect, &Draw.m_Prev, &Draw.m_Player, ResolveRenderInfo(Draw), -2, Draw.m_IntraTick);
+		GameClient()->m_Players.RenderPlayer(ScreenRect, &Draw.m_Prev, &Draw.m_Player, ResolveRenderInfo(Draw), -2, Draw.m_IntraTick, Draw.m_AttackTimeOverride);
+
+	// 冻结段画与实机一致的进度条：回放里看到“无武器”的 Tee 时，直接能读出
+	// 它正处在冻结倒计时中。开关沿用 cl_show_freeze_bars（在 CFreezeBars 内判定）。
+	for(const SGhostDrawData &Draw : m_vGhostDraws)
+	{
+		const float FreezeProgress = QmGhostFreezeProgress(m_aManualFreezeSpans[Draw.m_Slot], PlaybackTick);
+		if(FreezeProgress < 0.0f)
+			continue;
+		GameClient()->m_FreezeBars.RenderBarAt(Draw.m_Pos, FreezeProgress);
+	}
 
 	// QmClient: 查看模式下为每个虚影标注名字（多轨回放的信息可读性，对齐 demo 播放器）
 	// 名字尺寸跟随客户端名字牌大小设置；方向键指示与名字牌共用 cl_show_direction 数据
@@ -790,6 +810,35 @@ void CGhost::StopRender()
 	m_ManualMode = false;
 	m_ManualClock.SetPlaying(false, Client()->LocalTime());
 	std::fill(std::begin(m_aManualRenderPosValid), std::end(m_aManualRenderPosValid), false);
+	for(auto &vSpans : m_aManualFreezeSpans)
+		vSpans.clear();
+}
+
+void CGhost::BuildManualFreezeSpans(const std::vector<int> &vSlots)
+{
+	for(int Slot : vSlots)
+	{
+		if(Slot < 0 || Slot >= MAX_ACTIVE_GHOSTS)
+			continue;
+		std::vector<SGhostFreezeSpan> &vSpans = m_aManualFreezeSpans[Slot];
+		vSpans.clear();
+		CGhostItem &Ghost = m_aActiveGhosts[Slot];
+		if(Ghost.Empty())
+			continue;
+		// 连续 NINJA 帧 = 一个冻结段。录制/转换时每帧都会写冻结标记，
+		// 断档只出现在解除冻结或轨迹分段，按帧序号还原起止即可。
+		std::vector<int> vRelativeTicks;
+		std::vector<unsigned char> vFrozen;
+		vRelativeTicks.reserve(Ghost.m_Path.Size());
+		vFrozen.reserve(Ghost.m_Path.Size());
+		for(int Index = 0; Index < Ghost.m_Path.Size(); ++Index)
+		{
+			const CGhostCharacter *pFrame = Ghost.m_Path.Get(Index);
+			vRelativeTicks.push_back(pFrame->m_Tick - Ghost.m_StartTick);
+			vFrozen.push_back(pFrame->m_Weapon == WEAPON_NINJA ? 1 : 0);
+		}
+		QmCollectGhostFreezeSpans(vRelativeTicks, vFrozen, vSpans);
+	}
 }
 
 void CGhost::ManualSetSpeed(float Speed)
@@ -801,6 +850,7 @@ void CGhost::ManualSetSpeed(float Speed)
 void CGhost::StartRenderManual(const std::vector<int> &vSlots)
 {
 	StopRender();
+	BuildManualFreezeSpans(vSlots);
 	m_ManualPrimarySlot = vSlots.empty() ? -1 : vSlots.front();
 	m_vManualSampleTicks.clear();
 	std::fill(std::begin(m_aManualSlots), std::end(m_aManualSlots), false);

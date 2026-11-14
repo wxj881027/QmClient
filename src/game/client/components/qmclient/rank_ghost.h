@@ -103,6 +103,16 @@ public:
 	// 当前任务的进度描述（下载/转换百分比）；空闲时返回 false
 	bool DescribeTask(char *pBuf, size_t BufSize) const;
 
+	// 条目级任务进度：列表行据此显示下载/转换进度条。
+	// 返回 false 表示当前任务不属于该条目；Phase 为 NONE 时 Percent 无意义。
+	enum class EEntryTaskPhase
+	{
+		NONE,
+		DOWNLOAD,
+		CONVERT,
+	};
+	bool EntryTaskProgress(const qmclient::rank_demo::SEntry &Entry, EEntryTaskPhase &Phase, int &Percent) const;
+
 	// ===== 查看模式：影子按独立时间线播放（游戏内 demo 播放器，不与跑图同步） =====
 	// 请求加载该 demo 的影子并直接进入查看模式；已加载时直接切换
 	void RequestGhostViewForDemo(const char *pDemoName);

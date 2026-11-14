@@ -48,6 +48,11 @@ namespace
 
 	HANDLE LaunchHelper(const char *pHelperPath, const std::string &Source)
 	{
+#if defined(CONF_QMCLIENT_TEST_STORAGE)
+		// 测试存储构建不启动音乐 hook 助手，理由同网易云接入：
+		// 测试客户端不注入玩家正在运行的音乐应用，也不触发系统安全弹窗。
+		return nullptr;
+#endif
 		std::wstring Path = Utf8ToWide(pHelperPath);
 		if(Path.empty())
 			Path = DefaultHelperPath(Source != "soda");
@@ -155,6 +160,10 @@ void CQmSodaHookProvider::Start(const char *pHelperPath, const char *pSource)
 
 bool CQmSodaHookProvider::RunKugouSetup(bool Restore)
 {
+#if defined(CONF_QMCLIENT_TEST_STORAGE)
+	(void)Restore;
+	return false;
+#endif
 	const std::wstring Path = DefaultHelperPath(true);
 	if(Path.empty())
 		return false;

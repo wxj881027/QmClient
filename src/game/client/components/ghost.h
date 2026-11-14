@@ -7,10 +7,13 @@
 
 #include <game/client/component.h>
 #include <game/client/components/menus.h>
+#include <game/client/components/qmclient/ghost_freeze_bar.h>
 #include <game/client/components/qmclient/local_world.h>
 #include <game/client/components/qmclient/online_replay_player.h>
 #include <game/client/render.h>
 
+#include <array>
+#include <optional>
 #include <vector>
 
 struct CNetObj_Character;
@@ -127,8 +130,17 @@ private:
 		bool m_UseOwnRenderInfo = false;
 		CTeeRenderInfo m_OwnRenderInfo;
 		const CTeeRenderInfo *m_pSharedRenderInfo = nullptr;
+		// 查看模式：挥锤/开枪相位（秒），由回放播放头换算；跑图模式不用。
+		std::optional<float> m_AttackTimeOverride;
 	};
 	std::vector<SGhostDrawData> m_vGhostDraws;
+
+	// 查看模式的冻结段：幽灵格式没有冻结起止字段，转换侧把冻结帧的武器写成
+	// WEAPON_NINJA 作为标记。播放开始时扫一次路径还原成相对 tick 区间，
+	// 用来画与实机一致的冻结进度条（cl_show_freeze_bars）。区间与进度计算
+	// 在 ghost_freeze_bar.h，渲染由 CFreezeBars::RenderBarAt 负责。
+	std::array<std::vector<SGhostFreezeSpan>, MAX_ACTIVE_GHOSTS> m_aManualFreezeSpans;
+	void BuildManualFreezeSpans(const std::vector<int> &vSlots);
 
 	char m_aTmpFilename[IO_MAX_PATH_LENGTH] = "";
 

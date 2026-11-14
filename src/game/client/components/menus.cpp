@@ -1658,19 +1658,27 @@ int CMenus::DoButton_GridHeader(const void *pId, const char *pText, int Checked,
 {
 	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
 	const float SortedAlpha = std::clamp(0.34f + g_Config.m_QmUiOpacity / 100.0f * 0.6f, 0.0f, 0.55f);
+	const float Radius = ui_token::radius::SMALL_MENU;
 	if(Checked == 2)
-		DrawRoundedSurface(Ui(), *pRect, ColorRGBA(1, 0.98f, 0.5f, SortedAlpha), ColorRGBA(), 5.0f, 0.0f, IGraphics::CORNER_T);
+		DrawRoundedSurface(Ui(), *pRect, ColorRGBA(1, 0.98f, 0.5f, SortedAlpha), ColorRGBA(), Radius, 0.0f, IGraphics::CORNER_T);
 	else if(Checked)
-		DrawRoundedSurface(Ui(), *pRect, ColorRGBA(1, 1, 1, SortedAlpha), ColorRGBA(), 5.0f, 0.0f, IGraphics::CORNER_T);
+		DrawRoundedSurface(Ui(), *pRect, ColorRGBA(1, 1, 1, SortedAlpha), ColorRGBA(), Radius, 0.0f, IGraphics::CORNER_T);
 
 	CUIRect Temp;
 	pRect->VMargin(5.0f, &Temp);
 	SLabelProperties HeaderProps = Props;
 	if(HeaderProps.m_MaxWidth >= 0.0f)
 		HeaderProps.m_MaxWidth = std::min(HeaderProps.m_MaxWidth, std::max(0.0f, Temp.w));
+	CUIRect Arrow;
+	if(Checked && Temp.w > Temp.h)
+	{
+		Temp.VSplitRight(Temp.h, &Temp, &Arrow);
+		Ui()->DoLabel_QmIcon(&Arrow, Checked == 2 ? EQmIcon::CHEVRON_DOWN : EQmIcon::CHEVRON_UP,
+			Checked == 2 ? FONT_ICON_CHEVRON_DOWN : FONT_ICON_CHEVRON_UP, Temp.h * 0.62f, TEXTALIGN_MC, HeaderProps);
+	}
 	// 文字引擎把零行宽视作不限制宽度，空的表头文字区直接跳过绘制。
 	if(HeaderProps.m_MaxWidth != 0.0f)
-		Ui()->DoLabel(&Temp, pText, pRect->h * CUi::ms_FontmodHeight, Align, HeaderProps);
+		Ui()->DoLabel(&Temp, pText, ui_token::font::SMALL, Align, HeaderProps);
 	return Ui()->DoButtonLogic(pId, Checked, pRect, BUTTONFLAG_LEFT);
 }
 

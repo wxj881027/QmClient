@@ -26,6 +26,7 @@
 #include <base/windows.h>
 
 #include <engine/client/backend/graphics_backend_contract.h>
+#include <engine/client/input_ring.h>
 #include <engine/config.h>
 #include <engine/console.h>
 #include <engine/discord.h>
@@ -1143,25 +1144,11 @@ const char *CClient::LatestVersion() const
 // TODO: OPT: do this a lot smarter!
 int *CClient::GetInput(int Tick, int IsDummy) const
 {
-	int Best = -1;
 	const int d = IsDummy ^ g_Config.m_ClDummy;
-	for(int i = 0; i < 200; i++)
-	{
-		if(m_aInputs[d][i].m_Tick != -1 && m_aInputs[d][i].m_Tick <= Tick && (Best == -1 || m_aInputs[d][Best].m_Tick < m_aInputs[d][i].m_Tick))
-			Best = i;
-	}
-
-	if(Best != -1)
-		return (int *)m_aInputs[d][Best].m_aData;
+	const auto *pRecord = QmLatestInputRecord(m_aInputs[d], Tick);
+	if(pRecord != nullptr)
+		return (int *)pRecord->m_aData;
 	return nullptr;
-}
-
-int *CClient::GetInputExact(int Tick, int IsDummy) const
-{
-	const int d = IsDummy ^ g_Config.m_ClDummy;
-	if(m_aInputs[d][Tick % 200].m_Tick != Tick)
-		return nullptr;
-	return (int *)m_aInputs[d][Tick % 200].m_aData;
 }
 
 // ------ state handling -----

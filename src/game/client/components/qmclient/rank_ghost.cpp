@@ -693,6 +693,47 @@ bool CRankGhost::IsBusy() const
 	return m_Stage != EStage::IDLE || m_StartPending;
 }
 
+bool CRankGhost::EntryTaskProgress(const SEntry &Entry, EEntryTaskPhase &Phase, int &Percent) const
+{
+	Phase = EEntryTaskPhase::NONE;
+	Percent = 0;
+	// 按 demo 名请求时以 m_PendingDemo 为准；按地图/名次请求时
+	// 清单解析完成后以 m_ActiveEntry 为准。
+	const bool Matches = !m_PendingDemo.empty() ? Entry.m_Demo == m_PendingDemo : Entry.m_Demo == m_ActiveEntry.m_Demo;
+	if(!Matches)
+		return false;
+	switch(m_Stage)
+	{
+	case EStage::IDLE:
+		// 请求已登记但主循环还没开始下载。
+		if(m_StartPending || m_PendingView)
+		{
+			Phase = EEntryTaskPhase::DOWNLOAD;
+			return true;
+		}
+		return false;
+	case EStage::FETCH_MANIFEST:
+		return false;
+	case EStage::FETCH_DEMO:
+	case EStage::FETCH_DEMO_ONLY:
+		Phase = EEntryTaskPhase::DOWNLOAD;
+		Percent = m_pDemoRequest ? m_pDemoRequest->Progress() : 0;
+		return true;
+	case EStage::PARSE:
+		Phase = EEntryTaskPhase::CONVERT;
+		if(m_pParse && m_pParse->m_Context.m_pPlayer)
+		{
+			const SParseContext &Parse = m_pParse->m_Context;
+			const int Cur = Parse.m_pPlayer->Info()->m_Info.m_CurrentTick;
+			const int RunTicks = Parse.m_RunEnd - Parse.m_RunStart;
+			Percent = RunTicks > 0 ? std::clamp((Cur - Parse.m_RunStart) * 100 / RunTicks, 0, 100) : 0;
+		}
+		return true;
+	default:
+		return false;
+	}
+}
+
 bool CRankGhost::DescribeTask(char *pBuf, size_t BufSize) const
 {
 	pBuf[0] = '\0';

@@ -2750,9 +2750,9 @@ CLabelResult CUi::DoLabel_QmIcon(const CUIRect *pRect, EQmIcon Icon, const char 
 	return DoLabel(pRect, pFallbackIcon, Size, Align, LabelProps);
 }
 
-int CUi::DoButton_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, int Corners, bool Enabled, const std::optional<ColorRGBA> ButtonColor, bool ShowSlash, bool TransparentInactive, const ui_widget::SIconButtonIconDraw *pIconDraw)
+int CUi::DoButton_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, int Corners, bool Enabled, const std::optional<ColorRGBA> ButtonColor, bool ShowSlash, bool TransparentInactive, const ui_widget::SIconButtonIconDraw *pIconDraw, float Radius)
 {
-	return ui_widget::DoIconButton(ui_widget::ControlContext(this), pButtonContainer, Icon, pFallbackIcon, Checked, *pRect, Flags, Corners, Enabled, ButtonColor, ShowSlash, TransparentInactive, nullptr, pIconDraw);
+	return ui_widget::DoIconButton(ui_widget::ControlContext(this), pButtonContainer, Icon, pFallbackIcon, Checked, *pRect, Flags, Corners, Enabled, ButtonColor, ShowSlash, TransparentInactive, nullptr, pIconDraw, Radius);
 }
 
 int CUi::DoButton_PopupMenu(CButtonContainer *pButtonContainer, const char *pText, const CUIRect *pRect, float Size, int Align, float Padding, bool TransparentInactive, bool Enabled, const std::optional<ColorRGBA> ButtonColor, float MinimumFontSize, float TextInsetX)

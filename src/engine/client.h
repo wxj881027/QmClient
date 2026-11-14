@@ -282,10 +282,6 @@ public:
 
 	// input
 	virtual int *GetInput(int Tick, int IsDummy = 0) const = 0;
-	// 只返回正好属于该 tick 的输入记录，没有记录时返回 nullptr。
-	// GetInput 会回退到更早的一条输入，逐 tick 重放时同一帧多 tick 追赶
-	// 会把同一条输入重复消费，钩子的按下/松开边沿因此被吞或被延后。
-	virtual int *GetInputExact(int Tick, int IsDummy = 0) const { return GetInput(Tick, IsDummy); }
 
 	// remote console
 	virtual void RconAuth(const char *pUsername, const char *pPassword, bool Dummy) = 0;
