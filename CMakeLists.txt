@@ -4980,6 +4980,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_bind_overview_test.cpp
     src/test/unit/qmclient/client/qm_bind_workshop_catalog_test.cpp
     src/test/unit/qmclient/client/qm_bind_workshop_plan_test.cpp
+    src/test/integration/qmclient/client/qm_bind_workshop_cfg_file_test.cpp
     src/test/unit/qmclient/client/qm_background_particles_test.cpp
     src/test/unit/qmclient/client/qm_axiom_scores_test.cpp
     src/test/integration/qmclient/client/qm_axiom_quad_collision_test.cpp
