@@ -108,7 +108,7 @@ static inline float FilterGridExtent(int Rows, float RowHeight)
 
 static SQmDropdownVisualStyle FriendsPopupVisualStyle()
 {
-	return QmSettingsDropdownVisualStyle(ResolveInputFallbackTheme(g_Config.m_QmUiFocusColor), color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiCardBorderColor, true)));
+	return QmSettingsDropdownVisualStyle(ResolveInputFallbackTheme(), color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiCardBorderColor, true)));
 }
 
 static SPopupMenuProperties FriendsPopupProperties()
@@ -2926,7 +2926,7 @@ void CMenus::RenderServerbrowserDDNetFilter(CUIRect View,
 	}
 	const int64_t EntryNow = time_get();
 	const int64_t EntryFreq = maximum<int64_t>(1, time_freq());
-	const bool EntryEnabled = g_Config.m_QmUiListEntryAnimations != 0 && g_Config.m_QmUiMotionLevel > 0;
+	const bool EntryEnabled = g_Config.m_QmUiMotionLevel > 0;
 	const float EntryElapsed = s_EntryAnimation.Resolve(EntryNow, EntryFreq, EntryEnabled, g_Config.m_QmUiMotionLevel,
 		Ui()->MeasurementOnly() ? EQmListEntryRenderPass::MEASUREMENT : EQmListEntryRenderPass::INTERACTIVE);
 	for(int ItemIndex = 0; ItemIndex < MaxItems; ++ItemIndex)
@@ -3632,6 +3632,9 @@ void CMenus::RenderServerbrowserInfoScoreboard(CUIRect View, const CServerInfo *
 
 	static CListBox s_ListBox;
 	s_ListBox.SetCapsuleRows(FontSize);
+	// 玩家行是本页唯一能拿到真实内容高度的列表：没有滚动条时行胶囊占满整宽，
+	// 滚动条出现的那一刻横向让出一列（带过渡），不再一直空着一条轨道。
+	s_ListBox.SetReserveRightWhenOverflowing(true);
 	s_ListBox.DoAutoSpacing(0.0f);
 	s_ListBox.SetItemSelectionInset(ui_token::list::ROW_SPACING * 0.5f);
 	s_ListBox.SetVisibleRowRange(1, maximum(1, (int)std::floor(std::max(0.0f, View.h) / PlayerRowStep)));
@@ -4242,7 +4245,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 					FollowTag.w = maximum(0.0f, FollowTag.w - FollowTagRightInset);
 					FollowTag.y = FollowSlot.y + FollowTagRowInset;
 					FollowTag.h = minimum(FollowTagHeight, maximum(0.0f, FollowSlot.h - 2.0f * FollowTagRowInset));
-					const ColorRGBA FollowColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiFocusColor));
+					const ColorRGBA FollowColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiAccentColor));
 					DrawRoundedSurface(Ui(), FollowTag, FollowColor.WithAlpha(0.3f * FollowTagAlpha), FollowColor.WithAlpha(0.6f * FollowTagAlpha), 3.0f);
 					// 文字等槽位展开到接近满宽再画，避免中途把 "Follow" 压成 "F…"。
 					if(FollowTagCurrentWidth >= FollowTagSlotWidth * 0.9f)
@@ -5293,7 +5296,7 @@ namespace
 	CButtonContainer s_aFavoriteMapsWorkspaceTabButtons[4];
 }
 
-int CMenus::DoMapWorkspaceTabs(const CUIRect &Segments, float Rounding, int CurrentTab)
+int CMenus::DoMapWorkspaceTabs(const CUIRect &Segments, float Rounding, int CurrentTab, float FontSize)
 {
 	// 本地存档列表的计数与收藏地图页共用同一份缓存，这里沿用同样的节流刷新。
 	char aSavesPath[IO_MAX_PATH_LENGTH];
@@ -5309,7 +5312,7 @@ int CMenus::DoMapWorkspaceTabs(const CUIRect &Segments, float Rounding, int Curr
 	const char *apTabLabels[4] = {aaTabLabels[0], aaTabLabels[1], aaTabLabels[2], aaTabLabels[3]};
 	// 胶囊滑块配色按浏览器面板表面自适应，两个页面都用同一档面板色。
 	const ui_widget::SCapsuleTabBarStyle TabStyle = CapsuleTabBarStyleFor(BrowserPanelColor(0.68f));
-	const int NewTab = DoNavigationTabs(s_aFavoriteMapsWorkspaceTabButtons, apTabLabels, 4, CurrentTab, Segments, Rounding, &TabStyle);
+	const int NewTab = DoNavigationTabs(s_aFavoriteMapsWorkspaceTabButtons, apTabLabels, 4, CurrentTab, Segments, Rounding, &TabStyle, FontSize);
 	if(NewTab == 3)
 		SetMenuPage(PAGE_STATS);
 	else if(NewTab != CurrentTab)
@@ -5324,12 +5327,9 @@ int CMenus::MapWorkspaceTab()
 
 void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 {
+	// 工作区不再自算外缩：View 已对齐全局安全区，与服务器列表面板同一条基线，
+	// 页签条与下方正文面板因此贴着同一条左缘。
 	const QmMapHistoryUi::SWorkspaceMetrics Layout = QmMapHistoryUi::WorkspaceMetrics(View.h);
-	// 手机端左右不留额外外缩：面板直接对齐导航栏，上下留白保持不变。
-	if(QmUiMobilePlatform())
-		View.HMargin(Layout.m_OuterMargin, &View);
-	else
-		View.Margin(Layout.m_OuterMargin, &View);
 
 	char aSavesPath[IO_MAX_PATH_LENGTH];
 	Storage()->GetCompletePath(IStorage::TYPE_SAVE, SAVES_FILE, aSavesPath, sizeof(aSavesPath));
@@ -5341,9 +5341,11 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 	const std::vector<QmMapHistory::SMapHistoryRecord> &HistoryEntries = GameClient()->m_TClient.GetMapHistory().Entries();
 	const ColorRGBA TabInactiveColor = BrowserPanelColor(0.68f);
 
+	// 页签字体与设置页胶囊页签同档：DoNavigationTabs 不传字号时按行高反推，
+	// 反推值比设置页大一档，两页并排看得出差别。
 	CUIRect WorkspaceTabs;
 	View.HSplitTop(Layout.m_TabHeight, &WorkspaceTabs, &View);
-	DoMapWorkspaceTabs(WorkspaceTabs, Layout.m_TabHeight * 0.20f, s_FavoriteMapsWorkspaceTab);
+	DoMapWorkspaceTabs(WorkspaceTabs, Layout.m_TabHeight * 0.20f, s_FavoriteMapsWorkspaceTab, ui_token::settings::TAB_FONT_SIZE);
 	View.HSplitTop(Layout.m_SectionGap, nullptr, &View);
 
 	View.Draw(BrowserPanelColor(0.82f), IGraphics::CORNER_ALL, Layout.m_PanelMargin);
@@ -5365,7 +5367,21 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 	const float HeaderTextInset = Layout.m_PanelMargin * 0.50f;
 	WorkspaceTitle.VMargin(HeaderTextInset, &WorkspaceTitle);
 	WorkspaceSubTitle.VMargin(HeaderTextInset, &WorkspaceSubTitle);
-	Ui()->DoLabel(&WorkspaceTitle, apWorkspaceTitles[s_FavoriteMapsWorkspaceTab], std::clamp(WorkspaceTitle.h * 0.72f, 13.0f, 15.0f), TEXTALIGN_ML);
+	// 工作区标题与设置页顶部标题同一档字号，并带前置图标（三个工作区都与地图有关）。
+	{
+		const char *pWorkspaceIcon = FontIcons::FONT_ICON_MAP;
+		const float TitleFontSize = ui_token::font::TITLE;
+		const float TitleIconSize = TitleFontSize;
+		const float TitleGap = ui_token::page_title::ICON_GAP * 0.5f;
+		CUIRect TitleIconRect{WorkspaceTitle.x, WorkspaceTitle.y + (WorkspaceTitle.h - TitleIconSize) * 0.5f, TitleIconSize, TitleIconSize};
+		Ui()->DoLabel_QmIcon(&TitleIconRect, EQmIcon::MAP, pWorkspaceIcon, TitleIconSize, TEXTALIGN_ML);
+		CUIRect TitleTextRect = WorkspaceTitle;
+		TitleTextRect.VSplitLeft(TitleIconSize + TitleGap, nullptr, &TitleTextRect);
+		SLabelProperties TitleProps;
+		TitleProps.m_MaxWidth = TitleTextRect.w;
+		TitleProps.m_EllipsisAtEnd = true;
+		Ui()->DoLabel(&TitleTextRect, apWorkspaceTitles[s_FavoriteMapsWorkspaceTab], TitleFontSize, TEXTALIGN_ML, TitleProps);
+	}
 	Ui()->DoLabel(&WorkspaceSubTitle, apWorkspaceSubTitles[s_FavoriteMapsWorkspaceTab], std::clamp(WorkspaceSubTitle.h * 0.78f, 8.0f, 10.0f), TEXTALIGN_ML);
 	View.HSplitTop(Layout.m_SectionGap, nullptr, &View);
 

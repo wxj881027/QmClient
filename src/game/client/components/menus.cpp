@@ -739,7 +739,7 @@ CMenus::CMenus()
 
 IUiContext CMenus::SettingsUiContext(const char *pScope, const float UiScale)
 {
-	m_SettingsUiTheme = ResolveUiTheme(ColorHSLA(g_Config.m_QmUiColor), g_Config.m_QmUiOpacity / 100.0f, ColorHSLA(g_Config.m_QmUiFocusColor), ColorHSLA(g_Config.m_QmUiAccentColor).WithAlpha(g_Config.m_QmUiAccentOpacity / 100.0f), ColorHSLA(g_Config.m_QmUiSelectedColor));
+	m_SettingsUiTheme = ResolveUiTheme(ColorHSLA(g_Config.m_QmUiColor), g_Config.m_QmUiOpacity / 100.0f, ColorHSLA(g_Config.m_QmUiAccentColor).WithAlpha(g_Config.m_QmUiAccentOpacity / 100.0f));
 	IUiContext Context;
 	Context.m_pUi = Ui();
 	Context.m_pAnim = &GameClient()->UiRuntimeV2()->AnimRuntime();
@@ -789,12 +789,10 @@ int CMenus::DoSettingsDropDown(CUIRect *pRect, const int CurSelection, const cha
 
 SCardMotionSpec CMenus::SettingsCardMotionSpec() const
 {
-	return ResolveCardMotionSpec(
-		g_Config.m_QmUiMotionLevel,
-		g_Config.m_QmUiListEntryAnimations != 0,
-		g_Config.m_QmUiCardHeightAnimations != 0,
-		g_Config.m_QmUiCardReflowAnimations != 0,
-		g_Config.m_QmExtraAnimations != 0);
+	// 四类卡片动画不再单独配置：动效强度是唯一开关，四档全部跟随它。
+	// 拆成多个开关后，同一个界面会出现「卡片高度动画开着、入场动画关着」的半套效果。
+	const bool AnimateCards = g_Config.m_QmUiMotionLevel > 0;
+	return ResolveCardMotionSpec(g_Config.m_QmUiMotionLevel, AnimateCards, AnimateCards, AnimateCards, AnimateCards);
 }
 
 SSettingsCardDeckVisualOptions CMenus::SettingsCardDeckVisualOptions() const
@@ -1451,7 +1449,7 @@ int CMenus::DoButton_MenuTabInternal(CButtonContainer *pButtonContainer, const c
 		if(pActiveColor)
 			ColorMenuTab = *pActiveColor;
 		else
-			ColorMenuTab = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(0.42f);
+			ColorMenuTab = ResolveConfiguredAccentColor().WithAlpha(0.42f);
 
 		DrawRoundedSurface(Ui(), *pRect, ColorMenuTab, ColorRGBA(), EdgeRounding, 0.0f, Corners);
 	}
@@ -1463,7 +1461,7 @@ int CMenus::DoButton_MenuTabInternal(CButtonContainer *pButtonContainer, const c
 			if(pHoverColor)
 				HoverColorMenuTab = *pHoverColor;
 			else
-				HoverColorMenuTab = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(0.20f);
+				HoverColorMenuTab = ResolveConfiguredAccentColor().WithAlpha(0.20f);
 
 			const ColorRGBA IdleColor = pDefaultColor != nullptr ? *pDefaultColor : ms_ColorTabbarInactive;
 			const ColorRGBA AnimatedColor(
@@ -2979,21 +2977,16 @@ void CMenus::RenderStatistics(CUIRect MainView)
 
 	// 外间距和页签条直接取收藏地图页那套工作区度量：页签宽度、离顶部导航的距离、
 	// 与下方内容的间距都和其它页签页一致，卡片也铺到同一条内容线上。
+	// 外缩并入 MainView 的全局安全区（与服务器列表面板同一条基线），不再各页自缩一圈。
 	const QmMapHistoryUi::SWorkspaceMetrics StatisticsWorkspace = QmMapHistoryUi::WorkspaceMetrics(MainView.h);
 	CUIRect Window = MainView;
-	// 手机端工作区不再水平内缩：MainView 已对齐设置页壳层，额外缩进会让统计页
-	// 比导航栏窄一圈。只保留上下留白，左右与其它菜单页同线。
-	if(QmUiMobilePlatform())
-		Window.HMargin(StatisticsWorkspace.m_OuterMargin, &Window);
-	else
-		Window.Margin(StatisticsWorkspace.m_OuterMargin, &Window);
 
 	// 与收藏地图页共用的工作区页签：贴在内容顶端、离顶部导航和其它页面同一条基线，
 	// 且不随统计内容滚动；统计数据是第 4 个页签，点其它页签直接跳回收藏地图。
 	{
 		CUIRect WorkspaceTabs = Window;
 		WorkspaceTabs.h = StatisticsWorkspace.m_TabHeight;
-		const int PickedWorkspaceTab = DoMapWorkspaceTabs(WorkspaceTabs, StatisticsWorkspace.m_TabHeight * 0.20f, 3);
+		const int PickedWorkspaceTab = DoMapWorkspaceTabs(WorkspaceTabs, StatisticsWorkspace.m_TabHeight * 0.20f, 3, ui_token::settings::TAB_FONT_SIZE);
 		if(PickedWorkspaceTab >= 0 && PickedWorkspaceTab < 3)
 			SetMenuPage(PAGE_FAVORITE_MAPS);
 		Window.HSplitTop(StatisticsWorkspace.m_TabHeight + StatisticsWorkspace.m_SectionGap, nullptr, &Window);
@@ -3396,17 +3389,19 @@ void CMenus::RenderStatistics(CUIRect MainView)
 	ActionTop.h = ActionMiddle.h = ActionBottom.h = ActionButtonHeight;
 	ActionMiddle.y = ActionColumn.y + (ActionColumn.h - ActionButtonHeight) * 0.5f;
 	ActionBottom.y = ActionColumn.y + ActionColumn.h - ActionButtonHeight;
-	// 三枚操作按钮直接走菜单通用按钮面（DoButton_Menu + BASE 圆角），
-	// 和页面底部链接按钮、设置页 Reset 同一套底色/描边/选中态，不再自绘胶囊。
+	// 三枚操作按钮直接走菜单通用按钮面（DoButton_Menu + 胶囊端头），
+	// 和页面底部链接按钮同一套底色/描边/选中态，不再自绘。
+	// 统计页整页的可点元素（操作按钮、概览行、表格悬浮行）统一为胶囊：这一页
+	// 行高固定且都远宽于高，圆角矩形会和胶囊圆环/胶囊链接按钮混在一条竖线上。
 	const char *pRefreshStatsLabel = StatisticsFetching ? Localize("Syncing remote stats") : (StatisticsFailed ? Localize("Retry remote stats") : Localize("Sync remote stats"));
 	static CButtonContainer s_StatisticsRefreshButton;
-	if(DoButton_Menu(&s_StatisticsRefreshButton, pRefreshStatsLabel, 0, &ActionTop, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::BASE, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, 12.0f))
+	if(DoButton_Menu(&s_StatisticsRefreshButton, pRefreshStatsLabel, 0, &ActionTop, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::PILL, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, 12.0f))
 		GameClient()->m_QmClient.RefreshQmClientStatistics();
 	static CButtonContainer s_StatisticsUseCurrentNameButton;
-	if(DoButton_Menu(&s_StatisticsUseCurrentNameButton, Localize("Use current name"), 0, &ActionMiddle, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::BASE, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, 12.0f))
+	if(DoButton_Menu(&s_StatisticsUseCurrentNameButton, Localize("Use current name"), 0, &ActionMiddle, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::PILL, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, 12.0f))
 		GameClient()->m_QmClient.UseCurrentQmDdnetPlayerName();
 	static CButtonContainer s_TotalHoursButton;
-	if(DoButton_Menu(&s_TotalHoursButton, Localize("Total hours"), s_ShowTotalHours ? 1 : 0, &ActionBottom, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::BASE, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, 12.0f))
+	if(DoButton_Menu(&s_TotalHoursButton, Localize("Total hours"), s_ShowTotalHours ? 1 : 0, &ActionBottom, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::PILL, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, 12.0f))
 		s_ShowTotalHours = !s_ShowTotalHours;
 
 	const float ChartRadius = std::clamp(minimum(BodyMain.h * 0.40f, BodyMain.w * 0.24f), 44.0f, 92.0f);
@@ -3859,9 +3854,10 @@ void CMenus::RenderStatistics(CUIRect MainView)
 			CUIRect Highlight = Row;
 			Highlight.x -= 8.0f;
 			Highlight.w = maximum(0.0f, TableContentRight + 8.0f - Highlight.x);
-			Highlight.y += 1.0f;
-			Highlight.h -= 2.0f;
-			Highlight.Draw(Ui()->QmControlTheme().m_Selected, IGraphics::CORNER_ALL, ui_token::radius::SMALL_MENU);
+			// 上下各让出一档行距：胶囊高度小于行高，文字到胶囊边才有余量。
+			Highlight.y += ui_token::list::ROW_HIGHLIGHT_INSET_Y;
+			Highlight.h = maximum(0.0f, Highlight.h - ui_token::list::ROW_HIGHLIGHT_INSET_Y * 2.0f);
+			Highlight.Draw(Ui()->QmControlTheme().m_Selected, IGraphics::CORNER_ALL, ui_token::radius::PILL);
 		}
 		const ColorRGBA Color = aModeColors[Index % std::size(aModeColors)];
 		CUIRect Dot, Name, Maps, Duration, Score = CUIRect();
@@ -3921,7 +3917,7 @@ void CMenus::RenderStatistics(CUIRect MainView)
 	auto RenderInfoRow = [this](CUIRect &View, const char *pLabel, const char *pValue) {
 		CUIRect Row;
 		View.HSplitTop(24.0f, &Row, &View);
-		Row.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.04f), IGraphics::CORNER_ALL, ui_token::radius::BASE);
+		Row.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.04f), IGraphics::CORNER_ALL, ui_token::radius::PILL);
 		Row.VMargin(8.0f, &Row);
 
 		CUIRect Label, Value;
@@ -4060,11 +4056,11 @@ void CMenus::RenderStatistics(CUIRect MainView)
 	str_copy(aDdstatsButtonText, Localize("ddstats.tw ID stats"), sizeof(aDdstatsButtonText));
 	str_copy(aDdnetButtonText, Localize("DDNet.org map stats"), sizeof(aDdnetButtonText));
 	const bool HasPlayerName = pPlayerName && pPlayerName[0] != '\0';
-	if(DoButton_Menu(&s_DdstatsLinkButton, aDdstatsButtonText, 0, &DdstatsButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::BASE, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, HasPlayerName ? 0.5f : 0.2f), nullptr, 12.0f) && HasPlayerName)
+	if(DoButton_Menu(&s_DdstatsLinkButton, aDdstatsButtonText, 0, &DdstatsButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::PILL, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, HasPlayerName ? 0.5f : 0.2f), nullptr, 12.0f) && HasPlayerName)
 	{
 		Client()->ViewLink(aDdstatsUrl);
 	}
-	if(DoButton_Menu(&s_DdnetLinkButton, aDdnetButtonText, 0, &DdnetButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::BASE, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, HasPlayerName ? 0.5f : 0.2f), nullptr, 12.0f) && HasPlayerName)
+	if(DoButton_Menu(&s_DdnetLinkButton, aDdnetButtonText, 0, &DdnetButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::PILL, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, HasPlayerName ? 0.5f : 0.2f), nullptr, 12.0f) && HasPlayerName)
 	{
 		Client()->ViewLink(aDdnetUrl);
 	}
@@ -6424,7 +6420,7 @@ void CMenus::FinishSettingsScrollRegion(CScrollRegion &ScrollRegion, SSettingsSc
 CMenus::SQmSettingsCardStyle CMenus::QmSettingsCardStyle(float UiScale) const
 {
 	SQmSettingsCardStyle Style;
-	const SUiTheme Theme = ResolveUiTheme(ColorHSLA(g_Config.m_QmUiColor), g_Config.m_QmUiOpacity / 100.0f, ColorHSLA(g_Config.m_QmUiFocusColor), ColorHSLA(g_Config.m_QmUiAccentColor).WithAlpha(g_Config.m_QmUiAccentOpacity / 100.0f), ColorHSLA(g_Config.m_QmUiSelectedColor));
+	const SUiTheme Theme = ResolveUiTheme(ColorHSLA(g_Config.m_QmUiColor), g_Config.m_QmUiOpacity / 100.0f, ColorHSLA(g_Config.m_QmUiAccentColor).WithAlpha(g_Config.m_QmUiAccentOpacity / 100.0f));
 	const ui_widget::SCardProps CardProps = ui_widget::QmClientCardProps(UiScale, &Theme);
 	const SQmScrollContainerStyle ScrollStyle = QmScrollContainerStyleForSize(EQmScrollSize::MEDIUM, 1.0f);
 	Style.m_Padding = CardProps.m_Padding;
@@ -6578,7 +6574,16 @@ bool CMenus::SetSettingsPageFromCardTab(const char *pTab)
 		m_QmClientSettingsTab = QMCLIENT_SETTINGS_TAB_CONFIG;
 	}
 	else if(str_comp(pTab, "graphics") == 0)
+	{
 		g_Config.m_UiSettingsPage = SETTINGS_GRAPHICS;
+		g_Config.m_QmGraphicsTab = GRAPHICS_TAB_DISPLAY;
+	}
+	else if(str_comp(pTab, "graphics-visual") == 0)
+	{
+		// 图像页「视觉效果」子页签：拆出来的两张卡在全局搜索里仍要能直达。
+		g_Config.m_UiSettingsPage = SETTINGS_GRAPHICS;
+		g_Config.m_QmGraphicsTab = GRAPHICS_TAB_VISUAL;
+	}
 	else if(str_comp(pTab, "sound") == 0)
 		g_Config.m_UiSettingsPage = SETTINGS_SOUND;
 	else if(str_comp(pTab, "ddnet") == 0)
@@ -6862,7 +6867,8 @@ CMenus::SMenuTextStyleKey CMenus::BuildSettingsShellTitleTextStyle(const CUIRect
 	Props.m_MaxWidth = Label.w;
 	if(pOutLabel != nullptr)
 		*pOutLabel = Label;
-	return BuildMenuTextStyleKey(&Label, 16.0f, TEXTALIGN_MC, Props);
+	// 标题字号取页面标题档：写死 16 会让「设置」与正文一样细（用户实机反馈的观感问题）。
+	return BuildMenuTextStyleKey(&Label, ui_token::page_title::FONT_SIZE, TEXTALIGN_MC, Props);
 }
 
 CMenus::SMenuTextPlanItem CMenus::AddStableTextCheckbox(int Page, int Tab, int Subtab, const char *pTextId, const char *pText, const CUIRect &Rect, const char *pSourceTag) const

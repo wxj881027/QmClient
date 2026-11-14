@@ -348,8 +348,9 @@ TEST(SettingsCardDeck, ColumnProjectionExcludesInactiveDefinitions)
 {
 	qm_card_order::CModel Model;
 	Model.LoadMerged("", qm_card_registry::BuildDefaultEntries());
+	// 两张仍在「显示选项」页的卡片：图标与动效已迁到「视觉效果」，这里改用显示与显示模式。
 	const std::vector<int> vActiveStateIndices{
-		Model.StateIndexForStableId("deck:graphics-visual"),
+		Model.StateIndexForStableId("deck:graphics-display"),
 		Model.StateIndexForStableId("deck:graphics-modes"),
 	};
 	const auto aColumns = BuildSettingsCardDeckColumnOrder(Model, "graphics", vActiveStateIndices);
@@ -456,36 +457,36 @@ TEST(SettingsCardDeck, ColumnProjectionCacheRebuildsOnlyForLayoutOrActiveDefinit
 {
 	qm_card_order::CModel Model;
 	Model.LoadMerged("", qm_card_registry::BuildDefaultEntries());
-	const int Visual = Model.StateIndexForStableId("deck:graphics-visual");
+	const int Display = Model.StateIndexForStableId("deck:graphics-display");
 	const int Modes = Model.StateIndexForStableId("deck:graphics-modes");
-	const std::vector<int> vActiveStateIndices{Visual, Modes};
+	const std::vector<int> vActiveStateIndices{Display, Modes};
 	settings_card_deck_logic::CProjectionCache Cache;
 
 	// 列号由默认布局（对称瀑布）决定，两张卡也可能落在同一列，所以这里只锁
 	// 「每张卡在自己的默认列里且只出现一次」，不把具体列或同列/分列写死。
-	const int VisualColumn = Model.Entry(Visual).m_Column;
+	const int DisplayColumn = Model.Entry(Display).m_Column;
 	const int ModesColumn = Model.Entry(Modes).m_Column;
 	const auto CountIn = [](const std::vector<int> &vRows, const int Id) {
 		return (int)std::count(vRows.begin(), vRows.end(), Id);
 	};
 	const auto &aInitialColumns = Cache.Resolve(Model, "graphics", vActiveStateIndices);
 	EXPECT_EQ(Cache.RebuildCount(), 1u);
-	EXPECT_EQ(CountIn(aInitialColumns[VisualColumn], Visual), 1);
+	EXPECT_EQ(CountIn(aInitialColumns[DisplayColumn], Display), 1);
 	EXPECT_EQ(CountIn(aInitialColumns[ModesColumn], Modes), 1);
 
 	Cache.Resolve(Model, "graphics", vActiveStateIndices);
 	EXPECT_EQ(Cache.RebuildCount(), 1u);
 
-	const std::vector<int> vVisualOnly{Visual};
-	const auto &aFilteredColumns = Cache.Resolve(Model, "graphics", vVisualOnly);
+	const std::vector<int> vDisplayOnly{Display};
+	const auto &aFilteredColumns = Cache.Resolve(Model, "graphics", vDisplayOnly);
 	EXPECT_EQ(Cache.RebuildCount(), 2u);
 	EXPECT_EQ(CountIn(aFilteredColumns[ModesColumn], Modes), 0);
 
 	// 换到另一列的首位：该列按读序把这张卡排在最前，且这次落位不是空操作。
-	const int OtherColumn = VisualColumn == 1 ? 2 : 1;
-	ASSERT_TRUE(CommitSettingsCardDeckDrop(Model, "graphics", "deck:graphics-visual", OtherColumn, 0));
+	const int OtherColumn = DisplayColumn == 1 ? 2 : 1;
+	ASSERT_TRUE(CommitSettingsCardDeckDrop(Model, "graphics", "deck:graphics-display", OtherColumn, 0));
 	const auto &aMovedColumns = Cache.Resolve(Model, "graphics", vActiveStateIndices);
 	EXPECT_EQ(Cache.RebuildCount(), 3u);
 	ASSERT_FALSE(aMovedColumns[OtherColumn].empty());
-	EXPECT_EQ(aMovedColumns[OtherColumn].front(), Visual);
+	EXPECT_EQ(aMovedColumns[OtherColumn].front(), Display);
 }

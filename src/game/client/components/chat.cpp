@@ -3531,7 +3531,7 @@ void CChat::OnRender()
 		m_Show ||
 		(InputActive && g_Config.m_ClShowChat == 1) ||
 		g_Config.m_ClShowChat == 2;
-	const bool ExtraAnimations = g_Config.m_QmExtraAnimations != 0 && GameClient()->UiRuntimeV2()->Enabled();
+	const bool ExtraAnimations = g_Config.m_QmUiMotionLevel > 0 && GameClient()->UiRuntimeV2()->Enabled();
 	int64_t Now = time();
 	if(m_LastPresentationUpdateTime == 0 || Now < m_LastPresentationUpdateTime)
 		m_LastPresentationUpdateTime = Now;

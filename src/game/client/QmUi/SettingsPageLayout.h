@@ -1147,8 +1147,10 @@ inline SSettingsPageLayoutFrame ResolveSettingsPageLayoutForScrollViewport(const
 
 // 设置页壳层（页签条 + 内容面板）的宽度公式同时被其它菜单页用来对齐左右边界，
 // 两处必须共用同一份常量，避免某天调整设置页宽度后其它页面重新错位。
-inline constexpr float SETTINGS_SHELL_GAP = 10.0f;
-inline constexpr float SETTINGS_PANEL_MARGIN = 10.0f;
+// 设置页壳层的两栏缝隙与面板内边距取全局面板档：与服务器列表面板同一条基准，
+// 各页面之间不再各写 8/10/12。
+inline constexpr float SETTINGS_SHELL_GAP = ui_token::panel::GAP;
+inline constexpr float SETTINGS_PANEL_MARGIN = ui_token::panel::PADDING;
 
 inline float ResolveSettingsShellTabBarWidth(float AvailableWidth)
 {

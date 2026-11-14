@@ -681,7 +681,39 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 
 void CMenus::RenderSettingsGraphics(CUIRect MainView)
 {
-	RenderSettingsCatalogPage(MainView, "graphics");
+	// 图像页子页签：显示类卡片留在第一页，卡片自身的形状/外观与全局主题收进「视觉效果」。
+	// 写法与外观页、DDNet 页同源：ResolveSettingsSubTabLayout 让出页签高度，
+	// 胶囊滑块由 ui_widget::CapsuleTabBar 画、文字由 DoButton_MenuTab 画。
+	const SSettingsSubTabLayoutFrame GraphicsSubTabs = ResolveSettingsSubTabLayout(MainView, ResolveSettingsContentMetrics(MainView.w).m_UiScale);
+	MainView = GraphicsSubTabs.m_ContentRect;
+	const CUIRect TabBar = GraphicsSubTabs.m_TabBarRect;
+	static CButtonContainer s_aGraphicsPageTabs[NUMBER_OF_GRAPHICS_TABS] = {};
+	static CQmLocalizedLabelCache s_GraphicsTabNames;
+	s_GraphicsTabNames.Refresh(g_Config.m_ClLanguagefile,
+		{
+			// "Display" 是字体名（展示体）的既有 key，页签必须换个说法，
+			// 否则中文界面下这个页签会显示字体名。
+			Localizable("Display options"),
+			Localizable("Visual effects"),
+		});
+	const float TabWidth = TabBar.w / (float)NUMBER_OF_GRAPHICS_TABS;
+	CUIRect aGraphicsTabSlots[NUMBER_OF_GRAPHICS_TABS];
+	CUIRect GraphicsTabsRemainder = TabBar;
+	for(int Tab = GRAPHICS_TAB_DISPLAY; Tab < NUMBER_OF_GRAPHICS_TABS; ++Tab)
+		GraphicsTabsRemainder.VSplitLeft(TabWidth, &aGraphicsTabSlots[Tab], &GraphicsTabsRemainder);
+	const int ActiveGraphicsTab = std::clamp(g_Config.m_QmGraphicsTab, (int)GRAPHICS_TAB_DISPLAY, (int)NUMBER_OF_GRAPHICS_TABS - 1);
+	if(g_Config.m_QmGraphicsTab != ActiveGraphicsTab)
+		g_Config.m_QmGraphicsTab = ActiveGraphicsTab;
+	const IUiContext GraphicsTabBarCtx = TabBarUiContext();
+	const int SelectedGraphicsTab = ui_widget::CapsuleTabBar(GraphicsTabBarCtx, MakeUiScopeHash("settings_graphics_tabs_capsule"), aGraphicsTabSlots, NUMBER_OF_GRAPHICS_TABS, ActiveGraphicsTab, SettingsCapsuleTabBarStyle());
+	// 预暖/测量趟只画不提交：页签切换必须由真实输入驱动。
+	const int EffectiveGraphicsTab = SelectedGraphicsTab >= 0 && SelectedGraphicsTab < NUMBER_OF_GRAPHICS_TABS ? SelectedGraphicsTab : ActiveGraphicsTab;
+	if(!Ui()->RenderOnly())
+		g_Config.m_QmGraphicsTab = EffectiveGraphicsTab;
+	for(int Tab = GRAPHICS_TAB_DISPLAY; Tab < NUMBER_OF_GRAPHICS_TABS; ++Tab)
+		DoButton_MenuTab(&s_aGraphicsPageTabs[Tab], s_GraphicsTabNames.Get(Tab), EffectiveGraphicsTab == Tab, &aGraphicsTabSlots[Tab], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, ui_token::settings::TAB_FONT_SIZE, true);
+	// 子页签直接对应卡片目录页 key：卡片归属页由注册表决定，这里只决定渲染哪一页。
+	RenderSettingsCatalogPage(MainView, EffectiveGraphicsTab == GRAPHICS_TAB_VISUAL ? "graphics-visual" : "graphics");
 }
 
 void CMenus::RenderSettingsSound(CUIRect MainView)
@@ -899,7 +931,7 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMet
 	}
 	const int64_t EntryNow = time_get();
 	const int64_t EntryFreq = maximum<int64_t>(1, time_freq());
-	const bool EntryEnabled = g_Config.m_QmUiListEntryAnimations != 0 && g_Config.m_QmUiMotionLevel > 0;
+	const bool EntryEnabled = g_Config.m_QmUiMotionLevel > 0;
 	const float EntryElapsed = s_EntryAnimation.Resolve(EntryNow, EntryFreq, EntryEnabled, g_Config.m_QmUiMotionLevel,
 		Ui()->MeasurementOnly() ? EQmListEntryRenderPass::MEASUREMENT : EQmListEntryRenderPass::INTERACTIVE);
 	const bool ScrollAnimating = gs_LanguageScrollRegion.Animating();
@@ -947,7 +979,7 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMet
 			s_HoverFeedback.Observe((int)i);
 		const float HoverAlpha = s_HoverFeedback.Alpha((int)i);
 		// 整行胶囊：圆角取自行高，宽高与绘制都走公共 DrawRoundedSurface。
-		// 悬浮与选中同一份强调色（QmControlTheme().m_Selected = qm_ui_selected_color，
+		// 悬浮与选中同一份强调色（QmControlTheme().m_Selected 由 qm_ui_accent_color 派生，
 		// 由强调色派生、alpha 0.22），都按 token 原色整行填充、不加描边；悬浮先画、
 		// 选中后叠。白色 token（LIST_ITEM_HOVER）不再参与行反馈——实机反馈「悬浮颜色
 		// 要跟强调色走，别硬编码成白的」。
@@ -1073,9 +1105,21 @@ void CMenus::RenderSettings(CUIRect MainView)
 	const float PreviousDropDownFontSize = Ui()->DropDownFontSize();
 	Ui()->SetDropDownFontSize(m_SettingsContentMetrics.m_BodySize);
 
-	TabBar.Margin(10.0f, &TabBar);
-	TabBar.HSplitTop(38.0f, &Button, &TabBar);
-	DoSettingsMenuLabel(SETTINGS_GENERAL, -1, -1, "settings-shell-title", &Button, Localize("Settings"), ui_token::font::HEADLINE_LG, TEXTALIGN_MC);
+	TabBar.Margin(ui_token::panel::PADDING, &TabBar);
+	TabBar.HSplitTop(ui_token::page_title::HEIGHT, &Button, &TabBar);
+	// 页面主标题：字号取 ui_token::page_title（标题样式函数也读同一档），
+	// 齿轮图标与文字整体居中，图标紧贴文字左侧，长标题不会把图标挤出面板。
+	{
+		const float TitleTextWidth = TextRender()->TextWidth(ui_token::page_title::FONT_SIZE, Localize("Settings"));
+		const float TitleIconSize = ui_token::page_title::ICON_SIZE;
+		CUIRect TitleIconRect{
+			Button.Center().x - (TitleTextWidth + ui_token::page_title::ICON_GAP) * 0.5f - TitleIconSize,
+			Button.y + (Button.h - TitleIconSize) * 0.5f,
+			TitleIconSize,
+			TitleIconSize};
+		Ui()->DoLabel_QmIcon(&TitleIconRect, EQmIcon::GEAR, FontIcons::FONT_ICON_GEAR, TitleIconSize, TEXTALIGN_MC);
+	}
+	DoSettingsMenuLabel(SETTINGS_GENERAL, -1, -1, "settings-shell-title", &Button, Localize("Settings"), ui_token::page_title::FONT_SIZE, TEXTALIGN_MC);
 	if(SettingsPerfEnabled)
 	{
 		char aSettingsPerfTab[16];
@@ -1116,8 +1160,8 @@ void CMenus::RenderSettings(CUIRect MainView)
 			SETTINGS_CONTRIBUTORS,
 		};
 		// 竖排页签（设置页左栏）保持原来的分块选中/悬停底色，只换胶囊端头形状，不加滑块。
-		const ColorRGBA SettingsNavigationSelected = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(0.42f);
-		const ColorRGBA SettingsNavigationHover = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(0.20f);
+		const ColorRGBA SettingsNavigationSelected = ResolveConfiguredAccentColor().WithAlpha(0.42f);
+		const ColorRGBA SettingsNavigationHover = ResolveConfiguredAccentColor().WithAlpha(0.20f);
 		std::array<CUIRect, SETTINGS_LENGTH> aSlots;
 		std::array<int, SETTINGS_LENGTH> aPages;
 		// 手机端虚拟高度更小（UI 缩放更大），固定的页签高度会把右侧目录撑出面板。

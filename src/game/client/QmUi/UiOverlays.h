@@ -15,8 +15,11 @@
 #include <engine/textrender.h>
 
 #include <game/client/components/tooltips.h>
+#include <game/client/qm_icon.h>
 #include <game/client/ui.h>
 #include <game/client/ui_rect.h>
+
+#include <optional>
 
 namespace ui_widget
 {
@@ -27,6 +30,40 @@ namespace ui_widget
 	{
 		if(Ctx.m_pTooltips != nullptr && pText != nullptr)
 			Ctx.m_pTooltips->DoToolTip(pId, &Anchor, pText, WidthHint);
+	}
+
+	// 页面主标题：可选前置图标的单行标题。字号、图标尺寸、图标间距统一取
+	// ui_token::page_title；设置页顶部标题与工作区标题都走本入口，不再各自写字号。
+	// 图标与文字作为一个整体，按 Align 左/中/右对齐；文字超宽按省略号收尾。
+	inline void PageTitle(const IUiContext &Ctx, const CUIRect &Rect, const char *pLabel,
+		std::optional<EQmIcon> Icon = std::nullopt, const char *pFallbackIcon = nullptr, int Align = TEXTALIGN_ML)
+	{
+		if(Ctx.m_pUi == nullptr || pLabel == nullptr)
+			return;
+		ITextRender *pTextRender = Ctx.m_pUi->TextRender();
+		const float FontSize = ui_token::page_title::FONT_SIZE;
+		const bool HasIcon = Icon.has_value() && pFallbackIcon != nullptr && pFallbackIcon[0] != '\0';
+		const float IconSize = HasIcon ? ui_token::page_title::ICON_SIZE : 0.0f;
+		const float Gap = HasIcon ? ui_token::page_title::ICON_GAP : 0.0f;
+		const float AvailableText = std::max(0.0f, Rect.w - IconSize - Gap);
+		const float TextWidth = std::min(pTextRender->TextWidth(FontSize, pLabel), AvailableText);
+		const float GroupWidth = IconSize + Gap + TextWidth;
+		float GroupX = Rect.x;
+		if(Align == TEXTALIGN_MC)
+			GroupX = Rect.x + (Rect.w - GroupWidth) * 0.5f;
+		else if(Align == TEXTALIGN_MR)
+			GroupX = Rect.x + Rect.w - GroupWidth;
+		if(HasIcon)
+		{
+			CUIRect IconRect{GroupX, Rect.y + (Rect.h - IconSize) * 0.5f, IconSize, IconSize};
+			Ctx.m_pUi->DoLabel_QmIcon(&IconRect, *Icon, pFallbackIcon, IconSize, TEXTALIGN_MC);
+		}
+		CUIRect LabelRect{GroupX + IconSize + Gap, Rect.y, TextWidth, Rect.h};
+		SLabelProperties Props;
+		Props.m_MaxWidth = LabelRect.w;
+		Props.m_EllipsisAtEnd = true;
+		Props.SetColor(ui_token::color::TEXT_PRIMARY);
+		Ctx.m_pUi->DoLabel(&LabelRect, pLabel, FontSize, Align, Props);
 	}
 
 	struct SAnimatePresenceResult

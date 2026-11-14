@@ -346,7 +346,7 @@ void CEmoticon::OnRender()
 		}
 	}
 
-	const bool ExtraAnimations = g_Config.m_QmExtraAnimations != 0 && GameClient()->UiRuntimeV2()->Enabled();
+	const bool ExtraAnimations = g_Config.m_QmUiMotionLevel > 0 && GameClient()->UiRuntimeV2()->Enabled();
 	float PresentationAlpha = m_Active ? 1.0f : 0.0f;
 	float PresentationScale = m_Active ? 1.0f : 0.88f;
 	if(ExtraAnimations)

@@ -349,12 +349,6 @@
 ?!Stuck keys!?
 == ?!누른 키!?
 
-Enable focus glow
-== 포커스 광채 사용
-
-Show an accent glow around the focused input field
-== 포커스된 입력란에 강조색 광채를 표시
-
 []
 [%s] %s (Map: %s, Time: %s)
 == [%s] %s (맵: %s, 시간: %s)
@@ -620,6 +614,9 @@ Add one
 Add one shortcut per message; it is used when the target is on the list.
 == 메시지마다 빠른 채팅을 하나씩 추가하며, 대상이 목록에 있을 때 사용됩니다.
 
+Add options below
+== 아래에서 옵션을 추가하세요
+
 Add or edit entries, then use the bind in chat to send the text.
 == 항목을 추가하거나 편집한 뒤 채팅에서 바인드를 써서 전송하세요.
 
@@ -718,9 +715,6 @@ Adjust mouse sensitivity and cursor limits
 
 Adjust nameplate options and compare the preview.
 == 이름표 옵션을 조정하고 미리보기와 비교하세요.
-
-Adjust one value at a time; corners and segments are drawn per frame, so large segment counts cost GPU time.
-== 한 번에 값 하나씩 조정하세요. 모서리 둥글림과 세그먼트는 매 프레임 그려지므로 세그먼트 수가 많으면 GPU 시간을 사용합니다.
 
 Adjust opacity of entity layers
 == 엔티티 레이어 불투명도 조정
@@ -946,21 +940,6 @@ Angry
 
 Angular gradient
 == 각도 그라데이션
-
-Animate chat box, emote selector, scoreboard, and spectate selection
-== 채팅창, 이모티콘 선택기, 점수판 및 관전 선택에 애니메이션 적용
-
-Animate lists when entering a page
-== 페이지 진입 시 목록 애니메이션 재생
-
-Animate settings card expand and collapse height changes
-== 설정 카드 확장 및 접기 높이 변경에 애니메이션 적용
-
-Animate settings card lists when entering a page
-== 페이지 진입 시 설정 카드 목록 애니메이션 적용
-
-Animate settings card reorder and layout reflow
-== 설정 카드 정렬 및 레이아웃 재배치에 애니메이션 적용
 
 Animated title style id
 == 칭호 애니메이션 스타일 ID
@@ -1706,6 +1685,9 @@ Background stroke color
 Background stroke width
 == 배경 스트로크 두께
 
+Background, border and title effects of the settings cards
+== 설정 카드의 배경, 테두리, 제목 효과
+
 Baidu Translate
 == Baidu 번역
 
@@ -1979,12 +1961,6 @@ Button - Disabled
 Button - Enabled
 == 버튼 - 활성화
 
-Button background color
-== 버튼 배경색
-
-Button background opacity percentage
-== 버튼 배경색 — 불투명도 백분율
-
 Button browser
 == 버튼 브라우저
 
@@ -2115,7 +2091,7 @@ Capsule ends
 == 캡슐 끝
 
 Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
-== Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
+== 캡슐 끝: 0 = 일반 원호, 1 = 부드러운 끝, 2 = Apple 연속 곡률
 
 Capture the flag
 == 깃발 뺏기 (CTF)
@@ -2123,20 +2099,17 @@ Capture the flag
 Capture-the-flag event cue, used by CTF servers rather than ordinary DDNet racing.
 == 깃발 뺏기 이벤트 알림음으로, 일반 DDNet 레이스가 아닌 CTF 서버에서 사용됩니다.
 
+Card effects
+== 카드 효과
+
 Card guide
 == 설정 카드 설명
-
-Card height animation
-== 설정 카드 높이 애니메이션
-
-Card list entry animation
-== 설정 카드 목록 진입 애니메이션
 
 Card opacity
 == 카드 불투명도
 
-Card reflow animation
-== 설정 카드 재배치 애니메이션
+Card shape is shared with the rest of the interface and lives in "Interface theme".
+== 카드 모양은 인터페이스 전체와 공유되며 "인터페이스 테마"에 있습니다.
 
 Category
 == 카테고리
@@ -2417,8 +2390,8 @@ Choose export name first.
 Choose Logo (PNG / WebP)
 == 로고 선택 (PNG / WebP)
 
-Choose off, simple or full; the individual switches below only apply to full.
-== 끄기, 간단, 전체 중에서 선택하세요. 아래의 개별 스위치는 전체일 때만 적용됩니다.
+Choose off, reduced or full; this single switch drives every animation.
+== 끔, 간소, 전체 중에서 고르세요. 모든 애니메이션이 이 하나의 스위치로 동작합니다.
 
 Choose the language used by the client
 == Choose the language used by the client
@@ -2575,6 +2548,12 @@ Click a part on the right to edit its color, blend mode and strength.
 
 Click a row such as "HDF" or "Left jump", press the key you want, and use the trash icon to remove a bind.
 == HDF나 왼쪽 점프 같은 행을 클릭하고 원하는 키를 누르면 지정됩니다. 옆의 휴지통 아이콘을 누르면 그 지정이 해제됩니다.
+
+Click a slice in the preview to change that option's color; options only exist within "Detection distance", so keep the wheel short.
+== 미리보기의 구역을 클릭하면 해당 항목의 색상을 바꿀 수 있습니다. 항목은 "감지 거리" 안에서만 유효하므로 메뉴를 짧게 유지하세요.
+
+Click a slice to set color
+== 구역을 클릭해 색상 설정
 
 Click again to find the next location.
 == 다음 위치를 찾으려면 다시 클릭하세요.
@@ -2763,7 +2742,7 @@ Colors of the translate button in the chat input and of the language menu that b
 == 채팅 입력창의 번역 버튼과 그 버튼으로 여는 언어 메뉴의 색상입니다.
 
 Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
-== Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
+== 스코어보드 행에 색을 지정합니다: 인증된 플레이어, 같은 클랜 플레이어, 친구, 친구 목록의 클랜 구성원.
 
 Colors too close to the map background are hard to read while moving.
 == 맵 배경과 너무 비슷한 색은 움직이는 동안 보기 어렵습니다.
@@ -2947,6 +2926,9 @@ Configure HUD island appearance
 
 Configure input helpers and cursor behavior
 == Configure input helpers and cursor behavior
+
+Configure interface shape, theme, icons and animations
+== 인터페이스 모양, 테마, 아이콘, 애니메이션 설정
 
 Configure keyboard, mouse, wheel, and modifier bindings
 == 키보드, 마우스, 휠 및 보조 키 지정 설정
@@ -3176,6 +3158,12 @@ Continuous-curvature UI corners (0 = classic arc, 100 = strongest)
 Contributors
 == 기여자
 
+Control background color
+== 컨트롤 배경 색상
+
+Control background opacity percentage
+== 컨트롤 배경 불투명도 비율
+
 Control custom background drawing
 == Control custom background drawing
 
@@ -3215,11 +3203,14 @@ Controls
 Controls demo recording and playback behavior.
 == 데모 녹화와 재생 동작을 제어합니다.
 
-Controls how UI surfaces are drawn: card surface opacity, border width, corner rounding, segment count and the rainbow title effect.
-== UI 표면을 그리는 방식을 설정합니다. 카드 표면 불투명도, 테두리 너비, 모서리 둥글림, 세그먼트 수, 카드 제목 무지개 효과입니다.
+Controls how the settings cards themselves are drawn: card background, border and the rainbow title effect.
+== 설정 카드 자체의 그리기(배경, 테두리, 무지개 제목 효과)를 제어합니다.
 
 Controls laser shape, glow and animation.
 == 레이저의 형태, 발광, 애니메이션을 설정합니다.
+
+Controls the shape and colors shared by the whole interface: corner curve, capsule ends, surfaces, accent, control and popup backgrounds, text color mode and blur.
+== 인터페이스 전체가 공유하는 모양과 색상(모서리 곡선, 캡슐 끝, 표면, 강조색, 컨트롤과 팝업 배경, 텍스트 색상 모드, 흐림)을 제어합니다.
 
 Controls what appears next to other players' names, such as clan tags, friend marks and client identifiers.
 == 다른 플레이어 이름 옆에 표시할 항목(클랜 태그, 친구 표시, 클라이언트 식별자 등)을 제어합니다.
@@ -3681,7 +3672,7 @@ DDNet releases
 == DDNet 릴리스
 
 DDNet settings sub-tab: 0=general, 1=network compensation
-== DDNet settings sub-tab: 0=general, 1=network compensation
+== DDNet 설정 하위 탭: 0=일반, 1=네트워크 보상
 
 DDNet staff
 == DDNet 스태프
@@ -3786,7 +3777,7 @@ Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == 전용 WebSocket 주소 (비우면 wss://qmclient.icu/ws 사용)
 
 Deep freeze
-== Deep freeze
+== 깊은 동결
 
 Deep freeze opacity
 == 심층 빙결 불투명도
@@ -3795,10 +3786,10 @@ Deep freeze tile outline color
 == 깊은 프리즈 타일 외곽선 색상
 
 Deep freeze tile outline width
-== Deep freeze tile outline width
+== 깊은 동결 타일 외곽선 두께
 
 Deep unfreeze
-== Deep unfreeze
+== 깊은 해동
 
 Deep unfreeze opacity
 == 심층 빙결 해제 불투명도
@@ -3807,7 +3798,7 @@ Deep unfreeze tile outline color
 == 깊은 언프리즈 타일 외곽선 색상
 
 Deep unfreeze tile outline width
-== Deep unfreeze tile outline width
+== 깊은 해동 타일 외곽선 두께
 
 Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 == 딥플라이 모드 (0=일반, 1=DF, 2=HDF, 3=사용자 정의)
@@ -4115,6 +4106,9 @@ Display mode
 Display modes
 == 표시 모드
 
+Display options
+== 표시 옵션
+
 Display your race time
 == 레이스 시간 표시
 
@@ -4304,6 +4298,12 @@ Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use 
 Drag HUD modules with the left mouse button
 == 마우스 왼쪽 버튼으로 HUD 모듈 드래그
 
+Drag options here to hide them
+== 여기로 끌어 놓으면 숨겨집니다
+
+Drag options here to show them
+== 여기로 끌어 놓으면 표시됩니다
+
 Drag the selected watermark to move it. The original image is preserved.
 == 선택한 워터마크를 드래그하여 이동하세요. 원본 이미지는 유지됩니다.
 
@@ -4318,6 +4318,9 @@ Drag to pan, scroll to zoom
 
 Drag to reorder; right-click or use the gear to manage
 == 드래그하여 순서 변경. 마우스 오른쪽 버튼이나 톱니바퀴로 관리
+
+Drag to the other list to show or hide this option
+== 다른 목록으로 끌어 놓으면 표시 여부가 바뀝니다
 
 Dragger Inner Color
 == 드래거 내부 색상
@@ -4763,8 +4766,8 @@ Enable audio output and choose a device
 Enable backdrop blur
 == 배경 흐림 효과 사용
 
-Enable backdrop blur for translucent interface and selected HUD backgrounds
-== 반투명 인터페이스와 선택한 HUD 배경에 배경 흐림 효과 사용
+Enable backdrop blur for translucent interface and all HUD backgrounds
+== 반투명 인터페이스와 모든 HUD 배경에 배경 흐림 사용
 
 Enable background 3D particle flicker
 == 배경 3D 파티클 깜빡임 활성화
@@ -4876,6 +4879,9 @@ Enable fast map download
 
 Enable fat skin
 == 뚱뚱한 스킨 활성화
+
+Enable focus glow
+== 포커스 광채 사용
 
 Enable freeze call sound
 == 프리즈 콜 사운드 활성화
@@ -5405,14 +5411,8 @@ Expand
 Expand console
 == 콘솔 확장
 
-Expanded dropdown background color
-== 펼쳐진 목록 배경색
-
-Expanded dropdown background opacity percentage
-== 펼쳐진 목록 배경색 — 불투명도 백분율
-
 Expanded personalization sections (format: stableId=1;stableId2=0;)
-== Expanded personalization sections (format: stableId=1;stableId2=0;)
+== 펼쳐진 개별 조정 구역 (형식: stableId=1;stableId2=0;)
 
 Experimental
 == 실험적
@@ -5481,7 +5481,7 @@ Exporting chat images: %d
 == 채팅 이미지 내보내는 중: %d
 
 Expose IP to servers by default when adding a favorite (last choice on the server info page)
-== Expose IP to servers by default when adding a favorite (last choice on the server info page)
+== 즐겨찾기 추가 시 기본으로 서버에 IP를 공개합니다 (서버 정보 페이지의 마지막 선택 기억)
 
 Expose playback controls to the operating system
 == Expose playback controls to the operating system
@@ -6027,7 +6027,7 @@ Freeze tile outline color
 == 얼음 타일 외곽선 색상
 
 Freeze tile outline width
-== Freeze tile outline width
+== 동결 타일 외곽선 두께
 
 Frequently asked questions
 == 자주 묻는 질문
@@ -6125,8 +6125,8 @@ Full quality nameplate count
 Full width
 == 전체 너비
 
-Full: each enabled animation category uses its complete transition
-== 전체: 활성화된 각 애니메이션 범주에 전체 전환을 사용합니다
+Full: uses the complete transition everywhere
+== 전체: 모든 전환을 전체 길이로 사용
 
 Fullscreen
 == 전체 화면
@@ -6210,7 +6210,7 @@ General
 == 일반
 
 General DDNet gameplay display: showing other players and their shadow opacity, background quads and the default zoom.
-== General DDNet gameplay display: showing other players and their shadow opacity, background quads and the default zoom.
+== DDNet 일반 표시: 다른 플레이어와 그림자 불투명도, 배경 쿼드, 기본 확대/축소.
 
 Generated skin outline color
 == 생성된 외곽선 색상
@@ -6445,6 +6445,9 @@ Graphics mode
 
 Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
 == 그래픽 모드: -1 = 백엔드 설정 사용, 0 = 호환성, 1 = 성능(기본값)
+
+Graphics settings sub-tab: 0=display, 1=visual effects
+== 그래픽 설정 하위 탭: 0=표시, 1=시각 효과
 
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
 == 그래픽 추적 수준: 0 = 끄기, 1 = 주기적 요약, 2 = 요약 및 느린 프레임, 3 = 상세 백엔드 추적
@@ -6876,13 +6879,13 @@ Hook through teleporters (deprecated, use special entities instead)
 == 텔레포터를 통한 갈고리 (비권장, 대신 특수 엔티티 사용)
 
 Hookable tile outline color
-== Hookable tile outline color
+== 갈고리 가능 타일 외곽선 색상
 
 Hookable tile outline width
-== Hookable tile outline width
+== 갈고리 가능 타일 외곽선 두께
 
 Hookable tiles
-== Hookable tiles
+== 갈고리 가능 타일
 
 Hooking L/R: %.0f%%/%.0f%%
 == 갈고리 L/R: %.0f%%/%.0f%%
@@ -7115,6 +7118,9 @@ In DDNet, played when weapons are removed. Other modes may use it for armor pick
 In memory of me
 == 나를 기억하며
 
+In pie menu
+== 파이 메뉴에 있음
+
 In-game controller sensitivity
 == 게임 내 컨트롤러 감도
 
@@ -7256,12 +7262,6 @@ Ink: Paper Bloom
 Input
 == 입력
 
-Input background color
-== 입력란 배경색
-
-Input background opacity percentage
-== 입력란 배경색 — 불투명도 백분율
-
 Input device
 == 입력 장치
 
@@ -7330,6 +7330,9 @@ Interface surface
 
 Interface surface color
 == 인터페이스 표면 색상
+
+Interface theme
+== 인터페이스 테마
 
 Interface transparency
 == 일반 UI 투명도
@@ -7581,7 +7584,7 @@ Keep the text light on a dark background; press "Reset tooltip appearance" to re
 == 어두운 배경에는 밝은 글자가 읽기 좋습니다. 기본 모양으로 되돌리려면 도움말 모양 초기화를 누르세요.
 
 Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
-== Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
+== 팀 색상과 구분하세요. 그렇지 않으면 같은 클랜 이름이 팀 패널에 묻혀 읽기 어려워집니다.
 
 Keep unsent message on chat close
 == 채팅 닫을 때 전송되지 않은 내용 유지
@@ -7624,9 +7627,6 @@ Key Sticking: On
 
 Key Sticking: Reset Self
 == 키 고정: 본체 초기화
-
-Keyboard focus ring color
-== 키보드 포커스 링 색상
 
 Keyboard size
 == 키보드 크기
@@ -8415,7 +8415,7 @@ Map preview rendering unavailable
 == 맵 미리보기를 렌더링할 수 없습니다
 
 Map preview shows the entity layer only (hides textures)
-== Map preview shows the entity layer only (hides textures)
+== 지도 미리보기가 엔티티 레이어만 표시합니다 (텍스처 숨김)
 
 Map Preview TODO
 == 맵 미리보기 할 일
@@ -9216,7 +9216,7 @@ Need to have started the map to swap with a player.
 == 플레이어와 교환하려면 맵을 시작해야 합니다.
 
 Negative stability buffer
-== Negative stability buffer
+== 음수 안정성 버퍼
 
 Net
 == 순 킬
@@ -9614,6 +9614,9 @@ Not downloaded
 Not enabled
 == 활성화되지 않음
 
+Not in pie menu
+== 파이 메뉴에 없음
+
 Not installed
 == 설치되지 않음
 
@@ -9722,8 +9725,8 @@ o = Send rate
 Off
 == 끄기
 
-Off: disables all interface animations while preserving the options below
-== 끄기: 아래 옵션 설정은 유지하면서 모든 인터페이스 애니메이션을 비활성화합니다
+Off: disables every interface animation
+== 끔: 모든 인터페이스 애니메이션 사용 안 함
 
 Official
 == 공식
@@ -9953,9 +9956,6 @@ Opt-in protection for client-initiated self-kill, with optional auto-enable afte
 Optimistic prediction along stable direction
 == 안정적인 방향을 따라 낙관적 예측
 
-Option color
-== 옵션 색상
-
 Optional
 == 선택 사항
 
@@ -9970,9 +9970,6 @@ Optional start and end time in seconds. Leave both empty to export the whole dem
 
 Options here affect networking or identity; test on a server before using them in matches.
 == 여기 설정은 네트워크나 신원에 영향을 줍니다. 경기에서 쓰기 전에 서버에서 시험해 보세요.
-
-Options only exist within "Detection distance"; turn off the ones you never use to keep the wheel short.
-== 항목은 감지 거리 안에서만 나타납니다. 쓰지 않는 항목을 끄면 바퀴가 짧아져 고르기 쉽습니다.
 
 Or visit DDNet.org
 == 또는 DDNet.org 를 방문하세요
@@ -10319,8 +10316,11 @@ Pick a shape, then tune glow and animation speed.
 Pick a slot, type the command and its label, then hold the wheel key in game to test.
 == 슬롯을 고르고 명령과 라벨을 입력한 뒤, 게임에서 휠 키를 눌러 테스트하세요.
 
+Pick a text color mode first; the custom color row only appears for the custom mode.
+== 먼저 텍스트 색상 모드를 선택하세요. 사용자 정의 색상 행은 사용자 정의 모드에서만 나타납니다.
+
 Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
-== Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
+== 각 색상 행에서 색을 고르세요. 인증 및 같은 클랜 색상은 스코어보드에, 두 목록 색상은 친구 목록에 적용됩니다.
 
 Pick result: %s
 == 추첨 결과: %s
@@ -10715,6 +10715,12 @@ Points unavailable
 Popup animation
 == 팝업 애니메이션
 
+Popup background color
+== 팝업 배경 색상
+
+Popup background opacity percentage
+== 팝업 배경 불투명도 비율
+
 Port for client to server connection (0=random, >=1024 sets manual port)
 == 클라이언트-서버 연결 포트 (0=랜덤, >=1024는 수동 포트 설정)
 
@@ -10824,7 +10830,7 @@ Prediction
 == 예측
 
 Prediction and latency compensation moved to the "Network compensation" sub-tab of the DDNet page.
-== Prediction and latency compensation moved to the "Network compensation" sub-tab of the DDNet page.
+== 예측과 지연 보상은 DDNet 페이지의 "네트워크 보상" 하위 탭으로 이동했습니다.
 
 Prediction boundary (ms, increases latency but reduces ping jitter)
 == 예측 경계 (ms, 지연 시간은 증가하지만 핑 지터는 감소)
@@ -10854,16 +10860,13 @@ Prediction margin when frozen
 == 얼었을 때 예측 여백
 
 Prediction trades accuracy for responsiveness: a larger margin and AntiPing smooth out ping jitter but can mispredict nearby actions, and upstream redundancy may triple upload traffic.
-== Prediction trades accuracy for responsiveness: a larger margin and AntiPing smooth out ping jitter but can mispredict nearby actions, and upstream redundancy may triple upload traffic.
+== 예측은 정확도를 응답성과 맞바꿉니다. 큰 여유와 AntiPing은 핑 흔들림을 매끄럽게 하지만 근처 동작을 잘못 예측할 수 있고, 업스트림 중복은 업로드 트래픽을 최대 세 배로 늘립니다.
 
 Preparing chat export: %d%%
 == 채팅 내보내기 준비 중: %d%%
 
 Preparing demo playback
 == 데모 재생 준비 중
-
-Presentation animations
-== 표시 애니메이션
 
 Preset %d
 == 프리셋 %d
@@ -11594,8 +11597,8 @@ Reduce visual latency
 Reduced
 == 감소
 
-Reduced: uses shorter transitions and disables presentation animations
-== 간소화: 더 짧은 전환을 사용하고 연출 애니메이션을 비활성화합니다
+Reduced: uses shorter transitions everywhere
+== 간소: 모든 전환을 더 짧게 사용
 
 Reflected gradient
 == 대칭 그라데이션
@@ -11927,9 +11930,6 @@ Render tiny tees instead of circles
 Renderer performing the analysis
 == 분석을 수행하는 렌더러
 
-Rendering options
-== 렌더링 옵션
-
 Rendering reads back 8-bit frames, so 10-bit formats add nothing by themselves; the gain comes from chroma density. If the encoder cannot do 4:4:4, the export fails with an error instead of reducing quality silently.
 == 렌더링 결과는 8비트이므로 10비트 형식 자체로는 디테일이 늘지 않습니다. 이득은 색차 밀도에서 옵니다. 인코더가 4:4:4를 지원하지 않으면 화질을 몰래 낮추지 않고 오류로 실패합니다.
 
@@ -12085,9 +12085,6 @@ Reset chat completion appearance
 
 Reset chat on escape
 == Escape 키로 채팅 초기화
-
-Reset colors
-== 색상 초기화
 
 Reset column widths
 == 열 너비 초기화
@@ -12566,15 +12563,6 @@ Scoreboard score lookup
 Scoreboard sort mode (0=Score, 1=Points)
 == 점수판 정렬 모드 (0=점수, 1=분)
 
-Scoreboard surface
-== 점수판 표면
-
-Scoreboard surface color
-== 점수판 표면 색상
-
-Scoreboard transparency
-== 스코어보드 투명도
-
 Scoreboard, chat, spectating
 == 점수판, 채팅, 관전
 
@@ -12707,12 +12695,6 @@ Sec-WebSocket-Protocol sent during the realtime handshake
 Secondary
 == 보조
 
-Secondary menu background color
-== 보조 메뉴 배경색
-
-Secondary menu background opacity percentage
-== 보조 메뉴 배경색 — 불투명도 백분율
-
 Seconds to wait before reconnecting (0=off, when server is full)
 == 재연결 전 대기 시간 (초) (서버가 가득 찼을 때, 0=끄기)
 
@@ -12775,9 +12757,6 @@ Selected %d
 
 Selected candidate %d/%d under cursor.
 == 커서 아래에 선택된 후보 %d/%d.
-
-Selected item color
-== 선택 항목 색상
 
 Selected part: %d
 == 선택한 부품: %d
@@ -12996,7 +12975,7 @@ Set "Ingame mouse sens." for aiming and "UI mouse sens." for menus, then limit t
 == 조준은 게임 내 마우스 감도, 메뉴는 UI 마우스 감도로 설정한 뒤 최소 커서 거리와 최대 커서 거리로 커서 위치를 제한합니다.
 
 Set "Prediction margin" in milliseconds, tick "AntiPing (latency compensation)" and then choose what to predict; the redundancy switch is experimental and only useful on lossy connections.
-== Set "Prediction margin" in milliseconds, tick "AntiPing (latency compensation)" and then choose what to predict; the redundancy switch is experimental and only useful on lossy connections.
+== "예측 여유"를 밀리초로 설정하고 "AntiPing(지연 보상)"을 켠 뒤 무엇을 예측할지 고르세요. 중복 스위치는 실험적이며 손실이 있는 연결에서만 유용합니다.
 
 Set "Switch interval" to 0 to stop timed switching and keep the queue for manual or map-join changes.
 == 전환 간격을 0으로 두면 시간에 따른 전환이 멈추고, 대기열은 수동 전환이나 맵 입장 시에만 쓰입니다.
@@ -13009,9 +12988,6 @@ Set camera position relative to current view in the map
 
 Set camera position to x and y in the map
 == 맵에서 카메라 위치를 x 와 y 로 설정
-
-Set color
-== 색상 설정
 
 Set current demo speed
 == 현재 데모 속도 설정
@@ -13148,6 +13124,9 @@ Severe
 Shape
 == 모양
 
+Shape, colors and text shared by the whole interface
+== 인터페이스 전체가 공유하는 모양, 색상, 텍스트
+
 Share of the server browser name/map split given to the name column (per mille)
 == 서버 브라우저 이름/맵 분할에서 이름 열에 할당할 비율(천분율)
 
@@ -13228,6 +13207,9 @@ Show all votes (page 0 by default, 20 entries per page)
 
 Show all warlist groups
 == 모든 전쟁 목록 그룹 표시
+
+Show an accent glow around the focused input field
+== 포커스된 입력란에 강조색 광채를 표시
 
 Show any enabled Indicators
 == 활성화된 모든 표시기 표시
@@ -13362,10 +13344,10 @@ Show death tile outlines
 == 죽음 타일 윤곽선 표시
 
 Show deep freeze tile outlines
-== Show deep freeze tile outlines
+== 깊은 동결 타일 외곽선 표시
 
 Show deep unfreeze tile outlines
-== Show deep unfreeze tile outlines
+== 깊은 해동 타일 외곽선 표시
 
 Show default flag in scoreboard
 == 점수판에 기본 국기 표시
@@ -13473,7 +13455,7 @@ Show freeze bars
 == 해동 진행바 표시
 
 Show freeze tile outlines
-== Show freeze tile outlines
+== 동결 타일 외곽선 표시
 
 Show friend icon in name plates
 == 이름표에 친구 아이콘 표시
@@ -13548,7 +13530,7 @@ Show hook strength number indicator
 == 갈고리 강도 숫자 표시
 
 Show hookable tile outlines
-== Show hookable tile outlines
+== 갈고리 가능 타일 외곽선 표시
 
 Show how weapons, shields, snowflakes, and flags appear in game
 == 무기, 방패, 눈송이, 깃발이 게임에서 어떻게 보이는지 표시
@@ -14124,10 +14106,10 @@ Show tuning parameters affecting own player (0=Off, 1=Show changed, 2=Show all)
 == 자신의 플레이어에 영향을 미치는 튜닝 파라미터 표시 (0 = 끄기, 1 = 변경된 것만 표시, 2 = 모두 표시)
 
 Show unfreeze tile outlines
-== Show unfreeze tile outlines
+== 해동 타일 외곽선 표시
 
 Show unhookable tile outlines
-== Show unhookable tile outlines
+== 갈고리 불가 타일 외곽선 표시
 
 Show unknown server messages
 == 알 수 없는 서버 메시지 표시
@@ -14976,7 +14958,7 @@ Strength icons assets
 == 강도 아이콘 에셋
 
 Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)
-== Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)
+== Apple 캡슐 끝의 강도 (0 = 반원, 100 = 최대)
 
 Stress system (debug builds only).
 == 스트레스 시스템 (디버그 빌드 전용)
@@ -15536,11 +15518,11 @@ Text color
 Text color mode
 == 텍스트 색상 모드
 
-Text color mode: 0 automatic, 1 white, 2 black, 3 custom
-== 텍스트 색상 모드: 0 자동, 1 흰색, 2 검정, 3 사용자 지정
+Text color mode: 0 white, 1 black, 2 rainbow, 3 custom
+== 텍스트 색상 모드: 0=흰색, 1=검정, 2=무지개, 3=사용자 정의
 
-Text input focus ring color
-== 텍스트 입력 포커스 링 색상
+Text follows the chosen mode instead of the surface, so a light surface with white text is unreadable by design.
+== 텍스트는 표면이 아니라 선택한 모드를 따르므로 밝은 표면에 흰 글자는 설계상 읽을 수 없습니다.
 
 Text is too long for the selected translation service.
 == 텍스트가 선택한 번역 서비스의 길이 제한을 초과합니다.
@@ -15725,8 +15707,8 @@ This connection cannot change names while connected. Reconnect with the saved na
 This ID is not connected
 == 이 ID는 연결되지 않음
 
-This is the master switch for all interface animation categories
-== 이것은 모든 인터페이스 애니메이션 범주의 마스터 스위치입니다
+This is the master switch for all interface animations
+== 모든 인터페이스 애니메이션의 총 스위치
 
 This map path cannot be used.
 == 이 맵 경로는 사용할 수 없습니다.
@@ -15837,7 +15819,7 @@ Tick "Show inputs", then size and place it with "Keyboard size", "Mouse size", "
 == 입력 표시를 선택한 다음 키보드 크기, 마우스 크기, 불투명도, 위치 슬라이더로 크기와 위치를 조정하세요.
 
 Tick "Show others" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use "Show background quads" and "Default zoom" for the view.
-== Tick "Show others" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use "Show background quads" and "Default zoom" for the view.
+== "다른 팀 표시"를 켜면 다른 팀이 반투명하게 그려집니다. 그림자 불투명도는 그 아래 종속 행에서 설정하고, 시야는 "배경 쿼드 표시"와 "기본 확대/축소"로 조정합니다.
 
 Tick any of "Show key stuck status", "Show hammer status", "Show dummy control status" or "Show dummy copy status".
 == 키 걸림 상태 표시, 해머 상태 표시, dummy 조작 상태 표시, dummy 복사 상태 표시 중 필요한 것을 선택하세요.
@@ -16391,8 +16373,8 @@ Turn on "Enable dummy window", then set "Dummy window size" and "Dummy window zo
 Turn on "Enable Gores mode" or let "Auto enable in Gores mode" do it, pick options like "Auto weapon switch", and bind "Gores mode key".
 == Gores 모드 사용을 켜거나 Gores 모드에서 자동 사용에 맡기고, 자동 무기 전환 같은 항목을 고른 뒤 Gores 모드 키를 할당합니다.
 
-Turn on "Enable pie menu", bind the "Pie menu" command on the Bind page, then hold that key near a player and release on an option.
-== 원형 메뉴 사용을 켜고 키 설정 페이지에서 원형 메뉴 명령을 키에 지정한 뒤, 플레이어 근처에서 그 키를 누르고 있다가 항목에서 떼면 됩니다.
+Turn on "Enable pie menu", bind the "Pie menu" command on the Bind page, then hold that key near a player and release on an option. Drag options between the two lists to show or hide them.
+== "파이 메뉴 활성화"를 켜고 "바인드" 페이지에서 "파이 메뉴" 명령을 지정하세요. 플레이어 근처에서 그 키를 누른 채 옵션 위에서 놓으면 됩니다. 옵션을 두 목록 사이로 끌어 표시 여부를 바꿀 수 있습니다.
 
 Turn on "Enable rotation", set "Switch interval" in milliseconds, then add skins with the plus icon in the skin list; "Random skin on map join" picks the start.
 == 순환 활성화를 켜고 전환 간격을 밀리초로 설정한 뒤 스킨 목록의 더하기 아이콘으로 스킨을 추가하세요. 맵 입장 시 무작위 스킨이 시작 지점을 정합니다.
@@ -16674,16 +16656,16 @@ Unfreeze tile outline color
 == 언프리즈 타일 윤곽선 색상
 
 Unfreeze tile outline width
-== Unfreeze tile outline width
+== 해동 타일 외곽선 두께
 
 Unhookable tile outline color
-== Unhookable tile outline color
+== 갈고리 불가 타일 외곽선 색상
 
 Unhookable tile outline width
-== Unhookable tile outline width
+== 갈고리 불가 타일 외곽선 두께
 
 Unhookable tiles
-== Unhookable tiles
+== 갈고리 불가 타일
 
 Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
 == 통합 내보내기 품질 (CRF/CQ/QP 척도 0-51, -1 = cl_video_crf 사용). 각 인코더의 고유 매개변수로 매핑됩니다
@@ -17024,9 +17006,6 @@ Use warlist colors instead of regular colors
 Use warlist groups for indicator
 == 표시기에 전쟁 목록 그룹 사용
 
-Used by active shared text and numeric input fields
-== 활성화된 공용 텍스트 및 숫자 입력 필드에서 사용됩니다
-
 Uses the active action with the current aiming position.
 == 현재 조준 위치로 활성 작업을 사용합니다.
 
@@ -17087,8 +17066,8 @@ Very high quality, very slow
 Very long kaomoji are split by the chat length limit.
 == 너무 긴 카오모지는 채팅 길이 제한에 따라 나뉩니다.
 
-Very thick borders or high segment counts make text look blurry; keep them near the defaults.
-== 테두리가 너무 두껍거나 세그먼트 수가 너무 많으면 글자가 흐릿하게 보입니다. 기본값에 가깝게 유지하세요.
+Very thick borders make text look blurry; keep them near the defaults.
+== 테두리가 너무 두꺼우면 글자가 흐려 보입니다. 기본값 근처로 유지하세요.
 
 Video Background
 == 비디오 배경

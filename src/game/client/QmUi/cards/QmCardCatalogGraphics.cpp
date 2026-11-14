@@ -293,12 +293,13 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 	const int GpuRowCount = GpuControl.RowCount();
 	const int GraphicsBackendRowCount = (FoundBackendCount > 1 ? 1 : 0) + GpuRowCount + 3;
 	const qm_card_registry::SCardDefault *pDisplayDefault = qm_card_registry::FindByStableId("deck:graphics-display");
-	const qm_card_registry::SCardDefault *pVisualDefault = qm_card_registry::FindByStableId("deck:graphics-visual");
+	const qm_card_registry::SCardDefault *pCardEffectsDefault = qm_card_registry::FindByStableId("deck:graphics-card-effects");
+	const qm_card_registry::SCardDefault *pThemeDefault = qm_card_registry::FindByStableId("deck:graphics-theme");
 	const qm_card_registry::SCardDefault *pIconsDefault = qm_card_registry::FindByStableId("deck:graphics-icons");
 	const qm_card_registry::SCardDefault *pModesDefault = qm_card_registry::FindByStableId("deck:graphics-modes");
 	const qm_card_registry::SCardDefault *pInteractionDefault = qm_card_registry::FindByStableId("deck:graphics-interaction");
-	dbg_assert(pDisplayDefault != nullptr && pVisualDefault != nullptr && pIconsDefault != nullptr && pModesDefault != nullptr && pInteractionDefault != nullptr, "graphics settings cards must be registered");
-	if(pDisplayDefault == nullptr || pVisualDefault == nullptr || pIconsDefault == nullptr || pModesDefault == nullptr || pInteractionDefault == nullptr)
+	dbg_assert(pDisplayDefault != nullptr && pCardEffectsDefault != nullptr && pThemeDefault != nullptr && pIconsDefault != nullptr && pModesDefault != nullptr && pInteractionDefault != nullptr, "graphics settings cards must be registered");
+	if(pDisplayDefault == nullptr || pCardEffectsDefault == nullptr || pThemeDefault == nullptr || pIconsDefault == nullptr || pModesDefault == nullptr || pInteractionDefault == nullptr)
 		return 0;
 
 	const SSettingsListCardGeometry GraphicsModesGeometry = ResolveSettingsGraphicsModesGeometry(s_NumNodes, GraphicsMetrics);
@@ -321,6 +322,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 	static CButtonContainer s_aGraphicsIconWeightButtons[4];
 	static CButtonContainer s_aGraphicsPasswordIconButtons[2];
 	static CButtonContainer s_aGraphicsBlurModeButtons[3];
+	static CButtonContainer s_aGraphicsTextColorModeButtons[4];
 	static CButtonContainer s_aGraphicsSignalColorModeButtons[3];
 	static CButtonContainer s_GraphicsIconCustomColorResetId;
 	static CButtonContainer s_GraphicsFriendIconColorResetId;
@@ -328,12 +330,13 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 	static CButtonContainer s_GraphicsSignalIconColorResetId;
 
 	const bool RenderOnly = Ui()->RenderOnly();
-	const auto BuildDefinitions = [this, Ctx, pModesDefault, pDisplayDefault, pVisualDefault, pIconsDefault, pInteractionDefault, GraphicsPage, GraphicsModesTargetContentHeight, GraphicsVisualMeasureRevision, GraphicsModesMeasureRevision, GraphicsDisplayMeasureRevision, GraphicsDisplayRowCount, GraphicsBackendRowCount, FoundBackendCount, OldWindowMode, GraphicsMetrics, BodySize, DoGraphicsNumericField](std::vector<SSettingsCardDefinition> &vCards) {
-		vCards.reserve(5);
+	const auto BuildDefinitions = [this, Ctx, pModesDefault, pDisplayDefault, pCardEffectsDefault, pThemeDefault, pIconsDefault, pInteractionDefault, GraphicsPage, GraphicsModesTargetContentHeight, GraphicsVisualMeasureRevision, GraphicsModesMeasureRevision, GraphicsDisplayMeasureRevision, GraphicsDisplayRowCount, GraphicsBackendRowCount, FoundBackendCount, OldWindowMode, GraphicsMetrics, BodySize, DoGraphicsNumericField](std::vector<SSettingsCardDefinition> &vCards) {
+		vCards.reserve(6);
 		const SSettingsCardSpec ModesSpec{pModesDefault->m_pStableId, Localize(pModesDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pModesDefault)};
 		// 副标题以注册表描述为唯一来源，与其他卡片一致；不再对本卡单独关闭副标题。
 		const SSettingsCardSpec DisplaySpec{pDisplayDefault->m_pStableId, Localize(pDisplayDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pDisplayDefault)};
-		const SSettingsCardSpec VisualSpec{pVisualDefault->m_pStableId, Localize(pVisualDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pVisualDefault)};
+		const SSettingsCardSpec CardEffectsSpec{pCardEffectsDefault->m_pStableId, Localize(pCardEffectsDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pCardEffectsDefault)};
+		const SSettingsCardSpec ThemeSpec{pThemeDefault->m_pStableId, Localize(pThemeDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pThemeDefault)};
 		const SSettingsCardSpec IconsSpec{pIconsDefault->m_pStableId, Localize(pIconsDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pIconsDefault)};
 		const SSettingsCardSpec InteractionSpec{pInteractionDefault->m_pStableId, Localize(pInteractionDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pInteractionDefault)};
 		const auto AddCard = [&vCards, &Ctx](const SSettingsCardSpec &Spec, FSettingsCardRender Render) {
@@ -722,30 +725,57 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 		};
 		AddCard(DisplaySpec, [RenderDisplay](CUIRect Content) { RenderDisplay(Content); });
 		vCards.back().m_RenderMeasured = RenderDisplay;
-		AddCard(VisualSpec, [this, GraphicsMetrics, GraphicsPage, BodySize, DoGraphicsNumericField](CUIRect ContentRect) {
+		// 「卡片效果」：只留卡片自身的背景、边框与标题效果；圆角曲线 / 曲率 / 胶囊端头
+		// 属于整块界面共通的形状，已并入「界面主题」，同一类形状不再分散在两卡里。
+		AddCard(CardEffectsSpec, [this, GraphicsMetrics, BodySize](CUIRect ContentRect) {
 			CSettingsContentLayoutFlow Flow(ContentRect);
-            const auto RowAction = [&](const char *pId, float Height, auto &&Action) {
-                CUIRect Row;
-                if(Flow.Control(pId, Height, Row))
-                    Action(Row);
-                Flow.Space(ui_token::settings::RowGap(GraphicsMetrics.m_LineSpacing));
-            };
-			const bool TextCustomColorVisible = g_Config.m_QmUiTextColorMode == 3;
+			const auto RowAction = [&](const char *pId, float Height, auto &&Action) {
+				CUIRect Row;
+				if(Flow.Control(pId, Height, Row))
+					Action(Row);
+				Flow.Space(ui_token::settings::RowGap(GraphicsMetrics.m_LineSpacing));
+			};
 			SSettingsContentMetrics ColorMetrics = GraphicsMetrics;
 			ColorMetrics.m_LineSpacing = 0.0f;
-
-			RowAction("graphics-backdrop-blur", GraphicsMetrics.m_LineHeight, [&](CUIRect Button) {
-				const bool BlurSupported = Graphics()->IsBackbufferCaptureSupported() && Graphics()->IsRenderTargetGaussianBlurSupported();
-				char aBlurLabel[192];
-				str_format(aBlurLabel, sizeof(aBlurLabel), "%s%s%s%s", Localize("Enable backdrop blur"), BlurSupported ? "" : " (", BlurSupported ? "" : Localize("Unavailable"), BlurSupported ? "" : ")");
-				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmGaussianBlur, "enable-backdrop-blur", aBlurLabel, g_Config.m_QmGaussianBlur, &Button))
-					g_Config.m_QmGaussianBlur ^= 1;
-			});
 
 			RowAction("graphics-card-borders", GraphicsMetrics.m_LineHeight, [&](CUIRect Button) {
 				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmUiCardBorders, "show-settings-card-borders", Localize("Show settings card borders"), g_Config.m_QmUiCardBorders, &Button))
 					g_Config.m_QmUiCardBorders ^= 1;
 			});
+
+			RowAction("graphics-card-surface", GraphicsMetrics.m_ButtonHeight, [&](CUIRect UiCardColorRow) {
+				static CButtonContainer s_UiCardColorResetId;
+				if(DoLine_AlphaColorPicker(&s_UiCardColorResetId, ColorMetrics, &UiCardColorRow, Localize("Settings card background"), &g_Config.m_QmUiCardColor, &g_Config.m_QmUiCardOpacity, DefaultConfig::QmUiCardColor, DefaultConfig::QmUiCardOpacity))
+					InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::CONFIG_HASH_CHANGED);
+			});
+
+			RowAction("graphics-card-border-color", GraphicsMetrics.m_ButtonHeight, [&](CUIRect CardBorderColorRow) {
+				static CButtonContainer s_CardBorderColorResetId;
+				const unsigned OldCardBorderColor = g_Config.m_QmUiCardBorderColor;
+				DoLine_ColorPicker(&s_CardBorderColorResetId, ColorMetrics, &CardBorderColorRow, Localize("Settings card border color"), &g_Config.m_QmUiCardBorderColor, color_cast<ColorRGBA>(ColorHSLA(CConfig::ms_QmUiCardBorderColor, true)), false, nullptr, true, false);
+				if(OldCardBorderColor != g_Config.m_QmUiCardBorderColor)
+					InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::CONFIG_HASH_CHANGED);
+			});
+
+			RowAction("graphics-rainbow-card-titles", GraphicsMetrics.m_LineHeight, [&](CUIRect Button) {
+				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmUiCardRainbowTitles, "rainbow-card-titles", Localize("Rainbow card titles"), g_Config.m_QmUiCardRainbowTitles, &Button))
+					g_Config.m_QmUiCardRainbowTitles ^= 1;
+			});
+		});
+
+		// 「界面主题」：整块界面共用的颜色与文字。模糊开关与模式也在这里——它们决定的是
+		// 界面背后那一层玻璃，不属于卡片自己的外观。
+		AddCard(ThemeSpec, [this, GraphicsMetrics, BodySize, DoGraphicsNumericField](CUIRect ContentRect) {
+			CSettingsContentLayoutFlow Flow(ContentRect);
+			const auto RowAction = [&](const char *pId, float Height, auto &&Action) {
+				CUIRect Row;
+				if(Flow.Control(pId, Height, Row))
+					Action(Row);
+				Flow.Space(ui_token::settings::RowGap(GraphicsMetrics.m_LineSpacing));
+			};
+			const bool TextCustomColorVisible = g_Config.m_QmUiTextColorMode == 3;
+			SSettingsContentMetrics ColorMetrics = GraphicsMetrics;
+			ColorMetrics.m_LineSpacing = 0.0f;
 
 			// 圆角曲线四档：原圆弧是旧外观（同时关掉沿边生长与曲线），其余三档都是
 			// 连续曲率，区别只在曲率沿弧长怎么分布。小控件受 25% 生长上限约束，
@@ -790,7 +820,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 					const char *apCapsuleStyleLabels[] = {
 						Localize("Plain capsule"),
 						Localize("Silky capsule"),
-					Localize("Apple capsule"),
+						Localize("Apple capsule"),
 					};
 					CUIRect CapsuleStyleLabel, CapsuleStyleSegments;
 					SplitSettingsControlRow(CapsuleStyleRow, GraphicsMetrics, &CapsuleStyleLabel, &CapsuleStyleSegments, ESettingsControlWidth::LONG_CHOICE);
@@ -806,21 +836,58 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 				// 苹果胶囊端部强度：只在这一档出现，独立于上方的「圆角曲率」。
 				// 胶囊的端头是半圆，和卡片圆角不是同一类形状，共用一个滑杆两边都调不准。
 				// 显隐走设置页统一的布局过渡，和「个性调整」里那些子项同一套动画。
-				static CSettingsConditionalRows s_CapsuleStrengthRows;
-				if(s_CapsuleStrengthRows.Update(g_Config.m_QmUiCapsuleStyle == 2, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
+				static SettingsDependentRows s_CapsuleStrengthRows;
+				if(const auto CapsuleStrengthRows = s_CapsuleStrengthRows.Reveal(Ui(), Flow, g_Config.m_QmUiCapsuleStyle == 2, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 				{
-					const CSettingsContentRevealScope CapsuleStrengthScope(Ui(), Flow, s_CapsuleStrengthRows.Fade(g_Config.m_QmUiMotionLevel));
 					RowAction("graphics-capsule-strength", GraphicsMetrics.m_LineHeight, [&](CUIRect CapsuleStrengthRow) {
 						DoGraphicsNumericField("graphics-capsule-strength", &g_Config.m_QmUiCapsuleAppleStrength, &g_Config.m_QmUiCapsuleAppleStrength, CapsuleStrengthRow, Localize("Capsule end strength"), 0, 100, &CUi::ms_LinearScrollbarScale, "%", CUi::SCROLLBAR_OPTION_DELAYUPDATE);
 					});
 				}
 			}
 
+			// 主控行与从属行必须共用一条行距链：主控行不再自带行尾间距，
+			// 间距全部由「主控行 -> 从属行」的 SubRowGap 与「从属行 -> 下一行」的 RowGap 给出，
+			// 否则 RowAction 的尾距叠加 SubRowGap 会出现双倍空隙（实测界面主题卡首屏）。
+			CUIRect BlurToggleRow;
+			if(Flow.Control("graphics-backdrop-blur", GraphicsMetrics.m_LineHeight, BlurToggleRow))
+			{
+				const bool BlurSupported = Graphics()->IsBackbufferCaptureSupported() && Graphics()->IsRenderTargetGaussianBlurSupported();
+				char aBlurLabel[192];
+				str_format(aBlurLabel, sizeof(aBlurLabel), "%s%s%s%s", Localize("Enable backdrop blur"), BlurSupported ? "" : " (", BlurSupported ? "" : Localize("Unavailable"), BlurSupported ? "" : ")");
+				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmGaussianBlur, "enable-backdrop-blur", aBlurLabel, g_Config.m_QmGaussianBlur, &BlurToggleRow))
+					g_Config.m_QmGaussianBlur ^= 1;
+			}
 
-			float SectionReveal = 0.0f;
-			if(!qm_card_catalog::QmCardRenderHook::PersonalizationReveal(this, ContentRect, "deck:graphics-visual", GraphicsMetrics, &SectionReveal))
-				return;
-			const CSettingsContentRevealScope SectionRevealScope(Ui(), Flow, SectionReveal);
+			// 「模糊模式」是「启用背景模糊」的从属行：缩进一档表明从属关系，关闭模糊时不出现，
+			// 显隐走设置页统一的布局过渡，下面的颜色行跟着让位（与胶囊端部强度同一套机制）。
+			// 模糊关掉时模式本身没有任何作用，留着只会让人以为它还在生效。
+			static SettingsDependentRows s_BlurModeRows;
+			if(const auto BlurModeRows = s_BlurModeRows.Reveal(Ui(), Flow, g_Config.m_QmGaussianBlur != 0, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
+			{
+				CUIRect BlurModeRow;
+				if(Flow.Control("graphics-blur-mode", GraphicsMetrics.m_LineHeight, BlurModeRow, ui_token::settings::SubRowGap(GraphicsMetrics.m_LineSpacing)))
+				{
+					const float Indent = ui_token::settings::row::SUB.m_Indent * GraphicsMetrics.m_UiScale;
+					BlurModeRow.x += Indent;
+					BlurModeRow.w = maximum(0.0f, BlurModeRow.w - Indent);
+					const char *apBlurModeLabels[] = {Localize("Gaussian"), Localize("Kawase"), Localize("Dual Kawase")};
+					const char *apBlurModeTooltips[] = {
+						Localize("Smooth and accurate blur with the highest GPU cost."),
+						Localize("Fast, lightweight blur with a softer approximation."),
+						Localize("Multi-resolution blur with a stronger result and balanced GPU cost."),
+					};
+					CUIRect BlurModeLabel, BlurModeSegments;
+					SplitSettingsControlRow(BlurModeRow, GraphicsMetrics, &BlurModeLabel, &BlurModeSegments, ESettingsControlWidth::LONG_CHOICE);
+					Ui()->DoLabel(&BlurModeLabel, Localize("Blur mode"), BodySize, TEXTALIGN_ML);
+					const int NewBlurMode = DoSegmentedChoice(s_aGraphicsBlurModeButtons, apBlurModeLabels, (int)std::size(apBlurModeLabels), g_Config.m_QmBlurMode, BlurModeSegments);
+					if(NewBlurMode != g_Config.m_QmBlurMode)
+						g_Config.m_QmBlurMode = NewBlurMode;
+					// 整行 tooltip 跟随当前模式，保留原先逐段的说明文案。
+					GameClient()->m_Tooltips.DoToolTip(&s_aGraphicsBlurModeButtons[0], &BlurModeRow, apBlurModeTooltips[std::clamp(g_Config.m_QmBlurMode, 0, (int)std::size(apBlurModeTooltips) - 1)]);
+				}
+			}
+			// 从属行收起时也保留这一档行距：显隐只影响中间那半档，下一行不会跳。
+			Flow.Space(ui_token::settings::RowGap(GraphicsMetrics.m_LineSpacing));
 
 			// 聚焦光晕与背景模糊同属「界面效果」，两行挨着放。光晕颜色取强调色，
 			// 这里只有开关，不额外给光晕开一条颜色配置（见 UI 视觉分组与自定义边界）。
@@ -830,98 +897,50 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 			});
 
 			RowAction("graphics-surface", GraphicsMetrics.m_ButtonHeight, [&](CUIRect UiColorRow) {
-static CButtonContainer s_UiColorResetId;
+				static CButtonContainer s_UiColorResetId;
 
-			if(DoLine_AlphaColorPicker(&s_UiColorResetId, ColorMetrics, &UiColorRow, Localize("Interface surface"), &g_Config.m_QmUiColor, &g_Config.m_QmUiOpacity, DefaultConfig::QmUiColor, DefaultConfig::QmUiOpacity))
-				InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::CONFIG_HASH_CHANGED);
-
-
+				if(DoLine_AlphaColorPicker(&s_UiColorResetId, ColorMetrics, &UiColorRow, Localize("Interface surface"), &g_Config.m_QmUiColor, &g_Config.m_QmUiOpacity, DefaultConfig::QmUiColor, DefaultConfig::QmUiOpacity))
+					InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::CONFIG_HASH_CHANGED);
 			});
 
 			RowAction("graphics-accent", GraphicsMetrics.m_ButtonHeight, [&](CUIRect UiAccentColorRow) {
-static CButtonContainer s_UiAccentColorResetId;
+				static CButtonContainer s_UiAccentColorResetId;
 
-			if(DoLine_AlphaColorPicker(&s_UiAccentColorResetId, ColorMetrics, &UiAccentColorRow, Localize("Interface accent color"), &g_Config.m_QmUiAccentColor, &g_Config.m_QmUiAccentOpacity, DefaultConfig::QmUiAccentColor, DefaultConfig::QmUiAccentOpacity))
-				InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::CONFIG_HASH_CHANGED);
-
-
+				if(DoLine_AlphaColorPicker(&s_UiAccentColorResetId, ColorMetrics, &UiAccentColorRow, Localize("Interface accent color"), &g_Config.m_QmUiAccentColor, &g_Config.m_QmUiAccentOpacity, DefaultConfig::QmUiAccentColor, DefaultConfig::QmUiAccentOpacity))
+					InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::CONFIG_HASH_CHANGED);
 			});
 
-			RowAction("graphics-selected", GraphicsMetrics.m_ButtonHeight, [&](CUIRect UiSelectedColorRow) {
-static CButtonContainer s_UiSelectedColorResetId;
-			const unsigned OldUiSelectedColor = g_Config.m_QmUiSelectedColor;
+			// 控件底与弹层底各只留一行：按钮/输入框同属「控件」，展开列表/二级菜单同属「弹层」，
+			// 分两行配置时用户得同时调两处才能改对一块区域，还容易调成两种底色。
+			RowAction("graphics-control-surface", GraphicsMetrics.m_ButtonHeight, [&](CUIRect ControlColorRow) {
+				static CButtonContainer s_ControlColorResetId;
 
-			DoLine_ColorPicker(&s_UiSelectedColorResetId, ColorMetrics, &UiSelectedColorRow, Localize("Selected item color"), &g_Config.m_QmUiSelectedColor, color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::QmUiSelectedColor)), false, nullptr, false);
-			if(OldUiSelectedColor != g_Config.m_QmUiSelectedColor)
-				InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::CONFIG_HASH_CHANGED);
-
-
+				if(DoLine_AlphaColorPicker(&s_ControlColorResetId, ColorMetrics, &ControlColorRow, Localize("Control background color"), &g_Config.m_QmUiControlColor, &g_Config.m_QmUiControlOpacity, DefaultConfig::QmUiControlColor, DefaultConfig::QmUiControlOpacity))
+					InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::CONFIG_HASH_CHANGED);
 			});
 
-			RowAction("graphics-card-surface", GraphicsMetrics.m_ButtonHeight, [&](CUIRect UiCardColorRow) {
-static CButtonContainer s_UiCardColorResetId;
+			RowAction("graphics-layer-surface", GraphicsMetrics.m_ButtonHeight, [&](CUIRect LayerColorRow) {
+				static CButtonContainer s_LayerColorResetId;
 
-			if(DoLine_AlphaColorPicker(&s_UiCardColorResetId, ColorMetrics, &UiCardColorRow, Localize("Settings card background"), &g_Config.m_QmUiCardColor, &g_Config.m_QmUiCardOpacity, DefaultConfig::QmUiCardColor, DefaultConfig::QmUiCardOpacity))
-				InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::CONFIG_HASH_CHANGED);
-
-
+				if(DoLine_AlphaColorPicker(&s_LayerColorResetId, ColorMetrics, &LayerColorRow, Localize("Popup background color"), &g_Config.m_QmUiLayerColor, &g_Config.m_QmUiLayerOpacity, DefaultConfig::QmUiLayerColor, DefaultConfig::QmUiLayerOpacity))
+					InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::CONFIG_HASH_CHANGED);
 			});
 
-			RowAction("graphics-button-surface", GraphicsMetrics.m_ButtonHeight, [&](CUIRect DropdownColorRow) {
-static CButtonContainer s_DropdownColorResetId;
-
-			if(DoLine_AlphaColorPicker(&s_DropdownColorResetId, ColorMetrics, &DropdownColorRow, Localize("Button background color"), &g_Config.m_QmUiDropdownColor, &g_Config.m_QmUiDropdownOpacity, DefaultConfig::QmUiDropdownColor, DefaultConfig::QmUiDropdownOpacity))
-				InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::CONFIG_HASH_CHANGED);
-
-
+			// 文本颜色模式不再有「自动」档：模式就是四种明确颜色，用胶囊分段控件直接摆在
+			// 行里，选哪个一眼可见；自动对比会在浅色胶囊/深色卡片之间翻转，且用户无法从
+			// 设置里判断某块文字最终是什么颜色。
+			RowAction("graphics-text-mode", GraphicsMetrics.m_LineHeight, [&](CUIRect TextModeRow) {
+				const char *apTextModes[] = {Localize("White"), Localize("Black"), Localize("Rainbow"), Localize("Custom")};
+				const SSettingsRadioRowLayout TextModeLayout = ResolveSettingsRadioRowLayout(TextModeRow, (int)std::size(apTextModes), GraphicsMetrics);
+				Ui()->DoLabel(&TextModeLayout.m_LabelRect, Localize("Text color mode"), GraphicsMetrics.m_BodySize, TEXTALIGN_ML);
+				const int TextMode = DoSegmentedChoice(s_aGraphicsTextColorModeButtons, apTextModes, (int)std::size(apTextModes), g_Config.m_QmUiTextColorMode, TextModeLayout.m_ButtonsRect);
+				if(TextMode != g_Config.m_QmUiTextColorMode)
+				{
+					g_Config.m_QmUiTextColorMode = TextMode;
+					InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::CONFIG_HASH_CHANGED);
+				}
 			});
-
-			RowAction("graphics-input-surface", GraphicsMetrics.m_ButtonHeight, [&](CUIRect InputColorRow) {
-static CButtonContainer s_InputColorResetId;
-
-			if(DoLine_AlphaColorPicker(&s_InputColorResetId, ColorMetrics, &InputColorRow, Localize("Input background color"), &g_Config.m_QmUiInputColor, &g_Config.m_QmUiInputOpacity, DefaultConfig::QmUiInputColor, DefaultConfig::QmUiInputOpacity))
-				InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::CONFIG_HASH_CHANGED);
-
-
-			});
-
-			RowAction("graphics-dropdown-surface", GraphicsMetrics.m_ButtonHeight, [&](CUIRect DropdownListColorRow) {
-static CButtonContainer s_DropdownListColorResetId;
-
-			if(DoLine_AlphaColorPicker(&s_DropdownListColorResetId, ColorMetrics, &DropdownListColorRow, Localize("Expanded dropdown background color"), &g_Config.m_QmUiDropdownListColor, &g_Config.m_QmUiDropdownListOpacity, DefaultConfig::QmUiDropdownListColor, DefaultConfig::QmUiDropdownListOpacity))
-				InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::CONFIG_HASH_CHANGED);
-
-
-			});
-
-			RowAction("graphics-popup-surface", GraphicsMetrics.m_ButtonHeight, [&](CUIRect PopupColorRow) {
-static CButtonContainer s_PopupColorResetId;
-
-			if(DoLine_AlphaColorPicker(&s_PopupColorResetId, ColorMetrics, &PopupColorRow, Localize("Secondary menu background color"), &g_Config.m_QmUiPopupColor, &g_Config.m_QmUiPopupOpacity, DefaultConfig::QmUiPopupColor, DefaultConfig::QmUiPopupOpacity))
-				InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::CONFIG_HASH_CHANGED);
-
-			});
-
-			RowAction("graphics-text-mode", GraphicsMetrics.m_ButtonHeight, [&](CUIRect TextModeRow) {
-
-			CUIRect TextModeLabel, TextModeControl;
-			SplitSettingsControlRow(TextModeRow, GraphicsMetrics, &TextModeLabel, &TextModeControl, ESettingsControlWidth::LONG_CHOICE);
-			DoSettingsMenuLabel(SETTINGS_GRAPHICS, -1, -1, "text-color-mode", &TextModeLabel, Localize("Text color mode"), GraphicsMetrics.m_BodySize, TEXTALIGN_ML);
-			static CUi::SDropDownState s_TextColorModeState;
-			static CScrollRegion s_TextColorModeScroll;
-			s_TextColorModeState.m_SelectionPopupContext.m_pScrollRegion = &s_TextColorModeScroll;
-			const char *apTextModes[] = {Localize("Auto"), Localize("White"), Localize("Black"), Localize("Custom")};
-			CUi::SDropDownProperties TextModeProps;
-			TextModeProps.m_pPopupViewport = &GraphicsPage.m_ScrollViewport;
-			const int TextMode = DoSettingsDropDown(&TextModeControl, g_Config.m_QmUiTextColorMode, apTextModes, std::size(apTextModes), s_TextColorModeState, TextModeProps, &g_Config.m_QmUiTextColorMode, nullptr, &TextModeRow);
-			if(TextMode != g_Config.m_QmUiTextColorMode)
-			{
-				g_Config.m_QmUiTextColorMode = TextMode;
-				InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::CONFIG_HASH_CHANGED);
-			}
-
-			});
-CUIRect TextCustomColorRow;
+			CUIRect TextCustomColorRow;
 			if(TextCustomColorVisible && Flow.Control("graphics-custom-text-color", GraphicsMetrics.m_ButtonHeight, TextCustomColorRow))
 			{
 				static CButtonContainer s_TextCustomColorResetId;
@@ -932,66 +951,7 @@ CUIRect TextCustomColorRow;
 			}
 			if(TextCustomColorVisible)
 				Flow.Space(ui_token::settings::RowGap(GraphicsMetrics.m_LineSpacing));
-
-			RowAction("graphics-focus-color", GraphicsMetrics.m_ButtonHeight, [&](CUIRect FocusColorRow) {
-static CButtonContainer s_FocusColorResetId;
-			const unsigned OldFocusColor = g_Config.m_QmUiFocusColor;
-
-			SSettingsContentMetrics FocusColorMetrics = ColorMetrics;
-			FocusColorMetrics.m_LineSpacing = 0.0f;
-			DoLine_ColorPicker(&s_FocusColorResetId, FocusColorMetrics, &FocusColorRow, Localize("Text input focus ring color"), &g_Config.m_QmUiFocusColor, color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::QmUiFocusColor)), false, nullptr, false);
-			GameClient()->m_Tooltips.DoToolTip(&s_FocusColorResetId, &FocusColorRow, Localize("Used by active shared text and numeric input fields"));
-			if(OldFocusColor != g_Config.m_QmUiFocusColor)
-				InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::CONFIG_HASH_CHANGED);
-
-
-			});
-
-			RowAction("graphics-scoreboard-color", GraphicsMetrics.m_ButtonHeight, [&](CUIRect ScoreboardColorRow) {
-static CButtonContainer s_ScoreboardColorResetId;
-
-			if(DoLine_AlphaColorPicker(&s_ScoreboardColorResetId, ColorMetrics, &ScoreboardColorRow, Localize("Scoreboard surface"), &g_Config.m_QmScoreboardColor, &g_Config.m_QmScoreboardOpacity, DefaultConfig::QmScoreboardColor, DefaultConfig::QmScoreboardOpacity))
-				InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::CONFIG_HASH_CHANGED);
-
-
-			});
-
-			RowAction("graphics-blur-mode", GraphicsMetrics.m_LineHeight, [&](CUIRect Button) {
-const char *apBlurModeLabels[] = {Localize("Gaussian"), Localize("Kawase"), Localize("Dual Kawase")};
-			const char *apBlurModeTooltips[] = {
-				Localize("Smooth and accurate blur with the highest GPU cost."),
-				Localize("Fast, lightweight blur with a softer approximation."),
-				Localize("Multi-resolution blur with a stronger result and balanced GPU cost."),
-			};
-			CUIRect BlurModeLabel, BlurModeSegments;
-
-			SplitSettingsControlRow(Button, GraphicsMetrics, &BlurModeLabel, &BlurModeSegments, ESettingsControlWidth::LONG_CHOICE);
-			Ui()->DoLabel(&BlurModeLabel, Localize("Blur mode"), BodySize, TEXTALIGN_ML);
-			const int NewBlurMode = DoSegmentedChoice(s_aGraphicsBlurModeButtons, apBlurModeLabels, (int)std::size(apBlurModeLabels), g_Config.m_QmBlurMode, BlurModeSegments);
-			if(NewBlurMode != g_Config.m_QmBlurMode)
-				g_Config.m_QmBlurMode = NewBlurMode;
-			// 整行 tooltip 跟随当前模式，保留原先逐段的说明文案。
-			GameClient()->m_Tooltips.DoToolTip(&s_aGraphicsBlurModeButtons[0], &Button, apBlurModeTooltips[std::clamp(g_Config.m_QmBlurMode, 0, (int)std::size(apBlurModeTooltips) - 1)]);
-
-
-			});
-
-			RowAction("graphics-card-border-color", GraphicsMetrics.m_ButtonHeight, [&](CUIRect CardBorderColorRow) {
-static CButtonContainer s_CardBorderColorResetId;
-			const unsigned OldCardBorderColor = g_Config.m_QmUiCardBorderColor;
-
-			DoLine_ColorPicker(&s_CardBorderColorResetId, ColorMetrics, &CardBorderColorRow, Localize("Settings card border color"), &g_Config.m_QmUiCardBorderColor, color_cast<ColorRGBA>(ColorHSLA(CConfig::ms_QmUiCardBorderColor, true)), false, nullptr, true, false);
-			if(OldCardBorderColor != g_Config.m_QmUiCardBorderColor)
-				InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::CONFIG_HASH_CHANGED);
-
-
-			});
-
-			RowAction("graphics-rainbow-card-titles", GraphicsMetrics.m_LineHeight, [&](CUIRect Button) {
-
-			if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmUiCardRainbowTitles, "rainbow-card-titles", Localize("Rainbow card titles"), g_Config.m_QmUiCardRainbowTitles, &Button))
-				g_Config.m_QmUiCardRainbowTitles ^= 1;
-			}); });
+		});
 		AddCard(IconsSpec, [this, GraphicsMetrics, BodySize](CUIRect ContentRect) {
 			CSettingsContentLayoutFlow Flow(ContentRect);
 			const auto RowAction = [&](const char *pId, float Height, auto &&Action) {
@@ -1112,14 +1072,14 @@ static CButtonContainer s_CardBorderColorResetId;
 					g_Config.m_QmUiMotionLevel = NewMotionLevel;
 				const char *pMotionDescription = nullptr;
 				if(g_Config.m_QmUiMotionLevel == 0)
-					pMotionDescription = Localize("Off: disables all interface animations while preserving the options below");
+					pMotionDescription = Localize("Off: disables every interface animation");
 				else if(g_Config.m_QmUiMotionLevel == 1)
-					pMotionDescription = Localize("Reduced: uses shorter transitions and disables presentation animations");
+					pMotionDescription = Localize("Reduced: uses shorter transitions everywhere");
 				else
-					pMotionDescription = Localize("Full: each enabled animation category uses its complete transition");
+					pMotionDescription = Localize("Full: uses the complete transition everywhere");
 
 				char aMotionTip[256];
-				str_format(aMotionTip, sizeof(aMotionTip), "%s\n%s", Localize("This is the master switch for all interface animation categories"), pMotionDescription);
+				str_format(aMotionTip, sizeof(aMotionTip), "%s\n%s", Localize("This is the master switch for all interface animations"), pMotionDescription);
 				GameClient()->m_Tooltips.DoToolTip(&s_aMotionButtons[0], &MotionRow, aMotionTip);
 			});
 
@@ -1127,30 +1087,6 @@ static CButtonContainer s_CardBorderColorResetId;
 			if(!qm_card_catalog::QmCardRenderHook::PersonalizationReveal(this, ContentRect, "deck:graphics-interaction", GraphicsMetrics, &SectionReveal))
 				return;
 			const CSettingsContentRevealScope SectionRevealScope(Ui(), Flow, SectionReveal);
-
-			RowAction("graphics-ListEntryAnimations", GraphicsMetrics.m_LineHeight, [&](CUIRect ListEntryAnimations) {
-				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmUiListEntryAnimations, "settings-card-list-entry-animations", Localize("Card list entry animation"), g_Config.m_QmUiListEntryAnimations, &ListEntryAnimations))
-					g_Config.m_QmUiListEntryAnimations ^= 1;
-				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUiListEntryAnimations, &ListEntryAnimations, Localize("Animate settings card lists when entering a page"));
-			});
-
-			RowAction("graphics-CardHeightAnimations", GraphicsMetrics.m_LineHeight, [&](CUIRect CardHeightAnimations) {
-				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmUiCardHeightAnimations, "settings-card-height-animations", Localize("Card height animation"), g_Config.m_QmUiCardHeightAnimations, &CardHeightAnimations))
-					g_Config.m_QmUiCardHeightAnimations ^= 1;
-				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUiCardHeightAnimations, &CardHeightAnimations, Localize("Animate settings card expand and collapse height changes"));
-			});
-
-			RowAction("graphics-CardReflowAnimations", GraphicsMetrics.m_LineHeight, [&](CUIRect CardReflowAnimations) {
-				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmUiCardReflowAnimations, "settings-card-reflow-animations", Localize("Card reflow animation"), g_Config.m_QmUiCardReflowAnimations, &CardReflowAnimations))
-					g_Config.m_QmUiCardReflowAnimations ^= 1;
-				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUiCardReflowAnimations, &CardReflowAnimations, Localize("Animate settings card reorder and layout reflow"));
-			});
-
-			RowAction("graphics-PresentationAnimations", GraphicsMetrics.m_LineHeight, [&](CUIRect PresentationAnimations) {
-				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmExtraAnimations, "presentation-animations", Localize("Presentation animations"), g_Config.m_QmExtraAnimations, &PresentationAnimations))
-					g_Config.m_QmExtraAnimations ^= 1;
-				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmExtraAnimations, &PresentationAnimations, Localize("Animate chat box, emote selector, scoreboard, and spectate selection"));
-			});
 
 			RowAction("graphics-ScrollFeel", GraphicsMetrics.m_LineHeight, [&](CUIRect ScrollFeelRow) {
 				CUIRect Label, Segments;

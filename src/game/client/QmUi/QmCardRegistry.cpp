@@ -215,10 +215,13 @@ namespace qm_card_registry
 			{"qm:skin_appearance", "tee", false, "Tee appearance", "Tee外观 tee waiguan 皮肤描边 pifu miaobian skin outline 边缘 bianyuan 颜色 yanse 粗细 cuxi 透明度 toumingdu 循环色调 xunhuan sediao hue 速度 sudu 分身 fenshen dummy 表情阴影 biaoqing yinying emoticon shadow 表情弹射时长 tanshe shichang projectile duration 皮肤切换 pifu qiehuan skin transition animation 换皮 huanpi 动画 donghua 锤中偷皮 chuizhong toupi hammer skin steal visual", "Configure Tee appearance and skins"},
 			{"deck:tee7-editor", "tee7", true, "Skin", "tee sixup skin editor", "Edit individual Tee 7 skin parts"},
 			{"deck:graphics-display", "graphics", false, Localizable("Graphics display"), "graphics display monitor window", "Window and monitor"},
-			{"deck:graphics-visual", "graphics", false, Localizable("Visual"), "graphics visual rendering card appearance settings card border corner segments rainbow title capsule ends silky plain 胶囊 端头 圆角曲线 曲率 focus glow input halo 聚焦光晕 输入框光晕 focus glow input halo 聚焦光晕 输入框光晕", "Rendering options"},
-			{"deck:graphics-icons", "graphics", false, Localizable("Icons"), "graphics UI icon color white black weight regular bold phosphor", "Configure UI icon appearance"},
+			// 图像页「视觉效果」子页签：原来一张「视觉」卡拆成形状/外观与全局主题两张，
+			// 拆完每张的行数都在一屏内，不再需要「个性调整」折叠。
+			{"deck:graphics-card-effects", "graphics-visual", false, Localizable("Card effects"), "graphics card effects card background border color rainbow title 卡片效果 卡片背景 卡片边框 彩虹标题 显示边框", "Background, border and title effects of the settings cards"},
+			{"deck:graphics-theme", "graphics-visual", false, Localizable("Interface theme"), "graphics interface theme surface accent selected item button background input background dropdown list background secondary menu background text color mode white black rainbow custom blur focus glow input halo corner curve curvature capsule ends silky plain apple segments radius 界面主题 界面表面 强调色 选中项 控件背景 弹层背景 文本颜色模式 白色 黑色 彩虹色 自定义 模糊模式 聚焦光晕 输入框光晕 圆角曲线 圆角曲率 胶囊端头 苹果胶囊 端部强度", "Shape, colors and text shared by the whole interface"},
+			{"deck:graphics-icons", "graphics-visual", false, Localizable("Icons"), "graphics UI icon color white black weight regular bold phosphor", "Configure UI icon appearance"},
 			{"deck:graphics-modes", "graphics", false, Localizable("Display modes"), "display modes graphics resolutions", "Available resolutions"},
-			{"deck:graphics-interaction", "graphics", false, Localizable("Interface animations"), "interface ui motion animations focus rainbow", "Motion and focus feedback"},
+			{"deck:graphics-interaction", "graphics-visual", false, Localizable("Interface animations"), "interface ui motion animations focus rainbow", "Motion and focus feedback"},
 			{"deck:sound-toggle", "sound", false, "Sound", "sound toggle audio", "Enable audio output and choose a device"},
 			{"deck:sound-volume", "sound", false, "Volume", "volume sound audio", "Balance master, music, and game volume"},
 			{"deck:sound-audio-pack", "sound", false, "Audio packs", "audio pack audio packs sound", "Browse and activate custom audio packs"},
@@ -315,6 +318,8 @@ namespace qm_card_registry
 			return Localizable("Configure Tee appearance and skins");
 		if(str_comp(pTab, "graphics") == 0)
 			return Localizable("Configure display and rendering");
+		if(str_comp(pTab, "graphics-visual") == 0)
+			return Localizable("Configure interface shape, theme, icons and animations");
 		if(str_comp(pTab, "sound") == 0)
 			return Localizable("Configure sound and audio packs");
 		if(str_comp(pTab, "ddnet") == 0)

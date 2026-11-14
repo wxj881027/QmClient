@@ -13,7 +13,10 @@ PAGE_STABLE_IDS = {
 	"player": ("deck:player-identity", "deck:player-country"),
 	"tee": ("deck:tee-identity", "deck:tee-skin-options", "deck:tee-skin-list", "deck:tee-skin-queue", "qm:skin_appearance", "deck:tee-glow"),
 	"tee7": ("deck:tee7-editor",),
-	"graphics": ("deck:graphics-display", "deck:graphics-visual", "deck:graphics-modes", "deck:graphics-interaction"),
+	# 图像页「显示选项」子页签：只留显示器/窗口与分辨率。
+	"graphics": ("deck:graphics-display", "deck:graphics-modes"),
+	# 图像页「视觉效果」子页签：卡片外观、界面形状与主题、图标、动效四张卡同属外观类。
+	"graphics-visual": ("deck:graphics-card-effects", "deck:graphics-theme", "deck:graphics-icons", "deck:graphics-interaction"),
 	"sound": ("deck:sound-toggle", "deck:sound-volume", "deck:sound-audio-pack"),
 	"ddnet": ("deck:ddnet-demo", "deck:ddnet-gameplay", "deck:ddnet-background", "deck:ddnet-miscellaneous", "qm:system_media_controls", "qm:entity_overlay"),
 	# DDNet 页内的「网络补偿」子页签：客户端预测卡 + 从 TClient 页整卡迁来的三张预测/延迟补偿卡。
@@ -119,6 +122,7 @@ PAGE_FUNCTIONS = {
 	"tee": ("CMenus::RenderSettingsTee(CUIRect MainView)",),
 	"tee7": ("CMenus::RenderSettingsTee7(CUIRect MainView)",),
 	"graphics": ("CMenus::RenderSettingsGraphics",),
+	"graphics-visual": ("CMenus::RenderSettingsGraphics",),
 	"sound": ("CMenus::RenderSettingsSound",),
 	"ddnet": ("CMenus::RenderSettingsDDNet",),
 	"ddnet-prediction": ("CMenus::RenderSettingsDDNet",),
@@ -145,6 +149,7 @@ PAGE_ROUTE_TABS = {
 	"tee": ("tee",),
 	"tee7": ("tee7",),
 	"graphics": ("graphics",),
+	"graphics-visual": ("graphics-visual",),
 	"sound": ("sound",),
 	"ddnet": ("ddnet",),
 	"ddnet-prediction": ("ddnet-prediction",),

@@ -514,7 +514,7 @@ void CSpectator::OnRender()
 		}
 	}
 
-	const bool ExtraAnimations = g_Config.m_QmExtraAnimations != 0 && GameClient()->UiRuntimeV2()->Enabled();
+	const bool ExtraAnimations = g_Config.m_QmUiMotionLevel > 0 && GameClient()->UiRuntimeV2()->Enabled();
 
 	if(!m_Active)
 	{

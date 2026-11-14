@@ -29,7 +29,6 @@ namespace
 				return;
 			// 行距步进只与几何有关：关掉入场动画与滚动弹簧，量到的就是容器的排版结果。
 			g_Config.m_QmUiMotionLevel = 0;
-			g_Config.m_QmUiListEntryAnimations = 0;
 			g_Config.m_UiSmoothScrollTime = 0;
 			CUIElementBase::Init(&m_Ui);
 			BeginFrame();

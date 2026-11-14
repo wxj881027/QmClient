@@ -349,12 +349,6 @@
 ?!Stuck keys!?
 == ?!押しっぱなし!?
 
-Enable focus glow
-== フォーカスグローを有効化
-
-Show an accent glow around the focused input field
-== フォーカス中の入力欄にアクセント色のグローを表示
-
 []
 [%s] %s (Map: %s, Time: %s)
 == [%s] %s（マップ: %s、時間: %s）
@@ -620,6 +614,9 @@ Add one
 Add one shortcut per message; it is used when the target is on the list.
 == メッセージごとにクイックチャットを 1 つ追加し、相手がリストにいるときに使います。
 
+Add options below
+== 下のリストから追加してください
+
 Add or edit entries, then use the bind in chat to send the text.
 == 項目を追加または編集し、チャットでバインドを使って送信します。
 
@@ -718,9 +715,6 @@ Adjust mouse sensitivity and cursor limits
 
 Adjust nameplate options and compare the preview.
 == ネームプレートのオプションを調整して、プレビューと見比べます。
-
-Adjust one value at a time; corners and segments are drawn per frame, so large segment counts cost GPU time.
-== 値を一つずつ調整してください。角丸とセグメントは毎フレーム描画されるため、セグメント数が多いと GPU 時間を消費します。
 
 Adjust opacity of entity layers
 == エンティティレイヤーの透明度を調整
@@ -946,21 +940,6 @@ Angry
 
 Angular gradient
 == 角度グラデーション
-
-Animate chat box, emote selector, scoreboard, and spectate selection
-== チャットボックス、絵文字選択、スコアボード、観戦選択をアニメーション化
-
-Animate lists when entering a page
-== ページ表示時にリストをアニメーション
-
-Animate settings card expand and collapse height changes
-== 設定カードの展開・折りたたみ時の高さ変化をアニメーション化
-
-Animate settings card lists when entering a page
-== ページを開くときに設定カード一覧をアニメーション表示
-
-Animate settings card reorder and layout reflow
-== 設定カードの並べ替えとレイアウト再配置をアニメーション化
 
 Animated title style id
 == タイトルのアニメーションスタイル ID
@@ -1706,6 +1685,9 @@ Background stroke color
 Background stroke width
 == 背景ストロークの幅
 
+Background, border and title effects of the settings cards
+== 設定カードの背景・枠線・タイトル効果
+
 Baidu Translate
 == Baidu 翻訳
 
@@ -1979,12 +1961,6 @@ Button - Disabled
 Button - Enabled
 == ボタン - 有効
 
-Button background color
-== ボタン背景色
-
-Button background opacity percentage
-== ボタン背景 — 不透明度（パーセント）
-
 Button browser
 == ボタンブラウザ
 
@@ -2115,7 +2091,7 @@ Capsule ends
 == カプセル端
 
 Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
-== Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
+== カプセル端: 0 = 通常の円弧、1 = なめらかな端点、2 = Apple 連続曲率
 
 Capture the flag
 == キャプチャー・ザ・フラッグ (CTF)
@@ -2123,20 +2099,17 @@ Capture the flag
 Capture-the-flag event cue, used by CTF servers rather than ordinary DDNet racing.
 == フラッグ戦のイベント通知音です。通常の DDNet レースではなく CTF サーバーで使用されます。
 
+Card effects
+== カード効果
+
 Card guide
 == 設定カードの説明
-
-Card height animation
-== 設定カードの高さアニメーション
-
-Card list entry animation
-== 設定カード一覧の入場アニメーション
 
 Card opacity
 == カードの不透明度
 
-Card reflow animation
-== 設定カードの再配置アニメーション
+Card shape is shared with the rest of the interface and lives in "Interface theme".
+== カードの形状はインターフェース全体と共通で、「インターフェーステーマ」にあります。
 
 Category
 == カテゴリ
@@ -2417,8 +2390,8 @@ Choose export name first.
 Choose Logo (PNG / WebP)
 == ロゴを選択 (PNG / WebP)
 
-Choose off, simple or full; the individual switches below only apply to full.
-== オフ・簡易・フルから選びます。下の個別スイッチはフルのときだけ適用されます。
+Choose off, reduced or full; this single switch drives every animation.
+== オフ・簡易・フルから選びます。すべてのアニメーションはこの 1 つのスイッチで動きます。
 
 Choose the language used by the client
 == Choose the language used by the client
@@ -2575,6 +2548,12 @@ Click a part on the right to edit its color, blend mode and strength.
 
 Click a row such as "HDF" or "Left jump", press the key you want, and use the trash icon to remove a bind.
 == HDFや左ジャンプなどの行をクリックして好きなキーを押すと割り当てられます。隣のゴミ箱アイコンでその割り当てを消せます。
+
+Click a slice in the preview to change that option's color; options only exist within "Detection distance", so keep the wheel short.
+== プレビューのセクターをクリックするとその項目の色を変更できます。項目は「検出距離」内でのみ有効なので、メニューは短く保ってください。
+
+Click a slice to set color
+== セクターをクリックして色を設定
 
 Click again to find the next location.
 == もう一度クリックすると次の場所を検索します。
@@ -2763,7 +2742,7 @@ Colors of the translate button in the chat input and of the language menu that b
 == チャット入力欄の翻訳ボタンと、そのボタンで開く言語メニューの色。
 
 Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
-== Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
+== スコアボードの行に色を付けます: 認証済みプレイヤー、同じクランのプレイヤー、フレンド、フレンドリスト内のクランメンバー。
 
 Colors too close to the map background are hard to read while moving.
 == マップの背景に近すぎる色は、動いているときに見分けにくくなります。
@@ -2947,6 +2926,9 @@ Configure HUD island appearance
 
 Configure input helpers and cursor behavior
 == Configure input helpers and cursor behavior
+
+Configure interface shape, theme, icons and animations
+== インターフェースの形状・テーマ・アイコン・アニメーションを設定
 
 Configure keyboard, mouse, wheel, and modifier bindings
 == キーボード、マウス、ホイール、修飾キーの割り当てを設定
@@ -3176,6 +3158,12 @@ Continuous-curvature UI corners (0 = classic arc, 100 = strongest)
 Contributors
 == コントリビューター
 
+Control background color
+== コントロールの背景色
+
+Control background opacity percentage
+== コントロール背景の不透明度（%）
+
 Control custom background drawing
 == Control custom background drawing
 
@@ -3215,11 +3203,14 @@ Controls
 Controls demo recording and playback behavior.
 == デモの録画と再生の動作を制御します。
 
-Controls how UI surfaces are drawn: card surface opacity, border width, corner rounding, segment count and the rainbow title effect.
-== UI の表面をどう描画するかを設定します。カード表面の不透明度、枠線の幅、角丸、セグメント数、カードタイトルの虹色効果です。
+Controls how the settings cards themselves are drawn: card background, border and the rainbow title effect.
+== 設定カード自体の描画（背景・枠線・虹色タイトル）を制御します。
 
 Controls laser shape, glow and animation.
 == レーザーの形状、発光、アニメーションを設定します。
+
+Controls the shape and colors shared by the whole interface: corner curve, capsule ends, surfaces, accent, control and popup backgrounds, text color mode and blur.
+== インターフェース全体で共通の形状と色（角の曲線、カプセル端、表面、アクセント、コントロールとポップアップの背景、文字色モード、ぼかし）を制御します。
 
 Controls what appears next to other players' names, such as clan tags, friend marks and client identifiers.
 == 他のプレイヤーの名前の横に表示するもの（クランタグ、フレンドマーク、クライアント識別子など）を制御します。
@@ -3681,7 +3672,7 @@ DDNet releases
 == DDNet リリース
 
 DDNet settings sub-tab: 0=general, 1=network compensation
-== DDNet settings sub-tab: 0=general, 1=network compensation
+== DDNet 設定のサブタブ: 0=一般、1=ネットワーク補償
 
 DDNet staff
 == DDNet スタッフ
@@ -3786,7 +3777,7 @@ Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == 専用 WebSocket エンドポイント（空欄なら wss://qmclient.icu/ws を使用）
 
 Deep freeze
-== Deep freeze
+== ディープフリーズ
 
 Deep freeze opacity
 == 深層凍結の不透明度
@@ -3795,10 +3786,10 @@ Deep freeze tile outline color
 == ディープフリーズタイルのアウトライン色
 
 Deep freeze tile outline width
-== Deep freeze tile outline width
+== ディープフリーズタイルの輪郭幅
 
 Deep unfreeze
-== Deep unfreeze
+== ディープ解凍
 
 Deep unfreeze opacity
 == 深層解凍の不透明度
@@ -3807,7 +3798,7 @@ Deep unfreeze tile outline color
 == ディープアンフリーズタイルのアウトライン色
 
 Deep unfreeze tile outline width
-== Deep unfreeze tile outline width
+== ディープ解凍タイルの輪郭幅
 
 Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 == Deepfly モード（0=通常、1=DF、2=HDF、3=カスタム）
@@ -4115,6 +4106,9 @@ Display mode
 Display modes
 == 表示モード
 
+Display options
+== 表示オプション
+
 Display your race time
 == レースタイムを表示
 
@@ -4304,6 +4298,12 @@ Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use 
 Drag HUD modules with the left mouse button
 == マウスの左ボタンで HUD モジュールをドラッグ
 
+Drag options here to hide them
+== ここにドラッグすると非表示になります
+
+Drag options here to show them
+== ここにドラッグすると表示されます
+
 Drag the selected watermark to move it. The original image is preserved.
 == 選択した透かしをドラッグして移動します。元の画像は保持されます。
 
@@ -4318,6 +4318,9 @@ Drag to pan, scroll to zoom
 
 Drag to reorder; right-click or use the gear to manage
 == ドラッグで並べ替え。右クリックまたは歯車で管理
+
+Drag to the other list to show or hide this option
+== もう一方のリストへドラッグすると表示/非表示を切り替えます
 
 Dragger Inner Color
 == ドラッガー内側の色
@@ -4763,8 +4766,8 @@ Enable audio output and choose a device
 Enable backdrop blur
 == 背景ぼかしを有効化
 
-Enable backdrop blur for translucent interface and selected HUD backgrounds
-== 半透明インターフェースと選択した HUD 背景に背景ぼかしを有効化
+Enable backdrop blur for translucent interface and all HUD backgrounds
+== 半透明のインターフェースとすべての HUD 背景に背景ぼかしを有効化
 
 Enable background 3D particle flicker
 == 背景 3D パーティクルの点滅を有効化
@@ -4876,6 +4879,9 @@ Enable fast map download
 
 Enable fat skin
 == ファットスキンを有効にする
+
+Enable focus glow
+== フォーカスグローを有効化
 
 Enable freeze call sound
 == フリーズコール音を有効にする
@@ -5405,14 +5411,8 @@ Expand
 Expand console
 == コンソールを展開
 
-Expanded dropdown background color
-== 展開リスト背景色
-
-Expanded dropdown background opacity percentage
-== 展開リスト背景 — 不透明度（パーセント）
-
 Expanded personalization sections (format: stableId=1;stableId2=0;)
-== Expanded personalization sections (format: stableId=1;stableId2=0;)
+== 展開済みの個別調整セクション（形式: stableId=1;stableId2=0;）
 
 Experimental
 == 実験的
@@ -5481,7 +5481,7 @@ Exporting chat images: %d
 == チャット画像をエクスポート中：%d
 
 Expose IP to servers by default when adding a favorite (last choice on the server info page)
-== Expose IP to servers by default when adding a favorite (last choice on the server info page)
+== お気に入り追加時に既定でサーバーへ IP を公開します（サーバー情報ページの前回の選択を記憶）
 
 Expose playback controls to the operating system
 == Expose playback controls to the operating system
@@ -6027,7 +6027,7 @@ Freeze tile outline color
 == フリーズタイルアウトラインの色
 
 Freeze tile outline width
-== Freeze tile outline width
+== フリーズタイルの輪郭幅
 
 Frequently asked questions
 == よくある質問
@@ -6125,8 +6125,8 @@ Full quality nameplate count
 Full width
 == 全幅
 
-Full: each enabled animation category uses its complete transition
-== 完全：有効な各アニメーションカテゴリで完全な遷移を使用します
+Full: uses the complete transition everywhere
+== フル：すべてのトランジションを完全に再生
 
 Fullscreen
 == フルスクリーン
@@ -6210,7 +6210,7 @@ General
 == 一般
 
 General DDNet gameplay display: showing other players and their shadow opacity, background quads and the default zoom.
-== General DDNet gameplay display: showing other players and their shadow opacity, background quads and the default zoom.
+== DDNet の全般的な表示: 他プレイヤーの表示と影の不透明度、背景クワッド、既定のズーム。
 
 Generated skin outline color
 == 生成アウトラインの色
@@ -6445,6 +6445,9 @@ Graphics mode
 
 Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
 == グラフィックスモード：-1 = バックエンド設定を使用、0 = 互換性、1 = パフォーマンス（既定）
+
+Graphics settings sub-tab: 0=display, 1=visual effects
+== グラフィック設定のサブタブ: 0=表示、1=視覚効果
 
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
 == グラフィックス追跡レベル：0 = オフ、1 = 定期サマリー、2 = サマリーと遅いフレーム、3 = 詳細なバックエンド追跡
@@ -6876,13 +6879,13 @@ Hook through teleporters (deprecated, use special entities instead)
 == テレポーターを通るフック（非推奨、代わりに特殊エンティティを使用）
 
 Hookable tile outline color
-== Hookable tile outline color
+== フック可能タイルの輪郭色
 
 Hookable tile outline width
-== Hookable tile outline width
+== フック可能タイルの輪郭幅
 
 Hookable tiles
-== Hookable tiles
+== フック可能タイル
 
 Hooking L/R: %.0f%%/%.0f%%
 == フック L/R：%.0f%%/%.0f%%
@@ -7115,6 +7118,9 @@ In DDNet, played when weapons are removed. Other modes may use it for armor pick
 In memory of me
 == 私を偲んで
 
+In pie menu
+== パイメニュー内
+
 In-game controller sensitivity
 == ゲーム内コントローラー感度
 
@@ -7256,12 +7262,6 @@ Ink: Paper Bloom
 Input
 == 入力
 
-Input background color
-== 入力欄背景色
-
-Input background opacity percentage
-== 入力欄背景 — 不透明度（パーセント）
-
 Input device
 == 入力デバイス
 
@@ -7330,6 +7330,9 @@ Interface surface
 
 Interface surface color
 == インターフェース表面の色
+
+Interface theme
+== インターフェーステーマ
 
 Interface transparency
 == 汎用インターフェース透明度
@@ -7581,7 +7584,7 @@ Keep the text light on a dark background; press "Reset tooltip appearance" to re
 == 暗い背景には明るい文字が見やすいです。既定の見た目に戻すにはヒントの外観をリセットを押します。
 
 Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
-== Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
+== チーム色と区別してください。同じだと同クランの名前がチームパネルに溶け込み、読みにくくなります。
 
 Keep unsent message on chat close
 == チャットを閉じる時に未送信内容を保持
@@ -7624,9 +7627,6 @@ Key Sticking: On
 
 Key Sticking: Reset Self
 == キースティッキング：自分をリセット
-
-Keyboard focus ring color
-== キーボードフォーカスリングの色
 
 Keyboard size
 == キーボードサイズ
@@ -8415,7 +8415,7 @@ Map preview rendering unavailable
 == マッププレビューを描画できません
 
 Map preview shows the entity layer only (hides textures)
-== Map preview shows the entity layer only (hides textures)
+== マッププレビューはエンティティ層のみ表示（テクスチャを隠す）
 
 Map Preview TODO
 == マッププレビュー TODO
@@ -9216,7 +9216,7 @@ Need to have started the map to swap with a player.
 == プレイヤーと入れ替えるにはマップを開始する必要があります。
 
 Negative stability buffer
-== Negative stability buffer
+== 負の安定性バッファ
 
 Net
 == ネット
@@ -9614,6 +9614,9 @@ Not downloaded
 Not enabled
 == 有効ではありません
 
+Not in pie menu
+== パイメニュー外
+
 Not installed
 == 未インストール
 
@@ -9722,8 +9725,8 @@ o = Send rate
 Off
 == オフ
 
-Off: disables all interface animations while preserving the options below
-== オフ：下の設定を保持したまま、すべてのインターフェースアニメーションを無効にします
+Off: disables every interface animation
+== オフ：すべてのインターフェースアニメーションを無効化
 
 Official
 == 公式
@@ -9953,9 +9956,6 @@ Opt-in protection for client-initiated self-kill, with optional auto-enable afte
 Optimistic prediction along stable direction
 == 安定方向に沿った楽観的予測
 
-Option color
-== オプションの色
-
 Optional
 == 任意
 
@@ -9970,9 +9970,6 @@ Optional start and end time in seconds. Leave both empty to export the whole dem
 
 Options here affect networking or identity; test on a server before using them in matches.
 == ここでの設定は通信や識別情報に影響します。試合で使う前にサーバーで試してください。
-
-Options only exist within "Detection distance"; turn off the ones you never use to keep the wheel short.
-== 項目は検出距離の中でのみ有効です。使わない項目を切ると輪が短く選びやすくなります。
 
 Or visit DDNet.org
 == または DDNet.org をご覧ください
@@ -10319,8 +10316,11 @@ Pick a shape, then tune glow and animation speed.
 Pick a slot, type the command and its label, then hold the wheel key in game to test.
 == スロットを選んでコマンドとラベルを入力し、ゲーム内でホイールキーを押し続けて試します。
 
+Pick a text color mode first; the custom color row only appears for the custom mode.
+== まず文字色モードを選んでください。カスタム色の行はカスタムモードでのみ表示されます。
+
 Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
-== Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
+== 各行の色を選んでください。認証済みと同クランの色はスコアボードに、2 つのリスト色はフレンドリストに適用されます。
 
 Pick result: %s
 == 抽選結果：%s
@@ -10715,6 +10715,12 @@ Points unavailable
 Popup animation
 == ポップアップアニメーション
 
+Popup background color
+== ポップアップの背景色
+
+Popup background opacity percentage
+== ポップアップ背景の不透明度（%）
+
 Port for client to server connection (0=random, >=1024 sets manual port)
 == クライアントからサーバーへの接続用ポート（0=ランダム, >=1024 で手動設定）
 
@@ -10824,7 +10830,7 @@ Prediction
 == 予測
 
 Prediction and latency compensation moved to the "Network compensation" sub-tab of the DDNet page.
-== Prediction and latency compensation moved to the "Network compensation" sub-tab of the DDNet page.
+== 予測と遅延補償は DDNet ページの「ネットワーク補償」サブタブに移動しました。
 
 Prediction boundary (ms, increases latency but reduces ping jitter)
 == 予測境界（ms、レイテンシは増加するが Ping ジッターを低減）
@@ -10854,16 +10860,13 @@ Prediction margin when frozen
 == フリーズ時の予測マージン
 
 Prediction trades accuracy for responsiveness: a larger margin and AntiPing smooth out ping jitter but can mispredict nearby actions, and upstream redundancy may triple upload traffic.
-== Prediction trades accuracy for responsiveness: a larger margin and AntiPing smooth out ping jitter but can mispredict nearby actions, and upstream redundancy may triple upload traffic.
+== 予測は精度と引き換えに応答性を得ます。大きなマージンと AntiPing は ping の揺れを滑らかにしますが、近くの動作を誤予測することがあり、上流冗長化はアップロード通信量を最大 3 倍にします。
 
 Preparing chat export: %d%%
 == チャットのエクスポートを準備中：%d%%
 
 Preparing demo playback
 == デモ再生を準備中
-
-Presentation animations
-== 表示アニメーション
 
 Preset %d
 == プリセット %d
@@ -11594,8 +11597,8 @@ Reduce visual latency
 Reduced
 == 縮小
 
-Reduced: uses shorter transitions and disables presentation animations
-== 軽減：短い遷移を使用し、演出アニメーションを無効にします
+Reduced: uses shorter transitions everywhere
+== 簡易：すべてのトランジションを短縮
 
 Reflected gradient
 == 反射グラデーション
@@ -11927,9 +11930,6 @@ Render tiny tees instead of circles
 Renderer performing the analysis
 == 分析を実行するレンダラー
 
-Rendering options
-== 描画オプション
-
 Rendering reads back 8-bit frames, so 10-bit formats add nothing by themselves; the gain comes from chroma density. If the encoder cannot do 4:4:4, the export fails with an error instead of reducing quality silently.
 == 描画の読み戻しは 8 ビットなので、10 ビット形式にしても情報は増えません。効果は色差の密度から来ます。エンコーダーが 4:4:4 に対応していない場合、画質を黙って下げずエラーで失敗します。
 
@@ -12085,9 +12085,6 @@ Reset chat completion appearance
 
 Reset chat on escape
 == Escape キーでチャットをリセット
-
-Reset colors
-== 色をリセット
 
 Reset column widths
 == 列幅をリセット
@@ -12566,15 +12563,6 @@ Scoreboard score lookup
 Scoreboard sort mode (0=Score, 1=Points)
 == スコアボードのソートモード（0=スコア、1=ポイント）
 
-Scoreboard surface
-== スコアボード表面
-
-Scoreboard surface color
-== スコアボード表面の色
-
-Scoreboard transparency
-== スコアボード透明度
-
 Scoreboard, chat, spectating
 == スコアボード、チャット、観戦
 
@@ -12707,12 +12695,6 @@ Sec-WebSocket-Protocol sent during the realtime handshake
 Secondary
 == セカンダリ
 
-Secondary menu background color
-== サブメニュー背景色
-
-Secondary menu background opacity percentage
-== サブメニュー背景 — 不透明度（パーセント）
-
 Seconds to wait before reconnecting (0=off, when server is full)
 == 再接続までの待機秒数（サーバー満員時、0 = オフ）
 
@@ -12775,9 +12757,6 @@ Selected %d
 
 Selected candidate %d/%d under cursor.
 == カーソル下の候補 %d/%d が選択されました。
-
-Selected item color
-== 選択項目の色
 
 Selected part: %d
 == 選択中のパーツ：%d
@@ -12996,7 +12975,7 @@ Set "Ingame mouse sens." for aiming and "UI mouse sens." for menus, then limit t
 == エイムはゲーム内マウス感度、メニューは UI マウス感度で設定し、最小カーソル距離と最大カーソル距離でカーソルの位置を制限します。
 
 Set "Prediction margin" in milliseconds, tick "AntiPing (latency compensation)" and then choose what to predict; the redundancy switch is experimental and only useful on lossy connections.
-== Set "Prediction margin" in milliseconds, tick "AntiPing (latency compensation)" and then choose what to predict; the redundancy switch is experimental and only useful on lossy connections.
+== 「予測マージン」をミリ秒で設定し、「AntiPing（遅延補償）」をオンにして、何を予測するか選びます。冗長化スイッチは実験的で、パケット損失のある回線でのみ有用です。
 
 Set "Switch interval" to 0 to stop timed switching and keep the queue for manual or map-join changes.
 == 切り替え間隔を 0 にすると時間での切り替えが止まり、キューは手動やマップ参加時の変更に使えます。
@@ -13009,9 +12988,6 @@ Set camera position relative to current view in the map
 
 Set camera position to x and y in the map
 == マップ内の x と y にカメラ位置を設定
-
-Set color
-== 色を設定
 
 Set current demo speed
 == 現在のデモ速度を設定
@@ -13148,6 +13124,9 @@ Severe
 Shape
 == 形状
 
+Shape, colors and text shared by the whole interface
+== インターフェース全体で共通の形状・色・文字
+
 Share of the server browser name/map split given to the name column (per mille)
 == サーバーブラウザーの名前/マップ分割で名前列に割り当てる割合（パーミル）
 
@@ -13228,6 +13207,9 @@ Show all votes (page 0 by default, 20 entries per page)
 
 Show all warlist groups
 == すべての敵対リストグループを表示
+
+Show an accent glow around the focused input field
+== フォーカス中の入力欄にアクセント色のグローを表示
 
 Show any enabled Indicators
 == 有効なすべてのインジケーターを表示
@@ -13362,10 +13344,10 @@ Show death tile outlines
 == デスタイルの輪郭を表示
 
 Show deep freeze tile outlines
-== Show deep freeze tile outlines
+== ディープフリーズタイルの輪郭を表示
 
 Show deep unfreeze tile outlines
-== Show deep unfreeze tile outlines
+== ディープ解凍タイルの輪郭を表示
 
 Show default flag in scoreboard
 == スコアボードにデフォルトの国旗を表示
@@ -13473,7 +13455,7 @@ Show freeze bars
 == フリーズバーを表示
 
 Show freeze tile outlines
-== Show freeze tile outlines
+== フリーズタイルの輪郭を表示
 
 Show friend icon in name plates
 == ネームプレートにフレンドアイコンを表示
@@ -13548,7 +13530,7 @@ Show hook strength number indicator
 == フック強度数値インジケーターを表示
 
 Show hookable tile outlines
-== Show hookable tile outlines
+== フック可能タイルの輪郭を表示
 
 Show how weapons, shields, snowflakes, and flags appear in game
 == 武器、シールド、雪片、旗がゲーム内でどう見えるかを表示
@@ -14124,10 +14106,10 @@ Show tuning parameters affecting own player (0=Off, 1=Show changed, 2=Show all)
 == 自身のプレイヤーに影響するチューニングパラメーターを表示（0 = オフ、1 = 変更のみ表示、2 = すべて表示）
 
 Show unfreeze tile outlines
-== Show unfreeze tile outlines
+== 解凍タイルの輪郭を表示
 
 Show unhookable tile outlines
-== Show unhookable tile outlines
+== フック不可タイルの輪郭を表示
 
 Show unknown server messages
 == 不明なサーバーメッセージを表示
@@ -14976,7 +14958,7 @@ Strength icons assets
 == 強さアイコンアセット
 
 Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)
-== Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)
+== Apple カプセル端の強さ (0 = 半円、100 = 最大)
 
 Stress system (debug builds only).
 == ストレスシステム（デバッグビルドのみ）
@@ -15536,11 +15518,11 @@ Text color
 Text color mode
 == 文字色モード
 
-Text color mode: 0 automatic, 1 white, 2 black, 3 custom
-== 文字色モード: 0 自動, 1 白, 2 黒, 3 カスタム
+Text color mode: 0 white, 1 black, 2 rainbow, 3 custom
+== 文字色モード: 0=白、1=黒、2=レインボー、3=カスタム
 
-Text input focus ring color
-== テキスト入力フォーカスリングの色
+Text follows the chosen mode instead of the surface, so a light surface with white text is unreadable by design.
+== テキストは表面ではなく選択したモードに従うため、明るい表面に白文字は設計上読めません。
 
 Text is too long for the selected translation service.
 == テキストが選択した翻訳サービスの長さ制限を超えています。
@@ -15725,8 +15707,8 @@ This connection cannot change names while connected. Reconnect with the saved na
 This ID is not connected
 == この ID は接続されていません
 
-This is the master switch for all interface animation categories
-== これはすべてのインターフェースアニメーションカテゴリの主スイッチです
+This is the master switch for all interface animations
+== すべてのインターフェースアニメーションの総合スイッチ
 
 This map path cannot be used.
 == このマップパスは使用できません。
@@ -15837,7 +15819,7 @@ Tick "Show inputs", then size and place it with "Keyboard size", "Mouse size", "
 == 入力を表示をオンにし、キーボードの大きさ、マウスの大きさ、不透明度、位置スライダーでサイズと位置を整えます。
 
 Tick "Show others" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use "Show background quads" and "Default zoom" for the view.
-== Tick "Show others" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use "Show background quads" and "Default zoom" for the view.
+== 「他のチームを表示」をオンにすると他チームを半透明で描画します。影の不透明度はその下の従属行で設定し、視界は「背景クワッドを表示」と「既定のズーム」で調整します。
 
 Tick any of "Show key stuck status", "Show hammer status", "Show dummy control status" or "Show dummy copy status".
 == キーの引っかかり表示、ハンマー状態を表示、dummy 操作状態を表示、dummy コピー状態を表示のうち、必要なものをオンにします。
@@ -16391,8 +16373,8 @@ Turn on "Enable dummy window", then set "Dummy window size" and "Dummy window zo
 Turn on "Enable Gores mode" or let "Auto enable in Gores mode" do it, pick options like "Auto weapon switch", and bind "Gores mode key".
 == Gores モードを有効にするの項目をオンにするか、Gores モードで自動有効化に任せ、自動武器切り替えなどの項目を選び、Gores モードキーを割り当てます。
 
-Turn on "Enable pie menu", bind the "Pie menu" command on the Bind page, then hold that key near a player and release on an option.
-== 円形メニューを有効にするをオンにし、キー割り当てページで円形メニューのコマンドを割り当て、プレイヤーの近くでそのキーを押し続けて項目の上で離します。
+Turn on "Enable pie menu", bind the "Pie menu" command on the Bind page, then hold that key near a player and release on an option. Drag options between the two lists to show or hide them.
+== 「パイメニューを有効化」をオンにし、「バインド」ページで「パイメニュー」コマンドを割り当ててください。プレイヤーの近くでそのキーを押したまま、項目の上で離します。項目を 2 つのリスト間でドラッグすると表示/非表示を切り替えられます。
 
 Turn on "Enable rotation", set "Switch interval" in milliseconds, then add skins with the plus icon in the skin list; "Random skin on map join" picks the start.
 == ローテーションを有効にするをオンにし、切り替え間隔をミリ秒で設定してから、スキン一覧のプラスアイコンでスキンを追加します。マップ参加時のランダムスキンが開始位置を決めます。
@@ -16674,16 +16656,16 @@ Unfreeze tile outline color
 == フリーズ解除タイルのアウトライン色
 
 Unfreeze tile outline width
-== Unfreeze tile outline width
+== 解凍タイルの輪郭幅
 
 Unhookable tile outline color
-== Unhookable tile outline color
+== フック不可タイルの輪郭色
 
 Unhookable tile outline width
-== Unhookable tile outline width
+== フック不可タイルの輪郭幅
 
 Unhookable tiles
-== Unhookable tiles
+== フック不可タイル
 
 Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
 == 統一書き出し品質（CRF/CQ/QP スケール 0-51、-1 = cl_video_crf を使用）。各エンコーダーのネイティブパラメータにマッピングされます
@@ -17024,9 +17006,6 @@ Use warlist colors instead of regular colors
 Use warlist groups for indicator
 == インジケーターに敵対リストグループを使用
 
-Used by active shared text and numeric input fields
-== 有効な共通テキスト・数値入力欄で使用されます
-
 Uses the active action with the current aiming position.
 == 現在の照準位置でアクティブアクションを使用します。
 
@@ -17087,8 +17066,8 @@ Very high quality, very slow
 Very long kaomoji are split by the chat length limit.
 == 長すぎる顔文字はチャットの文字数制限で分割されます。
 
-Very thick borders or high segment counts make text look blurry; keep them near the defaults.
-== 枠線を太くしすぎたり、セグメント数を増やしすぎたりすると、文字がぼやけて見えます。既定値に近い値に保ってください。
+Very thick borders make text look blurry; keep them near the defaults.
+== 枠線が太すぎると文字がぼやけます。既定値付近に保ってください。
 
 Video Background
 == ビデオ背景

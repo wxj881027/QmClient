@@ -1,6 +1,7 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_BROWSER_STATUS_LAYOUT_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_BROWSER_STATUS_LAYOUT_H
 
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/ui_rect.h>
 
 #include <algorithm>
@@ -34,7 +35,10 @@ struct SQmBrowserChipGrid
 
 // 等宽胶囊网格：宽度决定每行个数，行数决定内容高度；所有矩形都落在 Area 内。
 // 底部快捷条与右侧筛选面板共用同一套度量，避免两处密度不一致。
-inline SQmBrowserChipGrid QmBrowserChipGrid(CUIRect Area, int Count, float MinChipWidth, float ChipHeight = 18.0f, float Gap = 4.0f)
+// PerRowOverride > 0 时直接采用该列数（筛选面板的模式分组固定一行四个），
+// 否则按 MinChipWidth 反推能放几个。列数决定每格宽度，格子变窄时文字靠
+// FilterChip 自己的内边距与最小字号兜底，不会溢出胶囊。
+inline SQmBrowserChipGrid QmBrowserChipGrid(CUIRect Area, int Count, float MinChipWidth, float ChipHeight = 18.0f, float Gap = 4.0f, int PerRowOverride = 0)
 {
 	SQmBrowserChipGrid Result;
 	const float Width = QmBrowserLayoutExtent(Area.w);
@@ -43,7 +47,7 @@ inline SQmBrowserChipGrid QmBrowserChipGrid(CUIRect Area, int Count, float MinCh
 		return Result;
 	const float SafeMin = std::max(MinChipWidth, 1.0f);
 	const float SafeGap = std::max(Gap, 0.0f);
-	Result.m_PerRow = std::clamp((int)((Width + SafeGap) / (SafeMin + SafeGap)), 1, Result.m_Count);
+	Result.m_PerRow = PerRowOverride > 0 ? std::clamp(PerRowOverride, 1, Result.m_Count) : std::clamp((int)((Width + SafeGap) / (SafeMin + SafeGap)), 1, Result.m_Count);
 	const float ChipWidth = std::max(0.0f, (Width - SafeGap * (Result.m_PerRow - 1)) / Result.m_PerRow);
 	const int Rows = (Result.m_Count + Result.m_PerRow - 1) / Result.m_PerRow;
 	for(int Index = 0; Index < Result.m_Count; ++Index)
@@ -186,12 +190,12 @@ inline SQmBrowserPanelLayout QmBrowserPanelLayout(CUIRect View, bool ShowNotice)
 	// 连工具箱的最小内容列都放不下时，让主操作区使用全宽。
 	if(ToolboxWidth < 120.0f)
 		ToolboxWidth = 0.0f;
-	const float ColumnGap = ToolboxWidth > 0.0f ? 8.0f : 0.0f;
+	const float ColumnGap = ToolboxWidth > 0.0f ? ui_token::panel::GAP : 0.0f;
 	const float ListWidth = Width - ToolboxWidth - ColumnGap;
 	const float PaddingX = std::min(10.0f, ListWidth * 0.1f);
 	const float NaturalHeight = QmBrowserStatusLayout({0.0f, 0.0f, ListWidth - 2.0f * PaddingX, 0.0f}, ShowNotice).m_ContentHeight + 20.0f;
 	const float StatusHeight = std::min(Height, NaturalHeight);
-	const float ListHeight = std::max(0.0f, Height - StatusHeight - 8.0f);
+	const float ListHeight = std::max(0.0f, Height - StatusHeight - ui_token::panel::GAP);
 	Result.m_List = {View.x, View.y, ListWidth, ListHeight};
 	Result.m_Status = {View.x, View.y + Height - StatusHeight, ListWidth, StatusHeight};
 	Result.m_Toolbox = {View.x + Width - ToolboxWidth, View.y, ToolboxWidth, Height};

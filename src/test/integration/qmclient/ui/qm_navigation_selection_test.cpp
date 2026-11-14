@@ -218,7 +218,7 @@ TEST_F(QmNavigationSelection, SavedListSelectionCanStayAtTopUntilExplicitlyRevea
 	std::array<int, 60> Ids{};
 	CUIElementBase::Init(&m_Ui);
 	g_Config.m_UiSmoothScrollTime = 0;
-	g_Config.m_QmUiListEntryAnimations = 0;
+	g_Config.m_QmUiMotionLevel = 0;
 	const auto DrawList = [&](int Selected) {
 		Frame({400, 400}, false);
 		CUIRect View{20, 20, 200, 100};

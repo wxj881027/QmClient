@@ -59,7 +59,7 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 ### 2.1 设计 Token（design token）
 
 - 定义：所有尺寸、颜色、圆角、字号、动效参数只有一个来源；调用点选语义，不写数字。
-- 唯一实现：`src/game/client/QmUi/UiTokens.h`，命名空间共 20 个：`ui_token::color`（58 项）、`ui_token::spacing`、`ui_token::radius`（`NONE/TIGHT/BASE/SMALL_MENU/MENU/CARD/PILL`）、`ui_token::font`（`HEADLINE_LG/HEADLINE/TITLE/BODY/SMALL/CAPTION/TIP`）、`ui_token::motion`（36 项）、`ui_token::elevation`、`ui_token::control`（`PadX/PadY/IconBox/IconTextGap/SUFFIX_RATIO/SwitchMinWidth/SwitchTrackAspect`）、`ui_token::list`、`ui_token::settings` + `ui_token::settings::row`、`ui_token::feedback`、`ui_token::glow`、`ui_token::tooltip`、`ui_token::secondary_panel`、`ui_token::server_filter`、`ui_token::status_bar`、`ui_token::confirm_dialog`、`ui_token::dropdown`、`ui_token::discrete_slider`、`ui_token::ime`、`ui_token::hud::font`。
+- 唯一实现：`src/game/client/QmUi/UiTokens.h`，命名空间共 20 个：`ui_token::color`（58 项）、`ui_token::spacing`、`ui_token::radius`（`NONE/TIGHT/BASE/SMALL_MENU/MENU/CARD/PILL`）、`ui_token::font`（`HEADLINE_LG/HEADLINE/TITLE/BODY/SMALL/CAPTION/TIP`）、`ui_token::motion`（36 项）、`ui_token::elevation`、`ui_token::control`（`PadX/PadY/IconBox/IconTextGap/SUFFIX_RATIO/SwitchMinWidth/SwitchTrackAspect`）、`ui_token::list`、`ui_token::settings` + `ui_token::settings::row`、`ui_token::feedback`、`ui_token::glow`、`ui_token::tooltip`、`ui_token::secondary_panel`、`ui_token::server_filter`、`ui_token::status_bar`、`ui_token::confirm_dialog`、`ui_token::dropdown`、`ui_token::discrete_slider`、`ui_token::ime`、`ui_token::hud::font`、`ui_token::page_title`（`FONT_SIZE/HEIGHT/ICON_SIZE/ICON_GAP`）、`ui_token::panel`（`GAP/PADDING`）。
 - 禁止的反面写法：`Row.h - 2.0f` 这类就地魔数；为单个组件新开命名空间放通用色；用近似值复制已有 token（`PREVIEW_BACKDROP` 与 `SURFACE_OVERLAY` 二选一时必须复用）。
 
 ### 2.2 设置内容布局流（settings content flow）
@@ -116,7 +116,25 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 - 唯一实现：`DoSettingsMenuLabel(...)`（`src/game/client/components/menus.cpp`）、`CQmLocalizedLabelCache`（`src/game/client/QmUi/QmLocalizedLabels.h`）、`SLabelProperties`（`m_MaxWidth`、`m_EllipsisAtEnd`、`m_vColorSplits`）、字体档 `ui_token::font::*`。
 - 禁止的反面写法：`Ui()->DoLabel` 里写死字号与颜色；标签宽度自己量；同一行两种截断策略。
 
-### 2.11 对比表：三类动效机制
+### 2.11 页面主标题（page title）
+
+- 定义：页面级标题（设置页顶部「设置」、收藏地图工作区标题）共用一个字号与行高档，图标与文字作为一个整体对齐；标题不再借用正文标尺。
+- 唯一实现：`ui_token::page_title::{FONT_SIZE, HEIGHT, ICON_SIZE, ICON_GAP}`（`UiTokens.h`）+ `ui_widget::PageTitle(...)`（`src/game/client/QmUi/UiOverlays.h`，内部 `DoLabel_QmIcon` + `DoLabel`）；设置页标题样式键 `CMenus::BuildSettingsShellTitleTextStyle`（`menus.cpp`）读同一档字号。
+- 禁止的反面写法：标题字号写死 16 或 `font::HEADLINE_LG`（曾把「设置」压成正文观感）；标题前面自己 `DoLabel` 画图标导致换语言后错位；工作区标题用 `h * 0.72f` 按行高反推字号。
+
+### 2.12 页面页签字号（page tab font）
+
+- 定义：页签条文字只有一档字号，设置页页签与工作区页签并排看起来一样大。
+- 唯一实现：`ui_token::settings::TAB_FONT_SIZE`（`UiTokens.h`）+ `ui_token::settings::TAB_HEIGHT`；`DoButton_MenuTab` / `DoMapWorkspaceTabs` 显式传该档值。
+- 禁止的反面写法：`DoButton_MenuTab(..., -1.0f, ...)` 让行高反推字号（26 行高推到 15.4，与 13 档并排就露馅）；两个页面各写一个字号。
+
+### 2.13 面板间距（panel spacing）
+
+- 定义：页面级面板之间、面板与内容之间只有两档：缝与内边距。服务器列表是基准，回放/截图浏览器与设置页壳层跟它对齐。
+- 唯一实现：`ui_token::panel::{GAP, PADDING}`（`UiTokens.h`）；消费点 `QmBrowserPanelLayout`（`browser_status_layout.h`）、`ResolveSettingsShellLayout` 的 `SETTINGS_SHELL_GAP` / `SETTINGS_PANEL_MARGIN`（`SettingsPageLayout.h`）、`CMenus::RenderDemoBrowser`（`menus_demo.cpp`）。
+- 禁止的反面写法：调用点写 `HSplitBottom(10.0f, ...)` / `Margin(12.0f, ...)`；三个页面各用一套 8/10/12；面板间隙与内边距共用一个常数。
+
+### 2.14 对比表：三类动效机制
 
 | 机制 | 何时用 | 布局占位 | 唯一实现 | 禁止混用 |
 | --- | --- | --- | --- | --- |
@@ -160,6 +178,12 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 - 定义：整卡「个性调整」开关控制一整段内容的露头，不是单行从属关系。
 - 唯一实现：`CMenus::PersonalizationReveal`（`src/game/client/QmUi/cards/QmCardCatalog.h`）、渲染钩子版 `QmCardRenderHook::PersonalizationReveal`（`cards/QmCardCatalog.cpp`）。
 - 禁止的反面写法：用它代替 `SettingsDependentRows` 写单行；展开状态不进 `qm_expanded_sections`。
+
+### 3.4b 页面主标题组件（page title widget）
+
+- 定义：页面标题的唯一绘制入口，可选前置图标；图标与文字作为一个整体按左/中/右对齐，超宽省略。
+- 唯一实现：`ui_widget::PageTitle(Ctx, Rect, pLabel, Icon, pFallbackIcon, Align)`（`src/game/client/QmUi/UiOverlays.h`）；尺寸走 `ui_token::page_title`；图标字形取 `FontIcons::FONT_ICON_*`。
+- 禁止的反面写法：自己算图标矩形再调 `DoLabel`（居中对齐时算错）；标题不设 `m_MaxWidth` / `m_EllipsisAtEnd`（长语言串撑出面板）；图标尺寸写死 16/18。
 
 ### 3.5 胶囊页签（Capsule tab bar）
 

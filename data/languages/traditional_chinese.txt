@@ -349,12 +349,6 @@
 ?!Stuck keys!?
 == ?!卡鍵!?
 
-Enable focus glow
-== 啟用聚焦光暈
-
-Show an accent glow around the focused input field
-== 為聚焦的輸入框顯示強調色光暈
-
 []
 [%s] %s (Map: %s, Time: %s)
 == [%s] %s（地圖：%s，時間：%s）
@@ -620,6 +614,9 @@ Add one
 Add one shortcut per message; it is used when the target is on the list.
 == 每則訊息單獨加一條快速發言，目標在敵對列表裡時才會用到。
 
+Add options below
+== 在下方加入選項
+
 Add or edit entries, then use the bind in chat to send the text.
 == 新增或編輯項目，再到聊天中用綁定送出文字。
 
@@ -718,9 +715,6 @@ Adjust mouse sensitivity and cursor limits
 
 Adjust nameplate options and compare the preview.
 == 調整名牌選項並與預覽比較。
-
-Adjust one value at a time; corners and segments are drawn per frame, so large segment counts cost GPU time.
-== 一次只調整一個值；圓角與分段每幀都會繪製，分段數過高會佔用 GPU 時間。
 
 Adjust opacity of entity layers
 == 調整各個實體層的透明度
@@ -946,21 +940,6 @@ Angry
 
 Angular gradient
 == 角度漸層
-
-Animate chat box, emote selector, scoreboard, and spectate selection
-== 聊天框、表情選擇、計分板和觀戰選擇的展示動畫
-
-Animate lists when entering a page
-== 進入頁面時播放列表動畫
-
-Animate settings card expand and collapse height changes
-== 展開或折疊設定卡片時播放高度過渡動畫
-
-Animate settings card lists when entering a page
-== 進入設定頁面時播放卡片列表進場動畫
-
-Animate settings card reorder and layout reflow
-== 拖動排序或版面重排時播放卡片位置過渡動畫
 
 Animated title style id
 == 頭銜動態風格 ID
@@ -1706,6 +1685,9 @@ Background stroke color
 Background stroke width
 == 背景描邊寬度
 
+Background, border and title effects of the settings cards
+== 設定卡片的背景、邊框與標題效果
+
 Baidu Translate
 == 百度翻譯
 
@@ -1979,12 +1961,6 @@ Button - Disabled
 Button - Enabled
 == 按鈕 - 已啟用
 
-Button background color
-== 按鈕背景顏色
-
-Button background opacity percentage
-== 按鈕背景 — 不透明度百分比
-
 Button browser
 == 按鈕瀏覽器
 
@@ -2115,7 +2091,7 @@ Capsule ends
 == 膠囊端頭
 
 Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
-== Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
+== 膠囊端頭：0 = 普通圓弧，1 = 絲滑端點，2 = 蘋果連續曲率
 
 Capture the flag
 == 奪旗模式 (CTF)
@@ -2123,20 +2099,17 @@ Capture the flag
 Capture-the-flag event cue, used by CTF servers rather than ordinary DDNet racing.
 == 奪旗模式事件提示音，由 CTF 伺服器使用，非常規 DDNet 競速音效。
 
+Card effects
+== 卡片效果
+
 Card guide
 == 設定卡說明
-
-Card height animation
-== 設定卡片高度過渡動畫
-
-Card list entry animation
-== 設定卡片列表進場動畫
 
 Card opacity
 == 卡片不透明度
 
-Card reflow animation
-== 設定卡片重排動畫
+Card shape is shared with the rest of the interface and lives in "Interface theme".
+== 卡片形狀與介面其它部分共用，在「介面主題」裡調整。
 
 Category
 == 分類
@@ -2417,8 +2390,8 @@ Choose export name first.
 Choose Logo (PNG / WebP)
 == 選擇 Logo（PNG / WebP）
 
-Choose off, simple or full; the individual switches below only apply to full.
-== 可選擇關閉、精簡或完整；下方各個開關只在「完整」下生效。
+Choose off, reduced or full; this single switch drives every animation.
+== 選擇關、精簡或完整；所有動畫都由這一個開關控制。
 
 Choose the language used by the client
 == Choose the language used by the client
@@ -2575,6 +2548,12 @@ Click a part on the right to edit its color, blend mode and strength.
 
 Click a row such as "HDF" or "Left jump", press the key you want, and use the trash icon to remove a bind.
 == 點一下 HDF 或左跳這類列，按下想用的鍵即可綁定；點旁邊的垃圾桶圖示可以清除這個綁定。
+
+Click a slice in the preview to change that option's color; options only exist within "Detection distance", so keep the wheel short.
+== 點擊預覽裡的扇區可修改該選項的顏色；選項只在「檢測距離」內生效，保持輪盤簡短。
+
+Click a slice to set color
+== 點擊扇區設定顏色
 
 Click again to find the next location.
 == 再次點擊可尋找下一個位置
@@ -2763,7 +2742,7 @@ Colors of the translate button in the chat input and of the language menu that b
 == 聊天輸入框裡翻譯按鈕的顏色，以及該按鈕開啟的語言選單的顏色。
 
 Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
-== Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
+== 為計分板列上色：已認證玩家、同戰隊玩家、好友，以及好友清單裡的戰隊成員。
 
 Colors too close to the map background are hard to read while moving.
 == 顏色若太接近地圖背景，移動時會很難看清。
@@ -2947,6 +2926,9 @@ Configure HUD island appearance
 
 Configure input helpers and cursor behavior
 == Configure input helpers and cursor behavior
+
+Configure interface shape, theme, icons and animations
+== 配置介面形狀、主題、圖示與動畫
 
 Configure keyboard, mouse, wheel, and modifier bindings
 == 設定鍵盤、滑鼠、滾輪和修飾鍵綁定
@@ -3176,6 +3158,12 @@ Continuous-curvature UI corners (0 = classic arc, 100 = strongest)
 Contributors
 == 貢獻者
 
+Control background color
+== 控件背景顏色
+
+Control background opacity percentage
+== 控件背景不透明度百分比
+
 Control custom background drawing
 == Control custom background drawing
 
@@ -3215,11 +3203,14 @@ Controls
 Controls demo recording and playback behavior.
 == 控制回放錄製與播放的行為。
 
-Controls how UI surfaces are drawn: card surface opacity, border width, corner rounding, segment count and the rainbow title effect.
-== 控制介面表面的繪製方式：卡片表面不透明度、邊框寬度、圓角、分段數與彩虹標題效果。
+Controls how the settings cards themselves are drawn: card background, border and the rainbow title effect.
+== 控制設定卡片自身的繪製：卡片背景、邊框與標題彩虹流動效果。
 
 Controls laser shape, glow and animation.
 == 控制雷射的形狀、光暈與動畫。
+
+Controls the shape and colors shared by the whole interface: corner curve, capsule ends, surfaces, accent, control and popup backgrounds, text color mode and blur.
+== 控制整個介面共用的形狀與顏色：圓角曲線、膠囊端頭、介面表面、強調色、控件與彈層背景、文字顏色模式與模糊。
 
 Controls what appears next to other players' names, such as clan tags, friend marks and client identifiers.
 == 控制其他玩家名稱旁顯示的內容，例如戰隊標籤、好友標記與客戶端識別碼。
@@ -3681,7 +3672,7 @@ DDNet releases
 == DDNet 發布包
 
 DDNet settings sub-tab: 0=general, 1=network compensation
-== DDNet settings sub-tab: 0=general, 1=network compensation
+== DDNet 設定子頁籤：0=一般，1=網路補償
 
 DDNet staff
 == DDNet 官方開發者
@@ -3786,7 +3777,7 @@ Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == 專用 WebSocket 位址（留空使用 wss://qmclient.icu/ws）
 
 Deep freeze
-== Deep freeze
+== 深層凍結
 
 Deep freeze opacity
 == 深度凍結不透明度
@@ -3795,10 +3786,10 @@ Deep freeze tile outline color
 == 深凍圖塊輪廓顏色
 
 Deep freeze tile outline width
-== Deep freeze tile outline width
+== 深層凍結方塊的描邊寬度
 
 Deep unfreeze
-== Deep unfreeze
+== 深層解凍
 
 Deep unfreeze opacity
 == 深度解凍不透明度
@@ -3807,7 +3798,7 @@ Deep unfreeze tile outline color
 == 深解凍圖塊輪廓顏色
 
 Deep unfreeze tile outline width
-== Deep unfreeze tile outline width
+== 深層解凍方塊的描邊寬度
 
 Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 == Deepfly 模式（0=正常，1=DF，2=HDF，3=自定義）
@@ -4115,6 +4106,9 @@ Display mode
 Display modes
 == 顯示模式
 
+Display options
+== 顯示選項
+
 Display your race time
 == 顯示你的比賽時間
 
@@ -4304,6 +4298,12 @@ Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use 
 Drag HUD modules with the left mouse button
 == 按住鼠標左鍵拖動 HUD 模塊
 
+Drag options here to hide them
+== 把選項拖到這裡即可隱藏
+
+Drag options here to show them
+== 把選項拖到這裡即可顯示
+
 Drag the selected watermark to move it. The original image is preserved.
 == 拖曳選取的浮水印可調整位置，原圖會保留。
 
@@ -4318,6 +4318,9 @@ Drag to pan, scroll to zoom
 
 Drag to reorder; right-click or use the gear to manage
 == 拖曳排序；右鍵或齒輪可管理分類
+
+Drag to the other list to show or hide this option
+== 拖到另一個列表即可顯示或隱藏該選項
 
 Dragger Inner Color
 == 光索實心顏色
@@ -4763,8 +4766,8 @@ Enable audio output and choose a device
 Enable backdrop blur
 == 啟用背景模糊
 
-Enable backdrop blur for translucent interface and selected HUD backgrounds
-== 為半透明介面和指定 HUD 背景啟用背景模糊
+Enable backdrop blur for translucent interface and all HUD backgrounds
+== 為半透明介面與所有 HUD 背景啟用背景模糊
 
 Enable background 3D particle flicker
 == 啟用背景 3D 粒子閃爍
@@ -4876,6 +4879,9 @@ Enable fast map download
 
 Enable fat skin
 == 啟用脂肪皮
+
+Enable focus glow
+== 啟用聚焦光暈
 
 Enable freeze call sound
 == 啟用凍結呼叫聲
@@ -5405,14 +5411,8 @@ Expand
 Expand console
 == 展開控制台
 
-Expanded dropdown background color
-== 展開清單背景顏色
-
-Expanded dropdown background opacity percentage
-== 展開清單背景 — 不透明度百分比
-
 Expanded personalization sections (format: stableId=1;stableId2=0;)
-== Expanded personalization sections (format: stableId=1;stableId2=0;)
+== 已展開的個性調整分區（格式：stableId=1;stableId2=0;）
 
 Experimental
 == 實驗性
@@ -5481,7 +5481,7 @@ Exporting chat images: %d
 == 正在匯出聊天圖片：%d
 
 Expose IP to servers by default when adding a favorite (last choice on the server info page)
-== Expose IP to servers by default when adding a favorite (last choice on the server info page)
+== 加入收藏時預設向該伺服器顯示 IP（記住伺服器資訊頁上的上次選擇）
 
 Expose playback controls to the operating system
 == Expose playback controls to the operating system
@@ -6027,7 +6027,7 @@ Freeze tile outline color
 == 凍結圖塊輪廓顏色
 
 Freeze tile outline width
-== Freeze tile outline width
+== 凍結方塊的描邊寬度
 
 Frequently asked questions
 == 常見問題
@@ -6125,8 +6125,8 @@ Full quality nameplate count
 Full width
 == 全寬
 
-Full: each enabled animation category uses its complete transition
-== 完整：依下方各項開關播放完整過渡和展示動畫
+Full: uses the complete transition everywhere
+== 完整：所有過渡使用完整時長
 
 Fullscreen
 == 獨佔全屏
@@ -6210,7 +6210,7 @@ General
 == 常規
 
 General DDNet gameplay display: showing other players and their shadow opacity, background quads and the default zoom.
-== General DDNet gameplay display: showing other players and their shadow opacity, background quads and the default zoom.
+== DDNet 通用顯示：顯示其他玩家及其影子不透明度、背景方塊與預設縮放。
 
 Generated skin outline color
 == 生成描邊顏色
@@ -6445,6 +6445,9 @@ Graphics mode
 
 Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
 == 圖形模式：-1 = 使用後端設定，0 = 相容性，1 = 效能（預設）
+
+Graphics settings sub-tab: 0=display, 1=visual effects
+== 圖像設定子頁籤：0=顯示，1=視覺效果
 
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
 == 圖形追蹤等級：0 = 關閉，1 = 定期摘要，2 = 摘要與慢影格，3 = 詳細後端追蹤
@@ -6876,13 +6879,13 @@ Hook through teleporters (deprecated, use special entities instead)
 == 鉤子穿過傳送器（已棄用，請使用特殊實體代替）
 
 Hookable tile outline color
-== Hookable tile outline color
+== 可鉤方塊描邊顏色
 
 Hookable tile outline width
-== Hookable tile outline width
+== 可鉤方塊描邊寬度
 
 Hookable tiles
-== Hookable tiles
+== 可鉤方塊
 
 Hooking L/R: %.0f%%/%.0f%%
 == 出鉤 L/R：%.0f%%/%.0f%%
@@ -7115,6 +7118,9 @@ In DDNet, played when weapons are removed. Other modes may use it for armor pick
 In memory of me
 == 謹以此端，回憶我
 
+In pie menu
+== 餅菜單中
+
 In-game controller sensitivity
 == 遊戲內控制器靈敏度
 
@@ -7256,12 +7262,6 @@ Ink: Paper Bloom
 Input
 == 輸入
 
-Input background color
-== 輸入框背景顏色
-
-Input background opacity percentage
-== 輸入框背景 — 不透明度百分比
-
 Input device
 == 輸入設備
 
@@ -7330,6 +7330,9 @@ Interface surface
 
 Interface surface color
 == 介面表面顏色
+
+Interface theme
+== 介面主題
 
 Interface transparency
 == 通用介面透明度
@@ -7581,7 +7584,7 @@ Keep the text light on a dark background; press "Reset tooltip appearance" to re
 == 深色背景配淺色文字最好讀；想恢復建議樣式就點重設提示外觀。
 
 Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
-== Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
+== 這些顏色要與隊伍色區分開，否則同戰隊名字會融進隊伍面板、難以辨認。
 
 Keep unsent message on chat close
 == 關閉聊天時保留未發送內容
@@ -7624,9 +7627,6 @@ Key Sticking: On
 
 Key Sticking: Reset Self
 == 卡鍵：重置本體
-
-Keyboard focus ring color
-== 鍵盤焦點環顏色
 
 Keyboard size
 == 鍵盤大小
@@ -8415,7 +8415,7 @@ Map preview rendering unavailable
 == 目前無法繪製地圖預覽
 
 Map preview shows the entity layer only (hides textures)
-== Map preview shows the entity layer only (hides textures)
+== 地圖預覽只顯示實體層（隱藏貼圖）
 
 Map Preview TODO
 == 地圖預覽待做
@@ -9216,7 +9216,7 @@ Need to have started the map to swap with a player.
 == 你需要先開始地圖，才能和其他玩家交換位置
 
 Negative stability buffer
-== Negative stability buffer
+== 負穩定性緩衝
 
 Net
 == 淨擊殺
@@ -9614,6 +9614,9 @@ Not downloaded
 Not enabled
 == 未啟用
 
+Not in pie menu
+== 未在餅菜單中
+
 Not installed
 == 未安裝
 
@@ -9722,8 +9725,8 @@ o = Send rate
 Off
 == 關
 
-Off: disables all interface animations while preserving the options below
-== 關閉：停用全部介面動畫，但保留下面各項開關的設定
+Off: disables every interface animation
+== 關閉：停用全部介面動畫
 
 Official
 == 官方
@@ -9953,9 +9956,6 @@ Opt-in protection for client-initiated self-kill, with optional auto-enable afte
 Optimistic prediction along stable direction
 == 沿穩定方向更樂觀的預測
 
-Option color
-== 選項顏色
-
 Optional
 == 選填
 
@@ -9970,9 +9970,6 @@ Optional start and end time in seconds. Leave both empty to export the whole dem
 
 Options here affect networking or identity; test on a server before using them in matches.
 == 這裡的選項會影響網路或身分識別；在比賽中使用前，先到伺服器上測試。
-
-Options only exist within "Detection distance"; turn off the ones you never use to keep the wheel short.
-== 選項只在偵測距離內才有效；關掉從不使用的選項，輪盤會更短更好選。
 
 Or visit DDNet.org
 == 或造訪 DDNet.org
@@ -10319,8 +10316,11 @@ Pick a shape, then tune glow and animation speed.
 Pick a slot, type the command and its label, then hold the wheel key in game to test.
 == 選一個槽位，輸入指令和對應標籤，再到遊戲裡按住輪盤鍵測試。
 
+Pick a text color mode first; the custom color row only appears for the custom mode.
+== 先選擇文字顏色模式；自定義顏色列只在自定義模式下出現。
+
 Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
-== Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
+== 逐列選擇顏色：已認證與同戰隊顏色作用於計分板，兩個清單顏色作用於好友清單。
 
 Pick result: %s
 == 抽取結果：%s
@@ -10715,6 +10715,12 @@ Points unavailable
 Popup animation
 == 彈出動畫
 
+Popup background color
+== 彈層背景顏色
+
+Popup background opacity percentage
+== 彈層背景不透明度百分比
+
 Port for client to server connection (0=random, >=1024 sets manual port)
 == 用於客戶端連接到伺服器的端口（0 選擇隨機端口，1024 或更高設置手動端口）
 
@@ -10824,7 +10830,7 @@ Prediction
 == 預測
 
 Prediction and latency compensation moved to the "Network compensation" sub-tab of the DDNet page.
-== Prediction and latency compensation moved to the "Network compensation" sub-tab of the DDNet page.
+== 預測與延遲補償已移到 DDNet 頁的「網路補償」子頁籤。
 
 Prediction boundary (ms, increases latency but reduces ping jitter)
 == 預測邊界（單位：毫秒，增加延遲但可減少因 ping 波動導致的卡頓）
@@ -10854,16 +10860,13 @@ Prediction margin when frozen
 == 凍結時的預測邊距
 
 Prediction trades accuracy for responsiveness: a larger margin and AntiPing smooth out ping jitter but can mispredict nearby actions, and upstream redundancy may triple upload traffic.
-== Prediction trades accuracy for responsiveness: a larger margin and AntiPing smooth out ping jitter but can mispredict nearby actions, and upstream redundancy may triple upload traffic.
+== 預測用精度換取回應速度：更大的餘量與 AntiPing 能抹平 ping 抖動，但可能誤判近處動作；上游冗餘最多會讓上行流量增至三倍。
 
 Preparing chat export: %d%%
 == 正在準備聊天匯出：%d%%
 
 Preparing demo playback
 == 正在準備回放
-
-Presentation animations
-== 介面展示動畫
 
 Preset %d
 == 預設 %d
@@ -11594,8 +11597,8 @@ Reduce visual latency
 Reduced
 == 降低
 
-Reduced: uses shorter transitions and disables presentation animations
-== 精簡：保留較短的過渡效果，並停用展示動畫
+Reduced: uses shorter transitions everywhere
+== 精簡：所有過渡使用更短時長
 
 Reflected gradient
 == 對稱漸層
@@ -11927,9 +11930,6 @@ Render tiny tees instead of circles
 Renderer performing the analysis
 == 執行分析的渲染器
 
-Rendering options
-== 渲染選項
-
 Rendering reads back 8-bit frames, so 10-bit formats add nothing by themselves; the gain comes from chroma density. If the encoder cannot do 4:4:4, the export fails with an error instead of reducing quality silently.
 == 算繪讀回的是 8 位畫面，所以換成 10 位格式本身不會多出細節；真正的收益來自色度密度。編碼器不支援 4:4:4 時匯出會直接報錯，而不是偷偷降畫質。
 
@@ -12085,9 +12085,6 @@ Reset chat completion appearance
 
 Reset chat on escape
 == 按退出鍵時重置聊天
-
-Reset colors
-== 重設顏色
 
 Reset column widths
 == 重置列寬
@@ -12566,15 +12563,6 @@ Scoreboard score lookup
 Scoreboard sort mode (0=Score, 1=Points)
 == 記分牌排序模式（0=分數，1=分）
 
-Scoreboard surface
-== 計分板表面
-
-Scoreboard surface color
-== 計分板表面顏色
-
-Scoreboard transparency
-== 計分板透明度
-
 Scoreboard, chat, spectating
 == 計分板、聊天、觀戰
 
@@ -12707,12 +12695,6 @@ Sec-WebSocket-Protocol sent during the realtime handshake
 Secondary
 == 次要
 
-Secondary menu background color
-== 次級選單背景顏色
-
-Secondary menu background opacity percentage
-== 次級選單背景 — 不透明度百分比
-
 Seconds to wait before reconnecting (0=off, when server is full)
 == 重新連接前等待多少秒（伺服器已滿時，0 表示關閉）
 
@@ -12775,9 +12757,6 @@ Selected %d
 
 Selected candidate %d/%d under cursor.
 == 已選中光標下的候選項 %d/%d。
-
-Selected item color
-== 已選項目顏色
 
 Selected part: %d
 == 所選部件：%d
@@ -12996,7 +12975,7 @@ Set "Ingame mouse sens." for aiming and "UI mouse sens." for menus, then limit t
 == 瞄準用遊戲內鼠標靈敏度，選單用鼠標靈敏度（界面），再用最小光標距離和最大光標距離限制光標位置。
 
 Set "Prediction margin" in milliseconds, tick "AntiPing (latency compensation)" and then choose what to predict; the redundancy switch is experimental and only useful on lossy connections.
-== Set "Prediction margin" in milliseconds, tick "AntiPing (latency compensation)" and then choose what to predict; the redundancy switch is experimental and only useful on lossy connections.
+== 以毫秒設定「預測餘量」，勾選「AntiPing（延遲補償）」，再選擇要預測什麼；冗餘開關是實驗性的，只在丟包鏈路上有用。
 
 Set "Switch interval" to 0 to stop timed switching and keep the queue for manual or map-join changes.
 == 把切換間隔設為 0 就會停止定時切換，佇列留給手動切換或進圖時使用。
@@ -13009,9 +12988,6 @@ Set camera position relative to current view in the map
 
 Set camera position to x and y in the map
 == 將相機位置設置為地圖中的 x 和 y
-
-Set color
-== 設置顏色
 
 Set current demo speed
 == 設置當前回放速度
@@ -13148,6 +13124,9 @@ Severe
 Shape
 == 形狀
 
+Shape, colors and text shared by the whole interface
+== 整個介面共用的形狀、顏色與文字
+
 Share of the server browser name/map split given to the name column (per mille)
 == 伺服器瀏覽器名稱/地圖分欄中分配給名稱列的千分比
 
@@ -13228,6 +13207,9 @@ Show all votes (page 0 by default, 20 entries per page)
 
 Show all warlist groups
 == 顯示所有敵對群組
+
+Show an accent glow around the focused input field
+== 為聚焦的輸入框顯示強調色光暈
 
 Show any enabled Indicators
 == 開啟玩家指示器
@@ -13362,10 +13344,10 @@ Show death tile outlines
 == 顯示死亡圖塊輪廓
 
 Show deep freeze tile outlines
-== Show deep freeze tile outlines
+== 顯示深層凍結方塊描邊
 
 Show deep unfreeze tile outlines
-== Show deep unfreeze tile outlines
+== 顯示深層解凍方塊描邊
 
 Show default flag in scoreboard
 == 在記分牌中顯示默認國旗
@@ -13473,7 +13455,7 @@ Show freeze bars
 == 顯示解凍進度條
 
 Show freeze tile outlines
-== Show freeze tile outlines
+== 顯示凍結方塊描邊
 
 Show friend icon in name plates
 == 在暱稱中顯示好友圖標
@@ -13548,7 +13530,7 @@ Show hook strength number indicator
 == 顯示鉤索強度數值
 
 Show hookable tile outlines
-== Show hookable tile outlines
+== 顯示可鉤方塊描邊
 
 Show how weapons, shields, snowflakes, and flags appear in game
 == 顯示武器、護盾、雪花與旗幟在遊戲中的外觀
@@ -14124,10 +14106,10 @@ Show tuning parameters affecting own player (0=Off, 1=Show changed, 2=Show all)
 == 顯示影響自身玩家的調整參數信息（0 = 關閉，1 = 顯示已改變的，2 = 顯示全部）
 
 Show unfreeze tile outlines
-== Show unfreeze tile outlines
+== 顯示解凍方塊描邊
 
 Show unhookable tile outlines
-== Show unhookable tile outlines
+== 顯示不可鉤方塊描邊
 
 Show unknown server messages
 == 顯示未知伺服器消息
@@ -14976,7 +14958,7 @@ Strength icons assets
 == 強弱圖標資源
 
 Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)
-== Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)
+== 蘋果膠囊端頭強度（0 = 半圓，100 = 最強）
 
 Stress system (debug builds only).
 == 壓力系統（僅限調試版本）
@@ -15536,11 +15518,11 @@ Text color
 Text color mode
 == 文字顏色模式
 
-Text color mode: 0 automatic, 1 white, 2 black, 3 custom
-== 文字顏色模式: 0 自動, 1 白色, 2 黑色, 3 自訂
+Text color mode: 0 white, 1 black, 2 rainbow, 3 custom
+== 文字顏色模式：0=白色，1=黑色，2=彩虹，3=自定義
 
-Text input focus ring color
-== 文字輸入焦點環顏色
+Text follows the chosen mode instead of the surface, so a light surface with white text is unreadable by design.
+== 文字跟隨所選模式而不是表面色，因此淺色表面配白字在設計上就是不可讀的。
 
 Text is too long for the selected translation service.
 == 文字超過所選翻譯服務的長度限制。
@@ -15725,8 +15707,8 @@ This connection cannot change names while connected. Reconnect with the saved na
 This ID is not connected
 == 該 ID 未連接
 
-This is the master switch for all interface animation categories
-== 這是所有介面動畫類別的總開關
+This is the master switch for all interface animations
+== 這是所有介面動畫的總開關
 
 This map path cannot be used.
 == 這個地圖路徑不能使用。
@@ -15837,7 +15819,7 @@ Tick "Show inputs", then size and place it with "Keyboard size", "Mouse size", "
 == 勾選顯示輸入，然後用鍵盤大小、滑鼠大小、不透明度與位置滑桿調整尺寸與位置。
 
 Tick "Show others" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use "Show background quads" and "Default zoom" for the view.
-== Tick "Show others" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use "Show background quads" and "Default zoom" for the view.
+== 勾選「顯示其他隊伍」可半透明繪製其他隊伍，其影子不透明度在下方從屬列設定；視野相關還有「顯示背景方塊」和「預設縮放」。
 
 Tick any of "Show key stuck status", "Show hammer status", "Show dummy control status" or "Show dummy copy status".
 == 按需勾選顯示卡鍵狀態、顯示錘子狀態、顯示分身控制狀態或顯示分身同步狀態。
@@ -16391,8 +16373,8 @@ Turn on "Enable dummy window", then set "Dummy window size" and "Dummy window zo
 Turn on "Enable Gores mode" or let "Auto enable in Gores mode" do it, pick options like "Auto weapon switch", and bind "Gores mode key".
 == 開啟啟用 Gores 模式，或讓在 Gores 模式中自動啟用代勞，選擇自動切換武器等選項，再綁定 Gores 模式按鍵。
 
-Turn on "Enable pie menu", bind the "Pie menu" command on the Bind page, then hold that key near a player and release on an option.
-== 開啟啟用輪盤選單，在按鍵綁定頁把輪盤選單指令綁到一個鍵，然後在玩家旁邊按住該鍵、在選項上放開。
+Turn on "Enable pie menu", bind the "Pie menu" command on the Bind page, then hold that key near a player and release on an option. Drag options between the two lists to show or hide them.
+== 開啟「啟用餅菜單」，在「綁定」頁綁定「餅菜單」指令，然後靠近玩家按住該鍵，並在某個選項上放開。拖動選項可在兩個列表之間顯示或隱藏。
 
 Turn on "Enable rotation", set "Switch interval" in milliseconds, then add skins with the plus icon in the skin list; "Random skin on map join" picks the start.
 == 打開啟用輪換並把切換間隔設成毫秒數，然後在皮膚列表裡用加號圖示加入皮膚；進入地圖時隨機皮膚決定從哪裡開始。
@@ -16674,16 +16656,16 @@ Unfreeze tile outline color
 == 解凍圖塊輪廓顏色
 
 Unfreeze tile outline width
-== Unfreeze tile outline width
+== 解凍方塊的描邊寬度
 
 Unhookable tile outline color
-== Unhookable tile outline color
+== 不可鉤方塊描邊顏色
 
 Unhookable tile outline width
-== Unhookable tile outline width
+== 不可鉤方塊描邊寬度
 
 Unhookable tiles
-== Unhookable tiles
+== 不可鉤方塊
 
 Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
 == 統一匯出品質（CRF/CQ/QP 標度 0-51，-1 = 使用 cl_video_crf）；映射到各編碼器的原生參數
@@ -17024,9 +17006,6 @@ Use warlist colors instead of regular colors
 Use warlist groups for indicator
 == 使用敵對列表作為指示器
 
-Used by active shared text and numeric input fields
-== 用於已啟用的共用文字與數值輸入框
-
 Uses the active action with the current aiming position.
 == 使用當前動作配合目前的瞄準位置。
 
@@ -17087,8 +17066,8 @@ Very high quality, very slow
 Very long kaomoji are split by the chat length limit.
 == 過長的表情符號會因聊天長度上限而被拆分。
 
-Very thick borders or high segment counts make text look blurry; keep them near the defaults.
-== 邊框太粗或分段數過高會讓文字顯得模糊；請盡量讓這些值接近預設值。
+Very thick borders make text look blurry; keep them near the defaults.
+== 邊框太粗會讓文字顯得模糊；請保持在預設值附近。
 
 Video Background
 == 視頻背景

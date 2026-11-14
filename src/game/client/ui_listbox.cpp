@@ -134,6 +134,30 @@ float CListBox::RowReserveWidth() const
 	return ui_token::list::OverlayRailReserve();
 }
 
+float CListBox::StepRowReserveRight(const float Target)
+{
+	const float FullReserve = RowReserveWidth();
+	const int64_t Now = time_get();
+	const int64_t Freq = maximum<int64_t>(1, time_freq());
+	const float Elapsed = m_ReserveRightStepTime > 0 ? std::clamp((float)((double)(Now - m_ReserveRightStepTime) / (double)Freq), 0.0f, 0.10f) : 0.0f;
+	m_ReserveRightStepTime = Now;
+	// 测量趟与关闭动效时直接落到目标：布局要一份确定的宽度，动画只属于绘制节奏。
+	if(g_Config.m_QmUiMotionLevel == 0 || Ui()->MeasurementOnly() || FullReserve <= 0.0f)
+	{
+		m_ReserveRightCurrent = Target;
+		return Target;
+	}
+	// 匀速走完整段让位用时 INTERACTIVE_REVEAL_SEC：与折叠区展开同一档节奏，
+	// 滚动条淡入的同一段时间里行胶囊横向让开，两者不会一个快一个慢。
+	const float Speed = FullReserve / maximum(0.001f, ui_token::motion::INTERACTIVE_REVEAL_SEC);
+	const float MaxStep = Speed * Elapsed;
+	if(m_ReserveRightCurrent < Target)
+		m_ReserveRightCurrent = minimum(Target, m_ReserveRightCurrent + MaxStep);
+	else if(m_ReserveRightCurrent > Target)
+		m_ReserveRightCurrent = maximum(Target, m_ReserveRightCurrent - MaxStep);
+	return m_ReserveRightCurrent;
+}
+
 float CListBox::ResolveRowCornerRadius() const
 {
 	// 只有显式开启胶囊行（SetCapsuleRows）的列表才换成胶囊横条：它会同时带来行距、
@@ -270,7 +294,7 @@ void CListBox::DoStart(float RowHeight, int NumItems, int ItemsPerRow, int RowsP
 	if(m_LastDrawTime != 0 && Now - m_LastDrawTime > Frequency / 4 && SelectedIndex >= 0)
 		m_ListBoxUpdateScroll = true;
 	m_LastDrawTime = Now;
-	const bool EntryAnimationEnabled = g_Config.m_QmUiListEntryAnimations != 0 && g_Config.m_QmUiMotionLevel > 0;
+	const bool EntryAnimationEnabled = g_Config.m_QmUiMotionLevel > 0;
 	// F1 后台仍显示同一列表；只有纯测量不参与可见动画生命周期。
 	const EQmListEntryRenderPass AnimationPass = Ui()->MeasurementOnly()  ? EQmListEntryRenderPass::MEASUREMENT :
 						     Ui()->BackgroundRender() ? EQmListEntryRenderPass::BACKGROUND :
@@ -339,11 +363,16 @@ void CListBox::DoStart(float RowHeight, int NumItems, int ItemsPerRow, int RowsP
 	ScrollParams.m_ScrollbarTrackInset = std::max(0.0f, m_ContainerRadius - m_ContainerPaddingY);
 	const int NumRows = (m_ListBoxNumItems + maximum(1, m_ListBoxItemsPerRow) - 1) / maximum(1, m_ListBoxItemsPerRow);
 	const float ContentHeight = ui_token::list::RowsHeight(NumRows, m_ListBoxRowHeight, m_AutoSpacing);
-	// 胶囊行：覆盖式滚动条不占行宽，但行右侧恒定让出滚动条那一列，行胶囊右缘
-	// 不贴轨道、滚动条出现/消失也不横跳。这里不能按「内容是否溢出」判断：
-	// 服务器列表用 SkipItems 做可见范围裁剪，本帧根本拿不到真实内容高度。
+	// 胶囊行：覆盖式滚动条不占行宽，行右侧要让出滚动条那一列，行胶囊右缘不贴轨道。
+	// 默认仍然恒定让位——服务器列表用 SkipItems 做可见范围裁剪，本帧拿不到真实内容高度。
+	// 显式开启 SetReserveRightWhenOverflowing 的列表（服务器信息里的玩家行）能拿到
+	// 真实内容高度，于是只在滚动条真出现时让位，并把这个宽度做成过渡动画。
 	if(m_CapsuleRows && m_ListBoxItemsPerRow <= 1)
-		m_RowReserveRight = RowReserveWidth();
+	{
+		const bool Overflows = ContentHeight > maximum(0.0f, m_ListBoxView.h) + 0.5f;
+		const float Target = m_ReserveWhenOverflowing && !Overflows ? 0.0f : RowReserveWidth();
+		m_RowReserveRight = m_ReserveWhenOverflowing ? StepRowReserveRight(Target) : Target;
+	}
 	m_ScrollRegion.SetContentHeightForNextFrame(ContentHeight);
 	m_ScrollRegion.Begin(&m_ListBoxView, &ScrollOffset, &ScrollParams);
 	m_ListBoxView.y += ScrollOffset.y;

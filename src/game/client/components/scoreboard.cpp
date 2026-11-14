@@ -148,14 +148,16 @@ namespace
 		return ColorRGBA(1.0f, 1.0f, 1.0f, Alpha);
 	}
 
+	// 计分板表面不再单独配置：直接取界面表面色与界面透明度，和菜单、面板同一份颜色。
+	// 分开配置时两块面板会各调各的，同一局里出现两种底色。
 	ColorRGBA ScoreboardUiColor()
 	{
-		return color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmScoreboardColor)).WithAlpha(1.0f);
+		return color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiColor)).WithAlpha(1.0f);
 	}
 
 	float ScoreboardUiAlpha(float AlphaScale)
 	{
-		return ui_token::color::UiColorAccent(ScoreboardUiColor(), AlphaScale * (g_Config.m_QmScoreboardOpacity / 100.0f)).a;
+		return ui_token::color::UiColorAccent(ScoreboardUiColor(), AlphaScale * (g_Config.m_QmUiOpacity / 100.0f)).a;
 	}
 
 	ColorRGBA ScoreboardUiColorSurface(float AlphaScale, float ColorScale = 0.16f)
@@ -173,7 +175,7 @@ namespace
 
 	ColorRGBA ScoreboardDecorationColor(ColorRGBA Color, float AlphaScale = 1.0f)
 	{
-		Color.a = std::clamp(Color.a * AlphaScale * (g_Config.m_QmScoreboardOpacity / 100.0f), 0.0f, 1.0f);
+		Color.a = std::clamp(Color.a * AlphaScale * (g_Config.m_QmUiOpacity / 100.0f), 0.0f, 1.0f);
 		return Color;
 	}
 
@@ -857,7 +859,7 @@ void CScoreboard::RenderSoundMuteBar(CUIRect ScoreboardRect)
 	}
 
 	CUiV2AnimationRuntime *pAnimRuntime = nullptr;
-	if(g_Config.m_QmExtraAnimations != 0 && GameClient()->UiRuntimeV2()->Enabled())
+	if(g_Config.m_QmUiMotionLevel > 0 && GameClient()->UiRuntimeV2()->Enabled())
 		pAnimRuntime = &GameClient()->UiRuntimeV2()->AnimRuntime();
 
 	if(pAnimRuntime != nullptr && !m_SoundMuteButtonAnimState.m_Initialized)
@@ -1851,7 +1853,7 @@ void CScoreboard::OnRender()
 	if(WantActive && !m_WasActive)
 		m_ActiveStartTime = time_get();
 	m_WasActive = WantActive;
-	const bool ExtraAnimations = g_Config.m_QmExtraAnimations != 0 && GameClient()->UiRuntimeV2()->Enabled();
+	const bool ExtraAnimations = g_Config.m_QmUiMotionLevel > 0 && GameClient()->UiRuntimeV2()->Enabled();
 	float PanelOffsetY = 0.0f;
 	float PanelScale = 1.0f;
 	if(!ExtraAnimations)

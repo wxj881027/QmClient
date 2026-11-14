@@ -349,12 +349,6 @@
 ?!Stuck keys!?
 == ?!Basılı tuşlar!?
 
-Enable focus glow
-== Odak parıltısını etkinleştir
-
-Show an accent glow around the focused input field
-== Odaklanan giriş alanının çevresinde vurgu renginde parıltı göster
-
 []
 [%s] %s (Map: %s, Time: %s)
 == [%s] %s (harita: %s, zaman: %s)
@@ -620,6 +614,9 @@ Add one
 Add one shortcut per message; it is used when the target is on the list.
 == Her mesaj için ayrı bir kısayol ekle; hedef listede olduğunda kullanılır.
 
+Add options below
+== Aşağıdan seçenek ekleyin
+
 Add or edit entries, then use the bind in chat to send the text.
 == Girdileri ekle veya düzenle, sonra sohbette bağlantıyı kullanarak metni gönder.
 
@@ -718,9 +715,6 @@ Adjust mouse sensitivity and cursor limits
 
 Adjust nameplate options and compare the preview.
 == İsim etiketi seçeneklerini ayarlayın ve önizlemeyle karşılaştırın.
-
-Adjust one value at a time; corners and segments are drawn per frame, so large segment counts cost GPU time.
-== Her seferinde tek bir değeri değiştirin; köşeler ve dilimler her karede çizilir, bu yüzden yüksek dilim sayıları GPU süresini artırır.
 
 Adjust opacity of entity layers
 == Varlık katmanlarının opaklığını ayarla
@@ -946,21 +940,6 @@ Angry
 
 Angular gradient
 == Açısal gradyan
-
-Animate chat box, emote selector, scoreboard, and spectate selection
-== Sohbet kutusunu, ifade seçiciyi, skor tablosunu ve izleyici seçimini canlandır
-
-Animate lists when entering a page
-== Bir sayfaya girerken listeleri canlandır
-
-Animate settings card expand and collapse height changes
-== Ayar kartlarını genişletip daraltırken yükseklik değişimlerini canlandır
-
-Animate settings card lists when entering a page
-== Bir sayfaya girerken ayar kartı listelerini canlandır
-
-Animate settings card reorder and layout reflow
-== Ayar kartı sıralamasını ve düzen yeniden akışını canlandır
 
 Animated title style id
 == Animasyonlu unvan stili kimliği
@@ -1706,6 +1685,9 @@ Background stroke color
 Background stroke width
 == Arka plan vuruş genişliği
 
+Background, border and title effects of the settings cards
+== Ayar kartlarının arka plan, kenarlık ve başlık efektleri
+
 Baidu Translate
 == Baidu çevirisi
 
@@ -1979,12 +1961,6 @@ Button - Disabled
 Button - Enabled
 == Düğme - Etkin
 
-Button background color
-== Düğme arka plan rengi
-
-Button background opacity percentage
-== Düğme arka plan rengi — opaklık yüzdesi
-
 Button browser
 == Düğme tarayıcısı
 
@@ -2115,7 +2091,7 @@ Capsule ends
 == Kapsül uçları
 
 Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
-== Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
+== Kapsül uçları: 0 = düz yay, 1 = ipeksi uç, 2 = Apple sürekli eğrilik
 
 Capture the flag
 == Bayrak kapmaca (CTF)
@@ -2123,20 +2099,17 @@ Capture the flag
 Capture-the-flag event cue, used by CTF servers rather than ordinary DDNet racing.
 == Bayrak kapmaca etkinlik sesi; normal DDNet yarışlarından ziyade CTF sunucularında kullanılır.
 
+Card effects
+== Kart efektleri
+
 Card guide
 == Kart rehberi
-
-Card height animation
-== Ayar kartı yüksekliği animasyonu
-
-Card list entry animation
-== Ayar kartı listesi giriş animasyonu
 
 Card opacity
 == Kart opaklığı
 
-Card reflow animation
-== Ayar kartı yeniden düzenleme animasyonu
+Card shape is shared with the rest of the interface and lives in "Interface theme".
+== Kart biçimi arayüzün geri kalanıyla ortaktır ve "Arayüz teması" içindedir.
 
 Category
 == Kategori
@@ -2417,8 +2390,8 @@ Choose export name first.
 Choose Logo (PNG / WebP)
 == Logo seç (PNG / WebP)
 
-Choose off, simple or full; the individual switches below only apply to full.
-== Kapalı, basit veya tam seçin; aşağıdaki ayrı anahtarlar yalnızca tam seçeneğinde geçerlidir.
+Choose off, reduced or full; this single switch drives every animation.
+== Kapalı, azaltılmış veya tam seçin; tüm animasyonlar bu tek anahtarla çalışır.
 
 Choose the language used by the client
 == Choose the language used by the client
@@ -2575,6 +2548,12 @@ Click a part on the right to edit its color, blend mode and strength.
 
 Click a row such as "HDF" or "Left jump", press the key you want, and use the trash icon to remove a bind.
 == HDF veya Sola zıplama gibi bir satıra tıkla ve istediğin tuşa bas; yanındaki çöp kutusu simgesi atamayı siler.
+
+Click a slice in the preview to change that option's color; options only exist within "Detection distance", so keep the wheel short.
+== O seçeneğin rengini değiştirmek için önizlemedeki bir dilime tıklayın; seçenekler yalnızca "Algılama mesafesi" içinde geçerlidir, bu yüzden menüyü kısa tutun.
+
+Click a slice to set color
+== Rengi ayarlamak için bir dilime tıklayın
 
 Click again to find the next location.
 == Sonraki konumu bulmak için tekrar tıklayın.
@@ -2763,7 +2742,7 @@ Colors of the translate button in the chat input and of the language menu that b
 == Sohbet girişindeki çeviri düğmesinin ve bu düğmenin açtığı dil menüsünün renkleri.
 
 Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
-== Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
+== Skor tablosu satırlarını renklendirir: kimliği doğrulanmış oyuncular, aynı klan oyuncuları, arkadaşlar ve arkadaş listesindeki klan üyeleri.
 
 Colors too close to the map background are hard to read while moving.
 == Harita arka planına çok yakın renkler hareket halindeyken zor okunur.
@@ -2947,6 +2926,9 @@ Configure HUD island appearance
 
 Configure input helpers and cursor behavior
 == Configure input helpers and cursor behavior
+
+Configure interface shape, theme, icons and animations
+== Arayüz biçimini, temasını, simgelerini ve animasyonlarını ayarla
 
 Configure keyboard, mouse, wheel, and modifier bindings
 == Klavye, fare, tekerlek ve değiştirici tuş atamalarını yapılandır
@@ -3176,6 +3158,12 @@ Continuous-curvature UI corners (0 = classic arc, 100 = strongest)
 Contributors
 == Katkıda Bulunanlar
 
+Control background color
+== Denetim arka plan rengi
+
+Control background opacity percentage
+== Denetim arka planı opaklık yüzdesi
+
 Control custom background drawing
 == Control custom background drawing
 
@@ -3215,11 +3203,14 @@ Controls
 Controls demo recording and playback behavior.
 == Demo kaydı ve oynatma davranışını denetler.
 
-Controls how UI surfaces are drawn: card surface opacity, border width, corner rounding, segment count and the rainbow title effect.
-== Arayüz yüzeylerinin nasıl çizileceğini denetler: kart yüzeyi opaklığı, kenarlık genişliği, köşe yuvarlaması, dilim sayısı ve gökkuşağı başlık efekti.
+Controls how the settings cards themselves are drawn: card background, border and the rainbow title effect.
+== Ayar kartlarının kendisinin çizimini denetler: arka plan, kenarlık ve gökkuşağı başlık.
 
 Controls laser shape, glow and animation.
 == Lazer şeklini, parlamasını ve animasyonunu denetler.
+
+Controls the shape and colors shared by the whole interface: corner curve, capsule ends, surfaces, accent, control and popup backgrounds, text color mode and blur.
+== Tüm arayüzün paylaştığı biçim ve renkleri denetler: köşe eğrisi, kapsül uçları, yüzeyler, vurgu rengi, denetim ve açılır katman arka planları, metin renk modu ve bulanıklık.
 
 Controls what appears next to other players' names, such as clan tags, friend marks and client identifiers.
 == Diğer oyuncuların adlarının yanında görünenleri denetler: klan etiketleri, arkadaş işaretleri ve istemci tanımlayıcıları gibi.
@@ -3681,7 +3672,7 @@ DDNet releases
 == DDNet sürümleri
 
 DDNet settings sub-tab: 0=general, 1=network compensation
-== DDNet settings sub-tab: 0=general, 1=network compensation
+== DDNet ayarları alt sekmesi: 0=genel, 1=ağ telafisi
 
 DDNet staff
 == DDNet Ekibi
@@ -3786,7 +3777,7 @@ Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == Özel WebSocket adresi (boşsa wss://qmclient.icu/ws kullanılır)
 
 Deep freeze
-== Deep freeze
+== Derin dondurma
 
 Deep freeze opacity
 == Derin donma opaklığı.
@@ -3795,10 +3786,10 @@ Deep freeze tile outline color
 == Derin donma bloğu anahat rengi
 
 Deep freeze tile outline width
-== Deep freeze tile outline width
+== Derin dondurma karolarının kenar kalınlığı
 
 Deep unfreeze
-== Deep unfreeze
+== Derin çözme
 
 Deep unfreeze opacity
 == Derin çözülme opaklığı.
@@ -3807,7 +3798,7 @@ Deep unfreeze tile outline color
 == Derin çözülme bloğu anahat rengi
 
 Deep unfreeze tile outline width
-== Deep unfreeze tile outline width
+== Derin çözme karolarının kenar kalınlığı
 
 Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 == Deepfly modu (0=normal, 1=DF, 2=HDF, 3=özel)
@@ -4115,6 +4106,9 @@ Display mode
 Display modes
 == Görüntü modları
 
+Display options
+== Görüntü seçenekleri
+
 Display your race time
 == Yarış sürenizi gösterir
 
@@ -4304,6 +4298,12 @@ Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use 
 Drag HUD modules with the left mouse button
 == HUD modüllerini sol fare tuşuyla sürükleyin
 
+Drag options here to hide them
+== Gizlemek için buraya sürükleyin
+
+Drag options here to show them
+== Göstermek için buraya sürükleyin
+
 Drag the selected watermark to move it. The original image is preserved.
 == Seçili filigranı sürükleyerek taşıyın. Orijinal görüntü korunur.
 
@@ -4318,6 +4318,9 @@ Drag to pan, scroll to zoom
 
 Drag to reorder; right-click or use the gear to manage
 == Yeniden sıralamak için sürükleyin; yönetmek için sağ tıklayın veya dişliyi kullanın
+
+Drag to the other list to show or hide this option
+== Bu seçeneği göstermek veya gizlemek için diğer listeye sürükleyin
 
 Dragger Inner Color
 == Sürükleyici İç Rengi
@@ -4763,8 +4766,8 @@ Enable audio output and choose a device
 Enable backdrop blur
 == Arka plan bulanıklığını etkinleştir
 
-Enable backdrop blur for translucent interface and selected HUD backgrounds
-== Yarı saydam arayüz ve seçili HUD arka planları için arka plan bulanıklığını etkinleştir
+Enable backdrop blur for translucent interface and all HUD backgrounds
+== Yarı saydam arayüz ve tüm HUD arka planları için arka plan bulanıklığını aç
 
 Enable background 3D particle flicker
 == Arka plan 3D parçacık titremesini etkinleştir
@@ -4876,6 +4879,9 @@ Enable fast map download
 
 Enable fat skin
 == Şişman skin'i etkinleştir
+
+Enable focus glow
+== Odak parıltısını etkinleştir
 
 Enable freeze call sound
 == Donma çağrı sesini etkinleştir
@@ -5405,14 +5411,8 @@ Expand
 Expand console
 == Konsolu genişlet
 
-Expanded dropdown background color
-== Açılan liste arka plan rengi
-
-Expanded dropdown background opacity percentage
-== Açılan liste arka plan rengi — opaklık yüzdesi
-
 Expanded personalization sections (format: stableId=1;stableId2=0;)
-== Expanded personalization sections (format: stableId=1;stableId2=0;)
+== Genişletilmiş kişiselleştirme bölümleri (biçim: stableId=1;stableId2=0;)
 
 Experimental
 == deneysel
@@ -5481,7 +5481,7 @@ Exporting chat images: %d
 == Sohbet görselleri dışa aktarılıyor: %d
 
 Expose IP to servers by default when adding a favorite (last choice on the server info page)
-== Expose IP to servers by default when adding a favorite (last choice on the server info page)
+== Favori eklerken IP'yi varsayılan olarak sunuculara gösterir (sunucu bilgi sayfasındaki son seçimi hatırlar)
 
 Expose playback controls to the operating system
 == Expose playback controls to the operating system
@@ -6027,7 +6027,7 @@ Freeze tile outline color
 == Donma döşemesi ana hattı rengi
 
 Freeze tile outline width
-== Freeze tile outline width
+== Dondurma karolarının kenar kalınlığı
 
 Frequently asked questions
 == Sık sorulan sorular
@@ -6125,8 +6125,8 @@ Full quality nameplate count
 Full width
 == Tam genişlik
 
-Full: each enabled animation category uses its complete transition
-== Tam: etkin her animasyon kategorisi tam geçişini kullanır
+Full: uses the complete transition everywhere
+== Tam: her yerde tam geçiş kullanır
 
 Fullscreen
 == Tam ekran
@@ -6210,7 +6210,7 @@ General
 == Genel
 
 General DDNet gameplay display: showing other players and their shadow opacity, background quads and the default zoom.
-== General DDNet gameplay display: showing other players and their shadow opacity, background quads and the default zoom.
+== Genel DDNet görünümü: diğer oyuncuları ve gölge saydamlığını, arka plan dörtgenlerini ve varsayılan yakınlaştırmayı gösterir.
 
 Generated skin outline color
 == Oluşturulan dış çizgi rengi
@@ -6445,6 +6445,9 @@ Graphics mode
 
 Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
 == Grafik modu: -1 = arka uç ayarını kullan, 0 = uyumluluk, 1 = performans (varsayılan)
+
+Graphics settings sub-tab: 0=display, 1=visual effects
+== Grafik ayarları alt sekmesi: 0=görüntü, 1=görsel efektler
 
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
 == Grafik izleme düzeyi: 0 = kapalı, 1 = dönemsel özet, 2 = özet ve yavaş kareler, 3 = ayrıntılı arka uç izlemesi
@@ -6876,13 +6879,13 @@ Hook through teleporters (deprecated, use special entities instead)
 == Işınlayıcılardan kanca geçirme (kullanımdan kaldırıldı, bunun yerine özel varlıklar kullanın)
 
 Hookable tile outline color
-== Hookable tile outline color
+== Kancalanabilir karoların kenar rengi
 
 Hookable tile outline width
-== Hookable tile outline width
+== Kancalanabilir karoların kenar kalınlığı
 
 Hookable tiles
-== Hookable tiles
+== Kancalanabilir karolar
 
 Hooking L/R: %.0f%%/%.0f%%
 == Kanca S/S: %.0f%%/%.0f%%
@@ -7115,6 +7118,9 @@ In DDNet, played when weapons are removed. Other modes may use it for armor pick
 In memory of me
 == Bu istemci beni hatırlasın
 
+In pie menu
+== Dairesel menüde
+
 In-game controller sensitivity
 == Oyun içi kontrolcü hassasiyeti
 
@@ -7256,12 +7262,6 @@ Ink: Paper Bloom
 Input
 == Giriş
 
-Input background color
-== Giriş alanı arka plan rengi
-
-Input background opacity percentage
-== Giriş alanı arka plan rengi — opaklık yüzdesi
-
 Input device
 == Giriş cihazı
 
@@ -7330,6 +7330,9 @@ Interface surface
 
 Interface surface color
 == Arayüz yüzey rengi
+
+Interface theme
+== Arayüz teması
 
 Interface transparency
 == Genel arayüz şeffaflığı
@@ -7581,7 +7584,7 @@ Keep the text light on a dark background; press "Reset tooltip appearance" to re
 == Koyu zeminde açık renk yazı daha okunaklıdır; yardım görünümünü sıfırla düğmesi önerilen görünümü geri getirir.
 
 Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
-== Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
+== Bu renkleri takım renklerinden ayrı tutun, yoksa aynı klandaki adlar takım paneline karışıp okunaksız olur.
 
 Keep unsent message on chat close
 == Sohbet kapatılırken gönderilmemiş içeriği sakla
@@ -7624,9 +7627,6 @@ Key Sticking: On
 
 Key Sticking: Reset Self
 == Tuş Kilitleme: Kendini Sıfırla
-
-Keyboard focus ring color
-== Klavye odak halkası rengi
 
 Keyboard size
 == Klavye boyutu
@@ -8415,7 +8415,7 @@ Map preview rendering unavailable
 == Harita önizlemesi oluşturulamıyor
 
 Map preview shows the entity layer only (hides textures)
-== Map preview shows the entity layer only (hides textures)
+== Harita önizlemesi yalnızca varlık katmanını gösterir (dokuları gizler)
 
 Map Preview TODO
 == Harita önizlemesi yapılacak
@@ -9216,7 +9216,7 @@ Need to have started the map to swap with a player.
 == Bir oyuncuyla yer değiştirmek için haritayı başlatmış olmanız gerekir.
 
 Negative stability buffer
-== Negative stability buffer
+== Negatif stabilite tamponu
 
 Net
 == Net
@@ -9614,6 +9614,9 @@ Not downloaded
 Not enabled
 == Etkin değil
 
+Not in pie menu
+== Dairesel menüde değil
+
 Not installed
 == Yüklü değil
 
@@ -9722,8 +9725,8 @@ o = Send rate
 Off
 == Kapalı
 
-Off: disables all interface animations while preserving the options below
-== Kapalı: aşağıdaki seçenekleri korurken tüm arayüz animasyonlarını devre dışı bırakır
+Off: disables every interface animation
+== Kapalı: tüm arayüz animasyonlarını kapatır
 
 Official
 == Resmi
@@ -9953,9 +9956,6 @@ Opt-in protection for client-initiated self-kill, with optional auto-enable afte
 Optimistic prediction along stable direction
 == Kararlı yön boyunca iyimser tahmin
 
-Option color
-== Seçenek rengi
-
 Optional
 == İsteğe bağlı
 
@@ -9970,9 +9970,6 @@ Optional start and end time in seconds. Leave both empty to export the whole dem
 
 Options here affect networking or identity; test on a server before using them in matches.
 == Buradaki seçenekler ağı veya kimliği etkiler; maçlarda kullanmadan önce bir sunucuda test edin.
-
-Options only exist within "Detection distance"; turn off the ones you never use to keep the wheel short.
-== Seçenekler yalnızca algılama mesafesi içinde geçerlidir; kullanmadıklarını kapatarak çarkı kısa tut.
 
 Or visit DDNet.org
 == Veya DDNet.org adresini ziyaret edin
@@ -10319,8 +10316,11 @@ Pick a shape, then tune glow and animation speed.
 Pick a slot, type the command and its label, then hold the wheel key in game to test.
 == Bir dilim seç, komutu ve etiketini yaz, sonra oyunda çark tuşunu basılı tutarak dene.
 
+Pick a text color mode first; the custom color row only appears for the custom mode.
+== Önce bir metin rengi modu seçin; özel renk satırı yalnızca özel modda görünür.
+
 Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
-== Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
+== Her renk satırında bir renk seçin; kimliği doğrulanmış ve aynı klan renkleri skor tablosuna, iki liste rengi arkadaş listesine uygulanır.
 
 Pick result: %s
 == Seçim sonucu: %s
@@ -10715,6 +10715,12 @@ Points unavailable
 Popup animation
 == Açılır animasyon
 
+Popup background color
+== Açılır katman arka plan rengi
+
+Popup background opacity percentage
+== Açılır katman arka planı opaklık yüzdesi
+
 Port for client to server connection (0=random, >=1024 sets manual port)
 == İstemci-sunucu bağlantısı için port (0=rastgele, >=1024 manuel port ayarlar)
 
@@ -10824,7 +10830,7 @@ Prediction
 == Tahmin
 
 Prediction and latency compensation moved to the "Network compensation" sub-tab of the DDNet page.
-== Prediction and latency compensation moved to the "Network compensation" sub-tab of the DDNet page.
+== Tahmin ve gecikme telafisi DDNet sayfasının "Ağ telafisi" alt sekmesine taşındı.
 
 Prediction boundary (ms, increases latency but reduces ping jitter)
 == Tahmin sınırı (ms, gecikmeyi artırır ancak ping dalgalanmasını azaltır)
@@ -10854,16 +10860,13 @@ Prediction margin when frozen
 == Donduğunda tahmin marjı
 
 Prediction trades accuracy for responsiveness: a larger margin and AntiPing smooth out ping jitter but can mispredict nearby actions, and upstream redundancy may triple upload traffic.
-== Prediction trades accuracy for responsiveness: a larger margin and AntiPing smooth out ping jitter but can mispredict nearby actions, and upstream redundancy may triple upload traffic.
+== Tahmin, isabetlilik yerine tepkisellik sunar: daha büyük pay ve AntiPing ping dalgalanmasını yumuşatır ama yakın eylemleri yanlış tahmin edebilir; üst akış yedekliliği yükleme trafiğini üç katına çıkarabilir.
 
 Preparing chat export: %d%%
 == Sohbet dışa aktarımı hazırlanıyor: %d%%
 
 Preparing demo playback
 == Demo oynatımı hazırlanıyor
-
-Presentation animations
-== Sunum animasyonları
 
 Preset %d
 == Ön ayar %d
@@ -11594,8 +11597,8 @@ Reduce visual latency
 Reduced
 == Azaltılmış
 
-Reduced: uses shorter transitions and disables presentation animations
-== Azaltılmış: daha kısa geçişler kullanır ve sunum animasyonlarını devre dışı bırakır
+Reduced: uses shorter transitions everywhere
+== Azaltılmış: her yerde daha kısa geçişler kullanır
 
 Reflected gradient
 == Simetrik gradyan
@@ -11927,9 +11930,6 @@ Render tiny tees instead of circles
 Renderer performing the analysis
 == Analizi gerçekleştiren işleyici
 
-Rendering options
-== İşleme seçenekleri
-
 Rendering reads back 8-bit frames, so 10-bit formats add nothing by themselves; the gain comes from chroma density. If the encoder cannot do 4:4:4, the export fails with an error instead of reducing quality silently.
 == İşleme 8 bit kare döndürür, bu yüzden 10 bit biçimler tek başına ayrıntı eklemez; kazanç kroma yoğunluğundan gelir. Kodlayıcı 4:4:4 desteklemiyorsa kalite sessizce düşürülmez, dışa aktarma hata verir.
 
@@ -12085,9 +12085,6 @@ Reset chat completion appearance
 
 Reset chat on escape
 == Escape tuşunda sohbeti sıfırla
-
-Reset colors
-== Renkleri sıfırla
 
 Reset column widths
 == Sütun genişliklerini sıfırla
@@ -12566,15 +12563,6 @@ Scoreboard score lookup
 Scoreboard sort mode (0=Score, 1=Points)
 == Skor Tablosu Sıralama Modu (0=Puan, 1=Skor)
 
-Scoreboard surface
-== Skor tablosu yüzeyi
-
-Scoreboard surface color
-== Skor tablosu yüzey rengi
-
-Scoreboard transparency
-== Skor Tablosu Şeffaflığı
-
 Scoreboard, chat, spectating
 == skor tablosu, sohbet, izleme
 
@@ -12707,12 +12695,6 @@ Sec-WebSocket-Protocol sent during the realtime handshake
 Secondary
 == İkincil
 
-Secondary menu background color
-== Alt menü arka plan rengi
-
-Secondary menu background opacity percentage
-== Alt menü arka plan rengi — opaklık yüzdesi
-
 Seconds to wait before reconnecting (0=off, when server is full)
 == Yeniden bağlanmadan önce beklenecek saniye (0=kapalı, sunucu dolu olduğunda)
 
@@ -12775,9 +12757,6 @@ Selected %d
 
 Selected candidate %d/%d under cursor.
 == İmleç altında seçilen aday %d/%d.
-
-Selected item color
-== Seçili öğe rengi
 
 Selected part: %d
 == Seçili parça: %d
@@ -12996,7 +12975,7 @@ Set "Ingame mouse sens." for aiming and "UI mouse sens." for menus, then limit t
 == Nişan için oyunda fare hassasiyetini, menüler için arayüz fare hassasiyetini ayarla; ardından minimum ve maksimum imleç mesafesiyle imleci sınırla.
 
 Set "Prediction margin" in milliseconds, tick "AntiPing (latency compensation)" and then choose what to predict; the redundancy switch is experimental and only useful on lossy connections.
-== Set "Prediction margin" in milliseconds, tick "AntiPing (latency compensation)" and then choose what to predict; the redundancy switch is experimental and only useful on lossy connections.
+== "Tahmin payını" milisaniye olarak ayarlayın, "AntiPing (gecikme telafisi)"ni işaretleyin ve neyin tahmin edileceğini seçin; yedeklilik anahtarı deneyseldir ve yalnızca paket kayıplı bağlantılarda işe yarar.
 
 Set "Switch interval" to 0 to stop timed switching and keep the queue for manual or map-join changes.
 == Değiştirme aralığını 0 yapmak zamanlı değişimi durdurur; sıra yalnızca elle ya da haritaya girişte kullanılır.
@@ -13009,9 +12988,6 @@ Set camera position relative to current view in the map
 
 Set camera position to x and y in the map
 == Kamerayı haritadaki x ve y konumuna ayarla
-
-Set color
-== Renk ayarla
 
 Set current demo speed
 == Geçerli demo hızını ayarla
@@ -13148,6 +13124,9 @@ Severe
 Shape
 == Şekil
 
+Shape, colors and text shared by the whole interface
+== Tüm arayüzün paylaştığı biçim, renk ve metin
+
 Share of the server browser name/map split given to the name column (per mille)
 == Sunucu tarayıcısı ad/harita bölünmesinden ad sütununa ayrılan oran (binde)
 
@@ -13228,6 +13207,9 @@ Show all votes (page 0 by default, 20 entries per page)
 
 Show all warlist groups
 == Tüm savaş listesi gruplarını göster
+
+Show an accent glow around the focused input field
+== Odaklanan giriş alanının çevresinde vurgu renginde parıltı göster
 
 Show any enabled Indicators
 == Etkin göstergeleri göster
@@ -13362,10 +13344,10 @@ Show death tile outlines
 == Ölüm döşemesi ana hatlarını göster
 
 Show deep freeze tile outlines
-== Show deep freeze tile outlines
+== Derin dondurma karolarının kenarlarını göster
 
 Show deep unfreeze tile outlines
-== Show deep unfreeze tile outlines
+== Derin çözme karolarının kenarlarını göster
 
 Show default flag in scoreboard
 == Skor tablosunda varsayılan bayrağı göster
@@ -13473,7 +13455,7 @@ Show freeze bars
 == Çözülme çubuklarını göster
 
 Show freeze tile outlines
-== Show freeze tile outlines
+== Dondurma karolarının kenarlarını göster
 
 Show friend icon in name plates
 == İsim plakalarında arkadaş simgesini göster
@@ -13548,7 +13530,7 @@ Show hook strength number indicator
 == Kanca gücü sayı göstergesini göster
 
 Show hookable tile outlines
-== Show hookable tile outlines
+== Kancalanabilir karoların kenarlarını göster
 
 Show how weapons, shields, snowflakes, and flags appear in game
 == Silahların, kalkanların, kar tanelerinin ve bayrakların oyunda nasıl göründüğünü göster
@@ -14124,10 +14106,10 @@ Show tuning parameters affecting own player (0=Off, 1=Show changed, 2=Show all)
 == Kendi oyuncunu etkileyen ayar parametrelerini göster (0=Kapalı, 1=Değişenleri göster, 2=Tümünü göster)
 
 Show unfreeze tile outlines
-== Show unfreeze tile outlines
+== Çözme karolarının kenarlarını göster
 
 Show unhookable tile outlines
-== Show unhookable tile outlines
+== Kancalanamaz karoların kenarlarını göster
 
 Show unknown server messages
 == Bilinmeyen sunucu mesajlarını göster
@@ -14976,7 +14958,7 @@ Strength icons assets
 == Güç simgeleri varlıkları
 
 Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)
-== Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)
+== Apple kapsül uçlarının gücü (0 = yarım daire, 100 = en güçlü)
 
 Stress system (debug builds only).
 == Stres sistemi (yalnızca hata ayıklama yapıları).
@@ -15536,11 +15518,11 @@ Text color
 Text color mode
 == Metin rengi modu
 
-Text color mode: 0 automatic, 1 white, 2 black, 3 custom
-== Metin rengi modu: 0 otomatik, 1 beyaz, 2 siyah, 3 özel
+Text color mode: 0 white, 1 black, 2 rainbow, 3 custom
+== Metin rengi modu: 0=beyaz, 1=siyah, 2=gökkuşağı, 3=özel
 
-Text input focus ring color
-== Metin girişi odak halkası rengi
+Text follows the chosen mode instead of the surface, so a light surface with white text is unreadable by design.
+== Metin yüzeye değil seçilen moda uyar; bu yüzden açık yüzeyde beyaz metin tasarım gereği okunamaz.
 
 Text is too long for the selected translation service.
 == Metin seçilen çeviri hizmetinin uzunluk sınırını aşıyor.
@@ -15725,8 +15707,8 @@ This connection cannot change names while connected. Reconnect with the saved na
 This ID is not connected
 == Bu ID bağlı değil
 
-This is the master switch for all interface animation categories
-== Bu, tüm arayüz animasyonu kategorileri için ana anahtardır
+This is the master switch for all interface animations
+== Tüm arayüz animasyonlarının ana anahtarı
 
 This map path cannot be used.
 == Bu harita yolu kullanılamaz.
@@ -15837,7 +15819,7 @@ Tick "Show inputs", then size and place it with "Keyboard size", "Mouse size", "
 == Girdileri göster seçeneğini işaretle, sonra klavye boyutu, fare boyutu, saydamlık ve konum kaydırıcılarıyla boyutunu ve yerini ayarla.
 
 Tick "Show others" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use "Show background quads" and "Default zoom" for the view.
-== Tick "Show others" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use "Show background quads" and "Default zoom" for the view.
+== Diğer takımları yarı saydam çizmek için "Diğerlerini göster"i işaretleyin; gölge saydamlığı hemen altındaki bağımlı satırda ayarlanır, görünüm için "Arka plan dörtgenlerini göster" ve "Varsayılan yakınlaştırma" kullanılır.
 
 Tick any of "Show key stuck status", "Show hammer status", "Show dummy control status" or "Show dummy copy status".
 == Tuş takılı durumunu göster, çekiç durumunu göster, dummy kontrol durumunu göster veya dummy kopya durumunu göster seçeneklerinden istediklerini işaretle.
@@ -16391,8 +16373,8 @@ Turn on "Enable dummy window", then set "Dummy window size" and "Dummy window zo
 Turn on "Enable Gores mode" or let "Auto enable in Gores mode" do it, pick options like "Auto weapon switch", and bind "Gores mode key".
 == Gores modunu etkinleştir seçeneğini açın ya da Gores modunda otomatik etkinleştir seçeneğine bırakın; otomatik silah değiştirme gibi seçenekleri seçip Gores modu tuşunu atayın.
 
-Turn on "Enable pie menu", bind the "Pie menu" command on the Bind page, then hold that key near a player and release on an option.
-== Radyal menüyü etkinleştir seçeneğini aç, tuş atama sayfasında radyal menü komutunu bir tuşa ata, sonra oyuncunun yanında tuşu basılı tutup bir seçeneğin üzerinde bırak.
+Turn on "Enable pie menu", bind the "Pie menu" command on the Bind page, then hold that key near a player and release on an option. Drag options between the two lists to show or hide them.
+== „Pasta menüsünü etkinleştir“ ayarını açın, „Bağla“ sayfasında „Pasta menüsü“ komutunu atayın, sonra bir oyuncunun yanında o tuşu basılı tutup bir seçeneğin üzerinde bırakın. Seçenekleri iki liste arasında sürükleyerek gösterip gizleyin.
 
 Turn on "Enable rotation", set "Switch interval" in milliseconds, then add skins with the plus icon in the skin list; "Random skin on map join" picks the start.
 == Döndürmeyi etkinleştir seçeneğini aç, değiştirme aralığını milisaniye olarak ayarla, sonra skin listesindeki artı simgesiyle skin ekle; haritaya girişte rastgele skin başlangıcı seçer.
@@ -16674,16 +16656,16 @@ Unfreeze tile outline color
 == Çözülme döşemesi anahat rengi
 
 Unfreeze tile outline width
-== Unfreeze tile outline width
+== Çözme karolarının kenar kalınlığı
 
 Unhookable tile outline color
-== Unhookable tile outline color
+== Kancalanamaz karoların kenar rengi
 
 Unhookable tile outline width
-== Unhookable tile outline width
+== Kancalanamaz karoların kenar kalınlığı
 
 Unhookable tiles
-== Unhookable tiles
+== Kancalanamaz karolar
 
 Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
 == Birleşik dışa aktarma kalitesi (CRF/CQ/QP ölçeği 0-51, -1 = cl_video_crf kullan); her kodlayıcının yerel parametresine eşlenir
@@ -17024,9 +17006,6 @@ Use warlist colors instead of regular colors
 Use warlist groups for indicator
 == Gösterge için savaş listesi gruplarını kullan
 
-Used by active shared text and numeric input fields
-== Etkin ortak metin ve sayısal giriş alanları tarafından kullanılır
-
 Uses the active action with the current aiming position.
 == Mevcut nişan alma konumuyla etkin eylemi kullanır.
 
@@ -17087,8 +17066,8 @@ Very high quality, very slow
 Very long kaomoji are split by the chat length limit.
 == Çok uzun kaomojiler sohbet uzunluk sınırı yüzünden bölünür.
 
-Very thick borders or high segment counts make text look blurry; keep them near the defaults.
-== Çok kalın kenarlıklar veya yüksek dilim sayıları metni bulanık gösterir; varsayılan değerlere yakın tutun.
+Very thick borders make text look blurry; keep them near the defaults.
+== Çok kalın kenarlıklar metni bulanık gösterir; varsayılan değerlere yakın kalın.
 
 Video Background
 == Video Arkaplanı

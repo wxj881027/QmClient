@@ -3503,18 +3503,20 @@ void CMenus::RenderDemoBrowser(CUIRect MainView)
 	UpdateRankDemoDownload();
 	GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_DEMOS);
 
+	// 面板间距与内边距统一取全局面板档（与服务器列表一致）：三个面板之间的缝、
+	// 内容到面板边缘的距离不再各自写 10。
 	CUIRect ListView, DetailsView, ButtonsView;
-	MainView.HSplitBottom(10.0f, &MainView, nullptr);
+	MainView.HSplitBottom(ui_token::panel::GAP, &MainView, nullptr);
 	MainView.HSplitBottom(44.0f, &ListView, &ButtonsView);
-	ListView.HSplitBottom(10.0f, &ListView, nullptr);
+	ListView.HSplitBottom(ui_token::panel::GAP, &ListView, nullptr);
 	ListView.VSplitRight(205.0f, &ListView, &DetailsView);
-	ListView.VSplitRight(10.0f, &ListView, nullptr);
+	ListView.VSplitRight(ui_token::panel::GAP, &ListView, nullptr);
 	ListView.Draw(MenuPanelColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
 	DetailsView.Draw(MenuPanelColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
 	ButtonsView.Draw(MenuPanelElevatedColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
-	ListView.Margin(10.0f, &ListView);
-	DetailsView.Margin(10.0f, &DetailsView);
-	ButtonsView.Margin(10.0f, &ButtonsView);
+	ListView.Margin(ui_token::panel::PADDING, &ListView);
+	DetailsView.Margin(ui_token::panel::PADDING, &DetailsView);
+	ButtonsView.Margin(ui_token::panel::PADDING, &ButtonsView);
 
 	bool WasListboxItemActivated;
 	RenderDemoBrowserList(ListView, WasListboxItemActivated);
