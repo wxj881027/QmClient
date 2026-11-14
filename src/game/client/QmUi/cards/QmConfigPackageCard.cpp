@@ -153,6 +153,13 @@ bool qm_card_catalog::QmCardRenderHook::BuildConfigFilesCard(const SQmCardBuildC
 		const auto Text = [&](const char *pId, const char *pValue, float Rows = 1) {
 			Flow.Text(pId, pValue, 0.0f, Metrics.m_BodySize, ui_token::settings::RowGap(Metrics.m_LineSpacing), [pMenus](const char *pText, float Width, float FontSize) { return pMenus->TextRender()->TextBoundingBox(FontSize, pText, -1, Width).m_H + FontSize * 0.25f; }, [pMenus, Metrics](const CUIRect &Rect, const char *pText) { pMenus->Ui()->DoLabel(&Rect, pText, Metrics.m_BodySize, TEXTALIGN_ML, {.m_MaxWidth = Rect.w, .m_EnableWidthCheck = false}); }, Rows * RowHeight + (Rows - 1) * Metrics.m_LineSpacing);
 		};
+		// 图标类动作：方形图标按钮 + 悬停气泡，与全仓刷新/复制按钮同一入口。
+		const auto IconAction = [pMenus, pTooltips, Interactive](CButtonContainer *pButton, const char *pId, const char *pTooltip, const CUIRect &Rect, EQmIcon Icon, const char *pFallback) {
+			const bool Clicked = pMenus->Ui()->DoButton_QmIcon(pButton, Icon, pFallback, 0, &Rect, BUTTONFLAG_LEFT) != 0;
+			if(pTooltips != nullptr)
+				pTooltips->DoToolTipForRect(pId, &Rect, pTooltip);
+			return Interactive && Clicked;
+		};
 		const auto Button = [pMenus, Metrics, Interactive, &State](int Index, const char *pId, const char *pLabel, const CUIRect &Rect, bool Checked = false) {
 			const bool Clicked = pMenus->DoSettingsButton_Menu(CMenus::SETTINGS_GENERAL, -1, -1, &State.m_aButtons[Index], pId, pLabel, Checked, &Rect, Metrics);
 			return Interactive && Clicked;
@@ -353,14 +360,14 @@ bool qm_card_catalog::QmCardRenderHook::BuildConfigFilesCard(const SQmCardBuildC
 				Text("config-package-no-preview", Localize("Select a configuration package to preview its contents."), 2);
 		}
 		RowAction("config-package-actions", 1, [&](CUIRect Rect) {
-			const char *apActions[] = {Localize("Refresh"), Localize("Open package folder")};
-			static ui_widget::SSettingsActionGroupState s_ActionWidths;
-			const auto Actions = ui_widget::PrepareSettingsActionGroup(*pMenus->Ui(), s_ActionWidths, Rect, apActions, 2, Metrics);
-			Left = Actions.m_aButtons[0];
-			Right = Actions.m_aButtons[1];
-			if(Button(8, "config-package-refresh", Localize("Refresh"), Left))
+			// 刷新改图标按钮：方形按钮与行高同高，文字动作吃掉剩余宽度。
+			CUIRect RefreshRect, Rest;
+			Rect.VSplitLeft(std::min(Rect.h, Rect.w), &RefreshRect, &Rest);
+			Rest.VSplitLeft(std::min(ui_token::spacing::XS, Rest.w), nullptr, &Rest);
+			static CButtonContainer s_RefreshIconButton;
+			if(IconAction(&s_RefreshIconButton, "config-package-refresh", Localize("Refresh"), RefreshRect, EQmIcon::ARROW_ROTATE_RIGHT, FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT))
 				RefreshFiles(*pMenus->Storage());
-			if(Button(9, "config-package-folder", Localize("Open package folder"), Right))
+			if(Button(9, "config-package-folder", Localize("Open package folder"), Rest))
 			{
 				pMenus->Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
 				pMenus->Storage()->CreateFolder(qm_config_package::PACKAGE_DIRECTORY, IStorage::TYPE_SAVE);
