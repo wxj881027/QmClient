@@ -637,32 +637,33 @@ void CConfigManager::Init()
 			m_pConsole, pScriptName, SConfigVariable::VAR_INT, Flags, m_ConfigHeap.StoreString(aHelp), pDesc, pVariable, Default, Min, Max));
 	};
 
-#define MACRO_CONFIG_INT(Name, ScriptName, Def, Min, Max, Flags, Desc) \
-	{ \
-		AddIntVariable(#ScriptName, Flags, Desc, &g_Config.m_##Name, Def, Min, Max); \
-	}
+	const auto &&AddColorVariable = [this, AddVariable](const char *pScriptName, int Flags, const char *pDesc, unsigned *pVariable, unsigned Default) {
+		const bool Alpha = (Flags & CFGFLAG_COLALPHA) != 0;
 
-#define MACRO_CONFIG_COL(Name, ScriptName, Def, Flags, Desc) \
-	{ \
-		const char *pScriptName = #ScriptName; \
-		const bool Alpha = ((Flags) & CFGFLAG_COLALPHA) != 0; \
-		char aHelp[512]; \
-		const size_t HelpSize = str_format(aHelp, sizeof(aHelp), "%s (default: $%0*X)", Desc, Alpha ? 8 : 6, color_cast<ColorRGBA>(ColorHSLA(Def, Alpha)).Pack(Alpha)); \
-		dbg_assert(HelpSize < sizeof(aHelp) - UTF8_BYTE_LENGTH - 1, "MACRO_CONFIG_COL(%s): help text possibly truncated. Increase size of aHelp.", pScriptName); \
-		AddVariable(m_ConfigHeap.Allocate<SColorConfigVariable>( \
-			m_pConsole, pScriptName, SConfigVariable::VAR_COLOR, Flags, m_ConfigHeap.StoreString(aHelp), Desc, &g_Config.m_##Name, Def)); \
-	}
+		char aHelp[512];
+		const size_t HelpSize = str_format(aHelp, sizeof(aHelp), "%s (default: $%0*X)", pDesc, Alpha ? 8 : 6, color_cast<ColorRGBA>(ColorHSLA(Default, Alpha)).Pack(Alpha));
+		dbg_assert(HelpSize < sizeof(aHelp) - UTF8_BYTE_LENGTH - 1, "MACRO_CONFIG_COL(%s): help text possibly truncated. Increase size of aHelp.", pScriptName);
 
-#define MACRO_CONFIG_STR(Name, ScriptName, Len, Def, Flags, Desc) \
-	{ \
-		const char *pScriptName = #ScriptName; \
-		char aHelp[512]; \
-		const size_t HelpSize = str_format(aHelp, sizeof(aHelp), "%s (default: \"%s\", max length: %d)", Desc, Def, Len - 1); \
-		dbg_assert(HelpSize < sizeof(aHelp) - UTF8_BYTE_LENGTH - 1, "MACRO_CONFIG_STR(%s): help text possibly truncated. Increase size of aHelp.", pScriptName); \
-		char *pOldValue = static_cast<char *>(m_ConfigHeap.Allocate(Len)); \
-		AddVariable(m_ConfigHeap.Allocate<SStringConfigVariable>( \
-			m_pConsole, pScriptName, SConfigVariable::VAR_STRING, Flags, m_ConfigHeap.StoreString(aHelp), Desc, g_Config.m_##Name, Def, Len, pOldValue)); \
-	}
+		AddVariable(m_ConfigHeap.Allocate<SColorConfigVariable>(
+			m_pConsole, pScriptName, SConfigVariable::VAR_COLOR, Flags, m_ConfigHeap.StoreString(aHelp), pDesc, pVariable, Default));
+	};
+
+	const auto &&AddStringVariable = [this, AddVariable](const char *pScriptName, int Flags, const char *pDesc, char *pVariable, size_t Len, const char *pDefault) {
+		dbg_assert(Len > 0 && Len <= 1024 * 1024, "MACRO_CONFIG_STR(%s): length (%" PRIzu ") is invalid.", pScriptName, Len);
+
+		char aHelp[512];
+		const size_t HelpSize = str_format(aHelp, sizeof(aHelp), "%s (default: \"%s\", max length: %" PRIzu ")", pDesc, pDefault, Len - 1);
+		dbg_assert(HelpSize < sizeof(aHelp) - UTF8_BYTE_LENGTH - 1, "MACRO_CONFIG_STR(%s): help text possibly truncated. Increase size of aHelp.", pScriptName);
+
+		char *pOldValue = static_cast<char *>(m_ConfigHeap.Allocate(Len));
+
+		AddVariable(m_ConfigHeap.Allocate<SStringConfigVariable>(
+			m_pConsole, pScriptName, SConfigVariable::VAR_STRING, Flags, m_ConfigHeap.StoreString(aHelp), pDesc, pVariable, pDefault, Len, pOldValue));
+	};
+
+#define MACRO_CONFIG_INT(Name, ScriptName, Def, Min, Max, Flags, Desc) AddIntVariable(#ScriptName, Flags, Desc, &g_Config.m_##Name, Def, Min, Max);
+#define MACRO_CONFIG_COL(Name, ScriptName, Def, Flags, Desc) AddColorVariable(#ScriptName, Flags, Desc, &g_Config.m_##Name, Def);
+#define MACRO_CONFIG_STR(Name, ScriptName, Len, Def, Flags, Desc) AddStringVariable(#ScriptName, Flags, Desc, g_Config.m_##Name, Len, Def);
 #define SET_CONFIG_DOMAIN(_ConfigDomain) ConfigDomain = _ConfigDomain;
 #include "config_includes.h"
 #undef MACRO_CONFIG_INT
