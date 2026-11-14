@@ -95,10 +95,6 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	IUpdater *m_pUpdater = nullptr;
 	IEngineHttp *m_pHttp = nullptr;
 
-	rust::Box<CSnapshotDelta> m_pSnapshotDelta;
-	rust::Box<CSnapshotDelta> m_pSnapshotDeltaSixup;
-	CSnapshotDelta *SnapshotDelta();
-
 	CNetClient m_aNetClient[NUM_CONNS];
 	CDemoPlayer m_DemoPlayer;
 	CDemoRecorder m_aDemoRecorders[RECORDER_MAX];
@@ -270,6 +266,10 @@ class CClient : public IClient, public CDemoPlayer::IListener
 
 	CSnapshotStorage::CHolder m_aDemorecSnapshotHolders[NUM_SNAPSHOT_TYPES];
 	CSnapshotBuffer m_aaDemorecSnapshotData[NUM_SNAPSHOT_TYPES][2];
+
+	CSnapshotDelta m_SnapshotDelta;
+	CSnapshotDelta m_SnapshotDeltaSixup;
+	CSnapshotDelta *SnapshotDelta();
 
 	std::deque<std::shared_ptr<CDemoEdit>> m_EditJobs;
 

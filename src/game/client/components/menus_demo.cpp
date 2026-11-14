@@ -135,9 +135,9 @@ namespace
 	{
 		if(pStorage == nullptr || pPath == nullptr || pPath[0] == '\0')
 			return false;
-		rust::Box<CSnapshotDelta> pDelta = CSnapshotDelta::New();
-		rust::Box<CSnapshotDelta> pDeltaSixup = CSnapshotDelta::New();
-		CDemoPlayer DemoPlayer(&*pDelta, &*pDeltaSixup, false);
+		CSnapshotDelta Delta;
+		CSnapshotDelta DeltaSixup;
+		CDemoPlayer DemoPlayer(&Delta, &DeltaSixup, false);
 		const int Result = DemoPlayer.Load(pStorage, nullptr, pPath, IStorage::TYPE_SAVE_OR_ABSOLUTE);
 		// CDemoPlayer 析构要求文件已关闭，否则 dbg_assert 在 Release 下也会 abort
 		DemoPlayer.Stop();

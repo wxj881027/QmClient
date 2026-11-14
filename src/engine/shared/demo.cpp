@@ -365,7 +365,7 @@ void CDemoRecorder::RecordSnapshot(int Tick, const void *pData, int Size, bool K
 
 		// create delta
 		CSnapshotDeltaBuffer DeltaData;
-		const int DeltaSize = m_pSnapshotDelta->CreateDelta(*m_LastSnapshotData.AsSnapshot(), *(CSnapshot *)pData, DeltaData.AsMutSlice());
+		const int DeltaSize = m_pSnapshotDelta->CreateDelta(m_LastSnapshotData.AsSnapshot(), (CSnapshot *)pData, DeltaData.Data(), sizeof(DeltaData.m_aData));
 		if(DeltaSize > 0)
 		{
 			// record delta
@@ -764,10 +764,7 @@ void CDemoPlayer::DoTick()
 			}
 
 			// process delta snapshot
-			// TODO: this needs alignment for `m_aChunkData` of 4,
-			// but this is not guaranteed. This is assumed above,
-			// too, anyway, in `CVariableInt::Decompress`.
-			DataSize = SnapshotDelta()->UnpackDelta(*m_LastSnapshotData.AsSnapshot(), m_Snapshot, rust::Slice<const int32_t>((const int *)m_aChunkData, DataSize / sizeof(int32_t)));
+			DataSize = SnapshotDelta()->UnpackDelta(m_LastSnapshotData.AsSnapshot(), &m_Snapshot, m_aChunkData, DataSize);
 
 			if(DataSize < 0)
 			{

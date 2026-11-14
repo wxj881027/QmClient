@@ -234,9 +234,9 @@ public:
 
 	CClient m_aClients[MAX_CLIENTS];
 
-	rust::Box<CSnapshotDelta> m_pSnapshotDelta;
-	rust::Box<CSnapshotDelta> m_pSnapshotDeltaSixup;
-	rust::Box<CSnapshotBuilder> m_pSnapshotBuilder;
+	CSnapshotDelta m_SnapshotDelta;
+	CSnapshotDelta m_SnapshotDeltaSixup;
+	CSnapshotBuilder m_SnapshotBuilder;
 	CSnapIdPool m_IdPool;
 	CNetServer m_NetServer;
 	CEcon m_Econ;
@@ -514,7 +514,7 @@ public:
 
 	std::optional<int> SnapNewId() override;
 	void SnapFreeId(int Id) override;
-	bool SnapNewItem(int Type, int Id, rust::Slice<const int32_t> Data) override;
+	bool SnapNewItem(int Type, int Id, const void *pData, int Size) override;
 	void SnapSetStaticsize(int ItemType, int Size) override;
 	void SnapSetStaticsize7(int ItemType, int Size) override;
 

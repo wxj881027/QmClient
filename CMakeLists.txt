@@ -1287,10 +1287,6 @@ set_glob(RUST_ENGINE_SHARED GLOB_RECURSE "rs;toml" src/engine/shared
   qm_update.rs
   qm_websocket.rs
   rust_version.rs
-  snapshot/builder.rs
-  snapshot/delta.rs
-  snapshot/mod.rs
-  uuid_manager.rs
 )
 
 set_glob(RUST_QM_UPDATE GLOB_RECURSE "rs;toml" src/qm/update
@@ -1299,19 +1295,10 @@ set_glob(RUST_QM_UPDATE GLOB_RECURSE "rs;toml" src/qm/update
 )
 
 set_src(RUST_BRIDGE_SHARED GLOB_RECURSE src/rust-bridge
-  base/cxx.h
   cpp/console.cpp
   cpp/console.h
-  cpp/snapshot.cpp
-  cpp/snapshot.h
-  cpp/uuid_manager.cpp
-  cpp/uuid_manager.h
   engine/shared/rust_version.cpp
   engine/shared/rust_version.h
-  engine/shared/snapshot/builder.cpp
-  engine/shared/snapshot/builder.h
-  engine/shared/snapshot/delta.cpp
-  engine/shared/snapshot/delta.h
 )
 
 set_glob(RUST_MASTERSRV GLOB "rs;toml" src/mastersrv/src
@@ -2892,6 +2879,7 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   ringbuffer.h
   serverinfo.cpp
   serverinfo.h
+  sixup_translate_snapshot.cpp
   snapshot.cpp
   snapshot.h
   storage.cpp

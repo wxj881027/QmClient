@@ -15,11 +15,6 @@ ddnet-base = { path = "../../base" }
 ddnet-engine = { path = ".." }
 
 cxx.workspace = true
-libtw2-common = { git = "https://github.com/heinrich5991/libtw2" }
-libtw2-packer = { git = "https://github.com/heinrich5991/libtw2" }
-libtw2-snapshot = { git = "https://github.com/heinrich5991/libtw2" }
-libtw2-warn = { git = "https://github.com/heinrich5991/libtw2" }
-uuid = "1.0"
 tungstenite = { version = "0.21", default-features = false, features = ["handshake", "rustls-tls-webpki-roots"] }
 
 [target.'cfg(windows)'.dependencies]

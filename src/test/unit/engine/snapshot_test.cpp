@@ -11,65 +11,65 @@
 
 TEST(Snapshot, CrcOneInt)
 {
-	rust::Box<CSnapshotBuilder> pBuilder = CSnapshotBuilder::New();
-	pBuilder->Init(false);
+	CSnapshotBuilder Builder;
+	Builder.Init();
 
 	CNetObj_Flag Flag;
 	Flag.m_X = 4;
 	Flag.m_Y = 0;
 	Flag.m_Team = 0;
-	ASSERT_TRUE(pBuilder->NewItem(NETOBJTYPE_FLAG, 0, Flag.AsSlice()));
+	ASSERT_TRUE(Builder.NewItem(NETOBJTYPE_FLAG, 0, &Flag, sizeof(Flag)));
 
 	CSnapshotBuffer Buffer;
-	pBuilder->Finish(Buffer);
+	Builder.Finish(&Buffer);
 	ASSERT_EQ(Buffer.AsSnapshot()->Crc(), 4);
 }
 
 TEST(Snapshot, CrcTwoInts)
 {
-	rust::Box<CSnapshotBuilder> pBuilder = CSnapshotBuilder::New();
-	pBuilder->Init(false);
+	CSnapshotBuilder Builder;
+	Builder.Init();
 
 	CNetObj_Flag Flag;
 	Flag.m_X = 1;
 	Flag.m_Y = 1;
 	Flag.m_Team = 0;
-	ASSERT_TRUE(pBuilder->NewItem(NETOBJTYPE_FLAG, 0, Flag.AsSlice()));
+	ASSERT_TRUE(Builder.NewItem(NETOBJTYPE_FLAG, 0, &Flag, sizeof(Flag)));
 
 	CSnapshotBuffer Buffer;
-	pBuilder->Finish(Buffer);
+	Builder.Finish(&Buffer);
 	ASSERT_EQ(Buffer.AsSnapshot()->Crc(), 2);
 }
 
 TEST(Snapshot, CrcBiggerInts)
 {
-	rust::Box<CSnapshotBuilder> pBuilder = CSnapshotBuilder::New();
-	pBuilder->Init(false);
+	CSnapshotBuilder Builder;
+	Builder.Init();
 
 	CNetObj_Flag Flag;
 	Flag.m_X = 99999999;
 	Flag.m_Y = 1;
 	Flag.m_Team = 1;
-	ASSERT_TRUE(pBuilder->NewItem(NETOBJTYPE_FLAG, 0, Flag.AsSlice()));
+	ASSERT_TRUE(Builder.NewItem(NETOBJTYPE_FLAG, 0, &Flag, sizeof(Flag)));
 
 	CSnapshotBuffer Buffer;
-	pBuilder->Finish(Buffer);
+	Builder.Finish(&Buffer);
 	ASSERT_EQ(Buffer.AsSnapshot()->Crc(), 100000001);
 }
 
 TEST(Snapshot, CrcOverflow)
 {
-	rust::Box<CSnapshotBuilder> pBuilder = CSnapshotBuilder::New();
-	pBuilder->Init(false);
+	CSnapshotBuilder Builder;
+	Builder.Init();
 
 	CNetObj_Flag Flag;
 	Flag.m_X = 0xFFFFFFFF;
 	Flag.m_Y = 1;
 	Flag.m_Team = 1;
-	ASSERT_TRUE(pBuilder->NewItem(NETOBJTYPE_FLAG, 0, Flag.AsSlice()));
+	ASSERT_TRUE(Builder.NewItem(NETOBJTYPE_FLAG, 0, &Flag, sizeof(Flag)));
 
 	CSnapshotBuffer Buffer;
-	pBuilder->Finish(Buffer);
+	Builder.Finish(&Buffer);
 	ASSERT_EQ(Buffer.AsSnapshot()->Crc(), 1);
 }
 
@@ -104,57 +104,55 @@ TEST(SnapshotDelta, LargeDeltaNeedsDoubleSizedBuffer)
 	// 调用方必须按失败处理，而不是当成“零变化”。
 	constexpr int ITEM_DATA_INTS = 8189; // 两个对象刚好把快照填满 64 KiB
 
-	rust::Box<CSnapshotDelta> pDelta = CSnapshotDelta::New();
-	pDelta->SetStaticsize(0, 0);
-	pDelta->SetStaticsize(1, ITEM_DATA_INTS * sizeof(int32_t));
+	CSnapshotDelta Delta;
+	Delta.SetStaticsize(0, 0);
+	Delta.SetStaticsize(1, ITEM_DATA_INTS * sizeof(int32_t));
 
-	rust::Box<CSnapshotBuilder> pBuilder = CSnapshotBuilder::New();
-	pBuilder->Init(false);
+	CSnapshotBuilder Builder;
+	Builder.Init();
 	const std::vector<int32_t> vItemData(ITEM_DATA_INTS, 7);
-	const rust::Slice<const int32_t> ItemData(vItemData.data(), vItemData.size());
-	ASSERT_TRUE(pBuilder->NewItem(1, 0, ItemData));
-	ASSERT_TRUE(pBuilder->NewItem(1, 1, ItemData));
+	ASSERT_TRUE(Builder.NewItem(1, 0, vItemData.data(), (int)vItemData.size() * sizeof(int32_t)));
+	ASSERT_TRUE(Builder.NewItem(1, 1, vItemData.data(), (int)vItemData.size() * sizeof(int32_t)));
 
 	CSnapshotBuffer Snapshot;
-	const int SnapshotSize = pBuilder->Finish(Snapshot);
+	const int SnapshotSize = Builder.Finish(&Snapshot);
 	ASSERT_EQ(SnapshotSize, (int)CSnapshot::MAX_SIZE);
 
-	// 一倍缓冲装不下这个 delta，Rust 侧返回 -1。
+	// 一倍缓冲装不下这个 delta，必须返回 -1 而不是写越界。
 	std::vector<int32_t> vSmallBuffer(CSnapshot::MAX_SIZE / sizeof(int32_t), 0);
-	EXPECT_EQ(pDelta->CreateDelta(*CSnapshot::EmptySnapshot(), *Snapshot.AsSnapshot(), rust::Slice(vSmallBuffer.data(), vSmallBuffer.size())), -1);
+	EXPECT_EQ(Delta.CreateDelta(CSnapshot::EmptySnapshot(), Snapshot.AsSnapshot(), vSmallBuffer.data(), (int)(vSmallBuffer.size() * sizeof(int32_t))), -1);
 
 	// 两倍缓冲足够，并且确实用到了超过一个快照上限的容量。
 	CSnapshotDeltaBuffer BigBuffer;
-	const int DeltaSize = pDelta->CreateDelta(*CSnapshot::EmptySnapshot(), *Snapshot.AsSnapshot(), BigBuffer.AsMutSlice());
+	const int DeltaSize = Delta.CreateDelta(CSnapshot::EmptySnapshot(), Snapshot.AsSnapshot(), BigBuffer.Data(), sizeof(BigBuffer.m_aData));
 	EXPECT_GT(DeltaSize, (int)CSnapshot::MAX_SIZE);
 	EXPECT_LE(DeltaSize, (int)sizeof(BigBuffer.m_aData));
 }
 
 TEST(SnapshotDelta, MalformedDeltaIsRejected)
 {
-	// 官方 0198e362b 修的是 C++ 解包里的指针加法溢出；本地解包在 Rust 侧，
+	// 官方 0198e362b 修的是 C++ 解包里的指针加法溢出；
 	// 这里用畸形 delta 覆盖同类边界：越界和非法计数都必须返回失败。
-	rust::Box<CSnapshotDelta> pDelta = CSnapshotDelta::New();
-	pDelta->SetStaticsize(0, 0);
+	CSnapshotDelta Delta;
+	Delta.SetStaticsize(0, 0);
 
 	CSnapshotBuffer To;
 
 	// 空 delta
 	{
-		std::vector<int32_t> vEmpty;
-		EXPECT_LT(pDelta->UnpackDelta(*CSnapshot::EmptySnapshot(), To, rust::Slice<const int32_t>(vEmpty.data(), vEmpty.size())), 0);
+		EXPECT_LT(Delta.UnpackDelta(CSnapshot::EmptySnapshot(), &To, nullptr, 0), 0);
 	}
 
 	// 头部不完整
 	{
 		std::vector<int32_t> vTruncated = {0};
-		EXPECT_LT(pDelta->UnpackDelta(*CSnapshot::EmptySnapshot(), To, rust::Slice<const int32_t>(vTruncated.data(), vTruncated.size())), 0);
+		EXPECT_LT(Delta.UnpackDelta(CSnapshot::EmptySnapshot(), &To, vTruncated.data(), (int)vTruncated.size() * sizeof(int32_t)), 0);
 	}
 
 	// 删除项数量超出剩余数据（官方溢出修复针对的形态）
 	{
 		std::vector<int32_t> vHugeDeleted = {std::numeric_limits<int32_t>::max(), 0, 0};
-		EXPECT_LT(pDelta->UnpackDelta(*CSnapshot::EmptySnapshot(), To, rust::Slice<const int32_t>(vHugeDeleted.data(), vHugeDeleted.size())), 0);
+		EXPECT_LT(Delta.UnpackDelta(CSnapshot::EmptySnapshot(), &To, vHugeDeleted.data(), (int)vHugeDeleted.size() * sizeof(int32_t)), 0);
 	}
 }
 
