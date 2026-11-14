@@ -18,9 +18,64 @@ using offset_ptr32 = unsigned int;
 #include <game/mapitems_ex.h>
 
 #include <functional>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <vector>
+
+// 一次 RenderTileLayer 提交：起始索引偏移与索引数量。
+struct STileLayerDrawRange
+{
+	offset_ptr m_Offset;
+	unsigned int m_Count;
+};
+
+// 把可见行区间折算成提交段：整层左右边界都在可见区时所有可见行连续，只有一段；
+// 否则逐行合并相邻行。与渲染后端无关，可单独测量。
+template<typename TOffsetAt, typename TDrawAt>
+void QmBuildTileLayerDrawRanges(int Width, int X0, int X1, int Y0, int Y1, TOffsetAt OffsetAt, TDrawAt DrawAt, std::vector<STileLayerDrawRange> &vRanges)
+{
+	vRanges.clear();
+	if(Width <= 0 || X0 < 0 || X1 > Width || Y0 >= Y1)
+		return;
+
+	if(X0 == 0 && X1 == Width)
+	{
+		const size_t StartIndex = (size_t)Y0 * (size_t)Width;
+		const size_t EndIndex = (size_t)Y1 * (size_t)Width - 1;
+		const offset_ptr Start = OffsetAt(StartIndex);
+		const offset_ptr End = OffsetAt(EndIndex);
+		dbg_assert(End >= Start, "Tile offsets are not monotone.");
+		const unsigned int Count = (unsigned int)((End - Start) / sizeof(unsigned int)) + (DrawAt(EndIndex) ? 6u : 0u);
+		if(Count != 0)
+			vRanges.push_back({Start, Count});
+		return;
+	}
+
+	const int XR = X1 - 1;
+	for(int y = Y0; y < Y1; ++y)
+	{
+		const size_t StartIndex = (size_t)y * (size_t)Width + (size_t)X0;
+		const size_t EndIndex = (size_t)y * (size_t)Width + (size_t)XR;
+		const offset_ptr RowStart = OffsetAt(StartIndex);
+		const offset_ptr RowEnd = OffsetAt(EndIndex);
+		dbg_assert(RowEnd >= RowStart, "Tile offsets are not monotone.");
+		const unsigned int Count = (unsigned int)((RowEnd - RowStart) / sizeof(unsigned int)) + (DrawAt(EndIndex) ? 6u : 0u);
+		if(Count == 0)
+			continue;
+		if(!vRanges.empty())
+		{
+			STileLayerDrawRange &Last = vRanges.back();
+			if(Last.m_Offset + (offset_ptr)Last.m_Count * sizeof(unsigned int) == RowStart &&
+				std::numeric_limits<unsigned int>::max() - Last.m_Count >= Count)
+			{
+				Last.m_Count += Count;
+				continue;
+			}
+		}
+		vRanges.push_back({RowStart, Count});
+	}
+}
 
 class CMapLayers;
 class CMapItemLayerTilemap;
@@ -227,6 +282,7 @@ protected:
 
 	std::vector<char *> m_vpRenderTileLayerIndexOffsets;
 	std::vector<unsigned int> m_vRenderTileLayerDrawCounts;
+	std::vector<STileLayerDrawRange> m_vRenderTileLayerRanges;
 
 	std::optional<CRenderLayerTile::CTileLayerVisuals> m_VisualTiles;
 	CMapItemLayerTilemap *m_pLayerTilemap;
