@@ -140,6 +140,8 @@ void CMenus::RenderPlayers(CUIRect MainView)
 	static CListBox s_Players;
 	s_Players.DoAutoSpacing(ui_token::list::ROW_SPACING);
 	s_Players.SetActive(!Ui()->IsPopupOpen() && !State.m_Search.IsActive());
+	// 行悬浮反馈由卡片自己按卡片矩形画：列表自带的那层按整格绘制，左右会超出卡片。
+	s_Players.SetItemColors(ui_token::color::LIST_ITEM_SELECTED, ui_token::color::LIST_ITEM_SELECTED, ColorRGBA());
 	s_Players.DoStart(ui_token::player_card::TILE_HEIGHT, Count, Columns, 1, -1, &ListArea, false);
 	static CButtonContainer s_aTileButtons[MAX_CLIENTS][5];
 	for(int i = 0; i < Count; ++i)

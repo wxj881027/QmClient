@@ -3963,7 +3963,11 @@ void CChat::OnRender()
 	{
 		if(m_HistoryWheelSteps != 0)
 		{
-			QmChatHistoryWheel(m_HistoryScroll, m_HistoryWheelSteps, HistoryScrollMetrics, HistoryScrollConfig);
+			// Alt 三倍与列表同一个系数：公共滚动的倍率来自 QmScrollAltMultiplier，
+			// 聊天此前直连 AddWheelImpulse，绕过了那一层，所以没有三倍。
+			const bool AltPressed = Input()->KeyIsPressed(KEY_LALT) || Input()->KeyIsPressed(KEY_RALT);
+			const int WheelSteps = AltPressed ? (int)std::lround((float)m_HistoryWheelSteps * QmScrollAltMultiplier()) : m_HistoryWheelSteps;
+			QmChatHistoryWheel(m_HistoryScroll, WheelSteps, HistoryScrollMetrics, HistoryScrollConfig);
 			m_HistoryWheelSteps = 0;
 		}
 		// 新消息到达时 AddLine 会把可见行 +1（视图锚定在同一批消息上）。这类外部

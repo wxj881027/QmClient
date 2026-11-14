@@ -376,7 +376,7 @@ namespace ui_token::settings
 	// ESC 顶部主导航与页面页签共用同一档：高度取胶囊行高，字号取标题档。
 	// 单一入口的目的就是导航与页签不再一个高一个矮。
 	inline constexpr float MENU_NAV_HEIGHT = TAB_HEIGHT;
-	inline constexpr float MENU_NAV_FONT_SIZE = SECTION_TITLE;
+	inline constexpr float MENU_NAV_FONT_SIZE = TAB_FONT_SIZE;
 	// 子页签高度：与一级页签同档，切换时布局不跳动。
 	inline constexpr float SUB_TAB_HEIGHT = TAB_HEIGHT;
 	// 子页签间距：同上，与一级页签一致。
@@ -612,7 +612,7 @@ namespace ui_token::chat
 		inline constexpr float BUTTON_BORDER_RATIO = 0.05f;
 	// 图标相对内径的内缩比例：图标与圆边之间必须有边距，
 	// 否则大图标顶到描边上，看起来像「图标和圆一样高」。
-	inline constexpr float ICON_INSET_RATIO = 0.18f;
+	inline constexpr float ICON_INSET_RATIO = 0.14f;
 	// 翻译按钮直径相对输入行行高的比例：外圈比行高小一档，文字行不被按钮撑高。
 	inline constexpr float BUTTON_ROW_RATIO = 0.82f;
 
@@ -945,7 +945,7 @@ namespace ui_token::player_card
 	// 玩家列表是网格卡片（与皮肤列表同一种读法）：每格最小宽度、格高、格间缝与格内头像边长。
 	// 玩家瓦片按皮肤列表那种小卡：头像 + 两行文字 + 右侧/右上动作图标，
 	// 因此比纯文字格宽一档，高度容纳两行文字。
-	inline constexpr float TILE_MIN_WIDTH = 296.0f;
+	inline constexpr float TILE_MIN_WIDTH = 196.0f;
 	inline constexpr float TILE_HEIGHT = 64.0f;
 	// 瓦片内动作图标边长：比整行卡的小一档，五枚才排得下。
 	inline constexpr float TILE_ICON_SIZE = 18.0f;
