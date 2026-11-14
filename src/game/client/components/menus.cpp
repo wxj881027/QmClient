@@ -1325,7 +1325,11 @@ int CMenus::DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char
 	Options.m_Enabled = Checked >= 0;
 	Options.m_Selected = Checked > 0;
 	Options.m_Corners = Corners;
-	Options.m_Radius = Rounding;
+	// 显示层统一「长条即胶囊」：宽明显大于高的按钮按半高取端头，与主菜单其它胶囊按钮同一曲线；
+	// 贴图本身不动，只把落点往内收一点避开圆头。
+	const bool CapsuleDisplay = pRect->w >= pRect->h * 1.8f;
+	Options.m_Corners = CapsuleDisplay ? IGraphics::CORNER_NONE : Corners;
+	Options.m_Radius = CapsuleDisplay ? pRect->h * 0.5f : Rounding;
 	Options.m_AlignToPixel = pUnscaledRect == nullptr;
 	Color = ui_widget::DrawButtonSurface(ui_widget::ControlContext(Ui()), pButtonContainer, *pRect, Options);
 	CUiScopedSurfaceText SurfaceText(TextRender(), Color);
@@ -1336,6 +1340,15 @@ int CMenus::DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char
 		pRect->VSplitRight(pRect->h * 4.0f, &Text, &Image); // always correct ratio for image
 
 		// render image
+		// 胶囊端头是圆弧：贴图内收一档，避免直角压在圆角外侧。
+		if(CapsuleDisplay)
+		{
+			const float ImageInset = Image.h * 0.12f;
+			Image.x -= ImageInset * 1.5f;
+			Image.y += ImageInset;
+			Image.h -= ImageInset * 2.0f;
+			Image.w -= ImageInset;
+		}
 		const CMenuImage *pImage = FindMenuImage(pImageName);
 		if(pImage)
 		{
