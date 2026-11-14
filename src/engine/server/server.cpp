@@ -1904,7 +1904,8 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 		}
 	}
 
-	if(Config()->m_SvNetlimit && (Msg != NETMSG_REQUEST_MAP_DATA || m_aClients[ClientId].m_State != CClient::STATE_CONNECTING))
+	// 官方 13100 回滚 13092：地图数据传输本来就走 sv_fast_download 的节流，不能再计入 sv_netlimit
+	if(Config()->m_SvNetlimit && Msg != NETMSG_REQUEST_MAP_DATA)
 	{
 		int64_t Now = time_get();
 		int64_t Diff = Now - m_aClients[ClientId].m_TrafficSince;
@@ -2102,7 +2103,8 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 		}
 		else if(Msg == NETMSG_REQUEST_MAP_DATA)
 		{
-			if(m_aClients[ClientId].m_State != CClient::STATE_CONNECTING)
+			// 官方 13100 回滚 13092：0.7 客户端换图后会在 READY/游戏态继续请求地图块
+			if(m_aClients[ClientId].m_State < CClient::STATE_CONNECTING)
 				return;
 
 			if(m_aClients[ClientId].m_Sixup)
