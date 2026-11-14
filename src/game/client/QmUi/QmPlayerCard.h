@@ -146,9 +146,10 @@ namespace QmPlayersUi
 	}
 
 	// 展示区图标行：固定四格（好友 / 静音 / 屏蔽表情 / 跨服跟随）。
+	// 行内动作图标条：好友 / 静音 / 屏蔽表情 / 跟随 / 复制，五格足够覆盖玩家页全部动作。
 	struct SPlayerShowcaseIconRow
 	{
-		std::array<CUIRect, 4> m_aCells{};
+		std::array<CUIRect, 5> m_aCells{};
 	};
 
 	struct SPlayerCardIconRow
@@ -252,22 +253,18 @@ namespace QmPlayersUi
 		return std::max(1, (int)((AvailableWidth + Gap) / (Tile + Gap)));
 	}
 
-	// 玩家信息卡：与好友列表卡片同一种读法——头部一行是角色头像、名字、战队、国家旗，
-	// 右上角一排动作图标；下面只有皮肤行与状态行。没有大块立绘。
-	struct SPlayerInfoCard
+	// 玩家行卡：与服务器浏览器「好友」页同一种读法——整行一张卡，
+	// 左边头像、中间名字与战队两行、右侧一排动作图标。没有选中态，也没有右侧展示页。
+	struct SPlayerRow
 	{
-		CUIRect m_Header{};
+		CUIRect m_Card{};
 		CUIRect m_Avatar{};
 		CUIRect m_Name{};
 		CUIRect m_Clan{};
-		CUIRect m_Flag{};
 		CUIRect m_Icons{};
-		CUIRect m_SkinRow{};
-		CUIRect m_Status{};
 	};
 
-	// 动作图标行：数量由调用点给（好友 / 静音 / 屏蔽表情 / 跟随），从右往左排，
-	// 窄卡等比缩小而不是把按钮挤出行外。
+	// 动作图标行：数量由调用点给（好友 / 静音 / 屏蔽表情 / 跟随 / 复制），从右往左排。
 	inline SPlayerShowcaseIconRow PlayerIconRow(const CUIRect &Row, const int IconCount)
 	{
 		SPlayerShowcaseIconRow Layout;
@@ -294,43 +291,35 @@ namespace QmPlayersUi
 		return Layout;
 	}
 
-	inline SPlayerInfoCard PlayerInfoCardLayout(const CUIRect &Card, const int IconCount)
+	// 行内排版：卡片自身先留内边距，再从左取头像、从右取动作图标条，中间是两行文字。
+	inline SPlayerRow PlayerRowLayout(const CUIRect &Row, const int IconCount)
 	{
-		SPlayerInfoCard Result;
-		if(Card.w <= 0.0f || Card.h <= 0.0f)
+		SPlayerRow Result;
+		if(Row.w <= 0.0f || Row.h <= 0.0f)
 			return Result;
-
-		// 头部：先切出高度（头像边长），再在右侧切出动作图标条，剩下给头像 + 文字 + 旗子。
-		const float HeaderHeight = std::min(Card.h, ui_token::player_card::HEADER_HEIGHT);
-		CUIRect Remaining = Card;
-		Remaining.HSplitTop(HeaderHeight, &Result.m_Header, &Remaining);
-		CUIRect Header = Result.m_Header;
+		Result.m_Card = Row;
+		CUIRect Content = Row;
+		Content.Margin(ui_token::player_card::PADDING, &Content);
 
 		const int Count = std::max(0, IconCount);
 		const float IconSize = ui_token::player_card::ICON_BUTTON_SIZE;
 		if(Count > 0)
 		{
 			const float IconsWidth = Count * IconSize + (Count - 1) * ui_token::player_card::ICON_BUTTON_GAP;
-			Header.VSplitRight(std::min(IconsWidth, Header.w), &Header, &Result.m_Icons);
-			Header.VSplitRight(std::min(ui_token::spacing::XS, Header.w), &Header, nullptr);
+			Content.VSplitRight(std::min(IconsWidth, Content.w), &Content, &Result.m_Icons);
+			Content.VSplitRight(std::min(ui_token::spacing::XS, Content.w), &Content, nullptr);
 		}
 
-		Header.VSplitLeft(std::min(Header.h, Header.w), &Result.m_Avatar, &Header);
-		Header.VSplitLeft(std::min(ui_token::spacing::XS, Header.w), nullptr, &Header);
+		const float AvatarSize = std::min(Content.h, ui_token::player_card::LIST_AVATAR_SIZE);
+		Content.VSplitLeft(std::min(AvatarSize, Content.w), &Result.m_Avatar, &Content);
+		Result.m_Avatar.h = std::min(Result.m_Avatar.h, AvatarSize);
+		Content.VSplitLeft(std::min(ui_token::spacing::SM, Content.w), nullptr, &Content);
 
-		const float FlagHeight = std::min(ui_token::player_card::HEADER_FLAG_HEIGHT, Header.h);
-		const float FlagWidth = FlagHeight * ui_token::player_card::HEADER_FLAG_ASPECT;
-		Header.VSplitRight(std::min(FlagWidth, Header.w), &Header, &Result.m_Flag);
-		Header.VSplitRight(std::min(ui_token::spacing::XS, Header.w), &Header, nullptr);
-
-		Header.HSplitTop(std::min(ui_token::player_card::HEADER_NAME_HEIGHT, Header.h), &Result.m_Name, &Header);
-		Result.m_Clan = Header;
-
-		// 皮肤行与状态行：与头部同一条内边距，行高取图标按钮边长与字段行高。
-		Remaining.HSplitTop(std::min(ui_token::player_card::SECTION_GAP, Remaining.h), nullptr, &Remaining);
-		Remaining.HSplitTop(std::min(ui_token::player_card::ICON_BUTTON_SIZE, Remaining.h), &Result.m_SkinRow, &Remaining);
-		Remaining.HSplitTop(std::min(ui_token::player_card::SECTION_GAP, Remaining.h), nullptr, &Remaining);
-		Result.m_Status = Remaining;
+		// 名字一行、战队一行，两行都在剩余高度里垂直居中，行高变矮也不会把文字挤出卡片。
+		const float TextBlock = std::min(Content.h, 2.0f * ui_token::player_card::LIST_NAME_HEIGHT);
+		Content.HSplitTop(std::min(Content.h, std::max(0.0f, (Content.h - TextBlock) * 0.5f)), nullptr, &Content);
+		Content.HSplitTop(std::min(ui_token::player_card::LIST_NAME_HEIGHT, Content.h), &Result.m_Name, &Content);
+		Result.m_Clan = Content;
 		return Result;
 	}
 

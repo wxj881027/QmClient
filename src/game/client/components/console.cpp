@@ -2420,22 +2420,26 @@ void CGameConsole::OnRender()
 		}
 		if(ShowConsoleScrollbar)
 		{
-			CUIRect ScrollbarRect = {Screen.w - CONSOLE_SCROLLBAR_WIDTH - CONSOLE_SCROLLBAR_MARGIN, LogTop, CONSOLE_SCROLLBAR_WIDTH, LogHeight};
-			CUIRect Rail;
-			ScrollbarRect.Margin(CONSOLE_SCROLLBAR_MARGIN, &Rail);
-			if(Rail.w > 0.0f && Rail.h > Rail.w)
+			// 轨道与滑块几何来自公共覆盖式滚动条，与控制台设置面板、设置页列表完全同一条算法：
+			// 轨道两端内缩、滑块 = 视口/内容 × 轨道、夹在最小滑块与轨道之间。
+			const CUIRect Owner{0.0f, LogTop, Screen.w, LogHeight};
+			const float ConsoleContentHeight = (float)maximum(TotalBacklogLines, 1) * LineHeight;
+			const float MaxOffset = maximum(ScrollFrame.m_MaxOffset, 1.0f);
+			const float Progress = 1.0f - std::clamp(ScrollFrame.m_Offset / MaxOffset, 0.0f, 1.0f);
+			const auto ScrollbarFrame = ui_widget::ResolveOverlayScrollbarFrame(Owner, LogTop, LogHeight, ConsoleContentHeight, Progress, true,
+				CONSOLE_SCROLLBAR_WIDTH, CONSOLE_SCROLLBAR_MARGIN, CONSOLE_SCROLLBAR_MIN_THUMB);
+			if(ScrollbarFrame.m_Visible)
 			{
-				const float HandleHeight = std::clamp(Rail.h * (VisibleBacklogLines / (float)maximum(TotalBacklogLines, 1)), maximum(Rail.w, CONSOLE_SCROLLBAR_MIN_THUMB), Rail.h);
-				const float TrackRange = maximum(1.0f, Rail.h - HandleHeight);
-				// 偏移单位是像素、0 在最新一行（滑轨底端），所以进度要按最大偏移归一化。
-				const float MaxOffset = maximum(ScrollFrame.m_MaxOffset, 1.0f);
-				const float Current = 1.0f - std::clamp(ScrollFrame.m_Offset / MaxOffset, 0.0f, 1.0f);
-				CUIRect Handle = {Rail.x, Rail.y + TrackRange * Current, Rail.w, HandleHeight};
+				const CUIRect Rail = ScrollbarFrame.m_Rail;
+				CUIRect Handle = ScrollbarFrame.m_Thumb;
 				const vec2 MousePos = GetMousePosition();
 				const bool MouseDown = !SettingsOpen && (m_TouchState.m_PrimaryPressed || Input()->NativeMousePressed(1));
 				const auto InsideRect = [&](const CUIRect &Rect) {
 					return MousePos.x >= Rect.x && MousePos.x <= Rect.x + Rect.w && MousePos.y >= Rect.y && MousePos.y <= Rect.y + Rect.h;
 				};
+				// 热项登记走公共按钮逻辑：滑块据此拿到悬浮/按下的几何反馈，
+				// 面板画出「变大」正是这一步，而不是另写一套放大常量。
+				Ui()->DoButtonLogic(&pConsole->m_ScrollbarDragOffset, 0, &Rail, BUTTONFLAG_LEFT);
 
 				if(!MouseDown)
 				{
@@ -2449,16 +2453,13 @@ void CGameConsole::OnRender()
 
 				if(pConsole->m_ScrollbarDragging)
 				{
-					const float HandleTop = std::clamp(MousePos.y - pConsole->m_ScrollbarDragOffset, Rail.y, Rail.y + TrackRange);
-					const float Relative = (HandleTop - Rail.y) / TrackRange;
+					const float HandleTop = std::clamp(MousePos.y - pConsole->m_ScrollbarDragOffset, Rail.y, Rail.y + ScrollbarFrame.m_TrackRange);
+					const float Relative = ScrollbarFrame.m_TrackRange > 0.0f ? (HandleTop - Rail.y) / ScrollbarFrame.m_TrackRange : 0.0f;
 					// 拖动跟手：位移直接落到指针位置，不经过弹簧；越界由橡皮筋收回合法范围。
 					Scroll.DragToOffset((1.0f - Relative) * ScrollFrame.m_MaxOffset);
 					Handle.y = HandleTop;
 				}
 
-				// 轨道与滑块都走公共控件：滑块带悬停/拖动反馈，颜色取主题强调色，
-				// 和控制台设置面板、设置页列表的滚动条保持同一套观感。
-				// 原先这里写死 0.62 灰，跟其它滚动条不是一种东西。
 				Rail.Draw(ui_token::color::LIST_ITEM_HOVER, IGraphics::CORNER_ALL, Rail.w * 0.5f);
 				const ColorRGBA ScrollbarAccent = Ui()->QmControlTheme().m_Accent;
 				ui_widget::DrawScrollbarHandle(ui_widget::ControlContext(Ui()), &pConsole->m_ScrollbarDragOffset, Handle, true, nullptr, &ScrollbarAccent);

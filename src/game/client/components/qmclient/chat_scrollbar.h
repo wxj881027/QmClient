@@ -97,51 +97,20 @@ struct SQmChatScrollbarFrame
 	bool m_Visible = false;
 };
 
-// 聊天历史的滚动条几何。轨道与滑块不再由聊天自己算：这里把"视口"和"内容"交给
-// 公共滚动容器 CQmScrollController，它与列表覆盖式轨道（CScrollRegion::DoSlider）
-// 是同一条算法——轨道 = 视口，两端各让出一档内缩；滑块 = 视口/内容 × 轨道，夹在
-// ui_token::chat::SCROLLBAR_MIN_THUMB 与轨道之间；位置 = 进度 × (轨道 − 滑块)。
+// 聊天历史的滚动条几何：轨道、滑块与显隐全部来自公共覆盖式滚动条
+// （ui_widget::ResolveOverlayScrollbarFrame，与列表覆盖式轨道同一条算法）。
 // 聊天只回答三件事：视口多高、内容总高多少、当前滚到哪（Progress 0 = 顶部/最旧）。
 inline SQmChatScrollbarFrame QmResolveChatScrollbarFrame(const CUIRect &Bounds, float Top, float Height, float ContentHeight, float Progress, bool OnRight, float Scale = 1.0f)
 {
 	SQmChatScrollbarFrame Result;
-	const float ViewHeight = std::max(0.0f, Height);
-	const float Content = std::max(0.0f, ContentHeight);
-	// 内容装得下就没有滚动条：与列表一致，不留一根占满轨道却动不了的滑块。
-	if(Bounds.w <= 0.0f || ViewHeight <= 0.0f || Content <= ViewHeight)
-		return Result;
 	const float Width = QmChatScrollbarWidth(Bounds, Scale);
 	const float Margin = QmChatScrollbarMargin(Bounds, OnRight, Width, Scale);
-	SQmScrollContainerStyle Style;
-	Style.m_Axis = EQmScrollAxis::VERTICAL;
-	// 公共容器按 margin 把轨道在宽度方向两侧各收一次；槽位宽度补回两份，
-	// 轨道净宽才仍然是一档 SCROLLBAR_WIDTH。
-	Style.m_ScrollbarWidth = Width + Margin * 2.0f;
-	Style.m_ScrollbarMargin = Margin;
-	Style.m_MinThumbHeight = ui_token::chat::SCROLLBAR_MIN_THUMB * std::max(0.0f, Scale);
-	Style.m_ReserveScrollbarSpace = false;
-
-	const CUIRect View{Bounds.x, Top, Bounds.w, ViewHeight};
-	SQmScrollMetrics Metrics;
-	Metrics.m_ViewportSize = ViewHeight;
-	Metrics.m_ContentSize = Content;
-	// 进度换成公共容器认的"偏移"，行程换算由它自己完成，聊天不再维护一套 lerp。
-	CQmScrollState ThumbState;
-	ThumbState.SetOffset(std::clamp(Progress, 0.0f, 1.0f) * Metrics.MaxOffset(), Metrics);
-	const CQmScrollController Controller;
-	const SQmScrollContainerFrame Frame = Controller.PreviewFrame(ThumbState, View, Content, Style);
-	if(!Frame.m_ScrollbarVisible)
-		return Result;
-	Result.m_Visible = true;
-	Result.m_Rail = Frame.m_ScrollbarTrackRect;
-	Result.m_Thumb = Frame.m_ScrollbarThumbRect;
-	if(!OnRight)
-	{
-		// 公共容器只画右侧轨道；靠左时把整条轨道镜像到聊天区左缘，内缩量同档。
-		Result.m_Rail.x = Bounds.x + (Bounds.w - (Result.m_Rail.x - Bounds.x) - Result.m_Rail.w);
-		Result.m_Thumb.x = Result.m_Rail.x;
-	}
-	Result.m_TrackRange = std::max(0.0f, Result.m_Rail.h - Result.m_Thumb.h);
+	const auto Frame = ui_widget::ResolveOverlayScrollbarFrame(Bounds, Top, Height, ContentHeight, Progress, OnRight, Width, Margin,
+		ui_token::chat::SCROLLBAR_MIN_THUMB * std::max(0.0f, Scale));
+	Result.m_Rail = Frame.m_Rail;
+	Result.m_Thumb = Frame.m_Thumb;
+	Result.m_TrackRange = Frame.m_TrackRange;
+	Result.m_Visible = Frame.m_Visible;
 	return Result;
 }
 

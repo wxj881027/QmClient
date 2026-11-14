@@ -8436,9 +8436,7 @@ void CMenus::OnStateChange(int NewState, int OldState)
 	{
 		m_QmVoteMenu.m_Mode.Reset();
 		m_QmVoteMenu.m_Page = EQmVoteMenuPage::OPTIONS;
-	}
-	m_QmPlayersMenu.m_Selection.Validate(nullptr);
-	if(NewState == IClient::STATE_DEMOPLAYBACK)
+	}	if(NewState == IClient::STATE_DEMOPLAYBACK)
 	{
 		m_DemoDisplayExpanded = false;
 		m_DemoExportDisplayExpanded = false;

@@ -148,11 +148,17 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 - 唯一实现：`CQmConsoleScrollRuntime`（`src/game/client/QmUi/QmConsoleScroll.h`）+ `CQmScrollState` / `QmNativeWheelScrollConfig`；调用点 `CGameConsole::CInstance::OnInput`、`CGameConsole::OnRender`（`src/game/client/components/console.cpp`）。
 - 禁止的反面写法：在控制台里自己写 `m_BacklogCurLine += 行数` 直跳滚轮；拖动滑块走弹簧（应跟手）；新日志到达时搬整型行锚而不是按内容增长量抬高偏移；另写一套平滑时长或阻尼。
 
+### 2.8c 覆盖式滚动条（overlay scrollbar）
+
+- 定义：铺在内容上层、不占内容宽度的滚动条。轨道长度等于宿主视口，两端各内缩一档；滑块长度按「视口高 / 内容总高 × 轨道」求，夹在最小滑块与轨道之间；位置由进度决定（0 = 顶部/最旧）。内容装得下时不出现。
+- 唯一实现：`ui_widget::ResolveOverlayScrollbarFrame`（`src/game/client/QmUi/UiForms.h`，几何本体委托 `CQmScrollController::PreviewFrame`），绘制走 `ui_widget::DrawScrollbarHandle`；滑块悬浮/按下放大的热项必须由 `CUi::DoButtonLogic` 登记，控件才会画大。
+- 禁止的反面写法：各页面自己算轨道与滑块；用固定像素上限截断滑块长度；只画滑块、不登记热项导致悬浮不变大；另写一套放大像素。
+
 ### 2.15 玩家信息卡（player card）
 
-- 定义：ESC 菜单「玩家」页是「顶部一行（左胶囊筛选 / 右搜索框 / 最右在线人数）+ 网格玩家列表 + 右侧英雄展示卡」。列表是网格卡片（一行多格，与皮肤列表同一种读法），未选中玩家时占满全宽；选中后右侧卡上半是展示区（角色立绘居中、名字与氏族压在下沿、区内一排圆形图标按钮），下半只有皮肤名与复制按钮。所有度量只由 `ui_token::player_card` 决定。
-- 唯一实现：`QmPlayersUi::PlayerTileColumns`（网格列数）/ `PlayerShowcaseLayout`（展示区 / 立绘 / 名字 / 氏族 / 图标行 / 皮肤行 / 状态行）/ `PlayerShowcaseIconRow`（展示区内图标槽位）（`src/game/client/QmUi/QmPlayerCard.h`）；列表用 `CListBox` 多列网格；操作胶囊走 `ui_widget::SecondaryButton`，方形图标按钮走 `ui_widget::DoIconButton`（`src/game/client/QmUi/UiButtons.h`），悬停提示走 `ui_widget::Tooltip`、复制成功提示走 `ui_widget::Toast`（`src/game/client/QmUi/UiOverlays.h`）。
-- 禁止的反面写法：在页面里手写 `HSplitTop(28.0f)` 自己切分区（窗口变矮就翻出卡片）；用文字按钮承担「好友 / 静音 / 屏蔽表情 / 跨服跟随」这四类动作（一律圆形图标按钮，图标语义与好友列表同源：心 / 禁 / 裂心 / 眼）；凭空造 DDNet 没有的动作（例如「复制氏族」）；把玩家列表写成单列长条（应与皮肤列表一样是网格）；给卡片再开一条颜色配置（表面色固定取 `ui_token::color::SURFACE_HIGHLIGHT` + `BORDER_SUBTLE`）。
+- 定义：玩家页一名玩家一行，整行一张卡，与服务器浏览器「好友」页同一种读法：左边角色头像、中间名字与战队两行、右侧一排动作图标（好友 / 静音 / 屏蔽表情 / 跟随 / 复制皮肤）。没有选中态，也没有右侧展示页。
+- 唯一实现：`QmPlayersUi::PlayerRowLayout` / `QmPlayersUi::PlayerIconRow`（`src/game/client/QmUi/QmPlayerCard.h`），列表为单列 `CListBox`（`src/game/client/QmUi/QmPlayersMenu.cpp`）。
+- 禁止的反面写法：点选后另开右栏展示页；把动作按钮放在展示页里；跟随用眼睛图标（应复用好友列表的播放/停止）；复制动作拆成「复制战队」之类的臆造项。
 
 ### 2.16 聊天气泡与聊天滚动条（chat bubble / chat scrollbar）
 
