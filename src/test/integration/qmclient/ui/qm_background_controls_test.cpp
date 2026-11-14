@@ -2,7 +2,6 @@
 #include <engine/keys.h>
 
 #include <game/client/QmUi/QmAnimResolve.h>
-#include <game/client/QmUi/QmPieMenuSettingsControls.h>
 #include <game/client/QmUi/SettingsCardMeasure.h>
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiDiscreteSlider.h>
@@ -265,11 +264,11 @@ namespace
 			if(HasFatalFailure())
 				return;
 			g_Config.m_QmUiAccentOpacity = 60;
+			// 按钮与输入框共用「控件背景」，两处不再各配一份透明度。
+			g_Config.m_QmUiControlOpacity = 50;
 			// 测试基座用 CConfig() 清零所有配置：焦点光晕开关显式打开，
 			// 否则后台趟的「聚焦输入框两层光晕」永远不会出现。
 			g_Config.m_QmUiFocusGlow = 1;
-			g_Config.m_QmUiDropdownOpacity = 40;
-			g_Config.m_QmUiInputOpacity = 60;
 			m_pRecordingKernel = std::make_unique<qm_ui_test::CRealUiTestKernel>(&m_Recording, m_Ui.TextRender(), &m_Input, &m_Client);
 			m_Ui.Init(m_pRecordingKernel.get());
 			m_Ui.MapScreen();
@@ -324,8 +323,7 @@ namespace
 		void DrawOpacityControls(bool On = false)
 		{
 			m_Recording.m_vSurfaces.clear();
-			g_Config.m_QmUiDropdownOpacity = 40;
-			g_Config.m_QmUiInputOpacity = 60;
+			g_Config.m_QmUiControlOpacity = 50;
 			const auto Ctx = ui_widget::ControlContext(&m_Ui);
 			m_Ui.BeginBackgroundRender();
 			ui_widget::DrawButtonSurface(Ctx, &m_Button, m_Rect, {});
@@ -866,118 +864,6 @@ TEST_F(QmBackgroundControlsIntegration, ConsoleOverlayKeepsCapsulePlateAndIndica
 	EXPECT_TRUE(m_Recording.m_vSurfaces.empty());
 }
 
-TEST_F(QmBackgroundControlsIntegration, PieOptionButtonAndColorHitAreasRemainSeparateWhenNarrowOrScaled)
-{
-	for(const float Scale : {0.75f, 1.0f, 2.0f})
-	{
-		for(const float Width : {0.0f, 8.0f, 24.0f, 100.0f})
-		{
-			SCOPED_TRACE(Scale);
-			SCOPED_TRACE(Width);
-			const CUIRect Cell{20, 20, Width * Scale, 32 * Scale};
-			const CUIRect Button = QmPieOptionButtonRect(Cell, 24 * Scale, 4 * Scale);
-			const CUIRect Swatch = QmPieOptionSwatchRect(Cell, 24 * Scale);
-			EXPECT_GE(Button.w, 0.0f);
-			EXPECT_GE(Swatch.w, 0.0f);
-			EXPECT_LE(Button.x + Button.w, Swatch.x);
-			EXPECT_LE(Swatch.x + Swatch.w, Cell.x + Cell.w);
-			EXPECT_GE(Swatch.y, Cell.y);
-			EXPECT_LE(Swatch.y + Swatch.h, Cell.y + Cell.h);
-		}
-	}
-}
-
-TEST_F(QmBackgroundControlsIntegration, PieOptionSwatchRemainsVisibleBehindConsole)
-{
-	const auto Ctx = ui_widget::ControlContext(&m_Ui);
-	const ColorRGBA Color(0.8f, 0.2f, 0.3f, 0.75f);
-	m_Recording.m_vSurfaces.clear();
-	QmDrawPieOptionColorControl(Ctx, &m_Button, Color, QmPieOptionSwatchRect(m_Rect, 24.0f), 6.0f, true);
-	const auto Baseline = m_Recording.m_vSurfaces;
-	ASSERT_FALSE(Baseline.empty());
-	m_Recording.m_vSurfaces.clear();
-	m_Ui.SetEnabled(false);
-	m_Ui.BeginBackgroundRender();
-	const auto Result = QmDrawPieOptionColorControl(Ctx, &m_Button, Color, QmPieOptionSwatchRect(m_Rect, 24.0f), 6.0f, true);
-	m_Ui.EndBackgroundRender();
-	EXPECT_FALSE(Result);
-	ASSERT_EQ(m_Recording.m_vSurfaces.size(), Baseline.size());
-	for(size_t i = 0; i < Baseline.size(); ++i)
-	{
-		EXPECT_EQ(m_Recording.m_vSurfaces[i].m_FillColor, Baseline[i].m_FillColor);
-		EXPECT_FLOAT_EQ(m_Recording.m_vSurfaces[i].m_Rect.x, Baseline[i].m_Rect.x);
-		EXPECT_FLOAT_EQ(m_Recording.m_vSurfaces[i].m_Rect.y, Baseline[i].m_Rect.y);
-		EXPECT_TRUE(m_Recording.m_vSurfaceVisibility[i]);
-	}
-	m_Recording.m_vSurfaces.clear();
-	m_Ui.BeginRenderOnly();
-	QmDrawPieOptionColorControl(Ctx, &m_Button, Color, QmPieOptionSwatchRect(m_Rect, 24.0f), 6.0f, false);
-	m_Ui.EndRenderOnly();
-	EXPECT_TRUE(m_Recording.m_vSurfaces.empty());
-	m_Ui.SetEnabled(true);
-}
-
-TEST_F(QmBackgroundControlsIntegration, PieOptionPointerInputResumesOnlyAfterConsoleCloses)
-{
-	const auto Ctx = ui_widget::ControlContext(&m_Ui);
-	const ColorRGBA Color(0.8f, 0.2f, 0.3f, 0.75f);
-	const CUIRect Cell{20, 20, 100, 24};
-	const CUIRect Swatch = QmPieOptionSwatchRect(Cell, 24.0f);
-	const auto Frame = [&](vec2 Position, bool Pressed, bool Background) {
-		const vec2 Pixels = Position * vec2(m_Recording.WindowWidth(), m_Recording.WindowHeight()) / m_Ui.Screen()->Size();
-		const vec2 Delta = Pixels - m_Ui.UpdatedMousePos();
-		m_Ui.OnCursorMove(Delta.x, Delta.y);
-		m_Input.m_HeldKey = Pressed ? KEY_MOUSE_1 : 0;
-		m_Client.AdvanceFrame();
-		m_Ui.Update();
-		if(Background)
-			m_Ui.BeginBackgroundRender();
-		const auto Result = QmDrawPieOptionColorControl(Ctx, &m_Button, Color, QmPieOptionSwatchRect(Cell, 24.0f), 6.0f, true);
-		if(Background)
-			m_Ui.EndBackgroundRender();
-		return Result;
-	};
-	for(const auto Position : {Swatch.Center()})
-	{
-		for(const bool Pressed : {false, true, false})
-		{
-			const auto Result = Frame(Position, Pressed, true);
-			EXPECT_FALSE(Result);
-		}
-	}
-	EXPECT_EQ(m_Ui.ActiveItem(), nullptr);
-	Frame(Swatch.Center(), false, false);
-	Frame(Swatch.Center(), true, false);
-	EXPECT_TRUE(Frame(Swatch.Center(), false, false));
-}
-
-TEST_F(QmBackgroundControlsIntegration, PieOptionPreLayoutInputCommitsWithoutDrawing)
-{
-	const auto Ctx = ui_widget::ControlContext(&m_Ui);
-	const ColorRGBA Color(0.8f, 0.2f, 0.3f, 0.75f);
-	const CUIRect Cell{20, 20, 100, 24};
-	const CUIRect Swatch = QmPieOptionSwatchRect(Cell, 24.0f);
-	const auto Frame = [&](vec2 Position, bool Pressed) {
-		const vec2 Pixels = Position * vec2(m_Recording.WindowWidth(), m_Recording.WindowHeight()) / m_Ui.Screen()->Size();
-		const vec2 Delta = Pixels - m_Ui.UpdatedMousePos();
-		m_Ui.OnCursorMove(Delta.x, Delta.y);
-		m_Input.m_HeldKey = Pressed ? KEY_MOUSE_1 : 0;
-		m_Client.AdvanceFrame();
-		m_Ui.Update();
-		m_Recording.m_vSurfaces.clear();
-		m_Recording.m_vQuads.clear();
-		m_Ui.BeginPreLayoutInput();
-		const auto Result = QmDrawPieOptionColorControl(Ctx, &m_Button, Color, QmPieOptionSwatchRect(Cell, 24.0f), 6.0f, true);
-		m_Ui.EndPreLayoutInput();
-		EXPECT_TRUE(m_Recording.m_vSurfaces.empty());
-		EXPECT_TRUE(m_Recording.m_vQuads.empty());
-		return Result;
-	};
-	Frame(Swatch.Center(), false);
-	Frame(Swatch.Center(), true);
-	EXPECT_TRUE(Frame(Swatch.Center(), false));
-}
-
 TEST_F(QmBackgroundControlsIntegration, BackgroundActionIconsRemainVisibleWithoutClicks)
 {
 	UseRecordingTextEngine();
@@ -1196,10 +1082,11 @@ TEST_F(QmBackgroundControlsIntegration, PageBackgroundOpacityDoesNotMultiplyCont
 		DrawOpacityControls(On);
 		ASSERT_EQ(m_Recording.m_vSurfaces.size(), 4u);
 		const auto Baseline = m_Recording.m_vSurfaces;
-		EXPECT_FLOAT_EQ(Baseline[0].m_FillColor.a, 0.4f);
-		EXPECT_FLOAT_EQ(Baseline[1].m_FillColor.a, 0.6f);
+		EXPECT_FLOAT_EQ(Baseline[0].m_FillColor.a, 0.5f);
+		// 输入框不再单独配色：与按钮同底、同透明度。
+		EXPECT_FLOAT_EQ(Baseline[1].m_FillColor.a, 0.5f);
 		if(!On)
-			EXPECT_FLOAT_EQ(Baseline[2].m_FillColor.a, 0.4f);
+			EXPECT_FLOAT_EQ(Baseline[2].m_FillColor.a, 0.5f);
 		else
 			EXPECT_GT(Baseline[2].m_FillColor.a, 0.0f);
 		for(float PageAlpha : {0.0f, 0.2f, 0.6f, 1.0f})
@@ -1365,12 +1252,12 @@ TEST_F(QmBackgroundControlsIntegration, NestedParentTransitionsMultiplyEachLayer
 			CUiScopedControlAlphaScale Child(&m_Ui, 0.4f);
 			DrawOpacityControls();
 			ASSERT_EQ(m_Recording.m_vSurfaces.size(), 4u);
-			EXPECT_NEAR(m_Recording.m_vSurfaces[0].m_FillColor.a, 0.4f * 0.5f * 0.4f, 0.0001f);
-			EXPECT_NEAR(m_Recording.m_vSurfaces[1].m_FillColor.a, 0.6f * 0.5f * 0.4f, 0.0001f);
+			EXPECT_NEAR(m_Recording.m_vSurfaces[0].m_FillColor.a, 0.5f * 0.5f * 0.4f, 0.0001f);
+			EXPECT_NEAR(m_Recording.m_vSurfaces[1].m_FillColor.a, 0.5f * 0.5f * 0.4f, 0.0001f);
 		}
 		DrawOpacityControls();
 		ASSERT_EQ(m_Recording.m_vSurfaces.size(), 4u);
-		EXPECT_FLOAT_EQ(m_Recording.m_vSurfaces[0].m_FillColor.a, 0.4f * 0.5f);
+		EXPECT_FLOAT_EQ(m_Recording.m_vSurfaces[0].m_FillColor.a, 0.5f * 0.5f);
 	}
 	EXPECT_FLOAT_EQ(m_Ui.ControlAlphaScale(), 1.0f);
 }
@@ -1392,7 +1279,7 @@ TEST_F(QmBackgroundControlsIntegration, AnimatedPopupAppliesTransitionToItsContr
 	Props.m_Animate = true;
 	Props.m_BlockUnderlyingPointerInput = false;
 	g_Config.m_QmGaussianBlur = 0;
-	g_Config.m_QmUiDropdownOpacity = 40;
+	g_Config.m_QmUiControlOpacity = 40;
 	m_Ui.SetBackgroundAlphaScale(0.2f);
 	m_Ui.DoPopupMenu(&Id, 20, 20, 240, 100, &Probe, [](void *pContext, CUIRect View, bool) {
 		auto &State = *static_cast<SProbe *>(pContext);

@@ -238,6 +238,11 @@ private:
 	float m_RowInsetX = 0.0f;
 	// 胶囊行：滚动条压在内容上时，行右侧要给滚动条让出的缝（避免胶囊被压住一角）。
 	float m_RowReserveRight = 0.0f;
+	// 单列胶囊行可选：只在内容真的溢出、滚动条要出现时才让出那一列；
+	// 让位量按时间推进，滚动条出现/消失时行胶囊横向滑动而不是瞬跳。
+	bool m_ReserveWhenOverflowing = false;
+	float m_ReserveRightCurrent = 0.0f;
+	int64_t m_ReserveRightStepTime = 0;
 	bool m_AutoSpacingOverridden = false;
 	// 自适应高度：可见行数夹在 [MinRows, MaxRows]；MaxRows <= 0 表示不接管高度。
 	int m_MinVisibleRows = 0;
@@ -317,10 +322,17 @@ public:
 	void SetVisibleRowRange(int MinRows, int MaxRows);
 	// 覆盖式滚动条开关：开启后行宽与有没有滚动条无关（默认随 SetCapsuleRows 打开）。
 	void SetScrollbarOverlay(bool Overlay) { m_ScrollbarOverlay = Overlay; }
+	// 单列胶囊行的让位策略：默认恒定为滚动条留出一列（拿不到真实内容高度的列表用）。
+	// 开启后改为「滚动条真出现才让位」，并把这个宽度做成过渡动画。
+	// 只对能提供准确条目数的列表有意义（服务器信息里的玩家行）。
+	void SetReserveRightWhenOverflowing(bool Enabled) { m_ReserveWhenOverflowing = Enabled; }
 	// 胶囊行/胶囊格右侧为滚动条让出的宽度（厚度 + 外边距 + 行缝）。调用点（表头列宽、
 	// 外框内容宽度）在 DoStart 前就要这份值，所以由 token（或显式覆盖值）直接算，
 	// 不依赖上一帧的滚动条状态；未开胶囊行或非覆盖式轨道时为 0。
 	float RowReserveWidth() const;
+	// 让位量的逐帧推进：目标由「内容是否溢出」决定，步长按真实时间折算，
+	// 因此窗口高度、条目数变化时都是同一条速度，不会随帧率变快变慢。
+	float StepRowReserveRight(float Target);
 	void DoSpacing(float Spacing = 20.0f);
 	void DoStart(float RowHeight, int NumItems, int ItemsPerRow, int RowsPerScroll, int SelectedIndex, const CUIRect *pRect = nullptr, bool Background = true, int BackgroundCorners = IGraphics::CORNER_ALL);
 	int ItemIndex() const { return m_ListBoxItemIndex; }

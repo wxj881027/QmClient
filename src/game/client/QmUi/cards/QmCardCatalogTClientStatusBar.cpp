@@ -31,6 +31,7 @@
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiSurface.h>
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/QmUi/cards/QmCardCatalog.h>
 #include <game/client/QmUi/cards/QmCardCatalogTClientInternal.h>
 #include <game/client/animstate.h>
@@ -101,7 +102,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientStatusBarCard(const qm_car
 		return str_comp(pItem->m_aName, "Space") == 0 ? pItem->m_aName : pItem->m_aDisplayName;
 	};
 	auto RenderStatusBarPreview = [&](CUIRect PreviewRect, int MaxItems = -1) {
-		DrawRoundedSurface(Ui(), PreviewRect, ColorRGBA(0, 0, 0, 0.5f), ColorRGBA(), 5.0f);
+		DrawRoundedSurface(Ui(), PreviewRect, ui_token::status_bar::TRACK, ui_token::color::COLOR_TRANSPARENT, ui_token::status_bar::RADIUS);
 		PreviewRect.VSplitLeft(MarginExtraSmall, nullptr, &PreviewRect);
 		const int TotalCount = (int)GameClient()->m_StatusBar.m_StatusBarItems.size();
 		const int PreviewCount = MaxItems > 0 ? minimum(TotalCount, MaxItems) : TotalCount;
@@ -119,7 +120,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientStatusBarCard(const qm_car
 			PreviewRect.VSplitLeft(ItemWidth, &PreviewItem, &PreviewRect);
 			PreviewItem.HMargin(RowSpacing, &PreviewItem);
 			PreviewItem.VMargin(MarginExtraSmall, &PreviewItem);
-			DrawRoundedSurface(Ui(), PreviewItem, ColorRGBA(1.0f, 1.0f, 1.0f, 0.15f), ColorRGBA(), 5.0f);
+			DrawRoundedSurface(Ui(), PreviewItem, ui_token::status_bar::ITEM_FILL, ui_token::color::COLOR_TRANSPARENT, ui_token::status_bar::RADIUS);
 			DoSettingsMenuLabel(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, nullptr, &PreviewItem, Localize(GetStatusBarEditorLabel(GameClient()->m_StatusBar.m_StatusBarItems[i])), FontSize, TEXTALIGN_MC);
 		}
 	};
@@ -361,7 +362,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientStatusBarCard(const qm_car
 				RenderStatusBarPreview(StatusBar);
 			else
 			{
-				DrawRoundedSurface(Ui(), StatusBar, ColorRGBA(0, 0, 0, 0.5f), ColorRGBA(), 5.0f);
+				DrawRoundedSurface(Ui(), StatusBar, ui_token::status_bar::TRACK, ui_token::color::COLOR_TRANSPARENT, ui_token::status_bar::RADIUS);
 				const float ItemWidth = (StatusBar.w - RowSpacing) / (float)ItemCount;
 				StatusBar.VSplitLeft(MarginExtraSmall, nullptr, &StatusBar);
 				static std::vector<CButtonContainer *> s_pItemButtons;
@@ -402,7 +403,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientStatusBarCard(const qm_car
 					StatusItemButton.HMargin(RowSpacing, &StatusItemButton);
 					StatusItemButton.VMargin(MarginExtraSmall, &StatusItemButton);
 					CStatusItem *pStatusItem = GameClient()->m_StatusBar.m_StatusBarItems[i];
-					const ColorRGBA Color = s_SelectedItem == i ? ColorRGBA(1.0f, 0.35f, 0.35f, 0.75f) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f);
+					const ColorRGBA Color = s_SelectedItem == i ? ui_token::status_bar::ITEM_LABEL_SELECTED : ui_token::status_bar::ITEM_LABEL;
 					CUIRect TempItemButton = StatusItemButton;
 					if(!ReadOnly && StatusItemActive && Ui()->ActiveItem() != s_pItemButtons[i])
 					{

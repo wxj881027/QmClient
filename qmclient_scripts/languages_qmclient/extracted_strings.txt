@@ -118,8 +118,6 @@
 === All Local Saves ===
 === Saves for '%s' ===
 ?!Stuck keys!?
-Enable focus glow
-Show an accent glow around the focused input field
 [%s] %s (Map: %s, Time: %s)
 _ or ' ' = blank spacer
 a = View angle
@@ -212,6 +210,7 @@ Add keyframe
 Add latency for antiping (0 to disable)
 Add one
 Add one shortcut per message; it is used when the target is on the list.
+Add options below
 Add or edit entries, then use the bind in chat to send the text.
 Add players or groups, then choose which markers and chat highlights apply to them.
 Add rules in "Rule list", fill the answer in "Reply content", then under "Trigger limits" turn on "Enable keyword reply" and set "Auto reply cooldown".
@@ -245,7 +244,6 @@ Adjust local/remote console verbosity (-3=None, -2=Errors only, -1=Warning, 0=In
 Adjust log file verbosity (-3=None, -2=Errors only, -1=Warning, 0=Info, 1=Debug, 2=Trace)
 Adjust mouse sensitivity and cursor limits
 Adjust nameplate options and compare the preview.
-Adjust one value at a time; corners and segments are drawn per frame, so large segment counts cost GPU time.
 Adjust opacity of entity layers
 Adjust player nameplate details and visibility
 Adjust status bar position and text style
@@ -321,11 +319,6 @@ Angle
 Angle:
 Angry
 Angular gradient
-Animate chat box, emote selector, scoreboard, and spectate selection
-Animate lists when entering a page
-Animate settings card expand and collapse height changes
-Animate settings card lists when entering a page
-Animate settings card reorder and layout reflow
 Animated title style id
 Animates the weapon in your hand when you switch or reload, plus an optional hammer rotation mode.
 Animation
@@ -580,6 +573,7 @@ Background music volume
 Background opacity
 Background stroke color
 Background stroke width
+Background, border and title effects of the settings cards
 Badges are informational: a bind can chain several commands, and one command can be bound to several keys.
 Baidu Translate
 Balance master, music, and game volume
@@ -679,8 +673,6 @@ Built-in
 Built-in cfg is empty - nothing was installed
 Button - Disabled
 Button - Enabled
-Button background color
-Button background opacity percentage
 Button browser
 Button position is outside of the screen.
 Buttons
@@ -733,11 +725,10 @@ Capsule ends
 Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
 Capture the flag
 Capture-the-flag event cue, used by CTF servers rather than ordinary DDNet racing.
+Card effects
 Card guide
-Card height animation
-Card list entry animation
 Card opacity
-Card reflow animation
+Card shape is shared with the rest of the interface and lives in "Interface theme".
 Category
 Category name
 Censor replacement character
@@ -832,7 +823,7 @@ Choose country flag
 Choose default eyes when joining a server
 Choose export name first.
 Choose Logo (PNG / WebP)
-Choose off, simple or full; the individual switches below only apply to full.
+Choose off, reduced or full; this single switch drives every animation.
 Choose the language used by the client
 Choose the menu font and cursor appearance
 Choose the menu font and font weight
@@ -886,6 +877,8 @@ Click a key on the keyboard picture or under "Mouse", then add a command with "A
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
 Click a part on the right to edit its color, blend mode and strength.
 Click a row such as "HDF" or "Left jump", press the key you want, and use the trash icon to remove a bind.
+Click a slice in the preview to change that option's color; options only exist within "Detection distance", so keep the wheel short.
+Click a slice to set color
 Click again to find the next location.
 Click the "Player" or "Dummy" preview, type a name under "Your skin", then turn on "Custom colors" to pick "Body" and "Feet".
 Click the key field beside "Chat", "Team chat" or "Chat command" and press the key you want to use.
@@ -1012,6 +1005,7 @@ Configure HJ unfreeze assistance
 Configure hook range and collision guide lines
 Configure HUD island appearance
 Configure input helpers and cursor behavior
+Configure interface shape, theme, icons and animations
 Configure keyboard, mouse, wheel, and modifier bindings
 Configure keyword-based automatic replies
 Configure laser shape, glow, and animation
@@ -1090,6 +1084,8 @@ Contents
 Continue anyway?
 Continuous-curvature UI corners (0 = classic arc, 100 = strongest)
 Contributors
+Control background color
+Control background opacity percentage
 Control custom background drawing
 Control latency compensation tools
 Control player (0) or dummy (1)
@@ -1103,8 +1099,9 @@ Controller GUID of the active controller
 Controller jitter tolerance
 Controls
 Controls demo recording and playback behavior.
-Controls how UI surfaces are drawn: card surface opacity, border width, corner rounding, segment count and the rainbow title effect.
+Controls how the settings cards themselves are drawn: card background, border and the rainbow title effect.
 Controls laser shape, glow and animation.
+Controls the shape and colors shared by the whole interface: corner curve, capsule ends, surfaces, accent, control and popup backgrounds, text color mode and blur.
 Controls what appears next to other players' names, such as clan tags, friend marks and client identifiers.
 Converse
 Converse with the last person you whispered to (private message)
@@ -1411,6 +1408,7 @@ Display
 Display index
 Display mode
 Display modes
+Display options
 Display your race time
 Displays connection quality grade
 Displays current position
@@ -1480,11 +1478,14 @@ Drag empty space to box-select
 Drag from the dot on the right of one node to the dot on the left of the next to link them.
 Drag HUD modules with the left mouse button
 Drag its bottom-right corner to resize. It is never compiled and never appears in the cfg.
+Drag options here to hide them
+Drag options here to show them
 Drag the selected watermark to move it. The original image is preserved.
 Drag the three sliders; master scales the other two.
 Drag to another category to move this friend.
 Drag to pan, scroll to zoom
 Drag to reorder; right-click or use the gear to manage
+Drag to the other list to show or hide this option
 Dragger Inner Color
 Dragger laser inner color
 Dragger laser outline color
@@ -1640,7 +1641,7 @@ Enable antiping (more aggressive prediction)
 Enable antispoof for vanilla 0.6 clients
 Enable audio output and choose a device
 Enable backdrop blur
-Enable backdrop blur for translucent interface and selected HUD backgrounds
+Enable backdrop blur for translucent interface and all HUD backgrounds
 Enable background 3D particle flicker
 Enable background 3D particle glow
 Enable background 3D particle pulse scaling
@@ -1678,6 +1679,7 @@ Enable fast input if your key presses feel late; turn on auto margin to stop the
 Enable fast input in Gores mode
 Enable fast map download
 Enable fat skin
+Enable focus glow
 Enable freeze call sound
 Enable FTAPI auto-translate
 Enable FTAPI auto-translate (may overload the service)
@@ -1857,8 +1859,6 @@ Exit replay view
 Exit spectating on both tees when either is hammered awake by another player
 Expand
 Expand console
-Expanded dropdown background color
-Expanded dropdown background opacity percentage
 Expanded personalization sections (format: stableId=1;stableId2=0;)
 Experimental
 Experimental: repeats outgoing UDP game packets when round-trip probes go unanswered. Upload traffic may triple; download loss and late duplicate inputs can still cause problems. Disabled with KCP.
@@ -2112,7 +2112,7 @@ Full map listen in same room
 Full quality nameplate count
 Full site set
 Full width
-Full: each enabled animation category uses its complete transition
+Full: uses the complete transition everywhere
 Fullscreen
 Fully block enemy players
 Fun
@@ -2219,6 +2219,7 @@ Graphics library patch version
 Graphics library texture sampling lod bias multiplied by 1000
 Graphics mode
 Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
+Graphics settings sub-tab: 0=display, 1=visual effects
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
 Graphs RTT, prediction, snapshot age and frame rate in a panel shown while the debug graph toggle is on.
 Greek
@@ -2453,6 +2454,7 @@ Improved anti ping
 In DDNet, played when a freeze heart freezes the player. Other modes may use it for health pickups.
 In DDNet, played when weapons are removed. Other modes may use it for armor pickups.
 In memory of me
+In pie menu
 In-game controller sensitivity
 In-game crosshair scale percent (50=half, 200=double)
 Inactive color
@@ -2500,8 +2502,6 @@ Initializing map layers
 Initializing map logic
 Ink: Paper Bloom
 Input
-Input background color
-Input background opacity percentage
 Input device
 Input device not found
 Input device open failed
@@ -2527,6 +2527,7 @@ Interface page
 Interface settings page
 Interface surface
 Interface surface color
+Interface theme
 Interface transparency
 Intermediate
 Internet
@@ -2628,7 +2629,6 @@ Key Sticking: ?
 Key Sticking: Off
 Key Sticking: On
 Key Sticking: Reset Self
-Keyboard focus ring color
 Keyboard size
 Keyframe %d/%d: %s
 Keyframe interval (GOP)
@@ -3335,6 +3335,7 @@ Not connected to a game server
 Not connected to server
 Not downloaded
 Not enabled
+Not in pie menu
 Not installed
 Not open, check input device or mic permission
 Not open, check output device
@@ -3375,7 +3376,7 @@ NVIDIA hardware encoders refuse 1 and fall back to 2, with a note in the log; us
 o = Send rate
 occupied
 Off
-Off: disables all interface animations while preserving the options below
+Off: disables every interface animation
 Official
 Official community links
 Official site: DDNet.org
@@ -3454,13 +3455,11 @@ Opens the spectator menu (this does not work with binds).
 Opt out of spectator count and hide auth status to non-authed players (1 = hidden, 0 = shown)
 Opt-in protection for client-initiated self-kill, with optional auto-enable after joining a game
 Optimistic prediction along stable direction
-Option color
 Optional
 Optional authentication key for the DNSBL provider
 Optional export range in seconds. Leave empty to export the whole demo.
 Optional start and end time in seconds. Leave both empty to export the whole demo.
 Options here affect networking or identity; test on a server before using them in matches.
-Options only exist within "Detection distance"; turn off the ones you never use to keep the wheel short.
 Or visit DDNet.org
 Original
 Original and translation
@@ -3581,6 +3580,7 @@ Pick a pack to activate it; samples are reloaded when the selection changes.
 Pick a scope under "Show name plates", then set "Name plates size" and "Name plates offset"; clan and client ID lines have their own switches.
 Pick a shape, then tune glow and animation speed.
 Pick a slot, type the command and its label, then hold the wheel key in game to test.
+Pick a text color mode first; the custom color row only appears for the custom mode.
 Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
 Pick result: %s
 Pick the key that starts this flow.
@@ -3715,6 +3715,8 @@ Please wait…
 Points
 Points unavailable
 Popup animation
+Popup background color
+Popup background opacity percentage
 Port for client to server connection (0=random, >=1024 sets manual port)
 Port for dummy connection to server (0=random, >=1024 sets manual port)
 Port for master server registration, useful if behind NAT, otherwise just use sv_port
@@ -3766,7 +3768,6 @@ Prediction margin when frozen
 Prediction trades accuracy for responsiveness: a larger margin and AntiPing smooth out ping jitter but can mispredict nearby actions, and upstream redundancy may triple upload traffic.
 Preparing chat export: %d%%
 Preparing demo playback
-Presentation animations
 Preset %d
 Preset bar
 Preset type
@@ -4015,7 +4016,7 @@ Reduce antiping and player prediction when frozen
 Reduce prediction while frozen
 Reduce visual latency
 Reduced
-Reduced: uses shorter transitions and disables presentation animations
+Reduced: uses shorter transitions everywhere
 Reflected gradient
 Refresh
 Refresh interval
@@ -4126,7 +4127,6 @@ Render quads as triangles (fixes quad shading on some GPUs)
 Render refresh rate (Hz, limited by cl_refresh_rate)
 Render tiny tees instead of circles
 Renderer performing the analysis
-Rendering options
 Rendering reads back 8-bit frames, so 10-bit formats add nothing by themselves; the gain comes from chroma density. If the encoder cannot do 4:4:4, the export fails with an error instead of reducing quality silently.
 Renders a live preview of the current chat appearance.
 Renders the demo that is currently playing into a video file. It runs as fast as the encoder allows instead of in real time, so a five-minute demo usually finishes in tens of seconds.
@@ -4181,7 +4181,6 @@ Reset all or one tuning variable to default
 Reset both
 Reset chat completion appearance
 Reset chat on escape
-Reset colors
 Reset column widths
 Reset console appearance
 Reset control
@@ -4347,9 +4346,6 @@ Scoreboard point check
 Scoreboard row colors
 Scoreboard score lookup
 Scoreboard sort mode (0=Score, 1=Points)
-Scoreboard surface
-Scoreboard surface color
-Scoreboard transparency
 Scoreboard, chat, spectating
 Scores are private on this server
 Scores are public on this server
@@ -4396,8 +4392,6 @@ Searching
 Searching all map folders...
 Sec-WebSocket-Protocol sent during the realtime handshake
 Secondary
-Secondary menu background color
-Secondary menu background opacity percentage
 Seconds to wait before reconnecting (0=off, when server is full)
 Seconds to wait before reconnecting (after timeout, 0 to disable).
 SecretId
@@ -4419,7 +4413,6 @@ Select map for the pose file
 Select the country flag for each player
 Selected %d
 Selected candidate %d/%d under cursor.
-Selected item color
 Selected node
 Selected part: %d
 Selected text color
@@ -4501,7 +4494,6 @@ Set "Switch interval" to 0 to stop timed switching and keep the queue for manual
 Set all to Rifle
 Set camera position relative to current view in the map
 Set camera position to x and y in the map
-Set color
 Set current demo speed
 Set ddrace team for a player
 Set default replay length
@@ -4547,6 +4539,7 @@ Settings prewarm default migration done
 Settings, binds, profiles, chat binds and the war list are included. Select additional cfg files below.
 Severe
 Shape
+Shape, colors and text shared by the whole interface
 Share of the server browser name/map split given to the name column (per mille)
 Sharpen
 Short pain voice
@@ -4574,6 +4567,7 @@ Show all enemy groups
 Show all video modes
 Show all votes (page 0 by default, 20 entries per page)
 Show all warlist groups
+Show an accent glow around the focused input field
 Show any enabled Indicators
 Show background quads
 Show background quads (only for mappers or if system is very slow)
@@ -5363,8 +5357,8 @@ Text alpha
 Text before each key press count
 Text color
 Text color mode
-Text color mode: 0 automatic, 1 white, 2 black, 3 custom
-Text input focus ring color
+Text color mode: 0 white, 1 black, 2 rainbow, 3 custom
+Text follows the chosen mode instead of the surface, so a light surface with white text is unreadable by design.
 Text is too long for the selected translation service.
 Thank you for your company and trust. This is what gives me the courage to keep going.
 Thanks for supporting QmClient
@@ -5428,7 +5422,7 @@ This bind contains an unfinished quote and cannot be edited safely.
 This bind is already over the local config line limit.
 This connection cannot change names while connected. Reconnect with the saved names first.
 This ID is not connected
-This is the master switch for all interface animation categories
+This is the master switch for all interface animations
 This map path cannot be used.
 This name cannot be used for files and folders
 This only affects your own screen; votes still follow the server rules.
@@ -5658,7 +5652,7 @@ Turn on "Enable camera drift" or "Enable dynamic FOV", then tune "Drift intensit
 Turn on "Enable controller", choose the device, pick "Relative" or "Absolute" under "Ingame controller mode", then tick the axes you want under "Aim bind".
 Turn on "Enable dummy window", then set "Dummy window size" and "Dummy window zoom"; "Only show when the other Tee is not on screen" hides it otherwise.
 Turn on "Enable Gores mode" or let "Auto enable in Gores mode" do it, pick options like "Auto weapon switch", and bind "Gores mode key".
-Turn on "Enable pie menu", bind the "Pie menu" command on the Bind page, then hold that key near a player and release on an option.
+Turn on "Enable pie menu", bind the "Pie menu" command on the Bind page, then hold that key near a player and release on an option. Drag options between the two lists to show or hide them.
 Turn on "Enable rotation", set "Switch interval" in milliseconds, then add skins with the plus icon in the skin list; "Random skin on map join" picks the start.
 Turn on "Enable word filter list", type the words into "Word Filter" separated by commas, then choose "Replace mode" or "Hide player messages" under "Behavior".
 Turn on "Enable Zen mode", pick what to hide under "Interface", "Players", "Visuals", "Audio" and "Chat", then set the "Zen mode key" for quick switching.
@@ -5874,7 +5868,6 @@ Use this after `add_favorite` to group favorites. Start with `begin_favorite_gro
 Use this before `add_favorite` to group favorites. End with `end_favorite_group`
 Use warlist colors instead of regular colors
 Use warlist groups for indicator
-Used by active shared text and numeric input fields
 User
 Uses the active action with the current aiming position.
 UTF-8 text, one word per line (max 2 MiB).
@@ -5902,7 +5895,7 @@ Very fast encode
 Very high
 Very high quality, very slow
 Very long kaomoji are split by the chat length limit.
-Very thick borders or high segment counts make text look blurry; keep them near the defaults.
+Very thick borders make text look blurry; keep them near the defaults.
 Video Background
 Video directory
 Video encoder for demo export (empty = default software encoder, e.g. h264_nvenc)
