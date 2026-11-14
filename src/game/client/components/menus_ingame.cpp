@@ -39,6 +39,7 @@
 #include <game/client/components/countryflags.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/qmclient/rank_demo_sort.h>
+#include <game/client/components/qmclient/rank_list_controller.h>
 #include <game/client/components/qmclient/rank_list_layout.h>
 #include <game/client/components/qmclient/scoreboard_skin.h>
 #include <game/client/components/touch_controls.h>
@@ -2784,8 +2785,7 @@ void CMenus::RenderRankDemo(CUIRect MainView)
 
 	// 顶部工具栏：搜索框 + 圆形刷新 + 圆形目录。
 	// 刷新与目录从底部移到顶部，底部只保留条目动作。
-	static int s_SelectedIndex = 0;
-	static std::string s_SelectedDemo;
+	static qmclient::rank_demo::SListSelection s_Selection;
 	static CButtonContainer s_RefreshButton;
 	static CButtonContainer s_DirectoryButton;
 	ui_widget::SListToolbarOptions ToolbarOptions;
@@ -2793,11 +2793,12 @@ void CMenus::RenderRankDemo(CUIRect MainView)
 	ToolbarOptions.m_pRefreshButton = &s_RefreshButton;
 	ToolbarOptions.m_pFolderButton = &s_DirectoryButton;
 	const ui_widget::SListToolbarResult Toolbar = ui_widget::ListToolbar(ui_widget::ControlContext(Ui()), &m_RankSearchInput, View, ToolbarOptions);
+	// 搜索/刷新只把行号置为无效；demo 身份保留，若同一场次仍在结果里就继续选中。
 	if(Toolbar.m_SearchChanged)
-		s_SelectedIndex = -1;
+		s_Selection.m_Index = -1;
 	if(Toolbar.m_RefreshPressed || Input()->KeyPress(KEY_F5))
 	{
-		s_SelectedIndex = -1;
+		s_Selection.m_Index = -1;
 		RankGhost.RefreshManifest();
 	}
 	GameClient()->m_Tooltips.DoToolTip(&s_RefreshButton, &Toolbar.m_Layout.m_RefreshRect, Localize("Refresh"));
@@ -2901,33 +2902,17 @@ void CMenus::RenderRankDemo(CUIRect MainView)
 	constexpr int RANK_SEARCH_DISPLAY_LIMIT = 100;
 	const char *pMapName = Client()->GetCurrentMap();
 	const bool Searching = m_RankSearchInput.GetString()[0] != '\0';
-	std::vector<qmclient::rank_demo::SEntry> vEntries = Searching ? RankGhost.CollectSearchEntries(m_RankSearchInput.GetString(), 1) : RankGhost.CollectRankEntries(pMapName, 1);
-	qmclient::rank_demo::SortEntries(vEntries, s_SortState);
-	// 排序必须作用于全部匹配项，截断只限制最终展示条数。
-	if(Searching && (int)vEntries.size() > RANK_SEARCH_DISPLAY_LIMIT)
-		vEntries.resize(RANK_SEARCH_DISPLAY_LIMIT);
+	std::vector<qmclient::rank_demo::SEntry> vCollected = Searching ? RankGhost.CollectSearchEntries(m_RankSearchInput.GetString(), 1) : RankGhost.CollectRankEntries(pMapName, 1);
+	// 排序作用于全部匹配项，搜索截断只限制最终展示条数；选中项按 demo 身份回填。
+	const qmclient::rank_demo::SListSnapshot Snapshot = qmclient::rank_demo::BuildRankListSnapshot(
+		std::move(vCollected), s_SortState, Searching ? RANK_SEARCH_DISPLAY_LIMIT : 0, s_Selection);
+	const std::vector<qmclient::rank_demo::SEntry> &vEntries = Snapshot.m_vEntries;
 	const int NumEntries = (int)vEntries.size();
-	// 选中项跨排序/搜索保持同一条回放：按 demo 名找回；找不到时收回到有效区间。
-	if(!s_SelectedDemo.empty())
-	{
-		for(int i = 0; i < NumEntries; i++)
-		{
-			if(vEntries[i].m_Demo == s_SelectedDemo)
-			{
-				s_SelectedIndex = i;
-				break;
-			}
-		}
-	}
-	if(s_SelectedIndex >= NumEntries)
-		s_SelectedIndex = NumEntries - 1;
-	if(s_SelectedIndex < 0)
-		s_SelectedIndex = 0;
 	// 行距只留半档；视口按可用高度收敛到整数行（同影子列表），不随条目数收高度。
 	const int ListVisibleRows = maximum(1, (int)((maximum(0.0f, View.h) + ui_token::list::ROW_SPACING) / (17.0f + ui_token::list::ROW_SPACING)));
 	s_ListBox.DoAutoSpacing(ui_token::list::ROW_SPACING);
 	s_ListBox.SetVisibleRowRange(ListVisibleRows, ListVisibleRows);
-	s_ListBox.DoStart(17.0f, NumEntries, 1, 3, s_SelectedIndex, &View, false);
+	s_ListBox.DoStart(17.0f, NumEntries, 1, 3, Snapshot.m_SelectedIndex, &View, false);
 
 	char aBuf[256];
 	for(int i = 0; i < NumEntries; i++)
@@ -3060,9 +3045,8 @@ void CMenus::RenderRankDemo(CUIRect MainView)
 
 	// 必须关闭列表的滚动/裁剪区域：否则裁剪会泄漏到本帧后续绘制与下一帧，
 	// 导致底部按钮与顶部菜单 tab 栏被裁掉、高亮随热项状态闪烁。
-	s_SelectedIndex = s_ListBox.DoEnd();
-	if(s_SelectedIndex >= 0 && s_SelectedIndex < NumEntries)
-		s_SelectedDemo = vEntries[s_SelectedIndex].m_Demo;
+	const int SelectedIndex = s_ListBox.DoEnd();
+	qmclient::rank_demo::CommitListSelection(s_Selection, vEntries, SelectedIndex);
 
 	const bool Busy = RankGhost.IsBusy();
 	const CRankGhost::EManifestState ManifestState = RankGhost.ManifestState();
@@ -3094,9 +3078,9 @@ void CMenus::RenderRankDemo(CUIRect MainView)
 	Status.HMargin(ui_token::spacing::XS, &Status);
 	Status.VMargin(RowInsetX, &Status);
 
-	if(s_SelectedIndex >= 0 && s_SelectedIndex < NumEntries)
+	if(SelectedIndex >= 0 && SelectedIndex < NumEntries)
 	{
-		const qmclient::rank_demo::SEntry &Entry = vEntries[s_SelectedIndex];
+		const qmclient::rank_demo::SEntry &Entry = vEntries[SelectedIndex];
 
 		char aDemoPath[IO_MAX_PATH_LENGTH];
 		const bool DemoCached = RankGhost.IsEntryDemoCached(Entry, aDemoPath, sizeof(aDemoPath));
@@ -3104,6 +3088,9 @@ void CMenus::RenderRankDemo(CUIRect MainView)
 		// 任务进行中统一禁用条目动作，避免下载/转换中途删改缓存
 		const bool TaskBusy = RankGhost.IsBusy();
 		const bool ItemActivated = s_ListBox.WasItemActivated();
+		// 双击语义与按钮共用一份判定：未缓存→下载，已缓存→加载影子，任务中→忽略。
+		const qmclient::rank_demo::ERowActivation Activation =
+			ItemActivated ? qmclient::rank_demo::ResolveRowActivation(TaskBusy, GhostActive, DemoCached) : qmclient::rank_demo::ERowActivation::NONE;
 
 		// 右侧动作（全部常驻，不可用/进行中置灰）：影子加载 | 画面内回放 | 下载回放 | 播放回放 | 删除。
 		// 主操作固定在最右、删除固定在最后，与影子页的动作栏顺序一致。
@@ -3113,7 +3100,7 @@ void CMenus::RenderRankDemo(CUIRect MainView)
 			const CUIRect Button = NextIngameActionButton(Status, pGhostText);
 			if(Button.w > 0.0f && (DoIngameMenuButton(PAGE_RANK_DEMO, GhostActive ? "ingame-rank-demo-ghost-off" : "ingame-rank-demo-ghost-on", &s_GhostButton,
 						       pGhostText, 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::PILL, TaskBusy) ||
-						      (ItemActivated && !GhostActive && !TaskBusy && DemoCached)))
+						      Activation == qmclient::rank_demo::ERowActivation::LOAD_GHOST))
 			{
 				if(GhostActive)
 					RankGhost.RequestGhostOff();
@@ -3142,7 +3129,7 @@ void CMenus::RenderRankDemo(CUIRect MainView)
 			const CUIRect Button = NextIngameActionButton(Status, Localize("Download replay"));
 			// 双击行等同「下载回放」：未缓存且没有其它任务时直接开始下载。
 			if(Button.w > 0.0f && (DoIngameMenuButton(PAGE_RANK_DEMO, "ingame-rank-demo-download", &s_DownloadButton, Localize("Download replay"), 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::PILL, TaskBusy || DemoCached) ||
-						      (ItemActivated && !TaskBusy && !DemoCached)))
+						      Activation == qmclient::rank_demo::ERowActivation::DOWNLOAD_REPLAY))
 				RankGhost.RequestDemoDownload(Entry.m_Demo.c_str());
 		}
 

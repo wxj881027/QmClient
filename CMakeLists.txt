@@ -5225,6 +5225,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_rank_demo_search_test.cpp
     src/test/unit/qmclient/client/qm_rank_demo_sort_test.cpp
     src/test/unit/qmclient/client/qm_rank_list_layout_test.cpp
+    src/test/unit/qmclient/client/qm_rank_list_controller_test.cpp
     src/test/unit/qmclient/client/qm_ghost_freeze_bar_test.cpp
     src/test/unit/qmclient/client/qmclient_update_version_test.cpp
     src/test/unit/qmclient/client/qmclient_update_manifest_test.cpp
