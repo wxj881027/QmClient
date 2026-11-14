@@ -1,5 +1,6 @@
 #if defined(CONF_BACKEND_VULKAN)
 
+#include <base/dbg.h>
 #include <base/log.h>
 #include <base/math.h>
 #include <base/system.h>
@@ -93,48 +94,33 @@ class CCommandProcessorFragment_Vulkan : public CCommandProcessorFragment_GLBase
 #endif
 	}
 
-	void VerboseAllocatedMemory(VkDeviceSize Size, size_t FrameImageIndex, EMemoryBlockUsage MemUsage) const
+	static const char *MemoryUsageName(EMemoryBlockUsage MemUsage)
 	{
-		const char *pUsage = "unknown";
 		switch(MemUsage)
 		{
 		case MEMORY_BLOCK_USAGE_TEXTURE:
-			pUsage = "texture";
-			break;
+			return "texture";
 		case MEMORY_BLOCK_USAGE_BUFFER:
-			pUsage = "buffer";
-			break;
+			return "buffer";
 		case MEMORY_BLOCK_USAGE_STREAM:
-			pUsage = "stream";
-			break;
+			return "stream";
 		case MEMORY_BLOCK_USAGE_STAGING:
-			pUsage = "staging buffer";
-			break;
-		default: break;
+			return "staging buffer";
+		default:
+			dbg_assert_failed("Invalid MemUsage: %d", (int)MemUsage);
 		}
-		dbg_msg("vulkan", "allocated chunk of memory with size: %" PRIzu " for frame %" PRIzu " (%s)", (size_t)Size, (size_t)m_CurImageIndex, pUsage);
+	}
+
+	void VerboseAllocatedMemory(VkDeviceSize Size, size_t FrameImageIndex, EMemoryBlockUsage MemUsage) const
+	{
+		log_debug("gfx/vulkan", "Allocated chunk of memory with size %" PRIzu " for frame %" PRIzu " (%s).",
+			(size_t)Size, (size_t)m_CurImageIndex, MemoryUsageName(MemUsage));
 	}
 
 	void VerboseDeallocatedMemory(VkDeviceSize Size, size_t FrameImageIndex, EMemoryBlockUsage MemUsage) const
 	{
-		const char *pUsage = "unknown";
-		switch(MemUsage)
-		{
-		case MEMORY_BLOCK_USAGE_TEXTURE:
-			pUsage = "texture";
-			break;
-		case MEMORY_BLOCK_USAGE_BUFFER:
-			pUsage = "buffer";
-			break;
-		case MEMORY_BLOCK_USAGE_STREAM:
-			pUsage = "stream";
-			break;
-		case MEMORY_BLOCK_USAGE_STAGING:
-			pUsage = "staging buffer";
-			break;
-		default: break;
-		}
-		dbg_msg("vulkan", "deallocated chunk of memory with size: %" PRIzu " for frame %" PRIzu " (%s)", (size_t)Size, (size_t)m_CurImageIndex, pUsage);
+		log_debug("gfx/vulkan", "Deallocated chunk of memory with size %" PRIzu " for frame %" PRIzu " (%s).",
+			(size_t)Size, (size_t)m_CurImageIndex, MemoryUsageName(MemUsage));
 	}
 
 	/************************
@@ -1443,9 +1429,9 @@ protected:
 		if(m_CanAssert)
 		{
 			if(pErrStrExtra != nullptr)
-				dbg_msg("vulkan", "vulkan error: %s: %s", pErr, pErrStrExtra);
+				log_error("gfx/vulkan", "%s: %s", pErr, pErrStrExtra);
 			else
-				dbg_msg("vulkan", "vulkan error: %s", pErr);
+				log_error("gfx/vulkan", "%s", pErr);
 			if(!m_HasError)
 			{
 				m_Error.m_ErrorType = ErrType;
@@ -1474,7 +1460,7 @@ protected:
 	void SetWarning(EGfxWarningType WarningType, const char *pWarning)
 	{
 		std::unique_lock<std::mutex> Lock(m_ErrWarnMutex);
-		dbg_msg("vulkan", "vulkan warning: %s", pWarning);
+		log_warn("gfx/vulkan", "%s", pWarning);
 		if(std::find(m_Warning.m_vWarnings.begin(), m_Warning.m_vWarnings.end(), pWarning) == m_Warning.m_vWarnings.end())
 			m_Warning.m_vWarnings.emplace_back(pWarning);
 		m_Warning.m_WarningType = WarningType;
