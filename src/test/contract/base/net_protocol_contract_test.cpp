@@ -52,4 +52,6 @@ TEST(NetProtocolContract, RejoiningClientsAreHeldOutsideGameState)
 	EXPECT_NE(Server.find("m_IngameBeforeRejoin = false;"), std::string::npos);
 	EXPECT_EQ(Server.find("m_Rejoining"), std::string::npos);
 	EXPECT_NE(Server.find("GameServer()->OnClientRejoin(ClientId);"), std::string::npos);
+	// 重连握手期间仍要收 CLIENTVER/INFO：Reset 会清掉版本，丢了版本会把 128 人服按 64 人映射
+	EXPECT_NE(Server.find("(Rejoining && m_aClients[ClientId].m_State == CClient::STATE_CONNECTING)"), std::string::npos);
 }

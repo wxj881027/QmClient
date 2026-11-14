@@ -2021,7 +2021,9 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 		else if(Msg == NETMSG_CLIENTVER)
 		{
 			// 官方 7131ad28b：重连中的连接也要接受版本包，但不改变槽位状态
-			if(m_aClients[ClientId].m_State == CClient::STATE_PREAUTH)
+			const bool Rejoining = m_aClients[ClientId].m_IngameBeforeRejoin;
+			if(m_aClients[ClientId].m_State == CClient::STATE_PREAUTH ||
+				(Rejoining && m_aClients[ClientId].m_State == CClient::STATE_CONNECTING))
 			{
 				CUuid *pConnectionId = (CUuid *)Unpacker.GetRaw(sizeof(*pConnectionId));
 				int DDNetVersion = Unpacker.GetInt();
@@ -2035,14 +2037,17 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 				str_copy(m_aClients[ClientId].m_aDDNetVersionStr, pDDNetVersionStr);
 				m_aClients[ClientId].m_DDNetVersionSettled = true;
 				m_aClients[ClientId].m_GotDDNetVersionPacket = true;
-				m_aClients[ClientId].m_State = CClient::STATE_AUTH;
+				// 重连时保持 CONNECTING：客户端还要按这个状态请求地图数据
+				if(!Rejoining)
+					m_aClients[ClientId].m_State = CClient::STATE_AUTH;
 				UpdateClientBrand(ClientId, pDDNetVersionStr);
 				SendCapabilities(ClientId);
 			}
 		}
 		else if(Msg == NETMSG_INFO)
 		{
-			if(m_aClients[ClientId].m_State == CClient::STATE_PREAUTH || m_aClients[ClientId].m_State == CClient::STATE_AUTH)
+			if(m_aClients[ClientId].m_State == CClient::STATE_PREAUTH || m_aClients[ClientId].m_State == CClient::STATE_AUTH ||
+				(m_aClients[ClientId].m_IngameBeforeRejoin && m_aClients[ClientId].m_State == CClient::STATE_CONNECTING))
 			{
 				const char *pVersion = Unpacker.GetString(CUnpacker::SANITIZE_CC);
 				if(Unpacker.Error())
