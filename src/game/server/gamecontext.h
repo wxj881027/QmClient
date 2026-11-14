@@ -8,6 +8,8 @@
 #include "playermapping.h"
 #include "teehistorian.h"
 
+#include <base/aio.h>
+
 #include <engine/console.h>
 #include <engine/server.h>
 

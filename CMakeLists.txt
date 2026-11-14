@@ -2718,6 +2718,8 @@ add_custom_command(OUTPUT "src/generated/wordlist.h"
 
 # Sources
 set_src(BASE GLOB_RECURSE src/base
+  aio.cpp
+  aio.h
   bezier.cpp
   bezier.h
   color.cpp

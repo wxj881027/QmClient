@@ -1,3 +1,4 @@
+#include "aio.h"
 #include "color.h"
 #include "dbg.h"
 #include "logger.h"
