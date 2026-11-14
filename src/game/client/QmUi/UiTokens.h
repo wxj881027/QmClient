@@ -844,6 +844,15 @@ namespace ui_token::server_info
 	inline constexpr float NOTE_LABEL_WIDTH = 72.0f;
 	// 卡片圆角：与设置卡片同一族。
 	inline constexpr float CARD_RADIUS = radius::MENU;
+	// 地图标签面板：标题行高、刷新图标边长、标题与列表的缝、底部分区高度、
+	// 列表与底部之间的一档缝、建议标签说明文字占宽。
+	inline constexpr float TAGS_HEADER_HEIGHT = 26.0f;
+	inline constexpr float TAGS_ICON_SIZE = 22.0f;
+	inline constexpr float TAGS_HEADER_GAP = 8.0f;
+	inline constexpr float TAGS_FOOTER_HEIGHT = 90.0f;
+	inline constexpr float TAGS_LIST_GAP = 5.0f;
+	inline constexpr float TAGS_PRESET_LABEL_WIDTH = 78.0f;
+	inline constexpr float TAGS_PRESET_ROW_HEIGHT = 22.0f;
 } // namespace ui_token::server_info
 
 // 服务器信息页公告（MOTD）的排版档：公告里常用 Unicode 框线字符画方框，
@@ -918,6 +927,10 @@ namespace ui_token::player_card
 	inline constexpr float COUNT_WIDTH = 96.0f;
 	// 英雄展示区：高度占卡片宽度的比例、角色占展示区高度的比例、区内图标按钮边长。
 	inline constexpr float SHOWCASE_HEIGHT_RATIO = 0.72f;
+	// 展示区高度还受卡片自身高度约束：卡片矮时按比例收敛，不把下半内容挤没。
+	inline constexpr float SHOWCASE_MAX_CARD_HEIGHT_RATIO = 0.62f;
+	// 立绘宽度上限（占展示区宽度比例）：超宽卡片上角色不再横向拉长。
+	inline constexpr float SHOWCASE_MAX_WIDTH_RATIO = 0.55f;
 	inline constexpr float SHOWCASE_TEE_RATIO = 0.78f;
 	inline constexpr float SHOWCASE_ICON_SIZE = 24.0f;
 	// 信息卡四周内边距与圆角。

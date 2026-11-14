@@ -295,7 +295,7 @@ namespace QmPlayersUi
 	inline SPlayerShowcase PlayerShowcaseLayout(const CUIRect &Card, const int IconCount)
 	{
 		SPlayerShowcase Result;
-		const float ShowcaseHeight = std::min(Card.h * 0.62f, Card.w * ui_token::player_card::SHOWCASE_HEIGHT_RATIO);
+		const float ShowcaseHeight = std::min(Card.h * ui_token::player_card::SHOWCASE_MAX_CARD_HEIGHT_RATIO, Card.w * ui_token::player_card::SHOWCASE_HEIGHT_RATIO);
 		CUIRect Remaining = Card;
 		Remaining.HSplitTop(ShowcaseHeight, &Result.m_Showcase, &Remaining);
 		Remaining.HSplitTop(std::min(ui_token::player_card::SECTION_GAP, Remaining.h), nullptr, &Remaining);
@@ -305,7 +305,7 @@ namespace QmPlayersUi
 
 		// 立绘：等比居中，高度吃展示区比例，宽度最多占一半，避免超宽卡片把角色拉成扁片。
 		const float FigureSize = std::max(0.0f,
-			std::min(Result.m_Showcase.h * ui_token::player_card::SHOWCASE_TEE_RATIO, Result.m_Showcase.w * 0.55f));
+			std::min(Result.m_Showcase.h * ui_token::player_card::SHOWCASE_TEE_RATIO, Result.m_Showcase.w * ui_token::player_card::SHOWCASE_MAX_WIDTH_RATIO));
 		Result.m_Figure = CUIRect{
 			Result.m_Showcase.x + (Result.m_Showcase.w - FigureSize) * 0.5f,
 			Result.m_Showcase.y + ui_token::spacing::XS,

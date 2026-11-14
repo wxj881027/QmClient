@@ -282,7 +282,7 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	Header.VSplitRight(28.0f, &Header, &Refresh);
 	Header.VSplitRight(8.0f, &Header, nullptr);
 	static CButtonContainer s_Refresh;
-	if(ui_widget::IconButton(ui_widget::ControlContext(Ui()), &s_Refresh, EQmIcon::ARROWS_ROTATE, FontIcons::FONT_ICON_ARROWS_ROTATE, Refresh, State.m_Loader.Loading()))
+	if(ui_widget::IconButton(ui_widget::ControlContext(Ui()), &s_Refresh, EQmIcon::ARROW_ROTATE_RIGHT, FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT, Refresh, State.m_Loader.Loading()))
 		State.m_Loader.Refresh(Http());
 	GameClient()->m_Tooltips.DoToolTip(&s_Refresh, &Refresh, State.m_Loader.Loading() ? Localize("Loading…") : Localize("Refresh"));
 	Header.VSplitRight(Header.w * 0.34f, &Search, &Exclude);
@@ -714,13 +714,13 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 			}
 			if(State.m_Loader.DetailsError())
 			{
-				// 重新拉取详情是刷新/重试类动作：圆形图标按钮（ARROWS_ROTATE），
+				// 重新拉取详情是刷新/重试类动作：圆形图标按钮（ARROW_ROTATE_RIGHT，与全仓刷新图标同一档），
 				// 与地图库右上角的刷新按钮同一套字号、图标与悬停反馈。
 				CUIRect Retry;
 				Statistics.VSplitRight(Statistics.h, &Statistics, &Retry);
 				Statistics.VSplitRight(ui_token::spacing::SM, &Statistics, nullptr);
 				static CButtonContainer s_Retry;
-				if(ui_widget::IconButton(ui_widget::ControlContext(Ui()), &s_Retry, EQmIcon::ARROWS_ROTATE, FontIcons::FONT_ICON_ARROWS_ROTATE, Retry))
+				if(ui_widget::IconButton(ui_widget::ControlContext(Ui()), &s_Retry, EQmIcon::ARROW_ROTATE_RIGHT, FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT, Retry))
 					State.m_Loader.RetryDetails();
 				GameClient()->m_Tooltips.DoToolTip(&s_Retry, &Retry, Localize("Retry details"));
 			}
