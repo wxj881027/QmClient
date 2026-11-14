@@ -38,25 +38,20 @@ static const char *LocalizeChatHelp(CGameContext *pSelf, const char *pText)
 
 void CGameContext::ConInfo(IConsole::IResult *pResult, void *pUserData)
 {
-	CGameContext *pSelf = (CGameContext *)pUserData;
-	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-		"DDraceNetwork 模组版本: " GAME_VERSION);
+	log_info("chatresp", "DDraceNetwork 模组版本: " GAME_VERSION);
 	//DDraceNetwork Mod. Version:
 	if(GIT_SHORTREV_HASH)
 	{
 		char aBuf[64];
 		str_format(aBuf, sizeof(aBuf), "Git 提交哈希: %s", GIT_SHORTREV_HASH);
 		//Git revision hash: %s
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", aBuf);
+		log_info("chatresp", "%s", aBuf);
 	}
-	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-		"官方网站: DDNet.org");
+	log_info("chatresp", "官方网站: DDNet.org");
 	//Official site: DDNet.org
-	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-		"更多命令请查看: /cmdlist");
+	log_info("chatresp", "更多命令请查看: /cmdlist");
 	//For more info: /cmdlist
-	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-		"或访问 DDNet.org");
+	log_info("chatresp", "或访问 DDNet.org");
 	//Or visit DDNet.org
 }
 
@@ -79,12 +74,9 @@ void CGameContext::ConHelp(IConsole::IResult *pResult, void *pUserData)
 
 	if(pResult->NumArguments() == 0)
 	{
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-			"/cmdlist 会显示所有聊天命令列表");
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-			"/help + 任意命令 会显示该命令的帮助");
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-			"例如 /help settings 会显示 /settings 的帮助");
+		log_info("chatresp", "/cmdlist 会显示所有聊天命令列表");
+		log_info("chatresp", "/help + 任意命令 会显示该命令的帮助");
+		log_info("chatresp", "例如 /help settings 会显示 /settings 的帮助");
 	}
 	else
 	{
@@ -97,17 +89,17 @@ void CGameContext::ConHelp(IConsole::IResult *pResult, void *pUserData)
 			{
 				char aBuf[256];
 				str_format(aBuf, sizeof(aBuf), "用法：%s %s", pCmdInfo->Name(), pCmdInfo->Params());
-				pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", aBuf);
+				log_info("chatresp", "%s", aBuf);
 			}
 
 			if(pCmdInfo->Help())
-				pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", LocalizeChatHelp(pSelf, pCmdInfo->Help()));
+				log_info("chatresp", "%s", LocalizeChatHelp(pSelf, pCmdInfo->Help()));
 		}
 		else
 		{
 			char aBuf[256];
 			str_format(aBuf, sizeof(aBuf), "未知命令：%s", pArg);
-			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", aBuf);
+			log_info("chatresp", "%s", aBuf);
 		}
 	}
 }
@@ -118,12 +110,9 @@ void CGameContext::ConSettings(IConsole::IResult *pResult, void *pUserData)
 
 	if(pResult->NumArguments() == 0)
 	{
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-			"输入 /settings 加设置名即可查看服务器设置。可用设置有：");
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-			"teams, cheats, collision, hooking, endlesshooking,");
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-			"hitting, oldlaser, timeout, votes, pause and scores");
+		log_info("chatresp", "输入 /settings 加设置名即可查看服务器设置。可用设置有：");
+		log_info("chatresp", "teams, cheats, collision, hooking, endlesshooking,");
+		log_info("chatresp", "hitting, oldlaser, timeout, votes, pause and scores");
 	}
 	else
 	{
@@ -142,59 +131,52 @@ void CGameContext::ConSettings(IConsole::IResult *pResult, void *pUserData)
 					"本服务器不允许组队" :
 					"你必须加入队伍才能在本服务器游玩",
 				"；队伍上锁后，队内任意玩家死亡都会导致全队死亡");
-			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", aBuf);
+			log_info("chatresp", "%s", aBuf);
 		}
 		else if(str_comp_nocase(pArg, "cheats") == 0)
 		{
-			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-				g_Config.m_SvTestingCommands ?
+			log_info("chatresp", "%s", g_Config.m_SvTestingCommands ?
 					"本服务器已开启作弊功能" :
 					"本服务器已关闭作弊功能");
 		}
 		else if(str_comp_nocase(pArg, "collision") == 0)
 		{
-			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-				ColTemp ?
+			log_info("chatresp", "%s", ColTemp ?
 					"本服务器允许玩家碰撞" :
 					"本服务器不允许玩家碰撞");
 		}
 		else if(str_comp_nocase(pArg, "hooking") == 0)
 		{
-			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-				HookTemp ?
+			log_info("chatresp", "%s", HookTemp ?
 					"本服务器允许玩家互钩" :
 					"本服务器不允许玩家互钩");
 		}
 		else if(str_comp_nocase(pArg, "endlesshooking") == 0)
 		{
-			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-				g_Config.m_SvEndlessDrag ?
+			log_info("chatresp", "%s", g_Config.m_SvEndlessDrag ?
 					"本服务器的钩子时长不受限制" :
 					"本服务器的钩子时长受限制");
 		}
 		else if(str_comp_nocase(pArg, "hitting") == 0)
 		{
-			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-				g_Config.m_SvHit ?
+			log_info("chatresp", "%s", g_Config.m_SvHit ?
 					"本服务器允许武器影响其他玩家" :
 					"本服务器的武器不会影响其他玩家");
 		}
 		else if(str_comp_nocase(pArg, "oldlaser") == 0)
 		{
-			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-				g_Config.m_SvOldLaser ?
+			log_info("chatresp", "%s", g_Config.m_SvOldLaser ?
 					"你自己发射的激光也会命中自己，并把你拉向反弹起点（类似 DDRace Beta）" :
 					"你自己发射的激光不会命中自己，激光会把其他玩家拉向发射者");
 		}
 		else if(str_comp_nocase(pArg, "timeout") == 0)
 		{
 			str_format(aBuf, sizeof(aBuf), "当前服务器超时时间为 %d 秒", g_Config.m_ConnTimeout);
-			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", aBuf);
+			log_info("chatresp", "%s", aBuf);
 		}
 		else if(str_comp_nocase(pArg, "votes") == 0)
 		{
-			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-				g_Config.m_SvVoteKick ?
+			log_info("chatresp", "%s", g_Config.m_SvVoteKick ?
 					"玩家可以通过 Callvote 菜单发起踢人投票" :
 					"玩家不能通过 Callvote 菜单发起踢人投票");
 			if(g_Config.m_SvVoteKick)
@@ -202,42 +184,36 @@ void CGameContext::ConSettings(IConsole::IResult *pResult, void *pUserData)
 				str_format(aBuf, sizeof(aBuf),
 					"被投票踢出的玩家会被封禁 %d 分钟", g_Config.m_SvVoteKickBantime);
 
-				pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-					g_Config.m_SvVoteKickBantime ?
+				log_info("chatresp", "%s", g_Config.m_SvVoteKickBantime ?
 						aBuf :
 						"被投票踢出的玩家只会被踢出，不会被封禁");
 			}
 		}
 		else if(str_comp_nocase(pArg, "pause") == 0)
 		{
-			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-				g_Config.m_SvPauseable ?
+			log_info("chatresp", "%s", g_Config.m_SvPauseable ?
 					"输入 /spec 后你会暂停，tee 也会消失" :
 					"输入 /spec 后你会暂停，但 tee 不会消失");
 		}
 		else if(str_comp_nocase(pArg, "scores") == 0)
 		{
-			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-				g_Config.m_SvHideScore ?
+			log_info("chatresp", "%s", g_Config.m_SvHideScore ?
 					"本服务器的成绩是私密的" :
 					"本服务器的成绩是公开的");
 		}
 		else
 		{
-			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-				"没有找到对应设置。输入 /settings 可以查看可用设置");
+			log_info("chatresp", "没有找到对应设置。输入 /settings 可以查看可用设置");
 		}
 	}
 }
 
 void CGameContext::ConRules(IConsole::IResult *pResult, void *pUserData)
 {
-	CGameContext *pSelf = (CGameContext *)pUserData;
 	bool Printed = false;
 	if(g_Config.m_SvDDRaceRules)
 	{
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-			"请友善交流。");
+		log_info("chatresp", "请友善交流。");
 		//Be nice.
 		Printed = true;
 	}
@@ -257,15 +233,13 @@ void CGameContext::ConRules(IConsole::IResult *pResult, void *pUserData)
 	{
 		if(pRuleLine[0])
 		{
-			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD,
-				"chatresp", pRuleLine);
+			log_info("chatresp", "%s", pRuleLine);
 			Printed = true;
 		}
 	}
 	if(!Printed)
 	{
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-			"未设置服务器规则，请联系管理员。");
+		log_info("chatresp", "未设置服务器规则，请联系管理员。");
 		//No Rules Defined, Kill em all!!
 	}
 }
@@ -286,7 +260,7 @@ static void ToggleSpecPause(IConsole::IResult *pResult, void *pUserData, int Pau
 	{
 		char aBuf[128];
 		str_format(aBuf, sizeof(aBuf), "你被强制暂停，还需等待 %d 秒。", (PauseState - pServ->Tick()) / pServ->TickSpeed());
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", aBuf);
+		log_info("chatresp", "%s", aBuf);
 	}
 	else if(pResult->NumArguments() > 0)
 	{
@@ -326,7 +300,7 @@ static void ToggleSpecPauseVoted(IConsole::IResult *pResult, void *pUserData, in
 		IServer *pServ = pSelf->Server();
 		char aBuf[128];
 		str_format(aBuf, sizeof(aBuf), "你被强制暂停，还需等待 %d 秒。", (PauseState - pServ->Tick()) / pServ->TickSpeed());
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", aBuf);
+		log_info("chatresp", "%s", aBuf);
 		return;
 	}
 
@@ -391,8 +365,7 @@ void CGameContext::ConTeamTop5(IConsole::IResult *pResult, void *pUserData)
 
 	if(g_Config.m_SvHideScore)
 	{
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-			"本服务器不允许查看队伍前 5 名");
+		log_info("chatresp", "本服务器不允许查看队伍前 5 名");
 		return;
 	}
 
@@ -423,9 +396,9 @@ void CGameContext::ConTeamTop5(IConsole::IResult *pResult, void *pUserData)
 	}
 	else
 	{
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", "/top5team 需要 0、1 或 2 个参数。第 1 个是名字，第 2 个是起始名次");
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", "示例：/top5team、/top5team me、/top5team Hans、/top5team \"Papa Smurf\" 5");
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", "错误示例：/top5team Papa Smurf 5；正确示例：/top5team \"Papa Smurf\" 5");
+		log_info("chatresp", "/top5team 需要 0、1 或 2 个参数。第 1 个是名字，第 2 个是起始名次");
+		log_info("chatresp", "示例：/top5team、/top5team me、/top5team Hans、/top5team \"Papa Smurf\" 5");
+		log_info("chatresp", "错误示例：/top5team Papa Smurf 5；正确示例：/top5team \"Papa Smurf\" 5");
 	}
 }
 
@@ -437,8 +410,7 @@ void CGameContext::ConTop(IConsole::IResult *pResult, void *pUserData)
 
 	if(g_Config.m_SvHideScore)
 	{
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-			"本服务器不允许查看排行榜");
+		log_info("chatresp", "本服务器不允许查看排行榜");
 		return;
 	}
 
@@ -476,9 +448,9 @@ void CGameContext::ConTimes(IConsole::IResult *pResult, void *pUserData)
 	}
 	else if(pResult->NumArguments() > 2)
 	{
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", "/times 需要 0、1 或 2 个参数。第 1 个是名字，第 2 个是起始名次");
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", "示例：/times、/times me、/times Hans、/times \"Papa Smurf\" 5");
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", "错误示例：/times Papa Smurf 5；正确示例：/times \"Papa Smurf\" 5");
+		log_info("chatresp", "/times 需要 0、1 或 2 个参数。第 1 个是名字，第 2 个是起始名次");
+		log_info("chatresp", "示例：/times、/times me、/times Hans、/times \"Papa Smurf\" 5");
+		log_info("chatresp", "错误示例：/times Papa Smurf 5；正确示例：/times \"Papa Smurf\" 5");
 		return;
 	}
 
@@ -487,7 +459,7 @@ void CGameContext::ConTimes(IConsole::IResult *pResult, void *pUserData)
 	{
 		if(pRequestedName && str_comp_nocase(pRequestedName, "me") != 0 && str_comp_nocase(pRequestedName, pSelf->Server()->ClientName(pResult->m_ClientId)) != 0)
 		{
-			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", "本服务器不允许查看其他玩家的成绩");
+			log_info("chatresp", "本服务器不允许查看其他玩家的成绩");
 			return;
 		}
 		pRequestedName = pSelf->Server()->ClientName(pResult->m_ClientId);
@@ -516,7 +488,7 @@ void CGameContext::ConDND(IConsole::IResult *pResult, void *pUserData)
 		return;
 
 	pPlayer->m_DND = pResult->NumArguments() == 0 ? !pPlayer->m_DND : pResult->GetInteger(0);
-	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", pPlayer->m_DND ? "你将不再接收全局聊天和服务器消息" : "你将继续接收全局聊天和服务器消息");
+	log_info("chatresp", "%s", pPlayer->m_DND ? "你将不再接收全局聊天和服务器消息" : "你将继续接收全局聊天和服务器消息");
 }
 
 void CGameContext::ConWhispers(IConsole::IResult *pResult, void *pUserData)
@@ -530,7 +502,7 @@ void CGameContext::ConWhispers(IConsole::IResult *pResult, void *pUserData)
 		return;
 
 	pPlayer->m_Whispers = pResult->NumArguments() == 0 ? !pPlayer->m_Whispers : pResult->GetInteger(0);
-	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", pPlayer->m_Whispers ? "你现在会收到私聊消息" : "你将不再收到私聊消息");
+	log_info("chatresp", "%s", pPlayer->m_Whispers ? "你现在会收到私聊消息" : "你将不再收到私聊消息");
 }
 
 void CGameContext::ConMap(IConsole::IResult *pResult, void *pUserData)
@@ -541,14 +513,13 @@ void CGameContext::ConMap(IConsole::IResult *pResult, void *pUserData)
 
 	if(g_Config.m_SvMapVote == 0)
 	{
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-			"本服务器已禁用 /map");
+		log_info("chatresp", "本服务器已禁用 /map");
 		return;
 	}
 
 	if(pResult->NumArguments() <= 0)
 	{
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", "示例：/map adr3 可以发起 Adrenaline 3 的换图投票。这表示地图名必须以 'a' 开头，并按顺序包含 'd'、'r'、'3'");
+		log_info("chatresp", "示例：/map adr3 可以发起 Adrenaline 3 的换图投票。这表示地图名必须以 'a' 开头，并按顺序包含 'd'、'r'、'3'");
 		return;
 	}
 
@@ -615,7 +586,7 @@ void CGameContext::ConTimeout(IConsole::IResult *pResult, void *pUserData)
 	}
 
 	pSelf->Server()->SetTimeoutProtected(pResult->m_ClientId);
-	str_copy(pPlayer->m_aTimeoutCode, pResult->GetString(0), sizeof(pPlayer->m_aTimeoutCode));
+	str_copy(pPlayer->m_aTimeoutCode, pResult->GetString(0));
 }
 
 void CGameContext::ConPractice(IConsole::IResult *pResult, void *pUserData)
@@ -633,10 +604,7 @@ void CGameContext::ConPractice(IConsole::IResult *pResult, void *pUserData)
 
 	if(!g_Config.m_SvPractice)
 	{
-		pSelf->Console()->Print(
-			IConsole::OUTPUT_LEVEL_STANDARD,
-			"chatresp",
-			"本服务器已禁用练习模式");
+		log_info("chatresp", "本服务器已禁用练习模式");
 		return;
 	}
 
@@ -646,37 +614,25 @@ void CGameContext::ConPractice(IConsole::IResult *pResult, void *pUserData)
 
 	if(!Teams.IsValidTeamNumber(Team) || (Team == TEAM_FLOCK && g_Config.m_SvTeam != SV_TEAM_FORCED_SOLO))
 	{
-		pSelf->Console()->Print(
-			IConsole::OUTPUT_LEVEL_STANDARD,
-			"chatresp",
-			"先加入队伍才能开启练习模式。开启后可以使用 /r，但不会获得排名");
+		log_info("chatresp", "先加入队伍才能开启练习模式。开启后可以使用 /r，但不会获得排名");
 		return;
 	}
 
 	if(Teams.TeamFlock(Team))
 	{
-		pSelf->Console()->Print(
-			IConsole::OUTPUT_LEVEL_STANDARD,
-			"chatresp",
-			"0 队模式下不能开启练习模式");
+		log_info("chatresp", "0 队模式下不能开启练习模式");
 		return;
 	}
 
 	if(Teams.GetSaving(Team))
 	{
-		pSelf->Console()->Print(
-			IConsole::OUTPUT_LEVEL_STANDARD,
-			"chatresp",
-			"队伍正在存档或读档时，不能开启练习模式");
+		log_info("chatresp", "队伍正在存档或读档时，不能开启练习模式");
 		return;
 	}
 
 	if(Teams.IsPractice(Team))
 	{
-		pSelf->Console()->Print(
-			IConsole::OUTPUT_LEVEL_STANDARD,
-			"chatresp",
-			"队伍已经处于练习模式");
+		log_info("chatresp", "队伍已经处于练习模式");
 		return;
 	}
 
@@ -818,19 +774,13 @@ void CGameContext::ConSwap(IConsole::IResult *pResult, void *pUserData)
 
 	if(!g_Config.m_SvSwap)
 	{
-		pSelf->Console()->Print(
-			IConsole::OUTPUT_LEVEL_STANDARD,
-			"chatresp",
-			"本服务器已禁用交换功能");
+		log_info("chatresp", "本服务器已禁用交换功能");
 		return;
 	}
 
 	if(g_Config.m_SvTeam == SV_TEAM_FORCED_SOLO)
 	{
-		pSelf->Console()->Print(
-			IConsole::OUTPUT_LEVEL_STANDARD,
-			"chatresp",
-			"强制 solo 服务器上不能使用交换功能");
+		log_info("chatresp", "强制 solo 服务器上不能使用交换功能");
 		return;
 	}
 
@@ -840,19 +790,13 @@ void CGameContext::ConSwap(IConsole::IResult *pResult, void *pUserData)
 
 	if(Team == Teams.m_Core.TeamSuper())
 	{
-		pSelf->Console()->Print(
-			IConsole::OUTPUT_LEVEL_STANDARD,
-			"chatresp",
-			"关闭 super 后才能使用交换功能，也就是和队友互换位置");
+		log_info("chatresp", "关闭 super 后才能使用交换功能，也就是和队友互换位置");
 		return;
 	}
 
 	if(!Teams.IsValidTeamNumber(Team))
 	{
-		pSelf->Console()->Print(
-			IConsole::OUTPUT_LEVEL_STANDARD,
-			"chatresp",
-			"先加入队伍后才能使用交换功能，也就是和队友互换位置");
+		log_info("chatresp", "先加入队伍后才能使用交换功能，也就是和队友互换位置");
 		return;
 	}
 
@@ -878,20 +822,20 @@ void CGameContext::ConSwap(IConsole::IResult *pResult, void *pUserData)
 
 	if(TargetClientId < 0)
 	{
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", "未找到该玩家");
+		log_info("chatresp", "未找到该玩家");
 		return;
 	}
 
 	if(TargetClientId == pResult->m_ClientId)
 	{
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", "你不能和自己交换位置");
+		log_info("chatresp", "你不能和自己交换位置");
 		return;
 	}
 
 	int TargetTeam = Teams.m_Core.Team(TargetClientId);
 	if(TargetTeam != Team)
 	{
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", "目标玩家不在你的队伍里");
+		log_info("chatresp", "目标玩家不在你的队伍里");
 		return;
 	}
 
@@ -902,18 +846,18 @@ void CGameContext::ConSwap(IConsole::IResult *pResult, void *pUserData)
 		CCharacter *pSwapChr = pSwapPlayer->GetCharacter();
 		if(!pChr || !pSwapChr || pChr->m_DDRaceState != ERaceState::STARTED || pSwapChr->m_DDRaceState != ERaceState::STARTED)
 		{
-			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", "你和对方都需要先开始地图，才能交换位置");
+			log_info("chatresp", "你和对方都需要先开始地图，才能交换位置");
 			return;
 		}
 	}
 	else if(!Teams.IsStarted(Team) && !Teams.TeamFlock(Team))
 	{
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", "你需要先开始地图，才能和其他玩家交换位置");
+		log_info("chatresp", "你需要先开始地图，才能和其他玩家交换位置");
 		return;
 	}
 	if(pSelf->m_World.m_Core.m_apCharacters[pResult->m_ClientId] == nullptr || pSelf->m_World.m_Core.m_apCharacters[TargetClientId] == nullptr)
 	{
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", "你和对方都不能处于暂停状态，才能交换位置");
+		log_info("chatresp", "你和对方都不能处于暂停状态，才能交换位置");
 		return;
 	}
 
@@ -943,19 +887,13 @@ void CGameContext::ConCancelSwap(IConsole::IResult *pResult, void *pUserData)
 
 	if(!g_Config.m_SvSwap)
 	{
-		pSelf->Console()->Print(
-			IConsole::OUTPUT_LEVEL_STANDARD,
-			"chatresp",
-			"本服务器已禁用交换功能");
+		log_info("chatresp", "本服务器已禁用交换功能");
 		return;
 	}
 
 	if(g_Config.m_SvTeam == SV_TEAM_FORCED_SOLO)
 	{
-		pSelf->Console()->Print(
-			IConsole::OUTPUT_LEVEL_STANDARD,
-			"chatresp",
-			"强制 solo 服务器上不能使用交换功能");
+		log_info("chatresp", "强制 solo 服务器上不能使用交换功能");
 		return;
 	}
 
@@ -967,10 +905,7 @@ void CGameContext::ConCancelSwap(IConsole::IResult *pResult, void *pUserData)
 
 	if(!SwapPending)
 	{
-		pSelf->Console()->Print(
-			IConsole::OUTPUT_LEVEL_STANDARD,
-			"chatresp",
-			"你当前没有待处理的交换请求");
+		log_info("chatresp", "你当前没有待处理的交换请求");
 		return;
 	}
 
@@ -1040,10 +975,7 @@ void CGameContext::ConTeamRank(IConsole::IResult *pResult, void *pUserData)
 		if(!g_Config.m_SvHideScore)
 			pSelf->Score()->ShowTeamRank(pResult->m_ClientId, pResult->GetString(0));
 		else
-			pSelf->Console()->Print(
-				IConsole::OUTPUT_LEVEL_STANDARD,
-				"chatresp",
-				"本服务器不允许查看其他玩家的队伍排名");
+			log_info("chatresp", "本服务器不允许查看其他玩家的队伍排名");
 	}
 	else
 		pSelf->Score()->ShowTeamRank(pResult->m_ClientId,
@@ -1061,10 +993,7 @@ void CGameContext::ConRank(IConsole::IResult *pResult, void *pUserData)
 		if(!g_Config.m_SvHideScore)
 			pSelf->Score()->ShowRank(pResult->m_ClientId, pResult->GetString(0));
 		else
-			pSelf->Console()->Print(
-				IConsole::OUTPUT_LEVEL_STANDARD,
-				"chatresp",
-				"本服务器不允许查看其他玩家的排名");
+			log_info("chatresp", "本服务器不允许查看其他玩家的排名");
 	}
 	else
 		pSelf->Score()->ShowRank(pResult->m_ClientId,
@@ -1079,8 +1008,7 @@ void CGameContext::ConLock(IConsole::IResult *pResult, void *pUserData)
 
 	if(g_Config.m_SvTeam == SV_TEAM_FORBIDDEN || g_Config.m_SvTeam == SV_TEAM_FORCED_SOLO)
 	{
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-			"队伍功能已禁用");
+		log_info("chatresp", "队伍功能已禁用");
 		return;
 	}
 
@@ -1093,10 +1021,7 @@ void CGameContext::ConLock(IConsole::IResult *pResult, void *pUserData)
 
 	if(Team == TEAM_FLOCK || !pSelf->m_pController->Teams().IsValidTeamNumber(Team))
 	{
-		pSelf->Console()->Print(
-			IConsole::OUTPUT_LEVEL_STANDARD,
-			"chatresp",
-			"这个队伍不能被锁定");
+		log_info("chatresp", "这个队伍不能被锁定");
 		return;
 	}
 
@@ -1128,8 +1053,7 @@ void CGameContext::ConUnlock(IConsole::IResult *pResult, void *pUserData)
 
 	if(g_Config.m_SvTeam == SV_TEAM_FORBIDDEN || g_Config.m_SvTeam == SV_TEAM_FORCED_SOLO)
 	{
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-			"队伍功能已禁用");
+		log_info("chatresp", "队伍功能已禁用");
 		return;
 	}
 
@@ -1161,24 +1085,17 @@ void CGameContext::AttemptJoinTeam(int ClientId, int Team)
 
 	if(IsRunningKickOrSpecVote(ClientId))
 	{
-		Console()->Print(
-			IConsole::OUTPUT_LEVEL_STANDARD,
-			"chatresp",
-			"你正在发起投票，请等当前投票结束后再试");
+		log_info("chatresp", "你正在发起投票，请等当前投票结束后再试");
 		return;
 	}
 	else if(g_Config.m_SvTeam == SV_TEAM_FORBIDDEN || g_Config.m_SvTeam == SV_TEAM_FORCED_SOLO)
 	{
-		Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-			"队伍功能已禁用");
+		log_info("chatresp", "队伍功能已禁用");
 		return;
 	}
 	else if(g_Config.m_SvTeam == SV_TEAM_MANDATORY && Team == 0 && pPlayer->GetCharacter() && pPlayer->GetCharacter()->m_LastStartWarning < Server()->Tick() - 3 * Server()->TickSpeed())
 	{
-		Console()->Print(
-			IConsole::OUTPUT_LEVEL_STANDARD,
-			"chatresp",
-			"你必须加入一个队伍并和其他人一起玩，否则无法开始");
+		log_info("chatresp", "你必须加入一个队伍并和其他人一起玩，否则无法开始");
 		pPlayer->GetCharacter()->m_LastStartWarning = Server()->Tick();
 	}
 
@@ -1187,8 +1104,7 @@ void CGameContext::AttemptJoinTeam(int ClientId, int Team)
 		auto EmptyTeam = m_pController->Teams().GetFirstEmptyTeam();
 		if(!EmptyTeam.has_value())
 		{
-			Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-				"已经没有空队伍了");
+			log_info("chatresp", "已经没有空队伍了");
 			return;
 		}
 		Team = EmptyTeam.value();
@@ -1197,13 +1113,11 @@ void CGameContext::AttemptJoinTeam(int ClientId, int Team)
 	char aError[512];
 	if(pPlayer->m_LastDDRaceTeamChange.has_value() && pPlayer->m_LastDDRaceTeamChange.value() + (int64_t)Server()->TickSpeed() * g_Config.m_SvTeamChangeDelay > Server()->Tick())
 	{
-		Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-			"你切换队伍太快了");
+		log_info("chatresp", "你切换队伍太快了");
 	}
 	else if(Team != TEAM_FLOCK && m_pController->Teams().TeamLocked(Team) && !m_pController->Teams().IsInvited(Team, ClientId))
 	{
-		Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-			g_Config.m_SvInvite ?
+		log_info("chatresp", "%s", g_Config.m_SvInvite ?
 				"这个队伍已用 /lock 锁定，只有队伍成员才能用 /lock 解锁" :
 				"这个队伍已用 /lock 锁定，只有队伍成员才能邀请你或用 /lock 解锁");
 	}
@@ -1211,11 +1125,11 @@ void CGameContext::AttemptJoinTeam(int ClientId, int Team)
 	{
 		char aBuf[512];
 		str_format(aBuf, sizeof(aBuf), "这个队伍已经达到最大人数上限 %d", g_Config.m_SvMaxTeamSize);
-		Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", aBuf);
+		log_info("chatresp", "%s", aBuf);
 	}
 	else if(!m_pController->Teams().SetCharacterTeam(pPlayer->GetCid(), Team, aError, sizeof(aError)))
 	{
-		Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", aError);
+		log_info("chatresp", "%s", aError);
 	}
 	else
 	{
@@ -1249,14 +1163,13 @@ void CGameContext::ConInvite(IConsole::IResult *pResult, void *pUserData)
 
 	if(g_Config.m_SvTeam == SV_TEAM_FORBIDDEN || g_Config.m_SvTeam == SV_TEAM_FORCED_SOLO)
 	{
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-			"队伍功能已禁用");
+		log_info("chatresp", "队伍功能已禁用");
 		return;
 	}
 
 	if(!g_Config.m_SvInvite)
 	{
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", "邀请功能已禁用");
+		log_info("chatresp", "邀请功能已禁用");
 		return;
 	}
 
@@ -1266,19 +1179,19 @@ void CGameContext::ConInvite(IConsole::IResult *pResult, void *pUserData)
 		int Target = pSelf->FindClientIdByName(pName).value_or(-1);
 		if(Target == -1)
 		{
-			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", "未找到该玩家");
+			log_info("chatresp", "未找到该玩家");
 			return;
 		}
 
 		if(pController->Teams().IsInvited(Team, Target))
 		{
-			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", "该玩家已经被邀请过了");
+			log_info("chatresp", "该玩家已经被邀请过了");
 			return;
 		}
 
 		if(pSelf->m_apPlayers[pResult->m_ClientId] && pSelf->m_apPlayers[pResult->m_ClientId]->m_LastInvited + g_Config.m_SvInviteFrequency * pSelf->Server()->TickSpeed() > pSelf->Server()->Tick())
 		{
-			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", "邀请过于频繁，请稍后再试");
+			log_info("chatresp", "邀请过于频繁，请稍后再试");
 			return;
 		}
 
@@ -1293,7 +1206,7 @@ void CGameContext::ConInvite(IConsole::IResult *pResult, void *pUserData)
 		pSelf->SendChatTeam(Team, aBuf);
 	}
 	else
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", "这个队伍不能邀请玩家");
+		log_info("chatresp", "这个队伍不能邀请玩家");
 }
 
 void CGameContext::ConTeam0Mode(IConsole::IResult *pResult, void *pUserData)
@@ -1306,17 +1219,13 @@ void CGameContext::ConTeam0Mode(IConsole::IResult *pResult, void *pUserData)
 
 	if(g_Config.m_SvTeam == SV_TEAM_FORBIDDEN || g_Config.m_SvTeam == SV_TEAM_FORCED_SOLO || g_Config.m_SvTeam == SV_TEAM_MANDATORY)
 	{
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-			"队伍模式切换已禁用");
+		log_info("chatresp", "队伍模式切换已禁用");
 		return;
 	}
 
 	if(!g_Config.m_SvTeam0Mode)
 	{
-		pSelf->Console()->Print(
-			IConsole::OUTPUT_LEVEL_STANDARD,
-			"chatresp",
-			"本服务器已禁用队伍模式切换。");
+		log_info("chatresp", "本服务器已禁用队伍模式切换。");
 		return;
 	}
 
@@ -1325,10 +1234,7 @@ void CGameContext::ConTeam0Mode(IConsole::IResult *pResult, void *pUserData)
 
 	if(Team == TEAM_FLOCK || !pController->Teams().IsValidTeamNumber(Team))
 	{
-		pSelf->Console()->Print(
-			IConsole::OUTPUT_LEVEL_STANDARD,
-			"chatresp",
-			"这个队伍不能切换模式");
+		log_info("chatresp", "这个队伍不能切换模式");
 		return;
 	}
 
@@ -1395,7 +1301,7 @@ void CGameContext::ConTeam(IConsole::IResult *pResult, void *pUserData)
 		char aBuf[512];
 		if(!pPlayer->IsPlaying())
 		{
-			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", "你死亡或处于旁观状态时，不能查看自己的队伍。");
+			log_info("chatresp", "你死亡或处于旁观状态时，不能查看自己的队伍。");
 		}
 		else
 		{
@@ -1414,7 +1320,7 @@ void CGameContext::ConTeam(IConsole::IResult *pResult, void *pUserData)
 			}
 
 			str_format(aBuf, sizeof(aBuf), "你当前在 %d 队，队伍里有 %d 人", PlayerTeam, TeamSize);
-			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", aBuf);
+			log_info("chatresp", "%s", aBuf);
 		}
 	}
 }
@@ -1429,7 +1335,7 @@ void CGameContext::ConJoin(IConsole::IResult *pResult, void *pUserData)
 	int Target = pSelf->FindClientIdByName(pName).value_or(-1);
 	if(Target == -1)
 	{
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", "未找到该玩家");
+		log_info("chatresp", "未找到该玩家");
 		return;
 	}
 
@@ -1462,10 +1368,7 @@ void CGameContext::ConSetEyeEmote(IConsole::IResult *pResult,
 		return;
 	if(pResult->NumArguments() == 0)
 	{
-		pSelf->Console()->Print(
-			IConsole::OUTPUT_LEVEL_STANDARD,
-			"chatresp",
-			(pPlayer->m_EyeEmoteEnabled) ?
+		log_info("chatresp", "%s", (pPlayer->m_EyeEmoteEnabled) ?
 				"你现在可以使用预设眼睛表情了。" :
 				"你还没有绑定任何眼睛表情，记得先绑定。");
 		return;
@@ -1476,10 +1379,7 @@ void CGameContext::ConSetEyeEmote(IConsole::IResult *pResult,
 		pPlayer->m_EyeEmoteEnabled = false;
 	else if(str_comp_nocase(pResult->GetString(0), "toggle") == 0)
 		pPlayer->m_EyeEmoteEnabled = !pPlayer->m_EyeEmoteEnabled;
-	pSelf->Console()->Print(
-		IConsole::OUTPUT_LEVEL_STANDARD,
-		"chatresp",
-		(pPlayer->m_EyeEmoteEnabled) ?
+	log_info("chatresp", "%s", (pPlayer->m_EyeEmoteEnabled) ?
 			"你现在可以使用预设眼睛表情了。" :
 			"你还没有绑定任何眼睛表情，记得先绑定。");
 }
@@ -1489,8 +1389,7 @@ void CGameContext::ConEyeEmote(IConsole::IResult *pResult, void *pUserData)
 	CGameContext *pSelf = (CGameContext *)pUserData;
 	if(g_Config.m_SvEmotionalTees == -1)
 	{
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-			"表情功能已禁用。");
+		log_info("chatresp", "表情功能已禁用。");
 		return;
 	}
 
@@ -1503,14 +1402,8 @@ void CGameContext::ConEyeEmote(IConsole::IResult *pResult, void *pUserData)
 
 	if(pResult->NumArguments() == 0)
 	{
-		pSelf->Console()->Print(
-			IConsole::OUTPUT_LEVEL_STANDARD,
-			"chatresp",
-			"可用表情命令：/emote surprise /emote blink /emote close /emote angry /emote happy /emote pain /emote normal");
-		pSelf->Console()->Print(
-			IConsole::OUTPUT_LEVEL_STANDARD,
-			"chatresp",
-			"示例：/emote surprise 10 表示持续 10 秒，或直接 /emote surprise（默认 1 秒）");
+		log_info("chatresp", "可用表情命令：/emote surprise /emote blink /emote close /emote angry /emote happy /emote pain /emote normal");
+		log_info("chatresp", "示例：/emote surprise 10 表示持续 10 秒，或直接 /emote surprise（默认 1 秒）");
 	}
 	else
 	{
@@ -1534,8 +1427,7 @@ void CGameContext::ConEyeEmote(IConsole::IResult *pResult, void *pUserData)
 			EmoteType = EMOTE_NORMAL;
 		else
 		{
-			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD,
-				"chatresp", "未知表情。输入 /emote 查看帮助");
+			log_info("chatresp", "未知表情。输入 /emote 查看帮助");
 			return;
 		}
 
@@ -1579,10 +1471,7 @@ void CGameContext::ConShowOthers(IConsole::IResult *pResult, void *pUserData)
 			pPlayer->m_ShowOthers = !pPlayer->m_ShowOthers;
 	}
 	else
-		pSelf->Console()->Print(
-			IConsole::OUTPUT_LEVEL_STANDARD,
-			"chatresp",
-			"本服务器已禁用显示其他队伍玩家");
+		log_info("chatresp", "本服务器已禁用显示其他队伍玩家");
 }
 
 void CGameContext::ConShowAll(IConsole::IResult *pResult, void *pUserData)
@@ -1648,7 +1537,7 @@ void CGameContext::ConSayTime(IConsole::IResult *pResult, void *pUserData)
 	}
 	else
 	{
-		str_copy(aBufName, "你的", sizeof(aBufName));
+		str_copy(aBufName, "你的");
 		ClientId = pResult->m_ClientId;
 	}
 
@@ -1666,7 +1555,7 @@ void CGameContext::ConSayTime(IConsole::IResult *pResult, void *pUserData)
 	int64_t Time = (int64_t)100 * (float)(pSelf->Server()->Tick() - pChr->m_StartTime) / ((float)pSelf->Server()->TickSpeed());
 	str_time(Time, TIME_HOURS, aBufTime, sizeof(aBufTime));
 	str_format(aBuf, sizeof(aBuf), "%s当前用时是 %s", aBufName, aBufTime);
-	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", aBuf);
+	log_info("chatresp", "%s", aBuf);
 }
 
 void CGameContext::ConSayTimeAll(IConsole::IResult *pResult, void *pUserData)
@@ -1746,13 +1635,13 @@ void CGameContext::ConSetTimerType(IConsole::IResult *pResult, void *pUserData)
 			Result = pPlayer->SetTimerType(CPlayer::TIMERTYPE_NONE);
 		else
 		{
-			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", "未知参数。可用值：default、gametimer、broadcast、both、none");
+			log_info("chatresp", "未知参数。可用值：default、gametimer、broadcast、both、none");
 			return;
 		}
 
 		if(!Result)
 		{
-			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", "你当前客户端不支持所选计时器类型");
+			log_info("chatresp", "你当前客户端不支持所选计时器类型");
 			return;
 		}
 
@@ -1765,7 +1654,7 @@ void CGameContext::ConSetTimerType(IConsole::IResult *pResult, void *pUserData)
 	else if(pPlayer->m_TimerType == CPlayer::TIMERTYPE_NONE)
 		str_copy(aBuf, "计时器不会显示。");
 
-	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", aBuf);
+	log_info("chatresp", "%s", aBuf);
 }
 
 void CGameContext::ConRescue(IConsole::IResult *pResult, void *pUserData)
@@ -2465,10 +2354,7 @@ void CGameContext::ConPoints(IConsole::IResult *pResult, void *pUserData)
 		if(!g_Config.m_SvHideScore)
 			pSelf->Score()->ShowPoints(pResult->m_ClientId, pResult->GetString(0));
 		else
-			pSelf->Console()->Print(
-				IConsole::OUTPUT_LEVEL_STANDARD,
-				"chatresp",
-				"本服务器不允许查看其他玩家的全局积分。");
+			log_info("chatresp", "本服务器不允许查看其他玩家的全局积分。");
 	}
 	else
 		pSelf->Score()->ShowPoints(pResult->m_ClientId,
@@ -2483,8 +2369,7 @@ void CGameContext::ConTopPoints(IConsole::IResult *pResult, void *pUserData)
 
 	if(g_Config.m_SvHideScore)
 	{
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-			"本服务器不允许查看全局积分排行榜");
+		log_info("chatresp", "本服务器不允许查看全局积分排行榜");
 		return;
 	}
 
@@ -2502,8 +2387,7 @@ void CGameContext::ConTimeCP(IConsole::IResult *pResult, void *pUserData)
 
 	if(g_Config.m_SvHideScore)
 	{
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-			"本服务器不允许查看 checkpoint 时间");
+		log_info("chatresp", "本服务器不允许查看 checkpoint 时间");
 		return;
 	}
 
