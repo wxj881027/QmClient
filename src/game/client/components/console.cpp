@@ -390,6 +390,7 @@ enum class EArgumentCompletionType
 	TUNE,
 	SETTING,
 	KEY,
+	COMMAND,
 };
 
 // NOLINTNEXTLINE(misc-use-internal-linkage)
@@ -410,11 +411,11 @@ static const CArgumentCompletionEntry gs_aArgumentCompletionEntries[] = {
 	{EArgumentCompletionType::TUNE, "tune_zone", 1},
 	{EArgumentCompletionType::SETTING, "reset", 0},
 	{EArgumentCompletionType::SETTING, "toggle", 0},
-	{EArgumentCompletionType::SETTING, "access_level", 0},
 	{EArgumentCompletionType::SETTING, "+toggle", 0},
 	{EArgumentCompletionType::KEY, "bind", 0},
 	{EArgumentCompletionType::KEY, "binds", 0},
 	{EArgumentCompletionType::KEY, "unbind", 0},
+	{EArgumentCompletionType::COMMAND, "access_level", 0},
 };
 
 static std::pair<EArgumentCompletionType, int> ArgumentCompletion(const char *pStr)
@@ -497,6 +498,19 @@ static int PossibleKeys(const char *pStr, IInput *pInput, IConsole::FPossibleCal
 static void CollectPossibleCommandsCallback(int Index, const char *pStr, void *pUser)
 {
 	((std::vector<const char *> *)pUser)->push_back(pStr);
+}
+
+struct SPossibleSettingsContext
+{
+	IConsole::FPossibleCallback m_pfnCallback;
+	void *m_pUser;
+	int m_Index;
+};
+
+static void CollectPossibleSettingsCallback(const SConfigVariable *pVariable, void *pUser)
+{
+	SPossibleSettingsContext *pContext = (SPossibleSettingsContext *)pUser;
+	pContext->m_pfnCallback(pContext->m_Index++, pVariable->m_pScriptName, pContext->m_pUser);
 }
 
 static void SortCompletions(std::vector<const char *> &vCompletions, const char *pSearch)
@@ -756,9 +770,11 @@ void CGameConsole::CInstance::UpdateCompletionSuggestions()
 		else if(CompletionType == EArgumentCompletionType::TUNE)
 			PossibleTunings(m_aCompletionBufferArgument, CollectPossibleCommandsCallback, &m_vpArgumentSuggestions);
 		else if(CompletionType == EArgumentCompletionType::SETTING)
-			m_pGameConsole->m_pConsole->PossibleCommands(m_aCompletionBufferArgument, m_CompletionFlagmask, UseTempCommands, CollectPossibleCommandsCallback, &m_vpArgumentSuggestions);
+			m_pGameConsole->PossibleSettings(m_aCompletionBufferArgument, m_CompletionFlagmask, CollectPossibleCommandsCallback, &m_vpArgumentSuggestions);
 		else if(CompletionType == EArgumentCompletionType::KEY)
 			PossibleKeys(m_aCompletionBufferArgument, m_pGameConsole->Input(), CollectPossibleCommandsCallback, &m_vpArgumentSuggestions);
+		else if(CompletionType == EArgumentCompletionType::COMMAND)
+			m_pGameConsole->m_pConsole->PossibleCommands(m_aCompletionBufferArgument, m_CompletionFlagmask, UseTempCommands, CollectPossibleCommandsCallback, &m_vpArgumentSuggestions);
 		SortCompletions(m_vpArgumentSuggestions, m_aCompletionBufferArgument);
 	}
 
@@ -1768,6 +1784,12 @@ int CGameConsole::PossibleMaps(const char *pStr, IConsole::FPossibleCallback pfn
 		}
 	}
 	return Index;
+}
+
+void CGameConsole::PossibleSettings(const char *pStr, int FlagMask, IConsole::FPossibleCallback pfnCallback, void *pUser)
+{
+	SPossibleSettingsContext Context{pfnCallback, pUser, 0};
+	ConfigManager()->PossibleConfigVariables(pStr, FlagMask, CollectPossibleSettingsCallback, &Context);
 }
 
 // only defined for 0<=t<=1

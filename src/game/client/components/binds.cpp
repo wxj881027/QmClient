@@ -52,13 +52,15 @@ static void ExecuteBindCommand(IConsole *pConsole, const char *pBind, const CGam
 {
 	if(!pBind)
 		return;
-	if(!ShouldAppendGoresPrevWeapon(pGameClient) || str_find(pBind, "+fire") == nullptr || str_find(pBind, "+prevweapon") != nullptr)
+	// 绑定命令可能在执行中解绑或改写自身槽位，先复制再交给控制台。
+	const std::string BindCopy(pBind);
+	if(!ShouldAppendGoresPrevWeapon(pGameClient) || str_find(BindCopy.c_str(), "+fire") == nullptr || str_find(BindCopy.c_str(), "+prevweapon") != nullptr)
 	{
-		pConsole->ExecuteLineStroked(Stroke, pBind, ClientId);
+		pConsole->ExecuteLineStroked(Stroke, BindCopy.c_str(), ClientId);
 		return;
 	}
 
-	std::string Command(pBind);
+	std::string Command(BindCopy);
 	Command += ";+prevweapon";
 	pConsole->ExecuteLineStroked(Stroke, Command.c_str(), ClientId);
 }

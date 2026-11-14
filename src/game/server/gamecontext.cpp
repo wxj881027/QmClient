@@ -16,6 +16,8 @@
 #include <base/str.h>
 #include <base/system.h>
 
+#include <algorithm>
+
 #include <engine/console.h>
 #include <engine/engine.h>
 #include <engine/map.h>
@@ -310,8 +312,8 @@ void CGameContext::CreateDamageInd(vec2 Pos, float Angle, int Amount, CClientMas
 		CNetEvent_DamageInd *pEvent = m_Events.Create<CNetEvent_DamageInd>(Mask);
 		if(pEvent)
 		{
-			pEvent->m_X = (int)Pos.x;
-			pEvent->m_Y = (int)Pos.y;
+			pEvent->m_X = round_truncate(Pos.x);
+			pEvent->m_Y = round_truncate(Pos.y);
 			pEvent->m_Angle = (int)(f * 256.0f);
 		}
 	}
@@ -322,8 +324,8 @@ void CGameContext::CreateHammerHit(vec2 Pos, CClientMask Mask)
 	CNetEvent_HammerHit *pEvent = m_Events.Create<CNetEvent_HammerHit>(Mask);
 	if(pEvent)
 	{
-		pEvent->m_X = (int)Pos.x;
-		pEvent->m_Y = (int)Pos.y;
+		pEvent->m_X = round_truncate(Pos.x);
+		pEvent->m_Y = round_truncate(Pos.y);
 	}
 }
 
@@ -333,8 +335,8 @@ void CGameContext::CreateExplosion(vec2 Pos, int Owner, int Weapon, bool NoDamag
 	CNetEvent_Explosion *pEvent = m_Events.Create<CNetEvent_Explosion>(Mask);
 	if(pEvent)
 	{
-		pEvent->m_X = (int)Pos.x;
-		pEvent->m_Y = (int)Pos.y;
+		pEvent->m_X = round_truncate(Pos.x);
+		pEvent->m_Y = round_truncate(Pos.y);
 	}
 
 	// deal damage
@@ -390,8 +392,8 @@ void CGameContext::CreatePlayerSpawn(vec2 Pos, CClientMask Mask)
 	CNetEvent_Spawn *pEvent = m_Events.Create<CNetEvent_Spawn>(Mask);
 	if(pEvent)
 	{
-		pEvent->m_X = (int)Pos.x;
-		pEvent->m_Y = (int)Pos.y;
+		pEvent->m_X = round_truncate(Pos.x);
+		pEvent->m_Y = round_truncate(Pos.y);
 	}
 }
 
@@ -400,8 +402,8 @@ void CGameContext::CreateDeath(vec2 Pos, int ClientId, CClientMask Mask)
 	CNetEvent_Death *pEvent = m_Events.Create<CNetEvent_Death>(Mask);
 	if(pEvent)
 	{
-		pEvent->m_X = (int)Pos.x;
-		pEvent->m_Y = (int)Pos.y;
+		pEvent->m_X = round_truncate(Pos.x);
+		pEvent->m_Y = round_truncate(Pos.y);
 		pEvent->m_ClientId = ClientId;
 	}
 }
@@ -411,8 +413,8 @@ void CGameContext::CreateBirthdayEffect(vec2 Pos, CClientMask Mask)
 	CNetEvent_Birthday *pEvent = m_Events.Create<CNetEvent_Birthday>(Mask);
 	if(pEvent)
 	{
-		pEvent->m_X = (int)Pos.x;
-		pEvent->m_Y = (int)Pos.y;
+		pEvent->m_X = round_truncate(Pos.x);
+		pEvent->m_Y = round_truncate(Pos.y);
 	}
 }
 
@@ -421,8 +423,8 @@ void CGameContext::CreateFinishEffect(vec2 Pos, CClientMask Mask)
 	CNetEvent_Finish *pEvent = m_Events.Create<CNetEvent_Finish>(Mask);
 	if(pEvent)
 	{
-		pEvent->m_X = (int)Pos.x;
-		pEvent->m_Y = (int)Pos.y;
+		pEvent->m_X = round_truncate(Pos.x);
+		pEvent->m_Y = round_truncate(Pos.y);
 	}
 }
 
@@ -435,8 +437,8 @@ void CGameContext::CreateSound(vec2 Pos, int Sound, CClientMask Mask)
 	CNetEvent_SoundWorld *pEvent = m_Events.Create<CNetEvent_SoundWorld>(Mask);
 	if(pEvent)
 	{
-		pEvent->m_X = (int)Pos.x;
-		pEvent->m_Y = (int)Pos.y;
+		pEvent->m_X = round_truncate(Pos.x);
+		pEvent->m_Y = round_truncate(Pos.y);
 		pEvent->m_SoundId = Sound;
 	}
 }
@@ -520,10 +522,11 @@ void CGameContext::SnapLaserObject(const CSnapContext &Context, int SnapId, cons
 	if(Context.GetClientVersion() >= VERSION_DDNET_MULTI_LASER)
 	{
 		CNetObj_DDNetLaser Laser = {};
-		Laser.m_ToX = (int)To.x;
-		Laser.m_ToY = (int)To.y;
-		Laser.m_FromX = (int)From.x;
-		Laser.m_FromY = (int)From.y;
+		// 截断会让激光端点偏离像素格，改用四舍五入保持两点对齐。
+		Laser.m_ToX = round_to_int(To.x);
+		Laser.m_ToY = round_to_int(To.y);
+		Laser.m_FromX = round_to_int(From.x);
+		Laser.m_FromY = round_to_int(From.y);
 		Laser.m_StartTick = StartTick;
 		Laser.m_Owner = Owner;
 		Laser.m_Type = LaserType;
@@ -537,10 +540,10 @@ void CGameContext::SnapLaserObject(const CSnapContext &Context, int SnapId, cons
 	else
 	{
 		CNetObj_Laser Laser = {};
-		Laser.m_X = (int)To.x;
-		Laser.m_Y = (int)To.y;
-		Laser.m_FromX = (int)From.x;
-		Laser.m_FromY = (int)From.y;
+		Laser.m_X = round_to_int(To.x);
+		Laser.m_Y = round_to_int(To.y);
+		Laser.m_FromX = round_to_int(From.x);
+		Laser.m_FromY = round_to_int(From.y);
 		Laser.m_StartTick = StartTick;
 		Server()->SnapNewItem(SnapId, Laser);
 	}
@@ -555,16 +558,16 @@ void CGameContext::SnapPickup(const CSnapContext &Context, int SnapId, const vec
 	if(Context.IsSixup())
 	{
 		protocol7::CNetObj_Pickup Pickup = {};
-		Pickup.m_X = (int)Pos.x;
-		Pickup.m_Y = (int)Pos.y;
+		Pickup.m_X = round_truncate(Pos.x);
+		Pickup.m_Y = round_truncate(Pos.y);
 		Pickup.m_Type = PickupType_SixToSeven(Type, SubType);
 		Server()->SnapNewItem(SnapId, Pickup);
 	}
 	else if(Context.GetClientVersion() >= VERSION_DDNET_ENTITY_NETOBJS)
 	{
 		CNetObj_DDNetPickup Pickup = {};
-		Pickup.m_X = (int)Pos.x;
-		Pickup.m_Y = (int)Pos.y;
+		Pickup.m_X = round_truncate(Pos.x);
+		Pickup.m_Y = round_truncate(Pos.y);
 		Pickup.m_Type = Type;
 		Pickup.m_Subtype = SubType;
 		Pickup.m_SwitchNumber = SwitchNumber;
@@ -575,8 +578,8 @@ void CGameContext::SnapPickup(const CSnapContext &Context, int SnapId, const vec
 	{
 		CNetObj_Pickup Pickup = {};
 
-		Pickup.m_X = (int)Pos.x;
-		Pickup.m_Y = (int)Pos.y;
+		Pickup.m_X = round_truncate(Pos.x);
+		Pickup.m_Y = round_truncate(Pos.y);
 
 		Pickup.m_Type = Type;
 		if(Context.GetClientVersion() < VERSION_DDNET_WEAPON_SHIELDS)
@@ -1527,6 +1530,13 @@ void CGameContext::OnClientPrepareInput(int ClientId, void *pInput)
 
 	if(Server()->IsSixup(ClientId))
 		pPlayerInput->m_PlayerFlags = PlayerFlags_SevenToSix(pPlayerInput->m_PlayerFlags);
+
+	// 客户端可伪造任意目标坐标与武器序号，先钳制再进入预测与转发。
+	constexpr int MaxTarget = 1 << 20;
+	pPlayerInput->m_TargetX = std::clamp(pPlayerInput->m_TargetX, -MaxTarget, MaxTarget);
+	pPlayerInput->m_TargetY = std::clamp(pPlayerInput->m_TargetY, -MaxTarget, MaxTarget);
+	if(pPlayerInput->m_WantedWeapon < 0 || pPlayerInput->m_WantedWeapon > NUM_WEAPONS)
+		pPlayerInput->m_WantedWeapon = 0;
 }
 
 void CGameContext::OnClientDirectInput(int ClientId, const void *pInput)
@@ -1829,13 +1839,23 @@ void CGameContext::OnClientDrop(int ClientId, const char *pReason)
 	delete m_apPlayers[ClientId];
 	m_apPlayers[ClientId] = nullptr;
 
-	delete m_apSavedTeams[ClientId];
-	m_apSavedTeams[ClientId] = nullptr;
-
 	delete m_apSavedTees[ClientId];
 	m_apSavedTees[ClientId] = nullptr;
 
+	const int SavedTeam = m_aTeamMapping[ClientId];
 	m_aTeamMapping[ClientId] = -1;
+	// 同一队伍可能还有重载中的成员，只有最后一个成员离开时才删除队伍存档。
+	if(SavedTeam != -1)
+	{
+		bool TeamStillPending = false;
+		for(const int MappedTeam : m_aTeamMapping)
+			TeamStillPending |= MappedTeam == SavedTeam;
+		if(!TeamStillPending)
+		{
+			delete m_apSavedTeams[SavedTeam];
+			m_apSavedTeams[SavedTeam] = nullptr;
+		}
+	}
 
 	if(g_Config.m_SvTeam == SV_TEAM_FORCED_SOLO && PracticeByDefault())
 		m_pController->Teams().SetPractice(GetDDRaceTeam(ClientId), true);
@@ -3246,6 +3266,9 @@ void CGameContext::ConPause(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
 
+	// 地图配置可能在控制器就绪前执行 pause_game。
+	if(!pSelf->m_pController)
+		return;
 	pSelf->m_pController->SetGamePaused(!pSelf->m_pController->IsGamePaused());
 }
 
@@ -3359,6 +3382,9 @@ void CGameContext::ConSay(IConsole::IResult *pResult, void *pUserData)
 void CGameContext::ConSetTeam(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
+	// 地图配置可能在控制器就绪前执行 set_team。
+	if(!pSelf->m_pController)
+		return;
 	int Team = pResult->GetInteger(1);
 	if(!pSelf->m_pController->IsValidTeam(Team))
 	{

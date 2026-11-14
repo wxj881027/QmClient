@@ -5731,7 +5731,9 @@ void CClient::Con_Ping(IConsole::IResult *pResult, void *pUserData)
 void CClient::ConNetReset(IConsole::IResult *pResult, void *pUserData)
 {
 	CClient *pSelf = (CClient *)pUserData;
-	pSelf->ResetSocket();
+	// 启动阶段尚未记录本地起始时间，此时重建 socket 会打断端口配置。
+	if(pSelf->m_LocalStartTime > 0)
+		pSelf->ResetSocket();
 }
 
 void CClient::AutoScreenshot_Start()
@@ -7747,7 +7749,8 @@ void CClient::ConchainNetReset(IConsole::IResult *pResult, void *pUserData, ICon
 {
 	CClient *pSelf = (CClient *)pUserData;
 	pfnCallback(pResult, pCallbackUserData);
-	if(pResult->NumArguments())
+	// 启动阶段加载 cl_port 等配置时不能重建 socket。
+	if(pResult->NumArguments() && pSelf->m_LocalStartTime > 0)
 		pSelf->ResetSocket();
 }
 

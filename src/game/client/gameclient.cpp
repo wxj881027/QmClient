@@ -3011,6 +3011,11 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dumm
 				m_Chat.OnMessage(MsgId, pRawMsg, Conn);
 			}
 		}
+		else if(MsgId == NETMSGTYPE_SV_MODERATORALERT)
+		{
+			// 管理员警告可能只发给 dummy 连接，必须单独分发。
+			m_ImportantAlert.OnMessage(MsgId, pRawMsg);
+		}
 		return; // no need of all that stuff for the dummy
 	}
 

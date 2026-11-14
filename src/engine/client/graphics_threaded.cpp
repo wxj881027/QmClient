@@ -3437,7 +3437,8 @@ void CGraphics_Threaded::RenderQuadContainer(int ContainerIndex, int QuadOffset,
 	if(QuadDrawNum == -1)
 		QuadDrawNum = (int)Container.m_vQuads.size() - QuadOffset;
 
-	if((int)Container.m_vQuads.size() < QuadOffset + QuadDrawNum || QuadDrawNum == 0)
+	// 用减法比较，避免 QuadOffset + QuadDrawNum 在异常输入下溢出。
+	if(QuadDrawNum <= 0 || QuadOffset < 0 || (int)Container.m_vQuads.size() - QuadOffset < QuadDrawNum)
 		return;
 
 	if(IsQuadContainerBufferingEnabled())
@@ -3494,11 +3495,12 @@ void CGraphics_Threaded::RenderQuadContainerEx(int ContainerIndex, int QuadOffse
 
 	SQuadContainer &Container = m_vQuadContainers[ContainerIndex];
 
-	if((int)Container.m_vQuads.size() < QuadOffset + 1)
-		return;
-
 	if(QuadDrawNum == -1)
 		QuadDrawNum = (int)Container.m_vQuads.size() - QuadOffset;
+
+	// 用减法比较，避免 QuadOffset + QuadDrawNum 在异常输入下溢出。
+	if(QuadDrawNum <= 0 || QuadOffset < 0 || (int)Container.m_vQuads.size() - QuadOffset < QuadDrawNum)
+		return;
 
 	if(IsQuadContainerBufferingEnabled())
 	{

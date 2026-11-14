@@ -156,7 +156,8 @@ void CServerBan::ConBanExt(IConsole::IResult *pResult, void *pUser)
 	{
 		int ClientId = str_toint(pStr);
 		// 官方 f586be3e0：看不到真实 id 的旧客户端不能按 id 封禁
-		if(!pThis->Server()->ClientSupportsServerMaxClients(pResult->m_ClientId))
+		// 地图配置、econ 等来源没有真实客户端 ID，不能查询客户端能力。
+		if(pResult->m_ClientId >= 0 && !pThis->Server()->ClientSupportsServerMaxClients(pResult->m_ClientId))
 			pThis->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "net_ban", "ban error (use a more recent DDNet client)");
 		else if(ClientId < 0 || ClientId >= MAX_CLIENTS || pThis->Server()->m_aClients[ClientId].m_State == CServer::CClient::STATE_EMPTY)
 			pThis->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "net_ban", "ban error (invalid client id)");
@@ -1241,6 +1242,8 @@ int CServer::ClientRejoinCallback(int ClientId, void *pUser, bool Sixup, bool Va
 	// 官方 7131ad28b：槽位不在游戏中时按新连接处理
 	if(pThis->m_aClients[ClientId].m_State != CClient::STATE_INGAME)
 	{
+		// 先释放旧槽位状态，避免重连后残留上一次连接的名称、认证与持久数据。
+		DelClientCallback(ClientId, "reconnect", pUser);
 		if(VanillaAuth)
 			return NewClientNoAuthCallback(ClientId, pUser);
 		return NewClientCallback(ClientId, pUser, Sixup);
@@ -2271,16 +2274,23 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 
 			IntendedTick = std::max(IntendedTick, Tick() + 1);
 
-			CClient::CInput *pInput = &m_aClients[ClientId].m_aInputs[m_aClients[ClientId].m_CurrentInput];
-			pInput->m_GameTick = IntendedTick;
+			// 先解包到局部缓冲，解包失败时不污染输入环形缓冲。
+			int aInputData[MAX_INPUT_SIZE];
 			for(int i = 0; i < Size / (int)sizeof(int32_t); i++)
 			{
-				pInput->m_aData[i] = Unpacker.GetInt();
+				aInputData[i] = Unpacker.GetInt();
 			}
 			if(Unpacker.Error())
 			{
 				return;
 			}
+
+			CClient::CInput *pInput = &m_aClients[ClientId].m_aInputs[m_aClients[ClientId].m_CurrentInput];
+			pInput->m_GameTick = IntendedTick;
+			mem_copy(pInput->m_aData, aInputData, Size);
+
+			// 在转发 pre-input 之前钳制，保证其他客户端与本服务端使用同一份输入。
+			GameServer()->OnClientPrepareInput(ClientId, pInput->m_aData);
 
 			if(m_NetServer.IsKcpActive(ClientId) &&
 				OriginalIntendedTick == m_aClients[ClientId].m_LastKcpInputTick &&
@@ -2344,7 +2354,6 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 				}
 			}
 
-			GameServer()->OnClientPrepareInput(ClientId, pInput->m_aData);
 			mem_copy(m_aClients[ClientId].m_LatestInput.m_aData, pInput->m_aData, sizeof(m_aClients[ClientId].m_LatestInput.m_aData));
 
 			m_aClients[ClientId].m_CurrentInput++;
