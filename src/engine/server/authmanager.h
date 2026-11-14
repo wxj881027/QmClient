@@ -45,6 +45,9 @@ public:
 	// but not vice versa.
 	int Rank() const { return m_Rank; }
 
+	// admin 是权限最高的角色，拥有完整 rcon 权限。
+	bool IsAdmin() const { return m_Rank == RoleRank::ADMIN; }
+
 	CRconRole(const char *pName, int Rank) :
 		m_Rank(Rank)
 	{

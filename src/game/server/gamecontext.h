@@ -663,7 +663,8 @@ public:
 	void SendRecord(int ClientId);
 	void SendFinish(int ClientId, float Time, std::optional<float> PreviousBestTime);
 	void SendSaveCode(int Team, int TeamSize, int State, const char *pError, const char *pSaveRequester, const char *pServerName, const char *pGeneratedCode, const char *pCode);
-	void OnSetAuthed(int ClientId, int Level) override;
+	// pRole 为 nullptr 表示登出。
+	void OnSetAuthed(int ClientId, class CRconRole *pRole) override;
 	void ReinitPlayerMap(int ClientId, bool Timeout) override;
 	void OnClientRejoin(int ClientId) override;
 

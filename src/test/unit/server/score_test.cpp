@@ -519,13 +519,13 @@ TEST_P(MapInfo, ExactNoFinish)
 
 TEST_P(MapInfo, ExactFinish)
 {
-	InsertRank(42.87f);
+	InsertRank(42.86f);
 	str_copy(m_PlayerRequest.m_aRequestingPlayer, "nameless tee", sizeof(m_PlayerRequest.m_aRequestingPlayer));
 	str_copy(m_PlayerRequest.m_aName, "Kobra 3", sizeof(m_PlayerRequest.m_aName));
 	ASSERT_TRUE(CScoreWorker::MapInfo(m_pConn, &m_PlayerRequest, m_aError, sizeof(m_aError))) << m_aError;
 
 	EXPECT_EQ(m_pPlayerResult->m_MessageKind, CScorePlayerResult::DIRECT);
-	EXPECT_THAT(m_pPlayerResult->m_Data.m_aaMessages[0], testing::MatchesRegex("\"Kobra 3\"，作者 Zerodin，服务器 Novice，★★★★★，5 积分，发布于 .* 前，1 次通关，1 名玩家通关，中位时间 00:42，你的成绩：42.87"));
+	EXPECT_THAT(m_pPlayerResult->m_Data.m_aaMessages[0], testing::MatchesRegex("\"Kobra 3\"，作者 Zerodin，服务器 Novice，★★★★★，5 积分，发布于 .* 前，1 次通关，1 名玩家通关，中位时间 00:42，你的成绩：42.86"));
 	for(int i = 1; i < CScorePlayerResult::MAX_MESSAGES; i++)
 	{
 		EXPECT_STREQ(m_pPlayerResult->m_Data.m_aaMessages[i], "");

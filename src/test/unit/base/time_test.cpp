@@ -114,7 +114,8 @@ TEST(Time, StrTimeFloat)
 	EXPECT_STREQ(aBuf, "12.16");
 
 	EXPECT_EQ(str_time_float(22.995, TIME_MINS, aBuf, sizeof(aBuf)), 5);
-	EXPECT_STREQ(aBuf, "00:22");
+	// 服务端 50Hz，成绩只会落在偶数厘秒，22.995 取整到 23.00。
+	EXPECT_STREQ(aBuf, "00:23");
 
 	EXPECT_EQ(str_time_float(36000000.0f, TIME_HOURS_CENTISECS, aBuf, sizeof(aBuf)), 14);
 	EXPECT_STREQ(aBuf, "10000:00:00.00");

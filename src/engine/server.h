@@ -469,7 +469,7 @@ public:
 	virtual void ReinitPlayerMap(int ClientId, bool Timeout) = 0;
 	// 官方 7131ad28b：连接重连完成，槽位状态未变
 	virtual void OnClientRejoin(int ClientId) = 0;
-	virtual void OnSetAuthed(int ClientId, int Level) = 0;
+	virtual void OnSetAuthed(int ClientId, class CRconRole *pRole) = 0;
 	virtual bool PlayerExists(int ClientId) const = 0;
 
 	virtual void TeehistorianRecordAntibot(const void *pData, int DataSize) = 0;
