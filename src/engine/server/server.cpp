@@ -237,7 +237,7 @@ void CServer::CClient::Reset()
 	m_Flags = 0;
 	m_RedirectDropTime = 0;
 	// 官方 b946fa9a2：换图后也要清掉重连标记，不能只在进游戏和掉线时清
-	m_Rejoining = false;
+	m_IngameBeforeRejoin = false;
 	m_KcpCapable = false;
 	m_KcpNegotiated = false;
 	m_KcpConv = 0;
@@ -635,7 +635,7 @@ int CServer::Init()
 		Client.m_Latency = 0;
 		Client.m_Sixup = false;
 		Client.m_RedirectDropTime = 0;
-		Client.m_Rejoining = false;
+		Client.m_IngameBeforeRejoin = false;
 	}
 
 	m_CurrentGameTick = MIN_TICK;
@@ -730,7 +730,7 @@ bool CServer::GetClientInfo(int ClientId, CClientInfo *pInfo) const
 	dbg_assert(ClientId >= 0 && ClientId < MAX_CLIENTS, "Invalid ClientId: %d", ClientId);
 	dbg_assert(pInfo != nullptr, "pInfo cannot be null");
 
-	if(m_aClients[ClientId].m_State == CClient::STATE_INGAME)
+	if(m_aClients[ClientId].IsKnownToGame())
 	{
 		pInfo->m_pName = m_aClients[ClientId].m_aName;
 		pInfo->m_Latency = m_aClients[ClientId].m_Latency;
@@ -755,7 +755,7 @@ void CServer::SetClientDDNetVersion(int ClientId, int DDNetVersion)
 {
 	dbg_assert(ClientId >= 0 && ClientId < MAX_CLIENTS, "Invalid ClientId: %d", ClientId);
 
-	if(m_aClients[ClientId].m_State == CClient::STATE_INGAME)
+	if(m_aClients[ClientId].IsKnownToGame())
 	{
 		m_aClients[ClientId].m_DDNetVersion = DDNetVersion;
 		m_aClients[ClientId].m_DDNetVersionSettled = true;
@@ -788,7 +788,7 @@ const char *CServer::ClientName(int ClientId) const
 {
 	if(ClientId < 0 || ClientId >= MAX_CLIENTS || m_aClients[ClientId].m_State == CServer::CClient::STATE_EMPTY)
 		return "(invalid)";
-	if(m_aClients[ClientId].m_State == CServer::CClient::STATE_INGAME || m_aClients[ClientId].m_State == CServer::CClient::STATE_REDIRECTED)
+	if(m_aClients[ClientId].IsKnownToGame() || m_aClients[ClientId].m_State == CServer::CClient::STATE_REDIRECTED)
 		return m_aClients[ClientId].m_aName;
 	else
 		return "(connecting)";
@@ -798,7 +798,7 @@ const char *CServer::ClientClan(int ClientId) const
 {
 	if(ClientId < 0 || ClientId >= MAX_CLIENTS || m_aClients[ClientId].m_State == CServer::CClient::STATE_EMPTY)
 		return "";
-	if(m_aClients[ClientId].m_State == CServer::CClient::STATE_INGAME)
+	if(m_aClients[ClientId].IsKnownToGame())
 		return m_aClients[ClientId].m_aClan;
 	else
 		return "";
@@ -808,7 +808,7 @@ int CServer::ClientCountry(int ClientId) const
 {
 	if(ClientId < 0 || ClientId >= MAX_CLIENTS || m_aClients[ClientId].m_State == CServer::CClient::STATE_EMPTY)
 		return -1;
-	if(m_aClients[ClientId].m_State == CServer::CClient::STATE_INGAME)
+	if(m_aClients[ClientId].IsKnownToGame())
 		return m_aClients[ClientId].m_Country;
 	else
 		return -1;
@@ -821,7 +821,7 @@ bool CServer::ClientSlotEmpty(int ClientId) const
 
 bool CServer::ClientIngame(int ClientId) const
 {
-	return ClientId >= 0 && ClientId < MAX_CLIENTS && m_aClients[ClientId].m_State == CServer::CClient::STATE_INGAME;
+	return ClientId >= 0 && ClientId < MAX_CLIENTS && m_aClients[ClientId].IsKnownToGame();
 }
 
 int CServer::Port() const
@@ -1085,7 +1085,7 @@ void CServer::DoSnapshot()
 	for(int i = 0; i < MaxClients(); i++)
 	{
 		// client must be ingame to receive snapshots
-		if(m_aClients[i].m_State != CClient::STATE_INGAME || m_aClients[i].m_Rejoining)
+		if(m_aClients[i].m_State != CClient::STATE_INGAME)
 			continue;
 
 		// 官方 1a1e165e7：不再用“是否已确认 DDNet 版本”挡住快照，
@@ -1241,7 +1241,7 @@ int CServer::ClientRejoinCallback(int ClientId, void *pUser, bool Sixup, bool Va
 	CServer *pThis = (CServer *)pUser;
 
 	// 官方 7131ad28b：槽位不在游戏中时按新连接处理
-	if(pThis->m_aClients[ClientId].m_State != CClient::STATE_INGAME)
+	if(!pThis->m_aClients[ClientId].IsKnownToGame())
 	{
 		// 先释放旧槽位状态，避免重连后残留上一次连接的名称、认证与持久数据。
 		DelClientCallback(ClientId, "reconnect", pUser);
@@ -1259,8 +1259,9 @@ int CServer::ClientRejoinCallback(int ClientId, void *pUser, bool Sixup, bool Va
 
 	pThis->m_NetServer.DeactivateKcp(ClientId);
 	pThis->m_aClients[ClientId].Reset();
-	// m_Rejoining 让客户端在不改变槽位状态的情况下回到连接中
-	pThis->m_aClients[ClientId].m_Rejoining = true;
+	// 官方 12841：保留游戏槽位，但连接状态退回握手流程
+	pThis->m_aClients[ClientId].m_IngameBeforeRejoin = true;
+	pThis->m_aClients[ClientId].m_State = CClient::STATE_CONNECTING;
 	pThis->m_aClients[ClientId].m_Sixup = Sixup;
 
 	pThis->GameServer()->TeehistorianRecordPlayerRejoin(ClientId);
@@ -1419,7 +1420,7 @@ int CServer::DelClientCallback(int ClientId, const char *pReason, void *pUser)
 	pThis->m_aClients[ClientId].m_Snapshots.PurgeAll();
 	pThis->m_aClients[ClientId].m_Sixup = false;
 	pThis->m_aClients[ClientId].m_RedirectDropTime = 0;
-	pThis->m_aClients[ClientId].m_Rejoining = false;
+	pThis->m_aClients[ClientId].m_IngameBeforeRejoin = false;
 	pThis->m_aClients[ClientId].m_HasPersistentData = false;
 	pThis->SendClientBrandsToKnownClients();
 
@@ -2020,7 +2021,7 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 		else if(Msg == NETMSG_CLIENTVER)
 		{
 			// 官方 7131ad28b：重连中的连接也要接受版本包，但不改变槽位状态
-			if(m_aClients[ClientId].m_State == CClient::STATE_PREAUTH || m_aClients[ClientId].m_Rejoining)
+			if(m_aClients[ClientId].m_State == CClient::STATE_PREAUTH)
 			{
 				CUuid *pConnectionId = (CUuid *)Unpacker.GetRaw(sizeof(*pConnectionId));
 				int DDNetVersion = Unpacker.GetInt();
@@ -2034,17 +2035,14 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 				str_copy(m_aClients[ClientId].m_aDDNetVersionStr, pDDNetVersionStr);
 				m_aClients[ClientId].m_DDNetVersionSettled = true;
 				m_aClients[ClientId].m_GotDDNetVersionPacket = true;
-				if(!m_aClients[ClientId].m_Rejoining)
-				{
-					m_aClients[ClientId].m_State = CClient::STATE_AUTH;
-				}
+				m_aClients[ClientId].m_State = CClient::STATE_AUTH;
 				UpdateClientBrand(ClientId, pDDNetVersionStr);
 				SendCapabilities(ClientId);
 			}
 		}
 		else if(Msg == NETMSG_INFO)
 		{
-			if((m_aClients[ClientId].m_State == CClient::STATE_PREAUTH || m_aClients[ClientId].m_State == CClient::STATE_AUTH || m_aClients[ClientId].m_Rejoining))
+			if(m_aClients[ClientId].m_State == CClient::STATE_PREAUTH || m_aClients[ClientId].m_State == CClient::STATE_AUTH)
 			{
 				const char *pVersion = Unpacker.GetString(CUnpacker::SANITIZE_CC);
 				if(Unpacker.Error())
@@ -2090,9 +2088,9 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 
 				SendRconType(ClientId, m_AuthManager.NumNonDefaultKeys() > 0);
 				SendCapabilities(ClientId);
-				if(!m_aClients[ClientId].m_Rejoining)
+				m_aClients[ClientId].m_State = CClient::STATE_CONNECTING;
+				if(!m_aClients[ClientId].m_IngameBeforeRejoin)
 				{
-					m_aClients[ClientId].m_State = CClient::STATE_CONNECTING;
 					SendMap(ClientId);
 				}
 			}
@@ -2138,41 +2136,35 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 		}
 		else if(Msg == NETMSG_READY)
 		{
-			if(m_aClients[ClientId].m_State == CClient::STATE_CONNECTING)
+			if(m_aClients[ClientId].m_State != CClient::STATE_CONNECTING)
+				return;
+
+			char aBuf[256];
+			str_format(aBuf, sizeof(aBuf), "player is ready. ClientId=%d addr=<{%s}> secure=%s", ClientId, ClientAddrString(ClientId, true), m_NetServer.HasSecurityToken(ClientId) ? "yes" : "no");
+			Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "server", aBuf);
+
+			void *pPersistentData = nullptr;
+			if(m_aClients[ClientId].m_HasPersistentData)
 			{
-				char aBuf[256];
-				str_format(aBuf, sizeof(aBuf), "player is ready. ClientId=%d addr=<{%s}> secure=%s", ClientId, ClientAddrString(ClientId, true), m_NetServer.HasSecurityToken(ClientId) ? "yes" : "no");
-				Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "server", aBuf);
-
-				void *pPersistentData = nullptr;
-				if(m_aClients[ClientId].m_HasPersistentData)
-				{
-					pPersistentData = m_aClients[ClientId].m_pPersistentData;
-					m_aClients[ClientId].m_HasPersistentData = false;
-				}
-				m_aClients[ClientId].m_State = CClient::STATE_READY;
-				GameServer()->OnClientConnected(ClientId, pPersistentData);
+				pPersistentData = m_aClients[ClientId].m_pPersistentData;
+				m_aClients[ClientId].m_HasPersistentData = false;
 			}
-
+			m_aClients[ClientId].m_State = CClient::STATE_READY;
 			SendConnectionReady(ClientId);
 
 			// 官方 7131ad28b：重连中的连接需要 ReadyToEnter 才能回到游戏
-			if(m_aClients[ClientId].m_Rejoining)
+			if(m_aClients[ClientId].m_IngameBeforeRejoin)
 			{
 				CNetMsg_Sv_ReadyToEnter Msg;
 				SendPackMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_FLUSH, ClientId);
 			}
+			else
+			{
+				GameServer()->OnClientConnected(ClientId, pPersistentData);
+			}
 		}
 		else if(Msg == NETMSG_ENTERGAME)
 		{
-			// 官方 7131ad28b：重连完成，槽位状态不变，交给游戏层恢复
-			if(m_aClients[ClientId].m_Rejoining)
-			{
-				m_aClients[ClientId].m_Rejoining = false;
-				GameServer()->OnClientRejoin(ClientId);
-				return;
-			}
-
 			if(m_aClients[ClientId].m_State >= CClient::STATE_READY)
 			{
 				if(m_aClients[ClientId].m_KcpNegotiated && !m_NetServer.IsKcpActive(ClientId))
@@ -2206,7 +2198,16 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 					GetServerInfoSixup(&ServerInfoMessage, false);
 					SendMsg(&ServerInfoMessage, MSGFLAG_VITAL | MSGFLAG_FLUSH, ClientId);
 				}
-				GameServer()->OnClientEnter(ClientId);
+				// 官方 7131ad28b / 12841：重连完成时槽位回到游戏，由游戏层恢复状态
+				if(m_aClients[ClientId].m_IngameBeforeRejoin)
+				{
+					m_aClients[ClientId].m_IngameBeforeRejoin = false;
+					GameServer()->OnClientRejoin(ClientId);
+				}
+				else
+				{
+					GameServer()->OnClientEnter(ClientId);
+				}
 				SendClientBrandsToKnownClients();
 			}
 		}
@@ -3698,7 +3699,7 @@ int CServer::Run()
 					// ask the game for the data it wants to persist past a map change
 					for(int i = 0; i < MAX_CLIENTS; i++)
 					{
-						if(m_aClients[i].m_State == CClient::STATE_INGAME)
+						if(m_aClients[i].IsKnownToGame())
 						{
 							m_aClients[i].m_HasPersistentData = GameServer()->OnClientDataPersist(i, m_aClients[i].m_pPersistentData);
 						}
@@ -4018,7 +4019,7 @@ void CServer::ConStatus(IConsole::IResult *pResult, void *pUser)
 		if(!str_utf8_find_nocase(pThis->m_aClients[i].m_aName, pName))
 			continue;
 
-		if(pThis->m_aClients[i].m_State == CClient::STATE_INGAME)
+		if(pThis->m_aClients[i].IsKnownToGame())
 		{
 			char aDnsblStr[64];
 			aDnsblStr[0] = '\0';

@@ -41,12 +41,15 @@ TEST(NetProtocolContract, VanillaAntispoofBoundsPreconnectionChunk)
 
 TEST(NetProtocolContract, RejoiningClientsAreHeldOutsideGameState)
 {
-	// 官方 7131ad28b/b946fa9a2：重连槽位不发快照，标记在重连、掉线与换图时清理
-	const std::string Header = ReadTestSourceFile("src/engine/shared/network.h");
-	EXPECT_NE(Header.find("typedef int (*NETFUNC_CLIENTREJOIN)(int ClientId, void *pUser, bool Sixup, bool VanillaAuth);"), std::string::npos);
+	// 官方 7131ad28b/b946fa9a2/12841：重连时槽位退回握手状态，用独立标记保留游戏身份
+	const std::string ServerHeader = ReadTestSourceFile("src/engine/server/server.h");
+	EXPECT_NE(ServerHeader.find("bool IsKnownToGame() const { return m_State == STATE_INGAME || m_IngameBeforeRejoin; }"), std::string::npos);
+	EXPECT_NE(ServerHeader.find("m_IngameBeforeRejoin"), std::string::npos);
+	EXPECT_EQ(ServerHeader.find("m_Rejoining"), std::string::npos);
 	const std::string Server = ReadTestSourceFile("src/engine/server/server.cpp");
-	EXPECT_NE(Server.find("m_aClients[i].m_State != CClient::STATE_INGAME || m_aClients[i].m_Rejoining"), std::string::npos);
-	EXPECT_NE(Server.find("m_Rejoining = true;"), std::string::npos);
-	EXPECT_NE(Server.find("m_Rejoining = false;"), std::string::npos);
+	EXPECT_NE(Server.find("m_aClients[i].m_State != CClient::STATE_INGAME)"), std::string::npos);
+	EXPECT_NE(Server.find("m_IngameBeforeRejoin = true;"), std::string::npos);
+	EXPECT_NE(Server.find("m_IngameBeforeRejoin = false;"), std::string::npos);
+	EXPECT_EQ(Server.find("m_Rejoining"), std::string::npos);
 	EXPECT_NE(Server.find("GameServer()->OnClientRejoin(ClientId);"), std::string::npos);
 }

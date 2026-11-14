@@ -5513,6 +5513,7 @@ void CGameContext::OnClientRejoin(int ClientId)
 
 	ReinitPlayerMap(ClientId, false);
 	SendStartMessages(ClientId);
+	SendSettings(ClientId);
 
 	// send clear vote options
 	CNetMsg_Sv_VoteClearOptions ClearMsg;

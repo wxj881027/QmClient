@@ -148,6 +148,10 @@ public:
 		int m_Latency;
 		int m_SnapRate;
 
+		// 重连期间槽位已存在游戏身份，但连接状态已回到握手流程
+		bool m_IngameBeforeRejoin;
+		bool IsKnownToGame() const { return m_State == STATE_INGAME || m_IngameBeforeRejoin; }
+
 		double m_Traffic;
 		int64_t m_TrafficSince;
 
@@ -204,8 +208,6 @@ public:
 		char m_aDDNetVersionStr[64];
 		CUuid m_ConnectionId;
 		int64_t m_RedirectDropTime;
-		// 官方 7131ad28b：正在重连、暂不改变槽位状态
-		bool m_Rejoining;
 		bool m_KcpCapable;
 		bool m_KcpNegotiated;
 		int m_KcpConv;
