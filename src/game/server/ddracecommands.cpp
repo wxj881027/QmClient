@@ -439,6 +439,15 @@ void CGameContext::Teleport(CCharacter *pChr, vec2 Pos)
 	pChr->m_DDRaceState = ERaceState::CHEATED;
 }
 
+void CGameContext::PracticeTeleport(CCharacter *pChr, vec2 Pos)
+{
+	Teleport(pChr, Pos);
+	pChr->ResetJumps();
+	pChr->Unfreeze();
+	pChr->ResetVelocity();
+	pChr->GetPlayer()->m_LastTeleTee.Save(pChr);
+}
+
 void CGameContext::ConToTeleporter(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
