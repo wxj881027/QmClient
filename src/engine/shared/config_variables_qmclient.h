@@ -1018,6 +1018,15 @@ MACRO_CONFIG_INT(QmSelfKillEnabled, qm_self_kill_enabled, 0, 0, 1, CFGFLAG_CLIEN
 // 自动开启只改本局运行时状态，不写回 qm_self_kill_enabled。
 MACRO_CONFIG_INT(QmSelfKillAutoDelay, qm_self_kill_auto_delay, 0, 0, 60, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-enable self-kill protection this many minutes after joining a game (0 = never)")
 
+// 快速练习：主世界影子是分支世界之外的另一条时间线，服务器正在推进的真实角色
+// 会停在开练习那一刻并保持可见，容易和练习中的自己混淆。这两个开关只作用于
+// 参与者自己的影子；其他玩家的绘制仍由 cl_show_others 统一决定。
+MACRO_CONFIG_INT(QmFastPracticeShowMainWorld, qm_fast_practice_show_main_world, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show your own main-world ghost during fast practice")
+// 主世界影子的不透明度（百分比）。开启时不透明度越高越显眼，0 等同于隐藏。
+MACRO_CONFIG_INT(QmFastPracticeMainWorldAlpha, qm_fast_practice_main_world_alpha, 28, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Main-world ghost opacity during fast practice (%)")
+// 练习计时：分支世界推进的 tick 累计，/r、传送与重开后归零。
+MACRO_CONFIG_INT(QmFastPracticeTimer, qm_fast_practice_timer, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show the practice run timer in the HUD")
+
 // 圆角曲线档位：0 原圆弧（旧外观，不扩展），1 超椭圆，2 五次贝塞尔，3 圆锥贝塞尔。
 // 超椭圆与五次贝塞尔的端点曲率为 0，是真正的连续曲率；圆锥贝塞尔的端点曲率恒为
 // 1/(2W²E)，只能把接缝跳变压小。连续曲率靠沿边拉长圆角补偿曲率峰值，拉长量受

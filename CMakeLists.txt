@@ -3363,6 +3363,7 @@ if(CLIENT)
     QmUi/cards/QmSearchAnswerCard.h
     QmUi/cards/QmCardCatalogBind.cpp
     QmUi/cards/QmCardCatalogSelfKillProtection.cpp
+    QmUi/cards/QmCardCatalogFastPractice.cpp
     QmUi/cards/QmCardCatalogFunction.cpp
     QmUi/cards/QmWordFilterFileCard.cpp
     QmUi/cards/QmCardCatalogGeneral.cpp

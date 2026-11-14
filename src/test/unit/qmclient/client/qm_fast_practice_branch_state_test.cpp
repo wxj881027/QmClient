@@ -244,3 +244,74 @@ TEST(QmFastPracticeRecordFilter, DropsEventTypesTheTimelineReaderWouldReject)
 	EXPECT_FALSE(QmShouldRecordPracticeEvent(NETEVENTTYPE_SPAWN, 0, true, true, true, true, true, true));
 	EXPECT_FALSE(QmShouldRecordPracticeEvent(9999, 0, true, true, true, true, true, true));
 }
+
+TEST(QmFastPracticeControlledTee, MainControlResolvesTheMainParticipant)
+{
+	// 本体在 conn0、分身在 conn1；控制本体时命令与检查点落在本体上。
+	const int aLocalIds[NUM_DUMMIES] = {3, 4};
+	EXPECT_EQ(QmResolveControlledPracticeClientId(aLocalIds, false, 3, 4), 3);
+}
+
+TEST(QmFastPracticeControlledTee, DummyControlResolvesTheDummyParticipant)
+{
+	// 切到 cl_dummy 后按键属于分身连接：检查点与 /r 必须跟着换人。
+	const int aLocalIds[NUM_DUMMIES] = {3, 4};
+	EXPECT_EQ(QmResolveControlledPracticeClientId(aLocalIds, true, 3, 4), 4);
+}
+
+TEST(QmFastPracticeControlledTee, DummyControlWithoutADummyFallsBackToMain)
+{
+	// 分身没接入（id -1）时控制槽位不是参与者，退回另一条参与者连接，
+	// 否则命令会静默失效。
+	const int aLocalIds[NUM_DUMMIES] = {3, -1};
+	EXPECT_EQ(QmResolveControlledPracticeClientId(aLocalIds, true, 3, -1), 3);
+}
+
+TEST(QmFastPracticeControlledTee, SpectatingResolvesToNoParticipant)
+{
+	// 旁观时两条本地连接都不是参与者：返回 -1，由调用方决定是否回退。
+	const int aLocalIds[NUM_DUMMIES] = {9, 10};
+	EXPECT_EQ(QmResolveControlledPracticeClientId(aLocalIds, false, 3, 4), -1);
+}
+
+TEST(QmFastPracticeControlledTee, OutOfRangeSlotsAreNeverParticipants)
+{
+	// 服务器 id 越界与 -1 一样不参与，不能把命令发往不存在的连接。
+	const int aLocalIds[NUM_DUMMIES] = {MAX_CLIENTS, -1};
+	EXPECT_EQ(QmResolveControlledPracticeClientId(aLocalIds, false, 3, 4), -1);
+	EXPECT_FALSE(QmIsPracticeParticipant(-1, 3, 4));
+	EXPECT_FALSE(QmIsPracticeParticipant(MAX_CLIENTS, 3, 4));
+}
+
+TEST(QmFastPracticeDeathTile, FreshDeathPlaysFeedbackAndReturnsToTheSavedPoint)
+{
+	// 与 /r 一致：踩到死亡 tile 的那一刻播一次死亡效果并回到保存点。
+	const SQmPracticeDeathTileDecision Decision = QmEvaluatePracticeDeathTile(true, false, true);
+	EXPECT_TRUE(Decision.m_PlayFeedback);
+	EXPECT_TRUE(Decision.m_ReturnToSavedPoint);
+}
+
+TEST(QmFastPracticeDeathTile, StayingInDeathDoesNotRetrigger)
+{
+	// 停在死亡 tile 上时预测每 tick 都报告“在死亡区域”，不能每 tick 都传送。
+	const SQmPracticeDeathTileDecision Decision = QmEvaluatePracticeDeathTile(false, false, true);
+	EXPECT_FALSE(Decision.m_PlayFeedback);
+	EXPECT_FALSE(Decision.m_ReturnToSavedPoint);
+}
+
+TEST(QmFastPracticeDeathTile, InvincibleOrSuperIgnoresDeathTilesLikeTheServer)
+{
+	// 服务端 HandleSkippableTiles 在 super / invincible 时完全不处理死亡 tile；
+	// 客户端分支世界必须保持同一行为，否则会凭空传送。
+	const SQmPracticeDeathTileDecision Decision = QmEvaluatePracticeDeathTile(true, true, true);
+	EXPECT_FALSE(Decision.m_PlayFeedback);
+	EXPECT_FALSE(Decision.m_ReturnToSavedPoint);
+}
+
+TEST(QmFastPracticeDeathTile, NoSavedPointStillPlaysFeedbackWithoutTeleporting)
+{
+	// 首次死亡且还没有救援点：只播反馈，不做位置突变，也不能假装回退成功。
+	const SQmPracticeDeathTileDecision Decision = QmEvaluatePracticeDeathTile(true, false, false);
+	EXPECT_TRUE(Decision.m_PlayFeedback);
+	EXPECT_FALSE(Decision.m_ReturnToSavedPoint);
+}

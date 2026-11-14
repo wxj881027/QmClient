@@ -38,6 +38,7 @@ namespace qm_card_catalog
 			"qm:better_scoreboard",
 			"qm:mini_features",
 			"qm:self_kill_protection",
+			"qm:fast_practice",
 			"qm:ime",
 			"qm:jump_hint",
 			"qm:weapon_trajectory",

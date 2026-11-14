@@ -551,6 +551,12 @@ namespace
 			Localizable("Fading death and freeze tiles helps you see tees and weapons behind them, but the exact tile edge gets harder to judge."),
 		},
 		{
+			"qm:fast_practice",
+			Localizable("Runs your own copy of the map while the server keeps your real Tee where you entered, with a run timer and keys for the practice commands."),
+			Localizable("Turn off \"Show main-world ghost\" to hide the server-side Tee, set its opacity while it stays on, enable the timer, and bind the command rows you use."),
+			Localizable("Only your copy of the world is simulated: other players still come from the server, so switches you hit do not affect them."),
+		},
+		{
 			"qm:focus_mode",
 			Localizable("A calm-play mode that hides the HUD, names, effects, chat and sounds you pick, so only the game stays on screen."),
 			Localizable("Turn on \"Enable Zen mode\", pick what to hide under \"Interface\", \"Players\", \"Visuals\", \"Audio\" and \"Chat\", then set the \"Zen mode key\" for quick switching."),

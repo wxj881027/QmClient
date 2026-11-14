@@ -11228,6 +11228,9 @@ Position jump tip
 Position:
 == 坐标
 
+Practice a map privately, hide the main-world ghost, show a run timer and bind practice commands
+== 私下练习整张地图：可隐藏主世界影子、显示本次用时，并为练习命令绑定快捷键。
+
 Practice
 == 练习
 

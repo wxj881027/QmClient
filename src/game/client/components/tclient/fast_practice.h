@@ -58,6 +58,9 @@ public:
 	int CurrentPracticeDummyId() const;
 	bool IsPracticeDummy(int ClientId) const;
 	int PracticeDummyId() const;
+	// 当前这段练习用时（百分之一秒）：只累计分支世界真正推进的 tick，
+	// 位置突变（/r、传送、重开、死亡回退）后从零开始。
+	int PracticeRunCentiseconds() const;
 	struct SPracticeTileFeedbackDecision
 	{
 		bool m_RecordTeleport = false;
@@ -130,6 +133,7 @@ private:
 
 	bool m_Enabled = false;
 	bool m_RequireDummy = false;
+	int m_PracticeRunTicks = 0;
 	// 启用时本体所在连接：服务器重进换 id 后，用它把参与者重绑回同一条连接。
 	int m_EnableLocalConn = -1;
 	int m_EnableLocalClientId = -1;

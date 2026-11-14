@@ -3436,6 +3436,8 @@ private:
 	void RenderQmFunctionEmoticonsContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth);
 	// 自杀保护卡的内容渲染：自 MiniFeatures 杂烩卡迁出，独立成 qm:self_kill_protection 卡。
 	void RenderQmSelfKillProtectionContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
+	// 快速练习卡：主世界影子开关/透明度、HUD 计时开关与快捷菜单条目的绑定行。
+	void RenderQmFastPracticeContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	// 灵动岛倒计时位置开关（卡片目录的桥接入口按本地签名调用）。
 	bool ToggleQmHudCountdownLocation(CUIRect &Content, float LineHeight, float LineSpacing, const void *pId, int *pValue);
 	// 歌词卡的内容渲染（音乐 Hook 开关 + 歌词开关；Hook 开关改为遍历 QmMusicHookRegistry）。

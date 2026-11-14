@@ -2482,6 +2482,16 @@ void CHud::RenderTextInfo()
 		const float Line2X = m_Width / 2.0f - TextRender()->TextWidth(Line2Size, Localize(pLine2), -1, -1.0f) / 2.0f;
 		TextRender()->Text(Line1X, 34.0f, Line1Size, Localize(pLine1), -1.0f);
 		TextRender()->Text(Line2X, 45.0f, Line2Size, Localize(pLine2), -1.0f);
+		// 计时只跟着分支世界推进的 tick 走，不走墙钟：位置突变（/r、传送、重开、
+		// 死亡回退）后归零，玩家看到的是“这一段跑到这里”的用时。
+		if(g_Config.m_QmFastPracticeTimer)
+		{
+			char aTime[32];
+			str_time(GameClient()->m_FastPractice.PracticeRunCentiseconds(), TIME_MINS_CENTISECS, aTime, sizeof(aTime));
+			const float TimeSize = 10.0f;
+			const float TimeX = m_Width / 2.0f - TextRender()->TextWidth(TimeSize, aTime, -1, -1.0f) / 2.0f;
+			TextRender()->Text(TimeX, 56.0f, TimeSize, aTime, -1.0f);
+		}
 	}
 
 	if(g_Config.m_QmMiniDebug)

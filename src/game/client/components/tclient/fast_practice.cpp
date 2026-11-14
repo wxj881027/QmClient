@@ -273,6 +273,7 @@ void CFastPractice::ResetPracticeState()
 {
 	m_Enabled = false;
 	m_RequireDummy = false;
+	m_PracticeRunTicks = 0;
 	m_EnableLocalConn = -1;
 	m_EnableLocalClientId = -1;
 	m_EnableDummyClientId = -1;
@@ -401,23 +402,9 @@ int CFastPractice::CurrentLocalPracticeId() const
 	if(!m_Enabled)
 		return -1;
 
-	// Use the currently controlled connection so switching cl_dummy swaps control.
-	const int ActiveConn = g_Config.m_ClDummy ? IClient::CONN_DUMMY : IClient::CONN_MAIN;
-	const int ActiveClientId = GameClient()->m_aLocalIds[ActiveConn];
-	if(ActiveClientId >= 0 && ActiveClientId < MAX_CLIENTS &&
-		(ActiveClientId == m_EnableLocalClientId || ActiveClientId == m_EnableDummyClientId))
-	{
-		return ActiveClientId;
-	}
-
-	const int InactiveClientId = GameClient()->m_aLocalIds[ActiveConn ^ 1];
-	if(InactiveClientId >= 0 && InactiveClientId < MAX_CLIENTS &&
-		(InactiveClientId == m_EnableLocalClientId || InactiveClientId == m_EnableDummyClientId))
-	{
-		return InactiveClientId;
-	}
-
-	return -1;
+	// 当前控制的连接优先，切换 cl_dummy 后命令与检查点跟着换人。
+	return QmResolveControlledPracticeClientId(GameClient()->m_aLocalIds, g_Config.m_ClDummy != 0,
+		m_EnableLocalClientId, m_EnableDummyClientId);
 }
 
 bool CFastPractice::ResolvePracticeRoles(int &LocalClientId, int &DummyClientId) const
@@ -507,6 +494,12 @@ int CFastPractice::PracticeDummyId() const
 bool CFastPractice::IsPracticeDummy(int ClientId) const
 {
 	return ClientId >= 0 && ClientId == CurrentPracticeDummyId();
+}
+
+int CFastPractice::PracticeRunCentiseconds() const
+{
+	const int TickSpeed = std::max(Client()->GameTickSpeed(), 1);
+	return (int)((int64_t)m_PracticeRunTicks * 100 / TickSpeed);
 }
 
 bool CFastPractice::IsPracticeServerPauseActive() const
@@ -1091,6 +1084,7 @@ void CFastPractice::Enable(bool PreserveHeldInput)
 		PreserveCurrentPracticeInputFilterStates();
 	ReleaseBufferedActionInputState();
 	m_Enabled = true;
+	m_PracticeRunTicks = 0;
 	m_PracticeBaseWorld.m_GameTick = Client()->PredGameTick(g_Config.m_ClDummy);
 	// 录制是全手动的：进入练习不再自动开录，由“开始录制”按键启动轨迹。
 	m_Recorder.Reset();
@@ -1323,6 +1317,8 @@ void CFastPractice::ResetPracticeToAnchor()
 
 void CFastPractice::ResetPracticeTimelineState()
 {
+	// 时间线整条换掉：救援点、/lasttp、计时全部从零开始。
+	m_PracticeRunTicks = 0;
 	for(auto &State : m_aPracticeCommandState)
 	{
 		// 救援模式是用户偏好，重开后保留；其余记录都指向旧时间线，必须清空。
@@ -1436,6 +1432,9 @@ void CFastPractice::RestorePracticeCheckpoint()
 
 void CFastPractice::PublishPracticeWorldState()
 {
+	// 调用方要么整条时间线重开（/kill、/restart），要么把人挪回检查点：
+	// 两种都是新的一段尝试，计时从零开始。
+	m_PracticeRunTicks = 0;
 	ResetAttackTickHistory();
 	if(CCharacter *pMain = m_PracticeBaseWorld.GetCharacterById(m_EnableLocalClientId))
 		TrackSafeRescuePosition(m_EnableLocalClientId, pMain);
@@ -1511,27 +1510,64 @@ void CFastPractice::TrackPracticeTileFeedback(int ClientId, CCharacter *pChar, c
 	if(ClientId < 0 || ClientId >= MAX_CLIENTS || !pChar)
 		return;
 
-	const vec2 BeforeTickPos = BeforePos;
 	const vec2 AfterPos = pChar->Core()->m_Pos;
-	const bool PathContainsTeleport = PracticePathContainsTeleport(Collision(), BeforePos, AfterPos);
-	const bool WasInDeath = IsCharacterTouchingDeathTile(Collision(), BeforeTickPos, pChar->GetProximityRadius());
+	const float Moved = distance(BeforePos, AfterPos);
+	// 传送 tile 一定在同一 tick 内把角色挪出至少一格；普通移动达不到这个位移。
+	// 用阈值挡掉每 tick 一次的 GetMapIndices 线段扫描，只给真正的瞬移付代价。
+	constexpr float TELEPORT_MIN_DISTANCE = 32.0f;
+	const bool PathContainsTeleport = Moved >= TELEPORT_MIN_DISTANCE &&
+					  PracticePathContainsTeleport(Collision(), BeforePos, AfterPos);
+	const bool WasInDeath = IsCharacterTouchingDeathTile(Collision(), BeforePos, pChar->GetProximityRadius());
 	const bool IsInDeath = IsCharacterTouchingDeathTile(Collision(), AfterPos, pChar->GetProximityRadius());
-	const SPracticeTileFeedbackDecision FeedbackDecision = EvaluatePracticeTileFeedback(PathContainsTeleport, WasInDeath, IsInDeath, distance(BeforePos, AfterPos));
+	const SPracticeTileFeedbackDecision FeedbackDecision = EvaluatePracticeTileFeedback(PathContainsTeleport, WasInDeath, IsInDeath, Moved);
 	if(FeedbackDecision.m_RecordTeleport)
 	{
+		// /lasttp 与 /back 共用这两个记录：传送前的位置才是 /back 该回去的点。
 		StoreLastDeathPosition(ClientId, BeforePos);
 		StoreLastTeleport(ClientId, AfterPos);
 	}
 
-	if(!FeedbackDecision.m_RecordDeath)
+	// 死亡 tile 的落点：manual 模式下用显式救援点，否则用最近的安全点；
+	// 连救援点都还没采到时回到启用练习那一刻的起点。
+	auto &State = m_aPracticeCommandState[ClientId];
+	const SQmPracticeSavedTee *pTee = nullptr;
+	if(State.m_RescueManual && State.m_ManualTee.m_Valid)
+		pTee = &State.m_ManualTee;
+	else if(State.m_AutoTee.m_Valid)
+		pTee = &State.m_AutoTee;
+	CCharacter *pStartChar = m_PracticeStartWorld.GetCharacterById(ClientId);
+
+	const CCharacterCore *pCore = pChar->Core();
+	const SQmPracticeDeathTileDecision DeathDecision = QmEvaluatePracticeDeathTile(
+		FeedbackDecision.m_RecordDeath, pCore->m_Super || pCore->m_Invincible, pTee != nullptr || pStartChar != nullptr);
+	if(!DeathDecision.m_PlayFeedback)
 		return;
 
-	StoreLastDeathPosition(ClientId, AfterPos);
-	if(FeedbackDecision.m_PlayDeathFeedback && !GameClient()->m_SuppressEvents)
+	// 服务器在 practice 队伍里对死亡 tile 只播一次/秒的死亡效果并冻结；
+	// 分支世界不再冻结，改为立刻回退，所以每个新进入的 tick 播一次反馈。
+	if(!GameClient()->m_SuppressEvents)
 		GameClient()->m_Effects.PlayerDeath(AfterPos, ClientId, 1.0f);
-	if(FeedbackDecision.m_PlayDeathFeedback && g_Config.m_SndGame && !GameClient()->m_SuppressEvents)
+	if(g_Config.m_SndGame && !GameClient()->m_SuppressEvents)
 		if(GetQmFocusModeDecisions().m_PlayDeathOrSpawnSound)
 			GameClient()->m_Sounds.PlayAndRecord(CSounds::CHN_WORLD, SOUND_PLAYER_DIE, 1.0f, AfterPos);
+
+	if(!DeathDecision.m_ReturnToSavedPoint)
+		return;
+
+	// /back 回到“上一次出事的位置”：踩死点的坐标在回退后仍然有意义，
+	// 回退本身不改写它，玩家可以一键回到死亡处再看一眼。
+	StoreLastDeathPosition(ClientId, AfterPos);
+	// 位置突变必须切段，否则存成幽灵后回放会连出一条穿过死亡 tile 的直线。
+	OnPracticePositionJump();
+	if(pTee)
+	{
+		ApplyPracticeRescueTee(pChar, *pTee);
+	}
+	else
+	{
+		TeleportCharacter(pChar, pStartChar->Core()->m_Pos);
+	}
+	pChar->Unfreeze();
 }
 
 bool CFastPractice::OverridePredict()
@@ -1712,6 +1748,8 @@ bool CFastPractice::OverridePredict()
 			ApplyDummyHammerAim(pLocalChar, pDummyChar, *pDummyInputData);
 		}
 
+		const vec2 LocalPosBeforeTick = pLocalChar->Core()->m_Pos;
+		const vec2 DummyPosBeforeTick = pDummyChar ? pDummyChar->Core()->m_Pos : vec2(0.0f, 0.0f);
 		ApplyPracticeActorInputs(pLocalChar, pDummyChar, pInputData, pDummyInputData, Tick, PredTick);
 		StepPracticeWorld(GameClient(), GameClient()->m_PredictedWorld, Tick, pLocalChar, pDummyChar, pInputData, pDummyInputData);
 
@@ -1719,6 +1757,15 @@ bool CFastPractice::OverridePredict()
 		// 机关炮在实体 tick 之前发射，新生成的 plasma 同一 tick 就开始移动。
 		TickPracticeGuns(GameClient()->m_PredictedWorld, Tick);
 		GameClient()->m_PredictedWorld.Tick();
+		// 死亡 tile 反馈与回退必须在角色前进之后判断：Before/After 两点才能区分
+		// “刚踩进去”和“一直停在上面”。回退后紧跟的 TrackSafeRescuePosition 会
+		// 在下一 tick 重新采样安全点。
+		// 分支世界每推进一 tick 记一次练习用时；服务器暂停时这个循环不跑，计时随之停住。
+		// 先累计再处理死亡回退：回退会清零计时，新一段从 0 开始而不是从 1 tick 开始。
+		m_PracticeRunTicks++;
+		TrackPracticeTileFeedback(LocalClientId, pLocalChar, LocalPosBeforeTick);
+		if(pDummyChar)
+			TrackPracticeTileFeedback(DummyClientId, pDummyChar, DummyPosBeforeTick);
 		// 采样分叉时空里本体与分身的这一 tick（多轨），连同本 tick 的交互事件，
 		// 供 /pg 存成 demo 式可回看的幽灵。Rank 1 幽灵是另一个平行时空，只参与渲染。
 		RecordPracticeFrames(GameClient()->m_PredictedWorld, Tick, LocalClientId, DummyClientId);
@@ -1989,8 +2036,17 @@ void CFastPractice::OnRender()
 		RenderGhost(Ghost, Alpha);
 	};
 
-	RenderRealMarker(m_MainGhost, 0.28f);
-	RenderRealMarker(m_DummyGhost, 0.22f);
+	// 主世界影子：练习推进时，服务器那条时间线里的自己停在开练习那一刻。
+	// 它和练习中的自己长同一个皮肤，重叠时很容易看错人，所以开关与不透明度
+	// 都交给配置；需要干净画面的人可以整条关掉。
+	if(!g_Config.m_QmFastPracticeShowMainWorld)
+		return;
+	const float MainAlpha = std::clamp(g_Config.m_QmFastPracticeMainWorldAlpha, 0, 100) / 100.0f;
+	if(MainAlpha <= 0.0f)
+		return;
+	RenderRealMarker(m_MainGhost, MainAlpha);
+	// 分身影子略淡：两条影子同时在场时，浅一点的那条更容易和本体分辨。
+	RenderRealMarker(m_DummyGhost, MainAlpha * 0.8f);
 }
 
 void CFastPractice::EchoPractice(const char *pFormat, ...) const

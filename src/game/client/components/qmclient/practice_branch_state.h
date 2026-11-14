@@ -90,6 +90,49 @@ inline bool QmPracticeShouldCaptureServerLockedInput(bool Enabled, bool AlreadyL
 	return !Enabled || !AlreadyLocked || SlotClientId != EnableLocalClientId;
 }
 
+inline bool QmIsPracticeParticipant(int ClientId, int EnableLocalClientId, int EnableDummyClientId)
+{
+	return ClientId >= 0 && ClientId < MAX_CLIENTS &&
+	       (ClientId == EnableLocalClientId || ClientId == EnableDummyClientId);
+}
+
+// 练习命令、检查点与死亡回退都作用在“当前控制的 tee”上：cl_dummy 切换后，
+// 用户按的键属于另一条连接。控制连接不是参与者时退回另一条参与者连接；
+// 两条都不是（旁观、掉线）返回 -1，由调用方决定是否回退到启用时的本体。
+// 不能用启用时记录的 m_EnableLocalClientId 直接代替——分身接管时那会操作错人。
+inline int QmResolveControlledPracticeClientId(const int aLocalIds[NUM_DUMMIES], bool ControlDummy, int EnableLocalClientId, int EnableDummyClientId)
+{
+	const int ActiveClientId = aLocalIds[ControlDummy ? 1 : 0];
+	if(QmIsPracticeParticipant(ActiveClientId, EnableLocalClientId, EnableDummyClientId))
+		return ActiveClientId;
+
+	const int InactiveClientId = aLocalIds[ControlDummy ? 0 : 1];
+	if(QmIsPracticeParticipant(InactiveClientId, EnableLocalClientId, EnableDummyClientId))
+		return InactiveClientId;
+
+	return -1;
+}
+
+// 服务器 HandleSkippableTiles：super / invincible 时死亡 tile 完全不生效（也不播死亡反馈）；
+// 练习队伍里命中死亡 tile 只是 Freeze()。快速练习的分支世界把这个反馈改成
+// “播一次死亡效果并回到救援点”，与 /r 的落点一致。
+struct SQmPracticeDeathTileDecision
+{
+	bool m_PlayFeedback = false;
+	bool m_ReturnToSavedPoint = false;
+};
+
+inline SQmPracticeDeathTileDecision QmEvaluatePracticeDeathTile(bool NewlyInDeath, bool InvincibleOrSuper, bool HasSavedPoint)
+{
+	SQmPracticeDeathTileDecision Decision;
+	// 只在“刚踩进去”的那一 tick 触发：停在 tile 边缘时不能每 tick 都传送。
+	if(!NewlyInDeath || InvincibleOrSuper)
+		return Decision;
+	Decision.m_PlayFeedback = true;
+	Decision.m_ReturnToSavedPoint = HasSavedPoint;
+	return Decision;
+}
+
 struct SQmPracticeRebindDecision
 {
 	bool m_Changed = false;
