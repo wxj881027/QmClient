@@ -41,15 +41,12 @@ void CGhost::GetGhostCharacter(CGhostCharacter *pGhostChar, const CNetObj_Charac
 	pGhostChar->m_X = pChar->m_X;
 	pGhostChar->m_Y = pChar->m_Y;
 	pGhostChar->m_VelX = pChar->m_VelX;
-	pGhostChar->m_VelY = 0;
+	// m_VelY 不参与回放插值，改作显式冻结标记（见 ghost_freeze_bar.h）：
+	// 旧版文件没有标记位，播放侧才回退到“武器=忍者”的历史判定。
+	pGhostChar->m_VelY = QmEncodeGhostFreezeMarker(pDDnetChar != nullptr ? QmGhostFreezeTicksFromEnd(pDDnetChar->m_FreezeEnd, pChar->m_Tick) : 0);
 	pGhostChar->m_Angle = pChar->m_Angle;
 	pGhostChar->m_Direction = pChar->m_Direction;
-	int Weapon = pChar->m_Weapon;
-	if(pDDnetChar != nullptr && pDDnetChar->m_FreezeEnd != 0)
-	{
-		Weapon = WEAPON_NINJA;
-	}
-	pGhostChar->m_Weapon = Weapon;
+	pGhostChar->m_Weapon = pChar->m_Weapon;
 	pGhostChar->m_HookState = pChar->m_HookState;
 	pGhostChar->m_HookX = pChar->m_HookX;
 	pGhostChar->m_HookY = pChar->m_HookY;
@@ -395,6 +392,8 @@ bool CGhost::SavePracticeTrack(const char *pName, const SLocalSegment &Segment)
 			CNetObj_Character Obj = QmLocalWorldFrameToNetObj(LocalFrame);
 			CGhostCharacter GhostChar;
 			GetGhostCharacter(&GhostChar, &Obj, nullptr);
+			// 练习轨没有 DDNetCharacter，冻结信息直接取录制帧里的剩余 tick。
+			GhostChar.m_VelY = QmEncodeGhostFreezeMarker(LocalFrame.m_FreezeTicks);
 			GhostRecorder()->WriteData(GHOSTDATA_TYPE_CHARACTER, &GhostChar, sizeof(CGhostCharacter));
 		}
 		GhostRecorder()->Stop((int)Track.m_vFrames.size(), TimeMs);
@@ -568,10 +567,13 @@ void CGhost::OnRender()
 			Draw.m_Player.m_AttackTick += Client()->GameTick(g_Config.m_ClDummy) - GhostTick;
 		}
 
-		// QmClient：转换侧以 WEAPON_NINJA 标记冻结段（幽灵格式无独立冻结字段）。
-		// 冻结表现完全复刻 demo 播放的玩家渲染（players.cpp）：冰冻着色 + 隐藏武器、
-		// 旧版卡塔纳手随 TClient 的 qm_frozen_katana、忍者皮肤随 cl_show_ninja
-		const bool GhostFrozen = Draw.m_Player.m_Weapon == WEAPON_NINJA;
+		// QmClient：新格式在 m_VelY 写显式冻结标记；旧格式没有标记位时才回退到
+		// WEAPON_NINJA 判定（兼容旧幽灵文件，代价是旧文件里的真实忍者帧仍会被
+		// 当作冻结）。冻结表现完全复刻 demo 播放的玩家渲染（players.cpp）：
+		// 冰冻着色 + 隐藏武器、旧版卡塔纳手随 TClient 的 qm_frozen_katana、
+		// 忍者皮肤随 cl_show_ninja
+		const CGhostCharacter *pCurFrame = Ghost.m_Path.Get(CurPos);
+		const bool GhostFrozen = QmGhostFrameFrozen(pCurFrame->m_VelY, pCurFrame->m_Weapon == WEAPON_NINJA);
 		unsigned FrozenFlags = 0;
 		int RenderWeapon = Draw.m_Player.m_Weapon;
 		if(GhostFrozen)
@@ -825,8 +827,9 @@ void CGhost::BuildManualFreezeSpans(const std::vector<int> &vSlots)
 		CGhostItem &Ghost = m_aActiveGhosts[Slot];
 		if(Ghost.Empty())
 			continue;
-		// 连续 NINJA 帧 = 一个冻结段。录制/转换时每帧都会写冻结标记，
-		// 断档只出现在解除冻结或轨迹分段，按帧序号还原起止即可。
+		// 连续冻结帧 = 一个冻结段。新文件用 m_VelY 显式标记，旧文件回退到
+		// NINJA 判定（见 ghost_freeze_bar.h）；断档只出现在解除冻结或轨迹分段，
+		// 按帧序号还原起止即可。
 		std::vector<int> vRelativeTicks;
 		std::vector<unsigned char> vFrozen;
 		vRelativeTicks.reserve(Ghost.m_Path.Size());
@@ -835,7 +838,7 @@ void CGhost::BuildManualFreezeSpans(const std::vector<int> &vSlots)
 		{
 			const CGhostCharacter *pFrame = Ghost.m_Path.Get(Index);
 			vRelativeTicks.push_back(pFrame->m_Tick - Ghost.m_StartTick);
-			vFrozen.push_back(pFrame->m_Weapon == WEAPON_NINJA ? 1 : 0);
+			vFrozen.push_back(QmGhostFrameFrozen(pFrame->m_VelY, pFrame->m_Weapon == WEAPON_NINJA) ? 1 : 0);
 		}
 		QmCollectGhostFreezeSpans(vRelativeTicks, vFrozen, vSpans);
 	}

@@ -2495,7 +2495,7 @@ void CMenus::RenderGhost(CUIRect MainView)
 	for(const auto &Col : s_aCols)
 	{
 		const int Checked = Col.m_Sort != GHOST_SORT_NONE && g_Config.m_GhSort == Col.m_Sort ? (g_Config.m_GhSortOrder ? 2 : 1) : 0;
-		if(DoButton_GridHeader(&Col.m_Id, Localize(Col.m_pCaption), Checked, &Col.m_Rect))
+		if(DoButton_GridHeader(&Col.m_Id, Localize(Col.m_pCaption), Checked, &Col.m_Rect, g_Config.m_GhSortOrder != 0))
 		{
 			if(Col.m_Sort != GHOST_SORT_NONE)
 			{
@@ -2925,16 +2925,20 @@ void CMenus::RenderRankDemo(CUIRect MainView)
 		int Checked = 0;
 		if(SortColumn != qmclient::rank_demo::ESortColumn::NONE && s_SortState.m_Column == SortColumn)
 			Checked = s_SortState.m_Descending ? 2 : 1;
-		if(s_aCols[i].m_pCaption[0] != '\0' && DoButton_GridHeader(&s_aCols[i].m_Id, Localize(s_aCols[i].m_pCaption), Checked, &s_aCols[i].m_Rect))
+		if(s_aCols[i].m_pCaption[0] != '\0' && DoButton_GridHeader(&s_aCols[i].m_Id, Localize(s_aCols[i].m_pCaption), Checked, &s_aCols[i].m_Rect, s_SortState.m_Descending))
 			qmclient::rank_demo::ToggleSort(s_SortState, SortColumn);
 	}
 
 	View.Draw(ColorRGBA(0, 0, 0, 0.15f), 0, 0);
 
+	constexpr int RANK_SEARCH_DISPLAY_LIMIT = 100;
 	const char *pMapName = Client()->GetCurrentMap();
 	const bool Searching = m_RankSearchInput.GetString()[0] != '\0';
-	std::vector<qmclient::rank_demo::SEntry> vEntries = Searching ? RankGhost.CollectSearchEntries(m_RankSearchInput.GetString(), 1, 100) : RankGhost.CollectRankEntries(pMapName, 1);
+	std::vector<qmclient::rank_demo::SEntry> vEntries = Searching ? RankGhost.CollectSearchEntries(m_RankSearchInput.GetString(), 1) : RankGhost.CollectRankEntries(pMapName, 1);
 	qmclient::rank_demo::SortEntries(vEntries, s_SortState);
+	// 排序必须作用于全部匹配项，截断只限制最终展示条数。
+	if(Searching && (int)vEntries.size() > RANK_SEARCH_DISPLAY_LIMIT)
+		vEntries.resize(RANK_SEARCH_DISPLAY_LIMIT);
 	const int NumEntries = (int)vEntries.size();
 	// 选中项跨排序/搜索保持同一条回放：按 demo 名找回；找不到时收回到有效区间。
 	if(!s_SelectedDemo.empty())

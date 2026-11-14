@@ -1559,7 +1559,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		const bool BlockHeaderButton = s_HeaderGesture.ResizeColumn() >= 0 || (HoveredHandle >= 0 && s_HeaderGesture.ReorderColumn() < 0);
 		if(BlockHeaderButton)
 			Ui()->BeginBackgroundRender(true);
-		const bool HeaderClicked = DoButton_GridHeader(&Col.m_Id, pCaption, Checked, &Col.m_Rect, TEXTALIGN_ML, QmBrowserTableLabelProperties(Col.m_Rect.w));
+		const bool HeaderClicked = DoButton_GridHeader(&Col.m_Id, pCaption, Checked, &Col.m_Rect, g_Config.m_BrSortOrder != 0, TEXTALIGN_ML, QmBrowserTableLabelProperties(Col.m_Rect.w));
 		if(BlockHeaderButton)
 			Ui()->EndBackgroundRender(true);
 		if(HeaderClicked)

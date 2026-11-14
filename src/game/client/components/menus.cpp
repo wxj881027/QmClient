@@ -1654,7 +1654,7 @@ void CMenus::PrepareSettingsTabLabelCache(float MainViewWidth, float TabBarWidth
 	}
 }
 
-int CMenus::DoButton_GridHeader(const void *pId, const char *pText, int Checked, const CUIRect *pRect, int Align, const SLabelProperties &Props)
+int CMenus::DoButton_GridHeader(const void *pId, const char *pText, int Checked, const CUIRect *pRect, bool Descending, int Align, const SLabelProperties &Props)
 {
 	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
 	const float SortedAlpha = std::clamp(0.34f + g_Config.m_QmUiOpacity / 100.0f * 0.6f, 0.0f, 0.55f);
@@ -1673,8 +1673,13 @@ int CMenus::DoButton_GridHeader(const void *pId, const char *pText, int Checked,
 	if(Checked && Temp.w > Temp.h)
 	{
 		Temp.VSplitRight(Temp.h, &Temp, &Arrow);
-		Ui()->DoLabel_QmIcon(&Arrow, Checked == 2 ? EQmIcon::CHEVRON_DOWN : EQmIcon::CHEVRON_UP,
-			Checked == 2 ? FONT_ICON_CHEVRON_DOWN : FONT_ICON_CHEVRON_UP, Temp.h * 0.62f, TEXTALIGN_MC, HeaderProps);
+		// 箭头方向跟随真实排序方向。Checked 只表示该列正在排序（2 是组合排序的
+		// 黄色高亮），不能再把 Checked == 2 当成降序。
+		Ui()->DoLabel_QmIcon(&Arrow, Descending ? EQmIcon::CHEVRON_DOWN : EQmIcon::CHEVRON_UP,
+			Descending ? FONT_ICON_CHEVRON_DOWN : FONT_ICON_CHEVRON_UP, Temp.h * 0.62f, TEXTALIGN_MC, HeaderProps);
+		// 文字区被箭头切掉后重新收敛最大宽度，避免标签画到箭头上。
+		if(HeaderProps.m_MaxWidth >= 0.0f)
+			HeaderProps.m_MaxWidth = std::min(HeaderProps.m_MaxWidth, std::max(0.0f, Temp.w));
 	}
 	// 文字引擎把零行宽视作不限制宽度，空的表头文字区直接跳过绘制。
 	if(HeaderProps.m_MaxWidth != 0.0f)

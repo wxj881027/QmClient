@@ -3657,7 +3657,7 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 			CUIRect HeaderButton = Col.m_Rect;
 			HeaderButton.HMargin(1.0f, &HeaderButton);
 			const int HeaderAlign = (Col.m_FontIcon || Col.m_Id == COL_LENGTH || Col.m_Id == COL_DATE) ? TEXTALIGN_MC : TEXTALIGN_ML;
-			const int ButtonPressed = DoButton_GridHeader(&Col.m_Id, Col.m_FontIcon ? Col.m_pCaption : Localize(Col.m_pCaption), g_Config.m_BrDemoSort == Col.m_Sort, &HeaderButton, HeaderAlign);
+			const int ButtonPressed = DoButton_GridHeader(&Col.m_Id, Col.m_FontIcon ? Col.m_pCaption : Localize(Col.m_pCaption), g_Config.m_BrDemoSort == Col.m_Sort, &HeaderButton, g_Config.m_BrDemoSortOrder != 0, HeaderAlign);
 			if(Col.m_pTooltip != nullptr)
 			{
 				GameClient()->m_Tooltips.DoToolTip(&Col.m_Id, &HeaderButton, Localize(Col.m_pTooltip));

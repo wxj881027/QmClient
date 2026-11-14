@@ -88,8 +88,9 @@ public:
 	void RefreshManifest();
 	// 收集指定地图与名次的条目：同一 demo 的多条成员记录合并为一条，solo 在前
 	std::vector<qmclient::rank_demo::SEntry> CollectRankEntries(const char *pMap, int Rank) const;
-	// 全清单搜索：按地图名子串（大小写不敏感）匹配指定名次的条目，Limit 限制结果数
-	std::vector<qmclient::rank_demo::SEntry> CollectSearchEntries(const char *pQuery, int Rank, int Limit) const;
+	// 全清单搜索：按地图名子串（大小写不敏感）匹配指定名次的条目，按 demo 去重。
+	// 这里不截断结果数：排序必须作用于全部匹配项，展示条数由界面排序后截取。
+	std::vector<qmclient::rank_demo::SEntry> CollectSearchEntries(const char *pQuery, int Rank) const;
 	// 创建 QmClient rank 回放缓存目录（层级创建，可安全重复调用）
 	static void EnsureFolders(IStorage *pStorage);
 	// 按 manifest 的 demo 文件名请求：下载并转换为影子（不退出服务器）

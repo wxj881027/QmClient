@@ -76,3 +76,38 @@ TEST(QmGhostFreezeBar, EmptyPathProducesNoSpans)
 	QmCollectGhostFreezeSpans({}, {}, vSpans);
 	EXPECT_TRUE(vSpans.empty());
 }
+
+// 显式标记把“明确未冻结”和旧文件的“无标记”区分开：新文件里的真实忍者帧
+// 不再被当成冻结，旧文件仍保留历史判定。
+TEST(QmGhostFreezeBar, ExplicitMarkerSeparatesGenuineNinjaFromFreeze)
+{
+	const int NotFrozen = QmEncodeGhostFreezeMarker(0);
+	const int Frozen = QmEncodeGhostFreezeMarker(37);
+
+	EXPECT_EQ(QmDecodeGhostFreezeMarker(NotFrozen), 0);
+	EXPECT_EQ(QmDecodeGhostFreezeMarker(Frozen), 37);
+	EXPECT_EQ(QmDecodeGhostFreezeMarker(0), -1);
+	EXPECT_EQ(QmDecodeGhostFreezeMarker(12345), -1);
+
+	EXPECT_FALSE(QmGhostFrameFrozen(NotFrozen, true));
+	EXPECT_TRUE(QmGhostFrameFrozen(Frozen, false));
+	EXPECT_TRUE(QmGhostFrameFrozen(0, true));
+	EXPECT_FALSE(QmGhostFrameFrozen(0, false));
+}
+
+// 剩余 tick 截到 16 位，防止超长冻结污染标记位。
+TEST(QmGhostFreezeBar, MarkerClampsRemainingTicksTo16Bits)
+{
+	EXPECT_EQ(QmDecodeGhostFreezeMarker(QmEncodeGhostFreezeMarker(70000)), 0xFFFF);
+	EXPECT_EQ(QmDecodeGhostFreezeMarker(QmEncodeGhostFreezeMarker(-5)), 0);
+}
+
+// 冻结结束 tick 的三种状态：深度冻结无结束时间、正常倒计时、已过期不算冻结。
+TEST(QmGhostFreezeBar, FreezeEndConvertsToRemainingTicks)
+{
+	EXPECT_EQ(QmGhostFreezeTicksFromEnd(0, 100), 0);
+	EXPECT_EQ(QmGhostFreezeTicksFromEnd(-1, 100), 1);
+	EXPECT_EQ(QmGhostFreezeTicksFromEnd(137, 100), 37);
+	EXPECT_EQ(QmGhostFreezeTicksFromEnd(100, 100), 0);
+	EXPECT_EQ(QmGhostFreezeTicksFromEnd(90, 100), 0);
+}

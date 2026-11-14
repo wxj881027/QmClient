@@ -610,12 +610,14 @@ std::vector<qmclient::rank_demo::SEntry> CRankGhost::CollectRankEntries(const ch
 	return Out;
 }
 
-std::vector<qmclient::rank_demo::SEntry> CRankGhost::CollectSearchEntries(const char *pQuery, int Rank, int Limit) const
+std::vector<qmclient::rank_demo::SEntry> CRankGhost::CollectSearchEntries(const char *pQuery, int Rank) const
 {
 	std::vector<SEntry> Out;
 	if(!m_ManifestLoaded || pQuery == nullptr || pQuery[0] == '\0')
 		return Out;
 	std::set<std::string> SeenDemos;
+	// 不在这里按展示条数提前退出：先收集全部匹配项，调用方排序后再截断，
+	// 否则表头排序只是清单前 N 条的局部排序。
 	for(const SEntry &Entry : m_vEntries)
 	{
 		if(Entry.m_Rank != Rank)
@@ -625,8 +627,6 @@ std::vector<qmclient::rank_demo::SEntry> CRankGhost::CollectSearchEntries(const 
 		if(!SeenDemos.insert(Entry.m_Demo).second)
 			continue;
 		Out.push_back(Entry);
-		if((int)Out.size() >= Limit)
-			break;
 	}
 	return Out;
 }

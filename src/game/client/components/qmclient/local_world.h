@@ -29,6 +29,9 @@ struct SLocalActorFrame
 	int m_HookX = 0;
 	int m_HookY = 0;
 	int m_AttackTick = 0;
+	// 冻结剩余 tick（0 = 未冻结）。只用于写入幽灵的显式冻结标记，
+	// 不是协议字段，也不进入 QmLocalWorldFrameToNetObj。
+	int m_FreezeTicks = 0;
 };
 
 // 录制帧 -> 协议角色对象。这是轨迹与录像格式之间唯一的数据边界。

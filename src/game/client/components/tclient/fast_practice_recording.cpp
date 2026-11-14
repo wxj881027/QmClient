@@ -56,6 +56,9 @@ void CFastPractice::RecordPracticeFrames(CGameWorld &World, int Tick, int LocalC
 		Frame.m_HookX = (int)pCore->m_HookPos.x;
 		Frame.m_HookY = (int)pCore->m_HookPos.y;
 		Frame.m_AttackTick = pChar->GetAttackTick();
+		// 分支世界没有服务器快照，冻结状态取预测角色自己的倒计时；
+		// 保存幽灵时写入显式冻结标记，回放才有冻结条与冻结表现。
+		Frame.m_FreezeTicks = pChar->m_FreezeTime;
 		GameClient()->m_LocalWorld.AddTrackFrame(TrackIndex, Frame);
 	};
 	Record(0, LocalClientId);

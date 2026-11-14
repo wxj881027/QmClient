@@ -135,10 +135,11 @@ private:
 	};
 	std::vector<SGhostDrawData> m_vGhostDraws;
 
-	// 查看模式的冻结段：幽灵格式没有冻结起止字段，转换侧把冻结帧的武器写成
-	// WEAPON_NINJA 作为标记。播放开始时扫一次路径还原成相对 tick 区间，
-	// 用来画与实机一致的冻结进度条（cl_show_freeze_bars）。区间与进度计算
-	// 在 ghost_freeze_bar.h，渲染由 CFreezeBars::RenderBarAt 负责。
+	// 查看模式的冻结段：幽灵格式没有冻结起止字段，新格式在 m_VelY 写显式冻结
+	// 标记（见 ghost_freeze_bar.h），旧格式才回退到 WEAPON_NINJA 判定。播放开始时
+	// 扫一次路径还原成相对 tick 区间，用来画与实机一致的冻结进度条
+	// （cl_show_freeze_bars）。区间与进度计算在 ghost_freeze_bar.h，渲染由
+	// CFreezeBars::RenderBarAt 负责。
 	std::array<std::vector<SGhostFreezeSpan>, MAX_ACTIVE_GHOSTS> m_aManualFreezeSpans;
 	void BuildManualFreezeSpans(const std::vector<int> &vSlots);
 

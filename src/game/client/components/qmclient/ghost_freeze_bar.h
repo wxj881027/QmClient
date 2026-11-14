@@ -6,10 +6,52 @@
 
 // 查看模式虚影的冻结进度条策略。
 //
-// 幽灵文件没有冻结起止字段：转换/录制侧把冻结帧的武器写成 WEAPON_NINJA 作为标记。
-// 播放开始时按连续冻结帧还原成相对 tick 区间，播放头落在区间内就画一根与实机
-// 相同语义的冻结条（剩余比例 = 剩余 tick / 总冻结 tick）。这里只放纯计算，
-// 渲染由 CFreezeBars::RenderBarAt 负责。
+// 幽灵文件没有冻结起止字段。CGhostCharacter::m_VelY 在所有转换/录制路径里都被
+// 清零且不参与回放插值，因此用作显式冻结标记：高 16 位固定为 0x514D（"QM"），
+// 低 16 位是剩余冻结 tick（0 = 明确未冻结）。旧版文件没有标记位，仍回退到
+// “武器为 WEAPON_NINJA 即冻结”的历史判定；该回退无法区分旧文件里的真实忍者帧，
+// 但新文件不会再落入这条路径。播放开始时按连续冻结帧还原成相对 tick 区间，
+// 播放头落在区间内就画一根与实机相同语义的冻结条（剩余比例 = 剩余 tick /
+// 总冻结 tick）。这里只放纯计算，渲染由 CFreezeBars::RenderBarAt 负责。
+
+inline constexpr int QM_GHOST_FREEZE_MARKER_MASK = 0xFFFF0000;
+inline constexpr int QM_GHOST_FREEZE_MARKER = 0x514D0000;
+
+// FreezeTicks <= 0 表示明确未冻结；正值写入剩余 tick（截到 16 位）。
+inline int QmEncodeGhostFreezeMarker(int FreezeTicks)
+{
+	if(FreezeTicks <= 0)
+		return QM_GHOST_FREEZE_MARKER;
+	return QM_GHOST_FREEZE_MARKER | std::min(FreezeTicks, 0xFFFF);
+}
+
+// -1 = 旧文件帧（无显式标记），0 = 明确未冻结，>0 = 冻结且剩余 tick。
+inline int QmDecodeGhostFreezeMarker(int VelY)
+{
+	if((VelY & QM_GHOST_FREEZE_MARKER_MASK) != QM_GHOST_FREEZE_MARKER)
+		return -1;
+	return VelY & 0xFFFF;
+}
+
+// 由 DDNetCharacter 的冻结结束 tick 换算标记值：< 0 表示深度冻结（没有结束
+// tick），0 表示未冻结；只有结束 tick 晚于当前 tick 才计入剩余时长。
+inline int QmGhostFreezeTicksFromEnd(int FreezeEnd, int Tick)
+{
+	if(FreezeEnd < 0)
+		return 1;
+	if(FreezeEnd > Tick)
+		return FreezeEnd - Tick;
+	return 0;
+}
+
+// 冻结判定：显式标记优先，旧文件才回退到武器标记，避免真实忍者帧被误判。
+inline bool QmGhostFrameFrozen(int VelY, bool LegacyNinjaMarker)
+{
+	const int FreezeTicks = QmDecodeGhostFreezeMarker(VelY);
+	if(FreezeTicks >= 0)
+		return FreezeTicks > 0;
+	return LegacyNinjaMarker;
+}
 
 struct SGhostFreezeSpan
 {
