@@ -139,7 +139,8 @@ namespace qm_text_caret
 		const float FallbackWidth = Height * ui_token::text_caret::WIDTH_RATIO;
 		const float CellWidth = Params.m_Cell.m_W > 0.0f ? Params.m_Cell.m_W : FallbackWidth;
 		const float Thickness = ui_token::text_caret::THICKNESS_PX * PixelSize;
-		const float Outline = ui_token::text_caret::OUTLINE_PX * PixelSize;
+		// 描边默认取 token；竖线与方块至少要有一圈，压在深色字上也看得出边界。
+		float Outline = std::max(ui_token::text_caret::OUTLINE_PX * PixelSize, std::min(Thickness, Height) * ui_token::text_caret::OUTLINE_RATIO);
 
 		CUIRect Rect{};
 		float Radius = 0.0f;
@@ -156,7 +157,8 @@ namespace qm_text_caret
 		case EStyle::BAR:
 		default:
 			Rect = {Params.m_Cell.m_X, Params.m_Cell.m_Y, Thickness, Height};
-			Radius = ui_token::text_caret::RADIUS_PX * PixelSize;
+			// 竖线按胶囊收圆：两端是圆头，与正文字形的圆角笔画同一种观感。
+			Radius = Thickness * 0.5f;
 			break;
 		}
 

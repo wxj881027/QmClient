@@ -277,13 +277,14 @@ TEST(QmChatInputLayout, TranslateButtonAndPrefixRowShareOneHeight)
 	{
 		SCOPED_TRACE(FontSize);
 		const SQmChatInputLayout Layout = QmChatResolveInputLayout(5.0f, 100.0f, 400.0f, FontSize, 40.0f);
-		// 圆形图标按钮：宽高相等（绘制层按胶囊档裁成正圆），直径就是输入行行高，
-		// 与同一行「全体」前缀块逐像素同高——chat.cpp 的前缀块也取同一个行高函数。
+		// 圆形图标按钮：宽高相等（绘制层按胶囊档裁成正圆），直径比输入行行高小一档，
+		// 所以文字行不会被按钮撑高；前缀块仍取行高，两者中心对齐。
 		EXPECT_FLOAT_EQ(Layout.m_ButtonW, Layout.m_ButtonH);
-		EXPECT_FLOAT_EQ(Layout.m_ButtonH, QmChatInputRowHeight(FontSize));
 		EXPECT_FLOAT_EQ(Layout.m_ButtonH, QmChatTranslateButtonHeight(FontSize));
+		EXPECT_LT(Layout.m_ButtonH, QmChatInputRowHeight(FontSize));
+		EXPECT_NEAR(Layout.m_ButtonH, QmChatInputRowHeight(FontSize) * ui_token::chat::input::BUTTON_ROW_RATIO, 0.01f);
 		// 行高不再等于字号：按钮比字形高出一档，居中后上下各露半档，读作「一行控件」。
-		EXPECT_GT(Layout.m_ButtonH, FontSize);
+		EXPECT_GT(Layout.m_ButtonH, FontSize * 0.85f);
 		// 基线对齐的实现方式：按钮中心与首行文字中心重合，桌面文字与手机前缀块同时对齐。
 		EXPECT_FLOAT_EQ(Layout.m_ButtonY + Layout.m_ButtonH * 0.5f, 100.0f + FontSize * 0.5f);
 	}

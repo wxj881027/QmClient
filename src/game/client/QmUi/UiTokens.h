@@ -613,6 +613,8 @@ namespace ui_token::chat
 	// 图标相对内径的内缩比例：图标与圆边之间必须有边距，
 	// 否则大图标顶到描边上，看起来像「图标和圆一样高」。
 	inline constexpr float ICON_INSET_RATIO = 0.18f;
+	// 翻译按钮直径相对输入行行高的比例：外圈比行高小一档，文字行不被按钮撑高。
+	inline constexpr float BUTTON_ROW_RATIO = 0.82f;
 
 		// 输入行行高：按钮直径与「全体」前缀块高度都只从这里取。
 		inline float RowHeight(const float FontSize)
@@ -1157,6 +1159,8 @@ namespace ui_token::text_caret
 	inline constexpr float WIDTH_RATIO = 0.6f;
 	// 光标外描边宽度（物理像素）：让光标压在任意底色和字形上都读得清。
 	inline constexpr float OUTLINE_PX = 1.0f;
+	// 描边相对笔画的最小比例：笔画细时光标仍是「一圈边」，不会只剩一条实心线。
+	inline constexpr float OUTLINE_RATIO = 0.35f;
 } // namespace ui_token::text_caret
 
 // 动效令牌：界面所有过渡的时长、曲线与弹簧参数。按「节奏分级」组织——

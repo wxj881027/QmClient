@@ -601,7 +601,7 @@ MACRO_CONFIG_STR(QmBlockWordsReplacementChar, qm_block_words_replacement_char, 8
 	// 配置长度与它不一致会在保存时触发静态断言。
 	MACRO_CONFIG_STR(QmBlockWordsList, qm_block_words_list, 65536, "", CFGFLAG_CLIENT, "Censor word list (comma-separated)")
 	// 控制台日志行距：在基准行高上按百分比加宽，0 表示与旧版一致。
-	MACRO_CONFIG_INT(QmConsoleLineSpacing, qm_console_line_spacing, 0, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Extra console log line spacing in percent")
+	MACRO_CONFIG_INT(QmConsoleLineSpacing, qm_console_line_spacing, 0, 0, 24, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Extra console log line spacing in pixels")
 MACRO_CONFIG_STR(QmBlockWordsFile, qm_block_words_file, 1024, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Chat word list file")
 MACRO_CONFIG_STR(QmSidebarCardOrder, qm_sidebar_card_order, 2048, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "QmClient sidebar module order")
 MACRO_CONFIG_STR(QmSidebarCardCollapsed, qm_sidebar_card_collapsed, 512, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "QmClient sidebar module collapse state")

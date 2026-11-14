@@ -22,7 +22,8 @@ inline float QmChatInputRowHeight(float FontSize)
 // 于是按钮与同一行「全体」前缀块等高，首行垂直居中后两者基线对齐。
 inline float QmChatTranslateButtonSize(float FontSize)
 {
-	return QmChatInputRowHeight(FontSize);
+	// 按钮整体比行高再小一档，文字行不被撑高；图标按同一比例一起缩。
+	return QmChatInputRowHeight(FontSize) * ui_token::chat::input::BUTTON_ROW_RATIO;
 }
 
 // 按钮与输入首行垂直居中，多行输入时仍固定在第一行；高度就是输入行行高。

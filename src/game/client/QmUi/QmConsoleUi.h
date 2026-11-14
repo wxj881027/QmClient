@@ -233,10 +233,11 @@ namespace QmConsoleUi
 		else
 			Fill = Selected ? ResolveConfiguredAccentColor().WithAlpha(Enabled ? 1.0f : 0.65f) : ResolveConfiguredControlSurface(Enabled);
 		const CUiScopedGaussianBlurSuppression GaussianBlurSuppression(pUi);
-		DrawRoundedSurface(pUi, Rect, Fill, ColorRGBA(), ui_token::radius::BASE);
+		// 控制台顶部动作与筛选都是胶囊：半径取半高，与控制台设置里的滑块按钮同一形制。
+	DrawRoundedSurface(pUi, Rect, Fill, ColorRGBA(), Rect.h * 0.5f);
 		const ColorRGBA Feedback = ResolveUiIconButtonFeedback(CompositeUiSurface(Fill), Enabled, Hovered, Pressed);
 		if(Feedback.a > 0.0f)
-			DrawRoundedSurface(pUi, Rect, Feedback, ColorRGBA(), ui_token::radius::BASE);
+			DrawRoundedSurface(pUi, Rect, Feedback, ColorRGBA(), Rect.h * 0.5f);
 		const CUiScopedSurfaceText SurfaceText(pUi->TextRender(), Fill);
 		if(pPalette != nullptr)
 		{
