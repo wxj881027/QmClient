@@ -1754,7 +1754,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 					if(GameClient()->m_LocalServer.IsServerRunning())
 					{
 						RefreshBrowserTab(true);
-						Connect("localhost");
+						GameClient()->m_LocalServer.Connect();
 					}
 					else
 					{

@@ -8,6 +8,7 @@
 #include <game/client/component.h>
 
 #include <string>
+#include <chrono>
 #include <vector>
 
 class CLocalServer : public CComponentInterfaces
@@ -19,9 +20,20 @@ public:
 	void KillServer();
 	bool IsServerRunning();
 	void RconAuthIfPossible();
+	void Connect();
+	void CancelConnect();
 
 private:
 	char m_aRconPassword[sizeof(g_Config.m_SvRconPassword)] = "";
+	// 服务端启动后把自己实际监听的端口写进这个文件，客户端据此直连本机服务器。
+	int m_Port = 0;
+	bool m_WaitingForPort = false;
+	bool m_ConnectRequested = false;
+	std::chrono::nanoseconds m_StartTime{0};
+	std::chrono::nanoseconds m_NextPortCheck{0};
+
+	void Reset();
+	void WaitForPort();
 
 #if defined(CONF_PLATFORM_ANDROID)
 	std::vector<std::string> m_vPendingArguments;

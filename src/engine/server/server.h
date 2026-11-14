@@ -347,6 +347,7 @@ public:
 	bool ClientSlotEmpty(int ClientId) const override;
 	bool ClientIngame(int ClientId) const override;
 	int Port() const override;
+	void WritePortFile();
 	int MaxClients() const override;
 	int ClientCount() const override;
 	int DistinctClientCount() const override;

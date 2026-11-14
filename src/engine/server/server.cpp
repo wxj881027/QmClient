@@ -3617,6 +3617,8 @@ int CServer::Run()
 	if(Port == 0)
 		log_info("server", "using port %d", BindAddr.port);
 
+	WritePortFile();
+
 #if defined(CONF_UPNP)
 	m_UPnP.Open(BindAddr);
 #endif
@@ -4365,6 +4367,32 @@ void CServer::ConShutdown(IConsole::IResult *pResult, void *pUser)
 	{
 		str_copy(pThis->m_aShutdownReason, pReason);
 	}
+}
+
+void CServer::WritePortFile()
+{
+	const char *pPortFile = Config()->m_SvPortFile;
+	if(pPortFile[0] == '\0')
+	{
+		return;
+	}
+
+	char aPortFileTmp[IO_MAX_PATH_LENGTH];
+	IStorage::FormatTmpPath(aPortFileTmp, sizeof(aPortFileTmp), pPortFile);
+	IOHANDLE PortFile = Storage()->OpenFile(aPortFileTmp, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	if(PortFile != nullptr)
+	{
+		char aPort[8];
+		const int Length = str_format(aPort, sizeof(aPort), "%d", m_NetServer.Address().port);
+		const bool Written = io_write(PortFile, aPort, Length) == (unsigned)Length;
+		if(io_close(PortFile) == 0 && Written &&
+			Storage()->RenameFile(aPortFileTmp, pPortFile, IStorage::TYPE_SAVE))
+		{
+			return;
+		}
+		Storage()->RemoveFile(aPortFileTmp, IStorage::TYPE_SAVE);
+	}
+	log_error("server", "Failed to write port file '%s'", pPortFile);
 }
 
 void CServer::ConUptime(IConsole::IResult *pResult, void *pUser)
