@@ -1398,7 +1398,8 @@ int CServer::DelClientCallback(int ClientId, const char *pReason, void *pUser)
 #endif
 
 	// notify the mod about the drop
-	if(pThis->m_aClients[ClientId].m_State >= CClient::STATE_READY)
+	// 官方 12895：重连中的槽位已经退回 CONNECTING，但游戏层仍有玩家对象，必须通知掉线
+	if(pThis->m_aClients[ClientId].m_State >= CClient::STATE_READY || pThis->m_aClients[ClientId].m_IngameBeforeRejoin)
 		pThis->GameServer()->OnClientDrop(ClientId, pReason);
 
 	pThis->m_aClients[ClientId].m_State = CClient::STATE_EMPTY;
