@@ -312,7 +312,9 @@ namespace QmPlayersUi
 
 		const float AvatarSize = std::min(Content.h, ui_token::player_card::TILE_AVATAR_SIZE);
 		Content.VSplitLeft(std::min(AvatarSize, Content.w), &Result.m_Avatar, &Content);
-		Result.m_Avatar.h = std::min(Result.m_Avatar.h, AvatarSize);
+		// 头像在瓦片内垂直居中：与右侧名字/战队两行的视觉中线对齐，不贴顶。
+		Result.m_Avatar.h = AvatarSize;
+		Result.m_Avatar.y = Content.y + (Content.h - AvatarSize) * 0.5f;
 		Content.VSplitLeft(std::min(ui_token::spacing::XS, Content.w), nullptr, &Content);
 
 		const float TextBlock = std::min(Content.h, 2.0f * ui_token::player_card::LIST_NAME_HEIGHT);

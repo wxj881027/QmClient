@@ -138,6 +138,9 @@ void CMenus::RenderPlayers(CUIRect MainView)
 
 	const int Columns = QmPlayersUi::PlayerTileColumns(ListArea.w);
 	static CListBox s_Players;
+	// 行反馈（悬浮/选中）由列表组件自己画：胶囊行 + 选择内缩，宽高与卡片一致，
+	// 不再由调用点自绘一层比卡片更大的底色。
+	s_Players.SetCapsuleRows(ui_token::font::BODY);
 	s_Players.DoAutoSpacing(ui_token::list::ROW_SPACING);
 	s_Players.SetActive(!Ui()->IsPopupOpen() && !State.m_Search.IsActive());
 	s_Players.DoStart(ui_token::player_card::TILE_HEIGHT, Count, Columns, 1, -1, &ListArea, false);
@@ -152,7 +155,6 @@ void CMenus::RenderPlayers(CUIRect MainView)
 		auto Blur = Item.SuppressGaussianBlur();
 		const CUIRect Tile = Item.m_ContentRect;
 		const auto Layout = QmPlayersUi::PlayerTileLayout(Tile, 5);
-		Tile.Draw(ui_token::color::SURFACE_HIGHLIGHT, IGraphics::CORNER_ALL, ui_token::list::RowRadius(Tile.h));
 
 		char aName[MAX_NAME_LENGTH], aClan[MAX_CLAN_LENGTH];
 		GameClient()->FormatStreamerName(Id, aName, sizeof(aName));
@@ -177,11 +179,10 @@ void CMenus::RenderPlayers(CUIRect MainView)
 		};
 		// 图标默认不占视线：只有悬浮到这张卡上才出现；已经生效的状态
 		//（好友 / 静音 / 裂心 / 跟随中）常显，复制不属于状态，只在悬浮时出现。
+		// 悬浮底色由列表组件画（胶囊行），这里不再自绘一层比卡片更大的底。
 		const vec2 MousePos = Input()->NativeMousePos();
 		const bool TileHovered = MousePos.x >= Tile.x && MousePos.x <= Tile.x + Tile.w &&
 					 MousePos.y >= Tile.y && MousePos.y <= Tile.y + Tile.h;
-		if(TileHovered)
-			Tile.Draw(ui_token::color::LIST_ITEM_HOVER, IGraphics::CORNER_ALL, ui_token::list::RowRadius(Tile.h));
 		const auto Slots = QmPlayersUi::PlayerTileIconRow(Layout.m_Icons, (int)std::size(aActions));
 		for(int Action = (int)std::size(aActions) - 1; Action >= 0; --Action)
 		{
@@ -190,6 +191,8 @@ void CMenus::RenderPlayers(CUIRect MainView)
 				continue;
 			const CUIRect Slot = Slots.m_aCells[Action];
 			const auto &Spec = aActions[Action];
+			if(!TileHovered && !Spec.m_Active)
+				continue;
 			const int Clicked = Ui()->DoButton_QmIcon(&s_aTileButtons[Id][Action], Spec.m_Icon, Spec.m_pFallback, Spec.m_Active ? 1 : 0, &Slot, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Spec.m_Enabled);
 			ui_widget::Tooltip(Ctx, &s_aTileButtons[Id][Action], Slot, Spec.m_pTooltip);
 			if(Clicked == 0 || !Spec.m_Enabled)

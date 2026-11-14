@@ -123,6 +123,8 @@ namespace ui_widget
 			return Enabled && Checked >= 0 ? pUi->DoButtonLogic(pId, Checked, &HitRect, Flags) : 0;
 		SButtonSurfaceOptions Options;
 		Options.m_Role = EUiButtonRole::ICON;
+		// 图标按钮一律正圆：方块按钮按半高取半径，和「圆形图标按钮」的既有约定一致。
+		Options.m_Radius = ButtonRect.h * 0.5f;
 		Options.m_Enabled = Enabled && Checked >= 0;
 		Options.m_Selected = Checked > 0;
 		Options.m_Corners = Corners;
