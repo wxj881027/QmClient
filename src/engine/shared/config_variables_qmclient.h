@@ -90,7 +90,7 @@ MACRO_CONFIG_STR(QmSettingsCardWidths, qm_settings_card_widths, 8000, "", CFGFLA
 MACRO_CONFIG_STR(QmExpandedSections, qm_expanded_sections, 2048, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Expanded personalization sections (format: stableId=1;stableId2=0;)")
 MACRO_CONFIG_INT(QmSettingsCardCollapseMigrated, qm_settings_card_collapse_migrated, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Legacy settings card collapse states migrated")
 MACRO_CONFIG_INT(QmCardOrderMigrated, qm_card_order_migrated, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Global card ordering old config migration completed flag")
-MACRO_CONFIG_INT(QmCardLayoutVersion, qm_card_layout_version, 0, 0, 13, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Settings card default layout migration version")
+MACRO_CONFIG_INT(QmCardLayoutVersion, qm_card_layout_version, 0, 0, 14, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Settings card default layout migration version")
 MACRO_CONFIG_STR(QmSettingsCardOrder, qm_settings_card_order, 2048, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Tclient settings card ordering (format: id:col:order; semicolon-separated)")
 // 服务器浏览器地图预览：「只看实体层」开关原来只存在弹窗上下文里，关掉弹窗就丢，改为落配置。
 MACRO_CONFIG_INT(QmMapPreviewEntityOnly, qm_map_preview_entity_only, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Map preview shows the entity layer only (hides textures)")

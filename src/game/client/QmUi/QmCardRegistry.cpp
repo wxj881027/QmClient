@@ -884,6 +884,33 @@ namespace qm_card_registry
 		return qm_card_order::MigrateExactLayout(Model, "credits-qmclient", vLegacy, vTarget, vAllowed);
 	}
 
+	bool RepairLegacyGraphicsVisualCards(qm_card_order::CModel &Model)
+	{
+		// 两张卡的新归属固定来自注册表：tab 是「页」这一个维度，注册表说了算，
+		// 持久化顺序只保留列与列内次序。搬过去时追加到该页首列末尾，
+		// 阅读序保持「卡片效果 → 界面主题 → 图标 → 界面动效」。
+		const char *apMovedCards[] = {"deck:graphics-icons", "deck:graphics-interaction"};
+		bool Changed = false;
+		for(const char *pStableId : apMovedCards)
+		{
+			const int Index = Model.FindByStableId(pStableId);
+			if(Index < 0)
+				continue;
+			const auto &Entry = Model.Entry(Index);
+			if(Entry.m_pDefaultTab != nullptr && str_comp(Entry.m_pDefaultTab, "graphics-visual") == 0)
+				continue;
+			// 列与列内次序取注册表默认落位：半宽卡由瀑布分配到左/右列，
+			// 固定塞进 0 列（全宽列）会让胶囊行错位。
+			const qm_card_order::SEntry *pPlacement = FindDefaultPlacement(pStableId);
+			const int Column = pPlacement != nullptr ? pPlacement->m_Column : 1;
+			int Order = pPlacement != nullptr ? pPlacement->m_OrderInColumn : 0;
+			Order = std::min(Order, (int)Model.ColumnIndices("graphics-visual", Column).size());
+			Model.MoveToTab(pStableId, "graphics-visual", Column, Order);
+			Changed = true;
+		}
+		return Changed;
+	}
+
 	bool RepairLegacyNameplateTitleLayout(qm_card_order::CModel &Model)
 	{
 		const char *pStableId = "deck:qmclient-contributors-title-display";

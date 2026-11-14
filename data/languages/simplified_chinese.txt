@@ -8723,6 +8723,9 @@ Map name or path:
 Map not downloaded yet — join the server to preview it
 == 地图尚未下载，进入服务器下载后即可预览
 
+Map note
+== 地图备注
+
 Map play history
 == 地图游玩历史
 
@@ -10402,9 +10405,6 @@ Original message language
 
 Original only
 == 仅原文
-
-Original options
-== 原始选项
 
 Other
 == 其他
@@ -12652,6 +12652,9 @@ Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects anoth
 
 Restore Kugou files
 == 恢复酷狗原始文件
+
+Restore legacy votes
+== 恢复旧版投票
 
 Restore old single-segment hook collision line behavior
 == 恢复旧版单段钩子辅助线行为

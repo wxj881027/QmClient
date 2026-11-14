@@ -8408,6 +8408,9 @@ Map name or path:
 Map not downloaded yet — join the server to preview it
 == Mapa ainda não baixado. Entre no servidor para visualizar
 
+Map note
+== Nota do mapa
+
 Map play history
 == Histórico de jogos do mapa
 
@@ -9988,9 +9991,6 @@ Original message language
 
 Original only
 == Somente original
-
-Original options
-== Opções originais
 
 Other
 == Outro
@@ -12184,6 +12184,9 @@ Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects anoth
 
 Restore Kugou files
 == Restaurar arquivos do Kugou
+
+Restore legacy votes
+== Restaurar a votação antiga
 
 Restore old single-segment hook collision line behavior
 == Restaurar comportamento antigo de linha de colisão de gancho de segmento único

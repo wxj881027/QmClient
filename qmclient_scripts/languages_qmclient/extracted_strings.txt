@@ -2906,6 +2906,7 @@ Map folders
 Map name
 Map name or path:
 Map not downloaded yet — join the server to preview it
+Map note
 Map play history
 Map preview rendering unavailable
 Map preview shows the entity layer only (hides textures)
@@ -3466,7 +3467,6 @@ Original and translation
 Original language for incoming and outgoing text
 Original message language
 Original only
-Original options
 Other
 Other game modes
 Other modes
@@ -4216,6 +4216,7 @@ Restarting. Please wait…
 Restore a recently used Tee skin
 Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects another. /qm No dismisses.
 Restore Kugou files
+Restore legacy votes
 Restore old single-segment hook collision line behavior
 Restore recommended
 Restored previous bind

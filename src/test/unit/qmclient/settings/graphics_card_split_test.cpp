@@ -2,6 +2,7 @@
 // 分组与搜索索引都是结构契约，一旦拆错，卡片会渲染在空页上或搜索指向不存在的配置。
 #include <base/str.h>
 
+#include <game/client/QmUi/QmCardOrderModel.h>
 #include <game/client/QmUi/QmCardRegistry.h>
 #include <game/client/QmUi/QmCardSearchRegistry.h>
 #include <game/client/QmUi/cards/QmCardCatalog.h>
@@ -65,6 +66,41 @@ TEST(GraphicsCardSplit, VisualEffectsPageOwnsTheShapeThemeIconAndMotionCards)
 	// 两张新卡仍是标准卡：构建要分派到图像卡片构建器，否则子页签上是空页。
 	EXPECT_GE(qm_card_catalog::StandardCardFamily(CARD_EFFECTS), 0);
 	EXPECT_GE(qm_card_catalog::StandardCardFamily(THEME), 0);
+}
+
+// 意图：卡片换页后，玩家已保存的卡片顺序里仍记着旧 tab。若不做归属修复，
+// 顺序模型按 tab 投影，两张卡会在新旧两页同时消失（本批实机复现过）。
+TEST(GraphicsCardSplit, MovedCardsAreRehomedToTheirRegistryPage)
+{
+	qm_card_order::CModel Model;
+	Model.LoadMerged("", qm_card_registry::BuildDefaultEntries());
+	// 模拟旧存档：两张卡仍记着「显示选项」页与旧的列位置。
+	Model.MoveToTab(ICONS, "graphics", 1, 0);
+	Model.MoveToTab(INTERACTION, "graphics", 1, 1);
+
+	const int Icons = Model.StateIndexForStableId(ICONS);
+	const int Interaction = Model.StateIndexForStableId(INTERACTION);
+	const auto CountInTab = [&](const char *pTab, int EntryIndex) {
+		int Total = 0;
+		for(int Column = 0; Column < 3; ++Column)
+		{
+			const std::vector<int> vColumn = Model.ColumnIndices(pTab, Column);
+			Total += (int)std::count(vColumn.begin(), vColumn.end(), EntryIndex);
+		}
+		return Total;
+	};
+	// 旧存档里两张卡挂在「显示选项」，视觉页一张都没有。
+	EXPECT_EQ(CountInTab("graphics-visual", Icons), 0);
+	EXPECT_EQ(CountInTab("graphics-visual", Interaction), 0);
+
+	EXPECT_TRUE(qm_card_registry::RepairLegacyGraphicsVisualCards(Model));
+	// 修复后两张卡都在视觉页，且不再留在旧页（否则会渲染两遍或干脆看不见）。
+	EXPECT_EQ(CountInTab("graphics-visual", Icons), 1);
+	EXPECT_EQ(CountInTab("graphics-visual", Interaction), 1);
+	EXPECT_EQ(CountInTab("graphics", Icons), 0);
+	EXPECT_EQ(CountInTab("graphics", Interaction), 0);
+	// 归属已正确时不再改动，重复调用是空操作。
+	EXPECT_FALSE(qm_card_registry::RepairLegacyGraphicsVisualCards(Model));
 }
 
 TEST(GraphicsCardSplit, SearchIndexFollowsTheSplitCards)

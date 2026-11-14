@@ -1112,9 +1112,10 @@ void CMenus::RenderSettings(CUIRect MainView)
 	{
 		const float TitleTextWidth = TextRender()->TextWidth(ui_token::page_title::FONT_SIZE, Localize("Settings"));
 		const float TitleIconSize = ui_token::page_title::ICON_SIZE;
+		// 图标与文字作为一个整体居中；图标按 token 做视觉下沉，标题重心才落在中线上。
 		CUIRect TitleIconRect{
 			Button.Center().x - (TitleTextWidth + ui_token::page_title::ICON_GAP) * 0.5f - TitleIconSize,
-			Button.y + (Button.h - TitleIconSize) * 0.5f,
+			Button.y + (Button.h - TitleIconSize) * 0.5f + ui_token::page_title::ICON_Y_OFFSET,
 			TitleIconSize,
 			TitleIconSize};
 		Ui()->DoLabel_QmIcon(&TitleIconRect, EQmIcon::GEAR, FontIcons::FONT_ICON_GEAR, TitleIconSize, TEXTALIGN_MC);

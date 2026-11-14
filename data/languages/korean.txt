@@ -8408,6 +8408,9 @@ Map name or path:
 Map not downloaded yet — join the server to preview it
 == 아직 다운로드하지 않은 맵입니다. 서버에 접속하면 미리 볼 수 있습니다
 
+Map note
+== 맵 메모
+
 Map play history
 == 맵 플레이 기록
 
@@ -9988,9 +9991,6 @@ Original message language
 
 Original only
 == 원문만
-
-Original options
-== 원본 투표 항목
 
 Other
 == 기타
@@ -12184,6 +12184,9 @@ Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects anoth
 
 Restore Kugou files
 == Kugou 원본 파일 복원
+
+Restore legacy votes
+== 이전 투표로 되돌리기
 
 Restore old single-segment hook collision line behavior
 == 이전 단일 세그먼트 갈고리 충돌선 동작 복원

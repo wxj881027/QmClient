@@ -8408,6 +8408,9 @@ Map name or path:
 Map not downloaded yet — join the server to preview it
 == 未ダウンロードのマップです。サーバーに参加するとプレビューできます
 
+Map note
+== マップメモ
+
 Map play history
 == マッププレイ履歴
 
@@ -9988,9 +9991,6 @@ Original message language
 
 Original only
 == 原文のみ
-
-Original options
-== 元の投票項目
 
 Other
 == その他
@@ -12184,6 +12184,9 @@ Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects anoth
 
 Restore Kugou files
 == Kugou の元ファイルを復元
+
+Restore legacy votes
+== 従来の投票に戻す
 
 Restore old single-segment hook collision line behavior
 == 旧式の単一セグメントフック衝突線動作を復元

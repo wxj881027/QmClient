@@ -63,15 +63,16 @@ void CMenus::RenderServerControl(CUIRect MainView)
 	bool ModeChanged = State.m_Mode.UpdateCommunity(pCommunityId);
 	const auto PreviousPage = State.m_Page;
 	CUIRect Navigation;
-	MainView.HSplitTop(28.0f, &Navigation, &MainView);
-	MainView.HSplitTop(8.0f, nullptr, &MainView);
+	// 页签条高度与字号取设置页胶囊页签同一档：投票页顶部不再用更大的一档文字。
+	MainView.HSplitTop(ui_token::settings::TAB_HEIGHT, &Navigation, &MainView);
+	MainView.HSplitTop(ui_token::panel::GAP, nullptr, &MainView);
 	if(State.m_Mode.IsOfficialDdnet())
 	{
 		CUIRect SwitchView;
 		Navigation.VSplitRight(std::min(140.0f, Navigation.w * 0.25f), &Navigation, &SwitchView);
 		Navigation.VSplitRight(8.0f, &Navigation, nullptr);
 		static CButtonContainer s_SwitchView;
-		if(ui_widget::SecondaryButton(ui_widget::ControlContext(Ui()), &s_SwitchView, State.m_Mode.UseMapLibrary() ? Localize("Original options") : Localize("Map"), SwitchView))
+		if(ui_widget::SecondaryButton(ui_widget::ControlContext(Ui()), &s_SwitchView, State.m_Mode.UseMapLibrary() ? Localize("Restore legacy votes") : Localize("Map"), SwitchView))
 		{
 			ModeChanged = State.m_Mode.ToggleServerOptions();
 			State.m_Page = EQmVoteMenuPage::OPTIONS;
@@ -81,7 +82,7 @@ void CMenus::RenderServerControl(CUIRect MainView)
 	static CButtonContainer s_aPages[3];
 	const char *apPages[] = {State.m_Mode.UseMapLibrary() ? Localize("Map") : Localize("Server votes"), Localize("Kick player"), Localize("Move player to spectators")};
 	const auto Style = CapsuleTabBarStyleFor(MenuPanelColor());
-	State.m_Page = static_cast<EQmVoteMenuPage>(DoNavigationTabs(s_aPages, apPages, std::size(apPages), static_cast<int>(State.m_Page), Navigation, 8.0f, &Style));
+	State.m_Page = static_cast<EQmVoteMenuPage>(DoNavigationTabs(s_aPages, apPages, std::size(apPages), static_cast<int>(State.m_Page), Navigation, ui_token::radius::PILL, &Style, ui_token::settings::TAB_FONT_SIZE));
 	if(ModeChanged || State.m_Page != PreviousPage)
 	{
 		Ui()->ClosePopupMenus();

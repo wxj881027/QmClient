@@ -711,7 +711,10 @@ namespace ui_token::page_title
 	inline constexpr float HEIGHT = 38.0f;
 	// 前置图标尺寸与图标到文字的间距。
 	inline constexpr float ICON_SIZE = 20.0f;
-	inline constexpr float ICON_GAP = 8.0f;
+	inline constexpr float ICON_GAP = 6.0f;
+	// 图标的视觉下沉量：字形有内部留白，纯按矩形居中时图标会显得偏高，
+	// 标题「图标 + 文字」的重心因此不稳。按字号比例给一点点下沉。
+	inline constexpr float ICON_Y_OFFSET = 1.5f;
 } // namespace ui_token::page_title
 
 // 面板间距：页面级面板之间、面板与内容之间只用这两档。
@@ -723,6 +726,29 @@ namespace ui_token::panel
 	// 面板内边距：内容到面板四边。
 	inline constexpr float PADDING = 10.0f;
 } // namespace ui_token::panel
+
+// 服务器信息页（游戏内「服务器信息」页）的排版档：标题、字段正文、标签列宽与行高。
+// 原先标题 32、正文 20 全是硬编码并乘卡片缩放，实机上又大又密；收成一组后
+// 「服务器信息」「游戏信息」两张卡与下方地图标签、公告共用同一套字号。
+namespace ui_token::server_info
+{
+	// 卡片大标题。
+	inline constexpr float TITLE_SIZE = 26.0f;
+	// 字段正文（标签与值同一档）。
+	inline constexpr float BODY_SIZE = 15.0f;
+	// 标题与副标题之间的留白。
+	inline constexpr float TITLE_GAP = 4.0f;
+	// 字段行高 = 正文字号 × 该比例：字号缩小后仍要留出行间呼吸，避免密排。
+	inline constexpr float ROW_HEIGHT_RATIO = 1.5f;
+	// 标签列宽（地址 / 延迟 / 版本 / 密码 / 社区）。
+	inline constexpr float LABEL_WIDTH = 104.0f;
+	// 备注行：与上一段的间隔、行高、标签列宽。
+	inline constexpr float NOTE_GAP = 8.0f;
+	inline constexpr float NOTE_ROW_HEIGHT = 22.0f;
+	inline constexpr float NOTE_LABEL_WIDTH = 72.0f;
+	// 卡片圆角：与设置卡片同一族。
+	inline constexpr float CARD_RADIUS = radius::MENU;
+} // namespace ui_token::server_info
 
 // 只给偏移量，颜色用 color::SURFACE_SHADOW，绘制层按偏移方向铺一层模糊底。
 namespace ui_token::elevation
