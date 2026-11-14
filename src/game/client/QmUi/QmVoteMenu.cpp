@@ -88,6 +88,13 @@ namespace
 		auto *pState = static_cast<SQmVoteMenuState *>(pUser);
 		if(pState == nullptr)
 			return;
+		// 先试实时预览：与服务器列表同一套缓存与渲染目标，本地没有这张图时返回 false。
+		if(pState->m_pGameClient != nullptr)
+		{
+			CMenus &Menus = pState->m_pGameClient->m_Menus;
+			if(Menus.RenderMapPreviewForVote(Layout.m_Cover, pState->m_aPreviewMapName))
+				return;
+		}
 		DrawVoteMapCoverPatch(pState->m_Covers, pUi, Layout.m_Cover, pState->m_MapPreview.m_Info.m_Thumbnail, CQmMapCovers::ERole::DETAILS);
 	}
 }
@@ -152,6 +159,8 @@ void CMenus::RenderServerControl(CUIRect MainView)
 		}
 		State.m_MapPreview.m_Info = std::move(Info);
 	}
+	State.m_pGameClient = GameClient();
+	str_copy(State.m_aPreviewMapName, pPreviewName, sizeof(State.m_aPreviewMapName));
 	State.m_MapPreview.m_CoverAspect = (float)CQmMapCovers::DETAILS_WIDTH / (float)CQmMapCovers::DETAILS_HEIGHT;
 	State.m_MapPreview.m_pfnDrawContent = DrawVoteMapPreviewCover;
 	State.m_MapPreview.m_pUser = &State;

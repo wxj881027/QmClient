@@ -2422,6 +2422,11 @@ protected:
 	void DrainIngameUiSnapshotTextRuntime();
 	void DrainIngameUiTextRuntime(bool AllowCurrentFrame = false);
 	void RenderServerControl(CUIRect MainView);
+public:
+	// 按地图名渲染预览（投票页复用服务器列表那套缓存与渲染目标）。
+	// 返回 false 表示本地没有这张地图，调用点回退到静态封面。
+	bool RenderMapPreviewForVote(const CUIRect &Preview, const char *pMapName);
+private:
 	void RenderServerVoteList(CUIRect MainView);
 	void RenderVoteMapLibrary(CUIRect MainView);
 	void RenderUnfinishedMaps(CUIRect MainView);

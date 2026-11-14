@@ -1,3 +1,4 @@
+class CGameClient;
 #ifndef GAME_CLIENT_QMUI_QMVOTEMENU_H
 #define GAME_CLIENT_QMUI_QMVOTEMENU_H
 
@@ -59,6 +60,9 @@ struct SQmVoteMenuState
 	int m_FinishedCount = -1;
 	std::string m_RankPlayer;
 	std::set<std::string> m_Favorites;
+	// 当前预览目标地图名与所属客户端：封面回调据此调用 CMenus 的预览渲染。
+	char m_aPreviewMapName[128] = "";
+	CGameClient *m_pGameClient = nullptr;
 };
 
 #endif

@@ -1077,6 +1077,104 @@ CUi::EPopupMenuFunctionResult CMenus::PopupMapPreview(void *pContext, CUIRect Vi
 	return CUi::POPUP_KEEP_OPEN;
 }
 
+
+bool CMenus::RenderMapPreviewForVote(const CUIRect &Preview, const char *pMapName)
+{
+	if(pMapName == nullptr || pMapName[0] == '\0' || Preview.w <= 0.0f || Preview.h <= 0.0f)
+		return false;
+	const float Now = Client()->GlobalTime();
+	if(m_pMapPreviewCache == nullptr)
+		m_pMapPreviewCache = new CMapPreviewCache(Graphics());
+	SQmMapPreviewEntry *pEntry = m_pMapPreviewCache->Acquire(pMapName, Now, Storage(), GameClient());
+	if(pEntry == nullptr || pEntry->m_LoadFailed)
+		return false;
+	const bool Ready = CMapPreviewCache::AdvanceEntry(*pEntry, GameClient(), Now) && pEntry->m_pRenderer->AdvanceMapLoad(1);
+	if(!Ready)
+	{
+		Ui()->DoLabel(&Preview, Localize("Initializing map layers"), 10.0f, TEXTALIGN_MC);
+		return true;
+	}
+
+	// 相机按地图自身存一份：投票页没有可拖拽的交互，只固定在起点或地图中心。
+	static char s_aVotePreviewMap[128] = "";
+	static vec2 s_VotePreviewCenter{};
+	static float s_VotePreviewZoom = 1.0f;
+	if(str_comp(s_aVotePreviewMap, pMapName) != 0)
+	{
+		str_copy(s_aVotePreviewMap, pMapName);
+		s_VotePreviewCenter = pEntry->m_Start ? *pEntry->m_Start : vec2(pEntry->m_WorldSize.x * 0.5f, pEntry->m_WorldSize.y * 0.5f);
+		s_VotePreviewZoom = 1.0f;
+	}
+
+	const float Aspect = Graphics()->GameScreenAspect();
+	const float CanvasWidth = std::min(Preview.w, Preview.h * Aspect);
+	const int TargetWidth = std::clamp((int)std::ceil(CanvasWidth * Graphics()->ScreenWidth() / Ui()->Screen()->w), 128, 2048);
+	const int TargetHeight = maximum(32, (int)std::round(TargetWidth / Aspect));
+	const uint32_t ResetVersion = Graphics()->GraphicsResourcesResetVersion();
+	const bool Reset = pEntry->m_GraphicsResetVersion != ResetVersion;
+	if(Reset)
+		pEntry->m_RenderTarget.Invalidate();
+	if(!pEntry->m_RenderTarget.IsValid() || pEntry->m_TargetWidth != TargetWidth || pEntry->m_TargetHeight != TargetHeight)
+	{
+		if(pEntry->m_RenderTarget.IsValid())
+			Graphics()->DestroyRenderTarget(&pEntry->m_RenderTarget);
+		pEntry->m_RenderTarget = Graphics()->CreateRenderTarget(TargetWidth, TargetHeight);
+		pEntry->m_TargetHeight = TargetHeight;
+		pEntry->m_TargetWidth = TargetWidth;
+		pEntry->m_NeedsRender = true;
+		pEntry->m_GraphicsResetVersion = ResetVersion;
+	}
+	if(!pEntry->m_RenderTarget.IsValid())
+		return false;
+
+	float DrawW = Preview.w;
+	float DrawH = DrawW / Aspect;
+	if(DrawH > Preview.h)
+	{
+		DrawH = Preview.h;
+		DrawW = DrawH * Aspect;
+	}
+	const CUIRect DrawRect(Preview.x + (Preview.w - DrawW) * 0.5f, Preview.y + (Preview.h - DrawH) * 0.5f, DrawW, DrawH);
+	if(pEntry->m_NeedsRender || pEntry->m_RenderedCenter != s_VotePreviewCenter || pEntry->m_RenderedZoom != s_VotePreviewZoom)
+	{
+		Ui()->FlushQuadBatch();
+		Ui()->ClipEnable(Ui()->Screen());
+		const bool EntityOnly = g_Config.m_QmMapPreviewEntityOnly != 0;
+		pEntry->m_pRenderer->SetEntityOnly(EntityOnly);
+		if(Graphics()->BeginRenderTarget(pEntry->m_RenderTarget, ColorRGBA(0.055f, 0.065f, 0.085f, 1.0f)))
+		{
+			if(EntityOnly)
+				GameClient()->m_Background.RenderPreview(s_VotePreviewCenter, s_VotePreviewZoom, *pEntry->m_pRenderer);
+			pEntry->m_pRenderer->RenderCustomWithCamera(s_VotePreviewCenter, s_VotePreviewZoom, EntityOnly ? ERenderType::RENDERTYPE_FOREGROUND : ERenderType::RENDERTYPE_FULL_DESIGN);
+			Graphics()->EndRenderTarget();
+			pEntry->m_RenderedCenter = s_VotePreviewCenter;
+			pEntry->m_RenderedZoom = s_VotePreviewZoom;
+			pEntry->m_NeedsRender = false;
+		}
+		Ui()->MapScreen();
+		Ui()->ClipDisable();
+	}
+	if(pEntry->m_NeedsRender)
+		return true;
+
+	IGraphics::SRenderTargetDrawParams DrawParams;
+	DrawParams.m_X = DrawRect.x;
+	DrawParams.m_Y = DrawRect.y;
+	DrawParams.m_W = DrawRect.w;
+	DrawParams.m_H = DrawRect.h;
+	DrawParams.m_Alpha = Ui()->ControlAlphaScale();
+	DrawParams.m_Corners = IGraphics::CORNER_ALL;
+	DrawParams.m_Rounding = ui_token::list::RowRadius(DrawRect.h);
+	DrawParams.m_CornerSmoothing = QmEffectiveCornerSmoothing();
+	DrawParams.m_CornerCurve = (float)g_Config.m_QmUiCornerCurve;
+	DrawParams.m_CornerSeam = g_Config.m_QmUiCapsuleStyle == 2 ? 1.0f + std::clamp(g_Config.m_QmUiCapsuleAppleStrength / 100.0f, 0.0f, 1.0f) : (g_Config.m_QmUiCapsuleStyle == 1 ? 0.0f : 1.0f);
+	Ui()->FlushQuadBatch();
+	Ui()->ClipEnable(&Preview);
+	Graphics()->DrawRenderTarget(pEntry->m_RenderTarget, DrawParams);
+	Ui()->ClipDisable();
+	return true;
+}
+
 void CMenus::OpenMapPreviewPopup(const CServerInfo *pItem)
 {
 	m_MapPreviewPopupContext = CMapPreviewPopupContext{};
