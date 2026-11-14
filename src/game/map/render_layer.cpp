@@ -356,22 +356,43 @@ void CRenderLayerTile::RenderTileLayer(const ColorRGBA &Color, const CRenderLaye
 		{
 			int Y0 = std::max(VisibleRectY0, 0);
 			int Y1 = std::min(VisibleRectY1, (int)Visuals.m_Height);
-
-			unsigned long long Reserve = absolute(Y1 - Y0) + 1;
-			m_vpRenderTileLayerIndexOffsets.reserve(Reserve);
-			m_vRenderTileLayerDrawCounts.reserve(Reserve);
-
-			for(int y = Y0; y < Y1; ++y)
+			if(Y0 < Y1 && X0 == 0 && X1 == (int)Visuals.m_Width)
 			{
-				const auto &StartTileVisual = Visuals.m_vTilesOfLayer[y * Visuals.m_Width + X0];
-				const auto &EndTileVisual = Visuals.m_vTilesOfLayer[y * Visuals.m_Width + XR];
-				const offset_ptr RowStartOffset = StartTileVisual.IndexBufferByteOffset();
-				const offset_ptr RowEndOffset = EndTileVisual.IndexBufferByteOffset();
-				dbg_assert(RowEndOffset >= RowStartOffset, "Tile offsets are not monotone.");
-				unsigned int NumVertices = ((RowEndOffset - RowStartOffset) / sizeof(unsigned int)) + (EndTileVisual.DoDraw() ? 6lu : 0lu);
+				// 整层左右边界都在屏内时，所有可见行一次提交，省掉逐行的索引偏移数组。
+				const auto &StartTileVisual = Visuals.m_vTilesOfLayer[(size_t)Y0 * Visuals.m_Width];
+				const auto &EndTileVisual = Visuals.m_vTilesOfLayer[(size_t)Y1 * Visuals.m_Width - 1];
+				const offset_ptr StartOffset = StartTileVisual.IndexBufferByteOffset();
+				const offset_ptr EndOffset = EndTileVisual.IndexBufferByteOffset();
+				dbg_assert(EndOffset >= StartOffset, "Tile offsets are not monotone.");
+				const unsigned int NumVertices = ((EndOffset - StartOffset) / sizeof(unsigned int)) + (EndTileVisual.DoDraw() ? 6u : 0u);
 
-				if(NumVertices)
+				if(NumVertices != 0)
 				{
+					offset_ptr_size SingleOffset = (offset_ptr_size)StartOffset;
+					unsigned int SingleDrawCount = NumVertices;
+					Graphics()->RenderTileLayer(Visuals.m_BufferContainerIndex, Color, &SingleOffset, &SingleDrawCount, 1);
+				}
+			}
+			else
+			{
+				m_vpRenderTileLayerIndexOffsets.clear();
+				m_vRenderTileLayerDrawCounts.clear();
+				const unsigned long long Reserve = absolute(Y1 - Y0) + 1;
+				m_vpRenderTileLayerIndexOffsets.reserve(Reserve);
+				m_vRenderTileLayerDrawCounts.reserve(Reserve);
+
+				for(int y = Y0; y < Y1; ++y)
+				{
+					const auto &StartTileVisual = Visuals.m_vTilesOfLayer[y * Visuals.m_Width + X0];
+					const auto &EndTileVisual = Visuals.m_vTilesOfLayer[y * Visuals.m_Width + XR];
+					const offset_ptr RowStartOffset = StartTileVisual.IndexBufferByteOffset();
+					const offset_ptr RowEndOffset = EndTileVisual.IndexBufferByteOffset();
+					dbg_assert(RowEndOffset >= RowStartOffset, "Tile offsets are not monotone.");
+					unsigned int NumVertices = ((RowEndOffset - RowStartOffset) / sizeof(unsigned int)) + (EndTileVisual.DoDraw() ? 6lu : 0lu);
+
+					if(!NumVertices)
+						continue;
+
 					if(!m_vpRenderTileLayerIndexOffsets.empty())
 					{
 						const offset_ptr LastOffset = (offset_ptr)m_vpRenderTileLayerIndexOffsets.back();
@@ -390,12 +411,12 @@ void CRenderLayerTile::RenderTileLayer(const ColorRGBA &Color, const CRenderLaye
 					m_vpRenderTileLayerIndexOffsets.push_back((offset_ptr_size)RowStartOffset);
 					m_vRenderTileLayerDrawCounts.push_back(NumVertices);
 				}
-			}
 
-			int DrawCount = m_vpRenderTileLayerIndexOffsets.size();
-			if(DrawCount != 0)
-			{
-				Graphics()->RenderTileLayer(Visuals.m_BufferContainerIndex, Color, m_vpRenderTileLayerIndexOffsets.data(), m_vRenderTileLayerDrawCounts.data(), DrawCount);
+				int DrawCount = m_vpRenderTileLayerIndexOffsets.size();
+				if(DrawCount != 0)
+				{
+					Graphics()->RenderTileLayer(Visuals.m_BufferContainerIndex, Color, m_vpRenderTileLayerIndexOffsets.data(), m_vRenderTileLayerDrawCounts.data(), DrawCount);
+				}
 			}
 		}
 	}
