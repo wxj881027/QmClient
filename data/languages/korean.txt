@@ -5657,6 +5657,9 @@ Fast keys for common dummy, aim and rescue actions: HDF, DF, 45-degree aim, jump
 Fast practice
 == 빠른 연습
 
+Fast practice runs a private copy of the map, so the server still sees you where you entered. The ghost above is that server-side you; other players are controlled by "Show others". Bind rows send the same commands as the practice menu, so a bound key never needs the chat box
+== 빠른 연습은 맵의 개인 복사본을 실행하므로 서버는 입장했던 위치의 당신을 봅니다. 위의 고스트가 바로 서버 쪽의 당신입니다. 다른 플레이어는 "다른 플레이어 표시" 설정을 따릅니다. 바인드 행은 연습 메뉴와 같은 명령을 보내므로 키를 지정하면 채팅창을 열 필요가 없습니다.
+
 Fast, lightweight blur with a softer approximation.
 == 빠르고 가벼운 블러로, 더 부드러운 근사 효과를 제공합니다.
 
@@ -8300,6 +8303,12 @@ Main Tee
 Main Tee and dummy
 == 본체와 더미
 
+Main-world ghost opacity
+== 메인 월드 고스트 불투명도
+
+Main-world ghost opacity during fast practice (%)
+== 빠른 연습 중 메인 월드 고스트 불투명도(%)
+
 Maintains the list of hostile players and groups plus the rules used to display them.
 == 적대 플레이어와 그룹 목록, 그리고 표시에 쓰이는 규칙을 관리합니다.
 
@@ -9833,6 +9842,9 @@ Only the selected tee changes, so switch to "Dummy" before editing the colors yo
 Only what you can't imagine, nothing Dream can't do
 == 상상할 수 없는 것만 있을 뿐, Dream 이 할 수 없는 것은 없습니다
 
+Only your copy of the world is simulated: other players still come from the server, so switches you hit do not affect them.
+== 시뮬레이션되는 것은 자신의 세계 복사본뿐입니다. 다른 플레이어는 여전히 서버에서 오므로 당신이 밟은 스위치는 그들에게 영향을 주지 않습니다.
+
 Opacity
 == 불투명도
 
@@ -10792,6 +10804,9 @@ Position jump tip
 
 Position:
 == 위치:
+
+Practice a map privately, hide the main-world ghost, show a run timer and bind practice commands
+== 맵을 혼자 연습하고, 메인 월드 고스트를 숨기고, 이번 시간을 표시하며, 연습 명령을 키에 지정합니다.
 
 Practice ghosts
 == 연습 고스트
@@ -12410,6 +12425,9 @@ Run server
 Runs commands automatically when you connect to a server, split into a connect part and a join part.
 == 서버에 연결하면 명령어를 자동으로 실행하며, 연결 단계와 참가 단계로 나뉩니다.
 
+Runs your own copy of the map while the server keeps your real Tee where you entered, with a run timer and keys for the practice commands.
+== 자신만의 맵 복사본을 실행하고 서버의 실제 Tee는 입장했던 위치에 남습니다. 이번 시간 표시와 연습 명령 키 지정도 함께 제공합니다.
+
 Same as "vote no"
 == "투표 반대"와 동일
 
@@ -13775,6 +13793,9 @@ Show lyrics in Dynamic Island
 Show main tee title locally
 == 로컬에서 메인 티 칭호 표시
 
+Show main-world ghost
+== 메인 월드 고스트 표시
+
 Show map details
 == 맵 세부 정보 표시
 
@@ -13985,6 +14006,9 @@ Show position and angle (mini debug)
 Show position and angle debug info
 == 위치 및 각도 디버그 정보 표시
 
+Show practice timer
+== 연습 타이머 표시
+
 Show predicted position as ghost, original as unpredictable player
 == 예측 위치를 유령으로, 원본 위치를 예측 불가능한 플레이어로 표시
 
@@ -14156,6 +14180,9 @@ Show the original text locally below translated outgoing messages
 Show the pet
 == 펫 표시
 
+Show the practice run timer in the HUD
+== HUD에 이번 연습 시간을 표시합니다
+
 Show the screen center line
 == 화면 중심선 표시
 
@@ -14236,6 +14263,9 @@ Show Y
 
 Show your current team
 == 현재 팀 보기
+
+Show your own main-world ghost during fast practice
+== 빠른 연습 중 메인 월드의 내 고스트를 표시합니다
 
 Show zzz emoji next to afk players
 == 자리 비움 플레이어 옆에 zzz 이모지 표시
@@ -16142,6 +16172,9 @@ Toggle keyboard shortcuts
 Toggle local console
 == 로컬 콘솔 전환
 
+Toggle main-world ghost
+== 메인 월드 고스트 전환
+
 Toggle map preview
 == 맵 미리보기
 
@@ -16459,6 +16492,9 @@ Tune variable to value or show current value
 
 Turn motion off on weaker machines; cards then open and scroll immediately.
 == 성능이 낮은 환경에서는 움직임을 끄세요. 그러면 카드가 즉시 열리고 스크롤도 바로 됩니다.
+
+Turn off "Show main-world ghost" to hide the server-side Tee, set its opacity while it stays on, enable the timer, and bind the command rows you use.
+== "메인 월드 고스트 표시"를 끄면 서버 쪽 Tee가 숨겨집니다. 켜 둔 상태에서는 불투명도를 조절하고, 타이머를 켜고, 사용하는 명령 행에 키를 지정할 수 있습니다.
 
 Turn on "Auto chat in water", type the "Chat message" you want, and optionally enable "Send emoticon in water" with its ID.
 == "물에 빠지면 자동 채팅"을 켜고 보낼 "채팅 메시지"를 입력한 뒤, 원하면 "물에 빠지면 이모티콘 보내기"와 이모티콘 ID를 설정하세요.

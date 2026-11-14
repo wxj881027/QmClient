@@ -5657,6 +5657,9 @@ Fast keys for common dummy, aim and rescue actions: HDF, DF, 45-degree aim, jump
 Fast practice
 == Szybkie ćwiczenie
 
+Fast practice runs a private copy of the map, so the server still sees you where you entered. The ghost above is that server-side you; other players are controlled by "Show others". Bind rows send the same commands as the practice menu, so a bound key never needs the chat box
+== Szybka praktyka uruchamia prywatną kopię mapy, więc serwer nadal widzi cię tam, gdzie wszedłeś. Duch powyżej to ty po stronie serwera; innymi graczami steruje opcja „Pokaż innych”. Wiersze skrótów wysyłają te same komendy co menu praktyki, więc przypisany klawisz nigdy nie potrzebuje okna czatu.
+
 Fast, lightweight blur with a softer approximation.
 == Szybkie i lekkie rozmycie z łagodniejszym przybliżeniem.
 
@@ -8300,6 +8303,12 @@ Main Tee
 Main Tee and dummy
 == Główny Tee i dummy
 
+Main-world ghost opacity
+== Krycie ducha głównego świata
+
+Main-world ghost opacity during fast practice (%)
+== Krycie ducha głównego świata podczas szybkiej praktyki (%)
+
 Maintains the list of hostile players and groups plus the rules used to display them.
 == Zarządza listą wrogich graczy i grup oraz regułami ich wyświetlania.
 
@@ -9833,6 +9842,9 @@ Only the selected tee changes, so switch to "Dummy" before editing the colors yo
 Only what you can't imagine, nothing Dream can't do
 == Tylko to, czego nie możesz sobie wyobrazić, nic, czego Dream nie może zrobić
 
+Only your copy of the world is simulated: other players still come from the server, so switches you hit do not affect them.
+== Symulowana jest tylko twoja kopia świata: inni gracze wciąż pochodzą z serwera, więc przełączniki, które naciśniesz, nie mają na nich wpływu.
+
 Opacity
 == Nieprzezroczystość
 
@@ -10792,6 +10804,9 @@ Position jump tip
 
 Position:
 == Pozycja:
+
+Practice a map privately, hide the main-world ghost, show a run timer and bind practice commands
+== Ćwicz mapę prywatnie, ukryj ducha głównego świata, pokazuj czas przejazdu i przypisz klawisze do komend praktyki.
 
 Practice ghosts
 == Duchy ćwiczeń
@@ -12410,6 +12425,9 @@ Run server
 Runs commands automatically when you connect to a server, split into a connect part and a join part.
 == Automatycznie wykonuje polecenia po połączeniu z serwerem, podzielone na część połączenia i część dołączania.
 
+Runs your own copy of the map while the server keeps your real Tee where you entered, with a run timer and keys for the practice commands.
+== Uruchamia własną kopię mapy, a serwer zostawia twojego prawdziwego Tee tam, gdzie wszedłeś; w zestawie czas przejazdu i klawisze komend praktyki.
+
 Same as "vote no"
 == To samo co „głosuj nie”
 
@@ -13775,6 +13793,9 @@ Show lyrics in Dynamic Island
 Show main tee title locally
 == Pokazuj tytuł głównego tee lokalnie
 
+Show main-world ghost
+== Pokaż ducha głównego świata
+
 Show map details
 == Pokaż szczegóły mapy
 
@@ -13985,6 +14006,9 @@ Show position and angle (mini debug)
 Show position and angle debug info
 == Pokaż informacje debugowania pozycji i kąta
 
+Show practice timer
+== Pokaż stoper praktyki
+
 Show predicted position as ghost, original as unpredictable player
 == Pokaż przewidywaną pozycję jako ducha, oryginalną jako nieprzewidywalnego gracza
 
@@ -14156,6 +14180,9 @@ Show the original text locally below translated outgoing messages
 Show the pet
 == Pokaż zwierzaka
 
+Show the practice run timer in the HUD
+== Pokazuje czas bieżącej praktyki w HUD
+
 Show the screen center line
 == Pokaż linię środka ekranu
 
@@ -14236,6 +14263,9 @@ Show Y
 
 Show your current team
 == Pokaż swoją bieżącą drużynę
+
+Show your own main-world ghost during fast practice
+== Pokazuje własnego ducha głównego świata podczas szybkiej praktyki
 
 Show zzz emoji next to afk players
 == Pokaż emoji zzz obok graczy AFK
@@ -16142,6 +16172,9 @@ Toggle keyboard shortcuts
 Toggle local console
 == Przełącz lokalną konsolę
 
+Toggle main-world ghost
+== Przełącz ducha głównego świata
+
 Toggle map preview
 == Podgląd mapy
 
@@ -16459,6 +16492,9 @@ Tune variable to value or show current value
 
 Turn motion off on weaker machines; cards then open and scroll immediately.
 == Na słabszych komputerach wyłącz ruch; karty otwierają się i przewijają wtedy od razu.
+
+Turn off "Show main-world ghost" to hide the server-side Tee, set its opacity while it stays on, enable the timer, and bind the command rows you use.
+== Wyłącz „Pokaż ducha głównego świata”, aby ukryć Tee po stronie serwera; gdy duch pozostaje włączony, ustaw jego krycie, włącz stoper i przypisz klawisze do używanych wierszy komend.
 
 Turn on "Auto chat in water", type the "Chat message" you want, and optionally enable "Send emoticon in water" with its ID.
 == Włącz „Automatyczny czat w wodzie", wpisz wybraną „Wiadomość na czacie", a w razie potrzeby włącz „Wysyłaj emotikonę w wodzie" wraz z jej ID.

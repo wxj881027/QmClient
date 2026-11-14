@@ -5657,6 +5657,9 @@ Fast keys for common dummy, aim and rescue actions: HDF, DF, 45-degree aim, jump
 Fast practice
 == Entraînement rapide
 
+Fast practice runs a private copy of the map, so the server still sees you where you entered. The ghost above is that server-side you; other players are controlled by "Show others". Bind rows send the same commands as the practice menu, so a bound key never needs the chat box
+== La pratique rapide exécute une copie privée de la carte, donc le serveur vous voit toujours là où vous êtes entré. Le fantôme au-dessus est votre vous côté serveur ; les autres joueurs sont gérés par « Afficher les autres ». Les lignes de raccourci envoient les mêmes commandes que le menu de pratique, une touche assignée n'a donc jamais besoin de la zone de chat.
+
 Fast, lightweight blur with a softer approximation.
 == Flou rapide et léger avec une approximation plus douce.
 
@@ -8300,6 +8303,12 @@ Main Tee
 Main Tee and dummy
 == Tee principal et dummy
 
+Main-world ghost opacity
+== Opacité du fantôme du monde principal
+
+Main-world ghost opacity during fast practice (%)
+== Opacité du fantôme du monde principal pendant la pratique rapide (%)
+
 Maintains the list of hostile players and groups plus the rules used to display them.
 == Gère la liste des joueurs et groupes hostiles ainsi que les règles d'affichage.
 
@@ -9833,6 +9842,9 @@ Only the selected tee changes, so switch to "Dummy" before editing the colors yo
 Only what you can't imagine, nothing Dream can't do
 == Seul ce que vous ne pouvez pas imaginer, rien que Dream ne puisse faire
 
+Only your copy of the world is simulated: other players still come from the server, so switches you hit do not affect them.
+== Seule votre copie du monde est simulée : les autres joueurs viennent toujours du serveur, donc les interrupteurs que vous activez ne les affectent pas.
+
 Opacity
 == Opacité
 
@@ -10792,6 +10804,9 @@ Position jump tip
 
 Position:
 == Position :
+
+Practice a map privately, hide the main-world ghost, show a run timer and bind practice commands
+== Entraînez-vous sur une carte en privé, masquez le fantôme du monde principal, affichez le chronomètre et assignez des touches aux commandes de pratique.
 
 Practice ghosts
 == Fantômes d'entraînement
@@ -12410,6 +12425,9 @@ Run server
 Runs commands automatically when you connect to a server, split into a connect part and a join part.
 == Exécute des commandes automatiquement lors de la connexion à un serveur, réparties en une partie pour la connexion et une partie pour rejoindre le serveur.
 
+Runs your own copy of the map while the server keeps your real Tee where you entered, with a run timer and keys for the practice commands.
+== Lance votre propre copie de la carte pendant que le serveur garde votre vrai Tee là où vous êtes entré, avec un chronomètre et des touches pour les commandes de pratique.
+
 Same as "vote no"
 == Identique à "vote non"
 
@@ -13775,6 +13793,9 @@ Show lyrics in Dynamic Island
 Show main tee title locally
 == Afficher le titre du tee principal localement
 
+Show main-world ghost
+== Afficher le fantôme du monde principal
+
 Show map details
 == Afficher les détails de la carte
 
@@ -13985,6 +14006,9 @@ Show position and angle (mini debug)
 Show position and angle debug info
 == Afficher les infos de débogage de position et d'angle
 
+Show practice timer
+== Afficher le chronomètre de pratique
+
 Show predicted position as ghost, original as unpredictable player
 == Afficher la position prédite en fantôme, l'original en joueur imprévisible
 
@@ -14156,6 +14180,9 @@ Show the original text locally below translated outgoing messages
 Show the pet
 == Afficher l'animal
 
+Show the practice run timer in the HUD
+== Affiche le temps de la pratique en cours dans le HUD
+
 Show the screen center line
 == Afficher la ligne centrale de l'écran
 
@@ -14236,6 +14263,9 @@ Show Y
 
 Show your current team
 == Afficher votre équipe actuelle
+
+Show your own main-world ghost during fast practice
+== Affiche votre propre fantôme du monde principal pendant la pratique rapide
 
 Show zzz emoji next to afk players
 == Afficher l'emoji zzz à côté des joueurs AFK
@@ -16142,6 +16172,9 @@ Toggle keyboard shortcuts
 Toggle local console
 == Basculer la console locale
 
+Toggle main-world ghost
+== Basculer le fantôme du monde principal
+
 Toggle map preview
 == Aperçu de la carte
 
@@ -16459,6 +16492,9 @@ Tune variable to value or show current value
 
 Turn motion off on weaker machines; cards then open and scroll immediately.
 == Désactive les animations sur une machine modeste ; les cartes s'ouvrent alors et défilent instantanément.
+
+Turn off "Show main-world ghost" to hide the server-side Tee, set its opacity while it stays on, enable the timer, and bind the command rows you use.
+== Désactivez « Afficher le fantôme du monde principal » pour masquer le Tee côté serveur ; tant qu'il reste actif, réglez son opacité, activez le chronomètre et assignez des touches aux lignes de commandes utilisées.
 
 Turn on "Auto chat in water", type the "Chat message" you want, and optionally enable "Send emoticon in water" with its ID.
 == Active « Chat auto dans l'eau », saisis le « Message de chat » voulu et, en option, active « Envoyer un emoticon dans l'eau » avec son ID.

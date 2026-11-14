@@ -1947,6 +1947,7 @@ Fast input changes how inputs are timed, so disable it if a server reports unusu
 Fast input others
 Fast keys for common dummy, aim and rescue actions: HDF, DF, 45-degree aim, jumps and the trajectory line.
 Fast practice
+Fast practice runs a private copy of the map, so the server still sees you where you entered. The ghost above is that server-side you; other players are controlled by "Show others". Bind rows send the same commands as the practice menu, so a bound key never needs the chat box
 Fast, lightweight blur with a softer approximation.
 Faster export playback
 Faster presets encode quicker but produce larger files
@@ -2869,6 +2870,8 @@ Main only
 Main Tee
 Main Tee and dummy
 Main view
+Main-world ghost opacity
+Main-world ghost opacity during fast practice (%)
 Maintains the list of hostile players and groups plus the rules used to display them.
 Make frozen players look more like volleyballs (0=Disabled, 1=Only volleyball maps, 2=Always)
 Make press event
@@ -3414,6 +3417,7 @@ Only show when the other Tee is not on screen
 Only show with this nickname
 Only the selected tee changes, so switch to "Dummy" before editing the colors you want on your dummy.
 Only what you can't imagine, nothing Dream can't do
+Only your copy of the world is simulated: other players still come from the server, so switches you hit do not affect them.
 Opacity
 Opacity of entity layers on the map such as death, freeze, unfreeze, teleport, checkpoint and switch tiles.
 Opacity of freeze bars inside freeze
@@ -3742,6 +3746,7 @@ Position jump hint
 Position jump tip
 Position:
 Practice
+Practice a map privately, hide the main-world ghost, show a run timer and bind practice commands
 Practice ghosts
 Practice mode can't be enabled in team 0 mode.
 Practice mode can't be enabled while team save or load is in progress
@@ -4294,6 +4299,7 @@ Run profiler to check 3D/2D array texture sampling works correctly
 Run selected commands after joining a server
 Run server
 Runs commands automatically when you connect to a server, split into a connect part and a join part.
+Runs your own copy of the map while the server keeps your real Tee where you entered, with a run timer and keys for the practice commands.
 Same as "vote no"
 Same clan color in scoreboard
 Same function
@@ -4759,6 +4765,7 @@ Show logs of the last i seconds
 Show lyrics in a separate island below Dynamic Island
 Show lyrics in Dynamic Island
 Show main tee title locally
+Show main-world ghost
 Show map details
 Show map progress bar (beta)
 Show map progress test point route
@@ -4829,6 +4836,7 @@ Show points
 Show position and angle
 Show position and angle (mini debug)
 Show position and angle debug info
+Show practice timer
 Show predicted position as ghost, original as unpredictable player
 Show pressed keys
 Show Qm badge
@@ -4886,6 +4894,7 @@ Show the number of tees still alive
 Show the occasional sponsor reminder in the main menu
 Show the original text locally below translated outgoing messages
 Show the pet
+Show the practice run timer in the HUD
 Show the screen center line
 Show the server rules
 Show tiles layers from BG map
@@ -4913,6 +4922,7 @@ Show Workshop Assets
 Show X
 Show Y
 Show your current team
+Show your own main-world ghost during fast practice
 Show zzz emoji next to afk players
 Showing players from other teams is disabled
 Showing the checkpoint times for '%s' with a race time of %s
@@ -5572,6 +5582,7 @@ Toggle ghost key
 Toggle ghost view mode: play the ghost on an independent timeline (in-game demo player)
 Toggle keyboard shortcuts
 Toggle local console
+Toggle main-world ghost
 Toggle map preview
 Toggle microphone mute
 Toggle or set the switch on or off for the specified time (or indefinitely by default)
@@ -5681,6 +5692,7 @@ Tune in zone a variable to value
 Tune variable to value
 Tune variable to value or show current value
 Turn motion off on weaker machines; cards then open and scroll immediately.
+Turn off "Show main-world ghost" to hide the server-side Tee, set its opacity while it stays on, enable the timer, and bind the command rows you use.
 Turn on "Auto chat in water", type the "Chat message" you want, and optionally enable "Send emoticon in water" with its ID.
 Turn on "Auto translate received messages", pick a "Translation service", set "Translate received messages to", then press "Test translation".
 Turn on "Automatically record demos" or a screenshot option, set "Max demos" or "Max Screenshots", and fill "Demo directory" or "Screenshot directory" to move the files.

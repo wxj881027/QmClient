@@ -5657,6 +5657,9 @@ Fast keys for common dummy, aim and rescue actions: HDF, DF, 45-degree aim, jump
 Fast practice
 == 高速プラクティス
 
+Fast practice runs a private copy of the map, so the server still sees you where you entered. The ghost above is that server-side you; other players are controlled by "Show others". Bind rows send the same commands as the practice menu, so a bound key never needs the chat box
+== 高速練習はマップのプライベートコピーを動かすため、サーバーは入ったときの位置にあなたを表示します。上のゴーストがそのサーバー側のあなたです。他のプレイヤーは「他のプレイヤーを表示」で制御します。バインド行は練習メニューと同じコマンドを送るので、キーを割り当てればチャット欄を開く必要はありません。
+
 Fast, lightweight blur with a softer approximation.
 == 高速で軽量なぼかしで、やや柔らかい近似表現になります。
 
@@ -8300,6 +8303,12 @@ Main Tee
 Main Tee and dummy
 == メインTeeとダミー
 
+Main-world ghost opacity
+== メインワールドゴーストの不透明度
+
+Main-world ghost opacity during fast practice (%)
+== 高速練習中のメインワールドゴーストの不透明度（%）
+
 Maintains the list of hostile players and groups plus the rules used to display them.
 == 敵対プレイヤーとグループのリスト、および表示に使うルールを管理します。
 
@@ -9833,6 +9842,9 @@ Only the selected tee changes, so switch to "Dummy" before editing the colors yo
 Only what you can't imagine, nothing Dream can't do
 == 想像できないことだけが、Dreamにできないことです
 
+Only your copy of the world is simulated: other players still come from the server, so switches you hit do not affect them.
+== 模擬されるのは自分の世界コピーだけです。他のプレイヤーはサーバーから来るため、あなたが踏んだスイッチは彼らに影響しません。
+
 Opacity
 == 不透明度
 
@@ -10792,6 +10804,9 @@ Position jump tip
 
 Position:
 == 位置：
+
+Practice a map privately, hide the main-world ghost, show a run timer and bind practice commands
+== マップをひとりで練習し、メインワールドのゴーストを隠し、今回のタイムを表示し、練習コマンドをキーに割り当てます。
 
 Practice ghosts
 == 練習ゴースト
@@ -12410,6 +12425,9 @@ Run server
 Runs commands automatically when you connect to a server, split into a connect part and a join part.
 == サーバーに接続したときにコマンドを自動で実行します。接続時と参加時の二段階に分かれています。
 
+Runs your own copy of the map while the server keeps your real Tee where you entered, with a run timer and keys for the practice commands.
+== 自分専用のマップコピーを動かし、サーバー側の本当の Tee は入ったときの位置に残ります。今回のタイムと練習コマンドのキー割り当ても含みます。
+
 Same as "vote no"
 == 「vote no」と同じ
 
@@ -13775,6 +13793,9 @@ Show lyrics in Dynamic Island
 Show main tee title locally
 == メインTeeの称号をローカル表示
 
+Show main-world ghost
+== メインワールドのゴーストを表示
+
 Show map details
 == マップの詳細を表示
 
@@ -13985,6 +14006,9 @@ Show position and angle (mini debug)
 Show position and angle debug info
 == 位置と角度のデバッグ情報を表示
 
+Show practice timer
+== 練習タイマーを表示
+
 Show predicted position as ghost, original as unpredictable player
 == 予測位置をゴーストとして表示、元の位置を予測不可能なプレイヤーとして表示
 
@@ -14156,6 +14180,9 @@ Show the original text locally below translated outgoing messages
 Show the pet
 == ペットを表示
 
+Show the practice run timer in the HUD
+== HUD に今回の練習タイムを表示します
+
 Show the screen center line
 == 画面中央線を表示
 
@@ -14236,6 +14263,9 @@ Show Y
 
 Show your current team
 == 現在のチームを表示
+
+Show your own main-world ghost during fast practice
+== 高速練習中にメインワールドの自分のゴーストを表示します
 
 Show zzz emoji next to afk players
 == AFK プレイヤーの横に zzz 絵文字を表示
@@ -16142,6 +16172,9 @@ Toggle keyboard shortcuts
 Toggle local console
 == ローカルコンソールを切り替え
 
+Toggle main-world ghost
+== メインワールドのゴーストを切り替え
+
 Toggle map preview
 == マッププレビュー
 
@@ -16459,6 +16492,9 @@ Tune variable to value or show current value
 
 Turn motion off on weaker machines; cards then open and scroll immediately.
 == 性能の低い環境では動きをオフにしてください。カードがすぐに開き、スクロールもすぐに反応します。
+
+Turn off "Show main-world ghost" to hide the server-side Tee, set its opacity while it stays on, enable the timer, and bind the command rows you use.
+== 「メインワールドのゴーストを表示」をオフにするとサーバー側の Tee が隠れます。オンのままなら不透明度を調整でき、タイマーを有効にし、使うコマンド行にキーを割り当てられます。
 
 Turn on "Auto chat in water", type the "Chat message" you want, and optionally enable "Send emoticon in water" with its ID.
 == 「水中で自動チャット」をオンにして送りたい「チャットメッセージ」を入力し、必要なら「水中で表情を送信」と表情 ID も設定します。

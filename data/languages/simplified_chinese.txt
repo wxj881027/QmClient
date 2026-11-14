@@ -5846,6 +5846,9 @@ Fast keys for common dummy, aim and rescue actions: HDF, DF, 45-degree aim, jump
 Fast practice
 == 快速练习
 
+Fast practice runs a private copy of the map, so the server still sees you where you entered. The ghost above is that server-side you; other players are controlled by "Show others". Bind rows send the same commands as the practice menu, so a bound key never needs the chat box
+== 快速练习运行的是地图的私人副本，服务器仍然看到你进入练习时的位置。上方的影子就是服务器那边的你；其他玩家由“显示其他玩家”控制。绑定行发送与练习菜单相同的指令，绑好键后无需打开聊天框。
+
 Fast, lightweight blur with a softer approximation.
 == 快速、轻量的模糊效果，采用较柔和的近似处理。
 
@@ -8612,6 +8615,12 @@ Main Tee and dummy
 Main view
 == 主视角
 
+Main-world ghost opacity
+== 主世界影子不透明度
+
+Main-world ghost opacity during fast practice (%)
+== 快速练习时主世界影子的不透明度（%）
+
 Maintains the list of hostile players and groups plus the rules used to display them.
 == 维护敌对玩家和分组列表，以及显示它们所用的规则。
 
@@ -10247,6 +10256,9 @@ Only the selected tee changes, so switch to "Dummy" before editing the colors yo
 Only what you can't imagine, nothing Dream can't do
 == 只有你想不到，没有梦做不到
 
+Only your copy of the world is simulated: other players still come from the server, so switches you hit do not affect them.
+== 只有你自己的世界副本在模拟：其他玩家仍然来自服务器，你踩到的开关不会影响他们。
+
 Opacity
 == 不透明度
 
@@ -11228,11 +11240,11 @@ Position jump tip
 Position:
 == 坐标
 
-Practice a map privately, hide the main-world ghost, show a run timer and bind practice commands
-== 私下练习整张地图：可隐藏主世界影子、显示本次用时，并为练习命令绑定快捷键。
-
 Practice
 == 练习
+
+Practice a map privately, hide the main-world ghost, show a run timer and bind practice commands
+== 私下练习整张地图：可隐藏主世界影子、显示本次用时，并为练习命令绑定快捷键。
 
 Practice ghosts
 == 练习影子
@@ -12890,6 +12902,9 @@ Run server
 Runs commands automatically when you connect to a server, split into a connect part and a join part.
 == 连接服务器时自动执行指令，分为连接段和加入段。
 
+Runs your own copy of the map while the server keeps your real Tee where you entered, with a run timer and keys for the practice commands.
+== 运行属于你自己的地图副本，服务器保留你进入时的真实角色；附带本次用时与练习命令绑定。
+
 Same as "vote no"
 == 与“投反对票”相同
 
@@ -14285,6 +14300,9 @@ Show lyrics in Dynamic Island
 Show main tee title locally
 == 本机显示本体头衔
 
+Show main-world ghost
+== 显示主世界影子
+
 Show map details
 == 显示地图细节
 
@@ -14495,6 +14513,9 @@ Show position and angle (mini debug)
 Show position and angle debug info
 == 显示位置和角度调试信息
 
+Show practice timer
+== 显示练习计时
+
 Show predicted position as ghost, original as unpredictable player
 == 将预测位置显示为幽灵，原始位置显示为不可预测玩家
 
@@ -14666,6 +14687,9 @@ Show the original text locally below translated outgoing messages
 Show the pet
 == 显示宠物
 
+Show the practice run timer in the HUD
+== 在 HUD 上显示本次练习用时
+
 Show the screen center line
 == 显示屏幕中心线
 
@@ -14746,6 +14770,9 @@ Show Y
 
 Show your current team
 == 查看自己所在队伍
+
+Show your own main-world ghost during fast practice
+== 快速练习时显示自己在主世界的影子
 
 Show zzz emoji next to afk players
 == 在挂机玩家旁显示 zzz 表情
@@ -16724,6 +16751,9 @@ Toggle keyboard shortcuts
 Toggle local console
 == 切换本地控制台
 
+Toggle main-world ghost
+== 切换主世界影子
+
 Toggle map preview
 == 地图预览
 
@@ -17050,6 +17080,9 @@ Tune variable to value or show current value
 
 Turn motion off on weaker machines; cards then open and scroll immediately.
 == 配置较低的机器请关闭动效；卡片便会立即打开和滚动。
+
+Turn off "Show main-world ghost" to hide the server-side Tee, set its opacity while it stays on, enable the timer, and bind the command rows you use.
+== 关闭“显示主世界影子”可隐藏服务器侧的角色；保持开启时可调整不透明度，还可开启计时，并为常用的命令行绑定按键。
 
 Turn on "Auto chat in water", type the "Chat message" you want, and optionally enable "Send emoticon in water" with its ID.
 == 打开「掉水自动发言」，填上想要的聊天内容，想要表情就再开启「掉水发表情」并选好表情 ID。

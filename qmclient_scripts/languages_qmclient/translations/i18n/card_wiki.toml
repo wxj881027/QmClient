@@ -7058,3 +7058,67 @@ brazilian_portuguese = "Marque 'Mostrar outros' para desenhar outras equipes de 
 portuguese = "Marque 'Mostrar outros' para desenhar outras equipas de forma translúcida, defina a opacidade das sombras na linha dependente abaixo e use 'Mostrar quads de fundo' e 'Zoom predefinido' para a visualização."
 turkish = "Diğer takımları yarı saydam çizmek için „Diğerlerini göster“i işaretleyin, gölge opaklıklarını altındaki bağımlı satırda ayarlayın ve görünüm için „Arka plan dörtlülerini göster“ ile „Varsayılan yakınlaştırma“yı kullanın."
 polish = "Zaznacz „Pokaż innych”, aby rysować inne drużyny półprzezroczyście, ustaw krycie ich cieni w zależnej linii poniżej i użyj „Pokaż czworokąty tła” oraz „Domyślne powiększenie” do widoku."
+
+[[message]]
+key = "Practice a map privately, hide the main-world ghost, show a run timer and bind practice commands"
+[message.translations]
+simplified_chinese = "私下练习整张地图：可隐藏主世界影子、显示本次用时，并为练习命令绑定快捷键。"
+traditional_chinese = "私下練習整張地圖：可隱藏主世界影子、顯示本次用時，並為練習指令綁定快捷鍵。"
+japanese = "マップをひとりで練習し、メインワールドのゴーストを隠し、今回のタイムを表示し、練習コマンドをキーに割り当てます。"
+korean = "맵을 혼자 연습하고, 메인 월드 고스트를 숨기고, 이번 시간을 표시하며, 연습 명령을 키에 지정합니다."
+russian = "Тренируйтесь на карте в одиночку, скрывайте призрак основного мира, показывайте время забега и назначайте клавиши для команд практики."
+german = "Übe eine Karte für dich, blende den Geist der Hauptwelt aus, zeige die Laufzeit an und belege Tasten mit Übungsbefehlen."
+spanish = "Practica un mapa en privado, oculta el fantasma del mundo principal, muestra el tiempo de la carrera y asigna teclas a los comandos de práctica."
+french = "Entraînez-vous sur une carte en privé, masquez le fantôme du monde principal, affichez le chronomètre et assignez des touches aux commandes de pratique."
+brazilian_portuguese = "Pratique um mapa em particular, oculte o fantasma do mundo principal, mostre o cronômetro e atribua teclas aos comandos de prática."
+portuguese = "Pratique um mapa em privado, oculte o fantasma do mundo principal, mostre o cronómetro e atribua teclas aos comandos de prática."
+turkish = "Bir haritayı tek başınıza çalışın, ana dünya hayaletini gizleyin, tur süresini gösterin ve pratik komutlarını tuşlara atayın."
+polish = "Ćwicz mapę prywatnie, ukryj ducha głównego świata, pokazuj czas przejazdu i przypisz klawisze do komend praktyki."
+
+[[message]]
+key = "Runs your own copy of the map while the server keeps your real Tee where you entered, with a run timer and keys for the practice commands."
+[message.translations]
+simplified_chinese = "运行属于你自己的地图副本，服务器保留你进入时的真实角色；附带本次用时与练习命令绑定。"
+traditional_chinese = "運行屬於你自己的地圖副本，伺服器保留你進入時的真實角色；附帶本次用時與練習指令綁定。"
+japanese = "自分専用のマップコピーを動かし、サーバー側の本当の Tee は入ったときの位置に残ります。今回のタイムと練習コマンドのキー割り当ても含みます。"
+korean = "자신만의 맵 복사본을 실행하고 서버의 실제 Tee는 입장했던 위치에 남습니다. 이번 시간 표시와 연습 명령 키 지정도 함께 제공합니다."
+russian = "Запускает вашу личную копию карты, а сервер оставляет вашего настоящего ти на месте входа; в комплекте таймер забега и привязки команд практики."
+german = "Startet deine eigene Kopie der Karte, während der Server deinen echten Tee dort lässt, wo du gestartet bist – mit Laufzeit und Tasten für die Übungsbefehle."
+spanish = "Ejecuta tu propia copia del mapa mientras el servidor mantiene tu Tee real donde entraste, con temporizador y teclas para los comandos de práctica."
+french = "Lance votre propre copie de la carte pendant que le serveur garde votre vrai Tee là où vous êtes entré, avec un chronomètre et des touches pour les commandes de pratique."
+brazilian_portuguese = "Executa sua própria cópia do mapa enquanto o servidor mantém seu Tee real onde você entrou, com cronômetro e teclas para os comandos de prática."
+portuguese = "Executa a sua própria cópia do mapa enquanto o servidor mantém o seu Tee real onde entrou, com cronómetro e teclas para os comandos de prática."
+turkish = "Siz girerken sunucu gerçek Tee'nizi girdiğiniz yerde tutarken kendi harita kopyanızı çalıştırır; tur süresi ve pratik komut tuşlarıyla birlikte."
+polish = "Uruchamia własną kopię mapy, a serwer zostawia twojego prawdziwego Tee tam, gdzie wszedłeś; w zestawie czas przejazdu i klawisze komend praktyki."
+
+[[message]]
+key = "Turn off \"Show main-world ghost\" to hide the server-side Tee, set its opacity while it stays on, enable the timer, and bind the command rows you use."
+[message.translations]
+simplified_chinese = "关闭“显示主世界影子”可隐藏服务器侧的角色；保持开启时可调整不透明度，还可开启计时，并为常用的命令行绑定按键。"
+traditional_chinese = "關閉「顯示主世界影子」可隱藏伺服器側的角色；保持開啟時可調整不透明度，還可開啟計時，並為常用的指令行綁定按鍵。"
+japanese = "「メインワールドのゴーストを表示」をオフにするとサーバー側の Tee が隠れます。オンのままなら不透明度を調整でき、タイマーを有効にし、使うコマンド行にキーを割り当てられます。"
+korean = "\"메인 월드 고스트 표시\"를 끄면 서버 쪽 Tee가 숨겨집니다. 켜 둔 상태에서는 불투명도를 조절하고, 타이머를 켜고, 사용하는 명령 행에 키를 지정할 수 있습니다."
+russian = "Отключите «Показывать призрак основного мира», чтобы скрыть ти на стороне сервера; пока призрак включён, можно настроить его непрозрачность, включить таймер и назначить клавиши нужным строкам команд."
+german = "Schalte „Geist der Hauptwelt anzeigen“ aus, um den Server-Tee zu verbergen; solange er an ist, kannst du seine Deckkraft einstellen, den Timer aktivieren und die genutzten Befehlzeilen belegen."
+spanish = "Desactiva «Mostrar fantasma del mundo principal» para ocultar el Tee del servidor; mientras siga activo puedes ajustar su opacidad, activar el temporizador y asignar teclas a las filas de comandos que uses."
+french = "Désactivez « Afficher le fantôme du monde principal » pour masquer le Tee côté serveur ; tant qu'il reste actif, réglez son opacité, activez le chronomètre et assignez des touches aux lignes de commandes utilisées."
+brazilian_portuguese = "Desative \"Mostrar fantasma do mundo principal\" para ocultar o Tee do servidor; enquanto ele estiver ativo, ajuste a opacidade, ative o cronômetro e atribua teclas às linhas de comando que usar."
+portuguese = "Desative «Mostrar fantasma do mundo principal» para ocultar o Tee do servidor; enquanto estiver ativo, ajuste a opacidade, ative o cronómetro e atribua teclas às linhas de comando que usar."
+turkish = "Sunucu tarafındaki Tee'yi gizlemek için \"Ana dünya hayaletini göster\"i kapatın; açıkken opaklığını ayarlayabilir, zamanlayıcıyı açabilir ve kullandığınız komut satırlarına tuş atayabilirsiniz."
+polish = "Wyłącz „Pokaż ducha głównego świata”, aby ukryć Tee po stronie serwera; gdy duch pozostaje włączony, ustaw jego krycie, włącz stoper i przypisz klawisze do używanych wierszy komend."
+
+[[message]]
+key = "Only your copy of the world is simulated: other players still come from the server, so switches you hit do not affect them."
+[message.translations]
+simplified_chinese = "只有你自己的世界副本在模拟：其他玩家仍然来自服务器，你踩到的开关不会影响他们。"
+traditional_chinese = "只有你自己的世界副本在模擬：其他玩家仍然來自伺服器，你踩到的開關不會影響他們。"
+japanese = "模擬されるのは自分の世界コピーだけです。他のプレイヤーはサーバーから来るため、あなたが踏んだスイッチは彼らに影響しません。"
+korean = "시뮬레이션되는 것은 자신의 세계 복사본뿐입니다. 다른 플레이어는 여전히 서버에서 오므로 당신이 밟은 스위치는 그들에게 영향을 주지 않습니다."
+russian = "Симулируется только ваша копия мира: другие игроки по-прежнему приходят с сервера, поэтому включатели, которые вы нажали, на них не влияют."
+german = "Nur deine Kopie der Welt wird simuliert: andere Spieler kommen weiterhin vom Server, Schalter, die du trittst, betreffen sie also nicht."
+spanish = "Solo se simula tu copia del mundo: los demás jugadores siguen viniendo del servidor, así que los interruptores que pisas no les afectan."
+french = "Seule votre copie du monde est simulée : les autres joueurs viennent toujours du serveur, donc les interrupteurs que vous activez ne les affectent pas."
+brazilian_portuguese = "Apenas sua cópia do mundo é simulada: os outros jogadores continuam vindo do servidor, então os interruptores que você aciona não os afetam."
+portuguese = "Apenas a sua cópia do mundo é simulada: os outros jogadores continuam a vir do servidor, por isso os interruptores que aciona não os afetam."
+turkish = "Yalnızca sizin dünya kopyanız simüle edilir: diğer oyuncular hâlâ sunucudan gelir, bu yüzden bastığınız anahtarlar onları etkilemez."
+polish = "Symulowana jest tylko twoja kopia świata: inni gracze wciąż pochodzą z serwera, więc przełączniki, które naciśniesz, nie mają na nich wpływu."

@@ -5657,6 +5657,9 @@ Fast keys for common dummy, aim and rescue actions: HDF, DF, 45-degree aim, jump
 Fast practice
 == Hızlı antrenman
 
+Fast practice runs a private copy of the map, so the server still sees you where you entered. The ghost above is that server-side you; other players are controlled by "Show others". Bind rows send the same commands as the practice menu, so a bound key never needs the chat box
+== Hızlı pratik haritanın özel bir kopyasını çalıştırır, bu yüzden sunucu sizi girdiğiniz yerde görmeye devam eder. Yukarıdaki hayalet sunucu tarafındaki sizsiniz; diğer oyuncuları "Diğerlerini göster" ayarı yönetir. Kısayol satırları pratik menüsüyle aynı komutları gönderir, yani atanmış bir tuş sohbet kutusuna hiç ihtiyaç duymaz.
+
 Fast, lightweight blur with a softer approximation.
 == Daha yumuşak bir yaklaşıma sahip hızlı ve hafif bulanıklık.
 
@@ -8300,6 +8303,12 @@ Main Tee
 Main Tee and dummy
 == Ana Tee ve kukla
 
+Main-world ghost opacity
+== Ana dünya hayaleti opaklığı
+
+Main-world ghost opacity during fast practice (%)
+== Hızlı pratik sırasında ana dünya hayaletinin opaklığı (%)
+
 Maintains the list of hostile players and groups plus the rules used to display them.
 == Düşman oyuncuların ve grupların listesini, bunların görünüm kurallarıyla birlikte yönetir.
 
@@ -9833,6 +9842,9 @@ Only the selected tee changes, so switch to "Dummy" before editing the colors yo
 Only what you can't imagine, nothing Dream can't do
 == Hayal edemediğin şeyler dışında, Dream'in yapamayacağı hiçbir şey yok
 
+Only your copy of the world is simulated: other players still come from the server, so switches you hit do not affect them.
+== Yalnızca sizin dünya kopyanız simüle edilir: diğer oyuncular hâlâ sunucudan gelir, bu yüzden bastığınız anahtarlar onları etkilemez.
+
 Opacity
 == Opaklık
 
@@ -10792,6 +10804,9 @@ Position jump tip
 
 Position:
 == Konum:
+
+Practice a map privately, hide the main-world ghost, show a run timer and bind practice commands
+== Bir haritayı tek başınıza çalışın, ana dünya hayaletini gizleyin, tur süresini gösterin ve pratik komutlarını tuşlara atayın.
 
 Practice ghosts
 == Pratik hayaletleri
@@ -12410,6 +12425,9 @@ Run server
 Runs commands automatically when you connect to a server, split into a connect part and a join part.
 == Bir sunucuya bağlandığınızda komutları otomatik çalıştırır; bağlanma ve katılma olarak iki bölüme ayrılır.
 
+Runs your own copy of the map while the server keeps your real Tee where you entered, with a run timer and keys for the practice commands.
+== Siz girerken sunucu gerçek Tee'nizi girdiğiniz yerde tutarken kendi harita kopyanızı çalıştırır; tur süresi ve pratik komut tuşlarıyla birlikte.
+
 Same as "vote no"
 == "hayır oyu" ile aynı
 
@@ -13775,6 +13793,9 @@ Show lyrics in Dynamic Island
 Show main tee title locally
 == Ana tee unvanını yerel olarak göster
 
+Show main-world ghost
+== Ana dünya hayaletini göster
+
 Show map details
 == Harita detaylarını göster
 
@@ -13985,6 +14006,9 @@ Show position and angle (mini debug)
 Show position and angle debug info
 == Konum ve açı hata ayıklama bilgisini göster
 
+Show practice timer
+== Pratik zamanlayıcısını göster
+
 Show predicted position as ghost, original as unpredictable player
 == Tahmin edilen konumu hayalet olarak, orijinali tahmin edilemez oyuncu olarak göster
 
@@ -14156,6 +14180,9 @@ Show the original text locally below translated outgoing messages
 Show the pet
 == Evcil hayvanı göster
 
+Show the practice run timer in the HUD
+== HUD'da bu pratiğin süresini gösterir
+
 Show the screen center line
 == Ekran merkez çizgisini göster
 
@@ -14236,6 +14263,9 @@ Show Y
 
 Show your current team
 == Geçerli takımını göster
+
+Show your own main-world ghost during fast practice
+== Hızlı pratik sırasında ana dünyadaki kendi hayaletini gösterir
 
 Show zzz emoji next to afk players
 == AFK oyuncuların yanında zzz emojisini göster
@@ -16142,6 +16172,9 @@ Toggle keyboard shortcuts
 Toggle local console
 == Yerel konsolu değiştir
 
+Toggle main-world ghost
+== Ana dünya hayaletini aç/kapat
+
 Toggle map preview
 == Harita önizlemesi
 
@@ -16459,6 +16492,9 @@ Tune variable to value or show current value
 
 Turn motion off on weaker machines; cards then open and scroll immediately.
 == Zayıf makinelerde hareketi kapatın; kartlar o zaman hemen açılır ve kaydırılır.
+
+Turn off "Show main-world ghost" to hide the server-side Tee, set its opacity while it stays on, enable the timer, and bind the command rows you use.
+== Sunucu tarafındaki Tee'yi gizlemek için "Ana dünya hayaletini göster"i kapatın; açıkken opaklığını ayarlayabilir, zamanlayıcıyı açabilir ve kullandığınız komut satırlarına tuş atayabilirsiniz.
 
 Turn on "Auto chat in water", type the "Chat message" you want, and optionally enable "Send emoticon in water" with its ID.
 == "Suda otomatik sohbet"i aç, istediğin "Sohbet mesajı"nı yaz ve istersen "Suda ifade gönder"i ID'siyle etkinleştir.

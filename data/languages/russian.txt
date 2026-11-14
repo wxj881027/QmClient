@@ -5657,6 +5657,9 @@ Fast keys for common dummy, aim and rescue actions: HDF, DF, 45-degree aim, jump
 Fast practice
 == Быстрая тренировка
 
+Fast practice runs a private copy of the map, so the server still sees you where you entered. The ghost above is that server-side you; other players are controlled by "Show others". Bind rows send the same commands as the practice menu, so a bound key never needs the chat box
+== Быстрая практика запускает личную копию карты, поэтому сервер по-прежнему видит вас там, где вы вошли. Призрак выше — это вы на стороне сервера; другие игроки управляются настройкой «Показать других». Строки привязок отправляют те же команды, что и меню практики, так что назначенной клавише не нужен чат.
+
 Fast, lightweight blur with a softer approximation.
 == Быстрое и лёгкое размытие с более мягким приближением.
 
@@ -8300,6 +8303,12 @@ Main Tee
 Main Tee and dummy
 == Основной Tee и дамми
 
+Main-world ghost opacity
+== Непрозрачность призрака основного мира
+
+Main-world ghost opacity during fast practice (%)
+== Непрозрачность призрака основного мира во время быстрой практики (%)
+
 Maintains the list of hostile players and groups plus the rules used to display them.
 == Ведёт список враждебных игроков и групп, а также правила их отображения.
 
@@ -9833,6 +9842,9 @@ Only the selected tee changes, so switch to "Dummy" before editing the colors yo
 Only what you can't imagine, nothing Dream can't do
 == Только то, что вы не можете себе представить, нет ничего, что Dream не может сделать
 
+Only your copy of the world is simulated: other players still come from the server, so switches you hit do not affect them.
+== Симулируется только ваша копия мира: другие игроки по-прежнему приходят с сервера, поэтому включатели, которые вы нажали, на них не влияют.
+
 Opacity
 == Прозрачность
 
@@ -10792,6 +10804,9 @@ Position jump tip
 
 Position:
 == Позиция:
+
+Practice a map privately, hide the main-world ghost, show a run timer and bind practice commands
+== Тренируйтесь на карте в одиночку, скрывайте призрак основного мира, показывайте время забега и назначайте клавиши для команд практики.
 
 Practice ghosts
 == Призраки практики
@@ -12410,6 +12425,9 @@ Run server
 Runs commands automatically when you connect to a server, split into a connect part and a join part.
 == Автоматически выполняет команды при подключении к серверу, разделив их на часть подключения и часть входа.
 
+Runs your own copy of the map while the server keeps your real Tee where you entered, with a run timer and keys for the practice commands.
+== Запускает вашу личную копию карты, а сервер оставляет вашего настоящего ти на месте входа; в комплекте таймер забега и привязки команд практики.
+
 Same as "vote no"
 == То же, что и "vote no"
 
@@ -13775,6 +13793,9 @@ Show lyrics in Dynamic Island
 Show main tee title locally
 == Показывать титул основного ти локально
 
+Show main-world ghost
+== Показывать призрак основного мира
+
 Show map details
 == Показывать детали карты
 
@@ -13985,6 +14006,9 @@ Show position and angle (mini debug)
 Show position and angle debug info
 == Показывать отладочную информацию о позиции и угле
 
+Show practice timer
+== Показывать таймер практики
+
 Show predicted position as ghost, original as unpredictable player
 == Показывать предсказанную позицию как призрака, оригинальную как непредсказуемого игрока
 
@@ -14156,6 +14180,9 @@ Show the original text locally below translated outgoing messages
 Show the pet
 == Показать питомца
 
+Show the practice run timer in the HUD
+== Показывать время текущего забега в HUD
+
 Show the screen center line
 == Показать центральную линию экрана
 
@@ -14236,6 +14263,9 @@ Show Y
 
 Show your current team
 == Показать свою текущую команду
+
+Show your own main-world ghost during fast practice
+== Показывать призрак себя в основном мире во время быстрой практики
 
 Show zzz emoji next to afk players
 == Показывать эмодзи zzz рядом с AFK-игроками
@@ -16142,6 +16172,9 @@ Toggle keyboard shortcuts
 Toggle local console
 == Переключить локальную консоль
 
+Toggle main-world ghost
+== Переключить призрак основного мира
+
 Toggle map preview
 == Предпросмотр карты
 
@@ -16459,6 +16492,9 @@ Tune variable to value or show current value
 
 Turn motion off on weaker machines; cards then open and scroll immediately.
 == На слабых машинах отключите анимацию: карточки будут открываться и прокручиваться мгновенно.
+
+Turn off "Show main-world ghost" to hide the server-side Tee, set its opacity while it stays on, enable the timer, and bind the command rows you use.
+== Отключите «Показывать призрак основного мира», чтобы скрыть ти на стороне сервера; пока призрак включён, можно настроить его непрозрачность, включить таймер и назначить клавиши нужным строкам команд.
 
 Turn on "Auto chat in water", type the "Chat message" you want, and optionally enable "Send emoticon in water" with its ID.
 == Включите «Автосообщение при падении в воду», впишите нужное «Сообщение в чат» и при желании включите «Отправлять эмоцию» с её ID.
