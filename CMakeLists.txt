@@ -4861,6 +4861,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/ui/qm_card_registry_test.cpp
     src/test/unit/qmclient/ui/qm_server_info_layout_test.cpp
     src/test/unit/qmclient/ui/qm_motd_layout_test.cpp
+    src/test/unit/qmclient/ui/qm_console_scroll_test.cpp
+    src/test/unit/qmclient/ui/qm_console_caret_test.cpp
     src/test/unit/qmclient/settings/qm_search_header_test.cpp
     src/test/unit/qmclient/settings/qm_search_answers_test.cpp
     src/test/unit/qmclient/ui/qm_interaction_source_test.cpp

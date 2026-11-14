@@ -198,14 +198,12 @@ void CMenus::RenderPlayers(CUIRect MainView)
 		ui_widget::Toast(Ctx, &s_CopyToast, &s_CopyToast, ToastVisible, PageRect, ToastProps);
 	}
 
-	// ── 右侧信息卡：上半是「英雄展示」——角色立绘居中，名字与战队压在下沿，
-	// 操作全部是展示区内的圆形图标按钮；下半只留皮肤名与复制按钮。
+	// ── 右侧玩家卡：与好友列表卡片同一种读法——头部一行放头像、名字、战队、国家旗，
+	// 右上角一排动作图标；下面只有皮肤行与状态行，没有大块立绘。
 	if(CardArea.w <= 0.0f || SelectedId < 0)
-	{
 		return;
-	}
 	CUIRect Card = CardArea;
-	DrawRoundedSurface(Ui(), Card, ui_token::color::SURFACE_HIGHLIGHT, ui_token::color::BORDER_SUBTLE, ui_token::player_card::RADIUS, ui_token::feedback::ICON_BORDER_WIDTH);
+	DrawRoundedSurface(Ui(), Card, ui_token::color::SURFACE_HIGHLIGHT, ui_token::color::BORDER_SUBTLE, ui_token::player_card::RADIUS);
 	Card.Margin(ui_token::player_card::PADDING, &Card);
 	auto &Player = GameClient()->m_aClients[SelectedId];
 	char aName[MAX_NAME_LENGTH], aClan[MAX_CLAN_LENGTH];
@@ -216,8 +214,6 @@ void CMenus::RenderPlayers(CUIRect MainView)
 	char aSkinName[sizeof(Player.m_aSkinName)];
 	str_copy(aSkinName, GameClient()->ShouldHideStreamerSkin(SelectedId) ? "default" : Player.m_aSkinName, sizeof(aSkinName));
 
-	// 展示区右下角：四个圆形图标按钮——好友（心）、静音（禁）、跨服跟随（眼）、屏蔽表情（裂心）。
-	// 图标沿用仓库既有语义色与既有图集条目，不再出现「复制战队」这种 DDNet 里没有的动作。
 	const bool Following = GameClient()->m_PieMenu.IsFollowingPlayer(Player.m_aName, Player.m_aClan) ||
 			       (m_FriendAutoFollowState.m_Active && str_comp(m_FriendAutoFollowState.m_aName, Player.m_aName) == 0 && str_comp(m_FriendAutoFollowState.m_aClan, Player.m_aClan) == 0);
 	const bool ForcedMute = g_Config.m_ClShowChatFriends && !Player.m_Friend;
@@ -230,32 +226,34 @@ void CMenus::RenderPlayers(CUIRect MainView)
 		bool m_Active;
 		bool m_Enabled;
 	};
+	// 跟随沿用好友列表那一对字形：跟随 = 播放，取消跟随 = 停止。
 	const SIconAction aIconActions[] = {
 		{EQmIcon::HEART, FontIcons::FONT_ICON_HEART, Localize("Friends"), Player.m_Friend, true},
 		{EQmIcon::BAN, FontIcons::FONT_ICON_BAN, Localize("Mute"), ForcedChatMute || Player.m_ChatIgnore, !ForcedChatMute},
 		{EQmIcon::HEART_CRACK, FontIcons::FONT_ICON_HEART_CRACK, Localize("Mute emoticons"), ForcedMute || Player.m_EmoticonIgnore, !ForcedMute},
-		{EQmIcon::EYE, FontIcons::FONT_ICON_EYE, Following ? Localize("Stop following") : Localize("Follow server"), Following,
+		{Following ? EQmIcon::STOP : EQmIcon::PLAY, Following ? FontIcons::FONT_ICON_STOP : FontIcons::FONT_ICON_PLAY,
+			Following ? Localize("Stop following") : Localize("Follow server"), Following,
 			Online && !GameClient()->IsLocalClientId(SelectedId)},
 	};
-	// 分区几何只有一个来源：PlayerShowcaseLayout（展示区 / 立绘 / 名字 / 战队 / 图标行 / 皮肤行 / 状态行）。
-	const auto ShowcaseLayout = QmPlayersUi::PlayerShowcaseLayout(Card, (int)std::size(aIconActions));
-	const CUIRect Showcase = ShowcaseLayout.m_Showcase;
-	CUIRect SkinRow = ShowcaseLayout.m_SkinRow;
-	const CUIRect InfoRow = ShowcaseLayout.m_Info;
-	DrawRoundedSurface(Ui(), Showcase, ui_token::color::SURFACE_OVERLAY, ui_token::color::BORDER_SUBTLE, ui_token::player_card::RADIUS, ui_token::feedback::ICON_BORDER_WIDTH);
-	DrawTee(SelectedId, ShowcaseLayout.m_Figure);
-	Label(ShowcaseLayout.m_Name, aName, ui_token::font::HEADLINE, TEXTALIGN_MC);
-	if(aClan[0] != '\0')
-		Label(ShowcaseLayout.m_Clan, aClan, ui_token::font::BODY, TEXTALIGN_MC, true);
-
 	static CButtonContainer s_aIconButtons[std::size(aIconActions)];
-	// 槽位由 PlayerShowcaseIconRow 统一算：从右往左排，窄卡等比缩小而不是把按钮挤出行外。
-	const auto IconSlots = QmPlayersUi::PlayerShowcaseIconRow(ShowcaseLayout.m_Icons, (int)std::size(aIconActions));
+	const auto CardLayout = QmPlayersUi::PlayerInfoCardLayout(Card, (int)std::size(aIconActions));
+
+	// 头部：头像、名字、战队、国家旗。
+	CUIRect AvatarRect = QmUiSquareIconButtonRect(CardLayout.m_Avatar);
+	DrawTee(SelectedId, AvatarRect);
+	Label(CardLayout.m_Name, aName, ui_token::font::HEADLINE);
+	if(aClan[0] != '\0')
+		Label(CardLayout.m_Clan, aClan, ui_token::font::BODY, TEXTALIGN_ML, true);
+	const int FlagCode = g_Config.m_QmStreamerScoreboardDefaultFlags ? -1 : Player.m_Country;
+	GameClient()->m_CountryFlags.Render(FlagCode, ui_token::color::NEUTRAL_WHITE.WithMultipliedAlpha(ui_token::player_card::FLAG_ALPHA),
+		CardLayout.m_Flag.x, CardLayout.m_Flag.y, CardLayout.m_Flag.w, CardLayout.m_Flag.h);
+
+	// 右上角动作图标：好友（心）、静音（禁）、屏蔽表情（裂心）、跟随（播放/停止）。
+	const auto IconSlots = QmPlayersUi::PlayerIconRow(CardLayout.m_Icons, (int)std::size(aIconActions));
 	for(int Action = (int)std::size(aIconActions) - 1; Action >= 0; --Action)
 	{
 		const CUIRect Slot = IconSlots.m_aCells[Action];
 		const auto &Spec = aIconActions[Action];
-		// 禁用态仍占槽并置灰：按钮数量不随状态横跳，玩家也能看到「为什么没有这个动作」。
 		const int Clicked = Ui()->DoButton_QmIcon(&s_aIconButtons[Action], Spec.m_Icon, Spec.m_pFallback, Spec.m_Active ? 1 : 0, &Slot, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Spec.m_Enabled);
 		ui_widget::Tooltip(Ctx, &s_aIconButtons[Action], Slot, Spec.m_pTooltip);
 		if(Clicked == 0 || !Spec.m_Enabled)
@@ -287,14 +285,15 @@ void CMenus::RenderPlayers(CUIRect MainView)
 		}
 	}
 
-	// 展示区下方：皮肤名 + 复制按钮（复制的是玩家真实皮肤名，与计分板「Copy skin ID」同源）。
+	// 皮肤行：皮肤名 + 复制按钮（复制玩家真实皮肤名，与计分板「Copy skin ID」同源）。
 	CUIRect SkinLabel, CopyButton;
-	SkinRow.VSplitRight(ui_token::player_card::SHOWCASE_ICON_SIZE, &SkinLabel, &CopyButton);
-	SkinRow.VSplitRight(std::min(ui_token::spacing::XS, SkinLabel.w), &SkinLabel, nullptr);
+	CardLayout.m_SkinRow.VSplitRight(ui_token::player_card::ICON_BUTTON_SIZE, &SkinLabel, &CopyButton);
+	SkinLabel.VSplitRight(std::min(ui_token::spacing::XS, SkinLabel.w), &SkinLabel, nullptr);
 	Label(SkinLabel, aSkinName, ui_token::font::BODY, TEXTALIGN_ML, true);
 	static CButtonContainer s_SkinCopyButton;
 	const bool CanCopySkin = Online && !Sixup;
-	if(Ui()->DoButton_QmIcon(&s_SkinCopyButton, EQmIcon::COPY, FontIcons::FONT_ICON_COPY, 0, &CopyButton, CanCopySkin ? BUTTONFLAG_LEFT : 0) != 0 && CanCopySkin)
+	CopyButton = QmUiSquareIconButtonRect(CopyButton);
+	if(Ui()->DoButton_QmIcon(&s_SkinCopyButton, EQmIcon::COPY, FontIcons::FONT_ICON_COPY, 0, &CopyButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, CanCopySkin) != 0 && CanCopySkin)
 	{
 		if(QmCopyScoreboardSkin(g_Config, Sixup, Player.m_aSkinName, Player.m_UseCustomColor, Player.m_ColorBody, Player.m_ColorFeet))
 		{
@@ -305,16 +304,18 @@ void CMenus::RenderPlayers(CUIRect MainView)
 			State.m_CopyToastUntil = Client()->GlobalTime() + ui_token::player_card::COPY_TOAST_SECONDS;
 		}
 	}
+	GameClient()->m_Tooltips.DoToolTip(&s_SkinCopyButton, &CopyButton, Localize("Copy skin"));
+
+	// 状态行：在线 / 观战 / 加入 + 分数，压成一行短信息。
 	if(!CanCopySkin)
-		Label(InfoRow, Localize("Skin copying is only available for 0.6 skins"), ui_token::font::CAPTION, TEXTALIGN_ML, true);
+		Label(CardLayout.m_Status, Localize("Skin copying is only available for 0.6 skins"), ui_token::font::CAPTION, TEXTALIGN_ML, true);
 	else
 	{
-		// 状态与分数压成一行短信息，不再用五行「标签: 值」的表格。
 		char aStatus[96];
 		str_format(aStatus, sizeof(aStatus), "%s · %s · %d",
 			Online ? Localize("Online") : Localize("Offline"),
 			Player.m_Team != TEAM_SPECTATORS ? Localize("Join game") : Localize("Spectate"),
 			GameClient()->m_Snap.m_apPlayerInfos[SelectedId] != nullptr ? GameClient()->m_Snap.m_apPlayerInfos[SelectedId]->m_Score : 0);
-		Label(InfoRow, aStatus, ui_token::player_card::DETAIL_FONT_SIZE, TEXTALIGN_ML, true);
+		Label(CardLayout.m_Status, aStatus, ui_token::player_card::DETAIL_FONT_SIZE, TEXTALIGN_ML, true);
 	}
 }

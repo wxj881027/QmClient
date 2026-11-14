@@ -22,6 +22,7 @@
 
 #include <generated/client_data.h>
 
+#include <game/client/QmUi/QmConsoleScroll.h>
 #include <game/client/QmUi/QmConsoleUi.h>
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiForms.h>
@@ -52,8 +53,33 @@ static constexpr float LINK_CLICK_DRAG_THRESHOLD = 3.0f;
 static constexpr float LINK_UNDERLINE_HEIGHT = 0.12f;
 static constexpr float CONSOLE_SCROLLBAR_WIDTH = 18.0f;
 static constexpr float CONSOLE_SCROLLBAR_MARGIN = 5.0f;
+// 滑块最短高度：日志只有几行时也要按得住，取旧实现里写死的 14。
+static constexpr float CONSOLE_SCROLLBAR_MIN_THUMB = 14.0f;
 static constexpr ColorRGBA LINK_TEXT_COLOR = ColorRGBA(0.2f, 0.65f, 1.0f, 1.0f);
 static constexpr ColorRGBA LINK_UNDERLINE_COLOR = ColorRGBA(0.2f, 0.65f, 1.0f, 0.9f);
+
+namespace
+{
+	// 滚动运行态按控制台类型（本地 / 远程）唯一确定：滚动只是纯数值状态，不持有任何 UI 指针，
+	// 所以放在这里不会留下悬空引用；ClearBacklog / 筛选切换 / OnReset 时统一清零。
+	// 远程控制台与本地控制台共用同一套推进，只是各自独立一份偏移。
+	CQmConsoleScrollRuntime g_aConsoleScrollRuntimes[CGameConsole::NUM_CONSOLETYPES];
+
+	CQmConsoleScrollRuntime &ConsoleScrollRuntime(int ConsoleType)
+	{
+		return g_aConsoleScrollRuntimes[std::clamp(ConsoleType, 0, (int)CGameConsole::NUM_CONSOLETYPES - 1)];
+	}
+
+	// 控制台特化：一档滚轮 = QmConsoleWheelLines 折算出来的行数，不是设置页那种像素档；
+	// 手感档位、弹簧响应与阻尼、橡皮筋距离仍然全部来自公共配置 QmNativeWheelScrollConfig。
+	SQmScrollConfig ConsoleScrollConfig(float LineHeight)
+	{
+		SQmScrollConfig Config = QmNativeWheelScrollConfig(1.0f, g_Config.m_UiSmoothScrollTime / 1000.0f);
+		const float SafeLine = maximum(1.0f, LineHeight);
+		Config.m_WheelScale = (float)QmConsoleWheelLines(g_Config.m_QmUiScrollStep, SafeLine) * SafeLine;
+		return Config;
+	}
+} // namespace
 
 struct SConfigHelpLookup
 {
@@ -624,6 +650,7 @@ void CGameConsole::CInstance::ClearBacklog()
 	m_BacklogLastActiveLine = -1;
 	m_ScrollbarDragging = false;
 	m_ScrollbarDragOffset = 0.0f;
+	ConsoleScrollRuntime(m_Type).Reset();
 	InvalidateTotalBacklogLines();
 	m_ChatExportAnchorId = -1;
 	m_ChatExportMode = false;
@@ -1047,45 +1074,37 @@ bool CGameConsole::CInstance::OnInput(const IInput::CEvent &Event)
 		}
 		else if(Event.m_Key == KEY_PAGEUP)
 		{
-			m_BacklogCurLine += GetLinesToScroll(-1, m_LinesRendered);
+			// 翻页也走统一推进：位移交给 CQmScrollState，逐帧逼近而不是整屏瞬移。
+			ConsoleScrollRuntime(m_Type).Page(1);
 			Handled = true;
 		}
 		else if(Event.m_Key == KEY_PAGEDOWN)
 		{
-			m_BacklogCurLine -= GetLinesToScroll(1, m_LinesRendered);
-			if(m_BacklogCurLine < 0)
-			{
-				m_BacklogCurLine = 0;
-			}
+			ConsoleScrollRuntime(m_Type).Page(-1);
 			Handled = true;
 		}
 		else if(Event.m_Key == KEY_MOUSE_WHEEL_UP)
 		{
 			// 每档滚多行。原先上下都只走一行，控制台滚起来慢得几乎没反应；
-			// 行数按 qm_ui_scroll_step 折算，和其它列表的滚轮手感对齐。
-			m_BacklogCurLine += GetLinesToScroll(-1, GetWheelLinesToScroll());
+			// 行数按 qm_ui_scroll_step 折算，由公共滚动物理逐帧逼近（见 QmConsoleScroll.h）。
+			ConsoleScrollRuntime(m_Type).Wheel(1);
 			Handled = true;
 		}
 		else if(Event.m_Key == KEY_MOUSE_WHEEL_DOWN)
 		{
-			m_BacklogCurLine -= GetWheelLinesToScroll();
-			if(m_BacklogCurLine < 0)
-			{
-				m_BacklogCurLine = 0;
-			}
+			ConsoleScrollRuntime(m_Type).Wheel(-1);
 			Handled = true;
 		}
 		// in order not to conflict with CLineInput's handling of Home/End only
 		// react to it when the input is empty
 		else if(Event.m_Key == KEY_HOME && m_Input.IsEmpty())
 		{
-			m_BacklogCurLine += GetLinesToScroll(-1, -1);
-			m_BacklogLastActiveLine = m_BacklogCurLine;
+			ConsoleScrollRuntime(m_Type).ScrollToOldest();
 			Handled = true;
 		}
 		else if(Event.m_Key == KEY_END && m_Input.IsEmpty())
 		{
-			m_BacklogCurLine = 0;
+			ConsoleScrollRuntime(m_Type).ScrollToNewest();
 			Handled = true;
 		}
 		else if(Event.m_Key == KEY_ESCAPE && m_SearchInput.IsSearching())
@@ -1215,6 +1234,8 @@ void CGameConsole::CInstance::SetLogFilterMask(int Mask)
 	m_BacklogCurLine = 0;
 	m_BacklogLastActiveLine = -1;
 	m_NewLineCounter = 0;
+	// 筛选改变内容总高：滚动运行态一起归零，避免停在已经不存在的位置。
+	ConsoleScrollRuntime(m_Type).Reset();
 	InvalidateTotalBacklogLines();
 	m_Selection.Clear();
 	m_MouseIsPress = false;
@@ -1381,14 +1402,14 @@ void CGameConsole::CInstance::ScrollToCenter(int StartLine, int EndLine)
 		return;
 
 	// Compute actual amount of lines to scroll to make sure lines fit in viewport and we don't have empty space
-	int Direction = m_BacklogCurLine - Target < 0 ? -1 : 1;
-	int LinesToScroll = absolute(Target - m_BacklogCurLine);
-	int ComputedLines = GetLinesToScroll(Direction, LinesToScroll);
+	const int Direction = m_BacklogCurLine - Target < 0 ? -1 : 1;
+	const int LinesToScroll = absolute(Target - m_BacklogCurLine);
+	const int ComputedLines = GetLinesToScroll(Direction, LinesToScroll);
 
-	if(Direction == -1)
-		m_BacklogCurLine += ComputedLines;
-	else
-		m_BacklogCurLine -= ComputedLines;
+	// 搜索跳转属于"选中项回看"：位移交给统一滚动物理，弹簧档会顺着当前方向转向新目标，
+	// 不再直接写死整型行锚（否则滚动模拟与行锚会各说一套，下一帧就被覆盖）。
+	const int ResultLine = Direction == -1 ? m_BacklogCurLine + ComputedLines : m_BacklogCurLine - ComputedLines;
+	ConsoleScrollRuntime(m_Type).ScrollToLine(ResultLine);
 }
 
 float CGameConsole::CInstance::FontSize() const
@@ -1771,6 +1792,8 @@ void CGameConsole::OnReset()
 	m_RemoteConsole.m_Selection.Finish();
 	m_RemoteConsole.m_ScrollbarDragging = false;
 	m_RemoteConsole.m_ScrollbarDragOffset = 0.0f;
+	ConsoleScrollRuntime(CONSOLETYPE_LOCAL).Reset();
+	ConsoleScrollRuntime(CONSOLETYPE_REMOTE).Reset();
 }
 
 int CGameConsole::PossibleMaps(const char *pStr, IConsole::FPossibleCallback pfnCallback, void *pUser)
@@ -1988,7 +2011,7 @@ void CGameConsole::OnRender()
 		else
 		{
 			AddAction(EToolbarAction::SEARCH, pConsole->m_SearchInput.IsSearching() ? Localize("Cancel") : Localize("Search"), pConsole->m_SearchInput.IsSearching());
-			AddAction(EToolbarAction::FOLLOW, Localize("Following"), pConsole->m_BacklogCurLine == 0);
+			AddAction(EToolbarAction::FOLLOW, Localize("Following"), ConsoleScrollRuntime(pConsole->m_Type).Following());
 			AddAction(EToolbarAction::EXPORT, Localize("Select export"));
 			// 控制台报「failed to open」时，下一步通常是去配置目录里放脚本或改 cfg，
 			// 所以把入口直接放在工具栏上，不必再翻到设置页的「通用」卡片。
@@ -2184,17 +2207,18 @@ void CGameConsole::OnRender()
 		const float ScaledLineHeight = LineHeight / ScreenSize.y;
 		if(!SettingsOpen && absolute(m_TouchState.m_ScrollAmount.y) >= ScaledLineHeight)
 		{
+			// 触控拖动与滑块同一档语义：位移直接落到手指位置（跟手），越界由橡皮筋收回。
+			const int Steps = (int)(absolute(m_TouchState.m_ScrollAmount.y) / ScaledLineHeight);
+			const float DragPixels = (float)Steps * LineHeight;
 			if(m_TouchState.m_ScrollAmount.y > 0.0f)
 			{
-				pConsole->m_BacklogCurLine += pConsole->GetLinesToScroll(-1, 1);
-				m_TouchState.m_ScrollAmount.y -= ScaledLineHeight;
+				ConsoleScrollRuntime(m_ConsoleType).DragBy(DragPixels);
+				m_TouchState.m_ScrollAmount.y -= (float)Steps * ScaledLineHeight;
 			}
 			else
 			{
-				--pConsole->m_BacklogCurLine;
-				if(pConsole->m_BacklogCurLine < 0)
-					pConsole->m_BacklogCurLine = 0;
-				m_TouchState.m_ScrollAmount.y += ScaledLineHeight;
+				ConsoleScrollRuntime(m_ConsoleType).DragBy(-DragPixels);
+				m_TouchState.m_ScrollAmount.y += (float)Steps * ScaledLineHeight;
 			}
 		}
 
@@ -2364,13 +2388,8 @@ void CGameConsole::OnRender()
 		if(pConsole->m_NewLineCounter != 0)
 		{
 			pConsole->UpdateSearch();
-
-			// keep scroll position when new entries are printed.
-			if(pConsole->m_BacklogCurLine != 0 || pConsole->m_Selection.HasSelection() || pConsole->m_Selection.IsDragging())
-			{
-				pConsole->m_BacklogCurLine += pConsole->m_NewLineCounter;
-				pConsole->m_BacklogLastActiveLine += pConsole->m_NewLineCounter;
-			}
+			// 新日志带来的行数变化由滚动运行态核算（见 QmConsoleScroll.h）：跟随态保持贴底，
+			// 锁定态把视口停在原来那几行，这里不再自己搬整型行锚。
 			if(pConsole->m_NewLineCounter < 0)
 				pConsole->m_NewLineCounter = 0;
 		}
@@ -2382,8 +2401,14 @@ void CGameConsole::OnRender()
 		const float LogHeight = maximum(0.0f, LogBottom - LogTop);
 		const int VisibleBacklogLines = maximum(1, (int)std::floor(LogHeight / LineHeight));
 		const int TotalBacklogLines = pConsole->TotalBacklogLines();
+		// 滚动推进：滚轮、翻页、滑块与触控拖动都写进同一份 CQmScrollState（弹簧 + 橡皮筋），
+		// 每帧在这里结算一次，读回「整行 + 亚行余量」。行锚继续服务选区、状态栏与搜索跳转，
+		// 亚行余量交给绘制与命中，两边读同一份结果，不会各留一套滚动值。
+		CQmConsoleScrollRuntime &Scroll = ConsoleScrollRuntime(m_ConsoleType);
+		const CQmConsoleScrollRuntime::SFrame ScrollFrame = Scroll.Advance(Client()->RenderFrameTime(), LogHeight, TotalBacklogLines, LineHeight, ConsoleScrollConfig(LineHeight));
+		const float SubLine = ScrollFrame.m_SubLine;
 		const int MaxScroll = maximum(0, TotalBacklogLines - VisibleBacklogLines);
-		pConsole->m_BacklogCurLine = std::clamp(pConsole->m_BacklogCurLine, 0, MaxScroll);
+		pConsole->m_BacklogCurLine = std::clamp(ScrollFrame.m_Line, 0, MaxScroll);
 		if(pConsole->m_BacklogLastActiveLine >= 0)
 			pConsole->m_BacklogLastActiveLine = std::clamp(pConsole->m_BacklogLastActiveLine, 0, MaxScroll);
 		const bool ShowConsoleScrollbar = MaxScroll > 0 && LogHeight > 0.0f;
@@ -2394,23 +2419,27 @@ void CGameConsole::OnRender()
 		HandleLinkClick = !SettingsOpen && HandleLinkClick && LogRect.Inside(LinkClickPress) && LogRect.Inside(LinkClickPos);
 		ChatExportClickPending = !SettingsOpen && ChatExportClickPending && LogRect.Inside(pConsole->m_MousePress) && LogRect.Inside(ChatExportClickPos);
 		if(CanSelectLog && MousePressedThisFrame && LogRect.Inside(pConsole->m_MousePress))
-			pConsole->m_Selection.Begin(pConsole->SelectionPositionAt(pConsole->m_MousePress, LogBottom, LineHeight));
+			pConsole->m_Selection.Begin(pConsole->SelectionPositionAt(pConsole->m_MousePress, LogBottom + SubLine, LineHeight));
 		if(CanSelectLog && pConsole->m_MouseIsPress)
 		{
 			const int ScrollLines = pConsole->m_Selection.AutoScroll(pConsole->m_MouseRelease.y, LogTop, LogBottom, LineHeight, Client()->RenderFrameTime());
-			pConsole->m_BacklogCurLine = std::clamp(pConsole->m_BacklogCurLine + ScrollLines, 0, MaxScroll);
+			// 拖选到边缘时的自动滚动按"跟手拖动"推进：每帧把这一帧算出的行数直接落到位移上，
+			// 既不经过弹簧（拖选要贴着指针走），又和滑块拖动共用同一份越界与夹取逻辑。
+			if(ScrollLines != 0)
+				Scroll.DragBy((float)ScrollLines * LineHeight);
 		}
 		if(ShowConsoleScrollbar)
 		{
 			CUIRect ScrollbarRect = {Screen.w - CONSOLE_SCROLLBAR_WIDTH - CONSOLE_SCROLLBAR_MARGIN, LogTop, CONSOLE_SCROLLBAR_WIDTH, LogHeight};
-			const float RailMargin = 5.0f;
 			CUIRect Rail;
-			ScrollbarRect.Margin(RailMargin, &Rail);
+			ScrollbarRect.Margin(CONSOLE_SCROLLBAR_MARGIN, &Rail);
 			if(Rail.w > 0.0f && Rail.h > Rail.w)
 			{
-				const float HandleHeight = std::clamp(Rail.h * (VisibleBacklogLines / (float)maximum(TotalBacklogLines, 1)), maximum(Rail.w, 14.0f), Rail.h);
+				const float HandleHeight = std::clamp(Rail.h * (VisibleBacklogLines / (float)maximum(TotalBacklogLines, 1)), maximum(Rail.w, CONSOLE_SCROLLBAR_MIN_THUMB), Rail.h);
 				const float TrackRange = maximum(1.0f, Rail.h - HandleHeight);
-				const float Current = 1.0f - (pConsole->m_BacklogCurLine / (float)maximum(MaxScroll, 1));
+				// 偏移单位是像素、0 在最新一行（滑轨底端），所以进度要按最大偏移归一化。
+				const float MaxOffset = maximum(ScrollFrame.m_MaxOffset, 1.0f);
+				const float Current = 1.0f - std::clamp(ScrollFrame.m_Offset / MaxOffset, 0.0f, 1.0f);
 				CUIRect Handle = {Rail.x, Rail.y + TrackRange * Current, Rail.w, HandleHeight};
 				const vec2 MousePos = GetMousePosition();
 				const bool MouseDown = !SettingsOpen && (m_TouchState.m_PrimaryPressed || Input()->NativeMousePressed(1));
@@ -2432,13 +2461,9 @@ void CGameConsole::OnRender()
 				{
 					const float HandleTop = std::clamp(MousePos.y - pConsole->m_ScrollbarDragOffset, Rail.y, Rail.y + TrackRange);
 					const float Relative = (HandleTop - Rail.y) / TrackRange;
-					const int NewLine = std::clamp((int)std::round((1.0f - Relative) * MaxScroll), 0, MaxScroll);
-					if(NewLine != pConsole->m_BacklogCurLine)
-					{
-						pConsole->m_BacklogCurLine = NewLine;
-						pConsole->m_BacklogLastActiveLine = NewLine;
-					}
-					Handle.y = Rail.y + TrackRange * (1.0f - (pConsole->m_BacklogCurLine / (float)maximum(MaxScroll, 1)));
+					// 拖动跟手：位移直接落到指针位置，不经过弹簧；越界由橡皮筋收回合法范围。
+					Scroll.DragToOffset((1.0f - Relative) * ScrollFrame.m_MaxOffset);
+					Handle.y = HandleTop;
 				}
 
 				// 轨道与滑块都走公共控件：滑块带悬停/拖动反馈，颜色取主题强调色，
@@ -2459,7 +2484,7 @@ void CGameConsole::OnRender()
 			{
 				vec2 SelectionMouse = pConsole->m_MouseRelease;
 				SelectionMouse.y = std::clamp(SelectionMouse.y, LogTop, LogBottom);
-				pConsole->m_Selection.Extend(pConsole->SelectionPositionAt(SelectionMouse, LogBottom, LineHeight));
+				pConsole->m_Selection.Extend(pConsole->SelectionPositionAt(SelectionMouse, LogBottom + SubLine, LineHeight));
 			}
 			if(!CanSelectLog || !pConsole->m_MouseIsPress)
 				pConsole->m_Selection.Finish();
@@ -2514,7 +2539,9 @@ void CGameConsole::OnRender()
 
 			if(First)
 			{
-				OffsetY -= (pConsole->m_BacklogLastActiveLine - SkippedLines) * LineHeight;
+				// 整行位移之外再补上亚行余量：滚轮/弹簧停在半行时内容也要跟着走，
+				// 越界时余量承载橡皮筋距离（行号已夹在合法区间内）。
+				OffsetY -= (pConsole->m_BacklogLastActiveLine - SkippedLines) * LineHeight + SubLine;
 			}
 
 			const float LocalOffsetY = OffsetY + pEntry->m_YOffset / (float)pEntry->m_LineCount;
@@ -2676,8 +2703,7 @@ void CGameConsole::OnRender()
 			if(CaretCharacter && SelectionCursor.m_HasCursorRenderedPosition)
 			{
 				// 日志只显示定位光标，键盘输入仍由命令输入框接收。
-				// 几何走公共光标组件：线宽、圆角与样式来自 Token 与 qm_text_caret_style，
-				// 日志光标是「选中位置」标记，所以恒亮、不参与闪烁相位。
+				// 几何与相位都走公共光标组件：线宽、圆角、样式来自 Token 与 qm_text_caret_style。
 				const vec2 Position = pConsole->m_LogCaretMotion.Resolve(pConsole->m_Selection.CursorPosition(), SelectionCursor.m_CursorRenderedPosition,
 					SelectionCursor.m_AlignedFontSize, time_get_nanoseconds(), g_Config.m_QmUiMotionLevel, pConsole->m_Selection.HasSelection());
 				LogCaretRendered = true;
@@ -2686,10 +2712,14 @@ void CGameConsole::OnRender()
 				CaretParams.m_Cell = {Position.x, Position.y, 0.0f, SelectionCursor.m_AlignedFontSize};
 				// XScale 是「屏幕像素 / 世界单位」，取倒数即一个世界单位占多少像素。
 				CaretParams.m_WorldPerPixel = 1.0f / maximum(XScale, 0.001f);
-				CaretParams.m_Blink = false;
-				const qm_text_caret::SCaretShape CaretShape = qm_text_caret::ResolveShape(CaretParams);
+				// 相位只由绝对时间推导：每帧现取全局时间，和聊天输入、设置页输入同一时钟源，
+				// 因此控制台光标按 ui_token::motion::CARET_BLINK_PERIOD_SEC 闪烁且与其它输入框同相位。
+				CaretParams.m_TimeSec = qm_text_caret::NowSeconds();
+				// 拖选期间恒亮（光标此刻不该闪）；动效等级关闭时同样恒亮——这是唯一的例外约定，
+				// 关掉动效不该换来一个半周期才亮一次、几乎看不见的光标。
+				CaretParams.m_Blink = qm_text_caret::ShouldBlink(!pConsole->m_Selection.HasSelection() && !pConsole->m_Selection.IsDragging(), g_Config.m_QmUiMotionLevel);
 				const ColorRGBA CaretColor = LocalConsole ? Palette.m_aColors[QmConsoleAppearance::TEXT] : TextRender()->DefaultTextColor();
-				QmConsoleUi::DrawCaret(Ui(), CaretShape, CaretColor.WithAlpha(CaretColor.a * ContentAlpha));
+				QmConsoleUi::DrawCaret(Ui(), CaretParams, CaretColor.WithAlpha(CaretColor.a * ContentAlpha));
 			}
 			pEntry = pConsole->m_Backlog.Prev(pEntry);
 
@@ -2726,7 +2756,7 @@ void CGameConsole::OnRender()
 		const int LineStart = pConsole->m_LinesRendered > 0 ? pConsole->m_BacklogCurLine + 1 : 0;
 		const int LineEnd = pConsole->m_LinesRendered > 0 ? pConsole->m_BacklogCurLine + pConsole->m_LinesRendered : 0;
 		str_format(aLinesBuf, sizeof(aLinesBuf), Localize("Lines %d - %d (%s)"), LineStart, LineEnd,
-			pConsole->m_BacklogCurLine != 0 ? Localize("Locked") : Localize("Following"));
+			Scroll.Following() ? Localize("Following") : Localize("Locked"));
 		const auto ToolbarButton = [&](const CUIRect &Rect, const char *pLabel, float Scale, bool Selected = false, uint64_t AnimationKey = 0) {
 			return QmConsoleUi::Button(Ui(), Rect, pLabel, maximum(1.0f, FontSize * Scale), Selected,
 				m_ButtonPressPosition, ButtonMousePosition, pConsole->m_MouseIsPress, ButtonReleased, !SettingsOpen && m_ConsoleState == CONSOLE_OPEN,
@@ -2760,7 +2790,8 @@ void CGameConsole::OnRender()
 					{
 					case EToolbarAction::SEARCH: pConsole->SetSearching(!pConsole->m_SearchInput.IsSearching()); break;
 					case EToolbarAction::FOLLOW:
-						pConsole->m_BacklogCurLine = 0;
+						// 回到跟随态也走统一滚动：弹簧档会顺着当前方向滑回最新一行。
+						ConsoleScrollRuntime(pConsole->m_Type).ScrollToNewest();
 						pConsole->m_Selection.Clear();
 						break;
 					case EToolbarAction::EXPORT: pConsole->SetChatExportMode(true); break;
@@ -3017,27 +3048,25 @@ void CGameConsole::ConDumpRemoteConsole(IConsole::IResult *pResult, void *pUserD
 void CGameConsole::ConConsolePageUp(IConsole::IResult *pResult, void *pUserData)
 {
 	CInstance *pConsole = ((CGameConsole *)pUserData)->CurrentConsole();
-	pConsole->m_BacklogCurLine += pConsole->GetLinesToScroll(-1, pConsole->m_LinesRendered);
+	ConsoleScrollRuntime(pConsole->m_Type).Page(1);
 }
 
 void CGameConsole::ConConsolePageDown(IConsole::IResult *pResult, void *pUserData)
 {
 	CInstance *pConsole = ((CGameConsole *)pUserData)->CurrentConsole();
-	pConsole->m_BacklogCurLine -= pConsole->GetLinesToScroll(1, pConsole->m_LinesRendered);
-	if(pConsole->m_BacklogCurLine < 0)
-		pConsole->m_BacklogCurLine = 0;
+	ConsoleScrollRuntime(pConsole->m_Type).Page(-1);
 }
 
 void CGameConsole::ConConsolePageTop(IConsole::IResult *pResult, void *pUserData)
 {
 	CInstance *pConsole = ((CGameConsole *)pUserData)->CurrentConsole();
-	pConsole->m_BacklogCurLine += pConsole->GetLinesToScroll(-1, pConsole->m_LinesRendered);
+	ConsoleScrollRuntime(pConsole->m_Type).ScrollToOldest();
 }
 
 void CGameConsole::ConConsolePageBottom(IConsole::IResult *pResult, void *pUserData)
 {
 	CInstance *pConsole = ((CGameConsole *)pUserData)->CurrentConsole();
-	pConsole->m_BacklogCurLine = 0;
+	ConsoleScrollRuntime(pConsole->m_Type).ScrollToNewest();
 }
 
 void CGameConsole::ConchainConsoleOutputLevel(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)

@@ -193,17 +193,25 @@ namespace QmConsoleUi
 		Rect.Draw(Color, IGraphics::CORNER_NONE, 0.0f);
 	}
 
-	// 日志选区光标：几何由 qm_text_caret 统一解析，这里只按解析出的圆角把整块画出来。
-	// 日志光标是「选中位置」标记而不是输入光标，因此恒亮、不参与闪烁相位。
-	inline void DrawCaret(CUi *pUi, const qm_text_caret::SCaretShape &Shape, ColorRGBA Color)
+	// 控制台光标（日志定位光标）：几何与闪烁相位都由 qm_text_caret 统一解析，
+	// 这里只按解析出的圆角把整块画出来，保证控制台与聊天/设置输入同一套线宽与相位。
+	//
+	// 相位参数由调用点每帧现算：时间取 qm_text_caret::NowSeconds()（全站同一条进程单调时钟），
+	// 不允许把时间缓存成静态值或把相位钳成常量——那正是控制台光标之前常亮不闪的原因。
+	// 只有两种时刻才传 m_Blink=false：光标此刻不该闪（拖选、输入法组合），
+	// 以及 qm_ui_motion_level = 0（动效关闭 → 取亮相终点恒亮，唯一例外）。
+	inline void DrawCaret(CUi *pUi, const qm_text_caret::SCaretParams &Params, ColorRGBA Color)
 	{
-		if(pUi == nullptr || !Shape.m_Visible || Shape.m_Rect.w <= 0.0f || Shape.m_Rect.h <= 0.0f)
+		if(pUi == nullptr)
+			return;
+		const qm_text_caret::SCaretShape Shape = qm_text_caret::ResolveShape(Params);
+		if(!Shape.m_Visible || Shape.m_Rect.w <= 0.0f || Shape.m_Rect.h <= 0.0f)
 			return;
 		const CUiScopedGaussianBlurSuppression GaussianBlurSuppression(pUi);
-		SRoundedSurfaceParams Params;
-		Params.m_Radius = Shape.m_Radius;
-		Params.m_PixelSize = std::max(Shape.m_PixelSize, 0.0001f);
-		DrawRoundedSurface(pUi, Shape.m_Rect, Color, ColorRGBA(), Params);
+		SRoundedSurfaceParams Surface;
+		Surface.m_Radius = Shape.m_Radius;
+		Surface.m_PixelSize = std::max(Shape.m_PixelSize, 0.0001f);
+		DrawRoundedSurface(pUi, Shape.m_Rect, Color, ColorRGBA(), Surface);
 	}
 
 	// 控制台使用独立的鼠标/触摸按下位置；统一在按钮内松开时触发一次。

@@ -765,25 +765,32 @@ void CChat::UpdatePointerState()
 	}
 }
 
-int CChat::CountVisibleLinesFrom(int BacklogLine) const
+CChat::SQmChatHistoryExtent CChat::MeasureVisibleHistory(int BacklogLine, int OffsetType, float FallbackLineHeight, float ExtraLineSpacing) const
 {
 	const SQmFocusModeDecisions Focus = GetQmFocusModeDecisions();
 	const bool FocusHideChat = Focus.m_HidePlayerMessages;
 	const bool FocusHideSystemInfoMessages = Focus.m_HideSystemInfoMessages;
 	const bool FocusHideSystemPromptMessages = Focus.m_HideSystemPromptMessages;
 	const bool FocusHideEcho = Focus.m_HideEchoMessages;
+	const int Index = std::clamp(OffsetType, 0, 1);
+	const float Fallback = maximum(0.0f, FallbackLineHeight);
+	const float Spacing = maximum(0.0f, ExtraLineSpacing);
 
-	int Count = 0;
-	for(int i = BacklogLine; i < MAX_LINES; ++i)
+	SQmChatHistoryExtent Extent;
+	for(int i = maximum(0, BacklogLine); i < MAX_LINES; ++i)
 	{
 		const CLine &Line = m_aLines[((m_CurrentLine - i) + MAX_LINES) % MAX_LINES];
 		if(!Line.m_Initialized)
 			break;
 		const bool ServerMessageIsBasicInfo = Line.m_ServerMessageClass == QmHudNotifications::EServerMessageClass::BasicInfo;
-		if(ShouldRenderFocusFilteredChatLine(FocusHideChat, FocusHideSystemInfoMessages, FocusHideSystemPromptMessages, FocusHideEcho, Line.m_ClientId, Line.m_ForceVisible, ServerMessageIsBasicInfo))
-			++Count;
+		if(!ShouldRenderFocusFilteredChatLine(FocusHideChat, FocusHideSystemInfoMessages, FocusHideSystemPromptMessages, FocusHideEcho, Line.m_ClientId, Line.m_ForceVisible, ServerMessageIsBasicInfo))
+			continue;
+		++Extent.m_Lines;
+		// 行高来自上一次排版（消息首次出现在可见区时量到的），与绘制用的是同一个值；
+		// 还没量过的行按一行高估，宁可让滑块略长也不让它凭空缩短。
+		Extent.m_Height += (Line.m_aYOffset[Index] >= 0.0f ? Line.m_aYOffset[Index] : Fallback) + Spacing;
 	}
-	return Count;
+	return Extent;
 }
 
 bool CChat::UpdateHistoryTouchScroll(const CUIRect &ChatRect, float HeightLimit, float HistoryBottom, float LineHeight, int TotalVisibleLines, int VisibleLineCapacity, bool StartAllowed)
@@ -3931,7 +3938,13 @@ void CChat::OnRender()
 	const vec2 CommandHudMousePos = GetChatMousePos();
 	const bool InsideCommandHud = m_CommandHud.Contains(CommandHudMousePos.x, CommandHudMousePos.y);
 	const float HistoryHeight = maximum(0.0f, HistoryBottom - HeightLimit);
-	const int TotalVisibleLines = CountVisibleLinesFrom(0);
+	// 历史内容尺寸一到手就分成两把尺子：
+	//   行数 → 滚轮推进、行号夹取、滑块进度（0 = 顶部/最旧）；
+	//   总高度 → 滑块长度。消息会换行，"条数"并不等于"高度"，用条数算比例会把
+	//   滑块虚长成几乎整条轨道（本次要修的就是这个观感）。
+	const SQmChatHistoryExtent HistoryExtent = MeasureVisibleHistory(0, OffsetType, FontSize() + RealMsgPaddingY, ExtraLineSpacing);
+	const int TotalVisibleLines = HistoryExtent.m_Lines;
+	const float HistoryContentHeight = HistoryExtent.m_Height;
 	const int VisibleLineCapacity = maximum(1, (int)std::floor(HistoryHeight / maximum(RowHeight + ExtraLineSpacing, 1.0f)));
 	const int MaxScroll = maximum(0, TotalVisibleLines - VisibleLineCapacity);
 	// 聊天历史的滚动偏移单位是"行"：视口 = 可显示行数、内容 = 总行数，推进一律交给
@@ -3967,33 +3980,33 @@ void CChat::OnRender()
 		m_HistoryScrollAppliedLine = m_BacklogCurLine;
 	}
 
-	const bool ShowChatScrollbar = InputActive && MaxScroll > 0 && HistoryHeight > 0.0f;
-	const CUIRect ScrollbarRect = QmChatScrollbarRail(ChatRect, HeightLimit, HistoryHeight, ChatScrollbarOnRight);
-	float ScrollbarHandleY = ScrollbarRect.y;
-	float ScrollbarHandleH = ScrollbarRect.h;
+	// 滚动条几何全部来自公共滚动容器（与列表滚动条同一算法）：聊天只报视口高度、
+	// 内容总高度和当前进度。轨道按列表规则两端内缩，滑块按"视口/内容"算长度，
+	// 不再有聊天自己的一档上限与反馈内缩；内容装得下就不出现。
+	SQmChatScrollbarFrame ScrollbarFrame = QmResolveChatScrollbarFrame(ChatRect, HeightLimit, HistoryHeight, HistoryContentHeight, BacklogLineToScrollbarValue(m_BacklogCurLine, MaxScroll), ChatScrollbarOnRight);
+	const bool ShowChatScrollbar = InputActive && MaxScroll > 0 && ScrollbarFrame.m_Visible;
 	bool ScrollbarHovered = false;
 	if(ShowChatScrollbar)
 	{
-		ScrollbarHandleH = QmChatScrollbarHandleHeight(ScrollbarRect.h, VisibleLineCapacity, TotalVisibleLines, 1.0f, ScrollbarRect.w);
-		const float TrackRange = QmChatScrollbarTrackRange(ScrollbarRect, ScrollbarHandleH);
-		ScrollbarHandleY = QmChatScrollbarHandle(ScrollbarRect, ScrollbarHandleH, BacklogLineToScrollbarValue(m_BacklogCurLine, MaxScroll)).y;
+		const CUIRect &Rail = ScrollbarFrame.m_Rail;
+		const CUIRect &Thumb = ScrollbarFrame.m_Thumb;
 		const vec2 MousePos = PointerLocalPos();
 		const bool InsideRail =
-			MousePos.x >= ScrollbarRect.x &&
-			MousePos.x <= ScrollbarRect.x + ScrollbarRect.w &&
-			MousePos.y >= ScrollbarRect.y &&
-			MousePos.y <= ScrollbarRect.y + ScrollbarRect.h;
+			MousePos.x >= Rail.x &&
+			MousePos.x <= Rail.x + Rail.w &&
+			MousePos.y >= Rail.y &&
+			MousePos.y <= Rail.y + Rail.h;
 		const bool InsideHandle =
-			MousePos.x >= ScrollbarRect.x &&
-			MousePos.x <= ScrollbarRect.x + ScrollbarRect.w &&
-			MousePos.y >= ScrollbarHandleY &&
-			MousePos.y <= ScrollbarHandleY + ScrollbarHandleH;
+			MousePos.x >= Thumb.x &&
+			MousePos.x <= Thumb.x + Thumb.w &&
+			MousePos.y >= Thumb.y &&
+			MousePos.y <= Thumb.y + Thumb.h;
 
 		ScrollbarHovered = InsideRail && !InsideCommandHud && !m_CommandHud.IsPressed();
 		if(PointerPressed() && ScrollbarHovered)
 		{
 			m_ScrollbarDragging = true;
-			m_ScrollbarDragOffset = InsideHandle ? std::clamp(MousePos.y - ScrollbarHandleY, 0.0f, ScrollbarHandleH) : ScrollbarHandleH * 0.5f;
+			m_ScrollbarDragOffset = InsideHandle ? std::clamp(MousePos.y - Thumb.y, 0.0f, Thumb.h) : Thumb.h * 0.5f;
 		}
 		if(!PointerDown())
 			m_ScrollbarDragging = false;
@@ -4010,10 +4023,10 @@ void CChat::OnRender()
 		}
 		if(m_ScrollbarDragging)
 		{
-			// 拖动跟手：把指针位置换算成目标行后直接写进公共滚动状态（不经过弹簧），
+			// 拖动跟手：把指针位置换算成进度后直接写进公共滚动状态（不经过弹簧），
 			// 松手后由 Advance 的越界回弹收回合法范围。
-			const float HandleTop = QmChatScrollbarClampTop(ScrollbarRect, MousePos.y - m_ScrollbarDragOffset, TrackRange);
-			const int NewBacklogCurLine = ScrollbarValueToBacklogLine(QmChatScrollbarValueFromTop(ScrollbarRect, HandleTop, TrackRange), MaxScroll);
+			const float Progress = QmChatScrollbarProgressFromPointer(ScrollbarFrame, MousePos.y, m_ScrollbarDragOffset);
+			const int NewBacklogCurLine = ScrollbarValueToBacklogLine(Progress, MaxScroll);
 			QmChatHistoryDragToLine(m_HistoryScroll, NewBacklogCurLine, HistoryScrollMetrics, HistoryScrollConfig);
 			if(NewBacklogCurLine != m_BacklogCurLine)
 			{
@@ -4021,7 +4034,8 @@ void CChat::OnRender()
 				RebuildChat();
 			}
 			m_HistoryScrollAppliedLine = m_BacklogCurLine;
-			ScrollbarHandleY = QmChatScrollbarHandle(ScrollbarRect, ScrollbarHandleH, BacklogLineToScrollbarValue(m_BacklogCurLine, MaxScroll)).y;
+			// 滑块跟着新进度重画一次，走同一个几何入口。
+			ScrollbarFrame = QmResolveChatScrollbarFrame(ChatRect, HeightLimit, HistoryHeight, HistoryContentHeight, BacklogLineToScrollbarValue(m_BacklogCurLine, MaxScroll), ChatScrollbarOnRight);
 		}
 	}
 	else
@@ -4050,10 +4064,10 @@ void CChat::OnRender()
 		MousePos.y <= m_TranslateButton.m_Y + m_TranslateButton.m_H;
 	const bool InsideScrollbar =
 		ShowChatScrollbar &&
-		MousePos.x >= ScrollbarRect.x &&
-		MousePos.x <= ScrollbarRect.x + ScrollbarRect.w &&
-		MousePos.y >= ScrollbarRect.y &&
-		MousePos.y <= ScrollbarRect.y + ScrollbarRect.h;
+		MousePos.x >= ScrollbarFrame.m_Rail.x &&
+		MousePos.x <= ScrollbarFrame.m_Rail.x + ScrollbarFrame.m_Rail.w &&
+		MousePos.y >= ScrollbarFrame.m_Rail.y &&
+		MousePos.y <= ScrollbarFrame.m_Rail.y + ScrollbarFrame.m_Rail.h;
 	// 触摸没有左右键：轻点翻译按钮打开设置，长按（CUi 合成的右键）切换自动翻译。
 	if(!Input()->TouchFingerStates().empty() && InsideTranslateButton && !AnyChatPopupOpen)
 	{
@@ -4309,9 +4323,8 @@ void CChat::OnRender()
 
 	if(ShowChatScrollbar)
 	{
-		const CUIRect ScrollbarThumb{ScrollbarRect.x, ScrollbarHandleY, ScrollbarRect.w, ScrollbarHandleH};
-		QmDrawChatScrollbar(Ui(), ScrollbarRect, ScrollbarThumb, true, ScrollbarHovered, m_ScrollbarDragging);
-		ExtendBounds(ScrollbarRect.x, ScrollbarRect.y, ScrollbarRect.w, ScrollbarRect.h);
+		QmDrawChatScrollbar(Ui(), ScrollbarFrame.m_Rail, ScrollbarFrame.m_Thumb, true, ScrollbarHovered, m_ScrollbarDragging);
+		ExtendBounds(ScrollbarFrame.m_Rail.x, ScrollbarFrame.m_Rail.y, ScrollbarFrame.m_Rail.w, ScrollbarFrame.m_Rail.h);
 	}
 
 	if(HudEditorPreview && !RenderedAnyLines)

@@ -435,7 +435,14 @@ private:
 	void RenderCommandHud(float X, float Bottom, float Width, float FontSize, const CUIRect &ChatRect, const CUIRect &TargetRect);
 
 	int CountInitializedLines() const;
-	int CountVisibleLinesFrom(int BacklogLine) const;
+	// 历史"内容尺寸"：行数与总高度一趟量完。滚轮推进与行号夹取用行数；
+	// 滚动条滑块要用总高度——消息会换行，"条数"不等于"高度"，两把尺子必须分开量。
+	struct SQmChatHistoryExtent
+	{
+		int m_Lines = 0;
+		float m_Height = 0.0f;
+	};
+	SQmChatHistoryExtent MeasureVisibleHistory(int BacklogLine, int OffsetType, float FallbackLineHeight, float ExtraLineSpacing) const;
 	void UpdatePresentationStates(int64_t Now, float DeltaSeconds, bool ShowLargeArea, bool ExtraAnimations);
 	bool UpdateHistoryTouchScroll(const CUIRect &ChatRect, float HeightLimit, float HistoryBottom, float LineHeight, int TotalVisibleLines, int VisibleLineCapacity, bool StartAllowed);
 

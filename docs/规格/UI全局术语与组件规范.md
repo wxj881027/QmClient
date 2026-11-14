@@ -142,6 +142,12 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 | 从属行展开 | 单行随父项出现/消失 | 关闭时不占高、不进命中 | `CSettingsConditionalRows` + `CSettingsContentRevealScope` | 用固定高度留白冒充 |
 | 互斥分支切换 | 同一槽位二选一/三选一 | 槽高恒定 | `CSettingsExclusiveReveal` + `CSettingsExclusiveBranchScope` + `SlotPadding()` | 用它写从属行（白占一档槽高） |
 
+### 2.8b 控制台日志滚动（console log scroll）
+
+- 定义：控制台日志的滚轮、翻页、滑块与触控拖动共用全站滚动物理；偏移以像素推进、读取时折回「整行 + 亚行余量」，贴底时新日志自动跟随。
+- 唯一实现：`CQmConsoleScrollRuntime`（`src/game/client/QmUi/QmConsoleScroll.h`）+ `CQmScrollState` / `QmNativeWheelScrollConfig`；调用点 `CGameConsole::CInstance::OnInput`、`CGameConsole::OnRender`（`src/game/client/components/console.cpp`）。
+- 禁止的反面写法：在控制台里自己写 `m_BacklogCurLine += 行数` 直跳滚轮；拖动滑块走弹簧（应跟手）；新日志到达时搬整型行锚而不是按内容增长量抬高偏移；另写一套平滑时长或阻尼。
+
 ### 2.15 玩家信息卡（player card）
 
 - 定义：ESC 菜单「玩家」页是「顶部一行（左胶囊筛选 / 右搜索框 / 最右在线人数）+ 网格玩家列表 + 右侧英雄展示卡」。列表是网格卡片（一行多格，与皮肤列表同一种读法），未选中玩家时占满全宽；选中后右侧卡上半是展示区（角色立绘居中、名字与氏族压在下沿、区内一排圆形图标按钮），下半只有皮肤名与复制按钮。所有度量只由 `ui_token::player_card` 决定。
@@ -151,7 +157,7 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 ### 2.16 聊天气泡与聊天滚动条（chat bubble / chat scrollbar）
 
 - 定义：游戏内聊天框是独立的 300 高虚拟屏，尺寸单位是「聊天逻辑单位」（1 单位 ≈ 屏幕高度/300），不是 UI 像素；消息气泡单行画成完整胶囊、多行画成圆角矩形，聊天滚动条与列表滚动条共用同一套滑块绘制入口。
-- 唯一实现：`ui_token::chat`（`SCROLLBAR_WIDTH/SCROLLBAR_MARGIN/SCROLLBAR_MIN_THUMB/SCROLLBAR_MAX_THUMB_RATIO/SCROLLBAR_RADIUS/SCROLLBAR_FEEDBACK_INSET_MAX_RATIO/BUBBLE_*`、`BubbleIsSingleLine`、`BubbleRadius`）+ `ui_token::feedback::HANDLE_{HOVER,PRESS}_GROW`（滑块悬浮/按下放大，与 `ui_widget::DrawScrollbarHandle` 同源）+ `src/game/client/components/qmclient/chat_scrollbar.h`（`QmChatHistoryScrollMetrics/ScrollConfig/ScrollLine/Wheel/DragToLine` 为历史滚动推进唯一入口；`QmChatScrollbarFeedbackInset/UsableLength/TrackRange/ValueFromTop/ClampTop/FeedbackRect` 为滑块几何与反馈）（`QmChatScrollbarRail`、`QmChatScrollbarHandleHeight`、`QmDrawChatScrollbar`）；滑块绘制走 `ui_widget::DrawScrollbarHandle`（与 `CListBox`/`CScrollRegion` 同一入口），气泡圆角走 `DrawRoundedSurface`（`ResolveRoundedSurfacePlan` + `QmEffectiveCornerSmoothing` 曲线链）。
+- 唯一实现：`ui_token::chat`（`SCROLLBAR_WIDTH/SCROLLBAR_MARGIN/SCROLLBAR_MIN_THUMB/SCROLLBAR_MAX_THUMB_RATIO/SCROLLBAR_RADIUS/SCROLLBAR_FEEDBACK_INSET_MAX_RATIO/BUBBLE_*`、`BubbleIsSingleLine`、`BubbleRadius`）+ `ui_token::feedback::HANDLE_{HOVER,PRESS}_GROW`（滑块悬浮/按下放大，与 `ui_widget::DrawScrollbarHandle` 同源）+ `src/game/client/components/qmclient/chat_scrollbar.h`（`QmChatHistoryScrollMetrics/ScrollConfig/ScrollLine/Wheel/DragToLine` 为历史滚动推进唯一入口；`QmResolveChatScrollbarFrame/QmChatScrollbarThumbHeight/QmChatScrollbarProgressFromPointer` 为滑块几何，几何本体委托 `CQmScrollController::PreviewFrame`，与列表覆盖式轨道同一条算法）（`QmChatScrollbarRail`、`QmChatScrollbarHandleHeight`、`QmDrawChatScrollbar`）；滑块绘制走 `ui_widget::DrawScrollbarHandle`（与 `CListBox`/`CScrollRegion` 同一入口），气泡圆角走 `DrawRoundedSurface`（`ResolveRoundedSurfacePlan` + `QmEffectiveCornerSmoothing` 曲线链）。
 - 禁止的反面写法：在 chat.cpp 里写 `FontSize() * 0.5f` 之类的半径、给气泡另起一套 `CreateRectQuadContainer` 直绘几何（只认圆弧，和气泡自己的背景模糊会错位）、把列表滚动条的 UI 像素值直接当聊天单位用、聊天滚动条自己画强调色与卡片描边。
 
 ## 三、通用组件与行级模式
@@ -171,8 +177,8 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 ### 2.17 输入光标（text caret）
 
 - 定义：所有输入框共用的光标形态与闪烁相位，样式可配（竖线 / 下划线 / 方块），相位只由绝对时间推导。
-- 唯一实现：`qm_text_caret::ResolveShape` / `BlinkVisible` / `Render`（`src/game/client/QmUi/UiTextCaret.h`、`UiTextCaret.cpp`）；调用点 `CLineInput::RenderCaret`（`src/game/client/lineinput.cpp`）、`QmConsoleUi::DrawCaret`（`QmConsoleUi.h`）；token `ui_token::text_caret::*`、`ui_token::motion::CARET_BLINK_*`；配置 `qm_text_caret_style`。
-- 禁止的反面写法：调用点自己画光标方块（`Graphics()->QuadsDrawTL`）；保存「本框闪烁起点」导致两个输入框相位不同；写死 0.5 秒闪烁或 2 像素线宽。
+- 唯一实现：`qm_text_caret::ResolveShape` / `BlinkVisible` / `Render`（`src/game/client/QmUi/UiTextCaret.h`、`UiTextCaret.cpp`）；调用点 `CLineInput::RenderCaret`（`src/game/client/lineinput.cpp`）、`QmConsoleUi::DrawCaret`（`QmConsoleUi.h`）；相位与闪烁门控由 `qm_text_caret::NowSeconds` / `ShouldBlink` 统一给出；token `ui_token::text_caret::*`、`ui_token::motion::CARET_BLINK_*`；配置 `qm_text_caret_style`。
+- 禁止的反面写法：调用点自己画光标方块（`Graphics()->QuadsDrawTL`）；保存「本框闪烁起点」导致两个输入框相位不同；把时间缓存成静态值或写死 `m_Blink = false` 让光标常亮；写死 0.5 秒闪烁或 2 像素线宽。
 
 ### 3.1 行级七词（继承自 2026-11-11 报告 §9.1，口径不变）
 

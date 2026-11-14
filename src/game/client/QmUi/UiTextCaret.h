@@ -7,10 +7,12 @@
 #include "UiTokens.h"
 
 #include <base/color.h>
+#include <base/time.h>
 
 #include <game/client/ui_rect.h>
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 
 class IGraphics;
@@ -85,7 +87,31 @@ namespace qm_text_caret
 		float m_PixelSize = 1.0f;
 	};
 
+	// 全站唯一的光标时间基准（秒）：聊天输入、设置页输入、控制台命令输入与日志定位光标
+	// 都取同一个进程单调时钟（time_get_nanoseconds），所以并排的输入框永远同相位闪烁。
+	// 调用点每帧重新取一次，不要缓存成「本框闪烁起点」。
+	inline double NowSeconds()
+	{
+		return std::chrono::duration<double>(time_get_nanoseconds()).count();
+	}
+
+	// 调用点统一的闪烁门控：CaretActive 表示"光标此刻本该闪"（没有拖选、没有输入法组合）。
+	// 动效等级 0 时恒亮——这是全站唯一"关掉动效反而更亮"的例外，集中在这里判断，
+	// 调用点不要再写死 m_Blink = false（那会让光标永远常亮，正是控制台光标曾经的问题）。
+	inline bool ShouldBlink(bool CaretActive, int MotionLevel)
+	{
+		return CaretActive && MotionLevel > 0;
+	}
+
 	// 闪烁是否处于亮相：相位由绝对时间取模得到，负数时间按同一周期回绕。
+	//
+	// Blink=false 是「恒亮档」，只有两种来源，别拿它当默认值：
+	// 1) 光标此刻本来就不该闪：鼠标拖选、输入法组合输入，以及日志定位光标（选中位置标记）；
+	// 2) qm_ui_motion_level = 0 —— 这是全站唯一的「关掉动效反而更亮」的例外约定：
+	//    动效等级关闭时所有过渡都直接落到终点，光标取「亮相」这个终点，恒亮而不是灭相；
+	//    否则关掉动效会得到一个半周期才亮一次、几乎看不见的光标。该判断由调用点做，
+	//    组件自身不读配置，保持纯几何与纯相位。
+	// 其余情况调用点必须传 Blink=true，并把 NowSeconds() 放进 SCaretParams::m_TimeSec。
 	inline bool BlinkVisible(double TimeSec, bool Blink)
 	{
 		if(!Blink)

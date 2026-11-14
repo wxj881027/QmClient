@@ -546,14 +546,10 @@ namespace ui_token::chat
 	// 滑块最短长度：再短就抓不住，与旧实现同一档。
 	inline constexpr float SCROLLBAR_MIN_THUMB = spacing::MD;
 	// 滑块最长占轨道的比例：内容只比一屏多一点时，按「可见/内容」比例算出来的滑块
-	// 会拉成几乎整条轨道（旧实现就是这个观感）；压到一半以内才读得出还能滚多少。
-	inline constexpr float SCROLLBAR_MAX_THUMB_RATIO = 0.5f;
 	// 轨道与滑块的圆角：胶囊端头，和列表覆盖式滚动条同一档（绘制层按短边一半兜底）。
 	inline constexpr float SCROLLBAR_RADIUS = radius::PILL;
 	// 滑块悬浮/按下放大的预留比例上限：轨道长度方向两端各最多让出这一比例，
 	// 加上 ui_token::feedback::HANDLE_PRESS_GROW 的放大后仍完整落在轨道内；
-	// 上限定在四分之一是为了让极短的历史区（约两行高）也留得住可抓的滑块。
-	inline constexpr float SCROLLBAR_FEEDBACK_INSET_MAX_RATIO = 0.25f;
 
 	// 消息气泡单行判定的容差：行高不超过「一行行高」的 1.25 倍就算单行，
 	// 留出行距与装饰的余量；超过即按多行处理。
@@ -605,6 +601,9 @@ namespace ui_token::chat
 		// 按钮描边宽度占直径的比例：圆形图标按钮只需要一圈勾边。
 		// 固定 1 单位在 8 单位直径的小圆上就是八分之一，读起来是「粗框」而不是「描边」。
 		inline constexpr float BUTTON_BORDER_RATIO = 0.05f;
+	// 图标相对内径的内缩比例：图标与圆边之间必须有边距，
+	// 否则大图标顶到描边上，看起来像「图标和圆一样高」。
+	inline constexpr float ICON_INSET_RATIO = 0.18f;
 
 		// 输入行行高：按钮直径与「全体」前缀块高度都只从这里取。
 		inline float RowHeight(const float FontSize)
@@ -873,8 +872,11 @@ namespace ui_token::motd
 	// 框线行每个排版 token 最多发多少个字形：整行一次发完会在长公告下形成单帧尖刺，
 	// 这里给一个上限，剩余字形留到下一帧继续。
 	inline constexpr int BOX_GLYPHS_PER_STEP = 12;
-	// 公告正文字号（未缩放）：公告栏再乘卡片缩放绘制。
-	inline constexpr float FONT_SIZE = 16.0f;
+	// 公告正文字号（未缩放）：与「服务器信息 / 游戏信息」正文同一档，
+	// 公告不再比上面两张卡更大。公告栏绘制时再乘卡片缩放。
+	inline constexpr float FONT_SIZE = server_info::BODY_SIZE;
+	// 行距相对行高的比例：公告是多行长文，行与行之间要留出比单行标签更松的空。
+	inline constexpr float LINE_SPACING_RATIO = 1.28f;
 	// 超宽框线行的推进压缩下限：低于该比例笔画会互相吞掉，宁可截断可见字数。
 	inline constexpr float BOX_CELL_MIN_RATIO = 0.5f;
 } // namespace ui_token::motd
@@ -937,14 +939,7 @@ namespace ui_token::player_card
 	// 顶部一行：搜索框与在线人数占的固定宽度。
 	inline constexpr float SEARCH_WIDTH = 260.0f;
 	inline constexpr float COUNT_WIDTH = 96.0f;
-	// 英雄展示区：高度占卡片宽度的比例、角色占展示区高度的比例、区内图标按钮边长。
-	inline constexpr float SHOWCASE_HEIGHT_RATIO = 0.72f;
-	// 展示区高度还受卡片自身高度约束：卡片矮时按比例收敛，不把下半内容挤没。
-	inline constexpr float SHOWCASE_MAX_CARD_HEIGHT_RATIO = 0.62f;
-	// 立绘宽度上限（占展示区宽度比例）：超宽卡片上角色不再横向拉长。
-	inline constexpr float SHOWCASE_MAX_WIDTH_RATIO = 0.55f;
-	inline constexpr float SHOWCASE_TEE_RATIO = 0.78f;
-	inline constexpr float SHOWCASE_ICON_SIZE = 24.0f;
+
 	// 信息卡四周内边距与圆角。
 	inline constexpr float PADDING = spacing::SM;
 	inline constexpr float RADIUS = radius::BASE;
@@ -965,6 +960,8 @@ namespace ui_token::player_card
 	inline constexpr int ICON_COUNT = 3;
 	inline constexpr float ICON_BUTTON_SIZE = 22.0f;
 	inline constexpr float ICON_BUTTON_GAP = spacing::XS;
+	// 卡片右上角动作图标行的行高：与图标边长同一档（好友列表卡片的动作图标也是这个尺寸）。
+	inline constexpr float SHOWCASE_ICON_SIZE = ICON_BUTTON_SIZE;
 	// 状态区（在线 / 旁观 / 加入）：行高与状态之间留出的空。
 	inline constexpr float STATUS_HEIGHT = 16.0f;
 	inline constexpr float STATUS_GAP = spacing::MD;

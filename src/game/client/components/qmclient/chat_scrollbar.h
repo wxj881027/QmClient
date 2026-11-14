@@ -58,22 +58,99 @@ public:
 	const CUIRect &Rect() const { return m_Rect; }
 };
 
+// 轨道宽度：手机端手指比鼠标粗，要更宽才按得到；设置页预览用 Scale 放大整条滚动条。
+inline float QmChatScrollbarWidth(const CUIRect &Bounds, float Scale)
+{
+	const float Scaled = std::max(0.0f, Scale);
+#if defined(CONF_PLATFORM_ANDROID) || defined(CONF_PLATFORM_IOS)
+	return std::min(std::max(0.0f, Bounds.w), QM_CHAT_SCROLLBAR_WIDTH * Scaled * 2.5f);
+#else
+	return std::min(std::max(0.0f, Bounds.w), QM_CHAT_SCROLLBAR_WIDTH * Scaled);
+#endif
+}
+
+// 轨道离聊天区边缘的一档外边距（未夹取）；手机端离屏边更远，靠左时再往内收避开圆角。
+inline float QmChatScrollbarBaseMargin(bool OnRight, float Scale)
+{
+	const float Scaled = std::max(0.0f, Scale);
+#if defined(CONF_PLATFORM_ANDROID) || defined(CONF_PLATFORM_IOS)
+	const float MarginScale = OnRight ? 1.5f : 3.0f;
+	return QM_CHAT_SCROLLBAR_MARGIN * Scaled * MarginScale;
+#else
+	(void)OnRight; // 桌面端左右同档；手机端才按位置加宽。
+	return QM_CHAT_SCROLLBAR_MARGIN * Scaled;
+#endif
+}
+
+// 轨道实际使用的内缩量：同一个外边距，另外夹进聊天区宽度，窄屏也不把轨道挤出屏幕。
+// 它同时是轨道沿长度方向两端的内缩量（与列表覆盖式轨道同一条语义）。
+inline float QmChatScrollbarMargin(const CUIRect &Bounds, bool OnRight, float Width, float Scale)
+{
+	return std::min(QmChatScrollbarBaseMargin(OnRight, Scale), std::max(0.0f, (Bounds.w - Width) * 0.5f));
+}
+
+// 一次算完的滚动条几何：轨道、滑块、可移动行程与显隐。
+struct SQmChatScrollbarFrame
+{
+	CUIRect m_Rail{};
+	CUIRect m_Thumb{};
+	float m_TrackRange = 0.0f;
+	bool m_Visible = false;
+};
+
+// 聊天历史的滚动条几何。轨道与滑块不再由聊天自己算：这里把"视口"和"内容"交给
+// 公共滚动容器 CQmScrollController，它与列表覆盖式轨道（CScrollRegion::DoSlider）
+// 是同一条算法——轨道 = 视口，两端各让出一档内缩；滑块 = 视口/内容 × 轨道，夹在
+// ui_token::chat::SCROLLBAR_MIN_THUMB 与轨道之间；位置 = 进度 × (轨道 − 滑块)。
+// 聊天只回答三件事：视口多高、内容总高多少、当前滚到哪（Progress 0 = 顶部/最旧）。
+inline SQmChatScrollbarFrame QmResolveChatScrollbarFrame(const CUIRect &Bounds, float Top, float Height, float ContentHeight, float Progress, bool OnRight, float Scale = 1.0f)
+{
+	SQmChatScrollbarFrame Result;
+	const float ViewHeight = std::max(0.0f, Height);
+	const float Content = std::max(0.0f, ContentHeight);
+	// 内容装得下就没有滚动条：与列表一致，不留一根占满轨道却动不了的滑块。
+	if(Bounds.w <= 0.0f || ViewHeight <= 0.0f || Content <= ViewHeight)
+		return Result;
+	const float Width = QmChatScrollbarWidth(Bounds, Scale);
+	const float Margin = QmChatScrollbarMargin(Bounds, OnRight, Width, Scale);
+	SQmScrollContainerStyle Style;
+	Style.m_Axis = EQmScrollAxis::VERTICAL;
+	// 公共容器按 margin 把轨道在宽度方向两侧各收一次；槽位宽度补回两份，
+	// 轨道净宽才仍然是一档 SCROLLBAR_WIDTH。
+	Style.m_ScrollbarWidth = Width + Margin * 2.0f;
+	Style.m_ScrollbarMargin = Margin;
+	Style.m_MinThumbHeight = ui_token::chat::SCROLLBAR_MIN_THUMB * std::max(0.0f, Scale);
+	Style.m_ReserveScrollbarSpace = false;
+
+	const CUIRect View{Bounds.x, Top, Bounds.w, ViewHeight};
+	SQmScrollMetrics Metrics;
+	Metrics.m_ViewportSize = ViewHeight;
+	Metrics.m_ContentSize = Content;
+	// 进度换成公共容器认的"偏移"，行程换算由它自己完成，聊天不再维护一套 lerp。
+	CQmScrollState ThumbState;
+	ThumbState.SetOffset(std::clamp(Progress, 0.0f, 1.0f) * Metrics.MaxOffset(), Metrics);
+	const CQmScrollController Controller;
+	const SQmScrollContainerFrame Frame = Controller.PreviewFrame(ThumbState, View, Content, Style);
+	if(!Frame.m_ScrollbarVisible)
+		return Result;
+	Result.m_Visible = true;
+	Result.m_Rail = Frame.m_ScrollbarTrackRect;
+	Result.m_Thumb = Frame.m_ScrollbarThumbRect;
+	if(!OnRight)
+	{
+		// 公共容器只画右侧轨道；靠左时把整条轨道镜像到聊天区左缘，内缩量同档。
+		Result.m_Rail.x = Bounds.x + (Bounds.w - (Result.m_Rail.x - Bounds.x) - Result.m_Rail.w);
+		Result.m_Thumb.x = Result.m_Rail.x;
+	}
+	Result.m_TrackRange = std::max(0.0f, Result.m_Rail.h - Result.m_Thumb.h);
+	return Result;
+}
+
+// 只要轨道矩形的位置与长度（设置页预览、聊天布局基准与游戏内绘制共用同一条几何）。
+// 轨道与内容多少无关，这里给一个必然溢出的内容高度，只为从公共容器取回轨道那一段。
 inline CUIRect QmChatScrollbarRail(const CUIRect &Bounds, float Top, float Height, bool OnRight, float Scale = 1.0f)
 {
-	// 手机上手指比鼠标粗：轨道要更宽、离屏边更远，否则根本按不到、拖不动。
-#if defined(CONF_PLATFORM_ANDROID) || defined(CONF_PLATFORM_IOS)
-	const float Width = std::min(std::max(0.0f, Bounds.w), QM_CHAT_SCROLLBAR_WIDTH * Scale * 2.5f);
-	const float MarginScale = OnRight ? 1.5f : 3.0f; // 靠左时再往内收，避开手机圆角
-	const float Margin = std::min(QM_CHAT_SCROLLBAR_MARGIN * Scale * MarginScale, std::max(0.0f, (Bounds.w - Width) * 0.5f));
-#else
-	const float Width = std::min(std::max(0.0f, Bounds.w), QM_CHAT_SCROLLBAR_WIDTH * Scale);
-	const float Margin = std::min(QM_CHAT_SCROLLBAR_MARGIN * Scale, std::max(0.0f, (Bounds.w - Width) * 0.5f));
-#endif
-	// 轨道沿长度方向两端各让出一档外边距：滑块端头不顶到聊天区上下边缘，
-	// 整条轨道也不至于顶满历史区那么高（与列表覆盖式轨道同一条内缩语义）。
-	const float LengthMargin = QM_CHAT_SCROLLBAR_MARGIN * Scale;
-	const float RailHeight = std::max(0.0f, Height - LengthMargin * 2.0f);
-	return {OnRight ? Bounds.x + Bounds.w - Margin - Width : Bounds.x + Margin, Top + LengthMargin, Width, RailHeight};
+	return QmResolveChatScrollbarFrame(Bounds, Top, Height, std::max(0.0f, Height) * 2.0f, 0.0f, OnRight, Scale).m_Rail;
 }
 
 // 历史正文与预览都避开轨道及其两侧间距；切换位置不改变内容可用宽度。
@@ -132,73 +209,55 @@ inline void QmChatHistoryDragToLine(CQmScrollState &State, int Line, const SQmSc
 }
 
 // ---------------------------------------------------------------------------
-// 滚动条几何与反馈
+// 滑块长度、位置与拖动换算（与列表滚动条同一实现）
 // ---------------------------------------------------------------------------
 
-// 滑块悬浮/按下放大在轨道长度方向要预留的余量（两端各一份）。
-// 放大档来自公共滑块（ui_token::feedback::HANDLE_*_GROW），基准宽是一档
-// SCROLLBAR_WIDTH，所以按「轨道实际宽度 × 放大档 / 基准宽」等比换算：
-// 预览放大（Scale = 2）与手机加宽轨道都能自动同位。
-inline float QmChatScrollbarFeedbackInset(float RailWidth, float RailHeight)
+// 滑块长度：视口/内容 × 轨道，下夹 ui_token::chat::SCROLLBAR_MIN_THUMB（列表滑块同一档），
+// 上不越过轨道。视口与内容只要是同一把尺子比例就成立——这里把内容折成"轨道高"下的
+// 等价值再交给同一个公共容器，聊天不维护第二套比例、上限或内缩。
+inline float QmChatScrollbarThumbHeight(const CUIRect &Rail, float ViewportHeight, float ContentHeight, float Scale = 1.0f)
 {
-	const float Desired = std::max(0.0f, RailWidth) * (ui_token::feedback::HANDLE_PRESS_GROW / ui_token::chat::SCROLLBAR_WIDTH);
-	const float Cap = std::max(0.0f, RailHeight) * ui_token::chat::SCROLLBAR_FEEDBACK_INSET_MAX_RATIO;
-	return std::min(Desired, Cap);
+	const float Height = std::max(0.0f, Rail.h);
+	const float Viewport = std::max(0.0f, ViewportHeight);
+	const float Content = std::max(0.0f, ContentHeight);
+	if(Height <= 0.0f || Viewport <= 0.0f)
+		return 0.0f;
+	// 内容装得下：滑块占满轨道（列表在不溢出时同样把滑块画成整条）。
+	if(Content <= Viewport)
+		return Height;
+	const float Scaled = std::max(0.0f, Scale);
+	const float Margin = QmChatScrollbarBaseMargin(true, Scaled);
+	const float Slot = QM_CHAT_SCROLLBAR_WIDTH * Scaled + Margin * 2.0f;
+	// 视口取「轨道高 + 两端内缩」，与帧内部减回去的两端内缩正好抵消，轨道长度不变。
+	const CUIRect View{Rail.x, Rail.y, Slot, Height + Margin * 2.0f};
+	return QmResolveChatScrollbarFrame(View, Rail.y, View.h, View.h * Content / Viewport, 0.0f, true, Scaled).m_Thumb.h;
 }
 
-// 轨道内可用的滑块长度：扣掉两端反馈余量，放大后的滑块仍完整落在轨道内。
-inline float QmChatScrollbarUsableLength(float RailWidth, float RailHeight)
-{
-	const float Inset = QmChatScrollbarFeedbackInset(RailWidth, RailHeight);
-	return std::max(0.0f, std::max(0.0f, RailHeight) - Inset * 2.0f);
-}
-
-// 滑块长度：与 CScrollRegion 同一条公式（可见/内容比例 × 可用轨道长度，夹在最短
-// 长度与浓度上限之间），再按聊天框自己的一档上限压住。聊天一次能看到的行数远少于
-// 列表，纯比例算出来的滑块会拉成几乎整条轨道，看起来是一根长条而不是「还能滚多少」。
-// 结果永不超过扣掉反馈余量后的可用长度，所以滑块不会长出轨道。
+// 兼容入口（设置页预览与聊天布局基准）：给定轨道长度与「可见/总行数」问滑块多长。
+// 游戏内走 QmResolveChatScrollbarFrame（真实高度），这里只把行数比例交给同一条实现。
 inline float QmChatScrollbarHandleHeight(float RailHeight, int VisibleLines, int TotalLines, float Scale = 1.0f, float RailWidth = 0.0f)
 {
-	const float ScaledWidth = RailWidth > 0.0f ? RailWidth : QM_CHAT_SCROLLBAR_WIDTH * std::max(0.0f, Scale);
-	const float Available = QmChatScrollbarUsableLength(ScaledWidth, RailHeight);
-	if(Available <= 0.0f)
-		return 0.0f;
-	const float Ratio = std::clamp(VisibleLines / (float)std::max(TotalLines, 1), 0.0f, 1.0f);
-	const float MinThumb = std::min(ui_token::chat::SCROLLBAR_MIN_THUMB * std::max(0.0f, Scale), Available);
-	const float MaxThumb = std::max(MinThumb, Available * ui_token::chat::SCROLLBAR_MAX_THUMB_RATIO);
-	return std::clamp(Available * Ratio, MinThumb, std::min(MaxThumb, Available));
+	const float Width = RailWidth > 0.0f ? RailWidth : QM_CHAT_SCROLLBAR_WIDTH * std::max(0.0f, Scale);
+	const CUIRect Rail{0.0f, 0.0f, std::max(0.0f, Width), std::max(0.0f, RailHeight)};
+	return QmChatScrollbarThumbHeight(Rail, (float)std::max(0, VisibleLines), (float)std::max(0, TotalLines), Scale);
 }
 
-// 滑块在轨道里的可移动行程：可用长度再扣掉滑块自己，两端就是反馈余量。
-inline float QmChatScrollbarTrackRange(const CUIRect &Rail, float HandleHeight)
-{
-	const float Available = QmChatScrollbarUsableLength(Rail.w, Rail.h);
-	return std::max(0.0f, Available - std::clamp(HandleHeight, 0.0f, Available));
-}
-
+// 滑块矩形：进度 × 可移动行程，与公共容器同一摆放规则（0 = 顶部/最旧，1 = 底部/最新）。
 inline CUIRect QmChatScrollbarHandle(const CUIRect &Rail, float Height, float Value)
 {
-	const float Inset = QmChatScrollbarFeedbackInset(Rail.w, Rail.h);
-	const float Available = QmChatScrollbarUsableLength(Rail.w, Rail.h);
-	Height = std::clamp(Height, 0.0f, Available);
-	const float Travel = std::max(0.0f, Available - Height);
-	return {Rail.x, Rail.y + Inset + Travel * std::clamp(Value, 0.0f, 1.0f), Rail.w, Height};
+	const float Clamped = std::clamp(Height, 0.0f, std::max(0.0f, Rail.h));
+	const float Travel = std::max(0.0f, Rail.h - Clamped);
+	return {Rail.x, Rail.y + Travel * std::clamp(Value, 0.0f, 1.0f), Rail.w, Clamped};
 }
 
-// 鼠标位置 → 0..1 的滑块比例（拖动时只换算比例，滚动值仍由 BacklogLineToScrollbarValue 负责）。
-inline float QmChatScrollbarValueFromTop(const CUIRect &Rail, float HandleTop, float TrackRange)
+// 拖动换算：指针位置 → 进度（0 = 顶部/最旧，1 = 底部/最新）。滑块顶端跟手；
+// 指针把滑块拖到轨道外时夹在两端，与列表拖动滚动条同一条边界语义。
+inline float QmChatScrollbarProgressFromPointer(const SQmChatScrollbarFrame &Frame, float PointerY, float GrabOffset)
 {
-	if(TrackRange <= 0.0f)
+	if(Frame.m_TrackRange <= 0.0f)
 		return 1.0f;
-	const float Start = Rail.y + QmChatScrollbarFeedbackInset(Rail.w, Rail.h);
-	return std::clamp((HandleTop - Start) / TrackRange, 0.0f, 1.0f);
-}
-
-// 拖动时滑块顶端的合法位置：指针不能把滑块拖出轨道（含两端反馈余量）。
-inline float QmChatScrollbarClampTop(const CUIRect &Rail, float HandleTop, float TrackRange)
-{
-	const float Start = Rail.y + QmChatScrollbarFeedbackInset(Rail.w, Rail.h);
-	return std::clamp(HandleTop, Start, Start + TrackRange);
+	const float Top = std::clamp(PointerY - GrabOffset, Frame.m_Rail.y, Frame.m_Rail.y + Frame.m_TrackRange);
+	return std::clamp((Top - Frame.m_Rail.y) / Frame.m_TrackRange, 0.0f, 1.0f);
 }
 
 // 悬浮/按下的放大：公共绘制入口（ui_widget::DrawScrollbarHandle）按 CUi 的热项与
@@ -236,15 +295,11 @@ inline void QmDrawChatScrollbar(CUi *pUi, const CUIRect &Rail, const CUIRect &Th
 	CUIRect Handle = Thumb;
 	Handle.x = Rail.x;
 	Handle.w = Rail.w;
-	// 滑块严格落在轨道内：高度不超可用长度，顶端不越过两端反馈余量。
-	// 旧实现直接把比例长度交给公共入口，按下时公共入口向外扩两档，顶端会顶出轨道上端。
-	const float Inset = QmChatScrollbarFeedbackInset(Rail.w, Rail.h);
-	const float Available = QmChatScrollbarUsableLength(Rail.w, Rail.h);
-	Handle.h = std::min(std::max(0.0f, Handle.h), Available);
+	// 滑块落在轨道内（几何已由公共容器算好，这里只做防御性夹取）。
+	Handle.h = std::min(std::max(0.0f, Handle.h), Rail.h);
 	if(Handle.h <= 0.0f)
 		return;
-	const float TrackRange = std::max(0.0f, Available - Handle.h);
-	Handle.y = std::clamp(Handle.y, Rail.y + Inset, Rail.y + Inset + TrackRange);
+	Handle.y = std::clamp(Handle.y, Rail.y, Rail.y + Rail.h - Handle.h);
 	const ColorRGBA Accent = pUi->QmControlTheme().m_Accent;
 	const bool PublicFeedbackActive = pUi->VisualHotItem(QmChatScrollbarId()) || pUi->CheckActiveItem(QmChatScrollbarId());
 	const CUIRect FeedbackHandle = QmChatScrollbarFeedbackRect(Handle, Interactive && Hovered, Interactive && Dragging, PublicFeedbackActive);

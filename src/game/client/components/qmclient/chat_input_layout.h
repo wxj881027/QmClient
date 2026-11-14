@@ -47,7 +47,8 @@ inline float QmChatTranslateButtonInnerSize(float ButtonSize)
 // 绘制层会再按 ICON_INK_RATIO 把方框换成字形 em，所以这里不能提前乘。
 inline float QmChatTranslateIconBoxSize(float ButtonSize)
 {
-	return QmChatTranslateButtonInnerSize(ButtonSize);
+	// 图标不能和圆同高：外圈留出内边距，图标才不会顶到描边上。
+	return QmChatTranslateButtonInnerSize(ButtonSize) * (1.0f - 2.0f * ui_token::chat::input::ICON_INSET_RATIO);
 }
 
 // 图标字形（em）尺寸：沿用控件「字形 = 盒子 × ICON_INK_RATIO」的通用比例，

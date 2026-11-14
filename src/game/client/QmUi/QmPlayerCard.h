@@ -252,28 +252,30 @@ namespace QmPlayersUi
 		return std::max(1, (int)((AvailableWidth + Gap) / (Tile + Gap)));
 	}
 
-	// 英雄展示区：上半部分放角色立绘与名字，高度同时受卡片宽度与可用高度约束。
-	struct SPlayerShowcase
+	// 玩家信息卡：与好友列表卡片同一种读法——头部一行是角色头像、名字、战队、国家旗，
+	// 右上角一排动作图标；下面只有皮肤行与状态行。没有大块立绘。
+	struct SPlayerInfoCard
 	{
-		CUIRect m_Showcase{};
-		CUIRect m_Figure{};
+		CUIRect m_Header{};
+		CUIRect m_Avatar{};
 		CUIRect m_Name{};
 		CUIRect m_Clan{};
+		CUIRect m_Flag{};
 		CUIRect m_Icons{};
 		CUIRect m_SkinRow{};
-		CUIRect m_Info{};
+		CUIRect m_Status{};
 	};
 
-	// 展示区图标行：数量由调用点给（好友 / 静音 / 屏蔽表情 / 跨服跟随），
-	// 与「复制动作」枚举无关，所以单独一套槽位，不从复制行借用。
-	inline SPlayerShowcaseIconRow PlayerShowcaseIconRow(const CUIRect &Row, const int IconCount)
+	// 动作图标行：数量由调用点给（好友 / 静音 / 屏蔽表情 / 跟随），从右往左排，
+	// 窄卡等比缩小而不是把按钮挤出行外。
+	inline SPlayerShowcaseIconRow PlayerIconRow(const CUIRect &Row, const int IconCount)
 	{
 		SPlayerShowcaseIconRow Layout;
 		const int Count = std::max(0, std::min(IconCount, static_cast<int>(std::size(Layout.m_aCells))));
 		if(Count <= 0 || Row.w <= 0.0f)
 			return Layout;
 		const float Gap = ui_token::player_card::ICON_BUTTON_GAP;
-		float Size = ui_token::player_card::SHOWCASE_ICON_SIZE;
+		float Size = ui_token::player_card::ICON_BUTTON_SIZE;
 		const float TotalGap = (Count - 1) * Gap;
 		if(Size * Count + TotalGap > Row.w)
 			Size = std::max(0.0f, (Row.w - TotalGap) / (float)Count);
@@ -292,40 +294,43 @@ namespace QmPlayersUi
 		return Layout;
 	}
 
-	inline SPlayerShowcase PlayerShowcaseLayout(const CUIRect &Card, const int IconCount)
+	inline SPlayerInfoCard PlayerInfoCardLayout(const CUIRect &Card, const int IconCount)
 	{
-		SPlayerShowcase Result;
-		const float ShowcaseHeight = std::min(Card.h * ui_token::player_card::SHOWCASE_MAX_CARD_HEIGHT_RATIO, Card.w * ui_token::player_card::SHOWCASE_HEIGHT_RATIO);
+		SPlayerInfoCard Result;
+		if(Card.w <= 0.0f || Card.h <= 0.0f)
+			return Result;
+
+		// 头部：先切出高度（头像边长），再在右侧切出动作图标条，剩下给头像 + 文字 + 旗子。
+		const float HeaderHeight = std::min(Card.h, ui_token::player_card::HEADER_HEIGHT);
 		CUIRect Remaining = Card;
-		Remaining.HSplitTop(ShowcaseHeight, &Result.m_Showcase, &Remaining);
-		Remaining.HSplitTop(std::min(ui_token::player_card::SECTION_GAP, Remaining.h), nullptr, &Remaining);
-		Remaining.HSplitTop(std::min(ui_token::player_card::SHOWCASE_ICON_SIZE, Remaining.h), &Result.m_SkinRow, &Remaining);
-		Remaining.HSplitTop(std::min(ui_token::player_card::SECTION_GAP, Remaining.h), nullptr, &Remaining);
-		Result.m_Info = Remaining;
+		Remaining.HSplitTop(HeaderHeight, &Result.m_Header, &Remaining);
+		CUIRect Header = Result.m_Header;
 
-		// 立绘：高度必须扣掉下方文本块（名字 / 战队 / 图标行）与顶部留白，
-		// 否则大卡片上立绘会压住图标行，图标按钮被角色贴图盖住点不到。
-		const float TextBlockHeight = ui_token::spacing::SM +
-					      2.0f * ui_token::player_card::HEADER_NAME_HEIGHT +
-					      ui_token::player_card::SHOWCASE_ICON_SIZE;
-		const float FigureAvailableHeight = std::max(0.0f, Result.m_Showcase.h - ui_token::spacing::XS - TextBlockHeight);
-		const float FigureSize = std::max(0.0f,
-			std::min({Result.m_Showcase.h * ui_token::player_card::SHOWCASE_TEE_RATIO, FigureAvailableHeight, Result.m_Showcase.w * ui_token::player_card::SHOWCASE_MAX_WIDTH_RATIO}));
-		Result.m_Figure = CUIRect{
-			Result.m_Showcase.x + (Result.m_Showcase.w - FigureSize) * 0.5f,
-			Result.m_Showcase.y + ui_token::spacing::XS,
-			FigureSize,
-			FigureSize};
+		const int Count = std::max(0, IconCount);
+		const float IconSize = ui_token::player_card::ICON_BUTTON_SIZE;
+		if(Count > 0)
+		{
+			const float IconsWidth = Count * IconSize + (Count - 1) * ui_token::player_card::ICON_BUTTON_GAP;
+			Header.VSplitRight(std::min(IconsWidth, Header.w), &Header, &Result.m_Icons);
+			Header.VSplitRight(std::min(ui_token::spacing::XS, Header.w), &Header, nullptr);
+		}
 
-		// 名字与战队压在下沿；图标行再压在名字之上，三者不互相侵占。
-		// HSplitBottom 的第二个参数是「剩余区」，第三个才是切下来的底条，顺序不能写反。
-		CUIRect Text = Result.m_Showcase;
-		Text.HSplitBottom(std::min(ui_token::spacing::SM, Text.h), &Text, nullptr);
-		Text.HSplitBottom(std::min(ui_token::player_card::HEADER_NAME_HEIGHT, Text.h), &Text, &Result.m_Clan);
-		Text.HSplitBottom(std::min(ui_token::player_card::HEADER_NAME_HEIGHT, Text.h), &Text, &Result.m_Name);
-		Text.HSplitBottom(std::min(ui_token::player_card::SHOWCASE_ICON_SIZE, Text.h), &Text, &Result.m_Icons);
-		if(IconCount <= 0)
-			Result.m_Icons = {};
+		Header.VSplitLeft(std::min(Header.h, Header.w), &Result.m_Avatar, &Header);
+		Header.VSplitLeft(std::min(ui_token::spacing::XS, Header.w), nullptr, &Header);
+
+		const float FlagHeight = std::min(ui_token::player_card::HEADER_FLAG_HEIGHT, Header.h);
+		const float FlagWidth = FlagHeight * ui_token::player_card::HEADER_FLAG_ASPECT;
+		Header.VSplitRight(std::min(FlagWidth, Header.w), &Header, &Result.m_Flag);
+		Header.VSplitRight(std::min(ui_token::spacing::XS, Header.w), &Header, nullptr);
+
+		Header.HSplitTop(std::min(ui_token::player_card::HEADER_NAME_HEIGHT, Header.h), &Result.m_Name, &Header);
+		Result.m_Clan = Header;
+
+		// 皮肤行与状态行：与头部同一条内边距，行高取图标按钮边长与字段行高。
+		Remaining.HSplitTop(std::min(ui_token::player_card::SECTION_GAP, Remaining.h), nullptr, &Remaining);
+		Remaining.HSplitTop(std::min(ui_token::player_card::ICON_BUTTON_SIZE, Remaining.h), &Result.m_SkinRow, &Remaining);
+		Remaining.HSplitTop(std::min(ui_token::player_card::SECTION_GAP, Remaining.h), nullptr, &Remaining);
+		Result.m_Status = Remaining;
 		return Result;
 	}
 

@@ -1328,7 +1328,9 @@ namespace
 	// 框线字形的自然推进与行高由字体实测：换字号或换字体后仍然首尾相接，不写死像素。
 	void MeasureIngameMotdBoxMetrics(ITextRender *pTextRender, float FontSize, float &CellAdvance, float &LineHeight)
 	{
-		LineHeight = pTextRender->TextBoundingBox(FontSize, "─").m_H;
+		// 行距在这里放宽一次：公告正文是多行长文，行贴行读起来吃力；
+	// 框线格宽仍取字体自然推进，所以方框笔画不会被拉长。
+	LineHeight = pTextRender->TextBoundingBox(FontSize, "─").m_H * ui_token::motd::LINE_SPACING_RATIO;
 		// 两个字形与一个字形的最长行宽之差就是一个字形的推进，抵消首尾字形的处理差异。
 		const float MeasuredAdvance = pTextRender->TextWidth(FontSize, "──") - pTextRender->TextWidth(FontSize, "─");
 		// 格宽向下取整：文本容器会把每个字形起点对齐到一个假屏幕像素上，
@@ -1883,24 +1885,28 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 			GameClient()->m_TClient.SetMapNote(CurrentServerInfo.m_aMap, s_MapNoteInput.GetString());
 	}
 
-	// 收藏开关排在右列地图备注下方：与页面其它文本同一套描边字（DoIngameMenuCheckBox），
-	// 不再缩在左卡片底部当「卡片小字」。窗口太矮时跳过，避免把备注行挤掉。
-	if(GameInfo.h >= 2.0f * ui_token::server_info::NOTE_ROW_HEIGHT * GameScale)
+	// 收藏开关排在右列地图备注下方，排版与其它字段完全一致：
+	// 标签落在标签列、开关落在值列左端，行高与其它字段同档；不再多垫空行。
+	if(GameInfo.h >= 2.0f * GameFieldRowHeight)
 	{
-		CUIRect Row;
-		GameInfo.HSplitTop(ui_token::server_info::NOTE_GAP * GameScale, nullptr, &GameInfo);
-		GameInfo.HSplitTop(ui_token::server_info::NOTE_ROW_HEIGHT * GameScale, &Row, &GameInfo);
+		auto DoFavoriteToggle = [&](const char *pTextId, const char *pText, const void *pId, bool Checked) {
+			CUIRect Row, LabelCol, ValueCol, Square;
+			GameInfo.HSplitTop(GameFieldRowHeight, &Row, &GameInfo);
+			Row.VSplitLeft(ServerInfoLabelWidth, &LabelCol, &ValueCol);
+			DoIngameMenuLabel(PAGE_SERVER_INFO, pTextId, &LabelCol, pText, FontSizeBody, TEXTALIGN_ML, FieldProps);
+			ValueCol.VSplitLeft(std::min(ValueCol.h, ValueCol.w), &Square, nullptr);
+			return DoIngameMenuCheckBox(PAGE_SERVER_INFO, nullptr, pId, "", Checked ? 1 : 0, &Square) != 0;
+		};
 		static int s_AddFavButton = 0;
-		if(DoIngameMenuCheckBox(PAGE_SERVER_INFO, "ingame-server-info-favorite", &s_AddFavButton, Localize("Favorite server"), IsFavorite != TRISTATE::NONE, &Row))
+		if(DoFavoriteToggle("ingame-server-info-favorite", Localize("Favorite server"), &s_AddFavButton, IsFavorite != TRISTATE::NONE))
 		{
 			if(IsFavorite != TRISTATE::NONE)
 				Favorites()->Remove(CurrentServerInfo.m_aAddresses, CurrentServerInfo.m_NumAddresses);
 			else
 				Favorites()->Add(CurrentServerInfo.m_aAddresses, CurrentServerInfo.m_NumAddresses);
 		}
-		GameInfo.HSplitTop(ui_token::server_info::NOTE_ROW_HEIGHT * GameScale, &Row, &GameInfo);
 		static int s_AddFavMapButton = 0;
-		if(DoIngameMenuCheckBox(PAGE_SERVER_INFO, "ingame-server-info-favorite-map", &s_AddFavMapButton, Localize("Favorite map"), IsMapFavorite, &Row))
+		if(DoFavoriteToggle("ingame-server-info-favorite-map", Localize("Favorite map"), &s_AddFavMapButton, IsMapFavorite))
 		{
 			if(IsMapFavorite)
 				GameClient()->m_TClient.RemoveFavoriteMap(CurrentServerInfo.m_aMap);
@@ -2243,7 +2249,9 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 	SUiAnimTransition AppearTransition;
 	AppearTransition.m_DurationSec = 0.18f;
 	AppearTransition.m_Easing = EEasing::EASE_OUT;
-	for(const CCommunity *pCommunity : ServerBrowser()->FavoriteCommunities())
+	// FavoriteCommunities() 按值返回，页签、翻页边界和键盘切换共用同一份快照。
+	const std::vector<const CCommunity *> vpFavoriteCommunities = ServerBrowser()->FavoriteCommunities();
+	for(const CCommunity *pCommunity : vpFavoriteCommunities)
 	{
 		if((size_t)NumServerTabs >= std::size(s_aServerTabButtons))
 			break;
@@ -2270,7 +2278,7 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 		NewPage = aServerTabs[PressedServerTab].m_Page;
 
 	// 键盘左右键循环切换服务器页签。
-	int MaxPage = PAGE_FAVORITES + ServerBrowser()->FavoriteCommunities().size();
+	int MaxPage = PAGE_FAVORITES + vpFavoriteCommunities.size();
 	if(
 		!Ui()->IsPopupOpen() &&
 		CLineInput::GetActiveInput() == nullptr &&
@@ -2285,7 +2293,7 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 			}
 			else if(g_Config.m_UiPage == PAGE_FAVORITE_MAPS)
 			{
-				NewPage = ServerBrowser()->FavoriteCommunities().empty() ? PAGE_INTERNET : PAGE_FAVORITE_COMMUNITY_1;
+				NewPage = vpFavoriteCommunities.empty() ? PAGE_INTERNET : PAGE_FAVORITE_COMMUNITY_1;
 			}
 			else
 			{
@@ -2300,7 +2308,7 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 			{
 				NewPage = PAGE_FAVORITES;
 			}
-			else if(!ServerBrowser()->FavoriteCommunities().empty() && g_Config.m_UiPage == PAGE_FAVORITE_COMMUNITY_1)
+			else if(!vpFavoriteCommunities.empty() && g_Config.m_UiPage == PAGE_FAVORITE_COMMUNITY_1)
 			{
 				NewPage = PAGE_FAVORITE_MAPS;
 			}
@@ -2309,7 +2317,7 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 				NewPage = g_Config.m_UiPage - 1;
 			}
 			if(NewPage < PAGE_INTERNET)
-				NewPage = ServerBrowser()->FavoriteCommunities().empty() ? PAGE_FAVORITE_MAPS : MaxPage;
+				NewPage = vpFavoriteCommunities.empty() ? PAGE_FAVORITE_MAPS : MaxPage;
 		}
 	}
 
