@@ -36,9 +36,11 @@ void CMenus::RenderQmWordFilterFileContent(CUIRect &Content, bool Streamer, floa
 	if(Flow.Control("word-filter-file-reload", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		CUIRect Reload, Count;
-		Row.VSplitLeft(std::min(Row.w * 0.35f, 100.0f), &Reload, &Count);
-		if(DoButton_Menu(&s_aReloadButtons[Index], Localize("Reload"), 0, &Reload) && Flow.Input() && !Ui()->RenderOnly())
+		// 重新加载是图标类动作：方形按钮与行高同高，右侧留给词数说明。
+		Row.VSplitLeft(std::min(Row.h, Row.w), &Reload, &Count);
+		if(Ui()->DoButton_QmIcon(&s_aReloadButtons[Index], EQmIcon::ARROW_ROTATE_RIGHT, FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT, 0, &Reload, BUTTONFLAG_LEFT) != 0 && Flow.Input() && !Ui()->RenderOnly())
 			GameClient()->m_Chat.ReloadWordFilterFile(Streamer);
+		GameClient()->m_Tooltips.DoToolTip(&s_aReloadButtons[Index], &Reload, Localize("Reload"));
 		const auto &File = GameClient()->m_Chat.WordFilterFile(Streamer);
 		char aCount[128];
 		str_format(aCount, sizeof(aCount), Localize("%d words loaded"), static_cast<int>(File.Words().size()));

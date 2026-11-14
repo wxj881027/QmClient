@@ -3062,9 +3062,12 @@ void CMenus::RenderRankDemo(CUIRect MainView)
 	Status.HMargin(4.0f, &Status);
 	Status.VSplitLeft(5.0f, nullptr, &Status);
 	CUIRect Button;
-	Status.VSplitLeft(110.0f, &Button, &Status);
+	// 刷新是图标类动作：方形图标按钮与行高同高，悬停给气泡。
+	Status.VSplitLeft(std::min(Status.h, Status.w), &Button, &Status);
 	static CButtonContainer s_RefreshButton;
-	if(DoIngameMenuButton(PAGE_RANK_DEMO, "ingame-rank-demo-refresh", &s_RefreshButton, Localize("Refresh"), 0, &Button) || Input()->KeyPress(KEY_F5))
+	const bool RefreshClicked = Ui()->DoButton_QmIcon(&s_RefreshButton, EQmIcon::ARROW_ROTATE_RIGHT, FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT, 0, &Button, BUTTONFLAG_LEFT) != 0;
+	GameClient()->m_Tooltips.DoToolTip(&s_RefreshButton, &Button, Localize("Refresh"));
+	if(RefreshClicked || Input()->KeyPress(KEY_F5))
 		RankGhost.RefreshManifest();
 
 	Status.VSplitLeft(5.0f, nullptr, &Status);

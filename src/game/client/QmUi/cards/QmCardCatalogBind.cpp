@@ -649,7 +649,7 @@ void CMenus::RenderQmBindOverviewContent(CUIRect &Content, const bool ReadOnly)
 		Filter = Toolbar;
 		if(DoButton_Menu(&State.m_SortButton, State.m_SortByCommand ? Localize("Sort by command") : Localize("Sort by key"), 0, &Sort) && Enabled)
 			State.m_SortByCommand = !State.m_SortByCommand;
-		if(DoButton_Menu(&State.m_CopyButton, Localize("Copy all"), 0, &Copy) && Enabled)
+		if(Ui()->DoButton_QmIcon(&State.m_CopyButton, EQmIcon::COPY, FontIcons::FONT_ICON_COPY, 0, &Copy, Enabled ? BUTTONFLAG_LEFT : 0) != 0 && Enabled)
 		{
 			std::vector<qm_bind_overview::SBindOverviewEntry> vCopyEntries;
 			vCopyEntries.reserve(State.m_vFiltered.size());
