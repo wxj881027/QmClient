@@ -86,10 +86,11 @@ class CServer : public IServer
 	class CDbConnectionPool *m_pConnectionPool;
 
 	int m_PreviousDebugDummies = 0;
-	void UpdateDebugDummies(bool ForceDisconnect);
 	int64_t m_KcpLastStatsTime = 0;
 
 public:
+	// 测试与调试工具需要按 sv_dbg_dummies 立即同步假人。
+	void UpdateDebugDummies(bool ForceDisconnect);
 	class IGameServer *GameServer() { return m_pGameServer; }
 	class CConfig *Config() { return m_pConfig; }
 	const CConfig *Config() const { return m_pConfig; }
