@@ -29,7 +29,9 @@ namespace qm_card_catalog
 		switch(Family)
 		{
 		case 0: return Ctx.m_pMenus->BuildPlayerSettingsCards(Ctx, pCards);
-		case 1: return Ctx.m_pMenus->BuildGraphicsSettingsCards(Ctx, pCards);
+		case 1:
+		// 图像页「视觉效果」子页签与显示类卡片共用同一个构建器。
+		case 12: return Ctx.m_pMenus->BuildGraphicsSettingsCards(Ctx, pCards);
 		case 2: return Ctx.m_pMenus->BuildSoundSettingsCards(Ctx, pCards);
 		case 3: return Ctx.m_pMenus->BuildDDNetSettingsCards(Ctx, pCards);
 		case 10: return Ctx.m_pMenus->BuildTee7SettingsCards(Ctx, pCards);
@@ -45,7 +47,7 @@ namespace qm_card_catalog
 
 	uint64_t QmCardRenderHook::PrepareStandardCards(const SQmCardBuildContext &Ctx, const std::vector<const char *> &vStableIds)
 	{
-		std::array<bool, 12> aPrepared{};
+		std::array<bool, 13> aPrepared{};
 		uint64_t Revision = 0;
 		for(const char *pStableId : vStableIds)
 		{
@@ -144,7 +146,7 @@ void CMenus::RenderSettingsCatalogPage(CUIRect MainView, const char *pTab, bool 
 	{
 		const double Now = QmPageMs();
 		const double Total = Now - QmEntryMs;
-		if(Total > 30.0 || PrewarmOnly || str_comp(pTab, "graphics") == 0)
+		if(Total > 30.0 || PrewarmOnly || str_comp(pTab, "graphics") == 0 || str_comp(pTab, "graphics-visual") == 0)
 			dbg_msg("perf/page", "page=%s prewarm=%d total=%.1fms prepare=%.1fms deck=%.1fms renderonly=%d measure=%d", pTab, PrewarmOnly ? 1 : 0,
 				Total, QmPrepareMs, Now - CatalogRenderStart, Ui()->RenderOnly() ? 1 : 0, Ui()->MeasurementOnly() ? 1 : 0);
 	}

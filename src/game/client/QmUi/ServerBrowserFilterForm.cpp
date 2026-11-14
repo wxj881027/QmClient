@@ -168,7 +168,9 @@ void CMenus::RenderServerbrowserFilterForm(CUIRect &View)
 		int CategoryMask = g_Config.m_QmMapBrowserCategoryMask;
 		bool CategoryMaskChanged = false;
 		const auto DrawChipGroup = [&](const char *const *ppKeys, const char *const *ppLabels, int Count, int IdOffset, bool Translate) {
-			const SQmBrowserChipGrid Chips = QmBrowserChipGrid(View, Count, ui_token::server_filter::CHIP_LABEL_MIN_WIDTH, ResolveSettingsControlHeight(Metrics.m_BodySize), ui_token::server_filter::CHIP_GAP);
+			// 分类两两成对（Novice/Moderate、Brutal/Insane…）时四格一行正好排出两对，
+			// 五格一行会把族内配对拆开，反而更难扫。
+			const SQmBrowserChipGrid Chips = QmBrowserChipGrid(View, Count, ui_token::server_filter::CHIP_LABEL_MIN_WIDTH, ResolveSettingsControlHeight(Metrics.m_BodySize), ui_token::server_filter::CHIP_GAP, ui_token::server_filter::CHIP_LABEL_PER_ROW);
 			for(int Index = 0; Index < Chips.m_Count; ++Index)
 			{
 				const int Bit = QmMapVotes::MapBrowserCategoryBit(ppKeys[Index]);

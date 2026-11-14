@@ -393,7 +393,7 @@ void CMenus::RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMet
 		{
 			const SSettingsFoldRowStyle VoiceAdvancedFoldStyle = ResolveSettingsFoldRowStyle(
 				SettingsCardDeckVisualOptions().m_BorderColor,
-				color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(1.0f));
+				ResolveConfiguredAccentColor().WithAlpha(1.0f));
 			// 原来的复选框（控件 text id 仍是 "Advanced options"）换成整行可点的折叠行：
 			// 暗沉小字 + 右侧 chevron，展开/收起由 chevron 表达，不再是一枚开关。
 			const bool VoiceAdvancedClicked = SettingsFoldRow(Ui(), &s_VoiceAdvancedFoldRowButton, VoiceAdvancedFoldRow, Localize("Personal adjustments"), Metrics.m_SmallSize, g_Config.m_QmVoiceShowAdvanced != 0, VoiceAdvancedFoldStyle);

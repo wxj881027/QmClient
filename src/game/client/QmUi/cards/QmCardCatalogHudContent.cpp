@@ -472,7 +472,7 @@ void CMenus::RenderQmHudNotificationsBasicContent(CUIRect &Content, const SSetti
 	{
 		const SSettingsFoldRowStyle NotificationsAdvancedFoldStyle = ResolveSettingsFoldRowStyle(
 			SettingsCardDeckVisualOptions().m_BorderColor,
-			color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(1.0f));
+			ResolveConfiguredAccentColor().WithAlpha(1.0f));
 		const bool NotificationsAdvancedClicked = SettingsFoldRow(Ui(), &s_NotificationsAdvancedFoldRowButton, NotificationsAdvancedFoldRow, Localize("Personal adjustments"), Metrics.m_SmallSize, g_Config.m_QmHudNotificationsShowAdvanced != 0, NotificationsAdvancedFoldStyle);
 		if(NotificationsAdvancedClicked && Flow.Input() && !PrewarmOnly && !Ui()->RenderOnly())
 			g_Config.m_QmHudNotificationsShowAdvanced = g_Config.m_QmHudNotificationsShowAdvanced ? 0 : 1;

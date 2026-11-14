@@ -48,7 +48,7 @@ namespace qm_card_catalog
 		// 强调色沿用卡片选中色；折叠行不画分割线，所以不再需要边框色。
 		SSettingsFoldRowStyle Style = ResolveSettingsFoldRowStyle(
 			color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiCardBorderColor, true)),
-			color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(1.0f));
+			ResolveConfiguredAccentColor().WithAlpha(1.0f));
 		const bool WasExpanded = s_Personalization.Expanded(pStableId);
 		const bool Expanded = SettingsPersonalizationSectionEx(s_Personalization, Content, pStableId, Metrics,
 			ReadOnly || pMenus->Ui()->RenderOnly() || pMenus->m_MenuTextPlanCollecting, DrawDivider,

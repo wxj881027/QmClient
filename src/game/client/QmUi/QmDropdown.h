@@ -17,9 +17,9 @@
 struct SQmDropdownVisualStyle
 {
 	ColorRGBA m_TriggerColor = ResolveConfiguredControlSurface();
-	ColorRGBA m_PopupBackgroundColor = ResolveDropdownSurface(g_Config.m_QmUiDropdownListColor, g_Config.m_QmUiDropdownListOpacity);
+	ColorRGBA m_PopupBackgroundColor = ResolveDropdownSurface(g_Config.m_QmUiLayerColor, g_Config.m_QmUiLayerOpacity);
 	ColorRGBA m_PopupBorderColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiCardBorderColor, true));
-	ColorRGBA m_ActiveEntryColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(0.22f);
+	ColorRGBA m_ActiveEntryColor = ResolveConfiguredAccentColor().WithAlpha(0.22f);
 	bool m_TransparentEntries = true;
 };
 

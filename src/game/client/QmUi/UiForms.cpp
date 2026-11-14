@@ -52,7 +52,7 @@ namespace ui_widget
 		SUiTheme ThemeFor(const IUiContext &Ctx)
 		{
 			return Ctx.m_pTheme != nullptr ? *Ctx.m_pTheme : Ctx.m_pUi != nullptr ? Ctx.m_pUi->QmControlTheme() :
-												ResolveInputFallbackTheme(g_Config.m_QmUiFocusColor);
+												ResolveInputFallbackTheme();
 		}
 
 		SInputFieldResult BuildInputFieldResult(const IUiContext &Ctx, CLineInput *pInput, bool Changed, bool WasActive, bool WasEmpty, bool Clearable)
@@ -864,11 +864,15 @@ namespace ui_widget
 		// 这里也不再挂 CUiScopedSurfaceText——那会把本胶囊的合成底色登记成
 		// 当前表面，后面的字形/图标仍可能按它反色。
 		SLabelProperties Props;
-		Props.m_MaxWidth = Rect.w;
+		// 文字左右各让出一段内边距（按字号比例）：四格一行时胶囊变窄，
+		// 没有这段内边距文字会顶到胶囊圆弧上。
+		const float TextInset = std::max(ui_token::spacing::XS * 0.5f, FontSize * ui_token::server_filter::CHIP_TEXT_INSET_RATIO);
+		CUIRect LabelRect = Rect;
+		LabelRect.VMargin(std::min(TextInset, Rect.w * 0.25f), &LabelRect);
+		Props.m_MaxWidth = LabelRect.w;
 		Props.m_EllipsisAtEnd = true;
 		Props.m_MinimumFontSize = std::min(FontSize, ui_token::server_filter::CHIP_MIN_FONT_SIZE);
 		Props.SetColor(Enabled ? ui_token::color::TEXT_PRIMARY : ui_token::color::TEXT_DISABLED);
-		CUIRect LabelRect = Rect;
 		// 按钮字号由调用点给（设置面板里就是正文档），不再固定一档比正文更大的字号。
 		Ctx.m_pUi->DoLabel(&LabelRect, pLabel, FontSize, TEXTALIGN_MC, Props);
 		return Pressed;

@@ -195,7 +195,8 @@ public:
 	// 页面导航按下时先更新选择；复用多选一布局和窄窗口下拉退路。
 	int DoNavigationTabs(CButtonContainer *pButtons, const char *const *ppLabels, int Count, int Current, const CUIRect &Segments, float Rounding = 5.0f, const ui_widget::SCapsuleTabBarStyle *pCapsuleStyle = nullptr, float FontSize = -1.0f);
 	// 收藏地图页与统计数据页共用的工作区页签：收藏地图 / 地图游玩历史 / 本地存档 / 统计数据。
-	int DoMapWorkspaceTabs(const CUIRect &Segments, float Rounding, int CurrentTab);
+	// FontSize <= 0 时按行高反推；两个调用点显式传设置页页签字号，两页顶部一致。
+	int DoMapWorkspaceTabs(const CUIRect &Segments, float Rounding, int CurrentTab, float FontSize = -1.0f);
 	int MapWorkspaceTab();
 	ColorRGBA MenuPanelColor(float AlphaScale = 1.0f) const;
 	ColorRGBA MenuPanelElevatedColor(float AlphaScale = 1.0f) const;
@@ -2767,6 +2768,14 @@ public:
 		DDNET_TAB_GENERAL = 0,
 		DDNET_TAB_PREDICTION = 1,
 		NUMBER_OF_DDNET_TABS = 2,
+	};
+
+	// 图像页内子页签：显示类卡片留在第一页，「卡片效果 / 界面主题」收进视觉效果。
+	enum
+	{
+		GRAPHICS_TAB_DISPLAY = 0,
+		GRAPHICS_TAB_VISUAL = 1,
+		NUMBER_OF_GRAPHICS_TABS = 2,
 	};
 
 	SUIAnimator m_aAnimatorsBigPage[BIG_TAB_LENGTH];
