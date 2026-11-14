@@ -251,21 +251,36 @@ namespace ui_widget
 		Ctx.m_pUi->ClipEnable(&Right);
 		const bool RightClicked = DoStyledButton(Ctx, pRight, pRightText, Right, RightDisabled, EUiButtonRole::SECONDARY, IGraphics::CORNER_ALL, false, Geometry, &Rect);
 		Ctx.m_pUi->ClipDisable();
+		const bool LeftHovered = !LeftDisabled && Ctx.m_pUi->VisualSurfaceHovered(&Left);
+		const bool RightHovered = !RightDisabled && Ctx.m_pUi->VisualSurfaceHovered(&Right);
 		SUiButtonState BorderState;
 		BorderState.m_Enabled = !(LeftDisabled && RightDisabled);
-		BorderState.m_Hovered = (!LeftDisabled && Ctx.m_pUi->VisualSurfaceHovered(&Left)) || (!RightDisabled && Ctx.m_pUi->VisualSurfaceHovered(&Right));
+		BorderState.m_Hovered = LeftHovered || RightHovered;
 		BorderState.m_Pressed = BorderState.m_Hovered && (Ctx.m_pUi->CheckActiveItem(pLeft) || Ctx.m_pUi->CheckActiveItem(pRight)) && (Ctx.m_pUi->MouseButton(0) || Ctx.m_pUi->MouseButton(1) || Ctx.m_pUi->MouseButton(2));
 		const float Inset = std::min(ui_token::spacing::XS, Rect.h * 0.25f);
 		const CUIRect Divider{Right.x - 0.5f, Rect.y + Inset, 1.0f, std::max(0.0f, Rect.h - 2.0f * Inset)};
 		if(!Ctx.m_pUi->DrawingSuppressed())
 		{
-			Divider.Draw(Ctx.m_pUi->ScaleBackgroundAlpha(ui_token::color::BORDER_SUBTLE), IGraphics::CORNER_NONE, 0.0f);
 			const SUiTheme &Theme = Ctx.m_pTheme != nullptr ? *Ctx.m_pTheme : Ctx.m_pUi->QmControlTheme();
 			const auto BorderStyle = ResolveUiButtonStyle(EUiButtonRole::SECONDARY, ResolveConfiguredControlSurface(), CUiScopedSurfaceText::CurrentSurface(), Theme, BorderState);
-			const ColorRGBA BorderColor = ResolveActiveButtonBorder(EUiButtonRole::SECONDARY, BorderStyle, BorderState);
-			// 外框与被裁剪的两半填充共用「长条即胶囊」这条规则：分配器按 1.8 倍宽高比
-			// 选过胶囊端头，边框却还停在用途档位，悬浮时两者就不是同一条曲线。
-			DrawRoundedSurface(Ctx, Rect, ColorRGBA(), Ctx.m_pUi->ScaleControlAlpha(BorderColor), ResolveUiSurfaceRadius(Rect, Geometry), ui_token::feedback::ICON_BORDER_WIDTH);
+			const float Radius = ResolveUiSurfaceRadius(Rect, Geometry);
+			// 外框按半绘制：只高亮被悬停的那一半。外侧端头沿用整条按钮的胶囊曲线，
+			// 中缝一侧被裁剪成直边，所以左悬停只亮左半圈、右悬停只亮右半圈。
+			const auto DrawHalfBorder = [&](const CUIRect &Half, bool Hovered, bool Disabled) {
+				if(Disabled || !Hovered)
+					return;
+				SUiButtonState HalfState = BorderState;
+				HalfState.m_Hovered = true;
+				const ColorRGBA HalfBorder = ResolveActiveButtonBorder(EUiButtonRole::SECONDARY, BorderStyle, HalfState);
+				Ctx.m_pUi->ClipEnable(&Half);
+				DrawRoundedSurface(Ctx, Rect, ColorRGBA(), Ctx.m_pUi->ScaleControlAlpha(HalfBorder), Radius, ui_token::feedback::ICON_BORDER_WIDTH);
+				Ctx.m_pUi->ClipDisable();
+			};
+			DrawHalfBorder(Left, LeftHovered, LeftDisabled);
+			DrawHalfBorder(Right, RightHovered, RightDisabled);
+			// 中缝跟着被悬停的半边走强调色：左悬停时中线是左按钮的右边界，右悬停时是右按钮的左边界。
+			const ColorRGBA DividerColor = (LeftHovered || RightHovered) ? Theme.m_Accent : ui_token::color::BORDER_SUBTLE;
+			Divider.Draw(Ctx.m_pUi->ScaleBackgroundAlpha(DividerColor), IGraphics::CORNER_NONE, 0.0f);
 		}
 		Ctx.m_pUi->DoButtonTooltip(pLeft, &Left, pLeftTooltip);
 		Ctx.m_pUi->DoButtonTooltip(pRight, &Right, pRightTooltip);
