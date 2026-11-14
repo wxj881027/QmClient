@@ -48,7 +48,13 @@
 #include <vector>
 
 static constexpr float FONT_SIZE = 10.0f;
-static constexpr float LINE_SPACING = 1.0f;
+static constexpr float LINE_SPACING_BASE = 1.0f;
+// 控制台日志行距：基准 1.0 再按 qm_console_line_spacing 百分比放宽，
+// 字号、行高、光标与选区命中都读这一个函数，不会各写一份。
+static float ConsoleLineSpacing()
+{
+	return LINE_SPACING_BASE * (1.0f + std::clamp(g_Config.m_QmConsoleLineSpacing, 0, 100) / 100.0f);
+}
 static constexpr float LINK_CLICK_DRAG_THRESHOLD = 3.0f;
 static constexpr float LINK_UNDERLINE_HEIGHT = 0.12f;
 // 轨道粗细与设置页列表滚动条同一档，控制台不再自带一套更粗的尺寸。
@@ -1353,7 +1359,7 @@ void CGameConsole::CInstance::SetChatExportMode(bool Enable)
 // 滚轮每档滚几行：把像素口径的 qm_ui_scroll_step 按当前行高折算成行数（见 console_scroll.h）。
 int CGameConsole::CInstance::GetWheelLinesToScroll() const
 {
-	return QmConsoleWheelLines(g_Config.m_QmUiScrollStep, FontSize() + LINE_SPACING);
+	return QmConsoleWheelLines(g_Config.m_QmUiScrollStep, FontSize() + ConsoleLineSpacing());
 }
 
 int CGameConsole::CInstance::GetLinesToScroll(int Direction, int LinesToScroll)
@@ -1449,7 +1455,7 @@ CQmConsoleSelection::CPosition CGameConsole::CInstance::SelectionPositionAt(vec2
 			Cursor.m_FontSize = FontSize();
 			Cursor.m_LineWidth = BacklogLineWidth();
 			Cursor.m_MaxLines = pEntry->m_LineCount;
-			Cursor.m_LineSpacing = LINE_SPACING;
+			Cursor.m_LineSpacing = ConsoleLineSpacing();
 			Cursor.m_Flags = 0;
 			Cursor.m_CursorMode = TEXT_CURSOR_CURSOR_MODE_CALCULATE;
 			Cursor.m_RenderCursor = false;
@@ -1482,7 +1488,7 @@ void CGameConsole::CInstance::UpdateEntryTextAttributes(CBacklogEntry *pEntry) c
 	Cursor.m_Flags = 0;
 	Cursor.m_LineWidth = BacklogLineWidth();
 	Cursor.m_MaxLines = 10;
-	Cursor.m_LineSpacing = LINE_SPACING;
+	Cursor.m_LineSpacing = ConsoleLineSpacing();
 	const CColoredParts Text(pEntry->m_aText, ParseEntryColors(pEntry));
 	m_pGameConsole->TextRender()->TextEx(&Cursor, Text.Text(), -1);
 	pEntry->m_YOffset = Cursor.Height();
@@ -2099,7 +2105,7 @@ void CGameConsole::OnRender()
 
 	{
 		// Get height of 1 line
-		const float LineHeight = TextRender()->TextBoundingBox(FontSize, " ", -1, -1.0f, LINE_SPACING).m_H;
+		const float LineHeight = TextRender()->TextBoundingBox(FontSize, " ", -1, -1.0f, ConsoleLineSpacing()).m_H;
 
 		float x = 3;
 		// 输入区占三部分：输入行、补全提示行、与页脚之间的留白。
@@ -2260,7 +2266,7 @@ void CGameConsole::OnRender()
 				DisplayText.insert(pConsole->m_Input.GetCursorOffset(), Input()->GetComposition());
 			QmConsoleSyntax::AppendColors(DisplayText.c_str(), Palette, vInputColors);
 		}
-		pConsole->m_BoundingBox = pConsole->m_Input.Render(&InputCursorRect, FontSize, TEXTALIGN_BL, Changed, Screen.w - 10.0f - x, LINE_SPACING, vInputColors);
+		pConsole->m_BoundingBox = pConsole->m_Input.Render(&InputCursorRect, FontSize, TEXTALIGN_BL, Changed, Screen.w - 10.0f - x, ConsoleLineSpacing(), vInputColors);
 		if(pConsole->m_Input.HasSelection())
 			pConsole->m_Selection.Clear();
 
@@ -2396,6 +2402,9 @@ void CGameConsole::OnRender()
 		// 每帧在这里结算一次，读回「整行 + 亚行余量」。行锚继续服务选区、状态栏与搜索跳转，
 		// 亚行余量交给绘制与命中，两边读同一份结果，不会各留一套滚动值。
 		CQmConsoleScrollRuntime &Scroll = CurrentConsole()->m_Scroll;
+		// 静止态先把偏移吸到整行，再推进：滚动停下后正文不再带亚行余量，避免闪。
+		if(!pConsole->m_ScrollbarDragging && !pConsole->m_Selection.IsDragging() && !Scroll.Animating())
+			Scroll.SnapToNearestLine();
 		const CQmConsoleScrollRuntime::SFrame ScrollFrame = Scroll.Advance(Client()->RenderFrameTime(), LogHeight, TotalBacklogLines, LineHeight, ConsoleScrollConfig(LineHeight));
 		const float SubLine = ScrollFrame.m_SubLine;
 		const int MaxScroll = maximum(0, TotalBacklogLines - VisibleBacklogLines);
@@ -2506,7 +2515,8 @@ void CGameConsole::OnRender()
 		const float CalcOffsetY = LineHeight * std::floor((y - RowHeight) / LineHeight);
 		const float ClipStartY = (y - CalcOffsetY) * YScale;
 		HandleLinkClick = !SettingsOpen && HandleLinkClick && LinkClickPress.y >= y - CalcOffsetY && LinkClickPos.y >= y - CalcOffsetY;
-		Graphics()->ClipEnable(0, ClipStartY, Screen.w * XScale, (y + 2.0f) * YScale - ClipStartY);
+		const float ClipStartX = ui_token::panel::PADDING * XScale;
+		Graphics()->ClipEnable(ClipStartX, ClipStartY, std::max(0.0f, Screen.w * XScale - ClipStartX), (y + 2.0f) * YScale - ClipStartY);
 
 		while(pEntry)
 		{
@@ -2569,14 +2579,15 @@ void CGameConsole::OnRender()
 				}
 			}
 
-			const float EntryTextX = pConsole->m_ChatExportMode ? 22.0f : 0.0f;
-			const float EntryLineWidth = pConsole->BacklogLineWidth();
+			// 正文左侧留一档内边距：贴屏幕左缘起排的日志读起来顶手，与其它面板同一档。
+			const float EntryTextX = (pConsole->m_ChatExportMode ? 22.0f : 0.0f) + ui_token::panel::PADDING;
+			const float EntryLineWidth = maximum(1.0f, pConsole->BacklogLineWidth() - ui_token::panel::PADDING);
 			CTextCursor EntryCursor;
 			EntryCursor.SetPosition(vec2(EntryTextX, y - OffsetY));
 			EntryCursor.m_FontSize = FontSize;
 			EntryCursor.m_LineWidth = EntryLineWidth;
 			EntryCursor.m_MaxLines = pEntry->m_LineCount;
-			EntryCursor.m_LineSpacing = LINE_SPACING;
+			EntryCursor.m_LineSpacing = ConsoleLineSpacing();
 			const bool ParseColors = pConsole->ParseEntryColors(pEntry);
 
 			CColoredParts ColoredParts(pEntry->m_aText, ParseColors);
@@ -2642,7 +2653,7 @@ void CGameConsole::OnRender()
 				LinkCursor.m_FontSize = FontSize;
 				LinkCursor.m_LineWidth = EntryLineWidth;
 				LinkCursor.m_MaxLines = pEntry->m_LineCount;
-				LinkCursor.m_LineSpacing = LINE_SPACING;
+				LinkCursor.m_LineSpacing = ConsoleLineSpacing();
 				LinkCursor.m_Flags = 0;
 				LinkCursor.m_CalculateSelectionMode = TEXT_CURSOR_SELECTION_MODE_SET;
 				LinkCursor.m_RenderSelection = false;

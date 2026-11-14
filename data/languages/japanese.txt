@@ -3119,6 +3119,9 @@ Console command color
 Console font size
 == コンソール: 文字サイズ
 
+Console line spacing
+== コンソール行間
+
 Console link color
 == コンソール: リンクの色
 
@@ -5509,6 +5512,9 @@ External links open in the browser.
 
 External sites are not controlled by the client.
 == 外部サイトはクライアントの管理下にはありません。
+
+Extra console log line spacing in percent
+== コンソールログの行間をパーセントで追加
 
 Extra vertical spacing between chat lines in pixels (0 = default)
 == チャット行間の追加の縦余白（ピクセル）（0 = 既定）

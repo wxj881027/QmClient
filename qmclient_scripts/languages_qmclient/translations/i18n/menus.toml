@@ -23515,3 +23515,19 @@ brazilian_portuguese = "Em máquinas modestas, desligue: os cartões abrem e rol
 portuguese = "Em máquinas modestas, desligue: os cartões abrem e deslocam-se imediatamente. A forma do cursor é apenas estética: os três estilos ocupam a mesma célula."
 turkish = "Zayıf makinelerde kapatın: kartlar anında açılır ve kaydırılır. İmleç biçimi yalnızca görseldir: üç stil de aynı karakter hücresine sığar."
 polish = "Na słabszych komputerach wyłącz: karty otwierają się i przewijają natychmiast. Kształt kursora jest tylko estetyczny: wszystkie trzy style mieszczą się w tej samej komórce znaku."
+
+[[message]]
+key = "Console line spacing"
+[message.translations]
+simplified_chinese = "控制台行距"
+traditional_chinese = "主控台行距"
+japanese = "コンソール行間"
+korean = "콘솔 줄 간격"
+russian = "Межстрочный интервал консоли"
+german = "Konsolenzeilenabstand"
+spanish = "Interlineado de la consola"
+french = "Interligne de la console"
+brazilian_portuguese = "Espaçamento entre linhas do console"
+portuguese = "Espaçamento entre linhas da consola"
+turkish = "Konsol satır aralığı"
+polish = "Odstęp między wierszami konsoli"

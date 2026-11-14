@@ -3119,6 +3119,9 @@ Console command color
 Console font size
 == 콘솔: 글꼴 크기
 
+Console line spacing
+== 콘솔 줄 간격
+
 Console link color
 == 콘솔: 링크 색상
 
@@ -5509,6 +5512,9 @@ External links open in the browser.
 
 External sites are not controlled by the client.
 == 외부 사이트는 클라이언트가 관리하지 않습니다.
+
+Extra console log line spacing in percent
+== 콘솔 로그 줄 간격 추가(백분율)
 
 Extra vertical spacing between chat lines in pixels (0 = default)
 == 채팅 줄 사이의 추가 세로 간격(픽셀) (0 = 기본값)

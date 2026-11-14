@@ -3119,6 +3119,9 @@ Console command color
 Console font size
 == Konsole: Schriftgröße
 
+Console line spacing
+== Konsolenzeilenabstand
+
 Console link color
 == Konsole: Linkfarbe
 
@@ -5509,6 +5512,9 @@ External links open in the browser.
 
 External sites are not controlled by the client.
 == Externe Seiten stehen nicht unter der Kontrolle des Clients.
+
+Extra console log line spacing in percent
+== Zusätzlicher Zeilenabstand im Konsolen-Log in Prozent
 
 Extra vertical spacing between chat lines in pixels (0 = default)
 == Zusätzlicher vertikaler Abstand zwischen Chat-Zeilen in Pixeln (0 = Standard)

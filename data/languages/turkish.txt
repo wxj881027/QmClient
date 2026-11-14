@@ -3119,6 +3119,9 @@ Console command color
 Console font size
 == Konsol: yazı tipi boyutu
 
+Console line spacing
+== Konsol satır aralığı
+
 Console link color
 == Konsol: bağlantı rengi
 
@@ -5509,6 +5512,9 @@ External links open in the browser.
 
 External sites are not controlled by the client.
 == Dış siteler istemcinin denetiminde değildir.
+
+Extra console log line spacing in percent
+== Konsol günlüğünde ek satır aralığı (yüzde)
 
 Extra vertical spacing between chat lines in pixels (0 = default)
 == Sohbet satırları arasına ek dikey boşluk (piksel) (0 = varsayılan)

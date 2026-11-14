@@ -3119,6 +3119,9 @@ Console command color
 Console font size
 == 控制台: 字號
 
+Console line spacing
+== 主控台行距
+
 Console link color
 == 控制台: 連結顏色
 
@@ -5509,6 +5512,9 @@ External links open in the browser.
 
 External sites are not controlled by the client.
 == 外部網站不受用戶端控制。
+
+Extra console log line spacing in percent
+== 主控台日誌額外行距（百分比）
 
 Extra vertical spacing between chat lines in pixels (0 = default)
 == 聊天行與行之間的額外垂直間距（像素）（0 = 預設）

@@ -3119,6 +3119,9 @@ Console command color
 Console font size
 == Консоль: размер шрифта
 
+Console line spacing
+== Межстрочный интервал консоли
+
 Console link color
 == Консоль: цвет ссылок
 
@@ -5509,6 +5512,9 @@ External links open in the browser.
 
 External sites are not controlled by the client.
 == Внешние сайты не контролируются клиентом.
+
+Extra console log line spacing in percent
+== Дополнительный межстрочный интервал в консоли (%)
 
 Extra vertical spacing between chat lines in pixels (0 = default)
 == Дополнительный вертикальный интервал между строками чата в пикселях (0 = по умолчанию)

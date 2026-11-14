@@ -23,6 +23,7 @@ void CMenus::RenderQmConsoleContent(CUIRect &Content, const SSettingsContentMetr
 	struct SControls
 	{
 		ui_widget::SNumericFieldState m_FontSize;
+		ui_widget::SNumericFieldState m_LineSpacing;
 		ui_widget::SNumericFieldState m_Opacity;
 		CButtonContainer m_Highlight;
 		CButtonContainer m_aSchemeRows[qm_console_scheme_list::Count()];
@@ -128,6 +129,8 @@ void CMenus::RenderQmConsoleContent(CUIRect &Content, const SSettingsContentMetr
 	{
 		Numeric(Controls.m_FontSize, &g_Config.m_QmConsoleFontSize, "console-font-size", Localize("Console font size"), 1, 24, "");
 		Numeric(Controls.m_Opacity, &g_Config.m_QmConsoleOpacity, "console-opacity", Localize("Console background opacity"), 20, 100, "%");
+		// 日志行距：百分比放宽，0 = 与旧版一致；与控制台正文读同一个配置。
+		Numeric(Controls.m_LineSpacing, &g_Config.m_QmConsoleLineSpacing, "console-line-spacing", Localize("Console line spacing"), 0, 100, "%");
 		RenderHighlight();
 		// 配色方案只有一个选择集合：历史三项（现代终端 / 经典 PowerShell / 自定义）
 		// 与 Windows Terminal 内置配色同属一个列表，选中任意一行都能再切回其它行。

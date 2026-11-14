@@ -102,6 +102,19 @@ public:
 	// 滑块与触控拖动：直接把位移落到手指位置，不经弹簧（跟手）。
 	void DragToOffset(float Offset) { m_State.SetOffset(Offset, m_Metrics, m_Config, true); }
 
+	// 静止态吸附到整行：不吸附时每帧的亚行余量会让正文在整数像素边界上抖动，
+	// 视觉上就是「滚动后内容区在闪」。动画与拖动期间保持连续偏移。
+	void SnapToNearestLine()
+	{
+		if(!m_HasGeometry || m_LineHeight <= 0.0f)
+			return;
+		const float Snapped = std::round(m_State.Offset() / m_LineHeight) * m_LineHeight;
+		if(std::abs(Snapped - m_State.Offset()) > 0.01f)
+			m_State.SetOffset(Snapped, m_Metrics, m_Config);
+	}
+
+	bool Animating() const { return m_State.Animating(); }
+
 	void DragBy(float Pixels) { DragToOffset(m_State.Offset() + Pixels); }
 
 	float Offset() const { return m_State.Offset(); }
