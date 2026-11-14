@@ -196,6 +196,22 @@ const char *CQmMapDifficultyCatalog::SEntry::StarLabel() const
 	return m_MaxStars == 5 ? s_apFive[m_Stars] : "";
 }
 
+void CQmMapDifficultyCatalog::SEntry::CellLabel(const char *pCategoryText, char *pOut, size_t OutSize) const
+{
+	if(pOut == nullptr || OutSize == 0)
+		return;
+	pOut[0] = '\0';
+	const char *pStars = StarLabel();
+	if(pStars[0] == '\0')
+		return;
+	if(pCategoryText == nullptr || pCategoryText[0] == '\0')
+	{
+		str_copy(pOut, pStars, (int)OutSize);
+		return;
+	}
+	str_format(pOut, (int)OutSize, "%s %s", pCategoryText, pStars);
+}
+
 bool CQmMapDifficultyCatalog::RecordAxiomMotd(const CServerInfo &Server, const char *pMotd)
 {
 	const EAxiomMode Mode = AxiomMode(Server);

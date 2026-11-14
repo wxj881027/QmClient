@@ -258,19 +258,27 @@ static const char *MapDifficultyStars(int Stars)
 	return Stars >= 0 && Stars <= 5 ? s_apStarLabels[Stars] : "";
 }
 
-// 独立难度列只显示星级符号；
+// Axiom 公告的类别是玩家可见的原文，直接显示，避免「普通」被归并成「简单」。
+static const char *MapDifficultyCategoryText(const CServerInfo &Server, const CQmMapDifficultyCatalog::SEntry &Entry)
+{
+	if(str_comp_nocase(Server.m_aCommunityId, "axiom") == 0)
+		return Entry.m_Category.c_str();
+	const char *pKey = FavoriteMapCategoryKeyFromText(Entry.m_Category.c_str());
+	if(pKey != nullptr)
+		return FavoriteMapCategoryDisplayName(pKey);
+	return Entry.m_Category.c_str();
+}
+
+// 独立难度列显示「类别 + 星级」（如「简单 ★★☆☆☆」）；
 // 无目录条目返回空串，由调用方显示占位符。
-static void FormatMapDifficultyText(const CQmMapDifficultyCatalog::SEntry *pDifficulty, char *pOut, size_t OutSize)
+static void FormatMapDifficultyText(const CServerInfo &Server, const CQmMapDifficultyCatalog::SEntry *pDifficulty, char *pOut, size_t OutSize)
 {
 	if(pOut == nullptr || OutSize == 0)
 		return;
 	pOut[0] = '\0';
 	if(pDifficulty == nullptr)
 		return;
-	const char *pStars = pDifficulty->StarLabel();
-	if(pStars[0] == '\0')
-		return;
-	str_copy(pOut, pStars, OutSize);
+	pDifficulty->CellLabel(MapDifficultyCategoryText(Server, *pDifficulty), pOut, OutSize);
 }
 
 // 浏览器名称列的区段短名：解析器输出「类别 - 区段」（如「简单 - CHN5 上海」），
@@ -2059,10 +2067,10 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			}
 			else if(Id == COL_DIFFICULTY)
 			{
-				// 独立难度列只显示星级符号；无目录条目显示占位。
+				// 独立难度列显示类别与星级；无目录条目显示占位。
 				const CQmMapDifficultyCatalog::SEntry *pDifficulty = m_MapDifficultyCatalog.FindForServer(*pItem, MapCategoryHintFromServer(pItem));
-				char aDifficulty[64];
-				FormatMapDifficultyText(pDifficulty, aDifficulty, sizeof(aDifficulty));
+				char aDifficulty[128];
+				FormatMapDifficultyText(*pItem, pDifficulty, aDifficulty, sizeof(aDifficulty));
 				MeasureColumn(Id, aDifficulty[0] != '\0' ? aDifficulty : "--", FontSize);
 				if(aDifficulty[0] != '\0')
 				{

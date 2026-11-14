@@ -395,6 +395,36 @@ TEST(MapDifficultyCatalog, AxiomCacheRoundTripRestoresBothModesAndUnknownMapsRem
 	EXPECT_EQ(Restored.Find("SharedMap"), nullptr);
 }
 
+TEST(MapDifficultyCatalog, DifficultyCellKeepsCategoryBeforeStars)
+{
+	CQmMapDifficultyCatalog::SEntry Entry;
+	Entry.m_Stars = 3;
+	Entry.m_MaxStars = 5;
+	char aOut[64];
+
+	Entry.CellLabel("疯狂", aOut, sizeof(aOut));
+	EXPECT_STREQ(aOut, "疯狂 ★★★☆☆");
+
+	Entry.CellLabel("古典.中阶", aOut, sizeof(aOut));
+	EXPECT_STREQ(aOut, "古典.中阶 ★★★☆☆");
+
+	Entry.CellLabel("", aOut, sizeof(aOut));
+	EXPECT_STREQ(aOut, "★★★☆☆");
+
+	Entry.CellLabel(nullptr, aOut, sizeof(aOut));
+	EXPECT_STREQ(aOut, "★★★☆☆");
+
+	char aSmall[4];
+	Entry.CellLabel("疯狂", aSmall, sizeof(aSmall));
+	EXPECT_TRUE(str_utf8_check(aSmall));
+	EXPECT_LE(str_length(aSmall), 3);
+
+	Entry.m_MaxStars = 3;
+	Entry.m_Stars = 2;
+	Entry.CellLabel("简单", aOut, sizeof(aOut));
+	EXPECT_STREQ(aOut, "简单 ★★☆");
+}
+
 TEST(MapDifficultyCatalog, InvalidAxiomCacheDoesNotReplaceValidRecords)
 {
 	CQmMapDifficultyCatalog Catalog;

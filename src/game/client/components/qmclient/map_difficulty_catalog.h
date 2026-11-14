@@ -23,6 +23,9 @@ public:
 		int m_MaxStars = 5;
 
 		const char *StarLabel() const;
+		// 难度列单元格文本：类别 + 空格 + 星级；类别为空时只输出星级。
+		// pCategoryText 由调用方按社区决定使用原文或本地化名称。
+		void CellLabel(const char *pCategoryText, char *pOut, size_t OutSize) const;
 	};
 
 	// 读取随客户端发布的 DDNet 分类 SQL 和本地 Axiom 公告缓存，不访问网络。
