@@ -371,10 +371,12 @@ namespace ui_token::settings
 	inline constexpr float TAB_GAP = 10.0f;
 	// 页签字号（未缩放）。
 	inline constexpr float TAB_FONT_SIZE = 15.0f;
-	// ESC 顶部主导航：行高与字号都比页签再小一档。导航本身带选中滑块，
-	// 字号跟页签一样大会在滑块里显得挤，这里单独降一档。
-	inline constexpr float MENU_NAV_HEIGHT = 26.0f;
-	inline constexpr float MENU_NAV_FONT_SIZE = 13.0f;
+	// 区块标题档：导航、页签、卡片标题共用这一个字号，不再各自声明。
+	inline constexpr float SECTION_TITLE = 15.0f;
+	// ESC 顶部主导航与页面页签共用同一档：高度取胶囊行高，字号取标题档。
+	// 单一入口的目的就是导航与页签不再一个高一个矮。
+	inline constexpr float MENU_NAV_HEIGHT = TAB_HEIGHT;
+	inline constexpr float MENU_NAV_FONT_SIZE = SECTION_TITLE;
 	// 子页签高度：与一级页签同档，切换时布局不跳动。
 	inline constexpr float SUB_TAB_HEIGHT = TAB_HEIGHT;
 	// 子页签间距：同上，与一级页签一致。

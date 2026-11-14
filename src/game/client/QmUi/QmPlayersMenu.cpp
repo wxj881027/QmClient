@@ -175,9 +175,19 @@ void CMenus::RenderPlayers(CUIRect MainView)
 				Online && !GameClient()->IsLocalClientId(Id)},
 			{EQmIcon::COPY, FontIcons::FONT_ICON_COPY, Localize("Copy skin"), false, CanCopySkin},
 		};
+		// 图标默认不占视线：只有悬浮到这张卡上才出现；已经生效的状态
+		//（好友 / 静音 / 裂心 / 跟随中）常显，复制不属于状态，只在悬浮时出现。
+		const vec2 MousePos = Input()->NativeMousePos();
+		const bool TileHovered = MousePos.x >= Tile.x && MousePos.x <= Tile.x + Tile.w &&
+					 MousePos.y >= Tile.y && MousePos.y <= Tile.y + Tile.h;
+		if(TileHovered)
+			Tile.Draw(ui_token::color::LIST_ITEM_HOVER, IGraphics::CORNER_ALL, ui_token::list::RowRadius(Tile.h));
 		const auto Slots = QmPlayersUi::PlayerTileIconRow(Layout.m_Icons, (int)std::size(aActions));
 		for(int Action = (int)std::size(aActions) - 1; Action >= 0; --Action)
 		{
+			const bool StatefulAction = Action < 4 && aActions[Action].m_Active;
+			if(!TileHovered && !StatefulAction)
+				continue;
 			const CUIRect Slot = Slots.m_aCells[Action];
 			const auto &Spec = aActions[Action];
 			const int Clicked = Ui()->DoButton_QmIcon(&s_aTileButtons[Id][Action], Spec.m_Icon, Spec.m_pFallback, Spec.m_Active ? 1 : 0, &Slot, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Spec.m_Enabled);

@@ -51,8 +51,9 @@ static constexpr float FONT_SIZE = 10.0f;
 static constexpr float LINE_SPACING = 1.0f;
 static constexpr float LINK_CLICK_DRAG_THRESHOLD = 3.0f;
 static constexpr float LINK_UNDERLINE_HEIGHT = 0.12f;
-static constexpr float CONSOLE_SCROLLBAR_WIDTH = 18.0f;
-static constexpr float CONSOLE_SCROLLBAR_MARGIN = 5.0f;
+// 轨道粗细与设置页列表滚动条同一档，控制台不再自带一套更粗的尺寸。
+static constexpr float CONSOLE_SCROLLBAR_WIDTH = ui_token::list::SCROLLBAR_WIDTH;
+static constexpr float CONSOLE_SCROLLBAR_MARGIN = ui_token::list::SCROLLBAR_MARGIN;
 // 滑块最短高度：日志只有几行时也要按得住，取旧实现里写死的 14。
 static constexpr float CONSOLE_SCROLLBAR_MIN_THUMB = 14.0f;
 static constexpr ColorRGBA LINK_TEXT_COLOR = ColorRGBA(0.2f, 0.65f, 1.0f, 1.0f);
