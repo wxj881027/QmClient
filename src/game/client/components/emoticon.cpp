@@ -115,7 +115,7 @@ static float EmoticonStaggerReveal(int Index, int Count, float PresentationAlpha
 CEmoticon::CEmoticon()
 {
 	m_RenderProjectiles.m_pEmoticon = this;
-	OnReset();
+	CEmoticon::OnReset();
 }
 
 void CEmoticon::ConKeyEmoticon(IConsole::IResult *pResult, void *pUserData)

@@ -1282,6 +1282,7 @@ void CGameClient::OnUpdate()
 	}
 
 	// handle key presses
+	std::fill(std::begin(m_Controls.m_aMouseOnAction), std::end(m_Controls.m_aMouseOnAction), false);
 	Input()->ConsumeEvents([&](const IInput::CEvent &Event) {
 		const bool HadCountingFocus = m_InputOverlay.HasCountingFocus();
 		OnInput(Event);
@@ -1289,10 +1290,14 @@ void CGameClient::OnUpdate()
 		m_InputOverlay.ObservePhysicalInput(Event, HadCountingFocus);
 	});
 
-	if(g_Config.m_ClSubTickAiming && m_Binds.m_MouseOnAction)
+	if(g_Config.m_ClSubTickAiming)
 	{
-		m_Controls.m_aMousePosOnAction[g_Config.m_ClDummy] = m_Controls.m_aMousePos[g_Config.m_ClDummy];
-		m_Binds.m_MouseOnAction = false;
+		// 主号和 dummy 各自记录：同帧内切换 cl_dummy 不会把另一只的瞄准位置写错。
+		for(int Dummy = 0; Dummy < NUM_DUMMIES; Dummy++)
+		{
+			if(m_Controls.m_aMouseOnAction[Dummy])
+				m_Controls.m_aMousePosOnAction[Dummy] = m_Controls.m_aMousePos[Dummy];
+		}
 	}
 
 	if(g_Config.m_QmPerfStutterDiagnostics)

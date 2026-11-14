@@ -2616,7 +2616,9 @@ bool CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 			static_assert(std::size(s_aStartTabButtons) == 1 + 4 + (size_t)PAGE_FAVORITE_COMMUNITY_5 - PAGE_FAVORITE_COMMUNITY_1 + 1);
 			static_assert(std::size(s_aStartTabButtons) - 5 == (size_t)BIT_TAB_FAVORITE_COMMUNITY_5 - BIT_TAB_FAVORITE_COMMUNITY_1 + 1);
 			static_assert(std::size(s_aStartTabButtons) - 5 == (size_t)IServerBrowser::TYPE_FAVORITE_COMMUNITY_5 - IServerBrowser::TYPE_FAVORITE_COMMUNITY_1 + 1);
-			for(const CCommunity *pCommunity : ServerBrowser()->FavoriteCommunities())
+			// FavoriteCommunities() 按值返回，渲染路径里只取一次，避免重复分配。
+			const std::vector<const CCommunity *> vpFavoriteCommunities = ServerBrowser()->FavoriteCommunities();
+			for(const CCommunity *pCommunity : vpFavoriteCommunities)
 			{
 				if((size_t)NumStartTabs >= std::size(s_aStartTabButtons))
 					break;

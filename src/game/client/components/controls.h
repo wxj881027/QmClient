@@ -25,6 +25,8 @@ public:
 		AUTOMATED,
 	};
 
+	// 本帧子 tick 瞄准的鼠标位置是否需要在本帧采样（逐 dummy 记录）。
+	bool m_aMouseOnAction[NUM_DUMMIES];
 	vec2 m_aMousePos[NUM_DUMMIES];
 	vec2 m_aMousePosOnAction[NUM_DUMMIES];
 	vec2 m_aTargetPos[NUM_DUMMIES];

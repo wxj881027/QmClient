@@ -4,8 +4,10 @@
 #include "menus.h"
 #include "skins.h"
 
+#include <base/dbg.h>
 #include <base/log.h>
 #include <base/math.h>
+#include <base/mem.h>
 #include <base/perf_timer.h>
 #include <base/system.h>
 

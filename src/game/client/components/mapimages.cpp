@@ -2,7 +2,9 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "mapimages.h"
 
+#include <base/dbg.h>
 #include <base/log.h>
+#include <base/mem.h>
 #include <base/math.h>
 
 #include <engine/gfx/image_loader.h>

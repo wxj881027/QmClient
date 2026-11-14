@@ -2,6 +2,8 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "scoreboard.h"
 
+#include <base/mem.h>
+
 #include <engine/demo.h>
 #include <engine/graphics.h>
 #include <engine/serverbrowser.h>
@@ -190,7 +192,7 @@ namespace
 
 CScoreboard::CScoreboard()
 {
-	OnReset();
+	CScoreboard::OnReset();
 }
 
 void CScoreboard::SetUiMousePos(vec2 Pos)
@@ -330,6 +332,11 @@ void CScoreboard::ConToggleScoreboardCursor(IConsole::IResult *pResult, void *pU
 	}
 
 	pSelf->m_MouseUnlocked = !pSelf->m_MouseUnlocked;
+
+	// 锁定光标时计分板不再接收点击，已打开的玩家菜单必须同步关闭，
+	// 否则弹层会在无光标状态下继续占着输入。
+	if(!pSelf->m_MouseUnlocked)
+		pSelf->Ui()->ClosePopupMenus();
 
 	vec2 OldMousePos = pSelf->Ui()->MousePos();
 
@@ -1630,6 +1637,13 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 			}
 			else
 				RenderTools()->RenderTee(pIdleState, &TeeInfo, EMOTE_NORMAL, vec2(1.0f, 0.0f), TeeRenderPos, TEE_PREVIEW_LAYER_BODY, ItemAlpha);
+
+			// 光标解锁时悬停皮肤显示皮肤名；0.7 下 m_aSkinName 是 body 部件名。
+			if(m_MouseUnlocked && m_RenderInteractions && ClientData.m_aSkinName[0] != '\0')
+			{
+				const CUIRect SkinRect = {TeeOffset, Row.y, TeeLength, Row.h};
+				GameClient()->m_Tooltips.DoToolTip(&ClientData, &SkinRect, ClientData.m_aSkinName);
+			}
 		}
 
 		// name

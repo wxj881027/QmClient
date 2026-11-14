@@ -1,3 +1,5 @@
+#include <base/dbg.h>
+
 #include <engine/shared/masterserver.h>
 
 #include <game/client/gameclient.h>

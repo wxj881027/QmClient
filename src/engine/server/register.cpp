@@ -1,7 +1,10 @@
 #include "register.h"
 
+#include <base/dbg.h>
 #include <base/lock.h>
 #include <base/log.h>
+#include <base/mem.h>
+#include <base/str.h>
 
 #include <engine/console.h>
 #include <engine/engine.h>
