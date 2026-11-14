@@ -726,6 +726,9 @@ namespace
 
 }
 
+// 预览框「点击重试」的按钮 id：只做命中判定，下载状态由缓存持有。
+static int s_MapPreviewRetryId = 0;
+
 // 预览框里的下载进度：轨道 + 已完成比例 + 百分比文字。
 static void QmDrawMapPreviewDownloadProgress(CGameClient *pGameClient, const CUIRect &Rect, int Progress)
 {
@@ -802,6 +805,21 @@ public:
 		if(!m_pDownloadTask || str_comp(m_aDownloadName, pMapName) != 0)
 			return -1;
 		return m_pDownloadTask->Progress();
+	}
+
+	bool DownloadFailed(const char *pMapName) const
+	{
+		if(!m_pDownloadTask || str_comp(m_aDownloadName, pMapName) != 0)
+			return false;
+		const EHttpState State = m_pDownloadTask->State();
+		return State == EHttpState::ERROR || State == EHttpState::ABORTED;
+	}
+
+	// 取消当前任务（重试前先清掉旧句柄，否则会复用已失败的任务）。
+	void CancelDownload()
+	{
+		m_pDownloadTask.reset();
+		m_aDownloadName[0] = '\0';
 	}
 
 	bool DownloadFinished(const char *pMapName) const
@@ -1164,6 +1182,17 @@ bool CMenus::RenderMapPreviewForVote(const CUIRect &Preview, const char *pMapNam
 	if(pEntry == nullptr || pEntry->m_LoadFailed)
 	{
 		// 缺图就按名字下载：进度直接画在预览框里，下载完成后清缓存让它重新加载。
+		if(m_pMapPreviewCache->DownloadFailed(pMapName))
+		{
+			// 失败态不自动重试：画一行可点击的重试提示，点一下取消旧任务并重新发起。
+			if(Ui()->DoButtonLogic(&s_MapPreviewRetryId, 0, &Preview, BUTTONFLAG_LEFT) != 0)
+			{
+				m_pMapPreviewCache->CancelDownload();
+				m_pMapPreviewCache->EnsureDownloaded(GameClient(), pMapName);
+			}
+			Ui()->DoLabel(&Preview, Localize("Map download failed, click to retry"), ui_token::font::SMALL, TEXTALIGN_MC);
+			return false;
+		}
 		if(m_pMapPreviewCache->EnsureDownloaded(GameClient(), pMapName))
 		{
 			QmDrawMapPreviewDownloadProgress(GameClient(), Preview, m_pMapPreviewCache->DownloadProgress(pMapName));
