@@ -197,4 +197,28 @@ inline void QmShiftPracticePredictedEventTicks(std::vector<CGameWorld::CPredicte
 		Event.m_Tick += TickDelta;
 }
 
+// 事件屏障：<= BarrierTick 的分支 tick 已经创建并消费过预测事件。
+// 分支世界重新 fork（重进服务器、分身重连）会从服务器 tick 往回重算一段已经
+// 播过的 tick；预测事件去重依赖世界里的队列记录，而重建世界会把记录换成
+// 服务器世界那份旧快照，同一 tick 的开火声因此会被再排一份、再播一次。
+// 屏障随分支时钟单调前进，重算范围内的 tick 直接关闭事件创建。
+inline bool QmPracticeTickAllowsPredictedEvents(int Tick, int BarrierTick)
+{
+	return Tick > BarrierTick;
+}
+
+// 重新 fork 出来的是新的分支时间线，旧队列整份作废：带进新世界的事件要么
+// 属于已经播过的时间线，要么带着对不上的 tick，统一丢掉最安全。
+inline void QmResetPracticePredictedEvents(std::vector<CGameWorld::CPredictedEvent> &vEvents)
+{
+	vEvents.clear();
+}
+
+// 重开练习世界会连同快照初刻的事件队列一起回来。那些事件对应的 tick 早已
+// 被屏障盖过，留着会在下一帧集中播放（连续开火声），必须按屏障摘掉。
+inline void QmDropPracticePredictedEventsUntil(std::vector<CGameWorld::CPredictedEvent> &vEvents, int BarrierTick)
+{
+	std::erase_if(vEvents, [BarrierTick](const CGameWorld::CPredictedEvent &Event) { return Event.m_Tick <= BarrierTick; });
+}
+
 #endif

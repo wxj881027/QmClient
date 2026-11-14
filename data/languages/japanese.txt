@@ -839,9 +839,6 @@ All remaining binds: scoreboard, spectating, console, screenshots, emoticon and 
 All sounds
 == すべてのサウンド
 
-All weapons
-== 全武器
-
 Allow /map.
 == /map を許可
 
@@ -5264,6 +5261,9 @@ Enter fast practice
 Enter Password
 == パスワードを入力
 
+Enter solo mode
+== ソロモードに入る
+
 Enter solo split mode
 == ソロスプリットモードに入る
 
@@ -5410,6 +5410,9 @@ Exit fast practice
 
 Exit replay view
 == リプレイ視聴を終了
+
+Exit solo mode
+== ソロモードから出る
 
 Exit spectating on both tees when either is hammered awake by another player
 == どちらかが他のプレイヤーのハンマーで解凍されたら両方の Tee の観戦を解除
@@ -5656,9 +5659,6 @@ Fast keys for common dummy, aim and rescue actions: HDF, DF, 45-degree aim, jump
 
 Fast practice
 == 高速プラクティス
-
-Fast practice runs a private copy of the map, so the server still sees you where you entered. The ghost above is that server-side you; other players are controlled by "Show others". Bind rows send the same commands as the practice menu, so a bound key never needs the chat box
-== 高速練習はマップのプライベートコピーを動かすため、サーバーは入ったときの位置にあなたを表示します。上のゴーストがそのサーバー側のあなたです。他のプレイヤーは「他のプレイヤーを表示」で制御します。バインド行は練習メニューと同じコマンドを送るので、キーを割り当てればチャット欄を開く必要はありません。
 
 Fast, lightweight blur with a softer approximation.
 == 高速で軽量なぼかしで、やや柔らかい近似表現になります。
@@ -6235,6 +6235,9 @@ Generated skin outline opacity
 
 Generated skin outline width
 == 生成アウトラインの太さ
+
+Get all weapons
+== 全武器を入手
 
 Getting game info
 == ゲーム情報を取得中
@@ -8306,9 +8309,6 @@ Main Tee and dummy
 Main-world ghost opacity
 == メインワールドゴーストの不透明度
 
-Main-world ghost opacity during fast practice (%)
-== 高速練習中のメインワールドゴーストの不透明度（%）
-
 Maintains the list of hostile players and groups plus the rules used to display them.
 == 敵対プレイヤーとグループのリスト、および表示に使うルールを管理します。
 
@@ -9842,8 +9842,8 @@ Only the selected tee changes, so switch to "Dummy" before editing the colors yo
 Only what you can't imagine, nothing Dream can't do
 == 想像できないことだけが、Dreamにできないことです
 
-Only your copy of the world is simulated: other players still come from the server, so switches you hit do not affect them.
-== 模擬されるのは自分の世界コピーだけです。他のプレイヤーはサーバーから来るため、あなたが踏んだスイッチは彼らに影響しません。
+Only your own copy of the world is simulated: other players are server-side Tees, so switches you hit do not affect them. The ghost toggle and opacity apply to them too.
+== 模擬されるのは自分の世界コピーだけです。他のプレイヤーはサーバー側の Tee なので、あなたが踏んだスイッチは彼らに影響しません。ゴーストの表示切り替えと不透明度は彼らにも適用されます。
 
 Opacity
 == 不透明度
@@ -11792,6 +11792,9 @@ Remove a type from the exclusion filter for a specific community
 remove a voting option
 == 投票オプションを削除
 
+Remove all weapons
+== 全武器を外す
+
 Remove Bind
 == バインドを削除
 
@@ -11836,9 +11839,6 @@ Remove war clan:
 
 Remove war name:
 == 敵対プレイヤー名を削除：
-
-Remove weapons
-== 武器を外す
 
 Removed %s from friends
 == %s をフレンドから削除しました
@@ -12221,9 +12221,6 @@ Restart
 Restart in x seconds (0 = abort)
 == x 秒後に再起動（0 = 中止）
 
-Restart practice world
-== 練習ワールドを再開始
-
 Restart the client
 == クライアントを再起動
 
@@ -12301,6 +12298,9 @@ Review the entries and change only what you understand; defaults are tuned for n
 
 Reviews configuration values that differ from their defaults and resets them.
 == 既定値と異なる設定値を確認し、リセットできます。
+
+Rewind practice world
+== 練習ワールドを巻き戻す
 
 Rifle
 == ライフル
@@ -13057,6 +13057,9 @@ Server votes
 
 Server-dependent
 == サーバー依存
+
+Server-side ghost opacity during fast practice (%)
+== 高速練習中のサーバー側ゴーストの不透明度（%）
 
 Set "Background color" and "Background opacity", then "Text color", "Selected text color" and "Selection background color"; a preview follows.
 == 背景色と背景の不透明度を設定し、次に文字色、選択文字色、選択背景色を決めます。下にプレビューが付きます。
@@ -14057,6 +14060,9 @@ Show server prompts and Echo messages as popups
 Show server settings
 == サーバー設定を表示
 
+Show server-side tees as ghosts during fast practice
+== 高速練習中にサーバー側の Tee をゴーストとして表示する
+
 Show settings card borders
 == 設定カードの枠線を表示
 
@@ -14263,9 +14269,6 @@ Show Y
 
 Show your current team
 == 現在のチームを表示
-
-Show your own main-world ghost during fast practice
-== 高速練習中にメインワールドの自分のゴーストを表示します
 
 Show zzz emoji next to afk players
 == AFK プレイヤーの横に zzz 絵文字を表示
@@ -16493,8 +16496,8 @@ Tune variable to value or show current value
 Turn motion off on weaker machines; cards then open and scroll immediately.
 == 性能の低い環境では動きをオフにしてください。カードがすぐに開き、スクロールもすぐに反応します。
 
-Turn off "Show main-world ghost" to hide the server-side Tee, set its opacity while it stays on, enable the timer, and bind the command rows you use.
-== 「メインワールドのゴーストを表示」をオフにするとサーバー側の Tee が隠れます。オンのままなら不透明度を調整でき、タイマーを有効にし、使うコマンド行にキーを割り当てられます。
+Turn off "Show main-world ghost" to hide every Tee from the server, other players included; while it is on, the opacity slider sets how visible they are. The bind rows send the same commands as the practice menu, so a bound key needs no chat box.
+== 「メインワールドのゴーストを表示」をオフにすると、他のプレイヤーを含むサーバー側の Tee がすべて隠れます。オンのままなら不透明度スライダーで見え方を調整できます。バインド行は練習メニューと同じコマンドを送るので、チャット欄を開く必要はありません。
 
 Turn on "Auto chat in water", type the "Chat message" you want, and optionally enable "Send emoticon in water" with its ID.
 == 「水中で自動チャット」をオンにして送りたい「チャットメッセージ」を入力し、必要なら「水中で表情を送信」と表情 ID も設定します。
@@ -16687,9 +16690,6 @@ UI server address
 
 UI size percentage
 == UI スケールのパーセンテージ
-
-Un-solo
-== solo を解除
 
 Unable to delete %d selected items. The first failing item was '%s'.
 == 選択した %d 個のアイテムを削除できませんでした。最初に失敗したアイテムは「%s」です。

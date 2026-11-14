@@ -407,8 +407,7 @@ void CPlayers::RenderHookCollLine(
 	if(GameClient()->IsOtherTeam(ClientId))
 		Alpha = g_Config.m_ClShowOthersAlpha / 100.0f;
 	Alpha *= (float)g_Config.m_ClHookCollAlpha / 100;
-	if(ClientId >= 0 && GameClient()->m_FastPractice.Enabled() && !GameClient()->m_Snap.m_SpecInfo.m_Active && !GameClient()->m_FastPractice.IsPracticeParticipant(ClientId))
-		Alpha = std::min(Alpha, 0.5f);
+	Alpha = GameClient()->m_FastPractice.ServerTeeAlpha(ClientId, Alpha);
 	if(Alpha <= 0.0f)
 		return;
 
@@ -727,8 +726,7 @@ void CPlayers::RenderHook(
 		// 跑图模式保持半透明参照物语义
 		Alpha = GameClient()->ReplaySessionStatus().ManualActive() ? 1.0f : g_Config.m_ClRaceGhostAlpha / 100.0f;
 	}
-	if(ClientId >= 0 && GameClient()->m_FastPractice.Enabled() && !GameClient()->m_Snap.m_SpecInfo.m_Active && !GameClient()->m_FastPractice.IsPracticeParticipant(ClientId))
-		Alpha = std::min(Alpha, 0.5f);
+	Alpha = GameClient()->m_FastPractice.ServerTeeAlpha(ClientId, Alpha);
 
 	RenderInfo.m_Size = 64.0f;
 
@@ -826,8 +824,7 @@ float CPlayers::PlayerRenderAlpha(int ClientId) const
 		// QmClient: 查看模式下回放是主内容，用不透明渲染；跑图模式保持半透明参照物语义。
 		Alpha = GameClient()->ReplaySessionStatus().ManualActive() ? 1.0f : g_Config.m_ClRaceGhostAlpha / 100.0f;
 	}
-	if(ClientId >= 0 && GameClient()->m_FastPractice.Enabled() && !GameClient()->m_Snap.m_SpecInfo.m_Active && !GameClient()->m_FastPractice.IsPracticeParticipant(ClientId))
-		Alpha = std::min(Alpha, 0.5f);
+	Alpha = GameClient()->m_FastPractice.ServerTeeAlpha(ClientId, Alpha);
 	return std::clamp(Alpha, 0.0f, 1.0f);
 }
 
@@ -1331,7 +1328,11 @@ void CPlayers::RenderPlayer(
 				vec2(GameClient()->m_Snap.m_aCharacters[ClientId].m_Cur.m_X, GameClient()->m_Snap.m_aCharacters[ClientId].m_Cur.m_Y),
 				Client()->IntraGameTick(g_Config.m_ClDummy));
 
-		RenderTools()->RenderTee(&State, &RenderInfo, Player.m_Emote, Direction, ShadowPosition, g_Config.m_ClUnpredictedShadowAlpha / 100.f, JellyDeform.m_BodyScale, JellyDeform.m_FeetScale, JellyDeform.m_BodyAngle, JellyDeform.m_FeetAngle); // render ghost
+		// 服务器时间线上 Tee 的落点影子，练习期间和其它服务器侧 Tee 一起受
+		// 影子开关约束：整组隐藏时不该只剩这一圈残影。
+		const float ShadowAlpha = g_Config.m_ClUnpredictedShadowAlpha / 100.f * GameClient()->m_FastPractice.ServerTeeAlpha(ClientId, 1.0f);
+		if(ShadowAlpha > 0.0f)
+			RenderTools()->RenderTee(&State, &RenderInfo, Player.m_Emote, Direction, ShadowPosition, ShadowAlpha, JellyDeform.m_BodyScale, JellyDeform.m_FeetScale, JellyDeform.m_BodyAngle, JellyDeform.m_FeetAngle); // render ghost
 	}
 
 	const std::chrono::nanoseconds Now = time_get_nanoseconds();
@@ -1520,6 +1521,11 @@ void CPlayers::RenderPlayerGhost(
 
 	if(!OtherTeam && FrozenSwappingHide)
 		Alpha = 1.0f;
+	// 练习期间非参与者都是服务器时间线上的参照物，与其它渲染路径共用同一组
+	// 影子开关和不透明度；整组隐藏时不必再走后面的残影绘制。
+	Alpha = GameClient()->m_FastPractice.ServerTeeAlpha(ClientId, Alpha);
+	if(Alpha <= 0.0f)
+		return;
 	const bool Afk = ClientId >= 0 && IsQmAfkForPresentation(
 						  GameClient()->m_aClients[ClientId].m_Afk,
 						  Client()->State() == IClient::STATE_ONLINE,

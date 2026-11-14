@@ -8,7 +8,6 @@ namespace
 		{Localizable("Toggle main-world ghost"), nullptr, "影子开关键 一键隐藏 按键切换"},
 		{Localizable("Main-world ghost opacity"), nullptr, "影子透明度 不透明度 淡化 淡化程度"},
 		{Localizable("Show practice timer"), nullptr, "计时 用时 秒表 计时器 HUD"},
-		{Localizable("Fast practice runs a private copy of the map, so the server still sees you where you entered. The ghost above is that server-side you; other players are controlled by \"Show others\". Bind rows send the same commands as the practice menu, so a bound key never needs the chat box"), nullptr, "绑定 快捷键 练习命令 说明"},
 		{qm_practice_menu::s_aFastPracticeEntries[0].m_pName, nullptr, nullptr},
 		{qm_practice_menu::s_aFastPracticeEntries[1].m_pName, nullptr, nullptr},
 		{qm_practice_menu::s_aFastPracticeEntries[2].m_pName, nullptr, nullptr},

@@ -39,13 +39,8 @@ void CMenus::RenderQmFastPracticeContent(CUIRect &Content, float LineHeight, flo
 	if(Flow.Control("fast-practice-show-main-world", LineHeight, Row))
 		RenderQmFunctionCheckbox(s_ShowMainWorldCheckboxId, "fast-practice-show-main-world", Localize("Show main-world ghost"), &g_Config.m_QmFastPracticeShowMainWorld, &Row, PrewarmOnly);
 
-	// 同一开关的按键入口：控制台 toggle 直接改同一个配置项，跑图时不必回设置页。
-	static CButtonContainer s_ReaderButtonMainWorld, s_ClearButtonMainWorld;
-	if(Flow.Control("fast-practice-bind-main-world", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
-		RenderQmHudKeyBindRow(Row, s_ReaderButtonMainWorld, s_ClearButtonMainWorld, Localize("Toggle main-world ghost"), "toggle qm_fast_practice_show_main_world 0 1", LineHeight, BodySize, 0.0f, LabelWidth);
-
-	Flow.Space(ui_token::settings::RowGap(LineSpacing));
 	// 约定 A：不透明度只在影子可见时存在，隐藏时不占高、不可交互。
+	// 它必须紧跟影子开关：中间插一行别的配置会让"这个滑杆调的是谁"变得费解。
 	static SettingsDependentRows s_MainWorldAlphaRows;
 	if(const auto MainWorldAlphaRows = s_MainWorldAlphaRows.Reveal(Ui(), Flow, g_Config.m_QmFastPracticeShowMainWorld != 0, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 	{
@@ -69,6 +64,13 @@ void CMenus::RenderQmFastPracticeContent(CUIRect &Content, float LineHeight, flo
 
 	// 绑定行：按钮容器按条目序号固定分配，条目增减时序号与 id 一起变化，
 	// 不会把旧行的改键状态挂到别的命令上。
+	//
+	// 影子开关的按键入口也放在这里：控制台 toggle 直接改同一个配置项，跑图时
+	// 不必回设置页。它属于"绑定"这一类，夹在开关和滑杆之间只会打断阅读顺序。
+	static CButtonContainer s_ReaderButtonMainWorld, s_ClearButtonMainWorld;
+	if(Flow.Control("fast-practice-bind-main-world", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
+		RenderQmHudKeyBindRow(Row, s_ReaderButtonMainWorld, s_ClearButtonMainWorld, Localize("Toggle main-world ghost"), "toggle qm_fast_practice_show_main_world 0 1", LineHeight, BodySize, 0.0f, LabelWidth);
+
 	static CButtonContainer s_aReaderButtons[FAST_PRACTICE_ENTRY_COUNT];
 	static CButtonContainer s_aClearButtons[FAST_PRACTICE_ENTRY_COUNT];
 	for(int EntryIndex = 0; EntryIndex < FAST_PRACTICE_ENTRY_COUNT; ++EntryIndex)
@@ -80,17 +82,9 @@ void CMenus::RenderQmFastPracticeContent(CUIRect &Content, float LineHeight, flo
 			continue;
 		RenderQmHudKeyBindRow(Row, s_aReaderButtons[EntryIndex], s_aClearButtons[EntryIndex], Localize(Entry.m_pName), Entry.m_pCommand, LineHeight, BodySize, 0.0f, LabelWidth);
 	}
-	Flow.Space(ui_token::settings::RowGap(LineSpacing));
-
-	// 说明行统一取小字档，与自杀保护卡同一套测量/绘制写法。
-	const float HintSize = CurrentSettingsContentMetrics().m_SmallSize;
-	Flow.Text("fast-practice-hint", Localize("Fast practice runs a private copy of the map, so the server still sees you where you entered. The ghost above is that server-side you; other players are controlled by \"Show others\". Bind rows send the same commands as the practice menu, so a bound key never needs the chat box"), 0.0f, HintSize, ui_token::settings::RowGap(LineSpacing), [this](const char *pText, float Width, float FontSize) { return TextRender()->TextBoundingBox(FontSize, pText, -1, Width).m_H + FontSize * 0.25f; }, [this, HintSize](const CUIRect &Hint, const char *pText) {
-		SLabelProperties Props;
-		Props.m_MaxWidth = Hint.w;
-		Props.m_EllipsisAtEnd = true;
-		TextRender()->TextColor(ui_token::color::TEXT_TIP);
-		Ui()->DoLabel(&Hint, pText, HintSize, TEXTALIGN_ML, Props);
-		TextRender()->TextColor(TextRender()->DefaultTextColor()); });
+	// 卡片底部不再放长说明行：分支世界的解释属于"这张卡是干什么的"，
+	// 已经收进标题旁的 (i) 面板（QmCardWiki 的 qm:fast_practice），
+	// 设置页只保留可操作的行。
 }
 
 namespace qm_card_catalog

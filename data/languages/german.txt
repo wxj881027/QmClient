@@ -839,9 +839,6 @@ All remaining binds: scoreboard, spectating, console, screenshots, emoticon and 
 All sounds
 == Alle Sounds
 
-All weapons
-== Alle Waffen
-
 Allow /map.
 == /map erlauben.
 
@@ -5264,6 +5261,9 @@ Enter fast practice
 Enter Password
 == Passwort eingeben
 
+Enter solo mode
+== Solomodus betreten
+
 Enter solo split mode
 == Solo-Aufteilungsmodus betreten
 
@@ -5410,6 +5410,9 @@ Exit fast practice
 
 Exit replay view
 == Replay-Ansicht beenden
+
+Exit solo mode
+== Solomodus verlassen
 
 Exit spectating on both tees when either is hammered awake by another player
 == Den Zuschauermodus für beide Tees beenden, wenn ein anderer Spieler einen davon mit dem Hammer auftaut
@@ -5656,9 +5659,6 @@ Fast keys for common dummy, aim and rescue actions: HDF, DF, 45-degree aim, jump
 
 Fast practice
 == Schnelles Üben
-
-Fast practice runs a private copy of the map, so the server still sees you where you entered. The ghost above is that server-side you; other players are controlled by "Show others". Bind rows send the same commands as the practice menu, so a bound key never needs the chat box
-== Schnelles Üben läuft auf einer eigenen Kopie der Karte, der Server sieht dich also weiterhin dort, wo du gestartet bist. Der Geist darüber ist dein Server-Ich; andere Spieler steuerst du über „Andere anzeigen“. Die Bindezeilen senden dieselben Befehle wie das Übungsmenü, eine belegte Taste braucht also kein Chatfenster.
 
 Fast, lightweight blur with a softer approximation.
 == Schnelle, leichte Unschärfe mit einer weicheren Annäherung.
@@ -6235,6 +6235,9 @@ Generated skin outline opacity
 
 Generated skin outline width
 == Breite der erzeugten Umrandung
+
+Get all weapons
+== Alle Waffen erhalten
 
 Getting game info
 == Spieleinfo wird abgerufen
@@ -8306,9 +8309,6 @@ Main Tee and dummy
 Main-world ghost opacity
 == Deckkraft des Geists der Hauptwelt
 
-Main-world ghost opacity during fast practice (%)
-== Deckkraft des Geists der Hauptwelt während der schnellen Übung (%)
-
 Maintains the list of hostile players and groups plus the rules used to display them.
 == Verwaltet die Liste feindlicher Spieler und Gruppen sowie die Regeln für ihre Anzeige.
 
@@ -9842,8 +9842,8 @@ Only the selected tee changes, so switch to "Dummy" before editing the colors yo
 Only what you can't imagine, nothing Dream can't do
 == Nur was du dir nicht vorstellen kannst, nichts, was Dream nicht kann
 
-Only your copy of the world is simulated: other players still come from the server, so switches you hit do not affect them.
-== Nur deine Kopie der Welt wird simuliert: andere Spieler kommen weiterhin vom Server, Schalter, die du trittst, betreffen sie also nicht.
+Only your own copy of the world is simulated: other players are server-side Tees, so switches you hit do not affect them. The ghost toggle and opacity apply to them too.
+== Nur deine Kopie der Welt wird simuliert: andere Spieler sind Tees auf Serverseite, Schalter, die du trittst, betreffen sie also nicht. Geist-Schalter und Deckkraft gelten auch für sie.
 
 Opacity
 == Deckkraft
@@ -11792,6 +11792,9 @@ Remove a type from the exclusion filter for a specific community
 remove a voting option
 == Eine Abstimmungsoption entfernen
 
+Remove all weapons
+== Alle Waffen entfernen
+
 Remove Bind
 == Bind entfernen
 
@@ -11836,9 +11839,6 @@ Remove war clan:
 
 Remove war name:
 == Kriegs-Name entfernen:
-
-Remove weapons
-== Waffen entfernen
 
 Removed %s from friends
 == %s wurde aus den Freunden entfernt
@@ -12221,9 +12221,6 @@ Restart
 Restart in x seconds (0 = abort)
 == In x Sekunden neu starten (0 = abbrechen)
 
-Restart practice world
-== Übungswelt neu starten
-
 Restart the client
 == Client neu starten
 
@@ -12301,6 +12298,9 @@ Review the entries and change only what you understand; defaults are tuned for n
 
 Reviews configuration values that differ from their defaults and resets them.
 == Prüft Einstellungen, die von ihren Standardwerten abweichen, und setzt sie zurück.
+
+Rewind practice world
+== Übungswelt zurückspulen
 
 Rifle
 == Gewehr
@@ -13057,6 +13057,9 @@ Server votes
 
 Server-dependent
 == Serverabhängig
+
+Server-side ghost opacity during fast practice (%)
+== Deckkraft der Geister auf Serverseite während der Schnellübung (%)
 
 Set "Background color" and "Background opacity", then "Text color", "Selected text color" and "Selection background color"; a preview follows.
 == Hintergrundfarbe und Hintergrunddeckkraft einstellen, dann Textfarbe, Farbe des markierten Textes und Markierungsfarbe; eine Vorschau folgt.
@@ -14057,6 +14060,9 @@ Show server prompts and Echo messages as popups
 Show server settings
 == Server-Einstellungen anzeigen
 
+Show server-side tees as ghosts during fast practice
+== Zeigt Tees auf Serverseite während der Schnellübung als Geister
+
 Show settings card borders
 == Einstellungs-Kartenränder anzeigen
 
@@ -14263,9 +14269,6 @@ Show Y
 
 Show your current team
 == Eigenes aktuelles Team anzeigen
-
-Show your own main-world ghost during fast practice
-== Zeigt deinen eigenen Geist der Hauptwelt während der schnellen Übung
 
 Show zzz emoji next to afk players
 == Zeige zzz-Emoji neben AFK-Spielern
@@ -16493,8 +16496,8 @@ Tune variable to value or show current value
 Turn motion off on weaker machines; cards then open and scroll immediately.
 == Schalte die Bewegung auf schwächeren Rechnern ab; Karten öffnen und scrollen dann sofort.
 
-Turn off "Show main-world ghost" to hide the server-side Tee, set its opacity while it stays on, enable the timer, and bind the command rows you use.
-== Schalte „Geist der Hauptwelt anzeigen“ aus, um den Server-Tee zu verbergen; solange er an ist, kannst du seine Deckkraft einstellen, den Timer aktivieren und die genutzten Befehlzeilen belegen.
+Turn off "Show main-world ghost" to hide every Tee from the server, other players included; while it is on, the opacity slider sets how visible they are. The bind rows send the same commands as the practice menu, so a bound key needs no chat box.
+== Schalte „Geist der Hauptwelt anzeigen“ aus, um alle Tees vom Server auszublenden, andere Spieler eingeschlossen; solange es an ist, legt der Deckkraft-Regler ihre Sichtbarkeit fest. Die Bindezeilen senden dieselben Befehle wie das Übungsmenü, der Chat muss also nicht geöffnet werden.
 
 Turn on "Auto chat in water", type the "Chat message" you want, and optionally enable "Send emoticon in water" with its ID.
 == Aktiviere „Auto-Chat im Wasser", trage die gewünschte „Chatnachricht" ein und aktiviere bei Bedarf „Emoticon im Wasser senden" samt ID.
@@ -16687,9 +16690,6 @@ UI server address
 
 UI size percentage
 == UI-Größe (%)
-
-Un-solo
-== Solo aufheben
 
 Unable to delete %d selected items. The first failing item was '%s'.
 == %d ausgewählte Elemente konnten nicht gelöscht werden. Das erste fehlgeschlagene Element war '%s'.

@@ -864,7 +864,10 @@ bool CGameWorld::EmulateBug(int Bug) const
 
 void CGameWorld::CreatePredictedEvent(const CPredictedEvent &NewEvent)
 {
-	if(!g_Config.m_ClPredictEvents || !m_WorldConfig.m_PredictEvents)
+	// 只认世界配置：cl_predict_events 与服务器的 PREDICT_EVENTS 能力已经在
+	// m_WorldConfig.m_PredictEvents 里合成过一次。快速练习会为分支世界单独打开
+	// 这个开关（分支不消费服务器事件），这里再查一遍全局配置会把它挡掉。
+	if(!m_WorldConfig.m_PredictEvents)
 		return;
 
 	// prediction is ran multiple times per tick, check if event already exists
@@ -940,7 +943,8 @@ void CGameWorld::CreatePredictedExplosionEvent(vec2 Pos, int Id)
 
 void CGameWorld::CreatePredictedHammerHitEvent(vec2 Pos, int Id, int TargetId)
 {
-	if(!g_Config.m_ClPredictEvents || !m_WorldConfig.m_PredictEvents)
+	// 同上：世界配置已经包含用户开关，分支世界可以独立决定是否预测事件。
+	if(!m_WorldConfig.m_PredictEvents)
 		return;
 
 	CPredictedEvent Event(NETEVENTTYPE_HAMMERHIT, Pos, Id, GameTick(), TargetId);

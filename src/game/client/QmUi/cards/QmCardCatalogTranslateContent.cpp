@@ -43,14 +43,10 @@
 #include <cmath>
 #include <functional>
 #include <memory>
-#include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
 using namespace FontIcons;
-
-extern std::unordered_map<std::string, CBindSlot> g_CommandBindCache;
 
 void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float, bool PrewarmOnly)
 {

@@ -16,20 +16,34 @@
 #include <game/client/QmUi/cards/QmCardCatalogTClientInternal.h>
 #include <game/client/components/binds.h>
 #include <game/client/components/menus.h>
+#include <game/client/components/qmclient/bind_index.h>
 #include <game/client/gameclient.h>
 #include <game/client/qm_icon.h>
 #include <game/localization.h>
 
 #include <algorithm>
 #include <cmath>
-#include <optional>
-#include <string>
-#include <unordered_map>
 
 using namespace qm_tclient_cards;
 
-std::unordered_map<std::string, CBindSlot> g_CommandBindCache;
-bool g_CommandBindCacheInitialized = false;
+// 设置页所有绑定行共用的命令索引。定义放在这里而不是头文件里，卡片只通过
+// QmLookupCommandBind 访问，不各自持有副本。
+CCommandBindIndex &QmCommandBindIndex()
+{
+	static CCommandBindIndex s_Index;
+	return s_Index;
+}
+
+void QmRefreshCommandBindIndex(const CBinds &Binds)
+{
+	QmCommandBindIndex().EnsureFresh(Binds.Storage());
+}
+
+CBindSlot QmLookupCommandBind(const CBinds &Binds, const char *pCommand, bool *pExactMatch)
+{
+	QmRefreshCommandBindIndex(Binds);
+	return QmCommandBindIndex().Find(pCommand, pExactMatch);
+}
 
 void CMenus::RenderQmSettingsSliderWithValueInput(const void *pId, const CUIRect &ControlColumn, int *pValue, int MinValue, int MaxValue, const char *pSuffix, bool PrewarmOnly, unsigned Flags)
 {
@@ -162,10 +176,9 @@ void CMenus::RenderQmHudLabel(const char *pTextId, CUIRect *pRect, const char *p
 
 void CMenus::RenderQmHudKeyBindRow(CUIRect &Content, CButtonContainer &ReaderButton, CButtonContainer &ClearButton, const char *pLabel, const char *pCommand, float LineHeight, float BodySize, float LineSpacing, float LabelWidth)
 {
-	CBindSlot Bind(KEY_UNKNOWN, KeyModifier::NONE);
-	const auto CurrentBindIt = g_CommandBindCache.find(pCommand);
-	if(CurrentBindIt != g_CommandBindCache.end())
-		Bind = CurrentBindIt->second;
+	// 直接查绑定表：cfg 载入、控制台 bind、控制页改键都会在下一帧反映到这里，
+	// 不再依赖设置页首次打开时扫出的一份快照。
+	const CBindSlot Bind = QmLookupCommandBind(GameClient()->m_Binds, pCommand);
 
 	CUIRect BindRow, BindLabel, BindKey;
 	Content.HSplitTop(LineHeight, &BindRow, &Content);
@@ -178,14 +191,7 @@ void CMenus::RenderQmHudKeyBindRow(CUIRect &Content, CButtonContainer &ReaderBut
 		if(Bind.m_Key != KEY_UNKNOWN)
 			GameClient()->m_Binds.Bind(Bind.m_Key, "", false, Bind.m_ModifierMask);
 		if(Result.m_Bind.m_Key != KEY_UNKNOWN)
-		{
 			GameClient()->m_Binds.Bind(Result.m_Bind.m_Key, pCommand, false, Result.m_Bind.m_ModifierMask);
-			g_CommandBindCache.insert_or_assign(std::string(pCommand), Result.m_Bind);
-		}
-		else
-		{
-			g_CommandBindCache.erase(pCommand);
-		}
 	}
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
 }
@@ -233,32 +239,7 @@ int CMenus::DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(const void *pId, c
 bool CMenus::DoLine_KeyReader(CUIRect &View, CButtonContainer &ReaderButton, CButtonContainer &ClearButton, const char *pName, const char *pCommand, float BodySize)
 {
 	const float ResolvedBodySize = BodySize > 0.0f ? BodySize : CurrentSettingsContentMetrics().m_BodySize;
-	CBindSlot Bind(0, 0);
-	if(g_CommandBindCacheInitialized)
-	{
-		const auto It = g_CommandBindCache.find(pCommand);
-		if(It != g_CommandBindCache.end())
-			Bind = It->second;
-	}
-	else
-	{
-		for(int Mod = 0; Mod < KeyModifier::COMBINATION_COUNT; Mod++)
-		{
-			for(int KeyId = 0; KeyId < KEY_LAST; KeyId++)
-			{
-				const char *pBind = GameClient()->m_Binds.Get(KeyId, Mod);
-				if(!pBind[0])
-					continue;
-
-				if(str_comp(pBind, pCommand) == 0)
-				{
-					Bind.m_Key = KeyId;
-					Bind.m_ModifierMask = Mod;
-					break;
-				}
-			}
-		}
-	}
+	const CBindSlot Bind = QmLookupCommandBind(GameClient()->m_Binds, pCommand);
 
 	CUIRect KeyButton, KeyLabel;
 	View.HSplitTop(LineSize, &KeyButton, &View);
@@ -277,7 +258,6 @@ bool CMenus::DoLine_KeyReader(CUIRect &View, CButtonContainer &ReaderButton, CBu
 			GameClient()->m_Binds.Bind(Bind.m_Key, "", false, Bind.m_ModifierMask);
 		if(Result.m_Bind.m_Key != KEY_UNKNOWN)
 			GameClient()->m_Binds.Bind(Result.m_Bind.m_Key, pCommand, false, Result.m_Bind.m_ModifierMask);
-		g_CommandBindCacheInitialized = false;
 		return true;
 	}
 	return false;

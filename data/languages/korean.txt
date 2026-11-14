@@ -839,9 +839,6 @@ All remaining binds: scoreboard, spectating, console, screenshots, emoticon and 
 All sounds
 == 모든 사운드
 
-All weapons
-== 모든 무기
-
 Allow /map.
 == /map 허용.
 
@@ -5264,6 +5261,9 @@ Enter fast practice
 Enter Password
 == 비밀번호 입력
 
+Enter solo mode
+== 솔로 모드 들어가기
+
 Enter solo split mode
 == 솔로 스플릿 모드 시작
 
@@ -5410,6 +5410,9 @@ Exit fast practice
 
 Exit replay view
 == 리플레이 보기 종료
+
+Exit solo mode
+== 솔로 모드 나가기
 
 Exit spectating on both tees when either is hammered awake by another player
 == 어느 한 Tee가 다른 플레이어의 망치로 해동되면 두 Tee 모두 관전 해제
@@ -5656,9 +5659,6 @@ Fast keys for common dummy, aim and rescue actions: HDF, DF, 45-degree aim, jump
 
 Fast practice
 == 빠른 연습
-
-Fast practice runs a private copy of the map, so the server still sees you where you entered. The ghost above is that server-side you; other players are controlled by "Show others". Bind rows send the same commands as the practice menu, so a bound key never needs the chat box
-== 빠른 연습은 맵의 개인 복사본을 실행하므로 서버는 입장했던 위치의 당신을 봅니다. 위의 고스트가 바로 서버 쪽의 당신입니다. 다른 플레이어는 "다른 플레이어 표시" 설정을 따릅니다. 바인드 행은 연습 메뉴와 같은 명령을 보내므로 키를 지정하면 채팅창을 열 필요가 없습니다.
 
 Fast, lightweight blur with a softer approximation.
 == 빠르고 가벼운 블러로, 더 부드러운 근사 효과를 제공합니다.
@@ -6235,6 +6235,9 @@ Generated skin outline opacity
 
 Generated skin outline width
 == 생성된 외곽선 두께
+
+Get all weapons
+== 모든 무기 얻기
 
 Getting game info
 == 게임 정보를 가져오는 중
@@ -8306,9 +8309,6 @@ Main Tee and dummy
 Main-world ghost opacity
 == 메인 월드 고스트 불투명도
 
-Main-world ghost opacity during fast practice (%)
-== 빠른 연습 중 메인 월드 고스트 불투명도(%)
-
 Maintains the list of hostile players and groups plus the rules used to display them.
 == 적대 플레이어와 그룹 목록, 그리고 표시에 쓰이는 규칙을 관리합니다.
 
@@ -9842,8 +9842,8 @@ Only the selected tee changes, so switch to "Dummy" before editing the colors yo
 Only what you can't imagine, nothing Dream can't do
 == 상상할 수 없는 것만 있을 뿐, Dream 이 할 수 없는 것은 없습니다
 
-Only your copy of the world is simulated: other players still come from the server, so switches you hit do not affect them.
-== 시뮬레이션되는 것은 자신의 세계 복사본뿐입니다. 다른 플레이어는 여전히 서버에서 오므로 당신이 밟은 스위치는 그들에게 영향을 주지 않습니다.
+Only your own copy of the world is simulated: other players are server-side Tees, so switches you hit do not affect them. The ghost toggle and opacity apply to them too.
+== 시뮬레이션되는 것은 자신의 세계 복사본뿐입니다. 다른 플레이어는 서버 쪽 Tee이므로 당신이 밟은 스위치는 그들에게 영향을 주지 않습니다. 고스트 표시 전환과 불투명도는 그들에게도 적용됩니다.
 
 Opacity
 == 불투명도
@@ -11792,6 +11792,9 @@ Remove a type from the exclusion filter for a specific community
 remove a voting option
 == 투표 옵션 제거
 
+Remove all weapons
+== 모든 무기 제거
+
 Remove Bind
 == 바인드 제거
 
@@ -11836,9 +11839,6 @@ Remove war clan:
 
 Remove war name:
 == 전쟁 이름 제거:
-
-Remove weapons
-== 무기 제거
 
 Removed %s from friends
 == %s 님을 친구에서 제거했습니다
@@ -12221,9 +12221,6 @@ Restart
 Restart in x seconds (0 = abort)
 == x초 후 재시작 (0 = 중단)
 
-Restart practice world
-== 연습 세계 다시 시작
-
 Restart the client
 == 클라이언트 재시작
 
@@ -12301,6 +12298,9 @@ Review the entries and change only what you understand; defaults are tuned for n
 
 Reviews configuration values that differ from their defaults and resets them.
 == 기본값과 다른 설정 값을 검토하고 초기화합니다.
+
+Rewind practice world
+== 연습 세계 되돌리기
 
 Rifle
 == 라이플
@@ -13057,6 +13057,9 @@ Server votes
 
 Server-dependent
 == 서버에 따라 다름
+
+Server-side ghost opacity during fast practice (%)
+== 빠른 연습 중 서버 쪽 고스트 불투명도 (%)
 
 Set "Background color" and "Background opacity", then "Text color", "Selected text color" and "Selection background color"; a preview follows.
 == 배경색과 배경 불투명도를 설정한 뒤 글자색, 선택 글자색, 선택 배경색을 정합니다. 아래에 미리보기가 나옵니다.
@@ -14057,6 +14060,9 @@ Show server prompts and Echo messages as popups
 Show server settings
 == 서버 설정 보기
 
+Show server-side tees as ghosts during fast practice
+== 빠른 연습 중 서버 쪽 Tee를 고스트로 표시합니다
+
 Show settings card borders
 == 설정 카드 테두리 표시
 
@@ -14263,9 +14269,6 @@ Show Y
 
 Show your current team
 == 현재 팀 보기
-
-Show your own main-world ghost during fast practice
-== 빠른 연습 중 메인 월드의 내 고스트를 표시합니다
 
 Show zzz emoji next to afk players
 == 자리 비움 플레이어 옆에 zzz 이모지 표시
@@ -16493,8 +16496,8 @@ Tune variable to value or show current value
 Turn motion off on weaker machines; cards then open and scroll immediately.
 == 성능이 낮은 환경에서는 움직임을 끄세요. 그러면 카드가 즉시 열리고 스크롤도 바로 됩니다.
 
-Turn off "Show main-world ghost" to hide the server-side Tee, set its opacity while it stays on, enable the timer, and bind the command rows you use.
-== "메인 월드 고스트 표시"를 끄면 서버 쪽 Tee가 숨겨집니다. 켜 둔 상태에서는 불투명도를 조절하고, 타이머를 켜고, 사용하는 명령 행에 키를 지정할 수 있습니다.
+Turn off "Show main-world ghost" to hide every Tee from the server, other players included; while it is on, the opacity slider sets how visible they are. The bind rows send the same commands as the practice menu, so a bound key needs no chat box.
+== "메인 월드 고스트 표시"를 끄면 다른 플레이어를 포함해 서버에서 오는 모든 Tee가 숨겨집니다. 켜 둔 상태에서는 불투명도 슬라이더로 보이는 정도를 정할 수 있습니다. 바인드 행은 연습 메뉴와 같은 명령을 보내므로 채팅창을 열 필요가 없습니다.
 
 Turn on "Auto chat in water", type the "Chat message" you want, and optionally enable "Send emoticon in water" with its ID.
 == "물에 빠지면 자동 채팅"을 켜고 보낼 "채팅 메시지"를 입력한 뒤, 원하면 "물에 빠지면 이모티콘 보내기"와 이모티콘 ID를 설정하세요.
@@ -16687,9 +16690,6 @@ UI server address
 
 UI size percentage
 == UI 크기 백분율
-
-Un-solo
-== solo 해제
 
 Unable to delete %d selected items. The first failing item was '%s'.
 == %d개의 선택된 항목을 삭제할 수 없습니다. 첫 번째 실패 항목은 '%s'입니다.

@@ -553,8 +553,8 @@ namespace
 		{
 			"qm:fast_practice",
 			Localizable("Runs your own copy of the map while the server keeps your real Tee where you entered, with a run timer and keys for the practice commands."),
-			Localizable("Turn off \"Show main-world ghost\" to hide the server-side Tee, set its opacity while it stays on, enable the timer, and bind the command rows you use."),
-			Localizable("Only your copy of the world is simulated: other players still come from the server, so switches you hit do not affect them."),
+			Localizable("Turn off \"Show main-world ghost\" to hide every Tee from the server, other players included; while it is on, the opacity slider sets how visible they are. The bind rows send the same commands as the practice menu, so a bound key needs no chat box."),
+			Localizable("Only your own copy of the world is simulated: other players are server-side Tees, so switches you hit do not affect them. The ghost toggle and opacity apply to them too."),
 		},
 		{
 			"qm:focus_mode",

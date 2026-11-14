@@ -220,6 +220,55 @@ TEST(QmFastPracticePauseShift, ShiftedEventsDoNotBurstOnTheFirstResumedTick)
 	EXPECT_EQ(vPlayed, (std::vector<int>{1}));
 }
 
+TEST(QmFastPracticeEventBarrier, AllowsOnlyTicksAfterTheBarrier)
+{
+	EXPECT_TRUE(QmPracticeTickAllowsPredictedEvents(106, 105));
+	EXPECT_FALSE(QmPracticeTickAllowsPredictedEvents(105, 105));
+	EXPECT_FALSE(QmPracticeTickAllowsPredictedEvents(104, 105));
+	EXPECT_TRUE(QmPracticeTickAllowsPredictedEvents(0, -1));
+}
+
+TEST(QmFastPracticeEventBarrier, ReplayedTicksNeverPlayTheSameShotTwice)
+{
+	// 分支世界在 tick 100/101 各开一枪并播放，随后重新 fork 从 tick 100 重算。
+	// 重算区间已经播过，声学上必须是静默的，只有新 tick 才发一次。
+	int BarrierTick = -1;
+	std::vector<CGameWorld::CPredictedEvent> vQueue;
+	std::vector<int> vPlayed;
+	const auto Play = [&vPlayed](const CGameWorld::CPredictedEvent &Predicted) {
+		vPlayed.push_back(Predicted.m_Tick);
+		return true;
+	};
+	const auto StepTick = [&](int Tick) {
+		if(QmPracticeTickAllowsPredictedEvents(Tick, BarrierTick))
+			vQueue.push_back(Event(7, Tick));
+		QmProcessPredictedEvents(vQueue, Tick, SERVER_TICK_SPEED, Play);
+		BarrierTick = std::max(BarrierTick, Tick);
+	};
+
+	StepTick(100);
+	StepTick(101);
+	EXPECT_EQ(vPlayed, (std::vector<int>{100, 101}));
+
+	// 重新 fork：新世界带着服务器世界的旧队列，重复事件去重没有依据。
+	QmResetPracticePredictedEvents(vQueue);
+	EXPECT_TRUE(vQueue.empty());
+	BarrierTick = 101;
+	StepTick(100);
+	StepTick(101);
+	StepTick(102);
+	EXPECT_EQ(vPlayed, (std::vector<int>{100, 101, 102}));
+}
+
+TEST(QmFastPracticeEventBarrier, RestartDropsEventsOfTheDiscardedTimeline)
+{
+	// 重开练习世界带回快照初刻的队列，这些 tick 已经被屏障盖过。
+	std::vector<CGameWorld::CPredictedEvent> vEvents = {Event(1, 100), Event(2, 104), Event(3, 105), Event(4, 106)};
+	QmDropPracticePredictedEventsUntil(vEvents, 105);
+	ASSERT_EQ(vEvents.size(), 1u);
+	EXPECT_EQ(vEvents[0].m_Tick, 106);
+}
+
 TEST(QmFastPracticeRecordFilter, AcceptsVisualAndSoundEventsThatPlaybackWouldShow)
 {
 	// 特效类事件与音效开关无关，总是录制。

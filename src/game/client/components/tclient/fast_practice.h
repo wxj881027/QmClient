@@ -55,6 +55,9 @@ public:
 	bool ForcePredictPlayers() const;
 	void InvalidateBufferedInputState();
 	bool IsPracticeParticipant(int ClientId) const;
+	// 非参与者都停在服务器时间线上，练习期间只作画面参照物。影子开关和
+	// 不透明度统一管这一整组，不是只管自己的主世界影子。
+	float ServerTeeAlpha(int ClientId, float DefaultAlpha) const;
 	int CurrentPracticeDummyId() const;
 	bool IsPracticeDummy(int ClientId) const;
 	int PracticeDummyId() const;
@@ -143,6 +146,9 @@ private:
 	CPracticeRecorder m_Recorder;
 	bool m_SuppressFireOnNextPredictTick = false;
 	int m_InputSuppressTicks = 0;
+	// 分支世界已经创建并消费过预测事件的最高 tick。重新 fork 会重算一段已播过的
+	// tick，屏障让这些 tick 不再创建开火声/特效，避免同一次射击播两遍。
+	int m_EventBarrierTick = -1;
 	// 角色/输入解析瞬态失败的连续 tick 数；服务器重进、分身重连期间不立刻退出。
 	int m_TransientFailureTicks = 0;
 	int m_LastResolvedLocalClientId = -1;

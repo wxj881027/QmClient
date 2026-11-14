@@ -59,6 +59,7 @@
 #include <game/client/components/console.h>
 #include <game/client/components/key_binder.h>
 #include <game/client/components/menu_background.h>
+#include <game/client/components/qmclient/bind_index.h>
 #include <game/client/components/qmclient/demo_display.h>
 #include <game/client/components/qmclient/demo_ui.h>
 #include <game/client/components/qmclient/map_history_ui.h>
@@ -4191,27 +4192,9 @@ void CMenus::OnInit()
 
 void CMenus::EnsureSettingsBindCache()
 {
-	// NOLINTNEXTLINE(readability-identifier-naming)
-	extern std::unordered_map<std::string, CBindSlot> g_CommandBindCache;
-	// NOLINTNEXTLINE(readability-identifier-naming)
-	extern bool g_CommandBindCacheInitialized;
-
-	if(g_CommandBindCacheInitialized)
-		return;
-
-	g_CommandBindCache.clear();
-	g_CommandBindCache.reserve(64);
-	for(int Mod = 0; Mod < KeyModifier::COMBINATION_COUNT; ++Mod)
-	{
-		for(int KeyId = 0; KeyId < KEY_LAST; ++KeyId)
-		{
-			const char *pBind = GameClient()->m_Binds.Get(KeyId, Mod);
-			if(!pBind[0])
-				continue;
-			g_CommandBindCache.try_emplace(pBind, KeyId, Mod);
-		}
-	}
-	g_CommandBindCacheInitialized = true;
+	// 绑定索引自带版本校验：设置页提前建好索引，之后每次查询只在 Revision
+	// 变化时重建，cfg 载入与控制台 bind 都能被下一次绘制看到。
+	QmRefreshCommandBindIndex(GameClient()->m_Binds);
 }
 
 void CMenus::PrewarmSettingsPages()

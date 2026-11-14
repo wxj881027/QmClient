@@ -91,7 +91,7 @@ inline constexpr SKnownBindAction s_aKnownBindActions[] = {
 	{EBindOptionGroup::MISCELLANEOUS, Localizable("Fast practice"), "fast_practice_toggle"},
 	{EBindOptionGroup::MISCELLANEOUS, Localizable("Enter fast practice"), "fast_practice_enter"},
 	{EBindOptionGroup::MISCELLANEOUS, Localizable("Exit fast practice"), "fast_practice_exit"},
-	{EBindOptionGroup::MISCELLANEOUS, Localizable("Restart practice world"), "practice_restart",
+	{EBindOptionGroup::MISCELLANEOUS, Localizable("Rewind practice world"), "practice_restart",
 		Localizable("Restore the practice world to the state it had when fast practice was enabled. The recorded line is kept and a new segment is started.")},
 	{EBindOptionGroup::MISCELLANEOUS, Localizable("Set practice respawn point"), "practice_set_checkpoint",
 		Localizable("Store the current tee state (position, weapons, jumps and movement state) as the practice respawn point.")},

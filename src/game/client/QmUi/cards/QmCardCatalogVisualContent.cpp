@@ -26,6 +26,7 @@
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/binds.h>
+#include <game/client/components/qmclient/bind_index.h>
 #include <game/client/components/menus.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/qmclient/qm_music_hook_registry.h>
@@ -43,13 +44,9 @@
 #include <cmath>
 #include <functional>
 #include <memory>
-#include <string>
-#include <unordered_map>
 #include <vector>
 
 using namespace FontIcons;
-
-extern std::unordered_map<std::string, CBindSlot> g_CommandBindCache;
 
 void CMenus::RenderQmVisualStreamerContent(CUIRect &Content, float LineHeight, float LineSpacing)
 {
@@ -533,21 +530,14 @@ void CMenus::RenderQmVisualFocusModeContent(CUIRect &Content, float LineHeight, 
 	CUIRect BindLabel, BindKey;
 	SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &BindLabel, &BindKey);
 	RenderQmVisualLabel("qmclient-focus-mode-key", &BindLabel, Localize("Zen mode key"), BodySize);
-	CBindSlot FocusBind(KEY_UNKNOWN, KeyModifier::NONE);
-	if(const auto FocusIt = g_CommandBindCache.find("toggle qm_focus_mode 0 1"); FocusIt != g_CommandBindCache.end())
-		FocusBind = FocusIt->second;
+	const CBindSlot FocusBind = QmLookupCommandBind(GameClient()->m_Binds, "toggle qm_focus_mode 0 1");
 	const auto Result = GameClient()->m_KeyBinder.DoKeyReader(&s_ReaderButtonFocusToggle, &s_ClearButtonFocusToggle, &BindKey, FocusBind, false);
 	if(Flow.Input() && !Ui()->RenderOnly() && Result.m_Bind != FocusBind)
 	{
 		if(FocusBind.m_Key != KEY_UNKNOWN)
 			GameClient()->m_Binds.Bind(FocusBind.m_Key, "", false, FocusBind.m_ModifierMask);
 		if(Result.m_Bind.m_Key != KEY_UNKNOWN)
-		{
 			GameClient()->m_Binds.Bind(Result.m_Bind.m_Key, "toggle qm_focus_mode 0 1", false, Result.m_Bind.m_ModifierMask);
-			g_CommandBindCache.insert_or_assign(std::string("toggle qm_focus_mode 0 1"), Result.m_Bind);
-		}
-		else
-			g_CommandBindCache.erase("toggle qm_focus_mode 0 1");
 	}
 }
 

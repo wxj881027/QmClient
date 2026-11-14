@@ -839,9 +839,6 @@ All remaining binds: scoreboard, spectating, console, screenshots, emoticon and 
 All sounds
 == Tüm sesler
 
-All weapons
-== Tüm silahlar
-
 Allow /map.
 == /map komutuna izin ver.
 
@@ -5264,6 +5261,9 @@ Enter fast practice
 Enter Password
 == Şifre Gir
 
+Enter solo mode
+== Solo moduna gir
+
 Enter solo split mode
 == Solo bölme moduna gir
 
@@ -5410,6 +5410,9 @@ Exit fast practice
 
 Exit replay view
 == Demo görünümünden çık
+
+Exit solo mode
+== Solo modundan çık
 
 Exit spectating on both tees when either is hammered awake by another player
 == Başka bir oyuncu birini çekiçle çözdüğünde iki Tee de seyirci modundan çıksın
@@ -5656,9 +5659,6 @@ Fast keys for common dummy, aim and rescue actions: HDF, DF, 45-degree aim, jump
 
 Fast practice
 == Hızlı antrenman
-
-Fast practice runs a private copy of the map, so the server still sees you where you entered. The ghost above is that server-side you; other players are controlled by "Show others". Bind rows send the same commands as the practice menu, so a bound key never needs the chat box
-== Hızlı pratik haritanın özel bir kopyasını çalıştırır, bu yüzden sunucu sizi girdiğiniz yerde görmeye devam eder. Yukarıdaki hayalet sunucu tarafındaki sizsiniz; diğer oyuncuları "Diğerlerini göster" ayarı yönetir. Kısayol satırları pratik menüsüyle aynı komutları gönderir, yani atanmış bir tuş sohbet kutusuna hiç ihtiyaç duymaz.
 
 Fast, lightweight blur with a softer approximation.
 == Daha yumuşak bir yaklaşıma sahip hızlı ve hafif bulanıklık.
@@ -6235,6 +6235,9 @@ Generated skin outline opacity
 
 Generated skin outline width
 == Oluşturulan dış çizgi genişliği
+
+Get all weapons
+== Tüm silahları al
 
 Getting game info
 == Oyun bilgisi alınıyor
@@ -8306,9 +8309,6 @@ Main Tee and dummy
 Main-world ghost opacity
 == Ana dünya hayaleti opaklığı
 
-Main-world ghost opacity during fast practice (%)
-== Hızlı pratik sırasında ana dünya hayaletinin opaklığı (%)
-
 Maintains the list of hostile players and groups plus the rules used to display them.
 == Düşman oyuncuların ve grupların listesini, bunların görünüm kurallarıyla birlikte yönetir.
 
@@ -9842,8 +9842,8 @@ Only the selected tee changes, so switch to "Dummy" before editing the colors yo
 Only what you can't imagine, nothing Dream can't do
 == Hayal edemediğin şeyler dışında, Dream'in yapamayacağı hiçbir şey yok
 
-Only your copy of the world is simulated: other players still come from the server, so switches you hit do not affect them.
-== Yalnızca sizin dünya kopyanız simüle edilir: diğer oyuncular hâlâ sunucudan gelir, bu yüzden bastığınız anahtarlar onları etkilemez.
+Only your own copy of the world is simulated: other players are server-side Tees, so switches you hit do not affect them. The ghost toggle and opacity apply to them too.
+== Yalnızca kendi dünya kopyanız simüle edilir: diğer oyuncular sunucu tarafındaki Tee'lerdir, bu yüzden bastığınız anahtarlar onları etkilemez. Hayalet düğmesi ve opaklık onlara da uygulanır.
 
 Opacity
 == Opaklık
@@ -11792,6 +11792,9 @@ Remove a type from the exclusion filter for a specific community
 remove a voting option
 == Bir oylama seçeneğini kaldır
 
+Remove all weapons
+== Tüm silahları kaldır
+
 Remove Bind
 == Bind'i Kaldır
 
@@ -11836,9 +11839,6 @@ Remove war clan:
 
 Remove war name:
 == Savaş ismini kaldır:
-
-Remove weapons
-== Silahları kaldır
 
 Removed %s from friends
 == %s arkadaşlardan kaldırıldı
@@ -12221,9 +12221,6 @@ Restart
 Restart in x seconds (0 = abort)
 == x saniye içinde yeniden başlat (0 = iptal)
 
-Restart practice world
-== Pratik dünyasını yeniden başlat
-
 Restart the client
 == İstemciyi yeniden başlat
 
@@ -12301,6 +12298,9 @@ Review the entries and change only what you understand; defaults are tuned for n
 
 Reviews configuration values that differ from their defaults and resets them.
 == Varsayılanlarından farklı yapılandırma değerlerini gözden geçirir ve sıfırlar.
+
+Rewind practice world
+== Pratik dünyasını geri sar
 
 Rifle
 == Tüfek
@@ -13057,6 +13057,9 @@ Server votes
 
 Server-dependent
 == Sunucuya bağlı
+
+Server-side ghost opacity during fast practice (%)
+== Hızlı pratik sırasında sunucu tarafı hayalet opaklığı (%)
 
 Set "Background color" and "Background opacity", then "Text color", "Selected text color" and "Selection background color"; a preview follows.
 == Arka plan rengini ve arka plan saydamlığını, ardından metin rengi, seçili metin rengi ve seçim arka plan rengini ayarlayın; altında önizleme görünür.
@@ -14057,6 +14060,9 @@ Show server prompts and Echo messages as popups
 Show server settings
 == Sunucu ayarlarını göster
 
+Show server-side tees as ghosts during fast practice
+== Hızlı pratik sırasında sunucu tarafındaki Tee'leri hayalet olarak gösterir
+
 Show settings card borders
 == Ayar kartı kenarlıklarını göster
 
@@ -14263,9 +14269,6 @@ Show Y
 
 Show your current team
 == Geçerli takımını göster
-
-Show your own main-world ghost during fast practice
-== Hızlı pratik sırasında ana dünyadaki kendi hayaletini gösterir
 
 Show zzz emoji next to afk players
 == AFK oyuncuların yanında zzz emojisini göster
@@ -16493,8 +16496,8 @@ Tune variable to value or show current value
 Turn motion off on weaker machines; cards then open and scroll immediately.
 == Zayıf makinelerde hareketi kapatın; kartlar o zaman hemen açılır ve kaydırılır.
 
-Turn off "Show main-world ghost" to hide the server-side Tee, set its opacity while it stays on, enable the timer, and bind the command rows you use.
-== Sunucu tarafındaki Tee'yi gizlemek için "Ana dünya hayaletini göster"i kapatın; açıkken opaklığını ayarlayabilir, zamanlayıcıyı açabilir ve kullandığınız komut satırlarına tuş atayabilirsiniz.
+Turn off "Show main-world ghost" to hide every Tee from the server, other players included; while it is on, the opacity slider sets how visible they are. The bind rows send the same commands as the practice menu, so a bound key needs no chat box.
+== "Ana dünya hayaletini göster"i kapatınca diğer oyuncular dahil sunucudan gelen tüm Tee'ler gizlenir; açıkken opaklık kaydırıcısı ne kadar görüneceklerini belirler. Bağlantı satırları pratik menüsüyle aynı komutları gönderir, sohbet penceresini açmanız gerekmez.
 
 Turn on "Auto chat in water", type the "Chat message" you want, and optionally enable "Send emoticon in water" with its ID.
 == "Suda otomatik sohbet"i aç, istediğin "Sohbet mesajı"nı yaz ve istersen "Suda ifade gönder"i ID'siyle etkinleştir.
@@ -16687,9 +16690,6 @@ UI server address
 
 UI size percentage
 == UI boyut yüzdesi
-
-Un-solo
-== Solo'yu kaldır
 
 Unable to delete %d selected items. The first failing item was '%s'.
 == %d seçili öğe silinemiyor. İlk başarısız öğe '%s'.

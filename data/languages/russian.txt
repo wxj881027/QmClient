@@ -839,9 +839,6 @@ All remaining binds: scoreboard, spectating, console, screenshots, emoticon and 
 All sounds
 == Все звуки
 
-All weapons
-== Всё оружие
-
 Allow /map.
 == Разрешить /map.
 
@@ -5264,6 +5261,9 @@ Enter fast practice
 Enter Password
 == Введите пароль
 
+Enter solo mode
+== Войти в режим соло
+
 Enter solo split mode
 == Войти в режим соло-разделения
 
@@ -5410,6 +5410,9 @@ Exit fast practice
 
 Exit replay view
 == Выйти из просмотра реплея
+
+Exit solo mode
+== Выйти из режима соло
 
 Exit spectating on both tees when either is hammered awake by another player
 == Выходить из наблюдения обоими Tee, когда другой игрок размораживает любого из них молотком
@@ -5656,9 +5659,6 @@ Fast keys for common dummy, aim and rescue actions: HDF, DF, 45-degree aim, jump
 
 Fast practice
 == Быстрая тренировка
-
-Fast practice runs a private copy of the map, so the server still sees you where you entered. The ghost above is that server-side you; other players are controlled by "Show others". Bind rows send the same commands as the practice menu, so a bound key never needs the chat box
-== Быстрая практика запускает личную копию карты, поэтому сервер по-прежнему видит вас там, где вы вошли. Призрак выше — это вы на стороне сервера; другие игроки управляются настройкой «Показать других». Строки привязок отправляют те же команды, что и меню практики, так что назначенной клавише не нужен чат.
 
 Fast, lightweight blur with a softer approximation.
 == Быстрое и лёгкое размытие с более мягким приближением.
@@ -6235,6 +6235,9 @@ Generated skin outline opacity
 
 Generated skin outline width
 == Ширина сгенерированной обводки
+
+Get all weapons
+== Получить всё оружие
 
 Getting game info
 == Получение информации об игре
@@ -8306,9 +8309,6 @@ Main Tee and dummy
 Main-world ghost opacity
 == Непрозрачность призрака основного мира
 
-Main-world ghost opacity during fast practice (%)
-== Непрозрачность призрака основного мира во время быстрой практики (%)
-
 Maintains the list of hostile players and groups plus the rules used to display them.
 == Ведёт список враждебных игроков и групп, а также правила их отображения.
 
@@ -9842,8 +9842,8 @@ Only the selected tee changes, so switch to "Dummy" before editing the colors yo
 Only what you can't imagine, nothing Dream can't do
 == Только то, что вы не можете себе представить, нет ничего, что Dream не может сделать
 
-Only your copy of the world is simulated: other players still come from the server, so switches you hit do not affect them.
-== Симулируется только ваша копия мира: другие игроки по-прежнему приходят с сервера, поэтому включатели, которые вы нажали, на них не влияют.
+Only your own copy of the world is simulated: other players are server-side Tees, so switches you hit do not affect them. The ghost toggle and opacity apply to them too.
+== Симулируется только ваша копия мира: другие игроки — это ти на стороне сервера, поэтому включатели, которые вы нажали, на них не влияют. Переключатель призраков и непрозрачность действуют и на них.
 
 Opacity
 == Прозрачность
@@ -11792,6 +11792,9 @@ Remove a type from the exclusion filter for a specific community
 remove a voting option
 == удалить вариант голосования
 
+Remove all weapons
+== Убрать всё оружие
+
 Remove Bind
 == Удалить привязку
 
@@ -11836,9 +11839,6 @@ Remove war clan:
 
 Remove war name:
 == Удалить враждебное имя:
-
-Remove weapons
-== Убрать оружие
 
 Removed %s from friends
 == %s удален из друзей
@@ -12221,9 +12221,6 @@ Restart
 Restart in x seconds (0 = abort)
 == Перезапуск через x секунд (0 = отмена)
 
-Restart practice world
-== Перезапустить мир практики
-
 Restart the client
 == Перезапустить клиент
 
@@ -12301,6 +12298,9 @@ Review the entries and change only what you understand; defaults are tuned for n
 
 Reviews configuration values that differ from their defaults and resets them.
 == Показывает настройки, отличающиеся от значений по умолчанию, и сбрасывает их.
+
+Rewind practice world
+== Откатить мир практики
 
 Rifle
 == Винтовка
@@ -13057,6 +13057,9 @@ Server votes
 
 Server-dependent
 == Зависит от сервера
+
+Server-side ghost opacity during fast practice (%)
+== Непрозрачность призраков на стороне сервера во время быстрой практики (%)
 
 Set "Background color" and "Background opacity", then "Text color", "Selected text color" and "Selection background color"; a preview follows.
 == Задайте цвет фона и непрозрачность фона, затем цвет текста, цвет выделенного текста и цвет фона выделения; ниже есть предпросмотр.
@@ -14057,6 +14060,9 @@ Show server prompts and Echo messages as popups
 Show server settings
 == Показать настройки сервера
 
+Show server-side tees as ghosts during fast practice
+== Показывать ти на стороне сервера как призраков во время быстрой практики
+
 Show settings card borders
 == Показывать границы карточек настроек
 
@@ -14263,9 +14269,6 @@ Show Y
 
 Show your current team
 == Показать свою текущую команду
-
-Show your own main-world ghost during fast practice
-== Показывать призрак себя в основном мире во время быстрой практики
 
 Show zzz emoji next to afk players
 == Показывать эмодзи zzz рядом с AFK-игроками
@@ -16493,8 +16496,8 @@ Tune variable to value or show current value
 Turn motion off on weaker machines; cards then open and scroll immediately.
 == На слабых машинах отключите анимацию: карточки будут открываться и прокручиваться мгновенно.
 
-Turn off "Show main-world ghost" to hide the server-side Tee, set its opacity while it stays on, enable the timer, and bind the command rows you use.
-== Отключите «Показывать призрак основного мира», чтобы скрыть ти на стороне сервера; пока призрак включён, можно настроить его непрозрачность, включить таймер и назначить клавиши нужным строкам команд.
+Turn off "Show main-world ghost" to hide every Tee from the server, other players included; while it is on, the opacity slider sets how visible they are. The bind rows send the same commands as the practice menu, so a bound key needs no chat box.
+== Отключите «Показывать призрак основного мира», чтобы скрыть все ти, приходящие с сервера, включая других игроков; пока призрак включён, ползунок непрозрачности задаёт их видимость. Строки привязок отправляют те же команды, что и меню практики, поэтому открывать чат не нужно.
 
 Turn on "Auto chat in water", type the "Chat message" you want, and optionally enable "Send emoticon in water" with its ID.
 == Включите «Автосообщение при падении в воду», впишите нужное «Сообщение в чат» и при желании включите «Отправлять эмоцию» с её ID.
@@ -16687,9 +16690,6 @@ UI server address
 
 UI size percentage
 == Размер UI (%)
-
-Un-solo
-== Отменить solo
 
 Unable to delete %d selected items. The first failing item was '%s'.
 == Не удалось удалить %d выбранных элементов. Первый неудачный элемент: «%s».

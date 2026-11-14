@@ -285,7 +285,6 @@ All maps
 All players
 All remaining binds: scoreboard, spectating, console, screenshots, emoticon and practice tools.
 All sounds
-All weapons
 Allow /map.
 Allow /rescue command to teleport out of freeze (only applies in initial config)
 Allow arbitrary game resolution when scaling (may cause issues on Windows)
@@ -1807,6 +1806,7 @@ Enter /practice mode or restart to avoid the entire team being killed in 60 seco
 Enter a CP number from 1 to 255.
 Enter fast practice
 Enter Password
+Enter solo mode
 Enter solo split mode
 Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
 Enter the Steam client program path, without command arguments
@@ -1859,6 +1859,7 @@ Existing Player
 Exit and install
 Exit fast practice
 Exit replay view
+Exit solo mode
 Exit spectating on both tees when either is hammered awake by another player
 Expand
 Expand console
@@ -1947,7 +1948,6 @@ Fast input changes how inputs are timed, so disable it if a server reports unusu
 Fast input others
 Fast keys for common dummy, aim and rescue actions: HDF, DF, 45-degree aim, jumps and the trajectory line.
 Fast practice
-Fast practice runs a private copy of the map, so the server still sees you where you entered. The ghost above is that server-side you; other players are controlled by "Show others". Bind rows send the same commands as the practice menu, so a bound key never needs the chat box
 Fast, lightweight blur with a softer approximation.
 Faster export playback
 Faster presets encode quicker but produce larger files
@@ -2149,6 +2149,7 @@ General DDNet gameplay display: showing other players and their shadow opacity, 
 Generated skin outline color
 Generated skin outline opacity
 Generated skin outline width
+Get all weapons
 Getting game info
 Getting server list from master server
 Ghost
@@ -2871,7 +2872,6 @@ Main Tee
 Main Tee and dummy
 Main view
 Main-world ghost opacity
-Main-world ghost opacity during fast practice (%)
 Maintains the list of hostile players and groups plus the rules used to display them.
 Make frozen players look more like volleyballs (0=Disabled, 1=Only volleyball maps, 2=Always)
 Make press event
@@ -3417,7 +3417,7 @@ Only show when the other Tee is not on screen
 Only show with this nickname
 Only the selected tee changes, so switch to "Dummy" before editing the colors you want on your dummy.
 Only what you can't imagine, nothing Dream can't do
-Only your copy of the world is simulated: other players still come from the server, so switches you hit do not affect them.
+Only your own copy of the world is simulated: other players are server-side Tees, so switches you hit do not affect them. The ghost toggle and opacity apply to them too.
 Opacity
 Opacity of entity layers on the map such as death, freeze, unfreeze, teleport, checkpoint and switch tiles.
 Opacity of freeze bars inside freeze
@@ -4081,6 +4081,7 @@ Remove a server from favorites
 Remove a skin from the favorites
 Remove a type from the exclusion filter for a specific community
 remove a voting option
+Remove all weapons
 Remove Bind
 Remove chat
 Remove friend
@@ -4096,7 +4097,6 @@ Remove team clan:
 Remove team name:
 Remove war clan:
 Remove war name:
-Remove weapons
 Removed %s from friends
 Removes all bindwheel binds
 Removes all chat binds
@@ -4228,7 +4228,6 @@ Resource preview VRAM budget override (MB, 0=auto)
 Resource preview VRAM budget percentage (based on device local VRAM budget)
 Restart
 Restart in x seconds (0 = abort)
-Restart practice world
 Restart the client
 Restarting. Please wait…
 Restore a recently used Tee skin
@@ -4256,6 +4255,7 @@ Review and edit custom key bindings
 Review and reset changed configuration values
 Review the entries and change only what you understand; defaults are tuned for normal play.
 Reviews configuration values that differ from their defaults and resets them.
+Rewind practice world
 Rifle
 Rifle Laser Inner Color
 Rifle laser inner color
@@ -4517,6 +4517,7 @@ Server type (novice, moderate, etc.)
 Server URL
 Server votes
 Server-dependent
+Server-side ghost opacity during fast practice (%)
 Set "Background color" and "Background opacity", then "Text color", "Selected text color" and "Selection background color"; a preview follows.
 Set "Button - Disabled" and "Button - Enabled" for the button, then "Menu background" and the two menu option rows for the popup.
 Set "Display mode" to "Show on key" or "Always show", then pick "Pistol guide line" and "Predict ninja path", plus color, "Line width" and "Opacity".
@@ -4853,6 +4854,7 @@ Show server chat messages
 Show server help and usage messages
 Show server prompts and Echo messages as popups
 Show server settings
+Show server-side tees as ghosts during fast practice
 Show settings card borders
 Show short server names in browser (applies to China community servers)
 Show skin date and author
@@ -4922,7 +4924,6 @@ Show Workshop Assets
 Show X
 Show Y
 Show your current team
-Show your own main-world ghost during fast practice
 Show zzz emoji next to afk players
 Showing players from other teams is disabled
 Showing the checkpoint times for '%s' with a race time of %s
@@ -5692,7 +5693,7 @@ Tune in zone a variable to value
 Tune variable to value
 Tune variable to value or show current value
 Turn motion off on weaker machines; cards then open and scroll immediately.
-Turn off "Show main-world ghost" to hide the server-side Tee, set its opacity while it stays on, enable the timer, and bind the command rows you use.
+Turn off "Show main-world ghost" to hide every Tee from the server, other players included; while it is on, the opacity slider sets how visible they are. The bind rows send the same commands as the practice menu, so a bound key needs no chat box.
 Turn on "Auto chat in water", type the "Chat message" you want, and optionally enable "Send emoticon in water" with its ID.
 Turn on "Auto translate received messages", pick a "Translation service", set "Translate received messages to", then press "Test translation".
 Turn on "Automatically record demos" or a screenshot option, set "Max demos" or "Max Screenshots", and fill "Demo directory" or "Screenshot directory" to move the files.
@@ -5757,7 +5758,6 @@ UI rounded corner segments (even numbers recommended)
 UI scale
 UI server address
 UI size percentage
-Un-solo
 Unable to delete %d selected items. The first failing item was '%s'.
 Unable to delete skin
 Unable to delete the demo '%s'

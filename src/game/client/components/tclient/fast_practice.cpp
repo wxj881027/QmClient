@@ -274,6 +274,8 @@ void CFastPractice::ResetPracticeState()
 	m_Enabled = false;
 	m_RequireDummy = false;
 	m_PracticeRunTicks = 0;
+	// 下一次进入练习是新的分支时间线，事件屏障从零开始。
+	m_EventBarrierTick = -1;
 	m_EnableLocalConn = -1;
 	m_EnableLocalClientId = -1;
 	m_EnableDummyClientId = -1;
@@ -470,6 +472,19 @@ bool CFastPractice::IsPracticeParticipant(int ClientId) const
 	return ClientId == m_EnableLocalClientId || (m_EnableDummyClientId >= 0 && ClientId == m_EnableDummyClientId);
 }
 
+float CFastPractice::ServerTeeAlpha(int ClientId, float DefaultAlpha) const
+{
+	// 参与者渲染的是分支世界里的自己，必须保持原样；其余客户端（包括其他玩家）
+	// 的位置全部来自服务器快照，属于同一条"主世界"时间线。
+	if(!m_Enabled || ClientId < 0 || GameClient()->m_Snap.m_SpecInfo.m_Active || IsPracticeParticipant(ClientId))
+		return DefaultAlpha;
+	// 关掉开关就是整组隐藏，配合不透明度调整"看得见但让位"的程度。
+	if(!g_Config.m_QmFastPracticeShowMainWorld)
+		return 0.0f;
+	const float GhostAlpha = std::clamp(g_Config.m_QmFastPracticeMainWorldAlpha, 0, 100) / 100.0f;
+	return std::min(DefaultAlpha, GhostAlpha);
+}
+
 int CFastPractice::CurrentPracticeDummyId() const
 {
 	if(!m_Enabled || !m_RequireDummy)
@@ -587,6 +602,8 @@ void CFastPractice::ShiftPracticeWorldTicks(int TickDelta)
 	// 预测事件队列会随 CopyWorldClean 一起进入预测世界，tick 必须跟着平移，
 	// 否则平移后的第一帧会把积压事件一次性播出来（特效/音效集中爆发）。
 	QmShiftPracticePredictedEventTicks(m_PracticeBaseWorld.m_PredictedEvents, TickDelta);
+	if(m_EventBarrierTick >= 0)
+		m_EventBarrierTick += TickDelta;
 	for(auto &Switcher : m_PracticeBaseWorld.Switchers())
 	{
 		for(int Team = 0; Team < NUM_DDRACE_TEAMS; Team++)
@@ -665,6 +682,10 @@ bool CFastPractice::SuspendPracticeForTransientFailure(const char *pReason)
 void CFastPractice::SyncPracticeWorldConfig()
 {
 	m_PracticeBaseWorld.m_WorldConfig = GameClient()->m_GameWorld.m_WorldConfig;
+	// 分支世界不消费服务器事件（ProcessEvents 在练习里直接返回），开火声、
+	// 子弹命中、爆炸和锤击特效只能来自预测事件。cl_predict_events 默认关闭，
+	// 沿用主世界开关会让练习里所有武器都没有开火反馈。
+	m_PracticeBaseWorld.m_WorldConfig.m_PredictEvents = true;
 	m_PracticeBaseWorld.m_WorldConfig.m_PredictWeapons = true;
 	m_PracticeBaseWorld.m_WorldConfig.m_PredictFreeze = true;
 	m_PracticeBaseWorld.m_WorldConfig.m_PredictTiles = true;
@@ -843,6 +864,9 @@ bool CFastPractice::InitPracticeWorld()
 	m_Recorder.MarkBoundary(GameClient()->m_LocalWorld);
 
 	m_PracticeBaseWorld.CopyWorldClean(&GameClient()->m_GameWorld);
+	// 服务器世界那份队列属于上一段时间线（也可能停在进入练习前的版本），
+	// 带进新的分支世界会让重算 tick 去重失效，整份作废。
+	QmResetPracticePredictedEvents(m_PracticeBaseWorld.m_PredictedEvents);
 	PrunePracticeWorld(m_PracticeBaseWorld);
 	SanitizePracticeWorldHooks(m_PracticeBaseWorld);
 	SyncPracticeWorldConfig();
@@ -1086,6 +1110,8 @@ void CFastPractice::Enable(bool PreserveHeldInput)
 	m_Enabled = true;
 	m_PracticeRunTicks = 0;
 	m_PracticeBaseWorld.m_GameTick = Client()->PredGameTick(g_Config.m_ClDummy);
+	// 进入练习前的普通预测已经播到当前预测 tick，分支事件从它之后算起。
+	m_EventBarrierTick = m_PracticeBaseWorld.GameTick();
 	// 录制是全手动的：进入练习不再自动开录，由“开始录制”按键启动轨迹。
 	m_Recorder.Reset();
 	GameClient()->m_PredictedDummyId = CurrentPracticeDummyId();
@@ -1360,6 +1386,8 @@ bool CFastPractice::RestartPracticeFromStart()
 	// 世界树：主世界一直在推进，重新 fork 只会得到“现在”。这里改用启用练习那一刻的
 	// 快照，机关、移动方块、投射物、开关与角色一起回到入口状态。
 	m_PracticeBaseWorld.CopyWorldClean(&m_PracticeStartWorld);
+	// 快照初刻留下的事件 tick 早已被屏障盖过，留着会在下一帧集中播放。
+	QmDropPracticePredictedEventsUntil(m_PracticeBaseWorld.m_PredictedEvents, m_EventBarrierTick);
 	SanitizePracticeWorldHooks(m_PracticeBaseWorld);
 	SyncPracticeWorldConfig();
 
@@ -1700,6 +1728,10 @@ bool CFastPractice::OverridePredict()
 			return false;
 		}
 
+		// 事件屏障：重算已经播过的 tick 时不允许再创建预测事件。去重表跟着世界
+		// 重建，光靠 (id, tick) 匹配挡不住重复开火声，必须在源头关掉。
+		GameClient()->m_PredictedWorld.m_WorldConfig.m_PredictEvents = QmPracticeTickAllowsPredictedEvents(Tick, m_EventBarrierTick);
+
 		PublishPracticePredictionBeforeStep(GameClient()->m_PredictedWorld, TickPlan, Tick, false, LocalClientId);
 
 		// 和原生预测循环一样取“不晚于该 tick 的最新记录”。输入环按发送序号写入，
@@ -1815,6 +1847,8 @@ bool CFastPractice::OverridePredict()
 		// 这样开火声音和锤击反馈才能与普通预测共用同一份确认去重表。
 		if(!GameClient()->m_SuppressEvents)
 			GameClient()->HandlePredictedEvents(Tick);
+		// 本 tick 的事件已经创建并消费；此后任何路径重算这段 tick 都不再发声。
+		m_EventBarrierTick = std::max(m_EventBarrierTick, Tick);
 
 		PublishPracticePredictionAfterStep(GameClient()->m_PredictedWorld, TickPlan, Tick, LocalClientId);
 		PublishPracticePredictedPositions(GameClient()->m_PredictedWorld, Tick);

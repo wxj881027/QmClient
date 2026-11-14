@@ -44,13 +44,9 @@
 #include <cmath>
 #include <functional>
 #include <memory>
-#include <string>
-#include <unordered_map>
 #include <vector>
 
 using namespace FontIcons;
-
-extern std::unordered_map<std::string, CBindSlot> g_CommandBindCache;
 
 void CMenus::RenderQmHudBindStatusContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
 {

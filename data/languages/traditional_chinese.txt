@@ -839,9 +839,6 @@ All remaining binds: scoreboard, spectating, console, screenshots, emoticon and 
 All sounds
 == 全部音效
 
-All weapons
-== 全部武器
-
 Allow /map.
 == 是否允許 /map
 
@@ -5264,6 +5261,9 @@ Enter fast practice
 Enter Password
 == 輸入密碼
 
+Enter solo mode
+== 進入單人模式
+
 Enter solo split mode
 == 進入單刷模式
 
@@ -5410,6 +5410,9 @@ Exit fast practice
 
 Exit replay view
 == 退出回放檢視
+
+Exit solo mode
+== 退出單人模式
 
 Exit spectating on both tees when either is hammered awake by another player
 == 任一方被其他玩家錘醒時，自動讓兩個 Tee 退出旁觀
@@ -5656,9 +5659,6 @@ Fast keys for common dummy, aim and rescue actions: HDF, DF, 45-degree aim, jump
 
 Fast practice
 == 快速練習
-
-Fast practice runs a private copy of the map, so the server still sees you where you entered. The ghost above is that server-side you; other players are controlled by "Show others". Bind rows send the same commands as the practice menu, so a bound key never needs the chat box
-== 快速練習運行的是地圖的私人副本，伺服器仍然看到你進入練習時的位置。上方的影子就是伺服器那邊的你；其他玩家由「顯示其他玩家」控制。綁定行傳送與練習選單相同的指令，綁好鍵後無需開啟聊天框。
 
 Fast, lightweight blur with a softer approximation.
 == 快速、輕量的模糊效果，採用較柔和的近似處理。
@@ -6235,6 +6235,9 @@ Generated skin outline opacity
 
 Generated skin outline width
 == 生成描邊寬度
+
+Get all weapons
+== 獲得全部武器
 
 Getting game info
 == 正在獲取遊戲信息
@@ -8306,9 +8309,6 @@ Main Tee and dummy
 Main-world ghost opacity
 == 主世界影子不透明度
 
-Main-world ghost opacity during fast practice (%)
-== 快速練習時主世界影子的不透明度（%）
-
 Maintains the list of hostile players and groups plus the rules used to display them.
 == 維護敵對玩家與群組的清單，以及顯示它們所用的規則。
 
@@ -9842,8 +9842,8 @@ Only the selected tee changes, so switch to "Dummy" before editing the colors yo
 Only what you can't imagine, nothing Dream can't do
 == 只有你想不到，沒有夢做不到
 
-Only your copy of the world is simulated: other players still come from the server, so switches you hit do not affect them.
-== 只有你自己的世界副本在模擬：其他玩家仍然來自伺服器，你踩到的開關不會影響他們。
+Only your own copy of the world is simulated: other players are server-side Tees, so switches you hit do not affect them. The ghost toggle and opacity apply to them too.
+== 只有你自己的世界副本在模擬：其他玩家屬於伺服器側的 Tee，你踩到的開關不會影響他們。影子開關與不透明度同樣作用於他們。
 
 Opacity
 == 不透明度
@@ -11792,6 +11792,9 @@ Remove a type from the exclusion filter for a specific community
 remove a voting option
 == 刪除投票選項
 
+Remove all weapons
+== 移除全部武器
+
 Remove Bind
 == 刪除綁定
 
@@ -11836,9 +11839,6 @@ Remove war clan:
 
 Remove war name:
 == 刪除敵對玩家：
-
-Remove weapons
-== 移除武器
 
 Removed %s from friends
 == 已將 %s 移出好友
@@ -12221,9 +12221,6 @@ Restart
 Restart in x seconds (0 = abort)
 == 在 x 秒後重新啟動（0 = 中止）
 
-Restart practice world
-== 重開練習世界
-
 Restart the client
 == 重啟客戶端
 
@@ -12301,6 +12298,9 @@ Review the entries and change only what you understand; defaults are tuned for n
 
 Reviews configuration values that differ from their defaults and resets them.
 == 檢查與預設值不同的設定項，並可將其重設。
+
+Rewind practice world
+== 回溯練習世界
 
 Rifle
 == 步槍
@@ -13057,6 +13057,9 @@ Server votes
 
 Server-dependent
 == 取決於伺服器
+
+Server-side ghost opacity during fast practice (%)
+== 快速練習中伺服器側影子的不透明度（%）
 
 Set "Background color" and "Background opacity", then "Text color", "Selected text color" and "Selection background color"; a preview follows.
 == 設定背景顏色與背景不透明度，再設文字顏色、選取文字顏色與選取背景顏色；下方會即時預覽。
@@ -14057,6 +14060,9 @@ Show server prompts and Echo messages as popups
 Show server settings
 == 查看伺服器設置列表
 
+Show server-side tees as ghosts during fast practice
+== 快速練習中把伺服器側的 Tee 顯示為影子
+
 Show settings card borders
 == 顯示設定卡片邊框
 
@@ -14263,9 +14269,6 @@ Show Y
 
 Show your current team
 == 查看自己所在隊伍
-
-Show your own main-world ghost during fast practice
-== 快速練習時顯示自己在主世界的影子
 
 Show zzz emoji next to afk players
 == 在掛機玩家旁顯示 zzz 表情
@@ -16493,8 +16496,8 @@ Tune variable to value or show current value
 Turn motion off on weaker machines; cards then open and scroll immediately.
 == 效能較弱的機器請關閉動效；卡片便會立即開啟和捲動。
 
-Turn off "Show main-world ghost" to hide the server-side Tee, set its opacity while it stays on, enable the timer, and bind the command rows you use.
-== 關閉「顯示主世界影子」可隱藏伺服器側的角色；保持開啟時可調整不透明度，還可開啟計時，並為常用的指令行綁定按鍵。
+Turn off "Show main-world ghost" to hide every Tee from the server, other players included; while it is on, the opacity slider sets how visible they are. The bind rows send the same commands as the practice menu, so a bound key needs no chat box.
+== 關閉「顯示主世界影子」會隱藏所有來自伺服器的 Tee（包含其他玩家）；保持開啟時，不透明度滑桿決定它們有多顯眼。綁定列送出的指令與練習選單一致，按鍵觸發無需開啟聊天框。
 
 Turn on "Auto chat in water", type the "Chat message" you want, and optionally enable "Send emoticon in water" with its ID.
 == 開啟「掉水自動發言」，填上想要的聊天內容，想要表情就再開啟「掉水發表情」並選好表情 ID。
@@ -16687,9 +16690,6 @@ UI server address
 
 UI size percentage
 == UI 大小百分比
-
-Un-solo
-== 解除 solo
 
 Unable to delete %d selected items. The first failing item was '%s'.
 == 無法刪除 %d 個選中項。第一個失敗項是“%s”。

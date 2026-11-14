@@ -839,9 +839,6 @@ All remaining binds: scoreboard, spectating, console, screenshots, emoticon and 
 All sounds
 == Todos os sons
 
-All weapons
-== Todas as armas
-
 Allow /map.
 == Permitir /map.
 
@@ -5264,6 +5261,9 @@ Enter fast practice
 Enter Password
 == Inserir Palavra-passe
 
+Enter solo mode
+== Entrar no modo solo
+
 Enter solo split mode
 == Entrar no modo de divisão a solo
 
@@ -5410,6 +5410,9 @@ Exit fast practice
 
 Exit replay view
 == Sair da vista da demo
+
+Exit solo mode
+== Sair do modo solo
 
 Exit spectating on both tees when either is hammered awake by another player
 == Sair do modo espectador com ambos os Tees quando outro jogador descongelar um deles com o martelo
@@ -5656,9 +5659,6 @@ Fast keys for common dummy, aim and rescue actions: HDF, DF, 45-degree aim, jump
 
 Fast practice
 == Prática rápida
-
-Fast practice runs a private copy of the map, so the server still sees you where you entered. The ghost above is that server-side you; other players are controlled by "Show others". Bind rows send the same commands as the practice menu, so a bound key never needs the chat box
-== A prática rápida executa uma cópia privada do mapa, por isso o servidor continua a ver você onde entrou. O fantasma acima é você do lado do servidor; os outros jogadores são controlados por «Mostrar outros». As linhas de atalho enviam os mesmos comandos do menu de prática, por isso uma tecla atribuída nunca precisa da caixa de chat.
 
 Fast, lightweight blur with a softer approximation.
 == Desfocagem rápida e leve, com uma aproximação mais suave.
@@ -6235,6 +6235,9 @@ Generated skin outline opacity
 
 Generated skin outline width
 == Largura do contorno gerado
+
+Get all weapons
+== Obter todas as armas
 
 Getting game info
 == A obter informações do jogo
@@ -8306,9 +8309,6 @@ Main Tee and dummy
 Main-world ghost opacity
 == Opacidade do fantasma do mundo principal
 
-Main-world ghost opacity during fast practice (%)
-== Opacidade do fantasma do mundo principal durante a prática rápida (%)
-
 Maintains the list of hostile players and groups plus the rules used to display them.
 == Mantém a lista de jogadores e grupos hostis e as regras usadas para os mostrar.
 
@@ -9842,8 +9842,8 @@ Only the selected tee changes, so switch to "Dummy" before editing the colors yo
 Only what you can't imagine, nothing Dream can't do
 == Só o que não consegues imaginar, nada que o Dream não consiga fazer
 
-Only your copy of the world is simulated: other players still come from the server, so switches you hit do not affect them.
-== Apenas a sua cópia do mundo é simulada: os outros jogadores continuam a vir do servidor, por isso os interruptores que aciona não os afetam.
+Only your own copy of the world is simulated: other players are server-side Tees, so switches you hit do not affect them. The ghost toggle and opacity apply to them too.
+== Apenas a sua cópia do mundo é simulada: os outros jogadores são Tee do lado do servidor, por isso os interruptores que aciona não os afetam. O botão do fantasma e a opacidade também se aplicam a eles.
 
 Opacity
 == Opacidade
@@ -11792,6 +11792,9 @@ Remove a type from the exclusion filter for a specific community
 remove a voting option
 == remover uma opção de votação
 
+Remove all weapons
+== Remover todas as armas
+
 Remove Bind
 == Remover Bind
 
@@ -11836,9 +11839,6 @@ Remove war clan:
 
 Remove war name:
 == Remover nome inimigo:
-
-Remove weapons
-== Remover armas
 
 Removed %s from friends
 == %s foi removido dos amigos
@@ -12221,9 +12221,6 @@ Restart
 Restart in x seconds (0 = abort)
 == Reiniciar em x segundos (0 = abortar)
 
-Restart practice world
-== Reiniciar mundo de prática
-
 Restart the client
 == Reiniciar o cliente
 
@@ -12301,6 +12298,9 @@ Review the entries and change only what you understand; defaults are tuned for n
 
 Reviews configuration values that differ from their defaults and resets them.
 == Revê os valores de definição diferentes dos predefinidos e repõe-nos.
+
+Rewind practice world
+== Rebobinar mundo de prática
 
 Rifle
 == Rifle
@@ -13057,6 +13057,9 @@ Server votes
 
 Server-dependent
 == Depende do servidor
+
+Server-side ghost opacity during fast practice (%)
+== Opacidade dos fantasmas do servidor durante a prática rápida (%)
 
 Set "Background color" and "Background opacity", then "Text color", "Selected text color" and "Selection background color"; a preview follows.
 == Defina a cor de fundo e a opacidade do fundo, depois a cor do texto, a cor do texto selecionado e a cor de fundo da seleção; segue-se uma pré-visualização.
@@ -14057,6 +14060,9 @@ Show server prompts and Echo messages as popups
 Show server settings
 == Mostrar definições do servidor
 
+Show server-side tees as ghosts during fast practice
+== Mostra os Tee do servidor como fantasmas durante a prática rápida
+
 Show settings card borders
 == Mostrar contornos dos cartões de definições
 
@@ -14263,9 +14269,6 @@ Show Y
 
 Show your current team
 == Mostrar a tua equipa atual
-
-Show your own main-world ghost during fast practice
-== Mostra o seu próprio fantasma do mundo principal durante a prática rápida
 
 Show zzz emoji next to afk players
 == Mostrar emoji zzz ao lado de jogadores ausentes
@@ -16493,8 +16496,8 @@ Tune variable to value or show current value
 Turn motion off on weaker machines; cards then open and scroll immediately.
 == Desliga o movimento em máquinas mais fracas; os cartões abrem e deslocam-se de imediato.
 
-Turn off "Show main-world ghost" to hide the server-side Tee, set its opacity while it stays on, enable the timer, and bind the command rows you use.
-== Desative «Mostrar fantasma do mundo principal» para ocultar o Tee do servidor; enquanto estiver ativo, ajuste a opacidade, ative o cronómetro e atribua teclas às linhas de comando que usar.
+Turn off "Show main-world ghost" to hide every Tee from the server, other players included; while it is on, the opacity slider sets how visible they are. The bind rows send the same commands as the practice menu, so a bound key needs no chat box.
+== Desative «Mostrar fantasma do mundo principal» para ocultar todos os Tee que vêm do servidor, incluindo outros jogadores; enquanto estiver ativo, o controlo de opacidade define o quanto aparecem. As linhas de atalho enviam os mesmos comandos do menu de prática, por isso não é preciso abrir o chat.
 
 Turn on "Auto chat in water", type the "Chat message" you want, and optionally enable "Send emoticon in water" with its ID.
 == Liga "Chat automático na água", escreve a "Mensagem de chat" pretendida e, se quiseres, ativa "Enviar emoticon na água" com o ID.
@@ -16687,9 +16690,6 @@ UI server address
 
 UI size percentage
 == Percentagem do tamanho da UI
-
-Un-solo
-== Desfazer solo
 
 Unable to delete %d selected items. The first failing item was '%s'.
 == Não foi possível eliminar %d itens selecionados. O primeiro item com falha foi '%s'.
