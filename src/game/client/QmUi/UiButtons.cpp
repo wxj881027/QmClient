@@ -111,7 +111,16 @@ namespace ui_widget
 			}
 		}
 		const ColorRGBA Fill = pUi->ScaleControlAlpha(Style.m_Fill);
-		DrawRoundedSurface(Ctx, DrawRect, Fill, pUi->ScaleControlAlpha(Style.m_Border), Options.m_Radius, Options.m_BorderWidth, Options.m_Corners, Options.m_AlignToPixel);
+		// 图标按钮在表面这一层统一成正圆：不管调用点传的是方角、圆角还是自算半径，
+		// 形状只由「短边的一半」决定，避免同一个列表里一半圆一半方。
+		float ShapeRadius = Options.m_Radius;
+		int ShapeCorners = Options.m_Corners;
+		if(Options.m_Role == EUiButtonRole::ICON)
+		{
+			ShapeRadius = std::min(DrawRect.w, DrawRect.h) * 0.5f;
+			ShapeCorners = IGraphics::CORNER_NONE;
+		}
+		DrawRoundedSurface(Ctx, DrawRect, Fill, pUi->ScaleControlAlpha(Style.m_Border), ShapeRadius, Options.m_BorderWidth, ShapeCorners, Options.m_AlignToPixel);
 		return Fill;
 	}
 
