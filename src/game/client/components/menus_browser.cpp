@@ -2069,6 +2069,9 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 				Props.m_MaxWidth = Button.w;
 				Props.m_StopAtEnd = true;
 				Props.m_EnableWidthCheck = false;
+				// 名称列可能被搜索高亮拆成多段流式绘制；裁剪时统一用完整名称提示。
+				Props.m_pTooltipId = pUiElement->Rect(UI_ELEM_NAME_1);
+				Props.m_pTooltipText = pDisplayServerName;
 
 				bool Printed = false;
 				if(g_Config.m_BrFilterString[0] && (g_Config.m_QmShortServerNames || (pItem->m_QuickSearchHit & IServerBrowser::QUICK_SERVERNAME)))
@@ -2118,6 +2121,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 				Props.m_MaxWidth = Button.w;
 				Props.m_StopAtEnd = true;
 				Props.m_EnableWidthCheck = false;
+				Props.m_pTooltipId = pUiElement->Rect(UI_ELEM_GAMETYPE);
 				if(g_Config.m_UiColorizeGametype)
 				{
 					TextRender()->TextColor(pItem->m_GametypeColor);
@@ -2173,6 +2177,8 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 					Props.m_MaxWidth = Button.w;
 					Props.m_StopAtEnd = true;
 					Props.m_EnableWidthCheck = false;
+					Props.m_pTooltipId = pUiElement->Rect(UI_ELEM_MAP_1);
+					Props.m_pTooltipText = pItem->m_aMap;
 					bool Printed = false;
 					if(g_Config.m_BrFilterString[0] && (pItem->m_QuickSearchHit & IServerBrowser::QUICK_MAPNAME))
 						Printed = PrintHighlighted(pItem->m_aMap, [&](const char *pFilteredStr, const int FilterLen) {

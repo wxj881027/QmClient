@@ -1189,14 +1189,14 @@ void CScoreboard::RenderTeamModeIcons(float x, float y, float IconSize, const SQ
 	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 }
 
-void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart, int CountEnd, const CScoreboardPlayerRowPlan &Plan, CScoreboardRenderState &State, bool Scroll)
+void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart, int CountEnd, const CScoreboardPlayerRowPlan &Plan, CScoreboardRenderState &State, bool Scroll, int NumPlayersForSize)
 {
 	dbg_assert(Team == TEAM_RED || Team == TEAM_BLUE, "Team invalid");
 
 	const CNetObj_GameInfo *pGameInfoObj = GameClient()->m_Snap.m_pGameInfoObj;
 	const CNetObj_GameData *pGameDataObj = GameClient()->m_Snap.m_pGameDataObj;
 	const bool TimeScore = GameClient()->m_GameInfo.m_TimeScore;
-	const int NumPlayers = Scroll ? 16 : CountEnd - CountStart;
+	const int NumPlayers = Scroll ? 16 : (NumPlayersForSize >= 0 ? NumPlayersForSize : CountEnd - CountStart);
 	const bool LowScoreboardWidth = Scoreboard.w < 350.0f;
 	const bool ShowPlaytime = g_Config.m_QmScoreboardPlaytime != 0;
 	// 积分视图在 Axiom 服显示当前模式分数，游玩时间独立使用 DDStats。
@@ -1285,9 +1285,17 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 	const float PingLength = 27.5f;
 	const float PingOffset = Scoreboard.x + Scoreboard.w - PingLength - 10.0f;
 	const float CountryOffset = RowDetail.m_ShowCountry ? PingOffset - CountryLength : PingOffset;
-	const float NameLength = RowDetail.m_ShowClan ? (LowScoreboardWidth ? 90.0f : 150.0f) - TeeLength : maximum(0.0f, PingOffset - NameOffset - 5.0f);
+	float NameLength = RowDetail.m_ShowClan ? (LowScoreboardWidth ? 90.0f : 150.0f) - TeeLength : maximum(0.0f, PingOffset - NameOffset - 5.0f);
+	if(RowDetail.m_ShowClan)
+	{
+		// 分列后单列更窄：名字与 clan 之间至少留出 5px，剩余宽度按 7:3 分给名字和 clan。
+		constexpr float MinMiddleGap = 5.0f;
+		const float AvailableMiddle = CountryOffset - NameOffset;
+		if(NameLength + MinMiddleGap > AvailableMiddle)
+			NameLength = maximum(0.0f, (AvailableMiddle - MinMiddleGap) * 0.7f);
+	}
 	const float ClanOffset = NameOffset + NameLength + 2.5f;
-	const float ClanLength = CountryOffset - ClanOffset - 2.5f;
+	const float ClanLength = maximum(0.0f, CountryOffset - ClanOffset - 2.5f);
 
 	// render headlines
 	CUIRect Headline;
@@ -2183,8 +2191,22 @@ void CScoreboard::OnRender()
 		DoStatisticsButton(StatisticsButton);
 		DoServerPlayers(ServerPlayers);
 		DoSortButton(SortButton);
-		RenderScoreboard(RedScoreboardContent, TEAM_RED, 0, NumPlayers, RedPlayerRows, RenderState);
-		RenderScoreboard(BlueScoreboardContent, TEAM_BLUE, 0, NumPlayers, BluePlayerRows, RenderState);
+		// 单队超过 64 人时拆成左右两列：上半区先排满 64 行，其余进右列。
+		// 两列共用 64 行密度，右列人少也不会把行高放大到和左列不一致。
+		const auto RenderTeamColumn = [&](CUIRect TeamScoreboard, int Team, const CScoreboardPlayerRowPlan &Plan) {
+			constexpr int ColumnCapacity = 64;
+			if(Plan.m_Count <= ColumnCapacity)
+			{
+				RenderScoreboard(TeamScoreboard, Team, 0, Plan.m_Count, Plan, RenderState);
+				return;
+			}
+			CUIRect LeftColumn, RightColumn;
+			TeamScoreboard.VSplitMid(&LeftColumn, &RightColumn, 2.5f);
+			RenderScoreboard(LeftColumn, Team, 0, ColumnCapacity, Plan, RenderState, false, ColumnCapacity);
+			RenderScoreboard(RightColumn, Team, ColumnCapacity, Plan.m_Count, Plan, RenderState, false, ColumnCapacity);
+		};
+		RenderTeamColumn(RedScoreboardContent, TEAM_RED, RedPlayerRows);
+		RenderTeamColumn(BlueScoreboardContent, TEAM_BLUE, BluePlayerRows);
 	}
 	else
 	{

@@ -263,7 +263,7 @@ void CFileBrowser::OnRender(CUIRect _)
 		const EQmIcon FileIconType = DetermineFileQmIcon(m_vpFilteredFileList[i], &pFileIconFallback);
 		Ui()->DoLabel_QmIcon(&FileIcon, FileIconType, pFileIconFallback, 12.0f, TEXTALIGN_ML);
 
-		Ui()->DoLabel(&Button, m_vpFilteredFileList[i]->m_aDisplayName, 10.0f, TEXTALIGN_ML, {.m_MaxWidth = Button.w, .m_EllipsisAtEnd = true});
+		Ui()->DoLabel(&Button, m_vpFilteredFileList[i]->m_aDisplayName, 10.0f, TEXTALIGN_ML, {.m_MaxWidth = Button.w, .m_EllipsisAtEnd = true, .m_pTooltipId = m_vpFilteredFileList[i]});
 
 		if(!m_vpFilteredFileList[i]->m_IsLink && str_comp(m_vpFilteredFileList[i]->m_aFilename, "..") != 0)
 		{

@@ -2025,6 +2025,8 @@ CLabelResult CUi::DoLabel(const CUIRect *pRect, const char *pText, float Size, i
 {
 	if(PreLayoutInput())
 		return {};
+	// 括号拆分提示会改写实际绘制的标签，提示气泡仍要展示调用方传入的完整文本。
+	const char *pFullText = pText;
 	pText = PrepareCardLabel(pRect, pText);
 	const SQmIconLabelGlyphs Icons = QmIconLabelGlyphs(TextRender()->GetFontPreset(), pText);
 	const CQmIconLabelFontScope FontScope(*TextRender(), Icons);
@@ -2055,6 +2057,8 @@ CLabelResult CUi::DoLabel(const CUIRect *pRect, const char *pText, float Size, i
 	}
 	else
 		TextRender()->TextEx(&Cursor, pText, -1);
+	if(Cursor.m_Truncated && LabelProps.m_pTooltipId != nullptr && !DrawingSuppressed())
+		DoButtonTooltip(LabelProps.m_pTooltipId, pRect, LabelProps.m_pTooltipText != nullptr ? LabelProps.m_pTooltipText : pFullText);
 	return CLabelResult{.m_Truncated = Cursor.m_Truncated};
 }
 
@@ -2148,6 +2152,8 @@ void CUi::RenderLabelTextContainerAligned(const CUIElement::SUIElementRect &Rect
 void CUi::DoLabelStreamed(CUIElement::SUIElementRect &RectEl, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps, int StrLen, const CTextCursor *pReadCursor, bool Render, bool *pTextContainerRecreated) const
 {
 	Render = Render && !DrawingSuppressed();
+	// 分段流式绘制只把当前分段交给容器，提示气泡要用调用方传入的完整文本。
+	const char *pFullText = pText;
 	if(StrLen < 0 && pReadCursor == nullptr)
 		pText = PrepareCardLabel(pRect, pText, Render);
 	const int Flags = GetFlagsForLabelProperties(LabelProps, pReadCursor);
@@ -2218,6 +2224,8 @@ void CUi::DoLabelStreamed(CUIElement::SUIElementRect &RectEl, const CUIRect *pRe
 	if(Render && RectEl.m_UITextContainer.Valid())
 	{
 		RenderLabelTextContainerAligned(RectEl, pRect, Align);
+		if(RectEl.m_Cursor.m_Truncated && LabelProps.m_pTooltipId != nullptr)
+			DoButtonTooltip(LabelProps.m_pTooltipId, pRect, LabelProps.m_pTooltipText != nullptr ? LabelProps.m_pTooltipText : pFullText);
 	}
 }
 
@@ -2556,7 +2564,7 @@ void CUi::DoConfigTooltip(const void *pId, const CUIRect *pRect, const void *pVa
 		m_pQmTooltips->DoConfigToolTip(pId, pRect, pValue, pSecondValue);
 }
 
-void CUi::DoButtonTooltip(const void *pId, const CUIRect *pRect, const char *pText)
+void CUi::DoButtonTooltip(const void *pId, const CUIRect *pRect, const char *pText) const
 {
 	if(!RenderOnly() && m_pQmTooltips != nullptr && pText != nullptr)
 		m_pQmTooltips->DoToolTipForRect(pId, pRect, pText);
@@ -3153,6 +3161,8 @@ float CUi::DoScrollbarHLogic(const void *pId, const CUIRect *pRect, float Curren
 		const float Max = Rail.w - Handle.w;
 		const float Cur = MouseX() - m_ActiveScrollbarOffset;
 		ReturnValue = QmAnimationRuntime() != nullptr && Max <= 0.0f ? Current : std::clamp((Cur - Rail.x) / Max, 0.0f, 1.0f);
+		// 拖动时提示 Shift 精确拖动；按住 Shift 后 ConvertMouseMove 把指针位移压到 5%。
+		DoSmallTooltip(pId, &Handle, Localize("Hold Shift to be more precise."));
 	}
 
 	return ReturnValue;

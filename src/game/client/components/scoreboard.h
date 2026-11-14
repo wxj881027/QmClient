@@ -154,7 +154,8 @@ class CScoreboard : public CComponent
 	void RenderTeamModeIcons(float x, float y, float IconSize, const SQmScoreboardTeamModeState &State, float Alpha);
 	void UpdateTeamModeCache();
 	void BuildPlayerRowPlan(int Team, CScoreboardPlayerRowPlan &Plan);
-	void RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart, int CountEnd, const CScoreboardPlayerRowPlan &Plan, CScoreboardRenderState &State, bool Scroll = false);
+	// 分列绘制时用 NumPlayersForSize 固定行密度，短末列不能因实际人数少而放大字号。
+	void RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart, int CountEnd, const CScoreboardPlayerRowPlan &Plan, CScoreboardRenderState &State, bool Scroll = false, int NumPlayersForSize = -1);
 	void RenderRecordingNotification(float x);
 	static CUi::EPopupMenuFunctionResult PopupScoreboard(void *pContext, CUIRect View, bool Active);
 

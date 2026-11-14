@@ -451,6 +451,10 @@ struct SLabelProperties
 	bool m_EnableWidthCheck = true;
 	float m_MinimumFontSize = 5.0f;
 	std::vector<STextColorSplit> m_vColorSplits;
+	// 文本被裁剪时自动登记完整内容提示；pTooltipText 供分段绘制（搜索高亮）
+	// 用完整字符串覆盖当前分段的文本。
+	const void *m_pTooltipId = nullptr;
+	const char *m_pTooltipText = nullptr;
 
 	void SetColor(const ColorRGBA &Color);
 };
@@ -1188,7 +1192,7 @@ public:
 	void SetCardLabelHintsEnabled(bool Enabled) { m_CardLabelHintsEnabled = Enabled; }
 	const char *PrepareCardLabel(const CUIRect *pRect, const char *pText, bool Render = true, bool AllowHintSplit = true) const;
 	void DoConfigTooltip(const void *pId, const CUIRect *pRect, const void *pValue, const void *pSecondValue = nullptr);
-	void DoButtonTooltip(const void *pId, const CUIRect *pRect, const char *pText);
+	void DoButtonTooltip(const void *pId, const CUIRect *pRect, const char *pText) const;
 	void SetKeyboardFocus(const void *pId);
 	const void *KeyboardFocusItem() const { return m_KeyboardFocus.m_pItem; }
 	bool KeyboardFocusFromKeyboard() const { return m_KeyboardFocus.m_FromKeyboard; }
