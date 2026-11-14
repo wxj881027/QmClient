@@ -1422,6 +1422,7 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 						fontstore::RetryInstall(Http(), Storage(), (size_t)LastInstall);
 						fontstore::s_LastInstallFamily = LastInstall;
 					}
+					GameClient()->m_Tooltips.DoToolTip(&s_StoreRetryId, &RetryRect, Localize("Retry"));
 				}
 				else if(LastFamily.m_Installed)
 				{

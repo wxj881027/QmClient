@@ -121,23 +121,23 @@ void CQmMapTagsPanel::Render(CGameClient *pGameClient, CUIRect View)
 	for(size_t Index = 0; Index < std::size(PRESETS); ++Index)
 	{
 		CUIRect Button;
-		Presets.VSplitLeft(std::min(60.0f * Scale, Presets.w / (std::size(PRESETS) - Index)), &Button, &Presets);
-		Button.VMargin(2.0f * Scale, &Button);
+		Presets.VSplitLeft(std::min(ui_token::server_info::TAGS_PRESET_BUTTON_WIDTH * Scale, Presets.w / (std::size(PRESETS) - Index)), &Button, &Presets);
+		Button.VMargin(ui_token::spacing::XS * 0.5f * Scale, &Button);
 		if(DoButton(&m_aPresetButtons[Index], PRESETS[Index], Button, !Snapshot.m_Eligible || Tags.Busy()))
 			m_Input.Set(PRESETS[Index]);
 	}
-	Footer.HSplitTop(5.0f * Scale, nullptr, &Footer);
+	Footer.HSplitTop(ui_token::server_info::TAGS_LIST_GAP * Scale, nullptr, &Footer);
 	CUIRect Composer, Input, Submit;
-	Footer.HSplitTop(22.0f * Scale, &Composer, &Footer);
-	Composer.VSplitRight(70.0f * Scale, &Input, &Submit);
-	Input.VSplitRight(5.0f * Scale, &Input, nullptr);
+	Footer.HSplitTop(ui_token::server_info::TAGS_PRESET_ROW_HEIGHT * Scale, &Composer, &Footer);
+	Composer.VSplitRight(ui_token::server_info::TAGS_SUBMIT_WIDTH * Scale, &Input, &Submit);
+	Input.VSplitRight(ui_token::server_info::TAGS_LIST_GAP * Scale, &Input, nullptr);
 	ui_widget::SInputFieldOptions InputOptions;
 	InputOptions.m_pPlaceholder = Localize("New tag (up to 10 characters)");
 	InputOptions.m_FontSize = ui_token::font::BODY * Scale;
 	ui_widget::InputField(Ctx, &m_Input, Input, InputOptions);
 	if(DoButton(&m_SubmitButton, Localize("Submit"), Submit, !Snapshot.m_Eligible || Tags.Busy() || !QmMapTags::ValidTag(m_Input.GetString()), true))
 		Tags.Submit(pGameClient->Http(), m_Input.GetString());
-	Footer.HSplitTop(5.0f * Scale, nullptr, &Footer);
+	Footer.HSplitTop(ui_token::server_info::TAGS_LIST_GAP * Scale, nullptr, &Footer);
 	const char *pStatus = Tags.Status();
 	if(!pStatus[0])
 	{

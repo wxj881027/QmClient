@@ -85,7 +85,7 @@ void CMenus::RenderPlayers(CUIRect MainView)
 		ui_token::player_card::SEARCH_WIDTH + ui_token::player_card::COUNT_WIDTH + ui_token::spacing::SM * 2.0f);
 	TopRow.VSplitRight(RightWidth, &FilterRow, &RightSide);
 	FilterRow.VSplitRight(std::min(ui_token::spacing::SM, FilterRow.w), &FilterRow, nullptr);
-	RightSide.VSplitRight(ui_token::player_card::COUNT_WIDTH, &RightSide, &CountLabel);
+	RightSide.VSplitRight(std::min(ui_token::player_card::COUNT_WIDTH, RightSide.w * 0.4f), &RightSide, &CountLabel);
 	RightSide.VSplitRight(std::min(ui_token::spacing::XS, RightSide.w), &RightSide, nullptr);
 	SearchField = RightSide;
 
@@ -142,7 +142,8 @@ void CMenus::RenderPlayers(CUIRect MainView)
 	static CListBox s_Players;
 	s_Players.DoAutoSpacing(ui_token::list::ROW_SPACING);
 	s_Players.SetActive(!Ui()->IsPopupOpen() && !State.m_Search.IsActive());
-	s_Players.DoStart(ui_token::player_card::TILE_HEIGHT, Count, Columns, ui_token::list::DEFAULT_MAX_VISIBLE_ROWS, Selected, &ListArea, false);
+	// 多列网格的翻页按「一屏行数」算，不按默认最大行数：4 列时默认值会一次跳 48 个玩家。
+	s_Players.DoStart(ui_token::player_card::TILE_HEIGHT, Count, Columns, 1, Selected, &ListArea, false);
 	auto DrawTee = [&](int Id, const CUIRect &Rect) {
 		CTeeRenderInfo TeeInfo = GameClient()->m_aClients[Id].m_RenderInfo;
 		TeeInfo.m_Size = Rect.h;
@@ -187,6 +188,15 @@ void CMenus::RenderPlayers(CUIRect MainView)
 		State.m_Selection.Validate(nullptr);
 	if(Count == 0)
 		Label(ListArea, Localize("No players match these filters"), ui_token::font::HEADLINE, TEXTALIGN_MC);
+
+	// 复制成功的轻提示提到卡片早退之前：玩家离开导致卡片消失时，反馈不能一起丢。
+	{
+		const bool ToastVisible = Client()->GlobalTime() < State.m_CopyToastUntil;
+		ui_widget::SToastProps ToastProps;
+		ToastProps.m_pText = Localize("Copied");
+		static ui_widget::SToastState s_CopyToast;
+		ui_widget::Toast(Ctx, &s_CopyToast, &s_CopyToast, ToastVisible, PageRect, ToastProps);
+	}
 
 	// ── 右侧信息卡：上半是「英雄展示」——角色立绘居中，名字与战队压在下沿，
 	// 操作全部是展示区内的圆形图标按钮；下半只留皮肤名与复制按钮。
@@ -245,11 +255,10 @@ void CMenus::RenderPlayers(CUIRect MainView)
 	{
 		const CUIRect Slot = IconSlots.m_aCells[Action];
 		const auto &Spec = aIconActions[Action];
-		if(!Spec.m_Enabled)
-			continue;
-		const int Clicked = Ui()->DoButton_QmIcon(&s_aIconButtons[Action], Spec.m_Icon, Spec.m_pFallback, Spec.m_Active ? 1 : 0, &Slot, BUTTONFLAG_LEFT);
+		// 禁用态仍占槽并置灰：按钮数量不随状态横跳，玩家也能看到「为什么没有这个动作」。
+		const int Clicked = Ui()->DoButton_QmIcon(&s_aIconButtons[Action], Spec.m_Icon, Spec.m_pFallback, Spec.m_Active ? 1 : 0, &Slot, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Spec.m_Enabled);
 		ui_widget::Tooltip(Ctx, &s_aIconButtons[Action], Slot, Spec.m_pTooltip);
-		if(Clicked == 0)
+		if(Clicked == 0 || !Spec.m_Enabled)
 			continue;
 		switch(Action)
 		{
@@ -308,11 +317,4 @@ void CMenus::RenderPlayers(CUIRect MainView)
 			GameClient()->m_Snap.m_apPlayerInfos[SelectedId] != nullptr ? GameClient()->m_Snap.m_apPlayerInfos[SelectedId]->m_Score : 0);
 		Label(InfoRow, aStatus, ui_token::player_card::DETAIL_FONT_SIZE, TEXTALIGN_ML, true);
 	}
-
-	// 复制成功的轻提示：统一一条文案，出现在页面底部，不占用卡片布局。
-	const bool ToastVisible = Client()->GlobalTime() < State.m_CopyToastUntil;
-	ui_widget::SToastProps ToastProps;
-	ToastProps.m_pText = Localize("Copied");
-	static ui_widget::SToastState s_CopyToast;
-	ui_widget::Toast(Ctx, &s_CopyToast, &s_CopyToast, ToastVisible, PageRect, ToastProps);
 }

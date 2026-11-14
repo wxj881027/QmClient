@@ -360,7 +360,7 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 				if(pMenus->Ui()->DoButton_QmIcon(&s_SaveButton, EQmIcon::CHECK, "\xEE\x86\x82", Enabled ? 0 : -1, &PreviewSaveRect, IGraphics::CORNER_ALL) && Enabled && Auth.TitleAuthenticated() && (!Draft.m_BindName || Draft.m_Name.GetString()[0]))
 					Auth.SaveTitleProfile(Draft.m_Title.GetString(), Draft.m_BindName ? Draft.m_Name.GetString() : "", Auth.TitleProfileStyle(), static_cast<EQmSponsorChatStyle>(g_Config.m_QmSponsorChatStyle), QmTitleDraftAppearance());
 				pMenus->GameClient()->m_Tooltips.DoToolTip(&s_SaveButton, &PreviewSaveRect, Localize("Save"));
-				if(pMenus->Ui()->DoButton_QmIcon(&s_RefreshButton, EQmIcon::ARROW_ROTATE_RIGHT, "\xEE\x80\xB6", Enabled ? 0 : -1, &PreviewRefreshRect, IGraphics::CORNER_ALL) && Enabled)
+				if(pMenus->Ui()->DoButton_QmIcon(&s_RefreshButton, EQmIcon::ARROW_ROTATE_RIGHT, FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT, Enabled ? 0 : -1, &PreviewRefreshRect, IGraphics::CORNER_ALL) && Enabled)
 					Auth.RefreshTitleProfile();
 				pMenus->GameClient()->m_Tooltips.DoToolTip(&s_RefreshButton, &PreviewRefreshRect, Localize("Refresh"));
 				// 标题和预览块之间留一个行距，别贴在一起。

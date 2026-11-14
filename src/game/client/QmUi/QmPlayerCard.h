@@ -303,9 +303,14 @@ namespace QmPlayersUi
 		Remaining.HSplitTop(std::min(ui_token::player_card::SECTION_GAP, Remaining.h), nullptr, &Remaining);
 		Result.m_Info = Remaining;
 
-		// 立绘：等比居中，高度吃展示区比例，宽度最多占一半，避免超宽卡片把角色拉成扁片。
+		// 立绘：高度必须扣掉下方文本块（名字 / 战队 / 图标行）与顶部留白，
+		// 否则大卡片上立绘会压住图标行，图标按钮被角色贴图盖住点不到。
+		const float TextBlockHeight = ui_token::spacing::SM +
+					      2.0f * ui_token::player_card::HEADER_NAME_HEIGHT +
+					      ui_token::player_card::SHOWCASE_ICON_SIZE;
+		const float FigureAvailableHeight = std::max(0.0f, Result.m_Showcase.h - ui_token::spacing::XS - TextBlockHeight);
 		const float FigureSize = std::max(0.0f,
-			std::min(Result.m_Showcase.h * ui_token::player_card::SHOWCASE_TEE_RATIO, Result.m_Showcase.w * ui_token::player_card::SHOWCASE_MAX_WIDTH_RATIO));
+			std::min({Result.m_Showcase.h * ui_token::player_card::SHOWCASE_TEE_RATIO, FigureAvailableHeight, Result.m_Showcase.w * ui_token::player_card::SHOWCASE_MAX_WIDTH_RATIO}));
 		Result.m_Figure = CUIRect{
 			Result.m_Showcase.x + (Result.m_Showcase.w - FigureSize) * 0.5f,
 			Result.m_Showcase.y + ui_token::spacing::XS,
@@ -313,11 +318,12 @@ namespace QmPlayersUi
 			FigureSize};
 
 		// 名字与战队压在下沿；图标行再压在名字之上，三者不互相侵占。
+		// HSplitBottom 的第二个参数是「剩余区」，第三个才是切下来的底条，顺序不能写反。
 		CUIRect Text = Result.m_Showcase;
 		Text.HSplitBottom(std::min(ui_token::spacing::SM, Text.h), &Text, nullptr);
-		Text.HSplitBottom(std::min(ui_token::player_card::HEADER_NAME_HEIGHT, Text.h), &Result.m_Clan, &Text);
-		Text.HSplitBottom(std::min(ui_token::player_card::HEADER_NAME_HEIGHT, Text.h), &Result.m_Name, &Text);
-		Text.HSplitBottom(std::min(ui_token::player_card::SHOWCASE_ICON_SIZE, Text.h), &Result.m_Icons, &Text);
+		Text.HSplitBottom(std::min(ui_token::player_card::HEADER_NAME_HEIGHT, Text.h), &Text, &Result.m_Clan);
+		Text.HSplitBottom(std::min(ui_token::player_card::HEADER_NAME_HEIGHT, Text.h), &Text, &Result.m_Name);
+		Text.HSplitBottom(std::min(ui_token::player_card::SHOWCASE_ICON_SIZE, Text.h), &Text, &Result.m_Icons);
 		if(IconCount <= 0)
 			Result.m_Icons = {};
 		return Result;

@@ -1284,9 +1284,9 @@ void CMenus::PrepareIngameServerInfoTextRuntime(const CUIRect *pMainView)
 	RequestServerInfoField("ingame-game-info-players-value", &Label, aBuf);
 
 	CUIRect MotdHeader;
-	const float MotdScale = QmServerInfoGeometry::FitScale(Motd, 180.0f, 53.0f);
-	Motd.HSplitTop(2.0f * MotdFontSize * MotdScale, &MotdHeader, &Motd);
-	Motd.HSplitTop(5.0f * MotdScale, nullptr, &Motd);
+	const float MotdScale = QmServerInfoGeometry::FitScale(Motd, ui_token::motd::DESIGN_WIDTH, ui_token::motd::DESIGN_HEIGHT);
+	Motd.HSplitTop(ui_token::motd::TITLE_HEIGHT_RATIO * MotdFontSize * MotdScale, &MotdHeader, &Motd);
+	Motd.HSplitTop(ui_token::motd::TITLE_GAP * MotdScale, nullptr, &Motd);
 	if(GameClient()->m_Motd.ServerMotd()[0])
 		RequestIngameMotdParagraphCache(Motd, MotdFontSize);
 
@@ -1410,7 +1410,8 @@ namespace
 		{
 			// 框线行：一格一字形。字形按格子位置显式定位，所以相邻横线首尾相接，
 			// 不会像普通文本排版那样被字距切成一节一节。
-			for(; Build.m_RowGlyph < Line.m_VisibleGlyphCount;)
+			int EmittedGlyphs = 0;
+			for(; Build.m_RowGlyph < Line.m_VisibleGlyphCount && EmittedGlyphs < ui_token::motd::BOX_GLYPHS_PER_STEP;)
 			{
 				const int GlyphOffset = Line.m_ByteOffset + Build.m_RowByteOffset;
 				const int GlyphBytes = str_utf8_forward(pMotd, GlyphOffset) - GlyphOffset;
@@ -1423,7 +1424,11 @@ namespace
 				pTextRender->CreateOrAppendTextContainer(BuildContainer, &GlyphCursor, pMotd + GlyphOffset, GlyphBytes);
 				Build.m_RowByteOffset += GlyphBytes;
 				Build.m_RowGlyph++;
+				++EmittedGlyphs;
 			}
+			// 预算用完但本行还没发完：保持行内进度，下一帧接着发。
+			if(Build.m_RowGlyph < Line.m_VisibleGlyphCount)
+				return true;
 			Build.m_ContentWidth = maximum(Build.m_ContentWidth, (float)Line.m_VisibleGlyphCount * Line.m_Advance);
 			Build.m_Row++;
 			Build.m_RowGlyph = 0;
@@ -1460,8 +1465,9 @@ namespace
 
 			if(Build.m_RowByteOffset >= Line.m_ByteLength)
 			{
-				// 普通行可能换行：下一行行顶就是光标推进后的位置。
-				Build.m_RowTop = Build.m_RowCursor.m_Y;
+				// 引擎把光标 m_Y 停在「刚结束那一行的行顶」，不会自动补一行高度；
+				// 行顶推进必须显式加上实测行高 × 该行占用的视觉行数，否则下一行会叠在同一 y。
+				Build.m_RowTop += Build.m_Layout.m_LineHeight * (float)maximum(1, Build.m_RowCursor.m_LineCount);
 				Build.m_Row++;
 				Build.m_RowByteOffset = 0;
 			}
@@ -1491,7 +1497,6 @@ bool CMenus::RequestIngameMotdParagraphCache(CUIRect Motd, float FontSize)
 		absolute(m_IngameMotdParagraphCache.m_PendingFontSize - FontSize) >= 0.01f)
 	{
 		TextRender()->DeleteTextContainer(m_IngameMotdParagraphCache.m_BuildTextContainerIndex);
-		m_IngameMotdParagraphCache.m_BuildHeight = 0.0f;
 		m_IngameMotdParagraphCache.m_PendingTextHash = TextHash;
 		m_IngameMotdParagraphCache.m_PendingUpdateTime = UpdateTime;
 		m_IngameMotdParagraphCache.m_PendingRect = Motd;
@@ -1536,7 +1541,6 @@ void CMenus::DrainIngameMotdParagraphCache(CUIRect Motd, float FontSize, bool Al
 		if(!PendingMatches)
 		{
 			TextRender()->DeleteTextContainer(m_IngameMotdParagraphCache.m_BuildTextContainerIndex);
-			m_IngameMotdParagraphCache.m_BuildHeight = 0.0f;
 			m_IngameMotdParagraphCache.m_PendingTextHash = TextHash;
 			m_IngameMotdParagraphCache.m_PendingUpdateTime = UpdateTime;
 			m_IngameMotdParagraphCache.m_PendingRect = Motd;
@@ -1559,7 +1563,6 @@ void CMenus::DrainIngameMotdParagraphCache(CUIRect Motd, float FontSize, bool Al
 			EnsureIngameMotdLayout(TextRender(), m_IngameMotdParagraphCache.m_BuildTextContainerIndex, pMotd, TextHash, UpdateTime, Motd.w, FontSize);
 			StepIngameMotdLayout(TextRender(), m_IngameMotdParagraphCache.m_BuildTextContainerIndex, pMotd, Motd.w, FontSize, SIngameMotdParagraphCache::INGAME_MOTD_PARAGRAPH_CHUNK_BYTES);
 			ParagraphLayoutMs = std::chrono::duration<double, std::milli>(time_get_nanoseconds() - LayoutStart).count();
-			m_IngameMotdParagraphCache.m_BuildHeight = IngameMotdLayoutHeight();
 
 			if(IngameMotdLayoutComplete())
 			{
@@ -1574,7 +1577,6 @@ void CMenus::DrainIngameMotdParagraphCache(CUIRect Motd, float FontSize, bool Al
 				m_IngameMotdParagraphCache.m_UpdateTime = UpdateTime;
 				m_IngameMotdParagraphCache.m_Width = Motd.w;
 				m_IngameMotdParagraphCache.m_FontSize = FontSize;
-				m_IngameMotdParagraphCache.m_Height = s_IngameMotdContentHeight;
 				m_IngameMotdParagraphCache.m_Valid = true;
 				m_IngameMotdParagraphCache.m_Pending = false;
 			}
@@ -1926,14 +1928,14 @@ void CMenus::RenderServerInfoMotd(CUIRect Motd)
 	const float MotdFontSize = ui_token::motd::FONT_SIZE;
 	Motd.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_ALL, ui_token::server_info::CARD_RADIUS);
 	Motd = QmServerInfoGeometry::ContentRect(Motd);
-	const float MotdScale = QmServerInfoGeometry::FitScale(Motd, 180.0f, 53.0f);
+	const float MotdScale = QmServerInfoGeometry::FitScale(Motd, ui_token::motd::DESIGN_WIDTH, ui_token::motd::DESIGN_HEIGHT);
 
 	CUIRect MotdHeader;
 	SLabelProperties HeaderProps;
 	HeaderProps.m_MinimumFontSize = 0.1f;
-	Motd.HSplitTop(2.0f * MotdFontSize * MotdScale, &MotdHeader, &Motd);
-	Motd.HSplitTop(5.0f * MotdScale, nullptr, &Motd);
-	DoIngameMenuTitleLabel(PAGE_SERVER_INFO, "ingame-server-info-motd-title", &MotdHeader, Localize("MOTD"), 2.0f * MotdFontSize * MotdScale, TEXTALIGN_ML, HeaderProps);
+	Motd.HSplitTop(ui_token::motd::TITLE_HEIGHT_RATIO * MotdFontSize * MotdScale, &MotdHeader, &Motd);
+	Motd.HSplitTop(ui_token::motd::TITLE_GAP * MotdScale, nullptr, &Motd);
+	DoIngameMenuTitleLabel(PAGE_SERVER_INFO, "ingame-server-info-motd-title", &MotdHeader, Localize("MOTD"), ui_token::motd::TITLE_HEIGHT_RATIO * MotdFontSize * MotdScale, TEXTALIGN_ML, HeaderProps);
 
 	if(m_MenuTextPlanCollecting)
 		return;
@@ -3058,7 +3060,7 @@ void CMenus::RenderRankDemo(CUIRect MainView)
 	}
 
 	// 底部操作栏：刷新、打开缓存目录及条目动作。
-	Status.Draw(ColorRGBA(0, 0, 0, 0.15f), IGraphics::CORNER_B, 5.0f);
+	Status.Draw(ui_token::color::SURFACE_SUBHEADER, IGraphics::CORNER_B, ui_token::radius::SMALL_MENU);
 	Status.HMargin(4.0f, &Status);
 	Status.VSplitLeft(5.0f, nullptr, &Status);
 	CUIRect Button;

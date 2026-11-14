@@ -853,6 +853,9 @@ namespace ui_token::server_info
 	inline constexpr float TAGS_LIST_GAP = 5.0f;
 	inline constexpr float TAGS_PRESET_LABEL_WIDTH = 78.0f;
 	inline constexpr float TAGS_PRESET_ROW_HEIGHT = 22.0f;
+	// 预置标签按钮宽与提交按钮宽（两者都是「短文字胶囊」，按内容上限给固定宽）。
+	inline constexpr float TAGS_PRESET_BUTTON_WIDTH = 60.0f;
+	inline constexpr float TAGS_SUBMIT_WIDTH = 70.0f;
 } // namespace ui_token::server_info
 
 // 服务器信息页公告（MOTD）的排版档：公告里常用 Unicode 框线字符画方框，
@@ -861,6 +864,15 @@ namespace ui_token::server_info
 // 的全部数值来源，格宽与行高由字体实测（见 QmMotdLayout.h），不在此写死。
 namespace ui_token::motd
 {
+	// 排版设计基准尺寸：公告块按这个宽高比算缩放，尺寸改这里而不是散在渲染函数里。
+	inline constexpr float DESIGN_WIDTH = 180.0f;
+	inline constexpr float DESIGN_HEIGHT = 53.0f;
+	// 段标题行高相对正文字号的倍率，以及标题与正文之间的一档缝。
+	inline constexpr float TITLE_HEIGHT_RATIO = 2.0f;
+	inline constexpr float TITLE_GAP = 5.0f;
+	// 框线行每个排版 token 最多发多少个字形：整行一次发完会在长公告下形成单帧尖刺，
+	// 这里给一个上限，剩余字形留到下一帧继续。
+	inline constexpr int BOX_GLYPHS_PER_STEP = 12;
 	// 公告正文字号（未缩放）：公告栏再乘卡片缩放绘制。
 	inline constexpr float FONT_SIZE = 16.0f;
 	// 超宽框线行的推进压缩下限：低于该比例笔画会互相吞掉，宁可截断可见字数。

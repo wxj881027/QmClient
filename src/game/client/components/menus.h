@@ -2292,7 +2292,6 @@ protected:
 		unsigned m_TextHash = 0;
 		float m_Width = 0.0f;
 		float m_FontSize = 0.0f;
-		float m_Height = 0.0f;
 		int64_t m_UpdateTime = -1;
 		bool m_Valid = false;
 		unsigned m_PendingTextHash = 0;
@@ -2303,8 +2302,6 @@ protected:
 		uint64_t m_PendingFrame = 0;
 		bool m_Pending = false;
 		STextContainerIndex m_BuildTextContainerIndex;
-		// 逐行排版进度存在布局推进器内部（SIngameMotdLayoutBuild），这里只留容器与已建高度。
-		float m_BuildHeight = 0.0f;
 	};
 	struct SMenuSnapshotTextKey
 	{

@@ -123,10 +123,13 @@ void CMenus::RenderServerControl(CUIRect MainView)
 		}
 	}
 	Navigation.w = std::min(540.0f, Navigation.w);
-	// 预览目标：地图库取选中项，其余子页取当前地图；两者都为空时按钮置灰。
-	const char *pPreviewName = qm_vote_map_preview::TargetName(State.m_SelectedName.c_str(), Client()->GetCurrentMap());
-	if(State.m_MapPreview.m_Info.m_Name != pPreviewName)
+	// 预览目标：地图库取选中项，其余子页（服务端投票 / 踢人 / 观战）一律取当前地图；
+	// 传空串给 TargetName 让它回落到当前地图，避免在别的子页预览到上次选中的图。
+	const bool PreviewSelection = State.m_Page == EQmVoteMenuPage::OPTIONS && State.m_Mode.UseMapLibrary();
+	const char *pPreviewName = qm_vote_map_preview::TargetName(PreviewSelection ? State.m_SelectedName.c_str() : "", Client()->GetCurrentMap());
 	{
+		// 元数据每帧重建：目录与详情是异步到达的，只比名字会让面板长期停在「只有名字、
+		// 事实行全是破折号、没有封面」，直到换图才补齐。
 		// 目录里能查到就补齐作者 / 难度 / 分数 / 封面；查不到时只显示地图名。
 		const QmVoteMaps::SMap *pPreviewMap = nullptr;
 		for(const auto &Candidate : State.m_vMaps)
@@ -279,7 +282,7 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		State.m_Covers.Get(Map.m_Thumbnail.c_str(), CQmMapCovers::ERole::ROW, &Image);
 	};
 	CUIRect Refresh, Search, Exclude;
-	Header.VSplitRight(28.0f, &Header, &Refresh);
+	Header.VSplitRight(ui_token::control::IconBox(ui_token::font::TITLE), &Header, &Refresh);
 	Header.VSplitRight(8.0f, &Header, nullptr);
 	static CButtonContainer s_Refresh;
 	if(ui_widget::IconButton(ui_widget::ControlContext(Ui()), &s_Refresh, EQmIcon::ARROW_ROTATE_RIGHT, FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT, Refresh, State.m_Loader.Loading()))
@@ -569,7 +572,7 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		const auto Completion = CompletionFor(pCommunity, Map.m_Name.c_str());
 		const ColorRGBA PreviousText = TextRender()->GetTextColor();
 		const CQmIconSemanticColorScope SemanticColor;
-		TextRender()->TextColor(Favorite ? ResolveUiSurfaceIconColor(SurfaceText.Surface(), ColorRGBA(1.0f, 0.76f, 0.24f, 1.0f)) : PreviousText.WithMultipliedAlpha(0.3f));
+		TextRender()->TextColor(Favorite ? ResolveUiSurfaceIconColor(SurfaceText.Surface(), ui_token::color::FAVORITE) : PreviousText.WithMultipliedAlpha(0.3f));
 		const bool FavoriteClicked = ui_widget::DoIconButton(ui_widget::ControlContext(Ui()), &Map.m_Points, EQmIcon::STAR, FontIcons::FONT_ICON_STAR, 0, Marker, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, true, std::nullopt, false, true, &Marker) != 0;
 		TextRender()->TextColor(PreviousText);
 		if(FavoriteClicked)

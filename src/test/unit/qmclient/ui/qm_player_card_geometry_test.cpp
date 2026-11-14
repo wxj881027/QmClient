@@ -89,3 +89,36 @@ TEST(QmPlayerCardGeometry, IconRowSlotsAreSquareAndInsideTheShowcase)
 	for(const CUIRect &Slot : Empty.m_aCells)
 		EXPECT_EQ(Slot.w, 0.0f);
 }
+
+// 展示分区必须是「非零高度且互不重叠」：这组断言专门锁住 HSplitBottom 参数顺序写反
+// 导致的「图标行 0 高、名字 0 高、战队吃掉整块」这一类回归。
+TEST(QmPlayerCardGeometry, ShowcaseSectionsHavePositiveHeightAndDoNotOverlap)
+{
+	const CUIRect Card{0.0f, 0.0f, 320.0f, 460.0f};
+	const auto Layout = QmPlayersUi::PlayerShowcaseLayout(Card, 4);
+	EXPECT_GT(Layout.m_Name.h, 0.0f);
+	EXPECT_GT(Layout.m_Clan.h, 0.0f);
+	EXPECT_GT(Layout.m_Icons.h, 0.0f);
+	EXPECT_GE(Layout.m_Showcase.h, Layout.m_Name.h + Layout.m_Clan.h + Layout.m_Icons.h);
+	// 名字在战队之上、图标行在名字之上，三者纵向不交叠。
+	EXPECT_LE(Layout.m_Icons.y + Layout.m_Icons.h, Layout.m_Name.y + 0.01f);
+	EXPECT_LE(Layout.m_Name.y + Layout.m_Name.h, Layout.m_Clan.y + 0.01f);
+	// 立绘不得压到图标行。
+	EXPECT_LE(Layout.m_Figure.y + Layout.m_Figure.h, Layout.m_Icons.y + 0.01f);
+}
+
+TEST(QmPlayerCardGeometry, ShowcaseIconSlotsAreSquareAndInsideTheIconRow)
+{
+	const CUIRect Card{0.0f, 0.0f, 320.0f, 460.0f};
+	const auto Layout = QmPlayersUi::PlayerShowcaseLayout(Card, 4);
+	const auto Slots = QmPlayersUi::PlayerShowcaseIconRow(Layout.m_Icons, 4);
+	for(int i = 0; i < 4; ++i)
+	{
+		SCOPED_TRACE(i);
+		const CUIRect &Cell = Slots.m_aCells[i];
+		EXPECT_GT(Cell.w, 0.0f);
+		EXPECT_FLOAT_EQ(Cell.w, Cell.h);
+		EXPECT_GE(Cell.x, Layout.m_Icons.x - 0.01f);
+		EXPECT_LE(Cell.x + Cell.w, Layout.m_Icons.x + Layout.m_Icons.w + 0.01f);
+	}
+}

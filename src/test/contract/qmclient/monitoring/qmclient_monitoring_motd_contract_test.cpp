@@ -56,7 +56,8 @@ TEST(QmMonitoringMotdContract, MotdParagraphDrainBuildsInChunks)
 
 	EXPECT_NE(Header.find("static constexpr int INGAME_MOTD_PARAGRAPH_CHUNK_BYTES"), std::string::npos);
 	EXPECT_NE(Header.find("INGAME_MOTD_PARAGRAPH_CHUNK_BYTES = 24"), std::string::npos);
-	EXPECT_NE(Header.find("float m_BuildHeight"), std::string::npos);
+	// 构建期状态只剩容器索引；进度与高度都在布局推进器内部，头文件不再堆缓存字段。
+	EXPECT_NE(Header.find("STextContainerIndex m_BuildTextContainerIndex"), std::string::npos);
 	EXPECT_NE(DrainBody.find("INGAME_MOTD_PARAGRAPH_CHUNK_BYTES"), std::string::npos);
 	EXPECT_NE(DrainBody.find("EnsureIngameMotdLayout("), std::string::npos);
 	EXPECT_NE(DrainBody.find("StepIngameMotdLayout("), std::string::npos);
