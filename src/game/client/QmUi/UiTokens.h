@@ -545,6 +545,9 @@ namespace ui_token::chat
 	inline constexpr float SCROLLBAR_MARGIN = spacing::XS * 0.5f;
 	// 滑块最短长度：再短就抓不住，与旧实现同一档。
 	inline constexpr float SCROLLBAR_MIN_THUMB = spacing::MD;
+	// 一档滚轮推进多少行：聊天偏移单位是行，所以这里就是行数；
+	// 用户调 qm_ui_scroll_step 时与列表同一份系数等比缩放。
+	inline constexpr float WHEEL_LINES_PER_STEP = 1.0f;
 	// 滑块最长占轨道的比例：内容只比一屏多一点时，按「可见/内容」比例算出来的滑块
 	// 轨道与滑块的圆角：胶囊端头，和列表覆盖式滚动条同一档（绘制层按短边一半兜底）。
 	inline constexpr float SCROLLBAR_RADIUS = radius::PILL;

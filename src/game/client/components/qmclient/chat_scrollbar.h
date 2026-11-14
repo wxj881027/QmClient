@@ -24,7 +24,6 @@ constexpr float QM_CHAT_SCROLLBAR_RESERVE = QM_CHAT_SCROLLBAR_WIDTH + QM_CHAT_SC
 // 一个滚轮档的标准增量（与 CUi 滚轮归属帧同口径：上滚 +120、下滚 -120）。
 // 滚轮是离散输入，聊天只在输入事件里记方向，偏移推进统一交给 QmScroll 的
 // AddWheelImpulse，所以这里声明的是"一档"的语义常量，不让调用点自己写 120。
-constexpr float QM_CHAT_WHEEL_NOTCH = 120.0f;
 // 一帧内最多累积的滚轮档数：输入事件可能一帧来好几条，推进要等渲染帧。
 // 上界是为了防止聊天被配置或焦点过滤隐藏时步数无限攒着，重新显示时一次跳掉半屏历史。
 constexpr int QM_CHAT_WHEEL_MAX_PENDING_STEPS = 3;
@@ -180,7 +179,12 @@ inline SQmScrollMetrics QmChatHistoryScrollMetrics(int TotalLines, int VisibleLi
 inline SQmScrollConfig QmChatHistoryScrollConfig()
 {
 	SQmScrollConfig Config = QmNativeWheelScrollConfig(1.0f, g_Config.m_UiSmoothScrollTime / 1000.0f);
-	Config.m_WheelScale = 1.0f;
+	// 偏移单位是「行」，所以一档的尺度写成行数；步长系数与列表同一份配置
+	// （qm_ui_scroll_step 默认 10 时为 1.0），不再用固定 120 像素一次跳到底。
+	// 防零回退与 QmScroll 同口径：测试环境的 g_Config 是零初始化。
+	const float Step = g_Config.m_QmUiScrollStep > 0.0f ? (float)g_Config.m_QmUiScrollStep : 10.0f;
+	const float StepScale = Step / 10.0f;
+	Config.m_WheelScale = ui_token::chat::WHEEL_LINES_PER_STEP * StepScale;
 	return Config;
 }
 
@@ -197,7 +201,8 @@ inline void QmChatHistoryWheel(CQmScrollState &State, int Steps, const SQmScroll
 {
 	if(Steps == 0)
 		return;
-	State.AddWheelImpulse(-(float)Steps * QM_CHAT_WHEEL_NOTCH, Metrics, Config);
+	// 一档 = Config.m_WheelScale 行，与列表「一次两行」的手感对齐。
+	State.AddWheelImpulse(-(float)Steps * std::max(1.0f, Config.m_WheelScale), Metrics, Config);
 }
 
 // 拖动直接跟手：把目标行写进同一份滚动状态（不经过弹簧）。松手后交给
