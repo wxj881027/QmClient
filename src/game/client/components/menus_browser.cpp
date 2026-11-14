@@ -726,14 +726,89 @@ namespace
 
 }
 
+// 预览框里的下载进度：轨道 + 已完成比例 + 百分比文字。
+static void QmDrawMapPreviewDownloadProgress(CGameClient *pGameClient, const CUIRect &Rect, int Progress)
+{
+	CUi *pUi = pGameClient->Ui();
+	if(pUi == nullptr || Rect.w <= 0.0f || Rect.h <= 0.0f)
+		return;
+	const int Percent = std::clamp(Progress, 0, 100);
+	CUIRect Track, Label;
+	Rect.HSplitBottom(std::min(Rect.h, ui_token::font::BODY * 3.0f), &Label, nullptr);
+	Label.HSplitTop(std::min(Label.h, ui_token::settings::ROW_HEIGHT * 0.5f), &Track, nullptr);
+	Track.w = std::min(Track.w * 0.6f, 240.0f);
+	Track.x = Rect.x + (Rect.w - Track.w) * 0.5f;
+	Track.Draw(ui_token::color::LIST_ITEM_HOVER, IGraphics::CORNER_ALL, Track.h * 0.5f);
+	CUIRect Fill = Track;
+	Fill.w *= Percent / 100.0f;
+	if(Fill.w > 1.0f)
+		Fill.Draw(pUi->QmControlTheme().m_Accent, IGraphics::CORNER_ALL, Track.h * 0.5f);
+	char aBuf[64];
+	str_format(aBuf, sizeof(aBuf), Localize("Downloading map %d%%"), Percent);
+	pUi->DoLabel(&Label, aBuf, ui_token::font::SMALL, TEXTALIGN_MC);
+}
+
 // 预览地图加载缓存（LRU）。作为 CMenus 成员析构，保证 GPU 资源在图形
 // 接口存活期间释放；图形重建后旧句柄仅失效、不再提交销毁命令。
 class CMenus::CMapPreviewCache
 {
 public:
+	std::shared_ptr<IHttpRequest> m_pDownloadTask;
+	char m_aDownloadName[MAX_MAP_LENGTH] = {};
+
 	explicit CMapPreviewCache(IGraphics *pGraphics) :
 		m_pGraphics(pGraphics) {}
 	~CMapPreviewCache() { Clear(); }
+
+	// 本地缺图时按地图名拉一次，进度供预览控件显示。
+	bool EnsureDownloaded(CGameClient *pGameClient, const char *pMapName)
+	{
+		if(pMapName == nullptr || pMapName[0] == '\0')
+			return false;
+		if(m_pDownloadTask && str_comp(m_aDownloadName, pMapName) == 0)
+			return true;
+		auto *pClient = static_cast<CClient *>(pGameClient->Client());
+		if(pClient == nullptr || pClient->Http() == nullptr)
+			return false;
+		char aEscaped[MAX_MAP_LENGTH * 3];
+		int Out = 0;
+		for(const char *p = pMapName; *p != '\0' && Out + 4 < (int)sizeof(aEscaped); ++p)
+		{
+			if(*p == ' ')
+			{
+				aEscaped[Out++] = '%';
+				aEscaped[Out++] = '2';
+				aEscaped[Out++] = '0';
+			}
+			else
+				aEscaped[Out++] = *p;
+		}
+		aEscaped[Out] = '\0';
+		char aUrl[512];
+		str_format(aUrl, sizeof(aUrl), "%s/downloadedmaps/%s.map", g_Config.m_ClMapDownloadUrl, aEscaped);
+		char aOutput[IO_MAX_PATH_LENGTH];
+		str_format(aOutput, sizeof(aOutput), "downloadedmaps/%s.map", pMapName);
+		std::shared_ptr<IHttpRequest> pTask(HttpGetFile(aUrl, pGameClient->Storage(), aOutput, IStorage::TYPE_SAVE).release());
+		if(!pTask)
+			return false;
+		m_pDownloadTask = pTask;
+		str_copy(m_aDownloadName, pMapName);
+		pClient->Http()->Run(m_pDownloadTask);
+		return true;
+	}
+
+	int DownloadProgress(const char *pMapName) const
+	{
+		if(!m_pDownloadTask || str_comp(m_aDownloadName, pMapName) != 0)
+			return -1;
+		return m_pDownloadTask->Progress();
+	}
+
+	bool DownloadFinished(const char *pMapName) const
+	{
+		return m_pDownloadTask && str_comp(m_aDownloadName, pMapName) == 0 &&
+		       m_pDownloadTask->State() == EHttpState::DONE && m_pDownloadTask->Progress() >= 100;
+	}
 
 	void Clear()
 	{
@@ -1087,7 +1162,16 @@ bool CMenus::RenderMapPreviewForVote(const CUIRect &Preview, const char *pMapNam
 		m_pMapPreviewCache = new CMapPreviewCache(Graphics());
 	SQmMapPreviewEntry *pEntry = m_pMapPreviewCache->Acquire(pMapName, Now, Storage(), GameClient());
 	if(pEntry == nullptr || pEntry->m_LoadFailed)
+	{
+		// 缺图就按名字下载：进度直接画在预览框里，下载完成后清缓存让它重新加载。
+		if(m_pMapPreviewCache->EnsureDownloaded(GameClient(), pMapName))
+		{
+			QmDrawMapPreviewDownloadProgress(GameClient(), Preview, m_pMapPreviewCache->DownloadProgress(pMapName));
+			if(m_pMapPreviewCache->DownloadFinished(pMapName))
+				m_pMapPreviewCache->Clear();
+		}
 		return false;
+	}
 	const bool Ready = CMapPreviewCache::AdvanceEntry(*pEntry, GameClient(), Now) && pEntry->m_pRenderer->AdvanceMapLoad(1);
 	if(!Ready)
 	{

@@ -4289,6 +4289,9 @@ Downloaded: %.1f MiB (total size unknown)
 Downloading map
 == Harita indiriliyor
 
+Downloading map %d%%
+== Downloading map %d%%
+
 Downloading rank 1 demo
 == Rank 1 demosu indiriliyor
 
@@ -18266,6 +18269,14 @@ Hook
 [Direct touch input]
 Relative aim
 == Göreli nişan
+
+[Editor]
+Use Shift+Mouse wheel up/down to adjust the angle.
+== Use Shift+Mouse wheel up/down to adjust the angle.
+
+[Editor]
+Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
+== Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
 
 [Editor curve type abbreviation]
 B

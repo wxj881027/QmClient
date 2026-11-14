@@ -4421,6 +4421,9 @@ Downloaded: %.1f MiB (total size unknown)
 Downloading map
 == 正在下载地图
 
+Downloading map %d%%
+== Downloading map %d%%
+
 Downloading rank 1 demo
 == 正在下载 Rank 1 演示
 
@@ -22618,8 +22621,12 @@ Use left mouse button to paint with the brush. Right click to clear the brush. H
 == 使用鼠标左键用画笔绘制。右键清空画笔。按住 Alt 将鼠标移动锁定到单轴。
 
 [Editor]
-Use shift+mouse wheel up/down to adjust the tele numbers. Use ctrl+f to change all tele numbers to the first unused number.
-== 使用 Shift+鼠标滚轮上下调整传送编号。使用 Ctrl+F 将所有传送编号改为首个未使用编号。
+Use Shift+Mouse wheel up/down to adjust the angle.
+== Use Shift+Mouse wheel up/down to adjust the angle.
+
+[Editor]
+Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
+== Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
 
 [Editor]
 Value:

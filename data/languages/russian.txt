@@ -4289,6 +4289,9 @@ Downloaded: %.1f MiB (total size unknown)
 Downloading map
 == Загрузка карты
 
+Downloading map %d%%
+== Downloading map %d%%
+
 Downloading rank 1 demo
 == Загрузка демо ранга 1
 
@@ -18266,6 +18269,14 @@ Hook
 [Direct touch input]
 Relative aim
 == Относительное прицеливание
+
+[Editor]
+Use Shift+Mouse wheel up/down to adjust the angle.
+== Use Shift+Mouse wheel up/down to adjust the angle.
+
+[Editor]
+Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
+== Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
 
 [Editor curve type abbreviation]
 B

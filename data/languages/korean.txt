@@ -4289,6 +4289,9 @@ Downloaded: %.1f MiB (total size unknown)
 Downloading map
 == 맵 다운로드 중
 
+Downloading map %d%%
+== Downloading map %d%%
+
 Downloading rank 1 demo
 == 랭크 1 데모 다운로드 중
 
@@ -18266,6 +18269,14 @@ Hook
 [Direct touch input]
 Relative aim
 == 상대 조준
+
+[Editor]
+Use Shift+Mouse wheel up/down to adjust the angle.
+== Use Shift+Mouse wheel up/down to adjust the angle.
+
+[Editor]
+Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
+== Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
 
 [Editor curve type abbreviation]
 B
