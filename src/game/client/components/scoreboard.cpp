@@ -1280,7 +1280,17 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 	const float ClientBrandLength = ShowClientBrand ? maximum(TextRender()->TextWidth(FontSize, "Qm"), TextRender()->TextWidth(FontSize, "Arg")) + CLIENT_BRAND_LABEL_GAP : 0.0f;
 	const float ClientBrandOffset = Scoreboard.x + 10.0f;
 	const float ScoreOffset = Scoreboard.x + 20.0f + ClientBrandLength;
-	const float ScoreLength = TextRender()->TextWidth(FontSize, TimeScore ? "00:00:00" : "99999");
+	// 0.6 服务器带毫秒完赛数据时，时间列要为「.000」留出宽度；
+	// 小数按 0.7 倍字号绘制，与 RenderTime 的排版一致。
+	const bool MillisecondScore = GameClient()->m_ReceivedDDNetPlayerFinishTimes;
+	const bool TrueMilliseconds = GameClient()->m_ReceivedDDNetPlayerFinishTimesMillis;
+	float ScoreLength = TextRender()->TextWidth(FontSize, TimeScore ? "00:00:00" : "99999");
+	if(TimeScore && MillisecondScore)
+	{
+		const float MillisLength = TextRender()->TextWidth(FontSize * 0.7f, TrueMilliseconds ? ".000" : ".00");
+		// 小数块与秒数有意少量重叠，避免视觉断裂（见 CUi::RenderTime 的 FractionKern）。
+		ScoreLength += MillisLength * 0.65f;
+	}
 	// 统计列复用积分位置，并为带单位的表头预留宽度。
 	const char *pStatsLabel = ShowPlaytime ? Localize("Playtime (h)") : (AxiomScoreColumn ? QmAxiomModeName(m_QmAxiomScoreModeFrame) : Localize("Points"));
 	const float StatsLength = ShowStatistics ? maximum(TextRender()->TextWidth(FontSize, LowScoreboardWidth ? "99999" : "999999"), TextRender()->TextWidth(HeadlineFontsize, pStatsLabel)) : 0.0f;
@@ -1499,6 +1509,23 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 				str_time((int64_t)absolute(pInfo->m_Score / 10), TIME_MINS_CENTISECS, aBuf, sizeof(aBuf));
 			}
 		}
+		else if(TimeScore && MillisecondScore)
+		{
+			// 0.6 服务器若上报了 DDNet 完赛时间，优先显示「秒 + 小数」，
+			// 不再退回只有整秒的 m_Score；未完赛或时间未知时留空。
+			const int FinishSeconds = ClientData.m_FinishTimeSeconds;
+			const bool NotFinished = FinishSeconds == FinishTime::NOT_FINISHED_MILLIS;
+			CUIRect ScoreRect = {ScoreOffset, Row.y, ScoreLength, Row.h};
+			Ui()->RenderTime(ScoreRect, FontSize, FinishSeconds, NotFinished, ClientData.m_FinishTimeMillis,
+				TrueMilliseconds, m_aScoreSecondsText[ClientId], m_aScoreMillisText[ClientId], TextColor);
+			// 超过一小时后 RenderTime 只显示到秒，悬停补一条带百分秒的完整时间。
+			if(!NotFinished && FinishSeconds >= 60 * 60 && m_MouseUnlocked && m_RenderInteractions)
+			{
+				char aTimeTooltip[32];
+				str_time((int64_t)FinishSeconds * 100 + ClientData.m_FinishTimeMillis / 10, TIME_HOURS_CENTISECS, aTimeTooltip, sizeof(aTimeTooltip));
+				GameClient()->m_Tooltips.DoToolTipForRect(&m_aScoreTooltipIds[ClientId], &ScoreRect, aTimeTooltip, ScoreLength * 1.5f);
+			}
+		}
 		else if(TimeScore)
 		{
 			if(pInfo->m_Score == -9999)
@@ -1514,7 +1541,8 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 		{
 			str_format(aBuf, sizeof(aBuf), "%d", std::clamp(pInfo->m_Score, -999, 99999));
 		}
-		TextRender()->Text(ScoreOffset + ScoreLength - TextRender()->TextWidth(FontSize, aBuf), Row.y + (Row.h - FontSize) / 2.0f, FontSize, aBuf);
+		if(Race7 || !(TimeScore && MillisecondScore))
+			TextRender()->Text(ScoreOffset + ScoreLength - TextRender()->TextWidth(FontSize, aBuf), Row.y + (Row.h - FontSize) / 2.0f, FontSize, aBuf);
 		const bool HideIdentity = GameClient()->ShouldHideStreamerIdentity(ClientId);
 		char aNameBuf[MAX_NAME_LENGTH];
 		char aClanBuf[MAX_CLAN_LENGTH];

@@ -276,6 +276,11 @@ class CScoreboard : public CComponent
 	};
 	CPlayerElement m_aPlayers[MAX_CLIENTS];
 
+	// 完赛时间按「秒 + 小数」分块缓存：0.6 服务器带毫秒完赛数据时使用。
+	std::array<CCachedText, MAX_CLIENTS> m_aScoreSecondsText;
+	std::array<CCachedText, MAX_CLIENTS> m_aScoreMillisText;
+	std::array<char, MAX_CLIENTS> m_aScoreTooltipIds{};
+
 	// 本帧解析出的 Axiom 积分模式（NONE 表示当前服务器不是 Axiom 积分服）。
 	// 每帧在 OnRender 开头刷新一次，渲染期由 HasQmAxiomScoreMode / QmAxiomScorePoints 复用。
 	EQmAxiomMode m_QmAxiomScoreModeFrame = EQmAxiomMode::NONE;
