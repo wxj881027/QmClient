@@ -904,8 +904,9 @@ namespace ui_widget
 		// 悬浮/拖动的几何反馈：滑块向外扩 1~2px，在暗/亮表面上都可直接感知
 		//（颜色推导反馈在高透明度卡片上不可靠，几何反馈不依赖底色）。
 		CUIRect HandleRect = Rect;
+		// 放大档位来自 token：聊天滚动条与列表滑块读同一份，避免两处一边 1px 一边 2px。
 		if(Hot)
-			HandleRect.Margin(Pressed ? -2.0f : -1.0f, &HandleRect);
+			HandleRect.Margin(Pressed ? -ui_token::feedback::HANDLE_PRESS_GROW : -ui_token::feedback::HANDLE_HOVER_GROW, &HandleRect);
 		// 滑块是前景反馈，背景透明度仅作用于轨道；保留强调色自身 alpha 和禁用态。
 		DrawControlSurface(Ctx, HandleRect, Style.m_Handle, Style.m_Border, ui_token::radius::PILL, ui_token::feedback::ICON_BORDER_WIDTH);
 		if(pColorInner != nullptr)

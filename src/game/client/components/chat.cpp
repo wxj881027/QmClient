@@ -458,6 +458,9 @@ CChat::CChat()
 	m_LargeAreaOpenTick = 0;
 	m_LastPresentationShowLargeArea = false;
 	m_PendingConsoleLineIndex = -1;
+	m_BacklogCurLine = 0;
+	m_HistoryScrollAppliedLine = 0;
+	m_HistoryWheelSteps = 0;
 
 	m_Input.SetCalculateOffsetCallback([this]() { return m_IsInputCensored; });
 	m_Input.SetDisplayTextCallback([this](char *pStr, size_t NumChars) {
@@ -668,6 +671,9 @@ void CChat::ClearLines()
 	for(auto &Line : m_aLines)
 		Line.Reset(*this);
 	m_BacklogCurLine = 0;
+	m_HistoryScroll.Reset();
+	m_HistoryScrollAppliedLine = 0;
+	m_HistoryWheelSteps = 0;
 	m_ScrollbarDragging = false;
 	m_ScrollbarDragOffset = 0.0f;
 	m_ChatInputMapRect = {};
@@ -832,10 +838,17 @@ bool CChat::UpdateHistoryTouchScroll(const CUIRect &ChatRect, float HeightLimit,
 	if(Lines == 0)
 		return false;
 	// 手指下拖 = 内容下移 = 看更早的历史行，与滚轮上滚同向。
-	const int NewBacklogLine = ClampBacklogLine(m_BacklogCurLine + Lines, TotalVisibleLines, VisibleLineCapacity);
+	// 拖动与滚动条是同一语义：直接跟手写进公共滚动状态（SetOffset），松手后
+	// 由 QmScroll 的越界回弹收回合法范围，不再各自维护一份整数偏移。
+	const SQmScrollMetrics Metrics = QmChatHistoryScrollMetrics(TotalVisibleLines, VisibleLineCapacity);
+	const SQmScrollConfig Config = QmChatHistoryScrollConfig();
+	const int CurrentLine = QmChatHistoryScrollLine(m_HistoryScroll.Offset(), Metrics);
+	const int NewBacklogLine = ClampBacklogLine(CurrentLine + Lines, TotalVisibleLines, VisibleLineCapacity);
 	if(NewBacklogLine == m_BacklogCurLine)
 		return false;
+	QmChatHistoryDragToLine(m_HistoryScroll, NewBacklogLine, Metrics, Config);
 	m_BacklogCurLine = NewBacklogLine;
+	m_HistoryScrollAppliedLine = NewBacklogLine;
 	return true;
 }
 
@@ -1259,10 +1272,11 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 			MousePos.y <= m_TranslateButton.m_Y + m_TranslateButton.m_H;
 		if(InsideHistory && !InsideTranslateButton && !m_ScrollbarDragging)
 		{
-			const int TotalLines = CountInitializedLines();
-			const int Direction = Event.m_Key == KEY_MOUSE_WHEEL_UP ? 1 : -1;
-			m_BacklogCurLine = ClampBacklogLine(m_BacklogCurLine + Direction, TotalLines, 1);
-			RebuildChat();
+			// 这里只知道方向、不知道这一次能显示多少行（视口要等绘制趟算出来），
+			// 所以只累积步数；推进器按公共 QmScroll 的弹簧/惯性档在渲染帧统一推进。
+			m_HistoryWheelSteps = std::clamp(
+				m_HistoryWheelSteps + (Event.m_Key == KEY_MOUSE_WHEEL_UP ? 1 : -1),
+				-QM_CHAT_WHEEL_MAX_PENDING_STEPS, QM_CHAT_WHEEL_MAX_PENDING_STEPS);
 			return true;
 		}
 	}
@@ -3631,8 +3645,9 @@ void CChat::OnRender()
 
 		if(MobileChannelChips)
 		{
-			// 模式按钮与发送对象按钮底板，画在文字下面。
-			const float ChipHeight = maximum(InputCursor.m_FontSize + 4.0f, 16.0f);
+			// 模式按钮与发送对象按钮底板，画在文字下面。高度与左侧翻译按钮同源
+			// （QmChatInputRowHeight）：同一行的两个按钮各算一次行高就会一大一小。
+			const float ChipHeight = QmChatInputRowHeight(InputCursor.m_FontSize);
 			const float ChipY = y - (ChipHeight - InputCursor.m_FontSize) * 0.5f;
 			CUIRect ModeChip = {InputLayout.m_TextStartX - 2.0f, ChipY, InputModeLabelWidth + 4.0f, ChipHeight};
 			CUIRect TargetChip = {ModeChip.x + ModeChip.w + 2.0f, ChipY, InputChannelChipWidth, ChipHeight};
@@ -3919,18 +3934,48 @@ void CChat::OnRender()
 	const int TotalVisibleLines = CountVisibleLinesFrom(0);
 	const int VisibleLineCapacity = maximum(1, (int)std::floor(HistoryHeight / maximum(RowHeight + ExtraLineSpacing, 1.0f)));
 	const int MaxScroll = maximum(0, TotalVisibleLines - VisibleLineCapacity);
+	// 聊天历史的滚动偏移单位是"行"：视口 = 可显示行数、内容 = 总行数，推进一律交给
+	// 公共滚动实现（QmScroll 的 CQmScrollState）：滚轮走弹簧/平滑档，拖动直接跟手，
+	// 松手后由同一条越界回弹把偏移收回合法范围。聊天不再自己按整数行瞬时跳。
+	const SQmScrollMetrics HistoryScrollMetrics = QmChatHistoryScrollMetrics(TotalVisibleLines, VisibleLineCapacity);
+	const SQmScrollConfig HistoryScrollConfig = QmChatHistoryScrollConfig();
 	if(!InputActive)
+	{
+		m_HistoryScroll.Reset();
+		m_HistoryWheelSteps = 0;
 		m_BacklogCurLine = 0;
-	m_BacklogCurLine = ClampBacklogLine(m_BacklogCurLine, TotalVisibleLines, VisibleLineCapacity);
+		m_HistoryScrollAppliedLine = 0;
+	}
+	else
+	{
+		if(m_HistoryWheelSteps != 0)
+		{
+			QmChatHistoryWheel(m_HistoryScroll, m_HistoryWheelSteps, HistoryScrollMetrics, HistoryScrollConfig);
+			m_HistoryWheelSteps = 0;
+		}
+		// 新消息到达时 AddLine 会把可见行 +1（视图锚定在同一批消息上）。这类外部
+		// 改动要同步回推进器，否则下一帧会按旧偏移把视图弹回去。
+		if(m_BacklogCurLine != m_HistoryScrollAppliedLine)
+			QmChatHistoryDragToLine(m_HistoryScroll, m_BacklogCurLine, HistoryScrollMetrics, HistoryScrollConfig);
+		m_HistoryScroll.Advance(DeltaSeconds, HistoryScrollMetrics, HistoryScrollConfig);
+		const int NewBacklogLine = QmChatHistoryScrollLine(m_HistoryScroll.Offset(), HistoryScrollMetrics);
+		if(NewBacklogLine != m_BacklogCurLine)
+		{
+			m_BacklogCurLine = NewBacklogLine;
+			RebuildChat();
+		}
+		m_HistoryScrollAppliedLine = m_BacklogCurLine;
+	}
 
 	const bool ShowChatScrollbar = InputActive && MaxScroll > 0 && HistoryHeight > 0.0f;
 	const CUIRect ScrollbarRect = QmChatScrollbarRail(ChatRect, HeightLimit, HistoryHeight, ChatScrollbarOnRight);
 	float ScrollbarHandleY = ScrollbarRect.y;
 	float ScrollbarHandleH = ScrollbarRect.h;
+	bool ScrollbarHovered = false;
 	if(ShowChatScrollbar)
 	{
-		ScrollbarHandleH = QmChatScrollbarHandleHeight(ScrollbarRect.h, VisibleLineCapacity, TotalVisibleLines);
-		const float TrackRange = maximum(0.0f, ScrollbarRect.h - ScrollbarHandleH);
+		ScrollbarHandleH = QmChatScrollbarHandleHeight(ScrollbarRect.h, VisibleLineCapacity, TotalVisibleLines, 1.0f, ScrollbarRect.w);
+		const float TrackRange = QmChatScrollbarTrackRange(ScrollbarRect, ScrollbarHandleH);
 		ScrollbarHandleY = QmChatScrollbarHandle(ScrollbarRect, ScrollbarHandleH, BacklogLineToScrollbarValue(m_BacklogCurLine, MaxScroll)).y;
 		const vec2 MousePos = PointerLocalPos();
 		const bool InsideRail =
@@ -3944,19 +3989,20 @@ void CChat::OnRender()
 			MousePos.y >= ScrollbarHandleY &&
 			MousePos.y <= ScrollbarHandleY + ScrollbarHandleH;
 
-		if(PointerPressed() && InsideRail && !InsideCommandHud && !m_CommandHud.IsPressed())
+		ScrollbarHovered = InsideRail && !InsideCommandHud && !m_CommandHud.IsPressed();
+		if(PointerPressed() && ScrollbarHovered)
 		{
 			m_ScrollbarDragging = true;
 			m_ScrollbarDragOffset = InsideHandle ? std::clamp(MousePos.y - ScrollbarHandleY, 0.0f, ScrollbarHandleH) : ScrollbarHandleH * 0.5f;
 		}
 		if(!PointerDown())
 			m_ScrollbarDragging = false;
-		// 公共滑块绘制入口读 CUi 的悬浮/按下登记：只登记滚动条自己的 id，松手立刻收回，
-		// 不占用其它控件的热项/活动项（与 ui_widget::ScrollContainer 同一套做法）。
+		// 按下/拖动登记给 CUi 的活动项：公共滑块绘制入口按活动项做按下反馈（放大 + 描边），
+		// 松手立刻收回，不占用其它控件（与 ui_widget::ScrollContainer 同一套做法）。
+		// 悬浮反馈不能只依赖 CUi 热项：游戏内 HUD 帧没有菜单的 CUi::Update() 去提交它，
+		// 所以由 QmDrawChatScrollbar 用同一档参数补齐。
 		if(!Ui()->RenderOnly())
 		{
-			if(InsideRail || m_ScrollbarDragging)
-				Ui()->SetHotItem(QmChatScrollbarId());
 			if(m_ScrollbarDragging)
 				Ui()->SetActiveItem(QmChatScrollbarId());
 			else if(Ui()->CheckActiveItem(QmChatScrollbarId()))
@@ -3964,14 +4010,17 @@ void CChat::OnRender()
 		}
 		if(m_ScrollbarDragging)
 		{
-			const float HandleTop = std::clamp(MousePos.y - m_ScrollbarDragOffset, ScrollbarRect.y, ScrollbarRect.y + TrackRange);
-			const float RelativeTop = TrackRange > 0.0f ? (HandleTop - ScrollbarRect.y) / TrackRange : 1.0f;
-			const int NewBacklogCurLine = ScrollbarValueToBacklogLine(RelativeTop, MaxScroll);
+			// 拖动跟手：把指针位置换算成目标行后直接写进公共滚动状态（不经过弹簧），
+			// 松手后由 Advance 的越界回弹收回合法范围。
+			const float HandleTop = QmChatScrollbarClampTop(ScrollbarRect, MousePos.y - m_ScrollbarDragOffset, TrackRange);
+			const int NewBacklogCurLine = ScrollbarValueToBacklogLine(QmChatScrollbarValueFromTop(ScrollbarRect, HandleTop, TrackRange), MaxScroll);
+			QmChatHistoryDragToLine(m_HistoryScroll, NewBacklogCurLine, HistoryScrollMetrics, HistoryScrollConfig);
 			if(NewBacklogCurLine != m_BacklogCurLine)
 			{
 				m_BacklogCurLine = NewBacklogCurLine;
 				RebuildChat();
 			}
+			m_HistoryScrollAppliedLine = m_BacklogCurLine;
 			ScrollbarHandleY = QmChatScrollbarHandle(ScrollbarRect, ScrollbarHandleH, BacklogLineToScrollbarValue(m_BacklogCurLine, MaxScroll)).y;
 		}
 	}
@@ -4261,7 +4310,7 @@ void CChat::OnRender()
 	if(ShowChatScrollbar)
 	{
 		const CUIRect ScrollbarThumb{ScrollbarRect.x, ScrollbarHandleY, ScrollbarRect.w, ScrollbarHandleH};
-		QmDrawChatScrollbar(Ui(), ScrollbarRect, ScrollbarThumb, true);
+		QmDrawChatScrollbar(Ui(), ScrollbarRect, ScrollbarThumb, true, ScrollbarHovered, m_ScrollbarDragging);
 		ExtendBounds(ScrollbarRect.x, ScrollbarRect.y, ScrollbarRect.w, ScrollbarRect.h);
 	}
 
@@ -4617,9 +4666,13 @@ void CChat::RenderTranslateButton(const CUIRect &ButtonRect)
 	m_TranslateButton.m_AutoTranslateEnabled = g_Config.m_QmTranslateAutoOutgoing != 0;
 	const bool IsEnabled = m_TranslateButton.m_AutoTranslateEnabled;
 
-	// 圆形图标按钮：按钮区本身就是正方形（宽高都取字号），按胶囊档绘制即正圆。
+	// 圆形图标按钮：按钮区本身就是正方形（宽高都取输入行行高），按胶囊档绘制即正圆。
 	const float Diameter = minimum(ButtonRect.w, ButtonRect.h);
 	const CUIRect Circle{ButtonRect.x + (ButtonRect.w - Diameter) * 0.5f, ButtonRect.y + (ButtonRect.h - Diameter) * 0.5f, Diameter, Diameter};
+	// 描边与图标都由同一个直径按 token 派生：描边只占直径的零头（细勾边），
+	// 图标墨迹接近内圈，不会再出现「粗框套小点」。
+	const float BorderWidth = QmChatTranslateButtonBorderWidth(Diameter);
+	const float IconSize = QmChatTranslateIconBoxSize(Diameter);
 	// 底色只有「自动翻译启用/关闭」两条玩家配置；悬浮、按下、展开三种反馈统一走公共
 	// 按钮样式与反馈 token（主题强调色 + ui_token::feedback），这里不再写裸 ColorRGBA。
 	const SUiTheme &Theme = Ui()->QmControlTheme();
@@ -4632,11 +4685,11 @@ void CChat::RenderTranslateButton(const CUIRect &ButtonRect)
 						color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateBtnColorEnabled, true)) :
 						color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateBtnColorDisabled, true));
 	const SUiSecondaryButtonStyle ButtonStyle = ResolveUiButtonStyle(EUiButtonRole::ICON, ButtonSurface, Theme.m_Surface, Theme, ButtonState);
-	DrawRoundedSurface(Ui(), Circle, ButtonStyle.m_Fill, ButtonStyle.m_Border, ui_token::radius::PILL, ui_token::feedback::ICON_BORDER_WIDTH);
+	DrawRoundedSurface(Ui(), Circle, ButtonStyle.m_Fill, ButtonStyle.m_Border, ui_token::radius::PILL, BorderWidth);
 
-	CUIRect IconRect;
-	Circle.Margin(minimum(ui_token::spacing::XS * 0.5f, Circle.h * 0.25f), &IconRect);
-	const float IconSize = IconRect.h * ui_token::control::ICON_INK_RATIO;
+	// 图标盒子就是整个圆：字形尺寸已按内径 × ICON_INK_RATIO 反推过，
+	// 这里再内缩一圈等于把图标重新缩小一次。
+	const CUIRect IconRect = Circle;
 
 	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH |

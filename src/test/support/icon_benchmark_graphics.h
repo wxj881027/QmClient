@@ -245,14 +245,16 @@ public:
 	void QuadsSetRotation(float Angle) override {}
 	void QuadsSetSubset(float TopLeftU, float TopLeftV, float BottomRightU, float BottomRightV) override {}
 	void QuadsSetSubsetFree(float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3, int Index = -1) override { throw std::logic_error("unexpected graphics boundary: QuadsSetSubsetFree"); }
+	// 引擎接口新增的纹理目标标志：测试桩不加载真实纹理，统一返回 0（不启用数组/3D 目标）。
+	int TextureLoadFlags() override { return 0; }
 	void QuadsDraw(CQuadItem *pArray, int Num) override { throw std::logic_error("unexpected graphics boundary: QuadsDraw"); }
 	void QuadsDrawTL(const CQuadItem *pArray, int Num) override { throw std::logic_error("unexpected graphics boundary: QuadsDrawTL"); }
 	void QuadsTex3DDrawTL(const CQuadItem *pArray, int Num) override { throw std::logic_error("unexpected graphics boundary: QuadsTex3DDrawTL"); }
 	int CreateQuadContainer(bool AutomaticUpload = true) override { throw std::logic_error("unexpected graphics boundary: CreateQuadContainer"); }
 	void QuadContainerChangeAutomaticUpload(int ContainerIndex, bool AutomaticUpload) override { throw std::logic_error("unexpected graphics boundary: QuadContainerChangeAutomaticUpload"); }
 	void QuadContainerUpload(int ContainerIndex) override { throw std::logic_error("unexpected graphics boundary: QuadContainerUpload"); }
-	int QuadContainerAddQuads(int ContainerIndex, CQuadItem *pArray, int Num) override { throw std::logic_error("unexpected graphics boundary: QuadContainerAddQuads"); }
-	int QuadContainerAddQuads(int ContainerIndex, CFreeformItem *pArray, int Num) override { throw std::logic_error("unexpected graphics boundary: QuadContainerAddQuads"); }
+	int QuadContainerAddQuads(int ContainerIndex, const CQuadItem *pArray, int Num) override { throw std::logic_error("unexpected graphics boundary: QuadContainerAddQuads"); }
+	int QuadContainerAddQuads(int ContainerIndex, const CFreeformItem *pArray, int Num) override { throw std::logic_error("unexpected graphics boundary: QuadContainerAddQuads"); }
 	void QuadContainerReset(int ContainerIndex) override { throw std::logic_error("unexpected graphics boundary: QuadContainerReset"); }
 	void DeleteQuadContainer(int &ContainerIndex) override {}
 	void RenderQuadContainer(int ContainerIndex, int QuadDrawNum) override { throw std::logic_error("unexpected graphics boundary: RenderQuadContainer"); }

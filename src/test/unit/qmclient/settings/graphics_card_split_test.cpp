@@ -123,6 +123,14 @@ TEST(GraphicsCardSplit, SearchIndexFollowsTheSplitCards)
 	// 动效强度只属于界面动效卡。
 	EXPECT_TRUE(EntryMatches(INTERACTION, "config", "qm_ui_motion_level"));
 	EXPECT_FALSE(EntryMatches(THEME, "config", "qm_ui_motion_level"));
+	// 输入光标样式与动效强度同卡（两者都是整块界面的通用观感）。卡里的行文案与配置名
+	// 都要能被搜到，否则玩家只能靠翻页找到新增的那一行。
+	EXPECT_TRUE(EntryMatches(INTERACTION, "config", "qm_text_caret_style"));
+	EXPECT_TRUE(EntryMatches(INTERACTION, "label", "Text caret style"));
+	EXPECT_TRUE(EntryMatches(INTERACTION, "label", "Bar"));
+	EXPECT_TRUE(EntryMatches(INTERACTION, "label", "Underscore"));
+	EXPECT_TRUE(EntryMatches(INTERACTION, "label", "Block"));
+	EXPECT_FALSE(EntryMatches(THEME, "config", "qm_text_caret_style"));
 
 	// 「自动」档已删除，彩虹档是新增选项：搜索索引必须跟着文本颜色模式的语义走。
 	EXPECT_TRUE(EntryMatches(THEME, "label", "Rainbow"));

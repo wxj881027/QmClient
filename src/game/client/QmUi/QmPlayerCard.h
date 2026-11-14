@@ -23,6 +23,7 @@
 // 尺寸一律取 ui_token::player_card，调用点不再写 36 / 22 / 8 这类字面量。
 namespace QmPlayersUi
 {
+
 	// 卡片操作区（胶囊按钮）的动作：顺序即按钮容器数组的下标。
 	enum class EPlayerCardAction
 	{
@@ -144,6 +145,12 @@ namespace QmPlayersUi
 		return Grid;
 	}
 
+	// 展示区图标行：固定四格（好友 / 静音 / 屏蔽表情 / 跨服跟随）。
+	struct SPlayerShowcaseIconRow
+	{
+		std::array<CUIRect, 4> m_aCells{};
+	};
+
 	struct SPlayerCardIconRow
 	{
 		std::array<CUIRect, static_cast<int>(EPlayerCardCopy::COUNT)> m_aCells;
@@ -235,6 +242,87 @@ namespace QmPlayersUi
 		}
 		return EPlayerCardCopy::NONE;
 	}
+	// 玩家列表是网格卡片：列数由可用宽度与格宽推导，窗口变窄自动减列，最少一列。
+	inline int PlayerTileColumns(const float AvailableWidth)
+	{
+		const float Tile = ui_token::player_card::TILE_MIN_WIDTH;
+		const float Gap = ui_token::player_card::TILE_GAP;
+		if(AvailableWidth <= 0.0f || Tile <= 0.0f)
+			return 1;
+		return std::max(1, (int)((AvailableWidth + Gap) / (Tile + Gap)));
+	}
+
+	// 英雄展示区：上半部分放角色立绘与名字，高度同时受卡片宽度与可用高度约束。
+	struct SPlayerShowcase
+	{
+		CUIRect m_Showcase{};
+		CUIRect m_Figure{};
+		CUIRect m_Name{};
+		CUIRect m_Clan{};
+		CUIRect m_Icons{};
+		CUIRect m_SkinRow{};
+		CUIRect m_Info{};
+	};
+
+	// 展示区图标行：数量由调用点给（好友 / 静音 / 屏蔽表情 / 跨服跟随），
+	// 与「复制动作」枚举无关，所以单独一套槽位，不从复制行借用。
+	inline SPlayerShowcaseIconRow PlayerShowcaseIconRow(const CUIRect &Row, const int IconCount)
+	{
+		SPlayerShowcaseIconRow Layout;
+		const int Count = std::max(0, std::min(IconCount, static_cast<int>(std::size(Layout.m_aCells))));
+		if(Count <= 0 || Row.w <= 0.0f)
+			return Layout;
+		const float Gap = ui_token::player_card::ICON_BUTTON_GAP;
+		float Size = ui_token::player_card::SHOWCASE_ICON_SIZE;
+		const float TotalGap = (Count - 1) * Gap;
+		if(Size * Count + TotalGap > Row.w)
+			Size = std::max(0.0f, (Row.w - TotalGap) / (float)Count);
+		Size = std::min(Size, Row.h);
+		CUIRect Cursor = Row;
+		for(int Index = Count - 1; Index >= 0; --Index)
+		{
+			CUIRect Cell;
+			Cursor.VSplitRight(Size, &Cursor, &Cell);
+			Cell.h = Size;
+			Cell.y = Row.y + (Row.h - Size) * 0.5f;
+			Layout.m_aCells[Index] = Cell;
+			if(Index > 0)
+				Cursor.VSplitRight(std::min(Gap, Cursor.w), &Cursor, nullptr);
+		}
+		return Layout;
+	}
+
+	inline SPlayerShowcase PlayerShowcaseLayout(const CUIRect &Card, const int IconCount)
+	{
+		SPlayerShowcase Result;
+		const float ShowcaseHeight = std::min(Card.h * 0.62f, Card.w * ui_token::player_card::SHOWCASE_HEIGHT_RATIO);
+		CUIRect Remaining = Card;
+		Remaining.HSplitTop(ShowcaseHeight, &Result.m_Showcase, &Remaining);
+		Remaining.HSplitTop(std::min(ui_token::player_card::SECTION_GAP, Remaining.h), nullptr, &Remaining);
+		Remaining.HSplitTop(std::min(ui_token::player_card::SHOWCASE_ICON_SIZE, Remaining.h), &Result.m_SkinRow, &Remaining);
+		Remaining.HSplitTop(std::min(ui_token::player_card::SECTION_GAP, Remaining.h), nullptr, &Remaining);
+		Result.m_Info = Remaining;
+
+		// 立绘：等比居中，高度吃展示区比例，宽度最多占一半，避免超宽卡片把角色拉成扁片。
+		const float FigureSize = std::max(0.0f,
+			std::min(Result.m_Showcase.h * ui_token::player_card::SHOWCASE_TEE_RATIO, Result.m_Showcase.w * 0.55f));
+		Result.m_Figure = CUIRect{
+			Result.m_Showcase.x + (Result.m_Showcase.w - FigureSize) * 0.5f,
+			Result.m_Showcase.y + ui_token::spacing::XS,
+			FigureSize,
+			FigureSize};
+
+		// 名字与战队压在下沿；图标行再压在名字之上，三者不互相侵占。
+		CUIRect Text = Result.m_Showcase;
+		Text.HSplitBottom(std::min(ui_token::spacing::SM, Text.h), &Text, nullptr);
+		Text.HSplitBottom(std::min(ui_token::player_card::HEADER_NAME_HEIGHT, Text.h), &Result.m_Clan, &Text);
+		Text.HSplitBottom(std::min(ui_token::player_card::HEADER_NAME_HEIGHT, Text.h), &Result.m_Name, &Text);
+		Text.HSplitBottom(std::min(ui_token::player_card::SHOWCASE_ICON_SIZE, Text.h), &Result.m_Icons, &Text);
+		if(IconCount <= 0)
+			Result.m_Icons = {};
+		return Result;
+	}
+
 } // namespace QmPlayersUi
 
 #endif

@@ -11,6 +11,7 @@
 
 #include <generated/protocol7.h>
 
+#include <game/client/QmUi/QmScroll.h>
 #include <game/client/component.h>
 #include <game/client/components/qmclient/chat_command_hud.h>
 #include <game/client/components/qmclient/chat_emoji.h>
@@ -260,7 +261,17 @@ private:
 
 	CLine m_aLines[MAX_LINES];
 	int m_CurrentLine;
+	// 历史滚动偏移：单位是"行"，由 m_HistoryScroll 推进后取整得到。
+	// 推进器与列表 / 设置页共用 QmScroll（弹簧、惯性、橡皮筋同一实现），
+	// m_BacklogCurLine 只是它每帧取整后的可见行号。
 	int m_BacklogCurLine;
+	CQmScrollState m_HistoryScroll;
+	// 推进器上一次落到 m_BacklogCurLine 的行号。新消息到达时 AddLine 会直接把
+	// 可见行 +1（视图锚定在同一批消息上），这类外部改动要靠它识别并同步回推进器。
+	int m_HistoryScrollAppliedLine;
+	// 滚轮在输入事件里只累积方向（+1 = 往上翻历史），真正推进放到渲染帧：
+	// 那里才知道这一次能显示多少行，视口大小必须与绘制同一份。
+	int m_HistoryWheelSteps;
 	bool m_ScrollbarDragging;
 	float m_ScrollbarDragOffset;
 

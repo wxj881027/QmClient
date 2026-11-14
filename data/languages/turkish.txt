@@ -1700,9 +1700,6 @@ Balanced (recommended)
 Ban a certain nickname
 == Belirli bir takma adı yasakla
 
-Ban ip for x minutes for any reason
-== Herhangi bir nedenle x dakika boyunca IP'yi yasakla
-
 Ban ip range for x minutes for any reason
 == Herhangi bir nedenle x dakika boyunca IP aralığını yasakla
 
@@ -1720,6 +1717,12 @@ Ban reason for "sv_dnsbl_ban"
 
 Ban time after being voted kicked (in minutes, 0 = kick only, no ban)
 == Oy kullanılarak atıldıktan sonraki yasaklama süresi (dakika cinsinden, 0 = yalnızca atma, yasaklama yok)
+
+Bar
+== Çubuk
+
+Bar: a thin vertical line between characters
+== Çubuk: karakterler arasında ince bir dikey çizgi
 
 Base path for HTTPS map download URLs to clients
 == İstemcilere HTTPS harita indirme URL'leri için temel yol
@@ -1847,6 +1850,9 @@ Blink
 Blink the active local tee
 == Etkin yerel karakteri yanıp söndür
 
+Block
+== Blok
+
 Block client-initiated self-kill (K key / kill command)
 == İstemci kaynaklı intiharı engelle (K tuşu / kill komutu)
 
@@ -1858,6 +1864,9 @@ Block votes from blacklisted addresses
 
 Block words
 == Engellenen kelimeler
+
+Block: fills the character cell behind the next character
+== Blok: sonraki karakterin hücresini doldurur
 
 Blue
 == Mavi
@@ -2390,8 +2399,8 @@ Choose export name first.
 Choose Logo (PNG / WebP)
 == Logo seç (PNG / WebP)
 
-Choose off, reduced or full; this single switch drives every animation.
-== Kapalı, azaltılmış veya tam seçin; tüm animasyonlar bu tek anahtarla çalışır.
+Choose off, reduced or full; this single switch drives every animation. Then pick a caret shape for the settings, console and chat input fields.
+== Kapalı, azaltılmış veya tam seçin; tüm animasyonlar bu tek anahtarla çalışır. Ardından ayarlar, konsol ve sohbet giriş alanları için imleç biçimini seçin.
 
 Choose the language used by the client
 == Choose the language used by the client
@@ -3242,9 +3251,6 @@ Copy a .qmconfig file into the package folder, then refresh.
 Copy all
 == Tümünü kopyala
 
-Copy clan
-== Klanı kopyala
-
 Copy friend code
 == Arkadaş kodunu kopyala
 
@@ -3772,6 +3778,9 @@ Debug SQL.
 
 Debug tile layer clipping.
 == Döşeme katmanı kırpma hata ayıklaması.
+
+Debug websockets
+== WebSocket hata ayıkla
 
 Decides which skins the client downloads and lists, and can add a prefix to load prefixed skin variants.
 == İstemcinin hangi skinleri indirip listeleyeceğini belirler ve ön ekli skin varyantlarını yüklemek için ön ek ekleyebilir.
@@ -4615,6 +4624,9 @@ Echo follows the original chat color
 
 Echo text color when not inheriting chat color
 == Sohbet rengini devralmadığında Echo metin rengi
+
+Echo the config value in chat window
+== Ayar değerini sohbette göster
 
 Echo the text
 == Metni yankıla
@@ -8416,6 +8428,9 @@ Map note
 
 Map play history
 == Harita oynama geçmişi
+
+Map preview
+== Harita önizlemesi
 
 Map preview rendering unavailable
 == Harita önizlemesi oluşturulamıyor
@@ -12728,9 +12743,6 @@ Select a configuration package to preview its contents.
 Select a map
 == Bir harita seçin
 
-Select a player to manage
-== Yönetmek için bir oyuncu seçin
-
 Select a preset, then apply it to player or dummy
 == Bir ön ayar seçip oyuncuya veya dummy’ye uygula
 
@@ -13049,8 +13061,8 @@ Sets chat position, width, font size and visibility.
 Sets encoder, container and quality in one step: Daily is H.264 + MP4, High quality is HEVC + MP4 at a smaller size, Editing is all-intra H.264 + MP4 with instant seeking, and Exchange is ProRes 422 HQ + MOV for other editors.
 == Kodlayıcı, kapsayıcı ve kaliteyi tek adımda ayarlar: Günlük H.264 + MP4, Yüksek kalite daha küçük boyutta HEVC + MP4, Kurgu anında atlama sağlayan tam iç H.264 + MP4, Değişim ise diğer kurgu programları için ProRes 422 HQ + MOV.
 
-Sets how much motion the interface plays: transitions, card entrance, reorder animations and scroll feel.
-== Arayüzün ne kadar hareket oynatacağını ayarlar: geçişler, kart girişi, sıralama animasyonları ve kaydırma hissi.
+Sets how much motion the interface plays (transitions, card entrance, reorder animations, scroll feel) and the shape of the text caret in every input field.
+== Arayüzün ne kadar hareket göstereceğini (geçişler, kart girişi, yeniden sıralama, kaydırma hissi) ve tüm giriş alanlarındaki imleç biçimini ayarlar.
 
 Sets laser colors for weapons and entities.
 == Silahlar ve varlıklar için lazer renklerini ayarlar.
@@ -13960,6 +13972,9 @@ Show server prompts and Echo messages as popups
 
 Show server settings
 == Sunucu ayarlarını göster
+
+Show server uptime
+== Sunucu çalışma süresini göster
 
 Show settings card borders
 == Ayar kartı kenarlıklarını göster
@@ -15023,6 +15038,9 @@ Successfully saved the replay!
 Sudden Death
 == Ani Ölüm
 
+Suggested tags:
+== Önerilen etiketler:
+
 Suicides
 == İntiharlar
 
@@ -15517,6 +15535,9 @@ Text alpha
 
 Text before each key press count
 == Tuş sayacı ön eki
+
+Text caret style
+== Giriş imleci stili
 
 Text caret style: 0=bar, 1=underscore, 2=block
 == Giriş imleci stili: 0=çubuk, 1=alt çizgi, 2=blok
@@ -16355,8 +16376,8 @@ Tune variable to value
 Tune variable to value or show current value
 == Değişkeni değere ayarla veya geçerli değeri göster
 
-Turn motion off on weaker machines; cards then open and scroll immediately.
-== Zayıf makinelerde hareketi kapatın; kartlar o zaman hemen açılır ve kaydırılır.
+Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
+== Zayıf makinelerde kapatın: kartlar anında açılır ve kaydırılır. İmleç biçimi yalnızca görseldir: üç stil de aynı karakter hücresine sığar.
 
 Turn on "Auto chat in water", type the "Chat message" you want, and optionally enable "Send emoticon in water" with its ID.
 == "Suda otomatik sohbet"i aç, istediğin "Sohbet mesajı"nı yaz ve istersen "Suda ifade gönder"i ID'siyle etkinleştir.
@@ -16624,6 +16645,12 @@ Uncertainty duration
 
 Unclassified audio issue
 == Sınıflandırılmamış ses sorunu
+
+Underscore
+== Alt çizgi
+
+Underscore: a line under the character that follows
+== Alt çizgi: sonraki karakterin altına çizilen çizgi
 
 Unexpected map upload response.
 == Harita yüklemesine beklenmeyen yanıt geldi.

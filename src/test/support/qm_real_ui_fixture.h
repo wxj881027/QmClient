@@ -122,6 +122,8 @@ namespace qm_ui_test
 		// 采样边界只是设备状态：色环纹理需要 clamp，由真实后端生效，测试不关心。
 		void WrapClamp() override {}
 		void WrapNormal() override {}
+		// 引擎接口新增的纹理目标标志：测试桩不加载真实纹理，统一返回 0（不启用数组/3D 目标）。
+		int TextureLoadFlags() override { return 0; }
 		void QuadsDrawTL(const CQuadItem *, int Num) override
 		{
 			++m_Draws;
@@ -135,7 +137,7 @@ namespace qm_ui_test
 			m_QuadCounts.emplace(Id, 0);
 			return Id;
 		}
-		int QuadContainerAddQuads(int ContainerIndex, CQuadItem *, int Num) override
+		int QuadContainerAddQuads(int ContainerIndex, const CQuadItem *, int Num) override
 		{
 			int &Count = m_QuadCounts.at(ContainerIndex);
 			const int Offset = Count;

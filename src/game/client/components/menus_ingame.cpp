@@ -28,6 +28,7 @@
 #include <generated/protocol.h>
 
 #include <game/client/QmUi/QmAnimResolve.h>
+#include <game/client/QmUi/QmMotdLayout.h>
 #include <game/client/QmUi/QmServerInfoGeometry.h>
 #include <game/client/QmUi/QmTree.h>
 #include <game/client/QmUi/UiButtons.h>
@@ -1164,7 +1165,7 @@ void CMenus::PrepareIngameServerInfoTextRuntime(const CUIRect *pMainView)
 		MainView.HSplitTop(6.0f, nullptr, &MainView);
 	}
 
-	const float MotdFontSize = 16.0f;
+	const float MotdFontSize = ui_token::motd::FONT_SIZE;
 
 	SSettingsAdaptiveBudgetInput TextBudgetInput;
 	TextBudgetInput.m_FrameId = Client()->PerfFrame();
@@ -1205,7 +1206,7 @@ void CMenus::PrepareIngameServerInfoTextRuntime(const CUIRect *pMainView)
 	ServerInfo.HSplitTop(FontSizeTitle, &Label, &ServerInfo);
 	ServerInfo.HSplitTop(ui_token::server_info::TITLE_GAP * ServerScale, nullptr, &ServerInfo);
 	ServerInfo.HSplitTop(FieldRowHeight, &Label, &ServerInfo);
-	ServerInfo.HSplitTop(FontSizeBody, nullptr, &ServerInfo);
+	ServerInfo.HSplitTop(ui_token::server_info::NAME_GAP * ServerScale, nullptr, &ServerInfo);
 	RequestSnapshotTextContainer("ingame-server-info-name-value", &Label, CurrentServerInfo.m_aName, FontSizeBody, TEXTALIGN_ML, FieldProps);
 
 	ServerInfo.HSplitTop(FieldRowHeight, &Label, &ServerInfo);
@@ -1297,6 +1298,184 @@ void CMenus::PrepareIngameServerInfoTextRuntime(const CUIRect *pMainView)
 	}
 }
 
+namespace
+{
+	// 公告（MOTD）逐行排版状态：普通行沿用文本排版，框线行按统一格子逐字形发出。
+	// 只在公告文本 / 内容宽度 / 字号变化时重算，重算结果按 token 分摊到多帧
+	// （与整段文本容器同一套预算节奏），成型后就是一个容器，渲染期零重排。
+	struct SIngameMotdLayoutBuild
+	{
+		bool m_Valid = false;
+		unsigned m_TextHash = 0;
+		int64_t m_UpdateTime = -1;
+		float m_Width = 0.0f;
+		float m_FontSize = 0.0f;
+		QmMotdLayout::SLayout m_Layout;
+		int m_Row = 0;
+		int m_RowGlyph = 0;
+		int m_RowByteOffset = 0;
+		float m_RowTop = 0.0f;
+		float m_ContentWidth = 0.0f;
+		CTextCursor m_RowCursor;
+	};
+	SIngameMotdLayoutBuild s_IngameMotdLayoutBuild;
+
+	// 已完成（可渲染）容器的内容尺寸：同一个容器里既有普通行也有框线行，
+	// 容器自身的 bounding box 只反映最后一次追加，缩放必须用这里记下的实测值。
+	float s_IngameMotdContentWidth = 0.0f;
+	float s_IngameMotdContentHeight = 0.0f;
+
+	// 框线字形的自然推进与行高由字体实测：换字号或换字体后仍然首尾相接，不写死像素。
+	void MeasureIngameMotdBoxMetrics(ITextRender *pTextRender, float FontSize, float &CellAdvance, float &LineHeight)
+	{
+		LineHeight = pTextRender->TextBoundingBox(FontSize, "─").m_H;
+		// 两个字形与一个字形的最长行宽之差就是一个字形的推进，抵消首尾字形的处理差异。
+		const float MeasuredAdvance = pTextRender->TextWidth(FontSize, "──") - pTextRender->TextWidth(FontSize, "─");
+		// 格宽向下取整：文本容器会把每个字形起点对齐到一个假屏幕像素上，
+		// 格宽取整后每一格都落在同一像素网格；宁可让笔画多重叠不到一像素，
+		// 也不让取整在格与格之间渗出缝（那正是「竹子有节」的成因）。
+		CellAdvance = MeasuredAdvance >= 1.0f ? (float)round_truncate(MeasuredAdvance) : 0.0f;
+		if(CellAdvance <= 0.0f)
+			CellAdvance = LineHeight; // 字体缺这两个字形时退回方形格子，至少不重叠
+	}
+
+	void ResetIngameMotdLayoutProgress()
+	{
+		SIngameMotdLayoutBuild &Build = s_IngameMotdLayoutBuild;
+		Build.m_Row = 0;
+		Build.m_RowGlyph = 0;
+		Build.m_RowByteOffset = 0;
+		Build.m_RowTop = 0.0f;
+		Build.m_ContentWidth = 0.0f;
+		Build.m_RowCursor = CTextCursor();
+	}
+
+	// 保证逐行排版与当前公告文本一致；换文本时丢掉半成品容器，从头开始。
+	void EnsureIngameMotdLayout(ITextRender *pTextRender, STextContainerIndex &BuildContainer, const char *pMotd, unsigned TextHash, int64_t UpdateTime, float Width, float FontSize)
+	{
+		SIngameMotdLayoutBuild &Build = s_IngameMotdLayoutBuild;
+		if(Build.m_Valid &&
+			Build.m_TextHash == TextHash &&
+			Build.m_UpdateTime == UpdateTime &&
+			absolute(Build.m_Width - Width) < 0.01f &&
+			absolute(Build.m_FontSize - FontSize) < 0.01f)
+		{
+			// 外部重置（换服 / 断线）会删掉半成品容器：进度还在就整段重来，
+			// 否则会把没有字形的空容器当成成品提交。
+			if(!BuildContainer.Valid() && Build.m_Row > 0)
+				ResetIngameMotdLayoutProgress();
+			return;
+		}
+
+		pTextRender->DeleteTextContainer(BuildContainer);
+		float CellAdvance = 0.0f;
+		float LineHeight = 0.0f;
+		MeasureIngameMotdBoxMetrics(pTextRender, FontSize, CellAdvance, LineHeight);
+		Build.m_Layout = QmMotdLayout::Build(pMotd, Width, CellAdvance, LineHeight);
+		Build.m_Valid = true;
+		Build.m_TextHash = TextHash;
+		Build.m_UpdateTime = UpdateTime;
+		Build.m_Width = Width;
+		Build.m_FontSize = FontSize;
+		ResetIngameMotdLayoutProgress();
+	}
+
+	bool IngameMotdLayoutComplete()
+	{
+		return s_IngameMotdLayoutBuild.m_Row >= s_IngameMotdLayoutBuild.m_Layout.LineCount();
+	}
+
+	float IngameMotdLayoutHeight()
+	{
+		return s_IngameMotdLayoutBuild.m_RowTop;
+	}
+
+	float IngameMotdLayoutContentWidth()
+	{
+		return s_IngameMotdLayoutBuild.m_ContentWidth;
+	}
+
+	// 发出一个排版单元：框线行一次发完整行（每个字形显式定位到自己的格子，
+	// 推进相同、字间距为 0），普通行按字节块发出并沿用自然推进与换行。
+	// 返回 false 表示全部行都发完了。
+	bool StepIngameMotdLayout(ITextRender *pTextRender, STextContainerIndex &BuildContainer, const char *pMotd, float Width, float FontSize, int ChunkBytes)
+	{
+		SIngameMotdLayoutBuild &Build = s_IngameMotdLayoutBuild;
+		const auto &vLines = Build.m_Layout.m_vLines;
+		if(Build.m_Row >= (int)vLines.size())
+			return false;
+
+		const QmMotdLayout::SLine &Line = vLines[Build.m_Row];
+		if(Line.m_Mode == QmMotdLayout::ELineMode::BOX)
+		{
+			// 框线行：一格一字形。字形按格子位置显式定位，所以相邻横线首尾相接，
+			// 不会像普通文本排版那样被字距切成一节一节。
+			for(; Build.m_RowGlyph < Line.m_VisibleGlyphCount;)
+			{
+				const int GlyphOffset = Line.m_ByteOffset + Build.m_RowByteOffset;
+				const int GlyphBytes = str_utf8_forward(pMotd, GlyphOffset) - GlyphOffset;
+				if(GlyphBytes <= 0)
+					break;
+
+				CTextCursor GlyphCursor;
+				GlyphCursor.m_FontSize = FontSize;
+				GlyphCursor.SetPosition(vec2((float)Build.m_RowGlyph * Line.m_Advance, Build.m_RowTop));
+				pTextRender->CreateOrAppendTextContainer(BuildContainer, &GlyphCursor, pMotd + GlyphOffset, GlyphBytes);
+				Build.m_RowByteOffset += GlyphBytes;
+				Build.m_RowGlyph++;
+			}
+			Build.m_ContentWidth = maximum(Build.m_ContentWidth, (float)Line.m_VisibleGlyphCount * Line.m_Advance);
+			Build.m_Row++;
+			Build.m_RowGlyph = 0;
+			Build.m_RowByteOffset = 0;
+			Build.m_RowTop += Build.m_Layout.m_LineHeight;
+			return true;
+		}
+
+		// 普通行：沿用文本排版的自然推进与换行，只把预算拆细，不改排版结果。
+		if(Build.m_RowByteOffset < Line.m_ByteLength)
+		{
+			const int ChunkStart = Line.m_ByteOffset + Build.m_RowByteOffset;
+			int ChunkLength = minimum(ChunkBytes, Line.m_ByteLength - Build.m_RowByteOffset);
+			if(ChunkStart + ChunkLength < Line.m_ByteOffset + Line.m_ByteLength)
+			{
+				while(ChunkLength > 0 && !str_utf8_isstart(pMotd[ChunkStart + ChunkLength]))
+					--ChunkLength;
+				if(ChunkLength <= 0)
+					ChunkLength = str_utf8_forward(pMotd, ChunkStart) - ChunkStart;
+			}
+
+			if(Build.m_RowByteOffset == 0)
+			{
+				// 行首重新定位光标：普通行从内容左边缘起排，宽度按内容区，允许换行。
+				Build.m_RowCursor = CTextCursor();
+				Build.m_RowCursor.m_FontSize = FontSize;
+				Build.m_RowCursor.m_LineWidth = Width;
+				Build.m_RowCursor.SetPosition(vec2(0.0f, Build.m_RowTop));
+			}
+
+			pTextRender->CreateOrAppendTextContainer(BuildContainer, &Build.m_RowCursor, pMotd + ChunkStart, ChunkLength);
+			Build.m_RowByteOffset += ChunkLength;
+			Build.m_ContentWidth = maximum(Build.m_ContentWidth, Build.m_RowCursor.m_LongestLineWidth);
+
+			if(Build.m_RowByteOffset >= Line.m_ByteLength)
+			{
+				// 普通行可能换行：下一行行顶就是光标推进后的位置。
+				Build.m_RowTop = Build.m_RowCursor.m_Y;
+				Build.m_Row++;
+				Build.m_RowByteOffset = 0;
+			}
+			return true;
+		}
+
+		// 空行（没有字节可发）：只把行顶往下推一格。
+		Build.m_Row++;
+		Build.m_RowByteOffset = 0;
+		Build.m_RowTop += Build.m_Layout.m_LineHeight;
+		return true;
+	}
+} // namespace
+
 bool CMenus::RequestIngameMotdParagraphCache(CUIRect Motd, float FontSize)
 {
 	const char *pMotd = GameClient()->m_Motd.ServerMotd();
@@ -1312,8 +1491,6 @@ bool CMenus::RequestIngameMotdParagraphCache(CUIRect Motd, float FontSize)
 		absolute(m_IngameMotdParagraphCache.m_PendingFontSize - FontSize) >= 0.01f)
 	{
 		TextRender()->DeleteTextContainer(m_IngameMotdParagraphCache.m_BuildTextContainerIndex);
-		m_IngameMotdParagraphCache.m_BuildCursor = CTextCursor();
-		m_IngameMotdParagraphCache.m_BuildByteOffset = 0;
 		m_IngameMotdParagraphCache.m_BuildHeight = 0.0f;
 		m_IngameMotdParagraphCache.m_PendingTextHash = TextHash;
 		m_IngameMotdParagraphCache.m_PendingUpdateTime = UpdateTime;
@@ -1359,8 +1536,6 @@ void CMenus::DrainIngameMotdParagraphCache(CUIRect Motd, float FontSize, bool Al
 		if(!PendingMatches)
 		{
 			TextRender()->DeleteTextContainer(m_IngameMotdParagraphCache.m_BuildTextContainerIndex);
-			m_IngameMotdParagraphCache.m_BuildCursor = CTextCursor();
-			m_IngameMotdParagraphCache.m_BuildByteOffset = 0;
 			m_IngameMotdParagraphCache.m_BuildHeight = 0.0f;
 			m_IngameMotdParagraphCache.m_PendingTextHash = TextHash;
 			m_IngameMotdParagraphCache.m_PendingUpdateTime = UpdateTime;
@@ -1380,41 +1555,26 @@ void CMenus::DrainIngameMotdParagraphCache(CUIRect Motd, float FontSize, bool Al
 			if(m_IngameTextFrameBudget.m_ParagraphLayoutTokens > 0)
 				--m_IngameTextFrameBudget.m_ParagraphLayoutTokens;
 			const auto LayoutStart = time_get_nanoseconds();
-			if(m_IngameMotdParagraphCache.m_BuildByteOffset == 0 && !m_IngameMotdParagraphCache.m_BuildTextContainerIndex.Valid())
-			{
-				m_IngameMotdParagraphCache.m_BuildCursor = CTextCursor();
-				m_IngameMotdParagraphCache.m_BuildCursor.m_FontSize = FontSize;
-				m_IngameMotdParagraphCache.m_BuildCursor.m_LineWidth = Motd.w;
-			}
-
-			const int TextLength = str_length(pMotd);
-			int ChunkLength = minimum(SIngameMotdParagraphCache::INGAME_MOTD_PARAGRAPH_CHUNK_BYTES, TextLength - m_IngameMotdParagraphCache.m_BuildByteOffset);
-			if(m_IngameMotdParagraphCache.m_BuildByteOffset + ChunkLength < TextLength)
-			{
-				while(ChunkLength > 0 && !str_utf8_isstart(pMotd[m_IngameMotdParagraphCache.m_BuildByteOffset + ChunkLength]))
-					--ChunkLength;
-				if(ChunkLength <= 0)
-					ChunkLength = str_utf8_forward(pMotd, m_IngameMotdParagraphCache.m_BuildByteOffset) - m_IngameMotdParagraphCache.m_BuildByteOffset;
-			}
-			std::string ChunkText(pMotd + m_IngameMotdParagraphCache.m_BuildByteOffset, ChunkLength);
-			TextRender()->CreateOrAppendTextContainer(m_IngameMotdParagraphCache.m_BuildTextContainerIndex, &m_IngameMotdParagraphCache.m_BuildCursor, ChunkText.c_str(), ChunkLength);
-			m_IngameMotdParagraphCache.m_BuildByteOffset += ChunkLength;
+			// 逐行排版：文本/宽度/字号没变时不重算；重算后的进度按 token 分摊到多帧。
+			EnsureIngameMotdLayout(TextRender(), m_IngameMotdParagraphCache.m_BuildTextContainerIndex, pMotd, TextHash, UpdateTime, Motd.w, FontSize);
+			StepIngameMotdLayout(TextRender(), m_IngameMotdParagraphCache.m_BuildTextContainerIndex, pMotd, Motd.w, FontSize, SIngameMotdParagraphCache::INGAME_MOTD_PARAGRAPH_CHUNK_BYTES);
 			ParagraphLayoutMs = std::chrono::duration<double, std::milli>(time_get_nanoseconds() - LayoutStart).count();
-			m_IngameMotdParagraphCache.m_BuildHeight = m_IngameMotdParagraphCache.m_BuildCursor.Height();
+			m_IngameMotdParagraphCache.m_BuildHeight = IngameMotdLayoutHeight();
 
-			if(m_IngameMotdParagraphCache.m_BuildByteOffset >= TextLength)
+			if(IngameMotdLayoutComplete())
 			{
 				// 文本容器不支持多 owner；构建期间继续显示旧容器，完成后再原子替换。
 				TextRender()->DeleteTextContainer(m_MotdTextContainerIndex);
 				std::swap(m_MotdTextContainerIndex, m_IngameMotdParagraphCache.m_BuildTextContainerIndex);
 				m_IngameMotdParagraphCache.m_BuildTextContainerIndex.Reset();
-				m_IngameMotdParagraphCache.m_BuildCursor = CTextCursor();
-				m_IngameMotdParagraphCache.m_BuildByteOffset = 0;
+				// 内容尺寸按逐行实测提交：渲染期只做缩放，不再重排。
+				s_IngameMotdContentWidth = IngameMotdLayoutContentWidth();
+				s_IngameMotdContentHeight = IngameMotdLayoutHeight();
 				m_IngameMotdParagraphCache.m_TextHash = TextHash;
 				m_IngameMotdParagraphCache.m_UpdateTime = UpdateTime;
 				m_IngameMotdParagraphCache.m_Width = Motd.w;
 				m_IngameMotdParagraphCache.m_FontSize = FontSize;
-				m_IngameMotdParagraphCache.m_Height = m_IngameMotdParagraphCache.m_BuildHeight;
+				m_IngameMotdParagraphCache.m_Height = s_IngameMotdContentHeight;
 				m_IngameMotdParagraphCache.m_Valid = true;
 				m_IngameMotdParagraphCache.m_Pending = false;
 			}
@@ -1437,8 +1597,9 @@ bool CMenus::RenderIngameMotdStableParagraphCache(CUIRect Motd)
 {
 	if(!m_IngameMotdParagraphCache.m_Valid || !m_MotdTextContainerIndex.Valid())
 		return false;
-	const auto Bounds = TextRender()->GetBoundingBoxTextContainer(m_MotdTextContainerIndex);
-	const float Scale = QmServerInfoGeometry::FitScale(Motd, Bounds.m_W, maximum(Bounds.m_H, m_IngameMotdParagraphCache.m_Height));
+	// 内容尺寸取逐行排版提交时记下的实测值：容器里同时有普通行与框线行，
+	// 容器自身的 bounding box 只反映最后一次追加，撑不起整段内容的缩放。
+	const float Scale = QmServerInfoGeometry::FitScale(Motd, s_IngameMotdContentWidth, s_IngameMotdContentHeight);
 	if(Scale <= 0.0f)
 		return false;
 
@@ -1514,7 +1675,7 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 	DoIngameMenuTitleLabel(PAGE_SERVER_INFO, "ingame-server-info-title", &Label, Localize("Server info"), FontSizeTitle, TEXTALIGN_ML, FieldProps);
 
 	ServerInfo.HSplitTop(FieldRowHeight, &Label, &ServerInfo);
-	ServerInfo.HSplitTop(FontSizeBody, nullptr, &ServerInfo);
+	ServerInfo.HSplitTop(ui_token::server_info::NAME_GAP * ServerScale, nullptr, &ServerInfo);
 	RenderIngameServerInfoValueCached("ingame-server-info-name-value", m_IngameServerInfoTextSnapshot.m_ServerNameHash, &Label, CurrentServerInfo.m_aName, FontSizeBody, TEXTALIGN_ML, FieldProps);
 
 	ServerInfo.HSplitTop(FieldRowHeight, &Label, &ServerInfo);
@@ -1569,7 +1730,8 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 		Actions.HSplitBottom(20.0f * ServerScale, &Actions, &Button);
 		Actions.HSplitBottom(5.0f * ServerScale, &Actions, nullptr);
 		static CButtonContainer s_CopyButton;
-		if(DoIngameMenuButton(PAGE_SERVER_INFO, "ingame-server-info-copy-button", &s_CopyButton, Localize("Copy info"), 0, &Button))
+		// 与设置页按钮同一端头：整行宽度远大于高度，胶囊读作一条可点行。
+		if(DoIngameMenuButton(PAGE_SERVER_INFO, "ingame-server-info-copy-button", &s_CopyButton, Localize("Copy info"), 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::PILL))
 		{
 			char aInfo[512];
 			str_format(
@@ -1587,37 +1749,9 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 		}
 	}
 
-	// favorite checkbox
-	{
-		CUIRect Button;
-		TRISTATE IsFavorite = Favorites()->IsFavorite(CurrentServerInfo.m_aAddresses, CurrentServerInfo.m_NumAddresses);
-		Actions.HSplitBottom(20.0f * ServerScale, &Actions, &Button);
-		Actions.HSplitBottom(5.0f * ServerScale, &Actions, nullptr);
-		static int s_AddFavButton = 0;
-		if(DoIngameMenuCheckBox(PAGE_SERVER_INFO, "ingame-server-info-favorite", &s_AddFavButton, Localize("Favorite server"), IsFavorite != TRISTATE::NONE, &Button))
-		{
-			if(IsFavorite != TRISTATE::NONE)
-				Favorites()->Remove(CurrentServerInfo.m_aAddresses, CurrentServerInfo.m_NumAddresses);
-			else
-				Favorites()->Add(CurrentServerInfo.m_aAddresses, CurrentServerInfo.m_NumAddresses);
-		}
-	}
-
-	// favorite map checkbox
-	{
-		CUIRect Button;
-		bool IsMapFavorite = GameClient()->m_TClient.IsFavoriteMap(CurrentServerInfo.m_aMap);
-		Actions.HSplitBottom(20.0f * ServerScale, &Actions, &Button);
-		Actions.HSplitBottom(5.0f * ServerScale, &Actions, nullptr);
-		static int s_AddFavMapButton = 0;
-		if(DoIngameMenuCheckBox(PAGE_SERVER_INFO, "ingame-server-info-favorite-map", &s_AddFavMapButton, Localize("Favorite map"), IsMapFavorite, &Button))
-		{
-			if(IsMapFavorite)
-				GameClient()->m_TClient.RemoveFavoriteMap(CurrentServerInfo.m_aMap);
-			else
-				GameClient()->m_TClient.AddFavoriteMap(CurrentServerInfo.m_aMap);
-		}
-	}
+	// 收藏状态先读出来：开关按新排版画在右列地图备注下方。
+	const TRISTATE IsFavorite = Favorites()->IsFavorite(CurrentServerInfo.m_aAddresses, CurrentServerInfo.m_NumAddresses);
+	const bool IsMapFavorite = GameClient()->m_TClient.IsFavoriteMap(CurrentServerInfo.m_aMap);
 
 	if(!m_MenuTextPlanCollecting)
 		Ui()->ClipDisable();
@@ -1747,6 +1881,32 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 			GameClient()->m_TClient.SetMapNote(CurrentServerInfo.m_aMap, s_MapNoteInput.GetString());
 	}
 
+	// 收藏开关排在右列地图备注下方：与页面其它文本同一套描边字（DoIngameMenuCheckBox），
+	// 不再缩在左卡片底部当「卡片小字」。窗口太矮时跳过，避免把备注行挤掉。
+	if(GameInfo.h >= 2.0f * ui_token::server_info::NOTE_ROW_HEIGHT * GameScale)
+	{
+		CUIRect Row;
+		GameInfo.HSplitTop(ui_token::server_info::NOTE_GAP * GameScale, nullptr, &GameInfo);
+		GameInfo.HSplitTop(ui_token::server_info::NOTE_ROW_HEIGHT * GameScale, &Row, &GameInfo);
+		static int s_AddFavButton = 0;
+		if(DoIngameMenuCheckBox(PAGE_SERVER_INFO, "ingame-server-info-favorite", &s_AddFavButton, Localize("Favorite server"), IsFavorite != TRISTATE::NONE, &Row))
+		{
+			if(IsFavorite != TRISTATE::NONE)
+				Favorites()->Remove(CurrentServerInfo.m_aAddresses, CurrentServerInfo.m_NumAddresses);
+			else
+				Favorites()->Add(CurrentServerInfo.m_aAddresses, CurrentServerInfo.m_NumAddresses);
+		}
+		GameInfo.HSplitTop(ui_token::server_info::NOTE_ROW_HEIGHT * GameScale, &Row, &GameInfo);
+		static int s_AddFavMapButton = 0;
+		if(DoIngameMenuCheckBox(PAGE_SERVER_INFO, "ingame-server-info-favorite-map", &s_AddFavMapButton, Localize("Favorite map"), IsMapFavorite, &Row))
+		{
+			if(IsMapFavorite)
+				GameClient()->m_TClient.RemoveFavoriteMap(CurrentServerInfo.m_aMap);
+			else
+				GameClient()->m_TClient.AddFavoriteMap(CurrentServerInfo.m_aMap);
+		}
+	}
+
 	if(!m_MenuTextPlanCollecting)
 		Ui()->ClipDisable();
 	if(ShowTags)
@@ -1763,7 +1923,7 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 
 void CMenus::RenderServerInfoMotd(CUIRect Motd)
 {
-	const float MotdFontSize = 16.0f;
+	const float MotdFontSize = ui_token::motd::FONT_SIZE;
 	Motd.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_ALL, ui_token::server_info::CARD_RADIUS);
 	Motd = QmServerInfoGeometry::ContentRect(Motd);
 	const float MotdScale = QmServerInfoGeometry::FitScale(Motd, 180.0f, 53.0f);

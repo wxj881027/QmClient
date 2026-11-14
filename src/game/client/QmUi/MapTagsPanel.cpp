@@ -51,7 +51,8 @@ void CQmMapTagsPanel::Render(CGameClient *pGameClient, CUIRect View)
 		ui_widget::SButtonSurfaceOptions Options;
 		Options.m_Role = Primary ? EUiButtonRole::PRIMARY : EUiButtonRole::SECONDARY;
 		Options.m_Enabled = !Disabled;
-		Options.m_Radius *= Scale;
+		// 胶囊端头：圆角随按钮高度走，缩放后仍是完整胶囊。
+		Options.m_Radius = Rect.h * 0.5f;
 		const ColorRGBA Fill = ui_widget::DrawButtonSurface(Ctx, pButton, Rect, Options);
 		CUiScopedSurfaceText SurfaceText(pGameClient->TextRender(), Fill);
 		if(Disabled)
@@ -64,11 +65,14 @@ void CQmMapTagsPanel::Render(CGameClient *pGameClient, CUIRect View)
 			pUi->SetKeyboardFocus(pButton);
 		return Clicked;
 	};
-	CUIRect Header, Refresh;
+	CUIRect Header, RefreshSlot, Refresh;
 	View.HSplitTop(26.0f * Scale, &Header, &View);
-	Header.VSplitRight(65.0f * Scale, &Header, &Refresh);
+	// 刷新改圆形图标按钮：图标按钮在别处也是圆形，文字按钮只留给主要动作。
+	Header.VSplitRight(26.0f * Scale, &Header, &RefreshSlot);
+	RefreshSlot.VMargin((RefreshSlot.h - 22.0f * Scale) * 0.5f, &Refresh);
+	Refresh.h = 22.0f * Scale;
 	pUi->DoLabel(&Header, Localize("Map tags"), 20.0f * Scale, TEXTALIGN_ML, LabelProps);
-	if(DoButton(&m_RefreshButton, Localize("Refresh"), Refresh, Tags.Busy()))
+	if(pUi->DoButton_QmIcon(&m_RefreshButton, EQmIcon::ARROW_ROTATE_RIGHT, FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT, 0, &Refresh, BUTTONFLAG_LEFT))
 		Tags.Refresh();
 	View.HSplitTop(8.0f * Scale, nullptr, &View);
 	CUIRect List, Footer;
@@ -96,7 +100,8 @@ void CQmMapTagsPanel::Render(CGameClient *pGameClient, CUIRect View)
 		Options.m_Color = color_cast<ColorRGBA>(ColorHSLA(QmMapTags::ColorHue(Tag.m_Color), 0.55f, 0.43f, 0.9f));
 		Options.m_Enabled = Enabled;
 		Options.m_Selected = Tag.m_Voted;
-		Options.m_Radius = 13.0f * Grid.m_Scale;
+		// 标签是胶囊：圆角取自身高度一半，不再用固定的 13。
+		Options.m_Radius = Capsule.h * 0.5f;
 		ui_widget::DrawButtonSurface(Ctx, &Button, Capsule, Options);
 		SLabelProperties Properties;
 		Properties.m_MinimumFontSize = 0.1f;
@@ -106,8 +111,12 @@ void CQmMapTagsPanel::Render(CGameClient *pGameClient, CUIRect View)
 	{
 		pUi->DoLabel(&List, Tags.Ready() ? Localize("No approved tags yet.") : Localize("Loading map tags…"), 13.0f * Scale, TEXTALIGN_TL, LabelProps);
 	}
-	CUIRect Presets;
-	Footer.HSplitTop(22.0f * Scale, &Presets, &Footer);
+	CUIRect PresetRow, PresetLabel, Presets;
+	Footer.HSplitTop(22.0f * Scale, &PresetRow, &Footer);
+	PresetRow.VSplitLeft(78.0f * Scale, &PresetLabel, &Presets);
+	// 这四个是服务端内置的常用标签建议，不是「当前地图已有的标签」，
+	// 不给说明文字玩家会以为它们是已审核标签。
+	pUi->DoLabel(&PresetLabel, Localize("Suggested tags:"), 12.0f * Scale, TEXTALIGN_ML, LabelProps);
 	static constexpr const char *PRESETS[] = {"hj", "fly", "Gores", "Hook"};
 	for(size_t Index = 0; Index < std::size(PRESETS); ++Index)
 	{

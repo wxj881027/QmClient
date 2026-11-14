@@ -1700,9 +1700,6 @@ Balanced (recommended)
 Ban a certain nickname
 == Bannir un certain pseudonyme
 
-Ban ip for x minutes for any reason
-== Bannir l'IP pendant x minutes pour n'importe quelle raison
-
 Ban ip range for x minutes for any reason
 == Bannir la plage IP pendant x minutes pour n'importe quelle raison
 
@@ -1720,6 +1717,12 @@ Ban reason for "sv_dnsbl_ban"
 
 Ban time after being voted kicked (in minutes, 0 = kick only, no ban)
 == Durée du bannissement après avoir été exclu par vote (en minutes, 0 = exclusion uniquement, pas de bannissement)
+
+Bar
+== Barre
+
+Bar: a thin vertical line between characters
+== Barre : une fine ligne verticale entre les caractères
 
 Base path for HTTPS map download URLs to clients
 == Chemin de base pour les URLs de téléchargement de cartes HTTPS vers les clients
@@ -1847,6 +1850,9 @@ Blink
 Blink the active local tee
 == Faire clignoter le personnage local actif
 
+Block
+== Bloc
+
 Block client-initiated self-kill (K key / kill command)
 == Bloquer le suicide initié par le client (touche K / commande kill)
 
@@ -1858,6 +1864,9 @@ Block votes from blacklisted addresses
 
 Block words
 == Mots bloqués
+
+Block: fills the character cell behind the next character
+== Bloc : remplit la cellule du caractère suivant
 
 Blue
 == Bleu
@@ -2390,8 +2399,8 @@ Choose export name first.
 Choose Logo (PNG / WebP)
 == Choisir un logo (PNG / WebP)
 
-Choose off, reduced or full; this single switch drives every animation.
-== Choisissez désactivé, réduit ou complet ; ce seul interrupteur pilote toutes les animations.
+Choose off, reduced or full; this single switch drives every animation. Then pick a caret shape for the settings, console and chat input fields.
+== Choisissez désactivé, réduit ou complet ; ce seul interrupteur pilote toutes les animations. Choisissez ensuite la forme du curseur pour les réglages, la console et le chat.
 
 Choose the language used by the client
 == Choose the language used by the client
@@ -3242,9 +3251,6 @@ Copy a .qmconfig file into the package folder, then refresh.
 Copy all
 == Tout copier
 
-Copy clan
-== Copier le clan
-
 Copy friend code
 == Copier le code d’amis
 
@@ -3772,6 +3778,9 @@ Debug SQL.
 
 Debug tile layer clipping.
 == Déboguer le clipping des couches de tuiles.
+
+Debug websockets
+== Déboguer WebSocket
 
 Decides which skins the client downloads and lists, and can add a prefix to load prefixed skin variants.
 == Décide quels skins le client télécharge et liste, et peut ajouter un préfixe pour charger des variantes préfixées.
@@ -4615,6 +4624,9 @@ Echo follows the original chat color
 
 Echo text color when not inheriting chat color
 == Couleur du texte Echo lorsqu'il n'hérite pas de la couleur du chat
+
+Echo the config value in chat window
+== Afficher la valeur du réglage dans le chat
 
 Echo the text
 == Écho du texte
@@ -8416,6 +8428,9 @@ Map note
 
 Map play history
 == Historique de jeu des cartes
+
+Map preview
+== Aperçu de la carte
 
 Map preview rendering unavailable
 == Rendu de l’aperçu de la carte indisponible
@@ -12728,9 +12743,6 @@ Select a configuration package to preview its contents.
 Select a map
 == Sélectionnez une carte
 
-Select a player to manage
-== Sélectionnez un joueur à gérer
-
 Select a preset, then apply it to player or dummy
 == Choisissez un préréglage, puis appliquez-le au joueur ou au dummy
 
@@ -13049,8 +13061,8 @@ Sets chat position, width, font size and visibility.
 Sets encoder, container and quality in one step: Daily is H.264 + MP4, High quality is HEVC + MP4 at a smaller size, Editing is all-intra H.264 + MP4 with instant seeking, and Exchange is ProRes 422 HQ + MOV for other editors.
 == Règle l'encodeur, le conteneur et la qualité en une fois : Quotidien est H.264 + MP4, Haute qualité est HEVC + MP4 en plus léger, Montage est tout intra H.264 + MP4 avec navigation instantanée, et Échange est ProRes 422 HQ + MOV pour les autres logiciels de montage.
 
-Sets how much motion the interface plays: transitions, card entrance, reorder animations and scroll feel.
-== Définit l'ampleur des animations de l'interface : transitions, apparition des cartes, réorganisation et ressenti du défilement.
+Sets how much motion the interface plays (transitions, card entrance, reorder animations, scroll feel) and the shape of the text caret in every input field.
+== Définit l'intensité des animations (transitions, apparition des cartes, réorganisation, ressenti du défilement) et la forme du curseur dans tous les champs de saisie.
 
 Sets laser colors for weapons and entities.
 == Définit les couleurs des lasers des armes et des entités.
@@ -13960,6 +13972,9 @@ Show server prompts and Echo messages as popups
 
 Show server settings
 == Afficher les paramètres du serveur
+
+Show server uptime
+== Afficher la durée de fonctionnement du serveur
 
 Show settings card borders
 == Afficher les bordures des cartes de paramètres
@@ -15023,6 +15038,9 @@ Successfully saved the replay!
 Sudden Death
 == Mort subite
 
+Suggested tags:
+== Étiquettes suggérées :
+
 Suicides
 == Suicides | Référence chinois simplifié : 自杀数
 
@@ -15517,6 +15535,9 @@ Text alpha
 
 Text before each key press count
 == Préfixe du compteur de touches
+
+Text caret style
+== Style du curseur de saisie
 
 Text caret style: 0=bar, 1=underscore, 2=block
 == Style du curseur de saisie : 0=barre, 1=souligné, 2=bloc
@@ -16355,8 +16376,8 @@ Tune variable to value
 Tune variable to value or show current value
 == Régler la variable de tuning à la valeur ou afficher la valeur actuelle
 
-Turn motion off on weaker machines; cards then open and scroll immediately.
-== Désactive les animations sur une machine modeste ; les cartes s'ouvrent alors et défilent instantanément.
+Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
+== Sur une machine modeste, désactivez : les cartes s'ouvrent et défilent aussitôt. La forme du curseur est purement esthétique : les trois styles tiennent dans la même cellule.
 
 Turn on "Auto chat in water", type the "Chat message" you want, and optionally enable "Send emoticon in water" with its ID.
 == Active « Chat auto dans l'eau », saisis le « Message de chat » voulu et, en option, active « Envoyer un emoticon dans l'eau » avec son ID.
@@ -16624,6 +16645,12 @@ Uncertainty duration
 
 Unclassified audio issue
 == Problème audio non classifié
+
+Underscore
+== Souligné
+
+Underscore: a line under the character that follows
+== Souligné : une ligne sous le caractère suivant
 
 Unexpected map upload response.
 == Réponse inattendue lors de l’envoi de la carte.

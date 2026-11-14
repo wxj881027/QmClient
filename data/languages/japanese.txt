@@ -1700,9 +1700,6 @@ Balanced (recommended)
 Ban a certain nickname
 == 特定のニックネームを禁止
 
-Ban ip for x minutes for any reason
-== 任意の理由で IP を x 分間 BAN
-
 Ban ip range for x minutes for any reason
 == 任意の理由で IP 範囲を x 分間 BAN
 
@@ -1720,6 +1717,12 @@ Ban reason for "sv_dnsbl_ban"
 
 Ban time after being voted kicked (in minutes, 0 = kick only, no ban)
 == 投票キック後の禁止時間（分単位、0 = キックのみ、禁止なし）
+
+Bar
+== 縦線
+
+Bar: a thin vertical line between characters
+== 縦線：文字の間に入る細い縦線
 
 Base path for HTTPS map download URLs to clients
 == クライアント向け HTTPS マップダウンロード URL のベースパス
@@ -1847,6 +1850,9 @@ Blink
 Blink the active local tee
 == 操作中のローカルキャラクターを点滅させる
 
+Block
+== ブロック
+
 Block client-initiated self-kill (K key / kill command)
 == クライアント発の自殺をブロック（K キー / kill コマンド）
 
@@ -1858,6 +1864,9 @@ Block votes from blacklisted addresses
 
 Block words
 == ブロックワード
+
+Block: fills the character cell behind the next character
+== ブロック：次の文字の文字枠を塗りつぶす
 
 Blue
 == 青
@@ -2390,8 +2399,8 @@ Choose export name first.
 Choose Logo (PNG / WebP)
 == ロゴを選択 (PNG / WebP)
 
-Choose off, reduced or full; this single switch drives every animation.
-== オフ・簡易・フルから選びます。すべてのアニメーションはこの 1 つのスイッチで動きます。
+Choose off, reduced or full; this single switch drives every animation. Then pick a caret shape for the settings, console and chat input fields.
+== オフ・簡易・フルから選びます。すべてのアニメーションはこの 1 つのスイッチで動きます。次に設定・コンソール・チャット入力欄のカーソル形状を選びます。
 
 Choose the language used by the client
 == Choose the language used by the client
@@ -3242,9 +3251,6 @@ Copy a .qmconfig file into the package folder, then refresh.
 Copy all
 == すべてコピー
 
-Copy clan
-== クランをコピー
-
 Copy friend code
 == フレンドコードをコピー
 
@@ -3772,6 +3778,9 @@ Debug SQL.
 
 Debug tile layer clipping.
 == デバッグタイルレイヤークリッピング
+
+Debug websockets
+== WebSocket をデバッグ
 
 Decides which skins the client downloads and lists, and can add a prefix to load prefixed skin variants.
 == クライアントがダウンロードして一覧に出すスキンを決め、プレフィックス付きのスキン変種を読み込むための接頭辞も設定できます。
@@ -4615,6 +4624,9 @@ Echo follows the original chat color
 
 Echo text color when not inheriting chat color
 == チャット色を継承しない場合の Echo テキスト色
+
+Echo the config value in chat window
+== 設定値をチャットに表示
 
 Echo the text
 == テキストをエコー
@@ -8416,6 +8428,9 @@ Map note
 
 Map play history
 == マッププレイ履歴
+
+Map preview
+== マッププレビュー
 
 Map preview rendering unavailable
 == マッププレビューを描画できません
@@ -12728,9 +12743,6 @@ Select a configuration package to preview its contents.
 Select a map
 == マップを選択
 
-Select a player to manage
-== 管理するプレイヤーを選択
-
 Select a preset, then apply it to player or dummy
 == プリセットを選択し、プレイヤーまたはダミーに適用
 
@@ -13049,8 +13061,8 @@ Sets chat position, width, font size and visibility.
 Sets encoder, container and quality in one step: Daily is H.264 + MP4, High quality is HEVC + MP4 at a smaller size, Editing is all-intra H.264 + MP4 with instant seeking, and Exchange is ProRes 422 HQ + MOV for other editors.
 == エンコーダー・コンテナ・画質を一度に設定します。日常向けは H.264 + MP4、高画質はより小さい HEVC + MP4、編集向けは全フレーム内 H.264 + MP4（どこでも即座にシーク）、交換用は他の編集ソフト向けの ProRes 422 HQ + MOV です。
 
-Sets how much motion the interface plays: transitions, card entrance, reorder animations and scroll feel.
-== インターフェースの動きの量を設定します。トランジション、カードの登場、並べ替えアニメーション、スクロールの感触が対象です。
+Sets how much motion the interface plays (transitions, card entrance, reorder animations, scroll feel) and the shape of the text caret in every input field.
+== インターフェースの動きの量（遷移・カードの登場・並べ替え・スクロール感）と、各入力欄のカーソル形状を設定します。
 
 Sets laser colors for weapons and entities.
 == 武器とエンティティのレーザーの色を設定します。
@@ -13960,6 +13972,9 @@ Show server prompts and Echo messages as popups
 
 Show server settings
 == サーバー設定を表示
+
+Show server uptime
+== サーバー稼働時間を表示
 
 Show settings card borders
 == 設定カードの枠線を表示
@@ -15023,6 +15038,9 @@ Successfully saved the replay!
 Sudden Death
 == サドンデス
 
+Suggested tags:
+== 候補タグ：
+
 Suicides
 == 自殺数
 
@@ -15517,6 +15535,9 @@ Text alpha
 
 Text before each key press count
 == キー入力回数の接頭辞
+
+Text caret style
+== 入力カーソルのスタイル
 
 Text caret style: 0=bar, 1=underscore, 2=block
 == 入力カーソルのスタイル：0=縦線、1=下線、2=ブロック
@@ -16355,8 +16376,8 @@ Tune variable to value
 Tune variable to value or show current value
 == チューン変数を値に設定するか、現在の値を表示
 
-Turn motion off on weaker machines; cards then open and scroll immediately.
-== 性能の低い環境では動きをオフにしてください。カードがすぐに開き、スクロールもすぐに反応します。
+Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
+== 非力な環境ではオフにしてください。カードは即座に開き、スクロールも即時になります。カーソル形状は見た目だけで、3 種とも同じ文字枠に収まります。
 
 Turn on "Auto chat in water", type the "Chat message" you want, and optionally enable "Send emoticon in water" with its ID.
 == 「水中で自動チャット」をオンにして送りたい「チャットメッセージ」を入力し、必要なら「水中で表情を送信」と表情 ID も設定します。
@@ -16624,6 +16645,12 @@ Uncertainty duration
 
 Unclassified audio issue
 == 未分類のオーディオ問題
+
+Underscore
+== 下線
+
+Underscore: a line under the character that follows
+== 下線：次の文字の下に引く線
 
 Unexpected map upload response.
 == マップのアップロードに対する応答が不正です。

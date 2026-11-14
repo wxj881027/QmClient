@@ -32,6 +32,7 @@
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiSurface.h>
+#include <game/client/QmUi/UiTextCaret.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/QmUi/cards/QmCardCatalog.h>
 #include <game/client/QmUi/cards/QmCardCatalogInternal.h>
@@ -1081,6 +1082,29 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 				char aMotionTip[256];
 				str_format(aMotionTip, sizeof(aMotionTip), "%s\n%s", Localize("This is the master switch for all interface animations"), pMotionDescription);
 				GameClient()->m_Tooltips.DoToolTip(&s_aMotionButtons[0], &MotionRow, aMotionTip);
+			});
+
+			// 输入光标样式：设置页输入框、控制台、聊天输入共用同一个光标组件（qm_text_caret），
+			// 这里只切形态，不改任何一处的绘制路径。位置紧跟动效强度——两者都是「整块界面
+			// 的通用观感」，不属于某张卡的专属参数，所以留在个性调整之外常显。
+			RowAction("graphics-text-caret-style", GraphicsMetrics.m_LineHeight, [&](CUIRect CaretStyleRow) {
+				CUIRect Label, Segments;
+				SplitSettingsControlRow(CaretStyleRow, GraphicsMetrics, &Label, &Segments, ESettingsControlWidth::LONG_CHOICE);
+				DoSettingsLabel(SETTINGS_GRAPHICS, -1, "graphics-text-caret-style-label", &Label, Localize("Text caret style"), BodySize, TEXTALIGN_ML);
+				static CButtonContainer s_aCaretStyleButtons[3];
+				const char *apCaretStyleLabels[] = {Localize("Bar"), Localize("Underscore"), Localize("Block")};
+				const int CaretStyleCount = (int)std::size(apCaretStyleLabels);
+				// 越界值收敛到最近档：配置可能来自旧 cfg 或被外部写入，分段控件不能拿到非法下标。
+				const int CurrentCaretStyle = std::clamp(g_Config.m_QmTextCaretStyle, qm_text_caret::STYLE_MIN, qm_text_caret::STYLE_MAX);
+				const int NewCaretStyle = DoSegmentedChoice(s_aCaretStyleButtons, apCaretStyleLabels, CaretStyleCount, CurrentCaretStyle, Segments);
+				if(NewCaretStyle != CurrentCaretStyle)
+					g_Config.m_QmTextCaretStyle = NewCaretStyle;
+				const char *apCaretStyleTips[] = {
+					Localize("Bar: a thin vertical line between characters"),
+					Localize("Underscore: a line under the character that follows"),
+					Localize("Block: fills the character cell behind the next character"),
+				};
+				GameClient()->m_Tooltips.DoToolTip(&s_aCaretStyleButtons[0], &CaretStyleRow, apCaretStyleTips[std::clamp(NewCaretStyle, 0, CaretStyleCount - 1)]);
 			});
 
 			float SectionReveal = 0.0f;

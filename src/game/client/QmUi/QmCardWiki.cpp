@@ -264,9 +264,9 @@ namespace
 		},
 		{
 			"deck:graphics-interaction",
-			Localizable("Sets how much motion the interface plays: transitions, card entrance, reorder animations and scroll feel."),
-			Localizable("Choose off, reduced or full; this single switch drives every animation."),
-			Localizable("Turn motion off on weaker machines; cards then open and scroll immediately."),
+			Localizable("Sets how much motion the interface plays (transitions, card entrance, reorder animations, scroll feel) and the shape of the text caret in every input field."),
+			Localizable("Choose off, reduced or full; this single switch drives every animation. Then pick a caret shape for the settings, console and chat input fields."),
+			Localizable("Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell."),
 		},
 		{
 			"deck:graphics-modes",

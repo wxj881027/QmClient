@@ -59,7 +59,7 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 ### 2.1 设计 Token（design token）
 
 - 定义：所有尺寸、颜色、圆角、字号、动效参数只有一个来源；调用点选语义，不写数字。
-- 唯一实现：`src/game/client/QmUi/UiTokens.h`，命名空间共 24 个：`ui_token::color`（58 项）、`ui_token::spacing`、`ui_token::radius`（`NONE/TIGHT/BASE/SMALL_MENU/MENU/CARD/PILL`）、`ui_token::font`（`HEADLINE_LG/HEADLINE/TITLE/BODY/SMALL/CAPTION/TIP`）、`ui_token::motion`（36 项）、`ui_token::elevation`、`ui_token::control`（`PadX/PadY/IconBox/IconTextGap/SUFFIX_RATIO/SwitchMinWidth/SwitchTrackAspect`）、`ui_token::list`、`ui_token::settings` + `ui_token::settings::row`、`ui_token::feedback`、`ui_token::glow`、`ui_token::tooltip`、`ui_token::secondary_panel`、`ui_token::server_filter`、`ui_token::status_bar`、`ui_token::server_info`（`TITLE_SIZE/BODY_SIZE/TITLE_GAP/ROW_HEIGHT_RATIO/LABEL_WIDTH/NOTE_*/CARD_RADIUS`）、`ui_token::page_title`（`FONT_SIZE/HEIGHT/ICON_SIZE/ICON_GAP/ICON_Y_OFFSET`）、`ui_token::panel`（`GAP/PADDING`）、`ui_token::chat`（滚动条 + 气泡圆角派生）、`ui_token::player_card`（玩家信息卡分区度量）、`ui_token::text_caret`（`THICKNESS_PX/RADIUS_PX/BLOCK_RADIUS_PX/WIDTH_RATIO/OUTLINE_PX`）、`ui_token::confirm_dialog`、`ui_token::dropdown`、`ui_token::discrete_slider`、`ui_token::ime`、`ui_token::hud::font`、`ui_token::page_title`（`FONT_SIZE/HEIGHT/ICON_SIZE/ICON_GAP`）、`ui_token::panel`（`GAP/PADDING`）、`ui_token::chat`（`SCROLLBAR_*/BUBBLE_*`、`BubbleRadius`）、`ui_token::player_card`（`SIDE_BY_SIDE_MIN_WIDTH/CARD_MAX_WIDTH/CARD_WIDTH_RATIO/STACK_CARD_HEIGHT_RATIO/LIST_CARD_GAP/PADDING/RADIUS/SECTION_GAP/HEADER_*/ACTION_*/ICON_*/STATUS_*/DETAIL_*/LIST_*/SEARCH_HEIGHT/COPY_TOAST_SECONDS`）。
+- 唯一实现：`src/game/client/QmUi/UiTokens.h`，命名空间共 25 个：`ui_token::color`（58 项）、`ui_token::spacing`、`ui_token::radius`（`NONE/TIGHT/BASE/SMALL_MENU/MENU/CARD/PILL`）、`ui_token::font`（`HEADLINE_LG/HEADLINE/TITLE/BODY/SMALL/CAPTION/TIP`）、`ui_token::motion`（36 项）、`ui_token::elevation`、`ui_token::control`（`PadX/PadY/IconBox/IconTextGap/SUFFIX_RATIO/SwitchMinWidth/SwitchTrackAspect`）、`ui_token::list`、`ui_token::settings` + `ui_token::settings::row`、`ui_token::feedback`、`ui_token::glow`、`ui_token::tooltip`、`ui_token::secondary_panel`、`ui_token::server_filter`、`ui_token::status_bar`、`ui_token::server_info`（`TITLE_SIZE/BODY_SIZE/TITLE_GAP/ROW_HEIGHT_RATIO/LABEL_WIDTH/NOTE_*/CARD_RADIUS`）、`ui_token::motd`（`FONT_SIZE/BOX_CELL_MIN_RATIO`）、`ui_token::page_title`（`FONT_SIZE/HEIGHT/ICON_SIZE/ICON_GAP/ICON_Y_OFFSET`）、`ui_token::panel`（`GAP/PADDING`）、`ui_token::chat`（滚动条 + 气泡圆角派生 + `input::RowHeight/ButtonBorderWidth` 聊天输入行行高与翻译按钮描边）、`ui_token::player_card`（玩家信息卡分区度量）、`ui_token::text_caret`（`THICKNESS_PX/RADIUS_PX/BLOCK_RADIUS_PX/WIDTH_RATIO/OUTLINE_PX`）、`ui_token::confirm_dialog`、`ui_token::dropdown`、`ui_token::discrete_slider`、`ui_token::ime`、`ui_token::hud::font`、`ui_token::page_title`（`FONT_SIZE/HEIGHT/ICON_SIZE/ICON_GAP`）、`ui_token::panel`（`GAP/PADDING`）、`ui_token::chat`（`SCROLLBAR_*/BUBBLE_*`、`BubbleRadius`）、`ui_token::player_card`（`SIDE_BY_SIDE_MIN_WIDTH/CARD_MAX_WIDTH/CARD_WIDTH_RATIO/STACK_CARD_HEIGHT_RATIO/LIST_CARD_GAP/PADDING/RADIUS/SECTION_GAP/HEADER_*/ACTION_*/ICON_*/STATUS_*/DETAIL_*/LIST_*/SEARCH_HEIGHT/COPY_TOAST_SECONDS`）。
 - 禁止的反面写法：`Row.h - 2.0f` 这类就地魔数；为单个组件新开命名空间放通用色；用近似值复制已有 token（`PREVIEW_BACKDROP` 与 `SURFACE_OVERLAY` 二选一时必须复用）。
 
 ### 2.2 设置内容布局流（settings content flow）
@@ -144,17 +144,23 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 
 ### 2.15 玩家信息卡（player card）
 
-- 定义：ESC 菜单「玩家」页右侧的「信息 + 操作网格」：头部（皮肤 / 名字 / 国家）、胶囊操作区、小方形图标复制区、状态区（在线 / 旁观 / 加入）、玩家信息细节；分区高度、分区之间的缝与列表行度量只由 `ui_token::player_card` 决定。
-- 唯一实现：`QmPlayersUi::PlayerCardContentHeight` / `PlayerCardLayout` / `PlayerCardActionGrid` / `PlayerCardIconRowLayout` / `PlayerCardActions` / `PlayerCardCopies`（`src/game/client/QmUi/QmPlayerCard.h`）；操作胶囊走 `ui_widget::SecondaryButton`，方形图标按钮走 `ui_widget::DoIconButton`（`src/game/client/QmUi/UiButtons.h`），悬停提示走 `ui_widget::Tooltip`、复制成功提示走 `ui_widget::Toast`（`src/game/client/QmUi/UiOverlays.h`）。
-- 禁止的反面写法：在页面里手写 `HSplitTop(28.0f)` 自己切分区（窗口变矮就翻出卡片）；自绘方形图标按钮的底与描边；把复制动作写成 `if(Hovered && Clicked)` 直接调 `SetClipboardText` 而不经过 `PlayerCardCopies`（命中区与置灰规则会各写一份）；给卡片再开一条颜色配置（表面色固定取 `ui_token::color::SURFACE_HIGHLIGHT` + `BORDER_SUBTLE`）。
+- 定义：ESC 菜单「玩家」页是「顶部一行（左胶囊筛选 / 右搜索框 / 最右在线人数）+ 网格玩家列表 + 右侧英雄展示卡」。列表是网格卡片（一行多格，与皮肤列表同一种读法），未选中玩家时占满全宽；选中后右侧卡上半是展示区（角色立绘居中、名字与氏族压在下沿、区内一排圆形图标按钮），下半只有皮肤名与复制按钮。所有度量只由 `ui_token::player_card` 决定。
+- 唯一实现：`QmPlayersUi::PlayerTileColumns`（网格列数）/ `PlayerShowcaseLayout`（展示区 / 立绘 / 名字 / 氏族 / 图标行 / 皮肤行 / 状态行）/ `PlayerShowcaseIconRow`（展示区内图标槽位）（`src/game/client/QmUi/QmPlayerCard.h`）；列表用 `CListBox` 多列网格；操作胶囊走 `ui_widget::SecondaryButton`，方形图标按钮走 `ui_widget::DoIconButton`（`src/game/client/QmUi/UiButtons.h`），悬停提示走 `ui_widget::Tooltip`、复制成功提示走 `ui_widget::Toast`（`src/game/client/QmUi/UiOverlays.h`）。
+- 禁止的反面写法：在页面里手写 `HSplitTop(28.0f)` 自己切分区（窗口变矮就翻出卡片）；用文字按钮承担「好友 / 静音 / 屏蔽表情 / 跨服跟随」这四类动作（一律圆形图标按钮，图标语义与好友列表同源：心 / 禁 / 裂心 / 眼）；凭空造 DDNet 没有的动作（例如「复制氏族」）；把玩家列表写成单列长条（应与皮肤列表一样是网格）；给卡片再开一条颜色配置（表面色固定取 `ui_token::color::SURFACE_HIGHLIGHT` + `BORDER_SUBTLE`）。
 
 ### 2.16 聊天气泡与聊天滚动条（chat bubble / chat scrollbar）
 
 - 定义：游戏内聊天框是独立的 300 高虚拟屏，尺寸单位是「聊天逻辑单位」（1 单位 ≈ 屏幕高度/300），不是 UI 像素；消息气泡单行画成完整胶囊、多行画成圆角矩形，聊天滚动条与列表滚动条共用同一套滑块绘制入口。
-- 唯一实现：`ui_token::chat`（`SCROLLBAR_WIDTH/SCROLLBAR_MARGIN/SCROLLBAR_MIN_THUMB/SCROLLBAR_MAX_THUMB_RATIO/SCROLLBAR_RADIUS/BUBBLE_SINGLE_LINE_TOLERANCE/BUBBLE_MULTI_LINE_RADIUS_RATIO`、`BubbleIsSingleLine`、`BubbleRadius`）+ `src/game/client/components/qmclient/chat_scrollbar.h`（`QmChatScrollbarRail`、`QmChatScrollbarHandleHeight`、`QmDrawChatScrollbar`）；滑块绘制走 `ui_widget::DrawScrollbarHandle`（与 `CListBox`/`CScrollRegion` 同一入口），气泡圆角走 `DrawRoundedSurface`（`ResolveRoundedSurfacePlan` + `QmEffectiveCornerSmoothing` 曲线链）。
+- 唯一实现：`ui_token::chat`（`SCROLLBAR_WIDTH/SCROLLBAR_MARGIN/SCROLLBAR_MIN_THUMB/SCROLLBAR_MAX_THUMB_RATIO/SCROLLBAR_RADIUS/SCROLLBAR_FEEDBACK_INSET_MAX_RATIO/BUBBLE_*`、`BubbleIsSingleLine`、`BubbleRadius`）+ `ui_token::feedback::HANDLE_{HOVER,PRESS}_GROW`（滑块悬浮/按下放大，与 `ui_widget::DrawScrollbarHandle` 同源）+ `src/game/client/components/qmclient/chat_scrollbar.h`（`QmChatHistoryScrollMetrics/ScrollConfig/ScrollLine/Wheel/DragToLine` 为历史滚动推进唯一入口；`QmChatScrollbarFeedbackInset/UsableLength/TrackRange/ValueFromTop/ClampTop/FeedbackRect` 为滑块几何与反馈）（`QmChatScrollbarRail`、`QmChatScrollbarHandleHeight`、`QmDrawChatScrollbar`）；滑块绘制走 `ui_widget::DrawScrollbarHandle`（与 `CListBox`/`CScrollRegion` 同一入口），气泡圆角走 `DrawRoundedSurface`（`ResolveRoundedSurfacePlan` + `QmEffectiveCornerSmoothing` 曲线链）。
 - 禁止的反面写法：在 chat.cpp 里写 `FontSize() * 0.5f` 之类的半径、给气泡另起一套 `CreateRectQuadContainer` 直绘几何（只认圆弧，和气泡自己的背景模糊会错位）、把列表滚动条的 UI 像素值直接当聊天单位用、聊天滚动条自己画强调色与卡片描边。
 
 ## 三、通用组件与行级模式
+
+### 2.16b 聊天输入行（chat input row）
+
+- 定义：游戏内聊天输入行最左侧的翻译按钮、桌面「全体:」文字与手机「全体」前缀块共用一条行高；按钮直径、描边粗细、图标盒子与字形都从这条行高按比例派生，三者永远等高。
+- 唯一实现：`ui_token::chat::input`（`ROW_HEIGHT_EXTRA/ROW_HEIGHT_MIN/BUTTON_GAP/BUTTON_BORDER_RATIO`）+ `QmChatInputRowHeight`、`QmChatTranslateButtonSize`、`QmChatTranslateButtonBorderWidth`、`QmChatTranslateButtonInnerSize`、`QmChatTranslateIconBoxSize`、`QmChatTranslateIconGlyphSize`（`src/game/client/components/qmclient/chat_input_layout.h`）；调用点 `CChat::RenderTranslateButton`（`chat.cpp`）。
+- 禁止的反面写法：按钮直径直接取字号（行高与前缀块各算一次就一大一小）；在小圆上画 1 单位的固定描边；把图标盒子与字形尺寸混为一谈（`DoLabel_QmIcon` 收盒子，绘制层再乘墨迹比例）；图标在盒子内再内缩一圈。
 
 ### 2.17 输入光标（text caret）
 
@@ -301,6 +307,12 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 | 模态确认 | 操作请求 | 居中遮罩 | 确认/取消/Esc | `CUi::DoPopupMenu` + `SConfirmPopupContext` |
 | 轻提示 | 事件 | 角落浮层 | 计时结束 | `ui_widget::Toast` |
 | 颜色选择器 | 点色块 | 浮层，锚定指针 | 选中、点外部、Esc | `SettingsColorPicker.h` + `CUi::ShowPopupColorPicker` |
+
+### 3.20 公告行级排版（MOTD line layout）
+
+- 定义：服务端公告按行分类，整行都是框线/制表字符的行按统一格子推进（一格一字形、字间距为 0，相邻横线首尾相接），其余行沿用普通文本排版；格宽与行高由字体实测，不写死像素。
+- 唯一实现：`QmMotdLayout::Build` / `QmMotdLayout::IsBoxDrawingLine` / `QmMotdLayout::IsBoxDrawingCodepoint`（`src/game/client/QmUi/QmMotdLayout.h`）；接入点 `CMenus::DrainIngameMotdParagraphCache` 与 `CMenus::RenderIngameMotdStableParagraphCache`（`src/game/client/components/menus_ingame.cpp`，逐行排版与整段文本容器共用同一套请求/预算节奏）；字号与压缩下限走 `ui_token::motd::FONT_SIZE`、`ui_token::motd::BOX_CELL_MIN_RATIO`。
+- 禁止的反面写法：把框线行交给普通文本排版（字距把横线切成一节一节）；用固定像素当格宽或行高（换字号就错位）；超宽时继续压缩到笔画互相吞掉而不是截断可见字数；在渲染趟逐字形即时绘制（每帧重建文本容器）。
 
 ## 四、后续更新维护协议
 

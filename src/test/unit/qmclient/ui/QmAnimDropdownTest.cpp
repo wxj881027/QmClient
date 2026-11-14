@@ -1087,3 +1087,17 @@ TEST(QmDropdownSearch, SourceChangeAndReopeningDiscardStaleMatches)
 	ASSERT_TRUE(Search.Update({"Arial", "Verdana"}, ""));
 	EXPECT_EQ(Search.Indices().size(), 2u);
 }
+
+TEST(QmDropdownRadius, TriggerAndEntryShareTheCapsuleDerivation)
+{
+	// 常见行高：20 高的触发按钮得到 10、24 高的得到 12——完整胶囊端头，
+	// 不再是固定 radius::BASE(8) 的圆角矩形；弹层条目取同一档，展开前后不跳形。
+	EXPECT_FLOAT_EQ(QmDropdownEntryRadius(20.0f), 10.0f);
+	EXPECT_FLOAT_EQ(QmDropdownEntryRadius(24.0f), 12.0f);
+	for(const float RowHeight : {12.0f, 16.0f, 20.0f, 24.0f, 28.0f})
+		EXPECT_FLOAT_EQ(QmDropdownEntryRadius(RowHeight), ui_token::list::RowRadius(RowHeight));
+	// 高行停在上限档，不再继续长大；非正行高不产生负半径。
+	EXPECT_FLOAT_EQ(QmDropdownEntryRadius(40.0f), ui_token::radius::CARD);
+	EXPECT_FLOAT_EQ(QmDropdownEntryRadius(0.0f), 0.0f);
+	EXPECT_FLOAT_EQ(QmDropdownEntryRadius(-8.0f), 0.0f);
+}

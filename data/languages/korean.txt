@@ -1700,9 +1700,6 @@ Balanced (recommended)
 Ban a certain nickname
 == 특정 닉네임을 차단합니다
 
-Ban ip for x minutes for any reason
-== 모든 사유로 IP를 x분 동안 차단
-
 Ban ip range for x minutes for any reason
 == 모든 사유로 IP 범위를 x분 동안 차단
 
@@ -1720,6 +1717,12 @@ Ban reason for "sv_dnsbl_ban"
 
 Ban time after being voted kicked (in minutes, 0 = kick only, no ban)
 == 추방 투표 후 차단 시간 (분 단위, 0 = 추방만, 차단 없음)
+
+Bar
+== 세로선
+
+Bar: a thin vertical line between characters
+== 세로선: 글자 사이의 얇은 세로선
 
 Base path for HTTPS map download URLs to clients
 == 클라이언트에 HTTPS 맵 다운로드 URL을 제공하기 위한 기본 경로
@@ -1847,6 +1850,9 @@ Blink
 Blink the active local tee
 == 활성 로컬 캐릭터를 깜박이게 합니다
 
+Block
+== 블록
+
 Block client-initiated self-kill (K key / kill command)
 == 클라이언트 발 자살 차단 (K 키 / kill 명령)
 
@@ -1858,6 +1864,9 @@ Block votes from blacklisted addresses
 
 Block words
 == 차단 단어
+
+Block: fills the character cell behind the next character
+== 블록: 다음 글자의 문자 셀을 채움
 
 Blue
 == 파랑
@@ -2390,8 +2399,8 @@ Choose export name first.
 Choose Logo (PNG / WebP)
 == 로고 선택 (PNG / WebP)
 
-Choose off, reduced or full; this single switch drives every animation.
-== 끔, 간소, 전체 중에서 고르세요. 모든 애니메이션이 이 하나의 스위치로 동작합니다.
+Choose off, reduced or full; this single switch drives every animation. Then pick a caret shape for the settings, console and chat input fields.
+== 끔, 간소, 전체 중에서 고르세요. 모든 애니메이션이 이 하나의 스위치로 동작합니다. 이어서 설정, 콘솔, 채팅 입력 필드의 커서 모양을 고르세요.
 
 Choose the language used by the client
 == Choose the language used by the client
@@ -3242,9 +3251,6 @@ Copy a .qmconfig file into the package folder, then refresh.
 Copy all
 == 모두 복사
 
-Copy clan
-== 클랜 복사
-
 Copy friend code
 == 친구 코드 복사
 
@@ -3772,6 +3778,9 @@ Debug SQL.
 
 Debug tile layer clipping.
 == 디버그 타일 레이어 클리핑
+
+Debug websockets
+== WebSocket 디버그
 
 Decides which skins the client downloads and lists, and can add a prefix to load prefixed skin variants.
 == 클라이언트가 내려받고 목록에 표시할 스킨을 정하고, 접두사가 붙은 스킨 변형을 불러올 접두사를 추가할 수 있습니다.
@@ -4615,6 +4624,9 @@ Echo follows the original chat color
 
 Echo text color when not inheriting chat color
 == 채팅 색상을 상속하지 않을 때의 Echo 텍스트 색상
+
+Echo the config value in chat window
+== 설정값을 채팅창에 표시
 
 Echo the text
 == 텍스트 에코
@@ -8416,6 +8428,9 @@ Map note
 
 Map play history
 == 맵 플레이 기록
+
+Map preview
+== 맵 미리보기
 
 Map preview rendering unavailable
 == 맵 미리보기를 렌더링할 수 없습니다
@@ -12728,9 +12743,6 @@ Select a configuration package to preview its contents.
 Select a map
 == 맵 선택
 
-Select a player to manage
-== 관리할 플레이어 선택
-
 Select a preset, then apply it to player or dummy
 == 프리셋을 선택한 뒤 플레이어나 더미에 적용
 
@@ -13049,8 +13061,8 @@ Sets chat position, width, font size and visibility.
 Sets encoder, container and quality in one step: Daily is H.264 + MP4, High quality is HEVC + MP4 at a smaller size, Editing is all-intra H.264 + MP4 with instant seeking, and Exchange is ProRes 422 HQ + MOV for other editors.
 == 인코더·컨테이너·화질을 한 번에 정합니다. 일상 공유는 H.264 + MP4, 고품질은 더 작은 HEVC + MP4, 편집용은 어디서든 즉시 탐색되는 전체 프레임 내 H.264 + MP4, 교환용은 다른 편집 프로그램을 위한 ProRes 422 HQ + MOV입니다.
 
-Sets how much motion the interface plays: transitions, card entrance, reorder animations and scroll feel.
-== 인터페이스에서 재생되는 움직임의 정도를 설정합니다. 전환, 카드 등장, 순서 변경 애니메이션, 스크롤 느낌이 포함됩니다.
+Sets how much motion the interface plays (transitions, card entrance, reorder animations, scroll feel) and the shape of the text caret in every input field.
+== 인터페이스 동작량(전환, 카드 등장, 재배열 애니메이션, 스크롤 감각)과 모든 입력 필드의 커서 모양을 설정합니다.
 
 Sets laser colors for weapons and entities.
 == 무기와 엔티티의 레이저 색상을 설정합니다.
@@ -13960,6 +13972,9 @@ Show server prompts and Echo messages as popups
 
 Show server settings
 == 서버 설정 보기
+
+Show server uptime
+== 서버 가동 시간 표시
 
 Show settings card borders
 == 설정 카드 테두리 표시
@@ -15023,6 +15038,9 @@ Successfully saved the replay!
 Sudden Death
 == 서든 데스
 
+Suggested tags:
+== 추천 태그:
+
 Suicides
 == 자살 횟수
 
@@ -15517,6 +15535,9 @@ Text alpha
 
 Text before each key press count
 == 키 입력 횟수 접두사
+
+Text caret style
+== 입력 커서 스타일
 
 Text caret style: 0=bar, 1=underscore, 2=block
 == 입력 커서 스타일: 0=세로선, 1=밑줄, 2=블록
@@ -16355,8 +16376,8 @@ Tune variable to value
 Tune variable to value or show current value
 == 변수를 값으로 조정하거나 현재 값을 표시합니다.
 
-Turn motion off on weaker machines; cards then open and scroll immediately.
-== 성능이 낮은 환경에서는 움직임을 끄세요. 그러면 카드가 즉시 열리고 스크롤도 바로 됩니다.
+Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
+== 성능이 낮은 기기에서는 끄세요. 카드가 즉시 열리고 스크롤도 즉시 반응합니다. 커서 모양은 겉모양일 뿐이며 세 가지 모두 같은 문자 셀에 들어갑니다.
 
 Turn on "Auto chat in water", type the "Chat message" you want, and optionally enable "Send emoticon in water" with its ID.
 == "물에 빠지면 자동 채팅"을 켜고 보낼 "채팅 메시지"를 입력한 뒤, 원하면 "물에 빠지면 이모티콘 보내기"와 이모티콘 ID를 설정하세요.
@@ -16624,6 +16645,12 @@ Uncertainty duration
 
 Unclassified audio issue
 == 분류되지 않은 오디오 문제
+
+Underscore
+== 밑줄
+
+Underscore: a line under the character that follows
+== 밑줄: 다음 글자 아래에 그리는 선
 
 Unexpected map upload response.
 == 맵 업로드 응답이 예상과 다릅니다.

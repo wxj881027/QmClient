@@ -1700,9 +1700,6 @@ Balanced (recommended)
 Ban a certain nickname
 == Забанить определённый никнейм
 
-Ban ip for x minutes for any reason
-== Забанить IP на x минут по любой причине
-
 Ban ip range for x minutes for any reason
 == Забанить диапазон IP на x минут по любой причине
 
@@ -1720,6 +1717,12 @@ Ban reason for "sv_dnsbl_ban"
 
 Ban time after being voted kicked (in minutes, 0 = kick only, no ban)
 == Время бана после кика по голосованию (в минутах, 0 = только кик, без бана)
+
+Bar
+== Черта
+
+Bar: a thin vertical line between characters
+== Черта: тонкая вертикальная линия между символами
 
 Base path for HTTPS map download URLs to clients
 == Базовый путь для URL-адресов загрузки карт по HTTPS для клиентов
@@ -1847,6 +1850,9 @@ Blink
 Blink the active local tee
 == Заставить активного локального персонажа мигнуть
 
+Block
+== Блок
+
 Block client-initiated self-kill (K key / kill command)
 == Блокировать самоубийство со стороны клиента (клавиша K / команда kill)
 
@@ -1858,6 +1864,9 @@ Block votes from blacklisted addresses
 
 Block words
 == Блокировка слов
+
+Block: fills the character cell behind the next character
+== Блок: заливает знакоместо следующего символа
 
 Blue
 == Синий
@@ -2390,8 +2399,8 @@ Choose export name first.
 Choose Logo (PNG / WebP)
 == Выбрать логотип (PNG / WebP)
 
-Choose off, reduced or full; this single switch drives every animation.
-== Выберите «Выкл.», «Сокращённо» или «Полностью»; этот переключатель управляет всеми анимациями.
+Choose off, reduced or full; this single switch drives every animation. Then pick a caret shape for the settings, console and chat input fields.
+== Выберите «Выкл.», «Сокращённо» или «Полностью»; этот переключатель управляет всеми анимациями. Затем выберите форму курсора для настроек, консоли и чата.
 
 Choose the language used by the client
 == Choose the language used by the client
@@ -3242,9 +3251,6 @@ Copy a .qmconfig file into the package folder, then refresh.
 Copy all
 == Копировать все
 
-Copy clan
-== Скопировать клан
-
 Copy friend code
 == Копировать код друзей
 
@@ -3772,6 +3778,9 @@ Debug SQL.
 
 Debug tile layer clipping.
 == Отладка обрезки тайловых слоёв.
+
+Debug websockets
+== Отладка WebSocket
 
 Decides which skins the client downloads and lists, and can add a prefix to load prefixed skin variants.
 == Определяет, какие скины клиент скачивает и показывает, и позволяет задать префикс для загрузки вариантов скинов с префиксом.
@@ -4615,6 +4624,9 @@ Echo follows the original chat color
 
 Echo text color when not inheriting chat color
 == Цвет текста Echo, когда не наследует цвет чата
+
+Echo the config value in chat window
+== Выводить значение настройки в чат
 
 Echo the text
 == Вывести текст
@@ -8416,6 +8428,9 @@ Map note
 
 Map play history
 == История прохождения карт
+
+Map preview
+== Предпросмотр карты
 
 Map preview rendering unavailable
 == Предпросмотр карты недоступен
@@ -12728,9 +12743,6 @@ Select a configuration package to preview its contents.
 Select a map
 == Выберите карту
 
-Select a player to manage
-== Выберите игрока для управления
-
 Select a preset, then apply it to player or dummy
 == Выберите пресет, затем примените его к игроку или Дами
 
@@ -13049,8 +13061,8 @@ Sets chat position, width, font size and visibility.
 Sets encoder, container and quality in one step: Daily is H.264 + MP4, High quality is HEVC + MP4 at a smaller size, Editing is all-intra H.264 + MP4 with instant seeking, and Exchange is ProRes 422 HQ + MOV for other editors.
 == Настраивает кодировщик, контейнер и качество за один шаг: «Повседневный» — H.264 + MP4, «Высокое качество» — HEVC + MP4 меньшего размера, «Монтаж» — полностью внутрикадровый H.264 + MP4 с мгновенным переходом, «Обмен» — ProRes 422 HQ + MOV для других редакторов.
 
-Sets how much motion the interface plays: transitions, card entrance, reorder animations and scroll feel.
-== Задаёт, сколько анимации будет в интерфейсе: переходы, появление карточек, анимации перестановки и поведение прокрутки.
+Sets how much motion the interface plays (transitions, card entrance, reorder animations, scroll feel) and the shape of the text caret in every input field.
+== Задаёт объём анимации интерфейса (переходы, появление карточек, перестановка, ощущение прокрутки) и форму курсора во всех полях ввода.
 
 Sets laser colors for weapons and entities.
 == Задаёт цвета лазеров оружия и объектов.
@@ -13960,6 +13972,9 @@ Show server prompts and Echo messages as popups
 
 Show server settings
 == Показать настройки сервера
+
+Show server uptime
+== Показывать время работы сервера
 
 Show settings card borders
 == Показывать границы карточек настроек
@@ -15023,6 +15038,9 @@ Successfully saved the replay!
 Sudden Death
 == Внезапная смерть
 
+Suggested tags:
+== Предлагаемые теги:
+
 Suicides
 == Самоубийства
 
@@ -15517,6 +15535,9 @@ Text alpha
 
 Text before each key press count
 == Префикс счётчика нажатий
+
+Text caret style
+== Стиль курсора ввода
 
 Text caret style: 0=bar, 1=underscore, 2=block
 == Стиль курсора ввода: 0=черта, 1=подчёркивание, 2=блок
@@ -16355,8 +16376,8 @@ Tune variable to value
 Tune variable to value or show current value
 == Установить переменную тюнинга в значение или показать текущее значение
 
-Turn motion off on weaker machines; cards then open and scroll immediately.
-== На слабых машинах отключите анимацию: карточки будут открываться и прокручиваться мгновенно.
+Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
+== На слабых машинах выключите: карточки открываются и прокручиваются сразу. Форма курсора только внешняя: все три стиля занимают одно знакоместо.
 
 Turn on "Auto chat in water", type the "Chat message" you want, and optionally enable "Send emoticon in water" with its ID.
 == Включите «Автосообщение при падении в воду», впишите нужное «Сообщение в чат» и при желании включите «Отправлять эмоцию» с её ID.
@@ -16624,6 +16645,12 @@ Uncertainty duration
 
 Unclassified audio issue
 == Неклассифицированная аудио-проблема
+
+Underscore
+== Подчёркивание
+
+Underscore: a line under the character that follows
+== Подчёркивание: линия под следующим символом
 
 Unexpected map upload response.
 == Неожиданный ответ при загрузке карты.

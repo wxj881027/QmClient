@@ -1700,9 +1700,6 @@ Balanced (recommended)
 Ban a certain nickname
 == Zbanuj konkretny pseudonim
 
-Ban ip for x minutes for any reason
-== Zbanuj IP na x minut z dowolnego powodu
-
 Ban ip range for x minutes for any reason
 == Zbanuj zakres IP na x minut z dowolnego powodu
 
@@ -1720,6 +1717,12 @@ Ban reason for "sv_dnsbl_ban"
 
 Ban time after being voted kicked (in minutes, 0 = kick only, no ban)
 == Czas bana po wyrzuceniu przez głosowanie (w minutach, 0 = tylko wyrzucenie, bez bana)
+
+Bar
+== Kreska
+
+Bar: a thin vertical line between characters
+== Kreska: cienka pionowa linia między znakami
 
 Base path for HTTPS map download URLs to clients
 == Ścieżka bazowa dla URL-i pobierania map przez HTTPS do klientów
@@ -1847,6 +1850,9 @@ Blink
 Blink the active local tee
 == Mignij aktywną lokalną postacią
 
+Block
+== Blok
+
 Block client-initiated self-kill (K key / kill command)
 == Blokuj samobójstwo inicjowane przez klienta (klawisz K / polecenie kill)
 
@@ -1858,6 +1864,9 @@ Block votes from blacklisted addresses
 
 Block words
 == Blokuj słowa
+
+Block: fills the character cell behind the next character
+== Blok: wypełnia komórkę następnego znaku
 
 Blue
 == Niebieski
@@ -2390,8 +2399,8 @@ Choose export name first.
 Choose Logo (PNG / WebP)
 == Wybierz logo (PNG / WebP)
 
-Choose off, reduced or full; this single switch drives every animation.
-== Wybierz wył., ograniczone lub pełne; ten jeden przełącznik steruje wszystkimi animacjami.
+Choose off, reduced or full; this single switch drives every animation. Then pick a caret shape for the settings, console and chat input fields.
+== Wybierz wył., ograniczone lub pełne; ten jeden przełącznik steruje wszystkimi animacjami. Następnie wybierz kształt kursora dla ustawień, konsoli i czatu.
 
 Choose the language used by the client
 == Choose the language used by the client
@@ -3242,9 +3251,6 @@ Copy a .qmconfig file into the package folder, then refresh.
 Copy all
 == Kopiuj wszystko
 
-Copy clan
-== Kopiuj klan
-
 Copy friend code
 == Kopiuj kod znajomych
 
@@ -3772,6 +3778,9 @@ Debug SQL.
 
 Debug tile layer clipping.
 == Debugowanie przycinania warstw kafelków.
+
+Debug websockets
+== Debuguj WebSocket
 
 Decides which skins the client downloads and lists, and can add a prefix to load prefixed skin variants.
 == Decyduje, które skórki klient pobiera i wyświetla, i pozwala dodać prefiks, by wczytywać warianty skórek z prefiksem.
@@ -4615,6 +4624,9 @@ Echo follows the original chat color
 
 Echo text color when not inheriting chat color
 == Kolor tekstu Echo, gdy nie dziedziczy koloru czatu
+
+Echo the config value in chat window
+== Pokazuj wartość ustawienia na czacie
 
 Echo the text
 == Wyświetl tekst
@@ -8416,6 +8428,9 @@ Map note
 
 Map play history
 == Historia gry na mapach
+
+Map preview
+== Podgląd mapy
 
 Map preview rendering unavailable
 == Renderowanie podglądu mapy niedostępne
@@ -12728,9 +12743,6 @@ Select a configuration package to preview its contents.
 Select a map
 == Wybierz mapę
 
-Select a player to manage
-== Wybierz gracza do zarządzania
-
 Select a preset, then apply it to player or dummy
 == Wybierz preset, a następnie zastosuj do gracza lub dummy
 
@@ -13049,8 +13061,8 @@ Sets chat position, width, font size and visibility.
 Sets encoder, container and quality in one step: Daily is H.264 + MP4, High quality is HEVC + MP4 at a smaller size, Editing is all-intra H.264 + MP4 with instant seeking, and Exchange is ProRes 422 HQ + MOV for other editors.
 == Ustawia koder, kontener i jakość w jednym kroku: Codzienny to H.264 + MP4, Wysoka jakość to HEVC + MP4 w mniejszym rozmiarze, Montaż to wewnątrzklatkowy H.264 + MP4 z natychmiastowym przewijaniem, a Wymiana to ProRes 422 HQ + MOV dla innych edytorów.
 
-Sets how much motion the interface plays: transitions, card entrance, reorder animations and scroll feel.
-== Ustawia intensywność ruchu interfejsu: przejścia, wejście kart, animacje zmiany kolejności i płynność przewijania.
+Sets how much motion the interface plays (transitions, card entrance, reorder animations, scroll feel) and the shape of the text caret in every input field.
+== Określa ilość animacji interfejsu (przejścia, wejście kart, animacje przestawiania, odczucie przewijania) oraz kształt kursora we wszystkich polach wprowadzania.
 
 Sets laser colors for weapons and entities.
 == Ustawia kolory laserów dla broni i obiektów.
@@ -13960,6 +13972,9 @@ Show server prompts and Echo messages as popups
 
 Show server settings
 == Pokaż ustawienia serwera
+
+Show server uptime
+== Pokazuj czas działania serwera
 
 Show settings card borders
 == Pokaż obramowania kart ustawień
@@ -15023,6 +15038,9 @@ Successfully saved the replay!
 Sudden Death
 == Nagła śmierć
 
+Suggested tags:
+== Sugerowane tagi:
+
 Suicides
 == Samobójstwa
 
@@ -15517,6 +15535,9 @@ Text alpha
 
 Text before each key press count
 == Prefiks licznika naciśnięć
+
+Text caret style
+== Styl kursora
 
 Text caret style: 0=bar, 1=underscore, 2=block
 == Styl kursora: 0=kreska, 1=podkreślenie, 2=blok
@@ -16355,8 +16376,8 @@ Tune variable to value
 Tune variable to value or show current value
 == Dostrój zmienną do wartości lub pokaż bieżącą wartość
 
-Turn motion off on weaker machines; cards then open and scroll immediately.
-== Na słabszych komputerach wyłącz ruch; karty otwierają się i przewijają wtedy od razu.
+Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
+== Na słabszych komputerach wyłącz: karty otwierają się i przewijają natychmiast. Kształt kursora jest tylko estetyczny: wszystkie trzy style mieszczą się w tej samej komórce znaku.
 
 Turn on "Auto chat in water", type the "Chat message" you want, and optionally enable "Send emoticon in water" with its ID.
 == Włącz „Automatyczny czat w wodzie", wpisz wybraną „Wiadomość na czacie", a w razie potrzeby włącz „Wysyłaj emotikonę w wodzie" wraz z jej ID.
@@ -16624,6 +16645,12 @@ Uncertainty duration
 
 Unclassified audio issue
 == Niesklasyfikowany problem audio
+
+Underscore
+== Podkreślenie
+
+Underscore: a line under the character that follows
+== Podkreślenie: linia pod następnym znakiem
 
 Unexpected map upload response.
 == Nieoczekiwana odpowiedź na przesłanie mapy.

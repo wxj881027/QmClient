@@ -204,6 +204,12 @@ namespace ui_token::feedback
 	// 描边固定白色：它只表达「这里有反馈」，不参与强调色语义（强调色偏红时，
 	// 若描边跟随强调色，每个按钮的悬停都会被读成错误态）。
 	inline constexpr ColorRGBA ACTIVE_BORDER{1.0f, 1.0f, 1.0f, ICON_BORDER_ALPHA};
+	// 滚动条滑块悬浮时向四周扩张的距离：公共滑块绘制入口（ui_widget::DrawScrollbarHandle）
+	// 的几何反馈档，悬浮比静止大一档。
+	inline constexpr float HANDLE_HOVER_GROW = 1.0f;
+	// 滚动条滑块按下/拖动时再扩张一档：与悬浮拉开差距，按下有「抓得更实」的观感。
+	// 宿主（聊天滚动条）按这一档在轨道两端预留余量，放大后的滑块不会顶出轨道。
+	inline constexpr float HANDLE_PRESS_GROW = 2.0f;
 }
 
 // 输入框聚焦光晕：从外壳边缘向外铺开的衰减光带，与输入框模式无关——
@@ -544,6 +550,10 @@ namespace ui_token::chat
 	inline constexpr float SCROLLBAR_MAX_THUMB_RATIO = 0.5f;
 	// 轨道与滑块的圆角：胶囊端头，和列表覆盖式滚动条同一档（绘制层按短边一半兜底）。
 	inline constexpr float SCROLLBAR_RADIUS = radius::PILL;
+	// 滑块悬浮/按下放大的预留比例上限：轨道长度方向两端各最多让出这一比例，
+	// 加上 ui_token::feedback::HANDLE_PRESS_GROW 的放大后仍完整落在轨道内；
+	// 上限定在四分之一是为了让极短的历史区（约两行高）也留得住可抓的滑块。
+	inline constexpr float SCROLLBAR_FEEDBACK_INSET_MAX_RATIO = 0.25f;
 
 	// 消息气泡单行判定的容差：行高不超过「一行行高」的 1.25 倍就算单行，
 	// 留出行距与装饰的余量；超过即按多行处理。
@@ -578,6 +588,36 @@ namespace ui_token::chat
 	{
 		return SingleLine ? BubbleSingleLineRadius(LineHeight) : BubbleMultiLineRadius(RowHeight);
 	}
+
+	// 聊天输入行：翻译按钮与「全体」前缀块共用同一份行高。单位同样是聊天逻辑单位
+	// （1 单位 ≈ 屏幕高度 / 300），不要拿 ui_token::control 的控件高度当参照物。
+	// 两条边必须同源：按钮与前缀块各算一次行高，换字号后就会一大一小，又回到
+	// 「按钮比文字高半截」的老问题。
+	namespace input
+	{
+		// 行高相对字号多出的一档：相当于上下各半个内边距，让按钮读作「一行控件」
+		// 而不是贴着文字的圆点。取值与旧前缀块的「字号 + 4」一致，不改变既有手感。
+		inline constexpr float ROW_HEIGHT_EXTRA = 4.0f;
+		// 行高下限：小字号时不再跟着缩，保证按钮仍是可点、可辨认的一块。
+		inline constexpr float ROW_HEIGHT_MIN = 16.0f;
+		// 按钮与右侧文字之间的缝。
+		inline constexpr float BUTTON_GAP = 4.0f;
+		// 按钮描边宽度占直径的比例：圆形图标按钮只需要一圈勾边。
+		// 固定 1 单位在 8 单位直径的小圆上就是八分之一，读起来是「粗框」而不是「描边」。
+		inline constexpr float BUTTON_BORDER_RATIO = 0.05f;
+
+		// 输入行行高：按钮直径与「全体」前缀块高度都只从这里取。
+		inline float RowHeight(const float FontSize)
+		{
+			return std::max(std::max(0.0f, FontSize) + ROW_HEIGHT_EXTRA, ROW_HEIGHT_MIN);
+		}
+
+		// 按钮描边宽度：按直径比例给出，圆变大时描边仍是一圈细边，不会跟着变粗。
+		inline float ButtonBorderWidth(const float Diameter)
+		{
+			return std::max(0.0f, Diameter) * BUTTON_BORDER_RATIO;
+		}
+	} // namespace input
 } // namespace ui_token::chat
 
 // 设置页行类型：每种行只描述「上间距 + 左缩进」两个尺寸事实，全部由既有 spacing
@@ -735,10 +775,9 @@ namespace ui_token::status_bar
 	inline constexpr float RADIUS = radius::SMALL_MENU;
 } // namespace ui_token::status_bar
 
-// ui_token::server_info 已删除：服务器信息页改用设置页卡片同一份派生链
-// （ResolveSettingsContentMetrics + RowGap/SectionGap + 标准开关行），
-// 原来那套 15 高行、8.8 字号与独立开关宽度正是「同一页三套字号」的来源。
-// 不要恢复这个命名空间：恢复等于把两套字号重新装回同一页。
+// 服务器信息页的字号曾经被删过一次（当时走设置页派生链），结果是标题 32、正文 20
+// 又变成硬编码在渲染函数里，实机又大又密。现在恢复为「只放字号与列宽」的命名空间：
+// 行距、段落缝仍来自设置页派生链，本命名空间只负责这一页自己的字号标尺。
 
 // 确认弹窗（删除、覆盖、退出确认）的尺寸档：宽度按内容在上下限之间自适应，
 // 标题与按钮各自固定高度，保证不同长度的提示文案排版一致。
@@ -793,6 +832,8 @@ namespace ui_token::server_info
 	inline constexpr float BODY_SIZE = 15.0f;
 	// 标题与副标题之间的留白。
 	inline constexpr float TITLE_GAP = 4.0f;
+	// 副标题（服务器名）与第一条字段之间的留白：只留一档行距，不再额外空出一整行。
+	inline constexpr float NAME_GAP = 6.0f;
 	// 字段行高 = 正文字号 × 该比例：字号缩小后仍要留出行间呼吸，避免密排。
 	inline constexpr float ROW_HEIGHT_RATIO = 1.5f;
 	// 标签列宽（地址 / 延迟 / 版本 / 密码 / 社区）。
@@ -804,6 +845,18 @@ namespace ui_token::server_info
 	// 卡片圆角：与设置卡片同一族。
 	inline constexpr float CARD_RADIUS = radius::MENU;
 } // namespace ui_token::server_info
+
+// 服务器信息页公告（MOTD）的排版档：公告里常用 Unicode 框线字符画方框，
+// 按普通文本排版时字距会把横线切成一节一节（实机看起来像竹子有节），
+// 框线行因此改走「一格一字形、字间距为 0」的等宽推进。这些档位就是那条路径
+// 的全部数值来源，格宽与行高由字体实测（见 QmMotdLayout.h），不在此写死。
+namespace ui_token::motd
+{
+	// 公告正文字号（未缩放）：公告栏再乘卡片缩放绘制。
+	inline constexpr float FONT_SIZE = 16.0f;
+	// 超宽框线行的推进压缩下限：低于该比例笔画会互相吞掉，宁可截断可见字数。
+	inline constexpr float BOX_CELL_MIN_RATIO = 0.5f;
+} // namespace ui_token::motd
 
 // 只给偏移量，颜色用 color::SURFACE_SHADOW，绘制层按偏移方向铺一层模糊底。
 namespace ui_token::elevation
@@ -855,12 +908,24 @@ namespace ui_token::player_card
 	inline constexpr float STACK_CARD_HEIGHT_RATIO = 0.52f;
 	// 列表与信息卡之间的缝：直接用页面级面板间距，两栏与其它页面读起来是同一条缝。
 	inline constexpr float LIST_CARD_GAP = panel::GAP;
+	// 玩家列表是网格卡片（与皮肤列表同一种读法）：每格最小宽度、格高、格间缝与格内头像边长。
+	inline constexpr float TILE_MIN_WIDTH = 176.0f;
+	inline constexpr float TILE_HEIGHT = 56.0f;
+	inline constexpr float TILE_GAP = spacing::SM;
+	inline constexpr float TILE_AVATAR_SIZE = 36.0f;
+	// 顶部一行：搜索框与在线人数占的固定宽度。
+	inline constexpr float SEARCH_WIDTH = 260.0f;
+	inline constexpr float COUNT_WIDTH = 96.0f;
+	// 英雄展示区：高度占卡片宽度的比例、角色占展示区高度的比例、区内图标按钮边长。
+	inline constexpr float SHOWCASE_HEIGHT_RATIO = 0.72f;
+	inline constexpr float SHOWCASE_TEE_RATIO = 0.78f;
+	inline constexpr float SHOWCASE_ICON_SIZE = 24.0f;
 	// 信息卡四周内边距与圆角。
 	inline constexpr float PADDING = spacing::SM;
 	inline constexpr float RADIUS = radius::BASE;
 	// 卡内两个分区之间的缝（头部、操作区、图标行、状态区、细节区之间）。
 	inline constexpr float SECTION_GAP = spacing::SM;
-	// 头部：头像方形、名字/氏族两行的行高、右侧国家旗高度（宽度按 2:1 反推）。
+	// 头部：头像方形、名字/战队两行的行高、右侧国家旗高度（宽度按 2:1 反推）。
 	inline constexpr float HEADER_HEIGHT = 44.0f;
 	inline constexpr float HEADER_AVATAR_SIZE = 36.0f;
 	inline constexpr float HEADER_NAME_HEIGHT = 18.0f;

@@ -101,6 +101,15 @@ namespace
 		{Localizable("End bounce"), nullptr, "末端回弹"},
 		{Localizable("Scroll step"), nullptr, "滚动步长"},
 		{Localizable("Wheel distance per tick; hold Alt for 3x"), nullptr, "每格滚轮距离；按住 Alt 为 3 倍"},
+		// 输入光标样式：设置页、控制台与聊天输入共用同一个光标组件，检索词要覆盖三个档位名。
+		{Localizable("Bar"), nullptr, "竖线"},
+		{Localizable("Block"), nullptr, "方块"},
+		{Localizable("Text caret style"), nullptr, "输入光标样式"},
+		{Localizable("Underscore"), nullptr, "下划线"},
+		{Localizable("Bar: a thin vertical line between characters"), nullptr, "竖线：字符之间的一条细竖线"},
+		{Localizable("Block: fills the character cell behind the next character"), nullptr, "方块：填充下一个字符所在的字符格"},
+		{Localizable("Underscore: a line under the character that follows"), nullptr, "下划线：画在下一个字符下方的一条线"},
+		{nullptr, "qm_text_caret_style", nullptr},
 		{nullptr, "qm_ui_motion_level", nullptr},
 	};
 	QM_CARD_SEARCH_REGISTER("deck:graphics-interaction", deck_graphics_interaction);

@@ -3356,6 +3356,7 @@ if(CLIENT)
     QmUi/QmWikiStore.h
     QmUi/MapTagsPanel.cpp
     QmUi/MapTagsPanel.h
+    QmUi/QmMotdLayout.h
     QmUi/QmServerInfoGeometry.h
     QmUi/cards/QmCardCatalog.cpp
     QmUi/cards/QmCardCatalog.h
@@ -4859,6 +4860,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/ui/qm_card_order_model_test.cpp
     src/test/unit/qmclient/ui/qm_card_registry_test.cpp
     src/test/unit/qmclient/ui/qm_server_info_layout_test.cpp
+    src/test/unit/qmclient/ui/qm_motd_layout_test.cpp
     src/test/unit/qmclient/settings/qm_search_header_test.cpp
     src/test/unit/qmclient/settings/qm_search_answers_test.cpp
     src/test/unit/qmclient/ui/qm_interaction_source_test.cpp
@@ -5280,6 +5282,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/ui/qm_rounded_surface_matrix_test.cpp
     src/test/unit/qmclient/ui/settings_search_reveal_test.cpp
     src/test/unit/qmclient/ui/pie_option_pool_test.cpp
+    src/test/unit/qmclient/ui/qm_player_card_geometry_test.cpp
     src/test/unit/qmclient/ui/ui_text_caret_test.cpp
     src/test/contract/qmclient/settings/settings_resource_jobs_assets_contract_test.cpp
     src/test/unit/qmclient/settings/settings_resource_jobs_assets_test.cpp
@@ -5775,10 +5778,10 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/ui/qm_scroll_display_test.cpp
       src/test/integration/qmclient/ui/qm_direct_touch_test.cpp
       src/test/integration/qmclient/ui/qm_background_controls_test.cpp
+      src/test/integration/qmclient/ui/qm_vote_map_preview_test.cpp
       src/test/integration/qmclient/ui/qm_input_focus_glow_test.cpp
       src/test/integration/qmclient/ui/qm_navigation_selection_test.cpp
       src/test/integration/qmclient/ui/qm_listbox_row_spacing_test.cpp
-      src/test/integration/qmclient/ui/qm_player_card_layout_test.cpp
       src/test/integration/qmclient/ui/qm_editor_text_input_test.cpp
       src/test/integration/qmclient/ui/qm_offscreen_cursor_test.cpp
       src/test/unit/qmclient/ui/qm_line_input_multiline_test.cpp

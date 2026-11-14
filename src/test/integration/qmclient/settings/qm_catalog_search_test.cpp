@@ -108,6 +108,10 @@ TEST(QmCatalogSearch, InternalLabelsAliasesAndConfigsResolveWithoutOpeningTheirP
 		{"Scroll feel", "deck:graphics-interaction"},
 		{"Spring damping", "deck:graphics-interaction"},
 		{"End bounce", "deck:graphics-interaction"},
+		// 输入光标样式行落在「界面动效」卡：配置名、英文界面文案与中文检索词都要直达该卡。
+		{"qm_text_caret_style", "deck:graphics-interaction"},
+		{"Text caret style", "deck:graphics-interaction"},
+		{"输入光标样式", "deck:graphics-interaction"},
 		// 旧标签删掉后靠卡片关键词兜底，检索意图不能丢。
 		{"Config Filters", "deck:tclient-configs-actions"},
 		{"Show enemy color in spectator menu", "deck:tclient-warlist"},

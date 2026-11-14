@@ -2303,8 +2303,7 @@ protected:
 		uint64_t m_PendingFrame = 0;
 		bool m_Pending = false;
 		STextContainerIndex m_BuildTextContainerIndex;
-		CTextCursor m_BuildCursor;
-		int m_BuildByteOffset = 0;
+		// 逐行排版进度存在布局推进器内部（SIngameMotdLayoutBuild），这里只留容器与已建高度。
 		float m_BuildHeight = 0.0f;
 	};
 	struct SMenuSnapshotTextKey

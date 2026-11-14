@@ -1742,9 +1742,6 @@ Balanced (recommended)
 Ban a certain nickname
 == 禁止某个昵称
 
-Ban ip for x minutes for any reason
-== 按任意原因封禁 IP x 分钟
-
 Ban ip range for x minutes for any reason
 == 按任意原因封禁 IP 段 x 分钟
 
@@ -1762,6 +1759,12 @@ Ban reason for "sv_dnsbl_ban"
 
 Ban time after being voted kicked (in minutes, 0 = kick only, no ban)
 == 被投票踢出后的封禁时间（单位：分钟，0 为仅踢出不封禁）
+
+Bar
+== 竖线
+
+Bar: a thin vertical line between characters
+== 竖线：字符之间的一条细竖线
 
 Base path for HTTPS map download URLs to clients
 == 用于向客户端提供 HTTPS 地图下载 URL 的基本路径
@@ -1898,6 +1901,9 @@ Blink
 Blink the active local tee
 == 让当前本地角色闪烁
 
+Block
+== 方块
+
 Block client-initiated self-kill (K key / kill command)
 == 拦截客户端发起的自杀（K 键 / kill 命令）
 
@@ -1909,6 +1915,9 @@ Block votes from blacklisted addresses
 
 Block words
 == 屏蔽词
+
+Block: fills the character cell behind the next character
+== 方块：填充下一个字符所在的字符格
 
 Blue
 == 蓝色
@@ -2474,8 +2483,8 @@ Choose export name first.
 Choose Logo (PNG / WebP)
 == 选择 Logo（PNG / WebP）
 
-Choose off, reduced or full; this single switch drives every animation.
-== 选择关、精简或完整；所有动画都由这一个开关控制。
+Choose off, reduced or full; this single switch drives every animation. Then pick a caret shape for the settings, console and chat input fields.
+== 选择关、精简或完整；所有动画都由这一个开关控制。再为设置页、控制台与聊天输入框挑选光标形状。
 
 Choose the language used by the client
 == 选择客户端使用的语言
@@ -3344,9 +3353,6 @@ Copy a .qmconfig file into the package folder, then refresh.
 Copy all
 == 复制全部
 
-Copy clan
-== 复制氏族
-
 Copy friend code
 == 复制好友码
 
@@ -3883,6 +3889,9 @@ Debug SQL.
 
 Debug tile layer clipping.
 == 调试图块图层裁剪
+
+Debug websockets
+== 调试 WebSocket
 
 Decides which skins the client downloads and lists, and can add a prefix to load prefixed skin variants.
 == 决定客户端下载并列出哪些皮肤，还可以加前缀来加载带前缀的皮肤变体。
@@ -4771,6 +4780,9 @@ Echo follows the original chat color
 
 Echo text color when not inheriting chat color
 == Echo 不跟随聊天颜色时的文字颜色
+
+Echo the config value in chat window
+== 在聊天窗口回显该配置值
 
 Echo the text
 == 回显文本
@@ -8731,6 +8743,9 @@ Map note
 
 Map play history
 == 地图游玩历史
+
+Map preview
+== 地图预览
 
 Map preview rendering unavailable
 == 当前无法渲染地图预览
@@ -13214,9 +13229,6 @@ Select a configuration package to preview its contents.
 Select a map
 == 选择一张地图
 
-Select a player to manage
-== 选择玩家以查看和管理
-
 Select a preset, then apply it to player or dummy
 == 先选择预设，再应用到本体或分身
 
@@ -13547,8 +13559,8 @@ Sets chat position, width, font size and visibility.
 Sets encoder, container and quality in one step: Daily is H.264 + MP4, High quality is HEVC + MP4 at a smaller size, Editing is all-intra H.264 + MP4 with instant seeking, and Exchange is ProRes 422 HQ + MOV for other editors.
 == 一次配好编码器、容器和画质：日常分享是 H.264 + MP4，高画质是体积更小的 HEVC + MP4，剪辑是全帧内 H.264 + MP4（任意位置都能瞬间定位），交换格式是给别的剪辑软件用的 ProRes 422 HQ + MOV。
 
-Sets how much motion the interface plays: transitions, card entrance, reorder animations and scroll feel.
-== 设置界面的动效强度：过渡、卡片进入、重排动画和滚动手感。
+Sets how much motion the interface plays (transitions, card entrance, reorder animations, scroll feel) and the shape of the text caret in every input field.
+== 设置界面的动效强度（过渡、卡片入场、重排动画、滚动手感），以及每个输入框的光标形状。
 
 Sets laser colors for weapons and entities.
 == 设置武器与实体的激光颜色。
@@ -14467,6 +14479,9 @@ Show server prompts and Echo messages as popups
 
 Show server settings
 == 查看服务器设置列表
+
+Show server uptime
+== 显示服务器运行时长
 
 Show settings card borders
 == 显示设置卡片边框
@@ -15554,6 +15569,9 @@ Successfully saved the replay!
 Sudden Death
 == 决胜
 
+Suggested tags:
+== 建议标签：
+
 Suicides
 == 自杀数
 
@@ -16075,6 +16093,9 @@ Text alpha
 
 Text before each key press count
 == 按键计数前缀文字
+
+Text caret style
+== 输入光标样式
 
 Text caret style: 0=bar, 1=underscore, 2=block
 == 输入光标样式：0=竖线，1=下划线，2=方块
@@ -16943,8 +16964,8 @@ Tune variable to value
 Tune variable to value or show current value
 == 将变量调到指定值，或显示当前值
 
-Turn motion off on weaker machines; cards then open and scroll immediately.
-== 配置较低的机器请关闭动效；卡片便会立即打开和滚动。
+Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
+== 机器较弱时关掉动效，卡片会立刻展开、滚动手感也随之关闭。光标形状只是外观：三种样式都占同一个字符格。
 
 Turn on "Auto chat in water", type the "Chat message" you want, and optionally enable "Send emoticon in water" with its ID.
 == 打开「掉水自动发言」，填上想要的聊天内容，想要表情就再开启「掉水发表情」并选好表情 ID。
@@ -17212,6 +17233,12 @@ Uncertainty duration
 
 Unclassified audio issue
 == 音频异常未分类
+
+Underscore
+== 下划线
+
+Underscore: a line under the character that follows
+== 下划线：画在下一个字符下方的一条线
 
 Undo
 == 撤销

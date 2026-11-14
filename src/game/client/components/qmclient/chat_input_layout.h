@@ -1,6 +1,7 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_CHAT_INPUT_LAYOUT_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_CHAT_INPUT_LAYOUT_H
 
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/ui_rect.h>
 
 #include <algorithm>
@@ -8,19 +9,52 @@
 
 // 翻译按钮占据输入行最左侧，前缀（「全体」／「队伍」／「聊天」）与正文整体右移一个按钮区。
 // 正文宽度由行宽、按钮区和前缀宽度决定，光标与选区都从正文起点开始，不与按钮重叠。
-constexpr float QM_CHAT_TRANSLATE_BUTTON_GAP = 4.0f;
+constexpr float QM_CHAT_TRANSLATE_BUTTON_GAP = ui_token::chat::input::BUTTON_GAP;
 
-// 圆形图标按钮：宽高都与字号同档（正方形 ⇒ 绘制层按胶囊档裁成正圆），
-// 于是按钮与同一行「全体」文字等高，首行垂直居中后两者视觉齐平。
-inline float QmChatTranslateButtonSize(float FontSize)
+// 输入行行高：翻译按钮直径与同一行「全体」前缀块的高度都只取这一个值。
+// 两者都是「一行控件」，各算一次就会在换字号后一大一小——这正是按钮比文字矮一截的根因。
+inline float QmChatInputRowHeight(float FontSize)
 {
-	return std::max(0.0f, FontSize);
+	return ui_token::chat::input::RowHeight(FontSize);
 }
 
-// 按钮与输入首行垂直居中，多行输入时仍固定在第一行；高度就是字号本身。
+// 圆形图标按钮：宽高都等于行高（正方形 ⇒ 绘制层按胶囊档裁成正圆），
+// 于是按钮与同一行「全体」前缀块等高，首行垂直居中后两者基线对齐。
+inline float QmChatTranslateButtonSize(float FontSize)
+{
+	return QmChatInputRowHeight(FontSize);
+}
+
+// 按钮与输入首行垂直居中，多行输入时仍固定在第一行；高度就是输入行行高。
 inline float QmChatTranslateButtonHeight(float FontSize)
 {
 	return QmChatTranslateButtonSize(FontSize);
+}
+
+// 描边宽度：由直径按 token 比例派生，圆变大时描边仍是一圈细边，不跟着变粗。
+inline float QmChatTranslateButtonBorderWidth(float ButtonSize)
+{
+	return ui_token::chat::input::ButtonBorderWidth(ButtonSize);
+}
+
+// 按钮内径：直径扣掉两侧描边，图标只在这个圆里排版。
+inline float QmChatTranslateButtonInnerSize(float ButtonSize)
+{
+	return std::max(0.0f, ButtonSize - 2.0f * QmChatTranslateButtonBorderWidth(ButtonSize));
+}
+
+// 图标盒（方框边长）：取按钮内径。DoLabel_QmIcon 收的是盒子而不是字形，
+// 绘制层会再按 ICON_INK_RATIO 把方框换成字形 em，所以这里不能提前乘。
+inline float QmChatTranslateIconBoxSize(float ButtonSize)
+{
+	return QmChatTranslateButtonInnerSize(ButtonSize);
+}
+
+// 图标字形（em）尺寸：沿用控件「字形 = 盒子 × ICON_INK_RATIO」的通用比例，
+// 盒子取内径，字形因而接近内圈，不再是原来那枚只占内圈四成的小点。
+inline float QmChatTranslateIconGlyphSize(float ButtonSize)
+{
+	return QmChatTranslateIconBoxSize(ButtonSize) * ui_token::control::ICON_INK_RATIO;
 }
 
 inline float QmChatInputMessageWidth(float LineWidth, float FontSize, float PrefixWidth)
@@ -49,6 +83,8 @@ inline SQmChatInputLayout QmChatResolveInputLayout(float X, float Y, float LineW
 
 	SQmChatInputLayout Layout;
 	Layout.m_ButtonX = X;
+	// 按钮以首行文字中心为轴居中：行高比字号高出的那半档上下均分，
+	// 桌面「全体」文字与手机「全体」前缀块因此都落在同一条基线上。
 	Layout.m_ButtonY = Y + (FontSize - ButtonHeight) * 0.5f;
 	Layout.m_ButtonW = ButtonSize;
 	Layout.m_ButtonH = ButtonHeight;

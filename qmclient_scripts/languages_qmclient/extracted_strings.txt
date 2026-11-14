@@ -579,13 +579,14 @@ Baidu Translate
 Balance master, music, and game volume
 Balanced (recommended)
 Ban a certain nickname
-Ban ip for x minutes for any reason
 Ban ip range for x minutes for any reason
 Ban player in a region
 Ban player with ip/client id for x minutes for any reason
 Ban range in a region
 Ban reason for "sv_dnsbl_ban"
 Ban time after being voted kicked (in minutes, 0 = kick only, no ban)
+Bar
+Bar: a thin vertical line between characters
 Base path for HTTPS map download URLs to clients
 Base prediction margin
 Basic
@@ -631,10 +632,12 @@ Blend mode
 Blend strength
 Blink
 Blink the active local tee
+Block
 Block client-initiated self-kill (K key / kill command)
 Block enemy chat
 Block votes from blacklisted addresses
 Block words
+Block: fills the character cell behind the next character
 Blue
 Blue team
 Blue team wins!
@@ -823,7 +826,7 @@ Choose country flag
 Choose default eyes when joining a server
 Choose export name first.
 Choose Logo (PNG / WebP)
-Choose off, reduced or full; this single switch drives every animation.
+Choose off, reduced or full; this single switch drives every animation. Then pick a caret shape for the settings, console and chat input fields.
 Choose the language used by the client
 Choose the menu font and cursor appearance
 Choose the menu font and font weight
@@ -1113,7 +1116,6 @@ Copied bind command
 Copy
 Copy a .qmconfig file into the package folder, then refresh.
 Copy all
-Copy clan
 Copy friend code
 Copy info
 Copy name
@@ -1293,6 +1295,7 @@ Debug quad layer clipping.
 Debug quad layer cluster clipping.
 Debug SQL.
 Debug tile layer clipping.
+Debug websockets
 Decides which skins the client downloads and lists, and can add a prefix to load prefixed skin variants.
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 Deep fly
@@ -1589,6 +1592,7 @@ Ease out cubic
 Echo
 Echo follows the original chat color
 Echo text color when not inheriting chat color
+Echo the config value in chat window
 Echo the text
 Echo the text in chat window
 Edge margin
@@ -2909,6 +2913,7 @@ Map name or path:
 Map not downloaded yet — join the server to preview it
 Map note
 Map play history
+Map preview
 Map preview rendering unavailable
 Map preview shows the entity layer only (hides textures)
 Map Preview TODO
@@ -4403,7 +4408,6 @@ See you at the next checkpoint.
 Select a body part, change its sprite or color, then save the skin.
 Select a configuration package to preview its contents.
 Select a map
-Select a player to manage
 Select a preset, then apply it to player or dummy
 Select a result to open its card.
 Select a saved .map file (client limit: 64 MiB).
@@ -4514,7 +4518,7 @@ Set whether a friend is pinned
 Set your checkpoints based on another player
 Sets chat position, width, font size and visibility.
 Sets encoder, container and quality in one step: Daily is H.264 + MP4, High quality is HEVC + MP4 at a smaller size, Editing is all-intra H.264 + MP4 with instant seeking, and Exchange is ProRes 422 HQ + MOV for other editors.
-Sets how much motion the interface plays: transitions, card entrance, reorder animations and scroll feel.
+Sets how much motion the interface plays (transitions, card entrance, reorder animations, scroll feel) and the shape of the text caret in every input field.
 Sets laser colors for weapons and entities.
 Sets master, music and game volume separately.
 Sets one of the two rescue modes (auto or manual). Prints current mode if no arguments provided
@@ -4821,6 +4825,7 @@ Show server chat messages
 Show server help and usage messages
 Show server prompts and Echo messages as popups
 Show server settings
+Show server uptime
 Show settings card borders
 Show short server names in browser (applies to China community servers)
 Show skin date and author
@@ -5183,6 +5188,7 @@ Submit
 Success
 Successfully saved the replay!
 Sudden Death
+Suggested tags:
 Suicides
 Sun
 Super
@@ -5357,6 +5363,7 @@ Testing translation...
 Text
 Text alpha
 Text before each key press count
+Text caret style
 Text caret style: 0=bar, 1=underscore, 2=block
 Text color
 Text color mode
@@ -5646,7 +5653,7 @@ Tune additional world and player effects
 Tune in zone a variable to value
 Tune variable to value
 Tune variable to value or show current value
-Turn motion off on weaker machines; cards then open and scroll immediately.
+Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
 Turn on "Auto chat in water", type the "Chat message" you want, and optionally enable "Send emoticon in water" with its ID.
 Turn on "Auto translate received messages", pick a "Translation service", set "Translate received messages to", then press "Test translation".
 Turn on "Automatically record demos" or a screenshot option, set "Max demos" or "Max Screenshots", and fill "Demo directory" or "Screenshot directory" to move the files.
@@ -5736,6 +5743,8 @@ Unbind all keys
 Unbind key
 Uncertainty duration
 Unclassified audio issue
+Underscore
+Underscore: a line under the character that follows
 Undo
 Unexpected map upload response.
 Unfinished

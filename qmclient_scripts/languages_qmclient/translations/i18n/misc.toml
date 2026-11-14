@@ -16530,3 +16530,51 @@ brazilian_portuguese = "Estilo do cursor de entrada: 0=barra, 1=sublinhado, 2=bl
 portuguese = "Estilo do cursor de entrada: 0=barra, 1=sublinhado, 2=bloco"
 turkish = "Giriş imleci stili: 0=çubuk, 1=alt çizgi, 2=blok"
 polish = "Styl kursora: 0=kreska, 1=podkreślenie, 2=blok"
+
+[[message]]
+key = "Debug websockets"
+[message.translations]
+simplified_chinese = "调试 WebSocket"
+traditional_chinese = "偵錯 WebSocket"
+japanese = "WebSocket をデバッグ"
+korean = "WebSocket 디버그"
+russian = "Отладка WebSocket"
+german = "WebSocket-Debug"
+spanish = "Depurar WebSocket"
+french = "Déboguer WebSocket"
+brazilian_portuguese = "Depurar WebSocket"
+portuguese = "Depurar WebSocket"
+turkish = "WebSocket hata ayıkla"
+polish = "Debuguj WebSocket"
+
+[[message]]
+key = "Echo the config value in chat window"
+[message.translations]
+simplified_chinese = "在聊天窗口回显该配置值"
+traditional_chinese = "在聊天視窗回顯該設定值"
+japanese = "設定値をチャットに表示"
+korean = "설정값을 채팅창에 표시"
+russian = "Выводить значение настройки в чат"
+german = "Den Einstellungswert im Chat anzeigen"
+spanish = "Mostrar el valor del ajuste en el chat"
+french = "Afficher la valeur du réglage dans le chat"
+brazilian_portuguese = "Mostrar o valor da configuração no chat"
+portuguese = "Mostrar o valor da definição no chat"
+turkish = "Ayar değerini sohbette göster"
+polish = "Pokazuj wartość ustawienia na czacie"
+
+[[message]]
+key = "Show server uptime"
+[message.translations]
+simplified_chinese = "显示服务器运行时长"
+traditional_chinese = "顯示伺服器運作時間"
+japanese = "サーバー稼働時間を表示"
+korean = "서버 가동 시간 표시"
+russian = "Показывать время работы сервера"
+german = "Serverlaufzeit anzeigen"
+spanish = "Mostrar el tiempo en línea del servidor"
+french = "Afficher la durée de fonctionnement du serveur"
+brazilian_portuguese = "Mostrar o tempo no ar do servidor"
+portuguese = "Mostrar o tempo em linha do servidor"
+turkish = "Sunucu çalışma süresini göster"
+polish = "Pokazuj czas działania serwera"

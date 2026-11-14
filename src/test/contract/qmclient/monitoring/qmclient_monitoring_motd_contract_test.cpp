@@ -25,14 +25,17 @@ TEST(QmMonitoringMotdContract, MotdParagraphHydratesOnlyThroughBudgetDrain)
 	EXPECT_NE(Source.find("paragraph_budget_blocked"), std::string::npos);
 	EXPECT_NE(Source.find("paragraph_cache_hit"), std::string::npos);
 	EXPECT_NE(Source.find("paragraph_layout_ms"), std::string::npos);
-	EXPECT_NE(DrainBody.find("TextRender()->CreateOrAppendTextContainer(m_IngameMotdParagraphCache.m_BuildTextContainerIndex"), std::string::npos);
+	// 追加只发生在布局推进器里（Ensure/Step 两个辅助），Drain 只负责按 token 推进与原子替换。
+	EXPECT_NE(DrainBody.find("EnsureIngameMotdLayout("), std::string::npos);
+	EXPECT_NE(DrainBody.find("StepIngameMotdLayout("), std::string::npos);
+	EXPECT_NE(Source.find("pTextRender->CreateOrAppendTextContainer(BuildContainer"), std::string::npos);
 	EXPECT_EQ(DrainBody.find("TextRender()->RecreateTextContainer(m_MotdTextContainerIndex"), std::string::npos);
 	EXPECT_NE(DrainBody.find("m_IngameMotdParagraphCache.m_PendingFrame"), std::string::npos);
 	EXPECT_NE(Body.find("RequestIngameMotdParagraphCache(Motd"), std::string::npos);
 	EXPECT_EQ(Body.find("DrainIngameMotdParagraphCache(Motd"), std::string::npos);
 	EXPECT_NE(Source.find("void CMenus::DrainIngameUiTextRuntime(bool AllowCurrentFrame)"), std::string::npos);
 	EXPECT_NE(Header.find("m_PendingRect"), std::string::npos);
-	EXPECT_NE(Header.find("m_BuildByteOffset"), std::string::npos);
+	EXPECT_NE(Header.find("STextContainerIndex m_BuildTextContainerIndex"), std::string::npos);
 	EXPECT_NE(Header.find("m_BuildTextContainerIndex"), std::string::npos);
 	EXPECT_EQ(Header.find("m_IngameTextAdaptiveBudgetState"), std::string::npos);
 	EXPECT_NE(Header.find("SSettingsAdaptiveBudgetOutput m_IngameTextFrameBudget"), std::string::npos);
@@ -53,12 +56,14 @@ TEST(QmMonitoringMotdContract, MotdParagraphDrainBuildsInChunks)
 
 	EXPECT_NE(Header.find("static constexpr int INGAME_MOTD_PARAGRAPH_CHUNK_BYTES"), std::string::npos);
 	EXPECT_NE(Header.find("INGAME_MOTD_PARAGRAPH_CHUNK_BYTES = 24"), std::string::npos);
-	EXPECT_NE(Header.find("CTextCursor m_BuildCursor"), std::string::npos);
-	EXPECT_NE(Header.find("int m_BuildByteOffset"), std::string::npos);
+	EXPECT_NE(Header.find("float m_BuildHeight"), std::string::npos);
 	EXPECT_NE(DrainBody.find("INGAME_MOTD_PARAGRAPH_CHUNK_BYTES"), std::string::npos);
-	EXPECT_NE(DrainBody.find("str_utf8_isstart"), std::string::npos);
-	EXPECT_NE(DrainBody.find("TextRender()->CreateOrAppendTextContainer(m_IngameMotdParagraphCache.m_BuildTextContainerIndex"), std::string::npos);
-	EXPECT_NE(DrainBody.find("m_IngameMotdParagraphCache.m_BuildByteOffset += ChunkLength"), std::string::npos);
+	EXPECT_NE(DrainBody.find("EnsureIngameMotdLayout("), std::string::npos);
+	EXPECT_NE(DrainBody.find("StepIngameMotdLayout("), std::string::npos);
+	// 分块按 UTF-8 边界切：推进器里必须用引擎的字符边界函数，不能按字节硬切。
+	EXPECT_NE(Source.find("str_utf8_isstart(pMotd[ChunkStart + ChunkLength])"), std::string::npos);
+	// 逐行推进：进度落在布局推进器的行号上，不再按字节偏移累加。
+	EXPECT_NE(Source.find("Build.m_Row"), std::string::npos);
 	EXPECT_NE(DrainBody.find("std::swap(m_MotdTextContainerIndex, m_IngameMotdParagraphCache.m_BuildTextContainerIndex)"), std::string::npos);
 	EXPECT_EQ(DrainBody.find("m_MotdTextContainerIndex = m_IngameMotdParagraphCache.m_BuildTextContainerIndex"), std::string::npos);
 	EXPECT_EQ(DrainBody.find("TextRender()->RecreateTextContainer(m_IngameMotdParagraphCache.m_PreviousTextContainerIndex"), std::string::npos);
