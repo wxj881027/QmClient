@@ -1328,15 +1328,12 @@ void CFastPractice::ResetPracticeTimelineState()
 		// 救援模式是用户偏好，重开后保留；其余记录都指向旧时间线，必须清空。
 		State.m_HasRescueAuto = false;
 		State.m_HasRescueManual = false;
-		State.m_RescueAutoPos = vec2(0.0f, 0.0f);
-		State.m_RescueManualPos = vec2(0.0f, 0.0f);
 		State.m_AutoTee = {};
 		State.m_ManualTee = {};
 		State.m_HasLastTeleport = false;
 		State.m_HasLastDeath = false;
 		State.m_LastTeleportPos = vec2(0.0f, 0.0f);
 		State.m_LastDeathPos = vec2(0.0f, 0.0f);
-		State.m_vSafePositions.clear();
 	}
 }
 
@@ -1396,10 +1393,17 @@ void CFastPractice::SetPracticeCheckpoint()
 {
 	if(!m_Enabled || !m_PracticeWorldInitialized)
 		return;
-	CCharacter *pChar = m_PracticeBaseWorld.GetCharacterById(m_EnableLocalClientId);
+	// 与 /r、/tp 等聊天命令一致：操作当前控制的 tee。分身接管时按的是分身，
+	// 只有解析不到当前角色（例如旁观）才回落到启用练习时的本体。
+	int ClientId = CurrentLocalPracticeId();
+	if(ClientId < 0)
+		ClientId = m_EnableLocalClientId;
+	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
+		return;
+	CCharacter *pChar = m_PracticeBaseWorld.GetCharacterById(ClientId);
 	if(!pChar)
 		return;
-	auto &State = m_aPracticeCommandState[m_EnableLocalClientId];
+	auto &State = m_aPracticeCommandState[ClientId];
 	State.m_HasCheckpoint = true;
 	CapturePracticeRescueTee(pChar, m_PracticeBaseWorld.GameTick(), State.m_CheckpointTee);
 	EchoPractice("practice checkpoint set");
@@ -1409,13 +1413,18 @@ void CFastPractice::RestorePracticeCheckpoint()
 {
 	if(!m_Enabled || !m_PracticeWorldInitialized)
 		return;
-	auto &State = m_aPracticeCommandState[m_EnableLocalClientId];
+	int ClientId = CurrentLocalPracticeId();
+	if(ClientId < 0)
+		ClientId = m_EnableLocalClientId;
+	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
+		return;
+	auto &State = m_aPracticeCommandState[ClientId];
 	if(!State.m_HasCheckpoint || !State.m_CheckpointTee.m_Valid)
 	{
 		EchoPractice("no practice checkpoint set");
 		return;
 	}
-	CCharacter *pChar = m_PracticeBaseWorld.GetCharacterById(m_EnableLocalClientId);
+	CCharacter *pChar = m_PracticeBaseWorld.GetCharacterById(ClientId);
 	if(!pChar)
 		return;
 	// 与 /r 相同，重生点只回滚 tee，不动世界状态。
@@ -1822,12 +1831,11 @@ int CFastPractice::ApplyVisualFastInputPrediction(int FinalTickRegular, int Loca
 
 		PublishPracticePredictionBeforeStep(VisualWorld, TickPlan, Tick, true, LocalClientId);
 
-		CNetObj_PlayerInput *pInputData = (CNetObj_PlayerInput *)Client()->GetInput(Tick, LocalInputConn);
 		CNetObj_PlayerInput *pDummyInputData = pDummyChar ? (CNetObj_PlayerInput *)Client()->GetInput(Tick, DummyInputConn) : nullptr;
 		CNetObj_PlayerInput LocalFastInput = GameClient()->m_Controls.m_aFastInput[LocalTee];
 		CNetObj_PlayerInput DummyFastInput = {};
 		CNetObj_PlayerInput DummyVisualInput = {};
-		pInputData = &LocalFastInput;
+		CNetObj_PlayerInput *pInputData = &LocalFastInput;
 		FilterPracticeInput(*pInputData, LocalInputConn, false);
 		if(pDummyInputData)
 		{
@@ -2221,44 +2229,6 @@ void CFastPractice::StoreLastDeathPosition(int ClientId, const vec2 &Pos)
 	State.m_LastDeathPos = Pos;
 }
 
-bool CFastPractice::IsSafeRescueTile(int Tile) const
-{
-	return Tile != TILE_DEATH &&
-	       Tile != TILE_FREEZE &&
-	       Tile != TILE_DFREEZE &&
-	       Tile != TILE_LFREEZE;
-}
-
-bool CFastPractice::IsSafeRescuePosition(const vec2 &Pos, float ProximityRadius) const
-{
-	const float HalfSize = std::max(6.0f, ProximityRadius * 0.5f);
-	if(Collision()->TestBox(Pos, vec2(HalfSize * 2.0f, HalfSize * 2.0f)))
-		return false;
-
-	const vec2 aSamplePoints[] = {
-		Pos,
-		Pos + vec2(-HalfSize, -HalfSize),
-		Pos + vec2(HalfSize, -HalfSize),
-		Pos + vec2(-HalfSize, HalfSize),
-		Pos + vec2(HalfSize, HalfSize),
-	};
-	for(const vec2 &SamplePos : aSamplePoints)
-	{
-		const int X = round_to_int(SamplePos.x);
-		const int Y = round_to_int(SamplePos.y);
-		if(!IsSafeRescueTile(Collision()->GetTile(X, Y)) ||
-			!IsSafeRescueTile(Collision()->GetFrontTile(X, Y)))
-		{
-			return false;
-		}
-	}
-
-	const bool Grounded =
-		Collision()->CheckPoint(Pos.x + HalfSize, Pos.y + HalfSize + 5.0f) ||
-		Collision()->CheckPoint(Pos.x - HalfSize, Pos.y + HalfSize + 5.0f);
-	return Grounded;
-}
-
 bool CFastPractice::IsInFreezePickupRange(CCharacter *pChar) const
 {
 	// 对齐服务器 CCharacter::TrySetRescue：站在冻结拾取物的作用范围内时不能刷新救援点。
@@ -2334,45 +2304,10 @@ void CFastPractice::TrackSafeRescuePosition(int ClientId, CCharacter *pChar)
 	if(!QmPracticeCanSetRescuePoint(pCore->m_IsInFreeze, pCore->m_DeepFrozen, pChar->IsGrounded(), IsInFreezePickupRange(pChar)))
 		return;
 
-	const vec2 Pos = pCore->m_Pos;
 	auto &State = m_aPracticeCommandState[ClientId];
-	// 服务器每个 tick 都覆盖救援点，/r 的落点就是最近一帧的合法位置。48px 去重只作用于
-	// 给其它命令使用的历史列表，不能让它拖慢救援点本身，否则 /r 会偏离服务器语义。
+	// 服务器每个 tick 都覆盖救援点，/r 的落点就是最近一帧的合法位置。
 	State.m_HasRescueAuto = true;
-	State.m_RescueAutoPos = Pos;
 	CapturePracticeRescueTee(pChar, pChar->GameWorld()->GameTick(), State.m_AutoTee);
-	if(!State.m_vSafePositions.empty() && distance(State.m_vSafePositions.front(), Pos) < 48.0f)
-		return;
-
-	State.m_vSafePositions.push_front(Pos);
-	if((int)State.m_vSafePositions.size() > SPracticeCommandState::MAX_SAFE_POSITIONS)
-		State.m_vSafePositions.pop_back();
-}
-
-bool CFastPractice::FindNearestSafeRescuePosition(int ClientId, const vec2 &From, vec2 &OutPos) const
-{
-	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
-		return false;
-
-	const auto &State = m_aPracticeCommandState[ClientId];
-	float BestDistance = std::numeric_limits<float>::max();
-	bool Found = false;
-
-	for(const vec2 &Pos : State.m_vSafePositions)
-	{
-		if(!IsSafeRescuePosition(Pos, CCharacterCore::PhysicalSize()))
-			continue;
-
-		const float Dist = distance(From, Pos);
-		if(Dist < BestDistance)
-		{
-			BestDistance = Dist;
-			OutPos = Pos;
-			Found = true;
-		}
-	}
-
-	return Found;
 }
 
 bool CFastPractice::FindFinishPosition(vec2 &OutPos) const

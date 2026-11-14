@@ -190,7 +190,6 @@ bool CFastPractice::ExecutePracticeCommand(int Team, int LocalClientId, CCharact
 		if(Decision.m_SavePoint)
 		{
 			State.m_HasRescueManual = true;
-			State.m_RescueManualPos = pCore->m_Pos;
 			CapturePracticeRescueTee(pChar, pChar->GameWorld()->GameTick(), State.m_ManualTee);
 			EchoPractice("manual rescue point saved");
 		}

@@ -83,6 +83,34 @@ TEST(QmLocalWorldTrack, AShortCurrentSegmentFallsBackToTheLastCompleteRun)
 	EXPECT_EQ(vFrames.back().m_Tick, 1059);
 }
 
+TEST(QmLocalWorldTrack, AShortCurrentSegmentIsRejectedWhenNothingWasCompleted)
+{
+	// 按下开始后不到一秒就停：没有可以回退的完成段，也不能把这条碎片当线路存下来。
+	CLocalWorld Track;
+	Track.BeginTrack(1000);
+	for(int i = 0; i < 5; i++)
+		Track.AddTrackFrame(MakeFrame(1000 + i));
+
+	std::vector<SLocalActorFrame> vFrames;
+	int StartTick = 0;
+	EXPECT_FALSE(Track.BestSegment(&vFrames, &StartTick));
+}
+
+TEST(QmLocalWorldTrack, AMinimumLengthCurrentSegmentIsSaveable)
+{
+	// 恰好达到最小时长（50 帧）就是一条有效线路，即使没有完成段。
+	CLocalWorld Track;
+	Track.BeginTrack(1000);
+	for(int i = 0; i < CLocalWorld::MIN_SEGMENT_FRAMES; i++)
+		Track.AddTrackFrame(MakeFrame(1000 + i));
+
+	std::vector<SLocalActorFrame> vFrames;
+	int StartTick = 0;
+	ASSERT_TRUE(Track.BestSegment(&vFrames, &StartTick));
+	EXPECT_EQ(vFrames.size(), static_cast<size_t>(CLocalWorld::MIN_SEGMENT_FRAMES));
+	EXPECT_EQ(StartTick, 1000);
+}
+
 TEST(QmLocalWorldTrack, TheLongerCurrentSegmentWins)
 {
 	// 正在跑的这段已经比上一段长，/pg 就该保存"现在这段"。

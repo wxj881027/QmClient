@@ -22,8 +22,12 @@ TEST(QmPracticeRecorder, BeginStartsATrackAndBindsTrackIdentities)
 	EXPECT_FALSE(Recorder.Paused());
 	EXPECT_EQ(World.TrackStartTick(), 100);
 
-	World.AddTrackFrame(0, Frame(100));
-	World.AddTrackFrame(1, Frame(100));
+	// 达到最小时长才是一段可保存线路；这里只关心身份是否随 Begin 绑定。
+	for(int Tick = 100; Tick < 100 + CLocalWorld::MIN_SEGMENT_FRAMES; Tick++)
+	{
+		World.AddTrackFrame(0, Frame(Tick));
+		World.AddTrackFrame(1, Frame(Tick));
+	}
 	SLocalSegment Segment;
 	ASSERT_TRUE(World.BestSegment(&Segment));
 	ASSERT_EQ(Segment.m_vTracks.size(), 2u);

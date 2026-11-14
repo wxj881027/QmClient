@@ -111,7 +111,9 @@ bool CLocalWorld::BestSegment(SLocalSegment *pOut) const
 
 	const int CurrentSize = m_TrackActive ? (int)m_aTracks[0].m_vFrames.size() : 0;
 	const int CompletedSize = (int)m_aTracks[0].m_vCompleted.size();
-	const bool UseCurrent = CurrentSize > 0 && (CurrentSize >= MIN_SEGMENT_FRAMES || CurrentSize >= CompletedSize);
+	// 短于 MIN_SEGMENT_FRAMES 的当前段只有在“已经有一段完成段、且不比它短”时才被接受；
+	// 完全没有完成段时仍然按最小时长拒绝，否则刚按开始就停也能存出一条无效线路。
+	const bool UseCurrent = CurrentSize > 0 && (CurrentSize >= MIN_SEGMENT_FRAMES || (CompletedSize > 0 && CurrentSize >= CompletedSize));
 	const bool UseCompleted = !UseCurrent && CompletedSize > 0;
 	if(!UseCurrent && !UseCompleted)
 		return false;

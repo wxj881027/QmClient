@@ -20,7 +20,6 @@
 #include <game/gamecore.h>
 
 #include <array>
-#include <deque>
 #include <string>
 #include <vector>
 
@@ -114,18 +113,14 @@ private:
 
 	struct SPracticeCommandState
 	{
-		static constexpr int MAX_SAFE_POSITIONS = 256;
 		bool m_RescueManual = false;
 		bool m_HasRescueAuto = false;
 		bool m_HasRescueManual = false;
 		bool m_HasLastTeleport = false;
 		bool m_HasLastDeath = false;
 		bool m_InvincibleAddedEndlessJump = false;
-		vec2 m_RescueAutoPos = vec2(0.0f, 0.0f);
-		vec2 m_RescueManualPos = vec2(0.0f, 0.0f);
 		vec2 m_LastTeleportPos = vec2(0.0f, 0.0f);
 		vec2 m_LastDeathPos = vec2(0.0f, 0.0f);
-		std::deque<vec2> m_vSafePositions;
 		SQmPracticeSavedTee m_AutoTee;
 		SQmPracticeSavedTee m_ManualTee;
 		// 用户显式设置的重生点，独立于救援点，重开世界后依然保留。
@@ -280,8 +275,6 @@ private:
 	void StoreLastDeathPosition(int ClientId, const vec2 &Pos);
 	void CaptureServerLockedInputs();
 	bool TryAttachDummyFromSnapshot();
-	bool IsSafeRescueTile(int Tile) const;
-	bool IsSafeRescuePosition(const vec2 &Pos, float ProximityRadius) const;
 	bool IsInFreezePickupRange(CCharacter *pChar) const;
 	void CapturePracticeRescueTee(const CCharacter *pChar, int NowTick, SQmPracticeSavedTee &Tee) const;
 	void ApplyPracticeRescueTee(CCharacter *pChar, const SQmPracticeSavedTee &Tee) const;
@@ -300,7 +293,6 @@ private:
 	// 新预测 tick 的跳跃/钩子反馈。本体与分身走同一入口，按输入槽位去重。
 	// 返回 true 表示该 tick 被本槽位消费（调用方据此置 m_NewPredictedTick）。
 	bool PublishPracticeNewPredictedFeedback(int Slot, CCharacter *pChar, int Tick);
-	bool FindNearestSafeRescuePosition(int ClientId, const vec2 &From, vec2 &OutPos) const;
 	bool FindFinishPosition(vec2 &OutPos) const;
 	void NormalizeDefaultPracticeWeapons(CCharacter *pChar, bool HasExplicitWeaponFlags) const;
 	bool ExecutePracticeCommand(int Team, int LocalClientId, CCharacter *pChar, const std::vector<std::string> &vArgs, bool &WeaponsMutated);
