@@ -3466,6 +3466,15 @@ int CClient::UnpackAndValidateSnapshot(CSnapshot *pFrom, CSnapshotBuffer *pTo)
 		const void *pData = pFromItem->Data();
 		Unpacker.Reset(pData, FromItemSize);
 
+		if(ItemType <= 0)
+		{
+			// Don't add extended item type descriptions, they get
+			// added implicitly (== 0).
+			//
+			// Don't add items of unknown item types either (< 0).
+			continue;
+		}
+
 		const void *pSecuredData = pNetObjHandler->SecureUnpackObj(ItemType, &Unpacker);
 		if(!pSecuredData)
 		{

@@ -29,6 +29,8 @@
 #include <engine/client/video_encoder.h>
 #endif
 
+#include <memory>
+
 #include <generated/client_data.h>
 
 #include <game/client/QmUi/QmCardWikiPanel.h>
@@ -135,12 +137,13 @@ namespace
 	{
 		if(pStorage == nullptr || pPath == nullptr || pPath[0] == '\0')
 			return false;
-		CSnapshotDelta Delta;
-		CSnapshotDelta DeltaSixup;
-		CDemoPlayer DemoPlayer(&Delta, &DeltaSixup, false);
-		const int Result = DemoPlayer.Load(pStorage, nullptr, pPath, IStorage::TYPE_SAVE_OR_ABSOLUTE);
+		// CSnapshotDelta 每个约 512 KiB，两个值对象放栈上会超过 Windows 默认 1 MiB 栈。
+		auto pDelta = std::make_unique<CSnapshotDelta>();
+		auto pDeltaSixup = std::make_unique<CSnapshotDelta>();
+		auto pDemoPlayer = std::make_unique<CDemoPlayer>(pDelta.get(), pDeltaSixup.get(), false);
+		const int Result = pDemoPlayer->Load(pStorage, nullptr, pPath, IStorage::TYPE_SAVE_OR_ABSOLUTE);
 		// CDemoPlayer 析构要求文件已关闭，否则 dbg_assert 在 Release 下也会 abort
-		DemoPlayer.Stop();
+		pDemoPlayer->Stop();
 		return Result == 0;
 	}
 

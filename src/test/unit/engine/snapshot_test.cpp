@@ -156,6 +156,14 @@ TEST(SnapshotDelta, MalformedDeltaIsRejected)
 	}
 }
 
+TEST(SnapshotDelta, CreateRejectsTooSmallOutput)
+{
+	// 目标容量连 delta 头部（三个 int）都放不下时，必须在写入前失败。
+	CSnapshotDelta Delta;
+	char aBuffer[sizeof(int32_t)];
+	EXPECT_EQ(Delta.CreateDelta(CSnapshot::EmptySnapshot(), CSnapshot::EmptySnapshot(), aBuffer, sizeof(aBuffer)), -1);
+}
+
 TEST(Snapshot, StorageGet)
 {
 	CSnapshotStorage Storage;

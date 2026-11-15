@@ -2130,10 +2130,11 @@ bool CRankGhost::ExportViewCut(const char *pDestination, const std::vector<SDemo
 {
 	if(!IsViewModeActive() || m_aViewPlaybackFilename[0] == '\0')
 		return false;
-	CSnapshotDelta Delta;
-	CSnapshotDelta DeltaSixup;
+	// CSnapshotDelta 每个约 512 KiB，两个值对象放栈上会超过 Windows 默认 1 MiB 栈。
+	auto pDelta = std::make_unique<CSnapshotDelta>();
+	auto pDeltaSixup = std::make_unique<CSnapshotDelta>();
 	CDemoEditor Editor;
-	Editor.Init(&Delta, &DeltaSixup, Console(), Storage());
+	Editor.Init(pDelta.get(), pDeltaSixup.get(), Console(), Storage());
 	// 临时 demo 读取器会重置全局剪辑标记；保留当前在线会话的编辑状态。
 	const int SliceBegin = g_Config.m_ClDemoSliceBegin;
 	const int SliceEnd = g_Config.m_ClDemoSliceEnd;

@@ -288,6 +288,10 @@ const CSnapshotDelta::CData *CSnapshotDelta::EmptyDelta() const
 // TODO: OPT: this should be made much faster
 int CSnapshotDelta::CreateDelta(const CSnapshot *pFrom, const CSnapshot *pTo, void *pDstData, int DstSize)
 {
+	// 头部固定三个 int，容量连头部都放不下时必须在写入前失败。
+	if(DstSize < (int)(3 * sizeof(int32_t)))
+		return -1;
+
 	CData *pDelta = (CData *)pDstData;
 	int *pData = (int *)pDelta->m_aData;
 	const int *pDataEnd = (const int *)((const char *)pDstData + DstSize);
