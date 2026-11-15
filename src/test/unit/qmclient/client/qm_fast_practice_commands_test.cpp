@@ -137,3 +137,17 @@ TEST(QmPracticeCommands, LastTeleportRecordDropsWeaponsPickedUpAfterwards)
 	EXPECT_FALSE(Target.m_aWeapons[WEAPON_LASER].m_Got);
 	EXPECT_EQ(Target.m_ActiveWeapon, WEAPON_HAMMER);
 }
+
+TEST(QmPracticeCommands, SwitchIndexAcceptsTheHighestNumberLikeTheServer)
+{
+	// 服务器 in_range(Switch, size-1) 是闭区间：size 为 2 时编号 0 与 1 都能设。
+	EXPECT_TRUE(QmPracticeSwitchIndexValid(0, 2));
+	EXPECT_TRUE(QmPracticeSwitchIndexValid(1, 2));
+	EXPECT_FALSE(QmPracticeSwitchIndexValid(2, 2));
+}
+
+TEST(QmPracticeCommands, SwitchIndexRejectsNegativeAndEmptyTables)
+{
+	EXPECT_FALSE(QmPracticeSwitchIndexValid(-1, 2));
+	EXPECT_FALSE(QmPracticeSwitchIndexValid(0, 0));
+}

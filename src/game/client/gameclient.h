@@ -1100,15 +1100,15 @@ public:
 
 	int AntiPingPlayers() const
 	{
-		if(m_FastPractice.ForcePredictPlayers())
+		if(m_FastPractice.ForcePredictPractice())
 			return 1;
 		if(g_Config.m_ClAntiPing && g_Config.m_ClAntiPingPlayers && !m_Snap.m_SpecInfo.m_Active && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 			return g_Config.m_ClAntiPingPlayers;
 		return 0;
 	}
-	bool AntiPingGrenade() const { return m_FastPractice.ForcePredictGrenade() || (g_Config.m_ClAntiPing && g_Config.m_ClAntiPingGrenade && !m_Snap.m_SpecInfo.m_Active && Client()->State() != IClient::STATE_DEMOPLAYBACK); }
-	bool AntiPingWeapons() const { return m_FastPractice.ForcePredictWeapons() || (g_Config.m_ClAntiPing && g_Config.m_ClAntiPingWeapons && !m_Snap.m_SpecInfo.m_Active && Client()->State() != IClient::STATE_DEMOPLAYBACK); }
-	bool AntiPingGunfire() const { return m_FastPractice.ForcePredictGunfire() || (AntiPingGrenade() && AntiPingWeapons() && g_Config.m_ClAntiPingGunfire); }
+	bool AntiPingGrenade() const { return m_FastPractice.ForcePredictPractice() || (g_Config.m_ClAntiPing && g_Config.m_ClAntiPingGrenade && !m_Snap.m_SpecInfo.m_Active && Client()->State() != IClient::STATE_DEMOPLAYBACK); }
+	bool AntiPingWeapons() const { return m_FastPractice.ForcePredictPractice() || (g_Config.m_ClAntiPing && g_Config.m_ClAntiPingWeapons && !m_Snap.m_SpecInfo.m_Active && Client()->State() != IClient::STATE_DEMOPLAYBACK); }
+	bool AntiPingGunfire() const { return m_FastPractice.ForcePredictPractice() || (AntiPingGrenade() && AntiPingWeapons() && g_Config.m_ClAntiPingGunfire); }
 	bool Predict() const;
 	bool PredictDummy() const
 	{

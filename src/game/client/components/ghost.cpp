@@ -365,9 +365,19 @@ bool CGhost::SavePracticeTrack(const char *pName, const SLocalSegment &Segment)
 		return false;
 
 	// 皮肤取本地 Tee；两条轨共用一套皮肤，回放成员靠名字区分。
-	const CGameClient::CClientData *pData = &GameClient()->m_aClients[GameClient()->m_Snap.m_LocalClientId];
+	// 停止录制可以从控制台命令直接触发，快照失效帧里 m_LocalClientId 可能是 -1；
+	// 拿不到本地皮肤时退回默认皮肤，不能拿 -1 直接索引 m_aClients。
 	CGhostSkin Skin;
-	SetGhostSkinData(&Skin, pData->m_aSkinName, pData->m_UseCustomColor, pData->m_ColorBody, pData->m_ColorFeet);
+	const int LocalClientId = GameClient()->m_Snap.m_LocalClientId;
+	if(LocalClientId >= 0 && LocalClientId < MAX_CLIENTS)
+	{
+		const CGameClient::CClientData *pData = &GameClient()->m_aClients[LocalClientId];
+		SetGhostSkinData(&Skin, pData->m_aSkinName, pData->m_UseCustomColor, pData->m_ColorBody, pData->m_ColorFeet);
+	}
+	else
+	{
+		SetGhostSkinData(&Skin, "default", 0, 0, 0);
+	}
 
 	for(size_t TrackIndex = 0; TrackIndex < Segment.m_vTracks.size(); TrackIndex++)
 	{

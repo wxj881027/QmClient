@@ -490,9 +490,9 @@ bool CFastPractice::ExecutePracticeCommand(int Team, int LocalClientId, CCharact
 			return true;
 		}
 		auto &vSwitchers = m_PracticeBaseWorld.Switchers();
-		// 服务器用 in_range(Switch, Switchers().size() - 1)，最高编号同样设不了，
-		// 这里保持同款边界，避免练习里能设、连回服务器却设不了。
-		if(Switch < 0 || Switch >= (int)vSwitchers.size() - 1)
+		// 与服务器 in_range(Switch, Switchers().size() - 1) 完全一致：闭区间，
+		// 最高编号也能设。练习世界是按同一张地图建的，编号范围相同。
+		if(!QmPracticeSwitchIndexValid(Switch, (int)vSwitchers.size()))
 		{
 			EchoPractice("invalid switch id");
 			return true;
@@ -638,7 +638,9 @@ bool CFastPractice::ConsumePracticeChatCommand(int Team, const char *pLine)
 	int DummyClientId = -1;
 	if(!ResolvePracticeRoles(LocalClientId, DummyClientId))
 	{
-		Disable();
+		// 分身重连、重进过渡期里角色暂时解析不到。直接 Disable 会立刻放掉输入锁，
+		// 练习中的按键瞬间打到真身上；改走与预测循环相同的宽限冻结，超时才退出。
+		SuspendPracticeForTransientFailure("command resolve roles");
 		return true;
 	}
 
@@ -647,13 +649,13 @@ bool CFastPractice::ConsumePracticeChatCommand(int Team, const char *pLine)
 	{
 		if(!InitPracticeWorld())
 		{
-			Disable();
+			SuspendPracticeForTransientFailure("command init practice world");
 			return true;
 		}
 		pBaseChar = m_PracticeBaseWorld.GetCharacterById(LocalClientId);
 		if(!pBaseChar)
 		{
-			Disable();
+			SuspendPracticeForTransientFailure("command missing practice character");
 			return true;
 		}
 	}

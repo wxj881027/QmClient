@@ -274,7 +274,12 @@ void CFastPractice::ResetPracticeState()
 	m_HasCarriedSwitchers = false;
 	m_CarriedSwitchersTick = 0;
 	m_CarriedSwitchers.clear();
-	m_Recorder.Reset();
+	// 机关炮缓存绑定当前地图，录制会话绑定这条练习时间线。换图、重进和 OnReset
+	// 都只走这里、不经过 Disable，所以收尾必须放在这里：否则旧图的炮会在新图上
+	// 按旧坐标开火，录制轨迹也会跨会话继续累计。
+	m_PracticeGunsLoaded = false;
+	m_vPracticeGuns.clear();
+	m_Recorder.End(GameClient()->m_LocalWorld);
 	m_SuppressFireOnNextPredictTick = false;
 	m_InputSuppressTicks = 0;
 	m_TransientFailureTicks = 0;
@@ -524,29 +529,9 @@ bool CFastPractice::IsPracticeServerPauseActive() const
 	return IsParticipantPaused(m_EnableLocalClientId) || IsParticipantPaused(m_EnableDummyClientId);
 }
 
-bool CFastPractice::ForcePredictWeapons() const
+bool CFastPractice::ForcePredictPractice() const
 {
-	const bool Spectating = GameClient()->m_Snap.m_SpecInfo.m_Active ||
-				(GameClient()->m_Snap.m_pLocalInfo && GameClient()->m_Snap.m_pLocalInfo->m_Team == TEAM_SPECTATORS);
-	return m_Enabled && !Spectating;
-}
-
-bool CFastPractice::ForcePredictGrenade() const
-{
-	const bool Spectating = GameClient()->m_Snap.m_SpecInfo.m_Active ||
-				(GameClient()->m_Snap.m_pLocalInfo && GameClient()->m_Snap.m_pLocalInfo->m_Team == TEAM_SPECTATORS);
-	return m_Enabled && !Spectating;
-}
-
-bool CFastPractice::ForcePredictGunfire() const
-{
-	const bool Spectating = GameClient()->m_Snap.m_SpecInfo.m_Active ||
-				(GameClient()->m_Snap.m_pLocalInfo && GameClient()->m_Snap.m_pLocalInfo->m_Team == TEAM_SPECTATORS);
-	return m_Enabled && !Spectating;
-}
-
-bool CFastPractice::ForcePredictPlayers() const
-{
+	// 旁观期间分支世界不接管预测，武器/手雷/枪火/其他玩家都要交回服务器快照。
 	const bool Spectating = GameClient()->m_Snap.m_SpecInfo.m_Active ||
 				(GameClient()->m_Snap.m_pLocalInfo && GameClient()->m_Snap.m_pLocalInfo->m_Team == TEAM_SPECTATORS);
 	return m_Enabled && !Spectating;
@@ -1292,14 +1277,10 @@ void CFastPractice::Disable()
 	m_InputLock.ClearLocks();
 	if(WasEnabled)
 		ReleaseBufferedActionInputState();
-	// 机关炮缓存绑定当前地图，下次启用时重新解析。
-	m_PracticeGunsLoaded = false;
-	m_vPracticeGuns.clear();
 	// 世界树：主服务器世界 m_GameWorld 一直独立推进，练习是其 fork 出的分支。
-	// 退出即销毁分支——EndTrack 丢弃轨迹会话，ResetPracticeState 里的
+	// 退出即销毁分支——ResetPracticeState 会结束录制会话、清掉机关炮缓存并
 	// m_PracticeBaseWorld.Clear() 销毁所有实体；下次进入重新 fork。
 	// 已 /pg 落盘的 .gho 组是独立文件，分支销毁后依然存在。
-	m_Recorder.End(GameClient()->m_LocalWorld);
 	ResetPracticeState();
 	if(WasEnabled)
 		m_InputLock.BeginPostPracticeSuppression(2);

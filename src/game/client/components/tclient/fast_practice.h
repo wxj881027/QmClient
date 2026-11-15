@@ -50,10 +50,9 @@ public:
 
 	void PrepareInputForSend(int *pData, int Size, bool Dummy);
 	bool OverridePredict();
-	bool ForcePredictWeapons() const;
-	bool ForcePredictGrenade() const;
-	bool ForcePredictGunfire() const;
-	bool ForcePredictPlayers() const;
+	// 预测接管期间武器、手雷、枪火与其他玩家都走预测：四个调用点实际是同一条
+	// 「练习开启且不在旁观」判定，统一成一个入口，避免口径在四处漂移。
+	bool ForcePredictPractice() const;
 	void InvalidateBufferedInputState();
 	bool IsPracticeParticipant(int ClientId) const;
 	// 非参与者都停在服务器时间线上，练习期间只作画面参照物。影子开关和

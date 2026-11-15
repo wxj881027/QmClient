@@ -53,6 +53,14 @@ inline SQmPracticeBackDecision QmEvaluatePracticeBack(bool HasLastDeath, bool Mo
 	return Decision;
 }
 
+// 服务器 ConSetSwitch 用 in_range(Switch, Switchers().size() - 1)：闭区间，
+// 最高编号（size-1）同样可以设置。练习必须保持同一上界，否则最高编号的开关
+// 在练习里切不了、连回服务器却能切。空开关表（size 为 0）时没有合法编号。
+inline bool QmPracticeSwitchIndexValid(int Switch, int SwitchCount)
+{
+	return Switch >= 0 && Switch < SwitchCount;
+}
+
 // 服务器 ConToTeleporter 用 CWorldCore::RandomOr0 在多出口传送器里随机取一个，
 // 只有一个出口时固定第 0 个。返回 -1 表示没有可用出口。
 inline int QmPracticeTeleOutIndex(int Count, int RandomBelowCount)
