@@ -250,7 +250,8 @@ namespace QmPlayersUi
 		const float Gap = ui_token::player_card::TILE_GAP;
 		if(AvailableWidth <= 0.0f || Tile <= 0.0f)
 			return 1;
-		return std::max(1, (int)((AvailableWidth + Gap) / (Tile + Gap)));
+		// 最多四列：名字与图标要留出呼吸空间，列数再多就挤成一排小字。
+		return std::clamp((int)((AvailableWidth + Gap) / (Tile + Gap)), 1, 4);
 	}
 
 	// 玩家瓦片：与皮肤列表同一种读法——多列小卡，左边角色头像、中间名字与战队两行、

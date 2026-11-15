@@ -1973,6 +1973,9 @@ Button - Enabled
 Button browser
 == Navegador de botões
 
+Button hover feedback
+== Button hover feedback
+
 Button position is outside of the screen.
 == A posição do botão está fora da tela.
 
@@ -5516,8 +5519,8 @@ External links open in the browser.
 External sites are not controlled by the client.
 == Os sites externos não são controlados pelo cliente.
 
-Extra console log line spacing in percent
-== Espaçamento extra entre linhas do log do console em porcentagem
+Extra console log line spacing in pixels
+== Extra console log line spacing in pixels
 
 Extra vertical spacing between chat lines in pixels (0 = default)
 == Espaçamento vertical adicional entre linhas de chat em pixels (0 = padrão)
@@ -6919,6 +6922,9 @@ Horizontal position
 
 Hostname of DNSBL provider for IP verification
 == Hostname do provedor DNSBL para verificação de IP
+
+Hover feedback style: 0 = scale, 1 = border highlight
+== Hover feedback style: 0 = scale, 1 = border highlight
 
 Hover for tooltip
 == Passe o mouse para ver a dica
@@ -10048,6 +10054,9 @@ Outgoing language
 
 Outgoing translation target language code
 == Código do idioma alvo da tradução de saída
+
+Outline
+== Outline
 
 Outline global opacity
 == Opacidade global do contorno

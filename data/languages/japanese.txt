@@ -1973,6 +1973,9 @@ Button - Enabled
 Button browser
 == ボタンブラウザ
 
+Button hover feedback
+== Button hover feedback
+
 Button position is outside of the screen.
 == ボタンの位置が画面外です。
 
@@ -5516,8 +5519,8 @@ External links open in the browser.
 External sites are not controlled by the client.
 == 外部サイトはクライアントの管理下にはありません。
 
-Extra console log line spacing in percent
-== コンソールログの行間をパーセントで追加
+Extra console log line spacing in pixels
+== Extra console log line spacing in pixels
 
 Extra vertical spacing between chat lines in pixels (0 = default)
 == チャット行間の追加の縦余白（ピクセル）（0 = 既定）
@@ -6919,6 +6922,9 @@ Horizontal position
 
 Hostname of DNSBL provider for IP verification
 == IP 検証用 DNSBL プロバイダーのホスト名
+
+Hover feedback style: 0 = scale, 1 = border highlight
+== Hover feedback style: 0 = scale, 1 = border highlight
 
 Hover for tooltip
 == ホバーでツールチップ
@@ -10048,6 +10054,9 @@ Outgoing language
 
 Outgoing translation target language code
 == 送信翻訳のターゲット言語コード
+
+Outline
+== Outline
 
 Outline global opacity
 == アウトライン全体の不透明度

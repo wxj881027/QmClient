@@ -1973,6 +1973,9 @@ Button - Enabled
 Button browser
 == Düğme tarayıcısı
 
+Button hover feedback
+== Button hover feedback
+
 Button position is outside of the screen.
 == Düğme konumu ekranın dışında.
 
@@ -5516,8 +5519,8 @@ External links open in the browser.
 External sites are not controlled by the client.
 == Dış siteler istemcinin denetiminde değildir.
 
-Extra console log line spacing in percent
-== Konsol günlüğünde ek satır aralığı (yüzde)
+Extra console log line spacing in pixels
+== Extra console log line spacing in pixels
 
 Extra vertical spacing between chat lines in pixels (0 = default)
 == Sohbet satırları arasına ek dikey boşluk (piksel) (0 = varsayılan)
@@ -6919,6 +6922,9 @@ Horizontal position
 
 Hostname of DNSBL provider for IP verification
 == IP doğrulaması için DNSBL sağlayıcısının ana bilgisayar adı
+
+Hover feedback style: 0 = scale, 1 = border highlight
+== Hover feedback style: 0 = scale, 1 = border highlight
 
 Hover for tooltip
 == İpucu için üzerine gel
@@ -10048,6 +10054,9 @@ Outgoing language
 
 Outgoing translation target language code
 == Giden çeviri hedef dil kodu
+
+Outline
+== Outline
 
 Outline global opacity
 == Kontur genel opaklığı

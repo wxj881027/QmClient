@@ -1973,6 +1973,9 @@ Button - Enabled
 Button browser
 == 버튼 브라우저
 
+Button hover feedback
+== Button hover feedback
+
 Button position is outside of the screen.
 == 버튼 위치가 화면 밖에 있습니다.
 
@@ -5516,8 +5519,8 @@ External links open in the browser.
 External sites are not controlled by the client.
 == 외부 사이트는 클라이언트가 관리하지 않습니다.
 
-Extra console log line spacing in percent
-== 콘솔 로그 줄 간격 추가(백분율)
+Extra console log line spacing in pixels
+== Extra console log line spacing in pixels
 
 Extra vertical spacing between chat lines in pixels (0 = default)
 == 채팅 줄 사이의 추가 세로 간격(픽셀) (0 = 기본값)
@@ -6919,6 +6922,9 @@ Horizontal position
 
 Hostname of DNSBL provider for IP verification
 == IP 확인용 DNSBL 제공자 호스트명
+
+Hover feedback style: 0 = scale, 1 = border highlight
+== Hover feedback style: 0 = scale, 1 = border highlight
 
 Hover for tooltip
 == 툴팁을 보려면 마우스를 올리세요
@@ -10048,6 +10054,9 @@ Outgoing language
 
 Outgoing translation target language code
 == 발신 번역 대상 언어 코드
+
+Outline
+== Outline
 
 Outline global opacity
 == 외곽선 전체 불투명도

@@ -945,7 +945,7 @@ namespace ui_token::player_card
 	// 玩家列表是网格卡片（与皮肤列表同一种读法）：每格最小宽度、格高、格间缝与格内头像边长。
 	// 玩家瓦片按皮肤列表那种小卡：头像 + 两行文字 + 右侧/右上动作图标，
 	// 因此比纯文字格宽一档，高度容纳两行文字。
-	inline constexpr float TILE_MIN_WIDTH = 196.0f;
+	inline constexpr float TILE_MIN_WIDTH = 260.0f;
 	inline constexpr float TILE_HEIGHT = 64.0f;
 	// 瓦片内动作图标边长：比整行卡的小一档，五枚才排得下。
 	inline constexpr float TILE_ICON_SIZE = 18.0f;

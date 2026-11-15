@@ -2036,6 +2036,9 @@ Button - Enabled
 Button browser
 == 按键浏览器
 
+Button hover feedback
+== Button hover feedback
+
 Button position is outside of the screen.
 == 按键的位置在屏幕之外。
 
@@ -5696,8 +5699,8 @@ External links open in the browser.
 External sites are not controlled by the client.
 == 外部网站不受客户端控制。
 
-Extra console log line spacing in percent
-== 控制台日志额外行距（百分比）
+Extra console log line spacing in pixels
+== Extra console log line spacing in pixels
 
 Extra vertical spacing between chat lines in pixels (0 = default)
 == 聊天行与行之间的额外垂直间距（像素）（0 = 默认）
@@ -7159,6 +7162,9 @@ Horizontal position
 
 Hostname of DNSBL provider for IP verification
 == 用于 IP 验证的 DNSBL 提供商的主机名
+
+Hover feedback style: 0 = scale, 1 = border highlight
+== Hover feedback style: 0 = scale, 1 = border highlight
 
 Hover for tooltip
 == 悬停显示提示
@@ -10462,6 +10468,9 @@ Outgoing language
 
 Outgoing translation target language code
 == 出站翻译目标语言代码
+
+Outline
+== Outline
 
 Outline global opacity
 == 轮廓全局透明度

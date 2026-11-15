@@ -993,9 +993,9 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 			RowAction("graphics-hover-style", GraphicsMetrics.m_LineHeight, [&](CUIRect HoverRow) {
 				CUIRect Label, Segments;
 				SplitSettingsControlRow(HoverRow, GraphicsMetrics, &Label, &Segments, ESettingsControlWidth::LONG_CHOICE);
-				DoSettingsLabel(SETTINGS_GRAPHICS, -1, "graphics-hover-style-label", &Label, Localize("Hover feedback"), BodySize, TEXTALIGN_ML);
+				DoSettingsLabel(SETTINGS_GRAPHICS, -1, "graphics-hover-style-label", &Label, Localize("Button hover feedback"), BodySize, TEXTALIGN_ML);
 				static CButtonContainer s_aHoverStyleButtons[2];
-				const char *apHoverLabels[] = {Localize("Scale"), Localize("Border highlight")};
+				const char *apHoverLabels[] = {Localize("Shrink"), Localize("Outline")};
 				const int CurrentHover = std::clamp(g_Config.m_QmUiHoverStyle, 0, 1);
 				const int NewHover = DoSegmentedChoice(s_aHoverStyleButtons, apHoverLabels, 2, CurrentHover, Segments);
 				if(NewHover != CurrentHover)

@@ -119,8 +119,8 @@ namespace ui_widget
 		int ShapeCorners = Options.m_Corners;
 		if(Options.m_Role == EUiButtonRole::ICON)
 		{
+			// 只把半径抬到半高，Corners 保持调用点值，否则引擎按方块绘制。
 			ShapeRadius = std::min(DrawRect.w, DrawRect.h) * 0.5f;
-			ShapeCorners = IGraphics::CORNER_NONE;
 		}
 		DrawRoundedSurface(Ctx, DrawRect, Fill, pUi->ScaleControlAlpha(Style.m_Border), ShapeRadius, Options.m_BorderWidth, ShapeCorners, Options.m_AlignToPixel);
 		return Fill;
@@ -141,9 +141,9 @@ namespace ui_widget
 		Options.m_Radius = ButtonRect.h * 0.5f;
 		Options.m_Enabled = Enabled && Checked >= 0;
 		Options.m_Selected = Checked > 0;
-		// 图标按钮恒为正圆：调用点传的 Corners 只表达「方角/圆角」的历史习惯，
-		// 这里统一忽略，形状只由半高半径决定，避免同一批按钮一半是圆一半是圆角方块。
-		Options.m_Corners = IGraphics::CORNER_NONE;
+		// 图标按钮恒为正圆：半径取半高；Corners 必须保留调用点的值——
+		// 引擎的四角路径里 Corners 才是形状开关，清成 NONE 会直接画成方块。
+		Options.m_Corners = Corners;
 		Options.m_Color = Color;
 		Options.m_TransparentInactive = TransparentInactive;
 		Options.m_pHitRect = &HitRect;
