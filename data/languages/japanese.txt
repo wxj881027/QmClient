@@ -232,6 +232,9 @@
 '%s' locked your team. After the race starts, killing will kill everyone in your team.
 == '%s' があなたのチームをロックしました。レース開始後、キルするとチーム全員が死亡します。
 
+'%s' not bound.
+== 「%s」は割り当てられていません。
+
 '%s' unlocked your team.
 == '%s' があなたのチームのロックを解除しました。
 
@@ -1913,6 +1916,9 @@ Bottom right
 Bounce
 == バウンス
 
+Bouncy
+== バウンス
+
 Bound functions
 == 割り当て済みの機能
 
@@ -1987,6 +1993,9 @@ Buttons with this behavior execute console commands like regular key binds.
 
 Buttons with this behavior execute some predefined actions.
 == この動作のボタンは、いくつかの定義済みアクションを実行します。
+
+By row
+== 行ごと
 
 c = Player position
 == c = プレイヤー座標
@@ -2119,6 +2128,9 @@ Card opacity
 
 Card shape is shared with the rest of the interface and lives in "Interface theme".
 == カードの形状はインターフェース全体と共通で、「インターフェーステーマ」にあります。
+
+Cascade
+== ゆっくり連鎖
 
 Category
 == カテゴリ
@@ -3139,6 +3151,12 @@ Console selected search match color
 
 Console settings
 == コンソール設定
+
+Console slide
+== コンソールのスライド
+
+Console slide feel: 0=soft, 1=standard, 2=bouncy
+== コンソールのスライド感：0 = ソフト、1 = 標準、2 = 弾む
 
 Console string color
 == コンソール: 文字列の色
@@ -4290,7 +4308,7 @@ Downloading map
 == マップをダウンロード中
 
 Downloading map %d%%
-== Downloading map %d%%
+== マップをダウンロード中：%d%%
 
 Downloading rank 1 demo
 == ランク1デモをダウンロード中
@@ -4502,6 +4520,9 @@ Dummy is allowed on this server.
 Dummy is currently connected.
 == ダミーが現在接続されています。
 
+Dummy is not connected
+== ダミーが接続されていません
+
 Dummy jump
 == ダミージャンプ
 
@@ -4705,6 +4726,9 @@ Elastic
 
 Elastic back
 == エラスティックバック
+
+Elastic feel of the ESC menu sliding in from the top
+== ESC メニューが上から滑り込む際の弾性
 
 Elements too close to the edges overlap on ultrawide screens.
 == ウルトラワイド画面では、端に寄りすぎた要素が重なります。
@@ -5318,6 +5342,9 @@ Entity wall outline opacity
 entity_bg (Workshop)
 == entity_bg（Workshop）
 
+Entrance overshoot
+== 登場時のオーバーシュート
+
 Entries in it will fall back to none.
 == 中の項目は none に戻ります。
 
@@ -5350,6 +5377,12 @@ Error saving settings
 
 Error saving touch controls
 == タッチコントロールの保存エラー
+
+ESC menu slide
+== ESC メニューのスライド
+
+ESC menu slide feel: 0=soft, 1=standard, 2=bouncy
+== ESC メニューのスライド感：0=ソフト、1=標準、2=バウンス
 
 ESC replay minutes
 == ESC リプレイ保存時間（分）
@@ -5517,7 +5550,7 @@ External sites are not controlled by the client.
 == 外部サイトはクライアントの管理下にはありません。
 
 Extra console log line spacing in pixels
-== Extra console log line spacing in pixels
+== コンソールログの追加行間（ピクセル）
 
 Extra vertical spacing between chat lines in pixels (0 = default)
 == チャット行間の追加の縦余白（ピクセル）（0 = 既定）
@@ -5743,6 +5776,9 @@ File for storing ranks if sv_use_sql is disabled or as backup SQL server.
 
 File information
 == ファイル情報
+
+File to write the server's port to (used when running a server from the client)
+== サーバーのポートを書き込むファイル（クライアントからサーバーを起動するときに使用）
 
 File with announcements, one per line.
 == 告知ファイル（1 行に 1 件）
@@ -6830,6 +6866,9 @@ Hold gun higher like TW 0.6.1 and earlier
 Hold left click for free camera
 == 左クリックでフリーカメラ
 
+Hold Shift to be more precise.
+== Shift を押すとより正確に調整できます。
+
 Hold still
 == 停止
 
@@ -6921,7 +6960,7 @@ Hostname of DNSBL provider for IP verification
 == IP 検証用 DNSBL プロバイダーのホスト名
 
 Hover feedback style: 0 = scale, 1 = border highlight
-== Hover feedback style: 0 = scale, 1 = border highlight
+== ホバーフィードバックのスタイル：0 = 拡大、1 = 枠線ハイライト
 
 Hover for tooltip
 == ホバーでツールチップ
@@ -7510,6 +7549,9 @@ Jelly strength
 
 Jitter
 == ジッター
+
+Join
+== 参加
 
 Join a team before inviting another player
 == 他のプレイヤーを招待する前にチームに参加してください
@@ -8417,6 +8459,9 @@ Map danger border
 Map data unavailable; server votes remain available
 == マップ情報を取得できません。サーバーの投票項目は利用できます
 
+Map download failed, click to retry
+== マップのダウンロードに失敗しました。クリックして再試行
+
 Map download send window
 == マップダウンロード送信ウィンドウ
 
@@ -8715,7 +8760,7 @@ Menu background
 == メニュー背景
 
 Menu button hover
-== Menu button hover
+== メニューボタンのホバー
 
 Menu camera rotation radius
 == メニューカメラ回転半径
@@ -8737,9 +8782,6 @@ Menu music
 
 Menu opacity (0-100)
 == メニュー不透明度（Menu opacity 0-100）
-
-Menu opened. Press Esc key again to close menu.
-== メニューが開きました。もう一度 Esc キーを押してメニューを閉じます。
 
 Menu option - normal
 == メニューオプション - 通常
@@ -10056,7 +10098,7 @@ Outgoing translation target language code
 == 送信翻訳のターゲット言語コード
 
 Outline
-== Outline
+== アウトライン
 
 Outline global opacity
 == アウトライン全体の不透明度
@@ -10820,6 +10862,12 @@ Practice mode enabled for your team, happy practicing!
 Practice mode is disabled
 == 練習モードは無効になっています
 
+Practice: teleport the other tee to your cursor
+== 練習：もう一方の Tee をカーソル位置にテレポート
+
+Practice: teleport yourself to your cursor
+== 練習：自分をカーソル位置にテレポート
+
 Pre-warm settings page on startup and menu idle
 == 起動時とメニューアイドル時に設定ページをプリロード
 
@@ -10921,6 +10969,9 @@ Press "Save" after any change: the title and chat style are stored on your accou
 
 Press "Select map" to choose a file, check the target server and player shown for the upload, then press "Upload map"; "Cancel" stops it.
 == マップを選択のボタンでファイルを選び、アップロード先のサーバーとプレイヤーを確認してからマップをアップロードのボタンを押します。キャンセルで中止できます。
+
+Press '%s' to show cursor.
+== '%s' を押すとカーソルが表示されます。
 
 Press a key…
 == キーを押してください…
@@ -12587,6 +12638,15 @@ Scoreboard
 Scoreboard cursor
 == スコアボードカーソル
 
+Scoreboard entrance
+== スコアボードの登場
+
+Scoreboard entrance feel: 0=soft, 1=standard, 2=bouncy
+== スコアボード登場の感触：0=ソフト、1=標準、2=バウンス
+
+Scoreboard entrance overshoot in percent (10 = 110% peak)
+== スコアボード登場時のオーバーシュート率（10 で最大 110%）
+
 Scoreboard playtime
 == スコアボードのプレイ時間
 
@@ -12601,6 +12661,12 @@ Scoreboard score lookup
 
 Scoreboard sort mode (0=Score, 1=Points)
 == スコアボードのソートモード（0=スコア、1=ポイント）
+
+Scoreboard text entry
+== スコアボード文字の登場
+
+Scoreboard text entry: 0=together, 1=by row, 2=slow cascade
+== スコアボード文字の登場：0=一斉、1=行ごと、2=ゆっくり連鎖
 
 Scoreboard, chat, spectating
 == スコアボード、チャット、観戦
@@ -14270,9 +14336,6 @@ Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dyn
 Shows the bind wheel layout and which slot is currently selected.
 == バインドホイールの配置と、現在選択中のスロットを表示します。
 
-Shows the credits of the DDNet mod
-== DDNet mod のクレジットを表示
-
 Shows the current song's lyric line in the Dynamic Island and lets you pick which music app supplies it.
 == 現在の曲の歌詞行を Dynamic Island に表示し、どの音楽アプリから取得するかを選べます。
 
@@ -14570,6 +14633,9 @@ SodaMusic hook heartbeat timeout (milliseconds)
 SodaMusic hook helper path (empty=beside QmClient)
 == SodaMusic Hook ヘルパーのパス（空欄の場合は QmClient と同じディレクトリ）
 
+Soft
+== ソフト
+
 Solid
 == 単色
 
@@ -14818,6 +14884,9 @@ Squishy Tee deformation intensity
 
 Standalone
 == 単独表示
+
+Standard
+== 標準
 
 Star
 == 星形
@@ -15446,6 +15515,9 @@ Tele
 Teleport all weapons (deprecated, use special entities instead)
 == 全武器のテレポート（非推奨、代わりに特殊エンティティを使用してください）
 
+Teleport dummy to cursor
+== ダミーをカーソル位置にテレポート
+
 Teleport free spectator camera between hovered tele-in/out or checkpoint tele and a matching counterpart
 == ホバーしたテレポート入口/出口またはチェックポイントテレポートと対応する地点の間で自由観戦カメラをテレポート
 
@@ -15475,6 +15547,9 @@ Teleport tile outline color
 
 Teleport tile outline width
 == テレポートタイルのアウトライン幅
+
+Teleport to cursor
+== カーソル位置にテレポート
 
 Teleport yourself out of freeze if auto rescue mode is enabled, otherwise it will set position for rescuing if grounded and teleport you out of freeze if not (use sv_rescue 1 to enable this feature)
 == 自動レスキューモードが有効な場合はフリーズからテレポートアウト。無効な場合は接地時にレスキュー位置を設定し、非接地時はフリーズからテレポートアウト（sv_rescue 1 でこの機能を有効化）
@@ -16033,6 +16108,9 @@ To save all players in your team have to be alive and not in '/spec'
 
 Toast uses UiTokens + QmMotion slide
 == Toast は UiTokens + QmMotion スライドを使用
+
+Together
+== 一斉
 
 Toggle auto camera
 == 自動カメラの切り替え
@@ -18278,38 +18356,6 @@ Hook
 [Direct touch input]
 Relative aim
 == 相対照準
-
-[Editor]
-Use Shift+Mouse wheel up/down to adjust the angle.
-== Use Shift+Mouse wheel up/down to adjust the angle.
-
-[Editor]
-Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
-== Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
-
-[Editor curve type abbreviation]
-B
-== B
-
-[Editor curve type abbreviation]
-F
-== F
-
-[Editor curve type abbreviation]
-L
-== L
-
-[Editor curve type abbreviation]
-M
-== M
-
-[Editor curve type abbreviation]
-N
-== N
-
-[Editor curve type abbreviation]
-S
-== S
 
 [Friend auto follow]
 Follow this friend across servers

@@ -8319,6 +8319,22 @@ turkish = "Geçerli düzenleyici harita kopyasını \"auto\" klasörüne otomati
 polish = "Interwał automatycznego zapisywania kopii bieżącej mapy w edytorze do folderu „auto” (0=wyłączone)"
 
 [[message]]
+key = "Join"
+[message.translations]
+simplified_chinese = "进入"
+traditional_chinese = "進入"
+japanese = "参加"
+korean = "참가"
+russian = "Присоединиться"
+german = "Beitreten"
+spanish = "Unirse"
+french = "Rejoindre"
+brazilian_portuguese = "Entrar"
+portuguese = "Entrar"
+turkish = "Katıl"
+polish = "Dołącz"
+
+[[message]]
 key = "Join blue"
 [message.translations]
 simplified_chinese = "加入蓝队"
@@ -23531,3 +23547,19 @@ brazilian_portuguese = "Espaçamento entre linhas do console"
 portuguese = "Espaçamento entre linhas da consola"
 turkish = "Konsol satır aralığı"
 polish = "Odstęp między wierszami konsoli"
+
+[[message]]
+key = "File to write the server's port to (used when running a server from the client)"
+[message.translations]
+simplified_chinese = "写入服务器端口的文件（从客户端启动服务器时使用）"
+traditional_chinese = "寫入伺服器連接埠的檔案（從用戶端啟動伺服器時使用）"
+japanese = "サーバーのポートを書き込むファイル（クライアントからサーバーを起動するときに使用）"
+korean = "서버 포트를 기록할 파일(클라이언트에서 서버를 실행할 때 사용)"
+russian = "Файл для записи порта сервера (используется при запуске сервера из клиента)"
+german = "Datei zum Schreiben des Server-Ports (wird beim Starten eines Servers aus dem Client verwendet)"
+spanish = "Archivo donde escribir el puerto del servidor (se usa al iniciar un servidor desde el cliente)"
+french = "Fichier où écrire le port du serveur (utilisé lors du démarrage d'un serveur depuis le client)"
+brazilian_portuguese = "Arquivo para gravar a porta do servidor (usado ao iniciar um servidor pelo cliente)"
+portuguese = "Ficheiro onde escrever a porta do servidor (usado ao iniciar um servidor a partir do cliente)"
+turkish = "Sunucu bağlantı noktasının yazılacağı dosya (istemciden sunucu başlatılırken kullanılır)"
+polish = "Plik do zapisania portu serwera (używany przy uruchamianiu serwera z klienta)"

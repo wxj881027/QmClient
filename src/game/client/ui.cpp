@@ -264,17 +264,20 @@ CUi::~CUi()
 
 void CUi::OnReset()
 {
-	m_Tooltips.OnReset();
+	if(m_TooltipsInitialized)
+		m_Tooltips.OnReset();
 }
 
 void CUi::OnRenderTooltip()
 {
-	m_Tooltips.OnRender();
+	if(m_TooltipsInitialized)
+		m_Tooltips.OnRender();
 }
 
 void CUi::OnShutdown()
 {
-	m_Tooltips.OnShutdown();
+	if(m_TooltipsInitialized)
+		m_Tooltips.OnShutdown();
 	if(m_pGraphics == nullptr || m_pTextRender == nullptr)
 		return;
 	OnElementsReset();
@@ -340,7 +343,8 @@ void CUi::OnElementsReset()
 
 void CUi::OnWindowResize()
 {
-	m_Tooltips.OnWindowResize();
+	if(m_TooltipsInitialized)
+		m_Tooltips.OnWindowResize();
 	CancelTouchInput();
 	DestroyGaussianBlurTargets();
 	DestroyBackgroundLayerTarget();
@@ -2020,7 +2024,7 @@ bool CUi::DrawCachedQmIconLabel(const CUIRect &Rect, const char *pText, float Si
 
 const char *CUi::PrepareCardLabel(const CUIRect *pRect, const char *pText, bool Render, bool AllowHintSplit) const
 {
-	return m_CardLabelHintsEnabled && TextRender()->GetFontPreset() != EFontPreset::ICON_FONT ?
+	return m_TooltipsInitialized && m_CardLabelHintsEnabled && TextRender()->GetFontPreset() != EFontPreset::ICON_FONT ?
 		       m_Tooltips.PrepareCardLabel(pRect, pText, Render && !RenderOnly(), AllowHintSplit) :
 		       pText;
 }
@@ -2572,23 +2576,26 @@ bool CUi::DoClearableEditBox(CLineInput *pLineInput, const CUIRect *pRect, float
 
 void CUi::DoConfigTooltip(const void *pId, const CUIRect *pRect, const void *pValue, const void *pSecondValue)
 {
-	m_Tooltips.DoConfigToolTip(pId, pRect, pValue, pSecondValue);
+	if(m_TooltipsInitialized)
+		m_Tooltips.DoConfigToolTip(pId, pRect, pValue, pSecondValue);
 }
 
 void CUi::DoButtonTooltip(const void *pId, const CUIRect *pRect, const char *pText) const
 {
-	if(!RenderOnly() && pText != nullptr)
+	if(m_TooltipsInitialized && !RenderOnly() && pText != nullptr)
 		m_Tooltips.DoToolTipForRect(pId, pRect, pText);
 }
 
 void CUi::DoTooltip(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint)
 {
-	m_Tooltips.DoToolTip(pId, pNearRect, pText, WidthHint);
+	if(m_TooltipsInitialized)
+		m_Tooltips.DoToolTip(pId, pNearRect, pText, WidthHint);
 }
 
 void CUi::DoSmallTooltip(const void *pId, const CUIRect *pNearRect, const char *pText, float FontSize, float WidthHint)
 {
-	m_Tooltips.DoSmallToolTip(pId, pNearRect, pText, FontSize, WidthHint);
+	if(m_TooltipsInitialized)
+		m_Tooltips.DoSmallToolTip(pId, pNearRect, pText, FontSize, WidthHint);
 }
 
 const SUiTheme &CUi::QmControlTheme()

@@ -232,6 +232,9 @@
 '%s' locked your team. After the race starts, killing will kill everyone in your team.
 == '%s' 鎖定了你們的隊伍。比賽開始後，任何人使用 kill 都會導致整隊死亡
 
+'%s' not bound.
+== 「%s」未綁定。
+
 '%s' unlocked your team.
 == '%s' 解鎖了你們的隊伍
 
@@ -1913,6 +1916,9 @@ Bottom right
 Bounce
 == 彈跳
 
+Bouncy
+== 彈性
+
 Bound functions
 == 已綁定功能
 
@@ -1987,6 +1993,9 @@ Buttons with this behavior execute console commands like regular key binds.
 
 Buttons with this behavior execute some predefined actions.
 == 具有此行為的按鈕會執行一些預定義的動作。
+
+By row
+== 逐行
 
 c = Player position
 == c = 玩家座標
@@ -2119,6 +2128,9 @@ Card opacity
 
 Card shape is shared with the rest of the interface and lives in "Interface theme".
 == 卡片形狀與介面其它部分共用，在「介面主題」裡調整。
+
+Cascade
+== 慢速波浪
 
 Category
 == 分類
@@ -3139,6 +3151,12 @@ Console selected search match color
 
 Console settings
 == 控制台設定
+
+Console slide
+== 主控台滑入手感
+
+Console slide feel: 0=soft, 1=standard, 2=bouncy
+== 主控台滑入手感：0 = 柔和，1 = 標準，2 = 彈跳
 
 Console string color
 == 控制台: 字串顏色
@@ -4290,7 +4308,7 @@ Downloading map
 == 正在下載地圖
 
 Downloading map %d%%
-== Downloading map %d%%
+== 正在下載地圖：%d%%
 
 Downloading rank 1 demo
 == 正在下載 Rank 1 示範
@@ -4502,6 +4520,9 @@ Dummy is allowed on this server.
 Dummy is currently connected.
 == 分身當前已連接。
 
+Dummy is not connected
+== 分身未連線
+
 Dummy jump
 == 分身跳
 
@@ -4705,6 +4726,9 @@ Elastic
 
 Elastic back
 == 彈性回彈
+
+Elastic feel of the ESC menu sliding in from the top
+== ESC 選單從頂部滑入時的彈性手感
 
 Elements too close to the edges overlap on ultrawide screens.
 == 在超寬螢幕上，太靠近邊緣的元素會互相重疊。
@@ -5318,6 +5342,9 @@ Entity wall outline opacity
 entity_bg (Workshop)
 == entity_bg（Workshop）
 
+Entrance overshoot
+== 入場過衝
+
 Entries in it will fall back to none.
 == 裡面的條目會回到 none。
 
@@ -5350,6 +5377,12 @@ Error saving settings
 
 Error saving touch controls
 == 保存觸控設置錯誤
+
+ESC menu slide
+== ESC 選單滑入手感
+
+ESC menu slide feel: 0=soft, 1=standard, 2=bouncy
+== ESC 選單滑入手感：0=柔和，1=標準，2=彈性
 
 ESC replay minutes
 == ESC 保存回放分鐘數
@@ -5517,7 +5550,7 @@ External sites are not controlled by the client.
 == 外部網站不受用戶端控制。
 
 Extra console log line spacing in pixels
-== Extra console log line spacing in pixels
+== 主控台日誌的額外行距（像素）
 
 Extra vertical spacing between chat lines in pixels (0 = default)
 == 聊天行與行之間的額外垂直間距（像素）（0 = 預設）
@@ -5743,6 +5776,9 @@ File for storing ranks if sv_use_sql is disabled or as backup SQL server.
 
 File information
 == 檔案資訊
+
+File to write the server's port to (used when running a server from the client)
+== 寫入伺服器連接埠的檔案（從用戶端啟動伺服器時使用）
 
 File with announcements, one per line.
 == 包含公告的文件，每行一個
@@ -6830,6 +6866,9 @@ Hold gun higher like TW 0.6.1 and earlier
 Hold left click for free camera
 == 按住左鍵自由鏡頭
 
+Hold Shift to be more precise.
+== 按住 Shift 可進行更精確的調整。
+
 Hold still
 == 停住
 
@@ -6921,7 +6960,7 @@ Hostname of DNSBL provider for IP verification
 == 用於 IP 驗證的 DNSBL 提供商的主機名
 
 Hover feedback style: 0 = scale, 1 = border highlight
-== Hover feedback style: 0 = scale, 1 = border highlight
+== 懸停回饋樣式：0 = 縮放，1 = 邊框高亮
 
 Hover for tooltip
 == 懸停查看提示
@@ -7510,6 +7549,9 @@ Jelly strength
 
 Jitter
 == 抖動
+
+Join
+== 進入
 
 Join a team before inviting another player
 == 請先加入隊伍，再邀請其他玩家
@@ -8417,6 +8459,9 @@ Map danger border
 Map data unavailable; server votes remain available
 == 地圖資料暫不可用，仍可使用伺服器投票
 
+Map download failed, click to retry
+== 地圖下載失敗，點擊重試
+
 Map download send window
 == 地圖下載發送窗口
 
@@ -8715,7 +8760,7 @@ Menu background
 == 菜單背景
 
 Menu button hover
-== Menu button hover
+== 選單按鈕懸停
 
 Menu camera rotation radius
 == 菜單相機旋轉半徑
@@ -8737,9 +8782,6 @@ Menu music
 
 Menu opacity (0-100)
 == 菜單不透明度 (Menu opacity 0-100)
-
-Menu opened. Press Esc key again to close menu.
-== 菜單已打開，再次點擊 Esc 以關閉
 
 Menu option - normal
 == 菜單選項 - 普通
@@ -10056,7 +10098,7 @@ Outgoing translation target language code
 == 出站翻譯目標語言代碼
 
 Outline
-== Outline
+== 描邊
 
 Outline global opacity
 == 輪廓全局透明度
@@ -10820,6 +10862,12 @@ Practice mode enabled for your team, happy practicing!
 Practice mode is disabled
 == 本伺服器已禁用練習模式
 
+Practice: teleport the other tee to your cursor
+== 練習：將另一名 Tee 傳送到你的光標位置
+
+Practice: teleport yourself to your cursor
+== 練習：將自己傳送到光標位置
+
 Pre-warm settings page on startup and menu idle
 == 啟動和菜單空閒時預熱設置頁
 
@@ -10921,6 +10969,9 @@ Press "Save" after any change: the title and chat style are stored on your accou
 
 Press "Select map" to choose a file, check the target server and player shown for the upload, then press "Upload map"; "Cancel" stops it.
 == 按選擇地圖挑檔案，核對上傳顯示的目標伺服器與玩家，再按上傳地圖；取消可中止。
+
+Press '%s' to show cursor.
+== 按「%s」顯示光標。
 
 Press a key…
 == 按任意鍵…
@@ -12587,6 +12638,15 @@ Scoreboard
 Scoreboard cursor
 == 計分板光標
 
+Scoreboard entrance
+== 計分板入場
+
+Scoreboard entrance feel: 0=soft, 1=standard, 2=bouncy
+== 計分板入場手感：0=柔和，1=標準，2=彈性
+
+Scoreboard entrance overshoot in percent (10 = 110% peak)
+== 計分板入場過衝百分比（10 表示先到 110% 峰值）
+
 Scoreboard playtime
 == 計分板遊玩時間
 
@@ -12601,6 +12661,12 @@ Scoreboard score lookup
 
 Scoreboard sort mode (0=Score, 1=Points)
 == 記分牌排序模式（0=分數，1=分）
+
+Scoreboard text entry
+== 計分板文字進場
+
+Scoreboard text entry: 0=together, 1=by row, 2=slow cascade
+== 計分板文字進場：0=一起，1=逐行，2=慢速波浪
 
 Scoreboard, chat, spectating
 == 計分板、聊天、觀戰
@@ -14270,9 +14336,6 @@ Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dyn
 Shows the bind wheel layout and which slot is currently selected.
 == 顯示 Bind 輪盤的佈局和目前選取的槽位。
 
-Shows the credits of the DDNet mod
-== 顯示 DDNet mod 的製作人員
-
 Shows the current song's lyric line in the Dynamic Island and lets you pick which music app supplies it.
 == 在 Dynamic Island 中顯示目前歌曲的歌詞，並可選擇由哪個音樂應用程式提供。
 
@@ -14570,6 +14633,9 @@ SodaMusic hook heartbeat timeout (milliseconds)
 SodaMusic hook helper path (empty=beside QmClient)
 == 汽水音樂 Hook 輔助程式路徑（留空則使用 QmClient 所在目錄中的程式）
 
+Soft
+== 柔和
+
 Solid
 == 純色
 
@@ -14818,6 +14884,9 @@ Squishy Tee deformation intensity
 
 Standalone
 == 獨立顯示
+
+Standard
+== 標準
 
 Star
 == 星形
@@ -15446,6 +15515,9 @@ Tele
 Teleport all weapons (deprecated, use special entities instead)
 == 所有武器的傳送（已棄用，請使用特殊實體代替）
 
+Teleport dummy to cursor
+== 將分身傳送到光標
+
 Teleport free spectator camera between hovered tele-in/out or checkpoint tele and a matching counterpart
 == 在懸停的傳送入口/出口或檢查點傳送點與其對應點之間傳送自由觀戰鏡頭
 
@@ -15475,6 +15547,9 @@ Teleport tile outline color
 
 Teleport tile outline width
 == 傳送圖塊輪廓寬度
+
+Teleport to cursor
+== 傳送到光標
 
 Teleport yourself out of freeze if auto rescue mode is enabled, otherwise it will set position for rescuing if grounded and teleport you out of freeze if not (use sv_rescue 1 to enable this feature)
 == 若啟用自動救援模式，則直接將你傳送出凍結；否則，落地時會記錄救援位置，未落地則直接傳送出凍結（用 sv_rescue 1 啟用）
@@ -16033,6 +16108,9 @@ To save all players in your team have to be alive and not in '/spec'
 
 Toast uses UiTokens + QmMotion slide
 == Toast 使用 UiTokens + QmMotion 滑入效果
+
+Together
+== 一起
 
 Toggle auto camera
 == 切換自動視角
@@ -18278,38 +18356,6 @@ Hook
 [Direct touch input]
 Relative aim
 == 相對瞄準
-
-[Editor]
-Use Shift+Mouse wheel up/down to adjust the angle.
-== Use Shift+Mouse wheel up/down to adjust the angle.
-
-[Editor]
-Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
-== Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
-
-[Editor curve type abbreviation]
-B
-== B
-
-[Editor curve type abbreviation]
-F
-== F
-
-[Editor curve type abbreviation]
-L
-== L
-
-[Editor curve type abbreviation]
-M
-== M
-
-[Editor curve type abbreviation]
-N
-== N
-
-[Editor curve type abbreviation]
-S
-== S
 
 [Friend auto follow]
 Follow this friend across servers

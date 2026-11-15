@@ -232,6 +232,9 @@
 '%s' locked your team. After the race starts, killing will kill everyone in your team.
 == '%s' trancou seu time. Após a corrida começar, matar matará todos no seu time.
 
+'%s' not bound.
+== '%s' não está atribuído.
+
 '%s' unlocked your team.
 == '%s' destrancou seu time.
 
@@ -1913,6 +1916,9 @@ Bottom right
 Bounce
 == Quicar
 
+Bouncy
+== Elástico
+
 Bound functions
 == Funções atribuídas
 
@@ -1987,6 +1993,9 @@ Buttons with this behavior execute console commands like regular key binds.
 
 Buttons with this behavior execute some predefined actions.
 == Botões com este comportamento executam algumas ações predefinidas.
+
+By row
+== Por linha
 
 c = Player position
 == c = Posição do jogador
@@ -2119,6 +2128,9 @@ Card opacity
 
 Card shape is shared with the rest of the interface and lives in "Interface theme".
 == A forma dos cartões é compartilhada com o resto da interface e fica em "Tema da interface".
+
+Cascade
+== Cascata
 
 Category
 == Categoria
@@ -3139,6 +3151,12 @@ Console selected search match color
 
 Console settings
 == Configurações do console
+
+Console slide
+== Deslizamento do console
+
+Console slide feel: 0=soft, 1=standard, 2=bouncy
+== Sensação de deslizamento do console: 0 = suave, 1 = padrão, 2 = elástica
 
 Console string color
 == Console: cor das strings
@@ -4290,7 +4308,7 @@ Downloading map
 == Baixando mapa
 
 Downloading map %d%%
-== Downloading map %d%%
+== Baixando mapa: %d%%
 
 Downloading rank 1 demo
 == Baixando a demo de rank 1
@@ -4502,6 +4520,9 @@ Dummy is allowed on this server.
 Dummy is currently connected.
 == Dummy está atualmente conectado.
 
+Dummy is not connected
+== O dummy não está conectado
+
 Dummy jump
 == Pulo do Dummy
 
@@ -4705,6 +4726,9 @@ Elastic
 
 Elastic back
 == Elástico com recuo
+
+Elastic feel of the ESC menu sliding in from the top
+== Elasticidade do menu ESC ao deslizar de cima
 
 Elements too close to the edges overlap on ultrawide screens.
 == Elementos muito perto das bordas se sobrepõem em telas ultrawide.
@@ -5318,6 +5342,9 @@ Entity wall outline opacity
 entity_bg (Workshop)
 == entity_bg (Workshop)
 
+Entrance overshoot
+== Ultrapassagem na entrada
+
 Entries in it will fall back to none.
 == As entradas dela voltam para none.
 
@@ -5350,6 +5377,12 @@ Error saving settings
 
 Error saving touch controls
 == Erro ao salvar controles de toque
+
+ESC menu slide
+== Deslizamento do menu ESC
+
+ESC menu slide feel: 0=soft, 1=standard, 2=bouncy
+== Sensação de deslizamento do menu ESC: 0=suave, 1=padrão, 2=elástico
 
 ESC replay minutes
 == Minutos de replay do ESC
@@ -5517,7 +5550,7 @@ External sites are not controlled by the client.
 == Os sites externos não são controlados pelo cliente.
 
 Extra console log line spacing in pixels
-== Extra console log line spacing in pixels
+== Espaçamento adicional entre linhas do registro do console em pixels
 
 Extra vertical spacing between chat lines in pixels (0 = default)
 == Espaçamento vertical adicional entre linhas de chat em pixels (0 = padrão)
@@ -5743,6 +5776,9 @@ File for storing ranks if sv_use_sql is disabled or as backup SQL server.
 
 File information
 == Informações do arquivo
+
+File to write the server's port to (used when running a server from the client)
+== Arquivo para gravar a porta do servidor (usado ao iniciar um servidor pelo cliente)
 
 File with announcements, one per line.
 == Arquivo com anúncios, um por linha.
@@ -6830,6 +6866,9 @@ Hold gun higher like TW 0.6.1 and earlier
 Hold left click for free camera
 == Segure o clique esquerdo para câmera livre
 
+Hold Shift to be more precise.
+== Segure Shift para maior precisão.
+
 Hold still
 == Manter
 
@@ -6921,7 +6960,7 @@ Hostname of DNSBL provider for IP verification
 == Hostname do provedor DNSBL para verificação de IP
 
 Hover feedback style: 0 = scale, 1 = border highlight
-== Hover feedback style: 0 = scale, 1 = border highlight
+== Estilo de retorno ao passar o mouse: 0 = escala, 1 = destaque da borda
 
 Hover for tooltip
 == Passe o mouse para ver a dica
@@ -7510,6 +7549,9 @@ Jelly strength
 
 Jitter
 == Jitter
+
+Join
+== Entrar
 
 Join a team before inviting another player
 == Entre em uma equipe antes de convidar outro jogador
@@ -8417,6 +8459,9 @@ Map danger border
 Map data unavailable; server votes remain available
 == Dados dos mapas indisponíveis; as votações do servidor continuam disponíveis
 
+Map download failed, click to retry
+== Falha ao baixar o mapa, clique para tentar novamente
+
 Map download send window
 == Janela de envio de download de mapa
 
@@ -8715,7 +8760,7 @@ Menu background
 == Fundo do menu
 
 Menu button hover
-== Menu button hover
+== Passar o mouse sobre o botão do menu
 
 Menu camera rotation radius
 == Raio de rotação da câmera do menu
@@ -8737,9 +8782,6 @@ Menu music
 
 Menu opacity (0-100)
 == Opacidade do menu (Menu opacity 0-100)
-
-Menu opened. Press Esc key again to close menu.
-== Menu aberto. Pressione Esc novamente para fechar o menu.
 
 Menu option - normal
 == Opção de menu - normal
@@ -10056,7 +10098,7 @@ Outgoing translation target language code
 == Código do idioma alvo da tradução de saída
 
 Outline
-== Outline
+== Contorno
 
 Outline global opacity
 == Opacidade global do contorno
@@ -10820,6 +10862,12 @@ Practice mode enabled for your team, happy practicing!
 Practice mode is disabled
 == O modo de prática está desabilitado
 
+Practice: teleport the other tee to your cursor
+== Prática: teletransportar o outro tee até o cursor
+
+Practice: teleport yourself to your cursor
+== Prática: teletransportar você até o cursor
+
 Pre-warm settings page on startup and menu idle
 == Pré-aquecer página de configurações ao iniciar e quando o menu estiver ocioso
 
@@ -10921,6 +10969,9 @@ Press "Save" after any change: the title and chat style are stored on your accou
 
 Press "Select map" to choose a file, check the target server and player shown for the upload, then press "Upload map"; "Cancel" stops it.
 == Pressione selecionar mapa para escolher um arquivo, confira o servidor e o jogador de destino do envio e pressione enviar mapa; cancelar interrompe.
+
+Press '%s' to show cursor.
+== Pressione '%s' para mostrar o cursor.
 
 Press a key…
 == Pressione uma tecla…
@@ -12587,6 +12638,15 @@ Scoreboard
 Scoreboard cursor
 == Cursor do placar
 
+Scoreboard entrance
+== Entrada do placar
+
+Scoreboard entrance feel: 0=soft, 1=standard, 2=bouncy
+== Sensação de entrada do placar: 0=suave, 1=padrão, 2=elástico
+
+Scoreboard entrance overshoot in percent (10 = 110% peak)
+== Ultrapassagem de entrada do placar em porcentagem (10 = pico de 110%)
+
 Scoreboard playtime
 == Tempo de jogo no placar
 
@@ -12601,6 +12661,12 @@ Scoreboard score lookup
 
 Scoreboard sort mode (0=Score, 1=Points)
 == Modo de ordenação do placar (0 = Pontuação, 1 = Fim)
+
+Scoreboard text entry
+== Entrada do texto do placar
+
+Scoreboard text entry: 0=together, 1=by row, 2=slow cascade
+== Entrada do texto do placar: 0=juntos, 1=por linha, 2=cascata lenta
 
 Scoreboard, chat, spectating
 == placar, chat, espectando
@@ -14270,9 +14336,6 @@ Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dyn
 Shows the bind wheel layout and which slot is currently selected.
 == Mostra o layout da roda de binds e o espaço selecionado no momento.
 
-Shows the credits of the DDNet mod
-== Mostra os créditos do mod DDNet
-
 Shows the current song's lyric line in the Dynamic Island and lets you pick which music app supplies it.
 == Mostra a linha da letra da música atual no Dynamic Island e deixa escolher qual app de música a fornece.
 
@@ -14570,6 +14633,9 @@ SodaMusic hook heartbeat timeout (milliseconds)
 SodaMusic hook helper path (empty=beside QmClient)
 == Caminho do auxiliar do SodaMusic Hook (vazio = ao lado do QmClient)
 
+Soft
+== Suave
+
 Solid
 == Sólido
 
@@ -14818,6 +14884,9 @@ Squishy Tee deformation intensity
 
 Standalone
 == Separada
+
+Standard
+== Padrão
 
 Star
 == Estrela
@@ -15446,6 +15515,9 @@ Tele
 Teleport all weapons (deprecated, use special entities instead)
 == Teletransportar todas as armas (obsoleto, use entidades especiais)
 
+Teleport dummy to cursor
+== Teletransportar o dummy até o cursor
+
 Teleport free spectator camera between hovered tele-in/out or checkpoint tele and a matching counterpart
 == Teleportar câmera de espectador livre entre tele-in/out ou checkpoint tele pairando e uma contraparte correspondente
 
@@ -15475,6 +15547,9 @@ Teleport tile outline color
 
 Teleport tile outline width
 == Largura do contorno do tile de teletransporte
+
+Teleport to cursor
+== Teletransportar até o cursor
 
 Teleport yourself out of freeze if auto rescue mode is enabled, otherwise it will set position for rescuing if grounded and teleport you out of freeze if not (use sv_rescue 1 to enable this feature)
 == Teleporte-se para fora do congelamento se o modo de resgate automático estiver ativado, caso contrário, definirá a posição para resgate se estiver no chão e o teleportará para fora do congelamento se não estiver (use sv_rescue 1 para ativar este recurso)
@@ -16033,6 +16108,9 @@ To save all players in your team have to be alive and not in '/spec'
 
 Toast uses UiTokens + QmMotion slide
 == Toast usa UiTokens + slide QmMotion
+
+Together
+== Juntos
 
 Toggle auto camera
 == Alternar câmera automática
@@ -18278,38 +18356,6 @@ Hook
 [Direct touch input]
 Relative aim
 == Mira relativa
-
-[Editor]
-Use Shift+Mouse wheel up/down to adjust the angle.
-== Use Shift+Mouse wheel up/down to adjust the angle.
-
-[Editor]
-Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
-== Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
-
-[Editor curve type abbreviation]
-B
-== B
-
-[Editor curve type abbreviation]
-F
-== F
-
-[Editor curve type abbreviation]
-L
-== L
-
-[Editor curve type abbreviation]
-M
-== M
-
-[Editor curve type abbreviation]
-N
-== N
-
-[Editor curve type abbreviation]
-S
-== S
 
 [Friend auto follow]
 Follow this friend across servers

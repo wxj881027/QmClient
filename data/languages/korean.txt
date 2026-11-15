@@ -232,6 +232,9 @@
 '%s' locked your team. After the race starts, killing will kill everyone in your team.
 == '%s'가 당신의 팀을 잠갔습니다. 레이스가 시작된 후 죽으면 팀 전체가 사망합니다.
 
+'%s' not bound.
+== '%s'이(가) 바인딩되지 않았습니다.
+
 '%s' unlocked your team.
 == '%s'가 당신의 팀 잠금을 해제했습니다.
 
@@ -1913,6 +1916,9 @@ Bottom right
 Bounce
 == 바운스
 
+Bouncy
+== 탄성
+
 Bound functions
 == 지정된 기능
 
@@ -1987,6 +1993,9 @@ Buttons with this behavior execute console commands like regular key binds.
 
 Buttons with this behavior execute some predefined actions.
 == 이 동작을 가진 버튼은 미리 정의된 몇 가지 작업을 실행합니다.
+
+By row
+== 줄마다
 
 c = Player position
 == c = 플레이어 위치
@@ -2119,6 +2128,9 @@ Card opacity
 
 Card shape is shared with the rest of the interface and lives in "Interface theme".
 == 카드 모양은 인터페이스 전체와 공유되며 "인터페이스 테마"에 있습니다.
+
+Cascade
+== 느린 물결
 
 Category
 == 카테고리
@@ -3139,6 +3151,12 @@ Console selected search match color
 
 Console settings
 == 콘솔 설정
+
+Console slide
+== 콘솔 슬라이드
+
+Console slide feel: 0=soft, 1=standard, 2=bouncy
+== 콘솔 슬라이드 느낌: 0 = 부드러움, 1 = 표준, 2 = 탄성
 
 Console string color
 == 콘솔: 문자열 색상
@@ -4290,7 +4308,7 @@ Downloading map
 == 맵 다운로드 중
 
 Downloading map %d%%
-== Downloading map %d%%
+== 맵 다운로드 중: %d%%
 
 Downloading rank 1 demo
 == 랭크 1 데모 다운로드 중
@@ -4502,6 +4520,9 @@ Dummy is allowed on this server.
 Dummy is currently connected.
 == 더미가 현재 연결되어 있습니다.
 
+Dummy is not connected
+== 더미가 연결되어 있지 않습니다
+
 Dummy jump
 == 더미 점프
 
@@ -4705,6 +4726,9 @@ Elastic
 
 Elastic back
 == 탄력적 되돌림
+
+Elastic feel of the ESC menu sliding in from the top
+== ESC 메뉴가 위에서 내려올 때의 탄성
 
 Elements too close to the edges overlap on ultrawide screens.
 == 울트라와이드 화면에서는 가장자리에 너무 가까운 요소가 겹칩니다.
@@ -5318,6 +5342,9 @@ Entity wall outline opacity
 entity_bg (Workshop)
 == entity_bg (Workshop)
 
+Entrance overshoot
+== 등장 오버슈트
+
 Entries in it will fall back to none.
 == 포함된 항목은 none으로 돌아갑니다.
 
@@ -5350,6 +5377,12 @@ Error saving settings
 
 Error saving touch controls
 == 터치 컨트롤 저장 오류
+
+ESC menu slide
+== ESC 메뉴 슬라이드
+
+ESC menu slide feel: 0=soft, 1=standard, 2=bouncy
+== ESC 메뉴 슬라이드 감각: 0=부드럽게, 1=표준, 2=탄성
 
 ESC replay minutes
 == ESC 리플레이 분
@@ -5517,7 +5550,7 @@ External sites are not controlled by the client.
 == 외부 사이트는 클라이언트가 관리하지 않습니다.
 
 Extra console log line spacing in pixels
-== Extra console log line spacing in pixels
+== 콘솔 로그 추가 줄 간격(픽셀)
 
 Extra vertical spacing between chat lines in pixels (0 = default)
 == 채팅 줄 사이의 추가 세로 간격(픽셀) (0 = 기본값)
@@ -5743,6 +5776,9 @@ File for storing ranks if sv_use_sql is disabled or as backup SQL server.
 
 File information
 == 파일 정보
+
+File to write the server's port to (used when running a server from the client)
+== 서버 포트를 기록할 파일(클라이언트에서 서버를 실행할 때 사용)
 
 File with announcements, one per line.
 == 공지사항이 포함된 파일, 한 줄에 하나씩
@@ -6830,6 +6866,9 @@ Hold gun higher like TW 0.6.1 and earlier
 Hold left click for free camera
 == 자유 카메라를 위해 왼쪽 클릭 유지
 
+Hold Shift to be more precise.
+== Shift를 누르면 더 정밀하게 조정할 수 있습니다.
+
 Hold still
 == 정지
 
@@ -6921,7 +6960,7 @@ Hostname of DNSBL provider for IP verification
 == IP 확인용 DNSBL 제공자 호스트명
 
 Hover feedback style: 0 = scale, 1 = border highlight
-== Hover feedback style: 0 = scale, 1 = border highlight
+== 호버 피드백 스타일: 0 = 확대, 1 = 테두리 강조
 
 Hover for tooltip
 == 툴팁을 보려면 마우스를 올리세요
@@ -7510,6 +7549,9 @@ Jelly strength
 
 Jitter
 == 지터
+
+Join
+== 참가
 
 Join a team before inviting another player
 == 다른 플레이어를 초대하기 전에 팀에 참가하세요
@@ -8417,6 +8459,9 @@ Map danger border
 Map data unavailable; server votes remain available
 == 맵 정보를 불러올 수 없습니다. 서버 투표는 이용할 수 있습니다
 
+Map download failed, click to retry
+== 맵 다운로드에 실패했습니다. 클릭하여 다시 시도하세요
+
 Map download send window
 == 맵 다운로드 전송 창
 
@@ -8715,7 +8760,7 @@ Menu background
 == 메뉴 배경
 
 Menu button hover
-== Menu button hover
+== 메뉴 버튼 호버
 
 Menu camera rotation radius
 == 메뉴 카메라 회전 반경
@@ -8737,9 +8782,6 @@ Menu music
 
 Menu opacity (0-100)
 == 메뉴 불투명도 (Menu opacity 0-100)
-
-Menu opened. Press Esc key again to close menu.
-== 메뉴가 열렸습니다. 메뉴를 닫으려면 Esc 키를 다시 누르세요.
 
 Menu option - normal
 == 메뉴 옵션 - 일반
@@ -10056,7 +10098,7 @@ Outgoing translation target language code
 == 발신 번역 대상 언어 코드
 
 Outline
-== Outline
+== 외곽선
 
 Outline global opacity
 == 외곽선 전체 불투명도
@@ -10820,6 +10862,12 @@ Practice mode enabled for your team, happy practicing!
 Practice mode is disabled
 == 연습 모드가 비활성화되었습니다
 
+Practice: teleport the other tee to your cursor
+== 연습: 다른 티를 커서 위치로 순간이동
+
+Practice: teleport yourself to your cursor
+== 연습: 자신을 커서 위치로 순간이동
+
 Pre-warm settings page on startup and menu idle
 == 시작 및 메뉴 대기 시 설정 페이지 미리 로드
 
@@ -10921,6 +10969,9 @@ Press "Save" after any change: the title and chat style are stored on your accou
 
 Press "Select map" to choose a file, check the target server and player shown for the upload, then press "Upload map"; "Cancel" stops it.
 == 맵 선택으로 파일을 고르고 업로드 대상 서버와 플레이어를 확인한 뒤 맵 업로드를 누릅니다. 취소로 멈출 수 있습니다.
+
+Press '%s' to show cursor.
+== '%s'을(를) 눌러 커서를 표시하세요.
 
 Press a key…
 == 키를 누르세요…
@@ -12587,6 +12638,15 @@ Scoreboard
 Scoreboard cursor
 == 점수판 커서
 
+Scoreboard entrance
+== 점수판 등장
+
+Scoreboard entrance feel: 0=soft, 1=standard, 2=bouncy
+== 점수판 등장 감각: 0=부드럽게, 1=표준, 2=탄성
+
+Scoreboard entrance overshoot in percent (10 = 110% peak)
+== 점수판 등장 오버슈트 비율 (10 = 최대 110%)
+
 Scoreboard playtime
 == 스코어보드 플레이 시간
 
@@ -12601,6 +12661,12 @@ Scoreboard score lookup
 
 Scoreboard sort mode (0=Score, 1=Points)
 == 점수판 정렬 모드 (0=점수, 1=분)
+
+Scoreboard text entry
+== 점수판 텍스트 등장
+
+Scoreboard text entry: 0=together, 1=by row, 2=slow cascade
+== 점수판 텍스트 등장: 0=함께, 1=줄마다, 2=느린 물결
 
 Scoreboard, chat, spectating
 == 점수판, 채팅, 관전
@@ -14270,9 +14336,6 @@ Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dyn
 Shows the bind wheel layout and which slot is currently selected.
 == 바인드 휠 배치와 현재 선택된 슬롯을 보여 줍니다.
 
-Shows the credits of the DDNet mod
-== DDNet 모드의 크레딧 표시
-
 Shows the current song's lyric line in the Dynamic Island and lets you pick which music app supplies it.
 == 현재 곡의 가사 한 줄을 Dynamic Island에 표시하며, 어느 음악 앱에서 가져올지 고를 수 있습니다.
 
@@ -14570,6 +14633,9 @@ SodaMusic hook heartbeat timeout (milliseconds)
 SodaMusic hook helper path (empty=beside QmClient)
 == SodaMusic Hook 도우미 경로(비워 두면 QmClient과 같은 디렉터리)
 
+Soft
+== 부드럽게
+
 Solid
 == 단색
 
@@ -14818,6 +14884,9 @@ Squishy Tee deformation intensity
 
 Standalone
 == 별도 표시
+
+Standard
+== 표준
 
 Star
 == 별
@@ -15446,6 +15515,9 @@ Tele
 Teleport all weapons (deprecated, use special entities instead)
 == 모든 무기 순간이동 (사용 중단됨, 대신 특수 엔티티 사용)
 
+Teleport dummy to cursor
+== 더미를 커서 위치로 순간이동
+
 Teleport free spectator camera between hovered tele-in/out or checkpoint tele and a matching counterpart
 == 마우스를 올린 텔레포트 입구/출구 또는 체크포인트 텔레포트와 그에 대응하는 지점 사이에서 자유 관전 카메라를 순간이동합니다
 
@@ -15475,6 +15547,9 @@ Teleport tile outline color
 
 Teleport tile outline width
 == 텔레포트 타일 윤곽선 두께
+
+Teleport to cursor
+== 커서 위치로 순간이동
 
 Teleport yourself out of freeze if auto rescue mode is enabled, otherwise it will set position for rescuing if grounded and teleport you out of freeze if not (use sv_rescue 1 to enable this feature)
 == 자동 구조 모드가 활성화된 경우 동결 상태에서 순간이동합니다. 그렇지 않은 경우, 땅에 닿았을 때 구조 위치를 설정하고 닿지 않았을 때 동결에서 순간이동합니다 (sv_rescue 1 로 이 기능을 활성화하세요)
@@ -16033,6 +16108,9 @@ To save all players in your team have to be alive and not in '/spec'
 
 Toast uses UiTokens + QmMotion slide
 == Toast는 UiTokens + QmMotion 슬라이드 효과를 사용합니다.
+
+Together
+== 함께
 
 Toggle auto camera
 == 자동 카메라 전환
@@ -18278,38 +18356,6 @@ Hook
 [Direct touch input]
 Relative aim
 == 상대 조준
-
-[Editor]
-Use Shift+Mouse wheel up/down to adjust the angle.
-== Use Shift+Mouse wheel up/down to adjust the angle.
-
-[Editor]
-Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
-== Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
-
-[Editor curve type abbreviation]
-B
-== B
-
-[Editor curve type abbreviation]
-F
-== F
-
-[Editor curve type abbreviation]
-L
-== L
-
-[Editor curve type abbreviation]
-M
-== M
-
-[Editor curve type abbreviation]
-N
-== N
-
-[Editor curve type abbreviation]
-S
-== S
 
 [Friend auto follow]
 Follow this friend across servers

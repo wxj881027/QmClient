@@ -232,6 +232,9 @@
 '%s' locked your team. After the race starts, killing will kill everyone in your team.
 == '%s' заблокировал(а) вашу команду. После старта заезда убийство убьёт всех в команде.
 
+'%s' not bound.
+== '%s' не назначена.
+
 '%s' unlocked your team.
 == '%s' разблокировал(а) вашу команду.
 
@@ -1913,6 +1916,9 @@ Bottom right
 Bounce
 == Отскок
 
+Bouncy
+== Пружинисто
+
 Bound functions
 == Назначенные действия
 
@@ -1987,6 +1993,9 @@ Buttons with this behavior execute console commands like regular key binds.
 
 Buttons with this behavior execute some predefined actions.
 == Кнопки с таким поведением выполняют некоторые предопределённые действия.
+
+By row
+== По строкам
 
 c = Player position
 == c = Позиция игрока
@@ -2119,6 +2128,9 @@ Card opacity
 
 Card shape is shared with the rest of the interface and lives in "Interface theme".
 == Форма карточек общая для всего интерфейса и находится в «Теме интерфейса».
+
+Cascade
+== Волна
 
 Category
 == Категория
@@ -3139,6 +3151,12 @@ Console selected search match color
 
 Console settings
 == Настройки консоли
+
+Console slide
+== Скольжение консоли
+
+Console slide feel: 0=soft, 1=standard, 2=bouncy
+== Ощущение выдвижения консоли: 0 = мягкое, 1 = стандартное, 2 = упругое
 
 Console string color
 == Консоль: цвет строк
@@ -4290,7 +4308,7 @@ Downloading map
 == Загрузка карты
 
 Downloading map %d%%
-== Downloading map %d%%
+== Загрузка карты: %d%%
 
 Downloading rank 1 demo
 == Загрузка демо ранга 1
@@ -4502,6 +4520,9 @@ Dummy is allowed on this server.
 Dummy is currently connected.
 == Дамми в данный момент подключён.
 
+Dummy is not connected
+== Дамми не подключён
+
 Dummy jump
 == Прыжок дамми
 
@@ -4705,6 +4726,9 @@ Elastic
 
 Elastic back
 == Эластичный с отскоком
+
+Elastic feel of the ESC menu sliding in from the top
+== Упругость появления меню ESC сверху
 
 Elements too close to the edges overlap on ultrawide screens.
 == Элементы, стоящие слишком близко к краям, на ультрашироких экранах перекрываются.
@@ -5318,6 +5342,9 @@ Entity wall outline opacity
 entity_bg (Workshop)
 == entity_bg (Мастерская)
 
+Entrance overshoot
+== Перелёт при появлении
+
 Entries in it will fall back to none.
 == Записи из неё вернутся в none.
 
@@ -5350,6 +5377,12 @@ Error saving settings
 
 Error saving touch controls
 == Ошибка сохранения сенсорного управления
+
+ESC menu slide
+== Скольжение меню ESC
+
+ESC menu slide feel: 0=soft, 1=standard, 2=bouncy
+== Ощущение скольжения меню ESC: 0=мягко, 1=стандарт, 2=пружинисто
 
 ESC replay minutes
 == Минуты повтора ESC
@@ -5517,7 +5550,7 @@ External sites are not controlled by the client.
 == Внешние сайты не контролируются клиентом.
 
 Extra console log line spacing in pixels
-== Extra console log line spacing in pixels
+== Дополнительный интервал строк журнала консоли в пикселях
 
 Extra vertical spacing between chat lines in pixels (0 = default)
 == Дополнительный вертикальный интервал между строками чата в пикселях (0 = по умолчанию)
@@ -5743,6 +5776,9 @@ File for storing ranks if sv_use_sql is disabled or as backup SQL server.
 
 File information
 == Информация о файле
+
+File to write the server's port to (used when running a server from the client)
+== Файл для записи порта сервера (используется при запуске сервера из клиента)
 
 File with announcements, one per line.
 == Файл с объявлениями, по одному на строку.
@@ -6830,6 +6866,9 @@ Hold gun higher like TW 0.6.1 and earlier
 Hold left click for free camera
 == Зажмите левую кнопку мыши для свободной камеры
 
+Hold Shift to be more precise.
+== Удерживайте Shift для более точной настройки.
+
 Hold still
 == Стоп-кадр
 
@@ -6921,7 +6960,7 @@ Hostname of DNSBL provider for IP verification
 == Имя хоста провайдера DNSBL для проверки IP
 
 Hover feedback style: 0 = scale, 1 = border highlight
-== Hover feedback style: 0 = scale, 1 = border highlight
+== Стиль отклика при наведении: 0 = масштабирование, 1 = подсветка рамки
 
 Hover for tooltip
 == Наведите для подсказки
@@ -7510,6 +7549,9 @@ Jelly strength
 
 Jitter
 == Джиттер
+
+Join
+== Присоединиться
 
 Join a team before inviting another player
 == Вступите в команду перед приглашением другого игрока
@@ -8417,6 +8459,9 @@ Map danger border
 Map data unavailable; server votes remain available
 == Данные карт недоступны; голосования сервера доступны
 
+Map download failed, click to retry
+== Не удалось загрузить карту, нажмите для повторной попытки
+
 Map download send window
 == Окно отправки загрузки карты
 
@@ -8715,7 +8760,7 @@ Menu background
 == Фон меню
 
 Menu button hover
-== Menu button hover
+== Наведение на кнопку меню
 
 Menu camera rotation radius
 == Радиус вращения камеры меню
@@ -8737,9 +8782,6 @@ Menu music
 
 Menu opacity (0-100)
 == Непрозрачность меню (0-100)
-
-Menu opened. Press Esc key again to close menu.
-== Меню открыто. Нажмите Esc снова, чтобы закрыть меню.
 
 Menu option - normal
 == Пункт меню - обычный
@@ -10056,7 +10098,7 @@ Outgoing translation target language code
 == Код целевого языка для исходящего перевода
 
 Outline
-== Outline
+== Контур
 
 Outline global opacity
 == Глобальная непрозрачность контуров
@@ -10820,6 +10862,12 @@ Practice mode enabled for your team, happy practicing!
 Practice mode is disabled
 == Режим тренировки отключён
 
+Practice: teleport the other tee to your cursor
+== Практика: переместить другого ти к курсору
+
+Practice: teleport yourself to your cursor
+== Практика: переместить себя к курсору
+
 Pre-warm settings page on startup and menu idle
 == Прогревать страницу настроек при запуске и простое в меню
 
@@ -10921,6 +10969,9 @@ Press "Save" after any change: the title and chat style are stored on your accou
 
 Press "Select map" to choose a file, check the target server and player shown for the upload, then press "Upload map"; "Cancel" stops it.
 == Нажмите выбрать карту, проверьте целевой сервер и игрока для загрузки, затем нажмите загрузить карту; отмена остановит её.
+
+Press '%s' to show cursor.
+== Нажмите '%s', чтобы показать курсор.
 
 Press a key…
 == Нажмите клавишу…
@@ -12587,6 +12638,15 @@ Scoreboard
 Scoreboard cursor
 == Курсор таблицы лидеров
 
+Scoreboard entrance
+== Появление табло
+
+Scoreboard entrance feel: 0=soft, 1=standard, 2=bouncy
+== Ощущение появления табло: 0=мягко, 1=стандарт, 2=пружинисто
+
+Scoreboard entrance overshoot in percent (10 = 110% peak)
+== Перелёт табло при появлении в процентах (10 = пик 110%)
+
 Scoreboard playtime
 == Время игры в таблице
 
@@ -12601,6 +12661,12 @@ Scoreboard score lookup
 
 Scoreboard sort mode (0=Score, 1=Points)
 == Режим сортировки таблицы лидеров (0=очки, 1=фрагменты)
+
+Scoreboard text entry
+== Появление текста табло
+
+Scoreboard text entry: 0=together, 1=by row, 2=slow cascade
+== Появление текста табло: 0=сразу, 1=по строкам, 2=медленная волна
 
 Scoreboard, chat, spectating
 == таблица лидеров, чат, наблюдение
@@ -14270,9 +14336,6 @@ Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dyn
 Shows the bind wheel layout and which slot is currently selected.
 == Показывает раскладку колеса привязок и выбранную ячейку.
 
-Shows the credits of the DDNet mod
-== Показывает титры мода DDNet
-
 Shows the current song's lyric line in the Dynamic Island and lets you pick which music app supplies it.
 == Показывает строку текста текущей песни в Dynamic Island и позволяет выбрать, какое музыкальное приложение её передаёт.
 
@@ -14570,6 +14633,9 @@ SodaMusic hook heartbeat timeout (milliseconds)
 SodaMusic hook helper path (empty=beside QmClient)
 == Путь к помощнику SodaMusic Hook (пусто = рядом с QmClient)
 
+Soft
+== Мягко
+
 Solid
 == Сплошной
 
@@ -14818,6 +14884,9 @@ Squishy Tee deformation intensity
 
 Standalone
 == Отдельно
+
+Standard
+== Стандарт
 
 Star
 == Звезда
@@ -15446,6 +15515,9 @@ Tele
 Teleport all weapons (deprecated, use special entities instead)
 == Телепорт всего оружия (устарело, используйте вместо этого специальные сущности)
 
+Teleport dummy to cursor
+== Переместить дамми к курсору
+
 Teleport free spectator camera between hovered tele-in/out or checkpoint tele and a matching counterpart
 == Телепортировать свободную камеру наблюдателя между наведённым телепортом входа/выхода или чекпоинтом и соответствующим объектом
 
@@ -15475,6 +15547,9 @@ Teleport tile outline color
 
 Teleport tile outline width
 == Ширина контура тайлов телепорта
+
+Teleport to cursor
+== Переместить к курсору
 
 Teleport yourself out of freeze if auto rescue mode is enabled, otherwise it will set position for rescuing if grounded and teleport you out of freeze if not (use sv_rescue 1 to enable this feature)
 == Телепортироваться из заморозки, если включён режим автоспасения; в противном случае установит позицию для спасения, если на земле, и телепортирует из заморозки, если нет (используйте sv_rescue 1 для включения этой функции)
@@ -16033,6 +16108,9 @@ To save all players in your team have to be alive and not in '/spec'
 
 Toast uses UiTokens + QmMotion slide
 == Toast использует UiTokens + слайд QmMotion
+
+Together
+== Сразу
 
 Toggle auto camera
 == Переключить авто-камеру
@@ -18278,38 +18356,6 @@ Hook
 [Direct touch input]
 Relative aim
 == Относительное прицеливание
-
-[Editor]
-Use Shift+Mouse wheel up/down to adjust the angle.
-== Use Shift+Mouse wheel up/down to adjust the angle.
-
-[Editor]
-Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
-== Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
-
-[Editor curve type abbreviation]
-B
-== B
-
-[Editor curve type abbreviation]
-F
-== F
-
-[Editor curve type abbreviation]
-L
-== L
-
-[Editor curve type abbreviation]
-M
-== M
-
-[Editor curve type abbreviation]
-N
-== N
-
-[Editor curve type abbreviation]
-S
-== S
 
 [Friend auto follow]
 Follow this friend across servers

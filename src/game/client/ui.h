@@ -824,6 +824,7 @@ private:
 	CUiV2AnimationRuntime *m_pQmAnimationRuntime = nullptr;
 	// 气泡由 CUi 持有，生命周期与 UI 一致；配置页、服务器列表与通用控件共用同一实例。
 	mutable CTooltips m_Tooltips;
+	bool m_TooltipsInitialized = false;
 	bool m_CardLabelHintsEnabled = false;
 	SUiTheme m_QmControlTheme{};
 	std::array<unsigned, 6> m_aQmControlThemeConfig{};
@@ -1192,7 +1193,11 @@ public:
 	void SetDropDownFontSize(float FontSize) { m_DropDownFontSize = FontSize; }
 	void SetQmAnimationRuntime(CUiV2AnimationRuntime *pRuntime) { m_pQmAnimationRuntime = pRuntime; }
 	CUiV2AnimationRuntime *QmAnimationRuntime() const { return m_pQmAnimationRuntime; }
-	void InitTooltips(CGameClient *pClient) { m_Tooltips.OnInterfacesInit(pClient); }
+	void InitTooltips(CGameClient *pClient)
+	{
+		m_Tooltips.OnInterfacesInit(pClient);
+		m_TooltipsInitialized = true;
+	}
 	CTooltips &Tooltips() { return m_Tooltips; }
 	const CTooltips &Tooltips() const { return m_Tooltips; }
 	bool CardLabelHintsEnabled() const { return m_CardLabelHintsEnabled; }
@@ -1208,7 +1213,7 @@ public:
 	// FontSize <= 0 表示按提示令牌取字号：设置页用紧凑小字，页面外用 tooltip 令牌，
 	// 与普通气泡同源，避免调用点自带一个和全局不一致的魔数。
 	void DoSmallTooltip(const void *pId, const CUIRect *pNearRect, const char *pText, float FontSize = -1.0f, float WidthHint = -1.0f);
-	CTooltips *QmTooltips() const { return const_cast<CTooltips *>(&m_Tooltips); }
+	CTooltips *QmTooltips() const { return m_TooltipsInitialized ? const_cast<CTooltips *>(&m_Tooltips) : nullptr; }
 	const SUiTheme &QmControlTheme();
 	float DropDownFontSize() const { return m_DropDownFontSize; }
 	void Update();

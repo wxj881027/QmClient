@@ -264,6 +264,8 @@ namespace qm_ui_test
 			m_pUiKernel = std::make_unique<CRealUiTestKernel>(pGraphics, m_pText.get(), UiInput(), UiClient());
 			m_Ui.Init(m_pUiKernel.get());
 			m_Ui.SetQmAnimationRuntime(&m_AnimRuntime);
+			// 独立 UI 目标把提示生命周期隔离为可替换边界；启用标签解析，不创建真实 owner。
+			m_Ui.InitTooltips(nullptr);
 			if(auto *pTestClient = dynamic_cast<qm_ui_test::CTestUiClient *>(UiClient()))
 				pTestClient->AttachAnimRuntime(&m_AnimRuntime);
 			m_UiInitialized = true;

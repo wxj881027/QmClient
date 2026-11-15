@@ -4832,13 +4832,13 @@ simplified_chinese = "阻挡器：你可以使用钩子和武器穿过它。但�
 key = "SUPER JUMP OFF: You don't have unlimited air jumps."
 context = "Editor"
 [message.translations]
-simplified_chinese = "关闭无限跳：你没有无限跳。"
+simplified_chinese = "超级跳跃关闭：你没有无限空中跳。"
 
 [[message]]
 key = "SUPER JUMP: You have unlimited air jumps."
 context = "Editor"
 [message.translations]
-simplified_chinese = "无限跳：你有无限跳！"
+simplified_chinese = "超级跳跃：你有无限空中跳！"
 
 [[message]]
 key = "Switch copy"
@@ -6057,17 +6057,6 @@ key = "Collaboration connection lost; please try again"
 context = "Editor"
 [message.translations]
 simplified_chinese = "协作连接已断开，请重试"
-traditional_chinese = "協作連線已中斷，請重試"
-japanese = "共同編集の接続が切れました。もう一度お試しください"
-korean = "공동 편집 연결이 끊어졌습니다. 다시 시도하세요"
-russian = "Соединение для совместного редактирования потеряно; попробуйте ещё раз"
-german = "Verbindung zur Zusammenarbeit verloren; bitte erneut versuchen"
-spanish = "Se perdió la conexión de colaboración; inténtalo de nuevo"
-french = "Connexion de collaboration perdue ; veuillez réessayer"
-brazilian_portuguese = "Conexão de colaboração perdida; tente novamente"
-portuguese = "Ligação de colaboração perdida; tente novamente"
-turkish = "Ortak düzenleme bağlantısı koptu; tekrar deneyin"
-polish = "Utracono połączenie współpracy; spróbuj ponownie"
 
 [[message]]
 key = "Enter a server setting. Press Ctrl+Space or Ctrl+Shift+Space to complete at the cursor. Click All commands to browse every command without changing the text until you select one. If the IME reserves the shortcut, use the button."
@@ -6122,17 +6111,6 @@ key = "Follow remote placements"
 context = "Editor"
 [message.translations]
 simplified_chinese = "跟随其他协作者的放置"
-traditional_chinese = "跟隨其他協作者的放置"
-japanese = "他の共同編集者の配置に追従"
-korean = "다른 공동 편집자의 배치 따라가기"
-russian = "Следовать за размещением других участников"
-german = "Platzierungen anderer Mitwirkender folgen"
-spanish = "Seguir las colocaciones de otros colaboradores"
-french = "Suivre les placements des autres participants"
-brazilian_portuguese = "Acompanhar posicionamentos de outros colaboradores"
-portuguese = "Acompanhar colocações de outros colaboradores"
-turkish = "Diğer katılımcıların yerleştirmelerini takip et"
-polish = "Śledź elementy umieszczane przez innych współtwórców"
 
 [[message]]
 key = "Follow remote placements in the collaborative editor"
@@ -6149,3 +6127,69 @@ brazilian_portuguese = "Na edição colaborativa, mover a visão para a área on
 portuguese = "Na edição colaborativa, mover a vista para a área onde outros adicionam ou substituem conteúdo"
 turkish = "Ortak harita düzenlemede görünümü diğer katılımcıların içerik eklediği veya değiştirdiği alana taşı"
 polish = "Podczas wspólnej edycji mapy przenoś widok do obszaru, w którym inni dodają lub zastępują elementy"
+
+[[message]]
+key = "[Ctrl+Y] Redo the last undone action."
+context = "Editor"
+[message.translations]
+simplified_chinese = "[Ctrl+Y] 重做上一个被撤销的操作。"
+
+[[message]]
+key = "Redo"
+context = "Editor"
+[message.translations]
+simplified_chinese = "重做"
+
+[[message]]
+key = "Undo"
+context = "Editor"
+[message.translations]
+simplified_chinese = "撤销"
+
+[[message]]
+key = "Use Shift+Mouse wheel up/down to adjust the angle."
+context = "Editor"
+[message.translations]
+simplified_chinese = "按住 Shift 并向上/向下滚动鼠标滚轮可调整角度。"
+
+[[message]]
+key = "Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number."
+context = "Editor"
+[message.translations]
+simplified_chinese = "按住 Shift 并向上/向下滚动鼠标滚轮可调整图块编号。按 Ctrl+F 可将所有图块编号改为第一个未使用的编号。"
+
+[[message]]
+key = "B"
+context = "Editor curve type abbreviation"
+[message.translations]
+simplified_chinese = "B"
+
+[[message]]
+key = "F"
+context = "Editor curve type abbreviation"
+[message.translations]
+simplified_chinese = "F"
+
+[[message]]
+key = "L"
+context = "Editor curve type abbreviation"
+[message.translations]
+simplified_chinese = "L"
+
+[[message]]
+key = "M"
+context = "Editor curve type abbreviation"
+[message.translations]
+simplified_chinese = "M"
+
+[[message]]
+key = "N"
+context = "Editor curve type abbreviation"
+[message.translations]
+simplified_chinese = "N"
+
+[[message]]
+key = "S"
+context = "Editor curve type abbreviation"
+[message.translations]
+simplified_chinese = "S"

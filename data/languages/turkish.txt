@@ -232,6 +232,9 @@
 '%s' locked your team. After the race starts, killing will kill everyone in your team.
 == '%s', takımını kilitledi. Yarış başladıktan sonra öldürmek takımındaki herkesi öldürecek.
 
+'%s' not bound.
+== '%s' atanmamış.
+
 '%s' unlocked your team.
 == '%s', takımının kilidini açtı.
 
@@ -1913,6 +1916,9 @@ Bottom right
 Bounce
 == Sekme
 
+Bouncy
+== Yaylanmalı
+
 Bound functions
 == Atanmış işlevler
 
@@ -1987,6 +1993,9 @@ Buttons with this behavior execute console commands like regular key binds.
 
 Buttons with this behavior execute some predefined actions.
 == Bu davranışa sahip düğmeler, bazı önceden tanımlanmış eylemleri yürütür.
+
+By row
+== Satır satır
 
 c = Player position
 == c = Oyuncu konumu
@@ -2119,6 +2128,9 @@ Card opacity
 
 Card shape is shared with the rest of the interface and lives in "Interface theme".
 == Kart biçimi arayüzün geri kalanıyla ortaktır ve "Arayüz teması" içindedir.
+
+Cascade
+== Kademeli
 
 Category
 == Kategori
@@ -3139,6 +3151,12 @@ Console selected search match color
 
 Console settings
 == Konsol ayarları
+
+Console slide
+== Konsol kaydırması
+
+Console slide feel: 0=soft, 1=standard, 2=bouncy
+== Konsol kayma hissi: 0 = yumuşak, 1 = standart, 2 = esnek
 
 Console string color
 == Konsol: metin dizisi rengi
@@ -4290,7 +4308,7 @@ Downloading map
 == Harita indiriliyor
 
 Downloading map %d%%
-== Downloading map %d%%
+== Harita indiriliyor: %d%%
 
 Downloading rank 1 demo
 == Rank 1 demosu indiriliyor
@@ -4502,6 +4520,9 @@ Dummy is allowed on this server.
 Dummy is currently connected.
 == Dummy şu anda bağlı.
 
+Dummy is not connected
+== Dummy bağlı değil
+
 Dummy jump
 == Kukla zıplaması
 
@@ -4705,6 +4726,9 @@ Elastic
 
 Elastic back
 == Elastik geri tepme
+
+Elastic feel of the ESC menu sliding in from the top
+== ESC menüsünün üstten kayarken yaylanması
 
 Elements too close to the edges overlap on ultrawide screens.
 == Kenarlara çok yakın öğeler ultra geniş ekranlarda üst üste biner.
@@ -5318,6 +5342,9 @@ Entity wall outline opacity
 entity_bg (Workshop)
 == entity_bg（Workshop）
 
+Entrance overshoot
+== Girişte aşma
+
 Entries in it will fall back to none.
 == İçindeki kayıtlar none'a döner.
 
@@ -5350,6 +5377,12 @@ Error saving settings
 
 Error saving touch controls
 == Dokunmatik kontroller kaydedilirken hata
+
+ESC menu slide
+== ESC menüsü kaydırması
+
+ESC menu slide feel: 0=soft, 1=standard, 2=bouncy
+== ESC menüsü kayma hissi: 0=yumuşak, 1=standart, 2=yaylanmalı
 
 ESC replay minutes
 == ESC tekrar oynatma dakikası
@@ -5517,7 +5550,7 @@ External sites are not controlled by the client.
 == Dış siteler istemcinin denetiminde değildir.
 
 Extra console log line spacing in pixels
-== Extra console log line spacing in pixels
+== Konsol günlüğü için ek satır aralığı (piksel)
 
 Extra vertical spacing between chat lines in pixels (0 = default)
 == Sohbet satırları arasına ek dikey boşluk (piksel) (0 = varsayılan)
@@ -5743,6 +5776,9 @@ File for storing ranks if sv_use_sql is disabled or as backup SQL server.
 
 File information
 == Dosya bilgileri
+
+File to write the server's port to (used when running a server from the client)
+== Sunucu bağlantı noktasının yazılacağı dosya (istemciden sunucu başlatılırken kullanılır)
 
 File with announcements, one per line.
 == Duyuruları içeren dosya, her satırda bir tane.
@@ -6830,6 +6866,9 @@ Hold gun higher like TW 0.6.1 and earlier
 Hold left click for free camera
 == Serbest kamera için sol tıklamayı basılı tut
 
+Hold Shift to be more precise.
+== Daha hassas ayar için Shift tuşunu basılı tutun.
+
 Hold still
 == Sabit tut
 
@@ -6921,7 +6960,7 @@ Hostname of DNSBL provider for IP verification
 == IP doğrulaması için DNSBL sağlayıcısının ana bilgisayar adı
 
 Hover feedback style: 0 = scale, 1 = border highlight
-== Hover feedback style: 0 = scale, 1 = border highlight
+== Fare üzerine gelme geri bildirimi stili: 0 = ölçekleme, 1 = kenarlık vurgusu
 
 Hover for tooltip
 == İpucu için üzerine gel
@@ -7510,6 +7549,9 @@ Jelly strength
 
 Jitter
 == Titreşim
+
+Join
+== Katıl
 
 Join a team before inviting another player
 == Başka bir oyuncuyu davet etmeden önce bir takıma katıl
@@ -8417,6 +8459,9 @@ Map danger border
 Map data unavailable; server votes remain available
 == Harita verileri alınamıyor; sunucu oylamaları kullanılabilir
 
+Map download failed, click to retry
+== Harita indirilemedi, yeniden denemek için tıklayın
+
 Map download send window
 == Harita indirme gönderme penceresi
 
@@ -8715,7 +8760,7 @@ Menu background
 == Menü arka planı
 
 Menu button hover
-== Menu button hover
+== Menü düğmesi üzerine gelme
 
 Menu camera rotation radius
 == Menü kamera dönüş yarıçapı
@@ -8737,9 +8782,6 @@ Menu music
 
 Menu opacity (0-100)
 == Menü Opaklığı (0-100)
-
-Menu opened. Press Esc key again to close menu.
-== Menü açıldı. Menüyü kapatmak için Esc tuşuna tekrar basın.
 
 Menu option - normal
 == Menü seçeneği - normal
@@ -10056,7 +10098,7 @@ Outgoing translation target language code
 == Giden çeviri hedef dil kodu
 
 Outline
-== Outline
+== Ana hat
 
 Outline global opacity
 == Kontur genel opaklığı
@@ -10820,6 +10862,12 @@ Practice mode enabled for your team, happy practicing!
 Practice mode is disabled
 == Antrenman modu devre dışı
 
+Practice: teleport the other tee to your cursor
+== Alıştırma: diğer tee'yi imlecinize ışınla
+
+Practice: teleport yourself to your cursor
+== Alıştırma: kendinizi imlecinize ışınlayın
+
 Pre-warm settings page on startup and menu idle
 == Başlangıçta ve Menü Boştayken Ayarlar Sayfasını Önceden Yükle
 
@@ -10921,6 +10969,9 @@ Press "Save" after any change: the title and chat style are stored on your accou
 
 Press "Select map" to choose a file, check the target server and player shown for the upload, then press "Upload map"; "Cancel" stops it.
 == Dosya seçmek için harita seç düğmesine basın, yüklemenin hedef sunucusunu ve oyuncusunu kontrol edin, sonra haritayı yükle düğmesine basın; iptal durdurur.
+
+Press '%s' to show cursor.
+== İmleci göstermek için '%s' tuşuna basın.
 
 Press a key…
 == Bir tuşa basın…
@@ -12587,6 +12638,15 @@ Scoreboard
 Scoreboard cursor
 == Skor tablosu imleci
 
+Scoreboard entrance
+== Skor tablosu girişi
+
+Scoreboard entrance feel: 0=soft, 1=standard, 2=bouncy
+== Skor tablosu giriş hissi: 0=yumuşak, 1=standart, 2=yaylanmalı
+
+Scoreboard entrance overshoot in percent (10 = 110% peak)
+== Skor tablosu giriş aşma yüzdesi (10 = %110 tepe)
+
 Scoreboard playtime
 == Skor tablosunda oyun süresi
 
@@ -12601,6 +12661,12 @@ Scoreboard score lookup
 
 Scoreboard sort mode (0=Score, 1=Points)
 == Skor Tablosu Sıralama Modu (0=Puan, 1=Skor)
+
+Scoreboard text entry
+== Skor tablosu metin girişi
+
+Scoreboard text entry: 0=together, 1=by row, 2=slow cascade
+== Skor tablosu metin girişi: 0=hep birlikte, 1=satır satır, 2=yavaş kademeli
 
 Scoreboard, chat, spectating
 == skor tablosu, sohbet, izleme
@@ -14270,9 +14336,6 @@ Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dyn
 Shows the bind wheel layout and which slot is currently selected.
 == Komut çarkının yerleşimini ve seçili dilimi gösterir.
 
-Shows the credits of the DDNet mod
-== DDNet modunun jeneriklerini gösterir
-
 Shows the current song's lyric line in the Dynamic Island and lets you pick which music app supplies it.
 == Geçerli şarkının söz satırını Dynamic Island'da gösterir ve bunu hangi müzik uygulamasının sağlayacağını seçmenizi sağlar.
 
@@ -14570,6 +14633,9 @@ SodaMusic hook heartbeat timeout (milliseconds)
 SodaMusic hook helper path (empty=beside QmClient)
 == SodaMusic Hook yardımcı yolu (boş = QmClient'ın yanında)
 
+Soft
+== Yumuşak
+
 Solid
 == Düz
 
@@ -14818,6 +14884,9 @@ Squishy Tee deformation intensity
 
 Standalone
 == Ayrı göster
+
+Standard
+== Standart
 
 Star
 == Yıldız
@@ -15446,6 +15515,9 @@ Tele
 Teleport all weapons (deprecated, use special entities instead)
 == Tüm silahları ışınla (kullanımdan kaldırıldı, bunun yerine özel varlıklar kullanın)
 
+Teleport dummy to cursor
+== Dummy'yi imlece ışınla
+
 Teleport free spectator camera between hovered tele-in/out or checkpoint tele and a matching counterpart
 == Üzerinde durulan ışınlanma giriş/çıkışı veya kontrol noktası ışınlanması ile eşleşen bir karşılığı arasında serbest izleyici kamerasını ışınla
 
@@ -15475,6 +15547,9 @@ Teleport tile outline color
 
 Teleport tile outline width
 == Işınlanma döşemesi anahat genişliği
+
+Teleport to cursor
+== İmlece ışınla
 
 Teleport yourself out of freeze if auto rescue mode is enabled, otherwise it will set position for rescuing if grounded and teleport you out of freeze if not (use sv_rescue 1 to enable this feature)
 == Otomatik kurtarma modu etkinse kendini donmadan ışınla, aksi takdirde yerdeysen kurtarma için konum belirler ve değilsen seni donmadan ışınlar (bu özelliği etkinleştirmek için sv_rescue 1 kullanın)
@@ -16033,6 +16108,9 @@ To save all players in your team have to be alive and not in '/spec'
 
 Toast uses UiTokens + QmMotion slide
 == Toast, UiTokens + QmMotion kaydırma kullanır
+
+Together
+== Hep birlikte
 
 Toggle auto camera
 == Otomatik kamerayı aç/kapat
@@ -18278,38 +18356,6 @@ Hook
 [Direct touch input]
 Relative aim
 == Göreli nişan
-
-[Editor]
-Use Shift+Mouse wheel up/down to adjust the angle.
-== Use Shift+Mouse wheel up/down to adjust the angle.
-
-[Editor]
-Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
-== Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
-
-[Editor curve type abbreviation]
-B
-== B
-
-[Editor curve type abbreviation]
-F
-== F
-
-[Editor curve type abbreviation]
-L
-== L
-
-[Editor curve type abbreviation]
-M
-== M
-
-[Editor curve type abbreviation]
-N
-== N
-
-[Editor curve type abbreviation]
-S
-== S
 
 [Friend auto follow]
 Follow this friend across servers

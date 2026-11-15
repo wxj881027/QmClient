@@ -673,7 +673,7 @@ void CConfigManager::Init()
 	m_pConsole->Register("reset", "s[config]", CFGFLAG_SERVER | CFGFLAG_CLIENT | CFGFLAG_STORE, Con_Reset, this, "Reset a config to its default value");
 	m_pConsole->Register("toggle", "s[config] s[value 1] s[value 2]", CFGFLAG_SERVER | CFGFLAG_CLIENT, Con_Toggle, this, "Toggle config value");
 	m_pConsole->Register("+toggle", "s[config] s[value 1] s[value 2]", CFGFLAG_CLIENT, Con_ToggleStroke, this, "Toggle config value via keypress");
-	m_pConsole->Register("+toggle_restore", "s[config-option] s[value]", CFGFLAG_CLIENT, Con_ToggleRestore, this, "Temporarily set a config value while pressed");
+	m_pConsole->Register("+toggle_restore", "s[config] s[value]", CFGFLAG_CLIENT, Con_ToggleRestore, this, "Temporarily set a config value while pressed");
 }
 
 void CConfigManager::Reset(const char *pScriptName)
@@ -1197,9 +1197,7 @@ void CConfigManager::Con_ToggleRestore(IConsole::IResult *pResult, void *pUserDa
 		return;
 	}
 
-	char aBuf[IConsole::CMDLINE_LENGTH + 32];
-	str_format(aBuf, sizeof(aBuf), "Invalid config variable: '%s'", pScriptName);
-	pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "config", aBuf);
+	log_error("config", "Invalid config variable: '%s'", pScriptName);
 }
 
 IConfigManager *CreateConfigManager() { return new CConfigManager; }

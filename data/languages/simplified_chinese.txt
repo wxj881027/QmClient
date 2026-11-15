@@ -232,6 +232,9 @@
 '%s' locked your team. After the race starts, killing will kill everyone in your team.
 == '%s' 锁定了你们的队伍。比赛开始后，任何人使用 kill 都会导致整队死亡
 
+'%s' not bound.
+== “%s”未绑定。
+
 '%s' unlocked your team.
 == '%s' 解锁了你们的队伍
 
@@ -1970,6 +1973,9 @@ Bottom right
 Bounce
 == 弹跳
 
+Bouncy
+== 弹性
+
 Bound functions
 == 已绑定功能
 
@@ -2050,6 +2056,9 @@ Buttons with this behavior execute console commands like regular key binds.
 
 Buttons with this behavior execute some predefined actions.
 == 具有此行为的按键会执行部分预设动作。
+
+By row
+== 逐行
 
 Bytes in the generated bind line; over the limit the server rejects it.
 == 生成的 bind 指令有多少字节；超过上限服务器会拒收。
@@ -2200,6 +2209,9 @@ Card opacity
 
 Card shape is shared with the rest of the interface and lives in "Interface theme".
 == 卡片形状与界面其它部分共用，在「界面主题」里调整。
+
+Cascade
+== 慢速波浪
 
 Category
 == 分类
@@ -3238,6 +3250,12 @@ Console selected search match color
 
 Console settings
 == 控制台设置
+
+Console slide
+== 控制台滑入手感
+
+Console slide feel: 0=soft, 1=standard, 2=bouncy
+== 控制台滑入手感：0 = 柔和，1 = 标准，2 = 弹跳
 
 Console string color
 == 控制台：字符串颜色
@@ -4422,7 +4440,7 @@ Downloading map
 == 正在下载地图
 
 Downloading map %d%%
-== Downloading map %d%%
+== 正在下载地图：%d%%
 
 Downloading rank 1 demo
 == 正在下载 Rank 1 演示
@@ -4652,6 +4670,9 @@ Dummy is allowed on this server.
 Dummy is currently connected.
 == 分身当前已连接。
 
+Dummy is not connected
+== 分身未连接
+
 Dummy jump
 == 分身跳
 
@@ -4864,6 +4885,9 @@ Elastic
 
 Elastic back
 == 弹性回弹
+
+Elastic feel of the ESC menu sliding in from the top
+== ESC 菜单从顶部滑入时的弹性手感
 
 Elements too close to the edges overlap on ultrawide screens.
 == 在超宽屏上，太靠近屏幕边缘的元素会互相重叠。
@@ -5480,6 +5504,9 @@ Entity wall outline opacity
 entity_bg (Workshop)
 == entity_bg（Workshop）
 
+Entrance overshoot
+== 入场过冲
+
 Entries in it will fall back to none.
 == 里面的条目会回到 none。
 
@@ -5512,6 +5539,12 @@ Error saving settings
 
 Error saving touch controls
 == 保存触控设置错误
+
+ESC menu slide
+== ESC 菜单滑入手感
+
+ESC menu slide feel: 0=soft, 1=standard, 2=bouncy
+== ESC 菜单滑入手感：0=柔和，1=标准，2=弹性
 
 ESC replay minutes
 == ESC 保存回放分钟数
@@ -5697,7 +5730,7 @@ External sites are not controlled by the client.
 == 外部网站不受客户端控制。
 
 Extra console log line spacing in pixels
-== Extra console log line spacing in pixels
+== 控制台日志的额外行距（像素）
 
 Extra vertical spacing between chat lines in pixels (0 = default)
 == 聊天行与行之间的额外垂直间距（像素）（0 = 默认）
@@ -5932,6 +5965,9 @@ File for storing ranks if sv_use_sql is disabled or as backup SQL server.
 
 File information
 == 文件信息
+
+File to write the server's port to (used when running a server from the client)
+== 写入服务器端口的文件（从客户端启动服务器时使用）
 
 File with announcements, one per line.
 == 包含公告的文件，每行一个
@@ -7064,6 +7100,9 @@ Hold gun higher like TW 0.6.1 and earlier
 Hold left click for free camera
 == 按住左键自由镜头
 
+Hold Shift to be more precise.
+== 按住 Shift 可进行更精确的调整。
+
 Hold still
 == 停住
 
@@ -7161,7 +7200,7 @@ Hostname of DNSBL provider for IP verification
 == 用于 IP 验证的 DNSBL 提供商的主机名
 
 Hover feedback style: 0 = scale, 1 = border highlight
-== Hover feedback style: 0 = scale, 1 = border highlight
+== 悬停反馈样式：0 = 缩放，1 = 边框高亮
 
 Hover for tooltip
 == 悬停显示提示
@@ -7768,6 +7807,9 @@ Jelly strength
 
 Jitter
 == 抖动
+
+Join
+== 进入
 
 Join a team before inviting another player
 == 请先加入队伍，再邀请其他玩家
@@ -8732,6 +8774,9 @@ Map danger border
 Map data unavailable; server votes remain available
 == 地图数据暂不可用，仍可使用服务器投票
 
+Map download failed, click to retry
+== 地图下载失败，点击重试
+
 Map download send window
 == 地图下载发送窗口
 
@@ -9033,7 +9078,7 @@ Menu background
 == 菜单背景
 
 Menu button hover
-== Menu button hover
+== 菜单按钮悬停
 
 Menu camera rotation radius
 == 菜单相机旋转半径
@@ -9055,9 +9100,6 @@ Menu music
 
 Menu opacity (0-100)
 == 菜单不透明度（0-100）
-
-Menu opened. Press Esc key again to close menu.
-== 菜单已打开，再次点击 Esc 以关闭
 
 Menu option - normal
 == 菜单选项 - 普通
@@ -10470,7 +10512,7 @@ Outgoing translation target language code
 == 出站翻译目标语言代码
 
 Outline
-== Outline
+== 描边
 
 Outline global opacity
 == 轮廓全局透明度
@@ -11258,6 +11300,12 @@ Practice mode enabled for your team, happy practicing!
 Practice mode is disabled
 == 本服务器已禁用练习模式
 
+Practice: teleport the other tee to your cursor
+== 练习：将另一名 Tee 传送到你的光标处
+
+Practice: teleport yourself to your cursor
+== 练习：将自己传送到光标处
+
 Pre-warm settings page on startup and menu idle
 == 启动和菜单空闲时预热设置页
 
@@ -11365,6 +11413,9 @@ Press "Save" after any change: the title and chat style are stored on your accou
 
 Press "Select map" to choose a file, check the target server and player shown for the upload, then press "Upload map"; "Cancel" stops it.
 == 按选择地图挑文件，核对上传显示的目标服务器与玩家，再按上传地图；取消可中止。
+
+Press '%s' to show cursor.
+== 按“%s”显示光标。
 
 Press a key, do a command: drag from the right dot of one node to the left dot of the next. Double-click a node to edit it, right-click a link to delete it, Ctrl+Z to undo.
 == 按下某个键、执行某条指令：从一个节点右侧的圆点拖到下一个节点左侧的圆点即可连线。双击节点改内容，右键连线删除，Ctrl+Z 撤销。
@@ -13067,6 +13118,15 @@ Scoreboard
 Scoreboard cursor
 == 计分板光标
 
+Scoreboard entrance
+== 计分板入场
+
+Scoreboard entrance feel: 0=soft, 1=standard, 2=bouncy
+== 计分板入场手感：0=柔和，1=标准，2=弹性
+
+Scoreboard entrance overshoot in percent (10 = 110% peak)
+== 计分板入场过冲百分比（10 表示先到 110% 峰值）
+
 Scoreboard playtime
 == 计分板游玩时间
 
@@ -13081,6 +13141,12 @@ Scoreboard score lookup
 
 Scoreboard sort mode (0=Score, 1=Points)
 == 记分牌排序模式（0=分数，1=分）
+
+Scoreboard text entry
+== 计分板文本入场
+
+Scoreboard text entry: 0=together, 1=by row, 2=slow cascade
+== 计分板文本入场：0=一起，1=逐行，2=慢速波浪
 
 Scoreboard, chat, spectating
 == 计分板、聊天、观战
@@ -14777,9 +14843,6 @@ Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dyn
 Shows the bind wheel layout and which slot is currently selected.
 == 显示绑定轮盘的布局，以及当前选中的槽位。
 
-Shows the credits of the DDNet mod
-== 显示 DDNet mod 的制作人员
-
 Shows the current song's lyric line in the Dynamic Island and lets you pick which music app supplies it.
 == 在 Dynamic Island 中显示当前歌曲的歌词，并可选择由哪个音乐应用提供。
 
@@ -15080,6 +15143,9 @@ SodaMusic hook heartbeat timeout (milliseconds)
 SodaMusic hook helper path (empty=beside QmClient)
 == 汽水音乐 Hook 辅助程序路径（留空则使用 QmClient 所在目录中的程序）
 
+Soft
+== 柔和
+
 Solid
 == 纯色
 
@@ -15331,6 +15397,9 @@ Squishy Tee deformation intensity
 
 Standalone
 == 独立显示
+
+Standard
+== 标准
 
 Star
 == 星形
@@ -16004,6 +16073,9 @@ Teleport
 Teleport all weapons (deprecated, use special entities instead)
 == 所有武器的传送（已弃用，请使用特殊实体代替）
 
+Teleport dummy to cursor
+== 将分身传送到光标
+
 Teleport free spectator camera between hovered tele-in/out or checkpoint tele and a matching counterpart
 == 在悬停的传送入口/出口或检查点传送点与其对应点之间传送自由观战镜头
 
@@ -16033,6 +16105,9 @@ Teleport tile outline color
 
 Teleport tile outline width
 == 传送图块轮廓宽度
+
+Teleport to cursor
+== 传送到光标
 
 Teleport yourself out of freeze if auto rescue mode is enabled, otherwise it will set position for rescuing if grounded and teleport you out of freeze if not (use sv_rescue 1 to enable this feature)
 == 若启用自动救援模式，则直接将你传送出冻结；否则，落地时会记录救援位置，未落地则直接传送出冻结（用 sv_rescue 1 启用）
@@ -16606,6 +16681,9 @@ To save all players in your team have to be alive and not in '/spec'
 
 Toast uses UiTokens + QmMotion slide
 == Toast 使用 UiTokens + QmMotion 滑动效果
+
+Together
+== 一起
 
 Toggle
 == 切换
@@ -19086,6 +19164,10 @@ Relative aim
 == [Ctrl+Y] 重做上次的命令编辑。
 
 [Editor]
+[Ctrl+Y] Redo the last undone action.
+== [Ctrl+Y] 重做上一个被撤销的操作。
+
+[Editor]
 [Ctrl+Z] Undo the last action.
 == [Ctrl+Z] 撤销上一步操作。
 
@@ -21534,6 +21616,10 @@ Red value of the envelope.
 == 动画的红色通道值。
 
 [Editor]
+Redo
+== 重做
+
+[Editor]
 Reference
 == 参考
 
@@ -22171,11 +22257,11 @@ STOPPER: You can hook and shoot through it. You can't go through it.
 
 [Editor]
 SUPER JUMP OFF: You don't have unlimited air jumps.
-== 关闭无限跳：你没有无限跳。
+== 超级跳跃关闭：你没有无限空中跳。
 
 [Editor]
 SUPER JUMP: You have unlimited air jumps.
-== 无限跳：你有无限跳！
+== 超级跳跃：你有无限空中跳！
 
 [Editor]
 Switch curve type (N = step, L = linear, S = slow, F = fast, M = smooth, B = bezier).
@@ -22566,6 +22652,10 @@ UNDEEP: Removes DEEP FREEZE effect.
 == 深度解冻：移除深度冻结效果。
 
 [Editor]
+Undo
+== 撤销
+
+[Editor]
 Unfreeze
 == 解冻
 
@@ -22631,11 +22721,11 @@ Use left mouse button to paint with the brush. Right click to clear the brush. H
 
 [Editor]
 Use Shift+Mouse wheel up/down to adjust the angle.
-== Use Shift+Mouse wheel up/down to adjust the angle.
+== 按住 Shift 并向上/向下滚动鼠标滚轮可调整角度。
 
 [Editor]
 Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
-== Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
+== 按住 Shift 并向上/向下滚动鼠标滚轮可调整图块编号。按 Ctrl+F 可将所有图块编号改为第一个未使用的编号。
 
 [Editor]
 Value:

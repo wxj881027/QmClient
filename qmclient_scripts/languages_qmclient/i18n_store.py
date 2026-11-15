@@ -101,6 +101,8 @@ def module_name_for_source(source: Path | None) -> str:
         return "chat"
     if "/gameclient.cpp" in normalized or "/menus.cpp" in normalized:
         return "loading"
+    if "/src/game/editor/" in normalized:
+        return "editor"
     if "/components/qmclient/" in normalized:
         return "qmclient"
     if "/components/tclient/" in normalized:
@@ -112,6 +114,8 @@ def module_name_for_source(source: Path | None) -> str:
         return "card_wiki"
     if normalized.endswith("src/game/client/QmUi/QmWikiDocs.cpp"):
         return "wiki_docs"
+    if normalized.endswith("src/game/client/QmUi/QmCardCatalogGraphics.cpp"):
+        return "qmclient"
     return "misc"
 
 
@@ -158,6 +162,7 @@ def translation_quality_errors(
 ) -> list[str]:
     errors: list[str] = []
     for module_name, module_entries in sorted(store.items()):
+        preserve_verbatim = module_name in VERBATIM_TRANSLATION_MODULES
         for (key, context), translations in sorted(module_entries.items()):
             if (
                 active_module_identities is not None
@@ -170,7 +175,11 @@ def translation_quality_errors(
             ):
                 continue
             for language, translation in sorted(translations.items()):
-                normalized = normalize_translation(language, translation)
+                normalized = normalize_translation(
+                    language,
+                    translation,
+                    preserve_verbatim=preserve_verbatim,
+                )
                 if language == "simplified_chinese" and translation != normalized:
                     errors.append(
                         f"{module_name}: [{context}] {key}: {language} typography "
