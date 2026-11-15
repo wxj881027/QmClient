@@ -5056,6 +5056,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_fast_practice_rescue_test.cpp
     src/test/unit/qmclient/client/qm_fast_practice_branch_state_test.cpp
     src/test/unit/qmclient/client/qm_fast_practice_commands_test.cpp
+    src/test/unit/qmclient/client/qm_practice_switch_carry_test.cpp
     src/test/unit/qmclient/client/qm_dummy_input_test.cpp
     src/test/unit/qmclient/client/qm_practice_input_lock_test.cpp
     src/test/unit/qmclient/client/qm_replay_session_test.cpp

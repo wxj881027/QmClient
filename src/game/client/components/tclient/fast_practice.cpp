@@ -270,6 +270,10 @@ void CFastPractice::ResetPracticeState()
 	m_HasDummyAnchor = false;
 	m_HasPendingLocalTee = false;
 	m_PendingLocalTee = {};
+	m_PracticeBranchLive = false;
+	m_HasCarriedSwitchers = false;
+	m_CarriedSwitchersTick = 0;
+	m_CarriedSwitchers.clear();
 	m_Recorder.Reset();
 	m_SuppressFireOnNextPredictTick = false;
 	m_InputSuppressTicks = 0;
@@ -877,7 +881,28 @@ bool CFastPractice::InitPracticeWorld()
 	// 必须先切段，否则存出来的幽灵会带一道穿墙的直线。
 	m_Recorder.MarkBoundary(GameClient()->m_LocalWorld);
 
+	// 重新 fork 会把开关状态换回服务器世界那份，练习里 /setswitch 的改动会丢。
+	// 只要 base 世界里还是上一次练习分支的内容就刷新暂存；旁观、分身断开和重绑
+	// 都会先清 m_PracticeWorldInitialized 再 fork，用那个标志当条件会漏掉这些路径。
+	// fork 失败或同一帧内二次 fork 时沿用上一份，直到练习整体重置才丢弃。
+	if(m_PracticeBranchLive)
+	{
+		m_CarriedSwitchers = m_PracticeBaseWorld.Switchers();
+		m_CarriedSwitchersTick = m_PracticeBaseWorld.GameTick();
+		m_HasCarriedSwitchers = true;
+	}
+
 	m_PracticeBaseWorld.CopyWorldClean(&GameClient()->m_GameWorld);
+	// 定时开关的剩余时长要相对 fork 后真正使用的分支时钟（预测 tick）平移，
+	// 而不是 CopyWorldClean 带过来的服务器世界 tick：各调用方 fork 完都会把
+	// 分支 tick 对齐到预测 tick，用服务器 tick 会让剩余时长整体偏掉一截。
+	if(m_HasCarriedSwitchers)
+		QmCarryPracticeSwitchers(m_PracticeBaseWorld.Switchers(), m_CarriedSwitchers,
+			Client()->PredGameTick(g_Config.m_ClDummy) - m_CarriedSwitchersTick);
+	if(g_Config.m_Debug)
+		dbg_msg("fast_practice", "switch carry: live=%d has=%d count=%d status0=%d",
+			m_PracticeBranchLive ? 1 : 0, m_HasCarriedSwitchers ? 1 : 0, (int)m_PracticeBaseWorld.Switchers().size(),
+			!m_PracticeBaseWorld.Switchers().empty() ? (m_PracticeBaseWorld.Switchers()[0].m_aStatus[0] ? 1 : 0) : -1);
 	// 服务器世界那份队列属于上一段时间线（也可能停在进入练习前的版本），
 	// 带进新的分支世界会让重算 tick 去重失效，整份作废。
 	QmResetPracticePredictedEvents(m_PracticeBaseWorld.m_PredictedEvents);
@@ -886,16 +911,21 @@ bool CFastPractice::InitPracticeWorld()
 	SanitizePracticeWorldHooks(m_PracticeBaseWorld);
 	SyncPracticeWorldConfig();
 	m_PracticeWorldInitialized = true;
+	// 从这一刻起 base 重新装着一条活着的练习时间线，后续 fork 可以继续搬开关状态。
+	m_PracticeBranchLive = true;
 
 	if(!m_PracticeBaseWorld.GetCharacterById(m_EnableLocalClientId))
 	{
 		m_PracticeWorldInitialized = false;
+		// 参与者缺失时 base 已经被服务器世界覆盖，不再是练习分支，不能再当搬移源。
+		m_PracticeBranchLive = false;
 		return false;
 	}
 
 	if(m_RequireDummy && !m_PracticeBaseWorld.GetCharacterById(m_EnableDummyClientId))
 	{
 		m_PracticeWorldInitialized = false;
+		m_PracticeBranchLive = false;
 		return false;
 	}
 
@@ -912,7 +942,8 @@ bool CFastPractice::InitPracticeWorld()
 	if(!m_HasPracticeStartSnapshot)
 	{
 		// 重开快照只取第一次 fork 的结果。主世界一直在推进，之后的 InitPracticeWorld
-		// 重新 fork 出来的是“现在”，不再是进入练习那一刻的机关与开关状态。
+		// 重新 fork 出来的是“现在”；练习里 /setswitch 的改动按 tick 差接回，
+		// 与这份“进入练习那一刻”的重开快照互不影响。
 		m_PracticeStartWorld.CopyWorldClean(&m_PracticeBaseWorld);
 		m_HasPracticeStartSnapshot = true;
 	}

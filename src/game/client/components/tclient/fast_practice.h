@@ -230,6 +230,16 @@ private:
 	void PrunePracticeWorld(CGameWorld &World) const;
 	// solo 区里客户端世界不收非碰撞角色，分支世界按快照补建缺失的本体/分身。
 	bool EnsurePracticeParticipants();
+	// 分支世界当前是否装着一条活着的练习时间线。旁观、分身断开、重绑都会把
+	// m_PracticeWorldInitialized 置 false 等待重建，但那时 base 世界里的开关状态
+	// 仍然是有效的；fork 失败后 base 被服务器世界覆盖，这里才置 false。
+	// 捕获开关状态看它，不能看 m_PracticeWorldInitialized。
+	bool m_PracticeBranchLive = false;
+	// 重新 fork 前暂存的开关状态与当时的分支 tick，fork 后由 QmCarryPracticeSwitchers
+	// 按 tick 差接回，/setswitch 的改动不因分身接入/断开、旁观返回而丢失。
+	bool m_HasCarriedSwitchers = false;
+	int m_CarriedSwitchersTick = 0;
+	std::vector<SSwitchers> m_CarriedSwitchers;
 	// 练习线路录制：Rank 1 是另一个平行时空，只能看；这里录的是我们自己这条
 	// 分叉时空里的 Tee（本体 + 分身多轨），连同世界里发生的交互事件一起存，
 	// 回放时走 Rank 1 同款 demo 式查看模式，而不是普通跟跑影子。

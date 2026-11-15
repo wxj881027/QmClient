@@ -197,6 +197,27 @@ inline void QmShiftPracticePredictedEventTicks(std::vector<CGameWorld::CPredicte
 		Event.m_Tick += TickDelta;
 }
 
+// 重新 fork 会把分支世界换回服务器世界的开关状态，练习里 /setswitch 的改动会因此
+// 丢失。把旧分支的开关状态搬进新分支：定时开关的结束/更新时间按 tick 差平移，
+// 剩余时长保持不变；无限期开关的 tick 是 0，不平移。开关数量对不上（换图）时整份放弃。
+inline void QmCarryPracticeSwitchers(std::vector<SSwitchers> &vTarget, const std::vector<SSwitchers> &vSource, int TickDelta)
+{
+	if(vSource.size() != vTarget.size())
+		return;
+	for(size_t Index = 0; Index < vTarget.size(); Index++)
+	{
+		SSwitchers Carried = vSource[Index];
+		for(int Team = 0; Team < NUM_DDRACE_TEAMS; Team++)
+		{
+			if(Carried.m_aEndTick[Team] > 0)
+				Carried.m_aEndTick[Team] += TickDelta;
+			if(Carried.m_aLastUpdateTick[Team] > 0)
+				Carried.m_aLastUpdateTick[Team] += TickDelta;
+		}
+		vTarget[Index] = Carried;
+	}
+}
+
 // 事件屏障：<= BarrierTick 的分支 tick 已经创建并消费过预测事件。
 // 分支世界重新 fork（重进服务器、分身重连）会从服务器 tick 往回重算一段已经
 // 播过的 tick；预测事件去重依赖世界里的队列记录，而重建世界会把记录换成
