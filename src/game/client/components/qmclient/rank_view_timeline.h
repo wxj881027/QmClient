@@ -7,6 +7,7 @@
 
 #include <generated/protocol.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <new>
 #include <type_traits>
@@ -49,6 +50,15 @@ namespace qmclient::rank_ghost
 		std::vector<SViewSwitchState> m_vSwitchStates;
 		std::vector<SViewMessage> m_vMessages;
 	};
+
+	// 快进后的事件积压只有落在播放头附近才值得派发：更老的事件位置与当前画面
+	// 早已无关，补播只会得到错位的特效与音效。MaxLagTicks 由调用方按 tick 频率给。
+	inline bool ViewEventFresh(int EventTick, int CurTick, int MaxLagTicks)
+	{
+		if(EventTick > CurTick)
+			return false;
+		return EventTick >= CurTick - std::max(1, MaxLagTicks);
+	}
 
 	inline bool ValidViewEvent(const SViewEvent &Event)
 	{

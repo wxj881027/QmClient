@@ -101,10 +101,17 @@ void CRankGhost::EnterViewMode()
 	m_ViewMembers.Reset(m_vLoadedSlots.size());
 	++m_ViewGeneration;
 	m_ViewMode = true;
+	// 回放开关只画在自己的画布上：服务器世界和练习分支世界是两条可玩时间线的
+	// 权威状态，回放期间不允许改写它们，退出回放也就不需要还原。
+	m_vViewSwitchers = GameClient()->m_GameWorld.m_Core.m_vSwitchers;
+	m_ViewSwitchersActive = true;
 	// 只在父集登记会话状态；播放链（CGhost 独立时钟 + CRankGhost 事件派发）
 	// 保持原样，Rank 1 与练习组回放的观感完全一致。
 	GameClient()->m_LocalWorld.BeginViewSession((int)m_vLoadedSlots.size());
 	GameClient()->m_Spectator.OnReset();
+	// 快捷键与回放面板都要求菜单关闭：从“查看回放”按钮进来时菜单还开着，
+	// 不收起会让玩家按了空格/方向键却毫无反应。
+	GameClient()->m_Menus.SetActive(false);
 	// 查看模式不跟跑，清掉对齐标记，退出后由下一次跑图重新对齐
 	m_LastAlignedRaceTick = -1;
 	// 首次进入必须给出可退出的指引：控制面板由 ESC 开关，退出回放要走游戏菜单（双击 ESC）
@@ -185,20 +192,27 @@ bool CRankGhost::GetViewState(SViewState &Out) const
 	return true;
 }
 
+void CRankGhost::EndViewSessionState()
+{
+	m_ViewMode = false;
+	m_ViewSwitchersActive = false;
+	m_vViewSwitchers.clear();
+	GameClient()->m_LocalWorld.EndViewSession();
+	GameClient()->m_Ghost.StopManual();
+	GameClient()->m_Spectator.OnReset();
+}
+
 void CRankGhost::ViewStop()
 {
 	m_PendingView = false;
-	GameClient()->m_LocalWorld.EndViewSession();
-	GameClient()->m_Spectator.OnReset();
-	if(!m_ViewMode && !GameClient()->m_Ghost.ManualModeActive())
+	const bool WasViewing = m_ViewMode || GameClient()->m_Ghost.ManualModeActive();
+	EndViewSessionState();
+	if(!WasViewing)
 		return;
-	m_ViewMode = false;
 	m_ViewSelected = 0;
 	m_ViewCameraMode = EViewCameraMode::MEMBER;
 	m_ViewFreeCameraValid = false;
 	m_ViewZoomPersonal = 0.0f;
-	if(GameClient()->m_Ghost.ManualModeActive())
-		GameClient()->m_Ghost.StopManual();
 	Echo(Localize("Ghost view mode off. The ghost follows your runs again."));
 }
 
@@ -387,14 +401,18 @@ void CRankGhost::UpdateViewTimeline()
 	}
 	m_ViewLastTick = CurTick;
 
-	// 事件派发限流：大幅快进时按帧铺开，避免单帧粒子爆炸
+	// 事件派发限流：大幅快进时按帧铺开，避免单帧粒子爆炸。但跨越很久的快进里，
+	// 积压事件的位置早已与当前画面无关，补播只会得到一串错位的特效/音效；
+	// 因此只播最近一个游戏秒内的事件，更老的事件只前进游标、不派发。
+	const int MaxEventLagTicks = maximum(1, Client()->GameTickSpeed());
 	int Budget = 96;
 	while(m_ViewEventCursor < m_vViewEvents.size() && Budget-- > 0)
 	{
 		const SViewEvent &Event = m_vViewEvents[m_ViewEventCursor];
 		if(Event.m_RelTick > CurTick)
 			break;
-		DispatchViewEvent(Event);
+		if(qmclient::rank_ghost::ViewEventFresh(Event.m_RelTick, CurTick, MaxEventLagTicks))
+			DispatchViewEvent(Event);
 		m_ViewEventCursor++;
 	}
 
@@ -510,9 +528,12 @@ void CRankGhost::DispatchViewMessage(const SViewMessage &Message)
 
 void CRankGhost::ApplyViewSwitchState(const SViewSwitchState &State)
 {
-	auto &vSwitchers = GameClient()->Switchers();
-	if(vSwitchers.empty())
+	// 只改回放自己的开关画布。写 GameClient()->Switchers() 会在练习开启时落到
+	// 分支世界的权威开关上，退出回放后 /setswitch 与地图开关会被回放状态顶掉。
+	std::vector<SSwitchers> *pViewSwitchers = ViewSwitchers();
+	if(pViewSwitchers == nullptr || pViewSwitchers->empty())
 		return;
+	auto &vSwitchers = *pViewSwitchers;
 	const int Team = std::clamp(GameClient()->SwitchStateTeam(), (int)TEAM_FLOCK, NUM_DDRACE_TEAMS - 1);
 	const int Count = minimum(std::clamp(State.m_HighestSwitchNumber, 0, 255) + 1, (int)vSwitchers.size());
 	for(int j = 0; j < Count; j++)

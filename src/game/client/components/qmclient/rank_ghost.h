@@ -21,6 +21,7 @@
 #include <engine/shared/demo.h>
 
 #include <game/client/component.h>
+#include <game/gamecore.h>
 
 #include <memory>
 #include <string>
@@ -122,6 +123,9 @@ public:
 	bool ViewPracticeGroup(const char *pGroupDir);
 	bool IsViewModeActive() const;
 	IDemoPlayer *ViewPlayer() { return &m_ViewPlayer; }
+	// 查看模式下的开关状态画布：进入时复制一份服务器世界的开关，回放时间线只改
+	// 这一份。非查看模式返回 nullptr，调用方回落到可玩时间线的权威开关。
+	std::vector<SSwitchers> *ViewSwitchers() { return m_ViewSwitchersActive && IsViewModeActive() ? &m_vViewSwitchers : nullptr; }
 	uint64_t ViewGeneration() const { return m_ViewGeneration; }
 	bool ExportViewCut(const char *pDestination, const std::vector<SDemoSliceSegment> &vSegments, DEMOFUNC_FILTER pFilter, void *pUser);
 	bool ViewMemberRenderInfo(int Index, CTeeRenderInfo *pInfo) const;
@@ -278,6 +282,10 @@ private:
 	const char *PlaybackFilename() const override { return m_aViewPlaybackFilename; }
 	IDemoPlayer *PlaybackMetadataReader() const override;
 	bool m_ViewMode = false;
+	// 回放的开关状态独立存放：服务器世界与练习分支世界都是可玩时间线的权威状态，
+	// 回放时间线只允许改画面（items/命中盒读 GameClient()->Switchers()）。
+	std::vector<SSwitchers> m_vViewSwitchers;
+	bool m_ViewSwitchersActive = false;
 	// 旁观面板选中的跟随成员（多轨顺序索引，0 = 主选手）
 	int m_ViewSelected = 0;
 	COnlineReplayMembers m_ViewMembers;
@@ -379,6 +387,9 @@ private:
 	// 加载成功后的公共收尾：按需进入查看模式
 	void AfterGhostLoaded();
 	void EnterViewMode();
+	// 查看模式收尾的唯一出口：停独立时钟、结束 LocalWorld 查看会话、清回放开关画布。
+	// 换图、引擎清空槽位和显式退出都必须走这里，否则会留下残余会话状态。
+	void EndViewSessionState();
 
 	// 加载后把 Ghost 页列表刷新一遍，并关联我们占用的槽位
 	void RefreshGhostList();

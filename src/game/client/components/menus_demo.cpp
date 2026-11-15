@@ -6,6 +6,7 @@
 #include "qmclient/demo_display.h"
 #include "qmclient/demo_ui.h"
 #include "qmclient/perf_logging.h"
+#include "qmclient/playback_shortcuts.h"
 #include "qmclient/pose_capture.h"
 #include "qmclient/rank_demo_manifest.h"
 #include "qmclient/video_preset_labels.h"
@@ -1361,8 +1362,14 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	// handle keyboard shortcuts independent of active menu
 	float PositionToSeek = -1.0f;
 	float TimeToSeek = 0.0f;
+	// 单帧步进是即时跳转（不走 PositionToSeek），末帧回卷必须知道本帧已经步进过。
+	bool TickSteppedThisFrame = false;
 	const bool ShortcutsActive = PlaybackShortcutsActive();
 	const auto ShortcutPressed = [&](int Key) {
+		// 键表是唯一登记处：表外的键不参与回放快捷键，绑定层也用同一张表让路，
+		// 两处口径不会漂移。
+		if(!QmPlaybackShortcutKey(Key))
+			return false;
 		return Input()->KeyPress(Key) && (!OnlineReplay || !m_OnlineReplayShortcutClaims.Claimed(Client()->PerfFrame(), Key));
 	};
 	if(ShortcutsActive)
@@ -1453,10 +1460,12 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 		if(ShortcutPressed(KEY_PERIOD))
 		{
 			DemoSeekTick(IDemoPlayer::TICK_NEXT);
+			TickSteppedThisFrame = true;
 		}
 		else if(ShortcutPressed(KEY_COMMA))
 		{
 			DemoSeekTick(IDemoPlayer::TICK_PREVIOUS);
+			TickSteppedThisFrame = true;
 		}
 	}
 
@@ -1469,37 +1478,67 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	const float NameBarHeight = 20.0f;
 	const float CutBarHeight = 24.0f;
 	const float Margins = 3.0f;
-	const float TotalHeight = PlayerRect.h;
 
+	const bool ShowPauseIndicator = g_Config.m_ClDemoShowPause && (InitialVideoPause || (!VideoRendering && Client()->GlobalTime() - m_LastPauseChange < 0.5f));
+	const bool ShowSpeedIndicator = g_Config.m_ClDemoShowSpeed && Client()->GlobalTime() - m_LastSpeedChange < 1.0f;
 	if(!ControlsActive)
 	{
 		// Render pause indicator
-		if(g_Config.m_ClDemoShowPause && (InitialVideoPause || (!VideoRendering && Client()->GlobalTime() - m_LastPauseChange < 0.5f)))
+		//
+		// 图标用四边形直接画在帧缓冲上：文本管线在本帧沿用自己缓存的屏幕映射，
+		// 与 Ui()->Screen() 的虚拟尺寸对不上（实测提示会跟着 tee 落到画面右下角），
+		// 只有显式像素坐标的一手绘制能稳定居中。这里是纯几何图形，不依赖字形。
+		if(ShowPauseIndicator)
 		{
 			const float Time = InitialVideoPause ? 0.5f : ((Client()->GlobalTime() - m_LastPauseChange) / 0.5f);
 			const float Alpha = (Time < 0.5f ? Time : (1.0f - Time)) * 2.0f;
 			if(Alpha > 0.0f)
 			{
-				TextRender()->TextColor(TextRender()->DefaultTextColor().WithMultipliedAlpha(Alpha));
-				TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor().WithMultipliedAlpha(Alpha));
-				TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-				TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING);
-				Ui()->DoLabel_QmIcon(Ui()->Screen(), pInfo->m_Paused ? EQmIcon::PAUSE : EQmIcon::PLAY, pInfo->m_Paused ? FONT_ICON_PAUSE : FONT_ICON_PLAY, 36.0f + Time * 12.0f, TEXTALIGN_MC);
-				TextRender()->TextColor(TextRender()->DefaultTextColor());
-				TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor());
-				TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
-				TextRender()->SetRenderFlags(0);
+				float PrevScreenX0, PrevScreenY0, PrevScreenX1, PrevScreenY1;
+				Graphics()->GetScreen(&PrevScreenX0, &PrevScreenY0, &PrevScreenX1, &PrevScreenY1);
+				const float Width = (float)Graphics()->ScreenWidth();
+				const float Height = (float)Graphics()->ScreenHeight();
+				Graphics()->MapScreen(0.0f, 0.0f, Width, Height);
+
+				const float Size = 36.0f + Time * 12.0f;
+				const vec2 Center(Width * 0.5f, Height * 0.5f);
+				Graphics()->TextureClear();
+				Graphics()->QuadsBegin();
+				Graphics()->SetColor(1.0f, 1.0f, 1.0f, Alpha);
+				if(pInfo->m_Paused)
+				{
+					const float BarWidth = Size * 0.18f;
+					const float BarHeight = Size * 0.8f;
+					const float Gap = Size * 0.2f;
+					const IGraphics::CQuadItem Bars[] = {
+						IGraphics::CQuadItem(Center.x - Gap * 0.5f - BarWidth, Center.y - BarHeight * 0.5f, BarWidth, BarHeight),
+						IGraphics::CQuadItem(Center.x + Gap * 0.5f, Center.y - BarHeight * 0.5f, BarWidth, BarHeight),
+					};
+					Graphics()->QuadsDrawTL(Bars, std::size(Bars));
+				}
+				else
+				{
+					// 播放三角：四点多边形让两个顶点重合，得到直角朝右的三角形。
+					const float Half = Size * 0.5f;
+					const IGraphics::CFreeformItem Triangle(
+						vec2(Center.x - Half, Center.y - Half),
+						vec2(Center.x + Half, Center.y),
+						vec2(Center.x + Half, Center.y),
+						vec2(Center.x - Half, Center.y + Half));
+					Graphics()->QuadsDrawFreeform(&Triangle, 1);
+				}
+				Graphics()->QuadsEnd();
+				Graphics()->MapScreen(PrevScreenX0, PrevScreenY0, PrevScreenX1, PrevScreenY1);
 			}
 		}
 
-		// Render speed info
-		if(g_Config.m_ClDemoShowSpeed && Client()->GlobalTime() - m_LastSpeedChange < 1.0f)
+		// Render speed info（上游位置：左下角，退开播放器面板高度）
+		if(ShowSpeedIndicator)
 		{
-			CUIRect Screen = *Ui()->Screen();
-
+			const CUIRect *pScreen = Ui()->Screen();
 			char aSpeedBuf[16];
 			str_format(aSpeedBuf, sizeof(aSpeedBuf), "×%.2f", pInfo->m_Speed);
-			TextRender()->Text(120.0f, Screen.y + Screen.h - 120.0f - TotalHeight, 60.0f, aSpeedBuf, -1.0f);
+			TextRender()->Text(120.0f, pScreen->y + pScreen->h - 120.0f, 60.0f, aSpeedBuf, -1.0f);
 		}
 	}
 	else
@@ -1510,7 +1549,9 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 			m_LastSpeedChange = 0.0f;
 	}
 
-	if(CurrentTick == TotalTicks && !m_DemoCutPreview.IsFinished())
+	// 播到末尾自动回到开头；但不能覆盖同一帧里玩家自己按下的跳转与单帧步进
+	// （Home/End/数字写 PositionToSeek，方向键写 TimeToSeek，句号/逗号立即跳）。
+	if(CurrentTick == TotalTicks && !m_DemoCutPreview.IsFinished() && PositionToSeek < 0.0f && TimeToSeek == 0.0f && !TickSteppedThisFrame)
 	{
 		PlaybackPlayer()->Pause();
 		PositionToSeek = 0.0f;

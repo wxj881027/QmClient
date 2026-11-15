@@ -474,8 +474,10 @@ void CRankGhost::OnMapLoad()
 
 void CRankGhost::OnReset()
 {
-	if(GameClient() != nullptr && GameClient()->m_Ghost.ManualModeActive())
-		GameClient()->m_Ghost.StopManual();
+	// 换图/断线走的是这条路径而不是 ViewStop：查看会话、独立时钟与回放开关画布
+	// 必须一起收尾，否则会留下残余会话（诊断 dump 里能看到 ViewSessionActive=1）。
+	if(GameClient() != nullptr)
+		EndViewSessionState();
 	const bool KeepRetryLoad = m_RetryLoadPending && m_aGhostStoragePath[0] != '\0';
 	if(m_Stage != EStage::IDLE)
 		AbortTask();
@@ -489,7 +491,6 @@ void CRankGhost::OnReset()
 	m_vLoadedSlots.clear();
 	m_vLoadedGhostPaths.clear();
 	m_aLoadingGroupPrefix[0] = '\0';
-	m_ViewMode = false;
 	m_PendingView = false;
 	m_EventRebuildOnly = false;
 	m_LastAlignedRaceTick = -1;
@@ -1038,7 +1039,8 @@ void CRankGhost::OnGhostsUnloaded()
 	m_vLoadedSlots.clear();
 	m_vLoadedGhostPaths.clear();
 	m_aLoadingGroupPrefix[0] = '\0';
-	m_ViewMode = false;
+	// 槽位没了，查看模式的独立时钟/查看会话/开关画布也必须一起结束。
+	EndViewSessionState();
 	m_LastAlignedRaceTick = -1;
 }
 
@@ -1267,6 +1269,8 @@ void CRankGhost::UnloadGhost()
 {
 	m_LastAlignedRaceTick = -1;
 	m_ViewMode = false;
+	m_ViewSwitchersActive = false;
+	m_vViewSwitchers.clear();
 	GameClient()->m_LocalWorld.EndViewSession();
 	// 注意：这里不能清 m_PendingView —— 加载管线（LoadGhostFile/LoadGhostGroup）
 	// 第一步就会调用本函数卸载旧影子，而 m_PendingView 正是"加载完成后进入查看
