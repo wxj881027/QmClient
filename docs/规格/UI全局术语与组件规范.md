@@ -59,7 +59,7 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 ### 2.1 设计 Token（design token）
 
 - 定义：所有尺寸、颜色、圆角、字号、动效参数只有一个来源；调用点选语义，不写数字。
-- 唯一实现：`src/game/client/QmUi/UiTokens.h`，命名空间共 25 个：`ui_token::color`（58 项）、`ui_token::spacing`、`ui_token::radius`（`NONE/TIGHT/BASE/SMALL_MENU/MENU/CARD/PILL`）、`ui_token::font`（`HEADLINE_LG/HEADLINE/TITLE/BODY/SMALL/CAPTION/TIP`）、`ui_token::motion`（36 项）、`ui_token::elevation`、`ui_token::control`（`PadX/PadY/IconBox/IconTextGap/SUFFIX_RATIO/SwitchMinWidth/SwitchTrackAspect`）、`ui_token::list`、`ui_token::settings` + `ui_token::settings::row`、`ui_token::feedback`、`ui_token::glow`、`ui_token::tooltip`、`ui_token::secondary_panel`、`ui_token::server_filter`、`ui_token::status_bar`、`ui_token::server_info`（`TITLE_SIZE/BODY_SIZE/TITLE_GAP/ROW_HEIGHT_RATIO/LABEL_WIDTH/NOTE_*/CARD_RADIUS`）、`ui_token::motd`（`FONT_SIZE/BOX_CELL_MIN_RATIO`）、`ui_token::motd`（`DESIGN_WIDTH/DESIGN_HEIGHT/TITLE_HEIGHT_RATIO/TITLE_GAP/BOX_GLYPHS_PER_STEP/FONT_SIZE`）、`ui_token::page_title`（`FONT_SIZE/HEIGHT/ICON_SIZE/ICON_GAP/ICON_Y_OFFSET`）、`ui_token::panel`（`GAP/PADDING`）、`ui_token::chat`（滚动条 + 气泡圆角派生 + `input::RowHeight/ButtonBorderWidth` 聊天输入行行高与翻译按钮描边）、`ui_token::player_card`（玩家信息卡分区度量）、`ui_token::text_caret`（`THICKNESS_PX/RADIUS_PX/BLOCK_RADIUS_PX/WIDTH_RATIO/OUTLINE_PX`）、`ui_token::confirm_dialog`、`ui_token::dropdown`、`ui_token::discrete_slider`、`ui_token::ime`、`ui_token::hud::font`、`ui_token::page_title`（`FONT_SIZE/HEIGHT/ICON_SIZE/ICON_GAP`）、`ui_token::panel`（`GAP/PADDING`）、`ui_token::chat`（`SCROLLBAR_*/BUBBLE_*`、`BubbleRadius`）、`ui_token::player_card`（`SIDE_BY_SIDE_MIN_WIDTH/CARD_MAX_WIDTH/CARD_WIDTH_RATIO/STACK_CARD_HEIGHT_RATIO/LIST_CARD_GAP/PADDING/RADIUS/SECTION_GAP/HEADER_*/ACTION_*/ICON_*/STATUS_*/DETAIL_*/LIST_*/SEARCH_HEIGHT/COPY_TOAST_SECONDS`）。
+- 唯一实现：`src/game/client/QmUi/UiTokens.h`，命名空间共 25 个：`ui_token::color`（58 项）、`ui_token::spacing`、`ui_token::radius`（`NONE/TIGHT/BASE/SMALL_MENU/MENU/CARD/PILL`）、`ui_token::font`（`HEADLINE_LG/HEADLINE/TITLE/BODY/SMALL/CAPTION/TIP`）、`ui_token::motion`（36 项）、`ui_token::elevation`、`ui_token::control`（`PadX/PadY/IconBox/IconTextGap/SUFFIX_RATIO/SwitchMinWidth/SwitchTrackAspect`）、`ui_token::list`、`ui_token::settings` + `ui_token::settings::row`、`ui_token::feedback`、`ui_token::glow`、`ui_token::tooltip`、`ui_token::secondary_panel`、`ui_token::server_filter`、`ui_token::status_bar`、`ui_token::server_info`（`TITLE_SIZE/BODY_SIZE/TITLE_GAP/ROW_HEIGHT_RATIO/LABEL_WIDTH/NOTE_*/CARD_RADIUS`）、`ui_token::motd`（`FONT_SIZE/BOX_CELL_MIN_RATIO`）、`ui_token::motd`（`DESIGN_WIDTH/DESIGN_HEIGHT/TITLE_HEIGHT_RATIO/TITLE_GAP/BOX_GLYPHS_PER_STEP/FONT_SIZE`）、`ui_token::page_title`（`FONT_SIZE/HEIGHT/ICON_SIZE/ICON_GAP/ICON_Y_OFFSET`）、`ui_token::panel`（`GAP/PADDING/MARGIN`）、`ui_token::chat`（滚动条 + 气泡圆角派生 + `input::RowHeight/ButtonBorderWidth` 聊天输入行行高与翻译按钮描边）、`ui_token::player_card`（玩家信息卡分区度量）、`ui_token::text_caret`（`THICKNESS_PX/RADIUS_PX/BLOCK_RADIUS_PX/WIDTH_RATIO/OUTLINE_PX`）、`ui_token::confirm_dialog`、`ui_token::dropdown`、`ui_token::discrete_slider`、`ui_token::ime`、`ui_token::hud::font`、`ui_token::page_title`（`FONT_SIZE/HEIGHT/ICON_SIZE/ICON_GAP`）、`ui_token::panel`（`GAP/PADDING/MARGIN`）、`ui_token::chat`（`SCROLLBAR_*/BUBBLE_*`、`BubbleRadius`）、`ui_token::player_card`（`SIDE_BY_SIDE_MIN_WIDTH/CARD_MAX_WIDTH/CARD_WIDTH_RATIO/STACK_CARD_HEIGHT_RATIO/LIST_CARD_GAP/PADDING/RADIUS/SECTION_GAP/HEADER_*/ACTION_*/ICON_*/STATUS_*/DETAIL_*/LIST_*/SEARCH_HEIGHT/COPY_TOAST_SECONDS`）。
 - 禁止的反面写法：`Row.h - 2.0f` 这类就地魔数；为单个组件新开命名空间放通用色；用近似值复制已有 token（`PREVIEW_BACKDROP` 与 `SURFACE_OVERLAY` 二选一时必须复用）。
 
 ### 2.2 设置内容布局流（settings content flow）
@@ -130,9 +130,15 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 
 ### 2.13 面板间距（panel spacing）
 
-- 定义：页面级面板之间、面板与内容之间只有两档：缝与内边距。服务器列表是基准，回放/截图浏览器与设置页壳层跟它对齐。
-- 唯一实现：`ui_token::panel::{GAP, PADDING}`（`UiTokens.h`）；消费点 `QmBrowserPanelLayout`（`browser_status_layout.h`）、`ResolveSettingsShellLayout` 的 `SETTINGS_SHELL_GAP` / `SETTINGS_PANEL_MARGIN`（`SettingsPageLayout.h`）、`CMenus::RenderDemoBrowser`（`menus_demo.cpp`）。
-- 禁止的反面写法：调用点写 `HSplitBottom(10.0f, ...)` / `Margin(12.0f, ...)`；三个页面各用一套 8/10/12；面板间隙与内边距共用一个常数。
+- 定义：页面级面板的留白只有三档——面板之间的缝、内容到面板边缘的内边距、面板外缘到窗口边缘的外距。服务器列表是基准，回放/截图浏览器与设置页壳层跟它对齐。
+- 唯一实现：`ui_token::panel::{GAP, PADDING, MARGIN}`（`UiTokens.h`）；消费点 `QmBrowserPanelLayout`（`browser_status_layout.h`）、`ResolveSettingsShellLayout` 的 `SETTINGS_SHELL_GAP` / `SETTINGS_PANEL_MARGIN`（`SettingsPageLayout.h`）、`CMenus::RenderDemoBrowser`（`menus_demo.cpp`，底部操作条到窗口底取 `MARGIN`）。
+- 禁止的反面写法：调用点写 `HSplitBottom(10.0f, ...)` / `Margin(12.0f, ...)`；三个页面各用一套 8/10/12；面板间隙、内边距与外距互相顶替（底边留白拿 `GAP` 当外距就是这一条）。
+
+### 2.9b 列表卡片（list card）
+
+- 定义：网格或列表里的一张卡——外壳（矩形、圆角、内边距）+ 头部（标题 / 副标题 / 尾部徽标·按钮）+ 内容区 + 可选底栏，悬浮时勾一圈统一白边。
+- 唯一实现：`qm_list_card::ResolveLayout` / `SMetrics` / `SOptions` / `SLayout` / `DrawShell` / `DrawStaticShell`（`src/game/client/QmUi/QmListCard.h`）；圆角 `ui_token::radius::CARD`（资源卡片这一档传 `MENU`）、内边距 `ui_token::settings::CARD_PADDING`、描边 `ui_token::feedback::HOVER_BORDER`。接入点：`CMenus::RenderSettingsBindWorkshop`（`bind_workshop_ui.cpp`）、`CMenus::RenderSettingsCustom` 的 `RenderAssetsCardShell`（`menus_settings_assets.cpp`）。
+- 禁止的反面写法：卡片里自己写内边距与圆角再调 `DrawRoundedSurface`；在命中已由 `CListBox` 登记时再调 `DrawShell`（会抢命中，静态壳用 `DrawStaticShell`）；把列表卡片当设置卡片用（折叠、卡间阴影、deck 测量不属于它）。
 
 ### 2.14 对比表：三类动效机制
 
@@ -153,6 +159,12 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 - 定义：铺在内容上层、不占内容宽度的滚动条。轨道长度等于宿主视口，两端各内缩一档；滑块长度按「视口高 / 内容总高 × 轨道」求，夹在最小滑块与轨道之间；位置由进度决定（0 = 顶部/最旧）。内容装得下时不出现。
 - 唯一实现：`ui_widget::ResolveOverlayScrollbarFrame`（`src/game/client/QmUi/UiForms.h`，几何本体委托 `CQmScrollController::PreviewFrame`），绘制走 `ui_widget::DrawScrollbarHandle`；滑块悬浮/按下放大的热项必须由 `CUi::DoButtonLogic` 登记，控件才会画大。
 - 禁止的反面写法：各页面自己算轨道与滑块；用固定像素上限截断滑块长度；只画滑块、不登记热项导致悬浮不变大；另写一套放大像素。
+
+### 2.19 圆角与胶囊（radius / capsule）
+
+- 定义：表面形状只由「半径」决定。半径取控件短边的一半即胶囊端头，取短边一半且宽高相等即正圆；宽度明显大于高度（≥1.8 倍）时按半高取端头。
+- 唯一实现：`ui_widget::DrawRoundedSurface`（`src/game/client/QmUi/UiSurface.h`）+ `ResolveRoundedSurfaceCorners`。给了非零半径又传 `IGraphics::CORNER_NONE` 的调用点一律按四角全圆处理。
+- 禁止的反面写法：同时传半径与 `CORNER_NONE` 期望方块（要方块应把半径给 0）；在调用点自行判断走引擎四角接口还是 SDF；把贴图内容裁成胶囊（贴图只做内收缩进圆头）。
 
 ### 2.15 玩家信息卡（player card）
 
@@ -259,9 +271,9 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 
 ### 3.10 开关（Toggle）
 
-- 定义：二值开关，轨道与旋钮尺寸按字号派生；开关行的标签列由行级布局决定。
-- 唯一实现：`ui_widget::DrawToggle` / `ResolveToggleLayout` / `ResolveBooleanControlLayout` / `ResolveSwitchRowLabelColumn`（`UiForms.h`）、设置页包装 `DoSettingsButton_CheckBox`；尺寸 `ui_token::control::SwitchMinWidth` / `SwitchTrackAspect`。
-- 禁止的反面写法：自绘轨道与旋钮；开关行自己算右侧宽度（标签会压到开关）。
+- 定义：二值开关，轨道与旋钮尺寸按字号派生；开关行的标签列由行级布局决定；悬停描边与按钮同源，固定为白色。
+- 唯一实现：`ui_widget::DrawToggle` / `ResolveToggleLayout` / `ResolveBooleanControlLayout` / `ResolveSwitchRowLabelColumn`（`UiForms.h`）、设置页包装 `DoSettingsButton_CheckBox`；尺寸 `ui_token::control::SwitchMinWidth` / `SwitchTrackAspect`；悬停描边走 `ResolveUiSecondaryButtonStyle` → `ui_token::feedback::HOVER_BORDER`。
+- 禁止的反面写法：自绘轨道与旋钮；开关行自己算右侧宽度（标签会压到开关）；描边取轨道的自动对比色（开着是亮轨道就描黑边、关着描白边，和按钮的悬停白边割裂）。
 
 ### 3.11 按钮（Button）
 
@@ -271,9 +283,9 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 
 ### 3.12 列表（List）
 
-- 定义：行式或网格式可滚动集合，行反馈（选中/悬浮）由主题派生，容器内边距是显式能力。
-- 唯一实现：`CListBox`（`src/game/client/ui_listbox.h`）：`SetCapsuleRows`、`SetContainerPadding`、`SetItemSelectionInset`、`SetVisibleRowRange`、`SetScrollbarOverlay`、`DoAutoSpacing`；入场动画 `CQmListEntryAnimation` + `QmListBoxShouldStartEntryAnimation`（`src/game/client/QmUi/QmListEntryAnimation.h`）；反馈色 `Ui()->QmControlTheme().m_Selected`；行档 `ui_token::list::RowRadius/RowInsetX/ContainerPadding/PaddedRowsHeight/ROW_SPACING`。
-- 禁止的反面写法：自绘行背景；给选中态再加一圈描边；把行距折进行高后 `DoAutoSpacing(0)`（组件已按行推行距）；容器内边距与 `PaddedRowsHeight` 不成对（组件会把留白兜底缩回 0）。
+- 定义：行式或网格式可滚动集合，行反馈（选中/悬浮）由主题派生，容器内边距与「悬浮是否带描边」都是显式能力。
+- 唯一实现：`CListBox`（`src/game/client/ui_listbox.h`）：`SetCapsuleRows`、`SetContainerPadding`、`SetItemSelectionInset`、`SetRowFeedbackBorder`、`SetVisibleRowRange`、`SetScrollbarOverlay`、`DoAutoSpacing`；入场动画 `CQmListEntryAnimation` + `QmListBoxShouldStartEntryAnimation`（`src/game/client/QmUi/QmListEntryAnimation.h`）；反馈色 `Ui()->QmControlTheme().m_Selected`；悬浮描边 `ui_token::feedback::HOVER_BORDER`；行档 `ui_token::list::RowRadius/RowInsetX/ContainerPadding/PaddedRowsHeight/ROW_SPACING`。
+- 禁止的反面写法：自绘行背景；给选中态再加一圈描边；把行距折进行高后 `DoAutoSpacing(0)`（组件已按行推行距）；容器内边距与 `PaddedRowsHeight` 不成对（组件会把留白兜底缩回 0）；行列表打开 `SetRowFeedbackBorder`（整行大的白框会把列表读成一排按钮，只有卡片形态才开）。
 
 ### 3.13 下拉框（Dropdown）
 
