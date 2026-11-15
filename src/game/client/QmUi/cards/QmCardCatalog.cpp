@@ -134,6 +134,8 @@ namespace qm_card_catalog
 
 	bool BuildCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out)
 	{
+		if(str_comp(pStableId, "qm:key_binds") == 0)
+			return BuildFunctionCard(Ctx, qm_module::EQmModuleId::KeyBinds, Out);
 		if(ContainsStableId(ControlsCardStableIds(), pStableId))
 			return QmCardRenderHook::BuildControlsCard(Ctx, pStableId, Out);
 		if(ContainsStableId(GeneralCardStableIds(), pStableId))

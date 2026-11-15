@@ -134,7 +134,6 @@ namespace qm_card_registry
 			{"qm:gores_actor", "function", false, "Gores actor", "gores 演员 actor 掉水 diaoshui 自动发言 zidong fayan 表情 biaoqing 表情id emoticon 发送概率 gaolv function", "Auto chat when dying in water"},
 			{"qm:gores", "function", false, "Gores", "gores kog king of gores 锤枪切换 chuichang qiehuan 自动切枪 zidong qieqiang 自动切锤 zidong qiechui gun hammer prevweapon fire 开火后切锤 kaihuo qiechui 拿到其他武器停用 快速输入 kuaisu shuru fast input 快速输入其他玩家 移动方块 yidongfangkuai 移动水 yidongshui 预测 yuce axiom quad prediction function", "Gores auto weapon switch"},
 			{"qm:solo_split", "function", false, "Solo split", "单刷 danshua 单刷模式 danshua moshi 分队 fendui 分身 fenshen dummy 队伍 duiwu team 独立 duli 各自进队 gezi jindui 组队 zudui 自动锁队 zidong suodui lock 锁队 一键 yijian 单人 danren 刷图 shuatu solo 同步 tongbu 开局 kaiju function", "Split main and dummy into different teams for solo-run sync"},
-			{"qm:key_binds", "function", false, "Key binds", "按键绑定 anjian bangding bind 快捷键 kuaijiejian 常用绑定 changyong bangding 武器辅助线 fuzhuxian 异常断开 yichang duankai timeout disconnect function", "Common key bindings"},
 			{"qm:better_scoreboard", "function", false, "Better scoreboard", "更好的计分板 genghao jifenban better scoreboard 计分板查分 chafen 计分板积分检查 jifenban jifen jiancha scoreboard point check 游玩时间 youwan shijian 累计小时 leiji xiaoshi playtime DDStats qm_scoreboard_playtime 显示死亡后计分板 死亡后显示计分板 siwang hou xianshi jifenban show scoreboard after death 滚动计分板 gundong jifenban fixed-size scoreboard rows mouse wheel 计分板筛选 jifenban shaixuan scoreboard filter 计分板Qm标识 qm biaoshi scoreboard badge function", "Scoreboard"},
 			{"qm:mini_features", "function", false, "Mini features", "梦的小功能 meng xiaogongneng 粒子拖尾 lizi tuowei 远程粒子 yuancheng lizi 聊天框淡出 liaotian danchu 聊天指令补全 zhiling buquan 命令补全 mingling buquan command completion autocomplete qm_chat_command_completion 聊天表情补全 liaotian biaoqing buquan emoji completion qm_chat_emoji_completion 表情选择 biaoqing xuanze 动画优化 donghua youhua 哼歌 hengge humming qm_humming 唱歌 changge singing qm_singing qm_sing 双击歌词 shuangji geci 复读 fudu 锤人换皮 chuiren huanpi 随机表情 suiji biaoqing 连击 lianji combo 说话不弹表情 shuo hua biaoqing 本地彩虹名字 caihong mingzi 更新 gengxin 版本 banben 过旧 guojiu 提示 tishi outdated version warning 新版UI xinban ui settings page shezhi yemian 候选栏 houxuanlan 进程优先级 jincheng youxianji 协作制图 xiezuo zhitu 多人制图 duoren zhitu tune zone 区域着色 quyu zhaose 地图着色 ditu zhaose function", "Only what you can't imagine, nothing Dream can't do"},
 			{"qm:self_kill_protection", "function", false, "Client-side self-kill protection", "自杀保护 zisha baohu 客户端侧自杀 kehu duan ce 自杀 kehuduan zisha 自杀开关 关闭自杀 kaiguan 开启自杀 自动开启 zidong kaiqi 自动拦截 开局 jukaishi 延迟 yanchi 分钟 fenzhong 自动 跑图 shuatu fangwuchu 防误触 拦截 lanjie K键 K jian kill 命令 mingling selfkill self kill protection client-side bind qm_self_kill_off qm_self_kill_on qm_self_kill_enabled qm_self_kill_auto_delay", "Opt-in protection for client-initiated self-kill, with optional auto-enable after joining a game"},
@@ -266,6 +265,7 @@ namespace qm_card_registry
 			{"deck:appearance-laser-preview", "appearance-laser", false, "Preview", "appearance laser preview", "Preview laser bodies, outlines, and impacts"},
 			{"deck:controls-mouse", "controls", false, "Mouse", "controls mouse sensitivity", "Adjust mouse sensitivity and cursor limits"},
 			{"deck:controls-controller", "controls", false, "Controller", "controls controller joystick", "Enable and calibrate controller input"},
+			{"qm:key_binds", "controls", false, "Key binds", "按键绑定 anjian bangding bind 快捷键 kuaijiejian 常用绑定 changyong bangding 武器辅助线 fuzhuxian 异常断开 yichang duankai timeout disconnect controls", "Common key bindings"},
 			{"deck:controls-movement", "controls", false, "Movement", "controls movement binds", "Bind movement, jump, hook, and fire actions"},
 			{"deck:controls-weapon", "controls", false, "Weapon", "controls weapon binds", "Bind weapon selection and switching actions"},
 			{"deck:controls-voting", "controls", false, "Voting", "controls voting binds", "Bind voting and server browser actions"},
@@ -831,6 +831,20 @@ namespace qm_card_registry
 			Changed = true;
 		}
 		return Changed;
+	}
+
+	bool RepairLegacyKeyBindsTab(qm_card_order::CModel &Model)
+	{
+		const char *pStableId = "qm:key_binds";
+		const int Index = Model.FindByStableId(pStableId);
+		if(Index < 0 || Model.Entry(Index).m_pDefaultTab == nullptr || str_comp(Model.Entry(Index).m_pDefaultTab, "function") != 0)
+			return false;
+		const qm_card_order::SEntry *pPlacement = FindDefaultPlacement(pStableId);
+		if(pPlacement == nullptr)
+			return false;
+		// 控制页原有卡片顺序保持不变；迁入卡追加到其默认列的末尾。
+		Model.MoveToTab(pStableId, pPlacement->m_pDefaultTab, pPlacement->m_Column, static_cast<int>(Model.ColumnIndices(pPlacement->m_pDefaultTab, pPlacement->m_Column).size()));
+		return true;
 	}
 
 	bool RepairLegacyCreditsTabs(qm_card_order::CModel &Model)

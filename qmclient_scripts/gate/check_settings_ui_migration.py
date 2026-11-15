@@ -48,6 +48,7 @@ PAGE_STABLE_IDS = {
 		"deck:controls-custom",
 		"deck:controls-mouse",
 		"deck:controls-controller",
+		"qm:key_binds",
 	),
 	"qmclient_hud": (
 		"qm:coords",
@@ -66,7 +67,6 @@ PAGE_STABLE_IDS = {
 		"qm:translate_ui",
 		"qm:gores_actor",
 		"qm:gores",
-		"qm:key_binds",
 		"qm:emoticons",
 		"qm:mini_features",
 		"qm:jump_hint",

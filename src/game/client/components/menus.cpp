@@ -823,6 +823,7 @@ qm_card_order::CModel &CMenus::SettingsCardOrderModelForRenderPass()
 		m_SettingsCardRenderOnlyOrderModel.LoadMerged(g_Config.m_QmGlobalCardOrder, qm_card_registry::BuildDefaultEntries());
 		qm_card_registry::RepairRemovedModernTabs(m_SettingsCardRenderOnlyOrderModel);
 		qm_card_registry::RepairLegacyBindTab(m_SettingsCardRenderOnlyOrderModel);
+		qm_card_registry::RepairLegacyKeyBindsTab(m_SettingsCardRenderOnlyOrderModel);
 		qm_card_registry::RepairLegacyCreditsTabs(m_SettingsCardRenderOnlyOrderModel);
 		qm_card_registry::RepairLegacyNameplateTitleLayout(m_SettingsCardRenderOnlyOrderModel);
 		qm_card_registry::RepairLegacyTeeLayout(m_SettingsCardRenderOnlyOrderModel);
@@ -889,13 +890,14 @@ void CMenus::LoadSettingsCardOrderModel()
 	// 写回失败时仍保留可显示的内存布局，下次加载会再次尝试修复。
 	const bool ModernTabsChanged = qm_card_registry::RepairRemovedModernTabs(m_SettingsCardOrderModel);
 	const bool LegacyBindTabChanged = qm_card_registry::RepairLegacyBindTab(m_SettingsCardOrderModel);
+	const bool KeyBindsTabChanged = qm_card_registry::RepairLegacyKeyBindsTab(m_SettingsCardOrderModel);
 	const bool CreditsLayoutChanged = qm_card_registry::RepairLegacyCreditsTabs(m_SettingsCardOrderModel);
 	const bool NameplateTitleLayoutChanged = qm_card_registry::RepairLegacyNameplateTitleLayout(m_SettingsCardOrderModel);
 	const bool TeeLayoutChanged = qm_card_registry::RepairLegacyTeeLayout(m_SettingsCardOrderModel);
 	const bool ChatBubbleTabChanged = qm_card_registry::RepairLegacyChatBubbleTab(m_SettingsCardOrderModel);
 	const bool BindStatusHudTabChanged = qm_card_registry::RepairLegacyBindStatusHudTab(m_SettingsCardOrderModel);
 	const bool PredictionCardTabsChanged = qm_card_registry::RepairLegacyPredictionCardTabs(m_SettingsCardOrderModel);
-	if((ModernTabsChanged || LegacyBindTabChanged || CreditsLayoutChanged || NameplateTitleLayoutChanged || TeeLayoutChanged || ChatBubbleTabChanged || BindStatusHudTabChanged || PredictionCardTabsChanged) && !PersistCurrentLayout())
+	if((ModernTabsChanged || LegacyBindTabChanged || KeyBindsTabChanged || CreditsLayoutChanged || NameplateTitleLayoutChanged || TeeLayoutChanged || ChatBubbleTabChanged || BindStatusHudTabChanged || PredictionCardTabsChanged) && !PersistCurrentLayout())
 	{
 		m_SettingsCardOrderLoaded = true;
 		return;
@@ -906,7 +908,8 @@ void CMenus::LoadSettingsCardOrderModel()
 		MakeCandidate(Candidate);
 		const bool QmLayoutChanged = qm_module::LoadLegacyQmLayoutIntoModel(Candidate, g_Config.m_QmSidebarCardOrder);
 		const bool TClientLayoutChanged = qm_module::LoadLegacyTClientLayoutIntoModel(Candidate, g_Config.m_QmSettingsCardOrder);
-		const bool CandidateChanged = QmLayoutChanged || TClientLayoutChanged;
+		const bool LegacyKeyBindsMoved = qm_card_registry::RepairLegacyKeyBindsTab(Candidate);
+		const bool CandidateChanged = QmLayoutChanged || TClientLayoutChanged || LegacyKeyBindsMoved;
 		if(!PersistCandidate(Candidate, CandidateChanged, true))
 		{
 			m_SettingsCardOrderLoaded = true;

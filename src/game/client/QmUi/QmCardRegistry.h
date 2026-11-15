@@ -151,6 +151,8 @@ namespace qm_card_registry
 	bool RepairRemovedModernTabs(qm_card_order::CModel &Model);
 	// Bind 编辑器从栖梦页迁入控制页后，把旧持久化 tab 归属迁到 controls。
 	bool RepairLegacyBindTab(qm_card_order::CModel &Model);
+	// 常用按键绑定卡从栖梦功能页迁入控制页后，把旧持久化 tab 归属迁到 controls。
+	bool RepairLegacyKeyBindsTab(qm_card_order::CModel &Model);
 	// 旧贡献者页已删除，加载时先修复归属，避免其它布局迁移提前返回后留下不可见卡片。
 	bool RepairLegacyCreditsTabs(qm_card_order::CModel &Model);
 	bool RepairLegacyTitleLayout(qm_card_order::CModel &Model);

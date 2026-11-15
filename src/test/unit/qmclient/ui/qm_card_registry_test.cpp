@@ -131,6 +131,30 @@ TEST(QmCardRegistry, BetterScoreboardCardIsRegisteredInFunctionColumn)
 	EXPECT_GE(pPlacement->m_OrderInColumn, 0);
 }
 
+TEST(QmCardRegistryPlacement, KeyBindsCardIsRegisteredOnControlsPage)
+{
+	const auto *pCard = qm_card_registry::FindByStableId("qm:key_binds");
+	ASSERT_NE(pCard, nullptr);
+	EXPECT_STREQ(pCard->m_pDefaultTab, "controls");
+
+	const auto &vControlsCards = qm_card_catalog::ControlsCardStableIds();
+	EXPECT_NE(std::find_if(vControlsCards.begin(), vControlsCards.end(), [](const char *pStableId) {
+		return pStableId != nullptr && std::string(pStableId) == "qm:key_binds";
+	}),
+		vControlsCards.end());
+
+	const auto &vFunctionCards = qm_card_catalog::FunctionCardStableIds();
+	EXPECT_EQ(std::find_if(vFunctionCards.begin(), vFunctionCards.end(), [](const char *pStableId) {
+		return pStableId != nullptr && std::string(pStableId) == "qm:key_binds";
+	}),
+		vFunctionCards.end());
+
+	const qm_card_order::SEntry *pPlacement = qm_card_registry::FindDefaultPlacement("qm:key_binds");
+	ASSERT_NE(pPlacement, nullptr);
+	EXPECT_STREQ(pPlacement->m_pDefaultTab, "controls");
+	EXPECT_GT(pPlacement->m_Column, 0);
+}
+
 TEST(QmCardRegistry, BetterScoreboardSearchTargetsItsFunctionCard)
 {
 	qm_card_order::CModel Model;
@@ -1259,6 +1283,11 @@ TEST(QmCardRegistry, TimeoutDisconnectSearchPointsToControls)
 		{
 			EXPECT_EQ(UniqueIds.count("qm:key_binds"), 1u);
 			EXPECT_EQ(UniqueIds.count("qm:bind_editor"), 1u);
+			const auto KeyBinds = std::find_if(Results.begin(), Results.end(), [](const auto &Result) {
+				return Result.m_pStableId != nullptr && std::string(Result.m_pStableId) == "qm:key_binds";
+			});
+			ASSERT_NE(KeyBinds, Results.end());
+			EXPECT_STREQ(KeyBinds->m_Target.m_pTab, "controls");
 		}
 	}
 }

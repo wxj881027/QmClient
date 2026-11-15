@@ -33,7 +33,6 @@ namespace qm_card_catalog
 		const std::vector<const char *> s_vFunctionCards = {
 			"qm:gores_actor",
 			"qm:gores",
-			"qm:key_binds",
 			"qm:emoticons",
 			"qm:better_scoreboard",
 			"qm:mini_features",
@@ -98,6 +97,7 @@ namespace qm_card_catalog
 		const std::vector<const char *> s_vControlsCards = {
 			"deck:controls-mouse",
 			"deck:controls-controller",
+			"qm:key_binds",
 			"deck:controls-movement",
 			"deck:controls-weapon",
 			"deck:controls-voting",

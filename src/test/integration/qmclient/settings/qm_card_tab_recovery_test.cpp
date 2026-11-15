@@ -301,6 +301,71 @@ TEST(QmCardTabRecovery, ChatBubbleRepairSurvivesReloadAndSearchTargetsChat)
 	EXPECT_STREQ(It->m_Target.m_pTab, "appearance-chat");
 }
 
+TEST(QmCardTabRecovery, SavedKeyBindsMovesToControlsAfterExistingCards)
+{
+	const auto vDefaults = qm_card_registry::BuildDefaultEntries();
+	const auto &vControlIds = qm_card_catalog::ControlsCardStableIds();
+	const qm_card_order::SEntry *pPlacement = qm_card_registry::FindDefaultPlacement("qm:key_binds");
+	ASSERT_NE(pPlacement, nullptr);
+	ASSERT_STREQ(pPlacement->m_pDefaultTab, "controls");
+	for(const char *pSaved : {
+		    "qm:key_binds|function|left|0;",
+		    "qm:key_binds|function|right|5;",
+		    "qm:key_binds|function|full|0;",
+	    })
+	{
+		SCOPED_TRACE(pSaved);
+		qm_card_order::CModel Model;
+		ASSERT_TRUE(Model.LoadMerged(pSaved, vDefaults));
+		const auto Before = DeckColumns(Model, "controls", vControlIds);
+		for(const auto &Column : Before)
+			EXPECT_EQ(std::count(Column.begin(), Column.end(), "qm:key_binds"), 0);
+
+		ASSERT_TRUE(qm_card_registry::RepairLegacyKeyBindsTab(Model));
+		const auto After = DeckColumns(Model, "controls", vControlIds);
+		// 迁入卡追加到默认列末尾，控制页其他卡片与原有列序保持不变。
+		auto Expected = Before;
+		Expected[static_cast<size_t>(pPlacement->m_Column)].emplace_back("qm:key_binds");
+		EXPECT_EQ(After, Expected);
+		const int Index = Model.FindByStableId("qm:key_binds");
+		ASSERT_GE(Index, 0);
+		EXPECT_STREQ(Model.Entry(Index).m_pDefaultTab, "controls");
+	}
+}
+
+TEST(QmCardTabRecovery, KeyBindsInControlsKeepsPlacementAndRepairSurvivesReload)
+{
+	const auto vDefaults = qm_card_registry::BuildDefaultEntries();
+	qm_card_order::CModel AlreadyInControls;
+	ASSERT_TRUE(AlreadyInControls.LoadMerged("qm:key_binds|controls|right|0;", vDefaults));
+	char aBefore[32768];
+	ASSERT_TRUE(AlreadyInControls.Serialize(aBefore, sizeof(aBefore)));
+	const uint64_t Revision = AlreadyInControls.LayoutRevision();
+	EXPECT_FALSE(qm_card_registry::RepairLegacyKeyBindsTab(AlreadyInControls));
+	EXPECT_EQ(AlreadyInControls.LayoutRevision(), Revision);
+	char aAfter[32768];
+	ASSERT_TRUE(AlreadyInControls.Serialize(aAfter, sizeof(aAfter)));
+	EXPECT_STREQ(aAfter, aBefore);
+
+	qm_card_order::CModel Model;
+	ASSERT_TRUE(Model.LoadMerged("qm:key_binds|function|left|0;", vDefaults));
+	ASSERT_TRUE(qm_card_registry::RepairLegacyKeyBindsTab(Model));
+	char aSaved[32768];
+	ASSERT_TRUE(Model.Serialize(aSaved, sizeof(aSaved)));
+	qm_card_order::CModel Reloaded;
+	ASSERT_TRUE(Reloaded.LoadMerged(aSaved, vDefaults));
+	EXPECT_FALSE(qm_card_registry::RepairLegacyKeyBindsTab(Reloaded));
+	EXPECT_EQ(DeckColumns(Reloaded, "controls", qm_card_catalog::ControlsCardStableIds()),
+		DeckColumns(Model, "controls", qm_card_catalog::ControlsCardStableIds()));
+
+	const auto Results = qm_card_registry::SearchCards("qm_timeout_disconnect", Reloaded);
+	const auto It = std::find_if(Results.begin(), Results.end(), [](const auto &Result) {
+		return Result.m_pStableId != nullptr && std::string(Result.m_pStableId) == "qm:key_binds";
+	});
+	ASSERT_NE(It, Results.end());
+	EXPECT_STREQ(It->m_Target.m_pTab, "controls");
+}
+
 TEST(QmCardTabRecovery, BindStatusHudDefaultsAndSearchUseAppearanceHud)
 {
 	qm_card_order::CModel Model;
