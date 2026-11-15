@@ -58,6 +58,22 @@ TEST(QmConsoleScroll, WheelApproachesTargetMonotonicallyWithoutOvershoot)
 	EXPECT_NEAR(Runtime.Offset(), Target, 0.01f);
 }
 
+TEST(QmConsoleScroll, AltWheelUsesTheSharedThreeTimesMultiplier)
+{
+	CQmConsoleScrollRuntime Normal;
+	CQmConsoleScrollRuntime Alt;
+	const SQmScrollConfig Config = MakeConfig();
+	AdvanceFrames(Normal, 1, TOTAL_LINES, Config);
+	AdvanceFrames(Alt, 1, TOTAL_LINES, Config);
+
+	Normal.Wheel(1);
+	Alt.Wheel(1, true);
+	const auto NormalFrame = AdvanceFrames(Normal, 120, TOTAL_LINES, Config);
+	const auto AltFrame = AdvanceFrames(Alt, 120, TOTAL_LINES, Config);
+
+	EXPECT_NEAR(AltFrame.m_Offset, NormalFrame.m_Offset * QmScrollAltMultiplier(), 0.01f);
+}
+
 TEST(QmConsoleScroll, DragFollowsThePointerWithoutSpringDelay)
 {
 	CQmConsoleScrollRuntime Runtime;

@@ -142,10 +142,17 @@ inline SQmScrollMetrics QmChatHistoryScrollMetrics(int TotalLines, int VisibleLi
 	return Metrics;
 }
 
+// 聊天偏移以消息行为单位，而公共橡皮筋配置是像素。这里按当前行高换算，
+// 避免 25px 的回弹被误读成 25 行。
+inline float QmChatHistoryBounceLines(float BouncePixels, float LineExtent)
+{
+	return std::max(0.0f, BouncePixels) / std::max(1.0f, LineExtent);
+}
+
 // 手感档位（原版 / 顺滑 / 弹簧）、弹簧响应与阻尼、橡皮筋、动效等级全部来自
 // 公共配置 QmNativeWheelScrollConfig；聊天只声明"一档 = 一行"，不再自己写
-// 平滑时长、lerp 系数或阻尼。
-inline SQmScrollConfig QmChatHistoryScrollConfig()
+// 平滑时长、lerp 系数或阻尼。LineExtent 用于把公共像素配置换算到行单位。
+inline SQmScrollConfig QmChatHistoryScrollConfig(float LineExtent = 1.0f)
 {
 	SQmScrollConfig Config = QmNativeWheelScrollConfig(1.0f, g_Config.m_UiSmoothScrollTime / 1000.0f);
 	// 偏移单位是「行」，所以一档的尺度写成行数；步长系数与列表同一份配置
@@ -154,14 +161,23 @@ inline SQmScrollConfig QmChatHistoryScrollConfig()
 	const float Step = g_Config.m_QmUiScrollStep > 0.0f ? (float)g_Config.m_QmUiScrollStep : 10.0f;
 	const float StepScale = Step / 10.0f;
 	Config.m_WheelScale = ui_token::chat::WHEEL_LINES_PER_STEP * StepScale;
+	Config.m_MaxOverscroll = QmChatHistoryBounceLines((float)g_Config.m_QmUiScrollBounce, LineExtent);
 	return Config;
 }
 
-// 连续偏移 → 可见行号：正文是按整行渲染的，绘制前取最近的整行。
+// 连续偏移 → 可见行号。行号只决定从哪一条消息开始排版，余量交给
+// QmChatHistoryLayoutOffset 做连续像素位移，弹簧和越界回弹才看得见。
 inline int QmChatHistoryScrollLine(float Offset, const SQmScrollMetrics &Metrics)
 {
 	const float Line = std::clamp(Offset, 0.0f, Metrics.MaxOffset());
-	return (int)std::lround(Line);
+	return (int)std::floor(Line);
+}
+
+// 当前行锚之外的亚行余量，换算成正文整体的像素位移。负数/超过最大偏移
+// 时余量自然落在橡皮筋区，回弹过程会连续经过这些位置。
+inline float QmChatHistoryLayoutOffset(float Offset, int BacklogLine, float LineExtent)
+{
+	return (Offset - (float)BacklogLine) * std::max(0.0f, LineExtent);
 }
 
 // 滚轮：Steps > 0 表示往更早的历史（偏移增大）。公共实现里 WheelDelta 的正负
@@ -170,8 +186,8 @@ inline void QmChatHistoryWheel(CQmScrollState &State, int Steps, const SQmScroll
 {
 	if(Steps == 0)
 		return;
-	// 一档 = Config.m_WheelScale 行，与列表「一次两行」的手感对齐。
-	State.AddWheelImpulse(-(float)Steps * std::max(1.0f, Config.m_WheelScale), Metrics, Config);
+	// 原始增量必须按滚轮档报送；Config.m_WheelScale 只负责把一档换算成行。
+	State.AddWheelImpulse(-(float)Steps * QM_SCROLL_WHEEL_NOTCH, Metrics, Config);
 }
 
 // 拖动直接跟手：把目标行写进同一份滚动状态（不经过弹簧）。松手后交给

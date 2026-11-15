@@ -17,6 +17,7 @@
 
 #include <gtest/gtest.h>
 
+#include <cmath>
 #include <iterator>
 #include <string>
 
@@ -633,7 +634,8 @@ TEST(QmChatHistoryScroll, WheelPhysicsSharesTheListScrollConfig)
 	// 聊天不自带一套手感：推进档位（原版 / 顺滑 / 弹簧）、弹簧响应与阻尼、橡皮筋距离、
 	// 摩擦与越界回弹刚度全部取自 QmNativeWheelScrollConfig——与列表滚动面同一份配置。
 	// 唯一差别是单位：聊天一档 = 一行（偏移单位是行），列表一档 = 若干像素。
-	const SQmScrollConfig Chat = QmChatHistoryScrollConfig();
+	constexpr float LINE_EXTENT = 20.0f;
+	const SQmScrollConfig Chat = QmChatHistoryScrollConfig(LINE_EXTENT);
 	// 列表侧必须用与聊天相同的平滑时长比：默认参数是 0 秒，会把「原生滚轮动画时间」
 	// 直接算成 0，与聊天（读 ui_smooth_scroll_time）比较时就变成假差异。
 	const SQmResolvedScrollPolicy ListPolicy = QmResolveScrollPolicy(SQmScrollRequest{}, 1.0f, g_Config.m_UiSmoothScrollTime / 1000.0f);
@@ -641,7 +643,8 @@ TEST(QmChatHistoryScroll, WheelPhysicsSharesTheListScrollConfig)
 	EXPECT_EQ(Chat.m_Feel, List.m_Feel);
 	EXPECT_EQ(Chat.m_NativeWheelStep, List.m_NativeWheelStep);
 	EXPECT_FLOAT_EQ(Chat.m_NativeWheelAnimationTime, List.m_NativeWheelAnimationTime);
-	EXPECT_FLOAT_EQ(Chat.m_MaxOverscroll, List.m_MaxOverscroll);
+	// 聊天单位是行，公共配置单位是像素：数值不同，但换算回像素后必须一致。
+	EXPECT_FLOAT_EQ(Chat.m_MaxOverscroll * LINE_EXTENT, List.m_MaxOverscroll);
 	EXPECT_FLOAT_EQ(Chat.m_SpringResponse, List.m_SpringResponse);
 	EXPECT_FLOAT_EQ(Chat.m_SpringDamping, List.m_SpringDamping);
 	EXPECT_FLOAT_EQ(Chat.m_Friction, List.m_Friction);
@@ -651,6 +654,53 @@ TEST(QmChatHistoryScroll, WheelPhysicsSharesTheListScrollConfig)
 	EXPECT_FLOAT_EQ(Chat.m_RestDistance, List.m_RestDistance);
 	// 聊天只把"一档"声明成一行，步长单位由聊天正文的行渲染决定。
 	EXPECT_FLOAT_EQ(Chat.m_WheelScale, 1.0f);
+}
+
+TEST(QmChatHistoryScroll, BouncePixelsAreConvertedToMessageLineUnits)
+{
+	EXPECT_FLOAT_EQ(QmChatHistoryBounceLines(25.0f, 20.0f), 1.25f);
+	EXPECT_FLOAT_EQ(QmChatHistoryBounceLines(0.0f, 20.0f), 0.0f);
+	EXPECT_FLOAT_EQ(QmChatHistoryBounceLines(25.0f, 0.0f), 25.0f);
+}
+
+TEST(QmChatHistoryScroll, MultipleWheelStepsKeepTheirNotchCount)
+{
+	SQmScrollConfig Config;
+	Config.m_WheelScale = 1.0f;
+	Config.m_NativeWheelStep = true;
+	Config.m_Feel = EQmScrollFeel::SMOOTH;
+	Config.m_NativeWheelAnimationTime = 0.12f;
+	const SQmScrollMetrics Metrics = QmChatHistoryScrollMetrics(100, 10);
+	CQmScrollState State;
+	QmChatHistoryWheel(State, 3, Metrics, Config);
+	for(int Frame = 0; Frame < 60; ++Frame)
+		State.Advance(1.0f / 60.0f, Metrics, Config);
+	EXPECT_NEAR(State.Offset(), 3.0f, 0.001f);
+}
+
+TEST(QmChatHistoryScroll, SubLineOffsetKeepsSpringMotionContinuous)
+{
+	SQmScrollConfig Config;
+	Config.m_WheelScale = 1.0f;
+	Config.m_NativeWheelStep = true;
+	Config.m_Feel = EQmScrollFeel::SPRING;
+	Config.m_SpringResponse = 0.3f;
+	Config.m_SpringDamping = 0.9f;
+	Config.m_MaxOverscroll = 0.0f;
+	const SQmScrollMetrics Metrics = QmChatHistoryScrollMetrics(100, 10);
+	CQmScrollState State;
+	QmChatHistoryWheel(State, 1, Metrics, Config);
+
+	bool SawSubLineMotion = false;
+	for(int Frame = 0; Frame < 120; ++Frame)
+	{
+		State.Advance(1.0f / 60.0f, Metrics, Config);
+		const int Line = QmChatHistoryScrollLine(State.Offset(), Metrics);
+		const float PixelOffset = QmChatHistoryLayoutOffset(State.Offset(), Line, 20.0f);
+		SawSubLineMotion |= std::abs(PixelOffset) > 0.01f;
+	}
+	EXPECT_TRUE(SawSubLineMotion);
+	EXPECT_EQ(QmChatHistoryScrollLine(State.Offset(), Metrics), 1);
 }
 
 TEST(QmChatHistoryScroll, OverscrollPastBothEndsReboundsIntoLegalRange)
@@ -666,6 +716,7 @@ TEST(QmChatHistoryScroll, OverscrollPastBothEndsReboundsIntoLegalRange)
 	QmChatHistoryDragToLine(State, -6, Metrics, Config);
 	EXPECT_LT(State.Offset(), 0.0f);
 	EXPECT_GE(State.Offset(), -Config.m_MaxOverscroll - 0.001f);
+	EXPECT_LT(QmChatHistoryLayoutOffset(State.Offset(), QmChatHistoryScrollLine(State.Offset(), Metrics), 20.0f), 0.0f);
 	for(int Frame = 0; Frame < 240; ++Frame)
 		State.Advance(1.0f / 60.0f, Metrics, Config);
 	EXPECT_NEAR(State.Offset(), 0.0f, 0.01f);
@@ -675,6 +726,7 @@ TEST(QmChatHistoryScroll, OverscrollPastBothEndsReboundsIntoLegalRange)
 	QmChatHistoryDragToLine(State, Metrics.MaxOffset() + 40.0f, Metrics, Config);
 	EXPECT_GT(State.Offset(), Metrics.MaxOffset());
 	EXPECT_LE(State.Offset(), Metrics.MaxOffset() + Config.m_MaxOverscroll + 0.001f);
+	EXPECT_GT(QmChatHistoryLayoutOffset(State.Offset(), QmChatHistoryScrollLine(State.Offset(), Metrics), 20.0f), 0.0f);
 	for(int Frame = 0; Frame < 240; ++Frame)
 		State.Advance(1.0f / 60.0f, Metrics, Config);
 	EXPECT_NEAR(State.Offset(), Metrics.MaxOffset(), 0.01f);

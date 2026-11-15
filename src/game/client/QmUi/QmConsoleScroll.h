@@ -6,11 +6,6 @@
 #include <algorithm>
 #include <cmath>
 
-// 一个滚轮档的标准增量（与 CUi 滚轮归属帧、聊天历史同口径：上滚 +120、下滚 -120）。
-// 滚轮是离散输入，控制台只在输入事件里报方向，偏移推进统一交给 QmScroll 的
-// AddWheelImpulse，所以这里声明的是"一档"的语义常量，不让调用点自己写 120。
-inline constexpr float QM_CONSOLE_SCROLL_NOTCH = 120.0f;
-
 // 控制台日志滚动推进：物理本体是 CQmScrollState（列表滚动区、聊天历史、设置页共用同一套
 // 滚轮档位、弹簧、摩擦与橡皮筋），这里只补控制台的两条特化：
 //
@@ -75,12 +70,13 @@ public:
 	}
 
 	// 输入趟与命令回调：都用上一次 Advance 的几何快照，先落状态、下一帧统一推进。
-	void Wheel(int Steps)
+	void Wheel(int Steps, bool AltPressed = false)
 	{
 		if(Steps == 0 || !m_HasGeometry)
 			return;
+		const float Multiplier = AltPressed ? QmScrollAltMultiplier() : 1.0f;
 		// 公共实现里 WheelDelta 的正负与偏移方向相反，符号换算只留在这一处，调用点只报方向。
-		m_State.AddWheelImpulse(-(float)Steps * QM_CONSOLE_SCROLL_NOTCH, m_Metrics, m_Config);
+		m_State.AddWheelImpulse(-(float)Steps * Multiplier * QM_SCROLL_WHEEL_NOTCH, m_Metrics, m_Config);
 	}
 
 	void Page(int Direction)

@@ -5,6 +5,10 @@
 
 #include <game/client/ui_rect.h>
 
+// CUi 的滚轮事件以 120 为一个标准档。使用 AddWheelImpulse 的自定义滚动面
+// 必须按这个刻度报送档数，不能把“行”或“像素”直接当成原始滚轮增量。
+constexpr float QM_SCROLL_WHEEL_NOTCH = 120.0f;
+
 constexpr float QmScrollAltMultiplier()
 {
 	return 3.0f;

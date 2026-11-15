@@ -1089,12 +1089,12 @@ bool CGameConsole::CInstance::OnInput(const IInput::CEvent &Event)
 		{
 			// 每档滚多行。原先上下都只走一行，控制台滚起来慢得几乎没反应；
 			// 行数按 qm_ui_scroll_step 折算，由公共滚动物理逐帧逼近（见 QmConsoleScroll.h）。
-			m_Scroll.Wheel(1);
+			m_Scroll.Wheel(1, m_pGameConsole->Input()->AltIsPressed());
 			Handled = true;
 		}
 		else if(Event.m_Key == KEY_MOUSE_WHEEL_DOWN)
 		{
-			m_Scroll.Wheel(-1);
+			m_Scroll.Wheel(-1, m_pGameConsole->Input()->AltIsPressed());
 			Handled = true;
 		}
 		// in order not to conflict with CLineInput's handling of Home/End only

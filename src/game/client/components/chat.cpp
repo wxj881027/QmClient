@@ -848,7 +848,7 @@ bool CChat::UpdateHistoryTouchScroll(const CUIRect &ChatRect, float HeightLimit,
 	// 拖动与滚动条是同一语义：直接跟手写进公共滚动状态（SetOffset），松手后
 	// 由 QmScroll 的越界回弹收回合法范围，不再各自维护一份整数偏移。
 	const SQmScrollMetrics Metrics = QmChatHistoryScrollMetrics(TotalVisibleLines, VisibleLineCapacity);
-	const SQmScrollConfig Config = QmChatHistoryScrollConfig();
+	const SQmScrollConfig Config = QmChatHistoryScrollConfig(LineHeight);
 	const int CurrentLine = QmChatHistoryScrollLine(m_HistoryScroll.Offset(), Metrics);
 	const int NewBacklogLine = ClampBacklogLine(CurrentLine + Lines, TotalVisibleLines, VisibleLineCapacity);
 	if(NewBacklogLine == m_BacklogCurLine)
@@ -3951,7 +3951,8 @@ void CChat::OnRender()
 	// 公共滚动实现（QmScroll 的 CQmScrollState）：滚轮走弹簧/平滑档，拖动直接跟手，
 	// 松手后由同一条越界回弹把偏移收回合法范围。聊天不再自己按整数行瞬时跳。
 	const SQmScrollMetrics HistoryScrollMetrics = QmChatHistoryScrollMetrics(TotalVisibleLines, VisibleLineCapacity);
-	const SQmScrollConfig HistoryScrollConfig = QmChatHistoryScrollConfig();
+	const float HistoryFallbackStepExtent = RowHeight + ExtraLineSpacing;
+	const SQmScrollConfig HistoryScrollConfig = QmChatHistoryScrollConfig(HistoryFallbackStepExtent);
 	if(!InputActive)
 	{
 		m_HistoryScroll.Reset();
@@ -3983,6 +3984,26 @@ void CChat::OnRender()
 		}
 		m_HistoryScrollAppliedLine = m_BacklogCurLine;
 	}
+
+	// 行锚只解决“从哪条消息开始”，连续余量负责弹簧中间帧与越界回弹。
+	// 用当前首条可见消息的真实高度换算，换行消息与统一行高混排时也不会在整数行跳一下。
+	const float HistoryScrollStepExtent = [&]() {
+		for(int i = m_BacklogCurLine; i < MAX_LINES; ++i)
+		{
+			const CLine &Line = m_aLines[((m_CurrentLine - i) + MAX_LINES) % MAX_LINES];
+			if(!Line.m_Initialized)
+				break;
+			const bool ServerMessageIsBasicInfo = Line.m_ServerMessageClass == QmHudNotifications::EServerMessageClass::BasicInfo;
+			if(!ShouldRenderFocusFilteredChatLine(FocusHideChat, FocusHideSystemInfoMessages, FocusHideSystemPromptMessages, FocusHideEcho, Line.m_ClientId, Line.m_ForceVisible, ServerMessageIsBasicInfo))
+				continue;
+			if(!ShowLargeArea && Line.m_Presentation.m_State == EPresentationState::COLLAPSED)
+				continue;
+			return (Line.m_aYOffset[OffsetType] >= 0.0f ? Line.m_aYOffset[OffsetType] : RowHeight) + ExtraLineSpacing;
+		}
+		return HistoryFallbackStepExtent;
+	}();
+	y += QmChatHistoryLayoutOffset(m_HistoryScroll.Offset(), m_BacklogCurLine, HistoryScrollStepExtent);
+	const CUIRect HistoryClipRect = {ChatRect.x, HeightLimit, ChatRect.w, HistoryHeight};
 
 	// 滚动条几何全部来自公共滚动容器（与列表滚动条同一算法）：聊天只报视口高度、
 	// 内容总高度和当前进度。轨道按列表规则两端内缩，滑块按"视口/内容"算长度，
@@ -4130,6 +4151,9 @@ void CChat::OnRender()
 	}
 
 	const bool EmojiLayoutChanged = OnPrepareLines(y);
+	const SQmChatInputPixelClip HistoryPixelClip = QmChatInputPixelClip(HistoryClipRect,
+		m_ChatInputMapRect, Graphics()->ScreenWidth(), Graphics()->ScreenHeight());
+	Graphics()->ClipEnable(HistoryPixelClip.m_X, HistoryPixelClip.m_Y, HistoryPixelClip.m_W, HistoryPixelClip.m_H);
 
 	bool RenderedAnyLines = false;
 	bool HasVisibleSponsorMessage = false;
@@ -4192,7 +4216,7 @@ void CChat::OnRender()
 		const float RenderScale = maximum(0.0f, Line.m_Presentation.m_RenderScale);
 		const float RenderedContentWidth = Line.m_ContentWidth * RenderScale;
 		const CUIRect RenderedTextRect = {x + AnimOffsetX, RenderY, RenderedContentWidth, LineHeight * RenderScale};
-		const bool MouseInsideLine = IsChatLineHit(RenderedTextRect, MousePos);
+		const bool MouseInsideLine = HistoryClipRect.Inside(MousePos) && IsChatLineHit(RenderedTextRect, MousePos);
 		if(CopyClickReleased && MouseInsideLine)
 		{
 			pClickedLine = &Line;
@@ -4379,6 +4403,7 @@ void CChat::OnRender()
 			PreviewY += RowHeight;
 		}
 	}
+	Graphics()->ClipDisable();
 
 	if(VisibleBounds.Valid())
 		GameClient()->m_HudEditor.UpdateVisibleRect(EHudEditorElement::Chat, VisibleBounds.Rect());
