@@ -233,7 +233,7 @@
 == '%s'가 당신의 팀을 잠갔습니다. 레이스가 시작된 후 죽으면 팀 전체가 사망합니다.
 
 '%s' not bound.
-== '%s' not bound.
+== '%s'이(가) 바인딩되지 않았습니다.
 
 '%s' unlocked your team.
 == '%s'가 당신의 팀 잠금을 해제했습니다.
@@ -2064,7 +2064,7 @@ Candidate files
 == 후보 파일
 
 Candy gradient
-== Candy gradient
+== 캔디 그라데이션
 
 Cannot import: invalid data or too many friends or categories.
 == 가져올 수 없습니다. 데이터가 잘못되었거나 친구 또는 그룹 수가 한도를 초과했습니다.
@@ -2673,7 +2673,7 @@ Close window after changing settings
 == 설정 변경 후 창 닫기
 
 Cloud bubble
-== Cloud bubble
+== 구름 말풍선
 
 Collapse
 == 접기
@@ -2754,7 +2754,7 @@ Combo
 == 콤보
 
 Comic dialogue
-== Comic dialogue
+== 만화 대사
 
 Comma-separated list of banned clients to be kicked on join
 == 입장 시 추방될 금지 클라이언트의 쉼표로 구분된 목록
@@ -4293,7 +4293,7 @@ Downloading map
 == 맵 다운로드 중
 
 Downloading map %d%%
-== Downloading map %d%%
+== 맵 %d%% 다운로드 중
 
 Downloading rank 1 demo
 == 랭크 1 데모 다운로드 중
@@ -4506,7 +4506,7 @@ Dummy is currently connected.
 == 더미가 현재 연결되어 있습니다.
 
 Dummy is not connected
-== Dummy is not connected
+== 더미가 연결되어 있지 않습니다
 
 Dummy jump
 == 더미 점프
@@ -5547,7 +5547,7 @@ External sites are not controlled by the client.
 == 외부 사이트는 클라이언트가 관리하지 않습니다.
 
 Extra console log line spacing in pixels
-== Extra console log line spacing in pixels
+== 콘솔 로그 추가 줄 간격(픽셀)
 
 Extra vertical spacing between chat lines in pixels (0 = default)
 == 채팅 줄 사이의 추가 세로 간격(픽셀) (0 = 기본값)
@@ -5775,7 +5775,7 @@ File information
 == 파일 정보
 
 File to write the server's port to (used when running a server from the client)
-== File to write the server's port to (used when running a server from the client)
+== 서버 포트를 기록할 파일(클라이언트에서 서버를 실행할 때 사용)
 
 File with announcements, one per line.
 == 공지사항이 포함된 파일, 한 줄에 하나씩
@@ -6258,7 +6258,7 @@ Gap between tee and nametag
 == 티와 이름표 사이 간격
 
 Gather and disperse
-== Gather and disperse
+== 모였다 흩어지기
 
 Gaussian
 == 가우시안
@@ -6867,7 +6867,7 @@ Hold left click for free camera
 == 자유 카메라를 위해 왼쪽 클릭 유지
 
 Hold Shift to be more precise.
-== Hold Shift to be more precise.
+== Shift를 누르면 더 정밀하게 조절됩니다.
 
 Hold still
 == 정지
@@ -6960,7 +6960,7 @@ Hostname of DNSBL provider for IP verification
 == IP 확인용 DNSBL 제공자 호스트명
 
 Hover feedback style: 0 = scale, 1 = border highlight
-== Hover feedback style: 0 = scale, 1 = border highlight
+== 호버 피드백 방식: 0 = 확대, 1 = 테두리 강조
 
 Hover for tooltip
 == 툴팁을 보려면 마우스를 올리세요
@@ -7998,7 +7998,7 @@ Let server start race recorder
 == 서버가 레이스 리코더를 시작하도록 함
 
 Let's play together!
-== Let's play together!
+== 같이 놀아요!
 
 Lets you join team i (shows your team if left blank)
 == 팀 i에 가입할 수 있게 합니다 (비워두면 현재 팀을 표시)
@@ -8466,7 +8466,7 @@ Map data unavailable; server votes remain available
 == 맵 정보를 불러올 수 없습니다. 서버 투표는 이용할 수 있습니다
 
 Map download failed, click to retry
-== Map download failed, click to retry
+== 맵 다운로드 실패, 클릭하여 다시 시도
 
 Map download send window
 == 맵 다운로드 전송 창
@@ -8766,7 +8766,7 @@ Menu background
 == 메뉴 배경
 
 Menu button hover
-== Menu button hover
+== 메뉴 버튼 호버
 
 Menu camera rotation radius
 == 메뉴 카메라 회전 반경
@@ -10110,7 +10110,7 @@ Outgoing translation target language code
 == 발신 번역 대상 언어 코드
 
 Outline
-== Outline
+== 외곽선
 
 Outline global opacity
 == 외곽선 전체 불투명도
@@ -10890,10 +10890,10 @@ Practice mode is disabled
 == 연습 모드가 비활성화되었습니다
 
 Practice: teleport the other tee to your cursor
-== Practice: teleport the other tee to your cursor
+== 연습: 다른 tee를 커서 위치로 이동
 
 Practice: teleport yourself to your cursor
-== Practice: teleport yourself to your cursor
+== 연습: 자신을 커서 위치로 이동
 
 Pre-warm settings page on startup and menu idle
 == 시작 및 메뉴 대기 시 설정 페이지 미리 로드
@@ -10998,7 +10998,7 @@ Press "Select map" to choose a file, check the target server and player shown fo
 == 맵 선택으로 파일을 고르고 업로드 대상 서버와 플레이어를 확인한 뒤 맵 업로드를 누릅니다. 취소로 멈출 수 있습니다.
 
 Press '%s' to show cursor.
-== Press '%s' to show cursor.
+== %s를 누르면 커서가 표시됩니다.
 
 Press a key…
 == 키를 누르세요…
@@ -15168,7 +15168,7 @@ Strong Weak Hook
 == 강약 갈고리
 
 Style
-== Style
+== 스타일
 
 Style chat names, text, and message colors
 == Style chat names, text, and message colors
@@ -15591,7 +15591,7 @@ Teleport back to the practice respawn point and restore the tee state saved ther
 == 연습 리스폰 지점으로 돌아가 그곳에 저장된 Tee 상태를 복원합니다. Tee만 되돌리고 세계는 계속 진행됩니다.
 
 Teleport dummy to cursor
-== Teleport dummy to cursor
+== 더미를 커서 위치로 이동
 
 Teleport free spectator camera between hovered tele-in/out or checkpoint tele and a matching counterpart
 == 마우스를 올린 텔레포트 입구/출구 또는 체크포인트 텔레포트와 그에 대응하는 지점 사이에서 자유 관전 카메라를 순간이동합니다
@@ -17088,7 +17088,7 @@ Use custom chat bubble colors
 == 사용자 지정 채팅 말풍선 색상 사용
 
 Use custom colors
-== Use custom colors
+== 사용자 지정 색 사용
 
 Use custom colors for the pressed hook collision line (0 = always invert)
 == 훅 키를 누를 때 사용자 지정 색상 사용 (0 = 항상 반전)
@@ -18446,11 +18446,11 @@ Relative aim
 
 [Editor]
 Use Shift+Mouse wheel up/down to adjust the angle.
-== Use Shift+Mouse wheel up/down to adjust the angle.
+== Shift+마우스 휠 위/아래로 각도를 조절합니다.
 
 [Editor]
 Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
-== Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
+== Shift+마우스 휠 위/아래로 타일 번호를 조절합니다. Ctrl+F로 모든 타일 번호를 처음 쓰이지 않은 번호로 바꿉니다.
 
 [Editor curve type abbreviation]
 B

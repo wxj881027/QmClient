@@ -233,7 +233,7 @@
 == '%s' 锁定了你们的队伍。比赛开始后，任何人使用 kill 都会导致整队死亡
 
 '%s' not bound.
-== '%s' not bound.
+== “%s”未绑定。
 
 '%s' unlocked your team.
 == '%s' 解锁了你们的队伍
@@ -4425,7 +4425,7 @@ Downloading map
 == 正在下载地图
 
 Downloading map %d%%
-== Downloading map %d%%
+== 正在下载地图 %d%%
 
 Downloading rank 1 demo
 == 正在下载 Rank 1 演示
@@ -4656,7 +4656,7 @@ Dummy is currently connected.
 == 分身当前已连接。
 
 Dummy is not connected
-== Dummy is not connected
+== 分身未连接
 
 Dummy jump
 == 分身跳
@@ -5727,7 +5727,7 @@ External sites are not controlled by the client.
 == 外部网站不受客户端控制。
 
 Extra console log line spacing in pixels
-== Extra console log line spacing in pixels
+== 控制台日志额外行距（像素）
 
 Extra vertical spacing between chat lines in pixels (0 = default)
 == 聊天行与行之间的额外垂直间距（像素）（0 = 默认）
@@ -5964,7 +5964,7 @@ File information
 == 文件信息
 
 File to write the server's port to (used when running a server from the client)
-== File to write the server's port to (used when running a server from the client)
+== 写入服务器端口的文件（从客户端启动服务器时使用）
 
 File with announcements, one per line.
 == 包含公告的文件，每行一个
@@ -7101,7 +7101,7 @@ Hold left click for free camera
 == 按住左键自由镜头
 
 Hold Shift to be more precise.
-== Hold Shift to be more precise.
+== 按住 Shift 更精细。
 
 Hold still
 == 停住
@@ -7200,7 +7200,7 @@ Hostname of DNSBL provider for IP verification
 == 用于 IP 验证的 DNSBL 提供商的主机名
 
 Hover feedback style: 0 = scale, 1 = border highlight
-== Hover feedback style: 0 = scale, 1 = border highlight
+== 悬浮反馈样式：0 = 缩放，1 = 描边高亮
 
 Hover for tooltip
 == 悬停显示提示
@@ -8781,7 +8781,7 @@ Map data unavailable; server votes remain available
 == 地图数据暂不可用，仍可使用服务器投票
 
 Map download failed, click to retry
-== Map download failed, click to retry
+== 地图下载失败，点击重试
 
 Map download send window
 == 地图下载发送窗口
@@ -9084,7 +9084,7 @@ Menu background
 == 菜单背景
 
 Menu button hover
-== Menu button hover
+== 菜单按钮悬浮
 
 Menu camera rotation radius
 == 菜单相机旋转半径
@@ -10524,7 +10524,7 @@ Outgoing translation target language code
 == 出站翻译目标语言代码
 
 Outline
-== Outline
+== 描边
 
 Outline global opacity
 == 轮廓全局透明度
@@ -11328,10 +11328,10 @@ Practice mode is disabled
 == 本服务器已禁用练习模式
 
 Practice: teleport the other tee to your cursor
-== Practice: teleport the other tee to your cursor
+== 练习：把另一个 tee 传送到光标处
 
 Practice: teleport yourself to your cursor
-== Practice: teleport yourself to your cursor
+== 练习：把自己传送到光标处
 
 Pre-warm settings page on startup and menu idle
 == 启动和菜单空闲时预热设置页
@@ -11442,7 +11442,7 @@ Press "Select map" to choose a file, check the target server and player shown fo
 == 按选择地图挑文件，核对上传显示的目标服务器与玩家，再按上传地图；取消可中止。
 
 Press '%s' to show cursor.
-== Press '%s' to show cursor.
+== 按 %s 显示光标。
 
 Press a key, do a command: drag from the right dot of one node to the left dot of the next. Double-click a node to edit it, right-click a link to delete it, Ctrl+Z to undo.
 == 按下某个键、执行某条指令：从一个节点右侧的圆点拖到下一个节点左侧的圆点即可连线。双击节点改内容，右键连线删除，Ctrl+Z 撤销。
@@ -16149,7 +16149,7 @@ Teleport back to the practice respawn point and restore the tee state saved ther
 == 传送回练习重生点，并恢复在那里保存的 Tee 状态。只回滚 Tee，世界照常运行。
 
 Teleport dummy to cursor
-== Teleport dummy to cursor
+== 传送分身到光标处
 
 Teleport free spectator camera between hovered tele-in/out or checkpoint tele and a matching counterpart
 == 在悬停的传送入口/出口或检查点传送点与其对应点之间传送自由观战镜头
@@ -22796,11 +22796,11 @@ Use left mouse button to paint with the brush. Right click to clear the brush. H
 
 [Editor]
 Use Shift+Mouse wheel up/down to adjust the angle.
-== Use Shift+Mouse wheel up/down to adjust the angle.
+== 用 Shift+鼠标滚轮上/下调整角度。
 
 [Editor]
 Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
-== Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
+== 用 Shift+鼠标滚轮上/下调整图块编号。按 Ctrl+F 把所有图块编号改为第一个未使用编号。
 
 [Editor]
 Value:

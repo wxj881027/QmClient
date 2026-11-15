@@ -233,7 +233,7 @@
 == '%s' があなたのチームをロックしました。レース開始後、キルするとチーム全員が死亡します。
 
 '%s' not bound.
-== '%s' not bound.
+== 「%s」は割り当てられていません。
 
 '%s' unlocked your team.
 == '%s' があなたのチームのロックを解除しました。
@@ -2064,7 +2064,7 @@ Candidate files
 == 候補ファイル
 
 Candy gradient
-== Candy gradient
+== キャンディグラデーション
 
 Cannot import: invalid data or too many friends or categories.
 == インポートできません。データが無効か、フレンドまたはグループが多すぎます。
@@ -2673,7 +2673,7 @@ Close window after changing settings
 == 設定変更後にウィンドウを閉じる
 
 Cloud bubble
-== Cloud bubble
+== 雲の吹き出し
 
 Collapse
 == 折りたたむ
@@ -2754,7 +2754,7 @@ Combo
 == コンボ
 
 Comic dialogue
-== Comic dialogue
+== コミック調のセリフ
 
 Comma-separated list of banned clients to be kicked on join
 == 参加時にキックされる禁止クライアントのカンマ区切りリスト
@@ -4293,7 +4293,7 @@ Downloading map
 == マップをダウンロード中
 
 Downloading map %d%%
-== Downloading map %d%%
+== マップ %d%% をダウンロード中
 
 Downloading rank 1 demo
 == ランク1デモをダウンロード中
@@ -4506,7 +4506,7 @@ Dummy is currently connected.
 == ダミーが現在接続されています。
 
 Dummy is not connected
-== Dummy is not connected
+== ダミーが接続されていません
 
 Dummy jump
 == ダミージャンプ
@@ -5547,7 +5547,7 @@ External sites are not controlled by the client.
 == 外部サイトはクライアントの管理下にはありません。
 
 Extra console log line spacing in pixels
-== Extra console log line spacing in pixels
+== コンソールログの追加行間（ピクセル）
 
 Extra vertical spacing between chat lines in pixels (0 = default)
 == チャット行間の追加の縦余白（ピクセル）（0 = 既定）
@@ -5775,7 +5775,7 @@ File information
 == ファイル情報
 
 File to write the server's port to (used when running a server from the client)
-== File to write the server's port to (used when running a server from the client)
+== サーバーのポートを書き出すファイル（クライアントからサーバーを起動するときに使用）
 
 File with announcements, one per line.
 == 告知ファイル（1 行に 1 件）
@@ -6258,7 +6258,7 @@ Gap between tee and nametag
 == Tee とネームタグの間のギャップ
 
 Gather and disperse
-== Gather and disperse
+== 集まって散る
 
 Gaussian
 == ガウス
@@ -6867,7 +6867,7 @@ Hold left click for free camera
 == 左クリックでフリーカメラ
 
 Hold Shift to be more precise.
-== Hold Shift to be more precise.
+== Shift を押しながらで微調整できます。
 
 Hold still
 == 停止
@@ -6960,7 +6960,7 @@ Hostname of DNSBL provider for IP verification
 == IP 検証用 DNSBL プロバイダーのホスト名
 
 Hover feedback style: 0 = scale, 1 = border highlight
-== Hover feedback style: 0 = scale, 1 = border highlight
+== ホバー時の表現: 0 = 拡大、1 = 枠線ハイライト
 
 Hover for tooltip
 == ホバーでツールチップ
@@ -7998,7 +7998,7 @@ Let server start race recorder
 == サーバーにレースレコーダーを開始させる
 
 Let's play together!
-== Let's play together!
+== 一緒に遊ぼう！
 
 Lets you join team i (shows your team if left blank)
 == チーム i に参加できます（空白の場合は自分のチームを表示）
@@ -8466,7 +8466,7 @@ Map data unavailable; server votes remain available
 == マップ情報を取得できません。サーバーの投票項目は利用できます
 
 Map download failed, click to retry
-== Map download failed, click to retry
+== マップのダウンロードに失敗しました。クリックで再試行
 
 Map download send window
 == マップダウンロード送信ウィンドウ
@@ -8766,7 +8766,7 @@ Menu background
 == メニュー背景
 
 Menu button hover
-== Menu button hover
+== メニューボタンのホバー
 
 Menu camera rotation radius
 == メニューカメラ回転半径
@@ -10110,7 +10110,7 @@ Outgoing translation target language code
 == 送信翻訳のターゲット言語コード
 
 Outline
-== Outline
+== 輪郭
 
 Outline global opacity
 == アウトライン全体の不透明度
@@ -10890,10 +10890,10 @@ Practice mode is disabled
 == 練習モードは無効になっています
 
 Practice: teleport the other tee to your cursor
-== Practice: teleport the other tee to your cursor
+== 練習: もう一方の tee をカーソル位置へテレポート
 
 Practice: teleport yourself to your cursor
-== Practice: teleport yourself to your cursor
+== 練習: 自分をカーソル位置へテレポート
 
 Pre-warm settings page on startup and menu idle
 == 起動時とメニューアイドル時に設定ページをプリロード
@@ -10998,7 +10998,7 @@ Press "Select map" to choose a file, check the target server and player shown fo
 == マップを選択のボタンでファイルを選び、アップロード先のサーバーとプレイヤーを確認してからマップをアップロードのボタンを押します。キャンセルで中止できます。
 
 Press '%s' to show cursor.
-== Press '%s' to show cursor.
+== %s でカーソルを表示します。
 
 Press a key…
 == キーを押してください…
@@ -15168,7 +15168,7 @@ Strong Weak Hook
 == 強弱フック
 
 Style
-== Style
+== スタイル
 
 Style chat names, text, and message colors
 == Style chat names, text, and message colors
@@ -15591,7 +15591,7 @@ Teleport back to the practice respawn point and restore the tee state saved ther
 == 練習用リスポーン地点に戻り、そこに保存された Tee の状態を復元します。戻るのは Tee だけで、ワールドはそのまま進行します。
 
 Teleport dummy to cursor
-== Teleport dummy to cursor
+== ダミーをカーソル位置へテレポート
 
 Teleport free spectator camera between hovered tele-in/out or checkpoint tele and a matching counterpart
 == ホバーしたテレポート入口/出口またはチェックポイントテレポートと対応する地点の間で自由観戦カメラをテレポート
@@ -17088,7 +17088,7 @@ Use custom chat bubble colors
 == チャット吹き出しにカスタムカラーを使用
 
 Use custom colors
-== Use custom colors
+== カスタムカラーを使う
 
 Use custom colors for the pressed hook collision line (0 = always invert)
 == フックキー押下時にカスタムカラーを使用（0 = 常に反転）
@@ -18446,11 +18446,11 @@ Relative aim
 
 [Editor]
 Use Shift+Mouse wheel up/down to adjust the angle.
-== Use Shift+Mouse wheel up/down to adjust the angle.
+== Shift+マウスホイールの上下で角度を調整します。
 
 [Editor]
 Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
-== Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
+== Shift+マウスホイールの上下でタイル番号を調整します。Ctrl+F で全タイル番号を最初の未使用番号に変更します。
 
 [Editor curve type abbreviation]
 B

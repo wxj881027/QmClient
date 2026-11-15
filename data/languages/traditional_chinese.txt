@@ -233,7 +233,7 @@
 == '%s' 鎖定了你們的隊伍。比賽開始後，任何人使用 kill 都會導致整隊死亡
 
 '%s' not bound.
-== '%s' not bound.
+== 「%s」未綁定。
 
 '%s' unlocked your team.
 == '%s' 解鎖了你們的隊伍
@@ -4293,7 +4293,7 @@ Downloading map
 == 正在下載地圖
 
 Downloading map %d%%
-== Downloading map %d%%
+== 正在下載地圖 %d%%
 
 Downloading rank 1 demo
 == 正在下載 Rank 1 示範
@@ -4506,7 +4506,7 @@ Dummy is currently connected.
 == 分身當前已連接。
 
 Dummy is not connected
-== Dummy is not connected
+== 分身未連線
 
 Dummy jump
 == 分身跳
@@ -5547,7 +5547,7 @@ External sites are not controlled by the client.
 == 外部網站不受用戶端控制。
 
 Extra console log line spacing in pixels
-== Extra console log line spacing in pixels
+== 主控台日誌額外行距（像素）
 
 Extra vertical spacing between chat lines in pixels (0 = default)
 == 聊天行與行之間的額外垂直間距（像素）（0 = 預設）
@@ -5775,7 +5775,7 @@ File information
 == 檔案資訊
 
 File to write the server's port to (used when running a server from the client)
-== File to write the server's port to (used when running a server from the client)
+== 寫入伺服器連接埠的檔案（從用戶端啟動伺服器時使用）
 
 File with announcements, one per line.
 == 包含公告的文件，每行一個
@@ -6867,7 +6867,7 @@ Hold left click for free camera
 == 按住左鍵自由鏡頭
 
 Hold Shift to be more precise.
-== Hold Shift to be more precise.
+== 按住 Shift 更精細。
 
 Hold still
 == 停住
@@ -6960,7 +6960,7 @@ Hostname of DNSBL provider for IP verification
 == 用於 IP 驗證的 DNSBL 提供商的主機名
 
 Hover feedback style: 0 = scale, 1 = border highlight
-== Hover feedback style: 0 = scale, 1 = border highlight
+== 懸停回饋樣式：0 = 縮放，1 = 描邊高亮
 
 Hover for tooltip
 == 懸停查看提示
@@ -8466,7 +8466,7 @@ Map data unavailable; server votes remain available
 == 地圖資料暫不可用，仍可使用伺服器投票
 
 Map download failed, click to retry
-== Map download failed, click to retry
+== 地圖下載失敗，點擊重試
 
 Map download send window
 == 地圖下載發送窗口
@@ -8766,7 +8766,7 @@ Menu background
 == 菜單背景
 
 Menu button hover
-== Menu button hover
+== 選單按鈕懸停
 
 Menu camera rotation radius
 == 菜單相機旋轉半徑
@@ -10110,7 +10110,7 @@ Outgoing translation target language code
 == 出站翻譯目標語言代碼
 
 Outline
-== Outline
+== 描邊
 
 Outline global opacity
 == 輪廓全局透明度
@@ -10890,10 +10890,10 @@ Practice mode is disabled
 == 本伺服器已禁用練習模式
 
 Practice: teleport the other tee to your cursor
-== Practice: teleport the other tee to your cursor
+== 練習：把另一個 tee 傳送到游標處
 
 Practice: teleport yourself to your cursor
-== Practice: teleport yourself to your cursor
+== 練習：把自己傳送到游標處
 
 Pre-warm settings page on startup and menu idle
 == 啟動和菜單空閒時預熱設置頁
@@ -10998,7 +10998,7 @@ Press "Select map" to choose a file, check the target server and player shown fo
 == 按選擇地圖挑檔案，核對上傳顯示的目標伺服器與玩家，再按上傳地圖；取消可中止。
 
 Press '%s' to show cursor.
-== Press '%s' to show cursor.
+== 按 %s 顯示游標。
 
 Press a key…
 == 按任意鍵…
@@ -15591,7 +15591,7 @@ Teleport back to the practice respawn point and restore the tee state saved ther
 == 傳送回練習重生點，並恢復在那裡儲存的 Tee 狀態。只回滾 Tee，世界照常運行。
 
 Teleport dummy to cursor
-== Teleport dummy to cursor
+== 傳送分身到游標處
 
 Teleport free spectator camera between hovered tele-in/out or checkpoint tele and a matching counterpart
 == 在懸停的傳送入口/出口或檢查點傳送點與其對應點之間傳送自由觀戰鏡頭
@@ -18446,11 +18446,11 @@ Relative aim
 
 [Editor]
 Use Shift+Mouse wheel up/down to adjust the angle.
-== Use Shift+Mouse wheel up/down to adjust the angle.
+== 用 Shift+滑鼠滾輪上/下調整角度。
 
 [Editor]
 Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
-== Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
+== 用 Shift+滑鼠滾輪上/下調整圖塊編號。按 Ctrl+F 把所有圖塊編號改為第一個未使用編號。
 
 [Editor curve type abbreviation]
 B

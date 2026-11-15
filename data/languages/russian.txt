@@ -233,7 +233,7 @@
 == '%s' заблокировал(а) вашу команду. После старта заезда убийство убьёт всех в команде.
 
 '%s' not bound.
-== '%s' not bound.
+== «%s» не назначена.
 
 '%s' unlocked your team.
 == '%s' разблокировал(а) вашу команду.
@@ -2064,7 +2064,7 @@ Candidate files
 == Файлы-кандидаты
 
 Candy gradient
-== Candy gradient
+== Карамельный градиент
 
 Cannot import: invalid data or too many friends or categories.
 == Импорт невозможен: неверные данные или слишком много друзей либо групп.
@@ -2673,7 +2673,7 @@ Close window after changing settings
 == Закрыть окно после изменения настроек
 
 Cloud bubble
-== Cloud bubble
+== Облачко
 
 Collapse
 == Свернуть
@@ -2754,7 +2754,7 @@ Combo
 == Комбо
 
 Comic dialogue
-== Comic dialogue
+== Комиксный диалог
 
 Comma-separated list of banned clients to be kicked on join
 == Список забаненных клиентов через запятую, которые будут кикнуты при подключении
@@ -4293,7 +4293,7 @@ Downloading map
 == Загрузка карты
 
 Downloading map %d%%
-== Downloading map %d%%
+== Загрузка карты %d%%
 
 Downloading rank 1 demo
 == Загрузка демо ранга 1
@@ -4506,7 +4506,7 @@ Dummy is currently connected.
 == Дамми в данный момент подключён.
 
 Dummy is not connected
-== Dummy is not connected
+== Дамми не подключён
 
 Dummy jump
 == Прыжок дамми
@@ -5547,7 +5547,7 @@ External sites are not controlled by the client.
 == Внешние сайты не контролируются клиентом.
 
 Extra console log line spacing in pixels
-== Extra console log line spacing in pixels
+== Дополнительный интервал строк журнала консоли в пикселях
 
 Extra vertical spacing between chat lines in pixels (0 = default)
 == Дополнительный вертикальный интервал между строками чата в пикселях (0 = по умолчанию)
@@ -5775,7 +5775,7 @@ File information
 == Информация о файле
 
 File to write the server's port to (used when running a server from the client)
-== File to write the server's port to (used when running a server from the client)
+== Файл для записи порта сервера (используется при запуске сервера из клиента)
 
 File with announcements, one per line.
 == Файл с объявлениями, по одному на строку.
@@ -6258,7 +6258,7 @@ Gap between tee and nametag
 == Расстояние между ти и табличкой с именем
 
 Gather and disperse
-== Gather and disperse
+== Собираются и расходятся
 
 Gaussian
 == Гаусс
@@ -6867,7 +6867,7 @@ Hold left click for free camera
 == Зажмите левую кнопку мыши для свободной камеры
 
 Hold Shift to be more precise.
-== Hold Shift to be more precise.
+== Удерживайте Shift для точной настройки.
 
 Hold still
 == Стоп-кадр
@@ -6960,7 +6960,7 @@ Hostname of DNSBL provider for IP verification
 == Имя хоста провайдера DNSBL для проверки IP
 
 Hover feedback style: 0 = scale, 1 = border highlight
-== Hover feedback style: 0 = scale, 1 = border highlight
+== Стиль отклика при наведении: 0 = масштаб, 1 = подсветка рамки
 
 Hover for tooltip
 == Наведите для подсказки
@@ -7998,7 +7998,7 @@ Let server start race recorder
 == Разрешить серверу запускать рекордер гонки
 
 Let's play together!
-== Let's play together!
+== Давай играть вместе!
 
 Lets you join team i (shows your team if left blank)
 == Позволяет присоединиться к команде i (оставьте пустым, чтобы показать вашу команду)
@@ -8466,7 +8466,7 @@ Map data unavailable; server votes remain available
 == Данные карт недоступны; голосования сервера доступны
 
 Map download failed, click to retry
-== Map download failed, click to retry
+== Не удалось загрузить карту, нажмите для повтора
 
 Map download send window
 == Окно отправки загрузки карты
@@ -8766,7 +8766,7 @@ Menu background
 == Фон меню
 
 Menu button hover
-== Menu button hover
+== Наведение на кнопку меню
 
 Menu camera rotation radius
 == Радиус вращения камеры меню
@@ -10110,7 +10110,7 @@ Outgoing translation target language code
 == Код целевого языка для исходящего перевода
 
 Outline
-== Outline
+== Обводка
 
 Outline global opacity
 == Глобальная непрозрачность контуров
@@ -10890,10 +10890,10 @@ Practice mode is disabled
 == Режим тренировки отключён
 
 Practice: teleport the other tee to your cursor
-== Practice: teleport the other tee to your cursor
+== Практика: переместить другой tee к курсору
 
 Practice: teleport yourself to your cursor
-== Practice: teleport yourself to your cursor
+== Практика: переместить себя к курсору
 
 Pre-warm settings page on startup and menu idle
 == Прогревать страницу настроек при запуске и простое в меню
@@ -10998,7 +10998,7 @@ Press "Select map" to choose a file, check the target server and player shown fo
 == Нажмите выбрать карту, проверьте целевой сервер и игрока для загрузки, затем нажмите загрузить карту; отмена остановит её.
 
 Press '%s' to show cursor.
-== Press '%s' to show cursor.
+== Нажмите %s, чтобы показать курсор.
 
 Press a key…
 == Нажмите клавишу…
@@ -15168,7 +15168,7 @@ Strong Weak Hook
 == Сильный/Слабый крюк
 
 Style
-== Style
+== Стиль
 
 Style chat names, text, and message colors
 == Style chat names, text, and message colors
@@ -15591,7 +15591,7 @@ Teleport back to the practice respawn point and restore the tee state saved ther
 == Телепортирует к точке возрождения практики и восстанавливает сохранённое там состояние Tee. Восстанавливается только Tee, мир продолжает идти.
 
 Teleport dummy to cursor
-== Teleport dummy to cursor
+== Переместить дамми к курсору
 
 Teleport free spectator camera between hovered tele-in/out or checkpoint tele and a matching counterpart
 == Телепортировать свободную камеру наблюдателя между наведённым телепортом входа/выхода или чекпоинтом и соответствующим объектом
@@ -17088,7 +17088,7 @@ Use custom chat bubble colors
 == Использовать свои цвета пузырей чата
 
 Use custom colors
-== Use custom colors
+== Использовать свои цвета
 
 Use custom colors for the pressed hook collision line (0 = always invert)
 == Использовать свои цвета линии зацепа при нажатой клавише (0 = всегда инвертировать)
@@ -18446,11 +18446,11 @@ Relative aim
 
 [Editor]
 Use Shift+Mouse wheel up/down to adjust the angle.
-== Use Shift+Mouse wheel up/down to adjust the angle.
+== Крутите колесо мыши с Shift, чтобы менять угол.
 
 [Editor]
 Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
-== Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
+== Крутите колесо мыши с Shift, чтобы менять номера тайлов. Ctrl+F меняет все номера на первый неиспользуемый.
 
 [Editor curve type abbreviation]
 B

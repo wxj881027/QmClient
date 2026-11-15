@@ -233,7 +233,7 @@
 == '%s', takımını kilitledi. Yarış başladıktan sonra öldürmek takımındaki herkesi öldürecek.
 
 '%s' not bound.
-== '%s' not bound.
+== '%s' atanmamış.
 
 '%s' unlocked your team.
 == '%s', takımının kilidini açtı.
@@ -2064,7 +2064,7 @@ Candidate files
 == Aday dosyalar
 
 Candy gradient
-== Candy gradient
+== Şeker gradyanı
 
 Cannot import: invalid data or too many friends or categories.
 == İçe aktarılamıyor: veriler geçersiz veya arkadaş ya da grup sayısı çok fazla.
@@ -2673,7 +2673,7 @@ Close window after changing settings
 == Ayarları değiştirdikten sonra pencereyi kapat
 
 Cloud bubble
-== Cloud bubble
+== Bulut balonu
 
 Collapse
 == Daralt
@@ -2754,7 +2754,7 @@ Combo
 == Kombo
 
 Comic dialogue
-== Comic dialogue
+== Çizgi roman diyalogu
 
 Comma-separated list of banned clients to be kicked on join
 == Katılımda atılacak, virgülle ayrılmış yasaklı istemci listesi
@@ -4293,7 +4293,7 @@ Downloading map
 == Harita indiriliyor
 
 Downloading map %d%%
-== Downloading map %d%%
+== Harita indiriliyor %d%%
 
 Downloading rank 1 demo
 == Rank 1 demosu indiriliyor
@@ -4506,7 +4506,7 @@ Dummy is currently connected.
 == Dummy şu anda bağlı.
 
 Dummy is not connected
-== Dummy is not connected
+== Dummy bağlı değil
 
 Dummy jump
 == Kukla zıplaması
@@ -5547,7 +5547,7 @@ External sites are not controlled by the client.
 == Dış siteler istemcinin denetiminde değildir.
 
 Extra console log line spacing in pixels
-== Extra console log line spacing in pixels
+== Konsol günlüğü ek satır aralığı (piksel)
 
 Extra vertical spacing between chat lines in pixels (0 = default)
 == Sohbet satırları arasına ek dikey boşluk (piksel) (0 = varsayılan)
@@ -5775,7 +5775,7 @@ File information
 == Dosya bilgileri
 
 File to write the server's port to (used when running a server from the client)
-== File to write the server's port to (used when running a server from the client)
+== Sunucu bağlantı noktasının yazılacağı dosya (istemciden sunucu çalıştırırken kullanılır)
 
 File with announcements, one per line.
 == Duyuruları içeren dosya, her satırda bir tane.
@@ -6258,7 +6258,7 @@ Gap between tee and nametag
 == Tee ile isim etiketi arasındaki boşluk
 
 Gather and disperse
-== Gather and disperse
+== Toplan ve dağıl
 
 Gaussian
 == Gauss
@@ -6867,7 +6867,7 @@ Hold left click for free camera
 == Serbest kamera için sol tıklamayı basılı tut
 
 Hold Shift to be more precise.
-== Hold Shift to be more precise.
+== Daha hassas ayar için Shift'e basılı tut.
 
 Hold still
 == Sabit tut
@@ -6960,7 +6960,7 @@ Hostname of DNSBL provider for IP verification
 == IP doğrulaması için DNSBL sağlayıcısının ana bilgisayar adı
 
 Hover feedback style: 0 = scale, 1 = border highlight
-== Hover feedback style: 0 = scale, 1 = border highlight
+== Üzerine gelme geri bildirimi: 0 = ölçekle, 1 = kenarlığı vurgula
 
 Hover for tooltip
 == İpucu için üzerine gel
@@ -7998,7 +7998,7 @@ Let server start race recorder
 == Sunucunun yarış kaydedicisini başlatmasına izin ver
 
 Let's play together!
-== Let's play together!
+== Birlikte oynayalım!
 
 Lets you join team i (shows your team if left blank)
 == i takımına katılmanı sağlar (boş bırakılırsa takımını gösterir)
@@ -8466,7 +8466,7 @@ Map data unavailable; server votes remain available
 == Harita verileri alınamıyor; sunucu oylamaları kullanılabilir
 
 Map download failed, click to retry
-== Map download failed, click to retry
+== Harita indirilemedi, yeniden denemek için tıkla
 
 Map download send window
 == Harita indirme gönderme penceresi
@@ -8766,7 +8766,7 @@ Menu background
 == Menü arka planı
 
 Menu button hover
-== Menu button hover
+== Menü düğmesi üzerine gelme
 
 Menu camera rotation radius
 == Menü kamera dönüş yarıçapı
@@ -10110,7 +10110,7 @@ Outgoing translation target language code
 == Giden çeviri hedef dil kodu
 
 Outline
-== Outline
+== Kenarlık
 
 Outline global opacity
 == Kontur genel opaklığı
@@ -10890,10 +10890,10 @@ Practice mode is disabled
 == Antrenman modu devre dışı
 
 Practice: teleport the other tee to your cursor
-== Practice: teleport the other tee to your cursor
+== Alıştırma: diğer tee'yi imlece ışınla
 
 Practice: teleport yourself to your cursor
-== Practice: teleport yourself to your cursor
+== Alıştırma: kendini imlece ışınla
 
 Pre-warm settings page on startup and menu idle
 == Başlangıçta ve Menü Boştayken Ayarlar Sayfasını Önceden Yükle
@@ -10998,7 +10998,7 @@ Press "Select map" to choose a file, check the target server and player shown fo
 == Dosya seçmek için harita seç düğmesine basın, yüklemenin hedef sunucusunu ve oyuncusunu kontrol edin, sonra haritayı yükle düğmesine basın; iptal durdurur.
 
 Press '%s' to show cursor.
-== Press '%s' to show cursor.
+== İmleci göstermek için %s tuşuna bas.
 
 Press a key…
 == Bir tuşa basın…
@@ -15168,7 +15168,7 @@ Strong Weak Hook
 == Güçlü Zayıf Kanca
 
 Style
-== Style
+== Stil
 
 Style chat names, text, and message colors
 == Style chat names, text, and message colors
@@ -15591,7 +15591,7 @@ Teleport back to the practice respawn point and restore the tee state saved ther
 == Pratik yeniden doğma noktasına ışınlar ve orada kayıtlı Tee durumunu geri yükler. Yalnızca Tee geri alınır, dünya akmaya devam eder.
 
 Teleport dummy to cursor
-== Teleport dummy to cursor
+== Dummy'yi imlece ışınla
 
 Teleport free spectator camera between hovered tele-in/out or checkpoint tele and a matching counterpart
 == Üzerinde durulan ışınlanma giriş/çıkışı veya kontrol noktası ışınlanması ile eşleşen bir karşılığı arasında serbest izleyici kamerasını ışınla
@@ -17088,7 +17088,7 @@ Use custom chat bubble colors
 == Özel sohbet balonu renkleri kullan
 
 Use custom colors
-== Use custom colors
+== Özel renkleri kullan
 
 Use custom colors for the pressed hook collision line (0 = always invert)
 == Basılı kanca yardımcı çizgisi için özel renkler kullan (0 = her zaman ters çevir)
@@ -18446,11 +18446,11 @@ Relative aim
 
 [Editor]
 Use Shift+Mouse wheel up/down to adjust the angle.
-== Use Shift+Mouse wheel up/down to adjust the angle.
+== Açıyı ayarlamak için Shift+fare tekerleği yukarı/aşağı kullan.
 
 [Editor]
 Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
-== Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
+== Kiremit numaralarını ayarlamak için Shift+fare tekerleği yukarı/aşağı kullan. Ctrl+F tüm kiremit numaralarını kullanılmayan ilk numaraya çevirir.
 
 [Editor curve type abbreviation]
 B

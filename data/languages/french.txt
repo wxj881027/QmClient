@@ -233,7 +233,7 @@
 == '%s' a verrouillé votre équipe. Après le début de la course, tuer tuera tous les membres de votre équipe.
 
 '%s' not bound.
-== '%s' not bound.
+== « %s » n'est pas assigné.
 
 '%s' unlocked your team.
 == '%s' a déverrouillé votre équipe.
@@ -2064,7 +2064,7 @@ Candidate files
 == Fichiers candidats
 
 Candy gradient
-== Candy gradient
+== Dégradé bonbon
 
 Cannot import: invalid data or too many friends or categories.
 == Importation impossible : données invalides ou trop d’amis ou de groupes.
@@ -2673,7 +2673,7 @@ Close window after changing settings
 == Fermer la fenêtre après avoir modifié les paramètres
 
 Cloud bubble
-== Cloud bubble
+== Bulle nuage
 
 Collapse
 == Réduire
@@ -2754,7 +2754,7 @@ Combo
 == Combo
 
 Comic dialogue
-== Comic dialogue
+== Dialogue de BD
 
 Comma-separated list of banned clients to be kicked on join
 == Liste séparée par des virgules des clients bannis à expulser à la connexion
@@ -4293,7 +4293,7 @@ Downloading map
 == Téléchargement de la carte
 
 Downloading map %d%%
-== Downloading map %d%%
+== Téléchargement de la map %d%%
 
 Downloading rank 1 demo
 == Téléchargement de la démo de rang 1
@@ -4506,7 +4506,7 @@ Dummy is currently connected.
 == Le Dummy est actuellement connecté.
 
 Dummy is not connected
-== Dummy is not connected
+== Le dummy n'est pas connecté
 
 Dummy jump
 == Saut du Dummy
@@ -5547,7 +5547,7 @@ External sites are not controlled by the client.
 == Les sites externes ne sont pas contrôlés par le client.
 
 Extra console log line spacing in pixels
-== Extra console log line spacing in pixels
+== Espacement supplémentaire entre les lignes du journal de console en pixels
 
 Extra vertical spacing between chat lines in pixels (0 = default)
 == espacement vertical supplémentaire entre les lignes de chat en pixels (0 = par défaut)
@@ -5775,7 +5775,7 @@ File information
 == Informations du fichier
 
 File to write the server's port to (used when running a server from the client)
-== File to write the server's port to (used when running a server from the client)
+== Fichier où écrire le port du serveur (utilisé pour lancer un serveur depuis le client)
 
 File with announcements, one per line.
 == Fichier avec les annonces, une par ligne.
@@ -6258,7 +6258,7 @@ Gap between tee and nametag
 == Espace entre le tee et l'étiquette nominative
 
 Gather and disperse
-== Gather and disperse
+== Se rassembler et se disperser
 
 Gaussian
 == Gaussien
@@ -6867,7 +6867,7 @@ Hold left click for free camera
 == Maintenez le clic gauche pour la caméra libre
 
 Hold Shift to be more precise.
-== Hold Shift to be more precise.
+== Maintiens Maj pour plus de précision.
 
 Hold still
 == Figer
@@ -6960,7 +6960,7 @@ Hostname of DNSBL provider for IP verification
 == Nom d'hôte du fournisseur DNSBL pour la vérification IP
 
 Hover feedback style: 0 = scale, 1 = border highlight
-== Hover feedback style: 0 = scale, 1 = border highlight
+== Style de retour au survol : 0 = agrandir, 1 = surligner la bordure
 
 Hover for tooltip
 == Survoler pour l'infobulle
@@ -7998,7 +7998,7 @@ Let server start race recorder
 == Laisser le serveur démarrer l'enregistreur de course
 
 Let's play together!
-== Let's play together!
+== Jouons ensemble !
 
 Lets you join team i (shows your team if left blank)
 == Vous permet de rejoindre l'équipe i (affiche votre équipe si laissé vide)
@@ -8466,7 +8466,7 @@ Map data unavailable; server votes remain available
 == Données des cartes indisponibles ; les votes du serveur restent accessibles
 
 Map download failed, click to retry
-== Map download failed, click to retry
+== Échec du téléchargement de la map, clique pour réessayer
 
 Map download send window
 == Fenêtre d'envoi de téléchargement de carte
@@ -8766,7 +8766,7 @@ Menu background
 == Fond du menu
 
 Menu button hover
-== Menu button hover
+== Survol des boutons de menu
 
 Menu camera rotation radius
 == Rayon de rotation de la caméra du menu
@@ -10110,7 +10110,7 @@ Outgoing translation target language code
 == Code de la langue cible pour la traduction sortante
 
 Outline
-== Outline
+== Contour
 
 Outline global opacity
 == Opacité globale des contours
@@ -10890,10 +10890,10 @@ Practice mode is disabled
 == Le mode entraînement est désactivé
 
 Practice: teleport the other tee to your cursor
-== Practice: teleport the other tee to your cursor
+== Entraînement : téléporter l'autre tee sur le curseur
 
 Practice: teleport yourself to your cursor
-== Practice: teleport yourself to your cursor
+== Entraînement : te téléporter sur le curseur
 
 Pre-warm settings page on startup and menu idle
 == Activer le préchauffage des pages de paramètres au démarrage et lorsque le menu est inactif
@@ -10998,7 +10998,7 @@ Press "Select map" to choose a file, check the target server and player shown fo
 == Appuyez sur choisir une carte, vérifiez le serveur et le joueur cibles, puis appuyez sur envoyer la carte ; annuler l'interrompt.
 
 Press '%s' to show cursor.
-== Press '%s' to show cursor.
+== Appuie sur %s pour afficher le curseur.
 
 Press a key…
 == Appuyez sur une touche…
@@ -15591,7 +15591,7 @@ Teleport back to the practice respawn point and restore the tee state saved ther
 == Téléporte au point de réapparition d'entraînement et restaure l'état du tee qui y a été enregistré. Seul le tee est restauré ; le monde continue.
 
 Teleport dummy to cursor
-== Teleport dummy to cursor
+== Téléporter le dummy sur le curseur
 
 Teleport free spectator camera between hovered tele-in/out or checkpoint tele and a matching counterpart
 == Téléporter la caméra libre du spectateur entre le téléporteur d'entrée/sortie survolé ou le téléporteur de checkpoint et une contrepartie correspondante
@@ -17088,7 +17088,7 @@ Use custom chat bubble colors
 == Utiliser des couleurs personnalisées pour les bulles de discussion
 
 Use custom colors
-== Use custom colors
+== Utiliser des couleurs personnalisées
 
 Use custom colors for the pressed hook collision line (0 = always invert)
 == utilise des couleurs personnalisées pour la ligne de grappin maintenue (0 = toujours inverser)
@@ -18446,11 +18446,11 @@ Relative aim
 
 [Editor]
 Use Shift+Mouse wheel up/down to adjust the angle.
-== Use Shift+Mouse wheel up/down to adjust the angle.
+== Utilise Maj+molette haut/bas pour ajuster l'angle.
 
 [Editor]
 Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
-== Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
+== Utilise Maj+molette haut/bas pour ajuster les numéros de tuile. Ctrl+F remplace tous les numéros de tuile par le premier numéro inutilisé.
 
 [Editor curve type abbreviation]
 B
