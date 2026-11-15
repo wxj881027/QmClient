@@ -426,6 +426,22 @@ REGISTER_QUICK_ACTION(
 	ALWAYS_FALSE,
 	DEFAULT_BTN,
 	Localizable("Run a local server with the current map and connect you to it.", "Editor"))
+REGISTER_QUICK_ACTION(
+	Undo,
+	Localizable("Undo", "Editor"),
+	[&]() { Map()->m_EditorHistory.Undo(); },
+	[&]() -> bool { return !Map()->m_EditorHistory.CanUndo(); },
+	ALWAYS_FALSE,
+	DEFAULT_BTN,
+	Localizable("[Ctrl+Z] Undo the last action.", "Editor"))
+REGISTER_QUICK_ACTION(
+	Redo,
+	Localizable("Redo", "Editor"),
+	[&]() { Map()->m_EditorHistory.Redo(); },
+	[&]() -> bool { return !Map()->m_EditorHistory.CanRedo(); },
+	ALWAYS_FALSE,
+	DEFAULT_BTN,
+	Localizable("[Ctrl+Y] Redo the last undone action.", "Editor"))
 
 #undef ALWAYS_FALSE
 #undef DEFAULT_BTN

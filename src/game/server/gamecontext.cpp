@@ -56,6 +56,9 @@ public:
 		m_ClientId(ClientId),
 		m_pOuterLogger(pOuterLogger)
 	{
+		// 聊天回复走 DEBUG 级别，避免每条 /help、/team 回复都写进服务端日志文件；
+		// 本转发器要单独放行 DEBUG，否则玩家收不到回复。
+		m_Filter.m_MaxLevel.store(LEVEL_DEBUG, std::memory_order_relaxed);
 	}
 	void Log(const CLogMessage *pMessage) override;
 };

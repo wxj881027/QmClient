@@ -363,14 +363,14 @@ void CGameContext::ConSetSwitch(IConsole::IResult *pResult, void *pUserData)
 	CCharacter *pChr = pSelf->GetPlayerChar(pResult->m_ClientId);
 	if(!pChr)
 	{
-		log_info("chatresp", "You can't set switch while you are dead/a spectator.");
+		log_debug("chatresp", "You can't set switch while you are dead/a spectator.");
 		return;
 	}
 	const int Team = pChr->Team();
 	const int Switch = pResult->GetInteger(0);
 	if(!in_range(Switch, (int)pSelf->Switchers().size() - 1))
 	{
-		log_info("chatresp", "Invalid switch ID");
+		log_debug("chatresp", "Invalid switch ID");
 		return;
 	}
 	const bool State = pResult->NumArguments() == 1 ? !pSelf->Switchers()[Switch].m_aStatus[Team] : pResult->GetInteger(1) != 0;

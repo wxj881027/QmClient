@@ -754,6 +754,28 @@ public:
 
 	static bool IsVanillaImage(const char *pImage);
 
+	enum class ELayerOperation
+	{
+		NONE,
+		CLICK,
+		LAYER_DRAG,
+		GROUP_DRAG,
+	};
+	struct SLayerPanelState
+	{
+		ELayerOperation m_Operation = ELayerOperation::NONE;
+		ELayerOperation m_PreviousOperation = ELayerOperation::NONE;
+		const void *m_pDraggedButton = nullptr;
+		float m_InitialMouseY = 0.0f;
+		float m_InitialCutHeight = 0.0f;
+		bool m_ScrollToSelectionNext = false;
+		SPopupMenuId m_PopupGroupId = {};
+		SLayerPopupContext m_LayerPopupContext = {};
+
+		void Reset();
+	};
+	SLayerPanelState m_LayerPanelState;
+
 	void RenderLayers(CUIRect LayersBox);
 	void RenderImagesList(CUIRect Toolbox);
 	void RenderSelectedImage(CUIRect View) const;

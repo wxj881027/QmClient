@@ -1446,7 +1446,7 @@ void CRenderLayerQuads::Render(const CRenderLayerParams &Params)
 	float Alpha = Force ? 1.f : (100 - Params.m_EntityOverlayVal) / 100.0f;
 	if(!Graphics()->IsQuadBufferingEnabled() || !m_TileAndQuadBuffering)
 	{
-		RenderMap()->ForceRenderQuads(m_pQuads, m_pLayerQuads->m_NumQuads, LAYERRENDERFLAG_TRANSPARENT, m_pEnvelopeManager->EnvelopeEval(), Alpha);
+		RenderMap()->ForceRenderQuads(m_pQuads, m_pLayerQuads->m_NumQuads, m_pEnvelopeManager->EnvelopeEval(), Alpha);
 	}
 	else
 	{
