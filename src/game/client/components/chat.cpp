@@ -454,7 +454,6 @@ CChat::CChat()
 	m_Mode = MODE_NONE;
 	m_WhisperClientId = -1;
 	m_aWhisperName[0] = '\0';
-	m_LastPresentationUpdateTime = 0;
 	m_LargeAreaOpenTick = 0;
 	m_LastPresentationShowLargeArea = false;
 	m_PendingConsoleLineIndex = -1;
@@ -685,7 +684,6 @@ void CChat::ClearLines()
 	m_MouseRelease = vec2(0.0f, 0.0f);
 	m_PrevScoreBoardShowed = false;
 	m_PrevShowChat = false;
-	m_LastPresentationUpdateTime = 0;
 	m_LargeAreaOpenTick = 0;
 	m_LastPresentationShowLargeArea = false;
 	// 清屏时直接丢弃 echo 重复计数，不清算：补出来的统计行会立刻被清掉。
@@ -3574,13 +3572,12 @@ void CChat::OnRender()
 		(InputActive && g_Config.m_ClShowChat == 1) ||
 		g_Config.m_ClShowChat == 2;
 	const bool ExtraAnimations = g_Config.m_QmUiMotionLevel > 0 && GameClient()->UiRuntimeV2()->Enabled();
-	int64_t Now = time();
-	if(m_LastPresentationUpdateTime == 0 || Now < m_LastPresentationUpdateTime)
-		m_LastPresentationUpdateTime = Now;
-	float DeltaSeconds = std::clamp((Now - m_LastPresentationUpdateTime) / (float)time_freq(), 0.0f, CHAT_PRESENTATION_MAX_DELTA_SECONDS);
+	const int64_t Now = time();
+	// 动画与滚动物理必须共用渲染帧的真实步长。time() 只有毫秒精度，
+	// 60 Hz 下会在 15/16/17 ms 之间跳，弹簧每帧推进不均匀，滚动看起来一顿一顿。
+	float DeltaSeconds = std::clamp(Client()->RenderFrameTime(), 0.0f, CHAT_PRESENTATION_MAX_DELTA_SECONDS);
 	const float ChatFadeDurationSeconds = g_Config.m_QmChatAnimFadeDurationMs / 1000.0f;
 	(void)ChatFadeDurationSeconds;
-	m_LastPresentationUpdateTime = Now;
 	if(HudEditorPreview)
 		DeltaSeconds = 0.0f;
 	else
@@ -3977,11 +3974,10 @@ void CChat::OnRender()
 			QmChatHistoryDragToLine(m_HistoryScroll, m_BacklogCurLine, HistoryScrollMetrics, HistoryScrollConfig);
 		m_HistoryScroll.Advance(DeltaSeconds, HistoryScrollMetrics, HistoryScrollConfig);
 		const int NewBacklogLine = QmChatHistoryScrollLine(m_HistoryScroll.Offset(), HistoryScrollMetrics);
+		// 滚动只改“从哪一行开始显示”，不改变字体、宽度或文本内容。
+		// 保留每行的排版缓存，新进入视口的行由 OnPrepareLines 懒加载。
 		if(NewBacklogLine != m_BacklogCurLine)
-		{
 			m_BacklogCurLine = NewBacklogLine;
-			RebuildChat();
-		}
 		m_HistoryScrollAppliedLine = m_BacklogCurLine;
 	}
 
@@ -4054,10 +4050,7 @@ void CChat::OnRender()
 			const int NewBacklogCurLine = ScrollbarValueToBacklogLine(Progress, MaxScroll);
 			QmChatHistoryDragToLine(m_HistoryScroll, NewBacklogCurLine, HistoryScrollMetrics, HistoryScrollConfig);
 			if(NewBacklogCurLine != m_BacklogCurLine)
-			{
 				m_BacklogCurLine = NewBacklogCurLine;
-				RebuildChat();
-			}
 			m_HistoryScrollAppliedLine = m_BacklogCurLine;
 			// 滑块跟着新进度重画一次，走同一个几何入口。
 			ScrollbarFrame = QmResolveChatScrollbarFrame(ChatRect, HeightLimit, HistoryHeight, HistoryContentHeight, BacklogLineToScrollbarValue(m_BacklogCurLine, MaxScroll), ChatScrollbarOnRight);
@@ -4114,8 +4107,7 @@ void CChat::OnRender()
 		const bool HistoryDragStartAllowed =
 			!AnyChatPopupOpen && !HudEditorPreview && !InsideInputBlock && !InsideTranslateButton &&
 			!InsideScrollbar && !InsideCommandHud && !m_CommandHud.IsPressed() && !m_ScrollbarDragging;
-		if(UpdateHistoryTouchScroll(ChatRect, HeightLimit, HistoryBottom, RowHeight + ExtraLineSpacing, TotalVisibleLines, VisibleLineCapacity, HistoryDragStartAllowed))
-			RebuildChat();
+		UpdateHistoryTouchScroll(ChatRect, HeightLimit, HistoryBottom, RowHeight + ExtraLineSpacing, TotalVisibleLines, VisibleLineCapacity, HistoryDragStartAllowed);
 	}
 	else
 	{

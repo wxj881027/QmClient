@@ -17,6 +17,7 @@
 
 #include <gtest/gtest.h>
 
+#include <array>
 #include <cmath>
 #include <iterator>
 #include <string>
@@ -701,6 +702,46 @@ TEST(QmChatHistoryScroll, SubLineOffsetKeepsSpringMotionContinuous)
 	}
 	EXPECT_TRUE(SawSubLineMotion);
 	EXPECT_EQ(QmChatHistoryScrollLine(State.Offset(), Metrics), 1);
+}
+
+TEST(QmChatHistoryScroll, IrregularFrameIntervalsStayContinuousAcrossLineBoundaries)
+{
+	SQmScrollConfig Config;
+	Config.m_WheelScale = 1.0f;
+	Config.m_NativeWheelStep = true;
+	Config.m_Feel = EQmScrollFeel::SPRING;
+	Config.m_SpringResponse = 0.3f;
+	Config.m_SpringDamping = 1.0f;
+	Config.m_MaxOverscroll = 0.0f;
+	const SQmScrollMetrics Metrics = QmChatHistoryScrollMetrics(100, 10);
+	CQmScrollState State;
+	QmChatHistoryWheel(State, 3, Metrics, Config);
+
+	// 模拟 60 Hz 渲染帧捕获到的真实间隔：它们不会恒等于 1/60。
+	constexpr std::array<float, 6> s_aFrameDts = {
+		16.0f / 1000.0f,
+		17.0f / 1000.0f,
+		16.0f / 1000.0f,
+		17.0f / 1000.0f,
+		15.0f / 1000.0f,
+		17.0f / 1000.0f,
+	};
+	int PreviousLine = 0;
+	float PreviousTop = 0.0f;
+	int CrossedLines = 0;
+	for(int Frame = 0; Frame < 180; ++Frame)
+	{
+		State.Advance(s_aFrameDts[Frame % s_aFrameDts.size()], Metrics, Config);
+		const int Line = QmChatHistoryScrollLine(State.Offset(), Metrics);
+		const float Top = (float)Line * 20.0f + QmChatHistoryLayoutOffset(State.Offset(), Line, 20.0f);
+		// 跨整数行时仍应是亚行级连续位移，不能一帧跳掉大半行。
+		EXPECT_LT(std::abs(Top - PreviousTop), 12.0f);
+		CrossedLines += Line - PreviousLine;
+		PreviousLine = Line;
+		PreviousTop = Top;
+	}
+	EXPECT_GE(CrossedLines, 2);
+	EXPECT_EQ(PreviousLine, 3);
 }
 
 TEST(QmChatHistoryScroll, OverscrollPastBothEndsReboundsIntoLegalRange)

@@ -248,7 +248,6 @@ private:
 	QmWordFilterList::CFileList m_StreamerWordsFile;
 	uint64_t m_PreparedGlyphAtlasRevision = 0;
 	std::array<int, 5> m_aPreparedChatTextSettings = {-1, -1, -1, -1, -1};
-	int64_t m_LastPresentationUpdateTime;
 	int64_t m_LargeAreaOpenTick;
 	bool m_LastPresentationShowLargeArea;
 	int m_PendingConsoleLineIndex;
