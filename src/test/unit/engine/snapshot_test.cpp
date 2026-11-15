@@ -1,6 +1,7 @@
 #include <base/mem.h>
 
 #include <engine/shared/snapshot.h>
+#include <engine/shared/uuid_manager.h>
 
 #include <generated/protocol.h>
 
@@ -95,6 +96,23 @@ TEST(Snapshot, RejectsUnalignedItemSize)
 	pData[2] = 0;
 
 	EXPECT_FALSE(Buffer.AsSnapshot()->IsValid(sizeof(CSnapshot) + sizeof(int32_t) + pData[0]));
+}
+
+TEST(Snapshot, ExtendedTypeFailsWhenUuidItemExhaustsCapacity)
+{
+	CSnapshotBuilder Builder;
+	Builder.Init();
+
+	const int32_t Data = 0;
+	for(int i = 0; i < CSnapshot::MAX_ITEMS - 1; i++)
+	{
+		ASSERT_TRUE(Builder.NewItem(1, i, &Data, sizeof(Data)));
+	}
+
+	// 扩展类型需要额外的 UUID 说明项。说明项占用最后一个槽位后，
+	// 实际对象必须被拒绝，而不是越过 m_aOffsets 边界。
+	EXPECT_FALSE(Builder.NewItem(OFFSET_UUID, 0, &Data, sizeof(Data)));
+	EXPECT_EQ(Builder.FinishIfNoDroppedItems(nullptr), -1);
 }
 
 TEST(SnapshotDelta, LargeDeltaNeedsDoubleSizedBuffer)
