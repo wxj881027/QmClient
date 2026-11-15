@@ -238,6 +238,11 @@ private:
 	float m_RowInsetX = 0.0f;
 	// 胶囊行：滚动条压在内容上时，行右侧要给滚动条让出的缝（避免胶囊被压住一角）。
 	float m_RowReserveRight = 0.0f;
+	// 单列胶囊行可选：只在内容真的溢出、滚动条要出现时才让出那一列；
+	// 让位量按时间推进，滚动条出现/消失时行胶囊横向滑动而不是瞬跳。
+	bool m_ReserveWhenOverflowing = false;
+	float m_ReserveRightCurrent = 0.0f;
+	int64_t m_ReserveRightStepTime = 0;
 	bool m_AutoSpacingOverridden = false;
 	// 自适应高度：可见行数夹在 [MinRows, MaxRows]；MaxRows <= 0 表示不接管高度。
 	int m_MinVisibleRows = 0;
@@ -248,6 +253,12 @@ private:
 	bool m_ItemColorsOverridden = false;
 	// 容器圆角由容器长宽推导；带标题的列表沿用 DoHeader 用整容器算出的那一档。
 	float m_ContainerRadius = ui_token::radius::SMALL_MENU;
+	// 容器内边距：胶囊列表默认按行高分档，非胶囊列表为 0（旧页面观感不变）。
+	// m_ContainerPadding 是档位，X/Y 是本帧按「行数不被挤掉」与列数收敛后的生效值。
+	float m_ContainerPadding = 0.0f;
+	float m_ContainerPaddingX = 0.0f;
+	float m_ContainerPaddingY = 0.0f;
+	bool m_ContainerPaddingOverridden = false;
 	bool m_HeaderThisFrame = false;
 	// 本帧是否画了容器背板：只有背板才有圆角，胶囊行也才需要为它内退。
 	bool m_BackgroundDrawn = false;
@@ -264,6 +275,9 @@ private:
 
 protected:
 	CListboxItem DoNextRow();
+	// 行首统一步进：本条目标记为「开启新的一行」时给一次行距并切出该行矩形，
+	// 返回是否新行。DoNextItem / SkipItems / DoSubheader 共用，避免三处各推一次。
+	bool BeginRowIfNeeded();
 
 public:
 	CListBox();
@@ -280,6 +294,8 @@ public:
 	void SetItemSelectionInset(float Inset) { m_ItemSelectionInset = Inset; }
 
 	void DoHeader(const CUIRect *pRect, const char *pTitle, float HeaderHeight = 20.0f, float Spacing = 2.0f, int BackgroundCorners = IGraphics::CORNER_ALL);
+	// 行距：在**行首**推进一次（多列网格每行只算一次，第一行不算），DoNextItem 与
+	// SkipItems 走同一条步进。传入的行高就是单行内容高度，不要再把行距折进去。
 	void DoAutoSpacing(float Spacing = 20.0f)
 	{
 		m_AutoSpacing = Spacing;
@@ -289,16 +305,34 @@ public:
 	// 覆盖式滚动条（不占行宽）。FontSize 是行内文字字号，行内边距按
 	// ui_token::list::RowInsetX 从它派生，与弹层条目同一条公式。
 	void SetCapsuleRows(float FontSize);
+	// 容器内边距（**显式能力**，默认 0）：行区在容器四边内缩，选中/悬浮胶囊不再压在
+	// 容器圆角上。调用点声明档位时**必须同时**把 2×padding 算进列表高度
+	// （ui_token::list::PaddedRowsHeight），否则组件会为保行数把留白兜底缩回 0。
+	// 纵向留白给所有列表；横向留白只给多列网格（单列行的左右本就有行内内退与滚动条让位）。
+	void SetContainerPadding(float Padding)
+	{
+		m_ContainerPadding = std::max(0.0f, Padding);
+		m_ContainerPaddingOverridden = true;
+	}
+	// 本帧实际生效的纵向留白（未声明或高度不足时为 0）。
+	float ContainerPadding() const { return m_ContainerPaddingY; }
 	// 自适应高度：可见行数 = 条目行数夹在 [MinRows, MaxRows]，组件自己按行高和
 	// 行距算内容高度，调用方只给可用上限，不用再自己 std::min；超过上限就出滚动条。
 	// MaxRows <= 0 关闭接管（默认），高度完全由调用方矩形决定。
 	void SetVisibleRowRange(int MinRows, int MaxRows);
 	// 覆盖式滚动条开关：开启后行宽与有没有滚动条无关（默认随 SetCapsuleRows 打开）。
 	void SetScrollbarOverlay(bool Overlay) { m_ScrollbarOverlay = Overlay; }
+	// 单列胶囊行的让位策略：默认恒定为滚动条留出一列（拿不到真实内容高度的列表用）。
+	// 开启后改为「滚动条真出现才让位」，并把这个宽度做成过渡动画。
+	// 只对能提供准确条目数的列表有意义（服务器信息里的玩家行）。
+	void SetReserveRightWhenOverflowing(bool Enabled) { m_ReserveWhenOverflowing = Enabled; }
 	// 胶囊行/胶囊格右侧为滚动条让出的宽度（厚度 + 外边距 + 行缝）。调用点（表头列宽、
 	// 外框内容宽度）在 DoStart 前就要这份值，所以由 token（或显式覆盖值）直接算，
 	// 不依赖上一帧的滚动条状态；未开胶囊行或非覆盖式轨道时为 0。
 	float RowReserveWidth() const;
+	// 让位量的逐帧推进：目标由「内容是否溢出」决定，步长按真实时间折算，
+	// 因此窗口高度、条目数变化时都是同一条速度，不会随帧率变快变慢。
+	float StepRowReserveRight(float Target);
 	void DoSpacing(float Spacing = 20.0f);
 	void DoStart(float RowHeight, int NumItems, int ItemsPerRow, int RowsPerScroll, int SelectedIndex, const CUIRect *pRect = nullptr, bool Background = true, int BackgroundCorners = IGraphics::CORNER_ALL);
 	int ItemIndex() const { return m_ListBoxItemIndex; }

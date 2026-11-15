@@ -27,7 +27,7 @@ public:
 			ms_SurfaceKnown = m_PreviousSurfaceKnown || Surface.a >= 1.0f;
 			if(pTextRender)
 			{
-				const ColorRGBA Foreground = ResolveConfiguredTextColor(ms_Surface);
+				const ColorRGBA Foreground = ResolveConfiguredTextColor();
 				pTextRender->TextColor(Foreground.WithAlpha(m_PreviousText.a));
 				pTextRender->TextOutlineColor(ResolveUiSurfaceForeground(Foreground).WithAlpha(m_PreviousOutline.a));
 			}

@@ -895,22 +895,6 @@ turkish = "Axiom otomatik girişi başarılı oldu"
 polish = "Automatyczne logowanie Axiom powiodło się"
 
 [[message]]
-key = "Background"
-[message.translations]
-simplified_chinese = "背景"
-traditional_chinese = "背景"
-japanese = "背景"
-korean = "배경"
-russian = "Фон"
-german = "Hintergrund"
-spanish = "Fondo"
-french = "Arrière-plan"
-brazilian_portuguese = "Fundo"
-portuguese = "Fundo"
-turkish = "Arka plan"
-polish = "Tło"
-
-[[message]]
 key = "Background draw"
 [message.translations]
 simplified_chinese = "背景绘制"
@@ -1263,22 +1247,6 @@ turkish = "Yakınlaştırmayı değiştir"
 polish = "Zmień zoom"
 
 [[message]]
-key = "Chat"
-[message.translations]
-simplified_chinese = "聊天"
-traditional_chinese = "聊天"
-japanese = "チャット"
-korean = "채팅"
-russian = "Чат"
-german = "Chat"
-spanish = "Chat"
-french = "Chat"
-brazilian_portuguese = "Chat"
-portuguese = "Chat"
-turkish = "Sohbet"
-polish = "Czat"
-
-[[message]]
 key = "Chat bubble"
 [message.translations]
 simplified_chinese = "聊天气泡"
@@ -1309,22 +1277,6 @@ brazilian_portuguese = "Exportação de chat falhou"
 portuguese = "Exportação de chat falhou"
 turkish = "Sohbet dışa aktarma başarısız oldu"
 polish = "Eksport czatu nie powiódł się"
-
-[[message]]
-key = "Choose country flag"
-[message.translations]
-simplified_chinese = "选择国家旗帜"
-traditional_chinese = "選擇國家旗幟"
-japanese = "国旗を選択"
-korean = "국가 국기 선택"
-russian = "Выбрать флаг страны"
-german = "Landesflagge auswählen"
-spanish = "Elegir bandera del país"
-french = "Choisir le drapeau du pays"
-brazilian_portuguese = "Escolher bandeira do país"
-portuguese = "Escolher bandeira do país"
-turkish = "Ülke bayrağı seç"
-polish = "Wybierz flagę kraju"
 
 [[message]]
 key = "Clan Name"
@@ -1423,22 +1375,6 @@ turkish = "Uzak konsolu temizle"
 polish = "Wyczyść zdalną konsolę"
 
 [[message]]
-key = "Clearable text..."
-[message.translations]
-simplified_chinese = "可清除文本……"
-traditional_chinese = "可清除文本……"
-japanese = "クリア可能なテキスト..."
-korean = "지울 수 있는 텍스트..."
-russian = "Очищаемый текст..."
-german = "Löschbarer Text..."
-spanish = "Texto editable..."
-french = "Texte effaçable..."
-brazilian_portuguese = "Texto limpável..."
-portuguese = "Texto apagável..."
-turkish = "Temizlenebilir metin..."
-polish = "Tekst do wyczyszczenia..."
-
-[[message]]
 key = "Clears the voting options"
 [message.translations]
 simplified_chinese = "清除投票选项"
@@ -1455,22 +1391,6 @@ turkish = "Oylama seçeneklerini temizler"
 polish = "Czyści opcje głosowania"
 
 [[message]]
-key = "Client"
-[message.translations]
-simplified_chinese = "客户端"
-traditional_chinese = "客戶端"
-japanese = "クライアント"
-korean = "클라이언트"
-russian = "Клиент"
-german = "Client"
-spanish = "Cliente"
-french = "Client"
-brazilian_portuguese = "Cliente"
-portuguese = "Cliente"
-turkish = "İstemci"
-polish = "Klient"
-
-[[message]]
 key = "Collision hitbox"
 [message.translations]
 simplified_chinese = "碰撞箱"
@@ -1485,22 +1405,6 @@ brazilian_portuguese = "Hitbox de colisão"
 portuguese = "Hitbox de colisão"
 turkish = "Çarpışma hitbox'ı"
 polish = "Hitbox kolizji"
-
-[[message]]
-key = "Config Files"
-[message.translations]
-simplified_chinese = "配置文件"
-traditional_chinese = "配置文件"
-japanese = "設定ファイル"
-korean = "설정 파일"
-russian = "Файлы конфигурации"
-german = "Konfigurationsdateien"
-spanish = "Archivos de Configuración"
-french = "Fichiers de configuration"
-brazilian_portuguese = "Arquivos de Configuração"
-portuguese = "Ficheiros de Configuração"
-turkish = "Yapılandırma Dosyaları"
-polish = "Pliki konfiguracyjne"
 
 [[message]]
 key = "Configuration"
@@ -1581,22 +1485,6 @@ brazilian_portuguese = "Problemas de conexão…"
 portuguese = "Problemas de Conexão…"
 turkish = "Bağlantı Sorunları…"
 polish = "Problemy z połączeniem…"
-
-[[message]]
-key = "Controller"
-[message.translations]
-simplified_chinese = "手柄"
-traditional_chinese = "手柄"
-japanese = "コントローラー"
-korean = "컨트롤러"
-russian = "Контроллер"
-german = "Controller"
-spanish = "Mando"
-french = "Manette"
-brazilian_portuguese = "Controle"
-portuguese = "Comando"
-turkish = "Kumanda"
-polish = "Kontroler"
 
 [[message]]
 key = "Converse with the last person you whispered to (private message)"
@@ -1791,22 +1679,6 @@ turkish = "Veri"
 polish = "Dane"
 
 [[message]]
-key = "DDRace HUD"
-[message.translations]
-simplified_chinese = "DDRace HUD"
-traditional_chinese = "DDRace HUD"
-japanese = "DDRace HUD"
-korean = "DDRace HUD"
-russian = "HUD DDRace"
-german = "DDRace-HUD"
-spanish = "HUD de DDRace"
-french = "HUD DDRace"
-brazilian_portuguese = "HUD DDRace"
-portuguese = "HUD DDRace"
-turkish = "DDRace HUD"
-polish = "HUD DDRace"
-
-[[message]]
 key = "Deaths"
 [message.translations]
 simplified_chinese = "死亡数"
@@ -1837,22 +1709,6 @@ brazilian_portuguese = "Modo de depuração ativado. Pressione Ctrl+Shift+D para
 portuguese = "Modo de depuração ativado. Carrega Ctrl+Shift+D para desativar o modo de depuração."
 turkish = "Hata ayıklama modu etkin. Hata ayıklama modunu devre dışı bırakmak için Ctrl+Shift+D tuşlarına basın."
 polish = "Tryb debugowania włączony. Naciśnij Ctrl+Shift+D, aby wyłączyć tryb debugowania."
-
-[[message]]
-key = "Demo"
-[message.translations]
-simplified_chinese = "回放"
-traditional_chinese = "回放"
-japanese = "デモ"
-korean = "데모"
-russian = "Демо"
-german = "Demo"
-spanish = "Demo"
-french = "Démo"
-brazilian_portuguese = "Demo"
-portuguese = "Demo"
-turkish = "Demo"
-polish = "Demo"
 
 [[message]]
 key = "Depending on the number of supplied arguments, teleport yourself to; (0.) where you are spectating or aiming; (1.) the specified player name"
@@ -1966,22 +1822,6 @@ brazilian_portuguese = "Desconectar do servidor"
 portuguese = "Desconectar do servidor"
 turkish = "Sunucudan bağlantıyı kes"
 polish = "Rozłącz się z serwerem"
-
-[[message]]
-key = "Display modes"
-[message.translations]
-simplified_chinese = "显示模式"
-traditional_chinese = "顯示模式"
-japanese = "表示モード"
-korean = "표시 모드"
-russian = "Режимы отображения"
-german = "Anzeigemodi"
-spanish = "Modos de pantalla"
-french = "Modes d'affichage"
-brazilian_portuguese = "Modos de exibição"
-portuguese = "Modos de apresentação"
-turkish = "Görüntü modları"
-polish = "Tryby wyświetlania"
 
 [[message]]
 key = "Downscaled (0.78)"
@@ -2192,22 +2032,6 @@ turkish = "Metni yankıla"
 polish = "Wyświetl tekst"
 
 [[message]]
-key = "Edit Entry"
-[message.translations]
-simplified_chinese = "编辑条目"
-traditional_chinese = "編輯條目"
-japanese = "エントリを編集"
-korean = "항목 편집"
-russian = "Редактировать запись"
-german = "Eintrag bearbeiten"
-spanish = "Editar Entrada"
-french = "Modifier l'entrée"
-brazilian_portuguese = "Editar Entrada"
-portuguese = "Editar Entrada"
-turkish = "Girişi Düzenle"
-polish = "Edytuj wpis"
-
-[[message]]
 key = "Enable cheats for your current team's run, but you can't earn a rank"
 [message.translations]
 simplified_chinese = "为你当前队伍启用作弊，但将无法获得排名"
@@ -2369,22 +2193,6 @@ turkish = "Tuşa basma/bırakma sırasında dosyaları çalıştır"
 polish = "Wykonaj pliki po naciśnięciu/zwolnieniu klawisza"
 
 [[message]]
-key = "Execute on join"
-[message.translations]
-simplified_chinese = "进服时执行"
-traditional_chinese = "進服時執行"
-japanese = "参加時に実行"
-korean = "입장 시 실행"
-russian = "Выполнить при входе"
-german = "Beim Beitritt ausführen"
-spanish = "Ejecutar al entrar"
-french = "Exécuter à l'entrée"
-brazilian_portuguese = "Executar ao entrar"
-portuguese = "Executar ao entrar"
-turkish = "Katılırken çalıştır"
-polish = "Wykonaj przy dołączeniu"
-
-[[message]]
 key = "Execute the specified file"
 [message.translations]
 simplified_chinese = "执行指定文件"
@@ -2465,22 +2273,6 @@ turkish = "Kayıt kaydedilemedi!"
 polish = "Nie udało się zapisać powtórki!"
 
 [[message]]
-key = "Favorite maps"
-[message.translations]
-simplified_chinese = "收藏地图"
-traditional_chinese = "收藏地圖"
-japanese = "お気に入りのマップ"
-korean = "즐겨찾는 맵"
-russian = "Избранные карты"
-german = "Lieblingskarten"
-spanish = "Mapas favoritos"
-french = "Cartes favorites"
-brazilian_portuguese = "Mapas favoritos"
-portuguese = "Mapas favoritos"
-turkish = "Favori haritalar"
-polish = "Ulubione mapy"
-
-[[message]]
 key = "feat-003 dogfood: tokens + 12 widgets"
 [message.translations]
 simplified_chinese = "feat-003 dogfood：tokens + 12 widgets"
@@ -2495,22 +2287,6 @@ brazilian_portuguese = "feat-003 dogfood：tokens + 12 widgets"
 portuguese = "feat-003 dogfood：tokens + 12 widgets"
 turkish = "feat-003 dogfood: tokenlar + 12 widget"
 polish = "feat-003 dogfood: tokeny + 12 widgetów"
-
-[[message]]
-key = "Feature Search"
-[message.translations]
-simplified_chinese = "功能搜索"
-traditional_chinese = "功能搜索"
-japanese = "機能検索"
-korean = "기능 검색"
-russian = "Поиск функций"
-german = "Funktionssuche"
-spanish = "Búsqueda de funciones"
-french = "Recherche de fonctionnalités"
-brazilian_portuguese = "Pesquisa de Recursos"
-portuguese = "Pesquisa de Funcionalidades"
-turkish = "Özellik Arama"
-polish = "Wyszukiwanie funkcji"
 
 [[message]]
 key = "Find all ban records for the specified IP address"
@@ -3041,22 +2817,6 @@ turkish = "Bayraklar"
 polish = "Złapania"
 
 [[message]]
-key = "Graphics display"
-[message.translations]
-simplified_chinese = "图像显示"
-traditional_chinese = "圖像顯示"
-japanese = "グラフィック表示"
-korean = "그래픽 표시"
-russian = "Отображение графики"
-german = "Grafikanzeige"
-spanish = "Visualización gráfica"
-french = "Affichage graphique"
-brazilian_portuguese = "Exibição gráfica"
-portuguese = "Apresentação gráfica"
-turkish = "Grafik görüntüsü"
-polish = "Wyświetlanie grafiki"
-
-[[message]]
 key = "Hammer: %s"
 [message.translations]
 simplified_chinese = "锤：%s"
@@ -3121,22 +2881,6 @@ turkish = "Yardım: %s"
 polish = "Pomoc: %s"
 
 [[message]]
-key = "Hide Settings Tabs"
-[message.translations]
-simplified_chinese = "隐藏设置选项卡"
-traditional_chinese = "隱藏設置選項卡"
-japanese = "設定タブを非表示"
-korean = "설정 탭 숨기기"
-russian = "Скрыть вкладки настроек"
-german = "Einstellungs-Tabs ausblenden"
-spanish = "Ocultar Pestañas de Ajustes"
-french = "Cacher les onglets des paramètres"
-brazilian_portuguese = "Ocultar Abas de Configurações"
-portuguese = "Esconder Separadores de Definições"
-turkish = "Ayarlar Sekmelerini Gizle"
-polish = "Ukryj zakładki ustawień"
-
-[[message]]
 key = "Hide toast"
 [message.translations]
 simplified_chinese = "隐藏通知"
@@ -3167,22 +2911,6 @@ brazilian_portuguese = "Segure o clique esquerdo para câmera livre"
 portuguese = "Segura clique esquerdo para câmara livre"
 turkish = "Serbest kamera için sol tıklamayı basılı tut"
 polish = "Przytrzymaj lewy przycisk, aby uzyskać swobodną kamerę"
-
-[[message]]
-key = "Hook collision line"
-[message.translations]
-simplified_chinese = "钩子辅助线"
-traditional_chinese = "鉤子輔助線"
-japanese = "フック衝突線"
-korean = "갈고리 충돌선"
-russian = "Линия столкновения крюка"
-german = "Haken-Kollisionslinie"
-spanish = "Línea de colisión de gancho"
-french = "Ligne de collision de crochet"
-brazilian_portuguese = "Linha de colisão de gancho"
-portuguese = "Linha de colisão de gancho"
-turkish = "Kanca çarpışma çizgisi"
-polish = "Linia kolizji haka"
 
 [[message]]
 key = "Hooking L/R: %.0f%%/%.0f%%"
@@ -3231,22 +2959,6 @@ brazilian_portuguese = "https://wiki.ddnet.org/wiki/Mapping"
 portuguese = "https://wiki.ddnet.org/wiki/Mapping"
 turkish = "https://wiki.ddnet.org/wiki/Mapping"
 polish = "https://wiki.ddnet.org/wiki/Mapping"
-
-[[message]]
-key = "HUD"
-[message.translations]
-simplified_chinese = "HUD"
-traditional_chinese = "HUD"
-japanese = "HUD"
-korean = "HUD"
-russian = "HUD"
-german = "HUD"
-spanish = "HUD"
-french = "HUD"
-brazilian_portuguese = "HUD"
-portuguese = "HUD"
-turkish = "HUD"
-polish = "HUD"
 
 [[message]]
 key = "HUD editor preview"
@@ -3311,54 +3023,6 @@ brazilian_portuguese = "Anti-ping melhorado"
 portuguese = "Anti-ping melhorado"
 turkish = "Geliştirilmiş anti ping"
 polish = "Ulepszone anty-ping"
-
-[[message]]
-key = "Info Messages"
-[message.translations]
-simplified_chinese = "消息"
-traditional_chinese = "消息"
-japanese = "情報メッセージ"
-korean = "정보 메시지"
-russian = "Информационные сообщения"
-german = "Info-Nachrichten"
-spanish = "Mensajes de información"
-french = "Messages d'info"
-brazilian_portuguese = "Mensagens de informação"
-portuguese = "Mensagens de Informação"
-turkish = "Bilgi Mesajları"
-polish = "Wiadomości informacyjne"
-
-[[message]]
-key = "Input"
-[message.translations]
-simplified_chinese = "输入"
-traditional_chinese = "輸入"
-japanese = "入力"
-korean = "입력"
-russian = "Ввод"
-german = "Eingabe"
-spanish = "Entrada"
-french = "Entrée"
-brazilian_portuguese = "Entrada"
-portuguese = "Entrada"
-turkish = "Giriş"
-polish = "Wejście"
-
-[[message]]
-key = "Input overlay"
-[message.translations]
-simplified_chinese = "按键显示"
-traditional_chinese = "按鍵顯示"
-japanese = "入力オーバーレイ"
-korean = "입력 오버레이"
-russian = "Наложение ввода"
-german = "Eingabe-Overlay"
-spanish = "Superposición de entrada"
-french = "Superposition de saisie"
-brazilian_portuguese = "Sobreposição de entrada"
-portuguese = "Sobreposição de entrada"
-turkish = "Giriş kaplaması"
-polish = "Nakładka wejścia"
 
 [[message]]
 key = "Interface animations"
@@ -3487,22 +3151,6 @@ brazilian_portuguese = "k = Perda de reenvio"
 portuguese = "k = Perda de reenvio"
 turkish = "k = Yeniden gönderme kaybı"
 polish = "k = Utrata ponownego wysłania"
-
-[[message]]
-key = "Kaomoji"
-[message.translations]
-simplified_chinese = "表情符号"
-traditional_chinese = "表情符號"
-japanese = "顔文字"
-korean = "카오모지"
-russian = "Каомодзи"
-german = "Kaomoji"
-spanish = "Kaomoji"
-french = "Kaomoji"
-brazilian_portuguese = "Kaomoji"
-portuguese = "Kaomoji"
-turkish = "Kaomoji"
-polish = "Kaomoji"
 
 [[message]]
 key = "Key binds"
@@ -3713,38 +3361,6 @@ turkish = "l = Yerel saat"
 polish = "l = Czas lokalny"
 
 [[message]]
-key = "Language"
-[message.translations]
-simplified_chinese = "语言"
-traditional_chinese = "語言"
-japanese = "言語"
-korean = "언어"
-russian = "Язык"
-german = "Sprache"
-spanish = "Idioma"
-french = "Langue"
-brazilian_portuguese = "Idioma"
-portuguese = "Idioma"
-turkish = "Dil"
-polish = "Język"
-
-[[message]]
-key = "Laser"
-[message.translations]
-simplified_chinese = "激光"
-traditional_chinese = "激光"
-japanese = "レーザー"
-korean = "레이저"
-russian = "Лазер"
-german = "Laser"
-spanish = "Láser"
-french = "Laser"
-brazilian_portuguese = "Laser"
-portuguese = "Laser"
-turkish = "Lazer"
-polish = "Laser"
-
-[[message]]
 key = "Laser colors"
 [message.translations]
 simplified_chinese = "激光颜色"
@@ -3759,22 +3375,6 @@ brazilian_portuguese = "Cores do laser"
 portuguese = "Cores do laser"
 turkish = "Lazer renkleri"
 polish = "Kolory lasera"
-
-[[message]]
-key = "Laser settings"
-[message.translations]
-simplified_chinese = "激光设置"
-traditional_chinese = "激光設置"
-japanese = "レーザー設定"
-korean = "레이저 설정"
-russian = "Настройки лазера"
-german = "Laser-Einstellungen"
-spanish = "Configuración del láser"
-french = "Paramètres laser"
-brazilian_portuguese = "Configurações de laser"
-portuguese = "Definições do laser"
-turkish = "Lazer ayarları"
-polish = "Ustawienia lasera"
 
 [[message]]
 key = "Last page in console"
@@ -4145,22 +3745,6 @@ turkish = "Yarış demo dosyaları yükleniyor"
 polish = "Ładowanie plików dem wyścigowych"
 
 [[message]]
-key = "Loading skin files"
-[message.translations]
-simplified_chinese = "正在加载皮肤文件"
-traditional_chinese = "正在加載皮膚文件"
-japanese = "スキンファイルを読み込み中"
-korean = "스킨 파일 로딩 중"
-russian = "Загрузка файлов скинов"
-german = "Lade Skin-Dateien"
-spanish = "Cargando archivos de skin"
-french = "Chargement des fichiers de skin"
-brazilian_portuguese = "Carregando arquivos de skin"
-portuguese = "A carregar ficheiros de skin"
-turkish = "Skin dosyaları yükleniyor"
-polish = "Ładowanie plików skinów"
-
-[[message]]
 key = "Loading sound files"
 [message.translations]
 simplified_chinese = "正在加载声音文件"
@@ -4239,22 +3823,6 @@ brazilian_portuguese = "Sair do rcon"
 portuguese = "Terminar sessão do rcon"
 turkish = "Rcon'dan çıkış yap"
 polish = "Wyloguj z rcon"
-
-[[message]]
-key = "Lyrics"
-[message.translations]
-simplified_chinese = "歌词"
-traditional_chinese = "歌詞"
-japanese = "歌詞"
-korean = "가사"
-russian = "Текст песни"
-german = "Songtext"
-spanish = "Letra"
-french = "Paroles"
-brazilian_portuguese = "Letra"
-portuguese = "Letras"
-turkish = "Şarkı sözleri"
-polish = "Tekst utworu"
 
 [[message]]
 key = "Make dummy fire"
@@ -4625,22 +4193,6 @@ turkish = "İstemciyi simge durumuna küçült"
 polish = "Minimalizuj klienta"
 
 [[message]]
-key = "Miscellaneous"
-[message.translations]
-simplified_chinese = "杂项"
-traditional_chinese = "雜項"
-japanese = "その他"
-korean = "기타"
-russian = "Разное"
-german = "Sonstiges"
-spanish = "Varios"
-french = "Divers"
-brazilian_portuguese = "Diversos"
-portuguese = "Diversos"
-turkish = "Çeşitli"
-polish = "Różne"
-
-[[message]]
 key = "Moderator alert"
 [message.translations]
 simplified_chinese = "管理员提醒"
@@ -4687,22 +4239,6 @@ brazilian_portuguese = "Feedback de movimento e foco"
 portuguese = "Feedback de movimento e foco"
 turkish = "Hareket ve odak geri bildirimi"
 polish = "Informacja zwrotna o ruchu i skupieniu"
-
-[[message]]
-key = "Mouse"
-[message.translations]
-simplified_chinese = "鼠标"
-traditional_chinese = "鼠標"
-japanese = "マウス"
-korean = "마우스"
-russian = "Мышь"
-german = "Maus"
-spanish = "Ratón"
-french = "Souris"
-brazilian_portuguese = "Mouse"
-portuguese = "Rato"
-turkish = "Fare"
-polish = "Mysz"
 
 [[message]]
 key = "Move dummy left"
@@ -4783,22 +4319,6 @@ brazilian_portuguese = "Movido no jogo"
 portuguese = "Movido no jogo"
 turkish = "Oyunda taşındı"
 polish = "Przeniesiony w grze"
-
-[[message]]
-key = "Movement"
-[message.translations]
-simplified_chinese = "移动"
-traditional_chinese = "移動"
-japanese = "移動"
-korean = "이동"
-russian = "Движение"
-german = "Bewegung"
-spanish = "Movimiento"
-french = "Mouvement"
-brazilian_portuguese = "Movimento"
-portuguese = "Movimento"
-turkish = "Hareket"
-polish = "Ruch"
 
 [[message]]
 key = "Moves to the point with x/y-coordinates ii"
@@ -5199,22 +4719,6 @@ brazilian_portuguese = "Optar por não aparecer na contagem de espectadores e oc
 portuguese = "Optar por não contar como espetador e ocultar estado de auth para jogadores não autenticados (1 = oculto, 0 = mostrado)"
 turkish = "İzleyici sayısından çık ve yetkisiz oyunculara kimlik doğrulama durumunu gizle (1 = gizli, 0 = göster)"
 polish = "Zrezygnuj z liczenia obserwatorów i ukryj status autoryzacji przed nieautoryzowanymi graczami (1 = ukryty, 0 = widoczny)"
-
-[[message]]
-key = "Other"
-[message.translations]
-simplified_chinese = "其他"
-traditional_chinese = "其他"
-japanese = "その他"
-korean = "기타"
-russian = "Другое"
-german = "Andere"
-spanish = "Otro"
-french = "Autre"
-brazilian_portuguese = "Outro"
-portuguese = "Outro"
-turkish = "Diğer"
-polish = "Inne"
 
 [[message]]
 key = "Overview"
@@ -6849,22 +6353,6 @@ turkish = "Skor"
 polish = "Wynik"
 
 [[message]]
-key = "Search"
-[message.translations]
-simplified_chinese = "搜索"
-traditional_chinese = "搜索"
-japanese = "検索"
-korean = "검색"
-russian = "Поиск"
-german = "Suchen"
-spanish = "Buscar"
-french = "Rechercher"
-brazilian_portuguese = "Pesquisar"
-portuguese = "Pesquisar"
-turkish = "Ara"
-polish = "Szukaj"
-
-[[message]]
 key = "Searching"
 [message.translations]
 simplified_chinese = "正在搜索"
@@ -7521,22 +7009,6 @@ turkish = "Tee'nin göz ifadesini ayarlar"
 polish = "Ustaw emotkę oczu swojego tee"
 
 [[message]]
-key = "Settings"
-[message.translations]
-simplified_chinese = "设置"
-traditional_chinese = "設置"
-japanese = "設定"
-korean = "설정"
-russian = "Настройки"
-german = "Einstellungen"
-spanish = "Ajustes"
-french = "Paramètres"
-brazilian_portuguese = "Configurações"
-portuguese = "Definições"
-turkish = "Ayarlar"
-polish = "Ustawienia"
-
-[[message]]
 key = "Show all votes (page 0 by default, 20 entries per page)"
 [message.translations]
 simplified_chinese = "显示全部投票（默认第 0 页，每页 20 条）"
@@ -7983,22 +7455,6 @@ brazilian_portuguese = "Pesquisa de skin"
 portuguese = "Pesquisa de skin"
 turkish = "Görünüm arama"
 polish = "Wyszukiwanie skórki"
-
-[[message]]
-key = "Skin transition"
-[message.translations]
-simplified_chinese = "皮肤切换"
-traditional_chinese = "皮膚切換"
-japanese = "スキン遷移"
-korean = "스킨 전환"
-russian = "Смена скина"
-german = "Skin-Übergang"
-spanish = "Transición de skin"
-french = "Transition de skin"
-brazilian_portuguese = "Transição de skin"
-portuguese = "Transição de skin"
-turkish = "Görünüm geçişi"
-polish = "Przejście skórki"
 
 [[message]]
 key = "Some map images could not be loaded. Check the local console for details."
@@ -8753,22 +8209,6 @@ turkish = "Ekran görüntüsü al"
 polish = "Zrób zrzut ekranu"
 
 [[message]]
-key = "TClient Developers"
-[message.translations]
-simplified_chinese = "TClient 开发人员"
-traditional_chinese = "TClient 開發人員"
-japanese = "TClient 開発者"
-korean = "TClient 개발자"
-russian = "Разработчики TClient"
-german = "TClient-Entwickler"
-spanish = "Desarrolladores de TClient"
-french = "Développeurs TClient"
-brazilian_portuguese = "Desenvolvedores do TClient"
-portuguese = "Programadores do TClient"
-turkish = "TClient Geliştiricileri"
-polish = "Deweloperzy TClient"
-
-[[message]]
 key = "Team %d"
 [message.translations]
 simplified_chinese = "队伍 %d"
@@ -9119,22 +8559,6 @@ brazilian_portuguese = "Esta dica é fornecida por ui_widget::Tooltip, uma camad
 portuguese = "Esta dica é fornecida por ui_widget::Tooltip, uma camada fina sobre CTooltips."
 turkish = "Bu ipucu ui_widget::Tooltip tarafından sağlanır; CTooltips üzerinde ince bir sarmalayıcıdır."
 polish = "Ta podpowiedź pochodzi z ui_widget::Tooltip, cienkiej nakładki na CTooltips."
-
-[[message]]
-key = "Tile outlines"
-[message.translations]
-simplified_chinese = "墙体轮廓"
-traditional_chinese = "牆體輪廓"
-japanese = "タイルのアウトライン"
-korean = "타일 윤곽선"
-russian = "Контуры плиток"
-german = "Kachel-Umrisse"
-spanish = "Contornos de casillas"
-french = "Contours des tuiles"
-brazilian_portuguese = "Contornos de tiles"
-portuguese = "Contornos de tiles"
-turkish = "Karo ana hatları"
-polish = "Kontury kafelków"
 
 [[message]]
 key = "Time limit: %d min"
@@ -9519,22 +8943,6 @@ brazilian_portuguese = "Total"
 portuguese = "Total"
 turkish = "Toplam"
 polish = "Łącznie"
-
-[[message]]
-key = "Translate"
-[message.translations]
-simplified_chinese = "翻译"
-traditional_chinese = "翻譯"
-japanese = "翻訳"
-korean = "번역"
-russian = "Перевести"
-german = "Übersetzen"
-spanish = "Traducir"
-french = "Traduire"
-brazilian_portuguese = "Traduzir"
-portuguese = "Traduzir"
-turkish = "Çevir"
-polish = "Tłumacz"
 
 [[message]]
 key = "Translate UI"
@@ -10017,22 +9425,6 @@ turkish = "Verilen numaraya sahip tele'yi (ofsette) bul ve görüntüle"
 polish = "Wyświetl teleport znaleziony (z offsetem) o podanym numerze"
 
 [[message]]
-key = "Visual"
-[message.translations]
-simplified_chinese = "视觉效果"
-traditional_chinese = "視覺效果"
-japanese = "ビジュアル"
-korean = "시각"
-russian = "Визуал"
-german = "Visuell"
-spanish = "Visual"
-french = "Visuel"
-brazilian_portuguese = "Visual"
-portuguese = "Visual"
-turkish = "Görsel"
-polish = "Wizualne"
-
-[[message]]
 key = "Visual effects"
 [message.translations]
 simplified_chinese = "视觉效果"
@@ -10047,38 +9439,6 @@ brazilian_portuguese = "Efeitos visuais"
 portuguese = "Efeitos visuais"
 turkish = "Görsel efektler"
 polish = "Efekty wizualne"
-
-[[message]]
-key = "Voice"
-[message.translations]
-simplified_chinese = "语音"
-traditional_chinese = "語音"
-japanese = "音声"
-korean = "음성"
-russian = "Голос"
-german = "Sprache"
-spanish = "Voz"
-french = "Voix"
-brazilian_portuguese = "Voz"
-portuguese = "Voz"
-turkish = "Ses"
-polish = "Głos"
-
-[[message]]
-key = "Volume"
-[message.translations]
-simplified_chinese = "音量"
-traditional_chinese = "音量"
-japanese = "音量"
-korean = "볼륨"
-russian = "Громкость"
-german = "Lautstärke"
-spanish = "Volumen"
-french = "Volume"
-brazilian_portuguese = "Volume"
-portuguese = "Volume"
-turkish = "Ses düzeyi"
-polish = "Głośność"
 
 [[message]]
 key = "Vote a map by name"
@@ -10113,22 +9473,6 @@ turkish = "Evet/hayır oyla"
 polish = "Głosuj tak/nie"
 
 [[message]]
-key = "Voting"
-[message.translations]
-simplified_chinese = "投票"
-traditional_chinese = "投票"
-japanese = "投票"
-korean = "투표"
-russian = "Голосование"
-german = "Abstimmung"
-spanish = "Votación"
-french = "Vote"
-brazilian_portuguese = "Votação"
-portuguese = "Votação"
-turkish = "Oylama"
-polish = "Głosowanie"
-
-[[message]]
 key = "Waiting for snapshot"
 [message.translations]
 simplified_chinese = "等待快照"
@@ -10145,54 +9489,6 @@ turkish = "Anlık görüntü bekleniyor"
 polish = "Oczekiwanie na snapshot"
 
 [[message]]
-key = "War Entries"
-[message.translations]
-simplified_chinese = "敌对条目"
-traditional_chinese = "敵對條目"
-japanese = "戦争エントリ"
-korean = "전쟁 항목"
-russian = "Записи врагов"
-german = "Kriegseinträge"
-spanish = "Entradas de Guerra"
-french = "Entrées de guerre"
-brazilian_portuguese = "Entradas de Guerra"
-portuguese = "Entradas de Guerra"
-turkish = "Savaş Girişleri"
-polish = "Wpisy wojenne"
-
-[[message]]
-key = "War Groups"
-[message.translations]
-simplified_chinese = "敌对群组"
-traditional_chinese = "敵對群組"
-japanese = "戦争グループ"
-korean = "전쟁 그룹"
-russian = "Группы врагов"
-german = "Kriegsgruppen"
-spanish = "Grupos de Guerra"
-french = "Groupes ennemis"
-brazilian_portuguese = "Grupos de Guerra"
-portuguese = "Grupos de Guerra"
-turkish = "Savaş Grupları"
-polish = "Grupy wojenne"
-
-[[message]]
-key = "Warlist"
-[message.translations]
-simplified_chinese = "敌对列表"
-traditional_chinese = "敵對列表"
-japanese = "戦争リスト"
-korean = "전쟁 목록"
-russian = "Список врагов"
-german = "Kriegsliste"
-spanish = "Lista de Guerra"
-french = "Liste de guerre"
-brazilian_portuguese = "Lista de Guerra"
-portuguese = "Lista de Guerra"
-turkish = "Savaş Listesi"
-polish = "Lista wrogów"
-
-[[message]]
 key = "Warmup"
 [message.translations]
 simplified_chinese = "热身"
@@ -10207,54 +9503,6 @@ brazilian_portuguese = "Aquecimento"
 portuguese = "Aquecimento"
 turkish = "Isınma"
 polish = "Rozgrzewka"
-
-[[message]]
-key = "Weapon"
-[message.translations]
-simplified_chinese = "武器"
-traditional_chinese = "武器"
-japanese = "武器"
-korean = "무기"
-russian = "Оружие"
-german = "Waffe"
-spanish = "Arma"
-french = "Arme"
-brazilian_portuguese = "Arma"
-portuguese = "Arma"
-turkish = "Silah"
-polish = "Broń"
-
-[[message]]
-key = "Weapon animation"
-[message.translations]
-simplified_chinese = "武器动画"
-traditional_chinese = "武器動畫"
-japanese = "武器アニメーション"
-korean = "무기 애니메이션"
-russian = "Анимация оружия"
-german = "Waffenanimation"
-spanish = "Animación de arma"
-french = "Animation d'arme"
-brazilian_portuguese = "Animação de arma"
-portuguese = "Animação de arma"
-turkish = "Silah animasyonu"
-polish = "Animacja broni"
-
-[[message]]
-key = "Weapon trajectory"
-[message.translations]
-simplified_chinese = "武器弹道辅助线"
-traditional_chinese = "武器彈道輔助線"
-japanese = "武器軌跡"
-korean = "무기 궤적"
-russian = "Траектория оружия"
-german = "Waffenflugbahn"
-spanish = "Trayectoria del arma"
-french = "Trajectoire d'arme"
-brazilian_portuguese = "Trajetória da arma"
-portuguese = "Trajetória da arma"
-turkish = "Silah yörüngesi"
-polish = "Trajektoria broni"
 
 [[message]]
 key = "Whether a switch is deactivated by default (otherwise activated)"
@@ -15526,104 +14774,6 @@ turkish = "Anahtar kelime kuralları çok uzun. Değişiklikler kaydedilmedi; bi
 polish = "Reguły słów kluczowych są zbyt długie. Zmiany nie zostały zapisane; skróć lub usuń regułę."
 
 [[message]]
-key = "Candy gradient"
-[message.translations]
-japanese = "キャンディグラデーション"
-korean = "캔디 그라데이션"
-russian = "Конфетный градиент"
-german = "Bonbon-Farbverlauf"
-spanish = "Degradado de caramelo"
-french = "Dégradé de bonbons"
-brazilian_portuguese = "Gradiente de doces"
-portuguese = "Gradiente de rebuçados"
-turkish = "Şeker renk geçişi"
-polish = "Cukierkowy gradient"
-
-[[message]]
-key = "Cloud bubble"
-[message.translations]
-japanese = "雲の吹き出し"
-korean = "구름 말풍선"
-russian = "Облачный пузырь"
-german = "Wolkenblase"
-spanish = "Burbuja de nube"
-french = "Bulle nuage"
-brazilian_portuguese = "Balão de nuvem"
-portuguese = "Balão de nuvem"
-turkish = "Bulut balonu"
-polish = "Dymek w kształcie chmury"
-
-[[message]]
-key = "Comic dialogue"
-[message.translations]
-japanese = "漫画風会話"
-korean = "만화 대화"
-russian = "Диалог комикса"
-german = "Comic-Dialog"
-spanish = "Diálogo de cómic"
-french = "Dialogue de BD"
-brazilian_portuguese = "Diálogo de quadrinhos"
-portuguese = "Diálogo de banda desenhada"
-turkish = "Çizgi roman diyaloğu"
-polish = "Dialog komiksowy"
-
-[[message]]
-key = "Gather and disperse"
-[message.translations]
-japanese = "集合と拡散"
-korean = "모임과 흩어짐"
-russian = "Сбор и рассеивание"
-german = "Sammeln und Zerstreuen"
-spanish = "Agruparse y dispersarse"
-french = "Rassemblement et dispersion"
-brazilian_portuguese = "Agrupar e dispersar"
-portuguese = "Agrupar e dispersar"
-turkish = "Toplanma ve dağılma"
-polish = "Gromadzenie i rozpraszanie"
-
-[[message]]
-key = "Let's play together!"
-[message.translations]
-japanese = "一緒に遊ぼう！"
-korean = "함께 놀아요!"
-russian = "Давайте играть вместе!"
-german = "Lasst uns zusammen spielen!"
-spanish = "¡Juguemos juntos!"
-french = "Jouons ensemble !"
-brazilian_portuguese = "Vamos jogar juntos!"
-portuguese = "Vamos jogar juntos!"
-turkish = "Birlikte oynayalım!"
-polish = "Zagrajmy razem!"
-
-[[message]]
-key = "Style"
-[message.translations]
-japanese = "スタイル"
-korean = "스타일"
-russian = "Стиль"
-german = "Stil"
-spanish = "Estilo"
-french = "Apparence"
-brazilian_portuguese = "Estilo"
-portuguese = "Estilo"
-turkish = "Stil"
-polish = "Styl"
-
-[[message]]
-key = "Use custom colors"
-[message.translations]
-japanese = "カスタムカラーを使用"
-korean = "사용자 지정 색상 사용"
-russian = "Использовать свои цвета"
-german = "Eigene Farben verwenden"
-spanish = "Usar colores personalizados"
-french = "Utiliser des couleurs personnalisées"
-brazilian_portuguese = "Usar cores personalizadas"
-portuguese = "Usar cores personalizadas"
-turkish = "Özel renkler kullan"
-polish = "Użyj własnych kolorów"
-
-[[message]]
 key = "How far a wheel or drag can push past an end, in UI pixels; 0 disables"
 [message.translations]
 simplified_chinese = "滚轮或拖拽能把内容推过末端多远（UI 像素）；0 关闭"
@@ -15702,22 +14852,6 @@ brazilian_portuguese = "Alinhamento"
 portuguese = "Alinhamento"
 turkish = "Hizalama"
 polish = "Wyrównanie"
-
-[[message]]
-key = "Back"
-[message.translations]
-simplified_chinese = "返回"
-traditional_chinese = "返回"
-japanese = "戻る"
-korean = "뒤로"
-russian = "Назад"
-german = "Zurück"
-spanish = "Volver"
-french = "Retour"
-brazilian_portuguese = "Voltar"
-portuguese = "Voltar"
-turkish = "Geri"
-polish = "Wstecz"
 
 [[message]]
 key = "Choose Logo (PNG / WebP)"
@@ -16166,3 +15300,371 @@ brazilian_portuguese = "Cantar"
 portuguese = "Cantar"
 turkish = "Şarkı söyleme"
 polish = "Śpiewanie"
+
+[[message]]
+key = "Card effects"
+[message.translations]
+simplified_chinese = "卡片效果"
+traditional_chinese = "卡片效果"
+japanese = "カード効果"
+korean = "카드 효과"
+russian = "Эффекты карточек"
+german = "Karteneffekte"
+spanish = "Efectos de las tarjetas"
+french = "Effets des cartes"
+brazilian_portuguese = "Efeitos dos cartões"
+portuguese = "Efeitos dos cartões"
+turkish = "Kart efektleri"
+polish = "Efekty kart"
+
+[[message]]
+key = "Colors and text shared by the whole interface"
+[message.translations]
+simplified_chinese = "整个界面共用的颜色与文字"
+traditional_chinese = "整個介面共用的顏色與文字"
+japanese = "インターフェース全体で共有される色とテキスト"
+korean = "인터페이스 전체가 공유하는 색상과 텍스트"
+russian = "Цвета и текст, общие для всего интерфейса"
+german = "Farben und Text, die die gesamte Oberfläche teilt"
+spanish = "Colores y texto compartidos por toda la interfaz"
+french = "Couleurs et texte partagés par toute l'interface"
+brazilian_portuguese = "Cores e texto compartilhados por toda a interface"
+portuguese = "Cores e texto partilhados por toda a interface"
+turkish = "Tüm arayüzün paylaştığı renkler ve metin"
+polish = "Kolory i tekst wspólne dla całego interfejsu"
+
+[[message]]
+key = "Configure card shape and interface theme"
+[message.translations]
+simplified_chinese = "配置卡片形状与界面主题"
+traditional_chinese = "設定卡片形狀與介面主題"
+japanese = "カードの形状とインターフェーステーマを設定"
+korean = "카드 모양과 인터페이스 테마 설정"
+russian = "Настройка формы карточек и темы интерфейса"
+german = "Kartenform und Oberflächendesign einstellen"
+spanish = "Configura la forma de las tarjetas y el tema de la interfaz"
+french = "Configurer la forme des cartes et le thème de l'interface"
+brazilian_portuguese = "Configurar a forma dos cartões e o tema da interface"
+portuguese = "Configurar a forma dos cartões e o tema da interface"
+turkish = "Kart biçimini ve arayüz temasını yapılandır"
+polish = "Skonfiguruj kształt kart i motyw interfejsu"
+
+[[message]]
+key = "Display options"
+[message.translations]
+simplified_chinese = "显示选项"
+traditional_chinese = "顯示選項"
+japanese = "表示オプション"
+korean = "표시 옵션"
+russian = "Параметры отображения"
+german = "Anzeigeoptionen"
+spanish = "Opciones de visualización"
+french = "Options d'affichage"
+brazilian_portuguese = "Opções de exibição"
+portuguese = "Opções de apresentação"
+turkish = "Görüntü seçenekleri"
+polish = "Opcje wyświetlania"
+
+[[message]]
+key = "Interface theme"
+[message.translations]
+simplified_chinese = "界面主题"
+traditional_chinese = "介面主題"
+japanese = "インターフェーステーマ"
+korean = "인터페이스 테마"
+russian = "Тема интерфейса"
+german = "Oberflächendesign"
+spanish = "Tema de la interfaz"
+french = "Thème de l'interface"
+brazilian_portuguese = "Tema da interface"
+portuguese = "Tema da interface"
+turkish = "Arayüz teması"
+polish = "Motyw interfejsu"
+
+[[message]]
+key = "Shape, borders, and title effects of the settings cards"
+[message.translations]
+simplified_chinese = "设置卡片的形状、边框与标题效果"
+traditional_chinese = "設定卡片的形狀、邊框與標題效果"
+japanese = "設定カードの形状、枠線、タイトル効果"
+korean = "설정 카드의 모양, 테두리, 제목 효과"
+russian = "Форма, границы и эффекты заголовков карточек настроек"
+german = "Form, Ränder und Titeleffekte der Einstellungskarten"
+spanish = "Forma, bordes y efectos de título de las tarjetas de ajustes"
+french = "Forme, bordures et effets de titre des cartes de paramètres"
+brazilian_portuguese = "Forma, bordas e efeitos de título dos cartões de configurações"
+portuguese = "Forma, contornos e efeitos de título dos cartões de definições"
+turkish = "Ayar kartlarının biçimi, kenarlıkları ve başlık efektleri"
+polish = "Kształt, obramowania i efekty tytułów kart ustawień"
+
+[[message]]
+key = "Control background color"
+[message.translations]
+simplified_chinese = "控件背景颜色"
+traditional_chinese = "控件背景顏色"
+japanese = "コントロールの背景色"
+korean = "컨트롤 배경 색상"
+russian = "Цвет фона элементов управления"
+german = "Hintergrundfarbe der Bedienelemente"
+spanish = "Color de fondo de los controles"
+french = "Couleur d'arrière-plan des contrôles"
+brazilian_portuguese = "Cor de fundo dos controles"
+portuguese = "Cor de fundo dos controlos"
+turkish = "Denetim arka plan rengi"
+polish = "Kolor tła kontrolek"
+
+[[message]]
+key = "Control background opacity percentage"
+[message.translations]
+simplified_chinese = "控件背景不透明度百分比"
+traditional_chinese = "控件背景不透明度百分比"
+japanese = "コントロール背景の不透明度（%）"
+korean = "컨트롤 배경 불투명도 비율"
+russian = "Непрозрачность фона элементов управления (%)"
+german = "Deckkraft der Bedienelement-Hintergründe (%)"
+spanish = "Porcentaje de opacidad del fondo de los controles"
+french = "Pourcentage d'opacité de l'arrière-plan des contrôles"
+brazilian_portuguese = "Percentual de opacidade do fundo dos controles"
+portuguese = "Percentagem de opacidade do fundo dos controlos"
+turkish = "Denetim arka planı opaklık yüzdesi"
+polish = "Procent krycia tła kontrolek"
+
+[[message]]
+key = "Popup background color"
+[message.translations]
+simplified_chinese = "弹层背景颜色"
+traditional_chinese = "彈層背景顏色"
+japanese = "ポップアップの背景色"
+korean = "팝업 배경 색상"
+russian = "Цвет фона всплывающих панелей"
+german = "Hintergrundfarbe von Popups"
+spanish = "Color de fondo de las ventanas emergentes"
+french = "Couleur d'arrière-plan des fenêtres surgissantes"
+brazilian_portuguese = "Cor de fundo das janelas suspensas"
+portuguese = "Cor de fundo das janelas suspensas"
+turkish = "Açılır katman arka plan rengi"
+polish = "Kolor tła warstw wysuwanych"
+
+[[message]]
+key = "Popup background opacity percentage"
+[message.translations]
+simplified_chinese = "弹层背景不透明度百分比"
+traditional_chinese = "彈層背景不透明度百分比"
+japanese = "ポップアップ背景の不透明度（%）"
+korean = "팝업 배경 불투명도 비율"
+russian = "Непрозрачность фона всплывающих панелей (%)"
+german = "Deckkraft der Popup-Hintergründe (%)"
+spanish = "Porcentaje de opacidad del fondo de las ventanas emergentes"
+french = "Pourcentage d'opacité de l'arrière-plan des fenêtres surgissantes"
+brazilian_portuguese = "Percentual de opacidade do fundo das janelas suspensas"
+portuguese = "Percentagem de opacidade do fundo das janelas suspensas"
+turkish = "Açılır katman arka planı opaklık yüzdesi"
+polish = "Procent krycia tła warstw wysuwanych"
+
+[[message]]
+key = "Background, border and title effects of the settings cards"
+[message.translations]
+simplified_chinese = "设置卡片的背景、边框与标题效果"
+traditional_chinese = "設定卡片的背景、邊框與標題效果"
+japanese = "設定カードの背景・枠線・タイトル効果"
+korean = "설정 카드의 배경, 테두리, 제목 효과"
+russian = "Фон, рамка и заголовок карточек настроек"
+german = "Hintergrund, Rahmen und Titeleffekte der Einstellungskarten"
+spanish = "Efectos de fondo, borde y título de las tarjetas de ajustes"
+french = "Effets de fond, de bordure et de titre des cartes de réglages"
+brazilian_portuguese = "Efeitos de fundo, borda e título dos cartões de ajustes"
+portuguese = "Efeitos de fundo, moldura e título dos cartões de definições"
+turkish = "Ayar kartlarının arka plan, kenarlık ve başlık efektleri"
+polish = "Efekty tła, obramowania i tytułu kart ustawień"
+
+[[message]]
+key = "Configure interface shape, theme, icons and animations"
+[message.translations]
+simplified_chinese = "配置界面形状、主题、图标与动画"
+traditional_chinese = "配置介面形狀、主題、圖示與動畫"
+japanese = "インターフェースの形状・テーマ・アイコン・アニメーションを設定"
+korean = "인터페이스 모양, 테마, 아이콘, 애니메이션 설정"
+russian = "Настройка формы, темы, значков и анимаций интерфейса"
+german = "Form, Theme, Symbole und Animationen der Oberfläche einstellen"
+spanish = "Configurar la forma, el tema, los iconos y las animaciones de la interfaz"
+french = "Configurer la forme, le thème, les icônes et les animations de l'interface"
+brazilian_portuguese = "Configurar forma, tema, ícones e animações da interface"
+portuguese = "Configurar forma, tema, ícones e animações da interface"
+turkish = "Arayüz biçimini, temasını, simgelerini ve animasyonlarını ayarla"
+polish = "Konfiguruj kształt, motyw, ikony i animacje interfejsu"
+
+[[message]]
+key = "Enable backdrop blur for translucent interface and all HUD backgrounds"
+[message.translations]
+simplified_chinese = "为半透明界面和所有 HUD 背景启用背景模糊"
+traditional_chinese = "為半透明介面與所有 HUD 背景啟用背景模糊"
+japanese = "半透明のインターフェースとすべての HUD 背景に背景ぼかしを有効化"
+korean = "반투명 인터페이스와 모든 HUD 배경에 배경 흐림 사용"
+russian = "Включить размытие фона для полупрозрачного интерфейса и всех фонов HUD"
+german = "Hintergrundunschärfe für durchscheinende Oberfläche und alle HUD-Hintergründe aktivieren"
+spanish = "Activar el desenfoque de fondo para la interfaz translúcida y todos los fondos del HUD"
+french = "Activer le flou d'arrière-plan pour l'interface translucide et tous les fonds du HUD"
+brazilian_portuguese = "Ativar desfoque de fundo para a interface translúcida e todos os fundos do HUD"
+portuguese = "Ativar desfoque de fundo para a interface translúcida e todos os fundos do HUD"
+turkish = "Yarı saydam arayüz ve tüm HUD arka planları için arka plan bulanıklığını aç"
+polish = "Włącz rozmycie tła dla półprzezroczystego interfejsu i wszystkich teł HUD"
+
+[[message]]
+key = "Full: uses the complete transition everywhere"
+[message.translations]
+simplified_chinese = "完整：所有过渡使用完整时长"
+traditional_chinese = "完整：所有過渡使用完整時長"
+japanese = "フル：すべてのトランジションを完全に再生"
+korean = "전체: 모든 전환을 전체 길이로 사용"
+russian = "Полностью: везде используются полные переходы"
+german = "Voll: überall vollständige Übergänge"
+spanish = "Completo: usa la transición completa en todas partes"
+french = "Complet : utilise partout la transition complète"
+brazilian_portuguese = "Completo: usa a transição completa em toda parte"
+portuguese = "Completo: usa a transição completa em todo o lado"
+turkish = "Tam: her yerde tam geçiş kullanır"
+polish = "Pełne: wszędzie pełne przejścia"
+
+[[message]]
+key = "Off: disables every interface animation"
+[message.translations]
+simplified_chinese = "关闭：停用全部界面动画"
+traditional_chinese = "關閉：停用全部介面動畫"
+japanese = "オフ：すべてのインターフェースアニメーションを無効化"
+korean = "끔: 모든 인터페이스 애니메이션 사용 안 함"
+russian = "Выкл.: отключает все анимации интерфейса"
+german = "Aus: alle Oberflächenanimationen deaktiviert"
+spanish = "Desactivado: desactiva todas las animaciones de la interfaz"
+french = "Désactivé : désactive toutes les animations de l'interface"
+brazilian_portuguese = "Desligado: desativa todas as animações da interface"
+portuguese = "Desligado: desativa todas as animações da interface"
+turkish = "Kapalı: tüm arayüz animasyonlarını kapatır"
+polish = "Wył.: wyłącza wszystkie animacje interfejsu"
+
+[[message]]
+key = "Reduced: uses shorter transitions everywhere"
+[message.translations]
+simplified_chinese = "精简：所有过渡使用更短时长"
+traditional_chinese = "精簡：所有過渡使用更短時長"
+japanese = "簡易：すべてのトランジションを短縮"
+korean = "간소: 모든 전환을 더 짧게 사용"
+russian = "Сокращённо: везде используются более короткие переходы"
+german = "Reduziert: überall kürzere Übergänge"
+spanish = "Reducido: usa transiciones más cortas en todas partes"
+french = "Réduit : utilise partout des transitions plus courtes"
+brazilian_portuguese = "Reduzido: usa transições mais curtas em toda parte"
+portuguese = "Reduzido: usa transições mais curtas em todo o lado"
+turkish = "Azaltılmış: her yerde daha kısa geçişler kullanır"
+polish = "Ograniczone: wszędzie krótsze przejścia"
+
+[[message]]
+key = "Shape, colors and text shared by the whole interface"
+[message.translations]
+simplified_chinese = "整个界面共用的形状、颜色与文字"
+traditional_chinese = "整個介面共用的形狀、顏色與文字"
+japanese = "インターフェース全体で共通の形状・色・文字"
+korean = "인터페이스 전체가 공유하는 모양, 색상, 텍스트"
+russian = "Форма, цвета и текст, общие для всего интерфейса"
+german = "Form, Farben und Text, die die gesamte Oberfläche teilt"
+spanish = "Forma, colores y texto compartidos por toda la interfaz"
+french = "Forme, couleurs et texte partagés par toute l'interface"
+brazilian_portuguese = "Forma, cores e texto compartilhados por toda a interface"
+portuguese = "Forma, cores e texto partilhados por toda a interface"
+turkish = "Tüm arayüzün paylaştığı biçim, renk ve metin"
+polish = "Kształt, kolory i tekst wspólne dla całego interfejsu"
+
+[[message]]
+key = "This is the master switch for all interface animations"
+[message.translations]
+simplified_chinese = "这是所有界面动画的总开关"
+traditional_chinese = "這是所有介面動畫的總開關"
+japanese = "すべてのインターフェースアニメーションの総合スイッチ"
+korean = "모든 인터페이스 애니메이션의 총 스위치"
+russian = "Главный переключатель всех анимаций интерфейса"
+german = "Hauptschalter für alle Oberflächenanimationen"
+spanish = "Interruptor principal de todas las animaciones de la interfaz"
+french = "Interrupteur principal de toutes les animations de l'interface"
+brazilian_portuguese = "Interruptor principal de todas as animações da interface"
+portuguese = "Interruptor principal de todas as animações da interface"
+turkish = "Tüm arayüz animasyonlarının ana anahtarı"
+polish = "Główny przełącznik wszystkich animacji interfejsu"
+
+[[message]]
+key = "Text caret style: 0=bar, 1=underscore, 2=block"
+[message.translations]
+simplified_chinese = "输入光标样式：0=竖线，1=下划线，2=方块"
+traditional_chinese = "輸入游標樣式：0=直線，1=底線，2=方塊"
+japanese = "入力カーソルのスタイル：0=縦線、1=下線、2=ブロック"
+korean = "입력 커서 스타일: 0=세로선, 1=밑줄, 2=블록"
+russian = "Стиль курсора ввода: 0=черта, 1=подчёркивание, 2=блок"
+german = "Eingabecursor-Stil: 0=Strich, 1=Unterstrich, 2=Block"
+spanish = "Estilo del cursor de entrada: 0=barra, 1=subrayado, 2=bloque"
+french = "Style du curseur de saisie : 0=barre, 1=souligné, 2=bloc"
+brazilian_portuguese = "Estilo do cursor de entrada: 0=barra, 1=sublinhado, 2=bloco"
+portuguese = "Estilo do cursor de entrada: 0=barra, 1=sublinhado, 2=bloco"
+turkish = "Giriş imleci stili: 0=çubuk, 1=alt çizgi, 2=blok"
+polish = "Styl kursora: 0=kreska, 1=podkreślenie, 2=blok"
+
+[[message]]
+key = "Debug websockets"
+[message.translations]
+simplified_chinese = "调试 WebSocket"
+traditional_chinese = "偵錯 WebSocket"
+japanese = "WebSocket をデバッグ"
+korean = "WebSocket 디버그"
+russian = "Отладка WebSocket"
+german = "WebSocket-Debug"
+spanish = "Depurar WebSocket"
+french = "Déboguer WebSocket"
+brazilian_portuguese = "Depurar WebSocket"
+portuguese = "Depurar WebSocket"
+turkish = "WebSocket hata ayıkla"
+polish = "Debuguj WebSocket"
+
+[[message]]
+key = "Echo the config value in chat window"
+[message.translations]
+simplified_chinese = "在聊天窗口回显该配置值"
+traditional_chinese = "在聊天視窗回顯該設定值"
+japanese = "設定値をチャットに表示"
+korean = "설정값을 채팅창에 표시"
+russian = "Выводить значение настройки в чат"
+german = "Den Einstellungswert im Chat anzeigen"
+spanish = "Mostrar el valor del ajuste en el chat"
+french = "Afficher la valeur du réglage dans le chat"
+brazilian_portuguese = "Mostrar o valor da configuração no chat"
+portuguese = "Mostrar o valor da definição no chat"
+turkish = "Ayar değerini sohbette göster"
+polish = "Pokazuj wartość ustawienia na czacie"
+
+[[message]]
+key = "Show server uptime"
+[message.translations]
+simplified_chinese = "显示服务器运行时长"
+traditional_chinese = "顯示伺服器運作時間"
+japanese = "サーバー稼働時間を表示"
+korean = "서버 가동 시간 표시"
+russian = "Показывать время работы сервера"
+german = "Serverlaufzeit anzeigen"
+spanish = "Mostrar el tiempo en línea del servidor"
+french = "Afficher la durée de fonctionnement du serveur"
+brazilian_portuguese = "Mostrar o tempo no ar do servidor"
+portuguese = "Mostrar o tempo em linha do servidor"
+turkish = "Sunucu çalışma süresini göster"
+polish = "Pokazuj czas działania serwera"
+
+[[message]]
+key = "Extra console log line spacing in percent"
+[message.translations]
+simplified_chinese = "控制台日志额外行距（百分比）"
+traditional_chinese = "主控台日誌額外行距（百分比）"
+japanese = "コンソールログの行間をパーセントで追加"
+korean = "콘솔 로그 줄 간격 추가(백분율)"
+russian = "Дополнительный межстрочный интервал в консоли (%)"
+german = "Zusätzlicher Zeilenabstand im Konsolen-Log in Prozent"
+spanish = "Interlineado adicional del registro de consola en porcentaje"
+french = "Interligne supplémentaire du journal de console en pourcentage"
+brazilian_portuguese = "Espaçamento extra entre linhas do log do console em porcentagem"
+portuguese = "Espaçamento extra entre linhas do registo da consola em percentagem"
+turkish = "Konsol günlüğünde ek satır aralığı (yüzde)"
+polish = "Dodatkowy odstęp między wierszami dziennika konsoli (procent)"

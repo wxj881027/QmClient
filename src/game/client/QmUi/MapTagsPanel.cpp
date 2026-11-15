@@ -51,12 +51,13 @@ void CQmMapTagsPanel::Render(CGameClient *pGameClient, CUIRect View)
 		ui_widget::SButtonSurfaceOptions Options;
 		Options.m_Role = Primary ? EUiButtonRole::PRIMARY : EUiButtonRole::SECONDARY;
 		Options.m_Enabled = !Disabled;
-		Options.m_Radius *= Scale;
+		// 胶囊端头：圆角随按钮高度走，缩放后仍是完整胶囊。
+		Options.m_Radius = Rect.h * 0.5f;
 		const ColorRGBA Fill = ui_widget::DrawButtonSurface(Ctx, pButton, Rect, Options);
 		CUiScopedSurfaceText SurfaceText(pGameClient->TextRender(), Fill);
 		if(Disabled)
 			pGameClient->TextRender()->TextColor(pGameClient->TextRender()->GetTextColor().WithMultipliedAlpha(0.65f));
-		pUi->DoLabel(&Rect, pText, 13.0f * Scale, TEXTALIGN_MC, LabelProps);
+		pUi->DoLabel(&Rect, pText, ui_token::font::BODY, TEXTALIGN_MC, LabelProps);
 		if(Disabled && !pUi->RenderOnly() && pUi->CheckActiveItem(pButton))
 			pUi->SetActiveItem(nullptr);
 		const bool Clicked = !Disabled && !pUi->RenderOnly() && pUi->DoButtonLogic(pButton, 0, &Rect, BUTTONFLAG_LEFT) != 0;
@@ -64,22 +65,25 @@ void CQmMapTagsPanel::Render(CGameClient *pGameClient, CUIRect View)
 			pUi->SetKeyboardFocus(pButton);
 		return Clicked;
 	};
-	CUIRect Header, Refresh;
-	View.HSplitTop(26.0f * Scale, &Header, &View);
-	Header.VSplitRight(65.0f * Scale, &Header, &Refresh);
-	pUi->DoLabel(&Header, Localize("Map tags"), 20.0f * Scale, TEXTALIGN_ML, LabelProps);
-	if(DoButton(&m_RefreshButton, Localize("Refresh"), Refresh, Tags.Busy()))
+	CUIRect Header, RefreshSlot, Refresh;
+	View.HSplitTop(ui_token::server_info::TAGS_HEADER_HEIGHT * Scale, &Header, &View);
+	// 刷新改圆形图标按钮：图标按钮在别处也是圆形，文字按钮只留给主要动作。
+	Header.VSplitRight(ui_token::server_info::TAGS_HEADER_HEIGHT * Scale, &Header, &RefreshSlot);
+	RefreshSlot.VMargin((RefreshSlot.h - ui_token::server_info::TAGS_ICON_SIZE * Scale) * 0.5f, &Refresh);
+	Refresh.h = ui_token::server_info::TAGS_ICON_SIZE * Scale;
+	pUi->DoLabel(&Header, Localize("Map tags"), ui_token::font::TITLE, TEXTALIGN_ML, LabelProps);
+	if(pUi->DoButton_QmIcon(&m_RefreshButton, EQmIcon::ARROW_ROTATE_RIGHT, FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT, 0, &Refresh, BUTTONFLAG_LEFT))
 		Tags.Refresh();
-	View.HSplitTop(8.0f * Scale, nullptr, &View);
+	View.HSplitTop(ui_token::server_info::TAGS_HEADER_GAP * Scale, nullptr, &View);
 	CUIRect List, Footer;
-	View.HSplitBottom(90.0f * Scale, &List, &Footer);
-	List.HSplitBottom(5.0f * Scale, &List, nullptr);
+	View.HSplitBottom(ui_token::server_info::TAGS_FOOTER_HEIGHT * Scale, &List, &Footer);
+	List.HSplitBottom(ui_token::server_info::TAGS_LIST_GAP * Scale, &List, nullptr);
 	float MaxTagWidth = 1.0f;
 	for(const auto &Tag : Snapshot.m_vTags)
 	{
 		char aLabel[128];
 		str_format(aLabel, sizeof(aLabel), "%s ×%d%s", Tag.m_Text.c_str(), Tag.m_Count, Tag.m_Voted ? "" : "  +1");
-		MaxTagWidth = std::max(MaxTagWidth, pGameClient->TextRender()->TextWidth(13.0f, aLabel) + 22.0f);
+		MaxTagWidth = std::max(MaxTagWidth, pGameClient->TextRender()->TextWidth(ui_token::font::BODY, aLabel) + ui_token::spacing::MD);
 	}
 	const auto Grid = QmServerInfoGeometry::TagGrid(List, (int)Snapshot.m_vTags.size(), MaxTagWidth, Scale);
 	int Index = 0;
@@ -96,39 +100,44 @@ void CQmMapTagsPanel::Render(CGameClient *pGameClient, CUIRect View)
 		Options.m_Color = color_cast<ColorRGBA>(ColorHSLA(QmMapTags::ColorHue(Tag.m_Color), 0.55f, 0.43f, 0.9f));
 		Options.m_Enabled = Enabled;
 		Options.m_Selected = Tag.m_Voted;
-		Options.m_Radius = 13.0f * Grid.m_Scale;
+		// 标签是胶囊：圆角取自身高度一半，不再用固定的 13。
+		Options.m_Radius = Capsule.h * 0.5f;
 		ui_widget::DrawButtonSurface(Ctx, &Button, Capsule, Options);
 		SLabelProperties Properties;
 		Properties.m_MinimumFontSize = 0.1f;
-		pUi->DoLabel(&Capsule, aLabel, 13.0f * Grid.m_Scale, TEXTALIGN_MC, Properties);
+		pUi->DoLabel(&Capsule, aLabel, ui_token::font::BODY, TEXTALIGN_MC, Properties);
 	}
 	if(Snapshot.m_vTags.empty())
 	{
-		pUi->DoLabel(&List, Tags.Ready() ? Localize("No approved tags yet.") : Localize("Loading map tags…"), 13.0f * Scale, TEXTALIGN_TL, LabelProps);
+		pUi->DoLabel(&List, Tags.Ready() ? Localize("No approved tags yet.") : Localize("Loading map tags…"), ui_token::font::BODY, TEXTALIGN_TL, LabelProps);
 	}
-	CUIRect Presets;
-	Footer.HSplitTop(22.0f * Scale, &Presets, &Footer);
+	CUIRect PresetRow, PresetLabel, Presets;
+	Footer.HSplitTop(ui_token::server_info::TAGS_PRESET_ROW_HEIGHT * Scale, &PresetRow, &Footer);
+	PresetRow.VSplitLeft(ui_token::server_info::TAGS_PRESET_LABEL_WIDTH * Scale, &PresetLabel, &Presets);
+	// 这四个是服务端内置的常用标签建议，不是「当前地图已有的标签」，
+	// 不给说明文字玩家会以为它们是已审核标签。
+	pUi->DoLabel(&PresetLabel, Localize("Suggested tags:"), ui_token::font::SMALL, TEXTALIGN_ML, LabelProps);
 	static constexpr const char *PRESETS[] = {"hj", "fly", "Gores", "Hook"};
 	for(size_t Index = 0; Index < std::size(PRESETS); ++Index)
 	{
 		CUIRect Button;
-		Presets.VSplitLeft(std::min(60.0f * Scale, Presets.w / (std::size(PRESETS) - Index)), &Button, &Presets);
-		Button.VMargin(2.0f * Scale, &Button);
+		Presets.VSplitLeft(std::min(ui_token::server_info::TAGS_PRESET_BUTTON_WIDTH * Scale, Presets.w / (std::size(PRESETS) - Index)), &Button, &Presets);
+		Button.VMargin(ui_token::spacing::XS * 0.5f * Scale, &Button);
 		if(DoButton(&m_aPresetButtons[Index], PRESETS[Index], Button, !Snapshot.m_Eligible || Tags.Busy()))
 			m_Input.Set(PRESETS[Index]);
 	}
-	Footer.HSplitTop(5.0f * Scale, nullptr, &Footer);
+	Footer.HSplitTop(ui_token::server_info::TAGS_LIST_GAP * Scale, nullptr, &Footer);
 	CUIRect Composer, Input, Submit;
-	Footer.HSplitTop(22.0f * Scale, &Composer, &Footer);
-	Composer.VSplitRight(70.0f * Scale, &Input, &Submit);
-	Input.VSplitRight(5.0f * Scale, &Input, nullptr);
+	Footer.HSplitTop(ui_token::server_info::TAGS_PRESET_ROW_HEIGHT * Scale, &Composer, &Footer);
+	Composer.VSplitRight(ui_token::server_info::TAGS_SUBMIT_WIDTH * Scale, &Input, &Submit);
+	Input.VSplitRight(ui_token::server_info::TAGS_LIST_GAP * Scale, &Input, nullptr);
 	ui_widget::SInputFieldOptions InputOptions;
 	InputOptions.m_pPlaceholder = Localize("New tag (up to 10 characters)");
-	InputOptions.m_FontSize = 13.0f * Scale;
+	InputOptions.m_FontSize = ui_token::font::BODY * Scale;
 	ui_widget::InputField(Ctx, &m_Input, Input, InputOptions);
 	if(DoButton(&m_SubmitButton, Localize("Submit"), Submit, !Snapshot.m_Eligible || Tags.Busy() || !QmMapTags::ValidTag(m_Input.GetString()), true))
 		Tags.Submit(pGameClient->Http(), m_Input.GetString());
-	Footer.HSplitTop(5.0f * Scale, nullptr, &Footer);
+	Footer.HSplitTop(ui_token::server_info::TAGS_LIST_GAP * Scale, nullptr, &Footer);
 	const char *pStatus = Tags.Status();
 	if(!pStatus[0])
 	{
@@ -141,6 +150,6 @@ void CQmMapTagsPanel::Render(CGameClient *pGameClient, CUIRect View)
 		else
 			pStatus = Localize("Finish this map before submitting tags.");
 	}
-	pUi->DoLabel(&Footer, Localize(pStatus), 12.0f * Scale, TEXTALIGN_TL, LabelProps);
+	pUi->DoLabel(&Footer, Localize(pStatus), ui_token::font::SMALL, TEXTALIGN_TL, LabelProps);
 	pUi->ClipDisable();
 }

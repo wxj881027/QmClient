@@ -649,7 +649,10 @@ void CMenus::RenderQmBindOverviewContent(CUIRect &Content, const bool ReadOnly)
 		Filter = Toolbar;
 		if(DoButton_Menu(&State.m_SortButton, State.m_SortByCommand ? Localize("Sort by command") : Localize("Sort by key"), 0, &Sort) && Enabled)
 			State.m_SortByCommand = !State.m_SortByCommand;
-		if(DoButton_Menu(&State.m_CopyButton, Localize("Copy all"), 0, &Copy) && Enabled)
+		// 禁用态交给 DoButton_QmIcon 的 Enabled 形参：外观与命中一起关闭，不再用 0 旗标绕过。
+		const bool CopyClicked = Ui()->DoButton_QmIcon(&State.m_CopyButton, EQmIcon::COPY, FontIcons::FONT_ICON_COPY, 0, &Copy, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Enabled) != 0;
+		GameClient()->m_Tooltips.DoToolTip(&State.m_CopyButton, &Copy, Localize("Copy all"));
+		if(CopyClicked && Enabled)
 		{
 			std::vector<qm_bind_overview::SBindOverviewEntry> vCopyEntries;
 			vCopyEntries.reserve(State.m_vFiltered.size());

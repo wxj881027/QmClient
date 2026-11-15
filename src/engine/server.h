@@ -322,13 +322,13 @@ public:
 
 	virtual std::optional<int> SnapNewId() = 0;
 	virtual void SnapFreeId(int Id) = 0;
-	virtual bool SnapNewItem(int Type, int Id, rust::Slice<const int32_t> Data) = 0;
+	virtual bool SnapNewItem(int Type, int Id, const void *pData, int Size) = 0;
 
 	template<typename T>
 	bool SnapNewItem(int Id, const T &Data)
 	{
 		const int Type = protocol7::is_sixup<T>::value ? -T::ms_MsgId : T::ms_MsgId;
-		return SnapNewItem(Type, Id, Data.AsSlice());
+		return SnapNewItem(Type, Id, &Data, sizeof(Data));
 	}
 
 	virtual void SnapSetStaticsize(int ItemType, int Size) = 0;
@@ -469,7 +469,7 @@ public:
 	virtual void ReinitPlayerMap(int ClientId, bool Timeout) = 0;
 	// 官方 7131ad28b：连接重连完成，槽位状态未变
 	virtual void OnClientRejoin(int ClientId) = 0;
-	virtual void OnSetAuthed(int ClientId, int Level) = 0;
+	virtual void OnSetAuthed(int ClientId, class CRconRole *pRole) = 0;
 	virtual bool PlayerExists(int ClientId) const = 0;
 
 	virtual void TeehistorianRecordAntibot(const void *pData, int DataSize) = 0;

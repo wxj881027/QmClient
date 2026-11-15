@@ -3289,7 +3289,7 @@ void CGraphics_Threaded::QuadContainerUpload(int ContainerIndex)
 	}
 }
 
-int CGraphics_Threaded::QuadContainerAddQuads(int ContainerIndex, CQuadItem *pArray, int Num)
+int CGraphics_Threaded::QuadContainerAddQuads(int ContainerIndex, const CQuadItem *pArray, int Num)
 {
 	if(!IsQuadContainerIndexValid(ContainerIndex))
 		return -1;
@@ -3342,7 +3342,7 @@ int CGraphics_Threaded::QuadContainerAddQuads(int ContainerIndex, CQuadItem *pAr
 	return RetOff;
 }
 
-int CGraphics_Threaded::QuadContainerAddQuads(int ContainerIndex, CFreeformItem *pArray, int Num)
+int CGraphics_Threaded::QuadContainerAddQuads(int ContainerIndex, const CFreeformItem *pArray, int Num)
 {
 	if(!IsQuadContainerIndexValid(ContainerIndex))
 		return -1;
@@ -3437,7 +3437,8 @@ void CGraphics_Threaded::RenderQuadContainer(int ContainerIndex, int QuadOffset,
 	if(QuadDrawNum == -1)
 		QuadDrawNum = (int)Container.m_vQuads.size() - QuadOffset;
 
-	if((int)Container.m_vQuads.size() < QuadOffset + QuadDrawNum || QuadDrawNum == 0)
+	// 用减法比较，避免 QuadOffset + QuadDrawNum 在异常输入下溢出。
+	if(QuadDrawNum <= 0 || QuadOffset < 0 || (int)Container.m_vQuads.size() - QuadOffset < QuadDrawNum)
 		return;
 
 	if(IsQuadContainerBufferingEnabled())
@@ -3494,11 +3495,12 @@ void CGraphics_Threaded::RenderQuadContainerEx(int ContainerIndex, int QuadOffse
 
 	SQuadContainer &Container = m_vQuadContainers[ContainerIndex];
 
-	if((int)Container.m_vQuads.size() < QuadOffset + 1)
-		return;
-
 	if(QuadDrawNum == -1)
 		QuadDrawNum = (int)Container.m_vQuads.size() - QuadOffset;
+
+	// 用减法比较，避免 QuadOffset + QuadDrawNum 在异常输入下溢出。
+	if(QuadDrawNum <= 0 || QuadOffset < 0 || (int)Container.m_vQuads.size() - QuadOffset < QuadDrawNum)
+		return;
 
 	if(IsQuadContainerBufferingEnabled())
 	{
@@ -4748,9 +4750,9 @@ void CGraphics_Threaded::CreateNullTexture()
 	NullTextureInfo.m_Height = NullTextureDimension;
 	NullTextureInfo.m_Format = CImageInfo::FORMAT_RGBA;
 	NullTextureInfo.m_pData = aNullTextureData;
-	const int TextureLoadFlags = Uses2DTextureArrays() ? IGraphics::TEXLOAD_TO_2D_ARRAY_TEXTURE : IGraphics::TEXLOAD_TO_3D_TEXTURE;
+	const int NullTextureLoadFlags = TextureLoadFlags();
 	m_NullTexture.Invalidate();
-	m_NullTexture = LoadTextureRaw(NullTextureInfo, TextureLoadFlags, "null-texture");
+	m_NullTexture = LoadTextureRaw(NullTextureInfo, NullTextureLoadFlags, "null-texture");
 	dbg_assert(m_NullTexture.IsNullTexture(), "Null texture invalid");
 
 	// 全透明占位纹理（16x16，与空纹理同尺寸以满足整除校验，避免触发警告弹窗）：
@@ -4763,7 +4765,7 @@ void CGraphics_Threaded::CreateNullTexture()
 	BlankTextureInfo.m_Format = CImageInfo::FORMAT_RGBA;
 	BlankTextureInfo.m_pData = aBlankData;
 	m_BlankTexture.Invalidate();
-	m_BlankTexture = LoadTextureRaw(BlankTextureInfo, TextureLoadFlags, "blank-texture");
+	m_BlankTexture = LoadTextureRaw(BlankTextureInfo, TextureLoadFlags(), "blank-texture");
 	dbg_assert(m_BlankTexture.IsValid(), "Blank texture invalid");
 }
 

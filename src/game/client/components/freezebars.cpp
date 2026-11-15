@@ -28,8 +28,25 @@ void CFreezeBars::RenderFreezeBar(const int ClientId)
 		return;
 	}
 
+	// 服务端还没确认冻结时不画，避免误预测的冻结条闪现。
+	if(GameClient()->m_Snap.m_aCharacters[ClientId].m_ExtendedData.m_FreezeEnd <= 0)
+	{
+		return;
+	}
+
+	// 预测角色的冻结 tick 位于预测时间轴，要和它被预测到的 tick 比较。
+	int Tick = Client()->GameTick(g_Config.m_ClDummy);
+	if(GameClient()->m_aClients[ClientId].m_IsPredictedLocal)
+	{
+		Tick = Client()->PredGameTick(g_Config.m_ClDummy);
+	}
+	else if(GameClient()->m_aClients[ClientId].m_IsPredicted)
+	{
+		Tick = Client()->GetPredictionTick();
+	}
+
 	const int64_t Max = (int64_t)pCharacter->m_FreezeEnd - pCharacter->m_FreezeStart;
-	float FreezeProgress = std::clamp<int64_t>(Max - ((int64_t)Client()->GameTick(g_Config.m_ClDummy) - pCharacter->m_FreezeStart), 0, Max) / (float)Max;
+	float FreezeProgress = std::clamp<int64_t>(Max - ((int64_t)Tick - pCharacter->m_FreezeStart), 0, Max) / (float)Max;
 	if(FreezeProgress <= 0.0f)
 	{
 		return;

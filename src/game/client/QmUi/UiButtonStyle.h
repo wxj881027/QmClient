@@ -15,6 +15,14 @@ inline float ResolveUiTextButtonRadius(EUiButtonGeometry Geometry = EUiButtonGeo
 	return Geometry == EUiButtonGeometry::START_MENU ? ui_token::radius::MENU : ui_token::radius::BASE;
 }
 
+// 按钮表面的实际圆角：长条（宽 ≥ 1.8 倍高）给胶囊端头，接近方形的仍按用途档位，
+// 否则方按钮会被压成圆形。填充、外层描边、焦点环必须都走这一处——早先填充按
+// 长宽比取胶囊、描边却按用途档位取 8/10，于是悬浮时「填充是胶囊、边框是圆角矩形」。
+inline float ResolveUiSurfaceRadius(const CUIRect &Surface, EUiButtonGeometry Geometry = EUiButtonGeometry::CONTROL)
+{
+	return Surface.w >= Surface.h * 1.8f ? ui_token::radius::PILL : ResolveUiTextButtonRadius(Geometry);
+}
+
 struct SUiSecondaryButtonStyle
 {
 	ColorRGBA m_Fill;

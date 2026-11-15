@@ -86,10 +86,11 @@ class CServer : public IServer
 	class CDbConnectionPool *m_pConnectionPool;
 
 	int m_PreviousDebugDummies = 0;
-	void UpdateDebugDummies(bool ForceDisconnect);
 	int64_t m_KcpLastStatsTime = 0;
 
 public:
+	// 测试与调试工具需要按 sv_dbg_dummies 立即同步假人。
+	void UpdateDebugDummies(bool ForceDisconnect);
 	class IGameServer *GameServer() { return m_pGameServer; }
 	class CConfig *Config() { return m_pConfig; }
 	const CConfig *Config() const { return m_pConfig; }
@@ -147,6 +148,10 @@ public:
 		int m_Latency;
 		int m_SnapRate;
 
+		// 重连期间槽位已存在游戏身份，但连接状态已回到握手流程
+		bool m_IngameBeforeRejoin;
+		bool IsKnownToGame() const { return m_State == STATE_INGAME || m_IngameBeforeRejoin; }
+
 		double m_Traffic;
 		int64_t m_TrafficSince;
 
@@ -203,8 +208,6 @@ public:
 		char m_aDDNetVersionStr[64];
 		CUuid m_ConnectionId;
 		int64_t m_RedirectDropTime;
-		// 官方 7131ad28b：正在重连、暂不改变槽位状态
-		bool m_Rejoining;
 		bool m_KcpCapable;
 		bool m_KcpNegotiated;
 		int m_KcpConv;
@@ -231,9 +234,9 @@ public:
 
 	CClient m_aClients[MAX_CLIENTS];
 
-	rust::Box<CSnapshotDelta> m_pSnapshotDelta;
-	rust::Box<CSnapshotDelta> m_pSnapshotDeltaSixup;
-	rust::Box<CSnapshotBuilder> m_pSnapshotBuilder;
+	CSnapshotDelta m_SnapshotDelta;
+	CSnapshotDelta m_SnapshotDeltaSixup;
+	CSnapshotBuilder m_SnapshotBuilder;
 	CSnapIdPool m_IdPool;
 	CNetServer m_NetServer;
 	CEcon m_Econ;
@@ -244,6 +247,7 @@ public:
 	IEngineMap *m_pMap;
 
 	int64_t m_GameStartTime;
+	int64_t m_StartTime;
 
 	enum
 	{
@@ -346,6 +350,7 @@ public:
 	bool ClientSlotEmpty(int ClientId) const override;
 	bool ClientIngame(int ClientId) const override;
 	int Port() const override;
+	void WritePortFile();
 	int MaxClients() const override;
 	int ClientCount() const override;
 	int DistinctClientCount() const override;
@@ -458,6 +463,7 @@ public:
 	static void ConKick(IConsole::IResult *pResult, void *pUser);
 	static void ConStatus(IConsole::IResult *pResult, void *pUser);
 	static void ConShutdown(IConsole::IResult *pResult, void *pUser);
+	static void ConUptime(IConsole::IResult *pResult, void *pUser);
 	static void ConRecord(IConsole::IResult *pResult, void *pUser);
 	static void ConStopRecord(IConsole::IResult *pResult, void *pUser);
 	static void ConKcpStatus(IConsole::IResult *pResult, void *pUser);
@@ -508,7 +514,7 @@ public:
 
 	std::optional<int> SnapNewId() override;
 	void SnapFreeId(int Id) override;
-	bool SnapNewItem(int Type, int Id, rust::Slice<const int32_t> Data) override;
+	bool SnapNewItem(int Type, int Id, const void *pData, int Size) override;
 	void SnapSetStaticsize(int ItemType, int Size) override;
 	void SnapSetStaticsize7(int ItemType, int Size) override;
 

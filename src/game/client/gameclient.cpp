@@ -1295,6 +1295,7 @@ void CGameClient::OnUpdate()
 	}
 
 	// handle key presses
+	std::fill(std::begin(m_Controls.m_aMouseOnAction), std::end(m_Controls.m_aMouseOnAction), false);
 	Input()->ConsumeEvents([&](const IInput::CEvent &Event) {
 		const bool HadCountingFocus = m_InputOverlay.HasCountingFocus();
 		OnInput(Event);
@@ -1302,10 +1303,14 @@ void CGameClient::OnUpdate()
 		m_InputOverlay.ObservePhysicalInput(Event, HadCountingFocus);
 	});
 
-	if(g_Config.m_ClSubTickAiming && m_Binds.m_MouseOnAction)
+	if(g_Config.m_ClSubTickAiming)
 	{
-		m_Controls.m_aMousePosOnAction[g_Config.m_ClDummy] = m_Controls.m_aMousePos[g_Config.m_ClDummy];
-		m_Binds.m_MouseOnAction = false;
+		// 主号和 dummy 各自记录：同帧内切换 cl_dummy 不会把另一只的瞄准位置写错。
+		for(int Dummy = 0; Dummy < NUM_DUMMIES; Dummy++)
+		{
+			if(m_Controls.m_aMouseOnAction[Dummy])
+				m_Controls.m_aMousePosOnAction[Dummy] = m_Controls.m_aMousePos[Dummy];
+		}
 	}
 
 	if(g_Config.m_QmPerfStutterDiagnostics)
@@ -3019,6 +3024,11 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dumm
 				m_Chat.OnMessage(MsgId, pRawMsg, Conn);
 			}
 		}
+		else if(MsgId == NETMSGTYPE_SV_MODERATORALERT)
+		{
+			// 管理员警告可能只发给 dummy 连接，必须单独分发。
+			m_ImportantAlert.OnMessage(MsgId, pRawMsg);
+		}
 		return; // no need of all that stuff for the dummy
 	}
 
@@ -4145,7 +4155,8 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 
 					if(m_aClients[Item.m_Id].m_FinishTimeSeconds == FinishTime::UNSET)
 						HasUnsetDDNetFinishTimes = true;
-					else if(m_aClients[Item.m_Id].m_FinishTimeMillis % 10 != 0)
+					// 秒以下的精度只在计分板里展示一小时以内的成绩。
+					else if(m_aClients[Item.m_Id].m_FinishTimeSeconds < 60 * 60 && m_aClients[Item.m_Id].m_FinishTimeMillis % 10 != 0)
 						HasTrueMillisecondFinishTimes = true;
 
 					if(Item.m_Id == m_Snap.m_LocalClientId && (m_aClients[Item.m_Id].m_Paused || m_aClients[Item.m_Id].m_Spec))

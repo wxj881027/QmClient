@@ -48,22 +48,6 @@ turkish = "Harita seç"
 polish = "Wybierz mapę"
 
 [[message]]
-key = "Upload map"
-[message.translations]
-simplified_chinese = "上传地图"
-traditional_chinese = "上傳地圖"
-japanese = "マップをアップロード"
-korean = "맵 업로드"
-russian = "Загрузить карту"
-german = "Karte hochladen"
-spanish = "Subir mapa"
-french = "Envoyer la carte"
-brazilian_portuguese = "Enviar mapa"
-portuguese = "Enviar mapa"
-turkish = "Haritayı yükle"
-polish = "Prześlij mapę"
-
-[[message]]
 key = "No map selected"
 [message.translations]
 simplified_chinese = "尚未选择地图"

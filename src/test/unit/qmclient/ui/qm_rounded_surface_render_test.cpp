@@ -174,7 +174,9 @@ TEST_F(CQmRoundedSurfaceRender, BorderCoversEdgesForEachCornerMaskAndQuality)
 	for(int Segments : {8, 16, 48})
 	{
 		g_Config.m_QmRectCornerSegments = Segments;
-		for(int Corners = 0; Corners <= IGraphics::CORNER_ALL; ++Corners)
+		// 半径是形状的唯一来源：非零半径 + CORNER_NONE 按四角全圆处理，方块请把半径给 0。
+		// 因此这一轮只枚举真正带角掩码的组合，零掩码由几何单测单独钉住。
+		for(int Corners = IGraphics::CORNER_TL; Corners <= IGraphics::CORNER_ALL; ++Corners)
 		{
 			SCOPED_TRACE(::testing::Message() << "segments=" << Segments << " corners=" << Corners);
 			CSurfaceGraphics Graphics;
@@ -254,6 +256,55 @@ TEST_F(CQmRoundedSurfaceRender, SdfReceivesIndependentFillAndBorderAlpha)
 	EXPECT_EQ(Sdf.m_BorderColor, vec4(0, 0, 1, 0.7f));
 	EXPECT_EQ(Sdf.m_CornerRadii, vec4(0, 4, 4, 0));
 	EXPECT_FLOAT_EQ(Sdf.m_Params.x, 1.0f);
+}
+
+TEST_F(CQmRoundedSurfaceRender, SdfGlowIsBorderOnlyAndBandExpandsOutsideTheShell)
+{
+	m_Graphics.m_HasSdf = true;
+	SRoundedGlowParams Glow;
+	Glow.m_Radius = m_Params.m_Radius;
+	Glow.m_Spread = 6.0f;
+	Glow.m_Falloff = 2.4f;
+	Glow.m_PixelSize = 1.0f;
+	ASSERT_TRUE(DrawRoundedSurfaceGlow(&m_Graphics, m_Rect, ColorRGBA(0.4f, 0.75f, 0.95f, 0.3f), Glow));
+	ASSERT_EQ(m_Graphics.m_vSdf.size(), 1u);
+	const auto &Sdf = m_Graphics.m_vSdf[0];
+	// 只描边：填充整体丢弃，光晕不会把外壳内部染上一层色。
+	EXPECT_EQ(Sdf.m_FillColor, vec4(0.0f, 0.0f, 0.0f, 0.0f));
+	EXPECT_FLOAT_EQ(Sdf.m_GradientParams2.y, 1.0f);
+	EXPECT_FLOAT_EQ(Sdf.m_GradientParams2.z, 2.4f);
+	EXPECT_EQ(Sdf.m_BorderColor, vec4(0.4f, 0.75f, 0.95f, 0.3f));
+	// 环带整段落在外壳之外：SDF 矩形按 Spread 外扩、带宽同为 Spread，
+	// 距离场零等值线正好回到外壳边缘，所以最亮处贴着外壳、向外淡出。
+	// m_Rect 是 (x, y, 宽, 高) 的 vec4，取分量时按位置读，别用 h/w 这类别名。
+	EXPECT_FLOAT_EQ(Sdf.m_Rect.x, m_Rect.x - 6.0f);
+	EXPECT_FLOAT_EQ(Sdf.m_Rect.y, m_Rect.y - 6.0f);
+	EXPECT_FLOAT_EQ(Sdf.m_Rect.z, m_Rect.w + 12.0f);
+	EXPECT_FLOAT_EQ(Sdf.m_Rect.w, m_Rect.h + 12.0f);
+	EXPECT_FLOAT_EQ(Sdf.m_Params.x, 6.0f);
+	EXPECT_FLOAT_EQ(Sdf.m_TextureParams1.w, 6.0f);
+}
+
+TEST_F(CQmRoundedSurfaceRender, GlowWithoutSdfFallsBackToOutwardFadingRings)
+{
+	m_Graphics.m_HasSdf = false;
+	SRoundedGlowParams Glow;
+	Glow.m_Radius = m_Params.m_Radius;
+	Glow.m_Spread = 6.0f;
+	Glow.m_Falloff = 2.4f;
+	Glow.m_PixelSize = 1.0f;
+	ASSERT_TRUE(DrawRoundedSurfaceGlow(&m_Graphics, m_Rect, ColorRGBA(1.0f, 1.0f, 1.0f, 0.30f), Glow));
+	// 回退路径没有带宽内的连续羽化，只能用几道逐层变淡的窄环近似向外扩散；
+	// 这里按离开外壳边缘的距离采样，验证「越远越淡」这个光晕语义仍然成立。
+	const float NearAlpha = m_Graphics.Sample(vec2(15.0f, -1.5f)).a;
+	const float MidAlpha = m_Graphics.Sample(vec2(15.0f, -3.5f)).a;
+	const float FarAlpha = m_Graphics.Sample(vec2(15.0f, -5.5f)).a;
+	EXPECT_GT(NearAlpha, MidAlpha);
+	EXPECT_GT(MidAlpha, FarAlpha);
+	EXPECT_GT(FarAlpha, 0.0f);
+	// 铺开宽度之外不留残余光圈，外壳内部也不被染色。
+	EXPECT_FLOAT_EQ(m_Graphics.Sample(vec2(15.0f, -7.5f)).a, 0.0f);
+	EXPECT_FLOAT_EQ(m_Graphics.Sample(vec2(15.0f, 10.0f)).a, 0.0f);
 }
 
 // 圆角容器放图：图片作为 SDF 填充被采样，UV 换算必须是「卡片像素 → 图片 UV」，

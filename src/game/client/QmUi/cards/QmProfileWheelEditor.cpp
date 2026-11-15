@@ -375,16 +375,19 @@ void CMenus::RenderProfileWheelEditor(const qm_card_catalog::SQmCardBuildContext
 	Text("profile-wheel-status", Localize(State.m_pStatus));
 	Text("profile-wheel-list-title", Localize("Bind Wheel"));
 	// 绑定列表按胶囊行渲染：可见行数取整数行（最多 5 行，沿用原面板高度），
-	// 高度用 RowsHeight 派生，和 CListBox 的自适应上限同源，末行不会被裁一半；
-	// 空轮盘不占高度，不留一块没有背景的空面板。
+	// 高度用 PaddedRowsHeight 派生（行内容 + 上下两档容器内边距），和 CListBox 的
+	// 自适应上限同源，末行不会被裁一半、末行高亮也不会压在容器圆角上；
+	// 空轮盘不占高度（0 行时留白也是 0），不留一块没有背景的空面板。
 	constexpr int MaxWheelRows = 5;
 	const int WheelRows = ui_token::list::VisibleRows((int)Wheel.m_vBinds.size(), 1, 1, MaxWheelRows);
-	if(!Flow.Control("profile-wheel-list", ui_token::list::RowsHeight(WheelRows, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING), Row, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
+	const float WheelListPadding = WheelRows > 0 ? ui_token::list::ContainerPadding(Metrics.m_ListRowHeight) : 0.0f;
+	if(!Flow.Control("profile-wheel-list", ui_token::list::PaddedRowsHeight(WheelRows, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING, WheelListPadding), Row, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
 		return;
 	auto &List = ReadOnly ? State.m_ReadOnlyList : State.m_List;
 	List.SetActive(!ReadOnly);
 	List.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);
 	List.SetCapsuleRows(Metrics.m_BodySize);
+	List.SetContainerPadding(WheelListPadding);
 	List.SetVisibleRowRange(WheelRows, WheelRows);
 	List.DoStart(Metrics.m_ListRowHeight, Wheel.m_vBinds.size(), 1, 3, State.m_Selected, &Row);
 	for(size_t Index = 0; Index < Wheel.m_vBinds.size(); ++Index)

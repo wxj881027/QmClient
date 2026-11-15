@@ -233,8 +233,8 @@ TEST(QmControlSurface, ConfiguredButtonColorAndOpacityRemainIndependentOfInterfa
 		CConfig m_Previous = g_Config;
 		~SRestoreConfig() { g_Config = m_Previous; }
 	} Restore;
-	g_Config.m_QmUiDropdownColor = ColorHSLA(0, 1, 0.5f).Pack(false);
-	g_Config.m_QmUiDropdownOpacity = 40;
+	g_Config.m_QmUiControlColor = ColorHSLA(0, 1, 0.5f).Pack(false);
+	g_Config.m_QmUiControlOpacity = 40;
 	const ColorRGBA Button = ResolveConfiguredControlSurface();
 	EXPECT_GT(Button.r, 0.99f);
 	EXPECT_LT(Button.g, 0.01f);

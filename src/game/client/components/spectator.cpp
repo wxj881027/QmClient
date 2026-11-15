@@ -5,6 +5,7 @@
 
 #include "camera.h"
 
+#include <base/log.h>
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
 #include <engine/textrender.h>
@@ -192,7 +193,15 @@ void CSpectator::ConSpectate(IConsole::IResult *pResult, void *pUserData)
 	if(!pSelf->CanChangeSpectatorId())
 		return;
 
-	pSelf->Spectate(pResult->GetInteger(0));
+	const int SpectatorId = pResult->GetInteger(0);
+	if(SpectatorId != SPEC_FREEVIEW &&
+		SpectatorId != SPEC_FOLLOW &&
+		!in_range(SpectatorId, 0, (int)MAX_CLIENTS - 1))
+	{
+		log_error("spectator", "Invalid spectator ID: %d", SpectatorId);
+		return;
+	}
+	pSelf->Spectate(SpectatorId);
 }
 
 void CSpectator::ConSpectateNext(IConsole::IResult *pResult, void *pUserData)
@@ -239,7 +248,7 @@ void CSpectator::ConMultiView(IConsole::IResult *pResult, void *pUserData)
 CSpectator::CSpectator()
 {
 	m_SelectorMouse = vec2(0.0f, 0.0f);
-	OnReset();
+	CSpectator::OnReset();
 }
 
 void CSpectator::OnConsoleInit()
@@ -550,7 +559,7 @@ void CSpectator::OnRender()
 		}
 	}
 
-	const bool ExtraAnimations = g_Config.m_QmExtraAnimations != 0 && GameClient()->UiRuntimeV2()->Enabled();
+	const bool ExtraAnimations = g_Config.m_QmUiMotionLevel > 0 && GameClient()->UiRuntimeV2()->Enabled();
 
 	if(!m_Active)
 	{

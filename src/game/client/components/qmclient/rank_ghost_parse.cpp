@@ -43,9 +43,6 @@ namespace
 	using qmclient::rank_demo::ListCacheFiles;
 	using qmclient::rank_demo::SCacheNameTime;
 
-	// rust::Box 没有默认构造，必须在构造函数里创建
-	rust::Box<CSnapshotDelta> CreateSnapshotDelta();
-	rust::Box<CSnapshotDelta> CreateSnapshotDeltaSixup();
 	// 按 CGhostRecorder 的格式写 ghost 文件。
 	// 不使用 recorder 类是因为它的 Kernel() 依赖接口注册时才注入的指针，
 	// 组件内直接构造的实例无法取得 storage。
@@ -323,33 +320,20 @@ namespace
 		}
 	}
 
-	// 与上游 demo_extract_chat 工具一致：snapshot delta 需要按对象类型设置静态大小
-	rust::Box<CSnapshotDelta> CreateSnapshotDelta()
-	{
-		rust::Box<CSnapshotDelta> pResult = CSnapshotDelta::New();
-		CNetObjHandler NetObjHandler;
-		for(int i = 0; i < NUM_NETOBJTYPES; i++)
-			pResult->SetStaticsize(i, NetObjHandler.GetObjSize(i));
-		return pResult;
-	}
-
-	rust::Box<CSnapshotDelta> CreateSnapshotDeltaSixup()
-	{
-		rust::Box<CSnapshotDelta> pResult = CSnapshotDelta::New();
-		protocol7::CNetObjHandler NetObjHandler7;
-		// HACK: 只设置 0.7 首个版本存在的对象，避免新对象破坏 snapshot delta
-		static const int OLD_NUM_NETOBJTYPES = 23;
-		for(int i = 0; i < OLD_NUM_NETOBJTYPES; i++)
-			pResult->SetStaticsize(i, NetObjHandler7.GetObjSize(i));
-		return pResult;
-	}
-
 } // namespace
 
-SParseContext::SParseContext() :
-	m_pDelta(CreateSnapshotDelta()),
-	m_pDeltaSixup(CreateSnapshotDeltaSixup())
+SParseContext::SParseContext()
 {
+	// 与上游 demo_extract_chat 工具一致：snapshot delta 需要按对象类型设置静态大小
+	CNetObjHandler NetObjHandler;
+	for(int i = 0; i < NUM_NETOBJTYPES; i++)
+		m_Delta.SetStaticsize(i, NetObjHandler.GetObjSize(i));
+
+	protocol7::CNetObjHandler NetObjHandler7;
+	// HACK: 只设置 0.7 首个版本存在的对象，避免新对象破坏 snapshot delta
+	static const int OLD_NUM_NETOBJTYPES = 23;
+	for(int i = 0; i < OLD_NUM_NETOBJTYPES; i++)
+		m_DeltaSixup.SetStaticsize(i, NetObjHandler7.GetObjSize(i));
 }
 
 void CRankGhost::StartParse()
@@ -374,7 +358,7 @@ void CRankGhost::StartParse()
 	Primary.m_Skin.m_ColorBody = 0;
 	Primary.m_Skin.m_ColorFeet = 0;
 
-	Parse.m_pPlayer = std::make_unique<CDemoPlayer>(&*Parse.m_pDelta, &*Parse.m_pDeltaSixup, false);
+	Parse.m_pPlayer = std::make_unique<CDemoPlayer>(&Parse.m_Delta, &Parse.m_DeltaSixup, false);
 
 	if(Parse.m_pPlayer->Load(Storage(), nullptr, m_aDemoStoragePath, IStorage::TYPE_SAVE) == -1)
 	{

@@ -231,6 +231,8 @@ struct SConfigVariable
 	virtual bool IsDefault() const = 0;
 	virtual size_t MaxSerializedSize() const = 0;
 	virtual void Serialize(char *pOut, size_t Size) const = 0;
+	/** 面向玩家展示的序列化形式（颜色输出为 $RRGGBB 而不是打包整数）。 */
+	virtual void SerializeHumanReadable(char *pOut, size_t Size) const = 0;
 	virtual void ResetToDefault() = 0;
 	virtual void ResetToOld() = 0;
 
@@ -266,6 +268,7 @@ struct SIntConfigVariable : public SConfigVariable
 	size_t MaxSerializedSize() const override;
 	void Serialize(char *pOut, size_t Size, int Value) const;
 	void Serialize(char *pOut, size_t Size) const override;
+	void SerializeHumanReadable(char *pOut, size_t Size) const override;
 	void SetValue(int Value);
 	void ResetToDefault() override;
 	void ResetToOld() override;
@@ -311,6 +314,7 @@ struct SColorConfigVariable : public SConfigVariable
 	size_t MaxSerializedSize() const override;
 	void Serialize(char *pOut, size_t Size, unsigned Value) const;
 	void Serialize(char *pOut, size_t Size) const override;
+	void SerializeHumanReadable(char *pOut, size_t Size) const override;
 	void SetValue(unsigned Value);
 	void ResetToDefault() override;
 	void ResetToOld() override;
@@ -332,6 +336,7 @@ struct SStringConfigVariable : public SConfigVariable
 	size_t MaxSerializedSize() const override;
 	void Serialize(char *pOut, size_t Size, const char *pValue) const;
 	void Serialize(char *pOut, size_t Size) const override;
+	void SerializeHumanReadable(char *pOut, size_t Size) const override;
 	void SetValue(const char *pValue);
 	void ResetToDefault() override;
 	void ResetToOld() override;
@@ -404,6 +409,7 @@ public:
 	void StoreUnknownCommand(const char *pCommand, ConfigDomain ConfigDomain = ConfigDomain::QMCLIENT) override;
 
 	void PossibleConfigVariables(const char *pStr, int FlagMask, POSSIBLECFGFUNC pfnCallback, void *pUserData) override;
+	const SConfigVariable *FindVariable(const char *pScriptName) const override;
 	EColorInputAlphaMode ColorValueInputAlphaMode(const char *pScriptName) const override;
 };
 

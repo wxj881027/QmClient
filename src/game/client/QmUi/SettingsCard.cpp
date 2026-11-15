@@ -175,7 +175,7 @@ SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame 
 		// 卡片标题不按普通设置标签规则拆括号。
 		const CQmCardLabelHintScope HeaderLabelHints(Ctx.m_pUi, false);
 		Ctx.m_pTextRender->SetFontPreset(EFontPreset::DEFAULT_FONT);
-		ColorRGBA TitleColor = ResolveConfiguredTextColor(Surface);
+		ColorRGBA TitleColor = ResolveConfiguredTextColor();
 		// 彩虹标题由「彩虹卡片标题」独立开关控制，优先于全局文本颜色模式；
 		// 文本颜色模式只约束普通文本，不得覆盖卡片标题的彩虹流动效果。
 		if(VisualOptions.m_RainbowTitles)
@@ -190,7 +190,7 @@ SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame 
 		TitleProps.m_MaxWidth = DrawFrame.m_TitleRect.w;
 		TitleProps.m_EllipsisAtEnd = true;
 		RenderSettingsCardLabel(Ctx, Spec, false, DrawFrame.m_TitleRect, Spec.m_pTitle != nullptr ? Spec.m_pTitle : "", ui_token::font::TITLE * UiScale, TitleProps);
-		ColorRGBA SubtitleColor = ResolveConfiguredTextColor(Surface);
+		ColorRGBA SubtitleColor = ResolveConfiguredTextColor();
 		SubtitleColor.a *= DrawState.m_DrawAlpha;
 		Ctx.m_pTextRender->TextColor(SubtitleColor);
 		RenderSettingsCardSubtitle(Ctx, DrawFrame, Spec, DrawState.m_PointerInside);
@@ -353,7 +353,7 @@ bool CMenus::DoSettingsToggleButton(int Page, int Tab, int Subtab, const CUIRect
 	Options.m_Selected = SettingsToggleEntryValue(Entry);
 	Options.m_Radius *= Metrics.m_UiScale;
 	// 与 F1 筛选相同，以选中底色表达启用状态，不再另画滑动开关。
-	Options.m_Color = Options.m_Selected ? color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(1.0f) : ResolveConfiguredControlSurface();
+	Options.m_Color = Options.m_Selected ? ResolveConfiguredAccentColor().WithAlpha(1.0f) : ResolveConfiguredControlSurface();
 	// 需要突出悬浮位置的场景（成对出现的色块 + 按钮）再加一层明暗差：
 	// 不悬浮时底色压暗，悬浮时回到原亮度并把描边提亮。
 	// 指针位置直接按几何判断：这里是「成对色块」的强调语义，命中区可能小于卡片矩形，
@@ -379,7 +379,7 @@ bool CMenus::DoSettingsToggleButton(int Page, int Tab, int Subtab, const CUIRect
 	if(!m_MenuTextPlanCollecting)
 		Fill = ui_widget::DrawButtonSurface(Context, CanProcessInput ? pId : nullptr, Button, Options);
 	const CUiScopedSurfaceText SurfaceText(TextRender(), Fill);
-	// 选中只改填充、不改文字前景：选中底来自 qm_ui_selected_color，文字固定用正文色，
+	// 选中只改填充、不改文字前景：选中底来自强调色（qm_ui_accent_color），文字固定用正文色，
 	// 不跟着填充亮度翻成深色。必须直接设 TextRender 的当前色——这里走的标签会进
 	// 设置页文字池的缓存容器，SLabelProperties 的显式颜色在缓存容器路径里不生效，
 	// 只靠 CUiScopedSurfaceText 的自动反差就会在选中底上变成黑字。

@@ -8,6 +8,7 @@
 #include <engine/console.h>
 #include <engine/shared/ringbuffer.h>
 
+#include <game/client/QmUi/QmConsoleScroll.h>
 #include <game/client/QmUi/QmConsoleUi.h>
 #include <game/client/component.h>
 #include <game/client/components/qm_console_log_filter.h>
@@ -109,6 +110,8 @@ private:
 		bool m_TotalBacklogLinesValid = false;
 
 		CGameConsole *m_pGameConsole;
+		// 日志滚动态跟着实例走（本地 / 远程各一份），不再用按类型索引的文件级静态数组。
+		CQmConsoleScrollRuntime m_Scroll;
 
 		char m_aCompletionBuffer[IConsole::CMDLINE_LENGTH];
 		int m_CompletionChosen;
@@ -251,6 +254,7 @@ private:
 	static constexpr ColorRGBA ms_SearchSelectedColor = ColorRGBA(1.0f, 1.0f, 0.0f, 1.0f);
 
 	int PossibleMaps(const char *pStr, IConsole::FPossibleCallback pfnCallback = IConsole::EmptyPossibleCommandCallback, void *pUser = nullptr);
+	void PossibleSettings(const char *pStr, int FlagMask, IConsole::FPossibleCallback pfnCallback, void *pUser);
 
 	static void PossibleCommandsRenderCallback(int Index, const char *pStr, void *pUser);
 	static void ConToggleLocalConsole(IConsole::IResult *pResult, void *pUserData);

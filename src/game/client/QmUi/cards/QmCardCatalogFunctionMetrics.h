@@ -7,6 +7,7 @@
 #include <engine/shared/localization.h>
 #include <engine/textrender.h>
 
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/pie_menu_logic.h>
 #include <game/localization.h>
 
@@ -17,14 +18,19 @@
 // 函数分类卡片的文本高度及旧版特性行定义。
 namespace qm_card_catalog
 {
+	// 饼菜单卡片高度：与卡片里的实际布局同一份算式——固定 8 行控件、一个全宽预览容器，
+	// 再加两个选项池（各含一行标题与一行胶囊；池内换行会让实际高度更高，卡片自己会再量）。
 	inline float QmPieMenuContentHeight(float ContentWidth, float LineHeight, float BodySize, float LineSpacing, bool Enabled, bool Following)
 	{
 		const float Row = LineHeight + LineSpacing;
 		const float FollowHeight = Following ? Row : 0.0f;
 		if(!Enabled)
 			return Row + FollowHeight;
-		const float PreviewHeight = std::min(ContentWidth, std::clamp(ContentWidth * 0.88f, LineHeight * 10.0f, LineHeight * 13.5f)) * 0.8f;
-		return Row * (5.0f + static_cast<float>(qm_pie_menu::OPTION_COUNT)) + FollowHeight + BodySize + LineSpacing * 3.0f + PreviewHeight;
+		const float PreviewSide = std::clamp(ContentWidth * 0.42f, LineHeight * 8.0f, LineHeight * 12.0f);
+		const float PoolPadding = ui_token::list::ContainerPadding(LineHeight);
+		const float PreviewBlock = PreviewSide + PoolPadding * 2.0f + LineSpacing;
+		const float PoolBlock = (BodySize + LineSpacing) + (PoolPadding * 2.0f + LineHeight) + LineSpacing;
+		return Row * 8.0f + FollowHeight + PreviewBlock + PoolBlock * 2.0f;
 	}
 
 	// 保留旧版特性文案的翻译提取标注；本地渲染逐项绘制，行数以其实际控件为准。

@@ -84,6 +84,9 @@ namespace ui_widget
 		Style.m_Border = ResolveActiveButtonBorder(Options.m_Role, Style, State);
 		if(Options.m_TransparentInactive && !State.m_Hovered && !State.m_Selected)
 			Style.m_Border = ColorRGBA();
+		// 图标按钮的描边只表达「悬浮/选中」：静止态留白，避免每个图标都套一圈常驻边框。
+		if(Options.m_Role == EUiButtonRole::ICON && !State.m_Hovered && !State.m_Selected)
+			Style.m_Border = ColorRGBA();
 		if(Options.m_BorderOverride.has_value())
 			Style.m_Border = *Options.m_BorderOverride;
 		if(pUi->DrawingSuppressed())
@@ -97,7 +100,9 @@ namespace ui_widget
 			const uint64_t NodeKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash, reinterpret_cast<uint64_t>(pId));
 			const SUiAnimTransition &Transition = State.m_Pressed ? ui_token::motion::BTN_PRESS : ui_token::motion::BTN_HOVER;
 			Style.m_Fill = ResolveUiAnimValueColor(*pAnim, NodeKey, Style.m_Fill, Transition.m_DurationSec, Transition.m_Easing);
-			const float TargetScale = State.m_Pressed ? 0.97f : 1.0f;
+			// 悬浮反馈形态由 qm_ui_hover_style 决定：0 = 缩放，1 = 只有边框高亮（不缩）。
+			const bool BorderHoverOnly = g_Config.m_QmUiHoverStyle != 0;
+			const float TargetScale = BorderHoverOnly ? 1.0f : (State.m_Pressed ? 0.97f : 1.0f);
 			const float Scale = std::clamp(ResolveUiAnimSpringValue(*pAnim, NodeKey, EUiAnimProperty::SCALE, TargetScale, ui_token::motion::TWITCH_SPRING, 2), 0.90f, 1.05f);
 			if(std::abs(Scale - 1.0f) > 0.001f)
 			{
@@ -108,7 +113,16 @@ namespace ui_widget
 			}
 		}
 		const ColorRGBA Fill = pUi->ScaleControlAlpha(Style.m_Fill);
-		DrawRoundedSurface(Ctx, DrawRect, Fill, pUi->ScaleControlAlpha(Style.m_Border), Options.m_Radius, Options.m_BorderWidth, Options.m_Corners, Options.m_AlignToPixel);
+		// 图标按钮在表面这一层统一成正圆：不管调用点传的是方角、圆角还是自算半径，
+		// 形状只由「短边的一半」决定，避免同一个列表里一半圆一半方。
+		float ShapeRadius = Options.m_Radius;
+		int ShapeCorners = Options.m_Corners;
+		if(Options.m_Role == EUiButtonRole::ICON)
+		{
+			// 只把半径抬到半高，Corners 保持调用点值，否则引擎按方块绘制。
+			ShapeRadius = std::min(DrawRect.w, DrawRect.h) * 0.5f;
+		}
+		DrawRoundedSurface(Ctx, DrawRect, Fill, pUi->ScaleControlAlpha(Style.m_Border), ShapeRadius, Options.m_BorderWidth, ShapeCorners, Options.m_AlignToPixel);
 		return Fill;
 	}
 
@@ -123,8 +137,12 @@ namespace ui_widget
 			return Enabled && Checked >= 0 ? pUi->DoButtonLogic(pId, Checked, &HitRect, Flags) : 0;
 		SButtonSurfaceOptions Options;
 		Options.m_Role = EUiButtonRole::ICON;
+		// 图标按钮一律正圆：方块按钮按半高取半径，和「圆形图标按钮」的既有约定一致。
+		Options.m_Radius = ButtonRect.h * 0.5f;
 		Options.m_Enabled = Enabled && Checked >= 0;
 		Options.m_Selected = Checked > 0;
+		// 图标按钮恒为正圆：半径取半高；Corners 必须保留调用点的值——
+		// 引擎的四角路径里 Corners 才是形状开关，清成 NONE 会直接画成方块。
 		Options.m_Corners = Corners;
 		Options.m_Color = Color;
 		Options.m_TransparentInactive = TransparentInactive;
@@ -172,14 +190,6 @@ namespace ui_widget
 
 	namespace
 	{
-		// 按钮表面圆角：长条按钮（宽明显大于高）给胶囊端头；接近方形的按钮仍用
-		// 几何档位的小圆角，否则方按钮会被压成圆形。分体按钮的两半底色和共享外框
-		// 必须共用这一个判定：外框若按几何档位另算一次，就会比胶囊填充更方。
-		float ResolveButtonSurfaceRadius(const CUIRect &SurfaceRect, const EUiButtonGeometry Geometry)
-		{
-			return SurfaceRect.w >= SurfaceRect.h * 1.8f ? ui_token::radius::PILL : ResolveUiTextButtonRadius(Geometry);
-		}
-
 		bool DoStyledButton(const IUiContext &Ctx, CButtonContainer *pBtn, const char *pText, const CUIRect &Rect, bool Disabled, EUiButtonRole Role, const int Corners = IGraphics::CORNER_ALL, const bool DrawBorder = true, const EUiButtonGeometry Geometry = EUiButtonGeometry::CONTROL, const CUIRect *pSurfaceRect = nullptr, bool Selected = false)
 		{
 			if(Ctx.m_pUi == nullptr || pBtn == nullptr)
@@ -187,7 +197,7 @@ namespace ui_widget
 			SButtonSurfaceOptions Options;
 			Options.m_Role = Role;
 			const CUIRect &SurfaceRect = pSurfaceRect != nullptr ? *pSurfaceRect : Rect;
-			Options.m_Radius = ResolveButtonSurfaceRadius(SurfaceRect, Geometry);
+			Options.m_Radius = ResolveUiSurfaceRadius(SurfaceRect, Geometry);
 			if(!DrawBorder)
 				Options.m_BorderWidth = 0.0f;
 			Options.m_Corners = Corners;
@@ -238,24 +248,56 @@ namespace ui_widget
 		// 两半只提交状态底色；外框在最后按整条按钮的合并状态统一提交一圈，
 		// 悬浮/按下时不会只有被悬停的半边发亮、中缝断开。
 		Ctx.m_pUi->ClipEnable(&Left);
-		const bool LeftClicked = DoStyledButton(Ctx, pLeft, pLeftText, Left, LeftDisabled, EUiButtonRole::SECONDARY, IGraphics::CORNER_ALL, false, Geometry, &Rect);
+		const bool LeftClicked = DoStyledButton(Ctx, pLeft, "", Left, LeftDisabled, EUiButtonRole::SECONDARY, IGraphics::CORNER_ALL, false, Geometry, &Rect);
 		Ctx.m_pUi->ClipDisable();
 		Ctx.m_pUi->ClipEnable(&Right);
-		const bool RightClicked = DoStyledButton(Ctx, pRight, pRightText, Right, RightDisabled, EUiButtonRole::SECONDARY, IGraphics::CORNER_ALL, false, Geometry, &Rect);
+		const bool RightClicked = DoStyledButton(Ctx, pRight, "", Right, RightDisabled, EUiButtonRole::SECONDARY, IGraphics::CORNER_ALL, false, Geometry, &Rect);
 		Ctx.m_pUi->ClipDisable();
+		const bool LeftHovered = !LeftDisabled && Ctx.m_pUi->VisualSurfaceHovered(&Left);
+		const bool RightHovered = !RightDisabled && Ctx.m_pUi->VisualSurfaceHovered(&Right);
 		SUiButtonState BorderState;
 		BorderState.m_Enabled = !(LeftDisabled && RightDisabled);
-		BorderState.m_Hovered = (!LeftDisabled && Ctx.m_pUi->VisualSurfaceHovered(&Left)) || (!RightDisabled && Ctx.m_pUi->VisualSurfaceHovered(&Right));
+		BorderState.m_Hovered = LeftHovered || RightHovered;
 		BorderState.m_Pressed = BorderState.m_Hovered && (Ctx.m_pUi->CheckActiveItem(pLeft) || Ctx.m_pUi->CheckActiveItem(pRight)) && (Ctx.m_pUi->MouseButton(0) || Ctx.m_pUi->MouseButton(1) || Ctx.m_pUi->MouseButton(2));
 		const float Inset = std::min(ui_token::spacing::XS, Rect.h * 0.25f);
 		const CUIRect Divider{Right.x - 0.5f, Rect.y + Inset, 1.0f, std::max(0.0f, Rect.h - 2.0f * Inset)};
 		if(!Ctx.m_pUi->DrawingSuppressed())
 		{
-			Divider.Draw(Ctx.m_pUi->ScaleBackgroundAlpha(ui_token::color::BORDER_SUBTLE), IGraphics::CORNER_NONE, 0.0f);
 			const SUiTheme &Theme = Ctx.m_pTheme != nullptr ? *Ctx.m_pTheme : Ctx.m_pUi->QmControlTheme();
 			const auto BorderStyle = ResolveUiButtonStyle(EUiButtonRole::SECONDARY, ResolveConfiguredControlSurface(), CUiScopedSurfaceText::CurrentSurface(), Theme, BorderState);
-			const ColorRGBA BorderColor = ResolveActiveButtonBorder(EUiButtonRole::SECONDARY, BorderStyle, BorderState);
-			DrawRoundedSurface(Ctx, Rect, ColorRGBA(), Ctx.m_pUi->ScaleControlAlpha(BorderColor), ResolveButtonSurfaceRadius(Rect, Geometry), ui_token::feedback::ICON_BORDER_WIDTH);
+			const float Radius = ResolveUiSurfaceRadius(Rect, Geometry);
+			// 外框按半绘制：只高亮被悬停的那一半。外侧端头沿用整条按钮的胶囊曲线，
+			// 中缝一侧被裁剪成直边，所以左悬停只亮左半圈、右悬停只亮右半圈。
+			const auto DrawHalfBorder = [&](const CUIRect &Half, bool Hovered, bool Disabled) {
+				if(Disabled || !Hovered)
+					return;
+				SUiButtonState HalfState = BorderState;
+				HalfState.m_Hovered = true;
+				const ColorRGBA HalfBorder = ResolveActiveButtonBorder(EUiButtonRole::SECONDARY, BorderStyle, HalfState);
+				Ctx.m_pUi->ClipEnable(&Half);
+				DrawRoundedSurface(Ctx, Rect, ColorRGBA(), Ctx.m_pUi->ScaleControlAlpha(HalfBorder), Radius, ui_token::feedback::ICON_BORDER_WIDTH);
+				Ctx.m_pUi->ClipDisable();
+			};
+			DrawHalfBorder(Left, LeftHovered, LeftDisabled);
+			DrawHalfBorder(Right, RightHovered, RightDisabled);
+			// 中缝跟着被悬停的半边走强调色：左悬停时中线是左按钮的右边界，右悬停时是右按钮的左边界。
+			const ColorRGBA DividerColor = (LeftHovered || RightHovered) ? Theme.m_Accent : ui_token::color::BORDER_SUBTLE;
+			Divider.Draw(Ctx.m_pUi->ScaleBackgroundAlpha(DividerColor), IGraphics::CORNER_NONE, 0.0f);
+		}
+		// 文字自己画：半宽矩形会把可用宽度压小，DoLabel 会为了塞下而自动缩字号，
+		// 于是双操作按钮的字比同一排其它按钮小一号。这里固定正文档，放不下就用省略号。
+		if(!Ctx.m_pUi->DrawingSuppressed())
+		{
+			const float LabelSize = ui_token::control::BodySizeFromScale(Ctx.m_UiScale);
+			SLabelProperties TextProps;
+			TextProps.m_MaxWidth = std::max(0.0f, Left.w - 2.0f * ui_token::control::PadX(LabelSize));
+			TextProps.m_MinimumFontSize = LabelSize;
+			TextProps.m_EllipsisAtEnd = true;
+			if(!LeftDisabled && pLeftText != nullptr && Left.w > 0.0f)
+				Ctx.m_pUi->DoLabel(&Left, pLeftText, LabelSize, TEXTALIGN_MC, TextProps);
+			TextProps.m_MaxWidth = std::max(0.0f, Right.w - 2.0f * ui_token::control::PadX(LabelSize));
+			if(!RightDisabled && pRightText != nullptr && Right.w > 0.0f)
+				Ctx.m_pUi->DoLabel(&Right, pRightText, LabelSize, TEXTALIGN_MC, TextProps);
 		}
 		Ctx.m_pUi->DoButtonTooltip(pLeft, &Left, pLeftTooltip);
 		Ctx.m_pUi->DoButtonTooltip(pRight, &Right, pRightTooltip);
@@ -268,7 +310,9 @@ namespace ui_widget
 				CUIRect FocusRect = pFocus == pLeft ? Left : Right;
 				FocusRect.Margin(std::min(2.0f, std::min(FocusRect.w, FocusRect.h) * 0.25f), &FocusRect);
 				const SUiTheme &Theme = Ctx.m_pTheme != nullptr ? *Ctx.m_pTheme : Ctx.m_pUi->QmControlTheme();
-				DrawRoundedSurface(Ctx, FocusRect, ColorRGBA(), Theme.m_FocusRing, ResolveUiTextButtonRadius(Geometry), ui_token::feedback::ICON_BORDER_WIDTH);
+				// 焦点环贴的是整条按钮的外缘（不是半边的边），半径取整条的解析结果，
+				// 否则半边按自己的长宽比再选一次会得出半圆，勾在分割线上。
+				DrawRoundedSurface(Ctx, FocusRect, ColorRGBA(), Theme.m_FocusRing, ResolveUiSurfaceRadius(Rect, Geometry), ui_token::feedback::ICON_BORDER_WIDTH);
 			}
 		}
 		return LeftClicked ? 0 : RightClicked ? 1 :

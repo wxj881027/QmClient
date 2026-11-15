@@ -232,6 +232,9 @@
 '%s' locked your team. After the race starts, killing will kill everyone in your team.
 == '%s' заблокировал(а) вашу команду. После старта заезда убийство убьёт всех в команде.
 
+'%s' not bound.
+== '%s' not bound.
+
 '%s' unlocked your team.
 == '%s' разблокировал(а) вашу команду.
 
@@ -614,6 +617,9 @@ Add one
 Add one shortcut per message; it is used when the target is on the list.
 == Для каждого сообщения добавьте отдельный ярлык: он сработает, если адресат есть в списке.
 
+Add options below
+== Добавьте пункты ниже
+
 Add or edit entries, then use the bind in chat to send the text.
 == Добавьте или измените записи, затем отправьте текст привязкой в чате.
 
@@ -712,9 +718,6 @@ Adjust mouse sensitivity and cursor limits
 
 Adjust nameplate options and compare the preview.
 == Настройте параметры табличек и сравните с предпросмотром.
-
-Adjust one value at a time; corners and segments are drawn per frame, so large segment counts cost GPU time.
-== Меняйте по одному значению; скругления и сегменты рисуются каждый кадр, поэтому большое число сегментов нагружает GPU.
 
 Adjust opacity of entity layers
 == Регулировка прозрачности слоёв объектов
@@ -937,21 +940,6 @@ Angry
 
 Angular gradient
 == Угловой градиент
-
-Animate chat box, emote selector, scoreboard, and spectate selection
-== Анимировать чат, выбор эмоций, табло и выбор наблюдения
-
-Animate lists when entering a page
-== Анимировать списки при открытии страницы
-
-Animate settings card expand and collapse height changes
-== Анимировать изменение высоты при разворачивании и сворачивании карточек настроек
-
-Animate settings card lists when entering a page
-== Анимировать список карточек настроек при входе на страницу
-
-Animate settings card reorder and layout reflow
-== Анимировать сортировку и перестроение раскладки карточек настроек
 
 Animated title style id
 == Идентификатор анимированного стиля титула
@@ -1691,6 +1679,9 @@ Background stroke color
 Background stroke width
 == Ширина фонового штриха
 
+Background, border and title effects of the settings cards
+== Фон, рамка и заголовок карточек настроек
+
 Baidu Translate
 == Перевод Baidu
 
@@ -1702,9 +1693,6 @@ Balanced (recommended)
 
 Ban a certain nickname
 == Забанить определённый никнейм
-
-Ban ip for x minutes for any reason
-== Забанить IP на x минут по любой причине
 
 Ban ip range for x minutes for any reason
 == Забанить диапазон IP на x минут по любой причине
@@ -1723,6 +1711,12 @@ Ban reason for "sv_dnsbl_ban"
 
 Ban time after being voted kicked (in minutes, 0 = kick only, no ban)
 == Время бана после кика по голосованию (в минутах, 0 = только кик, без бана)
+
+Bar
+== Черта
+
+Bar: a thin vertical line between characters
+== Черта: тонкая вертикальная линия между символами
 
 Base path for HTTPS map download URLs to clients
 == Базовый путь для URL-адресов загрузки карт по HTTPS для клиентов
@@ -1853,6 +1847,9 @@ Blink
 Blink the active local tee
 == Заставить активного локального персонажа мигнуть
 
+Block
+== Блок
+
 Block client-initiated self-kill (K key / kill command)
 == Блокировать самоубийство со стороны клиента (клавиша K / команда kill)
 
@@ -1864,6 +1861,9 @@ Block votes from blacklisted addresses
 
 Block words
 == Блокировка слов
+
+Block: fills the character cell behind the next character
+== Блок: заливает знакоместо следующего символа
 
 Blue
 == Синий
@@ -1967,12 +1967,6 @@ Button - Disabled
 Button - Enabled
 == Кнопка - Включена
 
-Button background color
-== Цвет фона кнопок
-
-Button background opacity percentage
-== Цвет фона кнопок — непрозрачность в процентах
-
 Button browser
 == Браузер кнопок
 
@@ -2070,7 +2064,7 @@ Candidate files
 == Файлы-кандидаты
 
 Candy gradient
-== Конфетный градиент
+== Candy gradient
 
 Cannot import: invalid data or too many friends or categories.
 == Импорт невозможен: неверные данные или слишком много друзей либо групп.
@@ -2111,20 +2105,17 @@ Capture the flag
 Capture-the-flag event cue, used by CTF servers rather than ordinary DDNet racing.
 == Сигнал события режима захвата флага; используется на CTF-серверах, а не в обычных гонках DDNet.
 
+Card effects
+== Эффекты карточек
+
 Card guide
 == Справка по карточке
-
-Card height animation
-== Анимация высоты карточки настроек
-
-Card list entry animation
-== Анимация появления списка карточек настроек
 
 Card opacity
 == Непрозрачность карточки
 
-Card reflow animation
-== Анимация перестроения карточек настроек
+Card shape is shared with the rest of the interface and lives in "Interface theme".
+== Форма карточек общая для всего интерфейса и находится в «Теме интерфейса».
 
 Category
 == Категория
@@ -2402,8 +2393,8 @@ Choose export name first.
 Choose Logo (PNG / WebP)
 == Выбрать логотип (PNG / WebP)
 
-Choose off, simple or full; the individual switches below only apply to full.
-== Выберите «Выкл», «Простой» или «Полный»; отдельные переключатели ниже действуют только в полном режиме.
+Choose off, reduced or full; this single switch drives every animation. Then pick a caret shape for the settings, console and chat input fields.
+== Выберите «Выкл.», «Сокращённо» или «Полностью»; этот переключатель управляет всеми анимациями. Затем выберите форму курсора для настроек, консоли и чата.
 
 Choose the language used by the client
 == Choose the language used by the client
@@ -2561,6 +2552,12 @@ Click a part on the right to edit its color, blend mode and strength.
 Click a row such as "HDF" or "Left jump", press the key you want, and use the trash icon to remove a bind.
 == Нажмите на строку вроде HDF или «Прыжок влево» и нажмите нужную клавишу. Значок корзины рядом снимает привязку.
 
+Click a slice in the preview to change that option's color; options only exist within "Detection distance", so keep the wheel short.
+== Нажмите на сектор в предпросмотре, чтобы изменить цвет пункта; пункты работают только в пределах «Дистанции обнаружения», поэтому держите меню коротким.
+
+Click a slice to set color
+== Нажмите на сектор, чтобы задать цвет
+
 Click again to find the next location.
 == Нажмите ещё раз, чтобы найти следующее место.
 
@@ -2676,7 +2673,7 @@ Close window after changing settings
 == Закрыть окно после изменения настроек
 
 Cloud bubble
-== Облачный пузырь
+== Cloud bubble
 
 Collapse
 == Свернуть
@@ -2757,7 +2754,7 @@ Combo
 == Комбо
 
 Comic dialogue
-== Диалог комикса
+== Comic dialogue
 
 Comma-separated list of banned clients to be kicked on join
 == Список забаненных клиентов через запятую, которые будут кикнуты при подключении
@@ -2932,6 +2929,9 @@ Configure HUD island appearance
 
 Configure input helpers and cursor behavior
 == Configure input helpers and cursor behavior
+
+Configure interface shape, theme, icons and animations
+== Настройка формы, темы, значков и анимаций интерфейса
 
 Configure keyboard, mouse, wheel, and modifier bindings
 == Настройка клавиш, кнопок мыши, колеса и модификаторов
@@ -3113,6 +3113,9 @@ Console command color
 Console font size
 == Консоль: размер шрифта
 
+Console line spacing
+== Межстрочный интервал консоли
+
 Console link color
 == Консоль: цвет ссылок
 
@@ -3161,6 +3164,12 @@ Continuous-curvature UI corners (0 = classic arc, 100 = strongest)
 Contributors
 == Авторы
 
+Control background color
+== Цвет фона элементов управления
+
+Control background opacity percentage
+== Непрозрачность фона элементов управления (%)
+
 Control custom background drawing
 == Control custom background drawing
 
@@ -3200,11 +3209,14 @@ Controls
 Controls demo recording and playback behavior.
 == Управляет записью и воспроизведением демо.
 
-Controls how UI surfaces are drawn: card surface opacity, border width, corner rounding, segment count and the rainbow title effect.
-== Управляет отрисовкой поверхностей интерфейса: прозрачность поверхности карточки, толщина рамки, скругление углов, число сегментов и радужный эффект заголовка.
+Controls how the settings cards themselves are drawn: card background, border and the rainbow title effect.
+== Управляет отрисовкой самих карточек настроек: фон, рамка и радужный заголовок.
 
 Controls laser shape, glow and animation.
 == Управляет формой лазера, свечением и анимацией.
+
+Controls the shape and colors shared by the whole interface: corner curve, capsule ends, surfaces, accent, control and popup backgrounds, text color mode and blur.
+== Управляет формой и цветами, общими для всего интерфейса: кривая углов, торцы капсул, поверхности, акцент, фоны элементов управления и всплывающих панелей, режим цвета текста и размытие.
 
 Controls what appears next to other players' names, such as clan tags, friend marks and client identifiers.
 == Определяет, что показывать рядом с именами других игроков: клан-теги, отметки друзей, идентификаторы клиентов.
@@ -3767,6 +3779,9 @@ Debug SQL.
 Debug tile layer clipping.
 == Отладка обрезки тайловых слоёв.
 
+Debug websockets
+== Отладка WebSocket
+
 Decides which skins the client downloads and lists, and can add a prefix to load prefixed skin variants.
 == Определяет, какие скины клиент скачивает и показывает, и позволяет задать префикс для загрузки вариантов скинов с префиксом.
 
@@ -4106,6 +4121,9 @@ Display mode
 Display modes
 == Режимы отображения
 
+Display options
+== Параметры отображения
+
 Display your race time
 == Показывает ваше время гонки
 
@@ -4274,6 +4292,9 @@ Downloading %d%%
 Downloading map
 == Загрузка карты
 
+Downloading map %d%%
+== Downloading map %d%%
+
 Downloading rank 1 demo
 == Загрузка демо ранга 1
 
@@ -4298,6 +4319,12 @@ Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use 
 Drag HUD modules with the left mouse button
 == Перетаскивайте модули HUD левой кнопкой мыши
 
+Drag options here to hide them
+== Перетащите сюда, чтобы скрыть
+
+Drag options here to show them
+== Перетащите сюда, чтобы показать
+
 Drag the selected watermark to move it. The original image is preserved.
 == Перетащите выбранный водяной знак. Исходное изображение сохраняется.
 
@@ -4312,6 +4339,9 @@ Drag to pan, scroll to zoom
 
 Drag to reorder; right-click or use the gear to manage
 == Перетаскивайте для изменения порядка; правый клик или шестерёнка для управления
+
+Drag to the other list to show or hide this option
+== Перетащите в другой список, чтобы показать или скрыть этот пункт
 
 Dragger Inner Color
 == Внутренний цвет драггера
@@ -4475,6 +4505,9 @@ Dummy is allowed on this server.
 Dummy is currently connected.
 == Дамми в данный момент подключён.
 
+Dummy is not connected
+== Dummy is not connected
+
 Dummy jump
 == Прыжок дамми
 
@@ -4606,6 +4639,9 @@ Echo follows the original chat color
 
 Echo text color when not inheriting chat color
 == Цвет текста Echo, когда не наследует цвет чата
+
+Echo the config value in chat window
+== Выводить значение настройки в чат
 
 Echo the text
 == Вывести текст
@@ -4760,8 +4796,8 @@ Enable audio output and choose a device
 Enable backdrop blur
 == Включить размытие фона
 
-Enable backdrop blur for translucent interface and selected HUD backgrounds
-== Включить размытие фона для полупрозрачного интерфейса и выбранных фонов HUD
+Enable backdrop blur for translucent interface and all HUD backgrounds
+== Включить размытие фона для полупрозрачного интерфейса и всех фонов HUD
 
 Enable background 3D particle flicker
 == Включить мерцание фоновых 3D-частиц
@@ -4876,6 +4912,9 @@ Enable fast practice mode
 
 Enable fat skin
 == Включить толстый скин
+
+Enable focus glow
+== Включить свечение фокуса
 
 Enable freeze call sound
 == Включить звук вызова заморозки
@@ -5423,12 +5462,6 @@ Expand
 Expand console
 == Развернуть консоль
 
-Expanded dropdown background color
-== Цвет фона раскрытого списка
-
-Expanded dropdown background opacity percentage
-== Цвет фона раскрытого списка — непрозрачность в процентах
-
 Expanded personalization sections (format: stableId=1;stableId2=0;)
 == Развёрнутые разделы персонализации (формат: stableId=1;stableId2=0;)
 
@@ -5498,6 +5531,9 @@ Exported to %s
 Exporting chat images: %d
 == Экспорт изображений чата: %d
 
+Expose IP to servers by default when adding a favorite (last choice on the server info page)
+== По умолчанию открывать IP серверам при добавлении в избранное (запоминает последний выбор на странице сервера)
+
 Expose playback controls to the operating system
 == Expose playback controls to the operating system
 
@@ -5509,6 +5545,9 @@ External links open in the browser.
 
 External sites are not controlled by the client.
 == Внешние сайты не контролируются клиентом.
+
+Extra console log line spacing in pixels
+== Extra console log line spacing in pixels
 
 Extra vertical spacing between chat lines in pixels (0 = default)
 == Дополнительный вертикальный интервал между строками чата в пикселях (0 = по умолчанию)
@@ -5678,9 +5717,6 @@ Fastest encode, largest files
 Fat skins (DDFat)
 == Толстые скины (DDFat)
 
-Favorite
-== Избранное
-
 Favorite friend
 == Любимый друг
 
@@ -5692,6 +5728,9 @@ Favorite map
 
 Favorite maps
 == Избранные карты
+
+Favorite server
+== Избранный сервер
 
 Favorites
 == Избранное
@@ -5734,6 +5773,9 @@ File for storing ranks if sv_use_sql is disabled or as backup SQL server.
 
 File information
 == Информация о файле
+
+File to write the server's port to (used when running a server from the client)
+== File to write the server's port to (used when running a server from the client)
 
 File with announcements, one per line.
 == Файл с объявлениями, по одному на строку.
@@ -6140,8 +6182,8 @@ Full quality nameplate count
 Full width
 == Полная ширина
 
-Full: each enabled animation category uses its complete transition
-== Полный: для каждой включенной категории анимаций используются полные переходы
+Full: uses the complete transition everywhere
+== Полностью: везде используются полные переходы
 
 Fullscreen
 == Полноэкранный режим
@@ -6216,7 +6258,7 @@ Gap between tee and nametag
 == Расстояние между ти и табличкой с именем
 
 Gather and disperse
-== Сбор и рассеивание
+== Gather and disperse
 
 Gaussian
 == Гаусс
@@ -6463,6 +6505,9 @@ Graphics mode
 
 Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
 == Графический режим: -1 = использовать настройку бэкенда, 0 = совместимость, 1 = производительность (по умолчанию)
+
+Graphics settings sub-tab: 0=display, 1=visual effects
+== Вкладка настроек графики: 0=отображение, 1=визуальные эффекты
 
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
 == Уровень трассировки графики: 0 = выкл., 1 = периодическая сводка, 2 = сводка и медленные кадры, 3 = подробная трассировка бэкенда
@@ -6821,6 +6866,9 @@ Hold gun higher like TW 0.6.1 and earlier
 Hold left click for free camera
 == Зажмите левую кнопку мыши для свободной камеры
 
+Hold Shift to be more precise.
+== Hold Shift to be more precise.
+
 Hold still
 == Стоп-кадр
 
@@ -6910,6 +6958,9 @@ Horizontal position
 
 Hostname of DNSBL provider for IP verification
 == Имя хоста провайдера DNSBL для проверки IP
+
+Hover feedback style: 0 = scale, 1 = border highlight
+== Hover feedback style: 0 = scale, 1 = border highlight
 
 Hover for tooltip
 == Наведите для подсказки
@@ -7133,6 +7184,9 @@ In DDNet, played when weapons are removed. Other modes may use it for armor pick
 In memory of me
 == В память обо мне
 
+In pie menu
+== В круговом меню
+
 In-game controller sensitivity
 == Чувствительность контроллера в игре
 
@@ -7274,12 +7328,6 @@ Ink: Paper Bloom
 Input
 == Ввод
 
-Input background color
-== Цвет фона полей ввода
-
-Input background opacity percentage
-== Цвет фона полей ввода — непрозрачность в процентах
-
 Input device
 == Устройство ввода
 
@@ -7348,6 +7396,9 @@ Interface surface
 
 Interface surface color
 == Цвет поверхности интерфейса
+
+Interface theme
+== Тема интерфейса
 
 Interface transparency
 == Общая прозрачность интерфейса
@@ -7645,9 +7696,6 @@ Key Sticking: On
 
 Key Sticking: Reset Self
 == Залипание клавиш: Сбросить себя
-
-Keyboard focus ring color
-== Цвет кольца клавиатурного фокуса
 
 Keyboard size
 == Размер клавиатуры
@@ -7950,7 +7998,7 @@ Let server start race recorder
 == Разрешить серверу запускать рекордер гонки
 
 Let's play together!
-== Давайте играть вместе!
+== Let's play together!
 
 Lets you join team i (shows your team if left blank)
 == Позволяет присоединиться к команде i (оставьте пустым, чтобы показать вашу команду)
@@ -8417,6 +8465,9 @@ Map danger border
 Map data unavailable; server votes remain available
 == Данные карт недоступны; голосования сервера доступны
 
+Map download failed, click to retry
+== Map download failed, click to retry
+
 Map download send window
 == Окно отправки загрузки карты
 
@@ -8435,8 +8486,14 @@ Map name or path:
 Map not downloaded yet — join the server to preview it
 == Карта ещё не загружена. Зайдите на сервер для предпросмотра
 
+Map note
+== Заметка к карте
+
 Map play history
 == История прохождения карт
+
+Map preview
+== Предпросмотр карты
 
 Map preview rendering unavailable
 == Предпросмотр карты недоступен
@@ -8707,6 +8764,9 @@ Menu accent panel opacity
 
 Menu background
 == Фон меню
+
+Menu button hover
+== Menu button hover
 
 Menu camera rotation radius
 == Радиус вращения камеры меню
@@ -9641,6 +9701,9 @@ Not downloaded
 Not enabled
 == Не включено
 
+Not in pie menu
+== Не в круговом меню
+
 Not installed
 == Не установлен
 
@@ -9749,8 +9812,8 @@ o = Send rate
 Off
 == Выкл
 
-Off: disables all interface animations while preserving the options below
-== Выкл.: отключает все анимации интерфейса, сохраняя указанные ниже параметры
+Off: disables every interface animation
+== Выкл.: отключает все анимации интерфейса
 
 Official
 == Официально
@@ -9983,9 +10046,6 @@ Opt-in protection for client-initiated self-kill, with optional auto-enable afte
 Optimistic prediction along stable direction
 == Оптимистичное предсказание вдоль стабильного направления
 
-Option color
-== Цвет опции
-
 Optional
 == Необязательно
 
@@ -10000,9 +10060,6 @@ Optional start and end time in seconds. Leave both empty to export the whole dem
 
 Options here affect networking or identity; test on a server before using them in matches.
 == Настройки здесь влияют на сеть или идентичность; проверьте их на сервере, прежде чем использовать в матчах.
-
-Options only exist within "Detection distance"; turn off the ones you never use to keep the wheel short.
-== Пункты доступны только в пределах расстояния обнаружения; отключите ненужные, чтобы колесо было короче.
 
 Or visit DDNet.org
 == Или посетите DDNet.org
@@ -10021,9 +10078,6 @@ Original message language
 
 Original only
 == Только оригинал
-
-Original options
-== Исходные варианты
 
 Other
 == Другое
@@ -10054,6 +10108,9 @@ Outgoing language
 
 Outgoing translation target language code
 == Код целевого языка для исходящего перевода
+
+Outline
+== Outline
 
 Outline global opacity
 == Глобальная непрозрачность контуров
@@ -10357,6 +10414,9 @@ Pick a shape, then tune glow and animation speed.
 
 Pick a slot, type the command and its label, then hold the wheel key in game to test.
 == Выберите ячейку, введите команду и подпись, затем зажмите клавишу колеса в игре для проверки.
+
+Pick a text color mode first; the custom color row only appears for the custom mode.
+== Сначала выберите режим цвета текста; строка пользовательского цвета появляется только в пользовательском режиме.
 
 Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
 == Выберите цвет в каждой строке: цвета авторизованных игроков и игроков клана применяются к таблице результатов, два цвета списка — к списку друзей.
@@ -10754,6 +10814,12 @@ Points unavailable
 Popup animation
 == Анимация всплытия
 
+Popup background color
+== Цвет фона всплывающих панелей
+
+Popup background opacity percentage
+== Непрозрачность фона всплывающих панелей (%)
+
 Port for client to server connection (0=random, >=1024 sets manual port)
 == Порт для подключения клиента к серверу (0 = случайный, >=1024 задаёт ручной порт)
 
@@ -10822,6 +10888,12 @@ Practice mode enabled for your team, happy practicing!
 
 Practice mode is disabled
 == Режим тренировки отключён
+
+Practice: teleport the other tee to your cursor
+== Practice: teleport the other tee to your cursor
+
+Practice: teleport yourself to your cursor
+== Practice: teleport yourself to your cursor
 
 Pre-warm settings page on startup and menu idle
 == Прогревать страницу настроек при запуске и простое в меню
@@ -10907,9 +10979,6 @@ Preparing chat export: %d%%
 Preparing demo playback
 == Подготовка воспроизведения демо
 
-Presentation animations
-== Анимации отображения
-
 Preset %d
 == Пресет %d
 
@@ -10927,6 +10996,9 @@ Press "Save" after any change: the title and chat style are stored on your accou
 
 Press "Select map" to choose a file, check the target server and player shown for the upload, then press "Upload map"; "Cancel" stops it.
 == Нажмите выбрать карту, проверьте целевой сервер и игрока для загрузки, затем нажмите загрузить карту; отмена остановит её.
+
+Press '%s' to show cursor.
+== Press '%s' to show cursor.
 
 Press a key…
 == Нажмите клавишу…
@@ -11633,8 +11705,8 @@ Reduce visual latency
 Reduced
 == Уменьшенный
 
-Reduced: uses shorter transitions and disables presentation animations
-== Уменьшено: использует более короткие переходы и отключает презентационные анимации
+Reduced: uses shorter transitions everywhere
+== Сокращённо: везде используются более короткие переходы
 
 Reflected gradient
 == Зеркальный градиент
@@ -11969,9 +12041,6 @@ Render tiny tees instead of circles
 Renderer performing the analysis
 == Рендерер, выполняющий анализ
 
-Rendering options
-== Параметры рендеринга
-
 Rendering reads back 8-bit frames, so 10-bit formats add nothing by themselves; the gain comes from chroma density. If the encoder cannot do 4:4:4, the export fails with an error instead of reducing quality silently.
 == Рендер отдаёт 8-битные кадры, поэтому 10-битные форматы сами по себе не добавляют деталей; выигрыш даёт плотность цветовых компонент. Если кодировщик не умеет 4:4:4, экспорт завершится ошибкой, а не снизит качество молча.
 
@@ -12134,9 +12203,6 @@ Reset chat completion appearance
 Reset chat on escape
 == Сбрасывать чат при нажатии Escape
 
-Reset colors
-== Сбросить цвета
-
 Reset column widths
 == Сбросить ширину столбцов
 
@@ -12235,6 +12301,9 @@ Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects anoth
 
 Restore Kugou files
 == Восстановить файлы Kugou
+
+Restore legacy votes
+== Вернуть прежнее голосование
 
 Restore old single-segment hook collision line behavior
 == Восстановить старое поведение линии столкновения крюка с одним сегментом
@@ -12629,15 +12698,6 @@ Scoreboard score lookup
 Scoreboard sort mode (0=Score, 1=Points)
 == Режим сортировки таблицы лидеров (0=очки, 1=фрагменты)
 
-Scoreboard surface
-== Поверхность табло
-
-Scoreboard surface color
-== Цвет поверхности табло
-
-Scoreboard transparency
-== Прозрачность таблицы лидеров
-
 Scoreboard, chat, spectating
 == таблица лидеров, чат, наблюдение
 
@@ -12773,12 +12833,6 @@ Sec-WebSocket-Protocol sent during the realtime handshake
 Secondary
 == Вторичная
 
-Secondary menu background color
-== Цвет фона подменю
-
-Secondary menu background opacity percentage
-== Цвет фона подменю — непрозрачность в процентах
-
 Seconds to wait before reconnecting (0=off, when server is full)
 == Секунд ожидания перед переподключением (0 = выкл., когда сервер полон)
 
@@ -12805,9 +12859,6 @@ Select a configuration package to preview its contents.
 
 Select a map
 == Выберите карту
-
-Select a player to manage
-== Выберите игрока для управления
 
 Select a preset, then apply it to player or dummy
 == Выберите пресет, затем примените его к игроку или Дами
@@ -12841,9 +12892,6 @@ Selected %d
 
 Selected candidate %d/%d under cursor.
 == Выбран кандидат %d/%d под курсором.
-
-Selected item color
-== Цвет выбранного элемента
 
 Selected part: %d
 == Выбранная часть: %d
@@ -13079,9 +13127,6 @@ Set camera position relative to current view in the map
 Set camera position to x and y in the map
 == Установить позицию камеры на x и y на карте
 
-Set color
-== Установить цвет
-
 Set current demo speed
 == Установить скорость текущего демо
 
@@ -13139,8 +13184,8 @@ Sets chat position, width, font size and visibility.
 Sets encoder, container and quality in one step: Daily is H.264 + MP4, High quality is HEVC + MP4 at a smaller size, Editing is all-intra H.264 + MP4 with instant seeking, and Exchange is ProRes 422 HQ + MOV for other editors.
 == Настраивает кодировщик, контейнер и качество за один шаг: «Повседневный» — H.264 + MP4, «Высокое качество» — HEVC + MP4 меньшего размера, «Монтаж» — полностью внутрикадровый H.264 + MP4 с мгновенным переходом, «Обмен» — ProRes 422 HQ + MOV для других редакторов.
 
-Sets how much motion the interface plays: transitions, card entrance, reorder animations and scroll feel.
-== Задаёт, сколько анимации будет в интерфейсе: переходы, появление карточек, анимации перестановки и поведение прокрутки.
+Sets how much motion the interface plays (transitions, card entrance, reorder animations, scroll feel) and the shape of the text caret in every input field.
+== Задаёт объём анимации интерфейса (переходы, появление карточек, перестановка, ощущение прокрутки) и форму курсора во всех полях ввода.
 
 Sets laser colors for weapons and entities.
 == Задаёт цвета лазеров оружия и объектов.
@@ -13219,6 +13264,9 @@ Severe
 
 Shape
 == Форма
+
+Shape, colors and text shared by the whole interface
+== Форма, цвета и текст, общие для всего интерфейса
 
 Share of the server browser name/map split given to the name column (per mille)
 == Доля разделения имени и карты в браузере серверов для столбца имени (промилле)
@@ -13300,6 +13348,9 @@ Show all votes (page 0 by default, 20 entries per page)
 
 Show all warlist groups
 == Показать все вражеские группы
+
+Show an accent glow around the focused input field
+== Показывать свечение акцентного цвета вокруг поля ввода в фокусе
 
 Show any enabled Indicators
 == Показать все включённые индикаторы
@@ -14051,6 +14102,9 @@ Show server prompts and Echo messages as popups
 Show server settings
 == Показать настройки сервера
 
+Show server uptime
+== Показывать время работы сервера
+
 Show server-side tees as ghosts during fast practice
 == Показывать ти на стороне сервера как призраков во время быстрой практики
 
@@ -14332,9 +14386,6 @@ Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dyn
 
 Shows the bind wheel layout and which slot is currently selected.
 == Показывает раскладку колеса привязок и выбранную ячейку.
-
-Shows the credits of the DDNet mod
-== Показывает титры мода DDNet
 
 Shows the current song's lyric line in the Dynamic Island and lets you pick which music app supplies it.
 == Показывает строку текста текущей песни в Dynamic Island и позволяет выбрать, какое музыкальное приложение её передаёт.
@@ -15117,7 +15168,7 @@ Strong Weak Hook
 == Сильный/Слабый крюк
 
 Style
-== Стиль
+== Style
 
 Style chat names, text, and message colors
 == Style chat names, text, and message colors
@@ -15142,6 +15193,9 @@ Successfully saved the replay!
 
 Sudden Death
 == Внезапная смерть
+
+Suggested tags:
+== Предлагаемые теги:
 
 Suicides
 == Самоубийства
@@ -15536,6 +15590,9 @@ Teleport back to the practice respawn point
 Teleport back to the practice respawn point and restore the tee state saved there. Only the tee is restored; the world keeps running.
 == Телепортирует к точке возрождения практики и восстанавливает сохранённое там состояние Tee. Восстанавливается только Tee, мир продолжает идти.
 
+Teleport dummy to cursor
+== Teleport dummy to cursor
+
 Teleport free spectator camera between hovered tele-in/out or checkpoint tele and a matching counterpart
 == Телепортировать свободную камеру наблюдателя между наведённым телепортом входа/выхода или чекпоинтом и соответствующим объектом
 
@@ -15647,17 +15704,23 @@ Text alpha
 Text before each key press count
 == Префикс счётчика нажатий
 
+Text caret style
+== Стиль курсора ввода
+
+Text caret style: 0=bar, 1=underscore, 2=block
+== Стиль курсора ввода: 0=черта, 1=подчёркивание, 2=блок
+
 Text color
 == Цвет текста
 
 Text color mode
 == Режим цвета текста
 
-Text color mode: 0 automatic, 1 white, 2 black, 3 custom
-== Режим цвета текста: 0 авто, 1 белый, 2 черный, 3 свой
+Text color mode: 0 white, 1 black, 2 rainbow, 3 custom
+== Режим цвета текста: 0=белый, 1=чёрный, 2=радуга, 3=пользовательский
 
-Text input focus ring color
-== Цвет кольца фокуса текстового ввода
+Text follows the chosen mode instead of the surface, so a light surface with white text is unreadable by design.
+== Текст следует выбранному режиму, а не поверхности, поэтому белый текст на светлой поверхности нечитаем по замыслу.
 
 Text is too long for the selected translation service.
 == Текст превышает ограничение длины выбранного сервиса перевода.
@@ -15842,8 +15905,8 @@ This connection cannot change names while connected. Reconnect with the saved na
 This ID is not connected
 == Этот ID не подключён
 
-This is the master switch for all interface animation categories
-== Это главный переключатель всех категорий анимаций интерфейса
+This is the master switch for all interface animations
+== Главный переключатель всех анимаций интерфейса
 
 This map path cannot be used.
 == Этот путь к карте нельзя использовать.
@@ -16484,8 +16547,8 @@ Tune variable to value
 Tune variable to value or show current value
 == Установить переменную тюнинга в значение или показать текущее значение
 
-Turn motion off on weaker machines; cards then open and scroll immediately.
-== На слабых машинах отключите анимацию: карточки будут открываться и прокручиваться мгновенно.
+Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
+== На слабых машинах выключите: карточки открываются и прокручиваются сразу. Форма курсора только внешняя: все три стиля занимают одно знакоместо.
 
 Turn off "Show main-world ghost" to hide every Tee from the server, other players included; while it is on, the opacity slider sets how visible they are. The bind rows send the same commands as the practice menu, so a bound key needs no chat box.
 == Отключите «Показывать призрак основного мира», чтобы скрыть все ти, приходящие с сервера, включая других игроков; пока призрак включён, ползунок непрозрачности задаёт их видимость. Строки привязок отправляют те же команды, что и меню практики, поэтому открывать чат не нужно.
@@ -16514,8 +16577,8 @@ Turn on "Enable dummy window", then set "Dummy window size" and "Dummy window zo
 Turn on "Enable Gores mode" or let "Auto enable in Gores mode" do it, pick options like "Auto weapon switch", and bind "Gores mode key".
 == Включите режим Gores вручную или доверьте это автовключению в режиме Gores, выберите параметры вроде авто-смены оружия и назначьте клавишу режима Gores.
 
-Turn on "Enable pie menu", bind the "Pie menu" command on the Bind page, then hold that key near a player and release on an option.
-== Включите круговое меню, в разделе назначений привяжите команду «Круговое меню» к клавише, затем зажмите её рядом с игроком и отпустите на нужном пункте.
+Turn on "Enable pie menu", bind the "Pie menu" command on the Bind page, then hold that key near a player and release on an option. Drag options between the two lists to show or hide them.
+== Включите «Включить круговое меню», назначьте команду «Круговое меню» на странице «Привязка», затем удерживайте эту клавишу рядом с игроком и отпустите на нужном пункте. Перетаскивайте пункты между двумя списками, чтобы показать или скрыть их.
 
 Turn on "Enable rotation", set "Switch interval" in milliseconds, then add skins with the plus icon in the skin list; "Random skin on map join" picks the start.
 == Включите Включить ротацию, задайте Интервал смены в миллисекундах и добавляйте скины значком плюса в списке; Случайный скин при входе на карту задаёт начало.
@@ -16759,6 +16822,12 @@ Uncertainty duration
 
 Unclassified audio issue
 == Неклассифицированная аудио-проблема
+
+Underscore
+== Подчёркивание
+
+Underscore: a line under the character that follows
+== Подчёркивание: линия под следующим символом
 
 Undo deep freeze
 == Снять глубокую заморозку
@@ -17019,7 +17088,7 @@ Use custom chat bubble colors
 == Использовать свои цвета пузырей чата
 
 Use custom colors
-== Использовать свои цвета
+== Use custom colors
 
 Use custom colors for the pressed hook collision line (0 = always invert)
 == Использовать свои цвета линии зацепа при нажатой клавише (0 = всегда инвертировать)
@@ -17153,9 +17222,6 @@ Use warlist colors instead of regular colors
 Use warlist groups for indicator
 == Использовать группы списка врагов для индикатора
 
-Used by active shared text and numeric input fields
-== Используется активными общими полями ввода текста и чисел
-
 Uses the active action with the current aiming position.
 == Использует активное действие с текущей позицией прицеливания.
 
@@ -17216,8 +17282,8 @@ Very high quality, very slow
 Very long kaomoji are split by the chat length limit.
 == Слишком длинные каомодзи разбиваются из-за ограничения длины чата.
 
-Very thick borders or high segment counts make text look blurry; keep them near the defaults.
-== Слишком толстые рамки или большое число сегментов делают текст размытым; держите значения близко к стандартным.
+Very thick borders make text look blurry; keep them near the defaults.
+== Слишком толстые границы делают текст размытым; держитесь близко к значениям по умолчанию.
 
 Video Background
 == Фоновое видео
@@ -18377,6 +18443,14 @@ Hook
 [Direct touch input]
 Relative aim
 == Относительное прицеливание
+
+[Editor]
+Use Shift+Mouse wheel up/down to adjust the angle.
+== Use Shift+Mouse wheel up/down to adjust the angle.
+
+[Editor]
+Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
+== Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
 
 [Editor curve type abbreviation]
 B

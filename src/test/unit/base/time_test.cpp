@@ -104,6 +104,44 @@ TEST(Time, MillisecondsFromSeconds)
 	EXPECT_EQ(time_milliseconds_from_seconds(36000000.000f), 36000000000);
 }
 
+TEST(Time, CentisecondsFromSeconds)
+{
+	EXPECT_EQ(time_even_centiseconds_from_seconds(-0.006f), 0);
+	EXPECT_EQ(time_even_centiseconds_from_seconds(-0.001f), 0);
+	EXPECT_EQ(time_even_centiseconds_from_seconds(0.0f), 0);
+	EXPECT_EQ(time_even_centiseconds_from_seconds(0.0001f), 0);
+	EXPECT_EQ(time_even_centiseconds_from_seconds(0.006f), 0);
+	EXPECT_EQ(time_even_centiseconds_from_seconds(0.01f), 0);
+	EXPECT_EQ(time_even_centiseconds_from_seconds(1.000f), 100);
+	EXPECT_EQ(time_even_centiseconds_from_seconds(22.995f), 2300);
+	EXPECT_EQ(time_even_centiseconds_from_seconds(36000000.000f), 3600000000);
+}
+
+TEST(Time, CentisecondsFromSecondsAboveFloatPrecision)
+{
+	EXPECT_EQ(time_even_centiseconds_from_seconds(16384.03f), 1638402);
+	EXPECT_EQ(time_even_centiseconds_from_seconds(16384.04f), 1638404);
+	EXPECT_EQ(time_even_centiseconds_from_seconds(16384.05f), 1638406);
+	EXPECT_EQ(time_even_centiseconds_from_seconds(16384.06f), 1638406);
+	EXPECT_EQ(time_even_centiseconds_from_seconds(16384.11f), 1638410);
+	EXPECT_EQ(time_even_centiseconds_from_seconds(16384.19f), 1638418);
+}
+
+TEST(Time, SplitSecondsAndMillisFromTickTimes)
+{
+	// 服务端 50Hz，每个 tick 2 厘秒。
+	for(int64_t TimeTicks = 0; TimeTicks <= 800000; TimeTicks++)
+	{
+		const int64_t Centiseconds = time_even_centiseconds_from_seconds(TimeTicks / 50.0f);
+		ASSERT_EQ(Centiseconds, TimeTicks * 2);
+
+		const int Seconds = static_cast<int>(Centiseconds / 100);
+		const int Millis = static_cast<int>(Centiseconds % 100) * 10;
+		ASSERT_EQ(Seconds * 100 + Millis / 10, static_cast<int>(Centiseconds));
+		ASSERT_EQ(Millis % 10, 0);
+	}
+}
+
 TEST(Time, StrTimeFloat)
 {
 	char aBuf[64];
@@ -114,7 +152,8 @@ TEST(Time, StrTimeFloat)
 	EXPECT_STREQ(aBuf, "12.16");
 
 	EXPECT_EQ(str_time_float(22.995, TIME_MINS, aBuf, sizeof(aBuf)), 5);
-	EXPECT_STREQ(aBuf, "00:22");
+	// 服务端 50Hz，成绩只会落在偶数厘秒，22.995 取整到 23.00。
+	EXPECT_STREQ(aBuf, "00:23");
 
 	EXPECT_EQ(str_time_float(36000000.0f, TIME_HOURS_CENTISECS, aBuf, sizeof(aBuf)), 14);
 	EXPECT_STREQ(aBuf, "10000:00:00.00");

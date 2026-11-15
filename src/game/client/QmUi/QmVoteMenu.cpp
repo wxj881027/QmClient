@@ -27,6 +27,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <utility>
 
 namespace
 {
@@ -51,6 +52,51 @@ namespace
 			return QmVoteMaps::ECompletion::UNFINISHED;
 		return QmVoteMaps::ECompletion::UNKNOWN;
 	}
+
+	// 投票页的封面图（含压暗与参差拖尾）已经烘进纹理：这里只负责贴在目标矩形上。
+	// 列表行、详情条与预览面板共用这一份提交，避免三处各写一遍纹理切换。
+	void DrawVoteMapCoverPatch(CQmMapCovers &Covers, CUi *pUi, const CUIRect &Rect, const std::string &Thumbnail, const CQmMapCovers::ERole Role)
+	{
+		if(pUi == nullptr || Thumbnail.empty() || Rect.w <= 0.0f || Rect.h <= 0.0f)
+			return;
+		CQmMapCovers::SImage Image;
+		if(!Covers.Get(Thumbnail.c_str(), Role, &Image))
+			return;
+		const float Alpha = pUi->ControlAlphaScale();
+		if(Alpha <= 0.001f)
+			return;
+		IGraphics *pGraphics = pUi->Graphics();
+		if(pGraphics == nullptr)
+			return;
+		// 限制边缘采样，避免右侧透明拖尾混入纹理左端的不透明像素。
+		pGraphics->WrapClamp();
+		pGraphics->TextureSet(Image.m_Texture);
+		pGraphics->QuadsBegin();
+		pGraphics->SetColor(1.0f, 1.0f, 1.0f, Alpha);
+		pGraphics->QuadsSetSubset(0.0f, 0.0f, 1.0f, 1.0f);
+		const IGraphics::CQuadItem Quad(Rect.x, Rect.y, Rect.w, Rect.h);
+		pGraphics->QuadsDrawTL(&Quad, 1);
+		pGraphics->QuadsEnd();
+		pGraphics->WrapNormal();
+		pGraphics->TextureClear();
+		pGraphics->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+	}
+
+	// 预览面板内容区：只画封面；作者/难度/分数由 qm_vote_map_preview::Popup 统一排版。
+	void DrawVoteMapPreviewCover(CUi *pUi, const qm_vote_map_preview::SLayout &Layout, void *pUser)
+	{
+		auto *pState = static_cast<SQmVoteMenuState *>(pUser);
+		if(pState == nullptr)
+			return;
+		// 先试实时预览：与服务器列表同一套缓存与渲染目标，本地没有这张图时返回 false。
+		if(pState->m_pGameClient != nullptr)
+		{
+			CMenus &Menus = pState->m_pGameClient->m_Menus;
+			if(Menus.RenderMapPreviewForVote(Layout.m_Cover, pState->m_aPreviewMapName))
+				return;
+		}
+		DrawVoteMapCoverPatch(pState->m_Covers, pUi, Layout.m_Cover, pState->m_MapPreview.m_Info.m_Thumbnail, CQmMapCovers::ERole::DETAILS);
+	}
 }
 
 void CMenus::RenderServerControl(CUIRect MainView)
@@ -63,25 +109,67 @@ void CMenus::RenderServerControl(CUIRect MainView)
 	bool ModeChanged = State.m_Mode.UpdateCommunity(pCommunityId);
 	const auto PreviousPage = State.m_Page;
 	CUIRect Navigation;
-	MainView.HSplitTop(28.0f, &Navigation, &MainView);
-	MainView.HSplitTop(8.0f, nullptr, &MainView);
+	// 页签条高度与字号取设置页胶囊页签同一档：投票页顶部不再用更大的一档文字。
+	MainView.HSplitTop(ui_token::settings::TAB_HEIGHT, &Navigation, &MainView);
+	MainView.HSplitTop(ui_token::panel::GAP, nullptr, &MainView);
+	// 预览地图放在页签行最右端：见方的图标按钮，三张子页共用同一个入口，
+	// 地图库看选中的图，服务端投票 / 踢人 / 观战看当前地图。
+	CUIRect PreviewButton;
+	Navigation.VSplitRight(Navigation.h, &Navigation, &PreviewButton);
+	Navigation.VSplitRight(ui_token::spacing::SM, &Navigation, nullptr);
 	if(State.m_Mode.IsOfficialDdnet())
 	{
 		CUIRect SwitchView;
 		Navigation.VSplitRight(std::min(140.0f, Navigation.w * 0.25f), &Navigation, &SwitchView);
 		Navigation.VSplitRight(8.0f, &Navigation, nullptr);
 		static CButtonContainer s_SwitchView;
-		if(ui_widget::SecondaryButton(ui_widget::ControlContext(Ui()), &s_SwitchView, State.m_Mode.UseMapLibrary() ? Localize("Original options") : Localize("Map"), SwitchView))
+		if(ui_widget::SecondaryButton(ui_widget::ControlContext(Ui()), &s_SwitchView, State.m_Mode.UseMapLibrary() ? Localize("Restore legacy votes") : Localize("Map"), SwitchView))
 		{
 			ModeChanged = State.m_Mode.ToggleServerOptions();
 			State.m_Page = EQmVoteMenuPage::OPTIONS;
 		}
 	}
 	Navigation.w = std::min(540.0f, Navigation.w);
+	// 预览目标：地图库取选中项，其余子页（服务端投票 / 踢人 / 观战）一律取当前地图；
+	// 传空串给 TargetName 让它回落到当前地图，避免在别的子页预览到上次选中的图。
+	const bool PreviewSelection = State.m_Page == EQmVoteMenuPage::OPTIONS && State.m_Mode.UseMapLibrary();
+	const char *pPreviewName = qm_vote_map_preview::TargetName(PreviewSelection ? State.m_SelectedName.c_str() : "", Client()->GetCurrentMap());
+	{
+		// 元数据每帧重建：目录与详情是异步到达的，只比名字会让面板长期停在「只有名字、
+		// 事实行全是破折号、没有封面」，直到换图才补齐。
+		// 目录里能查到就补齐作者 / 难度 / 分数 / 封面；查不到时只显示地图名。
+		const QmVoteMaps::SMap *pPreviewMap = nullptr;
+		for(const auto &Candidate : State.m_vMaps)
+		{
+			if(Candidate.m_Name == pPreviewName)
+			{
+				pPreviewMap = &Candidate;
+				break;
+			}
+		}
+		qm_vote_map_preview::SInfo Info;
+		Info.m_Name = pPreviewName;
+		if(pPreviewMap != nullptr)
+		{
+			Info.m_Mapper = pPreviewMap->m_Mapper;
+			Info.m_Category = pPreviewMap->m_Category;
+			Info.m_Thumbnail = pPreviewMap->m_Thumbnail;
+			Info.m_Stars = pPreviewMap->m_Stars;
+			Info.m_Points = pPreviewMap->m_Points;
+		}
+		State.m_MapPreview.m_Info = std::move(Info);
+	}
+	State.m_pGameClient = GameClient();
+	str_copy(State.m_aPreviewMapName, pPreviewName, sizeof(State.m_aPreviewMapName));
+	State.m_MapPreview.m_CoverAspect = (float)CQmMapCovers::DETAILS_WIDTH / (float)CQmMapCovers::DETAILS_HEIGHT;
+	State.m_MapPreview.m_pfnDrawContent = DrawVoteMapPreviewCover;
+	State.m_MapPreview.m_pUser = &State;
+	qm_vote_map_preview::DoButton(ui_widget::ControlContext(Ui()), &State.m_MapPreviewButton, &State.m_MapPreviewPopup, &State.m_MapPreview, PreviewButton, pPreviewName[0] != '\0');
+	GameClient()->m_Tooltips.DoToolTip(&State.m_MapPreviewButton, &PreviewButton, Localize("Map preview"));
 	static CButtonContainer s_aPages[3];
 	const char *apPages[] = {State.m_Mode.UseMapLibrary() ? Localize("Map") : Localize("Server votes"), Localize("Kick player"), Localize("Move player to spectators")};
 	const auto Style = CapsuleTabBarStyleFor(MenuPanelColor());
-	State.m_Page = static_cast<EQmVoteMenuPage>(DoNavigationTabs(s_aPages, apPages, std::size(apPages), static_cast<int>(State.m_Page), Navigation, 8.0f, &Style));
+	State.m_Page = static_cast<EQmVoteMenuPage>(DoNavigationTabs(s_aPages, apPages, std::size(apPages), static_cast<int>(State.m_Page), Navigation, ui_token::radius::PILL, &Style, ui_token::settings::TAB_FONT_SIZE));
 	if(ModeChanged || State.m_Page != PreviousPage)
 	{
 		Ui()->ClosePopupMenus();
@@ -189,28 +277,10 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	const float RowCoverHeight = RowHeight - 2.0f;
 	const float RowCoverWidth = RowCoverHeight * (float)CQmMapCovers::ROW_WIDTH / (float)CQmMapCovers::ROW_HEIGHT;
 	const float RowNameInset = 20.0f + 16.0f + 4.0f + RowCoverWidth + 6.0f;
-	// 封面图（含压暗和参差拖尾）已经烘进纹理，这里只负责贴在目标矩形上。
+	// 封面图（含压暗和参差拖尾）已经烘进纹理，这里只负责贴在目标矩形上；
+	// 纹理提交与预览面板共用 DrawVoteMapCoverPatch，两处不会各自漂移。
 	auto DrawMapPatch = [&](const CUIRect &Rect, const std::string &Thumbnail, CQmMapCovers::ERole Role) {
-		if(Thumbnail.empty() || Rect.w <= 0.0f || Rect.h <= 0.0f)
-			return;
-		CQmMapCovers::SImage Image;
-		if(!State.m_Covers.Get(Thumbnail.c_str(), Role, &Image))
-			return;
-		const float Alpha = Ui()->ControlAlphaScale();
-		if(Alpha <= 0.001f)
-			return;
-		// 限制边缘采样，避免右侧透明拖尾混入纹理左端的不透明像素。
-		Graphics()->WrapClamp();
-		Graphics()->TextureSet(Image.m_Texture);
-		Graphics()->QuadsBegin();
-		Graphics()->SetColor(1.0f, 1.0f, 1.0f, Alpha);
-		Graphics()->QuadsSetSubset(0.0f, 0.0f, 1.0f, 1.0f);
-		const IGraphics::CQuadItem Quad(Rect.x, Rect.y, Rect.w, Rect.h);
-		Graphics()->QuadsDrawTL(&Quad, 1);
-		Graphics()->QuadsEnd();
-		Graphics()->WrapNormal();
-		Graphics()->TextureClear();
-		Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+		DrawVoteMapCoverPatch(State.m_Covers, Ui(), Rect, Thumbnail, Role);
 	};
 	// 提前生成视口外一小段行的封面，滚动时纹理已就绪，不会一出现就从头加载。
 	auto PrefetchRowCover = [&](int Row) {
@@ -221,10 +291,10 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		State.m_Covers.Get(Map.m_Thumbnail.c_str(), CQmMapCovers::ERole::ROW, &Image);
 	};
 	CUIRect Refresh, Search, Exclude;
-	Header.VSplitRight(28.0f, &Header, &Refresh);
+	Header.VSplitRight(ui_token::control::IconBox(ui_token::font::TITLE), &Header, &Refresh);
 	Header.VSplitRight(8.0f, &Header, nullptr);
 	static CButtonContainer s_Refresh;
-	if(ui_widget::IconButton(ui_widget::ControlContext(Ui()), &s_Refresh, EQmIcon::ARROWS_ROTATE, FontIcons::FONT_ICON_ARROWS_ROTATE, Refresh, State.m_Loader.Loading()))
+	if(ui_widget::IconButton(ui_widget::ControlContext(Ui()), &s_Refresh, EQmIcon::ARROW_ROTATE_RIGHT, FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT, Refresh, State.m_Loader.Loading()))
 		State.m_Loader.Refresh(Http());
 	GameClient()->m_Tooltips.DoToolTip(&s_Refresh, &Refresh, State.m_Loader.Loading() ? Localize("Loading…") : Localize("Refresh"));
 	Header.VSplitRight(Header.w * 0.34f, &Search, &Exclude);
@@ -490,15 +560,16 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		if(!Item.m_Visible)
 			continue;
 		auto Blur = Item.SuppressGaussianBlur();
-		// 行矩形含行距，胶囊只画行高那一截；选中/悬浮改用列表统一来源（主题选中色 /
-		// 列表 token），不再有左侧竖条，也不再写死圆角。
+		// 行矩形含行距，胶囊只画行高那一截；选中/悬浮统一用主题选中色（强调色派生），
+		// 不再有左侧竖条，也不再写死圆角，更不用白色 token 当第二档。
 		CUIRect RowRect = Item.m_Rect;
 		RowRect.h = RowHeight;
+		const ColorRGBA RowFeedback = Ui()->QmControlTheme().m_Selected;
 		const float SelectionAlpha = s_Maps.SelectionFeedbackAlpha(Row);
 		if(SelectionAlpha > 0.001f)
-			DrawRoundedSurface(Ui(), RowRect, Ui()->ScaleBackgroundAlpha(Ui()->QmControlTheme().m_Selected).WithMultipliedAlpha(SelectionAlpha), ColorRGBA(), ui_token::list::RowRadius(RowHeight));
+			DrawRoundedSurface(Ui(), RowRect, RowFeedback.WithMultipliedAlpha(SelectionAlpha), ColorRGBA(), ui_token::list::RowRadius(RowHeight));
 		if(Ui()->HotItem() == &Map)
-			DrawRoundedSurface(Ui(), RowRect, Ui()->ScaleBackgroundAlpha(ui_token::color::LIST_ITEM_HOVER), ColorRGBA(), ui_token::list::RowRadius(RowHeight));
+			DrawRoundedSurface(Ui(), RowRect, RowFeedback, ColorRGBA(), ui_token::list::RowRadius(RowHeight));
 		// 行内容排在组件让出左右内退后的内容区（高度仍按行本身，行距不参与排版）。
 		CUIRect RowContent = Item.m_ContentRect;
 		RowContent.h = RowHeight;
@@ -510,7 +581,7 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		const auto Completion = CompletionFor(pCommunity, Map.m_Name.c_str());
 		const ColorRGBA PreviousText = TextRender()->GetTextColor();
 		const CQmIconSemanticColorScope SemanticColor;
-		TextRender()->TextColor(Favorite ? ResolveUiSurfaceIconColor(SurfaceText.Surface(), ColorRGBA(1.0f, 0.76f, 0.24f, 1.0f)) : PreviousText.WithMultipliedAlpha(0.3f));
+		TextRender()->TextColor(Favorite ? ResolveUiSurfaceIconColor(SurfaceText.Surface(), ui_token::color::FAVORITE) : PreviousText.WithMultipliedAlpha(0.3f));
 		const bool FavoriteClicked = ui_widget::DoIconButton(ui_widget::ControlContext(Ui()), &Map.m_Points, EQmIcon::STAR, FontIcons::FONT_ICON_STAR, 0, Marker, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, true, std::nullopt, false, true, &Marker) != 0;
 		TextRender()->TextColor(PreviousText);
 		if(FavoriteClicked)
@@ -655,11 +726,15 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 			}
 			if(State.m_Loader.DetailsError())
 			{
+				// 重新拉取详情是刷新/重试类动作：圆形图标按钮（ARROW_ROTATE_RIGHT，与全仓刷新图标同一档），
+				// 与地图库右上角的刷新按钮同一套字号、图标与悬停反馈。
 				CUIRect Retry;
-				Statistics.VSplitRight(100.0f, &Statistics, &Retry);
+				Statistics.VSplitRight(Statistics.h, &Statistics, &Retry);
+				Statistics.VSplitRight(ui_token::spacing::SM, &Statistics, nullptr);
 				static CButtonContainer s_Retry;
-				if(CompactButton(s_Retry, Localize("Retry details"), 0, Retry))
+				if(ui_widget::IconButton(ui_widget::ControlContext(Ui()), &s_Retry, EQmIcon::ARROW_ROTATE_RIGHT, FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT, Retry))
 					State.m_Loader.RetryDetails();
+				GameClient()->m_Tooltips.DoToolTip(&s_Retry, &Retry, Localize("Retry details"));
 			}
 			Label(Statistics, aInfo, 12.0f, TEXTALIGN_ML, true);
 			GameClient()->m_Tooltips.DoToolTipForRect(&s_StatisticsTooltip, &Statistics, aInfo);

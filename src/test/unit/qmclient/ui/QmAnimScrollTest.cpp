@@ -1751,6 +1751,11 @@ TEST(QmScoreboardScroll, SharedListPolicyMovesContentContinuouslyBetweenRows)
 	Request.m_Profile = EQmScrollProfile::MENU_LIST;
 	Request.m_RowExtent = 20.0f;
 	Request.m_RowsPerStep = 2;
+
+	// g_Config 在测试里是零初始化，动效等级 0 等于关闭滚动动画，
+	// 会让滚轮一档直接落到目标位置。这里显式用生产默认档位（全额动效）。
+	const int OldMotionLevel = g_Config.m_QmUiMotionLevel;
+	g_Config.m_QmUiMotionLevel = 2;
 	const auto Policy = QmResolveScrollPolicy(Request, 1.0f, 0.25f);
 	const SQmScrollMetrics Metrics{333.0f, ScoreboardRowsHeight(64, 0, 0, 20.0f, 0.0f, 8.0f, 12.0f)};
 	CQmScrollState State;
@@ -1765,6 +1770,7 @@ TEST(QmScoreboardScroll, SharedListPolicyMovesContentContinuouslyBetweenRows)
 		State.Advance(1.0f / 60.0f, Metrics, Policy.m_Config);
 	EXPECT_FLOAT_EQ(State.Offset(), 40.0f);
 	EXPECT_FALSE(State.Animating());
+	g_Config.m_QmUiMotionLevel = OldMotionLevel;
 }
 
 TEST(QmScoreboardScroll, ShrinkingPlayerCountClampsBeforeDrawingAndResetRestoresTop)

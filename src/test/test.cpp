@@ -26,7 +26,10 @@
 #include <cstdint>
 #include <fstream>
 #include <functional>
+#include <mutex>
 #include <sstream>
+#include <string>
+#include <vector>
 
 #if !defined(DDNET_TEST_SOURCE_DIR)
 #define DDNET_TEST_SOURCE_DIR "."
@@ -67,7 +70,7 @@ CTestInfo::CTestInfo()
 	// Replace the string after the first slash with the name of the typed test and use hyphen instead of slash.
 	char aTestCaseName[128];
 	str_copy(aTestCaseName, pTestInfo->test_case_name());
-	for(int i = 0; i < str_length(aTestCaseName); i++)
+	for(int i = 0; aTestCaseName[i] != '\0'; i++)
 	{
 		if(aTestCaseName[i] == '/')
 		{
@@ -213,15 +216,67 @@ CTestInfo::~CTestInfo()
 	}
 }
 
+// 默认只在用例失败时输出该用例产生的日志，避免单元测试被海量 info 日志淹没。
+class CTestLogLogger : public ILogger
+{
+	std::mutex m_Mutex;
+	std::vector<std::string> m_vLines;
+
+public:
+	void Log(const CLogMessage *pMessage) override
+	{
+		std::lock_guard<std::mutex> Lock(m_Mutex);
+		m_vLines.emplace_back(pMessage->m_aLine, pMessage->m_LineLength);
+	}
+
+	void Clear()
+	{
+		std::lock_guard<std::mutex> Lock(m_Mutex);
+		m_vLines.clear();
+	}
+
+	void Flush()
+	{
+		std::lock_guard<std::mutex> Lock(m_Mutex);
+		for(const std::string &Line : m_vLines)
+		{
+			std::fprintf(stderr, "%s\n", Line.c_str());
+		}
+		m_vLines.clear();
+	}
+};
+
+static CTestLogLogger *gs_pTestLogLogger = nullptr;
+
+class CTestLogListener : public ::testing::EmptyTestEventListener
+{
+	void OnTestStart(const ::testing::TestInfo &Info) override
+	{
+		(void)Info;
+		gs_pTestLogLogger->Clear();
+	}
+
+	void OnTestEnd(const ::testing::TestInfo &Info) override
+	{
+		(void)Info;
+		if(::testing::Test::HasFailure())
+			gs_pTestLogLogger->Flush();
+		else
+			gs_pTestLogLogger->Clear();
+	}
+};
+
 int main(int argc, const char **argv)
 {
 	CCmdlineFix CmdlineFix(&argc, &argv);
-	log_set_global_logger_default();
+	gs_pTestLogLogger = new CTestLogLogger();
+	log_set_global_logger(gs_pTestLogLogger);
 	if(const auto Result = QmExitProcessProbe(argc, argv))
 		return *Result;
 	if(const auto Result = QmOpenLinkProbe(argc, argv))
 		return *Result;
 	::testing::InitGoogleTest(&argc, const_cast<char **>(argv));
+	::testing::UnitTest::GetInstance()->listeners().Append(new CTestLogListener());
 	GTEST_FLAG_SET(death_test_style, "threadsafe");
 	// terminate 兜底：异常漏出测试体时把当前用例名打到 stderr（无缓冲）。
 	std::set_terminate([] { // NOLINT

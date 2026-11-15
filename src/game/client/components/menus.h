@@ -133,7 +133,8 @@ enum
 
 // 导航胶囊行高与内容缩放：主菜单导航栏（离线/在线）与游戏内浏览页服务器导航栏
 // 共用同一组尺寸，保证上下两排胶囊导航观感一致。
-inline constexpr float MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW = 21.0f;
+	// 与页签胶囊同高同号：ui_token::settings::TAB_HEIGHT(26)，导航选中滑块与页签滑块上下对齐。
+	inline constexpr float MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW = 26.0f;
 inline constexpr float MENU_MENUBAR_CONTENT_SCALE_NEW = 1.10f;
 
 class CUIRect;
@@ -195,7 +196,8 @@ public:
 	// 页面导航按下时先更新选择；复用多选一布局和窄窗口下拉退路。
 	int DoNavigationTabs(CButtonContainer *pButtons, const char *const *ppLabels, int Count, int Current, const CUIRect &Segments, float Rounding = 5.0f, const ui_widget::SCapsuleTabBarStyle *pCapsuleStyle = nullptr, float FontSize = -1.0f);
 	// 收藏地图页与统计数据页共用的工作区页签：收藏地图 / 地图游玩历史 / 本地存档 / 统计数据。
-	int DoMapWorkspaceTabs(const CUIRect &Segments, float Rounding, int CurrentTab);
+	// FontSize <= 0 时按行高反推；两个调用点显式传设置页页签字号，两页顶部一致。
+	int DoMapWorkspaceTabs(const CUIRect &Segments, float Rounding, int CurrentTab, float FontSize = -1.0f);
 	int MapWorkspaceTab();
 	ColorRGBA MenuPanelColor(float AlphaScale = 1.0f) const;
 	ColorRGBA MenuPanelElevatedColor(float AlphaScale = 1.0f) const;
@@ -2295,7 +2297,6 @@ protected:
 		unsigned m_TextHash = 0;
 		float m_Width = 0.0f;
 		float m_FontSize = 0.0f;
-		float m_Height = 0.0f;
 		int64_t m_UpdateTime = -1;
 		bool m_Valid = false;
 		unsigned m_PendingTextHash = 0;
@@ -2306,9 +2307,6 @@ protected:
 		uint64_t m_PendingFrame = 0;
 		bool m_Pending = false;
 		STextContainerIndex m_BuildTextContainerIndex;
-		CTextCursor m_BuildCursor;
-		int m_BuildByteOffset = 0;
-		float m_BuildHeight = 0.0f;
 	};
 	struct SMenuSnapshotTextKey
 	{
@@ -2428,6 +2426,11 @@ protected:
 	void DrainIngameUiSnapshotTextRuntime();
 	void DrainIngameUiTextRuntime(bool AllowCurrentFrame = false);
 	void RenderServerControl(CUIRect MainView);
+public:
+	// 按地图名渲染预览（投票页复用服务器列表那套缓存与渲染目标）。
+	// 返回 false 表示本地没有这张地图，调用点回退到静态封面。
+	bool RenderMapPreviewForVote(const CUIRect &Preview, const char *pMapName);
+private:
 	void RenderServerVoteList(CUIRect MainView);
 	void RenderVoteMapLibrary(CUIRect MainView);
 	void RenderUnfinishedMaps(CUIRect MainView);
@@ -2771,6 +2774,14 @@ public:
 		DDNET_TAB_GENERAL = 0,
 		DDNET_TAB_PREDICTION = 1,
 		NUMBER_OF_DDNET_TABS = 2,
+	};
+
+	// 图像页内子页签：显示类卡片留在第一页，「卡片效果 / 界面主题」收进视觉效果。
+	enum
+	{
+		GRAPHICS_TAB_DISPLAY = 0,
+		GRAPHICS_TAB_VISUAL = 1,
+		NUMBER_OF_GRAPHICS_TABS = 2,
 	};
 
 	SUIAnimator m_aAnimatorsBigPage[BIG_TAB_LENGTH];

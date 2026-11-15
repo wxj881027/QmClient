@@ -22,7 +22,7 @@ CSaveTee::CSaveTee() = default;
 void CSaveTee::Save(CCharacter *pChr, bool AddPenalty)
 {
 	m_ClientId = pChr->m_pPlayer->GetCid();
-	str_copy(m_aName, pChr->Server()->ClientName(m_ClientId), sizeof(m_aName));
+	str_copy(m_aName, pChr->Server()->ClientName(m_ClientId));
 
 	m_Alive = pChr->m_Alive;
 
@@ -753,7 +753,7 @@ int CSaveTeam::FromString(const char *pString)
 	unsigned int LastPos = 0;
 	unsigned int StrSize;
 
-	str_copy(m_aString, pString, sizeof(m_aString));
+	str_copy(m_aString, pString);
 
 	while(m_aString[Pos] != '\n' && Pos < sizeof(m_aString) && m_aString[Pos]) // find next \n or \0
 		Pos++;

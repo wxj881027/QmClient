@@ -137,7 +137,8 @@ void CCamera::ScaleZoom(float Factor)
 
 float CCamera::MaxZoomLevel()
 {
-	return (g_Config.m_ClLimitMaxZoomLevel) ? ((Graphics()->IsTileBufferingEnabled() ? 240 : 30)) : std::numeric_limits<float>::max();
+	// 无上限缩放会把世界坐标与绘制批次推到溢出范围，保留 2000 的硬上限。
+	return (g_Config.m_ClLimitMaxZoomLevel) ? ((Graphics()->IsTileBufferingEnabled() ? 240 : 30)) : 2000;
 }
 
 float CCamera::MinZoomLevel()

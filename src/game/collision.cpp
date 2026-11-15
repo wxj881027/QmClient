@@ -1154,13 +1154,21 @@ bool CCollision::TileExistsNext(int Index) const
 	return false;
 }
 
+static int TileIndexFromCoord(float Coord, int Size)
+{
+	// NaN 与负数都落到首格，避免浮点转 int 的未定义行为。
+	if(!(Coord > 0.0f))
+		return 0;
+	return (int)std::min((double)Coord / 32.0, (double)(Size - 1));
+}
+
 int CCollision::GetMapIndex(vec2 Pos) const
 {
 	if(!m_pTiles || m_Width <= 0 || m_Height <= 0)
 		return -1;
 
-	int Nx = std::clamp((int)Pos.x / 32, 0, m_Width - 1);
-	int Ny = std::clamp((int)Pos.y / 32, 0, m_Height - 1);
+	int Nx = TileIndexFromCoord(Pos.x, m_Width);
+	int Ny = TileIndexFromCoord(Pos.y, m_Height);
 	int Index = Ny * m_Width + Nx;
 
 	if(TileExists(Index))

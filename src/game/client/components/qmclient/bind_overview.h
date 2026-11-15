@@ -74,6 +74,8 @@ inline constexpr SKnownBindAction s_aKnownBindActions[] = {
 	{EBindOptionGroup::DUMMY, Localizable("Dummy copy"), "toggle cl_dummy_copy_moves 0 1"},
 	{EBindOptionGroup::DUMMY, Localizable("Dummy hammer fly"), "toggle cl_dummy_hammer 0 1"},
 	{EBindOptionGroup::DUMMY, Localizable("Dummy Control"), "toggle cl_dummy_control 1 0"},
+	{EBindOptionGroup::MISCELLANEOUS, Localizable("Teleport to cursor"), "tp_to_cursor"},
+	{EBindOptionGroup::MISCELLANEOUS, Localizable("Teleport dummy to cursor"), "tp_dummy_to_cursor"},
 	{EBindOptionGroup::MISCELLANEOUS, Localizable("Emoticon"), "+emote"},
 	{EBindOptionGroup::MISCELLANEOUS, Localizable("Singing"), "+qm_sing"},
 	{EBindOptionGroup::MISCELLANEOUS, Localizable("Spectate mode"), "+spectate"},

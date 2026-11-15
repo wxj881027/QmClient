@@ -712,7 +712,9 @@ inline SSettingsListCardGeometry ResolveSettingsGeneralLanguageListGeometry(cons
 	SSettingsListCardGeometry Geometry;
 	Geometry.m_VisibleRows = std::clamp(ItemCount, 1, 8);
 	Geometry.m_ListViewportHeight = ResolveSettingsListViewportHeight(Geometry.m_VisibleRows, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING);
-	Geometry.m_ContentHeight = Geometry.m_ListViewportHeight;
+	// 容器内边距：行胶囊不能贴着容器圆角（实机反馈：最后一行的高亮与容器下缘粘在一起，
+	// 看起来从容器里溢出去了）。两档内边距只让卡片变高，可见行数仍由上面那一行决定。
+	Geometry.m_ContentHeight = ui_token::list::PaddedRowsHeight(Geometry.m_VisibleRows, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING, ui_token::list::ContainerPadding(Metrics.m_ListRowHeight));
 	return Geometry;
 }
 
@@ -728,8 +730,9 @@ inline SSettingsListCardGeometry ResolveSettingsGeneralThemeListGeometry(const i
 	Geometry.m_ListViewportHeight = ResolveSettingsListViewportHeight(Geometry.m_VisibleRows, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING);
 	// 标题行与列表体共用同一个容器背景：两段高度相加必须正好等于卡片给这个控件的高度，
 	// 否则列表体比背景短/长一截（滚动条滑块也会压在容器圆角外）。DoHeader 实际消费
-	// LineHeight + 2 × LineSpacing，和 CListBox 的自适应高度上限（RowsHeight）拼起来才是整容器。
-	Geometry.m_ContentHeight = Geometry.m_ListViewportHeight + Metrics.m_LineHeight + 2.0f * Metrics.m_LineSpacing;
+	// LineHeight + 2 × LineSpacing，和 CListBox 的自适应高度上限（PaddedRowsHeight）拼起来
+	// 才是整容器。两档内边距同时让标题之后、列表体的四边各留出留白，末行高亮不再贴容器下缘。
+	Geometry.m_ContentHeight = ui_token::list::PaddedRowsHeight(Geometry.m_VisibleRows, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING, ui_token::list::ContainerPadding(Metrics.m_ListRowHeight)) + Metrics.m_LineHeight + 2.0f * Metrics.m_LineSpacing;
 	return Geometry;
 }
 
@@ -739,7 +742,9 @@ inline SSettingsListCardGeometry ResolveSettingsGraphicsModesGeometry(const int 
 	// 显示模式列表按胶囊行渲染：可见行上限 8、行距取列表 token。测高和 CListBox
 	// 的自适应高度用同一组事实，超出的行交给覆盖式滚动条。
 	Geometry.m_VisibleRows = ui_token::list::VisibleRows(ModeCount, 1, 1, ui_token::list::MAX_VISIBLE_ROWS);
-	Geometry.m_ListViewportHeight = ResolveSettingsListViewportHeight(Geometry.m_VisibleRows, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING);
+	// 容器内边距与 CListBox 同一档：卡片测高必须把它算进去（否则列表拿到的矩形正好是
+	// 整数行、内边距被兜底退回 0，首/末行的胶囊会压在容器圆角上）。
+	Geometry.m_ListViewportHeight = ui_token::list::PaddedRowsHeight(Geometry.m_VisibleRows, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING, ui_token::list::ContainerPadding(Metrics.m_ListRowHeight));
 	// 窗口模式和当前显示模式各消费一行，模式列表使用剩余 viewport。
 	Geometry.m_ContentHeight = Geometry.m_ListViewportHeight + Metrics.m_RowStep * 2.0f;
 	return Geometry;
@@ -756,8 +761,10 @@ inline SSettingsListCardGeometry ResolveSettingsSoundAudioPackGeometry(const int
 	Geometry.m_VisibleRows = ResolveSettingsSoundAudioPackVisibleRows(ItemCount);
 	// 音频包列表按胶囊行渲染（卡片里 SetCapsuleRows）：行距取列表 token 的半档，
 	// 与 CListBox 的自适应高度（RowsHeight）用同一组事实，否则测高少掉行间的缝，
-	// 最后一行会被裁一半。
-	Geometry.m_ListViewportHeight = ResolveSettingsListViewportHeight(Geometry.m_VisibleRows, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING);
+	// 最后一行会被裁一半。容器内边距与组件同一档（PaddedRowsHeight）：卡片测高把它
+	// 算进去，末行的选中填充才不会压在容器圆角上。下面的 OuterPadding / ListPadding
+	// 是面板外边距与面板到行区的留白，和这条内边距是两回事，不要混算。
+	Geometry.m_ListViewportHeight = ui_token::list::PaddedRowsHeight(Geometry.m_VisibleRows, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING, ui_token::list::ContainerPadding(Metrics.m_ListRowHeight));
 	// 外层 Margin(2) 与列表 Margin(6) 各作用于上下两侧。
 	constexpr float OuterPadding = 2.0f;
 	constexpr float ListPadding = 6.0f;
@@ -789,7 +796,11 @@ inline float ResolveSettingsProfilesListHeight(const SSettingsContentMetrics &Me
 	const float ItemHeight = std::max(Metrics.m_ListRowHeight * 3.0f, Metrics.m_ButtonHeight * 3.0f + Metrics.m_LineSpacing * 2.0f);
 	// 行距必须算进来：列表按「行高 + 行距」步进（行距并进行高的多列网格），只按
 	// VisibleRows × ItemHeight 测高会少掉行与行之间的缝，卡片底部最后一行被裁一截。
-	const float ListHeight = ProfileCount > 0 ? ResolveSettingsListViewportHeight(VisibleRows, ItemHeight, ui_token::list::ROW_SPACING) : Metrics.m_ListRowHeight * 2.0f;
+	// 容器内边距与 CListBox 同一档（PaddedRowsHeight）：卡片测高把它算进去，行胶囊
+	// 才不会压在容器圆角上（列数是按整宽推导的，可见行数不随留白变化）。
+	const float PaddedListHeight = ui_token::list::PaddedRowsHeight(VisibleRows, ItemHeight, ui_token::list::ROW_SPACING, ui_token::list::ContainerPadding(ItemHeight));
+	// 空列表仍按原来的两行高占位（提示文字的位置），不额外加留白。
+	const float ListHeight = ProfileCount > 0 ? PaddedListHeight : Metrics.m_ListRowHeight * 2.0f;
 	return Metrics.m_ButtonHeight + Metrics.m_LineSpacing + ListHeight;
 }
 
@@ -797,8 +808,9 @@ inline float ResolveSettingsTeeQueuePresetHeight(const SSettingsContentMetrics &
 {
 	// 操作图标与标题同一行，列表区域仅保留必要内边距。行距取列表 token，
 	// 与 CListBox 的胶囊行距一致，否则测出来的高度会少掉行与行之间的缝。
+	// 容器内边距与组件同一档（PaddedRowsHeight）：预设栏的末行高亮不再贴着容器下缘。
 	return Metrics.m_LineSpacing * 5.0f + Metrics.m_LineHeight + Metrics.m_ButtonHeight +
-	       ResolveSettingsListViewportHeight(VisiblePresetRows, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING);
+	       ui_token::list::PaddedRowsHeight(VisiblePresetRows, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING, ui_token::list::ContainerPadding(Metrics.m_ListRowHeight));
 }
 
 inline int ResolveSettingsTeeVisiblePresetRows(const int PresetCount)
@@ -836,8 +848,9 @@ inline SSettingsTeeQueuePanelGeometry ResolveSettingsTeeQueuePanelGeometry(const
 	SSettingsTeeQueuePanelGeometry Geometry;
 	Geometry.m_VisibleQueueRows = ResolveSettingsTeeVisibleQueueRows(QueueCount);
 	Geometry.m_VisiblePresetRows = ResolveSettingsTeeVisiblePresetRows(PresetCount);
-	Geometry.m_QueueListViewportHeight = ResolveSettingsListViewportHeight(Geometry.m_VisibleQueueRows, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING);
-	// 列表 Surface 包含上下内边距、标题与标题到首行的标准间距，viewport 始终只显示完整行。
+	Geometry.m_QueueListViewportHeight = ui_token::list::PaddedRowsHeight(Geometry.m_VisibleQueueRows, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING, ui_token::list::ContainerPadding(Metrics.m_ListRowHeight));
+	// 列表 Surface 包含上下内边距、标题与标题到首行的标准间距，viewport 始终只显示完整行；
+	// viewport 里的两档容器内边距和 CListBox 的自适应上限同源，末行的胶囊不贴容器圆角。
 	Geometry.m_QueueListSurfaceHeight = Metrics.m_LineSpacing * 3.0f + Metrics.m_LineHeight + Geometry.m_QueueListViewportHeight;
 	Geometry.m_QueuePresetHeight = ResolveSettingsTeeQueuePresetHeight(Metrics, Geometry.m_VisiblePresetRows);
 	Geometry.m_StackInterval = ContentWidth < 250.0f * Metrics.m_UiScale;
@@ -1134,8 +1147,10 @@ inline SSettingsPageLayoutFrame ResolveSettingsPageLayoutForScrollViewport(const
 
 // 设置页壳层（页签条 + 内容面板）的宽度公式同时被其它菜单页用来对齐左右边界，
 // 两处必须共用同一份常量，避免某天调整设置页宽度后其它页面重新错位。
-inline constexpr float SETTINGS_SHELL_GAP = 10.0f;
-inline constexpr float SETTINGS_PANEL_MARGIN = 10.0f;
+// 设置页壳层的两栏缝隙与面板内边距取全局面板档：与服务器列表面板同一条基准，
+// 各页面之间不再各写 8/10/12。
+inline constexpr float SETTINGS_SHELL_GAP = ui_token::panel::GAP;
+inline constexpr float SETTINGS_PANEL_MARGIN = ui_token::panel::PADDING;
 
 inline float ResolveSettingsShellTabBarWidth(float AvailableWidth)
 {

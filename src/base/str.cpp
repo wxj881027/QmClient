@@ -845,6 +845,24 @@ int str_base64_decode(void *dst_raw, int dst_size, const char *data)
 	return o;
 }
 
+void str_unescape_newlines(char *str)
+{
+	int i, j;
+	for(i = 0, j = 0; str[i]; i++, j++)
+	{
+		if(str[i] == '\\' && str[i + 1] == 'n')
+		{
+			str[j] = '\n';
+			i++;
+		}
+		else if(i != j)
+		{
+			str[j] = str[i];
+		}
+	}
+	str[j] = '\0';
+}
+
 void str_escape(char **dst, const char *src, const char *end)
 {
 	while(*src && *dst + 1 < end)

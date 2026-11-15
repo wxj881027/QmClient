@@ -20,6 +20,7 @@
 #include <generated/protocol7.h>
 
 #include <game/client/QmUi/QmChatLineMenuLayout.h>
+#include <game/client/QmUi/UiButtonStyle.h>
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiTheme.h>
 #include <game/client/QmUi/UiTokens.h>
@@ -372,7 +373,6 @@ CChat::CLine::CLine()
 {
 	m_TextContainerIndex.Reset();
 	m_BodyTextContainerIndex.Reset();
-	m_QuadContainerIndex = -1;
 	m_aYOffset[0] = -1.0f;
 	m_aYOffset[1] = -1.0f;
 	m_TextYOffset = 0.0f;
@@ -400,8 +400,9 @@ void CChat::CLine::DeleteTextContainers(ITextRender *pTextRender)
 void CChat::CLine::Reset(CChat &This)
 {
 	DeleteTextContainers(This.TextRender());
-	This.Graphics()->DeleteQuadContainer(m_QuadContainerIndex);
-	m_QuadContainerIndex = -1;
+	// 气泡几何按行缓存：清行时一起清掉，避免旧半径/旧矩形被下一帧继续用。
+	m_BackgroundRect = {};
+	m_BackgroundRounding = 0.0f;
 	m_Initialized = false;
 	m_Time = 0;
 	m_aText[0] = '\0';
@@ -457,6 +458,9 @@ CChat::CChat()
 	m_LargeAreaOpenTick = 0;
 	m_LastPresentationShowLargeArea = false;
 	m_PendingConsoleLineIndex = -1;
+	m_BacklogCurLine = 0;
+	m_HistoryScrollAppliedLine = 0;
+	m_HistoryWheelSteps = 0;
 
 	m_Input.SetCalculateOffsetCallback([this]() { return m_IsInputCensored; });
 	m_Input.SetDisplayTextCallback([this](char *pStr, size_t NumChars) {
@@ -649,7 +653,8 @@ void CChat::RebuildChat()
 			continue;
 		RefreshMessageNamePrefix(Line.m_ClientId, Line.m_aName, sizeof(Line.m_aName), g_Config.m_QmChatHideSystemPrefix != 0);
 		Line.DeleteTextContainers(TextRender());
-		Graphics()->DeleteQuadContainer(Line.m_QuadContainerIndex);
+		Line.m_BackgroundRect = {};
+		Line.m_BackgroundRounding = 0.0f;
 		// recalculate sizes
 		Line.m_aYOffset[0] = -1.0f;
 		Line.m_aYOffset[1] = -1.0f;
@@ -666,6 +671,9 @@ void CChat::ClearLines()
 	for(auto &Line : m_aLines)
 		Line.Reset(*this);
 	m_BacklogCurLine = 0;
+	m_HistoryScroll.Reset();
+	m_HistoryScrollAppliedLine = 0;
+	m_HistoryWheelSteps = 0;
 	m_ScrollbarDragging = false;
 	m_ScrollbarDragOffset = 0.0f;
 	m_ChatInputMapRect = {};
@@ -757,25 +765,32 @@ void CChat::UpdatePointerState()
 	}
 }
 
-int CChat::CountVisibleLinesFrom(int BacklogLine) const
+CChat::SQmChatHistoryExtent CChat::MeasureVisibleHistory(int BacklogLine, int OffsetType, float FallbackLineHeight, float ExtraLineSpacing) const
 {
 	const SQmFocusModeDecisions Focus = GetQmFocusModeDecisions();
 	const bool FocusHideChat = Focus.m_HidePlayerMessages;
 	const bool FocusHideSystemInfoMessages = Focus.m_HideSystemInfoMessages;
 	const bool FocusHideSystemPromptMessages = Focus.m_HideSystemPromptMessages;
 	const bool FocusHideEcho = Focus.m_HideEchoMessages;
+	const int Index = std::clamp(OffsetType, 0, 1);
+	const float Fallback = maximum(0.0f, FallbackLineHeight);
+	const float Spacing = maximum(0.0f, ExtraLineSpacing);
 
-	int Count = 0;
-	for(int i = BacklogLine; i < MAX_LINES; ++i)
+	SQmChatHistoryExtent Extent;
+	for(int i = maximum(0, BacklogLine); i < MAX_LINES; ++i)
 	{
 		const CLine &Line = m_aLines[((m_CurrentLine - i) + MAX_LINES) % MAX_LINES];
 		if(!Line.m_Initialized)
 			break;
 		const bool ServerMessageIsBasicInfo = Line.m_ServerMessageClass == QmHudNotifications::EServerMessageClass::BasicInfo;
-		if(ShouldRenderFocusFilteredChatLine(FocusHideChat, FocusHideSystemInfoMessages, FocusHideSystemPromptMessages, FocusHideEcho, Line.m_ClientId, Line.m_ForceVisible, ServerMessageIsBasicInfo))
-			++Count;
+		if(!ShouldRenderFocusFilteredChatLine(FocusHideChat, FocusHideSystemInfoMessages, FocusHideSystemPromptMessages, FocusHideEcho, Line.m_ClientId, Line.m_ForceVisible, ServerMessageIsBasicInfo))
+			continue;
+		++Extent.m_Lines;
+		// 行高来自上一次排版（消息首次出现在可见区时量到的），与绘制用的是同一个值；
+		// 还没量过的行按一行高估，宁可让滑块略长也不让它凭空缩短。
+		Extent.m_Height += (Line.m_aYOffset[Index] >= 0.0f ? Line.m_aYOffset[Index] : Fallback) + Spacing;
 	}
-	return Count;
+	return Extent;
 }
 
 bool CChat::UpdateHistoryTouchScroll(const CUIRect &ChatRect, float HeightLimit, float HistoryBottom, float LineHeight, int TotalVisibleLines, int VisibleLineCapacity, bool StartAllowed)
@@ -830,10 +845,17 @@ bool CChat::UpdateHistoryTouchScroll(const CUIRect &ChatRect, float HeightLimit,
 	if(Lines == 0)
 		return false;
 	// 手指下拖 = 内容下移 = 看更早的历史行，与滚轮上滚同向。
-	const int NewBacklogLine = ClampBacklogLine(m_BacklogCurLine + Lines, TotalVisibleLines, VisibleLineCapacity);
+	// 拖动与滚动条是同一语义：直接跟手写进公共滚动状态（SetOffset），松手后
+	// 由 QmScroll 的越界回弹收回合法范围，不再各自维护一份整数偏移。
+	const SQmScrollMetrics Metrics = QmChatHistoryScrollMetrics(TotalVisibleLines, VisibleLineCapacity);
+	const SQmScrollConfig Config = QmChatHistoryScrollConfig();
+	const int CurrentLine = QmChatHistoryScrollLine(m_HistoryScroll.Offset(), Metrics);
+	const int NewBacklogLine = ClampBacklogLine(CurrentLine + Lines, TotalVisibleLines, VisibleLineCapacity);
 	if(NewBacklogLine == m_BacklogCurLine)
 		return false;
+	QmChatHistoryDragToLine(m_HistoryScroll, NewBacklogLine, Metrics, Config);
 	m_BacklogCurLine = NewBacklogLine;
+	m_HistoryScrollAppliedLine = NewBacklogLine;
 	return true;
 }
 
@@ -1023,6 +1045,26 @@ void CChat::ConEcho(IConsole::IResult *pResult, void *pUserData)
 	((CChat *)pUserData)->Echo(pResult->GetString(0));
 }
 
+void CChat::ConEchoConfig(IConsole::IResult *pResult, void *pUserData)
+{
+	((CChat *)pUserData)->EchoConfig(pResult->GetString(0));
+}
+
+void CChat::EchoConfig(const char *pName)
+{
+	char aBuf[2048];
+	const SConfigVariable *pVariable = GameClient()->ConfigManager()->FindVariable(pName);
+	if(pVariable == nullptr)
+	{
+		str_format(aBuf, sizeof(aBuf), "Invalid config variable: %s", pName);
+	}
+	else
+	{
+		pVariable->SerializeHumanReadable(aBuf, sizeof(aBuf));
+	}
+	Echo(aBuf);
+}
+
 void CChat::ConClearChat(IConsole::IResult *pResult, void *pUserData)
 {
 	((CChat *)pUserData)->ClearLines();
@@ -1164,6 +1206,7 @@ void CChat::OnConsoleInit()
 	Console()->Register("chat", "s['team'|'all'] ?r[message]", CFGFLAG_CLIENT, ConChat, this, "Enable chat with all/team mode");
 	Console()->Register("+show_chat", "", CFGFLAG_CLIENT, ConShowChat, this, "Show chat");
 	Console()->Register("echo", "r[message]", CFGFLAG_CLIENT | CFGFLAG_STORE, ConEcho, this, "Echo the text in chat window");
+	Console()->Register("echo_config", "r[config]", CFGFLAG_CLIENT | CFGFLAG_STORE, ConEchoConfig, this, "Echo the config value in chat window");
 	Console()->Register("clear_chat", "", CFGFLAG_CLIENT | CFGFLAG_STORE, ConClearChat, this, "Clear chat messages");
 }
 
@@ -1236,10 +1279,11 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 			MousePos.y <= m_TranslateButton.m_Y + m_TranslateButton.m_H;
 		if(InsideHistory && !InsideTranslateButton && !m_ScrollbarDragging)
 		{
-			const int TotalLines = CountInitializedLines();
-			const int Direction = Event.m_Key == KEY_MOUSE_WHEEL_UP ? 1 : -1;
-			m_BacklogCurLine = ClampBacklogLine(m_BacklogCurLine + Direction, TotalLines, 1);
-			RebuildChat();
+			// 这里只知道方向、不知道这一次能显示多少行（视口要等绘制趟算出来），
+			// 所以只累积步数；推进器按公共 QmScroll 的弹簧/惯性档在渲染帧统一推进。
+			m_HistoryWheelSteps = std::clamp(
+				m_HistoryWheelSteps + (Event.m_Key == KEY_MOUSE_WHEEL_UP ? 1 : -1),
+				-QM_CHAT_WHEEL_MAX_PENDING_STEPS, QM_CHAT_WHEEL_MAX_PENDING_STEPS);
 			return true;
 		}
 	}
@@ -1639,7 +1683,6 @@ void CChat::EnableMode(int Team)
 		else
 			m_Mode = MODE_ALL;
 
-		Input()->Clear();
 		m_CompletionChosen = -1;
 		m_CompletionUsed = false;
 		m_EmojiCompletionListLength = 0;
@@ -2642,7 +2685,8 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible
 		}
 		PreviousLine.m_ConsoleSuppressed |= BlockWordsConsolePrinted;
 		PreviousLine.DeleteTextContainers(TextRender());
-		Graphics()->DeleteQuadContainer(PreviousLine.m_QuadContainerIndex);
+		PreviousLine.m_BackgroundRect = {};
+		PreviousLine.m_BackgroundRounding = 0.0f;
 		PreviousLine.m_Time = Now;
 		PreviousLine.m_aYOffset[0] = -1.0f;
 		PreviousLine.m_aYOffset[1] = -1.0f;
@@ -3441,17 +3485,15 @@ bool CChat::OnPrepareLines(float y)
 			Line.m_ContentWidth = maximum(0.0f, FullWidth);
 			if(!g_Config.m_ClChatOld)
 			{
-				const CUIRect Rect = {Begin, TargetY, FullWidth, LineHeight};
-				const float Rounding = MessageRounding();
-				if(Line.m_QuadContainerIndex == -1 || Line.m_BackgroundRect.x != Rect.x || Line.m_BackgroundRect.y != Rect.y ||
-					Line.m_BackgroundRect.w != Rect.w || Line.m_BackgroundRect.h != Rect.h || Line.m_BackgroundRounding != Rounding)
-				{
-					Graphics()->DeleteQuadContainer(Line.m_QuadContainerIndex);
-					Graphics()->SetColor(1, 1, 1, 1);
-					Line.m_QuadContainerIndex = Graphics()->CreateRectQuadContainer(Begin, TargetY, FullWidth, LineHeight, Rounding, IGraphics::CORNER_ALL);
-					Line.m_BackgroundRect = Rect;
-					Line.m_BackgroundRounding = Rounding;
-				}
+				// 消息气泡：单行取整行高一半 → 完整胶囊，多行保持圆角矩形（圆角比旧的一档大）。
+				// 这里只记录几何与圆角，绘制交给 DrawRoundedSurface 走公共圆角曲线链；旧实现
+				// 缓存一个直绘四边形容器，只认圆弧，换曲线档位后气泡与它自己的背景模糊会错位，
+				// 也没法让单行/多行用两种圆角。
+				// 局部 FontSize 已是本帧字号（见 OnPrepareLines 开头），不能再当函数调用。
+				const float SingleLineHeight = FontSize + MessagePaddingY();
+				const bool SingleLineBubble = ui_token::chat::BubbleIsSingleLine(LineHeight, SingleLineHeight);
+				Line.m_BackgroundRect = {Begin, TargetY, FullWidth, LineHeight};
+				Line.m_BackgroundRounding = ui_token::chat::BubbleRadius(SingleLineBubble, LineHeight, SingleLineHeight);
 			}
 		}
 
@@ -3531,7 +3573,7 @@ void CChat::OnRender()
 		m_Show ||
 		(InputActive && g_Config.m_ClShowChat == 1) ||
 		g_Config.m_ClShowChat == 2;
-	const bool ExtraAnimations = g_Config.m_QmExtraAnimations != 0 && GameClient()->UiRuntimeV2()->Enabled();
+	const bool ExtraAnimations = g_Config.m_QmUiMotionLevel > 0 && GameClient()->UiRuntimeV2()->Enabled();
 	int64_t Now = time();
 	if(m_LastPresentationUpdateTime == 0 || Now < m_LastPresentationUpdateTime)
 		m_LastPresentationUpdateTime = Now;
@@ -3610,8 +3652,9 @@ void CChat::OnRender()
 
 		if(MobileChannelChips)
 		{
-			// 模式按钮与发送对象按钮底板，画在文字下面。
-			const float ChipHeight = maximum(InputCursor.m_FontSize + 4.0f, 16.0f);
+			// 模式按钮与发送对象按钮底板，画在文字下面。高度与左侧翻译按钮同源
+			// （QmChatInputRowHeight）：同一行的两个按钮各算一次行高就会一大一小。
+			const float ChipHeight = QmChatInputRowHeight(InputCursor.m_FontSize);
 			const float ChipY = y - (ChipHeight - InputCursor.m_FontSize) * 0.5f;
 			CUIRect ModeChip = {InputLayout.m_TextStartX - 2.0f, ChipY, InputModeLabelWidth + 4.0f, ChipHeight};
 			CUIRect TargetChip = {ModeChip.x + ModeChip.w + 2.0f, ChipY, InputChannelChipWidth, ChipHeight};
@@ -3880,64 +3923,123 @@ void CChat::OnRender()
 	}
 
 	// 行间隔按配置像素换算到聊天虚拟坐标，0 保持默认行距。
+	// ChatPixelSize 是一物理像素折成的聊天逻辑单位数，圆角表面也要用它：不传的话
+	// DrawRoundedSurface 会按菜单屏幕的像素尺寸抗锯齿，聊天气泡边缘会糊一圈。
 	float ExtraLineSpacing = 0.0f;
+	float ChatPixelSize = 1.0f;
 	{
 		float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 		Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-		const float PixelSize = (ScreenY1 - ScreenY0) / Graphics()->ScreenHeight();
-		ExtraLineSpacing = (float)g_Config.m_QmChatLineSpacing * PixelSize;
+		ChatPixelSize = (ScreenY1 - ScreenY0) / maximum(1, Graphics()->ScreenHeight());
+		ExtraLineSpacing = (float)g_Config.m_QmChatLineSpacing * ChatPixelSize;
 	}
 
 	const float HistoryBottom = y;
 	const vec2 CommandHudMousePos = GetChatMousePos();
 	const bool InsideCommandHud = m_CommandHud.Contains(CommandHudMousePos.x, CommandHudMousePos.y);
 	const float HistoryHeight = maximum(0.0f, HistoryBottom - HeightLimit);
-	const int TotalVisibleLines = CountVisibleLinesFrom(0);
+	// 历史内容尺寸一到手就分成两把尺子：
+	//   行数 → 滚轮推进、行号夹取、滑块进度（0 = 顶部/最旧）；
+	//   总高度 → 滑块长度。消息会换行，"条数"并不等于"高度"，用条数算比例会把
+	//   滑块虚长成几乎整条轨道（本次要修的就是这个观感）。
+	const SQmChatHistoryExtent HistoryExtent = MeasureVisibleHistory(0, OffsetType, FontSize() + RealMsgPaddingY, ExtraLineSpacing);
+	const int TotalVisibleLines = HistoryExtent.m_Lines;
+	const float HistoryContentHeight = HistoryExtent.m_Height;
 	const int VisibleLineCapacity = maximum(1, (int)std::floor(HistoryHeight / maximum(RowHeight + ExtraLineSpacing, 1.0f)));
 	const int MaxScroll = maximum(0, TotalVisibleLines - VisibleLineCapacity);
+	// 聊天历史的滚动偏移单位是"行"：视口 = 可显示行数、内容 = 总行数，推进一律交给
+	// 公共滚动实现（QmScroll 的 CQmScrollState）：滚轮走弹簧/平滑档，拖动直接跟手，
+	// 松手后由同一条越界回弹把偏移收回合法范围。聊天不再自己按整数行瞬时跳。
+	const SQmScrollMetrics HistoryScrollMetrics = QmChatHistoryScrollMetrics(TotalVisibleLines, VisibleLineCapacity);
+	const SQmScrollConfig HistoryScrollConfig = QmChatHistoryScrollConfig();
 	if(!InputActive)
+	{
+		m_HistoryScroll.Reset();
+		m_HistoryWheelSteps = 0;
 		m_BacklogCurLine = 0;
-	m_BacklogCurLine = ClampBacklogLine(m_BacklogCurLine, TotalVisibleLines, VisibleLineCapacity);
+		m_HistoryScrollAppliedLine = 0;
+	}
+	else
+	{
+		if(m_HistoryWheelSteps != 0)
+		{
+			// Alt 三倍与列表同一个系数：公共滚动的倍率来自 QmScrollAltMultiplier，
+			// 聊天此前直连 AddWheelImpulse，绕过了那一层，所以没有三倍。
+			const bool AltPressed = Input()->KeyIsPressed(KEY_LALT) || Input()->KeyIsPressed(KEY_RALT);
+			const int WheelSteps = AltPressed ? (int)std::lround((float)m_HistoryWheelSteps * QmScrollAltMultiplier()) : m_HistoryWheelSteps;
+			QmChatHistoryWheel(m_HistoryScroll, WheelSteps, HistoryScrollMetrics, HistoryScrollConfig);
+			m_HistoryWheelSteps = 0;
+		}
+		// 新消息到达时 AddLine 会把可见行 +1（视图锚定在同一批消息上）。这类外部
+		// 改动要同步回推进器，否则下一帧会按旧偏移把视图弹回去。
+		if(m_BacklogCurLine != m_HistoryScrollAppliedLine)
+			QmChatHistoryDragToLine(m_HistoryScroll, m_BacklogCurLine, HistoryScrollMetrics, HistoryScrollConfig);
+		m_HistoryScroll.Advance(DeltaSeconds, HistoryScrollMetrics, HistoryScrollConfig);
+		const int NewBacklogLine = QmChatHistoryScrollLine(m_HistoryScroll.Offset(), HistoryScrollMetrics);
+		if(NewBacklogLine != m_BacklogCurLine)
+		{
+			m_BacklogCurLine = NewBacklogLine;
+			RebuildChat();
+		}
+		m_HistoryScrollAppliedLine = m_BacklogCurLine;
+	}
 
-	const bool ShowChatScrollbar = InputActive && MaxScroll > 0 && HistoryHeight > 0.0f;
-	const CUIRect ScrollbarRect = QmChatScrollbarRail(ChatRect, HeightLimit, HistoryHeight, ChatScrollbarOnRight);
-	float ScrollbarHandleY = ScrollbarRect.y;
-	float ScrollbarHandleH = ScrollbarRect.h;
+	// 滚动条几何全部来自公共滚动容器（与列表滚动条同一算法）：聊天只报视口高度、
+	// 内容总高度和当前进度。轨道按列表规则两端内缩，滑块按"视口/内容"算长度，
+	// 不再有聊天自己的一档上限与反馈内缩；内容装得下就不出现。
+	SQmChatScrollbarFrame ScrollbarFrame = QmResolveChatScrollbarFrame(ChatRect, HeightLimit, HistoryHeight, HistoryContentHeight, BacklogLineToScrollbarValue(m_BacklogCurLine, MaxScroll), ChatScrollbarOnRight);
+	const bool ShowChatScrollbar = InputActive && MaxScroll > 0 && ScrollbarFrame.m_Visible;
+	bool ScrollbarHovered = false;
 	if(ShowChatScrollbar)
 	{
-		ScrollbarHandleH = QmChatScrollbarHandleHeight(ScrollbarRect.h, VisibleLineCapacity, TotalVisibleLines);
-		const float TrackRange = maximum(0.0f, ScrollbarRect.h - ScrollbarHandleH);
-		ScrollbarHandleY = QmChatScrollbarHandle(ScrollbarRect, ScrollbarHandleH, BacklogLineToScrollbarValue(m_BacklogCurLine, MaxScroll)).y;
+		const CUIRect &Rail = ScrollbarFrame.m_Rail;
+		const CUIRect &Thumb = ScrollbarFrame.m_Thumb;
 		const vec2 MousePos = PointerLocalPos();
 		const bool InsideRail =
-			MousePos.x >= ScrollbarRect.x &&
-			MousePos.x <= ScrollbarRect.x + ScrollbarRect.w &&
-			MousePos.y >= ScrollbarRect.y &&
-			MousePos.y <= ScrollbarRect.y + ScrollbarRect.h;
+			MousePos.x >= Rail.x &&
+			MousePos.x <= Rail.x + Rail.w &&
+			MousePos.y >= Rail.y &&
+			MousePos.y <= Rail.y + Rail.h;
 		const bool InsideHandle =
-			MousePos.x >= ScrollbarRect.x &&
-			MousePos.x <= ScrollbarRect.x + ScrollbarRect.w &&
-			MousePos.y >= ScrollbarHandleY &&
-			MousePos.y <= ScrollbarHandleY + ScrollbarHandleH;
+			MousePos.x >= Thumb.x &&
+			MousePos.x <= Thumb.x + Thumb.w &&
+			MousePos.y >= Thumb.y &&
+			MousePos.y <= Thumb.y + Thumb.h;
 
-		if(PointerPressed() && InsideRail && !InsideCommandHud && !m_CommandHud.IsPressed())
+		ScrollbarHovered = InsideRail && !InsideCommandHud && !m_CommandHud.IsPressed();
+		if(PointerPressed() && ScrollbarHovered)
 		{
 			m_ScrollbarDragging = true;
-			m_ScrollbarDragOffset = InsideHandle ? std::clamp(MousePos.y - ScrollbarHandleY, 0.0f, ScrollbarHandleH) : ScrollbarHandleH * 0.5f;
+			m_ScrollbarDragOffset = InsideHandle ? std::clamp(MousePos.y - Thumb.y, 0.0f, Thumb.h) : Thumb.h * 0.5f;
 		}
 		if(!PointerDown())
 			m_ScrollbarDragging = false;
+		// 按下/拖动登记给 CUi 的活动项：公共滑块绘制入口按活动项做按下反馈（放大 + 描边），
+		// 松手立刻收回，不占用其它控件（与 ui_widget::ScrollContainer 同一套做法）。
+		// 悬浮反馈不能只依赖 CUi 热项：游戏内 HUD 帧没有菜单的 CUi::Update() 去提交它，
+		// 所以由 QmDrawChatScrollbar 用同一档参数补齐。
+		if(!Ui()->RenderOnly())
+		{
+			if(m_ScrollbarDragging)
+				Ui()->SetActiveItem(QmChatScrollbarId());
+			else if(Ui()->CheckActiveItem(QmChatScrollbarId()))
+				Ui()->SetActiveItem(nullptr);
+		}
 		if(m_ScrollbarDragging)
 		{
-			const float HandleTop = std::clamp(MousePos.y - m_ScrollbarDragOffset, ScrollbarRect.y, ScrollbarRect.y + TrackRange);
-			const float RelativeTop = TrackRange > 0.0f ? (HandleTop - ScrollbarRect.y) / TrackRange : 1.0f;
-			const int NewBacklogCurLine = ScrollbarValueToBacklogLine(RelativeTop, MaxScroll);
+			// 拖动跟手：把指针位置换算成进度后直接写进公共滚动状态（不经过弹簧），
+			// 松手后由 Advance 的越界回弹收回合法范围。
+			const float Progress = QmChatScrollbarProgressFromPointer(ScrollbarFrame, MousePos.y, m_ScrollbarDragOffset);
+			const int NewBacklogCurLine = ScrollbarValueToBacklogLine(Progress, MaxScroll);
+			QmChatHistoryDragToLine(m_HistoryScroll, NewBacklogCurLine, HistoryScrollMetrics, HistoryScrollConfig);
 			if(NewBacklogCurLine != m_BacklogCurLine)
 			{
 				m_BacklogCurLine = NewBacklogCurLine;
 				RebuildChat();
 			}
-			ScrollbarHandleY = QmChatScrollbarHandle(ScrollbarRect, ScrollbarHandleH, BacklogLineToScrollbarValue(m_BacklogCurLine, MaxScroll)).y;
+			m_HistoryScrollAppliedLine = m_BacklogCurLine;
+			// 滑块跟着新进度重画一次，走同一个几何入口。
+			ScrollbarFrame = QmResolveChatScrollbarFrame(ChatRect, HeightLimit, HistoryHeight, HistoryContentHeight, BacklogLineToScrollbarValue(m_BacklogCurLine, MaxScroll), ChatScrollbarOnRight);
 		}
 	}
 	else
@@ -3966,10 +4068,10 @@ void CChat::OnRender()
 		MousePos.y <= m_TranslateButton.m_Y + m_TranslateButton.m_H;
 	const bool InsideScrollbar =
 		ShowChatScrollbar &&
-		MousePos.x >= ScrollbarRect.x &&
-		MousePos.x <= ScrollbarRect.x + ScrollbarRect.w &&
-		MousePos.y >= ScrollbarRect.y &&
-		MousePos.y <= ScrollbarRect.y + ScrollbarRect.h;
+		MousePos.x >= ScrollbarFrame.m_Rail.x &&
+		MousePos.x <= ScrollbarFrame.m_Rail.x + ScrollbarFrame.m_Rail.w &&
+		MousePos.y >= ScrollbarFrame.m_Rail.y &&
+		MousePos.y <= ScrollbarFrame.m_Rail.y + ScrollbarFrame.m_Rail.h;
 	// 触摸没有左右键：轻点翻译按钮打开设置，长按（CUi 合成的右键）切换自动翻译。
 	if(!Input()->TouchFingerStates().empty() && InsideTranslateButton && !AnyChatPopupOpen)
 	{
@@ -4107,35 +4209,37 @@ void CChat::OnRender()
 				str_comp(m_ChatLinePopupContext.m_aText, Line.m_aText) == 0) ||
 			(ChatLineMenuRequested && pMenuLine == &Line);
 
-		// Draw backgrounds for messages in one batch
-		if(!g_Config.m_ClChatOld)
+		// 消息气泡底色：与背景模糊用同一个矩形、同一档圆角，一起走公共圆角表面链
+		// （曲线档位、圆角强度、SDF 与几何兜底都在里面，和卡片/面板同一条路）。
+		if(!g_Config.m_ClChatOld && Line.m_BackgroundRounding > 0.0f && Line.m_BackgroundRect.w > 0.0f)
 		{
-			Graphics()->TextureClear();
-			if(Line.m_QuadContainerIndex != -1)
+			const float QuadScale = RenderScale;
+			const float QuadY = Line.m_TextYOffset - RealMsgPaddingY / 2.0f;
+			const float QuadOffsetX = AnimOffsetX + x * (1.0f - QuadScale);
+			const float QuadOffsetY = AnimOffsetY + QuadY * (1.0f - QuadScale);
+			const auto &Rect = Line.m_BackgroundRect;
+			const CUIRect BubbleRect{Rect.x * QuadScale + QuadOffsetX, Rect.y * QuadScale + QuadOffsetY, Rect.w * QuadScale, Rect.h * QuadScale};
+			if(BackgroundBaseColor.a > 0.0f && BubbleRect.w > 0.0f && BubbleRect.h > 0.0f)
 			{
-				const float QuadScale = RenderScale;
-				const float QuadY = Line.m_TextYOffset - RealMsgPaddingY / 2.0f;
-				const float QuadOffsetX = AnimOffsetX + x * (1.0f - QuadScale);
-				const float QuadOffsetY = AnimOffsetY + QuadY * (1.0f - QuadScale);
-				if(BackgroundBaseColor.a > 0.0f)
-				{
-					const auto &Rect = Line.m_BackgroundRect;
-					Ui()->RenderGaussianBlur({Rect.x * QuadScale + QuadOffsetX, Rect.y * QuadScale + QuadOffsetY, Rect.w * QuadScale, Rect.h * QuadScale}, AnimAlpha, IGraphics::CORNER_ALL, Line.m_BackgroundRounding * QuadScale);
-				}
-				Graphics()->TextureClear();
-				Graphics()->SetColor(BackgroundBaseColor.WithMultipliedAlpha(AnimAlpha));
-				Graphics()->RenderQuadContainerEx(Line.m_QuadContainerIndex, 0, -1, QuadOffsetX, QuadOffsetY, QuadScale, QuadScale);
+				const float BubbleRounding = Line.m_BackgroundRounding * QuadScale;
+				Ui()->RenderGaussianBlur(BubbleRect, AnimAlpha, IGraphics::CORNER_ALL, BubbleRounding);
+				SRoundedSurfaceParams BubbleParams;
+				BubbleParams.m_Radius = BubbleRounding;
+				BubbleParams.m_PixelSize = ChatPixelSize;
+				DrawRoundedSurface(Ui(), BubbleRect, BackgroundBaseColor.WithMultipliedAlpha(AnimAlpha), ui_token::color::COLOR_TRANSPARENT, BubbleParams);
 			}
 		}
 		if(IsPopupTarget && RenderedTextRect.w > 0.0f && RenderedTextRect.h > 0.0f)
 		{
 			Graphics()->TextureClear();
 			const ColorRGBA SelectionColor = ColorRGBA(0.20f, 0.55f, 0.88f, 0.35f * AnimAlpha);
-			const float Rounding = g_Config.m_ClChatOld ? 0.0f : MessageRounding();
+			// 选区与气泡取同一档半径：选区就压在气泡上，两档半径会露出月牙。
+			const float Rounding = g_Config.m_ClChatOld ? 0.0f : Line.m_BackgroundRounding;
 			SRoundedSurfaceParams SelectionSurface;
 			SelectionSurface.m_Radius = Rounding;
 			SelectionSurface.m_Corners = IGraphics::CORNER_ALL;
-			DrawRoundedSurface(Ui(), CUIRect{RenderedTextRect.x, RenderedTextRect.y, RenderedTextRect.w, RenderedTextRect.h}, SelectionColor, ColorRGBA(), SelectionSurface);
+			SelectionSurface.m_PixelSize = ChatPixelSize;
+			DrawRoundedSurface(Ui(), CUIRect{RenderedTextRect.x, RenderedTextRect.y, RenderedTextRect.w, RenderedTextRect.h}, SelectionColor, ui_token::color::COLOR_TRANSPARENT, SelectionSurface);
 		}
 
 		const bool RenderChatEmoji = Line.m_ChatEmojiRect.w > 0.0f && GameClient()->m_QmChatEmoji.CanRender(Line.m_ChatEmoji);
@@ -4223,8 +4327,11 @@ void CChat::OnRender()
 
 	if(ShowChatScrollbar)
 	{
-		QmDrawChatScrollbar(Ui(), ScrollbarRect, ScrollbarHandleY, ScrollbarHandleH, m_ScrollbarDragging || InsideScrollbar);
-		ExtendBounds(ScrollbarRect.x, ScrollbarRect.y, ScrollbarRect.w, ScrollbarRect.h);
+		// 热项登记走公共按钮逻辑：滑块据此拿到悬浮/按下的几何反馈（变大），
+	// 与控制台、设置页滚动条用同一套，不在聊天里另写放大。
+	Ui()->DoButtonLogic(QmChatScrollbarId(), 0, &ScrollbarFrame.m_Rail, BUTTONFLAG_LEFT);
+	QmDrawChatScrollbar(Ui(), ScrollbarFrame.m_Rail, ScrollbarFrame.m_Thumb, true, ScrollbarHovered, m_ScrollbarDragging);
+		ExtendBounds(ScrollbarFrame.m_Rail.x, ScrollbarFrame.m_Rail.y, ScrollbarFrame.m_Rail.w, ScrollbarFrame.m_Rail.h);
 	}
 
 	if(HudEditorPreview && !RenderedAnyLines)
@@ -4254,12 +4361,15 @@ void CChat::OnRender()
 
 			if(!g_Config.m_ClChatOld)
 			{
+				// 预览行都是单行，与真实单行气泡同一条半径派生，预览看起来才和实机一致。
+				const float PreviewRounding = ui_token::chat::BubbleRadius(true, RowHeight, RowHeight);
 				if(BackgroundBaseColor.a > 0.0f)
-					Ui()->RenderGaussianBlur({x, PreviewY, PreviewWidth, RowHeight}, 1.0f, IGraphics::CORNER_ALL, MessageRounding());
+					Ui()->RenderGaussianBlur({x, PreviewY, PreviewWidth, RowHeight}, 1.0f, IGraphics::CORNER_ALL, PreviewRounding);
 				SRoundedSurfaceParams PreviewSurface;
-				PreviewSurface.m_Radius = MessageRounding();
+				PreviewSurface.m_Radius = PreviewRounding;
 				PreviewSurface.m_Corners = IGraphics::CORNER_ALL;
-				DrawRoundedSurface(Ui(), CUIRect{x, PreviewY, PreviewWidth, RowHeight}, BackgroundBaseColor, ColorRGBA(), PreviewSurface);
+				PreviewSurface.m_PixelSize = ChatPixelSize;
+				DrawRoundedSurface(Ui(), CUIRect{x, PreviewY, PreviewWidth, RowHeight}, BackgroundBaseColor, ui_token::color::COLOR_TRANSPARENT, PreviewSurface);
 			}
 
 			TextRender()->TextColor(Line.m_TextColor);
@@ -4576,33 +4686,30 @@ void CChat::RenderTranslateButton(const CUIRect &ButtonRect)
 	m_TranslateButton.m_AutoTranslateEnabled = g_Config.m_QmTranslateAutoOutgoing != 0;
 	const bool IsEnabled = m_TranslateButton.m_AutoTranslateEnabled;
 
-	ColorRGBA ButtonColor;
-	if(IsEnabled)
-	{
-		ButtonColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateBtnColorEnabled, true));
-	}
-	else if(IsOpen)
-	{
-		ButtonColor = ColorRGBA(0.35f, 0.45f, 0.70f, 0.90f);
-	}
-	else if(Hovered)
-	{
-		ButtonColor = ColorRGBA(0.28f, 0.28f, 0.28f, 0.90f);
-	}
-	else
-	{
-		ButtonColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateBtnColorDisabled, true));
-	}
-	const float ButtonRounding = maximum(6.0f, ButtonRect.h * 0.28f);
-
-	// 自动翻译已启用时也保留悬浮/按下反馈，不被启用颜色分支遮住。
+	// 圆形图标按钮：按钮区本身就是正方形（宽高都取输入行行高），按胶囊档绘制即正圆。
+	const float Diameter = minimum(ButtonRect.w, ButtonRect.h);
+	const CUIRect Circle{ButtonRect.x + (ButtonRect.w - Diameter) * 0.5f, ButtonRect.y + (ButtonRect.h - Diameter) * 0.5f, Diameter, Diameter};
+	// 描边与图标都由同一个直径按 token 派生：描边只占直径的零头（细勾边），
+	// 图标墨迹接近内圈，不会再出现「粗框套小点」。
+	const float BorderWidth = QmChatTranslateButtonBorderWidth(Diameter);
+	const float IconSize = QmChatTranslateIconBoxSize(Diameter);
+	// 底色只有「自动翻译启用/关闭」两条玩家配置；悬浮、按下、展开三种反馈统一走公共
+	// 按钮样式与反馈 token（主题强调色 + ui_token::feedback），这里不再写裸 ColorRGBA。
 	const SUiTheme &Theme = Ui()->QmControlTheme();
 	const bool Pressed = Hovered && PointerDown();
-	DrawRoundedSurface(Ui(), ButtonRect, ButtonColor, Hovered ? Theme.m_Accent : ColorRGBA(), ButtonRounding, Hovered ? (Pressed ? 1.0f : 0.65f) : 0.0f);
+	SUiButtonState ButtonState;
+	ButtonState.m_Hovered = Hovered;
+	ButtonState.m_Pressed = Pressed;
+	ButtonState.m_Selected = IsOpen;
+	const ColorRGBA ButtonSurface = IsEnabled ?
+						color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateBtnColorEnabled, true)) :
+						color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateBtnColorDisabled, true));
+	const SUiSecondaryButtonStyle ButtonStyle = ResolveUiButtonStyle(EUiButtonRole::ICON, ButtonSurface, Theme.m_Surface, Theme, ButtonState);
+	DrawRoundedSurface(Ui(), Circle, ButtonStyle.m_Fill, ButtonStyle.m_Border, ui_token::radius::PILL, BorderWidth);
 
-	CUIRect IconRect;
-	ButtonRect.Margin(1.0f, &IconRect);
-	const float IconSize = IconRect.h * CUi::ms_FontmodHeight;
+	// 图标盒子就是整个圆：字形尺寸已按内径 × ICON_INK_RATIO 反推过，
+	// 这里再内缩一圈等于把图标重新缩小一次。
+	const CUIRect IconRect = Circle;
 
 	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH |

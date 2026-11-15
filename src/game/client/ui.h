@@ -315,6 +315,28 @@ inline SUiQuadBatchSubmissionPlan UiPlanQuadBatchSubmission(bool BatchActive, in
 	return Plan;
 }
 
+// 逐字色段是否逐项相同：条数、起点、长度与两端色全部一致才算相同。
+// 只比较 hash 会在碰撞时静默沿用旧颜色，所以重建判定必须精确比较。
+inline bool QmColorSplitsEqual(const std::vector<STextColorSplit> &Left, const std::vector<STextColorSplit> &Right)
+{
+	if(Left.size() != Right.size())
+		return false;
+	for(size_t i = 0; i < Left.size(); ++i)
+	{
+		if(Left[i].m_CharIndex != Right[i].m_CharIndex || Left[i].m_Length != Right[i].m_Length ||
+			Left[i].m_Color != Right[i].m_Color || Left[i].m_ColorEnd != Right[i].m_ColorEnd)
+			return false;
+	}
+	return true;
+}
+
+// 单条「从首字符到末尾」的色段覆盖全文，此时容器底色不会被任何字符看到。
+// 多段色段是否拼满全文依赖文本长度，缓存判定不为此引入逐帧文本扫描。
+inline bool QmColorSplitsCoverAllText(const std::vector<STextColorSplit> &Splits)
+{
+	return !Splits.empty() && Splits.front().m_CharIndex == 0 && Splits.front().m_Length == -1;
+}
+
 class CUIElement
 {
 	friend class CUi;
@@ -358,9 +380,33 @@ public:
 		ColorRGBA m_TextColor;
 		ColorRGBA m_TextOutlineColor;
 
+		// 容器顶点里已经烘入逐字色段（SLabelProperties::m_vColorSplits）。
+		// 色段指纹直接取 m_Cursor.m_vColorSplits：它和建容器用的是同一份光标数据，
+		// 精确可比较，也不必再复制一份色段。
+		bool m_TextColorBaked;
+		// 建容器时烘入的调用方文字颜色：色段没覆盖到的字符用它，绘制时不再乘色。
+		ColorRGBA m_TextColorBakedBase;
+
 		SUIElementRect();
 
 		ColorRGBA m_QuadColor;
+
+		// 容器烘入的颜色是否仍与本次请求一致。色段要逐项相同（含「有 → 无」）；
+		// 色段没覆盖全文时，未被覆盖字符用的底色也参与比较；覆盖全文时底色看不见，
+		// 调用方换色不需要重建。缓存判定与重建判定都只走这一处，避免两边失配。
+		bool BakedColorMatches(const std::vector<STextColorSplit> &Splits, const ColorRGBA &CurrentTextColor) const
+		{
+			if(m_TextColorBaked != !Splits.empty() || !QmColorSplitsEqual(m_Cursor.m_vColorSplits, Splits))
+				return false;
+			return !m_TextColorBaked || QmColorSplitsCoverAllText(Splits) || m_TextColorBakedBase == CurrentTextColor;
+		}
+
+		// 绘制容器时乘在顶点上的底色。色段已经烘进顶点，烘色后再乘调用方颜色
+		// 会二次染色，所以烘色容器固定用白色，只保留淡入淡出系数。
+		ColorRGBA TextContainerTint() const
+		{
+			return m_TextColorBaked ? ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f) : m_TextColor;
+		}
 
 		void Reset();
 		void Draw(const CUIRect *pRect, ColorRGBA Color, int Corners, float Rounding);
@@ -405,6 +451,10 @@ struct SLabelProperties
 	bool m_EnableWidthCheck = true;
 	float m_MinimumFontSize = 5.0f;
 	std::vector<STextColorSplit> m_vColorSplits;
+	// 文本被裁剪时自动登记完整内容提示；pTooltipText 供分段绘制（搜索高亮）
+	// 用完整字符串覆盖当前分段的文本。
+	const void *m_pTooltipId = nullptr;
+	const char *m_pTooltipText = nullptr;
 
 	void SetColor(const ColorRGBA &Color);
 };
@@ -516,6 +566,7 @@ class CCachedText
 	int m_CursorFlags = 0;
 	STextBoundingBox m_BoundingBox = {0.0f, 0.0f, 0.0f, 0.0f};
 	float m_MaxCharacterHeight = 0.0f;
+	float m_AlignedFontSize = 0.0f;
 	// 记录创建容器的渲染器，析构时才能归还容器；仅 Update 成功创建后非空。
 	ITextRender *m_pTextContainerOwner = nullptr;
 
@@ -535,6 +586,7 @@ public:
 
 	float Width() const { return m_BoundingBox.m_W; }
 	float MaxCharacterHeight() const { return m_MaxCharacterHeight; }
+	float AlignedFontSize() const { return m_AlignedFontSize; }
 };
 
 struct SPopupMenuProperties
@@ -771,7 +823,7 @@ private:
 	CTooltips *m_pQmTooltips = nullptr;
 	bool m_CardLabelHintsEnabled = false;
 	SUiTheme m_QmControlTheme{};
-	std::array<unsigned, 8> m_aQmControlThemeConfig{};
+	std::array<unsigned, 6> m_aQmControlThemeConfig{};
 	bool m_HasQmControlTheme = false;
 	mutable int m_QuadBatchDepth = 0;
 	mutable int m_QuadBatchContainerIndex = -1;
@@ -1140,7 +1192,7 @@ public:
 	void SetCardLabelHintsEnabled(bool Enabled) { m_CardLabelHintsEnabled = Enabled; }
 	const char *PrepareCardLabel(const CUIRect *pRect, const char *pText, bool Render = true, bool AllowHintSplit = true) const;
 	void DoConfigTooltip(const void *pId, const CUIRect *pRect, const void *pValue, const void *pSecondValue = nullptr);
-	void DoButtonTooltip(const void *pId, const CUIRect *pRect, const char *pText);
+	void DoButtonTooltip(const void *pId, const CUIRect *pRect, const char *pText) const;
 	void SetKeyboardFocus(const void *pId);
 	const void *KeyboardFocusItem() const { return m_KeyboardFocus.m_pItem; }
 	bool KeyboardFocusFromKeyboard() const { return m_KeyboardFocus.m_FromKeyboard; }

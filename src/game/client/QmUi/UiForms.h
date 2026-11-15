@@ -4,6 +4,7 @@
 #ifndef GAME_CLIENT_QMUI_UIFORMS_H
 #define GAME_CLIENT_QMUI_UIFORMS_H
 
+#include "QmScroll.h"
 #include "UiContext.h"
 #include "UiTokens.h"
 
@@ -13,6 +14,7 @@
 #include <game/client/ui.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 
 class CLineInput;
@@ -107,8 +109,58 @@ namespace ui_widget
 	// 两端渐隐的细分隔线：面板内分组用，替代背景板。
 	void DrawFadeDivider(CUi *pUi, const CUIRect &Rect);
 	// 多选筛选胶囊：选中态由调用方传入，返回是否被点击。标签按控件宽度省略，不换行。
-	bool FilterChip(const IUiContext &Ctx, const void *pId, const CUIRect &Rect, const char *pLabel, bool Selected, bool Enabled = true);
+	// FontSize 缺省取胶囊档，但调用点应传正文档：按钮文字与正文同号才是同一条排版逻辑。
+	bool FilterChip(const IUiContext &Ctx, const void *pId, const CUIRect &Rect, const char *pLabel, bool Selected, bool Enabled = true, float FontSize = ui_token::server_filter::CHIP_FONT_SIZE);
 	void DrawScrollbarHandle(const IUiContext &Ctx, const void *pId, const CUIRect &Rect, bool Enabled = true, const ColorRGBA *pColorInner = nullptr, const ColorRGBA *pHandleColorOverride = nullptr);
+
+	// 覆盖式滚动条几何（列表、聊天历史、控制台日志共用同一条算法）：
+	// 轨道沿宿主视口铺开并在两端内缩一档，滑块长度按「视口 / 内容」求，夹在最小滑块与轨道之间，
+	// 纵向位置由进度决定（0 = 顶部/最旧）。调用点只提供「视口多高、内容多高、滚到哪」。
+	struct SOverlayScrollbarFrame
+	{
+		CUIRect m_Rail{};
+		CUIRect m_Thumb{};
+		float m_TrackRange = 0.0f;
+		bool m_Visible = false;
+	};
+	inline SOverlayScrollbarFrame ResolveOverlayScrollbarFrame(const CUIRect &Owner, float Top, float Height, float ContentHeight, float Progress,
+		bool OnRight, float Width, float Margin, float MinThumb)
+	{
+		SOverlayScrollbarFrame Result;
+		const float ViewHeight = std::max(0.0f, Height);
+		const float Content = std::max(0.0f, ContentHeight);
+		// 内容装得下就不出现滚动条：与列表一致，不留一根占满轨道却动不了的滑块。
+		if(Owner.w <= 0.0f || ViewHeight <= 0.0f || Content <= ViewHeight || Width <= 0.0f)
+			return Result;
+		SQmScrollContainerStyle Style;
+		Style.m_Axis = EQmScrollAxis::VERTICAL;
+		Style.m_ScrollbarWidth = Width + Margin * 2.0f;
+		Style.m_ScrollbarMargin = Margin;
+		Style.m_MinThumbHeight = std::max(0.0f, MinThumb);
+		Style.m_ReserveScrollbarSpace = false;
+
+		const CUIRect View{Owner.x, Top, Owner.w, ViewHeight};
+		SQmScrollMetrics Metrics;
+		Metrics.m_ViewportSize = ViewHeight;
+		Metrics.m_ContentSize = Content;
+		CQmScrollState ThumbState;
+		ThumbState.SetOffset(std::clamp(Progress, 0.0f, 1.0f) * Metrics.MaxOffset(), Metrics);
+		const CQmScrollController Controller;
+		const SQmScrollContainerFrame Frame = Controller.PreviewFrame(ThumbState, View, Content, Style);
+		if(!Frame.m_ScrollbarVisible)
+			return Result;
+		Result.m_Visible = true;
+		Result.m_Rail = Frame.m_ScrollbarTrackRect;
+		Result.m_Thumb = Frame.m_ScrollbarThumbRect;
+		if(!OnRight)
+		{
+			// 公共容器只画右侧轨道；靠左时把整条轨道镜像到宿主左缘，内缩量同档。
+			Result.m_Rail.x = Owner.x + (Owner.w - (Result.m_Rail.x - Owner.x) - Result.m_Rail.w);
+			Result.m_Thumb.x = Result.m_Rail.x;
+		}
+		Result.m_TrackRange = std::max(0.0f, Result.m_Rail.h - Result.m_Thumb.h);
+		return Result;
+	}
 	void RenderHorizontalSlider(const IUiContext &Ctx, const void *pId, const CUIRect &Rect, float Current, const ColorRGBA *pColorInner = nullptr);
 	enum class EInputFieldCapability : unsigned
 	{
@@ -270,6 +322,35 @@ namespace ui_widget
 	{
 		return std::min(std::max(0.0f, Rect.h) * 0.5f, ui_token::radius::CARD);
 	}
+
+	// 输入框聚焦光晕的一层：宽度、衰减指数与外壳边缘处的强度。
+	struct SInputFocusGlowLayer
+	{
+		float m_Spread = 0.0f;
+		float m_Falloff = 1.0f;
+		float m_Alpha = 0.0f;
+	};
+
+	// 输入框聚焦光晕的层表（外层在前、内层在后，按这个顺序绘制）。
+	// FocusAlpha 是外壳聚焦描边那条淡入轨道的当前进度：光晕不另开动画，
+	// 聚焦淡入多少，光晕就亮多少；进度为 0 时返回两层全零，调用点直接跳过绘制。
+	// 宽度按外壳高度取比例并夹取，非法矩形（宽或高 <= 0）不产生任何层。
+	// 与输入框模式无关：文本、搜索、多行三种模式共用同一份层表，
+	// 「哪个框亮」只由焦点决定，不由控件类型决定。
+	// Enabled 来自 qm_ui_focus_glow：关掉时返回两层全零，绘制路径与未聚焦完全一致，
+	// 不会留下「描边还在、光晕没了」之外的多余分支。
+	inline std::array<SInputFocusGlowLayer, 2> ResolveInputFocusGlowLayers(const CUIRect &ShellRect, const float FocusAlpha, const bool Enabled = true)
+	{
+		std::array<SInputFocusGlowLayer, 2> aLayers{};
+		if(!Enabled || ShellRect.w <= 0.0f || ShellRect.h <= 0.0f || FocusAlpha <= 0.001f)
+			return aLayers;
+		const float Intensity = std::clamp(FocusAlpha, 0.0f, 1.0f);
+		const float Spread = ui_token::glow::InputFocusSpread(ShellRect.h);
+		aLayers[0] = {Spread, ui_token::glow::INPUT_FOCUS_OUTER_FALLOFF, Intensity * ui_token::glow::INPUT_FOCUS_OUTER_ALPHA};
+		aLayers[1] = {Spread * ui_token::glow::INPUT_FOCUS_INNER_RATIO, ui_token::glow::INPUT_FOCUS_INNER_FALLOFF, Intensity * ui_token::glow::INPUT_FOCUS_INNER_ALPHA};
+		return aLayers;
+	}
+
 	struct STextFieldOptions
 	{
 		const char *m_pPlaceholder = nullptr;

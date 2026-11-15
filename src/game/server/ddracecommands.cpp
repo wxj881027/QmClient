@@ -1,6 +1,8 @@
 /* (c) Shereef Marzouk. See "licence DDRace.txt" and the readme.txt in the root of the distribution for more information. */
 #include "gamecontext.h"
 
+#include <algorithm>
+
 #include <base/log.h>
 
 #include <engine/antibot.h>
@@ -15,6 +17,14 @@
 #include <game/server/player.h>
 #include <game/server/save.h>
 #include <game/server/teams.h>
+
+static vec2 ClampPlacement(const CCollision *pCollision, vec2 Pos)
+{
+	// 超出该范围的角色会被 CEntity::GameLayerClipped 直接判定出界。
+	constexpr float Margin = 200 * 32.0f;
+	return vec2(std::clamp(Pos.x, -Margin, pCollision->GetWidth() * 32.0f + Margin),
+		std::clamp(Pos.y, -Margin, pCollision->GetHeight() * 32.0f + Margin));
+}
 
 void CGameContext::ConGoLeft(IConsole::IResult *pResult, void *pUserData)
 {
@@ -81,7 +91,10 @@ void CGameContext::MoveCharacter(int ClientId, int X, int Y, bool Raw)
 	if(!pChr)
 		return;
 
-	pChr->Move(vec2((Raw ? 1 : 32) * X, (Raw ? 1 : 32) * Y));
+	// 先按浮点缩放，避免 32 * X 在 int 上溢出。
+	const float Scale = Raw ? 1.0f : 32.0f;
+	pChr->Move(vec2(Scale * X, Scale * Y));
+	pChr->SetPosition(ClampPlacement(Collision(), pChr->Core()->m_Pos));
 	pChr->ResetVelocity();
 	pChr->m_DDRaceState = ERaceState::CHEATED;
 }
@@ -419,10 +432,20 @@ void CGameContext::ModifyWeapons(IConsole::IResult *pResult, void *pUserData,
 
 void CGameContext::Teleport(CCharacter *pChr, vec2 Pos)
 {
+	Pos = ClampPlacement(Collision(), Pos);
 	pChr->SetPosition(Pos);
 	pChr->m_Pos = Pos;
 	pChr->m_PrevPos = Pos;
 	pChr->m_DDRaceState = ERaceState::CHEATED;
+}
+
+void CGameContext::PracticeTeleport(CCharacter *pChr, vec2 Pos)
+{
+	Teleport(pChr, Pos);
+	pChr->ResetJumps();
+	pChr->Unfreeze();
+	pChr->ResetVelocity();
+	pChr->GetPlayer()->m_LastTeleTee.Save(pChr);
 }
 
 void CGameContext::ConToTeleporter(IConsole::IResult *pResult, void *pUserData)
@@ -494,7 +517,7 @@ void CGameContext::ConTeleport(IConsole::IResult *pResult, void *pUserData)
 	if(pChr && pPlayer && pSelf->GetPlayerChar(TeleTo))
 	{
 		// default to view pos when character is not available
-		vec2 Pos = pPlayer->m_ViewPos;
+		vec2 Pos = pSelf->m_apPlayers[TeleTo]->m_ViewPos;
 		if(pResult->NumArguments() == 0 && !pPlayer->IsPaused() && pChr->IsAlive())
 		{
 			vec2 Target = vec2(pChr->Core()->m_Input.m_TargetX, pChr->Core()->m_Input.m_TargetY);

@@ -893,8 +893,10 @@ void CUi::SSelectionPopupContext::Reset()
 	// QmSettingsDropdownVisualStyle 也是取 Theme.m_Selected）。Reset() 里没有 CUi 实例，
 	// 但 CUi::QmControlTheme() 内部调的就是这个函数，所以这里不需要第二份颜色推导，
 	// 也不再回落硬编码的白 22%。
-	m_ActiveEntryColor = ResolveInputFallbackTheme(g_Config.m_QmUiFocusColor).m_Selected;
-	m_HoverEntryColor = std::nullopt;
+	m_ActiveEntryColor = ResolveInputFallbackTheme().m_Selected;
+	// 悬浮与选中同一份底色：弹层条目的悬浮不再叠一层白（实机反馈「下拉框弹层的悬浮态
+	// 也要用强调色，保持和选中态背景一致」）。列表行与弹层条目因此逐位同源。
+	m_HoverEntryColor = m_ActiveEntryColor;
 	m_TransparentButtons = false;
 	m_AnchorVisible = true;
 	m_PopupVisible = true;
@@ -1173,6 +1175,8 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 			Props.m_Enabled = DropDownProps.m_Enabled;
 			Props.m_Checked = IsPopupOpen(&State.m_SelectionPopupContext) ? 1 : 0;
 			Props.m_ShowDropDownIcon = true;
+			// 触发器与弹层条目同一条胶囊派生：展开前后圆角不跳档。
+			Props.m_Rounding = QmDropdownEntryRadius(pRect->h);
 			Props.m_HintRequiresStringCheck = true;
 			Props.m_HintCanChangePositionOrSize = true;
 			Props.m_FontSize = ResolvedFontSize;
@@ -1256,6 +1260,8 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 		ButtonProps.m_HintRequiresStringCheck = true;
 		ButtonProps.m_HintCanChangePositionOrSize = true;
 		ButtonProps.m_ShowDropDownIcon = true;
+		// 禁用态沿用同一档胶囊，禁用只衰减不换形。
+		ButtonProps.m_Rounding = QmDropdownEntryRadius(pRect->h);
 		ButtonProps.m_FontSize = ResolvedFontSize;
 		ButtonProps.m_Color = TriggerColor;
 		DoButton_Menu(State.m_UiElement, &State.m_ButtonContainer, LabelFunc, pRect, ButtonProps);
@@ -1266,6 +1272,8 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 	Props.m_HintRequiresStringCheck = true;
 	Props.m_HintCanChangePositionOrSize = true;
 	Props.m_ShowDropDownIcon = true;
+	// 触发器按行高取胶囊：与弹层条目（DoButton_PopupMenu 的 RowRadius）逐位同源。
+	Props.m_Rounding = QmDropdownEntryRadius(pRect->h);
 	Props.m_Checked = PopupOpen ? 1 : 0;
 	Props.m_Flags |= BUTTONFLAG_CURRENT_HIT;
 	Props.m_FontSize = ResolvedFontSize;
@@ -1300,6 +1308,7 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 		State.m_SelectionPopupContext.m_Props.m_BorderColor = VisualStyle.m_PopupBorderColor;
 		State.m_SelectionPopupContext.m_Props.m_BackgroundColor = VisualStyle.m_PopupBackgroundColor;
 		State.m_SelectionPopupContext.m_ActiveEntryColor = DropDownProps.m_VisualStyle.m_ActiveEntryColor;
+		State.m_SelectionPopupContext.m_HoverEntryColor = DropDownProps.m_VisualStyle.m_ActiveEntryColor;
 		State.m_SelectionPopupContext.m_TransparentButtons = DropDownProps.m_VisualStyle.m_TransparentEntries;
 		ShowPopupSelection(pRect->x, pRect->y, &State.m_SelectionPopupContext);
 		PopupOpen = IsPopupOpen(&State.m_SelectionPopupContext);
@@ -1323,6 +1332,7 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 		State.m_SelectionPopupContext.m_Props.m_BorderColor = VisualStyle.m_PopupBorderColor;
 		State.m_SelectionPopupContext.m_Props.m_BackgroundColor = VisualStyle.m_PopupBackgroundColor;
 		State.m_SelectionPopupContext.m_ActiveEntryColor = DropDownProps.m_VisualStyle.m_ActiveEntryColor;
+		State.m_SelectionPopupContext.m_HoverEntryColor = DropDownProps.m_VisualStyle.m_ActiveEntryColor;
 		for(int i = 0; i < Num; ++i)
 			State.m_SelectionPopupContext.m_vEntries.emplace_back(pStrs[i]);
 		State.m_SelectionPopupContext.m_Search.Update(State.m_SelectionPopupContext.m_vEntries, State.m_SelectionPopupContext.m_SearchInput.GetString());

@@ -181,7 +181,7 @@ namespace
 			pPopup->m_Editor.LeaveEditing();
 
 		CUiScopedSurfaceText SurfaceText(pPopup->m_pTextRender, Theme.m_Surface);
-		const ColorRGBA Foreground = ResolveConfiguredTextColor(Theme.m_Surface);
+		const ColorRGBA Foreground = ResolveConfiguredTextColor();
 		const ColorRGBA Muted = Foreground.WithMultipliedAlpha(0.62f);
 		const ColorRGBA ErrorColor = Theme.m_Accent;
 

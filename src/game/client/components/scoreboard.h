@@ -149,11 +149,13 @@ class CScoreboard : public CComponent
 	void RenderGoals(CUIRect Goals);
 	void RenderFooter(CUIRect Footer);
 	void RenderSpectators(CUIRect Spectators);
+	void RenderCursorHint(CUIRect Hint);
 	void RenderSoundMuteBar(CUIRect ScoreboardRect);
 	void RenderTeamModeIcons(float x, float y, float IconSize, const SQmScoreboardTeamModeState &State, float Alpha);
 	void UpdateTeamModeCache();
 	void BuildPlayerRowPlan(int Team, CScoreboardPlayerRowPlan &Plan);
-	void RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart, int CountEnd, const CScoreboardPlayerRowPlan &Plan, CScoreboardRenderState &State, bool Scroll = false);
+	// 分列绘制时用 NumPlayersForSize 固定行密度，短末列不能因实际人数少而放大字号。
+	void RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart, int CountEnd, const CScoreboardPlayerRowPlan &Plan, CScoreboardRenderState &State, bool Scroll = false, int NumPlayersForSize = -1);
 	void RenderRecordingNotification(float x);
 	static CUi::EPopupMenuFunctionResult PopupScoreboard(void *pContext, CUIRect View, bool Active);
 
@@ -273,6 +275,11 @@ class CScoreboard : public CComponent
 		char m_SpectatorSecondLineButtonId;
 	};
 	CPlayerElement m_aPlayers[MAX_CLIENTS];
+
+	// 完赛时间按「秒 + 小数」分块缓存：0.6 服务器带毫秒完赛数据时使用。
+	std::array<CCachedText, MAX_CLIENTS> m_aScoreSecondsText;
+	std::array<CCachedText, MAX_CLIENTS> m_aScoreMillisText;
+	std::array<char, MAX_CLIENTS> m_aScoreTooltipIds{};
 
 	// 本帧解析出的 Axiom 积分模式（NONE 表示当前服务器不是 Axiom 积分服）。
 	// 每帧在 OnRender 开头刷新一次，渲染期由 HasQmAxiomScoreMode / QmAxiomScorePoints 复用。

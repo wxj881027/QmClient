@@ -213,7 +213,10 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		// 高度按**过滤后**的整数行派生（RowsHeight）：胶囊行的行距是半档，
 		// 用行数×行高会少掉行间的缝；空结果不占高度，不留没有背景的空面板。
 		const int EntryRows = ui_token::list::VisibleRows((int)s_vFilteredEntries.size(), 1, 2, WarListViewportRows);
-		if(!Flow.Control("tclient-warlist-entries-list", ui_token::list::RowsHeight(EntryRows, ListRowHeight, ui_token::list::ROW_SPACING), EntriesList, RowSpacing))
+		// 容器内边距：测高处按 PaddedRowsHeight 计入上下两档留白，组件在内侧排版，
+		// 首/末行的胶囊不贴容器圆角。空结果不声明留白（0 行时留白只会多出一块空面板）。
+		const float EntryListPadding = s_vFilteredEntries.empty() ? 0.0f : ui_token::list::ContainerPadding(ListRowHeight);
+		if(!Flow.Control("tclient-warlist-entries-list", ui_token::list::PaddedRowsHeight(EntryRows, ListRowHeight, ui_token::list::ROW_SPACING, EntryListPadding), EntriesList, RowSpacing))
 			return;
 
 		int SelectedOldEntry = -1;
@@ -226,6 +229,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		// 胶囊行：行距、行内退、胶囊圆角与覆盖式滚动条统一走列表 token；
 		// 可见行数锁成外层声明的整数行，DoStart 的自适应高度才不会把末行裁一半。
 		EntriesListBox.SetCapsuleRows(StandardFontSize);
+		EntriesListBox.SetContainerPadding(EntryListPadding);
 		EntriesListBox.SetVisibleRowRange(EntryRows, EntryRows);
 		EntriesListBox.DoStart(ListRowHeight, s_vFilteredEntries.size(), 1, 2, SelectedOldEntry, &EntriesList);
 
@@ -487,7 +491,9 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		static CButtonContainer s_GroupColorPicker;
 		// 整数行派生高度：胶囊行的行距是半档，行数×行高会少掉行间的缝。
 		const int TypeRows = ui_token::list::VisibleRows((int)GameClient()->m_WarList.m_WarTypes.size(), 1, 2, WarListViewportRows);
-		if(Flow.Control("tclient-warlist-groups-list", ui_token::list::RowsHeight(TypeRows, ListRowHeight, ui_token::list::ROW_SPACING), WarTypeList, RowSpacing))
+		// 容器内边距与测高同源（PaddedRowsHeight）；空列表不声明留白。
+		const float WarTypeListPadding = TypeRows > 0 ? ui_token::list::ContainerPadding(ListRowHeight) : 0.0f;
+		if(Flow.Control("tclient-warlist-groups-list", ui_token::list::PaddedRowsHeight(TypeRows, ListRowHeight, ui_token::list::ROW_SPACING, WarTypeListPadding), WarTypeList, RowSpacing))
 		{
 			m_pRemoveWarType = nullptr;
 			int SelectedOldType = -1;
@@ -499,6 +505,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 			WarTypeListBox.SetWheelOwnerPriority(EUiWheelOwnerPriority::COMPOSITE_CONTROL);
 			// 与条目列表同一套胶囊行外观；可见行数锁成外层声明的整数行。
 			WarTypeListBox.SetCapsuleRows(StandardFontSize);
+			WarTypeListBox.SetContainerPadding(WarTypeListPadding);
 			WarTypeListBox.SetVisibleRowRange(TypeRows, TypeRows);
 			WarTypeListBox.DoStart(ListRowHeight, GameClient()->m_WarList.m_WarTypes.size(), 1, 2, SelectedOldType, &WarTypeList, true, IGraphics::CORNER_ALL);
 
@@ -740,7 +747,9 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 			}
 			// 空列表保留两行高度，让「没有匹配玩家」的提示有位置放。
 			const int PickRows = std::max(2, ui_token::list::VisibleRows((int)s_vPlayerPicks.size(), 1, 2, WarListViewportRows));
-			if(!Flow.Control("tclient-warlist-player-picks", ui_token::list::RowsHeight(PickRows, ListRowHeight, ui_token::list::ROW_SPACING), PlayerList, RowSpacing))
+			// 容器内边距与测高同源；没有可选玩家时不给留白，避免空面板上多出一圈内缩。
+			const float PickListPadding = s_vPlayerPicks.empty() ? 0.0f : ui_token::list::ContainerPadding(ListRowHeight);
+			if(!Flow.Control("tclient-warlist-player-picks", ui_token::list::PaddedRowsHeight(PickRows, ListRowHeight, ui_token::list::ROW_SPACING, PickListPadding), PlayerList, RowSpacing))
 				return;
 			static CListBox s_PickListBox;
 			static std::vector<unsigned char> s_vPickItemIds;
@@ -748,6 +757,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 			s_PickListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);
 			s_PickListBox.SetWheelOwnerPriority(EUiWheelOwnerPriority::COMPOSITE_CONTROL);
 			s_PickListBox.SetCapsuleRows(StandardFontSize);
+			s_PickListBox.SetContainerPadding(PickListPadding);
 			s_PickListBox.SetVisibleRowRange(2, WarListViewportRows);
 			s_PickListBox.DoStart(ListRowHeight, s_vPlayerPicks.size(), 1, 2, -1, &PlayerList, true, IGraphics::CORNER_ALL);
 			for(size_t PickIndex = 0; PickIndex < s_vPlayerPicks.size(); ++PickIndex)
@@ -809,9 +819,12 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		// 列表高度跟着实际人数收，空列表保留两行高度给「没有匹配玩家」的提示；
 		// 行高按胶囊行的整数行派生（含半档行距），末行才不会被裁。
 		const int PlayerRows = std::max(2, ui_token::list::VisibleRows((int)s_vFilteredPlayerIds.size(), 1, 2, WarListViewportRows));
-		if(!Flow.Control("tclient-warlist-players-list", ui_token::list::RowsHeight(PlayerRows, ListRowHeight, ui_token::list::ROW_SPACING), PlayerList, RowSpacing))
+		// 容器内边距与测高同源；没有在线玩家时不给留白，空面板保持原样。
+		const float PlayerListPadding = s_vFilteredPlayerIds.empty() ? 0.0f : ui_token::list::ContainerPadding(ListRowHeight);
+		if(!Flow.Control("tclient-warlist-players-list", ui_token::list::PaddedRowsHeight(PlayerRows, ListRowHeight, ui_token::list::ROW_SPACING, PlayerListPadding), PlayerList, RowSpacing))
 			return;
 		PlayerListBox.SetCapsuleRows(StandardFontSize);
+		PlayerListBox.SetContainerPadding(PlayerListPadding);
 		PlayerListBox.SetVisibleRowRange(2, WarListViewportRows);
 		PlayerListBox.DoStart(ListRowHeight, s_vFilteredPlayerIds.size(), 1, 2, -1, &PlayerList, true, IGraphics::CORNER_ALL);
 		if(s_vFilteredPlayerIds.empty())

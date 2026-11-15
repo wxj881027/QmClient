@@ -740,7 +740,7 @@ CEditorActionGroup::CEditorActionGroup(CEditorMap *pMap, int GroupIndex, bool De
 	if(m_Delete)
 		str_format(m_aDisplayText, sizeof(m_aDisplayText), Localize("Delete group %d", "Editor"), m_GroupIndex);
 	else
-		str_copy(m_aDisplayText, Localize("New group", "Editor"), sizeof(m_aDisplayText));
+		str_copy(m_aDisplayText, Localize("New group", "Editor"));
 }
 
 void CEditorActionGroup::Undo()

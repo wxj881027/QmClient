@@ -284,7 +284,6 @@ void CNetBan::Init(IConsole *pConsole, IStorage *pStorage)
 	net_host_lookup("localhost", &m_LocalhostIpV4, NETTYPE_IPV4);
 	net_host_lookup("localhost", &m_LocalhostIpV6, NETTYPE_IPV6);
 
-	Console()->Register("ban", "s[ip|id] ?i[minutes] r[reason]", CFGFLAG_SERVER | CFGFLAG_MASTER | CFGFLAG_STORE, ConBan, this, "Ban ip for x minutes for any reason");
 	Console()->Register("ban_range", "s[first ip] s[last ip] ?i[minutes] r[reason]", CFGFLAG_SERVER | CFGFLAG_MASTER | CFGFLAG_STORE, ConBanRange, this, "Ban ip range for x minutes for any reason");
 	Console()->Register("unban", "s[ip|entry]", CFGFLAG_SERVER | CFGFLAG_MASTER | CFGFLAG_STORE, ConUnban, this, "Unban ip/banlist entry");
 	Console()->Register("unban_range", "s[first ip] s[last ip]", CFGFLAG_SERVER | CFGFLAG_MASTER | CFGFLAG_STORE, ConUnbanRange, this, "Unban ip range");
@@ -602,7 +601,7 @@ void CNetBan::ConBansFind(IConsole::IResult *pResult, void *pUser)
 	if(Found)
 		str_format(aMsg, sizeof(aMsg), "%i ban records found.", Found);
 	else
-		str_copy(aMsg, "No ban records found.", sizeof(aMsg));
+		str_copy(aMsg, "No ban records found.");
 
 	pThis->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "net_ban", aMsg);
 }

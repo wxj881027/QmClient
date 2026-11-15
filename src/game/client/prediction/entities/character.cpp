@@ -543,8 +543,15 @@ void CCharacter::OnPredictedInput(const CNetObj_PlayerInput *pNewInput)
 		return;
 	}
 
-	// copy new input
+	// 旁观模式的输入不在瞄准坐标系内，保留上一个有效目标点。
+	const int PrevTargetX = m_Input.m_TargetX;
+	const int PrevTargetY = m_Input.m_TargetY;
 	mem_copy(&m_Input, pNewInput, sizeof(m_Input));
+	if(pNewInput->m_PlayerFlags & PLAYERFLAG_SPEC_CAM)
+	{
+		m_Input.m_TargetX = PrevTargetX;
+		m_Input.m_TargetY = PrevTargetY;
+	}
 
 	// it is not allowed to aim in the center
 	if(m_Input.m_TargetX == 0 && m_Input.m_TargetY == 0)
@@ -567,7 +574,14 @@ void CCharacter::OnDirectInput(const CNetObj_PlayerInput *pNewInput)
 
 	m_NumInputs++;
 	mem_copy(&m_LatestPrevInput, &m_LatestInput, sizeof(m_LatestInput));
+	const int PrevTargetX = m_LatestPrevInput.m_TargetX;
+	const int PrevTargetY = m_LatestPrevInput.m_TargetY;
 	mem_copy(&m_LatestInput, pNewInput, sizeof(m_LatestInput));
+	if(pNewInput->m_PlayerFlags & PLAYERFLAG_SPEC_CAM)
+	{
+		m_LatestInput.m_TargetX = PrevTargetX;
+		m_LatestInput.m_TargetY = PrevTargetY;
+	}
 
 	// it is not allowed to aim in the center
 	if(m_LatestInput.m_TargetX == 0 && m_LatestInput.m_TargetY == 0)

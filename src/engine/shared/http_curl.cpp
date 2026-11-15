@@ -826,7 +826,8 @@ void CHttpCurl::RunLoop()
 			{
 				curl_easy_cleanup(pEH);
 				str_copy(pRequest->m_aErr, "Failed to initialize request");
-				pRequest->OnCompletionInternal(nullptr, CURLE_ABORTED_BY_CALLBACK);
+				// 初始化失败不是用户取消，按失败上报给上层。
+				pRequest->OnCompletionInternal(nullptr, CURLE_FAILED_INIT);
 				NewRequests.pop_front();
 				continue;
 			}

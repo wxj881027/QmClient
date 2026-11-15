@@ -232,6 +232,9 @@
 '%s' locked your team. After the race starts, killing will kill everyone in your team.
 == '%s' 锁定了你们的队伍。比赛开始后，任何人使用 kill 都会导致整队死亡
 
+'%s' not bound.
+== '%s' not bound.
+
 '%s' unlocked your team.
 == '%s' 解锁了你们的队伍
 
@@ -635,6 +638,9 @@ Add one
 Add one shortcut per message; it is used when the target is on the list.
 == 每条消息添加一个快捷方式，只有目标在列表上时才会使用。
 
+Add options below
+== 在下方加入选项
+
 Add or edit entries, then use the bind in chat to send the text.
 == 添加或编辑条目，然后在聊天中使用对应绑定发送文字。
 
@@ -733,9 +739,6 @@ Adjust mouse sensitivity and cursor limits
 
 Adjust nameplate options and compare the preview.
 == 调整名字牌选项后与预览对比。
-
-Adjust one value at a time; corners and segments are drawn per frame, so large segment counts cost GPU time.
-== 一次只调整一个值；圆角和分段每帧都会绘制，分段数过高会占用 GPU 时间。
 
 Adjust opacity of entity layers
 == 调整各个实体层的透明度
@@ -958,21 +961,6 @@ Angry
 
 Angular gradient
 == 角度渐变
-
-Animate chat box, emote selector, scoreboard, and spectate selection
-== 聊天框、表情选择、计分板和观战选择的展示动画
-
-Animate lists when entering a page
-== 进入页面时播放列表动画
-
-Animate settings card expand and collapse height changes
-== 展开或折叠设置卡片时播放高度过渡动画
-
-Animate settings card lists when entering a page
-== 进入设置页面时播放卡片列表入场动画
-
-Animate settings card reorder and layout reflow
-== 拖动排序或布局重排时播放卡片位置过渡动画
 
 Animated title style id
 == 头衔动态风格 ID
@@ -1730,6 +1718,9 @@ Background stroke color
 Background stroke width
 == 背景描边宽度
 
+Background, border and title effects of the settings cards
+== 设置卡片的背景、边框与标题效果
+
 Badges are informational: a bind can chain several commands, and one command can be bound to several keys.
 == 徽标只是说明：一条绑定可以串多个命令，同一个命令也可以同时绑在别的键上。
 
@@ -1744,9 +1735,6 @@ Balanced (recommended)
 
 Ban a certain nickname
 == 禁止某个昵称
-
-Ban ip for x minutes for any reason
-== 按任意原因封禁 IP x 分钟
 
 Ban ip range for x minutes for any reason
 == 按任意原因封禁 IP 段 x 分钟
@@ -1765,6 +1753,12 @@ Ban reason for "sv_dnsbl_ban"
 
 Ban time after being voted kicked (in minutes, 0 = kick only, no ban)
 == 被投票踢出后的封禁时间（单位：分钟，0 为仅踢出不封禁）
+
+Bar
+== 竖线
+
+Bar: a thin vertical line between characters
+== 竖线：字符之间的一条细竖线
 
 Base path for HTTPS map download URLs to clients
 == 用于向客户端提供 HTTPS 地图下载 URL 的基本路径
@@ -1904,6 +1898,9 @@ Blink
 Blink the active local tee
 == 让当前本地角色闪烁
 
+Block
+== 方块
+
 Block client-initiated self-kill (K key / kill command)
 == 拦截客户端发起的自杀（K 键 / kill 命令）
 
@@ -1915,6 +1912,9 @@ Block votes from blacklisted addresses
 
 Block words
 == 屏蔽词
+
+Block: fills the character cell behind the next character
+== 方块：填充下一个字符所在的字符格
 
 Blue
 == 蓝色
@@ -2029,12 +2029,6 @@ Button - Disabled
 
 Button - Enabled
 == 按钮 - 已启用
-
-Button background color
-== 按钮背景颜色
-
-Button background opacity percentage
-== 按钮背景 — 不透明度百分比
 
 Button browser
 == 按键浏览器
@@ -2192,20 +2186,17 @@ Capture the flag
 Capture-the-flag event cue, used by CTF servers rather than ordinary DDNet racing.
 == 夺旗模式事件提示音，由 CTF 服务端使用，非常规 DDNet 竞速音效。
 
+Card effects
+== 卡片效果
+
 Card guide
 == 设置卡说明
-
-Card height animation
-== 设置卡片高度过渡动画
-
-Card list entry animation
-== 设置卡片列表入场动画
 
 Card opacity
 == 卡片不透明度
 
-Card reflow animation
-== 设置卡片重排动画
+Card shape is shared with the rest of the interface and lives in "Interface theme".
+== 卡片形状与界面其它部分共用，在「界面主题」里调整。
 
 Category
 == 分类
@@ -2486,8 +2477,8 @@ Choose export name first.
 Choose Logo (PNG / WebP)
 == 选择 Logo（PNG / WebP）
 
-Choose off, simple or full; the individual switches below only apply to full.
-== 可选择关闭、精简或完整；下方各个开关只在“完整”下生效。
+Choose off, reduced or full; this single switch drives every animation. Then pick a caret shape for the settings, console and chat input fields.
+== 选择关、精简或完整；所有动画都由这一个开关控制。再为设置页、控制台与聊天输入框挑选光标形状。
 
 Choose the language used by the client
 == 选择客户端使用的语言
@@ -2647,6 +2638,12 @@ Click a part on the right to edit its color, blend mode and strength.
 
 Click a row such as "HDF" or "Left jump", press the key you want, and use the trash icon to remove a bind.
 == 点一下 HDF 或左跳这类行，按下想用的键即可绑定；点旁边的垃圾桶图标可以清除这个绑定。
+
+Click a slice in the preview to change that option's color; options only exist within "Detection distance", so keep the wheel short.
+== 点击预览里的扇区可修改该选项的颜色；选项只在「检测距离」内生效，保持轮盘简短。
+
+Click a slice to set color
+== 点击扇区设置颜色
 
 Click again to find the next location.
 == 再次点击可查找下一个位置
@@ -3026,6 +3023,9 @@ Configure HUD island appearance
 Configure input helpers and cursor behavior
 == 配置输入辅助和光标行为
 
+Configure interface shape, theme, icons and animations
+== 配置界面形状、主题、图标与动画
+
 Configure keyboard, mouse, wheel, and modifier bindings
 == 配置键盘、鼠标、滚轮和修饰键绑定
 
@@ -3212,6 +3212,9 @@ Console command color
 Console font size
 == 控制台：字号
 
+Console line spacing
+== 控制台行距
+
 Console link color
 == 控制台：链接颜色
 
@@ -3260,6 +3263,12 @@ Continuous-curvature UI corners (0 = classic arc, 100 = strongest)
 Contributors
 == 贡献者
 
+Control background color
+== 控件背景颜色
+
+Control background opacity percentage
+== 控件背景不透明度百分比
+
 Control custom background drawing
 == 控制自定义背景绘制
 
@@ -3299,11 +3308,14 @@ Controls
 Controls demo recording and playback behavior.
 == 控制 demo 的录制与回放行为。
 
-Controls how UI surfaces are drawn: card surface opacity, border width, corner rounding, segment count and the rainbow title effect.
-== 控制界面表面的绘制方式：卡片表面不透明度、边框宽度、圆角、分段数和彩虹标题效果。
+Controls how the settings cards themselves are drawn: card background, border and the rainbow title effect.
+== 控制设置卡片自身的绘制：卡片背景、边框与标题彩虹流动效果。
 
 Controls laser shape, glow and animation.
 == 控制激光的形状、辉光与动画。
+
+Controls the shape and colors shared by the whole interface: corner curve, capsule ends, surfaces, accent, control and popup backgrounds, text color mode and blur.
+== 控制整个界面共用的形状与颜色：圆角曲线、胶囊端头、界面表面、强调色、控件与弹层背景、文本颜色模式与模糊。
 
 Controls what appears next to other players' names, such as clan tags, friend marks and client identifiers.
 == 控制其他玩家名字旁显示的内容，例如战队标签、好友标记和客户端标识。
@@ -3878,6 +3890,9 @@ Debug SQL.
 Debug tile layer clipping.
 == 调试图块图层裁剪
 
+Debug websockets
+== 调试 WebSocket
+
 Decides which skins the client downloads and lists, and can add a prefix to load prefixed skin variants.
 == 决定客户端下载并列出哪些皮肤，还可以加前缀来加载带前缀的皮肤变体。
 
@@ -4229,6 +4244,9 @@ Display mode
 Display modes
 == 显示模式
 
+Display options
+== 显示选项
+
 Display your race time
 == 显示你的比赛时间
 
@@ -4406,6 +4424,9 @@ Downloading %d%%
 Downloading map
 == 正在下载地图
 
+Downloading map %d%%
+== Downloading map %d%%
+
 Downloading rank 1 demo
 == 正在下载 Rank 1 演示
 
@@ -4439,6 +4460,12 @@ Drag HUD modules with the left mouse button
 Drag its bottom-right corner to resize. It is never compiled and never appears in the cfg.
 == 拖右下角改尺寸。它不参与编译，也不会出现在 cfg 里。
 
+Drag options here to hide them
+== 把选项拖到这里即可隐藏
+
+Drag options here to show them
+== 把选项拖到这里即可显示
+
 Drag the selected watermark to move it. The original image is preserved.
 == 拖动选中的水印可调整位置，原图会保留。
 
@@ -4453,6 +4480,9 @@ Drag to pan, scroll to zoom
 
 Drag to reorder; right-click or use the gear to manage
 == 拖动排序；右键或齿轮可管理分类
+
+Drag to the other list to show or hide this option
+== 拖到另一个列表即可显示或隐藏该选项
 
 Dragger Inner Color
 == 光索实心颜色
@@ -4625,6 +4655,9 @@ Dummy is allowed on this server.
 Dummy is currently connected.
 == 分身当前已连接。
 
+Dummy is not connected
+== Dummy is not connected
+
 Dummy jump
 == 分身跳
 
@@ -4762,6 +4795,9 @@ Echo follows the original chat color
 
 Echo text color when not inheriting chat color
 == Echo 不跟随聊天颜色时的文字颜色
+
+Echo the config value in chat window
+== 在聊天窗口回显该配置值
 
 Echo the text
 == 回显文本
@@ -4922,8 +4958,8 @@ Enable audio output and choose a device
 Enable backdrop blur
 == 启用背景模糊
 
-Enable backdrop blur for translucent interface and selected HUD backgrounds
-== 为半透明界面和指定 HUD 背景启用背景模糊
+Enable backdrop blur for translucent interface and all HUD backgrounds
+== 为半透明界面和所有 HUD 背景启用背景模糊
 
 Enable background 3D particle flicker
 == 启用背景 3D 粒子闪烁
@@ -5038,6 +5074,9 @@ Enable fast practice mode
 
 Enable fat skin
 == 启用肥胖皮肤
+
+Enable focus glow
+== 启用聚焦光晕
 
 Enable freeze call sound
 == 启用冻结呼叫声
@@ -5594,12 +5633,6 @@ Expand
 Expand console
 == 展开控制台
 
-Expanded dropdown background color
-== 展开列表背景颜色
-
-Expanded dropdown background opacity percentage
-== 展开列表背景 — 不透明度百分比
-
 Expanded personalization sections (format: stableId=1;stableId2=0;)
 == 已展开的个性化分区（格式：stableId=1;stableId2=0;）
 
@@ -5678,6 +5711,9 @@ Exported to %s
 Exporting chat images: %d
 == 正在导出聊天图片：%d
 
+Expose IP to servers by default when adding a favorite (last choice on the server info page)
+== 添加收藏时默认向该服务器暴露 IP（记住服务器信息页上的上次选择）
+
 Expose playback controls to the operating system
 == 向操作系统提供播放控制
 
@@ -5689,6 +5725,9 @@ External links open in the browser.
 
 External sites are not controlled by the client.
 == 外部网站不受客户端控制。
+
+Extra console log line spacing in pixels
+== Extra console log line spacing in pixels
 
 Extra vertical spacing between chat lines in pixels (0 = default)
 == 聊天行与行之间的额外垂直间距（像素）（0 = 默认）
@@ -5867,9 +5906,6 @@ Fastest encode, largest files
 Fat skins (DDFat)
 == 胖胖的皮肤（DDFat）
 
-Favorite
-== 收藏
-
 Favorite friend
 == 最喜欢的好友
 
@@ -5881,6 +5917,9 @@ Favorite map
 
 Favorite maps
 == 收藏地图
+
+Favorite server
+== 收藏服务器
 
 Favorites
 == 收藏夹
@@ -5923,6 +5962,9 @@ File for storing ranks if sv_use_sql is disabled or as backup SQL server.
 
 File information
 == 文件信息
+
+File to write the server's port to (used when running a server from the client)
+== File to write the server's port to (used when running a server from the client)
 
 File with announcements, one per line.
 == 包含公告的文件，每行一个
@@ -6356,8 +6398,8 @@ Full site set
 Full width
 == 全宽
 
-Full: each enabled animation category uses its complete transition
-== 完整：按下方各项开关播放完整过渡和展示动画
+Full: uses the complete transition everywhere
+== 完整：所有过渡使用完整时长
 
 Fullscreen
 == 独占全屏
@@ -6679,6 +6721,9 @@ Graphics mode
 
 Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
 == 图形模式：-1 = 使用后端设置，0 = 兼容性，1 = 性能（默认）
+
+Graphics settings sub-tab: 0=display, 1=visual effects
+== 图像设置子页签：0=显示，1=视觉效果
 
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
 == 图形跟踪级别：0 = 关闭，1 = 定期摘要，2 = 摘要和慢帧，3 = 详细后端跟踪
@@ -7055,6 +7100,9 @@ Hold gun higher like TW 0.6.1 and earlier
 Hold left click for free camera
 == 按住左键自由镜头
 
+Hold Shift to be more precise.
+== Hold Shift to be more precise.
+
 Hold still
 == 停住
 
@@ -7150,6 +7198,9 @@ Horizontal position
 
 Hostname of DNSBL provider for IP verification
 == 用于 IP 验证的 DNSBL 提供商的主机名
+
+Hover feedback style: 0 = scale, 1 = border highlight
+== Hover feedback style: 0 = scale, 1 = border highlight
 
 Hover for tooltip
 == 悬停显示提示
@@ -7382,6 +7433,9 @@ In DDNet, played when weapons are removed. Other modes may use it for armor pick
 In memory of me
 == 谨以此端，回忆我
 
+In pie menu
+== 饼菜单中
+
 In-game controller sensitivity
 == 游戏内控制器灵敏度
 
@@ -7523,12 +7577,6 @@ Ink: Paper Bloom
 Input
 == 输入
 
-Input background color
-== 输入框背景颜色
-
-Input background opacity percentage
-== 输入框背景 — 不透明度百分比
-
 Input device
 == 输入设备
 
@@ -7603,6 +7651,9 @@ Interface surface
 
 Interface surface color
 == 界面表面颜色
+
+Interface theme
+== 界面主题
 
 Interface transparency
 == 通用界面透明度
@@ -7909,9 +7960,6 @@ Key Sticking: On
 
 Key Sticking: Reset Self
 == 卡键：重置本体
-
-Keyboard focus ring color
-== 键盘焦点环颜色
 
 Keyboard size
 == 键盘大小
@@ -8732,6 +8780,9 @@ Map danger border
 Map data unavailable; server votes remain available
 == 地图数据暂不可用，仍可使用服务器投票
 
+Map download failed, click to retry
+== Map download failed, click to retry
+
 Map download send window
 == 地图下载发送窗口
 
@@ -8750,8 +8801,14 @@ Map name or path:
 Map not downloaded yet — join the server to preview it
 == 地图尚未下载，进入服务器下载后即可预览
 
+Map note
+== 地图备注
+
 Map play history
 == 地图游玩历史
+
+Map preview
+== 地图预览
 
 Map preview rendering unavailable
 == 当前无法渲染地图预览
@@ -9025,6 +9082,9 @@ Menu accent panel opacity
 
 Menu background
 == 菜单背景
+
+Menu button hover
+== Menu button hover
 
 Menu camera rotation radius
 == 菜单相机旋转半径
@@ -10037,6 +10097,9 @@ Not downloaded
 Not enabled
 == 未启用
 
+Not in pie menu
+== 未在饼菜单中
+
 Not installed
 == 未安装
 
@@ -10157,8 +10220,8 @@ occupied
 Off
 == 关
 
-Off: disables all interface animations while preserving the options below
-== 关闭：停用全部界面动画，但保留下面各项开关的设置
+Off: disables every interface animation
+== 关闭：停用全部界面动画
 
 Official
 == 官方
@@ -10397,9 +10460,6 @@ Opt-in protection for client-initiated self-kill, with optional auto-enable afte
 Optimistic prediction along stable direction
 == 沿稳定方向更乐观的预测
 
-Option color
-== 选项颜色
-
 Optional
 == 可选
 
@@ -10414,9 +10474,6 @@ Optional start and end time in seconds. Leave both empty to export the whole dem
 
 Options here affect networking or identity; test on a server before using them in matches.
 == 这里的选项会影响网络或身份；在对局中使用前请先在服务器上测试。
-
-Options only exist within "Detection distance"; turn off the ones you never use to keep the wheel short.
-== 选项只在检测距离内才有效；关掉从不使用的选项，轮盘会更短更好选。
 
 Or visit DDNet.org
 == 或访问 DDNet.org
@@ -10435,9 +10492,6 @@ Original message language
 
 Original only
 == 仅原文
-
-Original options
-== 原始选项
 
 Other
 == 其他
@@ -10468,6 +10522,9 @@ Outgoing language
 
 Outgoing translation target language code
 == 出站翻译目标语言代码
+
+Outline
+== Outline
 
 Outline global opacity
 == 轮廓全局透明度
@@ -10786,6 +10843,9 @@ Pick a shape, then tune glow and animation speed.
 
 Pick a slot, type the command and its label, then hold the wheel key in game to test.
 == 选一个槽位，输入指令和对应标签，再在游戏中按住轮盘键测试。
+
+Pick a text color mode first; the custom color row only appears for the custom mode.
+== 先选择文本颜色模式；自定义颜色行只在自定义模式下出现。
 
 Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
 == 逐行选择颜色；已认证和同战队颜色作用于计分板，两个列表颜色作用于好友列表。
@@ -11189,6 +11249,12 @@ Points unavailable
 Popup animation
 == 弹出动画
 
+Popup background color
+== 弹层背景颜色
+
+Popup background opacity percentage
+== 弹层背景不透明度百分比
+
 Port for client to server connection (0=random, >=1024 sets manual port)
 == 用于客户端连接到服务器的端口（0 选择随机端口，1024 或更高设置手动端口）
 
@@ -11260,6 +11326,12 @@ Practice mode enabled for your team, happy practicing!
 
 Practice mode is disabled
 == 本服务器已禁用练习模式
+
+Practice: teleport the other tee to your cursor
+== Practice: teleport the other tee to your cursor
+
+Practice: teleport yourself to your cursor
+== Practice: teleport yourself to your cursor
 
 Pre-warm settings page on startup and menu idle
 == 启动和菜单空闲时预热设置页
@@ -11348,9 +11420,6 @@ Preparing chat export: %d%%
 Preparing demo playback
 == 正在准备回放
 
-Presentation animations
-== 界面展示动画
-
 Preset %d
 == 预设 %d
 
@@ -11371,6 +11440,9 @@ Press "Save" after any change: the title and chat style are stored on your accou
 
 Press "Select map" to choose a file, check the target server and player shown for the upload, then press "Upload map"; "Cancel" stops it.
 == 按选择地图挑文件，核对上传显示的目标服务器与玩家，再按上传地图；取消可中止。
+
+Press '%s' to show cursor.
+== Press '%s' to show cursor.
 
 Press a key, do a command: drag from the right dot of one node to the left dot of the next. Double-click a node to edit it, right-click a link to delete it, Ctrl+Z to undo.
 == 按下某个键、执行某条指令：从一个节点右侧的圆点拖到下一个节点左侧的圆点即可连线。双击节点改内容，右键连线删除，Ctrl+Z 撤销。
@@ -12089,8 +12161,8 @@ Reduce visual latency
 Reduced
 == 精简
 
-Reduced: uses shorter transitions and disables presentation animations
-== 精简：保留更短的过渡效果，并停用展示动画
+Reduced: uses shorter transitions everywhere
+== 精简：所有过渡使用更短时长
 
 Reflected gradient
 == 对称渐变
@@ -12425,9 +12497,6 @@ Render tiny tees instead of circles
 Renderer performing the analysis
 == 执行分析的渲染器
 
-Rendering options
-== 渲染选项
-
 Rendering reads back 8-bit frames, so 10-bit formats add nothing by themselves; the gain comes from chroma density. If the encoder cannot do 4:4:4, the export fails with an error instead of reducing quality silently.
 == 渲染读回的是 8 位画面，所以换成 10 位格式本身不会多出细节；真正的收益来自色度密度。编码器不支持 4:4:4 时导出会直接报错，而不是偷偷降画质。
 
@@ -12596,9 +12665,6 @@ Reset chat completion appearance
 Reset chat on escape
 == 按退出键时重置聊天框
 
-Reset colors
-== 重置颜色
-
 Reset column widths
 == 重置列宽
 
@@ -12703,6 +12769,9 @@ Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects anoth
 
 Restore Kugou files
 == 恢复酷狗原始文件
+
+Restore legacy votes
+== 恢复旧版投票
 
 Restore old single-segment hook collision line behavior
 == 恢复旧版单段钩子辅助线行为
@@ -13109,15 +13178,6 @@ Scoreboard score lookup
 Scoreboard sort mode (0=Score, 1=Points)
 == 记分牌排序模式（0=分数，1=分）
 
-Scoreboard surface
-== 计分板表面
-
-Scoreboard surface color
-== 计分板表面颜色
-
-Scoreboard transparency
-== 计分板透明度
-
 Scoreboard, chat, spectating
 == 计分板、聊天、观战
 
@@ -13259,12 +13319,6 @@ Sec-WebSocket-Protocol sent during the realtime handshake
 Secondary
 == 次要
 
-Secondary menu background color
-== 二级菜单背景颜色
-
-Secondary menu background opacity percentage
-== 二级菜单背景 — 不透明度百分比
-
 Seconds to wait before reconnecting (0=off, when server is full)
 == 重新连接前等待多少秒（服务器已满时，0 表示关闭）
 
@@ -13291,9 +13345,6 @@ Select a configuration package to preview its contents.
 
 Select a map
 == 选择一张地图
-
-Select a player to manage
-== 选择玩家以查看和管理
 
 Select a preset, then apply it to player or dummy
 == 先选择预设，再应用到本体或分身
@@ -13327,9 +13378,6 @@ Selected %d
 
 Selected candidate %d/%d under cursor.
 == 已选中光标下的候选项 %d/%d。
-
-Selected item color
-== 选中项颜色
 
 Selected node
 == 选中节点
@@ -13577,9 +13625,6 @@ Set camera position relative to current view in the map
 Set camera position to x and y in the map
 == 将相机位置设置为地图中的 x 和 y
 
-Set color
-== 设置颜色
-
 Set current demo speed
 == 设置当前回放速度
 
@@ -13637,8 +13682,8 @@ Sets chat position, width, font size and visibility.
 Sets encoder, container and quality in one step: Daily is H.264 + MP4, High quality is HEVC + MP4 at a smaller size, Editing is all-intra H.264 + MP4 with instant seeking, and Exchange is ProRes 422 HQ + MOV for other editors.
 == 一次配好编码器、容器和画质：日常分享是 H.264 + MP4，高画质是体积更小的 HEVC + MP4，剪辑是全帧内 H.264 + MP4（任意位置都能瞬间定位），交换格式是给别的剪辑软件用的 ProRes 422 HQ + MOV。
 
-Sets how much motion the interface plays: transitions, card entrance, reorder animations and scroll feel.
-== 设置界面的动效强度：过渡、卡片进入、重排动画和滚动手感。
+Sets how much motion the interface plays (transitions, card entrance, reorder animations, scroll feel) and the shape of the text caret in every input field.
+== 设置界面的动效强度（过渡、卡片入场、重排动画、滚动手感），以及每个输入框的光标形状。
 
 Sets laser colors for weapons and entities.
 == 设置武器与实体的激光颜色。
@@ -13717,6 +13762,9 @@ Severe
 
 Shape
 == 形状
+
+Shape, colors and text shared by the whole interface
+== 整个界面共用的形状、颜色与文字
 
 Share of the server browser name/map split given to the name column (per mille)
 == 服务器浏览器名称/地图分栏中分配给名称列的千分比
@@ -13798,6 +13846,9 @@ Show all votes (page 0 by default, 20 entries per page)
 
 Show all warlist groups
 == 显示所有敌对群组
+
+Show an accent glow around the focused input field
+== 为聚焦的输入框显示强调色光晕
 
 Show any enabled Indicators
 == 开启玩家指示器
@@ -14558,6 +14609,9 @@ Show server prompts and Echo messages as popups
 Show server settings
 == 查看服务器设置列表
 
+Show server uptime
+== 显示服务器运行时长
+
 Show server-side tees as ghosts during fast practice
 == 快速练习中把服务器侧的 Tee 显示为影子
 
@@ -14839,9 +14893,6 @@ Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dyn
 
 Shows the bind wheel layout and which slot is currently selected.
 == 显示绑定轮盘的布局，以及当前选中的槽位。
-
-Shows the credits of the DDNet mod
-== 显示 DDNet mod 的制作人员
 
 Shows the current song's lyric line in the Dynamic Island and lets you pick which music app supplies it.
 == 在 Dynamic Island 中显示当前歌曲的歌词，并可选择由哪个音乐应用提供。
@@ -15674,6 +15725,9 @@ Successfully saved the replay!
 Sudden Death
 == 决胜
 
+Suggested tags:
+== 建议标签：
+
 Suicides
 == 自杀数
 
@@ -16094,6 +16148,9 @@ Teleport back to the practice respawn point
 Teleport back to the practice respawn point and restore the tee state saved there. Only the tee is restored; the world keeps running.
 == 传送回练习重生点，并恢复在那里保存的 Tee 状态。只回滚 Tee，世界照常运行。
 
+Teleport dummy to cursor
+== Teleport dummy to cursor
+
 Teleport free spectator camera between hovered tele-in/out or checkpoint tele and a matching counterpart
 == 在悬停的传送入口/出口或检查点传送点与其对应点之间传送自由观战镜头
 
@@ -16205,17 +16262,23 @@ Text alpha
 Text before each key press count
 == 按键计数前缀文字
 
+Text caret style
+== 输入光标样式
+
+Text caret style: 0=bar, 1=underscore, 2=block
+== 输入光标样式：0=竖线，1=下划线，2=方块
+
 Text color
 == 文本颜色
 
 Text color mode
 == 文本颜色模式
 
-Text color mode: 0 automatic, 1 white, 2 black, 3 custom
-== 文本颜色模式：0 自动，1 白色，2 黑色，3 自定义
+Text color mode: 0 white, 1 black, 2 rainbow, 3 custom
+== 文本颜色模式：0=白色，1=黑色，2=彩虹，3=自定义
 
-Text input focus ring color
-== 文本输入焦点环颜色
+Text follows the chosen mode instead of the surface, so a light surface with white text is unreadable by design.
+== 文字跟随所选模式而不是表面色，因此浅色表面配白字在设计上就是不可读的。
 
 Text is too long for the selected translation service.
 == 文本超过所选翻译服务的长度限制。
@@ -16406,8 +16469,8 @@ This connection cannot change names while connected. Reconnect with the saved na
 This ID is not connected
 == 该 ID 未连接
 
-This is the master switch for all interface animation categories
-== 这是所有界面动画类别的总开关
+This is the master switch for all interface animations
+== 这是所有界面动画的总开关
 
 This map path cannot be used.
 == 这个地图路径不能使用。
@@ -17072,8 +17135,8 @@ Tune variable to value
 Tune variable to value or show current value
 == 将变量调到指定值，或显示当前值
 
-Turn motion off on weaker machines; cards then open and scroll immediately.
-== 配置较低的机器请关闭动效；卡片便会立即打开和滚动。
+Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
+== 机器较弱时关掉动效，卡片会立刻展开、滚动手感也随之关闭。光标形状只是外观：三种样式都占同一个字符格。
 
 Turn off "Show main-world ghost" to hide every Tee from the server, other players included; while it is on, the opacity slider sets how visible they are. The bind rows send the same commands as the practice menu, so a bound key needs no chat box.
 == 关闭“显示主世界影子”会隐藏所有来自服务器的 Tee（包括其他玩家）；保持开启时，不透明度滑杆决定它们有多显眼。绑定行发送的指令与练习菜单一致，按键触发无需打开聊天框。
@@ -17102,8 +17165,8 @@ Turn on "Enable dummy window", then set "Dummy window size" and "Dummy window zo
 Turn on "Enable Gores mode" or let "Auto enable in Gores mode" do it, pick options like "Auto weapon switch", and bind "Gores mode key".
 == 打开启用 Gores 模式，或让在 Gores 模式中自动启用代劳，选择自动切换武器等选项，再绑定 Gores 模式按键。
 
-Turn on "Enable pie menu", bind the "Pie menu" command on the Bind page, then hold that key near a player and release on an option.
-== 打开启用轮盘菜单，在按键绑定页把轮盘菜单命令绑到一个键，然后在玩家旁边按住该键、在选项上松开。
+Turn on "Enable pie menu", bind the "Pie menu" command on the Bind page, then hold that key near a player and release on an option. Drag options between the two lists to show or hide them.
+== 打开「启用饼菜单」，在「绑定」页绑定「饼菜单」指令，然后靠近玩家按住该键，并在某个选项上松开。拖动选项可在两个列表之间显示或隐藏。
 
 Turn on "Enable rotation", set "Switch interval" in milliseconds, then add skins with the plus icon in the skin list; "Random skin on map join" picks the start.
 == 打开启用轮换并把切换间隔设成毫秒数，然后在皮肤列表里用加号图标加入皮肤；进入地图时随机皮肤决定从哪里开始。
@@ -17347,6 +17410,12 @@ Uncertainty duration
 
 Unclassified audio issue
 == 音频异常未分类
+
+Underscore
+== 下划线
+
+Underscore: a line under the character that follows
+== 下划线：画在下一个字符下方的一条线
 
 Undo
 == 撤销
@@ -17756,9 +17825,6 @@ Use warlist colors instead of regular colors
 Use warlist groups for indicator
 == 使用敌对列表作为指示器
 
-Used by active shared text and numeric input fields
-== 用于已激活的共享文本与数值输入框
-
 User
 == 自建
 
@@ -17840,8 +17906,8 @@ Very high quality, very slow
 Very long kaomoji are split by the chat length limit.
 == 过长的颜文字会因聊天长度上限被拆分发送。
 
-Very thick borders or high segment counts make text look blurry; keep them near the defaults.
-== 边框过粗或分段数过高会让文字显得模糊；请尽量让这些值接近默认值。
+Very thick borders make text look blurry; keep them near the defaults.
+== 边框太粗会让文字显得模糊；请保持在默认值附近。
 
 Video Background
 == 视频背景
@@ -22729,8 +22795,12 @@ Use left mouse button to paint with the brush. Right click to clear the brush. H
 == 使用鼠标左键用画笔绘制。右键清空画笔。按住 Alt 将鼠标移动锁定到单轴。
 
 [Editor]
-Use shift+mouse wheel up/down to adjust the tele numbers. Use ctrl+f to change all tele numbers to the first unused number.
-== 使用 Shift+鼠标滚轮上下调整传送编号。使用 Ctrl+F 将所有传送编号改为首个未使用编号。
+Use Shift+Mouse wheel up/down to adjust the angle.
+== Use Shift+Mouse wheel up/down to adjust the angle.
+
+[Editor]
+Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
+== Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
 
 [Editor]
 Value:

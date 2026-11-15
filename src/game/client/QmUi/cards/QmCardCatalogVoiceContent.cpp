@@ -390,7 +390,7 @@ void CMenus::RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMet
 		{
 			const SSettingsFoldRowStyle VoiceAdvancedFoldStyle = ResolveSettingsFoldRowStyle(
 				SettingsCardDeckVisualOptions().m_BorderColor,
-				color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(1.0f));
+				ResolveConfiguredAccentColor().WithAlpha(1.0f));
 			// 原来的复选框（控件 text id 仍是 "Advanced options"）换成整行可点的折叠行：
 			// 暗沉小字 + 右侧 chevron，展开/收起由 chevron 表达，不再是一枚开关。
 			const bool VoiceAdvancedClicked = SettingsFoldRow(Ui(), &s_VoiceAdvancedFoldRowButton, VoiceAdvancedFoldRow, Localize("Personal adjustments"), Metrics.m_SmallSize, g_Config.m_QmVoiceShowAdvanced != 0, VoiceAdvancedFoldStyle);
@@ -492,7 +492,7 @@ void CMenus::RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMet
 				if(s_VoiceInputDeviceEntries.empty())
 				{
 					DoQmSettingsLabel("qmclient-voice-input-default", &VoiceInputDropDownRect, Localize("Default"), BodySize);
-					DoQmSettingsIconButton(&s_VoiceInputRefreshButton, "qmclient-voice-input-refresh", EQmIcon::ARROW_ROTATE_RIGHT, "\xEE\x80\xB6", Localize("Refresh"), &VoiceInputRefreshButton);
+					DoQmSettingsIconButton(&s_VoiceInputRefreshButton, "qmclient-voice-input-refresh", EQmIcon::ARROW_ROTATE_RIGHT, FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT, Localize("Refresh"), &VoiceInputRefreshButton);
 				}
 				else
 				{
@@ -500,7 +500,7 @@ void CMenus::RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMet
 					const int VoiceInputSelectedNew = DoSettingsDropDown(&VoiceInputDropDownRect, VoiceInputSelectedOld, s_VoiceInputDeviceDropDownNames.data(), s_VoiceInputDeviceDropDownNames.size(), s_VoiceInputDeviceDropDownState, {}, g_Config.m_QmVoiceInputDevice, nullptr, &Row);
 					if(Flow.Input() && !ReadOnly && VoiceInputSelectedNew >= 0 && VoiceInputSelectedNew != VoiceInputSelectedOld && (size_t)VoiceInputSelectedNew < s_VoiceInputDeviceConfigValues.size())
 						str_copy(g_Config.m_QmVoiceInputDevice, s_VoiceInputDeviceConfigValues[VoiceInputSelectedNew].c_str(), sizeof(g_Config.m_QmVoiceInputDevice));
-					if(DoQmSettingsIconButton(&s_VoiceInputRefreshButton, "qmclient-voice-input-refresh", EQmIcon::ARROW_ROTATE_RIGHT, "\xEE\x80\xB6", Localize("Refresh"), &VoiceInputRefreshButton) && Flow.Input() && !ReadOnly)
+					if(DoQmSettingsIconButton(&s_VoiceInputRefreshButton, "qmclient-voice-input-refresh", EQmIcon::ARROW_ROTATE_RIGHT, FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT, Localize("Refresh"), &VoiceInputRefreshButton) && Flow.Input() && !ReadOnly)
 						RefreshVoiceInputDeviceList();
 				}
 			}
@@ -560,7 +560,7 @@ void CMenus::RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMet
 				if(s_VoiceOutputDeviceEntries.empty())
 				{
 					DoQmSettingsLabel("qmclient-voice-output-default", &VoiceOutputDropDownRect, Localize("Default"), BodySize);
-					DoQmSettingsIconButton(&s_VoiceOutputRefreshButton, "qmclient-voice-output-refresh", EQmIcon::ARROW_ROTATE_RIGHT, "\xEE\x80\xB6", Localize("Refresh"), &VoiceOutputRefreshButton);
+					DoQmSettingsIconButton(&s_VoiceOutputRefreshButton, "qmclient-voice-output-refresh", EQmIcon::ARROW_ROTATE_RIGHT, FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT, Localize("Refresh"), &VoiceOutputRefreshButton);
 				}
 				else
 				{
@@ -568,7 +568,7 @@ void CMenus::RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMet
 					const int VoiceOutputSelectedNew = DoSettingsDropDown(&VoiceOutputDropDownRect, VoiceOutputSelectedOld, s_VoiceOutputDeviceDropDownNames.data(), s_VoiceOutputDeviceDropDownNames.size(), s_VoiceOutputDeviceDropDownState, {}, g_Config.m_QmVoiceOutputDevice, nullptr, &Row);
 					if(Flow.Input() && !ReadOnly && VoiceOutputSelectedNew >= 0 && VoiceOutputSelectedNew != VoiceOutputSelectedOld && (size_t)VoiceOutputSelectedNew < s_VoiceOutputDeviceConfigValues.size())
 						str_copy(g_Config.m_QmVoiceOutputDevice, s_VoiceOutputDeviceConfigValues[VoiceOutputSelectedNew].c_str(), sizeof(g_Config.m_QmVoiceOutputDevice));
-					if(DoQmSettingsIconButton(&s_VoiceOutputRefreshButton, "qmclient-voice-output-refresh", EQmIcon::ARROW_ROTATE_RIGHT, "\xEE\x80\xB6", Localize("Refresh"), &VoiceOutputRefreshButton) && Flow.Input() && !ReadOnly)
+					if(DoQmSettingsIconButton(&s_VoiceOutputRefreshButton, "qmclient-voice-output-refresh", EQmIcon::ARROW_ROTATE_RIGHT, FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT, Localize("Refresh"), &VoiceOutputRefreshButton) && Flow.Input() && !ReadOnly)
 						RefreshVoiceOutputDeviceList();
 				}
 			}

@@ -46,6 +46,25 @@ namespace qm_ui_test
 			ColorRGBA m_OutlineColor;
 		};
 		std::vector<STextSubmission> m_vTextSubmissions;
+		// 文字缓冲默认开启，其他测试观察到的设备提交与后端行为保持不变；
+		// 关掉后引擎改走逐字符上色的回退分支（text.cpp 的逐 quad 填充），
+		// 于是每个字形的最终填充色会经 ChangeColorOfQuadVertices 暴露出来。
+		bool m_TextBuffering = true;
+		bool IsTextBufferingEnabled() override { return m_TextBuffering; }
+		struct SQuadVertexColor
+		{
+			size_t m_QuadOffset;
+			unsigned char m_r;
+			unsigned char m_g;
+			unsigned char m_b;
+			unsigned char m_a;
+		};
+		std::vector<SQuadVertexColor> m_vQuadVertexColors;
+		// 逐字填充色是「容器顶点色 × 绘制 tint」，只有关掉缓冲才能观察到。
+		void ChangeColorOfQuadVertices(size_t QuadOffset, unsigned char r, unsigned char g, unsigned char b, unsigned char a) override
+		{
+			m_vQuadVertexColors.push_back({QuadOffset, r, g, b, a});
+		}
 		void RenderText(int BufferContainerIndex, int TextQuadNum, int TextureSize, CTextureHandle TextTexture, CTextureHandle TextOutlineTexture, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor) override
 		{
 			CIconBenchmarkGraphics::RenderText(BufferContainerIndex, TextQuadNum, TextureSize, TextTexture, TextOutlineTexture, TextColor, TextOutlineColor);
@@ -103,6 +122,8 @@ namespace qm_ui_test
 		// 采样边界只是设备状态：色环纹理需要 clamp，由真实后端生效，测试不关心。
 		void WrapClamp() override {}
 		void WrapNormal() override {}
+		// 引擎接口新增的纹理目标标志：测试桩不加载真实纹理，统一返回 0（不启用数组/3D 目标）。
+		int TextureLoadFlags() override { return 0; }
 		void QuadsDrawTL(const CQuadItem *, int Num) override
 		{
 			++m_Draws;
@@ -116,7 +137,7 @@ namespace qm_ui_test
 			m_QuadCounts.emplace(Id, 0);
 			return Id;
 		}
-		int QuadContainerAddQuads(int ContainerIndex, CQuadItem *, int Num) override
+		int QuadContainerAddQuads(int ContainerIndex, const CQuadItem *, int Num) override
 		{
 			int &Count = m_QuadCounts.at(ContainerIndex);
 			const int Offset = Count;

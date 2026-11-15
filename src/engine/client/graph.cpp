@@ -114,7 +114,8 @@ void CGraph::Scale(int64_t WantedTotalTime)
 		{
 			m_MaxValue = Value;
 		}
-		else if(Value < m_MinValue)
+		// 单调上升时最大值与最小值可能出现在同一个采样，两个判断必须独立。
+		if(Value < m_MinValue)
 		{
 			m_MinValue = Value;
 		}

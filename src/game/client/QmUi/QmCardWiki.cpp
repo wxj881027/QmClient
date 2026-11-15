@@ -245,6 +245,12 @@ namespace
 			Localizable("Results include cards on other pages; the tab switches automatically."),
 		},
 		{
+			"deck:graphics-card-effects",
+			Localizable("Controls how the settings cards themselves are drawn: card background, border and the rainbow title effect."),
+			Localizable("Card shape is shared with the rest of the interface and lives in \"Interface theme\"."),
+			Localizable("Very thick borders make text look blurry; keep them near the defaults."),
+		},
+		{
 			"deck:graphics-display",
 			Localizable("Chooses windowed or fullscreen mode, the monitor and the resolution; switching recreates the swap chain, so the screen may flash briefly."),
 			Localizable("Pick the mode first, then the monitor and resolution; the refresh rate follows the monitor's current mode."),
@@ -258,9 +264,9 @@ namespace
 		},
 		{
 			"deck:graphics-interaction",
-			Localizable("Sets how much motion the interface plays: transitions, card entrance, reorder animations and scroll feel."),
-			Localizable("Choose off, simple or full; the individual switches below only apply to full."),
-			Localizable("Turn motion off on weaker machines; cards then open and scroll immediately."),
+			Localizable("Sets how much motion the interface plays (transitions, card entrance, reorder animations, scroll feel) and the shape of the text caret in every input field."),
+			Localizable("Choose off, reduced or full; this single switch drives every animation. Then pick a caret shape for the settings, console and chat input fields."),
+			Localizable("Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell."),
 		},
 		{
 			"deck:graphics-modes",
@@ -269,10 +275,10 @@ namespace
 			Localizable("Unusual refresh rates can cause tearing; prefer the monitor's native rate."),
 		},
 		{
-			"deck:graphics-visual",
-			Localizable("Controls how UI surfaces are drawn: card surface opacity, border width, corner rounding, segment count and the rainbow title effect."),
-			Localizable("Adjust one value at a time; corners and segments are drawn per frame, so large segment counts cost GPU time."),
-			Localizable("Very thick borders or high segment counts make text look blurry; keep them near the defaults."),
+			"deck:graphics-theme",
+			Localizable("Controls the shape and colors shared by the whole interface: corner curve, capsule ends, surfaces, accent, control and popup backgrounds, text color mode and blur."),
+			Localizable("Pick a text color mode first; the custom color row only appears for the custom mode."),
+			Localizable("Text follows the chosen mode instead of the surface, so a light surface with white text is unreadable by design."),
 		},
 		{
 			"deck:player-country",
@@ -643,8 +649,8 @@ namespace
 		{
 			"qm:pie_menu",
 			Localizable("A radial menu that opens near a player and offers quick actions such as whisper, spectate or copy skin."),
-			Localizable("Turn on \"Enable pie menu\", bind the \"Pie menu\" command on the Bind page, then hold that key near a player and release on an option."),
-			Localizable("Options only exist within \"Detection distance\"; turn off the ones you never use to keep the wheel short."),
+			Localizable("Turn on \"Enable pie menu\", bind the \"Pie menu\" command on the Bind page, then hold that key near a player and release on an option. Drag options between the two lists to show or hide them."),
+			Localizable("Click a slice in the preview to change that option's color; options only exist within \"Detection distance\", so keep the wheel short."),
 		},
 		{
 			"qm:player_stats",

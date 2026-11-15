@@ -60,7 +60,7 @@ namespace
 			m_vCreatedContainers.push_back(Id);
 			return Id;
 		}
-		int QuadContainerAddQuads(int Id, CFreeformItem *, int Num) override
+		int QuadContainerAddQuads(int Id, const CFreeformItem *, int Num) override
 		{
 			const int Offset = m_Containers.at(Id);
 			m_Containers.at(Id) += Num;

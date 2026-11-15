@@ -808,6 +808,9 @@ void CMenusIngameTouchControls::RenderTouchButtonBrowser(CUIRect MainView)
 	// 胶囊行先开：表头让位与行内退都从它派生。RowReserveWidth() 由 token 直接算，
 	// 不依赖上一帧解析出的滚动条宽度，表头与行胶囊右缘因此是同一条公式。
 	s_PreviewListBox.SetCapsuleRows(15.0f);
+	// 容器内边距：行区在面板四边内缩，档位按做行的行高（ROWSIZE，与 DoStart 同一个数）
+	// 派生；可见行数仍按可用高度反推，组件为保行数只把留白收敛到富余的那一段。
+	s_PreviewListBox.SetContainerPadding(ui_token::list::ContainerPadding(ROWSIZE));
 	// 表头行给滚动条让位：与行右侧让出的宽度同源。
 	const float PreviewListScrollbarReserve = s_PreviewListBox.RowReserveWidth();
 	EditBox.VSplitRight(PreviewListScrollbarReserve, &EditBox, nullptr);
@@ -1626,6 +1629,13 @@ std::string CMenusIngameTouchControls::CBehaviorElements::ParseLabel(const char 
 	json_value *pJsonLabel = JsonParseEx(&JsonSettings, aJsonString, str_length(aJsonString), aError);
 	if(pJsonLabel == nullptr)
 	{
+		return pLabel;
+	}
+	if(pJsonLabel->type != json_string)
+	{
+		// 解析成功但不是字符串说明上游 JSON 生成有误，退回原始标签而不是读错联合体。
+		dbg_assert(pJsonLabel->type == json_string, "Parsed label must be string");
+		json_value_free(pJsonLabel);
 		return pLabel;
 	}
 	std::string ParsedString = pJsonLabel->u.string.ptr;

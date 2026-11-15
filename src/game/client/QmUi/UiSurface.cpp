@@ -3,6 +3,7 @@
 #include "UiSurface.h"
 
 #include "QmColorGradient.h"
+#include "UiTokens.h"
 
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
@@ -125,6 +126,10 @@ bool DrawRoundedSurface(IGraphics *pGraphics, const CUIRect &Rect, const ColorRG
 		SdfParams.m_BorderColor = vec4(ResolvedBorder.r, ResolvedBorder.g, ResolvedBorder.b, ResolvedBorder.a);
 		SdfParams.m_CornerRadii = Plan.m_CornerRadii;
 		SdfParams.m_Params = vec4(Plan.m_BorderWidth, Plan.m_PixelSize, Plan.m_PixelSize * 2.0f, 0.0f);
+		// 单色表面同样支持「只描边」与带宽羽化：光晕不需要渐变，只靠这两项把环带
+		// 铺成向外淡出的晕。字段语义与渐变路径完全一致，调用点不另开一条绘制链。
+		SdfParams.m_GradientParams2.y = Params.m_BorderOnly ? 1.0f : 0.0f;
+		SdfParams.m_GradientParams2.z = std::max(0.0f, Params.m_BorderFalloff);
 		SdfParams.m_GradientParams2.w = CornerSmoothing();
 		SdfParams.m_ShapeParams = vec4(CornerCurveType(), CapsuleSeam(), 0.0f, 0.0f);
 		SdfParams.m_TextureParams1.w = Plan.m_Expand;
@@ -134,22 +139,22 @@ bool DrawRoundedSurface(IGraphics *pGraphics, const CUIRect &Rect, const ColorRG
 
 	if(!Params.m_AlignToPixel)
 	{
-		DrawSubpixelRoundedSurface(pGraphics, Plan, Fill, Border, Params.m_Corners);
+		DrawSubpixelRoundedSurface(pGraphics, Plan, Fill, Border, ResolveRoundedSurfaceCorners(Params.m_Radius, Params.m_Corners));
 		return true;
 	}
 
 	if(Plan.m_BorderWidth <= 0.0f)
 	{
-		pGraphics->DrawRect(Plan.m_Rect.x, Plan.m_Rect.y, Plan.m_Rect.w, Plan.m_Rect.h, Fill, Params.m_Corners, Plan.m_Radius);
+		pGraphics->DrawRect(Plan.m_Rect.x, Plan.m_Rect.y, Plan.m_Rect.w, Plan.m_Rect.h, Fill, ResolveRoundedSurfaceCorners(Params.m_Radius, Params.m_Corners), Plan.m_Radius);
 		return true;
 	}
 
 	CUIRect Inner = Plan.m_Rect;
 	Inner.Margin(Plan.m_BorderWidth, &Inner);
 	if(Inner.w > 0.0f && Inner.h > 0.0f)
-		pGraphics->DrawRect(Inner.x, Inner.y, Inner.w, Inner.h, Fill, Params.m_Corners, std::max(0.0f, Plan.m_Radius - Plan.m_BorderWidth));
+		pGraphics->DrawRect(Inner.x, Inner.y, Inner.w, Inner.h, Fill, ResolveRoundedSurfaceCorners(Params.m_Radius, Params.m_Corners), std::max(0.0f, Plan.m_Radius - Plan.m_BorderWidth));
 	// 边框仅覆盖环带；整块边框垫底会透过半透明填色污染输入框内部。
-	DrawRoundedSurfaceBorder(pGraphics, Plan, Border, Params.m_Corners);
+	DrawRoundedSurfaceBorder(pGraphics, Plan, Border, ResolveRoundedSurfaceCorners(Params.m_Radius, Params.m_Corners));
 	return true;
 }
 
@@ -234,6 +239,64 @@ bool DrawRoundedSurface(const IUiContext &Ctx, const CUIRect &Rect, const ColorR
 	return DrawRoundedSurface(Ctx.m_pUi, Rect, Fill, Border, Params);
 }
 
+bool DrawRoundedSurfaceGlow(IGraphics *pGraphics, const CUIRect &Rect, const ColorRGBA &Color, const SRoundedGlowParams &Params)
+{
+	if(pGraphics == nullptr || Rect.w <= 0.0f || Rect.h <= 0.0f || Params.m_Spread <= 0.0f || Color.a <= 0.004f)
+		return false;
+
+	if(pGraphics->HasRoundedRectSdf())
+	{
+		// 一条连续的衰减带：形状按距离场向外偏移 m_Spread，带宽同为 m_Spread，
+		// 于是零等值线落回外壳边缘，整个环带都在外壳之外，从边缘向外淡出。
+		SRoundedSurfaceParams SurfaceParams;
+		SurfaceParams.m_Radius = Params.m_Radius;
+		SurfaceParams.m_ShapeExpand = Params.m_Spread;
+		SurfaceParams.m_BorderWidth = Params.m_Spread;
+		SurfaceParams.m_BorderOnly = true;
+		SurfaceParams.m_BorderFalloff = std::max(Params.m_Falloff, 0.05f);
+		SurfaceParams.m_Corners = Params.m_Corners;
+		SurfaceParams.m_PixelSize = Params.m_PixelSize > 0.0f ? Params.m_PixelSize : 1.0f;
+		return DrawRoundedSurface(pGraphics, Rect, ui_token::color::COLOR_TRANSPARENT, Color, SurfaceParams);
+	}
+
+	// 几何回退没有带宽内的连续羽化，只能用几道等距、逐层变淡的窄环近似「向外扩散」。
+	// 环宽压到一像素：带宽稍宽一点就会读成实心光圈，而不是晕。层序从外到内，
+	// 越靠内越亮，和 SDF 分支边缘最强、向外渐弱的方向一致。
+	bool Any = false;
+	constexpr int GLOW_FALLBACK_LAYERS = 3;
+	const float PixelSize = std::max(Params.m_PixelSize > 0.0f ? Params.m_PixelSize : 1.0f, 0.0001f);
+	for(int i = GLOW_FALLBACK_LAYERS; i >= 1; --i)
+	{
+		const float Offset = Params.m_Spread * static_cast<float>(i) / static_cast<float>(GLOW_FALLBACK_LAYERS);
+		const CUIRect LayerRect{Rect.x - Offset, Rect.y - Offset, Rect.w + Offset * 2.0f, Rect.h + Offset * 2.0f};
+		SRoundedSurfaceParams RingParams;
+		RingParams.m_Radius = Params.m_Radius + Offset;
+		RingParams.m_BorderWidth = PixelSize;
+		RingParams.m_Corners = Params.m_Corners;
+		RingParams.m_PixelSize = PixelSize;
+		const float LayerAlpha = Color.a * (1.0f - 0.4f * static_cast<float>(i - 1));
+		if(LayerAlpha <= 0.004f)
+			continue;
+		Any = DrawRoundedSurface(pGraphics, LayerRect, ui_token::color::COLOR_TRANSPARENT, Color.WithAlpha(LayerAlpha), RingParams) || Any;
+	}
+	return Any;
+}
+
+bool DrawRoundedSurfaceGlow(CUi *pUi, const CUIRect &Rect, const ColorRGBA &Color, const SRoundedGlowParams &Params)
+{
+	if(pUi == nullptr || pUi->DrawingSuppressed())
+		return false;
+	SRoundedGlowParams Resolved = Params;
+	if(Resolved.m_PixelSize <= 0.0f)
+		Resolved.m_PixelSize = pUi->PixelSize();
+	return DrawRoundedSurfaceGlow(pUi->Graphics(), Rect, Color, Resolved);
+}
+
+bool DrawRoundedSurfaceGlow(const IUiContext &Ctx, const CUIRect &Rect, const ColorRGBA &Color, const SRoundedGlowParams &Params)
+{
+	return DrawRoundedSurfaceGlow(Ctx.m_pUi, Rect, Color, Params);
+}
+
 // 固定网格一次提交顶点；预览和候选栏共享五种渐变，不生成每帧纹理。
 bool DrawRoundedGradientSurface(IGraphics *pGraphics, const CUIRect &Rect, const SQmColorGradient &Gradient,
 	float Alpha, const ColorRGBA &Border, const SRoundedSurfaceParams &Params)
@@ -281,7 +344,7 @@ bool DrawRoundedGradientSurface(IGraphics *pGraphics, const CUIRect &Rect, const
 	CUIRect Inner = Plan.m_Rect;
 	if(Plan.m_BorderWidth > 0.0f)
 	{
-		DrawRoundedSurfaceBorder(pGraphics, Plan, Border, Params.m_Corners);
+		DrawRoundedSurfaceBorder(pGraphics, Plan, Border, ResolveRoundedSurfaceCorners(Params.m_Radius, Params.m_Corners));
 		Inner.Margin(Plan.m_BorderWidth, &Inner);
 	}
 	if(Inner.w <= 0.0f || Inner.h <= 0.0f)

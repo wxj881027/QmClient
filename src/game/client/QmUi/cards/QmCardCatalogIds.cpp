@@ -225,7 +225,9 @@ namespace qm_card_catalog
 			"player", "graphics", "sound", "ddnet", "appearance-hud", "appearance-chat",
 			"appearance-name-plate", "appearance-hook-collision", "appearance-info-messages", "appearance-laser", "tee7",
 			// DDNet 页的「网络补偿」子页签：卡片仍是 DDNet 卡（deck:），只是归属子页不同。
-			"ddnet-prediction"};
+			"ddnet-prediction",
+			// 图像页「视觉效果」子页签：卡片效果 / 界面主题，实现仍在图像卡片构建器里。
+			"graphics-visual"};
 
 	}
 

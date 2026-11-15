@@ -433,38 +433,6 @@ turkish = "Klan Üyeleri"
 polish = "Członkowie klanu"
 
 [[message]]
-key = "Clear all history"
-[message.translations]
-simplified_chinese = "清空所有历史"
-traditional_chinese = "清空所有歷史"
-japanese = "すべての履歴をクリア"
-korean = "모든 기록 지우기"
-russian = "Очистить всю историю"
-german = "Gesamten Verlauf löschen"
-spanish = "Borrar todo el historial"
-french = "Effacer tout l'historique"
-brazilian_portuguese = "Limpar todo o histórico"
-portuguese = "Limpar todo o histórico"
-turkish = "Tüm geçmişi temizle"
-polish = "Wyczyść całą historię"
-
-[[message]]
-key = "Clear finished"
-[message.translations]
-simplified_chinese = "清空已完成"
-traditional_chinese = "清空已完成"
-japanese = "完了したものをクリア"
-korean = "완료된 항목 지우기"
-russian = "Очистить завершённые"
-german = "Abgeschlossene löschen"
-spanish = "Borrar completados"
-french = "Effacer les terminés"
-brazilian_portuguese = "Limpar concluídos"
-portuguese = "Limpar concluídos"
-turkish = "Tamamlananları temizle"
-polish = "Wyczyść ukończone"
-
-[[message]]
 key = "Clear note"
 [message.translations]
 simplified_chinese = "移除备注"
@@ -609,38 +577,6 @@ turkish = "Topluluklar"
 polish = "Społeczności"
 
 [[message]]
-key = "Confirm clear all"
-[message.translations]
-simplified_chinese = "确认清空全部"
-traditional_chinese = "確認清空全部"
-japanese = "すべてクリアの確認"
-korean = "전체 지우기 확인"
-russian = "Подтвердить очистку всего"
-german = "Löschen aller bestätigen"
-spanish = "Confirmar borrar todo"
-french = "Confirmer l'effacement total"
-brazilian_portuguese = "Confirmar limpeza total"
-portuguese = "Confirmar limpar tudo"
-turkish = "Tümünü temizlemeyi onayla"
-polish = "Potwierdź wyczyszczenie wszystkiego"
-
-[[message]]
-key = "Confirm clear finished"
-[message.translations]
-simplified_chinese = "确认清空已完成"
-traditional_chinese = "確認清空已完成"
-japanese = "完了したものをクリアの確認"
-korean = "완료된 항목 지우기 확인"
-russian = "Подтвердить очистку завершённых"
-german = "Löschen abgeschlossener bestätigen"
-spanish = "Confirmar borrar completados"
-french = "Confirmer l'effacement des terminés"
-brazilian_portuguese = "Confirmar limpeza de concluídos"
-portuguese = "Confirmar limpar concluídos"
-turkish = "Tamamlananları temizlemeyi onayla"
-polish = "Potwierdź wyczyszczenie ukończonych"
-
-[[message]]
 key = "Copy info"
 [message.translations]
 simplified_chinese = "复制服务器信息"
@@ -655,22 +591,6 @@ brazilian_portuguese = "Copiar informações"
 portuguese = "Copiar informação"
 turkish = "Bilgiyi kopyala"
 polish = "Kopiuj informacje"
-
-[[message]]
-key = "Could not get server list from master server"
-[message.translations]
-simplified_chinese = "无法从主服务器获取服务器列表"
-traditional_chinese = "無法從主伺服器獲取伺服器列表"
-japanese = "マスターサーバーからサーバーリストを取得できませんでした"
-korean = "마스터 서버에서 서버 목록을 가져올 수 없습니다"
-russian = "Не удалось получить список серверов от мастер-сервера"
-german = "Serverliste konnte nicht vom Master-Server abgerufen werden"
-spanish = "No se pudo obtener la lista de servidores del servidor maestro"
-french = "Impossible d'obtenir la liste des serveurs depuis le serveur maître"
-brazilian_portuguese = "Não foi possível obter a lista de servidores do servidor mestre"
-portuguese = "Não foi possível obter a lista de servidores do servidor mestre"
-turkish = "Ana sunucudan sunucu listesi alınamadı"
-polish = "Nie można pobrać listy serwerów z serwera głównego"
 
 [[message]]
 key = "Common filters"
@@ -849,22 +769,6 @@ turkish = "ddnet-saves.txt bulunamadı"
 polish = "Nie znaleziono ddnet-saves.txt"
 
 [[message]]
-key = "Deaths"
-[message.translations]
-simplified_chinese = "死亡数"
-traditional_chinese = "死亡數"
-japanese = "デス数"
-korean = "사망 횟수"
-russian = "Смерти"
-german = "Tode"
-spanish = "Muertes"
-french = "Morts"
-brazilian_portuguese = "Mortes"
-portuguese = "Mortes"
-turkish = "Ölümler"
-polish = "Zgony"
-
-[[message]]
 key = "Delete category"
 [message.translations]
 simplified_chinese = "删除分类"
@@ -911,22 +815,6 @@ brazilian_portuguese = "Desconectar"
 portuguese = "Desligar"
 turkish = "Bağlantıyı kes"
 polish = "Rozłącz"
-
-[[message]]
-key = "Dummy"
-[message.translations]
-simplified_chinese = "分身"
-traditional_chinese = "分身"
-japanese = "ダミー"
-korean = "더미"
-russian = "Дамми"
-german = "Dummy"
-spanish = "Dummy"
-french = "Dummy"
-brazilian_portuguese = "Dummy"
-portuguese = "Dummy"
-turkish = "Dummy"
-polish = "Kukła"
 
 [[message]]
 key = "Edit note"
@@ -1025,36 +913,20 @@ turkish = "Hariç tut"
 polish = "Wyklucz"
 
 [[message]]
-key = "Favorite"
+key = "Favorite server"
 [message.translations]
-simplified_chinese = "收藏"
-traditional_chinese = "收藏"
-japanese = "お気に入り"
-korean = "즐겨찾기"
-russian = "Избранное"
-german = "Favorit"
-spanish = "Favorito"
-french = "Favori"
-brazilian_portuguese = "Favorito"
-portuguese = "Favorito"
-turkish = "Favori"
-polish = "Ulubiony"
-
-[[message]]
-key = "Finished"
-[message.translations]
-simplified_chinese = "已完成"
-traditional_chinese = "已完成"
-japanese = "完了"
-korean = "완료됨"
-russian = "Завершённые"
-german = "Abgeschlossen"
-spanish = "Completado"
-french = "Terminé"
-brazilian_portuguese = "Concluído"
-portuguese = "Concluído"
-turkish = "Tamamlandı"
-polish = "Ukończone"
+simplified_chinese = "收藏服务器"
+traditional_chinese = "收藏伺服器"
+japanese = "お気に入りサーバー"
+korean = "즐겨찾기 서버"
+russian = "Избранный сервер"
+german = "Favoritenserver"
+spanish = "Servidor favorito"
+french = "Serveur favori"
+brazilian_portuguese = "Servidor favorito"
+portuguese = "Servidor favorito"
+turkish = "Favori sunucu"
+polish = "Ulubiony serwer"
 
 [[message]]
 key = "Friend note"
@@ -1137,22 +1009,6 @@ turkish = "Oyun türleri:"
 polish = "Typy gier:"
 
 [[message]]
-key = "Getting server list from master server"
-[message.translations]
-simplified_chinese = "正在从主服务器获取服务器列表"
-traditional_chinese = "正在從主伺服器獲取伺服器列表"
-japanese = "マスターサーバーからサーバーリストを取得中"
-korean = "마스터 서버에서 서버 목록 가져오는 중"
-russian = "Получение списка серверов от мастер-сервера"
-german = "Serverliste wird vom Master-Server abgerufen"
-spanish = "Obteniendo lista de servidores del servidor maestro"
-french = "Récupération de la liste des serveurs depuis le serveur maître"
-brazilian_portuguese = "Obtendo lista de servidores do servidor mestre"
-portuguese = "A obter lista de servidores do servidor mestre"
-turkish = "Ana sunucudan sunucu listesi alınıyor"
-polish = "Pobieranie listy serwerów z serwera głównego"
-
-[[message]]
 key = "Has people playing"
 [message.translations]
 simplified_chinese = "有玩家"
@@ -1217,22 +1073,6 @@ turkish = "Çılgın"
 polish = "Insane"
 
 [[message]]
-key = "Last entered"
-[message.translations]
-simplified_chinese = "最后进入"
-traditional_chinese = "最後進入"
-japanese = "最後に入力"
-korean = "마지막 입력"
-russian = "Последние введённые"
-german = "Zuletzt eingegeben"
-spanish = "Último ingresado"
-french = "Dernière entrée"
-brazilian_portuguese = "Último inserido"
-portuguese = "Último inserido"
-turkish = "Son girilen"
-polish = "Ostatnio wprowadzone"
-
-[[message]]
 key = "Leak IP"
 [message.translations]
 simplified_chinese = "暴露 IP"
@@ -1295,22 +1135,6 @@ brazilian_portuguese = "Mapa"
 portuguese = "Mapa"
 turkish = "Harita"
 polish = "Mapa"
-
-[[message]]
-key = "Map play history"
-[message.translations]
-simplified_chinese = "地图游玩历史"
-traditional_chinese = "地圖遊玩歷史"
-japanese = "マッププレイ履歴"
-korean = "맵 플레이 기록"
-russian = "История прохождения карт"
-german = "Karten-Spielverlauf"
-spanish = "Historial de juego de mapas"
-french = "Historique de jeu des cartes"
-brazilian_portuguese = "Histórico de jogos do mapa"
-portuguese = "Histórico de reprodução de mapas"
-turkish = "Harita oynama geçmişi"
-polish = "Historia gry na mapach"
 
 [[message]]
 key = "Moderate"
@@ -1455,22 +1279,6 @@ brazilian_portuguese = "Nenhum login necessário"
 portuguese = "Sem login necessário"
 turkish = "Giriş gerekmez"
 polish = "Logowanie nie jest wymagane"
-
-[[message]]
-key = "No map play history yet"
-[message.translations]
-simplified_chinese = "暂无地图游玩历史"
-traditional_chinese = "暫無地圖遊玩歷史"
-japanese = "マッププレイ履歴がまだありません"
-korean = "아직 맵 플레이 기록이 없습니다"
-russian = "История прохождения карт пока пуста"
-german = "Noch kein Karten-Spielverlauf"
-spanish = "Aún no hay historial de juego de mapas"
-french = "Pas encore d'historique de jeu de carte"
-brazilian_portuguese = "Nenhum histórico de jogos do mapa ainda"
-portuguese = "Ainda sem histórico de reprodução de mapas"
-turkish = "Henüz harita oynama geçmişi yok"
-polish = "Brak jeszcze historii gry na mapach"
 
 [[message]]
 key = "No password"
@@ -1681,22 +1489,6 @@ turkish = "Oyuncu ülkesi:"
 polish = "Kraj gracza:"
 
 [[message]]
-key = "Recent"
-[message.translations]
-simplified_chinese = "最近"
-traditional_chinese = "最近"
-japanese = "最近"
-korean = "최근"
-russian = "Недавние"
-german = "Kürzlich"
-spanish = "Reciente"
-french = "Récent"
-brazilian_portuguese = "Recente"
-portuguese = "Recente"
-turkish = "Son"
-polish = "Ostatnie"
-
-[[message]]
 key = "Remove friend"
 [message.translations]
 simplified_chinese = "删除好友"
@@ -1711,22 +1503,6 @@ brazilian_portuguese = "Remover amigo"
 portuguese = "Remover amigo"
 turkish = "Arkadaşı kaldır"
 polish = "Usuń znajomego"
-
-[[message]]
-key = "Remove from history"
-[message.translations]
-simplified_chinese = "从历史中移除"
-traditional_chinese = "從歷史中移除"
-japanese = "履歴から削除"
-korean = "기록에서 제거"
-russian = "Удалить из истории"
-german = "Aus Verlauf entfernen"
-spanish = "Eliminar del historial"
-french = "Supprimer de l'historique"
-brazilian_portuguese = "Remover do histórico"
-portuguese = "Remover do histórico"
-turkish = "Geçmişten kaldır"
-polish = "Usuń z historii"
 
 [[message]]
 key = "Rename"
@@ -1967,22 +1743,6 @@ brazilian_portuguese = "Iniciar e conectar ao servidor local"
 portuguese = "Iniciar e conectar ao servidor local"
 turkish = "Yerel sunucuyu başlat ve bağlan"
 polish = "Uruchom i połącz z lokalnym serwerem"
-
-[[message]]
-key = "Status"
-[message.translations]
-simplified_chinese = "状态"
-traditional_chinese = "狀態"
-japanese = "ステータス"
-korean = "상태"
-russian = "Статус"
-german = "Status"
-spanish = "Estado"
-french = "Statut"
-brazilian_portuguese = "Status"
-portuguese = "Estado"
-turkish = "Durum"
-polish = "Status"
 
 [[message]]
 key = "Strict gametype filter"

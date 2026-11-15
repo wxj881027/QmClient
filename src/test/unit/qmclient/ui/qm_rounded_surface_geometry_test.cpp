@@ -242,7 +242,16 @@ TEST(QmRoundedSurface, PartialCornersBordersAndFallbackRemainBounded)
 	ExpectMask(IGraphics::CORNER_TR, 0.0f, 4.0f, 0.0f, 0.0f);
 	ExpectMask(IGraphics::CORNER_BR, 0.0f, 0.0f, 4.0f, 0.0f);
 	ExpectMask(IGraphics::CORNER_BL, 0.0f, 0.0f, 0.0f, 4.0f);
-	ExpectMask(IGraphics::CORNER_NONE, 0.0f, 0.0f, 0.0f, 0.0f);
+	// 约定：半径是形状的唯一来源。给了非零半径又传 CORNER_NONE 的调用点在语义上是
+	// 「要圆但忘了给角掩码」，一律按四角全圆处理；真要方块应当把半径给 0。
+	ExpectMask(IGraphics::CORNER_NONE, 4.0f, 4.0f, 4.0f, 4.0f);
+	{
+		SRoundedSurfaceParams SquareParams;
+		SquareParams.m_Radius = 0.0f;
+		SquareParams.m_Corners = IGraphics::CORNER_NONE;
+		const SRoundedSurfacePlan Square = ResolveRoundedSurfacePlan(Rect, SquareParams, true);
+		ExpectCornerRadii(Square, 0.0f, 0.0f, 0.0f, 0.0f);
+	}
 	SRoundedSurfaceParams WideBorderParams;
 	WideBorderParams.m_Radius = 2.0f;
 	WideBorderParams.m_BorderWidth = 4.0f;

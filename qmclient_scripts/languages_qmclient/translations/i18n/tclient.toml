@@ -9639,7 +9639,6 @@ portuguese = "Manga: corte de tinta"
 turkish = "Manga: mürekkep kesiği"
 polish = "Manga: cięcie tuszem"
 
-
 [[message]]
 key = "Original"
 [message.translations]
@@ -9735,7 +9734,6 @@ brazilian_portuguese = "Magia: escrita espiritual"
 portuguese = "Magia: escrita espiritual"
 turkish = "Büyü: ruh yazısı"
 polish = "Magia: pismo duchów"
-
 
 [[message]]
 key = "Save loaded; local record removed."
@@ -10585,7 +10583,6 @@ portuguese = "A pasta antiga qmclient/fonts já não é examinada. Mova manualme
 turkish = "Eski qmclient/fonts klasörü artık taranmıyor. Özel yazı tiplerinizi yapılandırma klasöründeki fonts/fonts_store konumuna elle taşıyın. Normal sürüm kullanıcı yapılandırma klasörünü, taşınabilir sürüm profile klasörünü kullanır. data/fonts içindeki birlikte gelen yazı tiplerinin taşınması gerekmez."
 polish = "Stary folder qmclient/fonts nie jest już skanowany. Przenieś własne czcionki ręcznie do fonts/fonts_store w folderze konfiguracji. Zwykła wersja używa folderu konfiguracji użytkownika, a przenośna — profile. Nie trzeba przenosić czcionek dostarczanych w data/fonts."
 
-
 [[message]]
 key = "Show position and angle"
 [message.translations]
@@ -10601,7 +10598,6 @@ brazilian_portuguese = "Mostrar posição e ângulo"
 portuguese = "Mostrar posição e ângulo"
 turkish = "Konum ve açıyı göster"
 polish = "Pokaż pozycję i kąt"
-
 
 [[message]]
 key = "Mini debug"
@@ -10619,7 +10615,6 @@ portuguese = "mini debug"
 turkish = "küçük hata ayıklama"
 polish = "mini debug"
 
-
 [[message]]
 key = "Reduce visual latency"
 [message.translations]
@@ -10636,7 +10631,6 @@ portuguese = "reduz latência visual"
 turkish = "görsel gecikmeyi azaltır"
 polish = "zmniejsza opóźnienie wizualne"
 
-
 [[message]]
 key = "Negative stability buffer"
 [message.translations]
@@ -10652,7 +10646,6 @@ brazilian_portuguese = "Buffer de estabilidade negativa"
 portuguese = "Buffer de estabilidade negativa"
 turkish = "Negatif stabilite tamponu"
 polish = "Bufor ujemnej stabilności"
-
 
 [[message]]
 key = "For Gores"

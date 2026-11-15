@@ -819,6 +819,8 @@ public:
 	virtual bool IsTextBufferingEnabled() = 0;
 	virtual bool IsQuadContainerBufferingEnabled() = 0;
 	virtual bool Uses2DTextureArrays() = 0;
+	/** 纹理加载时统一使用的目标类型标志，避免各调用点重复判断 2D 数组 / 3D 纹理。 */
+	virtual int TextureLoadFlags() = 0;
 	virtual bool HasTextureArraysSupport() const = 0;
 
 	virtual const char *GetVendorString() = 0;
@@ -914,8 +916,8 @@ public:
 	virtual int CreateQuadContainer(bool AutomaticUpload = true) = 0;
 	virtual void QuadContainerChangeAutomaticUpload(int ContainerIndex, bool AutomaticUpload) = 0;
 	virtual void QuadContainerUpload(int ContainerIndex) = 0;
-	virtual int QuadContainerAddQuads(int ContainerIndex, CQuadItem *pArray, int Num) = 0;
-	virtual int QuadContainerAddQuads(int ContainerIndex, CFreeformItem *pArray, int Num) = 0;
+	virtual int QuadContainerAddQuads(int ContainerIndex, const CQuadItem *pArray, int Num) = 0;
+	virtual int QuadContainerAddQuads(int ContainerIndex, const CFreeformItem *pArray, int Num) = 0;
 	virtual void QuadContainerReset(int ContainerIndex) = 0;
 	virtual void DeleteQuadContainer(int &ContainerIndex) = 0;
 	virtual void RenderQuadContainer(int ContainerIndex, int QuadDrawNum) = 0;

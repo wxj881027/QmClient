@@ -124,7 +124,7 @@ static std::shared_ptr<CEditorImage> ImageInfoToEditorImage(CEditorMap *pMap, co
 	pEditorImage->m_Format = Image.m_Format;
 	pEditorImage->m_pData = Image.m_pData;
 
-	int TextureLoadFlag = pMap->Editor()->Graphics()->Uses2DTextureArrays() ? IGraphics::TEXLOAD_TO_2D_ARRAY_TEXTURE : IGraphics::TEXLOAD_TO_3D_TEXTURE;
+	int TextureLoadFlag = pMap->Editor()->Graphics()->TextureLoadFlags();
 	pEditorImage->m_Texture = pMap->Editor()->Graphics()->LoadTextureRaw(Image, TextureLoadFlag, pName);
 	pEditorImage->m_External = 0;
 	str_copy(pEditorImage->m_aName, pName);

@@ -232,6 +232,9 @@
 '%s' locked your team. After the race starts, killing will kill everyone in your team.
 == '%s' trancou seu time. Após a corrida começar, matar matará todos no seu time.
 
+'%s' not bound.
+== '%s' not bound.
+
 '%s' unlocked your team.
 == '%s' destrancou seu time.
 
@@ -614,6 +617,9 @@ Add one
 Add one shortcut per message; it is used when the target is on the list.
 == Adicione um atalho por mensagem; ele é usado quando o alvo está na lista.
 
+Add options below
+== Adicione opções abaixo
+
 Add or edit entries, then use the bind in chat to send the text.
 == Adicione ou edite entradas e, no chat, use o atalho para enviar o texto.
 
@@ -712,9 +718,6 @@ Adjust mouse sensitivity and cursor limits
 
 Adjust nameplate options and compare the preview.
 == Ajuste as opções das placas de nome e compare com a prévia.
-
-Adjust one value at a time; corners and segments are drawn per frame, so large segment counts cost GPU time.
-== Ajuste um valor por vez; cantos e segmentos são desenhados a cada quadro, então muitos segmentos custam tempo de GPU.
 
 Adjust opacity of entity layers
 == Ajustar opacidade das camadas de entidades
@@ -937,21 +940,6 @@ Angry
 
 Angular gradient
 == Gradiente angular
-
-Animate chat box, emote selector, scoreboard, and spectate selection
-== Animar a caixa de chat, o seletor de emoticons, o placar e a seleção de espectador
-
-Animate lists when entering a page
-== Animar listas ao entrar em uma página
-
-Animate settings card expand and collapse height changes
-== Animar alterações de altura ao expandir e recolher cartões de configurações
-
-Animate settings card lists when entering a page
-== Animar listas de cartões de configurações ao entrar em uma página
-
-Animate settings card reorder and layout reflow
-== Animar a reorganização e o reajuste do layout dos cartões de configurações
 
 Animated title style id
 == ID do estilo de título animado
@@ -1691,6 +1679,9 @@ Background stroke color
 Background stroke width
 == Largura do traço de fundo
 
+Background, border and title effects of the settings cards
+== Efeitos de fundo, borda e título dos cartões de ajustes
+
 Baidu Translate
 == Tradução Baidu
 
@@ -1702,9 +1693,6 @@ Balanced (recommended)
 
 Ban a certain nickname
 == Banir um certo apelido
-
-Ban ip for x minutes for any reason
-== Banir IP por x minutos por qualquer motivo
 
 Ban ip range for x minutes for any reason
 == Banir faixa de IP por x minutos por qualquer motivo
@@ -1723,6 +1711,12 @@ Ban reason for "sv_dnsbl_ban"
 
 Ban time after being voted kicked (in minutes, 0 = kick only, no ban)
 == Tempo de ban após ser expulso por votação (em minutos, 0 = apenas expulsão, sem ban)
+
+Bar
+== Barra
+
+Bar: a thin vertical line between characters
+== Barra: uma linha vertical fina entre caracteres
 
 Base path for HTTPS map download URLs to clients
 == Caminho base para URLs de download de mapas HTTPS para os clientes
@@ -1853,6 +1847,9 @@ Blink
 Blink the active local tee
 == Fazer o personagem local ativo piscar
 
+Block
+== Bloco
+
 Block client-initiated self-kill (K key / kill command)
 == Bloquear a morte iniciada pelo cliente (tecla K / comando kill)
 
@@ -1864,6 +1861,9 @@ Block votes from blacklisted addresses
 
 Block words
 == Bloquear palavras
+
+Block: fills the character cell behind the next character
+== Bloco: preenche a célula do caractere seguinte
 
 Blue
 == Azul
@@ -1967,12 +1967,6 @@ Button - Disabled
 Button - Enabled
 == Botão - Ativado
 
-Button background color
-== Cor de fundo dos botões
-
-Button background opacity percentage
-== Cor de fundo dos botões — opacidade em porcentagem
-
 Button browser
 == Navegador de botões
 
@@ -2070,7 +2064,7 @@ Candidate files
 == Arquivos candidatos
 
 Candy gradient
-== Gradiente de doces
+== Candy gradient
 
 Cannot import: invalid data or too many friends or categories.
 == Não foi possível importar: dados inválidos ou amigos ou grupos em excesso.
@@ -2111,20 +2105,17 @@ Capture the flag
 Capture-the-flag event cue, used by CTF servers rather than ordinary DDNet racing.
 == Aviso de evento de captura de bandeira, usado por servidores CTF em vez de corridas comuns do DDNet.
 
+Card effects
+== Efeitos dos cartões
+
 Card guide
 == Guia do cartão
-
-Card height animation
-== Animação de altura do cartão de configurações
-
-Card list entry animation
-== Animação de entrada da lista de cartões de configurações
 
 Card opacity
 == Opacidade do cartão
 
-Card reflow animation
-== Animação de reorganização dos cartões de configurações
+Card shape is shared with the rest of the interface and lives in "Interface theme".
+== A forma dos cartões é compartilhada com o resto da interface e fica em "Tema da interface".
 
 Category
 == Categoria
@@ -2402,8 +2393,8 @@ Choose export name first.
 Choose Logo (PNG / WebP)
 == Escolher logotipo (PNG / WebP)
 
-Choose off, simple or full; the individual switches below only apply to full.
-== Escolha desligado, simples ou completo; os controles individuais abaixo só valem no modo completo.
+Choose off, reduced or full; this single switch drives every animation. Then pick a caret shape for the settings, console and chat input fields.
+== Escolha desligado, reduzido ou completo; este único interruptor controla todas as animações. Depois escolha a forma do cursor para ajustes, console e chat.
 
 Choose the language used by the client
 == Choose the language used by the client
@@ -2561,6 +2552,12 @@ Click a part on the right to edit its color, blend mode and strength.
 Click a row such as "HDF" or "Left jump", press the key you want, and use the trash icon to remove a bind.
 == Clique em uma linha como HDF ou Salto à esquerda e pressione a tecla desejada; o ícone de lixeira remove o atalho.
 
+Click a slice in the preview to change that option's color; options only exist within "Detection distance", so keep the wheel short.
+== Clique em um setor da prévia para mudar a cor dessa opção; as opções só existem dentro da "Distância de detecção", então mantenha o menu radial curto.
+
+Click a slice to set color
+== Clique em um setor para definir a cor
+
 Click again to find the next location.
 == Clique novamente para encontrar o próximo local.
 
@@ -2676,7 +2673,7 @@ Close window after changing settings
 == Fechar janela após alterar configurações
 
 Cloud bubble
-== Balão de nuvem
+== Cloud bubble
 
 Collapse
 == Recolher
@@ -2757,7 +2754,7 @@ Combo
 == Combo
 
 Comic dialogue
-== Diálogo de quadrinhos
+== Comic dialogue
 
 Comma-separated list of banned clients to be kicked on join
 == Lista separada por vírgulas de clientes banidos a serem expulsos ao entrar
@@ -2932,6 +2929,9 @@ Configure HUD island appearance
 
 Configure input helpers and cursor behavior
 == Configure input helpers and cursor behavior
+
+Configure interface shape, theme, icons and animations
+== Configurar forma, tema, ícones e animações da interface
 
 Configure keyboard, mouse, wheel, and modifier bindings
 == Configurar atalhos de teclado, mouse, roda e modificadores
@@ -3113,6 +3113,9 @@ Console command color
 Console font size
 == Console: tamanho da fonte
 
+Console line spacing
+== Espaçamento entre linhas do console
+
 Console link color
 == Console: cor dos links
 
@@ -3161,6 +3164,12 @@ Continuous-curvature UI corners (0 = classic arc, 100 = strongest)
 Contributors
 == Contribuidores
 
+Control background color
+== Cor de fundo dos controles
+
+Control background opacity percentage
+== Percentual de opacidade do fundo dos controles
+
 Control custom background drawing
 == Control custom background drawing
 
@@ -3200,11 +3209,14 @@ Controls
 Controls demo recording and playback behavior.
 == Controla o comportamento de gravação e reprodução de demos.
 
-Controls how UI surfaces are drawn: card surface opacity, border width, corner rounding, segment count and the rainbow title effect.
-== Controla como as superfícies da interface são desenhadas: opacidade da superfície do cartão, largura da borda, arredondamento dos cantos, número de segmentos e o efeito arco-íris do título.
+Controls how the settings cards themselves are drawn: card background, border and the rainbow title effect.
+== Controla como os próprios cartões de ajustes são desenhados: fundo, borda e título arco-íris.
 
 Controls laser shape, glow and animation.
 == Controla o formato, o brilho e a animação do laser.
+
+Controls the shape and colors shared by the whole interface: corner curve, capsule ends, surfaces, accent, control and popup backgrounds, text color mode and blur.
+== Controla a forma e as cores compartilhadas por toda a interface: curva dos cantos, pontas de cápsula, superfícies, destaque, fundos de controles e janelas suspensas, modo de cor do texto e desfoque.
 
 Controls what appears next to other players' names, such as clan tags, friend marks and client identifiers.
 == Controla o que aparece ao lado dos nomes de outros jogadores, como tags de clã, marcas de amigo e identificadores de cliente.
@@ -3767,6 +3779,9 @@ Debug SQL.
 Debug tile layer clipping.
 == Depuração de recorte de camada de tiles.
 
+Debug websockets
+== Depurar WebSocket
+
 Decides which skins the client downloads and lists, and can add a prefix to load prefixed skin variants.
 == Define quais skins o cliente baixa e lista, e pode adicionar um prefixo para carregar variações com prefixo.
 
@@ -4106,6 +4121,9 @@ Display mode
 Display modes
 == Modos de exibição
 
+Display options
+== Opções de exibição
+
 Display your race time
 == Mostra seu tempo de corrida
 
@@ -4274,6 +4292,9 @@ Downloading %d%%
 Downloading map
 == Baixando mapa
 
+Downloading map %d%%
+== Downloading map %d%%
+
 Downloading rank 1 demo
 == Baixando a demo de rank 1
 
@@ -4298,6 +4319,12 @@ Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use 
 Drag HUD modules with the left mouse button
 == Arraste os módulos da HUD com o botão esquerdo do mouse
 
+Drag options here to hide them
+== Arraste para cá para ocultá-las
+
+Drag options here to show them
+== Arraste para cá para exibi-las
+
 Drag the selected watermark to move it. The original image is preserved.
 == Arraste a marca-d’água selecionada para movê-la. A imagem original é preservada.
 
@@ -4312,6 +4339,9 @@ Drag to pan, scroll to zoom
 
 Drag to reorder; right-click or use the gear to manage
 == Arraste para reordenar; clique direito ou engrenagem para gerenciar
+
+Drag to the other list to show or hide this option
+== Arraste para a outra lista para mostrar ou ocultar esta opção
 
 Dragger Inner Color
 == Cor interna do arrastador
@@ -4475,6 +4505,9 @@ Dummy is allowed on this server.
 Dummy is currently connected.
 == Dummy está atualmente conectado.
 
+Dummy is not connected
+== Dummy is not connected
+
 Dummy jump
 == Pulo do Dummy
 
@@ -4606,6 +4639,9 @@ Echo follows the original chat color
 
 Echo text color when not inheriting chat color
 == Cor do texto do Echo quando não herda a cor do chat
+
+Echo the config value in chat window
+== Mostrar o valor da configuração no chat
 
 Echo the text
 == Ecoar o texto
@@ -4760,8 +4796,8 @@ Enable audio output and choose a device
 Enable backdrop blur
 == Ativar desfoque de fundo
 
-Enable backdrop blur for translucent interface and selected HUD backgrounds
-== Ativar desfoque de fundo para a interface translúcida e os fundos de HUD selecionados
+Enable backdrop blur for translucent interface and all HUD backgrounds
+== Ativar desfoque de fundo para a interface translúcida e todos os fundos do HUD
 
 Enable background 3D particle flicker
 == Ativar cintilação de partículas 3D de fundo
@@ -4876,6 +4912,9 @@ Enable fast practice mode
 
 Enable fat skin
 == Habilitar skin gorda
+
+Enable focus glow
+== Ativar brilho de foco
 
 Enable freeze call sound
 == Ativar som de chamada de congelamento
@@ -5423,12 +5462,6 @@ Expand
 Expand console
 == Expandir console
 
-Expanded dropdown background color
-== Cor de fundo da lista expandida
-
-Expanded dropdown background opacity percentage
-== Cor de fundo da lista expandida — opacidade em porcentagem
-
 Expanded personalization sections (format: stableId=1;stableId2=0;)
 == Seções de personalização expandidas (formato: stableId=1;stableId2=0;)
 
@@ -5498,6 +5531,9 @@ Exported to %s
 Exporting chat images: %d
 == Exportando imagens do chat: %d
 
+Expose IP to servers by default when adding a favorite (last choice on the server info page)
+== Expõe o IP aos servidores por padrão ao adicionar um favorito (lembra a última escolha da página de informações do servidor)
+
 Expose playback controls to the operating system
 == Expose playback controls to the operating system
 
@@ -5509,6 +5545,9 @@ External links open in the browser.
 
 External sites are not controlled by the client.
 == Os sites externos não são controlados pelo cliente.
+
+Extra console log line spacing in pixels
+== Extra console log line spacing in pixels
 
 Extra vertical spacing between chat lines in pixels (0 = default)
 == Espaçamento vertical adicional entre linhas de chat em pixels (0 = padrão)
@@ -5678,9 +5717,6 @@ Fastest encode, largest files
 Fat skins (DDFat)
 == Skins gordas (DDFat)
 
-Favorite
-== Favorito
-
 Favorite friend
 == Amigo favorito
 
@@ -5692,6 +5728,9 @@ Favorite map
 
 Favorite maps
 == Mapas favoritos
+
+Favorite server
+== Servidor favorito
 
 Favorites
 == Favoritos
@@ -5734,6 +5773,9 @@ File for storing ranks if sv_use_sql is disabled or as backup SQL server.
 
 File information
 == Informações do arquivo
+
+File to write the server's port to (used when running a server from the client)
+== File to write the server's port to (used when running a server from the client)
 
 File with announcements, one per line.
 == Arquivo com anúncios, um por linha.
@@ -6140,8 +6182,8 @@ Full quality nameplate count
 Full width
 == Largura total
 
-Full: each enabled animation category uses its complete transition
-== Completo: cada categoria de animação ativada usa sua transição completa
+Full: uses the complete transition everywhere
+== Completo: usa a transição completa em toda parte
 
 Fullscreen
 == Tela cheia exclusiva
@@ -6216,7 +6258,7 @@ Gap between tee and nametag
 == Espaço entre o tee e a etiqueta de nome
 
 Gather and disperse
-== Agrupar e dispersar
+== Gather and disperse
 
 Gaussian
 == Gaussiano
@@ -6463,6 +6505,9 @@ Graphics mode
 
 Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
 == Modo gráfico: -1 = usar a configuração do backend, 0 = compatibilidade, 1 = desempenho (padrão)
+
+Graphics settings sub-tab: 0=display, 1=visual effects
+== Subaba de configurações gráficas: 0=exibição, 1=efeitos visuais
 
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
 == Nível de rastreamento gráfico: 0 = desativado, 1 = resumo periódico, 2 = resumo e quadros lentos, 3 = rastreamento detalhado do backend
@@ -6821,6 +6866,9 @@ Hold gun higher like TW 0.6.1 and earlier
 Hold left click for free camera
 == Segure o clique esquerdo para câmera livre
 
+Hold Shift to be more precise.
+== Hold Shift to be more precise.
+
 Hold still
 == Manter
 
@@ -6910,6 +6958,9 @@ Horizontal position
 
 Hostname of DNSBL provider for IP verification
 == Hostname do provedor DNSBL para verificação de IP
+
+Hover feedback style: 0 = scale, 1 = border highlight
+== Hover feedback style: 0 = scale, 1 = border highlight
 
 Hover for tooltip
 == Passe o mouse para ver a dica
@@ -7133,6 +7184,9 @@ In DDNet, played when weapons are removed. Other modes may use it for armor pick
 In memory of me
 == Que este cliente se lembre de mim
 
+In pie menu
+== No menu radial
+
 In-game controller sensitivity
 == Sensibilidade do controle no jogo
 
@@ -7274,12 +7328,6 @@ Ink: Paper Bloom
 Input
 == Entrada
 
-Input background color
-== Cor de fundo dos campos de entrada
-
-Input background opacity percentage
-== Cor de fundo dos campos de entrada — opacidade em porcentagem
-
 Input device
 == Dispositivo de entrada
 
@@ -7348,6 +7396,9 @@ Interface surface
 
 Interface surface color
 == Cor da superfície da interface
+
+Interface theme
+== Tema da interface
 
 Interface transparency
 == Transparência geral da interface
@@ -7645,9 +7696,6 @@ Key Sticking: On
 
 Key Sticking: Reset Self
 == Tecla Pressionada: Resetar Próprio
-
-Keyboard focus ring color
-== Cor do anel de foco do teclado
 
 Keyboard size
 == Tamanho do teclado
@@ -7950,7 +7998,7 @@ Let server start race recorder
 == Deixar servidor iniciar gravador de corrida
 
 Let's play together!
-== Vamos jogar juntos!
+== Let's play together!
 
 Lets you join team i (shows your team if left blank)
 == Permite entrar na equipe i (mostra sua equipe se deixado em branco)
@@ -8417,6 +8465,9 @@ Map danger border
 Map data unavailable; server votes remain available
 == Dados dos mapas indisponíveis; as votações do servidor continuam disponíveis
 
+Map download failed, click to retry
+== Map download failed, click to retry
+
 Map download send window
 == Janela de envio de download de mapa
 
@@ -8435,8 +8486,14 @@ Map name or path:
 Map not downloaded yet — join the server to preview it
 == Mapa ainda não baixado. Entre no servidor para visualizar
 
+Map note
+== Nota do mapa
+
 Map play history
 == Histórico de jogos do mapa
+
+Map preview
+== Prévia do mapa
 
 Map preview rendering unavailable
 == Não é possível renderizar a prévia do mapa
@@ -8707,6 +8764,9 @@ Menu accent panel opacity
 
 Menu background
 == Fundo do menu
+
+Menu button hover
+== Menu button hover
 
 Menu camera rotation radius
 == Raio de rotação da câmera do menu
@@ -9641,6 +9701,9 @@ Not downloaded
 Not enabled
 == Não ativado
 
+Not in pie menu
+== Fora do menu radial
+
 Not installed
 == Não instalada
 
@@ -9749,8 +9812,8 @@ o = Send rate
 Off
 == Desligado
 
-Off: disables all interface animations while preserving the options below
-== Desativado: desativa todas as animações da interface mantendo as opções abaixo
+Off: disables every interface animation
+== Desligado: desativa todas as animações da interface
 
 Official
 == Oficial
@@ -9983,9 +10046,6 @@ Opt-in protection for client-initiated self-kill, with optional auto-enable afte
 Optimistic prediction along stable direction
 == Predição otimista ao longo da direção estável
 
-Option color
-== Cor da opção
-
 Optional
 == Opcional
 
@@ -10000,9 +10060,6 @@ Optional start and end time in seconds. Leave both empty to export the whole dem
 
 Options here affect networking or identity; test on a server before using them in matches.
 == As opções aqui afetam rede ou identidade; teste em um servidor antes de usar em partidas.
-
-Options only exist within "Detection distance"; turn off the ones you never use to keep the wheel short.
-== As opções só existem dentro da distância de detecção; desligue as que você nunca usa para manter o círculo curto.
 
 Or visit DDNet.org
 == Ou visite DDNet.org
@@ -10021,9 +10078,6 @@ Original message language
 
 Original only
 == Somente original
-
-Original options
-== Opções originais
 
 Other
 == Outro
@@ -10054,6 +10108,9 @@ Outgoing language
 
 Outgoing translation target language code
 == Código do idioma alvo da tradução de saída
+
+Outline
+== Outline
 
 Outline global opacity
 == Opacidade global do contorno
@@ -10357,6 +10414,9 @@ Pick a shape, then tune glow and animation speed.
 
 Pick a slot, type the command and its label, then hold the wheel key in game to test.
 == Escolha um espaço, digite o comando e o rótulo e, no jogo, segure a tecla da roda para testar.
+
+Pick a text color mode first; the custom color row only appears for the custom mode.
+== Escolha primeiro um modo de cor do texto; a linha de cor personalizada só aparece no modo personalizado.
 
 Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
 == Escolha uma cor em cada linha; as cores de autenticados e do mesmo clã se aplicam ao placar, e as duas cores de lista se aplicam à lista de amigos.
@@ -10754,6 +10814,12 @@ Points unavailable
 Popup animation
 == Animação de pop-up
 
+Popup background color
+== Cor de fundo das janelas suspensas
+
+Popup background opacity percentage
+== Percentual de opacidade do fundo das janelas suspensas
+
 Port for client to server connection (0=random, >=1024 sets manual port)
 == Porta para conexão do cliente ao servidor (0=aleatória, >=1024 define porta manual)
 
@@ -10822,6 +10888,12 @@ Practice mode enabled for your team, happy practicing!
 
 Practice mode is disabled
 == O modo de prática está desabilitado
+
+Practice: teleport the other tee to your cursor
+== Practice: teleport the other tee to your cursor
+
+Practice: teleport yourself to your cursor
+== Practice: teleport yourself to your cursor
 
 Pre-warm settings page on startup and menu idle
 == Pré-aquecer página de configurações ao iniciar e quando o menu estiver ocioso
@@ -10907,9 +10979,6 @@ Preparing chat export: %d%%
 Preparing demo playback
 == Preparando reprodução da demo
 
-Presentation animations
-== Animações de apresentação
-
 Preset %d
 == Predefinição %d
 
@@ -10927,6 +10996,9 @@ Press "Save" after any change: the title and chat style are stored on your accou
 
 Press "Select map" to choose a file, check the target server and player shown for the upload, then press "Upload map"; "Cancel" stops it.
 == Pressione selecionar mapa para escolher um arquivo, confira o servidor e o jogador de destino do envio e pressione enviar mapa; cancelar interrompe.
+
+Press '%s' to show cursor.
+== Press '%s' to show cursor.
 
 Press a key…
 == Pressione uma tecla…
@@ -11633,8 +11705,8 @@ Reduce visual latency
 Reduced
 == Reduzido
 
-Reduced: uses shorter transitions and disables presentation animations
-== Reduzido: usa transições mais curtas e desativa animações de apresentação
+Reduced: uses shorter transitions everywhere
+== Reduzido: usa transições mais curtas em toda parte
 
 Reflected gradient
 == Gradiente refletido
@@ -11969,9 +12041,6 @@ Render tiny tees instead of circles
 Renderer performing the analysis
 == Renderizador realizando a análise
 
-Rendering options
-== Opções de renderização
-
 Rendering reads back 8-bit frames, so 10-bit formats add nothing by themselves; the gain comes from chroma density. If the encoder cannot do 4:4:4, the export fails with an error instead of reducing quality silently.
 == A renderização devolve quadros de 8 bits, então formatos de 10 bits não acrescentam nada por si só; o ganho vem da densidade de croma. Se o codificador não aceita 4:4:4, o export falha com erro em vez de baixar a qualidade em silêncio.
 
@@ -12134,9 +12203,6 @@ Reset chat completion appearance
 Reset chat on escape
 == Redefinir chat ao pressionar Esc
 
-Reset colors
-== Redefinir cores
-
 Reset column widths
 == Redefinir larguras das colunas
 
@@ -12235,6 +12301,9 @@ Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects anoth
 
 Restore Kugou files
 == Restaurar arquivos do Kugou
+
+Restore legacy votes
+== Restaurar a votação antiga
 
 Restore old single-segment hook collision line behavior
 == Restaurar comportamento antigo de linha de colisão de gancho de segmento único
@@ -12629,15 +12698,6 @@ Scoreboard score lookup
 Scoreboard sort mode (0=Score, 1=Points)
 == Modo de ordenação do placar (0 = Pontuação, 1 = Fim)
 
-Scoreboard surface
-== Superfície do placar
-
-Scoreboard surface color
-== Cor da superfície do placar
-
-Scoreboard transparency
-== Transparência do placar
-
 Scoreboard, chat, spectating
 == placar, chat, espectando
 
@@ -12773,12 +12833,6 @@ Sec-WebSocket-Protocol sent during the realtime handshake
 Secondary
 == Secundário
 
-Secondary menu background color
-== Cor de fundo do submenu
-
-Secondary menu background opacity percentage
-== Cor de fundo do submenu — opacidade em porcentagem
-
 Seconds to wait before reconnecting (0=off, when server is full)
 == Segundos para esperar antes de reconectar (0=desligado, quando servidor estiver cheio)
 
@@ -12805,9 +12859,6 @@ Select a configuration package to preview its contents.
 
 Select a map
 == Selecione um mapa
-
-Select a player to manage
-== Selecione um jogador para gerenciar
 
 Select a preset, then apply it to player or dummy
 == Selecione um preset e aplique ao jogador ou ao dummy
@@ -12841,9 +12892,6 @@ Selected %d
 
 Selected candidate %d/%d under cursor.
 == Candidato selecionado %d/%d sob o cursor.
-
-Selected item color
-== Cor do item selecionado
 
 Selected part: %d
 == Parte selecionada: %d
@@ -13079,9 +13127,6 @@ Set camera position relative to current view in the map
 Set camera position to x and y in the map
 == Definir posição da câmera para x e y no mapa
 
-Set color
-== Definir cor
-
 Set current demo speed
 == Definir velocidade atual da demo
 
@@ -13139,8 +13184,8 @@ Sets chat position, width, font size and visibility.
 Sets encoder, container and quality in one step: Daily is H.264 + MP4, High quality is HEVC + MP4 at a smaller size, Editing is all-intra H.264 + MP4 with instant seeking, and Exchange is ProRes 422 HQ + MOV for other editors.
 == Define codificador, contêiner e qualidade de uma vez: Diário é H.264 + MP4, Alta qualidade é HEVC + MP4 em tamanho menor, Edição é todos intra H.264 + MP4 com busca instantânea, e Intercâmbio é ProRes 422 HQ + MOV para outros editores.
 
-Sets how much motion the interface plays: transitions, card entrance, reorder animations and scroll feel.
-== Define quanta animação a interface executa: transições, entrada dos cartões, animações de reordenação e a sensação de rolagem.
+Sets how much motion the interface plays (transitions, card entrance, reorder animations, scroll feel) and the shape of the text caret in every input field.
+== Define quanto movimento a interface exibe (transições, entrada de cartões, reordenação, sensação de rolagem) e a forma do cursor em todos os campos de entrada.
 
 Sets laser colors for weapons and entities.
 == Define as cores do laser para armas e entidades.
@@ -13219,6 +13264,9 @@ Severe
 
 Shape
 == Forma
+
+Shape, colors and text shared by the whole interface
+== Forma, cores e texto compartilhados por toda a interface
 
 Share of the server browser name/map split given to the name column (per mille)
 == Parte da divisão nome/mapa do navegador de servidores dada à coluna de nome (por mil)
@@ -13300,6 +13348,9 @@ Show all votes (page 0 by default, 20 entries per page)
 
 Show all warlist groups
 == Mostrar todos os grupos da lista de guerra
+
+Show an accent glow around the focused input field
+== Mostrar um brilho na cor de destaque ao redor do campo de entrada em foco
 
 Show any enabled Indicators
 == Mostrar quaisquer Indicadores ativados
@@ -14051,6 +14102,9 @@ Show server prompts and Echo messages as popups
 Show server settings
 == Mostrar configurações do servidor
 
+Show server uptime
+== Mostrar o tempo no ar do servidor
+
 Show server-side tees as ghosts during fast practice
 == Mostra os Tee do servidor como fantasmas durante a prática rápida
 
@@ -14332,9 +14386,6 @@ Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dyn
 
 Shows the bind wheel layout and which slot is currently selected.
 == Mostra o layout da roda de binds e o espaço selecionado no momento.
-
-Shows the credits of the DDNet mod
-== Mostra os créditos do mod DDNet
 
 Shows the current song's lyric line in the Dynamic Island and lets you pick which music app supplies it.
 == Mostra a linha da letra da música atual no Dynamic Island e deixa escolher qual app de música a fornece.
@@ -15117,7 +15168,7 @@ Strong Weak Hook
 == Gancho forte fraco
 
 Style
-== Estilo
+== Style
 
 Style chat names, text, and message colors
 == Style chat names, text, and message colors
@@ -15142,6 +15193,9 @@ Successfully saved the replay!
 
 Sudden Death
 == Morte súbita
+
+Suggested tags:
+== Tags sugeridas:
 
 Suicides
 == Suicídios
@@ -15536,6 +15590,9 @@ Teleport back to the practice respawn point
 Teleport back to the practice respawn point and restore the tee state saved there. Only the tee is restored; the world keeps running.
 == Teleporta de volta ao ponto de renascimento da prática e restaura o estado do tee salvo ali. Apenas o tee é restaurado; o mundo continua rodando.
 
+Teleport dummy to cursor
+== Teleport dummy to cursor
+
 Teleport free spectator camera between hovered tele-in/out or checkpoint tele and a matching counterpart
 == Teleportar câmera de espectador livre entre tele-in/out ou checkpoint tele pairando e uma contraparte correspondente
 
@@ -15647,17 +15704,23 @@ Text alpha
 Text before each key press count
 == Prefixo do contador de teclas
 
+Text caret style
+== Estilo do cursor de entrada
+
+Text caret style: 0=bar, 1=underscore, 2=block
+== Estilo do cursor de entrada: 0=barra, 1=sublinhado, 2=bloco
+
 Text color
 == Cor do texto
 
 Text color mode
 == Modo de cor do texto
 
-Text color mode: 0 automatic, 1 white, 2 black, 3 custom
-== Modo de cor do texto: 0 automático, 1 branco, 2 preto, 3 personalizado
+Text color mode: 0 white, 1 black, 2 rainbow, 3 custom
+== Modo de cor do texto: 0=branco, 1=preto, 2=arco-íris, 3=personalizado
 
-Text input focus ring color
-== Cor do anel de foco da entrada de texto
+Text follows the chosen mode instead of the surface, so a light surface with white text is unreadable by design.
+== O texto segue o modo escolhido, não a superfície, então texto branco em superfície clara é ilegível por design.
 
 Text is too long for the selected translation service.
 == O texto excede o limite de tamanho do serviço de tradução selecionado.
@@ -15842,8 +15905,8 @@ This connection cannot change names while connected. Reconnect with the saved na
 This ID is not connected
 == Este ID não está conectado
 
-This is the master switch for all interface animation categories
-== Este é o interruptor mestre para todas as categorias de animação da interface
+This is the master switch for all interface animations
+== Interruptor principal de todas as animações da interface
 
 This map path cannot be used.
 == Este caminho de mapa não pode ser usado.
@@ -16484,8 +16547,8 @@ Tune variable to value
 Tune variable to value or show current value
 == Ajustar variável para valor ou mostrar valor atual
 
-Turn motion off on weaker machines; cards then open and scroll immediately.
-== Desligue a animação em máquinas mais fracas; assim os cartões abrem e rolam na hora.
+Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
+== Em máquinas modestas, desligue: os cartões abrem e rolam imediatamente. A forma do cursor é só estética: os três estilos ocupam a mesma célula.
 
 Turn off "Show main-world ghost" to hide every Tee from the server, other players included; while it is on, the opacity slider sets how visible they are. The bind rows send the same commands as the practice menu, so a bound key needs no chat box.
 == Desative "Mostrar fantasma do mundo principal" para ocultar todos os Tee que vêm do servidor, incluindo outros jogadores; enquanto estiver ativo, o controle de opacidade define o quanto eles aparecem. As linhas de atalho enviam os mesmos comandos do menu de prática, então não é preciso abrir o chat.
@@ -16514,8 +16577,8 @@ Turn on "Enable dummy window", then set "Dummy window size" and "Dummy window zo
 Turn on "Enable Gores mode" or let "Auto enable in Gores mode" do it, pick options like "Auto weapon switch", and bind "Gores mode key".
 == Ative ativar o modo Gores ou deixe a ativação automática no modo Gores fazer isso, escolha opções como troca automática de arma e defina a tecla do modo Gores.
 
-Turn on "Enable pie menu", bind the "Pie menu" command on the Bind page, then hold that key near a player and release on an option.
-== Ative "Ativar menu radial", atribua o comando "Menu radial" na página de atalhos e segure a tecla perto de um jogador, soltando sobre uma opção.
+Turn on "Enable pie menu", bind the "Pie menu" command on the Bind page, then hold that key near a player and release on an option. Drag options between the two lists to show or hide them.
+== Ative "Ativar menu de torta", defina o comando "Menu de torta" na página "Vincular", segure essa tecla perto de um jogador e solte sobre uma opção. Arraste as opções entre as duas listas para exibi-las ou ocultá-las.
 
 Turn on "Enable rotation", set "Switch interval" in milliseconds, then add skins with the plus icon in the skin list; "Random skin on map join" picks the start.
 == Ative Ativar rotação, defina o intervalo de troca em milissegundos e adicione skins pelo ícone de mais na lista; a skin aleatória ao entrar no mapa escolhe o começo.
@@ -16759,6 +16822,12 @@ Uncertainty duration
 
 Unclassified audio issue
 == Problema de áudio não classificado
+
+Underscore
+== Sublinhado
+
+Underscore: a line under the character that follows
+== Sublinhado: uma linha sob o caractere seguinte
 
 Undo deep freeze
 == Desfazer congelamento profundo
@@ -17019,7 +17088,7 @@ Use custom chat bubble colors
 == Usar cores personalizadas nos balões de chat
 
 Use custom colors
-== Usar cores personalizadas
+== Use custom colors
 
 Use custom colors for the pressed hook collision line (0 = always invert)
 == Usa cores personalizadas para a linha de gancho pressionada (0 = sempre inverter)
@@ -17153,9 +17222,6 @@ Use warlist colors instead of regular colors
 Use warlist groups for indicator
 == Usar grupos da lista de guerra para o indicador
 
-Used by active shared text and numeric input fields
-== Usado por campos compartilhados ativos de texto e números
-
 Uses the active action with the current aiming position.
 == Usa a ação ativa com a posição de mira atual.
 
@@ -17216,8 +17282,8 @@ Very high quality, very slow
 Very long kaomoji are split by the chat length limit.
 == Kaomoji muito longos são divididos pelo limite de tamanho do chat.
 
-Very thick borders or high segment counts make text look blurry; keep them near the defaults.
-== Bordas muito grossas ou muitos segmentos deixam o texto borrado; mantenha perto dos padrões.
+Very thick borders make text look blurry; keep them near the defaults.
+== Bordas muito grossas deixam o texto borrado; mantenha valores próximos dos padrões.
 
 Video Background
 == Fundo de vídeo
@@ -18377,6 +18443,14 @@ Hook
 [Direct touch input]
 Relative aim
 == Mira relativa
+
+[Editor]
+Use Shift+Mouse wheel up/down to adjust the angle.
+== Use Shift+Mouse wheel up/down to adjust the angle.
+
+[Editor]
+Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
+== Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
 
 [Editor curve type abbreviation]
 B

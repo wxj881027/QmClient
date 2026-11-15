@@ -38,8 +38,8 @@ struct STrackContext
 // demo 解析期间的状态，独立于主客户端，避免打断正常游戏
 struct SParseContext
 {
-	rust::Box<CSnapshotDelta> m_pDelta;
-	rust::Box<CSnapshotDelta> m_pDeltaSixup;
+	CSnapshotDelta m_Delta;
+	CSnapshotDelta m_DeltaSixup;
 	std::unique_ptr<CDemoPlayer> m_pPlayer;
 	CNetObjHandler m_NetObjHandler;
 	// 0.7 回放的消息用独立协议解包（对象类型编号与 0.6 不同）

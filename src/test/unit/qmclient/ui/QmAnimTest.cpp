@@ -14,6 +14,7 @@
 #include <game/client/QmUi/UiFormLogic.h>
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiMotion.h>
+#include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiOverlays.h>
 #include <game/client/QmUi/UiTheme.h>
 #include <game/client/QmUi/UiTokens.h>
@@ -317,7 +318,9 @@ TEST(SettingsPageLayout, PageListCardsUseExactProductionViewports)
 	const SSettingsListCardGeometry EightLanguages = ResolveSettingsGeneralLanguageListGeometry(8, Metrics);
 	const SSettingsListCardGeometry NineLanguages = ResolveSettingsGeneralLanguageListGeometry(9, Metrics);
 	EXPECT_EQ(OneLanguage.m_VisibleRows, 1);
-	EXPECT_FLOAT_EQ(OneLanguage.m_ContentHeight, Metrics.m_ListRowHeight);
+	// 语言卡片测高 = 可见行内容 + 上下两档容器内边距（唯一来源 PaddedRowsHeight）：
+	// 末行的高亮不再贴着容器下缘，行数仍由可见行数决定。
+	EXPECT_FLOAT_EQ(OneLanguage.m_ContentHeight, ui_token::list::PaddedRowsHeight(1, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING, ui_token::list::ContainerPadding(Metrics.m_ListRowHeight)));
 	EXPECT_EQ(EightLanguages.m_VisibleRows, 8);
 	// 语言列表同样按胶囊行渲染，视口 = 整数行 + 行距半档（唯一来源 RowsHeight）。
 	EXPECT_FLOAT_EQ(EightLanguages.m_ListViewportHeight, ResolveSettingsListViewportHeight(8, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING));
@@ -330,8 +333,9 @@ TEST(SettingsPageLayout, PageListCardsUseExactProductionViewports)
 	const float ThemeViewport = ResolveSettingsListViewportHeight(ui_token::list::MAX_VISIBLE_ROWS, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING);
 	EXPECT_EQ(Theme.m_VisibleRows, ui_token::list::MAX_VISIBLE_ROWS);
 	EXPECT_FLOAT_EQ(Theme.m_ListViewportHeight, ThemeViewport);
-	// DoHeader 消费 LineHeight + 2 × LineSpacing，两段相加正好是整容器高度。
-	EXPECT_FLOAT_EQ(Theme.m_ContentHeight, ThemeViewport + Metrics.m_LineHeight + 2.0f * Metrics.m_LineSpacing);
+	// DoHeader 消费 LineHeight + 2 × LineSpacing，列表体再带上下两档容器内边距，
+	// 两段相加正好是整容器高度。
+	EXPECT_FLOAT_EQ(Theme.m_ContentHeight, ui_token::list::PaddedRowsHeight(ui_token::list::MAX_VISIBLE_ROWS, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING, ui_token::list::ContainerPadding(Metrics.m_ListRowHeight)) + Metrics.m_LineHeight + 2.0f * Metrics.m_LineSpacing);
 	// 少于最少可见行数时按最少行数测高，卡片不会缩成一行半。
 	const SSettingsListCardGeometry TwoThemes = ResolveSettingsGeneralThemeListGeometry(2, Metrics);
 	EXPECT_EQ(TwoThemes.m_VisibleRows, ui_token::list::THEME_MIN_VISIBLE_ROWS);
@@ -340,14 +344,14 @@ TEST(SettingsPageLayout, PageListCardsUseExactProductionViewports)
 	const SSettingsContentMetrics CardMetrics = ResolveSettingsContentMetrics(480.0f);
 	const SSettingsListCardGeometry CompactLanguages = ResolveSettingsGeneralLanguageListGeometry(9, CardMetrics);
 	EXPECT_NE(CardMetrics.m_ListRowHeight, Metrics.m_ListRowHeight);
-	EXPECT_FLOAT_EQ(CompactLanguages.m_ContentHeight, ResolveSettingsListViewportHeight(8, CardMetrics.m_ListRowHeight, ui_token::list::ROW_SPACING));
+	EXPECT_FLOAT_EQ(CompactLanguages.m_ContentHeight, ui_token::list::PaddedRowsHeight(8, CardMetrics.m_ListRowHeight, ui_token::list::ROW_SPACING, ui_token::list::ContainerPadding(CardMetrics.m_ListRowHeight)));
 
 	const SSettingsListCardGeometry OneMode = ResolveSettingsGraphicsModesGeometry(1, Metrics);
 	const SSettingsListCardGeometry ManyModes = ResolveSettingsGraphicsModesGeometry(20, Metrics);
-	EXPECT_FLOAT_EQ(OneMode.m_ContentHeight, Metrics.m_RowStep * 2.0f + Metrics.m_ListRowHeight);
-	// 视口高度 = 完整行高 + 行间距，行数与行距只由 ui_token::list 定义一次；
+	EXPECT_FLOAT_EQ(OneMode.m_ContentHeight, Metrics.m_RowStep * 2.0f + ui_token::list::PaddedRowsHeight(1, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING, ui_token::list::ContainerPadding(Metrics.m_ListRowHeight)));
+	// 视口高度 = 完整行内容 + 上下两档容器内边距，行数与行距只由 ui_token::list 定义一次；
 	// 这里引用同一组事实而不是写死数字，防止测高与渲染两套数字回潮。
-	const float ModesViewport = ResolveSettingsListViewportHeight(ui_token::list::MAX_VISIBLE_ROWS, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING);
+	const float ModesViewport = ui_token::list::PaddedRowsHeight(ui_token::list::MAX_VISIBLE_ROWS, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING, ui_token::list::ContainerPadding(Metrics.m_ListRowHeight));
 	EXPECT_FLOAT_EQ(ManyModes.m_ContentHeight, Metrics.m_RowStep * 2.0f + ModesViewport);
 	EXPECT_FLOAT_EQ(ManyModes.m_ListViewportHeight, ModesViewport);
 
@@ -355,9 +359,10 @@ TEST(SettingsPageLayout, PageListCardsUseExactProductionViewports)
 	const SSettingsListCardGeometry EightAudioPacks = ResolveSettingsSoundAudioPackGeometry(8, Metrics);
 	const SSettingsListCardGeometry NineAudioPacks = ResolveSettingsSoundAudioPackGeometry(9, Metrics);
 	EXPECT_EQ(OneAudioPack.m_VisibleRows, 1);
-	EXPECT_FLOAT_EQ(OneAudioPack.m_ListViewportHeight, Metrics.m_ListRowHeight);
+	// 音频包列表的 viewport 同样按 PaddedRowsHeight 计入上下两档容器内边距。
+	EXPECT_FLOAT_EQ(OneAudioPack.m_ListViewportHeight, ui_token::list::PaddedRowsHeight(1, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING, ui_token::list::ContainerPadding(Metrics.m_ListRowHeight)));
 	EXPECT_EQ(EightAudioPacks.m_VisibleRows, 8);
-	EXPECT_FLOAT_EQ(EightAudioPacks.m_ListViewportHeight, ResolveSettingsListViewportHeight(8, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING));
+	EXPECT_FLOAT_EQ(EightAudioPacks.m_ListViewportHeight, ui_token::list::PaddedRowsHeight(8, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING, ui_token::list::ContainerPadding(Metrics.m_ListRowHeight)));
 	EXPECT_FLOAT_EQ(NineAudioPacks.m_ListViewportHeight, EightAudioPacks.m_ListViewportHeight);
 	EXPECT_FLOAT_EQ(OneAudioPack.m_ContentHeight, Metrics.m_LineHeight + Metrics.m_LineSpacing + OneAudioPack.m_ListViewportHeight + 16.0f);
 	EXPECT_NE(ResolveSettingsSoundLayoutRevision(false, true, 7), ResolveSettingsSoundLayoutRevision(false, true, 8));
@@ -439,9 +444,10 @@ TEST(SettingsPageLayout, TeeQueueListViewportUsesCompleteRowsAndPrioritizesQueue
 	const SSettingsTeeQueuePanelGeometry OneQueueItem = ResolveSettingsTeeQueuePanelGeometry(Metrics, 1, 12);
 	const SSettingsTeeQueuePanelGeometry EightQueueItems = ResolveSettingsTeeQueuePanelGeometry(Metrics, 8, 12);
 	const SSettingsTeeQueuePanelGeometry NineQueueItems = ResolveSettingsTeeQueuePanelGeometry(Metrics, 9, 12);
-	EXPECT_FLOAT_EQ(OneQueueItem.m_QueueListViewportHeight, Metrics.m_ListRowHeight);
+	// 队列列表的 viewport 与 CListBox 的自适应上限同源：可见行内容 + 上下两档容器内边距。
+	EXPECT_FLOAT_EQ(OneQueueItem.m_QueueListViewportHeight, ui_token::list::PaddedRowsHeight(1, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING, ui_token::list::ContainerPadding(Metrics.m_ListRowHeight)));
 	EXPECT_FLOAT_EQ(EightQueueItems.m_QueueListViewportHeight,
-		ResolveSettingsListViewportHeight(ui_token::list::SKIN_QUEUE_MAX_VISIBLE_ROWS, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING));
+		ui_token::list::PaddedRowsHeight(ui_token::list::SKIN_QUEUE_MAX_VISIBLE_ROWS, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING, ui_token::list::ContainerPadding(Metrics.m_ListRowHeight)));
 	EXPECT_FLOAT_EQ(NineQueueItems.m_QueueListViewportHeight, EightQueueItems.m_QueueListViewportHeight);
 	EXPECT_FLOAT_EQ(EightQueueItems.m_QueueListSurfaceHeight, Metrics.m_LineHeight + Metrics.m_LineSpacing * 3.0f + EightQueueItems.m_QueueListViewportHeight);
 	EXPECT_EQ(EightQueueItems.m_VisiblePresetRows, 3);
@@ -520,8 +526,8 @@ TEST(SettingsPageLayout, SettingsShellReservesRestartBarBeforeContent)
 
 TEST(UiTheme, RuntimeThemeTracksBaseColorAndOpacity)
 {
-	const SUiTheme Blue = ResolveUiTheme(ColorHSLA(0.60f, 0.75f, 0.45f, 1.0f), 1.0f, ColorHSLA(0.60f, 0.78f, 0.52f, 1.0f), ColorHSLA(0.60f, 0.75f, 0.45f, 1.0f));
-	const SUiTheme RedHalf = ResolveUiTheme(ColorHSLA(0.00f, 0.75f, 0.45f, 1.0f), 0.5f, ColorHSLA(0.60f, 0.78f, 0.52f, 1.0f), ColorHSLA(0.00f, 0.75f, 0.45f, 1.0f));
+	const SUiTheme Blue = ResolveUiTheme(ColorHSLA(0.60f, 0.75f, 0.45f, 1.0f), 1.0f, ColorHSLA(0.60f, 0.75f, 0.45f, 1.0f));
+	const SUiTheme RedHalf = ResolveUiTheme(ColorHSLA(0.00f, 0.75f, 0.45f, 1.0f), 0.5f, ColorHSLA(0.00f, 0.75f, 0.45f, 1.0f));
 	EXPECT_NE(Blue.m_Accent.r, RedHalf.m_Accent.r);
 	EXPECT_NE(Blue.m_Accent.b, RedHalf.m_Accent.b);
 	EXPECT_LT(RedHalf.m_Surface.a, Blue.m_Surface.a);
@@ -743,13 +749,33 @@ TEST(UiTheme, FocusRingKeepsInputFillStable)
 	EXPECT_GT(Theme.m_FocusRing.a, Theme.m_Border.a);
 }
 
-TEST(UiTheme, InputFallbackTracksConfiguredFocusColor)
+TEST(UiTheme, InputFallbackDerivesFocusRingFromAccent)
 {
-	const SUiTheme Theme = ResolveInputFallbackTheme(0x97FFA6);
-
-	EXPECT_NEAR(Theme.m_FocusRing.r, 0x4D / 255.0f, 0.01f);
-	EXPECT_NEAR(Theme.m_FocusRing.g, 0x9C / 255.0f, 0.01f);
-	EXPECT_NEAR(Theme.m_FocusRing.b, 1.0f, 0.01f);
+	// 焦点环跟随强调色：不再有独立的「焦点环颜色」，否则同一界面会出现两个强调色。
+	struct SAccentGuard
+	{
+		unsigned m_Color = g_Config.m_QmUiAccentColor;
+		int m_Opacity = g_Config.m_QmUiAccentOpacity;
+		~SAccentGuard()
+		{
+			g_Config.m_QmUiAccentColor = m_Color;
+			g_Config.m_QmUiAccentOpacity = m_Opacity;
+		}
+	} Guard;
+	// 界面颜色配置是打包的 HSLA（取色器读写同一份），这里用同一个 Pack 构造。
+	const ColorHSLA Accent(0.72f, 0.85f, 0.55f, 1.0f);
+	g_Config.m_QmUiAccentColor = Accent.Pack();
+	g_Config.m_QmUiAccentOpacity = 100;
+	const SUiTheme Theme = ResolveInputFallbackTheme();
+	const ColorRGBA AccentRgb = color_cast<ColorRGBA>(Accent);
+	EXPECT_NEAR(Theme.m_FocusRing.r, AccentRgb.r, 0.01f);
+	EXPECT_NEAR(Theme.m_FocusRing.g, AccentRgb.g, 0.01f);
+	EXPECT_NEAR(Theme.m_FocusRing.b, AccentRgb.b, 0.01f);
+	// 焦点环不随低表面透明度弱化到不可辨认。
+	EXPECT_GE(Theme.m_FocusRing.a, 0.60f);
+	EXPECT_FLOAT_EQ(Theme.m_FocusRing.r, Theme.m_Accent.r);
+	EXPECT_FLOAT_EQ(Theme.m_FocusRing.g, Theme.m_Accent.g);
+	EXPECT_FLOAT_EQ(Theme.m_FocusRing.b, Theme.m_Accent.b);
 }
 
 TEST(UiV2WidgetPresence, AnimatePresenceRendersWhileExiting)
@@ -1388,4 +1414,54 @@ TEST(UiV2InputField, DeclaresEditingCapabilitiesPerPublicFieldType)
 	EXPECT_TRUE(HasCapability(SearchCaps, ui_widget::EInputFieldCapability::CLEAR_BUTTON));
 	EXPECT_TRUE(HasCapability(SearchCaps, ui_widget::EInputFieldCapability::SEARCH_HOTKEY));
 	EXPECT_EQ((SearchCaps & ClearableCaps), ClearableCaps);
+}
+TEST(UiTheme, SelectionFollowsAccentAndControlHighlightsStayWhite)
+{
+	// 选中项不再单独配置：选中就是强调色；边框高亮固定白色，不参与强调色语义。
+	struct SAccentGuard
+	{
+		unsigned m_Color = g_Config.m_QmUiAccentColor;
+		int m_Opacity = g_Config.m_QmUiAccentOpacity;
+		int m_TextMode = g_Config.m_QmUiTextColorMode;
+		~SAccentGuard()
+		{
+			g_Config.m_QmUiAccentColor = m_Color;
+			g_Config.m_QmUiAccentOpacity = m_Opacity;
+			g_Config.m_QmUiTextColorMode = m_TextMode;
+		}
+	} Guard;
+	const ColorHSLA Accent(0.02f, 0.85f, 0.55f, 1.0f);
+	// 配置是打包值：期望值必须从打包后的配置读回，不能拿打包前的浮点比较。
+	g_Config.m_QmUiAccentColor = Accent.Pack();
+	g_Config.m_QmUiAccentOpacity = 100;
+	g_Config.m_QmUiTextColorMode = 0;
+	const ColorRGBA AccentRgb = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiAccentColor));
+
+	const SUiTheme Theme = ResolveUiTheme(ColorHSLA(0.0f, 0.0f, 0.2f), 1.0f, ColorHSLA(g_Config.m_QmUiAccentColor));
+	// 选中反馈取强调色 RGB，透明度固定 22%（行反馈档）。
+	EXPECT_FLOAT_EQ(Theme.m_Selected.r, AccentRgb.r);
+	EXPECT_FLOAT_EQ(Theme.m_Selected.g, AccentRgb.g);
+	EXPECT_FLOAT_EQ(Theme.m_Selected.b, AccentRgb.b);
+	EXPECT_FLOAT_EQ(Theme.m_Selected.a, 0.22f);
+	// 悬停/聚焦边框固定白色：偏红的强调色也不该把按钮边框染红。
+	for(const ColorRGBA &Border : {Theme.m_BorderHovered, Theme.m_BorderFocused})
+	{
+		EXPECT_FLOAT_EQ(Border.r, 1.0f);
+		EXPECT_FLOAT_EQ(Border.g, 1.0f);
+		EXPECT_FLOAT_EQ(Border.b, 1.0f);
+	}
+	EXPECT_FLOAT_EQ(Theme.m_BorderHovered.a, 0.45f);
+	EXPECT_FLOAT_EQ(Theme.m_BorderFocused.a, 0.75f);
+
+	// 胶囊滑块 = 选中项 = 强调色；滑块文字 = 文本颜色模式的固定色，与容器明暗无关。
+	const ColorRGBA Indicator = ui_widget::CapsuleTabBarIndicatorColor(ColorRGBA(0.1f, 0.1f, 0.1f, 1.0f));
+	EXPECT_FLOAT_EQ(Indicator.r, AccentRgb.r);
+	EXPECT_FLOAT_EQ(Indicator.g, AccentRgb.g);
+	EXPECT_FLOAT_EQ(Indicator.b, AccentRgb.b);
+	const ColorRGBA LabelOnDark = ui_widget::CapsuleTabBarActiveLabelColor(ColorRGBA(0.1f, 0.1f, 0.1f, 1.0f));
+	const ColorRGBA LabelOnLight = ui_widget::CapsuleTabBarActiveLabelColor(ColorRGBA(0.95f, 0.95f, 0.95f, 1.0f));
+	EXPECT_EQ(LabelOnDark, ResolveConfiguredTextColor());
+	// 关键行为：以前浅色容器会把滑块文字翻成深色，现在不再随容器变。
+	EXPECT_EQ(LabelOnLight, LabelOnDark);
+	EXPECT_EQ(LabelOnDark, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
 }

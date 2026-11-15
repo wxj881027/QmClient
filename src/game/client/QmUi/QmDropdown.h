@@ -17,9 +17,9 @@
 struct SQmDropdownVisualStyle
 {
 	ColorRGBA m_TriggerColor = ResolveConfiguredControlSurface();
-	ColorRGBA m_PopupBackgroundColor = ResolveDropdownSurface(g_Config.m_QmUiDropdownListColor, g_Config.m_QmUiDropdownListOpacity);
+	ColorRGBA m_PopupBackgroundColor = ResolveDropdownSurface(g_Config.m_QmUiLayerColor, g_Config.m_QmUiLayerOpacity);
 	ColorRGBA m_PopupBorderColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiCardBorderColor, true));
-	ColorRGBA m_ActiveEntryColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(0.22f);
+	ColorRGBA m_ActiveEntryColor = ResolveConfiguredAccentColor().WithAlpha(0.22f);
 	bool m_TransparentEntries = true;
 };
 
@@ -90,6 +90,15 @@ struct SQmDropdownUpdateResult
 	bool m_Selected = false;
 	int m_SelectedIndex = -1;
 };
+
+// 下拉框触发按钮与弹层条目是同一个视觉件：圆角都按行高推导成胶囊（半角，上限卡片档）。
+// 触发器以前固定取 radius::BASE(8)，而 DoButton_PopupMenu 画的条目按行高取胶囊，
+// 于是展开瞬间按钮是圆角矩形、列表是胶囊，两层接缝处的圆角对不上。
+// 触发器与条目都从这里取档，改口径只改一处；调用点不得再各挑一个固定半径。
+inline float QmDropdownEntryRadius(const float RowHeight)
+{
+	return ui_token::list::RowRadius(RowHeight);
+}
 
 inline float QmDropdownFixedHeight(const bool HasMessage, const float MessageHeight, const float OuterHeight)
 {

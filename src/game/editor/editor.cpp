@@ -3094,7 +3094,7 @@ bool CEditor::ReplaceImage(const char *pFilename, int StorageType, bool CheckDup
 	DilateImage(*pImg);
 
 	pImg->m_AutoMapper.Load(pImg->m_aName);
-	int TextureLoadFlag = Graphics()->Uses2DTextureArrays() ? IGraphics::TEXLOAD_TO_2D_ARRAY_TEXTURE : IGraphics::TEXLOAD_TO_3D_TEXTURE;
+	int TextureLoadFlag = Graphics()->TextureLoadFlags();
 	if(pImg->m_Width % 16 != 0 || pImg->m_Height % 16 != 0)
 		TextureLoadFlag = 0;
 	pImg->m_Texture = Graphics()->LoadTextureRaw(*pImg, TextureLoadFlag, pFilename);
@@ -3154,7 +3154,7 @@ bool CEditor::AddImage(const char *pFilename, int StorageType, void *pUser)
 	}
 	DilateImage(*pImg);
 
-	int TextureLoadFlag = pEditor->Graphics()->Uses2DTextureArrays() ? IGraphics::TEXLOAD_TO_2D_ARRAY_TEXTURE : IGraphics::TEXLOAD_TO_3D_TEXTURE;
+	int TextureLoadFlag = pEditor->Graphics()->TextureLoadFlags();
 	if(pImg->m_Width % 16 != 0 || pImg->m_Height % 16 != 0)
 		TextureLoadFlag = 0;
 	pImg->m_Texture = pEditor->Graphics()->LoadTextureRaw(*pImg, TextureLoadFlag, pFilename);
@@ -4993,11 +4993,25 @@ void CEditor::Render()
 		}
 		if(!DrawingToolsWheelHandled && !m_pBrush->IsEmpty())
 		{
-			const bool HasTeleTiles = std::any_of(m_pBrush->m_vpLayers.begin(), m_pBrush->m_vpLayers.end(), [](const auto &pLayer) {
-				return pLayer->m_Type == LAYERTYPE_TILES && std::static_pointer_cast<CLayerTiles>(pLayer)->m_HasTele;
-			});
-			if(HasTeleTiles)
-				str_copy(m_aTooltip, Localize("Use shift+mouse wheel up/down to adjust the tele numbers. Use ctrl+f to change all tele numbers to the first unused number.", "Editor"));
+			// 官方 12084：switch / tune 图层也支持同样的滚轮与 Ctrl+F，提示按图层类型区分
+			bool HasTileAdjustLayer = false;
+			bool HasSpeedupLayer = false;
+			for(const auto &pLayer : m_pBrush->m_vpLayers)
+			{
+				if(pLayer->m_Type != LAYERTYPE_TILES)
+					continue;
+				const std::shared_ptr<CLayerTiles> pTiles = std::static_pointer_cast<CLayerTiles>(pLayer);
+				HasTileAdjustLayer |= pTiles->m_HasTele || pTiles->m_HasSwitch || pTiles->m_HasTune;
+				HasSpeedupLayer |= pTiles->m_HasSpeedup;
+			}
+			if(HasTileAdjustLayer)
+			{
+				str_copy(m_aTooltip, Localize("Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.", "Editor"));
+			}
+			else if(HasSpeedupLayer)
+			{
+				str_copy(m_aTooltip, Localize("Use Shift+Mouse wheel up/down to adjust the angle.", "Editor"));
+			}
 
 			if(Input()->ShiftIsPressed())
 			{
@@ -5474,7 +5488,7 @@ void CEditor::AddDefaultMap()
 
 int CEditor::GetTextureUsageFlag() const
 {
-	return Graphics()->Uses2DTextureArrays() ? IGraphics::TEXLOAD_TO_2D_ARRAY_TEXTURE : IGraphics::TEXLOAD_TO_3D_TEXTURE;
+	return Graphics()->TextureLoadFlags();
 }
 
 IGraphics::CTextureHandle CEditor::GetFrontTexture()

@@ -17,7 +17,6 @@ CMapLayers::CMapLayers(ERenderType Type, bool OnlineOnly)
 	// static parameters for ingame rendering
 	m_Params.m_RenderType = m_Type;
 	m_Params.m_RenderInvalidTiles = false;
-	m_Params.m_TileAndQuadBuffering = true;
 	m_Params.m_RenderTileBorder = true;
 }
 
@@ -62,7 +61,7 @@ void CMapLayers::OnMapLoad()
 		ProgressCallback = ProgressBarCallback;
 	if(m_OnlineOnly && !LiveConnection)
 	{
-		m_MapRenderer.Load(m_Type, m_pLayers, m_pImages, &m_EnvEvaluator, ProgressCallback);
+		m_MapRenderer.Load(m_Type, m_pLayers, m_pImages, &m_EnvEvaluator, ProgressCallback, true);
 		m_MapLoaded = true;
 	}
 	else

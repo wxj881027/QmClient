@@ -654,7 +654,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 	{
 		const SSettingsFoldRowStyle TranslateAdvancedFoldStyle = ResolveSettingsFoldRowStyle(
 			SettingsCardDeckVisualOptions().m_BorderColor,
-			color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(1.0f));
+			ResolveConfiguredAccentColor().WithAlpha(1.0f));
 		const bool TranslateAdvancedClicked = SettingsFoldRow(Ui(), &s_TranslateAdvancedFoldRowButton, TranslateAdvancedFoldRow, Localize("Personal adjustments"), SmallSize, g_Config.m_QmTranslateShowAdvanced != 0, TranslateAdvancedFoldStyle);
 		if(TranslateAdvancedClicked && Flow.Input() && !PrewarmOnly && !Ui()->RenderOnly())
 			g_Config.m_QmTranslateShowAdvanced = g_Config.m_QmTranslateShowAdvanced ? 0 : 1;

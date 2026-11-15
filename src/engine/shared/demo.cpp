@@ -121,6 +121,8 @@ int CDemoRecorder::Start(class IStorage *pStorage, class IConsole *pConsole, con
 				str_format(aBuf, sizeof(aBuf), "Unable to open mapfile '%s'", pMap);
 				m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo_recorder", aBuf, gs_DemoPrintColor);
 			}
+			// 地图文件打不开时录制文件已经创建，必须关闭，否则每次录制都泄漏句柄。
+			io_close(DemoFile);
 			return -1;
 		}
 
@@ -363,7 +365,7 @@ void CDemoRecorder::RecordSnapshot(int Tick, const void *pData, int Size, bool K
 
 		// create delta
 		CSnapshotDeltaBuffer DeltaData;
-		const int DeltaSize = m_pSnapshotDelta->CreateDelta(*m_LastSnapshotData.AsSnapshot(), *(CSnapshot *)pData, DeltaData.AsMutSlice());
+		const int DeltaSize = m_pSnapshotDelta->CreateDelta(m_LastSnapshotData.AsSnapshot(), (CSnapshot *)pData, DeltaData.Data(), sizeof(DeltaData.m_aData));
 		if(DeltaSize > 0)
 		{
 			// record delta
@@ -762,10 +764,7 @@ void CDemoPlayer::DoTick()
 			}
 
 			// process delta snapshot
-			// TODO: this needs alignment for `m_aChunkData` of 4,
-			// but this is not guaranteed. This is assumed above,
-			// too, anyway, in `CVariableInt::Decompress`.
-			DataSize = SnapshotDelta()->UnpackDelta(*m_LastSnapshotData.AsSnapshot(), m_Snapshot, rust::Slice<const int32_t>((const int *)m_aChunkData, DataSize / sizeof(int32_t)));
+			DataSize = SnapshotDelta()->UnpackDelta(m_LastSnapshotData.AsSnapshot(), &m_Snapshot, m_aChunkData, DataSize);
 
 			if(DataSize < 0)
 			{
@@ -1065,7 +1064,7 @@ bool CDemoPlayer::SeekTick(ETickOffset TickOffset)
 	switch(TickOffset)
 	{
 	case TICK_CURRENT:
-		// TODO: WantedTick == m_Info.m_NextTick is used to update spectator info when paused so seeking must be done
+		// TODO: https://github.com/ddnet/ddnet/issues/11681
 		WantedTick = m_Info.m_Info.m_CurrentTick;
 		break;
 	case TICK_PREVIOUS:
@@ -1088,7 +1087,7 @@ bool CDemoPlayer::SetPos(int WantedTick)
 	if(!m_File)
 		return false;
 
-	// TODO: WantedTick == m_Info.m_NextTick is used to update spectator info when paused so seeking must be done
+	// TODO: Early exit when WantedTick > m_Info.m_Info.m_CurrentTick && WantedTick <= m_Info.m_NextTick with https://github.com/ddnet/ddnet/issues/11681
 
 	int LastSeekableTick = m_Info.m_Info.m_LastTick;
 	if(m_Info.m_Info.m_LiveDemo)
@@ -1108,7 +1107,6 @@ bool CDemoPlayer::SetPos(int WantedTick)
 	// Just the next tick
 	if(WantedTick == m_Info.m_NextTick + 1)
 	{
-		// This does handle looping correctly
 		DoTick();
 		Play();
 		return true;
@@ -1124,7 +1122,9 @@ bool CDemoPlayer::SetPos(int WantedTick)
 	while(KeyFrame > 0 && m_vKeyFrames[KeyFrame].m_Tick > KeyFrameWantedTick)
 		KeyFrame--;
 
+	// TODO Remove `WantedTick <= m_Info.m_NextTick` with https://github.com/ddnet/ddnet/issues/11681
 	if(WantedTick <= m_Info.m_Info.m_CurrentTick || // if we are seeking backwards (must be <= for high bandwidth demos) OR
+		WantedTick <= m_Info.m_NextTick || // if seeking to current tick OR
 		m_Info.m_Info.m_CurrentTick < m_vKeyFrames[KeyFrame].m_Tick || // we are before the wanted KeyFrame OR
 		(KeyFrame != m_vKeyFrames.size() - 1 && m_Info.m_Info.m_CurrentTick >= m_vKeyFrames[KeyFrame + 1].m_Tick)) // we are after the wanted KeyFrame
 	{

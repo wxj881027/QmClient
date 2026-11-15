@@ -321,22 +321,6 @@ turkish = "Adınızla mevcut bir oyuncu kontrol ediliyor"
 polish = "Sprawdzanie, czy istnieje gracz o Twojej nazwie"
 
 [[message]]
-key = "Click to restore full match"
-[message.translations]
-simplified_chinese = "点击恢复完整比赛"
-traditional_chinese = "點擊恢復完整比賽"
-japanese = "クリックしてフルマッチを復元"
-korean = "클릭하여 전체 매치 복원"
-russian = "Нажмите, чтобы восстановить полный матч"
-german = "Klicken, um vollständiges Match wiederherzustellen"
-spanish = "Haz clic para restaurar la partida completa"
-french = "Cliquez pour restaurer le match complet"
-brazilian_portuguese = "Clique para restaurar partida completa"
-portuguese = "Clique para restaurar partida completa"
-turkish = "Tam maçı geri yüklemek için tıklayın"
-polish = "Kliknij, aby przywrócić pełny mecz"
-
-[[message]]
 key = "Client data overview"
 [message.translations]
 simplified_chinese = "客户端数据概览"
@@ -881,54 +865,6 @@ turkish = "'%s' dosyası zaten mevcut, üzerine yazmak istiyor musunuz?"
 polish = "Plik '%s' już istnieje, czy chcesz go nadpisać?"
 
 [[message]]
-key = "Filter off"
-[message.translations]
-simplified_chinese = "不筛选"
-traditional_chinese = "關閉過濾"
-japanese = "フィルターオフ"
-korean = "필터 끄기"
-russian = "Фильтр выключен"
-german = "Filter aus"
-spanish = "Filtro desactivado"
-french = "Filtre désactivé"
-brazilian_portuguese = "Filtro desligado"
-portuguese = "Filtro desligado"
-turkish = "Filtre kapalı"
-polish = "Filtr wyłączony"
-
-[[message]]
-key = "Filter Team %d"
-[message.translations]
-simplified_chinese = "筛选队伍 %d"
-traditional_chinese = "過濾隊伍 %d"
-japanese = "チーム %d をフィルター"
-korean = "팀 %d 필터"
-russian = "Фильтр команды %d"
-german = "Team %d filtern"
-spanish = "Filtrar equipo %d"
-french = "Filtrer équipe %d"
-brazilian_portuguese = "Filtrar time %d"
-portuguese = "Filtrar equipa %d"
-turkish = "Takım %d filtrele"
-polish = "Filtruj drużynę %d"
-
-[[message]]
-key = "Filter: Team %d"
-[message.translations]
-simplified_chinese = "筛选：队伍 %d"
-traditional_chinese = "過濾：隊伍 %d"
-japanese = "フィルター: チーム %d"
-korean = "필터: 팀 %d"
-russian = "Фильтр: команда %d"
-german = "Teamfilter: %d"
-spanish = "Filtro: equipo %d"
-french = "Filtrer : équipe %d"
-brazilian_portuguese = "Filtro: time %d"
-portuguese = "Filtro: equipa %d"
-turkish = "Filtre: Takım %d"
-polish = "Filtr: drużyna %d"
-
-[[message]]
 key = "Finish data source"
 [message.translations]
 simplified_chinese = "完成图来源"
@@ -975,22 +911,6 @@ brazilian_portuguese = "Tempo de conclusão"
 portuguese = "Tempo de conclusão"
 turkish = "Tamamlanma süresi"
 polish = "Czas ukończenia"
-
-[[message]]
-key = "Full demo + sidecar"
-[message.translations]
-simplified_chinese = "完整 demo + sidecar"
-traditional_chinese = "完整 demo + sidecar"
-japanese = "フルデモ + サイドカー"
-korean = "전체 데모 + 사이드카"
-russian = "Полное демо + sidecar"
-german = "Vollständige Demo + Sidecar"
-spanish = "Demo completa + sidecar"
-french = "Démo complète + sidecar"
-brazilian_portuguese = "Demo completa + sidecar"
-portuguese = "Demo completa + sidecar"
-turkish = "Tam demo + sidecar"
-polish = "Pełne demo + sidecar"
 
 [[message]]
 key = "Game"
@@ -1601,22 +1521,6 @@ turkish = "Lütfen aşağıya takma adınızı girin."
 polish = "Wpisz poniżej swój pseudonim."
 
 [[message]]
-key = "Please wait…"
-[message.translations]
-simplified_chinese = "请稍等…"
-traditional_chinese = "請稍等…"
-japanese = "お待ちください…"
-korean = "잠시 기다려 주세요…"
-russian = "Пожалуйста, подождите…"
-german = "Bitte warten…"
-spanish = "Por favor espera…"
-french = "Veuillez patienter…"
-brazilian_portuguese = "Aguarde…"
-portuguese = "Por favor, aguarde…"
-turkish = "Lütfen bekleyin…"
-polish = "Proszę czekać…"
-
-[[message]]
 key = "Preparing demo playback"
 [message.translations]
 simplified_chinese = "正在准备回放"
@@ -1631,38 +1535,6 @@ brazilian_portuguese = "Preparando reprodução da demo"
 portuguese = "A preparar reprodução da demo"
 turkish = "Demo oynatımı hazırlanıyor"
 polish = "Przygotowywanie odtwarzania dema"
-
-[[message]]
-key = "Preview/render only one DDRace team from a full match demo"
-[message.translations]
-simplified_chinese = "从完整比赛 demo 中只预览/渲染一个 DDRace 队伍"
-traditional_chinese = "從完整比賽 demo 中只預覽/渲染一個 DDRace 隊伍"
-japanese = "完全試合デモから DDRace チームを1つだけプレビュー/描画"
-korean = "전체 매치 데모에서 하나의 DDRace 팀만 미리보기/렌더"
-russian = "Предпросмотр/рендер только одной команды DDRace из полного матч-демо"
-german = "Nur ein DDRace-Team aus einer vollständigen Match-Demo vorab anzeigen/rendern"
-spanish = "Vista previa/renderizar solo un equipo de DDRace de una demo de partida completa"
-french = "Aperçu/rendu d'une seule équipe DDRace à partir d'une démo de match complet"
-brazilian_portuguese = "Pré-visualizar/renderizar apenas uma equipe DDRace de uma demo de partida completa"
-portuguese = "Pré-visualizar/renderizar apenas uma equipe DDRace de uma demo de partida completa"
-turkish = "Tam maç demosundan yalnızca bir DDRace takımını önizle/oluştur"
-polish = "Podgląd/renderowanie tylko jednej drużyny DDRace z pełnego dema meczu"
-
-[[message]]
-key = "Preview/render only this team"
-[message.translations]
-simplified_chinese = "仅预览/渲染此队伍"
-traditional_chinese = "僅預覽/渲染此隊伍"
-japanese = "このチームのみをプレビュー/レンダリング"
-korean = "이 팀만 미리보기/렌더"
-russian = "Предпросмотр/рендер только этой команды"
-german = "Nur dieses Team vorab anzeigen/rendern"
-spanish = "Vista previa/renderizar solo este equipo"
-french = "Aperçu/rendu de cette équipe uniquement"
-brazilian_portuguese = "Pré-visualizar/renderizar apenas esta equipe"
-portuguese = "Pré-visualizar/renderizar apenas esta equipe"
-turkish = "Yalnızca bu takımı önizle/oluştur"
-polish = "Podgląd/renderowanie tylko tej drużyny"
 
 [[message]]
 key = "Profiles"
@@ -1727,22 +1599,6 @@ brazilian_portuguese = "Reconectar em %d seg"
 portuguese = "Reconnectar em %d seg"
 turkish = "%d sn sonra yeniden bağlan"
 polish = "Ponowne połączenie za %d s"
-
-[[message]]
-key = "Record match"
-[message.translations]
-simplified_chinese = "录制比赛"
-traditional_chinese = "錄製比賽"
-japanese = "試合を録画"
-korean = "매치 녹화"
-russian = "Запись матча"
-german = "Match aufnehmen"
-spanish = "Grabar partida"
-french = "Enregistrer le match"
-brazilian_portuguese = "Gravar partida"
-portuguese = "Gravar partida"
-turkish = "Maç kaydet"
-polish = "Nagrywaj mecz"
 
 [[message]]
 key = "Refresh"
@@ -2127,22 +1983,6 @@ brazilian_portuguese = "Notas de estatísticas"
 portuguese = "Notas de estatísticas"
 turkish = "İstatistik notları"
 polish = "Uwagi do statystyk"
-
-[[message]]
-key = "Stop match record"
-[message.translations]
-simplified_chinese = "停止比赛录制"
-traditional_chinese = "停止比賽錄製"
-japanese = "マッチ録画を停止"
-korean = "매치 녹화 중지"
-russian = "Остановить запись матча"
-german = "Match-Aufnahme stoppen"
-spanish = "Detener grabación de partida"
-french = "Arrêter l'enregistrement du match"
-brazilian_portuguese = "Parar gravação de partida"
-portuguese = "Parar gravação de partida"
-turkish = "Maç kaydını durdur"
-polish = "Zatrzymaj nagrywanie meczu"
 
 [[message]]
 key = "Switch team"

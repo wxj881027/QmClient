@@ -1448,8 +1448,8 @@ public:
 	int CreateQuadContainer(bool AutomaticUpload = true) override;
 	void QuadContainerChangeAutomaticUpload(int ContainerIndex, bool AutomaticUpload) override;
 	void QuadContainerUpload(int ContainerIndex) override;
-	int QuadContainerAddQuads(int ContainerIndex, CQuadItem *pArray, int Num) override;
-	int QuadContainerAddQuads(int ContainerIndex, CFreeformItem *pArray, int Num) override;
+	int QuadContainerAddQuads(int ContainerIndex, const CQuadItem *pArray, int Num) override;
+	int QuadContainerAddQuads(int ContainerIndex, const CFreeformItem *pArray, int Num) override;
 	void QuadContainerReset(int ContainerIndex) override;
 	void DeleteQuadContainer(int &ContainerIndex) override;
 	void RenderQuadContainer(int ContainerIndex, int QuadDrawNum) override;
@@ -1652,6 +1652,7 @@ public:
 	bool IsTextBufferingEnabled() override { return m_GLTextBufferingEnabled; }
 	bool IsQuadContainerBufferingEnabled() override { return m_GLQuadContainerBufferingEnabled; }
 	bool Uses2DTextureArrays() override { return m_GLUses2DTextureArrays; }
+	int TextureLoadFlags() override { return Uses2DTextureArrays() ? IGraphics::TEXLOAD_TO_2D_ARRAY_TEXTURE : IGraphics::TEXLOAD_TO_3D_TEXTURE; }
 	bool HasTextureArraysSupport() const override { return m_GLHasTextureArraysSupport; }
 
 	const char *GetVendorString() override;

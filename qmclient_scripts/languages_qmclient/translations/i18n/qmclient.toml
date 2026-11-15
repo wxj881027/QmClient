@@ -1311,22 +1311,6 @@ turkish = "AMLL TTML DB API base URL (can be changed to a mirror)"
 polish = "AMLL TTML DB API base URL (can be changed to a mirror)"
 
 [[message]]
-key = "Animate chat box, emote selector, scoreboard, and spectate selection"
-[message.translations]
-simplified_chinese = "聊天框、表情选择、计分板和观战选择的展示动画"
-traditional_chinese = "聊天框、表情選擇、計分板和觀戰選擇的展示動畫"
-japanese = "チャットボックス、絵文字選択、スコアボード、観戦選択をアニメーション化"
-korean = "채팅창, 이모티콘 선택기, 점수판 및 관전 선택에 애니메이션 적용"
-russian = "Анимировать чат, выбор эмоций, табло и выбор наблюдения"
-german = "Chatfenster, Emote-Auswahl, Anzeigetafel und Zuschauerwahl animieren"
-spanish = "Animar el chat, el selector de emoticonos, el marcador y la selección de espectador"
-french = "Animer la boîte de discussion, le sélecteur d'émoticônes, le tableau des scores et la sélection de spectateur"
-brazilian_portuguese = "Animar a caixa de chat, o seletor de emoticons, o placar e a seleção de espectador"
-portuguese = "Animar a caixa de chat, o seletor de emoticons, o placar e a seleção de espetador"
-turkish = "Sohbet kutusunu, ifade seçiciyi, skor tablosunu ve izleyici seçimini canlandır"
-polish = "Animuj okno czatu, wybór emotikon, tablicę wyników i wybór obserwowania"
-
-[[message]]
 key = "Animate lists when entering a page"
 [message.translations]
 simplified_chinese = "进入页面时播放列表动画"
@@ -1341,54 +1325,6 @@ brazilian_portuguese = "Animar listas ao entrar em uma página"
 portuguese = "Animar listas ao entrar numa página"
 turkish = "Bir sayfaya girerken listeleri canlandır"
 polish = "Animuj listy podczas otwierania strony"
-
-[[message]]
-key = "Animate settings card expand and collapse height changes"
-[message.translations]
-simplified_chinese = "展开或折叠设置卡片时播放高度过渡动画"
-traditional_chinese = "展開或折疊設定卡片時播放高度過渡動畫"
-japanese = "設定カードの展開・折りたたみ時の高さ変化をアニメーション化"
-korean = "설정 카드 확장 및 접기 높이 변경에 애니메이션 적용"
-russian = "Анимировать изменение высоты при разворачивании и сворачивании карточек настроек"
-german = "Höhenänderungen beim Auf- und Zuklappen von Einstellungskarten animieren"
-spanish = "Animar los cambios de altura al expandir y contraer tarjetas de ajustes"
-french = "Animer les changements de hauteur lors du déploiement et du repli des cartes de paramètres"
-brazilian_portuguese = "Animar alterações de altura ao expandir e recolher cartões de configurações"
-portuguese = "Animar alterações de altura ao expandir e recolher cartões de definições"
-turkish = "Ayar kartlarını genişletip daraltırken yükseklik değişimlerini canlandır"
-polish = "Animuj zmiany wysokości podczas rozwijania i zwijania kart ustawień"
-
-[[message]]
-key = "Animate settings card lists when entering a page"
-[message.translations]
-simplified_chinese = "进入设置页面时播放卡片列表入场动画"
-traditional_chinese = "進入設定頁面時播放卡片列表進場動畫"
-japanese = "ページを開くときに設定カード一覧をアニメーション表示"
-korean = "페이지 진입 시 설정 카드 목록 애니메이션 적용"
-russian = "Анимировать список карточек настроек при входе на страницу"
-german = "Einstellungskartenlisten beim Öffnen einer Seite animieren"
-spanish = "Animar las listas de tarjetas de ajustes al entrar en una página"
-french = "Animer les listes de cartes de paramètres à l'ouverture d'une page"
-brazilian_portuguese = "Animar listas de cartões de configurações ao entrar em uma página"
-portuguese = "Animar listas de cartões de definições ao entrar numa página"
-turkish = "Bir sayfaya girerken ayar kartı listelerini canlandır"
-polish = "Animuj listy kart ustawień przy otwieraniu strony"
-
-[[message]]
-key = "Animate settings card reorder and layout reflow"
-[message.translations]
-simplified_chinese = "拖动排序或布局重排时播放卡片位置过渡动画"
-traditional_chinese = "拖動排序或版面重排時播放卡片位置過渡動畫"
-japanese = "設定カードの並べ替えとレイアウト再配置をアニメーション化"
-korean = "설정 카드 정렬 및 레이아웃 재배치에 애니메이션 적용"
-russian = "Анимировать сортировку и перестроение раскладки карточек настроек"
-german = "Neuanordnung und Layout-Umfluss von Einstellungskarten animieren"
-spanish = "Animar la reordenación y el reajuste de diseño de las tarjetas de ajustes"
-french = "Animer la réorganisation et le réagencement des cartes de paramètres"
-brazilian_portuguese = "Animar a reorganização e o reajuste do layout dos cartões de configurações"
-portuguese = "Animar a reorganização e o reajuste do layout dos cartões de definições"
-turkish = "Ayar kartı sıralamasını ve düzen yeniden akışını canlandır"
-polish = "Animuj zmianę kolejności i przepływ układu kart ustawień"
 
 [[message]]
 key = "Animated title style id"
@@ -40335,7 +40271,6 @@ portuguese = "Bézier cónica"
 turkish = "Konik Bézier"
 polish = "Bézier stożkowa"
 
-
 [[message]]
 key = "UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier"
 [message.translations]
@@ -41535,3 +41470,195 @@ brazilian_portuguese = "Opacidade dos fantasmas do servidor durante a prática r
 portuguese = "Opacidade dos fantasmas do servidor durante a prática rápida (%)"
 turkish = "Hızlı pratik sırasında sunucu tarafı hayalet opaklığı (%)"
 polish = "Krycie duchów po stronie serwera podczas szybkiej praktyki (%)"
+
+[[message]]
+key = "Negative stability buffer"
+[message.translations]
+simplified_chinese = "负稳定性缓冲"
+traditional_chinese = "負穩定性緩衝"
+japanese = "負の安定性バッファ"
+korean = "음수 안정성 버퍼"
+russian = "Буфер отрицательной стабильности"
+german = "Negativer Stabilitätspuffer"
+spanish = "Búfer de estabilidad negativa"
+french = "Tampon de stabilité négative"
+brazilian_portuguese = "Buffer de estabilidade negativa"
+portuguese = "Buffer de estabilidade negativa"
+turkish = "Negatif stabilite tamponu"
+polish = "Bufor ujemnej stabilności"
+
+[[message]]
+key = "Expose IP to servers by default when adding a favorite (last choice on the server info page)"
+[message.translations]
+simplified_chinese = "添加收藏时默认向该服务器暴露 IP（记住服务器信息页上的上次选择）"
+traditional_chinese = "加入收藏時預設向該伺服器顯示 IP（記住伺服器資訊頁上的上次選擇）"
+japanese = "お気に入り追加時に既定でサーバーへ IP を公開します（サーバー情報ページの前回の選択を記憶）"
+korean = "즐겨찾기 추가 시 기본으로 서버에 IP를 공개합니다 (서버 정보 페이지의 마지막 선택 기억)"
+russian = "По умолчанию открывать IP серверам при добавлении в избранное (запоминает последний выбор на странице сервера)"
+german = "IP beim Hinzufügen eines Favoriten standardmäßig an Server weitergeben (merkt sich die letzte Wahl auf der Serverinfoseite)"
+spanish = "Expone la IP a los servidores por defecto al añadir un favorito (recuerda la última elección de la página de información del servidor)"
+french = "Expose l'IP aux serveurs par défaut lors de l'ajout d'un favori (mémorise le dernier choix de la page d'infos du serveur)"
+brazilian_portuguese = "Expõe o IP aos servidores por padrão ao adicionar um favorito (lembra a última escolha da página de informações do servidor)"
+portuguese = "Expõe o IP aos servidores por predefinição ao adicionar um favorito (memoriza a última escolha da página de informações do servidor)"
+turkish = "Favori eklerken IP'yi varsayılan olarak sunuculara gösterir (sunucu bilgi sayfasındaki son seçimi hatırlar)"
+polish = "Domyślnie ujawniaj IP serwerom przy dodawaniu ulubionego (pamięta ostatni wybór na stronie informacji o serwerze)"
+
+[[message]]
+key = "Graphics settings sub-tab: 0=display, 1=visual effects"
+[message.translations]
+simplified_chinese = "图像设置子页签：0=显示，1=视觉效果"
+traditional_chinese = "圖像設定子頁籤：0=顯示，1=視覺效果"
+japanese = "グラフィック設定のサブタブ: 0=表示、1=視覚効果"
+korean = "그래픽 설정 하위 탭: 0=표시, 1=시각 효과"
+russian = "Вкладка настроек графики: 0=отображение, 1=визуальные эффекты"
+german = "Unterreiter der Grafikeinstellungen: 0=Anzeige, 1=visuelle Effekte"
+spanish = "Subpestaña de ajustes de gráficos: 0=visualización, 1=efectos visuales"
+french = "Sous-onglet des paramètres graphiques : 0=affichage, 1=effets visuels"
+brazilian_portuguese = "Subaba de configurações gráficas: 0=exibição, 1=efeitos visuais"
+portuguese = "Subseparador de definições gráficas: 0=apresentação, 1=efeitos visuais"
+turkish = "Grafik ayarları alt sekmesi: 0=görüntü, 1=görsel efektler"
+polish = "Podkarta ustawień grafiki: 0=wyświetlanie, 1=efekty wizualne"
+
+[[message]]
+key = "Text color mode: 0 white, 1 black, 2 rainbow, 3 custom"
+[message.translations]
+simplified_chinese = "文本颜色模式：0=白色，1=黑色，2=彩虹，3=自定义"
+traditional_chinese = "文字顏色模式：0=白色，1=黑色，2=彩虹，3=自定義"
+japanese = "文字色モード: 0=白、1=黒、2=レインボー、3=カスタム"
+korean = "텍스트 색상 모드: 0=흰색, 1=검정, 2=무지개, 3=사용자 정의"
+russian = "Режим цвета текста: 0=белый, 1=чёрный, 2=радуга, 3=пользовательский"
+german = "Textfarbmodus: 0=Weiß, 1=Schwarz, 2=Regenbogen, 3=benutzerdefiniert"
+spanish = "Modo de color del texto: 0=blanco, 1=negro, 2=arcoíris, 3=personalizado"
+french = "Mode de couleur du texte : 0=blanc, 1=noir, 2=arc-en-ciel, 3=personnalisé"
+brazilian_portuguese = "Modo de cor do texto: 0=branco, 1=preto, 2=arco-íris, 3=personalizado"
+portuguese = "Modo de cor do texto: 0=branco, 1=preto, 2=arco-íris, 3=personalizado"
+turkish = "Metin rengi modu: 0=beyaz, 1=siyah, 2=gökkuşağı, 3=özel"
+polish = "Tryb koloru tekstu: 0=biały, 1=czarny, 2=tęcza, 3=niestandardowy"
+
+[[message]]
+key = "Show an accent glow around the focused input field"
+[message.translations]
+simplified_chinese = "为聚焦的输入框显示强调色光晕"
+traditional_chinese = "為聚焦的輸入框顯示強調色光暈"
+japanese = "フォーカス中の入力欄にアクセント色のグローを表示"
+korean = "포커스된 입력란에 강조색 광채를 표시"
+russian = "Показывать свечение акцентного цвета вокруг поля ввода в фокусе"
+german = "Zeigt ein Leuchten in Akzentfarbe um das fokussierte Eingabefeld"
+spanish = "Mostrar un resplandor del color de acento alrededor del campo de entrada enfocado"
+french = "Afficher une lueur de la couleur d'accent autour du champ de saisie sélectionné"
+brazilian_portuguese = "Mostrar um brilho na cor de destaque ao redor do campo de entrada em foco"
+portuguese = "Mostrar um brilho na cor de destaque à volta do campo de entrada em foco"
+turkish = "Odaklanan giriş alanının çevresinde vurgu renginde parıltı göster"
+polish = "Pokazuj poświatę w kolorze akcentu wokół aktywnego pola tekstowego"
+
+[[message]]
+key = "Add options below"
+[message.translations]
+simplified_chinese = "在下方加入选项"
+traditional_chinese = "在下方加入選項"
+japanese = "下のリストから追加してください"
+korean = "아래에서 옵션을 추가하세요"
+russian = "Добавьте пункты ниже"
+german = "Optionen unten hinzufügen"
+spanish = "Añade opciones abajo"
+french = "Ajoutez des options ci-dessous"
+brazilian_portuguese = "Adicione opções abaixo"
+portuguese = "Adicione opções abaixo"
+turkish = "Aşağıdan seçenek ekleyin"
+polish = "Dodaj opcje poniżej"
+
+[[message]]
+key = "Click a slice to set color"
+[message.translations]
+simplified_chinese = "点击扇区设置颜色"
+traditional_chinese = "點擊扇區設定顏色"
+japanese = "セクターをクリックして色を設定"
+korean = "구역을 클릭해 색상 설정"
+russian = "Нажмите на сектор, чтобы задать цвет"
+german = "Auf ein Segment klicken, um die Farbe zu setzen"
+spanish = "Haz clic en un sector para elegir el color"
+french = "Cliquez sur un secteur pour choisir la couleur"
+brazilian_portuguese = "Clique em um setor para definir a cor"
+portuguese = "Clique num setor para definir a cor"
+turkish = "Rengi ayarlamak için bir dilime tıklayın"
+polish = "Kliknij wycinek, aby ustawić kolor"
+
+[[message]]
+key = "Drag options here to hide them"
+[message.translations]
+simplified_chinese = "把选项拖到这里即可隐藏"
+traditional_chinese = "把選項拖到這裡即可隱藏"
+japanese = "ここにドラッグすると非表示になります"
+korean = "여기로 끌어 놓으면 숨겨집니다"
+russian = "Перетащите сюда, чтобы скрыть"
+german = "Hierher ziehen, um sie auszublenden"
+spanish = "Arrastra aquí para ocultarlas"
+french = "Glissez ici pour les masquer"
+brazilian_portuguese = "Arraste para cá para ocultá-las"
+portuguese = "Arraste para aqui para as ocultar"
+turkish = "Gizlemek için buraya sürükleyin"
+polish = "Przeciągnij tutaj, aby ukryć"
+
+[[message]]
+key = "Drag options here to show them"
+[message.translations]
+simplified_chinese = "把选项拖到这里即可显示"
+traditional_chinese = "把選項拖到這裡即可顯示"
+japanese = "ここにドラッグすると表示されます"
+korean = "여기로 끌어 놓으면 표시됩니다"
+russian = "Перетащите сюда, чтобы показать"
+german = "Hierher ziehen, um sie anzuzeigen"
+spanish = "Arrastra aquí para mostrarlas"
+french = "Glissez ici pour les afficher"
+brazilian_portuguese = "Arraste para cá para exibi-las"
+portuguese = "Arraste para aqui para as mostrar"
+turkish = "Göstermek için buraya sürükleyin"
+polish = "Przeciągnij tutaj, aby pokazać"
+
+[[message]]
+key = "Drag to the other list to show or hide this option"
+[message.translations]
+simplified_chinese = "拖到另一个列表即可显示或隐藏该选项"
+traditional_chinese = "拖到另一個列表即可顯示或隱藏該選項"
+japanese = "もう一方のリストへドラッグすると表示/非表示を切り替えます"
+korean = "다른 목록으로 끌어 놓으면 표시 여부가 바뀝니다"
+russian = "Перетащите в другой список, чтобы показать или скрыть этот пункт"
+german = "In die andere Liste ziehen, um diese Option ein- oder auszublenden"
+spanish = "Arrastra a la otra lista para mostrar u ocultar esta opción"
+french = "Glissez vers l'autre liste pour afficher ou masquer cette option"
+brazilian_portuguese = "Arraste para a outra lista para mostrar ou ocultar esta opção"
+portuguese = "Arraste para a outra lista para mostrar ou ocultar esta opção"
+turkish = "Bu seçeneği göstermek veya gizlemek için diğer listeye sürükleyin"
+polish = "Przeciągnij do drugiej listy, aby pokazać lub ukryć tę opcję"
+
+[[message]]
+key = "In pie menu"
+[message.translations]
+simplified_chinese = "饼菜单中"
+traditional_chinese = "餅菜單中"
+japanese = "パイメニュー内"
+korean = "파이 메뉴에 있음"
+russian = "В круговом меню"
+german = "Im Kreismenü"
+spanish = "En el menú radial"
+french = "Dans le menu radial"
+brazilian_portuguese = "No menu radial"
+portuguese = "No menu radial"
+turkish = "Dairesel menüde"
+polish = "W menu kołowym"
+
+[[message]]
+key = "Not in pie menu"
+[message.translations]
+simplified_chinese = "未在饼菜单中"
+traditional_chinese = "未在餅菜單中"
+japanese = "パイメニュー外"
+korean = "파이 메뉴에 없음"
+russian = "Не в круговом меню"
+german = "Nicht im Kreismenü"
+spanish = "Fuera del menú radial"
+french = "Hors du menu radial"
+brazilian_portuguese = "Fora do menu radial"
+portuguese = "Fora do menu radial"
+turkish = "Dairesel menüde değil"
+polish = "Poza menu kołowym"

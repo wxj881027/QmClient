@@ -4,6 +4,8 @@
 #include "UiForms.h"
 
 #include "QmIconSwap.h"
+
+#include <game/client/QmUi/QmScroll.h>
 #include "QmPasswordIcon.h"
 #include "SettingsPageLayout.h"
 #include "UiButtons.h"
@@ -52,7 +54,7 @@ namespace ui_widget
 		SUiTheme ThemeFor(const IUiContext &Ctx)
 		{
 			return Ctx.m_pTheme != nullptr ? *Ctx.m_pTheme : Ctx.m_pUi != nullptr ? Ctx.m_pUi->QmControlTheme() :
-												ResolveInputFallbackTheme(g_Config.m_QmUiFocusColor);
+												ResolveInputFallbackTheme();
 		}
 
 		SInputFieldResult BuildInputFieldResult(const IUiContext &Ctx, CLineInput *pInput, bool Changed, bool WasActive, bool WasEmpty, bool Clearable)
@@ -268,6 +270,33 @@ namespace ui_widget
 		// 与列表胶囊行同一族；多行编辑器保持 radius::BASE 方角（首个/末个可见行
 		// 贴着矩形边，胶囊会把正文的首尾行切掉一角）。
 		const float ShellRadius = Options.m_Mode == EInputFieldMode::MULTILINE ? ui_token::radius::BASE : ResolveInputCapsuleRadius(Layout.m_ShellRect);
+		// 激活态光晕：外壳描边之外再铺两层光晕（内窄而亮、外宽而淡）。
+		// 光晕与焦点描边共用同一个判定与同一条淡入轨道，所以**任何**输入框聚焦都发光：
+		// 同一张卡片里搜索框、排除框、服务器地址框并排时，焦点落在哪个框上，哪个框就亮——
+		// 只给 SEARCH 模式发光会让地址框看起来"点了没反应"，就像它不是一个输入框。
+		// 开关在「图像 → 视觉效果 → 界面主题」里（qm_ui_focus_glow）：关掉只影响光晕，
+		// 焦点描边照旧，玩家不会因为关掉效果而失去焦点提示。
+		// 必须画在外壳之前：光晕最亮处贴着外壳边缘，外壳随后盖住内侧那一半，
+		// 剩下的才是「从边缘向外散开」的光，而不是盖在填充上的一层雾。
+		if(FocusPaintPass && FocusAlpha > 0.01f && !Ctx.m_pUi->MeasurementOnly())
+		{
+			const SUiTheme Theme = ThemeFor(Ctx);
+			// 浅色卡片上的光晕按表面亮度再压一档：白底上 0.22 的强调色淡光已经接近
+			// 参考设计里"贴着边框的一圈淡光"，深底上则保持令牌原强度。
+			const float GlowScale = ResolveUiSurfaceGlowScale(Theme.m_Surface);
+			const bool GlowEnabled = g_Config.m_QmUiFocusGlow != 0;
+			for(const SInputFocusGlowLayer &Layer : ResolveInputFocusGlowLayers(Layout.m_ShellRect, FocusAlpha, GlowEnabled))
+			{
+				if(Layer.m_Alpha <= 0.004f || Layer.m_Spread <= 0.0f)
+					continue;
+				SRoundedGlowParams GlowParams;
+				GlowParams.m_Radius = ShellRadius;
+				GlowParams.m_Spread = Layer.m_Spread;
+				GlowParams.m_Falloff = Layer.m_Falloff;
+				GlowParams.m_Corners = Options.m_Corners;
+				DrawRoundedSurfaceGlow(Ctx, Layout.m_ShellRect, Ctx.m_pUi->ScaleControlAlpha(Theme.m_FocusRing.WithAlpha(Layer.m_Alpha * GlowScale)), GlowParams);
+			}
+		}
 		if(!Ctx.m_pUi->MeasurementOnly() && FocusAlpha > 0.01f)
 		{
 			const SUiTheme Theme = ThemeFor(Ctx);
@@ -817,7 +846,7 @@ namespace ui_widget
 			Ctx.m_pUi->DoLabel(&Rect, pMark, Rect.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
 	}
 
-	bool FilterChip(const IUiContext &Ctx, const void *pId, const CUIRect &Rect, const char *pLabel, bool Selected, bool Enabled)
+	bool FilterChip(const IUiContext &Ctx, const void *pId, const CUIRect &Rect, const char *pLabel, bool Selected, bool Enabled, float FontSize)
 	{
 		if(Ctx.m_pUi == nullptr || pId == nullptr)
 			return false;
@@ -837,12 +866,17 @@ namespace ui_widget
 		// 这里也不再挂 CUiScopedSurfaceText——那会把本胶囊的合成底色登记成
 		// 当前表面，后面的字形/图标仍可能按它反色。
 		SLabelProperties Props;
-		Props.m_MaxWidth = Rect.w;
-		Props.m_EllipsisAtEnd = true;
-		Props.m_MinimumFontSize = ui_token::server_filter::CHIP_MIN_FONT_SIZE;
-		Props.SetColor(Enabled ? ui_token::color::TEXT_PRIMARY : ui_token::color::TEXT_DISABLED);
+		// 文字左右各让出一段内边距（按字号比例）：四格一行时胶囊变窄，
+		// 没有这段内边距文字会顶到胶囊圆弧上。
+		const float TextInset = std::max(ui_token::spacing::XS * 0.5f, FontSize * ui_token::server_filter::CHIP_TEXT_INSET_RATIO);
 		CUIRect LabelRect = Rect;
-		Ctx.m_pUi->DoLabel(&LabelRect, pLabel, ui_token::server_filter::CHIP_FONT_SIZE, TEXTALIGN_MC, Props);
+		LabelRect.VMargin(std::min(TextInset, Rect.w * 0.25f), &LabelRect);
+		Props.m_MaxWidth = LabelRect.w;
+		Props.m_EllipsisAtEnd = true;
+		Props.m_MinimumFontSize = std::min(FontSize, ui_token::server_filter::CHIP_MIN_FONT_SIZE);
+		Props.SetColor(Enabled ? ui_token::color::TEXT_PRIMARY : ui_token::color::TEXT_DISABLED);
+		// 按钮字号由调用点给（设置面板里就是正文档），不再固定一档比正文更大的字号。
+		Ctx.m_pUi->DoLabel(&LabelRect, pLabel, FontSize, TEXTALIGN_MC, Props);
 		return Pressed;
 	}
 
@@ -872,8 +906,9 @@ namespace ui_widget
 		// 悬浮/拖动的几何反馈：滑块向外扩 1~2px，在暗/亮表面上都可直接感知
 		//（颜色推导反馈在高透明度卡片上不可靠，几何反馈不依赖底色）。
 		CUIRect HandleRect = Rect;
+		// 放大档位来自 token：聊天滚动条与列表滑块读同一份，避免两处一边 1px 一边 2px。
 		if(Hot)
-			HandleRect.Margin(Pressed ? -2.0f : -1.0f, &HandleRect);
+			HandleRect.Margin(Pressed ? -ui_token::feedback::HANDLE_PRESS_GROW : -ui_token::feedback::HANDLE_HOVER_GROW, &HandleRect);
 		// 滑块是前景反馈，背景透明度仅作用于轨道；保留强调色自身 alpha 和禁用态。
 		DrawControlSurface(Ctx, HandleRect, Style.m_Handle, Style.m_Border, ui_token::radius::PILL, ui_token::feedback::ICON_BORDER_WIDTH);
 		if(pColorInner != nullptr)
@@ -883,6 +918,7 @@ namespace ui_widget
 			DrawControlSurface(Ctx, Inner, *pColorInner, ColorRGBA(), ui_token::radius::PILL);
 		}
 	}
+
 
 	void RenderHorizontalSlider(const IUiContext &Ctx, const void *pId, const CUIRect &Rect, float Current, const ColorRGBA *pColorInner)
 	{

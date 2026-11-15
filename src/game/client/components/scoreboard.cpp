@@ -2,6 +2,9 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "scoreboard.h"
 
+#include <base/dbg.h>
+#include <base/mem.h>
+
 #include <engine/demo.h>
 #include <engine/graphics.h>
 #include <engine/serverbrowser.h>
@@ -148,14 +151,16 @@ namespace
 		return ColorRGBA(1.0f, 1.0f, 1.0f, Alpha);
 	}
 
+	// 计分板表面不再单独配置：直接取界面表面色与界面透明度，和菜单、面板同一份颜色。
+	// 分开配置时两块面板会各调各的，同一局里出现两种底色。
 	ColorRGBA ScoreboardUiColor()
 	{
-		return color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmScoreboardColor)).WithAlpha(1.0f);
+		return color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiColor)).WithAlpha(1.0f);
 	}
 
 	float ScoreboardUiAlpha(float AlphaScale)
 	{
-		return ui_token::color::UiColorAccent(ScoreboardUiColor(), AlphaScale * (g_Config.m_QmScoreboardOpacity / 100.0f)).a;
+		return ui_token::color::UiColorAccent(ScoreboardUiColor(), AlphaScale * (g_Config.m_QmUiOpacity / 100.0f)).a;
 	}
 
 	ColorRGBA ScoreboardUiColorSurface(float AlphaScale, float ColorScale = 0.16f)
@@ -173,7 +178,7 @@ namespace
 
 	ColorRGBA ScoreboardDecorationColor(ColorRGBA Color, float AlphaScale = 1.0f)
 	{
-		Color.a = std::clamp(Color.a * AlphaScale * (g_Config.m_QmScoreboardOpacity / 100.0f), 0.0f, 1.0f);
+		Color.a = std::clamp(Color.a * AlphaScale * (g_Config.m_QmUiOpacity / 100.0f), 0.0f, 1.0f);
 		return Color;
 	}
 
@@ -188,7 +193,7 @@ namespace
 
 CScoreboard::CScoreboard()
 {
-	OnReset();
+	CScoreboard::OnReset();
 }
 
 void CScoreboard::SetUiMousePos(vec2 Pos)
@@ -328,6 +333,11 @@ void CScoreboard::ConToggleScoreboardCursor(IConsole::IResult *pResult, void *pU
 	}
 
 	pSelf->m_MouseUnlocked = !pSelf->m_MouseUnlocked;
+
+	// 锁定光标时计分板不再接收点击，已打开的玩家菜单必须同步关闭，
+	// 否则弹层会在无光标状态下继续占着输入。
+	if(!pSelf->m_MouseUnlocked)
+		pSelf->Ui()->ClosePopupMenus();
 
 	vec2 OldMousePos = pSelf->Ui()->MousePos();
 
@@ -788,7 +798,8 @@ void CScoreboard::RenderFooter(CUIRect Footer)
 			str_copy(aMediaBuf, MediaState.m_aArtist, sizeof(aMediaBuf));
 	}
 
-	const SQmScoreboardFooterLayout Layout = QmScoreboardFooterLayout(Footer, aMediaBuf[0] != '\0', HasSpectators);
+	const bool ShowCursorHint = !m_MouseUnlocked;
+	const SQmScoreboardFooterLayout Layout = QmScoreboardFooterLayout(Footer, aMediaBuf[0] != '\0', HasSpectators, ShowCursorHint);
 	if(Layout.m_Media.h > 0.0f)
 	{
 		Layout.m_Media.Draw(ScoreboardUiColorSurface(ContentAlpha), IGraphics::CORNER_ALL, SCOREBOARD_PANEL_RADIUS);
@@ -804,6 +815,32 @@ void CScoreboard::RenderFooter(CUIRect Footer)
 	}
 	if(Layout.m_Spectators.h > 0.0f)
 		RenderSpectators(Layout.m_Spectators);
+	if(Layout.m_Hint.h > 0.0f)
+		RenderCursorHint(Layout.m_Hint);
+}
+
+void CScoreboard::RenderCursorHint(CUIRect Hint)
+{
+	const float ContentAlpha = m_AnimContentAlpha;
+	char aKey[64];
+	GameClient()->m_Binds.GetKey("toggle_scoreboard_cursor", aKey, sizeof(aKey));
+
+	char aHint[128];
+	if(aKey[0] == '\0')
+		str_format(aHint, sizeof(aHint), Localize("'%s' not bound."), "toggle_scoreboard_cursor");
+	else
+		str_format(aHint, sizeof(aHint), Localize("Press '%s' to show cursor."), aKey);
+
+	Hint.Draw(ScoreboardUiColorSurface(ContentAlpha), IGraphics::CORNER_ALL, SCOREBOARD_PANEL_RADIUS);
+	CUIRect Label = Hint;
+	Label.Margin(4.0f, &Label);
+	TextRender()->TextColor(TextRender()->DefaultTextColor().WithMultipliedAlpha(ContentAlpha));
+	TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor().WithMultipliedAlpha(ContentAlpha));
+	SLabelProperties Props;
+	Props.m_MaxWidth = Label.w;
+	Props.m_EllipsisAtEnd = true;
+	Props.m_MinimumFontSize = 9.0f;
+	Ui()->DoLabel(&Label, aHint, 11.0f, TEXTALIGN_MC, Props);
 }
 
 void CScoreboard::RenderSoundMuteBar(CUIRect ScoreboardRect)
@@ -857,7 +894,7 @@ void CScoreboard::RenderSoundMuteBar(CUIRect ScoreboardRect)
 	}
 
 	CUiV2AnimationRuntime *pAnimRuntime = nullptr;
-	if(g_Config.m_QmExtraAnimations != 0 && GameClient()->UiRuntimeV2()->Enabled())
+	if(g_Config.m_QmUiMotionLevel > 0 && GameClient()->UiRuntimeV2()->Enabled())
 		pAnimRuntime = &GameClient()->UiRuntimeV2()->AnimRuntime();
 
 	if(pAnimRuntime != nullptr && !m_SoundMuteButtonAnimState.m_Initialized)
@@ -1160,14 +1197,14 @@ void CScoreboard::RenderTeamModeIcons(float x, float y, float IconSize, const SQ
 	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 }
 
-void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart, int CountEnd, const CScoreboardPlayerRowPlan &Plan, CScoreboardRenderState &State, bool Scroll)
+void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart, int CountEnd, const CScoreboardPlayerRowPlan &Plan, CScoreboardRenderState &State, bool Scroll, int NumPlayersForSize)
 {
 	dbg_assert(Team == TEAM_RED || Team == TEAM_BLUE, "Team invalid");
 
 	const CNetObj_GameInfo *pGameInfoObj = GameClient()->m_Snap.m_pGameInfoObj;
 	const CNetObj_GameData *pGameDataObj = GameClient()->m_Snap.m_pGameDataObj;
 	const bool TimeScore = GameClient()->m_GameInfo.m_TimeScore;
-	const int NumPlayers = Scroll ? 16 : CountEnd - CountStart;
+	const int NumPlayers = Scroll ? 16 : (NumPlayersForSize >= 0 ? NumPlayersForSize : CountEnd - CountStart);
 	const bool LowScoreboardWidth = Scoreboard.w < 350.0f;
 	const bool ShowPlaytime = g_Config.m_QmScoreboardPlaytime != 0;
 	// 积分视图在 Axiom 服显示当前模式分数，游玩时间独立使用 DDStats。
@@ -1244,7 +1281,17 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 	const float ClientBrandLength = ShowClientBrand ? maximum(TextRender()->TextWidth(FontSize, "Qm"), TextRender()->TextWidth(FontSize, "Arg")) + CLIENT_BRAND_LABEL_GAP : 0.0f;
 	const float ClientBrandOffset = Scoreboard.x + 10.0f;
 	const float ScoreOffset = Scoreboard.x + 20.0f + ClientBrandLength;
-	const float ScoreLength = TextRender()->TextWidth(FontSize, TimeScore ? "00:00:00" : "99999");
+	// 0.6 服务器带毫秒完赛数据时，时间列要为「.000」留出宽度；
+	// 小数按 0.7 倍字号绘制，与 RenderTime 的排版一致。
+	const bool MillisecondScore = GameClient()->m_ReceivedDDNetPlayerFinishTimes;
+	const bool TrueMilliseconds = GameClient()->m_ReceivedDDNetPlayerFinishTimesMillis;
+	float ScoreLength = TextRender()->TextWidth(FontSize, TimeScore ? "00:00:00" : "99999");
+	if(TimeScore && MillisecondScore)
+	{
+		const float MillisLength = TextRender()->TextWidth(FontSize * 0.7f, TrueMilliseconds ? ".000" : ".00");
+		// 小数块与秒数有意少量重叠，避免视觉断裂（见 CUi::RenderTime 的 FractionKern）。
+		ScoreLength += MillisLength * 0.65f;
+	}
 	// 统计列复用积分位置，并为带单位的表头预留宽度。
 	const char *pStatsLabel = ShowPlaytime ? Localize("Playtime (h)") : (AxiomScoreColumn ? QmAxiomModeName(m_QmAxiomScoreModeFrame) : Localize("Points"));
 	const float StatsLength = ShowStatistics ? maximum(TextRender()->TextWidth(FontSize, LowScoreboardWidth ? "99999" : "999999"), TextRender()->TextWidth(HeadlineFontsize, pStatsLabel)) : 0.0f;
@@ -1256,9 +1303,17 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 	const float PingLength = 27.5f;
 	const float PingOffset = Scoreboard.x + Scoreboard.w - PingLength - 10.0f;
 	const float CountryOffset = RowDetail.m_ShowCountry ? PingOffset - CountryLength : PingOffset;
-	const float NameLength = RowDetail.m_ShowClan ? (LowScoreboardWidth ? 90.0f : 150.0f) - TeeLength : maximum(0.0f, PingOffset - NameOffset - 5.0f);
+	float NameLength = RowDetail.m_ShowClan ? (LowScoreboardWidth ? 90.0f : 150.0f) - TeeLength : maximum(0.0f, PingOffset - NameOffset - 5.0f);
+	if(RowDetail.m_ShowClan)
+	{
+		// 分列后单列更窄：名字与 clan 之间至少留出 5px，剩余宽度按 7:3 分给名字和 clan。
+		constexpr float MinMiddleGap = 5.0f;
+		const float AvailableMiddle = CountryOffset - NameOffset;
+		if(NameLength + MinMiddleGap > AvailableMiddle)
+			NameLength = maximum(0.0f, (AvailableMiddle - MinMiddleGap) * 0.7f);
+	}
 	const float ClanOffset = NameOffset + NameLength + 2.5f;
-	const float ClanLength = CountryOffset - ClanOffset - 2.5f;
+	const float ClanLength = maximum(0.0f, CountryOffset - ClanOffset - 2.5f);
 
 	// render headlines
 	CUIRect Headline;
@@ -1455,6 +1510,23 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 				str_time((int64_t)absolute(pInfo->m_Score / 10), TIME_MINS_CENTISECS, aBuf, sizeof(aBuf));
 			}
 		}
+		else if(TimeScore && MillisecondScore)
+		{
+			// 0.6 服务器若上报了 DDNet 完赛时间，优先显示「秒 + 小数」，
+			// 不再退回只有整秒的 m_Score；未完赛或时间未知时留空。
+			const int FinishSeconds = ClientData.m_FinishTimeSeconds;
+			const bool NotFinished = FinishSeconds == FinishTime::NOT_FINISHED_MILLIS;
+			CUIRect ScoreRect = {ScoreOffset, Row.y, ScoreLength, Row.h};
+			Ui()->RenderTime(ScoreRect, FontSize, FinishSeconds, NotFinished, ClientData.m_FinishTimeMillis,
+				TrueMilliseconds, m_aScoreSecondsText[ClientId], m_aScoreMillisText[ClientId], TextColor);
+			// 超过一小时后 RenderTime 只显示到秒，悬停补一条带百分秒的完整时间。
+			if(!NotFinished && FinishSeconds >= 60 * 60 && m_MouseUnlocked && m_RenderInteractions)
+			{
+				char aTimeTooltip[32];
+				str_time((int64_t)FinishSeconds * 100 + ClientData.m_FinishTimeMillis / 10, TIME_HOURS_CENTISECS, aTimeTooltip, sizeof(aTimeTooltip));
+				GameClient()->m_Tooltips.DoToolTipForRect(&m_aScoreTooltipIds[ClientId], &ScoreRect, aTimeTooltip, ScoreLength * 1.5f);
+			}
+		}
 		else if(TimeScore)
 		{
 			if(pInfo->m_Score == -9999)
@@ -1470,7 +1542,8 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 		{
 			str_format(aBuf, sizeof(aBuf), "%d", std::clamp(pInfo->m_Score, -999, 99999));
 		}
-		TextRender()->Text(ScoreOffset + ScoreLength - TextRender()->TextWidth(FontSize, aBuf), Row.y + (Row.h - FontSize) / 2.0f, FontSize, aBuf);
+		if(Race7 || !(TimeScore && MillisecondScore))
+			TextRender()->Text(ScoreOffset + ScoreLength - TextRender()->TextWidth(FontSize, aBuf), Row.y + (Row.h - FontSize) / 2.0f, FontSize, aBuf);
 		const bool HideIdentity = GameClient()->ShouldHideStreamerIdentity(ClientId);
 		char aNameBuf[MAX_NAME_LENGTH];
 		char aClanBuf[MAX_CLAN_LENGTH];
@@ -1593,6 +1666,13 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 			}
 			else
 				RenderTools()->RenderTee(pIdleState, &TeeInfo, EMOTE_NORMAL, vec2(1.0f, 0.0f), TeeRenderPos, TEE_PREVIEW_LAYER_BODY, ItemAlpha);
+
+			// 光标解锁时悬停皮肤显示皮肤名；0.7 下 m_aSkinName 是 body 部件名。
+			if(m_MouseUnlocked && m_RenderInteractions && ClientData.m_aSkinName[0] != '\0')
+			{
+				const CUIRect SkinRect = {TeeOffset, Row.y, TeeLength, Row.h};
+				GameClient()->m_Tooltips.DoToolTip(&ClientData, &SkinRect, ClientData.m_aSkinName);
+			}
 		}
 
 		// name
@@ -1851,7 +1931,7 @@ void CScoreboard::OnRender()
 	if(WantActive && !m_WasActive)
 		m_ActiveStartTime = time_get();
 	m_WasActive = WantActive;
-	const bool ExtraAnimations = g_Config.m_QmExtraAnimations != 0 && GameClient()->UiRuntimeV2()->Enabled();
+	const bool ExtraAnimations = g_Config.m_QmUiMotionLevel > 0 && GameClient()->UiRuntimeV2()->Enabled();
 	float PanelOffsetY = 0.0f;
 	float PanelScale = 1.0f;
 	if(!ExtraAnimations)
@@ -2154,8 +2234,22 @@ void CScoreboard::OnRender()
 		DoStatisticsButton(StatisticsButton);
 		DoServerPlayers(ServerPlayers);
 		DoSortButton(SortButton);
-		RenderScoreboard(RedScoreboardContent, TEAM_RED, 0, NumPlayers, RedPlayerRows, RenderState);
-		RenderScoreboard(BlueScoreboardContent, TEAM_BLUE, 0, NumPlayers, BluePlayerRows, RenderState);
+		// 单队超过 64 人时拆成左右两列：上半区先排满 64 行，其余进右列。
+		// 两列共用 64 行密度，右列人少也不会把行高放大到和左列不一致。
+		const auto RenderTeamColumn = [&](CUIRect TeamScoreboard, int Team, const CScoreboardPlayerRowPlan &Plan) {
+			constexpr int ColumnCapacity = 64;
+			if(Plan.m_Count <= ColumnCapacity)
+			{
+				RenderScoreboard(TeamScoreboard, Team, 0, Plan.m_Count, Plan, RenderState);
+				return;
+			}
+			CUIRect LeftColumn, RightColumn;
+			TeamScoreboard.VSplitMid(&LeftColumn, &RightColumn, 2.5f);
+			RenderScoreboard(LeftColumn, Team, 0, ColumnCapacity, Plan, RenderState, false, ColumnCapacity);
+			RenderScoreboard(RightColumn, Team, ColumnCapacity, Plan.m_Count, Plan, RenderState, false, ColumnCapacity);
+		};
+		RenderTeamColumn(RedScoreboardContent, TEAM_RED, RedPlayerRows);
+		RenderTeamColumn(BlueScoreboardContent, TEAM_BLUE, BluePlayerRows);
 	}
 	else
 	{

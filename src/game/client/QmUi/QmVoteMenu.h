@@ -1,7 +1,10 @@
 #ifndef GAME_CLIENT_QMUI_QMVOTEMENU_H
 #define GAME_CLIENT_QMUI_QMVOTEMENU_H
 
+class CGameClient;
+
 #include "QmPlayersMenu.h"
+#include "QmVoteMapPreview.h"
 
 #include <generated/protocol.h>
 
@@ -50,10 +53,17 @@ struct SQmVoteMenuState
 	std::array<QmPlayersUi::CSelection, 2> m_PlayerSelections;
 	std::array<CLineInputBuffered<64>, 2> m_PlayerSearch;
 	std::array<CLineInputBuffered<64>, 2> m_PlayerExclude;
+	// 预览地图：按钮容器、弹层 ID 与面板上下文跨帧保留，三张子页共用同一个入口。
+	CButtonContainer m_MapPreviewButton;
+	SPopupMenuId m_MapPreviewPopup;
+	qm_vote_map_preview::SContext m_MapPreview;
 	bool m_Dirty = true;
 	int m_FinishedCount = -1;
 	std::string m_RankPlayer;
 	std::set<std::string> m_Favorites;
+	// 当前预览目标地图名与所属客户端：封面回调据此调用 CMenus 的预览渲染。
+	char m_aPreviewMapName[128] = "";
+	CGameClient *m_pGameClient = nullptr;
 };
 
 #endif

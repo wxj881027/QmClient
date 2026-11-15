@@ -106,7 +106,7 @@ void CMenus::RenderQmSteamContent(CUIRect &Content, const SSettingsContentMetric
 		if(ui_widget::InputField(Ctx, &s_ManualPathInput, PathInput, "", Metrics.m_BodySize) && !ReadOnly)
 			str_copy(g_Config.m_QmSteamClientPath, s_ManualPathInput.GetString());
 		// 重新检测只留图标，说明走悬浮提示，和卡片里其它刷新图标保持一致。
-		if(Ui()->DoButton_QmIcon(&s_DetectButton, EQmIcon::ARROW_ROTATE_RIGHT, "\xEE\x80\xB6", 0, &PathDetectButton, IGraphics::CORNER_ALL) && Flow.Input() && !ReadOnly && s_pProbe == nullptr)
+		if(Ui()->DoButton_QmIcon(&s_DetectButton, EQmIcon::ARROW_ROTATE_RIGHT, FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT, 0, &PathDetectButton, IGraphics::CORNER_ALL) && Flow.Input() && !ReadOnly && s_pProbe == nullptr)
 			s_RefreshRequested = true;
 		GameClient()->m_Tooltips.DoToolTip(&s_DetectButton, &PathDetectButton, Localize("Detect Steam again"));
 	}

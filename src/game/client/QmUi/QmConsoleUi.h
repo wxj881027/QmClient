@@ -3,6 +3,7 @@
 
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiSurfaceText.h>
+#include <game/client/QmUi/UiTextCaret.h>
 #include <game/client/components/qmclient/console_appearance.h>
 #include <game/client/qm_icon.h>
 #include <game/client/ui.h>
@@ -192,6 +193,27 @@ namespace QmConsoleUi
 		Rect.Draw(Color, IGraphics::CORNER_NONE, 0.0f);
 	}
 
+	// 控制台光标（日志定位光标）：几何与闪烁相位都由 qm_text_caret 统一解析，
+	// 这里只按解析出的圆角把整块画出来，保证控制台与聊天/设置输入同一套线宽与相位。
+	//
+	// 相位参数由调用点每帧现算：时间取 qm_text_caret::NowSeconds()（全站同一条进程单调时钟），
+	// 不允许把时间缓存成静态值或把相位钳成常量——那正是控制台光标之前常亮不闪的原因。
+	// 只有两种时刻才传 m_Blink=false：光标此刻不该闪（拖选、输入法组合），
+	// 以及 qm_ui_motion_level = 0（动效关闭 → 取亮相终点恒亮，唯一例外）。
+	inline void DrawCaret(CUi *pUi, const qm_text_caret::SCaretParams &Params, ColorRGBA Color)
+	{
+		if(pUi == nullptr)
+			return;
+		const qm_text_caret::SCaretShape Shape = qm_text_caret::ResolveShape(Params);
+		if(!Shape.m_Visible || Shape.m_Rect.w <= 0.0f || Shape.m_Rect.h <= 0.0f)
+			return;
+		const CUiScopedGaussianBlurSuppression GaussianBlurSuppression(pUi);
+		SRoundedSurfaceParams Surface;
+		Surface.m_Radius = Shape.m_Radius;
+		Surface.m_PixelSize = std::max(Shape.m_PixelSize, 0.0001f);
+		DrawRoundedSurface(pUi, Shape.m_Rect, Color, ColorRGBA(), Surface);
+	}
+
 	// 控制台使用独立的鼠标/触摸按下位置；统一在按钮内松开时触发一次。
 	inline bool Button(CUi *pUi, const CUIRect &Rect, const char *pLabel, float FontSize, bool Selected,
 		vec2 PressPosition, vec2 MousePosition, bool MouseDown, bool Released, bool Enabled, float FilterIndicatorWidth = 0.0f, const QmConsoleAppearance::SPalette *pPalette = nullptr, uint64_t AnimationKey = 0)
@@ -209,12 +231,13 @@ namespace QmConsoleUi
 			Fill = ColorRGBA(mix(From.r, To.r, Blend), mix(From.g, To.g, Blend), mix(From.b, To.b, Blend), mix(From.a, To.a, Blend));
 		}
 		else
-			Fill = Selected ? color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(Enabled ? 1.0f : 0.65f) : ResolveConfiguredControlSurface(Enabled);
+			Fill = Selected ? ResolveConfiguredAccentColor().WithAlpha(Enabled ? 1.0f : 0.65f) : ResolveConfiguredControlSurface(Enabled);
 		const CUiScopedGaussianBlurSuppression GaussianBlurSuppression(pUi);
-		DrawRoundedSurface(pUi, Rect, Fill, ColorRGBA(), ui_token::radius::BASE);
+		// 控制台顶部动作与筛选都是胶囊：半径取半高，与控制台设置里的滑块按钮同一形制。
+	DrawRoundedSurface(pUi, Rect, Fill, ColorRGBA(), Rect.h * 0.5f);
 		const ColorRGBA Feedback = ResolveUiIconButtonFeedback(CompositeUiSurface(Fill), Enabled, Hovered, Pressed);
 		if(Feedback.a > 0.0f)
-			DrawRoundedSurface(pUi, Rect, Feedback, ColorRGBA(), ui_token::radius::BASE);
+			DrawRoundedSurface(pUi, Rect, Feedback, ColorRGBA(), Rect.h * 0.5f);
 		const CUiScopedSurfaceText SurfaceText(pUi->TextRender(), Fill);
 		if(pPalette != nullptr)
 		{

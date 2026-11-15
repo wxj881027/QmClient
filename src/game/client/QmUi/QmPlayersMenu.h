@@ -1,12 +1,12 @@
 #ifndef GAME_CLIENT_QMUI_QMPLAYERSMENU_H
 #define GAME_CLIENT_QMUI_QMPLAYERSMENU_H
 
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/lineinput.h>
 #include <game/client/ui_rect.h>
 
 #include <algorithm>
 #include <string>
-
 namespace QmPlayersUi
 {
 	struct SIdentity
@@ -16,6 +16,7 @@ namespace QmPlayersUi
 		std::string m_Clan;
 	};
 
+	// 选中态仍被投票页的踢人/观战列表复用（玩家页本身已改成整行卡片，不再有选中概念）。
 	class CSelection
 	{
 		SIdentity m_Player;
@@ -31,34 +32,15 @@ namespace QmPlayersUi
 		}
 	};
 
-	struct SPanelLayout
-	{
-		CUIRect m_List;
-		CUIRect m_Details;
-	};
-
-	inline SPanelLayout Panels(const CUIRect &View)
-	{
-		SPanelLayout Layout;
-		if(View.w >= 580.0f)
-		{
-			View.VSplitRight(std::min(260.0f, View.w * 0.36f), &Layout.m_List, &Layout.m_Details);
-			Layout.m_List.w = std::max(0.0f, Layout.m_List.w - 8.0f);
-		}
-		else
-		{
-			View.HSplitBottom(View.h * 0.46f, &Layout.m_List, &Layout.m_Details);
-			Layout.m_List.h = std::max(0.0f, Layout.m_List.h - 8.0f);
-		}
-		return Layout;
-	}
-}
+} // namespace QmPlayersUi
 
 struct SQmPlayersMenuState
 {
-	QmPlayersUi::CSelection m_Selection;
 	CLineInputBuffered<64> m_Search;
 	int m_Filter = 0;
+	// 复制类图标按钮的轻提示：记录到期时刻（Client()->GlobalTime() 秒），
+	// 到期后不再绘制；文案统一取「Copied」，避免每个字段各造一条翻译。
+	float m_CopyToastUntil = 0.0f;
 };
 
 #endif

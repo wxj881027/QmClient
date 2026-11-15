@@ -1414,11 +1414,15 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 				else if(pJob != nullptr && pJob->m_Failed)
 				{
 					static CButtonContainer s_StoreRetryId;
-					if(DoButton_Menu(&s_StoreRetryId, Localize("Retry"), 0, &StoreStatus))
+					// 重试是图标类动作：方形按钮居中在状态行内。
+					const float RetrySize = std::min(StoreStatus.h, StoreStatus.w);
+					CUIRect RetryRect{StoreStatus.x + (StoreStatus.w - RetrySize) * 0.5f, StoreStatus.y, RetrySize, RetrySize};
+					if(Ui()->DoButton_QmIcon(&s_StoreRetryId, EQmIcon::ARROW_ROTATE_RIGHT, FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT, 0, &RetryRect, BUTTONFLAG_LEFT) != 0)
 					{
 						fontstore::RetryInstall(Http(), Storage(), (size_t)LastInstall);
 						fontstore::s_LastInstallFamily = LastInstall;
 					}
+					GameClient()->m_Tooltips.DoToolTip(&s_StoreRetryId, &RetryRect, Localize("Retry"));
 				}
 				else if(LastFamily.m_Installed)
 				{

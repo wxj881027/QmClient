@@ -560,22 +560,6 @@ turkish = "Yükseklik"
 polish = "Wysokość"
 
 [[message]]
-key = "https://wiki.ddnet.org/wiki/Touch_controls"
-[message.translations]
-simplified_chinese = "https://wiki.ddnet.org/wiki/Touch_controls/zh"
-traditional_chinese = "https://wiki.ddnet.org/wiki/Touch_controls/zh"
-japanese = "https://wiki.ddnet.org/wiki/Touch_controls"
-korean = "https://wiki.ddnet.org/wiki/Touch_controls"
-russian = "https://wiki.ddnet.org/wiki/Touch_controls"
-german = "https://wiki.ddnet.org/wiki/Touch_controls"
-spanish = "https://wiki.ddnet.org/wiki/Touch_controls"
-french = "https://wiki.ddnet.org/wiki/Touch_controls"
-brazilian_portuguese = "https://wiki.ddnet.org/wiki/Touch_controls"
-portuguese = "https://wiki.ddnet.org/wiki/Touch_controls"
-turkish = "https://wiki.ddnet.org/wiki/Touch_controls"
-polish = "https://wiki.ddnet.org/wiki/Touch_controls"
-
-[[message]]
 key = "Import from clipboard"
 [message.translations]
 simplified_chinese = "从剪贴板导入"
@@ -606,22 +590,6 @@ brazilian_portuguese = "Cor inativa"
 portuguese = "Cor inativa"
 turkish = "Etkin olmayan renk"
 polish = "Kolor nieaktywny"
-
-[[message]]
-key = "Info"
-[message.translations]
-simplified_chinese = "信息"
-traditional_chinese = "信息"
-japanese = "情報"
-korean = "정보"
-russian = "Информация"
-german = "Info"
-spanish = "Información"
-french = "Infos"
-brazilian_portuguese = "Informação"
-portuguese = "Informação"
-turkish = "Bilgi"
-polish = "Informacje"
 
 [[message]]
 key = "Label"

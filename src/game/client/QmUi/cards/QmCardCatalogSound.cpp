@@ -413,7 +413,10 @@ uint64_t CMenus::BuildSoundSettingsCards(const qm_card_catalog::SQmCardBuildCont
 				return;
 			ListRow.VMargin(2.0f, &ListRow);
 			ListRow.h -= 2.0f;
-			DrawRoundedSurface(Ui(), ListRow, ColorRGBA(0.0f, 0.0f, 0.0f, 0.12f), ColorRGBA(), 6.0f);
+			// 列表容器的圆角与承载它的设置卡片同档（CARD_RADIUS）：之前这里写死 6，
+		// 卡片是大圆角、内部列表是小圆角，两层圆角不成套（实机反馈：「列表的背景容器
+		// 圆角不够大、不统一」）。边距不动，只统一圆角。
+		DrawRoundedSurface(Ui(), ListRow, ColorRGBA(0.0f, 0.0f, 0.0f, 0.12f), ColorRGBA(), ui_token::settings::CARD_RADIUS);
 			ListRow.Margin(6.0f, &ListRow);
 
 			const int OldSelectedPack = SelectedPack;
@@ -422,6 +425,9 @@ uint64_t CMenus::BuildSoundSettingsCards(const qm_card_catalog::SQmCardBuildCont
 			// 胶囊行：行距、行内左右内退、胶囊圆角与覆盖式滚动条（8/4）一次拿到，
 			// 选中/悬浮填充走组件默认（选中色、无描边），不再单独覆盖颜色。
 			s_AudioPackListBox.SetCapsuleRows(BodySize);
+			// 容器内边距：卡片测高已在 ResolveSettingsSoundAudioPackGeometry 里按
+			// PaddedRowsHeight 计入两档留白，这里声明同一档（行高 = LineHeight + LineSpacing）。
+			s_AudioPackListBox.SetContainerPadding(ui_token::list::ContainerPadding(SoundMetrics.m_ListRowHeight));
 			s_AudioPackListBox.SetVisibleRowRange(1, ui_token::list::MAX_VISIBLE_ROWS);
 			s_AudioPackListBox.DoStart(LineHeight + LineSpacing, gs_vAudioPacks.size(), 1, 4, SelectedPack, &ListRow, false);
 
