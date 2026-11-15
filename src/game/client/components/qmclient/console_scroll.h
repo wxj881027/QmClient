@@ -16,4 +16,23 @@ inline int QmConsoleWheelLines(float StepPixels, float LineHeight)
 	return std::clamp(static_cast<int>(std::lround(SafeStep / SafeLine)), 3, 8);
 }
 
+struct SQmConsoleLogClipBounds
+{
+	float m_Top = 0.0f;
+	float m_Bottom = 0.0f;
+	float Height() const { return std::max(0.0f, m_Bottom - m_Top); }
+};
+
+// 日志区域裁剪：从工具栏下沿开始，不能按整行向下取整。
+// 视口高度通常不是行高整数倍，取整会裁掉顶部不足一行的部分，
+// 滚到最旧一行时就表现为“首行看不到，再继续滚才出现”。
+inline SQmConsoleLogClipBounds QmConsoleResolveLogClipBounds(float LogTop, float LogBottom, float PixelScale)
+{
+	const float Scale = std::max(0.0f, PixelScale);
+	SQmConsoleLogClipBounds Bounds;
+	Bounds.m_Top = std::max(0.0f, LogTop) * Scale;
+	Bounds.m_Bottom = std::max(Bounds.m_Top, (LogBottom + 2.0f) * Scale);
+	return Bounds;
+}
+
 #endif

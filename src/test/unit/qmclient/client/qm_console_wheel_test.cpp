@@ -25,3 +25,20 @@ TEST(QmConsoleWheel, ClampsToEightLinesAndFallsBackOnInvalidInput)
 	// 未跑配置加载（步长 0）或行高未初始化时用安全值，不产生除零。
 	EXPECT_EQ(QmConsoleWheelLines(0.0f, 0.0f), 8);
 }
+
+TEST(QmConsoleLogClip, StartsAtToolbarBottomWithoutWholeLineRounding)
+{
+	const SQmConsoleLogClipBounds Bounds = QmConsoleResolveLogClipBounds(40.0f, 400.0f, 2.0f);
+	// 日志顶部直接取工具栏下沿；旧实现会按整行向下取整，把顶部不足一行裁掉。
+	EXPECT_FLOAT_EQ(Bounds.m_Top, 80.0f);
+	EXPECT_FLOAT_EQ(Bounds.m_Bottom, 804.0f);
+	EXPECT_FLOAT_EQ(Bounds.Height(), 724.0f);
+}
+
+TEST(QmConsoleLogClip, DegenerateBoundsNeverProduceNegativeSize)
+{
+	const SQmConsoleLogClipBounds Bounds = QmConsoleResolveLogClipBounds(-10.0f, -20.0f, 0.0f);
+	EXPECT_FLOAT_EQ(Bounds.m_Top, 0.0f);
+	EXPECT_FLOAT_EQ(Bounds.m_Bottom, 0.0f);
+	EXPECT_FLOAT_EQ(Bounds.Height(), 0.0f);
+}

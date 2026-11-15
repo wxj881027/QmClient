@@ -2518,11 +2518,11 @@ void CGameConsole::OnRender()
 
 		const float XScale = Graphics()->ScreenWidth() / Screen.w;
 		const float YScale = Graphics()->ScreenHeight() / Screen.h;
-		const float CalcOffsetY = LineHeight * std::floor((y - RowHeight) / LineHeight);
-		const float ClipStartY = (y - CalcOffsetY) * YScale;
-		HandleLinkClick = !SettingsOpen && HandleLinkClick && LinkClickPress.y >= y - CalcOffsetY && LinkClickPos.y >= y - CalcOffsetY;
+		const float ClipTop = RowHeight;
+		const SQmConsoleLogClipBounds LogClip = QmConsoleResolveLogClipBounds(ClipTop, y, YScale);
+		HandleLinkClick = !SettingsOpen && HandleLinkClick && LinkClickPress.y >= ClipTop && LinkClickPos.y >= ClipTop;
 		const float ClipStartX = ui_token::panel::PADDING * XScale;
-		Graphics()->ClipEnable(ClipStartX, ClipStartY, std::max(0.0f, Screen.w * XScale - ClipStartX), (y + 2.0f) * YScale - ClipStartY);
+		Graphics()->ClipEnable(ClipStartX, LogClip.m_Top, std::max(0.0f, Screen.w * XScale - ClipStartX), LogClip.Height());
 
 		while(pEntry)
 		{
