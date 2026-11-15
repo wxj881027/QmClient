@@ -741,11 +741,11 @@ static void QmDrawMapPreviewDownloadProgress(CGameClient *pGameClient, const CUI
 	Label.HSplitTop(std::min(Label.h, ui_token::settings::ROW_HEIGHT * 0.5f), &Track, nullptr);
 	Track.w = std::min(Track.w * 0.6f, 240.0f);
 	Track.x = Rect.x + (Rect.w - Track.w) * 0.5f;
-	Track.Draw(ui_token::color::LIST_ITEM_HOVER, IGraphics::CORNER_ALL, Track.h * 0.5f);
+	DrawRoundedSurface(pUi, Track, ui_token::color::LIST_ITEM_HOVER, ColorRGBA(), Track.h * 0.5f);
 	CUIRect Fill = Track;
 	Fill.w *= Percent / 100.0f;
 	if(Fill.w > 1.0f)
-		Fill.Draw(pUi->QmControlTheme().m_Accent, IGraphics::CORNER_ALL, Track.h * 0.5f);
+		DrawRoundedSurface(pUi, Fill, pUi->QmControlTheme().m_Accent, ColorRGBA(), Track.h * 0.5f);
 	char aBuf[64];
 	str_format(aBuf, sizeof(aBuf), Localize("Downloading map %d%%"), Percent);
 	pUi->DoLabel(&Label, aBuf, ui_token::font::SMALL, TEXTALIGN_MC);

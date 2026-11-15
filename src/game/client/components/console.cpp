@@ -2475,7 +2475,8 @@ void CGameConsole::OnRender()
 					Handle.y = HandleTop;
 				}
 
-				Rail.Draw(ui_token::color::LIST_ITEM_HOVER, IGraphics::CORNER_ALL, Rail.w * 0.5f);
+				// 轨道与滑块都走 Qm 表面：与列表、弹层滚动条同一条圆角曲线与模糊抑制。
+				DrawRoundedSurface(Ui(), Rail, ui_token::color::LIST_ITEM_HOVER, ColorRGBA(), Rail.w * 0.5f);
 				const ColorRGBA ScrollbarAccent = Ui()->QmControlTheme().m_Accent;
 				ui_widget::DrawScrollbarHandle(ui_widget::ControlContext(Ui()), &pConsole->m_ScrollbarDragOffset, Handle, true, nullptr, &ScrollbarAccent);
 			}

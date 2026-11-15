@@ -350,19 +350,21 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 			else if(QmAction == 1)
 				GameClient()->m_Menus.ShowQmNewFeaturesPopup();
 
-			static CButtonContainer s_LocalServerButton;
-			if(ui_widget::SecondaryButton(Ctx, &s_LocalServerButton, LocalServerRunning ? Localize("Stop server") : Localize("Run server"), aMenuButtons[2]) || (CheckHotKey(KEY_R) && Input()->KeyPress(KEY_R)))
+			// 服务器运行中时这一格变成双操作：左边进入服务器、右边停止；未运行时仍是单按钮。
+			// 与「检查更新 / 新功能」共用同一套双操作控件与左右悬浮反馈。
+			static CButtonContainer s_LocalServerButton, s_LocalServerStopButton;
+			if(LocalServerRunning)
 			{
-				if(LocalServerRunning)
-				{
+				const int LocalAction = ui_widget::SplitActionButton(Ctx, &s_LocalServerButton, Localize("Join server"), &s_LocalServerStopButton, Localize("Stop"), aMenuButtons[2]);
+				if(LocalAction == 0)
+					GameClient()->m_LocalServer.Connect();
+				else if(LocalAction == 1)
 					GameClient()->m_LocalServer.KillServer();
-				}
-				else
-				{
-					GameClient()->m_LocalServer.RunServer({});
-				}
 			}
-
+			else if(ui_widget::SecondaryButton(Ctx, &s_LocalServerButton, Localize("Run server"), aMenuButtons[2]) || (CheckHotKey(KEY_R) && Input()->KeyPress(KEY_R)))
+			{
+				GameClient()->m_LocalServer.RunServer({});
+			}
 			if(!QmUiMobilePlatform())
 			{
 				static CButtonContainer s_MapEditorButton;
@@ -490,20 +492,21 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 				GameClient()->m_Menus.ShowQmNewFeaturesPopup();
 
 			ScaledButton = ScaleButtonRect(aMenuButtons[2], s_aMenuButtonScale[2]);
-			static CButtonContainer s_LocalServerButton;
-			if(GameClient()->m_Menus.DoButton_Menu(&s_LocalServerButton, LocalServerRunning ? Localize("Stop server") : Localize("Run server"), 0, &ScaledButton, BUTTONFLAG_LEFT, g_Config.m_ClShowStartMenuImages ? "local_server" : nullptr, IGraphics::CORNER_ALL, Rounding, 0.5f, LocalServerRunning ? ColorRGBA(0.0f, 1.0f, 0.0f, 0.25f) : ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), &m_aButtonLabels[2], -1.0f, &aMenuButtons[2]) || (CheckHotKey(KEY_R) && Input()->KeyPress(KEY_R)))
+			ScaledButton = ScaleButtonRect(aMenuButtons[2], s_aMenuButtonScale[2]);
+			// 与上面同一条语义：运行中给「进入服务器 / 停止」双操作，未运行给单按钮。
+			static CButtonContainer s_LocalServerButton, s_LocalServerStopButton;
+			if(LocalServerRunning)
 			{
-				if(LocalServerRunning)
-				{
+				const int LocalAction = ui_widget::SplitActionButton(ui_widget::ControlContext(Ui()), &s_LocalServerButton, Localize("Join server"), &s_LocalServerStopButton, Localize("Stop"), ScaledButton);
+				if(LocalAction == 0)
+					GameClient()->m_LocalServer.Connect();
+				else if(LocalAction == 1)
 					GameClient()->m_LocalServer.KillServer();
-				}
-				else
-				{
-					GameClient()->m_LocalServer.RunServer({});
-				}
 			}
-
-			if(!QmUiMobilePlatform())
+			else if(GameClient()->m_Menus.DoButton_Menu(&s_LocalServerButton, Localize("Run server"), 0, &ScaledButton, BUTTONFLAG_LEFT, g_Config.m_ClShowStartMenuImages ? "run_server" : nullptr, IGraphics::CORNER_ALL, 5.0f) || (CheckHotKey(KEY_R) && Input()->KeyPress(KEY_R)))
+			{
+				GameClient()->m_LocalServer.RunServer({});
+			}
 			{
 				ScaledButton = ScaleButtonRect(aMenuButtons[3], s_aMenuButtonScale[3]);
 				static CButtonContainer s_MapEditorButton;
