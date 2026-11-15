@@ -1328,7 +1328,9 @@ int CMenus::DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char
 	// 显示层统一「长条即胶囊」：宽明显大于高的按钮按半高取端头，与主菜单其它胶囊按钮同一曲线；
 	// 贴图本身不动，只把落点往内收一点避开圆头。
 	const bool CapsuleDisplay = pRect->w >= pRect->h * 1.8f;
-	Options.m_Corners = CapsuleDisplay ? IGraphics::CORNER_NONE : Corners;
+	// Corners 保持调用点原值：这里是「四角全圆」的引擎路径，清成 NONE 会直接画成方块；
+	// 端头形状靠半径表达，半径取半高即为胶囊。
+	Options.m_Corners = Corners;
 	Options.m_Radius = CapsuleDisplay ? pRect->h * 0.5f : Rounding;
 	Options.m_AlignToPixel = pUnscaledRect == nullptr;
 	Color = ui_widget::DrawButtonSurface(ui_widget::ControlContext(Ui()), pButtonContainer, *pRect, Options);
