@@ -6867,7 +6867,7 @@ Hold left click for free camera
 == 左クリックでフリーカメラ
 
 Hold Shift to be more precise.
-== Shift を押しながらで微調整できます。
+== Shift を押しながら操作すると微調整できます。
 
 Hold still
 == 停止

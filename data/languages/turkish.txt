@@ -18450,7 +18450,7 @@ Use Shift+Mouse wheel up/down to adjust the angle.
 
 [Editor]
 Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
-== Kiremit numaralarını ayarlamak için Shift+fare tekerleği yukarı/aşağı kullan. Ctrl+F tüm kiremit numaralarını kullanılmayan ilk numaraya çevirir.
+== Karo numaralarını ayarlamak için Shift+fare tekerleği yukarı/aşağı kullan. Ctrl+F tüm karo numaralarını kullanılmayan ilk numaraya çevirir.
 
 [Editor curve type abbreviation]
 B

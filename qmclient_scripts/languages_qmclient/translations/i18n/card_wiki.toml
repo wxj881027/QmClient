@@ -54,7 +54,7 @@ polish = "Dryf kamery i dynamiczne FOV to tylko efekty wizualne i mogą sprawia�
 [[message]]
 key = "The look of the help bubbles that appear when you hover over buttons, settings and bind rows."
 [message.translations]
-simplified_chinese = "鼠标停在按钮、设置项和绑定行上时弹出的提示气泡的外观。"
+simplified_chinese = "鼠标悬停在按钮、设置项和绑定行上时弹出的提示气泡的外观。"
 traditional_chinese = "滑鼠停在按鈕、設定項和綁定列上時彈出的提示氣泡的外觀。"
 japanese = "ボタンや設定項目、バインド行にマウスを重ねたときに出るヒント吹き出しの見た目を設定します。"
 korean = "버튼, 설정 항목, 바인드 행 위에 마우스를 올렸을 때 나오는 도움말 풍선의 모양을 정합니다."

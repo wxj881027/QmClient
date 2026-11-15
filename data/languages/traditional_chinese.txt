@@ -4506,7 +4506,7 @@ Dummy is currently connected.
 == 分身當前已連接。
 
 Dummy is not connected
-== 分身未連線
+== 分身未連接
 
 Dummy jump
 == 分身跳

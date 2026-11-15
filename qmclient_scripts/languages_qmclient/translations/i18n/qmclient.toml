@@ -39926,70 +39926,6 @@ turkish = "Harita ilerleme çubuğu konumu (0=ayrı göster, 1=oyuncu istatistik
 polish = "Położenie paska postępu mapy (0=osobno, 1=statystyki gracza, 2=Dynamiczna Wyspa)"
 
 [[message]]
-key = "Comic dialogue"
-[message.translations]
-simplified_chinese = "漫画对白"
-traditional_chinese = "漫畫對白"
-japanese = "コミック調のセリフ"
-korean = "만화 대사"
-russian = "Комиксный диалог"
-german = "Comic-Sprechblase"
-spanish = "Diálogo de cómic"
-french = "Dialogue de BD"
-brazilian_portuguese = "Diálogo de quadrinho"
-portuguese = "Diálogo de banda desenhada"
-turkish = "Çizgi roman diyalogu"
-polish = "Dymek komiksowy"
-
-[[message]]
-key = "Candy gradient"
-[message.translations]
-simplified_chinese = "糖果渐变"
-traditional_chinese = "糖果漸層"
-japanese = "キャンディグラデーション"
-korean = "캔디 그라데이션"
-russian = "Карамельный градиент"
-german = "Bonbon-Verlauf"
-spanish = "Degradado caramelo"
-french = "Dégradé bonbon"
-brazilian_portuguese = "Gradiente doce"
-portuguese = "Gradiente doce"
-turkish = "Şeker gradyanı"
-polish = "Gradient cukierkowy"
-
-[[message]]
-key = "Let's play together!"
-[message.translations]
-simplified_chinese = "一起玩吧！"
-traditional_chinese = "一起玩吧！"
-japanese = "一緒に遊ぼう！"
-korean = "같이 놀아요!"
-russian = "Давай играть вместе!"
-german = "Lass uns zusammen spielen!"
-spanish = "¡Juguemos juntos!"
-french = "Jouons ensemble !"
-brazilian_portuguese = "Vamos jogar juntos!"
-portuguese = "Vamos jogar juntos!"
-turkish = "Birlikte oynayalım!"
-polish = "Zagrajmy razem!"
-
-[[message]]
-key = "Use custom colors"
-[message.translations]
-simplified_chinese = "使用自定义颜色"
-traditional_chinese = "使用自訂顏色"
-japanese = "カスタムカラーを使う"
-korean = "사용자 지정 색 사용"
-russian = "Использовать свои цвета"
-german = "Eigene Farben verwenden"
-spanish = "Usar colores personalizados"
-french = "Utiliser des couleurs personnalisées"
-brazilian_portuguese = "Usar cores personalizadas"
-portuguese = "Usar cores personalizadas"
-turkish = "Özel renkleri kullan"
-polish = "Użyj własnych kolorów"
-
-[[message]]
 key = "Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble, 3=Default)"
 [message.translations]
 simplified_chinese = "消息气泡样式（0=漫画对白，1=糖果渐变，2=云朵气泡，3=默认）"
@@ -40020,54 +39956,6 @@ brazilian_portuguese = "Usar cores personalizadas nos balões de chat"
 portuguese = "Usar cores personalizadas nos balões de conversa"
 turkish = "Özel sohbet balonu renkleri kullan"
 polish = "Użyj własnych kolorów dymków czatu"
-
-[[message]]
-key = "Style"
-[message.translations]
-simplified_chinese = "样式"
-traditional_chinese = "樣式"
-japanese = "スタイル"
-korean = "스타일"
-russian = "Стиль"
-german = "Stil"
-spanish = "Estilo"
-french = "Style"
-brazilian_portuguese = "Estilo"
-portuguese = "Estilo"
-turkish = "Stil"
-polish = "Styl"
-
-[[message]]
-key = "Cloud bubble"
-[message.translations]
-simplified_chinese = "云朵气泡"
-traditional_chinese = "雲朵氣泡"
-japanese = "雲の吹き出し"
-korean = "구름 말풍선"
-russian = "Облачко"
-german = "Wolkenblase"
-spanish = "Burbuja de nube"
-french = "Bulle nuage"
-brazilian_portuguese = "Balão de nuvem"
-portuguese = "Balão de nuvem"
-turkish = "Bulut balonu"
-polish = "Chmurka"
-
-[[message]]
-key = "Gather and disperse"
-[message.translations]
-simplified_chinese = "聚集与散开"
-traditional_chinese = "聚集與散開"
-japanese = "集まって散る"
-korean = "모였다 흩어지기"
-russian = "Собираются и расходятся"
-german = "Sammeln und Zerstreuen"
-spanish = "Se juntan y se dispersan"
-french = "Se rassembler et se disperser"
-brazilian_portuguese = "Juntam e se espalham"
-portuguese = "Juntam-se e dispersam-se"
-turkish = "Toplan ve dağıl"
-polish = "Zbierają się i rozpraszają"
 
 [[message]]
 key = "Sponsor chat style draft: 0=Normal, 1=Platinum highlight, 2=Fluid"
@@ -41752,7 +41640,7 @@ polish = "Dodatkowy odstęp wierszy dziennika konsoli w pikselach"
 [[message]]
 key = "Hover feedback style: 0 = scale, 1 = border highlight"
 [message.translations]
-simplified_chinese = "悬浮反馈样式：0 = 缩放，1 = 描边高亮"
+simplified_chinese = "悬停反馈样式：0 = 缩放，1 = 描边高亮"
 traditional_chinese = "懸停回饋樣式：0 = 縮放，1 = 描邊高亮"
 japanese = "ホバー時の表現: 0 = 拡大、1 = 枠線ハイライト"
 korean = "호버 피드백 방식: 0 = 확대, 1 = 테두리 강조"
@@ -41774,7 +41662,7 @@ japanese = "ダミーをカーソル位置へテレポート"
 korean = "더미를 커서 위치로 이동"
 russian = "Переместить дамми к курсору"
 german = "Dummy zum Cursor teleportieren"
-spanish = "Teleportar el dummy al cursor"
+spanish = "Teletransportar el dummy al cursor"
 french = "Téléporter le dummy sur le curseur"
 brazilian_portuguese = "Teleportar o dummy até o cursor"
 portuguese = "Teleportar o dummy até ao cursor"

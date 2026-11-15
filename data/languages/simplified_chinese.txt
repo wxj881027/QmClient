@@ -7200,7 +7200,7 @@ Hostname of DNSBL provider for IP verification
 == 用于 IP 验证的 DNSBL 提供商的主机名
 
 Hover feedback style: 0 = scale, 1 = border highlight
-== 悬浮反馈样式：0 = 缩放，1 = 描边高亮
+== 悬停反馈样式：0 = 缩放，1 = 描边高亮
 
 Hover for tooltip
 == 悬停显示提示
@@ -9084,7 +9084,7 @@ Menu background
 == 菜单背景
 
 Menu button hover
-== 菜单按钮悬浮
+== 菜单按钮悬停
 
 Menu camera rotation radius
 == 菜单相机旋转半径
@@ -16338,7 +16338,7 @@ The look and behavior of the IME candidate bar that appears when you type Chines
 == 在聊天里输入中日韩文字时出现的 IME 候选栏的外观与行为。
 
 The look of the help bubbles that appear when you hover over buttons, settings and bind rows.
-== 鼠标停在按钮、设置项和绑定行上时弹出的提示气泡的外观。
+== 鼠标悬停在按钮、设置项和绑定行上时弹出的提示气泡的外观。
 
 The map progress bar only fills on Gores maps; the other three lines work on any server.
 == 地图进度条只在 Gores 地图上填充；其余三行在任何服务器上都有效。

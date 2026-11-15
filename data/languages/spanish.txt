@@ -10890,10 +10890,10 @@ Practice mode is disabled
 == El modo práctica está desactivado
 
 Practice: teleport the other tee to your cursor
-== Práctica: teleportar el otro tee al cursor
+== Práctica: teletransportar el otro tee al cursor
 
 Practice: teleport yourself to your cursor
-== Práctica: teleportarte al cursor
+== Práctica: teletransportarte al cursor
 
 Pre-warm settings page on startup and menu idle
 == Precargar página de configuración al inicio y cuando el menú esté inactivo
@@ -15591,7 +15591,7 @@ Teleport back to the practice respawn point and restore the tee state saved ther
 == Teletransporta al punto de reaparición de práctica y restaura el estado del tee guardado allí. Solo se restaura el tee; el mundo sigue avanzando.
 
 Teleport dummy to cursor
-== Teleportar el dummy al cursor
+== Teletransportar el dummy al cursor
 
 Teleport free spectator camera between hovered tele-in/out or checkpoint tele and a matching counterpart
 == Teletransportar la cámara libre del espectador entre el teleport de entrada/salida o el checkpoint tele señalado y una contraparte coincidente
