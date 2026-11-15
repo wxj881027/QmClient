@@ -296,8 +296,6 @@ public:
 	CGhost m_Ghost;
 	CHudEditor m_HudEditor;
 
-	CTooltips m_Tooltips;
-
 	CLocalServer m_LocalServer;
 
 	// TClient Components
@@ -410,6 +408,10 @@ private:
 	CLayers m_Layers;
 	CCollision m_Collision;
 	CUi m_UI;
+public:
+	// 气泡实例统一由 CUi 持有，这里保留引用别名给既有调用点，所有权仍只有一份。
+	CTooltips &m_Tooltips = m_UI.Tooltips();
+private:
 	CUiRuntimeV2 m_UiRuntimeV2;
 	CQmIconPrewarmPlan m_QmIconPrewarm;
 	int m_AppliedQmUiIconWeight = -1;

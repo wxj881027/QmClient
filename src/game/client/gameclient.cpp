@@ -704,7 +704,6 @@ void CGameClient::OnConsoleInit()
 	AddComponent(&m_Menus, "menus");
 	AddComponent(&m_PieMenu, "pie_menu");
 	AddComponent(&m_HudEditor, "hud_editor");
-	AddComponent(&m_Tooltips, "tooltips");
 	AddComponent(&m_Scripting, "scripting");
 	AddComponent(&m_KeyBinder, "key_binder");
 	AddComponent(&m_GameConsole, "game_console");
@@ -1000,7 +999,7 @@ void CGameClient::OnInit()
 	});
 	m_UiRuntimeV2.Init(this);
 	m_UI.SetQmAnimationRuntime(&m_UiRuntimeV2.AnimRuntime());
-	m_UI.SetQmTooltips(&m_Tooltips);
+	m_UI.InitTooltips(this);
 	m_RenderTools.Init(Graphics(), TextRender(), this); // TClient
 	m_RenderMap.Init(Graphics(), TextRender());
 	m_AppliedQmUiIconWeight = NormalizeQmIconWeight(g_Config.m_QmUiIconWeight);
@@ -1758,6 +1757,7 @@ void CGameClient::OnConnected()
 			QmPerfLogPayloadForce("perf/connect", aPayload, Client());
 		}
 	}
+	m_UI.OnReset();
 
 	LogConnectStage("components_map_load_total");
 	ConfigManager()->ResetGameSettings();
@@ -1943,6 +1943,7 @@ void CGameClient::OnReset()
 
 	for(auto &pComponent : m_vpAll)
 		pComponent->OnReset();
+	m_UI.OnReset();
 
 	if(m_pEditor != nullptr)
 	{
@@ -2174,6 +2175,7 @@ void CGameClient::OnRender()
 		for(auto &pComponent : m_vpAll)
 			RenderComponent(pComponent);
 	}
+	m_UI.OnRenderTooltip();
 	LogPerfStage(this, "components_total", ComponentsTimer.ElapsedMs());
 
 	// clear all events/input for this frame

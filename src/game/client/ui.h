@@ -12,6 +12,7 @@
 #include "QmUi/QmUiLifetime.h"
 #include "QmUi/UiTokens.h"
 #include "lineinput.h"
+#include "components/tooltips.h"
 #include "ui_rect.h"
 
 #include <engine/input.h>
@@ -27,6 +28,7 @@
 
 class CScrollRegion;
 class CTooltips;
+class CGameClient;
 enum class EQmIcon;
 class IClient;
 class IGraphics;
@@ -820,7 +822,8 @@ private:
 	float m_DropDownFontSize = -1.0f;
 	// 仅客户端绑定；地图编辑器保留自己的控件样式。
 	CUiV2AnimationRuntime *m_pQmAnimationRuntime = nullptr;
-	CTooltips *m_pQmTooltips = nullptr;
+	// 气泡由 CUi 持有，生命周期与 UI 一致；配置页、服务器列表与通用控件共用同一实例。
+	mutable CTooltips m_Tooltips;
 	bool m_CardLabelHintsEnabled = false;
 	SUiTheme m_QmControlTheme{};
 	std::array<unsigned, 6> m_aQmControlThemeConfig{};
@@ -1105,6 +1108,8 @@ public:
 
 	void AddUIElement(CUIElement *pElement);
 	void RemoveUIElement(CUIElement *pElement);
+	void OnReset();
+	void OnRenderTooltip();
 	void OnShutdown();
 	void OnElementsReset();
 	void OnWindowResize();
@@ -1187,7 +1192,9 @@ public:
 	void SetDropDownFontSize(float FontSize) { m_DropDownFontSize = FontSize; }
 	void SetQmAnimationRuntime(CUiV2AnimationRuntime *pRuntime) { m_pQmAnimationRuntime = pRuntime; }
 	CUiV2AnimationRuntime *QmAnimationRuntime() const { return m_pQmAnimationRuntime; }
-	void SetQmTooltips(CTooltips *pTooltips) { m_pQmTooltips = pTooltips; }
+	void InitTooltips(CGameClient *pClient) { m_Tooltips.OnInterfacesInit(pClient); }
+	CTooltips &Tooltips() { return m_Tooltips; }
+	const CTooltips &Tooltips() const { return m_Tooltips; }
 	bool CardLabelHintsEnabled() const { return m_CardLabelHintsEnabled; }
 	void SetCardLabelHintsEnabled(bool Enabled) { m_CardLabelHintsEnabled = Enabled; }
 	const char *PrepareCardLabel(const CUIRect *pRect, const char *pText, bool Render = true, bool AllowHintSplit = true) const;
@@ -1201,7 +1208,7 @@ public:
 	// FontSize <= 0 表示按提示令牌取字号：设置页用紧凑小字，页面外用 tooltip 令牌，
 	// 与普通气泡同源，避免调用点自带一个和全局不一致的魔数。
 	void DoSmallTooltip(const void *pId, const CUIRect *pNearRect, const char *pText, float FontSize = -1.0f, float WidthHint = -1.0f);
-	CTooltips *QmTooltips() const { return m_pQmTooltips; }
+	CTooltips *QmTooltips() const { return const_cast<CTooltips *>(&m_Tooltips); }
 	const SUiTheme &QmControlTheme();
 	float DropDownFontSize() const { return m_DropDownFontSize; }
 	void Update();
