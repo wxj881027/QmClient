@@ -492,23 +492,30 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 				GameClient()->m_Menus.ShowQmNewFeaturesPopup();
 
 			ScaledButton = ScaleButtonRect(aMenuButtons[2], s_aMenuButtonScale[2]);
-			ScaledButton = ScaleButtonRect(aMenuButtons[2], s_aMenuButtonScale[2]);
-			// 与上面同一条语义：运行中给「进入服务器 / 停止」双操作，未运行给单按钮。
+			// 运行中给「进入服务器 / 停止」双操作；未运行仍是单按钮「运行服务器」。
+			// 单按钮分支必须带齐带图按钮的全套参数（圆角、着色、标签、未缩放矩形），
+			// 运行中：左边保留官方贴图按钮显示「进入服务器」，右边一格停止图标。
+			// 贴图与字号仍走带图按钮的全套参数，不因为多一个按钮而丢图。
 			static CButtonContainer s_LocalServerButton, s_LocalServerStopButton;
 			if(LocalServerRunning)
 			{
-				const int LocalAction = ui_widget::SplitActionButton(ui_widget::ControlContext(Ui()), &s_LocalServerButton, Localize("Join server"), &s_LocalServerStopButton, Localize("Stop"), ScaledButton);
-				if(LocalAction == 0)
+				CUIRect JoinRect = ScaledButton;
+				CUIRect StopSlot;
+				const float StopSize = std::min(JoinRect.h + ui_token::spacing::XS, JoinRect.w);
+				JoinRect.VSplitRight(StopSize, &JoinRect, &StopSlot);
+				StopSlot.VSplitLeft(std::min(ui_token::spacing::XS, StopSlot.w), nullptr, &StopSlot);
+				if(GameClient()->m_Menus.DoButton_Menu(&s_LocalServerButton, Localize("Join server"), 0, &JoinRect, BUTTONFLAG_LEFT, g_Config.m_ClShowStartMenuImages ? "local_server" : nullptr, IGraphics::CORNER_ALL, Rounding, 0.5f, ColorRGBA(0.0f, 1.0f, 0.0f, 0.25f), &m_aButtonLabels[2], -1.0f, &aMenuButtons[2]))
 					GameClient()->m_LocalServer.Connect();
-				else if(LocalAction == 1)
+				StopSlot = QmUiSquareIconButtonRect(StopSlot);
+				if(Ui()->DoButton_QmIcon(&s_LocalServerStopButton, EQmIcon::STOP, FontIcons::FONT_ICON_STOP, 0, &StopSlot, BUTTONFLAG_LEFT))
 					GameClient()->m_LocalServer.KillServer();
 			}
-			else if(GameClient()->m_Menus.DoButton_Menu(&s_LocalServerButton, Localize("Run server"), 0, &ScaledButton, BUTTONFLAG_LEFT, g_Config.m_ClShowStartMenuImages ? "run_server" : nullptr, IGraphics::CORNER_ALL, 5.0f) || (CheckHotKey(KEY_R) && Input()->KeyPress(KEY_R)))
+			else if(GameClient()->m_Menus.DoButton_Menu(&s_LocalServerButton, Localize("Run server"), 0, &ScaledButton, BUTTONFLAG_LEFT, g_Config.m_ClShowStartMenuImages ? "local_server" : nullptr, IGraphics::CORNER_ALL, Rounding, 0.5f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), &m_aButtonLabels[2], -1.0f, &aMenuButtons[2]) || (CheckHotKey(KEY_R) && Input()->KeyPress(KEY_R)))
 			{
 				GameClient()->m_LocalServer.RunServer({});
 			}
+			if(!QmUiMobilePlatform())
 			{
-				ScaledButton = ScaleButtonRect(aMenuButtons[3], s_aMenuButtonScale[3]);
 				static CButtonContainer s_MapEditorButton;
 				if(GameClient()->m_Menus.DoButton_Menu(&s_MapEditorButton, Localize("Editor"), 0, &ScaledButton, BUTTONFLAG_LEFT, g_Config.m_ClShowStartMenuImages ? "editor" : nullptr, IGraphics::CORNER_ALL, Rounding, 0.5f, EditorDirty ? ColorRGBA(0.0f, 1.0f, 0.0f, 0.25f) : ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), &m_aButtonLabels[3], -1.0f, &aMenuButtons[3]) || CheckHotKey(KEY_E))
 				{
