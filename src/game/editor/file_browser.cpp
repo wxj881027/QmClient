@@ -78,7 +78,7 @@ void CFileBrowser::ShowFileDialog(
 	Editor()->m_Dialog = DIALOG_FILE;
 }
 
-void CFileBrowser::OnRender(CUIRect _)
+void CFileBrowser::Render()
 {
 	if(Editor()->m_Dialog != DIALOG_FILE)
 	{

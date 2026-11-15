@@ -5038,8 +5038,9 @@ void CEditor::Render()
 		}
 	}
 
-	for(CEditorComponent &Component : m_vComponents)
-		Component.OnRender(View);
+	m_FileBrowser.Render();
+	m_Prompt.Render();
+	m_FontTyper.Render();
 
 	MapView()->UpdateZoom();
 
