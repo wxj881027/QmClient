@@ -846,6 +846,31 @@ void CFastPractice::FirePracticeGun(CGameWorld &World, SPracticeGun &Gun, int Ti
 	}
 }
 
+bool CFastPractice::EnsurePracticeParticipants()
+{
+	// solo 区里客户端世界只收可碰撞角色（NetCharAdd 的 IsLocalTeam 过滤），本体或分身
+	// 因此可能不在从服务器世界 fork 出来的分支世界里。练习必须两个参与者同时在场，
+	// 这里按快照补建；团队关系仍沿用世界里的 m_Teams，碰撞与 solo 语义不变。
+	const int aParticipants[] = {m_EnableLocalClientId, m_RequireDummy ? m_EnableDummyClientId : -1};
+	bool Added = false;
+	for(const int ClientId : aParticipants)
+	{
+		if(ClientId < 0 || ClientId >= MAX_CLIENTS || m_PracticeBaseWorld.GetCharacterById(ClientId))
+			continue;
+		CGameClient::CSnapState::CCharacterInfo &Info = GameClient()->m_Snap.m_aCharacters[ClientId];
+		if(!Info.m_Active)
+			continue;
+		const int GameTeam = GameClient()->IsTeamPlay() ? GameClient()->m_aClients[ClientId].m_Team : ClientId;
+		// 与 UpdatePrediction 的判定保持一致：本体或正在预测的分身都算本地。
+		const bool IsLocal = ClientId == GameClient()->m_Snap.m_LocalClientId ||
+				     (GameClient()->PredictDummy() && ClientId == GameClient()->m_aLocalIds[!g_Config.m_ClDummy]);
+		m_PracticeBaseWorld.NetCharAdd(ClientId, &Info.m_Cur,
+			Info.m_HasExtendedData ? &Info.m_ExtendedData : nullptr, GameTeam, IsLocal, true);
+		Added = true;
+	}
+	return Added;
+}
+
 bool CFastPractice::InitPracticeWorld()
 {
 	// 重新 fork（/r、重进、追赶失败）会让角色回到锚点，轨迹上是一次瞬移，
@@ -857,6 +882,7 @@ bool CFastPractice::InitPracticeWorld()
 	// 带进新的分支世界会让重算 tick 去重失效，整份作废。
 	QmResetPracticePredictedEvents(m_PracticeBaseWorld.m_PredictedEvents);
 	PrunePracticeWorld(m_PracticeBaseWorld);
+	EnsurePracticeParticipants();
 	SanitizePracticeWorldHooks(m_PracticeBaseWorld);
 	SyncPracticeWorldConfig();
 	m_PracticeWorldInitialized = true;

@@ -228,6 +228,8 @@ private:
 	bool ApplyAnchorToCharacter(CGameWorld &World, const SAnchorData &Anchor) const;
 	bool InitPracticeWorld();
 	void PrunePracticeWorld(CGameWorld &World) const;
+	// solo 区里客户端世界不收非碰撞角色，分支世界按快照补建缺失的本体/分身。
+	bool EnsurePracticeParticipants();
 	// 练习线路录制：Rank 1 是另一个平行时空，只能看；这里录的是我们自己这条
 	// 分叉时空里的 Tee（本体 + 分身多轨），连同世界里发生的交互事件一起存，
 	// 回放时走 Rank 1 同款 demo 式查看模式，而不是普通跟跑影子。

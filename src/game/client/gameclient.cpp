@@ -7272,7 +7272,7 @@ void CGameClient::UpdatePrediction()
 			int GameTeam = IsTeamPlay() ? m_aClients[i].m_Team : i;
 			m_GameWorld.NetCharAdd(i, &m_Snap.m_aCharacters[i].m_Cur,
 				m_Snap.m_aCharacters[i].m_HasExtendedData ? &m_Snap.m_aCharacters[i].m_ExtendedData : nullptr,
-				GameTeam, IsLocal);
+				GameTeam, IsLocal, false);
 		}
 
 	for(const CSnapEntities &EntData : SnapEntities())

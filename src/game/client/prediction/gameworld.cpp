@@ -416,9 +416,9 @@ void CGameWorld::NetObjBegin(CTeamsCore Teams, int LocalClientId)
 	OnModified();
 }
 
-void CGameWorld::NetCharAdd(int ObjId, CNetObj_Character *pCharObj, CNetObj_DDNetCharacter *pExtended, int GameTeam, bool IsLocal)
+void CGameWorld::NetCharAdd(int ObjId, CNetObj_Character *pCharObj, CNetObj_DDNetCharacter *pExtended, int GameTeam, bool IsLocal, bool ForceAdd)
 {
-	if(IsLocalTeam(ObjId))
+	if(ForceAdd || IsLocalTeam(ObjId))
 	{
 		CCharacter *pChar;
 		if((pChar = (CCharacter *)GetEntity(ObjId, ENTTYPE_CHARACTER)))
