@@ -450,8 +450,8 @@ TEST(QmChatScrollbar, SideSwitchMovesRailInsideBoundsWithoutChangingSize)
 
 TEST(QmChatScrollbar, ThumbHeightFollowsTheListViewportOverContentRule)
 {
-	// 滑块长度不再由聊天自己定上限：与列表同一把尺子 = 视口/内容 × 轨道，
-	// 下夹 ui_token::chat::SCROLLBAR_MIN_THUMB，上不越过轨道。
+	// 滑块长度与列表同一把尺子 = 视口/内容 × 轨道，下夹最短长度；
+	// 内容刚超过一屏时再夹一档最长占比，保留可拖动行程。
 	const CUIRect Bounds{0.0f, 0.0f, 200.0f, 300.0f};
 	const float ViewHeight = 200.0f;
 	const auto Half = QmResolveChatScrollbarFrame(Bounds, 50.0f, ViewHeight, ViewHeight * 2.0f, 0.0f, false);
@@ -460,10 +460,10 @@ TEST(QmChatScrollbar, ThumbHeightFollowsTheListViewportOverContentRule)
 	EXPECT_FLOAT_EQ(Half.m_Rail.y, 50.0f + QM_CHAT_SCROLLBAR_MARGIN);
 	EXPECT_FLOAT_EQ(Half.m_Rail.h, ViewHeight - 2.0f * QM_CHAT_SCROLLBAR_MARGIN);
 	EXPECT_NEAR(Half.m_Thumb.h, Half.m_Rail.h * 0.5f, 0.001f);
-	// 内容只比视口多一点：滑块可以长到几乎满轨，但不越过轨道（列表同样如此）。
+	// 内容只比视口多一点：滑块最长只占轨道的一档比例，不会看起来铺满整条轨道。
 	const auto NearlyAllVisible = QmResolveChatScrollbarFrame(Bounds, 50.0f, ViewHeight, ViewHeight + 1.0f, 0.0f, false);
 	ASSERT_TRUE(NearlyAllVisible.m_Visible);
-	EXPECT_LE(NearlyAllVisible.m_Thumb.h, NearlyAllVisible.m_Rail.h);
+	EXPECT_NEAR(NearlyAllVisible.m_Thumb.h, NearlyAllVisible.m_Rail.h * ui_token::chat::SCROLLBAR_MAX_THUMB_RATIO, 0.001f);
 	EXPECT_GE(NearlyAllVisible.m_Thumb.h, Half.m_Thumb.h);
 	// 内容极多：滑块停在最短一档，不会被压成一条缝。
 	const auto Long = QmResolveChatScrollbarFrame(Bounds, 50.0f, ViewHeight, ViewHeight * 1000.0f, 0.0f, false);
@@ -506,6 +506,61 @@ TEST(QmChatScrollbar, ThumbMapsBothBacklogEndsAndTracksOnlyInsideTheRail)
 	EXPECT_NEAR(Oldest.m_Rail.x, Bounds.x + QM_CHAT_SCROLLBAR_MARGIN, 0.001f);
 	EXPECT_FLOAT_EQ(Right.m_Rail.h, Oldest.m_Rail.h);
 	EXPECT_FLOAT_EQ(Right.m_Thumb.h, Oldest.m_Thumb.h);
+}
+
+TEST(QmChatScrollbar, ContinuousOffsetDrivesOverscrollThumbBeyondBothEnds)
+{
+	const CUIRect Bounds{0.0f, 0.0f, 200.0f, 300.0f};
+	const float ViewHeight = 200.0f;
+	const float ContentHeight = ViewHeight * 4.0f;
+	const SQmScrollMetrics Metrics = QmChatHistoryScrollMetrics(100, 10);
+	ASSERT_FLOAT_EQ(Metrics.MaxOffset(), 90.0f);
+
+	const auto Latest = QmResolveChatScrollbarFrame(Bounds, 50.0f, ViewHeight, ContentHeight,
+		QmChatHistoryScrollbarValue(0.0f, Metrics), false);
+	const auto Oldest = QmResolveChatScrollbarFrame(Bounds, 50.0f, ViewHeight, ContentHeight,
+		QmChatHistoryScrollbarValue(Metrics.MaxOffset(), Metrics), false);
+	const auto PastLatest = QmResolveChatScrollbarFrame(Bounds, 50.0f, ViewHeight, ContentHeight,
+		QmChatHistoryScrollbarValue(-5.0f, Metrics), false);
+	const auto PastOldest = QmResolveChatScrollbarFrame(Bounds, 50.0f, ViewHeight, ContentHeight,
+		QmChatHistoryScrollbarValue(Metrics.MaxOffset() + 5.0f, Metrics), false);
+	ASSERT_TRUE(Latest.m_Visible);
+	ASSERT_TRUE(Oldest.m_Visible);
+	ASSERT_TRUE(PastLatest.m_Visible);
+	ASSERT_TRUE(PastOldest.m_Visible);
+
+	// 最新端过冲：滑块越过下沿；最旧端过冲：滑块越过上沿。回弹到合法偏移时同时回轨。
+	EXPECT_GT(PastLatest.m_Thumb.y + PastLatest.m_Thumb.h, Latest.m_Thumb.y + Latest.m_Thumb.h + 0.001f);
+	EXPECT_LT(PastOldest.m_Thumb.y, Oldest.m_Thumb.y - 0.001f);
+	EXPECT_NEAR(Latest.m_Thumb.y + Latest.m_Thumb.h, Latest.m_Rail.y + Latest.m_Rail.h, 0.001f);
+	EXPECT_NEAR(Oldest.m_Thumb.y, Oldest.m_Rail.y, 0.001f);
+}
+
+TEST(QmChatScrollbar, DrawGeometryKeepsOverscrollButAlignsToRailWidth)
+{
+	const CUIRect Bounds{0.0f, 0.0f, 200.0f, 300.0f};
+	const float ViewHeight = 200.0f;
+	const float ContentHeight = ViewHeight * 4.0f;
+	const SQmScrollMetrics Metrics = QmChatHistoryScrollMetrics(100, 10);
+	const auto PastLatest = QmResolveChatScrollbarFrame(Bounds, 50.0f, ViewHeight, ContentHeight,
+		QmChatHistoryScrollbarValue(-5.0f, Metrics), false);
+	const auto PastOldest = QmResolveChatScrollbarFrame(Bounds, 50.0f, ViewHeight, ContentHeight,
+		QmChatHistoryScrollbarValue(Metrics.MaxOffset() + 5.0f, Metrics), false);
+	ASSERT_TRUE(PastLatest.m_Visible);
+	ASSERT_TRUE(PastOldest.m_Visible);
+
+	const CUIRect LatestHandle = QmChatScrollbarDrawHandleRect(PastLatest.m_Rail, PastLatest.m_Thumb);
+	const CUIRect OldestHandle = QmChatScrollbarDrawHandleRect(PastOldest.m_Rail, PastOldest.m_Thumb);
+	// 绘制矩形不再把 Y 夹回轨道，弹簧过冲在屏幕上是可见的。
+	EXPECT_FLOAT_EQ(LatestHandle.y, PastLatest.m_Thumb.y);
+	EXPECT_FLOAT_EQ(OldestHandle.y, PastOldest.m_Thumb.y);
+	EXPECT_GT(LatestHandle.y + LatestHandle.h, PastLatest.m_Rail.y + PastLatest.m_Rail.h);
+	EXPECT_LT(OldestHandle.y, PastOldest.m_Rail.y);
+	// 横向仍与轨道严格对齐，滑块宽度不会被 Thumb 的旧值带偏。
+	EXPECT_FLOAT_EQ(LatestHandle.x, PastLatest.m_Rail.x);
+	EXPECT_FLOAT_EQ(LatestHandle.w, PastLatest.m_Rail.w);
+	EXPECT_FLOAT_EQ(OldestHandle.x, PastOldest.m_Rail.x);
+	EXPECT_FLOAT_EQ(OldestHandle.w, PastOldest.m_Rail.w);
 }
 
 TEST(QmChatScrollbar, DragProgressFollowsPointerAndClampsAtBothTrackEnds)
@@ -662,6 +717,17 @@ TEST(QmChatHistoryScroll, BouncePixelsAreConvertedToMessageLineUnits)
 	EXPECT_FLOAT_EQ(QmChatHistoryBounceLines(25.0f, 20.0f), 1.25f);
 	EXPECT_FLOAT_EQ(QmChatHistoryBounceLines(0.0f, 20.0f), 0.0f);
 	EXPECT_FLOAT_EQ(QmChatHistoryBounceLines(25.0f, 0.0f), 25.0f);
+}
+
+TEST(QmChatHistoryScroll, ScrollbarValueKeepsContinuousOffsetAndOverscroll)
+{
+	const SQmScrollMetrics Metrics = QmChatHistoryScrollMetrics(100, 10);
+	ASSERT_FLOAT_EQ(Metrics.MaxOffset(), 90.0f);
+	EXPECT_FLOAT_EQ(QmChatHistoryScrollbarValue(0.0f, Metrics), 1.0f);
+	EXPECT_FLOAT_EQ(QmChatHistoryScrollbarValue(45.0f, Metrics), 0.5f);
+	EXPECT_FLOAT_EQ(QmChatHistoryScrollbarValue(90.0f, Metrics), 0.0f);
+	EXPECT_FLOAT_EQ(QmChatHistoryScrollbarValue(-9.0f, Metrics), 1.1f);
+	EXPECT_FLOAT_EQ(QmChatHistoryScrollbarValue(99.0f, Metrics), -0.1f);
 }
 
 TEST(QmChatHistoryScroll, MultipleWheelStepsKeepTheirNotchCount)

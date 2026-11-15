@@ -4004,7 +4004,7 @@ void CChat::OnRender()
 	// 滚动条几何全部来自公共滚动容器（与列表滚动条同一算法）：聊天只报视口高度、
 	// 内容总高度和当前进度。轨道按列表规则两端内缩，滑块按"视口/内容"算长度，
 	// 不再有聊天自己的一档上限与反馈内缩；内容装得下就不出现。
-	SQmChatScrollbarFrame ScrollbarFrame = QmResolveChatScrollbarFrame(ChatRect, HeightLimit, HistoryHeight, HistoryContentHeight, BacklogLineToScrollbarValue(m_BacklogCurLine, MaxScroll), ChatScrollbarOnRight);
+	SQmChatScrollbarFrame ScrollbarFrame = QmResolveChatScrollbarFrame(ChatRect, HeightLimit, HistoryHeight, HistoryContentHeight, QmChatHistoryScrollbarValue(m_HistoryScroll.Offset(), HistoryScrollMetrics), ChatScrollbarOnRight);
 	const bool ShowChatScrollbar = InputActive && MaxScroll > 0 && ScrollbarFrame.m_Visible;
 	bool ScrollbarHovered = false;
 	if(ShowChatScrollbar)
@@ -4047,13 +4047,14 @@ void CChat::OnRender()
 			// 拖动跟手：把指针位置换算成进度后直接写进公共滚动状态（不经过弹簧），
 			// 松手后由 Advance 的越界回弹收回合法范围。
 			const float Progress = QmChatScrollbarProgressFromPointer(ScrollbarFrame, MousePos.y, m_ScrollbarDragOffset);
-			const int NewBacklogCurLine = ScrollbarValueToBacklogLine(Progress, MaxScroll);
-			QmChatHistoryDragToLine(m_HistoryScroll, NewBacklogCurLine, HistoryScrollMetrics, HistoryScrollConfig);
+			const float NewOffset = (1.0f - Progress) * HistoryScrollMetrics.MaxOffset();
+			QmChatHistoryDragToOffset(m_HistoryScroll, NewOffset, HistoryScrollMetrics, HistoryScrollConfig);
+			const int NewBacklogCurLine = QmChatHistoryScrollLine(NewOffset, HistoryScrollMetrics);
 			if(NewBacklogCurLine != m_BacklogCurLine)
 				m_BacklogCurLine = NewBacklogCurLine;
 			m_HistoryScrollAppliedLine = m_BacklogCurLine;
 			// 滑块跟着新进度重画一次，走同一个几何入口。
-			ScrollbarFrame = QmResolveChatScrollbarFrame(ChatRect, HeightLimit, HistoryHeight, HistoryContentHeight, BacklogLineToScrollbarValue(m_BacklogCurLine, MaxScroll), ChatScrollbarOnRight);
+			ScrollbarFrame = QmResolveChatScrollbarFrame(ChatRect, HeightLimit, HistoryHeight, HistoryContentHeight, QmChatHistoryScrollbarValue(m_HistoryScroll.Offset(), HistoryScrollMetrics), ChatScrollbarOnRight);
 		}
 	}
 	else

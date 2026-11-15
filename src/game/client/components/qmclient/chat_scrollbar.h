@@ -105,11 +105,25 @@ inline SQmChatScrollbarFrame QmResolveChatScrollbarFrame(const CUIRect &Bounds, 
 	SQmChatScrollbarFrame Result;
 	const float Width = QmChatScrollbarWidth(Bounds, Scale);
 	const float Margin = QmChatScrollbarMargin(Bounds, OnRight, Width, Scale);
-	const auto Frame = ui_widget::ResolveOverlayScrollbarFrame(Bounds, Top, Height, ContentHeight, Progress, OnRight, Width, Margin,
+	const float SafeProgress = std::isfinite(Progress) ? Progress : 1.0f;
+	const float ClampedProgress = std::clamp(SafeProgress, 0.0f, 1.0f);
+	const auto Frame = ui_widget::ResolveOverlayScrollbarFrame(Bounds, Top, Height, ContentHeight, ClampedProgress, OnRight, Width, Margin,
 		ui_token::chat::SCROLLBAR_MIN_THUMB * std::max(0.0f, Scale));
+	if(!Frame.m_Visible)
+		return Result;
 	Result.m_Rail = Frame.m_Rail;
 	Result.m_Thumb = Frame.m_Thumb;
-	Result.m_TrackRange = Frame.m_TrackRange;
+	// 内容刚超过一屏时，按比例算出的滑块会几乎铺满轨道。列表滑块保留可拖动行程，
+	// 聊天也采用同一比例公式，只增加一档最长占比，避免看起来像“没有滑块”。
+	const float MinThumb = std::min(Result.m_Rail.h, ui_token::chat::SCROLLBAR_MIN_THUMB * std::max(0.0f, Scale));
+	const float MaxThumb = std::max(MinThumb, Result.m_Rail.h * ui_token::chat::SCROLLBAR_MAX_THUMB_RATIO);
+	Result.m_Thumb.h = std::clamp(Result.m_Thumb.h, MinThumb, MaxThumb);
+	Result.m_TrackRange = std::max(0.0f, Result.m_Rail.h - Result.m_Thumb.h);
+	Result.m_Thumb.y = Result.m_Rail.y + ClampedProgress * Result.m_TrackRange;
+	// 连续偏移越过合法端点时，滑块跟着内容一起越界，回弹时再回到轨道内。
+	// Progress 0 = 最旧/顶部，1 = 最新/底部；正越界量表示滑块向下。
+	const float Overshoot = SafeProgress - ClampedProgress;
+	Result.m_Thumb.y += Overshoot * Result.m_TrackRange;
 	Result.m_Visible = Frame.m_Visible;
 	return Result;
 }
@@ -173,6 +187,16 @@ inline int QmChatHistoryScrollLine(float Offset, const SQmScrollMetrics &Metrics
 	return (int)std::floor(Line);
 }
 
+// 连续滚动偏移 → 滚动条进度。越界值不夹取：滑块要能跟着弹簧一起过冲回弹。
+// 0 = 最旧/顶部，1 = 最新/底部，与公共覆盖式滚动条同口径。
+inline float QmChatHistoryScrollbarValue(float Offset, const SQmScrollMetrics &Metrics)
+{
+	const float MaxOffset = Metrics.MaxOffset();
+	if(MaxOffset <= 0.0f)
+		return 1.0f;
+	return 1.0f - (std::isfinite(Offset) ? Offset : 0.0f) / MaxOffset;
+}
+
 // 当前行锚之外的亚行余量，换算成正文整体的像素位移。负数/超过最大偏移
 // 时余量自然落在橡皮筋区，回弹过程会连续经过这些位置。
 inline float QmChatHistoryLayoutOffset(float Offset, int BacklogLine, float LineExtent)
@@ -196,6 +220,11 @@ inline void QmChatHistoryWheel(CQmScrollState &State, int Steps, const SQmScroll
 inline void QmChatHistoryDragToLine(CQmScrollState &State, int Line, const SQmScrollMetrics &Metrics, const SQmScrollConfig &Config)
 {
 	State.SetOffset((float)Line, Metrics, Config, true);
+}
+
+inline void QmChatHistoryDragToOffset(CQmScrollState &State, float Offset, const SQmScrollMetrics &Metrics, const SQmScrollConfig &Config)
+{
+	State.SetOffset(Offset, Metrics, Config, true);
 }
 
 // ---------------------------------------------------------------------------
@@ -263,6 +292,17 @@ inline CUIRect QmChatScrollbarFeedbackRect(const CUIRect &Handle, bool Hovered, 
 	return Grown;
 }
 
+// 绘制滑块：横向贴住轨道，纵向保留几何阶段算出的位置。越界回弹时滑块本来就应
+// 越过轨道端头，这里若再把 Y 夹回轨道，弹簧手感会在最后一笔被抹掉。
+inline CUIRect QmChatScrollbarDrawHandleRect(const CUIRect &Rail, const CUIRect &Thumb)
+{
+	CUIRect Handle = Thumb;
+	Handle.x = Rail.x;
+	Handle.w = Rail.w;
+	Handle.h = std::min(std::max(0.0f, Handle.h), Rail.h);
+	return Handle;
+}
+
 // 滑块在 CUi 里的身份。聊天是每帧自绘的 HUD，不走菜单树；这里只借 CUi 的
 // 悬浮/按下登记给公共滑块绘制入口用，生命周期与本文件内的滚动条绘制一致。
 inline const void *QmChatScrollbarId()
@@ -282,14 +322,9 @@ inline void QmDrawChatScrollbar(CUi *pUi, const CUIRect &Rail, const CUIRect &Th
 	// 默认参数只在首次调用时构造一次：它要读 g_Config，不该每帧重算。
 	static const CScrollRegionParams s_DefaultListParams;
 	DrawRoundedSurface(pUi, Rail, pUi->ScaleBackgroundAlpha(s_DefaultListParams.m_RailBgColor), ui_token::color::COLOR_TRANSPARENT, ui_token::chat::SCROLLBAR_RADIUS);
-	CUIRect Handle = Thumb;
-	Handle.x = Rail.x;
-	Handle.w = Rail.w;
-	// 滑块落在轨道内（几何已由公共容器算好，这里只做防御性夹取）。
-	Handle.h = std::min(std::max(0.0f, Handle.h), Rail.h);
+	const CUIRect Handle = QmChatScrollbarDrawHandleRect(Rail, Thumb);
 	if(Handle.h <= 0.0f)
 		return;
-	Handle.y = std::clamp(Handle.y, Rail.y, Rail.y + Rail.h - Handle.h);
 	const ColorRGBA Accent = pUi->QmControlTheme().m_Accent;
 	const bool PublicFeedbackActive = pUi->VisualHotItem(QmChatScrollbarId()) || pUi->CheckActiveItem(QmChatScrollbarId());
 	const CUIRect FeedbackHandle = QmChatScrollbarFeedbackRect(Handle, Interactive && Hovered, Interactive && Dragging, PublicFeedbackActive);
