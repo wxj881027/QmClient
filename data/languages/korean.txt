@@ -12500,9 +12500,6 @@ Save power by lowering update rate
 Save power by lowering update rate (higher input latency)
 == 업데이트 속도를 낮춰 전력 절약 (입력 지연 증가)
 
-Save practice line
-== 연습 라인 저장
-
 Save replay of best time per game
 == 게임당 최고 기록의 리플레이 저장
 
@@ -12526,12 +12523,6 @@ Save team with code r.
 
 Save the best demo of each race
 == 각 레이스의 최고 데모 저장
-
-Save the current fast-practice line (all tees) as a replayable ghost group
-== 현재 빠른 연습 라인(모든 Tee)을 재생 가능한 고스트 그룹으로 저장
-
-Save the current fast-practice line (all tees) as a replayable ghost group. Only works while fast practice is active. Find the saved group on the Ghost page and press View to replay it as a demo-style ghost without leaving the server.
-== 현재 빠른 연습 라인(본체와 더미)을 재생 가능한 고스트 그룹으로 저장합니다. 빠른 연습 중에만 동작합니다. 저장 후 고스트 페이지에서 그룹을 선택하고 View를 누르면 서버를 나가지 않고 데모 방식으로 다시 볼 수 있습니다.
 
 Save the current team
 == 현재 팀 저장

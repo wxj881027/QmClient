@@ -645,17 +645,6 @@ bool CFastPractice::ConsumePracticeChatCommand(int Team, const char *pLine)
 	return true;
 }
 
-void CFastPractice::ConSavePracticeGhost(IConsole::IResult *pResult, void *pUserData)
-{
-	auto *pSelf = static_cast<CFastPractice *>(pUserData);
-	if(!pSelf->m_Enabled)
-	{
-		pSelf->EchoPractice("save practice ghost: fast practice is not active");
-		return;
-	}
-	pSelf->SavePracticeGhost(pResult->NumArguments() > 0 ? pResult->GetString(0) : "");
-}
-
 void CFastPractice::ConPracticeEnter(IConsole::IResult *pResult, void *pUserData)
 {
 	(void)pResult;
@@ -834,8 +823,6 @@ void CFastPractice::OnConsoleInit()
 		"Stop recording and save the practice line as a ghost group");
 	Console()->Register("practice_view_ghost", "r[group]", CFGFLAG_CLIENT, ConPracticeViewGhost, this,
 		"Replay a saved practice ghost group in demo-style view mode");
-	Console()->Register("practice_save_ghost", "?r[name]", CFGFLAG_CLIENT, ConSavePracticeGhost, this,
-		"Save the current fast-practice line (all tees) as a replayable ghost group");
 	Console()->Register("qm_local_world_dump", "", CFGFLAG_CLIENT, ConLocalWorldDump, this,
 		"Dump the client-side world state (practice branch, tracks, switchers, view session)");
 }

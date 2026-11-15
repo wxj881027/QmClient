@@ -97,8 +97,6 @@ inline constexpr SKnownBindAction s_aKnownBindActions[] = {
 		Localizable("Store the current tee state (position, weapons, jumps and movement state) as the practice respawn point.")},
 	{EBindOptionGroup::MISCELLANEOUS, Localizable("Return to respawn point"), "practice_restore_checkpoint",
 		Localizable("Teleport back to the practice respawn point and restore the tee state saved there. Only the tee is restored; the world keeps running.")},
-	{EBindOptionGroup::MISCELLANEOUS, Localizable("Save practice line"), "practice_save_ghost",
-		Localizable("Save the current fast-practice line (all tees) as a replayable ghost group. Only works while fast practice is active. Find the saved group on the Ghost page and press View to replay it as a demo-style ghost without leaving the server.")},
 	{EBindOptionGroup::MISCELLANEOUS, Localizable("Start recording"), "practice_record_start",
 		Localizable("Start recording the fast-practice line, or resume after a pause. Recording is always manual: nothing is recorded until this is pressed.")},
 	{EBindOptionGroup::MISCELLANEOUS, Localizable("Pause recording"), "practice_record_pause",

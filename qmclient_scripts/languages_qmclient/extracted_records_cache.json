@@ -6942,14 +6942,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/practice_menu.h",
       "context": "",
-      "line": 28
+      "line": 27
     },
     {
       "key": "Back",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/practice_menu.h",
       "context": "",
-      "line": 40
+      "line": 39
     },
     {
       "key": "Backdrop blur",
@@ -16462,7 +16462,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/practice_menu.h",
       "context": "",
-      "line": 44
+      "line": 43
     },
     {
       "key": "Deep Freeze",
@@ -18023,7 +18023,7 @@
       "category": "register_help",
       "source": "src/game/client/components/tclient/fast_practice_commands.cpp",
       "context": "",
-      "line": 822
+      "line": 811
     },
     {
       "key": "Disable Gores auto-switch when picking up extra weapon",
@@ -20053,7 +20053,7 @@
       "category": "register_help",
       "source": "src/game/client/components/tclient/fast_practice_commands.cpp",
       "context": "",
-      "line": 839
+      "line": 826
     },
     {
       "key": "Dump the current savestring",
@@ -21565,7 +21565,7 @@
       "category": "register_help",
       "source": "src/game/client/components/tclient/fast_practice_commands.cpp",
       "context": "",
-      "line": 821
+      "line": 810
     },
     {
       "key": "Enable fat skin",
@@ -22790,7 +22790,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/practice_menu.h",
       "context": "",
-      "line": 54
+      "line": 53
     },
     {
       "key": "Endless hook has been activated",
@@ -22979,14 +22979,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/practice_menu.h",
       "context": "",
-      "line": 31
+      "line": 30
     },
     {
       "key": "Enter solo mode",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/practice_menu.h",
       "context": "",
-      "line": 42
+      "line": 41
     },
     {
       "key": "Enter solo split mode",
@@ -23924,14 +23924,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/practice_menu.h",
       "context": "",
-      "line": 32
+      "line": 31
     },
     {
       "key": "Exit solo mode",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/practice_menu.h",
       "context": "",
-      "line": 43
+      "line": 42
     },
     {
       "key": "Exit spectating on both tees when either is hammered awake by another player",
@@ -28173,14 +28173,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/practice_menu.h",
       "context": "",
-      "line": 33
+      "line": 32
     },
     {
       "key": "Get all weapons",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/practice_menu.h",
       "context": "",
-      "line": 46
+      "line": 45
     },
     {
       "key": "Getting game info",
@@ -29104,7 +29104,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/practice_menu.h",
       "context": "",
-      "line": 49
+      "line": 48
     },
     {
       "key": "Grenade explosion",
@@ -33290,7 +33290,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/practice_menu.h",
       "context": "",
-      "line": 30
+      "line": 29
     },
     {
       "key": "Invite %s to the locked team",
@@ -33542,7 +33542,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/practice_menu.h",
       "context": "",
-      "line": 52
+      "line": 51
     },
     {
       "key": "JETPACK OFF: You lose your jetpack gun.",
@@ -34662,7 +34662,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/practice_menu.h",
       "context": "",
-      "line": 50
+      "line": 49
     },
     {
       "key": "Laser / shotgun bounce",
@@ -36825,7 +36825,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_overview.h",
       "context": "",
-      "line": 108
+      "line": 106
     },
     {
       "key": "Lock the team so other players cannot join directly",
@@ -41270,7 +41270,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/practice_menu.h",
       "context": "",
-      "line": 53
+      "line": 52
     },
     {
       "key": "Ninja attack",
@@ -45876,28 +45876,28 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_overview.h",
       "context": "",
-      "line": 104
+      "line": 102
     },
     {
       "key": "Pause recording",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/practice_menu.h",
       "context": "",
-      "line": 25
+      "line": 24
     },
     {
       "key": "Pause recording the practice line (the recorded part is kept)",
       "category": "register_help",
       "source": "src/game/client/components/tclient/fast_practice_commands.cpp",
       "context": "",
-      "line": 831
+      "line": 820
     },
     {
       "key": "Pause recording without discarding what has been recorded so far. Resuming starts a new segment, so the paused stretch is not drawn as a straight line.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_overview.h",
       "context": "",
-      "line": 105
+      "line": 103
     },
     {
       "key": "Pause the current demo",
@@ -52351,14 +52351,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/practice_menu.h",
       "context": "",
-      "line": 34
+      "line": 33
     },
     {
       "key": "Remove all weapons",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/practice_menu.h",
       "context": "",
-      "line": 47
+      "line": 46
     },
     {
       "key": "Remove Bind",
@@ -53331,7 +53331,7 @@
       "category": "register_help",
       "source": "src/game/client/components/tclient/fast_practice_commands.cpp",
       "context": "",
-      "line": 835
+      "line": 824
     },
     {
       "key": "Replay downloaded",
@@ -53520,14 +53520,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/practice_menu.h",
       "context": "",
-      "line": 27
+      "line": 26
     },
     {
       "key": "Rescue",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/practice_menu.h",
       "context": "",
-      "line": 39
+      "line": 38
     },
     {
       "key": "Rescue is not enabled on this server and you're not in a team with /practice turned on. Note that you can't earn a rank with practice enabled.",
@@ -53541,7 +53541,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/practice_menu.h",
       "context": "",
-      "line": 41
+      "line": 40
     },
     {
       "key": "Rescue mode changed to auto.",
@@ -54143,7 +54143,7 @@
       "category": "register_help",
       "source": "src/game/client/components/tclient/fast_practice_commands.cpp",
       "context": "",
-      "line": 823
+      "line": 812
     },
     {
       "key": "Restore the practice world to the state it had when fast practice was enabled. The recorded line is kept and a new segment is started.",
@@ -54395,7 +54395,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/practice_menu.h",
       "context": "",
-      "line": 51
+      "line": 50
     },
     {
       "key": "Rifle laser inner color",
@@ -55406,20 +55406,6 @@
       "line": 8
     },
     {
-      "key": "Save practice line",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/qmclient/bind_overview.h",
-      "context": "",
-      "line": 100
-    },
-    {
-      "key": "Save practice line",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/qmclient/practice_menu.h",
-      "context": "",
-      "line": 23
-    },
-    {
       "key": "Save replay of best time per game",
       "category": "indirect",
       "source": "src/engine/shared/config_variables.h",
@@ -55488,20 +55474,6 @@
       "source": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogDDNet.inc",
       "context": "",
       "line": 29
-    },
-    {
-      "key": "Save the current fast-practice line (all tees) as a replayable ghost group",
-      "category": "register_help",
-      "source": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "context": "",
-      "line": 837
-    },
-    {
-      "key": "Save the current fast-practice line (all tees) as a replayable ghost group. Only works while fast practice is active. Find the saved group on the Ghost page and press View to replay it as a demo-style ghost without leaving the server.",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/qmclient/bind_overview.h",
-      "context": "",
-      "line": 101
     },
     {
       "key": "Save the current team",
@@ -58707,7 +58679,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/practice_menu.h",
       "context": "",
-      "line": 48
+      "line": 47
     },
     {
       "key": "Shotgun / laser pickup",
@@ -59729,7 +59701,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_overview.h",
       "context": "",
-      "line": 109
+      "line": 107
     },
     {
       "key": "Show entities only (hide textures)",
@@ -60149,7 +60121,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_overview.h",
       "context": "",
-      "line": 110
+      "line": 108
     },
     {
       "key": "Show important messages when rendering video",
@@ -65273,7 +65245,7 @@
       "category": "register_help",
       "source": "src/game/client/components/tclient/fast_practice_commands.cpp",
       "context": "",
-      "line": 829
+      "line": 818
     },
     {
       "key": "Start playback of ghosts",
@@ -65294,14 +65266,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_overview.h",
       "context": "",
-      "line": 102
+      "line": 100
     },
     {
       "key": "Start recording",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/practice_menu.h",
       "context": "",
-      "line": 24
+      "line": 23
     },
     {
       "key": "Start recording a demo",
@@ -65322,7 +65294,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_overview.h",
       "context": "",
-      "line": 103
+      "line": 101
     },
     {
       "key": "Start skin queue from a random position when entering a map",
@@ -65735,14 +65707,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_overview.h",
       "context": "",
-      "line": 106
+      "line": 104
     },
     {
       "key": "Stop and save recording",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/practice_menu.h",
       "context": "",
-      "line": 26
+      "line": 25
     },
     {
       "key": "Stop audio preview.",
@@ -65854,14 +65826,14 @@
       "category": "register_help",
       "source": "src/game/client/components/tclient/fast_practice_commands.cpp",
       "context": "",
-      "line": 833
+      "line": 822
     },
     {
       "key": "Stop recording and write the line to disk right away as a ghost group. The saved group can be replayed from the bind menu or the Ghost page.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_overview.h",
       "context": "",
-      "line": 107
+      "line": 105
     },
     {
       "key": "Stop rendering text overlays in editor or with entities: higher = less detail = faster",
@@ -65917,7 +65889,7 @@
       "category": "register_help",
       "source": "src/game/client/components/tclient/fast_practice_commands.cpp",
       "context": "",
-      "line": 825
+      "line": 814
     },
     {
       "key": "Store the current tee state (position, weapons, jumps and movement state) as the practice respawn point.",
@@ -68143,7 +68115,7 @@
       "category": "register_help",
       "source": "src/game/client/components/tclient/fast_practice_commands.cpp",
       "context": "",
-      "line": 827
+      "line": 816
     },
     {
       "key": "Teleport back to the practice respawn point and restore the tee state saved there. Only the tee is restored; the world keeps running.",
@@ -68276,7 +68248,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/practice_menu.h",
       "context": "",
-      "line": 29
+      "line": 28
     },
     {
       "key": "TELEPORT TO: Destination tile for FROMs, WEAPON & HOOK TELEPORTs with the same numbers.",
@@ -70691,7 +70663,7 @@
       "category": "register_help",
       "source": "src/game/client/components/tclient/fast_practice_commands.cpp",
       "context": "",
-      "line": 819
+      "line": 808
     },
     {
       "key": "Toggle ghost",
@@ -73022,7 +72994,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/practice_menu.h",
       "context": "",
-      "line": 45
+      "line": 44
     },
     {
       "key": "Unexpected map upload response.",

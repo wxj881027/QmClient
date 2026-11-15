@@ -4325,7 +4325,6 @@ Save player names in replay
 Save PNG copy
 Save power by lowering update rate
 Save power by lowering update rate (higher input latency)
-Save practice line
 Save replay of best time per game
 Save restore dismissed.
 Save restore stopped without confirming success. The local record was kept.
@@ -4334,8 +4333,6 @@ Save settings file on exit
 Save skin
 Save team with code r.
 Save the best demo of each race
-Save the current fast-practice line (all tees) as a replayable ghost group
-Save the current fast-practice line (all tees) as a replayable ghost group. Only works while fast practice is active. Find the saved group on the Ghost page and press View to replay it as a demo-style ghost without leaving the server.
 Save the current team
 Save the team as %s
 Save unsent chat draft

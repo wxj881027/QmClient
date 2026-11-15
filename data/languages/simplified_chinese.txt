@@ -12980,9 +12980,6 @@ Save power by lowering update rate
 Save power by lowering update rate (higher input latency)
 == 降低刷新率以节约功耗（增加输入延迟）
 
-Save practice line
-== 保存练习线路
-
 Save replay of best time per game
 == 保存每场游戏最佳记录的回放
 
@@ -13006,12 +13003,6 @@ Save team with code r.
 
 Save the best demo of each race
 == 保存每场游戏最佳记录的回放
-
-Save the current fast-practice line (all tees) as a replayable ghost group
-== 把当前快速练习线路（所有 Tee）保存为可回放的影子组
-
-Save the current fast-practice line (all tees) as a replayable ghost group. Only works while fast practice is active. Find the saved group on the Ghost page and press View to replay it as a demo-style ghost without leaving the server.
-== 把当前快速练习线路（本体与分身）保存为可回放的影子组。仅在快速练习开启时有效。保存后到影子页选中该组并按 View，即可按 demo 式回放查看，不退出服务器。
 
 Save the current team
 == 保存当前队伍

@@ -20,7 +20,6 @@ namespace qm_practice_menu
 		{Localizable("Rewind practice world"), "practice_restart"},
 		{Localizable("Set practice respawn point"), "practice_set_checkpoint"},
 		{Localizable("Return to respawn point"), "practice_restore_checkpoint"},
-		{Localizable("Save practice line"), "practice_save_ghost"},
 		{Localizable("Start recording"), "practice_record_start"},
 		{Localizable("Pause recording"), "practice_record_pause"},
 		{Localizable("Stop and save recording"), "practice_record_stop"},

@@ -1,9 +1,9 @@
 {
   "summary": {
-    "must_i18n": 11271,
-    "business_data": 13070,
+    "must_i18n": 11267,
+    "business_data": 13065,
     "test_only": 6919,
-    "needs_review": 4934,
+    "needs_review": 4932,
     "violation": 0
   },
   "must_i18n": [
@@ -56871,76 +56871,62 @@
     {
       "file": "src/game/client/components/qmclient/bind_overview.h",
       "line": 100,
-      "text": "Save practice line",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_overview.h",
-      "line": 101,
-      "text": "Save the current fast-practice line (all tees) as a replayable ghost group. Only works while fast practice is active. Find the saved group on the Ghost page and press View to replay it as a demo-style ghost without leaving the server.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_overview.h",
-      "line": 102,
       "text": "Start recording",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/bind_overview.h",
-      "line": 103,
+      "line": 101,
       "text": "Start recording the fast-practice line, or resume after a pause. Recording is always manual: nothing is recorded until this is pressed.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/bind_overview.h",
-      "line": 104,
+      "line": 102,
       "text": "Pause recording",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/bind_overview.h",
-      "line": 105,
+      "line": 103,
       "text": "Pause recording without discarding what has been recorded so far. Resuming starts a new segment, so the paused stretch is not drawn as a straight line.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/bind_overview.h",
-      "line": 106,
+      "line": 104,
       "text": "Stop and save recording",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/bind_overview.h",
-      "line": 107,
+      "line": 105,
       "text": "Stop recording and write the line to disk right away as a ghost group. The saved group can be replayed from the bind menu or the Ghost page.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/bind_overview.h",
-      "line": 108,
+      "line": 106,
       "text": "Lock team",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/bind_overview.h",
-      "line": 109,
+      "line": 107,
       "text": "Show entities",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/bind_overview.h",
-      "line": 110,
+      "line": 108,
       "text": "Show HUD",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -64298,195 +64284,188 @@
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
       "line": 23,
-      "text": "Save practice line",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 24,
       "text": "Start recording",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 25,
+      "line": 24,
       "text": "Pause recording",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 26,
+      "line": 25,
       "text": "Stop and save recording",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 27,
+      "line": 26,
       "text": "Rescue",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/qmclient/practice_menu.h",
+      "line": 27,
+      "text": "Back",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
       "line": 28,
-      "text": "Back",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 29,
       "text": "Teleport to cursor",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 30,
+      "line": 29,
       "text": "Invincible",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 31,
+      "line": 30,
       "text": "Enter solo mode",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/qmclient/practice_menu.h",
+      "line": 31,
+      "text": "Exit solo mode",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
       "line": 32,
-      "text": "Exit solo mode",
+      "text": "Get all weapons",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
       "line": 33,
-      "text": "Get all weapons",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 34,
       "text": "Remove all weapons",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 39,
+      "line": 38,
       "text": "Rescue",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 40,
+      "line": 39,
       "text": "Back",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 41,
+      "line": 40,
       "text": "Rescue mode",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 42,
+      "line": 41,
       "text": "Enter solo mode",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 43,
+      "line": 42,
       "text": "Exit solo mode",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 44,
+      "line": 43,
       "text": "Deep freeze",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 45,
+      "line": 44,
       "text": "Undo deep freeze",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 46,
+      "line": 45,
       "text": "Get all weapons",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 47,
+      "line": 46,
       "text": "Remove all weapons",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 48,
+      "line": 47,
       "text": "Shotgun",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 49,
+      "line": 48,
       "text": "Grenade",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 50,
+      "line": 49,
       "text": "Laser",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 51,
+      "line": 50,
       "text": "Rifle",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 52,
+      "line": 51,
       "text": "Jetpack",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 53,
+      "line": 52,
       "text": "Ninja",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 54,
+      "line": 53,
       "text": "Endless hook",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -66964,84 +66943,77 @@
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 819,
+      "line": 808,
       "text": "Toggle fast practice mode",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 821,
+      "line": 810,
       "text": "Enable fast practice mode",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 822,
+      "line": 811,
       "text": "Disable fast practice mode",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 823,
+      "line": 812,
       "text": "Restore the practice world to the state it had when fast practice was enabled",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 825,
+      "line": 814,
       "text": "Store the current practice tee state as the respawn point",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 827,
+      "line": 816,
       "text": "Teleport back to the practice respawn point",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 829,
+      "line": 818,
       "text": "Start or resume recording the practice line",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 831,
+      "line": 820,
       "text": "Pause recording the practice line (the recorded part is kept)",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 833,
+      "line": 822,
       "text": "Stop recording and save the practice line as a ghost group",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 835,
+      "line": 824,
       "text": "Replay a saved practice ghost group in demo-style view mode",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 837,
-      "text": "Save the current fast-practice line (all tees) as a replayable ghost group",
-      "category": "must_i18n",
-      "reason": "active source key (register_help)"
-    },
-    {
-      "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 839,
+      "line": 826,
       "text": "Dump the client-side world state (practice branch, tracks, switchers, view session)",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
@@ -97850,28 +97822,28 @@
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFastPractice.inc",
-      "line": 28,
+      "line": 27,
       "text": "qm_fast_practice_main_world_alpha",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFastPractice.inc",
-      "line": 29,
+      "line": 28,
       "text": "qm_fast_practice_show_main_world",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFastPractice.inc",
-      "line": 30,
+      "line": 29,
       "text": "qm_fast_practice_timer",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogFastPractice.inc",
-      "line": 32,
+      "line": 31,
       "text": "qm:fast_practice",
       "category": "business_data",
       "reason": "command, config, or machine token"
@@ -126922,34 +126894,27 @@
     {
       "file": "src/game/client/components/qmclient/bind_overview.h",
       "line": 100,
-      "text": "practice_save_ghost",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_overview.h",
-      "line": 102,
       "text": "practice_record_start",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_overview.h",
-      "line": 104,
+      "line": 102,
       "text": "practice_record_pause",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_overview.h",
-      "line": 106,
+      "line": 104,
       "text": "practice_record_stop",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_overview.h",
-      "line": 108,
+      "line": 106,
       "text": "say /lock",
       "category": "business_data",
       "reason": "chat, vote, or bind command data"
@@ -138353,195 +138318,188 @@
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
       "line": 23,
-      "text": "practice_save_ghost",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 24,
       "text": "practice_record_start",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 25,
+      "line": 24,
       "text": "practice_record_pause",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 26,
+      "line": 25,
       "text": "practice_record_stop",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 27,
+      "line": 26,
       "text": "say /r",
+      "category": "business_data",
+      "reason": "chat, vote, or bind command data"
+    },
+    {
+      "file": "src/game/client/components/qmclient/practice_menu.h",
+      "line": 27,
+      "text": "say /back",
       "category": "business_data",
       "reason": "chat, vote, or bind command data"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
       "line": 28,
-      "text": "say /back",
-      "category": "business_data",
-      "reason": "chat, vote, or bind command data"
-    },
-    {
-      "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 29,
       "text": "say /tc",
       "category": "business_data",
       "reason": "chat, vote, or bind command data"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 30,
+      "line": 29,
       "text": "say /invincible",
       "category": "business_data",
       "reason": "chat, vote, or bind command data"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 31,
+      "line": 30,
       "text": "say /solo",
+      "category": "business_data",
+      "reason": "chat, vote, or bind command data"
+    },
+    {
+      "file": "src/game/client/components/qmclient/practice_menu.h",
+      "line": 31,
+      "text": "say /unsolo",
       "category": "business_data",
       "reason": "chat, vote, or bind command data"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
       "line": 32,
-      "text": "say /unsolo",
+      "text": "say /weapons",
       "category": "business_data",
       "reason": "chat, vote, or bind command data"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
       "line": 33,
-      "text": "say /weapons",
-      "category": "business_data",
-      "reason": "chat, vote, or bind command data"
-    },
-    {
-      "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 34,
       "text": "say /unweapons",
       "category": "business_data",
       "reason": "chat, vote, or bind command data"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 39,
+      "line": 38,
       "text": "say /r",
       "category": "business_data",
       "reason": "chat, vote, or bind command data"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 40,
+      "line": 39,
       "text": "say /back",
       "category": "business_data",
       "reason": "chat, vote, or bind command data"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 41,
+      "line": 40,
       "text": "say /rescuemode",
       "category": "business_data",
       "reason": "chat, vote, or bind command data"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 42,
+      "line": 41,
       "text": "say /solo",
       "category": "business_data",
       "reason": "chat, vote, or bind command data"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 43,
+      "line": 42,
       "text": "say /unsolo",
       "category": "business_data",
       "reason": "chat, vote, or bind command data"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 44,
+      "line": 43,
       "text": "say /deep",
       "category": "business_data",
       "reason": "chat, vote, or bind command data"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 45,
+      "line": 44,
       "text": "say /undeep",
       "category": "business_data",
       "reason": "chat, vote, or bind command data"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 46,
+      "line": 45,
       "text": "say /weapons",
       "category": "business_data",
       "reason": "chat, vote, or bind command data"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 47,
+      "line": 46,
       "text": "say /unweapons",
       "category": "business_data",
       "reason": "chat, vote, or bind command data"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 48,
+      "line": 47,
       "text": "say /shotgun",
       "category": "business_data",
       "reason": "chat, vote, or bind command data"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 49,
+      "line": 48,
       "text": "say /grenade",
       "category": "business_data",
       "reason": "chat, vote, or bind command data"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 50,
+      "line": 49,
       "text": "say /laser",
       "category": "business_data",
       "reason": "chat, vote, or bind command data"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 51,
+      "line": 50,
       "text": "say /rifle",
       "category": "business_data",
       "reason": "chat, vote, or bind command data"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 52,
+      "line": 51,
       "text": "say /jetpack",
       "category": "business_data",
       "reason": "chat, vote, or bind command data"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 53,
+      "line": 52,
       "text": "say /ninja",
       "category": "business_data",
       "reason": "chat, vote, or bind command data"
     },
     {
       "file": "src/game/client/components/qmclient/practice_menu.h",
-      "line": 54,
+      "line": 53,
       "text": "say /endless",
       "category": "business_data",
       "reason": "chat, vote, or bind command data"
@@ -153458,252 +153416,231 @@
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 656,
-      "text": "",
-      "category": "business_data",
-      "reason": "empty or whitespace literal"
-    },
-    {
-      "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 727,
+      "line": 716,
       "text": "local_world",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 732,
+      "line": 721,
       "text": "practice=%d branch_tick=%d local_id=%d dummy_id=%d",
       "category": "business_data",
       "reason": "log or telemetry key/value payload"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 735,
+      "line": 724,
       "text": "track: active=%d start=%d frames=%d events=%d switches=%d completed=%d",
       "category": "business_data",
       "reason": "log or telemetry key/value payload"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 739,
+      "line": 728,
       "text": "view: session=%d slots=%d manual=%d playback_tick=%d",
       "category": "business_data",
       "reason": "log or telemetry key/value payload"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 749,
+      "line": 738,
       "text": "switchers: count=%d team=%d bits0_31=0x%08x bits32_63=0x%08x",
       "category": "business_data",
       "reason": "log or telemetry payload"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 761,
+      "line": 750,
       "text": "local_tee: present=1 deep=%d freeze_end=%d freeze_time=%d grounded=%d pos=%d,%d vel=%d,%d jumped=%d jumps=%d hook_state=%d",
       "category": "business_data",
       "reason": "log or telemetry key/value payload"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 777,
+      "line": 766,
       "text": "ticks: game=%d pred=%d branch=%d",
       "category": "business_data",
       "reason": "log or telemetry key/value payload"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 781,
+      "line": 770,
       "text": "pred_input: present=%d direction=%d jump=%d hook=%d",
       "category": "business_data",
       "reason": "log or telemetry key/value payload"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 792,
+      "line": 781,
       "text": "live_input: direction=%d jump=%d hook=%d fire=%d target=%d,%d flags=0x%x",
       "category": "business_data",
       "reason": "log or telemetry key/value payload"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 800,
+      "line": 789,
       "text": "local_input: direction=%d jump=%d hook=%d fire=%d target=%d,%d flags=0x%x",
       "category": "business_data",
       "reason": "log or telemetry key/value payload"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 812,
+      "line": 801,
       "text": "predicted_world: characters=%d pending_events=%d",
       "category": "business_data",
       "reason": "log or telemetry key/value payload"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 819,
+      "line": 808,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 819,
+      "line": 808,
       "text": "fast_practice_toggle",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 821,
+      "line": 810,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 821,
+      "line": 810,
       "text": "fast_practice_enter",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 822,
+      "line": 811,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 822,
+      "line": 811,
       "text": "fast_practice_exit",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 823,
+      "line": 812,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 823,
+      "line": 812,
       "text": "practice_restart",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 825,
+      "line": 814,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 825,
+      "line": 814,
       "text": "practice_set_checkpoint",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 827,
+      "line": 816,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 827,
+      "line": 816,
       "text": "practice_restore_checkpoint",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 829,
+      "line": 818,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 829,
+      "line": 818,
       "text": "practice_record_start",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 831,
+      "line": 820,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 831,
+      "line": 820,
       "text": "practice_record_pause",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 833,
+      "line": 822,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 833,
+      "line": 822,
       "text": "practice_record_stop",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 835,
+      "line": 824,
       "text": "practice_view_ghost",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 835,
+      "line": 824,
       "text": "r[group]",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 837,
-      "text": "?r[name]",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 837,
-      "text": "practice_save_ghost",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 839,
+      "line": 826,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 839,
+      "line": 826,
       "text": "qm_local_world_dump",
       "category": "business_data",
       "reason": "command, config, or machine token"
@@ -232562,14 +232499,14 @@
     },
     {
       "file": "src/game/client/components/qmclient/bind_overview.h",
-      "line": 109,
+      "line": 107,
       "text": "toggle cl_overlay_entities 0 100",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/bind_overview.h",
-      "line": 110,
+      "line": 108,
       "text": "toggle cl_showhud 0 1",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
@@ -252897,91 +252834,77 @@
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 653,
-      "text": "save practice ghost: fast practice is not active",
-      "category": "needs_review",
-      "reason": "unclassified human-readable client string"
-    },
-    {
-      "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 719,
+      "line": 708,
       "text": "could not play practice ghost group '%s'",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 769,
+      "line": 758,
       "text": "local_tee: present=0 deep=0 freeze_end=0 freeze_time=0 grounded=0 pos=0,0 vel=0,0 jumped=0 jumps=0 hook_state=0",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 805,
+      "line": 794,
       "text": "local_input: direction=0 jump=0 hook=0 fire=0 target=0,0 flags=0x0",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 824,
+      "line": 813,
       "text": "Restore the practice world to the state it had when fast practice was enabled",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 826,
+      "line": 815,
       "text": "Store the current practice tee state as the respawn point",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 828,
+      "line": 817,
       "text": "Teleport back to the practice respawn point",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 830,
+      "line": 819,
       "text": "Start or resume recording the practice line",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 832,
+      "line": 821,
       "text": "Pause recording the practice line (the recorded part is kept)",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 834,
+      "line": 823,
       "text": "Stop recording and save the practice line as a ghost group",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 836,
+      "line": 825,
       "text": "Replay a saved practice ghost group in demo-style view mode",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 838,
-      "text": "Save the current fast-practice line (all tees) as a replayable ghost group",
-      "category": "needs_review",
-      "reason": "unclassified human-readable client string"
-    },
-    {
-      "file": "src/game/client/components/tclient/fast_practice_commands.cpp",
-      "line": 840,
+      "line": 827,
       "text": "Dump the client-side world state (practice branch, tracks, switchers, view session)",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"

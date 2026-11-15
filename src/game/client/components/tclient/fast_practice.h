@@ -194,8 +194,6 @@ private:
 	void FirePracticeGun(CGameWorld &World, SPracticeGun &Gun, int Tick);
 
 	static void ConFastPracticeToggle(IConsole::IResult *pResult, void *pUserData);
-	// 控制页可绑定的"保存练习线路"按键：不设默认键，只提供命令。
-	static void ConSavePracticeGhost(IConsole::IResult *pResult, void *pUserData);
 	// 控制页可绑定的"重开练习世界"按键：不设默认键，只提供命令。
 	static void ConPracticeRestart(IConsole::IResult *pResult, void *pUserData);
 	static void ConPracticeEnter(IConsole::IResult *pResult, void *pUserData);

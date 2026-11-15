@@ -12500,9 +12500,6 @@ Save power by lowering update rate
 Save power by lowering update rate (higher input latency)
 == Économisez l'énergie en réduisant le taux de rafraîchissement (latence d'entrée plus élevée)
 
-Save practice line
-== Enregistrer la ligne d'entraînement
-
 Save replay of best time per game
 == Sauvegarder la rediffusion du meilleur temps par partie
 
@@ -12526,12 +12523,6 @@ Save team with code r.
 
 Save the best demo of each race
 == Sauvegarder la meilleure démo de chaque course
-
-Save the current fast-practice line (all tees) as a replayable ghost group
-== Enregistrer la ligne d'entraînement actuelle (tous les tees) comme groupe de fantômes rejouable
-
-Save the current fast-practice line (all tees) as a replayable ghost group. Only works while fast practice is active. Find the saved group on the Ghost page and press View to replay it as a demo-style ghost without leaving the server.
-== Enregistre la ligne d'entraînement actuelle (joueur et dummy) comme groupe de fantômes rejouable. Ne fonctionne que pendant l'entraînement rapide. Retrouvez le groupe sur la page des fantômes et appuyez sur View pour le revoir en mode démo sans quitter le serveur.
 
 Save the current team
 == Sauvegarder l’équipe actuelle

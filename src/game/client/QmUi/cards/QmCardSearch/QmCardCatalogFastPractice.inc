@@ -24,7 +24,6 @@ namespace
 		{qm_practice_menu::s_aFastPracticeEntries[13].m_pName, nullptr, nullptr},
 		{qm_practice_menu::s_aFastPracticeEntries[14].m_pName, nullptr, nullptr},
 		{qm_practice_menu::s_aFastPracticeEntries[15].m_pName, nullptr, nullptr},
-		{qm_practice_menu::s_aFastPracticeEntries[16].m_pName, nullptr, nullptr},
 		{nullptr, "qm_fast_practice_main_world_alpha", nullptr},
 		{nullptr, "qm_fast_practice_show_main_world", nullptr},
 		{nullptr, "qm_fast_practice_timer", nullptr},

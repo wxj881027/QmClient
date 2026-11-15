@@ -12500,9 +12500,6 @@ Save power by lowering update rate
 Save power by lowering update rate (higher input latency)
 == 更新レートを下げて省電力（入力遅延増加）
 
-Save practice line
-== 練習ラインを保存
-
 Save replay of best time per game
 == ゲームごとのベストタイムのリプレイを保存
 
@@ -12526,12 +12523,6 @@ Save team with code r.
 
 Save the best demo of each race
 == 各レースのベストデモを保存
-
-Save the current fast-practice line (all tees) as a replayable ghost group
-== 現在の高速プラクティスライン（全 Tee）を再生可能なゴーストグループとして保存
-
-Save the current fast-practice line (all tees) as a replayable ghost group. Only works while fast practice is active. Find the saved group on the Ghost page and press View to replay it as a demo-style ghost without leaving the server.
-== 現在の高速プラクティスライン（本体と分身）を再生可能なゴーストグループとして保存します。高速プラクティス中のみ有効。保存後はゴーストページでグループを選び View を押すと、サーバーを離れずに demo 風の再生で確認できます。
 
 Save the current team
 == 現在のチームを保存
