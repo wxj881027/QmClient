@@ -360,6 +360,40 @@ TEST_F(QmUiBlurGraphics, MultipleSurfacesCaptureAndBlurOnlyOncePerFrame)
 	EXPECT_EQ(m_Graphics.m_vDraws.size(), 3u);
 }
 
+TEST_F(QmUiBlurGraphics, PreLayoutInputDoesNotSubmitBlurMasks)
+{
+	m_Ui.BeginBackgroundFrame();
+	ASSERT_TRUE(m_Ui.GaussianBlurTargetReady());
+	const int Captures = m_Graphics.m_Captures;
+	const int Blurs = m_Graphics.m_Blurs;
+	const size_t Draws = m_Graphics.m_vDraws.size();
+
+	m_Ui.BeginPreLayoutInput();
+	m_Ui.RenderGaussianBlur(m_Rect, 0.3f);
+	m_Ui.EndPreLayoutInput();
+
+	EXPECT_EQ(m_Graphics.m_Captures, Captures);
+	EXPECT_EQ(m_Graphics.m_Blurs, Blurs);
+	EXPECT_EQ(m_Graphics.m_vDraws.size(), Draws);
+}
+
+TEST_F(QmUiBlurGraphics, MeasurementOnlyDoesNotSubmitBlurMasks)
+{
+	m_Ui.BeginBackgroundFrame();
+	ASSERT_TRUE(m_Ui.GaussianBlurTargetReady());
+	const int Captures = m_Graphics.m_Captures;
+	const int Blurs = m_Graphics.m_Blurs;
+	const size_t Draws = m_Graphics.m_vDraws.size();
+
+	m_Ui.BeginRenderOnly();
+	m_Ui.RenderGaussianBlur(m_Rect, 0.7f);
+	m_Ui.EndRenderOnly();
+
+	EXPECT_EQ(m_Graphics.m_Captures, Captures);
+	EXPECT_EQ(m_Graphics.m_Blurs, Blurs);
+	EXPECT_EQ(m_Graphics.m_vDraws.size(), Draws);
+}
+
 TEST_F(QmUiBlurGraphics, CaptureFailureDoesNotRetryUntilNextFrameThenRecovers)
 {
 	m_Graphics.m_CaptureSucceeds = false;

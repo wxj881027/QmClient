@@ -633,9 +633,11 @@ void CUi::RenderGaussianBlur(const CUIRect &Rect, float Alpha, int Corners, floa
 	// 调用方（模糊作用域与 HUD 背景）只看作用域，不看 qm_gaussian_blur，因此功能关闭时
 	// 每个半透明矩形仍会走到这里。关闭是用户的正常选择、不是失败，不能打 trace——
 	// 否则 qm_graphics_trace 一开，加载界面/主菜单每帧都会刷满 "prepare failed"。
-	if(m_GaussianBlurSuppressionDepth > 0 || Rect.w <= 0.0f || Rect.h <= 0.0f || Alpha <= 0.0f || !PrepareGaussianBlur())
+	// 预布局输入趟与测量趟只跑逻辑，不能提交任何外观；否则控件底色被 DrawingSuppressed
+	// 拦下后，单独提交的模糊层会留在旧位置，表现为拖拽卡片时左侧出现一条条“骨架”。
+	if(DrawingSuppressed() || m_GaussianBlurSuppressionDepth > 0 || Rect.w <= 0.0f || Rect.h <= 0.0f || Alpha <= 0.0f || !PrepareGaussianBlur())
 	{
-		if(g_Config.m_QmGaussianBlur != 0 && g_Config.m_QmGraphicsTrace >= 1 && m_GaussianBlurSuppressionDepth <= 0 && Rect.w > 0.0f && Rect.h > 0.0f && Alpha > 0.0f)
+		if(!DrawingSuppressed() && g_Config.m_QmGaussianBlur != 0 && g_Config.m_QmGraphicsTrace >= 1 && m_GaussianBlurSuppressionDepth <= 0 && Rect.w > 0.0f && Rect.h > 0.0f && Alpha > 0.0f)
 			dbg_msg("ui/blur", "blur unavailable this frame (prepare failed)");
 		return;
 	}
