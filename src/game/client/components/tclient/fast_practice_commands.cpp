@@ -39,16 +39,13 @@ bool CFastPractice::ExecutePracticeCommand(int Team, int LocalClientId, CCharact
 	std::transform(Cmd.begin(), Cmd.end(), Cmd.begin(), [](unsigned char c) { return (char)std::tolower(c); });
 
 	auto &State = m_aPracticeCommandState[LocalClientId];
-	const vec2 CurrentPos = pChar->Core()->m_Pos;
-	const auto SaveTeleportPos = [&](const vec2 &Pos) {
-		StoreLastTeleport(LocalClientId, Pos);
-		StoreLastDeathPosition(LocalClientId, CurrentPos);
-	};
 	const auto ApplyTeleport = [&](const vec2 &Pos) {
-		SaveTeleportPos(Pos);
-		// 传送会在轨迹上造成瞬移，先封存当前段再跳。
+		// 传送会在轨迹上造成瞬移，先封存当前段再跳。角色整理（解冻、清速度、
+		// 重置跳跃）在 TeleportCharacter 里完成，整理之后才记录 /lasttp，
+		// 与服务器先 ResetJumps/Unfreeze/ResetVelocity、再存 m_LastTeleTee 的时序一致。
 		OnPracticePositionJump();
 		TeleportCharacter(pChar, Pos);
+		RecordPracticeCommandTeleport(LocalClientId, pChar);
 	};
 	const auto GiveWeapon = [&](int Weapon, bool Remove) {
 		if(Weapon == -1)
@@ -127,7 +124,7 @@ bool CFastPractice::ExecutePracticeCommand(int Team, int LocalClientId, CCharact
 	}
 	if(Cmd == "practicecmdlist")
 	{
-		EchoPractice("available commands: /r /back /rescuemode /restart /tp /teleport /tpxy /lasttp /tc /telecursor /totele /totelecp /tofinish /pg /solo /unsolo /deep /undeep /livefreeze /unlivefreeze /shotgun /grenade /laser /rifle /unshotgun /ungrenade /unlaser /unrifle /weapons /unweapons /addweapon /removeweapon /jetpack /unjetpack /infjump /uninfjump /setjumps /ninja /unninja /endless /unendless /invincible /collision /hookcollision /hitothers /practice /unpractice");
+		EchoPractice("available commands: /r /back /rescuemode /restart /tp /teleport /tpxy /lasttp /tc /telecursor /totele /totelecp /tofinish /pg /solo /unsolo /deep /undeep /livefreeze /unlivefreeze /shotgun /grenade /laser /rifle /unshotgun /ungrenade /unlaser /unrifle /weapons /unweapons /addweapon /removeweapon /jetpack /unjetpack /infjump /uninfjump /setjumps /ninja /unninja /endless /unendless /invincible /collision /hookcollision /hitothers /setswitch /practice /unpractice");
 		return true;
 	}
 	if(Cmd == "pg" || Cmd == "practiceghost")
@@ -208,23 +205,45 @@ bool CFastPractice::ExecutePracticeCommand(int Team, int LocalClientId, CCharact
 
 	if(Cmd == "back")
 	{
-		if(!State.m_HasLastDeath)
+		if(!State.m_Records.m_HasLastDeath)
 		{
 			EchoPractice("there is nowhere to go back to");
 			return true;
 		}
-		ApplyTeleport(State.m_LastDeathPos);
+		// 对齐服务器 ConBack：把 /back 记录塞进当前救援模式的救援槽，再走 Rescue()。
+		// 赋值本身不置位救援点标志，super/invincible 也会被 Rescue() 拒绝；
+		// 这两种情况只更新记录，不移动角色。
+		const bool TeleportBlocked = pChar->Core()->m_Super || pChar->Core()->m_Invincible;
+		const bool ModeSavePointExists = State.m_RescueManual ? State.m_HasRescueManual : State.m_HasRescueAuto;
+		const SQmPracticeBackDecision Decision = QmEvaluatePracticeBack(
+			State.m_Records.m_HasLastDeath, ModeSavePointExists, TeleportBlocked);
+		if(Decision.m_AssignRescueTee)
+		{
+			if(State.m_RescueManual)
+				State.m_ManualTee = State.m_Records.m_LastDeathTee;
+			else
+				State.m_AutoTee = State.m_Records.m_LastDeathTee;
+		}
+		if(Decision.m_Teleport)
+		{
+			OnPracticePositionJump();
+			ApplyPracticeRescueTee(pChar, State.m_RescueManual ? State.m_ManualTee : State.m_AutoTee);
+			pChar->Unfreeze();
+		}
 		return true;
 	}
 
 	if(Cmd == "lasttp")
 	{
-		if(!State.m_HasLastTeleport)
+		const SQmPracticeSavedTee &Tee = State.m_Records.m_LastTeleportTee;
+		if(!State.m_Records.m_HasLastTeleport || !Tee.m_Valid)
 		{
 			EchoPractice("you haven't previously teleported");
 			return true;
 		}
-		ApplyTeleport(State.m_LastTeleportPos);
+		// 对齐服务器 ConLastTele：载入整份 tee，不对世界做别的处理。
+		OnPracticePositionJump();
+		ApplyPracticeRescueTee(pChar, Tee);
 		return true;
 	}
 
@@ -317,7 +336,9 @@ bool CFastPractice::ExecutePracticeCommand(int Team, int LocalClientId, CCharact
 			return true;
 		}
 
-		ApplyTeleport(vTeleOuts[0]);
+		// 服务器 ConToTeleporter 在多出口之间随机取一个，练习保持同一语义。
+		const int TeleOut = QmPracticeTeleOutIndex((int)vTeleOuts.size(), secure_rand_below((int)vTeleOuts.size()));
+		ApplyTeleport(vTeleOuts[TeleOut]);
 		return true;
 	}
 
@@ -455,6 +476,44 @@ bool CFastPractice::ExecutePracticeCommand(int Team, int LocalClientId, CCharact
 			pChar->GiveNinja();
 		else
 			pChar->RemoveNinja();
+		return true;
+	}
+
+	if(Cmd == "setswitch")
+	{
+		// 对齐服务器 ConSetSwitch：/setswitch <编号> [0|1] [秒]。省略状态时翻转，
+		// 省略秒数时保持到世界结束。开关状态只写练习分支世界，服务器快照不会覆盖。
+		int Switch = 0;
+		if(vArgs.size() < 2 || vArgs.size() > 4 || !str_toint(vArgs[1].c_str(), &Switch))
+		{
+			EchoPractice("usage: /setswitch <switch> [0|1] [seconds]");
+			return true;
+		}
+		auto &vSwitchers = m_PracticeBaseWorld.Switchers();
+		// 服务器用 in_range(Switch, Switchers().size() - 1)，最高编号同样设不了，
+		// 这里保持同款边界，避免练习里能设、连回服务器却设不了。
+		if(Switch < 0 || Switch >= (int)vSwitchers.size() - 1)
+		{
+			EchoPractice("invalid switch id");
+			return true;
+		}
+
+		const int Team = std::clamp(pChar->Team(), (int)TEAM_FLOCK, NUM_DDRACE_TEAMS - 1);
+		bool NewState = !vSwitchers[Switch].m_aStatus[Team];
+		if(vArgs.size() > 2)
+		{
+			int StateValue = 0;
+			str_toint(vArgs[2].c_str(), &StateValue);
+			NewState = StateValue != 0;
+		}
+		int Seconds = 0;
+		if(vArgs.size() > 3)
+			str_toint(vArgs[3].c_str(), &Seconds);
+		const int EndTick = vArgs.size() > 3 ? m_PracticeBaseWorld.GameTick() + 1 + Seconds * Client()->GameTickSpeed() : 0;
+
+		vSwitchers[Switch].m_aStatus[Team] = NewState;
+		vSwitchers[Switch].m_aEndTick[Team] = EndTick;
+		vSwitchers[Switch].m_aType[Team] = NewState ? (EndTick ? TILE_SWITCHTIMEDOPEN : TILE_SWITCHOPEN) : (EndTick ? TILE_SWITCHTIMEDCLOSE : TILE_SWITCHCLOSE);
 		return true;
 	}
 

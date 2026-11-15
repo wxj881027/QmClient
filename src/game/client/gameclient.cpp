@@ -4363,15 +4363,18 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 				int Team = std::clamp(Item.m_Id, (int)TEAM_FLOCK, NUM_DDRACE_TEAMS - 1);
 
 				int HighestSwitchNumber = std::clamp(std::max(pSwitchStateData->m_HighestSwitchNumber, Collision()->m_HighestSwitchNumber), 0, 255);
-				if(HighestSwitchNumber != maximum(0, (int)Switchers().size() - 1))
+				if(HighestSwitchNumber != maximum(0, (int)m_GameWorld.m_Core.m_vSwitchers.size() - 1))
 				{
 					m_GameWorld.m_Core.InitSwitchers(HighestSwitchNumber);
 					Collision()->m_HighestSwitchNumber = HighestSwitchNumber;
 				}
 
-				for(int j = 0; j < (int)Switchers().size(); j++)
+				// 服务器快照只写服务器世界。练习分支有自己的开关状态，
+				// CGameClient::Switchers() 在练习时返回分支那一份，不能被这里覆盖。
+				auto &vServerSwitchers = m_GameWorld.m_Core.m_vSwitchers;
+				for(int j = 0; j < (int)vServerSwitchers.size(); j++)
 				{
-					Switchers()[j].m_aStatus[Team] = (pSwitchStateData->m_aStatus[j / 32] >> (j % 32)) & 1;
+					vServerSwitchers[j].m_aStatus[Team] = (pSwitchStateData->m_aStatus[j / 32] >> (j % 32)) & 1;
 				}
 
 				if(Item.m_DataSize >= 68)
@@ -4381,15 +4384,15 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 					{
 						int SwitchNumber = pSwitchStateData->m_aSwitchNumbers[j];
 						int EndTick = pSwitchStateData->m_aEndTicks[j];
-						if(EndTick > 0 && SwitchNumber >= 0 && SwitchNumber < (int)Switchers().size())
+						if(EndTick > 0 && SwitchNumber >= 0 && SwitchNumber < (int)vServerSwitchers.size())
 						{
-							Switchers()[SwitchNumber].m_aEndTick[Team] = EndTick;
+							vServerSwitchers[SwitchNumber].m_aEndTick[Team] = EndTick;
 						}
 					}
 				}
 
 				// update switch types
-				for(auto &Switcher : Switchers())
+				for(auto &Switcher : vServerSwitchers)
 				{
 					if(Switcher.m_aStatus[Team])
 						Switcher.m_aType[Team] = Switcher.m_aEndTick[Team] ? TILE_SWITCHTIMEDOPEN : TILE_SWITCHOPEN;
@@ -5283,6 +5286,11 @@ void CGameClient::OnPredict()
 	if(m_Snap.m_LocalClientId == -1 || !m_Snap.m_aCharacters[m_Snap.m_LocalClientId].m_Active)
 		return;
 
+	// 快速练习是平行世界：全服暂停不冻结练习，先由练习预测接管渲染。
+	// 练习接管失败（例如瞬态解析失败）时再落到下面的暂停分支。
+	if(m_FastPractice.Enabled() && m_FastPractice.OverridePredict())
+		return;
+
 	// don't predict anything if we are paused
 	if(m_Snap.m_pGameInfoObj && m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_PAUSED)
 	{
@@ -5298,9 +5306,6 @@ void CGameClient::OnPredict()
 		}
 		return;
 	}
-
-	if(m_FastPractice.Enabled() && m_FastPractice.OverridePredict())
-		return;
 
 	vec2 aBeforeRender[MAX_CLIENTS];
 	for(int i = 0; i < MAX_CLIENTS; i++)
@@ -7835,6 +7840,10 @@ bool CGameClient::IsOtherTeam(int ClientId) const
 
 int CGameClient::SwitchStateTeam() const
 {
+	// 练习分支世界的开关状态按分支里的队伍取，与服务器快照的队伍无关。
+	const int PracticeTeam = m_FastPractice.PracticeSwitchTeam();
+	if(PracticeTeam >= 0)
+		return PracticeTeam;
 	if(m_aSwitchStateTeam[g_Config.m_ClDummy] >= 0)
 		return m_aSwitchStateTeam[g_Config.m_ClDummy];
 	else if(m_Snap.m_LocalClientId < 0)

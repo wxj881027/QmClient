@@ -11,6 +11,7 @@
 
 #include <game/client/component.h>
 #include <game/client/components/qmclient/local_world.h>
+#include <game/client/components/qmclient/practice_commands.h>
 #include <game/client/components/qmclient/practice_hook_input.h>
 #include <game/client/components/qmclient/practice_input_lock.h>
 #include <game/client/components/qmclient/practice_predict_plan.h>
@@ -66,14 +67,14 @@ public:
 	int PracticeRunCentiseconds() const;
 	struct SPracticeTileFeedbackDecision
 	{
-		bool m_RecordTeleport = false;
 		bool m_RecordDeath = false;
 		bool m_PlayDeathFeedback = false;
 	};
-	static SPracticeTileFeedbackDecision EvaluatePracticeTileFeedback(bool PathContainsTeleport, bool WasInDeath, bool IsInDeath, float DistanceMoved)
+	// 传送 tile 不产生任何命令记录：服务器只把斜杠传送写进 m_LastTeleTee，
+	// 地图传送对 /lasttp 与 /back 都是透明的。
+	static SPracticeTileFeedbackDecision EvaluatePracticeTileFeedback(bool WasInDeath, bool IsInDeath)
 	{
 		SPracticeTileFeedbackDecision Decision;
-		Decision.m_RecordTeleport = PathContainsTeleport && DistanceMoved > 0.001f;
 		Decision.m_RecordDeath = IsInDeath && !WasInDeath;
 		Decision.m_PlayDeathFeedback = Decision.m_RecordDeath;
 		return Decision;
@@ -122,13 +123,11 @@ private:
 		bool m_RescueManual = false;
 		bool m_HasRescueAuto = false;
 		bool m_HasRescueManual = false;
-		bool m_HasLastTeleport = false;
-		bool m_HasLastDeath = false;
 		bool m_InvincibleAddedEndlessJump = false;
-		vec2 m_LastTeleportPos = vec2(0.0f, 0.0f);
-		vec2 m_LastDeathPos = vec2(0.0f, 0.0f);
 		SQmPracticeSavedTee m_AutoTee;
 		SQmPracticeSavedTee m_ManualTee;
+		// /back 与 /lasttp 的记录，写入规则见 practice_commands.h。
+		SQmPracticeCommandRecords m_Records;
 		// 用户显式设置的重生点，独立于救援点，重开世界后依然保留。
 		bool m_HasCheckpoint = false;
 		SQmPracticeSavedTee m_CheckpointTee;
@@ -143,6 +142,10 @@ private:
 	int m_EnableDummyClientId = -1;
 	bool m_PracticeWorldInitialized = false;
 	bool m_HasDummyAnchor = false;
+	// 分身接入/断开会重新 fork 分支世界。这份待还原的本地 tee 让角色留在
+	// 练习分支的位置上，而不是被换回服务器世界里的 tee。
+	bool m_HasPendingLocalTee = false;
+	SQmPracticeSavedTee m_PendingLocalTee;
 	CPracticeRecorder m_Recorder;
 	bool m_SuppressFireOnNextPredictTick = false;
 	int m_InputSuppressTicks = 0;
@@ -254,6 +257,11 @@ public:
 	// 两者会分叉，幽灵就会相对练习世界超前。返回 false 表示由调用方用默认值。
 	bool ResolvePracticePlaybackTick(int &PlaybackTick) const;
 	bool PracticeWorldClockActive() const { return m_Enabled && m_PracticeWorldInitialized; }
+	// 分支世界的开关状态是这条时间线的权威。渲染、HUD、命中盒和录制都读这一份；
+	// 服务器快照只写服务器世界，不会覆盖练习里的 /setswitch 结果。
+	// 未启用或世界未建好时返回 nullptr，调用方回落到服务器世界。
+	std::vector<SSwitchers> *PracticeSwitchers();
+	int PracticeSwitchTeam() const;
 
 private:
 	// 服务器重进会换 client id，重新 fork 前必须把参与者 id 换成本次连接的实际 id。
@@ -279,8 +287,8 @@ private:
 	void NormalizeCharacterAfterReset(CCharacter *pChar, bool KeepFreezeFlags) const;
 	void NormalizeWeaponSelectionInput(CCharacter *pChar) const;
 	void TeleportCharacter(CCharacter *pChar, const vec2 &Pos) const;
-	void StoreLastTeleport(int ClientId, const vec2 &Pos);
-	void StoreLastDeathPosition(int ClientId, const vec2 &Pos);
+	// 把传送落地后的整份 tee 存成 /lasttp 记录，对齐服务器 m_LastTeleTee 的保存时机。
+	void RecordPracticeCommandTeleport(int ClientId, CCharacter *pChar);
 	void CaptureServerLockedInputs();
 	bool TryAttachDummyFromSnapshot();
 	bool IsInFreezePickupRange(CCharacter *pChar) const;

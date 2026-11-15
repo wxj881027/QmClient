@@ -1149,7 +1149,14 @@ public:
 	CGameWorld m_ExtraPredictedWorld;
 	CGameWorld m_PredSmoothingWorld;
 
-	std::vector<SSwitchers> &Switchers() { return m_GameWorld.m_Core.m_vSwitchers; }
+	std::vector<SSwitchers> &Switchers()
+	{
+		// 练习分支世界是当前客户端侧的权威时间线：开关状态读分支那一份，
+		// 服务器快照只写 m_GameWorld，不会把 /setswitch 的结果冲掉。
+		if(auto *pPracticeSwitchers = m_FastPractice.PracticeSwitchers())
+			return *pPracticeSwitchers;
+		return m_GameWorld.m_Core.m_vSwitchers;
+	}
 	std::vector<SSwitchers> &PredSwitchers() { return m_PredictedWorld.m_Core.m_vSwitchers; }
 
 	void DummyResetInput() override;

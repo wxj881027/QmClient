@@ -38,6 +38,12 @@
 
 namespace
 {
+	// sv_plasma_per_sec 与 sv_plasma_range 是服务器端配置，不随协议下发，客户端无从
+	// 得知当前服务器改成了多少。练习世界只能按 DDNet 默认值模拟机关炮；服务器改过
+	// 这两项时，练习里的射速与射程会与真实世界不同，这是协议层面的已知边界。
+	constexpr int PRACTICE_PLASMA_PER_SEC = 3;
+	constexpr int PRACTICE_PLASMA_RANGE = 700;
+
 	// 预测写回的 CGameClient 适配器：模板只认字段槽位，不依赖客户端类型。
 	class CPracticePredictStateSink
 	{
@@ -197,25 +203,6 @@ namespace
 		       IsDeathTileAt(pCollision, Pos + vec2(-Offset, Offset));
 	}
 
-	bool PracticePathContainsTeleport(CCollision *pCollision, const vec2 &From, const vec2 &To)
-	{
-		if(!pCollision)
-			return false;
-
-		const std::vector<int> vIndices = pCollision->GetMapIndices(From, To);
-		for(int Index : vIndices)
-		{
-			if(pCollision->IsTeleport(Index) > 0 ||
-				pCollision->IsEvilTeleport(Index) > 0 ||
-				pCollision->IsCheckTeleport(Index) ||
-				pCollision->IsCheckEvilTeleport(Index))
-			{
-				return true;
-			}
-		}
-		return false;
-	}
-
 	void CollectTrackedProjectiles(CGameWorld &World, int LocalClientId, int DummyClientId, std::vector<STrackedProjectile> &vOut)
 	{
 		vOut.clear();
@@ -281,6 +268,8 @@ void CFastPractice::ResetPracticeState()
 	m_EnableDummyClientId = -1;
 	m_PracticeWorldInitialized = false;
 	m_HasDummyAnchor = false;
+	m_HasPendingLocalTee = false;
+	m_PendingLocalTee = {};
 	m_Recorder.Reset();
 	m_SuppressFireOnNextPredictTick = false;
 	m_InputSuppressTicks = 0;
@@ -778,14 +767,14 @@ void CFastPractice::TickPracticeGuns(CGameWorld &World, int Tick)
 			Collision()->MoverSpeed(Gun.m_Pos.x, Gun.m_Pos.y, &Gun.m_Core);
 			Gun.m_Pos += Gun.m_Core;
 		}
-		if(g_Config.m_SvPlasmaPerSec > 0)
+		if(PRACTICE_PLASMA_PER_SEC > 0)
 			FirePracticeGun(World, Gun, Tick);
 	}
 }
 
 void CFastPractice::FirePracticeGun(CGameWorld &World, SPracticeGun &Gun, int Tick)
 {
-	const int FireDelay = Client()->GameTickSpeed() / g_Config.m_SvPlasmaPerSec;
+	const int FireDelay = Client()->GameTickSpeed() / PRACTICE_PLASMA_PER_SEC;
 
 	// 复刻 CGun::Fire：solo 玩家单独计时，其余按队伍取最近目标。
 	int aMinDistInTeam[MAX_CLIENTS] = {};
@@ -810,7 +799,7 @@ void CFastPractice::FirePracticeGun(CGameWorld &World, SPracticeGun &Gun, int Ti
 			(!TargetIsSolo && Gun.m_aLastFireTeam[TargetTeam] + FireDelay > Tick))
 			continue;
 
-		if(distance(pTarget->m_Pos, Gun.m_Pos) > g_Config.m_SvPlasmaRange)
+		if(distance(pTarget->m_Pos, Gun.m_Pos) > PRACTICE_PLASMA_RANGE)
 			continue;
 		if(Collision()->IntersectLine(Gun.m_Pos, pTarget->m_Pos, nullptr, nullptr))
 			continue;
@@ -882,6 +871,16 @@ bool CFastPractice::InitPracticeWorld()
 	{
 		m_PracticeWorldInitialized = false;
 		return false;
+	}
+
+	if(m_HasPendingLocalTee)
+	{
+		// 分身接入/断开时的重新 fork：fork 出来的角色在服务器世界的位置上，
+		// 这里把本地 tee 放回练习分支原来的位置与状态，跑图进度不丢。
+		if(CCharacter *pLocal = m_PracticeBaseWorld.GetCharacterById(m_EnableLocalClientId))
+			ApplyPracticeRescueTee(pLocal, m_PendingLocalTee);
+		m_HasPendingLocalTee = false;
+		m_PendingLocalTee = {};
 	}
 
 	if(!m_HasPracticeStartSnapshot)
@@ -977,6 +976,28 @@ bool CFastPractice::ResolvePracticeSoloState(int ClientId, bool &Solo) const
 
 	Solo = m_PracticeBaseWorld.m_Teams.GetSolo(ClientId);
 	return true;
+}
+
+std::vector<SSwitchers> *CFastPractice::PracticeSwitchers()
+{
+	if(!m_Enabled || !m_PracticeWorldInitialized)
+		return nullptr;
+	return &m_PracticeBaseWorld.Switchers();
+}
+
+int CFastPractice::PracticeSwitchTeam() const
+{
+	if(!m_Enabled || !m_PracticeWorldInitialized)
+		return -1;
+
+	// 开关状态按当前操控的 tee 所在队伍取；分身接管时同样成立。
+	int ClientId = GameClient()->m_Snap.m_LocalClientId;
+	if(ClientId != m_EnableLocalClientId && ClientId != m_EnableDummyClientId)
+		ClientId = m_EnableLocalClientId;
+	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
+		return -1;
+
+	return std::clamp(m_PracticeBaseWorld.m_Teams.Team(ClientId), (int)TEAM_FLOCK, NUM_DDRACE_TEAMS - 1);
 }
 
 bool CFastPractice::ResolvePracticePlaybackTick(int &PlaybackTick) const
@@ -1148,6 +1169,18 @@ bool CFastPractice::TryAttachDummyFromSnapshot()
 	if(CandidateDummyId < 0)
 		return false;
 
+	// 接入分身要重新 fork 世界。fork 出来的本地角色在服务器世界的位置上，
+	// 先把练习分支里的本地 tee 存起来，fork 成功后由 InitPracticeWorld 放回去。
+	// 分支世界没建好时（旁观返回、重进）不保存，让重新 fork 的结果作准。
+	if(m_PracticeWorldInitialized)
+	{
+		if(CCharacter *pLocalChar = m_PracticeBaseWorld.GetCharacterById(m_EnableLocalClientId))
+		{
+			CapturePracticeRescueTee(pLocalChar, m_PracticeBaseWorld.GameTick(), m_PendingLocalTee);
+			m_HasPendingLocalTee = true;
+		}
+	}
+
 	m_EnableDummyClientId = CandidateDummyId;
 	m_RequireDummy = true;
 	if(!InitPracticeWorld())
@@ -1302,6 +1335,10 @@ void CFastPractice::ResetPracticeToAnchor()
 	if(!m_Enabled)
 		return;
 
+	// 复位目标由锚点决定，丢弃可能残留的分身重 fork 待还原 tee。
+	m_HasPendingLocalTee = false;
+	m_PendingLocalTee = {};
+
 	if(!InitPracticeWorld())
 	{
 		Disable();
@@ -1352,10 +1389,7 @@ void CFastPractice::ResetPracticeTimelineState()
 		State.m_HasRescueManual = false;
 		State.m_AutoTee = {};
 		State.m_ManualTee = {};
-		State.m_HasLastTeleport = false;
-		State.m_HasLastDeath = false;
-		State.m_LastTeleportPos = vec2(0.0f, 0.0f);
-		State.m_LastDeathPos = vec2(0.0f, 0.0f);
+		State.m_Records = {};
 	}
 }
 
@@ -1539,25 +1573,20 @@ void CFastPractice::TrackPracticeTileFeedback(int ClientId, CCharacter *pChar, c
 		return;
 
 	const vec2 AfterPos = pChar->Core()->m_Pos;
-	const float Moved = distance(BeforePos, AfterPos);
-	// 传送 tile 一定在同一 tick 内把角色挪出至少一格；普通移动达不到这个位移。
-	// 用阈值挡掉每 tick 一次的 GetMapIndices 线段扫描，只给真正的瞬移付代价。
-	constexpr float TELEPORT_MIN_DISTANCE = 32.0f;
-	const bool PathContainsTeleport = Moved >= TELEPORT_MIN_DISTANCE &&
-					  PracticePathContainsTeleport(Collision(), BeforePos, AfterPos);
 	const bool WasInDeath = IsCharacterTouchingDeathTile(Collision(), BeforePos, pChar->GetProximityRadius());
 	const bool IsInDeath = IsCharacterTouchingDeathTile(Collision(), AfterPos, pChar->GetProximityRadius());
-	const SPracticeTileFeedbackDecision FeedbackDecision = EvaluatePracticeTileFeedback(PathContainsTeleport, WasInDeath, IsInDeath, Moved);
-	if(FeedbackDecision.m_RecordTeleport)
-	{
-		// /lasttp 与 /back 共用这两个记录：传送前的位置才是 /back 该回去的点。
-		StoreLastDeathPosition(ClientId, BeforePos);
-		StoreLastTeleport(ClientId, AfterPos);
-	}
+	const SPracticeTileFeedbackDecision FeedbackDecision = EvaluatePracticeTileFeedback(WasInDeath, IsInDeath);
+	if(!FeedbackDecision.m_RecordDeath)
+		return;
+
+	// 死亡只写 /back 记录，来源是死亡前最后一次自动救援快照，与服务器
+	// CCharacter::Die 写 m_LastDeath 的时机和内容一致。
+	// 地图传送 tile 不写任何命令记录：服务器同样不更新 m_LastTeleTee 与 m_LastDeath。
+	auto &State = m_aPracticeCommandState[ClientId];
+	QmRecordPracticeDeath(State.m_Records, State.m_AutoTee);
 
 	// 死亡 tile 的落点：manual 模式下用显式救援点，否则用最近的安全点；
 	// 连救援点都还没采到时回到启用练习那一刻的起点。
-	auto &State = m_aPracticeCommandState[ClientId];
 	const SQmPracticeSavedTee *pTee = nullptr;
 	if(State.m_RescueManual && State.m_ManualTee.m_Valid)
 		pTee = &State.m_ManualTee;
@@ -1582,9 +1611,6 @@ void CFastPractice::TrackPracticeTileFeedback(int ClientId, CCharacter *pChar, c
 	if(!DeathDecision.m_ReturnToSavedPoint)
 		return;
 
-	// /back 回到“上一次出事的位置”：踩死点的坐标在回退后仍然有意义，
-	// 回退本身不改写它，玩家可以一键回到死亡处再看一眼。
-	StoreLastDeathPosition(ClientId, AfterPos);
 	// 位置突变必须切段，否则存成幽灵后回放会连出一条穿过死亡 tile 的直线。
 	OnPracticePositionJump();
 	if(pTee)
@@ -1621,8 +1647,17 @@ bool CFastPractice::OverridePredict()
 		return false;
 	}
 	// 分身连接断开：降级为本体单人练习，并重新 fork 去掉分支世界里的残留分身。
+	// 重新 fork 会把本地角色换到服务器世界的位置，先存住分支里的本地 tee。
 	if(m_RequireDummy && !Client()->DummyConnected())
 	{
+		if(m_PracticeWorldInitialized)
+		{
+			if(CCharacter *pLocalChar = m_PracticeBaseWorld.GetCharacterById(m_EnableLocalClientId))
+			{
+				CapturePracticeRescueTee(pLocalChar, m_PracticeBaseWorld.GameTick(), m_PendingLocalTee);
+				m_HasPendingLocalTee = true;
+			}
+		}
 		m_RequireDummy = false;
 		m_HasDummyAnchor = false;
 		m_EnableDummyClientId = -1;
@@ -2301,22 +2336,16 @@ void CFastPractice::TeleportCharacter(CCharacter *pChar, const vec2 &Pos) const
 	NormalizeCharacterAfterReset(pChar, false);
 }
 
-void CFastPractice::StoreLastTeleport(int ClientId, const vec2 &Pos)
+void CFastPractice::RecordPracticeCommandTeleport(int ClientId, CCharacter *pChar)
 {
-	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
+	if(ClientId < 0 || ClientId >= MAX_CLIENTS || !pChar)
 		return;
-	auto &State = m_aPracticeCommandState[ClientId];
-	State.m_HasLastTeleport = true;
-	State.m_LastTeleportPos = Pos;
-}
 
-void CFastPractice::StoreLastDeathPosition(int ClientId, const vec2 &Pos)
-{
-	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
-		return;
-	auto &State = m_aPracticeCommandState[ClientId];
-	State.m_HasLastDeath = true;
-	State.m_LastDeathPos = Pos;
+	// 服务器在 Teleport 之后先 ResetJumps/Unfreeze/ResetVelocity 再存 m_LastTeleTee，
+	// 调用方已经做过等价的角色整理，这里直接采整份 tee。
+	SQmPracticeSavedTee Tee;
+	CapturePracticeRescueTee(pChar, m_PracticeBaseWorld.GameTick(), Tee);
+	QmRecordPracticeCommandTeleport(m_aPracticeCommandState[ClientId].m_Records, Tee);
 }
 
 bool CFastPractice::IsInFreezePickupRange(CCharacter *pChar) const
