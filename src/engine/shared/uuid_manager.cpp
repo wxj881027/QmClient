@@ -194,4 +194,3 @@ void CUuidManager::DebugDump() const
 		dbg_msg("uuid", "%s %s", aBuf, Name.m_pName);
 	}
 }
-
