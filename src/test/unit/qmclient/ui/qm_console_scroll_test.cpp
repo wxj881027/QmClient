@@ -221,3 +221,23 @@ TEST(QmConsoleScroll, NegativeOverscrollKeepsLineAnchorAtTheNewestLine)
 	EXPECT_EQ(Settled.m_Line, 0);
 	EXPECT_NEAR(Settled.m_Offset, 0.0f, 0.5f);
 }
+
+TEST(QmConsoleScroll, RestingAtOldestKeepsFractionalEndpointInsteadOfRoundingAwayTopLine)
+{
+	CQmConsoleScrollRuntime Runtime;
+	const SQmScrollConfig Config = MakeConfig();
+	Runtime.Advance(FRAME_DT, 125.5f, TOTAL_LINES, LINE_HEIGHT, Config);
+	const float MaxOffset = Runtime.MaxOffset();
+	ASSERT_FLOAT_EQ(MaxOffset, 874.5f);
+
+	// 拖动到最旧端后停手：吸附只能处理中间位置的整行抖动，
+	// 不能把 874.5 吸成 870，否则顶部会少掉半行可见区域。
+	Runtime.DragToOffset(MaxOffset);
+	Runtime.SnapToNearestLine();
+	EXPECT_FLOAT_EQ(Runtime.Offset(), MaxOffset);
+
+	// 中间位置仍按整行吸附，保留原有的防抖行为。
+	Runtime.DragToOffset(436.0f);
+	Runtime.SnapToNearestLine();
+	EXPECT_FLOAT_EQ(Runtime.Offset(), 440.0f);
+}

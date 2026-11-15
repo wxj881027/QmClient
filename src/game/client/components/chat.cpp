@@ -3016,9 +3016,10 @@ bool CChat::OnPrepareLines(float y)
 			// 否则只有“首次创建”时受高度限制，后续帧又会溢出。
 			if(Line.m_aYOffset[OffsetType] >= 0.0f)
 			{
+				const float LayoutBottom = y;
 				y = AdvanceChatLineStack(y, Line.m_aYOffset[OffsetType], ExtraLineSpacing, ClampPresentationProgress(Line.m_Presentation.m_LayoutVisibility));
 
-				if(y < HeightLimit)
+				if(!QmScrollLineVisibleInViewportTop(y, LayoutBottom, HeightLimit))
 					break;
 			}
 			continue;
@@ -3240,7 +3241,7 @@ bool CChat::OnPrepareLines(float y)
 		const float LayoutBottom = y;
 		y = AdvanceChatLineStack(y, LineHeight, ExtraLineSpacing, LayoutVisibility);
 		// 超出 HUD 的聊天高度预算：停止准备更旧消息。
-		if(y < HeightLimit)
+		if(!QmScrollLineVisibleInViewportTop(y, LayoutBottom, HeightLimit))
 			break;
 		// 渲染落点必须与上面的堆叠游标同口径减去额外行间隔，否则行距只减少可视行数、不改变行位置。
 		const float TargetY = LayoutBottom - (LineHeight + ExtraLineSpacing);
@@ -4174,7 +4175,7 @@ void CChat::OnRender()
 		const float LayoutVisibility = ClampPresentationProgress(Line.m_Presentation.m_LayoutVisibility);
 		const float LayoutBottom = y;
 		y = AdvanceChatLineStack(y, LineHeight, ExtraLineSpacing, LayoutVisibility);
-		if(y < HeightLimit)
+		if(!QmScrollLineVisibleInViewportTop(y, LayoutBottom, HeightLimit))
 			break;
 		Line.m_Presentation.m_TargetY = LayoutBottom - (LineHeight + ExtraLineSpacing);
 

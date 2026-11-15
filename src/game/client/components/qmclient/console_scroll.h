@@ -35,4 +35,11 @@ inline SQmConsoleLogClipBounds QmConsoleResolveLogClipBounds(float LogTop, float
 	return Bounds;
 }
 
+// 首条可见日志之前的整行位移。SubLine 是“还差多少像素到下一个整行”，
+// 内容应向下补这段距离；旧实现把它反向减掉，滚到最旧端时会把顶行推出裁剪区。
+inline float QmConsoleLineStackOffset(int ActiveLine, int SkippedLines, float LineHeight, float SubLine)
+{
+	return (float)(ActiveLine - SkippedLines) * std::max(0.0f, LineHeight) - SubLine;
+}
+
 #endif

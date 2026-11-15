@@ -2549,18 +2549,15 @@ void CGameConsole::OnRender()
 			{
 				// 整行位移之外再补上亚行余量：滚轮/弹簧停在半行时内容也要跟着走，
 				// 越界时余量承载橡皮筋距离（行号已夹在合法区间内）。
-				OffsetY -= (pConsole->m_BacklogLastActiveLine - SkippedLines) * LineHeight + SubLine;
+				OffsetY -= QmConsoleLineStackOffset(pConsole->m_BacklogLastActiveLine, SkippedLines, LineHeight, SubLine);
 			}
 
-			const float LocalOffsetY = OffsetY + pEntry->m_YOffset / (float)pEntry->m_LineCount;
 			OffsetY += pEntry->m_YOffset;
 			const float EntryTop = y - OffsetY;
 			const float EntryBottom = EntryTop + pEntry->m_YOffset;
 
-			// stop rendering when lines reach the top
-			const bool Outside = y - OffsetY <= RowHeight;
-			const bool CanRenderOneLine = y - LocalOffsetY > RowHeight;
-			if(Outside && !CanRenderOneLine)
+			// 顶边只要还露出一个像素就继续画；只有整行底边也越过上沿才停止。
+			if(!QmScrollLineVisibleInViewportTop(EntryTop, EntryBottom, RowHeight))
 				break;
 
 			const bool ChatExportable = pConsole->IsChatExportableEntry(pEntry);

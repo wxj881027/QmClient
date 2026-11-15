@@ -1,4 +1,5 @@
 #include <game/client/components/qmclient/console_scroll.h>
+#include <game/client/QmUi/QmScroll.h>
 
 #include <gtest/gtest.h>
 
@@ -41,4 +42,22 @@ TEST(QmConsoleLogClip, DegenerateBoundsNeverProduceNegativeSize)
 	EXPECT_FLOAT_EQ(Bounds.m_Top, 0.0f);
 	EXPECT_FLOAT_EQ(Bounds.m_Bottom, 0.0f);
 	EXPECT_FLOAT_EQ(Bounds.Height(), 0.0f);
+}
+
+TEST(QmConsoleLogClip, SubLineOffsetMovesTheFirstVisibleLineDown)
+{
+	// 已经隐藏 6 行、亚行余量 3px：首行内容应再向下补 3px。
+	EXPECT_FLOAT_EQ(QmConsoleLineStackOffset(6, 6, 10.0f, 3.0f), -3.0f);
+	// 旧实现把余量反向减掉（+3），会把最旧端顶行推出裁剪区。
+	EXPECT_NE(QmConsoleLineStackOffset(6, 6, 10.0f, 3.0f), 3.0f);
+	EXPECT_FLOAT_EQ(QmConsoleLineStackOffset(8, 2, 10.0f, 0.0f), 60.0f);
+}
+
+TEST(QmConsoleLogClip, PartiallyVisibleTopLineStillHasVisiblePixels)
+{
+	constexpr float ClipTop = 100.0f;
+	EXPECT_TRUE(QmScrollLineVisibleInViewportTop(90.0f, 110.0f, ClipTop));
+	EXPECT_TRUE(QmScrollLineVisibleInViewportTop(100.0f, 120.0f, ClipTop));
+	EXPECT_FALSE(QmScrollLineVisibleInViewportTop(80.0f, 100.0f, ClipTop));
+	EXPECT_FALSE(QmScrollLineVisibleInViewportTop(80.0f, 80.0f, ClipTop));
 }

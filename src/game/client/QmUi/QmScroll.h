@@ -35,6 +35,14 @@ struct SQmScrollMetrics
 	float MaxOffset() const;
 };
 
+// 顶边裁剪：只要行的底边仍在视口上沿之下，就还有可见像素。
+// 调用方不能用“行顶越过上沿”直接判不可见，否则滚动到端点时，
+// 只露出一部分的半行会被整行丢掉，表现为滚动条已到顶却看不见第一行。
+inline bool QmScrollLineVisibleInViewportTop(float LineTop, float LineBottom, float ClipTop)
+{
+	return LineBottom > LineTop && LineBottom > ClipTop;
+}
+
 // 滚轮手感档位。SMOOTH 必须占 0：g_Config 在未跑配置加载时（测试环境）是零初始化，
 // 0 必须是生产默认档，否则测试与线上手感会静默分叉。档位在设置界面的展示顺序
 // （原版 → 顺滑 → 弹簧）由卡片侧单独映射，不依赖枚举值大小。

@@ -104,6 +104,16 @@ public:
 	{
 		if(!m_HasGeometry || m_LineHeight <= 0.0f)
 			return;
+		// 端点不是行边界：视口高度通常不是行高整数倍，最旧端停在
+		// TotalLines*LineHeight - Viewport。若这里仍按最近整行吸附，
+		// 会丢掉那点亚行余量，顶行随即被裁掉。端点附近保留真实最大偏移。
+		const float MaxOffset = m_Metrics.MaxOffset();
+		if(MaxOffset > 0.0f && std::abs(m_State.Offset() - MaxOffset) <= m_LineHeight * 0.5f)
+		{
+			if(std::abs(m_State.Offset() - MaxOffset) > 0.01f)
+				m_State.SetOffset(MaxOffset, m_Metrics, m_Config);
+			return;
+		}
 		const float Snapped = std::round(m_State.Offset() / m_LineHeight) * m_LineHeight;
 		if(std::abs(Snapped - m_State.Offset()) > 0.01f)
 			m_State.SetOffset(Snapped, m_Metrics, m_Config);
