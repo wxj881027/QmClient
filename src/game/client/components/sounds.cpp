@@ -3,6 +3,7 @@
 
 #include "sounds.h"
 
+#include <base/dbg.h>
 #include <base/mem.h>
 #include <base/str.h>
 #include <base/system.h>

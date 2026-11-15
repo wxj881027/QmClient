@@ -1,6 +1,7 @@
-class CGameClient;
 #ifndef GAME_CLIENT_QMUI_QMVOTEMENU_H
 #define GAME_CLIENT_QMUI_QMVOTEMENU_H
+
+class CGameClient;
 
 #include "QmPlayersMenu.h"
 #include "QmVoteMapPreview.h"

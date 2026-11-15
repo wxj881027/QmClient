@@ -883,7 +883,6 @@ bool net_addr_is_local(const NETADDR *addr)
 		       (addr->ip[0] >= 0xfc && addr->ip[0] <= 0xfd) ||
 		       mem_comp(addr->ip, LOOPBACKADDR_IPV6, sizeof(LOOPBACKADDR_IPV6)) == 0;
 	dbg_assert_failed("unknown NETADDR type %d", addr->type);
-	return false;
 }
 
 int net_addr_from_str(NETADDR *addr, const char *string)
@@ -2379,7 +2378,7 @@ void os_locale_str(char *locale, size_t length)
 	// Ensure RFC 3066 format:
 	// - use hyphens instead of underscores
 	// - truncate locale string after first non-standard letter
-	for(int i = 0; i < str_length(locale); ++i)
+	for(int i = 0; locale[i] != '\0'; ++i)
 	{
 		if(locale[i] == '_')
 		{

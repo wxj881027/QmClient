@@ -2,6 +2,7 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "scoreboard.h"
 
+#include <base/dbg.h>
 #include <base/mem.h>
 
 #include <engine/demo.h>

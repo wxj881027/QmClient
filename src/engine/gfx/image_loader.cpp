@@ -486,10 +486,8 @@ bool CImageLoader::SavePng(CByteBufferWriter &Writer, const CImageInfo &Image, c
 		png_set_text(pState->m_pPng, pState->m_pInfo, &Text, 1);
 	}
 	png_write_info(pState->m_pPng, pState->m_pInfo);
-	pState->m_pRows = new png_bytep[Image.m_Height];
 	for(size_t Y = 0; Y < Image.m_Height; ++Y)
-		pState->m_pRows[Y] = Image.m_pData + Y * Image.m_Width * CImageInfo::PixelSize(Image.m_Format);
-	png_write_image(pState->m_pPng, pState->m_pRows);
+		png_write_row(pState->m_pPng, Image.m_pData + Y * Image.m_Width * CImageInfo::PixelSize(Image.m_Format));
 	png_write_end(pState->m_pPng, pState->m_pInfo);
 	return true;
 }

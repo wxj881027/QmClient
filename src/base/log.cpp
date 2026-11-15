@@ -188,7 +188,6 @@ std::unique_ptr<ILogger> log_logger_android()
 std::unique_ptr<ILogger> log_logger_android()
 {
 	dbg_assert(0, "Android logger on non-Android");
-	return nullptr;
 }
 #endif
 
