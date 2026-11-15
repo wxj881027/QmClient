@@ -719,6 +719,21 @@ TEST(QmChatHistoryScroll, BouncePixelsAreConvertedToMessageLineUnits)
 	EXPECT_FLOAT_EQ(QmChatHistoryBounceLines(25.0f, 0.0f), 25.0f);
 }
 
+TEST(QmChatHistoryScroll, VisibleCapacityIsMeasuredFromTheOldestMessages)
+{
+	// 末尾两条高消息：按默认行高会以为一屏能放 5 条，实际从最旧一侧只能完整放下 1 条。
+	// 容量若按最新一侧或默认行高估算，最大偏移会偏小，最旧一条永远滚不到。
+	const std::array<float, 4> aHeights = {20.0f, 20.0f, 80.0f, 80.0f};
+	EXPECT_EQ(QmChatOldestFittingLineCount(aHeights.data(), (int)aHeights.size(), 100.0f), 1);
+	EXPECT_EQ(QmChatOldestFittingLineCount(aHeights.data(), (int)aHeights.size(), 160.0f), 2);
+	EXPECT_EQ(QmChatOldestFittingLineCount(aHeights.data(), (int)aHeights.size(), 200.0f), 4);
+
+	// 单条消息高于视口时仍保留 1 条，至少能滚到它。
+	const std::array<float, 1> aOversized = {240.0f};
+	EXPECT_EQ(QmChatOldestFittingLineCount(aOversized.data(), (int)aOversized.size(), 100.0f), 1);
+	EXPECT_EQ(QmChatOldestFittingLineCount(nullptr, 0, 100.0f), 1);
+}
+
 TEST(QmChatHistoryScroll, ScrollbarValueKeepsContinuousOffsetAndOverscroll)
 {
 	const SQmScrollMetrics Metrics = QmChatHistoryScrollMetrics(100, 10);

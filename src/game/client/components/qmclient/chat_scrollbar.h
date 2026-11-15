@@ -156,6 +156,28 @@ inline SQmScrollMetrics QmChatHistoryScrollMetrics(int TotalLines, int VisibleLi
 	return Metrics;
 }
 
+// 聊天行高不一，可见容量不能按默认行高估算：滚动上限必须从最旧一端量，
+// 否则末尾几条偏高时，滚动条已经到顶，最旧一条却还被挡在视口上方。
+// pExtentsNewestFirst 按“最新 → 最旧”排列；返回最旧一侧能完整放下的条数。
+// 至少保留 1 条，保证单条消息高于视口时仍能被滚到。
+inline int QmChatOldestFittingLineCount(const float *pExtentsNewestFirst, int Count, float ViewportHeight)
+{
+	if(pExtentsNewestFirst == nullptr || Count <= 0)
+		return 1;
+	const float SafeViewport = std::max(0.0f, ViewportHeight);
+	float UsedHeight = 0.0f;
+	int Fitting = 0;
+	for(int i = Count - 1; i >= 0; --i)
+	{
+		const float Extent = std::max(0.0f, pExtentsNewestFirst[i]);
+		if(Fitting > 0 && UsedHeight + Extent > SafeViewport + 0.001f)
+			break;
+		UsedHeight += Extent;
+		++Fitting;
+	}
+	return std::max(1, Fitting);
+}
+
 // 聊天偏移以消息行为单位，而公共橡皮筋配置是像素。这里按当前行高换算，
 // 避免 25px 的回弹被误读成 25 行。
 inline float QmChatHistoryBounceLines(float BouncePixels, float LineExtent)

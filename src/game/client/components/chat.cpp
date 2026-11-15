@@ -763,7 +763,7 @@ void CChat::UpdatePointerState()
 	}
 }
 
-CChat::SQmChatHistoryExtent CChat::MeasureVisibleHistory(int BacklogLine, int OffsetType, float FallbackLineHeight, float ExtraLineSpacing) const
+CChat::SQmChatHistoryExtent CChat::MeasureVisibleHistory(int BacklogLine, int OffsetType, float FallbackLineHeight, float ExtraLineSpacing, float ViewportHeight) const
 {
 	const SQmFocusModeDecisions Focus = GetQmFocusModeDecisions();
 	const bool FocusHideChat = Focus.m_HidePlayerMessages;
@@ -775,6 +775,8 @@ CChat::SQmChatHistoryExtent CChat::MeasureVisibleHistory(int BacklogLine, int Of
 	const float Spacing = maximum(0.0f, ExtraLineSpacing);
 
 	SQmChatHistoryExtent Extent;
+	float aRowExtents[MAX_LINES];
+	int RowCount = 0;
 	for(int i = maximum(0, BacklogLine); i < MAX_LINES; ++i)
 	{
 		const CLine &Line = m_aLines[((m_CurrentLine - i) + MAX_LINES) % MAX_LINES];
@@ -786,8 +788,12 @@ CChat::SQmChatHistoryExtent CChat::MeasureVisibleHistory(int BacklogLine, int Of
 		++Extent.m_Lines;
 		// 行高来自上一次排版（消息首次出现在可见区时量到的），与绘制用的是同一个值；
 		// 还没量过的行按一行高估，宁可让滑块略长也不让它凭空缩短。
-		Extent.m_Height += (Line.m_aYOffset[Index] >= 0.0f ? Line.m_aYOffset[Index] : Fallback) + Spacing;
+		const float RowExtent = (Line.m_aYOffset[Index] >= 0.0f ? Line.m_aYOffset[Index] : Fallback) + Spacing;
+		Extent.m_Height += RowExtent;
+		if(RowCount < MAX_LINES)
+			aRowExtents[RowCount++] = RowExtent;
 	}
+	Extent.m_FittingLines = ViewportHeight >= 0.0f ? QmChatOldestFittingLineCount(aRowExtents, RowCount, ViewportHeight) : Extent.m_Lines;
 	return Extent;
 }
 
@@ -3940,10 +3946,12 @@ void CChat::OnRender()
 	//   行数 → 滚轮推进、行号夹取、滑块进度（0 = 顶部/最旧）；
 	//   总高度 → 滑块长度。消息会换行，"条数"并不等于"高度"，用条数算比例会把
 	//   滑块虚长成几乎整条轨道（本次要修的就是这个观感）。
-	const SQmChatHistoryExtent HistoryExtent = MeasureVisibleHistory(0, OffsetType, FontSize() + RealMsgPaddingY, ExtraLineSpacing);
+	const SQmChatHistoryExtent HistoryExtent = MeasureVisibleHistory(0, OffsetType, FontSize() + RealMsgPaddingY, ExtraLineSpacing, HistoryHeight);
 	const int TotalVisibleLines = HistoryExtent.m_Lines;
 	const float HistoryContentHeight = HistoryExtent.m_Height;
-	const int VisibleLineCapacity = maximum(1, (int)std::floor(HistoryHeight / maximum(RowHeight + ExtraLineSpacing, 1.0f)));
+	// 可见容量按最旧一侧的实际行高量出：把末尾几条高消息算进来，
+	// 才能保证滚动上限真正覆盖到最旧一条，而不是用默认行高少算一条。
+	const int VisibleLineCapacity = maximum(1, HistoryExtent.m_FittingLines);
 	const int MaxScroll = maximum(0, TotalVisibleLines - VisibleLineCapacity);
 	// 聊天历史的滚动偏移单位是"行"：视口 = 可显示行数、内容 = 总行数，推进一律交给
 	// 公共滚动实现（QmScroll 的 CQmScrollState）：滚轮走弹簧/平滑档，拖动直接跟手，
