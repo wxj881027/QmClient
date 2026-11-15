@@ -2036,9 +2036,6 @@ Button - Enabled
 Button browser
 == 按键浏览器
 
-Button hover feedback
-== Button hover feedback
-
 Button position is outside of the screen.
 == 按键的位置在屏幕之外。
 
@@ -9034,6 +9031,9 @@ Menu accent panel opacity
 
 Menu background
 == 菜单背景
+
+Menu button hover
+== Menu button hover
 
 Menu camera rotation radius
 == 菜单相机旋转半径

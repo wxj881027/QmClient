@@ -73,6 +73,16 @@ struct SRoundedSurfacePlan
 	bool m_UseSdf = false;
 };
 
+// 半径是形状的唯一来源：只要调用点给了非零半径，就按四角全圆处理。
+// 历史上「Corners 位掩码」是引擎四角接口的遗留，传 CORNER_NONE 会把圆角清零画出方块，
+// 而传半径的调用点显然不是要方块，所以这里把这两个信号统一掉。
+inline int ResolveRoundedSurfaceCorners(const float Radius, const int Corners)
+{
+	if(Radius > 0.0f && Corners == IGraphics::CORNER_NONE)
+		return IGraphics::CORNER_ALL;
+	return Corners;
+}
+
 inline vec4 ResolveRoundedSurfaceCornerRadii(const float Radius, const int Corners)
 {
 	return vec4(
@@ -102,7 +112,7 @@ inline SRoundedSurfacePlan ResolveRoundedSurfacePlan(const CUIRect &Rect, const 
 		Plan.m_Rect.w += Plan.m_Expand * 2.0f;
 		Plan.m_Rect.h += Plan.m_Expand * 2.0f;
 	}
-	Plan.m_CornerRadii = ResolveRoundedSurfaceCornerRadii(Plan.m_Radius, Params.m_Corners);
+	Plan.m_CornerRadii = ResolveRoundedSurfaceCornerRadii(Plan.m_Radius, ResolveRoundedSurfaceCorners(Params.m_Radius, Params.m_Corners));
 	Plan.m_UseSdf = HasSdf && Plan.m_Rect.w > 0.0f && Plan.m_Rect.h > 0.0f;
 	return Plan;
 }

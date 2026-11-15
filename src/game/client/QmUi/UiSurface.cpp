@@ -139,22 +139,22 @@ bool DrawRoundedSurface(IGraphics *pGraphics, const CUIRect &Rect, const ColorRG
 
 	if(!Params.m_AlignToPixel)
 	{
-		DrawSubpixelRoundedSurface(pGraphics, Plan, Fill, Border, Params.m_Corners);
+		DrawSubpixelRoundedSurface(pGraphics, Plan, Fill, Border, ResolveRoundedSurfaceCorners(Params.m_Radius, Params.m_Corners));
 		return true;
 	}
 
 	if(Plan.m_BorderWidth <= 0.0f)
 	{
-		pGraphics->DrawRect(Plan.m_Rect.x, Plan.m_Rect.y, Plan.m_Rect.w, Plan.m_Rect.h, Fill, Params.m_Corners, Plan.m_Radius);
+		pGraphics->DrawRect(Plan.m_Rect.x, Plan.m_Rect.y, Plan.m_Rect.w, Plan.m_Rect.h, Fill, ResolveRoundedSurfaceCorners(Params.m_Radius, Params.m_Corners), Plan.m_Radius);
 		return true;
 	}
 
 	CUIRect Inner = Plan.m_Rect;
 	Inner.Margin(Plan.m_BorderWidth, &Inner);
 	if(Inner.w > 0.0f && Inner.h > 0.0f)
-		pGraphics->DrawRect(Inner.x, Inner.y, Inner.w, Inner.h, Fill, Params.m_Corners, std::max(0.0f, Plan.m_Radius - Plan.m_BorderWidth));
+		pGraphics->DrawRect(Inner.x, Inner.y, Inner.w, Inner.h, Fill, ResolveRoundedSurfaceCorners(Params.m_Radius, Params.m_Corners), std::max(0.0f, Plan.m_Radius - Plan.m_BorderWidth));
 	// 边框仅覆盖环带；整块边框垫底会透过半透明填色污染输入框内部。
-	DrawRoundedSurfaceBorder(pGraphics, Plan, Border, Params.m_Corners);
+	DrawRoundedSurfaceBorder(pGraphics, Plan, Border, ResolveRoundedSurfaceCorners(Params.m_Radius, Params.m_Corners));
 	return true;
 }
 
@@ -344,7 +344,7 @@ bool DrawRoundedGradientSurface(IGraphics *pGraphics, const CUIRect &Rect, const
 	CUIRect Inner = Plan.m_Rect;
 	if(Plan.m_BorderWidth > 0.0f)
 	{
-		DrawRoundedSurfaceBorder(pGraphics, Plan, Border, Params.m_Corners);
+		DrawRoundedSurfaceBorder(pGraphics, Plan, Border, ResolveRoundedSurfaceCorners(Params.m_Radius, Params.m_Corners));
 		Inner.Margin(Plan.m_BorderWidth, &Inner);
 	}
 	if(Inner.w <= 0.0f || Inner.h <= 0.0f)

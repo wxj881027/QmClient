@@ -1973,9 +1973,6 @@ Button - Enabled
 Button browser
 == Düğme tarayıcısı
 
-Button hover feedback
-== Button hover feedback
-
 Button position is outside of the screen.
 == Düğme konumu ekranın dışında.
 
@@ -8716,6 +8713,9 @@ Menu accent panel opacity
 
 Menu background
 == Menü arka planı
+
+Menu button hover
+== Menu button hover
 
 Menu camera rotation radius
 == Menü kamera dönüş yarıçapı

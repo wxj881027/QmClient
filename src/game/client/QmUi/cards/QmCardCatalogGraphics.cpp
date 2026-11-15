@@ -989,19 +989,6 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 					Client()->OnWindowResize();
 				}
 			});
-			// 悬浮反馈形态：缩放与边框高亮二选一，整站按钮共用同一个配置。
-			RowAction("graphics-hover-style", GraphicsMetrics.m_LineHeight, [&](CUIRect HoverRow) {
-				CUIRect Label, Segments;
-				SplitSettingsControlRow(HoverRow, GraphicsMetrics, &Label, &Segments, ESettingsControlWidth::LONG_CHOICE);
-				DoSettingsLabel(SETTINGS_GRAPHICS, -1, "graphics-hover-style-label", &Label, Localize("Button hover feedback"), BodySize, TEXTALIGN_ML);
-				static CButtonContainer s_aHoverStyleButtons[2];
-				const char *apHoverLabels[] = {Localize("Shrink"), Localize("Outline")};
-				const int CurrentHover = std::clamp(g_Config.m_QmUiHoverStyle, 0, 1);
-				const int NewHover = DoSegmentedChoice(s_aHoverStyleButtons, apHoverLabels, 2, CurrentHover, Segments);
-				if(NewHover != CurrentHover)
-					g_Config.m_QmUiHoverStyle = NewHover;
-			});
-
 			float SectionReveal = 0.0f;
 			if(!qm_card_catalog::QmCardRenderHook::PersonalizationReveal(this, ContentRect, "deck:graphics-icons", GraphicsMetrics, &SectionReveal))
 				return;
@@ -1095,6 +1082,20 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 				char aMotionTip[256];
 				str_format(aMotionTip, sizeof(aMotionTip), "%s\n%s", Localize("This is the master switch for all interface animations"), pMotionDescription);
 				GameClient()->m_Tooltips.DoToolTip(&s_aMotionButtons[0], &MotionRow, aMotionTip);
+			});
+
+			// 菜单按钮悬浮反馈：主菜单那排按钮的悬浮表现二选一。
+			// 缩放会让整块按钮连同贴图一起胀缩，描边只点亮边框，几何不动。
+			RowAction("graphics-menu-hover", GraphicsMetrics.m_LineHeight, [&](CUIRect HoverRow) {
+				CUIRect Label, Segments;
+				SplitSettingsControlRow(HoverRow, GraphicsMetrics, &Label, &Segments, ESettingsControlWidth::LONG_CHOICE);
+				DoSettingsLabel(SETTINGS_GRAPHICS, -1, "graphics-menu-hover-label", &Label, Localize("Menu button hover"), BodySize, TEXTALIGN_ML);
+				static CButtonContainer s_aHoverStyleButtons[2];
+				const char *apHoverLabels[] = {Localize("Shrink"), Localize("Outline")};
+				const int CurrentHover = std::clamp(g_Config.m_QmUiHoverStyle, 0, 1);
+				const int NewHover = DoSegmentedChoice(s_aHoverStyleButtons, apHoverLabels, 2, CurrentHover, Segments);
+				if(NewHover != CurrentHover)
+					g_Config.m_QmUiHoverStyle = NewHover;
 			});
 
 			// 输入光标样式：设置页输入框、控制台、聊天输入共用同一个光标组件（qm_text_caret），

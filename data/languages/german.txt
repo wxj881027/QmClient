@@ -1973,9 +1973,6 @@ Button - Enabled
 Button browser
 == Button-Browser
 
-Button hover feedback
-== Button hover feedback
-
 Button position is outside of the screen.
 == Die Button-Position befindet sich außerhalb des Bildschirms.
 
@@ -8716,6 +8713,9 @@ Menu accent panel opacity
 
 Menu background
 == Menühintergrund
+
+Menu button hover
+== Menu button hover
 
 Menu camera rotation radius
 == Radius der Menü-Kamerarotation

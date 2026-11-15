@@ -1973,9 +1973,6 @@ Button - Enabled
 Button browser
 == 버튼 브라우저
 
-Button hover feedback
-== Button hover feedback
-
 Button position is outside of the screen.
 == 버튼 위치가 화면 밖에 있습니다.
 
@@ -8716,6 +8713,9 @@ Menu accent panel opacity
 
 Menu background
 == 메뉴 배경
+
+Menu button hover
+== Menu button hover
 
 Menu camera rotation radius
 == 메뉴 카메라 회전 반경

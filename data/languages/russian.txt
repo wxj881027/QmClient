@@ -1973,9 +1973,6 @@ Button - Enabled
 Button browser
 == Браузер кнопок
 
-Button hover feedback
-== Button hover feedback
-
 Button position is outside of the screen.
 == Позиция кнопки находится за пределами экрана.
 
@@ -8716,6 +8713,9 @@ Menu accent panel opacity
 
 Menu background
 == Фон меню
+
+Menu button hover
+== Menu button hover
 
 Menu camera rotation radius
 == Радиус вращения камеры меню

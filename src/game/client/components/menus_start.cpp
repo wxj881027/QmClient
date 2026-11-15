@@ -452,6 +452,9 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 					Target = (i == HoveredIndex) ? HoverScale : OtherScale;
 				}
 
+				// 描边模式不缩放：按钮几何保持不动，反馈只走边框。
+				if(g_Config.m_QmUiHoverStyle != 0)
+					Target = 1.0f;
 				s_aMenuButtonScale[i] += (Target - s_aMenuButtonScale[i]) * Blend;
 				s_aMenuButtonTargetScale[i] = s_aMenuButtonScale[i];
 			}
