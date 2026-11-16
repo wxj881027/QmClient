@@ -510,7 +510,11 @@ bool CMenusSettingsControls::BuildSettingsCard(const qm_card_catalog::SQmCardBui
 			m_aBindGroupExpanded[Index] = !m_aBindGroupExpanded[Index];
 			return true;
 		};
-		Out.m_HeaderAction = [CardCtx = Ctx.m_UiContext](const SSettingsCardFrame &Frame, bool Collapsed) { RenderSettingsCardCollapseButton(CardCtx, Frame.m_HandleRect, Collapsed); };
+		Out.m_HeaderAction = [this, CardCtx = Ctx.m_UiContext, Group](const SSettingsCardFrame &Frame, bool Collapsed) {
+			// 折叠动画的节点键必须按分组区分：这一页有 MOVEMENT/WEAPON/CUSTOM 等多张卡，
+			// 共用空 id 会让所有箭头共享同一条进度，展开一张时其余一起转。
+			RenderSettingsCardCollapseButton(CardCtx, Frame.m_HandleRect, Collapsed, 1.0f, &m_aBindGroupExpandButtons[static_cast<int>(Group)]);
+		};
 		UseDeclared();
 		return true;
 	}

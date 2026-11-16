@@ -11,7 +11,11 @@ namespace
 {
 	CConfig MakeConfig()
 	{
-		CConfig Config;
+		// CConfig 是纯聚合体，没有默认成员初值，直接声明就是一堆栈上残值。
+		// 之前这里没初始化 m_QmVideoRenderDemoOnly，而 Capture() 会读它：
+		// 读未初始化内存在 -O2 下属于未定义行为，macOS arm64 上直接变成 SIGTRAP，
+		// Windows 只是碰巧读到 0。统一清零，让每个字段都有确定值。
+		CConfig Config{};
 		// 实时游玩用的显示配置：故意与回放配置取不同值，才能分辨出到底读了哪一组。
 		Config.m_ClShowDirection = 3;
 		Config.m_ClVideoShowDirection = 0;
@@ -29,6 +33,8 @@ namespace
 		Config.m_QmDemoStrongWeakScope = 4;
 		Config.m_QmDemoShowHud = 1;
 		Config.m_QmDemoShowChat = 0;
+		// 这个用例断言的是「不是仅渲染 demo」这一路，显式写出来不依赖清零后的默认值。
+		Config.m_QmVideoRenderDemoOnly = 0;
 		return Config;
 	}
 }

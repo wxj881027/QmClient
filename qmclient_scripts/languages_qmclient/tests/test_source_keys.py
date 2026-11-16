@@ -9,6 +9,13 @@ from qmclient_scripts.languages_qmclient import source_keys
 
 
 class SourceKeysTest(unittest.TestCase):
+    def test_scans_inc_declaration_files(self):
+        with TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "QmCardCatalogSkin.inc"
+            path.write_text('{Localizable("Inc only label"), nullptr, "别名"},\n', encoding="utf-8")
+            records = source_keys.collect_file_source_key_records(path)
+        self.assertIn("Inc only label", {record.key for record in records})
+
     def test_extracts_localize_first_argument_literals(self):
         content = 'Localize("Open"); Localize("Close", "Menu");'
         self.assertEqual(

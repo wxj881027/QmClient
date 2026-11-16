@@ -89,3 +89,24 @@ TEST(PlayerPlaytimeParse, DdnetActivityIsNotUsedForScoreboardPlaytime)
 	EXPECT_EQ(Result.m_Points, 123);
 	EXPECT_EQ(Result.m_PlaytimeHours, -1);
 }
+
+TEST(PlayerPlaytimeHttp, MissingDdStatsRecordIsAZeroHourResult)
+{
+	// 查无此人：时长查询按 0 小时成功记录，计分板显示 0 而不是问号。
+	EXPECT_TRUE(QmDdStatsPlaytimeMissingRecord(true, 404));
+	// 查分列不受这条规则影响，其他状态码仍是查询失败。
+	EXPECT_FALSE(QmDdStatsPlaytimeMissingRecord(false, 404));
+	EXPECT_FALSE(QmDdStatsPlaytimeMissingRecord(true, 0));
+	EXPECT_FALSE(QmDdStatsPlaytimeMissingRecord(true, 500));
+	EXPECT_FALSE(QmDdStatsPlaytimeMissingRecord(true, 200));
+}
+
+TEST(PlayerPlaytimeCache, MissingDdStatsRecordBecomesReadyZeroHours)
+{
+	CQmPlayerPointsCache Cache;
+	const CQmPlayerPointsCache::SRequestToken Token = Cache.BeginRequest("player");
+	ASSERT_TRUE(Cache.CompleteSuccess("player", Token, 0, 1, 0));
+	const SPlayerPlaytimeResult Result = Cache.GetPlaytime("player");
+	EXPECT_EQ(Result.m_Status, EPointsStatus::READY);
+	EXPECT_EQ(Result.m_Hours, 0);
+}

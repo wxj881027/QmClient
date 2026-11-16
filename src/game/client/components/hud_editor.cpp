@@ -12,6 +12,7 @@
 
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/components/controls.h>
+#include <game/client/components/qmclient/mobile_touch_rules.h>
 #include <game/client/gameclient.h>
 #include <game/localization.h>
 
@@ -39,6 +40,12 @@ void CHudEditor::ResetRuntimeState()
 {
 	m_DraggingElement = -1;
 	m_DragGrabOffset = vec2(0.0f, 0.0f);
+	// 手机缩放状态一并复位：否则中途退出编辑器会带着上次的起始距离，
+	// 下次进来第一帧就把元素缩放改成一个随机值并落盘。
+	m_MobileSelectedElement = -1;
+	m_MobileScaling = false;
+	m_MobileScaleStartPercent = 100.0f;
+	m_MobileScaleStartDistance = 1.0f;
 	m_vVisibleElements.clear();
 	m_aVisibleBounds = {};
 }
@@ -137,8 +144,15 @@ void CHudEditor::SetActive(bool Active)
 void CHudEditor::UpdateVisibleRect(EHudEditorElement Element, const CUIRect &RenderedRect)
 {
 	const int VisibleIndex = FindVisibleElementIndex(Element);
-	if(VisibleIndex < 0 || RenderedRect.w <= 0.0f || RenderedRect.h <= 0.0f)
+	if(VisibleIndex < 0)
 		return;
+	if(RenderedRect.w <= 0.0f || RenderedRect.h <= 0.0f)
+	{
+		// 没有内容时撤销本帧的可交互区域，避免留下预估空框。
+		m_vVisibleElements.erase(m_vVisibleElements.begin() + VisibleIndex);
+		m_aVisibleBounds[static_cast<int>(Element)] = {};
+		return;
+	}
 
 	float ScreenX0 = 0.0f;
 	float ScreenY0 = 0.0f;
@@ -186,6 +200,9 @@ void CHudEditor::ParseLayoutConfig(const char *pConfig)
 {
 	for(SElementState &State : m_aElementStates)
 		State = SElementState{};
+
+	// 未保存灵动岛布局时采用默认位置和缩放，后续解析仍允许用户覆盖。
+	m_aElementStates[static_cast<int>(EHudEditorElement::MediaIsland)] = {true, 4879, 100, 115};
 
 	if(pConfig == nullptr || pConfig[0] == '\0')
 		return;
@@ -279,8 +296,7 @@ void CHudEditor::SaveLayoutConfig()
 
 void CHudEditor::ResetLayoutConfig()
 {
-	for(SElementState &State : m_aElementStates)
-		State = SElementState{};
+	ParseLayoutConfig("");
 
 	g_Config.m_QmHudEditorLayout[0] = '\0';
 	m_aLayoutCache[0] = '\0';
@@ -346,7 +362,7 @@ CHudEditor::STransformScope CHudEditor::BeginTransform(EHudEditorElement Element
 	return BeginTransform(Element, TransformRect, VisibleRect, QmHudEditor::SEdgeMargin{}, Scalable, ApplyMapScreen);
 }
 
-bool CHudEditor::ComputeTransformPlacement(EHudEditorElement Element, const CUIRect &TransformRect, const CUIRect &VisibleRect, bool Scalable, STransformScope &Scope, SVisibleElement *pVisible, const QmHudEditor::SEdgeMargin &EdgeMargin, QmHudEditor::EHorizontalPlacement HorizontalPlacement)
+bool CHudEditor::ComputeTransformPlacement(EHudEditorElement Element, const CUIRect &TransformRect, const CUIRect &VisibleRect, bool Scalable, STransformScope &Scope, SVisibleElement *pVisible, const QmHudEditor::SEdgeMargin &EdgeMargin, QmHudEditor::EHorizontalPlacement HorizontalPlacement, float MinimumAnchorY)
 {
 	const CUIRect EffectiveVisibleRect = m_aVisibleBounds[static_cast<int>(Element)].Resolve(TransformRect, VisibleRect);
 	if(TransformRect.w <= 0.0f || TransformRect.h <= 0.0f || EffectiveVisibleRect.w <= 0.0f || EffectiveVisibleRect.h <= 0.0f)
@@ -392,9 +408,13 @@ bool CHudEditor::ComputeTransformPlacement(EHudEditorElement Element, const CUIR
 	const auto Horizontal = QmHudEditor::ResolveHorizontalPlacement(HorizontalPlacement, SavedState.m_HasCustom,
 		SavedState.m_PosXPermille / (float)POSITION_SCALE, TransformRect.x, VisibleWidth, VisibleOffsetX, ScreenX0, ScreenW, SafeLeft, SafeRight);
 	const float AnchorX = Horizontal.m_Position;
-	const float AnchorY = SavedState.m_HasCustom ?
-				      QmHudEditor::RestoreAxisAnchor(NormY, VisibleHeight, ScreenY0, ScreenH, VisibleOffsetY) :
-				      QmHudEditor::SnapAxisToScreenEdgesEx(ScreenY0 + NormY * ScreenH, VisibleHeight, EffScreenY0, EffScreenH, VisibleOffsetY);
+	float AnchorY = SavedState.m_HasCustom ?
+				QmHudEditor::RestoreAxisAnchor(NormY, VisibleHeight, ScreenY0, ScreenH, VisibleOffsetY) :
+				QmHudEditor::SnapAxisToScreenEdgesEx(ScreenY0 + NormY * ScreenH, VisibleHeight, EffScreenY0, EffScreenH, VisibleOffsetY);
+
+	// 跟随宿主的附岛（如分离歌词岛）以宿主当前底边为纵向下限：
+	// 旧布局保存的屏幕绝对位置在宿主变高后会落进宿主内部，必须抬回下限。
+	AnchorY = QmHudEditor::ClampAnchorYBelowMinimum(AnchorY, MinimumAnchorY, VisibleHeight, ScreenY0, ScreenH, VisibleOffsetY);
 
 	Scope.m_TargetRect = {AnchorX, AnchorY, TransformWidth, TransformHeight};
 	Scope.m_VisibleRect = {AnchorX + VisibleOffsetX, AnchorY + VisibleOffsetY, VisibleWidth, VisibleHeight};
@@ -466,16 +486,16 @@ CHudEditor::STransformScope CHudEditor::PreviewTransform(EHudEditorElement Eleme
 	return Scope;
 }
 
-CHudEditor::STransformScope CHudEditor::BeginTransform(EHudEditorElement Element, const CUIRect &TransformRect, const CUIRect &VisibleRect, QmHudEditor::EHorizontalPlacement HorizontalPlacement, bool Scalable, bool ApplyMapScreen)
+CHudEditor::STransformScope CHudEditor::BeginTransform(EHudEditorElement Element, const CUIRect &TransformRect, const CUIRect &VisibleRect, QmHudEditor::EHorizontalPlacement HorizontalPlacement, bool Scalable, bool ApplyMapScreen, float MinimumAnchorY)
 {
-	return BeginTransform(Element, TransformRect, VisibleRect, QmHudEditor::SEdgeMargin{}, Scalable, ApplyMapScreen, HorizontalPlacement);
+	return BeginTransform(Element, TransformRect, VisibleRect, QmHudEditor::SEdgeMargin{}, Scalable, ApplyMapScreen, HorizontalPlacement, MinimumAnchorY);
 }
 
-CHudEditor::STransformScope CHudEditor::BeginTransform(EHudEditorElement Element, const CUIRect &TransformRect, const CUIRect &VisibleRect, const QmHudEditor::SEdgeMargin &EdgeMargin, bool Scalable, bool ApplyMapScreen, QmHudEditor::EHorizontalPlacement HorizontalPlacement)
+CHudEditor::STransformScope CHudEditor::BeginTransform(EHudEditorElement Element, const CUIRect &TransformRect, const CUIRect &VisibleRect, const QmHudEditor::SEdgeMargin &EdgeMargin, bool Scalable, bool ApplyMapScreen, QmHudEditor::EHorizontalPlacement HorizontalPlacement, float MinimumAnchorY)
 {
 	STransformScope Scope;
 	SVisibleElement Visible;
-	if(!ComputeTransformPlacement(Element, TransformRect, VisibleRect, Scalable, Scope, &Visible, EdgeMargin, HorizontalPlacement))
+	if(!ComputeTransformPlacement(Element, TransformRect, VisibleRect, Scalable, Scope, &Visible, EdgeMargin, HorizontalPlacement, MinimumAnchorY))
 		return Scope;
 	m_vVisibleElements.push_back(Visible);
 
@@ -771,7 +791,7 @@ void CHudEditor::OnRender()
 		Graphics()->GetScreen(&PrevX0, &PrevY0, &PrevX1, &PrevY1);
 		Graphics()->MapScreen(pUiScreen->x, pUiScreen->y, pUiScreen->x + pUiScreen->w, pUiScreen->y + pUiScreen->h);
 		RenderJumpHintTextEditor(*pUiScreen);
-		RenderTools()->RenderCursor(Ui()->MousePos(), 24.0f);
+		// 屏幕映射必须无条件归位：漏掉这一句会把坐标系留在 UI 空间，污染后续帧。
 		Graphics()->MapScreen(PrevX0, PrevY0, PrevX1, PrevY1);
 		Ui()->FinishCheck();
 		m_InteractionUiActive = false;
@@ -792,7 +812,37 @@ void CHudEditor::OnRender()
 	if(ResetDefaultClicked)
 		ResetLayoutConfig();
 
+	// 手机上必须有一个看得见的出口：HUD 编辑器原来只能靠 ESC（手机即返回手势）退出。
+	if(QmUiMobilePlatform())
+	{
+		CUIRect DoneButton{ResetButton.x - ResetButtonWidth - ResetButtonMargin, ResetButton.y, ResetButtonWidth, ResetButtonHeight};
+		static CButtonContainer s_DoneButton;
+		DoneButton.Draw(ColorRGBA(0.25f, 0.62f, 1.0f, 0.85f), IGraphics::CORNER_ALL, 4.0f);
+		Ui()->DoLabel(&DoneButton, Localize("Done"), ResetButtonHeight * 0.6f, TEXTALIGN_MC);
+		if(Ui()->DoButtonLogic(&s_DoneButton, 0, &DoneButton, BUTTONFLAG_LEFT) != 0)
+			SetActive(false);
+	}
+
 	const int HoveredIndex = ResetButtonHovered ? -1 : FindHoveredVisibleElement();
+
+	// 手机：没有滚轮，元素缩放改为「点一下选中 + 拖右下角把手」。
+	// 选中后右下角画一个把手指示；拖它按中心距比例改 m_ScalePercent。
+	int MobileSelectedIndex = -1;
+	CUIRect MobileScaleHandle{};
+	bool MobileHandleHovered = false;
+	if(QmUiMobilePlatform())
+	{
+		if(m_MobileSelectedElement >= 0)
+			MobileSelectedIndex = FindVisibleElementIndex(static_cast<EHudEditorElement>(m_MobileSelectedElement));
+		if(MobileSelectedIndex >= 0)
+		{
+			const SVisibleElement &Selected = m_vVisibleElements[MobileSelectedIndex];
+			const float HandleSize = 22.0f;
+			MobileScaleHandle = {Selected.m_Rect.x + Selected.m_Rect.w - HandleSize * 0.5f, Selected.m_Rect.y + Selected.m_Rect.h - HandleSize * 0.5f, HandleSize, HandleSize};
+			MobileHandleHovered = MobileScaleHandle.Inside(vec2(Ui()->MouseX(), Ui()->MouseY()));
+		}
+	}
+
 	bool ShowDragGuideX = false;
 	bool ShowDragGuideY = false;
 	float DragGuideX = 0.0f;
@@ -809,7 +859,48 @@ void CHudEditor::OnRender()
 		}
 	}
 
-	if(HoveredIndex >= 0 && m_DraggingElement < 0 && Ui()->MouseButtonClicked(0) && Ui()->ActiveItem() == nullptr)
+	// 手机：先处理缩放把手，再处理拖动/选中。拖把手时不允许同时拖动元素。
+	if(QmUiMobilePlatform())
+	{
+		if(m_MobileScaling && MobileSelectedIndex < 0)
+		{
+			// 选中的元素中途消失（切 Spectate/换层）：必须退出缩放，否则永远挡住拖动。
+			m_MobileScaling = false;
+		}
+		else if(m_MobileScaling && MobileSelectedIndex >= 0)
+		{
+			const SVisibleElement &Selected = m_vVisibleElements[MobileSelectedIndex];
+			SElementState &State = EnsureState(Selected.m_Element);
+			const vec2 Center = {Selected.m_Rect.x + Selected.m_Rect.w * 0.5f, Selected.m_Rect.y + Selected.m_Rect.h * 0.5f};
+			const float Distance = maximum(1.0f, length(vec2(Ui()->MouseX(), Ui()->MouseY()) - Center));
+			BeginCustomPosition(State, Selected, *pUiScreen);
+			State.m_ScalePercent = qm_mobile_touch::ScaledPercentByDistance(round_to_int(m_MobileScaleStartPercent), m_MobileScaleStartDistance, Distance, MIN_SCALE_PERCENT, MAX_SCALE_PERCENT);
+			ClampStateToScreen(State, Selected.m_BaseWidth, Selected.m_BaseHeight, Selected.m_StateOffsetX, Selected.m_StateOffsetY);
+			m_DirtyLayout = true;
+			if(!Ui()->MouseButton(0))
+			{
+				m_MobileScaling = false;
+				if(m_DirtyLayout)
+					SaveLayoutConfig();
+			}
+		}
+		else if(MobileHandleHovered && Ui()->MouseButtonClicked(0))
+		{
+			const SVisibleElement &Selected = m_vVisibleElements[MobileSelectedIndex];
+			SElementState &State = EnsureState(Selected.m_Element);
+			const vec2 Center = {Selected.m_Rect.x + Selected.m_Rect.w * 0.5f, Selected.m_Rect.y + Selected.m_Rect.h * 0.5f};
+			m_MobileScaling = true;
+			m_MobileScaleStartPercent = static_cast<float>(State.m_HasCustom ? State.m_ScalePercent : 100);
+			m_MobileScaleStartDistance = maximum(1.0f, length(vec2(Ui()->MouseX(), Ui()->MouseY()) - Center));
+			m_DraggingElement = -1;
+		}
+		else if(HoveredIndex >= 0 && Ui()->MouseButtonClicked(0) && Ui()->ActiveItem() == nullptr)
+		{
+			m_MobileSelectedElement = static_cast<int>(m_vVisibleElements[HoveredIndex].m_Element);
+		}
+	}
+
+	if(HoveredIndex >= 0 && m_DraggingElement < 0 && !m_MobileScaling && Ui()->MouseButtonClicked(0) && Ui()->ActiveItem() == nullptr)
 	{
 		const EHudEditorElement Element = m_vVisibleElements[HoveredIndex].m_Element;
 		if(!HandleElementDoubleClick(Element))
@@ -942,7 +1033,31 @@ void CHudEditor::OnRender()
 		Ui()->DoLabel(&ResetButton, Localize("Reset default"), 8.0f, TEXTALIGN_MC);
 	}
 
-	RenderTools()->RenderCursor(Ui()->MousePos(), 24.0f);
+	// 手机：选中的元素右下角画缩放把手，指示这里可以拖。
+	if(QmUiMobilePlatform() && MobileSelectedIndex >= 0)
+	{
+		const SVisibleElement &Selected = m_vVisibleElements[MobileSelectedIndex];
+		const CUIRect Outline = {Selected.m_Rect.x - 1.0f, Selected.m_Rect.y - 1.0f, Selected.m_Rect.w + 2.0f, Selected.m_Rect.h + 2.0f};
+		Outline.Draw(ColorRGBA(0.25f, 0.62f, 1.0f, 0.18f), IGraphics::CORNER_ALL, 4.0f);
+		MobileScaleHandle.Draw(ColorRGBA(0.25f, 0.62f, 1.0f, 0.9f), IGraphics::CORNER_ALL, 6.0f);
+		// 右下角三根斜线：各平台通用的「拖这里缩放」角标，不依赖某个图标语义。
+		{
+			Graphics()->LinesBegin();
+			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 0.95f);
+			const vec2 Corner = {MobileScaleHandle.x + MobileScaleHandle.w - 5.0f, MobileScaleHandle.y + MobileScaleHandle.h - 5.0f};
+			for(int i = 0; i < 3; i++)
+			{
+				const float Offset = 4.5f * i;
+				const IGraphics::CLineItem Grip(Corner.x - 6.0f - Offset, Corner.y, Corner.x, Corner.y - 6.0f - Offset);
+				Graphics()->LinesDraw(&Grip, 1);
+			}
+			Graphics()->LinesEnd();
+		}
+	}
+
+	// 手机上是手指直接点，不画鼠标箭头。
+	if(!QmUiMobilePlatform())
+		RenderTools()->RenderCursor(Ui()->MousePos(), 24.0f);
 
 	Graphics()->MapScreen(PrevX0, PrevY0, PrevX1, PrevY1);
 	Ui()->FinishCheck();

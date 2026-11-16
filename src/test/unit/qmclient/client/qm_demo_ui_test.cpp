@@ -232,3 +232,18 @@ TEST(QmDemoUi, PoseMapRenderRowsReserveHeightForBothOutputRows)
 		qm_demo_ui::PoseMapRenderRowsHeight(RenderRows));
 	EXPECT_EQ(MapCount, qm_demo_ui::POSE_MAP_MIN_ROWS);
 }
+
+TEST(QmDemoUi, TouchPanelMovesOnlyFromTitleAndLeavesHeaderButtonsFree)
+{
+	const CUIRect Panel{10.0f, 20.0f, 600.0f, 240.0f};
+	const CUIRect Title{18.0f, 28.0f, 584.0f, 20.0f};
+	const CUIRect Drag = qm_demo_ui::PanelDragRect(Panel, Title, true);
+	EXPECT_TRUE(Drag.Inside({30.0f, 35.0f}));
+	EXPECT_FALSE(Drag.Inside({200.0f, 35.0f}));
+	EXPECT_FALSE(Drag.Inside({30.0f, 65.0f}));
+	const CUIRect Desktop = qm_demo_ui::PanelDragRect(Panel, Title, false);
+	EXPECT_FLOAT_EQ(Desktop.x, Panel.x);
+	EXPECT_FLOAT_EQ(Desktop.y, Panel.y);
+	EXPECT_FLOAT_EQ(Desktop.w, Panel.w);
+	EXPECT_FLOAT_EQ(Desktop.h, Panel.h);
+}

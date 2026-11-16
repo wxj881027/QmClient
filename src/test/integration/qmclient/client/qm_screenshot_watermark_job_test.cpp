@@ -158,3 +158,66 @@ TEST_F(CQmScreenshotWatermarkJobTest, ReplacementDeniedByOpenHandlePreservesPrev
 		EXPECT_NE(Entry.path().extension(), ".tmp");
 }
 #endif
+
+TEST_F(CQmScreenshotWatermarkJobTest, EditorPreviewAndExportUseSameLogoPixels)
+{
+	for(size_t Y = 0; Y < m_Image.m_Height; ++Y)
+		for(size_t X = 0; X < m_Image.m_Width; ++X)
+			m_Image.SetPixelColor(X, Y, ColorRGBA(1, 0, 0, 0.5f));
+	ASSERT_TRUE(CImageLoader::SavePng(m_pStorage->OpenFile("logo.png", IOFLAG_WRITE, IStorage::TYPE_SAVE), "logo.png", m_Image));
+	auto Request = Options("");
+	Request.m_Editor = true;
+	char aLogo[IO_MAX_PATH_LENGTH];
+	m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, "logo.png", aLogo, sizeof(aLogo));
+	Request.m_LogoPath = aLogo;
+	Request.m_LogoLayer.m_Angle = 30;
+	Request.m_LogoLayer.m_Tile = true;
+	auto pPreview = m_Manager.CreateWatermarkJob(m_pStorage.get(), "source.png", IStorage::TYPE_SAVE, "preview.png", Request, 1200);
+	ASSERT_TRUE(pPreview);
+	ASSERT_TRUE(Run(pPreview));
+	ASSERT_NE(pPreview->Preview(), nullptr);
+	EXPECT_FALSE(m_pStorage->FileExists("preview.png", IStorage::TYPE_SAVE));
+	auto pExport = m_Manager.CreateWatermarkJob(m_pStorage.get(), "source.png", IStorage::TYPE_SAVE, "export.png", Request);
+	ASSERT_TRUE(pExport);
+	ASSERT_TRUE(Run(pExport));
+	ASSERT_TRUE(pExport->Saved());
+	CImageInfo Export;
+	int Incompatible = 0;
+	ASSERT_TRUE(CImageLoader::LoadPng(m_pStorage->OpenFile("export.png", IOFLAG_READ, IStorage::TYPE_SAVE), "export.png", Export, Incompatible));
+	EXPECT_TRUE(pPreview->Preview()->DataEquals(Export));
+	Export.Free();
+}
+
+TEST_F(CQmScreenshotWatermarkJobTest, EditorPreviewUsesBoundedDimensionsAndDoesNotWriteFile)
+{
+	auto Request = Options("");
+	Request.m_Editor = true;
+	auto pPreview = m_Manager.CreateWatermarkJob(m_pStorage.get(), "source.png", IStorage::TYPE_SAVE, "preview.png", Request, 40);
+	ASSERT_TRUE(pPreview);
+	ASSERT_TRUE(Run(pPreview));
+	ASSERT_NE(pPreview->Preview(), nullptr);
+	EXPECT_EQ(pPreview->Preview()->m_Width, 40u);
+	EXPECT_EQ(pPreview->Preview()->m_Height, 20u);
+	EXPECT_FALSE(m_pStorage->FileExists("preview.png", IStorage::TYPE_SAVE));
+}
+
+TEST_F(CQmScreenshotWatermarkJobTest, CanceledEditorPreviewDoesNotPublishPixelsOrWriteFile)
+{
+	auto Request = Options("");
+	Request.m_Editor = true;
+	auto pPreview = m_Manager.CreateWatermarkJob(m_pStorage.get(), "source.png", IStorage::TYPE_SAVE, "preview.png", Request, 40);
+	ASSERT_TRUE(pPreview);
+	pPreview->Cancel();
+	ASSERT_TRUE(Run(pPreview));
+	EXPECT_EQ(pPreview->Preview(), nullptr);
+	EXPECT_FALSE(m_pStorage->FileExists("preview.png", IStorage::TYPE_SAVE));
+}
+
+TEST_F(CQmScreenshotWatermarkJobTest, CancelAfterFileCommitKeepsSuccessfulResult)
+{
+	CQmScreenshotExportControl Control;
+	ASSERT_TRUE(CQmScreenshotManager::SavePngAtomically(m_Target, m_Image, "", &Control));
+	Control.Cancel();
+	EXPECT_FALSE(Control.Canceled());
+	EXPECT_TRUE(m_pStorage->FileExists("export.png", IStorage::TYPE_SAVE));
+}

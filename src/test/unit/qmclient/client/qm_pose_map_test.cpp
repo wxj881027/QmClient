@@ -219,10 +219,18 @@ TEST(QmPoseMap, TypedNameFallsBackToMapSuffix)
 
 TEST(QmPoseMap, AbsolutePathIsUsedAsIs)
 {
+	// 绝对路径的写法随平台不同：Windows 用盘符，POSIX 用根目录。
+	// 引擎的 fs_is_relative_path 按本平台语义判断，用例要用各自平台的绝对路径，
+	// 否则在 Linux / macOS 上 "C:/..." 只是一个带冒号的相对文件名。
+#ifdef CONF_FAMILY_WINDOWS
+	const char *pAbsolutePath = "C:/maps/Custom Map.map";
+#else
+	const char *pAbsolutePath = "/maps/Custom Map.map";
+#endif
 	std::string MapPath;
-	EXPECT_EQ(qm_pose_map::Resolve("C:/maps/Custom Map.map", KnownMaps(), MapPath), qm_pose_map::EStatus::OK);
+	EXPECT_EQ(qm_pose_map::Resolve(pAbsolutePath, KnownMaps(), MapPath), qm_pose_map::EStatus::OK);
 	// 绝对路径不进索引，原样交给引擎：能否加载由 LoadMap 报错。
-	EXPECT_EQ(MapPath, "C:/maps/Custom Map.map");
+	EXPECT_EQ(MapPath, pAbsolutePath);
 }
 
 TEST(QmPoseMap, RejectsParentDirectorySegments)

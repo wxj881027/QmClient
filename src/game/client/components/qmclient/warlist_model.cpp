@@ -114,6 +114,18 @@ void CQmWarListModel::AddWarType(const char *pType, ColorRGBA Color)
 	}
 }
 
+void CQmWarListModel::MoveWarType(int From, int To)
+{
+	const int Count = (int)m_WarTypes.size();
+	// 0 号位是 none，条目兜底依赖它，任何排序都从 1 开始。
+	if(From <= 0 || To <= 0 || From >= Count || To >= Count || From == To)
+		return;
+	CWarType *pType = m_WarTypes[From];
+	m_WarTypes.erase(m_WarTypes.begin() + From);
+	m_WarTypes.insert(m_WarTypes.begin() + To, pType);
+	MarkWarTypesDirty();
+}
+
 void CQmWarListModel::RemoveWarEntry(const char *pName, const char *pClan, const char *pType)
 {
 	CWarType *pWarType = FindWarType(pType);

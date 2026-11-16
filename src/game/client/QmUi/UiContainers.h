@@ -80,12 +80,15 @@ namespace ui_widget
 			DrawRoundedSurface(Ctx, Shadow, ui_token::color::SURFACE_SHADOW, ColorRGBA(), Props.m_Radius);
 		}
 
-		// 2) 保持外扩细描边的几何尺寸，同时使用统一表面绘制路径。
+		// 2) 外扩细描边：形状按距离场向外偏移 1px，和下面的填充共用同一条曲线。
+		//    原来「矩形外扩 + 半径加一」只对圆成立，换成连续曲率后两层会交叉出血色缝隙，
+		//    所以外层不再自己算半径，改由同一份形状描述外扩。
 		if(Props.m_DrawBorder)
 		{
-			CUIRect BorderBg = Rect;
-			BorderBg.Margin(-1.0f, &BorderBg);
-			DrawRoundedSurface(Ctx, BorderBg, Props.m_BorderColor, ColorRGBA(), Props.m_Radius + 1.0f);
+			SRoundedSurfaceParams BorderParams;
+			BorderParams.m_Radius = Props.m_Radius;
+			BorderParams.m_ShapeExpand = 1.0f;
+			DrawRoundedSurface(Ctx, Rect, Props.m_BorderColor, ColorRGBA(), BorderParams);
 		}
 
 		// 3) Card fill (glass)

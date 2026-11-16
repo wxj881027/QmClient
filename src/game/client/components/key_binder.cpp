@@ -59,7 +59,10 @@ CKeyBinder::CKeyReaderResult CKeyBinder::DoKeyReader(CButtonContainer *pReaderBu
 		m_TakeKey = true;
 		m_Key = std::nullopt;
 	}
-	else if(!ReadOnly && (ButtonResult == 2 || ClearButtonResult != 0))
+	// 右键不再清空键位：以前右键点键名会直接把整个键的全部命令清掉，界面上没有任何提示，
+	// 手滑一下就是一整键内容没了。清空只能点右侧的垃圾桶按钮（调用方会写撤销点）。
+	// 右键在这里什么都不做，也不吞掉，调用方拿到的仍是原来的键位。
+	else if(!ReadOnly && ClearButtonResult != 0)
 	{
 		Result.m_Bind = CBindSlot(KEY_UNKNOWN, KeyModifier::NONE);
 	}

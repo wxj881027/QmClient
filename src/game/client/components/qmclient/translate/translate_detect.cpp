@@ -94,6 +94,18 @@ namespace qm_translate
 			}
 			return BestLength;
 		}
+
+		// 简体中文的 zh 与 zh-CN 指向同一门语言；zh-TW 仍需转换，不算同语言。
+		bool SameLanguageAsTarget(const char *pLanguage, const char *pTarget)
+		{
+			if(!pLanguage || !pTarget || pLanguage[0] == '\0' || pTarget[0] == '\0')
+				return false;
+			if(str_comp_nocase(pLanguage, pTarget) == 0)
+				return true;
+			const bool LanguageSimplified = str_comp_nocase(pLanguage, "zh") == 0 || str_comp_nocase(pLanguage, "zh-cn") == 0;
+			const bool TargetSimplified = str_comp_nocase(pTarget, "zh") == 0 || str_comp_nocase(pTarget, "zh-cn") == 0;
+			return LanguageSimplified && TargetSimplified;
+		}
 	}
 
 	SLanguageStats AnalyzeLanguage(const char *pText, const SPlayerReference *pPlayers, int NumPlayers)
@@ -225,6 +237,48 @@ namespace qm_translate
 		}
 
 		return false;
+	}
+
+	const char *SelectExplicitSourceLanguage(const SLanguageStats &Stats, const char *pTarget)
+	{
+		if(!pTarget || pTarget[0] == '\0' || Stats.m_ScriptTotal <= 0)
+			return nullptr;
+
+		// 按字形数量取多数，同数沿用既有优先级（假名 > 谚文 > 西里尔 > 汉字 > 拉丁）。
+		struct SCandidate
+		{
+			int m_Count;
+			const char *m_pCode;
+		};
+		const SCandidate aCandidates[] = {
+			{Stats.m_Kana, "ja"},
+			{Stats.m_Hangul, "ko"},
+			{Stats.m_Cyrillic, "ru"},
+			{Stats.m_Han, "zh"},
+			{Stats.m_Latin, "en"},
+		};
+
+		const SCandidate *pBest = nullptr;
+		bool HasTargetScript = false;
+		for(const SCandidate &Candidate : aCandidates)
+		{
+			if(Candidate.m_Count <= 0)
+				continue;
+			if(SameLanguageAsTarget(Candidate.m_pCode, pTarget))
+			{
+				HasTargetScript = true;
+				continue;
+			}
+			if(pBest == nullptr || Candidate.m_Count > pBest->m_Count)
+				pBest = &Candidate;
+		}
+		// 与目标同语言的字形不能作为来源：两端相同的语言对只会换回服务提示而不是译文。
+		if(pBest != nullptr)
+			return pBest->m_pCode;
+		if(HasTargetScript)
+			return nullptr;
+		// 只有无法归类的文字（阿拉伯文、天城文等）时沿用英文来源，由服务侧处理。
+		return "en";
 	}
 
 	bool ShouldTranslateIncoming(const SLanguageStats &Stats, const char *pTarget, int MinChars, int Ratio, bool Always)

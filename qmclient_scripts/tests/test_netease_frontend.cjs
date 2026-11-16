@@ -206,3 +206,98 @@ test('重复注入复用定时器和进度订阅，保留真实进度与暂停�
     assert.equal(progress.positionMs, 1250);
     assert.equal(progress.playing, false);
 });
+
+// 字段来自网易云 app.chunk.8b36fda.js 的歌词模型，原始 YRC 不依赖主歌词显示格式。
+function wordLyricFixture() {
+    const lyric = lyricFixture();
+    lyric.yrcInfo = {
+        yrc: '[1250,1750](1250,1000,0)original (2250,750,0)one\n[3000,2000](3000,1000,0)original (4000,1000,0)two',
+        yrcTrans: '[0:01.250]逐字第一句译文\n[0:03.000]逐字第二句译文',
+        yrcRoma: '[0:01.250]romanization',
+    };
+    return lyric;
+}
+
+test('行级显示模式仍保留网易云原始逐字时间并优先使用逐字译文', () => {
+    const lyric = wordLyricFixture();
+    lyric.translationEnable = false;
+    const bridge = createBridge(lyric);
+    bridge.complete();
+    bridge.tick(3);
+    const raw = bridge.lyrics()[0].rawLyrics;
+    assert.equal(raw.lrc, '[0:01.250]original one\n[0:03.000]original two');
+    assert.equal(raw.yrc, lyric.yrcInfo.yrc);
+    assert.equal(raw.tlyric, lyric.yrcInfo.yrcTrans);
+});
+
+test('只有逐字原文时仍发布歌词', () => {
+    const lyric = wordLyricFixture();
+    lyric.currentUsedLyric = 'yrc';
+    lyric.lyricLines = [];
+    const bridge = createBridge(lyric);
+    bridge.complete();
+    bridge.tick(3);
+    assert.equal(bridge.lyrics().length, 1);
+    assert.equal(bridge.lyrics()[0].rawLyrics.lrc, '');
+    assert.equal(bridge.lyrics()[0].rawLyrics.yrc, lyric.yrcInfo.yrc);
+});
+
+test('逐字原文后到或时间修订会重新发布，稳定内容不重复发布', () => {
+    const lyric = lyricFixture();
+    const bridge = createBridge(lyric);
+    bridge.complete();
+    bridge.tick(3);
+    assert.equal(bridge.lyrics()[0].rawLyrics.yrc, undefined);
+    lyric.yrcInfo = wordLyricFixture().yrcInfo;
+    bridge.tick(3);
+    assert.equal(bridge.lyrics().length, 2);
+    assert.equal(bridge.lyrics()[1].rawLyrics.yrc, lyric.yrcInfo.yrc);
+    lyric.yrcInfo.yrc = lyric.yrcInfo.yrc.replace('(2250,750,0)', '(2300,700,0)');
+    bridge.tick(3);
+    assert.equal(bridge.lyrics().length, 3);
+    assert.equal(bridge.lyrics()[2].rawLyrics.yrc, lyric.yrcInfo.yrc);
+    bridge.tick(6);
+    assert.equal(bridge.lyrics().length, 3);
+});
+
+test('无有效逐字原文时保留行级原文和译文', () => {
+    for (const yrc of [undefined, null, {}, '', '  ']) {
+        const lyric = wordLyricFixture();
+        lyric.yrcInfo.yrc = yrc;
+        const bridge = createBridge(lyric);
+        bridge.complete();
+        bridge.tick(3);
+        const raw = bridge.lyrics()[0].rawLyrics;
+        assert.equal(raw.yrc, undefined);
+        assert.equal(raw.lrc, '[0:01.250]original one\n[0:03.000]original two');
+        assert.equal(raw.tlyric, '[0:01.250]第一句译文\n[0:03.000]第二句译文');
+    }
+});
+
+test('逐字译文缺失时保留行级译文，不读取罗马音', () => {
+    const lyric = wordLyricFixture();
+    lyric.yrcInfo.yrcTrans = '';
+    const bridge = createBridge(lyric);
+    bridge.complete();
+    bridge.tick(3);
+    assert.equal(bridge.lyrics()[0].rawLyrics.yrc, lyric.yrcInfo.yrc);
+    assert.equal(bridge.lyrics()[0].rawLyrics.tlyric, '[0:01.250]第一句译文\n[0:03.000]第二句译文');
+});
+
+test('切歌后的旧请求不能发布上一首逐字歌词', () => {
+    const lyric = wordLyricFixture();
+    const bridge = createBridge(lyric);
+    bridge.store.playing.onlineResourceId = '43';
+    bridge.tick();
+    bridge.complete(0);
+    bridge.tick(3);
+    assert.equal(bridge.lyrics().length, 0);
+    lyric.yrcInfo = { yrc: '[2000,2000](2000,2000,0)new song', yrcTrans: '' };
+    lyric.lyricLines = [{ time: 2, lyric: 'new song' }];
+    lyric.tlyricLines = [];
+    bridge.complete(1);
+    bridge.tick(3);
+    assert.equal(bridge.lyrics().length, 1);
+    assert.equal(bridge.lyrics()[0].songId, '43');
+    assert.equal(bridge.lyrics()[0].rawLyrics.yrc, lyric.yrcInfo.yrc);
+});

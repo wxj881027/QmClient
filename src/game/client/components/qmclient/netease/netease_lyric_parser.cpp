@@ -99,6 +99,27 @@ namespace NeteaseLyrics
 			return true;
 		}
 
+		size_t FindYrcWordMarker(std::string_view Body, size_t Offset)
+		{
+			for(size_t Open = Body.find('(', Offset); Open != std::string_view::npos; Open = Body.find('(', Open + 1))
+			{
+				size_t NumberEnd = Open + 1;
+				while(NumberEnd < Body.size() && std::isspace((unsigned char)Body[NumberEnd]) != 0)
+					++NumberEnd;
+				const size_t NumberStart = NumberEnd;
+				while(NumberEnd < Body.size() && Body[NumberEnd] >= '0' && Body[NumberEnd] <= '9')
+					++NumberEnd;
+				if(NumberEnd == NumberStart)
+					continue;
+				while(NumberEnd < Body.size() && std::isspace((unsigned char)Body[NumberEnd]) != 0)
+					++NumberEnd;
+				// 普通括号属于歌词正文；数字和逗号开头的标记仍交给解析器检查，保留损坏歌词的回退行为。
+				if(NumberEnd < Body.size() && Body[NumberEnd] == ',')
+					return Open;
+			}
+			return std::string_view::npos;
+		}
+
 		size_t Utf8Width(std::string_view Text, size_t Offset)
 		{
 			if(Offset >= Text.size())
@@ -304,10 +325,10 @@ namespace NeteaseLyrics
 					size_t BodyOffset = 0;
 					while(BodyOffset < Body.size())
 					{
-						if(Body[BodyOffset] != '(')
+						const size_t Marker = FindYrcWordMarker(Body, BodyOffset);
+						if(Marker != BodyOffset)
 						{
-							const size_t Next = Body.find('(', BodyOffset);
-							const size_t End = Next == std::string_view::npos ? Body.size() : Next;
+							const size_t End = Marker == std::string_view::npos ? Body.size() : Marker;
 							PlainText.append(Body.substr(BodyOffset, End - BodyOffset));
 							BodyOffset = End;
 							continue;
@@ -327,23 +348,21 @@ namespace NeteaseLyrics
 							break;
 						}
 						const size_t WordStart = PairClose + 1;
-						const size_t NextMarker = Body.find('(', WordStart);
+						const size_t NextMarker = FindYrcWordMarker(Body, WordStart);
 						const size_t WordEnd = NextMarker == std::string_view::npos ? Body.size() : NextMarker;
 						const std::string WordText(Body.substr(WordStart, WordEnd - WordStart));
 						PlainText += WordText;
-						if(WordDurationMs > 0 && WordOffsetMs >= 0)
+						// 网易云三字段 YRC 使用绝对词起点；两字段兼容格式使用
+						// 相对行起点的偏移，不根据数值大小猜测单位或语义。
+						if(!AbsoluteWordTime && StartMs > std::numeric_limits<int64_t>::max() - WordOffsetMs)
 						{
-							// 网易云三字段 YRC 使用绝对词起点；两字段兼容格式使用
-							// 相对行起点的偏移，不根据数值大小猜测单位或语义。
-							if(!AbsoluteWordTime && StartMs > std::numeric_limits<int64_t>::max() - WordOffsetMs)
-							{
-								BodyOffset = WordEnd;
-								continue;
-							}
-							const int64_t WordStartMs = AbsoluteWordTime ? WordOffsetMs : StartMs + WordOffsetMs;
-							if(WordStartMs <= std::numeric_limits<int64_t>::max() - WordDurationMs)
-								Parsed.m_vWords.push_back({WordStartMs, WordStartMs + WordDurationMs, WordText});
+							BodyOffset = WordEnd;
+							continue;
 						}
+						const int64_t WordStartMs = AbsoluteWordTime ? WordOffsetMs : StartMs + WordOffsetMs;
+						// 零时长标点和空格仍占正文字符，必须保留在逐字时间轴中。
+						if(WordStartMs <= std::numeric_limits<int64_t>::max() - WordDurationMs)
+							Parsed.m_vWords.push_back({WordStartMs, WordStartMs + WordDurationMs, WordText});
 						BodyOffset = WordEnd;
 					}
 					if(!MalformedLine)

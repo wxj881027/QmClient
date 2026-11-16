@@ -147,6 +147,14 @@ void main()
 	int ItemCount = clamp(int(Metadata.x + 0.5), 0, MAX_ITEMS);
 	float MainRadius = MainParams.x;
 	float MainDistance = RoundedRectSdf(Point, Data(1), MainRadius, Metadata.y, MainParams.y);
+	// 微小波动沿外壳传播，与主体共用距离场、模糊覆盖和阴影。
+	vec2 ShellRipple = Data(6).zw;
+	if(ShellRipple.x > 0.0)
+	{
+		float Along = RoundedRectPerimeterFraction(Point, Data(1), MainRadius) * TAU;
+		float Wave = 0.7 * sin(Along * 3.0 - ShellRipple.y) + 0.3 * sin(Along * 5.0 + ShellRipple.y);
+		MainDistance -= ShellRipple.x * Wave;
+	}
 	float SatelliteDistance = 1000000.0;
 	float ShapeDistance = MainDistance;
 	for(int i = 0; i < ItemCount; ++i)

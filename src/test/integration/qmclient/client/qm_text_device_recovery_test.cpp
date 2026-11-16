@@ -57,6 +57,8 @@ namespace
 		int m_ContainerDeletes = 0;
 		int m_QuadContainerDeletes = 0;
 		int m_QuadBegins = 0;
+		int m_FreeformQuads = 0;
+		std::vector<ColorRGBA> m_vVertexColors;
 		std::unordered_map<int, int> m_QuadCounts;
 		std::vector<uint8_t> m_vLastFill;
 
@@ -133,6 +135,13 @@ namespace
 		}
 		bool IsTextBufferingEnabled() override { return m_TextBuffering; }
 		void QuadsBegin() override { ++m_QuadBegins; }
+		void QuadsSetSubsetFree(float, float, float, float, float, float, float, float, int = -1) override {}
+		void QuadsDrawFreeform(const CFreeformItem *, int Num) override { m_FreeformQuads += Num; }
+		void SetColorVertex(const CColorVertex *pColors, size_t Num) override
+		{
+			for(size_t i = 0; i < Num; ++i)
+				m_vVertexColors.emplace_back(pColors[i].m_R, pColors[i].m_G, pColors[i].m_B, pColors[i].m_A);
+		}
 		int CreateQuadContainer(bool = true) override
 		{
 			const int Id = m_NextId++;
@@ -229,6 +238,11 @@ namespace
 		void Draw()
 		{
 			m_pText->RenderTextContainer(m_Text, ColorRGBA(1, 1, 1, 1), ColorRGBA(0, 0, 0, 0.3f));
+		}
+		void DrawFill(float X = 0, float Y = 0)
+		{
+			const auto Sample = [](vec2, const void *) { return ColorRGBA(0.2f, 0.6f, 1.0f, 0.5f); };
+			m_pText->RenderTextContainerFill(m_Text, Sample, nullptr, 4, 4, ColorRGBA(1, 1, 1, 0.5f), X, Y);
 		}
 		void DrawSweep()
 		{
@@ -653,4 +667,89 @@ TEST_F(QmTextDeviceRecovery, SweepWaitsForFailedIncrementalUpdatesToRecover)
 	DrawSweep();
 	EXPECT_GT(m_Graphics.m_Draws, 0u);
 	EXPECT_EQ(m_Graphics.m_vUpdates.size(), 4u);
+}
+
+TEST_F(QmTextDeviceRecovery, FillReusesLayoutAndBuffersAcrossFramesAndDrawOffsets)
+{
+	ASSERT_TRUE(Create("A"));
+	const auto Before = m_pText->GetBoundingBoxTextContainer(m_Text);
+	DrawFill();
+	const auto Buffers = m_Graphics.m_Buffers;
+	const auto Containers = m_Graphics.m_Containers;
+	const int Uploads = m_Graphics.m_TextureUpdates;
+	ASSERT_GT(m_Graphics.m_Draws, 0u);
+	DrawFill(30, 15);
+	const auto After = m_pText->GetBoundingBoxTextContainer(m_Text);
+	EXPECT_EQ(Before.m_W, After.m_W);
+	EXPECT_EQ(Before.m_H, After.m_H);
+	EXPECT_EQ(m_Graphics.m_Buffers, Buffers);
+	EXPECT_EQ(m_Graphics.m_Containers, Containers);
+	EXPECT_EQ(m_Graphics.m_TextureUpdates, Uploads);
+}
+
+TEST_F(QmTextDeviceRecovery, FillWaitsForIncrementalUploadsAndRecoversAfterDeviceReset)
+{
+	CaptureUpdates();
+	ASSERT_TRUE(Create("A"));
+	m_Graphics.m_RejectUpdates = true;
+	DrawFill();
+	EXPECT_EQ(m_Graphics.m_Draws, 0u);
+	m_Graphics.m_RejectUpdates = false;
+	m_pText->QmTextFrameEnd();
+	DrawFill();
+	ASSERT_GT(m_Graphics.m_Draws, 0u);
+	m_Graphics.ResetDevice();
+	ASSERT_TRUE(m_pText->OnGraphicsResourcesReset());
+	const auto Draws = m_Graphics.m_Draws;
+	DrawFill();
+	EXPECT_EQ(m_Graphics.m_Draws, Draws);
+	ASSERT_TRUE(Create("A"));
+	EXPECT_NO_THROW(DrawFill());
+	EXPECT_GT(m_Graphics.m_Draws, Draws);
+}
+
+TEST_F(QmTextDeviceRecovery, UnbufferedFillKeepsSampledRgbAndMultipliesOpacity)
+{
+	m_Graphics.m_TextBuffering = false;
+	m_pText->TextColor(ColorRGBA(1, 1, 1, 0.4f));
+	ASSERT_TRUE(Create("A"));
+	DrawFill();
+	ASSERT_GT(m_Graphics.m_FreeformQuads, 0);
+	ASSERT_FALSE(m_Graphics.m_vVertexColors.empty());
+	for(const auto &Color : m_Graphics.m_vVertexColors)
+	{
+		EXPECT_NEAR(Color.r, 0.2f, 1.0f / 255.0f);
+		EXPECT_NEAR(Color.g, 0.6f, 1.0f / 255.0f);
+		EXPECT_FLOAT_EQ(Color.b, 1.0f);
+		EXPECT_NEAR(Color.a, 0.1f, 1.0f / 255.0f);
+	}
+}
+
+TEST_F(QmTextDeviceRecovery, FillSamplingIsRelativeToTextAndUnaffectedByDrawingOffset)
+{
+	ASSERT_TRUE(Create("AB"));
+	std::vector<vec2> vPositions;
+	const auto Sample = [](vec2 Position, const void *pContext) {
+		static_cast<std::vector<vec2> *>(const_cast<void *>(pContext))->push_back(Position);
+		return ColorRGBA(1, 1, 1, 1);
+	};
+	m_pText->RenderTextContainerFill(m_Text, Sample, &vPositions, 4, 4, ColorRGBA(1, 1, 1, 1), 0, 0);
+	const auto vOriginal = vPositions;
+	ASSERT_FALSE(vOriginal.empty());
+	vPositions.clear();
+	m_pText->RenderTextContainerFill(m_Text, Sample, &vPositions, 4, 4, ColorRGBA(1, 1, 1, 1), 25, 10);
+	EXPECT_EQ(vPositions, vOriginal);
+	m_pText->DeleteTextContainer(m_Text);
+	CTextCursor Cursor;
+	Cursor.SetPosition(vec2(80, 40));
+	Cursor.m_FontSize = 16.0f;
+	ASSERT_TRUE(m_pText->CreateTextContainer(m_Text, &Cursor, "AB"));
+	vPositions.clear();
+	m_pText->RenderTextContainerFill(m_Text, Sample, &vPositions, 4, 4, ColorRGBA(1, 1, 1, 1), 0, 0);
+	ASSERT_EQ(vPositions.size(), vOriginal.size());
+	for(size_t i = 0; i < vPositions.size(); ++i)
+	{
+		EXPECT_NEAR(vPositions[i].x, vOriginal[i].x, 0.0001f);
+		EXPECT_NEAR(vPositions[i].y, vOriginal[i].y, 0.0001f);
+	}
 }

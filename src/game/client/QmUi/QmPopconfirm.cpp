@@ -83,8 +83,12 @@ void QmShowPopconfirm(CUi *pUi, SQmPopconfirmContext *pContext, const CUIRect &A
 
 	SPopupMenuProperties Props;
 	Props.m_CenterInViewport = false;
-	// 与模态确认的分界点：不画遮罩、不锁页面滚动、不打断焦点链。
-	Props.m_BlockUnderlyingPointerInput = false;
+	// 与模态确认的分界点：不画遮罩、不锁页面滚动，但必须屏蔽下层指针输入。
+	// 气泡里的「取消」是锚在触发按钮旁边的：如果不屏蔽，这一次按下/抬起会同时
+	// 落到下层那个按钮上（点删除图标打开气泡时，落点正好还是删除图标），
+	// 调用方就会把「取消」看成「又点了一次删除」。屏蔽只走指针通道，
+	// 视觉与滚动行为不变。
+	Props.m_BlockUnderlyingPointerInput = true;
 	Props.m_BlockUnderlyingScroll = false;
 	Props.m_Animate = true;
 	Props.m_AutoReposition = false;

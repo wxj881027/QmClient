@@ -18,6 +18,7 @@
 #include <engine/storage.h>
 #include <engine/textrender.h>
 
+#include <game/client/QmUi/QmChatBubble.h>
 #include <game/client/QmUi/SettingsContentLayout.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/QmUi/UiButtons.h>
@@ -74,6 +75,7 @@ void CMenus::RenderQmVisualTranslateUiContent(CUIRect &Content, float LineHeight
 void CMenus::RenderQmVisualEntityOverlayContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
 {
 	CSettingsContentLayoutFlow Flow(Content);
+	const bool CanCommit = Flow.Input() && !PrewarmOnly && !Ui()->RenderOnly();
 	auto RenderSlider = [&](const void *pInputId, int *pValue, const char *pTextId, const char *pTitle) {
 		CUIRect Row, LabelColumn, ControlColumn;
 		const bool HasRow = Flow.Control(pTextId, LineHeight, Row);
@@ -95,6 +97,33 @@ void CMenus::RenderQmVisualEntityOverlayContent(CUIRect &Content, float LineHeig
 	static int s_QmEntityOverlayTeleCheckpointAlphaInputId;
 	static int s_QmEntityOverlaySwitchAlphaInputId;
 	static int s_ClOverlayEntitiesInputId;
+	// 显示实体层和原来的叠层不透明度共用配置，合并后只保留一个控件。
+	RenderSlider(&s_ClOverlayEntitiesInputId, &g_Config.m_ClOverlayEntities, "m_ClOverlayEntities", Localize("Overlay entities"));
+	CUIRect Row;
+	if(Flow.Control("text-entities", LineHeight, Row))
+	{
+		if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_ClTextEntities, "Show text entities", Localize("Show text entities"), g_Config.m_ClTextEntities, &Row) && CanCommit)
+			g_Config.m_ClTextEntities ^= 1;
+	}
+	Flow.Space(LineSpacing);
+	if(g_Config.m_ClTextEntities)
+	{
+		if(Flow.Control("text-entities-size", LineHeight, Row))
+		{
+			CUIRect LabelColumn, ControlColumn;
+			SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
+			RenderQmVisualLabel("ddnet-text-entities-size", &LabelColumn, Localize("Size"), BodySize);
+			GameClient()->m_Tooltips.DoSettingsToolTipForConfig(&g_Config.m_ClTextEntitiesSize, &Row, &g_Config.m_ClTextEntitiesSize, &LabelColumn);
+			const int PreviousSize = g_Config.m_ClTextEntitiesSize;
+			RenderQmSettingsSliderWithValueInput(&g_Config.m_ClTextEntitiesSize, ControlColumn, &g_Config.m_ClTextEntitiesSize, 20, 100, "", PrewarmOnly, CUi::SCROLLBAR_OPTION_DELAYUPDATE);
+			if(CanCommit && PreviousSize != g_Config.m_ClTextEntitiesSize)
+				GameClient()->m_MapImages.SetTextureScale(g_Config.m_ClTextEntitiesSize);
+		}
+		Flow.Space(LineSpacing);
+	}
+	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:entity_overlay", CurrentSettingsContentMetrics(), PrewarmOnly || Ui()->RenderOnly()))
+		return;
+
 	RenderSlider(&s_QmEntityOverlayDeathAlphaInputId, &g_Config.m_QmEntityOverlayDeathAlpha, "m_QmEntityOverlayDeathAlpha", Localize("Death opacity"));
 	RenderSlider(&s_QmEntityOverlayFreezeAlphaInputId, &g_Config.m_QmEntityOverlayFreezeAlpha, "m_QmEntityOverlayFreezeAlpha", Localize("Freeze opacity"));
 	RenderSlider(&s_QmEntityOverlayUnfreezeAlphaInputId, &g_Config.m_QmEntityOverlayUnfreezeAlpha, "m_QmEntityOverlayUnfreezeAlpha", Localize("Unfreeze opacity"));
@@ -103,7 +132,6 @@ void CMenus::RenderQmVisualEntityOverlayContent(CUIRect &Content, float LineHeig
 	RenderSlider(&s_QmEntityOverlayTeleAlphaInputId, &g_Config.m_QmEntityOverlayTeleAlpha, "m_QmEntityOverlayTeleAlpha", Localize("Teleport opacity"));
 	RenderSlider(&s_QmEntityOverlayTeleCheckpointAlphaInputId, &g_Config.m_QmEntityOverlayTeleCheckpointAlpha, "m_QmEntityOverlayTeleCheckpointAlpha", Localize("CP opacity"));
 	RenderSlider(&s_QmEntityOverlaySwitchAlphaInputId, &g_Config.m_QmEntityOverlaySwitchAlpha, "m_QmEntityOverlaySwitchAlpha", Localize("Switch opacity"));
-	RenderSlider(&s_ClOverlayEntitiesInputId, &g_Config.m_ClOverlayEntities, "m_ClOverlayEntities", Localize("Tune layer opacity"));
 }
 
 void CMenus::RenderQmVisualCollisionHitboxContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
@@ -157,6 +185,9 @@ void CMenus::RenderQmVisualCollisionHitboxContent(CUIRect &Content, float LineHe
 			g_Config.m_QmHitboxPlayerScope = HitboxScopeNew;
 	}
 	Flow.Space(LineSpacing);
+
+	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:collision_hitbox", CurrentSettingsContentMetrics(), PrewarmOnly || Ui()->RenderOnly()))
+		return;
 
 	static CButtonContainer s_FreezeColorId;
 	CUIRect s_FreezeColorIdRow;
@@ -223,6 +254,11 @@ void CMenus::RenderQmVisualWeaponAnimationContent(CUIRect &Content, float LineHe
 		}
 	}
 
+	if(!g_Config.m_QmWeaponSwitchAnim && !g_Config.m_QmWeaponReloadAnim)
+		return;
+	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:weapon_animation", CurrentSettingsContentMetrics(), PrewarmOnly || Ui()->RenderOnly()))
+		return;
+
 	CUIRect Row, LabelColumn, ControlColumn;
 	auto RenderValue = [&](const char *pTextId, const char *pText, const void *pInputId, int *pValue, int Min, int Max, const char *pSuffix = "") {
 		const bool HasRow = Flow.Control(pTextId, LineHeight, Row);
@@ -240,9 +276,6 @@ void CMenus::RenderQmVisualWeaponAnimationContent(CUIRect &Content, float LineHe
 		static int s_QmWeaponReloadAnimProbabilityInputId;
 		RenderValue("qmclient-weapon-reload-animation-probability", "Weapon reload animation probability", &s_QmWeaponReloadAnimProbabilityInputId, &g_Config.m_QmWeaponReloadAnimProbability, 0, 100, "%");
 	}
-
-	if(!g_Config.m_QmWeaponSwitchAnim && !g_Config.m_QmWeaponReloadAnim)
-		return;
 
 	if(Flow.Control("qm-weapon-scope", LineHeight, Row))
 	{
@@ -294,6 +327,72 @@ void CMenus::RenderQmVisualChatBubbleContent(CUIRect &Content, float LineHeight,
 	if(!g_Config.m_QmChatBubble)
 		return;
 
+	CUIRect StyleRow, StyleLabel, StyleControl;
+	if(Flow.Control("qm-chat-bubble-style", LineHeight, StyleRow))
+	{
+		SplitSettingsControlRow(StyleRow, CurrentSettingsContentMetrics(), &StyleLabel, &StyleControl);
+		RenderQmVisualLabel("qm-chat-bubble-style-label", &StyleLabel, Localize("Style"), BodySize);
+		const char *apStyles[] = {Localize("Comic dialogue"), Localize("Candy gradient"), Localize("Cloud bubble"), Localize("Default")};
+		static CUi::SDropDownState s_StyleState;
+		static CScrollRegion s_StyleScroll;
+		s_StyleState.m_SelectionPopupContext.m_pScrollRegion = &s_StyleScroll;
+		const int Selected = DoSettingsDropDown(&StyleControl, std::clamp(g_Config.m_QmChatBubbleStyle, 0, qm_chat_bubble::STYLE_COUNT - 1), apStyles, std::size(apStyles), s_StyleState, {}, &g_Config.m_QmChatBubbleStyle, nullptr, &StyleRow);
+		if(Flow.Input() && !PrewarmOnly && !Ui()->RenderOnly())
+			g_Config.m_QmChatBubbleStyle = Selected;
+	}
+	Flow.Space(LineSpacing);
+
+	CUIRect PreviewRow;
+	if(Flow.Control("qm-chat-bubble-preview", LineHeight * 5.0f, PreviewRow) && Flow.Drawing() && !Ui()->DrawingSuppressed())
+	{
+		CUIRect PreviewLabel, Preview;
+		PreviewRow.HSplitTop(LineHeight, &PreviewLabel, &Preview);
+		Ui()->DoLabel(&PreviewLabel, Localize("Preview"), BodySize, TEXTALIGN_ML);
+		const auto Style = qm_chat_bubble::StyleFromConfig(g_Config.m_QmChatBubbleStyle);
+		const float FontSize = static_cast<float>(g_Config.m_QmChatBubbleFontSize);
+		const char *pText = Localize("Let's play together!");
+		const unsigned int PreviousFlags = TextRender()->GetRenderFlags();
+		const ColorRGBA PreviousColor = TextRender()->GetTextColor();
+		const ColorRGBA PreviousOutline = TextRender()->GetTextOutlineColor();
+		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT);
+		CTextCursor Measure;
+		Measure.m_FontSize = FontSize;
+		Measure.m_LineWidth = std::max(40.0f, std::min(qm_chat_bubble::MAX_TEXT_WIDTH, Preview.w - 40.0f));
+		Measure.m_Flags = 0;
+		TextRender()->TextEx(&Measure, pText);
+		const vec2 TextSize(Measure.m_LongestLineWidth, Measure.Height());
+		const auto Natural = qm_chat_bubble::Layout(vec2(0, 0), TextSize, FontSize, 1.0f, Style);
+		const float FullHeight = Natural.m_Size.y * (Style == qm_chat_bubble::EStyle::CLOUD ? 1.25f : 1.0f) + Natural.m_TailHeight + 5.0f;
+		const float Scale = std::max(0.0f, std::min({1.0f, (Preview.w - 12.0f) / (Natural.m_Size.x + 8.0f), (Preview.h - 8.0f) / FullHeight}));
+		const vec2 Anchor(Preview.x + Preview.w * 0.5f, Preview.y + (Preview.h - FullHeight * Scale) * 0.5f + (FullHeight - 4.0f) * Scale);
+		const auto Bubble = qm_chat_bubble::Layout(Anchor, TextSize, FontSize, Scale, Style);
+		const auto Colors = qm_chat_bubble::Palette(Style, g_Config.m_QmChatBubbleCustomColors != 0,
+			color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmChatBubbleBgColor, true)), color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmChatBubbleTextColor, false)), g_Config.m_QmChatBubbleAlpha / 100.0f);
+		if(Scale > 0.0f)
+		{
+			if(Style == qm_chat_bubble::EStyle::CLOUD)
+				GameClient()->m_NamePlates.RenderCloudBubble(Bubble, Colors);
+			else
+				qm_chat_bubble::Render(Graphics(), Bubble, Colors);
+			TextRender()->TextColor(Colors.m_Text);
+			TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor().WithMultipliedAlpha((g_Config.m_QmChatBubbleCustomColors || Style == qm_chat_bubble::EStyle::DEFAULT) ? Colors.m_Text.a : 0.0f));
+			CTextCursor Cursor;
+			Cursor.m_FontSize = FontSize * Scale;
+			Cursor.m_LineWidth = Measure.m_LineWidth * Scale;
+			Cursor.m_Flags = TEXTFLAG_RENDER;
+			Cursor.SetPosition(Bubble.m_TextPosition);
+			qm_chat_bubble::RenderText(TextRender(), Cursor, pText, Colors.m_Text,
+				TextRender()->DefaultTextOutlineColor().WithMultipliedAlpha((g_Config.m_QmChatBubbleCustomColors || Style == qm_chat_bubble::EStyle::DEFAULT) ? Colors.m_Text.a : 0.0f));
+		}
+		TextRender()->SetRenderFlags(PreviousFlags);
+		TextRender()->TextColor(PreviousColor);
+		TextRender()->TextOutlineColor(PreviousOutline);
+	}
+	Flow.Space(LineSpacing);
+
+	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:chat_bubble", CurrentSettingsContentMetrics(), PrewarmOnly || Ui()->RenderOnly()))
+		return;
+
 	auto RenderValue = [&](const char *pTextId, const char *pText, const void *pInputId, int *pValue, int Min, int Max, const char *pSuffix = "") {
 		CUIRect Row, LabelColumn, ControlColumn;
 		const bool HasRow = Flow.Control(pTextId, LineHeight, Row);
@@ -317,16 +416,25 @@ void CMenus::RenderQmVisualChatBubbleContent(CUIRect &Content, float LineHeight,
 	{
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
 		RenderQmVisualLabel("qmclient-chat-bubble-animation", &LabelColumn, Localize("Animation"), BodySize);
-		static std::vector<const char *> s_ChatBubbleAnimDropDownNames;
-		s_ChatBubbleAnimDropDownNames = {Localize("Dissolve"), Localize("Shrink"), Localize("Bounce")};
-		static CUi::SDropDownState s_ChatBubbleAnimDropDownState;
-		static CScrollRegion s_ChatBubbleAnimDropDownScrollRegion;
-		s_ChatBubbleAnimDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_ChatBubbleAnimDropDownScrollRegion;
-		const int Animation = DoSettingsDropDown(&ControlColumn, g_Config.m_QmChatBubbleAnimation, s_ChatBubbleAnimDropDownNames.data(), s_ChatBubbleAnimDropDownNames.size(), s_ChatBubbleAnimDropDownState, {}, &g_Config.m_QmChatBubbleAnimation, nullptr, &Row);
-		if(g_Config.m_QmChatBubbleAnimation != Animation)
-			g_Config.m_QmChatBubbleAnimation = Animation;
+		if(qm_chat_bubble::StyleFromConfig(g_Config.m_QmChatBubbleStyle) == qm_chat_bubble::EStyle::CLOUD)
+			RenderQmVisualLabel("qm-chat-bubble-cloud-motion", &ControlColumn, Localize("Gather and disperse"), BodySize);
+		else
+		{
+			static std::vector<const char *> s_ChatBubbleAnimDropDownNames;
+			s_ChatBubbleAnimDropDownNames = {Localize("Dissolve"), Localize("Shrink"), Localize("Bounce")};
+			static CUi::SDropDownState s_ChatBubbleAnimDropDownState;
+			static CScrollRegion s_ChatBubbleAnimDropDownScrollRegion;
+			s_ChatBubbleAnimDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_ChatBubbleAnimDropDownScrollRegion;
+			const int Animation = DoSettingsDropDown(&ControlColumn, g_Config.m_QmChatBubbleAnimation, s_ChatBubbleAnimDropDownNames.data(), s_ChatBubbleAnimDropDownNames.size(), s_ChatBubbleAnimDropDownState, {}, &g_Config.m_QmChatBubbleAnimation, nullptr, &Row);
+			if(g_Config.m_QmChatBubbleAnimation != Animation)
+				g_Config.m_QmChatBubbleAnimation = Animation;
+		}
 	}
 	Flow.Space(LineSpacing);
+
+	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmChatBubbleCustomColors, "qm-chat-bubble-custom-colors", Localize("Use custom colors"), &g_Config.m_QmChatBubbleCustomColors);
+	if(!g_Config.m_QmChatBubbleCustomColors)
+		return;
 
 	static CButtonContainer s_ChatBubbleBgColorId;
 	static CButtonContainer s_ChatBubbleTextColorId;
@@ -356,62 +464,65 @@ void CMenus::RenderQmVisualFocusModeContent(CUIRect &Content, float LineHeight, 
 	static CButtonContainer s_ReaderButtonFocusToggle, s_ClearButtonFocusToggle;
 	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmFocusMode, "qmclient-focus-mode-enable", Localize("Enable Zen mode"), &g_Config.m_QmFocusMode);
 	CUIRect Row;
-	const auto RenderSection = [&](const char *pTextId, const char *pLabel) {
-		if(Flow.Control(pTextId, SmallSize, Row))
-		{
-			TextRender()->TextColor(ColorRGBA(0.72f, 0.72f, 0.78f, 0.86f));
-			RenderQmVisualLabel(pTextId, &Row, Localize(pLabel), SmallSize);
-			TextRender()->TextColor(TextRender()->DefaultTextColor());
-		}
+	if(qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:focus_mode", Metrics, Ui()->RenderOnly()))
+	{
+		const auto RenderSection = [&](const char *pTextId, const char *pLabel) {
+			if(Flow.Control(pTextId, SmallSize, Row))
+			{
+				TextRender()->TextColor(ColorRGBA(0.72f, 0.72f, 0.78f, 0.86f));
+				RenderQmVisualLabel(pTextId, &Row, Localize(pLabel), SmallSize);
+				TextRender()->TextColor(TextRender()->DefaultTextColor());
+			}
+			Flow.Space(LineSpacing);
+		};
+		RenderSection("qmclient-focus-section-interface", "Interface");
+		DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, Content,
+			{
+				{&g_Config.m_QmFocusModeHideHud, "qmclient-focus-hide-hud", Localize("Hide HUD")},
+				{&g_Config.m_QmFocusModeHideMapProgress, "qmclient-focus-hide-map-progress", Localize("Hide map progress")},
+				{&g_Config.m_QmFocusModeHideInfoMessages, "qmclient-focus-hide-info-messages", Localize("Hide kill/finish messages")},
+				{&g_Config.m_QmFocusModeHideScoreboard, "qmclient-focus-hide-scoreboard", Localize("Hide scoreboard")},
+			},
+			Metrics);
+		RenderSection("qmclient-focus-section-players", "Players");
+		DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, Content,
+			{
+				{&g_Config.m_QmFocusModeHideNames, "qmclient-focus-hide-names", Localize("Hide names")},
+				{&g_Config.m_QmFocusModeHideNameplates, "qmclient-focus-hide-nameplates", Localize("Hide nameplates")},
+				{&g_Config.m_QmFocusModeHideDirectionIndicators, "qmclient-focus-hide-direction-indicators", Localize("Hide direction indicators")},
+				{&g_Config.m_QmFocusModeHideGuideLines, "qmclient-focus-hide-guide-lines", Localize("Hide guide lines")},
+			},
+			Metrics);
+		RenderSection("qmclient-focus-section-visuals", "Visuals");
+		DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, Content,
+			{
+				{&g_Config.m_QmFocusModeHideJumpEffects, "qmclient-focus-hide-jump-effects", Localize("Hide jump effects")},
+				{&g_Config.m_QmFocusModeHideKillEffects, "qmclient-focus-hide-kill-effects", Localize("Hide death/respawn effects")},
+				{&g_Config.m_QmFocusModeHideExplosionEffects, "qmclient-focus-hide-explosion-effects", Localize("Hide explosion effects")},
+				{&g_Config.m_QmFocusModeHideFreezeEffects, "qmclient-focus-hide-freeze-effects", Localize("Hide freeze effects")},
+				{&g_Config.m_QmFocusModeHideHammerEffects, "qmclient-focus-hide-hammer-effects", Localize("Hide hammer effects")},
+				{&g_Config.m_QmFocusModeHideMuzzleEffects, "qmclient-focus-hide-muzzle-effects", Localize("Hide weapon muzzle flashes")},
+			},
+			Metrics);
+		RenderSection("qmclient-focus-section-audio", "Audio");
+		DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, Content,
+			{
+				{&g_Config.m_QmFocusModeMuteJumpSounds, "qmclient-focus-mute-jump-sounds", Localize("Mute jump sounds")},
+				{&g_Config.m_QmFocusModeMuteDeathSounds, "qmclient-focus-mute-death-sounds", Localize("Mute death/respawn sounds")},
+				{&g_Config.m_QmFocusModeMuteHammerSounds, "qmclient-focus-mute-hammer-sounds", Localize("Mute hammer sounds")},
+			},
+			Metrics);
+		RenderSection("qmclient-focus-section-chat", "Chat");
+		DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, Content,
+			{
+				{&g_Config.m_QmFocusModeHideChat, "qmclient-focus-hide-chat", Localize("Hide player messages")},
+				{&g_Config.m_QmFocusModeHideSystemInfoMessages, "qmclient-focus-hide-system-info-messages", Localize("Hide join/version prompts")},
+				{&g_Config.m_QmFocusModeHideSystemMessages, "qmclient-focus-hide-system-messages", Localize("Hide server prompt notifications")},
+				{&g_Config.m_QmFocusModeHideEcho, "qmclient-focus-hide-echo", Localize("Hide Echo messages")},
+			},
+			Metrics);
 		Flow.Space(LineSpacing);
-	};
-	RenderSection("qmclient-focus-section-interface", "Interface");
-	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, Content,
-		{
-			{&g_Config.m_QmFocusModeHideHud, "qmclient-focus-hide-hud", Localize("Hide HUD")},
-			{&g_Config.m_QmFocusModeHideMapProgress, "qmclient-focus-hide-map-progress", Localize("Hide map progress")},
-			{&g_Config.m_QmFocusModeHideInfoMessages, "qmclient-focus-hide-info-messages", Localize("Hide kill/finish messages")},
-			{&g_Config.m_QmFocusModeHideScoreboard, "qmclient-focus-hide-scoreboard", Localize("Hide scoreboard")},
-		},
-		Metrics);
-	RenderSection("qmclient-focus-section-players", "Players");
-	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, Content,
-		{
-			{&g_Config.m_QmFocusModeHideNames, "qmclient-focus-hide-names", Localize("Hide names")},
-			{&g_Config.m_QmFocusModeHideNameplates, "qmclient-focus-hide-nameplates", Localize("Hide nameplates")},
-			{&g_Config.m_QmFocusModeHideDirectionIndicators, "qmclient-focus-hide-direction-indicators", Localize("Hide direction indicators")},
-			{&g_Config.m_QmFocusModeHideGuideLines, "qmclient-focus-hide-guide-lines", Localize("Hide guide lines")},
-		},
-		Metrics);
-	RenderSection("qmclient-focus-section-visuals", "Visuals");
-	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, Content,
-		{
-			{&g_Config.m_QmFocusModeHideJumpEffects, "qmclient-focus-hide-jump-effects", Localize("Hide jump effects")},
-			{&g_Config.m_QmFocusModeHideKillEffects, "qmclient-focus-hide-kill-effects", Localize("Hide death/respawn effects")},
-			{&g_Config.m_QmFocusModeHideExplosionEffects, "qmclient-focus-hide-explosion-effects", Localize("Hide explosion effects")},
-			{&g_Config.m_QmFocusModeHideFreezeEffects, "qmclient-focus-hide-freeze-effects", Localize("Hide freeze effects")},
-			{&g_Config.m_QmFocusModeHideHammerEffects, "qmclient-focus-hide-hammer-effects", Localize("Hide hammer effects")},
-			{&g_Config.m_QmFocusModeHideMuzzleEffects, "qmclient-focus-hide-muzzle-effects", Localize("Hide weapon muzzle flashes")},
-		},
-		Metrics);
-	RenderSection("qmclient-focus-section-audio", "Audio");
-	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, Content,
-		{
-			{&g_Config.m_QmFocusModeMuteJumpSounds, "qmclient-focus-mute-jump-sounds", Localize("Mute jump sounds")},
-			{&g_Config.m_QmFocusModeMuteDeathSounds, "qmclient-focus-mute-death-sounds", Localize("Mute death/respawn sounds")},
-			{&g_Config.m_QmFocusModeMuteHammerSounds, "qmclient-focus-mute-hammer-sounds", Localize("Mute hammer sounds")},
-		},
-		Metrics);
-	RenderSection("qmclient-focus-section-chat", "Chat");
-	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, Content,
-		{
-			{&g_Config.m_QmFocusModeHideChat, "qmclient-focus-hide-chat", Localize("Hide player messages")},
-			{&g_Config.m_QmFocusModeHideSystemInfoMessages, "qmclient-focus-hide-system-info-messages", Localize("Hide join/version prompts")},
-			{&g_Config.m_QmFocusModeHideSystemMessages, "qmclient-focus-hide-system-messages", Localize("Hide server prompt notifications")},
-			{&g_Config.m_QmFocusModeHideEcho, "qmclient-focus-hide-echo", Localize("Hide Echo messages")},
-		},
-		Metrics);
-	Flow.Space(LineSpacing);
+	}
 	if(!Flow.Control("qmclient-focus-mode-key", LineHeight, Row))
 		return;
 	CUIRect BindLabel, BindKey;
@@ -469,6 +580,9 @@ void CMenus::RenderQmVisualCameraViewContent(CUIRect &Content, float LineHeight,
 		RenderQmSettingsSliderWithValueInput(pId, ControlColumn, pValue, MinValue, MaxValue, pSuffix, PrewarmOnly, Flags);
 	};
 	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmCameraDrift, "Enable camera drift", Localize("Enable camera drift"), &g_Config.m_QmCameraDrift);
+	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmDynamicFov, "Enable dynamic FOV", Localize("Enable dynamic FOV"), &g_Config.m_QmDynamicFov);
+	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmZoomInstantReverse, "Instant zoom reverse", Localize("Instant zoom reverse"), &g_Config.m_QmZoomInstantReverse);
+
 	if(g_Config.m_QmCameraDrift)
 	{
 		static int s_QmCameraDriftAmountInputId;
@@ -477,7 +591,6 @@ void CMenus::RenderQmVisualCameraViewContent(CUIRect &Content, float LineHeight,
 		RenderValue("qmclient-camera-drift-smoothness", "Drift smoothness", &s_QmCameraDriftSmoothnessInputId, &g_Config.m_QmCameraDriftSmoothness, 0, 100, "%");
 		RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmCameraDriftReverse, "Drift direction", Localize("Drift direction"), &g_Config.m_QmCameraDriftReverse);
 	}
-	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmDynamicFov, "Enable dynamic FOV", Localize("Enable dynamic FOV"), &g_Config.m_QmDynamicFov);
 	if(g_Config.m_QmDynamicFov)
 	{
 		static int s_QmDynamicFovAmountInputId;
@@ -485,7 +598,6 @@ void CMenus::RenderQmVisualCameraViewContent(CUIRect &Content, float LineHeight,
 		RenderValue("qmclient-camera-dynamic-fov-intensity", "Dynamic FOV intensity", &s_QmDynamicFovAmountInputId, &g_Config.m_QmDynamicFovAmount, 0, 200);
 		RenderValue("qmclient-camera-dynamic-fov-smoothness", "Dynamic FOV smoothness", &s_QmDynamicFovSmoothnessInputId, &g_Config.m_QmDynamicFovSmoothness, 0, 100, "%");
 	}
-	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmZoomInstantReverse, "Instant zoom reverse", Localize("Instant zoom reverse"), &g_Config.m_QmZoomInstantReverse);
 	static int s_QmUiScaleInputId;
 	RenderValue("qmclient-ui-scale", "UI scale", &s_QmUiScaleInputId, &g_Config.m_QmUiScale, 50, 200, "%", CUi::SCROLLBAR_OPTION_DELAYUPDATE);
 	const char *apAspectPresetNames[] = {Localize("Off"), "5:4", "4:3", "3:2", "16:9", "21:9", Localize("Custom")};

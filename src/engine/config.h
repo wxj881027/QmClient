@@ -63,6 +63,8 @@ public:
 	// 供录制等"不应受临时接管影响"的路径读取。
 	virtual int RealValue(const int *pValue) const = 0;
 	virtual bool Save(bool Force = false) = 0;
+	// 最近一次 Save 失败的可读诊断（stage=失败阶段 path=路径）；成功后为空。
+	virtual const char *LastSaveError() const = 0;
 	virtual class CConfig *Values() = 0;
 
 	virtual void RegisterCallback(SAVECALLBACKFUNC pfnFunc, void *pUserData, ConfigDomain ConfigDomain = ConfigDomain::QMCLIENT) = 0;

@@ -99,6 +99,10 @@ public:
 
 	int SecondsLeft() const;
 	bool IsVoting() const { return m_Closetime != 0; }
+	// 手机端顶部投票条要自己画进度条，这里只暴露计数。
+	int YesCount() const { return m_Yes; }
+	int NoCount() const { return m_No; }
+	int TotalCount() const { return m_Total; }
 	int TakenChoice() const { return m_Voted; }
 	const char *VoteDescription() const { return m_aDescription; }
 	const char *VoteReason() const { return m_aReason; }

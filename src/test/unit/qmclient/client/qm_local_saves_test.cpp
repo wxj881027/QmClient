@@ -56,6 +56,69 @@ TEST(QmLocalSaves, KeepsRecordUntilConfirmedLoad)
 	EXPECT_FALSE(Confirmation.Active());
 }
 
+TEST(QmLocalSaves, RemovalDeletesMatchingDuplicatesAndKeepsOtherCodes)
+{
+	const std::string Text = "Time,Players,Map,Code\n"
+				 "2026,A,Map,secret\n"
+				 "2025,A,map,secret\n"
+				 "2024,A,Map,other\n"
+				 "2023,A,Map,SECRET\n"
+				 "2022,A,OtherMap,secret\n";
+	const std::string Expected = "Time,Players,Map,Code\n"
+				     "2024,A,Map,other\n"
+				     "2023,A,Map,SECRET\n"
+				     "2022,A,OtherMap,secret\n";
+	std::string Updated;
+	ASSERT_TRUE(QmLocalSaves::RemoveEntries(Text, "Map", "secret", Updated));
+	EXPECT_EQ(Updated, Expected);
+	std::string Repeated;
+	EXPECT_FALSE(QmLocalSaves::RemoveEntries(Updated, "Map", "secret", Repeated));
+	EXPECT_EQ(Repeated, Expected);
+}
+
+TEST(QmLocalSaves, RemovalPreservesBomLineEndingsAndUnterminatedRecords)
+{
+	const std::string Text = "\xef\xbb\xbfTime,Players,Map,Code\r\n"
+				 "2026,A,Map,secret\r\n"
+				 "2025,B,OtherMap,keep\r\n"
+				 "bad,row";
+	std::string Updated;
+	ASSERT_TRUE(QmLocalSaves::RemoveEntries(Text, "Map", "secret", Updated));
+	EXPECT_EQ(Updated, "\xef\xbb\xbfTime,Players,Map,Code\r\n2025,B,OtherMap,keep\r\nbad,row");
+}
+
+TEST(QmLocalSaves, PlayerChatCannotConfirmLoad)
+{
+	QmLocalSaves::CConfirmation Confirmation;
+	Confirmation.Track({"Map", "secret", 0, 1, 100, false, 500});
+	EXPECT_EQ(Confirmation.Message(0, 2, "Loading successfully done", "Map", 1, 200), QmLocalSaves::EResult::NONE);
+	EXPECT_EQ(Confirmation.Message(0, -1, "Loading successfully done", "Map", 2, 200), QmLocalSaves::EResult::NONE);
+	EXPECT_EQ(Confirmation.Message(0, -1, "存档载入成功", "Map", 1, 200), QmLocalSaves::EResult::SUCCESS);
+}
+
+TEST(QmLocalSaves, OverlappingLoadCodesCannotConfirmWhichRecordWasConsumed)
+{
+	QmLocalSaves::CConfirmation Confirmation;
+	Confirmation.Track({"Map", "first", 0, 1, 200, false, 500});
+	Confirmation.Track({"Map", "second", 0, 1, 201, false, 500});
+	EXPECT_EQ(Confirmation.Message(0, -1, "Loading successfully done", "Map", 1, 250), QmLocalSaves::EResult::FAILED);
+	EXPECT_FALSE(Confirmation.RestoredRace("Map", 1, 250, 50, 50, 250));
+}
+
+TEST(QmLocalSaves, RestoredClockConfirmsLoadOnlyForPreviouslyIdleRace)
+{
+	QmLocalSaves::CConfirmation Confirmation;
+	Confirmation.Track({"Map", "secret", 0, 1, 200, false, 500});
+	EXPECT_FALSE(Confirmation.RestoredRace("Map", 1, 199, 50, 50, 250));
+	EXPECT_FALSE(Confirmation.RestoredRace("Map", 1, 250, 200, 50, 250));
+	EXPECT_FALSE(Confirmation.RestoredRace("Map", 1, 250, 50, 50, 501));
+	EXPECT_TRUE(Confirmation.RestoredRace("Map", 1, 250, 50, 50, 250));
+	Confirmation.Reset();
+	EXPECT_FALSE(Confirmation.RestoredRace("Map", 1, 250, 50, 50, 250));
+	Confirmation.Track({"Map", "secret", 0, 1, 200, true, 500});
+	EXPECT_FALSE(Confirmation.RestoredRace("Map", 1, 250, 50, 50, 250));
+}
+
 TEST(QmLocalSaves, RestoreWaitsForBothPlayersAndRejectsForeignTeamMember)
 {
 	QmLocalSaves::CRestore Restore;

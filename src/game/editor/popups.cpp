@@ -43,17 +43,25 @@ CUi::EPopupMenuFunctionResult CEditor::CPopupMapTab::Render(void *pContext, CUIR
 	const bool Saving = pEditor->IsSaving(pSelectedMap);
 	const bool Saved = pSelectedMap->m_aFilename[0] != '\0';
 
-	CUIRect Slot;
-	View.HSplitTop(12.0f, &Slot, &View);
-	if(pEditor->DoButton_MenuItem(&pPopupMapTab->m_CloseButtonId, "Close", Saving ? -1 : 0, &Slot, BUTTONFLAG_LEFT, "Close this map."))
+	// 四个动作同级：统一行高与行距等距排列，面板高度由 PanelHeight() 按同一组
+	// 常量算出，内容不会再越出面板底边。
+	View.HSplitTop(ROW_PADDING, nullptr, &View);
+	const auto NextRow = [&View]() {
+		CUIRect Row;
+		View.HSplitTop(ROW_HEIGHT, &Row, &View);
+		View.HSplitTop(ROW_GAP, nullptr, &View);
+		return Row;
+	};
+
+	CUIRect CloseRow = NextRow();
+	if(pEditor->DoButton_MenuItem(&pPopupMapTab->m_CloseButtonId, "Close", Saving ? -1 : 0, &CloseRow, BUTTONFLAG_LEFT, "Close this map."))
 	{
 		pEditor->CloseMap(SelectedMapIndex, true);
 		return CUi::POPUP_CLOSE_CURRENT;
 	}
 
-	View.HSplitTop(10.0f, nullptr, &View);
-	View.HSplitTop(12.0f, &Slot, &View);
-	if(pEditor->DoButton_MenuItem(&pPopupMapTab->m_CopyNameButtonId, "Copy name", Saved ? 0 : -1, &Slot, BUTTONFLAG_LEFT, "Copy the name of this map to the clipboard."))
+	CUIRect CopyNameRow = NextRow();
+	if(pEditor->DoButton_MenuItem(&pPopupMapTab->m_CopyNameButtonId, "Copy name", Saved ? 0 : -1, &CopyNameRow, BUTTONFLAG_LEFT, "Copy the name of this map to the clipboard."))
 	{
 		char aFilename[IO_MAX_PATH_LENGTH];
 		fs_split_file_extension(fs_filename(pSelectedMap->m_aFilename), aFilename, sizeof(aFilename));
@@ -61,17 +69,15 @@ CUi::EPopupMenuFunctionResult CEditor::CPopupMapTab::Render(void *pContext, CUIR
 		return CUi::POPUP_CLOSE_CURRENT;
 	}
 
-	View.HSplitTop(2.0f, nullptr, &View);
-	View.HSplitTop(12.0f, &Slot, &View);
-	if(pEditor->DoButton_MenuItem(&pPopupMapTab->m_CopyPathButtonId, "Copy path", Saved ? 0 : -1, &Slot, BUTTONFLAG_LEFT, "Copy the path of this map to the clipboard."))
+	CUIRect CopyPathRow = NextRow();
+	if(pEditor->DoButton_MenuItem(&pPopupMapTab->m_CopyPathButtonId, "Copy path", Saved ? 0 : -1, &CopyPathRow, BUTTONFLAG_LEFT, "Copy the path of this map to the clipboard."))
 	{
 		pEditor->Input()->SetClipboardText(pSelectedMap->m_aFilename);
 		return CUi::POPUP_CLOSE_CURRENT;
 	}
 
-	View.HSplitTop(10.0f, nullptr, &View);
-	View.HSplitTop(12.0f, &Slot, &View);
-	if(pEditor->DoButton_MenuItem(&pPopupMapTab->m_ShowFileButtonId, "Show file", Saved ? 0 : -1, &Slot, BUTTONFLAG_LEFT, "Show this map in the file browser."))
+	CUIRect ShowFileRow = NextRow();
+	if(pEditor->DoButton_MenuItem(&pPopupMapTab->m_ShowFileButtonId, "Show file", Saved ? 0 : -1, &ShowFileRow, BUTTONFLAG_LEFT, "Show this map in the file browser."))
 	{
 		bool FoundMap = false;
 		for(int CheckStorageType = IStorage::TYPE_SAVE; CheckStorageType < pEditor->Storage()->NumPaths(); ++CheckStorageType)

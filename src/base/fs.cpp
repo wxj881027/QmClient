@@ -601,7 +601,23 @@ int fs_rename(const char *oldname, const char *newname, bool allow_destination_r
 	// Windows 在目标文件仍有打开句柄时无法重命名，先删除目标文件再重试。
 	// 不能在重命名前删除：对 foo 重命名为 FOO 时会把源文件误删。
 	DWORD error = GetLastError();
-	if(allow_destination_removal && error == ERROR_ACCESS_DENIED)
+	if(!allow_destination_removal && (error == ERROR_ACCESS_DENIED || error == ERROR_SHARING_VIOLATION))
+	{
+		// 配置和缓存类写入禁止删除目标后重试，改为等待瞬时句柄释放再试：
+		// 杀毒扫描、索引器或另一个实例刚读完文件，不应让整次保存失败。
+		constexpr int RETRY_COUNT = 10;
+		constexpr DWORD RETRY_DELAY_MS = 20;
+		for(int Attempt = 0; Attempt < RETRY_COUNT; ++Attempt)
+		{
+			Sleep(RETRY_DELAY_MS);
+			if(MoveFileExW(wide_oldname.c_str(), wide_newname.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED | MOVEFILE_WRITE_THROUGH) != 0)
+				return 0;
+			error = GetLastError();
+			if(error != ERROR_ACCESS_DENIED && error != ERROR_SHARING_VIOLATION)
+				break;
+		}
+	}
+	else if(allow_destination_removal && error == ERROR_ACCESS_DENIED)
 	{
 		(void)fs_remove(newname);
 		if(MoveFileExW(wide_oldname.c_str(), wide_newname.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED | MOVEFILE_WRITE_THROUGH) != 0)

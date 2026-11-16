@@ -32,6 +32,7 @@
 #include <generated/client_data.h>
 
 #include <game/client/QmUi/QmCardWikiPanel.h>
+#include <game/client/QmUi/QmIconSwap.h>
 #include <game/client/QmUi/QmToast.h>
 #include <game/client/QmUi/QmWikiDocs.h>
 #include <game/client/QmUi/UiButtons.h>
@@ -1231,6 +1232,7 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 		g_Config.m_ClDemoSliceEnd = -1;
 		m_PrevSeekAmount = -1.0f;
 		m_PausedBeforeSeeking = true;
+		m_DemoTouchSeeking = false;
 		Ui()->SetActiveItem(nullptr);
 	}
 	const IDemoPlayer::CInfo *pInfo = PlaybackPlayer()->BaseInfo();
@@ -1522,11 +1524,12 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	CUIRect DemoControls = qm_demo_ui::DraggedPlayerRect(MainView, DemoControlsOriginal, m_DemoControlsPositionOffset.x, m_DemoControlsPositionOffset.y);
 	RenderDemoCard(DemoControls);
 	std::optional<CUiScopedGaussianBlurSuppression> DemoControlsBlurSuppression(std::in_place, Ui());
-	const CUIRect DemoControlsDragRect = DemoControls;
+	const CUIRect DemoControlsPanel = DemoControls;
 
 	CUIRect SeekBar, TimeBar, ButtonBar, NameBar, SpeedBar, CutBar, DisplayBar, CameraBar;
 	DemoControls.Margin(8.0f, &DemoControls);
 	DemoControls.HSplitTop(NameBarHeight, &NameBar, &DemoControls);
+	const CUIRect DemoControlsDragRect = qm_demo_ui::PanelDragRect(DemoControlsPanel, NameBar, Ui()->DirectTouchInput());
 	DemoControls.HSplitTop(4.0f, nullptr, &DemoControls);
 	DemoControls.HSplitTop(SeekBarHeight, &SeekBar, &DemoControls);
 	DemoControls.HSplitTop(14.0f, &TimeBar, &DemoControls);
@@ -1728,6 +1731,16 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 			return ClosestDistance <= SnapPixels ? ClosestAmount : AmountSeek;
 		};
 
+		const bool TouchSeeking = Ui()->CaptureTouchDrag(&m_DemoSeekBarId, &SeekBar);
+		if(TouchSeeking && !Ui()->IsActiveItem(&m_DemoSeekBarId))
+		{
+			m_DemoTouchSeeking = true;
+			m_PrevSeekAmount = -1.0f;
+			m_PausedBeforeSeeking = pInfo->m_Paused;
+			if(!pInfo->m_Paused)
+				PlaybackPlayer()->Pause();
+			Ui()->SetActiveItem(&m_DemoSeekBarId);
+		}
 		if(Ui()->CheckActiveItem(&m_DemoSeekBarId))
 		{
 			if(!Ui()->MouseButton(0))
@@ -1788,7 +1801,16 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	// combined play and pause button
 	ButtonBar.VSplitLeft(ButtonbarHeight, &Button, &ButtonBar);
 	static CButtonContainer s_PlayPauseButton;
-	if(Ui()->DoButton_QmIcon(&s_PlayPauseButton, pInfo->m_Paused ? EQmIcon::PLAY : EQmIcon::PAUSE, pInfo->m_Paused ? FONT_ICON_PLAY : FONT_ICON_PAUSE, false, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, true, DEMO_ACCENT))
+	// 播放/暂停是同位置双态：有轮廓字重的形变帧条走弹簧，Fill 字重回交叉淡化。
+	// 静止态仍由 DrawIconSwapBinding 画原字形，避免帧条与字形字号不一致。
+	IUiContext PlayPauseCtx = ui_widget::ControlContext(Ui());
+	ui_widget::SIconSwapBinding PlayPauseIcon = ui_widget::ResolveIconSwapBinding(
+		PlayPauseCtx, EQmIconSwapPair::PLAY_PAUSE,
+		EQmIcon::PLAY, FONT_ICON_PLAY,
+		EQmIcon::PAUSE, FONT_ICON_PAUSE,
+		pInfo->m_Paused ? 0.0f : 1.0f, str_quickhash("demo-playpause"), &s_PlayPauseButton, 0.24f, true);
+	ui_widget::SIconButtonIconDraw PlayPauseDraw{&ui_widget::DrawIconSwapBinding, &PlayPauseIcon};
+	if(Ui()->DoButton_QmIcon(&s_PlayPauseButton, EQmIcon::COUNT, nullptr, false, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, true, DEMO_ACCENT, false, false, &PlayPauseDraw))
 	{
 		if(pInfo->m_Paused)
 		{
@@ -2024,8 +2046,16 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	const bool PreviewEnabled = CutControlsEnabled &&
 				    ((PendingCut.m_StartTick >= 0 && PendingCut.m_StartTick < PendingCut.m_EndTick) || m_DemoCutPreview.IsActive());
 	static CButtonContainer s_CutPreviewButton;
-	if(Ui()->DoButton_QmIcon(&s_CutPreviewButton, m_DemoCutPreview.IsActive() ? EQmIcon::STOP : EQmIcon::PLAY,
-		   m_DemoCutPreview.IsActive() ? FONT_ICON_STOP : FONT_ICON_PLAY, 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, PreviewEnabled) &&
+	// 预览/停止同位置双态：复用 PLAY_STOP 帧条（与好友跟随同资产），点击或快捷键 P
+	// 切换时弹簧推进；预览自然结束 Reset() 引起的状态回落也由轨道自动收敛。
+	IUiContext CutPreviewCtx = ui_widget::ControlContext(Ui());
+	ui_widget::SIconSwapBinding CutPreviewIcon = ui_widget::ResolveIconSwapBinding(
+		CutPreviewCtx, EQmIconSwapPair::PLAY_STOP,
+		EQmIcon::PLAY, FONT_ICON_PLAY,
+		EQmIcon::STOP, FONT_ICON_STOP,
+		m_DemoCutPreview.IsActive() ? 1.0f : 0.0f, str_quickhash("demo-cut-preview"), &s_CutPreviewButton, 0.24f, true);
+	ui_widget::SIconButtonIconDraw CutPreviewDraw{&ui_widget::DrawIconSwapBinding, &CutPreviewIcon};
+	if(Ui()->DoButton_QmIcon(&s_CutPreviewButton, EQmIcon::COUNT, nullptr, 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, PreviewEnabled, std::nullopt, false, false, &CutPreviewDraw) &&
 		PreviewEnabled)
 		PreviewCut();
 	GameClient()->m_Tooltips.DoToolTip(&s_CutPreviewButton, &Button, m_DemoCutPreview.IsActive() ? Localize("Stop preview (P)") : Localize("Preview cut (P)"));
@@ -3463,6 +3493,12 @@ void CMenus::UpdateRankDemoDownload()
 
 void CMenus::RenderDemoBrowser(CUIRect MainView)
 {
+	if(m_ScreenshotEditor.IsOpen())
+	{
+		m_ScreenshotEditor.Render(this, MainView);
+		return;
+	}
+
 	SyncDemoBrowserDirectory();
 	UpdateRankDemoDownload();
 	GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_DEMOS);
@@ -4073,6 +4109,77 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 	const char *pBaseFolder = DemoBrowserBaseFolder();
 	const IUiContext DemoBrowserSearchCtx = SettingsUiContext("demo_browser_search");
 
+	// 按钮和鼠标后退侧键共用目录切换，保留链接目录与多存储入口的返回规则。
+	const auto OpenFolder = [&](const CDemoItem &Item) {
+		m_DemoSearchInput.Clear();
+		const bool ParentFolder = str_comp(Item.m_aFilename, "..") == 0;
+		if(ParentFolder) // 上级目录
+		{
+			// QmClient: Rank 1 缓存目录（含其子目录）是挂在顶层的链接入口，
+			// .. 直接回到 demos 根目录，不逐级穿过 qmclient/ 等内部目录
+			const size_t RankCacheDirLen = str_length(CRankGhost::DEMO_CACHE_DIR);
+			const bool InRankCacheFolder = str_startswith(m_aCurrentDemoFolder, CRankGhost::DEMO_CACHE_DIR) &&
+						       (m_aCurrentDemoFolder[RankCacheDirLen] == '\0' || m_aCurrentDemoFolder[RankCacheDirLen] == '/');
+			if(InRankCacheFolder)
+			{
+				str_copy(m_aCurrentDemoFolder, pBaseFolder);
+				m_DemolistStorageType = fs_is_relative_path(pBaseFolder) ? IStorage::TYPE_ALL : IStorage::TYPE_ABSOLUTE;
+				str_copy(m_aCurrentDemoSelectionName, Localize("Rank 1 replays"));
+			}
+			else
+			{
+				str_copy(m_aCurrentDemoSelectionName, fs_filename(m_aCurrentDemoFolder));
+				str_append(m_aCurrentDemoSelectionName, "/");
+				if(fs_parent_dir(m_aCurrentDemoFolder))
+				{
+					m_aCurrentDemoFolder[0] = '\0';
+					if(m_DemolistStorageType == IStorage::TYPE_ALL)
+					{
+						m_aCurrentDemoSelectionName[0] = '\0'; // 默认选中第一项
+					}
+					else
+					{
+						Storage()->GetCompletePath(m_DemolistStorageType, pBaseFolder, m_aCurrentDemoSelectionName, sizeof(m_aCurrentDemoSelectionName));
+						str_append(m_aCurrentDemoSelectionName, "/");
+					}
+				}
+			}
+		}
+		else // 子目录
+		{
+			// QmClient: 链接项携带完整存储路径（如 Rank 1 回放缓存目录），直接跳转
+			if(str_find(Item.m_aFilename, "/") != nullptr)
+			{
+				str_copy(m_aCurrentDemoFolder, Item.m_aFilename);
+				m_DemolistStorageType = Item.m_StorageType;
+			}
+			else
+			{
+				if(m_aCurrentDemoFolder[0] != '\0')
+					str_append(m_aCurrentDemoFolder, "/");
+				else
+					m_DemolistStorageType = Item.m_StorageType;
+				str_append(m_aCurrentDemoFolder, Item.m_aFilename);
+			}
+		}
+		DemolistPopulate();
+		DemolistOnUpdate(!ParentFolder);
+	};
+
+	if(IsActive() && Ui()->Enabled() && !Ui()->RenderOnly() && m_Popup == POPUP_NONE &&
+		!Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive() && Input()->KeyPress(KEY_MOUSE_4))
+	{
+		// 从完整列表查找，搜索隐藏上级目录或当前多选时仍能返回。
+		const auto Parent = std::find_if(m_vDemos.begin(), m_vDemos.end(), [](const CDemoItem &Item) {
+			return Item.m_IsDir && str_comp(Item.m_aFilename, "..") == 0;
+		});
+		if(Parent != m_vDemos.end())
+		{
+			OpenFolder(*Parent);
+			return;
+		}
+	}
+
 	const auto &&SetIconMode = [&](bool Enable) {
 		if(Enable)
 		{
@@ -4239,59 +4346,9 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 			SetIconMode(false);
 			if(pSelectedItem->m_IsDir) // folder
 			{
-				m_DemoSearchInput.Clear();
-				const bool ParentFolder = str_comp(pSelectedItem->m_aFilename, "..") == 0;
-				if(ParentFolder) // parent folder
-				{
-					// QmClient: Rank 1 缓存目录（含其子目录）是挂在顶层的链接入口，
-					// .. 直接回到 demos 根目录，不逐级穿过 qmclient/ 等内部目录
-					const size_t RankCacheDirLen = str_length(CRankGhost::DEMO_CACHE_DIR);
-					const bool InRankCacheFolder = str_startswith(m_aCurrentDemoFolder, CRankGhost::DEMO_CACHE_DIR) &&
-								       (m_aCurrentDemoFolder[RankCacheDirLen] == '\0' || m_aCurrentDemoFolder[RankCacheDirLen] == '/');
-					if(InRankCacheFolder)
-					{
-						str_copy(m_aCurrentDemoFolder, pBaseFolder);
-						m_DemolistStorageType = fs_is_relative_path(pBaseFolder) ? IStorage::TYPE_ALL : IStorage::TYPE_ABSOLUTE;
-						str_copy(m_aCurrentDemoSelectionName, Localize("Rank 1 replays"));
-					}
-					else
-					{
-						str_copy(m_aCurrentDemoSelectionName, fs_filename(m_aCurrentDemoFolder));
-						str_append(m_aCurrentDemoSelectionName, "/");
-						if(fs_parent_dir(m_aCurrentDemoFolder))
-						{
-							m_aCurrentDemoFolder[0] = '\0';
-							if(m_DemolistStorageType == IStorage::TYPE_ALL)
-							{
-								m_aCurrentDemoSelectionName[0] = '\0'; // will select first list item
-							}
-							else
-							{
-								Storage()->GetCompletePath(m_DemolistStorageType, pBaseFolder, m_aCurrentDemoSelectionName, sizeof(m_aCurrentDemoSelectionName));
-								str_append(m_aCurrentDemoSelectionName, "/");
-							}
-						}
-					}
-				}
-				else // sub folder
-				{
-					// QmClient: 链接项携带完整存储路径（如 Rank 1 回放缓存目录），直接跳转
-					if(str_find(pSelectedItem->m_aFilename, "/") != nullptr)
-					{
-						str_copy(m_aCurrentDemoFolder, pSelectedItem->m_aFilename);
-						m_DemolistStorageType = pSelectedItem->m_StorageType;
-					}
-					else
-					{
-						if(m_aCurrentDemoFolder[0] != '\0')
-							str_append(m_aCurrentDemoFolder, "/");
-						else
-							m_DemolistStorageType = pSelectedItem->m_StorageType;
-						str_append(m_aCurrentDemoFolder, pSelectedItem->m_aFilename);
-					}
-				}
-				DemolistPopulate();
-				DemolistOnUpdate(!ParentFolder);
+				OpenFolder(*pSelectedItem);
+				// 列表已经重建，本帧不再使用旧选中项绘制后续按钮。
+				return;
 			}
 			else // file
 			{
@@ -4431,6 +4488,32 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 			SetIconMode(false);
 		}
 
+#if !defined(CONF_VIDEORECORDER)
+		// 手机端没有视频渲染（Android 的 VIDEORECORDER 关闭），但必须有导出入口：
+		// 打开系统文件对话框，把选中的 demo 另存到手机可见的位置。
+		if(qm_mobile_spectator::Enabled() && pSelectedItem != nullptr && !pSelectedItem->m_IsDir)
+		{
+			CUIRect ExportButton;
+			RightGroup.VSplitRight(ButtonWidth, &RightGroup, &ExportButton);
+			if(RightGroup.w > TightSpacing)
+				RightGroup.VSplitRight(TightSpacing, &RightGroup, nullptr);
+			SetIconMode(true);
+			static CButtonContainer s_ExportDemoButton;
+			if(DoButton_Menu_QmIcon(&s_ExportDemoButton, EQmIcon::DOWNLOAD_SIMPLE, FONT_ICON_DOWNLOAD_SIMPLE, 0, &ExportButton))
+			{
+				SetIconMode(false);
+				// 只导出当前选中的这个文件，直接落进系统下载目录，不弹目录浏览。
+				char aDir[IO_MAX_PATH_LENGTH];
+				Storage()->GetCompletePath(pSelectedItem->m_StorageType, m_aCurrentDemoFolder[0] == '\0' ? pBaseFolder : m_aCurrentDemoFolder, aDir, sizeof(aDir));
+				char aPath[IO_MAX_PATH_LENGTH];
+				str_format(aPath, sizeof(aPath), "%s/%s", aDir, pSelectedItem->m_aFilename);
+				GameClient()->m_QmMobileSpectator.ExportFile(aPath);
+				return;
+			}
+			GameClient()->m_Tooltips.DoToolTip(&s_ExportDemoButton, &ExportButton, Localize("Export to downloads"));
+			SetIconMode(false);
+		}
+#endif
 #if defined(CONF_VIDEORECORDER)
 		// render demo / pose button
 		if(CanRenderDemo)
@@ -4646,12 +4729,12 @@ void CMenus::RenderQmPoseHud(CUIRect MainView)
 	RenderDemoCard(Card);
 	CUiScopedGaussianBlurSuppression BlurSuppression(Ui());
 	State.m_CardRect = Card;
-	const CUIRect DragRect = Card;
 
 	CUIRect Content = Card;
 	Content.Margin(8.0f, &Content);
 	CUIRect NameBar, InfoBar, ControlsBar, ActionBar;
 	Content.HSplitTop(18.0f, &NameBar, &Content);
+	const CUIRect DragRect = qm_demo_ui::PanelDragRect(Card, NameBar, Ui()->DirectTouchInput());
 	Content.HSplitTop(4.0f, nullptr, &Content);
 	Content.HSplitTop(14.0f, &InfoBar, &Content);
 	Content.HSplitTop(6.0f, nullptr, &Content);

@@ -5,6 +5,8 @@
 #include <engine/input.h>
 #include <engine/shared/qm_ime_policy.h>
 
+#include <utility>
+
 namespace qm_ui_test
 {
 	class CTestInput final : public IInput
@@ -41,6 +43,7 @@ namespace qm_ui_test
 		void MouseModeAbsolute() override {}
 		bool MouseRelative(float *, float *) override { return false; }
 		const std::vector<CTouchFingerState> &TouchFingerStates() const override { return m_vTouch; }
+		void SetTouchFingers(std::vector<CTouchFingerState> vTouch) { m_vTouch = std::move(vTouch); }
 		void ClearTouchDeltas() override {}
 		std::string GetClipboardText() override { return m_Clipboard; }
 		void SetClipboardText(const char *pText) override { m_Clipboard = pText; }

@@ -112,7 +112,6 @@ namespace qm_module
 		case EQmModuleId::Laser: return "qm:laser";
 		case EQmModuleId::PlayerStats: return "qm:player_stats";
 		case EQmModuleId::CollisionHitbox: return "qm:collision_hitbox";
-		case EQmModuleId::FavoriteMaps: return "qm:favorite_maps";
 		case EQmModuleId::HJAssist: return "qm:hj_assist";
 		case EQmModuleId::DebugGraph: return "qm:debug_graph";
 		case EQmModuleId::InputOverlay: return "qm:input_overlay";

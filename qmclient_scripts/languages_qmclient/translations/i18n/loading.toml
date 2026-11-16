@@ -451,7 +451,7 @@ polish = "Współtwórcy"
 [[message]]
 key = "DDNet contributors and staff credits"
 [message.translations]
-simplified_chinese = "DDNet 贡献者与团队名单"
+simplified_chinese = "DDNet 贡献者与队伍名单"
 traditional_chinese = "DDNet 貢獻者與團隊名單"
 japanese = "DDNet のコントリビューターとスタッフ"
 korean = "DDNet 기여자 및 스태프"
@@ -883,7 +883,7 @@ polish = "Plik '%s' już istnieje, czy chcesz go nadpisać?"
 [[message]]
 key = "Filter off"
 [message.translations]
-simplified_chinese = "关闭过滤"
+simplified_chinese = "不筛选"
 traditional_chinese = "關閉過濾"
 japanese = "フィルターオフ"
 korean = "필터 끄기"
@@ -899,7 +899,7 @@ polish = "Filtr wyłączony"
 [[message]]
 key = "Filter Team %d"
 [message.translations]
-simplified_chinese = "过滤队伍 %d"
+simplified_chinese = "筛选队伍 %d"
 traditional_chinese = "過濾隊伍 %d"
 japanese = "チーム %d をフィルター"
 korean = "팀 %d 필터"
@@ -915,7 +915,7 @@ polish = "Filtruj drużynę %d"
 [[message]]
 key = "Filter: Team %d"
 [message.translations]
-simplified_chinese = "过滤：队伍 %d"
+simplified_chinese = "筛选：队伍 %d"
 traditional_chinese = "過濾：隊伍 %d"
 japanese = "フィルター: チーム %d"
 korean = "필터: 팀 %d"

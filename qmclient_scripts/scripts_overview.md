@@ -16,7 +16,7 @@
 
 根目录 `scripts/` 视为 DDNet 上游同步目录。QmClient 自有逻辑、gate 入口、生成脚本和检查脚本都放在 `qmclient_scripts/`，不要在 gate 或 GitHub workflow 中直接调用 QmClient 修改过的 `scripts/` 文件。
 
-需要复用上游脚本时，先把脚本复制到 `qmclient_scripts/`，在复制件上做 QmClient 适配；不要让 `qmclient_scripts/` 里的脚本反向依赖根目录 `scripts/` 的 QmClient 特化行为。允许引用明确保持上游原样的通用辅助文件，例如 `scripts/compile_libs/_build_common.sh`。Android 平台构建入口使用 `qmclient_scripts/android/cmake_android.sh`，从当前 CMake 下载的 SDL3 源码同步 Java 绑定。
+需要复用上游脚本时，先把脚本复制到 `qmclient_scripts/`，在复制件上做 QmClient 适配；不要让 `qmclient_scripts/` 里的脚本反向依赖根目录 `scripts/` 的 QmClient 特化行为。允许引用明确保持上游原样的通用辅助文件，例如 `scripts/compile_libs/_build_common.sh`。Android 平台构建入口使用 `qmclient_scripts/android/cmake_android.sh`，Java 绑定从 `ddnet-libs/sdl/java` 同步；SDL3 预编译库由 `qmclient_scripts/build_sdl3_prebuilt.sh` 生成。
 
 ### 1. `gate/`
 
@@ -44,6 +44,7 @@
 当前主要脚本：
 
 - `qmclient_scripts/cmake-windows.cmd` — Windows 构建统一入口，加载 MSVC 环境后调用 `cmake_windows.py`。
+- `qmclient_scripts/build_sdl3_prebuilt_windows.cmd <SDL3 源码目录>` — 重建 Windows SDL3 预编译库之前应用 `cmake/PatchSDL3WindowsAudio.cmake`，使设备名称、格式与 GUID 的读取先校验属性类型和指针。源码补丁实现在 `qmclient_scripts/sdl3/SDL_qm_immdevice_info.h`，由 SDL 构建和行为测试共用；更新补丁后仍须重建并更新 `ddnet-libs/sdl/windows/` 的 DLL，再重新打包客户端，现有 DLL 不会自动获得修复。
 - `qmclient_scripts/cmake_windows.py` — 按规范化后的构建目录持有系统文件锁，覆盖 configure、build、测试目标、打包目标及 install；同目录任务自动等待，最长 10 分钟后明确失败，不同目录可以并行。锁内统一执行 MSVC 前缀检查、旧依赖恢复和规则重生成后的补构建，日志与锁文件保留在 `tmp/`。直接运行 CMake/Ninja 不会获取这把锁，日常操作继续使用 `.cmd` 入口。
 - `qmclient_scripts/darwin_fix_install_names.py`
 - `qmclient_scripts/make_lib_openssl.sh`
@@ -61,6 +62,7 @@
 - `qmclient_scripts/check_config_variables.py`
 - `qmclient_scripts/check_header_guards.py`
 - `qmclient_scripts/check_ci_deps.py` — CI Linux 依赖单一来源守卫：所有 Linux 构建作业的 apt 依赖统一走 `.github/actions/linux-deps` 复合 action；残留 apt 步骤的包、各 workflow 的 `extra` 包、可选特性（MYSQL/WEBSOCKETS/UPNP）与对应系统包的对应关系都在其注册表核对，curl share API 编译探针也在守卫范围内。已在 gate `quick/default/full` 注册为「CI 依赖单一来源守卫」。
+- `qmclient_scripts/check_card_search_index.py` — 设置搜索索引缺口报告：解析 `QmUi/cards/QmCardSearch/*.inc` 的声明式搜索表与 `QM_CARD_SEARCH_REGISTER` 注册（以及 `QmCardCatalogSearch.cpp` 的旧集中表），按 `Add`/`MakeModuleCard`、`pStableId` 分支、`AddCard` 规格与卡片源文件多级映射收集 `Localize` 文案，报告未入索引的卡片文案、失效索引标签和无静态文案可核对的卡片，并校验声明数组注册、聚合器 include 与默认卡登记；默认只报告，`--strict` 才在索引漂移/结构不一致时失败。CI style 作业以非阻断步骤运行并写入 step summary。
 - `qmclient_scripts/bump_version.py`
 - `qmclient_scripts/fix_style.py`
 - `qmclient_scripts/export_settings_commands_table.py`
@@ -91,7 +93,7 @@
 
 ### 5. 独立开源的服务仓库
 
-`qmclient_scripts/` 下另有一组**独立 Git 仓库**（各自有独立 remote，已被根 `.gitignore` 排除，不并入主仓库）：
+`qmclient_scripts/` 下另有独立服务源码目录（已被根 `.gitignore` 排除，不并入主仓库）。中心服与其他服务采用各自更新流程，统一见 `qmclient_scripts/SERVICES.md`：
 
 | 目录 | 仓库 | 语言 |
 |------|------|------|

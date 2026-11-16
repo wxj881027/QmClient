@@ -2216,6 +2216,8 @@ set(EXPECTED_DATA
   menuimages/play_game.png
   menuimages/settings.png
   particles.png
+  qmclient/water_hammer.png
+  qmclient/water_hook.png
   qmclient/builtinscripts/sayemoticon.chai
   qmclient/friendlinks/ddnet.webp
   qmclient/friendlinks/ddrace.webp
@@ -2241,8 +2243,29 @@ set(EXPECTED_DATA
   qmclient/chat_emojis/surrender.webp
   qmclient/developer_badge.png
   qmclient/gui_logo.png
+  qmclient/search_logo.png
+  qmclient/search_logo_signed.png
+  qmclient/search_logo_silver_ear.png
   qmclient/map_difficulty.sql
   qmclient/title_badges/logo_sdf.png
+  qmclient/ui/password_icon_bold.png
+  qmclient/ui/password_icon_light.png
+  qmclient/ui/password_icon_regular.png
+  qmclient/ui/chevron_swap_bold.png
+  qmclient/ui/chevron_swap_light.png
+  qmclient/ui/chevron_swap_regular.png
+  qmclient/ui/play_pause_swap_bold.png
+  qmclient/ui/play_pause_swap_light.png
+  qmclient/ui/play_pause_swap_regular.png
+  qmclient/ui/play_stop_swap_bold.png
+  qmclient/ui/play_stop_swap_light.png
+  qmclient/ui/play_stop_swap_regular.png
+  qmclient/ui/star_favorite_swap_bold.png
+  qmclient/ui/star_favorite_swap_light.png
+  qmclient/ui/star_favorite_swap_regular.png
+  qmclient/ui/plus_minus_swap_bold.png
+  qmclient/ui/plus_minus_swap_light.png
+  qmclient/ui/plus_minus_swap_regular.png
   race_flag.png
   shader/gaussian_blur.frag
   shader/gaussian_blur.vert
@@ -3192,6 +3215,11 @@ if(CLIENT)
     QmUi/QmSeasonalSidebar.h
     QmUi/QmBadgeGeometry.cpp
     QmUi/QmBadgeGeometry.h
+    QmUi/QmChatBubble.cpp
+    QmUi/QmChatBubble.h
+    QmUi/QmChatLineMenuLayout.h
+    QmUi/QmCloudBubble.cpp
+    QmUi/QmCloudBubble.h
     QmUi/QmBadgeGeometryData.h
     QmUi/QmAuthorName.cpp
     QmUi/QmAuthorName.h
@@ -3274,6 +3302,8 @@ if(CLIENT)
     QmUi/SettingsCardMeasure.h
     QmUi/SettingsCardCollapseState.cpp
     QmUi/SettingsCardCollapseState.h
+    QmUi/SettingsCardWidthState.cpp
+    QmUi/SettingsCardWidthState.h
     QmUi/SettingsCardWidth.h
     QmUi/SettingsCardGeometry.cpp
     QmUi/SettingsCardGeometry.h
@@ -3292,9 +3322,12 @@ if(CLIENT)
     QmUi/UiFormLogic.h
     QmUi/UiForms.cpp
     QmUi/UiForms.h
+    QmUi/QmIconSwap.cpp
+    QmUi/QmIconSwap.h
     QmUi/UiNavigation.cpp
     QmUi/UiNavigation.h
     QmUi/UiOverlays.h
+    QmUi/UiScaledLabel.h
     QmUi/UiSurface.cpp
     QmUi/UiSurface.h
     QmUi/UiTokens.h
@@ -3302,6 +3335,8 @@ if(CLIENT)
     QmUi/QmCardOrderModel.h
     QmUi/QmCardRegistry.cpp
     QmUi/QmCardRegistry.h
+    QmUi/QmSearchHeader.cpp
+    QmUi/QmSearchHeader.h
     QmUi/QmCardWiki.cpp
     QmUi/QmCardWiki.h
     QmUi/QmCardWikiPanel.cpp
@@ -3318,17 +3353,23 @@ if(CLIENT)
     QmUi/QmWikiMedia.h
     QmUi/QmWikiStore.cpp
     QmUi/QmWikiStore.h
+    QmUi/MapTagsPanel.cpp
+    QmUi/MapTagsPanel.h
+    QmUi/QmServerInfoGeometry.h
     QmUi/cards/QmCardCatalog.cpp
     QmUi/cards/QmCardCatalog.h
     QmUi/cards/QmCardCatalogIds.cpp
     QmUi/cards/QmCardCatalogSearch.cpp
     QmUi/cards/QmCardCatalogSearch.h
+    QmUi/cards/QmSearchAnswerCard.cpp
+    QmUi/cards/QmSearchAnswerCard.h
     QmUi/cards/QmCardCatalogBind.cpp
     QmUi/cards/QmCardCatalogSelfKillProtection.cpp
     QmUi/cards/QmCardCatalogFunction.cpp
     QmUi/cards/QmWordFilterFileCard.cpp
     QmUi/cards/QmCardCatalogGeneral.cpp
     QmUi/cards/QmConfigPackageCard.cpp
+    QmUi/cards/QmFriendCodeCard.cpp
     QmUi/cards/QmCardCatalogPlayer.cpp
     QmUi/cards/QmCardCatalogGraphics.cpp
     QmUi/AudioPackEditor.cpp
@@ -3357,7 +3398,6 @@ if(CLIENT)
     QmUi/cards/QmCardCatalogVisualContent.cpp
     QmUi/cards/QmCardCatalogFunctionContent.cpp
     QmUi/cards/QmCardCatalogTranslateContent.cpp
-    QmUi/cards/QmCardCatalogFavoriteMapsContent.cpp
     QmUi/cards/QmCardCatalogHudContent.cpp
     QmUi/cards/QmCardCatalogVoiceContent.cpp
     QmUi/cards/QmCardCatalogBackground3DContent.cpp
@@ -3443,6 +3483,7 @@ if(CLIENT)
     components/freezebars.h
     components/ghost.cpp
     components/ghost.h
+    components/qmclient/ghost_start_detection.h
     components/hud.cpp
     components/hud.h
     components/hud_frozen_tee_state.h
@@ -3520,8 +3561,14 @@ if(CLIENT)
     components/qmclient/friend_last_seen_data.h
     components/qmclient/bind_editor.cpp
     components/qmclient/bind_editor.h
+    components/qmclient/bind_mouse_diagram.cpp
+    components/qmclient/bind_mouse_diagram.h
     components/qmclient/bind_overview.h
     components/qmclient/bind_settings.cpp
+    components/qmclient/bind_workshop.cpp
+    components/qmclient/bind_workshop.h
+    components/qmclient/bind_workshop_ui.cpp
+    components/qmclient/bind_workshop_layout.cpp
     components/qmclient/browser_status_layout.h
     components/qmclient/browser_map_preview.h
     components/qmclient/browser_map_preview_loader.h
@@ -3548,6 +3595,8 @@ if(CLIENT)
     components/qmclient/console_text.h
     components/qmclient/streamer_word_filter.cpp
     components/qmclient/streamer_word_filter.h
+    components/qmclient/map_tags.cpp
+    components/qmclient/map_tags.h
     components/qmclient/public_word_filter.cpp
     components/qmclient/public_word_filter.h
     components/qmclient/word_filter_list.cpp
@@ -3573,6 +3622,10 @@ if(CLIENT)
     components/qmclient/keyword_reply_rules.h
     components/qmclient/recent_tee_skins.cpp
     components/qmclient/recent_tee_skins.h
+    components/qmclient/map_cover_art.cpp
+    components/qmclient/map_cover_art.h
+    components/qmclient/map_covers.cpp
+    components/qmclient/map_covers.h
     components/qmclient/map_difficulty_catalog.cpp
     components/qmclient/map_difficulty_catalog.h
     components/qmclient/vote_map_library.cpp
@@ -3595,6 +3648,10 @@ if(CLIENT)
     components/qmclient/menus_qmclient_internal.h
     components/qmclient/menus_qmclient_popups.cpp
     components/qmclient/menus_qmclient_search.cpp
+    components/qmclient/hud_map_progress.cpp
+    components/qmclient/hud_map_progress.h
+    components/qmclient/hud_island_soft_body.h
+    components/qmclient/player_state_hud_bounds.h
     components/qmclient/modes.cpp
     components/qmclient/modes.h
     components/qmclient/nameplate_layout.h
@@ -3603,16 +3660,26 @@ if(CLIENT)
     components/qmclient/monitoring/monitoring.h
     components/qmclient/music_app_watcher.cpp
     components/qmclient/music_app_watcher.h
+    components/qmclient/music_lyrics/music_lyrics_chat.h
+    components/qmclient/music_lyrics/music_lyrics_community.cpp
+    components/qmclient/music_lyrics/music_lyrics_community.h
+    components/qmclient/music_lyrics/music_lyrics_community_format.cpp
+    components/qmclient/music_lyrics/music_lyrics_community_format.h
     components/qmclient/music_lyrics/music_lyrics_display.h
     components/qmclient/music_lyrics/music_humming_state.h
     components/qmclient/music_lyrics/music_lyrics_presentation.cpp
     components/qmclient/music_lyrics/music_lyrics_presentation.h
+    components/qmclient/music_lyrics/music_singing_state.h
+    components/qmclient/music_lyrics/music_world_lyrics.cpp
+    components/qmclient/music_lyrics/music_world_lyrics.h
+    components/qmclient/music_lyrics/music_world_lyrics_state.h
     components/qmclient/netease_hook/qm_netease_lyrics_channel.cpp
     components/qmclient/netease_hook/qm_netease_lyrics_channel.h
     components/qmclient/music_lyrics/music_lyrics_integration.cpp
     components/qmclient/music_lyrics/music_lyrics_integration.h
     components/qmclient/music_lyrics/music_lyrics_krc.cpp
     components/qmclient/music_lyrics/music_lyrics_krc.h
+    components/qmclient/music_lyrics/music_lyrics_metadata.h
     components/qmclient/music_lyrics/music_lyrics_model.h
     components/qmclient/music_lyrics/music_lyrics_qrc.cpp
     components/qmclient/music_lyrics/music_lyrics_qrc.h
@@ -3636,6 +3703,7 @@ if(CLIENT)
     components/qmclient/pie_menu_points.h
     components/qmclient/pie_menu_settings.cpp
     components/qmclient/predicted_event_queue.h
+    components/qmclient/practice_cursor.h
     components/qmclient/netease/netease_integration.cpp
     components/qmclient/netease/netease_integration.h
     components/qmclient/netease/netease_lyric_parser.cpp
@@ -3693,6 +3761,9 @@ if(CLIENT)
     components/qmclient/route_visited.h
     components/qmclient/settings_resource_preview.cpp
     components/qmclient/settings_resource_preview.h
+    components/qmclient/settings_text_gap_sampler.h
+    components/qmclient/search_answers.cpp
+    components/qmclient/search_answers.h
     components/qmclient/screenshot_clipboard.cpp
     components/qmclient/screenshot_clipboard.h
     components/qmclient/screenshot_image_job.cpp
@@ -3711,7 +3782,13 @@ if(CLIENT)
     components/qmclient/ime_gradient_probe.h
     components/qmclient/config_package.cpp
     components/qmclient/config_package.h
+    components/qmclient/friend_code.cpp
+    components/qmclient/friend_code.h
     components/qmclient/screenshot_manager.h
+    components/qmclient/watermark_compositor.cpp
+    components/qmclient/watermark_compositor.h
+    QmUi/QmScreenshotEditor.cpp
+    QmUi/QmScreenshotEditor.h
     components/qmclient/scripting.cpp
     components/qmclient/scripting.h
     components/qmclient/skin_download_session.h
@@ -3726,6 +3803,12 @@ if(CLIENT)
     components/qmclient/tee_hue_cycle.h
     components/qmclient/tee_trail_styles.cpp
     components/qmclient/tee_trail_styles.h
+    components/qmclient/tee_trail_style_common.h
+    components/qmclient/tee_trail_style_aurora.cpp
+    components/qmclient/tee_trail_style_ink.cpp
+    components/qmclient/tee_trail_style_ignis.cpp
+    components/qmclient/tee_trail_style_stardust.cpp
+    components/qmclient/tee_trail_style_blackflash.cpp
     components/qmclient/scripting/impl.cpp
     components/qmclient/scripting/impl.h
     components/qmclient/scripting/state.h
@@ -3787,6 +3870,9 @@ if(CLIENT)
     components/qmclient/water_hammer_indicator.h
     components/qmclient/weapon_trajectory.cpp
     components/qmclient/weapon_trajectory.h
+    components/qmclient/checkpoint_guide.cpp
+    components/qmclient/checkpoint_guide.h
+    components/qmclient/checkpoint_guide_logic.h
     components/qmclient/friend_heart_icon.h
     components/race_demo.cpp
     components/race_demo.h
@@ -4036,6 +4122,7 @@ if(CLIENT)
     map_preview_common.h
     map_renderer.cpp
     map_renderer.h
+    qm_entity_overlay_build_plan.h
     render_component.cpp
     render_component.h
     render_interfaces.h
@@ -4710,11 +4797,12 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/ui/QmAnimDropdownTest.cpp
     src/test/unit/qmclient/ui/QmAnimFormsTest.cpp
     src/test/unit/qmclient/ui/QmDiscreteSliderTest.cpp
-    src/test/unit/client/map_browser_filter_slider_test.cpp
     src/test/unit/qmclient/ui/QmAnimScrollTest.cpp
     src/test/unit/qmclient/ui/QmListRowFeedbackTest.cpp
     src/test/unit/qmclient/ui/QmAnimTreeTest.cpp
     src/test/unit/qmclient/ui/qm_icon_policy_test.cpp
+    src/test/unit/qmclient/ui/qm_password_icon_test.cpp
+    src/test/unit/qmclient/ui/qm_icon_swap_test.cpp
     src/test/unit/qmclient/ui/qm_icon_diagnostics_test.cpp
     src/test/unit/qmclient/ui/qm_signal_icon_font_size_test.cpp
     src/test/unit/qmclient/ui/qm_signal_icon_color_test.cpp
@@ -4768,6 +4856,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_nameplate_layout_test.cpp
     src/test/unit/qmclient/client/qm_nameplate_text_effects_test.cpp
     src/test/unit/qmclient/client/qm_route_visited_test.cpp
+    src/test/unit/qmclient/client/qm_ghost_start_detection_test.cpp
     src/test/unit/qmclient/client/qm_route_render_cache_test.cpp
     src/test/integration/qmclient/client/qm_map_route_cache_test.cpp
     src/test/unit/qmclient/monitoring/qm_stutter_sample_series_test.cpp
@@ -4782,10 +4871,14 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_chat_gradient_test.cpp
     src/test/unit/qmclient/ui/qm_card_order_model_test.cpp
     src/test/unit/qmclient/ui/qm_card_registry_test.cpp
+    src/test/unit/qmclient/ui/qm_server_info_layout_test.cpp
+    src/test/unit/qmclient/settings/qm_search_header_test.cpp
+    src/test/unit/qmclient/settings/qm_search_answers_test.cpp
     src/test/unit/qmclient/ui/qm_interaction_source_test.cpp
     src/test/unit/qmclient/ui/qm_console_ui_layout_test.cpp
     src/test/unit/qmclient/ui/qm_console_settings_layout_test.cpp
     src/test/unit/qmclient/client/qm_credits_layout_test.cpp
+    src/test/unit/qmclient/client/qm_favorite_map_vote_test.cpp
     src/test/unit/qmclient/client/qm_module_layout_adapter_test.cpp
     src/test/unit/base/aio_test.cpp
     src/test/unit/client/assets_editor_layout_test.cpp
@@ -4852,11 +4945,13 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/integration/qmclient/client/qm_friend_greet_flow_test.cpp
     src/test/unit/engine/logger_test.cpp
     src/test/unit/client/map_difficulty_catalog_test.cpp
+    src/test/unit/qmclient/ui/qm_map_cover_art_test.cpp
     src/test/unit/qmclient/ui/vote_map_library_test.cpp
     src/test/unit/qmclient/ui/server_vote_list_test.cpp
     src/test/unit/qmclient/ui/vote_menu_mode_test.cpp
     src/test/unit/qmclient/ui/players_menu_test.cpp
     src/test/unit/qmclient/ui/vote_player_targets_test.cpp
+    src/test/integration/qmclient/ui/map_covers_test.cpp
     src/test/integration/qmclient/ui/vote_map_loader_test.cpp
     src/test/unit/client/map_history_test.cpp
     src/test/unit/client/map_tile_border_test.cpp
@@ -4883,7 +4978,10 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/base/prng_test.cpp
     src/test/unit/qmclient/client/qm_bind_editor_console_test.cpp
     src/test/unit/qmclient/client/qm_bind_editor_test.cpp
+    src/test/unit/qmclient/client/qm_bind_mouse_diagram_test.cpp
     src/test/unit/qmclient/client/qm_bind_overview_test.cpp
+    src/test/unit/qmclient/client/qm_bind_workshop_catalog_test.cpp
+    src/test/unit/qmclient/client/qm_bind_workshop_plan_test.cpp
     src/test/unit/qmclient/client/qm_background_particles_test.cpp
     src/test/unit/qmclient/client/qm_axiom_scores_test.cpp
     src/test/integration/qmclient/client/qm_axiom_quad_collision_test.cpp
@@ -4906,6 +5004,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_console_text_test.cpp
     src/test/unit/qmclient/client/qm_console_wheel_test.cpp
     src/test/unit/qmclient/client/qm_streamer_word_filter_test.cpp
+    src/test/unit/qmclient/client/qm_map_tags_test.cpp
+    src/test/integration/qmclient/client/qm_map_tags_lifecycle_test.cpp
     src/test/unit/qmclient/client/qm_public_word_filter_test.cpp
     src/test/unit/qmclient/client/qm_word_filter_list_test.cpp
     src/test/integration/qmclient/client/qm_public_word_filter_cache_test.cpp
@@ -4940,6 +5040,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_dummy_mini_view_layout_test.cpp
     src/test/unit/qmclient/client/qm_browser_map_preview_test.cpp
     src/test/unit/qmclient/client/qm_map_render_pass_test.cpp
+    src/test/unit/qmclient/client/qm_entity_overlay_build_plan_test.cpp
     src/test/integration/qmclient/client/qm_browser_map_preview_loader_test.cpp
     src/test/unit/qmclient/client/qm_hud_editor_visible_bounds_test.cpp
     src/test/unit/qmclient/client/qm_hud_hook_countdown_test.cpp
@@ -4949,8 +5050,13 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/integration/qmclient/client/qm_netease_lyrics_channel_test.cpp
     src/test/unit/qmclient/music/music_lyrics_display_test.cpp
     src/test/unit/qmclient/music/music_humming_state_test.cpp
+    src/test/unit/qmclient/music/music_singing_state_test.cpp
+    src/test/unit/qmclient/music/music_world_lyrics_state_test.cpp
+    src/test/unit/qmclient/music/music_lyrics_community_format_test.cpp
+    src/test/integration/qmclient/music/music_lyrics_community_test.cpp
     src/test/unit/qmclient/client/qm_lyrics_hud_layout_test.cpp
     src/test/unit/qmclient/client/qm_fast_practice_hook_input_test.cpp
+    src/test/unit/qmclient/client/qm_fast_practice_cursor_test.cpp
     src/test/unit/qmclient/client/qm_media_island_content_test.cpp
     src/test/unit/qmclient/client/qm_media_island_satellite_test.cpp
     src/test/unit/qmclient/client/qm_media_island_motion_test.cpp
@@ -4992,6 +5098,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_camera_effects_test.cpp
     src/test/contract/qmclient/ui/qm_capsule_tab_wiring_contract_test.cpp
     src/test/unit/qmclient/ui/qm_capsule_tab_geometry_test.cpp
+    src/test/unit/qmclient/ui/qm_scroll_content_drag_test.cpp
     src/test/contract/qmclient/ui/qm_ui_form_wiring_contract_test.cpp
     src/test/unit/qmclient/ui/qm_tooltip_ownership_test.cpp
     src/test/contract/qmclient/client/qm_camera_effects_contract_test.cpp
@@ -5002,6 +5109,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/settings/settings_icon_options_test.cpp
     src/test/unit/qmclient/settings/settings_color_picker_test.cpp
     src/test/unit/qmclient/settings/settings_page_layout_test.cpp
+    src/test/unit/qmclient/settings/qm_settings_mobile_pages_test.cpp
     src/test/unit/qmclient/settings/settings_content_metrics_test.cpp
     src/test/unit/qmclient/settings/settings_label_metadata_test.cpp
     src/test/unit/qmclient/settings/settings_content_layout_test.cpp
@@ -5013,6 +5121,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_tclient_statusbar_score_contract_test.cpp
     src/test/contract/qmclient/client/qm_graphics_shutdown_contract_test.cpp
     src/test/unit/qmclient/client/qm_crashdump_shutdown_suppression_test.cpp
+    src/test/unit/qmclient/client/qm_crashdump_fatal_report_test.cpp
     src/test/unit/qmclient/client/qm_hang_watchdog_state_test.cpp
     src/test/contract/qmclient/client/qm_graphics_backend_fallback_contract_test.cpp
     src/test/unit/qmclient/client/qm_graphics_opengl_probe_contract_test.cpp
@@ -5026,7 +5135,6 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/contract/qmclient/client/qm_demo_cut_contract_test.cpp
     src/test/unit/qmclient/client/qm_demo_cut_test.cpp
     src/test/unit/qmclient/client/qm_local_saves_test.cpp
-    src/test/unit/qmclient/client/qm_save_usage_test.cpp
     src/test/contract/qmclient/client/qm_storage_path_contract_test.cpp
     src/test/contract/qmclient/ui/qm_new_ui_menu_cards_surface_contract_test.cpp
     src/test/contract/qmclient/ui/qm_new_ui_menu_cards_deck_contract_test.cpp
@@ -5070,6 +5178,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/music/qm_spotify_parser_test.cpp
     src/test/unit/qmclient/client/qm_modes_test.cpp
     src/test/unit/qmclient/client/qm_map_progress_test.cpp
+    src/test/unit/qmclient/client/qm_checkpoint_guide_test.cpp
+    src/test/unit/qmclient/client/qm_hud_map_progress_test.cpp
     src/test/unit/qmclient/client/qm_config_save_value_override_test.cpp
     src/test/integration/qmclient/client/qm_removed_ui_config_test.cpp
     src/test/integration/qmclient/client/qm_legacy_config_load_test.cpp
@@ -5098,6 +5208,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_title_badge_test.cpp
     src/test/unit/qmclient/client/qm_title_badge_render_test.cpp
     src/test/unit/qmclient/client/qm_title_style_test.cpp
+    src/test/unit/qmclient/ui/qm_chat_bubble_test.cpp
     src/test/unit/qmclient/client/qm_sponsor_chat_style_test.cpp
     src/test/unit/qmclient/client/qm_skin_outline_test.cpp
     src/test/unit/qmclient/client/qm_scoreboard_skin_test.cpp
@@ -5124,6 +5235,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/integration/qmclient/settings/qm_nameplate_cards_test.cpp
     src/test/integration/qmclient/settings/qm_general_cards_test.cpp
     src/test/integration/qmclient/settings/qm_catalog_search_test.cpp
+    src/test/integration/qmclient/settings/qm_search_answer_cards_test.cpp
     src/test/integration/qmclient/settings/qm_title_cards_test.cpp
     src/test/integration/qmclient/settings/qm_spectator_cards_test.cpp
     src/test/integration/qmclient/settings/qm_tee_cards_test.cpp
@@ -5158,6 +5270,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/engine/serverinfo_test.cpp
     src/test/unit/qmclient/settings/settings_card_collapse_state_test.cpp
     src/test/unit/qmclient/settings/settings_card_collapse_config_test.cpp
+    src/test/unit/qmclient/settings/settings_card_width_state_test.cpp
     src/test/unit/client/pie_menu_logic_test.cpp
     src/test/unit/client/pie_menu_geometry_test.cpp
     src/test/unit/client/pie_menu_points_test.cpp
@@ -5169,7 +5282,10 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/settings/settings_card_width_test.cpp
     src/test/unit/qmclient/client/qm_weapon_trajectory_test.cpp
     src/test/unit/qmclient/client/qm_screenshot_watermark_test.cpp
+    src/test/unit/qmclient/client/qm_watermark_compositor_test.cpp
     src/test/unit/qmclient/client/qm_config_package_test.cpp
+    src/test/unit/qmclient/client/qm_friend_code_test.cpp
+    src/test/integration/qmclient/client/qm_friend_code_import_test.cpp
     src/test/integration/qmclient/client/qm_config_package_storage_test.cpp
     src/test/unit/qmclient/client/qm_screenshot_clipboard_test.cpp
     src/test/unit/qmclient/client/qm_screenshot_image_policy_test.cpp
@@ -5273,6 +5389,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/support/translate_http_test_support.h
     src/test/unit/qmclient/translate/translate_detect_test.cpp
     src/test/unit/qmclient/translate/translate_history_test.cpp
+    src/test/unit/qmclient/translate/translate_outgoing_request_test.cpp
     src/test/integration/qmclient/translate/translate_jobs_integration_test.cpp
     src/test/unit/qmclient/translate/translate_responses_test.cpp
     src/test/unit/qmclient/translate/translate_llm_parse_test.cpp
@@ -5311,12 +5428,20 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/tclient/swap_countdown_message.cpp
     src/game/client/components/tclient/qm_tee_trail.cpp
     src/game/client/components/qmclient/tee_trail_styles.cpp
+    src/game/client/components/qmclient/tee_trail_style_aurora.cpp
+    src/game/client/components/qmclient/tee_trail_style_ink.cpp
+    src/game/client/components/qmclient/tee_trail_style_ignis.cpp
+    src/game/client/components/qmclient/tee_trail_style_stardust.cpp
+    src/game/client/components/qmclient/tee_trail_style_blackflash.cpp
     src/game/client/components/qmclient/qm_developer_badge.cpp
     src/game/client/components/qmclient/qm_title_badge.cpp
     src/game/client/components/qmclient/screenshot_clipboard.cpp
     src/game/client/components/qmclient/screenshot_image_job.cpp
+    src/game/client/components/qmclient/watermark_compositor.cpp
     src/game/client/components/qmclient/skin_source_job.cpp
     src/game/client/components/qmclient/config_package.cpp
+    src/game/client/components/qmclient/friend_code.cpp
+    src/game/client/components/qmclient/search_answers.cpp
     src/game/client/components/jump_hint_utils.cpp
     src/test/support/render_tee_offset_helpers.cpp
     src/game/client/components/section_loader.cpp
@@ -5350,6 +5475,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/QmUi/cards/QmCardCatalogSearch.cpp
     src/game/client/QmUi/SettingsCardDeckLogic.cpp
     src/game/client/QmUi/SettingsCardCollapseState.cpp
+    src/game/client/QmUi/SettingsCardWidthState.cpp
     src/game/client/QmUi/QmModuleLayoutAdapter.cpp
     src/game/client/QmUi/SettingsCardGeometry.cpp
     src/game/client/components/assets_resource_registry.cpp
@@ -5358,6 +5484,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/generated/client_data7.h
     src/game/client/components/qmclient/hud_notifications/hud_notification_catalog.cpp
     src/game/client/components/qmclient/hud_notifications/hud_notification_rules.cpp
+    src/game/client/components/qmclient/map_cover_art.cpp
+    src/game/client/components/qmclient/map_covers.cpp
     src/game/client/components/qmclient/map_difficulty_catalog.cpp
     src/game/client/components/qmclient/vote_map_library.cpp
     src/game/client/components/qmclient/vote_map_loader.cpp
@@ -5366,6 +5494,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/axiom_scores_data.cpp
     src/game/client/components/qmclient/friend_last_seen_data.cpp
     src/game/client/components/qmclient/streamer_word_filter.cpp
+    src/game/client/components/qmclient/map_tags.cpp
     src/game/client/components/qmclient/public_word_filter.cpp
     src/game/client/components/qmclient/word_filter_list.cpp
     src/test/support/ui_test_stubs.cpp
@@ -5376,6 +5505,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/qm/hooks/soda/qm_soda_protocol.cpp
     src/qm/music/qm_kugou_protocol.cpp
     src/qm/music/qm_qqmusic_protocol.cpp
+    src/game/client/components/qmclient/music_lyrics/music_lyrics_community.cpp
+    src/game/client/components/qmclient/music_lyrics/music_lyrics_community_format.cpp
     src/game/client/components/qmclient/music_lyrics/qm_spotify_crypto.cpp
     src/game/client/components/qmclient/music_lyrics/qm_spotify_token.cpp
     src/game/client/components/qmclient/music_lyrics/qm_spotify_parser.cpp
@@ -5391,6 +5522,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/qm/music/qm_qqmusic_protocol.h
     src/game/client/components/qmclient/modes.cpp
     src/game/client/components/qmclient/bind_editor.cpp
+    src/game/client/components/qmclient/bind_mouse_diagram.cpp
+    src/game/client/components/qmclient/bind_workshop.cpp
+    src/game/client/components/qmclient/bind_workshop_layout.cpp
     src/game/client/components/qmclient/wheel_presets.cpp
     src/game/client/components/qmclient/settings_resource_preview.cpp
     src/game/client/components/qmclient/tee_hue_cycle.cpp
@@ -5493,6 +5627,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/unit/engine/input_sdl3_test.cpp
       src/test/integration/engine/audio_sdl3_test.cpp
     )
+    if(TARGET_OS STREQUAL "windows")
+      list(APPEND TESTS src/test/unit/engine/sdl3_windows_audio_properties_test.cpp)
+    endif()
   endif()
   set(TARGET_TESTRUNNER testrunner)
   add_executable(${TARGET_TESTRUNNER} EXCLUDE_FROM_ALL
@@ -5651,6 +5788,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/client/qm_text_initialization_test.cpp
       src/test/integration/qmclient/client/qm_text_device_recovery_test.cpp
       src/test/integration/qmclient/ui/qm_popup_blur_scope_test.cpp
+      src/test/integration/qmclient/ui/qm_clip_suspend_test.cpp
       src/test/integration/qmclient/ui/qm_author_name_blur_test.cpp
       src/game/client/QmUi/QmAuthorName.cpp
       src/game/client/components/qmclient/qm_sponsor_authors.cpp
@@ -5663,6 +5801,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/ui/qm_console_settings_scroll_test.cpp
       src/test/integration/qmclient/ui/qm_scrollbar_color_submission_test.cpp
       src/test/integration/qmclient/ui/qm_scrollbar_reserve_transition_test.cpp
+      src/test/integration/qmclient/ui/qm_scroll_display_test.cpp
+      src/test/integration/qmclient/ui/qm_direct_touch_test.cpp
       src/test/integration/qmclient/ui/qm_background_controls_test.cpp
       src/test/integration/qmclient/ui/qm_navigation_selection_test.cpp
       src/test/integration/qmclient/ui/qm_editor_text_input_test.cpp
@@ -5673,6 +5813,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/ui/qm_confirm_popup_result_test.cpp
       src/test/integration/qmclient/ui/qm_tooltip_text_layout_test.cpp
       src/test/integration/qmclient/ui/qm_card_summary_layout_test.cpp
+      src/test/integration/qmclient/ui/qm_visual_hover_visibility_test.cpp
       src/test/integration/qmclient/ui/qm_secondary_panel_actions_test.cpp
       src/test/integration/qmclient/ui/qm_browser_map_preview_input_test.cpp
       src/test/integration/qmclient/ui/qm_settings_action_group_test.cpp
@@ -5682,6 +5823,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/ui/qm_server_browser_filter_layout_test.cpp
       src/test/integration/qmclient/ui/qm_spectator_hud_text_test.cpp
       src/test/integration/qmclient/ui/qm_icon_text_test.cpp
+      src/test/integration/qmclient/ui/qm_scaled_label_test.cpp
       src/test/integration/qmclient/ui/qm_surface_text_test.cpp
       src/test/integration/qmclient/ui/qm_theme_selection_test.cpp
       src/test/integration/qmclient/ui/qm_ui_element_lifetime_test.cpp
@@ -5697,6 +5839,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/game/client/QmUi/UiButtons.cpp
       src/game/client/QmUi/UiSurface.cpp
       src/game/client/QmUi/UiForms.cpp
+      src/game/client/QmUi/QmIconSwap.cpp
       src/game/client/QmUi/UiFormLogic.cpp
       src/game/client/QmUi/QmAnim.cpp
       src/game/client/QmUi/QmAnimationBackend.cpp
@@ -5704,6 +5847,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/game/client/QmUi/QmCardOrderModel.cpp
       src/game/client/QmUi/QmCardRegistry.cpp
       src/game/client/QmUi/QmCardWiki.cpp
+      src/game/client/QmUi/cards/QmCardCatalogIds.cpp
       src/game/client/QmUi/cards/QmCardCatalogSearch.cpp
       src/game/client/QmUi/QmCardWikiPanel.cpp
       src/game/client/QmUi/QmWikiDocs.cpp
@@ -5783,6 +5927,9 @@ if(TARGET benchmark::benchmark AND SERVER AND FREETYPE_FOUND)
     src/test/benchmark/qm_benchmark_main.cpp
     src/test/benchmark/qm_online_replay_benchmark.cpp
     src/test/benchmark/qm_route_render_cache_benchmark.cpp
+    src/test/benchmark/qm_bind_blueprint_benchmark.cpp
+    src/game/client/components/qmclient/bind_workshop.cpp
+    src/game/client/components/qmclient/bind_editor.cpp
     src/test/benchmark/qm_str_benchmark.cpp
     src/test/benchmark/qm_update_benchmark.cpp
     src/game/client/components/qmclient/update_manifest.cpp
@@ -5809,6 +5956,15 @@ if(TARGET benchmark::benchmark AND SERVER AND FREETYPE_FOUND)
     src/game/client/QmUi/QmDropdown.cpp
     src/test/benchmark/qm_icon_render_benchmark.cpp
     src/engine/client/text.cpp
+    # 拖尾几何构建（BuildEffect 与样式分派的生产实现；每帧每玩家热路径）
+    src/test/benchmark/qm_trail_style_benchmark.cpp
+    src/game/client/components/tclient/qm_tee_trail.cpp
+    src/game/client/components/qmclient/tee_trail_styles.cpp
+    src/game/client/components/qmclient/tee_trail_style_aurora.cpp
+    src/game/client/components/qmclient/tee_trail_style_ink.cpp
+    src/game/client/components/qmclient/tee_trail_style_ignis.cpp
+    src/game/client/components/qmclient/tee_trail_style_stardust.cpp
+    src/game/client/components/qmclient/tee_trail_style_blackflash.cpp
     src/test/benchmark/qm_steam_benchmark.cpp
     # Steam 客户端探测链（SteamFindClient 基准；依赖 steam_api 的链接桩）
     src/engine/client/steam.cpp
@@ -6219,6 +6375,16 @@ if(CLIENT AND DMGBUILD_FOUND)
   configure_file(other/bundle/server/Info.plist.in bundle/server/Info.plist)
 
   set(DMG_TMPDIR pack_${CPACK_PACKAGE_FILE_NAME}_dmg)
+  # SDL3 以 framework 形式随包分发；静态链接时期这段为空。
+  if(SDL3_COPY_DIRS)
+    set(DMG_SDL3_FRAMEWORK_COPY_COMMANDS
+      COMMAND ${CMAKE_COMMAND} -E copy_directory ${EXTRA_SDL3_LIBDIR}/SDL3.framework ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/SDL3.framework)
+    set(DMG_SDL3_FRAMEWORK_SIGN_COMMANDS
+      COMMAND codesign --force --sign - ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/SDL3.framework)
+  else()
+    set(DMG_SDL3_FRAMEWORK_COPY_COMMANDS)
+    set(DMG_SDL3_FRAMEWORK_SIGN_COMMANDS)
+  endif()
   set(DMG_MKDIRS
     ${CLIENT_EXECUTABLE}.app
     ${CLIENT_EXECUTABLE}.app/Contents
@@ -6357,12 +6523,14 @@ if(CLIENT AND DMGBUILD_FOUND)
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/ddnet-libs/freetype/${LIB_DIR}/libfreetype.6.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/ddnet-libs/png/${LIB_DIR}/libpng16.16.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
     ${DMG_FFMPEG_COPY_COMMANDS}
+    ${DMG_SDL3_FRAMEWORK_COPY_COMMANDS}
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_BINARY_DIR}/libsteam_api.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
 	${DMG_WEBP_COPY_COMMANDS}
 	${DMG_VULKAN_RUNTIME_COPY_COMMANDS}
     COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/scripts/darwin_strip_rpath.py ${CMAKE_OTOOL} ${CMAKE_INSTALL_NAME_TOOL} ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/MacOS/${CLIENT_EXECUTABLE}
     COMMAND ${CMAKE_INSTALL_NAME_TOOL} -add_rpath @loader_path/../Frameworks ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/MacOS/${CLIENT_EXECUTABLE}
     COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/qmclient_scripts/darwin_fix_install_names.py ${CMAKE_OTOOL} ${CMAKE_INSTALL_NAME_TOOL} ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks --executable ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/MacOS/${CLIENT_EXECUTABLE}
+    ${DMG_SDL3_FRAMEWORK_SIGN_COMMANDS}
     COMMAND codesign --force --sign - ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/*.dylib
     COMMAND codesign --force --sign - ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/MacOS/${CLIENT_EXECUTABLE}
 
@@ -6591,6 +6759,13 @@ foreach(target ${TARGETS})
 	endif()
   if(OUR_FLAGS)
     target_compile_options(${target} PRIVATE ${OUR_FLAGS})
+  endif()
+  # Android 17 的 bionic 对 strlen/memchr 做运行期 FORTIFY 检查，会和字符串工具
+  # （str_length / str_utf8_*）在 -O2 下的对象大小推导打架：启动即在 CFriends
+  # 构造函数里 abort（FORTIFY: memchr: prevented 63-byte read from 8-byte buffer）。
+  # NDK 工具链默认往 FLAGS 注入 -D_FORTIFY_SOURCE=2，这里用 -U 抵消（后者生效）。
+  if(CMAKE_SYSTEM_NAME STREQUAL "Android")
+    target_compile_options(${target} PRIVATE -U_FORTIFY_SOURCE)
   endif()
   if(DEFINE_FORTIFY_SOURCE_3 OR DEFINE_FORTIFY_SOURCE)
     if(MINGW)

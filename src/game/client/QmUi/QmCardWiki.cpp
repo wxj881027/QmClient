@@ -497,12 +497,6 @@ namespace
 			Localizable("It stays on for every match, so switch it off before real races to keep the screen and your aim clean."),
 		},
 		{
-			"qm:console",
-			Localizable("Font size, background opacity, colors and command highlighting of the local console you open with F1."),
-			Localizable("Set \"Console font size\" and \"Console background opacity\", tick \"Highlight console commands\", then choose a \"Console color scheme\"."),
-			Localizable("Your own colors appear only under \"Custom\"; press \"Reset console appearance\" if the text becomes hard to read."),
-		},
-		{
 			"qm:coords",
 			Localizable("Shows X and Y coordinates on players' nameplates, for yourself, for other players, or both."),
 			Localizable("Turn on \"Show own coordinates\" or \"Show other players' coordinates\", then choose \"Show X\" and \"Show Y\"."),
@@ -541,14 +535,8 @@ namespace
 		{
 			"qm:entity_overlay",
 			Localizable("Opacity of entity layers on the map such as death, freeze, unfreeze, teleport, checkpoint and switch tiles."),
-			Localizable("Drag a slider like \"Death opacity\" or \"Teleport opacity\" from 0 to 100%, or use \"Tune layer opacity\" to fade the whole entity layer."),
+			Localizable("Drag a slider like \"Death opacity\" or \"Teleport opacity\" from 0 to 100%, or use \"Overlay entities\" to fade the whole entity layer."),
 			Localizable("Fading death and freeze tiles helps you see tees and weapons behind them, but the exact tile edge gets harder to judge."),
-		},
-		{
-			"qm:favorite_maps",
-			Localizable("Your list of favorite maps, each shown with its map type, with quick copy and remove actions."),
-			Localizable("Click a map name to copy it and press the X button to remove it; add maps with the \"Favorite map\" checkbox in the in-game server info page."),
-			Localizable("Favorites match the exact map name and also feed the \"Favorite map\" tab in the server browser."),
 		},
 		{
 			"qm:focus_mode",
@@ -643,7 +631,7 @@ namespace
 		{
 			"qm:player_stats",
 			Localizable("Adds HUD lines for alive time, rescue and freeze counts and hook left/right ratio, plus a map progress bar."),
-			Localizable("Enable \"Show player stats HUD\"; tick \"Map progress bar\", then pick \"Use embedded HUD progress bar\" or place the bar with the sliders."),
+			Localizable("Enable \"Map progress bar\" and choose its location: Standalone, Player stats or Dynamic Island. Enable \"Show player stats HUD\" for the Player stats location."),
 			Localizable("The map progress bar only fills on Gores maps; the other three lines work on any server."),
 		},
 		{
@@ -663,12 +651,6 @@ namespace
 			Localizable("Adds an outline to skins, slowly cycles your custom Tee colors, and draws a shadow behind emoticons."),
 			Localizable("Turn on \"Skin outline for self and dummy\" or \"Skin outline for other players\", then tune width and opacity; \"Cycle custom Tee hue\" animates custom colors."),
 			Localizable("\"Cycle custom Tee hue\" only works with custom colors and does nothing while the TClient rainbow Tee option is on."),
-		},
-		{
-			"qm:skin_transition",
-			Localizable("Plays a short effect when a tee's skin changes, and can copy the skin of the tee you just hammered."),
-			Localizable("Turn on \"Skin transition animation\", choose a \"Skin transition type\" and \"Animation range\", then set \"Skin transition duration\" and \"Skin transition intensity\"."),
-			Localizable("Enable \"Hammer skin steal\" only if you want your skin to change on every hammer hit, since other players see it too."),
 		},
 		{
 			"qm:solo_split",
@@ -726,9 +708,9 @@ namespace
 		},
 		{
 			"qm:water_hammer",
-			Localizable("Marks teammates who hold hammer while stuck in death or freeze areas, so you can see who is hammering them."),
-			Localizable("Tick \"Highlight teammates hammering in death or freeze areas\"; it works on your own team only and needs no key bind."),
-			Localizable("Use it to find the teammate who needs a wake-up; enemies are never highlighted, so do not look for them here."),
+			Localizable("Highlights frozen teammates holding hammer and shows their held hammer or hook beside the nameplate key presses."),
+			Localizable("Enable the highlight and nameplate key presses, then choose the pressed hammer and hook icon colors. Icon size follows the key press size."),
+			Localizable("Icons disappear on release or unfreeze. Remote held inputs require server preinput support; your active character is excluded."),
 		},
 		{
 			"qm:weapon_animation",

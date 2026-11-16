@@ -21,6 +21,7 @@ enum class ETranslateNotice
 	INVALID_RESPONSE,
 	INPUT_TOO_LONG,
 	MODEL_NOT_FOUND,
+	ALREADY_TARGET_LANGUAGE,
 };
 
 class CTranslateResponse

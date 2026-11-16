@@ -130,7 +130,7 @@ float CMenus::LayoutTClientAutoReplyCacheSection(CUIRect &CurrentColumn, bool Re
 	}
 	return CurrentColumn.y - SavedY;
 }
-float CMenus::LayoutTClientPetCacheSection(CUIRect &CurrentColumn, bool Render)
+float CMenus::LayoutTClientPetCacheSection(CUIRect &CurrentColumn, bool)
 {
 	CUIRect Label, Button, PetSkinBox;
 	IUiContext TClientPetTextInputCtx;
@@ -159,7 +159,7 @@ float CMenus::LayoutTClientPetCacheSection(CUIRect &CurrentColumn, bool Render)
 	}
 	return CurrentColumn.y - SavedY;
 }
-float CMenus::LayoutTClientHudCacheSection(CUIRect &CurrentColumn, bool Render)
+float CMenus::LayoutTClientHudCacheSection(CUIRect &CurrentColumn, bool)
 {
 	CUIRect Button, NotificationConfig;
 	IUiContext TClientHudTextInputCtx;
@@ -177,13 +177,15 @@ float CMenus::LayoutTClientHudCacheSection(CUIRect &CurrentColumn, bool Render)
 		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmMiniDebug, "tclient-mini-debug", Localize("Show position and angle (mini debug)"), &g_Config.m_QmMiniDebug, &Row, LineSize);
 	if(Flow.Control("tclient-render-cursor-spec", LineSize, Row, MarginSmall))
 		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmRenderCursorSpec, "tclient-render-cursor-spec", Localize("Show the cursor while free spectating"), &g_Config.m_QmRenderCursorSpec, &Row, LineSize);
+	if(Flow.Control("tclient-notify-when-last", LineSize, Row, MarginSmall))
+		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmNotifyWhenLast, "tclient-notify-when-last", Localize("Notify when only one tee is still alive:"), &g_Config.m_QmNotifyWhenLast, &Row, LineSize);
+	if(Flow.Control("tclient-show-center-line", LineSize, Row, MarginSmall))
+		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmShowCenter, "tclient-show-center-line", Localize("Show the screen center line"), &g_Config.m_QmShowCenter, &Row, LineSize);
 	if(g_Config.m_QmRenderCursorSpec)
 	{
 		if(Flow.Control("tclient-freeview-cursor-opacity", LineSize, Button, MarginSmall))
 			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-freeview-cursor-opacity", &g_Config.m_QmRenderCursorSpecAlpha, &g_Config.m_QmRenderCursorSpecAlpha, &Button, Localize("Freeview cursor opacity"), 0, 100);
 	}
-	if(Flow.Control("tclient-notify-when-last", LineSize, Row, MarginSmall))
-		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmNotifyWhenLast, "tclient-notify-when-last", Localize("Notify when only one tee is still alive:"), &g_Config.m_QmNotifyWhenLast, &Row, LineSize);
 	if(g_Config.m_QmNotifyWhenLast)
 	{
 		if(Flow.Control("tclient-notify-last-text-color", LineSize, NotificationConfig, MarginSmall))
@@ -202,8 +204,6 @@ float CMenus::LayoutTClientHudCacheSection(CUIRect &CurrentColumn, bool Render)
 		if(Flow.Control("tclient-notify-last-size", LineSize, Button, MarginSmall))
 			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-notify-last-size", &g_Config.m_QmNotifyWhenLastSize, &g_Config.m_QmNotifyWhenLastSize, &Button, Localize("Font size"), 1, 50);
 	}
-	if(Flow.Control("tclient-show-center-line", LineSize, Row, MarginSmall))
-		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmShowCenter, "tclient-show-center-line", Localize("Show the screen center line"), &g_Config.m_QmShowCenter, &Row, LineSize);
 	if(g_Config.m_QmShowCenter)
 	{
 		CUIRect CenterColor;

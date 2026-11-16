@@ -3,9 +3,14 @@ package org.ddnet.client;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ClipData;
+import android.content.ContentValues;
 import android.content.Intent;
+import android.media.MediaScannerConnection;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.provider.DocumentsContract;
 import android.util.Log;
 import android.widget.Toast;
@@ -21,6 +26,7 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -154,6 +160,61 @@ public final class QmMediaExporter {
 
 	private String mimeType(File file) {
 		return QmMediaFiles.matches(file, true) ? "video/mp4" : "application/octet-stream";
+	}
+
+	// 复制到公共下载目录：Android 10+ 用 MediaStore.Downloads（不需要存储权限、
+	// 文件管理器和「下载」应用都能看到），旧版本退回公共 Downloads 直写。
+	// 返回最终文件名，失败抛 IOException。
+	// 崩溃报告是纯文本，用 text/plain 才能被文件管理器直接预览；其余保持二进制类型。
+	public static String copyToDownloads(Activity activity, File source) throws IOException {
+		final String displayName = source.getName();
+		final String mime = displayName.toLowerCase(Locale.ROOT).endsWith(".txt") ? "text/plain" : "application/octet-stream";
+		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+			ContentValues values = new ContentValues();
+			values.put(MediaStore.MediaColumns.DISPLAY_NAME, displayName);
+			values.put(MediaStore.MediaColumns.MIME_TYPE, mime);
+			values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/QmClient");
+			values.put(MediaStore.MediaColumns.IS_PENDING, 1);
+			Uri uri = activity.getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+			if(uri == null)
+				throw new IOException("insert failed");
+			boolean ok = false;
+			try(OutputStream out = activity.getContentResolver().openOutputStream(uri); FileInputStream in = new FileInputStream(source)) {
+				if(out == null)
+					throw new IOException("open failed");
+				byte[] buffer = new byte[64 * 1024];
+				int read;
+				while((read = in.read(buffer)) > 0)
+					out.write(buffer, 0, read);
+				ok = true;
+			} finally {
+				if(!ok)
+					activity.getContentResolver().delete(uri, null, null);
+			}
+			ContentValues done = new ContentValues();
+			done.put(MediaStore.MediaColumns.IS_PENDING, 0);
+			activity.getContentResolver().update(uri, done, null, null);
+			return displayName;
+		}
+		File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "QmClient");
+		if(!dir.exists() && !dir.mkdirs())
+			throw new IOException("mkdir failed");
+		File target = new File(dir, displayName);
+		int index = 1;
+		while(target.exists()) {
+			final int dot = displayName.lastIndexOf('.');
+			final String base = dot > 0 ? displayName.substring(0, dot) : displayName;
+			final String ext = dot > 0 ? displayName.substring(dot) : "";
+			target = new File(dir, base + "_" + index + ext);
+			index++;
+		}
+		try(OutputStream out = new FileOutputStream(target); FileInputStream in = new FileInputStream(source)) {
+			byte[] buffer = new byte[64 * 1024];
+			int read;
+			while((read = in.read(buffer)) > 0)
+				out.write(buffer, 0, read);
+		}
+		return target.getName();
 	}
 
 	private void export(File file) {

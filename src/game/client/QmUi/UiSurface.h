@@ -35,6 +35,11 @@ struct SRoundedSurfaceParams
 	// 边框沿带宽的羽化指数：0 为实心边框，越大越向外淡出。
 	// 辉光类描边（彩虹光环）靠它把多层叠成渐变，而不是三道硬边。
 	float m_BorderFalloff = 0.0f;
+	// 形状外扩像素：整块形状按距离场向外偏移，而不是「矩形外扩 + 半径加一」。
+	// 叠层（阴影 / 描边 / 填充）只有靠它才是同一条曲线的等距外扩，换成连续曲率后不会错位。
+	float m_ShapeExpand = 0.0f;
+	// 连续缩放的表面保留小数几何；抗锯齿仍使用真实物理像素大小。
+	bool m_AlignToPixel = true;
 };
 
 struct SRoundedSurfacePlan
@@ -44,6 +49,8 @@ struct SRoundedSurfacePlan
 	float m_BorderWidth = 0.0f;
 	float m_PixelSize = 0.0001f;
 	vec4 m_CornerRadii{};
+	// 形状外扩：m_Rect 已经按它向外放大，着色器再用同一个值把形状本身外扩。
+	float m_Expand = 0.0f;
 	bool m_UseSdf = false;
 };
 
@@ -60,7 +67,7 @@ inline SRoundedSurfacePlan ResolveRoundedSurfacePlan(const CUIRect &Rect, const 
 {
 	SRoundedSurfacePlan Plan;
 	Plan.m_PixelSize = std::max(Params.m_PixelSize, 0.0001f);
-	const SRoundedRectGeometry Geometry = ResolveRoundedRectGeometry(Rect.x, Rect.y, Rect.w, Rect.h, Params.m_Radius, Plan.m_PixelSize);
+	const SRoundedRectGeometry Geometry = ResolveRoundedRectGeometry(Rect.x, Rect.y, Rect.w, Rect.h, Params.m_Radius, Params.m_AlignToPixel ? Plan.m_PixelSize : 0.0f);
 	Plan.m_Rect = {Geometry.m_X, Geometry.m_Y, Geometry.m_W, Geometry.m_H};
 	Plan.m_Radius = Geometry.m_Rounding;
 	const auto AlignToPixel = [](const float Value, const float Size) {
@@ -68,6 +75,14 @@ inline SRoundedSurfacePlan ResolveRoundedSurfacePlan(const CUIRect &Rect, const 
 	};
 	const float MaxBorderWidth = std::max(0.0f, std::min(Plan.m_Rect.w, Plan.m_Rect.h) * 0.5f);
 	Plan.m_BorderWidth = std::clamp(AlignToPixel(Params.m_BorderWidth, Plan.m_PixelSize), 0.0f, MaxBorderWidth);
+	Plan.m_Expand = std::max(Params.m_ShapeExpand, 0.0f);
+	if(Plan.m_Expand > 0.0f)
+	{
+		Plan.m_Rect.x -= Plan.m_Expand;
+		Plan.m_Rect.y -= Plan.m_Expand;
+		Plan.m_Rect.w += Plan.m_Expand * 2.0f;
+		Plan.m_Rect.h += Plan.m_Expand * 2.0f;
+	}
 	Plan.m_CornerRadii = ResolveRoundedSurfaceCornerRadii(Plan.m_Radius, Params.m_Corners);
 	Plan.m_UseSdf = HasSdf && Plan.m_Rect.w > 0.0f && Plan.m_Rect.h > 0.0f;
 	return Plan;
@@ -144,8 +159,11 @@ inline void ResolveRoundedImageUV(const float RectWidth, const float RectHeight,
 
 bool DrawRoundedImage(IGraphics *pGraphics, const CUIRect &Rect, const SRoundedImageParams &Image, const ColorRGBA &Border, const SRoundedSurfaceParams &Params);
 bool DrawRoundedSurface(IGraphics *pGraphics, const CUIRect &Rect, const ColorRGBA &Fill, const ColorRGBA &Border, const SRoundedSurfaceParams &Params);
-bool DrawRoundedSurface(CUi *pUi, const CUIRect &Rect, const ColorRGBA &Fill, const ColorRGBA &Border, float Radius, float BorderWidth = 0.0f, int Corners = IGraphics::CORNER_ALL);
+// 需要形状外扩等完整参数时走参数重载，保留曲线与描边的统一语义。
+bool DrawRoundedSurface(CUi *pUi, const CUIRect &Rect, const ColorRGBA &Fill, const ColorRGBA &Border, float Radius, float BorderWidth = 0.0f, int Corners = IGraphics::CORNER_ALL, bool AlignToPixel = true);
+bool DrawRoundedSurface(CUi *pUi, const CUIRect &Rect, const ColorRGBA &Fill, const ColorRGBA &Border, const SRoundedSurfaceParams &Params);
+bool DrawRoundedSurface(const IUiContext &Ctx, const CUIRect &Rect, const ColorRGBA &Fill, const ColorRGBA &Border, const SRoundedSurfaceParams &Params);
 bool DrawRoundedImage(CUi *pUi, const CUIRect &Rect, const SRoundedImageParams &Image, const ColorRGBA &Border, float Radius, float BorderWidth = 0.0f);
-bool DrawRoundedSurface(const IUiContext &Ctx, const CUIRect &Rect, const ColorRGBA &Fill, const ColorRGBA &Border, float Radius, float BorderWidth = 0.0f, int Corners = IGraphics::CORNER_ALL);
+bool DrawRoundedSurface(const IUiContext &Ctx, const CUIRect &Rect, const ColorRGBA &Fill, const ColorRGBA &Border, float Radius, float BorderWidth = 0.0f, int Corners = IGraphics::CORNER_ALL, bool AlignToPixel = true);
 
 #endif

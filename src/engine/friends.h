@@ -8,6 +8,8 @@
 #include <engine/shared/protocol.h>
 
 #include <cstdint>
+#include <string>
+#include <vector>
 
 struct CFriendInfo
 {
@@ -18,6 +20,12 @@ struct CFriendInfo
 	unsigned m_NameHash;
 	unsigned m_ClanHash;
 	bool m_Pinned;
+};
+
+struct CFriendList
+{
+	std::vector<std::string> m_vCategories;
+	std::vector<CFriendInfo> m_vFriends;
 };
 
 class IFriends : public IInterface
@@ -39,6 +47,9 @@ public:
 	static constexpr const char *OFFLINE_CATEGORY = "Offline";
 
 	virtual void Init(bool Foes = false) = 0;
+	// 批量恢复按名字和战队精确保存身份，不受显示时忽略战队的选项影响。
+	static bool ValidateList(const CFriendList &List);
+	virtual bool ReplaceAll(const CFriendList &List) = 0;
 
 	virtual int NumFriends() const = 0;
 	// 好友身份、分组与置顶变化的版本；备注在显示时直接读取。

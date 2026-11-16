@@ -343,6 +343,9 @@
 === Saves for '%s' ===
 == === Saves de '%s' ===
 
+?!Stuck keys!?
+== ?!Teclas pressionadas!?
+
 []
 [%s] %s (Map: %s, Time: %s)
 == [%s] %s (mapa: %s, hora: %s)
@@ -364,6 +367,9 @@ A calm-play mode that hides the HUD, names, effects, chat and sounds you pick, s
 
 A crowded HUD hides the game, so start with one element and add more if needed.
 == Um HUD cheio esconde o jogo; comece com um elemento e adicione mais se precisar.
+
+A damped spring drives the offset; reversing slows it before it turns
+== Uma mola amortecida conduz o deslocamento; ao inverter, ela desacelera antes de virar
 
 A demo with this name already exists
 == Já existe uma demo com este nome
@@ -590,9 +596,6 @@ Add friends by entering their name below or by clicking their name in the player
 Add function
 == Adicionar função
 
-Add Group
-== Adicionar Grupo
-
 Add Item
 == Adicionar Item
 
@@ -728,9 +731,6 @@ Adjust TClient heads-up display elements
 Adjust the display options; open a vote to check the layout before joining a busy server.
 == Ajuste as opções de exibição; abra uma votação para conferir o layout antes de entrar em um servidor cheio.
 
-Adjust the opacity of entities belonging to other teams, such as tees and name plates
-== Ajusta a opacidade das entidades de outros times, como tees e placas de nome
-
 Adjust trails rendered behind Tees
 == Adjust trails rendered behind Tees
 
@@ -748,9 +748,6 @@ Adjusts TClient-specific HUD elements that are not part of the standard DDNet HU
 
 Advanced
 == Avançado
-
-Advanced mode
-== Modo avançado
 
 Advanced options
 == Opções avançadas
@@ -799,6 +796,9 @@ Alias of poses_render
 
 Alias of poses_video
 == Alias de poses_video
+
+Alignment
+== Alinhamento
 
 Alive notification color
 == Cor da notificação de vivo
@@ -914,6 +914,9 @@ Always show song title and artist
 Always translate
 == Traduzir sempre
 
+AMLL community lyrics
+== Letras da comunidade AMLL
+
 Amount
 == Quantidade
 
@@ -977,9 +980,6 @@ Anti Latency Tools
 Anti latency tools
 == Ferramentas anti-latência
 
-Anti Ping Smoothing
-== Suavização Anti-Ping
-
 Anti-aliasing for the exported video only, independent of the graphics setting. Explicit levels render each frame into a multisampled offscreen target, so the game itself can stay at a lower setting for performance. Supersampling (output smaller than the window) already reduces jagged edges, so prefer one or the other.
 == Antialiasing somente para o vídeo exportado, independente da configuração gráfica. Com um nível explícito, cada quadro é desenhado em um destino fora da tela com multisampling, então o jogo pode permanecer em uma configuração mais baixa por desempenho. O supersampling (saída menor que a janela) já reduz as bordas serrilhadas, portanto prefira um ou outro.
 
@@ -1022,9 +1022,6 @@ APP ID
 Appearance
 == Aparência
 
-Appearance and command highlighting of the local console
-== Aparência do console local e destaque dos comandos
-
 Appearance of help bubbles
 == Aparência dos balões de ajuda
 
@@ -1039,9 +1036,6 @@ Applied to %d same-family part(s).
 
 Applies an animated rainbow color to selected elements such as nameplates or the hook.
 == Aplica uma cor arco-íris animada aos elementos escolhidos, como as placas de nome ou o gancho.
-
-Applies to single-color and rainbow overrides.
-== Aplica-se às substituições de cor única e arco-íris.
 
 Apply
 == Aplicar
@@ -1076,9 +1070,6 @@ Apply quick input to other Tees as well
 Apply squishy Tee deformation to other players
 == Aplicar deformação do Tee elástico a outros jogadores
 
-Apply this preset
-== Aplicar este preset
-
 Apply to
 == Aplicar a
 
@@ -1087,9 +1078,6 @@ Apply to dummy
 
 Apply to player
 == Aplicar ao jogador
-
-Apply watermark
-== Aplicar marca d'água
 
 Applying overwrites your font, UI scale, animation and panel colors at once, so note the values you like first.
 == Aplicar substitui de uma vez fonte, escala da UI, animação e cores dos painéis, então anote antes os valores de que gosta.
@@ -1141,6 +1129,9 @@ Are you sure that you want to quit?
 
 Are you sure that you want to remove '%s' from your war groups?
 == Tem certeza de que deseja remover '%s' dos seus grupos de guerra?
+
+Are you sure that you want to remove '%s' from your war list?
+== Remover "%s" da lista de inimigos?
 
 Are you sure that you want to remove the clan '%s' from your friends list?
 == Tem certeza de que deseja remover o clã '%s' da sua lista de amigos?
@@ -1232,6 +1223,9 @@ Audio packets
 Audio packs
 == Pacotes de áudio
 
+Aurora: Polar Veil
+== Aurora: véu polar
+
 AUS
 == AUS
 
@@ -1276,9 +1270,6 @@ Auto enable in Gores mode
 
 Auto enable/disable IME on text focus
 == Ativar ou desativar IME automaticamente com base no foco de entrada de texto
-
-Auto execute
-== Execução automática
 
 Auto fetch replay info on refresh
 == Buscar automaticamente informações de replay ao atualizar
@@ -1531,9 +1522,6 @@ Automatically record demos
 
 Automatically record replays
 == Gravar replays automaticamente
-
-Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)
-== Remove automaticamente um registro salvo local após carregá-lo com sucesso (0 = manter e marcar como usado, 1 = remover)
 
 Automatically reply to muted players
 == Responder automaticamente a jogadores mutados
@@ -1841,6 +1829,9 @@ Binds that use commands the client does not recognize, listed by their raw comma
 Black
 == Preto
 
+Black Flash: Void Rift
+== Clarão negro: fenda do vazio
+
 Blank asset auto fallback
 == Fallback automático de recurso vazio
 
@@ -1967,6 +1958,9 @@ Bubble opacity
 Build the status text shown above Tees
 == Build the status text shown above Tees
 
+Built-in
+== Integrado
+
 Button - Disabled
 == Botão - Desativado
 
@@ -2075,6 +2069,12 @@ Cancel your swap request
 Candidate files
 == Arquivos candidatos
 
+Candy gradient
+== Gradiente de doces
+
+Cannot import: invalid data or too many friends or categories.
+== Não foi possível importar: dados inválidos ou amigos ou grupos em excesso.
+
 Cannot join the target player's team
 == Não é possível entrar na equipe deste jogador
 
@@ -2095,6 +2095,12 @@ Cannot update public words. Previous words remain active.
 
 Cannot write the wiki file
 == Não é possível gravar o arquivo do Wiki
+
+Capsule seam
+== Junta da cápsula
+
+Capsule seam smoothing: ease the straight-to-cap curvature jump (0 = plain semicircular ends)
+== Suavização da junta da cápsula: suaviza o salto de curvatura entre a reta e a ponta (0 = pontas semicirculares)
 
 Capture the flag
 == Capture a bandeira (CTF)
@@ -2209,6 +2215,9 @@ Chat bubble display duration (seconds)
 
 Chat bubble font size
 == Tamanho da fonte do balão de chat
+
+Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble, 3=Default)
+== Estilo do balão de chat (0=Diálogo de quadrinhos, 1=Gradiente de doces, 2=Balão de nuvem, 3=Padrão)
 
 Chat bubble text color
 == Cor do texto do balão de chat
@@ -2390,6 +2399,9 @@ Choose default eyes when joining a server
 Choose export name first.
 == Escolha o nome de exportação primeiro.
 
+Choose Logo (PNG / WebP)
+== Escolher logotipo (PNG / WebP)
+
 Choose off, simple or full; the individual switches below only apply to full.
 == Escolha desligado, simples ou completo; os controles individuais abaixo só valem no modo completo.
 
@@ -2434,9 +2446,6 @@ Chroma sampling preference for export: 0=auto, 1=4:2:0, 2=4:2:2, 3=4:4:4 (higher
 
 Chroma sampling. 4:2:0 is smallest and most compatible; 4:4:4 keeps full color detail for thin lines and small colored text. Rendering is 8-bit, so 10-bit formats do not add detail by themselves.
 == Amostragem de croma. 4:2:0 ocupa menos e é mais compatível; 4:4:4 mantém a cor completa e preserva linhas finas e textos pequenos coloridos. A renderização é de 8 bits, então um formato de 10 bits não acrescenta detalhe por si só.
-
-Cinematic camera
-== Câmera cinematográfica
 
 Cinematic camera smoothness (0=instant, 100=smoothest)
 == Suavidade da câmera cinematográfica (0=instantâneo, 100=mais suave)
@@ -2486,35 +2495,11 @@ Clan: %s
 Classic
 == Clássico
 
-Classic Easy
-== Clássico Fácil
-
-Classic easy
-== Clássico fácil
-
-Classic Next
-== Clássico Next
-
-Classic next
-== Clássico próximo
-
-Classic Nut
-== Clássico Nut
-
-Classic nut
-== Clássico nut
+Classic arc
+== Arco clássico
 
 Classic PowerShell
 == PowerShell clássico
-
-Classic Pro
-== Clássico Pro
-
-Classic pro
-== Clássico pro
-
-Classic title glow
-== Brilho clássico
 
 Clear
 == Limpar
@@ -2569,9 +2554,6 @@ Click a key on the keyboard picture or under "Mouse", then add a command with "A
 
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
 == Clique em um idioma da lista para aplicá-lo na hora; a bandeira à esquerda mostra o escolhido.
-
-Click a map name to copy it and press the X button to remove it; add maps with the "Favorite map" checkbox in the in-game server info page.
-== Clique no nome do mapa para copiá-lo e pressione o X para removê-lo; adicione mapas pela caixa "Mapa favorito" na página de informações do servidor.
 
 Click a part on the right to edit its color, blend mode and strength.
 == Clique em uma parte à direita para ajustar a cor, o modo de mesclagem e a intensidade.
@@ -2630,9 +2612,6 @@ Click to remove this player from your friends list.
 Click to select server. Double click to join your friend.
 == Clique para selecionar o servidor. Clique duas vezes para entrar no servidor do seu amigo.
 
-Click to set color
-== Clique para definir a cor
-
 Client
 == Cliente
 
@@ -2687,8 +2666,17 @@ Close the demo player
 Close window after changing settings
 == Fechar janela após alterar configurações
 
+Cloud bubble
+== Balão de nuvem
+
+Collapse
+== Recolher
+
 Collapse console
 == Recolher console
+
+Collect CP %d before teleporting
+== Ative o CP %d antes de se teletransportar
 
 Collects the remaining DDNet client preferences that do not belong to other cards.
 == Reúne as demais preferências do cliente DDNet que não pertencem a outros cartões.
@@ -2747,12 +2735,6 @@ Colors and opacity of the popup list that suggests chat commands and emoticons w
 Colors for chat command and emoji completion
 == Cores do autocompletar de comandos e emojis no chat
 
-Colors in chat
-== Cores no chat
-
-Colors in scoreboard
-== Cores no placar
-
 Colors of the hook collision line, in case of a possible collision with:
 == Cores da linha de colisão do gancho, em caso de possível colisão com:
 
@@ -2764,6 +2746,9 @@ Colors too close to the map background are hard to read while moving.
 
 Combo
 == Combo
+
+Comic dialogue
+== Diálogo de quadrinhos
 
 Comma-separated list of banned clients to be kicked on join
 == Lista separada por vírgulas de clientes banidos a serem expulsos ao entrar
@@ -2855,17 +2840,11 @@ Concurrent requests when refreshing server browser
 Config
 == Configuração
 
-Config Changes
-== Alterações de Configuração
-
 Config directory
 == Diretório de configuração
 
 Config Files
 == Arquivos de Configuração
-
-Config Filters
-== Filtros de Configuração
 
 Config version. Helps new client fix old config errors.
 == Versão da configuração. Ajuda o novo cliente a corrigir erros de configuração antiga.
@@ -2921,17 +2900,11 @@ Configure DDNet gameplay preferences
 Configure display and rendering
 == Configurar exibição e renderização
 
-Configure Dream-only convenience features
-== Configure Dream-only convenience features
-
 Configure game and client preferences
 == Configurar preferências do jogo e do cliente
 
 Configure ghost recording and playback tools
 == Configure ghost recording and playback tools
-
-Configure hammer skin steal and skin transition animations
-== Configurar roubo de skin do martelo e animações de transição de skin
 
 Configure health, ammo, timer, and race HUD
 == Configure health, ammo, timer, and race HUD
@@ -3032,6 +3005,9 @@ Confirm disconnect after game end (minutes, -1 off, 0 always)
 Confirm quit after game end (minutes, -1 off, 0 always)
 == Confirmar saída após fim da partida (minutos, -1 desligado, 0 sempre)
 
+Conic Bezier
+== Bézier cônica
+
 Connect address error
 == Erro de endereço de conexão
 
@@ -3098,6 +3074,9 @@ Connlimit: number of connections allowed per IP in a time period
 Connlimit: time window for IP connection count
 == Connlimit: janela de tempo para contagem de conexões IP
 
+Consecutive wheel ticks carry their velocity into one continuous glide
+== Passos consecutivos herdam a velocidade e formam um deslize contínuo
+
 Console
 == Console
 
@@ -3163,6 +3142,9 @@ Contents
 
 Continue anyway?
 == Continuar mesmo assim?
+
+Continuous-curvature UI corners (0 = classic arc, 100 = strongest)
+== Curvatura contínua nos cantos da interface (0 = arco clássico, 100 = máximo)
 
 Contributors
 == Contribuidores
@@ -3242,6 +3224,9 @@ Copy a .qmconfig file into the package folder, then refresh.
 Copy all
 == Copiar tudo
 
+Copy friend code
+== Copiar código de amigos
+
 Copy info
 == Copiar informações
 
@@ -3266,6 +3251,12 @@ Copy skin ID
 Copy skin option color
 == Cor das opções de skin copiada
 
+Corner curvature
+== Curvatura do canto
+
+Corner curve
+== Curva do canto
+
 Could not add the player as a friend
 == Não foi possível adicionar o jogador como amigo
 
@@ -3286,6 +3277,9 @@ Could not delete "%s"
 
 Could not download "%s"
 == Não foi possível baixar "%s"
+
+Could not encode friend data.
+== Não foi possível codificar os dados dos amigos.
 
 Could not find a Tutorial server. Check your internet connection.
 == Não foi possível encontrar um servidor Tutorial. Verifique sua conexão com a internet.
@@ -3362,8 +3356,14 @@ Country code
 Country flag for grouping this community (ISO 3166-1 numeric)
 == Bandeira do país para agrupar esta comunidade (ISO 3166-1 numérico)
 
+CP %d
+== Ponto de controle %d
+
 CP border overlay alpha (0-100)
 == Alpha da entidade de sobreposição do limite do ponto de CP (0-100)
+
+CP guide
+== Guia de CP
 
 CP opacity
 == Opacidade do CP
@@ -3776,9 +3776,6 @@ Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 DeepL API
 == API do DeepL
 
-DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)
-== DeepL API Free: 500.000 caracteres por mês (registre-se em deepl.com; chaves gratuitas terminam com :fx)
-
 DeepL API Key (free keys end with :fx)
 == Chave da API DeepL (chaves gratuitas terminam com :fx)
 
@@ -3880,9 +3877,6 @@ Delete screenshot
 
 Delete selected items
 == Excluir itens selecionados
-
-Delete skin
-== Excluir skin
 
 Delete this preset
 == Excluir esta predefinição
@@ -4199,6 +4193,9 @@ Door Laser Outline Color
 Door laser outline color
 == Cor do contorno do laser da porta
 
+Double-tap the bound key within 400 ms to send the current lyric to public chat
+== Pressione a tecla vinculada duas vezes em até 400 ms para enviar a linha atual da letra ao chat público
+
 Download
 == Baixar
 
@@ -4259,11 +4256,17 @@ Downscaled (0.78)
 Draft file is empty
 == O arquivo de rascunho está vazio
 
-Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Tune layer opacity" to fade the whole entity layer.
-== Arraste um controle como opacidade de morte ou opacidade de teletransporte de 0 a 100%, ou use ajustar a opacidade da camada para esmaecer toda a camada de entidades.
+Drag
+== Arrastar
+
+Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Overlay entities" to fade the whole entity layer.
+== Arraste um controle como opacidade de morte ou opacidade de teletransporte de 0 a 100%, ou use sobrepor entidades para esmaecer toda a camada de entidades.
 
 Drag HUD modules with the left mouse button
 == Arraste os módulos da HUD com o botão esquerdo do mouse
+
+Drag the selected watermark to move it. The original image is preserved.
+== Arraste a marca-d’água selecionada para movê-la. A imagem original é preservada.
 
 Drag the three sliders; master scales the other two.
 == Arraste os três controles; o volume geral escala os outros dois.
@@ -4535,6 +4538,9 @@ Dynamic FOV smoothness
 Dynamic FOV smoothness (0=instant, 100=smoothest)
 == Suavidade da visão dinâmica (0=instantâneo, 100=mais suave)
 
+Dynamic Island
+== Ilha Dinâmica
+
 Dynamic island
 == Ilha dinâmica
 
@@ -4610,6 +4616,9 @@ Edit the name and clan fields; the dummy keeps its own values.
 Edit this custom command on the Bind Wheel page.
 == Edite este comando personalizado na página Roda de comandos.
 
+Edit title style
+== Editar estilo do título
+
 Edit touch controls
 == Editar controles de toque
 
@@ -4679,11 +4688,8 @@ Empty slots still take space, so clear the ones you no longer use.
 enable
 == ativar
 
-Enable "Hammer skin steal" only if you want your skin to change on every hammer hit, since other players see it too.
-== Ative o roubo de skin com martelo só se quiser trocar de skin a cada acerto, porque os outros também veem.
-
-Enable "Show player stats HUD"; tick "Map progress bar", then pick "Use embedded HUD progress bar" or place the bar with the sliders.
-== Ative mostrar HUD de estatísticas, marque barra de progresso do mapa e escolha usar a barra de progresso do HUD integrado ou posicione a barra com os controles.
+Enable "Map progress bar" and choose its location: Standalone, Player stats or Dynamic Island. Enable "Show player stats HUD" for the Player stats location.
+== Ative a barra de progresso do mapa e escolha onde exibi-la: separada, nas estatísticas do jogador ou na Ilha Dinâmica. Para exibi-la nas estatísticas, ative também o HUD de estatísticas do jogador.
 
 Enable "Show unpredicted ghosts of other players", then tune the predicted and unpredicted ghost opacity.
 == Ative «Mostrar fantasmas não previstos de outros jogadores» e ajuste a opacidade dos fantasmas previstos e não previstos.
@@ -5072,6 +5078,9 @@ Enable the frozen Tee HUD, choose whether to count active or frozen Tees, then s
 Enable the guide line, then set its length, style and colors.
 == Ative a linha-guia e depois defina comprimento, estilo e cores.
 
+Enable the highlight and nameplate key presses, then choose the pressed hammer and hook icon colors. Icon size follows the key press size.
+== Ative o destaque e as teclas do nome e escolha as cores do martelo e do gancho pressionados. O tamanho dos ícones acompanha o das teclas.
+
 Enable the indicator; choose its distance mode and whether war-list players get a different color.
 == Ative o indicador, escolha o modo de distância e se os jogadores da war-list recebem outra cor.
 
@@ -5168,6 +5177,9 @@ Encoder:
 End (s)
 == Fim (s)
 
+End bounce
+== Quique nas bordas
+
 End marker of replay slice
 == Marcador final da fatia de replay
 
@@ -5228,8 +5240,11 @@ Entity assets
 Entity Background Image
 == Imagem de fundo das entidades
 
-Entity overlay
-== Sobreposição de entidades
+Entity layer
+== Camada de entidades
+
+Entity layer adjustments
+== Ajustes da camada de entidades
 
 Entity Preview
 == Pré-visualização de entidades
@@ -5239,6 +5254,9 @@ Entity wall outline opacity
 
 entity_bg (Workshop)
 == entity_bg (Workshop)
+
+Entries in it will fall back to none.
+== As entradas dela voltam para none.
 
 Entries with NVENC, AMF, Quick Sync or VideoToolbox use the GPU encoding chip and are several times faster. Only encoders that really work on this machine are listed.
 == Itens com NVENC, AMF, Quick Sync ou VideoToolbox usam o chip de codificação da GPU e são várias vezes mais rápidos. Só aparecem os codificadores que realmente funcionam nesta máquina.
@@ -5285,6 +5303,9 @@ Event
 Every click applies the skin at once, so star the ones you like before you start browsing.
 == Cada clique aplica a skin na hora, então favorite as que gostar antes de começar a navegar.
 
+Every wheel tick restarts from rest, matching the original client
+== Cada passo da roda reinicia do repouso, como no cliente original
+
 Exact bound nickname
 == Apelido exato vinculado
 
@@ -5308,6 +5329,9 @@ Exchange (ProRes 422 HQ / MOV)
 
 Exclude
 == Excluir
+
+exec
+== exec
 
 Execute before connecting
 == Executar antes de conectar
@@ -5339,6 +5363,9 @@ Exit replay view
 Exit spectating on both tees when either is hammered awake by another player
 == Sair do modo espectador com os dois Tees quando outro jogador descongelar um deles com o martelo
 
+Expand
+== Expandir
+
 Expand console
 == Expandir console
 
@@ -5365,6 +5392,9 @@ Export cut as a separate demo
 
 Export demo cut
 == Exportar corte de demo
+
+Export failed
+== Falha ao exportar
 
 Export name contains invalid characters.
 == O nome de exportação contém caracteres inválidos.
@@ -5399,6 +5429,9 @@ Export selected
 Export to clipboard
 == Exportar para área de transferência
 
+Export to downloads
+== Exportar para Downloads
+
 Exported %d chat messages
 == %d mensagens de chat exportadas
 
@@ -5432,8 +5465,14 @@ Extreme values make movement feel wrong, so change one step at a time.
 Extremely slow, for testing only
 == Extremamente lento, apenas para testes
 
+Eyes
+== Olhos
+
 f = Frame rate
 == f = Taxa de quadros
+
+Fade
+== Fusão
 
 Fade and slide
 == Desvanecer e deslizar
@@ -5540,9 +5579,6 @@ Fairly fast encode
 Fake CTF flags
 == Bandeiras CTF falsas
 
-Fallback simple noise reduction strength
-== Força de redução de ruído simples de fallback
-
 Fast encode
 == Codificação rápida
 
@@ -5602,9 +5638,6 @@ Favorite maps
 
 Favorites
 == Favoritos
-
-Favorites match the exact map name and also feed the "Favorite map" tab in the server browser.
-== Os favoritos comparam o nome exato do mapa e também alimentam a aba "Mapa favorito" do navegador de servidores.
 
 feat-003 dogfood: tokens + 12 widgets
 == feat-003 dogfood：tokens + 12 widgets
@@ -5768,6 +5801,9 @@ Flags are cosmetic and can be hidden by other clients.
 Flip:
 == Inverter:
 
+Fluid
+== Fluido
+
 Folder
 == Pasta
 
@@ -5816,9 +5852,6 @@ Font cursor
 Font size
 == Tamanho da fonte
 
-Font size, background opacity, colors and command highlighting of the local console you open with F1.
-== Tamanho da fonte, opacidade do fundo, cores e destaque de comandos do console local aberto com F1.
-
 Font store
 == Loja de fontes
 
@@ -5858,9 +5891,6 @@ Format player names after a finish
 Forms
 == Formulários
 
-Found %d global cards
-== %d cartões globais encontrados
-
 Four IP addresses are already online
 == Já há 4 endereços IP conectados
 
@@ -5896,6 +5926,9 @@ Frankenstein (drop parts on right)
 
 Free move
 == Movimento livre
+
+Free view
+== Visão livre
 
 Free-View
 == Visão livre
@@ -5957,6 +5990,9 @@ Friend
 Friend bar category expand state (1=expanded, 0=collapsed)
 == Estado de expansão da categoria da barra de amigos (1=expandido, 0=recolhido)
 
+Friend code copied, including categories, notes and pins.
+== Código de amigos copiado com grupos, notas e amigos fixados.
+
 Friend color in friends list
 == Cor do amigo na lista de amigos
 
@@ -6004,6 +6040,12 @@ Friend option color
 
 Friends
 == Amigos
+
+Friends imported and saved.
+== Amigos importados e salvos.
+
+Friends imported for this session, but saving settings failed.
+== Amigos importados para esta sessão, mas não foi possível salvar as configurações.
 
 Friends only
 == Apenas amigos
@@ -6083,9 +6125,6 @@ Game type
 Game type (ddnet, mod)
 == Tipo de jogo (ddnet, mod)
 
-Game types:
-== Tipos de jogo:
-
 Game update rate (Hz)
 == Taxa de atualização do jogo (Hz)
 
@@ -6112,6 +6151,9 @@ Gap between statusbar items
 
 Gap between tee and nametag
 == Espaço entre o tee e a etiqueta de nome
+
+Gather and disperse
+== Agrupar e dispersar
 
 Gaussian
 == Gaussiano
@@ -6383,6 +6425,9 @@ Ground jump
 Group name
 == Nome do grupo
 
+Group names are limited to 16 characters
+== Nomes de grupo têm no máximo 16 caracteres
+
 Groups input helpers: fast input, automatic margin, sub-tick aiming and cursor behavior.
 == Agrupa auxílios de entrada: entrada rápida, margem automática, mira por subtique e comportamento do cursor.
 
@@ -6397,6 +6442,9 @@ Guide line color
 
 Guide lines are computed locally and do not guarantee that a hook will connect.
 == As linhas-guia são calculadas localmente e não garantem que o gancho vá conectar.
+
+Guide to nearby uncollected teleport checkpoints and warn near checkpoint teleporters
+== Guiar até pontos de controle de teletransporte próximos não ativados e avisar perto das entradas de retorno
 
 Gun fire
 == Disparo de pistola
@@ -6644,14 +6692,14 @@ High quality, slow
 Higher input latency
 == maior latência de entrada
 
-Higher values make the wave move faster. Zero stops the movement.
-== Valores maiores aceleram a onda. Zero interrompe o movimento.
-
 Highlight Color
 == Cor de destaque
 
 Highlight console commands
 == Destacar comandos do console
+
+Highlight frozen teammates' hammer and hook inputs
+== Destacar entradas de martelo e gancho dos aliados congelados
 
 Highlight game type
 == Destacar tipo de jogo
@@ -6659,26 +6707,20 @@ Highlight game type
 Highlight message text gradient color
 == Cor gradiente do texto de mensagens destacadas
 
-Highlight movement in Polished mode. Zero turns it off.
-== Movimento do destaque no modo Polido. Zero o desativa.
-
 Highlight ping value
 == Destacar valor de ping
 
 Highlight selected players in the game world
 == Highlight selected players in the game world
 
-Highlight teammates hammering in death or freeze areas
-== Destacar companheiros martelando em áreas de morte ou congelamento
-
-Highlight teammates holding hammer in death or freeze areas
-== Destacar companheiros que seguram o martelo em áreas de morte ou congelamento
-
 Highlighted message
 == Mensagem destacada
 
 Highlighted message color
 == Cor da mensagem destacada
+
+Highlights frozen teammates holding hammer and shows their held hammer or hook beside the nameplate key presses.
+== Destaca aliados congelados que mantêm o martelo pressionado e mostra suas entradas de martelo ou gancho ao lado das teclas do nome.
 
 Hit feedback
 == Feedback de acerto
@@ -6712,6 +6754,9 @@ Hold gun higher like TW 0.6.1 and earlier
 
 Hold left click for free camera
 == Segure o clique esquerdo para câmera livre
+
+Hold still
+== Manter
 
 Hold the wheel key to see the selection move; release it to run the highlighted slot.
 == Segure a tecla da roda para mover a seleção e solte para executar o espaço destacado.
@@ -6799,6 +6844,9 @@ Hostname of DNSBL provider for IP verification
 
 Hover for tooltip
 == Passe o mouse para ver a dica
+
+How far a wheel or drag can push past an end, in UI pixels; 0 disables
+== Quanto a roda ou o arrasto pode passar do fim, em pixels de UI; 0 desativa
 
 How far the plasma gun tracks a tee
 == Distância que a arma de plasma rastreia um tee
@@ -6899,6 +6947,9 @@ Icon symbols:
 Icons
 == Ícones
 
+Icons disappear on release or unfreeze. Remote held inputs require server preinput support; your active character is excluded.
+== Os ícones somem ao soltar a tecla ou descongelar. As entradas de outros jogadores exigem suporte a pré-entrada no servidor; seu personagem ativo fica de fora.
+
 Identity preset
 == Predefinição de identidade
 
@@ -6925,6 +6976,9 @@ If the bar covers your chat, lower "Opacity" or "IME font size" first; "Reset IM
 
 If the wheel feels crowded, remove unused slots in the editor card.
 == Se a roda parecer cheia demais, remova os espaços sem uso no cartão do editor.
+
+Ignis: Ember Spirit
+== Chama: espírito das brasas
 
 Ignore clan tag when searching friends
 == Ignorar tag de Clã ao procurar amigos
@@ -6989,8 +7043,14 @@ Import and restart
 Import configuration package
 == Importar pacote de configurações
 
+Import friend code
+== Importar código de amigos
+
 Import from clipboard
 == Importar da área de transferência
+
+Import merges friends and keeps local duplicates by default. Codes contain private names and notes.
+== Por padrão, a importação mescla amigos e mantém os dados locais dos duplicados. Os códigos contêm nomes e notas privados.
 
 Improved anti ping
 == Anti-ping melhorado
@@ -7142,6 +7202,9 @@ Initializing map layers
 Initializing map logic
 == Inicializando lógica do mapa
 
+Ink: Paper Bloom
+== Tinta: florescer no papel
+
 Input
 == Entrada
 
@@ -7192,9 +7255,6 @@ Installed
 
 Installing update. Please wait...
 == Instalando a atualização. Aguarde...
-
-Instant compact hints
-== Dicas compactas imediatas
 
 Instant zoom reverse
 == Inversão de zoom imediata
@@ -7304,6 +7364,9 @@ Invalid X coordinate.
 Invalid Y coordinate.
 == Coordenada Y inválida.
 
+Invalid, damaged or unsupported friend code.
+== Código de amigos inválido, danificado ou incompatível.
+
 Invert camera drift direction
 == Inverter direção da deriva da câmera
 
@@ -7348,9 +7411,6 @@ It's recommended that you check the settings to adjust them to your liking befor
 
 Item
 == Item
-
-Item type
-== Tipo de item
 
 Its use depends on the server or game mode.
 == Seu uso depende do servidor ou modo de jogo.
@@ -7414,6 +7474,9 @@ Join, version, rules, and help messages stay in chat instead of popups
 
 Joining Tutorial server
 == Entrando no servidor Tutorial
+
+Joystick
+== Joystick
 
 Jump
 == Pular
@@ -7552,6 +7615,9 @@ Keyword reply use Dummy
 
 Keyword rules
 == Regras de palavra-chave
+
+Keyword rules are too long. Changes were not saved; shorten or remove a rule.
+== As regras de palavras-chave são longas demais. As alterações não foram salvas; encurte ou remova uma regra.
 
 Kick player
 == Expulsar jogador
@@ -7739,6 +7805,9 @@ Leak IP
 Leaks your IP address to all servers by pinging each of them, also acquiring the latency in the process
 == Vaza seu endereço IP para todos os servidores ao pingar cada um deles, também adquirindo a latência no processo
 
+Leaks your IP address to this server by pinging it, also acquiring the latency in the process
+== Expõe seu endereço IP a este servidor ao enviar um ping para medir a latência
+
 Learn
 == Aprender
 
@@ -7756,9 +7825,6 @@ Leave empty to disable
 
 Leave empty to join public room
 == Deixe em branco para entrar em sala pública
-
-Leave empty to show everyone
-== Deixe vazio para mostrar todos os jogadores
 
 Leave empty to use default prompt
 == Deixe em branco para usar o prompt padrão
@@ -7811,6 +7877,9 @@ Let server start ghost
 Let server start race recorder
 == Deixar servidor iniciar gravador de corrida
 
+Let's play together!
+== Vamos jogar juntos!
+
 Lets you join team i (shows your team if left blank)
 == Permite entrar na equipe i (mostra sua equipe se deixado em branco)
 
@@ -7825,9 +7894,6 @@ LibreTranslate endpoint
 
 Light
 == Leve
-
-Light band
-== Faixa de luz
 
 Limit information in spectator mode
 == Limitar informações no modo espectador
@@ -8255,6 +8321,9 @@ Manual target
 Map
 == Mapa
 
+Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
+== Máscara de bits do filtro de categorias de dificuldade do navegador de mapas (bits 0-14, ver map_vote_difficulty.h)
+
 Map browser difficulty star filter bitmask (bits 1-5)
 == Máscara de bits do filtro de estrelas de dificuldade do navegador de mapas (bits 1-5)
 
@@ -8312,8 +8381,8 @@ Map progress bar height
 Map progress bar horizontal position (center, % of screen width)
 == Posição horizontal da barra de progresso do mapa (centro, porcentagem da largura da tela)
 
-Map progress bar style (0=bottom bar, 1=HUD overlay)
-== Estilo da barra de progresso do mapa (0=barra inferior, 1=embutido no HUD)
+Map progress bar location (0=standalone, 1=player stats, 2=Dynamic Island)
+== Local da barra de progresso do mapa (0=separada, 1=estatísticas do jogador, 2=Ilha Dinâmica)
 
 Map progress bar vertical position (top edge, % of screen height)
 == Posição vertical da barra de progresso do mapa (borda superior, porcentagem da altura da tela)
@@ -8392,9 +8461,6 @@ Markers
 
 Markers are drawn on your screen only and never change the game itself.
 == Os marcadores são desenhados apenas na sua tela e nunca mudam o jogo.
-
-Marks teammates who hold hammer while stuck in death or freeze areas, so you can see who is hammering them.
-== Marca os companheiros com martelo presos em áreas de morte ou congelamento, para você ver quem está martelando neles.
 
 Master server URL to register
 == URL do servidor mestre para registrar
@@ -8699,9 +8765,6 @@ Minimum time between kills (in seconds)
 Minimum time between map votes (in seconds)
 == Tempo mínimo entre votações de mapa (em segundos)
 
-Minimum width for name column in server browser
-== Largura mínima para a coluna de nome no navegador de servidores
-
 Minutes on server before a player can call a map change vote (0 = disabled)
 == Minutos no servidor antes que um jogador possa solicitar uma votação de mudança de mapa (0 = desativado)
 
@@ -8719,6 +8782,12 @@ Mix rate
 
 Mixed
 == Misto
+
+Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+== Somente mobile: copiar o relatório de falha para Downloads/QmClient na próxima inicialização (0 = manter dentro do sandbox do aplicativo)
+
+Mobile spectator camera: 0=joystick pad, 1=drag the view
+== Câmera de espectador móvel: 0=joystick, 1=arrastar a visão
 
 Mode
 == Modo
@@ -8753,6 +8822,9 @@ More optimistic prediction along Tee's stable direction, reduces delay to stabil
 More teammates...
 == Mais companheiros de equipe...
 
+Morph
+== Transformação
+
 MOTD
 == MOTD
 
@@ -8777,6 +8849,9 @@ Mouse speed for aiming and for menus, and how far your cursor may travel from th
 Move a friend category to a position
 == Mover uma categoria de amigos para uma posição
 
+Move down
+== Mover para baixo
+
 Move left
 == Mover para esquerda
 
@@ -8791,6 +8866,9 @@ Move the free camera, then add a keyframe at the current demo time.
 
 Move to category
 == Mover para categoria
+
+Move up
+== Mover para cima
 
 Movement
 == Movimento
@@ -8947,6 +9025,18 @@ Name plate elements allow free Y movement
 
 Name plate elements freely movable within bounds
 == Elemento da placa de nome permite movimento livre dentro da caixa
+
+Name plate hammer icon X offset
+== Deslocamento X do ícone de martelo do nome
+
+Name plate hammer icon Y offset
+== Deslocamento Y do ícone de martelo do nome
+
+Name plate hook icon X offset
+== Deslocamento X do ícone de gancho do nome
+
+Name plate hook icon Y offset
+== Deslocamento Y do ícone de gancho do nome
 
 Name plate key line X offset
 == Deslocamento X da linha de teclas da placa de nome
@@ -9119,6 +9209,9 @@ New features
 New features (unread)
 == Novidades (não lidas)
 
+New group
+== Novo grupo
+
 New IME
 == Novo IME
 
@@ -9263,6 +9356,9 @@ No downloadable portable package for this version
 No empty team left.
 == Nenhum time vazio restante.
 
+No entries yet
+== Nenhuma entrada ainda
+
 No favorite maps yet
 == Nenhum mapa favorito ainda
 
@@ -9283,6 +9379,9 @@ No local servers found (ports %d-%d)
 
 No login required
 == Nenhum login necessário
+
+No Logo selected
+== Nenhum logotipo selecionado
 
 No map
 == Sem mapa
@@ -9337,6 +9436,9 @@ No player nearby
 
 No player with this name found.
 == Nenhum jogador com este nome encontrado.
+
+No players match
+== Nenhum jogador correspondente
 
 No players match these filters
 == Nenhum jogador corresponde aos filtros
@@ -9409,6 +9511,9 @@ No status bar items
 
 No such savegame for this map
 == Não existe esse save para este mapa
+
+No tee nearby
+== Nenhum tee por perto
 
 No unfinished maps available
 == Nenhum mapa não finalizado disponível
@@ -9599,6 +9704,9 @@ On
 One key can hold several commands, so remove single entries under "Bound functions" instead of clearing the key.
 == Uma tecla pode ter vários comandos, então remova entradas individuais em Funções atribuídas em vez de limpar a tecla.
 
+Online
+== Online
+
 Online friends
 == Amigos online
 
@@ -9650,6 +9758,9 @@ Only show with this nickname
 Only the selected tee changes, so switch to "Dummy" before editing the colors you want on your dummy.
 == Só o Tee selecionado muda, então troque para Dummy antes de editar as cores do seu dummy.
 
+Only what you can't imagine, nothing Dream can't do
+== Só o que você não pode imaginar, nada que o Dream não possa fazer
+
 Opacity
 == Opacidade
 
@@ -9679,6 +9790,9 @@ Open bindwheel selector
 
 Open DDNet Wiki
 == Abrir DDNet Wiki
+
+Open downloads folder
+== Abrir pasta Downloads
 
 Open emote selector
 == Abrir seletor de emotes
@@ -9815,9 +9929,6 @@ Original
 Original and translation
 == Original e tradução
 
-Original language for both received and outgoing messages. Use Auto to detect each message.
-== Idioma original tanto para mensagens recebidas quanto enviadas. Use Auto para detectar cada mensagem.
-
 Original language for incoming and outgoing text
 == Idioma original do texto recebido e enviado
 
@@ -9829,9 +9940,6 @@ Original only
 
 Original options
 == Opções originais
-
-Original scroll feel
-== Sensação de rolagem original
 
 Other
 == Outro
@@ -9925,9 +10033,6 @@ Override Entry
 
 Override Freeze Tile Entity Alpha (0-100)
 == Sobrescrever alpha de entidade para tiles congelados (0-100)
-
-Override Group
-== Sobrescrever Grupo
 
 Override location for ping estimation, available: auto, af, as, as:cn, eu, na, oc, sa (Automatic, Africa, Asia, China, Europe, North America, Oceania/Australia, South America
 == Substituir a região de estimativa do Ping; opções: auto, af, as, as:cn, eu, na, oc, sa (Automático, África, Ásia, China, Europa, América do Norte, Oceania/Austrália, América do Sul)
@@ -10025,14 +10130,26 @@ Password for Axiom alt account auto-login
 Password for Axiom main account auto-login
 == Senha de login automático da conta principal do Axiom
 
+Password icon animation
+== Animação do ícone de senha
+
 Password incorrect
 == Senha incorreta
 
 Password required to use reserved slots.
 == Senha necessária para usar slots reservados.
 
+Password visibility icon animation: 0=Fade, 1=Morph
+== Animação do ícone de visibilidade da senha: 0=Fusão, 1=Transformação
+
 Past year
 == Último ano
+
+Paste a friend code first.
+== Cole um código de amigos primeiro.
+
+Paste friend code
+== Colar código de amigos
 
 Paste sp_dc from Spotify web cookies
 == Cole o cookie sp_dc do navegador
@@ -10081,6 +10198,9 @@ Permanent access; up to 4 online IP addresses
 
 Permanent sponsor verified
 == Apoio permanente verificado
+
+Personal adjustments
+== Ajustes personalizados
 
 Personal best:
 == Melhor pessoal:
@@ -10198,9 +10318,6 @@ Pistol guide line
 
 Pixel: Layer Shift
 == Pixels: deslocamento de camadas
-
-Place title on a separate line above the player name instead of inline
-== Colocar o título em uma linha separada acima do nome do jogador, em vez de na mesma linha
 
 Plasma gun shots per second
 == Tiros de plasma por segundo
@@ -10342,9 +10459,6 @@ Player country (ISO 3166-1 numeric code)
 
 Player country filter in server browser (ISO 3166-1 numeric)
 == Filtro de país do jogador no navegador de servidores (ISO 3166-1 numérico)
-
-Player country:
-== País do jogador:
 
 Player death
 == Morte do jogador
@@ -10499,9 +10613,6 @@ Players weapons has no affect on others
 Playing effects
 == Efeitos de reprodução
 
-Plays a short effect when a tee's skin changes, and can copy the skin of the tee you just hammered.
-== Toca um efeito curto quando a skin de um tee muda e pode copiar a skin do tee que você acabou de acertar com o martelo.
-
 Plays an animation whenever your skin changes, including skins stolen with the hammer.
 == Reproduz uma animação quando o skin muda, incluindo os roubados com o martelo.
 
@@ -10540,12 +10651,6 @@ Points
 
 Points unavailable
 == Pontos indisponíveis
-
-Polished
-== Polido
-
-Pop wave
-== Onda de ampliação
 
 Popup animation
 == Animação de pop-up
@@ -10724,6 +10829,9 @@ Press Esc to exit the HUD editor
 Press F2, log in, then use: change_map map_name
 == Pressione F2, faça login e use: change_map map_name
 
+Pressed hammer icon color
+== Cor do ícone do martelo pressionado
+
 Pressed hook collision line color when hitting a tee
 == Cor da linha de gancho pressionada ao acertar um tee
 
@@ -10732,6 +10840,9 @@ Pressed hook collision line color when hitting something hookable
 
 Pressed hook collision line color when not aiming at anything hookable
 == Cor da linha de gancho pressionada quando não se mira em nada agarrável
+
+Pressed hook icon color
+== Cor do ícone do gancho pressionado
 
 Pressed hook line color; always used when custom pressed colors are enabled
 == Cor da linha ao pressionar; sempre usada quando cores personalizadas ao pressionar estão ativadas
@@ -10777,6 +10888,9 @@ Preview cut (P)
 
 Preview dummy nameplate
 == Pré-visualizar placa de nome do dummy
+
+Preview failed. Check the image and Logo, then retry.
+== Falha na prévia. Verifique a imagem e o logotipo e tente novamente.
 
 Preview hook collision colors and line styles
 == Preview hook collision colors and line styles
@@ -10891,6 +11005,9 @@ Progress bar color
 
 Progress bar height
 == Altura da barra de progresso
+
+Progress bar location
+== Local da barra de progresso
 
 Progress bar width
 == Largura da barra de progresso
@@ -11117,6 +11234,9 @@ Queue preset: %s
 Quick action menu for players
 == Menu de ação rápida para jogadores
 
+Quintic Bezier
+== Bézier quíntica
+
 Quit
 == Sair
 
@@ -11308,6 +11428,9 @@ Read the listed rows, then press "Apply Qm recommended appearance"; if the font 
 
 Ready
 == Pronto
+
+Ready to import: %d friends, %d categories.
+== Pronto para importar: %d amigos, %d grupos.
 
 Really? Not even a little?
 == Sério? Nem um pouquinho?
@@ -11585,6 +11708,9 @@ Remove from queue
 Remove Item
 == Remover Item
 
+Remove Logo
+== Remover logotipo
+
 Remove right to vote from player with client ID
 == Remover direito de voto do jogador com ID de cliente
 
@@ -11602,9 +11728,6 @@ Remove team name:
 
 Remove war clan:
 == Remover clã inimigo:
-
-Remove War Group
-== Remover Grupo de Guerra
 
 Remove war name:
 == Remover nome inimigo:
@@ -11659,6 +11782,9 @@ Rename demo
 
 Rename folder
 == Renomear pasta
+
+Rename group
+== Renomear grupo
 
 Rename queue
 == Fila de renomeação
@@ -11756,6 +11882,9 @@ Repeat message
 Repeat the latest chat message
 == Repetir a última mensagem do chat
 
+Replace all friends
+== Substituir todos os amigos
+
 Replace censored words with length-based chars
 == Substituir por múltiplos caracteres conforme comprimento da palavra bloqueada
 
@@ -11779,6 +11908,9 @@ Replace settings, binds and the listed cfg files, then restart? The current conf
 
 Replace skin with one having this prefix (e.g. cats, santa)
 == Substituir skin por uma com este prefixo (ex.: gatos, papai noel)
+
+Replace your entire friend list, categories, notes and pins with the pasted code?
+== Substituir toda a lista de amigos, grupos, notas e amigos fixados pelo código colado?
 
 Replacement chars
 == Caracteres de substituição
@@ -11918,6 +12050,9 @@ Reset IME appearance
 Reset key press counts
 == Zerar a contagem de teclas pressionadas
 
+Reset layer
+== Redefinir camada
+
 Reset layout
 == Redefinir layout
 
@@ -11972,9 +12107,6 @@ Restart
 Restart in x seconds (0 = abort)
 == Reiniciar em x segundos (0 = abortar)
 
-Restart smooth scrolling on every wheel tick
-== Reinicia a rolagem suave a cada passo da roda
-
 Restart the client
 == Reiniciar o cliente
 
@@ -11995,9 +12127,6 @@ Restore old single-segment hook collision line behavior
 
 Restore recommended
 == Restaurar recomendados
-
-Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
-== Restaurar a rolagem original: cada passo da roda reinicia a rolagem suave sem manter a velocidade
 
 Restored the built-in content
 == Conteúdo incluído restaurado
@@ -12028,6 +12157,9 @@ Reverse gradient colors
 
 Reverse IME gradient colors
 == Inverter as cores do gradiente (IME)
+
+Reverse order
+== Ordem inversa
 
 Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
 == Inverter o zoom na hora ao apertar a tecla oposta (0=manter o zoom suave original)
@@ -12068,18 +12200,6 @@ Right-click to enable auto-translate
 Ring
 == Anel
 
-RNNoise noise reduction
-== Redução de ruído RNNoise
-
-RNNoise noise reduction (unavailable in this build)
-== Redução de ruído RNNoise (indisponível nesta compilação)
-
-RNNoise noise reduction strength
-== Força da redução de ruído RNNoise
-
-RNNoise not integrated in current build, will fallback to simple noise reduction
-== RNNoise não integrado na compilação atual, usará redução de ruído simples como fallback
-
 Room
 == Sala
 
@@ -12094,6 +12214,9 @@ Rotate hammer with cursor like other weapons
 
 Rotates your tee through a saved list of skins, either on a timer or at a random spot when a map starts.
 == Alterna seu Tee por uma lista salva de skins, por temporizador ou a partir de um ponto aleatório quando o mapa começa.
+
+Rotation
+== Rotação
 
 Round
 == Rodada
@@ -12115,6 +12238,9 @@ Rows here usually come from old configs, so test each command before you rely on
 
 RTT
 == RTT
+
+Rubber-band distance in UI pixels when the wheel or a drag pushes past an end (0=off); the content springs back after scrolling stops
+== Distância do efeito elástico em pixels de UI quando a roda ou o arrasto passa de um limite (0=desligado); o conteúdo volta ao parar
 
 Rule line 1.
 == Linha de regra 1.
@@ -12227,9 +12353,6 @@ Save ghost
 Save last %d min
 == Salvar últimos %d min
 
-Save loaded and marked as used.
-== Save carregado e marcado como usado.
-
 Save loaded; local record removed.
 == Jogo salvo carregado; registro local removido.
 
@@ -12238,6 +12361,9 @@ Save loaded; the local record could not be removed.
 
 Save player names in replay
 == Salvar nomes de jogadores na gravação
+
+Save PNG copy
+== Salvar cópia PNG
 
 Save power by lowering update rate
 == Economize energia reduzindo a taxa de atualização
@@ -12302,6 +12428,9 @@ Save/Load Skin
 Saved
 == Salvo
 
+Saved to Downloads/QmClient
+== Salvo em Downloads/QmClient
+
 Saved to the bind wheel.
 == Salvo na roda de comandos.
 
@@ -12313,6 +12442,9 @@ Saves and loads complete client profiles, including name, chat settings and bind
 
 Saves file
 == Arquivo de saves
+
+Saving…
+== Salvando…
 
 Say in chat
 == Dizer no chat
@@ -12352,9 +12484,6 @@ Scoreboard
 
 Scoreboard cursor
 == Cursor do placar
-
-Scoreboard filter: only show players whose name or clan contains this text
-== Filtro do placar: mostrar apenas jogadores cujo nome ou clã contenha este texto
 
 Scoreboard playtime
 == Tempo de jogo no placar
@@ -12427,6 +12556,9 @@ Screenshots
 
 Screenshots directory
 == Diretório de capturas de tela
+
+Scroll feel
+== Sensação de rolagem
 
 Scroll mode
 == Modo de rolagem
@@ -12650,8 +12782,11 @@ Send sampling and token limit parameters
 Send specified command to rcon
 == Enviar comando especificado para o rcon
 
-Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines
-== Enviar três linhas consecutivas da letra no chat público em intervalos aleatórios de 30 a 90 segundos, com 3 segundos entre linhas
+Send three consecutive lyrics to public chat at random intervals of 360 to 1200 seconds, with 3 seconds between lines. Successfully sending a lyric with Singing cancels pending humming lines and restarts the random wait
+== Enviar três linhas consecutivas da letra no chat público em intervalos aleatórios de 360 a 1200 segundos, com 3 segundos entre linhas. Ao enviar uma linha com sucesso usando “Cantar”, as linhas pendentes de “Cantarolar” são canceladas e uma nova espera aleatória começa
+
+Send to
+== Enviar para
 
 Send translation method
 == Método de envio da tradução
@@ -12782,9 +12917,6 @@ Server URL
 Server votes
 == Votações do servidor
 
-Server-assigned style
-== Estilo atribuído pelo servidor
-
 Server-dependent
 == Depende do servidor
 
@@ -12793,9 +12925,6 @@ Set "Background color" and "Background opacity", then "Text color", "Selected te
 
 Set "Button - Disabled" and "Button - Enabled" for the button, then "Menu background" and the two menu option rows for the popup.
 == Defina botão - desativado e botão - ativado para o botão, e fundo do menu com as duas linhas de opções para o pop-up.
-
-Set "Console font size" and "Console background opacity", tick "Highlight console commands", then choose a "Console color scheme".
-== Defina o tamanho da fonte do console e a opacidade do fundo do console, marque destacar comandos do console e escolha um esquema de cores do console.
 
 Set "Display mode" to "Show on key" or "Always show", then pick "Pistol guide line" and "Predict ninja path", plus color, "Line width" and "Opacity".
 == Defina o modo de exibição como mostrar na tecla ou sempre mostrar, escolha a linha guia da pistola e a previsão do ninja, e ajuste cor, espessura e opacidade.
@@ -12929,6 +13058,9 @@ Settings card states: stableId for collapsed, !stableId for expanded, separated 
 Settings card titles use rainbow colors
 == Usar cores de arco-íris no título do cartão de configurações
 
+Settings card widths: stableId for full width, !stableId for half width, separated by semicolons
+== Larguras dos cartões de configurações: stableId para largura total, !stableId para meia largura, separados por ponto e vírgula
+
 Settings file
 == Arquivo de configurações
 
@@ -12937,6 +13069,9 @@ Settings page opacity
 
 Settings page right panel opacity
 == Opacidade do painel direito da página de configurações
+
+Settings prewarm default migration done
+== Migração do valor padrão de pré-aquecimento das configurações concluída
 
 Settings, binds, profiles, chat binds and the war list are included. Select additional cfg files below.
 == Inclui configurações, atalhos de teclas, perfis de skin, atalhos de chat e lista de guerra. Selecione arquivos cfg adicionais abaixo.
@@ -12952,9 +13087,6 @@ Share of the server browser name/map split given to the name column (per mille)
 
 Sharpen
 == Nitidez
-
-Shimmer speed
-== Velocidade do brilho
 
 Short pain voice
 == Grito curto de dor
@@ -13076,7 +13208,7 @@ Show chat when rendering video
 Show clan above name plates
 == Mostrar clã acima das placas de nome
 
-Show clan if war
+Show clan for enemies
 == Mostrar clã se for guerra
 
 Show clan name on nameplate
@@ -13114,9 +13246,6 @@ Show collision and weapon interaction
 
 Show Collision Borders
 == Mostrar borda do volume de colisão
-
-Show colors in spectator selection
-== Mostrar cores na seleção de espectador
 
 Show combo hint when hooking or hammering player within 2 seconds
 == Mostrar aviso de combo ao acertar um jogador com gancho ou martelo duas vezes em 2 segundos
@@ -13223,6 +13352,12 @@ Show enemy color in scoreboard
 Show enemy color in spectator menu
 == Mostrar cor do inimigo no menu de espectador
 
+Show enemy colors in chat
+== Cores no chat
+
+Show enemy colors in scoreboard
+== Cores no placar
+
 Show enemy group players
 == Mostrar jogadores do grupo inimigo
 
@@ -13306,6 +13441,9 @@ Show ghost
 
 Show ghost at unpredictable position of other players
 == Mostrar fantasma na posição imprevisível de outros jogadores
+
+Show glowing, floating lyrics in the map. Each new line stays where it appears; previous lines rise and fade out
+== Mostrar letras brilhantes e flutuantes no mapa. Cada nova linha fica onde aparece; as anteriores sobem e desaparecem gradualmente
 
 Show Gores drown board
 == Mostrar o quadro de afogamentos do Gores
@@ -13504,9 +13642,6 @@ Show lyrics in a separate island below Dynamic Island
 
 Show lyrics in Dynamic Island
 == Mostrar letra no Dynamic Island
-
-Show lyrics inside Dynamic Island
-== Show lyrics in Dynamic Island
 
 Show main tee title locally
 == Mostrar título do tee principal localmente
@@ -13904,9 +14039,6 @@ Show tiles layers from BG map
 Show title setting hints immediately in small text
 == Mostrar dicas de configuração do título imediatamente em texto pequeno
 
-Show titles above player names
-== Mostrar títulos acima dos nomes
-
 Show titles on nameplates
 == Mostrar títulos nas placas de nome
 
@@ -14105,11 +14237,8 @@ Simple noise reduction
 Simple noise reduction strength
 == Intensidade da redução de ruído simples
 
-Single color
-== Cor única
-
-Single color and Rainbow override the color of animated styles; the style keeps its motion
-== Cor única e arco-íris substituem as cores dos estilos animados; o movimento do estilo é mantido
+Singing
+== Cantar
 
 Size
 == Tamanho
@@ -14318,9 +14447,6 @@ Smooths the camera while you free-spectate with the mouse in live games and demo
 Snap title bob offset to whole pixels (sharper glyphs, choppier motion)
 == Alinhar o deslocamento da oscilação a pixels inteiros (glifos mais nítidos, movimento mais travado)
 
-Snap wave to pixels
-== Alinhar onda a pixels inteiros
-
 Snapshot Age
 == Idade do snapshot
 
@@ -14528,8 +14654,8 @@ Spin pop
 Split main and dummy into different teams for solo-run sync
 == Distribui o personagem principal e o clone em equipes diferentes para sincronizar corridas solo
 
-Sponsor chat style draft: 0=Normal, 1=Platinum highlight
-== Rascunho do estilo de chat de apoiador: 0=Normal, 1=Reflexo de platina
+Sponsor chat style draft: 0=Normal, 1=Platinum highlight, 2=Fluid
+== Rascunho do estilo de chat de apoiador: 0=Normal, 1=Reflexo de platina, 2=Fluido
 
 Sponsor code
 == Código de apoiador
@@ -14561,6 +14687,27 @@ Spotify sp_dc cookie (from browser DevTools, long-lived)
 Spree
 == Sequência
 
+Spring
+== Mola
+
+Spring damping
+== Amortecimento da mola
+
+Spring firmness; 100 stops without overshoot, lower bounces past
+== Firmeza da mola; 100 para sem ultrapassar, menor ricocheteia além do alvo
+
+Spring response
+== Resposta da mola
+
+Spring scroll feel damping ratio in percent; 100 stops without overshoot
+== Taxa de amortecimento da rolagem com mola em porcentagem; 100 para sem ultrapassar
+
+Spring scroll feel response time in milliseconds; lower reaches the target sooner
+== Tempo de resposta da rolagem com mola em milissegundos; menor chega mais rápido
+
+Spring settle time; lower is snappier, higher feels heavier
+== Tempo de acomodação da mola; menor responde mais rápido, maior parece mais pesado
+
 SQL Server name for record table
 == Nome do SQL Server para a tabela de registros
 
@@ -14570,8 +14717,14 @@ Squishy Tee deformation duration
 Squishy Tee deformation intensity
 == Intensidade da deformação do Tee elástico
 
+Standalone
+== Separada
+
 Star
 == Estrela
+
+Stardust: Constellation
+== Poeira estelar: constelação
 
 Start (s)
 == Início (s)
@@ -14584,9 +14737,6 @@ Start at a random queue position on every map join
 
 Start dummy skin queue from a random position when entering a map
 == Iniciar a fila de skins do Dummy de uma posição aleatória ao entrar em um mapa
-
-Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join.
-== Começa em uma posição aleatória da fila ao entrar em cada mapa (também ao conectar o dummy ou reativar a fila). Defina o intervalo de troca como 0 para desativar a rotação temporizada e trocar apenas ao entrar no mapa.
 
 Start from the default value; raise it slightly if other players look jumpy, lower it if you seem behind them.
 == Comece pelo valor padrão: aumente um pouco se outros jogadores parecerem aos saltos e diminua se você parecer atrasado em relação a eles.
@@ -14747,17 +14897,11 @@ Streamer word list file
 Strength icons assets
 == Recursos de ícones de força
 
-Strength of the vertical or pop wave. Zero keeps the title still.
-== Intensidade da onda vertical ou de ampliação. Zero mantém o título parado.
-
 Stress system (debug builds only).
 == Sistema de estresse (apenas builds de depuração).
 
 Strict game type filter
 == Filtro de tipo de jogo estrito
-
-Strict gametype filter
-== Filtro estrito de tipo de jogo
 
 Strict mode
 == Modo estrito
@@ -14783,6 +14927,9 @@ Strong hook color
 Strong Weak Hook
 == Gancho forte fraco
 
+Style
+== Estilo
+
 Style chat names, text, and message colors
 == Style chat names, text, and message colors
 
@@ -14797,9 +14944,6 @@ Styles kill, finish and system messages in the chat area.
 
 Sub-Tick aiming
 == Mira Sub-Tick
-
-Subtle
-== Sutil
 
 Success
 == Sucesso
@@ -14818,6 +14962,9 @@ Sun
 
 Super
 == Super
+
+Superellipse
+== Superelipse
 
 Support is optional; nothing here changes client behavior.
 == O apoio é opcional; nada aqui muda o comportamento do cliente.
@@ -14953,9 +15100,6 @@ System message text gradient color
 
 System prompt text color
 == Cor do texto de prompt do sistema
-
-Tags
-== Tags
 
 Take a screenshot
 == Tirar uma captura de tela
@@ -15179,8 +15323,8 @@ Tee trail color
 Tee trail color mode (1=Solid, 2=Current Tee color, 3=Rainbow, 4=Tee speed, 5=Random)
 == Modo de cor do rastro do Tee (1=Sólido, 2=Cor atual do Tee, 3=Arco-íris, 4=Velocidade do Tee, 5=Aleatório)
 
-Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic)
-== Estilo de rastro do Tee (0=Original, 1=Mangá, 2=Magia, 3=Pixels, 4=Número antigo de mangá, 5=Número antigo de magia)
+Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic, 6=Aurora, 7=Ink, 8=Ignis, 9=Stardust, 10=Black Flash)
+== Estilo de rastro do Tee (0=Original, 1=Mangá, 2=Magia, 3=Pixels, 4=Número antigo de mangá, 5=Número antigo de magia, 6=Aurora, 7=Tinta, 8=Chama, 9=Poeira estelar, 10=Clarão negro)
 
 Tee Trails
 == Rastros do Tee
@@ -15296,6 +15440,9 @@ Test translation
 Testing translation...
 == Testando tradução…
 
+Text
+== Texto
+
 Text alpha
 == Alfa do texto
 
@@ -15310,9 +15457,6 @@ Text color mode
 
 Text color mode: 0 automatic, 1 white, 2 black, 3 custom
 == Modo de cor do texto: 0 automático, 1 branco, 2 preto, 3 personalizado
-
-Text effect
-== Efeito de texto
 
 Text input focus ring color
 == Cor do anel de foco da entrada de texto
@@ -15563,6 +15707,9 @@ This team started already
 This team was disbanded because there are more players than allowed in the team.
 == Este time foi dissolvido porque há mais jogadores do que o permitido no time.
 
+This text is already in the target language.
+== Este texto já está no idioma de destino.
+
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == Esta dica é fornecida por ui_widget::Tooltip, uma camada fina sobre CTooltips.
 
@@ -15589,9 +15736,6 @@ Tick "Enable system media control", then "Show song info in top-left corner"; th
 
 Tick "Enable voice", then open "Advanced options" to pick "Input device" and "Output device"; "Auto unmute when speaking" frees your mute key.
 == Marque ativar voz, abra as opções avançadas e escolha dispositivo de entrada e dispositivo de saída; reativar o áudio ao falar libera sua tecla de mudo.
-
-Tick "Highlight teammates hammering in death or freeze areas"; it works on your own team only and needs no key bind.
-== Marque destacar companheiros martelando em áreas de morte ou congelamento; funciona só no seu time e não exige tecla.
 
 Tick "Launch Steam automatically when starting externally"; if Steam is not found, type its path or press "Detect Steam again".
 == Marque iniciar Steam automaticamente ao abrir por fora; se o Steam não for encontrado, digite o caminho ou pressione detectar Steam novamente.
@@ -15628,6 +15772,9 @@ tile
 
 Tile outlines
 == Contornos de tiles
+
+Tile watermark
+== Repetir marca-d’água
 
 Time
 == Tempo
@@ -15724,9 +15871,6 @@ Title display
 
 Title light sweep speed in 1/100 row per second (0 = off)
 == Velocidade da varredura de luz do título em 1/100 de linha por segundo (0 = desligado)
-
-Title motion
-== Animação do título
 
 Title motion: 0 = vertical wave, 1 = pop wave
 == Animação do título: 0 = onda vertical, 1 = onda de ampliação
@@ -15965,9 +16109,6 @@ Total play time
 Total: %d save(s)
 == Total: %d save(s)
 
-Traditional
-== Tradicional
-
 Trail alpha
 == Alfa do rastro
 
@@ -16136,9 +16277,6 @@ Tune additional world and player effects
 Tune in zone a variable to value
 == Ajustar variável na zona a para o valor
 
-Tune layer opacity
-== Opacidade da camada de ajuste
-
 Tune variable to value
 == Ajustar variável para o valor
 
@@ -16213,9 +16351,6 @@ Turn on "Show titles on nameplates", pick a "Title style", then adjust "Title mo
 
 Turn on "Skin outline for self and dummy" or "Skin outline for other players", then tune width and opacity; "Cycle custom Tee hue" animates custom colors.
 == Ative o contorno da skin própria e do dummy ou para outros jogadores e ajuste espessura e opacidade; a alternância de matiz do Tee anima as cores personalizadas.
-
-Turn on "Skin transition animation", choose a "Skin transition type" and "Animation range", then set "Skin transition duration" and "Skin transition intensity".
-== Ative a animação de transição de skin, escolha o tipo e o alcance da animação e ajuste duração e intensidade.
 
 Turn on "Smooth free spectator camera" and set "Cinematic smoothness": low values stay snappy, high values drift slowly.
 == Ative a câmera livre suavizada e ajuste a suavidade cinematográfica: baixo responde rápido, alto desliza devagar.
@@ -16310,6 +16445,9 @@ UI color
 UI controller sens.
 == Sensibilidade do controle na interface
 
+UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier
+== Curva do canto da interface: 0 = arco clássico, 1 = superelipse, 2 = Bézier quíntica, 3 = Bézier cônica
+
 UI icon color
 == Cor dos ícones da interface
 
@@ -16360,6 +16498,9 @@ Unable to load savegame: loaded on a different server
 
 Unable to load savegame: SaveId corrupted
 == Não foi possível carregar o save: SaveId corrompido
+
+Unable to open the file picker
+== Não foi possível abrir o seletor de arquivos
 
 Unable to open the screenshot file
 == Não foi possível abrir o arquivo de captura de tela
@@ -16577,6 +16718,9 @@ Update ready to install
 Update sources are temporarily unavailable
 == As fontes de atualização estão temporariamente indisponíveis
 
+Updating preview…
+== Atualizando prévia…
+
 Updating public word list...
 == Atualizando a lista pública de palavras...
 
@@ -16637,6 +16781,9 @@ Use alternative world tick calculation making hooks behave as if all players hav
 Use animated title style (overrides qm_title_color_mode)
 == Usar estilo de título animado (substitui qm_title_color_mode)
 
+Use cached or online AMLL community lyrics when the music source has no word timing
+== Usar letras da comunidade AMLL em cache ou on-line quando a fonte de música não fornecer tempos por palavra
+
 Use colored skins for frozen tees
 == Usar peles coloridas para tees congelados
 
@@ -16651,6 +16798,12 @@ Use current name
 
 Use current settings
 == Usar configurações atuais
+
+Use custom chat bubble colors
+== Usar cores personalizadas nos balões de chat
+
+Use custom colors
+== Usar cores personalizadas
 
 Use custom colors for the pressed hook collision line (0 = always invert)
 == Usa cores personalizadas para a linha de gancho pressionada (0 = sempre inverter)
@@ -16676,9 +16829,6 @@ Use default voice input device
 Use default voice output device
 == Usar dispositivo de saída de voz padrão
 
-Use embedded HUD progress bar
-== Usar barra de progresso HUD embutida
-
 Use emote
 == Usar emote
 
@@ -16693,9 +16843,6 @@ Use high bandwidth mode (doubles server bandwidth, LAN only)
 
 Use installed asset names. Empty fields keep the current asset.
 == Informe nomes de texturas instaladas. Campos vazios mantêm a textura atual.
-
-Use it to find the teammate who needs a wake-up; enemies are never highlighted, so do not look for them here.
-== Use para achar o companheiro que precisa ser acordado; inimigos nunca são destacados, não os procure aqui.
 
 Use k key to kill (restart), q to pause and watch other players. See settings for other key binds.
 == Use a tecla k para se matar (reiniciar), q para pausar e assistir outros jogadores. Veja as configurações para outras teclas.
@@ -16766,9 +16913,6 @@ Use team colors for name plates
 Use Tee icons instead of circles
 == Usar ícones de Tee em vez de círculos
 
-Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
-== Usa as cores personalizadas abaixo quando a linha de gancho for exibida com a tecla de gancho pressionada; se desativado, as cores sem pressionar são invertidas automaticamente
-
 Use the custom colors below while the hook key is held
 == Usa as cores personalizadas abaixo enquanto a tecla de gancho é mantida
 
@@ -16792,9 +16936,6 @@ Use warlist colors instead of regular colors
 
 Use warlist groups for indicator
 == Usar grupos da lista de guerra para o indicador
-
-Used
-== Usado
 
 Used by active shared text and numeric input fields
 == Usado por campos compartilhados ativos de texto e números
@@ -16846,9 +16987,6 @@ Vertical position
 
 Vertical sync (may cause lag)
 == Sincronização vertical (pode causar lag)
-
-Vertical wave
-== Onda vertical
 
 Very fast encode
 == Codificação muito rápida
@@ -16960,12 +17098,6 @@ Visual effects
 
 Visual: Cursor
 == Visual: cursor
-
-Visual: Effects
-== Visual: Efeitos
-
-Visual: Nameplates
-== Visual: Placas de Nome
 
 Visuals
 == Visuais
@@ -17150,20 +17282,11 @@ Warning
 Watches your friend list and reports friends coming online or joining your map, with optional automatic greeting.
 == Vigia sua lista de amigos e avisa quando um amigo entra online ou no seu mapa, com saudação automática opcional.
 
-Water hammer highlight
-== Destaque do martelo na água
-
 Watermark
 == Marca d'água
 
-Wave amount
-== Amplitude da onda
-
-Wave spacing
-== Espaçamento das ondas
-
-Wave speed
-== Velocidade das ondas
+Watermark editor
+== Editor de marcas-d’água
 
 Weak hook
 == Gancho fraco
@@ -17273,14 +17396,14 @@ Wheel distance per tick; hold Alt for 3x
 Wheel label
 == Nome na roda
 
+Wheel scroll feel: 0=Smooth (velocity carries over), 1=Original (each tick restarts), 2=Spring
+== Sensação da roda: 0=Suave (herda a velocidade), 1=Original (reinicia a cada passo), 2=Mola
+
 Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
 == Passo da roda em pixels da interface; páginas de configurações rolam 12 vezes esse valor por passo
 
 When TClient rainbow Tee is enabled, this feature has no effect.
 == Quando o Tee arco-íris do TClient está ativado, este recurso não tem efeito.
-
-When you cross the start line, show a ghost tee replicating the movements of your best time
-== Ao cruzar a linha de largada, mostra um tee fantasma replicando os movimentos do seu melhor tempo
 
 Where your title appears and how it looks: nameplate, style, motion, colors and glow.
 == Onde seu título aparece e como ele fica: placa de nome, estilo, animação, cores e brilho.
@@ -17366,6 +17489,9 @@ Whisper option color
 Whisper something to someone (private message)
 == Sussurrar algo para alguém (mensagem privada)
 
+Whisper target left the game
+== O destinatário do sussurro saiu do jogo
+
 Whisper to %s
 == Sussurrar para %s
 
@@ -17410,6 +17536,9 @@ Width of latency column in server browser
 
 Width of map column in server browser
 == Largura da coluna de mapa no navegador de servidores
+
+Width of name column in server browser
+== Largura da coluna de nome no navegador de servidores
 
 Width of others' hook collision line
 == Largura da linha de colisão do gancho dos outros
@@ -17462,6 +17591,9 @@ Word list file exceeds 2 MiB.
 Word list must be UTF-8 text without NUL characters.
 == A lista deve ser texto UTF-8 sem caracteres NUL.
 
+World lyrics
+== Letra no mundo
+
 Write local console contents to a text file
 == Escrever conteúdo do console local em um arquivo de texto
 
@@ -17486,6 +17618,9 @@ Writing item %d failed
 Written %d items
 == %d itens escritos
 
+X
+== X
+
 x = DDNet CPU% / total CPU%
 == x = DDNet CPU% / CPU total%
 
@@ -17494,6 +17629,9 @@ X alignment color
 
 X alignment hint with me
 == Dica de alinhamento X comigo
+
+Y
+== Y
 
 y = DDNet memory usage
 == y = Uso de memória do DDNet
@@ -17762,17 +17900,11 @@ Your current race time is %s
 Your current version is outdated. Please update from the QQ group.
 == Sua versão atual está desatualizada. Por favor, atualize pelo grupo do QQ.
 
-Your favorite map manager
-== Seu gerenciador de mapas favorito
-
 Your favorite maps appear here
 == Seus mapas favoritos aparecem aqui
 
 Your friend %s is online and currently on map %s!
 == Seu amigo %s está online e atualmente no mapa %s!
-
-Your list of favorite maps, each shown with its map type, with quick copy and remove actions.
-== Sua lista de mapas favoritos, cada um com o tipo e ações rápidas de copiar e remover.
 
 Your locked team was killed because '%s' %s
 == Seu time trancado foi morto porque '%s' %s
@@ -17782,9 +17914,6 @@ Your movements are not taken into account when calculating the line colors
 
 Your nickname '%s' is already used (%d points). Do you still want to use it?
 == Seu apelido '%s' já está em uso (%d pontos). Você ainda deseja usá-lo?
-
-Your own colors appear only under "Custom"; press "Reset console appearance" if the text becomes hard to read.
-== Suas cores só aparecem em personalizado; se o texto ficar difícil de ler, pressione redefinir a aparência do console.
 
 Your profile
 == Seu perfil
@@ -17830,9 +17959,6 @@ Zen mode hides chat bubbles even when this is on, and a long "Duration" leaves o
 
 Zen mode key
 == Tecla do modo Zen
-
-Zero uses the style default. Higher values make color bands narrower.
-== Zero usa o padrão do estilo. Valores maiores estreitam as faixas de cor.
 
 Zhipu AI
 == Zhipu AI
@@ -18287,10 +18413,6 @@ required
 [Team status]
 solo
 == Solo
-
-[Title color mode]
-Use style colors
-== Usar as cores do estilo
 
 [Touch button behavior]
 Bind

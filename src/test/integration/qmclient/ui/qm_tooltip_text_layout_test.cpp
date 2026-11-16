@@ -406,3 +406,18 @@ TEST_F(QmTooltipTextLayout, CachedTextKeepsFinalGlyphsInsideClipWhileBubbleMoves
 		}
 	}
 }
+
+TEST(QmTooltipFontScale, ConfiguredValueIsTheRenderedFontSize)
+{
+	// 配置值就是字号本身：默认 10 不缩放；老存档里调到 20 的用户升级后
+	// 仍得到 20，而不是按「14 = 1 倍」二次换算掉到 14.3。
+	EXPECT_FLOAT_EQ(QmTooltipFontScale(10), 1.0f);
+	EXPECT_FLOAT_EQ(QmTooltipFontScale(20), 2.0f);
+	EXPECT_FLOAT_EQ(ui_token::tooltip::FONT_SIZE * QmTooltipFontScale(20), 20.0f);
+	// 设置页预览按配置值直接画字：合法范围内预览字号必须严格等于真实气泡字号。
+	for(int FontSize = 10; FontSize <= 24; ++FontSize)
+		EXPECT_FLOAT_EQ(ui_token::tooltip::FONT_SIZE * QmTooltipFontScale(FontSize), static_cast<float>(FontSize));
+	// 越界存档按配置范围夹住，不让极端值把气泡撑出屏幕。
+	EXPECT_FLOAT_EQ(ui_token::tooltip::FONT_SIZE * QmTooltipFontScale(1), 10.0f);
+	EXPECT_FLOAT_EQ(ui_token::tooltip::FONT_SIZE * QmTooltipFontScale(99), 24.0f);
+}

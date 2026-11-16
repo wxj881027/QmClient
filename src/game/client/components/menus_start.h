@@ -4,7 +4,7 @@
 #define GAME_CLIENT_COMPONENTS_MENUS_START_H
 
 #include <game/client/component.h>
-#include <game/client/ui_rect.h>
+#include <game/client/ui.h>
 
 class CMenusStart : public CComponentInterfaces
 {
@@ -13,6 +13,7 @@ public:
 	void RenderStartMenuV2(CUIRect MainView);
 
 private:
+	CUIElement m_aButtonLabels[6];
 	void RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout);
 	bool CheckHotKey(int Key) const;
 };

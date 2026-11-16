@@ -24,26 +24,62 @@
 
 struct SConfigVariable;
 
+// 气泡相对锚点的首选展开方向；屏幕空间不足时回落为默认的上下居中布局。
+enum class EQmTooltipPlacement
+{
+	AUTO = 0,
+	LEFT,
+};
+
+// 入场收口时长与侧向弹出距离：缩放和位移共用同一条曲线，动画选项关闭时都直接落在终态。
+inline constexpr float QM_TOOLTIP_ENTER_SECONDS = 0.18f;
+inline constexpr float QM_TOOLTIP_SIDE_POP_DISTANCE = 8.0f;
+
+// 所有气泡共用 ui_token::tooltip 一套尺寸。设置页紧凑小字气泡是基准，
+// qm_tooltip_font_size 的值就是字号本身（默认等于 FONT_SIZE），对全部气泡统一缩放；
+// 默认配置下设置页、服务器列表、好友列表的字号/内边距/外边距/圆角/宽度上限完全一致。
+// 不再做「配置 14 = 1 倍」的二次换算：那样老存档调到 20 会被压成 14.3，
+// 而且设置页预览按配置值直接画字，会比真实气泡大一号。
+inline float QmTooltipFontScale(const int ConfiguredFontSize)
+{
+	return std::clamp(ConfiguredFontSize, 10, 24) / ui_token::tooltip::FONT_SIZE_CONFIG_REFERENCE;
+}
+
+// EASE_OUT_QUART 单调收口（0.88 → 1.0，无过冲回弹）：气泡常锚在控件/弹层
+// 边缘，ease-out-back 的过冲会被读作「弹层展开在弹」（用户明确要求下拉
+// 弹出优雅无弹跳），故入场只保留缩放渐入、去掉回弹段。
+inline float QmTooltipEnterEase(float ElapsedSeconds, bool AnimationEnabled)
+{
+	if(!AnimationEnabled || ElapsedSeconds >= QM_TOOLTIP_ENTER_SECONDS)
+		return 1.0f;
+	const float T = std::clamp(ElapsedSeconds / QM_TOOLTIP_ENTER_SECONDS, 0.0f, 1.0f);
+	const float Inv = 1.0f - T;
+	return 1.0f - Inv * Inv * Inv * Inv;
+}
+
 inline float QmTooltipScale(float ElapsedSeconds, bool AnimationEnabled)
 {
-	if(!AnimationEnabled || ElapsedSeconds >= 0.18f)
-		return 1.0f;
-	// EASE_OUT_QUART 单调收口（0.88 → 1.0，无过冲回弹）：气泡常锚在控件/弹层
-	// 边缘，ease-out-back 的过冲会被读作「弹层展开在弹」（用户明确要求下拉
-	// 弹出优雅无弹跳），故入场只保留缩放渐入、去掉回弹段。
-	const float T = std::clamp(ElapsedSeconds / 0.18f, 0.0f, 1.0f);
-	const float Inv = 1.0f - T;
-	const float Ease = 1.0f - Inv * Inv * Inv * Inv;
-	return 0.88f + 0.12f * Ease;
+	return 0.88f + 0.12f * QmTooltipEnterEase(ElapsedSeconds, AnimationEnabled);
 }
 
 // 气泡跟随目标矩形；指针在目标内部移动不会改变气泡位置。
-inline CUIRect QmTooltipRect(const CUIRect &Anchor, const CUIRect &Screen, vec2 Size, float Margin)
+// LEFT 时气泡贴在锚点左外侧并垂直居中，屏幕左侧放不下则回落为默认布局。
+inline CUIRect QmTooltipRect(const CUIRect &Anchor, const CUIRect &Screen, vec2 Size, float Margin, EQmTooltipPlacement Placement = EQmTooltipPlacement::AUTO)
 {
 	Margin = std::max(0.0f, std::min(Margin, std::min(Screen.w, Screen.h) * 0.5f));
-	CUIRect Rect{Anchor.x + (Anchor.w - Size.x) * 0.5f, Anchor.y - Size.y - Margin,
-		std::clamp(Size.x, 0.0f, std::max(0.0f, Screen.w - 2.0f * Margin)),
-		std::clamp(Size.y, 0.0f, std::max(0.0f, Screen.h - 2.0f * Margin))};
+	const float Width = std::clamp(Size.x, 0.0f, std::max(0.0f, Screen.w - 2.0f * Margin));
+	const float Height = std::clamp(Size.y, 0.0f, std::max(0.0f, Screen.h - 2.0f * Margin));
+	if(Placement == EQmTooltipPlacement::LEFT)
+	{
+		const float X = Anchor.x - Width - Margin;
+		if(X >= Screen.x + Margin)
+		{
+			CUIRect Rect{X, Anchor.y + (Anchor.h - Height) * 0.5f, Width, Height};
+			Rect.y = std::clamp(Rect.y, Screen.y + Margin, Screen.y + Screen.h - Rect.h - Margin);
+			return Rect;
+		}
+	}
+	CUIRect Rect{Anchor.x + (Anchor.w - Width) * 0.5f, Anchor.y - Height - Margin, Width, Height};
 	Rect.x = Anchor.x + (Anchor.w - Rect.w) * 0.5f;
 	Rect.y = Anchor.y - Rect.h - Margin;
 	if(Rect.y < Screen.y + Margin)
@@ -62,14 +98,35 @@ inline CUIRect QmTooltipRect(const CUIRect &Anchor, const CUIRect &Screen, vec2 
 	return Rect;
 }
 
-// 先确定避让后的完整矩形，再围绕固定中心缩放；屏幕边缘限制回弹幅度。
-inline CUIRect QmTooltipAnimatedRect(const CUIRect &Rect, const CUIRect &Screen, float Scale)
+// 先确定避让后的完整矩形，再围绕支点缩放；屏幕边缘限制回弹幅度。
+// 支点取 (1, 0.5) 时贴卡片的一边保持不动，缩放看起来从卡片边缘向外展开。
+inline CUIRect QmTooltipAnimatedRect(const CUIRect &Rect, const CUIRect &Screen, float Scale, vec2 Pivot = vec2(0.5f, 0.5f))
 {
-	const vec2 Center = Rect.Center();
-	const float MaxScaleX = Rect.w > 0.0f ? 2.0f * std::max(0.0f, std::min(Center.x - Screen.x, Screen.x + Screen.w - Center.x)) / Rect.w : 1.0f;
-	const float MaxScaleY = Rect.h > 0.0f ? 2.0f * std::max(0.0f, std::min(Center.y - Screen.y, Screen.y + Screen.h - Center.y)) / Rect.h : 1.0f;
+	Pivot.x = std::clamp(Pivot.x, 0.0f, 1.0f);
+	Pivot.y = std::clamp(Pivot.y, 0.0f, 1.0f);
+	const float PivotX = Rect.x + Rect.w * Pivot.x;
+	const float PivotY = Rect.y + Rect.h * Pivot.y;
+	constexpr float UnlimitedScale = 1.0e9f;
+	const float SpaceLeft = std::max(0.0f, PivotX - Screen.x);
+	const float SpaceRight = std::max(0.0f, Screen.x + Screen.w - PivotX);
+	const float SpaceTop = std::max(0.0f, PivotY - Screen.y);
+	const float SpaceBottom = std::max(0.0f, Screen.y + Screen.h - PivotY);
+	const float MaxScaleX = Rect.w > 0.0f ? std::min(Pivot.x > 0.0f ? SpaceLeft / (Rect.w * Pivot.x) : UnlimitedScale,
+							Pivot.x < 1.0f ? SpaceRight / (Rect.w * (1.0f - Pivot.x)) : UnlimitedScale) :
+						1.0f;
+	const float MaxScaleY = Rect.h > 0.0f ? std::min(Pivot.y > 0.0f ? SpaceTop / (Rect.h * Pivot.y) : UnlimitedScale,
+							Pivot.y < 1.0f ? SpaceBottom / (Rect.h * (1.0f - Pivot.y)) : UnlimitedScale) :
+						1.0f;
 	Scale = std::clamp(Scale, 0.0f, std::min(MaxScaleX, MaxScaleY));
-	return {Center.x - Rect.w * Scale * 0.5f, Center.y - Rect.h * Scale * 0.5f, Rect.w * Scale, Rect.h * Scale};
+	return {PivotX - Rect.w * Scale * Pivot.x, PivotY - Rect.h * Scale * Pivot.y, Rect.w * Scale, Rect.h * Scale};
+}
+
+// 侧向弹出从贴卡片的一侧开始，向离开卡片的方向收口；入场完成后位移归零。
+inline float QmTooltipSidePopOffset(float ElapsedSeconds, bool AnimationEnabled, float Distance = QM_TOOLTIP_SIDE_POP_DISTANCE)
+{
+	if(!AnimationEnabled || Distance <= 0.0f)
+		return 0.0f;
+	return (1.0f - QmTooltipEnterEase(ElapsedSeconds, AnimationEnabled)) * Distance;
 }
 
 struct CTooltip
@@ -80,11 +137,12 @@ struct CTooltip
 	float m_WidthHint = -1.0f;
 	bool m_OnScreen = false; // 登记时的悬浮资格，保留内容裁剪与弹层屏蔽结果。
 	float m_FadeTime = 0.75f;
-	float m_FontSize = 14.0f;
+	float m_FontSize = ui_token::tooltip::FONT_SIZE;
 	bool m_SmallInstant = false;
 	bool m_HoverByRect = false;
 	bool m_Immediate = false;
 	bool m_Fallback = false;
+	EQmTooltipPlacement m_Placement = EQmTooltipPlacement::AUTO;
 	uint64_t m_RegisteredFrame = 0;
 	std::array<int, 9> m_RegisteredContext{};
 	CUIRect m_Anchor{};
@@ -330,6 +388,12 @@ inline bool QmTooltipAnimate(const CTooltip &Tooltip, bool AnimationEnabled)
 	return !Tooltip.m_SmallInstant && AnimationEnabled;
 }
 
+// 左侧布局放不下时会回落为默认位置；只有真的落在卡片左侧才按侧向弹出处理。
+inline bool QmTooltipSidePlaced(const CTooltip &Tooltip, const CUIRect &Rect)
+{
+	return Tooltip.m_Placement == EQmTooltipPlacement::LEFT && Rect.x + Rect.w <= Tooltip.m_Anchor.x;
+}
+
 inline bool QmTooltipRegistered(const CTooltip &Tooltip, uint64_t Frame)
 {
 	return Tooltip.m_RegisteredFrame == Frame;
@@ -386,7 +450,7 @@ class CTooltips : public CComponent
 	 * @param Tooltip A reference to the tooltip that should be active.
 	 */
 	void SetActiveTooltip(CTooltip &Tooltip);
-	void DoToolTip(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint, float FontSize, bool SmallInstant, bool HoverByRect, bool Immediate = false, bool Fallback = false, const CUIRect *pAnchor = nullptr);
+	void DoToolTip(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint, float FontSize, bool SmallInstant, bool HoverByRect, bool Immediate = false, bool Fallback = false, const CUIRect *pAnchor = nullptr, EQmTooltipPlacement Placement = EQmTooltipPlacement::AUTO);
 
 	void RecordSource(const void *pId, const CUIRect &Rect);
 	void ClearActiveTooltip();
@@ -410,6 +474,8 @@ public:
 	void DoToolTip(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint = -1.0f);
 	// 说明标签不抢占控件的 HotItem，通过可见悬浮区域触发提示。
 	void DoToolTipForRect(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint = -1.0f);
+	// 指定气泡首选展开方向：屏幕空间足够时从控件该侧向外弹出，不足则回落默认布局。
+	void DoToolTipFromSide(const void *pId, const CUIRect *pNearRect, const char *pText, EQmTooltipPlacement Placement, float WidthHint = -1.0f);
 	// 控件显式提供配置绑定；后续普通提示会追加同一命令，保留原说明。
 	void DoConfigToolTip(const void *pId, const CUIRect *pNearRect, const void *pValue, const void *pSecondValue = nullptr);
 

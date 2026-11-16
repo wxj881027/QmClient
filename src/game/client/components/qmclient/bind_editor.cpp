@@ -6,6 +6,8 @@
 #include <engine/shared/config.h>
 #include <engine/shared/localization.h>
 
+#include <game/client/components/qmclient/bind_overview.h>
+
 #include <algorithm>
 #include <utility>
 
@@ -13,64 +15,6 @@ namespace qm_bind_editor
 {
 	namespace
 	{
-		struct SBindPreset
-		{
-			const char *m_pLabel;
-			const char *m_pCommand;
-			ECommandCategory m_Category;
-		};
-
-		constexpr SBindPreset s_aPresets[] = {
-			{Localizable("Move left"), "+left", ECommandCategory::MOVEMENT},
-			{Localizable("Move right"), "+right", ECommandCategory::MOVEMENT},
-			{Localizable("Jump"), "+jump", ECommandCategory::MOVEMENT},
-			{Localizable("Fire"), "+fire", ECommandCategory::WEAPON},
-			{Localizable("Hook"), "+hook", ECommandCategory::MOVEMENT},
-			{Localizable("Hook collisions"), "+showhookcoll", ECommandCategory::CAMERA},
-			{Localizable("Pause"), "say /pause", ECommandCategory::MISCELLANEOUS},
-			{Localizable("Kill"), "kill", ECommandCategory::MISCELLANEOUS},
-			{Localizable("Zoom in"), "zoom+", ECommandCategory::CAMERA},
-			{Localizable("Zoom out"), "zoom-", ECommandCategory::CAMERA},
-			{Localizable("Default zoom"), "zoom", ECommandCategory::CAMERA},
-			{Localizable("Show others"), "say /showothers", ECommandCategory::CAMERA},
-			{Localizable("Show all"), "say /showall", ECommandCategory::CAMERA},
-			{Localizable("Toggle dyncam"), "toggle cl_dyncam 0 1", ECommandCategory::CAMERA},
-			{Localizable("Toggle ghost"), "toggle cl_race_show_ghost 0 1", ECommandCategory::CAMERA},
-			{Localizable("Hammer"), "+weapon1", ECommandCategory::WEAPON},
-			{Localizable("Pistol"), "+weapon2", ECommandCategory::WEAPON},
-			{Localizable("Shotgun"), "+weapon3", ECommandCategory::WEAPON},
-			{Localizable("Grenade"), "+weapon4", ECommandCategory::WEAPON},
-			{Localizable("Laser"), "+weapon5", ECommandCategory::WEAPON},
-			{Localizable("Next weapon"), "+nextweapon", ECommandCategory::WEAPON},
-			{Localizable("Prev. weapon"), "+prevweapon", ECommandCategory::WEAPON},
-			{Localizable("Vote yes"), "vote yes", ECommandCategory::VOTING},
-			{Localizable("Vote no"), "vote no", ECommandCategory::VOTING},
-			{Localizable("Chat"), "+show_chat; chat all", ECommandCategory::CHAT},
-			{Localizable("Team chat"), "+show_chat; chat team", ECommandCategory::CHAT},
-			{Localizable("Converse"), "+show_chat; chat all /c ", ECommandCategory::CHAT},
-			{Localizable("Show chat"), "+show_chat", ECommandCategory::CHAT},
-			{Localizable("Repeat message"), "+qm_repeat", ECommandCategory::CHAT},
-			{Localizable("Voice chat"), "+qm_voice_ptt", ECommandCategory::CHAT},
-			{Localizable("Toggle dummy"), "toggle cl_dummy 0 1", ECommandCategory::DUMMY},
-			{Localizable("Dummy jump"), "+toggle_restore cl_dummy_jump 1", ECommandCategory::DUMMY},
-			{Localizable("Dummy fire"), "+toggle_restore cl_dummy_fire 1", ECommandCategory::DUMMY},
-			{Localizable("Dummy hook"), "+toggle_restore cl_dummy_hook 1", ECommandCategory::DUMMY},
-			{Localizable("Dummy copy"), "toggle cl_dummy_copy_moves 0 1", ECommandCategory::DUMMY},
-			{Localizable("Dummy control"), "toggle cl_dummy_control 1 0", ECommandCategory::DUMMY},
-			{Localizable("Emoticon"), "+emote", ECommandCategory::CHAT},
-			{Localizable("Spectate mode"), "+spectate", ECommandCategory::CAMERA},
-			{Localizable("Spectate next"), "spectate_next", ECommandCategory::CAMERA},
-			{Localizable("Spectate previous"), "spectate_previous", ECommandCategory::CAMERA},
-			{Localizable("Active disconnect"), "qm_timeout_disconnect", ECommandCategory::MISCELLANEOUS},
-			{Localizable("Console"), "toggle_local_console", ECommandCategory::MISCELLANEOUS},
-			{Localizable("Screenshot"), "screenshot", ECommandCategory::MISCELLANEOUS},
-			{Localizable("Scoreboard"), "+scoreboard", ECommandCategory::MISCELLANEOUS},
-			{Localizable("Statboard"), "+statboard", ECommandCategory::MISCELLANEOUS},
-			{Localizable("Pie menu"), "+pie_menu", ECommandCategory::MISCELLANEOUS},
-			{Localizable("Show entities"), "toggle cl_overlay_entities 0 100", ECommandCategory::CAMERA},
-			{Localizable("Show HUD"), "toggle cl_showhud 0 1", ECommandCategory::CAMERA},
-		};
-
 		bool IsWhitespace(const char Character)
 		{
 			return Character == ' ' || Character == '\t' || Character == '\r' || Character == '\n';
@@ -90,6 +34,41 @@ namespace qm_bind_editor
 			Segment = NormalizeSegment(std::move(Segment));
 			if(!Segment.empty())
 				Result.m_vCommands.push_back(std::move(Segment));
+		}
+
+		ECommandCategory CategoryForKnownAction(const SKnownBindAction &Action)
+		{
+			// 控制页按动作语义分组；镜头相关动作虽然在控制页归入“其他”，
+			// 在指令选择器里单独保留 Camera 分类，便于从常用动作中快速筛选。
+			if(str_comp(Action.m_pCommand, "+fire") == 0)
+				return ECommandCategory::WEAPON;
+			if(str_comp(Action.m_pCommand, "+emote") == 0)
+				return ECommandCategory::CHAT;
+			if(str_comp(Action.m_pCommand, "say /pause") == 0 || str_comp(Action.m_pCommand, "kill") == 0)
+				return ECommandCategory::MISCELLANEOUS;
+			if(str_comp(Action.m_pCommand, "+showhookcoll") == 0 ||
+				str_comp(Action.m_pCommand, "zoom+") == 0 ||
+				str_comp(Action.m_pCommand, "zoom-") == 0 ||
+				str_comp(Action.m_pCommand, "zoom") == 0 ||
+				str_comp(Action.m_pCommand, "say /showothers") == 0 ||
+				str_comp(Action.m_pCommand, "say /showall") == 0 ||
+				str_comp(Action.m_pCommand, "toggle cl_dyncam 0 1") == 0 ||
+				str_comp(Action.m_pCommand, "toggle cl_race_show_ghost 0 1") == 0 ||
+				str_comp(Action.m_pCommand, "+spectate") == 0 ||
+				str_comp(Action.m_pCommand, "spectate_next") == 0 ||
+				str_comp(Action.m_pCommand, "spectate_previous") == 0 ||
+				str_comp(Action.m_pCommand, "toggle cl_overlay_entities 0 100") == 0 ||
+				str_comp(Action.m_pCommand, "toggle cl_showhud 0 1") == 0)
+				return ECommandCategory::CAMERA;
+			switch(Action.m_Group)
+			{
+			case EBindOptionGroup::MOVEMENT: return ECommandCategory::MOVEMENT;
+			case EBindOptionGroup::WEAPON: return ECommandCategory::WEAPON;
+			case EBindOptionGroup::VOTING: return ECommandCategory::VOTING;
+			case EBindOptionGroup::CHAT: return ECommandCategory::CHAT;
+			case EBindOptionGroup::DUMMY: return ECommandCategory::DUMMY;
+			default: return ECommandCategory::MISCELLANEOUS;
+			}
 		}
 	}
 
@@ -111,8 +90,8 @@ namespace qm_bind_editor
 	{
 		std::vector<SCommandOption> vOptions;
 		vOptions.push_back({Localizable("Custom command"), {}, true, ECommandCategory::ALL});
-		for(const SBindPreset &Preset : s_aPresets)
-			vOptions.push_back({Preset.m_pLabel, {Preset.m_pCommand, {}, {}}, true, Preset.m_Category});
+		for(const SKnownBindAction &Action : s_aKnownBindActions)
+			vOptions.push_back({Action.m_pLabel, {Action.m_pCommand, {}, {}}, true, CategoryForKnownAction(Action)});
 		for(auto &Command : RegisteredCommands(Console))
 			vOptions.push_back({Command.m_Name, std::move(Command), false, ECommandCategory::CONSOLE});
 		return vOptions;

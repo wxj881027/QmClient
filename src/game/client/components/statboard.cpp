@@ -7,6 +7,7 @@
 #include <generated/client_data.h>
 #include <generated/protocol.h>
 
+#include <game/client/QmUi/UiSurface.h>
 #include <game/client/animstate.h>
 #include <game/client/components/motd.h>
 #include <game/client/components/statboard.h>
@@ -214,7 +215,12 @@ void CStatboard::RenderGlobalStats()
 
 	Graphics()->MapScreen(0, 0, StatboardWidth, StatboardHeight);
 
-	Graphics()->DrawRect(x - 10.f, y - 10.f, StatboardContentWidth, StatboardContentHeight, ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f), IGraphics::CORNER_ALL, 17.0f);
+	{
+		SRoundedSurfaceParams StatboardSurface;
+		StatboardSurface.m_Radius = 17.0f;
+		StatboardSurface.m_Corners = IGraphics::CORNER_ALL;
+		DrawRoundedSurface(Ui(), CUIRect{x - 10.f, y - 10.f, StatboardContentWidth, StatboardContentHeight}, ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f), ColorRGBA(), StatboardSurface);
+	}
 
 	int px = 325;
 

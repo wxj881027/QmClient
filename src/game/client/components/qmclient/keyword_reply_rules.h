@@ -284,7 +284,18 @@ namespace QmKeywordReplyRules
 				Compiled.m_Rule = std::move(Rule);
 				Compiled.m_vReplies = ReplyTokens(Compiled.m_Rule.m_Reply.c_str());
 				if(Compiled.m_Rule.m_Regex)
-					Compiled.m_Regex.emplace(RegexPattern(Compiled.m_Rule.m_Keywords), true);
+				{
+					// 用户写的正则不可信：编译失败必须降级成「永不匹配」，不能让异常漏出去
+					// 终止进程（libc++ 对孤立的 `[` 会在构造期抛 regex_error，MSVC 不抛）。
+					try
+					{
+						Compiled.m_Regex.emplace(RegexPattern(Compiled.m_Rule.m_Keywords), true);
+					}
+					catch(...)
+					{
+						Compiled.m_Regex.reset();
+					}
+				}
 				else
 					Compiled.m_vTokens = LiteralTokens(Compiled.m_Rule.m_Keywords);
 				m_vRules.push_back(std::move(Compiled));

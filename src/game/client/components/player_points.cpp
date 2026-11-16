@@ -296,6 +296,16 @@ void CPlayerPoints::ProcessCompletedRequests(TRequests &Requests, CQmPlayerPoint
 			continue;
 		}
 
+		// DDStats 用 404 表示没有该玩家的记录：时长按 0 小时记入成功结果，
+		// 计分板显示 0，不再把"查无此人"当成查询失败显示问号并按失败反复重试。
+		if(QmDdStatsPlaytimeMissingRecord(Playtime, pRequest->CompletedStatusCode()))
+		{
+			Cache.CompleteSuccess(Name, Token, 0, time_get(), 0);
+			Slot.m_pParseJob.reset();
+			Iter = Requests.erase(Iter);
+			continue;
+		}
+
 		EHttpState State = pRequest->State();
 
 		if(State == EHttpState::DONE)

@@ -1,9 +1,8 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_MUSIC_LYRICS_MUSIC_LYRICS_INTEGRATION_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_MUSIC_LYRICS_MUSIC_LYRICS_INTEGRATION_H
 
-#include "qm_soda_hook_provider.h"
-
 #include "music_lyrics_display.h"
+#include "qm_soda_hook_provider.h"
 
 #include <game/client/component.h>
 

@@ -13,6 +13,7 @@
 #include <game/client/components/binds.h>
 #include <game/client/components/particles.h>
 #include <game/client/components/qmclient/modes.h>
+#include <game/client/components/qmclient/practice_cursor.h>
 #include <game/client/gameclient.h>
 #include <game/client/prediction/entities/character.h>
 #include <game/client/prediction/entities/laser.h>
@@ -2491,7 +2492,7 @@ bool CFastPractice::ExecutePracticeCommand(int Team, int LocalClientId, CCharact
 
 	if(Cmd == "tp" || Cmd == "teleport" || Cmd == "tc" || Cmd == "telecursor")
 	{
-		vec2 Target = GameClient()->m_Controls.m_aTargetPos[g_Config.m_ClDummy];
+		vec2 Target;
 		if(vArgs.size() > 1)
 		{
 			const int TargetId = FindClientByName(vArgs[1].c_str());
@@ -2501,6 +2502,13 @@ bool CFastPractice::ExecutePracticeCommand(int Team, int LocalClientId, CCharact
 				return true;
 			}
 			Target = vec2((float)GameClient()->m_Snap.m_aCharacters[TargetId].m_Cur.m_X, (float)GameClient()->m_Snap.m_aCharacters[TargetId].m_Cur.m_Y);
+		}
+		else
+		{
+			const auto &Camera = GameClient()->m_Camera;
+			const auto &SpecInfo = GameClient()->m_Snap.m_SpecInfo;
+			Target = QmPracticeCursorWorldPosition(GameClient()->m_Controls.m_aTargetPos[g_Config.m_ClDummy],
+				Camera.m_Center, Camera.m_Zoom, SpecInfo.m_Active && !SpecInfo.m_UsePosition);
 		}
 		ApplyTeleport(ClampToPlayableBounds(Target));
 		return true;

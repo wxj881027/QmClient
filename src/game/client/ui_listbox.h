@@ -215,6 +215,8 @@ private:
 	// 默认开启，只有明确需要「跳动式」布局的列表才关掉。
 	bool m_AnimateScrollbarReserve;
 	bool m_InitialScrollPending;
+	// 上一帧绘制时间：列表被隐藏后再次出现时重新把选中项滚进视野。
+	int64_t m_LastDrawTime = 0;
 	float m_EntryAnimationElapsedSec;
 	CQmListEntryAnimation m_EntryAnimation;
 	// 依次淡入 + 上浮入场：当前行的父层显隐系数已推入，待下一行发射或

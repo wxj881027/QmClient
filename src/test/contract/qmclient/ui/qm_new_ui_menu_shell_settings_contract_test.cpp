@@ -37,7 +37,7 @@ TEST(QmNewUiMenuShellSettingsContract, SettingsShellAndOuterScrollbarUseStableCo
 	EXPECT_NE(TokenSource.find("MAX_CONTENT_WIDTH = 1000.0f"), std::string::npos);
 	EXPECT_NE(ShellSource.find("ResolveSettingsShellLayout"), std::string::npos);
 	EXPECT_NE(ShellSource.find("Frame.m_ShellRect.VSplitRight"), std::string::npos);
-	EXPECT_NE(ShellSource.find("Frame.m_ContentRect.Margin(PanelMargin"), std::string::npos);
+	EXPECT_NE(ShellSource.find("Frame.m_ContentRect.Margin(SETTINGS_PANEL_MARGIN"), std::string::npos);
 	EXPECT_NE(SettingsSource.find("ResolveSettingsShellLayout(MainView, NeedRestart ? 30.0f : 0.0f)"), std::string::npos);
 	EXPECT_NE(ScrollSource.find("SETTINGS_OUTER"), std::string::npos);
 	EXPECT_NE(ScrollSource.find("QmScrollContainerStyleForSize(EQmScrollSize::MEDIUM, 1.0f)"), std::string::npos);

@@ -3,6 +3,7 @@
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_QMCLIENT_H
 
 #include "ddnet_player_stats_state.h"
+#include "map_tags.h"
 #include "markdown_cache_writer.h"
 #include "qm_developer_badge.h"
 #include "qm_markdown_broadcast.h"
@@ -265,6 +266,7 @@ public:
 	ESponsorsStatus QmSponsorsStatus() const { return m_QmSponsorsStatus; }
 	int QmSponsorsRevision() const { return m_QmSponsors.Revision() + m_QmSponsorsStatusRevision; }
 	bool QmSponsorsPublishing() const { return m_pQmSponsorsPublishTask != nullptr; }
+	QmMapTags::CClient m_MapTags;
 	bool HasDeveloperCredential() const { return m_aQmDeveloperToken[0] != '\0'; }
 	void QmSponsorsRefresh();
 	void QmSponsorsReloadDraft();

@@ -30,7 +30,7 @@ namespace
 }
 
 void QmRenderLyricsRows(IGraphics &Graphics, ITextRender &TextRender, const CUIRect &Rect,
-	const char *const *ppRows, int RowCount, float FontSize, ColorRGBA Color, float ElapsedSeconds)
+	const char *const *ppRows, int RowCount, float FontSize, ColorRGBA Color, float Progress)
 {
 	RowCount = std::clamp(RowCount, 0, 2);
 	if(RowCount == 0 || Rect.w <= 0.0f || Rect.h <= 0.0f)
@@ -50,7 +50,7 @@ void QmRenderLyricsRows(IGraphics &Graphics, ITextRender &TextRender, const CUIR
 		Props.m_pVisualTop = &Top;
 		Props.m_pVisualBottom = &Bottom;
 		const float Width = TextRender.TextWidth(Size, pText, -1, -1.0f, TEXTFLAG_DISALLOW_NEWLINE, Props);
-		const float Offset = QmHudMediaIslandMarqueeOffset(Width, Row.w, ElapsedSeconds, Size * 5.1f);
+		const float Offset = QmLyricsScrollOffset(Width, Row.w, Progress);
 		const float X = Width <= Row.w ? Row.x + (Row.w - Width) * 0.5f : Row.x - Offset;
 		const float Y = Row.y + Row.h * 0.5f - (Top + Bottom) * 0.5f;
 		TextRender.TextColor(Color.WithMultipliedAlpha(Index == 0 ? 1.0f : 0.8f));
@@ -69,15 +69,19 @@ void QmRenderLyricsRows(IGraphics &Graphics, ITextRender &TextRender, const CUIR
 
 void QmRenderLyricsIsland(IGraphics &Graphics, ITextRender &TextRender, CHudEditor &Editor,
 	const CUIRect &Anchor, float ScreenWidth, float ScreenHeight, const char *const *ppRows, int RowCount,
-	float ElapsedSeconds, IGraphics::CRenderTargetHandle Backdrop)
+	float Progress, IGraphics::CRenderTargetHandle Backdrop)
 {
 	const bool FollowWidth = g_Config.m_QmLyricsIslandFollowWidth != 0;
 	const CUIRect Panel = QmLyricsIslandLayout(Anchor, ScreenWidth, ScreenHeight, RowCount, FollowWidth);
 	if(Panel.w <= 0.0f || Panel.h <= 0.0f)
 		return;
 	// 跟随时横向边界完全取自主岛，旧横向位置和缩放只在关闭跟随后恢复。
+	// 纵向同样跟随主岛底边：主岛因地图进度等底部行变高时，旧布局保存的屏幕绝对
+	// 纵坐标会落进主岛内部并遮挡其内容，因此以附岛默认落点（主岛底边下方留白）
+	// 作为纵向下限，保留向下拖动但不再允许盖住主岛。
 	const auto Placement = FollowWidth ? QmHudEditor::EHorizontalPlacement::DefaultPosition : QmHudEditor::EHorizontalPlacement::VisibleBounds;
-	const auto Scope = Editor.BeginTransform(EHudEditorElement::Lyrics, Panel, Panel, Placement, !FollowWidth);
+	const float MinimumAnchorY = FollowWidth ? Panel.y : QmHudEditor::NO_MINIMUM_ANCHOR_Y;
+	const auto Scope = Editor.BeginTransform(EHudEditorElement::Lyrics, Panel, Panel, Placement, !FollowWidth, true, MinimumAnchorY);
 	const auto PreviousPreset = TextRender.GetFontPreset();
 	const auto PreviousFlags = TextRender.GetRenderFlags();
 	const auto PreviousOutline = TextRender.GetTextOutlineColor();
@@ -106,7 +110,7 @@ void QmRenderLyricsIsland(IGraphics &Graphics, ITextRender &TextRender, CHudEdit
 		Graphics.DrawRect(Panel.x, Panel.y, Panel.w, Panel.h, Background, Scope.m_Corners, Radius);
 	const CUIRect TextRect{Panel.x + 4.9f, Panel.y + 1.75f, std::max(0.0f, Panel.w - 9.8f), std::max(0.0f, Panel.h - 3.5f)};
 	QmRenderLyricsRows(Graphics, TextRender, TextRect, ppRows, RowCount, 4.368f,
-		ui_token::color::ADAPTIVE_ON_DARK.WithAlpha(0.90f), ElapsedSeconds);
+		ui_token::color::ADAPTIVE_ON_DARK.WithAlpha(0.90f), Progress);
 	TextRender.SetFontPreset(PreviousPreset);
 	TextRender.SetRenderFlags(PreviousFlags);
 	TextRender.TextOutlineColor(PreviousOutline);

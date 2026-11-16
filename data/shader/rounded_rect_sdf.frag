@@ -2,18 +2,192 @@
 // 只有「圆角容器放图」变体才绑定图片；普通圆角控件保持无纹理管线。
 uniform sampler2D gTextureSampler;
 #endif
-uniform vec4 gRoundedRectSdfData[17];
+uniform vec4 gRoundedRectSdfData[18];
 
 noperspective in vec2 texCoord;
 
 out vec4 FragClr;
 
-float RoundedRectSdf(vec2 Point, vec2 HalfSize, float Radius)
+// 圆角形状由曲线档位 CurveType、连续曲率强度 Smoothing（0 = 圆弧）和外扩 Expand
+// （整块形状按距离场向外偏移，等价于同一条曲线的等距外扩）描述。
+// 阴影 / 描边 / 填充都从这一份距离场派生，曲率变化时层与层才不会错位。
+//
+// 曲线档位：0 = 原圆弧（旧外观），1 = 超椭圆（p 范数），2 = 五次贝塞尔，
+// 3 = 圆锥贝塞尔（有理二次）。超椭圆与五次贝塞尔的端点曲率都是 0，是真正的
+// 连续曲率；圆锥贝塞尔的端点曲率恒为 1/(2W^2 E)，只能把接缝跳变压小，做不到 0。
+// 圆锥曲线角（有理二次 Bézier）：P0=(E,0)、P1=(E,E)、P2=(0,E)，权重 W。
+// W = 0.7071 时正好是圆弧；W 越大角越平。零等值线就是这条曲线本身。
+vec2 ConicCornerPoint(float T, float E, float W)
 {
-	vec2 DistanceToInner = abs(Point) - HalfSize + Radius;
-	return length(max(DistanceToInner, vec2(0.0))) + min(max(DistanceToInner.x, DistanceToInner.y), 0.0) - Radius;
+	float B0 = (1.0 - T) * (1.0 - T);
+	float B1 = 2.0 * W * T * (1.0 - T);
+	float B2 = T * T;
+	float Den = B0 + B1 + B2;
+	return vec2((B0 + B1) * E, (B1 + B2) * E) / Den;
 }
 
+vec2 ConicCornerDerivative(float T, float E, float W)
+{
+	float B0 = (1.0 - T) * (1.0 - T);
+	float B1 = 2.0 * W * T * (1.0 - T);
+	float B2 = T * T;
+	float D0 = -2.0 * (1.0 - T);
+	float D1 = 2.0 * W * (1.0 - 2.0 * T);
+	float D2 = 2.0 * T;
+	float Den = B0 + B1 + B2;
+	float DDen = D0 + D1 + D2;
+	vec2 Num = vec2((B0 + B1) * E, (B1 + B2) * E);
+	vec2 DNum = vec2((D0 + D1) * E, (D1 + D2) * E);
+	return (DNum * Den - Num * DDen) / (Den * Den);
+}
+
+// 到圆锥曲线角的近似带符号距离：负值在形状内部（离角点更近的一侧）。
+float ConicCornerDistance(vec2 P, float E, float W)
+{
+	float Best = 1e9;
+	float BestT = 0.5;
+	for(int i = 0; i <= 4; i++)
+	{
+		float T = float(i) / 4.0;
+		float Dist = length(ConicCornerPoint(T, E, W) - P);
+		if(Dist < Best)
+		{
+			Best = Dist;
+			BestT = T;
+		}
+	}
+	float T = BestT;
+	for(int i = 0; i < 4; i++)
+	{
+		vec2 Q = ConicCornerPoint(T, E, W);
+		vec2 D = ConicCornerDerivative(T, E, W);
+		T = clamp(T - dot(Q - P, D) / max(dot(D, D), 0.000001), 0.0, 1.0);
+	}
+	vec2 Q = ConicCornerPoint(T, E, W);
+	float Dist = length(Q - P);
+	// Corner 坐标离角点越近越靠内：比曲线更近角点 = 形状内部 = 负值。
+	return dot(P - Q, P) > 0.0 ? Dist : -Dist;
+}
+
+// 连续曲率的代价是曲率峰值升高：90° 转弯、端点曲率归零、圆角长度不变时，峰值
+// 必然高于圆弧（超椭圆满强度能到 2.5 倍）。所以圆角沿边拉长来补偿，拉长量受有效
+// 半径上限约束，曲线强度按「实际拿到多少生长」反解——扩不动时（胶囊、短边很近的
+// 小控件）自动退回圆弧，不会被强行压弯。
+// x = 实际生效的圆角半径（含沿边拉长），y = 实际生效的曲线强度。
+vec2 RoundedCornerShape(vec2 HalfSize, float Radius, float Smoothing, float CurveType, float SeamAmount)
+{
+	// 原圆弧档就是旧外观：不扩展、也不换曲线。
+	float Amount = CurveType > 0.5 ? clamp(Smoothing, 0.0, 1.0) : 0.0;
+	float MinHalf = max(min(HalfSize.x, HalfSize.y), 0.0001);
+	float ClampedRadius = clamp(Radius, 0.0, MinHalf);
+	if(ClampedRadius <= 0.0 || Amount <= 0.0)
+		return vec2(ClampedRadius, 0.0);
+	// 只有「真的有一段直边」的胶囊才谈得上接缝：正圆（滑块圆点、单选按钮）四个角
+	// 本来就是连续的，不该被压成方圆，所以再要求长边明显长于短边。
+	// 判据与 CPU 侧 ResolveRoundedCornerShape 必须逐字一致，否则两边生长上限不同。
+	bool Capsule = ClampedRadius >= MinHalf * (9.0 / 10.0) && max(HalfSize.x, HalfSize.y) > MinHalf * 1.2;
+	// 生长上限：普通控件封在短边的 25%，已经是胶囊的元素放宽到短边的 40%；
+	// 这里用半边长表示，所以系数是 0.5 / 0.8。上限只限制生长，不回收更大的半径。
+	float MaxRadius = max(MinHalf * (Capsule ? 0.8 : 0.5), ClampedRadius);
+	float EffectiveRadius = clamp(ClampedRadius * (1.0 + 1.3 * Amount), ClampedRadius, MaxRadius);
+	float EffectiveAmount = clamp((EffectiveRadius / ClampedRadius - 1.0) / 1.3, 0.0, 1.0);
+	// 胶囊没有生长空间，但半圆端头与直边的接缝可以单独软化：给一个远小于半径生长的
+	// 曲线强度，曲率在几个像素内从 0 缓升到 1/R，形状几乎不变，只是肩部不再突然拐弯。
+	// 上限取 min(强度, 接缝)：曲率强度是主强度，接缝只在它之下做分部微调。
+	if(Capsule)
+		EffectiveAmount = max(EffectiveAmount, min(Amount, clamp(SeamAmount, 0.0, 1.0)));
+	return vec2(EffectiveRadius, EffectiveAmount);
+}
+
+// 五次贝塞尔圆角：控制点 P0=(1,0)、P1=(1,y1)、P2=(x2,y2)、P3=(y2,x2)、
+// P4=(y1,1)、P5=(0,1)。前两个控制点都落在 x=1 上，端点切向沿直边、曲率恒为 0，
+// 这就是「真连续曲率」的来源。两组取值之间按强度插值：0 取曲率匹配的三次圆弧
+// 升阶结果（几乎就是圆弧），1 取拟合圆锥 W=1.2 手感的那组（外形偏差 0.6%）。
+// 一次返回点与切向量：牛顿迭代每轮两样都要，分开写会把伯恩斯坦求和做两遍。
+vec4 QuinticCorner(float T, float E, float Amount)
+{
+	float Y1 = mix(0.3291504, 0.14, Amount);
+	float X2 = mix(0.8645747, 1.0, Amount);
+	float Y2 = mix(0.6291504, 0.80, Amount);
+	float U = 1.0 - T;
+	float U2 = U * U;
+	float T2 = T * T;
+	float B0 = U2 * U2 * U;
+	float B1 = 5.0 * T * U2 * U2;
+	float B2 = 10.0 * T2 * U2 * U;
+	float B3 = 10.0 * T2 * T * U2;
+	float B4 = 5.0 * T2 * T2 * U;
+	float B5 = T2 * T2 * T;
+	vec2 Point = B0 * vec2(1.0, 0.0) + B1 * vec2(1.0, Y1) + B2 * vec2(X2, Y2) + B3 * vec2(Y2, X2) + B4 * vec2(Y1, 1.0) + B5 * vec2(0.0, 1.0);
+	float D0 = 5.0 * U2 * U2;
+	float D1 = 20.0 * T * U2 * U;
+	float D2 = 30.0 * T2 * U2;
+	float D3 = 20.0 * T2 * T * U;
+	float D4 = 5.0 * T2 * T2;
+	vec2 Derivative = D0 * vec2(0.0, Y1) + D1 * (vec2(X2, Y2) - vec2(1.0, Y1)) + D2 * (vec2(Y2, X2) - vec2(X2, Y2)) + D3 * (vec2(Y1, 1.0) - vec2(Y2, X2)) + D4 * (vec2(0.0, 1.0) - vec2(Y1, 1.0));
+	return vec4(Point, Derivative) * E;
+}
+
+float QuinticCornerDistance(vec2 P, float E, float Amount)
+{
+	float Best = 1e9;
+	float BestT = 0.5;
+	for(int i = 0; i <= 5; i++)
+	{
+		float T = float(i) / 5.0;
+		float Dist = length(QuinticCorner(T, E, Amount).xy - P);
+		if(Dist < Best)
+		{
+			Best = Dist;
+			BestT = T;
+		}
+	}
+	float T = BestT;
+	for(int i = 0; i < 4; i++)
+	{
+		vec4 Node = QuinticCorner(T, E, Amount);
+		T = clamp(T - dot(Node.xy - P, Node.zw) / max(dot(Node.zw, Node.zw), 0.000001), 0.0, 1.0);
+	}
+	vec2 Q = QuinticCorner(T, E, Amount).xy;
+	float Dist = length(Q - P);
+	// Corner 坐标离角点越近越靠内：比曲线更近角点 = 形状内部 = 负值。
+	return dot(P - Q, P) > 0.0 ? Dist : -Dist;
+}
+
+float RoundedRectSdf(vec2 Point, vec2 HalfSize, float Radius, float Smoothing, float CurveType, float SeamAmount)
+{
+	vec2 Shape = RoundedCornerShape(HalfSize, Radius, Smoothing, CurveType, SeamAmount);
+	float EffectiveRadius = Shape.x;
+	float Amount = Shape.y;
+	vec2 DistanceToInner = abs(Point) - HalfSize + EffectiveRadius;
+	vec2 Corner = max(DistanceToInner, vec2(0.0));
+	float Flat = min(max(DistanceToInner.x, DistanceToInner.y), 0.0);
+	// 只有两个分量都为正才是圆角区；边上和内部直接用圆的距离，
+	// 否则 p 范数在两个分量都为 0 时会被归一化除成极大值，整块内部被误判成外部。
+	if(Amount <= 0.001 || Corner.x <= 0.0 || Corner.y <= 0.0)
+		return length(Corner) + Flat - EffectiveRadius;
+	// 曲线档位：1 = 超椭圆（p 范数），2 = 五次贝塞尔，3 = 圆锥贝塞尔。
+	int Type = int(CurveType + 0.5);
+	if(Type == 2)
+		return QuinticCornerDistance(Corner, EffectiveRadius, Amount);
+	if(Type == 3)
+		return ConicCornerDistance(Corner, EffectiveRadius, mix(0.70710678, 1.2, Amount));
+	float Exponent = mix(2.0, 4.0, Amount);
+	float PowX = pow(Corner.x, Exponent);
+	float PowY = pow(Corner.y, Exponent);
+	float Sum = max(PowX + PowY, 0.0000001);
+	// 角区里 Flat 恒为 0，形状值就是 p 范数减半径：曲率在直边处为 0，向角顶连续升高。
+	float Norm = pow(Sum, 1.0 / Exponent);
+	float ShapeValue = Norm - EffectiveRadius;
+	// p 范数的梯度不是单位长度，要把「整份形状值」除以梯度模长才换成近似距离，
+	// 零等值线因此完全不动。只缩放范数、把半径留在缩放外面，角顶有效半径会被拉小，
+	// 画出来就是凹进去的缺口。
+	float Scale = pow(Sum, 1.0 / Exponent - 1.0);
+	float GradientX = PowX / max(Corner.x, 0.0000001) * Scale;
+	float GradientY = PowY / max(Corner.y, 0.0000001) * Scale;
+	float GradientLength = max(length(vec2(GradientX, GradientY)), 0.0001);
+	return ShapeValue / GradientLength;
+}
 float CornerRadius(vec2 Point, vec4 CornerRadii)
 {
 	if(Point.y < 0.0)
@@ -88,6 +262,13 @@ void main()
 	vec4 BorderColor = gRoundedRectSdfData[2];
 	vec4 CornerRadii = gRoundedRectSdfData[3];
 	vec4 Params = gRoundedRectSdfData[4];
+	float CornerSmoothing = clamp(gRoundedRectSdfData[14].w, 0.0, 1.0);
+	// 圆角曲线档位：0 = 原圆弧，1 = 超椭圆，2 = 五次贝塞尔，3 = 圆锥贝塞尔。
+	// 档位在 [17].x、胶囊接缝软化在 [17].y；Params.w 仍然是「边框取渐变」开关。
+	float CornerCurveType = gRoundedRectSdfData[17].x;
+	float CornerSeam = clamp(gRoundedRectSdfData[17].y, 0.0, 1.0);
+	// 形状外扩：四角形状按基础矩形算完再整体外扩，叠层之间因此保持等距。
+	float ShapeExpand = clamp(gRoundedRectSdfData[16].w, 0.0, 64.0);
 	vec2 HalfSize = Rect.zw * 0.5;
 	vec2 Point = (texCoord - vec2(0.5)) * (Rect.zw + vec2(Params.z * 2.0));
 	float BorderWidth = clamp(Params.x, 0.0, min(HalfSize.x, HalfSize.y));
@@ -96,12 +277,13 @@ void main()
 	vec2 GradientExtent = max(InnerHalfSize, vec2(0.0));
 	vec2 GradientUV = clamp((Point + GradientExtent) / max(GradientExtent * 2.0, vec2(0.0001)), vec2(0.0), vec2(1.0));
 	vec4 FillColor = GradientColor(GradientUV, gRoundedRectSdfData[1]);
-	float Radius = clamp(CornerRadius(Point, CornerRadii), 0.0, min(HalfSize.x, HalfSize.y));
-	float OuterDistance = RoundedRectSdf(Point, HalfSize, Radius);
+	vec2 BaseHalfSize = max(HalfSize - vec2(ShapeExpand), vec2(0.5));
+	float Radius = clamp(CornerRadius(Point, CornerRadii), 0.0, min(BaseHalfSize.x, BaseHalfSize.y));
+	float OuterDistance = RoundedRectSdf(Point, BaseHalfSize, Radius, CornerSmoothing, CornerCurveType, CornerSeam) - ShapeExpand;
 	float OuterCoverage = Coverage(OuterDistance, Params.y);
-	vec4 InnerCornerRadii = max(CornerRadii - vec4(BorderWidth), vec4(0.0));
-	float InnerRadius = clamp(CornerRadius(Point, InnerCornerRadii), 0.0, min(InnerHalfSize.x, InnerHalfSize.y));
-	float InnerDistance = RoundedRectSdf(Point, InnerHalfSize, InnerRadius);
+	// 内缘是同一形状向内偏移一个边框宽度：换成连续曲率后「半径减边框」不再是等距内缩，
+	// 会让环带宽度不均、和外层错位，所以直接从同一份距离场加偏移。
+	float InnerDistance = OuterDistance + BorderWidth;
 	float InnerCoverage = BorderWidth > 0.0 && min(InnerHalfSize.x, InnerHalfSize.y) > 0.0 ? Coverage(InnerDistance, Params.y) : 0.0;
 	// 填充覆盖率：有边框时以环带内缘为界，无边框时整块形状都是填充。
 	float FillCoverage = BorderWidth > 0.0 ? InnerCoverage : OuterCoverage;

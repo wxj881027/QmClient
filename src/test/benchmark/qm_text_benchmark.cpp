@@ -10,9 +10,11 @@
 
 #include <engine/client/glyph_outline.h>
 #include <engine/client/qm_font_category.h>
+#include <engine/client/text_gradient.h>
 #include <engine/client/text_sweep.h>
 
 #include <game/client/components/qmclient/nameplate_density.h>
+#include <game/client/components/qmclient/sponsor_chat_style.h>
 
 #include <benchmark/benchmark.h>
 
@@ -212,3 +214,30 @@ static void BM_NameplateSmallTextSampling(benchmark::State &State)
 	State.SetItemsProcessed(State.iterations());
 }
 BENCHMARK(BM_NameplateSmallTextSampling)->Arg(6)->Arg(10)->Arg(16);
+
+// 每轮模拟一帧可见聊天的字形填充，包含生产流场取色与四乘四细分，不包含 GPU 上传。
+static void BM_SponsorChatFluidFill(benchmark::State &State)
+{
+	const auto Sample = [](vec2 Position, const void *pContext) {
+		return static_cast<const CQmSponsorChatFluid *>(pContext)->Sample(Position);
+	};
+	int Frame = 0;
+	for(auto _ : State)
+	{
+		const CQmSponsorChatFluid Fluid(Frame / 60.0);
+		Frame = (Frame + 1) % 720;
+		float Checksum = 0;
+		for(int Glyph = 0; Glyph < State.range(0); ++Glyph)
+		{
+			const vec2 Origin(Glyph % 32, Glyph / 32);
+			ForEachTextGradientCell(Origin, Origin + vec2(1, 1), vec2(0, 0), vec2(1, 1), Sample, &Fluid, 4, 4,
+				[&](const STextGradientCell &Cell) {
+					benchmark::DoNotOptimize(Cell);
+					Checksum += Cell.m_aColors[0].g;
+				});
+		}
+		benchmark::DoNotOptimize(Checksum);
+	}
+	State.SetItemsProcessed(State.iterations() * State.range(0));
+}
+BENCHMARK(BM_SponsorChatFluidFill)->Arg(32)->Arg(256)->Arg(1024);

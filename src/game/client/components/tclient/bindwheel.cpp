@@ -258,7 +258,7 @@ void CBindWheel::OnRender()
 	const CUIRect Screen = *Ui()->Screen();
 
 	const bool WasTouchPressed = GameClient()->m_Emoticon.m_TouchState.m_AnyPressed;
-	Ui()->UpdateTouchState(GameClient()->m_Emoticon.m_TouchState);
+	Ui()->UpdateTouchState(GameClient()->m_Emoticon.m_TouchState, false);
 	if(GameClient()->m_Emoticon.m_TouchState.m_AnyPressed)
 	{
 		const vec2 TouchPos = (GameClient()->m_Emoticon.m_TouchState.m_PrimaryPosition - vec2(0.5f, 0.5f)) * Screen.Size();

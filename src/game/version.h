@@ -22,8 +22,8 @@ extern const char *GIT_SHORTREV_HASH;
 
 // QmClient
 // 正式版 X.Y；预览版 X.Y-preview.N。预览批次为 0 时是正式版。
-#define QMCLIENT_BASE_VERSION "3.3"
-#define QMCLIENT_PREVIEW_NUMBER 0
+#define QMCLIENT_BASE_VERSION "3.4"
+#define QMCLIENT_PREVIEW_NUMBER 7
 
 #define QMCLIENT_STRINGIFY_IMPL(Value) #Value
 #define QMCLIENT_STRINGIFY(Value) QMCLIENT_STRINGIFY_IMPL(Value)

@@ -637,6 +637,16 @@ EBackendType CGraphicsBackend_SDL_GL::DetectBackend() const
 	EBackendType RetBackendType = graphics_backend::IsMetalCompiled() ? BACKEND_TYPE_METAL : BACKEND_TYPE_OPENGL;
 	const char *pEnvDriver = SDL_getenv("DDNET_DRIVER");
 	RetBackendType = graphics_backend::ParseBackendName(pEnvDriver != nullptr ? pEnvDriver : g_Config.m_GfxBackend, RetBackendType);
+#if defined(CONF_PLATFORM_ANDROID) || defined(CONF_PLATFORM_IOS)
+	// 手机端默认 GLES：Vulkan 在部分驱动的表面/交换链生命周期（切后台、冷启动、
+	// Activity 重建）上仍会失败，直接把初始化判死。这里把配置里的 Vulkan 收敛到
+	// GLES；确需 Vulkan 时用环境变量 DDNET_DRIVER=Vulkan 覆盖（上面已优先取 env）。
+	if(RetBackendType == BACKEND_TYPE_VULKAN && pEnvDriver == nullptr)
+	{
+		dbg_msg("gfx", "vulkan not default on mobile, using GLES (set DDNET_DRIVER=Vulkan to force)");
+		RetBackendType = BACKEND_TYPE_OPENGL_ES;
+	}
+#endif
 #if !defined(CONF_BACKEND_OPENGL_ES) && !defined(CONF_BACKEND_OPENGL_ES3)
 	if(RetBackendType == BACKEND_TYPE_OPENGL_ES)
 		RetBackendType = BACKEND_TYPE_OPENGL;

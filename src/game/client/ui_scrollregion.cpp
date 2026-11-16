@@ -27,6 +27,7 @@ CScrollRegion::CScrollRegion()
 void CScrollRegion::Reset()
 {
 	m_ScrollState.Reset();
+	m_DisplayOffset = 0.0f;
 	m_ContentSize = 0.0f;
 	m_ScrollDirection = SCROLLRELATIVE_NONE;
 	m_ScrollSpeedMultiplier = 1.0f;
@@ -54,7 +55,7 @@ SQmScrollConfig CScrollRegion::ScrollConfig() const
 
 vec2 CScrollRegion::ContentScrollOffset() const
 {
-	return m_Params.m_ScrollHorizontal ? vec2(-m_ScrollState.Offset(), 0.0f) : vec2(0.0f, -m_ScrollState.Offset());
+	return m_Params.m_ScrollHorizontal ? vec2(-m_DisplayOffset, 0.0f) : vec2(0.0f, -m_DisplayOffset);
 }
 
 void CScrollRegion::ClampBackgroundScrollOffset()
@@ -63,8 +64,10 @@ void CScrollRegion::ClampBackgroundScrollOffset()
 		return;
 
 	// 后台只约束失效的尺寸偏移；合法偏移不重设，保留暂停的动画和待处理定位。
+	// 橡皮筋区的越界量要一并保留，否则控制台开合这类后台渲染会把它夹掉，回弹中断。
 	const float MaxOffset = ContentOverflows() ? MaxScroll() : 0.0f;
-	const float Offset = std::clamp(m_ScrollState.Offset(), 0.0f, MaxOffset);
+	const float Overscroll = ScrollConfig().m_MaxOverscroll;
+	const float Offset = std::clamp(m_ScrollState.Offset(), -Overscroll, MaxOffset + Overscroll);
 	if(Offset != m_ScrollState.Offset())
 		m_ScrollState.SetOffset(Offset, ScrollMetrics(), ScrollConfig());
 }
@@ -72,6 +75,15 @@ void CScrollRegion::ClampBackgroundScrollOffset()
 void CScrollRegion::Begin(CUIRect *pClipRect, vec2 *pOutOffset, const CScrollRegionParams *pParams)
 {
 	m_WheelConsumedThisFrame = false;
+	// 上一帧没有绘制（切页、关闭面板后重开）才算重新出现；连续渲染不重复滚动，
+	// 否则用户刚滚走就会被拉回选中项。
+	const int64_t Now = time_get();
+	const int64_t Frequency = maximum<int64_t>(1, time_freq());
+	// 阈值按 250ms 而不是 50ms：单帧卡顿（换图、编译着色器）也常超过 50ms，
+	// 会被误判成「重新出现」而把用户滚走的视口拉回选中项。
+	m_ReScrollSelection = m_LastDrawTime != 0 && Now - m_LastDrawTime > Frequency / 4;
+	m_LastDrawTime = Now;
+	m_AddRectIndex = 0;
 	if(pParams)
 		m_Params = *pParams;
 	m_ClipRect = *pClipRect;
@@ -81,20 +93,44 @@ void CScrollRegion::Begin(CUIRect *pClipRect, vec2 *pOutOffset, const CScrollReg
 	CUIRect ScrollbarBg = SplitContentArea();
 	DrawBackground(ScrollbarBg);
 	ClampBackgroundScrollOffset();
+	Ui()->RegisterTouchScrollRegion(this, &m_ClipRect, m_Params.m_ScrollHorizontal, m_Params.m_WheelOwnerPriority, m_Params.m_Interactive && ContentOverflows());
+	const vec2 TouchScroll = Ui()->ConsumeTouchScroll(this);
+	const float TouchAxis = m_Params.m_ScrollHorizontal ? TouchScroll.x : TouchScroll.y;
+	if(TouchAxis != 0.0f)
+		m_ScrollState.SetOffset(m_ScrollState.Offset() - TouchAxis, ScrollMetrics(), ScrollConfig());
 
-	if(!ContentOverflows() && !Ui()->RenderOnly())
+	// 偏移还在滑回顶部时不要硬重置，否则折叠后的过渡会被打断成瞬移。
+	if(!ContentOverflows() && !Ui()->RenderOnly() && m_ScrollState.Offset() <= 0.5f)
 		m_ScrollState.ResetForNonScrollableContent(Ui()->IsActiveItem(&m_SliderId) && Ui()->MouseButton(0));
-	m_ContentSize = 0.0f;
-
 	Ui()->ClipEnable(&m_ClipRect);
 
 	*pClipRect = m_ClipRect;
+	// 滚轮已经由滚动状态完成缓动，显示层直接使用该位置，避免再次追赶和顿跳。
+	// 只有内容缩短后，旧画面超出新的可滚动范围时才保留回位过渡。
+	{
+		const float TargetOffset = m_ScrollState.Offset();
+		const float MaxOffset = ContentOverflows() ? MaxScroll() : 0.0f;
+		const bool AnimateContentShrink = m_DisplayOffset > MaxOffset && TargetOffset == MaxOffset &&
+						  !m_ScrollState.Animating() && !m_ScrollState.ThumbDragActive() && !m_ScrollState.ContentDragState().m_Active &&
+						  TouchAxis == 0.0f && g_Config.m_QmUiMotionLevel > 0 && g_Config.m_UiSmoothScrollTime > 0;
+		if(!AnimateContentShrink)
+			m_DisplayOffset = TargetOffset;
+		else if(!Ui()->RenderOnly())
+		{
+			const float Dt = maximum(0.0f, Client()->RenderFrameTime());
+			m_DisplayOffset += (TargetOffset - m_DisplayOffset) * (1.0f - std::exp(-Dt * 16.0f));
+			if(std::abs(TargetOffset - m_DisplayOffset) <= Ui()->PixelSize() * 0.25f)
+				m_DisplayOffset = TargetOffset;
+		}
+	}
+	m_ContentSize = 0.0f;
 	*pOutOffset = ContentScrollOffset();
 }
 
 void CScrollRegion::End()
 {
 	Ui()->ClipDisable();
+	m_ReScrollSelection = false;
 
 	if(Ui()->RenderOnly())
 	{
@@ -122,21 +158,31 @@ void CScrollRegion::End()
 	if(m_Params.m_Interactive)
 	{
 		UpdateHotScrollRegion();
+		DoContentDrag();
 		DoScrollInput();
 	}
 	AdvanceAnimation();
 	DoSlider();
 }
 
-bool CScrollRegion::AddRect(const CUIRect &Rect, bool ShouldScrollHere)
+bool CScrollRegion::AddRect(const CUIRect &Rect, bool ShouldScrollHere, bool IsSelection)
 {
+	const int RectIndex = m_AddRectIndex++;
+	if(IsSelection)
+		m_SelectionRectIndex = RectIndex;
+	// 重新出现的那一帧，选中项自动滚进视野，调用方不必自己记录「第一次渲染」。
+	const bool ScrollToThisRect = ShouldScrollHere || (m_ReScrollSelection && m_SelectionRectIndex == RectIndex);
 	m_LastAddedRect = Rect;
+	// 测量必须与调用方布局同源：调用方拿到的偏移就是显示偏移，两者都用它，
+	// 缓动窗口内才能精确抵消。这里不要为橡皮筋做任何夹取——Rect 是随偏移移动的
+	// 屏幕坐标，减去 ContentOffset 后恰好还原内容高度，越界时同样精确；夹取反而
+	// 会让越界量算进内容高度，使 MaxOffset 追着偏移膨胀。
 	const vec2 ContentOffset = ContentScrollOffset();
 	if(m_Params.m_ScrollHorizontal)
 		m_ContentSize = maximum(std::ceil(Rect.x + Rect.w - (m_ClipRect.x + ContentOffset.x)), m_ContentSize);
 	else
 		m_ContentSize = maximum(Rect.y + Rect.h - (m_ClipRect.y + ContentOffset.y), m_ContentSize);
-	if(ShouldScrollHere && !Ui()->RenderOnly())
+	if(ScrollToThisRect && !Ui()->RenderOnly())
 		ScrollHere();
 	return !RectClipped(Rect);
 }
@@ -345,6 +391,97 @@ void CScrollRegion::DrawBackground(const CUIRect &ScrollbarBg)
 	}
 }
 
+// 同一次按下只允许一个滚动区域接管内容拖动：嵌套时内层先于外层 End，
+// 于是内层列表能滑动、外层页面不会被带着一起滚。
+static const CScrollRegion *s_pContentDragOwner = nullptr;
+
+void CScrollRegion::DoContentDrag()
+{
+	SQmScrollContentDragState &Drag = m_ScrollState.ContentDragState();
+	if(s_pContentDragOwner != nullptr && s_pContentDragOwner != this)
+	{
+		Drag = {};
+		m_ContentDragVelocity = 0.0f;
+		m_ContentDragLastMoveTime = 0;
+		return;
+	}
+	// 手机以外的平台没有内容拖动语义：这里必须清空，避免旧候选状态在新一帧继续生效。
+	if(!QmScrollRegionContentDragEnabled())
+	{
+		Drag = {};
+		m_ContentDragVelocity = 0.0f;
+		m_ContentDragLastMoveTime = 0;
+		return;
+	}
+	if(!Ui()->MouseButton(0))
+	{
+		if(s_pContentDragOwner == this)
+			s_pContentDragOwner = nullptr;
+		// 松手：刚拖过且速度够快就交给滚动状态做惯性衰减。
+		const bool MovedRecently = m_ContentDragLastMoveTime != 0 && (time_get() - m_ContentDragLastMoveTime) <= time_freq() / 10;
+		if(Drag.m_Active && MovedRecently && std::abs(m_ContentDragVelocity) >= QM_SCROLL_FLING_MIN_VELOCITY)
+			m_ScrollState.Fling(m_ContentDragVelocity, ScrollMetrics());
+		Drag = {};
+		m_ContentDragVelocity = 0.0f;
+		m_ContentDragLastMoveTime = 0;
+		return;
+	}
+	// 滚动条滑块有独立语义，同一次按住不能再当作内容拖动。
+	if(m_ScrollState.ThumbDragActive())
+	{
+		Drag = {};
+		return;
+	}
+
+	const float MousePos = m_Params.m_ScrollHorizontal ? Ui()->MouseX() : Ui()->MouseY();
+	if(!Drag.m_Candidate && !Drag.m_Active)
+	{
+		// 只在内容区内部起手。列表行本身是按钮，按下时会把 ActiveItem 抢走，
+		// 所以这里不能要求 ActiveItem 为空，而是等位移超过阈值后再取消那次按下。
+		if(!Ui()->MouseButtonClicked(0) || !Ui()->MouseHovered(&m_ClipRect))
+			return;
+		Drag.m_Candidate = true;
+		Drag.m_PressMousePos = MousePos;
+		Drag.m_PressOffset = m_ScrollState.Offset();
+		Drag.m_LastMousePos = MousePos;
+		m_ContentDragVelocity = 0.0f;
+		m_ContentDragLastMoveTime = 0;
+		return;
+	}
+
+	const float DragDistance = MousePos - Drag.m_PressMousePos;
+	const float Threshold = QmScrollRegionContentDragThreshold(Ui()->PixelSize());
+	if(!QmScrollRegionContentDragBecomesActive(Drag.m_Active, DragDistance, Threshold))
+	{
+		Drag.m_LastMousePos = MousePos;
+		return;
+	}
+	if(!Drag.m_Active)
+	{
+		// 这一下已经变成拖动：取消被按下的列表项，松手时不再触发它的点击。
+		if(Ui()->ActiveItem() != nullptr)
+			Ui()->SetActiveItem(nullptr);
+		Drag.m_Active = true;
+		s_pContentDragOwner = this;
+	}
+	// 内容跟手：向上滑动内容即增大滚动偏移，允许越界以便松手后回弹。
+	m_ScrollState.SetOffset(Drag.m_PressOffset - DragDistance * QM_SCROLL_TOUCH_DRAG_GAIN, ScrollMetrics(), ScrollConfig(), true);
+	// 用相邻两次移动的时间差估计速度，再做一阶低通，避免单帧抖动决定甩动幅度。
+	const int64_t Now = time_get();
+	if(m_ContentDragLastMoveTime != 0)
+	{
+		const float Dt = (Now - m_ContentDragLastMoveTime) / (float)time_freq();
+		if(Dt > 0.0005f)
+		{
+			const float FingerVelocity = (MousePos - Drag.m_LastMousePos) / Dt;
+			const float Blend = std::clamp(Dt / 0.05f, 0.0f, 1.0f);
+			m_ContentDragVelocity += (-FingerVelocity * QM_SCROLL_TOUCH_DRAG_GAIN - m_ContentDragVelocity) * Blend;
+		}
+	}
+	m_ContentDragLastMoveTime = Now;
+	Drag.m_LastMousePos = MousePos;
+}
+
 void CScrollRegion::DoScrollInput()
 {
 	if(m_ScrollDirection != SCROLLRELATIVE_NONE)
@@ -447,6 +584,9 @@ void CScrollRegion::DoSlider()
 
 	const float MaxSlider = RailSize - SliderSize;
 	const void *pId = &m_SliderId;
+	// 滑块用主题强调色：此前取中性前景色，和设置页开关/滑条的红强调色脱节。
+	const ColorRGBA AccentHandle = Ui()->QmControlTheme().m_Accent;
+	const ColorRGBA *pHandleColor = m_Params.m_pSliderThemeColor != nullptr ? m_Params.m_pSliderThemeColor : &AccentHandle;
 
 	if(!CanScroll || MaxSlider <= 0.0f)
 	{
@@ -457,7 +597,7 @@ void CScrollRegion::DoSlider()
 		if(Ui()->QmAnimationRuntime() != nullptr)
 		{
 			CUiScopedControlAlphaScale SliderAlpha(Ui(), m_Params.m_SliderAlpha * RevealAlpha);
-			ui_widget::DrawScrollbarHandle(ui_widget::ControlContext(Ui()), pId, Slider, m_Params.m_Interactive, nullptr, m_Params.m_pSliderThemeColor);
+			ui_widget::DrawScrollbarHandle(ui_widget::ControlContext(Ui()), pId, Slider, m_Params.m_Interactive, nullptr, pHandleColor);
 		}
 		else
 			DrawRoundedSurface(Ui(), Slider, m_Params.SliderColor(Active, Ui()->HotItem() == pId), ColorRGBA(), Rounding);
@@ -468,6 +608,8 @@ void CScrollRegion::DoSlider()
 
 	const float MousePos = m_Params.m_ScrollHorizontal ? Ui()->MouseX() : Ui()->MouseY();
 	const bool WasActive = Ui()->ActiveItem() == pId;
+	if(m_Params.m_Interactive && !Ui()->RenderOnly())
+		Ui()->CaptureTouchDrag(pId, &m_RailRect);
 	if(m_Params.m_Interactive && !Ui()->RenderOnly())
 		Ui()->DoButtonLogic(pId, 0, &m_RailRect, BUTTONFLAG_LEFT); // Result ignored, we only care about the button becoming and being active
 	if(m_Params.m_Interactive && !Ui()->RenderOnly() && Ui()->CheckActiveItem(pId))
@@ -488,7 +630,7 @@ void CScrollRegion::DoSlider()
 	if(Ui()->QmAnimationRuntime() != nullptr)
 	{
 		CUiScopedControlAlphaScale SliderAlpha(Ui(), m_Params.m_SliderAlpha * RevealAlpha);
-		ui_widget::DrawScrollbarHandle(ui_widget::ControlContext(Ui()), pId, Slider, m_Params.m_Interactive, nullptr, m_Params.m_pSliderThemeColor);
+		ui_widget::DrawScrollbarHandle(ui_widget::ControlContext(Ui()), pId, Slider, m_Params.m_Interactive, nullptr, pHandleColor);
 	}
 	else
 		DrawRoundedSurface(Ui(), Slider, m_Params.SliderColor(Ui()->CheckActiveItem(pId), Ui()->HotItem() == pId), ColorRGBA(), Rounding);

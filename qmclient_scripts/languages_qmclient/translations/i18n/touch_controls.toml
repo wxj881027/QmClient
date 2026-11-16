@@ -50,7 +50,7 @@ polish = "Aktywny: Ogień"
 [[message]]
 key = "Active: Hook"
 [message.translations]
-simplified_chinese = "当前：钩索"
+simplified_chinese = "当前：钩子"
 traditional_chinese = "當前：鉤索"
 japanese = "アクティブ：フック"
 korean = "활성 상태: 훅"
@@ -1010,7 +1010,7 @@ polish = "Pokaż wszystkie przyciski"
 [[message]]
 key = "Swaps the active action (fire and hook) for direct touch input and virtual joysticks."
 [message.translations]
-simplified_chinese = "切换触控输入和虚拟摇杆的当前动作（开火和钩索）。"
+simplified_chinese = "切换触控输入和虚拟摇杆的当前动作（开火和钩子）。"
 traditional_chinese = "交換直接觸控輸入和虛擬搖桿的當前動作（開火和鉤索）。"
 japanese = "ダイレクトタッチ入力とバーチャルジョイスティックのアクティブアクション（発射とフック）を切り替えます。"
 korean = "직접 터치 입력 및 가상 조이스틱의 활성 작업 (발사 및 훅) 을 전환합니다."
@@ -1154,7 +1154,7 @@ polish = "Wirtualny joystick, który zawsze używa ognia."
 [[message]]
 key = "Virtual joystick which always uses hook."
 [message.translations]
-simplified_chinese = "始终用于钩索的虚拟摇杆。"
+simplified_chinese = "始终用于钩子的虚拟摇杆。"
 traditional_chinese = "始終使用鉤索的虛擬搖桿。"
 japanese = "常にフックを使用するバーチャルジョイスティック。"
 korean = "항상 훅을 사용하는 가상 조이스틱입니다."
@@ -1399,7 +1399,7 @@ polish = "Ogień"
 key = "Hook"
 context = "Direct touch input"
 [message.translations]
-simplified_chinese = "钩索"
+simplified_chinese = "钩子"
 traditional_chinese = "鉤索"
 japanese = "フック"
 korean = "훅"

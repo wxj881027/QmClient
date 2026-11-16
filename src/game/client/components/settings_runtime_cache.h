@@ -94,6 +94,11 @@ struct SSettingsRuntimeCacheKey
 };
 
 int SettingsCanonicalPage(int Page);
+// 手机端（Android/iOS）只承担观战与回放，桌面专属设置页在这里隐藏。
+// MobilePlatform 显式传入，便于桌面测试覆盖判定表而不依赖编译平台。
+bool SettingsMobilePlatform();
+bool SettingsPageHiddenForMobile(int Page, bool MobilePlatform);
+bool SettingsPageVisibleForPlatform(int Page, bool MobilePlatform);
 bool SettingsPageVisibleInRightTabBar(int Page);
 bool SettingsRuntimeCacheKeyMatches(const SSettingsRuntimeCacheKey &A, const SSettingsRuntimeCacheKey &B);
 ESettingsCacheDirtyReason SettingsRuntimeKeyMismatchDirtyReason(const SSettingsSectionCacheRuntimeKey &Current, const SSettingsSectionCacheRuntimeKey &Next);

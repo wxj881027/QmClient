@@ -36,6 +36,27 @@ namespace
 			m_Ui.Update();
 		}
 
+		void TouchFrame(vec2 Position, bool Pressed)
+		{
+			IInput::CTouchFingerState Finger{};
+			Finger.m_Position = Position / m_Ui.Screen()->Size();
+			Finger.m_PressTime = std::chrono::nanoseconds(1);
+			m_Input.SetTouchFingers(Pressed ? std::vector<IInput::CTouchFingerState>{Finger} : std::vector<IInput::CTouchFingerState>{});
+			Frame(Position, false);
+		}
+
+		void DrawTouchTextList(CScrollRegion &Region, CLineInput &Input)
+		{
+			Region.SetContentHeightForNextFrame(500.0f);
+			CUIRect View{0, 0, 300, 200};
+			vec2 Offset;
+			Region.Begin(&View, &Offset);
+			const CUIRect Edit{40, 40 + Offset.y, 240, 24};
+			m_Ui.DoEditBox(&Input, &Edit, 12);
+			Region.AddRect({View.x, View.y + Offset.y, View.w, 500});
+			Region.End();
+		}
+
 		int Draw(bool LeftDisabled = false)
 		{
 			return ui_widget::SplitActionButton(ui_widget::ControlContext(&m_Ui), &m_Left, "Check for updates", &m_Right, "New features", m_Button, LeftDisabled);
@@ -529,6 +550,51 @@ TEST_F(QmSecondaryPanelActions, ClosingParentClearsChildAndNotifiesEachOwnerOnce
 	m_Ui.ClosePopupMenu(&m_Panel);
 	EXPECT_EQ(ParentClosed, 1);
 	EXPECT_EQ(ChildClosed, 1);
+}
+
+TEST_F(QmSecondaryPanelActions, ScrollingFromTextFieldCancelsPendingTextInputActivation)
+{
+	CLineInputBuffered<64> Input;
+	CScrollRegion Region;
+	Input.Set("source");
+	Frame({0, 0}, false);
+	m_Ui.SetDirectTouchInput(true);
+	TouchFrame({70, 55}, true);
+	DrawTouchTextList(Region, Input);
+	ASSERT_EQ(m_Ui.ActiveItem(), &Input);
+	ASSERT_FALSE(Input.IsActive());
+	ASSERT_EQ(m_Input.m_TextInputStarts, 0);
+	TouchFrame({70, 25}, true);
+	DrawTouchTextList(Region, Input);
+	EXPECT_NEAR(Region.State().Offset(), 30.0f, 0.001f);
+	EXPECT_EQ(m_Ui.ActiveItem(), nullptr);
+	EXPECT_FALSE(Input.IsActive());
+	EXPECT_EQ(m_Input.m_TextInputStarts, 0);
+	TouchFrame({70, 25}, false);
+	DrawTouchTextList(Region, Input);
+	EXPECT_FALSE(Input.IsActive());
+	EXPECT_EQ(m_Input.m_TextInputStarts, 0);
+	m_Ui.ReleaseActiveTextInput(&Input);
+}
+
+TEST_F(QmSecondaryPanelActions, CancellingTextFieldTouchPreservesIndependentConsoleInput)
+{
+	CLineInputBuffered<64> Input, ConsoleInput;
+	CScrollRegion Region;
+	Frame({0, 0}, false);
+	m_Ui.SetDirectTouchInput(true);
+	TouchFrame({70, 55}, true);
+	DrawTouchTextList(Region, Input);
+	ASSERT_EQ(m_Ui.ActiveItem(), &Input);
+	ConsoleInput.Activate(EInputPriority::CONSOLE);
+	ASSERT_EQ(CLineInput::GetActiveInput(), &ConsoleInput);
+	TouchFrame({70, 25}, true);
+	DrawTouchTextList(Region, Input);
+	EXPECT_EQ(CLineInput::GetActiveInput(), &ConsoleInput);
+	EXPECT_FALSE(Input.IsActive());
+	EXPECT_EQ(m_Input.m_TextInputStops, 0);
+	ConsoleInput.Deactivate();
+	m_Ui.ReleaseActiveTextInput(&Input);
 }
 
 TEST_F(QmSecondaryPanelActions, ModalRestoresTextOnlyWhenTheSameSourceInputRendersAgain)

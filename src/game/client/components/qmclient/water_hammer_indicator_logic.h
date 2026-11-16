@@ -1,16 +1,68 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_WATER_HAMMER_INDICATOR_LOGIC_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_WATER_HAMMER_INDICATOR_LOGIC_H
 
+#include <base/color.h>
+
 #include <generated/protocol.h>
 
 #include <game/mapitems.h>
+
+#include <optional>
+
+struct SQmWaterHeldState
+{
+	bool m_Hammer = false;
+	bool m_Hook = false;
+
+	std::optional<ColorRGBA> HighlightColor(unsigned HammerColor, unsigned HookColor) const
+	{
+		if(!m_Hammer && !m_Hook)
+			return std::nullopt;
+
+		// 同时卡锤和卡钩时，整个角色优先使用卡锤的按下颜色。
+		return color_cast<ColorRGBA>(ColorHSLA(m_Hammer ? HammerColor : HookColor));
+	}
+};
 
 struct SQmWaterHammerInputState
 {
 	bool m_Received = false;
 	int m_WantedWeapon = 0;
 	int m_Fire = 0;
+	int m_Hook = 0;
+	int m_Direction = 0;
+	int m_Jump = 0;
+	int m_IntendedTick = -1;
+
+	void Update(const CNetMsg_Sv_PreInput &Message)
+	{
+		// 预输入不定期广播；保持按住状态，并忽略迟到的旧输入。
+		if(Message.m_IntendedTick < 0 || (m_Received && Message.m_IntendedTick < m_IntendedTick))
+			return;
+		m_Received = true;
+		m_WantedWeapon = Message.m_WantedWeapon;
+		m_Fire = Message.m_Fire;
+		m_Hook = Message.m_Hook;
+		m_Direction = Message.m_Direction;
+		m_Jump = Message.m_Jump;
+		m_IntendedTick = Message.m_IntendedTick;
+	}
 };
+
+struct SQmWaterDirectionState
+{
+	bool m_Left = false;
+	bool m_Jump = false;
+	bool m_Right = false;
+};
+
+// 冻结会清零角色快照中的移动输入，仅此时用收到的原始按键补全箭头。
+inline SQmWaterDirectionState QmResolveWaterDirection(const int FreezeEnd, const bool LiveFrozen, const int SnapshotDirection, const int SnapshotJumped, const SQmWaterHammerInputState &PreInput)
+{
+	if((FreezeEnd != 0 || LiveFrozen) && PreInput.m_Received)
+		return {PreInput.m_Direction == -1, PreInput.m_Jump != 0, PreInput.m_Direction == 1};
+	return {SnapshotDirection == -1, (SnapshotJumped & 1) != 0, SnapshotDirection == 1};
+}
 
 // 水域卡锤标记的纯判定逻辑，独立于客户端组件，便于单元测试。
 inline bool QmIsWaterHammerPenaltyTile(const int Tile)
@@ -35,6 +87,16 @@ inline bool QmShouldMarkWaterHammer(const int FreezeEnd, const bool LiveFrozen, 
 	const int Fire = pLocalInput ? pLocalInput->m_Fire : PreInput.m_Fire;
 	const bool HammerRequested = WantedWeapon == WEAPON_HAMMER + 1 || CurrentWeapon == WEAPON_HAMMER;
 	return QmShouldMarkWaterHammer(FreezeEnd, LiveFrozen, HammerRequested, (Fire & 1) != 0);
+}
+
+// 卡钩按持有输入判断，不使用钩索伸出状态，避免收钩后仍按住时漏报。
+inline bool QmShouldMarkWaterHook(const int FreezeEnd, const bool LiveFrozen, const SQmWaterHammerInputState &PreInput, const CNetObj_PlayerInput *pLocalInput)
+{
+	if(!pLocalInput && !PreInput.m_Received)
+		return false;
+
+	const int Hook = pLocalInput ? pLocalInput->m_Hook : PreInput.m_Hook;
+	return (FreezeEnd != 0 || LiveFrozen) && Hook != 0;
 }
 
 #endif // GAME_CLIENT_COMPONENTS_QMCLIENT_WATER_HAMMER_INDICATOR_LOGIC_H

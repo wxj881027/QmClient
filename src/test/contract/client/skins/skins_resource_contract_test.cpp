@@ -78,8 +78,6 @@ TEST(SkinsContract, TeeBackgroundRequestsWaitForAdmissionBeforePending)
 	EXPECT_NE(StartLoading.find("Stats.m_NumPending++;"), std::string::npos);
 }
 
-
-
 TEST(SkinsContract, TeeSkinListSortModeKeepsFavoritesPinnedThenUsesOfficialDate)
 {
 	const std::string Header = ReadTestSourceFile("src/game/client/components/skins.h");
@@ -133,8 +131,6 @@ TEST(SkinsContract, TeeSkinListSortModeKeepsFavoritesPinnedThenUsesOfficialDate)
 	EXPECT_NE(CompareBody.find("if(g_Config.m_QmSkinSortMode == 1)"), std::string::npos);
 	EXPECT_NE(CompareBody.find("if(m_Favorite && !Other.m_Favorite)"), std::string::npos);
 }
-
-
 
 TEST(SkinsContract, TeeStartLoadingFallbackSweepIsBoundedAndLogged)
 {

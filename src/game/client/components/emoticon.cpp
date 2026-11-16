@@ -325,7 +325,7 @@ void CEmoticon::OnRender()
 	if(m_Active)
 	{
 		const bool WasTouchPressed = m_TouchState.m_AnyPressed;
-		Ui()->UpdateTouchState(m_TouchState);
+		Ui()->UpdateTouchState(m_TouchState, false);
 		if(m_TouchState.m_AnyPressed)
 		{
 			const vec2 TouchPos = (m_TouchState.m_PrimaryPosition - vec2(0.5f, 0.5f)) * Screen.Size();
@@ -481,7 +481,7 @@ void CEmoticon::OnRender()
 	{
 		Graphics()->TextureClear();
 		Graphics()->QuadsBegin();
-		Graphics()->SetColor(ui_token::color::SURFACE_HIGHLIGHT.WithMultipliedAlpha(2.0f * PresentationAlpha));
+		Graphics()->SetColor(ui_token::color::TINT_HUD_BAR.WithMultipliedAlpha(PresentationAlpha));
 		Graphics()->DrawCircle(ScreenCenter.x, ScreenCenter.y, s_InnerCircleRadius * PresentationScale, 64);
 		Graphics()->QuadsEnd();
 
@@ -513,7 +513,9 @@ void CEmoticon::OnRender()
 		m_SelectedEyeEmote = -1;
 	}
 
-	RenderTools()->RenderCursor(ScreenCenter + m_SelectorMouse * PresentationScale, 24.0f * PresentationScale, PresentationAlpha);
+	// 手机是手指直接点，不画鼠标箭头。
+	if(!QmUiMobilePlatform())
+		RenderTools()->RenderCursor(ScreenCenter + m_SelectorMouse * PresentationScale, 24.0f * PresentationScale, PresentationAlpha);
 }
 
 void CEmoticon::RenderProjectiles()

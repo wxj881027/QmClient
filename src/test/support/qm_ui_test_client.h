@@ -52,6 +52,8 @@ namespace qm_ui_test
 		void ServerBrowserUpdate() override { throw std::logic_error("unexpected UI client boundary call"); }
 		void Notify(const char *pTitle, const char *pMessage) override { throw std::logic_error("unexpected UI client boundary call"); }
 		void OnWindowResize() override {}
+		// 垂直同步重建交换链由真实客户端排队处理；UI 测试不碰后端，忽略即可。
+		void QueueVSyncChange(bool State) override {}
 		void UpdateAndSwap() override { throw std::logic_error("unexpected UI client boundary call"); }
 		void EnterGame(int Conn) override { throw std::logic_error("unexpected UI client boundary call"); }
 		const NETADDR *ServerAddress() const override { throw std::logic_error("unexpected UI client boundary call"); }

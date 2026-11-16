@@ -524,8 +524,8 @@ void CPieMenu::OnRender()
 		RenderCenterInfo(CenterInfoAlpha);
 	}
 
-	// Render cursor (hide cursor during closing commit)
-	if(m_Lifecycle.State() != EMenuState::CLOSING)
+	// Render cursor (hide cursor during closing commit)；手机是手指直接点，不画箭头。
+	if(m_Lifecycle.State() != EMenuState::CLOSING && !QmUiMobilePlatform())
 		RenderTools()->RenderCursor(ScreenCenter + m_SelectorMouse, 43.0f, Alpha); // 24 * 1.8
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
 }

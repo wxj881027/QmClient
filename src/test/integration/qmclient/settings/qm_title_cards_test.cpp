@@ -36,7 +36,7 @@ TEST(QmTitleCards, MissingSettingNamesFindTheInteractiveDisplayCard)
 {
 	qm_card_order::CModel Model;
 	Model.SetEntries(qm_card_registry::BuildDefaultEntries());
-	for(const char *pQuery : {"头衔显示", "qm_nameplate_title_scale", "头衔大小", "qm_show_nameplate_title", "qm_nameplate_title_above_name", "qm_show_main_title", "qm_show_dummy_title", "qm_title_badge_style", "qm_title_badge_color", "qm_title_opacity", "Moon", "Sun", "月亮", "太阳", "星轨"})
+	for(const char *pQuery : {"头衔显示", "qm_nameplate_title_scale", "头衔大小", "qm_show_nameplate_title", "qm_show_main_title", "qm_show_dummy_title", "qm_title_badge_style", "qm_title_badge_color", "qm_title_opacity", "Moon", "Sun", "月亮", "太阳", "星轨"})
 	{
 		SCOPED_TRACE(pQuery);
 		const auto vResults = qm_card_registry::SearchCards(pQuery, Model);
@@ -142,4 +142,16 @@ TEST(QmTitleCards, CollapseStateIsIndependentAfterReload)
 	ASSERT_TRUE(Reloaded.Load(aSerialized));
 	EXPECT_FALSE(Reloaded.IsCollapsed(SPONSOR_CARD, true));
 	EXPECT_TRUE(Reloaded.IsCollapsed(DISPLAY_CARD, false));
+}
+
+TEST(QmTitleCards, FluidSearchFindsTheSponsorCard)
+{
+	qm_card_order::CModel Model;
+	Model.SetEntries(qm_card_registry::BuildDefaultEntries());
+	for(const char *pQuery : {"Fluid", "流体", "液体"})
+	{
+		SCOPED_TRACE(pQuery);
+		const auto vResults = qm_card_registry::SearchCards(pQuery, Model);
+		EXPECT_TRUE(std::any_of(vResults.begin(), vResults.end(), [](const auto &Result) { return std::string(Result.m_pStableId) == SPONSOR_CARD; }));
+	}
 }

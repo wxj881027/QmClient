@@ -3,3 +3,8 @@ with their own licences. The source you find here is stripped
 of unnecessary information. Please visit their websites for
 more information and official releases.
 
+
+unordered_dense/ - ankerl::unordered_dense (MIT License),
+  https://github.com/martinus/unordered_dense
+  Used by the Bind blueprint graph for NodeId-to-index and spatial cell maps.
+  Full license text: unordered_dense/LICENSE

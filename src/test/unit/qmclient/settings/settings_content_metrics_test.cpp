@@ -154,7 +154,7 @@ TEST(SettingsContentMetrics, QmHudHeightsRespectExplicitMetricsAndSelectedStates
 {
 	const SSettingsContentMetrics Metrics = MetricsWithExplicitControlHeight(1000.0f, 20.0f);
 	EXPECT_FLOAT_EQ(ResolveQmHudPlayerStatsHeight(Metrics, false, false), 70.0f);
-	EXPECT_FLOAT_EQ(ResolveQmHudPlayerStatsHeight(Metrics, true, true), 120.0f);
+	EXPECT_FLOAT_EQ(ResolveQmHudPlayerStatsHeight(Metrics, true, true), 145.0f);
 	EXPECT_FLOAT_EQ(ResolveQmHudPlayerStatsHeight(Metrics, true, false), 245.0f);
 	EXPECT_FLOAT_EQ(ResolveQmHudInputOverlayHeight(Metrics, false), 20.0f);
 	EXPECT_FLOAT_EQ(ResolveQmHudInputOverlayHeight(Metrics, true), 300.0f);

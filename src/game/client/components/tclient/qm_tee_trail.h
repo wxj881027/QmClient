@@ -28,14 +28,20 @@ namespace qm_tee_trail
 {
 	class CPixelNoiseCache;
 
-	// 0 保留原版；旧配置中的 4、5 由 ResolveStyle 映射到新的艺术风格。
+	// 0 保留原版；4、5 是旧配置编号，由 ResolveStyle 映射到漫画与魔法。
+	// 6 起为程序化艺术样式：现有编号不重排，避免已保存的样式选择发生含义漂移。
 	enum
 	{
 		STYLE_ORIGINAL = 0,
 		STYLE_MANGA = 1,
 		STYLE_MAGIC = 2,
 		STYLE_PIXEL = 3,
-		STYLE_COUNT = 4,
+		STYLE_AURORA = 6,
+		STYLE_INK = 7,
+		STYLE_IGNIS = 8,
+		STYLE_STARDUST = 9,
+		STYLE_BLACKFLASH = 10,
+		STYLE_COUNT = 11,
 	};
 
 	constexpr size_t MAX_POINTS = 192;

@@ -1,5 +1,7 @@
 #include "render_layer.h"
 
+#include "qm_entity_overlay_build_plan.h"
+
 #include <base/log.h>
 
 #include <engine/graphics.h>
@@ -1510,32 +1512,33 @@ static float QmOverlayAlpha(int Value)
 
 static bool IsFreezeAlphaTile(int Index)
 {
-	return Index == TILE_FREEZE || Index == TILE_LFREEZE;
+	return CQmEntityOverlayBuildPlan::Classify(Index) == CQmEntityOverlayBuildPlan::FREEZE;
 }
 
 static bool IsUnfreezeAlphaTile(int Index)
 {
-	return Index == TILE_UNFREEZE || Index == TILE_LUNFREEZE;
+	return CQmEntityOverlayBuildPlan::Classify(Index) == CQmEntityOverlayBuildPlan::UNFREEZE;
 }
 
 static bool IsDeepFreezeAlphaTile(int Index)
 {
-	return Index == TILE_DFREEZE;
+	return CQmEntityOverlayBuildPlan::Classify(Index) == CQmEntityOverlayBuildPlan::DEEP_FREEZE;
 }
 
 static bool IsDeepUnfreezeAlphaTile(int Index)
 {
-	return Index == TILE_DUNFREEZE;
+	return CQmEntityOverlayBuildPlan::Classify(Index) == CQmEntityOverlayBuildPlan::DEEP_UNFREEZE;
 }
 
 static bool IsSpecialEntityAlphaTile(int Index)
 {
-	return Index == TILE_DEATH || IsFreezeAlphaTile(Index) || IsUnfreezeAlphaTile(Index) || IsDeepFreezeAlphaTile(Index) || IsDeepUnfreezeAlphaTile(Index);
+	return CQmEntityOverlayBuildPlan::Classify(Index) != CQmEntityOverlayBuildPlan::NUM_CATEGORIES;
 }
 
 static bool IsSpecialSwitchAlphaTile(int Index)
 {
-	return IsFreezeAlphaTile(Index) || IsUnfreezeAlphaTile(Index) || IsDeepFreezeAlphaTile(Index) || IsDeepUnfreezeAlphaTile(Index);
+	const auto Category = CQmEntityOverlayBuildPlan::Classify(Index);
+	return Category != CQmEntityOverlayBuildPlan::NUM_CATEGORIES && Category != CQmEntityOverlayBuildPlan::DEATH;
 }
 
 static bool FilterBaseEntityAlphaTile(unsigned char Index, void *pUser)
@@ -1626,60 +1629,38 @@ CRenderLayerEntityGame::CRenderLayerEntityGame(int GroupId, int LayerId, int Fla
 void CRenderLayerEntityGame::Init()
 {
 	const std::optional<CClipRegion> LayerClip = m_LayerClip;
-	UploadTileData(m_VisualTiles, 0, false, true, [](unsigned char Index, unsigned char Flags, int AngleRotate, unsigned int x, unsigned int y, int CurOverlay) {
+	CQmEntityOverlayBuildPlan Plan;
+	UploadTileData(m_VisualTiles, 0, false, true, [&](unsigned char Index, unsigned char Flags, int AngleRotate, unsigned int x, unsigned int y, int CurOverlay) {
 		(void)Flags;
 		(void)AngleRotate;
 		(void)x;
 		(void)y;
 		(void)CurOverlay;
+		Plan.Record(Index);
 		return !IsSpecialEntityAlphaTile(Index);
 	});
 	m_LayerClip = LayerClip;
-	UploadTileData(m_VisualTilesDeath, 0, false, false, [](unsigned char Index, unsigned char Flags, int AngleRotate, unsigned int x, unsigned int y, int CurOverlay) {
-		(void)Flags;
-		(void)AngleRotate;
-		(void)x;
-		(void)y;
-		(void)CurOverlay;
-		return Index == TILE_DEATH;
+	Plan.ForEachPresent([&](CQmEntityOverlayBuildPlan::ECategory Category) {
+		std::optional<CTileLayerVisuals> *pVisuals = nullptr;
+		switch(Category)
+		{
+		case CQmEntityOverlayBuildPlan::DEATH: pVisuals = &m_VisualTilesDeath; break;
+		case CQmEntityOverlayBuildPlan::FREEZE: pVisuals = &m_VisualTilesFreeze; break;
+		case CQmEntityOverlayBuildPlan::UNFREEZE: pVisuals = &m_VisualTilesUnfreeze; break;
+		case CQmEntityOverlayBuildPlan::DEEP_FREEZE: pVisuals = &m_VisualTilesDeepFreeze; break;
+		case CQmEntityOverlayBuildPlan::DEEP_UNFREEZE: pVisuals = &m_VisualTilesDeepUnfreeze; break;
+		case CQmEntityOverlayBuildPlan::NUM_CATEGORIES: return;
+		}
+		UploadTileData(*pVisuals, 0, false, false, [Category](unsigned char Index, unsigned char Flags, int AngleRotate, unsigned int x, unsigned int y, int CurOverlay) {
+			(void)Flags;
+			(void)AngleRotate;
+			(void)x;
+			(void)y;
+			(void)CurOverlay;
+			return CQmEntityOverlayBuildPlan::Classify(Index) == Category;
+		});
+		m_LayerClip = LayerClip;
 	});
-	m_LayerClip = LayerClip;
-	UploadTileData(m_VisualTilesFreeze, 0, false, false, [](unsigned char Index, unsigned char Flags, int AngleRotate, unsigned int x, unsigned int y, int CurOverlay) {
-		(void)Flags;
-		(void)AngleRotate;
-		(void)x;
-		(void)y;
-		(void)CurOverlay;
-		return IsFreezeAlphaTile(Index);
-	});
-	m_LayerClip = LayerClip;
-	UploadTileData(m_VisualTilesUnfreeze, 0, false, false, [](unsigned char Index, unsigned char Flags, int AngleRotate, unsigned int x, unsigned int y, int CurOverlay) {
-		(void)Flags;
-		(void)AngleRotate;
-		(void)x;
-		(void)y;
-		(void)CurOverlay;
-		return IsUnfreezeAlphaTile(Index);
-	});
-	m_LayerClip = LayerClip;
-	UploadTileData(m_VisualTilesDeepFreeze, 0, false, false, [](unsigned char Index, unsigned char Flags, int AngleRotate, unsigned int x, unsigned int y, int CurOverlay) {
-		(void)Flags;
-		(void)AngleRotate;
-		(void)x;
-		(void)y;
-		(void)CurOverlay;
-		return IsDeepFreezeAlphaTile(Index);
-	});
-	m_LayerClip = LayerClip;
-	UploadTileData(m_VisualTilesDeepUnfreeze, 0, false, false, [](unsigned char Index, unsigned char Flags, int AngleRotate, unsigned int x, unsigned int y, int CurOverlay) {
-		(void)Flags;
-		(void)AngleRotate;
-		(void)x;
-		(void)y;
-		(void)CurOverlay;
-		return IsDeepUnfreezeAlphaTile(Index);
-	});
-	m_LayerClip = LayerClip;
 }
 
 void CRenderLayerEntityGame::Unload()
@@ -1781,60 +1762,38 @@ int CRenderLayerEntityFront::GetDataIndex() const
 void CRenderLayerEntityFront::Init()
 {
 	const std::optional<CClipRegion> LayerClip = m_LayerClip;
-	UploadTileData(m_VisualTiles, 0, false, false, [](unsigned char Index, unsigned char Flags, int AngleRotate, unsigned int x, unsigned int y, int CurOverlay) {
+	CQmEntityOverlayBuildPlan Plan;
+	UploadTileData(m_VisualTiles, 0, false, false, [&](unsigned char Index, unsigned char Flags, int AngleRotate, unsigned int x, unsigned int y, int CurOverlay) {
 		(void)Flags;
 		(void)AngleRotate;
 		(void)x;
 		(void)y;
 		(void)CurOverlay;
+		Plan.Record(Index);
 		return !IsSpecialEntityAlphaTile(Index);
 	});
 	m_LayerClip = LayerClip;
-	UploadTileData(m_VisualTilesDeath, 0, false, false, [](unsigned char Index, unsigned char Flags, int AngleRotate, unsigned int x, unsigned int y, int CurOverlay) {
-		(void)Flags;
-		(void)AngleRotate;
-		(void)x;
-		(void)y;
-		(void)CurOverlay;
-		return Index == TILE_DEATH;
+	Plan.ForEachPresent([&](CQmEntityOverlayBuildPlan::ECategory Category) {
+		std::optional<CTileLayerVisuals> *pVisuals = nullptr;
+		switch(Category)
+		{
+		case CQmEntityOverlayBuildPlan::DEATH: pVisuals = &m_VisualTilesDeath; break;
+		case CQmEntityOverlayBuildPlan::FREEZE: pVisuals = &m_VisualTilesFreeze; break;
+		case CQmEntityOverlayBuildPlan::UNFREEZE: pVisuals = &m_VisualTilesUnfreeze; break;
+		case CQmEntityOverlayBuildPlan::DEEP_FREEZE: pVisuals = &m_VisualTilesDeepFreeze; break;
+		case CQmEntityOverlayBuildPlan::DEEP_UNFREEZE: pVisuals = &m_VisualTilesDeepUnfreeze; break;
+		case CQmEntityOverlayBuildPlan::NUM_CATEGORIES: return;
+		}
+		UploadTileData(*pVisuals, 0, false, false, [Category](unsigned char Index, unsigned char Flags, int AngleRotate, unsigned int x, unsigned int y, int CurOverlay) {
+			(void)Flags;
+			(void)AngleRotate;
+			(void)x;
+			(void)y;
+			(void)CurOverlay;
+			return CQmEntityOverlayBuildPlan::Classify(Index) == Category;
+		});
+		m_LayerClip = LayerClip;
 	});
-	m_LayerClip = LayerClip;
-	UploadTileData(m_VisualTilesFreeze, 0, false, false, [](unsigned char Index, unsigned char Flags, int AngleRotate, unsigned int x, unsigned int y, int CurOverlay) {
-		(void)Flags;
-		(void)AngleRotate;
-		(void)x;
-		(void)y;
-		(void)CurOverlay;
-		return IsFreezeAlphaTile(Index);
-	});
-	m_LayerClip = LayerClip;
-	UploadTileData(m_VisualTilesUnfreeze, 0, false, false, [](unsigned char Index, unsigned char Flags, int AngleRotate, unsigned int x, unsigned int y, int CurOverlay) {
-		(void)Flags;
-		(void)AngleRotate;
-		(void)x;
-		(void)y;
-		(void)CurOverlay;
-		return IsUnfreezeAlphaTile(Index);
-	});
-	m_LayerClip = LayerClip;
-	UploadTileData(m_VisualTilesDeepFreeze, 0, false, false, [](unsigned char Index, unsigned char Flags, int AngleRotate, unsigned int x, unsigned int y, int CurOverlay) {
-		(void)Flags;
-		(void)AngleRotate;
-		(void)x;
-		(void)y;
-		(void)CurOverlay;
-		return IsDeepFreezeAlphaTile(Index);
-	});
-	m_LayerClip = LayerClip;
-	UploadTileData(m_VisualTilesDeepUnfreeze, 0, false, false, [](unsigned char Index, unsigned char Flags, int AngleRotate, unsigned int x, unsigned int y, int CurOverlay) {
-		(void)Flags;
-		(void)AngleRotate;
-		(void)x;
-		(void)y;
-		(void)CurOverlay;
-		return IsDeepUnfreezeAlphaTile(Index);
-	});
-	m_LayerClip = LayerClip;
 }
 
 void CRenderLayerEntityFront::Unload()
@@ -2148,12 +2107,14 @@ int CRenderLayerEntitySwitch::GetDataIndex() const
 void CRenderLayerEntitySwitch::Init()
 {
 	const std::optional<CClipRegion> LayerClip = m_LayerClip;
-	auto BaseFilter = [this](unsigned char Index, unsigned char Flags, int AngleRotate, unsigned int x, unsigned int y, int CurOverlay) {
+	CQmEntityOverlayBuildPlan Plan;
+	auto BaseFilter = [this, &Plan](unsigned char Index, unsigned char Flags, int AngleRotate, unsigned int x, unsigned int y, int CurOverlay) {
 		(void)Index;
 		(void)Flags;
 		(void)AngleRotate;
 		(void)CurOverlay;
 		const unsigned char Type = m_pSwitchTiles[y * m_pLayerTilemap->m_Width + x].m_Type;
+		Plan.Record(Type, false);
 		return !IsSpecialSwitchAlphaTile(Type);
 	};
 
@@ -2175,56 +2136,33 @@ void CRenderLayerEntitySwitch::Init()
 		return IsSwitchTileDelayUsed(Type);
 	};
 
-	auto FreezeFilter = [this](unsigned char Index, unsigned char Flags, int AngleRotate, unsigned int x, unsigned int y, int CurOverlay) {
-		(void)Index;
-		(void)Flags;
-		(void)AngleRotate;
-		(void)CurOverlay;
-		const unsigned char Type = m_pSwitchTiles[y * m_pLayerTilemap->m_Width + x].m_Type;
-		return IsFreezeAlphaTile(Type);
-	};
-
-	auto UnfreezeFilter = [this](unsigned char Index, unsigned char Flags, int AngleRotate, unsigned int x, unsigned int y, int CurOverlay) {
-		(void)Index;
-		(void)Flags;
-		(void)AngleRotate;
-		(void)CurOverlay;
-		const unsigned char Type = m_pSwitchTiles[y * m_pLayerTilemap->m_Width + x].m_Type;
-		return IsUnfreezeAlphaTile(Type);
-	};
-
-	auto DeepFreezeFilter = [this](unsigned char Index, unsigned char Flags, int AngleRotate, unsigned int x, unsigned int y, int CurOverlay) {
-		(void)Index;
-		(void)Flags;
-		(void)AngleRotate;
-		(void)CurOverlay;
-		const unsigned char Type = m_pSwitchTiles[y * m_pLayerTilemap->m_Width + x].m_Type;
-		return IsDeepFreezeAlphaTile(Type);
-	};
-
-	auto DeepUnfreezeFilter = [this](unsigned char Index, unsigned char Flags, int AngleRotate, unsigned int x, unsigned int y, int CurOverlay) {
-		(void)Index;
-		(void)Flags;
-		(void)AngleRotate;
-		(void)CurOverlay;
-		const unsigned char Type = m_pSwitchTiles[y * m_pLayerTilemap->m_Width + x].m_Type;
-		return IsDeepUnfreezeAlphaTile(Type);
-	};
-
 	UploadTileData(m_VisualTiles, 0, false, false, BaseFilter);
 	m_LayerClip = LayerClip;
 	UploadTileData(m_VisualSwitchNumberTop, 1, false, false, NumberFilter);
 	m_LayerClip = LayerClip;
 	UploadTileData(m_VisualSwitchNumberBottom, 2, false, false, DelayFilter);
 	m_LayerClip = LayerClip;
-	UploadTileData(m_VisualTilesFreeze, 0, false, false, FreezeFilter);
-	m_LayerClip = LayerClip;
-	UploadTileData(m_VisualTilesUnfreeze, 0, false, false, UnfreezeFilter);
-	m_LayerClip = LayerClip;
-	UploadTileData(m_VisualTilesDeepFreeze, 0, false, false, DeepFreezeFilter);
-	m_LayerClip = LayerClip;
-	UploadTileData(m_VisualTilesDeepUnfreeze, 0, false, false, DeepUnfreezeFilter);
-	m_LayerClip = LayerClip;
+	Plan.ForEachPresent([&](CQmEntityOverlayBuildPlan::ECategory Category) {
+		std::optional<CTileLayerVisuals> *pVisuals = nullptr;
+		switch(Category)
+		{
+		case CQmEntityOverlayBuildPlan::FREEZE: pVisuals = &m_VisualTilesFreeze; break;
+		case CQmEntityOverlayBuildPlan::UNFREEZE: pVisuals = &m_VisualTilesUnfreeze; break;
+		case CQmEntityOverlayBuildPlan::DEEP_FREEZE: pVisuals = &m_VisualTilesDeepFreeze; break;
+		case CQmEntityOverlayBuildPlan::DEEP_UNFREEZE: pVisuals = &m_VisualTilesDeepUnfreeze; break;
+		case CQmEntityOverlayBuildPlan::DEATH:
+		case CQmEntityOverlayBuildPlan::NUM_CATEGORIES: return;
+		}
+		UploadTileData(*pVisuals, 0, false, false, [this, Category](unsigned char Index, unsigned char Flags, int AngleRotate, unsigned int x, unsigned int y, int CurOverlay) {
+			(void)Index;
+			(void)Flags;
+			(void)AngleRotate;
+			(void)CurOverlay;
+			const unsigned char Type = m_pSwitchTiles[y * m_pLayerTilemap->m_Width + x].m_Type;
+			return CQmEntityOverlayBuildPlan::Classify(Type) == Category;
+		});
+		m_LayerClip = LayerClip;
+	});
 }
 
 void CRenderLayerEntitySwitch::InitTileData()

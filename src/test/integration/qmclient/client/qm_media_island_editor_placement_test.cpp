@@ -1,6 +1,7 @@
 #include <game/client/QmUi/QmLyricsHud.h>
 #include <game/client/components/hud_editor.h>
 #include <game/client/components/hud_media_island_logic.h>
+#include <game/client/components/qmclient/hud_map_progress.h>
 
 #include <gtest/gtest.h>
 
@@ -165,4 +166,41 @@ TEST(QmHudMediaIslandEditorPlacement, FollowingLyricsIgnoreSavedHorizontalPositi
 			EXPECT_FLOAT_EQ(Placed.y, 120.0f);
 		}
 	}
+}
+
+TEST(QmHudMediaIslandEditorPlacement, IslandProgressRowPushesFollowingLyricsBelowTheHost)
+{
+	// 主岛新增地图进度行后变高。旧布局保存的屏幕绝对纵坐标落在进度行上时，
+	// 跟随主岛的歌词岛必须被纵向下限抬到主岛底边之外，不能遮住进度条。
+	const float BaseHeight = QmHudMediaIslandScaled(QmHudMediaIslandBaseHeight);
+	const auto ProgressRows = QmHudMapProgress::IslandRows(true, true, 0, BaseHeight,
+		QmHudMediaIslandScaled(7.0f), QmHudMediaIslandScaled(2.5f));
+	ASSERT_GT(ProgressRows.m_BottomHeight, 0.0f);
+	const CUIRect Main{100.0f, 10.0f, 160.0f, BaseHeight + ProgressRows.m_BottomHeight};
+	const auto Lyrics = QmLyricsIslandLayout(Main, 600.0f, 300.0f, 1, true);
+	const float StaleSavedY = Main.y + ProgressRows.m_ProgressY + 1.0f;
+	ASSERT_LT(StaleSavedY, Main.y + Main.h);
+	const float Y = QmHudEditor::ClampAnchorYBelowMinimum(StaleSavedY, Lyrics.y, Lyrics.h, 0.0f, 300.0f);
+	EXPECT_FLOAT_EQ(Y, Lyrics.y);
+	EXPECT_GE(Y, Main.y + Main.h);
+	EXPECT_GT(Y, StaleSavedY);
+}
+
+TEST(QmHudMediaIslandEditorPlacement, FollowingLyricsKeepSavedPositionWhenItAlreadyClearsTheHost)
+{
+	const CUIRect Main{100.0f, 10.0f, 160.0f, 28.0f};
+	const auto Lyrics = QmLyricsIslandLayout(Main, 600.0f, 300.0f, 1, true);
+	for(const float SavedY : {Lyrics.y, 140.0f})
+	{
+		SCOPED_TRACE(SavedY);
+		EXPECT_FLOAT_EQ(QmHudEditor::ClampAnchorYBelowMinimum(SavedY, Lyrics.y, Lyrics.h, 0.0f, 300.0f), SavedY);
+	}
+}
+
+TEST(QmHudMediaIslandEditorPlacement, UnfollowedLyricsIgnoreTheMainIslandLowerBound)
+{
+	const CUIRect Main{100.0f, 10.0f, 160.0f, 28.0f};
+	const auto Lyrics = QmLyricsIslandLayout(Main, 600.0f, 300.0f, 1, false);
+	EXPECT_LT(30.0f, Main.y + Main.h);
+	EXPECT_FLOAT_EQ(QmHudEditor::ClampAnchorYBelowMinimum(30.0f, QmHudEditor::NO_MINIMUM_ANCHOR_Y, Lyrics.h, 0.0f, 300.0f), 30.0f);
 }

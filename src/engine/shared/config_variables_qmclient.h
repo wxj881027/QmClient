@@ -50,6 +50,7 @@ MACRO_CONFIG_INT(QmAssetsPreviewBudgetPercent, qm_assets_preview_budget_percent,
 MACRO_CONFIG_INT(QmUiRuntimeV2Debug, qm_ui_runtime_v2_debug, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable UI runtime v2 debug logging")
 MACRO_CONFIG_INT(QmUiMotionLevel, qm_ui_motion_level, 2, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "QmUi animation intensity: 0=Off, 1=Reduced, 2=Full")
 MACRO_CONFIG_INT(QmUiScale, qm_ui_scale, 100, 50, 200, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Global UI size percentage")
+MACRO_CONFIG_INT(QmMobileCameraMode, qm_mobile_camera_mode, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Mobile spectator camera: 0=joystick pad, 1=drag the view")
 MACRO_CONFIG_INT(QmDefaultsProfileVersion, qm_defaults_profile_version, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Default appearance profile migration version")
 MACRO_CONFIG_STR(QmNewsReadRelease, qm_news_read_release, 64, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Last viewed client release notes")
 MACRO_CONFIG_INT(QmNewsReadVersion, qm_news_read_version, -1, -1, 0, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Last viewed announcement version")
@@ -58,8 +59,11 @@ MACRO_CONFIG_INT(QmUiListEntryAnimations, qm_ui_list_entry_animations, 1, 0, 1, 
 MACRO_CONFIG_INT(QmUiCardHeightAnimations, qm_ui_card_height_animations, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Animate settings card expand and collapse height changes")
 MACRO_CONFIG_INT(QmUiCardReflowAnimations, qm_ui_card_reflow_animations, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Animate settings card reorder and layout reflow")
 MACRO_CONFIG_INT(QmExtraAnimations, qm_extra_animations, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Animate chat box, emote selector, scoreboard, and spectate selection")
-MACRO_CONFIG_INT(QmUiScrollLegacyWheel, qm_ui_scroll_legacy_wheel, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity")
+MACRO_CONFIG_INT(QmUiScrollFeel, qm_ui_scroll_feel, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Wheel scroll feel: 0=Smooth (velocity carries over), 1=Original (each tick restarts), 2=Spring")
 MACRO_CONFIG_INT(QmUiScrollStep, qm_ui_scroll_step, 10, 2, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick")
+MACRO_CONFIG_INT(QmUiScrollBounce, qm_ui_scroll_bounce, 0, 0, 64, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Rubber-band distance in UI pixels when the wheel or a drag pushes past an end (0=off); the content springs back after scrolling stops")
+MACRO_CONFIG_INT(QmUiScrollSpringResponse, qm_ui_scroll_spring_response, 300, 80, 600, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Spring scroll feel response time in milliseconds; lower reaches the target sooner")
+MACRO_CONFIG_INT(QmUiScrollSpringDamping, qm_ui_scroll_spring_damping, 90, 50, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Spring scroll feel damping ratio in percent; 100 stops without overshoot")
 MACRO_CONFIG_INT(QmCountryFlagAnim, qm_country_flag_anim, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable bounce-in entrance animation when country flags finish loading")
 MACRO_CONFIG_INT(QmUiCardRainbowTitles, qm_ui_card_rainbow_titles, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Settings card titles use rainbow colors")
 MACRO_CONFIG_INT(QmUiCardBorders, qm_ui_card_borders, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show settings card borders")
@@ -74,12 +78,14 @@ MACRO_CONFIG_COL(QmUiFavoriteIconColor, qm_ui_favorite_icon_color, 0x21FFA6, CFG
 MACRO_CONFIG_INT(QmUiFriendIconFilled, qm_ui_friend_icon_filled, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Draw the friend heart icon with the filled icon font style")
 MACRO_CONFIG_INT(QmUiFavoriteIconFilled, qm_ui_favorite_icon_filled, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Draw the favorite star icon with the filled icon font style")
 MACRO_CONFIG_INT(QmUiIconWeight, qm_ui_icon_weight, 1, 0, 5, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Qm UI icon style: 0=Regular, 1=Bold, 2=Light (legacy), 3=Fill, 4=Light, 5=Bold (legacy)")
+MACRO_CONFIG_INT(QmUiPasswordIconStyle, qm_ui_password_icon_style, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Password visibility icon animation: 0=Fade, 1=Morph")
 MACRO_CONFIG_INT(QmHudIslandSignalColorMode, qm_hud_island_signal_color_mode, 1, 1, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Dynamic island connection icon color: 1=Quality tier, 2=Follow global icon color, 3=Custom")
 MACRO_CONFIG_COL(QmHudIslandSignalColor, qm_hud_island_signal_color, 0x00D1AB, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Dynamic island connection icon custom color")
 MACRO_CONFIG_INT(QmUiColorInterpolation, qm_ui_color_interpolation, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "QmUi color animation interpolation: 0=sRGB linear, 1=OKLAB perceptually uniform")
 MACRO_CONFIG_INT(QmRectCornerSegments, qm_rect_corner_segments, 16, 8, 48, CFGFLAG_CLIENT | CFGFLAG_SAVE, "UI rounded corner segments (even numbers recommended)")
 MACRO_CONFIG_STR(QmGlobalCardOrder, qm_global_card_order, 8000, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Global card ordering (format: stableId|tab|col|order; semicolon-separated)")
 MACRO_CONFIG_STR(QmSettingsCardCollapsed, qm_settings_card_collapsed, 8000, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Settings card states: stableId for collapsed, !stableId for expanded, separated by semicolons")
+MACRO_CONFIG_STR(QmSettingsCardWidths, qm_settings_card_widths, 8000, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Settings card widths: stableId for full width, !stableId for half width, separated by semicolons")
 MACRO_CONFIG_INT(QmSettingsCardCollapseMigrated, qm_settings_card_collapse_migrated, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Legacy settings card collapse states migrated")
 MACRO_CONFIG_INT(QmCardOrderMigrated, qm_card_order_migrated, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Global card ordering old config migration completed flag")
 MACRO_CONFIG_INT(QmCardLayoutVersion, qm_card_layout_version, 0, 0, 13, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Settings card default layout migration version")
@@ -96,7 +102,7 @@ MACRO_CONFIG_INT(QmColorPickerShape, qm_color_picker_shape, 0, 0, 1, CFGFLAG_CLI
 MACRO_CONFIG_STR(QmColorPickerPalette, qm_color_picker_palette, 4096, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Color picker saved swatches (format: name|#hex entries separated by semicolons)")
 MACRO_CONFIG_COL(QmTooltipBackgroundColor, qm_tooltip_background_color, 0xD9000066, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Tooltip background color")
 MACRO_CONFIG_COL(QmTooltipTextColor, qm_tooltip_text_color, 0xFF0000FF, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Tooltip text color")
-MACRO_CONFIG_INT(QmTooltipFontSize, qm_tooltip_font_size, 14, 10, 24, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Tooltip font size")
+MACRO_CONFIG_INT(QmTooltipFontSize, qm_tooltip_font_size, 10, 10, 24, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Tooltip font size")
 MACRO_CONFIG_INT(QmTooltipAnimation, qm_tooltip_animation, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Tooltip bounce animation")
 MACRO_CONFIG_COL(QmUiDropdownColor, qm_ui_dropdown_color, 0x000000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Button background color")
 MACRO_CONFIG_INT(QmUiDropdownOpacity, qm_ui_dropdown_opacity, 16, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Button background opacity percentage")
@@ -111,6 +117,7 @@ MACRO_CONFIG_INT(QmUiPopupOpacity, qm_ui_popup_opacity, 20, 0, 100, CFGFLAG_CLIE
 MACRO_CONFIG_INT(QmMapBrowserEmptyOnly, qm_map_browser_empty_only, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Map browser: show empty servers only")
 MACRO_CONFIG_INT(QmMapBrowserFavoriteOnly, qm_map_browser_favorite_only, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Map browser: show favorite maps only")
 MACRO_CONFIG_INT(QmMapBrowserStarMask, qm_map_browser_star_mask, 0, 0, 62, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Map browser difficulty star filter bitmask (bits 1-5)")
+MACRO_CONFIG_INT(QmMapBrowserCategoryMask, qm_map_browser_category_mask, 0, 0, 32767, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)")
 // 留空沿用原目录；自定义路径只影响之后开始保存的文件。
 MACRO_CONFIG_STR(QmDemoDirectory, qm_demo_directory, 512, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Demo directory")
 MACRO_CONFIG_STR(QmVideoDirectory, qm_video_directory, 512, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Video directory")
@@ -202,7 +209,6 @@ MACRO_CONFIG_INT(QmImeSelectedGradientReverse, qm_ime_selected_gradient_reverse,
 MACRO_CONFIG_INT(QmAutoSaveHistoryCount, qm_auto_save_history_count, 100, 0, 1000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-save history count (0=disable)")
 MACRO_CONFIG_INT(QmShortServerNames, qm_short_server_names, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show short server names in browser (applies to China community servers)")
 MACRO_CONFIG_INT(QmPingCacheMaxAgeHours, qm_ping_cache_max_age_hours, 72, 0, 8760, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Discard cached server pings older than this many hours (0 = never expire)")
-MACRO_CONFIG_INT(QmSavesAutoRemoveUsed, qm_saves_auto_remove_used, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)")
 MACRO_CONFIG_INT(QmSkinSortMode, qm_skin_sort_mode, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Skin list sort mode (0=Name, 1=Release date)")
 MACRO_CONFIG_INT(QmSkinShowMetadata, qm_skin_show_metadata, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show skin release date and author")
 MACRO_CONFIG_INT(QmSkinOutlineLocal, qm_skin_outline_local, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show generated skin outline for local tees")
@@ -210,7 +216,9 @@ MACRO_CONFIG_INT(QmSkinOutlineOthers, qm_skin_outline_others, 0, 0, 1, CFGFLAG_C
 MACRO_CONFIG_COL(QmSkinOutlineColor, qm_skin_outline_color, 0xFFFFFFFF, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Generated skin outline color")
 MACRO_CONFIG_INT(QmSkinOutlineWidth, qm_skin_outline_width, 2, 1, 6, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Generated skin outline width")
 MACRO_CONFIG_INT(QmSkinOutlineAlpha, qm_skin_outline_alpha, 100, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Generated skin outline opacity")
-MACRO_CONFIG_INT(QmWaterHammerHighlight, qm_water_hammer_highlight, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Highlight teammates holding hammer in death or freeze areas")
+MACRO_CONFIG_INT(QmWaterHammerHighlight, qm_water_hammer_highlight, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Highlight frozen teammates' hammer and hook inputs")
+MACRO_CONFIG_COL(QmWaterHammerColor, qm_water_hammer_color, 255, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pressed hammer icon color")
+MACRO_CONFIG_COL(QmWaterHookColor, qm_water_hook_color, 255, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pressed hook icon color")
 
 // QmVulkan 扩展：SDF 常驻，不再提供关闭 SDF/增强管线的配置。
 MACRO_CONFIG_INT(QmEnhancedProceduralRing, qm_enhanced_procedural_ring, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use procedural ring pipeline")
@@ -230,8 +238,8 @@ MACRO_CONFIG_INT(QmScoreboardPlaytime, qm_scoreboard_playtime, 0, 0, 1, CFGFLAG_
 MACRO_CONFIG_INT(QmScoreboardSortMode, qm_scoreboard_sort_mode, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Scoreboard sort mode (0=Score, 1=Points)")
 MACRO_CONFIG_INT(QmScoreboardOnDeath, qm_scoreboard_on_death, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show scoreboard after death")
 MACRO_CONFIG_INT(QmScoreboardScroll, qm_scoreboard_scroll, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Fixed-size scoreboard rows with mouse wheel scrolling for crowded servers")
-MACRO_CONFIG_STR(QmScoreboardFilter, qm_scoreboard_filter, 32, "", CFGFLAG_CLIENT, "Scoreboard filter: only show players whose name or clan contains this text")
 MACRO_CONFIG_INT(QmBetterScoreboard, qm_better_scoreboard, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable enhanced scoreboard presentation")
+MACRO_CONFIG_INT(QmMapTags, qm_map_tags, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show community map tags in server information")
 MACRO_CONFIG_INT(QmHideJoinServerInfo, qm_hide_join_server_info, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Do not auto-show server info on entering map")
 
 // Chat / 聊天
@@ -408,7 +416,7 @@ MACRO_CONFIG_INT(QmTitleColorMode, qm_title_color_mode, 0, 0, 2, CFGFLAG_CLIENT 
 MACRO_CONFIG_INT(QmTitleOpacity, qm_title_opacity, 100, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Sponsor title badge opacity (0-100)")
 MACRO_CONFIG_INT(QmTitleStyleEnabled, qm_title_style_enabled, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use animated title style (overrides qm_title_color_mode)")
 MACRO_CONFIG_STR(QmTitleStyle, qm_title_style, 32, "exotic_rainbow", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Animated title style id")
-MACRO_CONFIG_INT(QmSponsorChatStyle, qm_sponsor_chat_style, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Sponsor chat style draft: 0=Normal, 1=Platinum highlight")
+MACRO_CONFIG_INT(QmSponsorChatStyle, qm_sponsor_chat_style, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Sponsor chat style draft: 0=Normal, 1=Platinum highlight, 2=Fluid")
 MACRO_CONFIG_INT(QmSponsorChatEffects, qm_sponsor_chat_effects, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show synchronized sponsor chat styles")
 MACRO_CONFIG_INT(QmChatSponsorBadges, qm_chat_sponsor_badges, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show sponsor badges in chat")
 MACRO_CONFIG_INT(QmTitleMotionMode, qm_title_motion_mode, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Title motion: 0 = vertical wave, 1 = pop wave")
@@ -423,7 +431,6 @@ MACRO_CONFIG_INT(QmShowNameplateTitle, qm_show_nameplate_title, 1, 0, 1, CFGFLAG
 MACRO_CONFIG_INT(QmNameplateTitleScale, qm_nameplate_title_scale, 100, 50, 200, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Nameplate title size")
 MACRO_CONFIG_INT(QmShowMainTitle, qm_show_main_title, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show main tee title locally")
 MACRO_CONFIG_INT(QmShowDummyTitle, qm_show_dummy_title, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show dummy title locally")
-MACRO_CONFIG_INT(QmNameplateTitleAboveName, qm_nameplate_title_above_name, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Place title on a separate line above the player name instead of inline")
 MACRO_CONFIG_INT(QmWeaponTrajectory, qm_weapon_trajectory, 1, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Weapon trajectory helper mode (0=Off, 1=On key, 2=Always)")
 MACRO_CONFIG_INT(QmWeaponTrajectoryGun, qm_weapon_trajectory_gun, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pistol guide line")
 MACRO_CONFIG_INT(QmWeaponTrajectoryNinja, qm_weapon_trajectory_ninja, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Predict ninja path")
@@ -457,15 +464,15 @@ MACRO_CONFIG_INT(QmPausedSpectatorFade, qm_paused_spectator_fade, 0, 0, 1, CFGFL
 MACRO_CONFIG_INT(QmPausedSpectatorAlpha, qm_paused_spectator_alpha, 40, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Spectator opacity (percent)")
 
 // Input Overlay / 输入叠加
-MACRO_CONFIG_INT(QmInputOverlay, qm_input_overlay, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show input overlay")
-MACRO_CONFIG_INT(QmInputOverlayKeyCounts, qm_input_overlay_key_counts, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show key press counts")
+MACRO_CONFIG_INT(QmInputOverlay, qm_input_overlay, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show input overlay")
+MACRO_CONFIG_INT(QmInputOverlayKeyCounts, qm_input_overlay_key_counts, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show key press counts")
 MACRO_CONFIG_COL(QmInputOverlayCountColor, qm_input_overlay_count_color, 0xFF0000FF, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Key press count color")
 MACRO_CONFIG_INT(QmInputOverlayCountSize, qm_input_overlay_count_size, 100, 50, 200, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Key press count font size percentage")
 MACRO_CONFIG_STR(QmInputOverlayCountLabel, qm_input_overlay_count_label, 32, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Text before each key press count")
-MACRO_CONFIG_INT(QmInputOverlayScale, qm_input_overlay_scale, 20, 1, 200, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Input overlay keyboard scale (percent)")
-MACRO_CONFIG_INT(QmInputOverlayMouseScale, qm_input_overlay_mouse_scale, 20, 1, 200, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Input overlay mouse scale (percent)")
-MACRO_CONFIG_INT(QmInputOverlayOpacity, qm_input_overlay_opacity, 80, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Input overlay opacity (percent)")
-MACRO_CONFIG_INT(QmInputOverlayPosX, qm_input_overlay_pos_x, 71, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Input overlay X position (percent)")
+MACRO_CONFIG_INT(QmInputOverlayScale, qm_input_overlay_scale, 50, 1, 200, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Input overlay keyboard scale (percent)")
+MACRO_CONFIG_INT(QmInputOverlayMouseScale, qm_input_overlay_mouse_scale, 28, 1, 200, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Input overlay mouse scale (percent)")
+MACRO_CONFIG_INT(QmInputOverlayOpacity, qm_input_overlay_opacity, 100, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Input overlay opacity (percent)")
+MACRO_CONFIG_INT(QmInputOverlayPosX, qm_input_overlay_pos_x, 27, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Input overlay X position (percent)")
 MACRO_CONFIG_INT(QmInputOverlayPosY, qm_input_overlay_pos_y, 80, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Input overlay Y position (percent)")
 
 // Notification Bar / 通知栏
@@ -590,6 +597,10 @@ MACRO_CONFIG_INT(QmNameplateFreeMoveX, qm_nameplate_free_move_x, 0, 0, 1, CFGFLA
 MACRO_CONFIG_INT(QmNameplateFreeMoveY, qm_nameplate_free_move_y, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Name plate elements allow free Y movement")
 MACRO_CONFIG_INT(QmNameplateKeysOffsetX, qm_nameplate_keys_offset_x, 0, -300, 300, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Name plate key line X offset")
 MACRO_CONFIG_INT(QmNameplateKeysOffsetY, qm_nameplate_keys_offset_y, 0, -300, 300, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Name plate key line Y offset")
+MACRO_CONFIG_INT(QmNameplateWaterHammerOffsetX, qm_nameplate_water_hammer_offset_x, 0, -300, 300, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Name plate hammer icon X offset")
+MACRO_CONFIG_INT(QmNameplateWaterHammerOffsetY, qm_nameplate_water_hammer_offset_y, 0, -300, 300, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Name plate hammer icon Y offset")
+MACRO_CONFIG_INT(QmNameplateWaterHookOffsetX, qm_nameplate_water_hook_offset_x, 0, -300, 300, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Name plate hook icon X offset")
+MACRO_CONFIG_INT(QmNameplateWaterHookOffsetY, qm_nameplate_water_hook_offset_y, 0, -300, 300, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Name plate hook icon Y offset")
 MACRO_CONFIG_INT(QmNameplateCoordsOffsetX, qm_nameplate_coords_offset_x, 0, -300, 300, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Name plate coord line X offset")
 MACRO_CONFIG_INT(QmNameplateCoordsOffsetY, qm_nameplate_coords_offset_y, 0, -300, 300, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Name plate coord line Y offset")
 MACRO_CONFIG_INT(QmNameplateHookOffsetX, qm_nameplate_hook_offset_x, 0, -300, 300, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Name plate strength line X offset")
@@ -667,7 +678,7 @@ MACRO_CONFIG_INT(QmFocusModeHideGuideLines, qm_focus_mode_hide_guide_lines, 0, 0
 // Player Stats HUD - 玩家统计面板
 MACRO_CONFIG_INT(QmPlayerStatsHud, qm_player_stats_hud, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable player statistics panel")
 MACRO_CONFIG_INT(QmPlayerStatsMapProgress, qm_player_stats_map_progress, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show map progress bar (beta)")
-MACRO_CONFIG_INT(QmPlayerStatsMapProgressStyle, qm_player_stats_map_progress_style, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Map progress bar style (0=bottom bar, 1=HUD overlay)")
+MACRO_CONFIG_INT(QmPlayerStatsMapProgressStyle, qm_player_stats_map_progress_style, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Map progress bar location (0=standalone, 1=player stats, 2=Dynamic Island)")
 MACRO_CONFIG_COL(QmPlayerStatsMapProgressColor, qm_player_stats_map_progress_color, 0xFF24C764, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Map progress bar color")
 MACRO_CONFIG_INT(QmPlayerStatsMapProgressWidth, qm_player_stats_map_progress_width, 28, 10, 80, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Map progress bar width (percentage of screen width)")
 MACRO_CONFIG_INT(QmPlayerStatsMapProgressHeight, qm_player_stats_map_progress_height, 10, 6, 30, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Map progress bar height")
@@ -706,7 +717,7 @@ MACRO_CONFIG_INT(QmHudIslandUseOriginalStyle, qm_hud_island_use_original_style, 
 MACRO_CONFIG_INT(QmHudIslandShowTeam, qm_hud_island_show_team, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show team on HUD Dynamic Island")
 MACRO_CONFIG_INT(QmHudIslandAlwaysShowTrackDetails, qm_hud_island_always_show_track_details, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Always show song title and artist")
 MACRO_CONFIG_COL(QmHudIslandBgColor, qm_hud_island_bg_color, 0x9C460E, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Dynamic Island background color")
-MACRO_CONFIG_INT(QmHudIslandBgOpacity, qm_hud_island_bg_opacity, 80, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Dynamic Island background alpha")
+MACRO_CONFIG_INT(QmHudIslandBgOpacity, qm_hud_island_bg_opacity, 100, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Dynamic Island background alpha")
 MACRO_CONFIG_STR(QmHudEditorLayout, qm_hud_editor_layout, 2048, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "HUD editor layout")
 
 // Gores 组队落水榜
@@ -728,6 +739,8 @@ MACRO_CONFIG_INT(QmCinematicCamera, qm_cinematic_camera, 0, 0, 1, CFGFLAG_CLIENT
 MACRO_CONFIG_INT(QmCinematicCameraSmoothness, qm_cinematic_camera_smoothness, 80, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Cinematic camera smoothness (0=instant, 100=smoothest)")
 MACRO_CONFIG_INT(QmZoomInstantReverse, qm_zoom_instant_reverse, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)")
 MACRO_CONFIG_INT(QmCrashReportOnStartup, qm_crash_report_on_startup, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show pending crash reports in a window at startup (0 = keep them on disk and log a line instead)")
+// 仅移动端有效：桌面客户端直接把报告留在 dumps/QmClient_Crash，没有公共「下载」这条路径。
+MACRO_CONFIG_INT(QmMobileCrashReportExport, qm_mobile_crash_report_export, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)")
 MACRO_CONFIG_INT(QmAspectPreset, qm_aspect_preset, 0, 0, 6, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Aspect ratio preset (0=off, 1=5:4, 2=4:3, 3=3:2, 4=16:9, 5=21:9, 6=custom)")
 MACRO_CONFIG_INT(QmAspectRatio, qm_aspect_ratio, 178, 100, 300, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Custom aspect ratio, stored as x100 (e.g. 178=16:9, 233=21:9)")
 
@@ -764,6 +777,7 @@ MACRO_CONFIG_INT(Qm3DParticlesPulseSpeed, qm_3d_particles_pulse_speed, 100, 10, 
 MACRO_CONFIG_INT(Qm3DParticlesTwinkle, qm_3d_particles_twinkle, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable background 3D particle flicker")
 MACRO_CONFIG_INT(Qm3DParticlesTwinkleStrength, qm_3d_particles_twinkle_strength, 35, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Background 3D particle flicker intensity")
 MACRO_CONFIG_INT(QmShowTuneZoneColors, qm_show_tune_zone_colors, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Color map tune zones by their tune zone number")
+MACRO_CONFIG_INT(QmCheckpointGuide, qm_checkpoint_guide, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Guide to nearby uncollected teleport checkpoints and warn near checkpoint teleporters")
 MACRO_CONFIG_INT(QmBlankAssetFallback, qm_blank_asset_fallback, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)")
 
 // Skin queue - 皮肤队列
@@ -781,10 +795,18 @@ MACRO_CONFIG_INT(QmDummySkinQueueRotateMap, qm_dummy_skin_queue_rotate_map, 0, 0
 MACRO_CONFIG_INT(QmDummySkinQueueRandomJoin, qm_dummy_skin_queue_random_join, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Start dummy skin queue from a random position when entering a map")
 
 // Settings performance - 性能
-MACRO_CONFIG_INT(QmSettingsPrewarm, qm_settings_prewarm, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pre-warm settings page on startup and menu idle")
+// 实测：关闭时第一次打开图像页要 435ms（整帧冻住），开启后降到 6ms，
+// 且没有引入新的长帧（最长帧 438ms -> 37ms）。默认打开，仍可手动关闭。
+MACRO_CONFIG_INT(QmSettingsPrewarm, qm_settings_prewarm, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pre-warm settings page on startup and menu idle")
+MACRO_CONFIG_INT(QmSettingsPrewarmMigrated, qm_settings_prewarm_migrated, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Settings prewarm default migration done")
 
 // Chat Bubble Settings - 聊天气泡
+// 手机端默认把轨道放右侧：左侧边缘更容易被误触和圆角挡住。
+#if defined(CONF_PLATFORM_ANDROID) || defined(CONF_PLATFORM_IOS)
+MACRO_CONFIG_INT(QmChatScrollbarRight, qm_chat_scrollbar_right, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show the chat scrollbar on the right")
+#else
 MACRO_CONFIG_INT(QmChatScrollbarRight, qm_chat_scrollbar_right, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show the chat scrollbar on the right")
+#endif
 MACRO_CONFIG_INT(QmChatRelatedOnly, qm_chat_related_only, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Only show mentions, whispers and your own chat messages regardless of friend or team filters; keep system messages and respect muted players")
 MACRO_CONFIG_INT(QmChatSaveDraft, qm_chat_save_draft, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Keep unsent message on chat close")
 MACRO_CONFIG_INT(QmChatCommandCompletion, qm_chat_command_completion, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show command completion in chat")
@@ -804,6 +826,8 @@ MACRO_CONFIG_INT(QmChatAnimSlideOut, qm_chat_anim_slide_out, 0, 0, 1, CFGFLAG_CL
 MACRO_CONFIG_INT(QmChatAnimFadeDurationMs, qm_chat_anim_fade_duration_ms, 300, 0, 2000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Chat fade smooth time (milliseconds)")
 MACRO_CONFIG_INT(QmHideChatBubbles, qm_hide_chat_bubbles, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hide own chat bubble (only when authenticated in remote console)")
 MACRO_CONFIG_INT(QmChatBubble, qm_chat_bubble, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show chat bubbles above players")
+MACRO_CONFIG_INT(QmChatBubbleStyle, qm_chat_bubble_style, 3, 0, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble, 3=Default)")
+MACRO_CONFIG_INT(QmChatBubbleCustomColors, qm_chat_bubble_custom_colors, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use custom chat bubble colors")
 MACRO_CONFIG_INT(QmChatBubbleDuration, qm_chat_bubble_duration, 10, 1, 30, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Chat bubble display duration (seconds)")
 MACRO_CONFIG_INT(QmChatBubbleAlpha, qm_chat_bubble_alpha, 80, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Chat bubble transparency (0-100)")
 MACRO_CONFIG_INT(QmChatBubbleFontSize, qm_chat_bubble_font_size, 20, 8, 32, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Chat bubble font size")
@@ -829,12 +853,15 @@ MACRO_CONFIG_STR(QmNeteaseHookHelperPath, qm_netease_hook_helper_path, 512, "", 
 
 // 网易云歌词展示开关。关闭展示时后台桥接仍可继续采集并维护当前歌曲状态。
 MACRO_CONFIG_INT(QmLyrics, qm_lyrics, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable Netease lyric integration")
+MACRO_CONFIG_INT(QmWorldLyrics, qm_world_lyrics, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show glowing, floating lyrics in the map. Each new line stays where it appears; previous lines rise and fade out")
 MACRO_CONFIG_INT(QmLyricsInMediaIsland, qm_lyrics_in_media_island, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show current Netease lyric in Media Island")
 
+MACRO_CONFIG_INT(QmLyricsCommunity, qm_lyrics_community, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use cached or online AMLL community lyrics when the music source has no word timing")
 MACRO_CONFIG_INT(QmLyricsLanguage, qm_lyrics_language, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Lyrics language (0=Original, 1=Translation, 2=Original and translation)")
 MACRO_CONFIG_INT(QmLyricsSeparateIsland, qm_lyrics_separate_island, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show lyrics in a separate island below Dynamic Island")
 MACRO_CONFIG_INT(QmLyricsIslandFollowWidth, qm_lyrics_island_follow_width, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Match lyrics island width to the main Dynamic Island, excluding satellites")
-MACRO_CONFIG_INT(QmHumming, qm_humming, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines")
+MACRO_CONFIG_INT(QmHumming, qm_humming, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Send three consecutive lyrics to public chat at random intervals of 360 to 1200 seconds, with 3 seconds between lines. Successfully sending a lyric with Singing cancels pending humming lines and restarts the random wait")
+MACRO_CONFIG_INT(QmSinging, qm_singing, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Double-tap the bound key within 400 ms to send the current lyric to public chat")
 
 // 汽水音乐 Hook 集成(共享同一套歌词展示开关)。
 // 与网易云 Hook 互斥:默认关闭,用户在 Lyrics 设置里切换。
@@ -970,3 +997,14 @@ MACRO_CONFIG_INT(QmSelfKillEnabled, qm_self_kill_enabled, 0, 0, 1, CFGFLAG_CLIEN
 // 进图后自动开启保护的延迟（分钟）。0 = 不自动开启，保持配置里的默认状态。
 // 自动开启只改本局运行时状态，不写回 qm_self_kill_enabled。
 MACRO_CONFIG_INT(QmSelfKillAutoDelay, qm_self_kill_auto_delay, 0, 0, 60, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-enable self-kill protection this many minutes after joining a game (0 = never)")
+
+// 圆角曲线档位：0 原圆弧（旧外观，不扩展），1 超椭圆，2 五次贝塞尔，3 圆锥贝塞尔。
+// 超椭圆与五次贝塞尔的端点曲率为 0，是真正的连续曲率；圆锥贝塞尔的端点曲率恒为
+// 1/(2W²E)，只能把接缝跳变压小。连续曲率靠沿边拉长圆角补偿曲率峰值，拉长量受
+// 短边 25% 上限约束，扩不动时（胶囊、短边很近的小控件）曲线自动退回圆弧。
+MACRO_CONFIG_INT(QmUiCornerCurve, qm_ui_corner_curve, 2, 0, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier")
+MACRO_CONFIG_INT(QmUiCornerSmoothing, qm_ui_corner_smoothing, 40, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Continuous-curvature UI corners (0 = classic arc, 100 = strongest)")
+// 胶囊接缝软化：胶囊的半径已经贴到短边一半、没有生长空间，但半圆端头与直边交界处
+// 的曲率跳变仍可以单独软化。过渡带只有几个像素，形状几乎不变，只是肩部不再突然
+// 从直边拐进半圆。0 = 与 iOS 一致（纯半圆端头，接缝保持硬），这是默认值。
+MACRO_CONFIG_INT(QmUiCapsuleSeam, qm_ui_capsule_seam, 0, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Capsule seam smoothing: ease the straight-to-cap curvature jump (0 = plain semicircular ends)")

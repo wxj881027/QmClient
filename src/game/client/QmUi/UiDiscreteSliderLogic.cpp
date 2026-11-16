@@ -49,7 +49,7 @@ namespace ui_widget
 		Geometry.m_KnobSize = std::min(18.0f * Scale, Rect.h / 1.12f);
 		// 两端预留悬停放大后的半径，绘制与鼠标换算共用圆心行程。
 		const float Padding = Geometry.m_KnobSize * 0.56f;
-		// 服务器筛选沿用独立的厚胶囊轨道，不套公共细滑条尺寸。
+		// 离散滑条沿用独立的厚胶囊轨道，不套公共细滑条尺寸。
 		const float TrackHeight = Geometry.m_KnobSize * (6.0f / 7.0f);
 		Geometry.m_TravelStart = Rect.x + Padding;
 		Geometry.m_TravelWidth = std::max(0.0f, Rect.w - Padding * 2.0f);

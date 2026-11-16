@@ -6,7 +6,7 @@ buildscript {
 		mavenCentral()
 	}
 	dependencies {
-		classpath 'com.android.tools.build:gradle:8.13.0'
+		classpath 'com.android.tools.build:gradle:9.5.0'
 	}
 }
 
@@ -17,13 +17,13 @@ java {
 }
 
 android {
-	compileSdkVersion 36
-	buildToolsVersion "36.1.0"
+	namespace = "com.qmclient.client"
+	compileSdk 37
+	buildToolsVersion "37.0.0"
 	defaultConfig {
 		applicationId "com.qmclient.client"
-		namespace = "com.qmclient.client"
-		minSdkVersion 24
-		targetSdkVersion 36
+		minSdk 24
+		targetSdk 37
 		versionCode TW_VERSION_CODE
 		versionName "TW_VERSION_NAME"
 	}
@@ -38,9 +38,11 @@ android {
 	buildTypes {
 		release {
 			signingConfig = signingConfigs.release
-			minifyEnabled = true
-			shrinkResources = true
-			proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+			// 关闭 R8 压缩：Java 层很小（dex 约 160 KB），而 SDL 的 Java 胶水
+			// 大量由 JNI 按名字调用，R8 看不到这些引用会删掉方法，
+			// 运行期直接 NoSuchMethodError（SDLAudioManager.registerAudioDeviceCallback）。
+			minifyEnabled = false
+			shrinkResources = false
 		}
 		debug {
 			debuggable = true
@@ -48,7 +50,7 @@ android {
 			shrinkResources = false
 		}
 	}
-	packagingOptions {
+	packaging {
 		doNotStrip '**/*.so'
 		jniLibs {
 			useLegacyPackaging = true
@@ -60,7 +62,7 @@ android {
 			jniLibs.srcDirs = ['lib']
 		}
 	}
-	lintOptions {
+	lint {
 		abortOnError = false
 	}
 	dependencies {

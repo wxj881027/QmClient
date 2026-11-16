@@ -19,7 +19,7 @@ Adds a column to the vanilla scoreboard (points or accumulated playtime), opens 
 ## Watch out
 
 - The master switch "Better scoreboard" currently controls nothing: with it off, the five sub-settings still apply — turn them off one by one.
-- Playtime adds up `activity[].hours_played` from the official JSON, shown in hours; it does not use the last-year figure or client-side time. It shares the same request as points and is only cached for the current session, never written into the points database. An empty array shows 0, loading shows `...`, and a missing field, no valid hours, overflow or a failed request shows `?`; if a refresh fails, previously loaded numbers stay visible.
+- Playtime adds up DDStats per-mode seconds and shows whole hours; it does not use the last-year figure or client-side time. It has its own request separate from points, is only cached for the current session, and is never written into the points database. An empty list and players DDStats has no record of show 0, loading shows `...`, and an invalid response, overflow or a failed request shows `?`; if a refresh fails, previously loaded numbers stay visible.
 - On Windows, points and playtime lookups follow the system proxy automatically, including manual proxies, PAC and bypass rules; existing environment-variable proxies keep their priority. This only governs the HTTP requests for player points and playtime lookups, and proxy resolution runs in the background — if it takes longer than 8 seconds the request goes out over the original network path.
 - The filter matches both name and clan; when the scoreboard suddenly shows only a few players, clear the filter box first before investigating further.
 - The filter text is not saved and is cleared after restarting the client.

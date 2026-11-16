@@ -699,6 +699,8 @@ TEST(QmFocusMode, IndependentMapProgressUsesItsOwnToggleAndBottomStyle)
 	EXPECT_FALSE(ShouldRenderMapProgressBar(true, 1, true, true));
 	EXPECT_FALSE(ShouldRenderMapProgressBar(true, 0, false, false));
 	EXPECT_TRUE(ShouldRenderMapProgressBar(true, 0, false, true));
+	EXPECT_FALSE(ShouldRenderMapProgressBar(true, 2, true, true, true));
+	EXPECT_TRUE(ShouldRenderMapProgressBar(true, 2, true, true, false));
 }
 
 TEST(QmFocusMode, JumpEffectsAndJumpSoundAreDecidedIndependently)

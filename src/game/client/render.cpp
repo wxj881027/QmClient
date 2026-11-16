@@ -143,6 +143,10 @@ void CRenderTools::Init(IGraphics *pGraphics, ITextRender *pTextRender, CGameCli
 
 void CRenderTools::RenderCursor(vec2 Center, float Size, float Alpha) const
 {
+#if defined(CONF_PLATFORM_ANDROID)
+	// 移动端直接操作触点，不绘制桌面鼠标指针。
+	return;
+#endif
 	Graphics()->WrapClamp();
 	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_CURSOR].m_Id);
 	Graphics()->QuadsBegin();
@@ -151,6 +155,35 @@ void CRenderTools::RenderCursor(vec2 Center, float Size, float Alpha) const
 	Graphics()->QuadsDrawTL(&QuadItem, 1);
 	Graphics()->QuadsEnd();
 	Graphics()->WrapNormal();
+}
+
+void CRenderTools::RenderResizeCursor(vec2 Center, float Size, float Alpha) const
+{
+#if defined(CONF_PLATFORM_ANDROID)
+	return;
+#endif
+	// 左右箭头以鼠标位置为中心，热点始终落在所拖动的列边界上。
+	const float Scale = Size / 24.0f;
+	auto DrawArrow = [&](float Tip, float Shoulder, float HeadHeight, float ShaftHeight) {
+		const IGraphics::CQuadItem Shaft(Center.x - Shoulder * Scale, Center.y - ShaftHeight * Scale,
+			2.0f * Shoulder * Scale, 2.0f * ShaftHeight * Scale);
+		Graphics()->QuadsDrawTL(&Shaft, 1);
+		const IGraphics::CFreeformItem aHeads[] = {
+			{Center + vec2(-Tip, 0.0f) * Scale, Center + vec2(-Shoulder, -HeadHeight) * Scale,
+				Center + vec2(-Shoulder, HeadHeight) * Scale, Center + vec2(-Shoulder, HeadHeight) * Scale},
+			{Center + vec2(Shoulder, -HeadHeight) * Scale, Center + vec2(Tip, 0.0f) * Scale,
+				Center + vec2(Shoulder, HeadHeight) * Scale, Center + vec2(Shoulder, HeadHeight) * Scale},
+		};
+		Graphics()->QuadsDrawFreeform(aHeads, 2);
+	};
+
+	Graphics()->TextureClear();
+	Graphics()->QuadsBegin();
+	Graphics()->SetColor(0.0f, 0.0f, 0.0f, Alpha);
+	DrawArrow(12.0f, 5.0f, 7.0f, 2.0f);
+	Graphics()->SetColor(1.0f, 1.0f, 1.0f, Alpha);
+	DrawArrow(10.0f, 6.0f, 4.0f, 0.75f);
+	Graphics()->QuadsEnd();
 }
 
 void CRenderTools::RenderIcon(int ImageId, int SpriteId, const CUIRect *pRect, const ColorRGBA *pColor) const

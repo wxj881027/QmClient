@@ -114,6 +114,7 @@ void CQmAnimationBackend::Reset()
 	m_NextTrackId = 1;
 	m_NextGroupId = 1;
 	m_Values.clear();
+	m_ValueUseCounter = 0;
 	m_ActiveTracks.clear();
 	m_QueuedTracks.clear();
 	m_CustomEasings.clear();
@@ -244,7 +245,7 @@ bool CQmAnimationBackend::StartTrack(const STrackKey &Key, const SUiAnimRequest 
 	const bool IsSpring = Track.m_Transition.m_Driver == EUiAnimDriver::SPRING;
 	if(!IsSpring && Track.m_Transition.m_DurationSec <= 0.0f && Track.m_Transition.m_DelaySec <= 0.0f)
 	{
-		m_Values[Key] = Track.m_Target;
+		StoreValue(Key, Track.m_Target);
 		m_CompletedEvents.push_back({Key.m_NodeKey, Key.m_Property, Track.m_TrackId});
 		CompleteAwaitedTrack(Track.m_TrackId);
 		return false;
@@ -252,14 +253,14 @@ bool CQmAnimationBackend::StartTrack(const STrackKey &Key, const SUiAnimRequest 
 
 	if(IsSpring && std::abs(Track.m_Current - Track.m_Target) < RestEpsilonFor(Key.m_Property, Track.m_Transition.m_Spring) && std::abs(Track.m_Velocity) < RestVelocityFor(Key.m_Property, Track.m_Transition.m_Spring))
 	{
-		m_Values[Key] = Track.m_Target;
+		StoreValue(Key, Track.m_Target);
 		m_CompletedEvents.push_back({Key.m_NodeKey, Key.m_Property, Track.m_TrackId});
 		CompleteAwaitedTrack(Track.m_TrackId);
 		return false;
 	}
 
 	m_ActiveTracks[Key] = Track;
-	m_Values[Key] = StartValue;
+	StoreValue(Key, StartValue);
 	return true;
 }
 
@@ -319,7 +320,7 @@ bool CQmAnimationBackend::StartTrackInterrupt(const STrackKey &Key, const SUiAni
 		Request.m_Transition.m_DelaySec <= 0.0f && std::abs(StartValue - Request.m_Target) <= 0.0001f)
 	{
 		const uint32_t TrackId = Request.m_TrackId != 0 ? Request.m_TrackId : ActiveTrackId;
-		m_Values[Key] = Request.m_Target;
+		StoreValue(Key, Request.m_Target);
 		m_CompletedEvents.push_back({Key.m_NodeKey, Key.m_Property, TrackId});
 		CompleteAwaitedTrack(TrackId);
 		if(TrackId != ActiveTrackId)
@@ -335,7 +336,7 @@ bool CQmAnimationBackend::StartTrackInterrupt(const STrackKey &Key, const SUiAni
 	if(RequestIsTween && Request.m_Transition.m_DurationSec <= 0.0f && Request.m_Transition.m_DelaySec <= 0.0f)
 	{
 		const uint32_t TrackId = Request.m_TrackId != 0 ? Request.m_TrackId : Active.m_TrackId;
-		m_Values[Key] = Request.m_Target;
+		StoreValue(Key, Request.m_Target);
 		m_CompletedEvents.push_back({Key.m_NodeKey, Key.m_Property, TrackId});
 		if(TrackId != ActiveTrackId)
 			CancelAwaitedTrack(ActiveTrackId);
@@ -366,7 +367,7 @@ void CQmAnimationBackend::CompleteTrack(const STrackKey &Key, const SActiveTrack
 {
 	const float Target = Track.m_Target;
 	const uint32_t TrackId = Track.m_TrackId;
-	m_Values[Key] = Target;
+	StoreValue(Key, Target);
 	m_CompletedEvents.push_back({Key.m_NodeKey, Key.m_Property, TrackId});
 	CompleteAwaitedTrack(TrackId);
 	m_ActiveTracks.erase(Key);
@@ -460,15 +461,54 @@ float CQmAnimationBackend::CurrentValueFor(const STrackKey &Key, float DefaultVa
 
 	const auto ItValue = m_Values.find(Key);
 	if(ItValue != m_Values.end())
-		return ItValue->second;
+	{
+		// 读也算一次使用：仍然可见的元素每帧都会被读到，因此不会在淘汰窗口内过期。
+		ItValue->second.m_LastUseCounter = m_ValueUseCounter;
+		return ItValue->second.m_Value;
+	}
 
 	return DefaultValue;
+}
+
+void CQmAnimationBackend::StoreValue(const STrackKey &Key, float Value)
+{
+	SValueEntry &Entry = m_Values[Key];
+	Entry.m_Value = Value;
+	Entry.m_LastUseCounter = m_ValueUseCounter;
+}
+
+void CQmAnimationBackend::PruneValueCache()
+{
+	// 只在超过软上限后、且每千帧一次：这张表是每帧都要查的热结构，逐帧全表扫描
+	// 在"很多键都还新鲜、一个也删不掉"时会变成稳定的每帧开销，直接摊到帧时间上。
+	if(m_Values.size() <= MAX_VALUES_SOFT || (m_ValueUseCounter % 1024) != 0)
+		return;
+
+	for(auto It = m_Values.begin(); It != m_Values.end();)
+	{
+		if(m_ValueUseCounter - It->second.m_LastUseCounter <= MAX_VALUE_IDLE_FRAMES)
+		{
+			++It;
+			continue;
+		}
+		// 活跃与排队中的轨道持有当前值，淘汰会让弹簧/补间在下一帧从"无值"重启。
+		if(m_ActiveTracks.find(It->first) != m_ActiveTracks.end() || m_QueuedTracks.find(It->first) != m_QueuedTracks.end())
+		{
+			++It;
+			continue;
+		}
+		It = m_Values.erase(It);
+	}
+	// 兜底：长期只增不减说明窗口外仍有大量键被反复触碰，直接清空——值缓存丢了
+	// 只影响下一帧的一次"首见同步"，不会产生可见动画。
+	if(m_Values.size() > MAX_VALUES_HARD)
+		m_Values.clear();
 }
 
 void CQmAnimationBackend::SetValue(uint64_t NodeKey, EUiAnimProperty Property, float Value)
 {
 	const STrackKey Key{NodeKey, Property};
-	m_Values[Key] = Value;
+	StoreValue(Key, Value);
 	const auto ItActive = m_ActiveTracks.find(Key);
 	if(ItActive != m_ActiveTracks.end())
 	{
@@ -490,7 +530,11 @@ float CQmAnimationBackend::GetValue(uint64_t NodeKey, EUiAnimProperty Property, 
 
 bool CQmAnimationBackend::HasValue(uint64_t NodeKey, EUiAnimProperty Property) const
 {
-	return m_Values.find(STrackKey{NodeKey, Property}) != m_Values.end();
+	const auto ItValue = m_Values.find(STrackKey{NodeKey, Property});
+	if(ItValue == m_Values.end())
+		return false;
+	ItValue->second.m_LastUseCounter = m_ValueUseCounter;
+	return true;
 }
 
 bool CQmAnimationBackend::RequestAnimation(const SUiAnimRequest &Request)
@@ -564,68 +608,9 @@ void CQmAnimationBackend::AdvanceSpring(SActiveTrack &Track, float Dt, EUiAnimPr
 		return;
 
 	const SUiSpringConfig &Cfg = Track.m_Transition.m_Spring;
-	const float Mass = std::max(Cfg.m_Mass, 1e-4f);
-	const float Stiffness = std::max(Cfg.m_Stiffness, 0.0f);
-	const float Damping = std::max(Cfg.m_Damping, 0.0f);
-
-	// 解析解闭式积分：阻尼谐振子。每步以 (当前值, 当前速度) 为初值在 [t, t+Dt] 上
-	// 解析推进；线性常系数 ODE 下与全局闭式解完全等价，帧率无关、无条件稳定。
-	const float Omega0 = std::sqrt(Stiffness / Mass);
-	if(Omega0 <= 1e-6f)
-	{
-		// 无刚度退化：自由阻尼运动（指数衰减）或匀速直线运动。
-		const float Lambda = Damping / Mass;
-		if(Lambda <= 1e-9f)
-		{
-			Track.m_Current += Track.m_Velocity * Dt;
-		}
-		else
-		{
-			const float Decay = std::exp(-Lambda * Dt);
-			Track.m_Current += Track.m_Velocity * (1.0f - Decay) / Lambda;
-			Track.m_Velocity *= Decay;
-		}
-	}
-	else
-	{
-		const float Zeta = Damping / (2.0f * Mass * Omega0);
-		const float Displacement = Track.m_Current - Track.m_Target;
-		const float Velocity = Track.m_Velocity;
-		if(Zeta < 1.0f)
-		{
-			// 欠阻尼：x(t) = e^(-ζω0 t)·(A·cos(ωd·t) + B·sin(ωd·t))，A=d0，B=(v0+ζω0·d0)/ωd
-			const float OmegaD = Omega0 * std::sqrt(std::max(0.0f, 1.0f - Zeta * Zeta));
-			const float A = Displacement;
-			const float B = (Velocity + Zeta * Omega0 * Displacement) / OmegaD;
-			const float Decay = std::exp(-Zeta * Omega0 * Dt);
-			const float CosDt = std::cos(OmegaD * Dt);
-			const float SinDt = std::sin(OmegaD * Dt);
-			Track.m_Current = Track.m_Target + Decay * (A * CosDt + B * SinDt);
-			Track.m_Velocity = Decay * ((B * OmegaD - A * Zeta * Omega0) * CosDt - (A * OmegaD + B * Zeta * Omega0) * SinDt);
-		}
-		else if(Zeta > 1.0f)
-		{
-			// 过阻尼：x(t) = A·e^(s1·t) + B·e^(s2·t)，s1/s2 为两个负实根
-			const float Root = Omega0 * std::sqrt(std::max(0.0f, Zeta * Zeta - 1.0f));
-			const float S1 = -Zeta * Omega0 + Root;
-			const float S2 = -Zeta * Omega0 - Root;
-			const float A = (Velocity - S2 * Displacement) / (S1 - S2);
-			const float B = (S1 * Displacement - Velocity) / (S1 - S2);
-			const float Exp1 = std::exp(S1 * Dt);
-			const float Exp2 = std::exp(S2 * Dt);
-			Track.m_Current = Track.m_Target + A * Exp1 + B * Exp2;
-			Track.m_Velocity = A * S1 * Exp1 + B * S2 * Exp2;
-		}
-		else
-		{
-			// 临界阻尼：x(t) = (d0 + (v0 + ω0·d0)·t)·e^(-ω0 t)
-			const float A = Displacement;
-			const float B = Velocity + Omega0 * Displacement;
-			const float Decay = std::exp(-Omega0 * Dt);
-			Track.m_Current = Track.m_Target + (A + B * Dt) * Decay;
-			Track.m_Velocity = (Velocity - Omega0 * B * Dt) * Decay;
-		}
-	}
+	// 积分本身是共用实现（QmAnimationBackend.h 的 QmSpringAdvance）：滚动越界回弹
+	// 走同一条闭式解，两处手感不会各自漂移。此处只负责延迟与静止判定。
+	QmSpringAdvance(Track.m_Current, Track.m_Velocity, Track.m_Target, Cfg, Dt);
 
 	const bool AtRest = std::abs(Track.m_Current - Track.m_Target) < RestEpsilonFor(Property, Cfg) && std::abs(Track.m_Velocity) < RestVelocityFor(Property, Cfg);
 	if(AtRest)
@@ -639,6 +624,8 @@ void CQmAnimationBackend::Advance(float Dt)
 	if(!std::isfinite(Dt) || Dt <= 0.0f)
 		return;
 	m_TimeSec += Dt;
+	// 值缓存的使用时钟按帧推进，与 m_TimeSec 解耦（只在淘汰判据里当"最近第几帧"用）。
+	m_ValueUseCounter++;
 
 	constexpr float KSpringRestHoldSec = 0.033f;
 	const auto AdvanceTrack = [&](const STrackKey &Key, SActiveTrack &Track, float Elapsed, float &Remaining) {
@@ -651,7 +638,7 @@ void CQmAnimationBackend::Advance(float Dt)
 			const float ActiveDt = std::min(Elapsed, std::max(0.0f, Track.m_ElapsedSec - Delay));
 			if(ActiveDt > 0.0f)
 				AdvanceSpring(Track, ActiveDt, Key.m_Property);
-			m_Values[Key] = Track.m_Current;
+			StoreValue(Key, Track.m_Current);
 			return Track.m_RestTimerSec >= KSpringRestHoldSec;
 		}
 
@@ -661,7 +648,7 @@ void CQmAnimationBackend::Advance(float Dt)
 		Track.m_Current = Track.m_Start + (Track.m_Target - Track.m_Start) * Progress;
 		// 有限差分速度用于被打断后的弹簧接续。
 		Track.m_Velocity = (Track.m_Current - Previous) / Elapsed;
-		m_Values[Key] = Track.m_Current;
+		StoreValue(Key, Track.m_Current);
 		if(RawProgress < 1.0f)
 			return false;
 		// 固定时长轨道可精确交接剩余时间；后续轨道仍保留自己的延迟。
@@ -699,6 +686,8 @@ void CQmAnimationBackend::Advance(float Dt)
 				break;
 		}
 	}
+
+	PruneValueCache();
 }
 
 bool CQmAnimationBackend::HasActiveAnimation(uint64_t NodeKey, EUiAnimProperty Property) const

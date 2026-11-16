@@ -1,7 +1,11 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_MUSIC_LYRICS_MUSIC_HUMMING_STATE_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_MUSIC_LYRICS_MUSIC_HUMMING_STATE_H
 
+#include "music_lyrics_chat.h"
+#include "music_lyrics_metadata.h"
 #include "music_lyrics_model.h"
+
+#include <base/str.h>
 
 #include <algorithm>
 #include <array>
@@ -26,16 +30,13 @@ namespace QmMusicLyrics
 
 	inline std::string HummingMessage(std::string_view Text)
 	{
-		if(!NeteaseLyrics::IsValidUtf8(Text))
+		if(Text.find(':') != std::string_view::npos || Text.find("：") != std::string_view::npos)
 			return {};
-		std::string Clean(Text);
-		for(char &Ch : Clean)
-			if(static_cast<unsigned char>(Ch) < 0x20 || Ch == 0x7f)
-				Ch = ' ';
-		const size_t Start = Clean.find_first_not_of(' ');
-		if(Start == std::string::npos)
+		const std::string Clean = CleanLyricChatText(Text);
+		if(Clean.empty())
 			return {};
-		Clean = Clean.substr(Start, Clean.find_last_not_of(' ') - Start + 1);
+		if(IsLyricCredit(Clean))
+			return {};
 		// 固定音符前缀使以斜杠开头的歌词也只能作为聊天文字发送。
 		return "♪ " + NeteaseLyrics::TruncateUtf8(Clean, 251);
 	}
@@ -63,8 +64,15 @@ namespace QmMusicLyrics
 			m_aMessages = {};
 			m_LineCount = 0;
 			m_NextLine = 0;
-			m_NextMs = NowMs + std::clamp(DelayMs, 30000, 90000);
+			m_NextMs = NowMs + std::clamp(DelayMs, 360000, 1200000);
 			m_Scheduled = m_Available;
+		}
+
+		void OnSingingResult(bool Sent, int64_t NowMs, int NextGroupDelayMs)
+		{
+			// 唱歌成功后取消本组剩余歌词，从本次发送重新等待。
+			if(Sent)
+				Schedule(NowMs, NextGroupDelayMs);
 		}
 
 		bool BeginGroup(const NeteaseLyrics::STimeline &Timeline, size_t Choice, int64_t NowMs)

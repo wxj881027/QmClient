@@ -32,6 +32,10 @@ private:
 
 	CRClientVoice m_Voice;
 	CVoiceOverlayState m_OverlayState;
+	// 首次启用语音时是否已放行冷启动；关闭语音后重新复位，让下一次启用重新等卡片动画。
+	bool m_ColdStartReleased = false;
+	// 等卡片动画的上限时刻：动画标记异常时到点直接启动，避免语音一直起不来。
+	int64_t m_ColdStartDeadline = 0;
 };
 
 #endif // GAME_CLIENT_COMPONENTS_QMCLIENT_VOICE_VOICE_COMPONENT_H

@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Bind 界面原型 · QmClient</title>
+<style>
+  :root{
+    --ink:#f7fbfe;
+    --muted:rgba(247,251,254,.72);
+    --faint:rgba(247,251,254,.52);
+    --line:rgba(255,255,255,.22);
+    --glass:rgba(255,255,255,.12);
+    --glass2:rgba(255,255,255,.08);
+    --dark:#1b2833;
+    --teal:#7ff0d8;
+    --amber:#ffcf7a;
+    --red:#ff9f98;
+    --mono:ui-monospace,"Cascadia Mono",Consolas,"SFMono-Regular",monospace;
+    --sans:"Microsoft YaHei UI","Microsoft YaHei","PingFang SC","Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#0d1216;font-family:var(--sans);color:#dfe8f0}
+  .page{display:flex;flex-direction:column;align-items:center;gap:34px;padding:36px 0 60px}
+  .shot{margin:0;display:flex;flex-direction:column;gap:10px}
+  .shot figcaption{color:#7d8b99;font-size:13px;padding-left:4px;letter-spacing:.02em}
+  .shot figcaption b{color:#b9c7d4;font-weight:600}
+
+  .artboard{position:relative;width:1280px;height:800px;overflow:hidden;font-family:var(--sans);color:var(--ink);isolation:isolate}
+  .scene{position:absolute;inset:-24px;background:linear-gradient(180deg,#8fc4dd 0%,#a6cdb4 36%,#87b070 60%,#4f7346 100%);filter:saturate(.72) brightness(.52)}
+  .scene:before{content:"";position:absolute;left:-12%;top:48%;width:72%;height:74%;background:radial-gradient(closest-side,#82b06c,transparent 70%);filter:blur(46px);opacity:.95}
+  .scene:after{content:"";position:absolute;right:-18%;top:34%;width:86%;height:86%;background:radial-gradient(closest-side,#d6e9bd,transparent 68%);filter:blur(56px);opacity:.8}
+  .scrim{position:absolute;inset:0;background:radial-gradient(120% 95% at 48% 36%,rgba(6,14,18,.30),rgba(6,14,18,.72))}
+  .grain{position:absolute;inset:0;opacity:.07;background-image:radial-gradient(rgba(255,255,255,.5) .5px,transparent .5px);background-size:3px 3px;mix-blend-mode:overlay}
+
+  .settings{position:absolute;inset:16px 20px;display:grid;grid-template-columns:minmax(0,1fr) 136px;gap:12px}
+  .panel{
+    position:relative;height:100%;border-radius:16px;padding:13px 16px 12px;
+    background:linear-gradient(180deg,rgba(22,37,45,.82),rgba(11,22,28,.76));
+    border:1px solid rgba(255,255,255,.18);
+    box-shadow:0 26px 64px rgba(0,8,12,.45),inset 0 1px 0 rgba(255,255,255,.14);
+    backdrop-filter:blur(22px) saturate(125%);
+    display:flex;flex-direction:column;gap:9px;
+  }
+  .side{padding-top:44px;display:flex;flex-direction:column;gap:6px}
+  .side .item{
+    height:33px;border-radius:9px;display:flex;align-items:center;justify-content:center;gap:6px;
+    background:rgba(9,20,26,.55);border:1px solid rgba(255,255,255,.13);
+    font-size:12.8px;color:rgba(255,255,255,.92);text-shadow:0 1px 2px rgba(0,0,0,.28);
+  }
+  .side .item.on{background:rgba(255,255,255,.17);border-color:rgba(255,255,255,.30);font-weight:600}
+  .side .gear{background:rgba(9,20,26,.35)}
+
+  .tabs{display:flex;align-items:center;gap:8px;min-height:36px}
+  .tab{
+    height:35px;padding:0 17px;border-radius:999px;display:flex;align-items:center;gap:7px;
+    background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);
+    font-size:13.4px;color:rgba(255,255,255,.9);text-shadow:0 1px 2px rgba(0,0,0,.25);
+  }
+  .tab.on{background:rgba(255,255,255,.95);border-color:transparent;color:#1b2833;font-weight:600;text-shadow:none;box-shadow:0 5px 16px rgba(9,24,30,.16)}
+  .tab svg{width:15px;height:15px}
+
+  .rowline{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .subtabs{display:flex;gap:2px;padding:3px;border-radius:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);width:max-content}
+  .subtab{height:27px;padding:0 15px;border-radius:8px;display:flex;align-items:center;gap:6px;font-size:12.6px;color:rgba(255,255,255,.8)}
+  .subtab.on{background:rgba(255,255,255,.92);color:#1b2833;font-weight:600;box-shadow:0 3px 10px rgba(9,24,30,.12)}
+  .subtabs .dot{width:5px;height:5px;border-radius:50%;background:var(--teal)}
+  .hint{font-size:11.6px;color:var(--faint);display:flex;align-items:center;gap:6px}
+  .hint b{color:rgba(255,255,255,.86);font-weight:600}
+
+  .body{flex:1;min-height:0;display:flex;gap:12px}
+  .col{min-height:0;display:flex;flex-direction:column;gap:9px}
+  .fill{flex:1;min-width:0;min-height:0}
+
+  .card{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.10);border-radius:12px;padding:11px 12px;backdrop-filter:blur(8px)}
+  .card-h{font-size:11.4px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-bottom:8px;font-weight:600}
+
+  /* keyboard */
+  .kb{padding:11px 10px 10px;border-radius:13px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.10)}
+  .krow{display:flex;gap:5px;margin-bottom:5px}
+  .krow:last-child{margin-bottom:0}
+  .key{position:relative;height:37px;flex:0 0 38px;border-radius:7px;background:rgba(255,255,255,.075);border:1px solid rgba(255,255,255,.13);display:flex;align-items:center;justify-content:center;font-size:10.4px;color:rgba(255,255,255,.95);text-shadow:0 1px 2px rgba(0,0,0,.25)}
+  .key.w15{flex-basis:57px}.key.w18{flex-basis:70px}.key.w2{flex-basis:83px}.key.w23{flex-basis:96px}.key.w3{flex-basis:122px}.key.w4{flex-basis:160px}
+  .key.small{font-size:9.4px}
+  .key.bound:after{content:"";position:absolute;right:5px;bottom:5px;width:5px;height:5px;border-radius:50%;background:var(--teal);box-shadow:0 0 7px rgba(127,240,216,.9)}
+  .key.sel{background:rgba(255,255,255,.95);border-color:#fff;color:#1b2833;font-weight:700;text-shadow:none;box-shadow:0 0 0 3px rgba(255,255,255,.22),0 6px 16px rgba(9,24,30,.18)}
+  .mice{display:flex;gap:8px;margin-top:9px}
+  .mouse{flex:1;height:44px;border-radius:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:11.4px}
+  .mouse.bound:after{content:"";width:5px;height:5px;border-radius:50%;background:var(--teal);margin-left:6px;box-shadow:0 0 7px rgba(127,240,216,.9)}
+  .wheel{flex:1.1;display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+  .wheel div{border-radius:7px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;font-size:9.4px;color:rgba(255,255,255,.8)}
+
+  /* inspector */
+  .insp{width:352px;flex:0 0 352px}
+  .keytitle{display:flex;align-items:flex-end;gap:10px}
+  .keytitle .big{font-size:27px;font-weight:700;line-height:1;letter-spacing:-.02em}
+  .badge{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 9px;border-radius:999px;font-size:10.8px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.12);color:rgba(255,255,255,.92)}
+  .badge.teal{background:rgba(127,240,216,.18);border-color:rgba(127,240,216,.42);color:#c9fff3}
+  .badge.amber{background:rgba(255,207,122,.18);border-color:rgba(255,207,122,.44);color:#ffe6b8}
+  .badge.red{background:rgba(255,159,152,.18);border-color:rgba(255,159,152,.44);color:#ffd3cf}
+  .src{display:flex;align-items:center;gap:6px;font-size:11.4px;color:var(--muted)}
+  .src .dot{width:5px;height:5px;border-radius:50%;background:var(--teal)}
+  .src a{color:#bff7ec;text-decoration:none;border-bottom:1px dashed rgba(191,247,236,.4)}
+  .node{display:flex;align-items:center;gap:8px;padding:8px 9px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.11);font-family:var(--mono);font-size:11.2px}
+  .node .grip{color:rgba(255,255,255,.35);font-size:11px}
+  .node .txt{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#eaf4fb}
+  .node .del{color:rgba(255,255,255,.45);font-size:12px}
+  .node + .node{margin-top:6px}
+  .addrow{display:flex;gap:6px;align-items:center}
+  .inputlike{flex:1;height:32px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14);display:flex;align-items:center;padding:0 10px;font-size:11.6px;color:var(--faint)}
+  .btn{height:32px;padding:0 12px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:11.8px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.16);color:#f4fbff}
+  .btn.primary{background:rgba(255,255,255,.95);border-color:transparent;color:#1b2833;font-weight:600}
+  .btn.ghost{background:transparent}
+  .btn.sm{height:28px;font-size:11px;padding:0 10px}
+  .stat{display:flex;justify-content:space-between;font-size:10.8px;color:var(--faint)}
+  .stat b{color:rgba(255,255,255,.86);font-weight:600;font-family:var(--mono)}
+
+  .occ{display:flex;flex-direction:column;gap:5px;margin-top:8px;min-height:0;overflow:hidden}
+  .occrow{display:grid;grid-template-columns:56px minmax(0,1fr) 84px 52px;gap:8px;align-items:center;padding:7px 8px;border-radius:8px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08);font-size:10.6px}
+  .occrow .cmd{font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.82);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .occrow .src2{font-size:10.2px;color:rgba(255,255,255,.62);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .occrow .tag2{font-size:9.4px;color:#a9f3e3;text-align:right}
+  .occrow.warn{border-color:rgba(255,207,122,.35);background:rgba(255,207,122,.07)}
+  .occrow.warn .tag2{color:#ffd79a}
+  .occrow.warn .keycap{border-color:rgba(255,207,122,.45)}
+
+  .modes{display:flex;flex-direction:column;gap:6px}
+  .modes div{display:flex;gap:8px;align-items:baseline;font-size:10.6px;color:rgba(255,255,255,.6)}
+  .modes b{flex:0 0 58px;font-size:10.8px;color:#fff;font-weight:600}
+  /* workshop */
+  .chips{display:flex;gap:6px;align-items:center;flex-wrap:nowrap}
+  .chip{height:29px;padding:0 12px;border-radius:999px;display:flex;align-items:center;gap:6px;font-size:11.8px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.11);color:rgba(255,255,255,.86)}
+  .chip.on{background:rgba(255,255,255,.93);color:#1b2833;font-weight:600;border-color:transparent}
+  .chip i{font-style:normal;font-size:10px;opacity:.62}
+  .search{height:40px;border-radius:12px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.11);display:flex;align-items:center;gap:9px;padding:0 13px;color:var(--faint);font-size:12.4px}
+  .search .sp{flex:1}
+  .seg{display:flex;gap:2px;padding:2px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.11)}
+  .seg div{width:26px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.7)}
+  .seg div.on{background:rgba(255,255,255,.9);color:#1b2833}
+  .grid{flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
+  .pcard{position:relative;display:flex;flex-direction:column;gap:7px;padding:11px 12px 10px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.11);overflow:hidden}
+  .pcard.applied{border-color:rgba(127,240,216,.44);background:linear-gradient(180deg,rgba(127,240,216,.10),rgba(255,255,255,.09))}
+  .pcard.conflict{border-color:rgba(255,207,122,.42)}
+  .pcard .top{display:flex;align-items:center;justify-content:space-between}
+  .cat{font-size:10px;padding:1px 7px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.18);color:rgba(255,255,255,.82)}
+  .pcard h3{margin:0;font-size:14.6px;font-weight:600;letter-spacing:-.01em;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.25)}
+  .pcard .desc{margin:0;font-size:11.2px;line-height:1.5;color:var(--muted);height:33px;overflow:hidden}
+  .keyrow{display:flex;align-items:center;gap:6px;font-size:10.8px;color:var(--faint)}
+  .keycap{min-width:30px;height:24px;padding:0 8px;border-radius:6px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.26);display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10.5px;color:#fff}
+  .keycap.empty{color:rgba(255,255,255,.45);border-style:dashed;background:transparent}
+  .codebox{font-family:var(--mono);font-size:10.2px;line-height:1.55;color:#dcebf5;background:rgba(0,0,0,.30);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:7px 8px;height:52px;min-height:52px;flex:none;overflow:hidden;position:relative}
+  .codebox:after{content:"";position:absolute;left:0;right:0;bottom:0;height:18px;background:linear-gradient(180deg,transparent,rgba(8,18,24,.5))}
+  .tags{display:flex;gap:4px;overflow:hidden}
+  .tags span{font-size:9px;line-height:1.7;padding:0 6px;border-radius:999px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.52)}
+  .pf{display:flex;align-items:center;gap:6px;margin-top:auto}
+  .pf .grow{flex:1}
+  .pf .apply{height:27px;padding:0 12px;border-radius:7px;background:rgba(255,255,255,.94);color:#1b2833;font-size:11.2px;font-weight:600;display:flex;align-items:center;gap:5px}
+  .pf .apply.done{background:rgba(127,240,216,.22);color:#d8fff6;border:1px solid rgba(127,240,216,.45)}
+  .pf .more{width:27px;height:27px;border-radius:7px;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.75);font-size:12px}
+  .warnline{display:flex;align-items:center;gap:5px;font-size:10.2px;color:#ffe0ae}
+  .footbar{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--faint);padding-top:2px}
+  .footbar .l{display:flex;gap:12px;align-items:center}
+
+  /* blueprint */
+  .bp{flex:1;min-height:0;display:grid;grid-template-columns:216px minmax(0,1fr) 294px;gap:10px}
+  .pane{border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.10);display:flex;flex-direction:column;min-height:0}
+  .pane-h{height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 11px;font-size:11.4px;letter-spacing:.06em;color:var(--faint);border-bottom:1px solid rgba(255,255,255,.10)}
+  .plist{padding:8px;display:flex;flex-direction:column;gap:5px;overflow:hidden}
+  .pitem{padding:8px 9px;border-radius:8px;background:rgba(255,255,255,.035);border:1px solid transparent;font-size:11.8px;color:rgba(255,255,255,.88);display:flex;align-items:center;justify-content:space-between}
+  .pitem.on{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.22);font-weight:600}
+  .pitem small{font-size:9.8px;color:var(--faint);font-weight:400}
+  .newflow{margin-top:auto;padding:8px 9px;border-radius:8px;border:1px dashed rgba(255,255,255,.26);font-size:11.4px;color:rgba(255,255,255,.72);text-align:center}
+
+  .canvas{position:relative;flex:1;min-height:0;border-radius:12px;border:1px solid rgba(255,255,255,.15);overflow:hidden;
+    background-color:rgba(3,10,14,.38);
+    background-image:radial-gradient(rgba(255,255,255,.16) 1px,transparent 1px);
+    background-size:18px 18px}
+  .cvbar{position:absolute;left:10px;top:10px;display:flex;gap:5px;align-items:center;z-index:3}
+  .cvbar .pill{height:26px;padding:0 10px;border-radius:7px;background:rgba(20,32,40,.55);border:1px solid rgba(255,255,255,.16);font-size:10.6px;display:flex;align-items:center;gap:5px;color:rgba(255,255,255,.82)}
+  .cvstat{position:absolute;left:12px;bottom:10px;font-size:10.4px;color:rgba(255,255,255,.55)}
+  .gnode{position:absolute;width:150px;border-radius:9px;background:rgba(14,26,34,.94);border:1px solid rgba(255,255,255,.22);box-shadow:0 10px 26px rgba(5,14,20,.35)}
+  .gnode .gh{height:24px;display:flex;align-items:center;gap:6px;padding:0 9px;font-size:10.4px;font-weight:600;color:#0f1c24;background:#a7d8ff;border-radius:8px 8px 0 0}
+  .gnode.g2 .gh{background:#9fe8d6}
+  .gnode.g3 .gh{background:#ffd79a}
+  .gnode .gb{padding:7px 9px;font-family:var(--mono);font-size:9.8px;line-height:1.5;color:#e8f3fa;word-break:break-all}
+  .port{position:absolute;width:8px;height:8px;border-radius:50%;background:#16222b;border:1.5px solid rgba(255,255,255,.65);top:50%;transform:translateY(-50%)}
+  .port.l{left:-5px}.port.r{right:-5px}
+  .cvsvg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  .cvlabel{position:absolute;font-size:9.4px;color:rgba(255,255,255,.6);background:rgba(12,24,30,.5);padding:1px 5px;border-radius:3px}
+
+  .insp2{padding:10px 11px;display:flex;flex-direction:column;gap:8px;overflow:hidden}
+  .field{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11.2px;color:var(--muted)}
+  .field b{font-weight:600;color:#fff;font-size:11.4px}
+  .field .val{font-family:var(--mono);font-size:10.6px;color:#eaf4fb;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:6px;padding:3px 7px}
+  .out{font-family:var(--mono);font-size:9.9px;line-height:1.6;color:#dff0fa;background:rgba(8,18,24,.3);border:1px solid rgba(255,255,255,.13);border-radius:8px;padding:8px;height:74px;overflow:hidden}
+  .checks{display:flex;flex-direction:column;gap:4px;font-size:10.2px;color:var(--muted)}
+  .checks div{display:flex;justify-content:space-between}
+  .checks i{font-style:normal;color:#a9f3e3}
+  .checks .warn{color:#ffd79a}
+
+  .qrow{display:flex;justify-content:space-between;align-items:center;padding:6px 2px;font-size:10.8px;color:rgba(255,255,255,.72);border-bottom:1px solid rgba(255,255,255,.06)}
+  .qrow:last-child{border-bottom:0}
+  .qrow span{font-family:var(--mono);font-size:9.8px;color:rgba(255,255,255,.45)}
+  .chk2{display:flex;gap:6px;align-items:center;font-size:10.4px;color:rgba(255,255,255,.68)}
+  .chk2 i{width:12px;height:12px;border-radius:3px;border:1px solid rgba(255,255,255,.28);display:flex;align-items:center;justify-content:center;font-style:normal;font-size:9px;color:#0f1c24}
+  .chk2 i.on{background:#7ff0d8;border-color:#7ff0d8}
+  .stage{position:absolute;left:12px;top:44px;width:460px;height:520px}
+  .cvnote{position:absolute;width:330px;border:1px dashed rgba(255,255,255,.16);border-radius:10px;padding:9px 10px;font-size:10px;color:rgba(255,255,255,.55);line-height:1.65;background:rgba(255,255,255,.02)}
+
+  /* dialog */
+  .overlay{position:absolute;inset:0;background:rgba(6,14,18,.44);backdrop-filter:blur(1.5px);display:flex;align-items:center;justify-content:center}
+  .dialog{width:540px;border-radius:16px;padding:18px 18px 14px;background:linear-gradient(180deg,rgba(32,46,56,.96),rgba(22,33,41,.97));border:1px solid rgba(255,255,255,.22);box-shadow:0 30px 80px rgba(0,0,0,.45)}
+  .dialog h3{margin:0 0 4px;font-size:17px;letter-spacing:-.01em}
+  .dialog .sub{font-size:11.6px;color:var(--faint);margin-bottom:12px}
+  .diff{border:1px solid rgba(255,255,255,.14);border-radius:10px;overflow:hidden;margin-bottom:10px}
+  .drow{display:flex;gap:12px;padding:9px 10px;font-size:11px;border-bottom:1px solid rgba(255,255,255,.09)}
+  .drow:last-child{border-bottom:0}
+  .drow .k{width:58px;flex:none;font-family:var(--mono);color:#fff}
+  .drow .v{flex:1;min-width:0;padding-right:6px;font-family:var(--mono);font-size:10.1px;color:rgba(255,255,255,.82);word-break:normal;overflow-wrap:break-word}
+  .drow .tag{flex:none;font-size:9.6px;color:#a9f3e3}
+  .drow.over .tag{color:#ffd79a}
+  .note{display:flex;gap:6px;align-items:flex-start;font-size:10.8px;color:rgba(255,255,255,.62);line-height:1.5;margin-bottom:12px}
+  .dact{display:flex;justify-content:flex-end;gap:8px}
+  .dact .btn{height:32px}
+  .blurred{filter:blur(1.2px) saturate(.9);opacity:.58}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ============ 1. OFFICIAL BIND ============ -->
+  <figure class="shot">
+    <div class="artboard" id="s1">
+      <div class="scene"></div><div class="scrim"></div><div class="grain"></div>
+      <div class="settings">
+        <div class="panel">
+          <div class="tabs">
+            <div class="tab">控制</div>
+            <div class="tab on">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="6" width="20" height="12" rx="2.5"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg>
+              Bind
+            </div>
+            <div style="flex:1"></div>
+            <div class="hint">键位占用 <b>24</b> 个 · 冲突 <b>1</b></div>
+          </div>
+          <div class="rowline">
+            <div class="subtabs">
+              <div class="subtab on">官方</div>
+              <div class="subtab">指令工坊</div>
+              <div class="subtab">蓝图</div>
+            </div>
+            <div class="hint">改动即时写入 · 可撤销</div>
+          </div>
+
+          <div class="body">
+            <div class="col fill">
+              <div class="card" style="padding:10px 11px 11px">
+                <div class="rowline">
+                  <div class="card-h" style="margin:0">键盘与鼠标</div>
+                  <div class="hint">0 · S · Space · M1 已绑定</div>
+                </div>
+                <div class="kb" style="margin-top:8px">
+                  <div class="krow">
+                    <div class="key w15 small">Esc</div><div class="key">1</div><div class="key">2</div><div class="key">3</div><div class="key">4</div><div class="key">5</div><div class="key">6</div><div class="key">7</div><div class="key">8</div><div class="key">9</div><div class="key bound">0</div><div class="key">-</div><div class="key">=</div><div class="key w2 small">Backspace</div>
+                  </div>
+                  <div class="krow">
+                    <div class="key w15 small">Tab</div><div class="key">Q</div><div class="key">W</div><div class="key">E</div><div class="key">R</div><div class="key">T</div><div class="key">Y</div><div class="key">U</div><div class="key">I</div><div class="key">O</div><div class="key">P</div><div class="key">[</div><div class="key">]</div><div class="key w15 small">\</div>
+                  </div>
+                  <div class="krow">
+                    <div class="key w18 small">Caps</div><div class="key">A</div><div class="key bound">S</div><div class="key">D</div><div class="key">F</div><div class="key">G</div><div class="key sel">H</div><div class="key">J</div><div class="key">K</div><div class="key">L</div><div class="key">;</div><div class="key">'</div><div class="key w23 small">Enter</div>
+                  </div>
+                  <div class="krow">
+                    <div class="key w23 small">Shift</div><div class="key">Z</div><div class="key">X</div><div class="key">C</div><div class="key">V</div><div class="key">B</div><div class="key">N</div><div class="key">M</div><div class="key">,</div><div class="key">.</div><div class="key">/</div><div class="key w23 small">Shift</div>
+                  </div>
+                  <div class="krow">
+                    <div class="key w15 small">Ctrl</div><div class="key w15 small">Win</div><div class="key w15 small">Alt</div><div class="key w4 small bound">Space</div><div class="key w15 small">Alt</div><div class="key w15 small">Fn</div><div class="key w15 small">Ctrl</div>
+                  </div>
+                </div>
+                <div class="mice">
+                  <div class="mouse bound">鼠标左键</div>
+                  <div class="mouse">鼠标右键</div>
+                  <div class="mouse">中键</div>
+                  <div class="wheel"><div>滚↑</div><div>滚↓</div><div>滚←</div><div>滚→</div></div>
+                </div>
+              </div>
+
+              <div class="card" style="flex:1;min-height:0;display:flex;flex-direction:column">
+                <div class="rowline">
+                  <div class="card-h" style="margin:0">键位占用</div>
+                  <div class="hint">24 个已占用 · 1 处遮蔽</div>
+                </div>
+                <div class="occ">
+                  <div class="occrow"><span class="keycap" style="min-width:44px">H</span><span class="cmd">toggle cl_dummy_hammer 0 1</span><span class="src2">分身自动锤</span><span class="tag2">当前</span></div>
+                  <div class="occrow"><span class="keycap" style="min-width:44px">S</span><span class="cmd">+showhookcoll; +toggle inp_mousesens 1 66</span><span class="src2">低灵敏度</span><span class="tag2">按住</span></div>
+                  <div class="occrow"><span class="keycap" style="min-width:44px">0</span><span class="cmd">echo 加入 team; say /team 101</span><span class="src2">加入队伍</span><span class="tag2">一次</span></div>
+                  <div class="occrow"><span class="keycap" style="min-width:44px">M1</span><span class="cmd">+fire; +toggle cl_dummy_hammer 1 0</span><span class="src2">DF 模式</span><span class="tag2">按住</span></div>
+                  <div class="occrow"><span class="keycap" style="min-width:44px">Space</span><span class="cmd">+jump</span><span class="src2">原地跳</span><span class="tag2">按住</span></div>
+                  <div class="occrow warn"><span class="keycap" style="min-width:44px">⇧S</span><span class="cmd">toggle cl_dummy 0 1</span><span class="src2">Shift+S</span><span class="tag2">遮蔽 S</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col insp">
+              <div class="keytitle">
+                <div class="big">H</div>
+                <div class="badge teal">一键切换</div>
+                <div style="flex:1"></div>
+                <div class="badge">42 B / 16384</div>
+              </div>
+              <div class="src"><span class="dot"></span>来源：指令工坊 · 分身自动锤 <a>查看</a></div>
+
+              <div class="card">
+                <div class="card-h">已绑定功能 · 2</div>
+                <div class="node"><span class="grip">⋮⋮</span><span class="txt">toggle cl_dummy_hammer 0 1</span><span class="del">✕</span></div>
+                <div class="node"><span class="grip">⋮⋮</span><span class="txt">echo HDF</span><span class="del">✕</span></div>
+                <div class="stat" style="margin-top:8px"><span>同帧执行，无延时</span><span><b>0</b> 层嵌套</span></div>
+              </div>
+
+              <div class="card">
+                <div class="card-h">添加命令</div>
+                <div class="addrow">
+                  <div class="inputlike">选择动作或控制台命令…</div>
+                  <div class="btn">＋</div>
+                </div>
+                <div class="addrow" style="margin-top:7px">
+                  <div class="inputlike" style="font-family:var(--mono);font-size:10.6px;color:rgba(255,255,255,.72)">toggle cl_dummy_hammer 0 1</div>
+                  <div class="btn primary sm">添加</div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="rowline"><div class="card-h" style="margin:0">改键 / 清除</div><div class="hint">捕获中会冻结当前槽</div></div>
+                <div class="addrow" style="margin-top:8px">
+                  <div class="btn" style="flex:1">捕获新按键</div>
+                  <div class="btn ghost" style="flex:1">清除本键</div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-h">快捷操作</div>
+                <div class="qrow">复制 bind 命令 <span>Ctrl+C</span></div>
+                <div class="qrow">在控制台试运行 <span>F1</span></div>
+                <div class="qrow">打开 Wiki 说明 <span>ⓘ</span></div>
+              </div>
+
+              <div class="card" style="margin-top:auto">
+                <div class="card-h">模式说明</div>
+                <div class="modes">
+                  <div><b>执行一次</b><span>按下执行整串，松开无动作</span></div>
+                  <div><b>按住</b><span>+ 命令按住生效，松手复原</span></div>
+                  <div><b>一键切换</b><span>每次按下翻转状态量</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="side">
+          <div class="item gear"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.8"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>设置</div>
+          <div class="item">常规</div>
+          <div class="item">Tee</div>
+          <div class="item">游戏界面</div>
+          <div class="item on">控制</div>
+          <div class="item">图像</div>
+          <div class="item">声音</div>
+          <div class="item">资源</div>
+          <div class="item">DDNet</div>
+          <div class="item">栖梦</div>
+          <div class="item">搜索</div>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>原型 1 · 官方 Bind</b>　Bind 页签内的第一层：保留现有键盘编辑器，右侧补来源、模式、字节数与改键入口。</figcaption>
+  </figure>
+
+  <!-- ============ 2. WORKSHOP ============ -->
+  <figure class="shot">
+    <div class="artboard" id="s2">
+      <div class="scene"></div><div class="scrim"></div><div class="grain"></div>
+      <div class="settings">
+        <div class="panel">
+          <div class="tabs">
+            <div class="tab">控制</div>
+            <div class="tab on">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="6" width="20" height="12" rx="2.5"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg>
+              Bind
+            </div>
+            <div style="flex:1"></div>
+            <div class="hint">直接写入绑定，不生成 cfg 文件</div>
+          </div>
+          <div class="rowline">
+            <div class="subtabs">
+              <div class="subtab">官方</div>
+              <div class="subtab on">指令工坊</div>
+              <div class="subtab">蓝图</div>
+            </div>
+            <div class="hint">数据 2026-11-04 · 54 条</div>
+          </div>
+
+          <div class="chips">
+            <div class="chip on">全部 <i>54</i></div>
+            <div class="chip">操控 <i>7</i></div>
+            <div class="chip">队伍 <i>10</i></div>
+            <div class="chip">飞行 <i>12</i></div>
+            <div class="chip">分身 <i>10</i></div>
+            <div class="chip">基础 <i>9</i></div>
+            <div class="chip">有趣的地方 <i>5</i></div>
+            <div class="chip">KOG <i>1</i></div>
+          </div>
+
+          <div class="search">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg>
+            搜索指令、功能或中文描述，如「分身锤」…
+            <div class="sp"></div>
+            <div class="seg">
+              <div class="on"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div>
+              <div><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg></div>
+            </div>
+          </div>
+
+          <div class="grid">
+            <div class="pcard applied">
+              <div class="top"><span class="cat">分身</span><span class="badge teal" style="height:19px;font-size:9.8px">已应用 · H</span></div>
+              <h3>分身自动锤</h3>
+              <p class="desc">按一下切换分身自动锤；可选手轮切锤或开火后恢复武器。</p>
+              <div class="keyrow">按键 <span class="keycap">H</span> <span class="badge" style="height:19px;font-size:9.6px">一键切换</span></div>
+              <div class="codebox">toggle cl_dummy_hammer 0 1<br>echo HDF</div>
+              <div class="tags"><span>HDF</span><span>分身</span><span>切换</span></div>
+              <div class="pf"><div class="grow"></div><div class="apply done">✓ 撤销</div><div class="more">…</div></div>
+            </div>
+
+            <div class="pcard">
+              <div class="top"><span class="cat">操控</span><span class="badge amber" style="height:19px;font-size:9.8px">会覆盖 S</span></div>
+              <h3>低灵敏度模式</h3>
+              <p class="desc">显示辅助线并降低灵敏度；松手恢复原值。</p>
+              <div class="keyrow">按键 <span class="keycap">S</span> <span class="badge" style="height:19px;font-size:9.6px">按住</span></div>
+              <div class="codebox">+showhookcoll; +toggle inp_mousesens 1 66;<br>+toggle cl_mouse_max_distance 5000 350</div>
+              <div class="tags"><span>灵敏度</span><span>辅助线</span><span>按住</span></div>
+              <div class="pf"><div class="grow"></div><div class="apply">应用</div><div class="more">…</div></div>
+            </div>
+
+            <div class="pcard">
+              <div class="top"><span class="cat">操控</span></div>
+              <h3>45 度角瞄准</h3>
+              <p class="desc">按住保持 45° 方向移动，八角定位；松手恢复。</p>
+              <div class="keyrow">按键 <span class="keycap empty">未设置</span> <span class="badge" style="height:19px;font-size:9.6px">按住</span></div>
+              <div class="codebox">+toggle cl_mouse_max_distance 2 400;<br>+toggle_restore inp_mousesens 1</div>
+              <div class="tags"><span>八角</span><span>瞄准</span><span>精准</span></div>
+              <div class="pf"><div class="grow"></div><div class="apply">应用</div><div class="more">…</div></div>
+            </div>
+
+            <div class="pcard">
+              <div class="top"><span class="cat">飞行</span><span class="badge" style="height:19px;font-size:9.8px">方案 1 / 2</span></div>
+              <h3>DF 模式</h3>
+              <p class="desc">开火同时切分身锤；可切换为不卡锤方案。</p>
+              <div class="keyrow">按键 <span class="keycap">M1</span> <span class="badge" style="height:19px;font-size:9.6px">按住</span></div>
+              <div class="codebox">+fire; +toggle cl_dummy_hammer 1 0</div>
+              <div class="tags"><span>双锤</span><span>开火</span><span>飞行</span></div>
+              <div class="pf"><div class="grow"></div><div class="apply">应用</div><div class="more">…</div></div>
+            </div>
+
+            <div class="pcard">
+              <div class="top"><span class="cat">队伍</span></div>
+              <h3>加入队伍</h3>
+              <p class="desc">本体与分身依次加入空队伍；超过 63 自动寻找空位。</p>
+              <div class="keyrow">按键 <span class="keycap">0</span> <span class="badge" style="height:19px;font-size:9.6px">执行一次</span></div>
+              <div class="codebox">echo 加入 team; say /team 101</div>
+              <div class="tags"><span>team</span><span>分身</span><span>一次</span></div>
+              <div class="pf"><div class="grow"></div><div class="apply">应用</div><div class="more">…</div></div>
+            </div>
+
+            <div class="pcard">
+              <div class="top"><span class="cat">基础</span></div>
+              <h3>快速视野</h3>
+              <p class="desc">按住临时拉远视野；松手回到默认缩放。</p>
+              <div class="keyrow">按键 <span class="keycap empty">未设置</span> <span class="badge" style="height:19px;font-size:9.6px">按住</span></div>
+              <div class="codebox">+toggle zoom 1 0</div>
+              <div class="tags"><span>zoom</span><span>视野</span><span>按住</span></div>
+              <div class="pf"><div class="grow"></div><div class="apply">应用</div><div class="more">…</div></div>
+            </div>
+          </div>
+
+          <div class="footbar">
+            <div class="l"><span>来源：DDNet 社区预设 + 内置动作表</span><span>·</span><span>应用后可撤销</span></div>
+            <div class="l"><span>导入 JSON</span><span>我的预设</span><span>商店（即将上线）</span></div>
+          </div>
+        </div>
+
+        <div class="side">
+          <div class="item gear"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.8"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>设置</div>
+          <div class="item">常规</div>
+          <div class="item">Tee</div>
+          <div class="item">游戏界面</div>
+          <div class="item on">控制</div>
+          <div class="item">图像</div>
+          <div class="item">声音</div>
+          <div class="item">资源</div>
+          <div class="item">DDNet</div>
+          <div class="item">栖梦</div>
+          <div class="item">搜索</div>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>原型 2 · 指令工坊</b>　分类胶囊 + 搜索 + 卡片网格；每张卡直接选键应用，保留多方案与冲突提示。</figcaption>
+  </figure>
+
+  <!-- ============ 3. BLUEPRINT ============ -->
+  <figure class="shot">
+    <div class="artboard" id="s3">
+      <div class="scene"></div><div class="scrim"></div><div class="grain"></div>
+      <div class="settings">
+        <div class="panel">
+          <div class="tabs">
+            <div class="tab">控制</div>
+            <div class="tab on">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="6" width="20" height="12" rx="2.5"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg>
+              Bind
+            </div>
+            <div style="flex:1"></div>
+            <div class="hint">图只在本地保存，应用后才写入绑定</div>
+          </div>
+          <div class="rowline">
+            <div class="subtabs">
+              <div class="subtab">官方</div>
+              <div class="subtab">指令工坊</div>
+              <div class="subtab on"><span class="dot"></span>蓝图</div>
+            </div>
+            <div class="hint">未保存的改动 <b>1</b> 处</div>
+          </div>
+
+          <div class="bp">
+            <div class="pane">
+              <div class="pane-h">我的流程 <span>3</span></div>
+              <div class="plist">
+                <div class="pitem on">HDF 开关 <small>3 节点</small></div>
+                <div class="pitem">三飞锤 <small>5 节点</small></div>
+                <div class="pitem">45° 瞄准 <small>2 节点</small></div>
+                <div class="pitem">切换本体 / 分身 <small>2 节点</small></div>
+                <div class="pitem" style="border-style:dashed;background:transparent;color:rgba(255,255,255,.6)">从预设创建 <small>54</small></div>
+                <div class="newflow" style="margin-top:6px">＋ 新建流程</div>
+              </div>
+            </div>
+
+            <div class="canvas">
+              <div class="cvbar">
+                <div class="pill">100%</div>
+                <div class="pill">整理</div>
+                <div class="pill">校验</div>
+                <div class="pill">撤销</div>
+              </div>
+
+              <div class="stage">
+                <svg class="cvsvg" viewBox="0 0 460 520" preserveAspectRatio="none">
+                  <path d="M160 131 C182 131 182 101 204 101" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.6"/>
+                  <path d="M160 131 C182 131 182 257 204 257" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.6"/>
+                  <circle cx="182" cy="118" r="2.6" fill="#7ff0d8"/>
+                </svg>
+
+                <div class="gnode g1" style="left:10px;top:96px">
+                  <div class="gh">事件 · 按下</div>
+                  <div class="gb">key H<br>mods none</div>
+                  <div class="port r"></div>
+                </div>
+                <div class="gnode g2" style="left:200px;top:66px">
+                  <div class="gh">状态 · 翻转</div>
+                  <div class="gb">toggle<br>cl_dummy_hammer 0 1</div>
+                  <div class="port l"></div><div class="port r"></div>
+                </div>
+                <div class="gnode g3" style="left:200px;top:230px">
+                  <div class="gh">动作 · 提示</div>
+                  <div class="gb">echo HDF</div>
+                  <div class="port l"></div>
+                </div>
+
+                <div class="cvlabel" style="left:166px;top:144px">同帧</div>
+                <div class="cvnote" style="left:10px;top:352px">
+                  <b style="color:rgba(255,255,255,.8);font-weight:600">为什么没有延时节点</b><br>
+                  DDNet 控制台不支持 sleep / if / 循环。这里的连线只表示同一帧内的执行顺序，不表示时间先后。
+                </div>
+              </div>
+
+              <div class="cvstat">3 个节点 · 2 条边 · 全部同帧执行</div>
+            </div>
+
+            <div class="pane">
+              <div class="pane-h">检视器 <span>未应用</span></div>
+              <div class="insp2">
+                <div class="field"><span>名称</span><b>HDF 开关</b></div>
+                <div class="field"><span>键位</span><span class="val">H</span></div>
+                <div class="field"><span>触发</span><span class="val">一键切换</span></div>
+                <div class="field" style="align-items:flex-start"><span>输出</span></div>
+                <div class="out">bind h "toggle cl_dummy_hammer 0 1;<br>echo HDF"</div>
+                <div class="checks">
+                  <div><span>命令行长度</span><i>47 / 16384 B</i></div>
+                  <div><span>嵌套层数</span><i>0 / 5</i></div>
+                  <div><span>槽位占用</span><span class="warn">H 已被占用</span></div>
+                </div>
+                <div class="field" style="margin-top:2px"><span>选项</span><span style="font-size:10px;color:rgba(255,255,255,.42)">映射到命令片段</span></div>
+                <div class="chk2"><i class="on">✓</i>再次按下取消</div>
+                <div class="chk2"><i></i>开火后恢复武器</div>
+                <div class="chk2"><i></i>滚轮联动切锤</div>
+                <div class="addrow" style="margin-top:2px">
+                  <div class="btn primary" style="flex:1">应用</div>
+                  <div class="btn" style="flex:1">导出 cfg</div>
+                </div>
+                <div class="hint" style="justify-content:center">应用前会显示覆盖 Diff</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="side">
+          <div class="item gear"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.8"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>设置</div>
+          <div class="item">常规</div>
+          <div class="item">Tee</div>
+          <div class="item">游戏界面</div>
+          <div class="item on">控制</div>
+          <div class="item">图像</div>
+          <div class="item">声音</div>
+          <div class="item">资源</div>
+          <div class="item">DDNet</div>
+          <div class="item">栖梦</div>
+          <div class="item">搜索</div>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>原型 3 · 蓝图</b>　左侧流程库、中间状态机画布、右侧检视器；输出实时编译为可执行的 bind 行。</figcaption>
+  </figure>
+
+  <!-- ============ 4. APPLY DIALOG ============ -->
+  <figure class="shot">
+    <div class="artboard" id="s4">
+      <div class="scene"></div><div class="scrim"></div><div class="grain"></div>
+      <div class="blurred">
+        <div class="settings">
+          <div class="panel">
+            <div class="tabs">
+              <div class="tab">控制</div>
+              <div class="tab on">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="6" width="20" height="12" rx="2.5"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg>
+                Bind
+              </div>
+            </div>
+            <div class="rowline">
+              <div class="subtabs">
+                <div class="subtab">官方</div>
+                <div class="subtab on">指令工坊</div>
+                <div class="subtab">蓝图</div>
+              </div>
+            </div>
+            <div class="search">搜索指令、功能或中文描述，如「分身锤」…</div>
+            <div class="grid" style="grid-template-columns:repeat(3,1fr)">
+              <div class="pcard"><div class="top"><span class="cat">操控</span></div><h3>低灵敏度模式</h3><p class="desc">显示辅助线并降低灵敏度；松手恢复原值。</p><div class="codebox">+showhookcoll; +toggle inp_mousesens 1 66</div></div>
+              <div class="pcard"><div class="top"><span class="cat">操控</span></div><h3>45 度角瞄准</h3><p class="desc">按住保持 45° 方向移动。</p><div class="codebox">+toggle cl_mouse_max_distance 2 400</div></div>
+              <div class="pcard"><div class="top"><span class="cat">飞行</span></div><h3>DF 模式</h3><p class="desc">开火同时切分身锤。</p><div class="codebox">+fire; +toggle cl_dummy_hammer 1 0</div></div>
+            </div>
+          </div>
+          <div class="side">
+            <div class="item gear"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.8"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>设置</div><div class="item">常规</div><div class="item">Tee</div><div class="item">游戏界面</div><div class="item on">控制</div><div class="item">图像</div><div class="item">声音</div><div class="item">资源</div><div class="item">DDNet</div><div class="item">栖梦</div><div class="item">搜索</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="overlay">
+        <div class="dialog">
+          <h3>应用「低灵敏度模式」？</h3>
+          <div class="sub">将写入 1 个键位，覆盖 1 条现有绑定。应用后 30 秒内可撤销。</div>
+          <div class="diff">
+            <div class="drow"><div class="k">S</div><div class="v">+showhookcoll; +toggle inp_mousesens 1 66; +toggle cl_mouse_max_distance 5000 350</div><div class="tag">新增</div></div>
+            <div class="drow over"><div class="k">S · 原</div><div class="v">toggle cl_dummy 0 1</div><div class="tag">覆盖</div></div>
+          </div>
+          <div class="note">
+            <span style="color:#ffd79a">▲</span>
+            <span>S 键同时被动作卡「切换本体 / 分身」使用。覆盖后该卡会显示为未应用，可随时重新应用。</span>
+          </div>
+          <div class="dact">
+            <div class="btn">取消</div>
+            <div class="btn primary">应用并记录撤销点</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>原型 4 · 应用确认</b>　客户端直接写绑定，所以应用前必须给出覆盖 Diff；撤销点是按键级快照，不是整份配置。</figcaption>
+  </figure>
+
+</div>
+</body>
+</html>

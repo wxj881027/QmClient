@@ -1,4 +1,5 @@
 #include "config_tags.h"
+
 #include "qm_legacy_config.h"
 
 #include <base/str.h>

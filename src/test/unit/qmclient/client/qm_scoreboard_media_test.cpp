@@ -1,4 +1,5 @@
 #include <game/client/components/qmclient/scoreboard_media_controls.h>
+
 #include <gtest/gtest.h>
 
 TEST(QmScoreboardMedia, RightRailFitsNarrowAndWideScreens)

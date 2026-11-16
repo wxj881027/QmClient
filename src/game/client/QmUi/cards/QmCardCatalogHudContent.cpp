@@ -54,7 +54,7 @@ extern std::unordered_map<std::string, CBindSlot> g_CommandBindCache;
 void CMenus::RenderQmHudBindStatusContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
 {
 	CSettingsContentLayoutFlow Flow(Content);
-	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, Content,
+	DoSettingsToggleGroup(SETTINGS_APPEARANCE, APPEARANCE_TAB_HUD, APPEARANCE_TAB_HUD, Content,
 		{
 			{&g_Config.m_ClShowhudKeyStatusReset, "appearance-show-key-stuck-status", Localize("Show key stuck status")},
 			{&g_Config.m_ClShowhudKeyStatusHammer, "appearance-show-hammer-status", Localize("Show hammer status")},
@@ -106,6 +106,7 @@ void CMenus::RenderQmHudDebugModeContent(CUIRect &Content, float LineHeight, flo
 	}
 	Flow.Space(LineSpacing);
 
+	// 调试模式卡片不放个性调整收起区：细调项本身就是排障入口，直接全部可见才能一眼核对状态。
 	auto RenderCheckbox = [this, &Flow, &Row, LineSpacing](const void *pId, const char *pText, int *pValue) {
 		if(Flow.Control(pText, CurrentSettingsContentMetrics().m_LineHeight, Row))
 		{
@@ -146,6 +147,9 @@ void CMenus::RenderQmHudDummyMiniViewContent(CUIRect &Content, float LineHeight,
 	Flow.Space(LineSpacing);
 
 	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmDummyMiniViewAuto, "Only show when the other Tee is not on screen", Localize("Only show when the other Tee is not on screen"), &g_Config.m_QmDummyMiniViewAuto);
+	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:dummy_miniview", CurrentSettingsContentMetrics(), PrewarmOnly || Ui()->RenderOnly()))
+		return;
+
 	CUIRect Row, LabelColumn, ControlColumn;
 	auto RenderValue = [&](const char *pTextId, const char *pText, const void *pInputId, int *pValue, int MinValue, int MaxValue) {
 		if(Flow.Control(pTextId, CurrentSettingsContentMetrics().m_LineHeight, Row))
@@ -178,6 +182,39 @@ void CMenus::RenderQmHudDynamicIslandContent(CUIRect &Content, float LineHeight,
 	if(g_Config.m_QmHudIslandUseOriginalStyle)
 		return;
 
+	// 钩子倒计时是独立开关：钩住玩家时在钩链中点显示倒计时环。
+	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmHookCountdown, "Enable hook countdown", Localize("Enable hook countdown"), &g_Config.m_QmHookCountdown);
+	// 开关倒计时：总开关决定是否显示，两个位置开关决定显示在跟随 Tee 的圆环上还是灵动岛里，可同时勾选。
+	const bool CountdownChanged = DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmSwitchCountdown, "Enable switch countdown", Localize("Enable switch countdown"), &g_Config.m_QmSwitchCountdown);
+	if(g_Config.m_QmSwitchCountdown)
+	{
+		int FollowTee = QmHudSwitchCountdownShowsFollowTee(g_Config.m_QmSwitchCountdownMode) ? 1 : 0;
+		int MediaIsland = QmHudSwitchCountdownShowsMediaIsland(g_Config.m_QmSwitchCountdownMode) ? 1 : 0;
+		const int CurrentMode = std::clamp(g_Config.m_QmSwitchCountdownMode, static_cast<int>(EQmSwitchCountdownMode::FOLLOW_TEE), static_cast<int>(EQmSwitchCountdownMode::BOTH));
+		bool LocationChanged = false;
+
+		// 位置开关不绑定配置项，用固定地址当按钮 ID，避免取栈变量地址导致 ID 漂移。
+		// 控件 id 的权威定义已随卡片目录迁至 QmUi/cards/QmCardCatalogHud.cpp（内部头提供取用入口），
+		// 渲染路径与卡片路径必须共用同一组 id，否则同一次点击会被两条路径各处理一次。
+		LocationChanged |= DeclaredCheckbox(Content, LineHeight, LineSpacing, qm_card_catalog::SwitchCountdownFollowTeeId(), "qmclient-switch-countdown-follow-tee", Localize("Follow Tee"), &FollowTee);
+		LocationChanged |= DeclaredCheckbox(Content, LineHeight, LineSpacing, qm_card_catalog::SwitchCountdownMediaIslandId(), "qmclient-switch-countdown-media-island", Localize("Show in Dynamic Island"), &MediaIsland);
+
+		if(CountdownChanged || LocationChanged)
+		{
+			// 两个位置都不勾时倒计时无处可显示，直接关掉总开关，避免界面与渲染结果互相打架。
+			if(FollowTee == 0 && MediaIsland == 0)
+			{
+				g_Config.m_QmSwitchCountdown = 0;
+				FollowTee = 0;
+				MediaIsland = 1;
+			}
+			g_Config.m_QmSwitchCountdownMode = QmHudSwitchCountdownModeFromLocations(FollowTee != 0, MediaIsland != 0, CurrentMode);
+		}
+	}
+	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmHudIslandAlwaysShowTrackDetails, "Always show song title and artist", Localize("Always show song title and artist"), &g_Config.m_QmHudIslandAlwaysShowTrackDetails);
+	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:dynamic_island", CurrentSettingsContentMetrics(), Ui()->RenderOnly()))
+		return;
+
 	static CButtonContainer s_DynamicIslandBgColorId;
 	// 颜色弹窗里的 A(透明度) 是整块板的通透度（亚克力）：开高斯模糊时模糊照旧，
 	// 板越透越看得见后面的画面；A=0 时整块板连外圈阴影一起消失。
@@ -185,13 +222,11 @@ void CMenus::RenderQmHudDynamicIslandContent(CUIRect &Content, float LineHeight,
 		CUIRect ColorRow;
 		if(Flow.Control("hud-QmHudIslandBgColor", CurrentSettingsContentMetrics().m_ButtonHeight, ColorRow))
 		{
-			DoLine_AlphaColorPicker(&s_DynamicIslandBgColorId, CurrentSettingsContentMetrics(), &ColorRow, Localize("Background color"), &g_Config.m_QmHudIslandBgColor, &g_Config.m_QmHudIslandBgOpacity, 0x9C460E, 80);
+			DoLine_AlphaColorPicker(&s_DynamicIslandBgColorId, CurrentSettingsContentMetrics(), &ColorRow, Localize("Background color"), &g_Config.m_QmHudIslandBgColor, &g_Config.m_QmHudIslandBgOpacity, 0x9C460E, 100);
 		}
 		Flow.Space(CurrentSettingsContentMetrics().m_LineSpacing);
 	}
 
-	// 钩子倒计时是独立开关：钩住玩家时在钩链中点显示倒计时环。
-	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmHookCountdown, "Enable hook countdown", Localize("Enable hook countdown"), &g_Config.m_QmHookCountdown);
 	if(g_Config.m_QmHookCountdown)
 	{
 		// 尺寸：50%–200%，与 HUD 其它百分比配置同一口径。
@@ -252,35 +287,6 @@ void CMenus::RenderQmHudDynamicIslandContent(CUIRect &Content, float LineHeight,
 		}
 		Flow.Space(LineSpacing);
 	}
-
-	// 开关倒计时：总开关决定是否显示，两个位置开关决定显示在跟随 Tee 的圆环上还是灵动岛里，可同时勾选。
-	const bool CountdownChanged = DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmSwitchCountdown, "Enable switch countdown", Localize("Enable switch countdown"), &g_Config.m_QmSwitchCountdown);
-	if(g_Config.m_QmSwitchCountdown)
-	{
-		int FollowTee = QmHudSwitchCountdownShowsFollowTee(g_Config.m_QmSwitchCountdownMode) ? 1 : 0;
-		int MediaIsland = QmHudSwitchCountdownShowsMediaIsland(g_Config.m_QmSwitchCountdownMode) ? 1 : 0;
-		const int CurrentMode = std::clamp(g_Config.m_QmSwitchCountdownMode, static_cast<int>(EQmSwitchCountdownMode::FOLLOW_TEE), static_cast<int>(EQmSwitchCountdownMode::BOTH));
-		bool LocationChanged = false;
-
-		// 位置开关不绑定配置项，用固定地址当按钮 ID，避免取栈变量地址导致 ID 漂移。
-		// 控件 id 的权威定义已随卡片目录迁至 QmUi/cards/QmCardCatalogHud.cpp（内部头提供取用入口），
-		// 渲染路径与卡片路径必须共用同一组 id，否则同一次点击会被两条路径各处理一次。
-		LocationChanged |= DeclaredCheckbox(Content, LineHeight, LineSpacing, qm_card_catalog::SwitchCountdownFollowTeeId(), "qmclient-switch-countdown-follow-tee", Localize("Follow Tee"), &FollowTee);
-		LocationChanged |= DeclaredCheckbox(Content, LineHeight, LineSpacing, qm_card_catalog::SwitchCountdownMediaIslandId(), "qmclient-switch-countdown-media-island", Localize("Show in Dynamic Island"), &MediaIsland);
-
-		if(CountdownChanged || LocationChanged)
-		{
-			// 两个位置都不勾时倒计时无处可显示，直接关掉总开关，避免界面与渲染结果互相打架。
-			if(FollowTee == 0 && MediaIsland == 0)
-			{
-				g_Config.m_QmSwitchCountdown = 0;
-				FollowTee = 0;
-				MediaIsland = 1;
-			}
-			g_Config.m_QmSwitchCountdownMode = QmHudSwitchCountdownModeFromLocations(FollowTee != 0, MediaIsland != 0, CurrentMode);
-		}
-	}
-	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmHudIslandAlwaysShowTrackDetails, "Always show song title and artist", Localize("Always show song title and artist"), &g_Config.m_QmHudIslandAlwaysShowTrackDetails);
 }
 
 void CMenus::RenderQmHudLyricsContent(CUIRect &Content, float LineHeight, float LineSpacing, bool PrewarmOnly)
@@ -323,25 +329,36 @@ void CMenus::RenderQmHudLyricsContent(CUIRect &Content, float LineHeight, float 
 		}
 	}
 	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmLyrics, "Enable lyrics", Localize("Enable lyrics"), &g_Config.m_QmLyrics);
-	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmLyricsInMediaIsland, "Show lyrics in Dynamic Island", Localize("Show lyrics in Dynamic Island"), &g_Config.m_QmLyricsInMediaIsland);
-	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmLyricsSeparateIsland, "Separate Dynamic Island", Localize("Separate Dynamic Island"), &g_Config.m_QmLyricsSeparateIsland);
-	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmLyricsIslandFollowWidth, "Follow main island width", Localize("Follow main island width"), &g_Config.m_QmLyricsIslandFollowWidth);
-	{
-		CUIRect Row;
-		if(Flow.Control("qmclient-lyrics-language", CurrentSettingsContentMetrics().m_LineHeight, Row))
+	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmLyricsCommunity, "AMLL community lyrics", Localize("AMLL community lyrics"), &g_Config.m_QmLyricsCommunity);
+	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, Content,
 		{
-			CUIRect Label, Control;
-			SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &Label, &Control);
-			RenderQmHudLabel("qmclient-lyrics-language-label", &Label, Localize("Lyrics language"), ui_token::font::BODY);
-			const char *apNames[] = {Localize("Original only"), Localize("Translation only"), Localize("Original and translation")};
-			static CUi::SDropDownState s_LanguageDropDown;
-			static CScrollRegion s_LanguageScroll;
-			s_LanguageDropDown.m_SelectionPopupContext.m_pScrollRegion = &s_LanguageScroll;
-			const int Selected = DoSettingsDropDown(&Control, g_Config.m_QmLyricsLanguage, apNames, std::size(apNames), s_LanguageDropDown, {}, &g_Config.m_QmLyricsLanguage, nullptr, &Row);
-			if(!PrewarmOnly && !Ui()->RenderOnly() && Selected >= 0)
-				g_Config.m_QmLyricsLanguage = Selected;
+			{&g_Config.m_QmWorldLyrics, "World lyrics", Localize("World lyrics"), nullptr, 0, Localize("Show glowing, floating lyrics in the map. Each new line stays where it appears; previous lines rise and fade out")},
+			{&g_Config.m_QmSinging, "Singing", Localize("Singing"), nullptr, 0, Localize("Double-tap the bound key within 400 ms to send the current lyric to public chat")},
+			{&g_Config.m_QmHumming, "Humming", Localize("Humming"), nullptr, 0, Localize("Send three consecutive lyrics to public chat at random intervals of 360 to 1200 seconds, with 3 seconds between lines. Successfully sending a lyric with Singing cancels pending humming lines and restarts the random wait")},
+		},
+		CurrentSettingsContentMetrics(), !PrewarmOnly);
+	if(qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:lyrics", CurrentSettingsContentMetrics(), PrewarmOnly || Ui()->RenderOnly()))
+	{
+		DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmLyricsInMediaIsland, "Show lyrics in Dynamic Island", Localize("Show lyrics in Dynamic Island"), &g_Config.m_QmLyricsInMediaIsland);
+		DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmLyricsSeparateIsland, "Separate Dynamic Island", Localize("Separate Dynamic Island"), &g_Config.m_QmLyricsSeparateIsland);
+		DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmLyricsIslandFollowWidth, "Follow main island width", Localize("Follow main island width"), &g_Config.m_QmLyricsIslandFollowWidth);
+		{
+			CUIRect Row;
+			if(Flow.Control("qmclient-lyrics-language", CurrentSettingsContentMetrics().m_LineHeight, Row))
+			{
+				CUIRect Label, Control;
+				SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &Label, &Control);
+				RenderQmHudLabel("qmclient-lyrics-language-label", &Label, Localize("Lyrics language"), ui_token::font::BODY);
+				const char *apNames[] = {Localize("Original only"), Localize("Translation only"), Localize("Original and translation")};
+				static CUi::SDropDownState s_LanguageDropDown;
+				static CScrollRegion s_LanguageScroll;
+				s_LanguageDropDown.m_SelectionPopupContext.m_pScrollRegion = &s_LanguageScroll;
+				const int Selected = DoSettingsDropDown(&Control, g_Config.m_QmLyricsLanguage, apNames, std::size(apNames), s_LanguageDropDown, {}, &g_Config.m_QmLyricsLanguage, nullptr, &Row);
+				if(!PrewarmOnly && !Ui()->RenderOnly() && Selected >= 0)
+					g_Config.m_QmLyricsLanguage = Selected;
+			}
+			Flow.Space(LineSpacing);
 		}
-		Flow.Space(LineSpacing);
 	}
 	if(g_Config.m_QmKugouHookEnable != 0)
 	{
@@ -381,9 +398,12 @@ void CMenus::RenderQmHudLyricsContent(CUIRect &Content, float LineHeight, float 
 		{
 			SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &InputColumn);
 			RenderQmHudLabel("qmclient-lyrics-spotify-sp-dc", &LabelColumn, "spotify_ck", ui_token::font::BODY);
-			s_SpotifySpDc.SetHidden(true);
+			static ui_widget::SPasswordFieldState s_SpotifySpDcState;
 			IUiContext TextInputCtx = SettingsUiContext("settings_qmclient_lyrics_spotify_text_inputs");
-			ui_widget::InputField(TextInputCtx, &s_SpotifySpDc, InputColumn, Localize("Paste sp_dc from Spotify web cookies"), ui_token::font::BODY);
+			ui_widget::SPasswordFieldOptions SpDcOptions;
+			SpDcOptions.m_pPlaceholder = Localize("Paste sp_dc from Spotify web cookies");
+			SpDcOptions.m_FontSize = ui_token::font::BODY;
+			ui_widget::PasswordField(TextInputCtx, &s_SpotifySpDc, InputColumn, &s_SpotifySpDcState, SpDcOptions);
 		}
 		Flow.Space(LineSpacing);
 	}
@@ -394,7 +414,9 @@ void CMenus::RenderQmHudSystemMediaControlsContent(CUIRect &Content, float LineH
 	CSettingsContentLayoutFlow Flow(Content);
 	const auto DeclaredCheckbox = [&](CUIRect &, float Height, float Spacing, const void *pId, const char *pTextId, const char *pText, int *pValue) {
 		CUIRect Row;
-		const bool Changed = Flow.Control(pTextId, Height, Row) && RenderQmHudCheckbox(Row, Height, 0.0f, pId, pTextId, pText, pValue);
+		const bool Changed = Flow.Control(pTextId, Height, Row) && DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, -1, pId, pTextId, pText, *pValue, &Row);
+		if(Changed)
+			*pValue ^= 1;
 		Flow.Space(Spacing);
 		return Changed;
 	};
@@ -416,13 +438,13 @@ void CMenus::RenderQmHudSystemMediaControlsContent(CUIRect &Content, float LineH
 		NextButton = Actions.m_aButtons[2];
 
 		static CButtonContainer s_SmtcPrev;
-		if(DoSettingsButton_Menu(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, &s_SmtcPrev, "qmclient-smtc-previous", Localize("Previous"), 0, &PrevButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE))
+		if(DoSettingsButton_Menu(SETTINGS_DDNET, -1, -1, &s_SmtcPrev, "qmclient-smtc-previous", Localize("Previous"), 0, &PrevButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE))
 			GameClient()->m_SystemMediaControls.Previous();
 		static CButtonContainer s_SmtcPlayPause;
-		if(DoSettingsButton_Menu(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, &s_SmtcPlayPause, "qmclient-smtc-play-pause", Localize("Play/Pause"), 0, &PlayButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE))
+		if(DoSettingsButton_Menu(SETTINGS_DDNET, -1, -1, &s_SmtcPlayPause, "qmclient-smtc-play-pause", Localize("Play/Pause"), 0, &PlayButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE))
 			GameClient()->m_SystemMediaControls.PlayPause();
 		static CButtonContainer s_SmtcNext;
-		if(DoSettingsButton_Menu(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, &s_SmtcNext, "qmclient-smtc-next", Localize("Next"), 0, &NextButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE))
+		if(DoSettingsButton_Menu(SETTINGS_DDNET, -1, -1, &s_SmtcNext, "qmclient-smtc-next", Localize("Next"), 0, &NextButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE))
 			GameClient()->m_SystemMediaControls.Next();
 	}
 	Flow.Space(LineSpacing);
@@ -613,6 +635,9 @@ void CMenus::RenderQmHudCoordsContent(CUIRect &Content, const SSettingsContentMe
 	}
 	Flow.Space(LineSpacing);
 
+	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:coords", Metrics, PrewarmOnly || Ui()->RenderOnly()))
+		return;
+
 	if(Flow.Control("Strict mode", CurrentSettingsContentMetrics().m_LineHeight, Row))
 	{
 		DoQmSettingsCheckboxAuto(&g_Config.m_QmNameplateCoordXAlignHintStrict, "Strict mode", Localize("Strict mode"), &g_Config.m_QmNameplateCoordXAlignHintStrict, &Row, LineHeight);
@@ -662,7 +687,6 @@ void CMenus::RenderQmHudGoresDrownBoardContent(CUIRect &Content, float LineHeigh
 		Flow.Space(Spacing);
 		return Changed;
 	};
-	// 行序与卡片目录的预布局输入一致：总开关、包含 Team0、显示人数、不透明度、显示玩家 Tee。
 	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmGoresDrownBoard, "Show Gores drown board", Localize("Show Gores drown board"), &g_Config.m_QmGoresDrownBoard);
 	if(!g_Config.m_QmGoresDrownBoard)
 		return;

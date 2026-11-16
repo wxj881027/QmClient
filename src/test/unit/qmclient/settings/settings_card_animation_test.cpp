@@ -86,6 +86,34 @@ TEST(SettingsCardDeck, ContentHeightAnimationSkipsStableFramesAndSnapsFirstLayou
 	EXPECT_TRUE(DragSnap.m_SetHeightTarget);
 }
 
+TEST(SettingsCardDeck, ContentHeightTransitionCannotBeConsumedByOneLongFrame)
+{
+	// 「内容变多」引发的目标变化正好落在内容第一次出现的那一帧之后：该帧要声明新行、
+	// 测量并创建新文本，比常规帧长得多。这一段补间不能让它一帧走完，否则卡片高度会
+	// 瞬移到位、动画等于没播。
+	const float Duration = ResolveCardMotionSpec(2, true, true, true, true).m_ContentHeightDuration;
+	ASSERT_GT(Duration, 0.0f);
+
+	// 常规帧不受限速影响，步长就是帧时长。
+	const float FrameDt = 1.0f / 60.0f;
+	EXPECT_FLOAT_EQ(SettingsCardContentHeightStepSeconds(FrameDt, Duration), FrameDt);
+
+	// 卡顿帧只推进整段过渡的固定比例，进度仍在起止之间。
+	float Elapsed = SettingsCardContentHeightStepSeconds(0.35f, Duration);
+	EXPECT_FLOAT_EQ(Elapsed, Duration * SETTINGS_CARD_CONTENT_HEIGHT_MAX_STEP_FRACTION);
+	EXPECT_GT(SettingsCardContentHeightProgress(Elapsed, Duration), 0.0f);
+	EXPECT_LT(SettingsCardContentHeightProgress(Elapsed, Duration), 1.0f);
+
+	// 后续正常帧接着播完同一段过渡。
+	int Frames = 0;
+	while(SettingsCardContentHeightProgress(Elapsed, Duration) < 1.0f)
+	{
+		Elapsed += SettingsCardContentHeightStepSeconds(FrameDt, Duration);
+		ASSERT_LT(++Frames, 60);
+	}
+	EXPECT_FLOAT_EQ(SettingsCardContentHeightProgress(Elapsed, Duration), 1.0f);
+}
+
 TEST(SettingsCardDeck, AnimatedColumnFramesNeverOverlapFollowingCards)
 {
 	for(const float Progress : {0.0f, 0.2f, 0.5f, 0.8f, 1.0f})

@@ -451,7 +451,7 @@ void CEditor::DoMapTabs(CUIRect MapTabs)
 		{
 			m_PopupMapTab.m_pEditor = this;
 			m_PopupMapTab.m_pSelectedMap = &Map;
-			Ui()->DoPopupMenu(&m_PopupMapTab, Ui()->MouseX(), Ui()->MouseY(), 150.0f, 80.0f, &m_PopupMapTab, CPopupMapTab::Render);
+			Ui()->DoPopupMenu(&m_PopupMapTab, Ui()->MouseX(), Ui()->MouseY(), 150.0f, CPopupMapTab::PanelHeight(), &m_PopupMapTab, CPopupMapTab::Render);
 		}
 		else if(TabResult == 3 || CloseResult == 1 || CloseResult == 3)
 		{

@@ -234,7 +234,7 @@ uint64_t CMenus::BuildSoundSettingsCards(const qm_card_catalog::SQmCardBuildCont
 				Definition.m_ContentLayoutInput = {};
 			vCards.push_back(std::move(Definition));
 		};
-		AddCard(ToggleSpec, [this, LineHeight, LineSpacing, RenderOnly](CUIRect &ContentRect) {
+		AddCard(ToggleSpec, [this, SoundMetrics, LineHeight, LineSpacing, RenderOnly](CUIRect &ContentRect) {
 			CSettingsContentLayoutFlow Flow(ContentRect);
 			const bool CanCommit = Flow.Input() && !RenderOnly && !Ui()->RenderOnly();
 			CUIRect Button;
@@ -276,6 +276,9 @@ uint64_t CMenus::BuildSoundSettingsCards(const qm_card_catalog::SQmCardBuildCont
 				}
 			}
 			Flow.Space(LineSpacing);
+			if(!qm_card_catalog::QmCardRenderHook::Personalization(this, ContentRect, "deck:sound-toggle", SoundMetrics, RenderOnly))
+				return;
+
 			if(Flow.Control("SndGun", LineHeight, Button))
 			{
 				if(DoSettingsButton_CheckBox(SETTINGS_SOUND, -1, &g_Config.m_SndGun, "Enable gun sound", Localize("Enable gun sound"), g_Config.m_SndGun, &Button) && CanCommit)
@@ -323,12 +326,15 @@ uint64_t CMenus::BuildSoundSettingsCards(const qm_card_catalog::SQmCardBuildCont
 					g_Config.m_SndHighlight ^= 1;
 				}
 			} }, {}, true);
-		AddCard(VolumeSpec, [DoSoundNumericField, LineHeight, LineSpacing](CUIRect &ContentRect) {
+		AddCard(VolumeSpec, [this, SoundMetrics, DoSoundNumericField, LineHeight, LineSpacing, RenderOnly](CUIRect &ContentRect) {
 			CSettingsContentLayoutFlow Flow(ContentRect);
 			CUIRect VolumeButton;
 			if(Flow.Control("sound-volume", LineHeight, VolumeButton))
 				DoSoundNumericField("sound-volume", &g_Config.m_SndVolume, &g_Config.m_SndVolume, VolumeButton, Localize("Sound volume"));
 			Flow.Space(LineSpacing);
+			if(!qm_card_catalog::QmCardRenderHook::Personalization(this, ContentRect, "deck:sound-volume", SoundMetrics, RenderOnly))
+				return;
+
 			if(Flow.Control("sound-game-volume", LineHeight, VolumeButton))
 				DoSoundNumericField("sound-game-volume", &g_Config.m_SndGameVolume, &g_Config.m_SndGameVolume, VolumeButton, Localize("Game sound volume"));
 			Flow.Space(LineSpacing);

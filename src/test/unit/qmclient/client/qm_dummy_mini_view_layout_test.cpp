@@ -159,3 +159,63 @@ TEST(QmDummyMiniViewLayout, UnknownBackendOrEmptyCanvasDoesNotAssumeOpenGLClip)
 	EXPECT_FALSE(Viewport.ResolveClip(EBackend::OPENGL, 1800, 0).has_value());
 	EXPECT_FALSE(QmDummyMiniViewLayout::SViewport{}.ResolveClip(EBackend::VULKAN, 1800, 900).has_value());
 }
+
+TEST(QmDummyMiniViewLayout, FrameLayersShareContentExtent)
+{
+	const QmDummyMiniViewLayout::SFrameStyle Style;
+	const auto Frame = QmDummyMiniViewLayout::ResolveFrame({100.0f, 20.0f, 160.0f, 90.0f}, 8.0f, Style);
+	ASSERT_TRUE(Frame.m_HasContent);
+	EXPECT_FLOAT_EQ(Frame.m_Outer.x, 100.0f);
+	EXPECT_FLOAT_EQ(Frame.m_Outer.w, 160.0f);
+	EXPECT_FLOAT_EQ(Frame.m_Content.x, 100.0f + Style.m_BezelWidth);
+	EXPECT_FLOAT_EQ(Frame.m_Content.y, 20.0f + Style.m_BezelWidth);
+	EXPECT_FLOAT_EQ(Frame.m_Content.w, 160.0f - Style.m_BezelWidth * 2.0f);
+	EXPECT_FLOAT_EQ(Frame.m_Content.h, 90.0f - Style.m_BezelWidth * 2.0f);
+	EXPECT_FLOAT_EQ(Frame.m_ContentRadius, 8.0f - Style.m_BezelWidth);
+	EXPECT_FLOAT_EQ(Frame.m_Accent.x, 100.0f + Style.m_RimWidth);
+	EXPECT_FLOAT_EQ(Frame.m_AccentRadius, 8.0f - Style.m_RimWidth);
+	EXPECT_FLOAT_EQ(Frame.m_Body.x, 100.0f + Style.m_RimWidth + Style.m_AccentWidth);
+	EXPECT_FLOAT_EQ(Frame.m_BodyRadius, 8.0f - Style.m_RimWidth - Style.m_AccentWidth);
+	// 边框环带的环带宽（SDF BorderWidth）就是内容内缩量：两者同源才不会露缝。
+	EXPECT_FLOAT_EQ(Frame.m_BezelWidth, Style.m_BezelWidth);
+}
+
+TEST(QmDummyMiniViewLayout, FrameClampsBezelOnTinyRect)
+{
+	const QmDummyMiniViewLayout::SFrameStyle Style;
+	const auto Frame = QmDummyMiniViewLayout::ResolveFrame({0.0f, 0.0f, 3.0f, 2.0f}, 5.0f, Style);
+	EXPECT_FLOAT_EQ(Frame.m_Radius, 1.0f);
+	EXPECT_FLOAT_EQ(Frame.m_BezelWidth, 1.0f);
+	EXPECT_FLOAT_EQ(Frame.m_Content.w, 1.0f);
+	EXPECT_FLOAT_EQ(Frame.m_Content.h, 0.0f);
+	EXPECT_FALSE(Frame.m_HasContent);
+	EXPECT_FLOAT_EQ(Frame.m_ContentRadius, 0.0f);
+	// 包边与强调线不能超过整体边框宽度，退化时也不会画出负宽度环带。
+	EXPECT_LE(Frame.m_RimWidth + Frame.m_AccentWidth, Frame.m_BezelWidth + 0.0001f);
+	for(const CUIRect Outer : {CUIRect{0.0f, 0.0f, 0.0f, 40.0f}, CUIRect{0.0f, 0.0f, 40.0f, 0.0f}, CUIRect{0.0f, 0.0f, -4.0f, -4.0f}})
+	{
+		const auto Empty = QmDummyMiniViewLayout::ResolveFrame(Outer, 6.0f, Style);
+		EXPECT_FALSE(Empty.m_HasContent);
+		EXPECT_FLOAT_EQ(Empty.m_Radius, 0.0f);
+		EXPECT_FLOAT_EQ(Empty.m_BezelWidth, 0.0f);
+	}
+}
+
+TEST(QmDummyMiniViewLayout, FrameCornerRadiiFollowShaderOrder)
+{
+	const vec4 Corners = QmDummyMiniViewLayout::ResolveFrameCornerRadii(6.0f, IGraphics::CORNER_TL | IGraphics::CORNER_BR);
+	EXPECT_FLOAT_EQ(Corners.x, 6.0f);
+	EXPECT_FLOAT_EQ(Corners.y, 0.0f);
+	EXPECT_FLOAT_EQ(Corners.z, 6.0f);
+	EXPECT_FLOAT_EQ(Corners.w, 0.0f);
+	const vec4 All = QmDummyMiniViewLayout::ResolveFrameCornerRadii(4.0f, IGraphics::CORNER_ALL);
+	EXPECT_FLOAT_EQ(All.x, 4.0f);
+	EXPECT_FLOAT_EQ(All.y, 4.0f);
+	EXPECT_FLOAT_EQ(All.z, 4.0f);
+	EXPECT_FLOAT_EQ(All.w, 4.0f);
+	const vec4 None = QmDummyMiniViewLayout::ResolveFrameCornerRadii(4.0f, IGraphics::CORNER_NONE);
+	EXPECT_FLOAT_EQ(None.x, 0.0f);
+	EXPECT_FLOAT_EQ(None.y, 0.0f);
+	EXPECT_FLOAT_EQ(None.z, 0.0f);
+	EXPECT_FLOAT_EQ(None.w, 0.0f);
+}

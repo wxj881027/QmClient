@@ -62,6 +62,36 @@ TEST(QmHudHorizontalPlacement, VisibleBoundsRetainSavedPositionClampingAndDefaul
 	EXPECT_FLOAT_EQ(Default.m_Position, 30.0f);
 }
 
+TEST(QmHudVerticalPlacement, SavedPositionAboveTheLowerBoundIsPushedDown)
+{
+	const float LowerBound = 40.0f;
+	EXPECT_FLOAT_EQ(QmHudEditor::ClampAnchorYBelowMinimum(12.0f, LowerBound, 10.0f, 0.0f, 300.0f), LowerBound);
+	EXPECT_FLOAT_EQ(QmHudEditor::ClampAnchorYBelowMinimum(LowerBound, LowerBound, 10.0f, 0.0f, 300.0f), LowerBound);
+}
+
+TEST(QmHudVerticalPlacement, SavedPositionBelowTheLowerBoundIsPreserved)
+{
+	const float LowerBound = 40.0f;
+	for(const float SavedY : {40.0f, 60.0f, 180.0f})
+	{
+		SCOPED_TRACE(SavedY);
+		EXPECT_FLOAT_EQ(QmHudEditor::ClampAnchorYBelowMinimum(SavedY, LowerBound, 10.0f, 0.0f, 300.0f), SavedY);
+	}
+}
+
+TEST(QmHudVerticalPlacement, ScreenBottomWinsOverTheLowerBound)
+{
+	// 下限落在屏幕底边之外时保持元素可见：位置取屏幕允许的最大锚点。
+	EXPECT_FLOAT_EQ(QmHudEditor::ClampAnchorYBelowMinimum(20.0f, 290.0f, 30.0f, 0.0f, 300.0f), 270.0f);
+	EXPECT_FLOAT_EQ(QmHudEditor::ClampAnchorYBelowMinimum(20.0f, 290.0f, 30.0f, 10.0f, 280.0f, 4.0f), 256.0f);
+}
+
+TEST(QmHudVerticalPlacement, DisabledLowerBoundKeepsTheSavedPosition)
+{
+	EXPECT_FLOAT_EQ(QmHudEditor::ClampAnchorYBelowMinimum(12.0f, QmHudEditor::NO_MINIMUM_ANCHOR_Y, 10.0f, 0.0f, 300.0f), 12.0f);
+	EXPECT_FLOAT_EQ(QmHudEditor::ClampAnchorYBelowMinimum(-15.0f, QmHudEditor::NO_MINIMUM_ANCHOR_Y, 10.0f, 0.0f, 300.0f), -15.0f);
+}
+
 TEST(QmHudMeasuredGeometry, ReportsLocalContentOffsetAndSizeAfterRendering)
 {
 	QmHudEditor::CVisibleBounds Geometry;

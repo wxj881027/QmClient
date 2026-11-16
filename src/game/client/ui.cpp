@@ -26,6 +26,7 @@
 #include <engine/keys.h>
 #include <engine/shared/config.h>
 
+#include <game/client/QmUi/UiSurface.h>
 #include <game/localization.h>
 
 #include <algorithm>
@@ -73,6 +74,22 @@ void CUIElement::InitRects(int RequestedRectCount)
 }
 
 CUIElement::SUIElementRect::SUIElementRect() { Reset(); }
+
+CUiScopedClipSuspend::CUiScopedClipSuspend(CUi *pUi) :
+	m_pUi(pUi)
+{
+	// 先提交外层批次，避免待绘制内容使用临时界面的裁剪状态。
+	m_pUi->FlushQuadBatch();
+	m_vSavedClips.swap(m_pUi->m_vClips);
+	m_pUi->UpdateClipping();
+}
+
+CUiScopedClipSuspend::~CUiScopedClipSuspend()
+{
+	m_pUi->FlushQuadBatch();
+	m_vSavedClips.swap(m_pUi->m_vClips);
+	m_pUi->UpdateClipping();
+}
 
 CUiScopedQuadBatch::CUiScopedQuadBatch(CUi *pUi) :
 	m_pUi(pUi)
@@ -180,6 +197,17 @@ void CUIElement::SUIElementRect::Draw(const CUIRect *pRect, ColorRGBA Color, int
 
 	if(Color.a > 0.0f && Color.a < 1.0f && m_pParent->Ui()->GaussianBlurScopeActive())
 		m_pParent->Ui()->RenderGaussianBlur(*pRect, m_pParent->Ui()->GaussianBlurScopeAlpha(), Corners, Rounding);
+	// 有 SDF 时所有圆角矩形都走同一条形状：边缘抗锯齿一致、连续曲率生效，
+	// 也不再依赖缓存四边形网格（那条网格的圆角环带会出现断续的点状边）。
+	if(Rounding > 0.0f && Corners != 0 && m_pParent->Ui()->Graphics()->HasRoundedRectSdf())
+	{
+		SRoundedSurfaceParams Params;
+		Params.m_Radius = Rounding;
+		Params.m_Corners = Corners;
+		Params.m_PixelSize = 0.0001f;
+		DrawRoundedSurface(m_pParent->Ui(), *pRect, Color, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), Params);
+		return;
+	}
 	m_pParent->Ui()->Graphics()->TextureClear();
 	m_pParent->Ui()->Graphics()->RenderQuadContainerEx(m_UIRectQuadContainer,
 		0, -1, m_X, m_Y, 1, 1);
@@ -224,6 +252,9 @@ void CUi::Init(IKernel *pKernel)
 CUi::CUi()
 {
 	m_Enabled = true;
+#if defined(CONF_PLATFORM_ANDROID)
+	m_DirectTouchInput = true;
+#endif
 
 	m_Screen.x = 0.0f;
 	m_Screen.y = 0.0f;
@@ -312,6 +343,7 @@ void CUi::OnElementsReset()
 
 void CUi::OnWindowResize()
 {
+	CancelTouchInput();
 	DestroyGaussianBlurTargets();
 	DestroyBackgroundLayerTarget();
 	OnElementsReset();
@@ -637,18 +669,28 @@ void CUi::RenderGaussianBlur(const CUIRect &Rect, float Alpha, int Corners, floa
 
 	Graphics()->ClipEnable(ClipX0, ClipY0, ClipX1 - ClipX0, ClipY1 - ClipY0);
 	Graphics()->BlendNormal();
+	// 掩码必须和面板落在同一块物理像素矩形上：面板走 SDF 前会把矩形对齐到物理像素，
+	// 掩码这层如果还用原始亚像素矩形，两者最多差半个像素——差的那一侧会漏出一条没被
+	// 面板盖住的模糊背景（看起来像一条细白线，且随亚像素位置在上/下边之间跳）。
+	const float MaskPixelSize = std::max(std::abs(MappedWidth) / std::max((float)Graphics()->ScreenWidth(), 1.0f), 0.0001f);
+	const SRoundedRectGeometry MaskGeometry = ResolveRoundedRectGeometry(Rect.x, Rect.y, Rect.w, Rect.h, Rounding, MaskPixelSize);
+	const CUIRect MaskRect{MaskGeometry.m_X, MaskGeometry.m_Y, MaskGeometry.m_W, MaskGeometry.m_H};
 	IGraphics::SRenderTargetDrawParams DrawParams;
-	DrawParams.m_X = Rect.x;
-	DrawParams.m_Y = Rect.y;
-	DrawParams.m_W = Rect.w;
-	DrawParams.m_H = Rect.h;
+	DrawParams.m_X = MaskRect.x;
+	DrawParams.m_Y = MaskRect.y;
+	DrawParams.m_W = MaskRect.w;
+	DrawParams.m_H = MaskRect.h;
 	DrawParams.m_Alpha = std::clamp(Alpha, 0.0f, 1.0f);
 	DrawParams.m_Corners = Corners;
-	DrawParams.m_Rounding = Rounding;
-	DrawParams.m_U0 = (Rect.x - ScreenX0) / MappedWidth;
-	DrawParams.m_U1 = (Rect.x + Rect.w - ScreenX0) / MappedWidth;
-	DrawParams.m_V0 = 1.0f - (Rect.y - ScreenY0) / MappedHeight;
-	DrawParams.m_V1 = 1.0f - (Rect.y + Rect.h - ScreenY0) / MappedHeight;
+	DrawParams.m_Rounding = MaskGeometry.m_Rounding;
+	// 模糊掩码跟着面板用的是同一条圆角曲线，否则角上会漏出没模糊的边。
+	DrawParams.m_CornerSmoothing = std::clamp(g_Config.m_QmUiCornerSmoothing / 100.0f, 0.0f, 1.0f);
+	DrawParams.m_CornerCurve = (float)g_Config.m_QmUiCornerCurve;
+	DrawParams.m_CornerSeam = std::clamp(g_Config.m_QmUiCapsuleSeam / 100.0f, 0.0f, 1.0f);
+	DrawParams.m_U0 = (MaskRect.x - ScreenX0) / MappedWidth;
+	DrawParams.m_U1 = (MaskRect.x + MaskRect.w - ScreenX0) / MappedWidth;
+	DrawParams.m_V0 = 1.0f - (MaskRect.y - ScreenY0) / MappedHeight;
+	DrawParams.m_V1 = 1.0f - (MaskRect.y + MaskRect.h - ScreenY0) / MappedHeight;
 	Graphics()->DrawRenderTarget(m_GaussianBlurTarget, DrawParams);
 	if(IsClipped())
 		UpdateClipping();
@@ -855,6 +897,10 @@ void CUi::Update()
 	const CUIRect *pScreen = Screen();
 
 	unsigned UpdatedMouseButtonsNext = 0;
+	if(m_DirectTouchInput && m_pTouchScrollRegion != nullptr && !m_TouchScrollRegionSeen)
+		CancelTouchInput();
+	m_TouchScrollRegionSeen = false;
+	m_TouchScrollDelta = vec2(0.0f, 0.0f);
 	if(Enabled())
 	{
 		// Update mouse buttons based on mouse keys
@@ -865,9 +911,35 @@ void CUi::Update()
 				m_UpdatedMouseButtons |= 1 << (MouseKey - KEY_MOUSE_1);
 			}
 		}
-
+	}
+	if(Enabled() || m_DirectTouchInput)
+	{
 		// Update mouse position and buttons based on touch finger state
 		UpdateTouchState(m_TouchState);
+		if(m_DirectTouchInput)
+		{
+			if(m_TouchState.m_DirectStarted || !m_TouchState.m_AnyPressed || m_TouchState.m_DirectCancelled)
+			{
+				m_pTouchDragId = nullptr;
+				if(!m_TouchState.m_AnyPressed || !m_TouchState.m_DirectTracking || !m_TouchState.m_DirectMoved)
+					m_pTouchScrollRegion = nullptr;
+			}
+			if(m_TouchState.m_DirectCancelled)
+				CancelTouchItem();
+			if(m_TouchState.m_DirectTracking && m_TouchState.m_DirectMoved && !m_TouchState.m_DirectDragging &&
+				!m_TouchState.m_DirectLongPress && m_pTouchScrollRegion != nullptr)
+			{
+				const vec2 Movement = (m_TouchState.m_PrimaryPosition - m_TouchState.m_DirectStartPosition) * pScreen->Size();
+				const float AxisMovement = m_TouchScrollHorizontal ? Movement.x : Movement.y;
+				if(m_TouchState.m_DirectScrolling || absolute(AxisMovement) > 8.0f)
+				{
+					m_TouchScrollDelta = m_TouchState.m_DirectScrolling ? m_TouchState.m_PrimaryDelta * pScreen->Size() : Movement;
+					m_TouchState.m_DirectScrolling = true;
+					m_TouchState.m_PrimaryPressed = false;
+					CancelTouchItem();
+				}
+			}
+		}
 		if(m_TouchState.m_AnyPressed)
 		{
 			if(!CheckMouseLock())
@@ -890,13 +962,18 @@ void CUi::Update()
 
 			// We need to delay the click until the next update or it's not possible to use UI
 			// elements because click and hover would happen at the same time for touch events.
-			if(m_TouchState.m_PrimaryPressed)
+			if(m_DirectTouchInput)
 			{
-				UpdatedMouseButtonsNext |= 1;
+				// 直接触控按当前坐标命中；不把按下延迟到下一帧或移交给后到的手指。
+				m_UpdatedMouseButtons = (m_TouchState.m_PrimaryPressed ? 1u : 0u) | (m_TouchState.m_SecondaryPressed ? 2u : 0u);
 			}
-			if(m_TouchState.m_SecondaryPressed)
+			else if(m_TouchState.m_PrimaryPressed)
 			{
-				UpdatedMouseButtonsNext |= 2;
+				m_UpdatedMouseButtons |= 1;
+			}
+			if(!m_DirectTouchInput && m_TouchState.m_SecondaryPressed)
+			{
+				m_UpdatedMouseButtons |= 2;
 			}
 		}
 	}
@@ -907,6 +984,8 @@ void CUi::Update()
 	m_LastMouseButtons = m_MouseButtons;
 	m_MouseButtons = m_UpdatedMouseButtons;
 	m_UpdatedMouseButtons = UpdatedMouseButtonsNext;
+	// 新的一帧允许按钮再次激活。
+	m_ButtonActivatedThisFrame = false;
 
 	m_pHotItem = m_pBecomingHotItem;
 	if(m_pActiveItem)
@@ -974,8 +1053,8 @@ bool CUi::MouseHovered(const CUIRect *pRect) const
 {
 	// 输入判定语义：任何非交互趟（测量、背景/回放）一律不响应——
 	// click-outside、DoButtonLogic 等输入路径都依赖这一点。
-	// 视觉侧的悬浮反馈用 VisualMouseHovered / VisualHotItem（内容
-	// DRAW 回放放行），两者不可混用。
+	// 控件外观用 VisualSurfaceHovered / VisualHotItem（内容 DRAW 回放放行），
+	// 两者不可混用。
 	return !RenderOnly() && !UnderlyingPointerInputBlocked() && MouseInside(pRect) && MouseInsideClip();
 }
 
@@ -1001,8 +1080,165 @@ void CUi::ConvertMouseMove(float *pX, float *pY, IInput::ECursorType CursorType)
 	*pY *= Factor;
 }
 
-void CUi::UpdateTouchState(CTouchState &State) const
+void CUi::SetDirectTouchInput(bool Enabled)
 {
+	if(m_DirectTouchInput == Enabled)
+		return;
+	CancelTouchInput();
+	m_DirectTouchInput = Enabled;
+	m_TouchState = CTouchState();
+	// 模式切换时已按下的手指必须松开，不能把旧手势当成新点击。
+	m_TouchState.m_DirectBlocked = m_pInput != nullptr && !Input()->TouchFingerStates().empty();
+}
+
+void CUi::CancelTouchItem()
+{
+	const void *pCancelledItem = m_pActiveItem;
+	// 输入框按下当帧可能尚未 Activate；同时撤销它的待激活焦点，避免滑动后弹出键盘。
+	if(m_pTrackedTextInput != nullptr && pCancelledItem == m_pTrackedTextInput)
+		ReleaseActiveTextInput(m_pTrackedTextInput);
+	if(m_pLastActiveItem == pCancelledItem)
+		m_pLastActiveItem = nullptr;
+	m_pActiveItem = nullptr;
+	m_pHotItem = nullptr;
+	m_pBecomingHotItem = nullptr;
+	m_ActiveButtonLogicButton = -1;
+	m_ActiveDraggableButtonLogicButton = -1;
+	DisableMouseLock();
+}
+
+void CUi::CancelTouchInput()
+{
+	if(!m_DirectTouchInput)
+		return;
+	if(m_TouchState.m_DirectTracking || m_TouchState.m_DirectBlocked)
+	{
+		CancelTouchItem();
+		m_UpdatedMouseButtons = m_MouseButtons = m_LastMouseButtons = 0;
+	}
+	m_TouchState = CTouchState();
+	m_TouchState.m_DirectBlocked = m_pInput != nullptr && !Input()->TouchFingerStates().empty();
+	m_pTouchDragId = nullptr;
+	m_pTouchScrollRegion = nullptr;
+	m_TouchScrollDelta = vec2(0.0f, 0.0f);
+	m_TouchScrollRegionSeen = false;
+}
+
+bool CUi::CaptureTouchDrag(const void *pId, const CUIRect *pRect)
+{
+	if(!m_DirectTouchInput || !m_TouchState.m_PrimaryPressed || RenderOnly() || UnderlyingPointerInputBlocked())
+		return false;
+	if(m_pTouchDragId == pId)
+		return true;
+	if(m_pTouchDragId != nullptr || !m_TouchState.m_DirectStarted || !MouseHovered(pRect))
+		return false;
+	m_pTouchDragId = pId;
+	m_TouchState.m_DirectDragging = true;
+	m_pTouchScrollRegion = nullptr;
+	return true;
+}
+
+void CUi::RegisterTouchScrollRegion(CScrollRegion *pRegion, const CUIRect *pRect, bool Horizontal, EUiWheelOwnerPriority Priority, bool Eligible)
+{
+	if(!m_DirectTouchInput || RenderOnly())
+		return;
+	if(m_pTouchScrollRegion == pRegion)
+	{
+		m_TouchScrollRegionSeen = true;
+		if(!Eligible || UnderlyingPointerInputBlocked())
+			CancelTouchInput();
+	}
+	if(!Eligible || !m_TouchState.m_DirectStarted || m_pTouchDragId != nullptr || !MouseHovered(pRect))
+		return;
+	if(m_pTouchScrollRegion == nullptr || QmHotScrollRegionPriorityWins(m_TouchScrollPriority, Priority))
+	{
+		m_pTouchScrollRegion = pRegion;
+		m_TouchScrollPriority = Priority;
+		m_TouchScrollHorizontal = Horizontal;
+		m_TouchScrollRegionSeen = true;
+	}
+}
+
+vec2 CUi::ConsumeTouchScroll(CScrollRegion *pRegion)
+{
+	if(RenderOnly() || !m_DirectTouchInput || !m_TouchState.m_DirectScrolling || m_pTouchScrollRegion != pRegion)
+		return vec2(0.0f, 0.0f);
+	const vec2 Delta = m_TouchScrollDelta;
+	m_TouchScrollDelta = vec2(0.0f, 0.0f);
+	return Delta;
+}
+
+void CUi::UpdateDirectTouchState(CTouchState &State) const
+{
+	const auto &vFingers = Input()->TouchFingerStates();
+	State.m_TapReleased = State.m_DirectStarted = State.m_DirectCancelled = false;
+	State.m_PrimaryDelta = State.m_ScrollAmount = vec2(0.0f, 0.0f);
+	State.m_AnyPressed = !vFingers.empty();
+	State.m_PrimaryPressed = State.m_SecondaryPressed = false;
+	auto *pEngineGraphics = dynamic_cast<IEngineGraphics *>(Graphics());
+	const bool Focused = pEngineGraphics == nullptr || pEngineGraphics->WindowActive() != 0;
+	const vec2 WindowSize(Graphics()->WindowWidth(), Graphics()->WindowHeight());
+	const bool ContextValid = Enabled() && Focused && (!State.m_DirectTracking || State.m_DirectWindowSize == WindowSize);
+	if(vFingers.empty())
+	{
+		State.m_TapReleased = ContextValid && State.m_DirectTracking && !State.m_DirectMoved && !State.m_DirectLongPress &&
+				      !State.m_DirectDragging && !State.m_DirectScrolling;
+		State.m_DirectCancelled = !ContextValid && State.m_DirectTracking;
+		State.m_DirectTracking = State.m_DirectBlocked = State.m_DirectDragging = State.m_DirectScrolling = false;
+		return;
+	}
+	const auto &Finger = vFingers.front();
+	const bool Interrupted = !ContextValid || vFingers.size() != 1 ||
+				 (State.m_DirectTracking && (State.m_DirectWindowSize != WindowSize || State.m_DirectFinger != Finger.m_Finger || State.m_DirectPressTime != Finger.m_PressTime));
+	if(Interrupted)
+	{
+		State.m_DirectCancelled = State.m_DirectTracking;
+		State.m_DirectTracking = State.m_DirectDragging = State.m_DirectScrolling = false;
+		State.m_DirectBlocked = true;
+		return;
+	}
+	if(State.m_DirectBlocked)
+		return;
+	if(!State.m_DirectTracking)
+	{
+		State.m_DirectTracking = State.m_DirectStarted = true;
+		State.m_DirectMoved = State.m_DirectLongPress = false;
+		State.m_DirectFinger = Finger.m_Finger;
+		State.m_DirectPressTime = Finger.m_PressTime;
+		State.m_DirectWindowSize = WindowSize;
+		State.m_DirectStartPosition = Finger.m_Position;
+		State.m_SecondaryActivationTime = Client()->GlobalTime();
+	}
+	else
+	{
+		State.m_PrimaryDelta = Finger.m_Position - State.m_PrimaryPosition;
+	}
+	State.m_PrimaryPosition = Finger.m_Position;
+	const float ScreenHeight = QmUiVirtualScreenHeight(g_Config.m_QmUiScale);
+	const vec2 Movement = (State.m_PrimaryPosition - State.m_DirectStartPosition) * vec2(Graphics()->ScreenAspect() * ScreenHeight, ScreenHeight);
+	if(!State.m_DirectMoved && length(Movement) > 8.0f)
+	{
+		State.m_DirectMoved = true;
+		State.m_DirectCancelled = !State.m_DirectDragging;
+	}
+	if(!State.m_DirectMoved && !State.m_DirectDragging && !State.m_DirectScrolling && !State.m_DirectLongPress &&
+		Client()->GlobalTime() - State.m_SecondaryActivationTime >= 0.5f)
+	{
+		// 长按接管前先撤销左键 active，避免右键菜单打开时额外点击原按钮。
+		State.m_DirectLongPress = State.m_DirectCancelled = true;
+	}
+	State.m_PrimaryPressed = !State.m_DirectLongPress && !State.m_DirectScrolling && (!State.m_DirectMoved || State.m_DirectDragging);
+	State.m_SecondaryPressed = State.m_DirectLongPress;
+}
+
+void CUi::UpdateTouchState(CTouchState &State, bool AllowDirectTouch) const
+{
+	if(m_DirectTouchInput && AllowDirectTouch)
+	{
+		UpdateDirectTouchState(State);
+		return;
+	}
+	State.m_TapReleased = false;
 	const std::vector<IInput::CTouchFingerState> &vTouchFingerStates = Input()->TouchFingerStates();
 
 	// Updated touch position as long as any finger is beinged pressed.
@@ -1351,11 +1587,16 @@ int CUi::DoButtonLogic(const void *pId, int Checked, const CUIRect *pRect, const
 {
 	if(RenderOnly())
 		return 0;
+	// 同一帧内只允许一个按钮激活。触摸按下后页面立刻切换时（例如游戏内点「设置」
+	// 打开设置页），原位置下方的另一个按钮会在同一帧读到同一次按下/抬起，
+	// 造成「点设置却退出游戏」这类双重点击。
+	if(m_ButtonActivatedThisFrame)
+		return 0;
 	RestorePopupFocus(pId);
 
 	int ReturnValue = 0;
 	const bool Inside = MouseHovered(pRect);
-	const bool UseCurrentHit = (Flags & BUTTONFLAG_CURRENT_HIT) != 0;
+	const bool UseCurrentHit = m_DirectTouchInput || (Flags & BUTTONFLAG_CURRENT_HIT) != 0;
 	const bool AllowCurrentPress = UseCurrentHit || (PreLayoutInput() && !IsPopupOpen());
 	const int CurrentPress = AllowCurrentPress ? QmButtonCurrentPress(QmResolvePointerButtons(m_MouseButtons, m_LastMouseButtons, UnderlyingPointerInputBlocked()), Flags, Inside) : -1;
 	// 预布局及显式启用的下拉触发器按当前矩形接管新按下；释放仍由原状态机处理。
@@ -1381,19 +1622,26 @@ int CUi::DoButtonLogic(const void *pId, int Checked, const CUIRect *pRect, const
 		if(!MouseButton(m_ActiveButtonLogicButton))
 		{
 			if(Inside && Checked >= 0)
+			{
 				ReturnValue = 1 + m_ActiveButtonLogicButton;
+				m_ButtonActivatedThisFrame = true;
+			}
 			SetActiveItem(nullptr);
 			m_ActiveButtonLogicButton = -1;
 		}
 	}
 
+	// 触摸没有 hover：第一次按下的位置就是当前指针位置，不能再依赖上一帧的
+	// HotItem（否则第一次只点亮、第二次才激活）。鼠标仍走原来的 HotItem 路径，
+	// 避免多控件重叠时按下未悬停的控件。
+	const bool TouchInputActive = !Input()->TouchFingerStates().empty();
 	bool NoRelevantButtonsPressed = true;
 	for(int Button = 0; Button < 3; ++Button)
 	{
 		if((Flags & (BUTTONFLAG_LEFT << Button)) && MouseButton(Button))
 		{
 			NoRelevantButtonsPressed = false;
-			if(UseCurrentHit ? CurrentPress == Button : HotItem() == pId)
+			if(UseCurrentHit ? CurrentPress == Button : (TouchInputActive ? Inside : HotItem() == pId))
 			{
 				SetActiveItem(pId);
 				m_ActiveButtonLogicButton = Button;
@@ -1429,6 +1677,7 @@ int CUi::DoDraggableButtonLogic(const void *pId, int Checked, const CUIRect *pRe
 	if(pAbrupted != nullptr)
 		*pAbrupted = false;
 
+	CaptureTouchDrag(pId, pRect);
 	if(CheckActiveItem(pId))
 	{
 		dbg_assert(m_ActiveDraggableButtonLogicButton >= 0, "m_ActiveDraggableButtonLogicButton invalid");
@@ -1461,7 +1710,8 @@ int CUi::DoDraggableButtonLogic(const void *pId, int Checked, const CUIRect *pRe
 			m_ActiveDraggableButtonLogicButton = -1;
 		}
 	}
-	else if(HotItem() == pId)
+	// 直接触控没有 hover：第一下按在控件上就要能开始拖动，不依赖上一帧的 HotItem。
+	else if(HotItem() == pId || (m_DirectTouchInput && Inside && MouseButtonClicked(0)))
 	{
 		for(int i = 0; i < 3; ++i)
 		{
@@ -1503,6 +1753,7 @@ EEditState CUi::DoPickerLogic(const void *pId, const CUIRect *pRect, float *pX, 
 		return EEditState::NONE;
 
 	const bool Inside = MouseHovered(pRect);
+	CaptureTouchDrag(pId, pRect);
 	if(Inside)
 		SetHotItem(pId);
 
@@ -2255,39 +2506,6 @@ bool CUi::DoClearableEditBox(CLineInput *pLineInput, const CUIRect *pRect, float
 	return ReturnValue;
 }
 
-bool CUi::DoEditBox_Search(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, bool HotkeyEnabled)
-{
-	return DoEditBox_Search(pLineInput, pRect, FontSize, HotkeyEnabled, {});
-}
-
-bool CUi::DoEditBox_Search(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, bool HotkeyEnabled, const SEditBoxRenderOptions &RenderOptions)
-{
-	const ColorRGBA PreviousTextColor = TextRender()->GetTextColor();
-	const ColorRGBA PreviousTextOutlineColor = TextRender()->GetTextOutlineColor();
-	const ColorRGBA PreviousTextSelectionColor = TextRender()->GetTextSelectionColor();
-	const unsigned PreviousRenderFlags = TextRender()->GetRenderFlags();
-	const EFontPreset PreviousFontPreset = TextRender()->GetFontPreset();
-
-	CUIRect QuickSearch = *pRect;
-	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-	DoLabel_QmIcon(&QuickSearch, EQmIcon::SEARCH, FONT_ICON_MAGNIFYING_GLASS, FontSize, TEXTALIGN_ML);
-	const float SearchWidth = TextRender()->TextWidth(FontSize, FONT_ICON_MAGNIFYING_GLASS);
-	TextRender()->SetRenderFlags(PreviousRenderFlags);
-	TextRender()->SetFontPreset(PreviousFontPreset);
-	TextRender()->TextOutlineColor(PreviousTextOutlineColor);
-	TextRender()->TextSelectionColor(PreviousTextSelectionColor);
-	TextRender()->TextColor(PreviousTextColor);
-	QuickSearch.VSplitLeft(SearchWidth + 5.0f, nullptr, &QuickSearch);
-	if(HotkeyEnabled && Input()->ModifierIsPressed() && Input()->KeyPress(KEY_F))
-	{
-		SetActiveItem(pLineInput);
-		pLineInput->SelectAll();
-	}
-	pLineInput->SetEmptyText(Localize("Search"));
-	return DoClearableEditBox(pLineInput, &QuickSearch, FontSize, IGraphics::CORNER_ALL, {}, RenderOptions);
-}
-
 void CUi::DoConfigTooltip(const void *pId, const CUIRect *pRect, const void *pValue, const void *pSecondValue)
 {
 	if(m_pQmTooltips != nullptr)
@@ -2477,7 +2695,7 @@ int CUi::DoButton_FontIcon(CButtonContainer *pButtonContainer, const char *pText
 	return ui_widget::DoIconButton(ui_widget::ControlContext(this), pButtonContainer, EQmIcon::COUNT, pText, Checked, *pRect, Flags, Corners, Enabled, ButtonColor);
 }
 
-bool CUi::DrawQmIcon(const CUIRect &Rect, EQmIcon Icon, const char *pFallbackIcon, const ColorRGBA &Color) const
+bool CUi::DrawQmIcon(const CUIRect &Rect, const EQmIcon Icon, const char *pFallbackIcon, const ColorRGBA &Color, const bool ForceOutlineStyle) const
 {
 	if(pFallbackIcon == nullptr || pFallbackIcon[0] == '\0')
 		return false;
@@ -2492,7 +2710,8 @@ bool CUi::DrawQmIcon(const CUIRect &Rect, EQmIcon Icon, const char *pFallbackIco
 	pTextRender->TextColor(QmSignalIconFamily(Icon) ? Color : ConfiguredQmUiIconColor(Color, Icon));
 	const CQmIconSemanticColorScope SemanticColorScope(QmUiIconHasSemanticColor(Icon));
 	// 实心态切换 Fill 字面渲染同一码位；字形文本与度量不变，缓存按预设自然隔离。
-	pTextRender->SetFontPreset(QmUiIconFilledStyle(Icon) ? EFontPreset::ICON_FONT_FILL : EFontPreset::ICON_FONT);
+	pTextRender->SetFontPreset(ForceOutlineStyle ? EFontPreset::ICON_FONT : QmUiIconFilledStyle(Icon) ? EFontPreset::ICON_FONT_FILL :
+													    EFontPreset::ICON_FONT);
 	pTextRender->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING);
 	// 信号柱家族按 bbox 占比补足字号，四档可视尺寸趋近常规图标；其余图标走通用字号。
 	const float FontSize = QmSignalIconFamily(Icon) ? QmSignalIconFontSize(Rect, Icon) : QmIconFontSize(Rect);
@@ -2513,9 +2732,9 @@ CLabelResult CUi::DoLabel_QmIcon(const CUIRect *pRect, EQmIcon Icon, const char 
 	return DoLabel(pRect, pFallbackIcon, Size, Align, LabelProps);
 }
 
-int CUi::DoButton_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, int Corners, bool Enabled, const std::optional<ColorRGBA> ButtonColor, bool ShowSlash, bool TransparentInactive)
+int CUi::DoButton_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, int Corners, bool Enabled, const std::optional<ColorRGBA> ButtonColor, bool ShowSlash, bool TransparentInactive, const ui_widget::SIconButtonIconDraw *pIconDraw)
 {
-	return ui_widget::DoIconButton(ui_widget::ControlContext(this), pButtonContainer, Icon, pFallbackIcon, Checked, *pRect, Flags, Corners, Enabled, ButtonColor, ShowSlash, TransparentInactive);
+	return ui_widget::DoIconButton(ui_widget::ControlContext(this), pButtonContainer, Icon, pFallbackIcon, Checked, *pRect, Flags, Corners, Enabled, ButtonColor, ShowSlash, TransparentInactive, nullptr, pIconDraw);
 }
 
 int CUi::DoButton_PopupMenu(CButtonContainer *pButtonContainer, const char *pText, const CUIRect *pRect, float Size, int Align, float Padding, bool TransparentInactive, bool Enabled, const std::optional<ColorRGBA> ButtonColor, float MinimumFontSize)
@@ -2595,6 +2814,10 @@ SEditResult<int64_t> CUi::DoValueSelectorWithState(const void *pId, const CUIRec
 		}
 	};
 
+	if(m_DirectTouchInput && Inside && (MouseButtonClicked(0) || MouseButtonClicked(1)))
+		m_pHotItem = pId;
+	if(Props.m_UseScroll)
+		CaptureTouchDrag(pId, pRect);
 	if(CheckActiveItem(pId))
 	{
 		if(m_ActiveValueSelectorState.m_Button < 0)
@@ -2717,7 +2940,8 @@ SEditResult<int64_t> CUi::DoValueSelectorWithState(const void *pId, const CUIRec
 				}
 			}
 		}
-		else if(HotItem() == pId)
+		// 触摸没有 hover：第一下按在数值框上就要进入拖动/滚轮状态。
+		else if(HotItem() == pId || (!Input()->TouchFingerStates().empty() && Inside))
 		{
 			if(MouseButton(0))
 			{
@@ -2759,85 +2983,6 @@ SEditResult<int64_t> CUi::DoValueSelectorWithState(const void *pId, const CUIRec
 	}
 
 	return SEditResult<int64_t>{State, Current};
-}
-
-float CUi::DoScrollbarV(const void *pId, const CUIRect *pRect, float Current)
-{
-	Current = std::clamp(Current, 0.0f, 1.0f);
-
-	// layout
-	CUIRect Rail;
-	pRect->Margin(5.0f, &Rail);
-
-	CUIRect Handle;
-	Rail.HSplitTop(std::clamp(33.0f, Rail.w, Rail.h / 3.0f), &Handle, nullptr);
-	Handle.y = Rail.y + (Rail.h - Handle.h) * Current;
-
-	// logic
-	const bool InsideRail = MouseHovered(&Rail);
-	const bool InsideHandle = MouseHovered(&Handle);
-	bool Grabbed = false; // whether to apply the offset
-
-	if(CheckActiveItem(pId))
-	{
-		if(MouseButton(0))
-		{
-			Grabbed = true;
-			if(Input()->ShiftIsPressed())
-				m_MouseSlow = true;
-		}
-		else
-		{
-			SetActiveItem(nullptr);
-		}
-	}
-	else if(HotItem() == pId)
-	{
-		if(InsideHandle)
-		{
-			if(MouseButton(0))
-			{
-				SetActiveItem(pId);
-				m_ActiveScrollbarOffset = MouseY() - Handle.y;
-				Grabbed = true;
-			}
-		}
-		else if(MouseButtonClicked(0))
-		{
-			SetActiveItem(pId);
-			m_ActiveScrollbarOffset = Handle.h / 2.0f;
-			Grabbed = true;
-		}
-	}
-
-	if(InsideRail && !MouseButton(0))
-	{
-		SetHotItem(pId);
-	}
-
-	float ReturnValue = Current;
-	if(Grabbed)
-	{
-		const float Min = Rail.y;
-		const float Max = Rail.h - Handle.h;
-		const float Cur = MouseY() - m_ActiveScrollbarOffset;
-		ReturnValue = std::clamp((Cur - Min) / Max, 0.0f, 1.0f);
-	}
-
-	// render
-	if(QmAnimationRuntime() != nullptr)
-	{
-		const auto Style = ResolveUiSliderStyle(QmControlTheme(), CUiScopedSurfaceText::CurrentSurface(), HotItem() == pId, CheckActiveItem(pId));
-		DrawRoundedSurface(this, Rail, ScaleControlAlpha(Style.m_Track), ColorRGBA(), ui_token::radius::PILL);
-		ui_widget::DrawScrollbarHandle(ui_widget::ControlContext(this), pId, Handle);
-	}
-	else
-	{
-		DrawRoundedSurface(this, Rail, ScaleControlAlpha(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f)), ColorRGBA(), Rail.w / 2.0f);
-		DrawRoundedSurface(this, Handle, ScaleControlAlpha(ms_ScrollBarColorFunction.GetColor(CheckActiveItem(pId), HotItem() == pId)), ColorRGBA(), Handle.w / 2.0f);
-	}
-
-	return ReturnValue;
 }
 
 void CUi::RenderScrollbarH(const void *pId, const CUIRect *pRect, float Current, const ColorRGBA *pColorInner)
@@ -2905,6 +3050,12 @@ float CUi::DoScrollbarH(const void *pId, const CUIRect *pRect, float Current, co
 	const bool InsideRail = MouseHovered(&Rail);
 	const bool InsideHandle = MouseHovered(&HandleArea);
 	bool Grabbed = false;
+	if(CaptureTouchDrag(pId, &Rail) && !IsActiveItem(pId))
+	{
+		SetActiveItem(pId);
+		m_pLastActiveScrollbar = pId;
+		m_ActiveScrollbarOffset = InsideHandle ? MouseX() - Handle.x : Handle.w / 2.0f;
+	}
 	if(CheckActiveItem(pId))
 	{
 		if(MouseButton(0))
@@ -2918,7 +3069,7 @@ float CUi::DoScrollbarH(const void *pId, const CUIRect *pRect, float Current, co
 			SetActiveItem(nullptr);
 		}
 	}
-	else if(HotItem() == pId)
+	else if(HotItem() == pId || (!Input()->TouchFingerStates().empty() && InsideRail))
 	{
 		if(InsideHandle)
 		{

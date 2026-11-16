@@ -94,6 +94,12 @@ void CMenus::RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMet
 	auto DoQmSettingsMenuButton = [this](CButtonContainer *pButton, const char *pTextId, const char *pText, const CUIRect *pRect) {
 		return DoSettingsButton_Menu(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, pButton, pTextId, pText, 0, pRect);
 	};
+	// 刷新这类动作只放图标，说明走悬浮提示，文字按钮在窄列里太占地方。
+	auto DoQmSettingsIconButton = [this](CButtonContainer *pButton, const char *pTextId, EQmIcon Icon, const char *pIcon, const char *pTooltip, const CUIRect *pRect) {
+		const bool Clicked = Ui()->DoButton_QmIcon(pButton, Icon, pIcon, 0, pRect, IGraphics::CORNER_ALL) != 0;
+		GameClient()->m_Tooltips.DoToolTip(pButton, pRect, pTooltip);
+		return Clicked;
+	};
 	auto RenderSliderWithValueInput = [this, PrewarmOnly](const void *pId, const CUIRect &ControlColumn, int *pValue, int MinValue, int MaxValue, const char *pSuffix = "") {
 		RenderQmSettingsSliderWithValueInput(pId, ControlColumn, pValue, MinValue, MaxValue, pSuffix, PrewarmOnly);
 	};
@@ -341,12 +347,11 @@ void CMenus::RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMet
 			SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelCol, &ControlCol);
 			DoQmSettingsLabel("qmclient-voice-room-password", &LabelCol, Localize("Room password"), BodySize);
 			static CLineInput s_VoiceToken(g_Config.m_QmVoiceToken, sizeof(g_Config.m_QmVoiceToken));
-			if(!PrewarmOnly && !Ui()->RenderOnly())
-			{
-				s_VoiceToken.SetEmptyText(Localize("Leave empty to join public room"));
-				s_VoiceToken.SetHidden(true);
-			}
-			ui_widget::InputField(QmClientVoiceTextInputCtx, &s_VoiceToken, ControlCol, Localize("Leave empty to join public room"), BodySize);
+			static ui_widget::SPasswordFieldState s_VoiceTokenState;
+			ui_widget::SPasswordFieldOptions VoiceTokenOptions;
+			VoiceTokenOptions.m_pPlaceholder = Localize("Leave empty to join public room");
+			VoiceTokenOptions.m_FontSize = BodySize;
+			ui_widget::PasswordField(QmClientVoiceTextInputCtx, &s_VoiceToken, ControlCol, &s_VoiceTokenState, VoiceTokenOptions);
 		}
 		Flow.Space(LineSpacing);
 
@@ -466,13 +471,13 @@ void CMenus::RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMet
 
 				CUIRect VoiceInputDropDownRect;
 				CUIRect VoiceInputRefreshButton;
-				ControlCol.VSplitRight(maximum(68.0f, 68.0f * UiScale), &VoiceInputDropDownRect, &VoiceInputRefreshButton);
+				ControlCol.VSplitRight(LineHeight, &VoiceInputDropDownRect, &VoiceInputRefreshButton);
 
 				static CButtonContainer s_VoiceInputRefreshButton;
 				if(s_VoiceInputDeviceEntries.empty())
 				{
 					DoQmSettingsLabel("qmclient-voice-input-default", &VoiceInputDropDownRect, Localize("Default"), BodySize);
-					DoQmSettingsMenuButton(&s_VoiceInputRefreshButton, "qmclient-voice-input-refresh", Localize("Refresh"), &VoiceInputRefreshButton);
+					DoQmSettingsIconButton(&s_VoiceInputRefreshButton, "qmclient-voice-input-refresh", EQmIcon::ARROW_ROTATE_RIGHT, "\xEE\x80\xB6", Localize("Refresh"), &VoiceInputRefreshButton);
 				}
 				else
 				{
@@ -480,7 +485,7 @@ void CMenus::RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMet
 					const int VoiceInputSelectedNew = DoSettingsDropDown(&VoiceInputDropDownRect, VoiceInputSelectedOld, s_VoiceInputDeviceDropDownNames.data(), s_VoiceInputDeviceDropDownNames.size(), s_VoiceInputDeviceDropDownState, {}, g_Config.m_QmVoiceInputDevice, nullptr, &Row);
 					if(Flow.Input() && !ReadOnly && VoiceInputSelectedNew >= 0 && VoiceInputSelectedNew != VoiceInputSelectedOld && (size_t)VoiceInputSelectedNew < s_VoiceInputDeviceConfigValues.size())
 						str_copy(g_Config.m_QmVoiceInputDevice, s_VoiceInputDeviceConfigValues[VoiceInputSelectedNew].c_str(), sizeof(g_Config.m_QmVoiceInputDevice));
-					if(DoQmSettingsMenuButton(&s_VoiceInputRefreshButton, "qmclient-voice-input-refresh", Localize("Refresh"), &VoiceInputRefreshButton) && Flow.Input() && !ReadOnly)
+					if(DoQmSettingsIconButton(&s_VoiceInputRefreshButton, "qmclient-voice-input-refresh", EQmIcon::ARROW_ROTATE_RIGHT, "\xEE\x80\xB6", Localize("Refresh"), &VoiceInputRefreshButton) && Flow.Input() && !ReadOnly)
 						RefreshVoiceInputDeviceList();
 				}
 			}
@@ -535,13 +540,13 @@ void CMenus::RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMet
 
 				CUIRect VoiceOutputDropDownRect;
 				CUIRect VoiceOutputRefreshButton;
-				ControlCol.VSplitRight(maximum(68.0f, 68.0f * UiScale), &VoiceOutputDropDownRect, &VoiceOutputRefreshButton);
+				ControlCol.VSplitRight(LineHeight, &VoiceOutputDropDownRect, &VoiceOutputRefreshButton);
 
 				static CButtonContainer s_VoiceOutputRefreshButton;
 				if(s_VoiceOutputDeviceEntries.empty())
 				{
 					DoQmSettingsLabel("qmclient-voice-output-default", &VoiceOutputDropDownRect, Localize("Default"), BodySize);
-					DoQmSettingsMenuButton(&s_VoiceOutputRefreshButton, "qmclient-voice-output-refresh", Localize("Refresh"), &VoiceOutputRefreshButton);
+					DoQmSettingsIconButton(&s_VoiceOutputRefreshButton, "qmclient-voice-output-refresh", EQmIcon::ARROW_ROTATE_RIGHT, "\xEE\x80\xB6", Localize("Refresh"), &VoiceOutputRefreshButton);
 				}
 				else
 				{
@@ -549,7 +554,7 @@ void CMenus::RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMet
 					const int VoiceOutputSelectedNew = DoSettingsDropDown(&VoiceOutputDropDownRect, VoiceOutputSelectedOld, s_VoiceOutputDeviceDropDownNames.data(), s_VoiceOutputDeviceDropDownNames.size(), s_VoiceOutputDeviceDropDownState, {}, g_Config.m_QmVoiceOutputDevice, nullptr, &Row);
 					if(Flow.Input() && !ReadOnly && VoiceOutputSelectedNew >= 0 && VoiceOutputSelectedNew != VoiceOutputSelectedOld && (size_t)VoiceOutputSelectedNew < s_VoiceOutputDeviceConfigValues.size())
 						str_copy(g_Config.m_QmVoiceOutputDevice, s_VoiceOutputDeviceConfigValues[VoiceOutputSelectedNew].c_str(), sizeof(g_Config.m_QmVoiceOutputDevice));
-					if(DoQmSettingsMenuButton(&s_VoiceOutputRefreshButton, "qmclient-voice-output-refresh", Localize("Refresh"), &VoiceOutputRefreshButton) && Flow.Input() && !ReadOnly)
+					if(DoQmSettingsIconButton(&s_VoiceOutputRefreshButton, "qmclient-voice-output-refresh", EQmIcon::ARROW_ROTATE_RIGHT, "\xEE\x80\xB6", Localize("Refresh"), &VoiceOutputRefreshButton) && Flow.Input() && !ReadOnly)
 						RefreshVoiceOutputDeviceList();
 				}
 			}

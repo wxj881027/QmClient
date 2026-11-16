@@ -17,6 +17,26 @@ void CMenus::RenderQmTooltipContent(CUIRect &Content, const SSettingsContentMetr
 {
 	CSettingsContentLayoutFlow Flow(Content);
 	const bool ReadOnly = PrewarmOnly || Ui()->RenderOnly();
+	CUIRect Row, Label, Control;
+	SLabelProperties Props;
+	Props.m_EllipsisAtEnd = true;
+	if(Flow.Control("tooltip-animation", Metrics.m_LineHeight, Row))
+		RenderQmFunctionCheckbox(&g_Config.m_QmTooltipAnimation, "Tooltip bounce animation", Localize("Tooltip bounce animation"), &g_Config.m_QmTooltipAnimation, &Row, ReadOnly);
+	Flow.Space(Metrics.m_LineSpacing);
+	if(Flow.Control("tooltip-preview", std::max(Metrics.m_LineHeight, g_Config.m_QmTooltipFontSize * 1.5f), Row))
+	{
+		Row.Draw(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTooltipBackgroundColor, true)), IGraphics::CORNER_ALL, 5.0f);
+		const ColorRGBA PreviousColor = TextRender()->GetTextColor();
+		TextRender()->TextColor(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTooltipTextColor, true)));
+		Row.HMargin(2.0f, &Row);
+		Props.m_MaxWidth = Row.w;
+		Ui()->DoLabel(&Row, Localize("Tooltip preview"), static_cast<float>(g_Config.m_QmTooltipFontSize), TEXTALIGN_MC, Props);
+		TextRender()->TextColor(PreviousColor);
+	}
+	Flow.Space(Metrics.m_LineSpacing);
+	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:tooltip", Metrics, ReadOnly))
+		return;
+
 	static CButtonContainer s_Background, s_Text;
 	CUIRect ColorRow;
 	if(Flow.Control("tooltip-background", Metrics.m_LineHeight, ColorRow))
@@ -31,8 +51,6 @@ void CMenus::RenderQmTooltipContent(CUIRect &Content, const SSettingsContentMetr
 			color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::QmTooltipTextColor, true)), false, nullptr, true);
 	}
 	Flow.Space(Metrics.m_LineSpacing);
-	CUIRect Row, Label, Control;
-	SLabelProperties Props;
 	if(Flow.Control("tooltip-font-size", Metrics.m_LineHeight, Row))
 	{
 		Row.VSplitMid(&Label, &Control, Metrics.m_LineSpacing);
@@ -42,20 +60,6 @@ void CMenus::RenderQmTooltipContent(CUIRect &Content, const SSettingsContentMetr
 		static int s_FontSize;
 		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(&s_FontSize, &Row, &g_Config.m_QmTooltipFontSize, &Label);
 		RenderQmSettingsSliderWithValueInput(&s_FontSize, Control, &g_Config.m_QmTooltipFontSize, 10, 24, "", ReadOnly);
-	}
-	Flow.Space(Metrics.m_LineSpacing);
-	if(Flow.Control("tooltip-animation", Metrics.m_LineHeight, Row))
-		RenderQmFunctionCheckbox(&g_Config.m_QmTooltipAnimation, "Tooltip bounce animation", Localize("Tooltip bounce animation"), &g_Config.m_QmTooltipAnimation, &Row, ReadOnly);
-	Flow.Space(Metrics.m_LineSpacing);
-	if(Flow.Control("tooltip-preview", std::max(Metrics.m_LineHeight, g_Config.m_QmTooltipFontSize * 1.5f), Row))
-	{
-		Row.Draw(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTooltipBackgroundColor, true)), IGraphics::CORNER_ALL, 5.0f);
-		const ColorRGBA PreviousColor = TextRender()->GetTextColor();
-		TextRender()->TextColor(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTooltipTextColor, true)));
-		Row.HMargin(2.0f, &Row);
-		Props.m_MaxWidth = Row.w;
-		Ui()->DoLabel(&Row, Localize("Tooltip preview"), static_cast<float>(g_Config.m_QmTooltipFontSize), TEXTALIGN_MC, Props);
-		TextRender()->TextColor(PreviousColor);
 	}
 	Flow.Space(Metrics.m_LineSpacing);
 	static CButtonContainer s_Reset;

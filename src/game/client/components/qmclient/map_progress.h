@@ -1,6 +1,8 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_MAP_PROGRESS_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_MAP_PROGRESS_H
 
+#include <engine/shared/protocol.h>
+
 #include <game/collision.h>
 #include <game/mapitems.h>
 
@@ -8,8 +10,10 @@
 #include <array>
 #include <cstdint>
 #include <limits>
+#include <optional>
 #include <queue>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 namespace QmMapProgress
@@ -17,16 +21,78 @@ namespace QmMapProgress
 	constexpr int NUM_TIME_CHECKPOINTS = TILE_TIME_CHECKPOINT_LAST - TILE_TIME_CHECKPOINT_FIRST + 1;
 	constexpr int INF = std::numeric_limits<int>::max();
 
+	struct SRouteCost
+	{
+		int m_Risk = INF;
+		int m_Water = INF;
+		int m_Length = INF;
+		int m_Unsupported = 0;
+
+		auto Key() const { return std::tie(m_Risk, m_Water, m_Length, m_Unsupported); }
+		bool operator<(const SRouteCost &Other) const { return Key() < Other.Key(); }
+		bool operator==(const SRouteCost &Other) const { return Key() == Other.Key(); }
+		bool operator!=(const SRouteCost &Other) const { return !(*this == Other); }
+
+		SRouteCost AddTile(bool Water, bool NearDeath, int Length = 1, bool Grounded = false) const
+		{
+			const int Risk = Water || NearDeath;
+			const int Unsupported = Grounded ? 0 : Length;
+			if(m_Risk >= INF - Risk || m_Water >= INF - Water || m_Length >= INF - Length || m_Unsupported >= INF - Unsupported)
+				return {};
+			return {m_Risk + Risk, m_Water + Water, m_Length + Length, m_Unsupported + Unsupported};
+		}
+	};
+
+	inline bool IsSolidGround(int Game, int Front)
+	{
+		return Game == TILE_SOLID || Game == TILE_NOHOOK || Front == TILE_SOLID || Front == TILE_NOHOOK;
+	}
+
+	inline bool IsWaterTile(int Type)
+	{
+		return Type == TILE_FREEZE || Type == TILE_DFREEZE || Type == TILE_LFREEZE;
+	}
+
+	inline bool IsSupportedGround(bool Water, bool SolidBelow, int Restrictions)
+	{
+		return !Water && (SolidBelow || (Restrictions & CANTMOVE_DOWN) != 0);
+	}
+
+	template<typename F>
+	bool NearDeathTile(int Index, int Width, int Size, F IsDeath)
+	{
+		if(Width <= 0 || Index < 0 || Index >= Size)
+			return false;
+		const int X = Index % Width;
+		const int Y = Index / Width;
+		for(int Ny = std::max(Y - 1, 0); Ny <= std::min(Y + 1, Size / Width - 1); ++Ny)
+		{
+			for(int Nx = std::max(X - 1, 0); Nx <= std::min(X + 1, Width - 1); ++Nx)
+			{
+				const int Neighbor = Ny * Width + Nx;
+				if(Neighbor != Index && IsDeath(Neighbor))
+					return true;
+			}
+		}
+		return false;
+	}
+
 	struct STile
 	{
-		int m_Cost = 100;
 		int m_Restrictions = 0;
 		int m_TimeCheckpoint = -1;
 		int m_TeleType = 0;
 		int m_TeleNumber = 0;
+		bool m_Solid = false;
+		bool m_Death = false;
+		bool m_Water = false;
+		bool m_NearDeath = false;
+		bool m_Grounded = false;
 		bool m_Start = false;
 		bool m_Finish = false;
 		bool m_Spawn = false;
+
+		bool Blocked() const { return m_Solid || m_Death; }
 	};
 
 	inline STile MakeTile(int Game, int Front = TILE_AIR, int TeleType = 0, int TeleNumber = 0, int Restrictions = 0)
@@ -38,12 +104,12 @@ namespace QmMapProgress
 		Tile.m_Start = Game == TILE_START || Front == TILE_START;
 		Tile.m_Finish = Game == TILE_FINISH || Front == TILE_FINISH;
 		Tile.m_Spawn = Game == ENTITY_OFFSET + ENTITY_SPAWN;
+		Tile.m_Solid = IsSolidGround(Game, Front);
+		Tile.m_Death = Game == TILE_DEATH || Front == TILE_DEATH;
 		for(const int Type : {Game, Front})
 		{
-			if(Type == TILE_SOLID || Type == TILE_NOHOOK || Type == TILE_DEATH)
-				Tile.m_Cost = 0;
-			else if(Tile.m_Cost != 0 && (Type == TILE_FREEZE || Type == TILE_DFREEZE || Type == TILE_LFREEZE))
-				Tile.m_Cost = 300;
+			if(IsWaterTile(Type))
+				Tile.m_Water = true;
 			if(Type >= TILE_TIME_CHECKPOINT_FIRST && Type <= TILE_TIME_CHECKPOINT_LAST)
 				Tile.m_TimeCheckpoint = Type - TILE_TIME_CHECKPOINT_FIRST;
 		}
@@ -93,9 +159,12 @@ namespace QmMapProgress
 			while(Budget-- > 0 && m_ScanCursor < Size())
 			{
 				const int Index = m_ScanCursor++;
-				const STile &Cell = Tile(Index);
-				if(Cell.m_Cost == 0)
+				STile &Cell = m_vTiles[(size_t)Index];
+				if(Cell.Blocked())
 					continue;
+				Cell.m_NearDeath = NearDeathTile(Index, m_Width, Size(), [&](int Neighbor) { return Tile(Neighbor).m_Death; });
+				const bool SolidBelow = Index < Size() - m_Width && Tile(Index + m_Width).m_Solid;
+				Cell.m_Grounded = IsSupportedGround(Cell.m_Water, SolidBelow, Cell.m_Restrictions);
 				if(Cell.m_Start)
 					m_vStarts.push_back(Index);
 				if(Cell.m_Finish)
@@ -155,12 +224,11 @@ namespace QmMapProgress
 	{
 		struct SLabel
 		{
-			int m_Cost = INF;
-			int m_Length = INF;
+			SRouteCost m_Cost;
 			int m_Next = -1;
 			bool m_Settled = false;
 		};
-		using TNode = std::tuple<int, int, int>;
+		using TNode = std::pair<SRouteCost, int>;
 		std::vector<SLabel> m_vLabels;
 		std::priority_queue<TNode, std::vector<TNode>, std::greater<TNode>> m_Queue;
 		std::array<const std::vector<int> *, 2> m_apPending = {};
@@ -175,7 +243,7 @@ namespace QmMapProgress
 		bool Allowed(const CMap &Map, int Index) const
 		{
 			const STile &Cell = Map.Tile(Index);
-			if(Cell.m_Cost == 0)
+			if(Cell.Blocked())
 				return false;
 			if(m_Stage < 0)
 				return true;
@@ -184,21 +252,15 @@ namespace QmMapProgress
 			return Cell.m_TimeCheckpoint < 0 || Cell.m_TimeCheckpoint == m_Stage || Cell.m_TimeCheckpoint == m_Stage - 1;
 		}
 
-		void Relax(int Index, int Target, int Cost, int Length)
+		void Relax(int Index, int Target, const SRouteCost &NewCost)
 		{
-			const auto &Next = m_vLabels[(size_t)Target];
-			if(Next.m_Cost > INF - Cost || Next.m_Length > INF - Length)
-				return;
 			auto &Label = m_vLabels[(size_t)Index];
-			const int NewCost = Next.m_Cost + Cost;
-			const int NewLength = Next.m_Length + Length;
-			if(NewCost > Label.m_Cost || (NewCost == Label.m_Cost && NewLength >= Label.m_Length))
+			if(!(NewCost < Label.m_Cost))
 				return;
 			Label.m_Cost = NewCost;
-			Label.m_Length = NewLength;
 			Label.m_Next = Target;
 			++m_Revision;
-			m_Queue.emplace(NewCost, NewLength, Index);
+			m_Queue.emplace(NewCost, Index);
 		}
 
 		bool ForcesTeleport(const CMap &Map, const STile &Cell) const
@@ -215,8 +277,8 @@ namespace QmMapProgress
 		bool Matches(int TeleCheckpoint, int Stage) const { return m_TeleCheckpoint == TeleCheckpoint && m_Stage == Stage; }
 		bool Complete() const { return m_Queue.empty() && m_apPending[0] == nullptr && m_apPending[1] == nullptr; }
 		bool Settled(int Index) const { return Index >= 0 && Index < (int)m_vLabels.size() && m_vLabels[(size_t)Index].m_Settled; }
-		int Length(int Index) const { return Settled(Index) ? m_vLabels[(size_t)Index].m_Length : -1; }
-		int Cost(int Index) const { return Settled(Index) ? m_vLabels[(size_t)Index].m_Cost : -1; }
+		int Length(int Index) const { return Settled(Index) ? m_vLabels[(size_t)Index].m_Cost.m_Length : -1; }
+		SRouteCost Cost(int Index) const { return Settled(Index) ? m_vLabels[(size_t)Index].m_Cost : SRouteCost{}; }
 		int Next(int Index) const { return Settled(Index) ? m_vLabels[(size_t)Index].m_Next : -1; }
 
 		void Start(const CMap &Map, int TeleCheckpoint, int Stage = -1)
@@ -239,9 +301,8 @@ namespace QmMapProgress
 				if(!Allowed(Map, Index))
 					continue;
 				auto &Label = m_vLabels[(size_t)Index];
-				Label.m_Cost = 0;
-				Label.m_Length = 0;
-				m_Queue.emplace(0, 0, Index);
+				Label.m_Cost = {0, 0, 0};
+				m_Queue.emplace(Label.m_Cost, Index);
 			}
 		}
 
@@ -252,12 +313,14 @@ namespace QmMapProgress
 				if(m_PendingSlot < 2 && m_apPending[(size_t)m_PendingSlot])
 				{
 					const auto &vInputs = *m_apPending[(size_t)m_PendingSlot];
+					const auto &Exit = Map.Tile(m_PendingTarget);
+					const auto ExitCost = m_vLabels[(size_t)m_PendingTarget].m_Cost.AddTile(Exit.m_Water, Exit.m_NearDeath, 0);
 					while(Budget > 0 && m_PendingCursor < (int)vInputs.size())
 					{
 						--Budget;
 						const int Index = vInputs[(size_t)m_PendingCursor++];
 						if(Allowed(Map, Index))
-							Relax(Index, m_PendingTarget, 0, 0);
+							Relax(Index, m_PendingTarget, ExitCost);
 					}
 					if(m_PendingCursor < (int)vInputs.size())
 						return;
@@ -273,14 +336,15 @@ namespace QmMapProgress
 				if(m_Queue.empty())
 					return;
 				--Budget;
-				const auto [Cost, Length, Index] = m_Queue.top();
+				const auto [Cost, Index] = m_Queue.top();
 				m_Queue.pop();
 				auto &Label = m_vLabels[(size_t)Index];
-				if(Label.m_Settled || Cost != Label.m_Cost || Length != Label.m_Length)
+				if(Label.m_Settled || Cost != Label.m_Cost)
 					continue;
 				Label.m_Settled = true;
 				++m_Revision;
 				const STile &Cell = Map.Tile(Index);
+				const SRouteCost EnterCost = Cost.AddTile(Cell.m_Water, Cell.m_NearDeath, 1, Cell.m_Grounded);
 				const int X = Index % Map.m_Width;
 				const int aPred[4] = {X > 0 ? Index - 1 : -1, X + 1 < Map.m_Width ? Index + 1 : -1, Index - Map.m_Width, Index + Map.m_Width};
 				const int aDirection[4] = {CANTMOVE_RIGHT, CANTMOVE_LEFT, CANTMOVE_DOWN, CANTMOVE_UP};
@@ -291,7 +355,7 @@ namespace QmMapProgress
 						continue;
 					const STile &From = Map.Tile(Pred);
 					if((From.m_Restrictions & aDirection[Direction]) == 0 && !ForcesTeleport(Map, From))
-						Relax(Pred, Index, Cell.m_Cost, 1);
+						Relax(Pred, Index, EnterCost);
 				}
 
 				m_apPending = {};
@@ -339,6 +403,25 @@ namespace QmMapProgress
 		float m_Progress = 0.0f;
 	};
 
+	inline int ResolveClientId(int LocalClientId, bool Spectating, int SpectatorId)
+	{
+		return Spectating && SpectatorId >= 0 && SpectatorId < MAX_CLIENTS ? SpectatorId : LocalClientId;
+	}
+
+	inline std::optional<vec2> ResolvePosition(std::optional<vec2> Character, std::optional<vec2> SpecCharacter, std::optional<vec2> Spectator)
+	{
+		if(Character)
+			return Character;
+		return SpecCharacter ? SpecCharacter : Spectator;
+	}
+
+	inline SEstimate EstimateDistance(int RemainingDistance, int StartDistance)
+	{
+		if(RemainingDistance < 0 || RemainingDistance == INF || StartDistance <= 0 || StartDistance == INF)
+			return {};
+		return {true, std::clamp(1.0f - (float)RemainingDistance / StartDistance, 0.0f, 1.0f)};
+	}
+
 	class CPlayer
 	{
 		CField m_Global;
@@ -382,7 +465,7 @@ namespace QmMapProgress
 			m_OnFinish = Tile.m_Finish;
 		}
 
-		void Update(const CMap &Map, int Index, int TeleCheckpoint, int Budget)
+		void Update(const CMap &Map, int Index, int TeleCheckpoint, int Budget, bool UseTimeCheckpoints = true)
 		{
 			m_CurrentIndex = Index;
 			if(!Map.Ready() || Index < 0 || Index >= Map.Size())
@@ -398,7 +481,7 @@ namespace QmMapProgress
 			}
 			if(!m_Global.Matches(TeleCheckpoint, -1))
 				m_Global.Start(Map, TeleCheckpoint);
-			const bool UseSegments = !m_SegmentsRejected && Map.CheckpointCount() > 0 && m_Stage >= 0 && m_Stage <= Map.CheckpointCount();
+			const bool UseSegments = UseTimeCheckpoints && !m_SegmentsRejected && Map.CheckpointCount() > 0 && m_Stage >= 0 && m_Stage <= Map.CheckpointCount();
 			const int GlobalBudget = UseSegments ? Budget / 2 : Budget;
 			m_Global.Step(Map, GlobalBudget);
 			m_UseSegmentForRoute = false;
@@ -417,7 +500,7 @@ namespace QmMapProgress
 					if(m_PendingDirection && Map.Tile(Index).m_TimeCheckpoint < 0)
 					{
 						m_PendingDirection = false;
-						if(m_Stage > 0 && m_Segment.Cost(Index) > m_Segment.Cost(Source))
+						if(m_Stage > 0 && m_Segment.Cost(Source) < m_Segment.Cost(Index))
 						{
 							// 刚穿回计时 CP 的前一侧：切回上一段，避免把历史最高 CP 当进度。
 							m_Estimate = {true, (float)m_Stage / (Map.CheckpointCount() + 1)};

@@ -16,7 +16,9 @@ def normalize_simplified_chinese_text(text: str) -> str:
     if not text:
         return text
 
-    normalized = text
+    # 标题两侧成对的装饰标点保持原样，正文仍按中文排版规范处理。
+    decorated_title = text.startswith("?!") and text.endswith("!?") and len(text) >= 4
+    normalized = text[2:-2] if decorated_title else text
 
     has_cjk = re.search(rf"[{CJK_RE}]", normalized) is not None
 
@@ -53,4 +55,4 @@ def normalize_simplified_chinese_text(text: str) -> str:
     normalized = re.sub(r"([：]) +", r"\1", normalized)
     normalized = re.sub(r"([（]) +", r"\1", normalized)
 
-    return normalized
+    return f"?!{normalized}!?" if decorated_title else normalized

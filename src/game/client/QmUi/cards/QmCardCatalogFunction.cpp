@@ -38,8 +38,9 @@ void CMenus::RenderQmFunctionBlockWordsContent(CUIRect &Content, float UiScale, 
 		const auto &PublicWords = GameClient()->m_Chat.PublicWordFilter();
 		char aCount[128];
 		str_format(aCount, sizeof(aCount), Localize("Public words: %d"), static_cast<int>(PublicWords.Words().size()));
-		const char *pStatus = PublicWords.Refreshing() ? Localize("Updating public word list...") :
-			!PublicWords.Error().empty() ? Localize(PublicWords.Error().c_str()) : Localize("Public words match literal text in incoming player chat.");
+		const char *pStatus = PublicWords.Refreshing()     ? Localize("Updating public word list...") :
+				      !PublicWords.Error().empty() ? Localize(PublicWords.Error().c_str()) :
+								     Localize("Public words match literal text in incoming player chat.");
 		auto Measure = [this](const char *pText, float Width, float Size) { return TextRender()->TextBoundingBox(Size, pText, -1, Width).m_H; };
 		auto Render = [this, BodySize](const CUIRect &Rect, const char *pText) { Ui()->DoLabel(&Rect, pText, BodySize, TEXTALIGN_ML, {.m_MaxWidth = Rect.w}); };
 		Flow.Text("public-word-filter-count", aCount, 0.0f, BodySize, LineSpacing, Measure, Render, LineHeight);
@@ -161,6 +162,10 @@ void CMenus::RenderQmFunctionHJAssistContent(CUIRect &Content, float LineHeight,
 			{&g_Config.m_QmAutoTeamLock, Localizable("Auto team lock"), Localize("Auto team lock")},
 		},
 		CurrentSettingsContentMetrics(), !PrewarmOnly);
+	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, Content,
+		{{&g_Config.m_QmPausedSpectatorFade, "Fade spectators in water", Localize("Fade spectators in water")}},
+		CurrentSettingsContentMetrics(), !PrewarmOnly);
+
 	if(g_Config.m_QmAutoTeamLock)
 	{
 		if(Flow.Control("hj-assist-1", LineHeight, Row))
@@ -172,9 +177,6 @@ void CMenus::RenderQmFunctionHJAssistContent(CUIRect &Content, float LineHeight,
 		}
 		Flow.Space(LineSpacing);
 	}
-	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, Content,
-		{{&g_Config.m_QmPausedSpectatorFade, "Fade spectators in water", Localize("Fade spectators in water")}},
-		CurrentSettingsContentMetrics(), !PrewarmOnly);
 	if(g_Config.m_QmPausedSpectatorFade)
 	{
 		if(Flow.Control("hj-assist-2", LineHeight, Row))
@@ -287,6 +289,7 @@ namespace qm_card_catalog
 					QmCardRenderHook::RenderQmFunctionCheckboxRow(pMenus, Row, LineHeight, 0, &g_Config.m_QmSpectatorFriendsFirst, "List friends first in the spectator menu", Localize("List friends first in the spectator menu"), &g_Config.m_QmSpectatorFriendsFirst, PrewarmOnly);
 				Flow.Space(LineSpacing);
 				QmCardRenderHook::RenderQmFunctionFriendNotifyContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LabelWidth, PrewarmOnly);
+				QmCardRenderHook::RenderFriendCodeControls(pMenus, Content, PrewarmOnly);
 			};
 			Add(Id, "qm:friend_notify", "Friend Notifications", "Friend online and join notifications",
 				[RenderFriendNotify, ReadOnly](CUIRect &Content) { RenderFriendNotify(Content, ReadOnly); });
@@ -314,9 +317,6 @@ namespace qm_card_catalog
 			return true;
 		case EQmModuleId::MapUpload:
 			Add(Id, "qm:map_upload", "Map upload", "Upload a saved map to the public test server", [pMenus, LineHeight, BodySize, LineSpacing, ReadOnly](CUIRect &Content) { qm_card_catalog::QmCardRenderHook::RenderQmFunctionMapUploadContent(pMenus, Content, LineHeight, BodySize, LineSpacing, ReadOnly); });
-			return true;
-		case EQmModuleId::FavoriteMaps:
-			Add(Id, "qm:favorite_maps", "Favorite maps", "Your favorite map manager", [pMenus, UiScale, LineHeight, BodySize, LineSpacing, ReadOnly](CUIRect &Content) { qm_card_catalog::QmCardRenderHook::RenderQmFunctionFavoriteMapsContent(pMenus, Content, UiScale, LineHeight, BodySize, LineSpacing, ReadOnly); });
 			return true;
 		case EQmModuleId::HJAssist:
 		{

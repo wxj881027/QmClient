@@ -124,8 +124,9 @@ class SettingsUiMigrationAuditTest(unittest.TestCase):
 
 	def test_explicit_category_requires_its_accessor_and_card(self):
 		self.make_page("qmclient_visual")
-		self.replace("src/game/client/QmUi/cards/QmCardCatalogIds.cpp", '"qm:skin_transition"', '"unrelated"')
-		self.assertTrue(any("qm:skin_transition: catalogue category entry missing" in error for error in audit_page(self.root, "qmclient_visual")))
+		stable_id = PAGE_STABLE_IDS["qmclient_visual"][0]
+		self.replace("src/game/client/QmUi/cards/QmCardCatalogIds.cpp", f'"{stable_id}"', '"unrelated"')
+		self.assertTrue(any(f"{stable_id}: catalogue category entry missing" in error for error in audit_page(self.root, "qmclient_visual")))
 
 	def test_explicit_category_accessor_cannot_return_another_list(self):
 		self.make_page("general")

@@ -58,6 +58,7 @@ namespace ui_widget
 		bool Hovered = false;
 		if(!pUi->RenderOnly())
 		{
+			pUi->CaptureTouchDrag(pId, &Rect);
 			SDiscreteSliderInput Input;
 			Input.m_MouseX = pUi->MouseX();
 			Input.m_Pressed = pUi->MouseButtonClicked(0);

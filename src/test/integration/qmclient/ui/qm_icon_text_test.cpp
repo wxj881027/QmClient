@@ -75,6 +75,38 @@ TEST_F(QmIconText, DirectContainerUsesFillAndImmediateDrawingRestoresTextState)
 	EXPECT_EQ(m_Ui.TextRender()->GetRenderFlags(), Flags);
 }
 
+TEST_F(QmIconText, FavoriteToggleFillScopeDrivesStarFaceAndRestoresPreference)
+{
+	m_Ui.TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+	g_Config.m_QmUiFavoriteIconFilled = 0;
+	g_Config.m_QmUiFriendIconFilled = 0;
+	{
+		// 已收藏：开关强制实心星标，即使全局偏好是空心。
+		const CQmFavoriteStarFillScope FilledStar(true);
+		EXPECT_TRUE(Draw(FontIcons::FONT_ICON_STAR));
+		EXPECT_EQ(m_Label.m_FontPreset, EFontPreset::ICON_FONT_FILL);
+	}
+	// 作用域只改收藏星标字面：好友心形仍按自己的配置画空心。
+	{
+		const CQmFavoriteStarFillScope FilledStar(true);
+		EXPECT_TRUE(Draw(FontIcons::FONT_ICON_HEART));
+		EXPECT_EQ(m_Label.m_FontPreset, EFontPreset::ICON_FONT);
+	}
+	EXPECT_EQ(m_Ui.TextRender()->GetFontPreset(), EFontPreset::ICON_FONT);
+	g_Config.m_QmUiFavoriteIconFilled = 1;
+	{
+		// 未收藏：即使全局偏好实心，开关也画空心星标。
+		const CQmFavoriteStarFillScope HollowStar(false);
+		EXPECT_TRUE(Draw(FontIcons::FONT_ICON_STAR));
+		EXPECT_EQ(m_Label.m_FontPreset, EFontPreset::ICON_FONT);
+	}
+	EXPECT_EQ(m_Ui.TextRender()->GetFontPreset(), EFontPreset::ICON_FONT);
+	// 作用域外仍按全局偏好绘制，覆盖不会污染徽标或后续标签。
+	EXPECT_TRUE(Draw(FontIcons::FONT_ICON_STAR));
+	EXPECT_EQ(m_Label.m_FontPreset, EFontPreset::ICON_FONT_FILL);
+	g_Config.m_QmUiFavoriteIconFilled = 0;
+}
+
 // 灵动岛连接质量图标（用户三次反馈「图标没有」）：cell-signal 四档必须能在
 // 真实嵌入字体下绘制。与 hud.cpp 渲染块同参数（~13px 小矩形、ICON_FONT 预设）。
 TEST_F(QmIconText, CellSignalGlyphsDrawThroughQmIconApi)

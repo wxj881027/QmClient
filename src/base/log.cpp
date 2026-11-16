@@ -170,9 +170,12 @@ public:
 		case LEVEL_WARN: AndroidLevel = ANDROID_LOG_WARN; break;
 		case LEVEL_ERROR: AndroidLevel = ANDROID_LOG_ERROR; break;
 		}
-		char aTag[64];
-		str_copy(aTag, ANDROID_PACKAGE_NAME "/");
-		str_append(aTag, pMessage->m_aSystem);
+		// 不要用 str_copy + str_append 拼 tag：新版 bionic 的 FORTIFY 会按内联后
+		// 推导出的对象大小做 strlen 检查，会误判成读取越界直接 abort
+		// （FORTIFY: memchr: prevented 63-byte read from 21-byte buffer）。
+		// 一次 str_format 拼完，长度由 sizeof 决定。
+		char aTag[96];
+		str_format(aTag, sizeof(aTag), "%s/%s", ANDROID_PACKAGE_NAME, pMessage->m_aSystem);
 		__android_log_write(AndroidLevel, aTag, pMessage->Message());
 	}
 };

@@ -15,6 +15,8 @@
 #include <game/client/component.h>
 #include <game/client/components/hud_media_island_logic.h>
 #include <game/client/components/qmclient/hook_countdown.h>
+#include <game/client/components/qmclient/hud_island_soft_body.h>
+#include <game/client/components/qmclient/hud_map_progress.h>
 #include <game/client/components/system_media_controls.h>
 #include <game/client/ui_rect.h>
 #include <game/teamscore.h>
@@ -147,6 +149,8 @@ class CHud : public CComponent
 		float m_TargetTrackMetaInOffset = 0.0f;
 		float m_TargetTrackMetaOutOffset = 0.0f;
 		SHudMediaIslandWaveformClock m_WaveformClock;
+		CHudIslandSoftBody m_SoftBody;
+		int64_t m_SoftBodyLastTick = 0;
 		bool m_WaveformWasPlaying = false;
 		bool m_WaveformSettling = false;
 		int64_t m_WaveformSettleStartTick = 0;
@@ -252,6 +256,8 @@ class CHud : public CComponent
 			m_TargetTrackMetaInOffset = 0.0f;
 			m_TargetTrackMetaOutOffset = 0.0f;
 			m_WaveformClock.Reset();
+			m_SoftBody.Reset();
+			m_SoftBodyLastTick = 0;
 			m_WaveformWasPlaying = false;
 			m_WaveformSettling = false;
 			m_WaveformSettleStartTick = 0;
@@ -452,7 +458,6 @@ class CHud : public CComponent
 	IGraphics::CRenderTargetHandle MediaIslandBlurBackdrop();
 	void RenderMediaIsland();
 	void RenderLyricsIsland();
-	CQmLyricsMarqueeState m_LyricsMarquee;
 	CUIRect m_LyricsIslandAnchor{};
 	bool m_LyricsIslandAnchorValid = false;
 
@@ -463,6 +468,7 @@ class CHud : public CComponent
 	void RenderMovementInformation();
 	void RenderJumpHint();
 	void RenderMapProgressBar();
+	QmHudMapProgress::ESurface MapProgressSurface() const;
 
 	void UpdateMovementInformationTextContainer(STextContainerIndex &TextContainer, float FontSize, float Value, float &PrevValue);
 	void RenderMovementInformationTextContainer(STextContainerIndex &TextContainer, const ColorRGBA &Color, float X, float Y);
@@ -538,6 +544,7 @@ private:
 	int m_AirjumpOffset;
 	int m_AirjumpEmptyOffset;
 	int m_aWeaponOffset[NUM_WEAPONS];
+	vec2 m_aWeaponHudSize[NUM_WEAPONS];
 	int m_EndlessJumpOffset;
 	int m_EndlessHookOffset;
 	int m_JetpackOffset;
@@ -568,9 +575,8 @@ private:
 	CUIRect m_MediaIslandLastVisibleRect{};
 	bool m_MediaIslandLastVisibleRectValid = false;
 	bool m_LegacyMediaInfoRendered = false;
-	CQmLegacyMediaHudLyricState m_LegacyMediaLyricState;
-	float m_aMapProgressDisplayed[NUM_DUMMIES] = {0.0f, 0.0f};
-	bool m_aMapProgressInitialized[NUM_DUMMIES] = {false, false};
+	std::array<QmHudMapProgress::CProgressState, NUM_DUMMIES> m_aIslandMapProgress;
+	std::array<QmHudMapProgress::CProgressState, NUM_DUMMIES> m_aMapProgress;
 };
 
 #endif

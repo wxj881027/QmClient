@@ -11,7 +11,6 @@
 #include <engine/shared/console.h>
 #include <engine/shared/json.h>
 #include <engine/shared/protocol.h>
-#include <engine/sqlite.h>
 #include <engine/textrender.h>
 
 #include <generated/protocol.h>
@@ -37,6 +36,7 @@
 #include <game/client/components/tclient/map_history.h>
 #include <game/client/components/tclient/swap_countdown_message.h>
 
+#include <array>
 #include <deque>
 #include <queue>
 #include <set>
@@ -260,16 +260,20 @@ class CTClient : public CComponent
 
 	// 地图进度：保留 Gores 距离场，DDRace 使用计时 CP 分段路径场。
 	QmMapProgress::CMap m_QmDDraceProgressMap;
-	QmMapProgress::CPlayer m_aQmDDraceProgress[NUM_DUMMIES];
+	// 最后一个槽位独立跟踪当前观战对象，不覆盖本体和分身的路径状态。
+	QmMapProgress::CPlayer m_aQmDDraceProgress[NUM_DUMMIES + 1];
 	const void *m_pQmDDraceProgressGame = nullptr;
 	const void *m_pQmDDraceProgressFront = nullptr;
 	const void *m_pQmDDraceProgressTele = nullptr;
 	int m_QmDDraceProgressWidth = 0;
 	int m_QmDDraceProgressScanCursor = 0;
-	int m_aQmDDraceProgressClientId[NUM_DUMMIES] = {-1, -1};
-	int m_aQmDDraceTeleCheckpoint[NUM_DUMMIES] = {0, 0};
-	vec2 m_aQmDDraceProgressPreviousPos[NUM_DUMMIES] = {};
-	bool m_aQmDDraceProgressHasPreviousPos[NUM_DUMMIES] = {false, false};
+	int m_aMapProgressClientId[NUM_DUMMIES + 1] = {-1, -1, -1};
+	int m_aQmDDraceTeleCheckpoint[NUM_DUMMIES + 1] = {};
+	vec2 m_aQmDDraceProgressPreviousPos[NUM_DUMMIES + 1] = {};
+	bool m_aQmDDraceProgressHasPreviousPos[NUM_DUMMIES + 1] = {};
+	int GoresMapProgressSlot(int Dummy) const;
+	int GoresMapProgressClientId(int Slot) const;
+	std::optional<vec2> GoresMapProgressPosition(int ClientId) const;
 	bool IsDDraceMapProgressMap() const;
 	void ResetDDraceMapProgress();
 	void UpdateDDraceMapProgress();
@@ -289,13 +293,12 @@ class CTClient : public CComponent
 	char m_aGoresDistanceFieldMap[128] = "";
 	int m_GoresDistanceFieldWidth = 0;
 	int m_GoresDistanceFieldHeight = 0;
-	std::vector<unsigned char> m_vGoresCMap; // 0=normal 1=blocked 2=tele 3=penalty 4=reward
-	std::vector<std::vector<int>> m_vvGoresDirectTeleOuts;
-	std::vector<int> m_vGoresDistanceToFinish;
-	// 路线显示的两处每帧开销：起点靠扫描全图、访问位图整张分配并清零。
-	// 前者沿用距离场已有的递增地图扫描记录潜在起点，后者只清理上一条路径触及的位图字。
+	int m_GoresStartDistanceToFinish = -1;
+	std::vector<unsigned char> m_vGoresCMap;
+	std::vector<QmMapProgress::SRouteCost> m_vGoresDistanceToFinish;
+	std::vector<int> m_vGoresRouteNext;
 	CQmRouteStartIndex m_GoresRouteStartIndex;
-	mutable CQmRouteVisited m_GoresDebugRouteVisited;
+	CQmRouteVisited m_GoresDebugRouteVisited;
 	CQmRouteRenderCache m_GoresDebugRouteCache;
 	uint64_t m_GoresDebugRouteRevision = 0;
 	std::vector<int> m_vDDraceDebugRouteIndices;
@@ -313,18 +316,20 @@ class CTClient : public CComponent
 	const void *m_pGoresDistanceFieldBuildTeleLayer = nullptr;
 	int m_GoresDistanceFieldBuildPendingTeleNumber = 0;
 	int m_GoresDistanceFieldBuildPendingTeleCursor = 0;
-	int m_GoresDistanceFieldBuildPendingTeleDistance = 0;
-	std::vector<unsigned char> m_vGoresDistanceFieldBuildPassable;
-	std::vector<unsigned char> m_vGoresDistanceFieldBuildImageSemantics;
+	int m_GoresDistanceFieldBuildPendingTeleOut = -1;
+	QmMapProgress::SRouteCost m_GoresDistanceFieldBuildPendingTeleCost;
+	std::array<bool, 256> m_aGoresDistanceFieldBuildHasTeleOut = {};
+	std::vector<unsigned char> m_vGoresDistanceFieldBuildRestrictions;
+	std::vector<unsigned char> m_vGoresDistanceFieldBuildWaterImages;
 	std::vector<int> m_vGoresDistanceFieldBuildFinishIndices;
 	std::vector<std::vector<int>> m_vvGoresDistanceFieldBuildDirectTeleInputs;
-	using TGoresDistanceNode = std::pair<int, int>;
+	using TGoresDistanceNode = std::pair<QmMapProgress::SRouteCost, int>;
 	std::priority_queue<TGoresDistanceNode, std::vector<TGoresDistanceNode>, std::greater<TGoresDistanceNode>> m_GoresDistanceFieldBuildQueue;
 	bool m_aGoresWasOnStartLastTick[NUM_DUMMIES] = {false, false};
 	bool m_aGoresRunStarted[NUM_DUMMIES] = {false, false};
 	int m_aGoresRunStartDistanceToFinish[NUM_DUMMIES] = {0, 0};
-	bool m_aGoresMapProgressValid[NUM_DUMMIES] = {false, false};
-	float m_aGoresMapProgress[NUM_DUMMIES] = {0.0f, 0.0f};
+	bool m_aGoresMapProgressValid[NUM_DUMMIES + 1] = {};
+	float m_aGoresMapProgress[NUM_DUMMIES + 1] = {};
 	int m_aGoresPreHammerWeapon[NUM_DUMMIES] = {WEAPON_GUN, WEAPON_GUN};
 	bool m_aGoresHasPreHammerWeapon[NUM_DUMMIES] = {false, false};
 	bool m_aPrevFireForGores[NUM_DUMMIES] = {false, false};
@@ -410,12 +415,6 @@ class CTClient : public CComponent
 	QmLocalSaves::CRestore::SWorld LocalSaveWorld() const;
 	void UpdateLocalSaveRestore();
 	void CompleteLocalSaveLoad(bool Success);
-	// 存档使用标记侧车库（qmclient/save_usage.sqlite3，issue #199）。
-	CSqlite m_pSaveUsageDb;
-	// 已使用键的内存镜像：行只在 MarkUsed 中 upsert、从不删除，镜像与库一致。
-	// UI 列表每帧的查询只查内存，不再每行走一次 SQLite。
-	std::unordered_set<std::string> m_LocalSaveUsedKeys;
-	void LoadLocalSaveUsedKeys();
 	static void ConSaveList(IConsole::IResult *pResult, void *pUserData);
 
 	// 复读功能
@@ -452,15 +451,14 @@ class CTClient : public CComponent
 	int m_FriendAutoRefreshPrevEnabled = -1;
 	int m_FriendAutoRefreshPrevSeconds = -1;
 	void CheckFriendOnline();
-	// 本服进服通知和自动问候共享同一份出入状态。
+	// 本服进服通知和自动问候共享服务端提示的出入状态。
 	qm_friend_notify::CEnterTracker m_FriendEnterTracker;
 	int m_FriendEnterPrevEnabled = -1;
-	int m_FriendEnterPrevIgnoreClan = -1;
 	int m_FriendEnterPrevDummy = -1;
 	uint64_t m_FriendEnterPrevRevision = 0;
-	float m_FriendEnterNextCheck = 0.0f;
 	qm_friend_notify::CGreetQueue m_FriendEnterPending;
 	void ResetFriendEnter();
+	bool SyncFriendEnterSettings();
 	void CheckFriendEnterGreet();
 
 	bool m_QmAspectApplyPending = false;
@@ -481,6 +479,7 @@ public:
 	void OnWindowResize() override;
 	void OnMessage(int MsgType, void *pRawMsg) override;
 	void OnChatMessage(const CNetMsg_Sv_Chat *pMsg, int Connection);
+	void HandleFriendEnterMessage(int Sender, int Team, const char *pMessage);
 	void OnConsoleInit() override;
 	void OnUpdate() override;
 	void OnRender() override;
@@ -602,9 +601,6 @@ public:
 	void ClearFavoriteMaps();
 	const std::set<std::string> &GetFavoriteMaps() const { return m_FavoriteMaps; }
 
-	// 存档使用标记公开接口（save_usage 侧车库，issue #199）。
-	void MarkLocalSaveUsed(const char *pMap, const char *pCode);
-	bool IsLocalSaveUsed(const char *pMap, const char *pCode);
 	const char *GetCachedMapCategoryKey(const char *pMapName) const;
 	void UpdateMapCategoryCache(const char *pMapName, const char *pCategoryKey);
 	const char *GetMapNote(const char *pMapName) const;
@@ -619,15 +615,11 @@ public:
 	void HandleLocalSaveMessage(const CNetMsg_Sv_Chat *pMsg, int Conn);
 	bool IsGoresMapProgressEnabled() const;
 	bool ShouldHideGoresGuides(bool ManualGuideVisible = false) const;
-	bool HasGoresMapProgress(int Dummy = 0) const
-	{
-		const int Idx = Dummy < 0 ? 0 : (Dummy >= NUM_DUMMIES ? NUM_DUMMIES - 1 : Dummy);
-		return m_aGoresMapProgressValid[Idx];
-	}
+	int GetGoresMapProgressClientId(int Dummy = 0) const { return GoresMapProgressClientId(GoresMapProgressSlot(Dummy)); }
+	bool HasGoresMapProgress(int Dummy = 0) const;
 	float GetGoresMapProgress(int Dummy = 0) const
 	{
-		const int Idx = Dummy < 0 ? 0 : (Dummy >= NUM_DUMMIES ? NUM_DUMMIES - 1 : Dummy);
-		return m_aGoresMapProgress[Idx];
+		return HasGoresMapProgress(Dummy) ? m_aGoresMapProgress[GoresMapProgressSlot(Dummy)] : 0.0f;
 	}
 
 	// Focus Mode (Zen Mode)

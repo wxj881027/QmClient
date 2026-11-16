@@ -147,9 +147,7 @@ void CMenus::RenderQmFunctionGoresContent(CUIRect &Content, float LineHeight, fl
 {
 	CSettingsContentLayoutFlow Flow(Content);
 	static CButtonContainer s_ReaderButtonGoresToggle, s_ClearButtonGoresToggle;
-	static CButtonContainer s_AxiomPasswordToggleButton, s_AxiomDummyPasswordToggleButton;
-	static bool s_ShowAxiomPassword = false;
-	static bool s_ShowAxiomDummyPassword = false;
+	static ui_widget::SPasswordFieldState s_AxiomMainPasswordState, s_AxiomDummyPasswordState;
 	CUIRect Row, LabelColumn, ControlColumn;
 	auto RenderCheckbox = [this, &Flow, &Row, LineHeight, LineSpacing, PrewarmOnly](const void *pId, const char *pTextId, const char *pText, int *pValue) {
 		if(Flow.Control(pTextId, LineHeight, Row))
@@ -167,7 +165,7 @@ void CMenus::RenderQmFunctionGoresContent(CUIRect &Content, float LineHeight, fl
 	if(g_Config.m_QmAxiomAutoLogin)
 	{
 		IUiContext TextInputCtx = SettingsUiContext("settings_qmclient_gores_text_inputs", BodySize / ui_token::font::BODY);
-		auto RenderPassword = [&](const char *pTextId, const char *pText, CLineInput &Input, CButtonContainer &ToggleButton, bool &Visible) {
+		auto RenderPassword = [&](const char *pTextId, const char *pText, CLineInput &Input, ui_widget::SPasswordFieldState &State) {
 			if(!Flow.Control(pTextId, LineHeight, Row))
 			{
 				Flow.Space(LineSpacing);
@@ -176,21 +174,16 @@ void CMenus::RenderQmFunctionGoresContent(CUIRect &Content, float LineHeight, fl
 			SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
 			DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, pTextId, &LabelColumn, Localize(pText), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
 			GameClient()->m_Tooltips.DoSettingsToolTipForConfig(&Input, &Row, Input.GetString(), &LabelColumn);
-			Input.SetHidden(!Visible);
-			ui_widget::SInputFieldOptions Options;
+			ui_widget::SPasswordFieldOptions Options;
 			Options.m_FontSize = BodySize;
-			Options.m_pTrailingActionId = &ToggleButton;
-			Options.m_pTrailingActionIcon = Visible ? FONT_ICON_EYE_SLASH : FONT_ICON_EYE;
-			Options.m_TrailingActionQmIcon = static_cast<int>(Visible ? EQmIcon::EYE_OFF : EQmIcon::EYE);
 			Options.m_TrailingWidth = ControlColumn.h;
-			if(ui_widget::InputField(TextInputCtx, &Input, ControlColumn, Options).m_TrailingAction)
-				Visible = !Visible;
+			ui_widget::PasswordField(TextInputCtx, &Input, ControlColumn, &State, Options);
 			Flow.Space(LineSpacing);
 		};
 		static CLineInput s_AxiomLoginPassword(g_Config.m_QmAxiomLoginPassword, sizeof(g_Config.m_QmAxiomLoginPassword));
 		static CLineInput s_AxiomDummyLoginPassword(g_Config.m_QmAxiomDummyLoginPassword, sizeof(g_Config.m_QmAxiomDummyLoginPassword));
-		RenderPassword("qmclient-gores-axiom-main-password", "Axiom main account password", s_AxiomLoginPassword, s_AxiomPasswordToggleButton, s_ShowAxiomPassword);
-		RenderPassword("qmclient-gores-axiom-dummy-password", "Axiom dummy password", s_AxiomDummyLoginPassword, s_AxiomDummyPasswordToggleButton, s_ShowAxiomDummyPassword);
+		RenderPassword("qmclient-gores-axiom-main-password", "Axiom main account password", s_AxiomLoginPassword, s_AxiomMainPasswordState);
+		RenderPassword("qmclient-gores-axiom-dummy-password", "Axiom dummy password", s_AxiomDummyLoginPassword, s_AxiomDummyPasswordState);
 	}
 
 	// Axiom 官网入口：注册账号、找回密码都从这里进。
@@ -394,6 +387,9 @@ void CMenus::RenderQmFunctionWeaponTrajectoryContent(CUIRect &Content, float Lin
 	}
 	Flow.Space(LineSpacing);
 
+	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:weapon_trajectory", CurrentSettingsContentMetrics(), PrewarmOnly))
+		return;
+
 	static CButtonContainer s_WeaponTrajectoryColorId;
 	if(Flow.Control("color", ResolveSettingsColorRowLayout(Content, CurrentSettingsContentMetrics(), false).m_ConsumedHeight, Row))
 		DoLine_ColorPicker(&s_WeaponTrajectoryColorId, CurrentSettingsContentMetrics(), &Row, Localize("Guide line color"), &g_Config.m_QmWeaponTrajectoryColor, ColorRGBA(1.0f, 0.6f, 0.2f, 1.0f), false);
@@ -455,9 +451,6 @@ void CMenus::RenderQmFunctionFriendNotifyContent(CUIRect &Content, float LineHei
 			{&g_Config.m_QmFriendOnlineAutoRefresh, "Auto refresh server list", Localize("Auto refresh server list")},
 		},
 		CurrentSettingsContentMetrics(), !PrewarmOnly);
-	RenderValue("qmclient-friend-auto-follow-delay", "Auto-follow delay", &s_QmFriendAutoFollowDelayInputId, &g_Config.m_QmFriendAutoFollowDelay, 0, 30, "s");
-	if(g_Config.m_QmFriendOnlineAutoRefresh)
-		RenderValue("qmclient-friend-notifications-refresh-interval", "Refresh interval", &s_QmFriendOnlineRefreshSecondsInputId, &g_Config.m_QmFriendOnlineRefreshSeconds, 5, 300, "s");
 	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, Content,
 		{
 			{&g_Config.m_QmFriendEnterAutoGreet, "Auto greet friends entering map", Localize("Auto greet friends entering map")},
@@ -473,6 +466,12 @@ void CMenus::RenderQmFunctionFriendNotifyContent(CUIRect &Content, float LineHei
 	{
 		static CLineInput s_FriendEnterGreetText(g_Config.m_QmFriendEnterGreetText, sizeof(g_Config.m_QmFriendEnterGreetText));
 		RenderText("qmclient-friend-notifications-greeting-text", "Greeting text", &s_FriendEnterGreetText, "Leave empty to disable");
+	}
+	if(qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:friend_notify", CurrentSettingsContentMetrics(), PrewarmOnly))
+	{
+		RenderValue("qmclient-friend-auto-follow-delay", "Auto-follow delay", &s_QmFriendAutoFollowDelayInputId, &g_Config.m_QmFriendAutoFollowDelay, 0, 30, "s");
+		if(g_Config.m_QmFriendOnlineAutoRefresh)
+			RenderValue("qmclient-friend-notifications-refresh-interval", "Refresh interval", &s_QmFriendOnlineRefreshSecondsInputId, &g_Config.m_QmFriendOnlineRefreshSeconds, 5, 300, "s");
 	}
 }
 
@@ -521,6 +520,7 @@ void CMenus::RenderQmFunctionMiniFeaturesContent(CUIRect &Content, float LineHei
 		{
 			{&g_Config.m_QmHideJoinServerInfo, "Hide server information on join", Localize("Hide server information on join")},
 			{&g_Config.m_QmShowTuneZoneColors, "Show tune zone colors", Localize("Show tune zone colors"), nullptr, 0, Localize("Color map tune zones by their tune zone number")},
+			{&g_Config.m_QmCheckpointGuide, "CP guide", Localize("CP guide"), nullptr, 0, Localize("Guide to nearby uncollected teleport checkpoints and warn near checkpoint teleporters")},
 			{&g_Config.m_QmBlankAssetFallback, "Blank asset auto fallback", Localize("Blank asset auto fallback"), nullptr, 0, Localize("Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)")},
 		},
 		CurrentSettingsContentMetrics(), !PrewarmOnly);
@@ -533,7 +533,6 @@ void CMenus::RenderQmFunctionMiniFeaturesContent(CUIRect &Content, float LineHei
 	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, Content,
 		{
 			{&g_Config.m_QmRepeatEnabled, "Enable repeat", Localize("Enable repeat")},
-			{&g_Config.m_QmHumming, "Humming", Localize("Humming"), nullptr, 0, Localize("Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines")},
 			{&g_Config.m_QmRandomEmoteOnHit, "Random emoticon", Localize("Random emoticon")},
 		},
 		CurrentSettingsContentMetrics(), !PrewarmOnly);

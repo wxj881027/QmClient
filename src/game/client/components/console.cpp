@@ -893,7 +893,7 @@ bool CGameConsole::CInstance::OnInput(const IInput::CEvent &Event)
 		if(m_Type == CONSOLETYPE_LOCAL && !m_ChatExportMode && m_pGameConsole->Input()->AltIsPressed() &&
 			Event.m_Key >= KEY_1 && Event.m_Key <= KEY_5 && !m_pGameConsole->Input()->HasComposition())
 		{
-			SetLogFilterMask(QmToggleConsoleLogFilterCategory(m_LogFilterMask, LogFilterCategoryForButton(Event.m_Key - KEY_1)));
+			SetLogFilterMask(QmSelectConsoleLogFilterCategory(LogFilterCategoryForButton(Event.m_Key - KEY_1)));
 			Handled = true;
 		}
 		else if(Event.m_Key == KEY_RETURN || Event.m_Key == KEY_KP_ENTER)
@@ -1920,14 +1920,10 @@ void CGameConsole::OnRender()
 		Localize("All"), Localize("Players"), Localize("System"), Localize("Commands"), Localize("Binds")};
 	constexpr float FilterSpacing = 4.0f;
 	constexpr float FilterPadding = 6.0f;
-	const float FilterIndicatorWidth = FontSize + 4.0f;
-	float aFilterWidths[CInstance::LOG_FILTER_BUTTON_COUNT];
-	float TotalFilterWidth = LocalConsole ? FilterSpacing * (CInstance::LOG_FILTER_BUTTON_COUNT - 1) : 0.0f;
+	float FilterWidth = 0.0f;
 	for(int i = 0; LocalConsole && i < CInstance::LOG_FILTER_BUTTON_COUNT; ++i)
-	{
-		aFilterWidths[i] = TextRender()->TextWidth(FontSize, apFilterLabels[i]) + FilterPadding * 2.0f + (LocalConsole && i != 0 ? FilterIndicatorWidth : 0.0f);
-		TotalFilterWidth += aFilterWidths[i];
-	}
+		FilterWidth = maximum(FilterWidth, TextRender()->TextWidth(FontSize, apFilterLabels[i]) + FilterPadding * 2.0f);
+	const float TotalFilterWidth = LocalConsole ? FilterWidth * CInstance::LOG_FILTER_BUTTON_COUNT + FilterSpacing * (CInstance::LOG_FILTER_BUTTON_COUNT - 1) : 0.0f;
 	enum class EToolbarAction
 	{
 		SEARCH,
@@ -2102,7 +2098,7 @@ void CGameConsole::OnRender()
 		vec2 ChatExportClickPos = vec2(0.0f, 0.0f);
 		const bool CtrlPressed = Input()->ModifierIsPressed();
 		const bool WasMousePressed = pConsole->m_MouseIsPress;
-		Ui()->UpdateTouchState(m_TouchState);
+		Ui()->UpdateTouchState(m_TouchState, false);
 		if(SettingsOpen)
 			m_TouchState.m_ScrollAmount = vec2(0.0f, 0.0f);
 		const auto &&GetMousePosition = [&]() -> vec2 {
@@ -2141,12 +2137,13 @@ void CGameConsole::OnRender()
 		const bool ButtonReleased = WasMousePressed && !pConsole->m_MouseIsPress;
 		const bool MousePressedThisFrame = !WasMousePressed && pConsole->m_MouseIsPress;
 		const vec2 ButtonMousePosition = ButtonReleased ? pConsole->m_MouseRelease : GetMousePosition();
-#if defined(CONF_PLATFORM_IOS)
+#if defined(CONF_PLATFORM_IOS) || defined(CONF_PLATFORM_ANDROID)
+		// 手机没有键盘，必须给控制台一个可见的关闭入口；顶部留出一行画 X。
 		CUIRect CloseButtonBar, CloseButton;
 		Screen.HSplitTop(RowHeight, &CloseButtonBar, nullptr);
 		CloseButtonBar.VSplitRight(10.0f, &CloseButtonBar, nullptr);
 		CloseButtonBar.VSplitRight(RowHeight, &CloseButtonBar, &CloseButton);
-		if(DoButton(CloseButton, FontIcon::XMARK, ButtonMousePosition, ButtonReleased))
+		if(DoButton(CloseButton, FontIcons::FONT_ICON_XMARK, ButtonMousePosition, ButtonReleased))
 			Toggle(m_ConsoleType);
 #endif
 		if(pConsole->m_MouseIsPress)
@@ -2203,11 +2200,9 @@ void CGameConsole::OnRender()
 		{
 			pConsole->m_Input.Activate(EInputPriority::CONSOLE); // Ensure that the input is active
 		}
-		// 提示符与输入文字放在同一行里：两者行顶相同、行高相同，
-		// 提示符再按这一行垂直居中。原实现各用各的偏移
-		//（提示符 y + FontSize/2，输入 y + FontSize*1.5），行高一变就错开。
-		const float InputRowTop = y + FontSize * 1.5f;
-		const CUIRect InputCursorRect = {x, InputRowTop, 0.0f, 0.0f};
+		// 零高度锚点是输入块底边，TEXTALIGN_BL 会让多行输入向上扩展。
+		const float InputBottomY = y + FontSize * 1.5f;
+		const CUIRect InputCursorRect = {x, InputBottomY, 0.0f, 0.0f};
 		const bool WasChanged = pConsole->m_Input.WasChanged();
 		const bool WasCursorChanged = pConsole->m_Input.WasCursorChanged();
 		const bool Changed = WasChanged || WasCursorChanged || FontChanged;
@@ -2223,17 +2218,8 @@ void CGameConsole::OnRender()
 		if(pConsole->m_Input.HasSelection())
 			pConsole->m_Selection.Clear();
 
-		// 输入行已经交出真实行高，提示符按同一行垂直居中，两者基线一致。
-		{
-			const float RowHeight = pConsole->m_BoundingBox.m_H;
-			CTextCursor PromptCursor;
-			PromptCursor.m_FontSize = FontSize;
-			const STextBoundingBox PromptBox = TextRender()->TextBoundingBox(FontSize, aPrompt, -1, -1.0f, LINE_SPACING);
-			const float *pPromptCharHeight = PromptBox.m_MaxCharacterHeight > 0.0f ? &PromptBox.m_MaxCharacterHeight : nullptr;
-			const CUIRect PromptRect = {InitialX, InputRowTop, 0.0f, RowHeight};
-			PromptCursor.SetPosition(CUi::CalcAlignedCursorPos(&PromptRect, PromptBox.Size(), TEXTALIGN_ML, pPromptCharHeight));
-			TextRender()->TextEx(&PromptCursor, aPrompt);
-		}
+		// 按实际首行原点绘制提示符，避免把底边当行顶或对整个多行块居中。
+		QmConsoleUi::DrawInputPrompt(*TextRender(), pConsole->m_BoundingBox, InitialX, FontSize, aPrompt);
 
 		y -= pConsole->m_BoundingBox.m_H - FontSize;
 
@@ -2265,7 +2251,7 @@ void CGameConsole::OnRender()
 			// 那条算式落在输入行内部，补全项会和正在输入的文本叠在一起。
 			// 固定占位：输入行下方留出的一行就是提示区，
 			// 与上面的 SuggestionHeight 是同一份预算，二者不会互相压。
-			Info.m_Cursor.SetPosition(vec2(InitialX - Info.m_Offset, InputRowTop + pConsole->m_BoundingBox.m_H + 4.0f));
+			Info.m_Cursor.SetPosition(vec2(InitialX - Info.m_Offset, pConsole->m_BoundingBox.m_Y + pConsole->m_BoundingBox.m_H + 4.0f));
 			Info.m_Cursor.m_FontSize = FontSize;
 
 			for(size_t SuggestionId = 0; SuggestionId < pConsole->m_vpCommandSuggestions.size(); ++SuggestionId)
@@ -2703,10 +2689,10 @@ void CGameConsole::OnRender()
 		const int LineEnd = pConsole->m_LinesRendered > 0 ? pConsole->m_BacklogCurLine + pConsole->m_LinesRendered : 0;
 		str_format(aLinesBuf, sizeof(aLinesBuf), Localize("Lines %d - %d (%s)"), LineStart, LineEnd,
 			pConsole->m_BacklogCurLine != 0 ? Localize("Locked") : Localize("Following"));
-		const auto ToolbarButton = [&](const CUIRect &Rect, const char *pLabel, float Scale, bool Selected = false, bool CategoryButton = false, uint64_t AnimationKey = 0) {
+		const auto ToolbarButton = [&](const CUIRect &Rect, const char *pLabel, float Scale, bool Selected = false, uint64_t AnimationKey = 0) {
 			return QmConsoleUi::Button(Ui(), Rect, pLabel, maximum(1.0f, FontSize * Scale), Selected,
 				m_ButtonPressPosition, ButtonMousePosition, pConsole->m_MouseIsPress, ButtonReleased, !SettingsOpen && m_ConsoleState == CONSOLE_OPEN,
-				CategoryButton ? FilterIndicatorWidth * Scale : 0.0f, LocalConsole ? &Palette : nullptr, AnimationKey);
+				0.0f, LocalConsole ? &Palette : nullptr, AnimationKey);
 		};
 		const float LinesWidth = LocalConsole ? 0.0f : TextRender()->TextWidth(FontSize, aLinesBuf);
 		float FilterX = LocalConsole ? 10.0f : LinesWidth + 20.0f;
@@ -2716,12 +2702,11 @@ void CGameConsole::OnRender()
 			for(int i = 0; i < CInstance::LOG_FILTER_BUTTON_COUNT; ++i)
 			{
 				const int Category = CInstance::LogFilterCategoryForButton(i);
-				const CUIRect Button = {FilterX, 3.0f, aFilterWidths[i] * FilterScale, LocalConsole ? FontSize + 10.0f : 14.0f};
+				const CUIRect Button = {FilterX, 3.0f, FilterWidth * FilterScale, LocalConsole ? FontSize + 10.0f : 14.0f};
 				if(ToolbarButton(Button, apFilterLabels[i], FilterScale, QmConsoleLogFilterButtonActive(pConsole->m_LogFilterMask, Category),
-					   LocalConsole && Category != QM_CONSOLE_LOG_CATEGORY_ALL,
 					   (static_cast<uint64_t>(reinterpret_cast<uintptr_t>(pConsole)) << 3) ^ static_cast<uint64_t>(i + 1)))
-					pConsole->SetLogFilterMask(QmToggleConsoleLogFilterCategory(pConsole->m_LogFilterMask, Category));
-				FilterX += (aFilterWidths[i] + FilterSpacing) * FilterScale;
+					pConsole->SetLogFilterMask(QmSelectConsoleLogFilterCategory(Category));
+				FilterX += (FilterWidth + FilterSpacing) * FilterScale;
 			}
 		}
 		if(LocalConsole)
@@ -2833,7 +2818,8 @@ void CGameConsole::OnRender()
 		if(!ConsoleSettingsOpen() && m_ConsoleState == CONSOLE_OPEN)
 			pConsole->m_Input.Activate(EInputPriority::CONSOLE);
 	}
-	RenderTools()->RenderCursor(Ui()->MousePos(), 24.0f);
+	if(!QmUiMobilePlatform())
+		RenderTools()->RenderCursor(Ui()->MousePos(), 24.0f);
 
 	{
 		Ui()->FinishCheck();

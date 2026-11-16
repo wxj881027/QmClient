@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Bind UI · 按真实 token 重绘</title>
+<style>
+  /* ===== token 全部取自 src/game/client/QmUi/UiTokens.h ===== */
+  :root{
+    --r-card:14px;      /* ui_token::radius::CARD */
+    --r-base:8px;       /* radius::BASE */
+    --r-tight:6px;      /* radius::TIGHT */
+    --r-pill:999px;
+
+    --f-title:18px;     /* font::TITLE */
+    --f-headline-lg:16px;
+    --f-headline:14px;  /* font::HEADLINE */
+    --f-body:12px;      /* font::BODY */
+    --f-small:10px;     /* font::SMALL */
+    --f-tip:9px;
+
+    --gap-card:16px;    /* settings::CARD_GAP */
+    --pad-card:14px;    /* settings::CARD_PADDING */
+    --row-h:20px;       /* settings::ROW_HEIGHT */
+    --row-gap:5px;      /* settings::ROW_GAP */
+    --tab-h:26px;       /* settings::TAB_HEIGHT */
+    --tab-gap:10px;     /* settings::TAB_GAP */
+
+    /* qm_ui_color=0x000000 + qm_ui_opacity：默认 12，这里按 40 渲染才读得清 */
+    --surface:rgba(19,20,22,.80);
+    --surface-2:rgba(8,9,11,.55);
+    --card:rgba(255,255,255,.078);      /* SURFACE_HIGHLIGHT 5% */
+    --card-hover:rgba(255,255,255,.075);
+    --border:rgba(255,255,255,.10);     /* BORDER_SUBTLE 8% ~ CONTAINER_BORDER 10% */
+    --track:rgba(0,0,0,.16);            /* 胶囊轨道 */
+    --field:rgba(0,0,0,.42);
+
+    --text:#fff;                        /* TEXT_PRIMARY */
+    --text-2:rgba(255,255,255,.72);     /* TEXT_SECONDARY */
+    --text-3:rgba(255,255,255,.55);
+    --accent:#66c0f4;                   /* ACCENT_PRIMARY 0.4/0.753/0.957 */
+    --selected:rgba(143,6,29,.62);      /* qm_ui_selected_color 0x8F061D */
+    --danger:#f26861;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0d1014;font-family:"Segoe UI","Microsoft YaHei",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  .frame{position:relative;width:1360px;height:765px;overflow:hidden;background:#1b1f24}
+
+  /* 背景：真实客户端是模糊后的游戏画面，这里用色块近似 */
+  .scene{position:absolute;inset:-40px;background:
+      radial-gradient(46% 40% at 16% 10%,#efe6a0 0%,transparent 62%),
+      radial-gradient(40% 36% at 84% 6%,#f3ecbc 0%,transparent 58%),
+      radial-gradient(72% 62% at 26% 86%,#86ac56 0%,transparent 64%),
+      radial-gradient(64% 56% at 82% 80%,#5d8140 0%,transparent 62%),
+      linear-gradient(164deg,#c3d194 0%,#96b06c 34%,#637f47 70%,#3b512e 100%);
+    filter:blur(18px) saturate(.9) brightness(.82)}
+  .veil{position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 38%,rgba(0,0,0,.16),rgba(0,0,0,.52))}
+
+  /* 顶部图标栏（主菜单 tab 行，非设置页） */
+  .topbar{position:absolute;left:14px;top:8px;right:14px;height:26px;display:flex;align-items:center;gap:6px}
+  .topbar .ic{width:26px;height:22px;border-radius:var(--r-tight);display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.26);color:rgba(255,255,255,.72)}
+  .topbar .ic.on{background:rgba(255,255,255,.20);color:#fff}
+  .topbar .sp{flex:1}
+  .topbar .brand{font-size:11px;letter-spacing:.10em;color:rgba(255,255,255,.85);font-weight:700}
+  .topbar .brand span{color:var(--accent)}
+
+  /* 外壳：宽 = min(1000+20, 可用) + 10 + 168 = 1198，居中 */
+  .shell{position:absolute;left:81px;top:40px;width:1198px;height:679px;display:flex;gap:10px}
+  .panel{width:1020px;height:100%;border-radius:var(--r-card);background:var(--surface);
+         box-shadow:inset 0 0 0 1px rgba(255,255,255,.06),0 18px 48px rgba(0,0,0,.35);
+         backdrop-filter:blur(14px);padding:10px;display:flex;flex-direction:column}
+  .nav{width:168px;height:100%;border-radius:var(--r-card);background:var(--surface);
+       box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);padding:10px;display:flex;flex-direction:column}
+  .nav h5{font-size:var(--f-headline-lg);font-weight:600;color:#fff;text-align:center;padding:6px 0 10px}
+  .nav .item{height:28px;margin-bottom:var(--tab-gap);border-radius:var(--r-base);
+             display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;
+             background:rgba(255,255,255,.10)}
+  .nav .item.on{background:var(--selected)}
+  .nav .item.ghost{background:transparent;color:rgba(255,255,255,.55);margin-top:auto}
+
+  /* 底部条 */
+  .footer{position:absolute;left:81px;right:81px;bottom:10px;height:26px;display:flex;align-items:center;gap:10px}
+  .searchbox{flex:1;max-width:520px;height:26px;border-radius:var(--r-base);background:var(--surface-2);
+             box-shadow:inset 0 0 0 1px rgba(255,255,255,.10);display:flex;align-items:center;gap:8px;padding:0 10px;font-size:11px;color:rgba(255,255,255,.55)}
+  .resetbtn{margin-left:auto;height:26px;min-width:200px;border-radius:var(--r-base);background:var(--surface-2);
+            box-shadow:inset 0 0 0 1px rgba(255,255,255,.10);display:flex;align-items:center;justify-content:center;font-size:11px;color:rgba(255,255,255,.82)}
+
+  /* 子 tab：胶囊，轨道黑 16%，滑块自适应（深表面上取白） */
+  .subtabs{height:var(--tab-h);border-radius:var(--r-pill);background:var(--track);display:flex;padding:2px;gap:2px;flex:none;width:100%;max-width:560px;margin:0 auto}
+  .subtabs .t{flex:1;border-radius:var(--r-pill);display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff}
+  .subtabs .t.on{background:rgba(255,255,255,.92);color:#111;font-weight:600}
+
+  /* 卡片 */
+  .cards{flex:1;min-height:0;display:flex;flex-direction:column;gap:var(--gap-card);margin-top:12px}
+  .card{background:var(--card);border-radius:var(--r-card);box-shadow:inset 0 0 0 1px var(--border);
+        padding:var(--pad-card);display:flex;flex-direction:column;min-height:0}
+  .card-h{display:flex;align-items:flex-start;gap:8px}
+  .card-t{font-size:var(--f-title);font-weight:400;line-height:1.1;
+          /* 彩虹标题：qm_ui_card_rainbow_titles 默认=1，色相 = 时间相位 + stableId 哈希相位 */
+          background:linear-gradient(92deg,#c9a4ff,#ffe08a);
+          -webkit-background-clip:text;background-clip:text;color:transparent}
+  .card-sub{font-size:var(--f-small);color:var(--text-2);margin-top:3px}
+  .hbtns{margin-left:auto;display:flex;gap:4px;flex:none;padding-top:1px}
+  .hbtn{width:20px;height:20px;border-radius:var(--r-tight);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);
+        display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.66)}
+  .hbtn svg{width:11px;height:11px}
+
+  .card-body{margin-top:10px;flex:1;min-height:0;display:flex;gap:14px}
+
+  /* 行控件：label 左，值右；行高 20 + gap 5 */
+  .rows{display:flex;flex-direction:column;gap:var(--row-gap);min-width:0}
+  .row{height:var(--row-h);display:flex;align-items:center;gap:8px;font-size:var(--f-body);color:#fff}
+  .row .lb{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row .val{margin-left:auto;width:104px;height:var(--row-h);border-radius:var(--r-tight);background:var(--field);
+            box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;
+            font-size:var(--f-body);color:#fff;flex:none}
+  .row .del{width:20px;height:20px;border-radius:var(--r-tight);display:flex;align-items:center;justify-content:center;
+            color:rgba(255,255,255,.55);flex:none}
+  .row .del svg{width:11px;height:11px}
+
+  .modrow{display:flex;gap:5px;margin-bottom:4px}
+  .modpill{flex:1;height:22px;border-radius:var(--r-tight);background:rgba(255,255,255,.05);
+           box-shadow:inset 0 0 0 1px rgba(255,255,255,.10);display:flex;align-items:center;justify-content:center;
+           font-size:10px;color:rgba(255,255,255,.72)}
+  .modpill.on{background:rgba(255,255,255,.16);color:#fff}
+  /* 键盘 */
+  .kb{display:flex;flex-direction:column;gap:5px;flex:1;min-width:0}
+  .krow{display:flex;gap:5px}
+  .key{flex:1;height:28px;border-radius:var(--r-tight);background:rgba(255,255,255,.055);
+       box-shadow:inset 0 0 0 1px rgba(255,255,255,.10);display:flex;align-items:center;justify-content:center;
+       font-size:9.5px;color:rgba(255,255,255,.80);white-space:nowrap;overflow:hidden}
+  .key.mod{background:rgba(255,255,255,.02);color:rgba(255,255,255,.42)}
+  .key.bound{background:rgba(102,192,244,.16);box-shadow:inset 0 0 0 1px rgba(102,192,244,.45)}
+  .key.sel{background:rgba(255,255,255,.90);color:#111;font-weight:600;box-shadow:none}
+  .mice{display:flex;gap:4px;margin-top:4px}
+  .mouse{flex:1;height:26px;border-radius:var(--r-tight);background:rgba(255,255,255,.055);
+         box-shadow:inset 0 0 0 1px rgba(255,255,255,.10);display:flex;align-items:center;justify-content:center;font-size:9px;color:rgba(255,255,255,.8)}
+
+  /* 键位占用表 */
+  .occ{display:flex;flex-direction:column;gap:5px}
+  .occrow{display:grid;grid-template-columns:64px 1fr 132px 56px;gap:10px;align-items:center;height:30px;
+          padding:0 8px;border-radius:var(--r-tight);background:rgba(255,255,255,.03);font-size:var(--f-small)}
+  .occrow .kc{height:18px;border-radius:4px;background:rgba(255,255,255,.10);display:flex;align-items:center;justify-content:center;
+              font-size:9.5px;color:#fff;font-family:ui-monospace,Consolas,monospace}
+  .occrow .cmd{font-family:ui-monospace,Consolas,monospace;font-size:9.5px;color:rgba(255,255,255,.78);
+               white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .occrow .src{font-size:9.5px;color:rgba(255,255,255,.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .occrow .tag{font-size:9px;text-align:right;color:var(--accent)}
+  .occrow.warn{background:rgba(255,207,122,.08);box-shadow:inset 0 0 0 1px rgba(255,207,122,.28)}
+  .occrow.warn .tag{color:#ffd79a}
+
+  /* ---- 工坊 ---- */
+  .filterrow{display:flex;align-items:center;gap:8px;margin-top:12px;flex:none}
+  .chips{display:flex;gap:5px;flex-wrap:nowrap;overflow:hidden}
+  .chip{height:26px;padding:0 12px;border-radius:var(--r-pill);background:rgba(255,255,255,.06);
+        box-shadow:inset 0 0 0 1px rgba(255,255,255,.09);display:flex;align-items:center;gap:5px;
+        font-size:11px;color:rgba(255,255,255,.80);white-space:nowrap}
+  .chip b{font-weight:600;font-size:9.5px;color:rgba(255,255,255,.45)}
+  .chip.on{background:rgba(255,255,255,.16);color:#fff}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--gap-card);margin-top:12px;flex:1;min-height:0;align-content:start}
+  .gcard{background:var(--card);border-radius:var(--r-card);box-shadow:inset 0 0 0 1px var(--border);
+         padding:var(--pad-card);display:flex;flex-direction:column;min-height:0;position:relative}
+  .gcard .gtitle{font-size:15px;line-height:1.15;
+                 background:linear-gradient(92deg,#c9a4ff,#ffe08a);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .gcard .gsub{font-size:9.5px;color:var(--text-2);margin-top:4px;line-height:1.5;height:29px;overflow:hidden}
+  .code{margin-top:7px;border-radius:var(--r-tight);background:rgba(0,0,0,.34);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);
+        padding:6px 7px;font-family:ui-monospace,Consolas,monospace;font-size:9px;line-height:1.6;color:rgba(255,255,255,.86);
+        height:58px;overflow:hidden;white-space:pre-wrap;word-break:break-all}
+  .variants{display:flex;align-items:center;gap:4px;margin-top:7px}
+  .vpill{height:17px;padding:0 7px;border-radius:4px;background:rgba(255,255,255,.05);
+         box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);font-size:8.5px;color:rgba(255,255,255,.6);display:flex;align-items:center}
+  .vpill.on{background:rgba(255,255,255,.14);color:#fff}
+  .vsrc{margin-left:auto;font-size:8px;color:rgba(255,255,255,.32)}
+  .tags{display:flex;gap:4px;margin-top:7px}
+  .tags span{font-size:8.5px;line-height:1.75;padding:0 6px;border-radius:var(--r-pill);background:rgba(255,255,255,.055);
+             box-shadow:inset 0 0 0 1px rgba(255,255,255,.07);color:rgba(255,255,255,.58)}
+  .gfoot{margin-top:auto;display:flex;align-items:center;gap:6px;padding-top:8px}
+  .mode{height:20px;padding:0 8px;border-radius:var(--r-tight);font-size:9px;display:flex;align-items:center;
+        background:rgba(102,192,244,.14);box-shadow:inset 0 0 0 1px rgba(102,192,244,.28);color:#bfe6ff;white-space:nowrap}
+  .mode.t{background:rgba(159,232,201,.14);box-shadow:inset 0 0 0 1px rgba(159,232,201,.28);color:#a9f3e3}
+  .mode.h{background:rgba(255,207,122,.13);box-shadow:inset 0 0 0 1px rgba(255,207,122,.26);color:#ffd79a}
+  .keybtn{margin-left:auto;height:20px;min-width:38px;padding:0 8px;border-radius:var(--r-tight);
+          background:rgba(255,255,255,.13);display:flex;align-items:center;justify-content:center;
+          font-family:ui-monospace,Consolas,monospace;font-size:9.5px;color:#fff}
+  .apply{height:20px;padding:0 8px;border-radius:var(--r-tight);background:rgba(255,255,255,.13);
+         display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;white-space:nowrap}
+  .gcard.applied{box-shadow:inset 0 0 0 1px rgba(159,232,201,.35)}
+
+  /* ---- 蓝图 ---- */
+  .bp{display:flex;gap:12px;flex:1;min-height:0;margin-top:10px}
+  .bpleft{width:190px;flex:none;display:flex;flex-direction:column;gap:5px}
+  .bpitem{height:30px;border-radius:var(--r-tight);background:rgba(255,255,255,.05);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07);
+          display:flex;align-items:center;gap:6px;padding:0 8px;font-size:10px;color:rgba(255,255,255,.82)}
+  .bpitem.on{background:rgba(255,255,255,.13);box-shadow:inset 0 0 0 1px rgba(255,255,255,.20)}
+  .bpitem small{margin-left:auto;font-size:8.5px;color:rgba(255,255,255,.40)}
+  .canvas{flex:1;min-width:0;border-radius:var(--r-base);background:rgba(0,0,0,.26);
+          box-shadow:inset 0 0 0 1px rgba(255,255,255,.07);position:relative;overflow:hidden}
+  .bpins{width:210px;flex:none;display:flex;flex-direction:column;gap:5px}
+  .fld{display:flex;align-items:center;height:22px;font-size:10px;color:var(--text-2)}
+  .fld b{margin-left:auto;font-weight:400;color:#fff;font-family:ui-monospace,Consolas,monospace;font-size:9.5px}
+  .bpchk{margin-top:4px;display:flex;flex-direction:column;gap:4px;font-size:9.5px;color:rgba(255,255,255,.62)}
+  .bpchk div{display:flex;align-items:center;gap:5px}
+  .bpchk i{width:11px;height:11px;border-radius:3px;border:1px solid rgba(255,255,255,.25);display:inline-block}
+  .bpchk i.ok{background:#9fe8c9;border-color:#9fe8c9}
+
+  /* ---- v3：Bind 两栏工作区 ---- */
+  .bindwrap{display:flex;gap:var(--gap-card);flex:1;min-height:0;margin-top:12px}
+  .lcol{width:620px;flex:none;display:flex;flex-direction:column;gap:var(--gap-card);min-height:0}
+  .rcol{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px;min-height:0}
+  .insp-head{display:flex;align-items:center;gap:8px;padding:2px 2px 0}
+  .insp-key{font-size:24px;font-weight:600;line-height:1;color:#fff}
+  .insp-badge{height:20px;padding:0 8px;border-radius:var(--r-tight);background:rgba(159,232,201,.14);
+              box-shadow:inset 0 0 0 1px rgba(159,232,201,.28);font-size:9px;color:#a9f3e3;display:flex;align-items:center}
+  .insp-bytes{margin-left:auto;font-family:ui-monospace,Consolas,monospace;font-size:10px;color:rgba(255,255,255,.55)}
+  .src-line{font-size:9.5px;color:rgba(255,255,255,.5);display:flex;align-items:center;gap:4px;padding:0 2px}
+  .src-line b{font-weight:400;color:rgba(255,255,255,.72)}
+  .src-line a{margin-left:auto;color:var(--accent);text-decoration:none}
+  .scard{background:var(--card);border-radius:var(--r-base);box-shadow:inset 0 0 0 1px var(--border);padding:9px 10px}
+  .scard-h{display:flex;align-items:center;font-size:10.5px;color:rgba(255,255,255,.78);margin-bottom:7px}
+  .scard-h span{margin-left:auto;font-size:9px;color:rgba(255,255,255,.42)}
+  .cmdrow{display:flex;align-items:center;gap:7px;height:26px;padding:0 7px;border-radius:var(--r-tight);
+          background:rgba(0,0,0,.26);box-shadow:inset 0 0 0 1px rgba(255,255,255,.05);margin-bottom:5px}
+  .cmdrow .n{width:13px;flex:none;font-size:8.5px;color:rgba(255,255,255,.38);text-align:center}
+  .cmdrow .c{font-family:ui-monospace,Consolas,monospace;font-size:9.5px;color:rgba(255,255,255,.86);
+             white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+  .cmdrow .x{width:14px;height:14px;flex:none;color:rgba(255,255,255,.42);display:flex;align-items:center;justify-content:center}
+  .cmdfoot{display:flex;font-size:8.5px;color:rgba(255,255,255,.38);padding:1px 2px 0}
+  .cmdfoot span:last-child{margin-left:auto}
+  .addbar{display:flex;gap:5px}
+  .addbar .inp{flex:1;height:26px;border-radius:var(--r-tight);background:rgba(0,0,0,.28);
+               box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);display:flex;align-items:center;padding:0 8px;
+               font-size:9px;color:rgba(255,255,255,.42)}
+  .addbar .plus{width:24px;height:24px;border-radius:var(--r-tight);background:rgba(255,255,255,.10);
+                display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;flex:none}
+  .addbar2{display:flex;gap:5px;margin-top:5px}
+  .addbar2 .inp2{flex:1;height:26px;border-radius:var(--r-tight);background:rgba(0,0,0,.28);
+                 box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);display:flex;align-items:center;padding:0 8px;
+                 font-family:ui-monospace,Consolas,monospace;font-size:9px;color:rgba(255,255,255,.82)}
+  .addbar2 .go{width:46px;height:26px;border-radius:var(--r-tight);background:rgba(255,255,255,.16);
+               display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;flex:none}
+  .two{display:flex;gap:6px}
+  .two .b{flex:1;height:28px;border-radius:var(--r-tight);background:rgba(255,255,255,.09);
+          box-shadow:inset 0 0 0 1px rgba(255,255,255,.10);display:flex;align-items:center;justify-content:center;
+          font-size:9.5px;color:rgba(255,255,255,.86)}
+  .qrow{display:flex;align-items:center;height:19px;font-size:9.5px;color:rgba(255,255,255,.62)}
+  .qrow i{margin-left:auto;font-style:normal;font-family:ui-monospace,Consolas,monospace;font-size:8.5px;color:rgba(255,255,255,.38)}
+  .modrow2{display:flex;flex-direction:column;gap:4px}
+  .modrow2 div{display:flex;gap:6px;font-size:9px;color:rgba(255,255,255,.52);line-height:1.5}
+  .modrow2 b{flex:0 0 52px;font-weight:600;color:rgba(255,255,255,.82);font-size:9px}
+  .occv3{display:flex;flex-direction:column;gap:4px}
+  .occv3 .r{display:grid;grid-template-columns:52px 1fr 92px 44px;gap:8px;align-items:center;height:33px;
+            padding:0 7px;border-radius:var(--r-tight);background:rgba(255,255,255,.03);font-size:9.5px}
+  .occv3 .r .k{height:17px;border-radius:4px;background:rgba(255,255,255,.10);display:flex;align-items:center;
+               justify-content:center;font-family:ui-monospace,Consolas,monospace;font-size:8.5px;color:#fff}
+  .occv3 .r .c{font-family:ui-monospace,Consolas,monospace;font-size:8.6px;color:rgba(255,255,255,.78);
+               white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .occv3 .r .s{color:rgba(255,255,255,.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .occv3 .r .t{text-align:right;color:var(--accent);font-size:8.5px}
+  .occv3 .r.warn{background:rgba(255,207,122,.08);box-shadow:inset 0 0 0 1px rgba(255,207,122,.26)}
+  .occv3 .r.warn .t{color:#ffd79a}
+</style>
+</head>
+<body>
+<div class="frame">
+  <div class="scene"></div><div class="veil"></div>
+
+  <!-- 顶栏（主菜单 tab 行） -->
+  <div class="topbar">
+    <div class="ic on"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></div>
+    <div class="ic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></div>
+    <div class="ic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3l7 7-4 4-7-7z"/><path d="M10 7l-6 6v5h5l6-6"/></svg></div>
+    <div class="ic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2.6 5.6 6 .8-4.4 4.2 1.1 6-5.3-3-5.3 3 1.1-6L3.4 9.4l6-.8z"/></svg></div>
+    <div class="ic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8"/></svg></div>
+    <div class="sp"></div>
+    <div class="brand">DD<span>Net</span></div>
+    <div class="brand" style="margin-left:14px">AXIOM</div>
+  </div>
+
+  <div class="shell">
+    <div class="panel">
+      <!-- 子 tab：控制页只有「控制 / Bind」两页，新方案加第三个「工坊」 -->
+      <div class="subtabs" style="max-width:380px">
+        <div class="t">控制</div>
+        <div class="t on">Bind</div>
+      </div>
+      <div class="subtabs" style="max-width:460px;margin-top:8px">
+        <div class="t on">官方</div>
+        <div class="t">指令工坊</div>
+        <div class="t">蓝图</div>
+      </div>
+
+      <div class="bindwrap">
+        <div class="lcol">
+          <div class="card" style="flex:0 0 292px">
+            <div class="card-h">
+              <div>
+                <div class="card-t">键盘与鼠标</div>
+                <div class="card-sub">配置键盘、鼠标、滚轮和修饰键绑定</div>
+              </div>
+              <div class="hbtns">
+                <div class="hbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></div>
+                <div class="hbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 15l6-6 6 6"/></svg></div>
+                <div class="hbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg></div>
+              </div>
+            </div>
+            <div class="kb" style="margin-top:8px">
+              <div class="krow">
+                <div class="key mod" style="flex:0 0 34px">Esc</div>
+                <div class="key">1</div><div class="key">2</div><div class="key">3</div><div class="key">4</div><div class="key">5</div>
+                <div class="key">6</div><div class="key">7</div><div class="key">8</div><div class="key">9</div><div class="key bound">0</div>
+                <div class="key">-</div><div class="key">=</div>
+                <div class="key mod" style="flex:0 0 54px">Bksp</div>
+              </div>
+              <div class="krow">
+                <div class="key mod" style="flex:0 0 34px">Tab</div>
+                <div class="key">Q</div><div class="key">W</div><div class="key">E</div><div class="key">R</div><div class="key">T</div>
+                <div class="key">Y</div><div class="key">U</div><div class="key">I</div><div class="key">O</div><div class="key">P</div>
+                <div class="key">[</div><div class="key">]</div><div class="key mod" style="flex:0 0 34px">\</div>
+              </div>
+              <div class="krow">
+                <div class="key mod" style="flex:0 0 44px">Caps</div>
+                <div class="key">A</div><div class="key bound">S</div><div class="key">D</div><div class="key">F</div><div class="key">G</div>
+                <div class="key sel">H</div><div class="key">J</div><div class="key">K</div><div class="key">L</div><div class="key">;</div><div class="key">'</div>
+                <div class="key mod" style="flex:0 0 58px">Enter</div>
+              </div>
+              <div class="krow">
+                <div class="key mod" style="flex:0 0 58px">Shift</div>
+                <div class="key">Z</div><div class="key">X</div><div class="key">C</div><div class="key">V</div><div class="key">B</div><div class="key">N</div>
+                <div class="key">M</div><div class="key">,</div><div class="key">.</div><div class="key">/</div>
+                <div class="key mod" style="flex:0 0 58px">Shift</div>
+              </div>
+              <div class="krow">
+                <div class="key mod" style="flex:0 0 34px">Ctrl</div>
+                <div class="key mod" style="flex:0 0 34px">Win</div>
+                <div class="key mod" style="flex:0 0 34px">Alt</div>
+                <div class="key bound" style="flex:0 0 170px">Space</div>
+                <div class="key mod" style="flex:0 0 34px">Alt</div>
+                <div class="key mod" style="flex:0 0 34px">Ctrl</div>
+              </div>
+              <div class="mice">
+                <div class="mouse">鼠标左键</div>
+                <div class="mouse">鼠标右键</div>
+                <div class="mouse">中键</div>
+                <div class="mouse">滚↑</div>
+                <div class="mouse">滚↓</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="flex:1">
+            <div class="card-h">
+              <div>
+                <div class="card-t" style="background:linear-gradient(92deg,#9fe8c9,#7ec8ff);-webkit-background-clip:text;background-clip:text">键位占用</div>
+                <div class="card-sub">当前按键被谁占用、是否被修饰键遮蔽</div>
+              </div>
+              <div class="hbtns">
+                <div class="hbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></div>
+                <div class="hbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 15l6-6 6 6"/></svg></div>
+                <div class="hbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg></div>
+              </div>
+            </div>
+            <div class="occv3" style="margin-top:8px">
+              <div class="r"><span class="k">H</span><span class="c">toggle cl_dummy_hammer 0 1; echo HDF</span><span class="s">分身自动锤</span><span class="t">当前</span></div>
+              <div class="r"><span class="k">S</span><span class="c">+showhookcoll; +toggle inp_mousesens 1 66</span><span class="s">低灵敏度</span><span class="t">按住</span></div>
+              <div class="r"><span class="k">0</span><span class="c">echo 加入 team; say /team 101</span><span class="s">加入队伍</span><span class="t">一次</span></div>
+              <div class="r"><span class="k">M1</span><span class="c">+fire; +toggle cl_dummy_hammer 1 0</span><span class="s">DF 模式</span><span class="t">按住</span></div>
+              <div class="r"><span class="k">Space</span><span class="c">+jump</span><span class="s">原地跳</span><span class="t">按住</span></div>
+              <div class="r warn"><span class="k">⇧S</span><span class="c">toggle cl_dummy 0 1</span><span class="s">Shift+S</span><span class="t">遮蔽 S</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="rcol">
+          <div class="insp-head">
+            <span class="insp-key">H</span>
+            <span class="insp-badge">一键切换</span>
+            <span class="insp-bytes">42 B / 16384</span>
+          </div>
+          <div class="src-line">来源：<b>指令工坊 · 分身自动锤</b><a>查看</a></div>
+
+          <div class="scard">
+            <div class="scard-h">已绑定功能<span>2</span></div>
+            <div class="cmdrow"><span class="n">1</span><span class="c">toggle cl_dummy_hammer 0 1</span><span class="x"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 5l14 14M19 5L5 19"/></svg></span></div>
+            <div class="cmdrow"><span class="n">2</span><span class="c">echo HDF</span><span class="x"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 5l14 14M19 5L5 19"/></svg></span></div>
+            <div class="cmdfoot"><span>同帧执行，无延时</span><span>0 层嵌套</span></div>
+          </div>
+
+          <div class="scard">
+            <div class="scard-h">添加命令</div>
+            <div class="addbar">
+              <div class="inp">选择动作或控制台命令…</div>
+              <div class="plus">＋</div>
+            </div>
+            <div class="addbar2">
+              <div class="inp2">toggle cl_dummy_hammer 0 1</div>
+              <div class="go">添加</div>
+            </div>
+          </div>
+
+          <div class="scard">
+            <div class="scard-h">改键 / 清除</div>
+            <div class="two">
+              <div class="b">捕获新按键</div>
+              <div class="b">清除本键</div>
+            </div>
+          </div>
+
+          <div class="scard">
+            <div class="scard-h">快捷操作</div>
+            <div class="qrow">复制 bind 命令<i>Ctrl+C</i></div>
+            <div class="qrow">在控制台试运行<i>F1</i></div>
+            <div class="qrow">打开 Wiki 说明<i>ⓘ</i></div>
+          </div>
+
+          <div class="scard" style="margin-top:auto">
+            <div class="scard-h">模式说明</div>
+            <div class="modrow2">
+              <div><b>执行一次</b><span>按下执行整串，松开无动作</span></div>
+              <div><b>按住</b><span>+ 命令按住生效，松手复原</span></div>
+              <div><b>一键切换</b><span>每次按下翻转状态量</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右导航：宽 168 = clamp(1360×0.16,132,168) -->
+    <div class="nav">
+      <h5>设置</h5>
+      <div class="item">常规</div><div class="item">Tee</div><div class="item">游戏界面</div>
+      <div class="item on">控制</div><div class="item">图像</div><div class="item">声音</div>
+      <div class="item">资源</div><div class="item">DDNet</div><div class="item">TClient</div>
+      <div class="item">栖梦</div><div class="item">搜索</div><div class="item">贡献者</div>
+      <div class="item ghost">Wiki</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="searchbox">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+      搜索
+    </div>
+    <div class="resetbtn">恢复默认设置</div>
+  </div>
+</div>
+<div class="frame">
+  <div class="scene"></div><div class="veil"></div>
+  <div class="topbar">
+    <div class="ic on"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></div>
+    <div class="ic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></div>
+    <div class="ic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3l7 7-4 4-7-7z"/><path d="M10 7l-6 6v5h5l6-6"/></svg></div>
+    <div class="ic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2.6 5.6 6 .8-4.4 4.2 1.1 6-5.3-3-5.3 3 1.1-6L3.4 9.4l6-.8z"/></svg></div>
+    <div class="ic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8"/></svg></div>
+    <div class="sp"></div>
+    <div class="brand">DD<span>Net</span></div>
+    <div class="brand" style="margin-left:14px">AXIOM</div>
+  </div>
+  <div class="shell">
+    <div class="panel">
+      <div class="subtabs" style="max-width:380px">
+        <div class="t">控制</div>
+        <div class="t on">Bind</div>
+      </div>
+      <div class="subtabs" style="max-width:460px;margin-top:8px">
+        <div class="t">官方</div>
+        <div class="t on">指令工坊</div>
+        <div class="t">蓝图</div>
+      </div>
+      <div class="filterrow">
+        <div class="chips">
+          <div class="chip on">全部 <b>54</b></div>
+          <div class="chip">移动 <b>12</b></div>
+          <div class="chip">分身 <b>9</b></div>
+          <div class="chip">武器 <b>7</b></div>
+          <div class="chip">队伍 <b>6</b></div>
+          <div class="chip">视角 <b>8</b></div>
+          <div class="chip">工具 <b>12</b></div>
+        </div>
+        <div class="searchbox" style="margin-left:auto;width:230px;height:24px;flex:none">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+          搜索「分身锤」
+        </div>
+      </div>
+      <div class="grid3">
+        <div class="gcard applied">
+          <div class="gtitle">分身锤 HDF</div>
+          <div class="gsub">按住开火时自动挥锤；再按一次取消。</div>
+          <div class="code">toggle cl_dummy_hammer 0 1<br>echo HDF</div>
+          <div class="variants"><span class="vpill on">方案 1</span><span class="vpill">方案 2</span><span class="vsrc">来源 ddrace.cn</span></div>
+          <div class="tags"><span>分身</span><span>锤</span><span>一键</span></div>
+          <div class="gfoot"><span class="mode t">一键切换</span><span class="keybtn">H</span><span class="apply">应用</span></div>
+        </div>
+        <div class="gcard">
+          <div class="gtitle">低灵敏度瞄准</div>
+          <div class="gsub">拉长钩子辅助线的同时把鼠标灵敏度降到 66，松手复原。</div>
+          <div class="code">+showhookcoll; +toggle inp_mousesens 1 66</div>
+          <div class="variants"><span class="vpill on">方案 1</span><span class="vpill">方案 2</span><span class="vsrc">来源 ddrace.cn</span></div>
+          <div class="tags"><span>瞄准</span><span>辅助线</span><span>按住</span></div>
+          <div class="gfoot"><span class="mode h">按住</span><span class="keybtn">S</span><span class="apply">应用</span></div>
+        </div>
+        <div class="gcard">
+          <div class="gtitle">45° 精准角</div>
+          <div class="gsub">把最大鼠标距离压到 400 再回弹，用于贴墙 45°。</div>
+          <div class="code">+toggle cl_mouse_max_distance 2 400;<br>+toggle_restore inp_mousesens 1</div>
+          <div class="variants"><span class="vpill on">方案 1</span><span class="vpill">方案 2</span><span class="vsrc">来源 ddrace.cn</span></div>
+          <div class="tags"><span>角度</span><span>精准</span></div>
+          <div class="gfoot"><span class="mode h">按住</span><span class="keybtn">—</span><span class="apply">应用</span></div>
+        </div>
+        <div class="gcard">
+          <div class="gtitle">双锤开火</div>
+          <div class="gsub">开火与分身锤交替，按住即连续双锤。</div>
+          <div class="code">+fire; +toggle cl_dummy_hammer 1 0</div>
+          <div class="variants"><span class="vpill on">方案 1</span><span class="vpill">方案 2</span><span class="vsrc">来源 ddrace.cn</span></div>
+          <div class="tags"><span>双锤</span><span>开火</span></div>
+          <div class="gfoot"><span class="mode h">按住</span><span class="keybtn">M1</span><span class="apply">应用</span></div>
+        </div>
+        <div class="gcard">
+          <div class="gtitle">加入队伍</div>
+          <div class="gsub">发一条队伍广播并立刻加入 101 队。</div>
+          <div class="code">echo 加入 team; say /team 101</div>
+          <div class="variants"><span class="vpill on">方案 1</span><span class="vpill">方案 2</span><span class="vsrc">来源 ddrace.cn</span></div>
+          <div class="tags"><span>队伍</span><span>聊天</span></div>
+          <div class="gfoot"><span class="mode ">执行一次</span><span class="keybtn">0</span><span class="apply">应用</span></div>
+        </div>
+        <div class="gcard">
+          <div class="gtitle">视野缩放</div>
+          <div class="gsub">按住拉远视野，松手恢复原缩放。</div>
+          <div class="code">+toggle zoom 1 0</div>
+          <div class="variants"><span class="vpill on">方案 1</span><span class="vpill">方案 2</span><span class="vsrc">来源 ddrace.cn</span></div>
+          <div class="tags"><span>视角</span><span>缩放</span></div>
+          <div class="gfoot"><span class="mode h">按住</span><span class="keybtn">—</span><span class="apply">应用</span></div>
+        </div>
+        <div class="gcard">
+          <div class="gtitle">快速切枪</div>
+          <div class="gsub">滚轮循环切换近战与手枪，不改变当前视角。</div>
+          <div class="code">bind mousewheelup "+weapon1"<br>bind mousewheeldown "+weapon2"</div>
+          <div class="variants"><span class="vpill on">方案 1</span><span class="vsrc">来源 内置</span></div>
+          <div class="tags"><span>武器</span><span>滚轮</span></div>
+          <div class="gfoot"><span class="mode">执行一次</span><span class="keybtn">滚↑</span><span class="apply">应用</span></div>
+        </div>
+        <div class="gcard">
+          <div class="gtitle">精准跳</div>
+          <div class="gsub">起跳瞬间锁定鼠标距离，落地后恢复。</div>
+          <div class="code">+jump; +toggle cl_mouse_max_distance 2 260</div>
+          <div class="variants"><span class="vpill on">方案 1</span><span class="vsrc">来源 ddrace.cn</span></div>
+          <div class="tags"><span>移动</span><span>跳跃</span></div>
+          <div class="gfoot"><span class="mode h">按住</span><span class="keybtn">Space</span><span class="apply">应用</span></div>
+        </div>
+        <div class="gcard">
+          <div class="gtitle">一键喊话</div>
+          <div class="gsub">把常用沟通语发到队伍频道，避免手打出错。</div>
+          <div class="code">say_team /ready</div>
+          <div class="variants"><span class="vpill on">方案 1</span><span class="vsrc">来源 内置</span></div>
+          <div class="tags"><span>聊天</span><span>队伍</span></div>
+          <div class="gfoot"><span class="mode">执行一次</span><span class="keybtn">—</span><span class="apply">应用</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="nav">
+      <h5>设置</h5>
+      <div class="item">常规</div><div class="item">Tee</div><div class="item">游戏界面</div>
+      <div class="item on">控制</div><div class="item">图像</div><div class="item">声音</div>
+      <div class="item">资源</div><div class="item">DDNet</div><div class="item">TClient</div>
+      <div class="item">栖梦</div><div class="item">搜索</div><div class="item">贡献者</div>
+      <div class="item ghost">Wiki</div>
+    </div>
+  </div>
+  <div class="footer">
+    <div class="searchbox">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+      搜索
+    </div>
+    <div class="resetbtn">恢复默认设置</div>
+  </div>
+</div>
+<div class="frame">
+  <div class="scene"></div><div class="veil"></div>
+  <div class="topbar">
+    <div class="ic on"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></div>
+    <div class="ic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></div>
+    <div class="ic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3l7 7-4 4-7-7z"/><path d="M10 7l-6 6v5h5l6-6"/></svg></div>
+    <div class="ic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2.6 5.6 6 .8-4.4 4.2 1.1 6-5.3-3-5.3 3 1.1-6L3.4 9.4l6-.8z"/></svg></div>
+    <div class="ic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8"/></svg></div>
+    <div class="sp"></div>
+    <div class="brand">DD<span>Net</span></div>
+    <div class="brand" style="margin-left:14px">AXIOM</div>
+  </div>
+  <div class="shell">
+    <div class="panel">
+      <div class="subtabs" style="max-width:380px">
+        <div class="t">控制</div>
+        <div class="t on">Bind</div>
+      </div>
+      <div class="subtabs" style="max-width:460px;margin-top:8px">
+        <div class="t">官方</div>
+        <div class="t">指令工坊</div>
+        <div class="t on">蓝图</div>
+      </div>
+
+      <div class="card" style="flex:1;margin-top:12px">
+        <div class="card-h">
+          <div>
+            <div class="card-t">分身锤 HDF</div>
+            <div class="card-sub">3 个节点 · 2 条边 · 全部同帧执行 · 未保存</div>
+          </div>
+          <div class="hbtns">
+            <div class="hbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></div>
+            <div class="hbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 15l6-6 6 6"/></svg></div>
+            <div class="hbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg></div>
+          </div>
+        </div>
+
+        <div class="bp">
+          <div class="bpleft">
+            <div style="font-size:9px;color:rgba(255,255,255,.42);letter-spacing:.06em;padding-bottom:2px">流程库</div>
+            <div class="bpitem on">分身锤 HDF <small>3 节点</small></div>
+            <div class="bpitem">切换本体 / 分身 <small>2 节点</small></div>
+            <div class="bpitem">45° 精准角 <small>4 节点</small></div>
+            <div class="bpitem">双锤循环 <small>5 节点</small></div>
+            <div class="bpitem" style="border:1px dashed rgba(255,255,255,.14);box-shadow:none;background:transparent;color:rgba(255,255,255,.6)">＋ 新建流程</div>
+            <div class="bpitem" style="box-shadow:none;background:transparent;color:rgba(255,255,255,.6)">从预设导入 <small>54</small></div>
+            <div style="margin-top:auto;font-size:8.5px;color:rgba(255,255,255,.38);line-height:1.6">DDNet 控制台没有 sleep / if / 循环。<br>连线只表示同一帧内的执行顺序。</div>
+          </div>
+
+          <div class="canvas">
+            <svg viewBox="0 0 548 470" style="position:absolute;inset:0;width:100%;height:100%">
+              <defs>
+                <pattern id="g" width="16" height="16" patternUnits="userSpaceOnUse">
+                  <path d="M16 0 L0 0 0 16" fill="none" stroke="rgba(255,255,255,.05)" stroke-width="1"/>
+                </pattern>
+              </defs>
+              <rect width="548" height="470" fill="url(#g)"/>
+              <path d="M141 225 H167 V166 H194" fill="none" stroke="rgba(255,255,255,.42)" stroke-width="1.5"/>
+              <path d="M141 225 H178 V308 H194" fill="none" stroke="rgba(255,255,255,.42)" stroke-width="1.5"/>
+              <circle cx="141" cy="225" r="3" fill="#141a20" stroke="rgba(255,255,255,.65)" stroke-width="1.4"/>
+              <circle cx="194" cy="166" r="3" fill="#141a20" stroke="rgba(255,255,255,.65)" stroke-width="1.4"/>
+              <circle cx="194" cy="308" r="3" fill="#141a20" stroke="rgba(255,255,255,.65)" stroke-width="1.4"/>
+              <circle cx="166" cy="184" r="2.4" fill="#9fe8c9"/>
+            </svg>
+
+            <div style="position:absolute;left:16px;top:186px;width:125px;border-radius:8px;background:rgba(255,255,255,.09);box-shadow:inset 0 0 0 1px rgba(255,255,255,.16)">
+              <div style="height:22px;border-radius:8px 8px 0 0;background:#a7d8ff;color:#101820;font-size:10px;font-weight:600;display:flex;align-items:center;padding:0 8px">事件 · 按下</div>
+              <div style="padding:6px 8px;font-family:ui-monospace,Consolas,monospace;font-size:9px;color:rgba(255,255,255,.85);line-height:1.6">key H<br>mods none</div>
+            </div>
+
+            <div style="position:absolute;left:194px;top:128px;width:150px;border-radius:8px;background:rgba(255,255,255,.09);box-shadow:inset 0 0 0 1px rgba(255,255,255,.16)">
+              <div style="height:22px;border-radius:8px 8px 0 0;background:#9fe8c9;color:#101820;font-size:10px;font-weight:600;display:flex;align-items:center;padding:0 8px">状态 · 翻转</div>
+              <div style="padding:6px 8px;font-family:ui-monospace,Consolas,monospace;font-size:9px;color:rgba(255,255,255,.85);line-height:1.6">toggle<br>cl_dummy_hammer 0 1</div>
+            </div>
+
+            <div style="position:absolute;left:194px;top:278px;width:126px;border-radius:8px;background:rgba(255,255,255,.09);box-shadow:inset 0 0 0 1px rgba(255,255,255,.16)">
+              <div style="height:22px;border-radius:8px 8px 0 0;background:#ffd79a;color:#101820;font-size:10px;font-weight:600;display:flex;align-items:center;padding:0 8px">动作 · 提示</div>
+              <div style="padding:6px 8px;font-family:ui-monospace,Consolas,monospace;font-size:9px;color:rgba(255,255,255,.85);line-height:1.6">echo HDF</div>
+            </div>
+
+            <div style="position:absolute;left:146px;top:250px;font-size:8.5px;color:rgba(255,255,255,.5)">同帧</div>
+            <div style="position:absolute;right:10px;bottom:10px;display:flex;gap:4px">
+              <div style="height:18px;padding:0 8px;border-radius:9px;background:rgba(255,255,255,.08);font-size:8.5px;color:rgba(255,255,255,.6);display:flex;align-items:center">100%</div>
+              <div style="height:18px;padding:0 8px;border-radius:9px;background:rgba(255,255,255,.08);font-size:8.5px;color:rgba(255,255,255,.6);display:flex;align-items:center">整理</div>
+            </div>
+          </div>
+
+          <div class="bpins">
+            <div style="font-size:9px;color:rgba(255,255,255,.42);letter-spacing:.06em;padding-bottom:2px">检视器</div>
+            <div class="fld">类型<b>STATE</b></div>
+            <div class="fld">按键<b>H</b></div>
+            <div class="fld">模式<b>一键切换</b></div>
+            <div class="fld">命令长度<b>47 / 16384 B</b></div>
+            <div class="fld">嵌套层数<b>0 / 5</b></div>
+            <div class="fld" style="color:#ffd79a">槽位占用<b style="color:#ffd79a">H 已被占用</b></div>
+            <div style="height:1px;background:rgba(255,255,255,.08);margin:6px 0"></div>
+            <div style="font-size:9px;color:rgba(255,255,255,.42);letter-spacing:.06em">选项</div>
+            <div class="bpchk">
+              <div><i class="ok"></i>再次按下取消</div>
+              <div><i></i>开火后恢复武器</div>
+              <div><i></i>滚轮联动切锤</div>
+            </div>
+            <div style="height:1px;background:rgba(255,255,255,.08);margin:6px 0"></div>
+            <div style="font-size:9px;color:rgba(255,255,255,.42);letter-spacing:.06em">输出</div>
+            <div style="border-radius:6px;background:rgba(0,0,0,.34);padding:6px 7px;font-family:ui-monospace,Consolas,monospace;font-size:8.6px;line-height:1.55;color:rgba(255,255,255,.86);word-break:break-all">bind h "toggle<br>cl_dummy_hammer 0 1;<br>echo HDF"</div>
+            <div style="margin-top:auto;display:flex;gap:6px">
+              <div style="flex:1;height:24px;border-radius:6px;background:rgba(255,255,255,.13);display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff">应用到 H</div>
+              <div style="width:64px;height:24px;border-radius:6px;background:rgba(255,255,255,.05);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;font-size:10px;color:rgba(255,255,255,.72)">导出 cfg</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="nav">
+      <h5>设置</h5>
+      <div class="item">常规</div><div class="item">Tee</div><div class="item">游戏界面</div>
+      <div class="item on">控制</div><div class="item">图像</div><div class="item">声音</div>
+      <div class="item">资源</div><div class="item">DDNet</div><div class="item">TClient</div>
+      <div class="item">栖梦</div><div class="item">搜索</div><div class="item">贡献者</div>
+      <div class="item ghost">Wiki</div>
+    </div>
+  </div>
+  <div class="footer">
+    <div class="searchbox">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+      搜索
+    </div>
+    <div class="resetbtn">恢复默认设置</div>
+  </div>
+</div>
+</body>
+</html>

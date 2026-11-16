@@ -14,8 +14,9 @@ struct SSettingsSkinAppearanceLayout
 inline SSettingsSkinAppearanceLayout ResolveSettingsSkinAppearanceLayout(const CUIRect &View, const SSettingsContentMetrics &Metrics)
 {
 	SSettingsSkinAppearanceLayout Layout;
-	const float OutlineHeight = 5.0f * Metrics.m_RowStep;
-	const float HueHeight = 3.0f * Metrics.m_RowStep;
+	// 常用开关由外层声明；这里只测量展开后的颜色、描边和速度参数。
+	const float OutlineHeight = 3.0f * Metrics.m_RowStep;
+	const float HueHeight = Metrics.m_RowStep;
 	float Bottom;
 	if(View.w >= 640.0f * Metrics.m_UiScale)
 	{
@@ -30,7 +31,7 @@ inline SSettingsSkinAppearanceLayout ResolveSettingsSkinAppearanceLayout(const C
 		Layout.m_Hue = {View.x, View.y + OutlineHeight + Metrics.m_SectionGap, View.w, HueHeight};
 		Bottom = Layout.m_Hue.y + HueHeight;
 	}
-	Layout.m_Shadow = {View.x, Bottom + Metrics.m_SectionGap, View.w, 2.0f * Metrics.m_RowStep};
+	Layout.m_Shadow = {View.x, Bottom + Metrics.m_SectionGap, View.w, Metrics.m_RowStep};
 	Layout.m_Height = Layout.m_Shadow.y + Layout.m_Shadow.h - View.y;
 	return Layout;
 }

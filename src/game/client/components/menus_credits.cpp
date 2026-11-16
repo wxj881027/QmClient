@@ -688,7 +688,7 @@ void CMenus::AppendQmClientContributorCards(std::vector<SSettingsCardDefinition>
 			Label.HSplitTop(LineSpacing, nullptr, &Label);
 			Label.HSplitTop(LineHeight, &Label, nullptr);
 			if(Author.m_Glitch)
-				m_QmAuthorName.Render(Ui(), Graphics(), Author, Label, BodySize, !ReadOnly && Ui()->VisualMouseHovered(Ui()->Screen()));
+				m_QmAuthorName.Render(Ui(), Graphics(), Author, Label, BodySize, !ReadOnly && Ui()->VisualSurfaceHovered(Ui()->Screen()));
 			else
 				DoSettingsMenuLabel(SETTINGS_CONTRIBUTORS, -1, -1, Author.m_pTextId, &Label, Author.m_pName, BodySize, TEXTALIGN_MC, {}, (int)Label.w);
 		}

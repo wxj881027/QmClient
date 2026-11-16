@@ -1,0 +1,1897 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QmClient 拖尾特效实验室 · Tee Trail VFX Showcase</title>
+  <style>
+    :root {
+      --bg-dark: #0a0c14;
+      --panel-bg: rgba(18, 22, 36, 0.78);
+      --panel-border: rgba(255, 255, 255, 0.12);
+      --panel-hover: rgba(255, 255, 255, 0.18);
+      --accent-cyan: #00f0ff;
+      --accent-pink: #ff2a85;
+      --accent-gold: #ffd166;
+      --accent-purple: #9d4edd;
+      --accent-green: #06d6a0;
+      --text-main: #f0f4fc;
+      --text-muted: #8e9bb0;
+      --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-family);
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+    }
+
+    /* 主画布区域 */
+    #canvas-container {
+      position: relative;
+      flex: 1;
+      height: 100%;
+      background: #06080e;
+      overflow: hidden;
+      cursor: crosshair;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* 顶部 HUD 栏 */
+    .hud-bar {
+      position: absolute;
+      top: 18px;
+      left: 24px;
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      z-index: 10;
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--panel-border);
+      padding: 10px 18px;
+      border-radius: 999px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+      font-size: 13px;
+    }
+
+    .hud-title {
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      background: linear-gradient(135deg, #fff 0%, #00f0ff 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hud-stat {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-muted);
+    }
+    .hud-stat span.val {
+      color: #00f0ff;
+      font-weight: 600;
+      font-family: "SF Mono", Consolas, monospace;
+    }
+    .hud-divider {
+      width: 1px;
+      height: 14px;
+      background: var(--panel-border);
+    }
+
+    /* 慢动作 & 飞行模式小标签 */
+    .hud-tag {
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      background: rgba(0, 240, 255, 0.15);
+      color: #00f0ff;
+      border: 1px solid rgba(0, 240, 255, 0.3);
+    }
+
+    /* 左侧/底部 款式选择 DOCK */
+    .styles-dock {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--panel-border);
+      padding: 8px 10px;
+      border-radius: 20px;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.6);
+      z-index: 10;
+      max-width: 90vw;
+      overflow-x: auto;
+    }
+
+    .style-pill {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 16px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      white-space: nowrap;
+    }
+
+    .style-pill:hover {
+      background: rgba(255, 255, 255, 0.09);
+      border-color: var(--panel-hover);
+      transform: translateY(-2px);
+    }
+
+    .style-pill.active {
+      background: linear-gradient(135deg, rgba(0, 240, 255, 0.18) 0%, rgba(157, 78, 221, 0.2) 100%);
+      border-color: rgba(0, 240, 255, 0.55);
+      box-shadow: 0 4px 16px rgba(0, 240, 255, 0.25);
+    }
+
+    .style-badge {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      box-shadow: 0 0 10px currentColor;
+    }
+
+    .style-text {
+      display: flex;
+      flex-direction: column;
+      text-align: left;
+    }
+
+    .style-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .style-sub {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .style-pill.is-new .style-title::after {
+      content: "NEW";
+      display: inline-block;
+      margin-left: 6px;
+      font-size: 8px;
+      font-weight: 800;
+      background: linear-gradient(90deg, #ff007f, #9d4edd);
+      color: #fff;
+      padding: 1px 4px;
+      border-radius: 4px;
+      vertical-align: middle;
+    }
+
+    /* 右侧控制与参数抽屉 */
+    .controls-panel {
+      width: 360px;
+      height: 100%;
+      background: var(--panel-bg);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-left: 1px solid var(--panel-border);
+      display: flex;
+      flex-direction: column;
+      z-index: 20;
+      box-shadow: -10px 0 35px rgba(0,0,0,0.5);
+    }
+
+    .panel-header {
+      padding: 22px 24px 16px;
+      border-bottom: 1px solid var(--panel-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .panel-header h2 {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .panel-body {
+      flex: 1;
+      padding: 20px 24px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      font-weight: 700;
+    }
+
+    .control-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .control-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: var(--text-main);
+    }
+
+    .control-label span.val {
+      font-family: monospace;
+      color: #00f0ff;
+    }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.1);
+      height: 5px;
+      border-radius: 3px;
+      outline: none;
+      transition: background 0.2s;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: #00f0ff;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.6);
+      transition: transform 0.1s;
+    }
+
+    input[type=range]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    /* 开关网格 */
+    .toggle-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .toggle-btn {
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--panel-border);
+      color: var(--text-muted);
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.2s;
+    }
+
+    .toggle-btn.active {
+      background: rgba(0, 240, 255, 0.12);
+      border-color: rgba(0, 240, 255, 0.4);
+      color: #fff;
+    }
+
+    .toggle-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .toggle-btn.active .toggle-dot {
+      background: #00f0ff;
+      box-shadow: 0 0 8px #00f0ff;
+    }
+
+    /* 运动轨迹预设按钮组 */
+    .flight-btns {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .flight-btn {
+      padding: 8px 6px;
+      font-size: 11px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--panel-border);
+      color: var(--text-main);
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+
+    .flight-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    .flight-btn.active {
+      background: linear-gradient(135deg, rgba(255, 42, 133, 0.25), rgba(157, 78, 221, 0.25));
+      border-color: rgba(255, 42, 133, 0.5);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    /* 款式细节卡片展示 */
+    .style-card {
+      padding: 14px;
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 12px;
+      line-height: 1.6;
+      color: #cbd5e1;
+    }
+
+    .style-card-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* 代码查看器按钮与弹窗 */
+    .btn-view-cpp {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, rgba(0, 240, 255, 0.15) 0%, rgba(157, 78, 221, 0.15) 100%);
+      border: 1px solid rgba(0, 240, 255, 0.35);
+      border-radius: 12px;
+      color: #00f0ff;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-view-cpp:hover {
+      background: linear-gradient(135deg, rgba(0, 240, 255, 0.25) 0%, rgba(157, 78, 221, 0.25) 100%);
+      box-shadow: 0 4px 18px rgba(0, 240, 255, 0.25);
+    }
+
+    /* 浮动操作提示 */
+    .action-tips {
+      position: absolute;
+      top: 18px;
+      right: 384px;
+      background: rgba(0,0,0,0.4);
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      color: var(--text-muted);
+      pointer-events: none;
+      backdrop-filter: blur(8px);
+    }
+
+    /* 弹出的 C++ 架构预览模态框 */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(4, 6, 12, 0.85);
+      backdrop-filter: blur(20px);
+      z-index: 100;
+      display: none;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-overlay.show {
+      display: flex;
+    }
+
+    .modal-dialog {
+      width: 860px;
+      max-width: 92vw;
+      max-height: 85vh;
+      background: #0f1320;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 18px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .modal-head {
+      padding: 18px 24px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-head h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #00f0ff;
+    }
+
+    .modal-close {
+      cursor: pointer;
+      font-size: 20px;
+      color: var(--text-muted);
+      transition: color 0.2s;
+    }
+    .modal-close:hover { color: #fff; }
+
+    .modal-content {
+      flex: 1;
+      padding: 20px 24px;
+      overflow-y: auto;
+      font-family: "SF Mono", Consolas, "Courier New", monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      background: #080a12;
+      color: #d1d5db;
+    }
+
+    pre code {
+      color: #93c5fd;
+    }
+    .kw { color: #f472b6; font-weight: 600; }
+    .fn { color: #60a5fa; }
+    .cm { color: #6b7280; font-style: italic; }
+    .num { color: #fcd34d; }
+  </style>
+</head>
+<body>
+
+  <!-- 画布交互层 -->
+  <div id="canvas-container">
+    <canvas id="trailCanvas"></canvas>
+
+    <!-- 顶部 HUD 状态信息 -->
+    <div class="hud-bar">
+      <div class="hud-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M14.31 8l5.74 9.94M9.69 8h11.48M7.38 12l5.74-9.94M9.69 16L3.95 6.06M14.31 16H2.83m13.79-4l-5.74 9.94"></path>
+        </svg>
+        <span>QmClient 拖尾实验室</span>
+      </div>
+      <div class="hud-divider"></div>
+      <div class="hud-stat">FPS: <span class="val" id="hudFps">60</span></div>
+      <div class="hud-divider"></div>
+      <div class="hud-stat">Quad 顶点数: <span class="val" id="hudQuads">0</span></div>
+      <div class="hud-divider"></div>
+      <div class="hud-stat">Tee 移速: <span class="val" id="hudSpeed">0.0</span> px/t</div>
+      <div class="hud-divider"></div>
+      <div class="hud-tag" id="hudStyleTag">Cyber: Neon Pulse</div>
+    </div>
+
+    <!-- 交互提示 -->
+    <div class="action-tips">💡 移动或拖曳鼠标体验真实 Tee 惯性拖尾 · 点击右侧预设演练高难度飞行动作</div>
+
+    <!-- 底部款式切换 Dock -->
+    <div class="styles-dock" id="stylesDock">
+      <!-- 款式药丸通过 JS 动态渲染 -->
+    </div>
+  </div>
+
+  <!-- 右侧高级控制面板 -->
+  <div class="controls-panel">
+    <div class="panel-header">
+      <h2>拖尾视觉配置</h2>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+      </svg>
+    </div>
+
+    <div class="panel-body">
+      <!-- 当前款式设计解析卡片 -->
+      <div>
+        <div class="section-title">款式设计与艺术解析</div>
+        <div class="style-card" id="styleCardDesc">
+          <div class="style-card-title">
+            <span id="cardTitle">Cyber: Neon Pulse</span>
+            <span id="cardBadge" style="color: #00f0ff; font-size:11px;">赛博脉冲</span>
+          </div>
+          <div id="cardContent" style="margin-top:6px;">
+            冷光纤管道内核与双轨激光相干光束，伴随按距离高速行进的数字信号脉冲包节（Data Packets）与 45° HUD 科技刻度。
+          </div>
+        </div>
+      </div>
+
+      <!-- 动作演示曲线模式 -->
+      <div>
+        <div class="section-title">飞行运动演练路径</div>
+        <div class="flight-btns">
+          <button class="flight-btn active" data-flight="manual">🖱️ 自由鼠标</button>
+          <button class="flight-btn" data-flight="figure8">♾️ 双纽回旋</button>
+          <button class="flight-btn" data-flight="drift">⚡ 急动甩尾</button>
+          <button class="flight-btn" data-flight="spiral">🌀 涡旋升空</button>
+          <button class="flight-btn" data-flight="hook">🪝 抓钩秋千</button>
+          <button class="flight-btn" data-flight="heart">💖 浪漫心形</button>
+        </div>
+      </div>
+
+      <!-- 核心几何参数滑块 -->
+      <div>
+        <div class="section-title">几何与形态调优</div>
+        <div class="control-row">
+          <div class="control-label">
+            <span>拖尾长度 (Length)</span>
+            <span class="val" id="valLength">45</span>
+          </div>
+          <input type="range" id="paramLength" min="10" max="120" value="45">
+        </div>
+
+        <div class="control-row">
+          <div class="control-label">
+            <span>拖尾宽度 (Width)</span>
+            <span class="val" id="valWidth">16</span>
+          </div>
+          <input type="range" id="paramWidth" min="6" max="42" value="16">
+        </div>
+
+        <div class="control-row">
+          <div class="control-label">
+            <span>基础透明度 (Alpha)</span>
+            <span class="val" id="valAlpha">0.90</span>
+          </div>
+          <input type="range" id="paramAlpha" min="0.2" max="1.0" step="0.05" value="0.90">
+        </div>
+      </div>
+
+      <!-- 渲染特征开关 -->
+      <div>
+        <div class="section-title">渲染特性与着色开关</div>
+        <div class="toggle-grid">
+          <div class="toggle-btn active" id="toggleTaper">
+            <span>尾端收拢 (Taper)</span>
+            <div class="toggle-dot"></div>
+          </div>
+          <div class="toggle-btn active" id="toggleFade">
+            <span>尾部衰减 (Fade)</span>
+            <div class="toggle-dot"></div>
+          </div>
+          <div class="toggle-btn active" id="togglePreset">
+            <span>专属调色盘 (Preset)</span>
+            <div class="toggle-dot"></div>
+          </div>
+          <div class="toggle-btn active" id="toggleBloom">
+            <span>辉光增强 (Bloom)</span>
+            <div class="toggle-dot"></div>
+          </div>
+          <div class="toggle-btn" id="toggleSlowMo">
+            <span>慢动作 (0.25x)</span>
+            <div class="toggle-dot"></div>
+          </div>
+          <div class="toggle-btn" id="toggleDarkMap">
+            <span>暗夜地图 (Dark)</span>
+            <div class="toggle-dot"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 查看 C++ 架构与代码 -->
+      <div>
+        <button class="btn-view-cpp" id="btnOpenCppModal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="16 18 22 12 16 6"></polyline>
+            <polyline points="8 6 2 12 8 18"></polyline>
+          </svg>
+          查看当前款式的 C++ 架构实现
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- C++ 代码预览模态框 -->
+  <div class="modal-overlay" id="cppModal">
+    <div class="modal-dialog">
+      <div class="modal-head">
+        <h3 id="modalStyleTitle">Style: Cyber (Neon Pulse) · C++ 架构与实现规范</h3>
+        <div class="modal-close" id="btnCloseCppModal">&times;</div>
+      </div>
+      <div class="modal-content">
+        <pre><code id="cppCodeContainer"></code></pre>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* =========================================================================
+     *  QmClient Tee 拖尾实验室 · 全套款式与物理模拟引擎
+     * ========================================================================= */
+
+    // 基础矢量工具
+    class Vec2 {
+      constructor(x = 0, y = 0) { this.x = x; this.y = y; }
+      set(x, y) { this.x = x; this.y = y; return this; }
+      copy(v) { this.x = v.x; this.y = v.y; return this; }
+      clone() { return new Vec2(this.x, this.y); }
+      add(v) { return new Vec2(this.x + v.x, this.y + v.y); }
+      sub(v) { return new Vec2(this.x - v.x, this.y - v.y); }
+      mul(s) { return new Vec2(this.x * s, this.y * s); }
+      len() { return Math.hypot(this.x, this.y); }
+      unit() {
+        const l = this.len();
+        return l > 0.0001 ? new Vec2(this.x / l, this.y / l) : new Vec2(1, 0);
+      }
+      normal() { return new Vec2(-this.y, this.x); }
+      dist(v) { return Math.hypot(this.x - v.x, this.y - v.y); }
+      dot(v) { return this.x * v.x + this.y * v.y; }
+    }
+
+    // 数学辅助函数
+    const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+    const smooth = x => {
+      x = clamp(x, 0, 1);
+      return x * x * (3 - 2 * x);
+    };
+    const mix = (a, b, t) => a + (b - a) * t;
+
+    // 伪随机与噪声哈希
+    function hashUint(n) {
+      n = (n ^ (n >> 16)) >>> 0;
+      n = Math.imul(n, 0x7feb352d) >>> 0;
+      n = (n ^ (n >> 15)) >>> 0;
+      n = Math.imul(n, 0x846ca68b) >>> 0;
+      return (n ^ (n >> 16)) >>> 0;
+    }
+    function rnd(seed) {
+      return (hashUint(seed) & 0xffffff) / 0xffffff;
+    }
+    function noise1D(dist, seed) {
+      const cell = Math.floor(dist);
+      const frac = dist - cell;
+      const id = cell >>> 0;
+      const v0 = rnd(id + seed) * 2 - 1;
+      const v1 = rnd(id + 1 + seed) * 2 - 1;
+      return mix(v0, v1, smooth(frac));
+    }
+
+    /* -------------------------------------------------------------------------
+     * 9 大款式体系定义（包含原有 4 种与全新构思设计的 5 款高颜值拖尾）
+     * ------------------------------------------------------------------------- */
+    const TRAIL_STYLES = [
+      {
+        id: "original",
+        name: "Original: Smooth Ribbon",
+        nameZh: "原版：纯净光带",
+        badgeColor: "#60a5fa",
+        isNew: false,
+        desc: "经典 Teeworlds/DDNet 纯净羽化飘带，三段式半透明网格，具备平滑自适应导向与曲率限宽防自交算法。",
+        cppEnum: "STYLE_ORIGINAL = 0"
+      },
+      {
+        id: "manga",
+        name: "Manga: Ink Slash",
+        nameZh: "水墨：黑曜斩击",
+        badgeColor: "#e2e8f0",
+        isNew: false,
+        desc: "日式黑白水墨风格。具有毛笔枯笔飞白、墨滴飞溅、撕裂裂纹以及赤红高亮刀芒。",
+        cppEnum: "STYLE_MANGA = 1"
+      },
+      {
+        id: "magic",
+        name: "Magic: Spirit Script",
+        nameZh: "魔导：灵纹法阵",
+        badgeColor: "#2dd4bf",
+        isNew: false,
+        desc: "双螺旋魔法符印。由翡翠主光、琥珀次光与星芒十字构成的魔法律动轨迹。",
+        cppEnum: "STYLE_MAGIC = 2"
+      },
+      {
+        id: "pixel",
+        name: "Pixel: Layer Shift",
+        nameZh: "像素：阶变体素",
+        badgeColor: "#fbbf24",
+        isNew: false,
+        desc: "复古 8-bit 体素世界网格。不随缩放抖动的世界像素簇网格，带五阶能量色阶与中心发光核。",
+        cppEnum: "STYLE_PIXEL = 3"
+      },
+      {
+        id: "cyber",
+        name: "Cyber: Neon Pulse",
+        nameZh: "赛博：霓虹脉冲",
+        badgeColor: "#00f0ff",
+        isNew: true,
+        desc: "高科技数字光缆。冷黑导电管内核包裹青色与品红激光双轨，伴随高速行进的数字信号数据包节（Data Packets）与 45° HUD 科技刻度线。",
+        cppEnum: "STYLE_CYBER = 6"
+      },
+      {
+        id: "cosmic",
+        name: "Cosmic: Starlight Nebula",
+        nameZh: "星轨：浩瀚星云",
+        badgeColor: "#c084fc",
+        isNew: true,
+        desc: "深邃梦幻的星际天体气体云。深紫与群青多重色散柔光带，沿途散落 4 角璀璨恒星芒针、双环行星徽印与漂浮星尘微粒。",
+        cppEnum: "STYLE_COSMIC = 7"
+      },
+      {
+        id: "sakura",
+        name: "Sakura: Petal Breeze",
+        nameZh: "绯樱：落瓣随风",
+        badgeColor: "#f472b6",
+        isNew: true,
+        desc: "日系新海诚浪漫美学。如丝绸羽织般的淡粉白透明风带，侧翼随风卷出不断翻滚旋转脱落的樱花花瓣片，伴随粉白落樱微澜。",
+        cppEnum: "STYLE_SAKURA = 8"
+      },
+      {
+        id: "thunder",
+        name: "Thunder: Arc Blitz",
+        nameZh: "雷霆：苍蓝神罚",
+        badgeColor: "#38bdf8",
+        isNew: true,
+        desc: "撕裂虚空的狂暴等离子放电。多频阶跃折线电弧核心，向空气中刺出次级分支闪电与高能等离子击穿球状火花。",
+        cppEnum: "STYLE_THUNDER = 9"
+      },
+      {
+        id: "prism",
+        name: "Prism: Chrono Shards",
+        nameZh: "晶棱：时空折光",
+        badgeColor: "#facc15",
+        isNew: true,
+        desc: "低多边形切面水晶与空间撕裂。多面晶体折射光带，外边缘具备 RGB 棱镜色散色差，伴随遗留在时空中的几何悬浮晶体碎片。",
+        cppEnum: "STYLE_PRISM = 10"
+      }
+    ];
+
+    /* -------------------------------------------------------------------------
+     * C++ 对应实现源码库（供 Inspector 实时审阅）
+     * ------------------------------------------------------------------------- */
+    const CPP_SOURCE_CODES = {
+      cyber: `// 款式：Cyber: Neon Pulse (赛博脉冲光缆)
+// 架构对齐：src/game/client/components/qmclient/tee_trail_styles.cpp
+void Cyber(const SStyleSample *pSamples, size_t Count, bool Preset, float PixelSize, unsigned Seed, std::vector<SQuad> &vOut)
+{
+    std::array<SBandPoint, MAX_RENDER_POINTS> aBand;
+    // Layer 0: 高对比度冷黑碳纤维导管带 (保护发光层在浅色地图同样清晰可见)
+    for(size_t i = 0; i < Count; ++i)
+    {
+        const auto &S = pSamples[i];
+        const float Width = S.m_Width * 0.95f;
+        const ColorRGBA ConduitColor = Preset ? ColorRGBA(0x0a101cu) : Tint(S.m_Tint, ColorRGBA(0x05070au), 0.88f);
+        aBand[i] = {S.m_Pos, Width, Width, ConduitColor.WithAlpha(S.m_Alpha * 0.85f)};
+    }
+    Band(vOut, aBand.data(), Count, 0.08f, PixelSize, false);
+
+    // Layer 1 & 2: 青色与洋红相干激光双轨 (Laser Rails)
+    const ColorRGBA RailCyan = Preset ? ColorRGBA(0x00f0ffu) : S.m_Tint;
+    const ColorRGBA RailPink = Preset ? ColorRGBA(0xff007fu) : Tint(S.m_Tint, ColorRGBA(0xffffffu), 0.5f);
+    for(int Side = -1; Side <= 1; Side += 2)
+    {
+        for(size_t i = 0; i < Count; ++i)
+        {
+            const auto &S = pSamples[i];
+            const float Phase = float(S.m_Distance * 0.06 + S.m_Age * 0.05);
+            const float Offset = Side * S.m_Width * (0.42f + 0.08f * std::sin(Phase));
+            const float RailWidth = S.m_Width * 0.075f;
+            const ColorRGBA Col = (Side == -1 ? RailCyan : RailPink).WithAlpha(S.m_Alpha * 0.95f);
+            aBand[i] = {S.m_Pos + S.m_Normal * Offset, RailWidth, RailWidth, Col};
+        }
+        Band(vOut, aBand.data(), Count, 0.15f, PixelSize, true); // 加法发光
+    }
+
+    // Layer 3: 沿光缆超速流窜的“数字脉冲波节” (Data Packets)
+    Anchors(pSamples, Count, 36.0f, float(std::fmod(CurTime * 450.0, 36.0)), 24, [&](const SStyleSample &S, unsigned Id) {
+        const float PacketSize = S.m_Width * 0.28f;
+        const ColorRGBA Glow = ColorRGBA(0xffffffu).WithAlpha(S.m_Alpha * 0.9f);
+        Stroke(vOut, S.m_Pos - Tangent(S) * PacketSize, S.m_Pos + Tangent(S) * PacketSize,
+               S.m_Width * 0.12f, S.m_Width * 0.12f, Glow, PixelSize, true);
+    });
+
+    // Layer 4: HUD 45度科技刻度线 (Tech Tick Marks)
+    Anchors(pSamples, Count, 28.0f, 0.0f, 24, [&](const SStyleSample &S, unsigned Id) {
+        const float Sign = (Hash(Id + Seed) & 1u) ? 1.0f : -1.0f;
+        const vec2 Root = S.m_Pos + S.m_Normal * (Sign * S.m_Width * 0.5f);
+        const vec2 Tick = Root + (Tangent(S) * 0.7f + S.m_Normal * Sign * 0.7f) * (S.m_Width * 0.35f);
+        Stroke(vOut, Root, Tick, S.m_Width * 0.035f, 0.0f, RailCyan.WithAlpha(S.m_Alpha * 0.7f), PixelSize, true);
+    });
+}`,
+      cosmic: `// 款式：Cosmic: Starlight Nebula (浩瀚星云星芒)
+void Cosmic(const SStyleSample *pSamples, size_t Count, bool Preset, float PixelSize, unsigned Seed, std::vector<SQuad> &vOut)
+{
+    std::array<SBandPoint, MAX_RENDER_POINTS> aBand;
+    // Layer 0: 幽深紫红与星际群青的多层星云气体 (Nebula Cloud)
+    for(int Layer = 0; Layer < 2; ++Layer)
+    {
+        for(size_t i = 0; i < Count; ++i)
+        {
+            const auto &S = pSamples[i];
+            const float Swirl = Noise(S.m_Distance / 35.0, Seed + Layer * 17u) * (S.m_Width * 0.25f);
+            const float Width = S.m_Width * (Layer == 0 ? 0.95f : 0.65f);
+            const ColorRGBA Col = Preset ? ColorRGBA(Layer == 0 ? 0x24083cu : 0x0a4275u) : Tint(S.m_Tint, ColorRGBA(0x1a0628u), 0.6f);
+            aBand[i] = {S.m_Pos + S.m_Normal * Swirl, Width, Width, Col.WithAlpha(S.m_Alpha * (Layer == 0 ? 0.65f : 0.5f))};
+        }
+        Band(vOut, aBand.data(), Count, 0.45f, PixelSize, false);
+    }
+
+    // Layer 1: 白热星轨核 (Starlight Core)
+    for(size_t i = 0; i < Count; ++i)
+    {
+        const auto &S = pSamples[i];
+        aBand[i] = {S.m_Pos, S.m_Width * 0.06f, S.m_Width * 0.06f, ColorRGBA(0xfff3d6u).WithAlpha(S.m_Alpha * 0.9f)};
+    }
+    Band(vOut, aBand.data(), Count, 0.2f, PixelSize, true);
+
+    // Layer 2: 沿途星光十字芒针 (4-Point Star Glints)
+    Anchors(pSamples, Count, 55.0f, Random(Seed + 42u) * 55.0f, 16, [&](const SStyleSample &S, unsigned Id) {
+        const float Sign = (Hash(Id + Seed) & 1u) ? 1.0f : -1.0f;
+        const vec2 Center = S.m_Pos + S.m_Normal * (Sign * S.m_Width * 0.45f);
+        const float StarLen = S.m_Width * 0.65f;
+        const ColorRGBA StarCol = ColorRGBA(0xfff5d8u).WithAlpha(S.m_Alpha * 0.92f);
+        // 主轴与正交短轴
+        Stroke(vOut, Center - Tangent(S) * StarLen, Center + Tangent(S) * StarLen, 0.0f, S.m_Width * 0.06f, StarCol, PixelSize, true);
+        Stroke(vOut, Center - S.m_Normal * (StarLen * 0.6f), Center + S.m_Normal * (StarLen * 0.6f), 0.0f, S.m_Width * 0.045f, StarCol, PixelSize, true);
+    });
+}`,
+      sakura: `// 款式：Sakura: Petal Breeze (落樱随风)
+void Sakura(const SStyleSample *pSamples, size_t Count, bool Preset, float PixelSize, unsigned Seed, std::vector<SQuad> &vOut)
+{
+    std::array<SBandPoint, MAX_RENDER_POINTS> aBand;
+    // Layer 0: 丝绢轻纱白粉流风带 (Silk Breeze Stream)
+    for(size_t i = 0; i < Count; ++i)
+    {
+        const auto &S = pSamples[i];
+        const float Wave = std::sin(S.m_Distance * 0.05 + S.m_Age * 0.03) * (S.m_Width * 0.15f);
+        const ColorRGBA Silk = Preset ? ColorRGBA(0xffe8f0u) : Tint(S.m_Tint, ColorRGBA(0xffffffu), 0.7f);
+        aBand[i] = {S.m_Pos + S.m_Normal * Wave, S.m_Width * 0.55f, S.m_Width * 0.55f, Silk.WithAlpha(S.m_Alpha * 0.45f)};
+    }
+    Band(vOut, aBand.data(), Count, 0.28f, PixelSize, false);
+
+    // Layer 1: 沿途旋转脱落的樱花花瓣多边形 (Falling Sakura Petals)
+    Anchors(pSamples, Count, 24.0f, Random(Seed + 99u) * 24.0f, 32, [&](const SStyleSample &S, unsigned Id) {
+        const float Side = (Hash(Id + Seed) & 1u) ? 1.0f : -1.0f;
+        const float Drift = S.m_Age * 8.0f; // 随风向外漂移
+        const vec2 PetalPos = S.m_Pos + S.m_Normal * (Side * (S.m_Width * 0.4f + Drift));
+        const float Angle = float(S.m_Distance * 0.15 + S.m_Age * 0.2); // 翻滚自转
+        const float PetalR = S.m_Width * 0.22f;
+        const ColorRGBA Blossom = Preset ? ColorRGBA(0xff75a0u) : S.m_Tint;
+        // 渲染单瓣倾斜四边形
+        const vec2 Dir = direction(Angle), Ortho = vec2(-Dir.y, Dir.x) * 0.55f;
+        Quad(vOut, PetalPos - Dir * PetalR, PetalPos + Ortho * PetalR,
+                   PetalPos + Dir * PetalR, PetalPos - Ortho * PetalR,
+                   Blossom.WithAlpha(S.m_Alpha * 0.85f), Blossom.WithAlpha(S.m_Alpha * 0.85f),
+                   Blossom.WithAlpha(S.m_Alpha * 0.85f), Blossom.WithAlpha(S.m_Alpha * 0.85f), false);
+    });
+}`,
+      thunder: `// 款式：Thunder: Arc Blitz (苍蓝神罚雷弧)
+void Thunder(const SStyleSample *pSamples, size_t Count, bool Preset, float PixelSize, unsigned Seed, std::vector<SQuad> &vOut)
+{
+    // Layer 0: 狂暴分形阶跃主闪电链 (Fractal Jagged Lightning)
+    for(size_t i = 0; i + 1 < Count; ++i)
+    {
+        const auto &A = pSamples[i], &B = pSamples[i + 1];
+        const float Jitter = (Noise(A.m_Distance * 0.18, Seed + 77u) * 2.0f) * (A.m_Width * 0.42f);
+        const vec2 Mid = (A.m_Pos + B.m_Pos) * 0.5f + A.m_Normal * Jitter;
+        const ColorRGBA CoreCol = ColorRGBA(0xffffffu).WithAlpha(A.m_Alpha);
+        const ColorRGBA IonGlow = (Preset ? ColorRGBA(0x00d2ffu) : A.m_Tint).WithAlpha(A.m_Alpha * 0.8f);
+        // 主电弧核心与等离子外晕
+        Stroke(vOut, A.m_Pos, Mid, A.m_Width * 0.14f, A.m_Width * 0.14f, IonGlow, PixelSize, true);
+        Stroke(vOut, Mid, B.m_Pos, A.m_Width * 0.14f, A.m_Width * 0.14f, IonGlow, PixelSize, true);
+        Stroke(vOut, A.m_Pos, Mid, A.m_Width * 0.05f, A.m_Width * 0.05f, CoreCol, PixelSize, true);
+        Stroke(vOut, Mid, B.m_Pos, A.m_Width * 0.05f, A.m_Width * 0.05f, CoreCol, PixelSize, true);
+
+        // 次级分叉闪电 (Branch Arcs)
+        if((Hash(unsigned(i) + Seed) % 5) == 0 && A.m_Alpha > 0.3f)
+        {
+            const float BranchSign = (Hash(unsigned(i) + Seed + 3u) & 1u) ? 1.0f : -1.0f;
+            const vec2 BranchTip = Mid + (Tangent(A) * 0.6f + A.m_Normal * BranchSign) * (A.m_Width * 0.8f);
+            Stroke(vOut, Mid, BranchTip, A.m_Width * 0.06f, 0.0f, IonGlow, PixelSize, true);
+        }
+    }
+}`,
+      prism: `// 款式：Prism: Chrono Shards (时空晶棱折光)
+void Prism(const SStyleSample *pSamples, size_t Count, bool Preset, float PixelSize, unsigned Seed, std::vector<SQuad> &vOut)
+{
+    // Layer 0: RGB 棱镜色散分离双带 (Chromatic Aberration Dispersion)
+    for(int Pass = 0; Pass < 2; ++Pass)
+    {
+        std::array<SBandPoint, MAX_RENDER_POINTS> aBand;
+        const float OffsetSide = Pass == 0 ? -1.0f : 1.0f;
+        const ColorRGBA Spectrum = Pass == 0 ? ColorRGBA(0xff3366u) : ColorRGBA(0x00e5ffu);
+        for(size_t i = 0; i < Count; ++i)
+        {
+            const auto &S = pSamples[i];
+            const vec2 Pos = S.m_Pos + S.m_Normal * (OffsetSide * S.m_Width * 0.18f);
+            aBand[i] = {Pos, S.m_Width * 0.45f, S.m_Width * 0.45f, Spectrum.WithAlpha(S.m_Alpha * 0.4f)};
+        }
+        Band(vOut, aBand.data(), Count, 0.18f, PixelSize, true);
+    }
+
+    // Layer 1: 悬浮翻滚的菱形时空晶体碎片 (Floating Chrono Shards)
+    Anchors(pSamples, Count, 32.0f, Random(Seed + 51u) * 32.0f, 24, [&](const SStyleSample &S, unsigned Id) {
+        const float Sign = (Hash(Id + Seed) & 1u) ? 1.0f : -1.0f;
+        const vec2 Center = S.m_Pos + S.m_Normal * (Sign * S.m_Width * 0.42f);
+        const float ShardR = S.m_Width * 0.32f;
+        const float Rot = float(S.m_Distance * 0.08 + S.m_Age * 0.15);
+        const vec2 D = direction(Rot) * ShardR, N = vec2(-D.y, D.x) * 0.5f;
+        const ColorRGBA CrystalCol = ColorRGBA(0xffffffu).WithAlpha(S.m_Alpha * 0.85f);
+        Quad(vOut, Center - D, Center + N, Center + D, Center - N,
+             CrystalCol, CrystalCol, CrystalCol, CrystalCol, true);
+    });
+}`
+    };
+
+    /* -------------------------------------------------------------------------
+     * 渲染与物理状态
+     * ------------------------------------------------------------------------- */
+    const canvas = document.getElementById("trailCanvas");
+    const ctx = canvas.getContext("2d");
+
+    let canvasWidth = 0, canvasHeight = 0;
+    function resizeCanvas() {
+      const container = document.getElementById("canvas-container");
+      canvasWidth = container.clientWidth;
+      canvasHeight = container.clientHeight;
+      canvas.width = canvasWidth * window.devicePixelRatio;
+      canvas.height = canvasHeight * window.devicePixelRatio;
+      ctx.resetTransform();
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    }
+    window.addEventListener("resize", resizeCanvas);
+
+    // 交互参数配置
+    const config = {
+      style: "cyber",
+      length: 45,
+      width: 16,
+      alpha: 0.9,
+      taper: true,
+      fade: true,
+      preset: true,
+      bloom: true,
+      slowMo: false,
+      darkMap: true,
+      flightMode: "manual"
+    };
+
+    // Tee 实体物理仿真
+    const tee = {
+      pos: new Vec2(400, 300),
+      vel: new Vec2(0, 0),
+      targetPos: new Vec2(400, 300),
+      radius: 18,
+      eyeDir: new Vec2(1, 0),
+      speed: 0,
+      totalDistance: 0,
+      history: [] // 保存 CTrailPart
+    };
+
+    // 鼠标拖动监听
+    let isMouseDown = false;
+    window.addEventListener("mousemove", e => {
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      if (mx >= 0 && mx <= canvasWidth && my >= 0 && my <= canvasHeight) {
+        tee.targetPos.set(mx, my);
+        if (config.flightMode !== "manual" && isMouseDown) {
+          setFlightMode("manual");
+        }
+      }
+    });
+
+    window.addEventListener("mousedown", e => {
+      if (e.target === canvas) isMouseDown = true;
+    });
+    window.addEventListener("mouseup", () => isMouseDown = false);
+
+    /* -------------------------------------------------------------------------
+     * 自动飞行演练路径控制器
+     * ------------------------------------------------------------------------- */
+    let flightTime = 0;
+    function updateFlightPath(dt) {
+      if (config.flightMode === "manual") return;
+
+      flightTime += dt * 1.5;
+      const cx = canvasWidth * 0.45;
+      const cy = canvasHeight * 0.5;
+      const rx = Math.min(canvasWidth * 0.32, 380);
+      const ry = Math.min(canvasHeight * 0.32, 240);
+
+      switch (config.flightMode) {
+        case "figure8": { // 双纽线无穷大回旋
+          const t = flightTime * 0.8;
+          const scale = 2 / (3 - Math.cos(2 * t));
+          const x = cx + rx * scale * Math.cos(t);
+          const y = cy + ry * scale * Math.sin(2 * t) / 2;
+          tee.targetPos.set(x, y);
+          break;
+        }
+        case "drift": { // 阶梯高速折返甩尾
+          const t = flightTime * 1.2;
+          const corner = Math.floor(t) % 4;
+          const frac = smooth(t - Math.floor(t));
+          const pts = [
+            new Vec2(cx - rx, cy - ry),
+            new Vec2(cx + rx, cy - ry * 0.4),
+            new Vec2(cx - rx * 0.6, cy + ry),
+            new Vec2(cx + rx * 0.8, cy + ry * 0.7)
+          ];
+          const p1 = pts[corner];
+          const p2 = pts[(corner + 1) % 4];
+          tee.targetPos.set(mix(p1.x, p2.x, frac), mix(p1.y, p2.y, frac));
+          break;
+        }
+        case "spiral": { // 涡旋升空再俯冲
+          const r = 80 + Math.sin(flightTime * 0.5) * 140;
+          const x = cx + Math.cos(flightTime * 2.2) * (rx * 0.8 + r * 0.5);
+          const y = cy + Math.sin(flightTime * 2.2) * (ry * 0.8 + r * 0.5);
+          tee.targetPos.set(x, y);
+          break;
+        }
+        case "hook": { // 抓钩大幅度荡秋千
+          const anchor = new Vec2(cx, cy - ry * 1.2);
+          const angle = Math.sin(flightTime * 2.0) * 1.15;
+          const ropeLen = ry * 1.4;
+          tee.targetPos.set(anchor.x + Math.sin(angle) * ropeLen, anchor.y + Math.cos(angle) * ropeLen);
+          break;
+        }
+        case "heart": { // 浪漫心形飞翔
+          const t = flightTime * 1.2;
+          const st = Math.sin(t);
+          const x = cx + rx * 0.055 * (16 * Math.pow(st, 3));
+          const y = cy - ry * 0.055 * (13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
+          tee.targetPos.set(x, y);
+          break;
+        }
+      }
+    }
+
+    /* -------------------------------------------------------------------------
+     * 轨迹生成与等距插值系统 (对齐 C++ CTrailState 与 BuildTrailSegment)
+     * ------------------------------------------------------------------------- */
+    const SAMPLE_SPACING = 5.0; // 世界采样间距
+    let currentTick = 0;
+
+    function updateTeePhysics(dt) {
+      currentTick++;
+      // 弹簧阻尼平滑跟随目标
+      const toTarget = tee.targetPos.sub(tee.pos);
+      const dist = toTarget.len();
+      const springK = 18.0;
+      const damping = 0.82;
+
+      tee.vel = tee.vel.add(toTarget.mul(springK * dt));
+      tee.vel = tee.vel.mul(damping);
+      tee.pos = tee.pos.add(tee.vel.mul(dt));
+      tee.speed = tee.vel.len();
+
+      if (tee.speed > 1.0) {
+        tee.eyeDir = tee.vel.unit();
+      }
+
+      // 等距推入采样点到环形队列
+      if (tee.history.length === 0) {
+        tee.history.push({
+          pos: tee.pos.clone(),
+          dist: 0,
+          speed: tee.speed,
+          tick: currentTick,
+          time: performance.now() * 0.001
+        });
+      } else {
+        const last = tee.history[0];
+        const stepDist = tee.pos.dist(last.pos);
+        if (stepDist >= SAMPLE_SPACING) {
+          tee.totalDistance += stepDist;
+          tee.history.unshift({
+            pos: tee.pos.clone(),
+            dist: tee.totalDistance,
+            speed: tee.speed,
+            tick: currentTick,
+            time: performance.now() * 0.001
+          });
+        }
+      }
+
+      // 维护历史长度
+      while (tee.history.length > config.length) {
+        tee.history.pop();
+      }
+    }
+
+    // 插值生成平滑细分样本点 (SStyleSample)
+    function generateSamples() {
+      const hist = tee.history;
+      if (hist.length < 2) return [];
+
+      const samples = [];
+      const totalDist = hist[0].dist - hist[hist.length - 1].dist;
+      const count = hist.length;
+
+      for (let i = 0; i < count; i++) {
+        const p = hist[i];
+        const age = (currentTick - p.tick) * 0.016;
+        const remaining = clamp(1.0 - i / (count - 1), 0, 1);
+        const energy = clamp(p.speed / 35.0, 0, 1);
+
+        // 法线与切线
+        let tangent = new Vec2(1, 0);
+        if (i === 0) {
+          tangent = p.pos.sub(hist[1].pos).unit();
+        } else if (i === count - 1) {
+          tangent = hist[count - 2].pos.sub(p.pos).unit();
+        } else {
+          tangent = hist[i - 1].pos.sub(hist[i + 1].pos).unit();
+        }
+        const normal = tangent.normal();
+
+        // 渐变计算
+        let width = config.width * (0.7 + 0.45 * energy);
+        if (config.taper) {
+          width *= Math.pow(remaining, 0.65) * smooth((count - i) / 4);
+        }
+
+        let alpha = config.alpha * remaining;
+        if (config.fade) {
+          alpha *= remaining;
+        }
+
+        samples.push({
+          pos: p.pos.clone(),
+          normal: normal,
+          tangent: tangent,
+          dist: p.dist,
+          age: age,
+          width: width,
+          alpha: alpha,
+          energy: energy,
+          remaining: remaining,
+          index: i
+        });
+      }
+      return samples;
+    }
+
+    /* -------------------------------------------------------------------------
+     * 9 大款式渲染管线实现
+     * ------------------------------------------------------------------------- */
+    let quadCount = 0;
+
+    function renderTrail(samples, curTime) {
+      quadCount = 0;
+      if (samples.length < 2) return;
+
+      ctx.save();
+      const style = config.style;
+
+      switch (style) {
+        case "original":
+          renderOriginal(samples);
+          break;
+        case "manga":
+          renderManga(samples);
+          break;
+        case "magic":
+          renderMagic(samples, curTime);
+          break;
+        case "pixel":
+          renderPixel(samples);
+          break;
+        case "cyber":
+          renderCyber(samples, curTime);
+          break;
+        case "cosmic":
+          renderCosmic(samples, curTime);
+          break;
+        case "sakura":
+          renderSakura(samples, curTime);
+          break;
+        case "thunder":
+          renderThunder(samples, curTime);
+          break;
+        case "prism":
+          renderPrism(samples, curTime);
+          break;
+      }
+
+      ctx.restore();
+    }
+
+    /* 1. 原版纯净飘带 (STYLE_ORIGINAL) */
+    function renderOriginal(samples) {
+      // 3 段式双边羽化网格带
+      for (let i = 0; i < samples.length - 1; i++) {
+        const a = samples[i], b = samples[i + 1];
+        ctx.beginPath();
+        ctx.moveTo(a.pos.x - a.normal.x * a.width, a.pos.y - a.normal.y * a.width);
+        ctx.lineTo(b.pos.x - b.normal.x * b.width, b.pos.y - b.normal.y * b.width);
+        ctx.lineTo(b.pos.x + b.normal.x * b.width, b.pos.y + b.normal.y * b.width);
+        ctx.lineTo(a.pos.x + a.normal.x * a.width, a.pos.y + a.normal.y * a.width);
+        ctx.closePath();
+
+        const grad = ctx.createLinearGradient(a.pos.x, a.pos.y, b.pos.x, b.pos.y);
+        grad.addColorStop(0, `rgba(96, 165, 250, ${a.alpha * 0.75})`);
+        grad.addColorStop(1, `rgba(96, 165, 250, ${b.alpha * 0.75})`);
+        ctx.fillStyle = grad;
+        ctx.fill();
+        quadCount += 3;
+      }
+    }
+
+    /* 2. 水墨斩击 (STYLE_MANGA) */
+    function renderManga(samples) {
+      // 黑白飞白带 + 赤红发光裂纹
+      for (let i = 0; i < samples.length - 1; i++) {
+        const a = samples[i], b = samples[i + 1];
+        const nA = noise1D(a.dist / 14, 11);
+        const wA = a.width * (0.8 + 0.3 * nA);
+        const wB = b.width * (0.8 + 0.3 * noise1D(b.dist / 14, 11));
+
+        ctx.fillStyle = `rgba(18, 18, 18, ${a.alpha * 0.95})`;
+        ctx.beginPath();
+        ctx.moveTo(a.pos.x - a.normal.x * wA, a.pos.y - a.normal.y * wA);
+        ctx.lineTo(b.pos.x - b.normal.x * wB, b.pos.y - b.normal.y * wB);
+        ctx.lineTo(b.pos.x + b.normal.x * wB, b.pos.y + b.normal.y * wB);
+        ctx.lineTo(a.pos.x + a.normal.x * wA, a.pos.y + a.normal.y * wA);
+        ctx.fill();
+        quadCount += 2;
+      }
+
+      // 赤红刀芒裂痕 (加法发光)
+      ctx.globalCompositeOperation = "lighter";
+      ctx.strokeStyle = "rgba(239, 68, 68, 0.85)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      for (let i = 0; i < samples.length; i++) {
+        const s = samples[i];
+        const crack = noise1D(s.dist / 8, 42) * (s.width * 0.35);
+        const px = s.pos.x + s.normal.x * crack;
+        const py = s.pos.y + s.normal.y * crack;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+      ctx.globalCompositeOperation = "source-over";
+    }
+
+    /* 3. 魔导灵纹 (STYLE_MAGIC) */
+    function renderMagic(samples, curTime) {
+      ctx.globalCompositeOperation = "lighter";
+      // 翡翠与琥珀双螺旋波动
+      for (let side = -1; side <= 1; side += 2) {
+        ctx.beginPath();
+        for (let i = 0; i < samples.length; i++) {
+          const s = samples[i];
+          const phase = s.dist * 0.05 + curTime * 4 + (side === 1 ? Math.PI : 0);
+          const offset = Math.sin(phase) * (s.width * 0.45);
+          const px = s.pos.x + s.normal.x * offset;
+          const py = s.pos.y + s.normal.y * offset;
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.strokeStyle = side === -1 ? "rgba(45, 212, 191, 0.85)" : "rgba(245, 158, 11, 0.75)";
+        ctx.lineWidth = 4;
+        ctx.stroke();
+        quadCount += samples.length;
+      }
+
+      // 十字星芒与魔法圆阵
+      for (let i = 4; i < samples.length; i += 7) {
+        const s = samples[i];
+        const r = s.width * 0.32;
+        ctx.strokeStyle = `rgba(255, 250, 222, ${s.alpha * 0.9})`;
+        ctx.lineWidth = 2;
+        // 圆环
+        ctx.beginPath();
+        ctx.arc(s.pos.x, s.pos.y, r, 0, Math.PI * 2);
+        ctx.stroke();
+        // 十字
+        ctx.beginPath();
+        ctx.moveTo(s.pos.x - r * 1.4, s.pos.y);
+        ctx.lineTo(s.pos.x + r * 1.4, s.pos.y);
+        ctx.moveTo(s.pos.x, s.pos.y - r * 1.4);
+        ctx.lineTo(s.pos.x, s.pos.y + r * 1.4);
+        ctx.stroke();
+        quadCount += 4;
+      }
+      ctx.globalCompositeOperation = "source-over";
+    }
+
+    /* 4. 像素阶变 (STYLE_PIXEL) */
+    function renderPixel(samples) {
+      const cellSize = Math.max(5, Math.round(config.width * 0.45));
+      const drawnCells = new Set();
+
+      for (let i = 0; i < samples.length; i++) {
+        const s = samples[i];
+        const numBlocks = Math.max(1, Math.round(s.width / cellSize));
+        for (let b = -numBlocks; b <= numBlocks; b++) {
+          const px = s.pos.x + s.normal.x * (b * cellSize);
+          const py = s.pos.y + s.normal.y * (b * cellSize);
+          const gx = Math.floor(px / cellSize) * cellSize;
+          const gy = Math.floor(py / cellSize) * cellSize;
+          const key = `${gx}_${gy}`;
+          if (drawnCells.has(key)) continue;
+          drawnCells.add(key);
+
+          const radDist = Math.abs(b) / numBlocks;
+          let col = `rgba(251, 191, 36, ${s.alpha * (1 - radDist * 0.4)})`;
+          if (radDist > 0.7) col = `rgba(180, 83, 9, ${s.alpha * 0.8})`;
+          else if (radDist < 0.2) col = `rgba(254, 240, 138, ${s.alpha})`;
+
+          ctx.fillStyle = col;
+          ctx.fillRect(gx + 0.5, gy + 0.5, cellSize - 1, cellSize - 1);
+          quadCount++;
+        }
+      }
+    }
+
+    /* 5. [NEW] 赛博霓虹脉冲 (STYLE_CYBER) */
+    function renderCyber(samples, curTime) {
+      // 1. 底层：冷黑碳纤维导管带 (提供强对比背景)
+      for (let i = 0; i < samples.length - 1; i++) {
+        const a = samples[i], b = samples[i + 1];
+        ctx.beginPath();
+        ctx.moveTo(a.pos.x - a.normal.x * a.width * 0.85, a.pos.y - a.normal.y * a.width * 0.85);
+        ctx.lineTo(b.pos.x - b.normal.x * b.width * 0.85, b.pos.y - b.normal.y * b.width * 0.85);
+        ctx.lineTo(b.pos.x + b.normal.x * b.width * 0.85, b.pos.y + b.normal.y * b.width * 0.85);
+        ctx.lineTo(a.pos.x + a.normal.x * a.width * 0.85, a.pos.y + a.normal.y * a.width * 0.85);
+        ctx.fillStyle = `rgba(11, 15, 25, ${a.alpha * 0.85})`;
+        ctx.fill();
+        quadCount += 2;
+      }
+
+      ctx.globalCompositeOperation = "lighter";
+
+      // 2. 双激光发光轨 (Cyan & Magenta)
+      const colors = ["rgba(0, 240, 255, 0.95)", "rgba(255, 0, 127, 0.95)"];
+      for (let side = -1; side <= 1; side += 2) {
+        ctx.beginPath();
+        for (let i = 0; i < samples.length; i++) {
+          const s = samples[i];
+          const phase = s.dist * 0.08 + curTime * 5 + (side === 1 ? 2.5 : 0);
+          const offset = side * s.width * (0.42 + 0.06 * Math.sin(phase));
+          const px = s.pos.x + s.normal.x * offset;
+          const py = s.pos.y + s.normal.y * offset;
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.strokeStyle = side === -1 ? colors[0] : colors[1];
+        ctx.lineWidth = 3.5;
+        ctx.stroke();
+        quadCount += samples.length;
+      }
+
+      // 3. 超速向前流动的数据脉冲波节 (Data Packets)
+      const packetSpacing = 42;
+      const pulseShift = (curTime * 320) % packetSpacing;
+      for (let i = 1; i < samples.length - 1; i++) {
+        const s = samples[i];
+        if (Math.abs((s.dist - pulseShift) % packetSpacing) < 8) {
+          ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
+          ctx.beginPath();
+          ctx.arc(s.pos.x, s.pos.y, s.width * 0.22, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = "rgba(0, 240, 255, 0.5)";
+          ctx.beginPath();
+          ctx.arc(s.pos.x, s.pos.y, s.width * 0.45, 0, Math.PI * 2);
+          ctx.fill();
+          quadCount += 2;
+        }
+      }
+
+      // 4. HUD 45度科技刻度线
+      for (let i = 2; i < samples.length; i += 5) {
+        const s = samples[i];
+        const side = (i % 2 === 0) ? 1 : -1;
+        const rootX = s.pos.x + s.normal.x * (side * s.width * 0.65);
+        const rootY = s.pos.y + s.normal.y * (side * s.width * 0.65);
+        const tickLen = s.width * 0.4;
+        const tipX = rootX + (s.tangent.x * 0.7 + s.normal.x * side * 0.7) * tickLen;
+        const tipY = rootY + (s.tangent.y * 0.7 + s.normal.y * side * 0.7) * tickLen;
+
+        ctx.strokeStyle = `rgba(0, 240, 255, ${s.alpha * 0.8})`;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(rootX, rootY);
+        ctx.lineTo(tipX, tipY);
+        ctx.stroke();
+        quadCount++;
+      }
+      ctx.globalCompositeOperation = "source-over";
+    }
+
+    /* 6. [NEW] 浩瀚星云星芒 (STYLE_COSMIC) */
+    function renderCosmic(samples, curTime) {
+      // 1. 梦幻双色气体星云雾带 (深紫 0x24083c 到 孔雀青 0x00808a)
+      for (let i = 0; i < samples.length - 1; i++) {
+        const a = samples[i], b = samples[i + 1];
+        const swirlA = noise1D(a.dist / 30, 21) * (a.width * 0.25);
+        const swirlB = noise1D(b.dist / 30, 21) * (b.width * 0.25);
+
+        ctx.beginPath();
+        ctx.moveTo(a.pos.x - a.normal.x * a.width + a.normal.x * swirlA, a.pos.y - a.normal.y * a.width + a.normal.y * swirlA);
+        ctx.lineTo(b.pos.x - b.normal.x * b.width + b.normal.x * swirlB, b.pos.y - b.normal.y * b.width + b.normal.y * swirlB);
+        ctx.lineTo(b.pos.x + b.normal.x * b.width + b.normal.x * swirlB, b.pos.y + b.normal.y * b.width + b.normal.y * swirlB);
+        ctx.lineTo(a.pos.x + a.normal.x * a.width + a.normal.x * swirlA, a.pos.y + a.normal.y * a.width + a.normal.y * swirlA);
+
+        const grad = ctx.createLinearGradient(a.pos.x, a.pos.y, b.pos.x, b.pos.y);
+        grad.addColorStop(0, `rgba(58, 16, 82, ${a.alpha * 0.55})`);
+        grad.addColorStop(0.5, `rgba(13, 94, 128, ${a.alpha * 0.65})`);
+        grad.addColorStop(1, `rgba(25, 20, 60, ${b.alpha * 0.55})`);
+        ctx.fillStyle = grad;
+        ctx.fill();
+        quadCount += 3;
+      }
+
+      ctx.globalCompositeOperation = "lighter";
+
+      // 2. 白热星轨核心轴
+      ctx.beginPath();
+      for (let i = 0; i < samples.length; i++) {
+        const s = samples[i];
+        if (i === 0) ctx.moveTo(s.pos.x, s.pos.y);
+        else ctx.lineTo(s.pos.x, s.pos.y);
+      }
+      ctx.strokeStyle = "rgba(255, 245, 218, 0.9)";
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      // 3. 十字芒星 (4-Point Star Glints)
+      for (let i = 3; i < samples.length; i += 6) {
+        const s = samples[i];
+        const side = (i % 2 === 0) ? 1 : -1;
+        const cx = s.pos.x + s.normal.x * (side * s.width * 0.55);
+        const cy = s.pos.y + s.normal.y * (side * s.width * 0.55);
+        const starLen = s.width * 0.7;
+
+        ctx.strokeStyle = `rgba(255, 248, 220, ${s.alpha * 0.95})`;
+        ctx.lineWidth = 1.8;
+        // 沿切线长轴
+        ctx.beginPath();
+        ctx.moveTo(cx - s.tangent.x * starLen, cy - s.tangent.y * starLen);
+        ctx.lineTo(cx + s.tangent.x * starLen, cy + s.tangent.y * starLen);
+        ctx.stroke();
+        // 沿法线短轴
+        ctx.beginPath();
+        ctx.moveTo(cx - s.normal.x * starLen * 0.55, cy - s.normal.y * starLen * 0.55);
+        ctx.lineTo(cx + s.normal.x * starLen * 0.55, cy + s.normal.y * starLen * 0.55);
+        ctx.stroke();
+
+        // 星辰微光晕
+        ctx.fillStyle = `rgba(192, 132, 252, ${s.alpha * 0.6})`;
+        ctx.beginPath();
+        ctx.arc(cx, cy, s.width * 0.18, 0, Math.PI * 2);
+        ctx.fill();
+        quadCount += 3;
+      }
+      ctx.globalCompositeOperation = "source-over";
+    }
+
+    /* 7. [NEW] 绯樱落瓣随风 (STYLE_SAKURA) */
+    function renderSakura(samples, curTime) {
+      // 1. 柔美粉白轻风丝带 (Silk Breeze Stream)
+      for (let i = 0; i < samples.length - 1; i++) {
+        const a = samples[i], b = samples[i + 1];
+        const waveA = Math.sin(a.dist * 0.05 + curTime * 3) * (a.width * 0.15);
+        const waveB = Math.sin(b.dist * 0.05 + curTime * 3) * (b.width * 0.15);
+
+        ctx.beginPath();
+        ctx.moveTo(a.pos.x - a.normal.x * a.width * 0.6 + a.normal.x * waveA, a.pos.y - a.normal.y * a.width * 0.6 + a.normal.y * waveA);
+        ctx.lineTo(b.pos.x - b.normal.x * b.width * 0.6 + b.normal.x * waveB, b.pos.y - b.normal.y * b.width * 0.6 + b.normal.y * waveB);
+        ctx.lineTo(b.pos.x + b.normal.x * b.width * 0.6 + b.normal.x * waveB, b.pos.y + b.normal.y * b.width * 0.6 + b.normal.y * waveB);
+        ctx.lineTo(a.pos.x + a.normal.x * a.width * 0.6 + a.normal.x * waveA, a.pos.y + a.normal.y * a.width * 0.6 + a.normal.y * waveA);
+
+        const grad = ctx.createLinearGradient(a.pos.x, a.pos.y, b.pos.x, b.pos.y);
+        grad.addColorStop(0, `rgba(255, 238, 244, ${a.alpha * 0.45})`);
+        grad.addColorStop(1, `rgba(255, 175, 204, ${b.alpha * 0.35})`);
+        ctx.fillStyle = grad;
+        ctx.fill();
+        quadCount += 2;
+      }
+
+      // 2. 真实翻滚飘落的樱花花瓣几何 (Falling Sakura Petals)
+      for (let i = 2; i < samples.length; i += 4) {
+        const s = samples[i];
+        const side = (i % 2 === 0) ? 1 : -1;
+        const drift = s.age * 22; // 随风向外漂移
+        const px = s.pos.x + s.normal.x * (side * (s.width * 0.45 + drift));
+        const py = s.pos.y + s.normal.y * (side * (s.width * 0.45 + drift));
+        const rot = s.dist * 0.15 + s.age * 4;
+        const pr = s.width * 0.32;
+
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.rotate(rot);
+
+        // 绘制单瓣花瓣 (心形/叶状四边形)
+        ctx.beginPath();
+        ctx.moveTo(0, -pr);
+        ctx.bezierCurveTo(pr * 0.8, -pr * 0.5, pr * 0.6, pr * 0.8, 0, pr);
+        ctx.bezierCurveTo(-pr * 0.6, pr * 0.8, -pr * 0.8, -pr * 0.5, 0, -pr);
+
+        const petalGrad = ctx.createLinearGradient(0, -pr, 0, pr);
+        petalGrad.addColorStop(0, `rgba(255, 240, 245, ${s.alpha * 0.95})`);
+        petalGrad.addColorStop(1, `rgba(255, 117, 140, ${s.alpha * 0.9})`);
+        ctx.fillStyle = petalGrad;
+        ctx.fill();
+
+        ctx.restore();
+        quadCount += 2;
+      }
+    }
+
+    /* 8. [NEW] 苍蓝神罚雷霆电弧 (STYLE_THUNDER) */
+    function renderThunder(samples, curTime) {
+      ctx.globalCompositeOperation = "lighter";
+
+      // 狂暴分形锯齿折线闪电链 (Fractal Jagged Lightning)
+      for (let i = 0; i < samples.length - 1; i++) {
+        const a = samples[i], b = samples[i + 1];
+        // 高频随机抖动
+        const jitter = noise1D(a.dist * 0.25 + curTime * 15, 77) * (a.width * 0.65);
+        const midX = (a.pos.x + b.pos.x) * 0.5 + a.normal.x * jitter;
+        const midY = (a.pos.y + b.pos.y) * 0.5 + a.normal.y * jitter;
+
+        // 外层苍蓝等离子电离晕
+        ctx.strokeStyle = `rgba(0, 210, 255, ${a.alpha * 0.85})`;
+        ctx.lineWidth = 4.5;
+        ctx.beginPath();
+        ctx.moveTo(a.pos.x, a.pos.y);
+        ctx.lineTo(midX, midY);
+        ctx.lineTo(b.pos.x, b.pos.y);
+        ctx.stroke();
+
+        // 内层超白炽电弧芯
+        ctx.strokeStyle = `rgba(255, 255, 255, ${a.alpha * 0.95})`;
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.moveTo(a.pos.x, a.pos.y);
+        ctx.lineTo(midX, midY);
+        ctx.lineTo(b.pos.x, b.pos.y);
+        ctx.stroke();
+        quadCount += 4;
+
+        // 次级刺穿分支闪电 (Forked Arcs)
+        if (i % 4 === 0 && a.alpha > 0.35) {
+          const sign = (i % 8 === 0) ? 1 : -1;
+          const branchLen = a.width * 0.9;
+          const tipX = midX + (a.tangent.x * 0.6 + a.normal.x * sign * 0.9) * branchLen;
+          const tipY = midY + (a.tangent.y * 0.6 + a.normal.y * sign * 0.9) * branchLen;
+
+          ctx.strokeStyle = `rgba(123, 44, 191, ${a.alpha * 0.8})`;
+          ctx.lineWidth = 2.0;
+          ctx.beginPath();
+          ctx.moveTo(midX, midY);
+          ctx.lineTo(tipX, tipY);
+          ctx.stroke();
+          quadCount += 2;
+        }
+      }
+      ctx.globalCompositeOperation = "source-over";
+    }
+
+    /* 9. [NEW] 时空晶棱折光 (STYLE_PRISM) */
+    function renderPrism(samples, curTime) {
+      ctx.globalCompositeOperation = "lighter";
+
+      // 1. RGB 棱镜色散分离双带 (Cyan & Red Dispersion)
+      const dispersions = [
+        { offset: -0.22, color: "rgba(255, 51, 102, 0.45)" }, // Red-Shift
+        { offset: 0.22, color: "rgba(0, 229, 255, 0.45)" }    // Cyan-Shift
+      ];
+
+      dispersions.forEach(disp => {
+        for (let i = 0; i < samples.length - 1; i++) {
+          const a = samples[i], b = samples[i + 1];
+          const oxA = a.normal.x * (disp.offset * a.width);
+          const oyA = a.normal.y * (disp.offset * a.width);
+          const oxB = b.normal.x * (disp.offset * b.width);
+          const oyB = b.normal.y * (disp.offset * b.width);
+
+          ctx.beginPath();
+          ctx.moveTo(a.pos.x - a.normal.x * a.width * 0.4 + oxA, a.pos.y - a.normal.y * a.width * 0.4 + oyA);
+          ctx.lineTo(b.pos.x - b.normal.x * b.width * 0.4 + oxB, b.pos.y - b.normal.y * b.width * 0.4 + oyB);
+          ctx.lineTo(b.pos.x + b.normal.x * b.width * 0.4 + oxB, b.pos.y + b.normal.y * b.width * 0.4 + oyB);
+          ctx.lineTo(a.pos.x + a.normal.x * a.width * 0.4 + oxA, a.pos.y + a.normal.y * a.width * 0.4 + oyA);
+          ctx.fillStyle = disp.color;
+          ctx.fill();
+          quadCount += 2;
+        }
+      });
+
+      // 2. 悬浮翻滚的菱形时空晶体碎片 (Chrono Shards)
+      for (let i = 3; i < samples.length; i += 5) {
+        const s = samples[i];
+        const side = (i % 2 === 0) ? 1 : -1;
+        const cx = s.pos.x + s.normal.x * (side * s.width * 0.48);
+        const cy = s.pos.y + s.normal.y * (side * s.width * 0.48);
+        const shardR = s.width * 0.36;
+        const rot = s.dist * 0.08 + curTime * 3;
+
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(rot);
+
+        // 菱形水晶切面
+        ctx.beginPath();
+        ctx.moveTo(0, -shardR);
+        ctx.lineTo(shardR * 0.55, 0);
+        ctx.lineTo(0, shardR);
+        ctx.lineTo(-shardR * 0.55, 0);
+        ctx.closePath();
+
+        ctx.fillStyle = `rgba(248, 250, 252, ${s.alpha * 0.85})`;
+        ctx.fill();
+        ctx.strokeStyle = `rgba(250, 204, 21, ${s.alpha * 0.9})`;
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+
+        ctx.restore();
+        quadCount += 3;
+      }
+      ctx.globalCompositeOperation = "source-over";
+    }
+
+    /* -------------------------------------------------------------------------
+     * 逼真 Tee 形象渲染 (身体、可爱眼神注视、手部、抓钩)
+     * ------------------------------------------------------------------------- */
+    function renderTee() {
+      ctx.save();
+      ctx.translate(tee.pos.x, tee.pos.y);
+
+      // 阴影
+      ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
+      ctx.beginPath();
+      ctx.ellipse(0, tee.radius * 0.9, tee.radius * 1.1, tee.radius * 0.45, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Tee 身体圆圈 (亮粉经典配色)
+      const r = tee.radius;
+      ctx.fillStyle = "#ff69b4";
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#1e1e24";
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      // Tee 双眼根据运动方向与目标方向注视
+      const eyeOffset = tee.eyeDir.mul(r * 0.35);
+      const eyeR = r * 0.32;
+      const pupilR = r * 0.16;
+
+      for (let side = -1; side <= 1; side += 2) {
+        const ex = eyeOffset.x + side * (r * 0.3);
+        const ey = eyeOffset.y - (r * 0.08);
+
+        // 白眼球
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.ellipse(ex, ey, eyeR * 0.85, eyeR, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#1e1e24";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // 黑瞳孔
+        const pupilOffset = tee.eyeDir.mul(eyeR * 0.4);
+        ctx.fillStyle = "#111827";
+        ctx.beginPath();
+        ctx.arc(ex + pupilOffset.x, ey + pupilOffset.y, pupilR, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+
+    /* -------------------------------------------------------------------------
+     * 背景渲染 (深邃暗夜网格与星尘)
+     * ------------------------------------------------------------------------- */
+    function renderBackground() {
+      if (config.darkMap) {
+        ctx.fillStyle = "#07090f";
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+        // DDNet 经典轻微网格方块
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.028)";
+        ctx.lineWidth = 1;
+        const grid = 64;
+        ctx.beginPath();
+        for (let x = 0; x < canvasWidth; x += grid) {
+          ctx.moveTo(x, 0); ctx.lineTo(x, canvasHeight);
+        }
+        for (let y = 0; y < canvasHeight; y += grid) {
+          ctx.moveTo(0, y); ctx.lineTo(canvasWidth, y);
+        }
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = "#1e2433";
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+      }
+    }
+
+    /* -------------------------------------------------------------------------
+     * 主主循环 (Main Loop)
+     * ------------------------------------------------------------------------- */
+    let lastTime = performance.now();
+    let frameCount = 0;
+    let fpsTimer = performance.now();
+    let currentFps = 60;
+
+    function animate(now) {
+      let dt = (now - lastTime) * 0.001;
+      lastTime = now;
+      if (dt > 0.1) dt = 0.1;
+
+      // 慢动作倍率
+      if (config.slowMo) dt *= 0.25;
+
+      // FPS 统计
+      frameCount++;
+      if (now - fpsTimer >= 500) {
+        currentFps = Math.round((frameCount * 1000) / (now - fpsTimer));
+        frameCount = 0;
+        fpsTimer = now;
+        document.getElementById("hudFps").textContent = currentFps;
+      }
+
+      // 更新物理
+      updateFlightPath(dt);
+      updateTeePhysics(dt);
+
+      // 渲染
+      renderBackground();
+      const samples = generateSamples();
+      renderTrail(samples, now * 0.001);
+      renderTee();
+
+      // 更新 HUD
+      document.getElementById("hudQuads").textContent = quadCount;
+      document.getElementById("hudSpeed").textContent = tee.speed.toFixed(1);
+
+      requestAnimationFrame(animate);
+    }
+
+    /* -------------------------------------------------------------------------
+     * UI 与交互绑定
+     * ------------------------------------------------------------------------- */
+    // 渲染底部款式药丸
+    const stylesDock = document.getElementById("stylesDock");
+    TRAIL_STYLES.forEach(st => {
+      const pill = document.createElement("div");
+      pill.className = `style-pill ${st.id === config.style ? 'active' : ''} ${st.isNew ? 'is-new' : ''}`;
+      pill.dataset.styleId = st.id;
+      pill.innerHTML = `
+        <div class="style-badge" style="color: ${st.badgeColor}"></div>
+        <div class="style-text">
+          <div class="style-title">${st.nameZh}</div>
+          <div class="style-sub">${st.name}</div>
+        </div>
+      `;
+      pill.addEventListener("click", () => selectStyle(st.id));
+      stylesDock.appendChild(pill);
+    });
+
+    function selectStyle(id) {
+      config.style = id;
+      const st = TRAIL_STYLES.find(s => s.id === id);
+
+      // 更新 Dock 激活状态
+      document.querySelectorAll(".style-pill").forEach(p => {
+        p.classList.toggle("active", p.dataset.styleId === id);
+      });
+
+      // 更新 HUD 标签
+      document.getElementById("hudStyleTag").textContent = st.name;
+      document.getElementById("hudStyleTag").style.color = st.badgeColor;
+
+      // 更新解析卡片
+      document.getElementById("cardTitle").textContent = st.name;
+      document.getElementById("cardBadge").textContent = st.nameZh;
+      document.getElementById("cardBadge").style.color = st.badgeColor;
+      document.getElementById("cardContent").textContent = st.desc;
+    }
+
+    // 飞行模式切换
+    function setFlightMode(mode) {
+      config.flightMode = mode;
+      document.querySelectorAll(".flight-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.flight === mode);
+      });
+    }
+    document.querySelectorAll(".flight-btn").forEach(btn => {
+      btn.addEventListener("click", () => setFlightMode(btn.dataset.flight));
+    });
+
+    // 参数滑块绑定
+    const bindRange = (id, key, valId, fmt) => {
+      const el = document.getElementById(id);
+      el.addEventListener("input", e => {
+        const v = parseFloat(e.target.value);
+        config[key] = v;
+        document.getElementById(valId).textContent = fmt ? fmt(v) : v;
+      });
+    };
+    bindRange("paramLength", "length", "valLength");
+    bindRange("paramWidth", "width", "valWidth");
+    bindRange("paramAlpha", "alpha", "valAlpha", v => v.toFixed(2));
+
+    // 开关绑定
+    const bindToggle = (id, key) => {
+      const el = document.getElementById(id);
+      el.addEventListener("click", () => {
+        config[key] = !config[key];
+        el.classList.toggle("active", config[key]);
+      });
+    };
+    bindToggle("toggleTaper", "taper");
+    bindToggle("toggleFade", "fade");
+    bindToggle("togglePreset", "preset");
+    bindToggle("toggleBloom", "bloom");
+    bindToggle("toggleSlowMo", "slowMo");
+    bindToggle("toggleDarkMap", "darkMap");
+
+    // 查看 C++ 代码模态框
+    const modal = document.getElementById("cppModal");
+    const modalTitle = document.getElementById("modalStyleTitle");
+    const codeContainer = document.getElementById("cppCodeContainer");
+
+    document.getElementById("btnOpenCppModal").addEventListener("click", () => {
+      const st = TRAIL_STYLES.find(s => s.id === config.style);
+      modalTitle.textContent = `Style: ${st.name} (${st.cppEnum}) · 生产架构对齐实现`;
+      codeContainer.textContent = CPP_SOURCE_CODES[config.style] || `// 该款式沿用现有 QmClient 生产管线 (${st.name})\n// 遵循 SStyleSample 与 BandSegment 架构。`;
+      modal.classList.add("show");
+    });
+    document.getElementById("btnCloseCppModal").addEventListener("click", () => {
+      modal.classList.remove("show");
+    });
+    modal.addEventListener("click", e => {
+      if (e.target === modal) modal.classList.remove("show");
+    });
+
+    // 初始化
+    resizeCanvas();
+    selectStyle("cyber");
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>

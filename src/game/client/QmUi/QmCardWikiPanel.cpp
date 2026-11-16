@@ -24,12 +24,17 @@
 #include <engine/shared/localization.h>
 #include <engine/storage.h>
 
+#if defined(CONF_PLATFORM_ANDROID)
+#include <SDL3/SDL_misc.h>
+#endif
+
 #include <game/client/lineinput.h>
 #include <game/client/ui.h>
 #include <game/client/ui_scrollregion.h>
 #include <game/localization.h>
 
 #include <algorithm>
+#include <new>
 #include <string>
 #include <vector>
 
@@ -92,7 +97,13 @@ namespace
 		const bool IsCard = str_startswith(pTarget, "qm:") != nullptr || str_startswith(pTarget, "tclient:") != nullptr || str_startswith(pTarget, "deck:") != nullptr;
 		if(!IsCard)
 		{
+#if defined(CONF_PLATFORM_ANDROID)
+			// Android 上 base 层不提供 open_link（system.h 在该平台隐藏声明），
+			// 外部链接交给 SDL 转交系统浏览器。
+			SDL_OpenURL(pTarget);
+#else
 			open_link(pTarget);
+#endif
 			return;
 		}
 		const SCardWikiCopy *pCopy = FindCardWikiCopy(pTarget);
@@ -521,7 +532,11 @@ namespace qm_wiki_panel_test
 	{
 		// 面板状态是文件级静态量：进程内 CUi 常驻时没有生命周期问题，
 		// 但测试每个用例都会新建 CUi，不清掉旧指针下次 IsOpen 就会读到已释放的实例。
-		gs_WikiPopupContext = SWikiPopupContext{};
+		// 不能用整块赋值重置：CLineInput 内部存的是指向自身 m_aBuffer 的指针，
+		// 赋值后它指回临时对象的栈缓冲区，下一个用例 Clear() 就往失效地址写 256 KiB
+		// （ASan 下表现为 memset 命中野指针直接 SEGV）。就地重建才会把指针绑回自己的缓冲区。
+		gs_WikiPopupContext.~SWikiPopupContext();
+		new(&gs_WikiPopupContext) SWikiPopupContext();
 		gs_WikiScroll.Reset();
 	}
 

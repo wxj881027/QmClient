@@ -1,6 +1,7 @@
 // 请抬头享受阳光｜日子很好 我很我---------致咩子
 #include <base/system.h>
 
+#include <game/client/QmUi/QmChatLineMenuLayout.h>
 #include <game/client/components/chat.h>
 #include <game/client/components/console.h>
 #include <game/client/components/hud_editor.h>
@@ -9,6 +10,7 @@
 #include <game/client/components/qmclient/chat_input_layout.h>
 #include <game/client/components/qmclient/chat_scrollbar.h>
 #include <game/client/components/qmclient/chat_translate_button.h>
+#include <game/client/components/qmclient/chat_whisper_targets.h>
 #include <game/client/components/qmclient/red_packet_auto_claim.h>
 #include <game/client/components/tclient/fast_practice.h>
 #include <game/client/components/tclient/warlist.h>
@@ -580,5 +582,119 @@ TEST(QmChatInputLayout, FarOffscreenClipClampsBeforeIntegerConversion)
 		EXPECT_EQ(Clip.m_Y, 480);
 		EXPECT_EQ(Clip.m_W, 0);
 		EXPECT_EQ(Clip.m_H, 80);
+	}
+}
+
+namespace
+{
+	SQmChatWhisperCandidate WhisperCandidate(int ClientId, const char *pName, bool Active = true, bool Local = false)
+	{
+		SQmChatWhisperCandidate Candidate;
+		Candidate.m_ClientId = ClientId;
+		Candidate.m_pName = pName;
+		Candidate.m_Active = Active;
+		Candidate.m_Local = Local;
+		return Candidate;
+	}
+}
+
+TEST(QmChatWhisperTargets, SkipsLocalConnectionsAndUnusableEntries)
+{
+	// 服务器按名字排序返回玩家；自己（主/副连接）与空名、离线条目都不能进入私聊列表。
+	const SQmChatWhisperCandidate aCandidates[] = {
+		WhisperCandidate(3, "alice"),
+		WhisperCandidate(1, "self", true, true),
+		WhisperCandidate(2, "dummy", true, true),
+		WhisperCandidate(4, "", true, false),
+		WhisperCandidate(5, "bob", false, false),
+		WhisperCandidate(6, nullptr, true, false),
+		WhisperCandidate(7, "carol"),
+	};
+	SQmChatWhisperTarget aTargets[8];
+	const int NumTargets = QmChatCollectWhisperTargets(aCandidates, (int)std::size(aCandidates), aTargets, (int)std::size(aTargets));
+
+	ASSERT_EQ(NumTargets, 2);
+	EXPECT_EQ(aTargets[0].m_ClientId, 3);
+	EXPECT_STREQ(aTargets[0].m_pName, "alice");
+	EXPECT_EQ(aTargets[1].m_ClientId, 7);
+	EXPECT_STREQ(aTargets[1].m_pName, "carol");
+}
+
+TEST(QmChatWhisperTargets, RespectsCapacityAndEmptyInput)
+{
+	const SQmChatWhisperCandidate aCandidates[] = {
+		WhisperCandidate(0, "a"),
+		WhisperCandidate(1, "b"),
+		WhisperCandidate(2, "c"),
+	};
+	SQmChatWhisperTarget aTargets[2];
+	EXPECT_EQ(QmChatCollectWhisperTargets(aCandidates, (int)std::size(aCandidates), aTargets, 2), 2);
+	EXPECT_EQ(QmChatCollectWhisperTargets(aCandidates, (int)std::size(aCandidates), aTargets, 0), 0);
+	EXPECT_EQ(QmChatCollectWhisperTargets(aCandidates, 0, aTargets, (int)std::size(aTargets)), 0);
+	EXPECT_EQ(QmChatCollectWhisperTargets(nullptr, 3, aTargets, (int)std::size(aTargets)), 0);
+	EXPECT_EQ(QmChatCollectWhisperTargets(aCandidates, (int)std::size(aCandidates), nullptr, 3), 0);
+}
+
+TEST(QmChatWhisperTargets, BuildWhisperCommandKeepsQuotedNameAndMessage)
+{
+	char aCommand[256];
+	ASSERT_TRUE(CChat::BuildWhisperCommand(aCommand, sizeof(aCommand), "alice", "hello there"));
+	EXPECT_STREQ(aCommand, "/w \"alice\" hello there");
+	EXPECT_FALSE(CChat::BuildWhisperCommand(aCommand, sizeof(aCommand), "", "hello"));
+	EXPECT_FALSE(CChat::BuildWhisperCommand(aCommand, sizeof(aCommand), "alice", nullptr));
+}
+
+TEST(QmChatLineMenuLayout, AllActionsFitInsidePopupWithBottomPadding)
+{
+	const CUIRect Menu = qm_chat_line_menu::PopupRect({50.0f, 80.0f}, {0.0f, 0.0f, 800.0f, 600.0f});
+	CUIRect Content;
+	Menu.Margin(qm_chat_line_menu::CONTENT_INSET, &Content);
+	const auto Layout = qm_chat_line_menu::LayoutContent(Content);
+
+	ASSERT_EQ(Layout.m_aButtons.size(), 7u);
+	EXPECT_FLOAT_EQ(Layout.m_Header.y, Content.y);
+	EXPECT_GE(Layout.m_HeaderDivider.y, Layout.m_Header.y + Layout.m_Header.h);
+	float PreviousBottom = Layout.m_HeaderDivider.y + Layout.m_HeaderDivider.h;
+	for(const CUIRect &Button : Layout.m_aButtons)
+	{
+		EXPECT_GT(Button.y, PreviousBottom);
+		EXPECT_FLOAT_EQ(Button.h, 23.0f);
+		EXPECT_GE(Button.x, Content.x);
+		EXPECT_LE(Button.x + Button.w, Content.x + Content.w);
+		EXPECT_LE(Button.y + Button.h, Content.y + Content.h);
+		PreviousBottom = Button.y + Button.h;
+	}
+	EXPECT_GE(Layout.m_GroupDivider.y, Layout.m_aButtons[qm_chat_line_menu::SPECTATE].y + Layout.m_aButtons[qm_chat_line_menu::SPECTATE].h);
+	EXPECT_LE(Layout.m_GroupDivider.y + Layout.m_GroupDivider.h, Layout.m_aButtons[qm_chat_line_menu::MUTE_PLAYER].y);
+	EXPECT_GE(Menu.y + Menu.h - PreviousBottom, qm_chat_line_menu::CONTENT_INSET);
+}
+
+TEST(QmChatLineMenuLayout, InteriorPointerKeepsPopupAtRequestedPosition)
+{
+	const CUIRect Menu = qm_chat_line_menu::PopupRect({100.0f, 120.0f}, {0.0f, 0.0f, 800.0f, 600.0f});
+	EXPECT_FLOAT_EQ(Menu.x, 100.0f);
+	EXPECT_FLOAT_EQ(Menu.y, 120.0f);
+}
+
+TEST(QmChatLineMenuLayout, BottomPointerOpensUpwardUsingFullMenuHeight)
+{
+	const CUIRect Menu = qm_chat_line_menu::PopupRect({100.0f, 590.0f}, {0.0f, 0.0f, 800.0f, 600.0f});
+	EXPECT_FLOAT_EQ(Menu.x, 100.0f);
+	EXPECT_LT(Menu.y, 590.0f);
+	EXPECT_FLOAT_EQ(Menu.y + Menu.h, 590.0f);
+}
+
+TEST(QmChatLineMenuLayout, AllViewportCornersKeepScreenMargin)
+{
+	const CUIRect Screen{30.0f, 40.0f, 400.0f, 300.0f};
+	const vec2 aCorners[] = {{30.0f, 40.0f}, {430.0f, 40.0f}, {30.0f, 340.0f}, {430.0f, 340.0f}};
+	for(const vec2 Corner : aCorners)
+	{
+		SCOPED_TRACE(::testing::Message() << "pointer " << Corner.x << ", " << Corner.y);
+		const CUIRect Menu = qm_chat_line_menu::PopupRect(Corner, Screen);
+		EXPECT_GE(Menu.x, Screen.x + qm_chat_line_menu::SCREEN_MARGIN);
+		EXPECT_GE(Menu.y, Screen.y + qm_chat_line_menu::SCREEN_MARGIN);
+		EXPECT_LE(Menu.x + Menu.w, Screen.x + Screen.w - qm_chat_line_menu::SCREEN_MARGIN);
+		EXPECT_LE(Menu.y + Menu.h, Screen.y + Screen.h - qm_chat_line_menu::SCREEN_MARGIN);
 	}
 }

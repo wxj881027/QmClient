@@ -115,6 +115,14 @@ python qmclient_scripts/integration/exit_lifecycle_smoke.py --build-dir tmp/sess
 
 覆盖正常最终清理、最终清理卡死后的看门狗强制退出并保留已保存配置，以及本地服务器在父进程正常退出、`_Exit`、外部强杀和 `CreateProcess` 尚未返回的创建窗口中被杀后的终止。Windows 本地服务器使用原子 Job-list 创建能力，需要 Windows 10 / Server 2016 或更新版本；能力不可用时拒绝启动。测试只运行工作区副本，服务器使用隔离的 `storage.cfg`，不会读取真实用户配置。
 
+## 地图资源准备期间再次切图
+
+```text
+python qmclient_scripts/integration/e2e_qmclient.py <build-dir> map_change_during_resource_preparation
+```
+
+场景在隔离目录生成带 512 个装饰图层的地图，确认真实客户端开始资源准备后立即切到 Tutorial。要求观察到旧准备任务被取消，新地图可以进入游戏并收发聊天，之后还能切换到 ctf1 并正常退出。客户端以窗口化、每秒 20 次更新运行，场景仅连接本机测试服务器，不依赖公网或真实用户配置。已补充场景，未执行。
+
 ## Vulkan FSAA 背景模糊回归
 
 ```text

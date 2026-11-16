@@ -2,6 +2,8 @@
 
 #include <engine/graphics.h>
 
+#include <game/client/QmUi/UiTokens.h>
+
 void QmSponsorChatAddPlatinumSplits(CTextCursor &Cursor, const char *pText, float Alpha)
 {
 	int Count = 0;
@@ -33,12 +35,28 @@ void QmSponsorChatAddPlatinumSplits(CTextCursor &Cursor, const char *pText, floa
 	}
 }
 
-void QmRenderSponsorChatText(IGraphics *pGraphics, ITextRender *pTextRender, STextContainerIndex Index, EQmSponsorChatStyle Style, float Alpha, float X, float Y, float FontSize, const SQmSponsorChatSweep &SweepState)
+void QmRenderSponsorChatText(IGraphics *pGraphics, ITextRender *pTextRender, STextContainerIndex Index, EQmSponsorChatStyle Style, float Alpha, float X, float Y, float FontSize, const SQmSponsorChatSweep &SweepState, double TimeSeconds)
 {
 	if(!Index.Valid() || Alpha <= 0.0f)
 		return;
 	const ColorRGBA Outline = Style == EQmSponsorChatStyle::NONE ? pTextRender->DefaultTextOutlineColor() :
-								       ColorRGBA(0.0f, 0.0f, 0.0f, 0.82f);
+								       ui_token::color::NEUTRAL_BLACK.WithMultipliedAlpha(0.82f);
+	if(Style == EQmSponsorChatStyle::FLUID)
+	{
+		struct SFluidPaint
+		{
+			CQmSponsorChatFluid m_Fluid;
+			float m_FontSize;
+		};
+		const SFluidPaint Paint{CQmSponsorChatFluid(TimeSeconds), std::max(1.0f, FontSize)};
+		const auto Sample = [](vec2 Position, const void *pContext) {
+			const auto &Context = *static_cast<const SFluidPaint *>(pContext);
+			return Context.m_Fluid.Sample(Position / Context.m_FontSize);
+		};
+		pTextRender->RenderTextContainer(Index, ui_token::color::NEUTRAL_WHITE.WithMultipliedAlpha(0.0f), Outline.WithMultipliedAlpha(Alpha), X, Y);
+		pTextRender->RenderTextContainerFill(Index, Sample, &Paint, 4, 4, ui_token::color::NEUTRAL_WHITE.WithMultipliedAlpha(Alpha), X, Y);
+		return;
+	}
 	pTextRender->RenderTextContainer(Index, ColorRGBA(1.0f, 1.0f, 1.0f, Alpha), Outline.WithMultipliedAlpha(Alpha), X, Y);
 	if(Style == EQmSponsorChatStyle::PLATINUM && SweepState.m_Line >= 0)
 	{

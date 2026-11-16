@@ -239,6 +239,24 @@ struct SSettingsRadioRowLayout
 	bool m_UseDropdown = false;
 };
 
+// 字号放大会牵连行高、标签列宽和控制区宽度；只放大字号会立刻把卡片排版压坏
+// （标签互相压行、控件变窄到点不中）。移动端字号暂与桌面一致，排版靠单列适配。
+constexpr float QM_SETTINGS_MOBILE_TEXT_SCALE = 1.0f;
+
+constexpr bool QmSettingsMobilePlatform()
+{
+#if defined(CONF_PLATFORM_ANDROID) || defined(CONF_PLATFORM_IOS)
+	return true;
+#else
+	return false;
+#endif
+}
+
+constexpr float ResolveSettingsTextScale(bool MobilePlatform)
+{
+	return MobilePlatform ? QM_SETTINGS_MOBILE_TEXT_SCALE : 1.0f;
+}
+
 inline float ResolveSettingsUiScale(const float ContentWidth)
 {
 	// 在窄窗口保留紧凑基线，并平滑过渡到 800px 处的标准缩放，避免跨阈值跳变。
@@ -251,16 +269,18 @@ inline float ResolveSettingsSmallFontSize(const float UiScale)
 	return std::clamp(ui_token::font::SMALL * std::max(0.0f, UiScale), 9.0f, ui_token::font::SMALL);
 }
 
-inline SSettingsContentMetrics ResolveSettingsContentMetrics(const float ContentWidth)
+inline SSettingsContentMetrics ResolveSettingsContentMetrics(const float ContentWidth, const float TextScale)
 {
 	SSettingsContentMetrics Metrics;
+	// TextScale 只放大字号与行高，不改变密度缩放本身的语义：桌面传 1.0 时与旧行为逐位一致。
+	const float Scale = std::max(0.01f, TextScale);
 	Metrics.m_UiScale = ResolveSettingsUiScale(ContentWidth);
-	Metrics.m_BodySize = std::clamp(ui_token::font::BODY * Metrics.m_UiScale, 10.0f, ui_token::font::BODY);
+	Metrics.m_BodySize = std::clamp(ui_token::font::BODY * Metrics.m_UiScale * Scale, 10.0f * Scale, ui_token::font::BODY * Scale);
 	// 所有单行控件共用高度；窄视口保留胶囊文字的可读下限和上下内边距。
-	Metrics.m_LineHeight = ResolveSettingsControlHeight(Metrics.m_BodySize, Metrics.m_UiScale);
-	Metrics.m_SmallSize = ResolveSettingsSmallFontSize(Metrics.m_UiScale);
-	Metrics.m_HeadlineSize = std::clamp(ui_token::font::HEADLINE * Metrics.m_UiScale, 12.0f, ui_token::font::HEADLINE);
-	Metrics.m_LineSpacing = std::clamp(ui_token::settings::ROW_GAP * Metrics.m_UiScale, 3.0f, ui_token::settings::ROW_GAP);
+	Metrics.m_LineHeight = ResolveSettingsControlHeight(Metrics.m_BodySize, Metrics.m_UiScale * Scale);
+	Metrics.m_SmallSize = std::clamp(ResolveSettingsSmallFontSize(Metrics.m_UiScale) * Scale, 9.0f * Scale, ui_token::font::SMALL * Scale);
+	Metrics.m_HeadlineSize = std::clamp(ui_token::font::HEADLINE * Metrics.m_UiScale * Scale, 12.0f * Scale, ui_token::font::HEADLINE * Scale);
+	Metrics.m_LineSpacing = std::clamp(ui_token::settings::ROW_GAP * Metrics.m_UiScale * Scale, 3.0f * Scale, ui_token::settings::ROW_GAP * Scale);
 	Metrics.m_RowStep = Metrics.m_LineHeight + Metrics.m_LineSpacing;
 	Metrics.m_InputHeight = Metrics.m_LineHeight;
 	Metrics.m_ButtonHeight = Metrics.m_LineHeight;
@@ -273,6 +293,11 @@ inline SSettingsContentMetrics ResolveSettingsContentMetrics(const float Content
 	const float PreferredLabelWidth = ContentWidth * 0.32f;
 	Metrics.m_LabelWidth = std::clamp(PreferredLabelWidth, 96.0f * Metrics.m_UiScale, std::max(96.0f * Metrics.m_UiScale, ContentWidth - MinimumControlWidth - Gap));
 	return Metrics;
+}
+
+inline SSettingsContentMetrics ResolveSettingsContentMetrics(const float ContentWidth)
+{
+	return ResolveSettingsContentMetrics(ContentWidth, ResolveSettingsTextScale(QmSettingsMobilePlatform()));
 }
 
 inline float ResolveSettingsCardLabelWidth(const float CardContentWidth, const SSettingsContentMetrics &Metrics)
@@ -926,14 +951,13 @@ inline SSettingsColorRowLayout ResolveSettingsColorRowLayout(const CUIRect &View
 	Layout.m_RowRect = {View.x, View.y, View.w, RowHeight};
 	Layout.m_ConsumedHeight = RowHeight + (TrailingSpacing ? std::max(0.0f, Metrics.m_LineSpacing) : 0.0f);
 
-	const float MaximumResetWidth = std::max(0.0f, View.w - ColorButtonWidth - Gap * 2.0f);
-	const float MinimumResetWidth = std::min(60.0f * Metrics.m_UiScale, MaximumResetWidth);
-	const float PreferredResetWidth = 72.0f * Metrics.m_UiScale;
-	const float ResetWidth = std::clamp(std::min(PreferredResetWidth, View.w * 0.30f), MinimumResetWidth, MaximumResetWidth);
+	// 色块和重置是右侧的一小组动作按钮：都按行高做成方形，紧挨着贴住行右缘。
+	// 以前按百分比分配宽度，中间会空出一大片，看着像没对齐。
+	const float ButtonSide = std::min(RowHeight, std::max(0.0f, (View.w - Gap * 2.0f) * 0.5f));
 	CUIRect Remaining = Layout.m_RowRect;
-	Remaining.VSplitRight(ResetWidth, &Remaining, &Layout.m_ResetButtonRect);
+	Remaining.VSplitRight(ButtonSide, &Remaining, &Layout.m_ResetButtonRect);
 	Remaining.VSplitRight(Gap, &Remaining, nullptr);
-	Remaining.VSplitRight(ColorButtonWidth, &Remaining, &Layout.m_ColorButtonRect);
+	Remaining.VSplitRight(ButtonSide, &Remaining, &Layout.m_ColorButtonRect);
 	Remaining.VSplitRight(Gap, &Layout.m_LabelRect, nullptr);
 	if(ReserveCheckboxIndent)
 	{
@@ -1117,7 +1141,7 @@ inline float ResolveQmHudPlayerStatsHeight(const SSettingsContentMetrics &Metric
 {
 	if(!MapProgress)
 		return 3.0f * Metrics.m_RowStep - Metrics.m_LineSpacing;
-	return (EmbeddedProgress ? 5.0f : 10.0f) * Metrics.m_RowStep - Metrics.m_LineSpacing;
+	return (EmbeddedProgress ? 6.0f : 10.0f) * Metrics.m_RowStep - Metrics.m_LineSpacing;
 }
 
 inline float ResolveQmHudInputOverlayHeight(const SSettingsContentMetrics &Metrics, const bool Enabled)
@@ -1274,7 +1298,8 @@ inline SSettingsPageLayoutFrame ResolveSettingsPageLayout(const CUIRect &PageRec
 	Frame.m_UnreservedScrollViewport = Frame.m_ScrollViewport;
 	Frame.m_ContentViewport = Frame.m_ScrollViewport;
 	Frame.m_CardGap = ui_token::settings::CARD_GAP * Scale;
-	Frame.m_TwoColumns = Frame.m_ContentViewport.w >= ui_token::settings::TWO_COLUMN_MIN_WIDTH;
+	// 手机端卡片单列：屏幕窄、触摸目标大，双列会把每张卡压得又窄又难读。
+	Frame.m_TwoColumns = !QmSettingsMobilePlatform() && Frame.m_ContentViewport.w >= ui_token::settings::TWO_COLUMN_MIN_WIDTH;
 	if(Frame.m_TwoColumns)
 	{
 		const float ColumnWidth = std::max(0.0f, (Frame.m_ContentViewport.w - Frame.m_CardGap) * 0.5f);
@@ -1293,7 +1318,7 @@ inline SSettingsPageLayoutFrame ResolveSettingsPageLayoutForScrollViewport(const
 	SSettingsPageLayoutFrame Frame = Layout;
 	Frame.m_ScrollViewport = ScrollViewport;
 	Frame.m_ContentViewport = ScrollViewport;
-	Frame.m_TwoColumns = Frame.m_ContentViewport.w >= ui_token::settings::TWO_COLUMN_MIN_WIDTH;
+	Frame.m_TwoColumns = !QmSettingsMobilePlatform() && Frame.m_ContentViewport.w >= ui_token::settings::TWO_COLUMN_MIN_WIDTH;
 	Frame.m_aColumns[0] = {};
 	Frame.m_aColumns[1] = {};
 	if(Frame.m_TwoColumns)
@@ -1307,24 +1332,32 @@ inline SSettingsPageLayoutFrame ResolveSettingsPageLayoutForScrollViewport(const
 	return Frame;
 }
 
+// 设置页壳层（页签条 + 内容面板）的宽度公式同时被其它菜单页用来对齐左右边界，
+// 两处必须共用同一份常量，避免某天调整设置页宽度后其它页面重新错位。
+inline constexpr float SETTINGS_SHELL_GAP = 10.0f;
+inline constexpr float SETTINGS_PANEL_MARGIN = 10.0f;
+
+inline float ResolveSettingsShellTabBarWidth(float AvailableWidth)
+{
+	return std::clamp(AvailableWidth * 0.16f, 132.0f, 168.0f);
+}
+
 inline SSettingsShellLayoutFrame ResolveSettingsShellLayout(const CUIRect &AvailableRect, const float BottomReservedHeight = 0.0f)
 {
-	constexpr float ShellGap = 10.0f;
-	constexpr float PanelMargin = 10.0f;
 	constexpr float RestartBarHeight = 20.0f;
 	SSettingsShellLayoutFrame Frame;
 	CUIRect ShellAvailable = AvailableRect;
 	ShellAvailable.h = std::max(0.0f, ShellAvailable.h - std::max(0.0f, BottomReservedHeight));
-	Frame.m_TabBarWidth = std::clamp(AvailableRect.w * 0.16f, 132.0f, 168.0f);
-	const float AvailablePanelWidth = std::max(0.0f, ShellAvailable.w - Frame.m_TabBarWidth - ShellGap);
-	const float MaxPanelWidth = ui_token::settings::MAX_CONTENT_WIDTH + PanelMargin * 2.0f;
+	Frame.m_TabBarWidth = ResolveSettingsShellTabBarWidth(AvailableRect.w);
+	const float AvailablePanelWidth = std::max(0.0f, ShellAvailable.w - Frame.m_TabBarWidth - SETTINGS_SHELL_GAP);
+	const float MaxPanelWidth = ui_token::settings::MAX_CONTENT_WIDTH + SETTINGS_PANEL_MARGIN * 2.0f;
 	const float PanelWidth = std::min(AvailablePanelWidth, MaxPanelWidth);
-	const float ShellWidth = PanelWidth + ShellGap + Frame.m_TabBarWidth;
+	const float ShellWidth = PanelWidth + SETTINGS_SHELL_GAP + Frame.m_TabBarWidth;
 	ShellAvailable.VMargin(std::max(0.0f, (ShellAvailable.w - ShellWidth) * 0.5f), &Frame.m_ShellRect);
 	Frame.m_ShellRect.VSplitRight(Frame.m_TabBarWidth, &Frame.m_ContentPanelRect, &Frame.m_TabBarRect);
-	Frame.m_ContentPanelRect.VSplitRight(ShellGap, &Frame.m_ContentPanelRect, nullptr);
+	Frame.m_ContentPanelRect.VSplitRight(SETTINGS_SHELL_GAP, &Frame.m_ContentPanelRect, nullptr);
 	Frame.m_ContentRect = Frame.m_ContentPanelRect;
-	Frame.m_ContentRect.Margin(PanelMargin, &Frame.m_ContentRect);
+	Frame.m_ContentRect.Margin(SETTINGS_PANEL_MARGIN, &Frame.m_ContentRect);
 	if(BottomReservedHeight >= RestartBarHeight)
 		Frame.m_RestartBarRect = {Frame.m_ContentPanelRect.x, AvailableRect.y + AvailableRect.h - RestartBarHeight, Frame.m_ContentPanelRect.w, RestartBarHeight};
 

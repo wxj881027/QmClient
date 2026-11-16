@@ -18,7 +18,7 @@ MAIN_EXECUTABLE="$APP_PATH/Contents/MacOS/DDNet"
 
 test -d "$APP_PATH"
 test -x "$MAIN_EXECUTABLE"
-test ! -e "$APP_PATH/Contents/Frameworks/SDL2.framework"
+test -d "$APP_PATH/Contents/Frameworks/SDL3.framework"
 test -f "$APP_PATH/Contents/Resources/data/shader/metal/qmclient.metallib"
 
 # Apple 发布包仅使用原生 Metal，不应残留旧 Vulkan 运行库或 ICD。
@@ -26,7 +26,7 @@ test ! -e "$APP_PATH/Contents/Frameworks/libMoltenVK.dylib"
 test ! -e "$APP_PATH/Contents/Frameworks/libvulkan.1.dylib"
 test ! -e "$APP_PATH/Contents/Resources/vulkan/icd.d"
 
-# SDL3 静态链接进主程序，检查整个应用的签名与其余动态库。
+# SDL3 以 framework 随包分发，检查整个应用的签名与其余动态库。
 codesign --display --verbose=2 "$APP_PATH"
 codesign --display --verbose=2 "$MAIN_EXECUTABLE"
 codesign --verify --deep --strict --verbose=2 "$APP_PATH"
@@ -34,6 +34,7 @@ shopt -s nullglob
 for dylib in "$APP_PATH"/Contents/Frameworks/*.dylib; do
 	codesign --verify --strict --verbose=2 "$dylib"
 done
+codesign --verify --strict --verbose=2 "$APP_PATH/Contents/Frameworks/SDL3.framework"
 
 if otool -L "$MAIN_EXECUTABLE" | grep -E '/Users/|/opt/homebrew/|/private/tmp/|SDL2'; then
 	echo "DMG contains an absolute build-machine dependency path" >&2

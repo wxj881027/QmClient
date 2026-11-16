@@ -48,7 +48,6 @@ namespace
 		case CMenus::QMCLIENT_SETTINGS_TAB_HUD: return "hud";
 		case CMenus::QMCLIENT_SETTINGS_TAB_CONTRIBUTORS: return "contributors";
 		case CMenus::QMCLIENT_SETTINGS_TAB_CONFIG: return "config";
-		case CMenus::QMCLIENT_SETTINGS_TAB_BIND: return "bind";
 		default: return "unknown";
 		}
 	}
@@ -157,27 +156,19 @@ void CMenus::RenderSettingsQmClientFunctionDeck(CUIRect MainView, bool PrewarmOn
 	static std::array<CButtonContainer, QmModuleCount> s_aCollapseButtons;
 	qm_card_collapse::SyncQmModules(s_aCollapsed);
 
-	const size_t FavoriteMapCount = GameClient()->TClientComponent().GetFavoriteMaps().size();
-	qm_card_catalog::FavoriteMapsLayoutRevision(FavoriteMapCount);
-	auto ToggleCollapsed = [](void *pUser, EQmModuleId Id) {
+	auto ToggleCollapsed = [](void *, EQmModuleId Id) {
 		const int Index = std::clamp((int)Id, 0, (int)QmModuleCount - 1);
-		const bool WasCollapsed = s_aCollapsed[Index];
-		const bool Collapsed = !WasCollapsed;
+		const bool Collapsed = !s_aCollapsed[Index];
 		if(!qm_card_collapse::SetQmModuleCollapsed(Id, Collapsed))
 			return;
 		s_aCollapsed[Index] = Collapsed;
-		if(Id == EQmModuleId::FavoriteMaps && WasCollapsed != Collapsed && !Collapsed)
-		{
-			const size_t FavoriteMapCount = static_cast<CMenus *>(pUser)->GameClient()->TClientComponent().GetFavoriteMaps().size();
-			qm_card_catalog::FavoriteMapsLayoutRevision(FavoriteMapCount);
-		}
 	};
 	auto MeasureContentRevision = [this](EQmModuleId Id) -> uint64_t {
-		return qm_card_catalog::MeasureModuleCardRevision(Id, ResolveFunctionCardLayoutState(GameClient()->TClientComponent().GetFavoriteMaps().size()));
+		return qm_card_catalog::MeasureModuleCardRevision(Id, ResolveFunctionCardLayoutState());
 	};
 	// 卡片改由全局卡片目录构造（N3）：页面只声明「这一页有哪些卡片」，测量与渲染都在目录里。
-	// 内容量状态（词条过滤/关键词回复/收藏地图）经 m_pFunctionLayout 注入，目录测量依赖它。
-	const qm_card_catalog::SQmFunctionCardLayoutState FunctionCardLayout = ResolveFunctionCardLayoutState(GameClient()->TClientComponent().GetFavoriteMaps().size());
+	// 内容量状态（词条过滤/关键词回复）经 m_pFunctionLayout 注入，目录测量依赖它。
+	const qm_card_catalog::SQmFunctionCardLayoutState FunctionCardLayout = ResolveFunctionCardLayoutState();
 	auto BuildDefinitions = [&](std::vector<SSettingsCardDefinition> &vCards) {
 		qm_card_catalog::SQmCardBuildContext CardBuild;
 		CardBuild.m_pMenus = this;
@@ -363,7 +354,7 @@ void CMenus::RenderSettingsQmClientContent(CUIRect MainView, bool PrewarmOnly)
 		TabBar = QmClientSubTabs.m_TabBarRect;
 		MainView = QmClientSubTabs.m_ContentRect;
 		// 贡献者枚举保留占位以兼容旧配置，可见页签使用独立列表。
-		constexpr int aVisibleQmTabs[] = {QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_CONFIG, QMCLIENT_SETTINGS_TAB_BIND};
+		constexpr int aVisibleQmTabs[] = {QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_CONFIG};
 		constexpr int NumQmTabs = (int)std::size(aVisibleQmTabs);
 		const float TabWidth = TabBar.w / (float)NumQmTabs;
 		static CButtonContainer s_aPageTabs[NUMBER_OF_QMCLIENT_SETTINGS_TABS] = {};
@@ -372,7 +363,6 @@ void CMenus::RenderSettingsQmClientContent(CUIRect MainView, bool PrewarmOnly)
 		apQmTabNames[QMCLIENT_SETTINGS_TAB_FUNCTION] = Localize("Functions");
 		apQmTabNames[QMCLIENT_SETTINGS_TAB_HUD] = Localize("HUD");
 		apQmTabNames[QMCLIENT_SETTINGS_TAB_CONFIG] = Localize("Config");
-		apQmTabNames[QMCLIENT_SETTINGS_TAB_BIND] = Localize("Bind");
 
 		{
 			CPerfTimer StageTimer;
@@ -441,13 +431,6 @@ void CMenus::RenderSettingsQmClientContent(CUIRect MainView, bool PrewarmOnly)
 			if(TabTransitionActive)
 				Ui()->ClipDisable();
 			LogQmPerfStage(Client(), "render_total", RenderTimer.ElapsedMs(), false, aConfigExtra);
-			return;
-		}
-		if(m_QmClientSettingsTab == QMCLIENT_SETTINGS_TAB_BIND)
-		{
-			RenderSettingsQmClientBindDeck(ContentView, PrewarmOnly);
-			if(TabTransitionActive)
-				Ui()->ClipDisable();
 			return;
 		}
 		if(m_QmClientSettingsTab == QMCLIENT_SETTINGS_TAB_VISUAL)

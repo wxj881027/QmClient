@@ -24,5 +24,4 @@ The endpoint address is set by `qm_map_upload_endpoint`; leaving it empty disabl
 
 ## Related
 
-- [Favorite maps](qm:favorite_maps)
 - [Console](qm:console)

@@ -65,6 +65,61 @@ TEST(NeteaseLyricParser, AcceptsRelativeYrcWordOffsets)
 	EXPECT_EQ(Timeline.m_vLines[0].m_vWords[1].m_StartMs, 2500);
 }
 
+TEST(NeteaseLyricParser, KeepsOrdinaryParenthesesInsideTimedYrcWords)
+{
+	for(const char *pFirstWord : {"A(x)", "A(2026)", "A((x))", "A(", "你(轻声)"})
+	{
+		SCOPED_TRACE(pFirstWord);
+		STimeline Timeline;
+		ASSERT_TRUE(ParseYrc(std::string("[1000,1000](1000,500,0)") + pFirstWord + "(1500,500,0) B", &Timeline));
+		ASSERT_EQ(Timeline.m_vLines.size(), 1u);
+		const auto &Line = Timeline.m_vLines[0];
+		EXPECT_EQ(Line.m_Text, std::string(pFirstWord) + " B");
+		ASSERT_EQ(Line.m_vWords.size(), 2u);
+		EXPECT_EQ(Line.m_vWords[0].m_Text, pFirstWord);
+		EXPECT_EQ(Line.m_vWords[0].m_StartMs, 1000);
+		EXPECT_EQ(Line.m_vWords[0].m_EndMs, 1500);
+		EXPECT_EQ(Line.m_vWords[1].m_Text, " B");
+		EXPECT_EQ(Line.m_vWords[1].m_StartMs, 1500);
+		EXPECT_EQ(Line.m_vWords[1].m_EndMs, 2000);
+	}
+}
+
+TEST(NeteaseLyricParser, KeepsZeroDurationPunctuationAndSpacesInYrcWords)
+{
+	STimeline Timeline;
+	ASSERT_TRUE(ParseYrc("[1000,1000](1000,500,0)Hello(1500,0,0), (1500,500,0)world(2000,0,0)!", &Timeline));
+	ASSERT_EQ(Timeline.m_vLines.size(), 1u);
+	const auto &Line = Timeline.m_vLines[0];
+	EXPECT_EQ(Line.m_Text, "Hello, world!");
+	ASSERT_EQ(Line.m_vWords.size(), 4u);
+	EXPECT_EQ(Line.m_vWords[0].m_Text, "Hello");
+	EXPECT_EQ(Line.m_vWords[1].m_Text, ", ");
+	EXPECT_EQ(Line.m_vWords[1].m_StartMs, 1500);
+	EXPECT_EQ(Line.m_vWords[1].m_EndMs, 1500);
+	EXPECT_EQ(Line.m_vWords[2].m_Text, "world");
+	EXPECT_EQ(Line.m_vWords[3].m_Text, "!");
+	EXPECT_EQ(Line.m_vWords[3].m_StartMs, 2000);
+	EXPECT_EQ(Line.m_vWords[3].m_EndMs, 2000);
+}
+
+TEST(NeteaseLyricParser, MalformedYrcMarkersAfterAWordStillFallBackToLrc)
+{
+	for(const char *pMarker : {"(1500,bad,0)", "(1500,500,bad)", "(1500,500"})
+	{
+		SCOPED_TRACE(pMarker);
+		STimeline Timeline;
+		SRawLyrics Raw;
+		Raw.m_Yrc = std::string("[1000,1000](1000,500,0)first") + pMarker + "broken";
+		Raw.m_Lrc = "[00:01.00]fallback";
+		EXPECT_FALSE(ParseYrc(Raw.m_Yrc, &Timeline));
+		ASSERT_TRUE(ParseRawLyrics(Raw, &Timeline));
+		ASSERT_EQ(Timeline.m_vLines.size(), 1u);
+		EXPECT_EQ(Timeline.m_vLines[0].m_Text, "fallback");
+		EXPECT_TRUE(Timeline.m_vLines[0].m_vWords.empty());
+	}
+}
+
 TEST(NeteaseLyricParser, YrcFallsBackToLrcAndDoesNotInventTiming)
 {
 	STimeline Timeline;

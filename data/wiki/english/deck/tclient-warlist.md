@@ -32,7 +32,7 @@ The search above the entries list filters by name, clan and group name; the arro
 - Deleting a group asks for confirmation. Its entries are not deleted — they fall back to the none group and turn white.
 - The trash can right of an entry deletes immediately, without confirmation or undo.
 - Toggling off "Enable warlist" disables all marks at once; the list itself remains.
-- "Show colors in spectator selection" is currently read nowhere; ticking it changes nothing.
+- "Show enemy color in spectator menu" is currently read nowhere; ticking it changes nothing.
 
 ## Related
 

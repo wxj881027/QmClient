@@ -125,6 +125,14 @@ class CClient : public IClient, public CDemoPlayer::IListener
 
 	QmHangDiagnostics::CSnapshotStore m_HangInfo;
 	int64_t m_QmGraphicsLastPumpNetworkNs = 0;
+	// 待应用的垂直同步状态：-1 表示没有等待中的切换。
+	int m_QmPendingVSync = -1;
+	// 已经真正下发到后端的垂直同步状态，用来跳过多余的交换链重建。
+	int m_QmAppliedVSync = -1;
+	// 连续多少帧界面动画都处于静止：只有连续静止才算"动画真的播完"，
+	// 单帧恰好静止不能代表滑块液态回弹已经到位。
+	int m_QmVSyncIdleFrames = 0;
+	int64_t m_QmVSyncQueuedAt = 0;
 	std::atomic<bool> m_HangWatchdogStop{false};
 	std::thread m_HangWatchdogThread;
 	char m_aHangDumpDir[IO_MAX_PATH_LENGTH] = "";
@@ -282,25 +290,19 @@ class CClient : public IClient, public CDemoPlayer::IListener
 public:
 	bool ServerCapAnyPlayerFlag() const override { return m_ServerCapabilities.m_AnyPlayerFlag; }
 
+#if defined(CONF_VIDEORECORDER)
 	// 分段导出的后台拼接是否仍未结束。UI 用它推迟"渲染完成"弹窗，
 	// 否则用户在成片写出前点"Videos directory"会看到文件不存在或不可播放。
 	bool VideoExportConcatPending() const override
 	{
-#if defined(CONF_VIDEORECORDER)
 		return m_ConcatThread.joinable() && !m_ConcatThreadFinished.load();
-#else
-		return false;
-#endif
 	}
 	// 最近一次拼接是否失败（有尝试且未成功）。失败时 UI 不应宣称渲染完成。
 	bool VideoExportConcatFailed() const override
 	{
-#if defined(CONF_VIDEORECORDER)
 		return m_ConcatAttempted.load() && !m_ConcatLastSucceeded.load();
-#else
-		return false;
-#endif
 	}
+#endif
 
 private:
 	CServerInfo m_CurrentServerInfo;
@@ -329,6 +331,11 @@ private:
 	std::mutex m_WarningsMutex;
 	std::vector<SWarning> m_vWarnings;
 	std::vector<SWarning> m_vQuittingWarnings;
+
+	// QmClient: 启动时对存档目录做一次写探针，并记录进程完整性/受限令牌，
+	// 供保存失败提示直接说明"写到哪里、以什么令牌写、哪一步被拒"。
+	char m_aQmSaveDiagnostics[768] = "";
+	bool m_QmSaveDirectoryWritable = true;
 
 	CFifo m_Fifo;
 
@@ -415,6 +422,7 @@ public:
 	// 性能日志文件运行时开/关（供 client.cpp 启动与主循环调用）。
 	void SetQmPerfFileSwitch(std::shared_ptr<CQmPerfFileSwitchLogger> pSwitch);
 	void UpdateQmPerfFileLogger();
+	void QmProbeSaveDirectory();
 
 	// ----- send functions -----
 	int SendMsg(int Conn, CMsgPacker *pMsg, int Flags) override;
@@ -584,7 +592,9 @@ public:
 	//   poses_video   导出视频（走与 demo 导出相同的录制管线）
 	static void Con_RenderPoses(IConsole::IResult *pResult, void *pUserData);
 	static void Con_PosesOpen(IConsole::IResult *pResult, void *pUserData);
+#if defined(CONF_VIDEORECORDER)
 	static void Con_PosesVideo(IConsole::IResult *pResult, void *pUserData);
+#endif
 	static void Con_PosesClose(IConsole::IResult *pResult, void *pUserData);
 
 	// 读文件 + 解析 + 合成快照 + 应用两次。失败返回 false 并打印原因。
@@ -764,6 +774,7 @@ public:
 	// gfx
 	void Notify(const char *pTitle, const char *pMessage) override;
 	void OnWindowResize() override;
+	void QueueVSyncChange(bool State) override;
 	void BenchmarkQuit(int Seconds, const char *pFilename);
 
 	void EnsureWindowShown();
