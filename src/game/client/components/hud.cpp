@@ -4890,11 +4890,8 @@ void CHud::RenderMediaIsland()
 	const float ScreenPixelSize = std::max(
 		(TransformedScreenX1 - TransformedScreenX0) / std::max(1, Graphics()->ScreenWidth()),
 		(TransformedScreenY1 - TransformedScreenY0) / std::max(1, Graphics()->ScreenHeight()));
-	CurrentSdfState.m_MainRect = ShellPose.ShellRect(MainIslandSdfRect);
-	const float HostScale = AnimState.m_FinishSummaryMotion.HostScale();
-	CurrentSdfState.m_MainRect.x += CurrentSdfState.m_MainRect.w * (1.0f - HostScale) * 0.5f;
-	CurrentSdfState.m_MainRect.w *= HostScale;
-	CurrentSdfState.m_MainRect.h *= 1.0f + (HostScale - 1.0f) * 0.45f;
+	const CUIRect RestShell = ShellPose.ShellRect(MainIslandSdfRect);
+	CurrentSdfState.m_MainRect = AnimState.m_FinishSummaryMotion.HostRect(RestShell);
 	const auto FinishPose = FinishLayout(CurrentSdfState.m_MainRect);
 	const bool FinishConnected = RenderFinish && FinishPose.m_Connection > 0.0f;
 	if(FinishConnected)
@@ -4907,7 +4904,7 @@ void CHud::RenderMediaIsland()
 	}
 	CurrentSdfState.m_ShellRippleAmplitude = ShellPose.RippleAmplitude(MainIslandSdfRect, ScreenPixelSize) * EntranceContentAlpha;
 	CurrentSdfState.m_ShellRipplePhase = ShellPose.m_RipplePhase;
-	CurrentSdfState.m_MainRadius = EntrancePose.m_Radius;
+	CurrentSdfState.m_MainRadius = EntrancePose.m_Radius + std::max(0.0f, RestShell.y - CurrentSdfState.m_MainRect.y);
 	CurrentSdfState.m_MainCorners = HudEditorScope.m_Corners;
 	CurrentSdfState.m_MainDisabledCornerRadius = EntrancePose.m_DisabledCornerRadius;
 	CurrentSdfState.m_ItemCount = SatelliteRenderItemCount;

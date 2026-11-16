@@ -169,12 +169,27 @@ TEST(QmFinishSummaryMotion, HostReversesFromCurrentShapeWhenDismissedDuringGrowt
 	qm_finish_summary::CCardMotion Motion;
 	Motion.Update(1, 0.0, true, 0.0f, {}, 2);
 	Motion.Update(1, 0.1, true, 0.5f, {}, 2);
-	const float Before = Motion.HostScale();
-	EXPECT_LT(Before, 1.0f);
+	const CUIRect Host{70, 4, 60, 16};
+	const CUIRect Before = Motion.HostRect(Host);
+	EXPECT_LT(Before.w, Host.w);
 	Motion.Update(1, 0.1, false, 0.5f, {}, 2);
-	EXPECT_FLOAT_EQ(Motion.HostScale(), Before);
+	EXPECT_FLOAT_EQ(Motion.HostRect(Host).w, Before.w);
 	Motion.Update(1, 0.3, false, 0.3f, {}, 2);
-	EXPECT_GT(Motion.HostScale(), 1.0f);
+	EXPECT_GT(Motion.HostRect(Host).w, Host.w);
+}
+
+TEST(QmFinishSummaryMotion, ClosingExpandsEachHostEdgeByTheSameDistance)
+{
+	const CUIRect Host{20, 8, 140, 16};
+	qm_finish_summary::CCardMotion Motion;
+	Motion.Update(1, 0.0, true, 1.0f, {}, 2);
+	Motion.Update(1, 0.2, false, 0.5f, {}, 2);
+	const CUIRect Expanded = Motion.HostRect(Host);
+	const float Outset = Host.y - Expanded.y;
+	ASSERT_GT(Outset, 0.0f);
+	EXPECT_NEAR(Host.x - Expanded.x, Outset, 0.0001f);
+	EXPECT_NEAR(Expanded.x + Expanded.w - (Host.x + Host.w), Outset, 0.0001f);
+	EXPECT_NEAR(Expanded.y + Expanded.h - (Host.y + Host.h), Outset, 0.0001f);
 }
 
 TEST(QmFinishSummaryMotion, DisablingMotionLevelsTheCardImmediately)
@@ -187,5 +202,10 @@ TEST(QmFinishSummaryMotion, DisablingMotionLevelsTheCardImmediately)
 	Motion.Update(1, 6.0, true, 1.0f, {-8, 6}, 0);
 	EXPECT_FLOAT_EQ(Motion.TiltX(), 0.0f);
 	EXPECT_FLOAT_EQ(Motion.TiltY(), 0.0f);
-	EXPECT_FLOAT_EQ(Motion.HostScale(), 1.0f);
+	const CUIRect Host{70, 4, 60, 16};
+	const CUIRect Rect = Motion.HostRect(Host);
+	EXPECT_FLOAT_EQ(Rect.x, Host.x);
+	EXPECT_FLOAT_EQ(Rect.y, Host.y);
+	EXPECT_FLOAT_EQ(Rect.w, Host.w);
+	EXPECT_FLOAT_EQ(Rect.h, Host.h);
 }

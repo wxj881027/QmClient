@@ -57,8 +57,8 @@ namespace qm_finish_summary
 		const float Pull = T * T * (2.0f - T);
 		const float Overlap = Island.h * 0.12f;
 		const float MouthY = Island.y + Island.h - Overlap;
-		const float Top = mix(From.y, MouthY, NeckEase);
-		const float Bottom = mix(From.y + From.h, MouthY, Pull);
+		const float Top = std::lerp(From.y, MouthY, NeckEase);
+		const float Bottom = std::lerp(From.y + From.h, MouthY, Pull);
 		const float Width = From.w * (1.0f - Pull);
 		const float HostCenter = Island.x + Island.w * 0.5f;
 		const float Center = mix(From.x + From.w * 0.5f, HostCenter, NeckEase);
@@ -116,7 +116,21 @@ namespace qm_finish_summary
 
 		float TiltX() const { return m_Tilt.x; }
 		float TiltY() const { return m_Tilt.y; }
-		float HostScale() const { return m_HostScale; }
+		CUIRect HostRect(CUIRect Shell) const
+		{
+			if(m_HostScale > 1.0f)
+			{
+				// 收回时四条边向外移动相同的距离，长条形主岛也能看清上下膨胀。
+				Shell.Margin(-Shell.h * (m_HostScale - 1.0f), &Shell);
+			}
+			else
+			{
+				Shell.x += Shell.w * (1.0f - m_HostScale) * 0.5f;
+				Shell.w *= m_HostScale;
+				Shell.h *= 1.0f + (m_HostScale - 1.0f) * 0.45f;
+			}
+			return Shell;
+		}
 	};
 }
 
