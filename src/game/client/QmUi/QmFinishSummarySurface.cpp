@@ -5,6 +5,8 @@
 
 #include <engine/shared/config.h>
 
+#include <game/client/components/qmclient/finish_summary_data.h>
+
 #include <algorithm>
 #include <cmath>
 
