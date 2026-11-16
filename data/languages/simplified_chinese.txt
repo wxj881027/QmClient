@@ -7316,8 +7316,8 @@ Import merges friends and keeps local duplicates by default. Codes contain priva
 Imported
 == 导入
 
-Improved +%s
-== 进步 +%s
+Improved -%s
+== 进步 -%s
 
 Improved anti ping
 == 改进版延迟补偿
@@ -8038,9 +8038,6 @@ Last seen (DDStats): %s
 
 Last successful sync: %s
 == 上次成功同步：%s
-
-Last sync
-== 上次同步
 
 Last teleport
 == 上次传送
@@ -14951,8 +14948,8 @@ Slow down the demo
 Slower
 == 较慢
 
-Slower -%s
-== 退步 -%s
+Slower +%s
+== 退步 +%s
 
 Slower export playback
 == 降低导出播放速度

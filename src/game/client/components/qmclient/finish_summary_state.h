@@ -30,8 +30,7 @@ namespace QmFinishSummary
 				return m_RunStartTick == RunStartTick;
 
 			// 聊天播报只有厘秒精度；未知起跑 tick 时在短窗口内合并两个消息来源。
-			const int64_t Difference = m_Snapshot->m_TimeMs - Incoming.m_TimeMs;
-			return Difference > -10 && Difference < 10 &&
+			return MatchesFinish(Incoming.m_ClientId, Incoming.m_TimeMs) &&
 			       Now >= m_ReceivedAt && Now - m_ReceivedAt < 1.0;
 		}
 
@@ -92,6 +91,13 @@ namespace QmFinishSummary
 		}
 
 		bool Visible() const { return m_Visible; }
+		bool MatchesFinish(int ClientId, int64_t TimeMs) const
+		{
+			if(!m_Snapshot || ClientId < 0 || m_Snapshot->m_ClientId != ClientId || TimeMs <= 0 || m_Snapshot->m_TimeMs <= 0)
+				return false;
+			const int64_t Difference = m_Snapshot->m_TimeMs - TimeMs;
+			return Difference > -10 && Difference < 10;
+		}
 		const SSnapshot *Snapshot() const { return m_Snapshot ? &*m_Snapshot : nullptr; }
 		SSnapshot *MutableSnapshot() { return m_Snapshot ? &*m_Snapshot : nullptr; }
 	};

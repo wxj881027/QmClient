@@ -6676,7 +6676,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmFinishSummary.cpp",
       "context": "",
-      "line": 223
+      "line": 254
     },
     {
       "key": "Axiom score request failed",
@@ -10344,7 +10344,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmFinishSummary.cpp",
       "context": "",
-      "line": 221
+      "line": 252
     },
     {
       "key": "Chinese (Simplified)",
@@ -12220,7 +12220,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmFinishSummary.cpp",
       "context": "",
-      "line": 146
+      "line": 175
     },
     {
       "key": "Completion records unavailable. Try refreshing.",
@@ -25471,7 +25471,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmFinishSummary.cpp",
       "context": "",
-      "line": 119
+      "line": 128
     },
     {
       "key": "First page in console",
@@ -27816,7 +27816,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmFinishSummary.cpp",
       "context": "",
-      "line": 223
+      "line": 254
     },
     {
       "key": "Global toggle key",
@@ -31242,11 +31242,11 @@
       "line": 526
     },
     {
-      "key": "Improved +%s",
+      "key": "Improved -%s",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmFinishSummary.cpp",
       "context": "",
-      "line": 140
+      "line": 162
     },
     {
       "key": "Improved anti ping",
@@ -34014,27 +34014,6 @@
       "line": 4007
     },
     {
-      "key": "Last sync",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/QmUi/QmFinishSummary.cpp",
-      "context": "",
-      "line": 54
-    },
-    {
-      "key": "Last sync",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/QmUi/QmFinishSummary.cpp",
-      "context": "",
-      "line": 235
-    },
-    {
-      "key": "Last sync",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/QmUi/QmFinishSummary.cpp",
-      "context": "",
-      "line": 240
-    },
-    {
       "key": "Last teleport",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
@@ -35600,7 +35579,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmFinishSummary.cpp",
       "context": "",
-      "line": 50
+      "line": 54
     },
     {
       "key": "Loading…",
@@ -37175,7 +37154,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmFinishSummary.cpp",
       "context": "",
-      "line": 126
+      "line": 135
     },
     {
       "key": "Matched with callable peer",
@@ -40668,21 +40647,28 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmFinishSummary.cpp",
       "context": "",
-      "line": 56
+      "line": 58
     },
     {
       "key": "No data",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmFinishSummary.cpp",
       "context": "",
-      "line": 102
+      "line": 118
     },
     {
       "key": "No data",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmFinishSummary.cpp",
       "context": "",
-      "line": 184
+      "line": 174
+    },
+    {
+      "key": "No data",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/QmFinishSummary.cpp",
+      "context": "",
+      "line": 232
     },
     {
       "key": "No delay: same-frame only",
@@ -44854,7 +44840,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmFinishSummary.cpp",
       "context": "",
-      "line": 52
+      "line": 56
     },
     {
       "key": "Per-name volume (name=percent)",
@@ -44945,14 +44931,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmFinishSummary.cpp",
       "context": "",
-      "line": 123
+      "line": 132
     },
     {
       "key": "Personal best pending",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmFinishSummary.cpp",
       "context": "",
-      "line": 132
+      "line": 141
     },
     {
       "key": "Personal best:",
@@ -56446,7 +56432,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmFinishSummary.cpp",
       "context": "",
-      "line": 219
+      "line": 250
     },
     {
       "key": "Server region. Used for region bans",
@@ -62126,11 +62112,11 @@
       "line": 32
     },
     {
-      "key": "Slower -%s",
+      "key": "Slower +%s",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmFinishSummary.cpp",
       "context": "",
-      "line": 140
+      "line": 162
     },
     {
       "key": "Slower export playback",
@@ -62144,7 +62130,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmFinishSummary.cpp",
       "context": "",
-      "line": 129
+      "line": 138
     },
     {
       "key": "Small Tee size",
@@ -68556,7 +68542,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmFinishSummary.cpp",
       "context": "",
-      "line": 189
+      "line": 217
     },
     {
       "key": "Time to wait before changing team: %s",
@@ -69725,7 +69711,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmFinishSummary.cpp",
       "context": "",
-      "line": 151
+      "line": 182
     },
     {
       "key": "Total: %d save(s)",

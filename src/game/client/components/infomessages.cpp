@@ -111,6 +111,7 @@ CInfoMessages::CInfoMsg CInfoMessages::CreateInfoMsg(EType Type)
 	InfoMsg.m_FlagCarrierBlue = -1;
 	InfoMsg.m_TeamSize = 0;
 
+	InfoMsg.m_TimeMs = 0;
 	InfoMsg.m_Diff = 0;
 	InfoMsg.m_aTimeText[0] = '\0';
 	InfoMsg.m_aDiffText[0] = '\0';
@@ -297,6 +298,7 @@ void CInfoMessages::OnRaceFinishMessage(const CNetMsg_Sv_RaceFinish *pMsg)
 	GameClient()->FormatStreamerName(Finish.m_aVictimIds[0], Finish.m_aVictimName, sizeof(Finish.m_aVictimName));
 	Finish.m_apVictimManagedTeeRenderInfos[0] = GameClient()->CreateManagedTeeRenderInfo(GameClient()->m_aClients[pMsg->m_ClientId]);
 
+	Finish.m_TimeMs = pMsg->m_Time;
 	Finish.m_Diff = pMsg->m_Diff;
 	Finish.m_RecordPersonal = pMsg->m_RecordPersonal || pMsg->m_RecordServer;
 	if(Finish.m_Diff)
@@ -480,6 +482,8 @@ void CInfoMessages::OnRender()
 			ResetMessage(InfoMsg);
 			continue;
 		}
+		if(InfoMsg.m_Type == EType::TYPE_FINISH && GameClient()->m_FinishSummary.SuppressesFinishMessage(InfoMsg.m_aVictimIds[0], InfoMsg.m_TimeMs))
+			continue;
 
 		bool FilteredName = QmStreamerWordFilter::Filter(InfoMsg.m_aVictimName, g_Config.m_QmStreamerFilterWords != 0);
 		FilteredName |= QmStreamerWordFilter::Filter(InfoMsg.m_aKillerName, g_Config.m_QmStreamerFilterWords != 0);

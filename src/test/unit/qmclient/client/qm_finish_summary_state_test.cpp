@@ -126,6 +126,65 @@ TEST(QmFinishSummaryState, DifferentFinishIdentityIsNotSuppressed)
 	}
 }
 
+TEST(QmFinishSummaryState, FinishMessageMatchingRequiresCurrentPlayerAndTime)
+{
+	QmFinishSummary::CState State;
+	EXPECT_FALSE(State.MatchesFinish(7, 100000));
+	ASSERT_TRUE(State.Begin(Finish(), 10.0, 100));
+	EXPECT_TRUE(State.MatchesFinish(7, 100000));
+	EXPECT_FALSE(State.MatchesFinish(8, 100000));
+	EXPECT_FALSE(State.MatchesFinish(-1, 100000));
+	EXPECT_FALSE(State.MatchesFinish(7, 120000));
+	EXPECT_FALSE(State.MatchesFinish(7, 0));
+	EXPECT_FALSE(State.MatchesFinish(7, -1));
+}
+
+TEST(QmFinishSummaryState, FinishMessageMatchingAcceptsOnlySubCentisecondPrecisionDifferences)
+{
+	QmFinishSummary::CState State;
+	ASSERT_TRUE(State.Begin(Finish(100020), 10.0, -1));
+	EXPECT_TRUE(State.MatchesFinish(7, 100011));
+	EXPECT_TRUE(State.MatchesFinish(7, 100019));
+	EXPECT_TRUE(State.MatchesFinish(7, 100029));
+	EXPECT_FALSE(State.MatchesFinish(7, 100010));
+	EXPECT_FALSE(State.MatchesFinish(7, 100030));
+	State.MutableSnapshot()->m_TimeMs = 100019;
+	EXPECT_TRUE(State.MatchesFinish(7, 100020));
+}
+
+TEST(QmFinishSummaryState, ClosingRetainsFinishMessageMatchDuringRestart)
+{
+	QmFinishSummary::CState State;
+	ASSERT_TRUE(State.Begin(Finish(), 10.0, 100));
+	State.Dismiss();
+	EXPECT_TRUE(State.MatchesFinish(7, 100000));
+	State.StartRun();
+	EXPECT_TRUE(State.MatchesFinish(7, 100000));
+	EXPECT_FALSE(State.Visible());
+}
+
+TEST(QmFinishSummaryState, ExpiredSummaryRetainsFinishMessageMatchUntilContextReset)
+{
+	QmFinishSummary::CState State;
+	ASSERT_TRUE(State.Begin(Finish(), 10.0, 100));
+	State.SetExpanded(true, 11.0);
+	State.Advance(23.0);
+	EXPECT_FALSE(State.Visible());
+	EXPECT_TRUE(State.MatchesFinish(7, 100000));
+	State.Reset();
+	EXPECT_FALSE(State.MatchesFinish(7, 100000));
+}
+
+TEST(QmFinishSummaryState, NewSummaryReplacesTheFinishMessageMatch)
+{
+	QmFinishSummary::CState State;
+	ASSERT_TRUE(State.Begin(Finish(), 10.0, 100));
+	State.StartRun();
+	ASSERT_TRUE(State.Begin(Finish(120000), 20.0, 200));
+	EXPECT_FALSE(State.MatchesFinish(7, 100000));
+	EXPECT_TRUE(State.MatchesFinish(7, 120000));
+}
+
 TEST(QmFinishSummaryState, ExpansionTimeDoesNotConsumeVisibleHoldTime)
 {
 	QmFinishSummary::CState State;

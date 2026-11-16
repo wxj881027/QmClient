@@ -16236,14 +16236,9 @@ key = "First finish"
 simplified_chinese = "首次通关"
 
 [[message]]
-key = "Improved +%s"
+key = "Improved -%s"
 [message.translations]
-simplified_chinese = "进步 +%s"
-
-[[message]]
-key = "Last sync"
-[message.translations]
-simplified_chinese = "上次同步"
+simplified_chinese = "进步 -%s"
 
 [[message]]
 key = "Loading..."
@@ -16286,9 +16281,9 @@ key = "Show finish summary"
 simplified_chinese = "显示结算卡"
 
 [[message]]
-key = "Slower -%s"
+key = "Slower +%s"
 [message.translations]
-simplified_chinese = "退步 -%s"
+simplified_chinese = "退步 +%s"
 
 [[message]]
 key = "Slower than personal best"

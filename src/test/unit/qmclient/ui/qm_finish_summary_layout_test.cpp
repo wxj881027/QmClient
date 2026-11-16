@@ -10,17 +10,56 @@ TEST(QmFinishSummaryLayout, ExpandedCardStaysCenteredAndInsideViewport)
 		const CUIRect Rect = qm_finish_summary::ExpandedRect(Width, 300.0f, 5.0f);
 		EXPECT_FLOAT_EQ(Rect.y, 5.0f);
 		EXPECT_NEAR(Rect.x + Rect.w * 0.5f, Width * 0.5f, 0.001f);
-		EXPECT_GE(Rect.x, 20.0f);
-		EXPECT_LE(Rect.x + Rect.w, Width - 20.0f);
-		EXPECT_LE(Rect.y + Rect.h, 290.0f);
+		EXPECT_LE(Rect.w, Width * 0.25f);
+		EXPECT_LE(Rect.h, 60.0f);
+		EXPECT_NEAR(Rect.w / Rect.h, 480.0f / 216.0f, 0.001f);
 	}
 }
 
 TEST(QmFinishSummaryLayout, ShortViewportLimitsExpandedHeight)
 {
 	const CUIRect Rect = qm_finish_summary::ExpandedRect(533.0f, 100.0f, 10.0f);
-	EXPECT_FLOAT_EQ(Rect.h, 80.0f);
-	EXPECT_FLOAT_EQ(Rect.y + Rect.h, 90.0f);
+	EXPECT_FLOAT_EQ(Rect.h, 20.0f);
+	EXPECT_FLOAT_EQ(Rect.y + Rect.h, 30.0f);
+}
+
+TEST(QmFinishSummaryLayout, HudEditorScalingKeepsPhysicalCardWithinScreenFractions)
+{
+	for(const float Scale : {0.5f, 1.0f, 1.5f, 2.0f, 4.0f})
+	{
+		SCOPED_TRACE(Scale);
+		const CUIRect Rect = qm_finish_summary::ExpandedRect(1920.0f, 1080.0f, 10.0f, Scale);
+		EXPECT_LE(Rect.w * Scale, 480.0f);
+		EXPECT_LE(Rect.h * Scale, 216.0f);
+		EXPECT_GT(Rect.w, 0.0f);
+		EXPECT_NEAR(Rect.w / Rect.h, 480.0f / 216.0f, 0.001f);
+	}
+}
+
+TEST(QmFinishSummaryLayout, UltrawideViewportKeepsHeightLimitAndContentAspectRatio)
+{
+	const CUIRect Rect = qm_finish_summary::ExpandedRect(3440.0f, 1440.0f, 10.0f);
+	EXPECT_FLOAT_EQ(Rect.h, 288.0f);
+	EXPECT_NEAR(Rect.w, 640.0f, 0.001f);
+}
+
+TEST(QmFinishSummaryLayout, OuterShadowFitsInsidePhysicalSizeLimitAfterHudScaling)
+{
+	for(const float Scale : {0.5f, 1.0f, 2.0f, 4.0f})
+	{
+		SCOPED_TRACE(Scale);
+		const CUIRect Rect = qm_finish_summary::ExpandedRect(1920.0f, 1080.0f, 10.0f, Scale, 5.0f);
+		EXPECT_LE(Rect.w * Scale + 10.0f, 480.0f);
+		EXPECT_LE(Rect.h * Scale + 10.0f, 216.0f);
+	}
+}
+
+TEST(QmFinishSummaryLayout, CardNearBottomUsesRemainingHeightWithoutStretching)
+{
+	const CUIRect Rect = qm_finish_summary::ExpandedRect(533.3333f, 300.0f, 285.0f);
+	EXPECT_FLOAT_EQ(Rect.h, 15.0f);
+	EXPECT_FLOAT_EQ(Rect.y + Rect.h, 300.0f);
+	EXPECT_NEAR(Rect.w / Rect.h, 480.0f / 216.0f, 0.001f);
 }
 
 TEST(QmFinishSummaryLayout, ExpansionKeepsTopAnchorAndInterpolatesBothDimensions)

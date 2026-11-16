@@ -93,6 +93,7 @@ void CQmFinishSummary::OnReset()
 {
 	CancelRequests();
 	m_State.Reset();
+	m_pManagedTeeRenderInfo.reset();
 	m_Data = {};
 	m_Before = {};
 	m_Community = ECommunity::NONE;
@@ -478,6 +479,7 @@ void CQmFinishSummary::Finish(int64_t TimeMs, std::optional<int64_t> Difference,
 		}
 		return;
 	}
+	m_pManagedTeeRenderInfo = GameClient()->CreateManagedTeeRenderInfo(GameClient()->m_aClients[m_ClientId]);
 	m_Before = m_Data;
 	// 精确的服务端历史成绩补足网页基线；积分历史仍按对应社区身份判断。
 	m_Before.m_BestTimeMs = m_PreviousBest;
@@ -504,6 +506,17 @@ void CQmFinishSummary::Finish(int64_t TimeMs, std::optional<int64_t> Difference,
 	ResolveLocalRank(Summary, m_vFinishOnlineTimes, m_PreviousBest, m_FinishOnlineTimesKnown);
 	PrepareRequests(true);
 	RefreshSnapshot();
+}
+
+bool CQmFinishSummary::SuppressesFinishMessage(int ClientId, int64_t TimeMs) const
+{
+	if(!g_Config.m_QmFinishSummary || g_Config.m_QmHudIslandUseOriginalStyle || !g_Config.m_ClShowhud ||
+		Client()->State() != IClient::STATE_ONLINE || GameClient()->m_RankGhost.IsViewModeActive())
+		return false;
+	if(m_Connection != g_Config.m_ClDummy || m_ClientId != GameClient()->m_aLocalIds[g_Config.m_ClDummy])
+		return false;
+	// 收起时仍由保留快照匹配，消息沿用自身的十秒过期时间，关闭功能则立即恢复。
+	return m_State.MatchesFinish(ClientId, TimeMs);
 }
 
 void CQmFinishSummary::OnMessage(int MsgType, void *pRawMsg)

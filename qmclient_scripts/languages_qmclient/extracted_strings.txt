@@ -2437,7 +2437,7 @@ Import friend code
 Import from clipboard
 Import merges friends and keeps local duplicates by default. Codes contain private names and notes.
 Imported
-Improved +%s
+Improved -%s
 Improved anti ping
 In DDNet, played when a freeze heart freezes the player. Other modes may use it for health pickups.
 In DDNet, played when weapons are removed. Other modes may use it for armor pickups.
@@ -2678,7 +2678,6 @@ Last entered
 Last page in console
 Last seen (DDStats): %s
 Last successful sync: %s
-Last sync
 Last teleport
 Last verified approved update source
 Last viewed announcement content revision
@@ -4982,7 +4981,7 @@ Slide left
 Slightly fast encode
 Slow down the demo
 Slower
-Slower -%s
+Slower +%s
 Slower export playback
 Slower than personal best
 Small Tee size

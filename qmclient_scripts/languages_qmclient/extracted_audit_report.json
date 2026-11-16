@@ -1,6 +1,6 @@
 {
   "summary": {
-    "must_i18n": 11019,
+    "must_i18n": 11017,
     "business_data": 12938,
     "test_only": 6814,
     "needs_review": 4838,
@@ -18475,155 +18475,141 @@
     },
     {
       "file": "src/game/client/QmUi/QmFinishSummary.cpp",
-      "line": 50,
+      "line": 54,
       "text": "Loading...",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmFinishSummary.cpp",
-      "line": 52,
+      "line": 56,
       "text": "Pending sync",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmFinishSummary.cpp",
-      "line": 54,
-      "text": "Last sync",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/QmFinishSummary.cpp",
-      "line": 56,
+      "line": 58,
       "text": "No data",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmFinishSummary.cpp",
-      "line": 102,
+      "line": 118,
       "text": "No data",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmFinishSummary.cpp",
-      "line": 119,
+      "line": 128,
       "text": "First finish",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmFinishSummary.cpp",
-      "line": 123,
+      "line": 132,
       "text": "Personal best",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmFinishSummary.cpp",
-      "line": 126,
+      "line": 135,
       "text": "Matched personal best",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmFinishSummary.cpp",
-      "line": 129,
+      "line": 138,
       "text": "Slower than personal best",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmFinishSummary.cpp",
-      "line": 132,
+      "line": 141,
       "text": "Personal best pending",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmFinishSummary.cpp",
-      "line": 140,
-      "text": "Improved +%s",
+      "line": 162,
+      "text": "Improved -%s",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmFinishSummary.cpp",
-      "line": 140,
-      "text": "Slower -%s",
+      "line": 162,
+      "text": "Slower +%s",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmFinishSummary.cpp",
-      "line": 146,
-      "text": "Completed",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/QmFinishSummary.cpp",
-      "line": 151,
-      "text": "Total points",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/QmFinishSummary.cpp",
-      "line": 184,
+      "line": 174,
       "text": "No data",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmFinishSummary.cpp",
-      "line": 189,
+      "line": 175,
+      "text": "Completed",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/QmFinishSummary.cpp",
+      "line": 182,
+      "text": "Total points",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/QmFinishSummary.cpp",
+      "line": 217,
       "text": "Time to finish",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmFinishSummary.cpp",
-      "line": 219,
+      "line": 232,
+      "text": "No data",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/QmFinishSummary.cpp",
+      "line": 250,
       "text": "Server rank",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmFinishSummary.cpp",
-      "line": 221,
+      "line": 252,
       "text": "China rank",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmFinishSummary.cpp",
-      "line": 223,
+      "line": 254,
       "text": "Axiom rank",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmFinishSummary.cpp",
-      "line": 223,
+      "line": 254,
       "text": "Global rank",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/QmFinishSummary.cpp",
-      "line": 235,
-      "text": "Last sync",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/QmFinishSummary.cpp",
-      "line": 240,
-      "text": "Last sync",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
@@ -81834,49 +81820,49 @@
     },
     {
       "file": "src/game/client/QmUi/QmFinishSummary.cpp",
-      "line": 41,
+      "line": 45,
       "text": ",",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/QmUi/QmFinishSummary.cpp",
-      "line": 75,
+      "line": 82,
       "text": "/",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/QmFinishSummary.cpp",
-      "line": 115,
+      "line": 152,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/QmUi/QmFinishSummary.cpp",
-      "line": 146,
+      "line": 175,
       "text": " ",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/QmUi/QmFinishSummary.cpp",
-      "line": 148,
+      "line": 177,
       "text": "/",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/QmFinishSummary.cpp",
-      "line": 151,
+      "line": 182,
       "text": " ",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/QmUi/QmFinishSummary.cpp",
-      "line": 152,
+      "line": 184,
       "text": "+",
       "category": "business_data",
       "reason": "numeric display format template"

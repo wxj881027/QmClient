@@ -3270,6 +3270,7 @@ if(CLIENT)
     QmUi/QmLineInputMotion.h
     QmUi/QmFinishSummary.cpp
     QmUi/QmFinishSummary.h
+    QmUi/QmFinishSummaryPresentation.h
     QmUi/QmIslandSurface.cpp
     QmUi/QmIslandSurface.h
     QmUi/QmIslandNotice.h
@@ -4995,6 +4996,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_finish_summary_data_test.cpp
     src/test/unit/qmclient/client/qm_finish_summary_state_test.cpp
     src/test/unit/qmclient/ui/qm_finish_summary_layout_test.cpp
+    src/test/unit/qmclient/ui/qm_finish_summary_presentation_test.cpp
     src/test/integration/qmclient/client/qm_axiom_quad_collision_test.cpp
     src/test/contract/qmclient/client/qm_axiom_scores_contract_test.cpp
     src/test/unit/qmclient/client/qm_chat_emoji_test.cpp
