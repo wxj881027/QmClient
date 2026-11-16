@@ -3144,6 +3144,9 @@ if(CLIENT)
     input.cpp
     input.h
     input_sdl3.h
+    input_tsf.cpp
+    input_tsf.h
+    input_tsf_sink.h
     audio_sdl3.h
     sound_buffer.h
     keynames.cpp
@@ -5588,6 +5591,16 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     )
   endif()
 
+  # TSF 测试调用生产读取和回调接口，fake 只替代系统输入法的 COM 边界。
+  if(TARGET_OS STREQUAL "windows" AND MSVC)
+    list(APPEND TESTS
+      src/test/unit/engine/input_tsf_test.cpp
+      src/test/support/qm_tsf_test.h
+      src/test/integration/engine/input_tsf_lifecycle_test.cpp
+    )
+    list(APPEND TESTS_EXTRA src/engine/client/input_tsf.cpp)
+  endif()
+
   # 视频导出测试依赖 FFmpeg（video_export.cpp/video_encoder.cpp 实现），无 FFmpeg 时随模块一起裁掉
   if(VIDEORECORDER AND FFMPEG_FOUND)
     list(APPEND TESTS
@@ -5664,6 +5677,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   endif()
   if(TARGET_OS STREQUAL "windows")
     target_link_libraries(${TARGET_TESTRUNNER} bcrypt winhttp ws2_32)
+    if(MSVC)
+      target_link_libraries(${TARGET_TESTRUNNER} oleaut32)
+    endif()
   endif()
   if(FFMPEG_FOUND)
     target_link_libraries(${TARGET_TESTRUNNER} ${FFMPEG_LIBRARIES})
