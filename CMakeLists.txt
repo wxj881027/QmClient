@@ -3751,6 +3751,7 @@ if(CLIENT)
     components/qmclient/qm_developer_badge_motion.h
     components/qmclient/qm_title_badge.cpp
     components/qmclient/qm_title_badge.h
+    components/qmclient/qm_title_badge_motion.h
     components/qmclient/qm_title_appearance.h
     components/qmclient/qm_title_style.cpp
     components/qmclient/qm_title_render.cpp

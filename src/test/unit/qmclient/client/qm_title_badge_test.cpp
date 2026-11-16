@@ -184,6 +184,22 @@ TEST(QmTitleBadge, ServerProfilePreservesBlackAndFullyTransparentAppearance)
 	EXPECT_EQ(Appearance.m_Opacity, 0);
 }
 
+TEST(QmTitleBadge, SavedCelestialStyleReturnsToTheSameSettingsSelection)
+{
+	const char *apIds[] = {"moon", "sun", "earth", "morning_star", "black_hole"};
+	for(int Index = 0; Index < static_cast<int>(std::size(apIds)); ++Index)
+	{
+		SCOPED_TRACE(apIds[Index]);
+		const auto Style = QmTitleBadgeStyleFromIndex(Index);
+		EXPECT_STREQ(QmTitleBadgeStyleId(Style), apIds[Index]);
+		const std::string Profile = std::string("{\"style\":\"") + apIds[Index] + "\",\"color\":0,\"opacity\":100}";
+		const auto Json = ReadJson(Profile.c_str());
+		SQmTitleAppearance Loaded;
+		ASSERT_TRUE(ParseQmTitleAppearance(Json.get(), Loaded));
+		EXPECT_EQ(QmTitleBadgeStyleIndex(Loaded.m_Style), Index);
+	}
+}
+
 TEST(QmTitleBadge, InvalidOrMissingAppearanceFallsBackAsOneUnit)
 {
 	for(const char *pJson : {"null", "[]", R"({"style":"sun","color":-1,"opacity":80})",

@@ -4178,7 +4178,8 @@ void CChat::OnRender()
 			for(const auto &Badge : Line.m_vTitleBadges)
 			{
 				GameClient()->m_QmClient.TitleBadge().RenderSurface(Graphics(),
-					{Badge.m_Rect.x + AnimOffsetX, Badge.m_Rect.y + AnimOffsetY, Badge.m_Rect.w, Badge.m_Rect.h}, Badge.m_Appearance, AnimAlpha * DefaultTextColor.a);
+					{Badge.m_Rect.x + AnimOffsetX, Badge.m_Rect.y + AnimOffsetY, Badge.m_Rect.w, Badge.m_Rect.h}, Badge.m_Appearance, AnimAlpha * DefaultTextColor.a,
+					GameClient()->m_QmClient.TitleAnimationTime());
 				Badge.RenderText(TextRender(), AnimAlpha * DefaultTextColor.a, vec2(AnimOffsetX, AnimOffsetY));
 			}
 

@@ -4,6 +4,7 @@
 #include <gtest/gtest.h>
 #include <test/support/icon_benchmark_graphics.h>
 
+#include <array>
 #include <cstring>
 #include <unordered_set>
 #include <vector>
@@ -76,6 +77,88 @@ namespace
 		void DrawCircle(float X, float Y, float Radius, int Segments) override { EXPECT_GT(Radius, 0.0f); }
 		void QuadsDrawFreeform(const CFreeformItem *pItems, int Count) override { m_vImmediate.insert(m_vImmediate.end(), pItems, pItems + Count); }
 	};
+
+	class CMotionGraphics : public CBadgeGraphics
+	{
+		std::array<float, 4> m_aAlpha{};
+		bool m_HasGradient = false;
+
+	public:
+		// 只采集带逐顶点颜色的动效网格；静态底纹和文字不参与两帧对比。
+		std::vector<vec3> m_vMotion;
+		void SetColorVertex(const CColorVertex *pColors, size_t Count) override
+		{
+			ASSERT_EQ(Count, m_aAlpha.size());
+			for(size_t i = 0; i < Count; ++i)
+				m_aAlpha.at(pColors[i].m_Index) = pColors[i].m_A;
+			m_HasGradient = true;
+		}
+		void QuadsDrawFreeform(const CFreeformItem *pItems, int Count) override
+		{
+			if(!m_HasGradient)
+				return;
+			for(int i = 0; i < Count; ++i)
+			{
+				const auto &Q = pItems[i];
+				m_vMotion.emplace_back(Q.m_X0, Q.m_Y0, m_aAlpha[0]);
+				m_vMotion.emplace_back(Q.m_X1, Q.m_Y1, m_aAlpha[1]);
+				m_vMotion.emplace_back(Q.m_X2, Q.m_Y2, m_aAlpha[2]);
+				m_vMotion.emplace_back(Q.m_X3, Q.m_Y3, m_aAlpha[3]);
+			}
+			m_HasGradient = false;
+		}
+	};
+}
+
+TEST(QmBadgeGeometryRender, AllFiveCelestialSurfacesMoveWithTheTitleClockAndLoopAtTheHour)
+{
+	CMotionGraphics Graphics;
+	CQmTitleBadge Sponsor;
+	Sponsor.Init(&Graphics);
+	for(int i = 0; i < QM_TITLE_BADGE_STYLE_COUNT; ++i)
+	{
+		const SQmTitleAppearance Appearance{QmTitleBadgeStyleFromIndex(i), 0x916abd, 100};
+		SCOPED_TRACE(QmTitleBadgeStyleId(Appearance.m_Style));
+		const auto Frame = [&](double Time) {
+			Graphics.m_vMotion.clear();
+			Sponsor.RenderSurface(&Graphics, {48, 16, 117, 24}, Appearance, 1.0f, Time);
+			return Graphics.m_vMotion;
+		};
+		const auto Initial = Frame(0.0);
+		ASSERT_FALSE(Initial.empty());
+		EXPECT_NE(Initial, Frame(0.75));
+		EXPECT_EQ(Initial, Frame(3600.0));
+	}
+	Sponsor.Shutdown(&Graphics);
+}
+
+TEST(QmBadgeGeometryRender, WideAndShortTitlesKeepLightAcrossTheInteriorAndRespectFade)
+{
+	CMotionGraphics Graphics;
+	CQmTitleBadge Sponsor;
+	Sponsor.Init(&Graphics);
+	for(int i = 0; i < QM_TITLE_BADGE_STYLE_COUNT; ++i)
+	{
+		const SQmTitleAppearance Appearance{QmTitleBadgeStyleFromIndex(i), 0xb08a64, 50};
+		for(float Width : {42.0f, 117.0f, 210.0f})
+		{
+			SCOPED_TRACE(::testing::Message() << QmTitleBadgeStyleId(Appearance.m_Style) << " " << Width);
+			Graphics.m_vMotion.clear();
+			Sponsor.RenderSurface(&Graphics, {0, 0, Width, 24}, Appearance, 0.5f, 1.0);
+			std::array<bool, 3> aLit{};
+			for(const vec3 &Point : Graphics.m_vMotion)
+			{
+				const vec2 Spine(std::clamp(Point.x, 12.0f, Width - 12.0f), 12.0f);
+				ASSERT_LE(distance(vec2(Point.x, Point.y), Spine), 11.001f);
+				ASSERT_GE(Point.z, 0.0f);
+				ASSERT_LE(Point.z, 0.25001f);
+				if(Point.z > 0.035f)
+					aLit.at(std::min(2, static_cast<int>(3.0f * Point.x / Width))) = true;
+			}
+			EXPECT_TRUE(aLit[0] && aLit[1] && aLit[2]);
+		}
+	}
+	Sponsor.Shutdown(&Graphics);
 }
 
 TEST(QmBadgeGeometryRender, BothBadgesUseTheSharedGeometricCapsuleWithoutTextureLoading)
@@ -89,7 +172,7 @@ TEST(QmBadgeGeometryRender, BothBadgesUseTheSharedGeometricCapsuleWithoutTexture
 	Developer.Render(&Graphics, {0, 0, 91, 24}, 1.0f, 0.0);
 	ASSERT_EQ(Graphics.m_vCapsules.size(), 2u);
 	EXPECT_FALSE(Graphics.m_vDraws.empty());
-	Sponsor.RenderSurface(&Graphics, {0, 0, 117, 24}, {}, 1.0f);
+	Sponsor.RenderSurface(&Graphics, {0, 0, 117, 24}, {}, 1.0f, CQmTitleBadge::NO_ANIMATION);
 	EXPECT_EQ(Graphics.m_vCapsules.size(), 5u);
 	Developer.Shutdown(&Graphics);
 	Sponsor.Shutdown(&Graphics);
@@ -103,7 +186,7 @@ TEST(QmBadgeGeometryRender, RepeatedRenderingReusesUploadedGeometry)
 	Sponsor.Init(&Graphics);
 	const int Creates = Graphics.m_Creates;
 	for(int Frame = 0; Frame < 5; ++Frame)
-		Sponsor.RenderSurface(&Graphics, {10, 20, 160, 24}, {}, 1.0f);
+		Sponsor.RenderSurface(&Graphics, {10, 20, 160, 24}, {}, 1.0f, CQmTitleBadge::NO_ANIMATION);
 	EXPECT_EQ(Graphics.m_Creates, Creates);
 	Sponsor.Shutdown(&Graphics);
 }
@@ -155,7 +238,7 @@ TEST(QmBadgeGeometryRender, SponsorEndPatternsKeepTheirAspectRatioForLongTitles)
 	CBadgeGraphics Graphics;
 	CQmTitleBadge Sponsor;
 	Sponsor.Init(&Graphics);
-	Sponsor.RenderSurface(&Graphics, {0, 0, 250, 48}, {}, 1.0f);
+	Sponsor.RenderSurface(&Graphics, {0, 0, 250, 48}, {}, 1.0f, CQmTitleBadge::NO_ANIMATION);
 	ASSERT_EQ(Graphics.m_vDraws.size(), 4u);
 	EXPECT_EQ(Graphics.m_vDraws[0].m_Scale, vec2(2, 2));
 	EXPECT_EQ(Graphics.m_vDraws[2].m_Scale, vec2(2, 2));
@@ -168,9 +251,9 @@ TEST(QmBadgeGeometryRender, HiddenAndTransparentBadgesDoNotDraw)
 	CBadgeGraphics Graphics;
 	CQmTitleBadge Sponsor;
 	Sponsor.Init(&Graphics);
-	Sponsor.RenderSurface(&Graphics, {0, 0, 117, 24}, {}, 0.0f);
-	Sponsor.RenderSurface(&Graphics, {0, 0, 117, 24}, {EQmTitleBadgeStyle::MOON, 0, 0}, 1.0f);
-	Sponsor.RenderSurface(&Graphics, {0, 0, 0, 24}, {}, 1.0f);
+	Sponsor.RenderSurface(&Graphics, {0, 0, 117, 24}, {}, 0.0f, CQmTitleBadge::NO_ANIMATION);
+	Sponsor.RenderSurface(&Graphics, {0, 0, 117, 24}, {EQmTitleBadgeStyle::MOON, 0, 0}, 1.0f, CQmTitleBadge::NO_ANIMATION);
+	Sponsor.RenderSurface(&Graphics, {0, 0, 0, 24}, {}, 1.0f, CQmTitleBadge::NO_ANIMATION);
 	EXPECT_TRUE(Graphics.m_vCapsules.empty());
 	EXPECT_TRUE(Graphics.m_vDraws.empty());
 	Sponsor.Shutdown(&Graphics);
@@ -210,7 +293,7 @@ TEST(QmBadgeGeometryRender, ShortTitleCropsTheLeftDecorationWithoutCompressingIt
 	CBadgeGraphics Graphics;
 	CQmTitleBadge Sponsor;
 	Sponsor.Init(&Graphics);
-	Sponsor.RenderSurface(&Graphics, {0, 0, 65, 24}, {}, 1.0f);
+	Sponsor.RenderSurface(&Graphics, {0, 0, 65, 24}, {}, 1.0f, CQmTitleBadge::NO_ANIMATION);
 	ASSERT_FALSE(Graphics.m_vImmediate.empty());
 	for(const auto &Q : Graphics.m_vImmediate)
 		EXPECT_LE(std::max({Q.m_X0, Q.m_X1, Q.m_X2, Q.m_X3}), 33.0001f);

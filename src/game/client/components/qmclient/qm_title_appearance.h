@@ -7,12 +7,16 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iterator>
 #include <string>
 
 enum class EQmTitleBadgeStyle
 {
 	MOON,
 	SUN,
+	EARTH,
+	MORNING_STAR,
+	BLACK_HOLE,
 };
 
 struct SQmTitleAppearance
@@ -28,14 +32,52 @@ struct SQmTitleAppearance
 	bool operator!=(const SQmTitleAppearance &Other) const { return !(*this == Other); }
 };
 
+inline constexpr const char *QM_TITLE_BADGE_STYLE_IDS[] = {"moon", "sun", "earth", "morning_star", "black_hole"};
+inline constexpr int QM_TITLE_BADGE_STYLE_COUNT = std::size(QM_TITLE_BADGE_STYLE_IDS);
+static_assert(static_cast<int>(EQmTitleBadgeStyle::BLACK_HOLE) + 1 == QM_TITLE_BADGE_STYLE_COUNT);
+
+inline EQmTitleBadgeStyle QmTitleBadgeStyleFromIndex(int Index)
+{
+	return Index >= 0 && Index < QM_TITLE_BADGE_STYLE_COUNT ? static_cast<EQmTitleBadgeStyle>(Index) : EQmTitleBadgeStyle::MOON;
+}
+
+inline int QmTitleBadgeStyleIndex(EQmTitleBadgeStyle Style)
+{
+	return static_cast<int>(QmTitleBadgeStyleFromIndex(static_cast<int>(Style)));
+}
+
 inline const char *QmTitleBadgeStyleId(EQmTitleBadgeStyle Style)
 {
-	return Style == EQmTitleBadgeStyle::SUN ? "sun" : "moon";
+	return QM_TITLE_BADGE_STYLE_IDS[QmTitleBadgeStyleIndex(Style)];
+}
+
+inline bool QmTitleBadgeStyleFromId(const char *pId, EQmTitleBadgeStyle &Out)
+{
+	if(pId)
+	{
+		for(int i = 0; i < QM_TITLE_BADGE_STYLE_COUNT; ++i)
+		{
+			if(str_comp(pId, QM_TITLE_BADGE_STYLE_IDS[i]) == 0)
+			{
+				Out = static_cast<EQmTitleBadgeStyle>(i);
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
 inline unsigned QmTitleBadgeDefaultColor(EQmTitleBadgeStyle Style)
 {
-	return Style == EQmTitleBadgeStyle::SUN ? 0xbd862d : 0x9562ba;
+	switch(Style)
+	{
+	case EQmTitleBadgeStyle::SUN: return 0xbd862d;
+	case EQmTitleBadgeStyle::EARTH: return 0x3b86c4;
+	case EQmTitleBadgeStyle::MORNING_STAR: return 0xd4af5a;
+	case EQmTitleBadgeStyle::BLACK_HOLE: return 0xd96b27;
+	case EQmTitleBadgeStyle::MOON:
+	default: return 0x9562ba;
+	}
 }
 
 inline std::string QmTitleBadgeText(const char *pTitle)
@@ -78,7 +120,32 @@ struct SQmTitleBadgePalette
 
 inline SQmTitleBadgePalette QmTitleBadgePalette(const SQmTitleAppearance &Appearance, float Alpha = 1.0f)
 {
-	const bool Sun = Appearance.m_Style == EQmTitleBadgeStyle::SUN;
+	struct SBaseColors
+	{
+		unsigned m_Background;
+		unsigned m_Border;
+		unsigned m_Text;
+		unsigned m_Icon;
+	};
+	SBaseColors Base{0x35273f, 0x695178, 0xedd8ff, 0xc397e2};
+	switch(Appearance.m_Style)
+	{
+	case EQmTitleBadgeStyle::SUN:
+		Base = {0x44301b, 0x8d6837, 0xffe6a8, 0xf2c66d};
+		break;
+	case EQmTitleBadgeStyle::EARTH:
+		Base = {0x16293b, 0x3d6e96, 0xdaf0ff, 0x72bef5};
+		break;
+	case EQmTitleBadgeStyle::MORNING_STAR:
+		Base = {0x2d2920, 0x7d6b43, 0xfff5d6, 0xf5db8c};
+		break;
+	case EQmTitleBadgeStyle::BLACK_HOLE:
+		Base = {0x0d0907, 0x7a3b16, 0xffdfc2, 0xf08c3a};
+		break;
+	case EQmTitleBadgeStyle::MOON:
+	default:
+		break;
+	}
 	const ColorHSLA Reference = color_cast<ColorHSLA>(ColorRGBA(QmTitleBadgeDefaultColor(Appearance.m_Style)));
 	const ColorHSLA Tint = color_cast<ColorHSLA>(ColorRGBA(Appearance.m_Color & 0xffffff));
 	const float Opacity = std::clamp(Alpha, 0.0f, 1.0f) * std::clamp(Appearance.m_Opacity, 0, 100) / 100.0f;
@@ -90,8 +157,7 @@ inline SQmTitleBadgePalette QmTitleBadgePalette(const SQmTitleAppearance &Appear
 		Color.l = std::clamp(Color.l + Tint.l - Reference.l, 0.0f, 1.0f);
 		return color_cast<ColorRGBA>(Color.WithAlpha(Opacity));
 	};
-	return {Shade(Sun ? 0x44301b : 0x35273f), Shade(Sun ? 0x8d6837 : 0x695178),
-		Shade(Sun ? 0xffe6a8 : 0xedd8ff), Shade(Sun ? 0xf2c66d : 0xc397e2)};
+	return {Shade(Base.m_Background), Shade(Base.m_Border), Shade(Base.m_Text), Shade(Base.m_Icon)};
 }
 
 #endif

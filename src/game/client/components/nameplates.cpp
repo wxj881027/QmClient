@@ -907,7 +907,7 @@ public:
 		if(!m_TextContainerIndex.Valid())
 			return;
 		const CUIRect Rect{Pos.x - m_Size.x * 0.5f, Pos.y - m_Size.y * 0.5f, m_Size.x, m_Size.y};
-		This.m_QmClient.TitleBadge().RenderSurface(This.Graphics(), Rect, m_Appearance, m_Alpha);
+		This.m_QmClient.TitleBadge().RenderSurface(This.Graphics(), Rect, m_Appearance, m_Alpha, This.m_QmClient.TitleAnimationTime());
 		const vec2 TextPosition = QmTitleBadgeTextPosition(Rect, m_TextVisualBounds);
 		This.TextRender()->RenderTextContainer(m_TextContainerIndex, QmTitleBadgePalette(m_Appearance, m_Alpha).m_Text,
 			ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), TextPosition.x, TextPosition.y);
