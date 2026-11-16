@@ -725,6 +725,14 @@ public:
 		float m_U1 = 1.0f;
 		float m_V1 = 0.0f;
 
+		// 以表面的几何上缘为起点向下减弱黑色，独立于纹理方向与边缘覆盖率。
+		float m_TopShade = 0.0f;
+
+		float BrightnessAt(float LocalY) const
+		{
+			return 1.0f - std::clamp(m_TopShade, 0.0f, 1.0f) * (1.0f - std::clamp(LocalY, 0.0f, 1.0f));
+		}
+
 		vec2 ProjectPoint(vec2 Point) const
 		{
 			if(m_TopPinch > 0.0f && m_H > 0.0f)

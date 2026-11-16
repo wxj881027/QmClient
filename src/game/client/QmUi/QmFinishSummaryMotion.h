@@ -12,10 +12,12 @@ namespace qm_finish_summary
 	struct SCardPose
 	{
 		CUIRect m_Rect{};
+		CUIRect m_NeckRect{};
 		float m_Radius = 0.0f;
 		float m_Connection = 0.0f;
 		float m_ContentAlpha = 0.0f;
 		float m_Pinch = 0.0f;
+		float m_TopShade = 0.0f;
 	};
 
 	inline SCardPose Layout(const CUIRect &Island, const CUIRect &Target, float Progress)
@@ -40,22 +42,39 @@ namespace qm_finish_summary
 	// 近端先抵达岛口，远端随后加速穿过同一位置，保留窗口被吸入的轮廓。
 	inline SCardPose ClosingLayout(const CUIRect &Island, const CUIRect &Target, float Start, float Progress)
 	{
-		if(Start <= 0.65f)
-			return Layout(Island, Target, Progress);
-		SCardPose Pose = Layout(Island, Target, Start);
-		const CUIRect From = Pose.m_Rect;
+		const bool Attached = Start <= 0.65f;
+		SCardPose Pose = Layout(Island, Target, Attached ? Progress : Start);
+		if(Start <= 0.0f)
+			return Pose;
 		const float T = std::clamp(1.0f - Progress / Start, 0.0f, 1.0f);
-		const float Pull = T * T * (2.0f - T);
 		const float Neck = std::min(T / 0.42f, 1.0f);
 		const float NeckEase = Neck * Neck * (3.0f - 2.0f * Neck);
-		const float MouthY = Island.y + Island.h;
+		Pose.m_TopShade = 0.96f * NeckEase;
+		if(Attached)
+			return Pose;
+
+		const CUIRect From = Pose.m_Rect;
+		const float Pull = T * T * (2.0f - T);
+		const float Overlap = Island.h * 0.12f;
+		const float MouthY = Island.y + Island.h - Overlap;
 		const float Top = mix(From.y, MouthY, NeckEase);
 		const float Bottom = mix(From.y + From.h, MouthY, Pull);
 		const float Width = From.w * (1.0f - Pull);
-		const float Center = mix(From.x + From.w * 0.5f, Island.x + Island.w * 0.5f, Pull);
+		const float HostCenter = Island.x + Island.w * 0.5f;
+		const float Center = mix(From.x + From.w * 0.5f, HostCenter, NeckEase);
 		Pose.m_Rect = {Center - Width * 0.5f, Top, Width, std::max(0.0f, Bottom - Top)};
 		Pose.m_Radius *= (1.0f - Pull);
-		Pose.m_Pinch = 0.82f * NeckEase;
+		constexpr float MaxPinch = 0.82f;
+		Pose.m_Pinch = MaxPinch * NeckEase;
+
+		// 岛底与卡片上缘各压住一小段接颈；卡片靠屏幕边缘时只取两者重合的宽度。
+		const float FlatHalf = std::max(0.0f, Width * 0.5f - Pose.m_Radius) * (1.0f - Pose.m_Pinch);
+		const float SocketHalf = std::min(Island.w * 0.25f, From.w * (1.0f - MaxPinch) * 0.5f);
+		const float Left = std::max(Center - FlatHalf, HostCenter - SocketHalf);
+		const float Right = std::min(Center + FlatHalf, HostCenter + SocketHalf);
+		const float NeckWidth = std::max(0.0f, Right - Left) * NeckEase;
+		const float NeckBottom = Top + std::min(Overlap, Pose.m_Rect.h * 0.5f);
+		Pose.m_NeckRect = {(Left + Right - NeckWidth) * 0.5f, MouthY, NeckWidth, std::max(0.0f, NeckBottom - MouthY)};
 		return Pose;
 	}
 

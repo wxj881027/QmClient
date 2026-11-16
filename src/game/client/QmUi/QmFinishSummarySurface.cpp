@@ -53,8 +53,15 @@ bool qm_finish_summary::CSurface::Render(IGraphics &Graphics, ITextRender &TextR
 		Content.Update(Snapshot, NowSeconds, FullyExpanded, MotionLevel);
 		const float CoverAlpha = Content.m_Presentation.NumberColorProgress(ENumber::TIME) * DrawAlpha;
 		RenderCover(Graphics, Rect, Style.m_CoverTexture, Style.m_Radius, CoverAlpha);
-		return qm_finish_summary::Render(Graphics, TextRender, RenderTools, Rect, Snapshot, pTeeRenderInfo, Content,
+		const bool Complete = qm_finish_summary::Render(Graphics, TextRender, RenderTools, Rect, Snapshot, pTeeRenderInfo, Content,
 			ContentAlpha * DrawAlpha, pTextScreen);
+		if(!pTextScreen && Style.m_TopShade > 0.0f)
+		{
+			const ColorRGBA Top(0.0f, 0.0f, 0.0f, Style.m_TopShade * DrawAlpha);
+			const ColorRGBA Bottom = Top.WithAlpha(0.0f);
+			Graphics.DrawRect4(Rect.x, Rect.y, Rect.w, Rect.h, Top, Top, Bottom, Bottom, IGraphics::CORNER_ALL, Style.m_Radius);
+		}
+		return Complete;
 	};
 	if(Alpha <= 0.001f || !Style.m_DrawBackground || !Graphics.IsRenderTargetSupported() || PixelSize.x <= 0.0f || PixelSize.y <= 0.0f)
 		return DrawContents(Alpha, nullptr);
@@ -115,6 +122,7 @@ bool qm_finish_summary::CSurface::Render(IGraphics &Graphics, ITextRender &TextR
 	Draw.m_H = Rect.h;
 	Draw.m_Alpha = Alpha;
 	Draw.m_TopPinch = Style.m_Pinch;
+	Draw.m_TopShade = Style.m_TopShade;
 	Draw.m_EdgeFeather = std::max(PixelSize.x, PixelSize.y) * 1.25f;
 	Draw.m_TiltX = MotionLevel > 0 && Style.m_DrawBackground ? Style.m_TiltX : 0.0f;
 	Draw.m_TiltY = MotionLevel > 0 && Style.m_DrawBackground ? Style.m_TiltY : 0.0f;

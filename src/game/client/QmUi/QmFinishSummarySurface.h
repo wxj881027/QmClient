@@ -15,6 +15,7 @@ namespace qm_finish_summary
 		float m_TiltY = 0.0f;
 		float m_Radius = 0.0f;
 		float m_Pinch = 0.0f;
+		float m_TopShade = 0.0f;
 		bool m_DrawBackground = true;
 		bool m_Closing = false;
 		IGraphics::CTextureHandle m_CoverTexture;

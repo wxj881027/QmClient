@@ -4861,8 +4861,6 @@ void CHud::RenderMediaIsland()
 	// HUD 编辑器的屏幕映射确定后，再限制附卡的最终落点。
 	FinishTargetRect.x = std::clamp(FinishTargetRect.x, TransformedScreenX0 + FinishShadowPadding,
 		std::max(TransformedScreenX0 + FinishShadowPadding, TransformedScreenX1 - FinishShadowPadding - FinishTargetRect.w));
-	const auto FinishPose = FinishLayout(MainIslandSdfRect);
-	const bool FinishConnected = RenderFinish && FinishPose.m_Connection > 0.0f;
 	m_LyricsIslandAnchor = QmLyricsHudAnchor(MainIslandSdfRect, EditorTransformRect, HudEditorScope.m_TargetRect);
 	m_LyricsIslandAnchorValid = true;
 	TextRender()->TextOutlineColor(0.0f, 0.0f, 0.0f, 0.42f * EntranceContentAlpha);
@@ -4897,8 +4895,16 @@ void CHud::RenderMediaIsland()
 	CurrentSdfState.m_MainRect.x += CurrentSdfState.m_MainRect.w * (1.0f - HostScale) * 0.5f;
 	CurrentSdfState.m_MainRect.w *= HostScale;
 	CurrentSdfState.m_MainRect.h *= 1.0f + (HostScale - 1.0f) * 0.45f;
+	const auto FinishPose = FinishLayout(CurrentSdfState.m_MainRect);
+	const bool FinishConnected = RenderFinish && FinishPose.m_Connection > 0.0f;
 	if(FinishConnected)
 		CurrentSdfState.m_AttachedCard = {FinishPose.m_Rect, FinishPose.m_Radius, FinishPose.m_Connection};
+	else if(RenderFinish && FinishPose.m_NeckRect.w > 0.0f && FinishPose.m_NeckRect.h > 0.0f)
+	{
+		const CUIRect &Neck = FinishPose.m_NeckRect;
+		const float Radius = std::min(Neck.w, Neck.h) * 0.5f;
+		CurrentSdfState.m_AttachedCard = {Neck, Radius, Radius};
+	}
 	CurrentSdfState.m_ShellRippleAmplitude = ShellPose.RippleAmplitude(MainIslandSdfRect, ScreenPixelSize) * EntranceContentAlpha;
 	CurrentSdfState.m_ShellRipplePhase = ShellPose.m_RipplePhase;
 	CurrentSdfState.m_MainRadius = EntrancePose.m_Radius;
@@ -5328,6 +5334,7 @@ void CHud::RenderMediaIsland()
 		Style.m_DrawBackground = !FinishConnected;
 		Style.m_Closing = !ShowFinish;
 		Style.m_Pinch = FinishPose.m_Pinch;
+		Style.m_TopShade = FinishPose.m_TopShade;
 		Style.m_CoverTexture = GameClient()->m_FinishSummary.CoverTexture();
 		Style.m_Backdrop = Backdrop;
 		Style.m_ScreenRect = {TransformedScreenX0, TransformedScreenY0, TransformedScreenX1 - TransformedScreenX0, TransformedScreenY1 - TransformedScreenY0};

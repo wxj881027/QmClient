@@ -38,6 +38,20 @@ TEST(RenderTargetProjection, RetractionNarrowsTopBeforeBottom)
 	EXPECT_EQ(Params.ProjectPoint(vec2(460.0f, 50.0f)), vec2(460.0f, 50.0f));
 }
 
+TEST(RenderTargetProjection, TopShadeDarkensTowardTheMouthRegardlessOfTextureOrigin)
+{
+	auto Params = Card();
+	EXPECT_FLOAT_EQ(Params.BrightnessAt(0.0f), 1.0f);
+	Params.m_TopShade = 0.9f;
+	for(const auto Backend : {BACKEND_TYPE_OPENGL, BACKEND_TYPE_VULKAN})
+	{
+		Params.SetNativeTextureCoordinates(Backend);
+		EXPECT_LT(Params.BrightnessAt(0.0f), Params.BrightnessAt(0.5f));
+		EXPECT_LT(Params.BrightnessAt(0.5f), Params.BrightnessAt(1.0f));
+		EXPECT_FLOAT_EQ(Params.BrightnessAt(1.0f), 1.0f);
+	}
+}
+
 TEST(RenderTargetProjection, TiltKeepsCardCenterFixed)
 {
 	auto Params = Card();

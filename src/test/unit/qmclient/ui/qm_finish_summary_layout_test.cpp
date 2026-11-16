@@ -97,13 +97,59 @@ TEST(QmFinishSummaryLayout, ClosingPullsNearEdgeIntoIslandBeforeFarEdge)
 	}
 	const auto Half = qm_finish_summary::ClosingLayout(Host, Target, 1.0f, 0.5f);
 	const auto Tail = qm_finish_summary::ClosingLayout(Host, Target, 1.0f, 0.2f);
-	EXPECT_FLOAT_EQ(Half.m_Rect.y, Host.y + Host.h);
+	EXPECT_LT(Half.m_Rect.y, Host.y + Host.h);
+	EXPECT_GT(Half.m_Rect.y, Host.y);
 	EXPECT_GT(Half.m_Pinch, 0.0f);
 	EXPECT_LT(Tail.m_Rect.w, Half.m_Rect.w);
 	EXPECT_LT(Tail.m_Rect.h, Half.m_Rect.h);
 	const auto End = qm_finish_summary::ClosingLayout(Host, Target, 1.0f, 0.0f);
 	EXPECT_FLOAT_EQ(End.m_Rect.h, 0.0f);
 	EXPECT_FLOAT_EQ(End.m_Rect.w, 0.0f);
+}
+
+TEST(QmFinishSummaryLayout, ClosingBridgesHostAndCardUntilTheTailDisappears)
+{
+	const CUIRect Host{70, 4, 60, 16};
+	for(const float TargetX : {-30.0f, 20.0f, 70.0f})
+	{
+		SCOPED_TRACE(TargetX);
+		const CUIRect Target{TargetX, 28, 160, 72};
+		const auto Open = qm_finish_summary::ClosingLayout(Host, Target, 1.0f, 1.0f);
+		EXPECT_FLOAT_EQ(Open.m_NeckRect.w, 0.0f);
+		for(const float Progress : {0.96f, 0.85f, 0.7f, 0.5f, 0.05f})
+		{
+			SCOPED_TRACE(Progress);
+			const auto Pose = qm_finish_summary::ClosingLayout(Host, Target, 1.0f, Progress);
+			const auto &Neck = Pose.m_NeckRect;
+			EXPECT_GT(Neck.w, 0.0f);
+			EXPECT_GE(Neck.x, Host.x);
+			EXPECT_LE(Neck.x + Neck.w, Host.x + Host.w);
+			EXPECT_LT(Neck.y, Host.y + Host.h);
+			EXPECT_GT(Neck.y + Neck.h, Pose.m_Rect.y);
+			const float MidX = Neck.x + Neck.w * 0.5f;
+			EXPECT_GT(MidX, Pose.m_Rect.x);
+			EXPECT_LT(MidX, Pose.m_Rect.x + Pose.m_Rect.w);
+		}
+		const auto End = qm_finish_summary::ClosingLayout(Host, Target, 1.0f, 0.0f);
+		EXPECT_FLOAT_EQ(End.m_NeckRect.w, 0.0f);
+		EXPECT_FLOAT_EQ(End.m_NeckRect.h, 0.0f);
+	}
+}
+
+TEST(QmFinishSummaryLayout, ShadeFadesInOnlyWhenClosing)
+{
+	const CUIRect Host{70, 4, 60, 16};
+	const CUIRect Target{20, 28, 160, 72};
+	for(const float Start : {0.4f, 0.8f, 1.0f})
+	{
+		SCOPED_TRACE(Start);
+		EXPECT_FLOAT_EQ(qm_finish_summary::Layout(Host, Target, Start).m_TopShade, 0.0f);
+		EXPECT_FLOAT_EQ(qm_finish_summary::ClosingLayout(Host, Target, Start, Start).m_TopShade, 0.0f);
+		const auto Early = qm_finish_summary::ClosingLayout(Host, Target, Start, Start * 0.9f);
+		const auto Attached = qm_finish_summary::ClosingLayout(Host, Target, Start, Start * 0.5f);
+		EXPECT_GT(Early.m_TopShade, 0.0f);
+		EXPECT_LT(Early.m_TopShade, Attached.m_TopShade);
+	}
 }
 
 TEST(QmFinishSummaryMotion, MovingTeeTiltsAndStoppingLevelsTheCard)

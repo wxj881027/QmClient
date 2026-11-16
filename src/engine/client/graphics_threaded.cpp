@@ -917,7 +917,8 @@ void CGraphics_Threaded::DrawRenderTarget(CRenderTargetHandle Target, const SRen
 			const float LocalU = (Position.x - Params.m_X) * InvW;
 			const float LocalV = (Position.y - Params.m_Y) * InvH;
 			Vertex.m_Tex = vec2(mix(Params.m_U0, Params.m_U1, LocalU), mix(Params.m_V0, Params.m_V1, LocalV));
-			Vertex.m_Color = CCommandBuffer::SColor{255, 255, 255, static_cast<uint8_t>((TransparentMask & (1u << i)) ? 0 : Alpha)};
+			const uint8_t Brightness = Params.m_TopShade > 0.0f ? static_cast<uint8_t>(Params.BrightnessAt(LocalV) * 255.0f + 0.5f) : 255;
+			Vertex.m_Color = CCommandBuffer::SColor{Brightness, Brightness, Brightness, static_cast<uint8_t>((TransparentMask & (1u << i)) ? 0 : Alpha)};
 			aVertices[NumVertices++] = Vertex;
 		}
 	};
