@@ -274,12 +274,11 @@ void qm_finish_summary::CContentCache::Update(const QmFinishSummary::SSnapshot &
 }
 
 bool qm_finish_summary::Render(IGraphics &Graphics, ITextRender &TextRender, CRenderTools &RenderTools, const CUIRect &Rect,
-	const QmFinishSummary::SSnapshot &Snapshot, const CManagedTeeRenderInfo *pTeeRenderInfo, CContentCache &Content,
-	double NowSeconds, bool FullyExpanded, int MotionLevel, float Alpha, const CUIRect *pTextScreen)
+	const QmFinishSummary::SSnapshot &Snapshot, const CManagedTeeRenderInfo *pTeeRenderInfo, const CContentCache &Content,
+	float Alpha, const CUIRect *pTextScreen)
 {
 	if(Rect.w <= 0.0f || Rect.h <= 0.0f)
 		return false;
-	Content.Update(Snapshot, NowSeconds, FullyExpanded, MotionLevel);
 	if(Alpha <= 0.001f)
 		return Content.m_Presentation.Complete();
 	const CTextPainter Painter(Graphics, TextRender, RenderTools, pTextScreen);

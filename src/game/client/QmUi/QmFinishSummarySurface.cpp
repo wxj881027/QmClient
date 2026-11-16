@@ -50,9 +50,11 @@ bool qm_finish_summary::CSurface::Render(IGraphics &Graphics, ITextRender &TextR
 			Background.m_BackgroundColor = Style.m_BackgroundColor.WithMultipliedAlpha(DrawAlpha);
 			qm_island::Render(&Graphics, Background, pTextScreen ? IGraphics::CRenderTargetHandle() : Style.m_Backdrop);
 		}
-		RenderCover(Graphics, Rect, Style.m_CoverTexture, Style.m_Radius, ContentAlpha * DrawAlpha);
+		Content.Update(Snapshot, NowSeconds, FullyExpanded, MotionLevel);
+		const float CoverAlpha = Content.m_Presentation.NumberColorProgress(ENumber::TIME) * DrawAlpha;
+		RenderCover(Graphics, Rect, Style.m_CoverTexture, Style.m_Radius, CoverAlpha);
 		return qm_finish_summary::Render(Graphics, TextRender, RenderTools, Rect, Snapshot, pTeeRenderInfo, Content,
-			NowSeconds, FullyExpanded, MotionLevel, ContentAlpha * DrawAlpha, pTextScreen);
+			ContentAlpha * DrawAlpha, pTextScreen);
 	};
 	if(Alpha <= 0.001f || !Style.m_DrawBackground || !Graphics.IsRenderTargetSupported() || PixelSize.x <= 0.0f || PixelSize.y <= 0.0f)
 		return DrawContents(Alpha, nullptr);

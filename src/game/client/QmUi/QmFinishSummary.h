@@ -60,8 +60,8 @@ namespace qm_finish_summary
 
 	// 内容入场独立于数据修订，返回值只表示本次入场是否呈现完毕。
 	bool Render(IGraphics &Graphics, ITextRender &TextRender, CRenderTools &RenderTools, const CUIRect &Rect,
-		const QmFinishSummary::SSnapshot &Snapshot, const CManagedTeeRenderInfo *pTeeRenderInfo, CContentCache &Content,
-		double NowSeconds, bool FullyExpanded, int MotionLevel, float Alpha, const CUIRect *pTextScreen = nullptr);
+		const QmFinishSummary::SSnapshot &Snapshot, const CManagedTeeRenderInfo *pTeeRenderInfo, const CContentCache &Content,
+		float Alpha, const CUIRect *pTextScreen = nullptr);
 }
 
 #endif

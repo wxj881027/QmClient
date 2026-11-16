@@ -249,6 +249,13 @@ void CQmFinishSummary::MergeResult(EQuery Query, const SRemoteData &Result)
 		m_Data.m_Map = Result.m_Map;
 		m_Data.m_Mapper = Result.m_Mapper;
 		m_Data.m_Thumbnail = Result.m_Thumbnail;
+		if(!m_Data.m_Thumbnail.empty() && m_Community == ECommunity::DDNET)
+		{
+			// 提前准备贴图，让首次通关也能随计数开始淡入。
+			CQmMapCovers::SImage Cover;
+			GameClient()->m_MapCovers.Get(m_Data.m_Thumbnail.c_str(), CQmMapCovers::ERole::SUMMARY, &Cover);
+			m_CoverTexture = Cover.m_Texture;
+		}
 		m_Data.m_Category = Result.m_Category;
 		m_Data.m_Stars = Result.m_Stars;
 		m_Data.m_MapPoints = Result.m_MapPoints;
