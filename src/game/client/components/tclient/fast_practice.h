@@ -61,8 +61,8 @@ public:
 	int CurrentPracticeDummyId() const;
 	bool IsPracticeDummy(int ClientId) const;
 	int PracticeDummyId() const;
-	// 当前这段练习用时（百分之一秒）：只累计分支世界真正推进的 tick，
-	// 位置突变（/r、传送、重开、死亡回退）后从零开始。
+	// 本次练习会话的累计用时（百分之一秒）：只累计分支世界真正推进的 tick，
+	// 进入练习起算，/r、传送、重开、死亡回退都不清零。
 	int PracticeRunCentiseconds() const;
 	struct SPracticeTileFeedbackDecision
 	{
@@ -140,6 +140,9 @@ private:
 	int m_EnableLocalClientId = -1;
 	int m_EnableDummyClientId = -1;
 	bool m_PracticeWorldInitialized = false;
+	// 旁观期间分支世界不推进，但仍是渲染与镜头权威。退出旁观时把分支时钟
+	// 平移到当前预测 tick，避免把旁观这段时间当作要补算的 tick。
+	bool m_SpectatingBranch = false;
 	bool m_HasDummyAnchor = false;
 	// 分身接入/断开会重新 fork 分支世界。这份待还原的本地 tee 让角色留在
 	// 练习分支的位置上，而不是被换回服务器世界里的 tee。
@@ -212,6 +215,13 @@ private:
 	void ResetPracticeState();
 	void ResetCommandState();
 	void SyncPracticeWorldConfig();
+	// 分支世界必须自洽：主世界只按客户端预测开关创建拾取物与激光类实体，
+	// 快照又只覆盖镜头附近。这里直接从地图图层重建整张地图的拾取物、门与
+	// 拖拉，机关炮由 m_vPracticeGuns 单独模拟。
+	void LoadPracticeMapMechanisms(CGameWorld &World);
+	// fork 前清掉从主世界复制过来的同类实体，避免与地图重建的机制重复生效。
+	void ResetPracticeMapEntities(CGameWorld &World);
+	int m_NextPracticeMapEntityId = 500000;
 	int DummyClientId() const;
 	bool ResolveParticipantInputs(int LocalClientId, int DummyClientId, int &LocalInputConn, int &DummyInputConn) const;
 	int CurrentLocalPracticeId() const;
@@ -273,6 +283,10 @@ public:
 	// 未启用或世界未建好时返回 nullptr，调用方回落到服务器世界。
 	std::vector<SSwitchers> *PracticeSwitchers();
 	int PracticeSwitchTeam() const;
+	// 练习参与者（本体/分身）的冻结状态来自分支世界：解冻进度条与 HUD 读它，
+	// 服务器快照里的 FreezeEnd 属于另一条世界线。返回 false 表示该 client
+	// 不在练习分支世界里，调用方回落到服务器快照。
+	bool ResolvePracticeCharacterCore(int ClientId, const CCharacterCore **ppCore, int &Tick);
 
 private:
 	// 服务器重进会换 client id，重新 fork 前必须把参与者 id 换成本次连接的实际 id。

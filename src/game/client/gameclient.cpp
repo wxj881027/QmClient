@@ -7512,6 +7512,23 @@ void CGameClient::UpdateRenderedCharacters()
 					Pos = UnpredPos;
 			}
 		}
+		// 练习中旁观时常规预测停摆，但分支世界仍是权威：参与者的渲染核心
+		// 切回分支世界，镜头跟随与画面才落在练习位置而不是服务器位置。
+		if(IsPracticeParticipant && !Predict())
+		{
+			const CCharacterCore *pPracticeCore = nullptr;
+			int PracticeTick = 0;
+			if(m_FastPractice.ResolvePracticeCharacterCore(i, &pPracticeCore, PracticeTick) && pPracticeCore)
+			{
+				m_aClients[i].m_Predicted = *pPracticeCore;
+				m_aClients[i].m_PrevPredicted = *pPracticeCore;
+				pPracticeCore->Write(&m_aClients[i].m_RenderCur);
+				pPracticeCore->Write(&m_aClients[i].m_RenderPrev);
+				m_aClients[i].m_IsPredicted = true;
+				m_aClients[i].m_IsPredictedLocal = true;
+				Pos = pPracticeCore->m_Pos;
+			}
+		}
 		m_aClients[i].m_RenderPos = Pos;
 		if(Predict() && i == m_Snap.m_LocalClientId)
 			m_LocalCharacterPos = Pos;

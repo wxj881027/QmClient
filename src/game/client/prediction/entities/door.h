@@ -18,6 +18,9 @@ class CDoor : public CEntity
 
 public:
 	CDoor(CGameWorld *pGameWorld, int Id, const CLaserData *pData);
+	// 副本只复制几何，不接管共享 CCollision 上的门碰撞端点：世界树里
+	// 同一扇门同时存在于多个 CGameWorld 副本，只有权威世界负责销毁清理。
+	CDoor(const CDoor &Other);
 	void ResetCollision();
 	bool Match(const CDoor *pDoor) const;
 	void Read(const CLaserData *pData);

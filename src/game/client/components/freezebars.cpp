@@ -20,23 +20,37 @@ void CFreezeBars::RenderBarAt(const vec2 TeePos, const float Progress, const flo
 
 void CFreezeBars::RenderFreezeBar(const int ClientId)
 {
-	// pCharacter contains the predicted character for local players or the last snap for players who are spectated
-	CCharacterCore *pCharacter = &GameClient()->m_aClients[ClientId].m_Predicted;
+	// 练习参与者（本体/分身）的冻结状态在分支世界里：服务器快照只描述另一条
+	// 世界线，快照的 FreezeEnd 门槛与扩展显示门控都不能拿来判断练习冻结。
+	const CCharacterCore *pPracticeCharacter = nullptr;
+	int PracticeTick = 0;
+	const bool InPractice = GameClient()->m_FastPractice.ResolvePracticeCharacterCore(ClientId, &pPracticeCharacter, PracticeTick);
 
-	if(pCharacter->m_FreezeEnd <= 0 || pCharacter->m_FreezeStart == 0 || pCharacter->m_FreezeEnd <= pCharacter->m_FreezeStart || !GameClient()->m_Snap.m_aCharacters[ClientId].m_HasExtendedDisplayInfo || (pCharacter->m_IsInFreeze && g_Config.m_ClFreezeBarsAlphaInsideFreeze == 0))
+	// pCharacter contains the predicted character for local players or the last snap for players who are spectated
+	const CCharacterCore *pCharacter = InPractice ? pPracticeCharacter : &GameClient()->m_aClients[ClientId].m_Predicted;
+
+	if(pCharacter->m_FreezeEnd <= 0 || pCharacter->m_FreezeStart == 0 || pCharacter->m_FreezeEnd <= pCharacter->m_FreezeStart || (pCharacter->m_IsInFreeze && g_Config.m_ClFreezeBarsAlphaInsideFreeze == 0))
 	{
 		return;
 	}
 
-	// 服务端还没确认冻结时不画，避免误预测的冻结条闪现。
-	if(GameClient()->m_Snap.m_aCharacters[ClientId].m_ExtendedData.m_FreezeEnd <= 0)
+	if(!InPractice)
 	{
-		return;
+		if(!GameClient()->m_Snap.m_aCharacters[ClientId].m_HasExtendedDisplayInfo)
+			return;
+		// 服务端还没确认冻结时不画，避免误预测的冻结条闪现。
+		if(GameClient()->m_Snap.m_aCharacters[ClientId].m_ExtendedData.m_FreezeEnd <= 0)
+			return;
 	}
 
 	// 预测角色的冻结 tick 位于预测时间轴，要和它被预测到的 tick 比较。
 	int Tick = Client()->GameTick(g_Config.m_ClDummy);
-	if(GameClient()->m_aClients[ClientId].m_IsPredictedLocal)
+	if(InPractice)
+	{
+		// 分支世界有自己的时钟，服务器暂停时两者会分叉。
+		Tick = PracticeTick;
+	}
+	else if(GameClient()->m_aClients[ClientId].m_IsPredictedLocal)
 	{
 		Tick = Client()->PredGameTick(g_Config.m_ClDummy);
 	}

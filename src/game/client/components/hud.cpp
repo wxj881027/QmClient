@@ -2482,8 +2482,8 @@ void CHud::RenderTextInfo()
 		const float Line2X = m_Width / 2.0f - TextRender()->TextWidth(Line2Size, Localize(pLine2), -1, -1.0f) / 2.0f;
 		TextRender()->Text(Line1X, 34.0f, Line1Size, Localize(pLine1), -1.0f);
 		TextRender()->Text(Line2X, 45.0f, Line2Size, Localize(pLine2), -1.0f);
-		// 计时只跟着分支世界推进的 tick 走，不走墙钟：位置突变（/r、传送、重开、
-		// 死亡回退）后归零，玩家看到的是“这一段跑到这里”的用时。
+		// 计时只跟着分支世界推进的 tick 走，不走墙钟：进入练习起算，
+		// /r、传送、重开、死亡回退都不清零，显示的是整段练习会话的用时。
 		if(g_Config.m_QmFastPracticeTimer)
 		{
 			char aTime[32];

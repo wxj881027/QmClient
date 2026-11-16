@@ -112,9 +112,8 @@ void CFastPractice::RecordPracticeSwitchState(CGameWorld &World, int Tick)
 
 void CFastPractice::OnPracticePositionJump()
 {
-	// 位置突变既是录制分段点，也是计时起点：/r、传送与死亡回退之后
-	// 玩家关心的是“这一段跑到这里用了多久”。
-	m_PracticeRunTicks = 0;
+	// 位置突变只切录制段，不动计时：练习计时统计的是整段练习会话的时长，
+	// /r、传送和死亡回退不应把它清零。
 	// 低频诊断点：位置突变必须切段，否则 /pg 出来的线路会带一道穿墙直线。
 	dbg_msg("fast_practice", "segment boundary: frames=%d events=%d switches=%d",
 		GameClient()->m_LocalWorld.CurrentFrameCount(), GameClient()->m_LocalWorld.CurrentEventCount(),

@@ -21,6 +21,16 @@ CDoor::CDoor(CGameWorld *pGameWorld, int Id, const CLaserData *pData) :
 	Read(pData);
 }
 
+CDoor::CDoor(const CDoor &Other) :
+	CEntity(Other)
+{
+	m_To = Other.m_To;
+	m_Direction = Other.m_Direction;
+	m_Length = Other.m_Length;
+	// 副本不拥有碰撞：销毁时不能清掉权威世界仍在使用的门碰撞端点。
+	m_Active = false;
+}
+
 // OnEntity 按这个顺序检查八个相邻 tile 来确定激光门长度。
 static const int s_aSideOffsetX[8] = {0, 1, 1, 1, 0, -1, -1, -1};
 static const int s_aSideOffsetY[8] = {1, 1, 0, -1, -1, -1, 0, 1};

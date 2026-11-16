@@ -21,7 +21,10 @@
 #include <game/client/components/qmclient/world_event_gate.h>
 #include <game/client/gameclient.h>
 #include <game/client/laser_data.h>
+#include <game/client/pickup_data.h>
 #include <game/client/prediction/entities/character.h>
+#include <game/client/prediction/entities/door.h>
+#include <game/client/prediction/entities/dragger.h>
 #include <game/client/prediction/entities/laser.h>
 #include <game/client/prediction/entities/pickup.h>
 #include <game/client/prediction/entities/plasma.h>
@@ -128,6 +131,11 @@ namespace
 		const CCharacterCore &Core = *pChar->Core();
 		return pChar->m_FreezeTime > 0 || Core.m_DeepFrozen || Core.m_LiveFrozen || Core.m_FreezeEnd != 0;
 	}
+
+	// 与服务端 IGameController::OnEntity 的八个相邻方向一致：方向 i 的
+	// 单位向量是 (sin(pi/4*i), cos(pi/4*i))。
+	constexpr int s_aPracticeSideOffsetX[8] = {0, 1, 1, 1, 0, -1, -1, -1};
+	constexpr int s_aPracticeSideOffsetY[8] = {1, 1, 0, -1, -1, -1, 0, 1};
 
 	struct STrackedProjectile
 	{
@@ -267,6 +275,7 @@ void CFastPractice::ResetPracticeState()
 	m_EnableLocalClientId = -1;
 	m_EnableDummyClientId = -1;
 	m_PracticeWorldInitialized = false;
+	m_SpectatingBranch = false;
 	m_HasDummyAnchor = false;
 	m_HasPendingLocalTee = false;
 	m_PendingLocalTee = {};
@@ -292,6 +301,9 @@ void CFastPractice::ResetPracticeState()
 	m_DummyAnchor = {};
 	m_aPracticeInputFilterStates = {};
 	m_PracticeBaseWorld.Clear();
+	// 分支里的门在销毁时会清掉共享 CCollision 上的门碰撞端点；主世界的门
+	// 需要立即重新装回，否则退出练习后要等下一次快照才恢复实体碰撞。
+	GameClient()->m_GameWorld.ResetDoorCollision();
 	// 退出练习即销毁分支，重开快照随分支一起丢弃；下次进入重新采样。
 	m_PracticeStartWorld.Clear();
 	m_HasPracticeStartSnapshot = false;
@@ -473,8 +485,9 @@ bool CFastPractice::IsPracticeParticipant(int ClientId) const
 float CFastPractice::ServerTeeAlpha(int ClientId, float DefaultAlpha) const
 {
 	// 参与者渲染的是分支世界里的自己，必须保持原样；其余客户端（包括其他玩家）
-	// 的位置全部来自服务器快照，属于同一条"主世界"时间线。
-	if(!m_Enabled || ClientId < 0 || GameClient()->m_Snap.m_SpecInfo.m_Active || IsPracticeParticipant(ClientId))
+	// 的位置全部来自服务器快照，属于同一条"主世界"时间线。旁观时同理：
+	// 练习中的旁观应当看分支世界，而不是主世界的其他玩家。
+	if(!m_Enabled || ClientId < 0 || IsPracticeParticipant(ClientId))
 		return DefaultAlpha;
 	// 关掉开关就是整组隐藏，配合不透明度调整"看得见但让位"的程度。
 	if(!g_Config.m_QmFastPracticeShowMainWorld)
@@ -675,6 +688,168 @@ void CFastPractice::SyncPracticeWorldConfig()
 	for(int ClientId = 0; ClientId < MAX_CLIENTS; ClientId++)
 		Teams.SetSolo(ClientId, m_PracticeBaseWorld.m_Teams.GetSolo(ClientId));
 	m_PracticeBaseWorld.m_Teams = Teams;
+}
+
+void CFastPractice::ResetPracticeMapEntities(CGameWorld &World)
+{
+	// 主世界按预测开关与快照范围只包含一部分拾取物/门/拖拉。分支世界如果
+	// 继续带着它们，再叠加地图重建的同位置实体会让拖拉翻倍、拾取物重复生效。
+	const int aTypes[] = {CGameWorld::ENTTYPE_PICKUP, CGameWorld::ENTTYPE_DOOR, CGameWorld::ENTTYPE_DRAGGER, CGameWorld::ENTTYPE_PLASMA};
+	for(const int Type : aTypes)
+	{
+		CEntity *pEnt = World.FindFirst(Type);
+		while(pEnt)
+		{
+			CEntity *pNext = pEnt->TypeNext();
+			pEnt->Destroy();
+			pEnt = pNext;
+		}
+	}
+}
+
+void CFastPractice::LoadPracticeMapMechanisms(CGameWorld &World)
+{
+	// 分支世界从服务器世界 fork，而快照只覆盖镜头附近；练习路线一旦走出
+	// 网络裁剪范围，武器、门与拖拉就会凭空消失。地图图层是整张地图的
+	// 静态数据源，直接按服务端 IGameController::OnEntity 的规则重建这些
+	// 机制，机关炮仍由 m_vPracticeGuns 模拟（它们不是地图实体）。
+	const CTile *pGame = Collision()->GameLayer();
+	const CTile *pFront = Collision()->FrontLayer();
+	const CSwitchTile *pSwitch = Collision()->SwitchLayer();
+	if(!pGame)
+		return;
+
+	const int Width = Collision()->GetWidth();
+	const int Height = Collision()->GetHeight();
+	int NumPickups = 0;
+	int NumDoors = 0;
+	int NumDraggers = 0;
+	for(int y = 0; y < Height; y++)
+	{
+		for(int x = 0; x < Width; x++)
+		{
+			const int TileIndex = y * Width + x;
+			const vec2 Pos(x * 32.0f + 16.0f, y * 32.0f + 16.0f);
+
+			const auto HandleEntity = [&](int EntityIndex, int Layer, int Number, int TileFlags) {
+				int PickupType = -1;
+				int PickupSubtype = 0;
+				if(EntityIndex == ENTITY_ARMOR_1)
+					PickupType = POWERUP_ARMOR;
+				else if(EntityIndex == ENTITY_ARMOR_SHOTGUN)
+					PickupType = POWERUP_ARMOR_SHOTGUN;
+				else if(EntityIndex == ENTITY_ARMOR_GRENADE)
+					PickupType = POWERUP_ARMOR_GRENADE;
+				else if(EntityIndex == ENTITY_ARMOR_NINJA)
+					PickupType = POWERUP_ARMOR_NINJA;
+				else if(EntityIndex == ENTITY_ARMOR_LASER)
+					PickupType = POWERUP_ARMOR_LASER;
+				else if(EntityIndex == ENTITY_HEALTH_1)
+					PickupType = POWERUP_FREEZE;
+				else if(EntityIndex == ENTITY_WEAPON_SHOTGUN)
+				{
+					PickupType = POWERUP_WEAPON;
+					PickupSubtype = WEAPON_SHOTGUN;
+				}
+				else if(EntityIndex == ENTITY_WEAPON_GRENADE)
+				{
+					PickupType = POWERUP_WEAPON;
+					PickupSubtype = WEAPON_GRENADE;
+				}
+				else if(EntityIndex == ENTITY_WEAPON_LASER)
+				{
+					PickupType = POWERUP_WEAPON;
+					PickupSubtype = WEAPON_LASER;
+				}
+				else if(EntityIndex == ENTITY_POWERUP_NINJA)
+				{
+					PickupType = POWERUP_NINJA;
+					PickupSubtype = WEAPON_NINJA;
+				}
+
+				if(PickupType != -1)
+				{
+					CPickupData Data;
+					Data.m_Pos = Pos;
+					Data.m_Type = PickupType;
+					Data.m_Subtype = PickupSubtype;
+					Data.m_SwitchNumber = Number;
+					Data.m_Flags = 0;
+					if(TileFlags & TILEFLAG_XFLIP)
+						Data.m_Flags |= PICKUPFLAG_XFLIP;
+					if(TileFlags & TILEFLAG_YFLIP)
+						Data.m_Flags |= PICKUPFLAG_YFLIP;
+					if(TileFlags & TILEFLAG_ROTATE)
+						Data.m_Flags |= PICKUPFLAG_ROTATE;
+					World.InsertEntity(new CPickup(&World, m_NextPracticeMapEntityId++, &Data), true);
+					NumPickups++;
+					return;
+				}
+
+				if(EntityIndex == ENTITY_DOOR)
+				{
+					for(int Side = 0; Side < 8; Side++)
+					{
+						const int Neighbor = Collision()->Entity(x + s_aPracticeSideOffsetX[Side], y + s_aPracticeSideOffsetY[Side], Layer);
+						if(Neighbor < ENTITY_LASER_SHORT || Neighbor > ENTITY_LASER_LONG)
+							continue;
+						const int Length = 32 * 3 + 32 * (Neighbor - ENTITY_LASER_SHORT) * 3;
+						const vec2 Dir(std::sin(pi / 4 * Side), std::cos(pi / 4 * Side));
+						vec2 To = Pos + Dir * Length;
+						Collision()->IntersectNoLaser(Pos, To, &To, nullptr);
+						// 客户端 CDoor::Read 会把 From/To 翻转：m_From 是远端，
+						// m_To 是门中心。
+						CLaserData Data = {};
+						Data.m_From = To;
+						Data.m_To = Pos;
+						Data.m_StartTick = -1;
+						Data.m_ExtraInfo = true;
+						Data.m_Owner = -1;
+						Data.m_Type = LASERTYPE_DOOR;
+						Data.m_SwitchNumber = Number;
+						World.InsertEntity(new CDoor(&World, m_NextPracticeMapEntityId++, &Data));
+						NumDoors++;
+					}
+					return;
+				}
+
+				int Strength = 0;
+				bool IgnoreWalls = false;
+				if(EntityIndex >= ENTITY_DRAGGER_WEAK && EntityIndex <= ENTITY_DRAGGER_STRONG)
+					Strength = EntityIndex - ENTITY_DRAGGER_WEAK + 1;
+				else if(EntityIndex >= ENTITY_DRAGGER_WEAK_NW && EntityIndex <= ENTITY_DRAGGER_STRONG_NW)
+				{
+					Strength = EntityIndex - ENTITY_DRAGGER_WEAK_NW + 1;
+					IgnoreWalls = true;
+				}
+				if(Strength <= 0)
+					return;
+
+				CLaserData Data = {};
+				Data.m_From = Pos;
+				Data.m_To = Pos;
+				Data.m_StartTick = -1;
+				Data.m_ExtraInfo = true;
+				Data.m_Owner = -1;
+				Data.m_Type = LASERTYPE_DRAGGER;
+				Data.m_SwitchNumber = Number;
+				// 与服务端 CDragger::Snap 的 subtype 编码一致。
+				Data.m_Subtype = ((Strength - 1) << 1) | (IgnoreWalls ? 1 : 0);
+				World.InsertEntity(new CDragger(&World, m_NextPracticeMapEntityId++, &Data));
+				NumDraggers++;
+			};
+
+			if(pGame[TileIndex].m_Index >= ENTITY_OFFSET)
+				HandleEntity(pGame[TileIndex].m_Index - ENTITY_OFFSET, LAYER_GAME, 0, pGame[TileIndex].m_Flags);
+			if(pFront && pFront[TileIndex].m_Index >= ENTITY_OFFSET)
+				HandleEntity(pFront[TileIndex].m_Index - ENTITY_OFFSET, LAYER_FRONT, 0, pFront[TileIndex].m_Flags);
+			if(pSwitch && pSwitch[TileIndex].m_Type >= ENTITY_OFFSET)
+				HandleEntity(pSwitch[TileIndex].m_Type - ENTITY_OFFSET, LAYER_SWITCH, pSwitch[TileIndex].m_Number, pSwitch[TileIndex].m_Flags);
+		}
+	}
+	// 新加入的门需要把自己的碰撞端点装进共享的 CCollision。
+	World.ResetDoorCollision();
+	dbg_msg("fast_practice", "map mechanisms: pickups=%d doors=%d draggers=%d", NumPickups, NumDoors, NumDraggers);
 }
 
 void CFastPractice::LoadPracticeGuns()
@@ -878,6 +1053,10 @@ bool CFastPractice::InitPracticeWorld()
 	}
 
 	m_PracticeBaseWorld.CopyWorldClean(&GameClient()->m_GameWorld);
+	// 主世界只按客户端预测开关创建拾取物与激光类实体，快照又只覆盖镜头
+	// 附近；练习世界必须整张地图自洽，因此清掉继承来的同类实体后按地图重建。
+	ResetPracticeMapEntities(m_PracticeBaseWorld);
+	LoadPracticeMapMechanisms(m_PracticeBaseWorld);
 	// 定时开关的剩余时长要相对 fork 后真正使用的分支时钟（预测 tick）平移，
 	// 而不是 CopyWorldClean 带过来的服务器世界 tick：各调用方 fork 完都会把
 	// 分支 tick 对齐到预测 tick，用服务器 tick 会让剩余时长整体偏掉一截。
@@ -1040,6 +1219,24 @@ int CFastPractice::PracticeSwitchTeam() const
 		return -1;
 
 	return std::clamp(m_PracticeBaseWorld.m_Teams.Team(ClientId), (int)TEAM_FLOCK, NUM_DDRACE_TEAMS - 1);
+}
+
+bool CFastPractice::ResolvePracticeCharacterCore(int ClientId, const CCharacterCore **ppCore, int &Tick)
+{
+	if(!m_Enabled || !m_PracticeWorldInitialized)
+		return false;
+	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
+		return false;
+	if(ClientId != m_EnableLocalClientId && ClientId != m_EnableDummyClientId)
+		return false;
+
+	CCharacter *pChar = m_PracticeBaseWorld.GetCharacterById(ClientId);
+	if(!pChar)
+		return false;
+
+	*ppCore = pChar->Core();
+	Tick = m_PracticeBaseWorld.GameTick();
+	return true;
 }
 
 bool CFastPractice::ResolvePracticePlaybackTick(int &PlaybackTick) const
@@ -1418,8 +1615,8 @@ void CFastPractice::ResetPracticeToAnchor()
 
 void CFastPractice::ResetPracticeTimelineState()
 {
-	// 时间线整条换掉：救援点、/lasttp、计时全部从零开始。
-	m_PracticeRunTicks = 0;
+	// 时间线整条换掉：救援点、/lasttp 从零开始。练习计时是整段会话的
+	// 累计时长，不随重开清零。
 	for(auto &State : m_aPracticeCommandState)
 	{
 		// 救援模式是用户偏好，重开后保留；其余记录都指向旧时间线，必须清空。
@@ -1458,6 +1655,8 @@ bool CFastPractice::RestartPracticeFromStart()
 	// 世界树：主世界一直在推进，重新 fork 只会得到“现在”。这里改用启用练习那一刻的
 	// 快照，机关、移动方块、投射物、开关与角色一起回到入口状态。
 	m_PracticeBaseWorld.CopyWorldClean(&m_PracticeStartWorld);
+	// 门副本不接管碰撞，重开后必须重新装回共享 CCollision 的端点。
+	m_PracticeBaseWorld.ResetDoorCollision();
 	// 快照初刻留下的事件 tick 早已被屏障盖过，留着会在下一帧集中播放。
 	QmDropPracticePredictedEventsUntil(m_PracticeBaseWorld.m_PredictedEvents, m_EventBarrierTick);
 	SanitizePracticeWorldHooks(m_PracticeBaseWorld);
@@ -1533,8 +1732,7 @@ void CFastPractice::RestorePracticeCheckpoint()
 void CFastPractice::PublishPracticeWorldState()
 {
 	// 调用方要么整条时间线重开（/kill、/restart），要么把人挪回检查点：
-	// 两种都是新的一段尝试，计时从零开始。
-	m_PracticeRunTicks = 0;
+	// 两者都只是位置突变，练习计时继续累计，不在这里清零。
 	ResetAttackTickHistory();
 	if(CCharacter *pMain = m_PracticeBaseWorld.GetCharacterById(m_EnableLocalClientId))
 		TrackSafeRescuePosition(m_EnableLocalClientId, pMain);
@@ -1679,10 +1877,22 @@ bool CFastPractice::OverridePredict()
 	}
 	if(GameClient()->m_Snap.m_SpecInfo.m_Active || (GameClient()->m_Snap.m_pLocalInfo && GameClient()->m_Snap.m_pLocalInfo->m_Team == TEAM_SPECTATORS))
 	{
-		// Keep practice mode state, but don't replace predicted world while spectating.
-		m_PracticeWorldInitialized = false;
+		// 旁观不结束练习：分支世界停住但继续是渲染与镜头的权威，位置与
+		// 机关状态都保留。退出旁观时再一次性把时钟对齐，不补算这段时间。
+		m_SpectatingBranch = m_PracticeWorldInitialized;
 		GameClient()->m_PredictedDummyId = -1;
 		return false;
+	}
+	if(m_SpectatingBranch)
+	{
+		// 从旁观回到游戏：分支世界原样保留，只把时钟平移到当前预测 tick。
+		m_SpectatingBranch = false;
+		const int TargetTick = Client()->PredGameTick(g_Config.m_ClDummy);
+		ShiftPracticeWorldTicks(TargetTick - m_PracticeBaseWorld.GameTick());
+		CapturePracticeInputFilterStates();
+		ReleaseBufferedActionInputState();
+		m_SuppressFireOnNextPredictTick = true;
+		m_InputSuppressTicks = std::max(m_InputSuppressTicks, 2);
 	}
 	// 分身连接断开：降级为本体单人练习，并重新 fork 去掉分支世界里的残留分身。
 	// 重新 fork 会把本地角色换到服务器世界的位置，先存住分支里的本地 tee。
@@ -1866,7 +2076,7 @@ bool CFastPractice::OverridePredict()
 		// “刚踩进去”和“一直停在上面”。回退后紧跟的 TrackSafeRescuePosition 会
 		// 在下一 tick 重新采样安全点。
 		// 分支世界每推进一 tick 记一次练习用时；服务器暂停时这个循环不跑，计时随之停住。
-		// 先累计再处理死亡回退：回退会清零计时，新一段从 0 开始而不是从 1 tick 开始。
+		// 计时跨 /r、传送、重开与死亡回退持续累计，只有进入/退出练习才归零。
 		m_PracticeRunTicks++;
 		TrackPracticeTileFeedback(LocalClientId, pLocalChar, LocalPosBeforeTick);
 		if(pDummyChar)
@@ -1933,6 +2143,9 @@ bool CFastPractice::OverridePredict()
 	}
 
 	m_PracticeBaseWorld.CopyWorldClean(&GameClient()->m_PredictedWorld);
+	// 预测世界里的门副本不接管碰撞；把步进后的分支世界接回来时要重新
+	// 装回共享 CCollision 的门碰撞端点。
+	m_PracticeBaseWorld.ResetDoorCollision();
 	GameClient()->m_PredictedTick = ApplyVisualFastInputPrediction(FinalTickRegular, LocalClientId, DummyClientId, LocalInputConn, DummyInputConn);
 	if(GameClient()->m_NewPredictedTick)
 		GameClient()->m_Ghost.OnNewPredictedSnapshot();

@@ -691,6 +691,8 @@ void CGameWorld::CopyWorldClean(CGameWorld *pFrom)
 				pCopy = new CDragger(*((CDragger *)pEnt));
 			else if(Type == ENTTYPE_CHARACTER)
 				pCopy = new CCharacter(*((CCharacter *)pEnt));
+			else if(Type == ENTTYPE_DOOR)
+				pCopy = new CDoor(*((CDoor *)pEnt));
 			else if(Type == ENTTYPE_PICKUP)
 				pCopy = new CPickup(*((CPickup *)pEnt));
 			else if(Type == ENTTYPE_PLASMA)
@@ -744,6 +746,8 @@ void CGameWorld::CopyWorld(CGameWorld *pFrom)
 				pCopy = new CDragger(*((CDragger *)pEnt));
 			else if(Type == ENTTYPE_CHARACTER)
 				pCopy = new CCharacter(*((CCharacter *)pEnt));
+			else if(Type == ENTTYPE_DOOR)
+				pCopy = new CDoor(*((CDoor *)pEnt));
 			else if(Type == ENTTYPE_PICKUP)
 				pCopy = new CPickup(*((CPickup *)pEnt));
 			else if(Type == ENTTYPE_PLASMA)

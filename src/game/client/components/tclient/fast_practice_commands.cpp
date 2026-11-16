@@ -791,6 +791,34 @@ void CFastPractice::ConLocalWorldDump(IConsole::IResult *pResult, void *pUserDat
 		pSelf->GameClient()->m_Ghost.ManualModeActive() ? 1 : 0,
 		pSelf->GameClient()->m_Ghost.ManualPlaybackTick());
 	Print(aBuf);
+	// 分支世界的机关实体清单：拾取物/门/拖拉/等离子缺失时，练习里会出现
+	// “踩武器不给枪、开关机关不动作”。同时打印主世界与快照计数，判断是
+	// fork 时主世界没建这些实体，还是快照本身就没有。
+	const auto CountEntities = [](CGameWorld &World, int Type) {
+		int Count = 0;
+		for(CEntity *pEnt = World.FindFirst(Type); pEnt; pEnt = pEnt->TypeNext())
+			Count++;
+		return Count;
+	};
+	const auto CountSnapEntities = [pSelf](int aTypeA, int aTypeB) {
+		int Count = 0;
+		for(const CSnapEntities &Ent : pSelf->GameClient()->SnapEntities())
+			if(Ent.m_Item.m_Type == aTypeA || Ent.m_Item.m_Type == aTypeB)
+				Count++;
+		return Count;
+	};
+	str_format(aBuf, sizeof(aBuf), "entities branch: pickups=%d doors=%d draggers=%d plasma=%d",
+		CountEntities(pSelf->m_PracticeBaseWorld, CGameWorld::ENTTYPE_PICKUP),
+		CountEntities(pSelf->m_PracticeBaseWorld, CGameWorld::ENTTYPE_DOOR),
+		CountEntities(pSelf->m_PracticeBaseWorld, CGameWorld::ENTTYPE_DRAGGER),
+		CountEntities(pSelf->m_PracticeBaseWorld, CGameWorld::ENTTYPE_PLASMA));
+	Print(aBuf);
+	str_format(aBuf, sizeof(aBuf), "entities main: pickups=%d doors=%d | snap: pickups=%d lasers=%d",
+		CountEntities(pSelf->GameClient()->m_GameWorld, CGameWorld::ENTTYPE_PICKUP),
+		CountEntities(pSelf->GameClient()->m_GameWorld, CGameWorld::ENTTYPE_DOOR),
+		CountSnapEntities(NETOBJTYPE_PICKUP, NETOBJTYPE_DDNETPICKUP),
+		CountSnapEntities(NETOBJTYPE_LASER, NETOBJTYPE_DDNETLASER));
+	Print(aBuf);
 
 	if(!pSelf->m_PracticeBaseWorld.Switchers().empty())
 	{
