@@ -40500,3 +40500,51 @@ polish = "Prowadź do pobliskich nieaktywowanych punktów kontrolnych teleportac
 key = "Show finish summary in Dynamic Island"
 [message.translations]
 simplified_chinese = "在灵动岛显示结算卡"
+
+[[message]]
+key = "Show a per-character wave on text titles locally"
+[message.translations]
+simplified_chinese = "在本机为文字头衔显示逐字波动"
+traditional_chinese = "在本機為文字頭銜顯示逐字波動"
+japanese = "自分の画面ではテキスト称号の文字を一文字ずつ波打たせる"
+korean = "내 화면에서 텍스트 칭호의 글자를 하나씩 물결처럼 움직임"
+russian = "Показывать на своём экране волнообразное движение букв в текстовых титулах"
+german = "Die Buchstaben von Texttiteln auf dem eigenen Bildschirm wellenförmig bewegen"
+spanish = "Mostrar en mi pantalla el movimiento ondulado de las letras de los títulos de texto"
+french = "Faire onduler les lettres des titres textuels sur mon écran"
+brazilian_portuguese = "Mostrar na minha tela a ondulação de cada letra dos títulos em texto"
+portuguese = "Mostrar no meu ecrã a ondulação de cada letra dos títulos em texto"
+turkish = "Metin unvanlarının harflerini kendi ekranımda dalgalandır"
+polish = "Wyświetlaj falowanie poszczególnych liter tytułów tekstowych na moim ekranie"
+
+[[message]]
+key = "Sponsor title appearance: 0 = capsule, 1-5 = text palette"
+[message.translations]
+simplified_chinese = "赞助头衔外观：0 = 胶囊，1–5 = 文字配色"
+traditional_chinese = "贊助頭銜外觀：0 = 膠囊，1–5 = 文字配色"
+japanese = "支援者称号の外観：0 = カプセル、1–5 = テキストの配色"
+korean = "후원자 칭호 모양: 0 = 캡슐, 1–5 = 텍스트 색상 조합"
+russian = "Вид титула спонсора: 0 = капсула, 1–5 = палитра текста"
+german = "Darstellung des Unterstützertitels: 0 = Kapsel, 1–5 = Textfarbpalette"
+spanish = "Aspecto del título de patrocinador: 0 = cápsula, 1–5 = paleta del texto"
+french = "Apparence du titre de soutien : 0 = capsule, 1–5 = palette du texte"
+brazilian_portuguese = "Aparência do título de apoiador: 0 = cápsula, 1–5 = paleta do texto"
+portuguese = "Aspeto do título de apoiante: 0 = cápsula, 1–5 = paleta do texto"
+turkish = "Destekçi unvanı görünümü: 0 = kapsül, 1–5 = metin renk paleti"
+polish = "Wygląd tytułu wspierającego: 0 = kapsułka, 1–5 = paleta tekstu"
+
+[[message]]
+key = "Title server does not support text titles yet"
+[message.translations]
+simplified_chinese = "头衔服务器暂不支持文字款头衔"
+traditional_chinese = "頭銜伺服器暫不支援文字款頭銜"
+japanese = "称号サーバーはまだテキスト形式の称号に対応していません"
+korean = "칭호 서버가 아직 텍스트형 칭호를 지원하지 않습니다"
+russian = "Сервер титулов пока не поддерживает текстовые титулы"
+german = "Der Titelserver unterstützt noch keine Texttitel"
+spanish = "El servidor de títulos aún no admite títulos de texto"
+french = "Le serveur de titres ne prend pas encore en charge les titres textuels"
+brazilian_portuguese = "O servidor de títulos ainda não oferece suporte a títulos em texto"
+portuguese = "O servidor de títulos ainda não suporta títulos em texto"
+turkish = "Unvan sunucusu henüz metin biçimindeki unvanları desteklemiyor"
+polish = "Serwer tytułów jeszcze nie obsługuje tytułów tekstowych"

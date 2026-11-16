@@ -2171,9 +2171,6 @@ Change values in the settings card and watch this preview update.
 Change zoom
 == ズーム変更
 
-Changes apply at once, so check "Title preview" to compare styles; press "Save" on the "Sponsor title" card to share one.
-== 変更はすぐ反映されるので、タイトルの仕上がりプレビューで見比べてください。他の人にも見せるには支援者の称号カードで保存を押します。
-
 Changes how the vote menu looks and how you interact with running votes.
 == 投票メニューの見た目と、進行中の投票への操作方法を変更します。
 
@@ -2383,6 +2380,9 @@ Choose a preset, or Custom to enter width and height. Follow window uses the cur
 
 Choose a screen position and font size, then check the preview card for wrapping.
 == 画面上の位置と文字サイズを選び、プレビューカードで折り返しを確認します。
+
+Choose a sponsor title style for your nameplate and chat messages.
+== ネームプレートとチャットに表示する支援者称号のスタイルを選びます。
 
 Choose a target, then set its color; entity lasers can follow team colors.
 == 対象を選んで色を設定します。エンティティのレーザーはチームカラーに合わせられます。
@@ -10265,6 +10265,9 @@ Pick a shape, then tune glow and animation speed.
 Pick a slot, type the command and its label, then hold the wheel key in game to test.
 == スロットを選んでコマンドとラベルを入力し、ゲーム内でホイールキーを押し続けて試します。
 
+Pick a text style or a moon or sun badge, check the preview, then press "Save" to share the style with other players.
+== テキストのスタイルか月・太陽のバッジを選び、プレビューを確認して「保存」を押すと、他のプレイヤーにもそのスタイルが表示されます。
+
 Pick result: %s
 == 抽選結果：%s
 
@@ -13127,6 +13130,9 @@ Show a ghost of your best time after crossing the start line
 Show a MomentCap .poses file in game (no export)
 == MomentCap .poses ファイルをゲーム内で表示（書き出しなし）
 
+Show a per-character wave on text titles locally
+== 自分の画面ではテキスト称号の文字を一文字ずつ波打たせる
+
 Show a small view of the dummy
 == ダミーの小さなビューを表示
 
@@ -13795,6 +13801,9 @@ Show pause/play indicator when changing
 
 Show pending crash reports in a window at startup (0 = keep them on disk and log a line instead)
 == 起動時にウィンドウで未処理のクラッシュレポートを表示する（0 = レポートファイルを残してログのみ記録）
+
+Show per-character title waves locally
+== 称号の文字を自分の画面で波打たせる
 
 Show performance graphs.
 == パフォーマンスグラフを表示
@@ -14672,6 +14681,9 @@ Sponsor support
 Sponsor title
 == 支援者の称号
 
+Sponsor title appearance: 0 = capsule, 1-5 = text palette
+== 支援者称号の外観：0 = カプセル、1–5 = テキストの配色
+
 Sponsor title badge opacity (0-100)
 == 支援者称号全体の不透明度（0-100）
 
@@ -15443,6 +15455,21 @@ Testing translation...
 Text
 == テキスト
 
+Text 1
+== 文字 1
+
+Text 2
+== 文字 2
+
+Text 3
+== 文字 3
+
+Text 4
+== 文字 4
+
+Text 5
+== 文字 5
+
 Text alpha
 == テキストの透明度
 
@@ -15523,6 +15550,9 @@ The message is sent on every water death, so keep it short; leaving "Chat messag
 
 The name "default" is reserved.
 == 「default」という名前は予約されています。
+
+The per-character wave setting affects text titles on your screen only.
+== 文字を波打たせる設定は、自分の画面に表示されるテキスト称号にだけ適用されます。
 
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 == あなたがささやき中だったプレイヤーは、まだ再接続していないか退出しました。少し待つか、別の相手にささやいてください
@@ -15889,6 +15919,9 @@ Title server does not support badge appearance yet
 
 Title server does not support chat styles yet
 == 称号サーバーはまだチャットスタイルに対応していません
+
+Title server does not support text titles yet
+== 称号サーバーはまだテキスト形式の称号に対応していません
 
 Title server unavailable; retry
 == 称号サーバーに接続できません。再試行してください
@@ -16345,9 +16378,6 @@ Turn on "Show important server prompts as notifications" or "Route Echo messages
 
 Turn on "Show own coordinates" or "Show other players' coordinates", then choose "Show X" and "Show Y".
 == 自分の座標を表示または他のプレイヤーの座標を表示をオンにし、次に X を表示と Y を表示を選びます。
-
-Turn on "Show titles on nameplates", pick a "Title style", then adjust "Title motion" and "Wave amount"; "Advanced mode" adds color and glow.
-== ネームプレートに称号を表示をオンにし、称号スタイルを選んで、称号アニメーションと波の振幅を調整します。詳細モードでは色と発光も加えられます。
 
 Turn on "Skin outline for self and dummy" or "Skin outline for other players", then tune width and opacity; "Cycle custom Tee hue" animates custom colors.
 == 自分と dummy のスキンの輪郭か他のプレイヤーのスキンの輪郭をオンにして、太さと不透明度を調整します。カスタム Tee の色相切り替えがカスタムカラーを動かします。
@@ -17404,9 +17434,6 @@ Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per
 
 When TClient rainbow Tee is enabled, this feature has no effect.
 == TClient のレインボー Tee が有効な場合、この機能は効果がありません。
-
-Where your title appears and how it looks: nameplate, style, motion, colors and glow.
-== 称号をどこに出すか、どう見せるか。ネームプレート、スタイル、アニメーション、色、発光です。
 
 Whether a switch is deactivated by default (otherwise activated)
 == スイッチがデフォルトで無効かどうか（そうでなければ有効）

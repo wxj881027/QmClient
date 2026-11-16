@@ -2171,9 +2171,6 @@ Change values in the settings card and watch this preview update.
 Change zoom
 == 更改縮放比例
 
-Changes apply at once, so check "Title preview" to compare styles; press "Save" on the "Sponsor title" card to share one.
-== 改動會立即生效，可以用頭銜成品預覽比較風格；想讓別人也看到，就到贊助頭銜卡裡點保存。
-
 Changes how the vote menu looks and how you interact with running votes.
 == 變更投票選單的外觀，以及你與進行中投票的互動方式。
 
@@ -2383,6 +2380,9 @@ Choose a preset, or Custom to enter width and height. Follow window uses the cur
 
 Choose a screen position and font size, then check the preview card for wrapping.
 == 選擇螢幕位置和字型大小，再確認預覽卡中的換行情況。
+
+Choose a sponsor title style for your nameplate and chat messages.
+== 選擇名牌和聊天中顯示的贊助頭銜樣式。
 
 Choose a target, then set its color; entity lasers can follow team colors.
 == 先選一個目標，再設定它的顏色；實體的雷射可以跟隨隊伍顏色。
@@ -10265,6 +10265,9 @@ Pick a shape, then tune glow and animation speed.
 Pick a slot, type the command and its label, then hold the wheel key in game to test.
 == 選一個槽位，輸入指令和對應標籤，再到遊戲裡按住輪盤鍵測試。
 
+Pick a text style or a moon or sun badge, check the preview, then press "Save" to share the style with other players.
+== 選擇文字款、月亮膠囊或太陽膠囊。查看預覽後按「保存」，其他玩家就能看到這款頭銜。
+
 Pick result: %s
 == 抽取結果：%s
 
@@ -13127,6 +13130,9 @@ Show a ghost of your best time after crossing the start line
 Show a MomentCap .poses file in game (no export)
 == 在遊戲中檢視 MomentCap .poses 檔案（不匯出）
 
+Show a per-character wave on text titles locally
+== 在本機為文字頭銜顯示逐字波動
+
 Show a small view of the dummy
 == 顯示分身的小視窗
 
@@ -13795,6 +13801,9 @@ Show pause/play indicator when changing
 
 Show pending crash reports in a window at startup (0 = keep them on disk and log a line instead)
 == 啟動時用視窗顯示待處理的崩潰報告（0 = 僅保留報告檔案並記錄日誌）
+
+Show per-character title waves locally
+== 本機顯示頭銜逐字波動
 
 Show performance graphs.
 == 顯示性能圖表
@@ -14672,6 +14681,9 @@ Sponsor support
 Sponsor title
 == 贊助頭銜
 
+Sponsor title appearance: 0 = capsule, 1-5 = text palette
+== 贊助頭銜外觀：0 = 膠囊，1–5 = 文字配色
+
 Sponsor title badge opacity (0-100)
 == 贊助頭銜整體不透明度（0-100）
 
@@ -15443,6 +15455,21 @@ Testing translation...
 Text
 == 文字
 
+Text 1
+== 文字1
+
+Text 2
+== 文字2
+
+Text 3
+== 文字3
+
+Text 4
+== 文字4
+
+Text 5
+== 文字5
+
 Text alpha
 == 文字透明度
 
@@ -15523,6 +15550,9 @@ The message is sent on every water death, so keep it short; leaving "Chat messag
 
 The name "default" is reserved.
 == “default” 是保留名稱。
+
+The per-character wave setting affects text titles on your screen only.
+== 逐字波動只影響你畫面上的文字頭銜。
 
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 == 你正在私聊的玩家尚未重連或已離開。請稍等，或改與他人私聊
@@ -15889,6 +15919,9 @@ Title server does not support badge appearance yet
 
 Title server does not support chat styles yet
 == 頭銜伺服器尚不支援發言樣式
+
+Title server does not support text titles yet
+== 頭銜伺服器暫不支援文字款頭銜
 
 Title server unavailable; retry
 == 頭銜服務暫不可用，請重試
@@ -16345,9 +16378,6 @@ Turn on "Show important server prompts as notifications" or "Route Echo messages
 
 Turn on "Show own coordinates" or "Show other players' coordinates", then choose "Show X" and "Show Y".
 == 開啟顯示自己的座標或顯示其他玩家的座標，再選擇顯示 X 與顯示 Y。
-
-Turn on "Show titles on nameplates", pick a "Title style", then adjust "Title motion" and "Wave amount"; "Advanced mode" adds color and glow.
-== 開啟顯示名牌頭銜，選一個頭銜風格，再調頭銜動畫和波浪幅度；進階模式裡還能加顏色和光暈。
 
 Turn on "Skin outline for self and dummy" or "Skin outline for other players", then tune width and opacity; "Cycle custom Tee hue" animates custom colors.
 == 打開自己與 dummy 的皮膚描邊或其他玩家的皮膚描邊，再調寬度和透明度；循環自定義 Tee 色調負責讓自訂顏色動起來。
@@ -17404,9 +17434,6 @@ Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per
 
 When TClient rainbow Tee is enabled, this feature has no effect.
 == 已啟用 TClient 彩虹 Tee 時，本功能不會生效。
-
-Where your title appears and how it looks: nameplate, style, motion, colors and glow.
-== 你的頭銜出現在哪裡、長什麼樣：名牌、風格、動畫、顏色和光暈。
 
 Whether a switch is deactivated by default (otherwise activated)
 == 開關是否默認禁用（否則激活）

@@ -751,7 +751,6 @@ Change the skip duration
 Change values in the chat cards and watch this preview update.
 Change values in the settings card and watch this preview update.
 Change zoom
-Changes apply at once, so check "Title preview" to compare styles; press "Save" on the "Sponsor title" card to share one.
 Changes how the vote menu looks and how you interact with running votes.
 Changes the font used by the menus and how large the in-game cursor is drawn.
 Changes: %d
@@ -823,6 +822,7 @@ Choose "Show players' key presses" as "Own", "Others" or "All", then adjust "Siz
 Choose a position, then adjust width and size; the preview card shows the result.
 Choose a preset, or Custom to enter width and height. Follow window uses the current render size.
 Choose a screen position and font size, then check the preview card for wrapping.
+Choose a sponsor title style for your nameplate and chat messages.
 Choose a target, then set its color; entity lasers can follow team colors.
 Choose colors for weapons and entity lasers
 Choose country flag
@@ -3576,6 +3576,7 @@ Pick a pack to activate it; samples are reloaded when the selection changes.
 Pick a scope under "Show name plates", then set "Name plates size" and "Name plates offset"; clan and client ID lines have their own switches.
 Pick a shape, then tune glow and animation speed.
 Pick a slot, type the command and its label, then hold the wheel key in game to test.
+Pick a text style or a moon or sun badge, check the preview, then press "Save" to share the style with other players.
 Pick result: %s
 Pick the key that starts this flow.
 Pick the mode first, then the monitor and resolution; the refresh rate follows the monitor's current mode.
@@ -4554,6 +4555,7 @@ Shotgun laser outline color
 Show %s group
 Show a ghost of your best time after crossing the start line
 Show a MomentCap .poses file in game (no export)
+Show a per-character wave on text titles locally
 Show a small view of the dummy
 Show advanced nameplate settings without changing effect values
 Show advanced options
@@ -4782,6 +4784,7 @@ Show own player's hook collision line
 Show path
 Show pause/play indicator when changing
 Show pending crash reports in a window at startup (0 = keep them on disk and log a line instead)
+Show per-character title waves locally
 Show performance graphs.
 Show pet
 Show Pickup Ranges in Hitbox Mode
@@ -5078,6 +5081,7 @@ Sponsor code already claimed
 Sponsor reminder
 Sponsor support
 Sponsor title
+Sponsor title appearance: 0 = capsule, 1-5 = text palette
 Sponsor title badge opacity (0-100)
 Sponsor title badge: 0 = moon, 1 = sun
 Sponsors:
@@ -5350,6 +5354,11 @@ Tencent Cloud Translation SecretKey
 Test translation
 Testing translation...
 Text
+Text 1
+Text 2
+Text 3
+Text 4
+Text 5
 Text alpha
 Text before each key press count
 Text color
@@ -5379,6 +5388,7 @@ The look of the help bubbles that appear when you hover over buttons, settings a
 The map progress bar only fills on Gores maps; the other three lines work on any server.
 The message is sent on every water death, so keep it short; leaving "Chat message" empty disables sending.
 The name "default" is reserved.
+The per-character wave setting affects text titles on your screen only.
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 The preview does not show every weapon; check in game.
 The preview uses your own name and colors; other players may look different.
@@ -5505,6 +5515,7 @@ Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visibl
 Title preview
 Title server does not support badge appearance yet
 Title server does not support chat styles yet
+Title server does not support text titles yet
 Title server unavailable; retry
 Title spatial effect: 0 = polished, 1 = solid, 2 = classic Calamity, 3 = off
 Title style
@@ -5663,7 +5674,6 @@ Turn on "Show chat bubbles above players", then adjust "Duration", "Bubble opaci
 Turn on "Show hook strength icon indicator", optionally add "Show hook strength number indicator", then choose a "Hook strength scope".
 Turn on "Show important server prompts as notifications" or "Route Echo messages to notifications", then set "Notification hold time" and "Notification text size".
 Turn on "Show own coordinates" or "Show other players' coordinates", then choose "Show X" and "Show Y".
-Turn on "Show titles on nameplates", pick a "Title style", then adjust "Title motion" and "Wave amount"; "Advanced mode" adds color and glow.
 Turn on "Skin outline for self and dummy" or "Skin outline for other players", then tune width and opacity; "Cycle custom Tee hue" animates custom colors.
 Turn on "Smooth free spectator camera" and set "Cinematic smoothness": low values stay snappy, high values drift slowly.
 Turn on "Team tee glow", then set "Team tee glow intensity" and "Team tee glow halo size"; "Team 0 glow" handles players without a team.
@@ -6031,7 +6041,6 @@ Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per
 Wheel to zoom - drag empty space to pan
 Wheel up
 When TClient rainbow Tee is enabled, this feature has no effect.
-Where your title appears and how it looks: nameplate, style, motion, colors and glow.
 Whether a switch is deactivated by default (otherwise activated)
 Whether dummy copies your movement
 Whether dummy fires (requires cl_dummy_control 1)
