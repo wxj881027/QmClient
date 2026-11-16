@@ -47,6 +47,7 @@ namespace qm_finish_summary
 	{
 		static constexpr double NUMBER_DURATION = 0.55;
 		static constexpr double INTRO_DURATION = 2.60;
+		static constexpr float RANK_GAIN_DURATION = 0.75f;
 		struct SNumber
 		{
 			double m_From = 0.0;
@@ -78,6 +79,8 @@ namespace qm_finish_summary
 		double m_Start = 0.0;
 		double m_Now = 0.0;
 		std::optional<double> m_StarsStart;
+		std::optional<double> m_RankGainStart;
+		bool m_RankGainSettled = false;
 
 		static constexpr double FieldStart(EField Field)
 		{
@@ -94,7 +97,7 @@ namespace qm_finish_summary
 		}
 
 	public:
-		void Update(uint64_t Id, double Now, bool FullyExpanded, int MotionLevel, const TNumberTargets &Targets, int Stars = -1)
+		void Update(uint64_t Id, double Now, bool FullyExpanded, int MotionLevel, const TNumberTargets &Targets, int Stars = -1, bool RankGain = false)
 		{
 			if(!m_Valid || m_Id != Id)
 			{
@@ -110,6 +113,12 @@ namespace qm_finish_summary
 			}
 			if(!m_Started)
 				return;
+			if(RankGain)
+			{
+				if(!m_RankGainStart)
+					m_RankGainStart = std::max(m_Now, m_Start + FieldStart(EField::RANK));
+				m_RankGainSettled = m_RankGainSettled || MotionLevel <= 0;
+			}
 			if(Stars >= 0)
 			{
 				if(MotionLevel <= 0)
@@ -148,6 +157,17 @@ namespace qm_finish_summary
 		float NumberColorProgress(ENumber Number) const
 		{
 			return m_aNumbers[static_cast<size_t>(Number)].ColorProgress(m_Now);
+		}
+
+		std::optional<float> RankGainTime() const
+		{
+			if(!m_RankGainStart)
+				return std::nullopt;
+			if(m_RankGainSettled)
+				return RANK_GAIN_DURATION;
+			if(m_Now < *m_RankGainStart)
+				return std::nullopt;
+			return std::min(static_cast<float>(m_Now - *m_RankGainStart), RANK_GAIN_DURATION);
 		}
 
 		float StarAppearance(int Index) const

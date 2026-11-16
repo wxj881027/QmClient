@@ -1,6 +1,7 @@
 #include "QmFinishSummary.h"
 
 #include "QmColorGradient.h"
+#include "QmPieMenuRender.h"
 
 #include <base/color.h>
 #include <base/str.h>
@@ -174,6 +175,40 @@ namespace
 		return Text;
 	}
 
+	void DrawRankGain(IGraphics &Graphics, const CTextPainter &Painter, const CUIRect &Cell, const std::string &Label, float Scale, float Age, float Alpha)
+	{
+		const ColorRGBA Amber(1.0f, 209 / 255.0f, 71 / 255.0f, 1.0f);
+		const float Sweep = std::min(Age / 0.18f, 1.0f);
+		const float Settle = std::clamp((Age - 0.30f) / 0.45f, 0.0f, 1.0f);
+		const float WashAlpha = Sweep * mix(36.0f, 12.0f, Settle) / 255.0f;
+		Graphics.DrawRect(Cell.x, Cell.y, Cell.w, Cell.h, Amber.WithAlpha(WashAlpha * Alpha), 0, 0.0f);
+		const float LineHeight = mix(2.0f, 1.0f, Settle) * Scale;
+		const ColorRGBA Line = Amber.WithAlpha(Sweep * mix(220.0f, 90.0f, Settle) / 255.0f * Alpha);
+		for(const float Y : {Cell.y, Cell.y + Cell.h})
+			Graphics.DrawRect(Cell.x, Y - LineHeight * 0.5f, Cell.w * Sweep, LineHeight, Line, IGraphics::CORNER_ALL, LineHeight * 0.5f);
+
+		const float Reveal = std::clamp((Age - 0.10f) / 0.20f, 0.0f, 1.0f);
+		if(Reveal <= 0.0f)
+			return;
+		const float Ease = 1.0f - (1.0f - Reveal) * (1.0f - Reveal);
+		const float BadgeScale = Scale * mix(0.85f, 1.0f, Ease);
+		const float Width = std::min(132.0f * BadgeScale, Painter.Width(11.0f * BadgeScale, Label.c_str()) + 14.0f * BadgeScale);
+		const CUIRect Badge{Cell.x + Cell.w - Width, Cell.y - 8.0f * BadgeScale, Width, 16.0f * BadgeScale};
+		const float Opacity = Alpha * Ease;
+		if(Reveal < 1.0f)
+		{
+			const float Radius = mix(3.0f, 14.0f, Ease) * Scale;
+			qm_pie_menu_ui::DrawSector(&Graphics, vec2(Badge.x, Cell.y), Radius - Scale, Radius, 0.0f, 360.0f, 360.0f,
+				Amber.WithAlpha((1.0f - Reveal) * Alpha * (180 / 255.0f)));
+		}
+		Graphics.DrawRect(Badge.x, Badge.y, Badge.w, Badge.h, Amber.WithAlpha(Opacity), IGraphics::CORNER_ALL, Badge.h * 0.5f);
+		CUIRect Inner;
+		Badge.Margin(BadgeScale, &Inner);
+		Graphics.DrawRect(Inner.x, Inner.y, Inner.w, Inner.h, ColorRGBA(36 / 255.0f, 27 / 255.0f, 5 / 255.0f, Opacity * (230 / 255.0f)), IGraphics::CORNER_ALL, Inner.h * 0.5f);
+		const CUIRect Text{Inner.x + BadgeScale, Badge.y + (2.0f + 3.0f * (1.0f - Ease)) * BadgeScale, Inner.w - 2.0f * BadgeScale, Badge.h};
+		Painter.Label(Text, 11.0f * BadgeScale, Label.c_str(), ColorRGBA(1.0f, 246 / 255.0f, 214 / 255.0f, Opacity), 0.5f, 1, nullptr, nullptr, &Amber);
+	}
+
 	void RankCell(const CTextPainter &Painter, const CUIRect &Rect, float Scale, const char *pLabel,
 		const SValue &Rank, const std::string &Text, const ColorRGBA &Color, float Alpha, float Progress)
 	{
@@ -193,7 +228,7 @@ void qm_finish_summary::CContentCache::Update(const QmFinishSummary::SSnapshot &
 		static_cast<double>((Snapshot.m_TimeMs + 5) / 10), static_cast<double>((std::abs(Snapshot.m_DifferenceMs) + 5) / 10),
 		Target(Snapshot.m_LocalRank), Target(Snapshot.m_LocalRankTotal), Target(Snapshot.m_ChinaRank), Target(Snapshot.m_Rank),
 		Target(Snapshot.m_CompletedMaps), Target(Snapshot.m_TotalMaps), Target(Snapshot.m_Points), Target(Snapshot.m_PointsGained), Progress};
-	m_Presentation.Update(Snapshot.m_Id, NowSeconds, FullyExpanded, MotionLevel, Targets, Snapshot.m_Stars);
+	m_Presentation.Update(Snapshot.m_Id, NowSeconds, FullyExpanded, MotionLevel, Targets, Snapshot.m_Stars, Snapshot.m_RankPointsGained > 0);
 	const bool Changed = !m_Valid || m_Id != Snapshot.m_Id || m_Revision != Snapshot.m_Revision || m_Language != g_Config.m_ClLanguagefile;
 	std::array<int64_t, static_cast<size_t>(ENumber::COUNT)> aNumbers{};
 	for(size_t i = 0; i < aNumbers.size(); ++i)
@@ -207,6 +242,7 @@ void qm_finish_summary::CContentCache::Update(const QmFinishSummary::SSnapshot &
 		m_Id = Snapshot.m_Id;
 		m_Revision = Snapshot.m_Revision;
 		m_Language = g_Config.m_ClLanguagefile;
+		m_RankGain = Snapshot.m_RankPointsGained > 0 ? "+" + Number(Snapshot.m_RankPointsGained) + " Rank" : "";
 		m_Type = Snapshot.m_Category.empty() ? Localize("No data") : Localize(Snapshot.m_Category.c_str());
 		if(Snapshot.m_Stars >= 0)
 			m_Type += " ·";
@@ -365,6 +401,10 @@ bool qm_finish_summary::Render(IGraphics &Graphics, ITextRender &TextRender, CRe
 	};
 	DrawDivider(118.0f, EField::LOCAL_RANK);
 	const bool Ddnet = Snapshot.m_Community == ECommunity::DDNET;
+	DrawDivider(171.0f, EField::PLAYER);
+	const auto RankGainTime = Content.m_Presentation.RankGainTime();
+	if(Ddnet && RankGainTime && !Content.m_RankGain.empty())
+		DrawRankGain(Graphics, Painter, Box(332, 118, 132, 53), Content.m_RankGain, Scale, *RankGainTime, Alpha);
 	const float RankWidth = Ddnet ? 136.0f : 216.0f;
 	RankCell(Painter, Box(16, 126, RankWidth, 39), Scale, Localize("Server rank"), Snapshot.m_LocalRank, Content.m_LocalRank, Gold, FieldAlpha(EField::LOCAL_RANK), Content.m_Presentation.NumberColorProgress(ENumber::LOCAL_RANK));
 	if(Ddnet)
@@ -372,7 +412,6 @@ bool qm_finish_summary::Render(IGraphics &Graphics, ITextRender &TextRender, CRe
 	RankCell(Painter, Box(Ddnet ? 332.0f : 250.0f, 126, RankWidth, 39), Scale,
 		Ddnet ? Localize("Global rank") : Localize("Axiom rank"), Snapshot.m_Rank, Content.m_Rank, White, FieldAlpha(EField::RANK), Content.m_Presentation.NumberColorProgress(ENumber::RANK));
 
-	DrawDivider(171.0f, EField::PLAYER);
 	const float PlayerAlpha = FieldAlpha(EField::PLAYER);
 	if(pTeeRenderInfo && PlayerAlpha > 0.001f)
 	{

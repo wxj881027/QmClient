@@ -42,6 +42,7 @@ namespace qm_finish_summary
 		std::string m_Completion;
 		std::string m_Points;
 		std::string m_Gain;
+		std::string m_RankGain;
 
 		void Update(const QmFinishSummary::SSnapshot &Snapshot, double NowSeconds, bool FullyExpanded, int MotionLevel);
 	};

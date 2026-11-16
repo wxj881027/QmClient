@@ -265,6 +265,7 @@ void CQmFinishSummary::MergeResult(EQuery Query, const SRemoteData &Result)
 		m_Data.m_HistoryKnown = Result.m_HistoryKnown;
 		m_Data.m_Rank = Result.m_Rank;
 		m_Data.m_Points = Result.m_Points;
+		m_Data.m_RankPoints = Result.m_RankPoints;
 		m_Data.m_CompletedMaps = Result.m_CompletedMaps;
 		m_Data.m_TotalMaps = Result.m_TotalMaps;
 		m_Data.m_LatestTimeMs = Result.m_LatestTimeMs;

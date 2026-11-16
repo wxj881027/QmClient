@@ -55,6 +55,7 @@ namespace QmFinishSummary
 		std::optional<int64_t> m_ChinaBestTimeMs;
 		bool m_ChinaRankKnown = false;
 		std::optional<int64_t> m_Points;
+		std::optional<int64_t> m_RankPoints;
 		std::optional<int64_t> m_CompletedMaps;
 		std::optional<int64_t> m_TotalMaps;
 		bool m_HistoryKnown = false;
@@ -89,6 +90,7 @@ namespace QmFinishSummary
 		SValue m_TotalMaps;
 		SValue m_Points;
 		SValue m_PointsGained;
+		int64_t m_RankPointsGained = 0;
 	};
 
 	struct SOnlineTime

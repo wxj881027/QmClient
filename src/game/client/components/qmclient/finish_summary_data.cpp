@@ -221,6 +221,11 @@ namespace QmFinishSummary
 			return false;
 		SRemoteData Result;
 		Result.m_Points = Integer(Field(Field(Root.get(), "points"), "points"));
+		const json_value *pRank = Field(Root.get(), "rank");
+		Result.m_RankPoints = Integer(Field(pRank, "points"));
+		// DDNet 对未上榜的玩家明确返回 {"rank": null}，字段缺失时仍保留未知。
+		if(Field(pRank, "rank")->type == json_null && Field(pRank, "points")->type == json_none)
+			Result.m_RankPoints = 0;
 		for(unsigned Type = 0; Type < pTypes->u.object.length; ++Type)
 		{
 			const json_value *pMaps = Field(pTypes->u.object.values[Type].value, "maps");
@@ -531,6 +536,12 @@ namespace QmFinishSummary
 			Snapshot.m_ChinaRank = {-1, EStatus::UNAVAILABLE};
 		if(Axiom)
 			Snapshot.m_ChinaRank = {-1, EStatus::UNAVAILABLE};
+		// 只在本图的本次成绩已同步、个人 Rank 积分确有增长时记录一次，供回看复用。
+		if(Snapshot.m_Community == ECommunity::DDNET && Snapshot.m_RankPointsGained == 0 && ConfirmedFinish &&
+			Before.m_RankPoints && After.m_RankPoints && *After.m_RankPoints > *Before.m_RankPoints &&
+			After.m_BestTimeMs && Centiseconds(*After.m_BestTimeMs) == Centiseconds(Snapshot.m_TimeMs))
+			Snapshot.m_RankPointsGained = *After.m_RankPoints - *Before.m_RankPoints;
+
 		const bool HadFinish = HistoryKnown && PreviousBest.has_value();
 		const bool FirstFinish = HistoryKnown && !PreviousBest;
 		const bool NewFinishVisible = ConfirmedFinish && CurrentHistory && CurrentBest.has_value();

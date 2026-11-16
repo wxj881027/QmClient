@@ -31,6 +31,33 @@ TEST(QmFinishSummaryPresentation, WaitsForExpandedShellBeforeRevealingDetails)
 	EXPECT_GT(Presentation.Number(ENumber::TIME), 0.0);
 }
 
+TEST(QmFinishSummaryPresentation, LateRankGainPlaysOnceAndResetsForANewCard)
+{
+	CPresentation Presentation;
+	const auto Values = Targets();
+	Presentation.Update(1, 0.0, true, 2, Values);
+	Presentation.Update(1, 4.0, true, 2, Values);
+	EXPECT_FALSE(Presentation.RankGainTime());
+	Presentation.Update(1, 4.1, true, 2, Values, -1, true);
+	EXPECT_EQ(Presentation.RankGainTime(), 0.0f);
+	Presentation.Update(1, 4.6, true, 2, Values, -1, true);
+	EXPECT_EQ(Presentation.RankGainTime(), 0.5f);
+	Presentation.Update(1, 7.0, true, 2, Values, -1, true);
+	EXPECT_EQ(Presentation.RankGainTime(), 0.75f);
+	Presentation.Update(2, 8.0, true, 2, Values);
+	EXPECT_FALSE(Presentation.RankGainTime());
+}
+
+TEST(QmFinishSummaryPresentation, ReducedMotionKeepsRankGainStaticWhenMotionIsEnabledAgain)
+{
+	CPresentation Presentation;
+	const auto Values = Targets();
+	Presentation.Update(1, 3.0, true, 0, Values, -1, true);
+	EXPECT_EQ(Presentation.RankGainTime(), 0.75f);
+	Presentation.Update(1, 3.1, true, 2, Values, -1, true);
+	EXPECT_EQ(Presentation.RankGainTime(), 0.75f);
+}
+
 TEST(QmFinishSummaryPresentation, TimeCountsAtCenterBeforeMovingToTopLeft)
 {
 	CPresentation Presentation;
