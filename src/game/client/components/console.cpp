@@ -23,9 +23,11 @@
 
 #include <generated/client_data.h>
 
+#include <game/client/QmUi/QmAnimResolve.h>
 #include <game/client/QmUi/QmConsoleScroll.h>
 #include <game/client/QmUi/QmConsoleUi.h>
 #include <game/client/QmUi/UiButtons.h>
+#include <game/client/components/qmclient/console_slide.h>
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/components/qmclient/colored_parts.h>
 #include <game/client/components/qmclient/console_scroll.h>
@@ -1824,6 +1826,35 @@ static float ConsoleScaleFunc(float t)
 	return std::sin(std::acos(1.0f - t));
 }
 
+// ---- 控制台下拉/收回的弹簧 ----
+// 高度比例由一条 SCALE 轨道承担（0=完全收起，1=完全展开）。状态机仍按
+// GlobalTime() 的 0.1s 走，输入门控与「丢弃触发打开的那个按键」不受影响；
+// 弹簧只负责视觉高度，所以打开时输入框照常立刻可用，回弹尾巴继续在动。
+static uint64_t ConsoleSlideNodeKey()
+{
+	static const uint64_t s_NodeKey = BuildUiAnimNodeKey(static_cast<uint64_t>(str_quickhash("qm_console_slide")), 0);
+	return s_NodeKey;
+}
+
+// 折返不钉起点：收回途中再按 F1 打开，从当前高度续接，不会先跳回 0 再展开。
+static void StartConsoleSlide(CUiV2AnimationRuntime &AnimRuntime, float Target, bool SnapToStart)
+{
+	const uint64_t NodeKey = ConsoleSlideNodeKey();
+	if(SnapToStart)
+		AnimRuntime.SetValue(NodeKey, EUiAnimProperty::SCALE, 0.0f);
+
+	SUiAnimRequest Request;
+	Request.m_NodeKey = NodeKey;
+	Request.m_Property = EUiAnimProperty::SCALE;
+	Request.m_Target = Target;
+	Request.m_Transition.m_Driver = EUiAnimDriver::SPRING;
+	Request.m_Transition.m_Spring = QmConsoleSlideSpring(Target >= 1.0f, g_Config.m_QmConsoleSlideFeel);
+	Request.m_Transition.m_Priority = 2;
+	// 快速反复开合时后一次立刻接管，不排队。
+	Request.m_Transition.m_Interrupt = EUiAnimInterruptPolicy::REPLACE;
+	AnimRuntime.RequestAnimation(Request);
+}
+
 // NOLINTNEXTLINE(misc-use-internal-linkage)
 struct CCompletionOptionRenderInfo
 {
@@ -1925,12 +1956,23 @@ void CGameConsole::OnRender()
 	const float MaxConsoleHeight = m_ConsoleType == CONSOLETYPE_LOCAL && m_LocalConsoleFullscreen ? Screen.h : Screen.h * 3 / 5.0f;
 	float Progress = (Client()->GlobalTime() - (m_StateChangeEnd - m_StateChangeDuration)) / m_StateChangeDuration;
 
+	// 下拉/收回的高度比例改由弹簧轨道提供。状态机仍按 GlobalTime() 走：
+	// OPENING 到点就切 OPEN（输入框照常立刻激活），关闭动画期间 OnInput 已让出输入。
+	const bool SlideEnabled = g_Config.m_QmUiMotionLevel > 0 && GameClient()->UiRuntimeV2()->Enabled();
+	const uint64_t SlideNode = ConsoleSlideNodeKey();
+	CUiV2AnimationRuntime *pAnimRuntime = SlideEnabled ? &GameClient()->UiRuntimeV2()->AnimRuntime() : nullptr;
+
 	if(Progress >= 1.0f)
 	{
 		if(m_ConsoleState == CONSOLE_CLOSING)
 		{
-			m_ConsoleState = CONSOLE_CLOSED;
-			pConsole->m_BacklogLastActiveLine = -1;
+			// 出场必须等弹簧收敛，否则高度还在回落就硬切成 0，读起来是「突然没了」。
+			const bool Settled = pAnimRuntime == nullptr || !pAnimRuntime->HasActiveAnimation(SlideNode, EUiAnimProperty::SCALE);
+			if(Settled || time_get() > m_ConsoleSlideDeadline)
+			{
+				m_ConsoleState = CONSOLE_CLOSED;
+				pConsole->m_BacklogLastActiveLine = -1;
+			}
 		}
 		else if(m_ConsoleState == CONSOLE_OPENING)
 		{
@@ -2044,7 +2086,12 @@ void CGameConsole::OnRender()
 		TextRender()->TextOutlineColor(ResolveUiSurfaceForeground(Palette.m_aColors[QmConsoleAppearance::TEXT]).WithAlpha(PreviousTextOutlineColor.a));
 
 	float ConsoleHeightScale;
-	if(m_ConsoleState == CONSOLE_OPENING)
+	if(pAnimRuntime != nullptr)
+	{
+		// 弹簧值就是高度比例，策略见 console_slide.h：只允许 [0, 1]。
+		ConsoleHeightScale = QmConsoleSlideHeightScale(pAnimRuntime->GetValue(SlideNode, EUiAnimProperty::SCALE, 1.0f));
+	}
+	else if(m_ConsoleState == CONSOLE_OPENING)
 		ConsoleHeightScale = ConsoleScaleFunc(Progress);
 	else if(m_ConsoleState == CONSOLE_CLOSING)
 		ConsoleHeightScale = ConsoleScaleFunc(1.0f - Progress);
@@ -2996,7 +3043,13 @@ void CGameConsole::Toggle(int Type)
 		if(m_ConsoleState == CONSOLE_CLOSED || m_ConsoleState == CONSOLE_CLOSING)
 		{
 			Ui()->SetEnabled(false);
+			// 真打开（从完全收起）才钉起点；收回途中折返从当前高度续接，不跳。
+			const bool FromClosed = m_ConsoleState == CONSOLE_CLOSED;
 			m_ConsoleState = CONSOLE_OPENING;
+			if(g_Config.m_QmUiMotionLevel > 0 && GameClient()->UiRuntimeV2()->Enabled())
+				StartConsoleSlide(GameClient()->UiRuntimeV2()->AnimRuntime(), 1.0f, FromClosed);
+			else
+				GameClient()->UiRuntimeV2()->AnimRuntime().SetValue(ConsoleSlideNodeKey(), EUiAnimProperty::SCALE, 1.0f);
 		}
 		else
 		{
@@ -3004,6 +3057,15 @@ void CGameConsole::Toggle(int Type)
 			Ui()->SetEnabled(true);
 			GameClient()->OnRelease();
 			m_ConsoleState = CONSOLE_CLOSING;
+			if(g_Config.m_QmUiMotionLevel > 0 && GameClient()->UiRuntimeV2()->Enabled())
+			{
+				StartConsoleSlide(GameClient()->UiRuntimeV2()->AnimRuntime(), 0.0f, false);
+				m_ConsoleSlideDeadline = time_get() + time_freq() * 3 / 2; // 兜底 1.5s
+			}
+			else
+			{
+				GameClient()->UiRuntimeV2()->AnimRuntime().SetValue(ConsoleSlideNodeKey(), EUiAnimProperty::SCALE, 0.0f);
+			}
 		}
 	}
 	m_ConsoleType = Type;

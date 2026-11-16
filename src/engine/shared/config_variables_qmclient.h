@@ -49,6 +49,8 @@ MACRO_CONFIG_INT(QmAssetsPreviewBudgetMbOverride, qm_assets_preview_budget_mb_ov
 MACRO_CONFIG_INT(QmAssetsPreviewBudgetPercent, qm_assets_preview_budget_percent, 8, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Resource preview VRAM budget percentage (based on device local VRAM budget)")
 MACRO_CONFIG_INT(QmUiRuntimeV2Debug, qm_ui_runtime_v2_debug, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable UI runtime v2 debug logging")
 MACRO_CONFIG_INT(QmUiMotionLevel, qm_ui_motion_level, 2, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "QmUi animation intensity: 0=Off, 1=Reduced, 2=Full")
+// 控制台从顶部下拉展开/收回的弹簧手感：0=柔和 1=标准 2=弹性。
+MACRO_CONFIG_INT(QmConsoleSlideFeel, qm_console_slide_feel, 1, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console slide feel: 0=soft, 1=standard, 2=bouncy")
 // 输入光标画法：只影响所有输入框的光标外观（竖线 / 下划线 / 方块），不改变输入行为。
 MACRO_CONFIG_INT(QmTextCaretStyle, qm_text_caret_style, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Text caret style: 0=bar, 1=underscore, 2=block")
 // DDNet 页内子页签：未发布，不做配置迁移，直接给默认值。

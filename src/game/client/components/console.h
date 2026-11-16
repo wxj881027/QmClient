@@ -19,6 +19,7 @@
 #include <game/client/ui.h>
 #include <game/client/ui_scrollregion.h>
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -236,6 +237,8 @@ private:
 	int m_ConsoleState;
 	float m_StateChangeEnd;
 	float m_StateChangeDuration;
+	// 下拉/收回弹簧轨道的关闭兜底截止时刻（time_get）：轨道异常不收敛时强制收起。
+	int64_t m_ConsoleSlideDeadline = 0;
 
 	bool m_WantsSelectionCopy = false;
 	bool m_LocalConsoleFullscreen = false;
