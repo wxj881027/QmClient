@@ -33,7 +33,7 @@ namespace QmMapCover
 	// 条目封面图的形状参数。
 	struct SArt
 	{
-		// 输出宽度里给完整缩略图的比例，其余宽度是右侧拖尾。
+		// 输出宽度里给完整缩略图的比例，1 表示完整图片，其余宽度是右侧拖尾。
 		float m_ImageFraction = 0.69f;
 		// 压暗系数：条目文字压不到这里，但太亮会抢列表的注意力。
 		float m_Shade = 0.84f;

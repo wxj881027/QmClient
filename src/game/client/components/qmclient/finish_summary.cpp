@@ -99,6 +99,8 @@ void CQmFinishSummary::OnReset()
 	m_Community = ECommunity::NONE;
 	m_Map.clear();
 	m_Player.clear();
+	m_CoverTexture.Invalidate();
+	m_NextCoverRequest = 0.0;
 	m_ClientId = -1;
 	m_Connection = -1;
 	m_RunStartTick = -1;
@@ -181,6 +183,7 @@ void CQmFinishSummary::PrepareRequests(bool AfterFinish)
 		SRemoteData Metadata;
 		Metadata.m_Map = m_Data.m_Map;
 		Metadata.m_Mapper = m_Data.m_Mapper;
+		Metadata.m_Thumbnail = m_Data.m_Thumbnail;
 		Metadata.m_Category = m_Data.m_Category;
 		Metadata.m_Stars = m_Data.m_Stars;
 		Metadata.m_MapPoints = m_Data.m_MapPoints;
@@ -241,6 +244,7 @@ void CQmFinishSummary::MergeResult(EQuery Query, const SRemoteData &Result)
 	case EQuery::MAP:
 		m_Data.m_Map = Result.m_Map;
 		m_Data.m_Mapper = Result.m_Mapper;
+		m_Data.m_Thumbnail = Result.m_Thumbnail;
 		m_Data.m_Category = Result.m_Category;
 		m_Data.m_Stars = Result.m_Stars;
 		m_Data.m_MapPoints = Result.m_MapPoints;
@@ -417,6 +421,11 @@ void CQmFinishSummary::OnNewSnapshot()
 		StartRun(Client()->GameTick(m_Connection));
 }
 
+IGraphics::CTextureHandle CQmFinishSummary::CoverTexture() const
+{
+	return Graphics()->IsTextureHandleAllocated(m_CoverTexture) ? m_CoverTexture : IGraphics::CTextureHandle();
+}
+
 void CQmFinishSummary::OnUpdate()
 {
 	if(!UpdateContext())
@@ -431,6 +440,16 @@ void CQmFinishSummary::OnUpdate()
 	if(WasVisible && !m_State.Visible())
 		CancelRequests();
 	UpdateRequests(CurrentTime);
+	// 展示时从当前通关快照取图；限频刷新也能在封面更新或设备重建后拿到新纹理。
+	const auto *pSnapshot = m_State.Snapshot();
+	if(m_State.Visible() && pSnapshot && CurrentTime >= m_NextCoverRequest)
+	{
+		CQmMapCovers::SImage Cover;
+		if(!pSnapshot->m_Thumbnail.empty())
+			GameClient()->m_MapCovers.Get(pSnapshot->m_Thumbnail.c_str(), CQmMapCovers::ERole::SUMMARY, &Cover);
+		m_CoverTexture = Cover.m_Texture;
+		m_NextCoverRequest = CurrentTime + 0.25;
+	}
 	if(!m_State.Visible())
 	{
 		m_PreviousBest = m_Data.m_BestTimeMs;

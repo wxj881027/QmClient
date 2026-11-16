@@ -1,5 +1,7 @@
 #include "QmFinishSummary.h"
 
+#include "QmColorGradient.h"
+
 #include <base/color.h>
 #include <base/str.h>
 #include <base/time.h>
@@ -23,19 +25,100 @@ namespace
 	using namespace QmFinishSummary;
 	using namespace qm_finish_summary;
 
-	void Label(ITextRender &TextRender, const CUIRect &Rect, float FontSize, const char *pText, const ColorRGBA &Color, float Alignment = 0.0f, int MaxLines = 1)
+	class CTextPainter
 	{
-		if(Rect.w <= 0.0f || Rect.h <= 0.0f || Color.a <= 0.001f)
-			return;
-		const float Width = std::min(Rect.w, TextRender.TextWidth(FontSize, pText));
-		CTextCursor Cursor;
-		Cursor.m_FontSize = FontSize;
-		Cursor.m_LineWidth = Rect.w;
-		Cursor.m_MaxLines = MaxLines;
-		Cursor.m_Flags = TEXTFLAG_RENDER | TEXTFLAG_ELLIPSIS_AT_END;
-		Cursor.SetPosition(vec2(Rect.x + (Rect.w - Width) * Alignment, Rect.y));
-		TextRender.TextColor(Color);
-		TextRender.TextEx(&Cursor, pText);
+		IGraphics &m_Graphics;
+		ITextRender &m_TextRender;
+		const CUIRect *m_pTextScreen;
+		CUIRect m_TargetScreen;
+
+		void MapTextScreen() const
+		{
+			if(m_pTextScreen)
+				m_Graphics.MapScreen(m_pTextScreen->x, m_pTextScreen->y, m_pTextScreen->x + m_pTextScreen->w, m_pTextScreen->y + m_pTextScreen->h);
+		}
+
+		void RestoreTargetScreen() const
+		{
+			if(m_pTextScreen)
+				m_Graphics.MapScreen(m_TargetScreen.x, m_TargetScreen.y, m_TargetScreen.x + m_TargetScreen.w, m_TargetScreen.y + m_TargetScreen.h);
+		}
+
+	public:
+		CTextPainter(IGraphics &Graphics, ITextRender &TextRender, const CUIRect *pTextScreen) :
+			m_Graphics(Graphics), m_TextRender(TextRender), m_pTextScreen(pTextScreen)
+		{
+			float Right, Bottom;
+			Graphics.GetScreen(&m_TargetScreen.x, &m_TargetScreen.y, &Right, &Bottom);
+			m_TargetScreen.w = Right - m_TargetScreen.x;
+			m_TargetScreen.h = Bottom - m_TargetScreen.y;
+		}
+
+		float Width(float FontSize, const char *pText) const
+		{
+			MapTextScreen();
+			const float Width = m_TextRender.TextWidth(FontSize, pText);
+			RestoreTargetScreen();
+			return Width;
+		}
+
+		void Label(const CUIRect &Rect, float FontSize, const char *pText, const ColorRGBA &Color, float Alignment = 0.0f,
+			int MaxLines = 1, const SQmColorGradient *pGradient = nullptr, const CUIRect *pGradientBounds = nullptr) const
+		{
+			if(Rect.w <= 0.0f || Rect.h <= 0.0f || Color.a <= 0.001f)
+				return;
+			const float TextWidth = std::min(Rect.w, Width(FontSize, pText));
+			CTextCursor Cursor;
+			Cursor.m_FontSize = FontSize;
+			Cursor.m_LineWidth = Rect.w;
+			Cursor.m_MaxLines = MaxLines;
+			Cursor.m_Flags = TEXTFLAG_RENDER | TEXTFLAG_ELLIPSIS_AT_END;
+			Cursor.SetPosition(vec2(Rect.x + (Rect.w - TextWidth) * Alignment, Rect.y));
+			const CUIRect Bounds = pGradientBounds ? *pGradientBounds : CUIRect{Cursor.m_X, Cursor.m_Y, TextWidth, FontSize};
+			const SQmGradientTextPaint Paint{pGradient, Bounds.TopLeft(), Bounds.Size(), Color.a};
+			if(pGradient)
+			{
+				const auto Grid = QmGradientTextGrid(*pGradient, Bounds.Size(), FontSize);
+				Cursor.m_pfnColorSampler = SQmGradientTextPaint::Sample;
+				Cursor.m_pColorSamplerContext = &Paint;
+				Cursor.m_ColorSamplerColumns = Grid[0];
+				Cursor.m_ColorSamplerRows = Grid[1];
+			}
+			m_TextRender.TextColor(Color);
+			if(!m_pTextScreen)
+			{
+				m_TextRender.TextEx(&Cursor, pText);
+				return;
+			}
+			// 按屏幕像素比例生成字形，再在小目标里绘制，避免离屏投影放大图集字号。
+			MapTextScreen();
+			STextContainerIndex Container;
+			const unsigned SavedFlags = m_TextRender.GetRenderFlags();
+			m_TextRender.SetRenderFlags(SavedFlags | TEXT_RENDER_FLAG_ONE_TIME_USE);
+			m_TextRender.CreateTextContainer(Container, &Cursor, pText);
+			m_TextRender.SetRenderFlags(SavedFlags);
+			RestoreTargetScreen();
+			if(Container.Valid())
+				m_TextRender.RenderTextContainer(Container, m_TextRender.DefaultTextColor(), m_TextRender.DefaultTextOutlineColor());
+			m_TextRender.DeleteTextContainer(Container);
+		}
+	};
+
+	SQmColorGradient NumberGradient(const ColorRGBA &Accent, float Progress)
+	{
+		const ColorRGBA Start(0.68f, 0.84f, 1.0f, 1.0f);
+		const ColorRGBA End(0.94f, 0.98f, 1.0f, 1.0f);
+		SQmColorGradient Gradient;
+		Gradient.m_NumColors = 3;
+		Gradient.m_HasPalette = true;
+		Gradient.m_Direction = vec2(0.35f, 1.0f);
+		const auto Interpolate = [Progress](ColorRGBA From, ColorRGBA To) {
+			return ColorRGBA(mix(From.r, To.r, Progress), mix(From.g, To.g, Progress), mix(From.b, To.b, Progress), 1.0f);
+		};
+		Gradient.m_aColors[0] = Interpolate(Start, End);
+		Gradient.m_aColors[1] = Interpolate(Start, Accent);
+		Gradient.m_aColors[2] = Interpolate(ColorRGBA(0.44f, 0.66f, 0.95f, 1.0f), Accent);
+		return Gradient;
 	}
 
 	std::string Number(int64_t Value)
@@ -83,12 +166,13 @@ namespace
 		return Text;
 	}
 
-	void RankCell(ITextRender &TextRender, const CUIRect &Rect, float Scale, const char *pLabel,
-		const SValue &Rank, const std::string &Text, const ColorRGBA &Color, float Alpha)
+	void RankCell(const CTextPainter &Painter, const CUIRect &Rect, float Scale, const char *pLabel,
+		const SValue &Rank, const std::string &Text, const ColorRGBA &Color, float Alpha, float Progress)
 	{
-		Label(TextRender, Rect, 12.0f * Scale, pLabel, ColorRGBA(0.92f, 0.95f, 1.0f, 0.72f * Alpha));
-		Label(TextRender, {Rect.x, Rect.y + 18.0f * Scale, Rect.w, 23.0f * Scale},
-			(HasValue(Rank) ? 18.0f : 13.0f) * Scale, Text.c_str(), Color.WithAlpha(Alpha));
+		const SQmColorGradient Gradient = NumberGradient(Color, Progress);
+		Painter.Label(Rect, 12.0f * Scale, pLabel, ColorRGBA(0.92f, 0.95f, 1.0f, 0.72f * Alpha));
+		Painter.Label({Rect.x, Rect.y + 18.0f * Scale, Rect.w, 23.0f * Scale},
+			(HasValue(Rank) ? 18.0f : 13.0f) * Scale, Text.c_str(), Color.WithAlpha(Alpha), 0.0f, 1, HasValue(Rank) ? &Gradient : nullptr);
 	}
 }
 
@@ -187,13 +271,14 @@ void qm_finish_summary::CContentCache::Update(const QmFinishSummary::SSnapshot &
 
 bool qm_finish_summary::Render(IGraphics &Graphics, ITextRender &TextRender, CRenderTools &RenderTools, const CUIRect &Rect,
 	const QmFinishSummary::SSnapshot &Snapshot, const CManagedTeeRenderInfo *pTeeRenderInfo, CContentCache &Content,
-	double NowSeconds, bool FullyExpanded, int MotionLevel, float Alpha)
+	double NowSeconds, bool FullyExpanded, int MotionLevel, float Alpha, const CUIRect *pTextScreen)
 {
 	if(Rect.w <= 0.0f || Rect.h <= 0.0f)
 		return false;
 	Content.Update(Snapshot, NowSeconds, FullyExpanded, MotionLevel);
 	if(Alpha <= 0.001f)
 		return Content.m_Presentation.Complete();
+	const CTextPainter Painter(Graphics, TextRender, pTextScreen);
 	const ColorRGBA SavedColor = TextRender.GetTextColor();
 	const ColorRGBA SavedOutline = TextRender.GetTextOutlineColor();
 	const EFontPreset SavedFont = TextRender.GetFontPreset();
@@ -214,44 +299,48 @@ bool qm_finish_summary::Render(IGraphics &Graphics, ITextRender &TextRender, CRe
 	const float Placement = Content.m_Presentation.TimePlacement();
 	const CUIRect TimeBox = Box(40.0f + (16.0f - 40.0f) * Placement, 72.0f + (14.0f - 72.0f) * Placement,
 		400.0f + (216.0f - 400.0f) * Placement, 60.0f);
-	Label(TextRender, TimeBox, 12.0f * Scale, Localize("Time to finish"), Muted.WithAlpha(Alpha), (1.0f - Placement) * 0.5f);
+	Painter.Label(TimeBox, 12.0f * Scale, Localize("Time to finish"), Muted.WithAlpha(Alpha), (1.0f - Placement) * 0.5f);
 	const char *pMajor = Content.m_TimeMajor.c_str();
 	const char *pMinor = Content.m_TimeMinor.c_str();
 	float TimeSize = (42.0f + (32.0f - 42.0f) * Placement) * Scale;
-	float TimeWidth = TextRender.TextWidth(TimeSize, pMajor) + TextRender.TextWidth(TimeSize * 0.58f, pMinor);
+	float TimeWidth = Painter.Width(TimeSize, pMajor) + Painter.Width(TimeSize * 0.58f, pMinor);
 	if(TimeWidth > TimeBox.w)
 		TimeSize *= TimeBox.w / TimeWidth;
-	TimeWidth = TextRender.TextWidth(TimeSize, pMajor) + TextRender.TextWidth(TimeSize * 0.58f, pMinor);
+	TimeWidth = Painter.Width(TimeSize, pMajor) + Painter.Width(TimeSize * 0.58f, pMinor);
 	const float TimeX = TimeBox.x + (TimeBox.w - TimeWidth) * (1.0f - Placement) * 0.5f;
 	const float TimeY = TimeBox.y + 19.0f * Scale;
-	TextRender.TextColor(White.WithAlpha(Alpha));
-	TextRender.Text(TimeX, TimeY, TimeSize, pMajor);
-	TextRender.Text(TimeX + TextRender.TextWidth(TimeSize, pMajor), TimeY + TimeSize * 0.42f, TimeSize * 0.58f, pMinor);
+	const SQmColorGradient TimeGradient = NumberGradient(Gold, Content.m_Presentation.NumberColorProgress(ENumber::TIME));
+	const CUIRect TimeBounds{TimeX, TimeY, TimeWidth, TimeSize};
+	const float MajorWidth = Painter.Width(TimeSize, pMajor);
+	Painter.Label({TimeX, TimeY, MajorWidth + Scale, TimeSize}, TimeSize, pMajor, White.WithAlpha(Alpha), 0.0f, 1, &TimeGradient, &TimeBounds);
+	Painter.Label({TimeX + MajorWidth, TimeY + TimeSize * 0.42f, TimeBox.w - MajorWidth, TimeSize},
+		TimeSize * 0.58f, pMinor, White.WithAlpha(Alpha), 0.0f, 1, &TimeGradient, &TimeBounds);
 
-	Label(TextRender, Box(250, 16, 214, 36), 17.0f * Scale, Snapshot.m_Map.c_str(), White.WithAlpha(FieldAlpha(EField::MAP)), 0.0f, 2);
-	Label(TextRender, Box(250, 55, 214, 15), 12.0f * Scale, Snapshot.m_Mapper.empty() ? Localize("No data") : Snapshot.m_Mapper.c_str(), Muted.WithAlpha(FieldAlpha(EField::MAPPER)));
-	Label(TextRender, Box(250, 74, 214, 15), 12.0f * Scale, Content.m_Type.c_str(), White.WithAlpha(FieldAlpha(EField::TYPE)));
-	Label(TextRender, Box(250, 94, 214, 15), 12.0f * Scale, Snapshot.m_FinishedAt.c_str(), Muted.WithAlpha(FieldAlpha(EField::FINISHED_AT)));
+	Painter.Label(Box(250, 16, 214, 36), 17.0f * Scale, Snapshot.m_Map.c_str(), White.WithAlpha(FieldAlpha(EField::MAP)), 0.0f, 2);
+	Painter.Label(Box(250, 55, 214, 15), 12.0f * Scale, Snapshot.m_Mapper.empty() ? Localize("No data") : Snapshot.m_Mapper.c_str(), Muted.WithAlpha(FieldAlpha(EField::MAPPER)));
+	Painter.Label(Box(250, 74, 214, 15), 12.0f * Scale, Content.m_Type.c_str(), White.WithAlpha(FieldAlpha(EField::TYPE)));
+	Painter.Label(Box(250, 94, 214, 15), 12.0f * Scale, Snapshot.m_FinishedAt.c_str(), Muted.WithAlpha(FieldAlpha(EField::FINISHED_AT)));
 
 	const bool PersonalBest = Snapshot.m_Comparison == EComparison::FIRST || Snapshot.m_Comparison == EComparison::BEST || Snapshot.m_Comparison == EComparison::IMPROVED;
 	const ColorRGBA ComparisonColor = PersonalBest ? Gold : Muted;
-	const float BadgeWidth = std::min(216.0f * Scale, TextRender.TextWidth(12.0f * Scale, Content.m_Comparison.c_str()) + 14.0f * Scale);
+	const float BadgeWidth = std::min(216.0f * Scale, Painter.Width(12.0f * Scale, Content.m_Comparison.c_str()) + 14.0f * Scale);
 	const CUIRect Badge{OriginX + 16.0f * Scale, OriginY + 76.0f * Scale, BadgeWidth, 18.0f * Scale};
 	Graphics.DrawRect(Badge.x, Badge.y, Badge.w, Badge.h, ComparisonColor.WithAlpha(0.16f * FieldAlpha(EField::COMPARISON)), IGraphics::CORNER_ALL, Badge.h * 0.5f);
-	Label(TextRender, {Badge.x + 7.0f * Scale, Badge.y + 2.0f * Scale, Badge.w - 14.0f * Scale, Badge.h}, 12.0f * Scale,
+	Painter.Label({Badge.x + 7.0f * Scale, Badge.y + 2.0f * Scale, Badge.w - 14.0f * Scale, Badge.h}, 12.0f * Scale,
 		Content.m_Comparison.c_str(), ComparisonColor.WithAlpha(FieldAlpha(EField::COMPARISON)));
 	const ColorRGBA DifferenceColor = Snapshot.m_Comparison == EComparison::IMPROVED ? ColorRGBA(0.55f, 0.96f, 0.73f, 1.0f) : ColorRGBA(1.0f, 0.66f, 0.60f, 1.0f);
-	Label(TextRender, Box(16, 99, 216, 15), 12.0f * Scale, Content.m_Difference.c_str(), DifferenceColor.WithAlpha(FieldAlpha(EField::DIFFERENCE)));
+	const SQmColorGradient DifferenceGradient = NumberGradient(DifferenceColor, Content.m_Presentation.NumberColorProgress(ENumber::DIFFERENCE));
+	Painter.Label(Box(16, 99, 216, 15), 12.0f * Scale, Content.m_Difference.c_str(), DifferenceColor.WithAlpha(FieldAlpha(EField::DIFFERENCE)), 0.0f, 1, &DifferenceGradient);
 
 	const CUIRect Divider = Box(16, 118, 448, 0.8f);
 	Graphics.DrawRect(Divider.x, Divider.y, Divider.w, Divider.h, White.WithAlpha(0.18f * FieldAlpha(EField::LOCAL_RANK)), 0, 0.0f);
 	const bool Ddnet = Snapshot.m_Community == ECommunity::DDNET;
 	const float RankWidth = Ddnet ? 136.0f : 216.0f;
-	RankCell(TextRender, Box(16, 126, RankWidth, 39), Scale, Localize("Server rank"), Snapshot.m_LocalRank, Content.m_LocalRank, Gold, FieldAlpha(EField::LOCAL_RANK));
+	RankCell(Painter, Box(16, 126, RankWidth, 39), Scale, Localize("Server rank"), Snapshot.m_LocalRank, Content.m_LocalRank, Gold, FieldAlpha(EField::LOCAL_RANK), Content.m_Presentation.NumberColorProgress(ENumber::LOCAL_RANK));
 	if(Ddnet)
-		RankCell(TextRender, Box(174, 126, 132, 39), Scale, Localize("China rank"), Snapshot.m_ChinaRank, Content.m_ChinaRank, White, FieldAlpha(EField::CHINA_RANK));
-	RankCell(TextRender, Box(Ddnet ? 332.0f : 250.0f, 126, RankWidth, 39), Scale,
-		Ddnet ? Localize("Global rank") : Localize("Axiom rank"), Snapshot.m_Rank, Content.m_Rank, White, FieldAlpha(EField::RANK));
+		RankCell(Painter, Box(174, 126, 132, 39), Scale, Localize("China rank"), Snapshot.m_ChinaRank, Content.m_ChinaRank, White, FieldAlpha(EField::CHINA_RANK), Content.m_Presentation.NumberColorProgress(ENumber::CHINA_RANK));
+	RankCell(Painter, Box(Ddnet ? 332.0f : 250.0f, 126, RankWidth, 39), Scale,
+		Ddnet ? Localize("Global rank") : Localize("Axiom rank"), Snapshot.m_Rank, Content.m_Rank, White, FieldAlpha(EField::RANK), Content.m_Presentation.NumberColorProgress(ENumber::RANK));
 
 	const CUIRect FooterDivider = Box(16, 171, 448, 0.8f);
 	Graphics.DrawRect(FooterDivider.x, FooterDivider.y, FooterDivider.w, FooterDivider.h, White.WithAlpha(0.18f * FieldAlpha(EField::PLAYER)), 0, 0.0f);
@@ -265,18 +354,21 @@ bool qm_finish_summary::Render(IGraphics &Graphics, ITextRender &TextRender, CRe
 		RenderTools.RenderTee(CAnimState::GetIdle(), &TeeInfo, EMOTE_NORMAL, vec2(1.0f, 0.0f),
 			vec2(OriginX + 31.0f * Scale, OriginY + 192.0f * Scale + Offset.y), PlayerAlpha);
 	}
-	Label(TextRender, Box(52, 183, 100, 18), 14.0f * Scale, Snapshot.m_Player.c_str(), White.WithAlpha(PlayerAlpha));
-	Label(TextRender, Box(164, 180, 168, 16), 12.0f * Scale, Content.m_Completion.c_str(), White.WithAlpha(FieldAlpha(EField::COMPLETION)), 0.5f);
+	Painter.Label(Box(52, 183, 100, 18), 14.0f * Scale, Snapshot.m_Player.c_str(), White.WithAlpha(PlayerAlpha));
+	const SQmColorGradient CompletionGradient = NumberGradient(Gold, Content.m_Presentation.NumberColorProgress(ENumber::COMPLETED));
+	Painter.Label(Box(164, 180, 168, 16), 12.0f * Scale, Content.m_Completion.c_str(), White.WithAlpha(FieldAlpha(EField::COMPLETION)), 0.5f, 1, &CompletionGradient);
 	const CUIRect Bar = Box(164, 201, 168, 3);
 	Graphics.DrawRect(Bar.x, Bar.y, Bar.w, Bar.h, White.WithAlpha(0.20f * FieldAlpha(EField::COMPLETION)), IGraphics::CORNER_ALL, Bar.h * 0.5f);
 	const float Progress = std::clamp(static_cast<float>(Content.m_Presentation.Number(ENumber::PROGRESS)), 0.0f, 1.0f);
 	Graphics.DrawRect(Bar.x, Bar.y, Bar.w * Progress, Bar.h, Gold.WithAlpha(FieldAlpha(EField::COMPLETION)), IGraphics::CORNER_ALL, Bar.h * 0.5f);
-	Label(TextRender, Box(348, 179, 116, 16), 12.0f * Scale, Content.m_Points.c_str(), White.WithAlpha(FieldAlpha(EField::POINTS)), 1.0f);
-	const float GainWidth = std::min(116.0f * Scale, TextRender.TextWidth(12.0f * Scale, Content.m_Gain.c_str()) + 14.0f * Scale);
+	const SQmColorGradient PointsGradient = NumberGradient(Gold, Content.m_Presentation.NumberColorProgress(ENumber::POINTS));
+	Painter.Label(Box(348, 179, 116, 16), 12.0f * Scale, Content.m_Points.c_str(), White.WithAlpha(FieldAlpha(EField::POINTS)), 1.0f, 1, &PointsGradient);
+	const float GainWidth = std::min(116.0f * Scale, Painter.Width(12.0f * Scale, Content.m_Gain.c_str()) + 14.0f * Scale);
 	const CUIRect GainBadge{OriginX + 464.0f * Scale - GainWidth, OriginY + 196.0f * Scale, GainWidth, 16.0f * Scale};
 	Graphics.DrawRect(GainBadge.x, GainBadge.y, GainBadge.w, GainBadge.h, Gold.WithAlpha(0.9f * FieldAlpha(EField::POINTS)), IGraphics::CORNER_ALL, GainBadge.h * 0.5f);
-	Label(TextRender, {GainBadge.x + 7.0f * Scale, GainBadge.y + Scale, GainBadge.w - 14.0f * Scale, GainBadge.h},
-		12.0f * Scale, Content.m_Gain.c_str(), ColorRGBA(0.18f, 0.15f, 0.06f, FieldAlpha(EField::POINTS)), 0.5f);
+	const SQmColorGradient GainGradient = NumberGradient(ColorRGBA(0.30f, 0.19f, 0.03f, 1.0f), Content.m_Presentation.NumberColorProgress(ENumber::GAIN));
+	Painter.Label({GainBadge.x + 7.0f * Scale, GainBadge.y + Scale, GainBadge.w - 14.0f * Scale, GainBadge.h},
+		12.0f * Scale, Content.m_Gain.c_str(), ColorRGBA(0.18f, 0.15f, 0.06f, FieldAlpha(EField::POINTS)), 0.5f, 1, &GainGradient);
 	TextRender.SetFontPreset(SavedFont);
 	TextRender.TextColor(SavedColor);
 	TextRender.TextOutlineColor(SavedOutline);

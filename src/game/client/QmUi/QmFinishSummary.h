@@ -52,23 +52,16 @@ namespace qm_finish_summary
 		constexpr float AspectRatio = 480.0f / 216.0f;
 		const float Scale = std::max(1.0f, HudScale);
 		const float Padding = std::max(0.0f, OuterPadding) * 2.0f;
-		const float MaxHeight = std::min(std::max(0.0f, ScreenHeight * 0.2f - Padding) / Scale, std::max(0.0f, ScreenHeight - Top));
-		const float Width = std::min(std::max(0.0f, ScreenWidth * 0.25f - Padding) / Scale, MaxHeight * AspectRatio);
+		const float MaxHeight = std::min(std::max(0.0f, ScreenHeight * 0.3f - Padding) / Scale, std::max(0.0f, ScreenHeight - Top));
+		const float Width = std::min(std::max(0.0f, ScreenWidth * 0.375f - Padding) / Scale, MaxHeight * AspectRatio);
 		const float Height = Width / AspectRatio;
 		return {(ScreenWidth - Width) * 0.5f, Top, Width, Height};
-	}
-
-	inline CUIRect ResolveRect(const CUIRect &Normal, const CUIRect &Expanded, float Progress)
-	{
-		const float T = std::clamp(Progress, 0.0f, 1.0f);
-		return {Normal.x + (Expanded.x - Normal.x) * T, Normal.y,
-			Normal.w + (Expanded.w - Normal.w) * T, Normal.h + (Expanded.h - Normal.h) * T};
 	}
 
 	// 内容入场独立于数据修订，返回值只表示本次入场是否呈现完毕。
 	bool Render(IGraphics &Graphics, ITextRender &TextRender, CRenderTools &RenderTools, const CUIRect &Rect,
 		const QmFinishSummary::SSnapshot &Snapshot, const CManagedTeeRenderInfo *pTeeRenderInfo, CContentCache &Content,
-		double NowSeconds, bool FullyExpanded, int MotionLevel, float Alpha);
+		double NowSeconds, bool FullyExpanded, int MotionLevel, float Alpha, const CUIRect *pTextScreen = nullptr);
 }
 
 #endif

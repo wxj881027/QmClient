@@ -1,5 +1,7 @@
 #include "finish_summary_data.h"
 
+#include "map_cover_art.h"
+
 #include <base/detect.h>
 #include <base/str.h>
 
@@ -203,7 +205,12 @@ namespace QmFinishSummary
 	bool ParseDdnetMap(const char *pJson, size_t Length, const std::string &Map, SRemoteData &Out)
 	{
 		const auto Root = Parse(pJson, Length);
-		return ReadMap(Root.get(), "name", "type", "difficulty", Map, Out);
+		if(!ReadMap(Root.get(), "name", "type", "difficulty", Map, Out))
+			return false;
+		std::string Thumbnail;
+		if(Text(Field(Root.get(), "thumbnail"), Thumbnail) && QmMapCover::ValidThumbnailUrl(Thumbnail.c_str()))
+			Out.m_Thumbnail = std::move(Thumbnail);
+		return true;
 	}
 
 	bool ParseDdnetPlayer(const char *pJson, size_t Length, const std::string &Player, const std::string &Map, SRemoteData &Out)
@@ -514,6 +521,7 @@ namespace QmFinishSummary
 		const auto CurrentBest = Axiom ? After.m_AccountBestTimeMs : After.m_BestTimeMs;
 		const bool CurrentHistory = Axiom ? After.m_AccountHistoryKnown : After.m_HistoryKnown;
 		Snapshot.m_Mapper = After.m_Mapper.empty() ? Before.m_Mapper : After.m_Mapper;
+		Snapshot.m_Thumbnail = Snapshot.m_Community == ECommunity::DDNET ? (After.m_Thumbnail.empty() ? Before.m_Thumbnail : After.m_Thumbnail) : std::string();
 		Snapshot.m_Category = After.m_Category.empty() ? Before.m_Category : After.m_Category;
 		Snapshot.m_Stars = After.m_Stars >= 0 ? After.m_Stars : Before.m_Stars;
 		const bool RankCurrent = RankReflectsFinish(CurrentBest, Snapshot.m_TimeMs, ConfirmedFinish);

@@ -51,6 +51,15 @@ namespace qm_finish_summary
 			double m_From = 0.0;
 			double m_Target = -1.0;
 			double m_Start = 0.0;
+			float m_ColorFrom = 0.0f;
+
+			float ColorProgress(double Now) const
+			{
+				if(m_Target < 0.0)
+					return 0.0f;
+				const float T = static_cast<float>(std::clamp((Now - m_Start) / NUMBER_DURATION, 0.0, 1.0));
+				return m_ColorFrom + (1.0f - m_ColorFrom) * T * T * (3.0f - 2.0f * T);
+			}
 
 			double Value(double Now) const
 			{
@@ -110,10 +119,12 @@ namespace qm_finish_summary
 					Number.m_From = Targets[i];
 					Number.m_Target = Targets[i];
 					Number.m_Start = m_Now - NUMBER_DURATION;
+					Number.m_ColorFrom = 1.0f;
 				}
 				else if(Number.m_Target != Targets[i])
 				{
 					Number.m_From = Number.Value(m_Now);
+					Number.m_ColorFrom = Number.ColorProgress(m_Now);
 					Number.m_Target = Targets[i];
 					Number.m_Start = m_Settled ? m_Now : std::max(m_Now, m_Start + NumberStart(static_cast<ENumber>(i)));
 				}
@@ -123,6 +134,11 @@ namespace qm_finish_summary
 		double Number(ENumber Number) const
 		{
 			return m_aNumbers[static_cast<size_t>(Number)].Value(m_Now);
+		}
+
+		float NumberColorProgress(ENumber Number) const
+		{
+			return m_aNumbers[static_cast<size_t>(Number)].ColorProgress(m_Now);
 		}
 
 		float FieldAlpha(EField Field) const

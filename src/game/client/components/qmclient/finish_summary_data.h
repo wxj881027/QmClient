@@ -44,6 +44,7 @@ namespace QmFinishSummary
 	{
 		std::string m_Map;
 		std::string m_Mapper;
+		std::string m_Thumbnail;
 		std::string m_Category;
 		int m_Stars = -1;
 		int m_MapPoints = -1;
@@ -70,6 +71,7 @@ namespace QmFinishSummary
 		ECommunity m_Community = ECommunity::NONE;
 		std::string m_Map;
 		std::string m_Mapper;
+		std::string m_Thumbnail;
 		std::string m_Category;
 		std::string m_Player;
 		std::string m_FinishedAt;

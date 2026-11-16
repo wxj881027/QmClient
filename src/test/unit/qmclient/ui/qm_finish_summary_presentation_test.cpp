@@ -163,3 +163,45 @@ TEST(QmFinishSummaryPresentation, RepeatedFrameDoesNotAdvanceOrRestart)
 	Presentation.Update(1, 0.3, true, 2, Values);
 	EXPECT_DOUBLE_EQ(Presentation.Number(ENumber::TIME), Before);
 }
+
+TEST(QmFinishSummaryPresentation, NumberColorProgressFollowsCountAndKeepsFinalGradient)
+{
+	CPresentation Presentation;
+	const auto Values = Targets();
+	Presentation.Update(1, 10.0, true, 2, Values);
+	EXPECT_FLOAT_EQ(Presentation.NumberColorProgress(ENumber::TIME), 0.0f);
+	Presentation.Update(1, 10.25, true, 2, Values);
+	EXPECT_GT(Presentation.NumberColorProgress(ENumber::TIME), 0.0f);
+	EXPECT_LT(Presentation.NumberColorProgress(ENumber::TIME), 1.0f);
+	Presentation.Update(1, 12.0, true, 2, Values);
+	EXPECT_FLOAT_EQ(Presentation.NumberColorProgress(ENumber::TIME), 1.0f);
+	Presentation.Update(1, 14.0, true, 2, Values);
+	EXPECT_FLOAT_EQ(Presentation.NumberColorProgress(ENumber::TIME), 1.0f);
+}
+
+TEST(QmFinishSummaryPresentation, RetargetKeepsCurrentNumberColor)
+{
+	CPresentation Presentation;
+	auto Values = Targets();
+	Presentation.Update(1, 10.0, true, 2, Values);
+	Presentation.Update(1, 10.25, true, 2, Values);
+	const float Before = Presentation.NumberColorProgress(ENumber::TIME);
+	Values[static_cast<size_t>(ENumber::TIME)] = 12000.0;
+	Presentation.Update(1, 10.25, true, 2, Values);
+	EXPECT_FLOAT_EQ(Presentation.NumberColorProgress(ENumber::TIME), Before);
+	Presentation.Update(1, 10.5, true, 2, Values);
+	EXPECT_GT(Presentation.NumberColorProgress(ENumber::TIME), Before);
+}
+
+TEST(QmFinishSummaryPresentation, DisabledMotionSettlesNumberColorImmediately)
+{
+	CPresentation Presentation;
+	const auto Values = Targets();
+	Presentation.Update(1, 10.0, true, 0, Values);
+	EXPECT_FLOAT_EQ(Presentation.NumberColorProgress(ENumber::TIME), 1.0f);
+	EXPECT_FLOAT_EQ(Presentation.NumberColorProgress(ENumber::POINTS), 1.0f);
+	Presentation.Update(1, 10.1, true, 2, Values);
+	EXPECT_FLOAT_EQ(Presentation.NumberColorProgress(ENumber::TIME), 1.0f);
+	Presentation.Update(2, 11.0, true, 2, Values);
+	EXPECT_FLOAT_EQ(Presentation.NumberColorProgress(ENumber::TIME), 0.0f);
+}

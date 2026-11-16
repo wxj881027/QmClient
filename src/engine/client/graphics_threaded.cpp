@@ -867,8 +867,11 @@ void CGraphics_Threaded::EndRenderTarget()
 	});
 }
 
-void CGraphics_Threaded::DrawRenderTarget(CRenderTargetHandle Target, const SRenderTargetDrawParams &Params)
+void CGraphics_Threaded::DrawRenderTarget(CRenderTargetHandle Target, const SRenderTargetDrawParams &InputParams)
 {
+	SRenderTargetDrawParams Params = InputParams;
+	if(Params.m_NativeTextureCoordinates)
+		Params.SetNativeTextureCoordinates(m_pBackend->GetBackendType());
 	if(!IsRenderTargetSupported() || !Target.IsValid() || Params.m_W <= 0.0f || Params.m_H <= 0.0f)
 		return;
 	const size_t TargetId = Target.Id();
@@ -890,25 +893,47 @@ void CGraphics_Threaded::DrawRenderTarget(CRenderTargetHandle Target, const SRen
 
 	// 四角每角至多 NumSegments / 2 个四边形，另有中心和四条边。
 	static_assert(RECT_CORNER_SEGMENTS >= 2 && RECT_CORNER_SEGMENTS % 2 == 0);
-	constexpr size_t MaxVertices = (RECT_CORNER_SEGMENTS / 2 * 4 + 9) * 4;
+	constexpr int ProjectionColumns = 4;
+	constexpr int ProjectionRows = 2;
+	constexpr size_t MaxVertices = (RECT_CORNER_SEGMENTS / 2 * 4 + 9 * ProjectionColumns * ProjectionRows) * 4;
 	CCommandBuffer::SVertex aVertices[MaxVertices];
 	size_t NumVertices = 0;
 	const float InvW = 1.0f / Params.m_W;
 	const float InvH = 1.0f / Params.m_H;
 	const uint8_t Alpha = (uint8_t)(Cmd.m_Alpha * 255.0f + 0.5f);
-	auto AddQuad = [&](vec2 Point0, vec2 Point1, vec2 Point2, vec2 Point3) {
+	const bool Projected = std::abs(Params.m_TiltX) > 0.0001f || std::abs(Params.m_TiltY) > 0.0001f;
+	auto AddVertices = [&](vec2 Point0, vec2 Point1, vec2 Point2, vec2 Point3) {
 		dbg_assert(NumVertices + 4 <= MaxVertices, "render target vertex capacity exceeded");
 		const vec2 aPositions[] = {Point0, Point1, Point2, Point3};
 		for(const vec2 Position : aPositions)
 		{
 			CCommandBuffer::SVertex Vertex{};
-			Vertex.m_Pos = Position;
+			Vertex.m_Pos = Projected ? Params.ProjectPoint(Position) : Position;
 			const float LocalU = (Position.x - Params.m_X) * InvW;
 			const float LocalV = (Position.y - Params.m_Y) * InvH;
 			Vertex.m_Tex = vec2(mix(Params.m_U0, Params.m_U1, LocalU), mix(Params.m_V0, Params.m_V1, LocalV));
 			Vertex.m_Color = CCommandBuffer::SColor{255, 255, 255, Alpha};
 			aVertices[NumVertices++] = Vertex;
 		}
+	};
+
+	const auto AddQuad = [&](vec2 Point0, vec2 Point1, vec2 Point2, vec2 Point3) {
+		// 圆角扇形已有密集采样，直边与中心额外细分以近似透视纹理插值。
+		const bool Rectangle = Point0.y == Point1.y && Point1.x == Point2.x && Point2.y == Point3.y && Point3.x == Point0.x;
+		if(!Projected || !Rectangle)
+		{
+			AddVertices(Point0, Point1, Point2, Point3);
+			return;
+		}
+		for(int Y = 0; Y < ProjectionRows; ++Y)
+			for(int X = 0; X < ProjectionColumns; ++X)
+			{
+				const float Left = mix(Point0.x, Point1.x, static_cast<float>(X) / ProjectionColumns);
+				const float Right = mix(Point0.x, Point1.x, static_cast<float>(X + 1) / ProjectionColumns);
+				const float Top = mix(Point0.y, Point3.y, static_cast<float>(Y) / ProjectionRows);
+				const float Bottom = mix(Point0.y, Point3.y, static_cast<float>(Y + 1) / ProjectionRows);
+				AddVertices(vec2(Left, Top), vec2(Right, Top), vec2(Right, Bottom), vec2(Left, Bottom));
+			}
 	};
 
 	const float Rounding = std::clamp(Params.m_Rounding, 0.0f, minimum(Params.m_W, Params.m_H) * 0.5f);

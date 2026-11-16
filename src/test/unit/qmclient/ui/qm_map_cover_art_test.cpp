@@ -204,6 +204,28 @@ TEST(QmMapCoverArt, ComposeTailEndsFullyTransparentForEveryRow)
 	}
 }
 
+TEST(QmMapCoverArt, FullImageRetainsBothEdgesAndSourceAlpha)
+{
+	CImageInfo Source;
+	Source.m_Width = 2;
+	Source.m_Height = 1;
+	Source.m_Format = CImageInfo::FORMAT_RGBA;
+	const uint8_t aPixels[] = {200, 100, 50, 96, 200, 100, 50, 255};
+	Source.m_pData = static_cast<uint8_t *>(malloc(sizeof(aPixels)));
+	std::memcpy(Source.m_pData, aPixels, sizeof(aPixels));
+	CImageInfo Output;
+	auto Art = DefaultArt();
+	Art.m_ImageFraction = 1.0f;
+	Art.m_Shade = 1.0f;
+	Art.m_CornerRadius = 0;
+	ASSERT_TRUE(QmMapCover::Compose(Source, 2, 1, Art, Output));
+	EXPECT_EQ(PixelAt(Output, 0, 0)[3], 96);
+	EXPECT_EQ(PixelAt(Output, 1, 0)[3], 255);
+	EXPECT_EQ(PixelAt(Output, 1, 0)[0], 200);
+	Output.Free();
+	Source.Free();
+}
+
 TEST(QmMapCoverArt, ComposeCropsToFillThumbnailAspect)
 {
 	// 高窄源图进缩略图区域：按宽度放大后上下居中裁切，顶行应来自源图中间部分而不是第 0 行。

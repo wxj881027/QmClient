@@ -32,6 +32,42 @@ TEST(QmFinishSummaryData, DdnetMapRequiresExactNameAndRetainsOutputOnFailure)
 	EXPECT_EQ(Data.m_Map, "Map A");
 }
 
+TEST(QmFinishSummaryCoverData, OfficialThumbnailSurvivesPartialAfterFinishData)
+{
+	constexpr const char *pJson = R"({"name":"Map A","thumbnail":"https://ddnet.org/ranks/maps/Map_A.png"})";
+	SRemoteData Data;
+	ASSERT_TRUE(ParseDdnetMap(pJson, std::strlen(pJson), "Map A", Data));
+	EXPECT_EQ(Data.m_Thumbnail, "https://ddnet.org/ranks/maps/Map_A.png");
+	auto Snapshot = Finish();
+	ApplyRemote(Snapshot, Data, {}, false);
+	EXPECT_EQ(Snapshot.m_Thumbnail, Data.m_Thumbnail);
+}
+
+TEST(QmFinishSummaryCoverData, InvalidThumbnailIsIgnoredWithoutRejectingMap)
+{
+	for(const char *pJson : {
+		    R"({"name":"Map A","thumbnail":"https://example.com/Map_A.png"})",
+		    R"({"name":"Map A","thumbnail":"https://ddnet.org/ranks/maps/Map_A.png\u0000suffix"})",
+		    R"({"name":"Map A","thumbnail":5})",
+		    R"({"name":"Map A"})"})
+	{
+		SCOPED_TRACE(pJson);
+		SRemoteData Data;
+		Data.m_Thumbnail = "previous";
+		ASSERT_TRUE(ParseDdnetMap(pJson, std::strlen(pJson), "Map A", Data));
+		EXPECT_TRUE(Data.m_Thumbnail.empty());
+	}
+}
+
+TEST(QmFinishSummaryCoverData, AxiomSnapshotDoesNotUseDdnetCover)
+{
+	auto Snapshot = Finish(ECommunity::AXIOM_GORES);
+	SRemoteData Data;
+	Data.m_Thumbnail = "https://ddnet.org/ranks/maps/Map_A.png";
+	ApplyRemote(Snapshot, {}, Data, false);
+	EXPECT_TRUE(Snapshot.m_Thumbnail.empty());
+}
+
 TEST(QmFinishSummaryData, DdnetMapRejectsEmbeddedNullAndInvalidJson)
 {
 	constexpr const char *pJson = R"({"name":"Map A\u0000extra","mapper":"Mapper"})";

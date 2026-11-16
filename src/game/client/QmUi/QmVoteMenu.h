@@ -5,7 +5,6 @@
 
 #include <generated/protocol.h>
 
-#include <game/client/components/qmclient/map_covers.h>
 #include <game/client/components/qmclient/server_vote_list.h>
 #include <game/client/components/qmclient/vote_map_loader.h>
 #include <game/client/components/qmclient/vote_menu_mode.h>
@@ -34,8 +33,6 @@ inline bool QmVotePlayerEligible(EQmVoteMenuPage Page, int Id, int LocalId, bool
 struct SQmVoteMenuState
 {
 	CQmVoteMapLoader m_Loader;
-	// 地图库行条目与详情面板的封面背景；由菜单逐帧完成已排队任务，跨页面复用缓存。
-	CQmMapCovers m_Covers;
 	std::vector<QmVoteMaps::SMap> m_vMaps;
 	std::vector<int> m_vVisible;
 	QmVoteMaps::SFilter m_Filter;

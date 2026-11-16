@@ -4,6 +4,8 @@
 #include "finish_summary_data.h"
 #include "finish_summary_state.h"
 
+#include <engine/graphics.h>
+
 #include <game/client/component.h>
 
 #include <array>
@@ -44,6 +46,8 @@ class CQmFinishSummary : public CComponent
 	QmFinishSummary::ECommunity m_Community = QmFinishSummary::ECommunity::NONE;
 	std::string m_Map;
 	std::string m_Player;
+	IGraphics::CTextureHandle m_CoverTexture;
+	double m_NextCoverRequest = 0.0;
 	int m_ClientId = -1;
 	int m_Connection = -1;
 	int m_RunStartTick = -1;
@@ -79,6 +83,7 @@ public:
 	void OnShutdown() override { OnReset(); }
 	const QmFinishSummary::SSnapshot *Snapshot() const { return m_State.Snapshot(); }
 	const CManagedTeeRenderInfo *TeeRenderInfo() const { return m_pManagedTeeRenderInfo.get(); }
+	IGraphics::CTextureHandle CoverTexture() const;
 	bool SuppressesFinishMessage(int ClientId, int64_t TimeMs) const;
 	bool Visible() const { return m_State.Visible(); }
 	void SetExpanded(bool Expanded) { m_State.SetExpanded(Expanded, Now()); }

@@ -184,7 +184,8 @@ bool QmMapCover::Compose(const CImageInfo &Source, int OutWidth, int OutHeight, 
 	if(OutWidth <= 0 || OutHeight <= 0 || OutWidth > MAX_WIDTH || OutHeight > MAX_HEIGHT || OutWidth < 2)
 		return false;
 
-	const int ImageWidth = std::clamp(static_cast<int>(std::lround(static_cast<float>(OutWidth) * std::clamp(Art.m_ImageFraction, 0.3f, 0.95f))), 1, OutWidth - 1);
+	const bool FullImage = Art.m_ImageFraction >= 1.0f;
+	const int ImageWidth = FullImage ? OutWidth : std::clamp(static_cast<int>(std::lround(static_cast<float>(OutWidth) * std::clamp(Art.m_ImageFraction, 0.3f, 0.95f))), 1, OutWidth - 1);
 	const int ChannelCount = Source.m_Format == CImageInfo::FORMAT_RGBA ? 4 : 3;
 	const float Shade = std::clamp(Art.m_Shade, 0.0f, 1.0f);
 
@@ -237,6 +238,8 @@ bool QmMapCover::Compose(const CImageInfo &Source, int OutWidth, int OutHeight, 
 				const float Value = BilinearChannel(Source, ChannelCount, SourceX, SourceY, Channel) * Shade;
 				pPixel[Channel] = static_cast<uint8_t>(std::clamp(Value, 0.0f, 1.0f) * 255.0f + 0.5f);
 			}
+			if(FullImage && ChannelCount == 4)
+				Alpha *= BilinearChannel(Source, ChannelCount, SourceX, SourceY, 3);
 			pPixel[3] = static_cast<uint8_t>(std::clamp(Alpha, 0.0f, 1.0f) * 255.0f + 0.5f);
 		}
 	}
