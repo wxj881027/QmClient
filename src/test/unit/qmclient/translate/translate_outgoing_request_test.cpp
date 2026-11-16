@@ -4,6 +4,43 @@
 
 #include <string>
 
+TEST(TranslateSendOptions, OrdinaryEnterKeepsExistingTranslationHandling)
+{
+	for(bool AutoOutgoing : {false, true})
+	{
+		SCOPED_TRACE(AutoOutgoing);
+		const auto Options = ResolveTranslateSendOptions(AutoOutgoing, false);
+		EXPECT_TRUE(Options.m_AllowTranslation);
+		EXPECT_FALSE(Options.m_TranslateOnce);
+	}
+}
+
+TEST(TranslateSendOptions, CtrlEnterWithAutomaticTranslationEnabledBypassesTranslationOnlyOnce)
+{
+	const auto Inverted = ResolveTranslateSendOptions(true, true);
+	EXPECT_FALSE(Inverted.m_AllowTranslation);
+	EXPECT_FALSE(Inverted.m_TranslateOnce);
+
+	const auto NextSend = ResolveTranslateSendOptions(true, false);
+	EXPECT_TRUE(NextSend.m_AllowTranslation);
+	EXPECT_FALSE(NextSend.m_TranslateOnce);
+
+	const auto InvertedAgain = ResolveTranslateSendOptions(true, true);
+	EXPECT_FALSE(InvertedAgain.m_AllowTranslation);
+	EXPECT_FALSE(InvertedAgain.m_TranslateOnce);
+}
+
+TEST(TranslateSendOptions, CtrlEnterWithAutomaticTranslationDisabledForcesTranslationOnlyOnce)
+{
+	const auto Inverted = ResolveTranslateSendOptions(false, true);
+	EXPECT_TRUE(Inverted.m_AllowTranslation);
+	EXPECT_TRUE(Inverted.m_TranslateOnce);
+
+	const auto NextSend = ResolveTranslateSendOptions(false, false);
+	EXPECT_TRUE(NextSend.m_AllowTranslation);
+	EXPECT_FALSE(NextSend.m_TranslateOnce);
+}
+
 TEST(TranslateOutgoingRequest, OrdinarySendWithoutSuffixDoesNotRequestTranslation)
 {
 	std::string Text;

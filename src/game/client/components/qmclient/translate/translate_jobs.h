@@ -32,6 +32,15 @@ struct STranslateCompletion
 	std::string m_SendText;
 };
 
+struct STranslateSendOptions
+{
+	bool m_AllowTranslation = true;
+	bool m_TranslateOnce = false;
+};
+
+// 临时反转只决定当前消息的发送方式，不修改自动翻译配置。
+STranslateSendOptions ResolveTranslateSendOptions(bool AutoOutgoing, bool InvertTranslation);
+
 // 显式语言后缀优先；单次翻译使用发送目标，空输入和命令不进入翻译。
 // pFallbackTarget 为空时，仅识别显式语言后缀。
 bool PrepareOutgoingTranslateRequest(const char *pLine, const char *pFallbackTarget, std::string &Text, std::string &Target);

@@ -747,7 +747,7 @@ public:
 	// between sent messages.
 	//
 	// It uses team or public chat depending on m_Mode.
-	EChatSendResult SendChatQueued(const char *pLine, bool TranslateOnce = false);
+	EChatSendResult SendChatQueued(const char *pLine, bool InvertTranslation = false);
 };
 
 static inline float ChatPresentationClamp(float Value)

@@ -1327,12 +1327,12 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 			m_ServerCommandsNeedSorting = false;
 		}
 
-		const bool TranslateOnce = Input()->KeyIsPressed(KEY_LCTRL) || Input()->KeyIsPressed(KEY_RCTRL);
+		const bool InvertTranslation = Input()->KeyIsPressed(KEY_LCTRL) || Input()->KeyIsPressed(KEY_RCTRL);
 		if(GameClient()->m_BindChat.ChatDoBinds(m_Input.GetString()))
 			; // Do nothing as bindchat was executed
 		else if(GameClient()->m_TClient.ChatDoSpecId(m_Input.GetString()))
 			; // Do nothing as specid was executed
-		else if(SendChatQueued(m_Input.GetString(), TranslateOnce) == EChatSendResult::REJECTED && *str_utf8_skip_whitespaces(m_Input.GetString()) != '\0')
+		else if(SendChatQueued(m_Input.GetString(), InvertTranslation) == EChatSendResult::REJECTED && *str_utf8_skip_whitespaces(m_Input.GetString()) != '\0')
 			return true;
 		m_SavedInputPending = false;
 		m_aSavedInputText[0] = '\0';
@@ -4504,7 +4504,7 @@ CChat::EChatSendResult CChat::SendChatQueued(int Team, const char *pLine, bool A
 	return DispatchChatMessage(pLine, SendSensitive, SendOrdinary);
 }
 
-CChat::EChatSendResult CChat::SendChatQueued(const char *pLine, bool TranslateOnce)
+CChat::EChatSendResult CChat::SendChatQueued(const char *pLine, bool InvertTranslation)
 {
 	if(m_Mode == MODE_WHISPER)
 	{
@@ -4527,7 +4527,8 @@ CChat::EChatSendResult CChat::SendChatQueued(const char *pLine, bool TranslateOn
 		if(BuildWhisperCommand(aLine, sizeof(aLine), WhisperTargetName(), pLine))
 			return SendChatQueued(0, aLine, true);
 	}
-	return SendChatQueued(m_Mode == MODE_ALL ? 0 : 1, pLine, true, nullptr, -1, true, TranslateOnce);
+	const auto Options = ResolveTranslateSendOptions(g_Config.m_QmTranslateAutoOutgoing != 0, InvertTranslation);
+	return SendChatQueued(m_Mode == MODE_ALL ? 0 : 1, pLine, Options.m_AllowTranslation, nullptr, -1, true, Options.m_TranslateOnce);
 }
 
 // ===== 翻译按钮相关方法 =====

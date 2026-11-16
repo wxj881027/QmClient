@@ -49,6 +49,15 @@ namespace
 	}
 }
 
+STranslateSendOptions ResolveTranslateSendOptions(bool AutoOutgoing, bool InvertTranslation)
+{
+	if(!InvertTranslation)
+		return {};
+	if(AutoOutgoing)
+		return {false, false};
+	return {true, true};
+}
+
 bool PrepareOutgoingTranslateRequest(const char *pLine, const char *pFallbackTarget, std::string &Text, std::string &Target)
 {
 	if(ParseOutgoingTranslateTarget(pLine, Text, Target))
