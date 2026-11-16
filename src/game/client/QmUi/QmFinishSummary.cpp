@@ -29,6 +29,7 @@ namespace
 	{
 		IGraphics &m_Graphics;
 		ITextRender &m_TextRender;
+		CRenderTools &m_RenderTools;
 		const CUIRect *m_pTextScreen;
 		CUIRect m_TargetScreen;
 
@@ -45,8 +46,8 @@ namespace
 		}
 
 	public:
-		CTextPainter(IGraphics &Graphics, ITextRender &TextRender, const CUIRect *pTextScreen) :
-			m_Graphics(Graphics), m_TextRender(TextRender), m_pTextScreen(pTextScreen)
+		CTextPainter(IGraphics &Graphics, ITextRender &TextRender, CRenderTools &RenderTools, const CUIRect *pTextScreen) :
+			m_Graphics(Graphics), m_TextRender(TextRender), m_RenderTools(RenderTools), m_pTextScreen(pTextScreen)
 		{
 			float Right, Bottom;
 			Graphics.GetScreen(&m_TargetScreen.x, &m_TargetScreen.y, &Right, &Bottom);
@@ -62,11 +63,11 @@ namespace
 			return Width;
 		}
 
-		void Label(const CUIRect &Rect, float FontSize, const char *pText, const ColorRGBA &Color, float Alignment = 0.0f,
-			int MaxLines = 1, const SQmColorGradient *pGradient = nullptr, const CUIRect *pGradientBounds = nullptr) const
+		float Label(const CUIRect &Rect, float FontSize, const char *pText, const ColorRGBA &Color, float Alignment = 0.0f,
+			int MaxLines = 1, const SQmColorGradient *pGradient = nullptr, const CUIRect *pGradientBounds = nullptr, const ColorRGBA *pGlow = nullptr) const
 		{
 			if(Rect.w <= 0.0f || Rect.h <= 0.0f || Color.a <= 0.001f)
-				return;
+				return 0.0f;
 			const float TextWidth = std::min(Rect.w, Width(FontSize, pText));
 			CTextCursor Cursor;
 			Cursor.m_FontSize = FontSize;
@@ -85,12 +86,6 @@ namespace
 				Cursor.m_ColorSamplerRows = Grid[1];
 			}
 			m_TextRender.TextColor(Color);
-			if(!m_pTextScreen)
-			{
-				m_TextRender.TextEx(&Cursor, pText);
-				return;
-			}
-			// 按屏幕像素比例生成字形，再在小目标里绘制，避免离屏投影放大图集字号。
 			MapTextScreen();
 			STextContainerIndex Container;
 			const unsigned SavedFlags = m_TextRender.GetRenderFlags();
@@ -99,8 +94,21 @@ namespace
 			m_TextRender.SetRenderFlags(SavedFlags);
 			RestoreTargetScreen();
 			if(Container.Valid())
-				m_TextRender.RenderTextContainer(Container, m_TextRender.DefaultTextColor(), m_TextRender.DefaultTextOutlineColor());
+			{
+				SQmTextEffectRenderStyle Style;
+				Style.m_OutlineColor = ColorRGBA(0.02f, 0.025f, 0.04f, 0.85f);
+				if(pGlow)
+				{
+					Style.m_Effects = QM_TEXT_EFFECT_GLOW;
+					Style.m_GlowRange = FontSize * 0.075f;
+					Style.m_GlowColor = pGlow->WithAlpha(0.30f);
+					m_RenderTools.RenderTextContainerWithEffects(Container, Style, 0.0f, 0.0f);
+				}
+				else
+					m_TextRender.RenderTextContainer(Container, m_TextRender.DefaultTextColor(), Style.m_OutlineColor);
+			}
 			m_TextRender.DeleteTextContainer(Container);
+			return Cursor.Height();
 		}
 	};
 
@@ -172,7 +180,7 @@ namespace
 		const SQmColorGradient Gradient = NumberGradient(Color, Progress);
 		Painter.Label(Rect, 12.0f * Scale, pLabel, ColorRGBA(0.92f, 0.95f, 1.0f, 0.72f * Alpha));
 		Painter.Label({Rect.x, Rect.y + 18.0f * Scale, Rect.w, 23.0f * Scale},
-			(HasValue(Rank) ? mix(14.0f, 18.0f, Progress) : 13.0f) * Scale, Text.c_str(), Color.WithAlpha(Alpha), 0.0f, 1, HasValue(Rank) ? &Gradient : nullptr);
+			(HasValue(Rank) ? mix(14.0f, 18.0f, Progress) : 13.0f) * Scale, Text.c_str(), Color.WithAlpha(Alpha), 0.0f, 1, HasValue(Rank) ? &Gradient : nullptr, nullptr, HasValue(Rank) ? &Color : nullptr);
 	}
 }
 
@@ -185,7 +193,7 @@ void qm_finish_summary::CContentCache::Update(const QmFinishSummary::SSnapshot &
 		static_cast<double>((Snapshot.m_TimeMs + 5) / 10), static_cast<double>((std::abs(Snapshot.m_DifferenceMs) + 5) / 10),
 		Target(Snapshot.m_LocalRank), Target(Snapshot.m_LocalRankTotal), Target(Snapshot.m_ChinaRank), Target(Snapshot.m_Rank),
 		Target(Snapshot.m_CompletedMaps), Target(Snapshot.m_TotalMaps), Target(Snapshot.m_Points), Target(Snapshot.m_PointsGained), Progress};
-	m_Presentation.Update(Snapshot.m_Id, NowSeconds, FullyExpanded, MotionLevel, Targets);
+	m_Presentation.Update(Snapshot.m_Id, NowSeconds, FullyExpanded, MotionLevel, Targets, Snapshot.m_Stars);
 	const bool Changed = !m_Valid || m_Id != Snapshot.m_Id || m_Revision != Snapshot.m_Revision || m_Language != g_Config.m_ClLanguagefile;
 	std::array<int64_t, static_cast<size_t>(ENumber::COUNT)> aNumbers{};
 	for(size_t i = 0; i < aNumbers.size(); ++i)
@@ -201,11 +209,7 @@ void qm_finish_summary::CContentCache::Update(const QmFinishSummary::SSnapshot &
 		m_Language = g_Config.m_ClLanguagefile;
 		m_Type = Snapshot.m_Category.empty() ? Localize("No data") : Localize(Snapshot.m_Category.c_str());
 		if(Snapshot.m_Stars >= 0)
-		{
-			m_Type += " · ";
-			for(int i = 0; i < Snapshot.m_MaxStars; ++i)
-				m_Type += i < Snapshot.m_Stars ? "★" : "☆";
-		}
+			m_Type += " ·";
 		switch(Snapshot.m_Comparison)
 		{
 		case EComparison::FIRST:
@@ -278,7 +282,7 @@ bool qm_finish_summary::Render(IGraphics &Graphics, ITextRender &TextRender, CRe
 	Content.Update(Snapshot, NowSeconds, FullyExpanded, MotionLevel);
 	if(Alpha <= 0.001f)
 		return Content.m_Presentation.Complete();
-	const CTextPainter Painter(Graphics, TextRender, pTextScreen);
+	const CTextPainter Painter(Graphics, TextRender, RenderTools, pTextScreen);
 	const ColorRGBA SavedColor = TextRender.GetTextColor();
 	const ColorRGBA SavedOutline = TextRender.GetTextOutlineColor();
 	const EFontPreset SavedFont = TextRender.GetFontPreset();
@@ -312,13 +316,31 @@ bool qm_finish_summary::Render(IGraphics &Graphics, ITextRender &TextRender, CRe
 	const SQmColorGradient TimeGradient = NumberGradient(Gold, Content.m_Presentation.NumberColorProgress(ENumber::TIME));
 	const CUIRect TimeBounds{TimeX, TimeY, TimeWidth, TimeSize};
 	const float MajorWidth = Painter.Width(TimeSize, pMajor);
-	Painter.Label({TimeX, TimeY, MajorWidth + Scale, TimeSize}, TimeSize, pMajor, White.WithAlpha(Alpha), 0.0f, 1, &TimeGradient, &TimeBounds);
+	Painter.Label({TimeX, TimeY, MajorWidth + Scale, TimeSize}, TimeSize, pMajor, White.WithAlpha(Alpha), 0.0f, 1, &TimeGradient, &TimeBounds, &Gold);
 	Painter.Label({TimeX + MajorWidth, TimeY + TimeSize * 0.42f, TimeBox.w - MajorWidth, TimeSize},
-		TimeSize * 0.58f, pMinor, White.WithAlpha(Alpha), 0.0f, 1, &TimeGradient, &TimeBounds);
+		TimeSize * 0.58f, pMinor, White.WithAlpha(Alpha), 0.0f, 1, &TimeGradient, &TimeBounds, &Gold);
 
-	Painter.Label(Box(250, 16, 214, 36), mix(13.0f, 17.0f, Content.m_Presentation.FieldAlpha(EField::MAP)) * Scale, Snapshot.m_Map.c_str(), White.WithAlpha(FieldAlpha(EField::MAP)), 0.0f, 2);
-	Painter.Label(Box(250, 55, 214, 15), 12.0f * Scale, Snapshot.m_Mapper.empty() ? Localize("No data") : Snapshot.m_Mapper.c_str(), Muted.WithAlpha(FieldAlpha(EField::MAPPER)));
-	Painter.Label(Box(250, 74, 214, 15), 12.0f * Scale, Content.m_Type.c_str(), White.WithAlpha(FieldAlpha(EField::TYPE)));
+	const CUIRect MapBox = Box(250, 16, 214, 36);
+	const float MapHeight = Painter.Label(MapBox, mix(13.0f, 17.0f, Content.m_Presentation.FieldAlpha(EField::MAP)) * Scale,
+		Snapshot.m_Map.c_str(), White.WithAlpha(FieldAlpha(EField::MAP)), 0.0f, 2);
+	const CUIRect AuthorBox{MapBox.x, MapBox.y + MapHeight + 1.5f * Scale, MapBox.w, 15.0f * Scale};
+	Painter.Label(AuthorBox, 12.0f * Scale, Snapshot.m_Mapper.empty() ? Localize("No data") : Snapshot.m_Mapper.c_str(),
+		Muted.WithAlpha(FieldAlpha(EField::MAPPER)), 1.0f);
+
+	const CUIRect TypeRow = Box(250, 74, 214, 15);
+	const float TypeSize = 12.0f * Scale;
+	const int Stars = Snapshot.m_Stars < 0 ? 0 : Snapshot.m_MaxStars;
+	const float StarWidth = Stars > 0 ? std::max(Painter.Width(TypeSize, "★"), Painter.Width(TypeSize, "☆")) + 1.0f * Scale : 0.0f;
+	const float TypeWidth = std::max(0.0f, TypeRow.w - StarWidth * Stars - 2.0f * Scale);
+	Painter.Label({TypeRow.x, TypeRow.y, TypeWidth, TypeRow.h}, TypeSize, Content.m_Type.c_str(), White.WithAlpha(FieldAlpha(EField::TYPE)));
+	const float StarX = TypeRow.x + std::min(TypeWidth, Painter.Width(TypeSize, Content.m_Type.c_str())) + 2.0f * Scale;
+	for(int i = 0; i < Stars; ++i)
+	{
+		const float Reveal = Content.m_Presentation.StarAppearance(i);
+		const CUIRect Cell{StarX + i * StarWidth, TypeRow.y + (1.0f - Reveal) * 3.0f * Scale, StarWidth, TypeRow.h};
+		Painter.Label(Cell, TypeSize * mix(0.72f, 1.0f, Reveal), i < Snapshot.m_Stars ? "★" : "☆",
+			White.WithAlpha(Reveal * FieldAlpha(EField::TYPE)), 0.5f);
+	}
 	Painter.Label(Box(250, 94, 214, 15), 12.0f * Scale, Snapshot.m_FinishedAt.empty() ? Localize("No data") : Snapshot.m_FinishedAt.c_str(), Muted.WithAlpha(FieldAlpha(EField::FINISHED_AT)));
 
 	const bool PersonalBest = Snapshot.m_Comparison == EComparison::FIRST || Snapshot.m_Comparison == EComparison::BEST || Snapshot.m_Comparison == EComparison::IMPROVED;

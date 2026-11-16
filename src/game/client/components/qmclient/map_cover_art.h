@@ -41,6 +41,7 @@ namespace QmMapCover
 		float m_Ragged = 1.0f;
 		// 输出像素单位的圆角半径（只作用于缩略图左侧两角）。
 		float m_CornerRadius = 3.0f;
+		bool m_SummaryBlur = false;
 		uint32_t m_Seed = 0;
 	};
 

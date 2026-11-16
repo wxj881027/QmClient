@@ -83,22 +83,37 @@ TEST(QmFinishSummaryLayout, CardGrowsFromInsideHostAndDetachesBelowIt)
 	EXPECT_FLOAT_EQ(Open.m_ContentAlpha, 1.0f);
 }
 
-TEST(QmFinishSummaryMotion, MovingTeeFadesAndTiltsWholeCardAndStoppingRestoresIt)
+TEST(QmFinishSummaryLayout, ClosingPullsNearEdgeIntoIslandBeforeFarEdge)
+{
+	const CUIRect Host{70, 4, 60, 16};
+	const CUIRect Target{20, 28, 160, 72};
+	for(const float Start : {0.5f, 0.82f, 1.0f})
+	{
+		const auto Current = qm_finish_summary::Layout(Host, Target, Start);
+		const auto Reversed = qm_finish_summary::ClosingLayout(Host, Target, Start, Start);
+		EXPECT_FLOAT_EQ(Reversed.m_Rect.x, Current.m_Rect.x);
+		EXPECT_FLOAT_EQ(Reversed.m_Rect.y, Current.m_Rect.y);
+		EXPECT_FLOAT_EQ(Reversed.m_Rect.w, Current.m_Rect.w);
+	}
+	const auto Half = qm_finish_summary::ClosingLayout(Host, Target, 1.0f, 0.5f);
+	const auto Tail = qm_finish_summary::ClosingLayout(Host, Target, 1.0f, 0.2f);
+	EXPECT_FLOAT_EQ(Half.m_Rect.y, Host.y + Host.h);
+	EXPECT_GT(Half.m_Pinch, 0.0f);
+	EXPECT_LT(Tail.m_Rect.w, Half.m_Rect.w);
+	EXPECT_LT(Tail.m_Rect.h, Half.m_Rect.h);
+	const auto End = qm_finish_summary::ClosingLayout(Host, Target, 1.0f, 0.0f);
+	EXPECT_FLOAT_EQ(End.m_Rect.h, 0.0f);
+	EXPECT_FLOAT_EQ(End.m_Rect.w, 0.0f);
+}
+
+TEST(QmFinishSummaryMotion, MovingTeeTiltsAndStoppingLevelsTheCard)
 {
 	qm_finish_summary::CCardMotion Motion;
 	Motion.Update(1, 0.0, true, 1.0f, {}, 2);
-	Motion.Update(1, 5.0, true, 1.0f, {10, -5}, 2);
-	EXPECT_FLOAT_EQ(Motion.Alpha(), 1.0f);
-	EXPECT_GT(Motion.TiltX(), 0.0f);
-	Motion.Update(1, 5.03, true, 1.0f, {10, -5}, 2);
-	EXPECT_GT(Motion.Alpha(), 0.15f);
-	EXPECT_LT(Motion.Alpha(), 1.0f);
 	Motion.Update(1, 6.0, true, 1.0f, {10, -5}, 2);
-	EXPECT_NEAR(Motion.Alpha(), 0.15f, 0.001f);
 	EXPECT_GT(Motion.TiltX(), 0.0f);
 	EXPECT_GT(Motion.TiltY(), 0.0f);
 	Motion.Update(1, 7.0, true, 1.0f, {}, 2);
-	EXPECT_NEAR(Motion.Alpha(), 1.0f, 0.001f);
 	EXPECT_NEAR(Motion.TiltX(), 0.0f, 0.001f);
 	EXPECT_NEAR(Motion.TiltY(), 0.0f, 0.001f);
 }
@@ -116,7 +131,7 @@ TEST(QmFinishSummaryMotion, HostReversesFromCurrentShapeWhenDismissedDuringGrowt
 	EXPECT_GT(Motion.HostScale(), 1.0f);
 }
 
-TEST(QmFinishSummaryMotion, DisablingMotionKeepsMovementFadeAndDropsDeformation)
+TEST(QmFinishSummaryMotion, DisablingMotionLevelsTheCardImmediately)
 {
 	qm_finish_summary::CCardMotion Motion;
 	Motion.Update(1, 0.0, true, 0.0f, {}, 2);
@@ -124,11 +139,7 @@ TEST(QmFinishSummaryMotion, DisablingMotionKeepsMovementFadeAndDropsDeformation)
 	ASSERT_LT(Motion.TiltX(), 0.0f);
 	ASSERT_LT(Motion.TiltY(), 0.0f);
 	Motion.Update(1, 6.0, true, 1.0f, {-8, 6}, 0);
-	EXPECT_NEAR(Motion.Alpha(), 0.15f, 0.001f);
 	EXPECT_FLOAT_EQ(Motion.TiltX(), 0.0f);
 	EXPECT_FLOAT_EQ(Motion.TiltY(), 0.0f);
 	EXPECT_FLOAT_EQ(Motion.HostScale(), 1.0f);
-	Motion.Update(2, 6.1, true, 0.0f, {-8, 6}, 2);
-	Motion.Update(2, 10.9, true, 1.0f, {-8, 6}, 2);
-	EXPECT_FLOAT_EQ(Motion.Alpha(), 1.0f);
 }

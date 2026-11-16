@@ -227,6 +227,31 @@ TEST(QmMapCoverArt, FullImageFlattensTranslucentSourcePixels)
 	Source.Free();
 }
 
+TEST(QmMapCoverArt, SummaryBlurSpreadsMoreDetailOnRightAndPreservesColorAndOpacity)
+{
+	CImageInfo Source = SolidImage(256, 128, 0, 170, 0);
+	for(size_t Y = 0; Y < Source.m_Height; ++Y)
+		for(size_t X = 0; X < Source.m_Width; X += 2)
+			Source.m_pData[(Y * Source.m_Width + X) * 3] = 255;
+	auto Art = DefaultArt();
+	Art.m_SummaryBlur = true;
+	Art.m_ImageFraction = 1.0f;
+	Art.m_Shade = 1.0f;
+	Art.m_CornerRadius = 0;
+	CImageInfo Out;
+	ASSERT_TRUE(QmMapCover::Compose(Source, 256, 128, Art, Out));
+	const auto *pLeft = PixelAt(Out, 17, 64);
+	const auto *pRight = PixelAt(Out, 239, 64);
+	EXPECT_GT(pRight[0], pLeft[0]);
+	EXPECT_GT(pRight[0], 60);
+	EXPECT_EQ(pLeft[1], 170);
+	EXPECT_EQ(pRight[1], 170);
+	EXPECT_EQ(pRight[2], 0);
+	EXPECT_EQ(pRight[3], 255);
+	Out.Free();
+	Source.Free();
+}
+
 TEST(QmMapCoverArt, ComposeCropsToFillThumbnailAspect)
 {
 	// 高窄源图进缩略图区域：按宽度放大后上下居中裁切，顶行应来自源图中间部分而不是第 0 行。

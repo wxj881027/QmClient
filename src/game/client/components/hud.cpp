@@ -3878,16 +3878,27 @@ void CHud::RenderMediaIsland()
 	if(!AnimState.m_LayoutInitialized || !FinishId || FinishId != AnimState.m_FinishSummaryId)
 		SetUiPresentationStateValue(FinishRuntime, FinishNode, EUiAnimProperty::ALPHA, 0.0f);
 	AnimState.m_FinishSummaryId = FinishId;
-	if(g_Config.m_QmUiMotionLevel <= 0)
-		SetUiPresentationStateValue(FinishRuntime, FinishNode, EUiAnimProperty::ALPHA, ShowFinish ? 1.0f : 0.0f);
-	SUiSpringConfig FinishSpring;
-	FinishSpring.m_Stiffness = ShowFinish ? 130.0f : 24.0f;
-	FinishSpring.m_Damping = ShowFinish ? 23.0f : 10.0f;
-	FinishSpring.m_RestEpsilon = 0.001f;
-	FinishSpring.m_RestVelocity = 0.01f;
-	AnimState.m_FinishSummaryProgress = std::clamp(ResolveUiPresentationStateValue(FinishRuntime, FinishNode,
-							       EUiAnimProperty::ALPHA, ShowFinish ? 1.0f : 0.0f, FinishSpring, 3, 0.001f),
-		0.0f, 1.0f);
+	if(ShowFinish)
+	{
+		SUiSpringConfig FinishSpring;
+		FinishSpring.m_Stiffness = 130.0f;
+		FinishSpring.m_Damping = 23.0f;
+		FinishSpring.m_RestEpsilon = 0.001f;
+		FinishSpring.m_RestVelocity = 0.01f;
+		AnimState.m_FinishSummaryProgress = std::clamp(ResolveUiAnimSpringValue(FinishRuntime, FinishNode, EUiAnimProperty::ALPHA, 1.0f, FinishSpring, 1), 0.0f, 1.0f);
+		AnimState.m_FinishSummaryCloseStart = -1.0f;
+	}
+	else
+	{
+		if(AnimState.m_FinishSummaryCloseStart < 0.0f)
+		{
+			// 中途收回从上一帧轮廓起步，避免通用动画打断逻辑把补间重新转成弹簧。
+			AnimState.m_FinishSummaryCloseStart = AnimState.m_FinishSummaryProgress;
+			SetUiPresentationStateValue(FinishRuntime, FinishNode, EUiAnimProperty::ALPHA, AnimState.m_FinishSummaryCloseStart);
+		}
+		AnimState.m_FinishSummaryProgress = std::clamp(ResolveUiAnimValue(FinishRuntime, FinishNode, EUiAnimProperty::ALPHA, 0.0f,
+			0.48f * AnimState.m_FinishSummaryCloseStart, EEasing::LINEAR), 0.0f, 1.0f);
+	}
 	const bool RenderFinish = pFinishSnapshot && AnimState.m_FinishSummaryProgress > 0.001f;
 	const int64_t Now = time_get();
 	vec2 FinishVelocity{};
@@ -4793,8 +4804,11 @@ void CHud::RenderMediaIsland()
 	CUIRect FinishTargetRect = qm_finish_summary::ExpandedRect(m_Width, m_Height,
 		IslandY + AnimatedIslandHeight + FinishGap, FinishHudScale, FinishShadowPadding);
 	FinishTargetRect.x = IslandX + UnifiedWidth * 0.5f - FinishTargetRect.w * 0.5f;
-	const auto FinishLayoutPreview = qm_finish_summary::Layout({IslandX, IslandY, UnifiedWidth, AnimatedIslandHeight},
-		FinishTargetRect, AnimState.m_FinishSummaryProgress);
+	const auto FinishLayout = [&](const CUIRect &Host) {
+		return ShowFinish ? qm_finish_summary::Layout(Host, FinishTargetRect, AnimState.m_FinishSummaryProgress) :
+				    qm_finish_summary::ClosingLayout(Host, FinishTargetRect, AnimState.m_FinishSummaryCloseStart, AnimState.m_FinishSummaryProgress);
+	};
+	const auto FinishLayoutPreview = FinishLayout({IslandX, IslandY, UnifiedWidth, AnimatedIslandHeight});
 	const SHudMediaIslandBlobPose SpectatorBlobPose = QmHudMediaIslandBlobPose(AnimState.m_SpectatorLiquidSpring);
 	const SHudMediaIslandSpectatorIconPose SpectatorIconPose = QmHudMediaIslandSpectatorIconPose(AnimState.m_SpectatorIconProgress);
 	const SHudMediaIslandLiquidCapsule SpectatorLiquidCapsule = QmHudMediaIslandRightBlobCapsule(
@@ -4847,7 +4861,7 @@ void CHud::RenderMediaIsland()
 	// HUD 编辑器的屏幕映射确定后，再限制附卡的最终落点。
 	FinishTargetRect.x = std::clamp(FinishTargetRect.x, TransformedScreenX0 + FinishShadowPadding,
 		std::max(TransformedScreenX0 + FinishShadowPadding, TransformedScreenX1 - FinishShadowPadding - FinishTargetRect.w));
-	const auto FinishPose = qm_finish_summary::Layout(MainIslandSdfRect, FinishTargetRect, AnimState.m_FinishSummaryProgress);
+	const auto FinishPose = FinishLayout(MainIslandSdfRect);
 	const bool FinishConnected = RenderFinish && FinishPose.m_Connection > 0.0f;
 	m_LyricsIslandAnchor = QmLyricsHudAnchor(MainIslandSdfRect, EditorTransformRect, HudEditorScope.m_TargetRect);
 	m_LyricsIslandAnchorValid = true;
@@ -5306,14 +5320,14 @@ void CHud::RenderMediaIsland()
 	{
 		const float FreeProgress = QmHudMediaIslandLiquidSmoothStep((AnimState.m_FinishSummaryProgress - 0.65f) / 0.35f);
 		qm_finish_summary::SSurfaceStyle Style;
-		Style.m_Alpha = EntranceContentAlpha * (1.0f + (AnimState.m_FinishSummaryMotion.Alpha() - 1.0f) * FreeProgress);
+		Style.m_Alpha = EntranceContentAlpha;
 		Style.m_ContentAlpha = FinishPose.m_ContentAlpha;
 		Style.m_TiltX = AnimState.m_FinishSummaryMotion.TiltX() * FreeProgress;
 		Style.m_TiltY = AnimState.m_FinishSummaryMotion.TiltY() * FreeProgress;
 		Style.m_Radius = FinishPose.m_Radius;
 		Style.m_DrawBackground = !FinishConnected;
-		const float Travel = AnimState.m_FinishSummaryProgress;
-		Style.m_Pinch = MotionLevel > 0 && !ShowFinish ? FreeProgress * (1.0f - Travel) * 4.0f : 0.0f;
+		Style.m_Closing = !ShowFinish;
+		Style.m_Pinch = FinishPose.m_Pinch;
 		Style.m_CoverTexture = GameClient()->m_FinishSummary.CoverTexture();
 		Style.m_Backdrop = Backdrop;
 		Style.m_ScreenRect = {TransformedScreenX0, TransformedScreenY0, TransformedScreenX1 - TransformedScreenX0, TransformedScreenY1 - TransformedScreenY0};

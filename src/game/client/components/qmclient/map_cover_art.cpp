@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <vector>
 
 namespace
 {
@@ -49,6 +50,32 @@ namespace
 		const float Distance = std::sqrt(DeltaX * DeltaX + DeltaY * DeltaY);
 		// 1 像素羽化，避免硬边阶梯；覆盖度按「在圆内多少」给出。
 		return std::clamp(Radius - Distance + 0.5f, 0.0f, 1.0f);
+	}
+
+	// 在缓存工作线程内把原图和径向模糊图混合，文字与 HUD 不参与采样。
+	void ApplySummaryBlur(uint8_t *pPixels, int Width, int Height)
+	{
+		const std::vector<uint8_t> vSharp(pPixels, pPixels + static_cast<size_t>(Width) * Height * 4);
+		const float CenterY = (Height - 1) * 0.5f;
+		constexpr int Samples = 24;
+		for(int Y = 0; Y < Height; ++Y)
+			for(int X = 0; X < Width; ++X)
+			{
+				const float Mask = 0.10f + 0.70f * X / (Width - 1);
+				int aSum[3]{};
+				for(int i = 0; i < Samples; ++i)
+				{
+					const float T = 0.065f * i / (Samples - 1);
+					const int SampleX = static_cast<int>(X * (1.0f - T) + 0.5f);
+					const int SampleY = static_cast<int>(Y + (CenterY - Y) * T + 0.5f);
+					const uint8_t *pSample = &vSharp[(static_cast<size_t>(SampleY) * Width + SampleX) * 4];
+					for(int c = 0; c < 3; ++c)
+						aSum[c] += pSample[c];
+				}
+				uint8_t *pPixel = pPixels + (static_cast<size_t>(Y) * Width + X) * 4;
+				for(int c = 0; c < 3; ++c)
+					pPixel[c] = static_cast<uint8_t>(pPixel[c] + (aSum[c] / static_cast<float>(Samples) - pPixel[c]) * Mask + 0.5f);
+			}
 	}
 
 	float SampleChannel(const CImageInfo &Image, int ChannelCount, int X, int Y, int Channel)
@@ -243,6 +270,9 @@ bool QmMapCover::Compose(const CImageInfo &Source, int OutWidth, int OutHeight, 
 			pPixel[3] = static_cast<uint8_t>(std::clamp(Alpha, 0.0f, 1.0f) * 255.0f + 0.5f);
 		}
 	}
+
+	if(Art.m_SummaryBlur)
+		ApplySummaryBlur(pOutput, OutWidth, OutHeight);
 
 	Out.Free();
 	Out.m_Width = static_cast<size_t>(OutWidth);

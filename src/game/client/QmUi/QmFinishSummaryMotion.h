@@ -15,6 +15,7 @@ namespace qm_finish_summary
 		float m_Radius = 0.0f;
 		float m_Connection = 0.0f;
 		float m_ContentAlpha = 0.0f;
+		float m_Pinch = 0.0f;
 	};
 
 	inline SCardPose Layout(const CUIRect &Island, const CUIRect &Target, float Progress)
@@ -36,12 +37,32 @@ namespace qm_finish_summary
 		return Pose;
 	}
 
+	// 近端先抵达岛口，远端随后加速穿过同一位置，保留窗口被吸入的轮廓。
+	inline SCardPose ClosingLayout(const CUIRect &Island, const CUIRect &Target, float Start, float Progress)
+	{
+		if(Start <= 0.65f)
+			return Layout(Island, Target, Progress);
+		SCardPose Pose = Layout(Island, Target, Start);
+		const CUIRect From = Pose.m_Rect;
+		const float T = std::clamp(1.0f - Progress / Start, 0.0f, 1.0f);
+		const float Pull = T * T * (2.0f - T);
+		const float Neck = std::min(T / 0.42f, 1.0f);
+		const float NeckEase = Neck * Neck * (3.0f - 2.0f * Neck);
+		const float MouthY = Island.y + Island.h;
+		const float Top = mix(From.y, MouthY, NeckEase);
+		const float Bottom = mix(From.y + From.h, MouthY, Pull);
+		const float Width = From.w * (1.0f - Pull);
+		const float Center = mix(From.x + From.w * 0.5f, Island.x + Island.w * 0.5f, Pull);
+		Pose.m_Rect = {Center - Width * 0.5f, Top, Width, std::max(0.0f, Bottom - Top)};
+		Pose.m_Radius *= (1.0f - Pull);
+		Pose.m_Pinch = 0.82f * NeckEase;
+		return Pose;
+	}
+
 	class CCardMotion
 	{
 		uint64_t m_Id = 0;
 		double m_LastTime = 0.0;
-		double m_FadeAllowedAt = 0.0;
-		float m_Alpha = 1.0f;
 		vec2 m_Tilt{};
 		float m_HostScale = 1.0f;
 
@@ -52,7 +73,6 @@ namespace qm_finish_summary
 			{
 				*this = {};
 				m_Id = Id;
-				m_FadeAllowedAt = Now + 5.0;
 				m_LastTime = Now;
 			}
 			if(!Id)
@@ -61,8 +81,6 @@ namespace qm_finish_summary
 			m_LastTime = Now;
 			const bool Moving = dot(Velocity, Velocity) > 0.04f;
 			const float Blend = -std::expm1(-Dt * (Moving ? 14.0f : 8.0f));
-			const float FadeDt = std::min(Dt, static_cast<float>(std::max(0.0, Now - m_FadeAllowedAt)));
-			m_Alpha = mix(m_Alpha, Moving && Opening ? 0.15f : 1.0f, -std::expm1(-FadeDt * (Moving && Opening ? 14.0f : 8.0f)));
 			if(MotionLevel <= 0)
 			{
 				m_Tilt = {};
@@ -77,7 +95,6 @@ namespace qm_finish_summary
 			m_HostScale = mix(m_HostScale, 1.0f + (Opening ? -0.09f : 0.07f) * Pulse, -std::expm1(-20.0f * Dt));
 		}
 
-		float Alpha() const { return m_Alpha; }
 		float TiltX() const { return m_Tilt.x; }
 		float TiltY() const { return m_Tilt.y; }
 		float HostScale() const { return m_HostScale; }

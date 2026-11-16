@@ -16,6 +16,7 @@ namespace qm_finish_summary
 		float m_Radius = 0.0f;
 		float m_Pinch = 0.0f;
 		bool m_DrawBackground = true;
+		bool m_Closing = false;
 		IGraphics::CTextureHandle m_CoverTexture;
 		IGraphics::CRenderTargetHandle m_Backdrop;
 		CUIRect m_ScreenRect{};
@@ -26,6 +27,7 @@ namespace qm_finish_summary
 	{
 		IGraphics::CRenderTargetHandle m_Target;
 		uint64_t m_GraphicsVersion = 0;
+		uint64_t m_RenderedId = 0;
 		int m_Width = 0;
 		int m_Height = 0;
 

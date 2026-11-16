@@ -205,3 +205,19 @@ TEST(QmFinishSummaryPresentation, DisabledMotionSettlesNumberColorImmediately)
 	Presentation.Update(2, 11.0, true, 2, Values);
 	EXPECT_FLOAT_EQ(Presentation.NumberColorProgress(ENumber::TIME), 0.0f);
 }
+
+TEST(QmFinishSummaryPresentation, LateRatingRevealsStarsInOrderAndReducedMotionShowsAll)
+{
+	CPresentation Presentation;
+	const auto Values = Targets();
+	Presentation.Update(1, 0.0, true, 2, Values);
+	Presentation.Update(1, 4.0, true, 2, Values, 3);
+	EXPECT_FLOAT_EQ(Presentation.StarAppearance(0), 0.0f);
+	Presentation.Update(1, 4.12, true, 2, Values, 3);
+	EXPECT_GT(Presentation.StarAppearance(0), Presentation.StarAppearance(1));
+	EXPECT_FLOAT_EQ(Presentation.StarAppearance(2), 0.0f);
+	Presentation.Update(1, 4.13, true, 0, Values, 3);
+	EXPECT_FLOAT_EQ(Presentation.StarAppearance(4), 1.0f);
+	Presentation.Update(2, 10.0, true, 2, Values, 3);
+	EXPECT_FLOAT_EQ(Presentation.StarAppearance(0), 0.0f);
+}

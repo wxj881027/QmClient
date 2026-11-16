@@ -16,6 +16,7 @@ void qm_finish_summary::CSurface::Reset(IGraphics &Graphics)
 		m_Target.Invalidate();
 	m_GraphicsVersion = Graphics.GraphicsResourcesResetVersion();
 	m_Width = m_Height = 0;
+	m_RenderedId = 0;
 }
 
 bool qm_finish_summary::CSurface::Render(IGraphics &Graphics, ITextRender &TextRender, CRenderTools &RenderTools, const CUIRect &Rect,
@@ -47,7 +48,7 @@ bool qm_finish_summary::CSurface::Render(IGraphics &Graphics, ITextRender &TextR
 			Background.m_BackgroundColor = Style.m_BackgroundColor.WithMultipliedAlpha(DrawAlpha);
 			qm_island::Render(&Graphics, Background, pTextScreen ? IGraphics::CRenderTargetHandle() : Style.m_Backdrop);
 		}
-		RenderCover(Graphics, Rect, Style.m_CoverTexture, Style.m_Radius, NowSeconds, ContentAlpha * DrawAlpha, MotionLevel);
+		RenderCover(Graphics, Rect, Style.m_CoverTexture, Style.m_Radius, ContentAlpha * DrawAlpha);
 		return qm_finish_summary::Render(Graphics, TextRender, RenderTools, Rect, Snapshot, pTeeRenderInfo, Content,
 			NowSeconds, FullyExpanded, MotionLevel, ContentAlpha * DrawAlpha, pTextScreen);
 	};
@@ -70,28 +71,39 @@ bool qm_finish_summary::CSurface::Render(IGraphics &Graphics, ITextRender &TextR
 		m_Height = NewHeight;
 		m_Target = Graphics.CreateRenderTarget(m_Width, m_Height, std::min(4, std::max(1, Graphics.MaxMultisampleRenderTargetSamples())));
 	}
-	if(!m_Target.IsValid() || !Graphics.BeginRenderTarget(m_Target, Style.m_BackgroundColor.WithAlpha(1.0f)))
+	if(!m_Target.IsValid())
 		return DrawContents(Alpha, nullptr);
-
-	Graphics.MapScreen(Rect.x, Rect.y, Rect.x + Rect.w, Rect.y + Rect.h);
-	if(Style.m_Backdrop.IsValid())
+	bool Complete = false;
+	// 收回期间直接变形上一帧的卡面，保留封面裁切、字形与分隔线的相对位置。
+	if(!Style.m_Closing || m_RenderedId != Snapshot.m_Id)
 	{
-		// 把已有模糊底图铺入目标，不额外抓取全屏；无底图时保留配置背景实色。
-		const vec4 Uv = QmHudMediaIslandBackdropUv(Rect, Style.m_ScreenRect);
-		IGraphics::SRenderTargetDrawParams Backdrop;
-		Backdrop.m_X = Rect.x;
-		Backdrop.m_Y = Rect.y;
-		Backdrop.m_W = Rect.w;
-		Backdrop.m_H = Rect.h;
-		Backdrop.m_U0 = Uv.x;
-		Backdrop.m_V0 = Uv.y;
-		Backdrop.m_U1 = Uv.x + Uv.z;
-		Backdrop.m_V1 = Uv.y + Uv.w;
-		Graphics.DrawRenderTarget(Style.m_Backdrop, Backdrop);
+		if(!Graphics.BeginRenderTarget(m_Target, Style.m_BackgroundColor.WithAlpha(1.0f)))
+			return DrawContents(Alpha, nullptr);
+
+		Graphics.MapScreen(Rect.x, Rect.y, Rect.x + Rect.w, Rect.y + Rect.h);
+		if(Style.m_Backdrop.IsValid())
+		{
+			// 把已有模糊底图铺入目标，不额外抓取全屏；无底图时保留配置背景实色。
+			const vec4 Uv = QmHudMediaIslandBackdropUv(Rect, Style.m_ScreenRect);
+			IGraphics::SRenderTargetDrawParams Backdrop;
+			Backdrop.m_X = Rect.x;
+			Backdrop.m_Y = Rect.y;
+			Backdrop.m_W = Rect.w;
+			Backdrop.m_H = Rect.h;
+			Backdrop.m_U0 = Uv.x;
+			Backdrop.m_V0 = Uv.y;
+			Backdrop.m_U1 = Uv.x + Uv.z;
+			Backdrop.m_V1 = Uv.y + Uv.w;
+			Graphics.DrawRenderTarget(Style.m_Backdrop, Backdrop);
+		}
+		// 字形按离屏像素密度生成，最终缩回 HUD 时仍有足够的笔画采样。
+		const float TextDensity = std::clamp(std::min(m_Width * PixelSize.x / Rect.w, m_Height * PixelSize.y / Rect.h), 1.0f, 2.0f);
+		const CUIRect GlyphScreen{Rect.x, Rect.y, TextScreen.w / TextDensity, TextScreen.h / TextDensity};
+		Complete = DrawContents(1.0f, &GlyphScreen);
+		Graphics.EndRenderTarget();
+		Graphics.MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
+		m_RenderedId = Snapshot.m_Id;
 	}
-	const bool Complete = DrawContents(1.0f, &TextScreen);
-	Graphics.EndRenderTarget();
-	Graphics.MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
 	IGraphics::SRenderTargetDrawParams Draw;
 	Draw.m_X = Rect.x;
 	Draw.m_Y = Rect.y;

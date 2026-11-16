@@ -1,22 +1,22 @@
 #include "QmFinishSummaryCover.h"
 
+#include "UiSurface.h"
+
 #include <engine/client/rounded_rect_geometry.h>
 #include <engine/shared/config.h>
 
 #include <algorithm>
-#include <cmath>
 
 namespace qm_finish_summary
 {
 	std::array<SCoverRow, COVER_SEGMENTS + 1> CoverRows(float Width, float Height, float Radius,
-		double NowSeconds, int MotionLevel, int CornerCurve, float Smoothing, float CapsuleSeam)
+		int CornerCurve, float Smoothing, float CapsuleSeam)
 	{
 		std::array<SCoverRow, COVER_SEGMENTS + 1> aRows{};
 		if(Width <= 0.0f || Height <= 0.0f)
 			return aRows;
 		const auto Shape = ResolveRoundedCornerShape(Radius, Width, Height, Smoothing, CornerCurve, CapsuleSeam);
 		const float R = Shape.m_Radius;
-		const double Time = std::isfinite(NowSeconds) ? NowSeconds : 0.0;
 		for(int i = 0; i <= COVER_SEGMENTS; ++i)
 		{
 			SCoverRow &Row = aRows[i];
@@ -31,15 +31,7 @@ namespace qm_finish_summary
 			}
 			else
 				Row.m_Y = R + (Height - 2.0f * R) * (i - 8) / 8.0f;
-			const float V = Row.m_Y / Height;
-			// 两端固定，边界向两侧缓慢摆动，纹理坐标始终按原图位置计算。
-			const float Offset = MotionLevel > 0 ? 0.02f * std::sin(pi * V) *
-								       static_cast<float>(0.65 * std::sin(Time * 0.45 + V * 10.0) + 0.35 * std::sin(Time * 0.31 - V * 23.0)) :
-							       0.0f;
-			const float FadeWidth = Width / 3.0f;
-			const float Center = Width * (0.65f - 0.35f * V + Offset);
-			Row.m_FadeStart = std::clamp(Center - FadeWidth * 0.5f, Row.m_Left, std::max(Row.m_Left, Width - FadeWidth));
-			Row.m_FadeEnd = std::min(Width, Row.m_FadeStart + FadeWidth);
+			Row.m_Right = Width - Row.m_Left;
 		}
 		return aRows;
 	}
@@ -49,19 +41,32 @@ namespace qm_finish_summary
 		if(Width <= 0.0f || Height <= 0.0f)
 			return {};
 		// 缓存为 2:1 图，按封面覆盖区域等比居中裁切。
-		const float ImageWidth = std::max(Width * 0.84f, Height * 2.0f);
-		return {(Point.x - Width * 0.42f) / ImageWidth + 0.5f, (Point.y - Height * 0.5f) / (ImageWidth * 0.5f) + 0.5f};
+		const float ImageWidth = std::max(Width, Height * 2.0f);
+		return {(Point.x - Width * 0.5f) / ImageWidth + 0.5f, (Point.y - Height * 0.5f) / (ImageWidth * 0.5f) + 0.5f};
 	}
 
 	void RenderCover(IGraphics &Graphics, const CUIRect &Rect, IGraphics::CTextureHandle Texture,
-		float Radius, double NowSeconds, float Alpha, int MotionLevel)
+		float Radius, float Alpha)
 	{
 		if(Alpha <= 0.001f || Rect.w <= 0.0f || Rect.h <= 0.0f || !Graphics.IsTextureHandleAllocated(Texture))
 			return;
-		const auto aRows = CoverRows(Rect.w, Rect.h, Radius, NowSeconds, MotionLevel, g_Config.m_QmUiCornerCurve,
+		const float Pixel = Graphics.GetScreen().Size().y / std::max(Graphics.ScreenHeight(), 1);
+		SRoundedImageParams Image;
+		Image.m_Texture = Texture;
+		Image.m_UVOffset = CoverUV({}, Rect.w, Rect.h);
+		const vec2 Extent = CoverUV(Rect.Size(), Rect.w, Rect.h) - Image.m_UVOffset;
+		Image.m_UVScale = {Extent.x / Rect.w, Extent.y / Rect.h};
+		Image.m_Alpha = Alpha;
+		SRoundedSurfaceParams Surface;
+		Surface.m_Radius = Radius;
+		Surface.m_PixelSize = Pixel;
+		Surface.m_AlignToPixel = false;
+		if(DrawRoundedImage(&Graphics, Rect, Image, ColorRGBA(0, 0, 0, 0), Surface))
+			return;
+		const auto aRows = CoverRows(Rect.w, Rect.h, Radius, g_Config.m_QmUiCornerCurve,
 			g_Config.m_QmUiCornerSmoothing / 100.0f, g_Config.m_QmUiCapsuleSeam / 100.0f);
 		const float Opacity = std::clamp(Alpha, 0.0f, 1.0f);
-		const float Feather = std::min(Rect.w * 0.005f, Graphics.GetScreen().Size().y / std::max(Graphics.ScreenHeight(), 1));
+		const float Feather = std::min(Rect.w * 0.005f, Pixel);
 		Graphics.WrapClamp();
 		Graphics.TextureSet(Texture);
 		Graphics.QuadsBegin();
@@ -84,19 +89,11 @@ namespace qm_finish_summary
 			const auto &Bottom = aRows[i + 1];
 			if(Bottom.m_Y <= Top.m_Y)
 				continue;
-			const float TopInner = std::min(Top.m_Left + Feather, Top.m_FadeStart);
-			const float BottomInner = std::min(Bottom.m_Left + Feather, Bottom.m_FadeStart);
-			DrawStrip(Top.m_Left, TopInner, Bottom.m_Left, BottomInner, Top.m_Y, Bottom.m_Y, 0.0f, Opacity);
-			DrawStrip(TopInner, Top.m_FadeStart, BottomInner, Bottom.m_FadeStart, Top.m_Y, Bottom.m_Y, Opacity, Opacity);
-			// 分段平滑两端斜率，让实图、渐变带和底色平顺衔接。
-			for(int Step = 0; Step < 4; ++Step)
-			{
-				const float A = Step / 4.0f;
-				const float B = (Step + 1) / 4.0f;
-				DrawStrip(mix(Top.m_FadeStart, Top.m_FadeEnd, A), mix(Top.m_FadeStart, Top.m_FadeEnd, B),
-					mix(Bottom.m_FadeStart, Bottom.m_FadeEnd, A), mix(Bottom.m_FadeStart, Bottom.m_FadeEnd, B), Top.m_Y, Bottom.m_Y,
-					Opacity * (1.0f - A * A * (3.0f - 2.0f * A)), Opacity * (1.0f - B * B * (3.0f - 2.0f * B)));
-			}
+			const float TopEdge = std::min(Feather, (Top.m_Right - Top.m_Left) * 0.5f);
+			const float BottomEdge = std::min(Feather, (Bottom.m_Right - Bottom.m_Left) * 0.5f);
+			DrawStrip(Top.m_Left, Top.m_Left + TopEdge, Bottom.m_Left, Bottom.m_Left + BottomEdge, Top.m_Y, Bottom.m_Y, 0.0f, Opacity);
+			DrawStrip(Top.m_Left + TopEdge, Top.m_Right - TopEdge, Bottom.m_Left + BottomEdge, Bottom.m_Right - BottomEdge, Top.m_Y, Bottom.m_Y, Opacity, Opacity);
+			DrawStrip(Top.m_Right - TopEdge, Top.m_Right, Bottom.m_Right - BottomEdge, Bottom.m_Right, Top.m_Y, Bottom.m_Y, Opacity, 0.0f);
 		}
 		Graphics.QuadsEnd();
 		Graphics.QuadsSetSubset(0, 0, 1, 1);

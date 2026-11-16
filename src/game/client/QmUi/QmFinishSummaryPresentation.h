@@ -5,6 +5,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 
 namespace qm_finish_summary
 {
@@ -76,6 +77,7 @@ namespace qm_finish_summary
 		bool m_Settled = false;
 		double m_Start = 0.0;
 		double m_Now = 0.0;
+		std::optional<double> m_StarsStart;
 
 		static constexpr double FieldStart(EField Field)
 		{
@@ -92,7 +94,7 @@ namespace qm_finish_summary
 		}
 
 	public:
-		void Update(uint64_t Id, double Now, bool FullyExpanded, int MotionLevel, const TNumberTargets &Targets)
+		void Update(uint64_t Id, double Now, bool FullyExpanded, int MotionLevel, const TNumberTargets &Targets, int Stars = -1)
 		{
 			if(!m_Valid || m_Id != Id)
 			{
@@ -108,6 +110,13 @@ namespace qm_finish_summary
 			}
 			if(!m_Started)
 				return;
+			if(Stars >= 0)
+			{
+				if(MotionLevel <= 0)
+					m_StarsStart = m_Now - 1.0;
+				else if(!m_StarsStart)
+					m_StarsStart = std::max(m_Now, m_Start + FieldStart(EField::TYPE));
+			}
 			m_Settled = m_Settled || MotionLevel <= 0 || m_Now - m_Start >= INTRO_DURATION;
 			for(size_t i = 0; i < m_aNumbers.size(); ++i)
 			{
@@ -139,6 +148,14 @@ namespace qm_finish_summary
 		float NumberColorProgress(ENumber Number) const
 		{
 			return m_aNumbers[static_cast<size_t>(Number)].ColorProgress(m_Now);
+		}
+
+		float StarAppearance(int Index) const
+		{
+			if(!m_StarsStart)
+				return 0.0f;
+			const float T = std::clamp(static_cast<float>((m_Now - *m_StarsStart - 0.065 * Index) / 0.18), 0.0f, 1.0f);
+			return T * T * (3.0f - 2.0f * T);
 		}
 
 		float FieldAlpha(EField Field) const

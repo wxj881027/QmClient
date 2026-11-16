@@ -137,6 +137,7 @@ class CHud : public CComponent
 		float m_TargetHeight = 0.0f;
 		uint64_t m_FinishSummaryId = 0;
 		float m_FinishSummaryProgress = 0.0f;
+		float m_FinishSummaryCloseStart = 0.0f;
 		qm_finish_summary::CContentCache m_FinishSummaryContent;
 		qm_finish_summary::CCardMotion m_FinishSummaryMotion;
 		float m_TargetTitleAlpha = 0.0f;
@@ -248,6 +249,7 @@ class CHud : public CComponent
 			m_TargetHeight = 0.0f;
 			m_FinishSummaryId = 0;
 			m_FinishSummaryProgress = 0.0f;
+			m_FinishSummaryCloseStart = 0.0f;
 			m_FinishSummaryContent = {};
 			m_FinishSummaryMotion = {};
 			m_TargetTitleAlpha = 0.0f;

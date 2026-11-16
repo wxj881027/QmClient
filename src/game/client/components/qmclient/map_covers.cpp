@@ -81,6 +81,7 @@ QmMapCover::SArt CQmMapCovers::StyleForUrl(const char *pUrl, ERole Role)
 	Art.m_Seed = QmMapCover::SeedForUrl(pUrl);
 	if(Role == ERole::SUMMARY)
 	{
+		Art.m_SummaryBlur = true;
 		Art.m_ImageFraction = 1.0f;
 		Art.m_Shade = 1.0f;
 		Art.m_CornerRadius = 0.0f;
