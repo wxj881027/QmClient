@@ -81,6 +81,7 @@
 #include "components/qmclient/collision_hitbox.h"
 #include "components/qmclient/data_version.h"
 #include "components/qmclient/demo_camera.h"
+#include "components/qmclient/finish_summary.h"
 #include "components/qmclient/friend_last_seen.h"
 #include "components/qmclient/hammer_hit_detection.h"
 #include "components/qmclient/hud_notifications/hud_notifications.h"
@@ -308,6 +309,7 @@ public:
 	CBindWheel m_BindWheel;
 	CBgDraw m_BgDraw;
 	CQmClient m_QmClient;
+	CQmFinishSummary m_FinishSummary;
 	CQmAxiomAutoLogin m_QmAxiomAutoLogin;
 	CQmAxiomScores m_QmAxiomScores;
 	CQmFriendLastSeen m_QmFriendLastSeen;

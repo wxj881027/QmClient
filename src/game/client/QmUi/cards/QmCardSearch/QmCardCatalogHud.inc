@@ -158,6 +158,8 @@ namespace
 namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_dynamic_island[] = {
+		{Localizable("Show finish summary"), nullptr, "结算卡 通关结算 完成用时 个人最佳 排名 完成进度 总分"},
+		{nullptr, "qm_finish_summary", nullptr},
 		{Localizable("Always show song title and artist"), nullptr, "始终显示歌曲名与歌手"},
 		{Localizable("Background color"), nullptr, "背景颜色 灵动岛背景"},
 		{Localizable("Enable hook countdown"), nullptr, "启用钩子倒计时"},

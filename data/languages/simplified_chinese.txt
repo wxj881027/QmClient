@@ -1619,6 +1619,9 @@ Axiom dummy password
 Axiom main account password
 == Axiom 主号密码
 
+Axiom rank
+== Axiom 排名
+
 Axiom score request failed
 == Axiom 分数请求失败
 
@@ -2444,6 +2447,9 @@ Checking for updates...
 Checking Steam...
 == 正在检测 Steam…
 
+China rank
+== 国服排名
+
 Chinese (Simplified)
 == 中文（简体）
 
@@ -2902,6 +2908,9 @@ Complete restore replaces the listed files. A backup is saved before importing. 
 
 Complete snapshots are arriving late or not arriving
 == 完整快照到达延迟或未到达
+
+Completed
+== 已完成
 
 Completion records unavailable. Try refreshing.
 == 通关记录暂不可用，请尝试刷新。
@@ -5966,6 +5975,9 @@ Fire
 Fire and dummy hammer alternate while the key is held.
 == 按住时开火与分身锤交替。
 
+First finish
+== 首次通关
+
 First page in console
 == 控制台第一页
 
@@ -6475,6 +6487,9 @@ Global card ordering (format: stableId|tab|col|order; semicolon-separated)
 
 Global card ordering old config migration completed flag
 == 全局卡片排序旧配置迁移完成标记
+
+Global rank
+== 全球排名
 
 Global toggle key
 == 全局开关键
@@ -7301,6 +7316,9 @@ Import merges friends and keeps local duplicates by default. Codes contain priva
 Imported
 == 导入
 
+Improved +%s
+== 进步 +%s
+
 Improved anti ping
 == 改进版延迟补偿
 
@@ -8021,6 +8039,9 @@ Last seen (DDStats): %s
 Last successful sync: %s
 == 上次成功同步：%s
 
+Last sync
+== 上次同步
+
 Last teleport
 == 上次传送
 
@@ -8401,6 +8422,9 @@ Loading sound files
 
 Loading successfully done
 == 存档载入成功
+
+Loading...
+== 加载中…
 
 Loading…
 == 正在加载…
@@ -8791,6 +8815,9 @@ Match ghost by map version instead of map name
 
 Match lyrics island width to the main Dynamic Island, excluding satellites
 == 让歌词岛始终与灵动岛主岛等宽，不包含眼睛等附岛
+
+Matched personal best
+== 追平个人最佳
 
 Matched with callable peer
 == 已匹配到可通话对端
@@ -9694,6 +9721,9 @@ No controller found. Plug in a controller.
 
 No corresponding vote option found
 == 未找到对应投票选项
+
+No data
+== 暂无数据
 
 No delay: same-frame only
 == 无延时：全部同帧执行
@@ -10610,6 +10640,9 @@ Pause/unpause game
 Penalty in seconds for saving or swapping positions
 == 保存或交换位置的惩罚时间（秒）
 
+Pending sync
+== 待同步
+
 Per-name volume (name=percent)
 == 按名字单独音量（name=percent）
 
@@ -10630,6 +10663,12 @@ Permanent sponsor verified
 
 Personal adjustments
 == 个性调整
+
+Personal best
+== 个人最佳
+
+Personal best pending
+== 个人最佳待确认
 
 Personal best:
 == 个人最佳：
@@ -13400,6 +13439,9 @@ Server port (only 8303-8310 work in LAN browser, 0=auto find free in 8303-8310).
 Server preset
 == 服务器预设
 
+Server rank
+== 本服排名
+
 Server region. Used for region bans
 == 服务器区域。用于地区禁令
 
@@ -13891,6 +13933,12 @@ Show filtered words in console
 
 Show finish messages
 == 显示完成消息
+
+Show finish summary
+== 显示结算卡
+
+Show finish summary in Dynamic Island
+== 在灵动岛显示结算卡
 
 Show flag on name plate
 == 在铭牌上显示国旗
@@ -14903,8 +14951,14 @@ Slow down the demo
 Slower
 == 较慢
 
+Slower -%s
+== 退步 -%s
+
 Slower export playback
 == 降低导出播放速度
+
+Slower than personal best
+== 慢于个人最佳
 
 Small Tee size
 == 小 Tee 尺寸
@@ -16400,6 +16454,9 @@ Time limit
 Time limit: %d min
 == 规定时限：%d 分钟
 
+Time to finish
+== 通关用时
+
 Time to wait before changing team: %s
 == 距离下次切换队伍还需等待：%s
 
@@ -16693,6 +16750,9 @@ Total hours
 
 Total play time
 == 总时长
+
+Total points
+== 总分
 
 Total: %d save(s)
 == 总计：%d 个存档

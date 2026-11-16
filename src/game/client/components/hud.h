@@ -9,6 +9,7 @@
 
 #include <generated/protocol.h>
 
+#include <game/client/QmUi/QmFinishSummary.h>
 #include <game/client/QmUi/QmLayout.h>
 #include <game/client/QmUi/QmLegacyMediaHud.h>
 #include <game/client/QmUi/QmLyricsHud.h>
@@ -132,6 +133,8 @@ class CHud : public CComponent
 		float m_TargetX = 0.0f;
 		float m_TargetWidth = 0.0f;
 		float m_TargetHeight = 0.0f;
+		float m_FinishSummaryProgress = 0.0f;
+		qm_finish_summary::CContentCache m_FinishSummaryContent;
 		float m_TargetTitleAlpha = 0.0f;
 		float m_TargetTitleOffset = 0.0f;
 		float m_TargetSpectatorAlpha = 0.0f;
@@ -239,6 +242,8 @@ class CHud : public CComponent
 			m_TargetX = 0.0f;
 			m_TargetWidth = 0.0f;
 			m_TargetHeight = 0.0f;
+			m_FinishSummaryProgress = 0.0f;
+			m_FinishSummaryContent = {};
 			m_TargetTitleAlpha = 0.0f;
 			m_TargetTitleOffset = 0.0f;
 			m_TargetSpectatorAlpha = 0.0f;

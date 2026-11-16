@@ -3265,6 +3265,8 @@ if(CLIENT)
     QmUi/QmInputMotion.h
     QmUi/QmLineInputMotion.cpp
     QmUi/QmLineInputMotion.h
+    QmUi/QmFinishSummary.cpp
+    QmUi/QmFinishSummary.h
     QmUi/QmIslandSurface.cpp
     QmUi/QmIslandSurface.h
     QmUi/QmIslandNotice.h
@@ -3553,6 +3555,11 @@ if(CLIENT)
     components/qmclient/axiom_scores_data.cpp
     components/qmclient/axiom_scores_data.h
     components/qmclient/axiom_scores_parse_job.h
+    components/qmclient/finish_summary.cpp
+    components/qmclient/finish_summary.h
+    components/qmclient/finish_summary_data.cpp
+    components/qmclient/finish_summary_data.h
+    components/qmclient/finish_summary_state.h
     components/qmclient/friend_last_seen.cpp
     components/qmclient/friend_last_seen.h
     components/qmclient/friend_last_seen_data.cpp
@@ -4982,6 +4989,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_bind_workshop_plan_test.cpp
     src/test/unit/qmclient/client/qm_background_particles_test.cpp
     src/test/unit/qmclient/client/qm_axiom_scores_test.cpp
+    src/test/unit/qmclient/client/qm_finish_summary_data_test.cpp
+    src/test/unit/qmclient/client/qm_finish_summary_state_test.cpp
+    src/test/unit/qmclient/ui/qm_finish_summary_layout_test.cpp
     src/test/integration/qmclient/client/qm_axiom_quad_collision_test.cpp
     src/test/contract/qmclient/client/qm_axiom_scores_contract_test.cpp
     src/test/unit/qmclient/client/qm_chat_emoji_test.cpp
@@ -5490,6 +5500,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/hammer_hit_detection.cpp
     src/game/client/components/qmclient/axiom_scores.cpp
     src/game/client/components/qmclient/axiom_scores_data.cpp
+    src/game/client/components/qmclient/finish_summary_data.cpp
     src/game/client/components/qmclient/friend_last_seen_data.cpp
     src/game/client/components/qmclient/streamer_word_filter.cpp
     src/game/client/components/qmclient/map_tags.cpp

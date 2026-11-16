@@ -538,6 +538,7 @@ Axiom auto login stopped after repeated failures
 Axiom auto login succeeded
 Axiom dummy password
 Axiom main account password
+Axiom rank
 Axiom score request failed
 Axiom website
 Axis
@@ -813,6 +814,7 @@ Check your devices before tweaking thresholds; most silent-mic cases are simply 
 Checking for existing player with your name
 Checking for updates...
 Checking Steam...
+China rank
 Chinese (Simplified)
 Chinese (Traditional)
 Chinese font:
@@ -966,6 +968,7 @@ Compatibility mode
 Compatible with single-player area hints from other servers
 Complete restore replaces the listed files. A backup is saved before importing. The client will restart.
 Complete snapshots are arriving late or not arriving
+Completed
 Completion records unavailable. Try refreshing.
 Compressor attack time (ms)
 Compressor makeup gain (percent)
@@ -1987,6 +1990,7 @@ Finished
 Finished maps
 Fire
 Fire and dummy hammer alternate while the key is held.
+First finish
 First page in console
 Fit view
 Fixed-size scoreboard rows with mouse wheel scrolling for crowded servers
@@ -2157,6 +2161,7 @@ Glitch
 Global card
 Global card ordering (format: stableId|tab|col|order; semicolon-separated)
 Global card ordering old config migration completed flag
+Global rank
 Global toggle key
 Global UI size
 Global UI size percentage
@@ -2432,6 +2437,7 @@ Import friend code
 Import from clipboard
 Import merges friends and keeps local duplicates by default. Codes contain private names and notes.
 Imported
+Improved +%s
 Improved anti ping
 In DDNet, played when a freeze heart freezes the player. Other modes may use it for health pickups.
 In DDNet, played when weapons are removed. Other modes may use it for armor pickups.
@@ -2672,6 +2678,7 @@ Last entered
 Last page in console
 Last seen (DDStats): %s
 Last successful sync: %s
+Last sync
 Last teleport
 Last verified approved update source
 Last viewed announcement content revision
@@ -2799,6 +2806,7 @@ Loading screenshot files
 Loading skin files
 Loading sound files
 Loading successfully done
+Loading...
 Loading…
 Local
 Local + Dummy
@@ -2929,6 +2937,7 @@ Master server URL to register
 Match %d of %d
 Match ghost by map version instead of map name
 Match lyrics island width to the main Dynamic Island, excluding satellites
+Matched personal best
 Matched with callable peer
 Max attempts for remote console authentication
 Max CSVs
@@ -3230,6 +3239,7 @@ No compatible Windows update package for this version
 No content yet
 No controller found. Plug in a controller.
 No corresponding vote option found
+No data
 No delay: same-frame only
 No demo is being recorded
 No demo selected
@@ -3535,6 +3545,7 @@ Pause video rendering when demo playback is paused
 Pause voice when window unfocused
 Pause/unpause game
 Penalty in seconds for saving or swapping positions
+Pending sync
 Per-name volume (name=percent)
 Performance debug log threshold (ms)
 Performance mode
@@ -3542,6 +3553,8 @@ Performance points
 Permanent access; up to 4 online IP addresses
 Permanent sponsor verified
 Personal adjustments
+Personal best
+Personal best pending
 Personal best:
 Personal Setting of showing time in either broadcast or game/round timer, timer s, where s = broadcast for broadcast, gametimer for game/round timer, cycle for cycle, both for both, none for no timer and nothing to show current status
 Pet
@@ -4465,6 +4478,7 @@ Server not full
 Server password
 Server port (only 8303-8310 work in LAN browser, 0=auto find free in 8303-8310). If behind NAT, see sv_register_port for external port
 Server preset
+Server rank
 Server region. Used for region bans
 Server stress (debug builds only).
 Server type (novice, moderate, etc.)
@@ -4629,6 +4643,8 @@ Show eye wheel and expressions
 Show feat-003 shared UI primitives dogfood page (takes over QmClient settings page, for visual verification of 11 primitives + spring/easing animations)
 Show filtered words in console
 Show finish messages
+Show finish summary
+Show finish summary in Dynamic Island
 Show flag on name plate
 Show FPS
 Show freeze bar under frozen players indicating thaw time
@@ -4966,7 +4982,9 @@ Slide left
 Slightly fast encode
 Slow down the demo
 Slower
+Slower -%s
 Slower export playback
+Slower than personal best
 Small Tee size
 Smaller tees
 Smart
@@ -5465,6 +5483,7 @@ Time in seconds before economy authentication timeout.
 Time interval (seconds) between chat messages.
 Time limit
 Time limit: %d min
+Time to finish
 Time to wait before changing team: %s
 Time to wait before handling inactive players (in minutes)
 Timeout code to use for dummy
@@ -5563,6 +5582,7 @@ Total fonts:
 Total friends
 Total hours
 Total play time
+Total points
 Total: %d save(s)
 Trail alpha
 Trail color
