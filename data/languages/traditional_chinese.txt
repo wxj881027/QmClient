@@ -1289,8 +1289,8 @@ Auto greet friend text
 Auto greet friends entering map
 == 自動問候進圖的好友
 
-Auto greet posts a public chat line a few seconds after a friend joins, so leave "Greeting text" empty on strict servers.
-== 自動問候會在好友進圖幾秒後公開發一則聊天；管得嚴的伺服器上就把問候語留空。
+Auto greet waits 1 second after a friend joins, then sends a public greeting when chat is available. Leave "Greeting text" empty on strict servers.
+== 好友進圖滿 1 秒後，聊天允許傳送時會在公頻打招呼。在限制自動發言的伺服器上，將「打招呼文本」留空即可關閉自動問候。
 
 Auto login Axiom server
 == 自動登入 Axiom 伺服器帳號

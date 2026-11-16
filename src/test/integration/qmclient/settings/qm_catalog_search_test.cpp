@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <iterator>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -201,24 +202,22 @@ TEST(QmCatalogSearch, PreviewHighlightsEveryResultCard)
 	qm_settings_reveal::Clear();
 }
 
-TEST(QmCatalogSearch, HighlightStyleUsesThemeAccentAndClampsRadius)
+TEST(QmCatalogSearch, MatchingLabelUsesYellowUntilDrawingFinishes)
 {
-	SUiTheme Theme;
-	Theme.m_Accent = ColorRGBA(0.2f, 0.4f, 0.6f, 1.0f);
-	CUIRect Row;
-	Row.w = 200.0f;
-	Row.h = 20.0f;
-	qm_settings_highlight::SStyle Style = qm_settings_highlight::Resolve(Theme, Row);
-	EXPECT_FLOAT_EQ(Style.m_Text.r, 0.2f);
-	EXPECT_FLOAT_EQ(Style.m_Text.g, 0.4f);
-	EXPECT_FLOAT_EQ(Style.m_Text.b, 0.6f);
-	EXPECT_FLOAT_EQ(Style.m_Fill.a, Theme.m_Selected.a);
-	EXPECT_FLOAT_EQ(Style.m_Border.r, Theme.m_Accent.r);
-	EXPECT_FLOAT_EQ(Style.m_Radius, ui_token::radius::BASE);
-
-	Row.h = 6.0f;
-	Style = qm_settings_highlight::Resolve(Theme, Row);
-	EXPECT_FLOAT_EQ(Style.m_Radius, 3.0f);
+	std::unique_ptr<IEngineTextRender> pTextRender(CreateEngineTextRender());
+	const ColorRGBA Original(0.2f, 0.4f, 0.6f, 0.5f);
+	pTextRender->TextColor(Original);
+	const ColorRGBA Outline = pTextRender->GetTextOutlineColor();
+	{
+		const qm_settings_highlight::CScopedLabelColor Highlight(pTextRender.get(), true);
+		EXPECT_EQ(pTextRender->GetTextColor(), ColorRGBA(1.0f, 1.0f, 0.0f, Original.a));
+		EXPECT_EQ(pTextRender->GetTextOutlineColor(), Outline);
+	}
+	EXPECT_EQ(pTextRender->GetTextColor(), Original);
+	{
+		const qm_settings_highlight::CScopedLabelColor Unmatched(pTextRender.get(), false);
+		EXPECT_EQ(pTextRender->GetTextColor(), Original);
+	}
 }
 
 TEST(QmCatalogSearch, RevealRequestMatchesOnlyTargetRowAndExpires)
