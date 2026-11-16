@@ -47,11 +47,11 @@ void CMenus::ClearQmTitlePreviewContainers()
 
 static SQmTitleAppearance QmTitleDraftAppearance()
 {
-	return {g_Config.m_QmTitleBadgeStyle == 1 ? EQmTitleBadgeStyle::SUN : EQmTitleBadgeStyle::MOON,
+	return {QmTitleBadgeStyleFromIndex(g_Config.m_QmTitleBadgeStyle),
 		color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTitleBadgeColor)).Pack(false), g_Config.m_QmTitleOpacity};
 }
 
-static void RenderQmTitleFinishedPreview(IGraphics *pGraphics, ITextRender *pTextRender, const CQmTitleBadge &TitleBadge, const CUIRect &Area, const char *pTitle, float FontSize)
+static void RenderQmTitleFinishedPreview(IGraphics *pGraphics, ITextRender *pTextRender, const CQmTitleBadge &TitleBadge, const CUIRect &Area, const char *pTitle, float FontSize, double TimeSec)
 {
 	const std::string Text = QmTitleBadgeText(pTitle[0] ? pTitle : Localize("Sponsor title"));
 	const vec2 DesiredSize = QmTitleBadgeSize(pTextRender->TextWidth(FontSize, Text.c_str()), FontSize);
@@ -73,7 +73,7 @@ static void RenderQmTitleFinishedPreview(IGraphics *pGraphics, ITextRender *pTex
 	const vec2 Size = QmTitleBadgeSize(Bounds.m_W, FontSize);
 	const CUIRect Rect{Area.x + (Area.w - Size.x) * 0.5f, Area.y + (Area.h - Size.y) * 0.5f, Size.x, Size.y};
 	const SQmTitleAppearance Appearance = QmTitleDraftAppearance();
-	TitleBadge.RenderSurface(pGraphics, Rect, Appearance, 1.0f);
+	TitleBadge.RenderSurface(pGraphics, Rect, Appearance, 1.0f, TimeSec);
 	const vec2 TextPosition = QmTitleBadgeTextPosition(Rect, QmTitleBadgeVisualBounds(Cursor));
 	pTextRender->RenderTextContainer(s_TitleFinishedPreviewContainer, QmTitleBadgePalette(Appearance).m_Text,
 		ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), TextPosition.x, TextPosition.y);
@@ -206,7 +206,7 @@ namespace
 				s_Draft.m_Code.Set("");
 				g_Config.m_QmSponsorChatStyle = static_cast<int>(Auth.TitleProfileChatStyle());
 				const auto &Appearance = Auth.TitleProfileAppearance();
-				g_Config.m_QmTitleBadgeStyle = Appearance.m_Style == EQmTitleBadgeStyle::SUN ? 1 : 0;
+				g_Config.m_QmTitleBadgeStyle = QmTitleBadgeStyleIndex(Appearance.m_Style);
 				g_Config.m_QmTitleBadgeColor = color_cast<ColorHSLA>(ColorRGBA(Appearance.m_Color)).Pack(false);
 				g_Config.m_QmTitleOpacity = Appearance.m_Opacity;
 			}
@@ -414,18 +414,24 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 					pMenus->Ui()->DoLabel(&Label, Localize("Title style"), BodySize, TEXTALIGN_ML);
 					static CUi::SDropDownState s_StyleState;
 					static CScrollRegion s_StyleScroll;
-					const std::array<const char *, 2> aNames{Localize("Moon"), Localize("Sun")};
+					const std::array<const char *, QM_TITLE_BADGE_STYLE_COUNT> aNames{
+						Localize("Moon"),
+						Localize("Sun"),
+						Localize("Earth"),
+						Localize("Morning star"),
+						Localize("Black hole"),
+					};
 					s_StyleState.m_SelectionPopupContext.m_pScrollRegion = &s_StyleScroll;
 					const int Style = pMenus->DoSettingsDropDown(&Control, g_Config.m_QmTitleBadgeStyle, aNames.data(), aNames.size(), s_StyleState, {}, &g_Config.m_QmTitleBadgeStyle, nullptr, &Row);
 					if(!ReadOnly && Style != g_Config.m_QmTitleBadgeStyle)
 					{
-						// 默认配色跟随日月；用户自定义过的颜色在切换形状时保留。
-						const auto OldStyle = g_Config.m_QmTitleBadgeStyle == 1 ? EQmTitleBadgeStyle::SUN : EQmTitleBadgeStyle::MOON;
+						// 默认配色跟随各天体主题色；用户自定义过的颜色在切换形状时保留。
+						const auto OldStyle = QmTitleBadgeStyleFromIndex(g_Config.m_QmTitleBadgeStyle);
 						const unsigned OldDefault = color_cast<ColorHSLA>(ColorRGBA(QmTitleBadgeDefaultColor(OldStyle))).Pack(false);
 						g_Config.m_QmTitleBadgeStyle = Style;
 						if(g_Config.m_QmTitleBadgeColor == OldDefault)
 						{
-							const auto NewStyle = Style == 1 ? EQmTitleBadgeStyle::SUN : EQmTitleBadgeStyle::MOON;
+							const auto NewStyle = QmTitleBadgeStyleFromIndex(Style);
 							g_Config.m_QmTitleBadgeColor = color_cast<ColorHSLA>(ColorRGBA(QmTitleBadgeDefaultColor(NewStyle))).Pack(false);
 						}
 					}
@@ -473,7 +479,7 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 						{TitlePreviewArea.x + (TitlePreviewArea.w - Size.x) * 0.5f, TitlePreviewArea.y + (TitlePreviewArea.h - Size.y) * 0.5f, Size.x, Size.y}, 1.0f, Auth.TitleAnimationTime());
 				}
 				else
-					RenderQmTitleFinishedPreview(pMenus->Graphics(), pMenus->TextRender(), pMenus->GameClient()->m_QmClient.TitleBadge(), TitlePreviewArea, Draft.m_Title.GetString(), BodySize * 1.4f);
+					RenderQmTitleFinishedPreview(pMenus->Graphics(), pMenus->TextRender(), pMenus->GameClient()->m_QmClient.TitleBadge(), TitlePreviewArea, Draft.m_Title.GetString(), BodySize * 1.4f, Auth.TitleAnimationTime());
 				pMenus->Ui()->ClipDisable();
 			}
 		}

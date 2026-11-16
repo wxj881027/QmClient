@@ -390,13 +390,14 @@ bool ParseQmTitleAppearance(const json_value *pValue, SQmTitleAppearance &Out)
 {
 	Out = {};
 	const json_value *pStyle = JsonObjectField(pValue, "style");
+	EQmTitleBadgeStyle ParsedStyle = EQmTitleBadgeStyle::MOON;
 	int64_t Color, Opacity;
 	if(pStyle->type != json_string ||
-		(str_comp(pStyle->u.string.ptr, "moon") != 0 && str_comp(pStyle->u.string.ptr, "sun") != 0) ||
+		!QmTitleBadgeStyleFromId(pStyle->u.string.ptr, ParsedStyle) ||
 		!JsonReadInteger(JsonObjectField(pValue, "color"), Color) || Color < 0 || Color > 0xffffff ||
 		!JsonReadInteger(JsonObjectField(pValue, "opacity"), Opacity) || Opacity < 0 || Opacity > 100)
 		return false;
-	Out.m_Style = str_comp(pStyle->u.string.ptr, "sun") == 0 ? EQmTitleBadgeStyle::SUN : EQmTitleBadgeStyle::MOON;
+	Out.m_Style = ParsedStyle;
 	Out.m_Color = static_cast<unsigned>(Color);
 	Out.m_Opacity = static_cast<int>(Opacity);
 	return true;

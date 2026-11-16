@@ -1,5 +1,7 @@
 #include "qm_title_badge.h"
 
+#include "qm_title_badge_motion.h"
+
 #include <engine/storage.h>
 
 void CQmTitleBadge::Init(IGraphics *pGraphics)
@@ -57,7 +59,7 @@ void CQmTitleBadge::RenderLogo(IGraphics *pGraphics, const CUIRect &Rect, ColorR
 		m_Logo.Render(pGraphics, Rect, Color);
 }
 
-void CQmTitleBadge::RenderSurface(IGraphics *pGraphics, const CUIRect &Rect, const SQmTitleAppearance &Appearance, float Alpha) const
+void CQmTitleBadge::RenderSurface(IGraphics *pGraphics, const CUIRect &Rect, const SQmTitleAppearance &Appearance, float Alpha, double TimeSec) const
 {
 	if(Rect.w <= 0.0f || Rect.h <= 0.0f || Alpha <= 0.0f || Appearance.m_Opacity <= 0)
 		return;
@@ -71,14 +73,18 @@ void CQmTitleBadge::RenderSurface(IGraphics *pGraphics, const CUIRect &Rect, con
 	DrawPill(Shadow, Palette.m_Background.WithMultipliedAlpha(0.05f));
 	QmDrawBadgeCapsuleGeometry(pGraphics, Rect, Palette.m_Background, Palette.m_Border);
 
-	// 两端保持图标比例，中间只伸展星轨；日月图案继续使用离线展开的几何网格。
-	const float RightWidth = std::min(32.0f * Scale, Rect.w);
-	const float LeftWidth = std::min(40.0f * Scale, Rect.w - RightWidth);
-	const int Pattern = Appearance.m_Style == EQmTitleBadgeStyle::SUN ? 3 : 0;
-	const ColorRGBA PatternColor = Palette.m_Icon.WithMultipliedAlpha(0.20f);
-	m_aPatterns[Pattern].Render(pGraphics, {Rect.x, Rect.y, 40.0f * Scale, Rect.h}, PatternColor, LeftWidth / Scale);
-	m_aPatterns[Pattern + 1].Render(pGraphics, {Rect.x + LeftWidth, Rect.y, Rect.w - LeftWidth - RightWidth, Rect.h}, PatternColor);
-	m_aPatterns[Pattern + 2].Render(pGraphics, {Rect.x + Rect.w - RightWidth, Rect.y, RightWidth, Rect.h}, PatternColor);
+	// 日月沿用已有底纹，新款天体与贯穿胶囊的光带在同一层绘制。
+	if(Appearance.m_Style == EQmTitleBadgeStyle::MOON || Appearance.m_Style == EQmTitleBadgeStyle::SUN)
+	{
+		const float RightWidth = std::min(32.0f * Scale, Rect.w);
+		const float LeftWidth = std::min(40.0f * Scale, Rect.w - RightWidth);
+		const int Pattern = Appearance.m_Style == EQmTitleBadgeStyle::SUN ? 3 : 0;
+		const ColorRGBA PatternColor = Palette.m_Icon.WithMultipliedAlpha(0.20f);
+		m_aPatterns[Pattern].Render(pGraphics, {Rect.x, Rect.y, 40.0f * Scale, Rect.h}, PatternColor, LeftWidth / Scale);
+		m_aPatterns[Pattern + 1].Render(pGraphics, {Rect.x + LeftWidth, Rect.y, Rect.w - LeftWidth - RightWidth, Rect.h}, PatternColor);
+		m_aPatterns[Pattern + 2].Render(pGraphics, {Rect.x + Rect.w - RightWidth, Rect.y, RightWidth, Rect.h}, PatternColor);
+	}
+	qm_title_badge_motion::CCanvas(*pGraphics, Rect, Palette).Draw(Appearance.m_Style, TimeSec);
 	const CUIRect Logo{Rect.x + 9.0f * Scale, Rect.y + 4.0f * Scale, 16.0f * Scale, 16.0f * Scale};
 	RenderLogo(pGraphics, Logo, Palette.m_Icon);
 	pGraphics->SetColor(1.0f, 1.0f, 1.0f, 1.0f);

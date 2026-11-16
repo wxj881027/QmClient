@@ -131,7 +131,7 @@ TEST_F(CQmTitleBadgeRender, DistanceLogoUsesItsOwnTextureWithoutColorMipmaps)
 	const auto &Distance = m_Graphics.m_vTextures[0];
 	EXPECT_EQ(Distance.m_Path, "qmclient/title_badges/logo_sdf.png");
 	EXPECT_NE(Distance.m_Flags & IGraphics::TEXLOAD_NO_MIPMAPS, 0);
-	m_Badge.RenderSurface(&m_Graphics, m_Rect, {}, 1.0f);
+	m_Badge.RenderSurface(&m_Graphics, m_Rect, {}, 1.0f, CQmTitleBadge::NO_ANIMATION);
 	ASSERT_EQ(m_Graphics.m_vDistanceDraws.size(), 1u);
 	EXPECT_EQ(m_Graphics.m_vDistanceDraws[0].m_Texture, Distance.m_Id);
 	for(const auto &Draw : m_Graphics.m_vGeometryDraws)
@@ -141,7 +141,7 @@ TEST_F(CQmTitleBadgeRender, DistanceLogoUsesItsOwnTextureWithoutColorMipmaps)
 TEST_F(CQmTitleBadgeRender, DistanceFieldPaddingKeepsTheOriginalLogoSizeAndPosition)
 {
 	m_Badge.Init(&m_Graphics);
-	m_Badge.RenderSurface(&m_Graphics, m_Rect, {}, 1.0f);
+	m_Badge.RenderSurface(&m_Graphics, m_Rect, {}, 1.0f, CQmTitleBadge::NO_ANIMATION);
 	ASSERT_EQ(m_Graphics.m_vDistanceDraws.size(), 1u);
 	const auto &Params = m_Graphics.m_vDistanceDraws[0].m_Params;
 	EXPECT_EQ(Params.m_Rect, vec4(17, 22, 20, 20));
@@ -161,7 +161,7 @@ TEST_F(CQmTitleBadgeRender, LogoColorAndFadeApplyOnceForBothStyles)
 	{
 		m_Graphics.m_vDistanceDraws.clear();
 		const SQmTitleAppearance Appearance{Style, QmTitleBadgeDefaultColor(Style), 40};
-		m_Badge.RenderSurface(&m_Graphics, m_Rect, Appearance, 0.5f);
+		m_Badge.RenderSurface(&m_Graphics, m_Rect, Appearance, 0.5f, CQmTitleBadge::NO_ANIMATION);
 		ASSERT_EQ(m_Graphics.m_vDistanceDraws.size(), 1u);
 		const auto &Params = m_Graphics.m_vDistanceDraws[0].m_Params;
 		const auto Icon = QmTitleBadgePalette(Appearance, 0.5f).m_Icon;
@@ -179,7 +179,7 @@ TEST_F(CQmTitleBadgeRender, CameraScaleReusesTheLoadedLogoWithOneSubmission)
 	{
 		m_Graphics.m_Zoom = Zoom;
 		m_Graphics.m_vDistanceDraws.clear();
-		m_Badge.RenderSurface(&m_Graphics, m_Rect, {}, 1.0f);
+		m_Badge.RenderSurface(&m_Graphics, m_Rect, {}, 1.0f, CQmTitleBadge::NO_ANIMATION);
 		ASSERT_EQ(m_Graphics.m_vDistanceDraws.size(), 1u);
 		const auto &Rect = m_Graphics.m_vDistanceDraws[0].m_Params.m_Rect;
 		EXPECT_FLOAT_EQ(Rect.z, 20.0f);
@@ -198,7 +198,7 @@ TEST_F(CQmTitleBadgeRender, UnsupportedTexturePipelineKeepsTheExistingGeometry)
 		m_Graphics.m_HasSdf = HasSdf;
 		m_Graphics.m_HasSdfTexture = false;
 		m_Graphics.m_vGeometryDraws.clear();
-		m_Badge.RenderSurface(&m_Graphics, m_Rect, {}, 1.0f);
+		m_Badge.RenderSurface(&m_Graphics, m_Rect, {}, 1.0f, CQmTitleBadge::NO_ANIMATION);
 		EXPECT_TRUE(m_Graphics.m_vDistanceDraws.empty());
 		ASSERT_FALSE(m_Graphics.m_vGeometryDraws.empty());
 		const auto &Logo = m_Graphics.m_vGeometryDraws.back();
@@ -212,7 +212,7 @@ TEST_F(CQmTitleBadgeRender, MissingDistanceAssetKeepsTheExistingGeometry)
 {
 	m_Graphics.m_MissingPath = "qmclient/title_badges/logo_sdf.png";
 	m_Badge.Init(&m_Graphics);
-	m_Badge.RenderSurface(&m_Graphics, m_Rect, {}, 1.0f);
+	m_Badge.RenderSurface(&m_Graphics, m_Rect, {}, 1.0f, CQmTitleBadge::NO_ANIMATION);
 	EXPECT_TRUE(m_Graphics.m_vDistanceDraws.empty());
 	ASSERT_FALSE(m_Graphics.m_vGeometryDraws.empty());
 	EXPECT_EQ(m_Graphics.m_vGeometryDraws.back().m_Container, m_Graphics.m_vCreatedContainers[0]);
@@ -223,9 +223,9 @@ TEST_F(CQmTitleBadgeRender, TransparentOrEmptyBadgesDoNotSubmitTheLogo)
 	m_Badge.Init(&m_Graphics);
 	SQmTitleAppearance Transparent;
 	Transparent.m_Opacity = 0;
-	m_Badge.RenderSurface(&m_Graphics, m_Rect, Transparent, 1.0f);
-	m_Badge.RenderSurface(&m_Graphics, m_Rect, {}, 0.0f);
-	m_Badge.RenderSurface(&m_Graphics, {0, 0, 0, 24}, {}, 1.0f);
+	m_Badge.RenderSurface(&m_Graphics, m_Rect, Transparent, 1.0f, CQmTitleBadge::NO_ANIMATION);
+	m_Badge.RenderSurface(&m_Graphics, m_Rect, {}, 0.0f, CQmTitleBadge::NO_ANIMATION);
+	m_Badge.RenderSurface(&m_Graphics, {0, 0, 0, 24}, {}, 1.0f, CQmTitleBadge::NO_ANIMATION);
 	EXPECT_TRUE(m_Graphics.m_vDistanceDraws.empty());
 	EXPECT_TRUE(m_Graphics.m_vGeometryDraws.empty());
 }
@@ -236,12 +236,12 @@ TEST_F(CQmTitleBadgeRender, DeviceResetFallsBackToGeometryUntilResourcesAreIniti
 	// 设备旧容器已丢失，生产几何组件应按新代际重新创建。
 	m_Graphics.m_Containers.clear();
 	++m_Graphics.m_ResetVersion;
-	m_Badge.RenderSurface(&m_Graphics, m_Rect, {}, 1.0f);
+	m_Badge.RenderSurface(&m_Graphics, m_Rect, {}, 1.0f, CQmTitleBadge::NO_ANIMATION);
 	EXPECT_TRUE(m_Graphics.m_vDistanceDraws.empty());
 	ASSERT_FALSE(m_Graphics.m_vGeometryDraws.empty());
 	EXPECT_EQ(m_Graphics.m_vGeometryDraws.back().m_Container, m_Graphics.m_vCreatedContainers.back());
 	m_Badge.Init(&m_Graphics);
-	m_Badge.RenderSurface(&m_Graphics, m_Rect, {}, 1.0f);
+	m_Badge.RenderSurface(&m_Graphics, m_Rect, {}, 1.0f, CQmTitleBadge::NO_ANIMATION);
 	EXPECT_EQ(m_Graphics.m_vDistanceDraws.size(), 1u);
 }
 

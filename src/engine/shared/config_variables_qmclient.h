@@ -409,7 +409,7 @@ MACRO_CONFIG_INT(QmEmoticonShadow, qm_emoticon_shadow, 0, 0, 1, CFGFLAG_CLIENT |
 MACRO_CONFIG_INT(QmEmoticonProjectileDuration, qm_emoticon_projectile_duration, 5, 1, 10, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Emoticon projectile duration")
 MACRO_CONFIG_INT(QmShowOtherSuperEmotes, qm_show_other_super_emotes, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show other players' large emoticons")
 MACRO_CONFIG_INT(QmShowOtherLaunchEmotes, qm_show_other_launch_emotes, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show other players' launched emoticons")
-MACRO_CONFIG_INT(QmTitleBadgeStyle, qm_title_badge_style, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Sponsor title badge: 0 = moon, 1 = sun")
+MACRO_CONFIG_INT(QmTitleBadgeStyle, qm_title_badge_style, 0, 0, 4, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Sponsor title badge: 0 = moon, 1 = sun, 2 = earth, 3 = morning star, 4 = black hole")
 MACRO_CONFIG_COL(QmTitleBadgeColor, qm_title_badge_color, 0xC3638E, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Overall sponsor title badge color")
 MACRO_CONFIG_INT(QmTitleInstantHints, qm_title_instant_hints, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show title setting hints immediately in small text")
 MACRO_CONFIG_INT(QmTitleColorMode, qm_title_color_mode, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow")

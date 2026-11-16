@@ -10,6 +10,7 @@
 #include <game/client/ui_rect.h>
 
 #include <cstdint>
+#include <limits>
 
 // 聊天测量和绘制共用整块胶囊的推进，保持与普通行相同的高度。
 inline CUIRect QmLayoutTitleBadge(CTextCursor &Cursor, float LabelWidth)
@@ -105,7 +106,8 @@ public:
 	void Init(IGraphics *pGraphics);
 	void Shutdown(IGraphics *pGraphics);
 	void RenderLogo(IGraphics *pGraphics, const CUIRect &Rect, ColorRGBA Color) const;
-	void RenderSurface(IGraphics *pGraphics, const CUIRect &Rect, const SQmTitleAppearance &Appearance, float Alpha) const;
+	static constexpr double NO_ANIMATION = std::numeric_limits<double>::quiet_NaN();
+	void RenderSurface(IGraphics *pGraphics, const CUIRect &Rect, const SQmTitleAppearance &Appearance, float Alpha, double TimeSec) const;
 };
 
 #endif
