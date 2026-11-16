@@ -57,6 +57,7 @@ class CQmFinishSummary : public CComponent
 	uint64_t m_Generation = 0;
 	std::optional<int64_t> m_PreviousBest;
 	bool m_PreviousHistoryKnown = false;
+	bool m_QueriesEnabled = false;
 	std::vector<QmFinishSummary::SOnlineTime> m_vFinishOnlineTimes;
 	bool m_FinishOnlineTimesKnown = false;
 
@@ -67,6 +68,8 @@ class CQmFinishSummary : public CComponent
 	void UpdateRequests(double Now);
 	void MergeResult(EQuery Query, const QmFinishSummary::SRemoteData &Result);
 	void RefreshSnapshot();
+	void UpdatePreview();
+	void CollectOnlineTimes(std::vector<QmFinishSummary::SOnlineTime> &vTimes) const;
 	void StartRun(int StartTick);
 	void Finish(int64_t TimeMs, std::optional<int64_t> Difference, bool PersonalRecord, bool Structured);
 	static double Now();

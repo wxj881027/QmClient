@@ -36,8 +36,10 @@ namespace qm_finish_summary
 			const float Offset = MotionLevel > 0 ? 0.02f * std::sin(pi * V) *
 								       static_cast<float>(0.65 * std::sin(Time * 0.45 + V * 10.0) + 0.35 * std::sin(Time * 0.31 - V * 23.0)) :
 							       0.0f;
-			Row.m_FadeEnd = std::clamp(Width * (0.65f - 0.35f * V + Offset), Row.m_Left, Width);
-			Row.m_FadeStart = std::max(Row.m_Left, Row.m_FadeEnd - Width * 0.065f);
+			const float FadeWidth = Width / 3.0f;
+			const float Center = Width * (0.65f - 0.35f * V + Offset);
+			Row.m_FadeStart = std::clamp(Center - FadeWidth * 0.5f, Row.m_Left, std::max(Row.m_Left, Width - FadeWidth));
+			Row.m_FadeEnd = std::min(Width, Row.m_FadeStart + FadeWidth);
 		}
 		return aRows;
 	}
@@ -47,8 +49,8 @@ namespace qm_finish_summary
 		if(Width <= 0.0f || Height <= 0.0f)
 			return {};
 		// 缓存为 2:1 图，按封面覆盖区域等比居中裁切。
-		const float ImageWidth = std::max(Width * 0.67f, Height * 2.0f);
-		return {(Point.x - Width * 0.335f) / ImageWidth + 0.5f, (Point.y - Height * 0.5f) / (ImageWidth * 0.5f) + 0.5f};
+		const float ImageWidth = std::max(Width * 0.84f, Height * 2.0f);
+		return {(Point.x - Width * 0.42f) / ImageWidth + 0.5f, (Point.y - Height * 0.5f) / (ImageWidth * 0.5f) + 0.5f};
 	}
 
 	void RenderCover(IGraphics &Graphics, const CUIRect &Rect, IGraphics::CTextureHandle Texture,
@@ -58,7 +60,7 @@ namespace qm_finish_summary
 			return;
 		const auto aRows = CoverRows(Rect.w, Rect.h, Radius, NowSeconds, MotionLevel, g_Config.m_QmUiCornerCurve,
 			g_Config.m_QmUiCornerSmoothing / 100.0f, g_Config.m_QmUiCapsuleSeam / 100.0f);
-		const float Opacity = std::clamp(Alpha, 0.0f, 1.0f) * 0.72f;
+		const float Opacity = std::clamp(Alpha, 0.0f, 1.0f);
 		const float Feather = std::min(Rect.w * 0.005f, Graphics.GetScreen().Size().y / std::max(Graphics.ScreenHeight(), 1));
 		Graphics.WrapClamp();
 		Graphics.TextureSet(Texture);
@@ -86,7 +88,15 @@ namespace qm_finish_summary
 			const float BottomInner = std::min(Bottom.m_Left + Feather, Bottom.m_FadeStart);
 			DrawStrip(Top.m_Left, TopInner, Bottom.m_Left, BottomInner, Top.m_Y, Bottom.m_Y, 0.0f, Opacity);
 			DrawStrip(TopInner, Top.m_FadeStart, BottomInner, Bottom.m_FadeStart, Top.m_Y, Bottom.m_Y, Opacity, Opacity);
-			DrawStrip(Top.m_FadeStart, Top.m_FadeEnd, Bottom.m_FadeStart, Bottom.m_FadeEnd, Top.m_Y, Bottom.m_Y, Opacity, 0.0f);
+			// 分段平滑两端斜率，让实图、渐变带和底色平顺衔接。
+			for(int Step = 0; Step < 4; ++Step)
+			{
+				const float A = Step / 4.0f;
+				const float B = (Step + 1) / 4.0f;
+				DrawStrip(mix(Top.m_FadeStart, Top.m_FadeEnd, A), mix(Top.m_FadeStart, Top.m_FadeEnd, B),
+					mix(Bottom.m_FadeStart, Bottom.m_FadeEnd, A), mix(Bottom.m_FadeStart, Bottom.m_FadeEnd, B), Top.m_Y, Bottom.m_Y,
+					Opacity * (1.0f - A * A * (3.0f - 2.0f * A)), Opacity * (1.0f - B * B * (3.0f - 2.0f * B)));
+			}
 		}
 		Graphics.QuadsEnd();
 		Graphics.QuadsSetSubset(0, 0, 1, 1);

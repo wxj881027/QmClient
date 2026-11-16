@@ -11,6 +11,8 @@ namespace QmFinishSummary
 	class CState
 	{
 		std::optional<SSnapshot> m_Snapshot;
+		std::optional<SSnapshot> m_BestPreview;
+		bool m_Previewing = false;
 		uint64_t m_NextId = 0;
 		int m_RunStartTick = -1;
 		double m_ReceivedAt = 0.0;
@@ -44,6 +46,8 @@ namespace QmFinishSummary
 				return false;
 			}
 
+			m_Previewing = false;
+			m_BestPreview.reset();
 			Snapshot.m_Id = ++m_NextId;
 			m_Snapshot = std::move(Snapshot);
 			m_RunStartTick = RunStartTick;
@@ -53,6 +57,22 @@ namespace QmFinishSummary
 			m_FinishedCurrentRun = true;
 			return true;
 		}
+
+		bool Preview(SSnapshot Best)
+		{
+			if(!m_Snapshot && Best.m_TimeMs <= 0)
+				return false;
+			if(!m_Snapshot)
+				m_BestPreview = std::move(Best);
+			(m_Snapshot ? *m_Snapshot : *m_BestPreview).m_Id = ++m_NextId;
+			m_ExpandedAt.reset();
+			m_Visible = true;
+			m_Previewing = true;
+			return true;
+		}
+
+		bool Previewing() const { return m_Previewing; }
+		bool ShowingBest() const { return m_BestPreview.has_value(); }
 
 		void SetExpanded(bool Expanded, double Now)
 		{
@@ -83,6 +103,8 @@ namespace QmFinishSummary
 		void Reset()
 		{
 			m_Snapshot.reset();
+			m_BestPreview.reset();
+			m_Previewing = false;
 			m_RunStartTick = -1;
 			m_ReceivedAt = 0.0;
 			m_ExpandedAt.reset();
@@ -98,7 +120,8 @@ namespace QmFinishSummary
 			const int64_t Difference = m_Snapshot->m_TimeMs - TimeMs;
 			return Difference > -10 && Difference < 10;
 		}
-		const SSnapshot *Snapshot() const { return m_Snapshot ? &*m_Snapshot : nullptr; }
+		const SSnapshot *Snapshot() const { return m_BestPreview ? &*m_BestPreview : (m_Snapshot ? &*m_Snapshot : nullptr); }
+		SSnapshot *MutableBestPreview() { return m_BestPreview ? &*m_BestPreview : nullptr; }
 		SSnapshot *MutableSnapshot() { return m_Snapshot ? &*m_Snapshot : nullptr; }
 	};
 }

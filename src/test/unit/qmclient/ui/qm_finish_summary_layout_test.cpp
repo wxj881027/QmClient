@@ -87,14 +87,17 @@ TEST(QmFinishSummaryMotion, MovingTeeFadesAndTiltsWholeCardAndStoppingRestoresIt
 {
 	qm_finish_summary::CCardMotion Motion;
 	Motion.Update(1, 0.0, true, 1.0f, {}, 2);
-	Motion.Update(1, 0.03, true, 1.0f, {10, -5}, 2);
+	Motion.Update(1, 5.0, true, 1.0f, {10, -5}, 2);
+	EXPECT_FLOAT_EQ(Motion.Alpha(), 1.0f);
+	EXPECT_GT(Motion.TiltX(), 0.0f);
+	Motion.Update(1, 5.03, true, 1.0f, {10, -5}, 2);
 	EXPECT_GT(Motion.Alpha(), 0.15f);
 	EXPECT_LT(Motion.Alpha(), 1.0f);
-	Motion.Update(1, 1.0, true, 1.0f, {10, -5}, 2);
+	Motion.Update(1, 6.0, true, 1.0f, {10, -5}, 2);
 	EXPECT_NEAR(Motion.Alpha(), 0.15f, 0.001f);
 	EXPECT_GT(Motion.TiltX(), 0.0f);
 	EXPECT_GT(Motion.TiltY(), 0.0f);
-	Motion.Update(1, 2.0, true, 1.0f, {}, 2);
+	Motion.Update(1, 7.0, true, 1.0f, {}, 2);
 	EXPECT_NEAR(Motion.Alpha(), 1.0f, 0.001f);
 	EXPECT_NEAR(Motion.TiltX(), 0.0f, 0.001f);
 	EXPECT_NEAR(Motion.TiltY(), 0.0f, 0.001f);
@@ -120,11 +123,12 @@ TEST(QmFinishSummaryMotion, DisablingMotionKeepsMovementFadeAndDropsDeformation)
 	Motion.Update(1, 0.1, true, 0.5f, {-8, 6}, 2);
 	ASSERT_LT(Motion.TiltX(), 0.0f);
 	ASSERT_LT(Motion.TiltY(), 0.0f);
-	Motion.Update(1, 1.0, true, 1.0f, {-8, 6}, 0);
+	Motion.Update(1, 6.0, true, 1.0f, {-8, 6}, 0);
 	EXPECT_NEAR(Motion.Alpha(), 0.15f, 0.001f);
 	EXPECT_FLOAT_EQ(Motion.TiltX(), 0.0f);
 	EXPECT_FLOAT_EQ(Motion.TiltY(), 0.0f);
 	EXPECT_FLOAT_EQ(Motion.HostScale(), 1.0f);
-	Motion.Update(2, 1.1, true, 0.0f, {}, 2);
+	Motion.Update(2, 6.1, true, 0.0f, {-8, 6}, 2);
+	Motion.Update(2, 10.9, true, 1.0f, {-8, 6}, 2);
 	EXPECT_FLOAT_EQ(Motion.Alpha(), 1.0f);
 }

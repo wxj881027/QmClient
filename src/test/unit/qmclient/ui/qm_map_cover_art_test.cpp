@@ -204,7 +204,7 @@ TEST(QmMapCoverArt, ComposeTailEndsFullyTransparentForEveryRow)
 	}
 }
 
-TEST(QmMapCoverArt, FullImageRetainsBothEdgesAndSourceAlpha)
+TEST(QmMapCoverArt, FullImageFlattensTranslucentSourcePixels)
 {
 	CImageInfo Source;
 	Source.m_Width = 2;
@@ -219,7 +219,8 @@ TEST(QmMapCoverArt, FullImageRetainsBothEdgesAndSourceAlpha)
 	Art.m_Shade = 1.0f;
 	Art.m_CornerRadius = 0;
 	ASSERT_TRUE(QmMapCover::Compose(Source, 2, 1, Art, Output));
-	EXPECT_EQ(PixelAt(Output, 0, 0)[3], 96);
+	EXPECT_EQ(PixelAt(Output, 0, 0)[3], 255);
+	EXPECT_EQ(PixelAt(Output, 0, 0)[0], 75);
 	EXPECT_EQ(PixelAt(Output, 1, 0)[3], 255);
 	EXPECT_EQ(PixelAt(Output, 1, 0)[0], 200);
 	Output.Free();

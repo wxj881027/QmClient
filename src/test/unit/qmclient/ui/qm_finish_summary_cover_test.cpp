@@ -9,8 +9,10 @@ using namespace qm_finish_summary;
 TEST(QmFinishSummaryCover, StaticEdgeReachesReferenceProportions)
 {
 	const auto Rows = CoverRows(480, 216, 8, 0, 0, 0, 0, 0);
-	EXPECT_FLOAT_EQ(Rows.front().m_FadeEnd, 480 * 0.65f);
-	EXPECT_NEAR(Rows.back().m_FadeEnd, 480 * 0.30f, 0.001f);
+	EXPECT_FLOAT_EQ((Rows.front().m_FadeStart + Rows.front().m_FadeEnd) * 0.5f, 480 * 0.65f);
+	EXPECT_NEAR((Rows.back().m_FadeStart + Rows.back().m_FadeEnd) * 0.5f, 480 * 0.30f, 0.001f);
+	for(const auto &Row : Rows)
+		EXPECT_NEAR(Row.m_FadeEnd - Row.m_FadeStart, 160.0f, 0.001f);
 	EXPECT_FLOAT_EQ(Rows.front().m_Y, 0);
 	EXPECT_FLOAT_EQ(Rows.back().m_Y, 216);
 	EXPECT_FLOAT_EQ(Rows.front().m_Left, 8);

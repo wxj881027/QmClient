@@ -233,13 +233,13 @@ bool QmMapCover::Compose(const CImageInfo &Source, int OutWidth, int OutHeight, 
 				SourceX = (1.0f - 0.10f * T * T) * MaxSourceX;
 				Alpha = TailAlpha(Art, X, Y, OutWidth, OutHeight, ImageWidth);
 			}
+			// 将完整封面的透明像素合成到黑色底，上层只需处理卡片渐隐。
+			const float SourceCoverage = FullImage && ChannelCount == 4 ? BilinearChannel(Source, ChannelCount, SourceX, SourceY, 3) : 1.0f;
 			for(int Channel = 0; Channel < 3; ++Channel)
 			{
-				const float Value = BilinearChannel(Source, ChannelCount, SourceX, SourceY, Channel) * Shade;
+				const float Value = BilinearChannel(Source, ChannelCount, SourceX, SourceY, Channel) * Shade * SourceCoverage;
 				pPixel[Channel] = static_cast<uint8_t>(std::clamp(Value, 0.0f, 1.0f) * 255.0f + 0.5f);
 			}
-			if(FullImage && ChannelCount == 4)
-				Alpha *= BilinearChannel(Source, ChannelCount, SourceX, SourceY, 3);
 			pPixel[3] = static_cast<uint8_t>(std::clamp(Alpha, 0.0f, 1.0f) * 255.0f + 0.5f);
 		}
 	}

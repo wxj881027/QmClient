@@ -3874,13 +3874,15 @@ void CHud::RenderMediaIsland()
 	const bool ShowFinish = pFinishSnapshot && GameClient()->m_FinishSummary.Visible();
 	auto &FinishRuntime = GameClient()->UiRuntimeV2()->AnimRuntime();
 	const uint64_t FinishNode = HudMediaIslandNodeKey("finish_summary");
-	if(!AnimState.m_LayoutInitialized || !pFinishSnapshot)
+	const uint64_t FinishId = pFinishSnapshot ? pFinishSnapshot->m_Id : 0;
+	if(!AnimState.m_LayoutInitialized || !FinishId || FinishId != AnimState.m_FinishSummaryId)
 		SetUiPresentationStateValue(FinishRuntime, FinishNode, EUiAnimProperty::ALPHA, 0.0f);
+	AnimState.m_FinishSummaryId = FinishId;
 	if(g_Config.m_QmUiMotionLevel <= 0)
 		SetUiPresentationStateValue(FinishRuntime, FinishNode, EUiAnimProperty::ALPHA, ShowFinish ? 1.0f : 0.0f);
 	SUiSpringConfig FinishSpring;
-	FinishSpring.m_Stiffness = 130.0f;
-	FinishSpring.m_Damping = 23.0f;
+	FinishSpring.m_Stiffness = ShowFinish ? 130.0f : 24.0f;
+	FinishSpring.m_Damping = ShowFinish ? 23.0f : 10.0f;
 	FinishSpring.m_RestEpsilon = 0.001f;
 	FinishSpring.m_RestVelocity = 0.01f;
 	AnimState.m_FinishSummaryProgress = std::clamp(ResolveUiPresentationStateValue(FinishRuntime, FinishNode,
@@ -5310,6 +5312,8 @@ void CHud::RenderMediaIsland()
 		Style.m_TiltY = AnimState.m_FinishSummaryMotion.TiltY() * FreeProgress;
 		Style.m_Radius = FinishPose.m_Radius;
 		Style.m_DrawBackground = !FinishConnected;
+		const float Travel = AnimState.m_FinishSummaryProgress;
+		Style.m_Pinch = MotionLevel > 0 && !ShowFinish ? FreeProgress * (1.0f - Travel) * 4.0f : 0.0f;
 		Style.m_CoverTexture = GameClient()->m_FinishSummary.CoverTexture();
 		Style.m_Backdrop = Backdrop;
 		Style.m_ScreenRect = {TransformedScreenX0, TransformedScreenY0, TransformedScreenX1 - TransformedScreenX0, TransformedScreenY1 - TransformedScreenY0};

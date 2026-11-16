@@ -58,9 +58,9 @@ bool qm_finish_summary::CSurface::Render(IGraphics &Graphics, ITextRender &TextR
 	// 预留当前屏幕的最终卡片尺寸，生长期间沿用目标；高分辨率只缩小离屏采样密度。
 	const float DesiredWidth = std::max(Bounds.w / PixelSize.x, Graphics.ScreenWidth() * 0.375f);
 	const float DesiredHeight = std::max(Bounds.h / PixelSize.y, Graphics.ScreenHeight() * 0.30f);
-	const float Density = std::min({1.0f, 1024.0f / DesiredWidth, 512.0f / DesiredHeight});
-	const int Width = std::clamp((static_cast<int>(std::ceil(DesiredWidth * Density)) + 31) / 32 * 32, 32, 1024);
-	const int Height = std::clamp((static_cast<int>(std::ceil(DesiredHeight * Density)) + 15) / 16 * 16, 16, 512);
+	const float Density = std::min({1.5f, 2048.0f / DesiredWidth, 1024.0f / DesiredHeight});
+	const int Width = std::clamp((static_cast<int>(std::ceil(DesiredWidth * Density)) + 31) / 32 * 32, 32, 2048);
+	const int Height = std::clamp((static_cast<int>(std::ceil(DesiredHeight * Density)) + 15) / 16 * 16, 16, 1024);
 	if(!m_Target.IsValid() || Width > m_Width || Height > m_Height)
 	{
 		const int NewWidth = std::max(Width, m_Width);
@@ -68,7 +68,7 @@ bool qm_finish_summary::CSurface::Render(IGraphics &Graphics, ITextRender &TextR
 		Reset(Graphics);
 		m_Width = NewWidth;
 		m_Height = NewHeight;
-		m_Target = Graphics.CreateRenderTarget(m_Width, m_Height);
+		m_Target = Graphics.CreateRenderTarget(m_Width, m_Height, std::min(4, std::max(1, Graphics.MaxMultisampleRenderTargetSamples())));
 	}
 	if(!m_Target.IsValid() || !Graphics.BeginRenderTarget(m_Target, Style.m_BackgroundColor.WithAlpha(1.0f)))
 		return DrawContents(Alpha, nullptr);
@@ -98,6 +98,8 @@ bool qm_finish_summary::CSurface::Render(IGraphics &Graphics, ITextRender &TextR
 	Draw.m_W = Rect.w;
 	Draw.m_H = Rect.h;
 	Draw.m_Alpha = Alpha;
+	Draw.m_TopPinch = Style.m_Pinch;
+	Draw.m_EdgeFeather = std::max(PixelSize.x, PixelSize.y) * 1.25f;
 	Draw.m_TiltX = MotionLevel > 0 && Style.m_DrawBackground ? Style.m_TiltX : 0.0f;
 	Draw.m_TiltY = MotionLevel > 0 && Style.m_DrawBackground ? Style.m_TiltY : 0.0f;
 	Draw.m_NativeTextureCoordinates = true;

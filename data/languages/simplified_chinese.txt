@@ -11378,6 +11378,9 @@ Preview dummy nameplate
 Preview failed. Check the image and Logo, then retry.
 == 预览失败，请检查图片和 Logo 后重试。
 
+Preview finish summary
+== 预览结算卡
+
 Preview hook collision colors and line styles
 == 预览钩子辅助线颜色和线条样式
 

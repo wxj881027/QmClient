@@ -172,7 +172,7 @@ namespace
 		const SQmColorGradient Gradient = NumberGradient(Color, Progress);
 		Painter.Label(Rect, 12.0f * Scale, pLabel, ColorRGBA(0.92f, 0.95f, 1.0f, 0.72f * Alpha));
 		Painter.Label({Rect.x, Rect.y + 18.0f * Scale, Rect.w, 23.0f * Scale},
-			(HasValue(Rank) ? 18.0f : 13.0f) * Scale, Text.c_str(), Color.WithAlpha(Alpha), 0.0f, 1, HasValue(Rank) ? &Gradient : nullptr);
+			(HasValue(Rank) ? mix(14.0f, 18.0f, Progress) : 13.0f) * Scale, Text.c_str(), Color.WithAlpha(Alpha), 0.0f, 1, HasValue(Rank) ? &Gradient : nullptr);
 	}
 }
 
@@ -302,7 +302,7 @@ bool qm_finish_summary::Render(IGraphics &Graphics, ITextRender &TextRender, CRe
 	Painter.Label(TimeBox, 12.0f * Scale, Localize("Time to finish"), Muted.WithAlpha(Alpha), (1.0f - Placement) * 0.5f);
 	const char *pMajor = Content.m_TimeMajor.c_str();
 	const char *pMinor = Content.m_TimeMinor.c_str();
-	float TimeSize = (42.0f + (32.0f - 42.0f) * Placement) * Scale;
+	float TimeSize = mix(42.0f, 32.0f, Placement) * Scale * mix(0.78f, 1.0f, Content.m_Presentation.NumberColorProgress(ENumber::TIME));
 	float TimeWidth = Painter.Width(TimeSize, pMajor) + Painter.Width(TimeSize * 0.58f, pMinor);
 	if(TimeWidth > TimeBox.w)
 		TimeSize *= TimeBox.w / TimeWidth;
@@ -316,10 +316,10 @@ bool qm_finish_summary::Render(IGraphics &Graphics, ITextRender &TextRender, CRe
 	Painter.Label({TimeX + MajorWidth, TimeY + TimeSize * 0.42f, TimeBox.w - MajorWidth, TimeSize},
 		TimeSize * 0.58f, pMinor, White.WithAlpha(Alpha), 0.0f, 1, &TimeGradient, &TimeBounds);
 
-	Painter.Label(Box(250, 16, 214, 36), 17.0f * Scale, Snapshot.m_Map.c_str(), White.WithAlpha(FieldAlpha(EField::MAP)), 0.0f, 2);
+	Painter.Label(Box(250, 16, 214, 36), mix(13.0f, 17.0f, Content.m_Presentation.FieldAlpha(EField::MAP)) * Scale, Snapshot.m_Map.c_str(), White.WithAlpha(FieldAlpha(EField::MAP)), 0.0f, 2);
 	Painter.Label(Box(250, 55, 214, 15), 12.0f * Scale, Snapshot.m_Mapper.empty() ? Localize("No data") : Snapshot.m_Mapper.c_str(), Muted.WithAlpha(FieldAlpha(EField::MAPPER)));
 	Painter.Label(Box(250, 74, 214, 15), 12.0f * Scale, Content.m_Type.c_str(), White.WithAlpha(FieldAlpha(EField::TYPE)));
-	Painter.Label(Box(250, 94, 214, 15), 12.0f * Scale, Snapshot.m_FinishedAt.c_str(), Muted.WithAlpha(FieldAlpha(EField::FINISHED_AT)));
+	Painter.Label(Box(250, 94, 214, 15), 12.0f * Scale, Snapshot.m_FinishedAt.empty() ? Localize("No data") : Snapshot.m_FinishedAt.c_str(), Muted.WithAlpha(FieldAlpha(EField::FINISHED_AT)));
 
 	const bool PersonalBest = Snapshot.m_Comparison == EComparison::FIRST || Snapshot.m_Comparison == EComparison::BEST || Snapshot.m_Comparison == EComparison::IMPROVED;
 	const ColorRGBA ComparisonColor = PersonalBest ? Gold : Muted;
@@ -332,8 +332,13 @@ bool qm_finish_summary::Render(IGraphics &Graphics, ITextRender &TextRender, CRe
 	const SQmColorGradient DifferenceGradient = NumberGradient(DifferenceColor, Content.m_Presentation.NumberColorProgress(ENumber::DIFFERENCE));
 	Painter.Label(Box(16, 99, 216, 15), 12.0f * Scale, Content.m_Difference.c_str(), DifferenceColor.WithAlpha(FieldAlpha(EField::DIFFERENCE)), 0.0f, 1, &DifferenceGradient);
 
-	const CUIRect Divider = Box(16, 118, 448, 0.8f);
-	Graphics.DrawRect(Divider.x, Divider.y, Divider.w, Divider.h, White.WithAlpha(0.18f * FieldAlpha(EField::LOCAL_RANK)), 0, 0.0f);
+	const auto DrawDivider = [&](float Y, EField Field) {
+		const float Width = 448.0f * Content.m_Presentation.FieldAlpha(Field);
+		const CUIRect Line = Box(240.0f - Width * 0.5f, Y, Width, 0.8f);
+		if(Width > 0.0f)
+			Graphics.DrawRect(Line.x, Line.y, Line.w, Line.h, White.WithAlpha(0.18f * FieldAlpha(Field)), 0, 0.0f);
+	};
+	DrawDivider(118.0f, EField::LOCAL_RANK);
 	const bool Ddnet = Snapshot.m_Community == ECommunity::DDNET;
 	const float RankWidth = Ddnet ? 136.0f : 216.0f;
 	RankCell(Painter, Box(16, 126, RankWidth, 39), Scale, Localize("Server rank"), Snapshot.m_LocalRank, Content.m_LocalRank, Gold, FieldAlpha(EField::LOCAL_RANK), Content.m_Presentation.NumberColorProgress(ENumber::LOCAL_RANK));
@@ -342,8 +347,7 @@ bool qm_finish_summary::Render(IGraphics &Graphics, ITextRender &TextRender, CRe
 	RankCell(Painter, Box(Ddnet ? 332.0f : 250.0f, 126, RankWidth, 39), Scale,
 		Ddnet ? Localize("Global rank") : Localize("Axiom rank"), Snapshot.m_Rank, Content.m_Rank, White, FieldAlpha(EField::RANK), Content.m_Presentation.NumberColorProgress(ENumber::RANK));
 
-	const CUIRect FooterDivider = Box(16, 171, 448, 0.8f);
-	Graphics.DrawRect(FooterDivider.x, FooterDivider.y, FooterDivider.w, FooterDivider.h, White.WithAlpha(0.18f * FieldAlpha(EField::PLAYER)), 0, 0.0f);
+	DrawDivider(171.0f, EField::PLAYER);
 	const float PlayerAlpha = FieldAlpha(EField::PLAYER);
 	if(pTeeRenderInfo && PlayerAlpha > 0.001f)
 	{

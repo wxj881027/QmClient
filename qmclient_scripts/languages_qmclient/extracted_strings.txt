@@ -3791,6 +3791,7 @@ Preview button visibility while the editor is active.
 Preview cut (P)
 Preview dummy nameplate
 Preview failed. Check the image and Logo, then retry.
+Preview finish summary
 Preview hook collision colors and line styles
 Preview import file
 Preview laser bodies, outlines, and impacts

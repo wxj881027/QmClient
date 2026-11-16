@@ -706,6 +706,9 @@ public:
 		// 预先绘好圆角的离屏表面可绕中心轻微倾斜，单位为弧度。
 		float m_TiltX = 0.0f;
 		float m_TiltY = 0.0f;
+		float m_TopPinch = 0.0f;
+		// 绘制表面边界的覆盖率过渡宽度，使用当前映射坐标。
+		float m_EdgeFeather = 0.0f;
 		// 整张离屏表面使用后端原生纹理方向，自定义UV仍沿用原有约定。
 		bool m_NativeTextureCoordinates = false;
 		// 已合成背景的实时画面直接复制颜色，避免纹理 Alpha 再混合一次。
@@ -724,6 +727,11 @@ public:
 
 		vec2 ProjectPoint(vec2 Point) const
 		{
+			if(m_TopPinch > 0.0f && m_H > 0.0f)
+			{
+				const float FromBottom = std::clamp(1.0f - (Point.y - m_Y) / m_H, 0.0f, 1.0f);
+				Point.x = mix(Point.x, m_X + m_W * 0.5f, FromBottom * FromBottom * std::clamp(m_TopPinch, 0.0f, 0.85f));
+			}
 			if((m_TiltX == 0.0f && m_TiltY == 0.0f) || m_W <= 0.0f || m_H <= 0.0f)
 				return Point;
 			const float TiltX = std::clamp(m_TiltX, -0.25f, 0.25f);

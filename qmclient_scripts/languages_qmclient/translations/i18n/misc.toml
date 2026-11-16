@@ -16276,6 +16276,11 @@ key = "Server rank"
 simplified_chinese = "本服排名"
 
 [[message]]
+key = "Preview finish summary"
+[message.translations]
+simplified_chinese = "预览结算卡"
+
+[[message]]
 key = "Show finish summary"
 [message.translations]
 simplified_chinese = "显示结算卡"

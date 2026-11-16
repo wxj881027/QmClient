@@ -895,24 +895,29 @@ void CGraphics_Threaded::DrawRenderTarget(CRenderTargetHandle Target, const SRen
 	static_assert(RECT_CORNER_SEGMENTS >= 2 && RECT_CORNER_SEGMENTS % 2 == 0);
 	constexpr int ProjectionColumns = 4;
 	constexpr int ProjectionRows = 2;
-	constexpr size_t MaxVertices = (RECT_CORNER_SEGMENTS / 2 * 4 + 9 * ProjectionColumns * ProjectionRows) * 4;
+	constexpr int CornerRows = 12;
+	constexpr int BodyRows = 8;
+	constexpr int FeatherRows = CornerRows * 2 + BodyRows;
+	constexpr size_t MaxVertices = std::max(RECT_CORNER_SEGMENTS / 2 * 4 + 9 * ProjectionColumns * ProjectionRows,
+		(FeatherRows + 2) * (ProjectionColumns + 2)) * 4;
 	CCommandBuffer::SVertex aVertices[MaxVertices];
 	size_t NumVertices = 0;
 	const float InvW = 1.0f / Params.m_W;
 	const float InvH = 1.0f / Params.m_H;
 	const uint8_t Alpha = (uint8_t)(Cmd.m_Alpha * 255.0f + 0.5f);
-	const bool Projected = std::abs(Params.m_TiltX) > 0.0001f || std::abs(Params.m_TiltY) > 0.0001f;
-	auto AddVertices = [&](vec2 Point0, vec2 Point1, vec2 Point2, vec2 Point3) {
+	const bool Projected = Params.m_TopPinch > 0.0f || std::abs(Params.m_TiltX) > 0.0001f || std::abs(Params.m_TiltY) > 0.0001f;
+	auto AddVertices = [&](vec2 Point0, vec2 Point1, vec2 Point2, vec2 Point3, unsigned TransparentMask = 0u) {
 		dbg_assert(NumVertices + 4 <= MaxVertices, "render target vertex capacity exceeded");
 		const vec2 aPositions[] = {Point0, Point1, Point2, Point3};
-		for(const vec2 Position : aPositions)
+		for(unsigned i = 0; i < 4; ++i)
 		{
+			const vec2 Position = aPositions[i];
 			CCommandBuffer::SVertex Vertex{};
 			Vertex.m_Pos = Projected ? Params.ProjectPoint(Position) : Position;
 			const float LocalU = (Position.x - Params.m_X) * InvW;
 			const float LocalV = (Position.y - Params.m_Y) * InvH;
 			Vertex.m_Tex = vec2(mix(Params.m_U0, Params.m_U1, LocalU), mix(Params.m_V0, Params.m_V1, LocalV));
-			Vertex.m_Color = CCommandBuffer::SColor{255, 255, 255, Alpha};
+			Vertex.m_Color = CCommandBuffer::SColor{255, 255, 255, static_cast<uint8_t>((TransparentMask & (1u << i)) ? 0 : Alpha)};
 			aVertices[NumVertices++] = Vertex;
 		}
 	};
@@ -943,7 +948,51 @@ void CGraphics_Threaded::DrawRenderTarget(CRenderTargetHandle Target, const SRen
 	const SRoundedCornerShape CornerShape = ResolveRoundedCornerShape(Rounding, Params.m_W, Params.m_H, Params.m_CornerSmoothing, CornerCurve, Params.m_CornerSeam);
 	const float CornerAmount = CornerShape.m_Amount;
 	const float Inset = CornerShape.m_Radius;
-	if(Params.m_Corners == CORNER_NONE || Rounding <= 0.0f)
+	if(Params.m_EdgeFeather > 0.0f && Params.m_Corners == CORNER_ALL && Inset > 0.0f)
+	{
+		// 横向切片共用端点，边缘和内部纹理一起变形。外圈顶点插值覆盖率。
+		const float Edge = std::min(Params.m_EdgeFeather, Inset);
+		struct SRow
+		{
+			vec2 m_Left, m_Right, m_OuterLeft, m_OuterRight;
+		};
+		const auto RowAt = [&](int Row) {
+			float X = 1.0f, Y = 0.0f;
+			const bool Top = Row <= CornerRows;
+			const bool Bottom = Row >= CornerRows + BodyRows;
+			if(Top || Bottom)
+			{
+				const int Index = Top ? CornerRows - Row : Row - CornerRows - BodyRows;
+				RoundedCornerCurveDirection(CornerCurve, CornerAmount, Index, CornerRows, X, Y);
+				Y *= Top ? -1.0f : 1.0f;
+			}
+			const float CenterY = Params.m_Y + mix(Inset, Params.m_H - Inset, std::clamp((Row - CornerRows) / static_cast<float>(BodyRows), 0.0f, 1.0f));
+			const vec2 Left(Params.m_X + Inset, CenterY);
+			const vec2 Right(Params.m_X + Params.m_W - Inset, CenterY);
+			return SRow{Left + vec2(-X, Y) * (Inset - Edge), Right + vec2(X, Y) * (Inset - Edge),
+				Left + vec2(-X, Y) * Inset, Right + vec2(X, Y) * Inset};
+		};
+		const auto Band = [&](vec2 L0, vec2 R0, vec2 L1, vec2 R1, unsigned Mask) {
+			const int Columns = Projected ? ProjectionColumns : 1;
+			for(int i = 0; i < Columns; ++i)
+			{
+				const float A = static_cast<float>(i) / Columns, B = static_cast<float>(i + 1) / Columns;
+				AddVertices(mix(L0, R0, A), mix(L0, R0, B), mix(L1, R1, B), mix(L1, R1, A), Mask);
+			}
+		};
+		SRow Previous = RowAt(0);
+		Band(Previous.m_OuterLeft, Previous.m_OuterRight, Previous.m_Left, Previous.m_Right, 3u);
+		for(int i = 1; i <= FeatherRows; ++i)
+		{
+			const SRow Next = RowAt(i);
+			AddVertices(Previous.m_OuterLeft, Previous.m_Left, Next.m_Left, Next.m_OuterLeft, 9u);
+			Band(Previous.m_Left, Previous.m_Right, Next.m_Left, Next.m_Right, 0u);
+			AddVertices(Previous.m_Right, Previous.m_OuterRight, Next.m_OuterRight, Next.m_Right, 6u);
+			Previous = Next;
+		}
+		Band(Previous.m_Left, Previous.m_Right, Previous.m_OuterLeft, Previous.m_OuterRight, 12u);
+	}
+	else if(Params.m_Corners == CORNER_NONE || Rounding <= 0.0f)
 	{
 		AddQuad(
 			vec2(Params.m_X, Params.m_Y),

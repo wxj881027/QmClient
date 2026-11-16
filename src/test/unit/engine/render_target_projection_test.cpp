@@ -25,6 +25,19 @@ TEST(RenderTargetProjection, ZeroTiltPreservesPositionExactly)
 	EXPECT_EQ(Params.ProjectPoint(Point), Point);
 }
 
+TEST(RenderTargetProjection, RetractionNarrowsTopBeforeBottom)
+{
+	auto Params = Card();
+	Params.m_TopPinch = 0.6f;
+	const auto WidthAt = [&](float Y) {
+		return Params.ProjectPoint(vec2(820.0f, Y)).x - Params.ProjectPoint(vec2(100.0f, Y)).x;
+	};
+	EXPECT_LT(WidthAt(50.0f), WidthAt(212.0f));
+	EXPECT_LT(WidthAt(212.0f), WidthAt(374.0f));
+	EXPECT_FLOAT_EQ(WidthAt(374.0f), Params.m_W);
+	EXPECT_EQ(Params.ProjectPoint(vec2(460.0f, 50.0f)), vec2(460.0f, 50.0f));
+}
+
 TEST(RenderTargetProjection, TiltKeepsCardCenterFixed)
 {
 	auto Params = Card();

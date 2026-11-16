@@ -21,10 +21,14 @@ namespace qm_finish_summary
 	{
 		const float T = std::clamp(Progress, 0.0f, 1.0f);
 		const float Grow = T * T * (3.0f - 2.0f * T);
+		// 靠近岛的上缘先贴到宿主，下缘继续向上收拢。
+		const float Travel = T * T * T;
 		const float BudY = Island.y + Island.h * 0.75f;
 		const float CenterX = mix(Island.x + Island.w * 0.5f, Target.x + Target.w * 0.5f, Grow);
 		SCardPose Pose;
-		Pose.m_Rect = {CenterX - Target.w * Grow * 0.5f, mix(BudY, Target.y, Grow), Target.w * Grow, Target.h * Grow};
+		const float Top = mix(BudY, Target.y, Travel);
+		const float Bottom = mix(BudY, Target.y + Target.h, Grow);
+		Pose.m_Rect = {CenterX - Target.w * Grow * 0.5f, Top, Target.w * Grow, Bottom - Top};
 		Pose.m_Radius = Pose.m_Rect.h * mix(0.5f, 0.08f, Grow);
 		// 芽尖离开主岛后，融合半径归零，独立表面从同一个轮廓接手。
 		Pose.m_Connection = Island.h * 0.65f * std::max(1.0f - T / 0.65f, 0.0f);
@@ -36,6 +40,7 @@ namespace qm_finish_summary
 	{
 		uint64_t m_Id = 0;
 		double m_LastTime = 0.0;
+		double m_FadeAllowedAt = 0.0;
 		float m_Alpha = 1.0f;
 		vec2 m_Tilt{};
 		float m_HostScale = 1.0f;
@@ -47,6 +52,7 @@ namespace qm_finish_summary
 			{
 				*this = {};
 				m_Id = Id;
+				m_FadeAllowedAt = Now + 5.0;
 				m_LastTime = Now;
 			}
 			if(!Id)
@@ -55,7 +61,8 @@ namespace qm_finish_summary
 			m_LastTime = Now;
 			const bool Moving = dot(Velocity, Velocity) > 0.04f;
 			const float Blend = -std::expm1(-Dt * (Moving ? 14.0f : 8.0f));
-			m_Alpha = mix(m_Alpha, Moving ? 0.15f : 1.0f, Blend);
+			const float FadeDt = std::min(Dt, static_cast<float>(std::max(0.0, Now - m_FadeAllowedAt)));
+			m_Alpha = mix(m_Alpha, Moving && Opening ? 0.15f : 1.0f, -std::expm1(-FadeDt * (Moving && Opening ? 14.0f : 8.0f)));
 			if(MotionLevel <= 0)
 			{
 				m_Tilt = {};
