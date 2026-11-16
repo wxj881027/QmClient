@@ -4849,8 +4849,6 @@ void CHud::RenderMediaIsland()
 	CurrentSdfState.m_RingThickness = SatelliteRingThickness;
 	CurrentSdfState.m_BackgroundColor = EntrancePose.m_BackgroundColor;
 	CurrentSdfState.m_ScreenPixelSize = ScreenPixelSize;
-	CurrentSdfState.m_OuterShadowSize = ScreenPixelSize * MEDIA_ISLAND_OUTER_SHADOW_PIXELS;
-	CurrentSdfState.m_OuterShadowOpacity = MEDIA_ISLAND_OUTER_SHADOW_OPACITY * EntrancePose.m_BackgroundColor.a;
 	CurrentSdfState.m_Rect = QmHudMediaIslandSdfOuterRect(CurrentSdfState);
 	const IGraphics::CRenderTargetHandle Backdrop = MediaIslandBlurBackdrop();
 	if(Backdrop.IsValid())
