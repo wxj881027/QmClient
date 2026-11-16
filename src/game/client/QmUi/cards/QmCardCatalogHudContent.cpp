@@ -182,6 +182,8 @@ void CMenus::RenderQmHudDynamicIslandContent(CUIRect &Content, float LineHeight,
 	if(g_Config.m_QmHudIslandUseOriginalStyle)
 		return;
 
+	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmFinishSummary, "Show finish summary", Localize("Show finish summary"), &g_Config.m_QmFinishSummary);
+
 	// 钩子倒计时是独立开关：钩住玩家时在钩链中点显示倒计时环。
 	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmHookCountdown, "Enable hook countdown", Localize("Enable hook countdown"), &g_Config.m_QmHookCountdown);
 	// 开关倒计时：总开关决定是否显示，两个位置开关决定显示在跟随 Tee 的圆环上还是灵动岛里，可同时勾选。

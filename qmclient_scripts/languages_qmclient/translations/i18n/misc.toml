@@ -16214,3 +16214,93 @@ brazilian_portuguese = "Guia de CP"
 portuguese = "Guia de CP"
 turkish = "CP rehberi"
 polish = "Wskazówki CP"
+
+[[message]]
+key = "Axiom rank"
+[message.translations]
+simplified_chinese = "Axiom 排名"
+
+[[message]]
+key = "China rank"
+[message.translations]
+simplified_chinese = "国服排名"
+
+[[message]]
+key = "Completed"
+[message.translations]
+simplified_chinese = "已完成"
+
+[[message]]
+key = "First finish"
+[message.translations]
+simplified_chinese = "首次通关"
+
+[[message]]
+key = "Improved +%s"
+[message.translations]
+simplified_chinese = "进步 +%s"
+
+[[message]]
+key = "Last sync"
+[message.translations]
+simplified_chinese = "上次同步"
+
+[[message]]
+key = "Loading..."
+[message.translations]
+simplified_chinese = "加载中…"
+
+[[message]]
+key = "Matched personal best"
+[message.translations]
+simplified_chinese = "追平个人最佳"
+
+[[message]]
+key = "No data"
+[message.translations]
+simplified_chinese = "暂无数据"
+
+[[message]]
+key = "Pending sync"
+[message.translations]
+simplified_chinese = "待同步"
+
+[[message]]
+key = "Personal best"
+[message.translations]
+simplified_chinese = "个人最佳"
+
+[[message]]
+key = "Personal best pending"
+[message.translations]
+simplified_chinese = "个人最佳待确认"
+
+[[message]]
+key = "Server rank"
+[message.translations]
+simplified_chinese = "本服排名"
+
+[[message]]
+key = "Show finish summary"
+[message.translations]
+simplified_chinese = "显示结算卡"
+
+[[message]]
+key = "Slower -%s"
+[message.translations]
+simplified_chinese = "退步 -%s"
+
+[[message]]
+key = "Slower than personal best"
+[message.translations]
+simplified_chinese = "慢于个人最佳"
+
+[[message]]
+key = "Total points"
+[message.translations]
+simplified_chinese = "总分"
+
+[[message]]
+key = "Time to finish"
+[message.translations]
+simplified_chinese = "通关用时"

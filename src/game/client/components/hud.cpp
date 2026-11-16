@@ -21,6 +21,7 @@
 #include <generated/protocol.h>
 
 #include <game/client/QmUi/QmAnimResolve.h>
+#include <game/client/QmUi/QmFinishSummary.h>
 #include <game/client/QmUi/QmHookCountdownRender.h>
 #include <game/client/QmUi/QmLayout.h>
 #include <game/client/QmUi/UiTokens.h>
@@ -3604,6 +3605,11 @@ void CHud::EnsureMediaIslandFrameCache() const
 	if(g_Config.m_QmHudIslandUseOriginalStyle)
 		return;
 	Cache.m_SpectatorCount = GetMediaIslandSpectatorCount(*GameClient(), *Client());
+	if(GameClient()->m_FinishSummary.Visible() || m_MediaIslandAnimState.m_FinishSummaryProgress > 0.001f)
+	{
+		Cache.m_HasVisible = true;
+		return;
+	}
 	if(MapProgressSurface() == QmHudMapProgress::ESurface::ISLAND)
 	{
 		Cache.m_HasVisible = true;
@@ -3687,6 +3693,13 @@ float CHud::GetTopIslandAvoidanceRight() const
 	EnsureMediaIslandFrameCache();
 	if(m_MediaIslandFrameCache.m_AvoidanceValid)
 		return m_MediaIslandFrameCache.m_AvoidanceRight;
+	if(GameClient()->m_FinishSummary.Visible() || m_MediaIslandAnimState.m_FinishSummaryProgress > 0.001f)
+	{
+		if(m_MediaIslandLastVisibleRectValid)
+			return m_MediaIslandLastVisibleRect.x + m_MediaIslandLastVisibleRect.w;
+		const CUIRect Expanded = qm_finish_summary::ExpandedRect(m_Width, m_Height, 0.0f);
+		return Expanded.x + Expanded.w;
+	}
 
 	const bool ShowLocalTime = ShouldRenderHudLocalTime(*GameClient());
 	const SHudGameTimerInfo TimerInfo = g_Config.m_ClShowhudTimer ? BuildHudGameTimerInfo(*GameClient(), *Client(), TextRender(), m_Width) : SHudGameTimerInfo{};
@@ -3850,6 +3863,22 @@ void CHud::RenderMediaIsland()
 {
 	EnsureMediaIslandFrameCache();
 	auto &AnimState = m_MediaIslandAnimState;
+	const auto *pFinishSnapshot = GameClient()->m_FinishSummary.Snapshot();
+	const bool ShowFinish = pFinishSnapshot && GameClient()->m_FinishSummary.Visible();
+	auto &FinishRuntime = GameClient()->UiRuntimeV2()->AnimRuntime();
+	const uint64_t FinishNode = HudMediaIslandNodeKey("finish_summary");
+	if(!AnimState.m_LayoutInitialized || !pFinishSnapshot)
+		SetUiPresentationStateValue(FinishRuntime, FinishNode, EUiAnimProperty::ALPHA, 0.0f);
+	if(g_Config.m_QmUiMotionLevel <= 0)
+		SetUiPresentationStateValue(FinishRuntime, FinishNode, EUiAnimProperty::ALPHA, ShowFinish ? 1.0f : 0.0f);
+	SUiSpringConfig FinishSpring;
+	FinishSpring.m_Stiffness = 430.0f;
+	FinishSpring.m_Damping = 42.0f;
+	FinishSpring.m_RestEpsilon = 0.001f;
+	FinishSpring.m_RestVelocity = 0.01f;
+	AnimState.m_FinishSummaryProgress = std::clamp(ResolveUiPresentationStateValue(FinishRuntime, FinishNode,
+		EUiAnimProperty::ALPHA, ShowFinish ? 1.0f : 0.0f, FinishSpring, 3, 0.001f), 0.0f, 1.0f);
+	const bool RenderFinish = pFinishSnapshot && AnimState.m_FinishSummaryProgress > 0.001f;
 	const int64_t Now = time_get();
 	const CSystemMediaControls::SState &MediaState = m_MediaIslandFrameCache.m_MediaState;
 	const bool HasMediaState = m_MediaIslandFrameCache.m_HasMediaState;
@@ -4057,7 +4086,7 @@ void CHud::RenderMediaIsland()
 	const SHudMediaIslandSwapRows SwapRows = QmHudMediaIslandSwapRows(IncomingSwapCount, TimerCapsule.m_Visible, ShowLyricsIslandLine, m_MediaIslandFrameCache.m_LyricsRowCount);
 	const bool ShowTopRow = HasMediaState || ShowInfoStack || TimerCapsule.m_Visible || ShowRecordingStatus || ShowSpectator || ShowTeam;
 
-	if(!ShowTopRow && !ShowLyricsIslandLine && !HasSatellitePresentation && !ShowMapProgress)
+	if(!ShowTopRow && !ShowLyricsIslandLine && !HasSatellitePresentation && !ShowMapProgress && !ShowFinish && !RenderFinish)
 	{
 		RelaxMediaIslandEntranceSprings(GameClient()->UiRuntimeV2()->AnimRuntime());
 		m_MediaIslandAnimState.Reset();
@@ -4499,10 +4528,10 @@ void CHud::RenderMediaIsland()
 	AnimState.m_TargetTrackMetaOutOffset = -TrackTextOffset;
 
 	const float IslandWidth = ResolveUiPresentationStateValue(AnimRuntime, CapsuleNode, EUiAnimProperty::WIDTH, AnimState.m_TargetWidth, CapsuleSpring, 3, 0.01f);
-	const float AnimatedIslandHeight = ResolveUiPresentationStateValue(AnimRuntime, CapsuleNode, EUiAnimProperty::HEIGHT, AnimState.m_TargetHeight, CapsuleSpring, 3, 0.01f);
+	float AnimatedIslandHeight = ResolveUiPresentationStateValue(AnimRuntime, CapsuleNode, EUiAnimProperty::HEIGHT, AnimState.m_TargetHeight, CapsuleSpring, 3, 0.01f);
 	// 大时间独立锚定中线，左侧宽度弹簧和右侧扩展只改变各自的边界。
 	const SHudMediaIslandTimerAnchor TimerAnchor = QmHudMediaIslandAnchorTimer(m_Width * 0.5f, TimerCapsule.m_BoxW, IslandWidth, MainToTimerGap);
-	const float IslandX = TimerCapsule.m_Visible ? TimerAnchor.m_MainX : ResolveUiPresentationStateValue(AnimRuntime, CapsuleNode, EUiAnimProperty::POS_X, AnimState.m_TargetX, CapsuleSpring, 3, 0.01f);
+	float IslandX = TimerCapsule.m_Visible ? TimerAnchor.m_MainX : ResolveUiPresentationStateValue(AnimRuntime, CapsuleNode, EUiAnimProperty::POS_X, AnimState.m_TargetX, CapsuleSpring, 3, 0.01f);
 	if(TimerCapsule.m_Visible)
 		SetUiPresentationStateValue(AnimRuntime, CapsuleNode, EUiAnimProperty::POS_X, IslandX);
 	const float TimerBoxX = TimerCapsule.m_Visible ? TimerAnchor.m_TimerX : TimerCapsule.m_BoxX;
@@ -4716,8 +4745,26 @@ void CHud::RenderMediaIsland()
 	const float StatusAlpha = std::clamp(ResolveUiPresentationStateValue(AnimRuntime, StatusBoxNode, EUiAnimProperty::ALPHA, m_RecordingStatusAnimState.m_TargetAlpha, StatusSpring, 2, 0.004f), 0.0f, 1.0f);
 	const float StatusTextAlpha = std::clamp(ResolveUiPresentationStateValue(AnimRuntime, StatusTextNode, EUiAnimProperty::ALPHA, m_RecordingStatusAnimState.m_TargetTextAlpha, StatusSpring, 2, 0.004f), 0.0f, 1.0f);
 	const bool RenderStatusSection = StatusWidth > 1.0f && StatusAlpha > 0.01f;
-	const float UnifiedRight = StatusAnchorRight + (RenderStatusSection ? StatusSectionGap + StatusWidth : 0.0f);
-	const float UnifiedWidth = std::max(IslandWidth, UnifiedRight - IslandX);
+	float UnifiedRight = StatusAnchorRight + (RenderStatusSection ? StatusSectionGap + StatusWidth : 0.0f);
+	float UnifiedWidth = std::max(IslandWidth, UnifiedRight - IslandX);
+	const CUIRect EditorAnchorRect = TimerCapsule.m_Visible ?
+						 CUIRect{TimerBoxX, IslandY, TimerCapsule.m_BoxW, AnimatedIslandHeight} :
+						 CUIRect{IslandX, IslandY, UnifiedWidth, AnimatedIslandHeight};
+	const CUIRect FinishTargetRect = qm_finish_summary::ExpandedRect(m_Width, m_Height, IslandY);
+	if(RenderFinish)
+	{
+		// 以当前主岛作为收展起点，附岛仅跟随边界平移。
+		const CUIRect FinishRect = qm_finish_summary::ResolveRect({IslandX, IslandY, UnifiedWidth, AnimatedIslandHeight},
+			FinishTargetRect, AnimState.m_FinishSummaryProgress);
+		const float LeftShift = FinishRect.x - IslandX;
+		for(int i = 0; i < SatelliteRenderItemCount; ++i)
+			aSatelliteRenderItems[i].m_Center.x += LeftShift;
+		SatelliteVisibleLeft += LeftShift;
+		IslandX = FinishRect.x;
+		UnifiedWidth = FinishRect.w;
+		UnifiedRight = FinishRect.x + FinishRect.w;
+		AnimatedIslandHeight = FinishRect.h;
+	}
 	const SHudMediaIslandBlobPose SpectatorBlobPose = QmHudMediaIslandBlobPose(AnimState.m_SpectatorLiquidSpring);
 	const SHudMediaIslandSpectatorIconPose SpectatorIconPose = QmHudMediaIslandSpectatorIconPose(AnimState.m_SpectatorIconProgress);
 	const SHudMediaIslandLiquidCapsule SpectatorLiquidCapsule = QmHudMediaIslandRightBlobCapsule(
@@ -4731,9 +4778,6 @@ void CHud::RenderMediaIsland()
 	const float EditorVisibleRight = std::max(UnifiedRight, SpectatorVisibleRight);
 	// 整组可见范围用于命中，定位单独使用时间中心，越界内容不再参与平移约束。
 	const CUIRect EditorVisibleRect = {SatelliteVisibleLeft, IslandY, EditorVisibleRight - SatelliteVisibleLeft, AnimatedIslandHeight};
-	const CUIRect EditorAnchorRect = TimerCapsule.m_Visible ?
-						 CUIRect{TimerBoxX, IslandY, TimerCapsule.m_BoxW, AnimatedIslandHeight} :
-						 CUIRect{IslandX, IslandY, UnifiedWidth, AnimatedIslandHeight};
 	const CUIRect EditorTransformRect = QmHudMediaIslandEditorTransformRect(EditorAnchorRect);
 	const bool RenderLeftSection = ShowCover || ShowTeam || ShowWaveform;
 	const bool ShowTimerSecondaryLine = SwapRows.m_InlineSwapCount > 0 || Checkpoint > 0;
@@ -4753,7 +4797,10 @@ void CHud::RenderMediaIsland()
 	float TransformedScreenX0, TransformedScreenY0, TransformedScreenX1, TransformedScreenY1;
 	Graphics()->GetScreen(&TransformedScreenX0, &TransformedScreenY0, &TransformedScreenX1, &TransformedScreenY1);
 	const CUIRect TargetMainIslandSdfRect = {IslandX, IslandY, UnifiedWidth, AnimatedIslandHeight};
-	const SHudMediaIslandEntrancePose EntrancePose = QmHudMediaIslandEntrancePose(TargetMainIslandSdfRect, Radius, IslandBackgroundColor, EntranceSprings.m_ExpandProgress, EntranceSprings.m_DropProgress, TransformedScreenY0);
+	const float SurfaceRadius = Radius + (8.0f - Radius) * AnimState.m_FinishSummaryProgress;
+	const SHudMediaIslandEntrancePose EntrancePose = QmHudMediaIslandEntrancePose(TargetMainIslandSdfRect, SurfaceRadius, IslandBackgroundColor, EntranceSprings.m_ExpandProgress, EntranceSprings.m_DropProgress, TransformedScreenY0);
+	GameClient()->m_FinishSummary.SetExpanded(ShowFinish && AnimState.m_FinishSummaryProgress >= 0.999f &&
+		EntranceSprings.m_ExpandProgress >= 0.999f && EntranceSprings.m_DropProgress >= 0.999f);
 	const float EntranceContentAlpha = EntrancePose.m_ContentAlpha;
 	const CUIRect MainIslandSdfRect = EntrancePose.m_Rect;
 	const float SoftBodyDelta = AnimState.m_SoftBodyLastTick != 0 ? (Now - AnimState.m_SoftBodyLastTick) / static_cast<float>(time_freq()) : 0.0f;
@@ -4877,6 +4924,17 @@ void CHud::RenderMediaIsland()
 		const ColorRGBA IconColor = Item.m_Completed ? ColorRGBA(0.20f, 1.0f, 0.42f, 0.96f * Item.m_ContentAlpha * EntranceContentAlpha) : ColorRGBA(0.98f, 0.99f, 1.0f, 0.94f * Item.m_ContentAlpha * EntranceContentAlpha);
 		const EQmIcon Icon = MediaIslandCountdownIcon(Item.m_Type, Item.m_Completed, Item.m_SwapOutgoing);
 		Ui()->DrawQmIcon(IconRect, Icon, MediaIslandCountdownFontIcon(Icon), IconColor);
+	}
+
+	if(RenderFinish)
+	{
+		const float FinishAlpha = std::clamp((AnimState.m_FinishSummaryProgress - 0.75f) * 4.0f, 0.0f, 1.0f) * EntranceContentAlpha;
+		qm_finish_summary::Render(*Graphics(), *TextRender(), TargetMainIslandSdfRect, *pFinishSnapshot, AnimState.m_FinishSummaryContent, FinishAlpha);
+		TextRender()->TextColor(PrevTextColor);
+		TextRender()->TextOutlineColor(PrevOutlineColor);
+		TextRender()->SetRenderFlags(PrevFlags);
+		GameClient()->m_HudEditor.EndTransform(HudEditorScope);
+		return;
 	}
 
 	const auto BuildTrackMetaText = [](const SHudMediaIslandTrackSnapshot &Track, char *pBuf, size_t BufSize) {
@@ -7314,6 +7372,8 @@ void CHud::RenderDDRaceEffects()
 		char aTime[32];
 		if(m_ShowFinishTime && m_FinishTimeLastReceivedTick + Client()->GameTickSpeed() * 6 > Client()->GameTick(g_Config.m_ClDummy))
 		{
+			if(!g_Config.m_QmHudIslandUseOriginalStyle && (GameClient()->m_FinishSummary.Visible() || m_MediaIslandAnimState.m_FinishSummaryProgress > 0.001f))
+				return;
 			str_time(m_DDRaceTime, TIME_HOURS_CENTISECS, aTime, sizeof(aTime));
 			str_format(aBuf, sizeof(aBuf), "Finish time: %s", aTime);
 

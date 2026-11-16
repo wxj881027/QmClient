@@ -643,6 +643,7 @@ void CGameClient::OnConsoleInit()
 	AddComponent(&m_Translate, "translate");
 	AddComponent(&m_Ghost, "ghost");
 	AddComponent(&m_QmClient, "qmclient");
+	AddComponent(&m_FinishSummary, "finish_summary");
 	AddComponent(&m_QmAxiomAutoLogin, "axiom_auto_login");
 	AddComponent(&m_QmAxiomScores, "axiom_scores");
 	AddComponent(&m_QmFriendLastSeen, "friend_last_seen");

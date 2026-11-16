@@ -40495,3 +40495,8 @@ brazilian_portuguese = "Guiar até pontos de controle de teletransporte próximo
 portuguese = "Guiar até pontos de controlo de teletransporte próximos não ativados e avisar perto das entradas de regresso"
 turkish = "Yakındaki etkinleştirilmemiş ışınlanma kontrol noktalarına yol göster ve kontrol noktasına dönüş girişlerinde uyar"
 polish = "Prowadź do pobliskich nieaktywowanych punktów kontrolnych teleportacji i ostrzegaj przy wejściach powrotnych"
+
+[[message]]
+key = "Show finish summary in Dynamic Island"
+[message.translations]
+simplified_chinese = "在灵动岛显示结算卡"
