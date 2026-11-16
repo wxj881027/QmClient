@@ -43,13 +43,13 @@ inline bool QmScrollLineVisibleInViewportTop(float LineTop, float LineBottom, fl
 	return LineBottom > LineTop && LineBottom > ClipTop;
 }
 
-// 滚轮手感档位。SMOOTH 必须占 0：g_Config 在未跑配置加载时（测试环境）是零初始化，
+// 滚轮手感档位。ORIGINAL 必须占 0：g_Config 在未跑配置加载时（测试环境）是零初始化，
 // 0 必须是生产默认档，否则测试与线上手感会静默分叉。档位在设置界面的展示顺序
 // （原版 → 顺滑 → 弹簧）由卡片侧单独映射，不依赖枚举值大小。
 enum class EQmScrollFeel
 {
-	SMOOTH = 0,
-	ORIGINAL = 1,
+	ORIGINAL = 0,
+	SMOOTH = 1,
 	SPRING = 2,
 };
 
@@ -58,7 +58,7 @@ struct SQmScrollConfig
 	float m_WheelScale = 10.0f;
 	bool m_NativeWheelStep = true;
 	float m_NativeWheelAnimationTime = 0.0f;
-	EQmScrollFeel m_Feel = EQmScrollFeel::SMOOTH;
+	EQmScrollFeel m_Feel = EQmScrollFeel::ORIGINAL;
 	// 弹簧档的两个参数，直接来自设置界面（qm_ui_scroll_spring_response /
 	// qm_ui_scroll_spring_damping）。响应周期是弹簧的固有周期，与"固定时长动画
 	// 的结束时刻"不是同一个量，所以不再从 m_NativeWheelAnimationTime 推导。
