@@ -91,6 +91,7 @@ private:
 	bool m_MouseFocus;
 
 	// IME support
+	bool m_UsesNativeImeUi = true;
 	std::string m_CompositionString;
 	int m_CompositionCursor;
 	CQmImeCandidateState m_ImeCandidates;
@@ -189,6 +190,7 @@ public:
 	std::string GetClipboardText() override;
 	void SetClipboardText(const char *pText) override;
 
+	bool UsesNativeImeUi() const override { return m_UsesNativeImeUi; }
 	void StartTextInput() override;
 	void StopTextInput() override;
 	void EnsureScreenKeyboardShown() override;

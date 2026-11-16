@@ -1,121 +1,14 @@
 #include <engine/client/input_tsf.h>
 #include <engine/shared/qm_ime_policy.h>
 
-#include <windows.h>
-
 #include <gtest/gtest.h>
-// Windows 接口声明必须先于 TSF 和 WRL 头文件。
-#include <msctf.h>
-#include <wrl/client.h>
+#include <test/support/qm_tsf_test.h>
 
-#include <algorithm>
 #include <limits>
 #include <string>
 #include <vector>
 
-namespace
-{
-	using Microsoft::WRL::ComPtr;
-
-	// 仅模拟 TIP 的 COM 输出，分页切片和选中项换算由生产函数完成。
-	class CFakeCandidateList final : public ITfCandidateListUIElement
-	{
-		ULONG m_RefCount = 1;
-
-	public:
-		std::vector<std::wstring> m_vStrings{L"你", L"好", L"吗"};
-		std::vector<UINT> m_vPageStarts{0};
-		UINT m_CurrentPage = 0;
-		UINT m_Selection = 0;
-		HRESULT m_SelectionResult = S_OK;
-		HRESULT m_PageResult = S_OK;
-		UINT m_ExtraReturnedPages = 0;
-		int m_FailedStringIndex = -1;
-		int m_MetadataCalls = 0;
-		int m_StringCalls = 0;
-
-		HRESULT STDMETHODCALLTYPE QueryInterface(REFIID Riid, void **ppObject) override
-		{
-			if(ppObject == nullptr)
-				return E_POINTER;
-			*ppObject = nullptr;
-			if(!IsEqualIID(Riid, __uuidof(IUnknown)) && !IsEqualIID(Riid, __uuidof(ITfUIElement)) && !IsEqualIID(Riid, __uuidof(ITfCandidateListUIElement)))
-				return E_NOINTERFACE;
-			*ppObject = static_cast<ITfCandidateListUIElement *>(this);
-			AddRef();
-			return S_OK;
-		}
-
-		ULONG STDMETHODCALLTYPE AddRef() override { return ++m_RefCount; }
-		ULONG STDMETHODCALLTYPE Release() override
-		{
-			const ULONG RefCount = --m_RefCount;
-			if(RefCount == 0)
-				delete this;
-			return RefCount;
-		}
-
-		HRESULT STDMETHODCALLTYPE GetDescription(BSTR *pDescription) override
-		{
-			*pDescription = nullptr;
-			return E_NOTIMPL;
-		}
-		HRESULT STDMETHODCALLTYPE GetGUID(GUID *) override { return E_NOTIMPL; }
-		HRESULT STDMETHODCALLTYPE Show(BOOL) override { return E_NOTIMPL; }
-		HRESULT STDMETHODCALLTYPE IsShown(BOOL *) override { return E_NOTIMPL; }
-		HRESULT STDMETHODCALLTYPE GetUpdatedFlags(DWORD *) override { return E_NOTIMPL; }
-		HRESULT STDMETHODCALLTYPE GetDocumentMgr(ITfDocumentMgr **ppDocument) override
-		{
-			*ppDocument = nullptr;
-			return E_NOTIMPL;
-		}
-		HRESULT STDMETHODCALLTYPE GetCount(UINT *pCount) override
-		{
-			*pCount = (UINT)m_vStrings.size();
-			return S_OK;
-		}
-		HRESULT STDMETHODCALLTYPE GetSelection(UINT *pSelection) override
-		{
-			++m_MetadataCalls;
-			*pSelection = m_Selection;
-			return m_SelectionResult;
-		}
-		HRESULT STDMETHODCALLTYPE GetString(UINT Index, BSTR *pString) override
-		{
-			++m_StringCalls;
-			*pString = nullptr;
-			if(Index >= m_vStrings.size() || (int)Index == m_FailedStringIndex)
-				return E_FAIL;
-			*pString = SysAllocStringLen(m_vStrings[Index].data(), (UINT)m_vStrings[Index].size());
-			return *pString != nullptr ? S_OK : E_OUTOFMEMORY;
-		}
-		HRESULT STDMETHODCALLTYPE GetPageIndex(UINT *pIndices, UINT Size, UINT *pPageCount) override
-		{
-			++m_MetadataCalls;
-			*pPageCount = (UINT)m_vPageStarts.size();
-			if(pIndices != nullptr)
-			{
-				std::copy_n(m_vPageStarts.begin(), std::min((size_t)Size, m_vPageStarts.size()), pIndices);
-				*pPageCount += m_ExtraReturnedPages;
-			}
-			return m_PageResult;
-		}
-		HRESULT STDMETHODCALLTYPE SetPageIndex(UINT *, UINT) override { return E_NOTIMPL; }
-		HRESULT STDMETHODCALLTYPE GetCurrentPage(UINT *pPage) override
-		{
-			++m_MetadataCalls;
-			*pPage = m_CurrentPage;
-			return S_OK;
-		}
-	};
-
-	ComPtr<CFakeCandidateList> CreateCandidates()
-	{
-		ComPtr<CFakeCandidateList> pCandidates;
-		pCandidates.Attach(new CFakeCandidateList());
-		return pCandidates;
-	}
-}
+using qm_tsf_test::CreateCandidates;
 
 TEST(QmTsfCandidates, UnequalLastPageAcceptsCompleteSFalsePageTable)
 {

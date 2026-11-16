@@ -145,7 +145,7 @@ void CQmImeManager::RenderCandidatePopup()
 	if(!m_TextInputSession.ClientOwnsInput())
 		return;
 	CUiScopedGaussianBlur GaussianBlurScope(m_pGameClient->Ui());
-	const EQmImeCandidateRenderAction RenderAction = QmImeComputeCandidateRenderAction(QmImeShouldRenderCustomCandidateUi(), g_Config.m_QmNewIme);
+	const EQmImeCandidateRenderAction RenderAction = QmImeComputeCandidateRenderAction(QmImeShouldRenderCustomCandidateUi(m_pGameClient->Input()->UsesNativeImeUi()), g_Config.m_QmNewIme);
 
 	if(RenderAction == EQmImeCandidateRenderAction::VALIDATE_ONLY)
 	{

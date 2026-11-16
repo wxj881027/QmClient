@@ -191,6 +191,8 @@ public:
 	virtual void SetClipboardText(const char *pText) = 0;
 
 	// text editing
+	// 输入法显示模式在初始化时确定，配置修改随客户端重启生效。
+	virtual bool UsesNativeImeUi() const { return false; }
 	virtual void StartTextInput() = 0;
 	virtual void StopTextInput() = 0;
 	virtual void EnsureScreenKeyboardShown() = 0;

@@ -13,18 +13,19 @@
 #include <utility>
 #include <vector>
 
-inline bool QmImeShouldUseSystemCandidateUi()
+inline bool QmImeShouldUseSystemCandidateUi(bool NativeUi = false)
 {
 #if defined(CONF_FAMILY_WINDOWS)
-	return false;
+	return NativeUi;
 #else
+	(void)NativeUi;
 	return true;
 #endif
 }
 
-inline bool QmImeShouldRenderCustomCandidateUi()
+inline bool QmImeShouldRenderCustomCandidateUi(bool NativeUi = false)
 {
-	if(QmImeShouldUseSystemCandidateUi())
+	if(QmImeShouldUseSystemCandidateUi(NativeUi))
 		return false;
 	return true;
 }

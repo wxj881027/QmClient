@@ -124,6 +124,17 @@ TEST(QmImePlatform, SystemCandidateUiPolicyMatchesPlatform)
 #endif
 }
 
+TEST(QmImePlatform, NativeUiOverrideDisablesBothCustomCandidateStyles)
+{
+	EXPECT_TRUE(QmImeShouldUseSystemCandidateUi(true));
+	EXPECT_FALSE(QmImeShouldRenderCustomCandidateUi(true));
+	for(const int NewIme : {0, 1})
+	{
+		SCOPED_TRACE(NewIme);
+		EXPECT_EQ(QmImeComputeCandidateRenderAction(QmImeShouldRenderCustomCandidateUi(true), NewIme), EQmImeCandidateRenderAction::VALIDATE_ONLY);
+	}
+}
+
 TEST(QmImePlatform, CandidateRenderActionKeepsLifecycleValidationOnAllPlatforms)
 {
 	EXPECT_EQ(QmImeComputeCandidateRenderAction(false, 0), EQmImeCandidateRenderAction::VALIDATE_ONLY);
