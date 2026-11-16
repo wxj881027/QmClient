@@ -303,21 +303,25 @@ bool qm_finish_summary::Render(IGraphics &Graphics, ITextRender &TextRender, CRe
 	const CUIRect TimeBox = Box(40.0f + (16.0f - 40.0f) * Placement, 72.0f + (14.0f - 72.0f) * Placement,
 		400.0f + (216.0f - 400.0f) * Placement, 60.0f);
 	Painter.Label(TimeBox, 12.0f * Scale, Localize("Time to finish"), Muted.WithAlpha(Alpha), (1.0f - Placement) * 0.5f);
-	const char *pMajor = Content.m_TimeMajor.c_str();
-	const char *pMinor = Content.m_TimeMinor.c_str();
-	float TimeSize = mix(42.0f, 32.0f, Placement) * Scale * mix(0.78f, 1.0f, Content.m_Presentation.NumberColorProgress(ENumber::TIME));
-	float TimeWidth = Painter.Width(TimeSize, pMajor) + Painter.Width(TimeSize * 0.58f, pMinor);
-	if(TimeWidth > TimeBox.w)
-		TimeSize *= TimeBox.w / TimeWidth;
-	TimeWidth = Painter.Width(TimeSize, pMajor) + Painter.Width(TimeSize * 0.58f, pMinor);
-	const float TimeX = TimeBox.x + (TimeBox.w - TimeWidth) * (1.0f - Placement) * 0.5f;
-	const float TimeY = TimeBox.y + 19.0f * Scale;
-	const SQmColorGradient TimeGradient = NumberGradient(Gold, Content.m_Presentation.NumberColorProgress(ENumber::TIME));
-	const CUIRect TimeBounds{TimeX, TimeY, TimeWidth, TimeSize};
-	const float MajorWidth = Painter.Width(TimeSize, pMajor);
-	Painter.Label({TimeX, TimeY, MajorWidth + Scale, TimeSize}, TimeSize, pMajor, White.WithAlpha(Alpha), 0.0f, 1, &TimeGradient, &TimeBounds, &Gold);
-	Painter.Label({TimeX + MajorWidth, TimeY + TimeSize * 0.42f, TimeBox.w - MajorWidth, TimeSize},
-		TimeSize * 0.58f, pMinor, White.WithAlpha(Alpha), 0.0f, 1, &TimeGradient, &TimeBounds, &Gold);
+	const float TimeProgress = Content.m_Presentation.NumberColorProgress(ENumber::TIME);
+	if(TimeProgress > 0.0f)
+	{
+		const char *pMajor = Content.m_TimeMajor.c_str();
+		const char *pMinor = Content.m_TimeMinor.c_str();
+		float TimeSize = mix(42.0f, 32.0f, Placement) * Scale * mix(0.78f, 1.0f, TimeProgress);
+		float TimeWidth = Painter.Width(TimeSize, pMajor) + Painter.Width(TimeSize * 0.58f, pMinor);
+		if(TimeWidth > TimeBox.w)
+			TimeSize *= TimeBox.w / TimeWidth;
+		TimeWidth = Painter.Width(TimeSize, pMajor) + Painter.Width(TimeSize * 0.58f, pMinor);
+		const float TimeX = TimeBox.x + (TimeBox.w - TimeWidth) * (1.0f - Placement) * 0.5f;
+		const float TimeY = TimeBox.y + 19.0f * Scale;
+		const SQmColorGradient TimeGradient = NumberGradient(Gold, TimeProgress);
+		const CUIRect TimeBounds{TimeX, TimeY, TimeWidth, TimeSize};
+		const float MajorWidth = Painter.Width(TimeSize, pMajor);
+		Painter.Label({TimeX, TimeY, MajorWidth + Scale, TimeSize}, TimeSize, pMajor, White.WithAlpha(Alpha), 0.0f, 1, &TimeGradient, &TimeBounds, &Gold);
+		Painter.Label({TimeX + MajorWidth, TimeY + TimeSize * 0.42f, TimeBox.w - MajorWidth, TimeSize},
+			TimeSize * 0.58f, pMinor, White.WithAlpha(Alpha), 0.0f, 1, &TimeGradient, &TimeBounds, &Gold);
+	}
 
 	const CUIRect MapBox = Box(250, 16, 214, 36);
 	const float MapHeight = Painter.Label(MapBox, mix(13.0f, 17.0f, Content.m_Presentation.FieldAlpha(EField::MAP)) * Scale,
