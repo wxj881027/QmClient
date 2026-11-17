@@ -86,6 +86,7 @@
 #include "components/qmclient/hammer_hit_detection.h"
 #include "components/qmclient/hud_notifications/hud_notifications.h"
 #include "components/qmclient/input_overlay.h"
+#include "components/qmclient/map_covers.h"
 #include "components/qmclient/mobile_spectator.h"
 #include "components/qmclient/monitoring/monitoring.h"
 #include "components/qmclient/music_app_watcher.h"
@@ -310,6 +311,7 @@ public:
 	CBgDraw m_BgDraw;
 	CQmClient m_QmClient;
 	CQmFinishSummary m_FinishSummary;
+	CQmMapCovers m_MapCovers;
 	CQmAxiomAutoLogin m_QmAxiomAutoLogin;
 	CQmAxiomScores m_QmAxiomScores;
 	CQmFriendLastSeen m_QmFriendLastSeen;

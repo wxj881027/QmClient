@@ -439,7 +439,7 @@ Auto gain control for mic (AGC, experimental)
 Auto greet friend on map join
 Auto greet friend text
 Auto greet friends entering map
-Auto greet posts a public chat line a few seconds after a friend joins, so leave "Greeting text" empty on strict servers.
+Auto greet waits 1 second after a friend joins, then sends a public greeting when chat is available. Leave "Greeting text" empty on strict servers.
 Auto hammer while firing; press again to cancel.
 Auto login Axiom server
 Auto manage IME while typing
@@ -2437,7 +2437,7 @@ Import friend code
 Import from clipboard
 Import merges friends and keeps local duplicates by default. Codes contain private names and notes.
 Imported
-Improved +%s
+Improved -%s
 Improved anti ping
 In DDNet, played when a freeze heart freezes the player. Other modes may use it for health pickups.
 In DDNet, played when weapons are removed. Other modes may use it for armor pickups.
@@ -2678,7 +2678,6 @@ Last entered
 Last page in console
 Last seen (DDStats): %s
 Last successful sync: %s
-Last sync
 Last teleport
 Last verified approved update source
 Last viewed announcement content revision
@@ -3793,6 +3792,7 @@ Preview button visibility while the editor is active.
 Preview cut (P)
 Preview dummy nameplate
 Preview failed. Check the image and Logo, then retry.
+Preview finish summary
 Preview hook collision colors and line styles
 Preview import file
 Preview laser bodies, outlines, and impacts
@@ -4985,7 +4985,7 @@ Slide left
 Slightly fast encode
 Slow down the demo
 Slower
-Slower -%s
+Slower +%s
 Slower export playback
 Slower than personal best
 Small Tee size

@@ -15,7 +15,7 @@ TEST(QmMediaIslandGpuSdfContract, ShapePassAvoidsPerFragmentDistanceArrayAndInac
 	for(const char *pShaderPath : apShaderPaths)
 	{
 		const std::string ShaderSource = ReadTestSourceFile(pShaderPath);
-		EXPECT_NE(ShaderSource.find("gMediaIslandSdfData[45]"), std::string::npos) << pShaderPath;
+		EXPECT_NE(ShaderSource.find("gMediaIslandSdfData[47]"), std::string::npos) << pShaderPath;
 		EXPECT_NE(ShaderSource.find("ITEM_STRIDE = 3"), std::string::npos) << pShaderPath;
 		EXPECT_NE(ShaderSource.find("BlobSdf"), std::string::npos) << pShaderPath;
 		EXPECT_NE(ShaderSource.find("BlobExponent"), std::string::npos) << pShaderPath;

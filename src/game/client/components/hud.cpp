@@ -933,6 +933,11 @@ namespace
 				DrawMediaIslandArcGeometry(pGraphics, Item.m_Center, RingRadius, RingThickness, Item.m_CountdownProgress, Item.m_RingColor.WithAlpha(Item.m_RingColor.a * Item.m_ContentAlpha));
 			}
 		}
+		if(State.m_AttachedCard.m_Rect.w > 0.0f && State.m_AttachedCard.m_Rect.h > 0.0f)
+		{
+			const CUIRect &Rect = State.m_AttachedCard.m_Rect;
+			DrawSmoothRoundedRect(pGraphics, Rect.x, Rect.y, Rect.w, Rect.h, State.m_AttachedCard.m_Radius, State.m_BackgroundColor, IGraphics::CORNER_ALL);
+		}
 		if(State.m_HasRightCapsule && State.m_RightCapsule.m_Rect.w > 0.0f && State.m_RightCapsule.m_Rect.h > 0.0f)
 		{
 			const CUIRect &Rect = State.m_RightCapsule.m_Rect;
@@ -1260,6 +1265,7 @@ void CHud::OnWindowResize()
 
 void CHud::OnReset()
 {
+	m_FinishSummarySurface.Reset(*Graphics());
 	m_LyricsIslandAnchorValid = false;
 	m_TimeCpDiff = 0.0f;
 	m_DDRaceTime = 0;
@@ -1334,6 +1340,7 @@ IGraphics::CRenderTargetHandle CHud::MediaIslandBlurBackdrop()
 
 void CHud::OnRelease()
 {
+	m_FinishSummarySurface.Reset(*Graphics());
 	DestroyDummyMiniViewRenderTarget();
 	m_MediaIslandFrameCache.Reset();
 }
@@ -3867,19 +3874,52 @@ void CHud::RenderMediaIsland()
 	const bool ShowFinish = pFinishSnapshot && GameClient()->m_FinishSummary.Visible();
 	auto &FinishRuntime = GameClient()->UiRuntimeV2()->AnimRuntime();
 	const uint64_t FinishNode = HudMediaIslandNodeKey("finish_summary");
-	if(!AnimState.m_LayoutInitialized || !pFinishSnapshot)
+	const uint64_t FinishId = pFinishSnapshot ? pFinishSnapshot->m_Id : 0;
+	if(!AnimState.m_LayoutInitialized || !FinishId || FinishId != AnimState.m_FinishSummaryId)
 		SetUiPresentationStateValue(FinishRuntime, FinishNode, EUiAnimProperty::ALPHA, 0.0f);
-	if(g_Config.m_QmUiMotionLevel <= 0)
-		SetUiPresentationStateValue(FinishRuntime, FinishNode, EUiAnimProperty::ALPHA, ShowFinish ? 1.0f : 0.0f);
-	SUiSpringConfig FinishSpring;
-	FinishSpring.m_Stiffness = 430.0f;
-	FinishSpring.m_Damping = 42.0f;
-	FinishSpring.m_RestEpsilon = 0.001f;
-	FinishSpring.m_RestVelocity = 0.01f;
-	AnimState.m_FinishSummaryProgress = std::clamp(ResolveUiPresentationStateValue(FinishRuntime, FinishNode,
-		EUiAnimProperty::ALPHA, ShowFinish ? 1.0f : 0.0f, FinishSpring, 3, 0.001f), 0.0f, 1.0f);
+	AnimState.m_FinishSummaryId = FinishId;
+	if(ShowFinish)
+	{
+		SUiSpringConfig FinishSpring;
+		FinishSpring.m_Stiffness = 130.0f;
+		FinishSpring.m_Damping = 23.0f;
+		FinishSpring.m_RestEpsilon = 0.001f;
+		FinishSpring.m_RestVelocity = 0.01f;
+		AnimState.m_FinishSummaryProgress = std::clamp(ResolveUiAnimSpringValue(FinishRuntime, FinishNode, EUiAnimProperty::ALPHA, 1.0f, FinishSpring, 1), 0.0f, 1.0f);
+		AnimState.m_FinishSummaryCloseStart = -1.0f;
+	}
+	else
+	{
+		if(AnimState.m_FinishSummaryCloseStart < 0.0f)
+		{
+			// 中途收回从上一帧轮廓起步，避免通用动画打断逻辑把补间重新转成弹簧。
+			AnimState.m_FinishSummaryCloseStart = AnimState.m_FinishSummaryProgress;
+			SetUiPresentationStateValue(FinishRuntime, FinishNode, EUiAnimProperty::ALPHA, AnimState.m_FinishSummaryCloseStart);
+		}
+		AnimState.m_FinishSummaryProgress = std::clamp(ResolveUiAnimValue(FinishRuntime, FinishNode, EUiAnimProperty::ALPHA, 0.0f,
+			0.48f * AnimState.m_FinishSummaryCloseStart, EEasing::LINEAR), 0.0f, 1.0f);
+	}
 	const bool RenderFinish = pFinishSnapshot && AnimState.m_FinishSummaryProgress > 0.001f;
 	const int64_t Now = time_get();
+	vec2 FinishVelocity{};
+	const int FinishClientId = GameClient()->m_aLocalIds[g_Config.m_ClDummy];
+	if(RenderFinish && FinishClientId >= 0 && FinishClientId < MAX_CLIENTS && !GameClient()->m_Snap.m_SpecInfo.m_Active &&
+		GameClient()->m_Snap.m_aCharacters[FinishClientId].m_Active)
+	{
+		if(GameClient()->m_aClients[FinishClientId].m_IsPredictedLocal)
+		{
+			const auto &Player = GameClient()->m_aClients[FinishClientId];
+			FinishVelocity = Player.m_Predicted.m_Pos - Player.m_PrevPredicted.m_Pos;
+		}
+		else
+		{
+			const auto &Character = GameClient()->m_Snap.m_aCharacters[FinishClientId];
+			const int Ticks = std::max(1, Client()->GameTick(g_Config.m_ClDummy) - Client()->PrevGameTick(g_Config.m_ClDummy));
+			FinishVelocity = vec2(Character.m_Cur.m_X - Character.m_Prev.m_X, Character.m_Cur.m_Y - Character.m_Prev.m_Y) / static_cast<float>(Ticks);
+		}
+	}
+	AnimState.m_FinishSummaryMotion.Update(RenderFinish ? pFinishSnapshot->m_Id : 0,
+		Now / static_cast<double>(time_freq()), ShowFinish, AnimState.m_FinishSummaryProgress, FinishVelocity, g_Config.m_QmUiMotionLevel);
 	const CSystemMediaControls::SState &MediaState = m_MediaIslandFrameCache.m_MediaState;
 	const bool HasMediaState = m_MediaIslandFrameCache.m_HasMediaState;
 	const bool LyricsActive = !g_Config.m_QmLyricsSeparateIsland && m_MediaIslandFrameCache.m_LyricsActive;
@@ -4750,21 +4790,25 @@ void CHud::RenderMediaIsland()
 	const CUIRect EditorAnchorRect = TimerCapsule.m_Visible ?
 						 CUIRect{TimerBoxX, IslandY, TimerCapsule.m_BoxW, AnimatedIslandHeight} :
 						 CUIRect{IslandX, IslandY, UnifiedWidth, AnimatedIslandHeight};
-	const CUIRect FinishTargetRect = qm_finish_summary::ExpandedRect(m_Width, m_Height, IslandY);
+	const CUIRect EditorTransformRect = QmHudMediaIslandEditorTransformRect(EditorAnchorRect);
+	float FinishHudScale = 1.0f;
 	if(RenderFinish)
 	{
-		// 以当前主岛作为收展起点，附岛仅跟随边界平移。
-		const CUIRect FinishRect = qm_finish_summary::ResolveRect({IslandX, IslandY, UnifiedWidth, AnimatedIslandHeight},
-			FinishTargetRect, AnimState.m_FinishSummaryProgress);
-		const float LeftShift = FinishRect.x - IslandX;
-		for(int i = 0; i < SatelliteRenderItemCount; ++i)
-			aSatelliteRenderItems[i].m_Center.x += LeftShift;
-		SatelliteVisibleLeft += LeftShift;
-		IslandX = FinishRect.x;
-		UnifiedWidth = FinishRect.w;
-		UnifiedRight = FinishRect.x + FinishRect.w;
-		AnimatedIslandHeight = FinishRect.h;
+		const auto Preview = GameClient()->m_HudEditor.PreviewTransform(EHudEditorElement::MediaIsland, EditorTransformRect);
+		FinishHudScale = Preview.m_TargetRect.w / EditorTransformRect.w;
 	}
+	const float FinishShadowPadding = std::max(m_Width / std::max(1, Graphics()->ScreenWidth()),
+						  m_Height / std::max(1, Graphics()->ScreenHeight())) *
+					  MEDIA_ISLAND_OUTER_SHADOW_PIXELS;
+	const float FinishGap = 8.0f / std::max(1.0f, FinishHudScale);
+	CUIRect FinishTargetRect = qm_finish_summary::ExpandedRect(m_Width, m_Height,
+		IslandY + AnimatedIslandHeight + FinishGap, FinishHudScale, FinishShadowPadding);
+	FinishTargetRect.x = IslandX + UnifiedWidth * 0.5f - FinishTargetRect.w * 0.5f;
+	const auto FinishLayout = [&](const CUIRect &Host) {
+		return ShowFinish ? qm_finish_summary::Layout(Host, FinishTargetRect, AnimState.m_FinishSummaryProgress) :
+				    qm_finish_summary::ClosingLayout(Host, FinishTargetRect, AnimState.m_FinishSummaryCloseStart, AnimState.m_FinishSummaryProgress);
+	};
+	const auto FinishLayoutPreview = FinishLayout({IslandX, IslandY, UnifiedWidth, AnimatedIslandHeight});
 	const SHudMediaIslandBlobPose SpectatorBlobPose = QmHudMediaIslandBlobPose(AnimState.m_SpectatorLiquidSpring);
 	const SHudMediaIslandSpectatorIconPose SpectatorIconPose = QmHudMediaIslandSpectatorIconPose(AnimState.m_SpectatorIconProgress);
 	const SHudMediaIslandLiquidCapsule SpectatorLiquidCapsule = QmHudMediaIslandRightBlobCapsule(
@@ -4777,8 +4821,15 @@ void CHud::RenderMediaIsland()
 	const float SpectatorVisibleRight = SpectatorLiquidCapsule.m_Rect.x + SpectatorLiquidCapsule.m_Rect.w + QmHudMediaIslandScaled(1.0f);
 	const float EditorVisibleRight = std::max(UnifiedRight, SpectatorVisibleRight);
 	// 整组可见范围用于命中，定位单独使用时间中心，越界内容不再参与平移约束。
-	const CUIRect EditorVisibleRect = {SatelliteVisibleLeft, IslandY, EditorVisibleRight - SatelliteVisibleLeft, AnimatedIslandHeight};
-	const CUIRect EditorTransformRect = QmHudMediaIslandEditorTransformRect(EditorAnchorRect);
+	CUIRect EditorVisibleRect = {SatelliteVisibleLeft, IslandY, EditorVisibleRight - SatelliteVisibleLeft, AnimatedIslandHeight};
+	if(RenderFinish)
+	{
+		const float Left = std::min(EditorVisibleRect.x, FinishLayoutPreview.m_Rect.x);
+		const float Right = std::max(EditorVisibleRect.x + EditorVisibleRect.w, FinishLayoutPreview.m_Rect.x + FinishLayoutPreview.m_Rect.w);
+		EditorVisibleRect.x = Left;
+		EditorVisibleRect.w = Right - Left;
+		EditorVisibleRect.h = std::max(EditorVisibleRect.h, FinishLayoutPreview.m_Rect.y + FinishLayoutPreview.m_Rect.h - IslandY);
+	}
 	const bool RenderLeftSection = ShowCover || ShowTeam || ShowWaveform;
 	const bool ShowTimerSecondaryLine = SwapRows.m_InlineSwapCount > 0 || Checkpoint > 0;
 	const SHudMediaIslandTimerRowLayout TimerRows = QmHudMediaIslandTimerRows(TimerCapsule.m_BoxY, TimerCapsule.m_BoxH, ShowTimerSecondaryLine);
@@ -4797,16 +4848,19 @@ void CHud::RenderMediaIsland()
 	float TransformedScreenX0, TransformedScreenY0, TransformedScreenX1, TransformedScreenY1;
 	Graphics()->GetScreen(&TransformedScreenX0, &TransformedScreenY0, &TransformedScreenX1, &TransformedScreenY1);
 	const CUIRect TargetMainIslandSdfRect = {IslandX, IslandY, UnifiedWidth, AnimatedIslandHeight};
-	const float SurfaceRadius = Radius + (8.0f - Radius) * AnimState.m_FinishSummaryProgress;
+	const float SurfaceRadius = Radius;
 	const SHudMediaIslandEntrancePose EntrancePose = QmHudMediaIslandEntrancePose(TargetMainIslandSdfRect, SurfaceRadius, IslandBackgroundColor, EntranceSprings.m_ExpandProgress, EntranceSprings.m_DropProgress, TransformedScreenY0);
-	GameClient()->m_FinishSummary.SetExpanded(ShowFinish && AnimState.m_FinishSummaryProgress >= 0.999f &&
-		EntranceSprings.m_ExpandProgress >= 0.999f && EntranceSprings.m_DropProgress >= 0.999f);
+	const bool FinishFullyExpanded = ShowFinish && AnimState.m_FinishSummaryProgress >= 0.999f &&
+					 EntranceSprings.m_ExpandProgress >= 0.999f && EntranceSprings.m_DropProgress >= 0.999f;
 	const float EntranceContentAlpha = EntrancePose.m_ContentAlpha;
 	const CUIRect MainIslandSdfRect = EntrancePose.m_Rect;
 	const float SoftBodyDelta = AnimState.m_SoftBodyLastTick != 0 ? (Now - AnimState.m_SoftBodyLastTick) / static_cast<float>(time_freq()) : 0.0f;
 	AnimState.m_SoftBodyLastTick = Now;
 	const CHudIslandSoftBody::SPose ShellPose = AnimState.m_SoftBody.Update(
 		SoftBodyDelta, vec2(MainIslandSdfRect.w, MainIslandSdfRect.h), LeftShellVelocity, SpectatorBlobPose.m_Velocity, MotionLevel);
+	// HUD 编辑器的屏幕映射确定后，再限制附卡的最终落点。
+	FinishTargetRect.x = std::clamp(FinishTargetRect.x, TransformedScreenX0 + FinishShadowPadding,
+		std::max(TransformedScreenX0 + FinishShadowPadding, TransformedScreenX1 - FinishShadowPadding - FinishTargetRect.w));
 	m_LyricsIslandAnchor = QmLyricsHudAnchor(MainIslandSdfRect, EditorTransformRect, HudEditorScope.m_TargetRect);
 	m_LyricsIslandAnchorValid = true;
 	TextRender()->TextOutlineColor(0.0f, 0.0f, 0.0f, 0.42f * EntranceContentAlpha);
@@ -4836,10 +4890,21 @@ void CHud::RenderMediaIsland()
 	const float ScreenPixelSize = std::max(
 		(TransformedScreenX1 - TransformedScreenX0) / std::max(1, Graphics()->ScreenWidth()),
 		(TransformedScreenY1 - TransformedScreenY0) / std::max(1, Graphics()->ScreenHeight()));
-	CurrentSdfState.m_MainRect = ShellPose.ShellRect(MainIslandSdfRect);
+	const CUIRect RestShell = ShellPose.ShellRect(MainIslandSdfRect);
+	CurrentSdfState.m_MainRect = AnimState.m_FinishSummaryMotion.HostRect(RestShell);
+	const auto FinishPose = FinishLayout(CurrentSdfState.m_MainRect);
+	const bool FinishConnected = RenderFinish && FinishPose.m_Connection > 0.0f;
+	if(FinishConnected)
+		CurrentSdfState.m_AttachedCard = {FinishPose.m_Rect, FinishPose.m_Radius, FinishPose.m_Connection};
+	else if(RenderFinish && FinishPose.m_NeckRect.w > 0.0f && FinishPose.m_NeckRect.h > 0.0f)
+	{
+		const CUIRect &Neck = FinishPose.m_NeckRect;
+		const float Radius = std::min(Neck.w, Neck.h) * 0.5f;
+		CurrentSdfState.m_AttachedCard = {Neck, Radius, Radius};
+	}
 	CurrentSdfState.m_ShellRippleAmplitude = ShellPose.RippleAmplitude(MainIslandSdfRect, ScreenPixelSize) * EntranceContentAlpha;
 	CurrentSdfState.m_ShellRipplePhase = ShellPose.m_RipplePhase;
-	CurrentSdfState.m_MainRadius = EntrancePose.m_Radius;
+	CurrentSdfState.m_MainRadius = EntrancePose.m_Radius + std::max(0.0f, RestShell.y - CurrentSdfState.m_MainRect.y);
 	CurrentSdfState.m_MainCorners = HudEditorScope.m_Corners;
 	CurrentSdfState.m_MainDisabledCornerRadius = EntrancePose.m_DisabledCornerRadius;
 	CurrentSdfState.m_ItemCount = SatelliteRenderItemCount;
@@ -4849,8 +4914,6 @@ void CHud::RenderMediaIsland()
 	CurrentSdfState.m_RingThickness = SatelliteRingThickness;
 	CurrentSdfState.m_BackgroundColor = EntrancePose.m_BackgroundColor;
 	CurrentSdfState.m_ScreenPixelSize = ScreenPixelSize;
-	CurrentSdfState.m_OuterShadowSize = ScreenPixelSize * MEDIA_ISLAND_OUTER_SHADOW_PIXELS;
-	CurrentSdfState.m_OuterShadowOpacity = MEDIA_ISLAND_OUTER_SHADOW_OPACITY * EntrancePose.m_BackgroundColor.a;
 	CurrentSdfState.m_Rect = QmHudMediaIslandSdfOuterRect(CurrentSdfState);
 	const IGraphics::CRenderTargetHandle Backdrop = MediaIslandBlurBackdrop();
 	if(Backdrop.IsValid())
@@ -4924,17 +4987,6 @@ void CHud::RenderMediaIsland()
 		const ColorRGBA IconColor = Item.m_Completed ? ColorRGBA(0.20f, 1.0f, 0.42f, 0.96f * Item.m_ContentAlpha * EntranceContentAlpha) : ColorRGBA(0.98f, 0.99f, 1.0f, 0.94f * Item.m_ContentAlpha * EntranceContentAlpha);
 		const EQmIcon Icon = MediaIslandCountdownIcon(Item.m_Type, Item.m_Completed, Item.m_SwapOutgoing);
 		Ui()->DrawQmIcon(IconRect, Icon, MediaIslandCountdownFontIcon(Icon), IconColor);
-	}
-
-	if(RenderFinish)
-	{
-		const float FinishAlpha = std::clamp((AnimState.m_FinishSummaryProgress - 0.75f) * 4.0f, 0.0f, 1.0f) * EntranceContentAlpha;
-		qm_finish_summary::Render(*Graphics(), *TextRender(), TargetMainIslandSdfRect, *pFinishSnapshot, AnimState.m_FinishSummaryContent, FinishAlpha);
-		TextRender()->TextColor(PrevTextColor);
-		TextRender()->TextOutlineColor(PrevOutlineColor);
-		TextRender()->SetRenderFlags(PrevFlags);
-		GameClient()->m_HudEditor.EndTransform(HudEditorScope);
-		return;
 	}
 
 	const auto BuildTrackMetaText = [](const SHudMediaIslandTrackSnapshot &Track, char *pBuf, size_t BufSize) {
@@ -5263,6 +5315,32 @@ void CHud::RenderMediaIsland()
 			QmRenderLyricsRows(*Graphics(), *TextRender(), LyricsRect, apRows, Count, LyricsFontSize,
 				LyricsIslandColor.WithMultipliedAlpha(VisibleBottomAlpha), Progress);
 		}
+	}
+
+	if(RenderFinish)
+	{
+		const float FreeProgress = QmHudMediaIslandLiquidSmoothStep((AnimState.m_FinishSummaryProgress - 0.65f) / 0.35f);
+		qm_finish_summary::SSurfaceStyle Style;
+		Style.m_Alpha = EntranceContentAlpha;
+		Style.m_ContentAlpha = FinishPose.m_ContentAlpha;
+		Style.m_TiltX = AnimState.m_FinishSummaryMotion.TiltX() * FreeProgress;
+		Style.m_TiltY = AnimState.m_FinishSummaryMotion.TiltY() * FreeProgress;
+		Style.m_Radius = FinishPose.m_Radius;
+		Style.m_DrawBackground = !FinishConnected;
+		Style.m_Closing = !ShowFinish;
+		Style.m_Pinch = FinishPose.m_Pinch;
+		Style.m_TopShade = FinishPose.m_TopShade;
+		Style.m_CoverTexture = GameClient()->m_FinishSummary.CoverTexture();
+		Style.m_Backdrop = Backdrop;
+		Style.m_ScreenRect = {TransformedScreenX0, TransformedScreenY0, TransformedScreenX1 - TransformedScreenX0, TransformedScreenY1 - TransformedScreenY0};
+		Style.m_BackgroundColor = EntrancePose.m_BackgroundColor;
+		const bool ContentComplete = m_FinishSummarySurface.Render(*Graphics(), *TextRender(), *RenderTools(), FinishPose.m_Rect,
+			*pFinishSnapshot, GameClient()->m_FinishSummary.TeeRenderInfo(), AnimState.m_FinishSummaryContent, Style,
+			Now / static_cast<double>(time_freq()), FinishFullyExpanded, MotionLevel);
+		GameClient()->m_FinishSummary.SetExpanded(FinishFullyExpanded && ContentComplete);
+		// 分离歌词排在结算卡下方，继续沿用主岛宽度。
+		const CUIRect CardAnchor = QmLyricsHudAnchor(FinishPose.m_Rect, EditorTransformRect, HudEditorScope.m_TargetRect);
+		m_LyricsIslandAnchor.h = std::max(m_LyricsIslandAnchor.h, CardAnchor.y + CardAnchor.h - m_LyricsIslandAnchor.y);
 	}
 
 	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);

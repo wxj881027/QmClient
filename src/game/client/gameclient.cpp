@@ -2019,6 +2019,8 @@ void CGameClient::UpdatePositions()
 
 void CGameClient::OnRender()
 {
+	// 地图库和结算卡共享封面缓存，菜单关闭时仍完成后台任务。
+	m_MapCovers.Update(Http(), Engine(), Graphics(), Storage(), Client()->LocalTime());
 	UpdateQmAxiomPrediction();
 	m_HudEditor.BeginRenderFrame();
 	CQmIconFrameColorClock::BeginFrame(static_cast<double>(time_get()) / static_cast<double>(time_freq()));
@@ -3389,6 +3391,7 @@ void CGameClient::OnShutdown()
 	for(auto &pComponent : m_vpAll)
 		pComponent->OnShutdown();
 
+	m_MapCovers.Shutdown(Graphics());
 	m_UI.OnShutdown();
 	m_LocalServer.KillServer();
 }

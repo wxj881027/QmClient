@@ -716,6 +716,7 @@ MACRO_CONFIG_COL(QmHookCollPressedTip, qm_hook_coll_pressed_tip, 0xFF2BFFC0, CFG
 
 // HUD Dynamic Island - 灵动岛/HUD 编辑器
 MACRO_CONFIG_INT(QmFinishSummary, qm_finish_summary, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show finish summary in Dynamic Island")
+MACRO_CONFIG_INT(QmFinishSummaryPreview, qm_finish_summary_preview, 0, 0, 1, CFGFLAG_CLIENT, "Preview finish summary")
 MACRO_CONFIG_INT(QmHudIslandUseOriginalStyle, qm_hud_island_use_original_style, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use original style for Dynamic Island")
 MACRO_CONFIG_INT(QmHudIslandShowTeam, qm_hud_island_show_team, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show team on HUD Dynamic Island")
 MACRO_CONFIG_INT(QmHudIslandAlwaysShowTrackDetails, qm_hud_island_always_show_track_details, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Always show song title and artist")

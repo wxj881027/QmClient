@@ -3,6 +3,8 @@
 
 #include "map_progress.h"
 
+#include <base/vmath.h>
+
 #include <algorithm>
 #include <bitset>
 #include <cstdint>
@@ -24,6 +26,36 @@ namespace QmCheckpointGuide
 		int m_TargetIndex = -1;
 		bool m_Warning = false;
 		std::vector<int> m_vRoute;
+
+		// 线段固定在地图上，只裁掉角色脚下的起始部分。
+		template<typename FGetPos, typename FDraw>
+		void VisitSegments(std::vector<int>::const_iterator Entry, vec2 StartCenter, vec2 Position, float Radius, FGetPos GetPos, FDraw Draw) const
+		{
+			vec2 From = StartCenter;
+			const float RadiusSquared = Radius * Radius;
+			bool Clipping = distance_squared(From, Position) <= RadiusSquared;
+			for(auto It = Entry; It != m_vRoute.end(); ++It)
+			{
+				const vec2 To = GetPos(*It);
+				if(Clipping && distance_squared(To, Position) <= RadiusSquared)
+				{
+					From = To;
+					continue;
+				}
+				if(Clipping)
+				{
+					// 起点在圆内、终点在圆外，沿线段方向的最后一个交点就是出圆点。
+					vec2 aHits[2];
+					const int Hits = intersect_line_circle(From, To, Position, Radius, aHits);
+					if(Hits > 0)
+						From = aHits[Hits - 1];
+					Clipping = false;
+				}
+				if(distance_squared(From, To) > 0.01f)
+					Draw(From, To);
+				From = To;
+			}
+		}
 	};
 
 	class CPlanner
@@ -46,6 +78,12 @@ namespace QmCheckpointGuide
 		static bool IsReturn(int Type)
 		{
 			return Type == TILE_TELECHECKIN || Type == TILE_TELECHECKINEVIL;
+		}
+
+		bool StopsAt(const QmMapProgress::STile &Tile) const
+		{
+			return IsReturn(Tile.m_TeleType) || Tile.m_TeleType == TILE_TELEIN || Tile.m_TeleType == TILE_TELEINEVIL ||
+				(Tile.m_TeleType == TILE_TELECHECK && Tile.m_TeleNumber > 0 && Tile.m_TeleNumber < 256 && Tile.m_TeleNumber != m_Checkpoint);
 		}
 
 	public:
@@ -97,6 +135,32 @@ namespace QmCheckpointGuide
 		int Checkpoint() const { return m_Checkpoint; }
 		const SResult &Result() const { return m_Result; }
 
+		template<typename FReadTile>
+		std::vector<int>::const_iterator FindRouteEntry(int Width, int StartIndex, FReadTile ReadTile) const
+		{
+			const auto &vRoute = m_Result.m_vRoute;
+			const auto Current = std::find(vRoute.begin(), vRoute.end(), StartIndex);
+			if(Current != vRoute.end() || vRoute.empty() || Width <= 0 || StartIndex < 0)
+				return Current;
+
+			// 切弯时可能短暂经过路线旁的一格，只接回当前能直接走到的相邻格。
+			const auto Tile = ReadTile(StartIndex);
+			if(Tile.Blocked() || StopsAt(Tile))
+				return vRoute.end();
+			for(auto It = vRoute.end(); It != vRoute.begin();)
+			{
+				--It;
+				const int Dx = *It % Width - StartIndex % Width;
+				const int Dy = *It / Width - StartIndex / Width;
+				if((Dx == 0 && Dy == -1 && !(Tile.m_Restrictions & CANTMOVE_UP)) ||
+					(Dx == 0 && Dy == 1 && !(Tile.m_Restrictions & CANTMOVE_DOWN)) ||
+					(Dy == 0 && Dx == -1 && !(Tile.m_Restrictions & CANTMOVE_LEFT)) ||
+					(Dy == 0 && Dx == 1 && !(Tile.m_Restrictions & CANTMOVE_RIGHT)))
+					return It;
+			}
+			return vRoute.end();
+		}
+
 		// 读取回调与地图进度共用 STile/MakeTile，生产端实时补入当前角色的阻挡状态。
 		template<typename FReadTile>
 		void Update(int Width, int Height, int StartIndex, FReadTile &&ReadTile)
@@ -145,11 +209,9 @@ namespace QmCheckpointGuide
 				const auto &Tile = Label.m_Tile;
 				if(IsReturn(Tile.m_TeleType))
 					ReturnCost = std::min(ReturnCost, Cost);
-				if(IsReturn(Tile.m_TeleType) || Tile.m_TeleType == TILE_TELEIN || Tile.m_TeleType == TILE_TELEINEVIL)
-					continue;
-				if(Tile.m_TeleType == TILE_TELECHECK && Tile.m_TeleNumber > 0 && Tile.m_TeleNumber < 256 && Tile.m_TeleNumber != m_Checkpoint)
+				if(StopsAt(Tile))
 				{
-					if(!m_Collected.test((size_t)Tile.m_TeleNumber))
+					if(Tile.m_TeleType == TILE_TELECHECK && !m_Collected.test((size_t)Tile.m_TeleNumber))
 					{
 						if(Target < 0 || Cost < m_vLabels[(size_t)Target].m_Cost)
 							Target = Index;

@@ -10,6 +10,8 @@
 #include <generated/protocol.h>
 
 #include <game/client/QmUi/QmFinishSummary.h>
+#include <game/client/QmUi/QmFinishSummaryMotion.h>
+#include <game/client/QmUi/QmFinishSummarySurface.h>
 #include <game/client/QmUi/QmLayout.h>
 #include <game/client/QmUi/QmLegacyMediaHud.h>
 #include <game/client/QmUi/QmLyricsHud.h>
@@ -133,8 +135,11 @@ class CHud : public CComponent
 		float m_TargetX = 0.0f;
 		float m_TargetWidth = 0.0f;
 		float m_TargetHeight = 0.0f;
+		uint64_t m_FinishSummaryId = 0;
 		float m_FinishSummaryProgress = 0.0f;
+		float m_FinishSummaryCloseStart = 0.0f;
 		qm_finish_summary::CContentCache m_FinishSummaryContent;
+		qm_finish_summary::CCardMotion m_FinishSummaryMotion;
 		float m_TargetTitleAlpha = 0.0f;
 		float m_TargetTitleOffset = 0.0f;
 		float m_TargetSpectatorAlpha = 0.0f;
@@ -242,8 +247,11 @@ class CHud : public CComponent
 			m_TargetX = 0.0f;
 			m_TargetWidth = 0.0f;
 			m_TargetHeight = 0.0f;
+			m_FinishSummaryId = 0;
 			m_FinishSummaryProgress = 0.0f;
+			m_FinishSummaryCloseStart = 0.0f;
 			m_FinishSummaryContent = {};
+			m_FinishSummaryMotion = {};
 			m_TargetTitleAlpha = 0.0f;
 			m_TargetTitleOffset = 0.0f;
 			m_TargetSpectatorAlpha = 0.0f;
@@ -462,6 +470,7 @@ class CHud : public CComponent
 	float GetTopIslandAvoidanceRight() const;
 	IGraphics::CRenderTargetHandle MediaIslandBlurBackdrop();
 	void RenderMediaIsland();
+	qm_finish_summary::CSurface m_FinishSummarySurface;
 	void RenderLyricsIsland();
 	CUIRect m_LyricsIslandAnchor{};
 	bool m_LyricsIslandAnchorValid = false;

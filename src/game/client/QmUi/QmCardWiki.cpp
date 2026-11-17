@@ -548,7 +548,7 @@ namespace
 			"qm:friend_notify",
 			Localizable("Watches your friend list and reports friends coming online or joining your map, with optional automatic greeting."),
 			Localizable("Turn on \"Notify when friends come online\" and \"Auto refresh server list\", then tune \"Refresh interval\"; \"Auto greet friends entering map\" is optional."),
-			Localizable("Auto greet posts a public chat line a few seconds after a friend joins, so leave \"Greeting text\" empty on strict servers."),
+			Localizable("Auto greet waits 1 second after a friend joins, then sends a public greeting when chat is available. Leave \"Greeting text\" empty on strict servers."),
 		},
 		{
 			"qm:gores",

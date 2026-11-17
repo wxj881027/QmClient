@@ -380,10 +380,7 @@ public:
 
 	static bool CalculateGaussianBlurKernel(const SGaussianBlurParams &Params, std::array<float, GAUSSIAN_BLUR_MAX_RADIUS + 1> &aWeights);
 
-	// Fixed vec4-only layout shared by the threaded command buffer, GLSL and
-	// Vulkan std140 UBO. The shader treats this as 45 consecutive vec4 values:
-	// [0..7] are common fields, every item occupies three vec4 values and the
-	// final value maps the SDF quad to an optional backdrop texture.
+	// 命令缓冲与各后端共享 vec4 布局；卫星数组后依次存放底图映射及附卡参数。
 	struct SMediaIslandSdfParams
 	{
 		static constexpr int DATA_RECT = 0;
@@ -397,7 +394,9 @@ public:
 		static constexpr int DATA_ITEM_BASE = 8;
 		static constexpr int DATA_ITEM_STRIDE = 3;
 		static constexpr int DATA_BACKDROP_UV = DATA_ITEM_BASE + MEDIA_ISLAND_SDF_MAX_ITEMS * DATA_ITEM_STRIDE;
-		static constexpr int DATA_COUNT = DATA_BACKDROP_UV + 1;
+		static constexpr int DATA_CARD_RECT = DATA_BACKDROP_UV + 1;
+		static constexpr int DATA_CARD_PARAMS = DATA_CARD_RECT + 1;
+		static constexpr int DATA_COUNT = DATA_CARD_PARAMS + 1;
 
 		std::array<vec4, DATA_COUNT> m_aData{};
 
@@ -704,6 +703,14 @@ public:
 		float m_W = 0.0f;
 		float m_H = 0.0f;
 		float m_Alpha = 1.0f;
+		// 预先绘好圆角的离屏表面可绕中心轻微倾斜，单位为弧度。
+		float m_TiltX = 0.0f;
+		float m_TiltY = 0.0f;
+		float m_TopPinch = 0.0f;
+		// 绘制表面边界的覆盖率过渡宽度，使用当前映射坐标。
+		float m_EdgeFeather = 0.0f;
+		// 整张离屏表面使用后端原生纹理方向，自定义UV仍沿用原有约定。
+		bool m_NativeTextureCoordinates = false;
 		// 已合成背景的实时画面直接复制颜色，避免纹理 Alpha 再混合一次。
 		bool m_Opaque = false;
 		int m_Corners = 0;
@@ -717,6 +724,35 @@ public:
 		float m_V0 = 1.0f;
 		float m_U1 = 1.0f;
 		float m_V1 = 0.0f;
+
+		// 以表面的几何上缘为起点向下减弱黑色，独立于纹理方向与边缘覆盖率。
+		float m_TopShade = 0.0f;
+
+		float BrightnessAt(float LocalY) const
+		{
+			return 1.0f - std::clamp(m_TopShade, 0.0f, 1.0f) * (1.0f - std::clamp(LocalY, 0.0f, 1.0f));
+		}
+
+		vec2 ProjectPoint(vec2 Point) const
+		{
+			if(m_TopPinch > 0.0f && m_H > 0.0f)
+			{
+				const float FromBottom = std::clamp(1.0f - (Point.y - m_Y) / m_H, 0.0f, 1.0f);
+				Point.x = mix(Point.x, m_X + m_W * 0.5f, FromBottom * FromBottom * std::clamp(m_TopPinch, 0.0f, 0.85f));
+			}
+			if((m_TiltX == 0.0f && m_TiltY == 0.0f) || m_W <= 0.0f || m_H <= 0.0f)
+				return Point;
+			const float TiltX = std::clamp(m_TiltX, -0.25f, 0.25f);
+			const float TiltY = std::clamp(m_TiltY, -0.25f, 0.25f);
+			const vec2 Center(m_X + m_W * 0.5f, m_Y + m_H * 0.5f);
+			const vec2 Local = Point - Center;
+			const float Z = Local.y * std::sin(TiltX);
+			const float RotatedX = Local.x * std::cos(TiltY) + Z * std::sin(TiltY);
+			const float RotatedY = Local.y * std::cos(TiltX);
+			const float Depth = -Local.x * std::sin(TiltY) + Z * std::cos(TiltY);
+			const float Distance = std::max(m_W, m_H) * 2.5f;
+			return Center + vec2(RotatedX, RotatedY) * (Distance / (Distance + Depth));
+		}
 
 		// 整幅预览按实际后端的纹理原点取样，不改变导出像素的读回方向。
 		void SetNativeTextureCoordinates(EBackendType Backend)

@@ -1751,12 +1751,6 @@ int CMenus::DoButton_CheckBox_Common_WithLabelElement(const void *pId, const cha
 	return ProcessInput ? Ui()->DoButtonLogic(pId, 0, pRect, Flags) : 0;
 }
 
-static void DrawSettingsSearchHighlight(CUi *pUi, const CUIRect &Rect)
-{
-	const qm_settings_highlight::SStyle Style = qm_settings_highlight::Resolve(pUi->QmControlTheme(), Rect);
-	DrawRoundedSurface(pUi, Rect, Style.m_Fill, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), Style.m_Radius, 0.0f);
-}
-
 int CMenus::DoSettingsButton_CheckBox(int Page, int Tab, const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect)
 {
 	return DoSettingsButton_CheckBox(Page, Tab, -1, pId, pTextId, pText, Checked, pRect);
@@ -1777,12 +1771,9 @@ int CMenus::DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void 
 {
 	Ui()->DoConfigTooltip(pId, pRect, pId);
 	const float BodySize = RequestedFontSize > 0.0f ? RequestedFontSize : CurrentSettingsContentMetrics().m_BodySize;
-	// 搜索结果逐行定位：命中行先铺一层浅色底，再按普通控件绘制，文字与开关保持可读。
-	const bool SearchReveal = !m_MenuTextPlanCollecting && qm_settings_reveal::OnRow(pTextId, pText, *pRect);
-	if(SearchReveal)
-		DrawSettingsSearchHighlight(Ui(), *pRect);
 	if(pTextId == nullptr)
 	{
+		const qm_settings_highlight::CScopedLabelColor LabelColor(TextRender(), !m_MenuTextPlanCollecting && qm_settings_reveal::OnRow(nullptr, pText, *pRect));
 		return DoButton_CheckBox_Common_WithLabelElement(pId, pText, Checked ? "X" : "", pRect, BUTTONFLAG_LEFT, nullptr, ProcessInput, BodySize);
 	}
 	const auto Layout = ui_widget::ResolveBooleanControlLayout(*pRect, pText != nullptr && pText[0] != '\0');
@@ -1790,7 +1781,7 @@ int CMenus::DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void 
 	const CUIRect &ToggleRect = Layout.m_ControlRect;
 	SLabelProperties Props = LabelProps;
 	Props.m_MaxWidth = Label.w;
-	DoSettingsMenuLabel(Page, Tab, Subtab, pTextId, &Label, pText, BodySize, TEXTALIGN_ML, Props, -1, false);
+	DoSettingsMenuLabel(Page, Tab, Subtab, pTextId, &Label, pText, BodySize, TEXTALIGN_ML, Props);
 	if(!m_MenuTextPlanCollecting)
 		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pId, pRect, pId, &Label);
 	if(m_MenuTextPlanCollecting)
@@ -1834,7 +1825,7 @@ int CMenus::DoSettingsButton_CheckBoxAutoVMarginAndSet(int Page, int Tab, const 
 	return Logic;
 }
 
-void CMenus::DoSettingsLabel(int Page, int Tab, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps, bool Render, const bool DrawSearchBackground)
+void CMenus::DoSettingsLabel(int Page, int Tab, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps, bool Render)
 {
 	const auto Presentation = ResolveSettingsLabelPresentation(pTextId, pText, [](const char *pKey) { return Localize(pKey); });
 	pText = Presentation.m_pText;
@@ -1842,11 +1833,7 @@ void CMenus::DoSettingsLabel(int Page, int Tab, const char *pTextId, const CUIRe
 		GameClient()->m_Tooltips.DoSmallToolTip(Presentation.m_pTipId, pRect, Presentation.m_pTip, CurrentSettingsContentMetrics().m_SmallSize);
 	pText = Ui()->PrepareCardLabel(pRect, pText, Render && !m_MenuTextPlanCollecting);
 	SLabelProperties EffectiveProps = LabelProps;
-	if(Render && !m_MenuTextPlanCollecting && qm_settings_reveal::OnRow(pTextId, pText, *pRect))
-	{
-		if(DrawSearchBackground)
-			DrawSettingsSearchHighlight(Ui(), *pRect);
-	}
+	const qm_settings_highlight::CScopedLabelColor LabelColor(TextRender(), Render && !m_MenuTextPlanCollecting && qm_settings_reveal::OnRow(pTextId, pText, *pRect));
 	if(Page == SETTINGS_TCLIENT && Size > 0.0f)
 	{
 		EffectiveProps.m_MaxWidth = EffectiveProps.m_MaxWidth >= 0.0f ? EffectiveProps.m_MaxWidth : pRect->w;
@@ -1869,19 +1856,18 @@ void CMenus::DoSettingsLabel(int Page, int Tab, const char *pTextId, const CUIRe
 	DoSettingsLabelStreamed(Element, pRect, pText, Size, Align, EffectiveProps, -1, nullptr, Render);
 }
 
-void CMenus::DoSettingsMenuLabel(int Page, int Tab, int Subtab, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &Props, int MaxWidth, const bool DrawSearchBackground)
+void CMenus::DoSettingsMenuLabel(int Page, int Tab, int Subtab, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &Props, int MaxWidth)
 {
+	const char *pFullText = pText;
 	const auto Presentation = ResolveSettingsLabelPresentation(pTextId, pText, [](const char *pKey) { return Localize(pKey); });
 	pText = Presentation.m_pText;
 	if(Presentation.m_pTip != nullptr && !m_MenuTextPlanCollecting && !Ui()->RenderOnly() && !Ui()->DrawingSuppressed())
 		GameClient()->m_Tooltips.DoSmallToolTip(Presentation.m_pTipId, pRect, Presentation.m_pTip, CurrentSettingsContentMetrics().m_SmallSize);
 	pText = Ui()->PrepareCardLabel(pRect, pText, !m_MenuTextPlanCollecting);
 	SLabelProperties EffectiveProps = Props;
-	if(!m_MenuTextPlanCollecting && qm_settings_reveal::OnRow(pTextId, pText, *pRect))
-	{
-		if(DrawSearchBackground)
-			DrawSettingsSearchHighlight(Ui(), *pRect);
-	}
+	const bool Highlight = !m_MenuTextPlanCollecting && (qm_settings_reveal::OnRow(pTextId, pText, *pRect) ||
+		(pFullText != pText && qm_settings_reveal::OnRow(nullptr, pFullText, *pRect)));
+	const qm_settings_highlight::CScopedLabelColor LabelColor(TextRender(), Highlight);
 	if(Page == SETTINGS_TCLIENT && Size > 0.0f)
 	{
 		EffectiveProps.m_MaxWidth = EffectiveProps.m_MaxWidth >= 0.0f ? EffectiveProps.m_MaxWidth : (MaxWidth >= 0 ? (float)MaxWidth : pRect->w);
@@ -6705,8 +6691,6 @@ void CMenus::OnReset()
 void CMenus::OnShutdown()
 {
 	m_QmVoteMenu.m_Loader.Suspend();
-	// 图形接口此刻仍存活，地图库封面的 GPU 纹理必须在这一步释放。
-	m_QmVoteMenu.m_Covers.Shutdown(Graphics());
 	m_ScreenshotEditor.Close(this);
 	m_TranslateProbe.Cancel();
 	m_LocalSaveDisplay.Reset();
@@ -8422,8 +8406,6 @@ void CMenus::OnUpdate()
 
 void CMenus::OnRender()
 {
-	// 关菜单和切页后继续完成已请求的封面，重开时直接复用纹理。
-	m_QmVoteMenu.m_Covers.Update(Http(), Engine(), Graphics(), Storage(), Client()->LocalTime());
 	m_BrowserColumnResizeCursor = false;
 	PumpDemoScreenshotWatermark();
 	// 引擎侧（Windows 双击 .poses、poses_open 命令）缺少地图时留下的请求：

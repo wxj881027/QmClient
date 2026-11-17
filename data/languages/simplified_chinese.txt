@@ -1322,8 +1322,8 @@ Auto greet friend text
 Auto greet friends entering map
 == 自动问候进图的好友
 
-Auto greet posts a public chat line a few seconds after a friend joins, so leave "Greeting text" empty on strict servers.
-== 自动问候会在好友进图几秒后公开发一条聊天；管得严的服务器上就把问候语留空。
+Auto greet waits 1 second after a friend joins, then sends a public greeting when chat is available. Leave "Greeting text" empty on strict servers.
+== 好友进图满 1 秒后，聊天允许发送时会公开打招呼。在限制自动发言的服务器上，将「打招呼文本」留空即可关闭自动问候。
 
 Auto hammer while firing; press again to cancel.
 == 按住开火时自动挥锤；再按一次取消。
@@ -7316,8 +7316,8 @@ Import merges friends and keeps local duplicates by default. Codes contain priva
 Imported
 == 导入
 
-Improved +%s
-== 进步 +%s
+Improved -%s
+== 进步 -%s
 
 Improved anti ping
 == 改进版延迟补偿
@@ -8038,9 +8038,6 @@ Last seen (DDStats): %s
 
 Last successful sync: %s
 == 上次成功同步：%s
-
-Last sync
-== 上次同步
 
 Last teleport
 == 上次传送
@@ -11383,6 +11380,9 @@ Preview dummy nameplate
 
 Preview failed. Check the image and Logo, then retry.
 == 预览失败，请检查图片和 Logo 后重试。
+
+Preview finish summary
+== 预览结算卡
 
 Preview hook collision colors and line styles
 == 预览钩子辅助线颜色和线条样式
@@ -14960,8 +14960,8 @@ Slow down the demo
 Slower
 == 较慢
 
-Slower -%s
-== 退步 -%s
+Slower +%s
+== 退步 +%s
 
 Slower export playback
 == 降低导出播放速度

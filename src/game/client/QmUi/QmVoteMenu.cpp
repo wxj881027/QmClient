@@ -190,7 +190,7 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		if(Thumbnail.empty() || Rect.w <= 0.0f || Rect.h <= 0.0f)
 			return;
 		CQmMapCovers::SImage Image;
-		if(!State.m_Covers.Get(Thumbnail.c_str(), Role, &Image))
+		if(!GameClient()->m_MapCovers.Get(Thumbnail.c_str(), Role, &Image))
 			return;
 		const float Alpha = Ui()->ControlAlphaScale();
 		if(Alpha <= 0.001f)
@@ -214,7 +214,7 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 			return;
 		const auto &Map = State.m_vMaps[State.m_vVisible[Row]];
 		CQmMapCovers::SImage Image;
-		State.m_Covers.Get(Map.m_Thumbnail.c_str(), CQmMapCovers::ERole::ROW, &Image);
+		GameClient()->m_MapCovers.Get(Map.m_Thumbnail.c_str(), CQmMapCovers::ERole::ROW, &Image);
 	};
 	CUIRect Refresh, Search, Exclude;
 	Header.VSplitRight(28.0f, &Header, &Refresh);

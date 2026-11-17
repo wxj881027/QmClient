@@ -4,12 +4,15 @@
 #include "finish_summary_data.h"
 #include "finish_summary_state.h"
 
+#include <engine/graphics.h>
+
 #include <game/client/component.h>
 
 #include <array>
 #include <memory>
 
 class IHttpRequest;
+class CManagedTeeRenderInfo;
 
 class CQmFinishSummary : public CComponent
 {
@@ -37,11 +40,14 @@ class CQmFinishSummary : public CComponent
 	};
 	std::array<SRequest, static_cast<size_t>(EQuery::COUNT)> m_aRequests;
 	QmFinishSummary::CState m_State;
+	std::shared_ptr<CManagedTeeRenderInfo> m_pManagedTeeRenderInfo;
 	QmFinishSummary::SRemoteData m_Data;
 	QmFinishSummary::SRemoteData m_Before;
 	QmFinishSummary::ECommunity m_Community = QmFinishSummary::ECommunity::NONE;
 	std::string m_Map;
 	std::string m_Player;
+	IGraphics::CTextureHandle m_CoverTexture;
+	double m_NextCoverRequest = 0.0;
 	int m_ClientId = -1;
 	int m_Connection = -1;
 	int m_RunStartTick = -1;
@@ -51,6 +57,7 @@ class CQmFinishSummary : public CComponent
 	uint64_t m_Generation = 0;
 	std::optional<int64_t> m_PreviousBest;
 	bool m_PreviousHistoryKnown = false;
+	bool m_QueriesEnabled = false;
 	std::vector<QmFinishSummary::SOnlineTime> m_vFinishOnlineTimes;
 	bool m_FinishOnlineTimesKnown = false;
 
@@ -61,6 +68,8 @@ class CQmFinishSummary : public CComponent
 	void UpdateRequests(double Now);
 	void MergeResult(EQuery Query, const QmFinishSummary::SRemoteData &Result);
 	void RefreshSnapshot();
+	void UpdatePreview();
+	void CollectOnlineTimes(std::vector<QmFinishSummary::SOnlineTime> &vTimes) const;
 	void StartRun(int StartTick);
 	void Finish(int64_t TimeMs, std::optional<int64_t> Difference, bool PersonalRecord, bool Structured);
 	static double Now();
@@ -76,6 +85,9 @@ public:
 	void OnStateChange(int NewState, int OldState) override;
 	void OnShutdown() override { OnReset(); }
 	const QmFinishSummary::SSnapshot *Snapshot() const { return m_State.Snapshot(); }
+	const CManagedTeeRenderInfo *TeeRenderInfo() const { return m_pManagedTeeRenderInfo.get(); }
+	IGraphics::CTextureHandle CoverTexture() const;
+	bool SuppressesFinishMessage(int ClientId, int64_t TimeMs) const;
 	bool Visible() const { return m_State.Visible(); }
 	void SetExpanded(bool Expanded) { m_State.SetExpanded(Expanded, Now()); }
 };

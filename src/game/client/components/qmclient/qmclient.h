@@ -276,6 +276,7 @@ public:
 	void SaveTitleProfile(const char *pTitle, const char *pBoundName, const char *pStyle, EQmSponsorChatStyle ChatStyle, const SQmTitleAppearance &Appearance);
 	void RefreshTitleProfile();
 	bool TitleBusy() const { return m_pTitleOperation != nullptr || m_TitleProfileRefreshStarted >= 0; }
+	bool CanRefreshTitleProfile() const { return !TitleBusy() && m_aTitleToken[0] != '\0'; }
 	bool TitleAuthenticated() const { return m_TitleAuthenticated; }
 	const char *TitleStatus() const { return m_pTitleStatus; }
 	const char *TitleText() const { return m_aTitleText; }

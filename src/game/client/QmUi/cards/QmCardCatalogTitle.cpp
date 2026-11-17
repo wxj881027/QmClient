@@ -272,8 +272,21 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 			TitleCtx.m_pAnim = nullptr;
 			TitleCtx.m_pTree = nullptr;
 		}
-		const bool Enabled = !ReadOnly && !Auth.TitleBusy() && !pMenus->Ui()->IsPopupOpen() && !pMenus->GameClient()->m_GameConsole.IsActive();
+		const bool InputBlocked = pMenus->Ui()->IsPopupOpen() || pMenus->GameClient()->m_GameConsole.IsActive();
+		const bool Enabled = !ReadOnly && !Auth.TitleBusy() && !InputBlocked;
 		CSettingsContentLayoutFlow Flow(Content);
+		const auto PreviewButton = [&](CButtonContainer &Button, EQmIcon Icon, const char *pGlyph, const CUIRect &Rect, bool Available, const char *pHint) {
+			const bool Clicked = pMenus->Ui()->DoButton_QmIcon(&Button, Icon, pGlyph, 0, &Rect, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Available && !InputBlocked) != 0;
+			if(!Flow.Input() || ReadOnly)
+				return false;
+			pMenus->GameClient()->m_Tooltips.DoToolTip(&Button, &Rect, pHint);
+			return Clicked;
+		};
+		const auto SaveButton = [&](CButtonContainer &Button, const CUIRect &Rect) {
+			const bool CanSave = Auth.TitleAuthenticated() && !Auth.TitleBusy() && (!Draft.m_BindName || Draft.m_Name.GetString()[0]);
+			if(PreviewButton(Button, EQmIcon::CHECK, "\xEE\x86\x82", Rect, CanSave, Localize("Save")))
+				Auth.SaveTitleProfile(Draft.m_Title.GetString(), Draft.m_BindName ? Draft.m_Name.GetString() : "", Auth.TitleProfileStyle(), static_cast<EQmSponsorChatStyle>(g_Config.m_QmSponsorChatStyle), QmTitleDraftAppearance());
+		};
 		const auto RowAction = [&](const char *pId, const auto &Action) {
 			CUIRect Row;
 			if(Flow.Control(pId, LineHeight, Row))
@@ -355,7 +368,7 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 			CUIRect ChatPreview, ChatPreviewLabel, ChatPreviewArea;
 			const bool HasPreview = Flow.Control("title-chat-preview", ChatPreviewHeight, ChatPreview);
 			Flow.Space(LineSpacing);
-			if(HasPreview && Flow.Drawing() && !pMenus->Ui()->DrawingSuppressed())
+			if(HasPreview)
 			{
 				// 标题行按按钮高度开，保存/刷新两个图标就摆在这一行的右端。
 				ChatPreview.HSplitTop(Metrics.m_ButtonHeight, &ChatPreviewLabel, &ChatPreviewArea);
@@ -364,6 +377,12 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 				ChatPreviewLabel.VSplitRight(LineSpacing * 0.5f, &ChatPreviewLabel, nullptr);
 				ChatPreviewLabel.VSplitRight(Metrics.m_ButtonHeight, &ChatPreviewLabel, &PreviewSaveRect);
 				ChatPreviewLabel.VSplitRight(LineSpacing, &ChatPreviewLabel, nullptr);
+				SaveButton(s_SaveButton, PreviewSaveRect);
+				if(PreviewButton(s_RefreshButton, EQmIcon::ARROW_ROTATE_RIGHT, "\xEE\x80\xB6", PreviewRefreshRect, Auth.CanRefreshTitleProfile(), Localize("Refresh")))
+					Auth.RefreshTitleProfile();
+			}
+			if(HasPreview && Flow.Drawing() && !pMenus->Ui()->DrawingSuppressed())
+			{
 				{
 					const ColorRGBA PreviousTextColor = pMenus->TextRender()->GetTextColor();
 					pMenus->TextRender()->TextColor(ui_token::color::TEXT_TIP);
@@ -371,12 +390,6 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 					pMenus->Ui()->DoLabel(&ChatPreviewLabel, Localize("Chat message preview"), TipSize, TEXTALIGN_ML);
 					pMenus->TextRender()->TextColor(PreviousTextColor);
 				}
-				if(pMenus->Ui()->DoButton_QmIcon(&s_SaveButton, EQmIcon::CHECK, "\xEE\x86\x82", Enabled ? 0 : -1, &PreviewSaveRect, IGraphics::CORNER_ALL) && Enabled && Auth.TitleAuthenticated() && (!Draft.m_BindName || Draft.m_Name.GetString()[0]))
-					Auth.SaveTitleProfile(Draft.m_Title.GetString(), Draft.m_BindName ? Draft.m_Name.GetString() : "", Auth.TitleProfileStyle(), static_cast<EQmSponsorChatStyle>(g_Config.m_QmSponsorChatStyle), QmTitleDraftAppearance());
-				pMenus->GameClient()->m_Tooltips.DoToolTip(&s_SaveButton, &PreviewSaveRect, Localize("Save"));
-				if(pMenus->Ui()->DoButton_QmIcon(&s_RefreshButton, EQmIcon::ARROW_ROTATE_RIGHT, "\xEE\x80\xB6", Enabled ? 0 : -1, &PreviewRefreshRect, IGraphics::CORNER_ALL) && Enabled)
-					Auth.RefreshTitleProfile();
-				pMenus->GameClient()->m_Tooltips.DoToolTip(&s_RefreshButton, &PreviewRefreshRect, Localize("Refresh"));
 				// 标题和预览块之间留一个行距，别贴在一起。
 				ChatPreviewArea.HSplitTop(LineSpacing * 0.6f, nullptr, &ChatPreviewArea);
 				pMenus->Ui()->ClipEnable(&ChatPreviewArea);
@@ -467,7 +480,8 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 			}
 
 			CUIRect Preview, PreviewLabel, TitlePreviewArea;
-			if(Flow.Control("title-finished-preview", PreviewHeight, Preview) && Flow.Drawing() && !pMenus->Ui()->DrawingSuppressed())
+			const bool HasPreview = Flow.Control("title-finished-preview", PreviewHeight, Preview);
+			if(HasPreview)
 			{
 				// 保存放在预览区右上角：位置贴着它作用的这块区域，不用回头找整行大按钮。
 				static CButtonContainer s_SaveAppearance;
@@ -475,6 +489,10 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 				Preview.VSplitRight(Metrics.m_ButtonHeight, &Preview, &SaveAppearanceRect);
 				SaveAppearanceRect.h = Metrics.m_ButtonHeight;
 				Preview.VSplitRight(LineSpacing * 0.5f, &Preview, nullptr);
+				SaveButton(s_SaveAppearance, SaveAppearanceRect);
+			}
+			if(HasPreview && Flow.Drawing() && !pMenus->Ui()->DrawingSuppressed())
+			{
 				Preview.HSplitTop(TipSize, &PreviewLabel, &TitlePreviewArea);
 				{
 					const ColorRGBA PreviousTextColor = pMenus->TextRender()->GetTextColor();
@@ -486,9 +504,6 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 				TitlePreviewArea.HSplitTop(LineSpacing * 0.6f, nullptr, &TitlePreviewArea);
 				TitlePreviewArea.Draw(ui_token::color::PREVIEW_SURFACE, IGraphics::CORNER_ALL, ui_token::radius::BASE);
 				TitlePreviewArea.Margin(TipSize * 0.45f, &TitlePreviewArea);
-				if(pMenus->Ui()->DoButton_QmIcon(&s_SaveAppearance, EQmIcon::CHECK, "\xEE\x86\x82", Enabled ? 0 : -1, &SaveAppearanceRect, IGraphics::CORNER_ALL) && Enabled && Auth.TitleAuthenticated() && (!Draft.m_BindName || Draft.m_Name.GetString()[0]))
-					Auth.SaveTitleProfile(Draft.m_Title.GetString(), Draft.m_BindName ? Draft.m_Name.GetString() : "", Auth.TitleProfileStyle(), static_cast<EQmSponsorChatStyle>(g_Config.m_QmSponsorChatStyle), QmTitleDraftAppearance());
-				pMenus->GameClient()->m_Tooltips.DoToolTip(&s_SaveAppearance, &SaveAppearanceRect, Localize("Save"));
 				pMenus->Ui()->ClipEnable(&TitlePreviewArea);
 				if(Auth.PlayerHasDeveloperBadge(pMenus->GameClient()->m_Snap.m_LocalClientId) && Auth.DeveloperBadge().Available())
 				{

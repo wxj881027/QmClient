@@ -964,20 +964,20 @@ turkish = "Arkadaş çevrimiçi bildirimini ve sunucu listesini otomatik yenilem
 polish = "Włącz powiadomienia o znajomych online i automatyczne odświeżanie listy serwerów, ustaw interwał; automatyczne powitanie jest opcjonalne."
 
 [[message]]
-key = "Auto greet posts a public chat line a few seconds after a friend joins, so leave \"Greeting text\" empty on strict servers."
+key = "Auto greet waits 1 second after a friend joins, then sends a public greeting when chat is available. Leave \"Greeting text\" empty on strict servers."
 [message.translations]
-simplified_chinese = "自动问候会在好友进图几秒后公开发一条聊天；管得严的服务器上就把问候语留空。"
-traditional_chinese = "自動問候會在好友進圖幾秒後公開發一則聊天；管得嚴的伺服器上就把問候語留空。"
-japanese = "自動あいさつはフレンドが入って数秒後に公開チャットを送ります。厳しいサーバーではあいさつ文を空にしておきましょう。"
-korean = "자동 인사는 친구가 들어온 몇 초 뒤 공개 채팅을 보냅니다. 엄격한 서버에서는 인사 문구를 비워 두세요."
-russian = "Авто-приветствие через несколько секунд пишет в общий чат; на строгих серверах оставьте текст приветствия пустым."
-german = "Die automatische Begrüßung schreibt wenige Sekunden nach dem Join in den öffentlichen Chat; auf strengen Servern den Text leer lassen."
-spanish = "El saludo automático escribe en el chat público a los pocos segundos; en servidores estrictos deja el texto vacío."
-french = "Le salut automatique écrit dans le chat public quelques secondes après l'arrivée ; sur les serveurs stricts, laisse le texte vide."
-brazilian_portuguese = "A saudação automática escreve no chat público poucos segundos depois; em servidores rígidos, deixe o texto vazio."
-portuguese = "A saudação automática escreve no chat público poucos segundos depois; em servidores rígidos, deixa o texto vazio."
-turkish = "Otomatik selamlama, arkadaş girdikten birkaç saniye sonra genel sohbete yazar; katı sunucularda selamlama metnini boş bırak."
-polish = "Automatyczne powitanie pisze na publicznym czacie kilka sekund po wejściu; na surowych serwerach zostaw tekst powitania pusty."
+simplified_chinese = "好友进图满 1 秒后，聊天允许发送时会公开打招呼。在限制自动发言的服务器上，将「打招呼文本」留空即可关闭自动问候。"
+traditional_chinese = "好友進圖滿 1 秒後，聊天允許傳送時會在公頻打招呼。在限制自動發言的伺服器上，將「打招呼文本」留空即可關閉自動問候。"
+japanese = "フレンドが参加してから 1 秒待ち、チャットが送信可能になったら全体チャットであいさつします。自動発言を制限しているサーバーでは、あいさつ文を空欄にしておいてください。"
+korean = "친구가 입장하면 1초 기다린 뒤 채팅을 보낼 수 있을 때 전체 채팅으로 인사합니다. 자동 채팅을 제한하는 서버에서는 인사 문구를 비워 두세요."
+russian = "Через 1 секунду после входа друга клиент отправит приветствие в общий чат, как только можно будет писать. На серверах со строгими правилами оставьте текст приветствия пустым."
+german = "Nach dem Beitritt eines Freundes wartet der Client 1 Sekunde und grüßt im öffentlichen Chat, sobald er senden kann. Lass den Grußtext auf Servern mit strengen Regeln leer."
+spanish = "Cuando entra un amigo, el cliente espera 1 segundo y envía un saludo al chat público en cuanto puede. Deja el texto del saludo vacío en servidores con normas estrictas."
+french = "Quand un ami rejoint la partie, le client attend 1 seconde, puis le salue dans le chat public dès que l’envoi est possible. Sur les serveurs aux règles strictes, laisse le texte de salutation vide."
+brazilian_portuguese = "Quando um amigo entra, o cliente espera 1 segundo e envia uma saudação no chat público assim que pode. Em servidores com regras rígidas, deixe o texto da saudação em branco."
+portuguese = "Quando um amigo entra, o cliente espera 1 segundo e envia uma saudação no chat público assim que pode. Em servidores com regras rígidas, deixa o texto da saudação em branco."
+turkish = "Bir arkadaş katıldığında istemci 1 saniye bekler ve mesaj gönderebildiğinde genel sohbette selam verir. Kuralları katı olan sunucularda selamlama metnini boş bırak."
+polish = "Po dołączeniu znajomego klient czeka 1 sekundę, a potem wysyła powitanie na czacie publicznym, gdy tylko będzie to możliwe. Na serwerach z surowymi zasadami pozostaw tekst powitania pusty."
 
 [[message]]
 key = "Replaces or hides chat lines that match words on your own list before they are shown to you."

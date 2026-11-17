@@ -44,6 +44,7 @@ namespace QmFinishSummary
 	{
 		std::string m_Map;
 		std::string m_Mapper;
+		std::string m_Thumbnail;
 		std::string m_Category;
 		int m_Stars = -1;
 		int m_MapPoints = -1;
@@ -54,6 +55,7 @@ namespace QmFinishSummary
 		std::optional<int64_t> m_ChinaBestTimeMs;
 		bool m_ChinaRankKnown = false;
 		std::optional<int64_t> m_Points;
+		std::optional<int64_t> m_RankPoints;
 		std::optional<int64_t> m_CompletedMaps;
 		std::optional<int64_t> m_TotalMaps;
 		bool m_HistoryKnown = false;
@@ -70,6 +72,7 @@ namespace QmFinishSummary
 		ECommunity m_Community = ECommunity::NONE;
 		std::string m_Map;
 		std::string m_Mapper;
+		std::string m_Thumbnail;
 		std::string m_Category;
 		std::string m_Player;
 		std::string m_FinishedAt;
@@ -87,6 +90,7 @@ namespace QmFinishSummary
 		SValue m_TotalMaps;
 		SValue m_Points;
 		SValue m_PointsGained;
+		int64_t m_RankPointsGained = 0;
 	};
 
 	struct SOnlineTime
