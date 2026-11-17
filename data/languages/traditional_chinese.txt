@@ -10971,7 +10971,7 @@ Press "Select map" to choose a file, check the target server and player shown fo
 == 按選擇地圖挑檔案，核對上傳顯示的目標伺服器與玩家，再按上傳地圖；取消可中止。
 
 Press '%s' to show cursor.
-== 按「%s」顯示光標。
+== 按「%s」顯示光標
 
 Press a key…
 == 按任意鍵…

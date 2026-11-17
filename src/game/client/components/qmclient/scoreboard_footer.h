@@ -15,35 +15,26 @@ inline float QmScoreboardScrollPanelHeight(float ScreenHeight, float PanelTop)
 	return minimum(520.0f, maximum(0.0f, ScreenHeight - PanelTop - 30.0f));
 }
 
-// 计分板底栏：整宽媒体信息条在上，旁观者列表在下。
-struct SQmScoreboardFooterLayout
+// 计分板底栏：区块从上往下堆叠，宽度按实测内容收缩并水平居中，不再整宽占位。
+// ContentWidth 为该区块内容宽度（已含左右内边距）；返回矩形 w/h 为 0 表示该区块
+// 不存在——此时不推进游标，所以空区块不会在底栏中间留下空白。
+inline CUIRect QmScoreboardFooterBlock(CUIRect Area, float &CursorY, float ContentWidth, float Height, float Gap)
 {
-	CUIRect m_Media{};
-	CUIRect m_Spectators{};
-	// 未解锁光标时在底栏最下方提示怎么打开光标。
-	CUIRect m_Hint{};
-};
+	CUIRect Block{};
+	if(ContentWidth <= 0.0f || Height <= 0.0f || Area.w <= 0.0f)
+		return Block;
+	Block.w = minimum(ContentWidth, Area.w);
+	Block.h = Height;
+	Block.x = Area.x + (Area.w - Block.w) * 0.5f;
+	Block.y = CursorY;
+	CursorY = Block.y + Block.h + Gap;
+	return Block;
+}
 
-// 媒体条只在有歌曲信息时占位；它和旁观者区域之间保留一个间隙。
-// 旁观者区域先拿到可用上限，实际背景高度在文字测量后再收缩。
-inline SQmScoreboardFooterLayout QmScoreboardFooterLayout(CUIRect Area, bool HasMedia, bool HasSpectators, bool HasHint = false)
+// 从 CursorY 起还剩多少高度：旁观者面板按它收缩，任何区块都不越出底栏。
+inline float QmScoreboardFooterRemainingHeight(CUIRect Area, float CursorY)
 {
-	SQmScoreboardFooterLayout Layout;
-	if(HasHint)
-	{
-		Area.HSplitBottom(20.0f, &Area, &Layout.m_Hint);
-		if(HasMedia || HasSpectators)
-			Area.HSplitBottom(5.0f, &Area, nullptr);
-	}
-	if(HasMedia)
-	{
-		Area.HSplitTop(25.0f, &Layout.m_Media, &Area);
-		if(HasSpectators)
-			Area.HSplitTop(5.0f, nullptr, &Area);
-	}
-	if(HasSpectators)
-		Layout.m_Spectators = Area;
-	return Layout;
+	return maximum(0.0f, Area.y + Area.h - CursorY);
 }
 
 // 旁观者背景按实际行数收缩，避免人少时留下一大片空面板；

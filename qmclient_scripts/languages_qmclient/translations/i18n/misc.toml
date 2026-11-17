@@ -16598,7 +16598,7 @@ polish = "Dodatkowy odstęp między wierszami dziennika konsoli (procent)"
 [[message]]
 key = "'%s' not bound."
 [message.translations]
-simplified_chinese = "“%s”未绑定。"
+simplified_chinese = "「%s」未绑定。"
 traditional_chinese = "「%s」未綁定。"
 japanese = "「%s」は割り当てられていません。"
 korean = "'%s'이(가) 바인딩되지 않았습니다."
@@ -16678,8 +16678,8 @@ polish = "Ćwiczenie: przenieś siebie do kursora"
 [[message]]
 key = "Press '%s' to show cursor."
 [message.translations]
-simplified_chinese = "按“%s”显示光标。"
-traditional_chinese = "按「%s」顯示光標。"
+simplified_chinese = "按「%s」显示光标"
+traditional_chinese = "按「%s」顯示光標"
 japanese = "'%s' を押すとカーソルが表示されます。"
 korean = "'%s'을(를) 눌러 커서를 표시하세요."
 russian = "Нажмите '%s', чтобы показать курсор."

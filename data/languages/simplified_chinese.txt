@@ -233,7 +233,7 @@
 == '%s' 锁定了你们的队伍。比赛开始后，任何人使用 kill 都会导致整队死亡
 
 '%s' not bound.
-== “%s”未绑定。
+== 「%s」未绑定。
 
 '%s' unlocked your team.
 == '%s' 解锁了你们的队伍
@@ -11415,7 +11415,7 @@ Press "Select map" to choose a file, check the target server and player shown fo
 == 按选择地图挑文件，核对上传显示的目标服务器与玩家，再按上传地图；取消可中止。
 
 Press '%s' to show cursor.
-== 按“%s”显示光标。
+== 按「%s」显示光标
 
 Press a key, do a command: drag from the right dot of one node to the left dot of the next. Double-click a node to edit it, right-click a link to delete it, Ctrl+Z to undo.
 == 按下某个键、执行某条指令：从一个节点右侧的圆点拖到下一个节点左侧的圆点即可连线。双击节点改内容，右键连线删除，Ctrl+Z 撤销。
