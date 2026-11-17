@@ -18,6 +18,15 @@ SQmBadgeGeometryMesh QmBadgeGeometryMesh(EQmBadgeGeometry Kind)
 	case EQmBadgeGeometry::SUN_LEFT: return {g_aQmBadgeSunLeft, std::size(g_aQmBadgeSunLeft), {40, 24}};
 	case EQmBadgeGeometry::SUN_MIDDLE: return {g_aQmBadgeSunMiddle, std::size(g_aQmBadgeSunMiddle), {45, 24}};
 	case EQmBadgeGeometry::SUN_RIGHT: return {g_aQmBadgeSunRight, std::size(g_aQmBadgeSunRight), {32, 24}};
+	case EQmBadgeGeometry::EARTH_LEFT: return {g_aQmBadgeEarthLeft, std::size(g_aQmBadgeEarthLeft), {40, 24}};
+	case EQmBadgeGeometry::EARTH_MIDDLE: return {g_aQmBadgeEarthMiddle, std::size(g_aQmBadgeEarthMiddle), {45, 24}};
+	case EQmBadgeGeometry::EARTH_RIGHT: return {g_aQmBadgeEarthRight, std::size(g_aQmBadgeEarthRight), {32, 24}};
+	case EQmBadgeGeometry::MORNING_STAR_LEFT: return {g_aQmBadgeMorningStarLeft, std::size(g_aQmBadgeMorningStarLeft), {40, 24}};
+	case EQmBadgeGeometry::MORNING_STAR_MIDDLE: return {g_aQmBadgeMorningStarMiddle, std::size(g_aQmBadgeMorningStarMiddle), {45, 24}};
+	case EQmBadgeGeometry::MORNING_STAR_RIGHT: return {g_aQmBadgeMorningStarRight, std::size(g_aQmBadgeMorningStarRight), {32, 24}};
+	case EQmBadgeGeometry::BLACK_HOLE_LEFT: return {g_aQmBadgeBlackHoleLeft, std::size(g_aQmBadgeBlackHoleLeft), {40, 24}};
+	case EQmBadgeGeometry::BLACK_HOLE_MIDDLE: return {g_aQmBadgeBlackHoleMiddle, std::size(g_aQmBadgeBlackHoleMiddle), {45, 24}};
+	case EQmBadgeGeometry::BLACK_HOLE_RIGHT: return {g_aQmBadgeBlackHoleRight, std::size(g_aQmBadgeBlackHoleRight), {32, 24}};
 	case EQmBadgeGeometry::DEVELOPER_LETTERING: return {g_aQmBadgeDeveloperLettering, std::size(g_aQmBadgeDeveloperLettering), {91, 24}};
 	}
 	return {};

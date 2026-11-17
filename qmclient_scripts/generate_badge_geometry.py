@@ -234,9 +234,16 @@ def main():
     lines += mesh("Developer", "data/qmclient/developer_badge.svg", (0, 0, 91, 24), True)
     lines += mesh("DeveloperLettering", "data/qmclient/developer_badge.svg", (0, 0, 91, 24), True, True)
     lines += mesh("Logo", "data/qmclient/title_badges/logo.svg", (0, 0, 16, 16))
-    for style in ("Moon", "Sun"):
+    sponsor_styles = (
+        ("Moon", "moon"),
+        ("Sun", "sun"),
+        ("Earth", "earth"),
+        ("MorningStar", "morning_star"),
+        ("BlackHole", "black_hole"),
+    )
+    for style, filename in sponsor_styles:
         for part, left, right in (("Left", 0, 40), ("Middle", 40, 85), ("Right", 85, 117)):
-            lines += mesh(style + part, f"data/qmclient/title_badges/{style.lower()}.svg", (left, 0, right, 24))
+            lines += mesh(style + part, f"data/qmclient/title_badges/{filename}.svg", (left, 0, right, 24))
     lines += ["// clang-format on", "", "#endif", ""]
     OUTPUT.write_text("\n".join(lines), encoding="utf-8", newline="\n")
 
