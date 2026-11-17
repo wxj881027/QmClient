@@ -136,46 +136,40 @@ void CQmCheckpointGuide::OnRender()
 	const vec2 Position = GameClient()->m_aClients[Player.m_ClientId].m_RenderPos;
 	const int StartIndex = pCollision->GetPureMapIndex(Position);
 	const int64_t Now = time_get();
+	CCharacter *pCharacter = GameClient()->m_GameWorld.GetCharacterById(Player.m_ClientId);
+	if(!pCharacter)
+		pCharacter = GameClient()->m_PredictedWorld.GetCharacterById(Player.m_ClientId);
+	if(!pCharacter)
+		return;
+	const auto GetPos = [pCollision](int Index) { return pCollision->GetPos(Index); };
+	const auto ReadTile = [&](int Index) {
+		const CTeleTile &Tele = pCollision->TeleLayer()[Index];
+		const int Restrictions = pCollision->GetMoveRestrictions(IsGuideSwitchActive, pCharacter, GetPos(Index), 18.0f, Index);
+		return QmMapProgress::MakeTile(pCollision->GameLayer()[Index].m_Index,
+			pCollision->FrontLayer() ? pCollision->FrontLayer()[Index].m_Index : TILE_AIR,
+			Tele.m_Type, Tele.m_Number, Restrictions);
+	};
 	if(Now >= Player.m_NextSearch)
 	{
-		CCharacter *pCharacter = GameClient()->m_GameWorld.GetCharacterById(Player.m_ClientId);
-		if(!pCharacter)
-			pCharacter = GameClient()->m_PredictedWorld.GetCharacterById(Player.m_ClientId);
-		if(!pCharacter)
-			return;
-		Player.m_Planner.Update(pCollision->GetWidth(), pCollision->GetHeight(), StartIndex, [&](int Index) {
-			const CTeleTile &Tele = pCollision->TeleLayer()[Index];
-			const int Restrictions = pCollision->GetMoveRestrictions(IsGuideSwitchActive, pCharacter, pCollision->GetPos(Index), 18.0f, Index);
-			return QmMapProgress::MakeTile(pCollision->GameLayer()[Index].m_Index,
-				pCollision->FrontLayer() ? pCollision->FrontLayer()[Index].m_Index : TILE_AIR,
-				Tele.m_Type, Tele.m_Number, Restrictions);
-		});
+		Player.m_Planner.Update(pCollision->GetWidth(), pCollision->GetHeight(), StartIndex, ReadTile);
 		Player.m_NextSearch = Now + time_freq() / 10;
 	}
 	const auto &Result = Player.m_Planner.Result();
 	if(Result.m_TargetIndex < 0)
 		return;
-	const auto Begin = std::find(Result.m_vRoute.begin(), Result.m_vRoute.end(), StartIndex);
-	// 移出已计算的路线后等待下一轮局部搜索，不把旧路线直接接过墙角。
+	const auto Begin = Player.m_Planner.FindRouteEntry(pCollision->GetWidth(), StartIndex, ReadTile);
 	if(Begin == Result.m_vRoute.end())
 		return;
 	const ColorRGBA Color = Result.m_Warning ? ui_token::color::WARNING : ui_token::color::ACCENT_PRIMARY;
 	Graphics()->TextureClear();
 	Graphics()->QuadsBegin();
 	Graphics()->SetColor(Color.WithAlpha(0.85f));
-	vec2 From = Position;
-	for(auto It = Begin; It != Result.m_vRoute.end(); ++It)
-	{
-		const vec2 To = pCollision->GetPos(*It);
+	Result.VisitSegments(Begin, GetPos(StartIndex), Position, CCharacterCore::PhysicalSize(), GetPos, [&](vec2 From, vec2 To) {
 		const vec2 Delta = To - From;
-		if(length_squared(Delta) > 0.01f)
-		{
-			const vec2 Normal = vec2(-Delta.y, Delta.x) / length(Delta) * (Result.m_Warning ? 2.5f : 1.5f);
-			IGraphics::CFreeformItem Segment(From + Normal, To + Normal, From - Normal, To - Normal);
-			Graphics()->QuadsDrawFreeform(&Segment, 1);
-		}
-		From = To;
-	}
+		const vec2 Normal = vec2(-Delta.y, Delta.x) / length(Delta) * (Result.m_Warning ? 2.5f : 1.5f);
+		IGraphics::CFreeformItem Segment(From + Normal, To + Normal, From - Normal, To - Normal);
+		Graphics()->QuadsDrawFreeform(&Segment, 1);
+	});
 	const vec2 Target = pCollision->GetPos(Result.m_TargetIndex);
 	const float Pulse = Result.m_Warning ? 2.0f * std::sin((float)(Now % time_freq()) / time_freq() * 2.0f * pi) : 0.0f;
 	const float Half = 18.0f + Pulse;

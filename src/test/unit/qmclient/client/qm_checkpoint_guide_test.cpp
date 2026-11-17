@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <utility>
 #include <vector>
 
 namespace
@@ -25,7 +26,85 @@ namespace
 		{
 			Planner.Update(m_Width, m_Height, Y * m_Width + X, [&](int Index) { return m_vTiles[(size_t)Index]; });
 		}
+
+		auto RouteEntry(const QmCheckpointGuide::CPlanner &Planner, int Index) const
+		{
+			return Planner.FindRouteEntry(m_Width, Index, [&](int Tile) { return m_vTiles.at((size_t)Tile); });
+		}
 	};
+}
+
+TEST(QmCheckpointGuide, CrossingATileBoundaryAdvancesOnlyTheStartOfTheLine)
+{
+	SGuideMap Map(6, 1);
+	Map.Set(5, 0, TILE_AIR, TILE_TELECHECK, 1);
+	QmCheckpointGuide::CPlanner Planner;
+	Planner.ObserveCheckpoint(0);
+	Map.Update(Planner, 0, 0);
+	const auto Center = [](int Index) { return vec2(16.0f + 32.0f * Index, 16.0f); };
+	const auto CheckLine = [&](int Tile, float X) {
+		const auto &Result = Planner.Result();
+		const auto Entry = Map.RouteEntry(Planner, Tile);
+		ASSERT_NE(Entry, Result.m_vRoute.end());
+		std::vector<std::pair<vec2, vec2>> vSegments;
+		Result.VisitSegments(Entry, Center(Tile), vec2(X, 16.0f), 28.0f, Center, [&](vec2 From, vec2 To) { vSegments.emplace_back(From, To); });
+		ASSERT_FALSE(vSegments.empty());
+		EXPECT_EQ(vSegments[0].first, vec2(X + 28.0f, 16.0f));
+		vec2 Previous = vSegments.front().first;
+		for(const auto &[From, To] : vSegments)
+		{
+			EXPECT_EQ(From, Previous);
+			EXPECT_EQ(To.y, 16.0f);
+			EXPECT_GT(To.x, From.x);
+			Previous = To;
+		}
+		EXPECT_EQ(Previous, Center(5));
+	};
+	CheckLine(0, 31.0f);
+	CheckLine(1, 33.0f);
+	Map.Update(Planner, 1, 0);
+	CheckLine(1, 33.0f);
+}
+
+TEST(QmCheckpointGuide, CuttingACornerRejoinsTheForwardRouteBetweenSearches)
+{
+	SGuideMap Map(4, 2);
+	Map.Set(0, 1, TILE_AIR, 0, 0, CANTMOVE_RIGHT);
+	Map.Set(3, 0, TILE_AIR, TILE_TELECHECK, 1);
+	QmCheckpointGuide::CPlanner Planner;
+	Planner.ObserveCheckpoint(0);
+	Map.Update(Planner, 0, 1);
+
+	const auto Entry = Map.RouteEntry(Planner, 5);
+	ASSERT_NE(Entry, Planner.Result().m_vRoute.end());
+	EXPECT_EQ(*Entry, 1);
+	const auto Center = [](int Index) { return vec2((Index % 4) * 32.0f + 16.0f, (Index / 4) * 32.0f + 16.0f); };
+	std::vector<std::pair<vec2, vec2>> vSegments;
+	Planner.Result().VisitSegments(Entry, Center(5), Center(5), 28.0f, Center, [&](vec2 From, vec2 To) { vSegments.emplace_back(From, To); });
+	ASSERT_GE(vSegments.size(), 2u);
+	EXPECT_EQ(vSegments[0].first, vec2(48.0f, 20.0f));
+	EXPECT_EQ(vSegments[0].second, Center(1));
+	EXPECT_EQ(vSegments[1].first, Center(1));
+	EXPECT_EQ(vSegments.back().second, Center(3));
+}
+
+TEST(QmCheckpointGuide, SideStepCannotReconnectThroughAStopperOrTeleportEntrance)
+{
+	SGuideMap Map(4, 2);
+	Map.Set(3, 0, TILE_AIR, TILE_TELECHECK, 1);
+	QmCheckpointGuide::CPlanner Planner;
+	Planner.ObserveCheckpoint(0);
+	Map.Update(Planner, 0, 0);
+	Map.Set(1, 1, TILE_AIR, 0, 0, CANTMOVE_UP);
+	EXPECT_EQ(Map.RouteEntry(Planner, 5), Planner.Result().m_vRoute.end());
+	Map.Set(1, 1, TILE_AIR, TILE_TELEIN, 1);
+	EXPECT_EQ(Map.RouteEntry(Planner, 5), Planner.Result().m_vRoute.end());
+	Map.Set(1, 1, TILE_DEATH);
+	EXPECT_EQ(Map.RouteEntry(Planner, 5), Planner.Result().m_vRoute.end());
+	Map.Set(1, 1, TILE_AIR);
+	const auto Entry = Map.RouteEntry(Planner, 5);
+	ASSERT_NE(Entry, Planner.Result().m_vRoute.end());
+	EXPECT_EQ(*Entry, 1);
 }
 
 TEST(QmCheckpointGuide, SideBranchCheckpointDoesNotNeedConsecutiveNumber)
