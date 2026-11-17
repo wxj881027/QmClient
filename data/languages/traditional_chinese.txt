@@ -5316,7 +5316,7 @@ Enter your sponsor code
 == 請輸入分發給你的認證碼
 
 Entities
-== 實體
+== 實體層
 
 Entities background color
 == 實體層背景顏色
@@ -5749,9 +5749,6 @@ Feature Search
 
 Feet
 == 腳
-
-Fetch Info
-== 回放信息
 
 Fifo file (non-Windows) or named pipe (Windows) for server console input
 == Fifo 文件（非 Windows）或命名管道 (Windows) 用作伺服器控制台的輸入
@@ -7185,7 +7182,7 @@ In memory of me
 == 謹以此端，回憶我
 
 In pie menu
-== 餅菜單中
+== 餅菜單包含
 
 In-game controller sensitivity
 == 遊戲內控制器靈敏度
@@ -9693,7 +9690,7 @@ Not enabled
 == 未啟用
 
 Not in pie menu
-== 未在餅菜單中
+== 餅菜單排除
 
 Not installed
 == 未安裝
@@ -15125,9 +15122,6 @@ Successfully saved the replay!
 Sudden Death
 == 決勝
 
-Suggested tags:
-== 建議標籤：
-
 Suicides
 == 自殺數
 
@@ -17594,8 +17588,8 @@ Wheel distance per tick; hold Alt for 3x
 Wheel label
 == 輪盤顯示名稱
 
-Wheel scroll feel: 0=Smooth (velocity carries over), 1=Original (each tick restarts), 2=Spring
-== 滾輪手感：0=順滑（繼承速度），1=原版（每檔重置），2=彈簧
+Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
+== Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
 
 Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
 == 滾輪每格的介面像素步長；設定卡片頁面每格捲動此值的 12 倍

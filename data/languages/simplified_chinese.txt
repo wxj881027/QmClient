@@ -581,6 +581,9 @@ Add a skin to the queue
 add a sqlserver
 == 添加一个 SQL 服务器
 
+Add a tag
+== 添加标签
+
 Add a type to the exclusion filter for a specific community
 == 将类型加入指定社区的排除筛选
 
@@ -856,6 +859,9 @@ All combined
 
 All maps
 == 全部地图
+
+All my tags are already on the server.
+== 我的标签都已经在服务器上了。
 
 All players
 == 所有人
@@ -2702,6 +2708,9 @@ Click to copy this clan's name to clipboard
 Click to copy this player's name to clipboard
 == 点击复制该玩家名字到剪贴板
 
+Click to manage this tag, drag to reorder
+== 点击管理该标签，拖动可调整顺序
+
 Click to remove this clan from your friends list.
 == 单击从你的好友列表移除此战队
 
@@ -2779,6 +2788,9 @@ Close window after changing settings
 
 Cloud bubble
 == 云朵气泡
+
+Cloud tags:
+== 云端标签：
 
 Collapse
 == 折叠
@@ -4066,6 +4078,9 @@ Delete selected items
 
 Delete this preset
 == 删除该预设
+
+Delete this tag
+== 删除此标签
 
 Deleted "%s"
 == 已删除"%s"
@@ -5478,7 +5493,7 @@ Enter your sponsor code
 == 请输入分发给你的认证码
 
 Entities
-== 实体
+== 实体层
 
 Entities background color
 == 实体层背景颜色
@@ -5938,9 +5953,6 @@ Feature Search
 
 Feet
 == 脚
-
-Fetch Info
-== 回放信息
 
 Fifo file (non-Windows) or named pipe (Windows) for server console input
 == Fifo 文件（非 Windows）或命名管道（Windows）用于服务器控制台输入
@@ -7434,7 +7446,7 @@ In memory of me
 == 谨以此端，回忆我
 
 In pie menu
-== 饼菜单中
+== 饼菜单包含
 
 In-game controller sensitivity
 == 游戏内控制器灵敏度
@@ -8548,6 +8560,9 @@ Local service without authentication
 
 Local statistics file is invalid, saving paused
 == 本地统计文件已损坏，保存已暂停
+
+Local tags:
+== 本地标签：
 
 Local test mode
 == 本地测试模式
@@ -9710,11 +9725,8 @@ New preset name
 New random timeout code
 == 随机生成新的超时代码
 
-New tag (up to 10 characters)
-== 新标签（最多 10 字）
-
-New tags require review. Click a tag to support it.
-== 新标签需要审核，点击已有标签可赞同。
+New tag
+== 新标签
 
 New version available
 == 有新版本可用
@@ -9769,9 +9781,6 @@ No animation
 
 No answer from server yet.
 == 服务器无响应
-
-No approved tags yet.
-== 暂无已审核标签。
 
 No assets
 == 没有资源
@@ -10061,6 +10070,9 @@ Non-friends use default skin
 None
 == 无
 
+None right now.
+== 当前暂无标签
+
 Normal
 == 正常
 
@@ -10089,7 +10101,7 @@ Not enabled
 == 未启用
 
 Not in pie menu
-== 未在饼菜单中
+== 饼菜单排除
 
 Not installed
 == 未安装
@@ -15644,9 +15656,6 @@ Styles kill, finish and system messages in the chat area.
 Sub-Tick aiming
 == Sub-Tick 瞄准
 
-Submit
-== 提交
-
 Success
 == 成功
 
@@ -15655,9 +15664,6 @@ Successfully saved the replay!
 
 Sudden Death
 == 决胜
-
-Suggested tags:
-== 建议标签：
 
 Suicides
 == 自杀数
@@ -15817,6 +15823,9 @@ System message text gradient color
 
 System prompt text color
 == 系统提示文字颜色
+
+Tag examples:
+== 标签示例：
 
 Tag submitted for review.
 == 标签已提交审核。
@@ -17537,6 +17546,9 @@ Upload .map files. Server and admin passwords: s.
 Upload a saved map to the public test server
 == 将已保存的地图上传到公用测图服
 
+Upload local tags for review. Tags stay local until approved.
+== 上传本地标签供审核。通过审核前，标签只保存在本地
+
 Upload map
 == 上传地图
 
@@ -18221,8 +18233,8 @@ Wheel down
 Wheel label
 == 轮盘显示名称
 
-Wheel scroll feel: 0=Smooth (velocity carries over), 1=Original (each tick restarts), 2=Spring
-== 滚轮手感：0=顺滑（继承速度），1=原版（每档重置），2=弹簧
+Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
+== Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
 
 Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
 == 滚轮每格的界面像素步长；设置卡片页面每格滚动此值的 12 倍

@@ -5750,9 +5750,6 @@ Feature Search
 Feet
 == 足
 
-Fetch Info
-== 情報を取得
-
 Fifo file (non-Windows) or named pipe (Windows) for server console input
 == サーバーコンソール入力用の Fifo ファイル（非 Windows）または名前付きパイプ（Windows）
 
@@ -15125,9 +15122,6 @@ Successfully saved the replay!
 Sudden Death
 == サドンデス
 
-Suggested tags:
-== 候補タグ：
-
 Suicides
 == 自殺数
 
@@ -17594,8 +17588,8 @@ Wheel distance per tick; hold Alt for 3x
 Wheel label
 == ホイールの表示名
 
-Wheel scroll feel: 0=Smooth (velocity carries over), 1=Original (each tick restarts), 2=Spring
-== ホイールの感覚: 0=滑らか（速度を継承）、1=オリジナル（毎回リセット）、2=バネ
+Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
+== Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
 
 Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
 == ホイール1刻みのUIピクセル移動量。設定カードのページは各刻みでこの値の12倍移動

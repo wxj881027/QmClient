@@ -5750,9 +5750,6 @@ Feature Search
 Feet
 == Pés
 
-Fetch Info
-== Obter Informações
-
 Fifo file (non-Windows) or named pipe (Windows) for server console input
 == Ficheiro Fifo (não Windows) ou pipe nomeado (Windows) para entrada do console do servidor
 
@@ -15125,9 +15122,6 @@ Successfully saved the replay!
 Sudden Death
 == Morte Súbita
 
-Suggested tags:
-== Etiquetas sugeridas:
-
 Suicides
 == Suicídios
 
@@ -17594,8 +17588,8 @@ Wheel distance per tick; hold Alt for 3x
 Wheel label
 == Nome na roda
 
-Wheel scroll feel: 0=Smooth (velocity carries over), 1=Original (each tick restarts), 2=Spring
-== Sensação da roda: 0=Suave (herda a velocidade), 1=Original (reinicia a cada passo), 2=Mola
+Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
+== Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
 
 Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
 == Passo da roda em píxeis da interface; as páginas de definições deslocam-se 12 vezes este valor por passo

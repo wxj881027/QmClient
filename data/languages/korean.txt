@@ -5750,9 +5750,6 @@ Feature Search
 Feet
 == 발
 
-Fetch Info
-== 정보 가져오기
-
 Fifo file (non-Windows) or named pipe (Windows) for server console input
 == 서버 콘솔 입력용 Fifo 파일 (비 Windows) 또는 네임드 파이프 (Windows)
 
@@ -15125,9 +15122,6 @@ Successfully saved the replay!
 Sudden Death
 == 서든 데스
 
-Suggested tags:
-== 추천 태그:
-
 Suicides
 == 자살 횟수
 
@@ -17594,8 +17588,8 @@ Wheel distance per tick; hold Alt for 3x
 Wheel label
 == 휠 표시 이름
 
-Wheel scroll feel: 0=Smooth (velocity carries over), 1=Original (each tick restarts), 2=Spring
-== 휠 감도: 0=부드럽게(속도 이어받기), 1=기본(매번 초기화), 2=스프링
+Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
+== Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
 
 Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
 == 휠 한 눈금당 UI 픽셀 이동량. 설정 카드 페이지는 매 눈금마다 이 값의 12배만큼 이동

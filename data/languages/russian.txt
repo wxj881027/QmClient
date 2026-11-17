@@ -5750,9 +5750,6 @@ Feature Search
 Feet
 == Ноги
 
-Fetch Info
-== Получить информацию
-
 Fifo file (non-Windows) or named pipe (Windows) for server console input
 == Fifo-файл (не Windows) или именованный канал (Windows) для ввода в консоль сервера
 
@@ -15125,9 +15122,6 @@ Successfully saved the replay!
 Sudden Death
 == Внезапная смерть
 
-Suggested tags:
-== Предлагаемые теги:
-
 Suicides
 == Самоубийства
 
@@ -17594,8 +17588,8 @@ Wheel distance per tick; hold Alt for 3x
 Wheel label
 == Название в колесе
 
-Wheel scroll feel: 0=Smooth (velocity carries over), 1=Original (each tick restarts), 2=Spring
-== Ощущение колеса: 0=Плавно (с наследованием скорости), 1=Оригинал (сброс каждый раз), 2=Пружина
+Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
+== Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
 
 Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
 == Шаг колёсика в пикселях интерфейса; страницы карточек настроек прокручиваются на 12 таких шагов

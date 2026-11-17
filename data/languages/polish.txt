@@ -5750,9 +5750,6 @@ Feature Search
 Feet
 == Stopy
 
-Fetch Info
-== Pobierz informacje
-
 Fifo file (non-Windows) or named pipe (Windows) for server console input
 == Plik Fifo (nie Windows) lub nazwany potok (Windows) dla wejścia konsoli serwera
 
@@ -15125,9 +15122,6 @@ Successfully saved the replay!
 Sudden Death
 == Nagła śmierć
 
-Suggested tags:
-== Sugerowane tagi:
-
 Suicides
 == Samobójstwa
 
@@ -17594,8 +17588,8 @@ Wheel distance per tick; hold Alt for 3x
 Wheel label
 == Nazwa w kole
 
-Wheel scroll feel: 0=Smooth (velocity carries over), 1=Original (each tick restarts), 2=Spring
-== Odczucie kółka: 0=Płynnie (przejmuje prędkość), 1=Oryginalny (reset przy każdym kroku), 2=Sprężyna
+Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
+== Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
 
 Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
 == Krok kółka w pikselach interfejsu; strony ustawień przewijają się o 12 razy tę wartość na skok

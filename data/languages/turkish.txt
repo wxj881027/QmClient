@@ -5750,9 +5750,6 @@ Feature Search
 Feet
 == Ayaklar
 
-Fetch Info
-== Bilgi Al
-
 Fifo file (non-Windows) or named pipe (Windows) for server console input
 == Sunucu konsol girişi için Fifo dosyası (Windows dışı) veya adlandırılmış kanal (Windows)
 
@@ -15125,9 +15122,6 @@ Successfully saved the replay!
 Sudden Death
 == Ani Ölüm
 
-Suggested tags:
-== Önerilen etiketler:
-
 Suicides
 == İntiharlar
 
@@ -17594,8 +17588,8 @@ Wheel distance per tick; hold Alt for 3x
 Wheel label
 == Çark etiketi
 
-Wheel scroll feel: 0=Smooth (velocity carries over), 1=Original (each tick restarts), 2=Spring
-== Tekerlek hissi: 0=Yumuşak (hız devralınır), 1=Özgün (her adımda sıfırlanır), 2=Yay
+Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
+== Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
 
 Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
 == Tekerlek kademesi başına arayüz pikseli; ayar kartı sayfaları her kademede bu değerin 12 katı kayar
