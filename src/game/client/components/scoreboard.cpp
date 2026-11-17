@@ -317,6 +317,12 @@ namespace
 	// 两侧留白才对称。宽度另加 4~6px 舍入余量——TextWidth 与实际排版有零点几像素差，
 	// 没有余量时右端字符会被 MaxWidth 挤到贴边。
 	constexpr float SCOREBOARD_FOOTER_PAD_X = 10.0f;
+	// 媒体条上的圆形封面（参考灵动岛）：条高 25、封面 19 居中，左侧只留 3px——
+	// 圆是紧贴条端的「实物」，按文字内边距留白反而会把它推到中间。
+	constexpr float SCOREBOARD_MEDIA_BAR_HEIGHT = 25.0f;
+	constexpr float SCOREBOARD_MEDIA_COVER_SIZE = 19.0f;
+	constexpr float SCOREBOARD_MEDIA_COVER_PAD_X = 3.0f;
+	constexpr float SCOREBOARD_MEDIA_COVER_GAP = 6.0f;
 
 }
 
@@ -963,23 +969,52 @@ void CScoreboard::RenderFooter(CUIRect Footer)
 	float CursorY = Footer.y;
 	if(aMediaBuf[0] != '\0')
 	{
-		// 文字宽度之外再加 6px 舍入余量：TextWidth 与实际排版有零点几像素差，
+		// 封面纹理由媒体组件统一预烘成圆形透明贴图（和 HUD 灵动岛同一张），
+		// 计分板这里只负责摆位，不重新裁圆、也不新传纹理。
+		const bool HasCover = MediaState.m_AlbumArtCircular.IsValid() && !MediaState.m_AlbumArtCircular.IsNullTexture();
+		// 文字宽度之外再加 4px 舍入余量：TextWidth 与实际排版有零点几像素差，
 		// 没有余量时右端字符会被 MaxWidth 挤到贴边。
-		const float MediaWidth = TextRender()->TextWidth(11.0f, aMediaBuf) + 2.0f * SCOREBOARD_FOOTER_PAD_X + 6.0f;
-		const CUIRect MediaBar = QmScoreboardFooterBlock(Footer, CursorY, MediaWidth, 25.0f, FooterGap);
+		const float MediaWidth = SCOREBOARD_MEDIA_COVER_PAD_X + SCOREBOARD_MEDIA_COVER_SIZE + SCOREBOARD_MEDIA_COVER_GAP +
+					 TextRender()->TextWidth(11.0f, aMediaBuf) + SCOREBOARD_FOOTER_PAD_X + 4.0f;
+		const CUIRect MediaBar = QmScoreboardFooterBlock(Footer, CursorY, MediaWidth, SCOREBOARD_MEDIA_BAR_HEIGHT, FooterGap);
 		if(MediaBar.w > 0.0f)
 		{
 			MediaBar.Draw(ScoreboardUiColorSurface(ContentAlpha), IGraphics::CORNER_ALL, SCOREBOARD_PANEL_RADIUS);
+			const CUIRect Cover = {MediaBar.x + SCOREBOARD_MEDIA_COVER_PAD_X,
+				MediaBar.y + (MediaBar.h - SCOREBOARD_MEDIA_COVER_SIZE) * 0.5f,
+				SCOREBOARD_MEDIA_COVER_SIZE,
+				SCOREBOARD_MEDIA_COVER_SIZE};
+			if(HasCover)
+			{
+				Graphics()->TextureSet(MediaState.m_AlbumArtCircular);
+				Graphics()->QuadsBegin();
+				Graphics()->SetColor(1.0f, 1.0f, 1.0f, ContentAlpha);
+				const IGraphics::CQuadItem CoverQuad(Cover.x, Cover.y, Cover.w, Cover.h);
+				Graphics()->QuadsDrawTL(&CoverQuad, 1);
+				Graphics()->QuadsEnd();
+				Graphics()->TextureClear();
+			}
+			else
+			{
+				// 没有封面时留一颗同尺寸的占位圆 + 音符，保证有/无封面时文字起点一致。
+				Graphics()->TextureClear();
+				Graphics()->QuadsBegin();
+				Graphics()->SetColor(ColorRGBA(1.0f, 1.0f, 1.0f, 0.10f * ContentAlpha));
+				Graphics()->DrawCircle(Cover.x + Cover.w * 0.5f, Cover.y + Cover.h * 0.5f, Cover.w * 0.5f, 24);
+				Graphics()->QuadsEnd();
+				const CUIRect Icon = {Cover.x + Cover.w * 0.26f, Cover.y + Cover.h * 0.26f, Cover.w * 0.48f, Cover.h * 0.48f};
+				Ui()->DrawQmIcon(Icon, EQmIcon::MUSIC, FontIcons::FONT_ICON_MUSIC, ColorRGBA(1.0f, 1.0f, 1.0f, 0.55f * ContentAlpha));
+			}
 			CUIRect Label = MediaBar;
-			Label.x += SCOREBOARD_FOOTER_PAD_X;
-			Label.w = maximum(0.0f, Label.w - 2.0f * SCOREBOARD_FOOTER_PAD_X);
+			Label.x = Cover.x + Cover.w + SCOREBOARD_MEDIA_COVER_GAP;
+			Label.w = maximum(0.0f, MediaBar.x + MediaBar.w - SCOREBOARD_FOOTER_PAD_X - Label.x);
 			TextRender()->TextColor(TextRender()->DefaultTextColor().WithMultipliedAlpha(ContentAlpha));
 			TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor().WithMultipliedAlpha(ContentAlpha));
 			SLabelProperties Props;
 			Props.m_MaxWidth = Label.w;
 			Props.m_EllipsisAtEnd = true;
 			Props.m_MinimumFontSize = 11.0f;
-			Ui()->DoLabel(&Label, aMediaBuf, 11.0f, TEXTALIGN_MC, Props);
+			Ui()->DoLabel(&Label, aMediaBuf, 11.0f, TEXTALIGN_ML, Props);
 		}
 	}
 	if(HasSpectators)

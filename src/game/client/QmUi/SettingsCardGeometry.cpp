@@ -19,7 +19,10 @@ SSettingsCardFrame BuildSettingsCardFrame(const CUIRect &Slot, const SSettingsCa
 	const float SafeContentHeight = std::max(0.0f, ContentHeight);
 
 	SSettingsCardFrame Frame{};
-	Frame.m_Rect = {Slot.x, Slot.y, std::max(0.0f, Slot.w), Padding + HeaderHeight + HeaderGap + SafeContentHeight + Padding};
+	// 底部 = 内边距 + 末行留白：所有卡片共用同一档，卡高由内容高度推导（自适应），
+	// 不再由各卡片在末尾自己 Flow.Space 拼出不同的底距。
+	const float BottomPadding = Padding + ui_token::settings::CARD_CONTENT_BOTTOM_GAP * Scale;
+	Frame.m_Rect = {Slot.x, Slot.y, std::max(0.0f, Slot.w), Padding + HeaderHeight + HeaderGap + SafeContentHeight + BottomPadding};
 	Frame.m_HeaderRect = {Frame.m_Rect.x + Padding, Frame.m_Rect.y + Padding, std::max(0.0f, Frame.m_Rect.w - Padding * 2.0f), HeaderHeight};
 	const float HandleSize = std::min({ui_token::settings::CARD_HANDLE_SIZE * Scale, TitleHeight, Frame.m_HeaderRect.w});
 	Frame.m_HandleRect = {Frame.m_HeaderRect.x + Frame.m_HeaderRect.w - HandleSize, Frame.m_HeaderRect.y, HandleSize, HandleSize};

@@ -26,6 +26,7 @@
 #include <game/client/QmUi/QmNeonRainbow.h>
 #include <game/client/QmUi/SecondaryPanel.h>
 #include <game/client/QmUi/UiButtons.h>
+#include <game/client/QmUi/UiTag.h>
 #include <game/client/QmUi/UiDiscreteSlider.h>
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiMotion.h>
@@ -4020,15 +4021,11 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 	const float FontSize = 10.0f;
 	const float SpacingH = 2.0f;
 	// 标签按译文实测宽度收窄，不再常驻预留 32 单位；只在真正跟随时占位。
-	// 字号比名字低一档（9 → 7），药丸高 13 并与顶部 16 单位动作行垂直居中；
-	// 右缘让出 6 单位，避免药丸边框和卡片彩虹描边贴在一起。
-	const float FollowTagFontSize = FontSize - 3.0f;
-	constexpr float FollowTagHPadding = 4.0f;
+	// 高度、内边距、字号都交给 ui_tag（固定档），右缘让出 6 单位，避免胶囊边框
+	// 和卡片彩虹描边贴在一起。
 	constexpr float FollowTagRightInset = 6.0f;
 	constexpr float FollowTagGap = 4.0f;
-	constexpr float FollowTagHeight = 13.0f;
-	constexpr float FollowTagRowInset = 1.5f;
-	const float FollowTagWidth = TextRender()->TextWidth(FollowTagFontSize, Localize("Follow")) + 2.0f * FollowTagHPadding;
+	const float FollowTagWidth = ui_tag::MeasureWidth(TextRender(), Localize("Follow"));
 	const float FollowTagSlotWidth = FollowTagWidth + FollowTagRightInset;
 	constexpr float ActionFadeInSec = 0.08f;
 	constexpr float ActionFadeOutDelaySec = 0.15f;
@@ -4457,44 +4454,18 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 					DrawFriendFollowRing(Ui(), FriendRow, FollowTagAlpha, FeedbackMotion);
 				if(FollowSlot.w > 0.5f && FollowTagAlpha > 0.01f)
 				{
-					// 药丸和顶部动作图标同处 16 单位动作行：上下各留 1.5 单位后
-					// 正好垂直居中；右缘再让出 6 单位，避免边框压到卡片描边。
+					// 胶囊统一由标签组件画：高度/内边距/字号固定，颜色取好友卡片
+					// 主色（accent）派生的一档更深色——同一色系、更实，读作「这张卡
+					// 上的状态」；右缘让 6 单位，避免边框压到卡片彩虹描边。
 					CUIRect FollowTag = FollowSlot;
 					FollowTag.w = maximum(0.0f, FollowTag.w - FollowTagRightInset);
-					FollowTag.y = FollowSlot.y + FollowTagRowInset;
-					FollowTag.h = minimum(FollowTagHeight, maximum(0.0f, FollowSlot.h - 2.0f * FollowTagRowInset));
-					const ColorRGBA FollowColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiAccentColor));
-					DrawRoundedSurface(Ui(), FollowTag, FollowColor.WithAlpha(0.3f * FollowTagAlpha), FollowColor.WithAlpha(0.6f * FollowTagAlpha), 3.0f);
+					FollowTag = ui_tag::FitRect(FollowTag, minimum(FollowTagWidth, FollowTag.w));
 					// 文字等槽位展开到接近满宽再画，避免中途把 "Follow" 压成 "F…"。
 					if(FollowTagCurrentWidth >= FollowTagSlotWidth * 0.9f)
 					{
 						CUiScopedControlAlphaScale FollowFade(Ui(), FollowTagAlpha);
-						SLabelProperties FollowLabelProps;
-						FollowLabelProps.m_MaxWidth = FollowTag.w;
-						FollowLabelProps.m_DisallowNewline = true;
-						FollowLabelProps.m_EllipsisAtEnd = true;
-						// TEXTALIGN_MC 的中线补偿按整行高度算，小字号矮药丸里会把基线
-						// 留在偏下位置；这里改用顶部对齐 + 实测墨迹高度自己居中，
-						// 绕开该补偿，让字形本体落在药丸视觉中心。
-						const char *pFollowText = Localize("Follow");
-						float InkTop = 0.0f;
-						float InkBottom = 0.0f;
-						STextSizeProperties InkProps{};
-						InkProps.m_pVisualTop = &InkTop;
-						InkProps.m_pVisualBottom = &InkBottom;
-						TextRender()->TextWidth(FollowTagFontSize, pFollowText, -1, FollowTag.w, TEXTFLAG_DISALLOW_NEWLINE | TEXTFLAG_ELLIPSIS_AT_END, InkProps);
-						const float InkHeight = maximum(0.0f, InkBottom - InkTop);
-						CUIRect FollowLabel = FollowTag;
-						float FollowLabelHeight = FollowTagFontSize;
-						if(InkHeight > 0.01f)
-						{
-							// 顶部对齐时行框从 y 起算，墨迹相对行框顶端下移 InkTop；
-							// 反推矩形 y 让墨迹上下留白相等。
-							FollowLabelHeight = InkHeight;
-							FollowLabel.y = FollowTag.y + (FollowTag.h - InkHeight) * 0.5f - InkTop;
-						}
-						FollowLabel.h = FollowLabelHeight;
-						Ui()->DoLabel(&FollowLabel, pFollowText, FollowTagFontSize, TEXTALIGN_TC, FollowLabelProps);
+						const ColorRGBA FollowColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiAccentColor));
+						ui_tag::DrawInRect(Ui(), FollowTag, Localize("Follow"), ui_tag::EColorMode::DERIVED, FollowColor, nullptr, FollowTagAlpha);
 					}
 				}
 
@@ -6240,6 +6211,7 @@ void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 	(void)DrawBackground;
 	if(g_Config.m_UiPage == PAGE_FAVORITE_MAPS)
 	{
+		AddMenuHitRegion(MainView);
 		// 新 UI：面板直接对齐全局安全区边缘（距窗口 8px 统一基准），
 		// 垂直不额外内缩，面板顶边与其他页面的卡片同线。
 		RenderServerbrowserFavoriteMaps(MainView);
@@ -6247,6 +6219,7 @@ void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 	}
 
 	const CUIRect View = MainView;
+	AddMenuHitRegion(View);
 	// 状态栏提示行已删除，列表/状态栏分割按「无提示行」算（见 RenderServerbrowserStatusBox 上方的说明）。
 	const SQmBrowserPanelLayout PanelLayout = QmBrowserPanelLayout(View, false);
 	PanelLayout.m_List.Draw(BrowserPanelColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);

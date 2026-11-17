@@ -32,9 +32,9 @@ namespace ui_widget
 		// 弹层条目（LIST_ENTRY）例外：它和列表胶囊行是同一个视觉件，选中/悬停只由填充
 		// 表达、任何状态都不描边。ResolveUiButtonStyle 里已清过一次，这里必须同样早退，
 		// 否则会把那次清空覆盖回白色描边——用户要的「选中 = 纯填充」就又会带上白边。
-		ColorRGBA ResolveActiveButtonBorder(EUiButtonRole Role, const SUiSecondaryButtonStyle &Style, const SUiButtonState &State)
+		ColorRGBA ResolveActiveButtonBorder(EUiButtonRole Role, const SUiSecondaryButtonStyle &Style, const SUiButtonState &State, bool ListEntryBorder = false)
 		{
-			if(Role == EUiButtonRole::LIST_ENTRY)
+			if(Role == EUiButtonRole::LIST_ENTRY && !ListEntryBorder)
 				return ColorRGBA();
 			return State.m_Enabled && (State.m_Hovered || State.m_Selected) ? ActiveBorderColor : Style.m_Border;
 		}
@@ -78,10 +78,10 @@ namespace ui_widget
 		State.m_Hovered = Options.m_HoveredOverride.value_or(Options.m_Enabled && pUi->Enabled() && pUi->VisualSurfaceHovered(&HitRect));
 		State.m_Pressed = State.m_Hovered && pUi->CheckActiveItem(pId) && (pUi->MouseButton(0) || pUi->MouseButton(1) || pUi->MouseButton(2));
 		const ColorRGBA Base = Options.m_Color.value_or(Options.m_TransparentInactive ? ColorRGBA() : ResolveConfiguredControlSurface());
-		auto Style = ResolveUiButtonStyle(Options.m_Role, Base, Backdrop, Theme, State);
+		auto Style = ResolveUiButtonStyle(Options.m_Role, Base, Backdrop, Theme, State, Options.m_ListEntryBorder);
 		// 描边统一在公共表面这一层收敛，调用点（设置卡片、下拉、页签、键位格等）
 		// 不再各自决定按下态描边颜色。
-		Style.m_Border = ResolveActiveButtonBorder(Options.m_Role, Style, State);
+		Style.m_Border = ResolveActiveButtonBorder(Options.m_Role, Style, State, Options.m_ListEntryBorder);
 		if(Options.m_TransparentInactive && !State.m_Hovered && !State.m_Selected)
 			Style.m_Border = ColorRGBA();
 		// 图标按钮的描边只表达「悬浮/选中」：静止态留白，避免每个图标都套一圈常驻边框。
@@ -188,7 +188,7 @@ namespace ui_widget
 
 	namespace
 	{
-		bool DoStyledButton(const IUiContext &Ctx, CButtonContainer *pBtn, const char *pText, const CUIRect &Rect, bool Disabled, EUiButtonRole Role, const int Corners = IGraphics::CORNER_ALL, const bool DrawBorder = true, const EUiButtonGeometry Geometry = EUiButtonGeometry::CONTROL, const CUIRect *pSurfaceRect = nullptr, bool Selected = false)
+		bool DoStyledButton(const IUiContext &Ctx, CButtonContainer *pBtn, const char *pText, const CUIRect &Rect, bool Disabled, EUiButtonRole Role, const int Corners = IGraphics::CORNER_ALL, const bool DrawBorder = true, const EUiButtonGeometry Geometry = EUiButtonGeometry::CONTROL, const CUIRect *pSurfaceRect = nullptr, bool Selected = false, const ColorRGBA *pSurfaceColor = nullptr)
 		{
 			if(Ctx.m_pUi == nullptr || pBtn == nullptr)
 				return false;
@@ -204,6 +204,9 @@ namespace ui_widget
 			Options.m_Enabled = !Disabled;
 			Options.m_Selected = Selected;
 			Options.m_pHitRect = &Rect;
+			// 底色语义由调用点显式给出时覆盖控制表面默认色（如运行/停止两段的语义色）。
+			if(pSurfaceColor != nullptr)
+				Options.m_Color = *pSurfaceColor;
 			const ColorRGBA Fill = DrawButtonSurface(Ctx, pBtn, pSurfaceRect != nullptr ? *pSurfaceRect : Rect, Options);
 			CUiScopedSurfaceText SurfaceText(Ctx.m_pUi->TextRender(), Fill);
 			if(Disabled)
@@ -236,30 +239,50 @@ namespace ui_widget
 		return DoStyledButton(Ctx, pBtn, pText, Rect, Disabled, EUiButtonRole::SECONDARY, IGraphics::CORNER_ALL, true, Geometry, nullptr, Selected);
 	}
 
-	int SplitActionButton(const IUiContext &Ctx, CButtonContainer *pLeft, const char *pLeftText, CButtonContainer *pRight, const char *pRightText, const CUIRect &Rect, bool LeftDisabled, bool RightDisabled, EUiButtonGeometry Geometry, const char *pLeftTooltip, const char *pRightTooltip)
+	int SplitActionButton(const IUiContext &Ctx, CButtonContainer *pLeft, const char *pLeftText, CButtonContainer *pRight, const char *pRightText, const CUIRect &Rect, bool LeftDisabled, bool RightDisabled, EUiButtonGeometry Geometry, const char *pLeftTooltip, const char *pRightTooltip, const SSplitActionOptions &Options)
 	{
 		if(Ctx.m_pUi == nullptr || Rect.w <= 0.0f || Rect.h <= 0.0f)
 			return -1;
+		// 右段宽度 = 目标宽度 × 进度：Progress=0 时整条只剩左段（就是单按钮形态），
+		// 弹簧过冲时略超目标宽度，左段跟着被压窄，交接线因此会「弹」一下再回稳。
+		const float Progress = std::clamp(Options.m_Progress, 0.0f, 1.2f);
+		const float LeftTargetW = std::clamp(Options.m_LeftFraction, 0.0f, 1.0f) * Rect.w;
+		// 插画贴在整条右端，不跟着右段走：分割线扫过去时它不动，视觉锚点固定在端头。
+		const bool HasImage = Options.m_ImageIdle.IsValid();
+		const float ImageWidth = HasImage ? std::min(Options.m_ImageWidth > 0.0f ? Options.m_ImageWidth : Rect.h * 4.0f, Rect.w) : 0.0f;
+		const float RightWidth = std::max(0.0f, (Rect.w - LeftTargetW) * Progress);
 		CUIRect Left, Right;
-		Rect.VSplitMid(&Left, &Right);
+		Rect.VSplitLeft(Rect.w - RightWidth, &Left, &Right);
+		const bool HasRight = RightWidth > 0.5f;
 		const void *apIds[] = {pLeft, pRight};
 		const bool aEnabled[] = {!LeftDisabled, !RightDisabled};
-		const int KeyboardAction = Ctx.m_pUi->DoButtonGroupKeyboard(apIds, aEnabled, 2);
+		// 右段还没长出来时不能把它算进键盘组：否则 Tab/回车会命中一个看不见的按钮。
+		const int KeyboardAction = Ctx.m_pUi->DoButtonGroupKeyboard(apIds, aEnabled, HasRight ? 2 : 1);
 		// 两半只提交状态底色；外框在最后按整条按钮的合并状态统一提交一圈，
 		// 悬浮/按下时不会只有被悬停的半边发亮、中缝断开。
 		Ctx.m_pUi->ClipEnable(&Left);
-		const bool LeftClicked = DoStyledButton(Ctx, pLeft, "", Left, LeftDisabled, EUiButtonRole::SECONDARY, IGraphics::CORNER_ALL, false, Geometry, &Rect);
+		const bool LeftClicked = DoStyledButton(Ctx, pLeft, "", Left, LeftDisabled, EUiButtonRole::SECONDARY, IGraphics::CORNER_ALL, false, Geometry, &Rect, false, Options.m_LeftSurface ? &*Options.m_LeftSurface : nullptr);
 		Ctx.m_pUi->ClipDisable();
-		Ctx.m_pUi->ClipEnable(&Right);
-		const bool RightClicked = DoStyledButton(Ctx, pRight, "", Right, RightDisabled, EUiButtonRole::SECONDARY, IGraphics::CORNER_ALL, false, Geometry, &Rect);
-		Ctx.m_pUi->ClipDisable();
+		bool RightClicked = false;
+		if(HasRight)
+		{
+			Ctx.m_pUi->ClipEnable(&Right);
+			RightClicked = DoStyledButton(Ctx, pRight, "", Right, RightDisabled, EUiButtonRole::SECONDARY, IGraphics::CORNER_ALL, false, Geometry, &Rect, false, Options.m_RightSurface ? &*Options.m_RightSurface : nullptr);
+			Ctx.m_pUi->ClipDisable();
+			// 生长前半段右段还没成形，点上去多半是想点左段；进度过半才放行点击，
+			// 避免启动服务器的瞬间误触「停止」。
+			if(Progress < 0.5f)
+				RightClicked = false;
+		}
 		const bool LeftHovered = !LeftDisabled && Ctx.m_pUi->VisualSurfaceHovered(&Left);
-		const bool RightHovered = !RightDisabled && Ctx.m_pUi->VisualSurfaceHovered(&Right);
+		const bool RightHovered = HasRight && !RightDisabled && Ctx.m_pUi->VisualSurfaceHovered(&Right);
 		SUiButtonState BorderState;
 		BorderState.m_Enabled = !(LeftDisabled && RightDisabled);
 		BorderState.m_Hovered = LeftHovered || RightHovered;
 		BorderState.m_Pressed = BorderState.m_Hovered && (Ctx.m_pUi->CheckActiveItem(pLeft) || Ctx.m_pUi->CheckActiveItem(pRight)) && (Ctx.m_pUi->MouseButton(0) || Ctx.m_pUi->MouseButton(1) || Ctx.m_pUi->MouseButton(2));
-		const float Inset = std::min(ui_token::spacing::XS, Rect.h * 0.25f);
+		// 中缝不是一上来就整条竖线：随进度从中心往上下长，配合右段的弹性扫入更像「长出来」。
+		const float GrowInset = (1.0f - std::clamp(Progress, 0.0f, 1.0f)) * Rect.h * 0.34f;
+		const float Inset = std::min(ui_token::spacing::XS, Rect.h * 0.25f) + GrowInset;
 		const CUIRect Divider{Right.x - 0.5f, Rect.y + Inset, 1.0f, std::max(0.0f, Rect.h - 2.0f * Inset)};
 		if(!Ctx.m_pUi->DrawingSuppressed())
 		{
@@ -279,33 +302,73 @@ namespace ui_widget
 				Ctx.m_pUi->ClipDisable();
 			};
 			DrawHalfBorder(Left, LeftHovered, LeftDisabled);
-			DrawHalfBorder(Right, RightHovered, RightDisabled);
-			// 中缝跟着被悬停的半边走强调色：左悬停时中线是左按钮的右边界，右悬停时是右按钮的左边界。
-			const ColorRGBA DividerColor = (LeftHovered || RightHovered) ? Theme.m_Accent : ui_token::color::BORDER_SUBTLE;
-			Divider.Draw(Ctx.m_pUi->ScaleBackgroundAlpha(DividerColor), IGraphics::CORNER_NONE, 0.0f);
+			if(HasRight)
+			{
+				DrawHalfBorder(Right, RightHovered, RightDisabled);
+				// 中缝跟着被悬停的半边走强调色：左悬停时中线是左按钮的右边界，右悬停时是右按钮的左边界。
+				const ColorRGBA DividerColor = (LeftHovered || RightHovered) ? Theme.m_Accent : ui_token::color::BORDER_SUBTLE;
+				Divider.Draw(Ctx.m_pUi->ScaleBackgroundAlpha(DividerColor), IGraphics::CORNER_NONE, 0.0f);
+			}
+			// 插画：与带图菜单按钮同一套内收，胶囊端头是圆弧，贴图太靠边会被切到。
+			if(HasImage)
+			{
+				const IGraphics::CTextureHandle &Texture = (LeftHovered || RightHovered) && Options.m_ImageHover.IsValid() ? Options.m_ImageHover : Options.m_ImageIdle;
+				if(Texture.IsValid())
+				{
+					CUIRect Image{Rect.x + Rect.w - ImageWidth, Rect.y, ImageWidth, Rect.h};
+					const float ImageInset = Image.h * 0.12f;
+					Image.x -= ImageInset * 1.5f;
+					Image.y += ImageInset;
+					Image.h -= ImageInset * 2.0f;
+					Image.w -= ImageInset;
+					IGraphics *pGraphics = Ctx.m_pUi->Graphics();
+					pGraphics->TextureSet(Texture);
+					pGraphics->WrapClamp();
+					pGraphics->QuadsBegin();
+					pGraphics->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+					IGraphics::CQuadItem QuadItem(Image.x, Image.y, Image.w, Image.h);
+					pGraphics->QuadsDrawTL(&QuadItem, 1);
+					pGraphics->QuadsEnd();
+					pGraphics->WrapNormal();
+				}
+			}
 		}
 		// 文字自己画：半宽矩形会把可用宽度压小，DoLabel 会为了塞下而自动缩字号，
 		// 于是双操作按钮的字比同一排其它按钮小一号。这里固定正文档，放不下就用省略号。
 		if(!Ctx.m_pUi->DrawingSuppressed())
 		{
-			const float LabelSize = ui_token::control::BodySizeFromScale(Ctx.m_UiScale);
+			const float LabelSize = Options.m_LabelSize > 0.0f ? Options.m_LabelSize : ui_token::control::BodySizeFromScale(Ctx.m_UiScale);
+			// 左段文字区：整条右端被插画占住的那块要扣掉，并随分割线左移一起收窄。
+			CUIRect LeftLabel = Left;
+			if(ImageWidth > 0.0f)
+				LeftLabel.w = std::max(0.0f, std::min(Left.w, Rect.w - ImageWidth));
 			SLabelProperties TextProps;
-			TextProps.m_MaxWidth = std::max(0.0f, Left.w - 2.0f * ui_token::control::PadX(LabelSize));
+			TextProps.m_MaxWidth = std::max(0.0f, LeftLabel.w - 2.0f * ui_token::control::PadX(LabelSize));
 			TextProps.m_MinimumFontSize = LabelSize;
 			TextProps.m_EllipsisAtEnd = true;
-			if(!LeftDisabled && pLeftText != nullptr && Left.w > 0.0f)
-				Ctx.m_pUi->DoLabel(&Left, pLeftText, LabelSize, TEXTALIGN_MC, TextProps);
-			TextProps.m_MaxWidth = std::max(0.0f, Right.w - 2.0f * ui_token::control::PadX(LabelSize));
-			if(!RightDisabled && pRightText != nullptr && Right.w > 0.0f)
-				Ctx.m_pUi->DoLabel(&Right, pRightText, LabelSize, TEXTALIGN_MC, TextProps);
+			if(!LeftDisabled && pLeftText != nullptr && TextProps.m_MaxWidth > 0.0f)
+				Ctx.m_pUi->DoLabel(&LeftLabel, pLeftText, LabelSize, TEXTALIGN_MC, TextProps);
+			// 右段文字区扣掉插画宽度；右段还没长到放得下这行字时不画，
+			// 否则生长途中会先闪一截省略号再变成全称。
+			CUIRect RightLabel = Right;
+			if(ImageWidth > 0.0f)
+				RightLabel.w = std::max(0.0f, RightLabel.w - ImageWidth);
+			const float RightPad = 2.0f * ui_token::control::PadX(LabelSize);
+			TextProps.m_MaxWidth = std::max(0.0f, RightLabel.w - RightPad);
+			const bool RightLabelFits = HasRight && !RightDisabled && pRightText != nullptr && TextProps.m_MaxWidth > 0.0f &&
+						    Ctx.m_pUi->TextRender()->TextWidth(LabelSize, pRightText) <= TextProps.m_MaxWidth;
+			if(RightLabelFits)
+				Ctx.m_pUi->DoLabel(&RightLabel, pRightText, LabelSize, TEXTALIGN_MC, TextProps);
 		}
 		Ctx.m_pUi->DoButtonTooltip(pLeft, &Left, pLeftTooltip);
-		Ctx.m_pUi->DoButtonTooltip(pRight, &Right, pRightTooltip);
+		if(HasRight)
+			Ctx.m_pUi->DoButtonTooltip(pRight, &Right, pRightTooltip);
 		if(!Ctx.m_pUi->DrawingSuppressed())
 		{
 			const void *pFocus = Ctx.m_pUi->KeyboardFocusItem();
+			// 右段收起时不画它的焦点环，左段照常。
 			// 焦点环只服务键盘导航；鼠标点击或弹层关闭恢复的焦点不再留下强调色框。
-			if(Ctx.m_pUi->KeyboardFocusFromKeyboard() && ((pFocus == pLeft && !LeftDisabled) || (pFocus == pRight && !RightDisabled)))
+			if((HasRight || pFocus == pLeft) && Ctx.m_pUi->KeyboardFocusFromKeyboard() && ((pFocus == pLeft && !LeftDisabled) || (pFocus == pRight && !RightDisabled)))
 			{
 				CUIRect FocusRect = pFocus == pLeft ? Left : Right;
 				FocusRect.Margin(std::min(2.0f, std::min(FocusRect.w, FocusRect.h) * 0.25f), &FocusRect);

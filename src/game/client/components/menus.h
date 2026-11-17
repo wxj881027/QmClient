@@ -55,6 +55,7 @@
 #include <game/client/components/qmclient/local_save_display.h>
 #include <game/client/components/qmclient/map_difficulty_catalog.h>
 #include <game/client/components/qmclient/map_vote_difficulty.h>
+#include <game/client/components/qmclient/menu_hit_regions.h>
 #include <game/client/components/qmclient/online_replay_player.h>
 #include <game/client/components/qmclient/pose_map.h>
 #include <game/client/components/qmclient/qm_map_upload.h>
@@ -172,7 +173,13 @@ class CMenus : public CComponent
 
 public:
 	int DoButton_Toggle(const void *pId, int Checked, const CUIRect *pRect, bool Active, unsigned Flags = BUTTONFLAG_LEFT);
-	int DoButton_Menu(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, unsigned Flags = BUTTONFLAG_LEFT, const char *pImageName = nullptr, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE, float FontFactor = 0.0f, ColorRGBA Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), CUIElement *pTextUiElement = nullptr, float TextFontSize = -1.0f, const CUIRect *pUnscaledRect = nullptr);
+	int DoButton_Menu(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, unsigned Flags = BUTTONFLAG_LEFT, const char *pImageName = nullptr, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE, float FontFactor = 0.0f, ColorRGBA Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), CUIElement *pTextUiElement = nullptr, float TextFontSize = -1.0f, const CUIRect *pUnscaledRect = nullptr, const ColorRGBA *pSurfaceColor = nullptr);
+	// 主菜单插画的两张纹理：未悬浮（灰版）/ 悬浮（彩版）。找不到同名插画时返回无效句柄。
+	// 给 QmUi 组件用——它们拿不到 CMenuImage，只认纹理句柄。
+	void MenuImageTextures(const char *pName, IGraphics::CTextureHandle *pIdle, IGraphics::CTextureHandle *pHover);
+	// 带图菜单按钮的文字字号（MenuButtonTextRect + 字体高度系数）。分段按钮要跟同一排的
+	// 单按钮同字号时用它，不要各自抄公式。
+	float MenuButtonLabelSize(const CUIRect &Rect, float FontFactor = 0.5f) const;
 	int DoButton_Menu_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, unsigned Flags = BUTTONFLAG_LEFT, const char *pImageName = nullptr, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE, float FontFactor = 0.0f, ColorRGBA Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), CUIElement *pTextUiElement = nullptr, float TextFontSize = -1.0f);
 	int DoButton_MenuTab(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, int Corners, SUIAnimator *pAnimator = nullptr, const ColorRGBA *pDefaultColor = nullptr, const ColorRGBA *pActiveColor = nullptr, const ColorRGBA *pHoverColor = nullptr, float EdgeRounding = 10.0f, const CCommunityIcon *pCommunityIcon = nullptr, CUIElement *pTextUiElement = nullptr, float FontSize = -1.0f, bool CapsuleTab = false);
 	int DoButton_MenuTab_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, int Corners, SUIAnimator *pAnimator = nullptr, const ColorRGBA *pDefaultColor = nullptr, const ColorRGBA *pActiveColor = nullptr, const ColorRGBA *pHoverColor = nullptr, float EdgeRounding = 10.0f, const CCommunityIcon *pCommunityIcon = nullptr, CUIElement *pTextUiElement = nullptr, float FontSize = -1.0f, bool CapsuleTab = false);
@@ -219,7 +226,7 @@ public:
 	bool DoLine_KeyReader(CUIRect &View, CButtonContainer &ReaderButton, CButtonContainer &ClearButton, const char *pName, const char *pCommand, float BodySize = -1.0f);
 
 private:
-	int DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize, const IGraphics::CTextureHandle *pIconTexture = nullptr, const CUIRect *pUnscaledRect = nullptr);
+	int DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize, const IGraphics::CTextureHandle *pIconTexture = nullptr, const CUIRect *pUnscaledRect = nullptr, const ColorRGBA *pSurfaceColor = nullptr);
 	int DoMenuTabV2Internal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, bool Active, const CUIRect *pRect, int Corners, const ColorRGBA *pCustomDefault, const ColorRGBA *pCustomActive, const ColorRGBA *pCustomHover, const CCommunityIcon *pCommunityIcon, CUIElement *pTextUiElement, float ContentScale, bool CapsuleTab = false);
 
 	int DoButton_MenuTabInternal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, int Corners, SUIAnimator *pAnimator, const ColorRGBA *pDefaultColor, const ColorRGBA *pActiveColor, const ColorRGBA *pHoverColor, float EdgeRounding, const CCommunityIcon *pCommunityIcon, CUIElement *pTextUiElement, float FontSize, bool CapsuleTab = false);
@@ -264,7 +271,7 @@ private:
 
 	void DoLaserPreview(const CUIRect *pRect, ColorHSLA OutlineColor, ColorHSLA InnerColor, int LaserType);
 	int DoButton_GridHeader(const void *pId, const char *pText, int Checked, const CUIRect *pRect, int Align = TEXTALIGN_ML, const SLabelProperties &Props = {});
-	int DoButton_Favorite(const void *pButtonId, const void *pParentId, bool Checked, const CUIRect *pRect);
+	int DoButton_Favorite(const void *pButtonId, const void *pParentId, bool Checked, const CUIRect *pRect, float IconFontSize = 0.0f);
 
 	bool m_SkinListScrollToSelected = false;
 	int64_t m_TeeEntranceStartTime = 0;
@@ -1578,6 +1585,17 @@ protected:
 	bool m_ShowStart;
 	bool m_MenuActive;
 	int m_MenuOpenFrame = 0;
+	// 滑出动画进行中：IsActive() 仍为 true（菜单要继续绘制），但输入全部让出，
+	// 动画自然收敛后才真正 SetActive(false)。
+	bool m_MenuClosing = false;
+	// 收尾兜底截止时刻（time_get）：轨道因配置/后端变化不收敛时强制关闭，
+	// 避免菜单停在半路既关不掉也不再接受输入。
+	int64_t m_MenuCloseDeadline = 0;
+	// 点击菜单面板外空白：按下时只登记，等本帧绘制算出 HotItem 再判定，
+	// 避免「快速甩鼠标点击」在同一帧里因 HotItem 还是上一帧的值而误关。
+	bool m_MenuOutsideClickPending = false;
+	// 本帧实际绘制出的菜单面板（已含滑动/切页偏移）：落在里面不算点外部。
+	SQmMenuHitRegions m_MenuHitRegions;
 	bool m_BrowserRefreshPending = false;
 	bool m_BrowserRefreshPendingForce = false;
 	// 切到浏览器页时递增；各列表（服务器列表、社区/国家/类型过滤）比对
@@ -2431,7 +2449,6 @@ private:
 	void RenderVoteMapLibrary(CUIRect MainView);
 	void RenderUnfinishedMaps(CUIRect MainView);
 	void RenderVotePlayerList(CUIRect MainView, bool MoveToSpectators);
-	void RenderIngameHint();
 
 	// found in menus_browser.cpp
 	int m_SelectedIndex;
@@ -2638,6 +2655,10 @@ public:
 	SSettingsResourceFrameContext SettingsResourceFrameContext() const { return {m_SettingsScrollActive, false, m_SettingsPostScrollRecoveryFrames, m_SettingsHighPrioritySettled}; }
 	const SSettingsAdaptiveBudgetOutput &CurrentSettingsUiFrameBudget() const { return m_CurrentSettingsUiFrameBudget; }
 	void SetActive(bool Active);
+	// 收菜单：先播滑出，动画收敛后再 SetActive(false)。ESC 与点击外部共用。
+	void BeginMenuClose();
+	// 页面在绘制前登记本帧真实使用的内容矩形；外部点击判定只认这些矩形。
+	void AddMenuHitRegion(const CUIRect &Rect);
 
 	void OnInterfacesInit(CGameClient *pClient) override;
 	void OnInit() override;

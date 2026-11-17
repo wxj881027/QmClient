@@ -13,6 +13,7 @@
 
 #include <generated/client_data.h>
 
+#include <game/client/QmUi/QmAnimationBackend.h>
 #include <game/client/QmUi/QmLayout.h>
 #include <game/client/QmUi/QmLegacy.h>
 #include <game/client/QmUi/UiButtons.h>
@@ -267,6 +268,41 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 
 	const bool LocalServerRunning = GameClient()->m_LocalServer.IsServerRunning();
 	const bool EditorDirty = GameClient()->Editor()->HasUnsavedData();
+	// 本地服务器格：0 = 单按钮「运行服务器」，1 = 已分成「进入 / 停止服务器」两段。
+	// 欠阻尼弹簧（固有响应约 0.34s、阻尼比 0.62）让右段冲过头一点再回稳，切换不是生硬的瞬变。
+	static float s_LocalServerSplit = 0.0f, s_LocalServerSplitVel = 0.0f;
+	QmSpringAdvance(s_LocalServerSplit, s_LocalServerSplitVel, LocalServerRunning ? 1.0f : 0.0f, SUiSpringConfig::FromResponse(0.34f, 0.62f), Client()->RenderFrameTime());
+	// 两段的底色沿用语义色，浓度跟着进度长：整条还是单按钮时不着色。
+	const ColorRGBA ControlSurface = ResolveConfiguredControlSurface();
+	const float SplitTint = std::clamp(s_LocalServerSplit, 0.0f, 1.0f);
+	const ColorRGBA JoinSurface = BlendUiButtonSurface(ControlSurface, ui_token::color::SUCCESS.WithAlpha(0.22f * SplitTint));
+	const ColorRGBA StopSurface = BlendUiButtonSurface(ControlSurface, ui_token::color::DANGER.WithAlpha(0.22f * SplitTint));
+	// 热键走边缘触发，只看目标态：CheckHotKey 是电平判定，按住 R 会每帧在「运行 → 停止」
+	// 之间来回切（实测按一下就能把刚起的服务器立刻停掉）。RenderOnly 趟不推进锁存，
+	// 否则背景趟吃掉边沿、绘制趟就不再响应。
+	{
+		static bool s_LocalServerRWasDown = false, s_LocalServerJWasDown = false;
+		if(!Ui()->RenderOnly())
+		{
+			const bool RDown = Input()->KeyPress(KEY_R);
+			const bool JDown = Input()->KeyPress(KEY_J);
+			const bool REdge = RDown && !s_LocalServerRWasDown;
+			const bool JEdge = JDown && !s_LocalServerJWasDown;
+			s_LocalServerRWasDown = RDown;
+			s_LocalServerJWasDown = JDown;
+			if(LocalServerRunning)
+			{
+				if(JEdge && CheckHotKey(KEY_J))
+					GameClient()->m_LocalServer.Connect();
+				else if(REdge && CheckHotKey(KEY_R))
+					GameClient()->m_LocalServer.KillServer();
+			}
+			else if(REdge && CheckHotKey(KEY_R))
+			{
+				GameClient()->m_LocalServer.RunServer({});
+			}
+		}
+	}
 	{
 		const std::chrono::nanoseconds StageStart = StartMenuPerfNow(TrackPerf);
 		constexpr int MenuButtonCount = 6;
@@ -310,6 +346,9 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 
 		// 更新入口始终允许查看；重开详情保留下载和已准备的安装包。
 		const char *pUpdateLabel = GameClient()->m_TClient.QmClientUpdateStatusText();
+		// 双操作行的文字字号跟同一排的带图菜单按钮对齐（两条版式分支共用）。
+		// 分段按钮自己按控件正文档取字会小一号，同一列里看得出来。
+		const float RowLabelSize = GameClient()->m_Menus.MenuButtonLabelSize(aMenuButtons[2]);
 
 		if(UseV2Layout)
 		{
@@ -342,7 +381,9 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 
 			// 检查更新与「新功能」共用双操作按钮：左半显示更新状态，右半打开新功能弹窗。
 			static CButtonContainer s_QmUpdateButton, s_QmNewFeaturesButton;
-			const int QmAction = ui_widget::SplitActionButton(Ctx, &s_QmUpdateButton, pUpdateLabel, &s_QmNewFeaturesButton, GameClient()->m_QmClient.HasUnreadQmNews() ? Localize("New features (unread)") : Localize("New features"), NewFeaturesButton, false, false, EUiButtonGeometry::CONTROL, Localize("Check for updates"), Localize("New features"));
+			ui_widget::SSplitActionOptions UpdateOptions;
+			UpdateOptions.m_LabelSize = RowLabelSize;
+			const int QmAction = ui_widget::SplitActionButton(Ctx, &s_QmUpdateButton, pUpdateLabel, &s_QmNewFeaturesButton, GameClient()->m_QmClient.HasUnreadQmNews() ? Localize("New features (unread)") : Localize("New features"), NewFeaturesButton, false, false, EUiButtonGeometry::CONTROL, Localize("Check for updates"), Localize("New features"), UpdateOptions);
 			if(QmAction == 0)
 			{
 				GameClient()->m_Menus.ShowQmUpdatePopup();
@@ -350,21 +391,23 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 			else if(QmAction == 1)
 				GameClient()->m_Menus.ShowQmNewFeaturesPopup();
 
-			// 服务器运行中时这一格变成双操作：左边进入服务器、右边停止；未运行时仍是单按钮。
-			// 与「检查更新 / 新功能」共用同一套双操作控件与左右悬浮反馈。
+			// 与 legacy 同一套分段按钮和同一条进度：V2 版式不带主菜单插画，只换两段文字与底色。
 			static CButtonContainer s_LocalServerButton, s_LocalServerStopButton;
-			if(LocalServerRunning)
+			ui_widget::SSplitActionOptions LocalServerOptions;
+			LocalServerOptions.m_Progress = s_LocalServerSplit;
+			LocalServerOptions.m_LeftSurface = JoinSurface;
+			LocalServerOptions.m_RightSurface = StopSurface;
+			LocalServerOptions.m_LabelSize = RowLabelSize;
+			const int LocalServerAction = ui_widget::SplitActionButton(Ctx, &s_LocalServerButton, s_LocalServerSplit > 0.5f ? Localize("Join") : Localize("Run server"), &s_LocalServerStopButton, Localize("Stop server"), aMenuButtons[2], false, false, EUiButtonGeometry::CONTROL, nullptr, nullptr, LocalServerOptions);
+			if(LocalServerAction == 0)
 			{
-				const int LocalAction = ui_widget::SplitActionButton(Ctx, &s_LocalServerButton, Localize("Join server"), &s_LocalServerStopButton, Localize("Stop"), aMenuButtons[2]);
-				if(LocalAction == 0)
+				if(LocalServerRunning)
 					GameClient()->m_LocalServer.Connect();
-				else if(LocalAction == 1)
-					GameClient()->m_LocalServer.KillServer();
+				else
+					GameClient()->m_LocalServer.RunServer({});
 			}
-			else if(ui_widget::SecondaryButton(Ctx, &s_LocalServerButton, Localize("Run server"), aMenuButtons[2]) || (CheckHotKey(KEY_R) && Input()->KeyPress(KEY_R)))
-			{
-				GameClient()->m_LocalServer.RunServer({});
-			}
+			else if(LocalServerAction == 1)
+				GameClient()->m_LocalServer.KillServer();
 			if(!QmUiMobilePlatform())
 			{
 				static CButtonContainer s_MapEditorButton;
@@ -483,7 +526,9 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 
 			// 检查更新与新功能共用双操作按钮：左半显示更新状态，右半打开内置新功能弹窗。
 			static CButtonContainer s_QmUpdateButton, s_QmNewFeaturesButton;
-			const int QmAction = ui_widget::SplitActionButton(ui_widget::ControlContext(Ui()), &s_QmUpdateButton, pUpdateLabel, &s_QmNewFeaturesButton, GameClient()->m_QmClient.HasUnreadQmNews() ? Localize("New features (unread)") : Localize("New features"), NewFeaturesButton, false, false, EUiButtonGeometry::START_MENU, Localize("Check for updates"), Localize("New features"));
+			ui_widget::SSplitActionOptions UpdateOptions;
+			UpdateOptions.m_LabelSize = RowLabelSize;
+			const int QmAction = ui_widget::SplitActionButton(ui_widget::ControlContext(Ui()), &s_QmUpdateButton, pUpdateLabel, &s_QmNewFeaturesButton, GameClient()->m_QmClient.HasUnreadQmNews() ? Localize("New features (unread)") : Localize("New features"), NewFeaturesButton, false, false, EUiButtonGeometry::START_MENU, Localize("Check for updates"), Localize("New features"), UpdateOptions);
 			if(QmAction == 0)
 			{
 				GameClient()->m_Menus.ShowQmUpdatePopup();
@@ -492,26 +537,35 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 				GameClient()->m_Menus.ShowQmNewFeaturesPopup();
 
 			ScaledButton = ScaleButtonRect(aMenuButtons[2], s_aMenuButtonScale[2]);
-			// 运行中：左边保留官方贴图按钮显示「进入服务器」，右边一格停止图标；未运行仍是单按钮「运行服务器」。
-			// 两个分支都必须带齐带图按钮的全套参数（贴图、圆角、着色、标签、未缩放矩形）。
+			// 与「检查更新 / 新功能」同一个分段组件，边框、圆角、字号、悬浮与按下反馈完全一致。
+			// 未运行时进度为 0，整条仍是单按钮「运行服务器」；启动后右段从右端弹性长出，
+			// 左段被压窄成「进入」，插画始终钉在整条右端不动。切点照抄上游：
+			// 左段宽 =（总宽 − 贴图宽）/ 2，贴图占 4 倍按钮高。
+			const char *pLocalServerImage = g_Config.m_ClShowStartMenuImages ? "local_server" : nullptr;
+			IGraphics::CTextureHandle LocalServerImageIdle, LocalServerImageHover;
+			if(pLocalServerImage != nullptr)
+				GameClient()->m_Menus.MenuImageTextures(pLocalServerImage, &LocalServerImageIdle, &LocalServerImageHover);
+			const float LocalServerImageWidth = LocalServerImageIdle.IsValid() ? ScaledButton.h * 4.0f : 0.0f;
+			ui_widget::SSplitActionOptions LocalServerOptions;
+			LocalServerOptions.m_Progress = s_LocalServerSplit;
+			LocalServerOptions.m_LeftFraction = ScaledButton.w > 0.0f ? std::clamp((ScaledButton.w - LocalServerImageWidth) / 2.0f / ScaledButton.w, 0.0f, 1.0f) : 0.5f;
+			LocalServerOptions.m_ImageIdle = LocalServerImageIdle;
+			LocalServerOptions.m_ImageHover = LocalServerImageHover;
+			LocalServerOptions.m_ImageWidth = LocalServerImageWidth;
+			LocalServerOptions.m_LeftSurface = JoinSurface;
+			LocalServerOptions.m_RightSurface = StopSurface;
+			LocalServerOptions.m_LabelSize = RowLabelSize;
 			static CButtonContainer s_LocalServerButton, s_LocalServerStopButton;
-			if(LocalServerRunning)
+			const int LocalServerAction = ui_widget::SplitActionButton(ui_widget::ControlContext(Ui()), &s_LocalServerButton, s_LocalServerSplit > 0.5f ? Localize("Join") : Localize("Run server"), &s_LocalServerStopButton, Localize("Stop server"), ScaledButton, false, false, EUiButtonGeometry::START_MENU, nullptr, nullptr, LocalServerOptions);
+			if(LocalServerAction == 0)
 			{
-				CUIRect JoinRect = ScaledButton;
-				CUIRect StopSlot;
-				const float StopSize = std::min(JoinRect.h + ui_token::spacing::XS, JoinRect.w);
-				JoinRect.VSplitRight(StopSize, &JoinRect, &StopSlot);
-				StopSlot.VSplitLeft(std::min(ui_token::spacing::XS, StopSlot.w), nullptr, &StopSlot);
-				if(GameClient()->m_Menus.DoButton_Menu(&s_LocalServerButton, Localize("Join server"), 0, &JoinRect, BUTTONFLAG_LEFT, g_Config.m_ClShowStartMenuImages ? "local_server" : nullptr, IGraphics::CORNER_ALL, Rounding, 0.5f, ColorRGBA(0.0f, 1.0f, 0.0f, 0.25f), &m_aButtonLabels[2], -1.0f, &aMenuButtons[2]))
+				if(LocalServerRunning)
 					GameClient()->m_LocalServer.Connect();
-				StopSlot = QmUiSquareIconButtonRect(StopSlot);
-				if(Ui()->DoButton_QmIcon(&s_LocalServerStopButton, EQmIcon::STOP, FontIcons::FONT_ICON_STOP, 0, &StopSlot, BUTTONFLAG_LEFT))
-					GameClient()->m_LocalServer.KillServer();
+				else
+					GameClient()->m_LocalServer.RunServer({});
 			}
-			else if(GameClient()->m_Menus.DoButton_Menu(&s_LocalServerButton, Localize("Run server"), 0, &ScaledButton, BUTTONFLAG_LEFT, g_Config.m_ClShowStartMenuImages ? "local_server" : nullptr, IGraphics::CORNER_ALL, Rounding, 0.5f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), &m_aButtonLabels[2], -1.0f, &aMenuButtons[2]) || (CheckHotKey(KEY_R) && Input()->KeyPress(KEY_R)))
-			{
-				GameClient()->m_LocalServer.RunServer({});
-			}
+			else if(LocalServerAction == 1)
+				GameClient()->m_LocalServer.KillServer();
 			if(!QmUiMobilePlatform())
 			{
 				ScaledButton = ScaleButtonRect(aMenuButtons[3], s_aMenuButtonScale[3]);

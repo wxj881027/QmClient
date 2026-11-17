@@ -8,6 +8,7 @@
 #include <engine/engine.h>
 
 #include <game/client/QmUi/QmToast.h>
+#include <game/client/components/qmclient/browser_status_layout.h>
 #include <game/client/components/qmclient/screenshot_viewer.h>
 #include <game/client/gameclient.h>
 #include <game/client/qm_icon.h>
@@ -24,7 +25,13 @@ using namespace FontIcons;
 
 namespace
 {
-	constexpr int SCREENSHOT_GALLERY_COLUMNS = 4;
+	// 列数固定：卡片宽度 = 面板宽 / 列数 − 格间距（见 ui_token::list::GRID_SPACING），
+	// 窗口变宽时卡片等比变大。5 列是实机观感档：4 列在大窗口里卡片偏大。
+	constexpr int SCREENSHOT_GALLERY_COLUMNS = 5;
+	// 卡片底部说明行高度（文件名一行）。
+	constexpr float SCREENSHOT_GALLERY_CAPTION_HEIGHT = 22.0f;
+	// 预览图宽高比（高 / 宽）：卡片尺寸只跟列宽走，窗口变宽卡片等比变大。
+	constexpr float SCREENSHOT_GALLERY_PREVIEW_ASPECT = 0.60f;
 
 	void RenderScreenshotTexture(IGraphics *pGraphics, const CQmScreenshotManager::SThumbnail &Thumbnail, CUIRect Rect)
 	{
@@ -218,34 +225,46 @@ void CMenus::RenderDemoScreenshotGallery(CUIRect ListBox, bool &WasListboxItemAc
 	for(size_t Index = 0; Index < s_vGalleryItemIds.size(); ++Index)
 		s_vGalleryItemIds[Index] = (int)Index;
 
-	// 胶囊格：行列表那一套统一行外观（行距、行内退、覆盖式滚动条、主题选中填充）同样用在
-	// 4 列网格上。行距必须并进行高：组件在 ItemsPerRow > 1 时按每个格子推进一次自动行距，
-	// 4 列网格的行距会变成 4 倍，内容高度少算、行位逐行漂移，底部的图片/文件夹滚不到。
+	// 胶囊格：行列表那一套统一行外观（行内退、覆盖式滚动条、主题选中填充）同样用在
+	// 多列网格上。自动行距必须关掉：组件在 ItemsPerRow > 1 时按每个格子推进一次，
+	// 网格行距会变成列数倍，内容高度少算、行位逐行漂移，底部的图片/文件夹滚不到。
 	s_GalleryListBox.SetCapsuleRows(ui_token::font::BODY);
 	s_GalleryListBox.DoAutoSpacing(0.0f);
-	// 选中填充内缩半档行距：填充贴合卡片（格与格之间那条缝不染色）。
-	s_GalleryListBox.SetItemSelectionInset(ui_token::list::ROW_SPACING * 0.5f);
+	// 卡片就是反馈矩形：格子里还含行距与行内退，按格子画反馈会与卡面错开一圈
+	// （实机反馈「选中底衬和卡片对不上」）。所以内缩归零，反馈延后到卡片矩形画。
+	s_GalleryListBox.SetItemSelectionInset(0.0f);
+	s_GalleryListBox.SetDeferredItemFeedback(true);
+	// 容器永远铺满面板：行数不足或最后一行只剩半行时都不收高度，
+	// 否则列表缩到内容高度、面板下方留一条空档（两种实机反馈都撞上过）。
+	s_GalleryListBox.SetFillViewportHeight(true);
 	// 轨道压在内容上：列宽按「行让位」这一份宽度算。RowReserveWidth 由 token 直接算，
 	// 不依赖上一帧的滚动条状态；轨道真正出现时组件把列表体整块右缩同一列，格子宽度不跳。
 	const float GalleryCellWidth = std::max(0.0f, ListBox.w - s_GalleryListBox.RowReserveWidth()) / (float)SCREENSHOT_GALLERY_COLUMNS;
-	const float PreviewHeight = std::clamp(GalleryCellWidth * 0.60f, 72.0f, 150.0f);
-	const float RowHeight = PreviewHeight + 42.0f;
-	const float RowPitch = RowHeight + ui_token::list::ROW_SPACING;
-	const float CardRadius = ui_token::list::RowRadius(RowHeight);
+	// 卡片尺寸只由列宽决定：预览图按固定宽高比、说明行固定高，两者与面板高度无关。
+	// 面板高度只决定这一屏放得下几行——末行露出一截是滚动列表的正常形态，滚动条
+	// 负责剩下的内容。绝不反过来拉伸卡片去凑满高度（那样一屏反而只放得下两行）。
+	// 格间距取列表的网格档（不是行胶囊那半档），卡片之间才有读得出来的缝。
+	const float GallerySpacing = ui_token::list::GRID_SPACING;
+	const float RowHeight = QmResolveGalleryRowHeight(GalleryCellWidth, SCREENSHOT_GALLERY_CAPTION_HEIGHT, SCREENSHOT_GALLERY_PREVIEW_ASPECT);
+	const float RowPitch = RowHeight + GallerySpacing;
+	const float GalleryPadding = ui_token::list::ContainerPadding(RowHeight);
+	// 向上取整：末行只露出一部分也要算进可视范围，否则滚动条少算一行、
+	// 最后一行永远滚不到底。
+	const float GalleryUsableHeight = std::max(0.0f, ListBox.h - 2.0f * GalleryPadding);
+	const int GalleryVisibleRows = std::max(1, (int)std::ceil((GalleryUsableHeight + GallerySpacing) / RowPitch));
+	const float CardRadius = ui_token::radius::BASE;
 	// 容器内边距：格内容区在容器四边内缩（档位由行高派生），首/末行的卡片不再贴着
-	// 容器圆角。可见行数仍按整格高度反推，组件为保行数只把留白收敛到富余的那一段。
-	s_GalleryListBox.SetContainerPadding(ui_token::list::ContainerPadding(RowHeight));
+	// 容器圆角。
+	s_GalleryListBox.SetContainerPadding(GalleryPadding);
 	if(m_DemolistSelectedReveal)
 	{
 		s_GalleryListBox.ScrollToSelected();
 		m_DemolistSelectedReveal = false;
 	}
-	// 整数行：行高即 RowPitch（含行距），组件按 RowsHeight(可见行, RowPitch, 0) = 可见行 × RowPitch
-	// 收高度，视图正好停在整格边界，最后一行完整可见而不是半张。空列表没有条目行
-	// （组件会把 0 条目收成 0 高，连自绘的空态占位行一起裁掉），传 (0, 0) 关掉自适应高度。
-	const int GalleryVisibleRows = m_vpFilteredDemos.empty() ? 0 :
-								   (int)std::floor(std::max(0.0f, ListBox.h) / RowPitch);
-	s_GalleryListBox.SetVisibleRowRange(GalleryVisibleRows > 0 ? 1 : 0, GalleryVisibleRows);
+	// 行高即 RowPitch（含行距）：可见行按 RowHeight 均分可用高度，正好铺满面板；
+	// 超出可见行的内容留给滚动条。空列表也保留完整高度（SetFillViewportHeight），
+	// 「No screenshots」占位行画在面板里。
+	s_GalleryListBox.SetVisibleRowRange(m_vpFilteredDemos.empty() ? 0 : 1, GalleryVisibleRows);
 	s_GalleryListBox.DoStart(RowPitch, (int)m_vpFilteredDemos.size(), SCREENSHOT_GALLERY_COLUMNS, 1, m_DemolistSelectedIndex, &ListBox, false, IGraphics::CORNER_B);
 
 	int ItemIndex = -1;
@@ -266,27 +285,22 @@ void CMenus::RenderDemoScreenshotGallery(CUIRect ListBox, bool &WasListboxItemAc
 		if(FirstVisibleIndex < 0)
 			FirstVisibleIndex = ItemIndex;
 		EndVisibleIndex = ItemIndex + 1;
-		// 卡片排在这一格的内容区里（左右已含胶囊格的行内退）；纵向夹回行高，
-		// RowPitch 里多出来的那一截行距只当格间缝，不撑高卡片。
-		CUIRect Card = ListItem.m_ContentRect;
+		// 卡片：格子去掉右侧与底部的缝，行高夹回 RowHeight。反馈与卡面共用这一个矩形
+		// （格子里含行距与行内退，按格子画反馈会大一圈）。
+		CUIRect Card = ListItem.m_Rect;
 		Card.h = std::min(Card.h, RowHeight);
-		CUIRect Shadow = Card;
-		Shadow.x += 2.0f;
-		Shadow.y += 2.0f;
-		Shadow.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.18f), IGraphics::CORNER_ALL, 4.0f);
-		// 选中/焦点底色由 CListBox 的胶囊格轨道统一绘制（主题 m_Selected 填充、无描边），
-		// 这里不再自绘那层。多选（Ctrl/Shift）组件不跟踪，用同一主题色补在卡片面上，
-		// 否则多选中的卡片和没选中的长得一样。
+		Card.x += GallerySpacing * 0.5f;
+		Card.w = std::max(0.0f, Card.w - GallerySpacing);
+		s_GalleryListBox.DrawItemFeedback(ItemIndex, Card, CardRadius);
+		// 一层卡片：上半缩略图 + 底部一行说明。以前是「卡片 + 内层暗底板 + 两层内边距 +
+		// 阴影」四层嵌套，缩略图看着像被塞进一个小框里（实机反馈「嵌套太多」）。
 		const ColorRGBA CardColor = Selected && !Focused ?
 						    Ui()->ScaleBackgroundAlpha(Ui()->QmControlTheme().m_Selected) :
 						    ColorRGBA(1.0f, 1.0f, 1.0f, 0.09f);
-		Card.Draw(CardColor, IGraphics::CORNER_ALL, 4.0f);
-		Card.Margin(4.0f, &Card);
+		Card.Draw(CardColor, IGraphics::CORNER_ALL, CardRadius);
 
 		CUIRect Preview, Caption;
-		Card.HSplitTop(Card.h - 22.0f, &Preview, &Caption);
-		Preview.Margin(1.0f, &Preview);
-		Preview.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.24f), IGraphics::CORNER_ALL, 2.0f);
+		Card.HSplitTop(std::max(0.0f, Card.h - SCREENSHOT_GALLERY_CAPTION_HEIGHT), &Preview, &Caption);
 		Preview.Margin(3.0f, &Preview);
 
 		if(pItem->m_IsDir)
@@ -294,7 +308,11 @@ void CMenus::RenderDemoScreenshotGallery(CUIRect ListBox, bool &WasListboxItemAc
 			const bool ParentFolder = str_comp(pItem->m_aFilename, "..") == 0;
 			const EQmIcon Icon = ParentFolder || pItem->m_IsLink ? EQmIcon::FOLDER_TREE : EQmIcon::FOLDER;
 			const char *pIcon = ParentFolder || pItem->m_IsLink ? FONT_ICON_FOLDER_TREE : FONT_ICON_FOLDER;
-			Ui()->DoLabel_QmIcon(&Preview, Icon, pIcon, std::min(26.0f, Preview.h * 0.34f), TEXTALIGN_MC);
+			// 图标占预览区高度的一档，再按墨迹高反算字号：先定视觉高度，各字形自己
+			// 换算，避免同字号并排时一大一小。旧实现把字号卡在 26，大卡片里图标显得
+			// 又小又空（实机反馈「图标可以大一些」）。
+			const float IconInkHeight = std::clamp(Preview.h * 0.34f, 18.0f, 64.0f);
+			Ui()->DoLabel_QmIcon(&Preview, Icon, pIcon, QmIconInkFontSize(Icon, IconInkHeight), TEXTALIGN_MC);
 		}
 		else
 		{
@@ -309,10 +327,9 @@ void CMenus::RenderDemoScreenshotGallery(CUIRect ListBox, bool &WasListboxItemAc
 			{
 				Ui()->DoLabel(&Preview, Localize("Could not preview this image"), 10.0f, TEXTALIGN_MC);
 			}
-			// 其余情况是后台正在解码：保留占位底色，贴图就绪后的帧再画。
+			// 其余情况是后台正在解码：保留卡片底色，贴图就绪后的帧再画。
 		}
 
-		Caption.HMargin(1.0f, &Caption);
 		SLabelProperties LabelProperties;
 		LabelProperties.m_MaxWidth = Caption.w;
 		LabelProperties.m_EllipsisAtEnd = true;

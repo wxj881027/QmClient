@@ -521,8 +521,16 @@ void CStatusBar::OnRender()
 
 	const float BackgroundAlpha = g_Config.m_QmStatusBarAlpha / 100.0f;
 	Graphics()->MapScreen(0.0f, 0.0f, m_Width, m_Height);
-	Ui()->RenderGaussianBlur({m_BarX, m_BarY, m_Width, m_BarHeight}, BackgroundAlpha, IGraphics::CORNER_NONE, 0.0f);
-	Graphics()->DrawRect(m_BarX, m_BarY, m_Width, m_BarHeight, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmStatusBarColor)).WithAlpha(BackgroundAlpha), 0, 0);
+	// 游戏内 HUD 组件要自己开模糊作用域：计分板(scoreboard.cpp)、提示(tooltips.cpp)、
+	// IME 都是这个口径。开了作用域之后，CUIRect::Draw 在半透明底色下会经
+	// DrawRectBackdrop 自动走 RenderGaussianBlur，模糊强度取作用域 alpha（这里 1.0），
+	// 受 qm_gaussian_blur 总开关与模糊档位约束。
+	// 以前是手写 RenderGaussianBlur + Graphics()->DrawRect，把「背景不透明度」同时当成
+	// 模糊强度：默认 75% 下模糊本体只做 0.75 混合，再被同值 0.75 的底色压一层，
+	// 视觉上跟没模糊几乎一样。
+	CUiScopedGaussianBlur BlurScope(Ui());
+	const CUIRect BarRect{m_BarX, m_BarY, m_Width, m_BarHeight};
+	BarRect.Draw(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmStatusBarColor)).WithAlpha(BackgroundAlpha), IGraphics::CORNER_NONE, 0.0f);
 	TextRender()->TextColor(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmStatusBarTextColor)).WithAlpha(g_Config.m_QmStatusBarTextAlpha / 100.0f));
 
 	struct SStatusLayoutItem

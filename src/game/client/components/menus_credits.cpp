@@ -311,7 +311,8 @@ void CMenus::AppendDdnetContributorCard(std::vector<SSettingsCardDefinition> &vC
 	// DDNet 署名卡：两个入口按钮同一行并列，下方是贡献者名单流式排版。
 	const float LineHeight = Metrics.m_LineHeight;
 	const float LineSpacing = Metrics.m_LineSpacing;
-	const float TipSize = Metrics.m_SmallSize;
+	const float BodySize = Metrics.m_BodySize;
+	const float ParagraphLineSpacing = ui_token::settings::RowGap(LineSpacing);
 
 	SSettingsCardDefinition DdnetCredits;
 	DdnetCredits.m_Spec = {"deck:qmclient-contributors-ddnet", Localize("DDNet"), qm_card_registry::ResolveLocalizedDescription("deck:qmclient-contributors-ddnet")};
@@ -338,7 +339,7 @@ void CMenus::AppendDdnetContributorCard(std::vector<SSettingsCardDefinition> &vC
 		}
 		return Names;
 	}();
-	DdnetCredits.m_RenderMeasured = [this, Metrics, LineHeight, LineSpacing, TipSize, ReadOnly](CUIRect &Content) {
+	DdnetCredits.m_RenderMeasured = [this, LineHeight, LineSpacing, BodySize, ParagraphLineSpacing, ReadOnly](CUIRect &Content) {
 		CUIRect Row, LeftButton, RightButton;
 		static CButtonContainer s_DdnetStaffButton;
 		static CButtonContainer s_DdnetReleasesButton;
@@ -355,8 +356,17 @@ void CMenus::AppendDdnetContributorCard(std::vector<SSettingsCardDefinition> &vC
 				Client()->ViewLink("https://ddnet.org/releases/");
 		}
 		Flow.Space(LineSpacing);
-		// 名单用小字加大行距的流式排版，间隔点分隔，降低拥挤感。
-		Flow.Text("ddnet-contributor-names", s_Contributors.c_str(), 0.0f, TipSize, 0.0f, [this](const char *pText, float Width, float Size) { return TextRender()->TextBoundingBox(Size, pText, -1, Width).m_H + Size * 0.75f; }, [this, TipSize](const CUIRect &Rect, const char *pText) { Ui()->DoLabel(&Rect, pText, TipSize, TEXTALIGN_ML, {.m_MaxWidth = Rect.w, .m_EnableWidthCheck = false}); }, LineHeight);
+		// 名单是正文内容而不是辅助说明：字号走正文档，换行行距走段落组件，
+		// 测量与绘制共用同一行距，不能再靠段尾补高度假装行距。
+		static SSettingsParagraphState s_ContributorNamesParagraph;
+		Flow.Text("ddnet-contributor-names", s_Contributors.c_str(), 0.0f, BodySize, 0.0f,
+			[this, ParagraphLineSpacing](const char *pText, float Width, float Size) {
+				return MeasureSettingsParagraph(TextRender(), pText, Width, Size, ParagraphLineSpacing);
+			},
+			[this, BodySize, ParagraphLineSpacing](const CUIRect &Rect, const char *pText) {
+				DrawSettingsParagraph(Ui(), s_ContributorNamesParagraph, Rect, pText, BodySize, ParagraphLineSpacing);
+			},
+			LineHeight);
 	};
 	qm_settings_content::UseDeclaredContent(DdnetCredits, Ui(), TextRender());
 	vCards.push_back(std::move(DdnetCredits));

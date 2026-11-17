@@ -24,6 +24,29 @@ inline float QmBrowserLayoutExtent(float Value)
 	return std::isfinite(Value) ? std::max(0.0f, Value) : 0.0f;
 }
 
+// 页面底部外距必须**按实际已内缩的量**补足：菜单壳层已经对 Screen 应用过全局安全区
+// （menus.cpp 的 Screen.Margin(panel::MARGIN)），页面若再切一次 8 就变成 16。
+// 回放播放 / 幽灵视角下安全区不生效，此时 View 底边贴着 Screen，需要页面自己补满 8。
+// 返回页面还应该额外切掉的量，保证「面板底边 → 窗口底」恒等于 Margin。
+inline float QmResolveBrowserBottomInset(const CUIRect &Screen, const CUIRect &View, float Margin = ui_token::panel::MARGIN)
+{
+	const float ScreenBottom = Screen.y + Screen.h;
+	const float ViewBottom = View.y + View.h;
+	const float Existing = std::max(0.0f, ScreenBottom - ViewBottom);
+	return std::clamp(Margin - Existing, 0.0f, std::max(0.0f, Margin));
+}
+
+// 图库（截图画廊 / 卡片网格）的行高：**只由列宽决定**。预览图按固定宽高比铺满
+// 卡片宽度，说明行固定高，所以卡片永远保持同一形状，窗口变宽卡片等比变大。
+//
+// 面板高度只决定「这一屏放得下几行」（可以是 2 行 + 第三行露出一截，滚动列表的
+// 正常形态），**绝不反过来拉伸卡片去凑满高度**。此前按可用高度均分行高，卡片会
+// 被拉成很大一张、一屏反而只放得下 2 行（实机反馈「为啥面板只允许两行」）。
+inline float QmResolveGalleryRowHeight(const float CellWidth, const float CaptionHeight, const float PreviewAspect)
+{
+	return QmBrowserLayoutExtent(CellWidth) * std::clamp(PreviewAspect, 0.05f, 4.0f) + QmBrowserLayoutExtent(CaptionHeight);
+}
+
 struct SQmBrowserChipGrid
 {
 	static constexpr int MAX_CHIPS = 16;

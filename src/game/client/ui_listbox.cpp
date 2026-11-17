@@ -30,6 +30,7 @@ void CListBox::Reset()
 	m_ListBoxNewSelOffset = 0;
 	m_RowReserveRight = 0.0f;
 	m_ItemSelectionInset = 0.0f;
+	m_WheelStepScale = 1.0f;
 	m_ListBoxUpdateScroll = false;
 	m_ScrollbarShown = false;
 	m_AutoSpacing = 0.0f;
@@ -74,6 +75,7 @@ void CListBox::Reset()
 	m_FeedbackNumItems = -1;
 	m_CapsuleRows = false;
 	m_ItemColorsOverridden = false;
+	m_RowFeedbackBorder = false;
 	m_RowInsetX = ui_token::list::RowInsetX(ui_token::font::BODY);
 	m_AutoSpacingOverridden = false;
 	m_MinVisibleRows = 0;
@@ -258,11 +260,27 @@ void CListBox::DoStart(float RowHeight, int NumItems, int ItemsPerRow, int RowsP
 	if(m_MaxVisibleRows > 0)
 	{
 		const int VisibleRows = ui_token::list::VisibleRows(m_ListBoxNumItems, m_ListBoxItemsPerRow, m_MinVisibleRows, m_MaxVisibleRows);
-		View.h = minimum(View.h, ui_token::list::PaddedRowsHeight(VisibleRows, m_ListBoxRowHeight, m_AutoSpacing, m_ContainerPaddingY));
-		// 兜底：调用方高度不足以容纳「行内容 + 两档内边距」时，留白只在多出来的
-		// 那段里取——宁可没有留白，也不挤掉一行。
-		const float Slack = maximum(0.0f, View.h - ui_token::list::RowsHeight(VisibleRows, m_ListBoxRowHeight, m_AutoSpacing));
-		m_ContainerPaddingY = minimum(m_ContainerPaddingY, Slack * 0.5f);
+		if(m_FillViewportHeight)
+		{
+			// 铺满视口：调用方给的矩形就是面板本身，行数不够（或最后一行只剩半行）时也不能
+			// 把视图收窄，否则面板底部会留一条没画到的空档（网格画廊两种情形都撞上过）。
+			// 内容块比视口矮时（只有一行、行高又封了顶），把富余高度对半分给上下内边距，
+			// 网格垂直居中——只贴顶部、底部空一大块，看起来就像列表画漏了一截。
+			const int PerRow = maximum(1, m_ListBoxItemsPerRow);
+			const int ContentRows = maximum(1, (m_ListBoxNumItems + PerRow - 1) / PerRow);
+			const float Block = ui_token::list::RowsHeight(ContentRows, m_ListBoxRowHeight, m_AutoSpacing);
+			const float Slack = maximum(0.0f, View.h - Block);
+			// 内容比视口高时 Slack 为 0，内边距退回调用方声明的那一档。
+			m_ContainerPaddingY = maximum(m_ContainerPaddingY, Slack * 0.5f);
+		}
+		else
+		{
+			View.h = minimum(View.h, ui_token::list::PaddedRowsHeight(VisibleRows, m_ListBoxRowHeight, m_AutoSpacing, m_ContainerPaddingY));
+			// 兜底：调用方高度不足以容纳「行内容 + 两档内边距」时，留白只在多出来的
+			// 那段里取——宁可没有留白，也不挤掉一行。
+			const float Slack = maximum(0.0f, View.h - ui_token::list::RowsHeight(VisibleRows, m_ListBoxRowHeight, m_AutoSpacing));
+			m_ContainerPaddingY = minimum(m_ContainerPaddingY, Slack * 0.5f);
+		}
 	}
 	// 容器圆角按容器长宽推导；带标题的列表沿用 DoHeader 用整容器算出的那一档。
 	if(!m_HeaderThisFrame)
@@ -336,7 +354,10 @@ void CListBox::DoStart(float RowHeight, int NumItems, int ItemsPerRow, int RowsP
 	ScrollRequest.m_Profile = m_ScrollProfile;
 	ScrollRequest.m_RowExtent = m_ListBoxRowHeight + m_AutoSpacing;
 	ScrollRequest.m_RowsPerStep = RowsPerScroll;
-	const SQmResolvedScrollPolicy ScrollPolicy = QmResolveScrollPolicy(ScrollRequest);
+	SQmResolvedScrollPolicy ScrollPolicy = QmResolveScrollPolicy(ScrollRequest);
+	// 单列表微调：只缩放滚轮位移，键盘翻页行数（RowsPerScroll）保持原值。
+	if(m_WheelStepScale != 1.0f)
+		ScrollPolicy.m_Config.m_WheelScale *= m_WheelStepScale;
 	CScrollRegionParams ScrollParams = QmScrollRegionParamsFromPolicy(ScrollPolicy);
 	ScrollParams.m_WheelOwnerPriority = m_WheelOwnerPriority;
 	ScrollParams.m_HideScrollbar = m_HideScrollbar;
@@ -520,32 +541,45 @@ CListboxItem CListBox::DoNextItem(const void *pId, bool Selected, float CornerRa
 	// 旧选中行即使已经不再被选中，也要继续画到淡出结束，才能和新行走成
 	// 真正的交叉淡变，而不是先消失再淡入。
 	const float RowCornerRadius = CornerRadius >= 0.0f ? CornerRadius : ResolveRowCornerRadius();
+	if(Ui()->HotItem() == pId)
+		m_HoverFeedback.Observe(ThisItemIndex);
+	// 卡片网格的反馈矩形要贴合卡片本身，而卡片矩形由调用方在 DoNextItem 之后
+	// 才算得出来（格子矩形里还含行距与行内退）。延后模式下这里只观察动画，
+	// 由调用方调 DrawItemFeedback(卡片矩形) 画。
+	if(!m_DeferredItemFeedback)
+		DrawItemFeedback(ThisItemIndex, Item.m_Rect, RowCornerRadius);
+
+	return Item;
+}
+
+void CListBox::DrawItemFeedback(int Index, const CUIRect &Rect, float CornerRadius)
+{
 	// 选中/悬浮填充直接取主题选中色（强调色派生），**不过 ScaleBackgroundAlpha**：
 	// 反馈强度是交互语义，不能跟着所在页面的背景透明度作用域走（服务器列表为画滚动条
 	// 轨道把背板淡化到 0.28，以前在调用点手写 /0.28 反算，其余列表没有，于是同一个
 	// token 在不同页面显示成两档——实机反馈「悬浮色不一致、更浅」）。行内容本身也不受
 	// 该作用域影响，所以这里不做任何补偿才是唯一口径。
-	const float SelectionAlpha = m_SelectedFeedback.Alpha(ThisItemIndex);
+	const float SelectionAlpha = m_SelectedFeedback.Alpha(Index);
 	if(SelectionAlpha > 0.001f)
 	{
-		CUIRect SelectionRect = Item.m_Rect;
+		CUIRect SelectionRect = Rect;
 		if(m_ItemSelectionInset > 0.0f)
 			SelectionRect.Margin(m_ItemSelectionInset, &SelectionRect);
 		const ColorRGBA SelectionFill = (m_Active ? m_SelectedItemActiveColor : m_SelectedItemInactiveColor).WithMultipliedAlpha(SelectionAlpha);
-		DrawRoundedSurface(Ui(), SelectionRect, SelectionFill, ColorRGBA(), RowCornerRadius);
+		DrawRoundedSurface(Ui(), SelectionRect, SelectionFill, ColorRGBA(), CornerRadius);
 	}
-	if(Ui()->HotItem() == pId)
-		m_HoverFeedback.Observe(ThisItemIndex);
-	const float HoverAlpha = m_HoverFeedback.Alpha(ThisItemIndex);
+	const float HoverAlpha = m_HoverFeedback.Alpha(Index);
 	if(HoverAlpha > 0.001f && !m_ScrollRegion.Animating())
 	{
-		CUIRect HoverRect = Item.m_Rect;
+		CUIRect HoverRect = Rect;
 		if(m_ItemSelectionInset > 0.0f)
 			HoverRect.Margin(m_ItemSelectionInset, &HoverRect);
-		DrawRoundedSurface(Ui(), HoverRect, m_HoveredItemColor.WithMultipliedAlpha(HoverAlpha), ColorRGBA(), RowCornerRadius);
+		// 卡片形态列表（资源贴图/皮肤/指令工坊）在悬浮时勾一圈白边：卡片本身是
+		// 独立视觉件，只有填充时读作"变亮一点"，加边才读作"这张卡被指向"。
+		// 行列表保持纯填充——整行那么大的白框会把列表读成一排按钮。
+		const ColorRGBA HoverBorder = m_RowFeedbackBorder ? ui_token::feedback::HOVER_BORDER : ColorRGBA();
+		DrawRoundedSurface(Ui(), HoverRect, m_HoveredItemColor.WithMultipliedAlpha(HoverAlpha), HoverBorder, CornerRadius, m_RowFeedbackBorder ? ui_token::feedback::ICON_BORDER_WIDTH : 0.0f);
 	}
-
-	return Item;
 }
 
 void CListBox::SkipItems(int Count)

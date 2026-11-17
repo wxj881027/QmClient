@@ -112,6 +112,8 @@ void CMenus::RenderServerControl(CUIRect MainView)
 	// 页签条高度与字号取设置页胶囊页签同一档：投票页顶部不再用更大的一档文字。
 	MainView.HSplitTop(ui_token::settings::TAB_HEIGHT, &Navigation, &MainView);
 	MainView.HSplitTop(ui_token::panel::GAP, nullptr, &MainView);
+	AddMenuHitRegion(Navigation);
+	AddMenuHitRegion(MainView);
 	// 预览地图放在页签行最右端：见方的图标按钮，三张子页共用同一个入口，
 	// 地图库看选中的图，服务端投票 / 踢人 / 观战看当前地图。
 	CUIRect PreviewButton;

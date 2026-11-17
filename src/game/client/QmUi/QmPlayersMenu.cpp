@@ -29,6 +29,7 @@ void CMenus::RenderPlayers(CUIRect MainView)
 	auto &State = m_QmPlayersMenu;
 	// 页面壳层：面板底、面板内边距与圆角全部取 token，页面不再自带一套 10/12。
 	const ColorRGBA PanelColor = MenuPanelColor();
+	AddMenuHitRegion(MainView);
 	MainView.Draw(PanelColor, MenuShellCorners(), ui_token::radius::MENU);
 	CUiScopedSurfaceText SurfaceText(TextRender(), PanelColor);
 	const CUIRect PageRect = MainView;

@@ -13,6 +13,7 @@
 #include "qm_icon.h"
 #include "qm_icon_font_render.h"
 #include "qm_icon_label.h"
+#include "ui_font_fit.h"
 #include "ui_scrollregion.h"
 
 #include <base/log.h>
@@ -1896,19 +1897,44 @@ static SCursorAndBoundingBox CalcFontSizeCursorHeightAndBoundingBox(ITextRender 
 	TextSizeProps.m_pMaxCharacterHeightInLine = &TextBoundingHeight;
 	TextSizeProps.m_pLineCount = &LineCount;
 
-	float TextWidth;
-	do
+	const float Minimum = maximum(0.0f, LabelProps.m_MinimumFontSize);
+	Size = maximum(Size, Minimum);
+	const float StartSize = Size;
+
+	// 一次测量：宽度按候选字号算，同时把高度 / 行高 / 行数出参刷新到最新一档。
+	// 测量次数就是这个函数的全部成本，所以绝大多数标签只走下面第一次调用。
+	// 只有真正落在下限时才放开 STOP/ELLIPSIS（判据换成含省略号的真实宽度）；
+	// 二分中间档必须和起点用同一套 flags，否则宽度不再随字号单调。
+	auto Measure = [&](const float Candidate, const bool AtMinimum) {
+		Size = Candidate;
+		if((AtMinimum || !LabelProps.m_EnableWidthCheck) && Flags != FlagsWithoutStop)
+			return pTextRender->TextWidth(Candidate, pText, -1, LabelProps.m_MaxWidth, Flags, TextSizeProps);
+		return pTextRender->TextWidth(Candidate, pText, -1, MaxTextWidthWithoutStop, FlagsWithoutStop, TextSizeProps);
+	};
+
+	float TextWidth = Measure(StartSize, StartSize <= Minimum + 0.0001f);
+	// 起始字号已经贴着下限（例如「不缩字号」的元数据行）时没有可行区间，
+	// 直接交给截断/省略号，省掉一次无意义的下限测量。
+	if(LabelProps.m_EnableWidthCheck && StartSize > Minimum + 0.0001f && TextWidth > MaxTextWidth + 0.001f)
 	{
-		Size = maximum(Size, LabelProps.m_MinimumFontSize);
-		// Only consider stop-at-end and ellipsis-at-end when minimum font size reached or font scaling disabled
-		if((Size == LabelProps.m_MinimumFontSize || !LabelProps.m_EnableWidthCheck) && Flags != FlagsWithoutStop)
-			TextWidth = pTextRender->TextWidth(Size, pText, -1, LabelProps.m_MaxWidth, Flags, TextSizeProps);
+		// 需要缩字号。先探下限：连最下一档也放不下时没有可行解，
+		// 再逐档递减只是白花测量，直接交给调用方的截断 / 省略号。
+		const float MinimumWidth = Measure(Minimum, true);
+		if(MinimumWidth > MaxTextWidth + 0.001f)
+		{
+			TextWidth = MinimumWidth;
+		}
 		else
-			TextWidth = pTextRender->TextWidth(Size, pText, -1, MaxTextWidthWithoutStop, FlagsWithoutStop, TextSizeProps);
-		if(TextWidth <= MaxTextWidth + 0.001f || !LabelProps.m_EnableWidthCheck || Size == LabelProps.m_MinimumFontSize)
-			break;
-		Size--;
-	} while(true);
+		{
+			// 可行区间 [Minimum, StartSize] 上二分夹逼。档位只当精度用：
+			// 步进 0.5 时字号可以落在半档上，视觉上是连续缩放而不是一格一格跳；
+			// 步进 1 时最后量化回整数档，与历史行为逐值相同。
+			Size = ResolveFittedFontSize(StartSize, Minimum, MaxTextWidth, LabelProps.m_FontSizeStep, [&](const float Candidate) {
+				return Measure(Candidate, false);
+			});
+			TextWidth = Measure(Size, Size <= Minimum + 0.0001f);
+		}
+	}
 
 	SCursorAndBoundingBox Res{};
 	Res.m_TextSize = vec2(TextWidth, TextHeight);

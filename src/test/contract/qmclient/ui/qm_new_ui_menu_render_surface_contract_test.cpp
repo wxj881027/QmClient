@@ -408,10 +408,14 @@ TEST(QmNewUiMenuBranches, SharedListsAndResourceCardsUseRoundedSurfacePath)
 	const std::string Assets = ReadTextFile("src/game/client/components/menus_settings_assets.cpp");
 	EXPECT_NE(ListBox.find("DrawRoundedSurface(Ui(), Item.m_Rect"), std::string::npos);
 	EXPECT_NE(ListBox.find("DrawRoundedSurface(Ui(), View"), std::string::npos);
-	EXPECT_NE(Assets.find("DrawRoundedSurface(Ui(), ShellRect"), std::string::npos);
+	// 资源卡片壳改由列表卡片组件统一绘制（qm_list_card::DrawStaticShell 内部仍走
+	// DrawRoundedSurface），卡片几何与圆角不再散在页面里各写一份。
+	EXPECT_NE(Assets.find("#include <game/client/QmUi/QmListCard.h>"), std::string::npos);
+	EXPECT_NE(Assets.find("qm_list_card::DrawStaticShell(Ui()"), std::string::npos);
 	// PreviewFrame 的第二层圆角底已随"卡片去嵌套"设计移除：卡片壳是唯一容器，
 	// 不再断言预览框自己的表面绘制。
 	EXPECT_NE(Assets.find("DrawRoundedSurface(Ui(), FallbackRect"), std::string::npos);
-	EXPECT_NE(Assets.find("DrawRoundedSurface(pUi, StatusRect"), std::string::npos);
+	// 状态徽章改由标签组件统一绘制（ui_tag 内部走 DrawRoundedSurface）。
+	EXPECT_NE(Assets.find("ui_tag::DrawInRect(pUi, Shell.m_StatusTagRect"), std::string::npos);
 	EXPECT_NE(Assets.find("DrawRoundedSurface(Ui(), WorkshopHudView"), std::string::npos);
 }

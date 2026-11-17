@@ -441,6 +441,7 @@ void CMenus::RenderGame(CUIRect MainView)
 	const bool HasSecondaryButtonBar = g_Config.m_ClTouchControls || UseSecondaryUtilityButtonBar;
 	MainView.HSplitTop(45.0f + (HasSecondaryButtonBar ? 35.0f : 0.0f), &ButtonBars, &MainView);
 	const int ButtonBarsCorners = IGraphics::CORNER_ALL;
+	AddMenuHitRegion(ButtonBars);
 	ButtonBars.Draw(ms_ColorTabbarActive, ButtonBarsCorners, 10.0f);
 	ButtonBars.Margin(10.0f, &ButtonBars);
 	ButtonBars.HSplitTop(MenuButtonHeight, &ButtonBar, &ButtonBars);
@@ -1655,6 +1656,7 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 	LogSettingsAdaptiveBudget("ingame_server_info_snapshot_text", TextBudgetInput, m_IngameTextFrameBudget);
 	m_IngameTextFrameBudget.m_TextContainerTokens = maximum(1, m_IngameTextFrameBudget.m_TextContainerTokens);
 
+	AddMenuHitRegion(MainView);
 	MainView.Draw(ms_ColorTabbarActive, MenuShellCorners(), 10.0f);
 	MainView.Margin(10.0f, &MainView);
 	const bool ShowTags = g_Config.m_QmMapTags != 0;
@@ -1980,6 +1982,7 @@ void CMenus::RenderServerInfoMotd(CUIRect Motd)
 
 void CMenus::RenderUnfinishedMaps(CUIRect MainView)
 {
+	AddMenuHitRegion(MainView);
 	MainView.Draw(ms_ColorTabbarActive, MenuShellCorners(), 10.0f);
 	MainView.Margin(10.0f, &MainView);
 
@@ -2212,6 +2215,7 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 {
 	CUIRect TabBar;
 	MainView.HSplitTop(MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW, &TabBar, &MainView);
+	AddMenuHitRegion(TabBar);
 
 	int NewPage = g_Config.m_UiPage;
 
@@ -2521,6 +2525,7 @@ void CMenus::SortGhostlist()
 void CMenus::RenderGhost(CUIRect MainView)
 {
 	// render background
+	AddMenuHitRegion(MainView);
 	MainView.Draw(ms_ColorTabbarActive, MenuShellCorners(), 10.0f);
 
 	MainView.HSplitTop(10.0f, nullptr, &MainView);
@@ -2858,6 +2863,7 @@ void CMenus::RenderRankDemo(CUIRect MainView)
 			s_RankDemoPlayPending = false;
 	}
 
+	AddMenuHitRegion(MainView);
 	MainView.Draw(ms_ColorTabbarActive, MenuShellCorners(), 10.0f);
 
 	MainView.HSplitTop(10.0f, nullptr, &MainView);
@@ -3194,17 +3200,4 @@ void CMenus::PopupConfirmRankDemoPlay()
 		s_RankDemoError.ErrorColor();
 		Ui()->ShowPopupMessage(0.0f, 0.0f, &s_RankDemoError);
 	}
-}
-
-void CMenus::RenderIngameHint()
-{
-	// With touch controls enabled there is a Close button in the menu and usually no Escape key available.
-	if(g_Config.m_ClTouchControls)
-		return;
-
-	float Width = 300 * Graphics()->ScreenAspect();
-	Graphics()->MapScreen(0, 0, Width, 300);
-	TextRender()->TextColor(1, 1, 1, 1);
-	TextRender()->Text(5, 280, 5, Localize("Menu opened. Press Esc key again to close menu."), -1.0f);
-	Ui()->MapScreen();
 }

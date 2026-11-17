@@ -14,6 +14,7 @@
 #include <game/client/QmUi/QmAnimResolve.h>
 #include <game/client/QmUi/QmCardRegistry.h>
 #include <game/client/QmUi/QmIconSwap.h>
+#include <game/client/QmUi/QmListCard.h>
 #include <game/client/QmUi/QmUiPerf.h>
 #include <game/client/QmUi/SecondaryPanel.h>
 #include <game/client/QmUi/SettingsCard.h>
@@ -1120,20 +1121,16 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 	static CLineInput s_SkinFilterInput(g_Config.m_ClSkinFilterString, sizeof(g_Config.m_ClSkinFilterString));
 	static CButtonContainer s_aCollectionButtons[3];
 	const char *apCollectionLabels[] = {Localize("All"), Localize("Favorites"), Localize("Recent")};
-	CUIRect Collection = Toolbar.m_Collection;
-	for(int Index = 0; Index < 3; ++Index)
+	// 三档集合用胶囊滑块（设置页多选一的同一组件）：槽高与字号都不变，选中态由滑块
+	// 表达，不再并排三个各自带底色的按钮。
+	const int CurrentCollection = std::clamp(static_cast<int>(gs_TeeSkinCollection.m_Collection), 0, 2);
+	const int NewCollection = DoSegmentedChoice(s_aCollectionButtons, apCollectionLabels, 3, CurrentCollection, Toolbar.m_Collection, ui_token::radius::BASE, nullptr, BodySize);
+	if(NewCollection != CurrentCollection)
 	{
-		CUIRect Tab;
-		Collection.VSplitLeft(Collection.w / (3 - Index), &Tab, &Collection);
-		const int Corners = Index == 0 ? IGraphics::CORNER_L : Index == 2 ? IGraphics::CORNER_R :
-										    IGraphics::CORNER_NONE;
-		if(DoSettingsButton_Menu(SETTINGS_TEE, -1, -1, &s_aCollectionButtons[Index], apCollectionLabels[Index], apCollectionLabels[Index], static_cast<int>(gs_TeeSkinCollection.m_Collection) == Index, &Tab, BUTTONFLAG_LEFT, Corners))
-		{
-			CommitSettingsTeeSkinEdits();
-			gs_TeeSkinCollection.m_Collection = static_cast<ETeeSkinCollection>(Index);
-			s_ListBox.ResetScroll();
-			m_SkinListScrollToSelected = false;
-		}
+		CommitSettingsTeeSkinEdits();
+		gs_TeeSkinCollection.m_Collection = static_cast<ETeeSkinCollection>(NewCollection);
+		s_ListBox.ResetScroll();
+		m_SkinListScrollToSelected = false;
 	}
 	if(gs_TeeSkinCollection.m_Collection == ETeeSkinCollection::RECENT)
 	{
@@ -1270,6 +1267,11 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 	// 行数因此也不会跟着变。
 	const int TeeSkinListItemsPerRow = ResolveSettingsTeeSkinColumns(MainView.w, UiScale);
 	s_ListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_GRID);
+	// 皮肤行高包含预览图，一格比普通设置行高得多；默认「每格两行」的滚轮步长
+	// 一下就滚过大半屏，减到一格一行又偏慢。0.7 ≈ 1.4 行/格，落在两者之间。
+	// 只作用于这一个列表的滚轮位移，键盘 PageUp/Down 与其它列表速度不变；
+	// 全局 qm_ui_scroll_step 仍作为等比基准生效。
+	s_ListBox.SetWheelStepScale(0.7f);
 	s_ListBox.SetWheelOwnerPriority(EUiWheelOwnerPriority::COMPOSITE_CONTROL);
 	// 网格不是胶囊行，组件不会替它接管内边距，所以在调用点显式给同一份 token：
 	// 选中/悬浮填充不再压在容器圆角上（实机反馈「背景超出列表」）。
@@ -1300,6 +1302,12 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 	int DoubleClickIndex = -1;
 	ETeeSkinApplyTarget DoubleClickTarget = ETeeSkinApplyTarget::MAIN;
 	const bool ShowSkinMetadata = g_Config.m_QmSkinShowMetadata != 0;
+	// 并排动作图标按**墨迹高**归一：同字号下方框字形只占 em 的 0.750、星形占 0.844，
+	// 各自沿用字号就会一高一矮（实机反馈：加号与收藏星高度不齐）。这里先取统一墨迹高，
+	// 再按各自字形反算 em 字号；图标盒与格间缝仍按盒统一，所以格宽和间距不变。
+	const float ActionInkHeight = ui_token::control::ActionIconInkHeight(BodySize);
+	const float ActionQueueFontSize = QmIconInkFontSize(EQmIcon::SQUARE_PLUS, ActionInkHeight);
+	const float ActionFavoriteFontSize = QmIconInkFontSize(EQmIcon::STAR, ActionInkHeight);
 	auto DoButtonSkinQueue = [&](const void *pButtonId, const void *pParentId, bool InQueue, bool Disabled, const CUIRect *pRect) {
 		if(InQueue || (pParentId != nullptr && Ui()->HotItem() == pParentId) || Ui()->HotItem() == pButtonId)
 		{
@@ -1321,8 +1329,8 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 			TextRender()->TextColor(Color);
 			SLabelProperties Props;
 			Props.m_MaxWidth = pRect->w;
-			// 排队按钮的图标与行文字同号：图标盒按行文字字号反推。
-			ui_widget::DrawIconSwapBinding(QueueIconCtx, QmIconLabelRect(*pRect, ui_token::control::IconBox(BodySize), TEXTALIGN_MC), Color, &QueueBinding);
+			// 排队按钮的图标与行文字同号：图标盒按「统一墨迹高」反推出的 em 字号换算。
+			ui_widget::DrawIconSwapBinding(QueueIconCtx, QmIconLabelRect(*pRect, ui_token::control::IconBox(ActionQueueFontSize), TEXTALIGN_MC), Color, &QueueBinding);
 			TextRender()->TextColor(TextRender()->DefaultTextColor());
 			TextRender()->SetRenderFlags(0);
 			TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
@@ -1413,7 +1421,20 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 		if(EntryNonTerminalWaiting)
 			++VisibleNonTerminalWaitingCount;
 		const CSkin *pSkin = pSkinContainer->Skin() != nullptr ? pSkinContainer->Skin().get() : pDefaultSkin;
-		Item.m_Rect.VSplitLeft(60.0f, &Button, &Label);
+		// 皮肤格是列表卡片的「左右分栏」形态：左侧 60 宽 tee 预览、右侧名称与动作图标。
+		// 几何由 qm_list_card 统一切分（与资源卡、工坊预设卡同一条路径），但这里不改
+		// 观感——内边距 0、无圆角、无壳，卡片底与悬浮反馈仍由 CListBox 画。
+		qm_list_card::SMetrics SkinCardFrame;
+		SkinCardFrame.m_UiScale = 1.0f;
+		SkinCardFrame.m_Padding = 0.0f;
+		SkinCardFrame.m_Radius = 0.0f;
+		qm_list_card::SOptions SkinCardOptions;
+		SkinCardOptions.m_Axis = qm_list_card::EAxis::ROW;
+		SkinCardOptions.m_LeadingWidth = 60.0f;
+		SkinCardOptions.m_RowGap = 0.0f;
+		const qm_list_card::SLayout SkinCardLayout = qm_list_card::ResolveLayout(Item.m_Rect, SkinCardFrame.Scaled(), SkinCardOptions);
+		Button = SkinCardLayout.m_Leading;
+		Label = SkinCardLayout.m_Body;
 
 		{
 			CTeeRenderInfo Info = pCachedPreview != nullptr ? pCachedPreview->TeeRenderInfo() : OwnSkinInfo;
@@ -1447,23 +1468,32 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 			}
 		}
 		// 右上角功能图标条：只按本帧真的会画的动作从右到左排（隐藏的动作不占位），
-		// 出现/消失走同一条缓动；下面的名称/元数据用 Reserve 收缩可用宽度，
-		// 文字不会画进图标底下（公共约定的消费方式见 QmUi/UiIconActionStrip.h）。
+		// 出现/消失走同一条缓动；下面的名称/元数据**跟着这条缓动**收缩可用宽度，
+		// 字号随之连续下滑——这是悬浮动画的一部分，不是要消掉的抖动。
+		// （公共约定的消费方式见 QmUi/UiIconActionStrip.h）
 		const int64_t ActionNow = time_get();
 		const int64_t ActionFreq = maximum<int64_t>(1, time_freq());
 		const float ActionEaseSeconds = ui_token::motion::HOVER_FADE.m_DurationSec;
 		const bool ActionMotion = g_Config.m_QmUiMotionLevel > 0;
 		const bool ActionInteractive = !Ui()->MeasurementOnly() && !Ui()->RenderOnly();
-		const float ActionIconSize = ui_token::control::IconBox(BodySize);
+		const float ActionIconSize = ui_token::control::IconBox(ActionQueueFontSize);
 		const float ActionGap = ui_token::spacing::XS * 0.5f;
 		const bool InSkinQueue = GameClient()->m_Skins.IsInSkinQueue(pSkinContainer->Name(), EntryUseCustomColor, EntryColorBody, EntryColorFeet, QueueDummy);
 		// 队列按钮只在「已在队列 / 本行悬浮 / 按钮自身悬浮」时存在；不存在就不占位。
 		const bool QueueActionPresent = InSkinQueue || Ui()->HotItem() == &RowIds.m_ListItem || Ui()->HotItem() == &RowIds.m_Queue;
 		RowIds.m_ActionStrip.Update(ActionNow, ActionFreq, ActionMotion, (QueueActionPresent ? 1u : 0u) | (1u << 1), ActionEaseSeconds, ActionInteractive);
-		CUIRect IconRow;
-		Item.m_Rect.HSplitTop(std::min(Item.m_Rect.h, 20.0f), &IconRow, nullptr);
+		// 图标条贴着「悬浮背景」的内缘排：列表把反馈矩形按 spacing::XS 内缩，图标若仍按
+		// 整格右缘对齐就会露到背景外面（实机反馈：收藏星溢出圆角背景）。两处用同一档 token。
+		const float ActionInset = ui_token::spacing::XS;
+		CUIRect IconRow = Item.m_Rect;
+		IconRow.x += ActionInset;
+		IconRow.y += ActionInset;
+		IconRow.w = maximum(0.0f, IconRow.w - 2.0f * ActionInset);
+		IconRow.h = maximum(0.0f, IconRow.h - 2.0f * ActionInset);
+		IconRow.HSplitTop(std::min(IconRow.h, 20.0f), &IconRow, nullptr);
 		CUIRect aActionRects[2];
 		RowIds.m_ActionStrip.Layout(IconRow, ActionIconSize, ActionGap, ActionNow, ActionFreq, ActionEaseSeconds, aActionRects);
+		// 文本可用宽度跟着图标条缓动：图标每帧多占一点，字号就每帧小一点。
 		const float ActionReserve = RowIds.m_ActionStrip.ReserveWidth(ActionIconSize, ActionGap, ActionNow, ActionFreq, ActionEaseSeconds);
 		{
 			CUIRect LabelContent = Label;
@@ -1482,9 +1512,13 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 			}
 			SLabelProperties Props;
 			// 可用宽度 = 行宽 − 图标条当前占位 − 文本缝；名称既不许换行也不许钻到图标下面。
+			// 允许缩字号（悬浮收缩的一部分），但档位细到 0.5：宽度逐帧变化时字号连续下滑，
+			// 不再在整数档之间一格一格跳。
 			Props.m_MaxWidth = maximum(0.0f, LabelContent.w - ActionReserve - 5.0f);
 			Props.m_DisallowNewline = true;
 			Props.m_EllipsisAtEnd = true;
+			Props.m_MinimumFontSize = BodySize * 0.8f;
+			Props.m_FontSizeStep = 0.5f;
 			const auto &NameMatch = SkinListEntry.NameMatch();
 			if(NameMatch.has_value())
 			{
@@ -1515,9 +1549,13 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 				Ui()->DoLabel(&NameLine, pSkinContainer->Name(), BodySize, TEXTALIGN_ML, Props);
 				MetadataLine.HSplitTop(16.0f, &MetadataLine, nullptr);
 				SLabelProperties MetadataProps;
-				MetadataProps.m_MaxWidth = maximum(0.0f, MetadataLine.w - ActionReserve - 5.0f);
+				// 图标条只占第一行（与皮肤名同行），元数据行在它下方，不能跟着减图标占位：
+				// 悬浮时队列按钮出现会让 Reserve 变大，作者名就凭空被截掉，右侧明明还空着。
+				MetadataProps.m_MaxWidth = maximum(0.0f, MetadataLine.w - 5.0f);
 				MetadataProps.m_DisallowNewline = true;
 				MetadataProps.m_StopAtEnd = true;
+				// 元数据是辅助信息，不参与悬浮缩字号：小字再缩会糊，且宽度本来够时用不上。
+				MetadataProps.m_MinimumFontSize = TeeMetrics.m_SmallSize;
 				TextRender()->TextColor(ColorRGBA(0.8f, 0.8f, 0.8f, 0.8f));
 				Ui()->DoLabel(&MetadataLine, aSkinMetadata, TeeMetrics.m_SmallSize, TEXTALIGN_ML, MetadataProps);
 				TextRender()->TextColor(TextRender()->DefaultTextColor());
@@ -1563,7 +1601,7 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 			if(FavoriteActionAlpha > 0.01f)
 			{
 				CUiScopedControlAlphaScale FavoriteActionFade(Ui(), FavoriteActionAlpha);
-				if(DoButton_Favorite(&RowIds.m_Favorite, &RowIds.m_ListItem, SkinListEntry.IsFavorite(), &aActionRects[1]))
+				if(DoButton_Favorite(&RowIds.m_Favorite, &RowIds.m_ListItem, SkinListEntry.IsFavorite(), &aActionRects[1], ActionFavoriteFontSize))
 				{
 					if(SkinListEntry.IsFavorite())
 					{

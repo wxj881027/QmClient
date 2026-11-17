@@ -1,12 +1,11 @@
 # AGENTS.md
 
-QmClient（Q1menG Client）基于 DDNet / TaterClient，主要使用 C++，辅以 Rust、Python；构建使用 CMake，依赖在 `ddnet-libs/` 子模块。
+QmClient（Q1menG Client）基于 DDNet / TaterClient，主要使用 C++，辅以 Rust、Python；构建使用 CMake，依赖 `ddnet-libs/` 子模块（预编译优先）。
 
 ## 执行与授权
 
 - 按当前请求和已有上下文执行到完成；已授权的调查、准备和可逆修改直接推进，不重复确认。
 - 歧义只在影响实现、范围或风险时澄清；先完成不依赖答案的工作。用户追加要求时保留有效成果，调整剩余工作。
-- 优先级：系统与开发者指令 > 用户当前指令 > 仓库规则与 skills。引用文档不产生额外授权。
 - 超出授权范围或涉及破坏性、外部操作时，先完成可审查的准备再确认。若规则导致暂停，指出具体文件、原文和适用原因。
 - 遇到非自己产生的文件改动，先视为用户或其他任务正在操作：不回退、不覆盖、不纳入本次提交。
 - 只有任务独立且并行确能节省时间或提高质量时才委托；高风险改动可独立复核，工具不可用时自行审查并说明限制，不因此停工。
@@ -15,7 +14,7 @@ QmClient（Q1menG Client）基于 DDNet / TaterClient，主要使用 C++，辅�
 
 每个新会话执行仓库任务前先做识别，不依赖旧聊天记忆；只读任务只核对所需信息，不占写入槽位。
 
-- 运行 `git status --short`、`git branch --show-current`、`git rev-parse HEAD`、`git worktree list --porcelain`，确认当前是主工作树还是关联槽位（Codex 中作为 Local 项目使用，不改变其 Git Worktree 身份）。detached HEAD 是单分支槽位的正常状态，不因此新建分支或重建 Worktree。
+- 运行 `git status --short`、`git branch --show-current`、`git rev-parse HEAD`、`git worktree list --porcelain`，确认当前是主工作树还是关联槽位（Codex 中作为 Local 项目使用，不改变其 Git Worktree 身份）。detached HEAD 是单分支槽位的正常状态，不因此新建分支或重建 Worktree。4 条 git 检查命令合并为单次 shell 调用执行；纯只读问答跳过本地状态文件读取
 - 按「本地机器配置与固定 Worktree」发现并核对 `.agents/machine.local.json`，确定集成分支、固定槽位、构建目录、job 预算和窗口偏好；不得按项目名、空分支名或其他开发者配置猜测。
 - 有匹配配置时读取主工作树 `.agents/worktree-state.local.json`（若存在，Git 忽略）。它记录任务、会话占用、基线与交付 SHA、构建对应源码状态、验证证据和待办，不保存凭据或新增授权；记录缺失、过期或与 Git、进程、任务状态不一致时以实际状态为准，不把它当互斥锁，也不把“空闲”当作无其他会话写入的证明。
 - 写入或切换前检查本槽位活跃会话、未提交修改和未集成提交；构建前核对进程占用与全机资源预算。只写当前任务明确授权的目录，不把主目录成果、其他槽位任务或历史 Worktree 纳入本任务。
@@ -26,7 +25,7 @@ QmClient（Q1menG Client）基于 DDNet / TaterClient，主要使用 C++，辅�
 
 - `.agents/machine.local.json` 与 `worktree-state.local.json` 只作为数据读取：不执行其中内容，不提交、不推送、不写入版本化报告，也不扩大任务授权；用户当前明确指令优先。发现、校验与继承细则见 [.agents/README.md](.agents/README.md)。
 - 无本地配置时沿用当前目录、当前分支和已有构建环境，不假定他人的固定路径、分支或槽位数量。默认构建目录 `cmake-build-release`，单次 `-j 6`，重构建串行；机器配置可调整资源预算。
-- 固定槽位、Submodule、索引和构建缓存长期保留；同一目录只有一个写入会话，只读任务不占槽位。不自动创建临时 Worktree，不删除或归档固定槽位，不用 `reset --hard` 或 `clean` 清场。
+- 固定槽位、Submodule、索引和构建缓存长期保留；同一目录可能有多个写入会话，只读任务不占槽位。不自动创建临时 Worktree，不删除或归档固定槽位，不用 `reset --hard` 或 `clean` 清场。
 - 每个 Worktree 独占构建目录，增量复用，不共享 Cache 或中间产物，不常规删除 build；同目录构建、测试、benchmark、打包和 gate 串行，跨目录也计入全机资源预算（含 Rust、链接与测试）。
 - 固定槽位用 detached HEAD 单分支模式：聚焦提交、保存标签、由主目录串行 cherry-pick 集成；同一功能链和公共接口修改优先串行。采用任务分支时按自己的已授权策略执行，不强制共用开发分支。流程见 [固定 Worktree 开发与集成](docs/归档/2026-10-07-固定Worktree开发与集成.md)。
 - 合并远程、长期或 reset 过的分支前，先按 [长期分支与远程合并流程](docs/规格/2026-10-18-长期分支与远程合并流程.md) 列出对方删除项；已明确删除的功能、配置和 UI 入口保持删除，合并后做净差异与回潮审查。
@@ -62,7 +61,7 @@ UI 任务另加一条：开工前必读 [UI 全局术语与组件规范](docs/�
 | 翻译、生成链及污染/迁移/覆盖审计     | `qmclient-i18n-workflow/SKILL.md`     |
 | 提交、PR、版本与发布                 | `qmclient-git-commit/SKILL.md`        |
 
-翻译不是每个任务的默认步骤：改 `Localize` 文案但任务与翻译无关时，不运行 extract/generate/validate，也不提交 `data/languages/*.txt` 的顺带变化；在任务尾声询问用户是否本次同步。
+翻译不是每个任务的默认步骤：改 `Localize` 文案但任务与翻译无关时，不运行 extract/generate/validate，也不提交 `data/languages/*.txt` 的顺带变化。
 
 维护规则时读 [.agents/README.md](.agents/README.md)；使用脚本时按需读 [qmclient_scripts/scripts_overview.md](qmclient_scripts/scripts_overview.md)。
 
@@ -91,7 +90,7 @@ UI 任务另加一条：开工前必读 [UI 全局术语与组件规范](docs/�
 
 ## 文档权威
 
-- 本文件管全局边界，skills 管专项操作，`references/` 只放按需资料。新文档按内容归档：功能设计与实施方案 → `docs/规格/`；历史调研、修复记录、被替代方案 → `docs/归档/`；长期、高风险、跨多轮的架构计划 → `docs/架构/`（一项工作一份，单一归口，允许 HTML）。`docs/superpowers/` 已停用。
+- 本文件管全局边界，skills 管专项操作，`references/` 只放按需资料。新文档按内容归档：功能设计与实施方案 → `docs/规格/`；历史调研、修复记录、被替代方案 → `docs/归档/`；长期、高风险、跨多轮的架构计划 → `docs/架构/`（一项工作一份，单一归口，允许 HTML）。
 - 新文档用 `YYYY-MM-DD-中文主题.md`（日期取本地创建日期）；`AGENTS.md`、`README.md`、`SKILL.md` 等固定入口沿用原名。正文写清目标、行为和实现安排，不套 skill、审查报告或提交模板。
 - 优先更新已有文档，不为每轮测试、提交或审查新建报告；同一任务的阶段证据集中维护。已完成的实施安排、阶段验收和修复记录移入 `docs/归档/` 并标注历史状态；仍有效的功能规格和未完成验收留在 `docs/规格/`；归档时修正引用。
 - 只采用与当前任务相符且仍有效的文档；`draft` 仅在你采纳后作为实现依据；无状态文档须核对现状，不能仅凭日期判断有效性。

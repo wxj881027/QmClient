@@ -233,6 +233,15 @@ private:
 	bool m_EntryBaseIndexCaptured = false;
 	bool m_EntryAnimationFadeOnly = false;
 	float m_ItemSelectionInset = 0.0f;
+	// 滚轮步长倍率：只缩放这一个列表的滚轮位移，不动键盘 PageUp/Down 的翻页行数，
+	// 也不影响别的列表。行高特别大的网格（皮肤列表）用它把「每格两行」降下来。
+	float m_WheelStepScale = 1.0f;
+	// 悬浮反馈描边：卡片形态列表打开，行/胶囊列表保持关闭。
+	bool m_RowFeedbackBorder = false;
+	// 选中/悬浮填充延后由调用方按卡片矩形绘制（网格画廊用）。
+	bool m_DeferredItemFeedback = false;
+	// 条目不足时容器仍铺满调用方给的高度（网格画廊用）。
+	bool m_FillViewportHeight = false;
 	// 统一行外观（胶囊行）：行距、行内左右内边距和覆盖式滚动条都由它开启。
 	bool m_CapsuleRows = false;
 	float m_RowInsetX = 0.0f;
@@ -290,8 +299,24 @@ public:
 	// 行级小列表仍保留淡入+上浮的 wordRise。
 	void SetEntryAnimationFadeOnly(bool FadeOnly) { m_EntryAnimationFadeOnly = FadeOnly; }
 	// 选中/悬浮反馈内缩：网格卡片在格子内有半格间隙，反馈矩形须贴合卡片
-	// 而不是铺满格子；行列表保持 0。选中态只有填充，不再附描边。
+	// 而不是铺满格子；行列表保持 0。
 	void SetItemSelectionInset(float Inset) { m_ItemSelectionInset = Inset; }
+	// 悬浮反馈描边（**显式能力**，默认关闭）：关闭时悬浮只换填充，与弹层条目一致；
+	// 卡片形态列表（资源贴图、皮肤、指令工坊）打开后，鼠标悬停的卡片勾一圈
+	// ui_token::feedback::HOVER_BORDER 白边。选中态不受影响，仍只有填充。
+	void SetRowFeedbackBorder(bool Border) { m_RowFeedbackBorder = Border; }
+	// 反馈矩形延后到调用方算完卡片矩形之后再画（**显式能力**，默认关闭）。
+	// 多列网格里格子矩形含行距与行内退，按格子画会与卡片错开一圈；调用方在
+	// DoNextItem 之后调 DrawItemFeedback(卡片矩形) 才能逐像素贴合。开启后
+	// DoNextItem 不再画任何填充，动画 alpha 仍由组件持有。
+	void SetDeferredItemFeedback(bool Deferred) { m_DeferredItemFeedback = Deferred; }
+	// 画当前条目的选中/悬浮反馈（仅在 SetDeferredItemFeedback(true) 时使用）。
+	// Index 传循环里的条目序号（DoNextItem 之后组件游标已指向下一格）。
+	void DrawItemFeedback(int Index, const CUIRect &Rect, float CornerRadius);
+	// 高度填满调用方给的矩形（**显式能力**，默认关闭）：条目不足时组件默认把
+	// 容器收成内容高度，面板下方留出一块「没画到」的空档。网格画廊要的是
+	// 容器始终铺满面板，内容短就只在上方排版、下方留白由容器背景承担。
+	void SetFillViewportHeight(bool Fill) { m_FillViewportHeight = Fill; }
 
 	void DoHeader(const CUIRect *pRect, const char *pTitle, float HeaderHeight = 20.0f, float Spacing = 2.0f, int BackgroundCorners = IGraphics::CORNER_ALL);
 	// 行距：在**行首**推进一次（多列网格每行只算一次，第一行不算），DoNextItem 与
@@ -362,6 +387,7 @@ public:
 	void SetWheelOwnerPriority(EUiWheelOwnerPriority Priority) { m_WheelOwnerPriority = Priority; }
 	void SetActive(bool Active) { m_Active = Active; }
 	void SetScrollProfile(EQmScrollProfile Profile) { m_ScrollProfile = Profile; }
+	void SetWheelStepScale(float Scale) { m_WheelStepScale = std::clamp(Scale, 0.1f, 4.0f); }
 	void SetHideScrollbar(bool HideScrollbar) { m_HideScrollbar = HideScrollbar; }
 	void SetScrollbarAlwaysReserved(bool AlwaysReserved) { m_ScrollbarAlwaysReserved = AlwaysReserved; }
 	void SetAnimateScrollbarReserve(bool Animate) { m_AnimateScrollbarReserve = Animate; }

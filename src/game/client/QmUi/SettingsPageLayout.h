@@ -1150,6 +1150,8 @@ inline SSettingsPageLayoutFrame ResolveSettingsPageLayoutForScrollViewport(const
 // 设置页壳层的两栏缝隙与面板内边距取全局面板档：与服务器列表面板同一条基准，
 // 各页面之间不再各写 8/10/12。
 inline constexpr float SETTINGS_SHELL_GAP = ui_token::panel::GAP;
+// 设置页内容区相对可用区的内缩（10）：这是设置页壳层自己的排版档，不是页面面板
+// 到窗口的外距（那是 panel::MARGIN，8）。两处数值不同，不能互相顶替。
 inline constexpr float SETTINGS_PANEL_MARGIN = ui_token::panel::PADDING;
 
 inline float ResolveSettingsShellTabBarWidth(float AvailableWidth)

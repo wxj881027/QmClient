@@ -1121,6 +1121,67 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 				GameClient()->m_Tooltips.DoToolTip(&s_aCaretStyleButtons[0], &CaretStyleRow, apCaretStyleTips[std::clamp(NewCaretStyle, 0, CaretStyleCount - 1)]);
 			});
 
+			// ---- 面板入场动效 ----
+			// 两处都是「形态偏好」，不是第二套动效开关：全局总闸仍是上面的 UI motion level。
+			// ESC 菜单壳层从顶部滑入/滑离的弹簧手感（控制台 qm_menu_slide_feel 同源）。
+			RowAction("graphics-esc-slide-feel", GraphicsMetrics.m_LineHeight, [&](CUIRect SlideRow) {
+				CUIRect Label, Segments;
+				SplitSettingsControlRow(SlideRow, GraphicsMetrics, &Label, &Segments, ESettingsControlWidth::LONG_CHOICE);
+				DoSettingsLabel(SETTINGS_GRAPHICS, -1, "graphics-esc-slide-feel-label", &Label, Localize("ESC menu slide"), BodySize, TEXTALIGN_ML);
+				static CButtonContainer s_aEscSlideButtons[3];
+				const char *apFeelLabels[] = {Localize("Soft"), Localize("Standard"), Localize("Bouncy")};
+				const int CurrentFeel = std::clamp(g_Config.m_QmMenuSlideFeel, 0, 2);
+				const int NewFeel = DoSegmentedChoice(s_aEscSlideButtons, apFeelLabels, 3, CurrentFeel, Segments);
+				if(NewFeel != CurrentFeel)
+					g_Config.m_QmMenuSlideFeel = NewFeel;
+				GameClient()->m_Tooltips.DoToolTip(&s_aEscSlideButtons[0], &SlideRow, Localize("Elastic feel of the ESC menu sliding in from the top"));
+			});
+
+			// 控制台从顶部下拉展开、原路收回，同一条弹簧轨道支持中途折返。
+			RowAction("graphics-console-slide-feel", GraphicsMetrics.m_LineHeight, [&](CUIRect ConsoleRow) {
+				CUIRect Label, Segments;
+				SplitSettingsControlRow(ConsoleRow, GraphicsMetrics, &Label, &Segments, ESettingsControlWidth::LONG_CHOICE);
+				DoSettingsLabel(SETTINGS_GRAPHICS, -1, "graphics-console-slide-feel-label", &Label, Localize("Console slide"), BodySize, TEXTALIGN_ML);
+				static CButtonContainer s_aConsoleSlideButtons[3];
+				const char *apFeelLabels[] = {Localize("Soft"), Localize("Standard"), Localize("Bouncy")};
+				const int CurrentFeel = std::clamp(g_Config.m_QmConsoleSlideFeel, 0, 2);
+				const int NewFeel = DoSegmentedChoice(s_aConsoleSlideButtons, apFeelLabels, 3, CurrentFeel, Segments);
+				if(NewFeel != CurrentFeel)
+					g_Config.m_QmConsoleSlideFeel = NewFeel;
+			});
+
+			// 计分板面板：从 0 缩放到过冲峰值再回落到 100%。
+			RowAction("graphics-scoreboard-pop-feel", GraphicsMetrics.m_LineHeight, [&](CUIRect PopRow) {
+				CUIRect Label, Segments;
+				SplitSettingsControlRow(PopRow, GraphicsMetrics, &Label, &Segments, ESettingsControlWidth::LONG_CHOICE);
+				DoSettingsLabel(SETTINGS_GRAPHICS, -1, "graphics-scoreboard-pop-feel-label", &Label, Localize("Scoreboard entrance"), BodySize, TEXTALIGN_ML);
+				static CButtonContainer s_aScoreboardPopButtons[3];
+				const char *apFeelLabels[] = {Localize("Soft"), Localize("Standard"), Localize("Bouncy")};
+				const int CurrentFeel = std::clamp(g_Config.m_QmScoreboardPopFeel, 0, 2);
+				const int NewFeel = DoSegmentedChoice(s_aScoreboardPopButtons, apFeelLabels, 3, CurrentFeel, Segments);
+				if(NewFeel != CurrentFeel)
+					g_Config.m_QmScoreboardPopFeel = NewFeel;
+			});
+
+			// 过冲百分比直接决定阻尼比：10% 就是先到 110% 再回落到 100%，0% 则无回弹。
+			RowAction("graphics-scoreboard-overshoot", GraphicsMetrics.m_LineHeight, [&](CUIRect OvershootRow) {
+				DoGraphicsNumericField("graphics-scoreboard-overshoot", &g_Config.m_QmScoreboardOvershoot, &g_Config.m_QmScoreboardOvershoot,
+					OvershootRow, Localize("Entrance overshoot"), 0, 15, &CUi::ms_LinearScrollbarScale, "%", CUi::SCROLLBAR_OPTION_DELAYUPDATE);
+			});
+
+			// 内部文本依次出场：先标题、再逐行玩家、最后页脚区块；只调透明度，不改命中矩形。
+			RowAction("graphics-scoreboard-text-entry", GraphicsMetrics.m_LineHeight, [&](CUIRect TextEntryRow) {
+				CUIRect Label, Segments;
+				SplitSettingsControlRow(TextEntryRow, GraphicsMetrics, &Label, &Segments, ESettingsControlWidth::LONG_CHOICE);
+				DoSettingsLabel(SETTINGS_GRAPHICS, -1, "graphics-scoreboard-text-entry-label", &Label, Localize("Scoreboard text entry"), BodySize, TEXTALIGN_ML);
+				static CButtonContainer s_aTextEntryButtons[3];
+				const char *apTextEntryLabels[] = {Localize("Together"), Localize("By row"), Localize("Cascade")};
+				const int CurrentEntry = std::clamp(g_Config.m_QmScoreboardTextEntry, 0, 2);
+				const int NewEntry = DoSegmentedChoice(s_aTextEntryButtons, apTextEntryLabels, 3, CurrentEntry, Segments);
+				if(NewEntry != CurrentEntry)
+					g_Config.m_QmScoreboardTextEntry = NewEntry;
+			});
+
 			float SectionReveal = 0.0f;
 			if(!qm_card_catalog::QmCardRenderHook::PersonalizationReveal(this, ContentRect, "deck:graphics-interaction", GraphicsMetrics, &SectionReveal))
 				return;

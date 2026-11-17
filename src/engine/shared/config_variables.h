@@ -417,7 +417,9 @@ MACRO_CONFIG_STR(BrColOrder, br_col_order, 96, "", CFGFLAG_SAVE | CFGFLAG_CLIENT
 
 MACRO_CONFIG_INT(BrDemoSort, br_demo_sort, 0, 0, 3, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Sort column in replay browser")
 MACRO_CONFIG_INT(BrDemoSortOrder, br_demo_sort_order, 0, 0, 1, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Sort order in replay browser")
-MACRO_CONFIG_INT(BrDemoFetchInfo, br_demo_fetch_info, 0, 0, 1, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Auto fetch replay info on refresh")
+// 批量预读头部：回放列表的「时长 / 标记 / 地图」三列依赖它，关掉整列就是 0。
+// 默认打开（读取在后台分帧预算内进行）；界面上不再给开关，控制台仍可改。
+MACRO_CONFIG_INT(BrDemoFetchInfo, br_demo_fetch_info, 1, 0, 1, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Auto fetch replay info on refresh")
 
 MACRO_CONFIG_INT(GhSort, gh_sort, 1, 0, 2, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Sort column in ghost list")
 MACRO_CONFIG_INT(GhSortOrder, gh_sort_order, 0, 0, 1, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Sort order in ghost list")

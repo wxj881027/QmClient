@@ -22,6 +22,7 @@
 
 #include <generated/client_data.h>
 
+#include <game/client/QmUi/QmListCard.h>
 #include <game/client/QmUi/QmLocalizedLabels.h>
 #include <game/client/QmUi/QmPopconfirm.h>
 #include <game/client/QmUi/QmSlotReflow.h>
@@ -31,6 +32,7 @@
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiSurface.h>
+#include <game/client/QmUi/UiTag.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/qmclient/settings_resource_preview.h>
 #include <game/client/gameclient.h>
@@ -469,13 +471,13 @@ namespace
 	// （6/7px 低于小字下限，窄视口还会更小）。标题与副标题的字号差是这张卡的
 	// 唯一层级手段，两档必须来自 ui_token::font，不要在这里写放大系数。
 	constexpr float AssetsCardStatusTagMinWidth = 24.0f;
-	constexpr float AssetsCardStatusTagMaxWidth = 36.0f;
-	constexpr float AssetsCardStatusTagHorizontalPadding = 2.0f;
+	// 状态徽章已统一走 ui_tag（固定内边距 6、固定高 16），这两个常量只当宽度下限用。
 	constexpr ColorRGBA AssetsCardStatusReadyColor = ColorRGBA(0.18f, 0.62f, 0.32f, 0.88f);
 	constexpr ColorRGBA AssetsCardStatusNetworkColor = ColorRGBA(0.35f, 0.45f, 0.56f, 0.86f);
 
 	static void RenderAssetsCardMetadataFallback(CUi *pUi, const SSettingsAssetsCardShell &Shell, const char *pTitle, const char *pAuthor, const char *pStatusLabel, bool StatusReady, bool ShowAuthorRow, float TitleFontSize, float AuthorFontSize, float StatusTagFontSize)
 	{
+		(void)StatusTagFontSize; // 标签字号由 ui_tag 固定，调用点不再传档位。
 		if(pUi == nullptr)
 			return;
 		const char *pSafeTitle = pTitle != nullptr && pTitle[0] != '\0' ? pTitle : "--";
@@ -498,13 +500,9 @@ namespace
 		}
 		if(Shell.m_HasStatusTag && pStatusLabel != nullptr && pStatusLabel[0] != '\0')
 		{
-			CUIRect StatusRect = Shell.m_StatusTagRect;
-			DrawRoundedSurface(pUi, StatusRect, StatusReady ? AssetsCardStatusReadyColor : AssetsCardStatusNetworkColor, ColorRGBA(), minimum(StatusRect.h / 2.0f, 6.0f));
-			SLabelProperties StatusLabelProps;
-			StatusLabelProps.m_MaxWidth = static_cast<int>(StatusRect.w - AssetsCardStatusTagHorizontalPadding * 2.0f);
-			StatusLabelProps.m_StopAtEnd = true;
-			StatusLabelProps.m_EllipsisAtEnd = true;
-			pUi->DoLabel(&StatusRect, pStatusLabel, StatusTagFontSize, TEXTALIGN_MC, StatusLabelProps);
+			// 状态词统一走标签组件：胶囊高度/内边距/字号全局一致，颜色只取语义色。
+			ui_tag::DrawInRect(pUi, Shell.m_StatusTagRect, pStatusLabel, ui_tag::EColorMode::FIXED,
+				StatusReady ? AssetsCardStatusReadyColor : AssetsCardStatusNetworkColor);
 		}
 	}
 
@@ -4982,7 +4980,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 
 	int OldSelected = -1;
 	float Margin = 10;
-	constexpr float AssetCardRadius = 10.0f;
+	// 卡片圆角取圆角标尺的菜单档（与列表卡片组件的默认档不同：资源卡片更小一档）。
+	constexpr float AssetCardRadius = ui_token::radius::MENU;
 	float TextureWidth = 128;
 	float TextureHeight = 128;
 	SMenuAssetScanUser LazyLoadUser;
@@ -5457,24 +5456,14 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	};
 
 	auto RenderCardBadge = [&](const CUIRect &Rect, const char *pLabel, const ColorRGBA &FillColor, float FontSize) {
+		(void)FontSize; // 标签字号固定，调用点不再传。
 		CUIRect BadgeRect = Rect;
-		DrawRoundedSurface(Ui(), BadgeRect, FillColor, ColorRGBA(), minimum(BadgeRect.h / 2.0f, 6.0f));
-		SLabelProperties BadgeLabelProps;
-		BadgeLabelProps.m_MaxWidth = static_cast<int>(BadgeRect.w - AssetsCardStatusTagHorizontalPadding * 2.0f);
-		BadgeLabelProps.m_StopAtEnd = true;
-		BadgeLabelProps.m_EllipsisAtEnd = true;
-		Ui()->DoLabel(&BadgeRect, pLabel, FontSize, TEXTALIGN_MC, BadgeLabelProps);
+		ui_tag::DrawInRect(Ui(), BadgeRect, pLabel, ui_tag::EColorMode::FIXED, FillColor);
 	};
 
 	auto RenderAssetStatusTag = [&](const CUIRect &TagRect, const char *pLabel, bool Positive) {
-		CUIRect StatusRect = TagRect;
-		const ColorRGBA TagColor = Positive ? AssetsCardStatusReadyColor : AssetsCardStatusNetworkColor;
-		DrawRoundedSurface(Ui(), StatusRect, TagColor, ColorRGBA(), minimum(StatusRect.h / 2.0f, 6.0f));
-		SLabelProperties StatusLabelProps;
-		StatusLabelProps.m_MaxWidth = static_cast<int>(StatusRect.w - AssetsCardStatusTagHorizontalPadding * 2.0f);
-		StatusLabelProps.m_StopAtEnd = true;
-		StatusLabelProps.m_EllipsisAtEnd = true;
-		Ui()->DoLabel(&StatusRect, pLabel != nullptr && pLabel[0] != '\0' ? pLabel : "--", ContentMetrics.m_SmallSize, TEXTALIGN_MC, StatusLabelProps);
+		ui_tag::DrawInRect(Ui(), TagRect, pLabel != nullptr && pLabel[0] != '\0' ? pLabel : "--", ui_tag::EColorMode::FIXED,
+			Positive ? AssetsCardStatusReadyColor : AssetsCardStatusNetworkColor);
 	};
 
 	auto ComputePreviewDrawRect = [&](const CUIRect &TextureRect, float ContentWidth, float ContentHeight) {
@@ -5502,14 +5491,19 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	};
 
 	auto RenderAssetsCardShell = [&](const SSettingsAssetsCardShell &Shell) {
-		CUIRect ShellRect = Shell.m_CardRect;
-		DrawRoundedSurface(Ui(), ShellRect, ColorRGBA(0.03f, 0.04f, 0.06f, 0.16f), ColorRGBA(), AssetCardRadius);
+		// 卡片几何与圆角统一走列表卡片组件（qm_list_card）：资源贴图、工坊资源、
+		// 指令工坊预设是同一个视觉件。这里只画静态壳——命中与悬浮白边由外层
+		// CListBox 负责，不能再登记一次交互。
+		qm_list_card::SMetrics CardFrame;
+		CardFrame.m_UiScale = 1.0f;
+		CardFrame.m_Radius = AssetCardRadius;
+		qm_list_card::DrawStaticShell(Ui(), qm_list_card::ResolveLayout(Shell.m_CardRect, CardFrame.Scaled(), {}), ColorRGBA(0.03f, 0.04f, 0.06f, 0.16f));
 	};
 
 	constexpr float AssetCardFooterSpacing = 8.0f;
 	constexpr float AssetCardHeaderHeightSingleLine = 30.0f;
 	constexpr float AssetCardHeaderHeightWithAuthor = 40.0f;
-	constexpr float AssetCardHeaderMargin = 3.0f;
+	constexpr float AssetCardHeaderMargin = 6.0f;
 	constexpr float AssetCardHeaderControlMargin = 1.0f;
 	constexpr float AssetCardHeaderControlHeight = 18.0f;
 	constexpr float AssetCardTextReserveSingleLine = 26.0f;
@@ -5521,8 +5515,10 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		CUIRect BodyRect = CardRect;
 		const float AssetCardHeaderHeight = ShowAuthorRow ? AssetCardHeaderHeightWithAuthor : AssetCardHeaderHeightSingleLine;
 		BodyRect.HSplitTop(AssetCardHeaderHeight, &HeaderRect, &Shell.m_TextureRect);
-		Shell.m_TextureRect.HSplitTop(8.0f, nullptr, &Shell.m_TextureRect);
+		// 标题区与贴图之间不再额外留缝（原 8）：贴图直接顶到文本预留区下缘，
+		// 视觉上比原来紧约 10px（贴图在框内垂直居中，留缝会两边摊一半）。
 		CUIRect TitleRect = HeaderRect;
+		// 文字到卡片四边统一留 6：标题、作者、右侧徽标一起内缩，左右与上下对称。
 		TitleRect.Margin(AssetCardHeaderMargin, &TitleRect);
 		if(HasActionButton)
 		{
@@ -5545,8 +5541,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		auto ComputeBadgeWidth = [&](const char *pLabel) {
 			if(pLabel == nullptr || pLabel[0] == '\0')
 				return AssetsCardStatusTagMinWidth;
-			const float DesiredBadgeWidth = TextRender()->TextWidth(ContentMetrics.m_SmallSize, pLabel, -1, -1.0f) + AssetsCardStatusTagHorizontalPadding * 2.0f;
-			return maximum(AssetsCardStatusTagMinWidth, minimum(AssetsCardStatusTagMaxWidth, DesiredBadgeWidth));
+			// 宽度 = 文本实测宽 + 标签自己的固定内边距（ui_tag::PADDING_X × 2）。
+			return maximum(AssetsCardStatusTagMinWidth, ui_tag::MeasureWidth(TextRender(), pLabel));
 		};
 		auto ReserveTrailingRect = [&](CUIRect &AvailableRect, float DesiredWidth, float DesiredMinWidth, CUIRect &OutRect, bool &OutVisible) {
 			if(AvailableRect.w <= 0.0f)
@@ -5564,21 +5560,22 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		if(pStatusLabel != nullptr && pStatusLabel[0] != '\0')
 		{
 			ReserveTrailingRect(TitleRect, ComputeBadgeWidth(pStatusLabel), AssetsCardStatusTagMinWidth, Shell.m_StatusTagRect, Shell.m_HasStatusTag);
-			if(Shell.m_HasStatusTag && Shell.m_StatusTagRect.h > HeaderControlHeight)
+			if(Shell.m_HasStatusTag)
 			{
-				const float VerticalInset = (Shell.m_StatusTagRect.h - HeaderControlHeight) / 2.0f;
-				Shell.m_StatusTagRect.y += VerticalInset;
-				Shell.m_StatusTagRect.h = HeaderControlHeight;
+				// 标签高度固定（ui_tag::HEIGHT），在头部行里垂直居中。
+				const float TagHeight = minimum(ui_tag::HEIGHT, Shell.m_StatusTagRect.h);
+				Shell.m_StatusTagRect.y += (Shell.m_StatusTagRect.h - TagHeight) * 0.5f;
+				Shell.m_StatusTagRect.h = TagHeight;
 			}
 		}
 		if(ShowLocalOnlyBadge)
 		{
 			ReserveTrailingRect(TitleRect, ComputeBadgeWidth(Localize("Local-only")), AssetsCardStatusTagMinWidth, Shell.m_LocalOnlyBadgeRect, Shell.m_HasLocalOnlyBadge);
-			if(Shell.m_HasLocalOnlyBadge && Shell.m_LocalOnlyBadgeRect.h > HeaderControlHeight)
+			if(Shell.m_HasLocalOnlyBadge)
 			{
-				const float VerticalInset = (Shell.m_LocalOnlyBadgeRect.h - HeaderControlHeight) / 2.0f;
-				Shell.m_LocalOnlyBadgeRect.y += VerticalInset;
-				Shell.m_LocalOnlyBadgeRect.h = HeaderControlHeight;
+				const float TagHeight = minimum(ui_tag::HEIGHT, Shell.m_LocalOnlyBadgeRect.h);
+				Shell.m_LocalOnlyBadgeRect.y += (Shell.m_LocalOnlyBadgeRect.h - TagHeight) * 0.5f;
+				Shell.m_LocalOnlyBadgeRect.h = TagHeight;
 			}
 		}
 		Shell.m_HasAuthorRow = ShowAuthorRow;
@@ -6202,8 +6199,10 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		s_ListBox.SetItemColors(LocalRowFeedbackColor, LocalRowFeedbackColor, LocalRowFeedbackColor);
 		// 整数行：列表高度停在整行边界，底部不再裁出半张卡。
 		s_ListBox.SetVisibleRowRange(1, maximum(1, (int)std::floor(std::max(0.0f, CustomList.h) / LocalRowHeight)));
-		// 反馈矩形贴合卡片（卡片与格子之间有半格间隙）；白色描边已由列表组件统一取消。
+		// 反馈矩形贴合卡片（卡片与格子之间有半格间隙）。卡片是独立视觉件，
+		// 悬浮时勾一圈白边才读作「这张卡被指向」，行式列表仍保持纯填充。
 		s_ListBox.SetItemSelectionInset(Margin / 2.0f);
+		s_ListBox.SetRowFeedbackBorder(true);
 		// 列宽按「行让位」这一份宽度算，与行胶囊右缘同源，不再写 ScrollbarWidthMax。
 		const CUIRect StableCustomList = AssetsCardListAreaWithStableScrollbar(CustomList, s_ListBox.RowReserveWidth());
 		const int LocalColumns = maximum(1, (int)(StableCustomList.w / (Margin + TextureWidth)));
@@ -7320,8 +7319,9 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		// 选中与悬浮反馈统一取主题强调色，与本地资源网格、语言/主题列表同一口径。
 		const ColorRGBA WorkshopRowFeedbackColor = Ui()->QmControlTheme().m_Selected;
 		s_WorkshopAssetsListBox.SetItemColors(WorkshopRowFeedbackColor, WorkshopRowFeedbackColor, WorkshopRowFeedbackColor);
-		// 反馈矩形贴合卡片（卡片与格子之间有半格间隙）；描边由列表组件统一取消。
+		// 反馈矩形贴合卡片（卡片与格子之间有半格间隙），悬浮勾白边，与本地资源网格一致。
 		s_WorkshopAssetsListBox.SetItemSelectionInset(Margin / 2.0f);
+		s_WorkshopAssetsListBox.SetRowFeedbackBorder(true);
 		if(CombinedCount == 0)
 		{
 			const CUIRect StableWorkshopListArea = AssetsCardListAreaWithStableScrollbar(WorkshopListArea, s_WorkshopAssetsListBox.RowReserveWidth());

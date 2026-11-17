@@ -452,6 +452,10 @@ struct SLabelProperties
 	bool m_EllipsisAtEnd = false;
 	bool m_EnableWidthCheck = true;
 	float m_MinimumFontSize = 5.0f;
+	// 缩字号的档位（UI 单位）。1 = 逐档整数，与历史行为一致；0.5 = 半档，
+	// 悬浮收缩这类「可用宽度逐帧变化」的场合看起来是连续缩放而不是一格一格跳。
+	// 档位只决定精度，不影响测量次数上限：内部用二分夹逼，细档反而比逐档递减更少调用。
+	float m_FontSizeStep = 1.0f;
 	std::vector<STextColorSplit> m_vColorSplits;
 	// 文本被裁剪时自动登记完整内容提示；pTooltipText 供分段绘制（搜索高亮）
 	// 用完整字符串覆盖当前分段的文本。

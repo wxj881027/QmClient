@@ -59,7 +59,7 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 ### 2.1 设计 Token（design token）
 
 - 定义：所有尺寸、颜色、圆角、字号、动效参数只有一个来源；调用点选语义，不写数字。
-- 唯一实现：`src/game/client/QmUi/UiTokens.h`，命名空间共 25 个：`ui_token::color`（58 项）、`ui_token::spacing`、`ui_token::radius`（`NONE/TIGHT/BASE/SMALL_MENU/MENU/CARD/PILL`）、`ui_token::font`（`HEADLINE_LG/HEADLINE/TITLE/BODY/SMALL/CAPTION/TIP`）、`ui_token::motion`（36 项）、`ui_token::elevation`、`ui_token::control`（`PadX/PadY/IconBox/IconTextGap/SUFFIX_RATIO/SwitchMinWidth/SwitchTrackAspect`）、`ui_token::list`、`ui_token::settings` + `ui_token::settings::row`、`ui_token::feedback`、`ui_token::glow`、`ui_token::tooltip`、`ui_token::secondary_panel`、`ui_token::server_filter`、`ui_token::status_bar`、`ui_token::server_info`（`TITLE_SIZE/BODY_SIZE/TITLE_GAP/ROW_HEIGHT_RATIO/LABEL_WIDTH/NOTE_*/CARD_RADIUS`）、`ui_token::motd`（`FONT_SIZE/BOX_CELL_MIN_RATIO`）、`ui_token::motd`（`DESIGN_WIDTH/DESIGN_HEIGHT/TITLE_HEIGHT_RATIO/TITLE_GAP/BOX_GLYPHS_PER_STEP/FONT_SIZE`）、`ui_token::page_title`（`FONT_SIZE/HEIGHT/ICON_SIZE/ICON_GAP/ICON_Y_OFFSET`）、`ui_token::panel`（`GAP/PADDING/MARGIN`）、`ui_token::chat`（滚动条 + 气泡圆角派生 + `input::RowHeight/ButtonBorderWidth` 聊天输入行行高与翻译按钮描边）、`ui_token::player_card`（玩家信息卡分区度量）、`ui_token::text_caret`（`THICKNESS_PX/RADIUS_PX/BLOCK_RADIUS_PX/WIDTH_RATIO/OUTLINE_PX`）、`ui_token::confirm_dialog`、`ui_token::dropdown`、`ui_token::discrete_slider`、`ui_token::ime`、`ui_token::hud::font`、`ui_token::page_title`（`FONT_SIZE/HEIGHT/ICON_SIZE/ICON_GAP`）、`ui_token::panel`（`GAP/PADDING/MARGIN`）、`ui_token::chat`（`SCROLLBAR_*/BUBBLE_*`、`BubbleRadius`）、`ui_token::player_card`（`SIDE_BY_SIDE_MIN_WIDTH/CARD_MAX_WIDTH/CARD_WIDTH_RATIO/STACK_CARD_HEIGHT_RATIO/LIST_CARD_GAP/PADDING/RADIUS/SECTION_GAP/HEADER_*/ACTION_*/ICON_*/STATUS_*/DETAIL_*/LIST_*/SEARCH_HEIGHT/COPY_TOAST_SECONDS`）。
+- 唯一实现：`src/game/client/QmUi/UiTokens.h`，命名空间共 25 个：`ui_token::color`（58 项）、`ui_token::spacing`、`ui_token::radius`（`NONE/TIGHT/BASE/SMALL_MENU/MENU/CARD/PILL`）、`ui_token::font`（`HEADLINE_LG/HEADLINE/TITLE/BODY/SMALL/CAPTION/TIP`）、`ui_token::motion`（36 项）、`ui_token::elevation`、`ui_token::control`（`PadX/PadY/IconBox/IconTextGap/SUFFIX_RATIO/SwitchMinWidth/SwitchTrackAspect`）、`ui_token::list`、`ui_token::settings` + `ui_token::settings::row`、`ui_token::feedback`、`ui_token::glow`、`ui_token::tooltip`、`ui_token::secondary_panel`、`ui_token::server_filter`、`ui_token::status_bar`、`ui_token::server_info`（`TITLE_SIZE/BODY_SIZE/TITLE_GAP/ROW_HEIGHT_RATIO/LABEL_WIDTH/CARD_RADIUS/TAGS_*`，整页只认一套行制：行高 = `BODY_SIZE × ROW_HEIGHT_RATIO`、标签列 = `LABEL_WIDTH`，备注行与开关行不再自带 `NOTE_*` 度量）、`ui_token::motd`（`FONT_SIZE/BOX_CELL_MIN_RATIO`）、`ui_token::motd`（`DESIGN_WIDTH/DESIGN_HEIGHT/TITLE_HEIGHT_RATIO/TITLE_GAP/BOX_GLYPHS_PER_STEP/FONT_SIZE`）、`ui_token::page_title`（`FONT_SIZE/HEIGHT/ICON_SIZE/ICON_GAP/ICON_Y_OFFSET`）、`ui_token::panel`（`GAP/PADDING/MARGIN`）、`ui_token::chat`（滚动条 + 气泡圆角派生 + `input::RowHeight/ButtonBorderWidth` 聊天输入行行高与翻译按钮描边）、`ui_token::player_card`（玩家信息卡分区度量）、`ui_token::text_caret`（`THICKNESS_PX/RADIUS_PX/BLOCK_RADIUS_PX/WIDTH_RATIO/OUTLINE_PX`）、`ui_token::confirm_dialog`、`ui_token::dropdown`、`ui_token::discrete_slider`、`ui_token::ime`、`ui_token::hud::font`、`ui_token::page_title`（`FONT_SIZE/HEIGHT/ICON_SIZE/ICON_GAP`）、`ui_token::panel`（`GAP/PADDING/MARGIN`）、`ui_token::chat`（`SCROLLBAR_*/BUBBLE_*`、`BubbleRadius`）、`ui_token::player_card`（`SIDE_BY_SIDE_MIN_WIDTH/CARD_MAX_WIDTH/CARD_WIDTH_RATIO/STACK_CARD_HEIGHT_RATIO/LIST_CARD_GAP/PADDING/RADIUS/SECTION_GAP/HEADER_*/ACTION_*/ICON_*/STATUS_*/DETAIL_*/LIST_*/SEARCH_HEIGHT/COPY_TOAST_SECONDS`）。
 - 禁止的反面写法：`Row.h - 2.0f` 这类就地魔数；为单个组件新开命名空间放通用色；用近似值复制已有 token（`PREVIEW_BACKDROP` 与 `SURFACE_OVERLAY` 二选一时必须复用）。
 
 ### 2.2 设置内容布局流（settings content flow）
@@ -76,9 +76,9 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 
 ### 2.4 行距档位（row gap tiers）
 
-- 定义：行距只有四档，由行自己声明：子行 0.5×、行间 1×、分区间 2×、卡尾 4×。
+- 定义：行距只有四档，由行自己声明：子行 0.5×、行间 1×、分区间 2×、卡尾 4×。一组行的高度按「N 行 + (N−1) 档行距」测量，末行之后不再补行距。
 - 唯一实现：`ui_token::settings::RowGap(行距)` / `SubRowGap` / `SectionGap` / `ActionGap`（`UiTokens.h`，`ui_token::settings`）；行类型旁路 `ui_token::settings::row::Of(EType)`（`PRIMARY/GROUP_HEADER/SUB/DIVIDER/FOLD/NOTE`，未缩放，仅已迁移调用点使用）。
-- 禁止的反面写法：上一行尾部补间距；用 `Space(2.0f)` 代替档位；用 `settings::row` 的数值冒充派生链档位。
+- 禁止的反面写法：上一行尾部补间距；用 `Space(2.0f)` 代替档位；用 `settings::row` 的数值冒充派生链档位；按 N × `m_RowStep` 测量一组行（把末行行距也算进去，组间距会变成「行距 + 分区间」两倍以上——「变色速度」上方那道断层就是这么来的）。
 
 ### 2.5 圆角与表面（rounded surface）
 
@@ -106,9 +106,9 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 
 ### 2.9 卡片骨架与测量（card skeleton and measure）
 
-- 定义：卡片外壳、标题、描边、展开高度由 deck 统一测量与绘制，卡片内容只填内容区。
-- 唯一实现：`CSettingsCardDeck`（`SettingsCardDeck.h`）、`SSettingsCardDefinition`、`ResolveSettingsCardDeckPointerInput`、`CSettingsCardDeckFrameRuntime`（`SettingsCardDeckLogic.h`）；外壳绘制 `ExecuteSettingsCardChromeDraw`、边框 `SettingsCardInteractionBorderVisible`、内容裁剪 `ResolveSettingsCardContentClipRect`（`SettingsCard.h`）；测量 `SettingsCardMeasure.h`；宽度 `SettingsCardWidth.h`；动效 `SettingsCardMotion.h`。
-- 禁止的反面写法：卡片里自己画标题栏或描边；卡片内容高度与测量函数各写一份；卡片折叠状态不进 `SettingsCardCollapseState`。
+- 定义：卡片外壳、标题、描边、展开高度由 deck 统一测量与绘制，卡片内容只填内容区；内容末行到卡片下边框的留白由一档 token 统一给出，卡高随内容自适应。
+- 唯一实现：`CSettingsCardDeck`（`SettingsCardDeck.h`）、`SSettingsCardDefinition`、`ResolveSettingsCardDeckPointerInput`、`CSettingsCardDeckFrameRuntime`（`SettingsCardDeckLogic.h`）；外壳绘制 `ExecuteSettingsCardChromeDraw`、边框 `SettingsCardInteractionBorderVisible`、内容裁剪 `ResolveSettingsCardContentClipRect`（`SettingsCard.h`）；测量 `SettingsCardMeasure.h`；宽度 `SettingsCardWidth.h`；动效 `SettingsCardMotion.h`；卡片几何 `BuildSettingsCardFrame`（`SettingsCardGeometry.cpp`），底边留白 = `ui_token::settings::CARD_PADDING` + `ui_token::settings::CARD_CONTENT_BOTTOM_GAP`。
+- 禁止的反面写法：卡片里自己画标题栏或描边；卡片内容高度与测量函数各写一份；卡片折叠状态不进 `SettingsCardCollapseState`；在卡片末尾用 `Flow.Space` 自行拼底距（会让同页卡片的末行到底边各不相同——统一走 `CARD_CONTENT_BOTTOM_GAP`）；测量函数按旧版行数多留空白（改版后没同步测量，卡片底部会凭空多出整行）。
 
 ### 2.10 标签与本地化缓存（label and localized cache）
 
@@ -119,8 +119,9 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 ### 2.11 页面主标题（page title）
 
 - 定义：页面级标题（设置页顶部「设置」、收藏地图工作区标题）共用一个字号与行高档，图标与文字作为一个整体对齐；标题不再借用正文标尺。
-- 唯一实现：`ui_token::page_title::{FONT_SIZE, HEIGHT, ICON_SIZE, ICON_GAP}`（`UiTokens.h`）+ `ui_widget::PageTitle(...)`（`src/game/client/QmUi/UiOverlays.h`，内部 `DoLabel_QmIcon` + `DoLabel`）；设置页标题样式键 `CMenus::BuildSettingsShellTitleTextStyle`（`menus.cpp`）读同一档字号。
-- 禁止的反面写法：标题字号写死 16 或 `font::HEADLINE_LG`（曾把「设置」压成正文观感）；标题前面自己 `DoLabel` 画图标导致换语言后错位；工作区标题用 `h * 0.72f` 按行高反推字号。
+- 唯一实现：`ui_token::page_title::{FONT_SIZE, HEIGHT, ICON_SIZE, ICON_GAP, ICON_Y_OFFSET, TEXT_WIDTH_SLACK}` + `ResolveTitleGroup` / `ResolveTitleTextMaxWidth`（`UiTokens.h`，一次算出图标与文字两个矩形并给出文字的最大宽度） + `ui_widget::PageTitle(...)`（`src/game/client/QmUi/UiOverlays.h`）；设置页接入点 `menus_settings.cpp`，标题样式键 `CMenus::BuildSettingsShellTitleTextStyle`（`menus.cpp`）读同一档字号。水平居中由组几何保证，垂直由 `ICON_Y_OFFSET` 做字形留白的视觉下沉。
+- **文字矩形取实测自然宽度，不裁到「行宽 − 图标 − 缝」**；行宽不足时整组居中溢出到两侧空白，字号与单行都不变。传给标签的最大宽度必须走 `ResolveTitleTextMaxWidth(实测宽)`：它加 `TEXT_WIDTH_SLACK` 并**向上取整**。
+- 禁止的反面写法：标题字号写死 16 或 `font::HEADLINE_LG`（曾把「设置」压成正文观感）；标题前面自己 `DoLabel` 画图标导致换语言后错位；工作区标题用 `h * 0.72f` 按行高反推字号；**文字按整行 MC 单独居中、图标再挂到左边**（组重心偏左 (图标宽+缝)/2，实机看着就是没对齐）；**把实测宽度直接塞给标签当最大宽度，或用 `(int)` 向下截断**（中文无空格，宽度差半个像素就被 `text.cpp` 的 "word can't be fitted" 分支在字间断开——「设置」变成上下两行，且与窗口比例无关）；长语言标题把文字矩形裁到行宽以内（同一处断行的另一条路径）。
 
 ### 2.12 页面页签字号（page tab font）
 
@@ -130,15 +131,37 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 
 ### 2.13 面板间距（panel spacing）
 
-- 定义：页面级面板的留白只有三档——面板之间的缝、内容到面板边缘的内边距、面板外缘到窗口边缘的外距。服务器列表是基准，回放/截图浏览器与设置页壳层跟它对齐。
-- 唯一实现：`ui_token::panel::{GAP, PADDING, MARGIN}`（`UiTokens.h`）；消费点 `QmBrowserPanelLayout`（`browser_status_layout.h`）、`ResolveSettingsShellLayout` 的 `SETTINGS_SHELL_GAP` / `SETTINGS_PANEL_MARGIN`（`SettingsPageLayout.h`）、`CMenus::RenderDemoBrowser`（`menus_demo.cpp`，底部操作条到窗口底取 `MARGIN`）。
-- 禁止的反面写法：调用点写 `HSplitBottom(10.0f, ...)` / `Margin(12.0f, ...)`；三个页面各用一套 8/10/12；面板间隙、内边距与外距互相顶替（底边留白拿 `GAP` 当外距就是这一条）。
+- 定义：页面级面板的留白只有三档——面板之间的缝（8）、内容到面板边缘的内边距（10）、面板外缘到窗口边缘的外距（8）。
+- 唯一实现：`ui_token::panel::{GAP, PADDING, MARGIN}`（`UiTokens.h`）；消费点 `QmBrowserPanelLayout` / `QmResolveBrowserBottomInset`（`browser_status_layout.h`）、`ResolveSettingsShellLayout` 的 `SETTINGS_SHELL_GAP` / `SETTINGS_PANEL_MARGIN`（`SettingsPageLayout.h`，内容区内缩仍取 `PADDING`）、`CMenus::RenderDemoBrowser`（`menus_demo.cpp`）、菜单壳层全局安全区 `Screen.Margin(MARGIN)`（`menus.cpp`）。
+- **外距只算一次**：壳层已对 `Screen` 应用过 `MARGIN` 的四边安全区，页面再无条件切一次 `MARGIN` 会变成 16。页面必须用 `QmResolveBrowserBottomInset(*Ui()->Screen(), MainView)` 按「整屏底 − 页面底」算出已内缩量，只补足差值；回放/幽灵视角下安全区不生效时自动补满 8。最终「面板底 → 窗口底」恒等于 `MARGIN`，与窗口缩放无关。
+- 禁止的反面写法：调用点写 `HSplitBottom(10.0f, ...)` / `Margin(12.0f, ...)`；三个页面各用一套 8/10/12；面板间隙、内边距与外距互相顶替——底边留白拿 `GAP` 当外距、或把设置页内容区内缩改成 `MARGIN`（8）让整页缩水 2px，都属于这一条；**只改常量名字却不去算实际叠加量**（改 `GAP`→`MARGIN` 两者同为 8，视觉不变，安全区仍被重复叠加）。
 
 ### 2.9b 列表卡片（list card）
 
-- 定义：网格或列表里的一张卡——外壳（矩形、圆角、内边距）+ 头部（标题 / 副标题 / 尾部徽标·按钮）+ 内容区 + 可选底栏，悬浮时勾一圈统一白边。
-- 唯一实现：`qm_list_card::ResolveLayout` / `SMetrics` / `SOptions` / `SLayout` / `DrawShell` / `DrawStaticShell`（`src/game/client/QmUi/QmListCard.h`）；圆角 `ui_token::radius::CARD`（资源卡片这一档传 `MENU`）、内边距 `ui_token::settings::CARD_PADDING`、描边 `ui_token::feedback::HOVER_BORDER`。接入点：`CMenus::RenderSettingsBindWorkshop`（`bind_workshop_ui.cpp`）、`CMenus::RenderSettingsCustom` 的 `RenderAssetsCardShell`（`menus_settings_assets.cpp`）。
-- 禁止的反面写法：卡片里自己写内边距与圆角再调 `DrawRoundedSurface`；在命中已由 `CListBox` 登记时再调 `DrawShell`（会抢命中，静态壳用 `DrawStaticShell`）；把列表卡片当设置卡片用（折叠、卡间阴影、deck 测量不属于它）。
+- 定义：网格或列表里的一张卡，两种形态共用同一条几何路径：`STACK`（头部标题/副标题/尾部区 + 内容 + 可选底栏）与 `ROW`（前置区 + 主体 + 可选尾部槽）。组件只定「一张卡占多大、各部分从哪切、外壳怎么画」。
+- 唯一实现：`qm_list_card::ResolveLayout` / `EAxis` / `SMetrics` / `SOptions` / `SLayout` / `DrawShell` / `DrawStaticShell`（`src/game/client/QmUi/QmListCard.h`）；圆角 `ui_token::radius::CARD`（资源卡片这一档传 `MENU`）、内边距 `ui_token::settings::CARD_PADDING`、描边 `ui_token::feedback::HOVER_BORDER`。接入点：`CMenus::RenderSettingsBindWorkshop`（`bind_workshop_ui.cpp`，STACK + DrawShell）、`RenderAssetsCardShell`（`menus_settings_assets.cpp`，STACK + DrawStaticShell）、`CMenus::RenderSettingsTeeSkinList`（`QmCardCatalogTee.cpp`，ROW，内边距 0 保持原观感）。
+- 禁止的反面写法：卡片里自己写内边距与圆角再调 `DrawRoundedSurface`；在命中已由 `CListBox` 登记时再调 `DrawShell`（会抢命中，静态壳用 `DrawStaticShell`）；把数据加载、缩略图任务、预览缓存、入场动画塞进组件（资源页与皮肤页各有一套独一份的预算与调度）；把列表卡片当设置卡片用（折叠、卡间阴影、deck 测量不属于它）；**卡片头部文字四边用同一个 `Margin` 内缩**——纵向只能留 6（头部高度固定 30/40，标题行 + 作者行要靠这段空间），横向同档 6（`ui_token::spacing` 的固定档），直接调大到 8 以上会把作者行压成 6px 高。
+
+### 2.9c 标签（tag）
+
+- 定义：一颗**尺寸固定**的胶囊，承载「本地 / 网络 / 跟随 / 地图标签」这类状态词或分类词。它不是按钮：可点语义（命中、动画、禁用）留在调用点，组件只管外形与配色。
+- 唯一实现：`ui_tag::{HEIGHT, PADDING_X, RADIUS, FONT_SIZE, EColorMode, SColors, Resolve, MeasureWidth, FitRect, Draw, DrawInRect}`（`src/game/client/QmUi/UiTag.h/.cpp`）。高度 16、水平内边距 6、圆角 8、字号 `ui_token::font::SMALL`，全部是常量——同一排标签永远等高、等圆，只有文本长度影响宽度。`UiScale` 只给「整个面板按可用空间缩放」的场景（服务器信息面板）用，同一次绘制传同一个值。
+- **三种颜色来源，调用点不许自己写 fill**：
+  1. `RANDOM_FIXED`：由标签文本哈希出**莫奈色板的下标**（`ui_tag::MONET_PALETTE`，12 色相 × 4 变体 = 48 色：罂粟红 / 赭橙 / 麦黄 / 橄榄 / 苔绿 / 灰绿 / 雾青 / 湖蓝 / 群青 / 紫罗兰 / 丁香紫 / 玫瑰粉，每个色相有浅灰 / 浅艳 / 深灰 / 深艳四档）。同一个词永远同一色，跨会话、跨机器稳定——「随机」只发生一次，之后由哈希钉死，所以不需要存颜色配置，也不会换会话变色（地图标签、用户自建标签）。**为什么是固定色板而不是 HSL 等距生成**：莫奈的关键在「低饱和 + 相近明度」，按色相均分会跑出高饱和青绿与紫红；48 色里每个色相的明度是**按感知亮度反解**的（两档 0.50 / 0.42），所以黄不会亮到发白、紫不会暗到发黑。**取色要打散**（`ui_tag::MonetPaletteIndex`）：数组按色相分组写，索引换算是「变体在外、色相在内」，相邻种子不会落在同一色相的深浅变体上。**索引不按添加顺序轮转**：顺序是玩家拖动排的，按位置取色会让一次拖动把整排颜色全换一遍。
+  2. `FIXED`：调用点给语义色（本地 = 绿、网络 = 蓝灰），整颗胶囊用它。
+  3. `DERIVED`：调用点给基色，按固定公式加深一档（`× 0.72`）（跟随标签跟好友卡片同色系，但比卡片更实）。
+- 取色器（`CUi::ShowPopupColorPicker`）里的「预设 · 莫奈」组**直接引用同一张色表**（`ui_tag::MONET_PALETTE`，48 格按色相分组、8 列布局一行两个色相），不在取色器里再抄一份 RGB：改了色板，标签与预设一起变。该组只读、点击直接应用，名字按色相重复四次（连续四格就是同一色相的四档，格宽只够 3~4 个汉字）。
+- 胶囊**不描边**，文字**不按填充亮度自动翻色**：文字统一取 `ResolveConfiguredTextColor()`（用户「文本颜色模式」那一档）。1px 亮边会让标签读成一张小卡片，抢列表卡片的层级；自动翻色会让同一屏出现两套文字色。
+- 接入点：资源卡片状态徽章（`AssetsCardStatusReadyColor` / `NetworkColor`，FIXED）、好友列表「跟随」药丸（accent 色，DERIVED）、地图标签面板的已审核标签与「当前标签」行（RANDOM_FIXED，同一词在两处同色）；用户自建标签存 `QmMapTags::CLocalTags`（`qm_local_map_tags.txt`，仅本地、不上传）。
+- 地图标签面板的版式（自上而下）：标题 + 右上角两颗图标按钮（**上传本地标签供审核** + 刷新，说明只在悬浮提示里） → **`本地标签：`（第一行）**：自己给这张图打的词，空时只有一颗 `+` → **`云端标签：`**：已审核标签（点击 = 赞同，可换行往下长；空态就写在这一行「当前暂无标签」，不再单独占一整块列表区）→ **`标签示例：`（钉在面板底边）**。中间整块空间归云端标签，`本地标签` 不再被底部留白推到面板下半部分。
+- 标签行的**行内输入框**：点 `+` 后输入框长在 `+` 原来的位置，与胶囊同高（`ui_tag::HEIGHT`）、同一行，底栏行数与高度都不变——不允许另起一行把上面的内容顶上去，也不允许输入框比同一行的胶囊更高。点 `+` 即把焦点交给输入框（不用再点一次）；点行外或输入框失焦 = 放弃这次添加，清空并收起、把 `+` 还回去（点示例不算放弃）。
+- 行内小动作按钮（`+` 加标签、`×` 删标签）边长统一取 `ui_token::server_info::TAGS_ACTION_SIZE`（= 胶囊高 16），两颗粒按钮视觉等大；不允许一颗写 14 一颗写 12。**两颗都走 `DoButton_QmIcon`**（圆底、悬浮反馈、图标墨迹居中由同一件提供），不要自绘圆底再调 `DrawQmIcon`——自绘版取的是通用 `TINT_PART`，与 ICON role 不是同一色阶，并排能看出不是一套件。
+- 本地标签的两种交互**必须共用一颗胶囊**（`MapTagsPanel.cpp`）：**单击 = 展开/收起它自己右侧的 `×`**（`×` 的宽度与透明度按进度从 0 生长，收起动画播完才清「正在绘制」的那颗，换一颗则从 0 重新长）；**按住移动超过 `ui_token::spacing::XS` = 池内拖动排序**（复用选项池的 `SQmPieOptionPoolDrag` 骨架 + `QmResolveChipDropSlot`，落点画插入竖线、拖动中画幽灵胶囊；松手写 `QmMapTags::CLocalTags::Move`，顺序落盘 `qm_local_map_tags.txt`）。拖动中的 `DoButtonLogic` 返回值一律忽略，否则松手会被当成一次「点击展开」。云端标签显示的文本带「×N +1」后缀，取色 key 必须传词本身（否则赞同数一变整颗胶囊就换色，同一个词在本地/云端也不同色）。未展开的标签**不占 `×` 的位置**；行末恒留一个动作位（收起时 `+`、输入时输入框），标签再多也不把它挤掉。
+- 面板里的图标按钮即使当前无事可做也画成**正常亮度**：禁用外观会压暗图标再加一条红斜线，玩家看不出它是什么。可用时机由点击处理决定，原因写进悬浮提示；提示必须走 `DoToolTipForRect`（矩形悬浮）——禁用按钮不会登记热项，普通 `DoToolTip` 的「热项 == 自己」判定会让整条提示消失。
+- 服务器信息页的行制（同一页四张卡共用一个读法）：一行 = 「标签列 + 值列」，行高 `BODY_SIZE × ROW_HEIGHT_RATIO`、标签列宽 `LABEL_WIDTH`，两列都以**同一个基线**绘制——标签走 `DoMenuLabelStreamed`，值走 `RenderIngameServerInfoValueCached`，两者必须都经 `RenderLabelTextContainerAligned` 出图（在矩形左上角裸画 `RenderTextContainer` 会让值比标签高半个字高）。备注行、收藏开关行与上面的字段行同高同列同间距，不再各自带 `NOTE_*` 度量或额外空行。
+- 布尔开关全站只有一颗件：`ui_widget::Toggle` + `ResolveBooleanControlLayout`（轨道宽 = `max(SwitchMinWidth(正文), 行高 × SwitchTrackAspect)`）。服务器信息页的收藏开关也用这颗件，但尺寸取**绝对档**（`settings::ROW_HEIGHT` 20 × `SwitchTrackAspect` 1.65 = 33），不跟本页行高（22.5）走——跟行高走会比设置页大一圈，两处并排读作两个控件。行内垂直居中，标签列与值列的基线不受影响。
+- 行内输入框（地图备注等）的**文字比同行标签小一档**（`FontSizeBody × 0.85`）：正文 15 号塞进 22 高的胶囊会顶满上下边距，读起来比左侧标签还重。
+- 禁止的反面写法：自绘胶囊再调 `DrawRoundedSurface`；字号/内边距/高度跟着所在行高或卡片宽度变；每次进游戏重新随机一次颜色（必须由标签文本决定）；给标签加描边；把「提交到服务器」和「加到我自己的标签」混成同一个动作；把审核规则写成面板正文（应进上传按钮的 tooltip）；把行内输入框塞进第二行、或让它比同行胶囊高；给图标按钮配可能为假的 `Enabled` 再指望普通 `DoToolTip` 出提示；常驻一排 `×`（删除钮只在点击后出现）；另写一套拖动排序状态（池内排序与选项池换池共用同一骨架，只有落点计算不同）。
 
 ### 2.14 对比表：三类动效机制
 
@@ -272,8 +295,10 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 ### 3.8 选项池（Option pool）
 
 - 定义：把一组选项分到「启用池 / 关闭池」两个集合，拖动或单击在池间迁移即切换配置项；颜色等属性在预览上改，不在池里改。
-- 唯一实现：`QmResolvePieOptionPool` / `QmPieOptionChipWidth` / `SQmPieOptionPoolLayout` / `SQmPieOptionPoolDrag` / `QmDrawPieOptionChip`（`src/game/client/QmUi/QmPieOptionPool.h`）；池容器圆角 `ui_token::radius::MENU`、胶囊 `ui_token::radius::PILL`、内边距 `ui_token::list::ContainerPadding`。
-- 禁止的反面写法：每个选项旁再挂一个色块控件（同一件事两个入口）；拖动不设阈值（轻点即误触）；空池不保留一行高度（最后一个选项离开时卡片高度跳）；拖动状态在绘制趟推进。
+- 唯一实现：`QmResolvePieOptionPool` / `QmPieOptionChipWidth` / `SQmPieOptionPoolLayout` / `SQmPieOptionPoolDrag` / `QmResolveChipDropSlot` / `QmDrawPieOptionChip`（`src/game/client/QmUi/QmPieOptionPool.h`）；池容器圆角 `ui_token::radius::MENU`、胶囊 `ui_token::radius::PILL`、内边距 `ui_token::list::ContainerPadding`。
+- 两种用法共用同一骨架：**换池**（选项池：`SQmPieOptionPoolDrag` + 落点池判定）与**池内排序**（地图标签：同一拖动结构 + `QmResolveChipDropSlot` 算插入槽位，落点画一条竖线）。区别只在落点怎么解释，阈值、幽灵、抓取偏移、状态跨帧规则全部相同。
+- 说明文本（「饼菜单包含 / 饼菜单排除」）与池容器之间的间距**取常规行距 `LineSpacing`**，与池到下一条说明的间距同档；写 0 会让标题贴住池的上边框，两块读成黏在一起的一整块。
+- 禁止的反面写法：每个选项旁再挂一个色块控件（同一件事两个入口）；拖动不设阈值（轻点即误触）；空池不保留一行高度（最后一个选项离开时卡片高度跳）；拖动状态在绘制趟推进；说明文本与池之间传 0 间距。
 
 ### 3.9 输入框（Input field）
 
@@ -296,8 +321,37 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 ### 3.12 列表（List）
 
 - 定义：行式或网格式可滚动集合，行反馈（选中/悬浮）由主题派生，容器内边距与「悬浮是否带描边」都是显式能力。
-- 唯一实现：`CListBox`（`src/game/client/ui_listbox.h`）：`SetCapsuleRows`、`SetContainerPadding`、`SetItemSelectionInset`、`SetRowFeedbackBorder`、`SetVisibleRowRange`、`SetScrollbarOverlay`、`DoAutoSpacing`；入场动画 `CQmListEntryAnimation` + `QmListBoxShouldStartEntryAnimation`（`src/game/client/QmUi/QmListEntryAnimation.h`）；反馈色 `Ui()->QmControlTheme().m_Selected`；悬浮描边 `ui_token::feedback::HOVER_BORDER`；行档 `ui_token::list::RowRadius/RowInsetX/ContainerPadding/PaddedRowsHeight/ROW_SPACING`。
-- 禁止的反面写法：自绘行背景；给选中态再加一圈描边；把行距折进行高后 `DoAutoSpacing(0)`（组件已按行推行距）；容器内边距与 `PaddedRowsHeight` 不成对（组件会把留白兜底缩回 0）；行列表打开 `SetRowFeedbackBorder`（整行大的白框会把列表读成一排按钮，只有卡片形态才开）。
+- 唯一实现：`CListBox`（`src/game/client/ui_listbox.h`）：`SetCapsuleRows`、`SetContainerPadding`、`SetItemSelectionInset`、`SetRowFeedbackBorder`、`SetDeferredItemFeedback` + `DrawItemFeedback`、`SetFillViewportHeight`、`SetWheelStepScale`、`SetVisibleRowRange`、`SetScrollbarOverlay`、`DoAutoSpacing`；入场动画 `CQmListEntryAnimation` + `QmListBoxShouldStartEntryAnimation`（`src/game/client/QmUi/QmListEntryAnimation.h`）；反馈色 `Ui()->QmControlTheme().m_Selected`；悬浮描边 `ui_token::feedback::HOVER_BORDER`；行档 `ui_token::list::RowRadius/RowInsetX/ContainerPadding/PaddedRowsHeight/ROW_SPACING/GRID_SPACING`。`SetWheelStepScale` 只缩放该列表的滚轮位移，不改键盘 PageUp/Down 翻页行数、不改全局 `qm_ui_scroll_step`——高行网格（皮肤列表）用来把「每格两行」降为「每格一行」。`SetDeferredItemFeedback` 让调用方在 `DoNextItem` 之后用**卡片矩形**调 `DrawItemFeedback`（多列网格的格子矩形里含行距与行内退，按格子画反馈会比卡片大一圈）；`SetFillViewportHeight` 让容器**始终占满调用方给的矩形**：条目不足一屏、或最后一行只剩半行，都不收高度（收高度会让面板底部留一条没画到的空档，截图画廊两种情形都撞上过）。**卡片尺寸只由列宽决定**：`QmResolveGalleryRowHeight(CellWidth, CaptionHeight, PreviewAspect)` 按「预览图固定宽高比 + 说明行固定高」算行高，窗口变宽卡片等比变大；面板高度只决定这一屏放得下几行，**末行可以只露一截**（滚动列表的正常形态），超出的内容交给滚动条。禁止按可用高度反推或均分行高去「铺满面板」——那会把卡片拉伸变形，一屏反而只放得下两行（实机反馈「为啥面板只允许两行」）。多列网格的**格间距取 `GRID_SPACING`（12，一档真正的间距）**，不要沿用行胶囊那半档 `ROW_SPACING`（2.5）——卡片是独立视觉件，半档缝会让整片网格贴成一整块；卡片内的文件夹图标先定**墨迹高**（预览区高度的 34%，夹在 18~64）再按 `QmIconInkFontSize` 反算字号，不能拿字号上限当尺寸（旧实现卡 26，大卡片里图标又小又空）。
+- 禁止的反面写法：自绘行背景；给选中态再加一圈描边；把行距折进行高后 `DoAutoSpacing(0)`（组件已按行推行距）；容器内边距与 `PaddedRowsHeight` 不成对（组件会把留白兜底缩回 0）；行列表打开 `SetRowFeedbackBorder`（整行大的白框会把列表读成一排按钮，只有卡片形态才开）；行内并排动作图标自己写 `VSplitRight` 固定槽——走 `ui_widget::CIconActionStrip`（`UiIconActionStrip.h`），文字可用宽度取 `ReserveWidth()`（跟着图标缓动，配合细档缩字号才是连续的悬浮收缩；只有排版确实不能逐帧变宽时才用 `ReserveWidthTarget`），图标条按反馈矩形内缘排版（按整格右缘排会溢出悬浮背景）；并排图标同字号却不按墨迹归一（见 §3.12b）；多列卡片网格把选中/悬浮反馈画在**格子**上而不是卡片上（格子里含行距与行内退，底衬比卡片大一圈，实机看着就是"没对齐"）；卡片内部再套一层暗底板 + 第二层内边距（缩略图像被塞进小框里，卡片最多「卡面 + 内容 + 一行说明」三层）；多列网格沿用 `ROW_SPACING` 当格间距（2.5px 的缝让卡片贴成一整块）；卡片内图标写死字号或字号上限（应按墨迹高反算，否则大卡片里图标明显偏小）。
+
+### 3.12b 标签缩字号与并排图标（font fitting / action icon strip）
+
+- 定义：标签宽度不足时**缩字号是连续的**，档位由标签自己声明：默认 `m_FontSizeStep = 1`（历史整数档，逐值兼容），悬浮收缩这类可用宽度逐帧变化的场合设 `0.5`。档位只是精度，不是循环步数。并排动作图标按**字形墨迹高**归一，不是按 em 字号归一。
+- 唯一实现：缩字号算法 `ResolveFittedFontSize`（`src/game/client/ui_font_fit.h`），唯一调用点 `CalcFontSizeCursorHeightAndBoundingBox`（`ui.cpp`）；档位字段 `SLabelProperties::m_FontSizeStep`（`ui.h`）；墨迹档 `ui_token::control::ActionIconInkHeight`（`UiTokens.h`），字形墨迹比与反算 `QmIconInkHeightRatio` / `QmIconInkFontSize`（`qm_icon.h`，数值为随包 Phosphor TTF 的 fontTools 实测：方框类 0.750、星形 0.844）；图标盒与格间距仍由 `ui_token::control::IconBox` 统一。接入点 `RenderSettingsTeeSkinList`（`QmCardCatalogTee.cpp`）、`CMenus::DoButton_Favorite`（`menus.cpp`，可选 `IconFontSize`）。
+- 禁止的反面写法：把 `Size--` 或逐档线性递减写回 `DoLabel`；用「禁用缩字号」代替连续化（那是把动画删掉，不是修抖动）；用 `ReserveWidthTarget` 掐掉宽度缓动却不提供别的连续反馈；同字号并排方框与星形（墨迹差 12.5%，肉眼就是一高一矮）；给收藏星写死 `12.0f` 而不跟正文字号派生；让细档位变成线性试探（必须走二分，否则每帧每标签的测量次数翻倍）；**二分中间档用任意浮点字号**（每个都是一次性物理字号，会反复光栅化该标签的全部字形，候选必须先量化到档位网格）；把只占第一行的图标占位从第二行元数据宽度里再减一次（悬浮时队列按钮出现，作者名就会在右侧还空着的时候被截掉）；给元数据行也开缩字号（辅助小字缩过头会糊，且它本就不参与悬浮收缩）。
+
+### 3.12c 滚动步长与速度（wheel step）
+
+- 定义：**所有竖向滚动面共用一个等比基准** `qm_ui_scroll_step`（设置页「界面动画 → 滚动步长」，默认 10，范围 2–100）。每个滚动面再按自己的语义档位把它换算成「每格位移」`CScrollRegionParams::m_ScrollUnit`；设置项改一倍，所有滚动面等比变一倍，绝对像素仍由各自的档位决定。
+- 唯一实现：`QmResolveScrollPolicy`（`QmUi/QmScroll.cpp`）产出 `SQmScrollConfig::m_WheelScale`，`QmScrollRegionParamsFromPolicy` / `QmScrollRegionParamsForSize`（`ui_scrollregion.h`）写入 `m_ScrollUnit`。`StepScale = qm_ui_scroll_step / 10`。
+- 档位表（`RowExtent = 行高 + 行距`，`RowsPerStep` 由 `CListBox::DoStart` 传入，皮肤/资源网格是 2）：
+
+  | 滚动面 | 档位 | 每格位移 |
+  |---|---|---|
+  | 面板级（设置主区、wiki/统计/控制台整页容器） | `SETTINGS_PAGE/OUTER`、`QmScrollRegionParamsForSize` | `qm_ui_scroll_step × QmPanelWheelStepMultiplier()`（默认 10×12 = 120） |
+  | 行列表 / 卡片内列表 | `MENU_LIST`、`SETTINGS_INNER` | `RowExtent × RowsPerStep × StepScale` |
+  | 网格（皮肤、资源、筛选） | `SETTINGS_GRID`、`GRID`、`FILTER_GRID` | `RowExtent × RowsPerStep × StepScale` |
+  | 弹层列表 | `POPUP_LIST` | `RowExtent × 3 × StepScale` |
+
+  `CListBox::SetWheelStepScale` 是**单列表**倍率，只乘该列表的 `m_WheelScale`（皮肤列表行高含预览图，取 0.7）。按住 Alt 滚轮额外 `× QmScrollAltMultiplier()`(3)。
+- 手感参数与距离无关：`qm_ui_scroll_feel`（原版 / 平滑 / 弹簧）、`qm_ui_scroll_spring_response`、`qm_ui_scroll_spring_damping`、`qm_ui_scroll_bounce` 只改动画曲线与回弹，不改每格位移。**默认档是弹簧**（`qm_ui_scroll_feel = 2`，响应 300ms / 阻尼 90% / 回弹 25）；原版与平滑保留为可切回的兜底档。
+- 禁止的反面写法：调用点直接写绝对滚动像素；用单列表倍率去补全局配置该改的值（会让不同页面失去等比关系）；改 `DoStart` 的 `RowsPerScroll` 来调滚轮速度（它会连带把键盘 PageUp/Down 的 `RowsPerScroll×4` 一起改掉）；面板级再乘一次 `QmPanelWheelStepMultiplier`（`QmSettingsScrollConfig` 已乘过）。
+
+### 3.12d 游戏内 HUD 背景模糊接入（in-game blur scope）
+
+- 定义：菜单壳层会在 `CMenus::OnRender` 里开 `CUiScopedGaussianBlur`，菜单内所有半透明 `CUIRect::Draw` 因此自动模糊；**游戏内组件不在该作用域内，必须自己开**。计分板、提示、IME、投票框都这么做。
+- 唯一实现：`CUiScopedGaussianBlur`（`ui.h` / `ui.cpp`）→ `CUi::BeginGaussianBlurScope`；`CUIRect::Draw`（`ui_rect.cpp`）在 `Color.a ∈ (0,1)` 时调 `DrawRectBackdrop` → `RenderGaussianBlur`。HUD 组件只负责开作用域 + 画半透明面板，不手写模糊调用。
+- 禁止的反面写法：组件里直接 `Ui()->RenderGaussianBlur(...)` 再配 `Graphics()->DrawRect(...)`（绕过统一表面链，`DrawRectBackdrop` 不会因为作用域而触发）；把「背景不透明度配置」当模糊强度传进 `RenderGaussianBlur`（透明度应由 `Color.a` 决定，模糊层保持全强度）；游戏内组件依赖菜单壳层的作用域（它根本不存在）。TClient 状态栏曾三条全占。
 
 ### 3.13 下拉框（Dropdown）
 

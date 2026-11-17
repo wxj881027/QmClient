@@ -68,7 +68,10 @@ inline SUiSecondaryButtonStyle ResolveUiSecondaryButtonStyle(ColorRGBA Surface, 
 		return Style;
 	const ColorRGBA Feedback = ResolveUiIconButtonFeedback(CompositeUiSurface(Surface, Backdrop), true, Hovered, Pressed);
 	Style.m_Fill = BlendUiButtonSurface(Surface, Feedback);
-	Style.m_Border = Feedback.WithAlpha(ui_token::feedback::ICON_BORDER_ALPHA);
+	// 填充叠加用自动对比色（深底压白、浅底压黑），描边不跟着走：描边只表达
+	// 「这里有反馈」，全站统一取白色悬浮描边。以前描边复用了同一份 Feedback，
+	// 于是开关「关着白边、打开黑边」，与按钮的悬停白边割裂。
+	Style.m_Border = ui_token::feedback::HOVER_BORDER;
 	return Style;
 }
 
@@ -83,7 +86,10 @@ inline SUiToggleStyle ResolveUiToggleFeedbackStyle(const SUiToggleStyle &Base, C
 }
 
 // 同类按钮只保留用途差异，主题、禁用和鼠标反馈由这一处解析。
-inline SUiSecondaryButtonStyle ResolveUiButtonStyle(EUiButtonRole Role, ColorRGBA Surface, ColorRGBA Backdrop, const SUiTheme &Theme, const SUiButtonState &State)
+// ListEntryBorder：LIST_ENTRY 默认「选中/悬浮只有填充、不描边」（弹层条目与列表
+// 胶囊行同一视觉件）。卡片形态的列表项（资源贴图、皮肤、指令工坊）由调用点显式
+// 打开，改为悬浮勾一圈白边；其余角色不受影响。
+inline SUiSecondaryButtonStyle ResolveUiButtonStyle(EUiButtonRole Role, ColorRGBA Surface, ColorRGBA Backdrop, const SUiTheme &Theme, const SUiButtonState &State, bool ListEntryBorder = false)
 {
 	if(Role == EUiButtonRole::PRIMARY)
 		Surface = Theme.m_Accent.WithAlpha(Theme.m_Accent.a * 0.18f);
@@ -97,10 +103,10 @@ inline SUiSecondaryButtonStyle ResolveUiButtonStyle(EUiButtonRole Role, ColorRGB
 	// 选中态常驻悬浮边框，悬浮选中项则收起边框，提示再次点击可取消。
 	if(State.m_Selected && State.m_Enabled && Role != EUiButtonRole::LIST_ENTRY)
 		Style.m_Border = ResolveUiSecondaryButtonStyle(Surface, Backdrop, true, !State.m_Hovered, false).m_Border;
-	// 弹层条目与列表胶囊行是同一个视觉件：选中/悬停只由填充深浅表达，任何状态都不描边。
+	// 弹层条目与列表胶囊行是同一个视觉件：选中/悬停只由填充深浅表达，默认不描边。
 	// 描边来自反馈遮罩（0.70 白），会在选中项上勾出一圈白边，与「选中 = 填充」的口径相反；
 	// 这里清空后，上层 DrawButtonSurface 的 ResolveActiveButtonBorder 也对该 role 早退。
-	if(Role == EUiButtonRole::LIST_ENTRY)
+	if(Role == EUiButtonRole::LIST_ENTRY && !ListEntryBorder)
 		Style.m_Border = ColorRGBA();
 	return Style;
 }

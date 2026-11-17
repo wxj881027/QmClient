@@ -175,26 +175,21 @@ float2 RoundedCornerShape(float2 HalfSize, float Radius, float Smoothing, float 
 	const float MaxRadius = max(MinHalf * (Capsule ? 0.8 : 0.5), ClampedRadius);
 	float EffectiveRadius = clamp(ClampedRadius * (1.0 + 1.3 * Amount), ClampedRadius, MaxRadius);
 	float EffectiveAmount = clamp((EffectiveRadius / ClampedRadius - 1.0) / 1.3, 0.0, 1.0);
-	// 苹果三段式自己负责沿边外扩（p = r*(1+0.881108*s)），半径不再按 1.3 倍生长，
+	// 苹果连续曲率自己负责沿边外扩（足迹 = r*(1 + 0.528665*s)），半径不再按 1.3 倍生长，
 	// 强度直接取平滑度；否则会和曲线自身的扩边叠加，圆角被放大两次。
 	if(int(CurveType + 0.5) == 4)
 	{
 		EffectiveRadius = ClampedRadius;
-		EffectiveAmount = clamp(Smoothing, 0.0, 1.0);
+		// 足迹必须塞进短边半高，塞不下就按短边等比削这一个标量：分轴各钳一次就是把端帽
+		// 拉成橄榄头，上下两个角的肩部还会互相穿过中线，端边挤出外凸的唇边。
+		const float MaxAmount = max(MinHalf / ClampedRadius - 1.0, 0.0) / 0.528665;
+		EffectiveAmount = clamp(min(clamp(Smoothing, 0.0, 1.0), MaxAmount), 0.0, 1.0);
 	}
-	// 胶囊半径已经贴到短边一半，没有生长空间，所以默认曲线强度恒为 0：端帽是精确正圆。
+	// 胶囊端帽由端头构造单独负责（正圆 / 丝滑肩部 / 苹果端帽，见 RoundedRectDistance），
+	// 圆角曲线不参与：半径已经贴到短边一半，任何沿边外扩都会穿过中线。
+	// 几何兜底因此按正圆胶囊生成，与端头构造最多差 0.021 r。
 	if(Capsule)
-	{
-		// 苹果胶囊例外：端帽改用三段式连续曲线，半径仍不生长，端部略方润。
-		// 丝滑档不在这里改形状，它只作用在直边上（见 RoundedRectSdf 的 SilkyCapsuleSdf）。
-		if(SeamAmount > 0.9)
-		{
-			EffectiveRadius = ClampedRadius;
-			EffectiveAmount = clamp(CapsuleStrength, 0.0, 1.0);
-		}
-		else
-			EffectiveAmount = 0.0;
-	}
+		EffectiveAmount = 0.0;
 	return float2(EffectiveRadius, EffectiveAmount);
 }
 
@@ -253,44 +248,61 @@ float QuinticCornerDistance(float2 P, float E, float Amount)
 	return dot(P - Q, P) > 0.0 ? Dist : -Dist;
 }
 
-// 苹果/Figma 连续圆角（三段式）：直边 → 三次贝塞尔 → 圆弧 → 三次贝塞尔 → 直边。
-// 控制点：起点在直边上，手柄 0.3 倍弦长；终点在圆弧上，手柄 0.382 倍弦长
-// （由「末端曲率正好等于 1/R」解出，在 0..1 的 S 上基本恒定）。
+// 苹果连续曲率圆角的控制点：P0 是起点，之后每段两个手柄加一个段末点，共 10 个。
+// 前 5 个独立，P5..P9 关于对角线镜像（P[9-i] = P[i].yx）。
+// [0] = 三段 30° 圆弧（手柄 k = 4/3·tan(7.5°)），[1] = UIBezierPath(roundedRect:) 实测值
+// （与 CoreAnimation 逐像素一致：足迹 1.528665 r，最贴角点 0.41225 r）。
+// 坐标：角点在原点、直边沿 +x/+y，曲线从 (足迹, 0) 走到 (0, 足迹)。
+float2 AppleCornerControlPoint(int Index, float S)
+{
+	const int Mirrored = Index > 4 ? 9 - Index : Index;
+	float2 Arc;
+	float2 Continuous;
+	if(Mirrored == 0)
+	{
+		Arc = float2(1.000000, 0.000000);
+		Continuous = float2(1.528665, 0.000000);
+	}
+	else if(Mirrored == 1)
+	{
+		Arc = float2(0.824462, 0.000000);
+		Continuous = float2(1.088493, 0.000000);
+	}
+	else if(Mirrored == 2)
+	{
+		Arc = float2(0.652020, 0.046206);
+		Continuous = float2(0.868407, 0.000000);
+	}
+	else if(Mirrored == 3)
+	{
+		Arc = float2(0.500000, 0.133975);
+		Continuous = float2(0.631494, 0.074911);
+	}
+	else
+	{
+		Arc = float2(0.347980, 0.221744);
+		Continuous = float2(0.372824, 0.169060);
+	}
+	const float2 Point = mix(Arc, Continuous, S);
+	return Index > 4 ? Point.yx : Point;
+}
+
+// 苹果连续曲率：三段首尾相连的三次贝塞尔（T 三等分），同时给出对 T 的导数（牛顿要用）。
+// 强度只在「三段圆弧」与实测曲线之间逐点插值，两个轴共用同一个标量：分轴各算一个系数
+// 会把端帽在短轴上压扁、长轴上拉长（1.53:1 的橄榄头），端头外凸就是这么来的。
+// 结果转回调用方坐标（圆弧中心为原点、从 (1,0) 到 (0,1)）：x = 1 - y_apple、y = 1 - x_apple。
 float4 AppleCorner(float T, float E, float S)
 {
-	// 平滑度上限压到 0.85：再往上圆弧段会被压成一个点，两段贝塞尔退化成尖角（会看到刺）。
-	S = min(S, 0.85);
-	const float Ext = 0.881108 * S;
-	const float Phi = 0.7853982 * S;
-	const float2 Start = float2(1.0, -Ext);
-	const float2 ArcStart = float2(cos(Phi), sin(Phi));
-	const float2 Tangent = float2(-sin(Phi), cos(Phi));
-	const float Chord = length(ArcStart - Start);
-	const float2 Handle0 = Start + float2(0.0, Chord * 0.3);
-	const float2 Handle1 = ArcStart - Tangent * (Chord * 0.382);
-	if(T < 0.3)
-	{
-		const float U = T / 0.3;
-		const float V = 1.0 - U;
-		const float2 Point = V * V * V * Start + 3.0 * V * V * U * Handle0 + 3.0 * V * U * U * Handle1 + U * U * U * ArcStart;
-		const float2 Derivative = 3.0 * V * V * (Handle0 - Start) + 6.0 * V * U * (Handle1 - Handle0) + 3.0 * U * U * (ArcStart - Handle1);
-		return float4(Point, Derivative / 0.3) * E;
-	}
-	if(T < 0.7)
-	{
-		const float U = (T - 0.3) / 0.4;
-		const float Angle = mix(Phi, 1.5707963 - Phi, U);
-		const float2 Point = float2(cos(Angle), sin(Angle));
-		const float2 Derivative = float2(-sin(Angle), cos(Angle)) * ((1.5707963 - 2.0 * Phi) / 0.4);
-		return float4(Point, Derivative) * E;
-	}
-	const float U = (1.0 - T) / 0.3;
+	const int Segment = T < 0.3333333 ? 0 : (T < 0.6666667 ? 1 : 2);
+	const float U = clamp(T * 3.0 - float(Segment), 0.0, 1.0);
+	const float2 P0 = AppleCornerControlPoint(Segment * 3 + 0, S);
+	const float2 P1 = AppleCornerControlPoint(Segment * 3 + 1, S);
+	const float2 P2 = AppleCornerControlPoint(Segment * 3 + 2, S);
+	const float2 P3 = AppleCornerControlPoint(Segment * 3 + 3, S);
 	const float V = 1.0 - U;
-	const float2 Point = V * V * V * Start + 3.0 * V * V * U * Handle0 + 3.0 * V * U * U * Handle1 + U * U * U * ArcStart;
-	const float2 Derivative = 3.0 * V * V * (Handle0 - Start) + 6.0 * V * U * (Handle1 - Handle0) + 3.0 * U * U * (ArcStart - Handle1);
-	const float2 Mirror = float2(Point.y, Point.x);
-	const float2 MirrorDerivative = float2(Derivative.y, Derivative.x) / 0.3;
-	return float4(Mirror, -MirrorDerivative) * E;
+	const float2 Point = V * V * V * P0 + 3.0 * V * V * U * P1 + 3.0 * V * U * U * P2 + U * U * U * P3;
+	const float2 Derivative = 3.0 * (V * V * (P1 - P0) + 2.0 * V * U * (P2 - P1) + U * U * (P3 - P2)) * 3.0;
+	return float4(1.0 - Point.y, 1.0 - Point.x, -Derivative.y, -Derivative.x) * E;
 }
 
 float AppleCornerDistance(float2 P, float E, float S)
@@ -344,6 +356,56 @@ float SilkyCapsuleSdf(float2 Point, float2 HalfSize, float Radius)
 	return (Across - Edge) / sqrt(1.0 + Slope * Slope);
 }
 
+// 苹果连续胶囊：端帽永远是半径 = 短边一半的正圆（半径不缩、端帽不拉长），多出来的
+// 长度全部体现在「直边提前起弯」的肩部。肩部从直边距切点 λ = 0.4154 R 处起弯，到端帽
+// 34.24° 处接上，两端 G1；三次贝塞尔手柄 0.2591 R（直边侧）/ 0.3102 R（端帽侧）。
+// 这组常数是对原生 iOS 胶囊做亚像素拟合的结果（残差 < 0.5 px），相对正圆胶囊的最大
+// 内收 0.021 R，向外越界 ≈ 0。直边不够长时 λ 与 φ 一起等比收窄，方盒退化成正圆。
+float AppleCapsuleSdf(float2 Point, float2 HalfSize, float Radius, float Strength)
+{
+	const float Shoulder = 0.4154;
+	const float Phi0 = 0.5976;
+	const float HandleEdge = 0.2591;
+	const float HandleCap = 0.3102;
+	const bool Horizontal = HalfSize.x >= HalfSize.y;
+	const float LongHalf = Horizontal ? HalfSize.x : HalfSize.y;
+	const float Along = abs(Horizontal ? Point.x : Point.y);
+	const float Across = abs(Horizontal ? Point.y : Point.x);
+	const float R = Radius;
+	const float Center = LongHalf - R;
+	// 强度按可用直边夹住：肩部再长也不能让两端的曲线连起来。
+	float A = clamp(Strength, 0.0, 1.0);
+	A = min(A, max(Center, 0.0) / max(Shoulder * R, 0.0001));
+	if(A <= 0.001)
+		return length(float2(max(Along - Center, 0.0), Across)) - R;
+	const float Lambda = Shoulder * A * R;
+	const float Phi = Phi0 * A;
+	const float CapX = Center + R * sin(Phi);
+	const float CapY = R * cos(Phi);
+	const float2 P0 = float2(Center - Lambda, R);
+	const float2 P1 = float2(P0.x + HandleEdge * A * R, R);
+	const float2 P3 = float2(CapX, CapY);
+	const float2 P2 = P3 - float2(cos(Phi), -sin(Phi)) * (HandleCap * A * R);
+	if(Along >= CapX)
+		return length(float2(Along - Center, Across)) - R;
+	if(Along <= P0.x)
+		return Across - R;
+	// 高度场：曲线沿长轴单调，先反解参数，再按切线斜率把竖向差换成垂直距离。
+	float U = clamp((Along - P0.x) / max(P3.x - P0.x, 0.0001), 0.0, 1.0);
+	for(int i = 0; i < 3; i++)
+	{
+		const float V = 1.0 - U;
+		const float X = V * V * V * P0.x + 3.0 * V * V * U * P1.x + 3.0 * V * U * U * P2.x + U * U * U * P3.x;
+		const float DX = 3.0 * (V * V * (P1.x - P0.x) + 2.0 * V * U * (P2.x - P1.x) + U * U * (P3.x - P2.x));
+		U = clamp(U - (X - Along) / (abs(DX) > 0.0001 ? DX : 0.0001), 0.0, 1.0);
+	}
+	const float V = 1.0 - U;
+	const float2 Q = V * V * V * P0 + 3.0 * V * V * U * P1 + 3.0 * V * U * U * P2 + U * U * U * P3;
+	const float2 D = 3.0 * (V * V * (P1 - P0) + 2.0 * V * U * (P2 - P1) + U * U * (P3 - P2));
+	const float Slope = D.y / (abs(D.x) > 0.0001 ? D.x : 0.0001);
+	return (Across - Q.y) / sqrt(1.0 + Slope * Slope);
+}
+
 float RoundedRectDistance(float2 Point, float2 HalfSize, float Radius, float Smoothing, float CurveType, float SeamAmount, float CapsuleStrength)
 {
 	const float2 Shape = RoundedCornerShape(HalfSize, Radius, Smoothing, CurveType, SeamAmount, CapsuleStrength);
@@ -352,33 +414,28 @@ float RoundedRectDistance(float2 Point, float2 HalfSize, float Radius, float Smo
 	const float2 DistanceToInner = abs(Point) - HalfSize + EffectiveRadius;
 	const float2 Corner = max(DistanceToInner, float2(0.0));
 	const float Flat = min(max(DistanceToInner.x, DistanceToInner.y), 0.0);
-	// 胶囊端头分两套：丝滑档整块形状单独算；苹果档把端帽整体换成三段式连续曲线。
+	// 胶囊端头分两套，都要求「真的有一段直边」，正圆（滑块圆点、单选按钮）不参与：
+	// 丝滑档只改直边（端帽仍是正圆 + 回旋线肩部），苹果档整块端头单独构造。
 	const float MinHalf = min(HalfSize.x, HalfSize.y);
 	const bool SeamCapsule = SeamAmount > 0.001 && EffectiveRadius >= MinHalf * 0.9 && max(HalfSize.x, HalfSize.y) > MinHalf * 1.2;
-	if(SeamCapsule && SeamAmount < 0.9)
-		return SilkyCapsuleSdf(Point, HalfSize, EffectiveRadius);
-	// 曲线档位：1 = 超椭圆（p 范数），2 = 五次贝塞尔，3 = 圆锥贝塞尔，4 = 苹果三段式。
-	int Type = int(CurveType + 0.5);
-	// 苹果胶囊：端帽用三段式连续曲线（和 Apple 的做法一致），强度由它自己的滑杆给。
 	if(SeamCapsule)
-		Type = 4;
-	// 苹果连续圆角的曲线会沿两条直边各外扩 Ext，所以角区判定也要跟着外扩。
+	{
+		if(SeamAmount > 0.9)
+			return AppleCapsuleSdf(Point, HalfSize, EffectiveRadius, clamp(CapsuleStrength, 0.0, 1.0));
+		return SilkyCapsuleSdf(Point, HalfSize, EffectiveRadius);
+	}
+	// 曲线档位：1 = 超椭圆（p 范数），2 = 五次贝塞尔，3 = 圆锥贝塞尔，4 = 苹果三段式。
+	const int Type = int(CurveType + 0.5);
+	// 苹果连续圆角的曲线会沿两条直边各外扩 Ext，所以角区判定也要跟着外扩，
+	// 否则那一段会被当成直边，曲线在直边上被直接切断。
 	// 注意必须同时要求「至少有一个分量在角盒内」：两个分量都为负说明在直边内侧，
 	// 那里最近的边界是直边本身，交给下面的早退分支；否则会拿角点做符号参照，
 	// 把一块矩形内部误判成外部，四角出现方块。
-	// 曲线沿直边外扩不能超过直边本身的长度：短胶囊两端的外扩会撞在一起，接缝处露出台阶。
-	float AppleAmount = Amount;
-	if(Type == 4 && Amount > 0.001 && EffectiveRadius > 0.001)
-	{
-		const float LongHalf = max(HalfSize.x, HalfSize.y);
-		const float MaxExt = max(LongHalf - EffectiveRadius, 0.0);
-		// 上限 0.85 与 AppleCorner 内部一致，否则角区判定与曲线本身会错开。
-		AppleAmount = min(min(Amount, 0.85), MaxExt / (0.881108 * EffectiveRadius));
-	}
-	const float AppleExt = Type == 4 ? EffectiveRadius * 0.881108 * AppleAmount : 0.0;
-	if(Type == 4 && AppleAmount > 0.001 && DistanceToInner.x > -AppleExt && DistanceToInner.y > -AppleExt &&
+	// 外扩量已由 RoundedCornerShape 按短边夹住（足迹 ≤ 短边半高），所以不会撞到中线。
+	const float AppleExt = Type == 4 ? EffectiveRadius * 0.528665 * Amount : 0.0;
+	if(Type == 4 && Amount > 0.001 && DistanceToInner.x > -AppleExt && DistanceToInner.y > -AppleExt &&
 		(DistanceToInner.x > 0.0 || DistanceToInner.y > 0.0))
-		return AppleCornerDistance(DistanceToInner, EffectiveRadius, AppleAmount);
+		return AppleCornerDistance(DistanceToInner, EffectiveRadius, Amount);
 	// 只有两个分量都为正才是圆角区；边上和内部直接用圆的距离。
 	if(Amount <= 0.001 || Corner.x <= 0.0 || Corner.y <= 0.0)
 		return length(Corner) + Flat - EffectiveRadius;

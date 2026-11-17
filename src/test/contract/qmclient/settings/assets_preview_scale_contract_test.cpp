@@ -91,7 +91,7 @@ TEST(AssetsPreviewScale, WorkshopRootFolderUsesPinkAccent)
 	EXPECT_NE(Source.find("IsEntityBgWorkshopFolderPath(pItem->m_aName);"), std::string::npos);
 }
 
-TEST(AssetsPreviewScale, StatusTagTextUsesSingleLineShrinkBeforeWrapping)
+TEST(AssetsPreviewScale, StatusTagUsesSharedTagComponent)
 {
 	std::ifstream File(TestSourcePath("src/game/client/components/menus_settings_assets.cpp"));
 	ASSERT_TRUE(File.good());
@@ -99,8 +99,11 @@ TEST(AssetsPreviewScale, StatusTagTextUsesSingleLineShrinkBeforeWrapping)
 	Buffer << File.rdbuf();
 	const std::string Source = Buffer.str();
 
-	EXPECT_NE(Source.find("StatusLabelProps.m_StopAtEnd = true;"), std::string::npos);
-	EXPECT_NE(Source.find("StatusLabelProps.m_EllipsisAtEnd = true;"), std::string::npos);
+	// 状态徽章不再自己画胶囊：统一走 ui_tag（固定尺寸 + 三种颜色公式），
+	// 换行/省略也由组件内部的单行标签属性负责。
+	EXPECT_NE(Source.find("#include <game/client/QmUi/UiTag.h>"), std::string::npos);
+	EXPECT_NE(Source.find("ui_tag::DrawInRect(pUi, Shell.m_StatusTagRect"), std::string::npos);
+	EXPECT_NE(Source.find("ui_tag::MeasureWidth(TextRender(), pLabel)"), std::string::npos);
 }
 
 TEST(AssetsPreviewScale, AssetCardHeaderPrioritizesRightSideControls)
@@ -111,7 +114,7 @@ TEST(AssetsPreviewScale, AssetCardHeaderPrioritizesRightSideControls)
 	Buffer << File.rdbuf();
 	const std::string Source = Buffer.str();
 
-	EXPECT_NE(Source.find("constexpr float AssetCardHeaderMargin = 3.0f;"), std::string::npos);
+	EXPECT_NE(Source.find("constexpr float AssetCardHeaderMargin = 6.0f;"), std::string::npos);
 	EXPECT_NE(Source.find("constexpr float AssetCardHeaderControlMargin = 1.0f;"), std::string::npos);
 	EXPECT_NE(Source.find("TitleRect.VSplitRight(16.0f, &TitleRect, &Shell.m_ActionButtonRect);"), std::string::npos);
 	EXPECT_NE(Source.find("const float BadgeGap = 2.0f;"), std::string::npos);

@@ -55,13 +55,25 @@ enum
 	ROUNDED_CORNER_CURVE_SUPERELLIPSE = 1,
 	ROUNDED_CORNER_CURVE_QUINTIC = 2,
 	ROUNDED_CORNER_CURVE_CONIC = 3,
-	// 4 = 苹果/Figma 三段式（贝塞尔 + 圆弧 + 贝塞尔），曲线会沿直边外扩。
+	// 4 = 苹果连续曲率：UIBezierPath 实测的三段三次贝塞尔，曲线沿直边外扩 0.528665 r。
 	ROUNDED_CORNER_CURVE_APPLE = 4,
 };
 
-// 苹果三段式的平滑度上限：再往上圆弧段会退化成一个尖角，着色器与几何兜底
-// 必须在同一档夹取，否则同一条边在 SDF 与多边形路径上形状不同。
-inline constexpr float ROUNDED_CORNER_APPLE_MAX_AMOUNT = 0.85f;
+// 苹果连续曲率圆角相对半径多出来的单侧足迹：满强度时曲线从直边 1.528665 r 处起弯
+// （= Apple 的 cornerCurveExpansionFactor），最贴角点 0.41225 r。三份着色器用的是
+// 同一组数字，改这里必须同步 data/shader/rounded_rect_sdf.frag、vulkan 同名文件与
+// data/shader/metal/qmclient.metal。
+inline constexpr float APPLE_CORNER_FOOTPRINT = 0.528665f;
+
+// 苹果连续胶囊（SwiftUI Capsule(style: .continuous) / 原生 iOS 胶囊实测）：
+// 端帽永远是半径 = 短边一半的正圆，半径不缩、端帽不拉长，多出来的长度只体现在
+// 直边提前起弯的肩部。肩部从直边距切点 0.4154 r 处起弯，到端帽 34.24° 处接上，
+// 两端 G1；三次贝塞尔手柄 0.2591 r（直边侧）/ 0.3102 r（端帽侧）。
+// 对 75 px 高的原生胶囊做亚像素拟合的残差 < 0.5 px，相对正圆胶囊的最大内收 0.021 r。
+inline constexpr float APPLE_CAPSULE_SHOULDER = 0.4154f;
+inline constexpr float APPLE_CAPSULE_PHI = 0.5976f;
+inline constexpr float APPLE_CAPSULE_HANDLE_EDGE = 0.2591f;
+inline constexpr float APPLE_CAPSULE_HANDLE_CAP = 0.3102f;
 
 struct SRoundedCornerShape
 {
@@ -95,17 +107,76 @@ inline SRoundedCornerShape ResolveRoundedCornerShape(const float Radius, const f
 	const float MaxRadius = std::max(MinHalf * CapRatio, ClampedRadius);
 	Shape.m_Radius = std::clamp(ClampedRadius * (1.0f + 1.3f * Amount), ClampedRadius, MaxRadius);
 	Shape.m_Amount = std::clamp((Shape.m_Radius / ClampedRadius - 1.0f) / 1.3f, 0.0f, 1.0f);
-	// 苹果三段式自己负责沿边外扩（p = r*(1+0.881108*s)），半径不再按 1.3 倍生长，
+	// 苹果连续曲率自己负责沿边外扩（足迹 = r·(1 + 0.528665·s)），半径不再按 1.3 倍生长，
 	// 强度直接取平滑度；否则会和曲线自身的扩边叠加，圆角被放大两次。
 	if(Curve == ROUNDED_CORNER_CURVE_APPLE)
 	{
 		Shape.m_Radius = ClampedRadius;
-		Shape.m_Amount = Amount;
+		// 足迹必须塞进短边半高（1 + 0.528665·s ≤ MinHalf / r）：塞不下时上下两个角的肩部
+		// 会互相穿过中线，端边被挤出一条外凸的唇边。按短边等比削这一个标量，两个轴共用；
+		// 分轴各钳一次就是把端帽拉成 1.53:1 的橄榄头，那才是端头外凸的成因。
+		const float MaxAmount = std::max(MinHalf / ClampedRadius - 1.0f, 0.0f) / APPLE_CORNER_FOOTPRINT;
+		Shape.m_Amount = std::clamp(std::min(Amount, MaxAmount), 0.0f, 1.0f);
 	}
-	// 胶囊的端帽必须永远是精确正圆：曲线强度恒为 0（丝滑胶囊只改直边，见着色器）。
+	// 胶囊端帽由端头构造单独负责（正圆 / 丝滑肩部 / 苹果端帽，见着色器），圆角曲线不参与：
+	// 半径已经贴到短边一半，任何沿边外扩都会穿过中线。几何兜底因此按正圆胶囊生成，
+	// 与端头构造最多差 0.021 r（实测苹果端帽相对正圆胶囊的最大内收）。
 	if(Capsule)
 		Shape.m_Amount = 0.0f;
 	return Shape;
+}
+
+// 苹果连续曲率的控制点表：P0 是起点，之后每段两个手柄加一个段末点，共 10 个。
+// 前 5 个独立，P5..P9 关于对角线镜像（P[9-i] = P[i].yx），所以只存一半。
+// [0] = 三段 30° 圆弧（手柄 k = 4/3·tan(7.5°)），[1] = UIBezierPath(roundedRect:) 实测值
+// （Liam Rosenfeld 的反解，与 CoreAnimation 逐像素一致：足迹 1.528665 r）。
+// 强度在两组之间逐点线性插值，两个轴共用同一个标量。
+// 坐标系：角点在原点，两条直边沿 +x / +y，曲线从 (足迹, 0) 走到 (0, 足迹)。
+inline void AppleCornerControlPoint(const int Index, const float Amount, float &OutX, float &OutY)
+{
+	const float Blend = std::clamp(Amount, 0.0f, 1.0f);
+	const int Mirrored = Index > 4 ? 9 - Index : Index;
+	float ArcX = 0.0f;
+	float ArcY = 0.0f;
+	float ContinuousX = 0.0f;
+	float ContinuousY = 0.0f;
+	switch(Mirrored)
+	{
+	case 0:
+		ArcX = 1.000000f;
+		ArcY = 0.000000f;
+		ContinuousX = 1.528665f;
+		ContinuousY = 0.000000f;
+		break;
+	case 1:
+		ArcX = 0.824462f;
+		ArcY = 0.000000f;
+		ContinuousX = 1.088493f;
+		ContinuousY = 0.000000f;
+		break;
+	case 2:
+		ArcX = 0.652020f;
+		ArcY = 0.046206f;
+		ContinuousX = 0.868407f;
+		ContinuousY = 0.000000f;
+		break;
+	case 3:
+		ArcX = 0.500000f;
+		ArcY = 0.133975f;
+		ContinuousX = 0.631494f;
+		ContinuousY = 0.074911f;
+		break;
+	default:
+		ArcX = 0.347980f;
+		ArcY = 0.221744f;
+		ContinuousX = 0.372824f;
+		ContinuousY = 0.169060f;
+		break;
+	}
+	const float PointX = ArcX + (ContinuousX - ArcX) * Blend;
+	const float PointY = ArcY + (ContinuousY - ArcY) * Blend;
+	OutX = Index > 4 ? PointY : PointX;
+	OutY = Index > 4 ? PointX : PointY;
 }
 
 // 连续曲率圆角的采样器：和着色器里同一条曲线（超椭圆 / 五次贝塞尔 / 圆锥曲线角），
@@ -126,43 +197,27 @@ inline void RoundedCornerCurveDirection(const int Curve, const float Amount, con
 	}
 	if(Curve == ROUNDED_CORNER_CURVE_APPLE)
 	{
-		// 苹果三段式：直边 → 三次贝塞尔 → 圆弧 → 三次贝塞尔 → 直边。
-		// 曲线沿直边外扩 0.881*A，所以这里的坐标会超出 [0,1]：调用方按半径放大后
-		// 正好落在直边上。控制点与着色器 AppleCorner 完全一致（手柄 0.3 / 0.382 倍弦长）。
-		// 与着色器一致：平滑度封顶 0.85，再往上圆弧段会退化成一个尖角。
-		const float ClampedA = std::min(A, ROUNDED_CORNER_APPLE_MAX_AMOUNT);
-		const float Ext = 0.881108f * ClampedA;
-		const float Phi = 0.7853982f * ClampedA;
-		const float StartX = 1.0f;
-		const float StartY = -Ext;
-		const float ArcX = std::cos(Phi);
-		const float ArcY = std::sin(Phi);
-		const float Chord = std::sqrt((ArcX - StartX) * (ArcX - StartX) + (ArcY - StartY) * (ArcY - StartY));
-		const float Handle0X = StartX;
-		const float Handle0Y = StartY + Chord * 0.3f;
-		const float Handle1X = ArcX + std::sin(Phi) * (Chord * 0.382f);
-		const float Handle1Y = ArcY - std::cos(Phi) * (Chord * 0.382f);
-		if(T < 0.3f)
-		{
-			const float U = T / 0.3f;
-			const float V = 1.0f - U;
-			OutX = V * V * V * StartX + 3.0f * V * V * U * Handle0X + 3.0f * V * U * U * Handle1X + U * U * U * ArcX;
-			OutY = V * V * V * StartY + 3.0f * V * V * U * Handle0Y + 3.0f * V * U * U * Handle1Y + U * U * U * ArcY;
-			return;
-		}
-		if(T < 0.7f)
-		{
-			const float Angle = Phi + ((float)pi * 0.5f - 2.0f * Phi) * ((T - 0.3f) / 0.4f);
-			OutX = std::cos(Angle);
-			OutY = std::sin(Angle);
-			return;
-		}
-		const float U = (1.0f - T) / 0.3f;
+		// 苹果连续曲率：三段首尾相连的三次贝塞尔（T 三等分，段内按 U 求值）。
+		// 控制点在「角点在原点、直边沿 +x/+y」的坐标系里，这里转回调用方约定
+		// （圆弧中心为原点、从 (1,0) 到 (0,1)）：x = 1 - y_apple、y = 1 - x_apple。
+		// 满强度时首点落在 (1, -0.528665)，即沿直边外扩 0.528665 r；调用方按半径放大后
+		// 正好落在直边上，所以角盒判定也要跟着外扩同样距离。
+		const int Segment = T < (1.0f / 3.0f) ? 0 : (T < (2.0f / 3.0f) ? 1 : 2);
+		const float U = std::clamp(T * 3.0f - (float)Segment, 0.0f, 1.0f);
 		const float V = 1.0f - U;
-		const float PointX = V * V * V * StartX + 3.0f * V * V * U * Handle0X + 3.0f * V * U * U * Handle1X + U * U * U * ArcX;
-		const float PointY = V * V * V * StartY + 3.0f * V * V * U * Handle0Y + 3.0f * V * U * U * Handle1Y + U * U * U * ArcY;
-		OutX = PointY;
-		OutY = PointX;
+		const float aWeights[4] = {V * V * V, 3.0f * V * V * U, 3.0f * V * U * U, U * U * U};
+		float PointX = 0.0f;
+		float PointY = 0.0f;
+		for(int Point = 0; Point < 4; Point++)
+		{
+			float ControlX = 0.0f;
+			float ControlY = 0.0f;
+			AppleCornerControlPoint(Segment * 3 + Point, A, ControlX, ControlY);
+			PointX += aWeights[Point] * ControlX;
+			PointY += aWeights[Point] * ControlY;
+		}
+		OutX = 1.0f - PointY;
+		OutY = 1.0f - PointX;
 		return;
 	}
 	if(Curve == ROUNDED_CORNER_CURVE_CONIC)

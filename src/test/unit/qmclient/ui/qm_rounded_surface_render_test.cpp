@@ -188,11 +188,14 @@ TEST_F(CQmRoundedSurfaceRender, BorderCoversEdgesForEachCornerMaskAndQuality)
 			ExpectColor(Graphics.Sample(vec2(0.43f, 9.13f)), Border);
 			for(const auto &Corner : std::array<std::pair<int, vec2>, 4>{{{IGraphics::CORNER_TL, vec2(0, 0)}, {IGraphics::CORNER_TR, vec2(30, 0)}, {IGraphics::CORNER_BR, vec2(30, 20)}, {IGraphics::CORNER_BL, vec2(0, 20)}}})
 			{
+				// 半径是形状的唯一来源：给了非零半径时 CORNER_NONE 也会被解析成四角全圆，
+				// 所以期望值要按解析后的掩码算，不能再拿调用点传进来的原始掩码。
+				const int EffectiveCorners = ResolveRoundedSurfaceCorners(m_Params.m_Radius, Corners);
 				const vec2 Direction(Corner.second.x > 0 ? -1.0f : 1.0f, Corner.second.y > 0 ? -1.0f : 1.0f);
-				const vec2 Point = Corner.second + Direction * (Corners & Corner.first ? vec2(1.21f, 1.17f) : vec2(0.43f, 1.17f));
+				const vec2 Point = Corner.second + Direction * (EffectiveCorners & Corner.first ? vec2(1.21f, 1.17f) : vec2(0.43f, 1.17f));
 				ExpectColor(Graphics.Sample(Point), Border);
 				const vec2 Outside = Corner.second + Direction * vec2(0.31f, 0.27f);
-				ExpectColor(Graphics.Sample(Outside), Corners & Corner.first ? ColorRGBA(0, 0, 0, 0) : Border);
+				ExpectColor(Graphics.Sample(Outside), EffectiveCorners & Corner.first ? ColorRGBA(0, 0, 0, 0) : Border);
 			}
 		}
 	}

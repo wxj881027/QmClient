@@ -24,6 +24,7 @@ void CMenus::RenderServerVoteList(CUIRect MainView)
 	auto &Voting = GameClient()->m_Voting;
 
 	const ColorRGBA PanelColor = MenuPanelColor();
+	AddMenuHitRegion(MainView);
 	MainView.Draw(PanelColor, IGraphics::CORNER_ALL, 10.0f);
 	CUiScopedSurfaceText SurfaceText(TextRender(), PanelColor);
 	MainView.Margin(12.0f, &MainView);

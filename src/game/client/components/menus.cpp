@@ -73,6 +73,7 @@
 #include <game/client/components/theme_scan.h>
 #include <game/client/gameclient.h>
 #include <game/client/qm_icon.h>
+#include <game/client/qm_icon_label.h>
 #include <game/client/ui_listbox.h>
 #include <game/localization.h>
 #include <game/version.h>
@@ -206,6 +207,109 @@ namespace
 {
 	constexpr float MENU_SWITCH_DURATION = ui_token::motion::PAGE_SLIDE.m_DurationSec;
 	constexpr float MENU_SWITCH_ALPHA_MAX = 0.12f;
+	// ---- ESC 菜单滑入/滑出 ----
+	// 整块壳层（顶部导航 + 内容区）从屏幕上方滑下来，关闭时原路收回上方。
+	// 位置只由一条 POS_Y 弹簧轨道承担：ζ<1 才有落位回弹，「曲线速率」来自弹簧
+	// 解析解，不是分段手写缓动。弹性档由 qm_menu_slide_feel 配置（设置-图像-视觉效果）。
+	// 弹簧只按「响应周期 + 阻尼比」这两个直觉量调，不按刚度/阻尼试错
+	// （与 SUiSpringConfig::FromResponse 的 Apple Fluid Interfaces 范式同一套）。
+	SUiSpringConfig MenuSlideSpring(bool Opening)
+	{
+		// 位移量 = 整屏高度，所以「过冲百分比」在这里会被放大成整百像素：
+		// ζ=0.70 的 4.6% 过冲就是 57px 的下压回弹，观感是面板掉下去又弹回来。
+		// 因此三档一律取高阻尼，弹性档只保留「落位时轻轻一顿」的量级。
+		float Response = 0.26f;
+		float DampingRatio = 0.88f;
+		switch(std::clamp(g_Config.m_QmMenuSlideFeel, 0, 2))
+		{
+		case 0: // 柔和：临界阻尼，零过冲
+			Response = 0.30f;
+			DampingRatio = 1.00f;
+			break;
+		case 2: // 弹性：约 1.9% 过冲（整屏高度下 ≈23px），落位一顿就走
+			Response = 0.24f;
+			DampingRatio = 0.78f;
+			break;
+		default: // 标准：约 0.35% 过冲，肉眼几乎不回弹
+			break;
+		}
+		// 收回比展开利落：关闭时缩短响应周期，别让面板在玩家眼前飘走。
+		// 收起必须单调——越过目标会从屏幕外再往回落一下，读作「收一半又冒头」。
+		if(!Opening)
+		{
+			Response *= 0.72f;
+			DampingRatio = std::max(DampingRatio, 1.0f);
+		}
+
+		SUiSpringConfig Spring = SUiSpringConfig::FromResponse(Response, DampingRatio);
+		// 位移单位是像素：0.5px 或 2px/s 以内即视为停，避免弹簧尾巴无限收敛。
+		Spring.m_RestEpsilon = 0.5f;
+		Spring.m_RestVelocity = 2.0f;
+		return Spring;
+	}
+
+	// 滑动节点键：固定一条，不按控件 id 派生（壳层每帧同一个节点）。
+	uint64_t MenuSlideNodeKey()
+	{
+		static const uint64_t s_NodeKey = BuildUiAnimNodeKey(static_cast<uint64_t>(str_quickhash("qm_menu_slide")), 0);
+		return s_NodeKey;
+	}
+
+	// 滑动距离取整屏高度：设置页、服务器信息页的内容铺满整屏，只有整页滑出
+	// 才是「从顶部滑离」；取一小段会变成「整页被抬起、底部露游戏画面」。
+	// 游戏页内容少（顶部约 110px），靠弹簧前段的加速度把它尽快送进来，
+	// 而不是缩短距离——距离一旦按页面改，同一手势在不同页面的位移就不一致。
+	float MenuSlideDistance(CUi *pUi)
+	{
+		if(pUi != nullptr && pUi->Screen() != nullptr && pUi->Screen()->h > 1.0f)
+			return pUi->Screen()->h;
+		return 600.0f;
+	}
+
+	// 起点只在「真正打开」那一刻写一次，之后绘制趟只读轨道值——不在绘制趟推进本地时钟
+	// （出图趟会把动画跑完、交互趟瞬变，这是 UI 全局术语规范 2.6 明令禁止的写法）。
+	// 目标与起点分开传：关闭途中按 ESC 折返时，目标回到 0 但不能钉起点，
+	// 否则面板会先瞬移到屏幕外再弹回来（狂按 ESC 时最刺眼的那种跳）。
+	void StartMenuSlide(CGameClient *pGameClient, CUi *pUi, float Target, bool SnapToStart)
+	{
+		if(pGameClient == nullptr || !pGameClient->UiRuntimeV2()->Enabled() || g_Config.m_QmUiMotionLevel <= 0)
+			return;
+
+		CUiV2AnimationRuntime &AnimRuntime = pGameClient->UiRuntimeV2()->AnimRuntime();
+		const uint64_t NodeKey = MenuSlideNodeKey();
+		const float Distance = MenuSlideDistance(pUi);
+		if(SnapToStart)
+			AnimRuntime.SetValue(NodeKey, EUiAnimProperty::POS_Y, -Distance);
+
+		SUiAnimRequest Request;
+		Request.m_NodeKey = NodeKey;
+		Request.m_Property = EUiAnimProperty::POS_Y;
+		Request.m_Target = Target;
+		Request.m_Transition.m_Driver = EUiAnimDriver::SPRING;
+		Request.m_Transition.m_Spring = MenuSlideSpring(Target >= 0.0f);
+		Request.m_Transition.m_Priority = 2;
+		// 同一条轨道反复改目标：REPLACE 让新目标立刻接管，从当前位置续接，不排队。
+		// 没有这条，「狂按 ESC」会变成一串排队动画，按几次就要等几次，完全不跟手。
+		Request.m_Transition.m_Interrupt = EUiAnimInterruptPolicy::REPLACE;
+		AnimRuntime.RequestAnimation(Request);
+	}
+
+	// 绘制趟只读。Instant 用于测量/背景趟与动效关闭：那里必须是终态，
+	// 否则测量与绘制不同源（偏移后的矩形会让命中区与绘制错位）。
+	float MenuSlideOffset(const CUiV2AnimationRuntime &AnimRuntime, bool Instant)
+	{
+		if(Instant)
+			return 0.0f;
+		return AnimRuntime.GetValue(MenuSlideNodeKey(), EUiAnimProperty::POS_Y, 0.0f);
+	}
+
+	// 出场的完成判据：轨道自然收敛（弹簧到 RestEpsilon 会自行结束），
+	// 不用「距离小于阈值」自己判 —— 那会把回弹阶段的过冲当成还没到位。
+	bool MenuSlideSettled(const CUiV2AnimationRuntime &AnimRuntime)
+	{
+		return !AnimRuntime.HasActiveAnimation(MenuSlideNodeKey(), EUiAnimProperty::POS_Y);
+	}
+
 	constexpr float MENU_TAB_HOVER_DURATION = ui_token::motion::HOVER_FADE.m_DurationSec;
 	constexpr float MENU_TAB_DEFAULT_X_OFFSET = 0.0f;
 	constexpr float MENU_TAB_DEFAULT_Y_OFFSET = 0.0f;
@@ -238,7 +342,9 @@ namespace
 		TextWidth = std::clamp(TextWidth, 1.0f, std::max(1.0f, Text.w - IconSide - Gap));
 		const float TotalWidth = IconSide + Gap + TextWidth;
 		const float StartX = Text.x + (Text.w - TotalWidth) * 0.5f;
-		*pIconRect = {StartX, Text.y, IconSide, IconSide};
+		// 图标盒与文字标签共用文本行；盒比行矮时按中间对齐，不能把盒顶贴到行顶，
+		// 否则站点纹理与字体图标都会整体偏上。x 已由整组居中算好，这里只收敛 y。
+		*pIconRect = QmIconLabelRect({StartX, Text.y, IconSide, Text.h}, IconSide, TEXTALIGN_ML);
 		*pTextRect = {StartX + IconSide + Gap, Text.y, TextWidth, Text.h};
 	}
 
@@ -1306,9 +1412,9 @@ int CMenus::DoButton_Toggle(const void *pId, int Checked, const CUIRect *pRect, 
 	return Active ? Ui()->DoButtonLogic(pId, Checked, pRect, Flags) : 0;
 }
 
-int CMenus::DoButton_Menu(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, const unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize, const CUIRect *pUnscaledRect)
+int CMenus::DoButton_Menu(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, const unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize, const CUIRect *pUnscaledRect, const ColorRGBA *pSurfaceColor)
 {
-	return DoButton_MenuInternal(pButtonContainer, pText, EQmIcon::COUNT, nullptr, Checked, pRect, Flags, pImageName, Corners, Rounding, FontFactor, Color, pTextUiElement, TextFontSize, nullptr, pUnscaledRect);
+	return DoButton_MenuInternal(pButtonContainer, pText, EQmIcon::COUNT, nullptr, Checked, pRect, Flags, pImageName, Corners, Rounding, FontFactor, Color, pTextUiElement, TextFontSize, nullptr, pUnscaledRect, pSurfaceColor);
 }
 
 int CMenus::DoButton_Menu_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize)
@@ -1317,7 +1423,7 @@ int CMenus::DoButton_Menu_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Ico
 	return DoButton_MenuInternal(pButtonContainer, nullptr, Icon, pFallbackIcon, Checked, &ButtonRect, Flags, pImageName, Corners, Rounding, FontFactor, Color, pTextUiElement, TextFontSize);
 }
 
-int CMenus::DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize, const IGraphics::CTextureHandle *pIconTexture, const CUIRect *pUnscaledRect)
+int CMenus::DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize, const IGraphics::CTextureHandle *pIconTexture, const CUIRect *pUnscaledRect, const ColorRGBA *pSurfaceColor)
 {
 	if(Icon != EQmIcon::COUNT && (pText == nullptr || pText[0] == '\0') && pImageName == nullptr && pIconTexture == nullptr)
 		return ui_widget::DoIconButton(ui_widget::ControlContext(Ui()), pButtonContainer, Icon, pFallbackIcon, Checked, *pRect, Flags, Corners);
@@ -1336,6 +1442,10 @@ int CMenus::DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char
 	Options.m_Corners = Corners;
 	Options.m_Radius = CapsuleDisplay ? pRect->h * 0.5f : Rounding;
 	Options.m_AlignToPixel = pUnscaledRect == nullptr;
+	// 个别调用点要换底色语义时显式覆盖；其余按钮继续吃 ResolveConfiguredControlSurface()。
+	// 只在显式传入时生效，避免把整条共享按钮路径刷成同一个颜色。
+	if(pSurfaceColor != nullptr)
+		Options.m_Color = *pSurfaceColor;
 	Color = ui_widget::DrawButtonSurface(ui_widget::ControlContext(Ui()), pButtonContainer, *pRect, Options);
 	CUiScopedSurfaceText SurfaceText(TextRender(), Color);
 
@@ -1705,7 +1815,7 @@ int CMenus::DoButton_GridHeader(const void *pId, const char *pText, int Checked,
 	return Ui()->DoButtonLogic(pId, Checked, pRect, BUTTONFLAG_LEFT);
 }
 
-int CMenus::DoButton_Favorite(const void *pButtonId, const void *pParentId, bool Checked, const CUIRect *pRect)
+int CMenus::DoButton_Favorite(const void *pButtonId, const void *pParentId, bool Checked, const CUIRect *pRect, float IconFontSize)
 {
 	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
 	const bool ShouldShow = Checked || (pParentId != nullptr && Ui()->HotItem() == pParentId) || Ui()->HotItem() == pButtonId;
@@ -1733,7 +1843,10 @@ int CMenus::DoButton_Favorite(const void *pButtonId, const void *pParentId, bool
 		// 全局「实心收藏图标」只决定收藏徽标外观，沿用到开关上会让悬停预览与已收藏同形。
 		const CQmIconSemanticColorScope FavoriteIconColorScope(!Checked);
 		const CQmFavoriteStarFillScope FavoriteStarFillScope(Checked);
-		Ui()->DoLabel_QmIcon(pRect, EQmIcon::STAR, FONT_ICON_STAR, 12.0f + HoverStrength, TEXTALIGN_MC, Props);
+		// IconFontSize 是 em 字号（与并排动作图标同一口径），盒边长按 ICON_INK_RATIO 反推；
+		// 不传时沿用历史盒径 12，服务器列表等既有调用点的观感不变。
+		const float StarBox = IconFontSize > 0.0f ? ui_token::control::IconBox(IconFontSize) : 12.0f;
+		Ui()->DoLabel_QmIcon(pRect, EQmIcon::STAR, FONT_ICON_STAR, StarBox + HoverStrength, TEXTALIGN_MC, Props);
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
 		TextRender()->SetRenderFlags(0);
 		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
@@ -4125,6 +4238,8 @@ void CMenus::OnInit()
 	ResetDemoBrowserFolder();
 	GameClient()->FrameScheduler()->Reset();
 	m_MapDifficultyCatalog.Load(Storage(), Console());
+	// ESC 菜单滑入手感由 qm_menu_slide_feel 承担（配置宏自动注册同名控制台命令），
+	// 设置页与控制台改的是同一个值，不再另设临时全局。
 
 	if(g_Config.m_ClShowWelcome)
 	{
@@ -4305,6 +4420,12 @@ bool CMenus::CanDisplayWarning() const
 void CMenus::Render()
 {
 	const int MenuOpenFrame = m_MenuOpenFrame++;
+	// ESC 菜单滑入/滑出：只挂在游戏内壳层（在线/回放）。主菜单常驻，没有「打开」时刻，
+	// 让它走同一套轨道会干扰启动画面与加载流程。
+	const IClient::EClientState IntroClientState = Client()->State();
+	const bool SlideApplies = (IntroClientState == IClient::STATE_ONLINE || IntroClientState == IClient::STATE_DEMOPLAYBACK) &&
+				  GameClient()->UiRuntimeV2()->Enabled() && !Ui()->AnimationsBlocked();
+	const float MenuSlideY = SlideApplies ? MenuSlideOffset(GameClient()->UiRuntimeV2()->AnimRuntime(), false) : 0.0f;
 	// 菜单首帧先显示界面，避免首次创建模糊 render target、捕获 backbuffer
 	// 和执行 blur pass 阻塞 ESC 打开路径；下一帧再恢复完整的半透明模糊效果。
 	CUiScopedGaussianBlur GaussianBlurScope(Ui(), MenuOpenFrame == 0 ? 0.0f : 1.0f);
@@ -4399,9 +4520,11 @@ void CMenus::Render()
 	{
 		// 全局安全区 = 统一边距基准：菜单内所有页面到窗口四边的基础距离，
 		// 内部元素（导航胶囊/内容面板）直接对齐安全区边缘，不再叠加额外内缩。
+		// 页面自己算底部外距时必须扣掉这一层（见 QmResolveBrowserBottomInset），
+		// 否则回放/截图浏览器底部会变成 8+8。
 		// 手机端的额外左右留白由各页面布局矩形处理（见 QmApplyMenuPageSideInset），
 		// 不要改 Screen()/这里：触摸映射按整屏换算，内缩 Screen 会让点击错位。
-		Screen.Margin(8.0f, &Screen);
+		Screen.Margin(ui_token::panel::MARGIN, &Screen);
 	}
 
 	if(ClientState == IClient::STATE_OFFLINE && QmNewsShouldAnnounce(true, m_ShowStart, m_Popup != POPUP_NONE,
@@ -4651,6 +4774,12 @@ void CMenus::Render()
 			// 只动布局矩形，触摸映射仍按整屏换算。
 			QmApplyMenuPageSideInset(&TabBar, Screen.w + 16.0f);
 			QmApplyMenuPageSideInset(&MainView, Screen.w + 16.0f);
+			// ESC 菜单滑入/滑出：导航栏与内容区共用一个纵向偏移，读作「一整块面板」
+			// 从屏幕上方落下；只动布局矩形，绘制与命中检测同步偏移（所见即所点）。
+			TabBar.y += MenuSlideY;
+			MainView.y += MenuSlideY;
+			// 记录导航栏命中矩形（含偏移）：点它内部属于点菜单自身，不算「点外部」。
+			AddMenuHitRegion(TabBar);
 			bool NavigationHandedOff;
 			{
 				CPerfTimer StageTimer;
@@ -4721,7 +4850,6 @@ void CMenus::Render()
 			{
 				CPerfTimer StageTimer;
 				RenderGame(MainView);
-				RenderIngameHint();
 				LogPerfStage(Client(), "ingame_esc_tab_content", StageTimer.ElapsedMs(), TransitionActive, aEscPerfExtra);
 			}
 			else if(m_GamePage == PAGE_PLAYERS)
@@ -6293,6 +6421,8 @@ void CMenus::SetActive(bool Active)
 		if(Active)
 		{
 			m_MenuOpenFrame = 0;
+			// 入场动效的唯一起点：轨道值钉到屏幕外，插值交给运行时。
+			StartMenuSlide(GameClient(), Ui(), 0.0f, true);
 			if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK &&
 				((m_MenuPage >= PAGE_INTERNET && m_MenuPage <= PAGE_FAVORITE_COMMUNITY_5) || m_MenuPage == PAGE_FAVORITE_MAPS))
 			{
@@ -6310,6 +6440,12 @@ void CMenus::SetActive(bool Active)
 	if(!Active && m_ScreenshotEditor.IsOpen())
 		m_ScreenshotEditor.Close(this);
 	m_MenuActive = Active;
+	// 真正关闭时清收尾状态：下一次打开必须能重新接收输入与点击判定。
+	if(!Active)
+	{
+		m_MenuClosing = false;
+		m_MenuOutsideClickPending = false;
+	}
 	if(!m_MenuActive)
 	{
 		CommitSettingsTeeSkinEdits();
@@ -6338,6 +6474,34 @@ void CMenus::SetActive(bool Active)
 	{
 		GameClient()->OnRelease();
 	}
+}
+
+void CMenus::BeginMenuClose()
+{
+	if(!m_MenuActive || m_MenuClosing)
+		return;
+
+	// 动效关闭或轨道不可用：立即关闭，不留一帧空转。
+	if(g_Config.m_QmUiMotionLevel <= 0 || !GameClient()->UiRuntimeV2()->Enabled())
+	{
+		SetActive(false);
+		return;
+	}
+
+	m_MenuClosing = true;
+	m_MenuCloseDeadline = time_get() + time_freq() * 3 / 2; // 兜底 1.5s
+	m_MenuOutsideClickPending = false;
+	// 收尾期间不再接受菜单交互：悬停与按下都交回游戏，避免动画区里的点击落到旧控件上。
+	Ui()->SetHotItem(nullptr);
+	Ui()->SetActiveItem(nullptr);
+	StartMenuSlide(GameClient(), Ui(), -MenuSlideDistance(Ui()), false);
+}
+
+void CMenus::AddMenuHitRegion(const CUIRect &Rect)
+{
+	if(Ui()->RenderOnly())
+		return;
+	m_MenuHitRegions.Add(Rect);
 }
 
 void CMenus::MarkMenuInteraction()
@@ -8381,6 +8545,9 @@ bool CMenus::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
 	// 否则列表点不到、光标也不会跟着动。预览 HUD 同理。
 	if(!m_MenuActive && !GameClient()->m_Spectator.PlaybackControlsActive() && !QmPoseMapPopupOpen() && !QmPoseHudActive() && !Client()->PoseSessionActive())
 		return false;
+	// 滑出收尾期间鼠标交回游戏：玩家关掉菜单就能立刻转身瞄准。
+	if(m_MenuClosing)
+		return false;
 
 	MarkMenuInteraction();
 	Ui()->ConvertMouseMove(&x, &y, CursorType);
@@ -8404,6 +8571,18 @@ bool CMenus::OnInput(const IInput::CEvent &Event)
 {
 	if(!IsActive() && GameClient()->m_HudEditor.IsActive())
 		return false;
+
+	// 滑出收尾期间让出输入：按键与鼠标都交回游戏，菜单只剩绘制。
+	// 只有 ESC 例外——它必须能立刻折返重开，否则狂按时按下去没反应，手感就断了。
+	if(m_MenuClosing)
+	{
+		if((Event.m_Flags & IInput::FLAG_PRESS) && Event.m_Key == KEY_ESCAPE)
+		{
+			Ui()->OnInput(Event);
+			return true;
+		}
+		return false;
+	}
 
 	// 合影预览：Esc 开/关预览 HUD，沿用回放 HUD 的心智——先叫出控制条，再决定
 	// 看哪里、拍哪一张。这里不再「Esc 即回菜单」，也不会顺手把会话收掉。
@@ -8430,6 +8609,13 @@ bool CMenus::OnInput(const IInput::CEvent &Event)
 		Client()->PoseCameraZoomBy(Event.m_Key == KEY_MOUSE_WHEEL_UP ? 1.15f : 1.0f / 1.15f);
 		return true;
 	}
+
+	// 点菜单外面关闭：这里只登记，判定放到本帧绘制之后（见 OnRender 末尾）——
+	// 「移动 + 点击」落在同一帧时 HotItem 还是上一帧的值，当场判定会把点按钮误判成点外部。
+	// 只在游戏内壳层启用：离线主菜单没有「打开」动作，点空白把它关掉会闪一下。
+	if(m_MenuActive && (Client()->State() == IClient::STATE_ONLINE || Client()->State() == IClient::STATE_DEMOPLAYBACK) &&
+		Event.m_Key == KEY_MOUSE_1 && (Event.m_Flags & IInput::FLAG_PRESS))
+		m_MenuOutsideClickPending = true;
 
 	// Escape key is always handled to activate/deactivate menu
 	if((Event.m_Flags & IInput::FLAG_PRESS && Event.m_Key == KEY_ESCAPE) || IsActive() || QmPoseMapPopupOpen() || QmPoseHudActive())
@@ -8546,6 +8732,8 @@ void CMenus::OnUpdate()
 
 void CMenus::OnRender()
 {
+	if(!Ui()->RenderOnly())
+		m_MenuHitRegions.Reset();
 	// 关菜单和切页后继续完成已请求的封面，重开时直接复用纹理。
 	m_QmVoteMenu.m_Covers.Update(Http(), Engine(), Graphics(), Storage(), Client()->LocalTime());
 	m_BrowserColumnResizeCursor = false;
@@ -8583,6 +8771,11 @@ void CMenus::OnRender()
 		// 被动断开要说明原因，但不该再挡一层模态：用警告提示。
 		qm_ui::Toast(EQmToastKind::WARNING, Localize("The server is running a non-standard tuning on a pure game type."));
 	}
+
+	// 滑出收尾：轨道自然收敛后才真正关闭。动画期间 IsActive() 仍为 true，
+	// 菜单继续逐帧绘制（位置由轨道带着往屏幕外走），输入已在 OnInput/OnCursorMove 里让出。
+	if(m_MenuClosing && (MenuSlideSettled(GameClient()->UiRuntimeV2()->AnimRuntime()) || time_get() > m_MenuCloseDeadline))
+		SetActive(false);
 
 	if(!IsActive())
 	{
@@ -8716,8 +8909,29 @@ void CMenus::OnRender()
 		Ui()->EndBackgroundRender();
 	else
 	{
+		// ESC 在任何时刻都立刻生效、并且可以中途折返：
+		// 打开中按下 → 立刻转成收起；收起中按下 → 立刻从当前位置弹回打开态。
+		// 两者都只改轨道目标（REPLACE 从当前值续接），不重置起点，所以狂按也不会跳帧。
 		if(Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE))
-			SetActive(false);
+		{
+			if(m_MenuClosing)
+			{
+				m_MenuClosing = false;
+				StartMenuSlide(GameClient(), Ui(), 0.0f, false);
+			}
+			else
+			{
+				BeginMenuClose();
+			}
+		}
+		// 点击面板外空白：本帧 HotItem 已由绘制算出，此刻判定才是「点到了什么」的真相。
+		if(m_MenuOutsideClickPending)
+		{
+			m_MenuOutsideClickPending = false;
+			const vec2 ClickPos = Ui()->MousePos();
+			if(m_MenuActive && !m_MenuClosing && QmMenuOutsideClickShouldClose(ClickPos, Ui()->HotItem() != nullptr, m_MenuHitRegions))
+				BeginMenuClose();
+		}
 		Ui()->FinishCheck();
 		Ui()->ClearHotkeys();
 	}
@@ -8892,6 +9106,21 @@ const CMenus::CMenuImage *CMenus::FindMenuImage(const char *pName)
 		if(str_comp(Image.m_aName, pName) == 0)
 			return &Image;
 	return nullptr;
+}
+
+void CMenus::MenuImageTextures(const char *pName, IGraphics::CTextureHandle *pIdle, IGraphics::CTextureHandle *pHover)
+{
+	const CMenuImage *pImage = pName == nullptr ? nullptr : FindMenuImage(pName);
+	if(pIdle != nullptr)
+		*pIdle = pImage != nullptr ? pImage->m_GreyTexture : IGraphics::CTextureHandle();
+	if(pHover != nullptr)
+		*pHover = pImage != nullptr ? pImage->m_OrgTexture : IGraphics::CTextureHandle();
+}
+
+float CMenus::MenuButtonLabelSize(const CUIRect &Rect, float FontFactor) const
+{
+	const CUIRect Text = MenuButtonTextRect(&Rect, FontFactor, 0.0f);
+	return Text.h * CUi::ms_FontmodHeight;
 }
 
 void CMenus::SetMenuPage(int NewPage)

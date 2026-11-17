@@ -49,8 +49,18 @@ MACRO_CONFIG_INT(QmAssetsPreviewBudgetMbOverride, qm_assets_preview_budget_mb_ov
 MACRO_CONFIG_INT(QmAssetsPreviewBudgetPercent, qm_assets_preview_budget_percent, 8, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Resource preview VRAM budget percentage (based on device local VRAM budget)")
 MACRO_CONFIG_INT(QmUiRuntimeV2Debug, qm_ui_runtime_v2_debug, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable UI runtime v2 debug logging")
 MACRO_CONFIG_INT(QmUiMotionLevel, qm_ui_motion_level, 2, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "QmUi animation intensity: 0=Off, 1=Reduced, 2=Full")
+// 以下四档是「形态/手感」偏好，不是第二套动效开关：唯一的全局开关仍是 qm_ui_motion_level。
+// ESC 菜单壳层从顶部滑入/滑离的弹簧手感：0=柔和（几乎不回弹）1=标准 2=弹性（明显回弹）。
+MACRO_CONFIG_INT(QmMenuSlideFeel, qm_menu_slide_feel, 1, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "ESC menu slide feel: 0=soft, 1=standard, 2=bouncy")
 // 控制台从顶部下拉展开/收回的弹簧手感：0=柔和 1=标准 2=弹性。
 MACRO_CONFIG_INT(QmConsoleSlideFeel, qm_console_slide_feel, 1, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console slide feel: 0=soft, 1=standard, 2=bouncy")
+// 计分板面板入场：0=柔和 1=标准 2=弹性。打开时从 0 缩放到过冲峰值再回落到 100%。
+MACRO_CONFIG_INT(QmScoreboardPopFeel, qm_scoreboard_pop_feel, 1, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Scoreboard entrance feel: 0=soft, 1=standard, 2=bouncy")
+// 计分板入场过冲量（百分比）：6 表示先放大到 106% 再回落到 100%；0 表示不回弹。
+// 上限 15%：过冲同时驱动立即模式布局的字号重排，超过这个量会读作「胀一下再缩回去」。
+MACRO_CONFIG_INT(QmScoreboardOvershoot, qm_scoreboard_overshoot, 6, 0, 15, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Scoreboard entrance overshoot in percent (10 = 110% peak)")
+// 计分板内部文本出场：0=整块一起淡入 1=逐行错峰 2=慢速逐行波浪。
+MACRO_CONFIG_INT(QmScoreboardTextEntry, qm_scoreboard_text_entry, 1, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Scoreboard text entry: 0=together, 1=by row, 2=slow cascade")
 // 输入光标画法：只影响所有输入框的光标外观（竖线 / 下划线 / 方块），不改变输入行为。
 MACRO_CONFIG_INT(QmTextCaretStyle, qm_text_caret_style, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Text caret style: 0=bar, 1=underscore, 2=block")
 // DDNet 页内子页签：未发布，不做配置迁移，直接给默认值。
@@ -58,7 +68,7 @@ MACRO_CONFIG_INT(QmDdnetTab, qm_ddnet_tab, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAV
 MACRO_CONFIG_INT(QmGraphicsTab, qm_graphics_tab, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Graphics settings sub-tab: 0=display, 1=visual effects")
 MACRO_CONFIG_INT(QmUiScale, qm_ui_scale, 100, 50, 200, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Global UI size percentage")
 MACRO_CONFIG_INT(QmMobileCameraMode, qm_mobile_camera_mode, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Mobile spectator camera: 0=joystick pad, 1=drag the view")
-MACRO_CONFIG_INT(QmDefaultsProfileVersion, qm_defaults_profile_version, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Default appearance profile migration version")
+MACRO_CONFIG_INT(QmDefaultsProfileVersion, qm_defaults_profile_version, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Default appearance profile migration version")
 MACRO_CONFIG_STR(QmNewsReadRelease, qm_news_read_release, 64, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Last viewed client release notes")
 MACRO_CONFIG_INT(QmNewsReadVersion, qm_news_read_version, -1, -1, 0, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Last viewed announcement version")
 MACRO_CONFIG_STR(QmNewsReadContentId, qm_news_read_content_id, 65, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Last viewed announcement content revision")
@@ -66,7 +76,7 @@ MACRO_CONFIG_STR(QmNewsReadContentId, qm_news_read_content_id, 65, "", CFGFLAG_C
 // 顺滑（继承速度）与弹簧两档保留在设置里，由玩家主动切换。
 MACRO_CONFIG_INT(QmUiScrollFeel, qm_ui_scroll_feel, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring")
 MACRO_CONFIG_INT(QmUiScrollStep, qm_ui_scroll_step, 10, 2, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick")
-MACRO_CONFIG_INT(QmUiScrollBounce, qm_ui_scroll_bounce, 24, 0, 64, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Rubber-band distance in UI pixels when the wheel or a drag pushes past an end (0=off); the content springs back after scrolling stops")
+MACRO_CONFIG_INT(QmUiScrollBounce, qm_ui_scroll_bounce, 25, 0, 64, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Rubber-band distance in UI pixels when the wheel or a drag pushes past an end (0=off); the content springs back after scrolling stops")
 MACRO_CONFIG_INT(QmUiScrollSpringResponse, qm_ui_scroll_spring_response, 300, 80, 600, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Spring scroll feel response time in milliseconds; lower reaches the target sooner")
 MACRO_CONFIG_INT(QmUiScrollSpringDamping, qm_ui_scroll_spring_damping, 90, 50, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Spring scroll feel damping ratio in percent; 100 stops without overshoot")
 MACRO_CONFIG_INT(QmCountryFlagAnim, qm_country_flag_anim, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable bounce-in entrance animation when country flags finish loading")
@@ -1028,14 +1038,17 @@ MACRO_CONFIG_INT(QmSelfKillAutoDelay, qm_self_kill_auto_delay, 0, 0, 60, CFGFLAG
 // 短边 25% 上限约束，扩不动时（胶囊、短边很近的小控件）曲线自动退回圆弧。
 MACRO_CONFIG_INT(QmUiCornerCurve, qm_ui_corner_curve, 2, 0, 4, CFGFLAG_CLIENT | CFGFLAG_SAVE, "UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier, 4 = Apple continuous (Bezier + arc + Bezier)")
 // 圆角强度按曲线档位分开存：每档各自记住自己的值，切档时互不覆盖。
-// 苹果三段式的基准是 60%（iOS 标准），其余三档是 40%。原圆弧档没有强度，不需要存档。
-MACRO_CONFIG_INT(QmUiCornerSmoothingApple, qm_ui_corner_smoothing_apple, 60, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Curvature strength for the Apple corner curve (0 = arc, 100 = strongest)")
+// 苹果档的 100% 就是 UIBezierPath 实测的连续曲率本身（足迹 1.528665 r），往下才是向圆弧
+// 插值；其余三档的默认是 40%。原圆弧档没有强度，不需要存档。
+MACRO_CONFIG_INT(QmUiCornerSmoothingApple, qm_ui_corner_smoothing_apple, 100, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Curvature strength for the Apple corner curve (0 = arc, 100 = strongest)")
 MACRO_CONFIG_INT(QmUiCornerSmoothingSquircle, qm_ui_corner_smoothing_squircle, 40, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Curvature strength for the superellipse corner curve")
 MACRO_CONFIG_INT(QmUiCornerSmoothingConic, qm_ui_corner_smoothing_conic, 40, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Curvature strength for the conic corner curve")
 MACRO_CONFIG_INT(QmUiCornerSmoothing, qm_ui_corner_smoothing, 40, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Continuous-curvature UI corners (0 = classic arc, 100 = strongest)")
 // 胶囊端头三档：0 = 普通胶囊（正圆弧端头）；1 = 丝滑（只把直边靠端帽的一段往外鼓 3%，
-// 端帽本身仍是精确正圆）；2 = 苹果（端帽换成三段式连续曲线，端部略方润）。
+// 端帽本身仍是精确正圆）；2 = 苹果（端帽仍是正圆，直边按原生 iOS 胶囊实测的肩部
+// 提前 0.4154 R 起弯，端头不会被拉长）。
 MACRO_CONFIG_INT(QmUiCapsuleStyle, qm_ui_capsule_style, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous")
 // 苹果胶囊端部的强度单独控制，不和上方「圆角曲率」共用：胶囊的端头是半圆，
 // 和卡片的圆角不是同一类形状，共用一个滑杆两边都调不准。
-MACRO_CONFIG_INT(QmUiCapsuleAppleStrength, qm_ui_capsule_apple_strength, 60, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)")
+// 100% = 原生 iOS 胶囊实测的肩部（直边提前 0.4154 R 起弯），0% = 正半圆端帽。
+MACRO_CONFIG_INT(QmUiCapsuleAppleStrength, qm_ui_capsule_apple_strength, 100, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)")

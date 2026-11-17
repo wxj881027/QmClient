@@ -43,6 +43,7 @@
 #include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/console.h>
+#include <game/client/components/qmclient/browser_status_layout.h>
 #include <game/client/components/qmclient/media_paths.h>
 #include <game/client/gameclient.h>
 #include <game/client/qm_icon.h>
@@ -3076,10 +3077,21 @@ void CMenus::SyncDemoSelection()
 
 	if(m_vDemoSelection.empty())
 	{
-		if(!IsValidIndex(m_DemolistSelectedIndex))
-			m_DemolistSelectedIndex = 0;
-		if(IsValidIndex(m_DemolistSelectedIndex))
-			m_vDemoSelection.push_back(DemoSelectionEntryFromItem(*m_vpFilteredDemos[m_DemolistSelectedIndex]));
+		// 截图画廊进入时不预选任何条目：以前这里把第 0 项（通常是 auto 文件夹）
+		// 顺手选上，界面一打开就带着一块选中底衬，用户没点过任何东西。
+		// 回放列表保持原有的「首项预选」，右侧详情一开始就有内容。
+		if(DemoBrowserBrowsingScreenshots())
+		{
+			m_DemolistSelectedIndex = -1;
+			m_DemoSelectionAnchorIndex = -1;
+		}
+		else
+		{
+			if(!IsValidIndex(m_DemolistSelectedIndex))
+				m_DemolistSelectedIndex = 0;
+			if(IsValidIndex(m_DemolistSelectedIndex))
+				m_vDemoSelection.push_back(DemoSelectionEntryFromItem(*m_vpFilteredDemos[m_DemolistSelectedIndex]));
+		}
 	}
 	else if(!IsValidIndex(m_DemolistSelectedIndex) || !IsDemoItemSelected(*m_vpFilteredDemos[m_DemolistSelectedIndex]))
 	{
@@ -3508,12 +3520,19 @@ void CMenus::RenderDemoBrowser(CUIRect MainView)
 
 	// 面板间距与内边距统一取全局面板档（与服务器列表一致）：三个面板之间的缝、
 	// 内容到面板边缘的距离不再各自写 10。
+	// 最外层留白（含底部操作条到窗口底）以 panel::MARGIN 为准，但**要扣掉菜单壳层
+	// 已经内缩的全局安全区**：menus.cpp 会先 Screen.Margin(MARGIN)，页面再切一次就成了 16。
+	// 安全区不生效的回放/幽灵视角则由这里补足，最终「面板底 → 窗口底」恒为 8。
 	CUIRect ListView, DetailsView, ButtonsView;
-	MainView.HSplitBottom(ui_token::panel::GAP, &MainView, nullptr);
+	const float BottomInset = QmResolveBrowserBottomInset(*Ui()->Screen(), MainView);
+	MainView.HSplitBottom(BottomInset, &MainView, nullptr);
 	MainView.HSplitBottom(44.0f, &ListView, &ButtonsView);
 	ListView.HSplitBottom(ui_token::panel::GAP, &ListView, nullptr);
 	ListView.VSplitRight(205.0f, &ListView, &DetailsView);
 	ListView.VSplitRight(ui_token::panel::GAP, &ListView, nullptr);
+	AddMenuHitRegion(ListView);
+	AddMenuHitRegion(DetailsView);
+	AddMenuHitRegion(ButtonsView);
 	ListView.Draw(MenuPanelColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
 	DetailsView.Draw(MenuPanelColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
 	ButtonsView.Draw(MenuPanelElevatedColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
@@ -4317,21 +4336,11 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 		GameClient()->m_Tooltips.DoToolTip(&s_RefreshButton, &RefreshButton, Localize("Refresh the demo list"));
 	}
 
-	// fetch info checkbox
-	if(!BrowsingScreenshots)
-	{
-		CUIRect FetchInfo;
-		const float FetchInfoWidth = minimum(maximum(LeftGroup.w * 0.26f, 104.0f), 140.0f);
-		LeftGroup.VSplitLeft(minimum(FetchInfoWidth, LeftGroup.w), &FetchInfo, &LeftGroup);
-		if(LeftGroup.w > TightSpacing)
-			LeftGroup.VSplitLeft(TightSpacing, nullptr, &LeftGroup);
-		if(DoButton_CheckBox(&g_Config.m_BrDemoFetchInfo, Localize("Fetch Info"), g_Config.m_BrDemoFetchInfo, &FetchInfo))
-		{
-			g_Config.m_BrDemoFetchInfo ^= 1;
-			m_DemoHeaderFetchCursor = 0;
-			m_DemoHeaderFetchComplete = DemoBrowserBrowsingScreenshots() || !g_Config.m_BrDemoFetchInfo;
-		}
-	}
+	// 「回放信息」开关已移除：它只是「刷新时批量预读 demo 头部」的开关，列表的
+	// 时长/标记/地图三列却依赖它，关着的时候整列显示 0，读起来像坏了。
+	// 读取本身是后台分帧预算的（DemoHeaderBudget），不必让用户为它做决定；
+	// 批量预读改为常开（qm 默认值 1），个别用户仍可在控制台关掉。
+	// 空出来的宽度留给搜索框，底栏不再有一个说不清作用的控件。
 
 	// demos directory button
 	if(HasSingleSelection && pSelectedItem->m_StorageType != IStorage::TYPE_ALL)

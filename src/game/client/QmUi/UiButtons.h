@@ -32,6 +32,9 @@ namespace ui_widget
 		bool m_Enabled = true;
 		bool m_Selected = false;
 		bool m_TransparentInactive = false;
+		// 卡片形态的列表项：LIST_ENTRY 默认不描边，这里显式打开悬浮白边。
+		// 只对 LIST_ENTRY 生效，其余角色本来就带统一描边。
+		bool m_ListEntryBorder = false;
 		bool m_AlignToPixel = true;
 		int m_Corners = IGraphics::CORNER_ALL;
 		float m_Radius = ui_token::radius::BASE;
@@ -69,7 +72,28 @@ namespace ui_widget
 	bool SecondaryButton(const IUiContext &Ctx, CButtonContainer *pBtn, const char *pText, const CUIRect &Rect, bool Disabled = false, EUiButtonGeometry Geometry = EUiButtonGeometry::CONTROL, bool Selected = false);
 
 	// 双操作共用外轮廓和分隔线，返回 0/1 表示被触发的半边，-1 表示无操作。
-	int SplitActionButton(const IUiContext &Ctx, CButtonContainer *pLeft, const char *pLeftText, CButtonContainer *pRight, const char *pRightText, const CUIRect &Rect, bool LeftDisabled = false, bool RightDisabled = false, EUiButtonGeometry Geometry = EUiButtonGeometry::CONTROL, const char *pLeftTooltip = nullptr, const char *pRightTooltip = nullptr);
+	// 分段按钮的可选渲染参数。默认值等价于「一直两段、中分、无插画」，
+	// 既有调用点不用改；主菜单「运行服务器」用 Progress 做单段→两段的生长过渡。
+	struct SSplitActionOptions
+	{
+		// 0 = 右段还没长出来（整条仍是左段，端头两侧都圆），1 = 正常分割；
+		// 弹簧过冲允许略大于 1，右段会先冲过去再回稳。
+		float m_Progress = 1.0f;
+		// 左段目标宽度占整条的比例。贴图会额外吃掉右段宽度，由调用点算好再传。
+		float m_LeftFraction = 0.5f;
+		// 贴在整条右端的插画（两条纹理：静止 / 悬浮），m_ImageWidth 为 0 时按 4 倍按钮高。
+		IGraphics::CTextureHandle m_ImageIdle;
+		IGraphics::CTextureHandle m_ImageHover;
+		float m_ImageWidth = 0.0f;
+		// 两段各自的底色语义；不给就都走控制表面默认色。
+		std::optional<ColorRGBA> m_LeftSurface;
+		std::optional<ColorRGBA> m_RightSurface;
+		// 文字字号；0 = 按控件正文尺寸（BodySizeFromScale）。主菜单行要跟带图菜单按钮
+		// 同字号时由调用点算好传进来。
+		float m_LabelSize = 0.0f;
+	};
+
+	int SplitActionButton(const IUiContext &Ctx, CButtonContainer *pLeft, const char *pLeftText, CButtonContainer *pRight, const char *pRightText, const CUIRect &Rect, bool LeftDisabled = false, bool RightDisabled = false, EUiButtonGeometry Geometry = EUiButtonGeometry::CONTROL, const char *pLeftTooltip = nullptr, const char *pRightTooltip = nullptr, const SSplitActionOptions &Options = {});
 
 	// 图标按钮与旧 CUi 入口共用字形、状态和点击处理。
 	bool IconButton(const IUiContext &Ctx, CButtonContainer *pBtn, const char *pIcon, const CUIRect &Rect, bool Disabled = false);

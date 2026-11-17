@@ -76,6 +76,7 @@
 '%s' joined team 0
 '%s' locked your team.
 '%s' locked your team. After the race starts, killing will kill everyone in your team.
+'%s' not bound.
 '%s' unlocked your team.
 '%s' was force-paused for %s seconds
 '%s' would have timed out, but can use timeout protection now
@@ -191,6 +192,7 @@ Add a skin to a queue preset
 Add a skin to the dummy queue
 Add a skin to the queue
 add a sqlserver
+Add a tag
 Add a type to the exclusion filter for a specific community
 Add a voting option
 Add Bind
@@ -283,6 +285,7 @@ All
 All categories
 All combined
 All maps
+All my tags are already on the server.
 All players
 All remaining binds: scoreboard, spectating, console, screenshots, emoticon and practice tools.
 All sounds
@@ -655,6 +658,7 @@ Both sides of keyword rules must be filled
 Bottom left
 Bottom right
 Bounce
+Bouncy
 Bound functions
 Bounded capture frame queue depth for demo export (higher values use more memory)
 Bounding box of the whole selection; edit geometry with a single node selected.
@@ -682,6 +686,7 @@ Buttons
 Buttons with this behavior cycle between executing one of two or more specified commands.
 Buttons with this behavior execute console commands like regular key binds.
 Buttons with this behavior execute some predefined actions.
+By row
 Bytes in the generated bind line; over the limit the server rejects it.
 c = Player position
 Calculate unfinished maps for player in certain mode
@@ -732,6 +737,7 @@ Card effects
 Card guide
 Card opacity
 Card shape is shared with the rest of the interface and lives in "Interface theme".
+Cascade
 Category
 Category name
 Censor replacement character
@@ -895,6 +901,7 @@ Click to copy map name
 Click to copy the map name
 Click to copy this clan's name to clipboard
 Click to copy this player's name to clipboard
+Click to manage this tag, drag to reorder
 Click to remove this clan from your friends list.
 Click to remove this community from favorites
 Click to remove this player from your friends list.
@@ -921,6 +928,7 @@ Close
 Close the demo player
 Close window after changing settings
 Cloud bubble
+Cloud tags:
 Collapse
 Collapse console
 Collects the remaining DDNet client preferences that do not belong to other cards.
@@ -1071,12 +1079,15 @@ Console color scheme
 Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom, 3+=Windows Terminal schemes
 Console command color
 Console font size
+Console line spacing
 Console link color
 Console number color
 Console parameter color
 Console search match color
 Console selected search match color
 Console settings
+Console slide
+Console slide feel: 0=soft, 1=standard, 2=bouncy
 Console string color
 Console text color
 Contacting title server
@@ -1347,6 +1358,7 @@ Delete folder
 Delete screenshot
 Delete selected items
 Delete this preset
+Delete this tag
 Deleted "%s"
 Demo
 Demo cut saved, but its camera path could not be saved
@@ -1471,6 +1483,7 @@ Downloaded
 Downloaded "%s"
 Downloaded: %.1f MiB (total size unknown)
 Downloading map
+Downloading map %d%%
 Downloading rank 1 demo
 Downloading update...
 Downloading…
@@ -1547,6 +1560,7 @@ Dummy hand skin
 Dummy hook
 Dummy is allowed on this server.
 Dummy is currently connected.
+Dummy is not connected
 Dummy jump
 Dummy key/hammer/control/copy status switches
 Dummy marking color
@@ -1618,6 +1632,7 @@ Effects are heavy on crowded servers, so keep "Automatic effect LOD when crowded
 Efficient sharing (HEVC / MP4)
 Elastic
 Elastic back
+Elastic feel of the ESC menu sliding in from the top
 Elements too close to the edges overlap on ultrawide screens.
 Elevated
 Emoji completion
@@ -1823,6 +1838,7 @@ Entity layer adjustments
 Entity Preview
 Entity wall outline opacity
 entity_bg (Workshop)
+Entrance overshoot
 Entries in it will fall back to none.
 Entries with NVENC, AMF, Quick Sync or VideoToolbox use the GPU encoding chip and are several times faster. Only encoders that really work on this machine are listed.
 Entry: %s
@@ -1834,6 +1850,8 @@ Error opening screenshot
 Error playing demo
 Error saving settings
 Error saving touch controls
+ESC menu slide
+ESC menu slide feel: 0=soft, 1=standard, 2=bouncy
 ESC replay minutes
 EUR
 Evaluate an expression
@@ -1895,6 +1913,7 @@ Expose playback controls to the operating system
 External console password. Must be set to enable economy.
 External links open in the browser.
 External sites are not controlled by the client.
+Extra console log line spacing in pixels
 Extra vertical spacing between chat lines in pixels (0 = default)
 Extras
 Extreme values make movement feel wrong, so change one step at a time.
@@ -1964,7 +1983,6 @@ feat-003 dogfood: tokens + 12 widgets
 Feature guide and announcements
 Feature Search
 Feet
-Fetch Info
 Fifo file (non-Windows) or named pipe (Windows) for server console input
 Fifo file (non-Windows) or named pipe (Windows) used as input for client console
 File
@@ -1973,6 +1991,7 @@ File already exists, do you want to overwrite it?
 File executed on map change/reload to set default server settings
 File for storing ranks if sv_use_sql is disabled or as backup SQL server.
 File information
+File to write the server's port to (used when running a server from the client)
 File with announcements, one per line.
 File: %s
 Fill
@@ -2350,6 +2369,7 @@ HJ assist
 Hold
 Hold gun higher like TW 0.6.1 and earlier
 Hold left click for free camera
+Hold Shift to be more precise.
 Hold still
 Hold the wheel key to see the selection move; release it to run the highlighted slot.
 Hold to Zoom
@@ -2382,6 +2402,7 @@ Hookable tiles
 Hooking L/R: %.0f%%/%.0f%%
 Horizontal position
 Hostname of DNSBL provider for IP verification
+Hover feedback style: 0 = scale, 1 = border highlight
 Hover for tooltip
 How far a wheel or drag can push past an end, in UI pixels; 0 disables
 How far the plasma gun tracks a tee
@@ -2584,6 +2605,7 @@ Jelly duration
 Jelly others
 Jelly strength
 Jitter
+Join
 Join a team before inviting another player
 Join a team to enable practice mode, which means you can use /r, but can't earn a rank.
 Join a team to use swap feature, which means you can swap positions with each other.
@@ -2830,6 +2852,7 @@ Local only
 Local saves
 Local service without authentication
 Local statistics file is invalid, saving paused
+Local tags:
 Local test mode
 Local test mode, no server needed
 Local Time
@@ -2905,6 +2928,7 @@ Map browser: show empty servers only
 Map browser: show favorite maps only
 Map danger border
 Map data unavailable; server votes remain available
+Map download failed, click to retry
 Map download send window
 Map exceeds the client limit of 64 MiB.
 Map folders
@@ -3005,6 +3029,7 @@ Mention
 Mention option color
 Menu accent panel opacity
 Menu background
+Menu button hover
 Menu camera rotation radius
 Menu camera rotation time in seconds
 Menu camera speed
@@ -3012,7 +3037,6 @@ Menu main panel background color
 Menu main panel opacity
 Menu music
 Menu opacity (0-100)
-Menu opened. Press Esc key again to close menu.
 Menu option - normal
 Menu option - selected
 Menu panel color
@@ -3216,8 +3240,7 @@ New name:
 New preset
 New preset name
 New random timeout code
-New tag (up to 10 characters)
-New tags require review. Click a tag to support it.
+New tag
 New version available
 Newest first
 News
@@ -3236,7 +3259,6 @@ No .map files in this folder
 No ammunition
 No animation
 No answer from server yet.
-No approved tags yet.
 No assets
 No assets available for composition.
 No assets found.
@@ -3333,6 +3355,7 @@ Noise suppression mode (0=off 1=simple 2=RNNoise)
 Noise suppression strength (percent)
 Non-friends use default skin
 None
+None right now.
 Normal
 Normal Color
 Normal message
@@ -3483,6 +3506,7 @@ Others
 Others only
 Outgoing language
 Outgoing translation target language code
+Outline
 Outline global opacity
 Outline opacity
 Outlines can be distracting in fast maps; lower the opacity instead of disabling them.
@@ -3745,6 +3769,8 @@ Practice mode can't be enabled in team 0 mode.
 Practice mode can't be enabled while team save or load is in progress
 Practice mode enabled for your team, happy practicing!
 Practice mode is disabled
+Practice: teleport the other tee to your cursor
+Practice: teleport yourself to your cursor
 Pre-warm settings page on startup and menu idle
 Precision Jump
 Predict client movement
@@ -3781,6 +3807,7 @@ Preset when encoding video with libx264, default 5 (medium), 0 is ultrafast, 9 i
 Presets
 Press "Save" after any change: the title and chat style are stored on your account, and "Refresh" reloads them.
 Press "Select map" to choose a file, check the target server and player shown for the upload, then press "Upload map"; "Cancel" stops it.
+Press '%s' to show cursor.
 Press a key, do a command: drag from the right dot of one node to the left dot of the next. Double-click a node to edit it, right-click a link to delete it, Ctrl+Z to undo.
 Press a key…
 Press ESC to close. Watch the scale-in spring on open.
@@ -4348,11 +4375,16 @@ Score limit
 Score option color
 Scoreboard
 Scoreboard cursor
+Scoreboard entrance
+Scoreboard entrance feel: 0=soft, 1=standard, 2=bouncy
+Scoreboard entrance overshoot in percent (10 = 110% peak)
 Scoreboard playtime
 Scoreboard point check
 Scoreboard row colors
 Scoreboard score lookup
 Scoreboard sort mode (0=Score, 1=Points)
+Scoreboard text entry
+Scoreboard text entry: 0=together, 1=by row, 2=slow cascade
 Scoreboard, chat, spectating
 Scores are private on this server
 Scores are public on this server
@@ -4918,7 +4950,6 @@ Shows help to command r, general help if left blank
 Shows how many Tees in your team are frozen and how many are still active, as a row of Tee icons.
 Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dynamic island.
 Shows the bind wheel layout and which slot is currently selected.
-Shows the credits of the DDNet mod
 Shows the current song's lyric line in the Dynamic Island and lets you pick which music app supplies it.
 Shows the global points of a player beginning with name r (your rank by default)
 Shows the people supporting QmClient development.
@@ -5019,6 +5050,7 @@ Snapshot tick gap
 Social
 SodaMusic hook heartbeat timeout (milliseconds)
 SodaMusic hook helper path (empty=beside QmClient)
+Soft
 Solid
 Solid favorite icon
 Solid friend icon
@@ -5103,6 +5135,7 @@ SQL Server name for record table
 Squishy Tee deformation duration
 Squishy Tee deformation intensity
 Standalone
+Standard
 Star
 Stardust: Constellation
 Start (s)
@@ -5184,11 +5217,9 @@ Style kill, finish, and system messages
 Styles chat names and message colors, including gradients.
 Styles kill, finish and system messages in the chat area.
 Sub-Tick aiming
-Submit
 Success
 Successfully saved the replay!
 Sudden Death
-Suggested tags:
 Suicides
 Sun
 Super
@@ -5242,6 +5273,7 @@ System message
 System message color
 System message text gradient color
 System prompt text color
+Tag examples:
 Tag submitted for review.
 Take a screenshot
 Take photo
@@ -5327,6 +5359,7 @@ Teeworlds 0.7 difficulty level (0 = Casual, 1 = Normal, 2 = Competitive).
 Tele
 Teleport
 Teleport all weapons (deprecated, use special entities instead)
+Teleport dummy to cursor
 Teleport free spectator camera between hovered tele-in/out or checkpoint tele and a matching counterpart
 Teleport grenade disabled
 Teleport grenade enabled
@@ -5337,6 +5370,7 @@ Teleport laser enabled
 Teleport opacity
 Teleport tile outline color
 Teleport tile outline width
+Teleport to cursor
 Teleport yourself out of freeze if auto rescue mode is enabled, otherwise it will set position for rescuing if grounded and teleport you out of freeze if not (use sv_rescue 1 to enable this feature)
 Teleport yourself to player or to where you are spectating/or looking if no player name is given
 Teleport yourself to the last auto rescue position before you died (use sv_rescue 1 to enable this feature)
@@ -5528,6 +5562,7 @@ to check a server setting say /settings and setting's name, setting names are:
 To prevent accidental kills while racing, toggle the switch above or use the two bind rows. To self-kill, enable first, then press K. Auto-enable counts from the moment you join a game; 0 minutes keeps it off. Server commands are not affected
 To save all players in your team have to be alive and not in '/spec'
 Toast uses UiTokens + QmMotion slide
+Together
 Toggle
 Toggle auto camera
 Toggle between game scene preview and raw texture
@@ -5812,6 +5847,7 @@ Updating preview…
 Updating public word list...
 Upload .map files. Server and admin passwords: s.
 Upload a saved map to the public test server
+Upload local tags for review. Tags stay local until approved.
 Upload map
 Upstream redundancy (experimental)
 URL for downloading community skins
@@ -6040,7 +6076,7 @@ What this controls
 Wheel distance per tick; hold Alt for 3x
 Wheel down
 Wheel label
-Wheel scroll feel: 0=Smooth (velocity carries over), 1=Original (each tick restarts), 2=Spring
+Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
 Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
 Wheel to zoom - drag empty space to pan
 Wheel up
@@ -6327,6 +6363,7 @@ Zoom to current mouse target
 [Editor]	[Ctrl+U] Disallow placing unused tiles.
 [Editor]	[Ctrl+Y] Redo the last action.
 [Editor]	[Ctrl+Y] Redo the last command edit.
+[Editor]	[Ctrl+Y] Redo the last undone action.
 [Editor]	[Ctrl+Z] Undo the last action.
 [Editor]	[Ctrl+Z] Undo the last command edit.
 [Editor]	[Delete] Delete the selected command from the command list.
@@ -6939,6 +6976,7 @@ Zoom to current mouse target
 [Editor]	RED SPIKE: Red team spikes. Gives negative points when killer is in blue team. Amount of points given is set inside the server.
 [Editor]	RED TELEPORT: After falling into this tile, tees appear on TO with the same number. Speed and hooks are reset.
 [Editor]	Red value of the envelope.
+[Editor]	Redo
 [Editor]	Reference
 [Editor]	REFILL JUMPS: Restores all jumps.
 [Editor]	Refocus
@@ -7197,6 +7235,7 @@ Zoom to current mouse target
 [Editor]	Type on your keyboard to insert letters and numbers. Press Escape to end text mode.
 [Editor]	Type your number. Press enter to confirm.
 [Editor]	UNDEEP: Removes DEEP FREEZE effect.
+[Editor]	Undo
 [Editor]	Unfreeze
 [Editor]	UNFREEZE: Unfreezes tees immediately.
 [Editor]	Unhookable
@@ -7213,7 +7252,8 @@ Zoom to current mouse target
 [Editor]	Use left mouse button to drag and create a brush. Hold shift to select multiple quads. Press R to rotate selected quads. Use ctrl+right click to select layer.
 [Editor]	Use left mouse button to drag and create a brush. Use ctrl+right click to select layer of hovered tile.
 [Editor]	Use left mouse button to paint with the brush. Right click to clear the brush. Hold Alt to lock the mouse movement to a single axis.
-[Editor]	Use shift+mouse wheel up/down to adjust the tele numbers. Use ctrl+f to change all tele numbers to the first unused number.
+[Editor]	Use Shift+Mouse wheel up/down to adjust the angle.
+[Editor]	Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number.
 [Editor]	Value:
 [Editor]	Vanilla
 [Editor]	version

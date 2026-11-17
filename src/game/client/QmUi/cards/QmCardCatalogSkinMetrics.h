@@ -15,15 +15,19 @@ inline SSettingsSkinAppearanceLayout ResolveSettingsSkinAppearanceLayout(const C
 {
 	SSettingsSkinAppearanceLayout Layout;
 	// 常用开关由外层声明；这里只测量展开后的颜色、描边和速度参数。
-	const float OutlineHeight = 3.0f * Metrics.m_RowStep;
-	const float HueHeight = Metrics.m_RowStep;
+	// 组高 = N 行 + (N-1) 档行距：末行之后不再留行距。以前按 N × RowStep 测量，
+	// 把「末行行距」也算进组里，组间距于是变成 行距 + SectionGap（「变色速度」
+	// 上方比正常行距大三倍）。绘制侧每行仍是「本行 + 行距」，末行的尾巴会落在
+	// 组矩形之外被自然吃掉，两边视觉一致。
+	const float OutlineHeight = 3.0f * Metrics.m_LineHeight + 2.0f * Metrics.m_LineSpacing;
+	const float HueHeight = Metrics.m_LineHeight;
 	float Bottom;
 	if(View.w >= 640.0f * Metrics.m_UiScale)
 	{
 		View.VSplitMid(&Layout.m_Outline, &Layout.m_Hue, Metrics.m_SectionGap);
 		Layout.m_Outline.h = OutlineHeight;
 		Layout.m_Hue.h = HueHeight;
-		Bottom = View.y + OutlineHeight;
+		Bottom = View.y + std::max(OutlineHeight, HueHeight);
 	}
 	else
 	{
@@ -31,7 +35,7 @@ inline SSettingsSkinAppearanceLayout ResolveSettingsSkinAppearanceLayout(const C
 		Layout.m_Hue = {View.x, View.y + OutlineHeight + Metrics.m_SectionGap, View.w, HueHeight};
 		Bottom = Layout.m_Hue.y + HueHeight;
 	}
-	Layout.m_Shadow = {View.x, Bottom + Metrics.m_SectionGap, View.w, Metrics.m_RowStep};
+	Layout.m_Shadow = {View.x, Bottom + Metrics.m_SectionGap, View.w, Metrics.m_LineHeight};
 	Layout.m_Height = Layout.m_Shadow.y + Layout.m_Shadow.h - View.y;
 	return Layout;
 }

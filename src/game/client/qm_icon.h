@@ -59,6 +59,31 @@ inline float QmIconFontSize(const CUIRect &Rect)
 	return std::min(Rect.w, Rect.h) * 0.8f;
 }
 
+// 字形墨迹高度（占 em 的比例），fontTools 实测。**同字号并排 ≠ 视觉等大**：
+// 方框类只占 0.750，星形占 0.844，同字号摆在一起星形会明显高出一截。
+// 并排的动作图标统一走「先定墨迹高，再反算各自字号」（QmIconInkFontSize），
+// 盒与格间距仍按盒统一，于是视觉等高、格宽也齐。
+// 未列出的图标按方框类 0.75 兜底：Phosphor 常规图标的墨迹集中在 0.72~0.78。
+inline float QmIconInkHeightRatio(const EQmIcon Icon)
+{
+	switch(Icon)
+	{
+	case EQmIcon::STAR:
+		return 0.844f;
+	case EQmIcon::SQUARE_PLUS:
+	case EQmIcon::SQUARE_MINUS:
+	default:
+		return 0.750f;
+	}
+}
+
+// 目标墨迹高 → 该图标的 em 字号（字号 = 墨迹高 / 字形墨迹比）。
+inline float QmIconInkFontSize(const EQmIcon Icon, const float InkHeight)
+{
+	const float Ratio = QmIconInkHeightRatio(Icon);
+	return Ratio > 0.0f ? InkHeight / Ratio : InkHeight;
+}
+
 // Phosphor cell-signal 家族的字形 bbox 实测 em 占比（upm=1024，fontTools 度量）：
 // HIGH 0.56 / MEDIUM 0.41 / LOW 0.25 / NONE 0.09。信号柱家族本体远小于
 // USERS(约 0.8) 等常规图标，按同一字号绘制时视觉尺寸逐档塌缩（NONE 只剩
