@@ -208,7 +208,7 @@ static int ExtractDemoChat(const char *pDemoFilePath, CSnapshotDelta *pSnapshotD
 {
 	CDemoPlayer DemoPlayer(pSnapshotDelta, pSnapshotDeltaSixup, false);
 
-	if(DemoPlayer.Load(pStorage, nullptr, pDemoFilePath, IStorage::TYPE_ALL_OR_ABSOLUTE) == -1)
+	if(DemoPlayer.Load(pStorage, pDemoFilePath, IStorage::TYPE_ALL_OR_ABSOLUTE) == -1)
 	{
 		log_error(TOOL_NAME, "Demo file '%s' failed to load: %s", pDemoFilePath, DemoPlayer.ErrorMessage());
 		return -1;
@@ -267,7 +267,9 @@ int main(int argc, const char *argv[])
 	std::unique_ptr<IStorage> pStorage = CreateLocalStorage();
 
 	CCmdlineFix CmdlineFix(&argc, &argv);
-	log_set_global_logger_default();
+	std::unique_ptr<ILogger> pDefaultLogger = log_logger_stdout();
+	pDefaultLogger->SetFilter(CLogFilter{LEVEL_WARN});
+	log_set_global_logger(pDefaultLogger.release());
 
 	if(!pStorage)
 	{

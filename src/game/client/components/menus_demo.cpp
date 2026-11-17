@@ -142,7 +142,7 @@ namespace
 		auto pDelta = std::make_unique<CSnapshotDelta>();
 		auto pDeltaSixup = std::make_unique<CSnapshotDelta>();
 		auto pDemoPlayer = std::make_unique<CDemoPlayer>(pDelta.get(), pDeltaSixup.get(), false);
-		const int Result = pDemoPlayer->Load(pStorage, nullptr, pPath, IStorage::TYPE_SAVE_OR_ABSOLUTE);
+		const int Result = pDemoPlayer->Load(pStorage, pPath, IStorage::TYPE_SAVE_OR_ABSOLUTE);
 		// CDemoPlayer 析构要求文件已关闭，否则 dbg_assert 在 Release 下也会 abort
 		pDemoPlayer->Stop();
 		return Result == 0;
@@ -3313,7 +3313,7 @@ bool CMenus::FetchHeader(CDemoItem &Item)
 		char aBuffer[IO_MAX_PATH_LENGTH];
 		str_format(aBuffer, sizeof(aBuffer), "%s/%s", m_aCurrentDemoFolder, Item.m_aFilename);
 		IOHANDLE File;
-		Item.m_Valid = DemoPlayer()->GetDemoInfo(Storage(), nullptr, aBuffer, Item.m_StorageType, &Item.m_Info, &Item.m_TimelineMarkers, &Item.m_MapInfo, &File);
+		Item.m_Valid = DemoPlayer()->GetDemoInfo(Storage(), aBuffer, Item.m_StorageType, &Item.m_Info, &Item.m_TimelineMarkers, &Item.m_MapInfo, &File);
 		Item.m_InfosLoaded = true;
 
 		if(Item.m_Valid && File)

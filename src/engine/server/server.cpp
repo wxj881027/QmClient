@@ -4422,7 +4422,6 @@ void CServer::DemoRecorder_HandleAutoStart()
 		str_format(aFilename, sizeof(aFilename), "demos/auto/server/%s_%s.demo", GetMapName(), aTimestamp);
 		m_aDemoRecorder[RECORDER_AUTO].Start(
 			Storage(),
-			m_pConsole,
 			aFilename,
 			GameServer()->NetVersion(),
 			GetMapName(),
@@ -4465,7 +4464,6 @@ void CServer::StartRecord(int ClientId)
 		str_format(aFilename, sizeof(aFilename), "demos/%s_%d_%d_tmp.demo", GetMapName(), m_NetServer.Address().port, ClientId);
 		m_aDemoRecorder[ClientId].Start(
 			Storage(),
-			Console(),
 			aFilename,
 			GameServer()->NetVersion(),
 			GetMapName(),
@@ -4527,7 +4525,6 @@ void CServer::ConRecord(IConsole::IResult *pResult, void *pUser)
 	}
 	pServer->m_aDemoRecorder[RECORDER_MANUAL].Start(
 		pServer->Storage(),
-		pServer->Console(),
 		aFilename,
 		pServer->GameServer()->NetVersion(),
 		pServer->GetMapName(),

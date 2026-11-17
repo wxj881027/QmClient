@@ -4892,6 +4892,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/client/color_test.cpp
     src/test/unit/engine/compression_test.cpp
     src/test/unit/engine/console_test.cpp
+    src/test/unit/engine/console_command_test.cpp
     src/test/unit/engine/config_tags_test.cpp
     src/test/unit/engine/qm_legacy_config_test.cpp
     src/test/unit/qmclient/settings/qm_appearance_preset_test.cpp

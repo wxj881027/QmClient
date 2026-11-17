@@ -96,7 +96,7 @@ namespace
 		int LoadDemo(const char *pFilename)
 		{
 			CDemoPlayer Player(nullptr, nullptr, false);
-			const int Result = Player.Load(m_pStorage.get(), nullptr, pFilename, IStorage::TYPE_SAVE);
+			const int Result = Player.Load(m_pStorage.get(), pFilename, IStorage::TYPE_SAVE);
 			Player.Stop();
 			return Result;
 		}

@@ -4691,7 +4691,7 @@ void CClient::InitInterfaces()
 	m_pStorage = Kernel()->RequestInterface<IStorage>();
 	m_pHttp = Kernel()->RequestInterface<IEngineHttp>();
 
-	m_DemoEditor.Init(&m_SnapshotDelta, &m_SnapshotDeltaSixup, m_pConsole, m_pStorage);
+	m_DemoEditor.Init(&m_SnapshotDelta, &m_SnapshotDeltaSixup, m_pStorage);
 
 #if defined(CONF_AUTOUPDATE)
 	m_Updater.Init(m_pHttp);
@@ -6932,7 +6932,7 @@ const char *CClient::DemoPlayer_Play(const char *pFilename, int StorageType)
 
 	// try to start playback
 	m_DemoPlayer.SetListener(this);
-	if(m_DemoPlayer.Load(Storage(), m_pConsole, pFilename, StorageType))
+	if(m_DemoPlayer.Load(Storage(), pFilename, StorageType))
 	{
 		DisconnectWithReason(m_DemoPlayer.ErrorMessage());
 		return m_DemoPlayer.ErrorMessage();
@@ -7091,7 +7091,6 @@ void CClient::DemoRecorder_Start(const char *pFilename, bool WithTimestamp, int 
 	str_copy(aFilename, Path.c_str());
 	if(DemoRecorders()[Recorder].Start(
 		   Storage(),
-		   m_pConsole,
 		   aFilename,
 		   IsSixup() ? GameClient()->NetVersion7() : GameClient()->NetVersion(),
 		   m_aCurrentMap,
@@ -8734,7 +8733,6 @@ void CClient::RaceRecord_Start(const char *pFilename)
 
 	if(DemoRecorders()[RECORDER_RACE].Start(
 		   Storage(),
-		   m_pConsole,
 		   pFilename,
 		   IsSixup() ? GameClient()->NetVersion7() : GameClient()->NetVersion(),
 		   m_aCurrentMap,

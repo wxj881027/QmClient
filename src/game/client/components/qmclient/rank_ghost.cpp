@@ -1696,7 +1696,7 @@ void CRankGhost::StartParse()
 
 	Parse.m_pPlayer = std::make_unique<CDemoPlayer>(&Parse.m_Delta, &Parse.m_DeltaSixup, false);
 
-	if(Parse.m_pPlayer->Load(Storage(), nullptr, m_aDemoStoragePath, IStorage::TYPE_SAVE) == -1)
+	if(Parse.m_pPlayer->Load(Storage(), m_aDemoStoragePath, IStorage::TYPE_SAVE) == -1)
 	{
 		char aBuf[512];
 		str_format(aBuf, sizeof(aBuf), Localize("Rank ghost: failed to load the replay: %s"), Parse.m_pPlayer->ErrorMessage());
@@ -2134,7 +2134,7 @@ bool CRankGhost::ExportViewCut(const char *pDestination, const std::vector<SDemo
 	auto pDelta = std::make_unique<CSnapshotDelta>();
 	auto pDeltaSixup = std::make_unique<CSnapshotDelta>();
 	CDemoEditor Editor;
-	Editor.Init(pDelta.get(), pDeltaSixup.get(), Console(), Storage());
+	Editor.Init(pDelta.get(), pDeltaSixup.get(), Storage());
 	// 临时 demo 读取器会重置全局剪辑标记；保留当前在线会话的编辑状态。
 	const int SliceBegin = g_Config.m_ClDemoSliceBegin;
 	const int SliceEnd = g_Config.m_ClDemoSliceEnd;
@@ -2165,7 +2165,7 @@ void CRankGhost::EnterViewMode()
 	str_copy(m_aViewPlaybackFilename, m_aLoadedReplayFilename);
 	// 只扫描源文件的 tick 与标记；不播放快照，不改变在线服务器状态。
 	CDemoPlayer Metadata(nullptr, nullptr, false);
-	if(Metadata.Load(Storage(), nullptr, m_aViewPlaybackFilename, IStorage::TYPE_SAVE) != -1)
+	if(Metadata.Load(Storage(), m_aViewPlaybackFilename, IStorage::TYPE_SAVE) != -1)
 	{
 		m_ViewPlaybackMetadata = *Metadata.BaseInfo();
 		if(m_ViewPlaybackMetadata.m_NumTimelineMarkers >= 2)

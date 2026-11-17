@@ -157,10 +157,10 @@ public:
 		const char *pBase = strrchr(Filename(), '/');
 		fs_split_file_extension(pBase ? pBase + 1 : Filename(), pBuffer, BufferSize);
 	}
-	bool GetDemoInfo(IStorage *pStorage, IConsole *pConsole, const char *pFilename, int StorageType, CDemoHeader *pHeader, CTimelineMarkers *pMarkers, CMapInfo *pMap, IOHANDLE *pFile = nullptr, char *pError = nullptr, size_t ErrorSize = 0) const override
+	bool GetDemoInfo(IStorage *pStorage, const char *pFilename, int StorageType, CDemoHeader *pHeader, CTimelineMarkers *pMarkers, CMapInfo *pMap, IOHANDLE *pFile = nullptr, char *pError = nullptr, size_t ErrorSize = 0) const override
 	{
 		IDemoPlayer *pReader = m_Source.PlaybackMetadataReader();
-		return pReader && pReader->GetDemoInfo(pStorage, pConsole, pFilename, StorageType, pHeader, pMarkers, pMap, pFile, pError, ErrorSize);
+		return pReader && pReader->GetDemoInfo(pStorage, pFilename, StorageType, pHeader, pMarkers, pMap, pFile, pError, ErrorSize);
 	}
 };
 
