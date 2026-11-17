@@ -1068,7 +1068,6 @@ void CSpectator::OnRender()
 		if(!ViewModeActive && GameClient()->m_Snap.m_pGameInfoObj && (GameClient()->m_Snap.m_pGameInfoObj->m_GameFlags & GAMEFLAG_FLAGS) &&
 			GameClient()->m_Snap.m_pGameDataObj && (GameClient()->m_Snap.m_pGameDataObj->m_FlagCarrierRed == pInfo->m_Id || GameClient()->m_Snap.m_pGameDataObj->m_FlagCarrierBlue == pInfo->m_Id))
 		{
-			Graphics()->BlendNormal();
 			if(GameClient()->m_Snap.m_pGameDataObj->m_FlagCarrierBlue == pInfo->m_Id)
 				Graphics()->TextureSet(GameClient()->m_GameSkin.m_SpriteFlagBlue);
 			else

@@ -416,7 +416,6 @@ void CEmoticon::OnRender()
 
 	Ui()->MapScreen();
 
-	Graphics()->BlendNormal();
 	const float BlurRadius = s_OuterCircleRadius * PresentationScale;
 	Ui()->RenderGaussianBlur({ScreenCenter.x - BlurRadius, ScreenCenter.y - BlurRadius, BlurRadius * 2.0f, BlurRadius * 2.0f}, PresentationAlpha, IGraphics::CORNER_ALL, BlurRadius);
 
