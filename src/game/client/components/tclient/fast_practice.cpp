@@ -577,6 +577,13 @@ void CFastPractice::PrunePracticeWorld(CGameWorld &World) const
 	}
 }
 
+int CFastPractice::PracticeClockTarget() const
+{
+	// cl_dummy 刚切到分身连接时，这条连接的预测 tick 还没被主循环推进过（停在 0）。
+	// 直接拿它对分支时钟会让世界倒退回 0，下一帧再一次性补几万 tick，主线程卡死。
+	return QmPracticeClockTarget(Client()->PredGameTick(g_Config.m_ClDummy), m_PracticeBaseWorld.GameTick());
+}
+
 void CFastPractice::ShiftPracticeWorldTicks(int TickDelta)
 {
 	if(TickDelta <= 0)
@@ -1371,7 +1378,7 @@ void CFastPractice::Enable(bool PreserveHeldInput)
 	ReleaseBufferedActionInputState();
 	m_Enabled = true;
 	m_PracticeRunTicks = 0;
-	m_PracticeBaseWorld.m_GameTick = Client()->PredGameTick(g_Config.m_ClDummy);
+	m_PracticeBaseWorld.m_GameTick = PracticeClockTarget();
 	// 进入练习前的普通预测已经播到当前预测 tick，分支事件从它之后算起。
 	m_EventBarrierTick = m_PracticeBaseWorld.GameTick();
 	// 录制是全手动的：进入练习不再自动开录，由“开始录制”按键启动轨迹。
@@ -1449,7 +1456,7 @@ bool CFastPractice::TryAttachDummyFromSnapshot()
 	CaptureServerReleasedFireStates();
 	CapturePracticeInputFilterStates();
 	ReleaseBufferedActionInputState();
-	m_PracticeBaseWorld.m_GameTick = Client()->PredGameTick(g_Config.m_ClDummy);
+	m_PracticeBaseWorld.m_GameTick = PracticeClockTarget();
 	ResetAttackTickHistory();
 	if(CCharacter *pLocal = m_PracticeBaseWorld.GetCharacterById(m_EnableLocalClientId))
 		TrackSafeRescuePosition(m_EnableLocalClientId, pLocal);
@@ -1550,7 +1557,7 @@ void CFastPractice::PrepareForSpectating()
 	}
 
 	SyncPracticeWorldConfig();
-	m_PracticeBaseWorld.m_GameTick = Client()->PredGameTick(g_Config.m_ClDummy);
+	m_PracticeBaseWorld.m_GameTick = PracticeClockTarget();
 
 	StandbyCharacter(m_PracticeBaseWorld.GetCharacterById(LocalClientId));
 	if(m_RequireDummy && DummyClientId >= 0)
@@ -1611,7 +1618,7 @@ void CFastPractice::ResetPracticeToAnchor()
 			NormalizeCharacterAfterReset(pDummy, false);
 	}
 
-	m_PracticeBaseWorld.m_GameTick = Client()->PredGameTick(g_Config.m_ClDummy);
+	m_PracticeBaseWorld.m_GameTick = PracticeClockTarget();
 	PublishPracticeWorldState();
 }
 
@@ -1678,7 +1685,7 @@ bool CFastPractice::RestartPracticeFromStart()
 		NeutralizeRestartedInput(m_PracticeBaseWorld.GetCharacterById(m_EnableDummyClientId), DummyFire);
 
 	ResetPracticeTimelineState();
-	m_PracticeBaseWorld.m_GameTick = Client()->PredGameTick(g_Config.m_ClDummy);
+	m_PracticeBaseWorld.m_GameTick = PracticeClockTarget();
 	PublishPracticeWorldState();
 
 	// 重开是一次瞬移。轨迹历史保留，只切段，避免回放里连出一条穿墙直线。
@@ -1996,6 +2003,27 @@ bool CFastPractice::OverridePredict()
 			GameClient()->m_aClients[DummyClientId].m_Predicted = pDummyChar->GetCore();
 		}
 		GameClient()->m_PredictedTick = BaseGameTick;
+		return true;
+	}
+
+	// 时钟断层防御：切换分身连接、预测时钟重置等情况下，分支 tick 可能落后
+	// 上千 tick。逐 tick 补算会把主线程卡住数秒到数十秒，看门狗直接判卡死。
+	// 超过 2 秒的缺口按暂停恢复的语义处理：只平移时钟，不模拟这段时间。
+	if(QmPracticeCatchUpNeedsShift(TickPlan.StepCount(), Client()->GameTickSpeed()))
+	{
+		if(g_Config.m_Debug)
+			dbg_msg("fast_practice", "catch-up guard: %d steps, shifting branch clock", TickPlan.StepCount());
+		ShiftPracticeWorldTicks(TickPlan.m_FinalTickSelf - BaseGameTick);
+		GameClient()->m_PredictedWorld.CopyWorldClean(&m_PracticeBaseWorld);
+		pLocalChar = GameClient()->m_PredictedWorld.GetCharacterById(LocalClientId);
+		pDummyChar = m_RequireDummy ? GameClient()->m_PredictedWorld.GetCharacterById(DummyClientId) : nullptr;
+		if(!pLocalChar || (m_RequireDummy && !pDummyChar))
+			return SuspendPracticeForTransientFailure("catch-up guard lost character");
+		GameClient()->m_PredictedChar = pLocalChar->GetCore();
+		GameClient()->m_aClients[LocalClientId].m_Predicted = pLocalChar->GetCore();
+		if(pDummyChar)
+			GameClient()->m_aClients[DummyClientId].m_Predicted = pDummyChar->GetCore();
+		GameClient()->m_PredictedTick = m_PracticeBaseWorld.GameTick();
 		return true;
 	}
 

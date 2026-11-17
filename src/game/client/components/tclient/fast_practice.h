@@ -228,6 +228,8 @@ private:
 	bool ResolvePracticeRoles(int &LocalClientId, int &DummyClientId) const;
 	bool IsPracticeServerPauseActive() const;
 	void ShiftPracticeWorldTicks(int TickDelta);
+	// 分支时钟的对齐目标：取预测 tick 与当前分支 tick 的较大值，绝不倒退。
+	int PracticeClockTarget() const;
 	void FreezePracticeWorldForServerPause();
 	void UpdateGhostData();
 	void UpdateGhostForClientId(int ClientId, SGhostData &Ghost);

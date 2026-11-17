@@ -50,6 +50,21 @@ inline bool QmPracticeConsumeNewPredictedTick(int Tick, int &LastConsumedTick)
 	return true;
 }
 
+// 分支时钟的对齐目标。cl_dummy 刚切到分身连接时，这条连接的预测 tick 还停在 0，
+// 直接对齐会让分支世界倒退回零点；取较大值保证时钟只前进、不倒退。
+inline int QmPracticeClockTarget(int PredTick, int BranchTick)
+{
+	return PredTick > BranchTick ? PredTick : BranchTick;
+}
+
+// 主循环逐 tick 补算的步数上限（两秒）。更大的缺口只能来自时钟断层
+// （切换分身连接、预测时钟重置），逐 tick 仿真会把主线程卡死；
+// 调用方应改为平移时钟，与暂停恢复的语义一致。
+inline bool QmPracticeCatchUpNeedsShift(int StepCount, int GameTickSpeed)
+{
+	return StepCount > GameTickSpeed * 2;
+}
+
 // 单 tick 的预测状态发布动作。步进前写「上一帧」，步进后写「当前帧」；
 // 本体角色与其他人可以停在不同 tick（视觉外推只延长本体时）。
 // 两条循环都按这份判定发布，避免某一处漏写或写错 tick。

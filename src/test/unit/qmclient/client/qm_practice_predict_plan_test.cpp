@@ -125,3 +125,22 @@ TEST(QmPracticePredictPlan, NewPredictedTickStartsAtZeroAndRejectsRegression)
 	EXPECT_FALSE(QmPracticeConsumeNewPredictedTick(0, LastConsumedTick));
 	EXPECT_EQ(LastConsumedTick, 1);
 }
+
+// 分支时钟只允许前进。切换 cl_dummy 后分身连接的预测 tick 仍是 0，
+// 若直接对齐，下一帧会从 0 一路补算到当前时间。
+TEST(QmPracticePredictPlan, ClockTargetKeepsBranchTickWhenPredTickUninitialized)
+{
+	EXPECT_EQ(QmPracticeClockTarget(0, 60000), 60000);
+	EXPECT_EQ(QmPracticeClockTarget(60010, 60000), 60010);
+	EXPECT_EQ(QmPracticeClockTarget(60000, 60000), 60000);
+	EXPECT_EQ(QmPracticeClockTarget(-1, 0), 0);
+}
+
+// 两秒以内的缺口逐 tick 补算；更大缺口必须走平移，避免主线程被数万 tick 卡死。
+TEST(QmPracticePredictPlan, CatchUpShiftOnlyForGapsBeyondTwoSeconds)
+{
+	EXPECT_FALSE(QmPracticeCatchUpNeedsShift(1, 50));
+	EXPECT_FALSE(QmPracticeCatchUpNeedsShift(100, 50));
+	EXPECT_TRUE(QmPracticeCatchUpNeedsShift(101, 50));
+	EXPECT_TRUE(QmPracticeCatchUpNeedsShift(60000, 50));
+}
