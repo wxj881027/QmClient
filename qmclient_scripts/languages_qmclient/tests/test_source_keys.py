@@ -276,16 +276,38 @@ class SourceKeysTest(unittest.TestCase):
         self.assertNotIn("列出普通玩家可用的所有命令", help_strings)
 
     def test_collects_category_summary_from_source_file(self):
-        records = source_keys.collect_source_key_records(
-            paths=(Path(__file__),),
-            extra_strings={"Extra test key"},
-        )
+        with TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "src" / "game" / "client" / "sample.cpp"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text('Localize("Sample");\n', encoding="utf-8")
+            records = source_keys.collect_source_key_records(
+                paths=(Path(temp_dir) / "src",),
+                extra_strings={"Extra test key"},
+            )
 
         summary = source_keys.summarize_source_key_records(records)
 
         self.assertGreaterEqual(summary.localize_or_localizable, 1)
         self.assertEqual(summary.extra, 1)
         self.assertEqual(summary.total_unique, len({record.key for record in records}))
+
+    def test_source_key_collection_ignores_test_fixtures(self):
+        with TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "src" / "test" / "console_test.cpp"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(
+                'Register("test_echo", "", CFGFLAG_SERVER, Fn, nullptr, "test");\n',
+                encoding="utf-8",
+            )
+
+            records = source_keys.collect_source_key_records(
+                paths=(Path(temp_dir) / "src",),
+                extra_strings=set(),
+            )
+            file_records = source_keys.collect_file_source_key_records(path)
+
+        self.assertNotIn("test", {record.key for record in records})
+        self.assertEqual(file_records, [])
 
     def test_audit_marks_notification_aliases_as_business_data(self):
         with TemporaryDirectory() as tmpdir:
@@ -466,18 +488,27 @@ class SourceKeysTest(unittest.TestCase):
         self.assertNotIn("u", keys)
 
     def test_extracts_tclient_cached_section_titles(self):
-        path = (
-            source_keys.PROJECT_ROOT
-            / "src"
-            / "game"
-            / "client"
-            / "components"
-            / "tclient"
-            / "menus_tclient.cpp"
-        )
-        content = source_keys.strip_cpp_comments(source_keys.read_source_text(path))
-        records = source_keys.extract_known_indirect_records(path, content)
-        keys = {record.key for record in records}
+        with TemporaryDirectory() as temp_dir:
+            path = (
+                Path(temp_dir)
+                / "src"
+                / "game"
+                / "client"
+                / "components"
+                / "tclient"
+                / "menus_tclient.cpp"
+            )
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(
+                'AddCard("visual", "Visual: Nameplates");\n'
+                'AddCard("status", "Tee status bar");\n',
+                encoding="utf-8",
+            )
+            content = source_keys.strip_cpp_comments(
+                source_keys.read_source_text(path)
+            )
+            records = source_keys.extract_known_indirect_records(path, content)
+            keys = {record.key for record in records}
 
         self.assertIn("Visual: Nameplates", keys)
         self.assertIn("Tee status bar", keys)

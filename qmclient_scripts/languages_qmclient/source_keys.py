@@ -786,6 +786,8 @@ def collect_source_key_records(
     ):
         records.append(SourceKeyRecord(key, "extra", None))
     for path in iter_source_files(paths):
+        if _is_test_path(path):
+            continue
         content = strip_cpp_comments(read_source_text(path))
         records.extend(
             SourceKeyRecord(
@@ -845,7 +847,7 @@ def _extra_source_key_records(
 
 
 def collect_file_source_key_records(path: Path) -> list[SourceKeyRecord]:
-    if not path.exists() or path.suffix not in SOURCE_EXTENSIONS:
+    if not path.exists() or path.suffix not in SOURCE_EXTENSIONS or _is_test_path(path):
         return []
     content = strip_cpp_comments(read_source_text(path))
     records: list[SourceKeyRecord] = []

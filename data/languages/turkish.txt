@@ -3683,6 +3683,9 @@ DDNet
 DDNet / Total CPU
 == DDNet / toplam CPU
 
+DDNet Archive Share
+== DDNet arşivlerini paylaş
+
 DDNet Client needs to be restarted to complete update!
 == Güncellemeyi tamamlamak için DDNet istemcisinin yeniden başlatılması gerekiyor!
 
@@ -6022,9 +6025,6 @@ Frame time p95
 
 Frame time p99
 == Kare süresi p99
-
-Framebuffer color bits (only fullscreen)
-== Çerçeve arabelleği renk bitleri (yalnızca tam ekran)
 
 Frankenstein (drop parts on right)
 == Frankenstein (parçaları sağa bırakın)

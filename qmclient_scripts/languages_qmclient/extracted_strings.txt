@@ -1267,6 +1267,7 @@ DDmaX Nut
 DDmaX Pro
 DDNet
 DDNet / Total CPU
+DDNet Archive Share
 DDNet Client needs to be restarted to complete update!
 DDNet contributors and staff credits
 DDNet Memory
@@ -2082,7 +2083,6 @@ Frame rate
 Frame time
 Frame time p95
 Frame time p99
-Framebuffer color bits (only fullscreen)
 Frankenstein (drop parts on right)
 Free move
 Free view

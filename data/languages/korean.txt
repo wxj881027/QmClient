@@ -3683,6 +3683,9 @@ DDNet
 DDNet / Total CPU
 == DDNet / 전체 CPU
 
+DDNet Archive Share
+== DDNet 아카이브 공유
+
 DDNet Client needs to be restarted to complete update!
 == DDNet 클라이언트를 다시 시작해야 업데이트가 완료됩니다!
 
@@ -6022,9 +6025,6 @@ Frame time p95
 
 Frame time p99
 == 프레임 시간 p99
-
-Framebuffer color bits (only fullscreen)
-== 프레임버퍼 색상 비트 (전체 화면만)
 
 Frankenstein (drop parts on right)
 == 프랑켄슈타인 (부품을 오른쪽에 놓기)

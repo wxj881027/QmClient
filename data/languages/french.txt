@@ -3683,6 +3683,9 @@ DDNet
 DDNet / Total CPU
 == DDNet / CPU totale
 
+DDNet Archive Share
+== Partager les archives DDNet
+
 DDNet Client needs to be restarted to complete update!
 == Le client DDNet doit être redémarré pour terminer la mise à jour !
 
@@ -6022,9 +6025,6 @@ Frame time p95
 
 Frame time p99
 == Temps de frame p99
-
-Framebuffer color bits (only fullscreen)
-== Bits de couleur du framebuffer (plein écran uniquement)
 
 Frankenstein (drop parts on right)
 == Frankenstein (déposez les parties à droite)

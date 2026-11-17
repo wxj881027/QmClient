@@ -540,7 +540,7 @@ void CMenus::AppendFriendLinkCards(std::vector<SSettingsCardDefinition> &vCards,
 			Row.VSplitMid(&LeftButton, &RightButton, LineSpacing);
 			if(DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_AxiomButton, "credits-links-axiom", "Axiom 社区", 0, &LeftButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, -1.0f, EQmIcon::EARTH_AMERICAS, FONT_ICON_EARTH_AMERICAS, &s_aSiteIcons[ICON_AXIOM]) && Flow.Input() && !ReadOnly && !Ui()->RenderOnly())
 				Client()->ViewLink("https://axiom.teeworlds.cn/");
-			if(DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_DdnetArchiveShareButton, "credits-links-ddnet-archive-share", "DDNet 存档分享", 0, &RightButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, -1.0f, EQmIcon::BOOKMARK, FONT_ICON_BOOKMARK) && Flow.Input() && !ReadOnly && !Ui()->RenderOnly())
+			if(DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_DdnetArchiveShareButton, "credits-links-ddnet-archive-share", Localize("DDNet Archive Share"), 0, &RightButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, -1.0f, EQmIcon::BOOKMARK, FONT_ICON_BOOKMARK) && Flow.Input() && !ReadOnly && !Ui()->RenderOnly())
 				Client()->ViewLink("http://p.ddrace.cn/");
 		}
 	};

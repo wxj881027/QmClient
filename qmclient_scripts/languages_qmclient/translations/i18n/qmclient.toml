@@ -6575,6 +6575,22 @@ turkish = "DDNet contributors"
 polish = "DDNet contributors"
 
 [[message]]
+key = "DDNet Archive Share"
+[message.translations]
+simplified_chinese = "DDNet 存档分享"
+traditional_chinese = "DDNet 存檔分享"
+japanese = "DDNet アーカイブ共有"
+korean = "DDNet 아카이브 공유"
+russian = "Обмен архивами DDNet"
+german = "DDNet-Archiv teilen"
+spanish = "Compartir archivos de DDNet"
+french = "Partager les archives DDNet"
+brazilian_portuguese = "Compartilhar arquivos do DDNet"
+portuguese = "Partilhar arquivos do DDNet"
+turkish = "DDNet arşivlerini paylaş"
+polish = "Udostępnij archiwa DDNet"
+
+[[message]]
 key = "DDNet official installer"
 [message.translations]
 simplified_chinese = "DDNet 官方安装包"

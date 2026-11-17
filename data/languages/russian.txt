@@ -3683,6 +3683,9 @@ DDNet
 DDNet / Total CPU
 == DDNet / всего CPU
 
+DDNet Archive Share
+== Обмен архивами DDNet
+
 DDNet Client needs to be restarted to complete update!
 == Для завершения обновления необходимо перезапустить клиент DDNet!
 
@@ -6022,9 +6025,6 @@ Frame time p95
 
 Frame time p99
 == Время кадра p99
-
-Framebuffer color bits (only fullscreen)
-== Биты цвета фреймбуфера (только полноэкранный режим)
 
 Frankenstein (drop parts on right)
 == Франкенштейн (перетащите части справа)

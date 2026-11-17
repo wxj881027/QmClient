@@ -3806,6 +3806,9 @@ DDNet
 DDNet / Total CPU
 == DDNet / 总 CPU
 
+DDNet Archive Share
+== DDNet 存档分享
+
 DDNet Client needs to be restarted to complete update!
 == DDNet 客户端需要重新启动才能完成更新！
 
@@ -6250,9 +6253,6 @@ Frame time p95
 
 Frame time p99
 == 帧时间 p99
-
-Framebuffer color bits (only fullscreen)
-== 帧缓冲区的颜色位（仅限全屏）
 
 Frankenstein (drop parts on right)
 == 拼合结果（将部件拖放到右侧）
