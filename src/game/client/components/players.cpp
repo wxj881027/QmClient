@@ -852,8 +852,11 @@ void CPlayers::RenderPlayer(
 	RenderTools()->m_LocalTeeRender = Local; // TClient
 
 	const float Alpha = PlayerRenderAlpha(ClientId);
+	// 练习参与者的挂机标记属于服务器世界：分身连接在服务器侧确实没有输入，
+	// 但分支里它可能正在挥锤。服务器挂机不能画成坐姿，菜单挂机照常。
+	const bool ServerAfk = ClientId >= 0 && GameClient()->m_aClients[ClientId].m_Afk && !GameClient()->m_FastPractice.IsPracticeParticipant(ClientId);
 	const bool Afk = ClientId >= 0 && IsQmAfkForPresentation(
-						  GameClient()->m_aClients[ClientId].m_Afk,
+						  ServerAfk,
 						  Client()->State() == IClient::STATE_ONLINE,
 						  GameClient()->m_Menus.IsActive(),
 						  ClientId,
@@ -1527,8 +1530,9 @@ void CPlayers::RenderPlayerGhost(
 	Alpha = GameClient()->m_FastPractice.ServerTeeAlpha(ClientId, Alpha);
 	if(Alpha <= 0.0f)
 		return;
+	const bool ServerAfk = ClientId >= 0 && GameClient()->m_aClients[ClientId].m_Afk && !GameClient()->m_FastPractice.IsPracticeParticipant(ClientId);
 	const bool Afk = ClientId >= 0 && IsQmAfkForPresentation(
-						  GameClient()->m_aClients[ClientId].m_Afk,
+						  ServerAfk,
 						  Client()->State() == IClient::STATE_ONLINE,
 						  GameClient()->m_Menus.IsActive(),
 						  ClientId,
@@ -1985,13 +1989,20 @@ void CPlayers::OnRender()
 	// 必须在任何 RenderHookCollLine 之前完成（本帧内数据不变）。
 	GameClient()->UpdateHookCollTargets();
 
+	// 练习参与者可能不在当前服务器快照里（服务器侧死亡、暂停或短暂离线），
+	// 但分支世界仍在模拟它。可用性以分支角色为准，否则画面上人会消失、碰撞体还在。
+	const auto IsRenderableClient = [&](int ClientId) {
+		return IsPlayerInfoAvailable(ClientId) ||
+		       GameClient()->m_FastPractice.ResolvePracticeCharacter(ClientId) != nullptr;
+	};
+
 	// update render info for ninja
 	CTeeRenderInfo aRenderInfo[MAX_CLIENTS];
 	CNetObj_Character aRenderCurForTee[MAX_CLIENTS];
 	const bool IsTeamPlay = GameClient()->IsTeamPlay();
 	for(int i = 0; i < MAX_CLIENTS; ++i)
 	{
-		if(!IsPlayerInfoAvailable(i))
+		if(!IsRenderableClient(i))
 			continue;
 		const auto &ClientData = GameClient()->m_aClients[i];
 		aRenderInfo[i] = ClientData.m_RenderInfo;
@@ -2148,7 +2159,7 @@ void CPlayers::OnRender()
 
 	for(int ClientId = 0; ClientId < MAX_CLIENTS; ClientId++)
 	{
-		if(ClientId == RenderLastId || !IsPlayerInfoAvailable(ClientId))
+		if(ClientId == RenderLastId || !IsRenderableClient(ClientId))
 		{
 			continue;
 		}
@@ -2181,7 +2192,7 @@ void CPlayers::OnRender()
 
 		RenderPlayer(PlayerScreenRect, &GameClient()->m_aClients[ClientId].m_RenderPrev, &aRenderCurForTee[ClientId], &aRenderInfo[ClientId], ClientId);
 	}
-	if(RenderLastId != -1 && IsPlayerInfoAvailable(RenderLastId))
+	if(RenderLastId != -1 && IsRenderableClient(RenderLastId))
 	{
 		const CGameClient::CClientData *pClientData = &GameClient()->m_aClients[RenderLastId];
 		RenderHookCollLine(ScreenRect, &pClientData->m_RenderPrev, &pClientData->m_RenderCur, RenderLastId);

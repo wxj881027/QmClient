@@ -7442,10 +7442,16 @@ void CGameClient::UpdateRenderedCharacters()
 {
 	for(int i = 0; i < MAX_CLIENTS; i++)
 	{
-		if(!m_Snap.m_aCharacters[i].m_Active)
+		// 练习参与者不随服务器世界失活：快照里的死亡、暂停或短暂离线只描述主世界，
+		// 分支世界仍在模拟这名 tee。照常发布渲染数据，否则画面上人会消失、碰撞体还在。
+		CCharacter *pPracticeChar = m_FastPractice.ResolvePracticeCharacter(i);
+		if(!m_Snap.m_aCharacters[i].m_Active && pPracticeChar == nullptr)
 			continue;
-		m_aClients[i].m_RenderCur = m_Snap.m_aCharacters[i].m_Cur;
-		m_aClients[i].m_RenderPrev = m_Snap.m_aCharacters[i].m_Prev;
+		if(m_Snap.m_aCharacters[i].m_Active)
+		{
+			m_aClients[i].m_RenderCur = m_Snap.m_aCharacters[i].m_Cur;
+			m_aClients[i].m_RenderPrev = m_Snap.m_aCharacters[i].m_Prev;
+		}
 		m_aClients[i].m_IsPredicted = false;
 		m_aClients[i].m_IsPredictedLocal = false;
 		vec2 UnpredPos = mix(
@@ -7468,6 +7474,19 @@ void CGameClient::UpdateRenderedCharacters()
 			m_aClients[i].m_PrevPredicted.Write(&m_aClients[i].m_RenderPrev);
 
 			m_aClients[i].m_IsPredicted = true;
+
+			// 武器与挥锤相位不在核心字段里，Write 不会带上；练习参与者的这两项
+			// 必须来自分支角色。旁观/暂停时反向预测不再接管，否则渲染会一直沿用
+			// 服务器快照里的武器（分身从锤子跳成手枪）。
+			if(IsPracticeParticipant)
+			{
+				if(CCharacter *pPracticeChar = m_FastPractice.ResolvePracticeCharacter(i))
+				{
+					m_aClients[i].m_RenderCur.m_Weapon = pPracticeChar->GetActiveWeapon();
+					m_aClients[i].m_RenderPrev.m_Weapon = pPracticeChar->GetActiveWeapon();
+					m_aClients[i].m_RenderCur.m_AttackTick = pPracticeChar->GetAttackTick();
+				}
+			}
 
 			Pos = mix(
 				vec2(m_aClients[i].m_RenderPrev.m_X, m_aClients[i].m_RenderPrev.m_Y),
@@ -7537,6 +7556,14 @@ void CGameClient::UpdateRenderedCharacters()
 				m_aClients[i].m_IsPredicted = true;
 				m_aClients[i].m_IsPredictedLocal = true;
 				Pos = pPracticeCore->m_Pos;
+				// 武器与挥锤相位不在核心字段里：旁观时反向预测（AntiPingGunfire）
+				// 不再接管，RenderCur 会保留服务器快照里的武器，分身会从锤子跳成手枪。
+				if(CCharacter *pPracticeChar = m_FastPractice.ResolvePracticeCharacter(i))
+				{
+					m_aClients[i].m_RenderCur.m_Weapon = pPracticeChar->GetActiveWeapon();
+					m_aClients[i].m_RenderPrev.m_Weapon = pPracticeChar->GetActiveWeapon();
+					m_aClients[i].m_RenderCur.m_AttackTick = pPracticeChar->GetAttackTick();
+				}
 			}
 		}
 		m_aClients[i].m_RenderPos = Pos;

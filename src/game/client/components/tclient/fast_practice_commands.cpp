@@ -779,9 +779,9 @@ void CFastPractice::ConLocalWorldDump(IConsole::IResult *pResult, void *pUserDat
 	char aBuf[512];
 	const CLocalWorld &Local = pSelf->GameClient()->m_LocalWorld;
 
-	str_format(aBuf, sizeof(aBuf), "practice=%d branch_tick=%d local_id=%d dummy_id=%d cl_dummy=%d snap_local=%d",
+	str_format(aBuf, sizeof(aBuf), "practice=%d branch_tick=%d local_id=%d dummy_id=%d cl_dummy=%d snap_local=%d dummy_hammer=%d",
 		pSelf->m_Enabled ? 1 : 0, pSelf->m_PracticeBaseWorld.GameTick(), pSelf->m_EnableLocalClientId, pSelf->m_EnableDummyClientId,
-		g_Config.m_ClDummy, pSelf->GameClient()->m_Snap.m_LocalClientId);
+		g_Config.m_ClDummy, pSelf->GameClient()->m_Snap.m_LocalClientId, g_Config.m_ClDummyHammer);
 	Print(aBuf);
 	str_format(aBuf, sizeof(aBuf), "track: active=%d start=%d frames=%d events=%d switches=%d completed=%d",
 		Local.TrackActive() ? 1 : 0, Local.TrackStartTick(), Local.CurrentFrameCount(),

@@ -1225,6 +1225,13 @@ bool CFastPractice::ResolvePracticeHookCollTarget(int ClientId, vec2 &Pos, bool 
 	return true;
 }
 
+CCharacter *CFastPractice::ResolvePracticeCharacter(int ClientId)
+{
+	if(!IsPracticeParticipant(ClientId) || !m_PracticeWorldInitialized)
+		return nullptr;
+	return m_PracticeBaseWorld.GetCharacterById(ClientId);
+}
+
 std::vector<SSwitchers> *CFastPractice::PracticeSwitchers()
 {
 	if(!m_Enabled || !m_PracticeWorldInitialized)
