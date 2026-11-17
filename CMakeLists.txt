@@ -2738,6 +2738,8 @@ set_src(BASE GLOB_RECURSE src/base
   math.h
   mem.cpp
   mem.h
+  os.cpp
+  os.h
   perf_timer.h
   rust.h
   secure.cpp

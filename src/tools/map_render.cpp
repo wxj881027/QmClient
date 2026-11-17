@@ -1,6 +1,7 @@
 #include <base/log.h>
 #include <base/logger.h>
 #include <base/math.h>
+#include <base/os.h>
 #include <base/str.h>
 #include <base/system.h>
 

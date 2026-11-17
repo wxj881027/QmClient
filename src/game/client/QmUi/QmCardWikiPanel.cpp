@@ -19,6 +19,8 @@
 #include "UiTheme.h"
 #include "UiTokens.h"
 
+#include <base/os.h>
+
 #include <base/system.h>
 
 #include <engine/shared/localization.h>
@@ -98,11 +100,11 @@ namespace
 		if(!IsCard)
 		{
 #if defined(CONF_PLATFORM_ANDROID)
-			// Android 上 base 层不提供 open_link（system.h 在该平台隐藏声明），
+			// Android 上 base 层不提供 os_open_link（os.h 在该平台隐藏声明），
 			// 外部链接交给 SDL 转交系统浏览器。
 			SDL_OpenURL(pTarget);
 #else
-			open_link(pTarget);
+			os_open_link(pTarget);
 #endif
 			return;
 		}

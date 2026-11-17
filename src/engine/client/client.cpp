@@ -22,6 +22,7 @@
 #include <base/logger.h>
 #include <base/math.h>
 #include <base/mem.h>
+#include <base/os.h>
 #include <base/perf_timer.h>
 #include <base/str.h>
 #include <base/system.h>
@@ -307,7 +308,7 @@ static bool ShowQmCrashReporterDialog(const char *pReportPath)
 		char aReportDirectory[IO_MAX_PATH_LENGTH];
 		str_copy(aReportDirectory, pReportPath);
 		if(fs_parent_dir(aReportDirectory) == 0)
-			open_file(aReportDirectory);
+			os_open_file(aReportDirectory);
 	}
 	return true;
 }
@@ -9000,7 +9001,7 @@ static bool ViewLinkImpl(const char *pLink)
 	log_error("client", "Failed to open link '%s' (%s)", pLink, SDL_GetError());
 	return false;
 #else
-	if(open_link(pLink))
+	if(os_open_link(pLink))
 	{
 		return true;
 	}

@@ -1,6 +1,7 @@
 #include "qm_open_link_probe.h"
 
-#include <base/system.h>
+#include <base/os.h>
+#include <base/str.h>
 
 #include <chrono>
 #include <cstdio>
@@ -23,7 +24,7 @@ std::optional<int> QmOpenLinkProbe(int argc, const char **ppArgv)
 		(str_comp(ppArgv[4], "0") != 0 && str_comp(ppArgv[4], "1") != 0))
 		return 2;
 	const pid_t OriginalPid = getpid();
-	const int Started = str_comp(ppArgv[2], "link") == 0 ? open_link(ppArgv[3]) : open_file(ppArgv[3]);
+	const int Started = str_comp(ppArgv[2], "link") == 0 ? os_open_link(ppArgv[3]) : os_open_file(ppArgv[3]);
 	if(getpid() != OriginalPid)
 	{
 		// 旧实现的 exec 失败分支会返回到这里；不让它继续执行 runner。

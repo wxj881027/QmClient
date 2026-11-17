@@ -7,6 +7,7 @@
 #include <base/logger.h>
 #include <base/math.h>
 #include <base/mem.h>
+#include <base/os.h>
 #include <base/str.h>
 #include <base/system.h>
 
@@ -2875,7 +2876,7 @@ void CGameConsole::OnRender()
 #if defined(CONF_PLATFORM_ANDROID)
 					Opened = Client()->ViewLink(Url.c_str());
 #else
-					Opened = str_startswith(Url.c_str(), "http://") ? open_link(Url.c_str()) != 0 : Client()->ViewLink(Url.c_str());
+					Opened = str_startswith(Url.c_str(), "http://") ? os_open_link(Url.c_str()) != 0 : Client()->ViewLink(Url.c_str());
 #endif
 					if(Opened)
 						pConsole->m_Selection.Clear();

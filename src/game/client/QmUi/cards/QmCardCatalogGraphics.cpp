@@ -2,6 +2,7 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include <base/log.h>
 #include <base/math.h>
+#include <base/os.h>
 #include <base/perf_timer.h>
 #include <base/system.h>
 
@@ -712,7 +713,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 					{
 						// 打不开系统设置页只影响这一次点击，不是需要阅读详情的错误：
 						// 用非阻断失败提示，用户再点一次就是重试。
-						if(!open_link("ms-settings:display-advancedgraphics"))
+						if(!os_open_link("ms-settings:display-advancedgraphics"))
 							qm_ui::Toast(EQmToastKind::FAILED, Localize("Could not open system graphics settings."));
 					}
 				});

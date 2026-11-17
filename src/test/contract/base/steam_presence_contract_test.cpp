@@ -59,7 +59,7 @@ TEST(SteamPresence, LaunchesOnlyAfterClientDetection)
 	EXPECT_NE(FunctionBody.find("EShellExecuteWindowState::BACKGROUND"), std::string::npos);
 	EXPECT_EQ(FunctionBody.find("shell_execute(\"steam.exe\""), std::string::npos);
 	EXPECT_EQ(FunctionBody.find("steam://open/main"), std::string::npos);
-	EXPECT_EQ(FunctionBody.find("open_link("), std::string::npos);
+	EXPECT_EQ(FunctionBody.find("os_open_link("), std::string::npos);
 	EXPECT_NE(Source.find("STEAM_SILENT_ARGUMENT = \"-silent\""), std::string::npos);
 }
 

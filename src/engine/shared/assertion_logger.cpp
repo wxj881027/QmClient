@@ -2,6 +2,7 @@
 
 #include <base/lock.h>
 #include <base/logger.h>
+#include <base/os.h>
 #include <base/system.h>
 
 #include <engine/shared/ringbuffer.h>
