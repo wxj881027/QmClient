@@ -27,14 +27,6 @@ void CRenderMap::Init(IGraphics *pGraphics, ITextRender *pTextRender)
 	m_pTextRender = pTextRender;
 }
 
-static void Rotate(const CPoint *pCenter, CPoint *pPoint, float Rotation)
-{
-	int x = pPoint->x - pCenter->x;
-	int y = pPoint->y - pCenter->y;
-	pPoint->x = (int)(x * std::cos(Rotation) - y * std::sin(Rotation) + pCenter->x);
-	pPoint->y = (int)(x * std::sin(Rotation) + y * std::cos(Rotation) + pCenter->y);
-}
-
 void CRenderMap::ForceRenderQuads(CQuad *pQuads, int NumQuads, const IEnvelopeEval *pEnvEval, float Alpha)
 {
 	Graphics()->TrianglesBegin();
@@ -68,16 +60,16 @@ void CRenderMap::ForceRenderQuads(CQuad *pQuads, int NumQuads, const IEnvelopeEv
 		};
 		Graphics()->SetColorVertex(aColors, std::size(aColors));
 
-		CPoint *pPoints = pQuad->m_aPoints;
-
+		const CPoint *pPoints;
 		CPoint aRotated[4];
-		if(Rotation != 0.0f)
+		if(Rotation == 0.0f)
 		{
-			for(size_t p = 0; p < std::size(aRotated); ++p)
-			{
-				aRotated[p] = pQuad->m_aPoints[p];
-				Rotate(&pQuad->m_aPoints[4], &aRotated[p], Rotation);
-			}
+			pPoints = pQuad->m_aPoints;
+		}
+		else
+		{
+			std::copy_n(pQuad->m_aPoints, std::size(aRotated), aRotated);
+			RotatePoints(pQuad->m_aPoints[4], aRotated, std::size(aRotated), Rotation);
 			pPoints = aRotated;
 		}
 

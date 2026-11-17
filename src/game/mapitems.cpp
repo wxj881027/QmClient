@@ -1,5 +1,7 @@
 #include <game/mapitems.h>
 
+#include <cmath>
+
 ColorRGBA CEnvPoint::ColorValue() const
 {
 	return ColorRGBA(fx2f(m_aValues[0]), fx2f(m_aValues[1]), fx2f(m_aValues[2]), fx2f(m_aValues[3]));
@@ -197,4 +199,17 @@ CColor UnpackColor(int PackedColor)
 	Color.b = (PackedColor >> 8) & 0xFF;
 	Color.a = PackedColor & 0xFF;
 	return Color;
+}
+
+void RotatePoints(const ivec2 &Center, ivec2 *pPoints, size_t NumPoints, float Rotation)
+{
+	const float Cos = std::cos(Rotation);
+	const float Sin = std::sin(Rotation);
+	for(size_t i = 0; i < NumPoints; i++)
+	{
+		ivec2 &Point = pPoints[i];
+		const ivec2 Offset = Point - Center;
+		Point.x = (int)(Offset.x * Cos - Offset.y * Sin + Center.x);
+		Point.y = (int)(Offset.x * Sin + Offset.y * Cos + Center.y);
+	}
 }
