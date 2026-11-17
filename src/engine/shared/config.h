@@ -148,6 +148,7 @@ constexpr int QmComputeAutoPredictionMargin(int BaseMargin, float MeasuredPingMa
 	return std::clamp(round_to_int(ConnectionMargin), 1, 300);
 }
 
+// Note: The values of some of these flags cannot be changed because they are recorded to Teehistorian files.
 enum
 {
 	CFGFLAG_SAVE = 1 << 0,
@@ -166,10 +167,8 @@ enum
 		0,
 #endif
 	CFGFLAG_STORE = 1 << 3,
-	CFGFLAG_MASTER = 1 << 4,
+	// 1 << 4 has been removed. Do not reuse this flag.
 	CFGFLAG_ECON = 1 << 5,
-	// DDRace
-
 	CMDFLAG_TEST = 1 << 6,
 	CFGFLAG_CHAT = 1 << 7,
 	CFGFLAG_GAME = 1 << 8,

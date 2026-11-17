@@ -499,7 +499,7 @@ MACRO_CONFIG_INT(ClDummyPort, cl_dummy_port, 0, 0, 65535, CFGFLAG_SAVE | CFGFLAG
 MACRO_CONFIG_INT(ClContactPort, cl_contact_port, 0, 0, 65535, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Port for server info connection to server (0=random, >=1024 sets manual port)")
 
 MACRO_CONFIG_STR(SvName, sv_name, 128, "unnamed server", CFGFLAG_SERVER, "Server name")
-MACRO_CONFIG_STR(Bindaddr, bindaddr, 128, "", CFGFLAG_CLIENT | CFGFLAG_SERVER | CFGFLAG_MASTER, "Bind address for client/server")
+MACRO_CONFIG_STR(Bindaddr, bindaddr, 128, "", CFGFLAG_CLIENT | CFGFLAG_SERVER, "Bind address for client/server")
 MACRO_CONFIG_INT(SvIpv4Only, sv_ipv4only, 0, 0, 1, CFGFLAG_SERVER, "Bind only to IPv4, otherwise bind to all interfaces")
 MACRO_CONFIG_INT(SvPort, sv_port, 0, 0, 65535, CFGFLAG_SERVER, "Server port (only 8303-8310 work in LAN browser, 0=auto find free in 8303-8310). If behind NAT, see sv_register_port for external port")
 MACRO_CONFIG_STR(SvPortFile, sv_port_file, IO_MAX_PATH_LENGTH, "", CFGFLAG_SERVER, "File to write the server's port to (used when running a server from the client)")

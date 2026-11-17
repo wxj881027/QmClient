@@ -47,6 +47,9 @@ namespace
 {
 	// 记分板未打开时每帧预热的 Axiom 分数条数：够让打开时立刻有数据，又不会无谓刷接口。
 	constexpr int AXIOM_SCOREBOARD_PREFETCH_BUDGET = 12;
+	static constexpr const char *TIME_WIDTH_TEXT = "00:00:00";
+	static constexpr ColorRGBA TEAM_RED_TITLE_COLOR(0.975f, 0.17f, 0.17f);
+	static constexpr ColorRGBA TEAM_BLUE_TITLE_COLOR(0.17f, 0.46f, 0.975f);
 
 	uint64_t ScoreboardPresentationNodeKey(const char *pScope)
 	{
@@ -693,7 +696,7 @@ void CScoreboard::RenderTitleBar(CUIRect TitleBar, int Team, const char *pTitle)
 
 	// 标题与 rank1 时间共用同一字号：手机不再单独放大，否则时间会压过地图名。
 	const float TitleFontSize = 20.0f;
-	const float ScoreTextWidth = TextRender()->TextWidth(TitleFontSize, "00:00:00");
+	const float ScoreTextWidth = TextRender()->TextWidth(TitleFontSize, TIME_WIDTH_TEXT);
 
 	TitleBar.VMargin(10.0f, &TitleBar);
 	CUIRect TitleLabel;
@@ -1442,7 +1445,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 	}
 
 	// calculate measurements
-	const float HeadlineFontsize = 11.0f;
+	constexpr float HeadlineFontsize = 11.0f;
 	const CUIRect PlayerRows = ScoreboardPlayerRowsRect(Scoreboard, HeadlineFontsize * 2.0f);
 	// 按原分列容量规划密度，短末列不能因实际人数少而放大字号。
 	const SQmScoreboardRowMetrics RowMetrics = QmScoreboardRowMetrics(PlayerRows.h, NumPlayers, NumTeamLabels, NumTeamModeLabels, Scroll);
@@ -1491,7 +1494,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 	// 小数按 0.7 倍字号绘制，与 RenderTime 的排版一致。
 	const bool MillisecondScore = GameClient()->m_ReceivedDDNetPlayerFinishTimes;
 	const bool TrueMilliseconds = GameClient()->m_ReceivedDDNetPlayerFinishTimesMillis;
-	float ScoreLength = TextRender()->TextWidth(FontSize, TimeScore ? "00:00:00" : "99999");
+	float ScoreLength = TextRender()->TextWidth(FontSize, TimeScore ? TIME_WIDTH_TEXT : "99999");
 	if(TimeScore && MillisecondScore)
 	{
 		const float MillisLength = TextRender()->TextWidth(FontSize * 0.7f, TrueMilliseconds ? ".000" : ".00");
@@ -1505,8 +1508,9 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 	const float TeeOffset = ShowStatistics ? (StatsOffset + StatsLength + 10.0f) : (ScoreOffset + ScoreLength + 10.0f);
 	const float TeeLength = 60.0f * TeeSizeMod;
 	const float NameOffset = TeeOffset + TeeLength;
-	const float CountryLength = (LineHeight - Spacing - TeeSizeMod * 5.0f) * 2.0f;
-	const float PingLength = 27.5f;
+	const float CountryFlagSize = TeeSizeMod * 5.0f;
+	const float CountryLength = (LineHeight - Spacing - CountryFlagSize) * 2.0f;
+	constexpr float PingLength = 27.5f;
 	const float PingOffset = Scoreboard.x + Scoreboard.w - PingLength - 10.0f;
 	const float CountryOffset = RowDetail.m_ShowCountry ? PingOffset - CountryLength : PingOffset;
 	float NameLength = RowDetail.m_ShowClan ? (LowScoreboardWidth ? 90.0f : 150.0f) - TeeLength : maximum(0.0f, PingOffset - NameOffset - 5.0f);
@@ -1588,6 +1592,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 		CUIRect RowAndSpacing, Row;
 		Scoreboard.HSplitTop(LineHeight + TeamLabelLayout.m_RowSpacing, &RowAndSpacing, &Scoreboard);
 		RowAndSpacing.HSplitTop(LineHeight, &Row, nullptr);
+		const float TextY = Row.y + (Row.h - FontSize) / 2.0f;
 
 		// 裁剪外的行只推进队伍计数和布局，不提交文字、旗帜或 Tee 绘制。
 		if(Scroll && !m_ScrollRegion.AddRect(RowAndSpacing))
@@ -1752,7 +1757,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 			str_format(aBuf, sizeof(aBuf), "%d", std::clamp(pInfo->m_Score, -999, 99999));
 		}
 		if(Race7 || !(TimeScore && MillisecondScore))
-			TextRender()->Text(ScoreOffset + ScoreLength - TextRender()->TextWidth(FontSize, aBuf), Row.y + (Row.h - FontSize) / 2.0f, FontSize, aBuf);
+			TextRender()->Text(ScoreOffset + ScoreLength - TextRender()->TextWidth(FontSize, aBuf), TextY, FontSize, aBuf);
 		const bool HideIdentity = GameClient()->ShouldHideStreamerIdentity(ClientId);
 		char aNameBuf[MAX_NAME_LENGTH];
 		char aClanBuf[MAX_CLAN_LENGTH];
@@ -1776,7 +1781,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 			const float ClientBrandWidth = TextRender()->TextWidth(FontSize, pClientBrandLabel);
 			const float ClientBrandX = ClientBrandOffset + maximum(0.0f, ClientBrandLength - CLIENT_BRAND_LABEL_GAP - ClientBrandWidth) / 2.0f;
 			TextRender()->TextColor(ClientBrandScoreboardColor(ClientBrand, ItemAlpha));
-			TextRender()->Text(ClientBrandX, Row.y + (Row.h - FontSize) / 2.0f, FontSize, pClientBrandLabel);
+			TextRender()->Text(ClientBrandX, TextY, FontSize, pClientBrandLabel);
 			TextRender()->TextColor(TextColor);
 		}
 		if(ShowStatistics)
@@ -1882,7 +1887,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 		// name
 		{
 			CTextCursor Cursor;
-			Cursor.SetPosition(vec2(NameOffset, Row.y + (Row.h - FontSize) / 2.0f));
+			Cursor.SetPosition(vec2(NameOffset, TextY));
 			Cursor.m_FontSize = FontSize;
 			Cursor.m_Flags |= TEXTFLAG_ELLIPSIS_AT_END;
 			Cursor.m_LineWidth = NameLength;
@@ -1964,7 +1969,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 				TextRender()->TextColor(GameClient()->m_WarList.GetClanColor(ClientId).WithMultipliedAlpha(ItemAlpha));
 
 			CTextCursor Cursor;
-			Cursor.SetPosition(vec2(ClanOffset + (ClanLength - minimum(TextRender()->TextWidth(FontSize, pClanName), ClanLength)) / 2.0f, Row.y + (Row.h - FontSize) / 2.0f));
+			Cursor.SetPosition(vec2(ClanOffset + (ClanLength - minimum(TextRender()->TextWidth(FontSize, pClanName), ClanLength)) / 2.0f, TextY));
 			Cursor.m_FontSize = FontSize;
 			Cursor.m_Flags |= TEXTFLAG_ELLIPSIS_AT_END;
 			Cursor.m_LineWidth = ClanLength;
@@ -1976,7 +1981,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 		{
 			const int CountryCode = g_Config.m_QmStreamerScoreboardDefaultFlags ? -1 : ClientData.m_Country;
 			GameClient()->m_CountryFlags.Render(CountryCode, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f * ItemAlpha),
-				CountryOffset, Row.y + (Spacing + TeeSizeMod * 5.0f) / 2.0f, CountryLength, Row.h - Spacing - TeeSizeMod * 5.0f, m_ActiveStartTime);
+				CountryOffset, Row.y + (Spacing + CountryFlagSize) / 2.0f, CountryLength, Row.h - Spacing - CountryFlagSize, m_ActiveStartTime);
 		}
 
 		// ping
@@ -1989,7 +1994,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 			TextRender()->TextColor(TextRender()->DefaultTextColor().WithMultipliedAlpha(ItemAlpha));
 		}
 		str_format(aBuf, sizeof(aBuf), "%d", std::clamp(pInfo->m_Latency, 0, 999));
-		TextRender()->Text(PingOffset + PingLength - TextRender()->TextWidth(FontSize, aBuf), Row.y + (Row.h - FontSize) / 2.0f, FontSize, aBuf);
+		TextRender()->Text(PingOffset + PingLength - TextRender()->TextWidth(FontSize, aBuf), TextY, FontSize, aBuf);
 		TextRender()->TextColor(TextRender()->DefaultTextColor().WithMultipliedAlpha(ItemAlpha));
 	}
 	if(Scroll)
@@ -2393,7 +2398,7 @@ void CScoreboard::OnRender()
 			char aTitle[256];
 			if(pGameDataObj->m_TeamscoreRed > pGameDataObj->m_TeamscoreBlue)
 			{
-				TextRender()->TextColor(ColorRGBA(0.975f, 0.17f, 0.17f, 1.0f).WithMultipliedAlpha(m_AnimContentAlpha));
+				TextRender()->TextColor(TEAM_RED_TITLE_COLOR.WithMultipliedAlpha(m_AnimContentAlpha));
 				if(pRedTeamName == nullptr)
 				{
 					str_copy(aTitle, Localize("Red team wins!"));
@@ -2405,7 +2410,7 @@ void CScoreboard::OnRender()
 			}
 			else if(pGameDataObj->m_TeamscoreBlue > pGameDataObj->m_TeamscoreRed)
 			{
-				TextRender()->TextColor(ColorRGBA(0.17f, 0.46f, 0.975f, 1.0f).WithMultipliedAlpha(m_AnimContentAlpha));
+				TextRender()->TextColor(TEAM_BLUE_TITLE_COLOR.WithMultipliedAlpha(m_AnimContentAlpha));
 				if(pBlueTeamName == nullptr)
 				{
 					str_copy(aTitle, Localize("Blue team wins!"));

@@ -93,6 +93,26 @@ int ParseUuid(CUuid *pUuid, const char *pBuffer)
 	return 0;
 }
 
+void UuidToInts(const CUuid &Uuid, int *pInts, size_t Size)
+{
+	dbg_assert(Size == UUID_INT_SIZE, "Invalid array size");
+	for(size_t IntIndex = 0; IntIndex < Size; IntIndex++)
+	{
+		pInts[IntIndex] = bytes_be_to_uint(&Uuid.m_aData[IntIndex * sizeof(int32_t)]);
+	}
+}
+
+CUuid UuidFromInts(const int *pInts, size_t Size)
+{
+	dbg_assert(Size == UUID_INT_SIZE, "Invalid array size");
+	CUuid Uuid;
+	for(size_t IntIndex = 0; IntIndex < Size; IntIndex++)
+	{
+		uint_to_bytes_be(&Uuid.m_aData[IntIndex * sizeof(int32_t)], pInts[IntIndex]);
+	}
+	return Uuid;
+}
+
 bool CUuid::operator==(const CUuid &Other) const
 {
 	return mem_comp(this, &Other, sizeof(*this)) == 0;
