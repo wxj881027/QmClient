@@ -125,7 +125,6 @@ namespace
 		int *m_pDataSizes;
 
 		char *m_pItemStart;
-		char *m_pDataStart;
 	};
 
 } // namespace
@@ -716,8 +715,6 @@ bool CDataFileReader::Open(class IStorage *pStorage, const char *pFilename, int 
 		pTmpDataFile->m_Info.m_pDataSizes = nullptr;
 		pTmpDataFile->m_Info.m_pItemStart = (char *)&pTmpDataFile->m_Info.m_pDataOffsets[pTmpDataFile->m_Header.m_NumRawData];
 	}
-	pTmpDataFile->m_Info.m_pDataStart = pTmpDataFile->m_Info.m_pItemStart + pTmpDataFile->m_Header.m_ItemSize;
-
 	if(!pTmpDataFile->Validate())
 	{
 		io_close(pTmpDataFile->m_File);
