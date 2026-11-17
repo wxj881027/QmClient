@@ -158,8 +158,41 @@ struct SHudRecordingPresentation
 
 inline SHudRecordingPresentation QmHudRecordingPresentation(bool Recording, bool ScoreboardExpanded, bool LocalTime, bool FrozenSummary)
 {
+	// 计分板展开时录像详情不再独占状态区：它与本地时间/冻结摘要并列显示
+	// （本地时间位置见 QmHudInfoStackLines）。录像仍在录时玩家既能看时间也能看时长。
 	const bool ShowRecordingText = Recording && ScoreboardExpanded;
-	return {(LocalTime || FrozenSummary) && !ShowRecordingText, ShowRecordingText};
+	return {LocalTime || FrozenSummary || ShowRecordingText, ShowRecordingText};
+}
+
+// 状态区（灵动岛右侧信息栈）的行内容。最多两行：主行放最重要的一条，次行承载
+// 剩余条目（用「 · 」拼接）。优先级：本地时间 > 冻结摘要 > 录像状态——本地时间
+// 是玩家主动要看的信息，不能被录像详情顶掉；冻结摘要描述对局状态，排在录像之前。
+struct SHudInfoStackLines
+{
+	const char *m_pPrimary = nullptr;
+	char m_aSecondary[192] = {};
+	bool m_HasSecondary = false;
+};
+
+inline SHudInfoStackLines QmHudInfoStackLines(const char *pLocalTime, const char *pFrozenSummary, const char *pRecordingStatus)
+{
+	SHudInfoStackLines Lines;
+	const char *apCandidates[] = {pLocalTime, pFrozenSummary, pRecordingStatus};
+	for(const char *pText : apCandidates)
+	{
+		if(pText == nullptr || pText[0] == '\0')
+			continue;
+		if(Lines.m_pPrimary == nullptr)
+		{
+			Lines.m_pPrimary = pText;
+			continue;
+		}
+		if(Lines.m_HasSecondary)
+			str_append(Lines.m_aSecondary, " · ", sizeof(Lines.m_aSecondary));
+		str_append(Lines.m_aSecondary, pText, sizeof(Lines.m_aSecondary));
+		Lines.m_HasSecondary = true;
+	}
+	return Lines;
 }
 
 // 连接质量图标（数据流量语义）在灵动岛状态区的常驻占位几何。

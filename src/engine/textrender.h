@@ -60,6 +60,9 @@ enum ETextRenderFlags
 	TEXT_RENDER_FLAG_ONE_TIME_USE = 1 << 9,
 	// 名牌独立缓存：连续描边、无 hinting，世界字号不跟随栅格取整。
 	TEXT_RENDER_FLAG_QM_NAMEPLATE = 1 << 10,
+	// 字号按浮点使用：字形仍按物理像素整档光栅化（缓存不膨胀），但绘制尺寸取原字号，
+	// 于是字号连续变化时是平滑缩放而不是逐档跳。用于需要字号过渡的 HUD 文本。
+	TEXT_RENDER_FLAG_QM_FLOAT_FONT_SIZE = 1 << 11,
 };
 
 enum class EFontPreset

@@ -343,7 +343,7 @@ void CMenus::AppendDdnetContributorCard(std::vector<SSettingsCardDefinition> &vC
 		CUIRect Row, LeftButton, RightButton;
 		static CButtonContainer s_DdnetStaffButton;
 		static CButtonContainer s_DdnetReleasesButton;
-		const char *apLabels[] = {Localize("DDNet staff"), Localize("DDNet releases")};
+		const char *apLabels[] = {Localize("DDNet staff"), Localize("DDNet official installer")};
 
 		CSettingsContentLayoutFlow Flow(Content);
 		if(Flow.Control("ddnet-actions", LineHeight, Row))
@@ -359,14 +359,7 @@ void CMenus::AppendDdnetContributorCard(std::vector<SSettingsCardDefinition> &vC
 		// 名单是正文内容而不是辅助说明：字号走正文档，换行行距走段落组件，
 		// 测量与绘制共用同一行距，不能再靠段尾补高度假装行距。
 		static SSettingsParagraphState s_ContributorNamesParagraph;
-		Flow.Text("ddnet-contributor-names", s_Contributors.c_str(), 0.0f, BodySize, 0.0f,
-			[this, ParagraphLineSpacing](const char *pText, float Width, float Size) {
-				return MeasureSettingsParagraph(TextRender(), pText, Width, Size, ParagraphLineSpacing);
-			},
-			[this, BodySize, ParagraphLineSpacing](const CUIRect &Rect, const char *pText) {
-				DrawSettingsParagraph(Ui(), s_ContributorNamesParagraph, Rect, pText, BodySize, ParagraphLineSpacing);
-			},
-			LineHeight);
+		Flow.Text("ddnet-contributor-names", s_Contributors.c_str(), 0.0f, BodySize, 0.0f, [this, ParagraphLineSpacing](const char *pText, float Width, float Size) { return MeasureSettingsParagraph(TextRender(), pText, Width, Size, ParagraphLineSpacing); }, [this, BodySize, ParagraphLineSpacing](const CUIRect &Rect, const char *pText) { DrawSettingsParagraph(Ui(), s_ContributorNamesParagraph, Rect, pText, BodySize, ParagraphLineSpacing); }, LineHeight);
 	};
 	qm_settings_content::UseDeclaredContent(DdnetCredits, Ui(), TextRender());
 	vCards.push_back(std::move(DdnetCredits));
@@ -480,7 +473,7 @@ void CMenus::AppendFriendLinkCards(std::vector<SSettingsCardDefinition> &vCards,
 	FriendLinks.m_Spec = {"deck:credits-friend-links", Localize("Friend links"), qm_card_registry::ResolveLocalizedDescription("deck:credits-friend-links")};
 	FriendLinks.m_RenderMeasured = [this, Metrics, LineHeight, LineSpacing, ReadOnly](CUIRect &Content) {
 		static CButtonContainer s_DdnetWorkshopButton, s_DdnetWebsiteButton, s_QmClientWebsiteButton;
-		static CButtonContainer s_ShengyanButton, s_TeeDataButton, s_DdStatsButton, s_AxiomButton;
+		static CButtonContainer s_ShengyanButton, s_TeeDataButton, s_DdStatsButton, s_AxiomButton, s_DdnetArchiveShareButton;
 		// 站点图标纹理：首次渲染时各加载一次，失败则回退到 EQmIcon 字形。
 		enum
 		{
@@ -543,10 +536,12 @@ void CMenus::AppendFriendLinkCards(std::vector<SSettingsCardDefinition> &vCards,
 		}
 		if(Flow.Control("friend-link-actions-3", LineHeight, Row, LineSpacing))
 		{
-			// 单枚按钮同样占半行，与其余行保持同一栅格。
+			// 两枚按钮同样等分半行，与其余行保持同一栅格。
 			Row.VSplitMid(&LeftButton, &RightButton, LineSpacing);
 			if(DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_AxiomButton, "credits-links-axiom", "Axiom 社区", 0, &LeftButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, -1.0f, EQmIcon::EARTH_AMERICAS, FONT_ICON_EARTH_AMERICAS, &s_aSiteIcons[ICON_AXIOM]) && Flow.Input() && !ReadOnly && !Ui()->RenderOnly())
 				Client()->ViewLink("https://axiom.teeworlds.cn/");
+			if(DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_DdnetArchiveShareButton, "credits-links-ddnet-archive-share", "DDNet 存档分享", 0, &RightButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, -1.0f, EQmIcon::BOOKMARK, FONT_ICON_BOOKMARK) && Flow.Input() && !ReadOnly && !Ui()->RenderOnly())
+				Client()->ViewLink("http://p.ddrace.cn/");
 		}
 	};
 	qm_settings_content::UseDeclaredContent(FriendLinks, Ui(), TextRender());

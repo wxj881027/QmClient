@@ -3695,11 +3695,11 @@ DDNet Memory
 DDNet memory
 == Memória do DDNet
 
+DDNet official installer
+== Instalador oficial do DDNet
+
 DDNet points
 == Pontos DDNet
-
-DDNet releases
-== Versões do DDNet
 
 DDNet settings sub-tab: 0=general, 1=network compensation
 == Subseparador de definições do DDNet: 0=geral, 1=compensação de rede

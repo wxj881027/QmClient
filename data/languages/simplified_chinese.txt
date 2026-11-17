@@ -3818,11 +3818,11 @@ DDNet Memory
 DDNet memory
 == DDNet 内存
 
+DDNet official installer
+== DDNet 官方安装包
+
 DDNet points
 == DDNet 分数
-
-DDNet releases
-== DDNet 发布包
 
 DDNet settings sub-tab: 0=general, 1=network compensation
 == DDNet 设置子页签：0 = 常规，1 = 网络补偿

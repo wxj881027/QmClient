@@ -3695,11 +3695,11 @@ DDNet Memory
 DDNet memory
 == DDNet belleği
 
+DDNet official installer
+== Resmî DDNet yükleyicisi
+
 DDNet points
 == DDNet puanı
-
-DDNet releases
-== DDNet sürümleri
 
 DDNet settings sub-tab: 0=general, 1=network compensation
 == DDNet ayarları alt sekmesi: 0=genel, 1=ağ telafisi

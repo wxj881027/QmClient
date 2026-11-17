@@ -3695,11 +3695,11 @@ DDNet Memory
 DDNet memory
 == DDNet 內存
 
+DDNet official installer
+== DDNet 官方安裝包
+
 DDNet points
 == DDNet 分數
-
-DDNet releases
-== DDNet 發布包
 
 DDNet settings sub-tab: 0=general, 1=network compensation
 == DDNet 設定子頁籤：0=一般，1=網路補償

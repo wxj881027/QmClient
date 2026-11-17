@@ -116,23 +116,14 @@ namespace
 		return Spring;
 	}
 
-	// 打断重开时的弹跳起点：面板此刻还在屏幕上，钉回 0 会一帧缩没（读作瞬移），
-	// 但从当前值（恒为 1.0）直接续接又等于没有弹跳，快速连按时就只剩文本在动。
-	// 折中：先回缩到这一比例再弹回 1.0，过冲仍然看得见，幅度只有完整入场的一半左右。
-	constexpr float SCOREBOARD_POP_REENTRY_SCALE = 0.86f;
-
 	// 「真正打开」把缩放轨道钉回 0 再请求一次 REPLACE 弹簧；SetValue 会清掉旧轨道，
 	// 所以反复按 Tab 不会留下排队动画或速度残留。
-	// Restart=false 用于「关闭动画途中又被打开」：从回缩后的起点重弹，保留弹性手感。
-	void StartScoreboardPop(CUiV2AnimationRuntime &AnimRuntime, uint64_t NodeKey, bool Restart)
+	// 每次打开都重播，不做「从当前值续接」：关闭阶段只做淡出，面板尺寸全程是 1.0，
+	// 续接等于从 1.0 走到 1.0——快速连按时就完全没有弹跳，只有等关闭动画彻底结束
+	// 才会重新弹。弹一下本身只有一帧的尺寸变化，比「看起来没反应」更容易接受。
+	void StartScoreboardPop(CUiV2AnimationRuntime &AnimRuntime, uint64_t NodeKey)
 	{
-		if(Restart)
-			AnimRuntime.SetValue(NodeKey, EUiAnimProperty::SCALE, 0.0f);
-		else
-		{
-			const float Current = AnimRuntime.GetValue(NodeKey, EUiAnimProperty::SCALE, 1.0f);
-			AnimRuntime.SetValue(NodeKey, EUiAnimProperty::SCALE, std::clamp(Current, 0.0f, 1.0f) * SCOREBOARD_POP_REENTRY_SCALE);
-		}
+		AnimRuntime.SetValue(NodeKey, EUiAnimProperty::SCALE, 0.0f);
 		SUiAnimRequest Request;
 		Request.m_NodeKey = NodeKey;
 		Request.m_Property = EUiAnimProperty::SCALE;
@@ -2170,9 +2161,6 @@ void CScoreboard::OnRender()
 	// 显示状态转换检测：每次由隐藏转为显示（Tab 开合、死亡自动弹出、游戏结束）都重置
 	// 行内国旗的入场动画起点与面板弹性缩放轨道，保证每次打开都重放入场动画。
 	const bool FreshOpen = WantActive && !m_WasActive;
-	// 重开那一刻面板是否还留在屏幕上：决定弹跳是「从 0 完整入场」还是「回缩一截轻弹」。
-	// 判据用「几乎完全透明」——只有真正收干净了才走完整入场，其余都是打断重开。
-	const bool PanelStillOnScreen = m_Visibility > 0.02f;
 	// 每次打开都重置入场基准（面板、文本、国旗同一套）：快速连按时三者一起重播，
 	// 不会出现「框不动、文本却在淡入」的错位。
 	if(FreshOpen)
@@ -2222,7 +2210,7 @@ void CScoreboard::OnRender()
 		// 当成目标没变而吞掉，第二次按 Tab 就没有弹一下了。
 		const uint64_t PopNode = ScoreboardPresentationNodeKey("pop");
 		if(FreshOpen)
-			StartScoreboardPop(AnimRuntime, PopNode, !PanelStillOnScreen);
+			StartScoreboardPop(AnimRuntime, PopNode);
 		PanelScale = BaseScale * std::max(0.01f, AnimRuntime.GetValue(PopNode, EUiAnimProperty::SCALE, 1.0f));
 		m_OpenTime = m_Visibility;
 

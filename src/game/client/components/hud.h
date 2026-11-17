@@ -330,6 +330,11 @@ class CHud : public CComponent
 		float m_TargetWidth = 0.0f;
 		float m_TargetAlpha = 0.0f;
 		float m_TargetTextAlpha = 0.0f;
+		// 状态区「单行 ↔ 两行」的混合系数（0=单行，1=两行），驱动字号、行位置与
+		// 次行透明度，让录像/冻结状态的出现与消失是过渡而不是一帧换版。
+		float m_TargetStackBlend = 0.0f;
+		// 上一帧的次行文本：行数回落时用来淡出，避免整行瞬间消失。
+		char m_aSecondaryCache[192] = {};
 		bool m_Initialized = false;
 
 		void Reset()
@@ -337,6 +342,8 @@ class CHud : public CComponent
 			m_TargetWidth = 0.0f;
 			m_TargetAlpha = 0.0f;
 			m_TargetTextAlpha = 0.0f;
+			m_TargetStackBlend = 0.0f;
+			m_aSecondaryCache[0] = '\0';
 			m_Initialized = false;
 		}
 	};

@@ -3695,11 +3695,11 @@ DDNet Memory
 DDNet memory
 == DDNet 메모리
 
+DDNet official installer
+== DDNet 공식 설치 프로그램
+
 DDNet points
 == DDNet 점수
-
-DDNet releases
-== DDNet 릴리스
 
 DDNet settings sub-tab: 0=general, 1=network compensation
 == DDNet 설정 하위 탭: 0=일반, 1=네트워크 보상
