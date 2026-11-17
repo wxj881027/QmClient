@@ -1095,7 +1095,7 @@ TEST(ServerBrowser, PingCacheIgnoresExpiredEntries)
 
 	// 直接写入缓存数据库：一条 30 天前的记录和一条刚写入的记录。
 	{
-		CSqlite pDisk = SqliteOpen(pConsole.get(), pStorage.get(), "ddnet-cache.sqlite3");
+		CSqlite pDisk = SqliteOpen(pStorage.get(), "ddnet-cache.sqlite3");
 		ASSERT_TRUE(pDisk) << "Error opening ping cache database";
 		ASSERT_EQ(sqlite3_exec(pDisk.get(), "CREATE TABLE IF NOT EXISTS server_pings (ip_address TEXT PRIMARY KEY NOT NULL, ping INTEGER NOT NULL, utc_timestamp TEXT NOT NULL)", nullptr, nullptr, nullptr), SQLITE_OK);
 		ASSERT_EQ(sqlite3_exec(pDisk.get(), "INSERT OR REPLACE INTO server_pings (ip_address, ping, utc_timestamp) VALUES ('127.0.0.1', 171, datetime('now', '-30 days')), ('127.0.0.2', 123, datetime('now'))", nullptr, nullptr, nullptr), SQLITE_OK);
