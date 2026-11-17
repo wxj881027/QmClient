@@ -103,6 +103,9 @@ private:
 		std::shared_ptr<CQmChatExportJob> m_pChatExportJob;
 
 		STextBoundingBox m_BoundingBox = {0.0f, 0.0f, 0.0f, 0.0f};
+		// 当前实例最近一次排版使用的字号；本地/远程各自记录，
+		// 字号设置变化或切换控制台时按需重排各自日志。
+		float m_LastFontSize = -1.0f;
 
 		bool m_MouseIsPress = false;
 		vec2 m_MousePress = vec2(0.0f, 0.0f);
@@ -247,7 +250,6 @@ private:
 
 	bool m_WantsSelectionCopy = false;
 	bool m_LocalConsoleFullscreen = false;
-	float m_LastLocalFontSize = -1.0f;
 	SPopupMenuId m_SettingsPopupId;
 	CScrollRegion m_SettingsScrollRegion;
 	CButtonContainer m_SettingsCloseButton;
@@ -258,6 +260,20 @@ private:
 	QmConsoleUi::CToolbarPresenceMotion<CInstance::LOG_FILTER_BUTTON_COUNT> m_ToolbarFilterMotion;
 	QmConsoleUi::CToolbarPresenceMotion<TOOLBAR_ACTION_MOTION_COUNT> m_ToolbarActionMotion;
 	QmConsoleUi::CToolbarPresenceMotion<1> m_HeaderPresenceMotion;
+
+	// 主页右下角终端按钮：主页每帧登记矩形，控制台在自己的输入趟用同一份几何
+	// 判定开合，因此打开/关闭动画期间也能被同一次点击折返。
+	struct SStartMenuToggleHit
+	{
+		const void *m_pButtonId = nullptr;
+		CUIRect m_Rect = {};
+		uint64_t m_Frame = 0;
+		bool m_Valid = false;
+	};
+	SStartMenuToggleHit m_StartMenuToggle;
+	QmConsoleUi::CStartMenuTogglePress m_StartMenuTogglePress;
+	bool m_StartMenuToggleHovered = false;
+	void UpdateStartMenuToggle();
 
 	bool DoButton(const CUIRect &Rect, const char *pIcon, vec2 MousePosition, bool Released);
 
@@ -310,6 +326,8 @@ public:
 	void Toggle(int Type);
 	bool ConsoleSettingsOpen() const { return Ui()->IsPopupOpen(&m_SettingsPopupId); }
 	bool IsActive() const { return m_ConsoleState != CONSOLE_CLOSED; }
+	void RegisterStartMenuToggle(const void *pButtonId, const CUIRect &Rect);
+	bool StartMenuToggleHovered() const { return m_StartMenuToggleHovered; }
 
 	void ForceUpdateRemoteCompletionSuggestions();
 };

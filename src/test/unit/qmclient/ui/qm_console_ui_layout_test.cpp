@@ -324,6 +324,64 @@ TEST(QmConsoleUiLayout, LogBottomLeavesReadableSeparatorGapAtEveryFontSize)
 	}
 }
 
+TEST(QmConsoleUiLayout, EmptyInputReservesNoHintRow)
+{
+	EXPECT_FLOAT_EQ(QmConsoleUi::ResolveConsoleHintReserve(10.0f, 0), 0.0f);
+	EXPECT_FLOAT_EQ(QmConsoleUi::ResolveConsoleHintReserve(10.0f, -2), 0.0f);
+	EXPECT_FLOAT_EQ(QmConsoleUi::ResolveConsoleHintReserve(0.0f, 2), 0.0f);
+	EXPECT_FLOAT_EQ(QmConsoleUi::ResolveConsoleHintReserve(10.0f, 1), 14.0f);
+	EXPECT_FLOAT_EQ(QmConsoleUi::ResolveConsoleHintReserve(10.0f, 2), 28.0f);
+}
+
+TEST(QmConsoleUiLayout, HintReserveStopsAtThreeRows)
+{
+	// 帮助最多两行 + 用法一行；再长的内容也不会继续吞掉日志区。
+	EXPECT_FLOAT_EQ(QmConsoleUi::ResolveConsoleHintReserve(8.0f, 3), 36.0f);
+	EXPECT_FLOAT_EQ(QmConsoleUi::ResolveConsoleHintReserve(8.0f, 99), 36.0f);
+}
+
+TEST(QmConsoleUiLayout, StartMenuToggleOnlyCommitsOnInsideRelease)
+{
+	QmConsoleUi::CStartMenuTogglePress Press;
+	EXPECT_FALSE(Press.Update(true, true, true));
+	EXPECT_TRUE(Press.Pressed());
+	EXPECT_FALSE(Press.Update(true, true, false));
+	EXPECT_TRUE(Press.Update(true, false, false));
+	EXPECT_FALSE(Press.Pressed());
+
+	// 按钮内按下后拖出再松开：取消，不切换。
+	EXPECT_FALSE(Press.Update(true, true, true));
+	EXPECT_FALSE(Press.Update(false, true, false));
+	EXPECT_FALSE(Press.Update(false, false, false));
+
+	// 按钮外按下后拖入：不接管这次手势。
+	EXPECT_FALSE(Press.Update(false, true, true));
+	EXPECT_FALSE(Press.Update(true, true, false));
+	EXPECT_FALSE(Press.Update(true, false, false));
+}
+
+TEST(QmConsoleUiLayout, StartMenuToggleCanReverseEveryAnimationPress)
+{
+	QmConsoleUi::CStartMenuTogglePress Press;
+	for(int PressIndex = 0; PressIndex < 3; ++PressIndex)
+	{
+		SCOPED_TRACE(PressIndex);
+		EXPECT_FALSE(Press.Update(true, true, true));
+		EXPECT_TRUE(Press.Update(true, false, false));
+		EXPECT_FALSE(Press.Pressed());
+	}
+}
+
+TEST(QmConsoleUiLayout, StartMenuToggleIsNotClickableUnderFullscreenPanel)
+{
+	// 常规 60% 高度下，右下角按钮在面板下方，可以透传点击。
+	EXPECT_TRUE(QmConsoleUi::StartMenuToggleVisibleBelowPanel(1000.0f, 1080.0f, false));
+	// 全屏本地控制台盖住按钮，同一坐标属于面板，不能再触发开关。
+	EXPECT_FALSE(QmConsoleUi::StartMenuToggleVisibleBelowPanel(1000.0f, 1080.0f, true));
+	// 按钮几何一旦落进常规面板区域，同样不接管。
+	EXPECT_FALSE(QmConsoleUi::StartMenuToggleVisibleBelowPanel(600.0f, 1080.0f, false));
+}
+
 TEST(QmConsoleUiLayout, FilterDisableMovesGraduallyAndRedirectsWithoutJump)
 {
 	const int PreviousMotion = g_Config.m_QmUiMotionLevel;

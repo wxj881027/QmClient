@@ -805,6 +805,19 @@ namespace ui_token::status_bar
 	inline constexpr float RADIUS = radius::SMALL_MENU;
 } // namespace ui_token::status_bar
 
+// 远程控制台的组件角色色：与本地控制台区分的是“远程”这一状态，
+// 不是另一套可配置主题。取莫奈式的灰紫/玫红，保持低饱和、偏画布的观感；
+// 文字仍走全局文字色，保证日志在深色底上的可读性。
+namespace ui_token::console_remote
+{
+	// 远程背板：灰调玫紫，压在模糊后的底层画面上。
+	inline constexpr ColorRGBA BACKGROUND{0.42f, 0.25f, 0.33f, 0.92f};
+	// 顶栏/页脚背板与描边：比背板深一档的茄紫。
+	inline constexpr ColorRGBA BORDER{0.23f, 0.12f, 0.19f, 0.95f};
+	// 面板投影：带一点紫的极暗色，不直接用纯黑。
+	inline constexpr ColorRGBA SHADOW{0.05f, 0.02f, 0.06f, 0.45f};
+} // namespace ui_token::console_remote
+
 // 服务器信息页的字号曾经被删过一次（当时走设置页派生链），结果是标题 32、正文 20
 // 又变成硬编码在渲染函数里，实机又大又密。现在恢复为「只放字号与列宽」的命名空间：
 // 行距、段落缝仍来自设置页派生链，本命名空间只负责这一页自己的字号标尺。

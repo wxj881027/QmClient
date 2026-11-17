@@ -50,7 +50,6 @@
 #include <utility>
 #include <vector>
 
-static constexpr float FONT_SIZE = 10.0f;
 static constexpr float LINE_SPACING_BASE = 1.0f;
 // 控制台日志行距：基准 1.0 再按 qm_console_line_spacing 百分比放宽，
 // 字号、行高、光标与选区命中都读这一个函数，不会各写一份。
@@ -1418,7 +1417,9 @@ void CGameConsole::CInstance::ScrollToCenter(int StartLine, int EndLine)
 
 float CGameConsole::CInstance::FontSize() const
 {
-	return m_Type == CONSOLETYPE_LOCAL ? QmConsoleAppearance::FontSize(g_Config.m_QmConsoleFontSize) : FONT_SIZE;
+	// 本地/远程共用同一档字号：远程控制台的日志、页脚和头部都跟随
+	// 「控制台字号」设置，不再固定为 10，切换 F1/F2 时文字大小保持一致。
+	return QmConsoleAppearance::FontSize(g_Config.m_QmConsoleFontSize);
 }
 
 float CGameConsole::CInstance::BacklogLineWidth() const
@@ -2008,17 +2009,23 @@ void CGameConsole::OnRender()
 		Toggle(CONSOLETYPE_LOCAL);
 
 	if(m_ConsoleState == CONSOLE_CLOSED)
+	{
+		// 关闭动画到点后主页按钮重新接管；清掉按下态，避免下一轮打开时
+		// 还带着上一轮未释放的手势。
+		m_StartMenuTogglePress.Reset();
+		m_StartMenuToggleHovered = false;
 		return;
+	}
 
 	Ui()->MapScreen();
 	const bool LocalConsole = m_ConsoleType == CONSOLETYPE_LOCAL;
 	const float FontSize = pConsole->FontSize();
 	const auto Palette = QmConsoleAppearance::Palette(g_Config);
 	const bool SettingsOpen = Ui()->IsPopupVisible(&m_SettingsPopupId);
-	const bool FontChanged = LocalConsole && m_LastLocalFontSize != FontSize;
+	const bool FontChanged = pConsole->m_LastFontSize != FontSize;
 	if(FontChanged)
 	{
-		m_LastLocalFontSize = FontSize;
+		pConsole->m_LastFontSize = FontSize;
 		pConsole->UpdateBacklogTextAttributes();
 		pConsole->m_Selection.Finish();
 		pConsole->m_ScrollbarDragging = false;
@@ -2152,7 +2159,8 @@ void CGameConsole::OnRender()
 	const float HeaderPresence = m_HeaderPresenceMotion.Resolve(pAnimRuntime, ConsoleHeaderNodeKey(), 0,
 		!LocalConsole && m_ConsoleState != CONSOLE_CLOSING, ToolbarMotionEnabled, ui_token::motion::NAVIGATION_APPEAR);
 	const float RowHeight = LocalConsole ? Toolbar.m_Height : FontSize * 2.0f + 8.0f;
-	const float FooterHeight = (FontSize + 6.0f) * (1.0f - TypeBlend);
+	// 页脚状态行本地/远程共用，始终保留同样的高度；远程不再把行号放在头部。
+	const float FooterHeight = FontSize + 6.0f;
 
 	const ColorRGBA PreviousTextColor = TextRender()->GetTextColor();
 	const ColorRGBA PreviousTextOutlineColor = TextRender()->GetTextOutlineColor();
@@ -2177,9 +2185,9 @@ void CGameConsole::OnRender()
 
 	const float ConsoleHeight = ConsoleHeightScale * MaxConsoleHeight;
 
-	const ColorRGBA RemoteBackground = ColorRGBA(0.4f, 0.2f, 0.2f, 0.9f);
-	const ColorRGBA RemoteBorder = ColorRGBA(0.2f, 0.1f, 0.1f, 0.9f);
-	const ColorRGBA RemoteShadow = ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f);
+	const ColorRGBA RemoteBackground = ui_token::console_remote::BACKGROUND;
+	const ColorRGBA RemoteBorder = ui_token::console_remote::BORDER;
+	const ColorRGBA RemoteShadow = ui_token::console_remote::SHADOW;
 	const ColorRGBA ShadowColor = QmConsoleUi::MixColor(Palette.m_Shadow, RemoteShadow, TypeBlend);
 	const ColorRGBA TransparentColor = ShadowColor.WithAlpha(0.0f);
 	const ColorRGBA HeaderColor = QmConsoleUi::MixColor(Palette.m_Panel, RemoteBorder, TypeBlend);
@@ -2198,6 +2206,7 @@ void CGameConsole::OnRender()
 			Ui()->SetActiveItem(nullptr);
 		}
 		Ui()->Update();
+		UpdateStartMenuToggle();
 	}
 
 	// 在日志和控制台背板之前保存底层画面，二级面板不透出清晰日志。
@@ -2231,7 +2240,7 @@ void CGameConsole::OnRender()
 	if(FooterPanelHeight > 0.5f)
 	{
 		QmConsoleUi::DrawPanel(Ui(), {0.0f, FooterPanelY, Screen.w, FooterPanelHeight},
-			Palette.m_Panel.WithMultipliedAlpha(1.0f - TypeBlend));
+			HeaderColor);
 	}
 	// bottom border
 	Graphics()->TextureClear();
@@ -2259,10 +2268,51 @@ void CGameConsole::OnRender()
 		const float LineHeight = TextRender()->TextBoundingBox(FontSize, " ", -1, -1.0f, ConsoleLineSpacing(FontSize)).m_H;
 
 		float x = 3;
-		// 输入区占三部分：输入行、补全提示行、与页脚之间的留白。
-		// 原先只算了输入行，补全提示就压到下方快捷键页脚上；这里把提示行
-		// 的高度显式留出来，提示出现或消失都不会挤到别的元素。
-		const float SuggestionHeight = FontSize + 4.0f;
+		// 输入区占三部分：输入行、提示区、与页脚之间的留白。
+		// 提示区按本帧真实内容动态占位：空输入不预留，搜索匹配占一行，
+		// 命令帮助 + 用法最多占三行；没有提示时日志区一直延伸到底部。
+		const bool ShowSearchMatchInfo = pConsole->m_SearchInput.IsSearching() && !pConsole->m_Input.IsEmpty();
+		const bool ShowCompletionInfo = !pConsole->m_SearchInput.IsSearching() &&
+			(m_ConsoleType == CONSOLETYPE_LOCAL || Client()->RconAuthed()) && !pConsole->m_Input.IsEmpty();
+		char aCommandHelpText[1024] = "";
+		char aCommandUsageText[1024] = "";
+		bool HasCommandHint = false;
+		int HintLines = 0;
+		if(ShowSearchMatchInfo)
+		{
+			HintLines = 1;
+		}
+		else if(ShowCompletionInfo)
+		{
+			pConsole->UpdateCompletionSuggestions();
+			const bool HasSuggestions = !pConsole->m_vpCommandSuggestions.empty() || !pConsole->m_vpArgumentSuggestions.empty();
+			if(HasSuggestions)
+			{
+				HintLines = 1;
+			}
+			else if(pConsole->m_IsCommand)
+			{
+				HasCommandHint = true;
+				const char *pCommandHelp = pConsole->m_pCommandHelp != nullptr ? pConsole->m_pCommandHelp : "";
+				const char *pCommandParams = pConsole->m_pCommandParams != nullptr ? pConsole->m_pCommandParams : "";
+				char aLocalizedConfigHelp[1024];
+				const char *pLocalizedHelp = nullptr;
+				SConfigHelpLookup Lookup{pConsole->m_pCommandName};
+				ConfigManager()->PossibleConfigVariables(pConsole->m_pCommandName, pConsole->m_CompletionFlagmask, FindConfigHelpVariable, &Lookup);
+				if(BuildLocalizedConfigHelpText(Lookup.m_pVariable, aLocalizedConfigHelp, sizeof(aLocalizedConfigHelp)))
+					pLocalizedHelp = aLocalizedConfigHelp;
+				if(pLocalizedHelp == nullptr)
+					pLocalizedHelp = Localize(pCommandHelp);
+				const char *pLocalizedParams = Localize(pCommandParams);
+				str_format(aCommandHelpText, sizeof(aCommandHelpText), Localize("Help: %s"), pLocalizedHelp);
+				str_format(aCommandUsageText, sizeof(aCommandUsageText), Localize("Usage: %s %s"), pConsole->m_pCommandName, pLocalizedParams);
+				const float HintWidth = maximum(1.0f, Screen.w - x - 10.0f);
+				const float HelpHeight = TextRender()->TextBoundingBox(FontSize, aCommandHelpText, -1, HintWidth, ConsoleLineSpacing(FontSize)).m_H;
+				const int HelpLines = std::clamp((int)std::ceil(HelpHeight / maximum(1.0f, LineHeight)), 1, 2);
+				HintLines = HelpLines + (aCommandUsageText[0] != '\0' ? 1 : 0);
+			}
+		}
+		const float SuggestionHeight = QmConsoleUi::ResolveConsoleHintReserve(FontSize, HintLines);
 		float y = ConsoleHeight - FontSize * 2.0f - 18.0f - FooterHeight - SuggestionHeight;
 
 		const float InitialX = x;
@@ -2483,25 +2533,31 @@ void CGameConsole::OnRender()
 					pConsole->m_CompletionRenderOffset = Info.m_Offset;
 				}
 
-				if(NumArguments <= 0 && pConsole->m_IsCommand)
+				if(NumArguments <= 0 && pConsole->m_IsCommand && HasCommandHint)
 				{
-					char aBuf[1024];
-					const char *pCommandHelp = pConsole->m_pCommandHelp != nullptr ? pConsole->m_pCommandHelp : "";
-					const char *pCommandParams = pConsole->m_pCommandParams != nullptr ? pConsole->m_pCommandParams : "";
-					char aLocalizedConfigHelp[1024];
-					const char *pLocalizedHelp = nullptr;
-					SConfigHelpLookup Lookup{pConsole->m_pCommandName};
-					ConfigManager()->PossibleConfigVariables(pConsole->m_pCommandName, pConsole->m_CompletionFlagmask, FindConfigHelpVariable, &Lookup);
-					if(BuildLocalizedConfigHelpText(Lookup.m_pVariable, aLocalizedConfigHelp, sizeof(aLocalizedConfigHelp)))
-						pLocalizedHelp = aLocalizedConfigHelp;
-					if(pLocalizedHelp == nullptr)
-						pLocalizedHelp = Localize(pCommandHelp);
-					const char *pLocalizedParams = Localize(pCommandParams);
-					str_format(aBuf, sizeof(aBuf), Localize("Help: %s"), pLocalizedHelp);
-					TextRender()->TextEx(&Info.m_Cursor, aBuf, -1);
+					// 帮助与用法拆成两段：帮助按可用宽度换行（最多两行），
+					// 用法固定跟在下方一行并省略超长尾部，不再把两段挤在同一行互相覆盖。
+					const float HintTop = pConsole->m_BoundingBox.m_Y + pConsole->m_BoundingBox.m_H + 4.0f;
+					const float HintWidth = maximum(1.0f, Screen.w - InitialX - 10.0f);
+					CTextCursor HelpCursor;
+					HelpCursor.SetPosition(vec2(InitialX - Info.m_Offset, HintTop));
+					HelpCursor.m_FontSize = FontSize;
+					HelpCursor.m_LineWidth = HintWidth;
+					HelpCursor.m_LineSpacing = ConsoleLineSpacing(FontSize);
+					HelpCursor.m_MaxLines = 2;
+					TextRender()->TextEx(&HelpCursor, aCommandHelpText, -1);
+					// 帮助最多画两行；测量值超过两行时按两行夹紧，
+					// 用法行才不会落到预留区之外压到页脚。
+					const float MeasuredHelpHeight = TextRender()->TextBoundingBox(FontSize, aCommandHelpText, -1, HintWidth, ConsoleLineSpacing(FontSize)).m_H;
+					const float HelpHeight = std::clamp(MeasuredHelpHeight, LineHeight, 2.0f * LineHeight);
+					CTextCursor UsageCursor;
+					UsageCursor.SetPosition(vec2(InitialX - Info.m_Offset, HintTop + HelpHeight));
+					UsageCursor.m_FontSize = FontSize;
+					UsageCursor.m_LineWidth = HintWidth;
+					UsageCursor.m_LineSpacing = ConsoleLineSpacing(FontSize);
+					UsageCursor.m_Flags = TEXTFLAG_DISALLOW_NEWLINE | TEXTFLAG_ELLIPSIS_AT_END;
 					TextRender()->TextColor(0.75f, 0.75f, 0.75f, 1);
-					str_format(aBuf, sizeof(aBuf), Localize("Usage: %s %s"), pConsole->m_pCommandName, pLocalizedParams);
-					TextRender()->TextEx(&Info.m_Cursor, aBuf, -1);
+					TextRender()->TextEx(&UsageCursor, aCommandUsageText, -1);
 				}
 			}
 
@@ -2914,12 +2970,11 @@ void CGameConsole::OnRender()
 				m_ButtonPressPosition, ButtonMousePosition, pConsole->m_MouseIsPress, ButtonReleased, !SettingsOpen && m_ConsoleState == CONSOLE_OPEN,
 				0.0f, LocalConsole ? &Palette : nullptr, AnimationKey, Presence);
 		};
-		const float LinesWidth = LocalConsole ? 0.0f : TextRender()->TextWidth(FontSize, aLinesBuf);
-		float FilterX = LocalConsole ? 10.0f : LinesWidth + 20.0f;
 		const float FilterScale = Toolbar.m_FilterScale;
 		if(LocalConsole)
 		{
 			Ui()->ClipEnable(&HeaderClip);
+			float FilterX = 10.0f;
 			bool HasVisibleFilter = false;
 			for(int i = 0; i < CInstance::LOG_FILTER_BUTTON_COUNT; ++i)
 			{
@@ -2985,45 +3040,6 @@ void CGameConsole::OnRender()
 				}
 			}
 			Ui()->ClipDisable();
-			Ui()->ClipEnable(&ConsoleClip);
-			char aStatus[256];
-			str_copy(aStatus, aLinesBuf);
-			if(pConsole->m_ChatExportMode)
-			{
-				char aExportStatus[128];
-				if(pConsole->m_pChatExportJob)
-				{
-					const auto &Job = *pConsole->m_pChatExportJob;
-					if(Job.m_Queued)
-						str_format(aExportStatus, sizeof(aExportStatus), Localize("Exporting chat images: %d"), Job.m_CompletedPages.load());
-					else
-						str_format(aExportStatus, sizeof(aExportStatus), Localize("Preparing chat export: %d%%"), Job.PreparationPercent());
-				}
-				else
-					str_format(aExportStatus, sizeof(aExportStatus), Localize("Selected %d"), pConsole->SelectedChatExportCount());
-				str_append(aStatus, "  |  ");
-				str_append(aStatus, aExportStatus);
-			}
-			const char *pHints = pConsole->m_ChatExportMode ? "Shift+Mouse1  |  Esc" :
-									  (pConsole->m_SearchInput.IsSearching() ? "Enter / Shift+Enter  |  Esc  |  Ctrl+Mouse1" : "Ctrl+F  |  Alt+1-5  |  PgUp/PgDn  |  End  |  Ctrl+Mouse1");
-			const float HintWidth = TextRender()->TextWidth(FontSize * 0.8f, pHints);
-			const float StatusWidth = TextRender()->TextWidth(FontSize * 0.8f, aStatus);
-			const float HintX = Screen.w - HintWidth - 10.0f;
-			const bool ShowHints = StatusWidth + HintWidth + 30.0f <= Screen.w;
-			const CUIRect StatusRect = {10.0f, ConsoleHeight - FooterHeight, ShowHints ? HintX - 20.0f : maximum(0.0f, Screen.w - 20.0f), FooterHeight};
-			SLabelProperties Props;
-			Props.m_MaxWidth = StatusRect.w;
-			Props.m_EllipsisAtEnd = true;
-			const ColorRGBA PreviousFooterColor = TextRender()->GetTextColor();
-			TextRender()->TextColor(PreviousFooterColor.WithMultipliedAlpha(1.0f - TypeBlend));
-			Ui()->DoLabel(&StatusRect, aStatus, FontSize * 0.8f, TEXTALIGN_ML, Props);
-			if(ShowHints)
-			{
-				const CUIRect HintRect = {HintX, ConsoleHeight - FooterHeight, HintWidth, FooterHeight};
-				Ui()->DoLabel(&HintRect, pHints, FontSize * 0.8f, TEXTALIGN_ML);
-			}
-			TextRender()->TextColor(PreviousFooterColor);
-			Ui()->ClipDisable();
 		}
 		else
 		{
@@ -3040,12 +3056,6 @@ void CGameConsole::OnRender()
 				str_copy(aVersion, "v" GAME_VERSION " on " CONF_PLATFORM_STRING " " CONF_ARCH_STRING);
 				const float VersionWidth = TextRender()->TextWidth(FontSize, aVersion);
 				const bool ShowVersion = VersionWidth + 20.0f <= Screen.w - ToolbarRightMargin;
-				SLabelProperties Props;
-				Props.m_EllipsisAtEnd = true;
-				CUIRect StatusRect = {10.0f + HeaderSlide, 0.0f,
-					maximum(0.0f, Screen.w - 20.0f - HeaderSlide - (ShowVersion ? VersionWidth + 12.0f : 0.0f)), HeaderLineHeight};
-				Props.m_MaxWidth = StatusRect.w;
-				Ui()->DoLabel(&StatusRect, aLinesBuf, FontSize, TEXTALIGN_ML, Props);
 				if(ShowVersion)
 				{
 					const CUIRect VersionRect = {0.0f, 0.0f, maximum(0.0f, Screen.w - ToolbarRightMargin - 10.0f - HeaderSlide), HeaderLineHeight};
@@ -3086,6 +3096,50 @@ void CGameConsole::OnRender()
 				}
 			}
 			TextRender()->TextColor(PreviousHeaderColor);
+			Ui()->ClipDisable();
+		}
+
+		// 本地/远程共用同一条页脚状态行：行号 + 跟随状态固定在左下，
+		// 快捷键提示固定在右下。远程不再把这段信息塞进左上头部，
+		// 两种控制台切换时同一份信息只换位置、不换语义。
+		if(FooterPanelHeight > 0.5f)
+		{
+			Ui()->ClipEnable(&ConsoleClip);
+			char aStatus[256];
+			str_copy(aStatus, aLinesBuf);
+			if(pConsole->m_ChatExportMode)
+			{
+				char aExportStatus[128];
+				if(pConsole->m_pChatExportJob)
+				{
+					const auto &Job = *pConsole->m_pChatExportJob;
+					if(Job.m_Queued)
+						str_format(aExportStatus, sizeof(aExportStatus), Localize("Exporting chat images: %d"), Job.m_CompletedPages.load());
+					else
+						str_format(aExportStatus, sizeof(aExportStatus), Localize("Preparing chat export: %d%%"), Job.PreparationPercent());
+				}
+				else
+					str_format(aExportStatus, sizeof(aExportStatus), Localize("Selected %d"), pConsole->SelectedChatExportCount());
+				str_append(aStatus, "  |  ");
+				str_append(aStatus, aExportStatus);
+			}
+			const char *pHints = pConsole->m_ChatExportMode ? "Shift+Mouse1  |  Esc" :
+									  (pConsole->m_SearchInput.IsSearching() ? "Enter / Shift+Enter  |  Esc  |  Ctrl+Mouse1" :
+														  (LocalConsole ? "Ctrl+F  |  Alt+1-5  |  PgUp/PgDn  |  End  |  Ctrl+Mouse1" : "Ctrl+F  |  PgUp/PgDn  |  End  |  Ctrl+Mouse1"));
+			const float HintWidth = TextRender()->TextWidth(FontSize * 0.8f, pHints);
+			const float StatusWidth = TextRender()->TextWidth(FontSize * 0.8f, aStatus);
+			const float HintX = Screen.w - HintWidth - 10.0f;
+			const bool ShowHints = StatusWidth + HintWidth + 30.0f <= Screen.w;
+			const CUIRect StatusRect = {10.0f, FooterPanelY, ShowHints ? HintX - 20.0f : maximum(0.0f, Screen.w - 20.0f), FooterPanelHeight};
+			SLabelProperties Props;
+			Props.m_MaxWidth = StatusRect.w;
+			Props.m_EllipsisAtEnd = true;
+			Ui()->DoLabel(&StatusRect, aStatus, FontSize * 0.8f, TEXTALIGN_ML, Props);
+			if(ShowHints)
+			{
+				const CUIRect HintRect = {HintX, FooterPanelY, HintWidth, FooterPanelHeight};
+				Ui()->DoLabel(&HintRect, pHints, FontSize * 0.8f, TEXTALIGN_ML);
+			}
 			Ui()->ClipDisable();
 		}
 	}
@@ -3172,6 +3226,40 @@ bool CGameConsole::OnInput(const IInput::CEvent &Event)
 	}
 
 	return true;
+}
+
+void CGameConsole::RegisterStartMenuToggle(const void *pButtonId, const CUIRect &Rect)
+{
+	m_StartMenuToggle.m_pButtonId = pButtonId;
+	m_StartMenuToggle.m_Rect = Rect;
+	m_StartMenuToggle.m_Frame = Client()->PerfFrame();
+	m_StartMenuToggle.m_Valid = pButtonId != nullptr && Rect.w > 0.0f && Rect.h > 0.0f;
+}
+
+void CGameConsole::UpdateStartMenuToggle()
+{
+	// 注册来自主页本帧的背景渲染趟，控制台渲染在其后，因此这里的矩形就是
+	// 当前帧画出的按钮。帧号不符说明主页本帧没有画它（例如已切到服务器列表），
+	// 旧矩形不能继续当作点击目标。
+	// 本地控制台全屏时按钮被面板盖住，不能再把面板上的点击当成按钮。
+	const CUIRect *pScreen = Ui()->Screen();
+	const bool BelowPanel = QmConsoleUi::StartMenuToggleVisibleBelowPanel(m_StartMenuToggle.m_Rect.y, pScreen->h,
+		m_ConsoleType == CONSOLETYPE_LOCAL && m_LocalConsoleFullscreen);
+	const bool Registered = m_StartMenuToggle.m_Valid && m_StartMenuToggle.m_Frame == Client()->PerfFrame() && BelowPanel;
+	const bool Blocked = ConsoleSettingsOpen();
+	const bool Inside = Registered && !Blocked && m_StartMenuToggle.m_Rect.Inside(Ui()->MousePos());
+	const bool Down = Registered && !Blocked && Ui()->MouseButton(0) != 0;
+	const bool PressedThisFrame = Registered && !Blocked && Ui()->MouseButtonClicked(0) != 0;
+	if(Inside && PressedThisFrame)
+		Ui()->SetActiveItem(m_StartMenuToggle.m_pButtonId);
+	const bool Activate = m_StartMenuTogglePress.Update(Inside, Down, PressedThisFrame);
+	m_StartMenuToggleHovered = Inside;
+	if(!Activate)
+		return;
+	if(Ui()->ActiveItem() == m_StartMenuToggle.m_pButtonId)
+		Ui()->SetActiveItem(nullptr);
+	// 与键盘 F1/F2 共用同一条状态机：OPENING 中按下会转收起，CLOSING 中按下会弹回。
+	Toggle(m_ConsoleType);
 }
 
 void CGameConsole::Toggle(int Type)

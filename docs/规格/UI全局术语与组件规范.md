@@ -191,9 +191,22 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 
 ### 2.8e 控制台类型切换与远程头部（console type switch）
 
-- 定义：本地/远程控制台是同一面板的两种内容；切换时背景、边框、阴影和顶部栏按同一条 0→1 混合轨道过渡，远程头部文本单独走存在度入场/出场；类型混合轨道从当前值续接，F1/F2 切换时头部重新入场。
+- 定义：本地/远程控制台是同一面板的两种内容；切换时背景、边框、阴影和顶部栏按同一条 0→1 混合轨道过渡，远程头部文本单独走存在度入场/出场；类型混合轨道从当前值续接，F1/F2 切换时头部重新入场。远程与本地共用同一档 `qm_console_font_size` 字号，日志、头部、页脚不再各用一套字号。
 - 唯一实现：`QmConsoleUi::ResolveConsoleTypeBlend`、`QmConsoleUi::MixColor`（`src/game/client/QmUi/QmConsoleUi.h`）；远程头部存在度 `QmConsoleUi::CToolbarPresenceMotion<1>`（`CGameConsole::m_HeaderPresenceMotion`）；调用点 `CGameConsole::OnRender`、`CGameConsole::Toggle`（`src/game/client/components/console.cpp`）。类型混合取 `ui_token::motion::TAB_SWITCH`，头部取 `ui_token::motion::NAVIGATION_APPEAR`。
-- 禁止的反面写法：本地/远程整块硬切；一个 `ALPHA` 轨道同时承担类型混合和头部显隐；远程顶部用裸 `TextRender()->Text` 直接瞬移；切换时把两份日志同时画出做交叉淡化；远程与本地各写一套顶栏行高或文字基线；顶栏/页脚固定高度不跟 `ConsoleHeight` 收缩（主体已收起，横条还留在屏幕上）。
+- 远程角色色：`ui_token::console_remote`（`src/game/client/QmUi/UiTokens.h`）只放远程背板、边框、投影三档灰紫/玫红，属于远程状态的角色色，不是玩家逐项配置项。
+- 禁止的反面写法：本地/远程整块硬切；一个 `ALPHA` 轨道同时承担类型混合和头部显隐；远程顶部用裸 `TextRender()->Text` 直接瞬移；切换时把两份日志同时画出做交叉淡化；远程与本地各写一套顶栏行高、文字基线或字号；远程固定写死 `10` 或另抄一套 `ColorRGBA(0.4f, 0.2f, 0.2f, ...)` 暗红；顶栏/页脚固定高度不跟 `ConsoleHeight` 收缩（主体已收起，横条还留在屏幕上）。
+
+### 2.8f 控制台页脚状态行与输入提示区（console footer / hint block）
+
+- 定义：本地与远程控制台共用同一条底部页脚：左侧固定为 `行 x - y（当前/已锁定）`，右侧为快捷键提示；远程不再把这段信息放在左上头部。输入行下方的提示区按本帧真实内容动态占位：空输入为 0 行，搜索匹配为 1 行，命令帮助按可用宽度换行（最多 2 行）并与用法各占一行，合计最多 3 行。
+- 唯一实现：`QmConsoleUi::ResolveConsoleHintReserve`（`src/game/client/QmUi/QmConsoleUi.h`）；页脚与提示绘制调用点 `CGameConsole::OnRender`（`src/game/client/components/console.cpp`）。
+- 禁止的反面写法：远程与本地各写一条状态行或各用一套页脚高度；空输入仍固定预留提示行；把 `帮助:` 与 `用法:` 串在同一行互相覆盖；提示换行后越过页脚；为提示区另写一套行高/留白常量。
+
+### 2.8g 终端按钮折返手势（start menu console toggle）
+
+- 定义：主页右下角终端按钮在控制台打开/关闭动画期间仍可点按；主页每帧把按钮的真实命中矩形登记给控制台，控制台在自己的输入趟按「按钮内按下、按钮内释放」判定一次开关，因此动画中每次释放都能折返，且不会把打开动画首帧的同一次点击立刻又关掉。
+- 唯一实现：`QmConsoleUi::CStartMenuTogglePress`（`src/game/client/QmUi/QmConsoleUi.h`）、`CGameConsole::RegisterStartMenuToggle` / `CGameConsole::UpdateStartMenuToggle`（`src/game/client/components/console.cpp`）；登记点 `CMenusStart::RenderStartMenuImpl`（`src/game/client/components/menus_start.cpp`）。
+- 禁止的反面写法：动画期间直接让主页跳过输入（按钮永远点不到）；在主页背景渲染趟直接处理点击（同一次点击被控制台和主页各算一次）；按下发生在控制台激活之前也算作折返；按钮矩形跨帧复用导致切页后误点。
 
 ### 2.19 圆角与胶囊（radius / capsule）
 

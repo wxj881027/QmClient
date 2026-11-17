@@ -272,6 +272,49 @@ namespace QmConsoleUi
 		return SeparatorY - std::max(3.0f, FontSize * 0.35f);
 	}
 
+	// 输入行下方提示区只在真的有提示时占位：空输入不预留，
+	// 搜索匹配占一行，命令帮助 + 用法最多占三行。
+	// 返回 0 时日志区可以一直延伸到输入行上方，不再留下一条永久空白。
+	inline float ResolveConsoleHintReserve(float FontSize, int Lines)
+	{
+		if(FontSize <= 0.0f || Lines <= 0)
+			return 0.0f;
+		return (FontSize + 4.0f) * std::clamp(Lines, 0, 3);
+	}
+
+	// 主页右下角终端按钮在控制台开合动画期间仍要能点按：
+	// 只认「在按钮内按下、并在按钮内释放」的手势；动画中每次释放都能折返。
+	// 按下发生在控制台激活之前时不接管，避免打开动画首帧被同一次点击立刻关掉。
+	class CStartMenuTogglePress
+	{
+		bool m_Pressed = false;
+
+	public:
+		bool Update(bool Inside, bool Down, bool PressedThisFrame)
+		{
+			if(m_Pressed)
+			{
+				if(Down)
+					return false;
+				m_Pressed = false;
+				return Inside;
+			}
+			if(Inside && Down && PressedThisFrame)
+				m_Pressed = true;
+			return false;
+		}
+		bool Pressed() const { return m_Pressed; }
+		void Reset() { m_Pressed = false; }
+	};
+
+	// 全屏本地控制台会盖住主页右下角按钮：此时该位置属于面板，
+	// 不能继续把面板上的点击透传给终端按钮。
+	inline bool StartMenuToggleVisibleBelowPanel(float ToggleTop, float ScreenHeight, bool Fullscreen)
+	{
+		const float MaxPanelHeight = Fullscreen ? ScreenHeight : ScreenHeight * 3.0f / 5.0f;
+		return ToggleTop >= MaxPanelHeight;
+	}
+
 	// 使用公共可打断动画轨道，禁用标识与标签位置共用同一个进度。
 	inline float ResolveFilterDisabled(CQmAnimationBackend *pRuntime, uint64_t NodeKey, bool Selected)
 	{

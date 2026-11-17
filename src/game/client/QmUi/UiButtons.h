@@ -63,7 +63,7 @@ namespace ui_widget
 		const void *m_pUser = nullptr;
 	};
 
-	int DoIconButton(const IUiContext &Ctx, const void *pId, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect &Rect, unsigned Flags, int Corners = IGraphics::CORNER_ALL, bool Enabled = true, std::optional<ColorRGBA> Color = std::nullopt, bool ShowSlash = false, bool TransparentInactive = false, const CUIRect *pHitRect = nullptr, const SIconButtonIconDraw *pIconDraw = nullptr);
+	int DoIconButton(const IUiContext &Ctx, const void *pId, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect &Rect, unsigned Flags, int Corners = IGraphics::CORNER_ALL, bool Enabled = true, std::optional<ColorRGBA> Color = std::nullopt, bool ShowSlash = false, bool TransparentInactive = false, const CUIRect *pHitRect = nullptr, const SIconButtonIconDraw *pIconDraw = nullptr, std::optional<bool> HoveredOverride = std::nullopt);
 
 	// 主按钮使用主题强调色；禁用时保留外形并停止交互。
 	bool PrimaryButton(const IUiContext &Ctx, CButtonContainer *pBtn, const char *pText, const CUIRect &Rect, bool Disabled = false, EUiButtonGeometry Geometry = EUiButtonGeometry::CONTROL);

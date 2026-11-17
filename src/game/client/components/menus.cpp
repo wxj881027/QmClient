@@ -1417,16 +1417,16 @@ int CMenus::DoButton_Menu(CButtonContainer *pButtonContainer, const char *pText,
 	return DoButton_MenuInternal(pButtonContainer, pText, EQmIcon::COUNT, nullptr, Checked, pRect, Flags, pImageName, Corners, Rounding, FontFactor, Color, pTextUiElement, TextFontSize, nullptr, pUnscaledRect, pSurfaceColor);
 }
 
-int CMenus::DoButton_Menu_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize)
+int CMenus::DoButton_Menu_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize, std::optional<bool> HoveredOverride)
 {
 	const CUIRect ButtonRect = QmUiSquareIconButtonRect(*pRect);
-	return DoButton_MenuInternal(pButtonContainer, nullptr, Icon, pFallbackIcon, Checked, &ButtonRect, Flags, pImageName, Corners, Rounding, FontFactor, Color, pTextUiElement, TextFontSize);
+	return DoButton_MenuInternal(pButtonContainer, nullptr, Icon, pFallbackIcon, Checked, &ButtonRect, Flags, pImageName, Corners, Rounding, FontFactor, Color, pTextUiElement, TextFontSize, nullptr, nullptr, nullptr, HoveredOverride);
 }
 
-int CMenus::DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize, const IGraphics::CTextureHandle *pIconTexture, const CUIRect *pUnscaledRect, const ColorRGBA *pSurfaceColor)
+int CMenus::DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize, const IGraphics::CTextureHandle *pIconTexture, const CUIRect *pUnscaledRect, const ColorRGBA *pSurfaceColor, std::optional<bool> HoveredOverride)
 {
 	if(Icon != EQmIcon::COUNT && (pText == nullptr || pText[0] == '\0') && pImageName == nullptr && pIconTexture == nullptr)
-		return ui_widget::DoIconButton(ui_widget::ControlContext(Ui()), pButtonContainer, Icon, pFallbackIcon, Checked, *pRect, Flags, Corners);
+		return ui_widget::DoIconButton(ui_widget::ControlContext(Ui()), pButtonContainer, Icon, pFallbackIcon, Checked, *pRect, Flags, Corners, true, std::nullopt, false, false, nullptr, nullptr, HoveredOverride);
 	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
 	CUIRect Text = *pRect;
 	ui_widget::SButtonSurfaceOptions Options;
