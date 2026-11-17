@@ -17,6 +17,7 @@
 
 #include <generated/protocol.h>
 
+#include <game/client/QmUi/AntiPingPlayersSettings.h>
 #include <game/client/QmUi/QmAnimResolve.h>
 #include <game/client/QmUi/QmCardRegistry.h>
 #include <game/client/QmUi/QmUiPerf.h>
@@ -334,6 +335,7 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 			CPerfTimer PredictionSectionTimer;
 			const float FrameDt = GameClient()->UiRuntimeV2()->FrameDt();
 			const int MotionLevel = g_Config.m_QmUiMotionLevel;
+			const float AntiPingPlayersHeight = ResolveSettingsRadioRowLayout(ContentRect, 3, DDNetMetrics).m_Height;
 
 			// 预测余量：标签用新名，旧名「预测边距 / prediction margin」与配置名进 tooltip，
 			// 玩家按旧文档搜索时仍能对上号。
@@ -356,11 +358,32 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 			static SettingsDependentRows s_AntiPingRows;
 			if(const auto AntiPingRows = s_AntiPingRows.Reveal(Ui(), Flow, g_Config.m_ClAntiPing != 0, FrameDt, MotionLevel))
 			{
-				if(Flow.Control("anti-ping-players", DDNetMetrics.m_LineHeight, Button))
+				if(Flow.Control("anti-ping-players", AntiPingPlayersHeight, Button))
 				{
-					if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_ClAntiPingPlayers, "AntiPing: predict other players", Localize("AntiPing: predict other players"), g_Config.m_ClAntiPingPlayers, &Button) && CanCommit)
+					int Choice = QmAntiPingPlayersSettings::BaseChoice(g_Config.m_ClAntiPingPlayers);
+					if(DoSettingsLine_RadioMenu(SETTINGS_DDNET, -1, -1, Button, "anti-ping-players-label", Localize("AntiPing: predict other players"),
+						   m_vButtonContainersAntiPingPlayers,
+						   {"anti-ping-players-off", "anti-ping-players-all", "anti-ping-players-interact"},
+						   {Localize("Off", "AntiPing: predict other players"), Localize("All", "AntiPing: predict other players"), Localize("Interact", "AntiPing: predict other players")},
+						   {QmAntiPingPlayersSettings::OFF, QmAntiPingPlayersSettings::ALL, QmAntiPingPlayersSettings::INTERACT},
+						   Choice, DDNetMetrics, nullptr, &g_Config.m_ClAntiPingPlayers) &&
+						CanCommit)
 					{
-						g_Config.m_ClAntiPingPlayers ^= 1;
+						g_Config.m_ClAntiPingPlayers = QmAntiPingPlayersSettings::ApplyBaseChoice(g_Config.m_ClAntiPingPlayers, Choice);
+					}
+				}
+				// 冻结玩家是 Interact 档的从属行：选 Off / All 时不参与布局、不占高。
+				static SettingsDependentRows s_AntiPingFrozenRows;
+				if(const auto AntiPingFrozenRows = s_AntiPingFrozenRows.Reveal(Ui(), Flow, QmAntiPingPlayersSettings::ShowsFrozenOption(g_Config.m_ClAntiPingPlayers), FrameDt, MotionLevel))
+				{
+					if(Flow.Control("anti-ping-players-frozen", DDNetMetrics.m_LineHeight, Button, ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing)))
+					{
+						static CButtonContainer s_AntiPingFrozenId;
+						const bool FrozenOption = QmAntiPingPlayersSettings::FrozenOptionEnabled(g_Config.m_ClAntiPingPlayers);
+						if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &s_AntiPingFrozenId, "anti-ping-players-frozen", Localize("Always predict frozen players", "AntiPing: predict other players"), FrozenOption, &Button) && CanCommit)
+						{
+							g_Config.m_ClAntiPingPlayers = QmAntiPingPlayersSettings::ApplyFrozenOption(g_Config.m_ClAntiPingPlayers, !FrozenOption);
+						}
 					}
 				}
 				if(Flow.Control("anti-ping-weapons", DDNetMetrics.m_LineHeight, Button, ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing)))

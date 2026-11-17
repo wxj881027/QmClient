@@ -17589,7 +17589,7 @@ Wheel label
 == ホイールの表示名
 
 Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
-== Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
+== ホイールのスクロール感：0=オリジナル（1ティックごとにリセット）、1=スムーズ（速度を引き継ぐ）、2=スプリング
 
 Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
 == ホイール1刻みのUIピクセル移動量。設定カードのページは各刻みでこの値の12倍移動
@@ -18190,6 +18190,22 @@ Zoom to current mouse target
 
 ⚠️ FTAPI is a free service. Excessive use may cause service suspension.
 == ⚠️ FTAPI は無料サービスです。過度に使用するとサービスが停止される可能性があります。
+
+[AntiPing: predict other players]
+All
+== すべて
+
+[AntiPing: predict other players]
+Always predict frozen players
+== 凍結中のプレイヤーを常に予測
+
+[AntiPing: predict other players]
+Interact
+== インタラクション
+
+[AntiPing: predict other players]
+Off
+== オフ
 
 [Assets editor blend mode]
 Color

@@ -4766,6 +4766,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   set(TESTS
     src/test/unit/qmclient/settings/qm_card_wiki_test.cpp
     src/test/unit/qmclient/settings/qm_wiki_markdown_test.cpp
+    src/test/unit/qmclient/settings/qm_anti_ping_players_settings_test.cpp
     src/test/integration/qmclient/settings/qm_wiki_editor_test.cpp
     src/test/unit/qmclient/ui/settings_card_info_test.cpp
     src/test/unit/qmclient/ui/qm_list_entry_animation_test.cpp

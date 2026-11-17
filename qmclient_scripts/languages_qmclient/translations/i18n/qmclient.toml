@@ -40096,6 +40096,22 @@ turkish = "Başlık stilini düzenle"
 polish = "Edytuj styl tytułu"
 
 [[message]]
+key = "Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring"
+[message.translations]
+simplified_chinese = "滚轮手感：0=原始（每格重新开始），1=平滑（速度延续），2=弹簧"
+traditional_chinese = "滾輪手感：0=原始（每格重新開始），1=平滑（速度延續），2=彈簧"
+japanese = "ホイールのスクロール感：0=オリジナル（1ティックごとにリセット）、1=スムーズ（速度を引き継ぐ）、2=スプリング"
+korean = "휠 스크롤 감도: 0=원본(각 틱마다 재시작), 1=부드럽게(속도 유지), 2=스프링"
+russian = "Ощущение прокрутки колесом: 0=Оригинал (сбрасывается на каждом тике), 1=Плавно (скорость сохраняется), 2=Пружина"
+german = "Scrollrad-Gefühl: 0=Original (bei jedem Tick neu), 1=Sanft (Geschwindigkeit bleibt erhalten), 2=Feder"
+spanish = "Sensación de la rueda: 0=Original (se reinicia en cada paso), 1=Suave (la velocidad continúa), 2=Resorte"
+french = "Sensation de molette : 0=Original (redémarre à chaque cran), 1=Doux (la vitesse se prolonge), 2=Ressort"
+brazilian_portuguese = "Sensação da roda: 0=Original (reinicia a cada passo), 1=Suave (a velocidade continua), 2=Mola"
+portuguese = "Sensação da roda: 0=Original (reinicia a cada passo), 1=Suave (a velocidade continua), 2=Mola"
+turkish = "Tekerlek hissi: 0=Orijinal (her adımda yeniden başlar), 1=Yumuşak (hız devam eder), 2=Yay"
+polish = "Odczucie przewijania: 0=Oryginalne (reset przy każdym kroku), 1=Gładkie (prędkość jest zachowana), 2=Sprężyna"
+
+[[message]]
 key = "Wheel scroll feel: 0=Smooth (velocity carries over), 1=Original (each tick restarts), 2=Spring"
 [message.translations]
 simplified_chinese = "滚轮手感：0=顺滑（继承速度），1=原版（每档重置），2=弹簧"

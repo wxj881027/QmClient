@@ -2562,6 +2562,7 @@ private:
 	std::vector<CButtonContainer> m_vButtonContainersNamePlateShow = {{}, {}, {}, {}, {}, {}};
 	std::vector<CButtonContainer> m_vButtonContainersNamePlateHookStrongWeakScope = {{}, {}, {}, {}, {}};
 	std::vector<CButtonContainer> m_vButtonContainersNamePlateKeyPresses = {{}, {}, {}, {}};
+	std::vector<CButtonContainer> m_vButtonContainersAntiPingPlayers = {{}, {}, {}};
 	class CSkinQueuePresetRenamePopupContext : public SPopupMenuId
 	{
 	public:

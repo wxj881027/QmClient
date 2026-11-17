@@ -17589,7 +17589,7 @@ Wheel label
 == Nome na roda
 
 Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
-== Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
+== Sensação da roda: 0=Original (reinicia a cada passo), 1=Suave (a velocidade continua), 2=Mola
 
 Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
 == Passo da roda em pixels da interface; páginas de configurações rolam 12 vezes esse valor por passo
@@ -18190,6 +18190,22 @@ Zoom to current mouse target
 
 ⚠️ FTAPI is a free service. Excessive use may cause service suspension.
 == ⚠️ FTAPI é um serviço gratuito. O uso excessivo pode causar suspensão do serviço.
+
+[AntiPing: predict other players]
+All
+== Todos
+
+[AntiPing: predict other players]
+Always predict frozen players
+== Sempre prever jogadores congelados
+
+[AntiPing: predict other players]
+Interact
+== Interações
+
+[AntiPing: predict other players]
+Off
+== Desligado
 
 [Assets editor blend mode]
 Color

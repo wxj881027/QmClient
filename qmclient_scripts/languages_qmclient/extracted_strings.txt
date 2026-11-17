@@ -1271,8 +1271,8 @@ DDNet Client needs to be restarted to complete update!
 DDNet contributors and staff credits
 DDNet Memory
 DDNet memory
+DDNet official installer
 DDNet points
-DDNet releases
 DDNet settings sub-tab: 0=general, 1=network compensation
 DDNet staff
 DDNet Website
@@ -6282,6 +6282,10 @@ Zoom is allowed on this server.
 Zoom out
 Zoom to current mouse target
 ⚠️ FTAPI is a free service. Excessive use may cause service suspension.
+[AntiPing: predict other players]	All
+[AntiPing: predict other players]	Always predict frozen players
+[AntiPing: predict other players]	Interact
+[AntiPing: predict other players]	Off
 [Assets editor blend mode]	Color
 [Assets editor blend mode]	Color Burn
 [Assets editor blend mode]	Color Dodge

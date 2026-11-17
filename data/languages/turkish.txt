@@ -17589,7 +17589,7 @@ Wheel label
 == Çark etiketi
 
 Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
-== Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
+== Tekerlek hissi: 0=Orijinal (her adımda yeniden başlar), 1=Yumuşak (hız devam eder), 2=Yay
 
 Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
 == Tekerlek kademesi başına arayüz pikseli; ayar kartı sayfaları her kademede bu değerin 12 katı kayar
@@ -18190,6 +18190,22 @@ Zoom to current mouse target
 
 ⚠️ FTAPI is a free service. Excessive use may cause service suspension.
 == ⚠️ FTAPI ücretsiz bir hizmettir. Aşırı kullanım hizmetin askıya alınmasına neden olabilir.
+
+[AntiPing: predict other players]
+All
+== Tümü
+
+[AntiPing: predict other players]
+Always predict frozen players
+== Donmuş oyuncuları her zaman tahmin et
+
+[AntiPing: predict other players]
+Interact
+== Etkileşim
+
+[AntiPing: predict other players]
+Off
+== Kapalı
 
 [Assets editor blend mode]
 Color

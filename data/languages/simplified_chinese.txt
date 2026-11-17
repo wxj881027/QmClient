@@ -18234,7 +18234,7 @@ Wheel label
 == 轮盘显示名称
 
 Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
-== Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
+== 滚轮手感：0=原始（每格重新开始），1=平滑（速度延续），2=弹簧
 
 Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
 == 滚轮每格的界面像素步长；设置卡片页面每格滚动此值的 12 倍
@@ -18850,6 +18850,22 @@ Zoom to current mouse target
 
 ⚠️ FTAPI is a free service. Excessive use may cause service suspension.
 == ⚠️ FTAPI 是免费服务，过度使用可能导致服务暂停
+
+[AntiPing: predict other players]
+All
+== 全体
+
+[AntiPing: predict other players]
+Always predict frozen players
+== 始终预测冻结玩家
+
+[AntiPing: predict other players]
+Interact
+== 交互
+
+[AntiPing: predict other players]
+Off
+== 关
 
 [Assets editor blend mode]
 Color

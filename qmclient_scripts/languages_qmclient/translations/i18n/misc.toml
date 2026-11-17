@@ -1919,6 +1919,74 @@ turkish = "DF"
 polish = "DF"
 
 [[message]]
+key = "All"
+context = "AntiPing: predict other players"
+[message.translations]
+simplified_chinese = "全体"
+traditional_chinese = "全體"
+japanese = "すべて"
+korean = "모두"
+russian = "Все"
+german = "Alle"
+spanish = "Todos"
+french = "Tous"
+brazilian_portuguese = "Todos"
+portuguese = "Todos"
+turkish = "Tümü"
+polish = "Wszyscy"
+
+[[message]]
+key = "Always predict frozen players"
+context = "AntiPing: predict other players"
+[message.translations]
+simplified_chinese = "始终预测冻结玩家"
+traditional_chinese = "始終預測凍結玩家"
+japanese = "凍結中のプレイヤーを常に予測"
+korean = "얼어붙은 플레이어를 항상 예측"
+russian = "Всегда предсказывать замороженных игроков"
+german = "Eingefrorene Spieler immer vorhersagen"
+spanish = "Predecir siempre a los jugadores congelados"
+french = "Toujours prédire les joueurs gelés"
+brazilian_portuguese = "Sempre prever jogadores congelados"
+portuguese = "Prever sempre jogadores congelados"
+turkish = "Donmuş oyuncuları her zaman tahmin et"
+polish = "Zawsze przewiduj zamrożonych graczy"
+
+[[message]]
+key = "Interact"
+context = "AntiPing: predict other players"
+[message.translations]
+simplified_chinese = "交互"
+traditional_chinese = "互動"
+japanese = "インタラクション"
+korean = "상호작용"
+russian = "Взаимодействие"
+german = "Interaktion"
+spanish = "Interactuar"
+french = "Interactions"
+brazilian_portuguese = "Interações"
+portuguese = "Interações"
+turkish = "Etkileşim"
+polish = "Interakcja"
+
+[[message]]
+key = "Off"
+context = "AntiPing: predict other players"
+[message.translations]
+simplified_chinese = "关"
+traditional_chinese = "關"
+japanese = "オフ"
+korean = "끄기"
+russian = "Выкл"
+german = "Aus"
+spanish = "Apagado"
+french = "Inactif"
+brazilian_portuguese = "Desligado"
+portuguese = "Desligado"
+turkish = "Kapalı"
+polish = "Wył."
+
+[[message]]
 key = "Disabled"
 context = "Auto camera"
 [message.translations]

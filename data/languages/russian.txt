@@ -17589,7 +17589,7 @@ Wheel label
 == Название в колесе
 
 Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
-== Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
+== Ощущение прокрутки колесом: 0=Оригинал (сбрасывается на каждом тике), 1=Плавно (скорость сохраняется), 2=Пружина
 
 Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
 == Шаг колёсика в пикселях интерфейса; страницы карточек настроек прокручиваются на 12 таких шагов
@@ -18190,6 +18190,22 @@ Zoom to current mouse target
 
 ⚠️ FTAPI is a free service. Excessive use may cause service suspension.
 == ⚠️ FTAPI — это бесплатный сервис. Чрезмерное использование может привести к приостановке обслуживания.
+
+[AntiPing: predict other players]
+All
+== Все
+
+[AntiPing: predict other players]
+Always predict frozen players
+== Всегда предсказывать замороженных игроков
+
+[AntiPing: predict other players]
+Interact
+== Взаимодействие
+
+[AntiPing: predict other players]
+Off
+== Выкл
 
 [Assets editor blend mode]
 Color
