@@ -2236,7 +2236,7 @@ void CGameConsole::OnRender()
 	// bottom border
 	Graphics()->TextureClear();
 	Graphics()->QuadsBegin();
-	Graphics()->SetColor(BorderColor);
+	Graphics()->SetColor(BorderColor.WithMultipliedAlpha(ConsoleHeightScale));
 	IGraphics::CQuadItem QuadItemBorder(0.0f, ConsoleHeight, Screen.w, 1.0f);
 	Graphics()->QuadsDrawTL(&QuadItemBorder, 1);
 	Graphics()->QuadsEnd();
@@ -2244,9 +2244,14 @@ void CGameConsole::OnRender()
 	// bottom shadow
 	Graphics()->TextureClear();
 	Graphics()->QuadsBegin();
-	Graphics()->SetColor4(ShadowColor, ShadowColor, TransparentColor, TransparentColor);
-	IGraphics::CQuadItem QuadItemShadow(0.0f, ConsoleHeight + 1.0f, Screen.w, 10.0f);
-	Graphics()->QuadsDrawTL(&QuadItemShadow, 1);
+	const float ShadowHeight = 10.0f * ConsoleHeightScale;
+	if(ShadowHeight > 0.5f)
+	{
+		const ColorRGBA ShadowTopColor = ShadowColor.WithMultipliedAlpha(ConsoleHeightScale);
+		Graphics()->SetColor4(ShadowTopColor, ShadowTopColor, TransparentColor, TransparentColor);
+		IGraphics::CQuadItem QuadItemShadow(0.0f, ConsoleHeight + 1.0f, Screen.w, ShadowHeight);
+		Graphics()->QuadsDrawTL(&QuadItemShadow, 1);
+	}
 	Graphics()->QuadsEnd();
 
 	{
