@@ -4,7 +4,7 @@
 
 CEditorImage::CEditorImage(CEditorMap *pMap) :
 	CMapObject(pMap),
-	m_AutoMapper(pMap)
+	m_Automapper(pMap)
 {
 	m_Texture.Invalidate();
 }
@@ -19,7 +19,7 @@ CEditorImage::~CEditorImage()
 void CEditorImage::OnAttach(CEditorMap *pMap)
 {
 	CMapObject::OnAttach(pMap);
-	m_AutoMapper.OnAttach(pMap);
+	m_Automapper.OnAttach(pMap);
 }
 
 void CEditorImage::AnalyseTileFlags()
@@ -55,6 +55,6 @@ void CEditorImage::AnalyseTileFlags()
 void CEditorImage::Free()
 {
 	Graphics()->UnloadTexture(&m_Texture);
-	m_AutoMapper.Unload();
+	m_Automapper.Unload();
 	CImageInfo::Free();
 }
