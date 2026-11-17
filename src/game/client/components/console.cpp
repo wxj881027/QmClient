@@ -1862,6 +1862,20 @@ static uint64_t ConsoleToolbarNodeKey(const char *pScope, int Index)
 	return BuildUiAnimNodeKey(static_cast<uint64_t>(str_quickhash(pScope)), static_cast<uint64_t>(Index + 1));
 }
 
+// 本地/远程是二元混合；远程头部单独一条存在度，开关与类型切换都能从
+// 当前值续接，不把两套布局硬切在同一帧。
+static uint64_t ConsoleTypeBlendNodeKey()
+{
+	static const uint64_t s_NodeKey = BuildUiAnimNodeKey(static_cast<uint64_t>(str_quickhash("qm_console_type_blend")), 0);
+	return s_NodeKey;
+}
+
+static uint64_t ConsoleHeaderNodeKey()
+{
+	static const uint64_t s_NodeKey = BuildUiAnimNodeKey(static_cast<uint64_t>(str_quickhash("qm_console_header_presence")), 0);
+	return s_NodeKey;
+}
+
 // NOLINTNEXTLINE(misc-use-internal-linkage)
 struct CCompletionOptionRenderInfo
 {
@@ -2133,8 +2147,12 @@ void CGameConsole::OnRender()
 #endif
 	const auto Toolbar = QmConsoleUi::LayoutToolbarAnimated(Screen.w - ToolbarRightMargin, TargetFilterWidth, TargetActionWidth,
 		CurrentFilterWidth, CurrentActionWidth, FontSize + 16.0f);
-	const float RowHeight = LocalConsole ? Toolbar.m_Height : FontSize * 2.0f;
-	const float FooterHeight = LocalConsole ? FontSize + 6.0f : 0.0f;
+	const float TypeBlend = QmConsoleUi::ResolveConsoleTypeBlend(pAnimRuntime, ConsoleTypeBlendNodeKey(),
+		m_ConsoleType == CONSOLETYPE_REMOTE, ToolbarMotionEnabled, ui_token::motion::TAB_SWITCH);
+	const float HeaderPresence = m_HeaderPresenceMotion.Resolve(pAnimRuntime, ConsoleHeaderNodeKey(), 0,
+		!LocalConsole && m_ConsoleState != CONSOLE_CLOSING, ToolbarMotionEnabled, ui_token::motion::NAVIGATION_APPEAR);
+	const float RowHeight = LocalConsole ? Toolbar.m_Height : FontSize * 2.0f + 8.0f;
+	const float FooterHeight = (FontSize + 6.0f) * (1.0f - TypeBlend);
 
 	const ColorRGBA PreviousTextColor = TextRender()->GetTextColor();
 	const ColorRGBA PreviousTextOutlineColor = TextRender()->GetTextOutlineColor();
@@ -2159,10 +2177,13 @@ void CGameConsole::OnRender()
 
 	const float ConsoleHeight = ConsoleHeightScale * MaxConsoleHeight;
 
-	const ColorRGBA ShadowColor = LocalConsole ? Palette.m_Shadow : ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f);
+	const ColorRGBA RemoteBackground = ColorRGBA(0.4f, 0.2f, 0.2f, 0.9f);
+	const ColorRGBA RemoteBorder = ColorRGBA(0.2f, 0.1f, 0.1f, 0.9f);
+	const ColorRGBA RemoteShadow = ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f);
+	const ColorRGBA ShadowColor = QmConsoleUi::MixColor(Palette.m_Shadow, RemoteShadow, TypeBlend);
 	const ColorRGBA TransparentColor = ShadowColor.WithAlpha(0.0f);
-	const ColorRGBA aBackgroundColors[NUM_CONSOLETYPES] = {ColorRGBA(0.2f, 0.2f, 0.2f, 0.9f), ColorRGBA(0.4f, 0.2f, 0.2f, 0.9f)};
-	const ColorRGBA aBorderColors[NUM_CONSOLETYPES] = {ColorRGBA(0.1f, 0.1f, 0.1f, 0.9f), ColorRGBA(0.2f, 0.1f, 0.1f, 0.9f)};
+	const ColorRGBA HeaderColor = QmConsoleUi::MixColor(Palette.m_Panel, RemoteBorder, TypeBlend);
+	const ColorRGBA BorderColor = QmConsoleUi::MixColor(Palette.m_Border, RemoteBorder, TypeBlend);
 
 	const int ConsoleStateAtRenderStart = m_ConsoleState;
 	const bool RestoreUiEnabled = Ui()->Enabled();
@@ -2183,26 +2204,32 @@ void CGameConsole::OnRender()
 
 	// 两种控制台均只模糊底层画面一次，各自背板与工具栏不重复模糊。
 	Ui()->RenderGaussianBlur({0.0f, 0.0f, Screen.w, ConsoleHeight}, ConsoleHeightScale, IGraphics::CORNER_NONE, 0.0f);
-	if(LocalConsole)
+	const float LocalBackgroundAlpha = 1.0f - TypeBlend;
+	if(LocalBackgroundAlpha > 0.001f)
 	{
-		QmConsoleUi::DrawPanel(Ui(), {0.0f, 0.0f, Screen.w, ConsoleHeight}, Palette.m_aColors[QmConsoleAppearance::BACKGROUND]);
-		QmConsoleUi::DrawPanel(Ui(), {0.0f, 0.0f, Screen.w, RowHeight}, Palette.m_Panel);
-		QmConsoleUi::DrawPanel(Ui(), {0.0f, ConsoleHeight - FooterHeight, Screen.w, FooterHeight}, Palette.m_Panel);
+		QmConsoleUi::DrawPanel(Ui(), {0.0f, 0.0f, Screen.w, ConsoleHeight},
+			Palette.m_aColors[QmConsoleAppearance::BACKGROUND].WithMultipliedAlpha(LocalBackgroundAlpha));
 	}
-	else
+	if(TypeBlend > 0.001f)
 	{
 		Graphics()->TextureSet(g_pData->m_aImages[IMAGE_BACKGROUND_NOISE].m_Id);
 		Graphics()->QuadsBegin();
-		Graphics()->SetColor(aBackgroundColors[m_ConsoleType]);
+		Graphics()->SetColor(RemoteBackground.WithMultipliedAlpha(TypeBlend));
 		Graphics()->QuadsSetSubset(0, 0, Screen.w / 80.0f, ConsoleHeight / 80.0f);
 		IGraphics::CQuadItem QuadItemBackground(0.0f, 0.0f, Screen.w, ConsoleHeight);
 		Graphics()->QuadsDrawTL(&QuadItemBackground, 1);
 		Graphics()->QuadsEnd();
 	}
+	QmConsoleUi::DrawPanel(Ui(), {0.0f, 0.0f, Screen.w, RowHeight}, HeaderColor);
+	if(FooterHeight > 0.5f)
+	{
+		QmConsoleUi::DrawPanel(Ui(), {0.0f, ConsoleHeight - FooterHeight, Screen.w, FooterHeight},
+			Palette.m_Panel.WithMultipliedAlpha(1.0f - TypeBlend));
+	}
 	// bottom border
 	Graphics()->TextureClear();
 	Graphics()->QuadsBegin();
-	Graphics()->SetColor(LocalConsole ? Palette.m_Border : aBorderColors[m_ConsoleType]);
+	Graphics()->SetColor(BorderColor);
 	IGraphics::CQuadItem QuadItemBorder(0.0f, ConsoleHeight, Screen.w, 1.0f);
 	Graphics()->QuadsDrawTL(&QuadItemBorder, 1);
 	Graphics()->QuadsEnd();
@@ -2972,41 +2999,76 @@ void CGameConsole::OnRender()
 			SLabelProperties Props;
 			Props.m_MaxWidth = StatusRect.w;
 			Props.m_EllipsisAtEnd = true;
+			const ColorRGBA PreviousFooterColor = TextRender()->GetTextColor();
+			TextRender()->TextColor(PreviousFooterColor.WithMultipliedAlpha(1.0f - TypeBlend));
 			Ui()->DoLabel(&StatusRect, aStatus, FontSize * 0.8f, TEXTALIGN_ML, Props);
 			if(ShowHints)
 			{
 				const CUIRect HintRect = {HintX, ConsoleHeight - FooterHeight, HintWidth, FooterHeight};
 				Ui()->DoLabel(&HintRect, pHints, FontSize * 0.8f, TEXTALIGN_ML);
 			}
+			TextRender()->TextColor(PreviousFooterColor);
 		}
 		else
 		{
-			TextRender()->Text(10.0f, FontSize / 2.0f, FontSize, aLinesBuf);
-			if(Client()->ReceivingRconCommands() || Client()->ReceivingMaplist())
+			// 远程头部与本地共用同一条顶栏高度；两行文本按行高居中，
+			// 开关与本地/远程切换都从当前存在度续接，不再整块硬切。
+			const float HeaderLineHeight = RowHeight * 0.5f;
+			const float HeaderSlide = (1.0f - HeaderPresence) * 8.0f;
+			const ColorRGBA PreviousHeaderColor = TextRender()->GetTextColor();
+			TextRender()->TextColor(TextRender()->DefaultTextColor().WithMultipliedAlpha(HeaderPresence));
+			if(HeaderPresence > 0.001f)
 			{
-				const float Percentage = Client()->ReceivingRconCommands() ? Client()->GotRconCommandsPercentage() : Client()->GotMaplistPercentage();
-				SProgressSpinnerProperties ProgressProps;
-				ProgressProps.m_Progress = Percentage;
-				Ui()->RenderProgressSpinner(vec2(Screen.w / 4.0f + FontSize / 2.f, FontSize), FontSize / 2.f, ProgressProps);
-				char aLoading[128];
-				str_copy(aLoading, Client()->ReceivingRconCommands() ? Localize("Loading commands…") : Localize("Loading maps…"));
-				if(Percentage > 0)
+				char aVersion[128];
+				str_copy(aVersion, "v" GAME_VERSION " on " CONF_PLATFORM_STRING " " CONF_ARCH_STRING);
+				const float VersionWidth = TextRender()->TextWidth(FontSize, aVersion);
+				const bool ShowVersion = VersionWidth + 20.0f <= Screen.w - ToolbarRightMargin;
+				SLabelProperties Props;
+				Props.m_EllipsisAtEnd = true;
+				CUIRect StatusRect = {10.0f + HeaderSlide, 0.0f,
+					maximum(0.0f, Screen.w - 20.0f - HeaderSlide - (ShowVersion ? VersionWidth + 12.0f : 0.0f)), HeaderLineHeight};
+				Props.m_MaxWidth = StatusRect.w;
+				Ui()->DoLabel(&StatusRect, aLinesBuf, FontSize, TEXTALIGN_ML, Props);
+				if(ShowVersion)
 				{
-					char aPercentage[8];
-					str_format(aPercentage, sizeof(aPercentage), " %d%%", (int)(Percentage * 100));
-					str_append(aLoading, aPercentage);
+					const CUIRect VersionRect = {0.0f, 0.0f, maximum(0.0f, Screen.w - ToolbarRightMargin - 10.0f - HeaderSlide), HeaderLineHeight};
+					Ui()->DoLabel(&VersionRect, aVersion, FontSize, TEXTALIGN_MR);
 				}
-				TextRender()->Text(Screen.w / 4.0f + FontSize + 2.0f, FontSize / 2.f, FontSize, aLoading);
-			}
-			char aVersion[128];
-			str_copy(aVersion, "v" GAME_VERSION " on " CONF_PLATFORM_STRING " " CONF_ARCH_STRING);
-			const float VersionWidth = TextRender()->TextWidth(FontSize, aVersion);
-			if(FilterX + VersionWidth + 10.0f <= Screen.w - ToolbarRightMargin)
-			{
-				TextRender()->Text(Screen.w - ToolbarRightMargin - VersionWidth - 10.0f, FontSize / 2.0f, FontSize, aVersion);
+
+				const float SecondRowY = HeaderLineHeight;
 				const char *pClientVersion = CLIENT_NAME " " CLIENT_RELEASE_VERSION;
-				TextRender()->Text(Screen.w - ToolbarRightMargin - TextRender()->TextWidth(FontSize, pClientVersion) - 10.0f, FontSize * 2.0f, FontSize, pClientVersion);
+				const float ClientVersionWidth = TextRender()->TextWidth(FontSize, pClientVersion);
+				const bool ShowClientVersion = ShowVersion && ClientVersionWidth + 20.0f <= Screen.w - ToolbarRightMargin;
+				if(Client()->ReceivingRconCommands() || Client()->ReceivingMaplist())
+				{
+					const float Percentage = Client()->ReceivingRconCommands() ? Client()->GotRconCommandsPercentage() : Client()->GotMaplistPercentage();
+					char aLoading[128];
+					str_copy(aLoading, Client()->ReceivingRconCommands() ? Localize("Loading commands…") : Localize("Loading maps…"));
+					if(Percentage > 0)
+					{
+						char aPercentage[8];
+						str_format(aPercentage, sizeof(aPercentage), " %d%%", (int)(Percentage * 100));
+						str_append(aLoading, aPercentage);
+					}
+					const float LoadingX = Screen.w / 4.0f + HeaderSlide;
+					SProgressSpinnerProperties ProgressProps;
+					ProgressProps.m_Progress = Percentage;
+					ProgressProps.m_Color = ColorRGBA(1.0f, 1.0f, 1.0f, HeaderPresence);
+					Ui()->RenderProgressSpinner(vec2(LoadingX + FontSize / 2.0f, SecondRowY + HeaderLineHeight / 2.0f), FontSize / 2.0f, ProgressProps);
+					const float LoadingRight = ShowClientVersion ? Screen.w - ToolbarRightMargin - ClientVersionWidth - 20.0f : Screen.w - 10.0f;
+					const CUIRect LoadingRect = {LoadingX + FontSize + 2.0f, SecondRowY, maximum(0.0f, LoadingRight - LoadingX - FontSize - 12.0f), HeaderLineHeight};
+					SLabelProperties LoadingProps;
+					LoadingProps.m_MaxWidth = LoadingRect.w;
+					LoadingProps.m_EllipsisAtEnd = true;
+					Ui()->DoLabel(&LoadingRect, aLoading, FontSize, TEXTALIGN_ML, LoadingProps);
+				}
+				if(ShowClientVersion)
+				{
+					const CUIRect ClientRect = {0.0f, SecondRowY, maximum(0.0f, Screen.w - ToolbarRightMargin - 10.0f - HeaderSlide), HeaderLineHeight};
+					Ui()->DoLabel(&ClientRect, pClientVersion, FontSize, TEXTALIGN_MR);
+				}
 			}
+			TextRender()->TextColor(PreviousHeaderColor);
 		}
 	}
 
@@ -3105,6 +3167,11 @@ void CGameConsole::Toggle(int Type)
 	if(m_ConsoleType != Type && (m_ConsoleState == CONSOLE_OPEN || m_ConsoleState == CONSOLE_OPENING))
 	{
 		// don't toggle console, just switch what console to use
+		// 类型切换时让新头部从 0 重新入场，并把本地工具栏的存在度归零；
+		// 否则从远程切回本地会直接看到一排已经展开的按钮。
+		m_HeaderPresenceMotion.Reset();
+		m_ToolbarFilterMotion.Reset();
+		m_ToolbarActionMotion.Reset();
 	}
 	else
 	{

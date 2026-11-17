@@ -127,6 +127,29 @@ TEST(QmConsoleUiLayout, OutsideClickCloseDoesNotRestoreStaleDisabledUi)
 	EXPECT_TRUE(QmConsoleUi::RestoreUiEnabledAtFrameEnd(true, true, false));
 }
 
+TEST(QmConsoleUiLayout, ConsoleTypeBlendReversesFromCurrentProgress)
+{
+	const int PreviousMotion = g_Config.m_QmUiMotionLevel;
+	g_Config.m_QmUiMotionLevel = 2;
+	CQmAnimationBackend Runtime;
+	constexpr uint64_t Key = 0x7EA1;
+
+	EXPECT_FLOAT_EQ(QmConsoleUi::ResolveConsoleTypeBlend(&Runtime, Key, false, true, ui_token::motion::TAB_SWITCH), 0.0f);
+	EXPECT_FLOAT_EQ(QmConsoleUi::ResolveConsoleTypeBlend(&Runtime, Key, true, true, ui_token::motion::TAB_SWITCH), 0.0f);
+	Runtime.Advance(0.05f);
+	const float Switching = QmConsoleUi::ResolveConsoleTypeBlend(&Runtime, Key, true, true, ui_token::motion::TAB_SWITCH);
+	EXPECT_GT(Switching, 0.0f);
+	EXPECT_LT(Switching, 1.0f);
+
+	const float Reversed = QmConsoleUi::ResolveConsoleTypeBlend(&Runtime, Key, false, true, ui_token::motion::TAB_SWITCH);
+	EXPECT_NEAR(Reversed, Switching, 0.001f);
+	Runtime.Advance(0.05f);
+	EXPECT_LT(QmConsoleUi::ResolveConsoleTypeBlend(&Runtime, Key, false, true, ui_token::motion::TAB_SWITCH), Reversed);
+
+	EXPECT_FLOAT_EQ(QmConsoleUi::ResolveConsoleTypeBlend(nullptr, Key, true, true, ui_token::motion::TAB_SWITCH), 1.0f);
+	g_Config.m_QmUiMotionLevel = PreviousMotion;
+}
+
 TEST(QmConsoleUiLayout, TextOnlyButtonCentersLabelWithoutReservingIconSlot)
 {
 	const CUIRect Button = {20.0f, 3.0f, 120.0f, 24.0f};

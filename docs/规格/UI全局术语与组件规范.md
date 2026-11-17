@@ -166,6 +166,12 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 - 唯一实现：`QmConsoleUi::CToolbarPresenceMotion`、`QmConsoleUi::LayoutToolbarAnimated`、`QmConsoleUi::ToolbarFlowGap`、`QmConsoleUi::ToolbarFlowWidth`、`QmConsoleUi::ResolveToolbarWidth`、`QmConsoleUi::ResolveConsoleButtonFill`、`QmConsoleUi::Button`（`src/game/client/QmUi/QmConsoleUi.h`）；显隐动效取 `ui_token::motion::NAVIGATION_APPEAR`、文案宽度取 `ui_token::motion::TAB_SWITCH`，调用点 `CGameConsole::OnRender`（`src/game/client/components/console.cpp`）。
 - 禁止的反面写法：动作集合变化时瞬切按钮或只淡文字不缩宽度；把搜索/取消、展开/收起拆成两颗按钮同时一缩一长；用当前动画宽度决定折行；隐藏槽位吞掉左右按钮之间的间距或让间距随存在度缩到 0；选中底色取控制台命令语法色或在调用点写裸 `ColorRGBA`；显隐和选中共用同一条 `ALPHA` 轨道。
 
+### 2.8e 控制台类型切换与远程头部（console type switch）
+
+- 定义：本地/远程控制台是同一面板的两种内容；切换时背景、边框、阴影和顶部栏按同一条 0→1 混合轨道过渡，远程头部文本单独走存在度入场/出场；类型混合轨道从当前值续接，F1/F2 切换时头部重新入场。
+- 唯一实现：`QmConsoleUi::ResolveConsoleTypeBlend`、`QmConsoleUi::MixColor`（`src/game/client/QmUi/QmConsoleUi.h`）；远程头部存在度 `QmConsoleUi::CToolbarPresenceMotion<1>`（`CGameConsole::m_HeaderPresenceMotion`）；调用点 `CGameConsole::OnRender`、`CGameConsole::Toggle`（`src/game/client/components/console.cpp`）。类型混合取 `ui_token::motion::TAB_SWITCH`，头部取 `ui_token::motion::NAVIGATION_APPEAR`。
+- 禁止的反面写法：本地/远程整块硬切；一个 `ALPHA` 轨道同时承担类型混合和头部显隐；远程顶部用裸 `TextRender()->Text` 直接瞬移；切换时把两份日志同时画出做交叉淡化；远程与本地各写一套顶栏行高或文字基线。
+
 ### 2.19 圆角与胶囊（radius / capsule）
 
 - 定义：表面形状只由「半径」决定。半径取控件短边的一半即胶囊端头，取短边一半且宽高相等即正圆；宽度明显大于高度（≥1.8 倍）时按半高取端头。

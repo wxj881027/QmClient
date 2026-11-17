@@ -94,6 +94,31 @@ namespace QmConsoleUi
 		return std::max(0.0f, pRuntime->ResolveTargetValue(NodeKey, EUiAnimProperty::WIDTH, Target, Effective));
 	}
 
+	// 控制台背景/边框/阴影的本地与远程配色只做分量混合，不各自写一套分支。
+	inline ColorRGBA MixColor(const ColorRGBA &From, const ColorRGBA &To, float Amount)
+	{
+		const float T = std::clamp(Amount, 0.0f, 1.0f);
+		return ColorRGBA(mix(From.r, To.r, T), mix(From.g, To.g, T),
+			mix(From.b, To.b, T), mix(From.a, To.a, T));
+	}
+
+	// 本地/远程是二元状态：0 = 本地，1 = 远程。切换时只改目标值，
+	// 由公共动画轨道从当前进度继续；快速 F1/F2 折返不会跳回起点。
+	inline float ResolveConsoleTypeBlend(CQmAnimationBackend *pRuntime, uint64_t NodeKey, bool Remote, bool MotionEnabled, const SUiAnimTransition &Transition)
+	{
+		const float Target = Remote ? 1.0f : 0.0f;
+		if(pRuntime == nullptr || !MotionEnabled)
+		{
+			if(pRuntime != nullptr)
+				pRuntime->SetValue(NodeKey, EUiAnimProperty::ALPHA, Target);
+			return Target;
+		}
+		SUiAnimTransition Effective = Transition;
+		Effective.m_Interrupt = EUiAnimInterruptPolicy::MERGE_TARGET;
+		Effective.m_Priority = std::max(Effective.m_Priority, 2);
+		return std::clamp(pRuntime->ResolveTargetValue(NodeKey, EUiAnimProperty::ALPHA, Target, Effective), 0.0f, 1.0f);
+	}
+
 	// 控制台渲染会临时启用 UI 以便自己处理输入，帧末再恢复进入本帧时的启用态。
 	// 但本帧内状态机若已切换（例如点击面板外，OPEN → CLOSING），Toggle 写入的
 	// 启用态才是正确结果；再用旧值覆盖会让下一帧主菜单一直保持禁用，按钮点不动。

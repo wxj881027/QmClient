@@ -257,6 +257,7 @@ private:
 	vec2 m_ButtonPressPosition = vec2(0.0f, 0.0f);
 	QmConsoleUi::CToolbarPresenceMotion<CInstance::LOG_FILTER_BUTTON_COUNT> m_ToolbarFilterMotion;
 	QmConsoleUi::CToolbarPresenceMotion<TOOLBAR_ACTION_MOTION_COUNT> m_ToolbarActionMotion;
+	QmConsoleUi::CToolbarPresenceMotion<1> m_HeaderPresenceMotion;
 
 	bool DoButton(const CUIRect &Rect, const char *pIcon, vec2 MousePosition, bool Released);
 
