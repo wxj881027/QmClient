@@ -31,14 +31,7 @@ namespace
 	// 胶囊端头：0 = 不启用，非 0 = 直边肩部外鼓。着色器只按是否大于 0 判断。
 	float CapsuleSeam()
 	{
-		// 0 = 普通端头；0.5 = 丝滑（只改直边）；1.0 以上 = 苹果三段式端帽，
-		// 小数部分是它自己的强度（0..1），不与上方「圆角曲率」共用。
-		switch(g_Config.m_QmUiCapsuleStyle)
-		{
-		case 1: return 0.5f;
-		case 2: return 1.0f + std::clamp(g_Config.m_QmUiCapsuleAppleStrength / 100.0f, 0.0f, 1.0f);
-		default: return 0.0f;
-		}
+		return QmEffectiveCapsuleSeam();
 	}
 
 	// 无 SDF 时直接提交小数坐标网格，避免 DrawRect 再次吸附到物理像素。

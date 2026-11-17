@@ -212,7 +212,8 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 
 - 定义：表面形状只由「半径」决定。半径取控件短边的一半即胶囊端头，取短边一半且宽高相等即正圆；宽度明显大于高度（≥1.8 倍）时按半高取端头。
 - 唯一实现：`ui_widget::DrawRoundedSurface`（`src/game/client/QmUi/UiSurface.h`）+ `ResolveRoundedSurfaceCorners`。给了非零半径又传 `IGraphics::CORNER_NONE` 的调用点一律按四角全圆处理。
-- 禁止的反面写法：同时传半径与 `CORNER_NONE` 期望方块（要方块应把半径给 0）；在调用点自行判断走引擎四角接口还是 SDF；把贴图内容裁成胶囊（贴图只做内收缩进圆头）。
+- 胶囊端头档位（capsule seam）：配置项 `qm_ui_capsule_style` 与 `qm_ui_capsule_apple_strength` 只允许经 `QmEffectiveCapsuleSeam()` 换算成 `m_CornerSeam`（0 = 普通端头，0.5 = 丝滑直边，1.0+强度 = 苹果三段式端帽）。该函数与 `QmEffectiveCornerSmoothing()` 并列，任何要画胶囊端头或复制面板圆角掩码的调用点（`DrawRoundedSurface` 内部、模糊掩码、HUD 小地图、作者名牌、地图预览）都取这一个入口。
+- 禁止的反面写法：同时传半径与 `CORNER_NONE` 期望方块（要方块应把半径给 0）；在调用点自行判断走引擎四角接口还是 SDF；把贴图内容裁成胶囊（贴图只做内收缩进圆头）；在调用点重写 `qm_ui_capsule_style == 2 ? 1.0f + ... : (== 1 ? 0.5f : 0.0f)` 这类三元式（分档容易写反，投票页地图预览就曾写成 `== 1 ? 0.0f : 1.0f`，与同屏其余五处端头相反）。
 
 ### 2.15 玩家信息卡（player card）
 

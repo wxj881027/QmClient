@@ -691,7 +691,7 @@ void CUi::RenderGaussianBlur(const CUIRect &Rect, float Alpha, int Corners, floa
 	// 模糊掩码跟着面板用的是同一条圆角曲线，否则角上会漏出没模糊的边。
 	DrawParams.m_CornerSmoothing = QmEffectiveCornerSmoothing();
 	DrawParams.m_CornerCurve = (float)g_Config.m_QmUiCornerCurve;
-	DrawParams.m_CornerSeam = g_Config.m_QmUiCapsuleStyle == 2 ? 1.0f + std::clamp(g_Config.m_QmUiCapsuleAppleStrength / 100.0f, 0.0f, 1.0f) : (g_Config.m_QmUiCapsuleStyle == 1 ? 0.5f : 0.0f);
+	DrawParams.m_CornerSeam = QmEffectiveCapsuleSeam();
 	DrawParams.m_U0 = (MaskRect.x - ScreenX0) / MappedWidth;
 	DrawParams.m_U1 = (MaskRect.x + MaskRect.w - ScreenX0) / MappedWidth;
 	DrawParams.m_V0 = 1.0f - (MaskRect.y - ScreenY0) / MappedHeight;

@@ -38,6 +38,16 @@ inline float QmEffectiveCornerSmoothing()
 	return std::clamp((float)*QmCornerSmoothingForCurve(g_Config.m_QmUiCornerCurve) / 100.0f, 0.0f, 1.0f);
 }
 
+inline float QmEffectiveCapsuleSeam()
+{
+	switch(g_Config.m_QmUiCapsuleStyle)
+	{
+	case 1: return 0.5f;
+	case 2: return 1.0f + std::clamp(g_Config.m_QmUiCapsuleAppleStrength / 100.0f, 0.0f, 1.0f);
+	default: return 0.0f;
+	}
+}
+
 // 普通 UI 圆角必须走 DrawRoundedSurface / CUIRect::Draw 公共路径。
 // 旧直绘路径仅允许用于高频 HUD/聊天/名牌/观战/统计板渲染。
 struct SRoundedSurfaceParams

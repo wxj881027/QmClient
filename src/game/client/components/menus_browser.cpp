@@ -1158,7 +1158,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupMapPreview(void *pContext, CUIRect Vi
 	DrawParams.m_Rounding = ui_token::radius::BASE;
 	DrawParams.m_CornerSmoothing = QmEffectiveCornerSmoothing();
 	DrawParams.m_CornerCurve = (float)g_Config.m_QmUiCornerCurve;
-	DrawParams.m_CornerSeam = g_Config.m_QmUiCapsuleStyle == 2 ? 1.0f + std::clamp(g_Config.m_QmUiCapsuleAppleStrength / 100.0f, 0.0f, 1.0f) : (g_Config.m_QmUiCapsuleStyle == 1 ? 0.5f : 0.0f);
+	DrawParams.m_CornerSeam = QmEffectiveCapsuleSeam();
 	if(Backend == QmDummyMiniViewLayout::EBackend::VULKAN)
 	{
 		DrawParams.m_V0 = 0.0f;
@@ -1281,7 +1281,7 @@ bool CMenus::RenderMapPreviewForVote(const CUIRect &Preview, const char *pMapNam
 	DrawParams.m_Rounding = ui_token::list::RowRadius(DrawRect.h);
 	DrawParams.m_CornerSmoothing = QmEffectiveCornerSmoothing();
 	DrawParams.m_CornerCurve = (float)g_Config.m_QmUiCornerCurve;
-	DrawParams.m_CornerSeam = g_Config.m_QmUiCapsuleStyle == 2 ? 1.0f + std::clamp(g_Config.m_QmUiCapsuleAppleStrength / 100.0f, 0.0f, 1.0f) : (g_Config.m_QmUiCapsuleStyle == 1 ? 0.0f : 1.0f);
+	DrawParams.m_CornerSeam = QmEffectiveCapsuleSeam();
 	Ui()->FlushQuadBatch();
 	Ui()->ClipEnable(&Preview);
 	Graphics()->DrawRenderTarget(pEntry->m_RenderTarget, DrawParams);
