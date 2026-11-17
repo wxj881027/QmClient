@@ -4805,6 +4805,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/ui/qm_ui_tag_test.cpp
     src/test/unit/qmclient/ui/qm_local_map_tags_test.cpp
     src/test/unit/qmclient/ui/qm_media_cover_spin_test.cpp
+    src/test/unit/qmclient/ui/qm_media_session_pick_test.cpp
     src/test/unit/qmclient/ui/qm_button_surface_radius_test.cpp
     src/test/contract/qmclient/client/qm_afk_presentation_contract_test.cpp
     src/test/unit/qmclient/client/qm_blank_asset_fallback_test.cpp

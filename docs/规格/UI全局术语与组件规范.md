@@ -359,6 +359,12 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 - 唯一实现：`SQmMediaCoverSpin` + `QM_MEDIA_COVER_SPIN_PERIOD_SECONDS`（`components/qmclient/media_cover_spin.h`）。时间以秒传入（调用方用 `time_get()/time_freq()` 折算成 double 再转 float），单帧增量上限 0.1s——界面隐藏后第一帧不会突然补上几十度。绘制用 `Graphics()->QuadsSetRotation(angle)` 绕 quad 中心旋转，画完立即归零。
 - 禁止的反面写法：用帧数递增角度（帧率一变转速就变）；暂停时把角度归零（复播会从 0 重新起步）；给无封面的占位音符也加旋转；HUD 与计分板各写一份速率（两处封面会明显不同步）。
 
+### 3.12f 媒体源选择（session picking）
+
+- 定义：同时存在多个媒体会话时，按「正在播放 > 暂停 > 未知 > 停止/关闭」选源，同档保留系统当前会话（不要为了「换而换」来回跳）。状态自称在播、但时间轴超过 5 秒没有更新且时长明确（>1s）的会话，按暂停参与选源——浏览器视频停了以后常见这种「假播放」。该判定**只影响选源**，不改写实际播放状态。
+- 唯一实现：`SystemMediaControls::PickMediaSession` / `MediaTimelineLooksStale` / `ESessionActivity`（`system_media_controls.h`）；Windows SMTC 后端在 `ThreadMain` 里枚举 `GetSessions()` 后调用，MPRIS 后端本来就是同一套优先级。
+- 禁止的反面写法：只信 `Manager.GetCurrentSession()`（浏览器的会话在视频停下后仍会占着「当前」，要等下一次媒体事件、典型是切歌，才让位）；按会话列表顺序取第一个（顺序不保证）；把「时间轴停住」直接当成暂停画出来（会误伤不上报时间轴的播放器）。
+
 ### 3.13 下拉框（Dropdown）
 
 - 定义：触发器 + 浮层列表，浮层底色属于「弹层」层，触发器底色属于「控件」层，搜索与分页由组件内部完成。

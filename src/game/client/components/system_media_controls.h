@@ -33,6 +33,47 @@ namespace SystemMediaControls
 		return std::string_view(pPrevious != nullptr ? pPrevious : "") != std::string_view(pCurrent != nullptr ? pCurrent : "");
 	}
 
+	// 会话活跃度：选源优先级只认这四档。数值只用于比较，不参与任何显示逻辑。
+	enum class ESessionActivity
+	{
+		STOPPED = 0,
+		UNKNOWN = 1,
+		PAUSED = 2,
+		PLAYING = 3,
+	};
+
+	inline int SessionActivityPriority(ESessionActivity Activity)
+	{
+		return static_cast<int>(Activity);
+	}
+
+	// 多个媒体会话里挑一个：分数最高者，同分保留系统当前会话（CurrentIndex），
+	// 当前会话无效时取第一个最高分。返回下标；空列表返回 -1。
+	// 系统的「当前会话」在浏览器视频停下后不会自动让位给另一个正在播放的播放器
+	// （要等下一次媒体事件，典型就是切歌），所以不能只信 GetCurrentSession()。
+	inline int PickMediaSession(const int *pPriorities, int Count, int CurrentIndex)
+	{
+		if(Count <= 0)
+			return -1;
+		int Best = (CurrentIndex >= 0 && CurrentIndex < Count) ? CurrentIndex : 0;
+		for(int i = 0; i < Count; ++i)
+		{
+			if(pPriorities[i] > pPriorities[Best])
+				Best = i;
+		}
+		return Best;
+	}
+
+	// 「状态说在播、时间轴却停住」判定：有明确时长（>1s）且最近一次位置更新时间
+	// 超过 5 秒，按暂停参与选源。只影响选中哪个会话，不改写实际播放状态。
+	inline bool MediaTimelineLooksStale(bool Playing, int64_t DurationMs, int64_t LastUpdatedUtc100ns, int64_t NowUtc100ns)
+	{
+		if(!Playing || DurationMs <= 1000)
+			return false;
+		constexpr int64_t STALE_SECONDS = 5;
+		return NowUtc100ns - LastUpdatedUtc100ns > STALE_SECONDS * 10'000'000LL;
+	}
+
 	inline bool AnyMediaSourceEnabled(bool SmtcEnabled, bool NeteaseHookEnabled)
 	{
 		return SmtcEnabled || NeteaseHookEnabled;
