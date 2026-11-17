@@ -68,7 +68,8 @@ namespace SystemMediaControls
 	// 超过 5 秒，按暂停参与选源。只影响选中哪个会话，不改写实际播放状态。
 	inline bool MediaTimelineLooksStale(bool Playing, int64_t DurationMs, int64_t LastUpdatedUtc100ns, int64_t NowUtc100ns)
 	{
-		if(!Playing || DurationMs <= 1000)
+		// 有的播放器根本不填 LastUpdatedTime（值为 0）：那是「没上报」，不是「很久没更新」。
+		if(!Playing || DurationMs <= 1000 || LastUpdatedUtc100ns <= 0)
 			return false;
 		constexpr int64_t STALE_SECONDS = 5;
 		return NowUtc100ns - LastUpdatedUtc100ns > STALE_SECONDS * 10'000'000LL;

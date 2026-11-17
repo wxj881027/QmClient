@@ -57,4 +57,6 @@ TEST(QmMediaSessionPick, StaleTimelineDemotesFakePlaying)
 	// 没有明确时长（直播/未知）不做判断；暂停状态也不该被误判。
 	EXPECT_FALSE(SystemMediaControls::MediaTimelineLooksStale(true, 0, Now - SixSeconds, Now));
 	EXPECT_FALSE(SystemMediaControls::MediaTimelineLooksStale(false, 180'000, Now - SixSeconds, Now));
+	// 播放器没填 LastUpdatedTime（=0）算「没上报」，不能当成停住了。
+	EXPECT_FALSE(SystemMediaControls::MediaTimelineLooksStale(true, 180'000, 0, Now));
 }
