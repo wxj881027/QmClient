@@ -49,7 +49,7 @@ public:
 private:
 	enum
 	{
-		TOOLBAR_ACTION_MOTION_COUNT = 12,
+		TOOLBAR_ACTION_MOTION_COUNT = 10,
 	};
 
 	friend class CConsoleLogger;

@@ -2023,7 +2023,6 @@ void CGameConsole::OnRender()
 	enum class EToolbarAction
 	{
 		SEARCH,
-		CANCEL_SEARCH,
 		FOLLOW,
 		EXPORT,
 		OPEN_CONFIG_DIR,
@@ -2033,7 +2032,6 @@ void CGameConsole::OnRender()
 		SELECT_CHAT,
 		SETTINGS,
 		EXPAND,
-		COLLAPSE_CONSOLE,
 		COUNT,
 	};
 	static_assert(static_cast<int>(EToolbarAction::COUNT) == TOOLBAR_ACTION_MOTION_COUNT);
@@ -2042,13 +2040,15 @@ void CGameConsole::OnRender()
 		EToolbarAction m_Action;
 		const char *m_pLabel;
 		float m_Width;
+		float m_CurrentWidth;
 		bool m_Selected;
 		bool m_Present;
 		float m_Presence;
 	};
 	std::array<SToolbarAction, TOOLBAR_ACTION_MOTION_COUNT> aActions{};
 	const auto SetAction = [&](EToolbarAction Action, const char *pLabel, bool Present, bool Selected = false) {
-		aActions[static_cast<int>(Action)] = {Action, pLabel, TextRender()->TextWidth(FontSize, pLabel) + FilterPadding * 2.0f, Selected, Present, 0.0f};
+		const float Width = TextRender()->TextWidth(FontSize, pLabel) + FilterPadding * 2.0f;
+		aActions[static_cast<int>(Action)] = {Action, pLabel, Width, Width, Selected, Present, 0.0f};
 	};
 
 	const bool ToolbarTargetVisible = LocalConsole && m_ConsoleState != CONSOLE_CLOSING;
@@ -2059,8 +2059,7 @@ void CGameConsole::OnRender()
 	const bool Searching = pConsole->m_SearchInput.IsSearching();
 	if(LocalConsole)
 	{
-		SetAction(EToolbarAction::SEARCH, Localize("Search"), NormalActions && !Searching);
-		SetAction(EToolbarAction::CANCEL_SEARCH, Localize("Cancel"), NormalActions && Searching, Searching);
+		SetAction(EToolbarAction::SEARCH, Searching ? Localize("Cancel") : Localize("Search"), NormalActions, Searching);
 		SetAction(EToolbarAction::FOLLOW, Localize("Following"), NormalActions, pConsole->m_Scroll.Following());
 		SetAction(EToolbarAction::EXPORT, Localize("Select export"), NormalActions);
 		// 控制台报「failed to open」时，下一步通常是去配置目录里放脚本或改 cfg，
@@ -2071,8 +2070,7 @@ void CGameConsole::OnRender()
 		SetAction(EToolbarAction::CLEAR_EXPORT, Localize("Clear"), ExportActions && !pConsole->m_pChatExportJob);
 		SetAction(EToolbarAction::SELECT_CHAT, Localize("Select all chat"), ExportActions && !pConsole->m_pChatExportJob);
 		SetAction(EToolbarAction::SETTINGS, Localize("Console settings"), ToolbarTargetVisible, SettingsOpen);
-		SetAction(EToolbarAction::EXPAND, Localize("Expand console"), ToolbarTargetVisible && !m_LocalConsoleFullscreen);
-		SetAction(EToolbarAction::COLLAPSE_CONSOLE, Localize("Collapse console"), ToolbarTargetVisible && m_LocalConsoleFullscreen, m_LocalConsoleFullscreen);
+		SetAction(EToolbarAction::EXPAND, m_LocalConsoleFullscreen ? Localize("Collapse console") : Localize("Expand console"), ToolbarTargetVisible, m_LocalConsoleFullscreen);
 	}
 
 	const bool FilterTargetPresent = ToolbarTargetVisible && !ExportMode;
@@ -2111,10 +2109,13 @@ void CGameConsole::OnRender()
 		Action.m_Presence = m_ToolbarActionMotion.Resolve(pAnimRuntime,
 			ConsoleToolbarNodeKey("qm_console_toolbar_action_presence", i), static_cast<size_t>(i),
 			Action.m_Present, ToolbarMotionEnabled, ui_token::motion::NAVIGATION_APPEAR);
+		Action.m_CurrentWidth = QmConsoleUi::ResolveToolbarWidth(pAnimRuntime,
+			ConsoleToolbarNodeKey("qm_console_toolbar_action_width", i), Action.m_Width,
+			ToolbarMotionEnabled, ui_token::motion::TAB_SWITCH);
 		if(Action.m_Presence > 0.001f)
 		{
 			CurrentActionWidth += QmConsoleUi::ToolbarFlowGap(FilterSpacing, HasVisibleAction, Action.m_Presence);
-			CurrentActionWidth += Action.m_Width * Action.m_Presence;
+			CurrentActionWidth += Action.m_CurrentWidth * Action.m_Presence;
 			HasVisibleAction = true;
 		}
 		if(Action.m_Present)
@@ -2163,6 +2164,7 @@ void CGameConsole::OnRender()
 	const ColorRGBA aBackgroundColors[NUM_CONSOLETYPES] = {ColorRGBA(0.2f, 0.2f, 0.2f, 0.9f), ColorRGBA(0.4f, 0.2f, 0.2f, 0.9f)};
 	const ColorRGBA aBorderColors[NUM_CONSOLETYPES] = {ColorRGBA(0.1f, 0.1f, 0.1f, 0.9f), ColorRGBA(0.2f, 0.1f, 0.1f, 0.9f)};
 
+	const int ConsoleStateAtRenderStart = m_ConsoleState;
 	const bool RestoreUiEnabled = Ui()->Enabled();
 	{
 		Ui()->SetEnabled(true);
@@ -2907,14 +2909,13 @@ void CGameConsole::OnRender()
 				const auto &Action = aActions[i];
 				if(Action.m_Presence > 0.001f)
 					ActionX += QmConsoleUi::ToolbarFlowGap(FilterSpacing * Toolbar.m_ActionScale, HasVisibleAction, Action.m_Presence);
-				const float Width = Action.m_Width * Toolbar.m_ActionScale * Action.m_Presence;
+				const float Width = Action.m_CurrentWidth * Toolbar.m_ActionScale * Action.m_Presence;
 				if(Action.m_Presence > 0.001f && ToolbarButton({ActionX, Toolbar.m_SplitRows ? FontSize + 19.0f : 3.0f, Width, FontSize + 10.0f}, Action.m_pLabel, Toolbar.m_ActionScale, Action.m_Selected, ConsoleToolbarNodeKey("qm_console_toolbar_action_selected", i), Action.m_Presence) &&
 					Action.m_Present)
 				{
 					switch(Action.m_Action)
 					{
 					case EToolbarAction::SEARCH: pConsole->SetSearching(!pConsole->m_SearchInput.IsSearching()); break;
-					case EToolbarAction::CANCEL_SEARCH: pConsole->SetSearching(false); break;
 					case EToolbarAction::FOLLOW:
 						// 回到跟随态也走统一滚动：弹簧档会顺着当前方向滑回最新一行。
 						pConsole->m_Scroll.ScrollToNewest();
@@ -2935,7 +2936,6 @@ void CGameConsole::OnRender()
 					}
 					case EToolbarAction::SETTINGS: OpenSettings(); break;
 					case EToolbarAction::EXPAND: m_LocalConsoleFullscreen = !m_LocalConsoleFullscreen; break;
-					case EToolbarAction::COLLAPSE_CONSOLE: m_LocalConsoleFullscreen = false; break;
 					}
 				}
 				if(Action.m_Presence > 0.001f)
@@ -3024,7 +3024,9 @@ void CGameConsole::OnRender()
 	{
 		Ui()->FinishCheck();
 		Ui()->ClearHotkeys();
-		Ui()->SetEnabled(RestoreUiEnabled);
+		const bool UiEnabledAtFrameEnd = Ui()->Enabled();
+		Ui()->SetEnabled(QmConsoleUi::RestoreUiEnabledAtFrameEnd(
+			RestoreUiEnabled, UiEnabledAtFrameEnd, ConsoleStateAtRenderStart != m_ConsoleState));
 	}
 
 	TextRender()->SetRenderFlags(PreviousRenderFlags);

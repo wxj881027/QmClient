@@ -94,6 +94,39 @@ TEST(QmConsoleUiLayout, ToolbarFlowKeepsOneFixedGapAcrossHiddenSlots)
 	EXPECT_FLOAT_EQ(QmConsoleUi::ToolbarFlowWidth(aWidths, aHidden, 4.0f), 0.0f);
 }
 
+TEST(QmConsoleUiLayout, SearchLabelWidthReversesWithoutRestartingItsSlot)
+{
+	const int PreviousMotion = g_Config.m_QmUiMotionLevel;
+	g_Config.m_QmUiMotionLevel = 2;
+	CQmAnimationBackend Runtime;
+	constexpr uint64_t Key = 0x5EA2;
+
+	EXPECT_FLOAT_EQ(QmConsoleUi::ResolveToolbarWidth(&Runtime, Key, 80.0f, true, ui_token::motion::TAB_SWITCH), 80.0f);
+	EXPECT_FLOAT_EQ(QmConsoleUi::ResolveToolbarWidth(&Runtime, Key, 56.0f, true, ui_token::motion::TAB_SWITCH), 80.0f);
+	Runtime.Advance(0.05f);
+	const float Shrinking = QmConsoleUi::ResolveToolbarWidth(&Runtime, Key, 56.0f, true, ui_token::motion::TAB_SWITCH);
+	EXPECT_GT(Shrinking, 56.0f);
+	EXPECT_LT(Shrinking, 80.0f);
+
+	const float Reversed = QmConsoleUi::ResolveToolbarWidth(&Runtime, Key, 80.0f, true, ui_token::motion::TAB_SWITCH);
+	EXPECT_NEAR(Reversed, Shrinking, 0.001f);
+	Runtime.Advance(0.05f);
+	EXPECT_GT(QmConsoleUi::ResolveToolbarWidth(&Runtime, Key, 80.0f, true, ui_token::motion::TAB_SWITCH), Shrinking);
+
+	EXPECT_FLOAT_EQ(QmConsoleUi::ResolveToolbarWidth(nullptr, Key, 64.0f, true, ui_token::motion::TAB_SWITCH), 64.0f);
+	g_Config.m_QmUiMotionLevel = PreviousMotion;
+}
+
+TEST(QmConsoleUiLayout, OutsideClickCloseDoesNotRestoreStaleDisabledUi)
+{
+	// 控制台打开时 UI 只在自己的渲染期间临时启用，帧末要恢复禁用。
+	EXPECT_FALSE(QmConsoleUi::RestoreUiEnabledAtFrameEnd(false, true, false));
+	// 点击面板外的同一帧从 OPEN 切到 CLOSING，Toggle 已写入启用态，不得被旧值覆盖。
+	EXPECT_TRUE(QmConsoleUi::RestoreUiEnabledAtFrameEnd(false, true, true));
+	// 关闭动画期间状态不再变化，继续按进入本帧的值恢复。
+	EXPECT_TRUE(QmConsoleUi::RestoreUiEnabledAtFrameEnd(true, true, false));
+}
+
 TEST(QmConsoleUiLayout, TextOnlyButtonCentersLabelWithoutReservingIconSlot)
 {
 	const CUIRect Button = {20.0f, 3.0f, 120.0f, 24.0f};

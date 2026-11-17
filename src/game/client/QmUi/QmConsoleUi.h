@@ -77,6 +77,31 @@ namespace QmConsoleUi
 		return Total;
 	}
 
+	// 同一按钮换文案时只做一次宽度过渡；反复点击从当前宽度折返，
+	// 不把按钮拆成两颗一缩一长（那会临时多占一档间距并造成顿挫）。
+	inline float ResolveToolbarWidth(CQmAnimationBackend *pRuntime, uint64_t NodeKey, float Target, bool MotionEnabled, const SUiAnimTransition &Transition)
+	{
+		Target = std::max(0.0f, Target);
+		if(pRuntime == nullptr || !MotionEnabled)
+		{
+			if(pRuntime != nullptr)
+				pRuntime->SetValue(NodeKey, EUiAnimProperty::WIDTH, Target);
+			return Target;
+		}
+		SUiAnimTransition Effective = Transition;
+		Effective.m_Interrupt = EUiAnimInterruptPolicy::MERGE_TARGET;
+		Effective.m_Priority = std::max(Effective.m_Priority, 2);
+		return std::max(0.0f, pRuntime->ResolveTargetValue(NodeKey, EUiAnimProperty::WIDTH, Target, Effective));
+	}
+
+	// 控制台渲染会临时启用 UI 以便自己处理输入，帧末再恢复进入本帧时的启用态。
+	// 但本帧内状态机若已切换（例如点击面板外，OPEN → CLOSING），Toggle 写入的
+	// 启用态才是正确结果；再用旧值覆盖会让下一帧主菜单一直保持禁用，按钮点不动。
+	inline bool RestoreUiEnabledAtFrameEnd(bool EnabledBeforeFrame, bool EnabledNow, bool StateChangedDuringFrame)
+	{
+		return StateChangedDuringFrame ? EnabledNow : EnabledBeforeFrame;
+	}
+
 	struct SButtonContentLayout
 	{
 		CUIRect m_Icon;
