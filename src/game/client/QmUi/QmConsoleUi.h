@@ -51,6 +51,32 @@ namespace QmConsoleUi
 		return LayoutToolbarAnimated(Width, FilterWidth, ActionWidth, FilterWidth, ActionWidth, RowHeight);
 	}
 
+	// 间距只存在于实际可见的相邻按钮之间：动作集合使用固定 ID 顺序，
+	// 中间隐藏的槽位不能吞掉左右两颗按钮之间的缝。
+	inline float ToolbarFlowGap(float Gap, bool HasPrevious, float Presence)
+	{
+		if(!HasPrevious || Presence <= 0.001f)
+			return 0.0f;
+		return std::max(0.0f, Gap);
+	}
+
+	template<size_t Count>
+	inline float ToolbarFlowWidth(const std::array<float, Count> &aBaseWidths, const std::array<float, Count> &aPresences, float Gap)
+	{
+		float Total = 0.0f;
+		bool HasPrevious = false;
+		for(size_t i = 0; i < Count; ++i)
+		{
+			const float Presence = std::clamp(aPresences[i], 0.0f, 1.0f);
+			if(Presence <= 0.001f)
+				continue;
+			Total += ToolbarFlowGap(Gap, HasPrevious, Presence);
+			Total += std::max(0.0f, aBaseWidths[i]) * Presence;
+			HasPrevious = true;
+		}
+		return Total;
+	}
+
 	struct SButtonContentLayout
 	{
 		CUIRect m_Icon;

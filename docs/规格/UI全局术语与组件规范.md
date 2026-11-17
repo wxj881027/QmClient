@@ -162,9 +162,9 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 
 ### 2.8d 控制台顶栏按钮（console toolbar button）
 
-- 定义：控制台筛选与动作按钮的出现、消失都走同一条存在度；按钮宽度、间距、透明度和命中一起收放，目标集合决定是否折成两行，选中底色取全局强调色的派生档。
-- 唯一实现：`QmConsoleUi::CToolbarPresenceMotion`、`QmConsoleUi::LayoutToolbarAnimated`、`QmConsoleUi::ResolveConsoleButtonFill`、`QmConsoleUi::Button`（`src/game/client/QmUi/QmConsoleUi.h`）；动效取 `ui_token::motion::NAVIGATION_APPEAR`，调用点 `CGameConsole::OnRender`（`src/game/client/components/console.cpp`）。
-- 禁止的反面写法：动作集合变化时瞬切按钮或只淡文字不缩宽度；用当前动画宽度决定折行；选中底色取控制台命令语法色或在调用点写裸 `ColorRGBA`；显隐和选中共用同一条 `ALPHA` 轨道。
+- 定义：控制台筛选与动作按钮的出现、消失都走同一条存在度；按钮宽度、透明度和命中一起收放，任意两颗实际可见的按钮之间保留同一档固定间距，目标集合决定是否折成两行，选中底色取全局强调色的派生档。
+- 唯一实现：`QmConsoleUi::CToolbarPresenceMotion`、`QmConsoleUi::LayoutToolbarAnimated`、`QmConsoleUi::ToolbarFlowGap`、`QmConsoleUi::ToolbarFlowWidth`、`QmConsoleUi::ResolveConsoleButtonFill`、`QmConsoleUi::Button`（`src/game/client/QmUi/QmConsoleUi.h`）；动效取 `ui_token::motion::NAVIGATION_APPEAR`，调用点 `CGameConsole::OnRender`（`src/game/client/components/console.cpp`）。
+- 禁止的反面写法：动作集合变化时瞬切按钮或只淡文字不缩宽度；用当前动画宽度决定折行；隐藏槽位吞掉左右按钮之间的间距或让间距随存在度缩到 0；选中底色取控制台命令语法色或在调用点写裸 `ColorRGBA`；显隐和选中共用同一条 `ALPHA` 轨道。
 
 ### 2.19 圆角与胶囊（radius / capsule）
 

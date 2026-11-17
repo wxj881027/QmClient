@@ -2080,15 +2080,18 @@ void CGameConsole::OnRender()
 	float TargetFilterWidth = 0.0f;
 	float CurrentFilterWidth = 0.0f;
 	bool HasPresentFilter = false;
-	float PreviousFilterPresence = 0.0f;
+	bool HasVisibleFilter = false;
 	for(int i = 0; i < CInstance::LOG_FILTER_BUTTON_COUNT; ++i)
 	{
 		aFilterPresence[i] = m_ToolbarFilterMotion.Resolve(pAnimRuntime,
 			ConsoleToolbarNodeKey("qm_console_toolbar_filter_presence", i), static_cast<size_t>(i),
 			FilterTargetPresent, ToolbarMotionEnabled, ui_token::motion::NAVIGATION_APPEAR);
-		if(i > 0)
-			CurrentFilterWidth += FilterSpacing * std::min(PreviousFilterPresence, aFilterPresence[i]);
-		CurrentFilterWidth += FilterWidth * aFilterPresence[i];
+		if(aFilterPresence[i] > 0.001f)
+		{
+			CurrentFilterWidth += QmConsoleUi::ToolbarFlowGap(FilterSpacing, HasVisibleFilter, aFilterPresence[i]);
+			CurrentFilterWidth += FilterWidth * aFilterPresence[i];
+			HasVisibleFilter = true;
+		}
 		if(FilterTargetPresent)
 		{
 			if(HasPresentFilter)
@@ -2096,22 +2099,24 @@ void CGameConsole::OnRender()
 			TargetFilterWidth += FilterWidth;
 			HasPresentFilter = true;
 		}
-		PreviousFilterPresence = aFilterPresence[i];
 	}
 
 	float TargetActionWidth = 0.0f;
 	float CurrentActionWidth = 0.0f;
 	bool HasPresentAction = false;
-	float PreviousActionPresence = 0.0f;
+	bool HasVisibleAction = false;
 	for(int i = 0; i < TOOLBAR_ACTION_MOTION_COUNT; ++i)
 	{
 		SToolbarAction &Action = aActions[i];
 		Action.m_Presence = m_ToolbarActionMotion.Resolve(pAnimRuntime,
 			ConsoleToolbarNodeKey("qm_console_toolbar_action_presence", i), static_cast<size_t>(i),
 			Action.m_Present, ToolbarMotionEnabled, ui_token::motion::NAVIGATION_APPEAR);
-		if(i > 0)
-			CurrentActionWidth += FilterSpacing * std::min(PreviousActionPresence, Action.m_Presence);
-		CurrentActionWidth += Action.m_Width * Action.m_Presence;
+		if(Action.m_Presence > 0.001f)
+		{
+			CurrentActionWidth += QmConsoleUi::ToolbarFlowGap(FilterSpacing, HasVisibleAction, Action.m_Presence);
+			CurrentActionWidth += Action.m_Width * Action.m_Presence;
+			HasVisibleAction = true;
+		}
 		if(Action.m_Present)
 		{
 			if(HasPresentAction)
@@ -2119,7 +2124,6 @@ void CGameConsole::OnRender()
 			TargetActionWidth += Action.m_Width;
 			HasPresentAction = true;
 		}
-		PreviousActionPresence = Action.m_Presence;
 	}
 
 	float ToolbarRightMargin = 0.0f;
@@ -2874,11 +2878,12 @@ void CGameConsole::OnRender()
 		const float FilterScale = Toolbar.m_FilterScale;
 		if(LocalConsole)
 		{
+			bool HasVisibleFilter = false;
 			for(int i = 0; i < CInstance::LOG_FILTER_BUTTON_COUNT; ++i)
 			{
 				const int Category = CInstance::LogFilterCategoryForButton(i);
-				if(i > 0)
-					FilterX += FilterSpacing * FilterScale * std::min(aFilterPresence[i - 1], aFilterPresence[i]);
+				if(aFilterPresence[i] > 0.001f)
+					FilterX += QmConsoleUi::ToolbarFlowGap(FilterSpacing * FilterScale, HasVisibleFilter, aFilterPresence[i]);
 				const float Width = FilterWidth * FilterScale * aFilterPresence[i];
 				if(aFilterPresence[i] > 0.001f)
 				{
@@ -2888,18 +2893,20 @@ void CGameConsole::OnRender()
 						ConsoleToolbarNodeKey("qm_console_toolbar_filter_selected", i), aFilterPresence[i]);
 					if(Clicked && FilterTargetPresent)
 						pConsole->SetLogFilterMask(QmSelectConsoleLogFilterCategory(Category));
+					FilterX += Width;
+					HasVisibleFilter = true;
 				}
-				FilterX += Width;
 			}
 		}
 		if(LocalConsole)
 		{
 			float ActionX = Toolbar.m_ActionX;
+			bool HasVisibleAction = false;
 			for(int i = 0; i < TOOLBAR_ACTION_MOTION_COUNT; ++i)
 			{
 				const auto &Action = aActions[i];
-				if(i > 0)
-					ActionX += FilterSpacing * Toolbar.m_ActionScale * std::min(aActions[i - 1].m_Presence, Action.m_Presence);
+				if(Action.m_Presence > 0.001f)
+					ActionX += QmConsoleUi::ToolbarFlowGap(FilterSpacing * Toolbar.m_ActionScale, HasVisibleAction, Action.m_Presence);
 				const float Width = Action.m_Width * Toolbar.m_ActionScale * Action.m_Presence;
 				if(Action.m_Presence > 0.001f && ToolbarButton({ActionX, Toolbar.m_SplitRows ? FontSize + 19.0f : 3.0f, Width, FontSize + 10.0f}, Action.m_pLabel, Toolbar.m_ActionScale, Action.m_Selected, ConsoleToolbarNodeKey("qm_console_toolbar_action_selected", i), Action.m_Presence) &&
 					Action.m_Present)
@@ -2931,7 +2938,11 @@ void CGameConsole::OnRender()
 					case EToolbarAction::COLLAPSE_CONSOLE: m_LocalConsoleFullscreen = false; break;
 					}
 				}
-				ActionX += Width;
+				if(Action.m_Presence > 0.001f)
+				{
+					ActionX += Width;
+					HasVisibleAction = true;
+				}
 			}
 			char aStatus[256];
 			str_copy(aStatus, aLinesBuf);

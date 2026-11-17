@@ -78,6 +78,22 @@ TEST(QmConsoleUiLayout, AnimatedToolbarDoesNotReserveAHiddenFilterRow)
 	EXPECT_FLOAT_EQ(Layout.m_Height, 26.0f);
 }
 
+TEST(QmConsoleUiLayout, ToolbarFlowKeepsOneFixedGapAcrossHiddenSlots)
+{
+	const std::array<float, 3> aWidths = {40.0f, 55.0f, 70.0f};
+	const std::array<float, 3> aVisibleEdges = {1.0f, 0.0f, 1.0f};
+	EXPECT_FLOAT_EQ(QmConsoleUi::ToolbarFlowWidth(aWidths, aVisibleEdges, 4.0f), 114.0f);
+
+	const std::array<float, 3> aVisible = {1.0f, 1.0f, 1.0f};
+	EXPECT_FLOAT_EQ(QmConsoleUi::ToolbarFlowWidth(aWidths, aVisible, 4.0f), 173.0f);
+
+	const std::array<float, 3> aPartial = {1.0f, 0.5f, 1.0f};
+	EXPECT_FLOAT_EQ(QmConsoleUi::ToolbarFlowWidth(aWidths, aPartial, 4.0f), 145.5f);
+
+	const std::array<float, 3> aHidden = {};
+	EXPECT_FLOAT_EQ(QmConsoleUi::ToolbarFlowWidth(aWidths, aHidden, 4.0f), 0.0f);
+}
+
 TEST(QmConsoleUiLayout, TextOnlyButtonCentersLabelWithoutReservingIconSlot)
 {
 	const CUIRect Button = {20.0f, 3.0f, 120.0f, 24.0f};
