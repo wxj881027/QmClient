@@ -4,19 +4,16 @@
 
 #include "io_read_all.h"
 #include "lock.h"
-#include "logger.h"
+#include "log.h"
 #include "sphore.h"
 #include "thread.h"
 #include "windows.h"
 
 #include <sys/types.h>
 
-#include <atomic>
 #include <chrono>
-#include <cmath>
 #include <cstring>
 #include <iterator> // std::size
-#include <mutex>
 #include <string_view>
 
 #if defined(CONF_WEBSOCKETS)
@@ -27,8 +24,7 @@ static constexpr unsigned char LOOPBACKADDR_IPV4[16] = {127, 0, 0, 1};
 static constexpr unsigned char LOOPBACKADDR_IPV6[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
 
 #if defined(CONF_FAMILY_UNIX)
-#include <sys/stat.h>
-#include <sys/time.h>
+#include <sys/time.h> // timeval
 #include <sys/utsname.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -46,15 +42,6 @@ static constexpr unsigned char LOOPBACKADDR_IPV6[16] = {0, 0, 0, 0, 0, 0, 0, 0, 
 #include <cerrno>
 
 #if defined(CONF_PLATFORM_MACOS)
-// some lock and pthread functions are already defined in headers
-// included from Carbon.h
-// this prevents having duplicate definitions of those
-#define _lock_set_user_
-#define _task_user_
-
-#include <Carbon/Carbon.h>
-#include <mach/mach_time.h>
-
 #if defined(__MAC_10_10) && __MAC_OS_X_VERSION_MIN_REQUIRED >= __MAC_10_10
 #include <pthread/qos.h>
 #endif
