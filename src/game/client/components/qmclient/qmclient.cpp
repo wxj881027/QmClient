@@ -3105,7 +3105,7 @@ void CQmClient::RedeemTitleCode(const char *pCode)
 
 void CQmClient::RefreshTitleProfile()
 {
-	if(TitleBusy() || !m_aTitleToken[0])
+	if(!CanRefreshTitleProfile())
 		return;
 	// 资料读取复用已认证的实时通道，公网 HTTP GET 已由服务器隐私规则关闭。
 	if(RequestQmRealtimeTitleRefresh())
