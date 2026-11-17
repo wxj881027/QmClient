@@ -1289,8 +1289,8 @@ Auto greet friend text
 Auto greet friends entering map
 == Haritaya giren arkadaşları otomatik selamla
 
-Auto greet posts a public chat line a few seconds after a friend joins, so leave "Greeting text" empty on strict servers.
-== Otomatik selamlama, arkadaş girdikten birkaç saniye sonra genel sohbete yazar; katı sunucularda selamlama metnini boş bırak.
+Auto greet waits 1 second after a friend joins, then sends a public greeting when chat is available. Leave "Greeting text" empty on strict servers.
+== Bir arkadaş katıldığında istemci 1 saniye bekler ve mesaj gönderebildiğinde genel sohbette selam verir. Kuralları katı olan sunucularda selamlama metnini boş bırak.
 
 Auto login Axiom server
 == Axiom sunucusuna otomatik giriş
