@@ -3343,7 +3343,10 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 						{
 							m_LocalStartTime = time_get();
 #if defined(CONF_VIDEORECORDER)
-							IVideo::SetLocalStartTime(m_LocalStartTime);
+							if(IVideo::Current())
+							{
+								IVideo::Current()->SetLocalStartTime(m_LocalStartTime);
+							}
 #endif
 						}
 						if(!Dummy)
@@ -4750,9 +4753,6 @@ void CClient::Run()
 #endif
 	QmProbeSaveDirectory();
 	m_LocalStartTime = m_GlobalStartTime = time_get();
-#if defined(CONF_VIDEORECORDER)
-	IVideo::SetLocalStartTime(m_LocalStartTime);
-#endif
 	m_aSnapshotParts[0] = 0;
 	m_aSnapshotParts[1] = 0;
 
@@ -6634,7 +6634,7 @@ void CClient::StartVideo(const char *pFilename, bool WithTimestamp)
 	m_VideoOffscreenFailed = false;
 	const int RenderWidth = m_VideoOffscreenPlan.m_Offscreen ? m_VideoOffscreenPlan.m_RenderWidth : Graphics()->ScreenWidth();
 	const int RenderHeight = m_VideoOffscreenPlan.m_Offscreen ? m_VideoOffscreenPlan.m_RenderHeight : Graphics()->ScreenHeight();
-	new CVideo(Graphics(), Sound(), Storage(), RenderWidth, RenderHeight, aFilename, g_Config.m_QmVideoWidth, g_Config.m_QmVideoHeight, &DisplaySnapshot);
+	new CVideo(Graphics(), Sound(), Storage(), RenderWidth, RenderHeight, m_LocalStartTime, aFilename, g_Config.m_QmVideoWidth, g_Config.m_QmVideoHeight, &DisplaySnapshot);
 	Sound()->UnpauseAudioDevice();
 	if(!IVideo::Current()->Start())
 	{
