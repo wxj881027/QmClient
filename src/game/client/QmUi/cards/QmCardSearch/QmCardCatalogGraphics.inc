@@ -125,7 +125,6 @@ namespace
 		{Localizable("Windowed"), nullptr, "窗口化"},
 		{Localizable("Windowed borderless"), nullptr, "无边框窗口"},
 		{Localizable("Windowed fullscreen"), nullptr, "窗口化全屏"},
-		{nullptr, "gfx_color_depth", nullptr},
 		{nullptr, "gfx_screen_height", nullptr},
 		{nullptr, "gfx_screen_refresh_rate", nullptr},
 		{nullptr, "gfx_screen_width", nullptr},

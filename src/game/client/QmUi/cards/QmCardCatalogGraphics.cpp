@@ -390,7 +390,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 			const int AspectGcd = G > 0 ? G : 1;
 			const float RawHiDPIScale = Graphics()->ScreenHiDPIScale();
 			const float HiDPIScale = std::isfinite(RawHiDPIScale) && RawHiDPIScale > 0.0f ? RawHiDPIScale : 1.0f;
-			str_format(aBuf, sizeof(aBuf), "%s: %dx%d @%dhz %d bit (%d:%d)", Localize("Current"), (int)(g_Config.m_GfxScreenWidth * HiDPIScale), (int)(g_Config.m_GfxScreenHeight * HiDPIScale), g_Config.m_GfxScreenRefreshRate, g_Config.m_GfxColorDepth, g_Config.m_GfxScreenWidth / AspectGcd, g_Config.m_GfxScreenHeight / AspectGcd);
+			str_format(aBuf, sizeof(aBuf), "%s: %dx%d @%dhz (%d:%d)", Localize("Current"), (int)(g_Config.m_GfxScreenWidth * HiDPIScale), (int)(g_Config.m_GfxScreenHeight * HiDPIScale), g_Config.m_GfxScreenRefreshRate, g_Config.m_GfxScreenWidth / AspectGcd, g_Config.m_GfxScreenHeight / AspectGcd);
 			Ui()->DoLabel(&ModeLabel, aBuf, FontSizeResListHeader, TEXTALIGN_MC);
 		}
 
@@ -411,9 +411,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 
 			for(int i = 0; i < s_NumNodes; ++i)
 			{
-				const int Depth = s_aModes[i].m_Red + s_aModes[i].m_Green + s_aModes[i].m_Blue > 16 ? 24 : 16;
-				if(g_Config.m_GfxColorDepth == Depth &&
-					g_Config.m_GfxScreenWidth == s_aModes[i].m_WindowWidth &&
+				if(g_Config.m_GfxScreenWidth == s_aModes[i].m_WindowWidth &&
 					g_Config.m_GfxScreenHeight == s_aModes[i].m_WindowHeight &&
 					g_Config.m_GfxScreenRefreshRate == s_aModes[i].m_RefreshRate)
 				{
@@ -425,7 +423,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 					continue;
 
 				int G = std::gcd(s_aModes[i].m_WindowWidth, s_aModes[i].m_WindowHeight);
-				str_format(aBuf, sizeof(aBuf), "%dx%d @%dhz %d bit (%d:%d)", s_aModes[i].m_CanvasWidth, s_aModes[i].m_CanvasHeight, s_aModes[i].m_RefreshRate, Depth, s_aModes[i].m_WindowWidth / G, s_aModes[i].m_WindowHeight / G);
+				str_format(aBuf, sizeof(aBuf), "%dx%d @%dhz (%d:%d)", s_aModes[i].m_CanvasWidth, s_aModes[i].m_CanvasHeight, s_aModes[i].m_RefreshRate, s_aModes[i].m_WindowWidth / G, s_aModes[i].m_WindowHeight / G);
 				// 行内容区已含 token 左右内边距，文字不再贴着胶囊边缘。
 				Ui()->DoLabel(&Item.m_ContentRect, aBuf, FontSizeResList, TEXTALIGN_ML);
 			}
@@ -433,8 +431,6 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 			const int NewSelected = s_ListBox.DoEnd();
 			if(SelectedOld != NewSelected && NewSelected >= 0 && NewSelected < s_NumNodes)
 			{
-				const int Depth = s_aModes[NewSelected].m_Red + s_aModes[NewSelected].m_Green + s_aModes[NewSelected].m_Blue > 16 ? 24 : 16;
-				g_Config.m_GfxColorDepth = Depth;
 				g_Config.m_GfxScreenWidth = s_aModes[NewSelected].m_WindowWidth;
 				g_Config.m_GfxScreenHeight = s_aModes[NewSelected].m_WindowHeight;
 				g_Config.m_GfxScreenRefreshRate = s_aModes[NewSelected].m_RefreshRate;
