@@ -11,6 +11,7 @@
 #include <game/client/ui_rect.h>
 
 #include <algorithm>
+#include <cmath>
 
 // QmUi 设计令牌（design token）的唯一来源：颜色、间距、圆角、字号、动效时长都从这里取，
 // 调用点只选令牌，不再写字面量数值。令牌一律不含缩放，调用点按响应式 UiScale 再乘一档，
@@ -199,11 +200,13 @@ namespace ui_token::feedback
 	inline constexpr float ICON_BORDER_ALPHA = 0.70f;
 	// 活动态描边宽度：固定 1 像素，不随 UiScale 变粗，否则悬停时会「胖一圈」。
 	inline constexpr float ICON_BORDER_WIDTH = 1.0f;
-	// 悬停 / 按下 / 选中统一使用的白色描边。按钮表面、动作组外框、键位行等
-	// 所有「控件处于活动态」的描边都从这里取，禁止在调用文件重写 1,1,1,alpha。
-	// 描边固定白色：它只表达「这里有反馈」，不参与强调色语义（强调色偏红时，
-	// 若描边跟随强调色，每个按钮的悬停都会被读成错误态）。
-	inline constexpr ColorRGBA ACTIVE_BORDER{1.0f, 1.0f, 1.0f, ICON_BORDER_ALPHA};
+	// 悬浮反馈描边：任何控件（按钮、开关、列表卡）在鼠标悬停时勾出的那一圈。
+	// 颜色固定白，只表达「这里有反馈」，不参与强调色语义（强调色偏红时，若描边
+	// 跟随强调色，每个按钮的悬停都会被读成错误态）；也不按底色自动取黑白——
+	// 自动对比色会让同一个开关「关着白边、打开黑边」，与按钮的悬停白边割裂。
+	inline constexpr ColorRGBA HOVER_BORDER{1.0f, 1.0f, 1.0f, ICON_BORDER_ALPHA};
+	// 按下 / 选中沿用同一份白描边：三态是同一个「活动」语义，不另配颜色。
+	inline constexpr ColorRGBA ACTIVE_BORDER = HOVER_BORDER;
 	// 滚动条滑块悬浮时向四周扩张的距离：公共滑块绘制入口（ui_widget::DrawScrollbarHandle）
 	// 的几何反馈档，悬浮比静止大一档。
 	inline constexpr float HANDLE_HOVER_GROW = 1.0f;
@@ -325,6 +328,11 @@ namespace ui_token::control
 	inline constexpr float LabelControlGap(const float BodySize) { return std::max(spacing::SM, BodySize * 0.5f); }
 	// 字形 → 盒子（与 QmIconFontSize 互逆）。
 	inline constexpr float IconBox(const float GlyphSize) { return GlyphSize / ICON_INK_RATIO; }
+	// 并排动作图标的墨迹高（em 占比）：方框类（SQUARE_PLUS / SQUARE_MINUS…）实测 0.75，
+	// 星形 0.844。**同字号并排 ≠ 视觉等大**，所以并排的一组图标都先取这一档墨迹高，
+	// 再各自按字形墨迹比反算字号（QmIconInkFontSize），盒与间距仍按盒统一。
+	inline constexpr float ACTION_ICON_INK_HEIGHT = 0.75f;
+	inline constexpr float ActionIconInkHeight(const float GlyphSize) { return GlyphSize * ACTION_ICON_INK_HEIGHT; }
 	// 开关轨道最小宽度：2.75 倍正文，@12 得 33，等于原来 max(h*1.65, 30) 在 h=20 的结果。
 	inline constexpr float SwitchMinWidth(const float BodySize) { return 2.75f * BodySize; }
 	// 正文随视口缩放的唯一换算（与设置页度量同一条夹取）：控件拿不到
@@ -397,6 +405,10 @@ namespace ui_token::settings
 	inline constexpr float TWO_COLUMN_MIN_WIDTH = 760.0f;
 	// 卡片四周内边距。
 	inline constexpr float CARD_PADDING = 14.0f;
+	// 卡片内容末行到卡片下边框的额外留白：叠在 CARD_PADDING 之上。
+	// 与行距同档（ROW_GAP）：末行文字/控件本身有下沉，纯靠 14 的内边距看起来比
+	// 顶部紧一档。所有设置卡片共用这一个值，卡片高度随内容自适应（不写死卡高）。
+	inline constexpr float CARD_CONTENT_BOTTOM_GAP = ROW_GAP;
 	// 卡片标题行高度（标题字号的容器高度）。
 	inline constexpr float CARD_HEADER_TITLE_HEIGHT = 18.0f;
 	// 卡片副标题行高度（小字号的容器高度）。
@@ -436,6 +448,11 @@ namespace ui_token::list
 	inline constexpr float ROW_HEIGHT = settings::ROW_HEIGHT;
 	// 行距只留半档：整行胶囊之间留一条读得出的缝，所有行列表统一这一档。
 	inline constexpr float ROW_SPACING = settings::ROW_GAP * 0.5f;
+	// 多列网格（截图画廊、资源贴图、皮肤卡片）的格间距：行胶囊只需半档就能读出行
+	// 边界，卡片是独立视觉件，缝必须是一档真正的间距（12），否则整片网格看起来像
+	// 贴在一起的一整块。卡片宽度由列数决定、间距从卡片外缘扣，所以调大间距会让
+	// 卡片同时变窄——这也是「卡片要小一点」时该动的档位。
+	inline constexpr float GRID_SPACING = spacing::MD;
 
 	// 行右侧给覆盖式滚动条让出的缝：行胶囊不能压在滚动条下面（组件内部用）。
 	inline constexpr float SCROLLBAR_ROW_GAP = spacing::XS;
@@ -822,6 +839,40 @@ namespace ui_token::page_title
 	// 图标的视觉下沉量：字形有内部留白，纯按矩形居中时图标会显得偏高，
 	// 标题「图标 + 文字」的重心因此不稳。按字号比例给一点点下沉。
 	inline constexpr float ICON_Y_OFFSET = 1.5f;
+	// 文字矩形的横向余量。标签渲染器按「最大宽度」断行，而中文没有空格，
+	// 一旦实际推进宽度比给的宽度多出零点几个像素，就会在**字与字之间**断开
+	// （「设置」变成上下两行）。矩形与文字等宽也不安全，必须留 1px。
+	inline constexpr float TEXT_WIDTH_SLACK = 1.0f;
+
+	// 「图标 + 文字」是一个整体：文字若单独按整行居中、图标再挂到它左边，
+	// 组的重心会偏左 (图标宽 + 缝)/2。这里一次算出两个矩形，保证组中心 == 行中心。
+	//
+	// 文字矩形按**测量到的自然宽度**给，不裁到「行宽 - 图标 - 缝」：裁窄等于让
+	// 渲染器在字间断行。行宽真的不够时整组居中溢出到两侧空白，字号与单行都不变——
+	// 这是硬要求，宁可溢出也不要折行。
+	struct STitleGroupLayout
+	{
+		CUIRect m_Icon;
+		CUIRect m_Text;
+	};
+	inline STitleGroupLayout ResolveTitleGroup(const CUIRect &Row, const float TextWidth)
+	{
+		const float Width = std::max(0.0f, TextWidth);
+		const float GroupWidth = ICON_SIZE + ICON_GAP + Width;
+		const float GroupX = Row.x + (Row.w - GroupWidth) * 0.5f;
+		STitleGroupLayout Layout{};
+		Layout.m_Icon = CUIRect{GroupX, Row.y + (Row.h - ICON_SIZE) * 0.5f + ICON_Y_OFFSET, ICON_SIZE, ICON_SIZE};
+		Layout.m_Text = CUIRect{GroupX + ICON_SIZE + ICON_GAP, Row.y, Width, Row.h};
+		return Layout;
+	}
+
+	// 传给标签渲染器的最大宽度：自然宽度 + 余量，**向上取整**。
+	// 不能向下截断（(int)40.6 → 40）——那会让「不论窗口什么比例都折行」，
+	// 因为截断后的宽度永远小于文字实际推进宽度。
+	inline int ResolveTitleTextMaxWidth(const float TextWidth)
+	{
+		return (int)std::ceil(std::max(0.0f, TextWidth) + TEXT_WIDTH_SLACK);
+	}
 } // namespace ui_token::page_title
 
 // 面板间距：页面级面板之间、面板与内容之间只用这两档。
@@ -832,6 +883,11 @@ namespace ui_token::panel
 	inline constexpr float GAP = 8.0f;
 	// 面板内边距：内容到面板四边。
 	inline constexpr float PADDING = 10.0f;
+	// 面板外距：面板外缘到窗口/内容区边缘（四边同一档，含底部）。
+	// 与 GAP / PADDING 分开命名：数值可以相同（都是 8），语义不同——GAP 是两块
+	// 面板之间的缝，PADDING 是内容到壳，MARGIN 是壳到窗口。分开后任一档单独调整
+	// 都不会牵动另外两处。
+	inline constexpr float MARGIN = 8.0f;
 } // namespace ui_token::panel
 
 // 服务器信息页（游戏内「服务器信息」页）的排版档：标题、字段正文、标签列宽与行高。
@@ -849,12 +905,10 @@ namespace ui_token::server_info
 	inline constexpr float NAME_GAP = 6.0f;
 	// 字段行高 = 正文字号 × 该比例：字号缩小后仍要留出行间呼吸，避免密排。
 	inline constexpr float ROW_HEIGHT_RATIO = 1.5f;
-	// 标签列宽（地址 / 延迟 / 版本 / 密码 / 社区）。
+	// 标签列宽（地址 / 延迟 / 版本 / 密码 / 社区 / 地图备注 / 收藏开关）。
+	// 整页只认这一档：备注行与开关行不再各自带一套列宽、行高或额外间隔，
+	// 否则同一张卡里会出现「上面三行紧、下面三行松」。
 	inline constexpr float LABEL_WIDTH = 104.0f;
-	// 备注行：与上一段的间隔、行高、标签列宽。
-	inline constexpr float NOTE_GAP = 8.0f;
-	inline constexpr float NOTE_ROW_HEIGHT = 22.0f;
-	inline constexpr float NOTE_LABEL_WIDTH = 72.0f;
 	// 卡片圆角：与设置卡片同一族。
 	inline constexpr float CARD_RADIUS = radius::MENU;
 	// 地图标签面板：标题行高、刷新图标边长、标题与列表的缝、底部分区高度、
@@ -869,6 +923,9 @@ namespace ui_token::server_info
 	// 预置标签按钮宽与提交按钮宽（两者都是「短文字胶囊」，按内容上限给固定宽）。
 	inline constexpr float TAGS_PRESET_BUTTON_WIDTH = 60.0f;
 	inline constexpr float TAGS_SUBMIT_WIDTH = 70.0f;
+	// 标签行里的微型动作按钮（+ 加标签、× 删标签）：边长与标签胶囊同高（ui_tag::HEIGHT），
+	// 两颗按钮因此视觉等大。以前 + 写 14、× 写 12，同一行里一个大一个小。
+	inline constexpr float TAGS_ACTION_SIZE = 16.0f;
 } // namespace ui_token::server_info
 
 // 服务器信息页公告（MOTD）的排版档：公告里常用 Unicode 框线字符画方框，

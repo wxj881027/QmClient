@@ -1065,10 +1065,13 @@ void CMenus::RenderSnapshotTextContainer(CUIElement &Element, const CUIRect *pRe
 	if(pRect == nullptr)
 		return;
 	const CUIElement::SUIElementRect *pElementRect = Element.Rect(0);
-	// 快照容器与设置页文字池共用 CUi::DoLabel 的烘色模型：烘了逐字色段就必须
-	// 用白色底色绘制，否则色段会被 m_TextColor 再乘一次。
-	if(pElementRect != nullptr && pElementRect->m_UITextContainer.Valid())
-		TextRender()->RenderTextContainer(pElementRect->m_UITextContainer, pElementRect->TextContainerTint(), pElementRect->m_TextOutlineColor, pRect->x, pRect->y);
+	if(pElementRect == nullptr || !pElementRect->m_UITextContainer.Valid())
+		return;
+	// 与标签（DoMenuLabelStreamed）走**同一个**对齐渲染入口：标签按矩形垂直居中，
+	// 数值以前是在矩形左上角直接出图，于是同一行里「游戏模式：」和它的值差半个字高。
+	// 快照容器和标签容器本来就是同一种容器，对齐规则也必须同一条。
+	// 烘色模型不变：容器自带逐字色段时底色由 TextContainerTint() 给出。
+	Ui()->RenderLabelTextContainerAligned(*pElementRect, pRect, TEXTALIGN_ML);
 }
 
 bool CMenus::RequestSnapshotTextContainer(const char *pScope, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps, CUIElement **ppReadyElement)
@@ -1859,7 +1862,7 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 	ServerInfoTextInputCtx.m_ScopeHash = MakeUiScopeHash("ingame_server_info_text_inputs");
 	ServerInfoTextInputCtx.m_FrameDt = GameClient()->UiRuntimeV2()->FrameDt();
 
-	if(CurrentServerInfo.m_aMap[0] != '\0' && GameInfo.h >= 34.0f * GameScale)
+	if(CurrentServerInfo.m_aMap[0] != '\0' && GameInfo.h >= 3.0f * GameFieldRowHeight)
 	{
 		static CLineInputBuffered<256> s_MapNoteInput;
 		static char s_aMapNoteInputMap[MAX_MAP_LENGTH] = "";
@@ -1870,10 +1873,12 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 			str_copy(s_aMapNoteInputMap, CurrentServerInfo.m_aMap);
 		}
 
+		// 地图备注与上面的字段同一套行制：行高、标签列宽完全一致。以前它另外用了
+		// NOTE_GAP + NOTE_ROW_HEIGHT + NOTE_LABEL_WIDTH 三档自有度量，于是与「收藏服务器 /
+		// 收藏地图」两行的间距明显比上面几行松、标签列也不齐。
 		CUIRect NoteRow, NoteLabel, NoteInput;
-		GameInfo.HSplitTop(ui_token::server_info::NOTE_GAP * GameScale, nullptr, &GameInfo);
-		GameInfo.HSplitTop(ui_token::server_info::NOTE_ROW_HEIGHT * GameScale, &NoteRow, &GameInfo);
-		NoteRow.VSplitLeft(ui_token::server_info::NOTE_LABEL_WIDTH * GameScale, &NoteLabel, &NoteInput);
+		GameInfo.HSplitTop(GameFieldRowHeight, &NoteRow, &GameInfo);
+		NoteRow.VSplitLeft(ServerInfoLabelWidth, &NoteLabel, &NoteInput);
 		// 这条备注记在「地图」上（按地图名存），标签必须写清是地图备注，
 		// 否则玩家会以为它锚定服务器。
 		str_format(aBuf, sizeof(aBuf), "%s:", Localize("Map note"));
@@ -1886,16 +1891,26 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 	}
 
 	// 收藏开关排在右列地图备注下方，排版与其它字段完全一致：
-	// 标签落在标签列、开关落在值列左端，行高与其它字段同档；不再多垫空行。
+	// 标签落在标签列、开关落在值列左端，行高与其它字段同档。
+	// 开关本身用**设置卡片那颗件**（`ui_widget::Toggle`）与同一条尺寸公式
+	// （轨道宽 = max(2.75×正文, 行高×1.65)），所以两处开关读作同一个控件。
 	if(GameInfo.h >= 2.0f * GameFieldRowHeight)
 	{
+		// 开关取**设置卡片同款绝对尺寸**（行高 20 × 轨道比 1.65 = 33），不跟本页行高
+		// （22.5）走：跟行高走会比设置页大一圈，两处并排读作两个不同的控件。
+		// 高度小于行高时在行内垂直居中，标签列与值列的基线不受影响。
+		const float SwitchHeight = std::min(GameFieldRowHeight, ui_token::settings::ROW_HEIGHT * GameScale);
+		const float SwitchWidth = SwitchHeight * ui_token::control::SwitchTrackAspect();
 		auto DoFavoriteToggle = [&](const char *pTextId, const char *pText, const void *pId, bool Checked) {
-			CUIRect Row, LabelCol, ValueCol, Square;
+			CUIRect Row, LabelCol, ValueCol, Switch;
 			GameInfo.HSplitTop(GameFieldRowHeight, &Row, &GameInfo);
 			Row.VSplitLeft(ServerInfoLabelWidth, &LabelCol, &ValueCol);
 			DoIngameMenuLabel(PAGE_SERVER_INFO, pTextId, &LabelCol, pText, FontSizeBody, TEXTALIGN_ML, FieldProps);
-			ValueCol.VSplitLeft(std::min(ValueCol.h, ValueCol.w), &Square, nullptr);
-			return DoIngameMenuCheckBox(PAGE_SERVER_INFO, nullptr, pId, "", Checked ? 1 : 0, &Square) != 0;
+			if(m_MenuTextPlanCollecting)
+				return false;
+			Switch = CUIRect{ValueCol.x, Row.y + (Row.h - SwitchHeight) * 0.5f, std::min(SwitchWidth, ValueCol.w), SwitchHeight};
+			bool Value = Checked;
+			return ui_widget::Toggle(ServerInfoTextInputCtx, pId, &Value, Switch, true);
 		};
 		static int s_AddFavButton = 0;
 		if(DoFavoriteToggle("ingame-server-info-favorite", Localize("Favorite server"), &s_AddFavButton, IsFavorite != TRISTATE::NONE))

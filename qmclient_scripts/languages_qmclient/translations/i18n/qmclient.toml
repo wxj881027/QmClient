@@ -41125,8 +41125,8 @@ polish = "Przeciągnij do drugiej listy, aby pokazać lub ukryć tę opcję"
 [[message]]
 key = "In pie menu"
 [message.translations]
-simplified_chinese = "饼菜单中"
-traditional_chinese = "餅菜單中"
+simplified_chinese = "饼菜单包含"
+traditional_chinese = "餅菜單包含"
 japanese = "パイメニュー内"
 korean = "파이 메뉴에 있음"
 russian = "В круговом меню"
@@ -41141,8 +41141,8 @@ polish = "W menu kołowym"
 [[message]]
 key = "Not in pie menu"
 [message.translations]
-simplified_chinese = "未在饼菜单中"
-traditional_chinese = "未在餅菜單中"
+simplified_chinese = "饼菜单排除"
+traditional_chinese = "餅菜單排除"
 japanese = "パイメニュー外"
 korean = "파이 메뉴에 없음"
 russian = "Не в круговом меню"

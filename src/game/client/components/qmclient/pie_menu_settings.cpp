@@ -286,7 +286,9 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 		str_format(aHeadingId, sizeof(aHeadingId), "%s-heading", pPoolId);
 		if(Flow.Control(aHeadingId, BodySize, Row, LineSpacing))
 			DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, aHeadingId, &Row, Localize(pHeadingText), BodySize, TEXTALIGN_ML, {}, (int)Row.w);
-		if(Flow.Control(pPoolId, PoolHeight, Row, 0.0f))
+		// 说明文本与池容器之间的间距必须是常规行距：写 0 会让标题贴住池的上边框，
+		// 两个池看起来像黏在一起的一整块。
+		if(Flow.Control(pPoolId, PoolHeight, Row, LineSpacing))
 		{
 			OutLayout = QmResolvePieOptionPool(Row, Count, pChipWidths, LineHeight, BodySize);
 			if(Flow.Drawing())

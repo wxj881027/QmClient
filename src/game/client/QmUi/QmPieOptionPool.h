@@ -75,6 +75,26 @@ inline SQmPieOptionPoolLayout QmResolvePieOptionPool(const CUIRect &Area, int Co
 	return Result;
 }
 
+// 单池内排序（池内拖动改顺序，例如地图标签）：把指针位置翻译成「被拖项移除之后
+// 应该插入的槽位」，范围 0..Count-1，直接对应容器里的最终索引。
+// 判定按每颗胶囊的横向中心：指针落在某颗左半 → 插到它前面；全部超过 → 插到末尾。
+// SkipIndex 是正在拖的那颗：它的矩形仍在布局里（原位保持不动），但不参与比较，
+// 否则指针一离开自己就会「插到自己前面」而抖动。
+inline int QmResolveChipDropSlot(const CUIRect *pRects, int Count, int SkipIndex, const vec2 &MousePos)
+{
+	int Slot = 0;
+	for(int Index = 0; Index < Count; ++Index)
+	{
+		if(Index == SkipIndex)
+			continue;
+		const CUIRect &Rect = pRects[Index];
+		if(MousePos.x < Rect.x + Rect.w * 0.5f)
+			return Slot;
+		++Slot;
+	}
+	return Slot;
+}
+
 // 拖动状态：跨趟跨帧保留。图形/测量趟只读它，只有交互趟推进它。
 struct SQmPieOptionPoolDrag
 {

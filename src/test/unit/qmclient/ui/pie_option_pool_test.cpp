@@ -96,3 +96,28 @@ TEST(QmPieOptionPool, DragStateResetsToIdle)
 	EXPECT_FALSE(Drag.m_Dragging);
 	EXPECT_EQ(Drag.m_Option, -1);
 }
+
+// 池内排序的落点：指针落在某颗左半 → 插到它前面；全部超过 → 插到末尾。
+// 被拖那颗不参与比较，指针刚离开它时不能把自己算成落点。
+TEST(QmPieOptionPool, DropSlotFollowsChipCenters)
+{
+	CUIRect aRects[3] = {
+		{0.0f, 0.0f, 20.0f, 16.0f},  // 中心 x = 10
+		{24.0f, 0.0f, 20.0f, 16.0f}, // 中心 x = 34
+		{48.0f, 0.0f, 20.0f, 16.0f}, // 中心 x = 58
+	};
+	EXPECT_EQ(QmResolveChipDropSlot(aRects, 3, -1, vec2(0.0f, 0.0f)), 0);
+	EXPECT_EQ(QmResolveChipDropSlot(aRects, 3, -1, vec2(12.0f, 0.0f)), 1);
+	EXPECT_EQ(QmResolveChipDropSlot(aRects, 3, -1, vec2(40.0f, 0.0f)), 2);
+	EXPECT_EQ(QmResolveChipDropSlot(aRects, 3, -1, vec2(200.0f, 0.0f)), 3);
+
+	// 拖第 0 颗：指针停在它自己原来的位置时落点仍是 0（插回原位），
+	// 而不是因为「跳过自己」被算成 1。
+	EXPECT_EQ(QmResolveChipDropSlot(aRects, 3, 0, vec2(5.0f, 0.0f)), 0);
+	EXPECT_EQ(QmResolveChipDropSlot(aRects, 3, 0, vec2(36.0f, 0.0f)), 1);
+	EXPECT_EQ(QmResolveChipDropSlot(aRects, 3, 0, vec2(60.0f, 0.0f)), 2);
+
+	// 空池与单项池都有确定结果，不会返回 -1 让调用点越界。
+	EXPECT_EQ(QmResolveChipDropSlot(aRects, 0, -1, vec2(0.0f, 0.0f)), 0);
+	EXPECT_EQ(QmResolveChipDropSlot(aRects, 1, -1, vec2(0.0f, 0.0f)), 0);
+}

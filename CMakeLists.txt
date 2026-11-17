@@ -3321,6 +3321,8 @@ if(CLIENT)
     QmUi/UiScaledLabel.h
     QmUi/UiSurface.cpp
     QmUi/UiSurface.h
+    QmUi/UiTag.cpp
+    QmUi/UiTag.h
     QmUi/UiTokens.h
     QmUi/QmCardOrderModel.cpp
     QmUi/QmCardOrderModel.h
@@ -3588,6 +3590,8 @@ if(CLIENT)
     components/qmclient/streamer_word_filter.h
     components/qmclient/map_tags.cpp
     components/qmclient/map_tags.h
+    components/qmclient/local_map_tags.cpp
+    components/qmclient/local_map_tags.h
     components/qmclient/public_word_filter.cpp
     components/qmclient/public_word_filter.h
     components/qmclient/word_filter_list.cpp
@@ -4792,6 +4796,13 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/ui/QmColorPickerPaletteTest.cpp
     src/test/unit/qmclient/ui/qm_input_focus_glow_test.cpp
     src/test/unit/qmclient/ui/qm_secondary_button_style_test.cpp
+    src/test/unit/qmclient/ui/qm_list_card_layout_test.cpp
+    src/test/unit/qmclient/ui/qm_font_fit_test.cpp
+    src/test/unit/qmclient/ui/qm_page_title_group_test.cpp
+    src/test/unit/qmclient/ui/qm_browser_bottom_inset_test.cpp
+    src/test/unit/qmclient/ui/qm_gallery_layout_test.cpp
+    src/test/unit/qmclient/ui/qm_ui_tag_test.cpp
+    src/test/unit/qmclient/ui/qm_local_map_tags_test.cpp
     src/test/unit/qmclient/ui/qm_button_surface_radius_test.cpp
     src/test/contract/qmclient/client/qm_afk_presentation_contract_test.cpp
     src/test/unit/qmclient/client/qm_blank_asset_fallback_test.cpp
@@ -5476,6 +5487,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/friend_last_seen_data.cpp
     src/game/client/components/qmclient/streamer_word_filter.cpp
     src/game/client/components/qmclient/map_tags.cpp
+    src/game/client/components/qmclient/local_map_tags.cpp
     src/game/client/components/qmclient/public_word_filter.cpp
     src/game/client/components/qmclient/word_filter_list.cpp
     src/test/support/ui_test_stubs.cpp
