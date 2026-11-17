@@ -1289,8 +1289,8 @@ Auto greet friend text
 Auto greet friends entering map
 == マップに入ったフレンドに自動挨拶
 
-Auto greet posts a public chat line a few seconds after a friend joins, so leave "Greeting text" empty on strict servers.
-== 自動あいさつはフレンドが入って数秒後に公開チャットを送ります。厳しいサーバーではあいさつ文を空にしておきましょう。
+Auto greet waits 1 second after a friend joins, then sends a public greeting when chat is available. Leave "Greeting text" empty on strict servers.
+== フレンドが参加してから 1 秒待ち、チャットが送信可能になったら全体チャットであいさつします。自動発言を制限しているサーバーでは、あいさつ文を空欄にしておいてください。
 
 Auto login Axiom server
 == Axiom サーバーに自動ログイン

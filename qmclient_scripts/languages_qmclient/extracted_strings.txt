@@ -439,7 +439,7 @@ Auto gain control for mic (AGC, experimental)
 Auto greet friend on map join
 Auto greet friend text
 Auto greet friends entering map
-Auto greet posts a public chat line a few seconds after a friend joins, so leave "Greeting text" empty on strict servers.
+Auto greet waits 1 second after a friend joins, then sends a public greeting when chat is available. Leave "Greeting text" empty on strict servers.
 Auto hammer while firing; press again to cancel.
 Auto login Axiom server
 Auto manage IME while typing

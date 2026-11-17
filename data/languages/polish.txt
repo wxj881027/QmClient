@@ -1289,8 +1289,8 @@ Auto greet friend text
 Auto greet friends entering map
 == Automatyczne witanie znajomych wchodzących na mapę
 
-Auto greet posts a public chat line a few seconds after a friend joins, so leave "Greeting text" empty on strict servers.
-== Automatyczne powitanie pisze na publicznym czacie kilka sekund po wejściu; na surowych serwerach zostaw tekst powitania pusty.
+Auto greet waits 1 second after a friend joins, then sends a public greeting when chat is available. Leave "Greeting text" empty on strict servers.
+== Po dołączeniu znajomego klient czeka 1 sekundę, a potem wysyła powitanie na czacie publicznym, gdy tylko będzie to możliwe. Na serwerach z surowymi zasadami pozostaw tekst powitania pusty.
 
 Auto login Axiom server
 == Automatyczne logowanie na serwer Axiom
