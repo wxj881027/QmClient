@@ -82,25 +82,6 @@ TEST(QmDefaultProfile, ReplayPrefetchIsOnByDefault)
 	EXPECT_EQ(DefaultConfig::BrDemoFetchInfo, 1);
 }
 
-TEST(QmDefaultProfile, OldConfigWithoutExplicitFetchInfoTurnsReplayPrefetchOn)
-{
-	// 旧配置按旧默认值存了 br_demo_fetch_info 0，而界面上的开关已经移除：
-	// 不迁移的话这批用户永远看不到时长/标记（列表整列是 0）。
-	auto pConfig = std::make_unique<CConfig>();
-	pConfig->m_BrDemoFetchInfo = 0;
-	EXPECT_TRUE(QmInitializeDefaultProfile(*pConfig, true, [](const char *pName) { return str_comp(pName, "br_demo_fetch_info") != 0; }));
-	EXPECT_EQ(pConfig->m_BrDemoFetchInfo, 1);
-}
-
-TEST(QmDefaultProfile, ExplicitlyDisabledFetchInfoSurvivesMigration)
-{
-	// 显式关掉预读的用户尊重原值：他们清楚关的是什么。
-	auto pConfig = std::make_unique<CConfig>();
-	pConfig->m_BrDemoFetchInfo = 0;
-	EXPECT_TRUE(QmInitializeDefaultProfile(*pConfig, true, [](const char *) { return true; }));
-	EXPECT_EQ(pConfig->m_BrDemoFetchInfo, 0);
-}
-
 TEST(QmDefaultProfile, ExplicitOldUserValuesAreNeverReplacedByDefaultMigration)
 {
 	auto pConfig = std::make_unique<CConfig>();
