@@ -582,10 +582,12 @@ void CFastPractice::ShiftPracticeWorldTicks(int TickDelta)
 	if(TickDelta <= 0)
 		return;
 
-	// 低频诊断点：暂停恢复后分支时钟被平移，轨迹/事件/开关的 tick 必须同步。
-	dbg_msg("fast_practice", "tick shift: +%d branch_tick=%d track_start=%d frames=%d",
-		TickDelta, m_PracticeBaseWorld.GameTick(), GameClient()->m_LocalWorld.TrackStartTick(),
-		GameClient()->m_LocalWorld.CurrentFrameCount());
+	// 诊断点只记录真正的时钟追赶：服务器暂停期间每帧都会补一两 tick 的节奏差，
+	// 那不是异常，逐帧打印会淹掉控制台；只有回到游戏时一次性平移才值得记录。
+	if(TickDelta >= 10)
+		dbg_msg("fast_practice", "tick shift: +%d branch_tick=%d track_start=%d frames=%d",
+			TickDelta, m_PracticeBaseWorld.GameTick(), GameClient()->m_LocalWorld.TrackStartTick(),
+			GameClient()->m_LocalWorld.CurrentFrameCount());
 	// 轨迹里的绝对 tick 跟着世界时钟一起走，否则暂停恢复后存成幽灵会错开一截。
 	GameClient()->m_LocalWorld.ShiftTrackTicks(TickDelta);
 
@@ -1870,17 +1872,18 @@ bool CFastPractice::OverridePredict()
 		Disable();
 		return false;
 	}
-	if(IsPracticeServerPauseActive())
-	{
-		FreezePracticeWorldForServerPause();
-		return false;
-	}
+	// 旁观优先于“服务器暂停”判断：pause 型旁观在快照里同样带 paused 标记。
 	if(GameClient()->m_Snap.m_SpecInfo.m_Active || (GameClient()->m_Snap.m_pLocalInfo && GameClient()->m_Snap.m_pLocalInfo->m_Team == TEAM_SPECTATORS))
 	{
 		// 旁观不结束练习：分支世界停住但继续是渲染与镜头的权威，位置与
 		// 机关状态都保留。退出旁观时再一次性把时钟对齐，不补算这段时间。
 		m_SpectatingBranch = m_PracticeWorldInitialized;
 		GameClient()->m_PredictedDummyId = -1;
+		return false;
+	}
+	if(IsPracticeServerPauseActive())
+	{
+		FreezePracticeWorldForServerPause();
 		return false;
 	}
 	if(m_SpectatingBranch)
@@ -2308,12 +2311,17 @@ void CFastPractice::OnNewSnapshot()
 		return;
 	}
 
-	if(IsPracticeServerPauseActive())
+	// 自身旁观同样会带上 paused 标记，先认旁观，否则会被当成“服务器暂停”，
+	// 每帧走冻结路径并把分支时钟追赶一遍。旁观只冻结世界、等回来时一次性对齐。
+	if(GameClient()->m_Snap.m_SpecInfo.m_Active || (GameClient()->m_Snap.m_pLocalInfo && GameClient()->m_Snap.m_pLocalInfo->m_Team == TEAM_SPECTATORS))
+	{
+		m_SpectatingBranch = m_PracticeWorldInitialized;
+		GameClient()->m_PredictedDummyId = -1;
+	}
+	else if(IsPracticeServerPauseActive())
 	{
 		FreezePracticeWorldForServerPause();
 	}
-	else if(GameClient()->m_Snap.m_SpecInfo.m_Active || (GameClient()->m_Snap.m_pLocalInfo && GameClient()->m_Snap.m_pLocalInfo->m_Team == TEAM_SPECTATORS))
-		GameClient()->m_PredictedDummyId = -1;
 	else
 	{
 		if(!m_RequireDummy)

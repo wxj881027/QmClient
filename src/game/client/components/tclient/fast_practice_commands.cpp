@@ -855,6 +855,14 @@ void CFastPractice::ConLocalWorldDump(IConsole::IResult *pResult, void *pUserDat
 		str_format(aBuf, sizeof(aBuf), "ticks: game=%d pred=%d branch=%d",
 			GameTick, PredTick, pSelf->m_PracticeBaseWorld.GameTick());
 		Print(aBuf);
+		// 旁观态：/spec 在练习队里走 pause 通道，光看画面分不清“真在旁观”还是
+		// “人还站在世界里”。branch_spec 是练习自己的旁观冻结标记。
+		const auto &SpecInfo = pSelf->GameClient()->m_Snap.m_SpecInfo;
+		const CNetObj_PlayerInfo *pLocalInfo = pSelf->GameClient()->m_Snap.m_pLocalInfo;
+		str_format(aBuf, sizeof(aBuf), "spec: active=%d use_position=%d spectator_id=%d branch_spec=%d local_team=%d",
+			SpecInfo.m_Active ? 1 : 0, SpecInfo.m_UsePosition ? 1 : 0, SpecInfo.m_SpectatorId,
+			pSelf->m_SpectatingBranch ? 1 : 0, pLocalInfo ? pLocalInfo->m_Team : -1);
+		Print(aBuf);
 		const CNetObj_PlayerInput *pPredInput = (const CNetObj_PlayerInput *)pSelf->Client()->GetInput(PredTick, 0);
 		str_format(aBuf, sizeof(aBuf), "pred_input: present=%d direction=%d jump=%d hook=%d",
 			pPredInput ? 1 : 0,
