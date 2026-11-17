@@ -93,11 +93,16 @@ void CQmFinishSummary::OnReset()
 {
 	CancelRequests();
 	m_State.Reset();
+	m_QueriesEnabled = false;
+	g_Config.m_QmFinishSummaryPreview = 0;
+	m_pManagedTeeRenderInfo.reset();
 	m_Data = {};
 	m_Before = {};
 	m_Community = ECommunity::NONE;
 	m_Map.clear();
 	m_Player.clear();
+	m_CoverTexture.Invalidate();
+	m_NextCoverRequest = 0.0;
 	m_ClientId = -1;
 	m_Connection = -1;
 	m_RunStartTick = -1;
@@ -117,7 +122,7 @@ void CQmFinishSummary::OnStateChange(int NewState, int OldState)
 
 bool CQmFinishSummary::UpdateContext()
 {
-	if(!g_Config.m_QmFinishSummary || g_Config.m_QmHudIslandUseOriginalStyle || !g_Config.m_ClShowhud || Client()->State() != IClient::STATE_ONLINE || GameClient()->m_RankGhost.IsViewModeActive())
+	if(Client()->State() != IClient::STATE_ONLINE || GameClient()->m_RankGhost.IsViewModeActive())
 	{
 		if(m_Community != ECommunity::NONE)
 			OnReset();
@@ -160,13 +165,14 @@ bool CQmFinishSummary::UpdateContext()
 	const char *pPlayer = GameClient()->m_aClients[ClientId].m_aName;
 	if(m_Community != Community || m_Map != Server.m_aMap || m_Player != pPlayer || m_ClientId != ClientId || m_Connection != g_Config.m_ClDummy)
 	{
+		const bool FirstPreview = m_Community == ECommunity::NONE && g_Config.m_QmFinishSummaryPreview;
 		OnReset();
+		g_Config.m_QmFinishSummaryPreview = FirstPreview;
 		m_Community = Community;
 		m_Map = Server.m_aMap;
 		m_Player = pPlayer;
 		m_ClientId = ClientId;
 		m_Connection = g_Config.m_ClDummy;
-		PrepareRequests(false);
 	}
 	return true;
 }
@@ -174,12 +180,14 @@ bool CQmFinishSummary::UpdateContext()
 void CQmFinishSummary::PrepareRequests(bool AfterFinish)
 {
 	CancelRequests();
+	m_QueriesEnabled = true;
 	// 刷新成绩时只保留地图资料与账号身份，旧成绩由 Before 单独标注。
 	if(AfterFinish)
 	{
 		SRemoteData Metadata;
 		Metadata.m_Map = m_Data.m_Map;
 		Metadata.m_Mapper = m_Data.m_Mapper;
+		Metadata.m_Thumbnail = m_Data.m_Thumbnail;
 		Metadata.m_Category = m_Data.m_Category;
 		Metadata.m_Stars = m_Data.m_Stars;
 		Metadata.m_MapPoints = m_Data.m_MapPoints;
@@ -240,6 +248,14 @@ void CQmFinishSummary::MergeResult(EQuery Query, const SRemoteData &Result)
 	case EQuery::MAP:
 		m_Data.m_Map = Result.m_Map;
 		m_Data.m_Mapper = Result.m_Mapper;
+		m_Data.m_Thumbnail = Result.m_Thumbnail;
+		if(!m_Data.m_Thumbnail.empty() && m_Community == ECommunity::DDNET)
+		{
+			// 提前准备贴图，让首次通关也能随计数开始淡入。
+			CQmMapCovers::SImage Cover;
+			GameClient()->m_MapCovers.Get(m_Data.m_Thumbnail.c_str(), CQmMapCovers::ERole::SUMMARY, &Cover);
+			m_CoverTexture = Cover.m_Texture;
+		}
 		m_Data.m_Category = Result.m_Category;
 		m_Data.m_Stars = Result.m_Stars;
 		m_Data.m_MapPoints = Result.m_MapPoints;
@@ -249,6 +265,7 @@ void CQmFinishSummary::MergeResult(EQuery Query, const SRemoteData &Result)
 		m_Data.m_HistoryKnown = Result.m_HistoryKnown;
 		m_Data.m_Rank = Result.m_Rank;
 		m_Data.m_Points = Result.m_Points;
+		m_Data.m_RankPoints = Result.m_RankPoints;
 		m_Data.m_CompletedMaps = Result.m_CompletedMaps;
 		m_Data.m_TotalMaps = Result.m_TotalMaps;
 		m_Data.m_LatestTimeMs = Result.m_LatestTimeMs;
@@ -360,14 +377,25 @@ void CQmFinishSummary::UpdateRequests(double CurrentTime)
 
 void CQmFinishSummary::RefreshSnapshot()
 {
-	auto *pSnapshot = m_State.MutableSnapshot();
+	const bool BestPreview = m_State.ShowingBest();
+	auto *pSnapshot = BestPreview ? m_State.MutableBestPreview() : m_State.MutableSnapshot();
 	if(!pSnapshot || !m_State.Visible())
 		return;
 	const bool Confirmed = m_Data.m_LatestTimeMs && m_Data.m_LatestTimestamp &&
 			       (*m_Data.m_LatestTimeMs + 5) / 10 == (pSnapshot->m_TimeMs + 5) / 10 &&
 			       std::abs(*m_Data.m_LatestTimestamp - m_FinishTimestamp) <= 120 &&
 			       (!m_Before.m_LatestTimestamp || *m_Data.m_LatestTimestamp > *m_Before.m_LatestTimestamp);
-	ApplyRemote(*pSnapshot, m_Before, m_Data, Confirmed);
+	ApplyRemote(*pSnapshot, BestPreview ? m_Data : m_Before, m_Data, !BestPreview && Confirmed);
+	if(BestPreview)
+	{
+		pSnapshot->m_PointsGained = {-1, EStatus::UNAVAILABLE};
+		if(m_Data.m_LatestTimeMs == pSnapshot->m_TimeMs && m_Data.m_LatestTimestamp)
+		{
+			char aDate[64];
+			str_timestamp_ex(*m_Data.m_LatestTimestamp, aDate, sizeof(aDate), "%Y-%m-%d %H:%M");
+			pSnapshot->m_FinishedAt = aDate;
+		}
+	}
 	++pSnapshot->m_Revision;
 	const auto Finalize = [&](SValue &Value, EQuery Query, bool AwaitingSync = false) {
 		if(Value.m_Value >= 0 || Value.m_Status == EStatus::UNAVAILABLE)
@@ -397,12 +425,13 @@ void CQmFinishSummary::StartRun(int StartTick)
 	m_State.StartRun();
 	m_FinishTimestamp = 0;
 	m_FinishGameTick = -1;
-	PrepareRequests(false);
+	if(m_QueriesEnabled)
+		PrepareRequests(false);
 }
 
 void CQmFinishSummary::OnNewSnapshot()
 {
-	if(!g_Config.m_QmFinishSummary || m_FinishGameTick < 0 || !UpdateContext())
+	if(m_FinishGameTick < 0 || !UpdateContext())
 		return;
 	const auto &Snap = GameClient()->m_Snap;
 	if(!Snap.m_pGameInfoObj || (Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_RACETIME) ||
@@ -416,10 +445,33 @@ void CQmFinishSummary::OnNewSnapshot()
 		StartRun(Client()->GameTick(m_Connection));
 }
 
+IGraphics::CTextureHandle CQmFinishSummary::CoverTexture() const
+{
+	return Graphics()->IsTextureHandleAllocated(m_CoverTexture) ? m_CoverTexture : IGraphics::CTextureHandle();
+}
+
 void CQmFinishSummary::OnUpdate()
 {
-	if(!UpdateContext())
+	if(!g_Config.m_QmFinishSummary && !g_Config.m_QmFinishSummaryPreview && m_Community == ECommunity::NONE)
 		return;
+	if(!UpdateContext())
+	{
+		g_Config.m_QmFinishSummaryPreview = 0;
+		return;
+	}
+	const bool HudEnabled = !g_Config.m_QmHudIslandUseOriginalStyle && g_Config.m_ClShowhud;
+	if(!HudEnabled)
+		g_Config.m_QmFinishSummaryPreview = 0;
+	if(!HudEnabled || (!g_Config.m_QmFinishSummary && !m_State.Previewing()))
+		m_State.Dismiss();
+	const bool WantQueries = HudEnabled && (g_Config.m_QmFinishSummary || g_Config.m_QmFinishSummaryPreview || (m_State.Visible() && m_State.Previewing()));
+	if(WantQueries && !m_QueriesEnabled)
+		PrepareRequests(false);
+	else if(!WantQueries && m_QueriesEnabled)
+	{
+		CancelRequests();
+		m_QueriesEnabled = false;
+	}
 	const double CurrentTime = Now();
 	const auto *pGameInfo = GameClient()->m_Snap.m_pGameInfoObj;
 	const int StartTick = pGameInfo && (pGameInfo->m_GameStateFlags & GAMESTATEFLAG_RACETIME) && pGameInfo->m_WarmupTimer < 0 && pGameInfo->m_WarmupTimer > std::numeric_limits<int>::min() ? -pGameInfo->m_WarmupTimer : -1;
@@ -429,8 +481,19 @@ void CQmFinishSummary::OnUpdate()
 	m_State.Advance(CurrentTime);
 	if(WasVisible && !m_State.Visible())
 		CancelRequests();
-	UpdateRequests(CurrentTime);
-	if(!m_State.Visible())
+	if(WantQueries)
+		UpdateRequests(CurrentTime);
+	// 展示时从当前通关快照取图；限频刷新也能在封面更新或设备重建后拿到新纹理。
+	const auto *pSnapshot = m_State.Snapshot();
+	if(m_State.Visible() && pSnapshot && CurrentTime >= m_NextCoverRequest)
+	{
+		CQmMapCovers::SImage Cover;
+		if(!pSnapshot->m_Thumbnail.empty())
+			GameClient()->m_MapCovers.Get(pSnapshot->m_Thumbnail.c_str(), CQmMapCovers::ERole::SUMMARY, &Cover);
+		m_CoverTexture = Cover.m_Texture;
+		m_NextCoverRequest = CurrentTime + 0.25;
+	}
+	if(!m_State.Visible() || m_State.ShowingBest())
 	{
 		m_PreviousBest = m_Data.m_BestTimeMs;
 		m_PreviousHistoryKnown = m_Data.m_HistoryKnown;
@@ -448,6 +511,40 @@ void CQmFinishSummary::OnUpdate()
 				m_PreviousHistoryKnown = true;
 			}
 		}
+	}
+	if(g_Config.m_QmFinishSummaryPreview && !GameClient()->m_Menus.IsActive())
+		UpdatePreview();
+}
+
+void CQmFinishSummary::UpdatePreview()
+{
+	SSnapshot Best;
+	if(!m_State.MutableSnapshot())
+	{
+		const auto RemoteBest = m_Community == ECommunity::DDNET ? m_Data.m_BestTimeMs : m_Data.m_AccountBestTimeMs;
+		Best.m_TimeMs = m_PreviousBest.value_or(RemoteBest.value_or(0));
+		const EQuery BestQuery = m_Community == ECommunity::DDNET ? EQuery::PLAYER : EQuery::RANK;
+		if(Best.m_TimeMs <= 0 && !m_aRequests[static_cast<size_t>(BestQuery)].m_Done)
+			return;
+		if(Best.m_TimeMs > 0)
+		{
+			Best.m_Community = m_Community;
+			Best.m_Map = m_Map;
+			Best.m_Player = m_Player;
+			Best.m_ClientId = m_ClientId;
+			Best.m_MaxStars = m_Community == ECommunity::AXIOM_GORES ? 3 : 5;
+			Best.m_Comparison = EComparison::BEST;
+			std::vector<SOnlineTime> vTimes;
+			CollectOnlineTimes(vTimes);
+			ResolveLocalRank(Best, vTimes, Best.m_TimeMs, GameClient()->m_ReceivedDDNetPlayerFinishTimes);
+			m_pManagedTeeRenderInfo = GameClient()->CreateManagedTeeRenderInfo(GameClient()->m_aClients[m_ClientId]);
+		}
+	}
+	g_Config.m_QmFinishSummaryPreview = 0;
+	if(m_State.Preview(std::move(Best)))
+	{
+		m_NextCoverRequest = 0.0;
+		RefreshSnapshot();
 	}
 }
 
@@ -478,6 +575,7 @@ void CQmFinishSummary::Finish(int64_t TimeMs, std::optional<int64_t> Difference,
 		}
 		return;
 	}
+	m_pManagedTeeRenderInfo = GameClient()->CreateManagedTeeRenderInfo(GameClient()->m_aClients[m_ClientId]);
 	m_Before = m_Data;
 	// 精确的服务端历史成绩补足网页基线；积分历史仍按对应社区身份判断。
 	m_Before.m_BestTimeMs = m_PreviousBest;
@@ -488,8 +586,20 @@ void CQmFinishSummary::Finish(int64_t TimeMs, std::optional<int64_t> Difference,
 	char aDate[64];
 	str_timestamp_ex(m_FinishTimestamp, aDate, sizeof(aDate), "%Y-%m-%d %H:%M");
 	Summary.m_FinishedAt = aDate;
-	m_vFinishOnlineTimes.clear();
 	m_FinishOnlineTimesKnown = GameClient()->m_ReceivedDDNetPlayerFinishTimes;
+	CollectOnlineTimes(m_vFinishOnlineTimes);
+	ResolveLocalRank(Summary, m_vFinishOnlineTimes, m_PreviousBest, m_FinishOnlineTimesKnown);
+	const bool Show = g_Config.m_QmFinishSummary && !g_Config.m_QmHudIslandUseOriginalStyle && g_Config.m_ClShowhud;
+	if(Show)
+		PrepareRequests(true);
+	RefreshSnapshot();
+	if(!Show)
+		m_State.Dismiss();
+}
+
+void CQmFinishSummary::CollectOnlineTimes(std::vector<SOnlineTime> &vTimes) const
+{
+	vTimes.clear();
 	for(const auto &Player : GameClient()->m_aClients)
 	{
 		if(!Player.m_Active)
@@ -499,16 +609,24 @@ void CQmFinishSummary::Finish(int64_t TimeMs, std::optional<int64_t> Difference,
 		Entry.m_Known = GameClient()->m_ReceivedDDNetPlayerFinishTimes && Player.m_FinishTimeSeconds != FinishTime::UNSET;
 		if(Player.m_FinishTimeSeconds >= 0)
 			Entry.m_TimeMs = static_cast<int64_t>(Player.m_FinishTimeSeconds) * 1000 + std::max(0, Player.m_FinishTimeMillis);
-		m_vFinishOnlineTimes.push_back(std::move(Entry));
+		vTimes.push_back(std::move(Entry));
 	}
-	ResolveLocalRank(Summary, m_vFinishOnlineTimes, m_PreviousBest, m_FinishOnlineTimesKnown);
-	PrepareRequests(true);
-	RefreshSnapshot();
+}
+
+bool CQmFinishSummary::SuppressesFinishMessage(int ClientId, int64_t TimeMs) const
+{
+	if(!g_Config.m_QmFinishSummary || g_Config.m_QmHudIslandUseOriginalStyle || !g_Config.m_ClShowhud ||
+		Client()->State() != IClient::STATE_ONLINE || GameClient()->m_RankGhost.IsViewModeActive())
+		return false;
+	if(m_Connection != g_Config.m_ClDummy || m_ClientId != GameClient()->m_aLocalIds[g_Config.m_ClDummy])
+		return false;
+	// 收起时仍由保留快照匹配，消息沿用自身的十秒过期时间，关闭功能则立即恢复。
+	return m_State.MatchesFinish(ClientId, TimeMs);
 }
 
 void CQmFinishSummary::OnMessage(int MsgType, void *pRawMsg)
 {
-	if(!g_Config.m_QmFinishSummary || Client()->State() != IClient::STATE_ONLINE)
+	if(Client()->State() != IClient::STATE_ONLINE)
 		return;
 	const int LocalId = GameClient()->m_aLocalIds[g_Config.m_ClDummy];
 	if(LocalId < 0 || LocalId >= MAX_CLIENTS)

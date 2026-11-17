@@ -19,10 +19,10 @@ class IHttp;
 class IHttpRequest;
 class IStorage;
 
-// 地图库条目的封面图缓存。
+// 地图库与通关结算卡共用的封面图缓存。
 //
 // 数据流：官方缩略图 URL → 磁盘缓存（qmclient/mapcovers）→ 工作线程解码/缩放/拖尾
-// → 主线程上传纹理。纹理按「地图 + 用途（列表行 / 详情条）」缓存：尺寸是固定值，
+// → 主线程上传纹理。纹理按「地图 + 用途（列表行 / 详情条 / 结算卡）」缓存：尺寸是固定值，
 // 不随窗口宽度和滚动条动画变化，所以来回滚动不会反复重合成。页面退出后继续完成已请求的封面，
 // 已下载的磁盘缓存和已生成的纹理继续复用。
 class CQmMapCovers
@@ -32,9 +32,10 @@ public:
 	{
 		ROW,
 		DETAILS,
+		SUMMARY,
 	};
 
-	// 可直接绘制的一张封面图（纹理本身已含拖尾 alpha 与压暗）。
+	// 借用缓存拥有的纹理；列表与详情含拖尾，结算卡使用完整图片。
 	struct SImage
 	{
 		IGraphics::CTextureHandle m_Texture{};
@@ -56,12 +57,14 @@ public:
 	// 还有封面在排队/下载/合成（供性能日志与调试使用）。
 	bool Loading() const;
 
-	// 两种用途的固定输出尺寸（像素）。列表行缩略图约等于绘制高度的 2.4 倍，
+	// 各用途的固定输出尺寸（像素）。列表行缩略图约等于绘制高度的 2.4 倍，
 	// 详情条约 2.5 倍，够清楚又不会让纹理缓存吃内存。
 	static constexpr int ROW_WIDTH = 167;
 	static constexpr int ROW_HEIGHT = 72;
 	static constexpr int DETAILS_WIDTH = 278;
 	static constexpr int DETAILS_HEIGHT = 120;
+	static constexpr int SUMMARY_WIDTH = 512;
+	static constexpr int SUMMARY_HEIGHT = 256;
 
 private:
 	struct SKey
@@ -109,6 +112,7 @@ private:
 	inline static constexpr int MAX_JOBS = 6;
 	inline static constexpr int MAX_QUEUED = 96;
 	inline static constexpr int MAX_TEXTURES = 192;
+	inline static constexpr int MAX_SUMMARY_TEXTURES = 2;
 	inline static constexpr int MAX_UPLOADS_PER_FRAME = 4;
 	inline static constexpr int MAX_READS_PER_FRAME = 8;
 	inline static constexpr float FAILURE_RETRY_SECONDS = 120.0f;

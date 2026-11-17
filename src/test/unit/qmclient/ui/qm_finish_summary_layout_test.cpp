@@ -1,4 +1,5 @@
 #include <game/client/QmUi/QmFinishSummary.h>
+#include <game/client/QmUi/QmFinishSummaryMotion.h>
 
 #include <gtest/gtest.h>
 
@@ -10,40 +11,201 @@ TEST(QmFinishSummaryLayout, ExpandedCardStaysCenteredAndInsideViewport)
 		const CUIRect Rect = qm_finish_summary::ExpandedRect(Width, 300.0f, 5.0f);
 		EXPECT_FLOAT_EQ(Rect.y, 5.0f);
 		EXPECT_NEAR(Rect.x + Rect.w * 0.5f, Width * 0.5f, 0.001f);
-		EXPECT_GE(Rect.x, 20.0f);
-		EXPECT_LE(Rect.x + Rect.w, Width - 20.0f);
-		EXPECT_LE(Rect.y + Rect.h, 290.0f);
+		EXPECT_LE(Rect.w, Width * 0.375f);
+		EXPECT_LE(Rect.h, 90.0f);
+		EXPECT_NEAR(Rect.w / Rect.h, 480.0f / 216.0f, 0.001f);
 	}
 }
 
 TEST(QmFinishSummaryLayout, ShortViewportLimitsExpandedHeight)
 {
 	const CUIRect Rect = qm_finish_summary::ExpandedRect(533.0f, 100.0f, 10.0f);
-	EXPECT_FLOAT_EQ(Rect.h, 80.0f);
-	EXPECT_FLOAT_EQ(Rect.y + Rect.h, 90.0f);
+	EXPECT_FLOAT_EQ(Rect.h, 30.0f);
+	EXPECT_FLOAT_EQ(Rect.y + Rect.h, 40.0f);
 }
 
-TEST(QmFinishSummaryLayout, ExpansionKeepsTopAnchorAndInterpolatesBothDimensions)
+TEST(QmFinishSummaryLayout, HudEditorScalingKeepsPhysicalCardWithinScreenFractions)
 {
-	const CUIRect Normal{250.0f, 7.0f, 33.0f, 11.2f};
-	const CUIRect Expanded{100.0f, 7.0f, 333.0f, 139.86f};
-	const CUIRect Half = qm_finish_summary::ResolveRect(Normal, Expanded, 0.5f);
-	EXPECT_FLOAT_EQ(Half.y, 7.0f);
-	EXPECT_FLOAT_EQ(Half.x, 175.0f);
-	EXPECT_FLOAT_EQ(Half.w, 183.0f);
-	EXPECT_NEAR(Half.h, 75.53f, 0.001f);
+	for(const float Scale : {0.5f, 1.0f, 1.5f, 2.0f, 4.0f})
+	{
+		SCOPED_TRACE(Scale);
+		const CUIRect Rect = qm_finish_summary::ExpandedRect(1920.0f, 1080.0f, 10.0f, Scale);
+		EXPECT_LE(Rect.w * Scale, 720.0f);
+		EXPECT_LE(Rect.h * Scale, 324.0f);
+		EXPECT_GT(Rect.w, 0.0f);
+		EXPECT_NEAR(Rect.w / Rect.h, 480.0f / 216.0f, 0.001f);
+	}
 }
 
-TEST(QmFinishSummaryLayout, SpringOvershootCannotExceedFinalGeometry)
+TEST(QmFinishSummaryLayout, UltrawideViewportKeepsHeightLimitAndContentAspectRatio)
 {
-	const CUIRect Normal{250.0f, 0.0f, 33.0f, 11.2f};
-	const CUIRect Expanded{100.0f, 0.0f, 333.0f, 139.86f};
-	const CUIRect Opening = qm_finish_summary::ResolveRect(Normal, Expanded, 1.1f);
-	const CUIRect Closing = qm_finish_summary::ResolveRect(Normal, Expanded, -0.1f);
-	EXPECT_FLOAT_EQ(Opening.x, Expanded.x);
-	EXPECT_FLOAT_EQ(Opening.w, Expanded.w);
-	EXPECT_FLOAT_EQ(Opening.h, Expanded.h);
-	EXPECT_FLOAT_EQ(Closing.x, Normal.x);
-	EXPECT_FLOAT_EQ(Closing.w, Normal.w);
-	EXPECT_FLOAT_EQ(Closing.h, Normal.h);
+	const CUIRect Rect = qm_finish_summary::ExpandedRect(3440.0f, 1440.0f, 10.0f);
+	EXPECT_FLOAT_EQ(Rect.h, 432.0f);
+	EXPECT_NEAR(Rect.w, 960.0f, 0.001f);
+}
+
+TEST(QmFinishSummaryLayout, OuterShadowFitsInsidePhysicalSizeLimitAfterHudScaling)
+{
+	for(const float Scale : {0.5f, 1.0f, 2.0f, 4.0f})
+	{
+		SCOPED_TRACE(Scale);
+		const CUIRect Rect = qm_finish_summary::ExpandedRect(1920.0f, 1080.0f, 10.0f, Scale, 5.0f);
+		EXPECT_LE(Rect.w * Scale + 10.0f, 720.0f);
+		EXPECT_LE(Rect.h * Scale + 10.0f, 324.0f);
+	}
+}
+
+TEST(QmFinishSummaryLayout, CardNearBottomUsesRemainingHeightWithoutStretching)
+{
+	const CUIRect Rect = qm_finish_summary::ExpandedRect(533.3333f, 300.0f, 285.0f);
+	EXPECT_FLOAT_EQ(Rect.h, 15.0f);
+	EXPECT_FLOAT_EQ(Rect.y + Rect.h, 300.0f);
+	EXPECT_NEAR(Rect.w / Rect.h, 480.0f / 216.0f, 0.001f);
+}
+
+TEST(QmFinishSummaryLayout, CardGrowsFromInsideHostAndDetachesBelowIt)
+{
+	const CUIRect Host{70, 4, 60, 16};
+	const CUIRect Target{20, 28, 160, 72};
+	const auto Closed = qm_finish_summary::Layout(Host, Target, 0.0f);
+	const auto Bud = qm_finish_summary::Layout(Host, Target, 0.25f);
+	const auto Open = qm_finish_summary::Layout(Host, Target, 1.0f);
+	EXPECT_FLOAT_EQ(Closed.m_Rect.w, 0.0f);
+	EXPECT_FLOAT_EQ(Closed.m_ContentAlpha, 0.0f);
+	EXPECT_LT(Bud.m_Rect.y, Host.y + Host.h);
+	EXPECT_GT(Bud.m_Rect.y + Bud.m_Rect.h, Host.y + Host.h);
+	EXPECT_GT(Bud.m_Connection, 0.0f);
+	EXPECT_LT(Bud.m_Rect.w, Target.w);
+	EXPECT_FLOAT_EQ(Open.m_Rect.x, Target.x);
+	EXPECT_FLOAT_EQ(Open.m_Rect.y, Target.y);
+	EXPECT_FLOAT_EQ(Open.m_Rect.h, Target.h);
+	EXPECT_FLOAT_EQ(Open.m_Connection, 0.0f);
+	EXPECT_FLOAT_EQ(Open.m_ContentAlpha, 1.0f);
+}
+
+TEST(QmFinishSummaryLayout, ClosingPullsNearEdgeIntoIslandBeforeFarEdge)
+{
+	const CUIRect Host{70, 4, 60, 16};
+	const CUIRect Target{20, 28, 160, 72};
+	for(const float Start : {0.5f, 0.82f, 1.0f})
+	{
+		const auto Current = qm_finish_summary::Layout(Host, Target, Start);
+		const auto Reversed = qm_finish_summary::ClosingLayout(Host, Target, Start, Start);
+		EXPECT_FLOAT_EQ(Reversed.m_Rect.x, Current.m_Rect.x);
+		EXPECT_FLOAT_EQ(Reversed.m_Rect.y, Current.m_Rect.y);
+		EXPECT_FLOAT_EQ(Reversed.m_Rect.w, Current.m_Rect.w);
+	}
+	const auto Half = qm_finish_summary::ClosingLayout(Host, Target, 1.0f, 0.5f);
+	const auto Tail = qm_finish_summary::ClosingLayout(Host, Target, 1.0f, 0.2f);
+	EXPECT_LT(Half.m_Rect.y, Host.y + Host.h);
+	EXPECT_GT(Half.m_Rect.y, Host.y);
+	EXPECT_GT(Half.m_Pinch, 0.0f);
+	EXPECT_LT(Tail.m_Rect.w, Half.m_Rect.w);
+	EXPECT_LT(Tail.m_Rect.h, Half.m_Rect.h);
+	const auto End = qm_finish_summary::ClosingLayout(Host, Target, 1.0f, 0.0f);
+	EXPECT_FLOAT_EQ(End.m_Rect.h, 0.0f);
+	EXPECT_FLOAT_EQ(End.m_Rect.w, 0.0f);
+}
+
+TEST(QmFinishSummaryLayout, ClosingBridgesHostAndCardUntilTheTailDisappears)
+{
+	const CUIRect Host{70, 4, 60, 16};
+	for(const float TargetX : {-30.0f, 20.0f, 70.0f})
+	{
+		SCOPED_TRACE(TargetX);
+		const CUIRect Target{TargetX, 28, 160, 72};
+		const auto Open = qm_finish_summary::ClosingLayout(Host, Target, 1.0f, 1.0f);
+		EXPECT_FLOAT_EQ(Open.m_NeckRect.w, 0.0f);
+		for(const float Progress : {0.96f, 0.85f, 0.7f, 0.5f, 0.05f})
+		{
+			SCOPED_TRACE(Progress);
+			const auto Pose = qm_finish_summary::ClosingLayout(Host, Target, 1.0f, Progress);
+			const auto &Neck = Pose.m_NeckRect;
+			EXPECT_GT(Neck.w, 0.0f);
+			EXPECT_GE(Neck.x, Host.x);
+			EXPECT_LE(Neck.x + Neck.w, Host.x + Host.w);
+			EXPECT_LT(Neck.y, Host.y + Host.h);
+			EXPECT_GT(Neck.y + Neck.h, Pose.m_Rect.y);
+			const float MidX = Neck.x + Neck.w * 0.5f;
+			EXPECT_GT(MidX, Pose.m_Rect.x);
+			EXPECT_LT(MidX, Pose.m_Rect.x + Pose.m_Rect.w);
+		}
+		const auto End = qm_finish_summary::ClosingLayout(Host, Target, 1.0f, 0.0f);
+		EXPECT_FLOAT_EQ(End.m_NeckRect.w, 0.0f);
+		EXPECT_FLOAT_EQ(End.m_NeckRect.h, 0.0f);
+	}
+}
+
+TEST(QmFinishSummaryLayout, ShadeFadesInOnlyWhenClosing)
+{
+	const CUIRect Host{70, 4, 60, 16};
+	const CUIRect Target{20, 28, 160, 72};
+	for(const float Start : {0.4f, 0.8f, 1.0f})
+	{
+		SCOPED_TRACE(Start);
+		EXPECT_FLOAT_EQ(qm_finish_summary::Layout(Host, Target, Start).m_TopShade, 0.0f);
+		EXPECT_FLOAT_EQ(qm_finish_summary::ClosingLayout(Host, Target, Start, Start).m_TopShade, 0.0f);
+		const auto Early = qm_finish_summary::ClosingLayout(Host, Target, Start, Start * 0.9f);
+		const auto Attached = qm_finish_summary::ClosingLayout(Host, Target, Start, Start * 0.5f);
+		EXPECT_GT(Early.m_TopShade, 0.0f);
+		EXPECT_LT(Early.m_TopShade, Attached.m_TopShade);
+	}
+}
+
+TEST(QmFinishSummaryMotion, MovingTeeTiltsAndStoppingLevelsTheCard)
+{
+	qm_finish_summary::CCardMotion Motion;
+	Motion.Update(1, 0.0, true, 1.0f, {}, 2);
+	Motion.Update(1, 6.0, true, 1.0f, {10, -5}, 2);
+	EXPECT_GT(Motion.TiltX(), 0.0f);
+	EXPECT_GT(Motion.TiltY(), 0.0f);
+	Motion.Update(1, 7.0, true, 1.0f, {}, 2);
+	EXPECT_NEAR(Motion.TiltX(), 0.0f, 0.001f);
+	EXPECT_NEAR(Motion.TiltY(), 0.0f, 0.001f);
+}
+
+TEST(QmFinishSummaryMotion, HostReversesFromCurrentShapeWhenDismissedDuringGrowth)
+{
+	qm_finish_summary::CCardMotion Motion;
+	Motion.Update(1, 0.0, true, 0.0f, {}, 2);
+	Motion.Update(1, 0.1, true, 0.5f, {}, 2);
+	const CUIRect Host{70, 4, 60, 16};
+	const CUIRect Before = Motion.HostRect(Host);
+	EXPECT_LT(Before.w, Host.w);
+	Motion.Update(1, 0.1, false, 0.5f, {}, 2);
+	EXPECT_FLOAT_EQ(Motion.HostRect(Host).w, Before.w);
+	Motion.Update(1, 0.3, false, 0.3f, {}, 2);
+	EXPECT_GT(Motion.HostRect(Host).w, Host.w);
+}
+
+TEST(QmFinishSummaryMotion, ClosingExpandsEachHostEdgeByTheSameDistance)
+{
+	const CUIRect Host{20, 8, 140, 16};
+	qm_finish_summary::CCardMotion Motion;
+	Motion.Update(1, 0.0, true, 1.0f, {}, 2);
+	Motion.Update(1, 0.2, false, 0.5f, {}, 2);
+	const CUIRect Expanded = Motion.HostRect(Host);
+	const float Outset = Host.y - Expanded.y;
+	ASSERT_GT(Outset, 0.0f);
+	EXPECT_NEAR(Host.x - Expanded.x, Outset, 0.0001f);
+	EXPECT_NEAR(Expanded.x + Expanded.w - (Host.x + Host.w), Outset, 0.0001f);
+	EXPECT_NEAR(Expanded.y + Expanded.h - (Host.y + Host.h), Outset, 0.0001f);
+}
+
+TEST(QmFinishSummaryMotion, DisablingMotionLevelsTheCardImmediately)
+{
+	qm_finish_summary::CCardMotion Motion;
+	Motion.Update(1, 0.0, true, 0.0f, {}, 2);
+	Motion.Update(1, 0.1, true, 0.5f, {-8, 6}, 2);
+	ASSERT_LT(Motion.TiltX(), 0.0f);
+	ASSERT_LT(Motion.TiltY(), 0.0f);
+	Motion.Update(1, 6.0, true, 1.0f, {-8, 6}, 0);
+	EXPECT_FLOAT_EQ(Motion.TiltX(), 0.0f);
+	EXPECT_FLOAT_EQ(Motion.TiltY(), 0.0f);
+	const CUIRect Host{70, 4, 60, 16};
+	const CUIRect Rect = Motion.HostRect(Host);
+	EXPECT_FLOAT_EQ(Rect.x, Host.x);
+	EXPECT_FLOAT_EQ(Rect.y, Host.y);
+	EXPECT_FLOAT_EQ(Rect.w, Host.w);
+	EXPECT_FLOAT_EQ(Rect.h, Host.h);
 }

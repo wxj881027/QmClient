@@ -514,6 +514,14 @@ fragment float4 qmclient_media_island_sdf_fragment(SMetalVertexOut Input [[stage
 			ShapeDistance = min(ShapeDistance, MediaIslandSmoothUnion(MainDistance, CapsuleDistance, CapsuleParams.y));
 	}
 
+	const float4 Card = Data[45];
+	if(Card.z > 0.0 && Card.w > 0.0)
+	{
+		const float2 Params = Data[46].xy;
+		const float CardDistance = MediaIslandRoundedRectDistance(Point, Card, Params.x, 15.0, 0.0);
+		ShapeDistance = min(ShapeDistance, MediaIslandSmoothUnion(MainDistance, CardDistance, Params.y));
+	}
+
 	float3 PremulColor = float3(0.0);
 	float Alpha = 0.0;
 	const float ShadowSize = max(ShadowParams.x, 0.0);

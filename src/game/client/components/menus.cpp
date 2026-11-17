@@ -6691,8 +6691,6 @@ void CMenus::OnReset()
 void CMenus::OnShutdown()
 {
 	m_QmVoteMenu.m_Loader.Suspend();
-	// 图形接口此刻仍存活，地图库封面的 GPU 纹理必须在这一步释放。
-	m_QmVoteMenu.m_Covers.Shutdown(Graphics());
 	m_ScreenshotEditor.Close(this);
 	m_TranslateProbe.Cancel();
 	m_LocalSaveDisplay.Reset();
@@ -8408,8 +8406,6 @@ void CMenus::OnUpdate()
 
 void CMenus::OnRender()
 {
-	// 关菜单和切页后继续完成已请求的封面，重开时直接复用纹理。
-	m_QmVoteMenu.m_Covers.Update(Http(), Engine(), Graphics(), Storage(), Client()->LocalTime());
 	m_BrowserColumnResizeCursor = false;
 	PumpDemoScreenshotWatermark();
 	// 引擎侧（Windows 双击 .poses、poses_open 命令）缺少地图时留下的请求：

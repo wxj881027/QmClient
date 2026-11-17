@@ -32,6 +32,42 @@ TEST(QmFinishSummaryData, DdnetMapRequiresExactNameAndRetainsOutputOnFailure)
 	EXPECT_EQ(Data.m_Map, "Map A");
 }
 
+TEST(QmFinishSummaryCoverData, OfficialThumbnailSurvivesPartialAfterFinishData)
+{
+	constexpr const char *pJson = R"({"name":"Map A","thumbnail":"https://ddnet.org/ranks/maps/Map_A.png"})";
+	SRemoteData Data;
+	ASSERT_TRUE(ParseDdnetMap(pJson, std::strlen(pJson), "Map A", Data));
+	EXPECT_EQ(Data.m_Thumbnail, "https://ddnet.org/ranks/maps/Map_A.png");
+	auto Snapshot = Finish();
+	ApplyRemote(Snapshot, Data, {}, false);
+	EXPECT_EQ(Snapshot.m_Thumbnail, Data.m_Thumbnail);
+}
+
+TEST(QmFinishSummaryCoverData, InvalidThumbnailIsIgnoredWithoutRejectingMap)
+{
+	for(const char *pJson : {
+		    R"({"name":"Map A","thumbnail":"https://example.com/Map_A.png"})",
+		    R"({"name":"Map A","thumbnail":"https://ddnet.org/ranks/maps/Map_A.png\u0000suffix"})",
+		    R"({"name":"Map A","thumbnail":5})",
+		    R"({"name":"Map A"})"})
+	{
+		SCOPED_TRACE(pJson);
+		SRemoteData Data;
+		Data.m_Thumbnail = "previous";
+		ASSERT_TRUE(ParseDdnetMap(pJson, std::strlen(pJson), "Map A", Data));
+		EXPECT_TRUE(Data.m_Thumbnail.empty());
+	}
+}
+
+TEST(QmFinishSummaryCoverData, AxiomSnapshotDoesNotUseDdnetCover)
+{
+	auto Snapshot = Finish(ECommunity::AXIOM_GORES);
+	SRemoteData Data;
+	Data.m_Thumbnail = "https://ddnet.org/ranks/maps/Map_A.png";
+	ApplyRemote(Snapshot, {}, Data, false);
+	EXPECT_TRUE(Snapshot.m_Thumbnail.empty());
+}
+
 TEST(QmFinishSummaryData, DdnetMapRejectsEmbeddedNullAndInvalidJson)
 {
 	constexpr const char *pJson = R"({"name":"Map A\u0000extra","mapper":"Mapper"})";
@@ -60,6 +96,23 @@ TEST(QmFinishSummaryData, PlayerDataCountsDistinctMapsAndFindsLatestMatchingFini
 	EXPECT_EQ(Data.m_LatestTimestamp, 120);
 	EXPECT_EQ(Data.m_LatestTimeMs, 100123);
 	EXPECT_FALSE(ParseDdnetPlayer(pJson, std::strlen(pJson), "alpha", "Map A", Data));
+}
+
+TEST(QmFinishSummaryData, IndividualRankPointsDistinguishUnrankedFromAnUnknownBaseline)
+{
+	SRemoteData Data;
+	const auto ParseProfile = [&](const char *pStandings) {
+		const std::string Json = std::string(R"({"player":"Alpha","types":{},"points":{"points":500},"team_rank":{"points":300},)") + pStandings + "}";
+		return ParseDdnetPlayer(Json.c_str(), Json.size(), "Alpha", "Map A", Data);
+	};
+	ASSERT_TRUE(ParseProfile(R"("rank":{"rank":4,"points":12})"));
+	EXPECT_EQ(Data.m_RankPoints, 12);
+	ASSERT_TRUE(ParseProfile(R"("rank":{"rank":null})"));
+	EXPECT_EQ(Data.m_RankPoints, 0);
+	ASSERT_TRUE(ParseProfile(R"("rank":{"rank":4})"));
+	EXPECT_FALSE(Data.m_RankPoints);
+	ASSERT_TRUE(ParseProfile(R"("rank":{"points":-1})"));
+	EXPECT_FALSE(Data.m_RankPoints);
 }
 
 TEST(QmFinishSummaryData, ExplicitZeroFinishesEstablishesFirstFinishBaseline)
@@ -390,6 +443,52 @@ TEST(QmFinishSummaryRemote, UnknownFirstFinishKeepsGainPending)
 	After.m_Points = 100;
 	ApplyRemote(Snapshot, {}, After, true);
 	EXPECT_EQ(Snapshot.m_PointsGained.m_Status, EStatus::PENDING);
+}
+
+TEST(QmFinishSummaryRemote, ConfirmedRankPointGainIsRecordedOnceForTheFinish)
+{
+	SSnapshot Snapshot;
+	Snapshot.m_Community = ECommunity::DDNET;
+	Snapshot.m_Map = "Map A";
+	Snapshot.m_TimeMs = 93000;
+	SRemoteData Before, After;
+	Before.m_RankPoints = 0;
+	Before.m_Rank = 42;
+	After.m_Rank = 9;
+	After.m_BestTimeMs = 93000;
+	After.m_RankPoints = 2;
+	ApplyRemote(Snapshot, Before, After, false);
+	EXPECT_EQ(Snapshot.m_RankPointsGained, 0);
+	ApplyRemote(Snapshot, Before, After, true);
+	EXPECT_EQ(Snapshot.m_RankPointsGained, 2);
+	ApplyRemote(Snapshot, Before, {}, false);
+	EXPECT_EQ(Snapshot.m_RankPointsGained, 2);
+}
+
+TEST(QmFinishSummaryRemote, OrdinaryPointsOrAMissingRankBaselineDoNotTriggerCelebration)
+{
+	SSnapshot Snapshot;
+	Snapshot.m_Community = ECommunity::DDNET;
+	Snapshot.m_TimeMs = 93000;
+	SRemoteData Before, After;
+	Before.m_Points = 100;
+	After.m_Points = 110;
+	Before.m_Rank = 10;
+	After.m_Rank = 9;
+	After.m_BestTimeMs = 93000;
+	After.m_RankPoints = 12;
+	ApplyRemote(Snapshot, Before, After, true);
+	EXPECT_EQ(Snapshot.m_RankPointsGained, 0);
+	for(const int Previous : {12, 15})
+	{
+		Before.m_RankPoints = Previous;
+		ApplyRemote(Snapshot, Before, After, true);
+		EXPECT_EQ(Snapshot.m_RankPointsGained, 0);
+	}
+	Before.m_RankPoints = 2;
+	After.m_BestTimeMs = 80000;
+	ApplyRemote(Snapshot, Before, After, true);
+	EXPECT_EQ(Snapshot.m_RankPointsGained, 0);
 }
 
 TEST(QmFinishSummaryRemote, ConfirmedFirstFinishAwardsOnlyThisMapsPoints)

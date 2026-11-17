@@ -183,6 +183,7 @@ void CMenus::RenderQmHudDynamicIslandContent(CUIRect &Content, float LineHeight,
 		return;
 
 	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmFinishSummary, "Show finish summary", Localize("Show finish summary"), &g_Config.m_QmFinishSummary);
+	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmFinishSummaryPreview, "Preview finish summary", Localize("Preview finish summary"), &g_Config.m_QmFinishSummaryPreview);
 
 	// 钩子倒计时是独立开关：钩住玩家时在钩链中点显示倒计时环。
 	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmHookCountdown, "Enable hook countdown", Localize("Enable hook countdown"), &g_Config.m_QmHookCountdown);

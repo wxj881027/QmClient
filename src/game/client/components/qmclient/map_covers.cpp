@@ -65,14 +65,28 @@ CQmMapCovers::~CQmMapCovers()
 
 std::string CQmMapCovers::MakeKeyString(const SKey &Key)
 {
-	return Key.m_Url + (Key.m_Role == ERole::DETAILS ? "|details" : "|row");
+	switch(Key.m_Role)
+	{
+	case ERole::SUMMARY: return Key.m_Url + "|summary";
+	case ERole::DETAILS: return Key.m_Url + "|details";
+	case ERole::ROW: return Key.m_Url + "|row";
+	}
+	dbg_assert(false, "unknown map cover role");
+	return {};
 }
 
 QmMapCover::SArt CQmMapCovers::StyleForUrl(const char *pUrl, ERole Role)
 {
 	QmMapCover::SArt Art;
 	Art.m_Seed = QmMapCover::SeedForUrl(pUrl);
-	if(Role == ERole::DETAILS)
+	if(Role == ERole::SUMMARY)
+	{
+		Art.m_SummaryBlur = true;
+		Art.m_ImageFraction = 1.0f;
+		Art.m_Shade = 1.0f;
+		Art.m_CornerRadius = 0.0f;
+	}
+	else if(Role == ERole::DETAILS)
 	{
 		Art.m_Shade = 0.88f;
 		Art.m_CornerRadius = 9.0f;
@@ -87,7 +101,12 @@ QmMapCover::SArt CQmMapCovers::StyleForUrl(const char *pUrl, ERole Role)
 
 void CQmMapCovers::ComposeSize(ERole Role, int *pWidth, int *pHeight)
 {
-	if(Role == ERole::DETAILS)
+	if(Role == ERole::SUMMARY)
+	{
+		*pWidth = SUMMARY_WIDTH;
+		*pHeight = SUMMARY_HEIGHT;
+	}
+	else if(Role == ERole::DETAILS)
 	{
 		*pWidth = DETAILS_WIDTH;
 		*pHeight = DETAILS_HEIGHT;
@@ -129,9 +148,14 @@ bool CQmMapCovers::Get(const char *pUrl, ERole Role, SImage *pOut)
 	const SKey Key{pUrl, Role};
 	if(SEntry *pEntry = FindEntry(Key))
 	{
-		pEntry->m_LastUsedFrame = m_Frame;
-		pOut->m_Texture = pEntry->m_Texture;
-		return pOut->m_Texture.IsValid();
+		if(m_pGraphics != nullptr && m_pGraphics->IsTextureHandleAllocated(pEntry->m_Texture))
+		{
+			pEntry->m_LastUsedFrame = m_Frame;
+			pOut->m_Texture = pEntry->m_Texture;
+			return true;
+		}
+		// 设备重建后旧句柄仍可能带 ID，移除失效条目后从磁盘缓存恢复。
+		m_vEntries.erase(std::remove_if(m_vEntries.begin(), m_vEntries.end(), [&](const SEntry &Entry) { return Entry.m_Key == Key; }), m_vEntries.end());
 	}
 
 	const auto Failed = m_vFailedUntil.find(Key.m_Url);
@@ -400,9 +424,26 @@ void CQmMapCovers::AddTexture(SJob &Job)
 
 void CQmMapCovers::EvictTextures()
 {
-	while((int)m_vEntries.size() > MAX_TEXTURES)
+	// 完整封面独立保留两张，列表滚动不会逐出正在显示的结算背景。
+	int Summaries = static_cast<int>(std::count_if(m_vEntries.begin(), m_vEntries.end(), [](const SEntry &Entry) { return Entry.m_Key.m_Role == ERole::SUMMARY; }));
+	while(Summaries > MAX_SUMMARY_TEXTURES)
+	{
+		auto Oldest = m_vEntries.end();
+		for(auto It = m_vEntries.begin(); It != m_vEntries.end(); ++It)
+		{
+			if(It->m_Key.m_Role == ERole::SUMMARY && (Oldest == m_vEntries.end() || It->m_LastUsedFrame < Oldest->m_LastUsedFrame))
+				Oldest = It;
+		}
+		if(m_pGraphics != nullptr)
+			m_pGraphics->UnloadTexture(&Oldest->m_Texture);
+		m_vEntries.erase(Oldest);
+		--Summaries;
+	}
+	while((int)m_vEntries.size() > MAX_TEXTURES + Summaries)
 	{
 		auto Oldest = std::min_element(m_vEntries.begin(), m_vEntries.end(), [](const SEntry &A, const SEntry &B) {
+			if((A.m_Key.m_Role == ERole::SUMMARY) != (B.m_Key.m_Role == ERole::SUMMARY))
+				return A.m_Key.m_Role != ERole::SUMMARY;
 			return A.m_LastUsedFrame < B.m_LastUsedFrame;
 		});
 		if(Oldest == m_vEntries.end())
