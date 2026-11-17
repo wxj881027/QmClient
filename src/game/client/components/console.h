@@ -47,6 +47,11 @@ public:
 	};
 
 private:
+	enum
+	{
+		TOOLBAR_ACTION_MOTION_COUNT = 12,
+	};
+
 	friend class CConsoleLogger;
 	class CInstance
 	{
@@ -250,6 +255,8 @@ private:
 	static CUi::EPopupMenuFunctionResult PopupSettings(void *pContext, CUIRect View, bool Active);
 	CUi::CTouchState m_TouchState;
 	vec2 m_ButtonPressPosition = vec2(0.0f, 0.0f);
+	QmConsoleUi::CToolbarPresenceMotion<CInstance::LOG_FILTER_BUTTON_COUNT> m_ToolbarFilterMotion;
+	QmConsoleUi::CToolbarPresenceMotion<TOOLBAR_ACTION_MOTION_COUNT> m_ToolbarActionMotion;
 
 	bool DoButton(const CUIRect &Rect, const char *pIcon, vec2 MousePosition, bool Released);
 

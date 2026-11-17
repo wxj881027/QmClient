@@ -57,6 +57,27 @@ TEST(QmConsoleUiLayout, LargerFontsReserveTallerRowsWhenControlsWrap)
 	EXPECT_LE(Layout.m_ActionX + 400.0f * Layout.m_ActionScale, 490.0f);
 }
 
+TEST(QmConsoleUiLayout, AnimatedToolbarKeepsTargetRowCountWhileItemsGrow)
+{
+	const auto Empty = QmConsoleUi::LayoutToolbarAnimated(500.0f, 240.0f, 320.0f, 0.0f, 0.0f);
+	const auto Half = QmConsoleUi::LayoutToolbarAnimated(500.0f, 240.0f, 320.0f, 120.0f, 160.0f);
+	const auto Full = QmConsoleUi::LayoutToolbarAnimated(500.0f, 240.0f, 320.0f, 240.0f, 320.0f);
+	for(const auto *pLayout : {&Empty, &Half, &Full})
+	{
+		EXPECT_TRUE(pLayout->m_SplitRows);
+		EXPECT_FLOAT_EQ(pLayout->m_Height, 52.0f);
+	}
+	EXPECT_GT(Empty.m_ActionX, Half.m_ActionX);
+	EXPECT_GT(Half.m_ActionX, Full.m_ActionX);
+}
+
+TEST(QmConsoleUiLayout, AnimatedToolbarDoesNotReserveAHiddenFilterRow)
+{
+	const auto Layout = QmConsoleUi::LayoutToolbarAnimated(500.0f, 0.0f, 320.0f, 0.0f, 160.0f);
+	EXPECT_FALSE(Layout.m_SplitRows);
+	EXPECT_FLOAT_EQ(Layout.m_Height, 26.0f);
+}
+
 TEST(QmConsoleUiLayout, TextOnlyButtonCentersLabelWithoutReservingIconSlot)
 {
 	const CUIRect Button = {20.0f, 3.0f, 120.0f, 24.0f};
@@ -248,6 +269,56 @@ TEST(QmConsoleUiLayout, FilterWithoutMotionOrRuntimeUsesFinalState)
 	QmConsoleUi::ResolveFilterDisabled(&Runtime, 19, true);
 	EXPECT_FLOAT_EQ(QmConsoleUi::ResolveFilterDisabled(&Runtime, 19, false), 1.0f);
 	g_Config.m_QmUiMotionLevel = PreviousMotion;
+}
+
+TEST(QmConsoleUiLayout, ToolbarPresenceEntersExitsAndResumesFromTheCurrentWidth)
+{
+	const int PreviousMotion = g_Config.m_QmUiMotionLevel;
+	g_Config.m_QmUiMotionLevel = 2;
+	CQmAnimationBackend Runtime;
+	QmConsoleUi::CToolbarPresenceMotion<1> Motion;
+	constexpr uint64_t Key = 0xC0DE;
+
+	EXPECT_FLOAT_EQ(Motion.Resolve(&Runtime, Key, 0, true, true, ui_token::motion::NAVIGATION_APPEAR), 0.0f);
+	Runtime.Advance(0.10f);
+	const float Entering = Motion.Resolve(&Runtime, Key, 0, true, true, ui_token::motion::NAVIGATION_APPEAR);
+	EXPECT_GT(Entering, 0.0f);
+	EXPECT_LT(Entering, 1.0f);
+	Runtime.Advance(0.5f);
+	EXPECT_NEAR(Motion.Resolve(&Runtime, Key, 0, true, true, ui_token::motion::NAVIGATION_APPEAR), 1.0f, 0.001f);
+
+	EXPECT_FLOAT_EQ(Motion.Resolve(&Runtime, Key, 0, false, true, ui_token::motion::NAVIGATION_APPEAR), 1.0f);
+	Runtime.Advance(0.08f);
+	const float Exiting = Motion.Resolve(&Runtime, Key, 0, false, true, ui_token::motion::NAVIGATION_APPEAR);
+	EXPECT_GT(Exiting, 0.0f);
+	EXPECT_LT(Exiting, 1.0f);
+
+	const float Resumed = Motion.Resolve(&Runtime, Key, 0, true, true, ui_token::motion::NAVIGATION_APPEAR);
+	EXPECT_NEAR(Resumed, Exiting, 0.001f);
+	Runtime.Advance(0.5f);
+	EXPECT_NEAR(Motion.Resolve(&Runtime, Key, 0, true, true, ui_token::motion::NAVIGATION_APPEAR), 1.0f, 0.001f);
+	g_Config.m_QmUiMotionLevel = PreviousMotion;
+}
+
+TEST(QmConsoleUiLayout, ToolbarPresenceJumpsToTargetWhenMotionIsDisabled)
+{
+	CQmAnimationBackend Runtime;
+	QmConsoleUi::CToolbarPresenceMotion<1> Motion;
+	constexpr uint64_t Key = 0xBEEF;
+	EXPECT_FLOAT_EQ(Motion.Resolve(&Runtime, Key, 0, true, false, ui_token::motion::NAVIGATION_APPEAR), 1.0f);
+	EXPECT_FLOAT_EQ(Motion.Resolve(&Runtime, Key, 0, false, false, ui_token::motion::NAVIGATION_APPEAR), 0.0f);
+}
+
+TEST(QmConsoleUiLayout, SelectedToolbarButtonUsesControlThemeAccentDerivative)
+{
+	SUiTheme Theme{};
+	Theme.m_Selected = ColorRGBA(0.25f, 0.75f, 0.50f, 0.22f);
+	QmConsoleAppearance::SPalette Palette{};
+	Palette.m_Panel = ColorRGBA(0.10f, 0.12f, 0.14f, 0.90f);
+	EXPECT_EQ(QmConsoleUi::ResolveConsoleButtonFill(Theme, Palette, 0.0f, true), Theme.m_Selected);
+	EXPECT_EQ(QmConsoleUi::ResolveConsoleButtonFill(Theme, Palette, 1.0f, true), Palette.m_Panel);
+	const ColorRGBA Disabled = QmConsoleUi::ResolveConsoleButtonFill(Theme, Palette, 0.0f, false);
+	EXPECT_FLOAT_EQ(Disabled.a, Theme.m_Selected.a * 0.65f);
 }
 
 TEST(QmConsoleUiLayout, FilterContentFadesInAfterMaskChangeAndCompletes)

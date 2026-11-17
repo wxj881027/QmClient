@@ -160,6 +160,12 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 - 唯一实现：`ui_widget::ResolveOverlayScrollbarFrame`（`src/game/client/QmUi/UiForms.h`，几何本体委托 `CQmScrollController::PreviewFrame`），绘制走 `ui_widget::DrawScrollbarHandle`；滑块悬浮/按下放大的热项必须由 `CUi::DoButtonLogic` 登记，控件才会画大。
 - 禁止的反面写法：各页面自己算轨道与滑块；用固定像素上限截断滑块长度；只画滑块、不登记热项导致悬浮不变大；另写一套放大像素。
 
+### 2.8d 控制台顶栏按钮（console toolbar button）
+
+- 定义：控制台筛选与动作按钮的出现、消失都走同一条存在度；按钮宽度、间距、透明度和命中一起收放，目标集合决定是否折成两行，选中底色取全局强调色的派生档。
+- 唯一实现：`QmConsoleUi::CToolbarPresenceMotion`、`QmConsoleUi::LayoutToolbarAnimated`、`QmConsoleUi::ResolveConsoleButtonFill`、`QmConsoleUi::Button`（`src/game/client/QmUi/QmConsoleUi.h`）；动效取 `ui_token::motion::NAVIGATION_APPEAR`，调用点 `CGameConsole::OnRender`（`src/game/client/components/console.cpp`）。
+- 禁止的反面写法：动作集合变化时瞬切按钮或只淡文字不缩宽度；用当前动画宽度决定折行；选中底色取控制台命令语法色或在调用点写裸 `ColorRGBA`；显隐和选中共用同一条 `ALPHA` 轨道。
+
 ### 2.19 圆角与胶囊（radius / capsule）
 
 - 定义：表面形状只由「半径」决定。半径取控件短边的一半即胶囊端头，取短边一半且宽高相等即正圆；宽度明显大于高度（≥1.8 倍）时按半高取端头。

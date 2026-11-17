@@ -27,10 +27,10 @@
 #include <game/client/QmUi/QmConsoleScroll.h>
 #include <game/client/QmUi/QmConsoleUi.h>
 #include <game/client/QmUi/UiButtons.h>
-#include <game/client/components/qmclient/console_slide.h>
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/components/qmclient/colored_parts.h>
 #include <game/client/components/qmclient/console_scroll.h>
+#include <game/client/components/qmclient/console_slide.h>
 #include <game/client/components/qmclient/console_syntax.h>
 #include <game/client/components/qmclient/console_text.h>
 #include <game/client/components/qmclient/qm_chat_export.h>
@@ -1855,6 +1855,13 @@ static void StartConsoleSlide(CUiV2AnimationRuntime &AnimRuntime, float Target, 
 	AnimRuntime.RequestAnimation(Request);
 }
 
+// 控制台顶栏每颗按钮一条稳定轨道：显隐、宽度与选中底色分开取样，
+// 避免同一个 ALPHA 轨道同时承担两种语义。
+static uint64_t ConsoleToolbarNodeKey(const char *pScope, int Index)
+{
+	return BuildUiAnimNodeKey(static_cast<uint64_t>(str_quickhash(pScope)), static_cast<uint64_t>(Index + 1));
+}
+
 // NOLINTNEXTLINE(misc-use-internal-linkage)
 struct CCompletionOptionRenderInfo
 {
@@ -2013,67 +2020,114 @@ void CGameConsole::OnRender()
 	float FilterWidth = 0.0f;
 	for(int i = 0; LocalConsole && i < CInstance::LOG_FILTER_BUTTON_COUNT; ++i)
 		FilterWidth = maximum(FilterWidth, TextRender()->TextWidth(FontSize, apFilterLabels[i]) + FilterPadding * 2.0f);
-	const float TotalFilterWidth = LocalConsole ? FilterWidth * CInstance::LOG_FILTER_BUTTON_COUNT + FilterSpacing * (CInstance::LOG_FILTER_BUTTON_COUNT - 1) : 0.0f;
 	enum class EToolbarAction
 	{
 		SEARCH,
+		CANCEL_SEARCH,
 		FOLLOW,
 		EXPORT,
+		OPEN_CONFIG_DIR,
 		CANCEL_EXPORT,
 		SAVE_EXPORT,
 		CLEAR_EXPORT,
 		SELECT_CHAT,
-		OPEN_CONFIG_DIR,
-		EXPAND,
 		SETTINGS,
+		EXPAND,
+		COLLAPSE_CONSOLE,
+		COUNT,
 	};
+	static_assert(static_cast<int>(EToolbarAction::COUNT) == TOOLBAR_ACTION_MOTION_COUNT);
 	struct SToolbarAction
 	{
 		EToolbarAction m_Action;
 		const char *m_pLabel;
 		float m_Width;
 		bool m_Selected;
+		bool m_Present;
+		float m_Presence;
 	};
-	std::array<SToolbarAction, 7> aActions;
-	int NumActions = 0;
-	const auto AddAction = [&](EToolbarAction Action, const char *pLabel, bool Selected = false) {
-		dbg_assert(NumActions < static_cast<int>(aActions.size()), "Too many console toolbar actions");
-		aActions[NumActions++] = {Action, pLabel, TextRender()->TextWidth(FontSize, pLabel) + FilterPadding * 2.0f, Selected};
+	std::array<SToolbarAction, TOOLBAR_ACTION_MOTION_COUNT> aActions{};
+	const auto SetAction = [&](EToolbarAction Action, const char *pLabel, bool Present, bool Selected = false) {
+		aActions[static_cast<int>(Action)] = {Action, pLabel, TextRender()->TextWidth(FontSize, pLabel) + FilterPadding * 2.0f, Selected, Present, 0.0f};
 	};
+
+	const bool ToolbarTargetVisible = LocalConsole && m_ConsoleState != CONSOLE_CLOSING;
+	const bool ExportMode = pConsole->m_ChatExportMode;
+	const bool ToolbarMotionEnabled = pAnimRuntime != nullptr && g_Config.m_QmUiMotionLevel > 0;
+	const bool NormalActions = ToolbarTargetVisible && !ExportMode;
+	const bool ExportActions = ToolbarTargetVisible && ExportMode;
+	const bool Searching = pConsole->m_SearchInput.IsSearching();
 	if(LocalConsole)
 	{
-		if(pConsole->m_ChatExportMode)
-		{
-			AddAction(EToolbarAction::CANCEL_EXPORT, Localize("Cancel"));
-			if(!pConsole->m_pChatExportJob)
-			{
-				AddAction(EToolbarAction::SAVE_EXPORT, Localize("Export selected"));
-				AddAction(EToolbarAction::CLEAR_EXPORT, Localize("Clear"));
-				AddAction(EToolbarAction::SELECT_CHAT, Localize("Select all chat"));
-			}
-		}
-		else
-		{
-			AddAction(EToolbarAction::SEARCH, pConsole->m_SearchInput.IsSearching() ? Localize("Cancel") : Localize("Search"), pConsole->m_SearchInput.IsSearching());
-			AddAction(EToolbarAction::FOLLOW, Localize("Following"), pConsole->m_Scroll.Following());
-			AddAction(EToolbarAction::EXPORT, Localize("Select export"));
-			// 控制台报「failed to open」时，下一步通常是去配置目录里放脚本或改 cfg，
-			// 所以把入口直接放在工具栏上，不必再翻到设置页的「通用」卡片。
-			AddAction(EToolbarAction::OPEN_CONFIG_DIR, Localize("Config directory"));
-		}
-		AddAction(EToolbarAction::SETTINGS, Localize("Console settings"), SettingsOpen);
-		AddAction(EToolbarAction::EXPAND, m_LocalConsoleFullscreen ? Localize("Collapse console") : Localize("Expand console"), m_LocalConsoleFullscreen);
+		SetAction(EToolbarAction::SEARCH, Localize("Search"), NormalActions && !Searching);
+		SetAction(EToolbarAction::CANCEL_SEARCH, Localize("Cancel"), NormalActions && Searching, Searching);
+		SetAction(EToolbarAction::FOLLOW, Localize("Following"), NormalActions, pConsole->m_Scroll.Following());
+		SetAction(EToolbarAction::EXPORT, Localize("Select export"), NormalActions);
+		// 控制台报「failed to open」时，下一步通常是去配置目录里放脚本或改 cfg，
+		// 所以把入口直接放在工具栏上，不必再翻到设置页的「通用」卡片。
+		SetAction(EToolbarAction::OPEN_CONFIG_DIR, Localize("Config directory"), NormalActions);
+		SetAction(EToolbarAction::CANCEL_EXPORT, Localize("Cancel"), ExportActions);
+		SetAction(EToolbarAction::SAVE_EXPORT, Localize("Export selected"), ExportActions && !pConsole->m_pChatExportJob);
+		SetAction(EToolbarAction::CLEAR_EXPORT, Localize("Clear"), ExportActions && !pConsole->m_pChatExportJob);
+		SetAction(EToolbarAction::SELECT_CHAT, Localize("Select all chat"), ExportActions && !pConsole->m_pChatExportJob);
+		SetAction(EToolbarAction::SETTINGS, Localize("Console settings"), ToolbarTargetVisible, SettingsOpen);
+		SetAction(EToolbarAction::EXPAND, Localize("Expand console"), ToolbarTargetVisible && !m_LocalConsoleFullscreen);
+		SetAction(EToolbarAction::COLLAPSE_CONSOLE, Localize("Collapse console"), ToolbarTargetVisible && m_LocalConsoleFullscreen, m_LocalConsoleFullscreen);
 	}
-	float TotalActionWidth = 0.0f;
-	for(int i = 0; i < NumActions; ++i)
-		TotalActionWidth += aActions[i].m_Width + FilterSpacing;
-	if(NumActions > 0)
-		TotalActionWidth -= FilterSpacing;
+
+	const bool FilterTargetPresent = ToolbarTargetVisible && !ExportMode;
+	std::array<float, CInstance::LOG_FILTER_BUTTON_COUNT> aFilterPresence{};
+	float TargetFilterWidth = 0.0f;
+	float CurrentFilterWidth = 0.0f;
+	bool HasPresentFilter = false;
+	float PreviousFilterPresence = 0.0f;
+	for(int i = 0; i < CInstance::LOG_FILTER_BUTTON_COUNT; ++i)
+	{
+		aFilterPresence[i] = m_ToolbarFilterMotion.Resolve(pAnimRuntime,
+			ConsoleToolbarNodeKey("qm_console_toolbar_filter_presence", i), static_cast<size_t>(i),
+			FilterTargetPresent, ToolbarMotionEnabled, ui_token::motion::NAVIGATION_APPEAR);
+		if(i > 0)
+			CurrentFilterWidth += FilterSpacing * std::min(PreviousFilterPresence, aFilterPresence[i]);
+		CurrentFilterWidth += FilterWidth * aFilterPresence[i];
+		if(FilterTargetPresent)
+		{
+			if(HasPresentFilter)
+				TargetFilterWidth += FilterSpacing;
+			TargetFilterWidth += FilterWidth;
+			HasPresentFilter = true;
+		}
+		PreviousFilterPresence = aFilterPresence[i];
+	}
+
+	float TargetActionWidth = 0.0f;
+	float CurrentActionWidth = 0.0f;
+	bool HasPresentAction = false;
+	float PreviousActionPresence = 0.0f;
+	for(int i = 0; i < TOOLBAR_ACTION_MOTION_COUNT; ++i)
+	{
+		SToolbarAction &Action = aActions[i];
+		Action.m_Presence = m_ToolbarActionMotion.Resolve(pAnimRuntime,
+			ConsoleToolbarNodeKey("qm_console_toolbar_action_presence", i), static_cast<size_t>(i),
+			Action.m_Present, ToolbarMotionEnabled, ui_token::motion::NAVIGATION_APPEAR);
+		if(i > 0)
+			CurrentActionWidth += FilterSpacing * std::min(PreviousActionPresence, Action.m_Presence);
+		CurrentActionWidth += Action.m_Width * Action.m_Presence;
+		if(Action.m_Present)
+		{
+			if(HasPresentAction)
+				TargetActionWidth += FilterSpacing;
+			TargetActionWidth += Action.m_Width;
+			HasPresentAction = true;
+		}
+		PreviousActionPresence = Action.m_Presence;
+	}
+
 	float ToolbarRightMargin = 0.0f;
 #if defined(CONF_PLATFORM_IOS)
 	ToolbarRightMargin = FontSize * 2.0f + 10.0f;
 #endif
-	const auto Toolbar = QmConsoleUi::LayoutToolbar(Screen.w - ToolbarRightMargin, pConsole->m_ChatExportMode ? 0.0f : TotalFilterWidth, TotalActionWidth, FontSize + 16.0f);
+	const auto Toolbar = QmConsoleUi::LayoutToolbarAnimated(Screen.w - ToolbarRightMargin, TargetFilterWidth, TargetActionWidth,
+		CurrentFilterWidth, CurrentActionWidth, FontSize + 16.0f);
 	const float RowHeight = LocalConsole ? Toolbar.m_Height : FontSize * 2.0f;
 	const float FooterHeight = LocalConsole ? FontSize + 6.0f : 0.0f;
 
@@ -2810,38 +2864,50 @@ void CGameConsole::OnRender()
 		const int LineEnd = pConsole->m_LinesRendered > 0 ? pConsole->m_BacklogCurLine + pConsole->m_LinesRendered : 0;
 		str_format(aLinesBuf, sizeof(aLinesBuf), Localize("Lines %d - %d (%s)"), LineStart, LineEnd,
 			Scroll.Following() ? Localize("Following") : Localize("Locked"));
-		const auto ToolbarButton = [&](const CUIRect &Rect, const char *pLabel, float Scale, bool Selected = false, uint64_t AnimationKey = 0) {
+		const auto ToolbarButton = [&](const CUIRect &Rect, const char *pLabel, float Scale, bool Selected = false, uint64_t AnimationKey = 0, float Presence = 1.0f) {
 			return QmConsoleUi::Button(Ui(), Rect, pLabel, maximum(1.0f, FontSize * Scale), Selected,
 				m_ButtonPressPosition, ButtonMousePosition, pConsole->m_MouseIsPress, ButtonReleased, !SettingsOpen && m_ConsoleState == CONSOLE_OPEN,
-				0.0f, LocalConsole ? &Palette : nullptr, AnimationKey);
+				0.0f, LocalConsole ? &Palette : nullptr, AnimationKey, Presence);
 		};
 		const float LinesWidth = LocalConsole ? 0.0f : TextRender()->TextWidth(FontSize, aLinesBuf);
 		float FilterX = LocalConsole ? 10.0f : LinesWidth + 20.0f;
 		const float FilterScale = Toolbar.m_FilterScale;
-		if(LocalConsole && !pConsole->m_ChatExportMode)
+		if(LocalConsole)
 		{
 			for(int i = 0; i < CInstance::LOG_FILTER_BUTTON_COUNT; ++i)
 			{
 				const int Category = CInstance::LogFilterCategoryForButton(i);
-				const CUIRect Button = {FilterX, 3.0f, FilterWidth * FilterScale, LocalConsole ? FontSize + 10.0f : 14.0f};
-				if(ToolbarButton(Button, apFilterLabels[i], FilterScale, QmConsoleLogFilterButtonActive(pConsole->m_LogFilterMask, Category),
-					   (static_cast<uint64_t>(reinterpret_cast<uintptr_t>(pConsole)) << 3) ^ static_cast<uint64_t>(i + 1)))
-					pConsole->SetLogFilterMask(QmSelectConsoleLogFilterCategory(Category));
-				FilterX += (FilterWidth + FilterSpacing) * FilterScale;
+				if(i > 0)
+					FilterX += FilterSpacing * FilterScale * std::min(aFilterPresence[i - 1], aFilterPresence[i]);
+				const float Width = FilterWidth * FilterScale * aFilterPresence[i];
+				if(aFilterPresence[i] > 0.001f)
+				{
+					const CUIRect Button = {FilterX, 3.0f, Width, FontSize + 10.0f};
+					const bool Clicked = ToolbarButton(Button, apFilterLabels[i], FilterScale,
+						QmConsoleLogFilterButtonActive(pConsole->m_LogFilterMask, Category),
+						ConsoleToolbarNodeKey("qm_console_toolbar_filter_selected", i), aFilterPresence[i]);
+					if(Clicked && FilterTargetPresent)
+						pConsole->SetLogFilterMask(QmSelectConsoleLogFilterCategory(Category));
+				}
+				FilterX += Width;
 			}
 		}
 		if(LocalConsole)
 		{
 			float ActionX = Toolbar.m_ActionX;
-			for(int i = 0; i < NumActions; ++i)
+			for(int i = 0; i < TOOLBAR_ACTION_MOTION_COUNT; ++i)
 			{
 				const auto &Action = aActions[i];
-				const CUIRect Button = {ActionX, Toolbar.m_SplitRows ? FontSize + 19.0f : 3.0f, Action.m_Width * Toolbar.m_ActionScale, FontSize + 10.0f};
-				if(ToolbarButton(Button, Action.m_pLabel, Toolbar.m_ActionScale, Action.m_Selected))
+				if(i > 0)
+					ActionX += FilterSpacing * Toolbar.m_ActionScale * std::min(aActions[i - 1].m_Presence, Action.m_Presence);
+				const float Width = Action.m_Width * Toolbar.m_ActionScale * Action.m_Presence;
+				if(Action.m_Presence > 0.001f && ToolbarButton({ActionX, Toolbar.m_SplitRows ? FontSize + 19.0f : 3.0f, Width, FontSize + 10.0f}, Action.m_pLabel, Toolbar.m_ActionScale, Action.m_Selected, ConsoleToolbarNodeKey("qm_console_toolbar_action_selected", i), Action.m_Presence) &&
+					Action.m_Present)
 				{
 					switch(Action.m_Action)
 					{
 					case EToolbarAction::SEARCH: pConsole->SetSearching(!pConsole->m_SearchInput.IsSearching()); break;
+					case EToolbarAction::CANCEL_SEARCH: pConsole->SetSearching(false); break;
 					case EToolbarAction::FOLLOW:
 						// 回到跟随态也走统一滚动：弹簧档会顺着当前方向滑回最新一行。
 						pConsole->m_Scroll.ScrollToNewest();
@@ -2862,9 +2928,10 @@ void CGameConsole::OnRender()
 					}
 					case EToolbarAction::SETTINGS: OpenSettings(); break;
 					case EToolbarAction::EXPAND: m_LocalConsoleFullscreen = !m_LocalConsoleFullscreen; break;
+					case EToolbarAction::COLLAPSE_CONSOLE: m_LocalConsoleFullscreen = false; break;
 					}
 				}
-				ActionX += (Action.m_Width + FilterSpacing) * Toolbar.m_ActionScale;
+				ActionX += Width;
 			}
 			char aStatus[256];
 			str_copy(aStatus, aLinesBuf);
