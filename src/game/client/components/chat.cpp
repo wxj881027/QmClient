@@ -3913,7 +3913,6 @@ void CChat::OnRender()
 	const ColorRGBA BackgroundBaseColor = g_Config.m_ClChatOld ? ConfigBackgroundColor : ConfigBackgroundColor.Multiply(ColorRGBA(0.78f, 0.86f, 1.0f, 1.0f));
 	const ColorRGBA DefaultTextColor = TextRender()->DefaultTextColor();
 	const ColorRGBA DefaultTextOutlineColor = TextRender()->DefaultTextOutlineColor();
-	const CAnimState *pIdleState = CAnimState::GetIdle();
 	const int TeeSize = MessageTeeSize();
 
 	float RealMsgPaddingX = MessagePaddingX();
@@ -4289,10 +4288,8 @@ void CChat::OnRender()
 				float OffsetTeeY = TeeSize / 2.0f;
 				float FullHeightMinusTee = RowHeight - TeeSize;
 
-				vec2 OffsetToMid;
-				CRenderTools::GetRenderTeeOffsetToRenderedTee(pIdleState, &TeeRenderInfo, OffsetToMid);
-				vec2 TeeRenderPos(x + AnimOffsetX + (RealMsgPaddingX + TeeSize) / 2.0f, RenderY + Line.m_QmTitleBobPadding + OffsetTeeY + FullHeightMinusTee / 2.0f + OffsetToMid.y);
-				RenderTools()->RenderTee(pIdleState, &TeeRenderInfo, EMOTE_NORMAL, vec2(1, 0.1f), TeeRenderPos, AnimAlpha);
+				const vec2 TeeCenter(x + AnimOffsetX + (RealMsgPaddingX + TeeSize) / 2.0f, RenderY + Line.m_QmTitleBobPadding + OffsetTeeY + FullHeightMinusTee / 2.0f);
+				RenderTools()->RenderIdleTeeAtCenter(&TeeRenderInfo, TeeCenter, EMOTE_NORMAL, vec2(1, 0.1f), AnimAlpha);
 			}
 
 			if(RenderChatEmoji)

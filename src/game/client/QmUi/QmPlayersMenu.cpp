@@ -124,9 +124,7 @@ void CMenus::RenderPlayers(CUIRect MainView)
 	auto DrawTee = [&](int Id, const CUIRect &Rect) {
 		CTeeRenderInfo TeeInfo = GameClient()->m_aClients[Id].m_RenderInfo;
 		TeeInfo.m_Size = Rect.h;
-		vec2 Offset;
-		CRenderTools::GetRenderTeeOffsetToRenderedTee(CAnimState::GetIdle(), &TeeInfo, Offset);
-		RenderTools()->RenderTee(CAnimState::GetIdle(), &TeeInfo, EMOTE_NORMAL, vec2(1.0f, 0.0f), Rect.Center() + Offset);
+		RenderTools()->RenderIdleTeeAtCenter(&TeeInfo, Rect.Center());
 	};
 	struct STileAction
 	{

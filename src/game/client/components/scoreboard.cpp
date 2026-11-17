@@ -1868,10 +1868,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 			vec2 TeeRenderPos = vec2(TeeOffset + TeeLength / 2, Row.y + Row.h / 2.0f);
 			if(RowDetail.m_FullTee)
 			{
-				vec2 OffsetToMid;
-				CRenderTools::GetRenderTeeOffsetToRenderedTee(pIdleState, &TeeInfo, OffsetToMid);
-				TeeRenderPos.y += OffsetToMid.y;
-				RenderTools()->RenderTee(pIdleState, &TeeInfo, EMOTE_NORMAL, vec2(1.0f, 0.0f), TeeRenderPos, ItemAlpha);
+				RenderTools()->RenderIdleTeeAtCenter(&TeeInfo, TeeRenderPos, EMOTE_NORMAL, vec2(1.0f, 0.0f), ItemAlpha);
 			}
 			else
 				RenderTools()->RenderTee(pIdleState, &TeeInfo, EMOTE_NORMAL, vec2(1.0f, 0.0f), TeeRenderPos, TEE_PREVIEW_LAYER_BODY, ItemAlpha);

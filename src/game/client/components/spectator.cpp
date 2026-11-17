@@ -1092,12 +1092,7 @@ void CSpectator::OnRender()
 			TeeInfo = GameClient()->m_aClients[pInfo->m_Id].m_RenderInfo;
 		TeeInfo.m_Size *= TeeSizeMod;
 
-		const CAnimState *pIdleState = CAnimState::GetIdle();
-		vec2 OffsetToMid;
-		CRenderTools::GetRenderTeeOffsetToRenderedTee(pIdleState, &TeeInfo, OffsetToMid);
-		vec2 TeeRenderPos(CenterX + x + TeeOffsetX, CenterY + y + BoxMove + LineHeight / 2.0f + OffsetToMid.y);
-
-		RenderTools()->RenderTee(pIdleState, &TeeInfo, EMOTE_NORMAL, vec2(1.0f, 0.0f), TeeRenderPos, TeeAlpha);
+		RenderTools()->RenderIdleTeeAtCenter(&TeeInfo, vec2(CenterX + x + TeeOffsetX, CenterY + y + BoxMove + LineHeight / 2.0f), EMOTE_NORMAL, vec2(1.0f, 0.0f), TeeAlpha);
 
 		float IconX = CenterX + x - TeeInfo.m_Size / 2.0f;
 		const float IconY = CenterY + y + BoxMove + (LineHeight - FontSize) / 2.0f;

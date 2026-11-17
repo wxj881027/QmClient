@@ -2885,8 +2885,7 @@ void CRankGhost::OnDemoPlayerMessage(void *pData, int Size)
 
 	int Msg;
 	bool Sys;
-	CUuid Uuid;
-	if(UnpackMessageId(&Msg, &Sys, &Uuid, &Unpacker, &Packer) == UNPACKMESSAGE_ERROR || Sys)
+	if(UnpackMessageId(&Msg, &Sys, &Unpacker, &Packer) == UNPACKMESSAGE_ERROR || Sys)
 		return;
 
 	// 消息按 tick 顺序到达。终点成绩可能紧跟在 run 结束标记之后（服务端在终点帧
