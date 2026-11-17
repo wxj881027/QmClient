@@ -779,8 +779,9 @@ void CFastPractice::ConLocalWorldDump(IConsole::IResult *pResult, void *pUserDat
 	char aBuf[512];
 	const CLocalWorld &Local = pSelf->GameClient()->m_LocalWorld;
 
-	str_format(aBuf, sizeof(aBuf), "practice=%d branch_tick=%d local_id=%d dummy_id=%d",
-		pSelf->m_Enabled ? 1 : 0, pSelf->m_PracticeBaseWorld.GameTick(), pSelf->m_EnableLocalClientId, pSelf->m_EnableDummyClientId);
+	str_format(aBuf, sizeof(aBuf), "practice=%d branch_tick=%d local_id=%d dummy_id=%d cl_dummy=%d snap_local=%d",
+		pSelf->m_Enabled ? 1 : 0, pSelf->m_PracticeBaseWorld.GameTick(), pSelf->m_EnableLocalClientId, pSelf->m_EnableDummyClientId,
+		g_Config.m_ClDummy, pSelf->GameClient()->m_Snap.m_LocalClientId);
 	Print(aBuf);
 	str_format(aBuf, sizeof(aBuf), "track: active=%d start=%d frames=%d events=%d switches=%d completed=%d",
 		Local.TrackActive() ? 1 : 0, Local.TrackStartTick(), Local.CurrentFrameCount(),
@@ -847,6 +848,39 @@ void CFastPractice::ConLocalWorldDump(IConsole::IResult *pResult, void *pUserDat
 		str_copy(aBuf, "local_tee: present=0 deep=0 freeze_end=0 freeze_time=0 grounded=0 pos=0,0 vel=0,0 jumped=0 jumps=0 hook_state=0");
 	}
 	Print(aBuf);
+	// 分身 Tee 的位置与它最后消费的输入：朝向卡死、站着不动或反复挥锤时，
+	// 先看这里——位置不动说明分支没推进它，输入 target/direction 不变说明
+	// 分支拿到的是录下来的旧输入，而不是当前控制层状态。
+	{
+		CCharacter *pDummy = pSelf->m_Enabled && pSelf->m_EnableDummyClientId >= 0 ? pSelf->m_PracticeBaseWorld.GetCharacterById(pSelf->m_EnableDummyClientId) : nullptr;
+		if(pDummy)
+		{
+			const CCharacterCore *pCore = pDummy->Core();
+			const CNetObj_PlayerInput *pInput = pDummy->LatestInput();
+			str_format(aBuf, sizeof(aBuf), "dummy_tee: present=1 grounded=%d pos=%d,%d vel=%d,%d angle=%d input: direction=%d jump=%d hook=%d fire=%d target=%d,%d",
+				pDummy->IsGrounded() ? 1 : 0,
+				round_to_int(pCore->m_Pos.x), round_to_int(pCore->m_Pos.y),
+				round_to_int(pCore->m_Vel.x), round_to_int(pCore->m_Vel.y),
+				round_to_int(pCore->m_Angle),
+				pInput->m_Direction, pInput->m_Jump, pInput->m_Hook, pInput->m_Fire,
+				pInput->m_TargetX, pInput->m_TargetY);
+		}
+		else
+		{
+			str_copy(aBuf, "dummy_tee: present=0 grounded=0 pos=0,0 vel=0,0 angle=0 input: direction=0 jump=0 hook=0 fire=0 target=0,0");
+		}
+		Print(aBuf);
+		// 渲染位置与镜头中心：辅助线起点与碰撞目标都取渲染位置。三者对不上时，
+		// 画面上看到的人和这条线判断的人不在同一个坐标，排查先看这一行。
+		const vec2 LocalRender = pSelf->m_EnableLocalClientId >= 0 ? pSelf->GameClient()->m_aClients[pSelf->m_EnableLocalClientId].m_RenderPos : vec2(0.0f, 0.0f);
+		const vec2 DummyRender = pSelf->m_EnableDummyClientId >= 0 ? pSelf->GameClient()->m_aClients[pSelf->m_EnableDummyClientId].m_RenderPos : vec2(0.0f, 0.0f);
+		const vec2 CameraCenter = pSelf->GameClient()->m_Camera.m_Center;
+		str_format(aBuf, sizeof(aBuf), "render_pos: local=%d,%d dummy=%d,%d camera=%d,%d",
+			round_to_int(LocalRender.x), round_to_int(LocalRender.y),
+			round_to_int(DummyRender.x), round_to_int(DummyRender.y),
+			round_to_int(CameraCenter.x), round_to_int(CameraCenter.y));
+		Print(aBuf);
+	}
 	// 时钟对照：分支世界 tick、服务器游戏 tick 与预测 tick。分支世界如果落后预测 tick，
 	// 它消费的输入就是旧的，表现为按键延迟好几帧才生效。
 	{

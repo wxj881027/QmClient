@@ -7036,6 +7036,16 @@ void CGameClient::UpdateHookCollTargets()
 		Target.m_Super = Data.m_Super;
 		Target.m_Solo = Data.m_Solo;
 		Target.m_HookHitDisabled = Data.m_HookHitDisabled;
+		// 练习参与者不在服务器快照时间线上：位置取分支世界的渲染坐标，
+		// solo 取分支队伍状态。否则辅助线对着另一条时间线的位置做碰撞，
+		// 会从画面里紧挨着的分身身上直接穿过去，颜色也不会切到 Tee 命中色。
+		vec2 PracticePos;
+		if(m_FastPractice.ResolvePracticeHookCollTarget(i, PracticePos, Target.m_Solo))
+		{
+			Target.m_Valid = true;
+			Target.m_Pos = PracticePos;
+			continue;
+		}
 		const CNetObj_Character &Prev = m_Snap.m_aCharacters[i].m_Prev;
 		const CNetObj_Character &Cur = m_Snap.m_aCharacters[i].m_Cur;
 		Target.m_Pos = mix(vec2(Prev.m_X, Prev.m_Y), vec2(Cur.m_X, Cur.m_Y), Intra);

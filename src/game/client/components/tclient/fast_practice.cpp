@@ -1208,6 +1208,23 @@ bool CFastPractice::ResolvePracticeSoloState(int ClientId, bool &Solo) const
 	return true;
 }
 
+bool CFastPractice::ResolvePracticeHookCollTarget(int ClientId, vec2 &Pos, bool &Solo)
+{
+	if(!IsPracticeParticipant(ClientId) || !m_PracticeWorldInitialized)
+		return false;
+
+	const CCharacterCore *pCore = nullptr;
+	int Tick = 0;
+	if(!ResolvePracticeCharacterCore(ClientId, &pCore, Tick) || pCore == nullptr)
+		return false;
+
+	// 取渲染位置而不是核心位置：辅助线起点同样用 m_RenderPos 绘制，
+	// 目标与起点必须落在同一帧的画面上，插值误差才不会让线贴着身体边缘漏过去。
+	Pos = GameClient()->m_aClients[ClientId].m_RenderPos;
+	ResolvePracticeSoloState(ClientId, Solo);
+	return true;
+}
+
 std::vector<SSwitchers> *CFastPractice::PracticeSwitchers()
 {
 	if(!m_Enabled || !m_PracticeWorldInitialized)
@@ -1920,6 +1937,27 @@ bool CFastPractice::OverridePredict()
 		m_HasDummyAnchor = false;
 		m_EnableDummyClientId = -1;
 		m_PracticeWorldInitialized = false;
+	}
+
+	// 分身接入时拿到的 client id 可能只是连接初期的临时 id：服务器把同一条连接
+	// 按正式 id 重登后，分支世界仍按旧 id 驱动一个幽灵角色。真人分身不参与模拟，
+	// 画面上就会停在服务器世界最后的动作上（朝向、挥锤都卡住不动）。
+	// 这里每帧比对一次实际连接 id，变了就整段重绑并重新 fork，本地 tee 位置保留。
+	// 只管分身一侧：本体换 id 走下方既有的重绑路径，避免改变死亡重进的语义。
+	if(m_RequireDummy && m_PracticeWorldInitialized)
+	{
+		const SQmPracticeRebindDecision Rebind = QmResolvePracticeRebind(
+			GameClient()->m_aLocalIds, m_EnableLocalConn, m_EnableLocalClientId, m_EnableDummyClientId, m_RequireDummy);
+		// 分身刚上线、快照还没到时不重绑，等下一帧 id 稳定。
+		if(Rebind.m_Changed && Rebind.m_LocalClientId == m_EnableLocalClientId && Rebind.m_DummyClientId >= 0)
+		{
+			if(CCharacter *pLocalChar = m_PracticeBaseWorld.GetCharacterById(m_EnableLocalClientId))
+			{
+				CapturePracticeRescueTee(pLocalChar, m_PracticeBaseWorld.GameTick(), m_PendingLocalTee);
+				m_HasPendingLocalTee = true;
+			}
+			m_PracticeWorldInitialized = false;
+		}
 	}
 
 	// 刚从旁观回到游戏时分支世界还没重新 fork，按本次连接的实际 id 重绑参与者。

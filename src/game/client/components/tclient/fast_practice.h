@@ -275,6 +275,10 @@ public:
 	// 分支世界的 solo 状态才是权威：练习里的 /solo /unsolo 只改预测世界，
 	// 服务器快照的 solo 标志不会跟着变，渲染层据此仍把分身画成实体。
 	bool ResolvePracticeSoloState(int ClientId, bool &Solo) const;
+	// 钩子辅助线的碰撞目标每帧从服务器快照重建，而练习参与者活在分支世界里。
+	// 位置和 solo 都必须取分支权威值，否则辅助线会按另一条时间线判断，
+	// 从画面上紧挨着的分身身上穿过去、颜色也不随 Tee 改变。
+	bool ResolvePracticeHookCollTarget(int ClientId, vec2 &Pos, bool &Solo);
 	// 分支世界是当前客户端侧权威世界的时钟。幽灵播放头必须问这里，而不是
 	// 直接用 PredGameTick：服务器暂停时练习世界冻结、PredGameTick 继续走，
 	// 两者会分叉，幽灵就会相对练习世界超前。返回 false 表示由调用方用默认值。
