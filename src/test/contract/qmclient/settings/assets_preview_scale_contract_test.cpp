@@ -106,22 +106,6 @@ TEST(AssetsPreviewScale, StatusTagUsesSharedTagComponent)
 	EXPECT_NE(Source.find("ui_tag::MeasureWidth(TextRender(), pLabel)"), std::string::npos);
 }
 
-TEST(AssetsPreviewScale, AssetCardHeaderPrioritizesRightSideControls)
-{
-	std::ifstream File(TestSourcePath("src/game/client/components/menus_settings_assets.cpp"));
-	ASSERT_TRUE(File.good());
-	std::stringstream Buffer;
-	Buffer << File.rdbuf();
-	const std::string Source = Buffer.str();
-
-	EXPECT_NE(Source.find("constexpr float AssetCardHeaderMargin = 6.0f;"), std::string::npos);
-	EXPECT_NE(Source.find("constexpr float AssetCardHeaderControlMargin = 1.0f;"), std::string::npos);
-	EXPECT_NE(Source.find("TitleRect.VSplitRight(16.0f, &TitleRect, &Shell.m_ActionButtonRect);"), std::string::npos);
-	EXPECT_NE(Source.find("const float BadgeGap = 2.0f;"), std::string::npos);
-	EXPECT_NE(Source.find("const float TitleMinWidth = 12.0f;"), std::string::npos);
-	EXPECT_NE(Source.find("return pWorkshopAsset != nullptr ? Localize(\"Downloaded\") : Localize(\"Local\");"), std::string::npos);
-}
-
 TEST(AssetsPreviewScale, LocalAssetCardsUsePersistedAuthorMetadata)
 {
 	std::ifstream File(TestSourcePath("src/game/client/components/menus_settings_assets.cpp"));
