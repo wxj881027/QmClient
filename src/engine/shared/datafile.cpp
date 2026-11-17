@@ -5,6 +5,7 @@
 
 #include "uuid_manager.h"
 
+#include <base/bytes.h>
 #include <base/hash_ctxt.h>
 #include <base/log.h>
 #include <base/math.h>

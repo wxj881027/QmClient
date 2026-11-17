@@ -11,6 +11,7 @@
 #include "serverbrowser.h"
 #include "video_export.h"
 
+#include <base/bytes.h>
 #include <base/crashdump.h>
 #include <base/dbg.h>
 #include <base/fs.h>

@@ -5,6 +5,7 @@
 #include "compression.h"
 #include "uuid_manager.h"
 
+#include <base/bytes.h>
 #include <base/dbg.h>
 #include <base/math.h>
 #include <base/mem.h>

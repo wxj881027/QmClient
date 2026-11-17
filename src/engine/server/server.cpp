@@ -7,6 +7,7 @@
 #include "databases/connection_pool.h"
 #include "register.h"
 
+#include <base/bytes.h>
 #include <base/logger.h>
 #include <base/math.h>
 #include <base/system.h>

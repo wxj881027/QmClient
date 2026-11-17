@@ -3,6 +3,7 @@
 #include "media_paths.h"
 #include "rank_demo_manifest.h"
 
+#include <base/bytes.h>
 #include <base/log.h>
 #include <base/str.h>
 #include <base/system.h>
