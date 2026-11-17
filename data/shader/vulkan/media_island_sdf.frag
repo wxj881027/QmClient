@@ -4,7 +4,7 @@
 layout(set = 0, binding = 0) uniform sampler2D gBackdropSampler;
 layout(std140, set = 1, binding = 1) uniform SMediaIslandSdf
 {
-	vec4 gMediaIslandSdfData[45];
+	vec4 gMediaIslandSdfData[47];
 } gSdf;
 
 layout(location = 0) noperspective in vec2 texCoord;
@@ -182,6 +182,14 @@ void main()
 		ShapeDistance = min(ShapeDistance, CapsuleDistance);
 		if(CapsuleParams.y > 0.0)
 			ShapeDistance = min(ShapeDistance, SmoothUnion(MainDistance, CapsuleDistance, CapsuleParams.y));
+	}
+
+	vec4 Card = Data(45);
+	if(Card.z > 0.0 && Card.w > 0.0)
+	{
+		vec2 Params = Data(46).xy;
+		float CardDistance = RoundedRectSdf(Point, Card, Params.x, 15.0, 0.0);
+		ShapeDistance = min(ShapeDistance, SmoothUnion(MainDistance, CardDistance, Params.y));
 	}
 
 	vec3 PremulColor = vec3(0.0);

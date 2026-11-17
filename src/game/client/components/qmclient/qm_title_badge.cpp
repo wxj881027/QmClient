@@ -2,6 +2,18 @@
 
 #include <engine/storage.h>
 
+std::string QmTitleDisplayText(const char *pTitle, const SQmTitleAppearance &Appearance)
+{
+	if(!pTitle || !pTitle[0])
+		return {};
+	if(Appearance.m_TextStyle == 0)
+		return QmTitleBadgeText(pTitle);
+	const int Length = str_length(pTitle);
+	if(Length >= 2 && pTitle[0] == '[' && pTitle[Length - 1] == ']')
+		return pTitle;
+	return "[" + std::string(pTitle) + "]";
+}
+
 void CQmTitleBadge::Init(IGraphics *pGraphics)
 {
 	Shutdown(pGraphics);

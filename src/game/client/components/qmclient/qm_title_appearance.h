@@ -20,10 +20,12 @@ struct SQmTitleAppearance
 	EQmTitleBadgeStyle m_Style = EQmTitleBadgeStyle::MOON;
 	unsigned m_Color = 0x9562ba;
 	int m_Opacity = 100;
+	// 日月款式同时给旧客户端用；0 显示胶囊，1 至 5 选择文字配色。
+	int m_TextStyle = 0;
 
 	bool operator==(const SQmTitleAppearance &Other) const
 	{
-		return m_Style == Other.m_Style && m_Color == Other.m_Color && m_Opacity == Other.m_Opacity;
+		return m_Style == Other.m_Style && m_Color == Other.m_Color && m_Opacity == Other.m_Opacity && m_TextStyle == Other.m_TextStyle;
 	}
 	bool operator!=(const SQmTitleAppearance &Other) const { return !(*this == Other); }
 };

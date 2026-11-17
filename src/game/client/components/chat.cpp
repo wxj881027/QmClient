@@ -562,7 +562,7 @@ bool CChat::HandleCommandHudInput(const IInput::CEvent &Event)
 	{
 		if(Event.m_Key == KEY_UP || Event.m_Key == KEY_DOWN)
 			return m_CommandHud.MoveSelection(Event.m_Key == KEY_UP ? -1 : 1, m_Input.GetString(), m_Input.GetCursorOffset(), m_pHistoryEntry != nullptr);
-		if(Event.m_Key == KEY_RETURN || Event.m_Key == KEY_KP_ENTER)
+		if((Event.m_Key == KEY_RETURN || Event.m_Key == KEY_KP_ENTER) && !Input()->KeyIsPressed(KEY_LCTRL) && !Input()->KeyIsPressed(KEY_RCTRL))
 		{
 			std::string Completion;
 			size_t Cursor = 0;
@@ -1375,11 +1375,12 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 			m_ServerCommandsNeedSorting = false;
 		}
 
+		const bool InvertTranslation = Input()->KeyIsPressed(KEY_LCTRL) || Input()->KeyIsPressed(KEY_RCTRL);
 		if(GameClient()->m_BindChat.ChatDoBinds(m_Input.GetString()))
 			; // Do nothing as bindchat was executed
 		else if(GameClient()->m_TClient.ChatDoSpecId(m_Input.GetString()))
 			; // Do nothing as specid was executed
-		else if(SendChatQueued(m_Input.GetString()) == EChatSendResult::REJECTED && *str_utf8_skip_whitespaces(m_Input.GetString()) != '\0')
+		else if(SendChatQueued(m_Input.GetString(), InvertTranslation) == EChatSendResult::REJECTED && *str_utf8_skip_whitespaces(m_Input.GetString()) != '\0')
 			return true;
 		m_SavedInputPending = false;
 		m_aSavedInputText[0] = '\0';
@@ -3006,7 +3007,13 @@ bool CChat::OnPrepareLines(float y)
 			}
 		}
 		const bool MergedPlayerMessages = Line.m_TimesRepeated > 0 && !Line.m_vMergedAuthors.empty();
-		const float TitleBobPadding = 0.0f;
+		const auto HasWavyTitle = [&](const auto &Author) {
+			return Author.m_TitleAppearance.m_TextStyle != 0 && Author.m_TitleAppearance.m_Opacity > 0 &&
+			       !(Author.m_DeveloperBadge && DeveloperBadgeAvailable) && VisibleTitle(Author.m_aQmTitle, Author.m_ClientId)[0] != '\0';
+		};
+		const bool WaveVisible = g_Config.m_QmTitleTextWave && (MergedPlayerMessages ?
+				std::any_of(Line.m_vMergedAuthors.begin(), Line.m_vMergedAuthors.end(), HasWavyTitle) : HasWavyTitle(Line));
+		const float TitleBobPadding = WaveVisible ? FontSize * QM_TITLE_TEXT_WAVE_AMPLITUDE : 0.0f;
 		if(LineEmojiLayoutChanged || TitleHidden || TitleBobPadding != Line.m_QmTitleBobPadding)
 		{
 			Line.DeleteTextContainers(TextRender());
@@ -3035,6 +3042,34 @@ bool CChat::OnPrepareLines(float y)
 		Line.m_ChatEmojiRect = {};
 		Line.m_vDeveloperBadgeRects.clear();
 		Line.m_vTitleBadges.clear();
+		const auto LayoutTitle = [&](CTextCursor &Cursor, const auto &Author, bool Prepare) {
+			const char *pTitle = VisibleTitle(Author.m_aQmTitle, Author.m_ClientId);
+			if(!pTitle[0])
+				return;
+			if(Author.m_DeveloperBadge && DeveloperBadgeAvailable)
+			{
+				const CUIRect Rect = QmLayoutDeveloperBadge(Cursor);
+				if(Prepare)
+					Line.m_vDeveloperBadgeRects.push_back(Rect);
+				return;
+			}
+
+			const auto &Appearance = Author.m_TitleAppearance;
+			const bool TextOnly = Appearance.m_TextStyle != 0;
+			std::string Text = QmTitleDisplayText(pTitle, Appearance);
+			const float LabelSize = TextOnly ? Cursor.m_FontSize : QmTitleBadgeLabelFontSize(Cursor.m_FontSize);
+			const CUIRect Rect = QmLayoutTitleBadge(Cursor, TextRender()->TextWidth(LabelSize, Text.c_str()), TextOnly);
+			if(Prepare)
+			{
+				auto &Badge = Line.m_vTitleBadges.emplace_back();
+				Badge.m_Rect = Rect;
+				Badge.m_Appearance = Appearance;
+				if(TextOnly)
+					Badge.m_DisplayText = std::move(Text);
+				else
+					Badge.PrepareText(TextRender(), Text.c_str());
+			}
+		};
 		const bool MultipleAuthors = Line.m_vMergedAuthors.size() > 1;
 		// 多人合并的续行只保留第一个人的前缀占位。
 		const bool IndentMessage = MultipleAuthors || (!IsScoreBoardOpen && !g_Config.m_ClChatOld);
@@ -3042,11 +3077,11 @@ bool CChat::OnPrepareLines(float y)
 		if(MultipleAuthors)
 		{
 			const SMergedAuthor &FirstAuthor = Line.m_vMergedAuthors.front();
-			const char *pTitle = VisibleTitle(FirstAuthor.m_aQmTitle, FirstAuthor.m_ClientId);
-			const float TitleWidth = pTitle[0] != '\0' && FirstAuthor.m_DeveloperBadge && DeveloperBadgeAvailable ?
-							 QmDeveloperBadgeAdvance(FontSize) :
-							 (pTitle[0] != '\0' ? QmTitleBadgeSize(TextRender()->TextWidth(QmTitleBadgeLabelFontSize(FontSize), QmTitleBadgeText(pTitle).c_str()), QmTitleBadgeLabelFontSize(FontSize)).x + FontSize * 0.15f : 0.0f);
-			FirstAuthorPrefixWidth = TitleWidth +
+			CTextCursor PrefixCursor;
+			PrefixCursor.m_FontSize = FontSize;
+			PrefixCursor.m_LineWidth = LineWidth;
+			LayoutTitle(PrefixCursor, FirstAuthor, false);
+			FirstAuthorPrefixWidth = PrefixCursor.m_X +
 						 TextRender()->TextWidth(FontSize, FirstAuthor.m_aName) + TextRender()->TextWidth(FontSize, ": ");
 		}
 
@@ -3164,13 +3199,6 @@ bool CChat::OnPrepareLines(float y)
 				}
 			}
 
-			const auto MeasureTitle = [&](const char *pTitle, int AuthorId, bool DeveloperBadge) {
-				pTitle = VisibleTitle(pTitle, AuthorId);
-				if(pTitle[0] != '\0' && DeveloperBadge && DeveloperBadgeAvailable)
-					QmLayoutDeveloperBadge(MeasureCursor);
-				else if(pTitle[0])
-					QmLayoutTitleBadge(MeasureCursor, TextRender()->TextWidth(QmTitleBadgeLabelFontSize(FontSize), QmTitleBadgeText(pTitle).c_str()));
-			};
 			TextRender()->TextEx(&MeasureCursor, aClientId);
 			if(MergedPlayerMessages)
 			{
@@ -3178,13 +3206,13 @@ bool CChat::OnPrepareLines(float y)
 				{
 					if(i > 0)
 						TextRender()->TextEx(&MeasureCursor, ",");
-					MeasureTitle(Line.m_vMergedAuthors[i].m_aQmTitle, Line.m_vMergedAuthors[i].m_ClientId, Line.m_vMergedAuthors[i].m_DeveloperBadge);
+					LayoutTitle(MeasureCursor, Line.m_vMergedAuthors[i], false);
 					TextRender()->TextEx(&MeasureCursor, Line.m_vMergedAuthors[i].m_aName);
 				}
 			}
 			else
 			{
-				MeasureTitle(Line.m_aQmTitle, Line.m_ClientId, Line.m_DeveloperBadge);
+				LayoutTitle(MeasureCursor, Line, false);
 				TextRender()->TextEx(&MeasureCursor, Line.m_aName);
 			}
 			if(Line.m_TimesRepeated > 0)
@@ -3299,24 +3327,6 @@ bool CChat::OnPrepareLines(float y)
 		else
 			NameColor = PlayerNameColor(Line.m_ClientId, Line.m_NameColor, Line.m_Team);
 
-		const auto AppendQmTitle = [&](const char *pTitle, int AuthorId, bool DeveloperBadge, const SQmTitleAppearance &Appearance) {
-			pTitle = VisibleTitle(pTitle, AuthorId);
-			if(!pTitle[0])
-				return;
-			if(DeveloperBadge && DeveloperBadgeAvailable)
-			{
-				Line.m_vDeveloperBadgeRects.push_back(QmLayoutDeveloperBadge(LineCursor));
-				return;
-			}
-			const std::string Text = QmTitleBadgeText(pTitle);
-			const float LabelWidth = TextRender()->TextWidth(QmTitleBadgeLabelFontSize(LineCursor.m_FontSize), Text.c_str());
-			const CUIRect Rect = QmLayoutTitleBadge(LineCursor, LabelWidth);
-			auto &Badge = Line.m_vTitleBadges.emplace_back();
-			Badge.m_Rect = Rect;
-			Badge.m_Appearance = Appearance;
-			Badge.PrepareText(TextRender(), Text.c_str());
-		};
-
 		if(MergedPlayerMessages)
 		{
 			TextRender()->TextColor(Line.m_vMergedAuthors.front().m_NameColor);
@@ -3326,7 +3336,7 @@ bool CChat::OnPrepareLines(float y)
 				TextRender()->TextColor(Line.m_vMergedAuthors[i].m_NameColor);
 				if(i > 0)
 					TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, ",");
-				AppendQmTitle(Line.m_vMergedAuthors[i].m_aQmTitle, Line.m_vMergedAuthors[i].m_ClientId, Line.m_vMergedAuthors[i].m_DeveloperBadge, Line.m_vMergedAuthors[i].m_TitleAppearance);
+				LayoutTitle(LineCursor, Line.m_vMergedAuthors[i], true);
 				TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, Line.m_vMergedAuthors[i].m_aName);
 			}
 			NameColor = Line.m_vMergedAuthors.back().m_NameColor;
@@ -3335,7 +3345,7 @@ bool CChat::OnPrepareLines(float y)
 		{
 			TextRender()->TextColor(NameColor);
 			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, aClientId);
-			AppendQmTitle(Line.m_aQmTitle, Line.m_ClientId, Line.m_DeveloperBadge, Line.m_TitleAppearance);
+			LayoutTitle(LineCursor, Line, true);
 			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, Line.m_aName);
 		}
 
@@ -4303,10 +4313,15 @@ void CChat::OnRender()
 					AnimAlpha);
 			}
 
-			for(const auto &Badge : Line.m_vTitleBadges)
+			for(auto &Badge : Line.m_vTitleBadges)
 			{
-				GameClient()->m_QmClient.TitleBadge().RenderSurface(Graphics(),
-					{Badge.m_Rect.x + AnimOffsetX, Badge.m_Rect.y + AnimOffsetY, Badge.m_Rect.w, Badge.m_Rect.h}, Badge.m_Appearance, AnimAlpha * DefaultTextColor.a);
+				if(Badge.m_Appearance.m_Opacity == 0)
+					continue;
+				if(Badge.m_Appearance.m_TextStyle != 0)
+					Badge.UpdateTextStyle(TextRender(), g_Config.m_QmTitleTextWave != 0, GameClient()->m_QmClient.TitleAnimationTime());
+				else
+					GameClient()->m_QmClient.TitleBadge().RenderSurface(Graphics(),
+						{Badge.m_Rect.x + AnimOffsetX, Badge.m_Rect.y + AnimOffsetY, Badge.m_Rect.w, Badge.m_Rect.h}, Badge.m_Appearance, AnimAlpha * DefaultTextColor.a);
 				Badge.RenderText(TextRender(), AnimAlpha * DefaultTextColor.a, vec2(AnimOffsetX, AnimOffsetY));
 			}
 
@@ -4593,7 +4608,7 @@ bool CChat::TryHandleWhisperCommand(const char *pLine)
 	return true;
 }
 
-CChat::EChatSendResult CChat::SendChatQueued(int Team, const char *pLine, bool AllowOutgoingTranslation, const char *pLocalOriginal, int Connection, bool ManualInput)
+CChat::EChatSendResult CChat::SendChatQueued(int Team, const char *pLine, bool AllowOutgoingTranslation, const char *pLocalOriginal, int Connection, bool ManualInput, bool TranslateOnce)
 {
 	if(Connection < -1 || Connection > IClient::CONN_DUMMY || (Connection >= 0 && (GameClient()->m_aLocalIds[Connection] < 0 || (Connection == IClient::CONN_DUMMY && !Client()->DummyConnected()))))
 		return EChatSendResult::REJECTED;
@@ -4609,7 +4624,7 @@ CChat::EChatSendResult CChat::SendChatQueued(int Team, const char *pLine, bool A
 	const auto SendSensitive = [&] { return SendChat(Team, pLine, nullptr, Connection); };
 	const auto SendOrdinary = [&] {
 		// 显式语言后缀先于自动检测，已识别请求的失败也不能漏发原文。
-		if(AllowOutgoingTranslation && GameClient()->m_Translate.TryTranslateOutgoingChat(Team, pLine))
+		if(AllowOutgoingTranslation && GameClient()->m_Translate.TryTranslateOutgoingChat(Team, pLine, TranslateOnce))
 			return EChatSendResult::HANDLED;
 		// 自动出站翻译
 		if(AllowOutgoingTranslation && QmChatEmojiShouldTranslate(QmChatEmojiFromText(pLine)) && GameClient()->m_Translate.ShouldAutoTranslateOutgoing(pLine))
@@ -4639,7 +4654,7 @@ CChat::EChatSendResult CChat::SendChatQueued(int Team, const char *pLine, bool A
 	return DispatchChatMessage(pLine, SendSensitive, SendOrdinary);
 }
 
-CChat::EChatSendResult CChat::SendChatQueued(const char *pLine)
+CChat::EChatSendResult CChat::SendChatQueued(const char *pLine, bool InvertTranslation)
 {
 	if(m_Mode == MODE_WHISPER)
 	{
@@ -4662,7 +4677,8 @@ CChat::EChatSendResult CChat::SendChatQueued(const char *pLine)
 		if(BuildWhisperCommand(aLine, sizeof(aLine), WhisperTargetName(), pLine))
 			return SendChatQueued(0, aLine, true);
 	}
-	return SendChatQueued(m_Mode == MODE_ALL ? 0 : 1, pLine, true, nullptr, -1, true);
+	const auto Options = ResolveTranslateSendOptions(g_Config.m_QmTranslateAutoOutgoing != 0, InvertTranslation);
+	return SendChatQueued(m_Mode == MODE_ALL ? 0 : 1, pLine, Options.m_AllowTranslation, nullptr, -1, true, Options.m_TranslateOnce);
 }
 
 // ===== 翻译按钮相关方法 =====

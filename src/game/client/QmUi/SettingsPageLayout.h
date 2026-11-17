@@ -1056,6 +1056,115 @@ inline float ResolveSettingsInlineRowMinimumWidth(const float FixedControlsWidth
 	return std::max(0.0f, FixedControlsWidth) + std::max(0.0f, Gap) * std::max(0, GapCount);
 }
 
+inline float ResolveAppearanceChatMessagesHeight(const SSettingsContentMetrics &Metrics)
+{
+	constexpr int MessageGradientCount = 6;
+	const float ControlHeight = std::max(Metrics.m_LineHeight, Metrics.m_ButtonHeight);
+	const float MessageGradientHeight = 2.0f * ControlHeight + 2.0f * Metrics.m_LineSpacing;
+	const float ColorPickerHeight = ControlHeight + Metrics.m_LineSpacing;
+	const float SystemPrefixToggleHeight = Metrics.m_LineHeight + Metrics.m_LineSpacing;
+	const float GeometryEditorHeight = 8.0f * (ControlHeight + Metrics.m_LineSpacing);
+	return MessageGradientCount * MessageGradientHeight + SystemPrefixToggleHeight + ColorPickerHeight + GeometryEditorHeight;
+}
+
+inline float ResolveQmHudCoordsHeight(const SSettingsContentMetrics &Metrics)
+{
+	// 六个复选框和一个数值输入保留行距；末尾颜色行不再追加卡片底部空白。
+	return 7.0f * Metrics.m_RowStep + Metrics.m_ButtonHeight;
+}
+
+inline float ResolveQmHudNotificationsHeight(const SSettingsContentMetrics &Metrics, const bool Advanced, const bool CategoryFilters)
+{
+	// 基础区域：两个开关、两个数值输入和高级选项开关。
+	float Height = 5.0f * Metrics.m_RowStep;
+	if(!Advanced)
+		return Height - Metrics.m_LineSpacing;
+
+	// 高级区域固定消费十行；分类过滤启用后再显示四个分类开关。
+	Height += (10.0f + (CategoryFilters ? 4.0f : 0.0f)) * Metrics.m_RowStep;
+	// 说明文字使用 Small 语义，并保留与其他行相同的安全间距。
+	return Height + Metrics.m_SmallSize + Metrics.m_LineSpacing;
+}
+
+inline float ResolveQmHudPlayerStatsHeight(const SSettingsContentMetrics &Metrics, const bool MapProgress, const bool EmbeddedProgress)
+{
+	if(!MapProgress)
+		return 3.0f * Metrics.m_RowStep - Metrics.m_LineSpacing;
+	return (EmbeddedProgress ? 6.0f : 10.0f) * Metrics.m_RowStep - Metrics.m_LineSpacing;
+}
+
+inline float ResolveQmHudInputOverlayHeight(const SSettingsContentMetrics &Metrics, const bool Enabled)
+{
+	if(!Enabled)
+		return Metrics.m_LineHeight;
+	// 八个基本控件，加字号、颜色、标签和外观恢复；实际页面优先使用内容探针。
+	return 12.0f * Metrics.m_RowStep;
+}
+
+inline float ResolveQmHudDummyMiniViewHeight(const SSettingsContentMetrics &Metrics, const bool Expanded)
+{
+	const float PreviewGap = Metrics.m_LineHeight * 0.8f + Metrics.m_LineSpacing;
+	return Expanded ? 4.0f * Metrics.m_RowStep + PreviewGap : Metrics.m_RowStep;
+}
+
+inline float ResolveQmHudDynamicIslandHeight(const SSettingsContentMetrics &Metrics, const bool OriginalStyle, const bool SwitchCountdownEnabled, const float ContentWidth)
+{
+	// 常驻行：原始样式、显示队伍、钩子倒计时和开关倒计时。
+	float Height = 4.0f * Metrics.m_RowStep;
+	if(!OriginalStyle)
+	{
+		const CUIRect ColorRowView{0.0f, 0.0f, std::max(0.0f, ContentWidth), 0.0f};
+		Height += ResolveSettingsColorRowLayout(ColorRowView, Metrics, false).m_ConsumedHeight + 3.0f * Metrics.m_RowStep;
+	}
+	// 开关倒计时启用时增加跟随 Tee / 灵动岛两个位置开关，不再保留位置标题行。
+	Height += (SwitchCountdownEnabled ? 2.0f : 0.0f) * Metrics.m_RowStep;
+	return Height;
+}
+
+inline float ResolveQmHudVoiceHeight(const SSettingsContentMetrics &Metrics, const bool Enabled, const bool Advanced, const bool ShowStatus, const int NoiseSuppressMode, const bool VadEnabled, const bool StereoEnabled)
+{
+	if(!Enabled)
+		return Metrics.m_LineHeight;
+
+	// 常规区域：启用、房间密码、静音、麦克风音量、VAD 和高级选项。
+	float Height = 6.0f * Metrics.m_RowStep;
+	if(!Advanced)
+		return Height - Metrics.m_LineSpacing;
+
+	// 高级固定区域：状态开关、服务器/设备/编码/降噪、AGC、播放、立体声、半径和房间范围。
+	Height += 11.0f * Metrics.m_RowStep + Metrics.m_LineSpacing * 1.15f;
+	// 可选 WebSocket endpoint 与 UDP 地址并列显示，始终占一行避免配置切换时卡片跳动。
+	Height += Metrics.m_RowStep;
+	if(NoiseSuppressMode == 1)
+		Height += Metrics.m_RowStep;
+	if(VadEnabled)
+		Height += 2.0f * Metrics.m_RowStep;
+	if(StereoEnabled)
+		Height += Metrics.m_RowStep;
+	if(ShowStatus)
+	{
+		// 标题、提示、十个稳定状态行以及状态区尾间距。
+		Height += Metrics.m_LineHeight * 1.46f + Metrics.m_LineSpacing * 0.75f;
+		Height += 10.0f * (Metrics.m_LineHeight + Metrics.m_LineSpacing * 0.75f);
+		Height += Metrics.m_LineSpacing * 0.5f;
+	}
+	return Height - Metrics.m_LineSpacing;
+}
+
+inline float ResolveQmHudBackground3DHeight(const SSettingsContentMetrics &Metrics, const float ContentWidth, const bool Enabled, const bool CustomColor, const bool Glow, const bool Trail, const bool Pulse, const bool Twinkle)
+{
+	if(!Enabled)
+		return Metrics.m_LineHeight;
+	const SSettingsRadioRowLayout Radio = ResolveSettingsRadioRowLayout({0.0f, 0.0f, ContentWidth, Metrics.m_LineHeight * 2.0f + Metrics.m_LineSpacing}, 2, Metrics);
+	float Height = 18.0f * Metrics.m_RowStep + Radio.m_Height + Metrics.m_LineSpacing;
+	Height += CustomColor ? Metrics.m_RowStep : 0.0f;
+	Height += Glow ? 2.0f * Metrics.m_RowStep : 0.0f;
+	Height += Trail ? 2.0f * Metrics.m_RowStep : 0.0f;
+	Height += Pulse ? 2.0f * Metrics.m_RowStep : 0.0f;
+	Height += Twinkle ? Metrics.m_RowStep : 0.0f;
+	return Height - Metrics.m_LineSpacing;
+}
+
 inline uint64_t ResolveQmHudVoiceRevision(const bool Enabled, const bool Advanced, const bool ShowStatus, const int NoiseSuppressMode, const bool VadEnabled, const bool StereoEnabled)
 {
 	return (Enabled ? 1u : 0u) |

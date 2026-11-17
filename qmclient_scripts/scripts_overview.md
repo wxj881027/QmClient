@@ -44,6 +44,7 @@
 当前主要脚本：
 
 - `qmclient_scripts/cmake-windows.cmd` — Windows 构建统一入口，加载 MSVC 环境后调用 `cmake_windows.py`。
+- `qmclient_scripts/build_sdl3_prebuilt_windows.cmd <SDL3 源码目录>` — 重建 Windows SDL3 预编译库之前应用 `cmake/PatchSDL3WindowsAudio.cmake`，使设备名称、格式与 GUID 的读取先校验属性类型和指针。源码补丁实现在 `qmclient_scripts/sdl3/SDL_qm_immdevice_info.h`，由 SDL 构建和行为测试共用；更新补丁后仍须重建并更新 `ddnet-libs/sdl/windows/` 的 DLL，再重新打包客户端，现有 DLL 不会自动获得修复。
 - `qmclient_scripts/cmake_windows.py` — 按规范化后的构建目录持有系统文件锁，覆盖 configure、build、测试目标、打包目标及 install；同目录任务自动等待，最长 10 分钟后明确失败，不同目录可以并行。锁内统一执行 MSVC 前缀检查、旧依赖恢复和规则重生成后的补构建，日志与锁文件保留在 `tmp/`。直接运行 CMake/Ninja 不会获取这把锁，日常操作继续使用 `.cmd` 入口。
 - `qmclient_scripts/darwin_fix_install_names.py`
 - `qmclient_scripts/make_lib_openssl.sh`

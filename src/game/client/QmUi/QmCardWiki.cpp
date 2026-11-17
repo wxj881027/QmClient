@@ -318,9 +318,9 @@ namespace
 		},
 		{
 			"deck:qmclient-contributors-title-display",
-			Localizable("Where your title appears and how it looks: nameplate, style, motion, colors and glow."),
-			Localizable("Turn on \"Show titles on nameplates\", pick a \"Title style\", then adjust \"Title motion\" and \"Wave amount\"; \"Advanced mode\" adds color and glow."),
-			Localizable("Changes apply at once, so check \"Title preview\" to compare styles; press \"Save\" on the \"Sponsor title\" card to share one."),
+			Localizable("Choose a sponsor title style for your nameplate and chat messages."),
+			Localizable("Pick a text style or a moon or sun badge, check the preview, then press \"Save\" to share the style with other players."),
+			Localizable("The per-character wave setting affects text titles on your screen only."),
 		},
 		{
 			"deck:sound-audio-pack",
@@ -566,7 +566,7 @@ namespace
 			"qm:friend_notify",
 			Localizable("Watches your friend list and reports friends coming online or joining your map, with optional automatic greeting."),
 			Localizable("Turn on \"Notify when friends come online\" and \"Auto refresh server list\", then tune \"Refresh interval\"; \"Auto greet friends entering map\" is optional."),
-			Localizable("Auto greet posts a public chat line a few seconds after a friend joins, so leave \"Greeting text\" empty on strict servers."),
+			Localizable("Auto greet waits 1 second after a friend joins, then sends a public greeting when chat is available. Leave \"Greeting text\" empty on strict servers."),
 		},
 		{
 			"qm:gores",

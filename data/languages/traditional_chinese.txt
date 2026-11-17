@@ -920,6 +920,9 @@ Always show song title and artist
 Always translate
 == 始終翻譯
 
+AMLL community lyrics
+== AMLL 社群歌詞
+
 Amount
 == 預測量
 
@@ -1283,8 +1286,8 @@ Auto greet friend text
 Auto greet friends entering map
 == 自動問候進圖的好友
 
-Auto greet posts a public chat line a few seconds after a friend joins, so leave "Greeting text" empty on strict servers.
-== 自動問候會在好友進圖幾秒後公開發一則聊天；管得嚴的伺服器上就把問候語留空。
+Auto greet waits 1 second after a friend joins, then sends a public greeting when chat is available. Leave "Greeting text" empty on strict servers.
+== 好友進圖滿 1 秒後，聊天允許傳送時會在公頻打招呼。在限制自動發言的伺服器上，將「打招呼文本」留空即可關閉自動問候。
 
 Auto login Axiom server
 == 自動登入 Axiom 伺服器帳號
@@ -1576,6 +1579,9 @@ Axiom dummy password
 
 Axiom main account password
 == Axiom 主號密碼
+
+Axiom rank
+== Axiom 排名
 
 Axiom score request failed
 == Axiom 分數請求失敗
@@ -2180,9 +2186,6 @@ Change values in the settings card and watch this preview update.
 Change zoom
 == 更改縮放比例
 
-Changes apply at once, so check "Title preview" to compare styles; press "Save" on the "Sponsor title" card to share one.
-== 改動會立即生效，可以用頭銜成品預覽比較風格；想讓別人也看到，就到贊助頭銜卡裡點保存。
-
 Changes how the vote menu looks and how you interact with running votes.
 == 變更投票選單的外觀，以及你與進行中投票的互動方式。
 
@@ -2369,6 +2372,9 @@ Checking for updates...
 Checking Steam...
 == 正在偵測 Steam…
 
+China rank
+== 國服排名
+
 Chinese (Simplified)
 == 中文（簡體）
 
@@ -2392,6 +2398,9 @@ Choose a preset, or Custom to enter width and height. Follow window uses the cur
 
 Choose a screen position and font size, then check the preview card for wrapping.
 == 選擇螢幕位置和字型大小，再確認預覽卡中的換行情況。
+
+Choose a sponsor title style for your nameplate and chat messages.
+== 選擇名牌和聊天中顯示的贊助頭銜樣式。
 
 Choose a target, then set its color; entity lasers can follow team colors.
 == 先選一個目標，再設定它的顏色；實體的雷射可以跟隨隊伍顏色。
@@ -2699,6 +2708,9 @@ Collapse
 Collapse console
 == 收起控制台
 
+Collect CP %d before teleporting
+== 請先吃 CP %d，再進入回傳入口
+
 Collects the remaining DDNet client preferences that do not belong to other cards.
 == 收納其餘不屬於其他卡片的 DDNet 用戶端偏好設定。
 
@@ -2836,6 +2848,9 @@ Complete restore replaces the listed files. A backup is saved before importing. 
 
 Complete snapshots are arriving late or not arriving
 == 完整快照到達延遲或未到達
+
+Completed
+== 已完成
 
 Compressor attack time (ms)
 == 壓縮器攻擊時間（毫秒）
@@ -3404,8 +3419,14 @@ Country code
 Country flag for grouping this community (ISO 3166-1 numeric)
 == 將此社區分組的國家/地區標誌（ISO 3166-1 數字）
 
+CP %d
+== 檢查點 %d
+
 CP border overlay alpha (0-100)
 == CP 點邊界的覆蓋實體 alpha（0-100）
+
+CP guide
+== CP 引導
 
 CP opacity
 == CP 點不透明度
@@ -5873,6 +5894,9 @@ Finished maps
 Fire
 == 開火
 
+First finish
+== 首次通關
+
 First page in console
 == 控制台第一頁
 
@@ -6368,6 +6392,9 @@ Global card ordering (format: stableId|tab|col|order; semicolon-separated)
 Global card ordering old config migration completed flag
 == 全局卡片排序舊配置遷移完成標記
 
+Global rank
+== 全球排名
+
 Global toggle key
 == 全局開關鍵
 
@@ -6553,6 +6580,9 @@ Guide line color
 
 Guide lines are computed locally and do not guarantee that a hook will connect.
 == 輔助線只在本機計算，並不保證鉤索一定能勾中。
+
+Guide to nearby uncollected teleport checkpoints and warn near checkpoint teleporters
+== 引導補吃附近遺漏的傳送檢查點，接近檢查點回傳入口時提醒
 
 Gun fire
 == 手槍射擊
@@ -7168,6 +7198,9 @@ Import from clipboard
 
 Import merges friends and keeps local duplicates by default. Codes contain private names and notes.
 == 預設合併好友，重複好友保留本機資料。好友碼包含私人名單和備註。
+
+Improved -%s
+== 進步 -%s
 
 Improved anti ping
 == 改進反 Ping
@@ -8222,6 +8255,9 @@ Loading sound files
 Loading successfully done
 == 存檔載入成功
 
+Loading...
+== 載入中…
+
 Loading…
 == 正在加載…
 
@@ -8602,6 +8638,9 @@ Match ghost by map version instead of map name
 
 Match lyrics island width to the main Dynamic Island, excluding satellites
 == 讓歌詞島始終與靈動島主島等寬，不包含眼睛等附島
+
+Matched personal best
+== 追平個人最佳
 
 Matched with callable peer
 == 已匹配到可通話對端
@@ -9467,6 +9506,9 @@ No controller found. Plug in a controller.
 No corresponding vote option found
 == 未找到對應投票選項
 
+No data
+== 暫無資料
+
 No demo is being recorded
 == 當前沒有正在錄製的回放
 
@@ -10307,6 +10349,9 @@ Pause/unpause game
 Penalty in seconds for saving or swapping positions
 == 保存或交換位置的懲罰時間（秒）
 
+Pending sync
+== 待同步
+
 Per-name volume (name=percent)
 == 按名字單獨音量（name=percent）
 
@@ -10327,6 +10372,12 @@ Permanent sponsor verified
 
 Personal adjustments
 == 個性調整
+
+Personal best
+== 個人最佳
+
+Personal best pending
+== 個人最佳待確認
 
 Personal best:
 == 個人最佳：
@@ -10393,6 +10444,9 @@ Pick a slot, type the command and its label, then hold the wheel key in game to 
 
 Pick a text color mode first; the custom color row only appears for the custom mode.
 == 先選擇文字顏色模式；自定義顏色列只在自定義模式下出現。
+
+Pick a text style or a moon or sun badge, check the preview, then press "Save" to share the style with other players.
+== 選擇文字款、月亮膠囊或太陽膠囊。查看預覽後按「保存」，其他玩家就能看到這款頭銜。
 
 Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
 == 逐列選擇顏色：已認證與同戰隊顏色作用於計分板，兩個清單顏色作用於好友清單。
@@ -11044,6 +11098,9 @@ Preview dummy nameplate
 
 Preview failed. Check the image and Logo, then retry.
 == 預覽失敗，請檢查圖片和 Logo 後重試。
+
+Preview finish summary
+== 預覽結算卡
 
 Preview hook collision colors and line styles
 == Preview hook collision colors and line styles
@@ -12929,8 +12986,8 @@ Send sampling and token limit parameters
 Send specified command to rcon
 == 向 rcon 發送指定命令
 
-Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines
-== 每隔隨機90到270秒向公共聊天逐句傳送連續三句歌詞，句間隔3秒
+Send three consecutive lyrics to public chat at random intervals of 360 to 1200 seconds, with 3 seconds between lines. Successfully sending a lyric with Singing cancels pending humming lines and restarts the random wait
+== 每隔隨機 360 到 1200 秒向公共聊天逐句傳送連續三句歌詞，句間隔 3 秒。透過「唱歌」成功傳送歌詞後，取消尚未傳送的哼歌歌詞並重新隨機計時
 
 Send to
 == 傳送給
@@ -13042,6 +13099,9 @@ Server port (only 8303-8310 work in LAN browser, 0=auto find free in 8303-8310).
 
 Server preset
 == 伺服器預設
+
+Server rank
+== 本服排名
 
 Server region. Used for region bans
 == 伺服器區域。用於地區禁令
@@ -13270,6 +13330,9 @@ Show a ghost of your best time after crossing the start line
 
 Show a MomentCap .poses file in game (no export)
 == 在遊戲中檢視 MomentCap .poses 檔案（不匯出）
+
+Show a per-character wave on text titles locally
+== 在本機為文字頭銜顯示逐字波動
 
 Show a small view of the dummy
 == 顯示分身的小視窗
@@ -13541,6 +13604,12 @@ Show filtered words in console
 Show finish messages
 == 顯示完成消息
 
+Show finish summary
+== 顯示結算卡
+
+Show finish summary in Dynamic Island
+== 在靈動島顯示結算卡
+
 Show flag on name plate
 == 名字板上顯示國旗
 
@@ -13594,6 +13663,9 @@ Show ghost
 
 Show ghost at unpredictable position of other players
 == 在其他玩家的不可預測位置顯示幽靈
+
+Show glowing, floating lyrics in the map. Each new line stays where it appears; previous lines rise and fade out
+== 在地圖中顯示發光、漂浮的歌詞。每句新歌詞固定在出現的位置，舊句向上漂浮並淡出
 
 Show Gores drown board
 == 顯示 Gores 落水榜
@@ -13945,6 +14017,9 @@ Show pause/play indicator when changing
 
 Show pending crash reports in a window at startup (0 = keep them on disk and log a line instead)
 == 啟動時用視窗顯示待處理的崩潰報告（0 = 僅保留報告檔案並記錄日誌）
+
+Show per-character title waves locally
+== 本機顯示頭銜逐字波動
 
 Show performance graphs.
 == 顯示性能圖表
@@ -14549,8 +14624,14 @@ Slow down the demo
 Slower
 == 較慢
 
+Slower +%s
+== 退步 +%s
+
 Slower export playback
 == 降低匯出播放速度
+
+Slower than personal best
+== 慢於個人最佳
 
 Small Tee size
 == 小 Tee 尺寸
@@ -14833,6 +14914,9 @@ Sponsor support
 
 Sponsor title
 == 贊助頭銜
+
+Sponsor title appearance: 0 = capsule, 1-5 = text palette
+== 贊助頭銜外觀：0 = 膠囊，1–5 = 文字配色
 
 Sponsor title badge opacity (0-100)
 == 贊助頭銜整體不透明度（0-100）
@@ -15617,6 +15701,21 @@ Testing translation...
 Text
 == 文字
 
+Text 1
+== 文字1
+
+Text 2
+== 文字2
+
+Text 3
+== 文字3
+
+Text 4
+== 文字4
+
+Text 5
+== 文字5
+
 Text alpha
 == 文字透明度
 
@@ -15703,6 +15802,9 @@ The message is sent on every water death, so keep it short; leaving "Chat messag
 
 The name "default" is reserved.
 == “default” 是保留名稱。
+
+The per-character wave setting affects text titles on your screen only.
+== 逐字波動只影響你畫面上的文字頭銜。
 
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 == 你正在私聊的玩家尚未重連或已離開。請稍等，或改與他人私聊
@@ -16010,6 +16112,9 @@ Time limit
 Time limit: %d min
 == 規定時限：%d 分鐘
 
+Time to finish
+== 通關用時
+
 Time to wait before changing team: %s
 == 距離下次切換隊伍還需等待：%s
 
@@ -16072,6 +16177,9 @@ Title server does not support badge appearance yet
 
 Title server does not support chat styles yet
 == 頭銜伺服器尚不支援發言樣式
+
+Title server does not support text titles yet
+== 頭銜伺服器暫不支援文字款頭銜
 
 Title server unavailable; retry
 == 頭銜服務暫不可用，請重試
@@ -16288,6 +16396,9 @@ Total hours
 
 Total play time
 == 總時長
+
+Total points
+== 總分
 
 Total: %d save(s)
 == 總計：%d 個存檔
@@ -16528,9 +16639,6 @@ Turn on "Show important server prompts as notifications" or "Route Echo messages
 
 Turn on "Show own coordinates" or "Show other players' coordinates", then choose "Show X" and "Show Y".
 == 開啟顯示自己的座標或顯示其他玩家的座標，再選擇顯示 X 與顯示 Y。
-
-Turn on "Show titles on nameplates", pick a "Title style", then adjust "Title motion" and "Wave amount"; "Advanced mode" adds color and glow.
-== 開啟顯示名牌頭銜，選一個頭銜風格，再調頭銜動畫和波浪幅度；進階模式裡還能加顏色和光暈。
 
 Turn on "Skin outline for self and dummy" or "Skin outline for other players", then tune width and opacity; "Cycle custom Tee hue" animates custom colors.
 == 打開自己與 dummy 的皮膚描邊或其他玩家的皮膚描邊，再調寬度和透明度；循環自定義 Tee 色調負責讓自訂顏色動起來。
@@ -16978,6 +17086,9 @@ Use alternative world tick calculation making hooks behave as if all players hav
 
 Use animated title style (overrides qm_title_color_mode)
 == 使用頭銜動態風格（覆蓋 qm_title_color_mode）
+
+Use cached or online AMLL community lyrics when the music source has no word timing
+== 音樂來源沒有逐字時間時，使用快取或線上取得的 AMLL 社群歌詞
 
 Use colored skins for frozen tees
 == 凍結 Tee 使用彩色皮膚
@@ -17597,9 +17708,6 @@ Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per
 When TClient rainbow Tee is enabled, this feature has no effect.
 == 已啟用 TClient 彩虹 Tee 時，本功能不會生效。
 
-Where your title appears and how it looks: nameplate, style, motion, colors and glow.
-== 你的頭銜出現在哪裡、長什麼樣：名牌、風格、動畫、顏色和光暈。
-
 Whether a switch is deactivated by default (otherwise activated)
 == 開關是否默認禁用（否則激活）
 
@@ -17782,6 +17890,9 @@ Word list file exceeds 2 MiB.
 
 Word list must be UTF-8 text without NUL characters.
 == 詞表必須是 UTF-8 文字，且不含 NUL 字元。
+
+World lyrics
+== 世界歌詞
 
 Write local console contents to a text file
 == 將本地控制台內容寫入文本文件

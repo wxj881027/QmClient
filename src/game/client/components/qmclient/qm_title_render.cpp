@@ -1,6 +1,7 @@
 // 请抬头享受阳光｜日子很好 我很我---------致咩子
 #include "qm_title_render.h"
 
+#include "qm_title_badge.h"
 #include "qmclient_utils.h"
 
 #include <base/str.h>
@@ -8,6 +9,45 @@
 
 #include <engine/shared/config.h>
 #include <engine/textrender.h>
+
+void QmPrepareTitleTextCursor(CTextCursor &Cursor, const char *pDisplayText, int TextStyle, bool Wave, float Time)
+{
+	// 号码随头衔保存；沿用旧色表，渐变只随文字位置变化。
+	static const std::array<const SQmTitleStyle *, 5> s_apStyles = {
+		QmTitleStyleById("calamity_red"), QmTitleStyleById("crystyl_crusher"), QmTitleStyleById("burnished_auric"),
+		QmTitleStyleById("turquoise"), QmTitleStyleById("endogenesis")};
+	if(TextStyle <= 0 || TextStyle > static_cast<int>(s_apStyles.size()) || !pDisplayText || !pDisplayText[0])
+		return;
+	const SQmTitleStyle &Style = *s_apStyles[TextStyle - 1];
+	if(Style.m_ColorCount == 1)
+	{
+		Cursor.m_vColorSplits.emplace_back(Cursor.m_CharCount, str_length(pDisplayText), ColorRGBA(Style.m_pColors[0]));
+		if(!Wave)
+			return;
+	}
+
+	const int CharCount = QmTitleShimmerUtf8CharCount(pDisplayText);
+	const ColorRGBA First(Style.m_pColors[0]);
+	const ColorRGBA Last(Style.m_pColors[Style.m_ColorCount - 1]);
+	const auto ColorAt = [&](int CharIndex) {
+		const float T = static_cast<float>(CharIndex) / CharCount;
+		return ColorRGBA(mix(First.r, Last.r, T), mix(First.g, Last.g, T), mix(First.b, Last.b, T));
+	};
+	const char *pNext = pDisplayText;
+	for(int CharIndex = 0; CharIndex < CharCount; ++CharIndex)
+	{
+		const char *pChar = pNext;
+		str_utf8_decode(&pNext);
+		const int ByteIndex = Cursor.m_CharCount + static_cast<int>(pChar - pDisplayText);
+		if(Style.m_ColorCount > 1)
+			Cursor.m_vColorSplits.emplace_back(ByteIndex, static_cast<int>(pNext - pChar), ColorAt(CharIndex), ColorAt(CharIndex + 1));
+		if(Wave)
+		{
+			const float Phase = pi * (Time + CharIndex / 3.0f);
+			Cursor.m_vCharOffsets.emplace_back(ByteIndex, 0.0f, std::sin(Phase) * Cursor.m_FontSize * QM_TITLE_TEXT_WAVE_AMPLITUDE);
+		}
+	}
+}
 
 SQmTitleRenderStyle QmTitleResolveRenderStyle(const char *pServerStyleId)
 {

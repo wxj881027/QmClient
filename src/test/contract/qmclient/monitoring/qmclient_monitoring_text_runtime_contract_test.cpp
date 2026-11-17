@@ -46,7 +46,7 @@ TEST(QmMonitoringTextRuntimeContract, SettingsStableTextMissAndStaleBlockVisible
 	EXPECT_TRUE(ContainsAll(Source, {"MenuTextPoolSizeForTesting", "CScopedMenuTextVisibleGuard"}));
 	EXPECT_EQ(Source.find("context-checkbox-common-"), std::string::npos);
 	EXPECT_TRUE(ContainsAll(Source, {
-						"scope=%s page=%s tab=%d subtab=%d key=%s reason=%s plan_status=%s operation=%s frame=%",
+						"event=%s scope=%s page=%s tab=%d subtab=%d key=%s reason=%s plan_status=%s operation=%s coverage_frame=%",
 						"%s:%d:%d:%d:%s:fs%d:al%d:mw%d:us%d:hd%d:cm%d",
 						"StyleKey.m_Align",
 						"StyleKey.m_MaxWidthBucket",

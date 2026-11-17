@@ -45,6 +45,8 @@ private:
 	std::shared_ptr<CLyricsParseJob> m_pLyricsParseJob;
 	QmNeteaseHook::CLyricsChannel m_LyricsChannel;
 	QmMusicLyrics::SLyricsData m_LyricsData;
+	bool m_HasWordTiming = false;
+	int64_t m_LyricsPositionMs = -1;
 	uint64_t m_DataSongId = 0;
 	uint64_t m_DataGeneration = 0;
 	uint32_t m_DataPid = 0;

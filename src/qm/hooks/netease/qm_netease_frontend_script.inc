@@ -1,5 +1,5 @@
 R"JS((() => {
-const bridgeVersion = "14";
+const bridgeVersion = "15";
 if (window.__QM_NCM_BRIDGE_VERSION__ !== bridgeVersion) {
   if (window.__QM_NCM_BRIDGE_TIMER__) {
     try { clearInterval(window.__QM_NCM_BRIDGE_TIMER__); } catch (_) {}
@@ -210,18 +210,22 @@ const reportStoreLyrics = () => {
     }
     if (!lyric || (!lyric.isLoading && Array.isArray(lyric.lyricLines) && lyric.lyricLines.length === 0 && lyric.currentUsedLyric === "none" && lyric.displayType === "default"))
       requestStoreLyrics(songId, state, now);
-    if (!lyric || lyric.isLoading || !Array.isArray(lyric.lyricLines)) {
+    if (!lyric || lyric.isLoading) {
       if (lyric && lyric.isLoading) state.sawLoading = true;
       resetLyricCandidate(state);
       return;
     }
     const lrc = serializeLyricLines(lyric.lyricLines);
-    if (!lrc) {
+    // 网易云将逐字原文与对应译文保存在 yrcInfo，lyricLines 只有行级时间。
+    const yrcInfo = lyric.yrcInfo;
+    const yrc = yrcInfo && typeof yrcInfo.yrc === "string" && yrcInfo.yrc.trim() ? yrcInfo.yrc : "";
+    if (!lrc && !yrc) {
       resetLyricCandidate(state);
       return;
     }
-    const tlyric = serializeLyricLines(lyric.tlyricLines);
+    const tlyric = yrc && typeof yrcInfo.yrcTrans === "string" && yrcInfo.yrcTrans.trim() ? yrcInfo.yrcTrans : serializeLyricLines(lyric.tlyricLines);
     const rawLyrics = {lrc, tlyric};
+    if (yrc) rawLyrics.yrc = yrc;
     const contentKey = JSON.stringify(rawLyrics);
     if (!state.sawLoading && state.previousContentKey && contentKey === state.previousContentKey && now - state.songChangedAt < 5000) {
       resetLyricCandidate(state);

@@ -153,6 +153,24 @@ TEST(QmHudMediaIslandSdfGpuPacking, ShellRippleWorksWithoutRightSatelliteAndDefa
 	EXPECT_FLOAT_EQ(Params.m_aData[IGraphics::SMediaIslandSdfParams::DATA_CAPSULE_PARAMS].w, 1.2f);
 }
 
+TEST(QmHudMediaIslandSdfGpuPacking, GrowingCardAndSpectatorCapsuleShareOneSurface)
+{
+	SHudMediaIslandSdfRenderState State;
+	State.m_MainRect = {40, 4, 60, 20};
+	State.m_HasRightCapsule = true;
+	State.m_RightCapsule = {{110, 4, 30, 20}, 10, 2};
+	State.m_AttachedCard = {{22, 20, 100, 45}, 6, 4};
+	State.m_Rect = QmHudMediaIslandSdfOuterRect(State);
+	EXPECT_LT(State.m_Rect.x, 22.0f);
+	EXPECT_GT(State.m_Rect.x + State.m_Rect.w, 140.0f);
+	EXPECT_GT(State.m_Rect.y + State.m_Rect.h, 65.0f);
+	IGraphics::SMediaIslandSdfParams Params;
+	ASSERT_TRUE(QmHudMediaIslandBuildGpuSdfParams(State, Params));
+	EXPECT_TRUE(Params.HasRightCapsule());
+	EXPECT_FLOAT_EQ(Params.m_aData[IGraphics::SMediaIslandSdfParams::DATA_CARD_RECT].w, 45.0f);
+	EXPECT_FLOAT_EQ(Params.m_aData[IGraphics::SMediaIslandSdfParams::DATA_CARD_PARAMS].y, 4.0f);
+}
+
 TEST(QmHudMediaIslandSdfBounds, RipplePaddingAlsoContainsTheDisplacedShadow)
 {
 	SHudMediaIslandSdfRenderState State;
@@ -174,7 +192,7 @@ TEST(QmMediaIslandGpuSdfContract, UsesFixedStd140FriendlyParameterBlock)
 	static_assert(IGraphics::SMediaIslandSdfParams::DATA_RESERVED == 7);
 	static_assert(IGraphics::SMediaIslandSdfParams::DATA_ITEM_STRIDE == 3);
 	static_assert(IGraphics::SMediaIslandSdfParams::DATA_BACKDROP_UV == 44);
-	static_assert(IGraphics::SMediaIslandSdfParams::DATA_COUNT == 45);
+	static_assert(IGraphics::SMediaIslandSdfParams::DATA_COUNT == 47);
 	static_assert(sizeof(vec4) == sizeof(float) * 4);
 	static_assert(sizeof(IGraphics::SMediaIslandSdfParams) == IGraphics::SMediaIslandSdfParams::DATA_COUNT * sizeof(vec4));
 

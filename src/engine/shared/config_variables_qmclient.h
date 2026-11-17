@@ -434,6 +434,8 @@ MACRO_CONFIG_INT(QmEmoticonProjectileDuration, qm_emoticon_projectile_duration, 
 MACRO_CONFIG_INT(QmShowOtherSuperEmotes, qm_show_other_super_emotes, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show other players' large emoticons")
 MACRO_CONFIG_INT(QmShowOtherLaunchEmotes, qm_show_other_launch_emotes, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show other players' launched emoticons")
 MACRO_CONFIG_INT(QmTitleBadgeStyle, qm_title_badge_style, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Sponsor title badge: 0 = moon, 1 = sun")
+MACRO_CONFIG_INT(QmTitleTextStyle, qm_title_text_style, 0, 0, 5, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Sponsor title appearance: 0 = capsule, 1-5 = text palette")
+MACRO_CONFIG_INT(QmTitleTextWave, qm_title_text_wave, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show a per-character wave on text titles locally")
 MACRO_CONFIG_COL(QmTitleBadgeColor, qm_title_badge_color, 0xC3638E, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Overall sponsor title badge color")
 MACRO_CONFIG_INT(QmTitleInstantHints, qm_title_instant_hints, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show title setting hints immediately in small text")
 MACRO_CONFIG_INT(QmTitleColorMode, qm_title_color_mode, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow")
@@ -746,6 +748,8 @@ MACRO_CONFIG_COL(QmHookCollPressedTee, qm_hook_coll_pressed_tee, 0xFF2AFFBF, CFG
 MACRO_CONFIG_COL(QmHookCollPressedTip, qm_hook_coll_pressed_tip, 0xFF2BFFC0, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Pressed hook line tip color")
 
 // HUD Dynamic Island - 灵动岛/HUD 编辑器
+MACRO_CONFIG_INT(QmFinishSummary, qm_finish_summary, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show finish summary in Dynamic Island")
+MACRO_CONFIG_INT(QmFinishSummaryPreview, qm_finish_summary_preview, 0, 0, 1, CFGFLAG_CLIENT, "Preview finish summary")
 MACRO_CONFIG_INT(QmHudIslandUseOriginalStyle, qm_hud_island_use_original_style, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use original style for Dynamic Island")
 MACRO_CONFIG_INT(QmHudIslandShowTeam, qm_hud_island_show_team, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show team on HUD Dynamic Island")
 MACRO_CONFIG_INT(QmHudIslandAlwaysShowTrackDetails, qm_hud_island_always_show_track_details, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Always show song title and artist")
@@ -811,6 +815,7 @@ MACRO_CONFIG_INT(Qm3DParticlesPulseSpeed, qm_3d_particles_pulse_speed, 100, 10, 
 MACRO_CONFIG_INT(Qm3DParticlesTwinkle, qm_3d_particles_twinkle, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable background 3D particle flicker")
 MACRO_CONFIG_INT(Qm3DParticlesTwinkleStrength, qm_3d_particles_twinkle_strength, 35, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Background 3D particle flicker intensity")
 MACRO_CONFIG_INT(QmShowTuneZoneColors, qm_show_tune_zone_colors, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Color map tune zones by their tune zone number")
+MACRO_CONFIG_INT(QmCheckpointGuide, qm_checkpoint_guide, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Guide to nearby uncollected teleport checkpoints and warn near checkpoint teleporters")
 MACRO_CONFIG_INT(QmBlankAssetFallback, qm_blank_asset_fallback, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)")
 
 // Skin queue - 皮肤队列
@@ -889,12 +894,14 @@ MACRO_CONFIG_STR(QmNeteaseHookHelperPath, qm_netease_hook_helper_path, 512, "", 
 
 // 网易云歌词展示开关。关闭展示时后台桥接仍可继续采集并维护当前歌曲状态。
 MACRO_CONFIG_INT(QmLyrics, qm_lyrics, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable Netease lyric integration")
+MACRO_CONFIG_INT(QmWorldLyrics, qm_world_lyrics, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show glowing, floating lyrics in the map. Each new line stays where it appears; previous lines rise and fade out")
 MACRO_CONFIG_INT(QmLyricsInMediaIsland, qm_lyrics_in_media_island, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show current Netease lyric in Media Island")
 
+MACRO_CONFIG_INT(QmLyricsCommunity, qm_lyrics_community, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use cached or online AMLL community lyrics when the music source has no word timing")
 MACRO_CONFIG_INT(QmLyricsLanguage, qm_lyrics_language, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Lyrics language (0=Original, 1=Translation, 2=Original and translation)")
 MACRO_CONFIG_INT(QmLyricsSeparateIsland, qm_lyrics_separate_island, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show lyrics in a separate island below Dynamic Island")
 MACRO_CONFIG_INT(QmLyricsIslandFollowWidth, qm_lyrics_island_follow_width, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Match lyrics island width to the main Dynamic Island, excluding satellites")
-MACRO_CONFIG_INT(QmHumming, qm_humming, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines")
+MACRO_CONFIG_INT(QmHumming, qm_humming, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Send three consecutive lyrics to public chat at random intervals of 360 to 1200 seconds, with 3 seconds between lines. Successfully sending a lyric with Singing cancels pending humming lines and restarts the random wait")
 MACRO_CONFIG_INT(QmSinging, qm_singing, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Double-tap the bound key within 400 ms to send the current lyric to public chat")
 
 // 汽水音乐 Hook 集成(共享同一套歌词展示开关)。

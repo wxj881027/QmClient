@@ -138,6 +138,22 @@ TEST(SettingsPageLayout, SegmentedControlsFollowBodySizeAcrossWidths)
 	}
 }
 
+TEST(SettingsPageLayout, DynamicIslandHeightMatchesTheRenderedRowsAndColorRow)
+{
+	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(1000.0f);
+	const float OriginalHeight = ResolveQmHudDynamicIslandHeight(Metrics, true, false, 700.0f);
+	const float ExpandedHeight = ResolveQmHudDynamicIslandHeight(Metrics, false, false, 700.0f);
+	const CUIRect ColorRowView{0.0f, 0.0f, 700.0f, 0.0f};
+
+	// 卡片预留 4 行：原版样式、显示队伍、钩子倒计时、开关倒计时。
+	// 展开时再多一行背景色、歌曲信息、结算卡与一次性预览开关。
+	EXPECT_FLOAT_EQ(OriginalHeight, 4.0f * Metrics.m_RowStep);
+	EXPECT_FLOAT_EQ(ExpandedHeight - OriginalHeight, ResolveSettingsColorRowLayout(ColorRowView, Metrics, false).m_ConsumedHeight + 3.0f * Metrics.m_RowStep);
+	// 开关倒计时启用后再多出「跟随 Tee」「灵动岛」两个位置开关（没有位置标题行）。
+	EXPECT_FLOAT_EQ(ResolveQmHudDynamicIslandHeight(Metrics, true, true, 700.0f) - OriginalHeight, 2.0f * Metrics.m_RowStep);
+	EXPECT_FLOAT_EQ(ResolveQmHudDynamicIslandHeight(Metrics, false, true, 700.0f) - ExpandedHeight, 2.0f * Metrics.m_RowStep);
+}
+
 TEST(SettingsPageLayout, ContentRowFlowKeepsConditionalRowsAndMeasuredHeightInSync)
 {
 	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(1000.0f);

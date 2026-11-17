@@ -72,47 +72,7 @@ inline SQmLegacyMediaHudLayout QmLegacyMediaHudLayout(float AnchorX, float Cente
 	return Layout;
 }
 
-class CQmLegacyMediaHudLyricState
-{
-	char m_aSource[128] = {};
-	char m_aTitle[128] = {};
-	char m_aArtist[128] = {};
-	char m_aLyrics[1024] = {};
-	char m_aTranslation[1024] = {};
-	int64_t m_StartTick = 0;
-	int64_t m_LastTick = 0;
-	bool m_Initialized = false;
-
-public:
-	void Reset()
-	{
-		if(m_Initialized)
-			*this = {};
-	}
-
-	void Update(const CSystemMediaControls::SState &Media, const char *pLyrics, int64_t Now, const char *pTranslation = "")
-	{
-		if(!m_Initialized || Now < m_LastTick || str_comp(m_aSource, Media.m_aSourceAppId) != 0 ||
-			str_comp(m_aTitle, Media.m_aTitle) != 0 || str_comp(m_aArtist, Media.m_aArtist) != 0 || str_comp(m_aLyrics, pLyrics) != 0 || str_comp(m_aTranslation, pTranslation) != 0)
-		{
-			str_copy(m_aSource, Media.m_aSourceAppId, sizeof(m_aSource));
-			str_copy(m_aTitle, Media.m_aTitle, sizeof(m_aTitle));
-			str_copy(m_aArtist, Media.m_aArtist, sizeof(m_aArtist));
-			str_copy(m_aLyrics, pLyrics, sizeof(m_aLyrics));
-			str_copy(m_aTranslation, pTranslation, sizeof(m_aTranslation));
-			m_StartTick = Now;
-			m_Initialized = true;
-		}
-		m_LastTick = Now;
-	}
-
-	float ElapsedSeconds(int64_t Now, int64_t TickFrequency) const
-	{
-		return m_Initialized && Now >= m_StartTick && TickFrequency > 0 ? (Now - m_StartTick) / static_cast<float>(TickFrequency) : 0.0f;
-	}
-};
-
 void QmRenderLegacyMediaHud(CUi &Ui, IGraphics &Graphics, ITextRender &TextRender, const CSystemMediaControls::SState &Media,
-	const SQmLegacyMediaHudContent &Content, const SQmLegacyMediaHudLayout &Layout, const char *pLyrics, ColorRGBA LyricsColor, float LyricsElapsedSeconds, int Corners, const char *pTranslation = "");
+	const SQmLegacyMediaHudContent &Content, const SQmLegacyMediaHudLayout &Layout, const char *pLyrics, ColorRGBA LyricsColor, float LyricsProgress, int Corners, const char *pTranslation = "");
 
 #endif

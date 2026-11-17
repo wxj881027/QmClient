@@ -2076,9 +2076,9 @@ bool CTClient::SyncFriendEnterSettings()
 
 void CTClient::CheckFriendEnterGreet()
 {
-	if(!SyncFriendEnterSettings())
+	if(!SyncFriendEnterSettings() || m_FriendEnterPending.Empty())
 		return;
-	m_FriendEnterPending.TrySend([&](const std::string &Names) {
+	m_FriendEnterPending.TrySend(qm_friend_notify::CGreetQueue::CClock::now(), [&](const std::string &Names) {
 		char aMessage[256];
 		str_format(aMessage, sizeof(aMessage), "%s: %s", Names.c_str(),
 			ResolveFriendEnterLocalizeText(g_Config.m_QmFriendEnterGreetText, s_pFriendEnterGreetDefaultText));
@@ -2118,8 +2118,7 @@ void CTClient::HandleFriendEnterMessage(int Sender, int Team, const char *pMessa
 			GameClient()->m_Broadcast.DoBroadcast(BroadcastText.c_str());
 	}
 	if(g_Config.m_QmFriendEnterAutoGreet && g_Config.m_QmFriendEnterGreetText[0] != '\0')
-		m_FriendEnterPending.Add(Message.m_Name);
-	CheckFriendEnterGreet();
+		m_FriendEnterPending.Add(Message.m_Name, qm_friend_notify::CGreetQueue::CClock::now());
 }
 
 void CTClient::QueueAspectApply()

@@ -77,13 +77,16 @@
 #include "components/qmclient/axiom_auto_login.h"
 #include "components/qmclient/axiom_scores.h"
 #include "components/qmclient/chat_emoji.h"
+#include "components/qmclient/checkpoint_guide.h"
 #include "components/qmclient/collision_hitbox.h"
 #include "components/qmclient/data_version.h"
 #include "components/qmclient/demo_camera.h"
+#include "components/qmclient/finish_summary.h"
 #include "components/qmclient/friend_last_seen.h"
 #include "components/qmclient/hammer_hit_detection.h"
 #include "components/qmclient/hud_notifications/hud_notifications.h"
 #include "components/qmclient/input_overlay.h"
+#include "components/qmclient/map_covers.h"
 #include "components/qmclient/mobile_spectator.h"
 #include "components/qmclient/monitoring/monitoring.h"
 #include "components/qmclient/music_app_watcher.h"
@@ -305,10 +308,13 @@ public:
 	CBindWheel m_BindWheel;
 	CBgDraw m_BgDraw;
 	CQmClient m_QmClient;
+	CQmFinishSummary m_FinishSummary;
+	CQmMapCovers m_MapCovers;
 	CQmAxiomAutoLogin m_QmAxiomAutoLogin;
 	CQmAxiomScores m_QmAxiomScores;
 	CQmFriendLastSeen m_QmFriendLastSeen;
 	CQmChatEmoji m_QmChatEmoji;
+	CQmCheckpointGuide m_QmCheckpointGuide;
 	CQmMonitoring m_QmMonitoring;
 	CQmMobileSpectator m_QmMobileSpectator;
 	CQmHudNotifications m_QmHudNotifications;

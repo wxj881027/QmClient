@@ -920,6 +920,9 @@ Always show song title and artist
 Always translate
 == Всегда переводить
 
+AMLL community lyrics
+== Тексты песен сообщества AMLL
+
 Amount
 == Количество
 
@@ -1283,8 +1286,8 @@ Auto greet friend text
 Auto greet friends entering map
 == Автоматически приветствовать друзей, входящих на карту
 
-Auto greet posts a public chat line a few seconds after a friend joins, so leave "Greeting text" empty on strict servers.
-== Авто-приветствие через несколько секунд пишет в общий чат; на строгих серверах оставьте текст приветствия пустым.
+Auto greet waits 1 second after a friend joins, then sends a public greeting when chat is available. Leave "Greeting text" empty on strict servers.
+== Через 1 секунду после входа друга клиент отправит приветствие в общий чат, как только можно будет писать. На серверах со строгими правилами оставьте текст приветствия пустым.
 
 Auto login Axiom server
 == Автовход на сервер Axiom
@@ -1576,6 +1579,9 @@ Axiom dummy password
 
 Axiom main account password
 == Пароль основной учётной записи Axiom
+
+Axiom rank
+== Рейтинг Axiom
 
 Axiom score request failed
 == Не удалось получить очки Axiom
@@ -2180,9 +2186,6 @@ Change values in the settings card and watch this preview update.
 Change zoom
 == Изменить масштаб
 
-Changes apply at once, so check "Title preview" to compare styles; press "Save" on the "Sponsor title" card to share one.
-== Изменения применяются сразу, сравнивайте стили в предпросмотре титула; чтобы титул увидели другие, нажмите сохранить на карточке титула спонсора.
-
 Changes how the vote menu looks and how you interact with running votes.
 == Меняет внешний вид меню голосований и способ взаимодействия с идущими голосованиями.
 
@@ -2369,6 +2372,9 @@ Checking for updates...
 Checking Steam...
 == Проверка Steam…
 
+China rank
+== Рейтинг китайских серверов
+
 Chinese (Simplified)
 == Китайский (упрощённый)
 
@@ -2392,6 +2398,9 @@ Choose a preset, or Custom to enter width and height. Follow window uses the cur
 
 Choose a screen position and font size, then check the preview card for wrapping.
 == Выберите положение на экране и размер шрифта, затем проверьте переносы в карточке предпросмотра.
+
+Choose a sponsor title style for your nameplate and chat messages.
+== Выберите стиль титула спонсора для таблички с именем и сообщений в чате.
 
 Choose a target, then set its color; entity lasers can follow team colors.
 == Выберите цель и задайте её цвет; лазеры объектов могут следовать цветам команды.
@@ -2699,6 +2708,9 @@ Collapse
 Collapse console
 == Уменьшить консоль
 
+Collect CP %d before teleporting
+== Перед телепортацией активируйте CP %d
+
 Collects the remaining DDNet client preferences that do not belong to other cards.
 == Собирает оставшиеся настройки клиента DDNet, не относящиеся к другим карточкам.
 
@@ -2836,6 +2848,9 @@ Complete restore replaces the listed files. A backup is saved before importing. 
 
 Complete snapshots are arriving late or not arriving
 == Полные снапшоты приходят с задержкой или не приходят
+
+Completed
+== Завершено
 
 Compressor attack time (ms)
 == Время атаки компрессора (мс)
@@ -3404,8 +3419,14 @@ Country code
 Country flag for grouping this community (ISO 3166-1 numeric)
 == Флаг страны для группировки этого сообщества (ISO 3166-1 числовой)
 
+CP %d
+== Контрольная точка %d
+
 CP border overlay alpha (0-100)
 == Альфа перекрывающих сущностей границы CP (0-100)
+
+CP guide
+== Подсказки CP
 
 CP opacity
 == Непрозрачность CP
@@ -5873,6 +5894,9 @@ Finished maps
 Fire
 == Огонь
 
+First finish
+== Первое прохождение
+
 First page in console
 == Первая страница в консоли
 
@@ -6368,6 +6392,9 @@ Global card ordering (format: stableId|tab|col|order; semicolon-separated)
 Global card ordering old config migration completed flag
 == Флаг завершения миграции старой конфигурации глобальной сортировки карточек
 
+Global rank
+== Мировой рейтинг
+
 Global toggle key
 == Глобальная клавиша переключения
 
@@ -6553,6 +6580,9 @@ Guide line color
 
 Guide lines are computed locally and do not guarantee that a hook will connect.
 == Линии столкновения рассчитываются локально и не гарантируют, что крюк зацепится.
+
+Guide to nearby uncollected teleport checkpoints and warn near checkpoint teleporters
+== Показывать путь к ближайшим неактивированным контрольным точкам телепортации и предупреждать у входов возврата
 
 Gun fire
 == Выстрел из пистолета
@@ -7168,6 +7198,9 @@ Import from clipboard
 
 Import merges friends and keeps local duplicates by default. Codes contain private names and notes.
 == По умолчанию друзья объединяются, а данные совпавших друзей остаются локальными. Код содержит личные имена и заметки.
+
+Improved -%s
+== Улучшение -%s
 
 Improved anti ping
 == Улучшенный антипинг
@@ -8222,6 +8255,9 @@ Loading sound files
 Loading successfully done
 == Загрузка успешно завершена
 
+Loading...
+== Загрузка…
+
 Loading…
 == Загрузка…
 
@@ -8602,6 +8638,9 @@ Match ghost by map version instead of map name
 
 Match lyrics island width to the main Dynamic Island, excluding satellites
 == Сохранять ширину текста равной основной части динамического острова без дополнительных островков
+
+Matched personal best
+== Повторён личный рекорд
 
 Matched with callable peer
 == Найден вызываемый пир
@@ -9467,6 +9506,9 @@ No controller found. Plug in a controller.
 No corresponding vote option found
 == Соответствующий вариант голосования не найден
 
+No data
+== Нет данных
+
 No demo is being recorded
 == Демка не записывается
 
@@ -10307,6 +10349,9 @@ Pause/unpause game
 Penalty in seconds for saving or swapping positions
 == Штраф в секундах за сохранение или обмен позициями
 
+Pending sync
+== Ожидает синхронизации
+
 Per-name volume (name=percent)
 == Индивидуальная громкость по имени (name=percent)
 
@@ -10327,6 +10372,12 @@ Permanent sponsor verified
 
 Personal adjustments
 == Индивидуальные настройки
+
+Personal best
+== Личный рекорд
+
+Personal best pending
+== Личный рекорд ожидает подтверждения
 
 Personal best:
 == Личный рекорд:
@@ -10393,6 +10444,9 @@ Pick a slot, type the command and its label, then hold the wheel key in game to 
 
 Pick a text color mode first; the custom color row only appears for the custom mode.
 == Сначала выберите режим цвета текста; строка пользовательского цвета появляется только в пользовательском режиме.
+
+Pick a text style or a moon or sun badge, check the preview, then press "Save" to share the style with other players.
+== Выберите стиль текста или значок с луной или солнцем. Посмотрите образец и нажмите «Сохранить», чтобы другие игроки увидели выбранный стиль.
 
 Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
 == Выберите цвет в каждой строке: цвета «авторизованные» и «свой клан» действуют на таблицу счёта, два цвета списка — на список друзей.
@@ -11044,6 +11098,9 @@ Preview dummy nameplate
 
 Preview failed. Check the image and Logo, then retry.
 == Ошибка предпросмотра. Проверьте изображение и логотип и повторите попытку.
+
+Preview finish summary
+== Предпросмотр карточки результата
 
 Preview hook collision colors and line styles
 == Preview hook collision colors and line styles
@@ -12929,8 +12986,8 @@ Send sampling and token limit parameters
 Send specified command to rcon
 == Отправить указанную команду в rcon
 
-Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines
-== Отправлять три последовательные строки песни в общий чат через случайные интервалы от 90 до 270 секунд, с паузой 3 секунды между строками
+Send three consecutive lyrics to public chat at random intervals of 360 to 1200 seconds, with 3 seconds between lines. Successfully sending a lyric with Singing cancels pending humming lines and restarts the random wait
+== Отправлять три последовательные строки песни в общий чат через случайные интервалы от 360 до 1200 секунд, с паузой 3 секунды между строками. После успешной отправки строки с помощью функции «Пение» отменять оставшиеся строки напевания и заново отсчитывать случайное время ожидания
 
 Send to
 == Отправить
@@ -13042,6 +13099,9 @@ Server port (only 8303-8310 work in LAN browser, 0=auto find free in 8303-8310).
 
 Server preset
 == Пресет сервера
+
+Server rank
+== Рейтинг на сервере
 
 Server region. Used for region bans
 == Регион сервера. Используется для региональных банов
@@ -13270,6 +13330,9 @@ Show a ghost of your best time after crossing the start line
 
 Show a MomentCap .poses file in game (no export)
 == Показать файл MomentCap .poses в игре (без экспорта)
+
+Show a per-character wave on text titles locally
+== Показывать на своём экране волнообразное движение букв в текстовых титулах
 
 Show a small view of the dummy
 == Показать небольшой вид дамми
@@ -13541,6 +13604,12 @@ Show filtered words in console
 Show finish messages
 == Показывать сообщения о финише
 
+Show finish summary
+== Показывать карточку результата
+
+Show finish summary in Dynamic Island
+== Показывать карточку результата в Dynamic Island
+
 Show flag on name plate
 == Показывать флаг на табличке с именем
 
@@ -13594,6 +13663,9 @@ Show ghost
 
 Show ghost at unpredictable position of other players
 == Показывать призрака в непредсказуемой позиции других игроков
+
+Show glowing, floating lyrics in the map. Each new line stays where it appears; previous lines rise and fade out
+== Показывать светящийся парящий текст песни на карте. Каждая новая строка остаётся на месте появления, а предыдущая поднимается и плавно исчезает
 
 Show Gores drown board
 == Показывать доску утонувших Gores
@@ -13945,6 +14017,9 @@ Show pause/play indicator when changing
 
 Show pending crash reports in a window at startup (0 = keep them on disk and log a line instead)
 == Показывать ожидающие отчёты о сбоях в окне при запуске (0 = только сохранять отчёт и писать строку в журнал)
+
+Show per-character title waves locally
+== Показывать волнообразное движение букв титула у себя
 
 Show performance graphs.
 == Показывать графики производительности.
@@ -14549,8 +14624,14 @@ Slow down the demo
 Slower
 == медленнее
 
+Slower +%s
+== Замедление +%s
+
 Slower export playback
 == Замедлить воспроизведение при экспорте
+
+Slower than personal best
+== Медленнее личного рекорда
 
 Small Tee size
 == Размер маленького Tee
@@ -14833,6 +14914,9 @@ Sponsor support
 
 Sponsor title
 == Титул спонсора
+
+Sponsor title appearance: 0 = capsule, 1-5 = text palette
+== Вид титула спонсора: 0 = капсула, 1–5 = палитра текста
 
 Sponsor title badge opacity (0-100)
 == Непрозрачность титула спонсора (0-100)
@@ -15617,6 +15701,21 @@ Testing translation...
 Text
 == Текст
 
+Text 1
+== Текст 1
+
+Text 2
+== Текст 2
+
+Text 3
+== Текст 3
+
+Text 4
+== Текст 4
+
+Text 5
+== Текст 5
+
 Text alpha
 == Альфа текста
 
@@ -15703,6 +15802,9 @@ The message is sent on every water death, so keep it short; leaving "Chat messag
 
 The name "default" is reserved.
 == Имя "default" зарезервировано.
+
+The per-character wave setting affects text titles on your screen only.
+== Волнообразное движение букв применяется только к текстовым титулам на вашем экране.
 
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 == Игрок, с которым вы шептались, ещё не переподключился или вышел. Подождите или напишите другому
@@ -16010,6 +16112,9 @@ Time limit
 Time limit: %d min
 == Лимит времени: %d мин
 
+Time to finish
+== Время прохождения
+
 Time to wait before changing team: %s
 == Время ожидания перед сменой команды: %s
 
@@ -16072,6 +16177,9 @@ Title server does not support badge appearance yet
 
 Title server does not support chat styles yet
 == Сервер титулов пока не поддерживает стили чата
+
+Title server does not support text titles yet
+== Сервер титулов пока не поддерживает текстовые титулы
 
 Title server unavailable; retry
 == Сервер титулов недоступен; повторите попытку
@@ -16288,6 +16396,9 @@ Total hours
 
 Total play time
 == Общее время игры
+
+Total points
+== Всего очков
 
 Total: %d save(s)
 == Всего: %d сохранений
@@ -16528,9 +16639,6 @@ Turn on "Show important server prompts as notifications" or "Route Echo messages
 
 Turn on "Show own coordinates" or "Show other players' coordinates", then choose "Show X" and "Show Y".
 == Включите показ своих координат или координат других игроков, затем выберите показывать X и показывать Y.
-
-Turn on "Show titles on nameplates", pick a "Title style", then adjust "Title motion" and "Wave amount"; "Advanced mode" adds color and glow.
-== Включите показывать титулы на табличках имён, выберите стиль титула, затем настройте анимацию титула и амплитуду волны; расширенный режим добавляет цвет и свечение.
 
 Turn on "Skin outline for self and dummy" or "Skin outline for other players", then tune width and opacity; "Cycle custom Tee hue" animates custom colors.
 == Включите Контур скина для себя и dummy или Контур скина других игроков и настройте толщину с прозрачностью; Циклическая смена оттенка Tee оживляет пользовательские цвета.
@@ -16978,6 +17086,9 @@ Use alternative world tick calculation making hooks behave as if all players hav
 
 Use animated title style (overrides qm_title_color_mode)
 == Использовать анимированный стиль титула (переопределяет qm_title_color_mode)
+
+Use cached or online AMLL community lyrics when the music source has no word timing
+== Использовать тексты песен сообщества AMLL из кэша или интернета, если музыкальный источник не предоставляет время для отдельных слов
 
 Use colored skins for frozen tees
 == Использовать цветные скины для замороженных ти
@@ -17597,9 +17708,6 @@ Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per
 When TClient rainbow Tee is enabled, this feature has no effect.
 == Если включен радужный Tee TClient, эта функция не действует.
 
-Where your title appears and how it looks: nameplate, style, motion, colors and glow.
-== Где показывается титул и как он выглядит: табличка с именем, стиль, анимация, цвета и свечение.
-
 Whether a switch is deactivated by default (otherwise activated)
 == Отключён ли переключатель по умолчанию (иначе включён)
 
@@ -17782,6 +17890,9 @@ Word list file exceeds 2 MiB.
 
 Word list must be UTF-8 text without NUL characters.
 == Список слов должен быть текстом UTF-8 без символов NUL.
+
+World lyrics
+== Текст песни в игровом мире
 
 Write local console contents to a text file
 == Записать содержимое локальной консоли в текстовый файл

@@ -95,7 +95,8 @@ namespace
 			if(Menus.RenderMapPreviewForVote(Layout.m_Cover, pState->m_aPreviewMapName))
 				return;
 		}
-		DrawVoteMapCoverPatch(pState->m_Covers, pUi, Layout.m_Cover, pState->m_MapPreview.m_Info.m_Thumbnail, CQmMapCovers::ERole::DETAILS);
+		if(pState->m_pGameClient != nullptr)
+			DrawVoteMapCoverPatch(pState->m_pGameClient->m_MapCovers, pUi, Layout.m_Cover, pState->m_MapPreview.m_Info.m_Thumbnail, CQmMapCovers::ERole::DETAILS);
 	}
 }
 
@@ -282,7 +283,7 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	// 封面图（含压暗和参差拖尾）已经烘进纹理，这里只负责贴在目标矩形上；
 	// 纹理提交与预览面板共用 DrawVoteMapCoverPatch，两处不会各自漂移。
 	auto DrawMapPatch = [&](const CUIRect &Rect, const std::string &Thumbnail, CQmMapCovers::ERole Role) {
-		DrawVoteMapCoverPatch(State.m_Covers, Ui(), Rect, Thumbnail, Role);
+		DrawVoteMapCoverPatch(GameClient()->m_MapCovers, Ui(), Rect, Thumbnail, Role);
 	};
 	// 提前生成视口外一小段行的封面，滚动时纹理已就绪，不会一出现就从头加载。
 	auto PrefetchRowCover = [&](int Row) {
@@ -290,7 +291,7 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 			return;
 		const auto &Map = State.m_vMaps[State.m_vVisible[Row]];
 		CQmMapCovers::SImage Image;
-		State.m_Covers.Get(Map.m_Thumbnail.c_str(), CQmMapCovers::ERole::ROW, &Image);
+		GameClient()->m_MapCovers.Get(Map.m_Thumbnail.c_str(), CQmMapCovers::ERole::ROW, &Image);
 	};
 	CUIRect Refresh, Search, Exclude;
 	Header.VSplitRight(ui_token::control::IconBox(ui_token::font::TITLE), &Header, &Refresh);

@@ -12,6 +12,7 @@
 #include <test/test.h>
 
 #include <cstdlib>
+#include <unordered_set>
 #include <utility>
 
 namespace
@@ -84,10 +85,16 @@ namespace
 	{
 	public:
 		int m_Unloads = 0;
+		std::unordered_set<int> m_Released;
+		bool IsTextureHandleAllocated(CTextureHandle Handle) const override
+		{
+			return Handle.IsValid() && m_Released.count(Handle.Id()) == 0;
+		}
 		void UnloadTexture(CTextureHandle *pHandle) override
 		{
 			EXPECT_TRUE(pHandle->IsValid());
 			++m_Unloads;
+			m_Released.insert(pHandle->Id());
 			pHandle->Invalidate();
 		}
 	};
@@ -138,7 +145,7 @@ TEST_F(MapCovers, PendingCoverCompletesWithoutFurtherVisibleRequests)
 	EXPECT_FALSE(Get(Image));
 	Update();
 	ASSERT_EQ(m_Http.m_vRequests.size(), 1u);
-	// 页面关闭后不再 Get，只由菜单逐帧完成已经排队的下载与合成。
+	// 页面关闭后不再 Get，只由客户端逐帧完成已经排队的下载与合成。
 	Update();
 	EXPECT_FALSE(m_Http.m_vRequests.front()->m_Aborted);
 	ASSERT_NO_FATAL_FAILURE(m_Http.m_vRequests.front()->Finish(m_Png));
@@ -206,4 +213,58 @@ TEST_F(MapCovers, IdleUpdatesAllowFailedCoverToRetryAfterCooldown)
 	EXPECT_TRUE(m_Covers.Loading());
 	Update(122.0f);
 	EXPECT_EQ(m_Http.m_vRequests.size(), 2u);
+}
+
+TEST_F(MapCovers, SummaryReusesDownloadedPngWithSeparateFullSizeTexture)
+{
+	ASSERT_NO_FATAL_FAILURE(DownloadCover());
+	CQmMapCovers::SImage Row, Summary;
+	ASSERT_TRUE(Get(Row));
+	EXPECT_FALSE(m_Covers.Get(COVER_URL, CQmMapCovers::ERole::SUMMARY, &Summary));
+	Update();
+	m_Engine.CompleteJobs();
+	Update();
+	ASSERT_TRUE(m_Covers.Get(COVER_URL, CQmMapCovers::ERole::SUMMARY, &Summary));
+	EXPECT_NE(Row.m_Texture.Id(), Summary.m_Texture.Id());
+	EXPECT_EQ(m_Http.m_vRequests.size(), 1u);
+	EXPECT_EQ(m_Graphics.m_Uploads, 2u);
+	EXPECT_EQ(m_Graphics.m_UploadBytes, 4u * (CQmMapCovers::ROW_WIDTH * CQmMapCovers::ROW_HEIGHT + CQmMapCovers::SUMMARY_WIDTH * CQmMapCovers::SUMMARY_HEIGHT));
+	EXPECT_TRUE(Get(Row));
+}
+
+TEST_F(MapCovers, InvalidTextureIsRestoredFromDisk)
+{
+	ASSERT_NO_FATAL_FAILURE(DownloadCover());
+	CQmMapCovers::SImage Old, Restored;
+	ASSERT_TRUE(Get(Old));
+	m_Graphics.m_Released.insert(Old.m_Texture.Id());
+	EXPECT_FALSE(Get(Restored));
+	Update();
+	m_Engine.CompleteJobs();
+	Update();
+	ASSERT_TRUE(Get(Restored));
+	EXPECT_NE(Restored.m_Texture.Id(), Old.m_Texture.Id());
+	EXPECT_EQ(m_Http.m_vRequests.size(), 1u);
+}
+
+TEST_F(MapCovers, SummaryTexturesHaveSeparateTwoImageBudget)
+{
+	CQmMapCovers::SImage First, Current;
+	for(int i = 0; i < 3; ++i)
+	{
+		const std::string Url = "https://ddnet.org/ranks/maps/Summary" + std::to_string(i) + ".png";
+		EXPECT_FALSE(m_Covers.Get(Url.c_str(), CQmMapCovers::ERole::SUMMARY, &Current));
+		Update(static_cast<float>(i + 1));
+		ASSERT_EQ(m_Http.m_vRequests.size(), static_cast<size_t>(i + 1));
+		ASSERT_NO_FATAL_FAILURE(m_Http.m_vRequests.back()->Finish(m_Png));
+		Update(static_cast<float>(i + 1));
+		m_Engine.CompleteJobs();
+		Update(static_cast<float>(i + 1));
+		ASSERT_TRUE(m_Covers.Get(Url.c_str(), CQmMapCovers::ERole::SUMMARY, &Current));
+		if(i == 0)
+			First = Current;
+	}
+	EXPECT_EQ(m_Graphics.m_Unloads, 1);
+	EXPECT_FALSE(m_Graphics.IsTextureHandleAllocated(First.m_Texture));
+	EXPECT_TRUE(m_Graphics.IsTextureHandleAllocated(Current.m_Texture));
 }

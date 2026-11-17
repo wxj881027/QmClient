@@ -1143,6 +1143,7 @@ struct SHudMediaIslandSdfRenderState
 	int m_ItemCount = 0;
 	bool m_HasRightCapsule = false;
 	SHudMediaIslandSdfCapsule m_RightCapsule{};
+	SHudMediaIslandSdfCapsule m_AttachedCard{};
 	float m_RingRadius = 0.0f;
 	float m_RingThickness = 0.0f;
 	ColorRGBA m_BackgroundColor{};
@@ -1159,7 +1160,7 @@ struct SHudMediaIslandSdfRenderState
 
 inline float QmHudMediaIslandSdfPadding(const SHudMediaIslandSdfRenderState &State)
 {
-	float MaxSmoothUnion = 0.0f;
+	float MaxSmoothUnion = State.m_AttachedCard.m_SmoothUnion;
 	const int ItemCount = std::clamp(State.m_ItemCount, 0, QmHudMediaIslandSdfMaxItems);
 	for(int i = 0; i < ItemCount; ++i)
 		MaxSmoothUnion = std::max(MaxSmoothUnion, State.m_Items[i].m_SmoothUnion);
@@ -1196,9 +1197,11 @@ inline CUIRect QmHudMediaIslandSdfOuterRect(const SHudMediaIslandSdfRenderState 
 		Right = std::max(Right, Item.m_Center.x + RadiusX);
 		Bottom = std::max(Bottom, Item.m_Center.y + RadiusY);
 	}
-	if(State.m_HasRightCapsule && State.m_RightCapsule.m_Rect.w > 0.0f && State.m_RightCapsule.m_Rect.h > 0.0f)
+	for(const auto *pCapsule : {State.m_HasRightCapsule ? &State.m_RightCapsule : nullptr, &State.m_AttachedCard})
 	{
-		const CUIRect &Rect = State.m_RightCapsule.m_Rect;
+		if(!pCapsule || pCapsule->m_Rect.w <= 0.0f || pCapsule->m_Rect.h <= 0.0f)
+			continue;
+		const CUIRect &Rect = pCapsule->m_Rect;
 		Left = std::min(Left, Rect.x);
 		Top = std::min(Top, Rect.y);
 		Right = std::max(Right, Rect.x + Rect.w);
@@ -1233,6 +1236,8 @@ inline bool QmHudMediaIslandBuildGpuSdfParams(const SHudMediaIslandSdfRenderStat
 		return false;
 
 	Params.Clear();
+	Params.m_aData[IGraphics::SMediaIslandSdfParams::DATA_CARD_RECT] = QmHudMediaIslandSdfRectVec4(State.m_AttachedCard.m_Rect);
+	Params.m_aData[IGraphics::SMediaIslandSdfParams::DATA_CARD_PARAMS] = vec4(State.m_AttachedCard.m_Radius, State.m_AttachedCard.m_SmoothUnion, 0, 0);
 	Params.m_aData[IGraphics::SMediaIslandSdfParams::DATA_RECT] = QmHudMediaIslandSdfRectVec4(State.m_Rect);
 	Params.m_aData[IGraphics::SMediaIslandSdfParams::DATA_MAIN_RECT] = QmHudMediaIslandSdfRectVec4(State.m_MainRect);
 	Params.m_aData[IGraphics::SMediaIslandSdfParams::DATA_CAPSULE_RECT] = QmHudMediaIslandSdfRectVec4(State.m_RightCapsule.m_Rect);

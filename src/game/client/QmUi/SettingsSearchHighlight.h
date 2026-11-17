@@ -1,32 +1,36 @@
 #ifndef GAME_CLIENT_QMUI_SETTINGSSEARCHHIGHLIGHT_H
 #define GAME_CLIENT_QMUI_SETTINGSSEARCHHIGHLIGHT_H
 
-#include <game/client/QmUi/UiTheme.h>
-#include <game/client/ui_rect.h>
+#include <engine/textrender.h>
 
-#include <algorithm>
-
-// 搜索命中的行背景样式：填充取主题选中色，边框/文字取 accent，圆角按
-// 行高裁到 BASE 以内，避免短行出现方角或超出控件轮廓。
 namespace qm_settings_highlight
 {
-	struct SStyle
+	// 在绘制时覆盖字色，使已缓存的标签也能随搜索状态切换颜色。
+	class CScopedLabelColor
 	{
-		ColorRGBA m_Fill;
-		ColorRGBA m_Border;
-		ColorRGBA m_Text;
-		float m_Radius;
-	};
+		ITextRender *m_pTextRender;
+		ColorRGBA m_PreviousColor;
 
-	inline SStyle Resolve(const SUiTheme &Theme, const CUIRect &RowRect)
-	{
-		SStyle Style;
-		Style.m_Fill = Theme.m_Selected;
-		Style.m_Border = Theme.m_Accent.WithAlpha(0.65f);
-		Style.m_Text = Theme.m_Accent;
-		Style.m_Radius = std::min(ui_token::radius::BASE, std::max(0.0f, RowRect.h) * 0.5f);
-		return Style;
-	}
+	public:
+		CScopedLabelColor(ITextRender *pTextRender, bool Highlight) :
+			m_pTextRender(Highlight ? pTextRender : nullptr)
+		{
+			if(m_pTextRender)
+			{
+				m_PreviousColor = m_pTextRender->GetTextColor();
+				m_pTextRender->TextColor(ColorRGBA(1.0f, 1.0f, 0.0f, m_PreviousColor.a));
+			}
+		}
+
+		~CScopedLabelColor()
+		{
+			if(m_pTextRender)
+				m_pTextRender->TextColor(m_PreviousColor);
+		}
+
+		CScopedLabelColor(const CScopedLabelColor &) = delete;
+		CScopedLabelColor &operator=(const CScopedLabelColor &) = delete;
+	};
 }
 
 #endif // GAME_CLIENT_QMUI_SETTINGSSEARCHHIGHLIGHT_H

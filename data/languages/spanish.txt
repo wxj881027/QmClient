@@ -920,6 +920,9 @@ Always show song title and artist
 Always translate
 == Traducir siempre
 
+AMLL community lyrics
+== Letras de la comunidad AMLL
+
 Amount
 == Cantidad
 
@@ -1283,8 +1286,8 @@ Auto greet friend text
 Auto greet friends entering map
 == Saludar automáticamente a amigos que entran al mapa
 
-Auto greet posts a public chat line a few seconds after a friend joins, so leave "Greeting text" empty on strict servers.
-== El saludo automático escribe en el chat público a los pocos segundos; en servidores estrictos deja el texto vacío.
+Auto greet waits 1 second after a friend joins, then sends a public greeting when chat is available. Leave "Greeting text" empty on strict servers.
+== Cuando entra un amigo, el cliente espera 1 segundo y envía un saludo al chat público en cuanto puede. Deja el texto del saludo vacío en servidores con normas estrictas.
 
 Auto login Axiom server
 == Inicio de sesión automático en el servidor Axiom
@@ -1576,6 +1579,9 @@ Axiom dummy password
 
 Axiom main account password
 == Contraseña de la cuenta principal de Axiom
+
+Axiom rank
+== Ranking de Axiom
 
 Axiom score request failed
 == Error al solicitar las puntuaciones de Axiom
@@ -2180,9 +2186,6 @@ Change values in the settings card and watch this preview update.
 Change zoom
 == Cambiar zoom
 
-Changes apply at once, so check "Title preview" to compare styles; press "Save" on the "Sponsor title" card to share one.
-== Los cambios se aplican al instante, compara estilos en la vista previa del título; para compartirlo, pulsa Guardar en la tarjeta Título de patrocinador.
-
 Changes how the vote menu looks and how you interact with running votes.
 == Cambia el aspecto del menú de votaciones y cómo interactúas con las votaciones en curso.
 
@@ -2369,6 +2372,9 @@ Checking for updates...
 Checking Steam...
 == Comprobando Steam…
 
+China rank
+== Ranking de China
+
 Chinese (Simplified)
 == Chino (simplificado)
 
@@ -2392,6 +2398,9 @@ Choose a preset, or Custom to enter width and height. Follow window uses the cur
 
 Choose a screen position and font size, then check the preview card for wrapping.
 == Elige una posición en pantalla y un tamaño de fuente, y revisa en la tarjeta de vista previa si el texto se corta.
+
+Choose a sponsor title style for your nameplate and chat messages.
+== Elige el estilo de tu título de patrocinador para la placa de nombre y los mensajes del chat.
 
 Choose a target, then set its color; entity lasers can follow team colors.
 == Elige un objetivo y define su color; los láseres de entidades pueden seguir los colores de equipo.
@@ -2699,6 +2708,9 @@ Collapse
 Collapse console
 == Contraer consola
 
+Collect CP %d before teleporting
+== Activa el CP %d antes de teletransportarte
+
 Collects the remaining DDNet client preferences that do not belong to other cards.
 == Reúne las preferencias del cliente DDNet que no encajan en otras tarjetas.
 
@@ -2836,6 +2848,9 @@ Complete restore replaces the listed files. A backup is saved before importing. 
 
 Complete snapshots are arriving late or not arriving
 == Las instantáneas completas llegan tarde o no llegan
+
+Completed
+== Completado
 
 Compressor attack time (ms)
 == Tiempo de ataque del compresor (ms)
@@ -3404,8 +3419,14 @@ Country code
 Country flag for grouping this community (ISO 3166-1 numeric)
 == Bandera de país para agrupar esta comunidad (ISO 3166-1 numérico)
 
+CP %d
+== Punto de control %d
+
 CP border overlay alpha (0-100)
 == Alfa de entidad de superposición del límite del punto de control (0-100)
+
+CP guide
+== Guía de CP
 
 CP opacity
 == Opacidad del CP
@@ -5873,6 +5894,9 @@ Finished maps
 Fire
 == Disparar
 
+First finish
+== Primera finalización
+
 First page in console
 == Primera página en la consola
 
@@ -6368,6 +6392,9 @@ Global card ordering (format: stableId|tab|col|order; semicolon-separated)
 Global card ordering old config migration completed flag
 == Marcador de migración completada de configuración antigua de orden de tarjetas global
 
+Global rank
+== Clasificación mundial
+
 Global toggle key
 == Tecla de activación global
 
@@ -6553,6 +6580,9 @@ Guide line color
 
 Guide lines are computed locally and do not guarantee that a hook will connect.
 == Las líneas guía se calculan en local y no garantizan que el gancho vaya a enganchar.
+
+Guide to nearby uncollected teleport checkpoints and warn near checkpoint teleporters
+== Guiar hacia puntos de control de teletransporte cercanos sin activar y avisar cerca de las entradas de retorno
 
 Gun fire
 == Disparo de pistola
@@ -7168,6 +7198,9 @@ Import from clipboard
 
 Import merges friends and keeps local duplicates by default. Codes contain private names and notes.
 == Por defecto, se combinan los amigos y se conservan los datos locales de los duplicados. Los códigos contienen nombres y notas privados.
+
+Improved -%s
+== Mejorado -%s
 
 Improved anti ping
 == Antiping mejorado
@@ -8222,6 +8255,9 @@ Loading sound files
 Loading successfully done
 == Carga completada correctamente
 
+Loading...
+== Cargando…
+
 Loading…
 == Cargando…
 
@@ -8602,6 +8638,9 @@ Match ghost by map version instead of map name
 
 Match lyrics island width to the main Dynamic Island, excluding satellites
 == Igualar el ancho de la isla de letras al cuerpo principal de Dynamic Island, sin islas secundarias
+
+Matched personal best
+== Igualaste tu mejor marca
 
 Matched with callable peer
 == Coincidido con un par contactable
@@ -9467,6 +9506,9 @@ No controller found. Plug in a controller.
 No corresponding vote option found
 == No se encontró una opción de voto correspondiente
 
+No data
+== Sin datos
+
 No demo is being recorded
 == No se está grabando ninguna demo
 
@@ -10307,6 +10349,9 @@ Pause/unpause game
 Penalty in seconds for saving or swapping positions
 == Penalización en segundos por guardar o intercambiar posiciones
 
+Pending sync
+== Pendiente de sincronización
+
 Per-name volume (name=percent)
 == Volumen individual por nombre (name=percent)
 
@@ -10327,6 +10372,12 @@ Permanent sponsor verified
 
 Personal adjustments
 == Ajustes personalizados
+
+Personal best
+== Mejor personal
+
+Personal best pending
+== Mejor personal pendiente
 
 Personal best:
 == Mejor personal:
@@ -10393,6 +10444,9 @@ Pick a slot, type the command and its label, then hold the wheel key in game to 
 
 Pick a text color mode first; the custom color row only appears for the custom mode.
 == Elige primero un modo de color del texto; la fila de color personalizado solo aparece en el modo personalizado.
+
+Pick a text style or a moon or sun badge, check the preview, then press "Save" to share the style with other players.
+== Elige un estilo de texto o una insignia de luna o sol. Revisa la vista previa y pulsa «Guardar» para que los demás jugadores vean el estilo elegido.
 
 Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
 == Elige un color en cada fila; los colores de autenticados y del mismo clan se aplican a la tabla de puntuaciones, y los dos colores de lista a la lista de amigos.
@@ -11044,6 +11098,9 @@ Preview dummy nameplate
 
 Preview failed. Check the image and Logo, then retry.
 == Error de vista previa. Comprueba la imagen y el logotipo e inténtalo de nuevo.
+
+Preview finish summary
+== Vista previa de la tarjeta de resultado
 
 Preview hook collision colors and line styles
 == Preview hook collision colors and line styles
@@ -12929,8 +12986,8 @@ Send sampling and token limit parameters
 Send specified command to rcon
 == Enviar comando especificado a rcon
 
-Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines
-== Enviar tres líneas consecutivas de la letra al chat público a intervalos aleatorios de 90 a 270 segundos, con 3 segundos entre líneas
+Send three consecutive lyrics to public chat at random intervals of 360 to 1200 seconds, with 3 seconds between lines. Successfully sending a lyric with Singing cancels pending humming lines and restarts the random wait
+== Enviar tres líneas consecutivas de la letra al chat público a intervalos aleatorios de 360 a 1200 segundos, con 3 segundos entre líneas. Al enviar una línea correctamente con «Cantar», se cancelan las líneas pendientes de «Tararear» y se inicia una nueva espera aleatoria
 
 Send to
 == Enviar a
@@ -13042,6 +13099,9 @@ Server port (only 8303-8310 work in LAN browser, 0=auto find free in 8303-8310).
 
 Server preset
 == Preajuste del servidor
+
+Server rank
+== Ranking del servidor
 
 Server region. Used for region bans
 == Región del servidor. Se usa para baneos por región
@@ -13270,6 +13330,9 @@ Show a ghost of your best time after crossing the start line
 
 Show a MomentCap .poses file in game (no export)
 == Muestra un archivo de MomentCap .poses en el juego (sin exportar)
+
+Show a per-character wave on text titles locally
+== Mostrar en mi pantalla el movimiento ondulado de las letras de los títulos de texto
 
 Show a small view of the dummy
 == Mostrar una vista pequeña del Dummy
@@ -13541,6 +13604,12 @@ Show filtered words in console
 Show finish messages
 == Mostrar mensajes de finalización
 
+Show finish summary
+== Mostrar tarjeta de resultado
+
+Show finish summary in Dynamic Island
+== Mostrar tarjeta de resultado en la isla dinámica
+
 Show flag on name plate
 == Mostrar bandera en la placa de nombre
 
@@ -13594,6 +13663,9 @@ Show ghost
 
 Show ghost at unpredictable position of other players
 == Mostrar fantasma en posición impredecible de otros jugadores
+
+Show glowing, floating lyrics in the map. Each new line stays where it appears; previous lines rise and fade out
+== Mostrar letras brillantes y flotantes en el mapa. Cada línea nueva permanece donde aparece; las anteriores ascienden y se desvanecen
 
 Show Gores drown board
 == Mostrar el marcador de ahogamientos de Gores
@@ -13945,6 +14017,9 @@ Show pause/play indicator when changing
 
 Show pending crash reports in a window at startup (0 = keep them on disk and log a line instead)
 == Mostrar en una ventana los informes de bloqueo pendientes al iniciar (0 = solo conservar el informe y anotarlo en el registro)
+
+Show per-character title waves locally
+== Mostrar la onda de los títulos solo en mi pantalla
 
 Show performance graphs.
 == Mostrar gráficos de rendimiento.
@@ -14549,8 +14624,14 @@ Slow down the demo
 Slower
 == más lento
 
+Slower +%s
+== Más lento +%s
+
 Slower export playback
 == Ralentizar la reproducción de exportación
+
+Slower than personal best
+== Más lento que tu mejor marca
 
 Small Tee size
 == Tamaño de Tee pequeño
@@ -14833,6 +14914,9 @@ Sponsor support
 
 Sponsor title
 == Título de patrocinador
+
+Sponsor title appearance: 0 = capsule, 1-5 = text palette
+== Aspecto del título de patrocinador: 0 = cápsula, 1–5 = paleta del texto
 
 Sponsor title badge opacity (0-100)
 == Opacidad de la insignia del título de patrocinador (0-100)
@@ -15617,6 +15701,21 @@ Testing translation...
 Text
 == Texto
 
+Text 1
+== Texto 1
+
+Text 2
+== Texto 2
+
+Text 3
+== Texto 3
+
+Text 4
+== Texto 4
+
+Text 5
+== Texto 5
+
 Text alpha
 == Alpha del texto
 
@@ -15703,6 +15802,9 @@ The message is sent on every water death, so keep it short; leaving "Chat messag
 
 The name "default" is reserved.
 == El nombre "default" está reservado.
+
+The per-character wave setting affects text titles on your screen only.
+== El efecto de onda de las letras solo se aplica a los títulos de texto en tu pantalla.
 
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 == El jugador al que susurrabas aún no se ha reconectado o se ha ido. Espera o susurra a otra persona
@@ -16010,6 +16112,9 @@ Time limit
 Time limit: %d min
 == Límite de tiempo: %d min
 
+Time to finish
+== Tiempo de finalización
+
 Time to wait before changing team: %s
 == Tiempo de espera antes de cambiar de equipo: %s
 
@@ -16072,6 +16177,9 @@ Title server does not support badge appearance yet
 
 Title server does not support chat styles yet
 == El servidor de títulos aún no admite estilos de chat
+
+Title server does not support text titles yet
+== El servidor de títulos aún no admite títulos de texto
 
 Title server unavailable; retry
 == Servidor de títulos no disponible; reintenta
@@ -16288,6 +16396,9 @@ Total hours
 
 Total play time
 == Tiempo total de juego
+
+Total points
+== Puntos totales
 
 Total: %d save(s)
 == Total: %d guardado(s)
@@ -16528,9 +16639,6 @@ Turn on "Show important server prompts as notifications" or "Route Echo messages
 
 Turn on "Show own coordinates" or "Show other players' coordinates", then choose "Show X" and "Show Y".
 == Activa mostrar mis coordenadas o mostrar coordenadas de otros jugadores y elige mostrar X y mostrar Y.
-
-Turn on "Show titles on nameplates", pick a "Title style", then adjust "Title motion" and "Wave amount"; "Advanced mode" adds color and glow.
-== Activa Mostrar títulos en las placas de nombre, elige un estilo del título y ajusta la animación y la amplitud de onda; el modo avanzado añade color y brillo.
 
 Turn on "Skin outline for self and dummy" or "Skin outline for other players", then tune width and opacity; "Cycle custom Tee hue" animates custom colors.
 == Activa Contorno de skin propio y del dummy o Contorno de skin de otros jugadores y ajusta grosor y opacidad; el ciclo de tono del Tee anima los colores personalizados.
@@ -16978,6 +17086,9 @@ Use alternative world tick calculation making hooks behave as if all players hav
 
 Use animated title style (overrides qm_title_color_mode)
 == Usar estilo de título animado (anula qm_title_color_mode)
+
+Use cached or online AMLL community lyrics when the music source has no word timing
+== Usar letras de la comunidad AMLL almacenadas en caché o disponibles en línea cuando la fuente de música no proporcione tiempos por palabra
 
 Use colored skins for frozen tees
 == Usar pieles de color para tees congelados
@@ -17597,9 +17708,6 @@ Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per
 When TClient rainbow Tee is enabled, this feature has no effect.
 == Cuando el Tee arcoíris de TClient está activado, esta función no tiene efecto.
 
-Where your title appears and how it looks: nameplate, style, motion, colors and glow.
-== Dónde aparece tu título y cómo se ve: placa de nombre, estilo, animación, colores y brillo.
-
 Whether a switch is deactivated by default (otherwise activated)
 == Si un interruptor está desactivado por defecto (de lo contrario activado)
 
@@ -17782,6 +17890,9 @@ Word list file exceeds 2 MiB.
 
 Word list must be UTF-8 text without NUL characters.
 == La lista debe ser texto UTF-8 sin caracteres NUL.
+
+World lyrics
+== Letra en el mundo
 
 Write local console contents to a text file
 == Escribir contenido de la consola local a un archivo de texto

@@ -643,6 +643,7 @@ void CGameClient::OnConsoleInit()
 	AddComponent(&m_Translate, "translate");
 	AddComponent(&m_Ghost, "ghost");
 	AddComponent(&m_QmClient, "qmclient");
+	AddComponent(&m_FinishSummary, "finish_summary");
 	AddComponent(&m_QmAxiomAutoLogin, "axiom_auto_login");
 	AddComponent(&m_QmAxiomScores, "axiom_scores");
 	AddComponent(&m_QmFriendLastSeen, "friend_last_seen");
@@ -658,7 +659,6 @@ void CGameClient::OnConsoleInit()
 	AddComponent(&m_NeteaseIntegration, "netease_integration");
 	AddComponent(&m_MusicLyricsIntegration, "music_lyrics_integration");
 	AddComponent(&m_SpotifyIntegration, "spotify_integration");
-	AddComponent(&m_LyricsPresentation, "lyrics_presentation");
 	AddComponent(&m_MusicAppWatcher, "music_app_watcher");
 	AddComponent(&m_Players, "players");
 	AddComponent(&m_MovingTilesBackground, "moving_tiles_background");
@@ -666,6 +666,8 @@ void CGameClient::OnConsoleInit()
 	AddComponent(&m_MovingTilesForeground, "moving_tiles_foreground");
 	AddComponent(&m_Outlines, "outlines");
 	AddComponent(&m_CollisionHitbox, "collision_hitbox");
+	AddComponent(&m_QmCheckpointGuide, "checkpoint_guide");
+	AddComponent(&m_LyricsPresentation, "lyrics_presentation");
 	AddComponent(&m_Pet, "pet");
 	AddComponent(&m_Particles.m_RenderExplosions, "particles_explosions");
 	AddComponent(&m_NamePlates, "nameplates");
@@ -2023,6 +2025,8 @@ void CGameClient::UpdatePositions()
 
 void CGameClient::OnRender()
 {
+	// 地图库和结算卡共享封面缓存，菜单关闭时仍完成后台任务。
+	m_MapCovers.Update(Http(), Engine(), Graphics(), Storage(), Client()->LocalTime());
 	UpdateQmAxiomPrediction();
 	m_HudEditor.BeginRenderFrame();
 	CQmIconFrameColorClock::BeginFrame(static_cast<double>(time_get()) / static_cast<double>(time_freq()));
@@ -3399,6 +3403,7 @@ void CGameClient::OnShutdown()
 	for(auto &pComponent : m_vpAll)
 		pComponent->OnShutdown();
 
+	m_MapCovers.Shutdown(Graphics());
 	m_UI.OnShutdown();
 	m_LocalServer.KillServer();
 }

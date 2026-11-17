@@ -920,6 +920,9 @@ Always show song title and artist
 Always translate
 == 常に翻訳
 
+AMLL community lyrics
+== AMLL コミュニティ歌詞
+
 Amount
 == 量
 
@@ -1283,8 +1286,8 @@ Auto greet friend text
 Auto greet friends entering map
 == マップに入ったフレンドに自動挨拶
 
-Auto greet posts a public chat line a few seconds after a friend joins, so leave "Greeting text" empty on strict servers.
-== 自動あいさつはフレンドが入って数秒後に公開チャットを送ります。厳しいサーバーではあいさつ文を空にしておきましょう。
+Auto greet waits 1 second after a friend joins, then sends a public greeting when chat is available. Leave "Greeting text" empty on strict servers.
+== フレンドが参加してから 1 秒待ち、チャットが送信可能になったら全体チャットであいさつします。自動発言を制限しているサーバーでは、あいさつ文を空欄にしておいてください。
 
 Auto login Axiom server
 == Axiom サーバーに自動ログイン
@@ -1576,6 +1579,9 @@ Axiom dummy password
 
 Axiom main account password
 == Axiom メインアカウントパスワード
+
+Axiom rank
+== Axiom ランキング
 
 Axiom score request failed
 == Axiom スコアの取得に失敗しました
@@ -2180,9 +2186,6 @@ Change values in the settings card and watch this preview update.
 Change zoom
 == ズーム変更
 
-Changes apply at once, so check "Title preview" to compare styles; press "Save" on the "Sponsor title" card to share one.
-== 変更はすぐ反映されるので、タイトルの仕上がりプレビューで見比べてください。他の人にも見せるには支援者の称号カードで保存を押します。
-
 Changes how the vote menu looks and how you interact with running votes.
 == 投票メニューの見た目と、進行中の投票への操作方法を変更します。
 
@@ -2369,6 +2372,9 @@ Checking for updates...
 Checking Steam...
 == Steam を確認中…
 
+China rank
+== 中国ランキング
+
 Chinese (Simplified)
 == 中国語（簡体字）
 
@@ -2392,6 +2398,9 @@ Choose a preset, or Custom to enter width and height. Follow window uses the cur
 
 Choose a screen position and font size, then check the preview card for wrapping.
 == 画面上の位置と文字サイズを選び、プレビューカードで折り返しを確認します。
+
+Choose a sponsor title style for your nameplate and chat messages.
+== ネームプレートとチャットに表示する支援者称号のスタイルを選びます。
 
 Choose a target, then set its color; entity lasers can follow team colors.
 == 対象を選んで色を設定します。エンティティのレーザーはチームカラーに合わせられます。
@@ -2699,6 +2708,9 @@ Collapse
 Collapse console
 == コンソールを縮小
 
+Collect CP %d before teleporting
+== テレポートする前に CP %d に触れてください
+
 Collects the remaining DDNet client preferences that do not belong to other cards.
 == ほかのカードに属さない DDNet クライアントの設定をまとめています。
 
@@ -2836,6 +2848,9 @@ Complete restore replaces the listed files. A backup is saved before importing. 
 
 Complete snapshots are arriving late or not arriving
 == 完全なスナップショットの到着が遅れているか、届いていません
+
+Completed
+== 完了
 
 Compressor attack time (ms)
 == コンプレッサーのアタックタイム（ミリ秒）
@@ -3404,8 +3419,14 @@ Country code
 Country flag for grouping this community (ISO 3166-1 numeric)
 == このコミュニティをグループ化するための国フラグ（ISO 3166-1 数値）
 
+CP %d
+== チェックポイント %d
+
 CP border overlay alpha (0-100)
 == CP 点境界のオーバーレイエンティティのアルファ（0-100）
+
+CP guide
+== CP ガイド
 
 CP opacity
 == CP 不透明度
@@ -5873,6 +5894,9 @@ Finished maps
 Fire
 == 発射
 
+First finish
+== 初クリア
+
 First page in console
 == コンソールの最初のページ
 
@@ -6368,6 +6392,9 @@ Global card ordering (format: stableId|tab|col|order; semicolon-separated)
 Global card ordering old config migration completed flag
 == グローバルカードソート旧設定移行完了フラグ
 
+Global rank
+== 世界順位
+
 Global toggle key
 == グローバルトグルキー
 
@@ -6553,6 +6580,9 @@ Guide line color
 
 Guide lines are computed locally and do not guarantee that a hook will connect.
 == ガイド線はローカルで計算されるだけで、フックが当たることを保証するものではありません。
+
+Guide to nearby uncollected teleport checkpoints and warn near checkpoint teleporters
+== 近くの未取得のテレポートチェックポイントへ案内し、チェックポイントへの帰還入口付近で警告する
 
 Gun fire
 == ピストル発射
@@ -7168,6 +7198,9 @@ Import from clipboard
 
 Import merges friends and keeps local duplicates by default. Codes contain private names and notes.
 == 標準ではフレンドを統合し、重複する相手のローカル情報を保持します。コードには個人の名前とメモが含まれます。
+
+Improved -%s
+== 短縮 -%s
 
 Improved anti ping
 == 改善されたアンチピング
@@ -8222,6 +8255,9 @@ Loading sound files
 Loading successfully done
 == ロードが完了しました
 
+Loading...
+== 読み込み中…
+
 Loading…
 == 読み込み中…
 
@@ -8602,6 +8638,9 @@ Match ghost by map version instead of map name
 
 Match lyrics island width to the main Dynamic Island, excluding satellites
 == 歌詞アイランドをダイナミックアイランド本体と同じ幅にし、サブアイランドは含めない
+
+Matched personal best
+== 自己ベストに並ぶ
 
 Matched with callable peer
 == 通話可能なピアとマッチしました
@@ -9467,6 +9506,9 @@ No controller found. Plug in a controller.
 No corresponding vote option found
 == 対応する投票オプションが見つかりません
 
+No data
+== データなし
+
 No demo is being recorded
 == デモは録画されていません
 
@@ -10307,6 +10349,9 @@ Pause/unpause game
 Penalty in seconds for saving or swapping positions
 == 位置の保存または交換に対するペナルティ（秒単位）
 
+Pending sync
+== 同期待ち
+
 Per-name volume (name=percent)
 == 名前ごとの個別音量（name=percent）
 
@@ -10327,6 +10372,12 @@ Permanent sponsor verified
 
 Personal adjustments
 == カスタマイズ
+
+Personal best
+== 自己ベスト
+
+Personal best pending
+== 自己ベスト確認待ち
 
 Personal best:
 == 自己ベスト：
@@ -10393,6 +10444,9 @@ Pick a slot, type the command and its label, then hold the wheel key in game to 
 
 Pick a text color mode first; the custom color row only appears for the custom mode.
 == まず文字色モードを選んでください。カスタム色の行はカスタムモードでのみ表示されます。
+
+Pick a text style or a moon or sun badge, check the preview, then press "Save" to share the style with other players.
+== テキストのスタイルか月・太陽のバッジを選び、プレビューを確認して「保存」を押すと、他のプレイヤーにもそのスタイルが表示されます。
 
 Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
 == 各行の色を選んでください。認証済みと同クランの色はスコアボードに、2 つのリスト色はフレンドリストに適用されます。
@@ -11044,6 +11098,9 @@ Preview dummy nameplate
 
 Preview failed. Check the image and Logo, then retry.
 == プレビューに失敗しました。画像とロゴを確認して再試行してください。
+
+Preview finish summary
+== リザルトカードをプレビュー
 
 Preview hook collision colors and line styles
 == Preview hook collision colors and line styles
@@ -12929,8 +12986,8 @@ Send sampling and token limit parameters
 Send specified command to rcon
 == rcon に指定コマンドを送信
 
-Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines
-== 90～270秒のランダムな間隔で連続する三行の歌詞を全体チャットに送り、各行の間隔を3秒にする
+Send three consecutive lyrics to public chat at random intervals of 360 to 1200 seconds, with 3 seconds between lines. Successfully sending a lyric with Singing cancels pending humming lines and restarts the random wait
+== 360～1200秒のランダムな間隔で連続する三行の歌詞を全体チャットに送り、各行の間隔を3秒にする。「歌う」で歌詞を送信できた場合は、口ずさむ機能の未送信の歌詞を取り消し、ランダムな待ち時間を最初から数え直す
 
 Send to
 == 送信先
@@ -13042,6 +13099,9 @@ Server port (only 8303-8310 work in LAN browser, 0=auto find free in 8303-8310).
 
 Server preset
 == サーバープリセット
+
+Server rank
+== サーバー順位
 
 Server region. Used for region bans
 == サーバーリージョン。リージョンバンに使用されます
@@ -13270,6 +13330,9 @@ Show a ghost of your best time after crossing the start line
 
 Show a MomentCap .poses file in game (no export)
 == MomentCap .poses ファイルをゲーム内で表示（書き出しなし）
+
+Show a per-character wave on text titles locally
+== 自分の画面ではテキスト称号の文字を一文字ずつ波打たせる
 
 Show a small view of the dummy
 == ダミーの小さなビューを表示
@@ -13541,6 +13604,12 @@ Show filtered words in console
 Show finish messages
 == フィニッシュメッセージを表示
 
+Show finish summary
+== リザルトカードを表示
+
+Show finish summary in Dynamic Island
+== ダイナミックアイランドにリザルトカードを表示
+
 Show flag on name plate
 == ネームプレートに国旗を表示
 
@@ -13594,6 +13663,9 @@ Show ghost
 
 Show ghost at unpredictable position of other players
 == 他のプレイヤーの予測不可能な位置にゴーストを表示
+
+Show glowing, floating lyrics in the map. Each new line stays where it appears; previous lines rise and fade out
+== マップ内に光りながら浮かぶ歌詞を表示する。新しい歌詞は出現した位置に留まり、前の歌詞は上に漂いながら消えていく
 
 Show Gores drown board
 == Gores 溺死ボードを表示
@@ -13945,6 +14017,9 @@ Show pause/play indicator when changing
 
 Show pending crash reports in a window at startup (0 = keep them on disk and log a line instead)
 == 起動時にウィンドウで未処理のクラッシュレポートを表示する（0 = レポートファイルを残してログのみ記録）
+
+Show per-character title waves locally
+== 称号の文字を自分の画面で波打たせる
 
 Show performance graphs.
 == パフォーマンスグラフを表示
@@ -14549,8 +14624,14 @@ Slow down the demo
 Slower
 == 低速
 
+Slower +%s
+== 自己ベストより遅い +%s
+
 Slower export playback
 == 書き出しの再生を遅くする
+
+Slower than personal best
+== 自己ベストより遅い
 
 Small Tee size
 == 小さな Tee のサイズ
@@ -14833,6 +14914,9 @@ Sponsor support
 
 Sponsor title
 == 支援者の称号
+
+Sponsor title appearance: 0 = capsule, 1-5 = text palette
+== 支援者称号の外観：0 = カプセル、1–5 = テキストの配色
 
 Sponsor title badge opacity (0-100)
 == 支援者称号全体の不透明度（0-100）
@@ -15617,6 +15701,21 @@ Testing translation...
 Text
 == テキスト
 
+Text 1
+== 文字 1
+
+Text 2
+== 文字 2
+
+Text 3
+== 文字 3
+
+Text 4
+== 文字 4
+
+Text 5
+== 文字 5
+
 Text alpha
 == テキストの透明度
 
@@ -15703,6 +15802,9 @@ The message is sent on every water death, so keep it short; leaving "Chat messag
 
 The name "default" is reserved.
 == 「default」という名前は予約されています。
+
+The per-character wave setting affects text titles on your screen only.
+== 文字を波打たせる設定は、自分の画面に表示されるテキスト称号にだけ適用されます。
 
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 == あなたがささやき中だったプレイヤーは、まだ再接続していないか退出しました。少し待つか、別の相手にささやいてください
@@ -16010,6 +16112,9 @@ Time limit
 Time limit: %d min
 == 制限時間：%d 分
 
+Time to finish
+== クリアタイム
+
 Time to wait before changing team: %s
 == チーム変更までの待機時間: %s
 
@@ -16072,6 +16177,9 @@ Title server does not support badge appearance yet
 
 Title server does not support chat styles yet
 == 称号サーバーはまだチャットスタイルに対応していません
+
+Title server does not support text titles yet
+== 称号サーバーはまだテキスト形式の称号に対応していません
 
 Title server unavailable; retry
 == 称号サーバーに接続できません。再試行してください
@@ -16288,6 +16396,9 @@ Total hours
 
 Total play time
 == 合計プレイ時間
+
+Total points
+== 合計ポイント
 
 Total: %d save(s)
 == 合計: %d 個のセーブ
@@ -16528,9 +16639,6 @@ Turn on "Show important server prompts as notifications" or "Route Echo messages
 
 Turn on "Show own coordinates" or "Show other players' coordinates", then choose "Show X" and "Show Y".
 == 自分の座標を表示または他のプレイヤーの座標を表示をオンにし、次に X を表示と Y を表示を選びます。
-
-Turn on "Show titles on nameplates", pick a "Title style", then adjust "Title motion" and "Wave amount"; "Advanced mode" adds color and glow.
-== ネームプレートに称号を表示をオンにし、称号スタイルを選んで、称号アニメーションと波の振幅を調整します。詳細モードでは色と発光も加えられます。
 
 Turn on "Skin outline for self and dummy" or "Skin outline for other players", then tune width and opacity; "Cycle custom Tee hue" animates custom colors.
 == 自分と dummy のスキンの輪郭か他のプレイヤーのスキンの輪郭をオンにして、太さと不透明度を調整します。カスタム Tee の色相切り替えがカスタムカラーを動かします。
@@ -16978,6 +17086,9 @@ Use alternative world tick calculation making hooks behave as if all players hav
 
 Use animated title style (overrides qm_title_color_mode)
 == タイトルのアニメーションスタイルを使う（qm_title_color_mode を上書き）
+
+Use cached or online AMLL community lyrics when the music source has no word timing
+== 音楽ソースに単語ごとのタイミング情報がない場合、キャッシュまたはオンラインの AMLL コミュニティ歌詞を使用する
 
 Use colored skins for frozen tees
 == 凍結 Tee にカラースキンを使用
@@ -17597,9 +17708,6 @@ Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per
 When TClient rainbow Tee is enabled, this feature has no effect.
 == TClient のレインボー Tee が有効な場合、この機能は効果がありません。
 
-Where your title appears and how it looks: nameplate, style, motion, colors and glow.
-== 称号をどこに出すか、どう見せるか。ネームプレート、スタイル、アニメーション、色、発光です。
-
 Whether a switch is deactivated by default (otherwise activated)
 == スイッチがデフォルトで無効かどうか（そうでなければ有効）
 
@@ -17782,6 +17890,9 @@ Word list file exceeds 2 MiB.
 
 Word list must be UTF-8 text without NUL characters.
 == 単語リストは NUL 文字を含まない UTF-8 テキストである必要があります。
+
+World lyrics
+== ワールド内の歌詞
 
 Write local console contents to a text file
 == ローカルコンソールの内容をテキストファイルに書き出す

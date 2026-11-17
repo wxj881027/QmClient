@@ -920,6 +920,9 @@ Always show song title and artist
 Always translate
 == 항상 번역
 
+AMLL community lyrics
+== AMLL 커뮤니티 가사
+
 Amount
 == 양
 
@@ -1283,8 +1286,8 @@ Auto greet friend text
 Auto greet friends entering map
 == 맵에 입장하는 친구에게 자동 인사
 
-Auto greet posts a public chat line a few seconds after a friend joins, so leave "Greeting text" empty on strict servers.
-== 자동 인사는 친구가 들어온 몇 초 뒤 공개 채팅을 보냅니다. 엄격한 서버에서는 인사 문구를 비워 두세요.
+Auto greet waits 1 second after a friend joins, then sends a public greeting when chat is available. Leave "Greeting text" empty on strict servers.
+== 친구가 입장하면 1초 기다린 뒤 채팅을 보낼 수 있을 때 전체 채팅으로 인사합니다. 자동 채팅을 제한하는 서버에서는 인사 문구를 비워 두세요.
 
 Auto login Axiom server
 == Axiom 서버 자동 로그인
@@ -1576,6 +1579,9 @@ Axiom dummy password
 
 Axiom main account password
 == Axiom 메인 계정 비밀번호
+
+Axiom rank
+== Axiom 순위
 
 Axiom score request failed
 == Axiom 점수 요청에 실패했습니다
@@ -2180,9 +2186,6 @@ Change values in the settings card and watch this preview update.
 Change zoom
 == 줌 변경
 
-Changes apply at once, so check "Title preview" to compare styles; press "Save" on the "Sponsor title" card to share one.
-== 변경은 바로 적용되니 칭호 완성 미리보기로 스타일을 비교해 보세요. 다른 사람에게도 보이게 하려면 후원자 칭호 카드에서 저장을 누르세요.
-
 Changes how the vote menu looks and how you interact with running votes.
 == 투표 메뉴의 모양과 진행 중인 투표를 다루는 방식을 변경합니다.
 
@@ -2369,6 +2372,9 @@ Checking for updates...
 Checking Steam...
 == Steam 확인 중…
 
+China rank
+== 중국 순위
+
 Chinese (Simplified)
 == 중국어(간체)
 
@@ -2392,6 +2398,9 @@ Choose a preset, or Custom to enter width and height. Follow window uses the cur
 
 Choose a screen position and font size, then check the preview card for wrapping.
 == 화면 위치와 글꼴 크기를 고른 뒤 미리 보기 카드에서 줄바꿈을 확인하세요.
+
+Choose a sponsor title style for your nameplate and chat messages.
+== 이름표와 채팅에 표시할 후원자 칭호 스타일을 선택하세요.
 
 Choose a target, then set its color; entity lasers can follow team colors.
 == 대상을 고르고 색상을 지정하세요. 엔티티 레이저는 팀 색상을 따르게 할 수 있습니다.
@@ -2699,6 +2708,9 @@ Collapse
 Collapse console
 == 콘솔 축소
 
+Collect CP %d before teleporting
+== 텔레포트 전에 CP %d에 닿으세요
+
 Collects the remaining DDNet client preferences that do not belong to other cards.
 == 다른 카드에 속하지 않는 나머지 DDNet 클라이언트 설정을 모아 둡니다.
 
@@ -2836,6 +2848,9 @@ Complete restore replaces the listed files. A backup is saved before importing. 
 
 Complete snapshots are arriving late or not arriving
 == 완전한 스냅샷이 늦게 도착하거나 도착하지 않음
+
+Completed
+== 완료
 
 Compressor attack time (ms)
 == 컴프레서 어택 타임 (ms)
@@ -3404,8 +3419,14 @@ Country code
 Country flag for grouping this community (ISO 3166-1 numeric)
 == 이 커뮤니티를 그룹화하기 위한 국가 플래그 (ISO 3166-1 숫자)
 
+CP %d
+== 체크포인트 %d
+
 CP border overlay alpha (0-100)
 == CP 경계 오버레이 엔티티 알파 (0-100)
+
+CP guide
+== CP 안내
 
 CP opacity
 == CP 불투명도
@@ -5873,6 +5894,9 @@ Finished maps
 Fire
 == 발사
 
+First finish
+== 첫 클리어
+
 First page in console
 == 콘솔 첫 페이지
 
@@ -6368,6 +6392,9 @@ Global card ordering (format: stableId|tab|col|order; semicolon-separated)
 Global card ordering old config migration completed flag
 == 전역 카드 정렬 이전 설정 마이그레이션 완료 표시
 
+Global rank
+== 세계 순위
+
 Global toggle key
 == 전역 토글 키
 
@@ -6553,6 +6580,9 @@ Guide line color
 
 Guide lines are computed locally and do not guarantee that a hook will connect.
 == 안내선은 로컬에서 계산될 뿐, 훅이 붙는다는 것을 보장하지 않습니다.
+
+Guide to nearby uncollected teleport checkpoints and warn near checkpoint teleporters
+== 근처의 미활성 텔레포트 체크포인트로 안내하고 체크포인트 귀환 입구 근처에서 경고
 
 Gun fire
 == 권총 발사
@@ -7168,6 +7198,9 @@ Import from clipboard
 
 Import merges friends and keeps local duplicates by default. Codes contain private names and notes.
 == 기본적으로 친구를 병합하고 중복 친구의 로컬 정보를 유지합니다. 코드에는 비공개 이름과 메모가 포함됩니다.
+
+Improved -%s
+== 단축 -%s
 
 Improved anti ping
 == 개선된 안티 핑
@@ -8222,6 +8255,9 @@ Loading sound files
 Loading successfully done
 == 불러오기가 완료되었습니다
 
+Loading...
+== 불러오는 중…
+
 Loading…
 == 로딩 중…
 
@@ -8602,6 +8638,9 @@ Match ghost by map version instead of map name
 
 Match lyrics island width to the main Dynamic Island, excluding satellites
 == 가사 섬 너비를 다이내믹 아일랜드 본체에 맞추고 보조 섬은 제외
+
+Matched personal best
+== 개인 최고 기록과 동일
 
 Matched with callable peer
 == 통화 가능 피어와 매칭됨
@@ -9467,6 +9506,9 @@ No controller found. Plug in a controller.
 No corresponding vote option found
 == 해당 투표 옵션을 찾을 수 없습니다
 
+No data
+== 데이터 없음
+
 No demo is being recorded
 == 녹화 중인 데모가 없습니다
 
@@ -10307,6 +10349,9 @@ Pause/unpause game
 Penalty in seconds for saving or swapping positions
 == 위치 저장 또는 교체에 대한 초 단위 패널티
 
+Pending sync
+== 동기화 대기 중
+
 Per-name volume (name=percent)
 == 이름별 개별 볼륨 (name=percent)
 
@@ -10327,6 +10372,12 @@ Permanent sponsor verified
 
 Personal adjustments
 == 개인 설정
+
+Personal best
+== 개인 최고 기록
+
+Personal best pending
+== 개인 최고 기록 확인 대기
 
 Personal best:
 == 개인 최고 기록:
@@ -10393,6 +10444,9 @@ Pick a slot, type the command and its label, then hold the wheel key in game to 
 
 Pick a text color mode first; the custom color row only appears for the custom mode.
 == 먼저 텍스트 색상 모드를 선택하세요. 사용자 정의 색상 행은 사용자 정의 모드에서만 나타납니다.
+
+Pick a text style or a moon or sun badge, check the preview, then press "Save" to share the style with other players.
+== 텍스트 스타일이나 달 또는 해 배지를 선택하고 미리보기를 확인하세요. “저장”을 누르면 다른 플레이어에게도 선택한 스타일이 표시됩니다.
 
 Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
 == 각 색상 행에서 색을 고르세요. 인증 및 같은 클랜 색상은 스코어보드에, 두 목록 색상은 친구 목록에 적용됩니다.
@@ -11044,6 +11098,9 @@ Preview dummy nameplate
 
 Preview failed. Check the image and Logo, then retry.
 == 미리보기에 실패했습니다. 이미지와 로고를 확인한 후 다시 시도하세요.
+
+Preview finish summary
+== 결과 카드 미리 보기
 
 Preview hook collision colors and line styles
 == Preview hook collision colors and line styles
@@ -12929,8 +12986,8 @@ Send sampling and token limit parameters
 Send specified command to rcon
 == 지정된 명령을 rcon 으로 전송
 
-Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines
-== 90~270초의 무작위 간격으로 연속 세 줄의 가사를 전체 채팅에 보내며 줄 사이에 3초 대기
+Send three consecutive lyrics to public chat at random intervals of 360 to 1200 seconds, with 3 seconds between lines. Successfully sending a lyric with Singing cancels pending humming lines and restarts the random wait
+== 360~1200초의 무작위 간격으로 연속 세 줄의 가사를 전체 채팅에 보내며 줄 사이에 3초 대기. ‘노래하기’로 가사를 성공적으로 보내면 흥얼거리기의 남은 가사 전송을 취소하고 무작위 대기 시간을 다시 시작
 
 Send to
 == 보낼 대상
@@ -13042,6 +13099,9 @@ Server port (only 8303-8310 work in LAN browser, 0=auto find free in 8303-8310).
 
 Server preset
 == 서버 프리셋
+
+Server rank
+== 서버 순위
 
 Server region. Used for region bans
 == 서버 지역. 지역 차단에 사용됨
@@ -13270,6 +13330,9 @@ Show a ghost of your best time after crossing the start line
 
 Show a MomentCap .poses file in game (no export)
 == 게임 내에서 MomentCap .poses 파일 보기 (내보내기 없음)
+
+Show a per-character wave on text titles locally
+== 내 화면에서 텍스트 칭호의 글자를 하나씩 물결처럼 움직임
 
 Show a small view of the dummy
 == 더미의 작은 화면 표시
@@ -13541,6 +13604,12 @@ Show filtered words in console
 Show finish messages
 == 완료 메시지 표시
 
+Show finish summary
+== 결과 카드 표시
+
+Show finish summary in Dynamic Island
+== 다이내믹 아일랜드에 결과 카드 표시
+
 Show flag on name plate
 == 이름표에 국기 표시
 
@@ -13594,6 +13663,9 @@ Show ghost
 
 Show ghost at unpredictable position of other players
 == 다른 플레이어의 예측 불가능한 위치에 유령 표시
+
+Show glowing, floating lyrics in the map. Each new line stays where it appears; previous lines rise and fade out
+== 맵에 빛나며 떠 있는 가사를 표시합니다. 새 가사는 나타난 위치에 고정되고 이전 가사는 위로 떠오르며 서서히 사라집니다
 
 Show Gores drown board
 == Gores 익사 보드 표시
@@ -13945,6 +14017,9 @@ Show pause/play indicator when changing
 
 Show pending crash reports in a window at startup (0 = keep them on disk and log a line instead)
 == 시작 시 창으로 미처리 크래시 리포트를 표시합니다(0 = 리포트 파일만 남기고 로그에 기록)
+
+Show per-character title waves locally
+== 내 화면에서 칭호 글자 물결 효과 표시
 
 Show performance graphs.
 == 성능 그래프 표시
@@ -14549,8 +14624,14 @@ Slow down the demo
 Slower
 == 느림
 
+Slower +%s
+== 기록 지연 +%s
+
 Slower export playback
 == 내보내기 재생 속도 낮추기
+
+Slower than personal best
+== 개인 최고 기록보다 느림
 
 Small Tee size
 == 작은 Tee 크기
@@ -14833,6 +14914,9 @@ Sponsor support
 
 Sponsor title
 == 후원자 칭호
+
+Sponsor title appearance: 0 = capsule, 1-5 = text palette
+== 후원자 칭호 모양: 0 = 캡슐, 1–5 = 텍스트 색상 조합
 
 Sponsor title badge opacity (0-100)
 == 후원자 칭호 전체 불투명도 (0-100)
@@ -15617,6 +15701,21 @@ Testing translation...
 Text
 == 텍스트
 
+Text 1
+== 텍스트 1
+
+Text 2
+== 텍스트 2
+
+Text 3
+== 텍스트 3
+
+Text 4
+== 텍스트 4
+
+Text 5
+== 텍스트 5
+
 Text alpha
 == 텍스트 투명도
 
@@ -15703,6 +15802,9 @@ The message is sent on every water death, so keep it short; leaving "Chat messag
 
 The name "default" is reserved.
 == "default" 이름은 예약되어 있습니다.
+
+The per-character wave setting affects text titles on your screen only.
+== 글자 물결 효과는 내 화면에 표시되는 텍스트 칭호에만 적용됩니다.
 
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 == 귓속말 상대가 아직 재접속하지 않았거나 게임을 떠났습니다. 잠시 기다리거나 다른 사람에게 귓속말하세요
@@ -16010,6 +16112,9 @@ Time limit
 Time limit: %d min
 == 시간 제한: %d 분
 
+Time to finish
+== 클리어 시간
+
 Time to wait before changing team: %s
 == 팀 변경까지 대기 시간: %s
 
@@ -16072,6 +16177,9 @@ Title server does not support badge appearance yet
 
 Title server does not support chat styles yet
 == 칭호 서버가 아직 채팅 스타일을 지원하지 않습니다
+
+Title server does not support text titles yet
+== 칭호 서버가 아직 텍스트형 칭호를 지원하지 않습니다
 
 Title server unavailable; retry
 == 칭호 서버에 연결할 수 없습니다. 다시 시도하세요
@@ -16288,6 +16396,9 @@ Total hours
 
 Total play time
 == 총 플레이 시간
+
+Total points
+== 총점
 
 Total: %d save(s)
 == 총계：%d 개 저장됨
@@ -16528,9 +16639,6 @@ Turn on "Show important server prompts as notifications" or "Route Echo messages
 
 Turn on "Show own coordinates" or "Show other players' coordinates", then choose "Show X" and "Show Y".
 == 내 좌표 표시 또는 다른 플레이어 좌표 표시를 켜고, X 표시와 Y 표시를 선택하세요.
-
-Turn on "Show titles on nameplates", pick a "Title style", then adjust "Title motion" and "Wave amount"; "Advanced mode" adds color and glow.
-== 이름표에 칭호 표시를 켜고 칭호 스타일을 고른 뒤 칭호 애니메이션과 파도 크기를 조정하세요. 고급 모드에서는 색상과 발광을 더할 수 있습니다.
 
 Turn on "Skin outline for self and dummy" or "Skin outline for other players", then tune width and opacity; "Cycle custom Tee hue" animates custom colors.
 == 자신과 dummy의 스킨 윤곽선 또는 다른 플레이어의 스킨 윤곽선을 켜고 두께와 불투명도를 맞추세요. 사용자 지정 Tee 색조 순환이 사용자 지정 색상을 움직입니다.
@@ -16978,6 +17086,9 @@ Use alternative world tick calculation making hooks behave as if all players hav
 
 Use animated title style (overrides qm_title_color_mode)
 == 칭호 애니메이션 스타일 사용 (qm_title_color_mode 덮어씀)
+
+Use cached or online AMLL community lyrics when the music source has no word timing
+== 음악 소스에 단어별 타이밍 정보가 없으면 캐시 또는 온라인의 AMLL 커뮤니티 가사를 사용
 
 Use colored skins for frozen tees
 == 얼어붙은 티에 컬러 스킨 사용
@@ -17597,9 +17708,6 @@ Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per
 When TClient rainbow Tee is enabled, this feature has no effect.
 == TClient 무지개 Tee가 켜져 있으면 이 기능은 적용되지 않습니다.
 
-Where your title appears and how it looks: nameplate, style, motion, colors and glow.
-== 칭호가 어디에 나타나고 어떻게 보일지를 정합니다. 이름표, 스타일, 애니메이션, 색상, 발광입니다.
-
 Whether a switch is deactivated by default (otherwise activated)
 == 스위치가 기본적으로 비활성화되어 있는지 여부 (그렇지 않으면 활성화)
 
@@ -17782,6 +17890,9 @@ Word list file exceeds 2 MiB.
 
 Word list must be UTF-8 text without NUL characters.
 == 단어 목록은 NUL 문자 없는 UTF-8 텍스트여야 합니다.
+
+World lyrics
+== 월드 가사
 
 Write local console contents to a text file
 == 로컬 콘솔 내용을 텍스트 파일로 저장

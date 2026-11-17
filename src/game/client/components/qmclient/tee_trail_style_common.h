@@ -99,7 +99,10 @@ namespace qm_tee_trail
 		// 带宽截面三次细分：内部两边共用接缝，外侧两边做柔边。
 		inline void Band(std::vector<SQuad> &vOut, SBandPoint *pBand, size_t Count, float Softness, float PixelSize, bool Additive)
 		{
+			if(Count < 2)
+				return;
 			std::array<vec2, MAX_RENDER_POINTS> aNormals;
+			QmPrepareTrailBandHead(pBand, Count);
 			QmPrepareTrailBandJoins(pBand, Count, aNormals.data());
 			const auto Section = [&](size_t Index) {
 				const SBandPoint &P = pBand[Index];

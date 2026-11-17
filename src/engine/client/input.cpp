@@ -101,7 +101,17 @@ void CInput::Init()
 	m_WindowsMessageEvent = SDL_RegisterEvents(1);
 #endif
 
-	SDL_SetHint(SDL_HINT_IME_IMPLEMENTED_UI, QmImeShouldUseSystemCandidateUi() ? "none" : "composition,candidates");
+#if !defined(CONF_FAMILY_WINDOWS)
+	SDL_SetHint(SDL_HINT_IME_IMPLEMENTED_UI, "none");
+#endif
+	// Windows 在建窗时已缓存 hint；后续接管和绘制沿用有效值，保留环境变量覆盖。
+	const char *pImeUi = SDL_GetHint(SDL_HINT_IME_IMPLEMENTED_UI);
+	m_UsesNativeImeUi = QmImeShouldUseSystemCandidateUi(pImeUi == nullptr || str_find(pImeUi, "candidates") == nullptr);
+#if defined(CONF_FAMILY_WINDOWS)
+	// 补充 TSF 界面回调，同时接管候选数据，避免仅隐藏系统窗口后缺失候选。
+	if(!m_UsesNativeImeUi)
+		m_TsfUiLess.Activate(m_ImeCandidates);
+#endif
 	StopTextInput();
 	if(Window() != nullptr)
 		MouseModeRelative();
@@ -118,6 +128,9 @@ SDL_Window *CInput::Window() const
 void CInput::Shutdown()
 {
 	StopTextInput();
+#if defined(CONF_FAMILY_WINDOWS)
+	m_TsfUiLess.Deactivate();
+#endif
 	CloseJoysticks();
 	// 关闭后仍可能收到输入法析构触发的清理，此时图形对象可能已销毁。
 	m_pGraphics = nullptr;
@@ -411,6 +424,7 @@ void CInput::ClearImeState()
 void CInput::StartTextInput()
 {
 #if defined(CONF_FAMILY_WINDOWS)
+	m_TsfUiLess.SetTextInputActive(Window() != nullptr);
 	SDL_SetWindowsMessageHook(WindowsMessageHook, this);
 #endif
 	if(Window() != nullptr)
@@ -421,6 +435,8 @@ void CInput::StartTextInput()
 void CInput::StopTextInput()
 {
 #if defined(CONF_FAMILY_WINDOWS)
+	m_TsfUiLess.SetTextInputActive(false);
+	m_ImeCandidates.ResetTsfCandidates();
 	SDL_SetWindowsMessageHook(nullptr, nullptr);
 	// 清掉旧标记，避免重新启用后由旧事件提前消费新的 IME 通知。
 	if(m_WindowsMessageEvent != 0)

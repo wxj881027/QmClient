@@ -305,7 +305,7 @@ namespace
 			return;
 		}
 
-		// 原版保留原有主体截面、接缝、柔边及浮点运算顺序。
+		// 原版与艺术样式共用生成端过渡，中后段保留原有截面、接缝与柔边。
 		std::array<SBandPoint, MAX_RENDER_POINTS> aBand;
 		std::array<vec2, MAX_RENDER_POINTS> aNormals;
 		for(size_t i = 0; i < SampleCount; ++i)
@@ -313,6 +313,7 @@ namespace
 			const SSample &S = aSamples[i];
 			aBand[i] = {S.m_Pos, S.m_Width, S.m_Width, S.m_Tint.WithAlpha(S.m_Alpha)};
 		}
+		QmPrepareTrailBandHead(aBand.data(), SampleCount);
 		QmPrepareTrailBandJoins(aBand.data(), SampleCount, aNormals.data());
 		const auto PrepareSection = [&](size_t Index) {
 			const SBandPoint &P = aBand[Index];

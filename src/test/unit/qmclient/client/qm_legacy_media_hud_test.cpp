@@ -23,14 +23,6 @@ namespace
 			    First.y + First.h <= Second.y || Second.y + Second.h <= First.y);
 	}
 
-	CSystemMediaControls::SState Media(const char *pSource = "music-player", const char *pTitle = "Song", const char *pArtist = "Artist")
-	{
-		CSystemMediaControls::SState State;
-		str_copy(State.m_aSourceAppId, pSource, sizeof(State.m_aSourceAppId));
-		str_copy(State.m_aTitle, pTitle, sizeof(State.m_aTitle));
-		str_copy(State.m_aArtist, pArtist, sizeof(State.m_aArtist));
-		return State;
-	}
 }
 
 TEST(QmLegacyMediaHudContent, NoMetadataOrLyricsHidesThePanel)
@@ -147,77 +139,4 @@ TEST(QmLegacyMediaHudLayout, OffscreenAnchorsAndSmallViewportsKeepEveryRegionIns
 			ExpectContained(Layout.m_Panel, Region);
 		EXPECT_FLOAT_EQ(Layout.m_Cover.w, Layout.m_Cover.h);
 	}
-}
-
-TEST(QmLegacyMediaHudLyrics, RepeatedSnapshotKeepsTheOriginalScrollStart)
-{
-	CQmLegacyMediaHudLyricState State;
-	const auto Track = Media();
-	State.Update(Track, "Same lyric", 1000);
-	State.Update(Track, "Same lyric", 2500);
-	EXPECT_FLOAT_EQ(State.ElapsedSeconds(3000, 1000), 2.0f);
-}
-
-TEST(QmLegacyMediaHudLyrics, NewLyricStartsItsOwnScrollPause)
-{
-	CQmLegacyMediaHudLyricState State;
-	const auto Track = Media();
-	State.Update(Track, "First lyric", 1000);
-	ASSERT_FLOAT_EQ(State.ElapsedSeconds(3000, 1000), 2.0f);
-	State.Update(Track, "Second lyric", 3000);
-	EXPECT_FLOAT_EQ(State.ElapsedSeconds(3000, 1000), 0.0f);
-	EXPECT_FLOAT_EQ(State.ElapsedSeconds(3500, 1000), 0.5f);
-}
-
-TEST(QmLegacyMediaHudLyrics, ChangingTrackIdentityResetsScrollingEvenWhenTheLyricIsUnchanged)
-{
-	const auto FirstTrack = Media();
-	const std::array<CSystemMediaControls::SState, 3> aNextTracks = {
-		Media("music-player", "Other song", "Artist"),
-		Media("music-player", "Song", "Other artist"),
-		Media("other-player", "Song", "Artist"),
-	};
-	for(const auto &NextTrack : aNextTracks)
-	{
-		SCOPED_TRACE(::testing::Message() << NextTrack.m_aSourceAppId << ": " << NextTrack.m_aTitle << " / " << NextTrack.m_aArtist);
-		CQmLegacyMediaHudLyricState State;
-		State.Update(FirstTrack, "Same lyric", 1000);
-		State.Update(NextTrack, "Same lyric", 3000);
-		EXPECT_FLOAT_EQ(State.ElapsedSeconds(3000, 1000), 0.0f);
-		EXPECT_FLOAT_EQ(State.ElapsedSeconds(4000, 1000), 1.0f);
-	}
-}
-
-TEST(QmLegacyMediaHudLyrics, ResetAllowsTheSameTrackAndLyricToStartAgain)
-{
-	CQmLegacyMediaHudLyricState State;
-	const auto Track = Media();
-	State.Update(Track, "Same lyric", 1000);
-	ASSERT_FLOAT_EQ(State.ElapsedSeconds(3000, 1000), 2.0f);
-	State.Reset();
-	EXPECT_FLOAT_EQ(State.ElapsedSeconds(3000, 1000), 0.0f);
-	State.Update(Track, "Same lyric", 4000);
-	EXPECT_FLOAT_EQ(State.ElapsedSeconds(4000, 1000), 0.0f);
-	EXPECT_FLOAT_EQ(State.ElapsedSeconds(4500, 1000), 0.5f);
-}
-
-TEST(QmLegacyMediaHudLyrics, ClockRollbackRestartsThePauseAfterTimeHasAdvanced)
-{
-	CQmLegacyMediaHudLyricState State;
-	const auto Track = Media();
-	State.Update(Track, "Same lyric", 1000);
-	State.Update(Track, "Same lyric", 3000);
-	ASSERT_FLOAT_EQ(State.ElapsedSeconds(3000, 1000), 2.0f);
-	State.Update(Track, "Same lyric", 2000);
-	EXPECT_FLOAT_EQ(State.ElapsedSeconds(2000, 1000), 0.0f);
-	EXPECT_FLOAT_EQ(State.ElapsedSeconds(2500, 1000), 0.5f);
-}
-
-TEST(QmLegacyMediaHudLyrics, InvalidClockFrequencyDoesNotLoseTheScrollStart)
-{
-	CQmLegacyMediaHudLyricState State;
-	State.Update(Media(), "Lyric", 1000);
-	EXPECT_FLOAT_EQ(State.ElapsedSeconds(2000, 0), 0.0f);
-	EXPECT_FLOAT_EQ(State.ElapsedSeconds(2000, -1000), 0.0f);
-	EXPECT_FLOAT_EQ(State.ElapsedSeconds(2000, 1000), 1.0f);
 }

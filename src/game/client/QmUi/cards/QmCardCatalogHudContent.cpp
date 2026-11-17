@@ -177,6 +177,9 @@ void CMenus::RenderQmHudDynamicIslandContent(CUIRect &Content, float LineHeight,
 	if(g_Config.m_QmHudIslandUseOriginalStyle)
 		return;
 
+	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmFinishSummary, "Show finish summary", Localize("Show finish summary"), &g_Config.m_QmFinishSummary);
+	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmFinishSummaryPreview, "Preview finish summary", Localize("Preview finish summary"), &g_Config.m_QmFinishSummaryPreview);
+
 	// 钩子倒计时是独立开关：钩住玩家时在钩链中点显示倒计时环。
 	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmHookCountdown, "Enable hook countdown", Localize("Enable hook countdown"), &g_Config.m_QmHookCountdown);
 	// 开关倒计时：总开关决定是否显示，两个位置开关决定显示在跟随 Tee 的圆环上还是灵动岛里，可同时勾选。
@@ -323,6 +326,14 @@ void CMenus::RenderQmHudLyricsContent(CUIRect &Content, float LineHeight, float 
 		}
 	}
 	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmLyrics, "Enable lyrics", Localize("Enable lyrics"), &g_Config.m_QmLyrics);
+	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmLyricsCommunity, "AMLL community lyrics", Localize("AMLL community lyrics"), &g_Config.m_QmLyricsCommunity);
+	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, Content,
+		{
+			{&g_Config.m_QmWorldLyrics, "World lyrics", Localize("World lyrics"), nullptr, 0, Localize("Show glowing, floating lyrics in the map. Each new line stays where it appears; previous lines rise and fade out")},
+			{&g_Config.m_QmSinging, "Singing", Localize("Singing"), nullptr, 0, Localize("Double-tap the bound key within 400 ms to send the current lyric to public chat")},
+			{&g_Config.m_QmHumming, "Humming", Localize("Humming"), nullptr, 0, Localize("Send three consecutive lyrics to public chat at random intervals of 360 to 1200 seconds, with 3 seconds between lines. Successfully sending a lyric with Singing cancels pending humming lines and restarts the random wait")},
+		},
+		CurrentSettingsContentMetrics(), !PrewarmOnly);
 	float SectionReveal = 0.0f;
 	if(qm_card_catalog::QmCardRenderHook::PersonalizationReveal(this, Content, "qm:lyrics", CurrentSettingsContentMetrics(), &SectionReveal, PrewarmOnly || Ui()->RenderOnly()))
 	{

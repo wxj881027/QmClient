@@ -161,22 +161,24 @@ TEST(QmLyricsHudLayout, LegacyBilingualLyricsKeepMetadataInPlace)
 	EXPECT_GT(Bilingual.m_Panel.h, Single.m_Panel.h);
 }
 
-TEST(QmLyricsMarquee, TranslationChangesRestartTheScroll)
+TEST(QmLyricsScroll, PlaybackProgressMovesFromTheBeginningToTheEnd)
 {
-	CQmLyricsMarqueeState State;
-	const char *apFirst[] = {"original", "first translation"};
-	const char *apSecond[] = {"original", "second translation"};
-	EXPECT_FLOAT_EQ(State.Update(apFirst, 2, 1000, 1000), 0.0f);
-	EXPECT_FLOAT_EQ(State.Update(apFirst, 2, 1500, 1000), 0.5f);
-	EXPECT_FLOAT_EQ(State.Update(apSecond, 2, 1500, 1000), 0.0f);
+	EXPECT_FLOAT_EQ(QmLyricsScrollOffset(300.0f, 100.0f, 0.0f), 0.0f);
+	EXPECT_FLOAT_EQ(QmLyricsScrollOffset(300.0f, 100.0f, 0.5f), 100.0f);
+	EXPECT_FLOAT_EQ(QmLyricsScrollOffset(300.0f, 100.0f, 1.0f), 200.0f);
 }
 
-TEST(QmLyricsMarquee, LegacyTranslationChangeRestartsTheScroll)
+TEST(QmLyricsScroll, SeekingBackwardsReturnsToTheCorrespondingText)
 {
-	CQmLegacyMediaHudLyricState State;
-	CSystemMediaControls::SState Media{};
-	State.Update(Media, "original", 1000, "first");
-	EXPECT_FLOAT_EQ(State.ElapsedSeconds(1500, 1000), 0.5f);
-	State.Update(Media, "original", 1500, "second");
-	EXPECT_FLOAT_EQ(State.ElapsedSeconds(1500, 1000), 0.0f);
+	const float Later = QmLyricsScrollOffset(300.0f, 100.0f, 0.8f);
+	const float Earlier = QmLyricsScrollOffset(300.0f, 100.0f, 0.3f);
+	EXPECT_LT(Earlier, Later);
+	EXPECT_FLOAT_EQ(Earlier, QmLyricsScrollOffset(300.0f, 100.0f, 0.3f));
+}
+
+TEST(QmLyricsScroll, MissingTimingAndShortRowsDoNotScroll)
+{
+	EXPECT_FLOAT_EQ(QmLyricsScrollOffset(300.0f, 100.0f, -1.0f), 0.0f);
+	EXPECT_FLOAT_EQ(QmLyricsScrollOffset(80.0f, 100.0f, 0.8f), 0.0f);
+	EXPECT_FLOAT_EQ(QmLyricsScrollOffset(300.0f, 0.0f, 0.8f), 0.0f);
 }

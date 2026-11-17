@@ -7242,3 +7242,67 @@ brazilian_portuguese = "Controla a forma e as cores compartilhadas por toda a in
 portuguese = "Controla a forma e as cores comuns a toda a interface: curva dos cantos, extremidades de cápsula, superfícies, destaque, fundos de controlos e janelas suspensas, modo de cor do texto e desfoque."
 turkish = "Tüm arayüzün paylaştığı biçim ve renkleri denetler: köşe eğrisi, kapsül uçları, yüzeyler, vurgu rengi, denetim ve açılır katman arka planları, metin renk modu ve bulanıklık."
 polish = "Steruje kształtem i kolorami wspólnymi dla całego interfejsu: krzywa narożników, końce kapsuł, powierzchnie, kolor akcentu, tła kontrolek i warstw wysuwanych, tryb koloru tekstu i rozmycie."
+
+[[message]]
+key = "Auto greet waits 1 second after a friend joins, then sends a public greeting when chat is available. Leave \"Greeting text\" empty on strict servers."
+[message.translations]
+simplified_chinese = "好友进图满 1 秒后，聊天允许发送时会公开打招呼。在限制自动发言的服务器上，将「打招呼文本」留空即可关闭自动问候。"
+traditional_chinese = "好友進圖滿 1 秒後，聊天允許傳送時會在公頻打招呼。在限制自動發言的伺服器上，將「打招呼文本」留空即可關閉自動問候。"
+japanese = "フレンドが参加してから 1 秒待ち、チャットが送信可能になったら全体チャットであいさつします。自動発言を制限しているサーバーでは、あいさつ文を空欄にしておいてください。"
+korean = "친구가 입장하면 1초 기다린 뒤 채팅을 보낼 수 있을 때 전체 채팅으로 인사합니다. 자동 채팅을 제한하는 서버에서는 인사 문구를 비워 두세요."
+russian = "Через 1 секунду после входа друга клиент отправит приветствие в общий чат, как только можно будет писать. На серверах со строгими правилами оставьте текст приветствия пустым."
+german = "Nach dem Beitritt eines Freundes wartet der Client 1 Sekunde und grüßt im öffentlichen Chat, sobald er senden kann. Lass den Grußtext auf Servern mit strengen Regeln leer."
+spanish = "Cuando entra un amigo, el cliente espera 1 segundo y envía un saludo al chat público en cuanto puede. Deja el texto del saludo vacío en servidores con normas estrictas."
+french = "Quand un ami rejoint la partie, le client attend 1 seconde, puis le salue dans le chat public dès que l’envoi est possible. Sur les serveurs aux règles strictes, laisse le texte de salutation vide."
+brazilian_portuguese = "Quando um amigo entra, o cliente espera 1 segundo e envia uma saudação no chat público assim que pode. Em servidores com regras rígidas, deixe o texto da saudação em branco."
+portuguese = "Quando um amigo entra, o cliente espera 1 segundo e envia uma saudação no chat público assim que pode. Em servidores com regras rígidas, deixa o texto da saudação em branco."
+turkish = "Bir arkadaş katıldığında istemci 1 saniye bekler ve mesaj gönderebildiğinde genel sohbette selam verir. Kuralları katı olan sunucularda selamlama metnini boş bırak."
+polish = "Po dołączeniu znajomego klient czeka 1 sekundę, a potem wysyła powitanie na czacie publicznym, gdy tylko będzie to możliwe. Na serwerach z surowymi zasadami pozostaw tekst powitania pusty."
+
+[[message]]
+key = "Choose a sponsor title style for your nameplate and chat messages."
+[message.translations]
+simplified_chinese = "选择名牌和聊天中显示的赞助头衔样式。"
+traditional_chinese = "選擇名牌和聊天中顯示的贊助頭銜樣式。"
+japanese = "ネームプレートとチャットに表示する支援者称号のスタイルを選びます。"
+korean = "이름표와 채팅에 표시할 후원자 칭호 스타일을 선택하세요."
+russian = "Выберите стиль титула спонсора для таблички с именем и сообщений в чате."
+german = "Wähle einen Stil für deinen Unterstützertitel auf dem Namensschild und in Chatnachrichten."
+spanish = "Elige el estilo de tu título de patrocinador para la placa de nombre y los mensajes del chat."
+french = "Choisis le style de ton titre de soutien sur ta plaque de nom et dans tes messages de chat."
+brazilian_portuguese = "Escolha o estilo do título de apoiador que aparece na sua placa de nome e nas mensagens do chat."
+portuguese = "Escolhe o estilo do título de apoiante apresentado na tua placa de nome e nas mensagens de conversa."
+turkish = "İsim etiketinde ve sohbet iletilerinde görünecek destekçi unvanının stilini seç."
+polish = "Wybierz styl tytułu wspierającego widocznego na tabliczce z nazwą i w wiadomościach na czacie."
+
+[[message]]
+key = "Pick a text style or a moon or sun badge, check the preview, then press \"Save\" to share the style with other players."
+[message.translations]
+simplified_chinese = "选择文字款、月亮胶囊或太阳胶囊。查看预览后点「保存」，其他玩家就能看到这款头衔。"
+traditional_chinese = "選擇文字款、月亮膠囊或太陽膠囊。查看預覽後按「保存」，其他玩家就能看到這款頭銜。"
+japanese = "テキストのスタイルか月・太陽のバッジを選び、プレビューを確認して「保存」を押すと、他のプレイヤーにもそのスタイルが表示されます。"
+korean = "텍스트 스타일이나 달 또는 해 배지를 선택하고 미리보기를 확인하세요. “저장”을 누르면 다른 플레이어에게도 선택한 스타일이 표시됩니다."
+russian = "Выберите стиль текста или значок с луной или солнцем. Посмотрите образец и нажмите «Сохранить», чтобы другие игроки увидели выбранный стиль."
+german = "Wähle einen Textstil oder ein Mond- oder Sonnenabzeichen. Prüfe die Vorschau und klicke auf „Speichern“, damit andere Spieler den gewählten Stil sehen."
+spanish = "Elige un estilo de texto o una insignia de luna o sol. Revisa la vista previa y pulsa «Guardar» para que los demás jugadores vean el estilo elegido."
+french = "Choisis un style de texte ou un badge en forme de lune ou de soleil. Vérifie l’aperçu, puis clique sur « Sauvegarder » pour que les autres joueurs voient ce style."
+brazilian_portuguese = "Escolha um estilo de texto ou um emblema de lua ou sol. Confira a prévia e clique em “Salvar” para os outros jogadores verem o estilo escolhido."
+portuguese = "Escolhe um estilo de texto ou um emblema de lua ou sol. Vê a pré-visualização e prime «Guardar» para que os outros jogadores vejam o estilo escolhido."
+turkish = "Bir metin stili ya da ay veya güneş rozeti seç. Önizlemeyi kontrol edip “Kaydet” düğmesine basarak seçtiğin stili diğer oyunculara göster."
+polish = "Wybierz styl tekstu albo odznakę z księżycem lub słońcem. Sprawdź podgląd i kliknij „Zapisz”, aby inni gracze zobaczyli wybrany styl."
+
+[[message]]
+key = "The per-character wave setting affects text titles on your screen only."
+[message.translations]
+simplified_chinese = "逐字波动只影响你屏幕上的文字头衔。"
+traditional_chinese = "逐字波動只影響你畫面上的文字頭銜。"
+japanese = "文字を波打たせる設定は、自分の画面に表示されるテキスト称号にだけ適用されます。"
+korean = "글자 물결 효과는 내 화면에 표시되는 텍스트 칭호에만 적용됩니다."
+russian = "Волнообразное движение букв применяется только к текстовым титулам на вашем экране."
+german = "Der Welleneffekt bewegt die Buchstaben von Texttiteln nur auf deinem Bildschirm."
+spanish = "El efecto de onda de las letras solo se aplica a los títulos de texto en tu pantalla."
+french = "L’ondulation des lettres s’applique uniquement aux titres textuels sur ton écran."
+brazilian_portuguese = "A ondulação das letras só afeta os títulos em texto na sua tela."
+portuguese = "A ondulação das letras só afeta os títulos em texto no teu ecrã."
+turkish = "Harflerin dalgalanması yalnızca kendi ekranındaki metin unvanlarını etkiler."
+polish = "Falowanie liter dotyczy tylko tytułów tekstowych na twoim ekranie."
