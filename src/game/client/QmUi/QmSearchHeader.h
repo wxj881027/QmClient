@@ -13,32 +13,23 @@ class ITextRender;
 namespace qm_search_header
 {
 
-	// 中文彩蛋是作者文案，保留 Tee 谐音与客户端名称，不作为界面标签翻译。
 	inline constexpr const char *SPLASHES[] = {
-		"今天打算跑什么图呢?",
+		"今天打算恰多少分呢?",
 		"栖梦客户端,努力打造最适合中国Tee质的客户端",
-		"再试一次，这次一定能过！",
-		"终点不急，先把队友接上。",
-		"钩住的是队友，也是默契。",
-		"今天的第一锤，留给最好的搭档。",
-		"跑累了就歇一会儿，地图又不会跑。",
-		"别急，好钩不怕晚。",
-		"这一跳，献给还没放弃的你。",
-		"过图记得合影！",
-		"有时候，等等队友也是一种进步。",
-		"小小的 Tee，大大的梦想。",
-		"栖一会儿，梦里也能过图。",
-		"前方有冻，身后有朋友。",
-		"今天也要对新手温柔一点。",
-		"向 DDNet 和 Teeworlds 的开拓者致敬。",
-		"谢谢 TaterClient，土豆前辈！",
-		"向仙人掌客户端致敬，带刺也温柔。",
-		"也试试 BestClient！",
-		"也试试 NaiMeiClient！",
-		"也试试 TaterClient！",
-		"也试试仙人掌客户端！",
-		"Also try Terraria!",
-		"Also try Minecraft!",
+		"你的意思是你玩了这么久技术也学不好bind也学不会只会swap和恰吗",
+		"如果你觉得好用,把QmClient也捎给你的朋友吧!",
+		"BiliBili关注贝塔塔塔塔塔喵,关注贝塔塔塔塔塔谢谢喵",
+		"I'm gonna pack my things and leave you behind This feeling's old, and I know that I've made up my mind I hope you feel what I felt when you shattered my soul 'Cause you were cruel, and I'm a fool, so please, let me go",
+		"三万分大佬手动跑图,能量微小;一百分萌新自动上分,能量巨大",
+		"今天也要对新手温柔一点.....你玩蛇图?!.....还泡在PVP区域?!.......滚出去!",
+		"I Like This 👉 QmClient 👈",
+		"栖梦❤️栖梦❤️栖梦❤️栖梦❤️栖梦❤️栖梦❤️栖梦❤️栖梦❤️栖梦❤️栖梦❤️栖梦❤️栖梦❤️栖梦❤️栖梦❤️",
+		"Why not try BestClient😊",
+		"Why not try NaiMeiClient😎",
+		"Why not try TClient? Actually...QmClient is based on TClient XD",
+		"■■■■■■■■■■■■■■[数据删除]■■■■■■■■■■■■■■",
+		"为啥要恰分，跑到大半死了想恰分可以理解，图都没跑甚至自己根本跑不过的，恰了有啥意义，分高了水平也就那样,别人一查分以为大佬，一起玩一看菜鸡，别人一看图过了时间很快，一起玩发现啥都不会，现在分高的没啥含金量了，碰到太多恰上去的",
+		"这qm不用睡觉吗?怎么老是在我骂他的时候就在线",
 	};
 	inline constexpr int NUM_SPLASHES = sizeof(SPLASHES) / sizeof(SPLASHES[0]);
 
