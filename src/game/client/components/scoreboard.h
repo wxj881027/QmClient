@@ -9,6 +9,7 @@
 
 #include <game/client/component.h>
 #include <game/client/components/qmclient/axiom_scores_data.h>
+#include <game/client/components/qmclient/media_cover_spin.h>
 #include <game/client/components/qmclient/scoreboard_media_controls.h>
 #include <game/client/components/qmclient/scoreboard_team_modes.h>
 #include <game/client/ui.h>
@@ -206,6 +207,8 @@ class CScoreboard : public CComponent
 	bool m_MouseUnlocked = false;
 	bool m_RenderInteractions = false;
 	CQmScoreboardMediaControls m_MediaControls;
+	// 底栏媒体条圆形封面的自转（与 HUD 媒体岛共用同一份实现）。
+	SQmMediaCoverSpin m_MediaCoverSpin;
 
 	struct SSoundMuteButtonAnimState
 	{

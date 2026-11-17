@@ -17,6 +17,7 @@
 #include <game/client/components/qmclient/hook_countdown.h>
 #include <game/client/components/qmclient/hud_island_soft_body.h>
 #include <game/client/components/qmclient/hud_map_progress.h>
+#include <game/client/components/qmclient/media_cover_spin.h>
 #include <game/client/components/system_media_controls.h>
 #include <game/client/ui_rect.h>
 #include <game/teamscore.h>
@@ -149,6 +150,8 @@ class CHud : public CComponent
 		float m_TargetTrackMetaInOffset = 0.0f;
 		float m_TargetTrackMetaOutOffset = 0.0f;
 		SHudMediaIslandWaveformClock m_WaveformClock;
+		// 圆形封面的自转（播放才转、暂停定格），与计分板媒体条共用同一份状态实现。
+		SQmMediaCoverSpin m_CoverSpin;
 		CHudIslandSoftBody m_SoftBody;
 		int64_t m_SoftBodyLastTick = 0;
 		bool m_WaveformWasPlaying = false;
@@ -256,6 +259,7 @@ class CHud : public CComponent
 			m_TargetTrackMetaInOffset = 0.0f;
 			m_TargetTrackMetaOutOffset = 0.0f;
 			m_WaveformClock.Reset();
+			m_CoverSpin.Reset();
 			m_SoftBody.Reset();
 			m_SoftBodyLastTick = 0;
 			m_WaveformWasPlaying = false;

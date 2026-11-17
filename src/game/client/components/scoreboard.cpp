@@ -972,6 +972,10 @@ void CScoreboard::RenderFooter(CUIRect Footer)
 		// 封面纹理由媒体组件统一预烘成圆形透明贴图（和 HUD 灵动岛同一张），
 		// 计分板这里只负责摆位，不重新裁圆、也不新传纹理。
 		const bool HasCover = MediaState.m_AlbumArtCircular.IsValid() && !MediaState.m_AlbumArtCircular.IsNullTexture();
+		// 唱片式自转：只随播放状态推进，暂停定格在当前角度；动效等级 0 不转。
+		// time_get() 先折成 double 再转 float 秒，避免大整数在 float 里丢低位。
+		const float CoverSpin = m_MediaCoverSpin.Advance(MediaState.m_Playing, g_Config.m_QmUiMotionLevel > 0,
+			static_cast<float>(static_cast<double>(time_get()) / static_cast<double>(time_freq())));
 		// 文字宽度之外再加 4px 舍入余量：TextWidth 与实际排版有零点几像素差，
 		// 没有余量时右端字符会被 MaxWidth 挤到贴边。
 		const float MediaWidth = SCOREBOARD_MEDIA_COVER_PAD_X + SCOREBOARD_MEDIA_COVER_SIZE + SCOREBOARD_MEDIA_COVER_GAP +
@@ -988,10 +992,13 @@ void CScoreboard::RenderFooter(CUIRect Footer)
 			{
 				Graphics()->TextureSet(MediaState.m_AlbumArtCircular);
 				Graphics()->QuadsBegin();
+				// 圆形贴图绕自己的中心转：轮廓不变，只有图案在转，所以不需要额外裁切。
+				Graphics()->QuadsSetRotation(CoverSpin);
 				Graphics()->SetColor(1.0f, 1.0f, 1.0f, ContentAlpha);
 				const IGraphics::CQuadItem CoverQuad(Cover.x, Cover.y, Cover.w, Cover.h);
 				Graphics()->QuadsDrawTL(&CoverQuad, 1);
 				Graphics()->QuadsEnd();
+				Graphics()->QuadsSetRotation(0.0f);
 				Graphics()->TextureClear();
 			}
 			else

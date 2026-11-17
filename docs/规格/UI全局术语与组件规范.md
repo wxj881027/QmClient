@@ -353,6 +353,12 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 - 唯一实现：`CUiScopedGaussianBlur`（`ui.h` / `ui.cpp`）→ `CUi::BeginGaussianBlurScope`；`CUIRect::Draw`（`ui_rect.cpp`）在 `Color.a ∈ (0,1)` 时调 `DrawRectBackdrop` → `RenderGaussianBlur`。HUD 组件只负责开作用域 + 画半透明面板，不手写模糊调用。
 - 禁止的反面写法：组件里直接 `Ui()->RenderGaussianBlur(...)` 再配 `Graphics()->DrawRect(...)`（绕过统一表面链，`DrawRectBackdrop` 不会因为作用域而触发）；把「背景不透明度配置」当模糊强度传进 `RenderGaussianBlur`（透明度应由 `Color.a` 决定，模糊层保持全强度）；游戏内组件依赖菜单壳层的作用域（它根本不存在）。TClient 状态栏曾三条全占。
 
+### 3.12e 媒体封面（唱片自转 / cover spin）
+
+- 定义：圆形专辑封面在**播放时**匀速自转、**暂停时定格在当前角度**（不回正、不跳变）；动效等级 0 不转。HUD 媒体岛与计分板媒体条是同一套外观，必须是同一套转速。
+- 唯一实现：`SQmMediaCoverSpin` + `QM_MEDIA_COVER_SPIN_PERIOD_SECONDS`（`components/qmclient/media_cover_spin.h`）。时间以秒传入（调用方用 `time_get()/time_freq()` 折算成 double 再转 float），单帧增量上限 0.1s——界面隐藏后第一帧不会突然补上几十度。绘制用 `Graphics()->QuadsSetRotation(angle)` 绕 quad 中心旋转，画完立即归零。
+- 禁止的反面写法：用帧数递增角度（帧率一变转速就变）；暂停时把角度归零（复播会从 0 重新起步）；给无封面的占位音符也加旋转；HUD 与计分板各写一份速率（两处封面会明显不同步）。
+
 ### 3.13 下拉框（Dropdown）
 
 - 定义：触发器 + 浮层列表，浮层底色属于「弹层」层，触发器底色属于「控件」层，搜索与分页由组件内部完成。

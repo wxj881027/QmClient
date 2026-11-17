@@ -1032,7 +1032,9 @@ namespace
 		}
 	}
 
-	void DrawTexturedQuad(IGraphics *pGraphics, IGraphics::CTextureHandle Texture, vec2 Center, float Radius, float Alpha = 1.0f)
+	// Rotation 为弧度，绕四边形中心旋转（QuadsSetRotation 的中心就是 quad 中心）；
+	// 封面是圆形贴图，转起来只是图案在转，轮廓不变。
+	void DrawTexturedQuad(IGraphics *pGraphics, IGraphics::CTextureHandle Texture, vec2 Center, float Radius, float Alpha = 1.0f, float Rotation = 0.0f)
 	{
 		if(pGraphics == nullptr || !Texture.IsValid() || Radius <= 0.0f)
 			return;
@@ -1040,10 +1042,12 @@ namespace
 		pGraphics->WrapClamp();
 		pGraphics->TextureSet(Texture);
 		pGraphics->QuadsBegin();
+		pGraphics->QuadsSetRotation(Rotation);
 		pGraphics->SetColor(1.0f, 1.0f, 1.0f, Alpha);
 		const IGraphics::CQuadItem CoverQuad(Center.x - Radius, Center.y - Radius, Radius * 2.0f, Radius * 2.0f);
 		pGraphics->QuadsDrawTL(&CoverQuad, 1);
 		pGraphics->QuadsEnd();
+		pGraphics->QuadsSetRotation(0.0f);
 		pGraphics->WrapNormal();
 		pGraphics->TextureClear();
 	}
@@ -3872,6 +3876,11 @@ void CHud::RenderMediaIsland()
 		AnimState.m_WaveformSettleStartTick = 0;
 		AnimState.m_WaveformSettleSampleTime = 0.0f;
 	}
+	// 封面自转：播放时匀速转（QM_MEDIA_COVER_SPIN_PERIOD_SECONDS 一圈），暂停就定格；
+	// 动效等级 0 不转。每帧只推进一次，进出场交叉淡化的两张封面共用同一个角度。
+	// time_get() 是大整数，先折成 double 再转 float 秒，避免低 20 位被浮点吃掉。
+	const float CoverSpinAngle = AnimState.m_CoverSpin.Advance(HasMediaState && MediaState.m_Playing, g_Config.m_QmUiMotionLevel > 0,
+		static_cast<float>(static_cast<double>(Now) / static_cast<double>(time_freq())));
 	SSwapCountdownList SwapList;
 	BuildSwapCountdownList(*GameClient(), *Client(), SwapList);
 	std::array<const SSwapCountdownInfo *, NUM_DUMMIES * MAX_CLIENTS> aIncomingSwapInfos{};
@@ -4912,7 +4921,7 @@ void CHud::RenderMediaIsland()
 		const float CoverDrawRadius = CoverRadius * std::max(0.01f, Scale);
 		if(Track.m_HasCover && Track.m_Cover.IsValid())
 		{
-			DrawTexturedQuad(Graphics(), Track.m_Cover, CoverCenter, CoverDrawRadius, Alpha);
+			DrawTexturedQuad(Graphics(), Track.m_Cover, CoverCenter, CoverDrawRadius, Alpha, CoverSpinAngle);
 			return;
 		}
 
