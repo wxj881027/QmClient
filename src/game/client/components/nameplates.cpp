@@ -37,6 +37,7 @@
 #include <cstdint>
 #include <limits>
 #include <memory>
+#include <string>
 #include <vector>
 
 // 录制画面跟随用户真实设置：禅模式等临时接管只改写运行时值，录制时读回接管前的真实值
@@ -863,10 +864,18 @@ public:
 class CNamePlatePartTitle : public CNamePlatePartText
 {
 	char m_aText[64] = "";
+	std::string m_DisplayText;
 	CUIRect m_TextVisualBounds{};
 	float m_FontSize = -INFINITY;
 	float m_Alpha = 1.0f;
 	SQmTitleAppearance m_Appearance;
+	int m_WaveFrame = -1;
+
+	static float LabelFontSize(const CNamePlateData &Data)
+	{
+		const float Height = QmNameplateTitleHeight(Data.m_FontSize, g_Config.m_QmNameplateTitleScale);
+		return Data.m_TitleAppearance.m_TextStyle ? Height : QmTitleBadgeLabelFontSize(Height);
+	}
 
 protected:
 	bool UpdateNeeded(CGameClient &This, const CNamePlateData &Data) override
@@ -875,19 +884,38 @@ protected:
 			    Data.m_aQmTitle[0] != '\0';
 		m_HiddenForPrivacy = Data.m_HideIdentity;
 		m_Alpha = Data.m_Color.a;
+		if(!m_Visible)
+			return false;
+		const bool Wave = Data.m_TitleAppearance.m_TextStyle && g_Config.m_QmTitleTextWave && !m_HiddenForPrivacy && m_Alpha > 0.0f && Data.m_TitleAppearance.m_Opacity > 0;
+		const int WaveFrame = Wave ? static_cast<int>(This.m_QmClient.TitleAnimationTime() * QM_TITLE_TEXT_WAVE_FPS) : -1;
+		const bool TextChanged = str_comp(m_aText, Data.m_aQmTitle) != 0 || m_Appearance.m_TextStyle != Data.m_TitleAppearance.m_TextStyle;
+		if(TextChanged)
+		{
+			str_copy(m_aText, Data.m_aQmTitle);
+			m_DisplayText = QmTitleDisplayText(m_aText, Data.m_TitleAppearance);
+		}
+		const bool SameFontSize = m_FontSize == LabelFontSize(Data);
+		const bool Changed = TextChanged || !SameFontSize || m_WaveFrame != WaveFrame;
 		m_Appearance = Data.m_TitleAppearance;
-		return m_Visible && (m_FontSize != QmTitleBadgeLabelFontSize(QmNameplateTitleHeight(Data.m_FontSize, g_Config.m_QmNameplateTitleScale)) || str_comp(m_aText, Data.m_aQmTitle) != 0);
+		m_WaveFrame = WaveFrame;
+		m_ReuseTextContainer = m_TextContainerIndex.Valid() && SameFontSize;
+		return Changed;
+	}
+	float ExtraVerticalPadding() const override
+	{
+		return m_Appearance.m_TextStyle && g_Config.m_QmTitleTextWave ? m_FontSize * QM_TITLE_TEXT_WAVE_AMPLITUDE : 0.0f;
 	}
 	void UpdateText(CGameClient &This, const CNamePlateData &Data) override
 	{
-		str_copy(m_aText, Data.m_aQmTitle);
-		m_FontSize = QmTitleBadgeLabelFontSize(QmNameplateTitleHeight(Data.m_FontSize, g_Config.m_QmNameplateTitleScale));
+		m_FontSize = LabelFontSize(Data);
 		CTextCursor Cursor;
 		Cursor.m_FontSize = m_FontSize;
-		Cursor.m_CalculateVisualBoundingBox = true;
+		Cursor.m_CalculateVisualBoundingBox = m_Appearance.m_TextStyle == 0;
+		if(m_Appearance.m_TextStyle)
+			QmPrepareTitleTextCursor(Cursor, m_DisplayText.c_str(), m_Appearance.m_TextStyle, m_WaveFrame >= 0, m_WaveFrame / QM_TITLE_TEXT_WAVE_FPS);
 		const ColorRGBA PreviousColor = This.TextRender()->GetTextColor();
 		This.TextRender()->TextColor(ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
-		This.TextRender()->CreateOrAppendTextContainer(m_TextContainerIndex, &Cursor, QmTitleBadgeText(m_aText).c_str());
+		QmUpdateNameplateTextContainer(This.TextRender(), m_TextContainerIndex, &Cursor, m_DisplayText.c_str());
 		This.TextRender()->TextColor(PreviousColor);
 		m_TextVisualBounds = QmTitleBadgeVisualBounds(Cursor);
 	}
@@ -899,13 +927,20 @@ public:
 	void Update(CGameClient &This, const CNamePlateData &Data) override
 	{
 		CNamePlatePartText::Update(This, Data);
-		if(m_Visible)
+		if(m_Visible && m_Appearance.m_TextStyle == 0)
 			m_Size = QmTitleBadgeSize(m_RenderSize.x, m_FontSize);
 	}
 	void Render(CGameClient &This, vec2 Pos) const override
 	{
 		if(!m_TextContainerIndex.Valid())
 			return;
+		if(m_Appearance.m_TextStyle)
+		{
+			const float Alpha = m_Alpha * m_Appearance.m_Opacity / 100.0f;
+			This.TextRender()->RenderTextContainer(m_TextContainerIndex, ui_token::color::NEUTRAL_WHITE.WithAlpha(Alpha),
+				s_OutlineColor.WithMultipliedAlpha(Alpha), Pos.x - m_RenderSize.x * 0.5f, Pos.y - m_RenderSize.y * 0.5f);
+			return;
+		}
 		const CUIRect Rect{Pos.x - m_Size.x * 0.5f, Pos.y - m_Size.y * 0.5f, m_Size.x, m_Size.y};
 		This.m_QmClient.TitleBadge().RenderSurface(This.Graphics(), Rect, m_Appearance, m_Alpha);
 		const vec2 TextPosition = QmTitleBadgeTextPosition(Rect, m_TextVisualBounds);

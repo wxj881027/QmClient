@@ -11,11 +11,17 @@
 
 #include <cstdint>
 
-// 聊天测量和绘制共用整块胶囊的推进，保持与普通行相同的高度。
-inline CUIRect QmLayoutTitleBadge(CTextCursor &Cursor, float LabelWidth)
+inline constexpr float QM_TITLE_TEXT_WAVE_AMPLITUDE = 0.08f;
+inline constexpr float QM_TITLE_TEXT_WAVE_FPS = 30.0f;
+
+std::string QmTitleDisplayText(const char *pTitle, const SQmTitleAppearance &Appearance);
+void QmPrepareTitleTextCursor(CTextCursor &Cursor, const char *pDisplayText, int TextStyle, bool Wave, float Time);
+
+// 聊天前缀作为一个整体换行。文字款使用正文字号和字宽，胶囊还要给图标和内边距留位。
+inline CUIRect QmLayoutTitleBadge(CTextCursor &Cursor, float LabelWidth, bool TextOnly = false)
 {
 	const float LineFontSize = Cursor.m_AlignedFontSize > 0.0f ? Cursor.m_AlignedFontSize : Cursor.m_FontSize;
-	vec2 Size = QmTitleBadgeSize(LabelWidth, QmTitleBadgeLabelFontSize(Cursor.m_FontSize));
+	vec2 Size = TextOnly ? vec2(LabelWidth, Cursor.m_FontSize) : QmTitleBadgeSize(LabelWidth, QmTitleBadgeLabelFontSize(Cursor.m_FontSize));
 	float Advance = Size.x + Cursor.m_FontSize * 0.15f;
 	if(Cursor.m_LineWidth > 0.0f)
 	{
@@ -60,25 +66,47 @@ struct SQmTitleBadgePlacement
 	SQmTitleAppearance m_Appearance;
 	STextContainerIndex m_TextContainerIndex;
 	CUIRect m_TextVisualBounds{};
+	std::string m_DisplayText;
+	int m_LastWaveFrame = -1;
 
 	// 用实际生成的独立容器取得边界，聊天正文的基线和像素取整不再改变胶囊内的对齐。
-	void PrepareText(ITextRender *pTextRender, const char *pText)
+	void PrepareText(ITextRender *pTextRender, const char *pText, bool Wave = false, float Time = 0.0f)
 	{
 		CTextCursor Cursor;
-		Cursor.m_FontSize = QmTitleBadgeLabelFontSize(m_Rect.h);
-		Cursor.m_CalculateVisualBoundingBox = true;
+		const bool TextOnly = m_Appearance.m_TextStyle != 0;
+		Cursor.m_FontSize = TextOnly ? m_Rect.h : QmTitleBadgeLabelFontSize(m_Rect.h);
+		Cursor.m_CalculateVisualBoundingBox = !TextOnly;
+		if(TextOnly)
+			QmPrepareTitleTextCursor(Cursor, pText, m_Appearance.m_TextStyle, Wave, Time);
 		const unsigned PreviousFlags = pTextRender->GetRenderFlags();
 		const ColorRGBA PreviousColor = pTextRender->GetTextColor();
 		pTextRender->SetRenderFlags((PreviousFlags | TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT) & ~TEXT_RENDER_FLAG_NO_AUTOMATIC_QUAD_UPLOAD);
 		pTextRender->TextColor(ui_token::color::NEUTRAL_WHITE);
 		pTextRender->RecreateTextContainerSoft(m_TextContainerIndex, &Cursor, pText);
-		m_TextVisualBounds = QmTitleBadgeVisualBounds(Cursor);
+		if(!TextOnly)
+			m_TextVisualBounds = QmTitleBadgeVisualBounds(Cursor);
 		pTextRender->TextColor(PreviousColor);
 		pTextRender->SetRenderFlags(PreviousFlags);
 	}
 
+	void UpdateTextStyle(ITextRender *pTextRender, bool Wave, float Time)
+	{
+		const int Frame = Wave ? static_cast<int>(Time * QM_TITLE_TEXT_WAVE_FPS) : -1;
+		if(m_TextContainerIndex.Valid() && Frame == m_LastWaveFrame)
+			return;
+		m_LastWaveFrame = Frame;
+		PrepareText(pTextRender, m_DisplayText.c_str(), Wave, Frame / QM_TITLE_TEXT_WAVE_FPS);
+	}
+
 	void RenderText(ITextRender *pTextRender, float Alpha, vec2 Offset) const
 	{
+		if(m_Appearance.m_TextStyle != 0)
+		{
+			const float TextAlpha = Alpha * m_Appearance.m_Opacity / 100.0f;
+			pTextRender->RenderTextContainer(m_TextContainerIndex, ui_token::color::NEUTRAL_WHITE.WithMultipliedAlpha(TextAlpha),
+				pTextRender->DefaultTextOutlineColor().WithMultipliedAlpha(TextAlpha), m_Rect.x + Offset.x, m_Rect.y + Offset.y);
+			return;
+		}
 		const vec2 Position = QmTitleBadgeTextPosition(m_Rect, m_TextVisualBounds) + Offset;
 		pTextRender->RenderTextContainer(m_TextContainerIndex, QmTitleBadgePalette(m_Appearance, Alpha).m_Text,
 			ui_token::color::COLOR_TRANSPARENT, Position.x, Position.y);

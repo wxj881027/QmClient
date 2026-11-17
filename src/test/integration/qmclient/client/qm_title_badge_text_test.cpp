@@ -110,3 +110,42 @@ TEST_F(QmTitleBadgeText, RebuildingAndDeletingReleasesTheOwnedTextResources)
 	Badge.DeleteText(pText);
 	EXPECT_FALSE(Badge.m_TextContainerIndex.Valid());
 }
+
+TEST_F(QmTitleBadgeText, SwitchingWaveOffUploadsTheStaticTitleOnce)
+{
+	auto *pText = m_Ui.TextRender();
+	SQmTitleBadgePlacement Title;
+	Title.m_Rect = {15.0f, 20.0f, 65.0f, 12.0f};
+	Title.m_Appearance.m_TextStyle = 1;
+	Title.m_DisplayText = "[青蓝]";
+	Title.UpdateTextStyle(pText, true, 1.0f);
+	ASSERT_TRUE(Title.m_TextContainerIndex.Valid());
+
+	Graphics().ResetCounters();
+	Title.UpdateTextStyle(pText, false, 1.2f);
+	EXPECT_GT(Graphics().m_BufferBytes, 0u);
+	Graphics().ResetCounters();
+	Title.UpdateTextStyle(pText, false, 2.0f);
+	EXPECT_EQ(Graphics().m_BufferBytes, 0u);
+	Title.DeleteText(pText);
+}
+
+TEST_F(QmTitleBadgeText, PlainTitleFadesAtTheStartOfTheChatPrefix)
+{
+	auto *pText = m_Ui.TextRender();
+	SQmTitleBadgePlacement Title;
+	Title.m_Rect = {17.5f, 23.0f, 62.0f, 12.0f};
+	Title.m_Appearance.m_TextStyle = 2;
+	Title.m_Appearance.m_Opacity = 40;
+	Title.m_DisplayText = "[A猫]";
+	Title.UpdateTextStyle(pText, false, 0.0f);
+	Graphics().m_vTextSubmissions.clear();
+	Title.RenderText(pText, 0.5f, vec2(1.25f, 2.5f));
+	ASSERT_EQ(Graphics().m_vTextSubmissions.size(), 1u);
+	const auto &Submitted = Graphics().m_vTextSubmissions.front();
+	EXPECT_FLOAT_EQ(-Submitted.m_Screen.x, 18.75f);
+	EXPECT_FLOAT_EQ(-Submitted.m_Screen.y, 25.5f);
+	EXPECT_FLOAT_EQ(Submitted.m_TextColor.a, 0.2f);
+	EXPECT_FLOAT_EQ(Submitted.m_OutlineColor.a, 0.2f * pText->DefaultTextOutlineColor().a);
+	Title.DeleteText(pText);
+}

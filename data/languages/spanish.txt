@@ -2171,9 +2171,6 @@ Change values in the settings card and watch this preview update.
 Change zoom
 == Cambiar zoom
 
-Changes apply at once, so check "Title preview" to compare styles; press "Save" on the "Sponsor title" card to share one.
-== Los cambios se aplican al instante, compara estilos en la vista previa del título; para compartirlo, pulsa Guardar en la tarjeta Título de patrocinador.
-
 Changes how the vote menu looks and how you interact with running votes.
 == Cambia el aspecto del menú de votaciones y cómo interactúas con las votaciones en curso.
 
@@ -2383,6 +2380,9 @@ Choose a preset, or Custom to enter width and height. Follow window uses the cur
 
 Choose a screen position and font size, then check the preview card for wrapping.
 == Elige una posición en pantalla y un tamaño de fuente, y revisa en la tarjeta de vista previa si el texto se corta.
+
+Choose a sponsor title style for your nameplate and chat messages.
+== Elige el estilo de tu título de patrocinador para la placa de nombre y los mensajes del chat.
 
 Choose a target, then set its color; entity lasers can follow team colors.
 == Elige un objetivo y define su color; los láseres de entidades pueden seguir los colores de equipo.
@@ -10265,6 +10265,9 @@ Pick a shape, then tune glow and animation speed.
 Pick a slot, type the command and its label, then hold the wheel key in game to test.
 == Elige una casilla, escribe el comando y su etiqueta, y en el juego mantén pulsada la tecla de la rueda para probar.
 
+Pick a text style or a moon or sun badge, check the preview, then press "Save" to share the style with other players.
+== Elige un estilo de texto o una insignia de luna o sol. Revisa la vista previa y pulsa «Guardar» para que los demás jugadores vean el estilo elegido.
+
 Pick result: %s
 == Resultado de la selección: %s
 
@@ -13127,6 +13130,9 @@ Show a ghost of your best time after crossing the start line
 Show a MomentCap .poses file in game (no export)
 == Muestra un archivo de MomentCap .poses en el juego (sin exportar)
 
+Show a per-character wave on text titles locally
+== Mostrar en mi pantalla el movimiento ondulado de las letras de los títulos de texto
+
 Show a small view of the dummy
 == Mostrar una vista pequeña del Dummy
 
@@ -13795,6 +13801,9 @@ Show pause/play indicator when changing
 
 Show pending crash reports in a window at startup (0 = keep them on disk and log a line instead)
 == Mostrar en una ventana los informes de bloqueo pendientes al iniciar (0 = solo conservar el informe y anotarlo en el registro)
+
+Show per-character title waves locally
+== Mostrar la onda de los títulos solo en mi pantalla
 
 Show performance graphs.
 == Mostrar gráficos de rendimiento.
@@ -14672,6 +14681,9 @@ Sponsor support
 Sponsor title
 == Título de patrocinador
 
+Sponsor title appearance: 0 = capsule, 1-5 = text palette
+== Aspecto del título de patrocinador: 0 = cápsula, 1–5 = paleta del texto
+
 Sponsor title badge opacity (0-100)
 == Opacidad de la insignia del título de patrocinador (0-100)
 
@@ -15443,6 +15455,21 @@ Testing translation...
 Text
 == Texto
 
+Text 1
+== Texto 1
+
+Text 2
+== Texto 2
+
+Text 3
+== Texto 3
+
+Text 4
+== Texto 4
+
+Text 5
+== Texto 5
+
 Text alpha
 == Alpha del texto
 
@@ -15523,6 +15550,9 @@ The message is sent on every water death, so keep it short; leaving "Chat messag
 
 The name "default" is reserved.
 == El nombre "default" está reservado.
+
+The per-character wave setting affects text titles on your screen only.
+== El efecto de onda de las letras solo se aplica a los títulos de texto en tu pantalla.
 
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 == El jugador al que susurrabas aún no se ha reconectado o se ha ido. Espera o susurra a otra persona
@@ -15889,6 +15919,9 @@ Title server does not support badge appearance yet
 
 Title server does not support chat styles yet
 == El servidor de títulos aún no admite estilos de chat
+
+Title server does not support text titles yet
+== El servidor de títulos aún no admite títulos de texto
 
 Title server unavailable; retry
 == Servidor de títulos no disponible; reintenta
@@ -16345,9 +16378,6 @@ Turn on "Show important server prompts as notifications" or "Route Echo messages
 
 Turn on "Show own coordinates" or "Show other players' coordinates", then choose "Show X" and "Show Y".
 == Activa mostrar mis coordenadas o mostrar coordenadas de otros jugadores y elige mostrar X y mostrar Y.
-
-Turn on "Show titles on nameplates", pick a "Title style", then adjust "Title motion" and "Wave amount"; "Advanced mode" adds color and glow.
-== Activa Mostrar títulos en las placas de nombre, elige un estilo del título y ajusta la animación y la amplitud de onda; el modo avanzado añade color y brillo.
 
 Turn on "Skin outline for self and dummy" or "Skin outline for other players", then tune width and opacity; "Cycle custom Tee hue" animates custom colors.
 == Activa Contorno de skin propio y del dummy o Contorno de skin de otros jugadores y ajusta grosor y opacidad; el ciclo de tono del Tee anima los colores personalizados.
@@ -17404,9 +17434,6 @@ Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per
 
 When TClient rainbow Tee is enabled, this feature has no effect.
 == Cuando el Tee arcoíris de TClient está activado, esta función no tiene efecto.
-
-Where your title appears and how it looks: nameplate, style, motion, colors and glow.
-== Dónde aparece tu título y cómo se ve: placa de nombre, estilo, animación, colores y brillo.
 
 Whether a switch is deactivated by default (otherwise activated)
 == Si un interruptor está desactivado por defecto (de lo contrario activado)

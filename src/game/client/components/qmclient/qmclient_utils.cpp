@@ -386,16 +386,24 @@ bool IsValidQmTitle(const char *pTitle)
 	return true;
 }
 
-bool ParseQmTitleAppearance(const json_value *pValue, SQmTitleAppearance &Out)
+bool ParseQmTitleAppearance(const json_value *pValue, SQmTitleAppearance &Out, bool *pTextStyleSupported)
 {
 	Out = {};
+	if(pTextStyleSupported)
+		*pTextStyleSupported = false;
 	const json_value *pStyle = JsonObjectField(pValue, "style");
+	const json_value *pTextStyle = JsonObjectField(pValue, "text_style");
+	int64_t TextStyle = 0;
 	int64_t Color, Opacity;
 	if(pStyle->type != json_string ||
 		(str_comp(pStyle->u.string.ptr, "moon") != 0 && str_comp(pStyle->u.string.ptr, "sun") != 0) ||
 		!JsonReadInteger(JsonObjectField(pValue, "color"), Color) || Color < 0 || Color > 0xffffff ||
-		!JsonReadInteger(JsonObjectField(pValue, "opacity"), Opacity) || Opacity < 0 || Opacity > 100)
+		!JsonReadInteger(JsonObjectField(pValue, "opacity"), Opacity) || Opacity < 0 || Opacity > 100 ||
+		(pTextStyle != &json_value_none && (!JsonReadInteger(pTextStyle, TextStyle) || TextStyle < 0 || TextStyle > 5)))
 		return false;
+	if(pTextStyleSupported)
+		*pTextStyleSupported = pTextStyle != &json_value_none;
+	Out.m_TextStyle = static_cast<int>(TextStyle);
 	Out.m_Style = str_comp(pStyle->u.string.ptr, "sun") == 0 ? EQmTitleBadgeStyle::SUN : EQmTitleBadgeStyle::MOON;
 	Out.m_Color = static_cast<unsigned>(Color);
 	Out.m_Opacity = static_cast<int>(Opacity);

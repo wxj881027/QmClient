@@ -3716,54 +3716,6 @@ turkish = "Her değişiklikten sonra Kaydet'e bas: unvan ve sohbet stili hesabı
 polish = "Po każdej zmianie naciśnij Zapisz: tytuł i styl czatu są przechowywane na twoim koncie, a Odśwież wczytuje je ponownie."
 
 [[message]]
-key = "Where your title appears and how it looks: nameplate, style, motion, colors and glow."
-[message.translations]
-simplified_chinese = "你的头衔出现在哪里、长什么样：名牌、风格、动画、颜色和光晕。"
-traditional_chinese = "你的頭銜出現在哪裡、長什麼樣：名牌、風格、動畫、顏色和光暈。"
-japanese = "称号をどこに出すか、どう見せるか。ネームプレート、スタイル、アニメーション、色、発光です。"
-korean = "칭호가 어디에 나타나고 어떻게 보일지를 정합니다. 이름표, 스타일, 애니메이션, 색상, 발광입니다."
-russian = "Где показывается титул и как он выглядит: табличка с именем, стиль, анимация, цвета и свечение."
-german = "Wo dein Titel erscheint und wie er aussieht: Namensschild, Stil, Animation, Farben und Leuchten."
-spanish = "Dónde aparece tu título y cómo se ve: placa de nombre, estilo, animación, colores y brillo."
-french = "Où apparaît ton titre et à quoi il ressemble : plaque de nom, style, animation, couleurs et lueur."
-brazilian_portuguese = "Onde seu título aparece e como ele fica: placa de nome, estilo, animação, cores e brilho."
-portuguese = "Onde aparece o teu título e como fica: placa de nome, estilo, animação, cores e brilho."
-turkish = "Unvanının nerede görüneceği ve nasıl duracağı: isim etiketi, stil, animasyon, renkler ve parıltı."
-polish = "Gdzie pojawia się twój tytuł i jak wygląda: plakietka z nazwą, styl, animacja, kolory i poświata."
-
-[[message]]
-key = "Turn on \"Show titles on nameplates\", pick a \"Title style\", then adjust \"Title motion\" and \"Wave amount\"; \"Advanced mode\" adds color and glow."
-[message.translations]
-simplified_chinese = "打开显示名牌头衔，选一个头衔风格，再调头衔动画和波浪幅度；高级模式里还能加颜色和光晕。"
-traditional_chinese = "開啟顯示名牌頭銜，選一個頭銜風格，再調頭銜動畫和波浪幅度；進階模式裡還能加顏色和光暈。"
-japanese = "ネームプレートに称号を表示をオンにし、称号スタイルを選んで、称号アニメーションと波の振幅を調整します。詳細モードでは色と発光も加えられます。"
-korean = "이름표에 칭호 표시를 켜고 칭호 스타일을 고른 뒤 칭호 애니메이션과 파도 크기를 조정하세요. 고급 모드에서는 색상과 발광을 더할 수 있습니다."
-russian = "Включите показывать титулы на табличках имён, выберите стиль титула, затем настройте анимацию титула и амплитуду волны; расширенный режим добавляет цвет и свечение."
-german = "Schalte Titel auf Namensschildern anzeigen ein, wähle einen Titelstil und stelle dann Titelanimation und Wellenhöhe ein; der erweiterte Modus ergänzt Farbe und Leuchten."
-spanish = "Activa Mostrar títulos en las placas de nombre, elige un estilo del título y ajusta la animación y la amplitud de onda; el modo avanzado añade color y brillo."
-french = "Active Afficher les titres sur les plaques de nom, choisis un style du titre, puis règle l'animation et l'amplitude de l'onde ; le mode avancé ajoute couleur et lueur."
-brazilian_portuguese = "Ative Mostrar títulos nas placas de nome, escolha um estilo do título e ajuste a animação do título e a amplitude da onda; o modo avançado adiciona cor e brilho."
-portuguese = "Ativa Mostrar títulos nas placas de nome, escolhe um estilo do título e ajusta a animação do título e a amplitude da onda; o modo avançado acrescenta cor e brilho."
-turkish = "İsim etiketlerinde unvanları göster seçeneğini aç, bir unvan stili seç, ardından unvan animasyonu ve dalga miktarını ayarla; gelişmiş mod renk ve parıltı ekler."
-polish = "Włącz Pokaż tytuły na plakietkach z nazwami, wybierz Styl tytułu, a potem ustaw Animację tytułu i Amplitudę fali; tryb zaawansowany dodaje kolor i poświatę."
-
-[[message]]
-key = "Changes apply at once, so check \"Title preview\" to compare styles; press \"Save\" on the \"Sponsor title\" card to share one."
-[message.translations]
-simplified_chinese = "改动会立即生效，可以用头衔成品预览对比风格；想让别人也看到，就到赞助头衔卡里点保存。"
-traditional_chinese = "改動會立即生效，可以用頭銜成品預覽比較風格；想讓別人也看到，就到贊助頭銜卡裡點保存。"
-japanese = "変更はすぐ反映されるので、タイトルの仕上がりプレビューで見比べてください。他の人にも見せるには支援者の称号カードで保存を押します。"
-korean = "변경은 바로 적용되니 칭호 완성 미리보기로 스타일을 비교해 보세요. 다른 사람에게도 보이게 하려면 후원자 칭호 카드에서 저장을 누르세요."
-russian = "Изменения применяются сразу, сравнивайте стили в предпросмотре титула; чтобы титул увидели другие, нажмите сохранить на карточке титула спонсора."
-german = "Änderungen wirken sofort; vergleiche Stile in der Titelvorschau und drücke zum Teilen Speichern auf der Karte Unterstützertitel."
-spanish = "Los cambios se aplican al instante, compara estilos en la vista previa del título; para compartirlo, pulsa Guardar en la tarjeta Título de patrocinador."
-french = "Les changements s'appliquent aussitôt : compare les styles dans l'aperçu du titre et appuie sur Sauvegarder sur la carte Titre de soutien pour le partager."
-brazilian_portuguese = "As mudanças valem na hora, compare estilos na prévia do título; para compartilhar, clique em Salvar no cartão Título de apoiador."
-portuguese = "As mudanças aplicam-se logo, compara estilos na pré-visualização do título; para partilhar, clica em Guardar no cartão Título de apoiante."
-turkish = "Değişiklikler anında uygulanır; unvan önizlemesinde stilleri karşılaştır. Paylaşmak için Destekçi unvanı kartında Kaydet'e bas."
-polish = "Zmiany działają od razu, więc porównuj style w Podglądzie tytułu; aby się nim podzielić, naciśnij Zapisz na karcie Tytuł wspierającego."
-
-[[message]]
 key = "View details"
 [message.translations]
 simplified_chinese = "查看说明"
@@ -6930,3 +6882,51 @@ brazilian_portuguese = "Ative a barra de progresso do mapa e escolha onde exibi-
 portuguese = "Ativa a barra de progresso do mapa e escolhe onde a mostrar: separada, nas estatísticas do jogador ou na Ilha Dinâmica. Para a mostrar nas estatísticas, ativa também o HUD de estatísticas do jogador."
 turkish = "Harita ilerleme çubuğunu açın ve konumunu seçin: ayrı göster, oyuncu istatistikleri veya Dinamik Ada. Oyuncu istatistiklerini seçerseniz oyuncu istatistikleri HUD’unu da açın."
 polish = "Włącz pasek postępu mapy i wybierz jego położenie: osobno, w statystykach gracza lub na Dynamicznej Wyspie. Dla statystyk włącz także HUD statystyk gracza."
+
+[[message]]
+key = "Choose a sponsor title style for your nameplate and chat messages."
+[message.translations]
+simplified_chinese = "选择名牌和聊天中显示的赞助头衔样式。"
+traditional_chinese = "選擇名牌和聊天中顯示的贊助頭銜樣式。"
+japanese = "ネームプレートとチャットに表示する支援者称号のスタイルを選びます。"
+korean = "이름표와 채팅에 표시할 후원자 칭호 스타일을 선택하세요."
+russian = "Выберите стиль титула спонсора для таблички с именем и сообщений в чате."
+german = "Wähle einen Stil für deinen Unterstützertitel auf dem Namensschild und in Chatnachrichten."
+spanish = "Elige el estilo de tu título de patrocinador para la placa de nombre y los mensajes del chat."
+french = "Choisis le style de ton titre de soutien sur ta plaque de nom et dans tes messages de chat."
+brazilian_portuguese = "Escolha o estilo do título de apoiador que aparece na sua placa de nome e nas mensagens do chat."
+portuguese = "Escolhe o estilo do título de apoiante apresentado na tua placa de nome e nas mensagens de conversa."
+turkish = "İsim etiketinde ve sohbet iletilerinde görünecek destekçi unvanının stilini seç."
+polish = "Wybierz styl tytułu wspierającego widocznego na tabliczce z nazwą i w wiadomościach na czacie."
+
+[[message]]
+key = "Pick a text style or a moon or sun badge, check the preview, then press \"Save\" to share the style with other players."
+[message.translations]
+simplified_chinese = "选择文字款、月亮胶囊或太阳胶囊。查看预览后点「保存」，其他玩家就能看到这款头衔。"
+traditional_chinese = "選擇文字款、月亮膠囊或太陽膠囊。查看預覽後按「保存」，其他玩家就能看到這款頭銜。"
+japanese = "テキストのスタイルか月・太陽のバッジを選び、プレビューを確認して「保存」を押すと、他のプレイヤーにもそのスタイルが表示されます。"
+korean = "텍스트 스타일이나 달 또는 해 배지를 선택하고 미리보기를 확인하세요. “저장”을 누르면 다른 플레이어에게도 선택한 스타일이 표시됩니다."
+russian = "Выберите стиль текста или значок с луной или солнцем. Посмотрите образец и нажмите «Сохранить», чтобы другие игроки увидели выбранный стиль."
+german = "Wähle einen Textstil oder ein Mond- oder Sonnenabzeichen. Prüfe die Vorschau und klicke auf „Speichern“, damit andere Spieler den gewählten Stil sehen."
+spanish = "Elige un estilo de texto o una insignia de luna o sol. Revisa la vista previa y pulsa «Guardar» para que los demás jugadores vean el estilo elegido."
+french = "Choisis un style de texte ou un badge en forme de lune ou de soleil. Vérifie l’aperçu, puis clique sur « Sauvegarder » pour que les autres joueurs voient ce style."
+brazilian_portuguese = "Escolha um estilo de texto ou um emblema de lua ou sol. Confira a prévia e clique em “Salvar” para os outros jogadores verem o estilo escolhido."
+portuguese = "Escolhe um estilo de texto ou um emblema de lua ou sol. Vê a pré-visualização e prime «Guardar» para que os outros jogadores vejam o estilo escolhido."
+turkish = "Bir metin stili ya da ay veya güneş rozeti seç. Önizlemeyi kontrol edip “Kaydet” düğmesine basarak seçtiğin stili diğer oyunculara göster."
+polish = "Wybierz styl tekstu albo odznakę z księżycem lub słońcem. Sprawdź podgląd i kliknij „Zapisz”, aby inni gracze zobaczyli wybrany styl."
+
+[[message]]
+key = "The per-character wave setting affects text titles on your screen only."
+[message.translations]
+simplified_chinese = "逐字波动只影响你屏幕上的文字头衔。"
+traditional_chinese = "逐字波動只影響你畫面上的文字頭銜。"
+japanese = "文字を波打たせる設定は、自分の画面に表示されるテキスト称号にだけ適用されます。"
+korean = "글자 물결 효과는 내 화면에 표시되는 텍스트 칭호에만 적용됩니다."
+russian = "Волнообразное движение букв применяется только к текстовым титулам на вашем экране."
+german = "Der Welleneffekt bewegt die Buchstaben von Texttiteln nur auf deinem Bildschirm."
+spanish = "El efecto de onda de las letras solo se aplica a los títulos de texto en tu pantalla."
+french = "L’ondulation des lettres s’applique uniquement aux titres textuels sur ton écran."
+brazilian_portuguese = "A ondulação das letras só afeta os títulos em texto na sua tela."
+portuguese = "A ondulação das letras só afeta os títulos em texto no teu ecrã."
+turkish = "Harflerin dalgalanması yalnızca kendi ekranındaki metin unvanlarını etkiler."
+polish = "Falowanie liter dotyczy tylko tytułów tekstowych na twoim ekranie."

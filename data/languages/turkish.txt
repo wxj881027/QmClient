@@ -2171,9 +2171,6 @@ Change values in the settings card and watch this preview update.
 Change zoom
 == Yakınlaştırmayı değiştir
 
-Changes apply at once, so check "Title preview" to compare styles; press "Save" on the "Sponsor title" card to share one.
-== Değişiklikler anında uygulanır; unvan önizlemesinde stilleri karşılaştır. Paylaşmak için Destekçi unvanı kartında Kaydet'e bas.
-
 Changes how the vote menu looks and how you interact with running votes.
 == Oylama menüsünün görünümünü ve süren oylamalarla etkileşiminizi değiştirir.
 
@@ -2383,6 +2380,9 @@ Choose a preset, or Custom to enter width and height. Follow window uses the cur
 
 Choose a screen position and font size, then check the preview card for wrapping.
 == Ekran konumunu ve yazı boyutunu seç, ardından önizleme kartında satır kayması olup olmadığına bak.
+
+Choose a sponsor title style for your nameplate and chat messages.
+== İsim etiketinde ve sohbet iletilerinde görünecek destekçi unvanının stilini seç.
 
 Choose a target, then set its color; entity lasers can follow team colors.
 == Bir hedef seçin, ardından rengini ayarlayın; varlık lazerleri takım renklerini izleyebilir.
@@ -10265,6 +10265,9 @@ Pick a shape, then tune glow and animation speed.
 Pick a slot, type the command and its label, then hold the wheel key in game to test.
 == Bir dilim seç, komutu ve etiketini yaz, sonra oyunda çark tuşunu basılı tutarak dene.
 
+Pick a text style or a moon or sun badge, check the preview, then press "Save" to share the style with other players.
+== Bir metin stili ya da ay veya güneş rozeti seç. Önizlemeyi kontrol edip “Kaydet” düğmesine basarak seçtiğin stili diğer oyunculara göster.
+
 Pick result: %s
 == Seçim sonucu: %s
 
@@ -13127,6 +13130,9 @@ Show a ghost of your best time after crossing the start line
 Show a MomentCap .poses file in game (no export)
 == MomentCap .poses dosyasını oyun içinde göster (dışa aktarma yok)
 
+Show a per-character wave on text titles locally
+== Metin unvanlarının harflerini kendi ekranımda dalgalandır
+
 Show a small view of the dummy
 == Dummy'nin küçük bir görünümünü göster
 
@@ -13795,6 +13801,9 @@ Show pause/play indicator when changing
 
 Show pending crash reports in a window at startup (0 = keep them on disk and log a line instead)
 == Bekleyen çökme raporlarını başlangıçta pencerede göster (0 = raporu diskte tut ve günlüğe yaz)
+
+Show per-character title waves locally
+== Unvan harflerini kendi ekranımda dalgalandır
 
 Show performance graphs.
 == Performans grafiklerini göster.
@@ -14672,6 +14681,9 @@ Sponsor support
 Sponsor title
 == Destekçi unvanı
 
+Sponsor title appearance: 0 = capsule, 1-5 = text palette
+== Destekçi unvanı görünümü: 0 = kapsül, 1–5 = metin renk paleti
+
 Sponsor title badge opacity (0-100)
 == Destekçi unvanı rozetinin opaklığı (0-100)
 
@@ -15443,6 +15455,21 @@ Testing translation...
 Text
 == Metin
 
+Text 1
+== Metin 1
+
+Text 2
+== Metin 2
+
+Text 3
+== Metin 3
+
+Text 4
+== Metin 4
+
+Text 5
+== Metin 5
+
 Text alpha
 == Metin alfası
 
@@ -15523,6 +15550,9 @@ The message is sent on every water death, so keep it short; leaving "Chat messag
 
 The name "default" is reserved.
 == "default" adı ayrılmıştır.
+
+The per-character wave setting affects text titles on your screen only.
+== Harflerin dalgalanması yalnızca kendi ekranındaki metin unvanlarını etkiler.
 
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 == Fısıldadığınız oyuncu henüz yeniden bağlanmadı veya oyundan ayrıldı. Biraz bekleyin ya da başka birine fısıldayın
@@ -15889,6 +15919,9 @@ Title server does not support badge appearance yet
 
 Title server does not support chat styles yet
 == Unvan sunucusu henüz sohbet stillerini desteklemiyor
+
+Title server does not support text titles yet
+== Unvan sunucusu henüz metin biçimindeki unvanları desteklemiyor
 
 Title server unavailable; retry
 == Unvan sunucusu kullanılamıyor; tekrar dene
@@ -16345,9 +16378,6 @@ Turn on "Show important server prompts as notifications" or "Route Echo messages
 
 Turn on "Show own coordinates" or "Show other players' coordinates", then choose "Show X" and "Show Y".
 == Kendi koordinatlarımı göster veya diğer oyuncuların koordinatlarını göster seçeneğini aç, sonra X göster ve Y göster seçeneklerini seç.
-
-Turn on "Show titles on nameplates", pick a "Title style", then adjust "Title motion" and "Wave amount"; "Advanced mode" adds color and glow.
-== İsim etiketlerinde unvanları göster seçeneğini aç, bir unvan stili seç, ardından unvan animasyonu ve dalga miktarını ayarla; gelişmiş mod renk ve parıltı ekler.
 
 Turn on "Skin outline for self and dummy" or "Skin outline for other players", then tune width and opacity; "Cycle custom Tee hue" animates custom colors.
 == Kendin ve dummy için skin dış çizgisini ya da diğer oyuncuların skin dış çizgisini aç, kalınlık ve saydamlığı ayarla; özel Tee tonu döngüsü özel renkleri canlandırır.
@@ -17404,9 +17434,6 @@ Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per
 
 When TClient rainbow Tee is enabled, this feature has no effect.
 == TClient gökkuşağı Tee açıkken bu özellik etkili olmaz.
-
-Where your title appears and how it looks: nameplate, style, motion, colors and glow.
-== Unvanının nerede görüneceği ve nasıl duracağı: isim etiketi, stil, animasyon, renkler ve parıltı.
 
 Whether a switch is deactivated by default (otherwise activated)
 == Bir anahtarın varsayılan olarak devre dışı olup olmadığı (aksi halde etkin)

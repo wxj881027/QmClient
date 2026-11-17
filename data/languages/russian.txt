@@ -2171,9 +2171,6 @@ Change values in the settings card and watch this preview update.
 Change zoom
 == Изменить масштаб
 
-Changes apply at once, so check "Title preview" to compare styles; press "Save" on the "Sponsor title" card to share one.
-== Изменения применяются сразу, сравнивайте стили в предпросмотре титула; чтобы титул увидели другие, нажмите сохранить на карточке титула спонсора.
-
 Changes how the vote menu looks and how you interact with running votes.
 == Меняет внешний вид меню голосований и способ взаимодействия с идущими голосованиями.
 
@@ -2383,6 +2380,9 @@ Choose a preset, or Custom to enter width and height. Follow window uses the cur
 
 Choose a screen position and font size, then check the preview card for wrapping.
 == Выберите положение на экране и размер шрифта, затем проверьте переносы в карточке предпросмотра.
+
+Choose a sponsor title style for your nameplate and chat messages.
+== Выберите стиль титула спонсора для таблички с именем и сообщений в чате.
 
 Choose a target, then set its color; entity lasers can follow team colors.
 == Выберите цель и задайте её цвет; лазеры объектов могут следовать цветам команды.
@@ -10265,6 +10265,9 @@ Pick a shape, then tune glow and animation speed.
 Pick a slot, type the command and its label, then hold the wheel key in game to test.
 == Выберите ячейку, введите команду и подпись, затем зажмите клавишу колеса в игре для проверки.
 
+Pick a text style or a moon or sun badge, check the preview, then press "Save" to share the style with other players.
+== Выберите стиль текста или значок с луной или солнцем. Посмотрите образец и нажмите «Сохранить», чтобы другие игроки увидели выбранный стиль.
+
 Pick result: %s
 == Результат выбора: %s
 
@@ -13127,6 +13130,9 @@ Show a ghost of your best time after crossing the start line
 Show a MomentCap .poses file in game (no export)
 == Показать файл MomentCap .poses в игре (без экспорта)
 
+Show a per-character wave on text titles locally
+== Показывать на своём экране волнообразное движение букв в текстовых титулах
+
 Show a small view of the dummy
 == Показать небольшой вид дамми
 
@@ -13795,6 +13801,9 @@ Show pause/play indicator when changing
 
 Show pending crash reports in a window at startup (0 = keep them on disk and log a line instead)
 == Показывать ожидающие отчёты о сбоях в окне при запуске (0 = только сохранять отчёт и писать строку в журнал)
+
+Show per-character title waves locally
+== Показывать волнообразное движение букв титула у себя
 
 Show performance graphs.
 == Показывать графики производительности.
@@ -14672,6 +14681,9 @@ Sponsor support
 Sponsor title
 == Титул спонсора
 
+Sponsor title appearance: 0 = capsule, 1-5 = text palette
+== Вид титула спонсора: 0 = капсула, 1–5 = палитра текста
+
 Sponsor title badge opacity (0-100)
 == Непрозрачность титула спонсора (0-100)
 
@@ -15443,6 +15455,21 @@ Testing translation...
 Text
 == Текст
 
+Text 1
+== Текст 1
+
+Text 2
+== Текст 2
+
+Text 3
+== Текст 3
+
+Text 4
+== Текст 4
+
+Text 5
+== Текст 5
+
 Text alpha
 == Альфа текста
 
@@ -15523,6 +15550,9 @@ The message is sent on every water death, so keep it short; leaving "Chat messag
 
 The name "default" is reserved.
 == Имя "default" зарезервировано.
+
+The per-character wave setting affects text titles on your screen only.
+== Волнообразное движение букв применяется только к текстовым титулам на вашем экране.
 
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 == Игрок, с которым вы шептались, ещё не переподключился или вышел. Подождите или напишите другому
@@ -15889,6 +15919,9 @@ Title server does not support badge appearance yet
 
 Title server does not support chat styles yet
 == Сервер титулов пока не поддерживает стили чата
+
+Title server does not support text titles yet
+== Сервер титулов пока не поддерживает текстовые титулы
 
 Title server unavailable; retry
 == Сервер титулов недоступен; повторите попытку
@@ -16345,9 +16378,6 @@ Turn on "Show important server prompts as notifications" or "Route Echo messages
 
 Turn on "Show own coordinates" or "Show other players' coordinates", then choose "Show X" and "Show Y".
 == Включите показ своих координат или координат других игроков, затем выберите показывать X и показывать Y.
-
-Turn on "Show titles on nameplates", pick a "Title style", then adjust "Title motion" and "Wave amount"; "Advanced mode" adds color and glow.
-== Включите показывать титулы на табличках имён, выберите стиль титула, затем настройте анимацию титула и амплитуду волны; расширенный режим добавляет цвет и свечение.
 
 Turn on "Skin outline for self and dummy" or "Skin outline for other players", then tune width and opacity; "Cycle custom Tee hue" animates custom colors.
 == Включите Контур скина для себя и dummy или Контур скина других игроков и настройте толщину с прозрачностью; Циклическая смена оттенка Tee оживляет пользовательские цвета.
@@ -17404,9 +17434,6 @@ Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per
 
 When TClient rainbow Tee is enabled, this feature has no effect.
 == Если включен радужный Tee TClient, эта функция не действует.
-
-Where your title appears and how it looks: nameplate, style, motion, colors and glow.
-== Где показывается титул и как он выглядит: табличка с именем, стиль, анимация, цвета и свечение.
 
 Whether a switch is deactivated by default (otherwise activated)
 == Отключён ли переключатель по умолчанию (иначе включён)

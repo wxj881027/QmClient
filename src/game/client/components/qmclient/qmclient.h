@@ -64,6 +64,7 @@ class CQmClient : public CComponent
 	EQmSponsorChatStyle m_TitleProfileChatStyle = EQmSponsorChatStyle::NONE;
 	bool m_TitleChatStyleSupported = false;
 	bool m_TitleAppearanceSupported = false;
+	bool m_TitleTextStyleSupported = false;
 	SQmTitleAppearance m_TitleAppearance;
 	SQmTitleAppearance m_aPlayerTitleAppearances[MAX_CLIENTS];
 	char m_aaPlayerTitles[MAX_CLIENTS][64] = {};
