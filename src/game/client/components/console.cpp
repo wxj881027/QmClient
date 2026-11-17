@@ -2184,6 +2184,8 @@ void CGameConsole::OnRender()
 	const ColorRGBA TransparentColor = ShadowColor.WithAlpha(0.0f);
 	const ColorRGBA HeaderColor = QmConsoleUi::MixColor(Palette.m_Panel, RemoteBorder, TypeBlend);
 	const ColorRGBA BorderColor = QmConsoleUi::MixColor(Palette.m_Border, RemoteBorder, TypeBlend);
+	const CUIRect ConsoleClip = {0.0f, 0.0f, Screen.w, ConsoleHeight};
+	const CUIRect HeaderClip = {0.0f, 0.0f, Screen.w, QmConsoleUi::ClampPanelHeight(RowHeight, ConsoleHeight)};
 
 	const int ConsoleStateAtRenderStart = m_ConsoleState;
 	const bool RestoreUiEnabled = Ui()->Enabled();
@@ -2220,10 +2222,15 @@ void CGameConsole::OnRender()
 		Graphics()->QuadsDrawTL(&QuadItemBackground, 1);
 		Graphics()->QuadsEnd();
 	}
-	QmConsoleUi::DrawPanel(Ui(), {0.0f, 0.0f, Screen.w, RowHeight}, HeaderColor);
-	if(FooterHeight > 0.5f)
+	if(HeaderClip.h > 0.5f)
 	{
-		QmConsoleUi::DrawPanel(Ui(), {0.0f, ConsoleHeight - FooterHeight, Screen.w, FooterHeight},
+		QmConsoleUi::DrawPanel(Ui(), {0.0f, 0.0f, Screen.w, HeaderClip.h}, HeaderColor);
+	}
+	const float FooterPanelHeight = QmConsoleUi::ClampPanelHeight(FooterHeight, ConsoleHeight);
+	const float FooterPanelY = QmConsoleUi::PanelTopForBottomAligned(ConsoleHeight, FooterHeight);
+	if(FooterPanelHeight > 0.5f)
+	{
+		QmConsoleUi::DrawPanel(Ui(), {0.0f, FooterPanelY, Screen.w, FooterPanelHeight},
 			Palette.m_Panel.WithMultipliedAlpha(1.0f - TypeBlend));
 	}
 	// bottom border
@@ -2907,6 +2914,7 @@ void CGameConsole::OnRender()
 		const float FilterScale = Toolbar.m_FilterScale;
 		if(LocalConsole)
 		{
+			Ui()->ClipEnable(&HeaderClip);
 			bool HasVisibleFilter = false;
 			for(int i = 0; i < CInstance::LOG_FILTER_BUTTON_COUNT; ++i)
 			{
@@ -2971,6 +2979,8 @@ void CGameConsole::OnRender()
 					HasVisibleAction = true;
 				}
 			}
+			Ui()->ClipDisable();
+			Ui()->ClipEnable(&ConsoleClip);
 			char aStatus[256];
 			str_copy(aStatus, aLinesBuf);
 			if(pConsole->m_ChatExportMode)
@@ -3008,9 +3018,11 @@ void CGameConsole::OnRender()
 				Ui()->DoLabel(&HintRect, pHints, FontSize * 0.8f, TEXTALIGN_ML);
 			}
 			TextRender()->TextColor(PreviousFooterColor);
+			Ui()->ClipDisable();
 		}
 		else
 		{
+			Ui()->ClipEnable(&HeaderClip);
 			// 远程头部与本地共用同一条顶栏高度；两行文本按行高居中，
 			// 开关与本地/远程切换都从当前存在度续接，不再整块硬切。
 			const float HeaderLineHeight = RowHeight * 0.5f;
@@ -3069,6 +3081,7 @@ void CGameConsole::OnRender()
 				}
 			}
 			TextRender()->TextColor(PreviousHeaderColor);
+			Ui()->ClipDisable();
 		}
 	}
 

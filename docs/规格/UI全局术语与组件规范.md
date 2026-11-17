@@ -170,7 +170,7 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 
 - 定义：本地/远程控制台是同一面板的两种内容；切换时背景、边框、阴影和顶部栏按同一条 0→1 混合轨道过渡，远程头部文本单独走存在度入场/出场；类型混合轨道从当前值续接，F1/F2 切换时头部重新入场。
 - 唯一实现：`QmConsoleUi::ResolveConsoleTypeBlend`、`QmConsoleUi::MixColor`（`src/game/client/QmUi/QmConsoleUi.h`）；远程头部存在度 `QmConsoleUi::CToolbarPresenceMotion<1>`（`CGameConsole::m_HeaderPresenceMotion`）；调用点 `CGameConsole::OnRender`、`CGameConsole::Toggle`（`src/game/client/components/console.cpp`）。类型混合取 `ui_token::motion::TAB_SWITCH`，头部取 `ui_token::motion::NAVIGATION_APPEAR`。
-- 禁止的反面写法：本地/远程整块硬切；一个 `ALPHA` 轨道同时承担类型混合和头部显隐；远程顶部用裸 `TextRender()->Text` 直接瞬移；切换时把两份日志同时画出做交叉淡化；远程与本地各写一套顶栏行高或文字基线。
+- 禁止的反面写法：本地/远程整块硬切；一个 `ALPHA` 轨道同时承担类型混合和头部显隐；远程顶部用裸 `TextRender()->Text` 直接瞬移；切换时把两份日志同时画出做交叉淡化；远程与本地各写一套顶栏行高或文字基线；顶栏/页脚固定高度不跟 `ConsoleHeight` 收缩（主体已收起，横条还留在屏幕上）。
 
 ### 2.19 圆角与胶囊（radius / capsule）
 

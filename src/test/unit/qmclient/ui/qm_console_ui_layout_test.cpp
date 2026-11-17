@@ -150,6 +150,15 @@ TEST(QmConsoleUiLayout, ConsoleTypeBlendReversesFromCurrentProgress)
 	g_Config.m_QmUiMotionLevel = PreviousMotion;
 }
 
+TEST(QmConsoleUiLayout, HeaderAndFooterPanelsShrinkWithConsoleHeight)
+{
+	EXPECT_FLOAT_EQ(QmConsoleUi::ClampPanelHeight(28.0f, 100.0f), 28.0f);
+	EXPECT_FLOAT_EQ(QmConsoleUi::ClampPanelHeight(28.0f, 10.0f), 10.0f);
+	EXPECT_FLOAT_EQ(QmConsoleUi::ClampPanelHeight(28.0f, -5.0f), 0.0f);
+	EXPECT_FLOAT_EQ(QmConsoleUi::PanelTopForBottomAligned(100.0f, 18.0f), 82.0f);
+	EXPECT_FLOAT_EQ(QmConsoleUi::PanelTopForBottomAligned(10.0f, 18.0f), 0.0f);
+}
+
 TEST(QmConsoleUiLayout, TextOnlyButtonCentersLabelWithoutReservingIconSlot)
 {
 	const CUIRect Button = {20.0f, 3.0f, 120.0f, 24.0f};

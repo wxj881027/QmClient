@@ -102,6 +102,18 @@ namespace QmConsoleUi
 			mix(From.b, To.b, T), mix(From.a, To.a, T));
 	}
 
+	// 顶栏与页脚是固定高度件：控制台弹簧缩小时必须跟着夹紧，
+	// 否则主体已经收起，固定高度的横条还会留在屏幕上等状态切到 CLOSED。
+	inline float ClampPanelHeight(float PanelHeight, float ConsoleHeight)
+	{
+		return std::clamp(PanelHeight, 0.0f, std::max(0.0f, ConsoleHeight));
+	}
+
+	inline float PanelTopForBottomAligned(float ConsoleHeight, float PanelHeight)
+	{
+		return std::max(0.0f, ConsoleHeight - PanelHeight);
+	}
+
 	// 本地/远程是二元状态：0 = 本地，1 = 远程。切换时只改目标值，
 	// 由公共动画轨道从当前进度继续；快速 F1/F2 折返不会跳回起点。
 	inline float ResolveConsoleTypeBlend(CQmAnimationBackend *pRuntime, uint64_t NodeKey, bool Remote, bool MotionEnabled, const SUiAnimTransition &Transition)
