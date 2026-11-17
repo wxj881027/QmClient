@@ -2348,9 +2348,7 @@ void CGameContext::OnSayNetMessage(const CNetMsg_Cl_Say *pMsg, int ClientId, con
 			}
 			// m_apPlayers[ClientId] can be NULL, if the player used a
 			// timeout code and replaced another client.
-			char aBuf[256];
-			str_format(aBuf, sizeof(aBuf), "%d used %s", ClientId, pMsg->m_pMessage);
-			Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "chat-command", aBuf);
+			log_trace("chat-command", "%d used %s", ClientId, pMsg->m_pMessage);
 
 			Console()->SetFlagMask(CFGFLAG_SERVER);
 		}
@@ -3070,18 +3068,17 @@ void CGameContext::ConTuneParam(IConsole::IResult *pResult, void *pUserData)
 	CGameContext *pSelf = (CGameContext *)pUserData;
 	const char *pParamName = pResult->GetString(0);
 
-	char aBuf[256];
 	if(pResult->NumArguments() == 2)
 	{
 		float NewValue = pResult->GetFloat(1);
 		if(pSelf->GlobalTuning()->Set(pParamName, NewValue) && pSelf->GlobalTuning()->Get(pParamName, &NewValue))
 		{
-			str_format(aBuf, sizeof(aBuf), "%s changed to %.2f", pParamName, NewValue);
+			log_info("tuning", "%s changed to %.2f", pParamName, NewValue);
 			pSelf->SendTuningParams(-1);
 		}
 		else
 		{
-			str_format(aBuf, sizeof(aBuf), "No such tuning parameter: %s", pParamName);
+			log_error("tuning", "No such tuning parameter: %s", pParamName);
 		}
 	}
 	else
@@ -3089,14 +3086,13 @@ void CGameContext::ConTuneParam(IConsole::IResult *pResult, void *pUserData)
 		float Value;
 		if(pSelf->GlobalTuning()->Get(pParamName, &Value))
 		{
-			str_format(aBuf, sizeof(aBuf), "%s %.2f", pParamName, Value);
+			log_info("tuning", "%s %.2f", pParamName, Value);
 		}
 		else
 		{
-			str_format(aBuf, sizeof(aBuf), "No such tuning parameter: %s", pParamName);
+			log_error("tuning", "No such tuning parameter: %s", pParamName);
 		}
 	}
-	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "tuning", aBuf);
 }
 
 void CGameContext::ConToggleTuneParam(IConsole::IResult *pResult, void *pUserData)
@@ -3105,11 +3101,9 @@ void CGameContext::ConToggleTuneParam(IConsole::IResult *pResult, void *pUserDat
 	const char *pParamName = pResult->GetString(0);
 	float OldValue;
 
-	char aBuf[256];
 	if(!pSelf->GlobalTuning()->Get(pParamName, &OldValue))
 	{
-		str_format(aBuf, sizeof(aBuf), "No such tuning parameter: %s", pParamName);
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "tuning", aBuf);
+		log_error("tuning", "No such tuning parameter: %s", pParamName);
 		return;
 	}
 
@@ -3118,8 +3112,7 @@ void CGameContext::ConToggleTuneParam(IConsole::IResult *pResult, void *pUserDat
 	pSelf->GlobalTuning()->Set(pParamName, NewValue);
 	pSelf->GlobalTuning()->Get(pParamName, &NewValue);
 
-	str_format(aBuf, sizeof(aBuf), "%s changed to %.2f", pParamName, NewValue);
-	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "tuning", aBuf);
+	log_info("tuning", "%s changed to %.2f", pParamName, NewValue);
 	pSelf->SendTuningParams(-1);
 }
 
@@ -3130,36 +3123,32 @@ void CGameContext::ConTuneReset(IConsole::IResult *pResult, void *pUserData)
 	{
 		const char *pParamName = pResult->GetString(0);
 		float DefaultValue = 0.0f;
-		char aBuf[256];
 
 		if(CTuningParams::DEFAULT.Get(pParamName, &DefaultValue) && pSelf->GlobalTuning()->Set(pParamName, DefaultValue) && pSelf->GlobalTuning()->Get(pParamName, &DefaultValue))
 		{
-			str_format(aBuf, sizeof(aBuf), "%s reset to %.2f", pParamName, DefaultValue);
+			log_info("tuning", "%s reset to %.2f", pParamName, DefaultValue);
 			pSelf->SendTuningParams(-1);
 		}
 		else
 		{
-			str_format(aBuf, sizeof(aBuf), "No such tuning parameter: %s", pParamName);
+			log_error("tuning", "No such tuning parameter: %s", pParamName);
 		}
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "tuning", aBuf);
 	}
 	else
 	{
 		pSelf->ResetTuning();
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "tuning", "Tuning reset");
+		log_info("tuning", "Tuning reset");
 	}
 }
 
 void CGameContext::ConTunes(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
-	char aBuf[256];
 	for(int i = 0; i < CTuningParams::Num(); i++)
 	{
 		float Value;
 		pSelf->GlobalTuning()->Get(i, &Value);
-		str_format(aBuf, sizeof(aBuf), "%s %.2f", CTuningParams::Name(i), Value);
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "tuning", aBuf);
+		log_info("tuning", "%s %.2f", CTuningParams::Name(i), Value);
 	}
 }
 
@@ -3172,17 +3161,15 @@ void CGameContext::ConTuneZone(IConsole::IResult *pResult, void *pUserData)
 
 	if(List >= 0 && List < TuneZone::NUM)
 	{
-		char aBuf[256];
 		if(pSelf->TuningList()[List].Set(pParamName, NewValue) && pSelf->TuningList()[List].Get(pParamName, &NewValue))
 		{
-			str_format(aBuf, sizeof(aBuf), "%s in zone %d changed to %.2f", pParamName, List, NewValue);
+			log_info("tuning", "%s in zone %d changed to %.2f", pParamName, List, NewValue);
 			pSelf->SendTuningParams(-1, List);
 		}
 		else
 		{
-			str_format(aBuf, sizeof(aBuf), "No such tuning parameter: %s", pParamName);
+			log_error("tuning", "No such tuning parameter: %s", pParamName);
 		}
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "tuning", aBuf);
 	}
 }
 
@@ -3190,15 +3177,13 @@ void CGameContext::ConTuneDumpZone(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
 	int List = pResult->GetInteger(0);
-	char aBuf[256];
 	if(List >= 0 && List < TuneZone::NUM)
 	{
 		for(int i = 0; i < CTuningParams::Num(); i++)
 		{
 			float Value;
 			pSelf->TuningList()[List].Get(i, &Value);
-			str_format(aBuf, sizeof(aBuf), "zone %d: %s %.2f", List, CTuningParams::Name(i), Value);
-			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "tuning", aBuf);
+			log_info("tuning", "zone %d: %s %.2f", List, CTuningParams::Name(i), Value);
 		}
 	}
 }
@@ -3212,9 +3197,7 @@ void CGameContext::ConTuneResetZone(IConsole::IResult *pResult, void *pUserData)
 		if(List >= 0 && List < TuneZone::NUM)
 		{
 			pSelf->TuningList()[List] = CTuningParams::DEFAULT;
-			char aBuf[256];
-			str_format(aBuf, sizeof(aBuf), "Tunezone %d reset", List);
-			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "tuning", aBuf);
+			log_info("tuning", "Tunezone %d reset", List);
 			pSelf->SendTuningParams(-1, List);
 		}
 	}
@@ -3225,7 +3208,7 @@ void CGameContext::ConTuneResetZone(IConsole::IResult *pResult, void *pUserData)
 			*(pSelf->TuningList() + i) = CTuningParams::DEFAULT;
 			pSelf->SendTuningParams(-1, i);
 		}
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "tuning", "All Tunezones reset");
+		log_info("tuning", "All Tunezones reset");
 	}
 }
 
@@ -3289,9 +3272,7 @@ void CGameContext::ConSwitchOpen(IConsole::IResult *pResult, void *pUserData)
 	if(in_range(Switch, (int)pSelf->Switchers().size() - 1))
 	{
 		pSelf->Switchers()[Switch].m_Initial = false;
-		char aBuf[256];
-		str_format(aBuf, sizeof(aBuf), "switch %d opened by default", Switch);
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
+		log_info("server", "switch %d opened by default", Switch);
 	}
 }
 
@@ -3430,9 +3411,7 @@ void CGameContext::ConSetTeam(IConsole::IResult *pResult, void *pUserData)
 	if(!pSelf->m_apPlayers[ClientId])
 		return;
 
-	char aBuf[256];
-	str_format(aBuf, sizeof(aBuf), "moved client %d to the %s", ClientId, pSelf->m_pController->GetTeamName(Team));
-	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
+	log_info("server", "moved client %d to the %s", ClientId, pSelf->m_pController->GetTeamName(Team));
 
 	pSelf->m_apPlayers[ClientId]->Pause(CPlayer::PAUSE_NONE, false); // reset /spec and /pause to allow rejoin
 	pSelf->m_apPlayers[ClientId]->m_TeamChangeTick = pSelf->Server()->Tick() + pSelf->Server()->TickSpeed() * Delay * 60;
@@ -3483,25 +3462,21 @@ void CGameContext::AddVote(const char *pDescription, const char *pCommand)
 {
 	if(m_NumVoteOptions == MAX_VOTE_OPTIONS)
 	{
-		Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", "maximum number of vote options reached");
+		log_error("server", "maximum number of vote options reached");
 		return;
 	}
 
 	// check for valid option
 	if(!Console()->LineIsValid(pCommand) || str_length(pCommand) >= VOTE_CMD_LENGTH)
 	{
-		char aBuf[256];
-		str_format(aBuf, sizeof(aBuf), "skipped invalid command '%s'", pCommand);
-		Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
+		log_error("server", "skipped invalid command '%s'", pCommand);
 		return;
 	}
 	while(*pDescription == ' ')
 		pDescription++;
 	if(str_length(pDescription) >= VOTE_DESC_LENGTH || *pDescription == 0)
 	{
-		char aBuf[256];
-		str_format(aBuf, sizeof(aBuf), "skipped invalid option '%s'", pDescription);
-		Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
+		log_error("server", "skipped invalid option '%s'", pDescription);
 		return;
 	}
 
@@ -3511,9 +3486,7 @@ void CGameContext::AddVote(const char *pDescription, const char *pCommand)
 	{
 		if(str_comp_nocase(pDescription, pOption->m_aDescription) == 0)
 		{
-			char aBuf[256];
-			str_format(aBuf, sizeof(aBuf), "option '%s' already exists", pDescription);
-			Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
+			log_error("server", "option '%s' already exists", pDescription);
 			return;
 		}
 		pOption = pOption->m_pNext;
@@ -3551,9 +3524,7 @@ void CGameContext::ConRemoveVote(IConsole::IResult *pResult, void *pUserData)
 	}
 	if(!pOption)
 	{
-		char aBuf[256];
-		str_format(aBuf, sizeof(aBuf), "option '%s' does not exist", pDescription);
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
+		log_error("server", "option '%s' does not exist", pDescription);
 		return;
 	}
 
@@ -3636,8 +3607,7 @@ void CGameContext::ConForceVote(IConsole::IResult *pResult, void *pUserData)
 
 		if(!pOption)
 		{
-			str_format(aBuf, sizeof(aBuf), "'%s' isn't an option on this server", pValue);
-			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
+			log_error("server", "'%s' isn't an option on this server", pValue);
 			return;
 		}
 	}
@@ -3646,13 +3616,13 @@ void CGameContext::ConForceVote(IConsole::IResult *pResult, void *pUserData)
 		// 官方 f586be3e0：看不到真实 id 的旧客户端不能按 id 强制踢人
 		if(!pSelf->Server()->ClientSupportsServerMaxClients(pResult->m_ClientId))
 		{
-			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", "Your client does not see the real client IDs of this server. Use a more recent DDNet client.");
+			log_error("server", "Your client does not see the real client IDs of this server. Use a more recent DDNet client.");
 			return;
 		}
 		int KickId = str_toint(pValue);
 		if(KickId < 0 || KickId >= MAX_CLIENTS || !pSelf->m_apPlayers[KickId])
 		{
-			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", "Invalid client id to kick");
+			log_error("server", "Invalid client id to kick");
 			return;
 		}
 
@@ -3672,13 +3642,13 @@ void CGameContext::ConForceVote(IConsole::IResult *pResult, void *pUserData)
 		// 官方 f586be3e0：看不到真实 id 的旧客户端不能按 id 移动玩家
 		if(!pSelf->Server()->ClientSupportsServerMaxClients(pResult->m_ClientId))
 		{
-			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", "Your client does not see the real client IDs of this server. Use a more recent DDNet client.");
+			log_error("server", "Your client does not see the real client IDs of this server. Use a more recent DDNet client.");
 			return;
 		}
 		int SpectateId = str_toint(pValue);
 		if(SpectateId < 0 || SpectateId >= MAX_CLIENTS || !pSelf->m_apPlayers[SpectateId] || pSelf->m_apPlayers[SpectateId]->GetTeam() == TEAM_SPECTATORS)
 		{
-			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", "Invalid client id to move");
+			log_error("server", "Invalid client id to move");
 			return;
 		}
 
@@ -3780,7 +3750,7 @@ void CGameContext::ConAddMapVotes(IConsole::IResult *pResult, void *pUserData)
 		pSelf->AddVote(aDescription, aCommand);
 	}
 
-	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", "added maps to votes");
+	log_info("server", "added maps to votes");
 }
 
 int CGameContext::MapScan(const char *pName, int IsDir, int DirType, void *pUserData)
@@ -3835,10 +3805,9 @@ void CGameContext::ConVotes(IConsole::IResult *pResult, void *pUserData)
 		str_escape(&pDst, pOption->m_aCommand, aBuf + sizeof(aBuf));
 		str_append(aBuf, "\"");
 
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "votes", aBuf);
+		log_info("votes", "%s", aBuf);
 	}
-	str_format(aBuf, sizeof(aBuf), "%d %s, showing entries %d - %d", Count, Count == 1 ? "vote" : "votes", Start, End - 1);
-	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "votes", aBuf);
+	log_info("votes", "%d %s, showing entries %d - %d", Count, Count == 1 ? "vote" : "votes", Start, End - 1);
 }
 
 void CGameContext::ConchainSpecialMotdupdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
@@ -4765,7 +4734,7 @@ void CGameContext::OnSetAuthed(int ClientId, CRconRole *pRole)
 		if(!str_comp_nocase(m_aVoteCommand, aBuf) && (m_VoteCreator == -1 || pRole->Rank() > Server()->GetAuthedState(m_VoteCreator)))
 		{
 			m_VoteEnforce = CGameContext::VOTE_ENFORCE_NO_ADMIN;
-			Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "game", "Vote aborted by authorized login.");
+			log_info("game", "Vote aborted by authorized login.");
 		}
 	}
 
