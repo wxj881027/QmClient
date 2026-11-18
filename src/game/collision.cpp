@@ -496,6 +496,38 @@ static int LineMiss(vec2 Pos, vec2 *pOutCollision, vec2 *pOutBeforeCollision)
 	return 0;
 }
 
+static bool CanSkipLineCells(vec2 First, vec2 Last)
+{
+	// 正坐标转 int 溢出时会回到首格。跨过这个边界的轴仍按原样逐点检查。
+	const auto UsesUpperSentinel = [](float Coord) {
+		return Coord > 0.0f && round_to_int(Coord) == std::numeric_limits<int>::min();
+	};
+	return UsesUpperSentinel(First.x) == UsesUpperSentinel(Last.x) &&
+	       UsesUpperSentinel(First.y) == UsesUpperSentinel(Last.y);
+}
+
+static int LastLineSampleInCell(int Sample, int End, int Cell, int EndCell, const auto &CellAtSample)
+{
+	if(Cell == EndCell)
+		return End;
+
+	// 两轴各自单调，离开当前格后不会再回到这一格。
+	int Low = Sample + 1;
+	if(CellAtSample(Low) != Cell)
+		return Sample;
+	++Low;
+	int High = End;
+	while(Low < High)
+	{
+		const int Middle = Low + (High - Low) / 2;
+		if(CellAtSample(Middle) == Cell)
+			Low = Middle + 1;
+		else
+			High = Middle;
+	}
+	return Low - 1;
+}
+
 // TODO: rewrite this smarter!
 static int QuadLineHit(int Tile, vec2 Pos0, vec2 Pos1, float Fraction, vec2 *pOutCollision, vec2 *pOutBeforeCollision)
 {
@@ -517,6 +549,13 @@ int CCollision::IntersectLine(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *p
 
 	float QuadFraction = 2;
 	const int QuadHit = m_pQmAxiomQuads ? m_pQmAxiomQuads->IntersectLine(Pos0, Pos1, &QuadFraction) : 0;
+	const auto PosAtSample = [&](int Sample) {
+		const float Fraction = Sample / (float)End;
+		return mix(Pos0, Pos1, Fraction);
+	};
+	const auto CellAtSample = [&](int Sample) { return GetPureMapIndex(PosAtSample(Sample)); };
+	const vec2 EndPos = !QuadHit && End > 1 ? PosAtSample(End) : Pos1;
+	const int EndCell = !QuadHit && End > 1 && CanSkipLineCells(PosAtSample(0), EndPos) ? GetPureMapIndex(EndPos) : -1;
 	vec2 Last = Pos0;
 	for(int i = 0; i <= End; i++)
 	{
@@ -538,6 +577,15 @@ int CCollision::IntersectLine(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *p
 		}
 
 		Last = Pos;
+		if(EndCell >= 0)
+		{
+			const int LastSample = LastLineSampleInCell(i, End, GetPureMapIndex(Pos), EndCell, CellAtSample);
+			if(LastSample == End)
+				break;
+			if(LastSample != i)
+				Last = PosAtSample(LastSample);
+			i = LastSample;
+		}
 	}
 	if(QuadHit)
 		return QuadLineHit(QuadHit, Pos0, Pos1, QuadFraction, pOutCollision, pOutBeforeCollision);
@@ -620,6 +668,13 @@ int CCollision::IntersectLineTeleWeapon(vec2 Pos0, vec2 Pos1, vec2 *pOutCollisio
 
 	float QuadFraction = 2;
 	const int QuadHit = m_pQmAxiomQuads ? m_pQmAxiomQuads->IntersectLine(Pos0, Pos1, &QuadFraction) : 0;
+	const auto PosAtSample = [&](int Sample) {
+		const float Fraction = Sample / (float)End;
+		return mix(Pos0, Pos1, Fraction);
+	};
+	const auto CellAtSample = [&](int Sample) { return GetPureMapIndex(PosAtSample(Sample)); };
+	const vec2 EndPos = !QuadHit && End > 1 ? PosAtSample(End) : Pos1;
+	const int EndCell = !QuadHit && End > 1 && CanSkipLineCells(PosAtSample(0), EndPos) ? GetPureMapIndex(EndPos) : -1;
 	vec2 Last = Pos0;
 	for(int i = 0; i <= End; i++)
 	{
@@ -658,6 +713,15 @@ int CCollision::IntersectLineTeleWeapon(vec2 Pos0, vec2 Pos1, vec2 *pOutCollisio
 		}
 
 		Last = Pos;
+		if(EndCell >= 0)
+		{
+			const int LastSample = LastLineSampleInCell(i, End, Index, EndCell, CellAtSample);
+			if(LastSample == End)
+				break;
+			if(LastSample != i)
+				Last = PosAtSample(LastSample);
+			i = LastSample;
+		}
 	}
 	if(QuadHit)
 		return QuadLineHit(QuadHit, Pos0, Pos1, QuadFraction, pOutCollision, pOutBeforeCollision);

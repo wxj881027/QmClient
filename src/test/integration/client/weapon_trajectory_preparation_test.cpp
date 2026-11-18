@@ -1,3 +1,5 @@
+#include <engine/shared/config.h>
+
 #include <game/client/components/qmclient/weapon_trajectory_geometry.h>
 #include <game/layers.h>
 
@@ -84,6 +86,43 @@ TEST_F(WeaponTrajectoryPreparation, NinjaUsesRealBoxMovementAndNormalizedDirecti
 	ASSERT_TRUE(QmTryPredictNinjaEndPosition(m_Collision, vec2(200, 200), vec2(2, 0), 2, 50, vec2(0, 0), Out));
 	EXPECT_NEAR(Out.x, 300, 0.01f);
 	EXPECT_NEAR(Out.y, 200, 0.01f);
+}
+
+TEST_F(WeaponTrajectoryPreparation, TileLineKeepsFirstHitAndPreviousSampleAfterEmptyEdge)
+{
+	m_Map.SetGameTile(1, 0, TILE_NOHOOK);
+	m_Map.SetGameTile(2, 0, TILE_SOLID);
+	Initialize();
+
+	vec2 Hit, Before;
+	EXPECT_EQ(m_Collision.IntersectLine(vec2(-32, 16), vec2(95, 16), &Hit, &Before), TILE_NOHOOK);
+	EXPECT_EQ(Hit, vec2(31.5f, 16));
+	EXPECT_EQ(Before, vec2(30.5078125f, 16));
+}
+
+TEST_F(WeaponTrajectoryPreparation, ReverseTileLineChecksItsFinalSample)
+{
+	m_Map.SetGameTile(0, 0, TILE_SOLID);
+	Initialize();
+
+	vec2 Hit, Before;
+	EXPECT_EQ(m_Collision.IntersectLine(vec2(34.25f, 16), vec2(31.25f, 16), &Hit, &Before), TILE_SOLID);
+	EXPECT_EQ(Hit, vec2(31.25f, 16));
+	EXPECT_EQ(Before, vec2(32, 16));
+}
+
+TEST_F(WeaponTrajectoryPreparation, WeaponLineChecksTeleporterBeforeWallInSameTile)
+{
+	m_Map.SetGameTile(1, 0, TILE_SOLID);
+	m_Map.SetTeleTile(1, 0, g_Config.m_SvOldTeleportWeapons ? TILE_TELEIN : TILE_TELEINWEAPON);
+	Initialize();
+
+	vec2 Hit, Before;
+	int TeleNr = 0;
+	EXPECT_EQ(m_Collision.IntersectLineTeleWeapon(vec2(-32, 16), vec2(95, 16), &Hit, &Before, &TeleNr), TILE_TELEINWEAPON);
+	EXPECT_EQ(TeleNr, 1);
+	EXPECT_EQ(Hit, vec2(31.5f, 16));
+	EXPECT_EQ(Before, vec2(30.5078125f, 16));
 }
 
 TEST_F(WeaponTrajectoryPreparation, NinjaStopsAtTheRealWallInsteadOfCrossingIt)
