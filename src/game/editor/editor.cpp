@@ -2391,9 +2391,28 @@ bool CEditor::IsAllowPlaceUnusedTiles() const
 	return m_AllowPlaceUnusedTiles != EUnusedEntities::NOT_ALLOWED;
 }
 
+static bool EditorSavePathsEqual(const char *pFirst, const char *pSecond)
+{
+#if defined(CONF_FAMILY_WINDOWS)
+	return str_utf8_comp_nocase(pFirst, pSecond) == 0;
+#else
+	return str_comp(pFirst, pSecond) == 0;
+#endif
+}
+
 bool CEditor::HasUnsavedData() const
 {
-	return std::any_of(m_vpMaps.begin(), m_vpMaps.end(), [](const auto &pMap) { return pMap->m_Modified; });
+	return std::any_of(m_vpMaps.begin(), m_vpMaps.end(), [&](const auto &pMap) {
+		if(pMap->m_Modified)
+			return true;
+		if(!pMap->m_ValidSaveFilename || pMap->m_aFilename[0] == '\0')
+			return false;
+
+		return std::any_of(m_WriterFinishJobs.begin(), m_WriterFinishJobs.end(), [&](const auto &pJob) {
+			return pJob->Map() == pMap.get() && EditorSavePathsEqual(pMap->m_aFilename, pJob->RealFilename()) &&
+			       (pJob->State() != IJob::STATE_DONE || pJob->ErrorMessage()[0] != '\0');
+		});
+	});
 }
 
 void CEditor::SLayerPanelState::Reset()
@@ -5932,10 +5951,13 @@ void CEditor::LoadCurrentMap()
 	{
 		Map()->m_ValidSaveFilename = !str_startswith(m_pClient->GetCurrentMapPath(), "downloadedmaps/");
 	}
+	else if(Load(m_pClient->GetCurrentMapPath(), IStorage::TYPE_ALL))
+	{
+		Map()->m_ValidSaveFilename = false;
+	}
 	else
 	{
-		Load(m_pClient->GetCurrentMapPath(), IStorage::TYPE_ALL);
-		Map()->m_ValidSaveFilename = false;
+		return;
 	}
 
 	CGameClient *pGameClient = (CGameClient *)Kernel()->RequestInterface<IGameClient>();
@@ -5949,6 +5971,16 @@ bool CEditor::Save(const char *pFilename)
 	// Check if file with this name is already being saved at the moment
 	if(IsSaving(pFilename))
 	{
+		return false;
+	}
+
+	char aTempPath[2 * IO_MAX_PATH_LENGTH];
+	IStorage::FormatTmpPath(aTempPath, sizeof(aTempPath), pFilename);
+	char aCompletePath[2 * IO_MAX_PATH_LENGTH];
+	Storage()->GetCompletePath(IStorage::TYPE_SAVE, aTempPath, aCompletePath, sizeof(aCompletePath));
+	if(str_length(aTempPath) >= IO_MAX_PATH_LENGTH || str_length(aCompletePath) >= IO_MAX_PATH_LENGTH)
+	{
+		ShowFileDialogError(Localize("The file path is too long.", "Editor"));
 		return false;
 	}
 
@@ -5977,17 +6009,17 @@ bool CEditor::HandleMapDrop(const char *pFilename, int StorageType)
 
 bool CEditor::Load(const char *pFilename, int StorageType)
 {
-	const auto &&ErrorHandler = [this](const char *pErrorMessage) {
-		ShowFileDialogError("%s", pErrorMessage);
-		log_error("editor/load", "%s", pErrorMessage);
+	std::vector<std::string> vLoadMessages;
+	const auto ErrorHandler = [&](const char *pErrorMessage) {
+		vLoadMessages.emplace_back(pErrorMessage);
 	};
 
-	Reset(false);
 	std::unique_ptr<CEditorMap> pNewMap = std::make_unique<CEditorMap>(this);
 	pNewMap->Clean();
-	const bool Result = pNewMap->Load(pFilename, StorageType, std::move(ErrorHandler));
+	const bool Result = pNewMap->Load(pFilename, StorageType, ErrorHandler);
 	if(Result)
 	{
+		Reset(false);
 		pNewMap->SortImages();
 		pNewMap->SelectGameLayer();
 		m_vpMaps.push_back(std::move(pNewMap));
@@ -5997,9 +6029,15 @@ bool CEditor::Load(const char *pFilename, int StorageType)
 
 		for(CEditorComponent &Component : m_vComponents)
 			Component.OnMapLoad();
-
-		log_info("editor/load", Localize("Loaded map '%s'", "Editor"), Map()->m_aFilename);
 	}
+
+	for(const auto &Message : vLoadMessages)
+	{
+		ShowFileDialogError("%s", Message.c_str());
+		log_error("editor/load", "%s", Message.c_str());
+	}
+	if(Result)
+		log_info("editor/load", Localize("Loaded map '%s'", "Editor"), Map()->m_aFilename);
 	return Result;
 }
 
@@ -6095,7 +6133,7 @@ void CEditor::UpdateMapDisplayNames()
 bool CEditor::IsSaving(const char *pFilename) const
 {
 	return std::any_of(m_WriterFinishJobs.begin(), m_WriterFinishJobs.end(), [pFilename](const std::shared_ptr<CDataFileWriterFinishJob> &pJob) {
-		return str_comp(pFilename, pJob->RealFilename()) == 0;
+		return EditorSavePathsEqual(pFilename, pJob->RealFilename());
 	});
 }
 
