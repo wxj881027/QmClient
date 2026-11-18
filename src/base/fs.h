@@ -39,6 +39,7 @@
  * @param path File or directory for which to create parent directories.
  *
  * @return `0` on success. Negative value on failure.
+ * @remark The complete path must fit in `IO_MAX_PATH_LENGTH` bytes including its terminator.
  *
  * @remark The strings are treated as null-terminated strings.
  */
@@ -69,6 +70,7 @@ int fs_makedir_rec_for(const char *path);
  * @param type Type of the directory.
  * @param user Pointer to give to the callback.
  *
+ * @remark Paths that do not fit in IO_MAX_PATH_LENGTH bytes including the terminator are skipped.
  * @remark The strings are treated as null-terminated strings.
  */
 void fs_listdir(const char *dir, FS_LISTDIR_CALLBACK cb, int type, void *user);
@@ -96,6 +98,7 @@ EFsListDirectoryResult fs_listdir_checked(const char *dir, FS_LISTDIR_CALLBACK c
  * @param type Type of the directory.
  * @param user Pointer to give to the callback.
  *
+ * @remark Paths that do not fit in IO_MAX_PATH_LENGTH bytes including the terminator are skipped.
  * @remark The strings are treated as null-terminated strings.
  */
 void fs_listdir_fileinfo(const char *dir, FS_LISTDIR_CALLBACK_FILEINFO cb, int type, void *user);
@@ -139,6 +142,8 @@ char *fs_getcwd(char *buffer, int buffer_size);
  *
  * @return `0` on success. Negative value on failure.
  *
+ * @remark The output buffer must fit the complete path and its terminator.
+ * @remark On failure, a writable output buffer is set to an empty string.
  * @remark Returns ~/.appname on UNIX based systems.
  * @remark Returns ~/Library/Applications Support/appname on macOS.
  * @remark Returns %APPDATA%/Appname on Windows based systems.
@@ -158,7 +163,7 @@ int fs_storage_path(const char *appname, char *path, int max);
  * @return `0` on success. Negative value on failure.
  *
  * @remark The executable name is included in the result.
- * @remark On Windows, a buffer that cannot fit the complete path and its terminator causes failure.
+ * @remark The output buffer must fit the complete path and its terminator.
  *
  * @remark The strings are treated as null-terminated strings.
  */
@@ -289,7 +294,7 @@ int fs_remove(const char *filename);
  *
  * @remark The strings are treated as null-terminated strings.
  */
-// 配置等用户文件可禁用删除目标后重试，保证重命名失败时保留原文件。
+// Windows 默认可先暂存目标再重试。传 false 时仅重试原地替换。
 int fs_rename(const char *oldname, const char *newname, bool allow_destination_removal = true);
 
 /**

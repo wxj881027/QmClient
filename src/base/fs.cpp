@@ -72,8 +72,10 @@ int fs_makedir(const char *path)
 int fs_makedir_rec_for(const char *path)
 {
 	char buffer[IO_MAX_PATH_LENGTH];
-	str_copy(buffer, path);
-	for(int index = 1; buffer[index] != '\0'; ++index)
+	const int length = str_copy(buffer, path);
+	if(static_cast<size_t>(length) != std::strlen(path))
+		return -1;
+	for(int index = 1; index < length; ++index)
 	{
 		// Do not try to create folder for drive letters on Windows,
 		// as this is not necessary and may fail for system drives.
@@ -135,8 +137,10 @@ static EFsListDirectoryResult fs_listdir_impl(const char *dir, FS_LISTDIR_CALLBA
 {
 #if defined(CONF_FAMILY_WINDOWS)
 	char buffer[IO_MAX_PATH_LENGTH];
-	if(checked && (std::strlen(dir) > sizeof(buffer) - 3 || !str_utf8_check(dir)))
+	const size_t dir_length = std::strlen(dir);
+	if(dir_length > sizeof(buffer) - 3 || !str_utf8_check(dir))
 		return EFsListDirectoryResult::IO_FAILURE;
+	const size_t name_capacity = sizeof(buffer) - dir_length - 1;
 	str_format(buffer, sizeof(buffer), "%s/*", dir);
 	const std::wstring wide_buffer = windows_utf8_to_wide(buffer);
 
@@ -163,14 +167,19 @@ static EFsListDirectoryResult fs_listdir_impl(const char *dir, FS_LISTDIR_CALLBA
 		const std::optional<std::string> current_entry = windows_wide_to_utf8(finddata.cFileName);
 		if(!current_entry.has_value())
 			log_error("filesystem", "ERROR: file/folder name containing invalid UTF-16 found in folder '%s'", dir);
-		else if(cb(current_entry.value().c_str(), (finddata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0, type, user))
+		else if(current_entry->size() >= name_capacity)
+		{
+			if(checked)
+				return EFsListDirectoryResult::IO_FAILURE;
+		}
+		else if(cb(current_entry->c_str(), (finddata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0, type, user))
 			return EFsListDirectoryResult::STOPPED;
 		if(!FindNextFileW(owned_handle.get(), &finddata))
 			return !checked || GetLastError() == ERROR_NO_MORE_FILES ? EFsListDirectoryResult::SUCCESS : EFsListDirectoryResult::IO_FAILURE;
 	}
 #else
 	char buffer[IO_MAX_PATH_LENGTH];
-	if(checked && std::strlen(dir) > sizeof(buffer) - 2)
+	if(std::strlen(dir) > sizeof(buffer) - 2)
 		return EFsListDirectoryResult::IO_FAILURE;
 	const std::unique_ptr<DIR, decltype(&closedir)> dir_handle(opendir(dir), closedir);
 	if(dir_handle == nullptr)
@@ -191,8 +200,12 @@ static EFsListDirectoryResult fs_listdir_impl(const char *dir, FS_LISTDIR_CALLBA
 			log_error("filesystem", "ERROR: file/folder name containing invalid UTF-8 found in folder '%s'", dir);
 			continue;
 		}
-		if(checked && std::strlen(entry->d_name) >= sizeof(buffer) - length)
-			return EFsListDirectoryResult::IO_FAILURE;
+		if(std::strlen(entry->d_name) >= sizeof(buffer) - length)
+		{
+			if(checked)
+				return EFsListDirectoryResult::IO_FAILURE;
+			continue;
+		}
 		str_copy(buffer + length, entry->d_name, sizeof(buffer) - length);
 		bool is_dir;
 		if(checked)
@@ -227,6 +240,10 @@ void fs_listdir_fileinfo(const char *dir, FS_LISTDIR_CALLBACK_FILEINFO cb, int t
 {
 #if defined(CONF_FAMILY_WINDOWS)
 	char buffer[IO_MAX_PATH_LENGTH];
+	const size_t dir_length = std::strlen(dir);
+	if(dir_length > sizeof(buffer) - 3 || !str_utf8_check(dir))
+		return;
+	const size_t name_capacity = sizeof(buffer) - dir_length - 1;
 	str_format(buffer, sizeof(buffer), "%s/*", dir);
 	const std::wstring wide_buffer = windows_utf8_to_wide(buffer);
 
@@ -245,8 +262,11 @@ void fs_listdir_fileinfo(const char *dir, FS_LISTDIR_CALLBACK_FILEINFO cb, int t
 			continue;
 		}
 
+		if(current_entry->size() >= name_capacity)
+			continue;
+
 		CFsFileInfo info;
-		info.m_pName = current_entry.value().c_str();
+		info.m_pName = current_entry->c_str();
 		info.m_TimeCreated = filetime_to_unixtime(&finddata.ftCreationTime);
 		info.m_TimeModified = filetime_to_unixtime(&finddata.ftLastWriteTime);
 
@@ -255,13 +275,15 @@ void fs_listdir_fileinfo(const char *dir, FS_LISTDIR_CALLBACK_FILEINFO cb, int t
 	} while(FindNextFileW(owned_handle.get(), &finddata));
 
 #else
+	char buffer[IO_MAX_PATH_LENGTH];
+	if(std::strlen(dir) > sizeof(buffer) - 2)
+		return;
 	const std::unique_ptr<DIR, decltype(&closedir)> dir_handle(opendir(dir), closedir);
 	if(dir_handle == nullptr)
 		return;
 
-	char buffer[IO_MAX_PATH_LENGTH];
 	str_format(buffer, sizeof(buffer), "%s/", dir);
-	size_t length = str_length(buffer);
+	const size_t length = str_length(buffer);
 
 	while(true)
 	{
@@ -273,6 +295,8 @@ void fs_listdir_fileinfo(const char *dir, FS_LISTDIR_CALLBACK_FILEINFO cb, int t
 			log_error("filesystem", "ERROR: file/folder name containing invalid UTF-8 found in folder '%s'", dir);
 			continue;
 		}
+		if(std::strlen(entry->d_name) >= sizeof(buffer) - length)
+			continue;
 		str_copy(buffer + length, entry->d_name, sizeof(buffer) - length);
 		time_t created = -1, modified = -1;
 		fs_file_time(buffer, &created, &modified);
@@ -337,77 +361,81 @@ char *fs_getcwd(char *buffer, int buffer_size)
 
 int fs_storage_path(const char *appname, char *path, int max)
 {
+	if(path == nullptr || max <= 0)
+		return -1;
+	path[0] = '\0';
+
+	const char *root;
+	const char *separator;
 #if defined(CONF_FAMILY_WINDOWS)
 	WCHAR *wide_home = nullptr;
-	if(SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, /* current user */ nullptr, &wide_home) != S_OK)
+	const HRESULT result = SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, /* current user */ nullptr, &wide_home);
+	const std::unique_ptr<WCHAR, decltype(&CoTaskMemFree)> home_owner(wide_home, CoTaskMemFree);
+	if(result != S_OK)
 	{
 		log_error("filesystem", "ERROR: could not determine location of Roaming/AppData folder");
-		CoTaskMemFree(wide_home);
-		path[0] = '\0';
 		return -1;
 	}
-	const std::optional<std::string> home = windows_wide_to_utf8(wide_home);
-	CoTaskMemFree(wide_home);
-	if(!home.has_value())
-	{
-		log_error("filesystem", "ERROR: path of Roaming/AppData folder contains invalid UTF-16");
-		path[0] = '\0';
-		return -1;
-	}
-	str_copy(path, home.value().c_str(), max);
-	fs_normalize_path(path);
-	str_append(path, "/", max);
-	str_append(path, appname, max);
-	return 0;
-#else
-	char *home = getenv("HOME");
+	std::optional<std::string> home = windows_wide_to_utf8(home_owner.get());
 	if(!home)
 	{
-		path[0] = '\0';
+		log_error("filesystem", "ERROR: path of Roaming/AppData folder contains invalid UTF-16");
 		return -1;
 	}
+	fs_normalize_path(home->data());
+	root = home->c_str();
+	separator = "/";
+#else
+	root = getenv("HOME");
+	if(!root)
+		return -1;
 
-	if(!str_utf8_check(home))
+	if(!str_utf8_check(root))
 	{
 		log_error("filesystem", "ERROR: the HOME environment variable contains invalid UTF-8");
-		path[0] = '\0';
 		return -1;
 	}
 
 #if defined(CONF_PLATFORM_HAIKU)
-	str_format(path, max, "%s/config/settings/%s", home, appname);
+	separator = "/config/settings/";
 #elif defined(CONF_PLATFORM_IOS)
-	str_format(path, max, "%s/Documents", home);
+	separator = "/Documents";
+	appname = "";
 #elif defined(CONF_PLATFORM_MACOS)
-	str_format(path, max, "%s/Library/Application Support/%s", home, appname);
+	separator = "/Library/Application Support/";
 #else
 	if(str_comp(appname, "Teeworlds") == 0)
 	{
-		// fallback for old directory for Teeworlds compatibility
-		str_format(path, max, "%s/.%s", home, appname);
+		// 旧 Teeworlds 目录仍优先从 HOME 中定位。
+		separator = "/.";
+	}
+	else if(const char *data_home = getenv("XDG_DATA_HOME"))
+	{
+		if(!str_utf8_check(data_home))
+		{
+			log_error("filesystem", "ERROR: the XDG_DATA_HOME environment variable contains invalid UTF-8");
+			return -1;
+		}
+		root = data_home;
+		separator = "/";
 	}
 	else
 	{
-		char *data_home = getenv("XDG_DATA_HOME");
-		if(data_home)
-		{
-			if(!str_utf8_check(data_home))
-			{
-				log_error("filesystem", "ERROR: the XDG_DATA_HOME environment variable contains invalid UTF-8");
-				path[0] = '\0';
-				return -1;
-			}
-			str_format(path, max, "%s/%s", data_home, appname);
-		}
-		else
-			str_format(path, max, "%s/.local/share/%s", home, appname);
+		separator = "/.local/share/";
 	}
-	for(int i = str_length(path) - str_length(appname); path[i]; i++)
-		path[i] = tolower((unsigned char)path[i]);
+#endif
 #endif
 
-	return 0;
+	const size_t prefix_length = std::strlen(root) + std::strlen(separator);
+	if(prefix_length + std::strlen(appname) >= static_cast<size_t>(max))
+		return -1;
+
+	str_format(path, max, "%s%s%s", root, separator, appname);
+#if defined(CONF_FAMILY_UNIX) && !defined(CONF_PLATFORM_HAIKU) && !defined(CONF_PLATFORM_IOS) && !defined(CONF_PLATFORM_MACOS)
+	for(char *p = path + prefix_length; *p; ++p)
+		*p = tolower(static_cast<unsigned char>(*p));
 #endif
+	return 0;
 }
 
 int fs_executable_path(char *buffer, int buffer_size)
@@ -427,19 +455,12 @@ int fs_executable_path(char *buffer, int buffer_size)
 	str_copy(buffer, path->c_str(), buffer_size);
 	return 0;
 #elif defined(CONF_PLATFORM_MACOS) || defined(CONF_PLATFORM_IOS)
-	// Get the size
-	uint32_t path_size = 0;
-	_NSGetExecutablePath(nullptr, &path_size);
-
-	char *path = (char *)malloc(path_size);
-	if(_NSGetExecutablePath(path, &path_size) != 0)
+	uint32_t path_size = buffer_size;
+	if(_NSGetExecutablePath(buffer, &path_size) != 0 || !str_utf8_check(buffer))
 	{
-		free(path);
 		buffer[0] = '\0';
 		return -1;
 	}
-	str_copy(buffer, path, buffer_size);
-	free(path);
 	return 0;
 #else
 	char path[IO_MAX_PATH_LENGTH];
@@ -450,7 +471,7 @@ int fs_executable_path(char *buffer, int buffer_size)
 	};
 	for(auto &name : NAMES)
 	{
-		if(ssize_t bytes_written = readlink(name, path, sizeof(path) - 1); bytes_written != -1)
+		if(const ssize_t bytes_written = readlink(name, path, sizeof(path)); bytes_written >= 0 && static_cast<size_t>(bytes_written) < sizeof(path))
 		{
 			path[bytes_written] = '\0'; // readlink does NOT null-terminate
 			// if the file gets deleted or replaced (not renamed) linux appends (deleted) to the symlink (see https://man7.org/linux/man-pages/man5/proc_pid_exe.5.html)
@@ -458,6 +479,8 @@ int fs_executable_path(char *buffer, int buffer_size)
 			{
 				path[deleted - path] = '\0';
 			}
+			if(std::strlen(path) >= static_cast<size_t>(buffer_size) || !str_utf8_check(path))
+				break;
 			str_copy(buffer, path, buffer_size);
 			return 0;
 		}
@@ -507,8 +530,10 @@ int fs_is_relative_path(const char *path)
 
 const char *fs_filename(const char *path)
 {
-	for(const char *filename = path + str_length(path); filename >= path; --filename)
+	const char *filename = path + str_length(path);
+	while(filename != path)
 	{
+		--filename;
 		if(filename[0] == '/' || filename[0] == '\\')
 			return filename + 1;
 	}
@@ -575,6 +600,34 @@ void fs_normalize_path(char *path)
 	}
 }
 
+#if defined(CONF_FAMILY_WINDOWS)
+static std::wstring fs_windows_temporary_sibling(const std::wstring &wide_filename, const char *suffix)
+{
+	unsigned random_num;
+	secure_random_fill(&random_num, sizeof(random_num));
+	std::wstring temporary;
+	do
+	{
+		char extension[64];
+		str_format(extension, sizeof(extension), ".%08X.%s", random_num, suffix);
+		temporary = wide_filename + windows_utf8_to_wide(extension);
+		++random_num;
+	} while(GetFileAttributesW(temporary.c_str()) != INVALID_FILE_ATTRIBUTES);
+	return temporary;
+}
+
+static void fs_windows_delete_temporary_file(const std::wstring &wide_filename)
+{
+	if(DeleteFileW(wide_filename.c_str()) != 0)
+		return;
+	const DWORD error = GetLastError();
+	if(error == ERROR_FILE_NOT_FOUND)
+		return;
+	const auto filename = windows_wide_to_utf8(wide_filename.c_str());
+	log_error("filesystem", "Failed to remove file '%s' (%ld '%s')", filename ? filename->c_str() : "(invalid filename)", error, windows_format_system_message(error).c_str());
+}
+#endif
+
 int fs_remove(const char *filename)
 {
 #if defined(CONF_FAMILY_WINDOWS)
@@ -584,17 +637,7 @@ int fs_remove(const char *filename)
 		return 1;
 	}
 	const std::wstring wide_filename = windows_utf8_to_wide(filename);
-
-	unsigned random_num;
-	secure_random_fill(&random_num, sizeof(random_num));
-	std::wstring wide_filename_temp;
-	do
-	{
-		char suffix[64];
-		str_format(suffix, sizeof(suffix), ".%08X.toberemoved", random_num);
-		wide_filename_temp = wide_filename + windows_utf8_to_wide(suffix);
-		++random_num;
-	} while(GetFileAttributesW(wide_filename_temp.c_str()) != INVALID_FILE_ATTRIBUTES);
+	const std::wstring wide_filename_temp = fs_windows_temporary_sibling(wide_filename, "toberemoved");
 
 	// The DeleteFileW function only marks the file for deletion but the deletion may not take effect immediately, which can
 	// cause subsequent operations using this filename to fail until all handles are closed. The MoveFileExW function with the
@@ -611,17 +654,7 @@ int fs_remove(const char *filename)
 		log_error("filesystem", "Failed to rename file '%s' to '%s' for removal (%ld '%s')", filename, filename_temp.c_str(), error, windows_format_system_message(error).c_str());
 		return 1;
 	}
-	if(DeleteFileW(wide_filename_temp.c_str()) != 0)
-	{
-		return 0; // Success: Marked the renamed file for deletion successfully.
-	}
-	const DWORD error = GetLastError();
-	if(error == ERROR_FILE_NOT_FOUND)
-	{
-		return 0; // Success: Another process deleted the renamed file we were about to delete?!
-	}
-	const std::string filename_temp = windows_wide_to_utf8(wide_filename_temp.c_str()).value_or("(invalid filename)");
-	log_error("filesystem", "Failed to remove file '%s' (%ld '%s')", filename_temp.c_str(), error, windows_format_system_message(error).c_str());
+	fs_windows_delete_temporary_file(wide_filename_temp);
 	// Success: While the temporary could not be deleted, this is also considered success because the original file does not exist anymore.
 	//          Callers of this function expect that the original file does not exist anymore if and only if the function succeeded.
 	return 0;
@@ -640,24 +673,23 @@ int fs_rename(const char *oldname, const char *newname, bool allow_destination_r
 #if defined(CONF_FAMILY_WINDOWS)
 	const std::wstring wide_oldname = windows_utf8_to_wide(oldname);
 	const std::wstring wide_newname = windows_utf8_to_wide(newname);
-	if(MoveFileExW(wide_oldname.c_str(), wide_newname.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED | MOVEFILE_WRITE_THROUGH) != 0)
+	constexpr DWORD MOVE_FLAGS = MOVEFILE_COPY_ALLOWED | MOVEFILE_WRITE_THROUGH;
+	if(MoveFileExW(wide_oldname.c_str(), wide_newname.c_str(), MOVE_FLAGS | MOVEFILE_REPLACE_EXISTING) != 0)
 	{
 		return 0;
 	}
 
-	// Windows 在目标文件仍有打开句柄时无法重命名，先删除目标文件再重试。
-	// 不能在重命名前删除：对 foo 重命名为 FOO 时会把源文件误删。
 	DWORD error = GetLastError();
 	if(!allow_destination_removal && (error == ERROR_ACCESS_DENIED || error == ERROR_SHARING_VIOLATION))
 	{
-		// 配置和缓存类写入禁止删除目标后重试，改为等待瞬时句柄释放再试：
+		// 配置和缓存类写入只等待瞬时句柄释放，再尝试原地替换。
 		// 杀毒扫描、索引器或另一个实例刚读完文件，不应让整次保存失败。
 		constexpr int RETRY_COUNT = 10;
 		constexpr DWORD RETRY_DELAY_MS = 20;
 		for(int Attempt = 0; Attempt < RETRY_COUNT; ++Attempt)
 		{
 			Sleep(RETRY_DELAY_MS);
-			if(MoveFileExW(wide_oldname.c_str(), wide_newname.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED | MOVEFILE_WRITE_THROUGH) != 0)
+			if(MoveFileExW(wide_oldname.c_str(), wide_newname.c_str(), MOVE_FLAGS | MOVEFILE_REPLACE_EXISTING) != 0)
 				return 0;
 			error = GetLastError();
 			if(error != ERROR_ACCESS_DENIED && error != ERROR_SHARING_VIOLATION)
@@ -666,12 +698,31 @@ int fs_rename(const char *oldname, const char *newname, bool allow_destination_r
 	}
 	else if(allow_destination_removal && error == ERROR_ACCESS_DENIED)
 	{
-		(void)fs_remove(newname);
-		if(MoveFileExW(wide_oldname.c_str(), wide_newname.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED | MOVEFILE_WRITE_THROUGH) != 0)
+		// 目标文件有打开句柄时，先在同目录暂存旧文件，等替换成功后再删除。
+		std::wstring backup;
+		const DWORD attributes = GetFileAttributesW(wide_newname.c_str());
+		if(attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
 		{
+			backup = fs_windows_temporary_sibling(wide_newname, "rename-backup");
+			if(MoveFileExW(wide_newname.c_str(), backup.c_str(), MOVEFILE_WRITE_THROUGH) == 0)
+				backup.clear();
+		}
+
+		// 暂存期间如果有其他写入者发布到目标名，保留对方写入和我们的备份。
+		const DWORD retry_flags = backup.empty() ? MOVE_FLAGS | MOVEFILE_REPLACE_EXISTING : MOVE_FLAGS;
+		if(MoveFileExW(wide_oldname.c_str(), wide_newname.c_str(), retry_flags) != 0)
+		{
+			if(!backup.empty())
+				fs_windows_delete_temporary_file(backup);
 			return 0;
 		}
 		error = GetLastError();
+		if(!backup.empty() && MoveFileExW(backup.c_str(), wide_newname.c_str(), MOVEFILE_WRITE_THROUGH) == 0)
+		{
+			const DWORD restore_error = GetLastError();
+			const auto filename_backup = windows_wide_to_utf8(backup.c_str());
+			log_error("filesystem", "Failed to restore '%s' from '%s' (%ld '%s')", newname, filename_backup ? filename_backup->c_str() : "(invalid filename)", restore_error, windows_format_system_message(restore_error).c_str());
+		}
 	}
 	log_error("filesystem", "Failed to rename file '%s' to '%s' (%ld '%s')", oldname, newname, error, windows_format_system_message(error).c_str());
 	return 1;

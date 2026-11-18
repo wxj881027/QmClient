@@ -294,14 +294,14 @@ int str_comp_filenames(const char *a, const char *b)
 			else if(result)
 				return result;
 			else if(*a == '\0' || *b == '\0')
-				return *a - *b;
+				break;
 		}
 
-		result = tolower(*a) - tolower(*b);
+		result = tolower(static_cast<unsigned char>(*a)) - tolower(static_cast<unsigned char>(*b));
 		if(result)
 			return result;
 	}
-	return *a - *b;
+	return static_cast<unsigned char>(*a) - static_cast<unsigned char>(*b);
 }
 
 void str_clean_whitespaces(char *str)

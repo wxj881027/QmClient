@@ -117,6 +117,19 @@ TEST(StrFilename, ValidFilename)
 	EXPECT_TRUE(str_valid_filename("Null.txt"));
 }
 
+TEST(StrFilename, CompFilenameOrdersUtf8AfterTheCommonPrefix)
+{
+	EXPECT_LT(str_comp_filenames("Race", "Racea"), 0);
+	EXPECT_LT(str_comp_filenames("Racea", "Race地图"), 0);
+	EXPECT_LT(str_comp_filenames("Race", "Race地图"), 0);
+}
+
+TEST(StrFilename, CompFilenameOrdersUtf8AfterTheCommonNumber)
+{
+	EXPECT_LT(str_comp_filenames("Race7", "Race7地图"), 0);
+	EXPECT_GT(str_comp_filenames("Race7地图", "Race7"), 0);
+}
+
 TEST(StrFilename, CompFilename)
 {
 	EXPECT_EQ(str_comp_filenames("a", "a"), 0);

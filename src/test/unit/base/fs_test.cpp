@@ -6,7 +6,12 @@
 #include <gtest/gtest.h>
 #include <test/test.h>
 
+#include <cstdlib>
+#include <optional>
+#include <string>
+
 #if defined(CONF_FAMILY_WINDOWS)
+#include <base/windows.h>
 #include <windows.h>
 #endif
 
@@ -97,6 +102,70 @@ TEST(Filesystem, StoragePath)
 	EXPECT_TRUE(str_endswith_nocase(aStoragePath, "/TestAppName"));
 }
 
+#if defined(CONF_PLATFORM_LINUX)
+class StoragePathTest : public testing::Test
+{
+	std::optional<std::string> m_PreviousHome;
+	std::optional<std::string> m_PreviousDataHome;
+
+	void SetUp() override
+	{
+		if(const char *pHome = std::getenv("HOME"))
+			m_PreviousHome = pHome;
+		if(const char *pDataHome = std::getenv("XDG_DATA_HOME"))
+			m_PreviousDataHome = pDataHome;
+		ASSERT_EQ(setenv("HOME", "/QmTestHome", 1), 0);
+	}
+
+	void TearDown() override
+	{
+		Restore("HOME", m_PreviousHome);
+		Restore("XDG_DATA_HOME", m_PreviousDataHome);
+	}
+
+	static void Restore(const char *pName, const std::optional<std::string> &Value)
+	{
+		if(Value)
+			EXPECT_EQ(setenv(pName, Value->c_str(), 1), 0);
+		else
+			EXPECT_EQ(unsetenv(pName), 0);
+	}
+};
+
+TEST_F(StoragePathTest, RejectsTruncatedDataRoot)
+{
+	const std::string DataHome = "/QmTest/" + std::string(180, 'A') + "/" + std::string(180, 'B') + "/" + std::string(180, 'C');
+	ASSERT_EQ(setenv("XDG_DATA_HOME", DataHome.c_str(), 1), 0);
+
+	char aPath[IO_MAX_PATH_LENGTH] = "previous";
+	EXPECT_EQ(fs_storage_path("DDNet", aPath, sizeof(aPath)), -1);
+	EXPECT_STREQ(aPath, "");
+}
+
+TEST_F(StoragePathTest, PreservesDataRootCaseAtExactCapacity)
+{
+	ASSERT_EQ(setenv("XDG_DATA_HOME", "/QmTestData", 1), 0);
+
+	char aPath[sizeof("/QmTestData/ddnet")];
+	ASSERT_EQ(fs_storage_path("DDNet", aPath, sizeof(aPath)), 0);
+	EXPECT_STREQ(aPath, "/QmTestData/ddnet");
+}
+#endif
+
+TEST(Filesystem, DoesNotCreateParentsForTruncatedPath)
+{
+	CTestInfo Info;
+	const std::string Path = std::string(Info.m_aFilename) + "/" + std::string(IO_MAX_PATH_LENGTH, 'x');
+
+	const int Result = fs_makedir_rec_for(Path.c_str());
+	const bool Created = fs_is_dir(Info.m_aFilename);
+	if(Created)
+		EXPECT_EQ(fs_removedir(Info.m_aFilename), 0);
+
+	EXPECT_EQ(Result, -1);
+	EXPECT_FALSE(Created);
+}
+
 TEST(Filesystem, ExecutablePath)
 {
 	char aExecutablePath[IO_MAX_PATH_LENGTH];
@@ -126,6 +195,7 @@ TEST(Filesystem, ExecutablePathIgnoresPreviousWindowsError)
 	ASSERT_EQ(result, 0);
 	EXPECT_TRUE(fs_is_file(aExecutablePath));
 }
+#endif
 
 TEST(Filesystem, ExecutablePathRejectsTooSmallBuffer)
 {
@@ -134,7 +204,6 @@ TEST(Filesystem, ExecutablePathRejectsTooSmallBuffer)
 	EXPECT_EQ(aOutput[0], '\0');
 	EXPECT_EQ(aOutput[1], '?');
 }
-#endif
 
 TEST(Filesystem, CreateCloseDelete)
 {
@@ -419,3 +488,33 @@ TEST(Filesystem, RenameOpenFileDeleteTarget)
 
 	EXPECT_FALSE(fs_remove(aNewFilename));
 }
+
+#if defined(CONF_FAMILY_WINDOWS)
+TEST(Filesystem, FailedRenameKeepsExistingDestination)
+{
+	CTestInfo Info;
+	ASSERT_EQ(fs_makedir(Info.m_aFilename), 0);
+	const std::string Destination = std::string(Info.m_aFilename) + "/existing.txt";
+	IOHANDLE File = io_open(Destination.c_str(), IOFLAG_WRITE);
+	ASSERT_NE(File, nullptr);
+	EXPECT_EQ(io_write(File, "old", 3), 3u);
+	ASSERT_EQ(io_close(File), 0);
+
+	// 目录不能移动到自己的子路径。底层文件系统可能报告不同的错误。
+	const auto WideSource = windows_utf8_to_wide(Info.m_aFilename);
+	const auto WideDestination = windows_utf8_to_wide(Destination.c_str());
+	const BOOL Renamed = MoveFileExW(WideSource.c_str(), WideDestination.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED | MOVEFILE_WRITE_THROUGH);
+	const DWORD FirstError = GetLastError();
+	ASSERT_EQ(Renamed, FALSE);
+	if(FirstError != ERROR_ACCESS_DENIED)
+		GTEST_SKIP() << "Native rename did not reach the access-denied fallback: " << FirstError;
+
+	EXPECT_NE(fs_rename(Info.m_aFilename, Destination.c_str()), 0);
+	File = io_open(Destination.c_str(), IOFLAG_READ);
+	ASSERT_NE(File, nullptr);
+	char aContents[4] = {};
+	EXPECT_EQ(io_read(File, aContents, 3), 3u);
+	EXPECT_EQ(io_close(File), 0);
+	EXPECT_STREQ(aContents, "old");
+}
+#endif

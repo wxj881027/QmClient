@@ -160,7 +160,7 @@ void str_timestamp(char *buffer, int buffer_size);
  * @param buffer_size Size of the buffer.
  * @param format Time formatting string. See https://cppreference.com/w/c/chrono/strftime.html for format description.
  *
- * @remark Guarantees that buffer string will contain null-termination.
+ * @remark Sets a writable buffer to an empty string on conversion or formatting failure.
  */
 [[gnu::format(strftime, 4, 0)]] void str_timestamp_ex(time_t time, char *buffer, int buffer_size, const char *format);
 

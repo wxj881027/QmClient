@@ -112,6 +112,28 @@ TEST_F(TimestampTest, WithSpecifiedFormatAndTimestamp)
 	EXPECT_STREQ(aTimestamp, "2004-05-15 18:13:53");
 }
 
+TEST_F(TimestampTest, FormatsAnUnsupportedFileTimestampAsEmpty)
+{
+#if defined(CONF_FAMILY_WINDOWS)
+	const time_t Unsupported = -2;
+#else
+	if(std::numeric_limits<time_t>::digits < 63)
+		GTEST_SKIP() << "time_t is limited to calendar dates supported by this platform";
+	const time_t Unsupported = std::numeric_limits<time_t>::max();
+#endif
+	char aTimestamp[32] = "previous text";
+	str_timestamp_ex(Unsupported, aTimestamp, sizeof(aTimestamp), FORMAT_SPACE);
+	EXPECT_STREQ(aTimestamp, "");
+}
+
+TEST_F(TimestampTest, FormatsIntoAnEmptyCapacityWithoutWriting)
+{
+	char aTimestamp[] = {'?', '!'};
+	str_timestamp_ex(1704027535, aTimestamp + 1, 0, FORMAT_SPACE);
+	EXPECT_EQ(aTimestamp[0], '?');
+	EXPECT_EQ(aTimestamp[1], '!');
+}
+
 TEST_F(TimestampTest, TryFormatsAValidTimestampInTheCurrentTimezone)
 {
 	char aTimestamp[32];

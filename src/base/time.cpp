@@ -167,9 +167,13 @@ void str_timestamp_format(char *buffer, int buffer_size, const char *format)
 
 void str_timestamp_ex(time_t time_data, char *buffer, int buffer_size, const char *format)
 {
-	const tm time_info = time_localtime_threadlocal(&time_data);
-	strftime(buffer, buffer_size, format, &time_info);
-	buffer[buffer_size - 1] = 0; /* assure null termination */
+	if(!std::in_range<int64_t>(time_data))
+	{
+		if(buffer != nullptr && buffer_size > 0)
+			buffer[0] = '\0';
+		return;
+	}
+	(void)str_timestamp_ex_try(static_cast<int64_t>(time_data), buffer, buffer_size, format);
 }
 
 bool str_timestamp_ex_try(int64_t timestamp, char *buffer, int buffer_size, const char *format)

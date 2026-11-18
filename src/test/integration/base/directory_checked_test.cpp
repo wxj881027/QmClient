@@ -7,6 +7,7 @@
 #include <test/test.h>
 
 #include <cerrno>
+#include <filesystem>
 #include <map>
 #include <string>
 #include <utility>
@@ -170,6 +171,43 @@ TEST_F(CCheckedDirectoryTest, CallbackErrnoDoesNotTurnNormalReaddirEndIntoFailur
 	const auto Result = fs_listdir_checked(Path("checked_files").c_str(), Visit, 42, &Visitor);
 	errno = Previous;
 	EXPECT_EQ(Result, EResult::SUCCESS);
+}
+#endif
+
+#if defined(CONF_PLATFORM_LINUX)
+TEST_F(CCheckedDirectoryTest, LegacyEnumerationSkipsEntriesWithoutACompletePath)
+{
+	const std::string Parent = Path("checked_files") + "/" + std::string(160, 'a');
+	const std::string Directory = Parent + "/" + std::string(160, 'b');
+	ASSERT_TRUE(std::filesystem::create_directories(Directory));
+	struct CCleanup
+	{
+		const std::string &m_Path;
+		~CCleanup()
+		{
+			std::error_code Error;
+			std::filesystem::remove_all(m_Path, Error);
+		}
+	} Cleanup{Parent};
+
+	ASSERT_LT(Directory.size() + 2, IO_MAX_PATH_LENGTH);
+	const std::string Fits(IO_MAX_PATH_LENGTH - Directory.size() - 2, 'c');
+	const std::string TooLong = Fits + "c";
+	ASSERT_EQ(fs_makedir((Directory + "/" + Fits).c_str()), 0);
+	ASSERT_EQ(fs_makedir((Directory + "/" + TooLong).c_str()), 0);
+
+	SVisitor Names, Details;
+	fs_listdir(Directory.c_str(), Visit, 42, &Names);
+	fs_listdir_fileinfo(
+		Directory.c_str(), [](const CFsFileInfo *pInfo, int IsDir, int Type, void *pUser) {
+			return Visit(pInfo->m_pName, IsDir, Type, pUser);
+		},
+		42, &Details);
+	EXPECT_EQ(Names.m_Entries.size(), 1u);
+	EXPECT_EQ(Names.m_Entries, Details.m_Entries);
+	EXPECT_EQ(Names.m_Entries.count(TooLong), 0u);
+	ASSERT_EQ(Names.m_Entries.count(Fits), 1u);
+	EXPECT_EQ(Names.m_Entries.at(Fits), std::make_pair(1, 42));
 }
 #endif
 
