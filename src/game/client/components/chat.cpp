@@ -4828,7 +4828,7 @@ bool CChat::TranslateVisibleChatLines()
 			continue;
 		if(!QmChatEmojiShouldTranslate(Line.m_ChatEmoji))
 			continue;
-		if(!IsManualVisibleTranslateCandidate(Line.m_ClientId, Line.m_aText[0] != '\0', Line.m_pTranslateResponse != nullptr, GameClient()->m_aLocalIds, std::size(GameClient()->m_aLocalIds)))
+		if(!IsManualVisibleTranslateCandidate(Line.m_ClientId, Line.m_aText[0] != '\0', TranslateResponseBlocksRequest(Line.m_pTranslateResponse.get()), GameClient()->m_aLocalIds, std::size(GameClient()->m_aLocalIds)))
 			continue;
 
 		aLineIndices[NumLineIndices++] = LineIndex;
