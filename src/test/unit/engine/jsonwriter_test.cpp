@@ -6,11 +6,13 @@
 #include <base/system.h>
 
 #include <engine/shared/jsonwriter.h>
+#include <engine/storage.h>
 
 #include <gtest/gtest.h>
 #include <test/test.h>
 
 #include <limits>
+#include <memory>
 
 class JsonFileWriter
 {
@@ -213,4 +215,24 @@ TYPED_TEST(JsonWriters, Small)
 {
 	this->Impl.m_pJson->WriteIntValue(std::numeric_limits<int>::min());
 	this->Impl.Expect("-2147483648\n");
+}
+
+TEST(JsonFileWriterTest, FinishReportsStreamError)
+{
+	CTestInfo Info;
+	const auto pStorage = Info.CreateTestStorage();
+	ASSERT_TRUE(pStorage);
+	std::unique_ptr<void, decltype(&io_close)> pFile(pStorage->OpenFile("stream-error.json", IOFLAG_WRITE, IStorage::TYPE_SAVE), io_close);
+	ASSERT_TRUE(pFile);
+
+	// 只写流上的读取失败会留下错误标记，但句柄仍可写。
+	char Byte = 0;
+	ASSERT_EQ(io_read(pFile.get(), &Byte, 1), 0u);
+	ASSERT_NE(io_error(pFile.get()), 0);
+
+	CJsonFileWriter Writer(pFile.get());
+	pFile.release();
+	Writer.WriteBoolValue(true);
+	EXPECT_FALSE(Writer.Finish());
+	EXPECT_FALSE(Writer.Finish());
 }
