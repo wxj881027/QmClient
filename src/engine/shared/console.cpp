@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <iterator> // std::size
+#include <memory>
 #include <new>
 
 // todo: rework this
@@ -491,6 +492,12 @@ bool CConsole::LineIsValid(const char *pStr)
 
 void CConsole::ExecuteLineStroked(int Stroke, const char *pStr, int ClientId, bool InterpretSemicolons)
 {
+	std::optional<CResult> ResultStorage;
+	ExecuteLineStroked(Stroke, pStr, ClientId, InterpretSemicolons, ResultStorage);
+}
+
+void CConsole::ExecuteLineStroked(int Stroke, const char *pStr, int ClientId, bool InterpretSemicolons, std::optional<CResult> &ResultStorage)
+{
 	const char *pWithoutPrefix = str_startswith(pStr, "mc;");
 	if(pWithoutPrefix)
 	{
@@ -499,7 +506,7 @@ void CConsole::ExecuteLineStroked(int Stroke, const char *pStr, int ClientId, bo
 	}
 	while(pStr && *pStr)
 	{
-		CResult Result(ClientId);
+		CResult &Result = ResultStorage.emplace(ClientId);
 		const char *pEnd = pStr;
 		const char *pNextPart = nullptr;
 		int InString = 0;
@@ -804,14 +811,22 @@ try
 	bool Success = false;
 	if(LineReader.OpenFile(m_pStorage->OpenFile(pFilename, IOFLAG_READ, StorageType), RejectInvalidLines))
 	{
-		log_info("console", "executing '%s'", pFilename);
-
-		while(const char *pLine = LineReader.Get())
+		// 每层脚本独占解析缓冲，避免嵌套 exec 把大参数数组逐层留在调用栈上。
+		const std::unique_ptr<std::optional<CResult>> pResultStorage(new(std::nothrow) std::optional<CResult>);
+		if(pResultStorage)
 		{
-			ExecuteLine(pLine, ClientId);
+			log_info("console", "executing '%s'", pFilename);
+			while(const char *pLine = LineReader.Get())
+			{
+				ExecuteLineStroked(1, pLine, ClientId, true, *pResultStorage);
+				ExecuteLineStroked(0, pLine, ClientId, true, *pResultStorage);
+			}
+			Success = true;
 		}
-
-		Success = true;
+		else if(LogFailure)
+		{
+			log_error("console", "could not allocate command parser for '%s'", pFilename);
+		}
 	}
 	else if(LogFailure)
 	{

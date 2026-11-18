@@ -5277,6 +5277,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/memheap_allocation_test.cpp
     src/test/integration/engine/console_temp_command_allocation_test.cpp
     src/test/integration/engine/localization_storage_transaction_test.cpp
+    src/test/integration/engine/console_nested_script_test.cpp
     src/test/integration/engine/engine_network_log_test.cpp
     src/test/integration/engine/storage_path_bounds_test.cpp
     src/test/integration/client/sqlite_open_failure_test.cpp

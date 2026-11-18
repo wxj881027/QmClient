@@ -148,6 +148,7 @@ class CConsole : public IConsole
 	};
 
 	int ParseArgs(CResult *pResult, const char *pFormat);
+	void ExecuteLineStroked(int Stroke, const char *pStr, int ClientId, bool InterpretSemicolons, std::optional<CResult> &ResultStorage);
 
 	/*
 	this function will set pFormat to the next parameter (i,s,r,v,?) it contains and
