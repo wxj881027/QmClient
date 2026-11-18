@@ -7,6 +7,7 @@
 #include "databases/connection_pool.h"
 #include "register.h"
 
+#include <base/bytes.h>
 #include <base/logger.h>
 #include <base/math.h>
 #include <base/system.h>
@@ -61,7 +62,6 @@ void CServerBan::InitServerBan(IConsole *pConsole, IStorage *pStorage, CServer *
 
 	m_pServer = pServer;
 
-	// overwrites base command, todo: improve this
 	Console()->Register("ban", "s[ip|id] ?i[minutes] r[reason]", CFGFLAG_SERVER | CFGFLAG_STORE, ConBanExt, this, "Ban player with ip/client id for x minutes for any reason");
 	Console()->Register("ban_region", "s[region] s[ip|id] ?i[minutes] r[reason]", CFGFLAG_SERVER | CFGFLAG_STORE, ConBanRegion, this, "Ban player in a region");
 	Console()->Register("ban_region_range", "s[region] s[first ip] s[last ip] ?i[minutes] r[reason]", CFGFLAG_SERVER | CFGFLAG_STORE, ConBanRegionRange, this, "Ban range in a region");
@@ -156,7 +156,8 @@ void CServerBan::ConBanExt(IConsole::IResult *pResult, void *pUser)
 	{
 		int ClientId = str_toint(pStr);
 		// 官方 f586be3e0：看不到真实 id 的旧客户端不能按 id 封禁
-		if(!pThis->Server()->ClientSupportsServerMaxClients(pResult->m_ClientId))
+		// 地图配置、econ 等来源没有真实客户端 ID，不能查询客户端能力。
+		if(pResult->m_ClientId >= 0 && !pThis->Server()->ClientSupportsServerMaxClients(pResult->m_ClientId))
 			pThis->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "net_ban", "ban error (use a more recent DDNet client)");
 		else if(ClientId < 0 || ClientId >= MAX_CLIENTS || pThis->Server()->m_aClients[ClientId].m_State == CServer::CClient::STATE_EMPTY)
 			pThis->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "net_ban", "ban error (invalid client id)");
@@ -237,7 +238,7 @@ void CServer::CClient::Reset()
 	m_Flags = 0;
 	m_RedirectDropTime = 0;
 	// 官方 b946fa9a2：换图后也要清掉重连标记，不能只在进游戏和掉线时清
-	m_Rejoining = false;
+	m_IngameBeforeRejoin = false;
 	m_KcpCapable = false;
 	m_KcpNegotiated = false;
 	m_KcpConv = 0;
@@ -249,19 +250,16 @@ void CServer::CClient::Reset()
 	std::fill(std::begin(m_aReverseIdMap), std::end(m_aReverseIdMap), -1);
 }
 
-CServer::CServer() :
-	m_pSnapshotDelta(CSnapshotDelta::New()),
-	m_pSnapshotDeltaSixup(CSnapshotDelta::New()),
-	m_pSnapshotBuilder(CSnapshotBuilder::New())
+CServer::CServer()
 {
 	m_pConfig = &g_Config;
 	for(int i = 0; i < MAX_CLIENTS; i++)
 	{
 		m_aClients[i].m_pPersistentData = nullptr;
-		m_aDemoRecorder[i] = CDemoRecorder(&*m_pSnapshotDelta, true);
+		m_aDemoRecorder[i] = CDemoRecorder(&m_SnapshotDelta, true);
 	}
-	m_aDemoRecorder[RECORDER_MANUAL] = CDemoRecorder(&*m_pSnapshotDelta, false);
-	m_aDemoRecorder[RECORDER_AUTO] = CDemoRecorder(&*m_pSnapshotDelta, false);
+	m_aDemoRecorder[RECORDER_MANUAL] = CDemoRecorder(&m_SnapshotDelta, false);
+	m_aDemoRecorder[RECORDER_AUTO] = CDemoRecorder(&m_SnapshotDelta, false);
 
 	m_pGameServer = nullptr;
 	m_pPersistentData = nullptr;
@@ -618,12 +616,14 @@ int64_t CServer::TickStartTime(int Tick)
 
 int CServer::Init()
 {
+	m_StartTime = time_get();
+
 	for(auto &Client : m_aClients)
 	{
 		Client.m_State = CClient::STATE_EMPTY;
 		Client.m_aName[0] = 0;
 		Client.m_aClan[0] = 0;
-		Client.m_Country = -1;
+		Client.m_Country = CountryCode::DEFAULT;
 		Client.m_Snapshots.Init();
 		Client.m_Traffic = 0;
 		Client.m_TrafficSince = 0;
@@ -633,7 +633,7 @@ int CServer::Init()
 		Client.m_Latency = 0;
 		Client.m_Sixup = false;
 		Client.m_RedirectDropTime = 0;
-		Client.m_Rejoining = false;
+		Client.m_IngameBeforeRejoin = false;
 	}
 
 	m_CurrentGameTick = MIN_TICK;
@@ -728,7 +728,7 @@ bool CServer::GetClientInfo(int ClientId, CClientInfo *pInfo) const
 	dbg_assert(ClientId >= 0 && ClientId < MAX_CLIENTS, "Invalid ClientId: %d", ClientId);
 	dbg_assert(pInfo != nullptr, "pInfo cannot be null");
 
-	if(m_aClients[ClientId].m_State == CClient::STATE_INGAME)
+	if(m_aClients[ClientId].IsKnownToGame())
 	{
 		pInfo->m_pName = m_aClients[ClientId].m_aName;
 		pInfo->m_Latency = m_aClients[ClientId].m_Latency;
@@ -753,7 +753,7 @@ void CServer::SetClientDDNetVersion(int ClientId, int DDNetVersion)
 {
 	dbg_assert(ClientId >= 0 && ClientId < MAX_CLIENTS, "Invalid ClientId: %d", ClientId);
 
-	if(m_aClients[ClientId].m_State == CClient::STATE_INGAME)
+	if(m_aClients[ClientId].IsKnownToGame())
 	{
 		m_aClients[ClientId].m_DDNetVersion = DDNetVersion;
 		m_aClients[ClientId].m_DDNetVersionSettled = true;
@@ -786,7 +786,7 @@ const char *CServer::ClientName(int ClientId) const
 {
 	if(ClientId < 0 || ClientId >= MAX_CLIENTS || m_aClients[ClientId].m_State == CServer::CClient::STATE_EMPTY)
 		return "(invalid)";
-	if(m_aClients[ClientId].m_State == CServer::CClient::STATE_INGAME || m_aClients[ClientId].m_State == CServer::CClient::STATE_REDIRECTED)
+	if(m_aClients[ClientId].IsKnownToGame() || m_aClients[ClientId].m_State == CServer::CClient::STATE_REDIRECTED)
 		return m_aClients[ClientId].m_aName;
 	else
 		return "(connecting)";
@@ -796,7 +796,7 @@ const char *CServer::ClientClan(int ClientId) const
 {
 	if(ClientId < 0 || ClientId >= MAX_CLIENTS || m_aClients[ClientId].m_State == CServer::CClient::STATE_EMPTY)
 		return "";
-	if(m_aClients[ClientId].m_State == CServer::CClient::STATE_INGAME)
+	if(m_aClients[ClientId].IsKnownToGame())
 		return m_aClients[ClientId].m_aClan;
 	else
 		return "";
@@ -806,7 +806,7 @@ int CServer::ClientCountry(int ClientId) const
 {
 	if(ClientId < 0 || ClientId >= MAX_CLIENTS || m_aClients[ClientId].m_State == CServer::CClient::STATE_EMPTY)
 		return -1;
-	if(m_aClients[ClientId].m_State == CServer::CClient::STATE_INGAME)
+	if(m_aClients[ClientId].IsKnownToGame())
 		return m_aClients[ClientId].m_Country;
 	else
 		return -1;
@@ -819,7 +819,7 @@ bool CServer::ClientSlotEmpty(int ClientId) const
 
 bool CServer::ClientIngame(int ClientId) const
 {
-	return ClientId >= 0 && ClientId < MAX_CLIENTS && m_aClients[ClientId].m_State == CServer::CClient::STATE_INGAME;
+	return ClientId >= 0 && ClientId < MAX_CLIENTS && m_aClients[ClientId].IsKnownToGame();
 }
 
 int CServer::Port() const
@@ -1068,9 +1068,9 @@ void CServer::DoSnapshot()
 		CSnapshotBuffer Data;
 
 		// build snap and possibly add some messages
-		m_pSnapshotBuilder->Init(false);
+		m_SnapshotBuilder.Init();
 		GameServer()->OnSnap(-1, IsGlobalSnap, true);
-		int SnapshotSize = m_pSnapshotBuilder->Finish(Data);
+		int SnapshotSize = m_SnapshotBuilder.Finish(&Data);
 
 		// write snapshot
 		if(m_aDemoRecorder[RECORDER_MANUAL].IsRecording())
@@ -1083,7 +1083,7 @@ void CServer::DoSnapshot()
 	for(int i = 0; i < MaxClients(); i++)
 	{
 		// client must be ingame to receive snapshots
-		if(m_aClients[i].m_State != CClient::STATE_INGAME || m_aClients[i].m_Rejoining)
+		if(m_aClients[i].m_State != CClient::STATE_INGAME)
 			continue;
 
 		// 官方 1a1e165e7：不再用“是否已确认 DDNet 版本”挡住快照，
@@ -1102,14 +1102,14 @@ void CServer::DoSnapshot()
 			continue;
 
 		{
-			m_pSnapshotBuilder->Init(m_aClients[i].m_Sixup);
+			m_SnapshotBuilder.Init(m_aClients[i].m_Sixup);
 
 			// only snap events on global ticks
 			GameServer()->OnSnap(i, IsGlobalSnap, m_aDemoRecorder[i].IsRecording());
 
 			// finish snapshot
 			CSnapshotBuffer Data;
-			int SnapshotSize = m_pSnapshotBuilder->Finish(Data);
+			int SnapshotSize = m_SnapshotBuilder.Finish(&Data);
 
 			if(m_aDemoRecorder[i].IsRecording())
 			{
@@ -1157,9 +1157,9 @@ void CServer::DoSnapshot()
 			}
 
 			// create delta
-			CSnapshotDelta *const pSnapshotDelta = IsSixup(i) ? &*m_pSnapshotDeltaSixup : &*m_pSnapshotDelta;
+			CSnapshotDelta *const pSnapshotDelta = IsSixup(i) ? &m_SnapshotDeltaSixup : &m_SnapshotDelta;
 			CSnapshotDeltaBuffer DeltaData;
-			const int DeltaSize = pSnapshotDelta->CreateDelta(*pDeltashot, *Data.AsSnapshot(), DeltaData.AsMutSlice());
+			const int DeltaSize = pSnapshotDelta->CreateDelta(pDeltashot, Data.AsSnapshot(), DeltaData.Data(), sizeof(DeltaData.m_aData));
 
 			if(DeltaSize < 0)
 			{
@@ -1239,8 +1239,10 @@ int CServer::ClientRejoinCallback(int ClientId, void *pUser, bool Sixup, bool Va
 	CServer *pThis = (CServer *)pUser;
 
 	// 官方 7131ad28b：槽位不在游戏中时按新连接处理
-	if(pThis->m_aClients[ClientId].m_State != CClient::STATE_INGAME)
+	if(!pThis->m_aClients[ClientId].IsKnownToGame())
 	{
+		// 先释放旧槽位状态，避免重连后残留上一次连接的名称、认证与持久数据。
+		DelClientCallback(ClientId, "reconnect", pUser);
 		if(VanillaAuth)
 			return NewClientNoAuthCallback(ClientId, pUser);
 		return NewClientCallback(ClientId, pUser, Sixup);
@@ -1255,8 +1257,9 @@ int CServer::ClientRejoinCallback(int ClientId, void *pUser, bool Sixup, bool Va
 
 	pThis->m_NetServer.DeactivateKcp(ClientId);
 	pThis->m_aClients[ClientId].Reset();
-	// m_Rejoining 让客户端在不改变槽位状态的情况下回到连接中
-	pThis->m_aClients[ClientId].m_Rejoining = true;
+	// 官方 12841：保留游戏槽位，但连接状态退回握手流程
+	pThis->m_aClients[ClientId].m_IngameBeforeRejoin = true;
+	pThis->m_aClients[ClientId].m_State = CClient::STATE_CONNECTING;
 	pThis->m_aClients[ClientId].m_Sixup = Sixup;
 
 	pThis->GameServer()->TeehistorianRecordPlayerRejoin(ClientId);
@@ -1277,7 +1280,7 @@ int CServer::NewClientNoAuthCallback(int ClientId, void *pUser)
 	pThis->m_aClients[ClientId].m_State = CClient::STATE_CONNECTING;
 	pThis->m_aClients[ClientId].m_aName[0] = 0;
 	pThis->m_aClients[ClientId].m_aClan[0] = 0;
-	pThis->m_aClients[ClientId].m_Country = -1;
+	pThis->m_aClients[ClientId].m_Country = CountryCode::DEFAULT;
 	pThis->m_aClients[ClientId].m_AuthKey = -1;
 	pThis->m_aClients[ClientId].m_AuthTries = 0;
 	pThis->m_aClients[ClientId].m_AuthHidden = false;
@@ -1310,7 +1313,7 @@ int CServer::NewClientCallback(int ClientId, void *pUser, bool Sixup)
 	pThis->m_aClients[ClientId].m_DnsblState = EDnsblState::NONE;
 	pThis->m_aClients[ClientId].m_aName[0] = 0;
 	pThis->m_aClients[ClientId].m_aClan[0] = 0;
-	pThis->m_aClients[ClientId].m_Country = -1;
+	pThis->m_aClients[ClientId].m_Country = CountryCode::DEFAULT;
 	pThis->m_aClients[ClientId].m_AuthKey = -1;
 	pThis->m_aClients[ClientId].m_AuthTries = 0;
 	pThis->m_aClients[ClientId].m_AuthHidden = false;
@@ -1393,13 +1396,14 @@ int CServer::DelClientCallback(int ClientId, const char *pReason, void *pUser)
 #endif
 
 	// notify the mod about the drop
-	if(pThis->m_aClients[ClientId].m_State >= CClient::STATE_READY)
+	// 官方 12895：重连中的槽位已经退回 CONNECTING，但游戏层仍有玩家对象，必须通知掉线
+	if(pThis->m_aClients[ClientId].m_State >= CClient::STATE_READY || pThis->m_aClients[ClientId].m_IngameBeforeRejoin)
 		pThis->GameServer()->OnClientDrop(ClientId, pReason);
 
 	pThis->m_aClients[ClientId].m_State = CClient::STATE_EMPTY;
 	pThis->m_aClients[ClientId].m_aName[0] = 0;
 	pThis->m_aClients[ClientId].m_aClan[0] = 0;
-	pThis->m_aClients[ClientId].m_Country = -1;
+	pThis->m_aClients[ClientId].m_Country = CountryCode::DEFAULT;
 	pThis->m_aClients[ClientId].m_AuthKey = -1;
 	pThis->m_aClients[ClientId].m_AuthTries = 0;
 	pThis->m_aClients[ClientId].m_AuthHidden = false;
@@ -1415,7 +1419,7 @@ int CServer::DelClientCallback(int ClientId, const char *pReason, void *pUser)
 	pThis->m_aClients[ClientId].m_Snapshots.PurgeAll();
 	pThis->m_aClients[ClientId].m_Sixup = false;
 	pThis->m_aClients[ClientId].m_RedirectDropTime = 0;
-	pThis->m_aClients[ClientId].m_Rejoining = false;
+	pThis->m_aClients[ClientId].m_IngameBeforeRejoin = false;
 	pThis->m_aClients[ClientId].m_HasPersistentData = false;
 	pThis->SendClientBrandsToKnownClients();
 
@@ -1876,9 +1880,8 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 	// unpack msgid and system flag
 	int Msg;
 	bool Sys;
-	CUuid Uuid;
 
-	int Result = UnpackMessageId(&Msg, &Sys, &Uuid, &Unpacker, &Packer);
+	int Result = UnpackMessageId(&Msg, &Sys, &Unpacker, &Packer);
 	if(Result == UNPACKMESSAGE_ERROR)
 	{
 		return;
@@ -1899,6 +1902,7 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 		}
 	}
 
+	// 官方 13100 回滚 13092：地图数据传输本来就走 sv_fast_download 的节流，不能再计入 sv_netlimit
 	if(Config()->m_SvNetlimit && Msg != NETMSG_REQUEST_MAP_DATA)
 	{
 		int64_t Now = time_get();
@@ -2016,7 +2020,9 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 		else if(Msg == NETMSG_CLIENTVER)
 		{
 			// 官方 7131ad28b：重连中的连接也要接受版本包，但不改变槽位状态
-			if(m_aClients[ClientId].m_State == CClient::STATE_PREAUTH || m_aClients[ClientId].m_Rejoining)
+			const bool Rejoining = m_aClients[ClientId].m_IngameBeforeRejoin;
+			if(m_aClients[ClientId].m_State == CClient::STATE_PREAUTH ||
+				(Rejoining && m_aClients[ClientId].m_State == CClient::STATE_CONNECTING))
 			{
 				CUuid *pConnectionId = (CUuid *)Unpacker.GetRaw(sizeof(*pConnectionId));
 				int DDNetVersion = Unpacker.GetInt();
@@ -2030,17 +2036,17 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 				str_copy(m_aClients[ClientId].m_aDDNetVersionStr, pDDNetVersionStr);
 				m_aClients[ClientId].m_DDNetVersionSettled = true;
 				m_aClients[ClientId].m_GotDDNetVersionPacket = true;
-				if(!m_aClients[ClientId].m_Rejoining)
-				{
+				// 重连时保持 CONNECTING：客户端还要按这个状态请求地图数据
+				if(!Rejoining)
 					m_aClients[ClientId].m_State = CClient::STATE_AUTH;
-				}
 				UpdateClientBrand(ClientId, pDDNetVersionStr);
 				SendCapabilities(ClientId);
 			}
 		}
 		else if(Msg == NETMSG_INFO)
 		{
-			if((m_aClients[ClientId].m_State == CClient::STATE_PREAUTH || m_aClients[ClientId].m_State == CClient::STATE_AUTH || m_aClients[ClientId].m_Rejoining))
+			if(m_aClients[ClientId].m_State == CClient::STATE_PREAUTH || m_aClients[ClientId].m_State == CClient::STATE_AUTH ||
+				(m_aClients[ClientId].m_IngameBeforeRejoin && m_aClients[ClientId].m_State == CClient::STATE_CONNECTING))
 			{
 				const char *pVersion = Unpacker.GetString(CUnpacker::SANITIZE_CC);
 				if(Unpacker.Error())
@@ -2086,15 +2092,16 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 
 				SendRconType(ClientId, m_AuthManager.NumNonDefaultKeys() > 0);
 				SendCapabilities(ClientId);
-				if(!m_aClients[ClientId].m_Rejoining)
+				m_aClients[ClientId].m_State = CClient::STATE_CONNECTING;
+				if(!m_aClients[ClientId].m_IngameBeforeRejoin)
 				{
-					m_aClients[ClientId].m_State = CClient::STATE_CONNECTING;
 					SendMap(ClientId);
 				}
 			}
 		}
 		else if(Msg == NETMSG_REQUEST_MAP_DATA)
 		{
+			// 官方 13100 回滚 13092：0.7 客户端换图后会在 READY/游戏态继续请求地图块
 			if(m_aClients[ClientId].m_State < CClient::STATE_CONNECTING)
 				return;
 
@@ -2134,41 +2141,35 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 		}
 		else if(Msg == NETMSG_READY)
 		{
-			if(m_aClients[ClientId].m_State == CClient::STATE_CONNECTING)
+			if(m_aClients[ClientId].m_State != CClient::STATE_CONNECTING)
+				return;
+
+			char aBuf[256];
+			str_format(aBuf, sizeof(aBuf), "player is ready. ClientId=%d addr=<{%s}> secure=%s", ClientId, ClientAddrString(ClientId, true), m_NetServer.HasSecurityToken(ClientId) ? "yes" : "no");
+			Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "server", aBuf);
+
+			void *pPersistentData = nullptr;
+			if(m_aClients[ClientId].m_HasPersistentData)
 			{
-				char aBuf[256];
-				str_format(aBuf, sizeof(aBuf), "player is ready. ClientId=%d addr=<{%s}> secure=%s", ClientId, ClientAddrString(ClientId, true), m_NetServer.HasSecurityToken(ClientId) ? "yes" : "no");
-				Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "server", aBuf);
-
-				void *pPersistentData = nullptr;
-				if(m_aClients[ClientId].m_HasPersistentData)
-				{
-					pPersistentData = m_aClients[ClientId].m_pPersistentData;
-					m_aClients[ClientId].m_HasPersistentData = false;
-				}
-				m_aClients[ClientId].m_State = CClient::STATE_READY;
-				GameServer()->OnClientConnected(ClientId, pPersistentData);
+				pPersistentData = m_aClients[ClientId].m_pPersistentData;
+				m_aClients[ClientId].m_HasPersistentData = false;
 			}
-
+			m_aClients[ClientId].m_State = CClient::STATE_READY;
 			SendConnectionReady(ClientId);
 
 			// 官方 7131ad28b：重连中的连接需要 ReadyToEnter 才能回到游戏
-			if(m_aClients[ClientId].m_Rejoining)
+			if(m_aClients[ClientId].m_IngameBeforeRejoin)
 			{
 				CNetMsg_Sv_ReadyToEnter Msg;
 				SendPackMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_FLUSH, ClientId);
 			}
+			else
+			{
+				GameServer()->OnClientConnected(ClientId, pPersistentData);
+			}
 		}
 		else if(Msg == NETMSG_ENTERGAME)
 		{
-			// 官方 7131ad28b：重连完成，槽位状态不变，交给游戏层恢复
-			if(m_aClients[ClientId].m_Rejoining)
-			{
-				m_aClients[ClientId].m_Rejoining = false;
-				GameServer()->OnClientRejoin(ClientId);
-				return;
-			}
-
 			if(m_aClients[ClientId].m_State >= CClient::STATE_READY)
 			{
 				if(m_aClients[ClientId].m_KcpNegotiated && !m_NetServer.IsKcpActive(ClientId))
@@ -2202,7 +2203,16 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 					GetServerInfoSixup(&ServerInfoMessage, false);
 					SendMsg(&ServerInfoMessage, MSGFLAG_VITAL | MSGFLAG_FLUSH, ClientId);
 				}
-				GameServer()->OnClientEnter(ClientId);
+				// 官方 7131ad28b / 12841：重连完成时槽位回到游戏，由游戏层恢复状态
+				if(m_aClients[ClientId].m_IngameBeforeRejoin)
+				{
+					m_aClients[ClientId].m_IngameBeforeRejoin = false;
+					GameServer()->OnClientRejoin(ClientId);
+				}
+				else
+				{
+					GameServer()->OnClientEnter(ClientId);
+				}
 				SendClientBrandsToKnownClients();
 			}
 		}
@@ -2271,16 +2281,23 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 
 			IntendedTick = std::max(IntendedTick, Tick() + 1);
 
-			CClient::CInput *pInput = &m_aClients[ClientId].m_aInputs[m_aClients[ClientId].m_CurrentInput];
-			pInput->m_GameTick = IntendedTick;
+			// 先解包到局部缓冲，解包失败时不污染输入环形缓冲。
+			int aInputData[MAX_INPUT_SIZE];
 			for(int i = 0; i < Size / (int)sizeof(int32_t); i++)
 			{
-				pInput->m_aData[i] = Unpacker.GetInt();
+				aInputData[i] = Unpacker.GetInt();
 			}
 			if(Unpacker.Error())
 			{
 				return;
 			}
+
+			CClient::CInput *pInput = &m_aClients[ClientId].m_aInputs[m_aClients[ClientId].m_CurrentInput];
+			pInput->m_GameTick = IntendedTick;
+			mem_copy(pInput->m_aData, aInputData, Size);
+
+			// 在转发 pre-input 之前钳制，保证其他客户端与本服务端使用同一份输入。
+			GameServer()->OnClientPrepareInput(ClientId, pInput->m_aData);
 
 			if(m_NetServer.IsKcpActive(ClientId) &&
 				OriginalIntendedTick == m_aClients[ClientId].m_LastKcpInputTick &&
@@ -2344,7 +2361,6 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 				}
 			}
 
-			GameServer()->OnClientPrepareInput(ClientId, pInput->m_aData);
 			mem_copy(m_aClients[ClientId].m_LatestInput.m_aData, pInput->m_aData, sizeof(m_aClients[ClientId].m_LatestInput.m_aData));
 
 			m_aClients[ClientId].m_CurrentInput++;
@@ -2460,27 +2476,18 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 					}
 
 					const char *pIdent = m_AuthManager.KeyIdent(KeySlot);
-					switch(AuthLevel)
-					{
-					case AUTHED_ADMIN:
-					{
-						SendRconLine(ClientId, "Admin authentication successful. Full remote console access granted.");
-						log_info("server", "ClientId=%d authed with key='%s' (admin)", ClientId, pIdent);
-						break;
-					}
-					case AUTHED_MOD:
-					{
-						SendRconLine(ClientId, "Moderator authentication successful. Limited remote console access granted.");
-						log_info("server", "ClientId=%d authed with key='%s' (moderator)", ClientId, pIdent);
-						break;
-					}
-					case AUTHED_HELPER:
-					{
-						SendRconLine(ClientId, "Helper authentication successful. Limited remote console access granted.");
-						log_info("server", "ClientId=%d authed with key='%s' (helper)", ClientId, pIdent);
-						break;
-					}
-					}
+					CRconRole *pRole = m_AuthManager.FindRole(CAuthManager::AuthLevelToRoleName(AuthLevel));
+					dbg_assert(pRole != nullptr, "pRole is nullptr");
+
+					char aAuthBuf[512];
+					str_format(
+						aAuthBuf,
+						sizeof(aAuthBuf),
+						"Successfully authenticated as %s. %s remote console access granted.",
+						pRole->Name(),
+						pRole->IsAdmin() ? "Full" : "Limited");
+					SendRconLine(ClientId, aAuthBuf);
+					log_info("server", "ClientId=%d authed with key='%s' (%s)", ClientId, pIdent, pRole->Name());
 
 					// 官方 f586be3e0：旧客户端看不到真实客户端 id，登录后直接提示
 					if(!ClientSupportsServerMaxClients(ClientId))
@@ -2489,7 +2496,7 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 					}
 
 					// DDRace
-					GameServer()->OnSetAuthed(ClientId, AuthLevel);
+					GameServer()->OnSetAuthed(ClientId, pRole);
 				}
 			}
 			else if(Config()->m_SvRconMaxTries)
@@ -3616,6 +3623,8 @@ int CServer::Run()
 	if(Port == 0)
 		log_info("server", "using port %d", BindAddr.port);
 
+	WritePortFile();
+
 #if defined(CONF_UPNP)
 	m_UPnP.Open(BindAddr);
 #endif
@@ -3695,7 +3704,7 @@ int CServer::Run()
 					// ask the game for the data it wants to persist past a map change
 					for(int i = 0; i < MAX_CLIENTS; i++)
 					{
-						if(m_aClients[i].m_State == CClient::STATE_INGAME)
+						if(m_aClients[i].IsKnownToGame())
 						{
 							m_aClients[i].m_HasPersistentData = GameServer()->OnClientDataPersist(i, m_aClients[i].m_pPersistentData);
 						}
@@ -4015,7 +4024,7 @@ void CServer::ConStatus(IConsole::IResult *pResult, void *pUser)
 		if(!str_utf8_find_nocase(pThis->m_aClients[i].m_aName, pName))
 			continue;
 
-		if(pThis->m_aClients[i].m_State == CClient::STATE_INGAME)
+		if(pThis->m_aClients[i].IsKnownToGame())
 		{
 			char aDnsblStr[64];
 			aDnsblStr[0] = '\0';
@@ -4366,6 +4375,42 @@ void CServer::ConShutdown(IConsole::IResult *pResult, void *pUser)
 	}
 }
 
+void CServer::WritePortFile()
+{
+	const char *pPortFile = Config()->m_SvPortFile;
+	if(pPortFile[0] == '\0')
+	{
+		return;
+	}
+
+	char aPortFileTmp[IO_MAX_PATH_LENGTH];
+	IStorage::FormatTmpPath(aPortFileTmp, sizeof(aPortFileTmp), pPortFile);
+	IOHANDLE PortFile = Storage()->OpenFile(aPortFileTmp, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	if(PortFile != nullptr)
+	{
+		char aPort[8];
+		const int Length = str_format(aPort, sizeof(aPort), "%d", m_NetServer.Address().port);
+		const bool Written = io_write(PortFile, aPort, Length) == (unsigned)Length;
+		if(io_close(PortFile) == 0 && Written &&
+			Storage()->RenameFile(aPortFileTmp, pPortFile, IStorage::TYPE_SAVE))
+		{
+			return;
+		}
+		Storage()->RemoveFile(aPortFileTmp, IStorage::TYPE_SAVE);
+	}
+	log_error("server", "Failed to write port file '%s'", pPortFile);
+}
+
+void CServer::ConUptime(IConsole::IResult *pResult, void *pUser)
+{
+	CServer *pThis = static_cast<CServer *>(pUser);
+	// str_time 接收厘秒，直接换算避免毫秒溢出。
+	const int64_t UptimeCentisecs = (time_get() - pThis->m_StartTime) / (time_freq() / 100);
+	char aTime[64];
+	str_time(UptimeCentisecs, TIME_DAYS, aTime, sizeof(aTime));
+	log_info("server", "Uptime %s", aTime);
+}
+
 void CServer::DemoRecorder_HandleAutoStart()
 {
 	if(Config()->m_SvAutoDemoRecord)
@@ -4378,7 +4423,6 @@ void CServer::DemoRecorder_HandleAutoStart()
 		str_format(aFilename, sizeof(aFilename), "demos/auto/server/%s_%s.demo", GetMapName(), aTimestamp);
 		m_aDemoRecorder[RECORDER_AUTO].Start(
 			Storage(),
-			m_pConsole,
 			aFilename,
 			GameServer()->NetVersion(),
 			GetMapName(),
@@ -4421,7 +4465,6 @@ void CServer::StartRecord(int ClientId)
 		str_format(aFilename, sizeof(aFilename), "demos/%s_%d_%d_tmp.demo", GetMapName(), m_NetServer.Address().port, ClientId);
 		m_aDemoRecorder[ClientId].Start(
 			Storage(),
-			Console(),
 			aFilename,
 			GameServer()->NetVersion(),
 			GetMapName(),
@@ -4483,7 +4526,6 @@ void CServer::ConRecord(IConsole::IResult *pResult, void *pUser)
 	}
 	pServer->m_aDemoRecorder[RECORDER_MANUAL].Start(
 		pServer->Storage(),
-		pServer->Console(),
 		aFilename,
 		pServer->GameServer()->NetVersion(),
 		pServer->GetMapName(),
@@ -4584,7 +4626,7 @@ void CServer::ConAddSqlServer(IConsole::IResult *pResult, void *pUserData)
 
 	if(!MysqlAvailable())
 	{
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", "can't add MySQL server: compiled without MySQL support");
+		log_error("server", "can't add MySQL server: compiled without MySQL support");
 		return;
 	}
 
@@ -4593,7 +4635,7 @@ void CServer::ConAddSqlServer(IConsole::IResult *pResult, void *pUserData)
 
 	if(pResult->NumArguments() < 7 || pResult->NumArguments() > 9)
 	{
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", "7 to 9 arguments are required");
+		log_error("server", "7 to 9 arguments are required");
 		return;
 	}
 
@@ -4605,15 +4647,15 @@ void CServer::ConAddSqlServer(IConsole::IResult *pResult, void *pUserData)
 		Write = true;
 	else
 	{
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", "choose either 'r' for SqlReadServer or 'w' for SqlWriteServer");
+		log_error("server", "choose either 'r' for SqlReadServer or 'w' for SqlWriteServer");
 		return;
 	}
 
-	str_copy(Config.m_aDatabase, pResult->GetString(1), sizeof(Config.m_aDatabase));
-	str_copy(Config.m_aPrefix, pResult->GetString(2), sizeof(Config.m_aPrefix));
-	str_copy(Config.m_aUser, pResult->GetString(3), sizeof(Config.m_aUser));
-	str_copy(Config.m_aPass, pResult->GetString(4), sizeof(Config.m_aPass));
-	str_copy(Config.m_aIp, pResult->GetString(5), sizeof(Config.m_aIp));
+	str_copy(Config.m_aDatabase, pResult->GetString(1));
+	str_copy(Config.m_aPrefix, pResult->GetString(2));
+	str_copy(Config.m_aUser, pResult->GetString(3));
+	str_copy(Config.m_aPass, pResult->GetString(4));
+	str_copy(Config.m_aIp, pResult->GetString(5));
 	Config.m_aBindaddr[0] = '\0';
 	Config.m_Port = pResult->GetInteger(6);
 	Config.m_Setup = pResult->NumArguments() >= 8 ? pResult->GetInteger(7) : true;
@@ -4622,12 +4664,10 @@ void CServer::ConAddSqlServer(IConsole::IResult *pResult, void *pUserData)
 	str_copy(Config.m_aSslCert, g_Config.m_SvSqlSslCert);
 	str_copy(Config.m_aSslKey, g_Config.m_SvSqlSslKey);
 
-	char aBuf[512];
-	str_format(aBuf, sizeof(aBuf),
+	log_info("server",
 		"Adding new Sql%sServer: DB: '%s' Prefix: '%s' User: '%s' IP: <{%s}> Port: %d",
 		Write ? "Write" : "Read",
 		Config.m_aDatabase, Config.m_aPrefix, Config.m_aUser, Config.m_aIp, Config.m_Port);
-	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
 	pSelf->DbPool()->RegisterMysqlDatabase(Write ? CDbConnectionPool::WRITE : CDbConnectionPool::READ, &Config);
 }
 
@@ -4637,16 +4677,16 @@ void CServer::ConDumpSqlServers(IConsole::IResult *pResult, void *pUserData)
 
 	if(str_comp_nocase(pResult->GetString(0), "w") == 0)
 	{
-		pSelf->DbPool()->Print(pSelf->Console(), CDbConnectionPool::WRITE);
-		pSelf->DbPool()->Print(pSelf->Console(), CDbConnectionPool::WRITE_BACKUP);
+		pSelf->DbPool()->Print(CDbConnectionPool::WRITE);
+		pSelf->DbPool()->Print(CDbConnectionPool::WRITE_BACKUP);
 	}
 	else if(str_comp_nocase(pResult->GetString(0), "r") == 0)
 	{
-		pSelf->DbPool()->Print(pSelf->Console(), CDbConnectionPool::READ);
+		pSelf->DbPool()->Print(CDbConnectionPool::READ);
 	}
 	else
 	{
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", "choose either 'r' for SqlReadServer or 'w' for SqlWriteServer");
+		log_error("server", "choose either 'r' for SqlReadServer or 'w' for SqlWriteServer");
 		return;
 	}
 }
@@ -4756,7 +4796,7 @@ void CServer::LogoutClient(int ClientId, const char *pReason)
 
 	m_aClients[ClientId].m_AuthKey = -1;
 
-	GameServer()->OnSetAuthed(ClientId, AUTHED_NO);
+	GameServer()->OnSetAuthed(ClientId, nullptr);
 }
 
 void CServer::LogoutKey(int Key, const char *pReason)
@@ -4936,6 +4976,7 @@ void CServer::RegisterCommands()
 	Console()->Register("kick", "v[id] ?r[reason]", CFGFLAG_SERVER, ConKick, this, "Kick player with specified id for any reason");
 	Console()->Register("status", "?r[name]", CFGFLAG_SERVER, ConStatus, this, "List players containing name or all players");
 	Console()->Register("shutdown", "?r[reason]", CFGFLAG_SERVER, ConShutdown, this, "Shut down");
+	Console()->Register("uptime", "", CFGFLAG_SERVER, ConUptime, this, "Show server uptime");
 	Console()->Register("logout", "", CFGFLAG_SERVER, ConLogout, this, "Logout of rcon");
 	Console()->Register("show_ips", "?i[show]", CFGFLAG_SERVER, ConShowIps, this, "Show IP addresses in rcon commands (1 = on, 0 = off)");
 	Console()->Register("hide_auth_status", "?i[hide]", CFGFLAG_SERVER, ConHideAuthStatus, this, "Opt out of spectator count and hide auth status to non-authed players (1 = hidden, 0 = shown)");
@@ -5005,24 +5046,24 @@ void CServer::SnapFreeId(int Id)
 	m_IdPool.FreeId(Id);
 }
 
-bool CServer::SnapNewItem(int Type, int Id, rust::Slice<const int32_t> Data)
+bool CServer::SnapNewItem(int Type, int Id, const void *pData, int Size)
 {
 	dbg_assert(Id >= -1 && Id <= 0xffff, "Invalid snap item Id: %d", Id);
 	if(Id < 0)
 	{
 		return false;
 	}
-	return m_pSnapshotBuilder->NewItem(Type, Id, Data);
+	return m_SnapshotBuilder.NewItem(Type, Id, pData, Size);
 }
 
 void CServer::SnapSetStaticsize(int ItemType, int Size)
 {
-	m_pSnapshotDelta->SetStaticsize(ItemType, Size);
+	m_SnapshotDelta.SetStaticsize(ItemType, Size);
 }
 
 void CServer::SnapSetStaticsize7(int ItemType, int Size)
 {
-	m_pSnapshotDeltaSixup->SetStaticsize(ItemType, Size);
+	m_SnapshotDeltaSixup.SetStaticsize(ItemType, Size);
 }
 
 CServer *CreateServer() { return new CServer(); }

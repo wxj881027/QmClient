@@ -2,6 +2,9 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "scoreboard.h"
 
+#include <base/dbg.h>
+#include <base/mem.h>
+
 #include <engine/demo.h>
 #include <engine/graphics.h>
 #include <engine/serverbrowser.h>
@@ -12,6 +15,7 @@
 #include <generated/protocol.h>
 
 #include <game/client/QmUi/QmAnimResolve.h>
+#include <game/client/QmUi/QmListEntryAnimation.h>
 #include <game/client/QmUi/QmLayout.h>
 #include <game/client/QmUi/QmLegacy.h>
 #include <game/client/QmUi/UiTokens.h>
@@ -43,6 +47,9 @@ namespace
 {
 	// 记分板未打开时每帧预热的 Axiom 分数条数：够让打开时立刻有数据，又不会无谓刷接口。
 	constexpr int AXIOM_SCOREBOARD_PREFETCH_BUDGET = 12;
+	static constexpr const char *TIME_WIDTH_TEXT = "00:00:00";
+	static constexpr ColorRGBA TEAM_RED_TITLE_COLOR(0.975f, 0.17f, 0.17f);
+	static constexpr ColorRGBA TEAM_BLUE_TITLE_COLOR(0.17f, 0.46f, 0.975f);
 
 	uint64_t ScoreboardPresentationNodeKey(const char *pScope)
 	{
@@ -72,6 +79,121 @@ namespace
 		}
 		return Spring;
 	}
+
+	// ---- 计分板面板的弹性入场（0 → 过冲 → 100%）----
+	// 二阶欠阻尼阶跃响应的峰值超调 Mp = exp(-πζ / sqrt(1-ζ²))，反解出阻尼比
+	// ζ = -ln(Mp) / sqrt(π² + ln²(Mp))。这样设置页里的「6%」就真的是 106% 峰值，
+	// 不用靠试刚度/阻尼凑近似；ζ=1 时无过冲，正好对应滑杆 0 档。
+	// 面板同时驱动立即模式布局的字号重排，过冲在视觉上比同数值的位移更明显，
+	// 所以上限压到 15%、阻尼比下限 0.45，避免出现「胀大再缩回」的呼吸感。
+	float ScoreboardPopDampingRatio(float Overshoot)
+	{
+		const float Peak = std::clamp(Overshoot, 0.0f, 0.15f);
+		if(Peak <= 0.0001f)
+			return 1.0f;
+		const float LogPeak = -std::log(Peak);
+		return std::clamp(LogPeak / std::sqrt(9.8696044f + LogPeak * LogPeak), 0.45f, 1.0f);
+	}
+
+	SUiSpringConfig ScoreboardPopSpring()
+	{
+		const int Feel = std::clamp(g_Config.m_QmScoreboardPopFeel, 0, 2);
+		float Response = 0.30f;
+		float Overshoot = std::clamp(g_Config.m_QmScoreboardOvershoot, 0, 15) / 100.0f;
+		switch(Feel)
+		{
+		case 0: // 柔和：慢一点，过冲减半
+			Response = 0.38f;
+			Overshoot *= 0.5f;
+			break;
+		case 2: // 弹性：快一点，过冲加半
+			Response = 0.26f;
+			Overshoot *= 1.5f;
+			break;
+		default:
+			break;
+		}
+		SUiSpringConfig Spring = SUiSpringConfig::FromResponse(Response, ScoreboardPopDampingRatio(Overshoot));
+		Spring.m_RestEpsilon = 0.002f;
+		Spring.m_RestVelocity = 0.02f;
+		return Spring;
+	}
+
+	// 「真正打开」把缩放轨道钉回 0 再请求一次 REPLACE 弹簧；SetValue 会清掉旧轨道，
+	// 所以反复按 Tab 不会留下排队动画或速度残留。
+	// 每次打开都重播，不做「从当前值续接」：关闭阶段只做淡出，面板尺寸全程是 1.0，
+	// 续接等于从 1.0 走到 1.0——快速连按时就完全没有弹跳，只有等关闭动画彻底结束
+	// 才会重新弹。弹一下本身只有一帧的尺寸变化，比「看起来没反应」更容易接受。
+	void StartScoreboardPop(CUiV2AnimationRuntime &AnimRuntime, uint64_t NodeKey)
+	{
+		AnimRuntime.SetValue(NodeKey, EUiAnimProperty::SCALE, 0.0f);
+		SUiAnimRequest Request;
+		Request.m_NodeKey = NodeKey;
+		Request.m_Property = EUiAnimProperty::SCALE;
+		Request.m_Target = 1.0f;
+		Request.m_Transition.m_Driver = EUiAnimDriver::SPRING;
+		Request.m_Transition.m_Spring = ScoreboardPopSpring();
+		Request.m_Transition.m_Priority = 3;
+		Request.m_Transition.m_Interrupt = EUiAnimInterruptPolicy::REPLACE;
+		AnimRuntime.RequestAnimation(Request);
+	}
+
+	// 面板还很小的时候先把内容压住：DDNet 是立即模式布局，缩放会连带重排字号，
+	// 让文字在 0.1 倍尺寸下以满透明度出现会读作一团噪点。门槛压在面板还很小的一段
+	// （0.32→0.70）：门控只是「别在小尺寸下显字」，不能宽到把行的错峰淡入整段吃掉。
+	constexpr float SCOREBOARD_CONTENT_SCALE_GATE_FROM = 0.32f;
+	constexpr float SCOREBOARD_CONTENT_SCALE_GATE_TO = 0.70f;
+	float ScoreboardContentScaleGate(float PanelScale)
+	{
+		const float T = std::clamp((PanelScale - SCOREBOARD_CONTENT_SCALE_GATE_FROM) /
+						   (SCOREBOARD_CONTENT_SCALE_GATE_TO - SCOREBOARD_CONTENT_SCALE_GATE_FROM),
+			0.0f, 1.0f);
+		return T * T * (3.0f - 2.0f * T);
+	}
+
+	// ---- 内部文本依次出场 ----
+	// Index 是出场序号：0 = 列首行，1..N = 后续玩家行，尾部区块用 FOOTER 常量。
+	// 错峰窗口按本列可见行数压缩到 0.16s（慢速波浪 0.30s），保证最后一行与面板
+	// 弹跳同时收尾。原来用固定的 14ms/行，行一多窗口就比弹跳长出两三百毫秒，
+	// 后半列在面板停稳之后才补出来，读作「后半段瞬移」。
+	constexpr int SCOREBOARD_TEXT_ENTRY_FOOTER_INDEX = 1024;
+	constexpr float SCOREBOARD_TEXT_ENTRY_WINDOW_SEC = 0.16f;
+	constexpr float SCOREBOARD_TEXT_ENTRY_WINDOW_SLOW_SEC = 0.30f;
+	float ScoreboardTextEntryFade(float ElapsedSec, int Index, int MotionLevel, int VisibleRows = 0)
+	{
+		const int Style = std::clamp(g_Config.m_QmScoreboardTextEntry, 0, 2);
+		if(Style == 0 || MotionLevel <= 0 || ElapsedSec < 0.0f)
+			return 1.0f;
+		if(MotionLevel == 1)
+		{
+			// 减弱动效：整列一起淡入，不铺错峰。
+			return std::clamp(ElapsedSec / ui_token::motion::LIST_ENTRY_FADE_REDUCED.m_DurationSec, 0.0f, 1.0f);
+		}
+		float Step = ui_token::motion::LIST_ENTRY_STAGGER_STEP_SEC;
+		if(VisibleRows > 1)
+		{
+			const float Window = Style == 2 ? SCOREBOARD_TEXT_ENTRY_WINDOW_SLOW_SEC : SCOREBOARD_TEXT_ENTRY_WINDOW_SEC;
+			Step = minimum(Step, Window / (float)(VisibleRows - 1));
+		}
+		// 尾部区块的序号远大于行数：夹到行数上，正好拖在最后一行之后一步。
+		const int EffIndex = VisibleRows > 0 ? minimum(Index, VisibleRows) : Index;
+		const float Local = ElapsedSec - (float)EffIndex * Step;
+		const float Fade = std::clamp(Local / ui_token::motion::LIST_ENTRY_FADE.m_DurationSec, 0.0f, 1.0f);
+		return Fade * Fade * (3.0f - 2.0f * Fade);
+	}
+
+	// 区块级 alpha 乘算：m_AnimContentAlpha 是所有文本与控件的公共系数，
+	// 在调用某个区块绘制前临时压低、返回时还原，就不用逐个绘制点改一遍。
+	struct SScoreboardEntryAlphaScope
+	{
+		float &m_Alpha;
+		float m_Saved;
+		SScoreboardEntryAlphaScope(float &Alpha, float Factor) : m_Alpha(Alpha), m_Saved(Alpha)
+		{
+			m_Alpha *= std::clamp(Factor, 0.0f, 1.0f);
+		}
+		~SScoreboardEntryAlphaScope() { m_Alpha = m_Saved; }
+	};
 
 	SUiSpringConfig ScoreboardElementSpring(bool Visible)
 	{
@@ -148,14 +270,16 @@ namespace
 		return ColorRGBA(1.0f, 1.0f, 1.0f, Alpha);
 	}
 
+	// 计分板表面不再单独配置：直接取界面表面色与界面透明度，和菜单、面板同一份颜色。
+	// 分开配置时两块面板会各调各的，同一局里出现两种底色。
 	ColorRGBA ScoreboardUiColor()
 	{
-		return color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmScoreboardColor)).WithAlpha(1.0f);
+		return color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiColor)).WithAlpha(1.0f);
 	}
 
 	float ScoreboardUiAlpha(float AlphaScale)
 	{
-		return ui_token::color::UiColorAccent(ScoreboardUiColor(), AlphaScale * (g_Config.m_QmScoreboardOpacity / 100.0f)).a;
+		return ui_token::color::UiColorAccent(ScoreboardUiColor(), AlphaScale * (g_Config.m_QmUiOpacity / 100.0f)).a;
 	}
 
 	ColorRGBA ScoreboardUiColorSurface(float AlphaScale, float ColorScale = 0.16f)
@@ -173,7 +297,7 @@ namespace
 
 	ColorRGBA ScoreboardDecorationColor(ColorRGBA Color, float AlphaScale = 1.0f)
 	{
-		Color.a = std::clamp(Color.a * AlphaScale * (g_Config.m_QmScoreboardOpacity / 100.0f), 0.0f, 1.0f);
+		Color.a = std::clamp(Color.a * AlphaScale * (g_Config.m_QmUiOpacity / 100.0f), 0.0f, 1.0f);
 		return Color;
 	}
 
@@ -183,12 +307,22 @@ namespace
 	}
 
 	constexpr float SCOREBOARD_PANEL_RADIUS = ui_token::radius::CARD;
+	// 底栏各条（媒体、旁观者、按键提示）的左右文字内边距：宽度计算与绘制共用同一个值，
+	// 两侧留白才对称。宽度另加 4~6px 舍入余量——TextWidth 与实际排版有零点几像素差，
+	// 没有余量时右端字符会被 MaxWidth 挤到贴边。
+	constexpr float SCOREBOARD_FOOTER_PAD_X = 10.0f;
+	// 媒体条上的圆形封面（参考灵动岛）：条高 25、封面 19 居中，左侧只留 3px——
+	// 圆是紧贴条端的「实物」，按文字内边距留白反而会把它推到中间。
+	constexpr float SCOREBOARD_MEDIA_BAR_HEIGHT = 25.0f;
+	constexpr float SCOREBOARD_MEDIA_COVER_SIZE = 19.0f;
+	constexpr float SCOREBOARD_MEDIA_COVER_PAD_X = 3.0f;
+	constexpr float SCOREBOARD_MEDIA_COVER_GAP = 6.0f;
 
 }
 
 CScoreboard::CScoreboard()
 {
-	OnReset();
+	CScoreboard::OnReset();
 }
 
 void CScoreboard::SetUiMousePos(vec2 Pos)
@@ -329,6 +463,11 @@ void CScoreboard::ConToggleScoreboardCursor(IConsole::IResult *pResult, void *pU
 
 	pSelf->m_MouseUnlocked = !pSelf->m_MouseUnlocked;
 
+	// 锁定光标时计分板不再接收点击，已打开的玩家菜单必须同步关闭，
+	// 否则弹层会在无光标状态下继续占着输入。
+	if(!pSelf->m_MouseUnlocked)
+		pSelf->Ui()->ClosePopupMenus();
+
 	vec2 OldMousePos = pSelf->Ui()->MousePos();
 
 	if(pSelf->m_LastMousePos == std::nullopt)
@@ -365,6 +504,11 @@ void CScoreboard::OnReset()
 	m_PresentationInitialized = false;
 	m_ActiveStartTime = 0;
 	m_WasActive = false;
+	m_AutoActiveStable = false;
+	m_AutoOnFrames = 0;
+	m_AutoOffFrames = 0;
+	m_TextEntryElapsedSec = -1.0f;
+	m_TextEntryStartTime = 0;
 	m_MouseUnlocked = false;
 	m_RenderInteractions = false;
 	m_aCachedTeamModes = {};
@@ -384,6 +528,11 @@ void CScoreboard::OnRelease()
 	m_PresentationInitialized = false;
 	m_ActiveStartTime = 0;
 	m_WasActive = false;
+	m_AutoActiveStable = false;
+	m_AutoOnFrames = 0;
+	m_AutoOffFrames = 0;
+	m_TextEntryElapsedSec = -1.0f;
+	m_TextEntryStartTime = 0;
 	m_RenderInteractions = false;
 	m_aCachedTeamModes = {};
 	m_ScrollRegion.Reset();
@@ -547,7 +696,7 @@ void CScoreboard::RenderTitleBar(CUIRect TitleBar, int Team, const char *pTitle)
 
 	// 标题与 rank1 时间共用同一字号：手机不再单独放大，否则时间会压过地图名。
 	const float TitleFontSize = 20.0f;
-	const float ScoreTextWidth = TextRender()->TextWidth(TitleFontSize, "00:00:00");
+	const float ScoreTextWidth = TextRender()->TextWidth(TitleFontSize, TIME_WIDTH_TEXT);
 
 	TitleBar.VMargin(10.0f, &TitleBar);
 	CUIRect TitleLabel;
@@ -643,7 +792,7 @@ void CScoreboard::RenderGoals(CUIRect Goals)
 	}
 }
 
-void CScoreboard::RenderSpectators(CUIRect Spectators)
+CUIRect CScoreboard::RenderSpectators(CUIRect Area, float &CursorY, float Gap)
 {
 	const float ContentAlpha = m_AnimContentAlpha;
 	const ColorRGBA BaseTextColor = TextRender()->DefaultTextColor().WithMultipliedAlpha(ContentAlpha);
@@ -652,17 +801,17 @@ void CScoreboard::RenderSpectators(CUIRect Spectators)
 	TextRender()->TextOutlineColor(BaseOutlineColor);
 
 	const bool IsTeamPlay = GameClient()->IsTeamPlay();
-	CUIRect SpectatorPanel = Spectators;
+	const float AvailableHeight = QmScoreboardFooterRemainingHeight(Area, CursorY);
+	if(AvailableHeight <= 0.0f)
+		return {};
 
 	const float CornerRadius = SCOREBOARD_PANEL_RADIUS;
-	CUIRect SpectatorList = SpectatorPanel;
-	SpectatorList.Margin(5.0f, &SpectatorList);
 
 	CTextCursor Cursor;
-	Cursor.SetPosition(SpectatorList.TopLeft());
+	Cursor.SetPosition(vec2(0.0f, 0.0f));
 	Cursor.m_FontSize = 11.0f;
-	Cursor.m_LineWidth = SpectatorList.w;
-	Cursor.m_MaxLines = maximum(1, round_truncate(SpectatorList.h / Cursor.m_FontSize));
+	Cursor.m_LineWidth = maximum(0.0f, Area.w - 2.0f * SCOREBOARD_FOOTER_PAD_X);
+	Cursor.m_MaxLines = maximum(1, round_truncate(AvailableHeight / Cursor.m_FontSize));
 
 	int RemainingSpectators = 0;
 	for(const CNetObj_PlayerInfo *pInfo : GameClient()->m_Snap.m_apInfoByName)
@@ -749,13 +898,32 @@ void CScoreboard::RenderSpectators(CUIRect Spectators)
 		}
 	};
 
-	// 测量与绘制共用文字路径，保留名称颜色和溢出提示；背景只包住实际行数。
+	// 测量与绘制共用文字路径，保留名称颜色和溢出提示；背景只包住实际行数与最长行宽。
 	CTextCursor MeasureCursor = Cursor;
 	MeasureCursor.m_Flags = 0;
 	RenderList(MeasureCursor);
-	SpectatorPanel.h = QmScoreboardSpectatorPanelHeight(SpectatorPanel.h, MeasureCursor.m_LineCount, Cursor.m_MaxLines, Cursor.m_FontSize, 10.0f);
+	const float PanelHeight = QmScoreboardSpectatorPanelHeight(AvailableHeight, MeasureCursor.m_LineCount, Cursor.m_MaxLines, Cursor.m_FontSize, 10.0f);
+	// 单行时宽度收到文字实测宽度；折行说明内容本来就撑满，保持整宽。
+	const float PanelWidth = MeasureCursor.m_LineCount <= 1 ?
+					 minimum(Area.w, MeasureCursor.m_LongestLineWidth + 2.0f * SCOREBOARD_FOOTER_PAD_X + 4.0f) :
+					 Area.w;
+	const CUIRect SpectatorPanel = QmScoreboardFooterBlock(Area, CursorY, PanelWidth, PanelHeight, Gap);
+	if(SpectatorPanel.w <= 0.0f)
+		return {};
+
+	// 垂直留白与 QmScoreboardSpectatorPanelHeight 的 padding 参数对应（上下各 5）；
+	// 水平单独用 PAD_X，行宽测量时也是同一个值。
+	CUIRect SpectatorList = SpectatorPanel;
+	SpectatorList.y += 5.0f;
+	SpectatorList.h = maximum(0.0f, SpectatorList.h - 10.0f);
+	SpectatorList.x += SCOREBOARD_FOOTER_PAD_X;
+	SpectatorList.w = maximum(0.0f, SpectatorList.w - 2.0f * SCOREBOARD_FOOTER_PAD_X);
+	Cursor.SetPosition(SpectatorList.TopLeft());
+	Cursor.m_LineWidth = SpectatorList.w;
+
 	SpectatorPanel.Draw(ScoreboardUiColorSurface(ContentAlpha), IGraphics::CORNER_ALL, CornerRadius);
 	RenderList(Cursor);
+	return SpectatorPanel;
 }
 
 // QmClient: 底栏上方的整宽媒体信息条。远程删除了三个 SMTC 播放控制按钮，
@@ -788,22 +956,100 @@ void CScoreboard::RenderFooter(CUIRect Footer)
 			str_copy(aMediaBuf, MediaState.m_aArtist, sizeof(aMediaBuf));
 	}
 
-	const SQmScoreboardFooterLayout Layout = QmScoreboardFooterLayout(Footer, aMediaBuf[0] != '\0', HasSpectators);
-	if(Layout.m_Media.h > 0.0f)
+	const bool ShowCursorHint = !m_MouseUnlocked;
+	// 底栏从上往下堆叠：每块宽度按实测文字收缩并居中，空块不占位，
+	// 所以内容少时整排会向面板贴齐，不会在中间留出一段空白。
+	constexpr float FooterGap = 5.0f;
+	float CursorY = Footer.y;
+	if(aMediaBuf[0] != '\0')
 	{
-		Layout.m_Media.Draw(ScoreboardUiColorSurface(ContentAlpha), IGraphics::CORNER_ALL, SCOREBOARD_PANEL_RADIUS);
-		CUIRect Label;
-		Layout.m_Media.Margin(5.0f, &Label);
-		TextRender()->TextColor(TextRender()->DefaultTextColor().WithMultipliedAlpha(ContentAlpha));
-		TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor().WithMultipliedAlpha(ContentAlpha));
-		SLabelProperties Props;
-		Props.m_MaxWidth = Label.w;
-		Props.m_EllipsisAtEnd = true;
-		Props.m_MinimumFontSize = 11.0f;
-		Ui()->DoLabel(&Label, aMediaBuf, 11.0f, TEXTALIGN_ML, Props);
+		// 封面纹理由媒体组件统一预烘成圆形透明贴图（和 HUD 灵动岛同一张），
+		// 计分板这里只负责摆位，不重新裁圆、也不新传纹理。
+		const bool HasCover = MediaState.m_AlbumArtCircular.IsValid() && !MediaState.m_AlbumArtCircular.IsNullTexture();
+		// 唱片式自转：只随播放状态推进，暂停定格在当前角度；动效等级 0 不转。
+		// time_get() 先折成 double 再转 float 秒，避免大整数在 float 里丢低位。
+		const float CoverSpin = m_MediaCoverSpin.Advance(MediaState.m_Playing, g_Config.m_QmUiMotionLevel > 0,
+			static_cast<float>(static_cast<double>(time_get()) / static_cast<double>(time_freq())));
+		// 文字宽度之外再加 4px 舍入余量：TextWidth 与实际排版有零点几像素差，
+		// 没有余量时右端字符会被 MaxWidth 挤到贴边。
+		const float MediaWidth = SCOREBOARD_MEDIA_COVER_PAD_X + SCOREBOARD_MEDIA_COVER_SIZE + SCOREBOARD_MEDIA_COVER_GAP +
+					 TextRender()->TextWidth(11.0f, aMediaBuf) + SCOREBOARD_FOOTER_PAD_X + 4.0f;
+		const CUIRect MediaBar = QmScoreboardFooterBlock(Footer, CursorY, MediaWidth, SCOREBOARD_MEDIA_BAR_HEIGHT, FooterGap);
+		if(MediaBar.w > 0.0f)
+		{
+			MediaBar.Draw(ScoreboardUiColorSurface(ContentAlpha), IGraphics::CORNER_ALL, SCOREBOARD_PANEL_RADIUS);
+			const CUIRect Cover = {MediaBar.x + SCOREBOARD_MEDIA_COVER_PAD_X,
+				MediaBar.y + (MediaBar.h - SCOREBOARD_MEDIA_COVER_SIZE) * 0.5f,
+				SCOREBOARD_MEDIA_COVER_SIZE,
+				SCOREBOARD_MEDIA_COVER_SIZE};
+			if(HasCover)
+			{
+				Graphics()->TextureSet(MediaState.m_AlbumArtCircular);
+				Graphics()->QuadsBegin();
+				// 圆形贴图绕自己的中心转：轮廓不变，只有图案在转，所以不需要额外裁切。
+				Graphics()->QuadsSetRotation(CoverSpin);
+				Graphics()->SetColor(1.0f, 1.0f, 1.0f, ContentAlpha);
+				const IGraphics::CQuadItem CoverQuad(Cover.x, Cover.y, Cover.w, Cover.h);
+				Graphics()->QuadsDrawTL(&CoverQuad, 1);
+				Graphics()->QuadsEnd();
+				Graphics()->QuadsSetRotation(0.0f);
+				Graphics()->TextureClear();
+			}
+			else
+			{
+				// 没有封面时留一颗同尺寸的占位圆 + 音符，保证有/无封面时文字起点一致。
+				Graphics()->TextureClear();
+				Graphics()->QuadsBegin();
+				Graphics()->SetColor(ColorRGBA(1.0f, 1.0f, 1.0f, 0.10f * ContentAlpha));
+				Graphics()->DrawCircle(Cover.x + Cover.w * 0.5f, Cover.y + Cover.h * 0.5f, Cover.w * 0.5f, 24);
+				Graphics()->QuadsEnd();
+				const CUIRect Icon = {Cover.x + Cover.w * 0.26f, Cover.y + Cover.h * 0.26f, Cover.w * 0.48f, Cover.h * 0.48f};
+				Ui()->DrawQmIcon(Icon, EQmIcon::MUSIC, FontIcons::FONT_ICON_MUSIC, ColorRGBA(1.0f, 1.0f, 1.0f, 0.55f * ContentAlpha));
+			}
+			CUIRect Label = MediaBar;
+			Label.x = Cover.x + Cover.w + SCOREBOARD_MEDIA_COVER_GAP;
+			Label.w = maximum(0.0f, MediaBar.x + MediaBar.w - SCOREBOARD_FOOTER_PAD_X - Label.x);
+			TextRender()->TextColor(TextRender()->DefaultTextColor().WithMultipliedAlpha(ContentAlpha));
+			TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor().WithMultipliedAlpha(ContentAlpha));
+			SLabelProperties Props;
+			Props.m_MaxWidth = Label.w;
+			Props.m_EllipsisAtEnd = true;
+			Props.m_MinimumFontSize = 11.0f;
+			Ui()->DoLabel(&Label, aMediaBuf, 11.0f, TEXTALIGN_ML, Props);
+		}
 	}
-	if(Layout.m_Spectators.h > 0.0f)
-		RenderSpectators(Layout.m_Spectators);
+	if(HasSpectators)
+		RenderSpectators(QmScoreboardFooterAreaWithHintReserved(Footer, ShowCursorHint, 20.0f, FooterGap), CursorY, FooterGap);
+	if(ShowCursorHint)
+	{
+		char aKey[64];
+		GameClient()->m_Binds.GetKey("toggle_scoreboard_cursor", aKey, sizeof(aKey));
+		char aHint[128];
+		if(aKey[0] == '\0')
+			str_format(aHint, sizeof(aHint), Localize("'%s' not bound."), "toggle_scoreboard_cursor");
+		else
+			str_format(aHint, sizeof(aHint), Localize("Press '%s' to show cursor."), aKey);
+		const float HintWidth = TextRender()->TextWidth(11.0f, aHint) + 2.0f * SCOREBOARD_FOOTER_PAD_X + 6.0f;
+		const CUIRect Hint = QmScoreboardFooterBlock(Footer, CursorY, HintWidth, 20.0f, 0.0f);
+		if(Hint.w > 0.0f)
+			RenderCursorHint(Hint, aHint);
+	}
+}
+
+void CScoreboard::RenderCursorHint(CUIRect Hint, const char *pHint)
+{
+	const float ContentAlpha = m_AnimContentAlpha;
+	Hint.Draw(ScoreboardUiColorSurface(ContentAlpha), IGraphics::CORNER_ALL, SCOREBOARD_PANEL_RADIUS);
+	CUIRect Label = Hint;
+	Label.x += SCOREBOARD_FOOTER_PAD_X;
+	Label.w = maximum(0.0f, Label.w - 2.0f * SCOREBOARD_FOOTER_PAD_X);
+	TextRender()->TextColor(TextRender()->DefaultTextColor().WithMultipliedAlpha(ContentAlpha));
+	TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor().WithMultipliedAlpha(ContentAlpha));
+	SLabelProperties Props;
+	Props.m_MaxWidth = Label.w;
+	Props.m_EllipsisAtEnd = true;
+	Props.m_MinimumFontSize = 9.0f;
+	Ui()->DoLabel(&Label, pHint, 11.0f, TEXTALIGN_MC, Props);
 }
 
 void CScoreboard::RenderSoundMuteBar(CUIRect ScoreboardRect)
@@ -857,7 +1103,7 @@ void CScoreboard::RenderSoundMuteBar(CUIRect ScoreboardRect)
 	}
 
 	CUiV2AnimationRuntime *pAnimRuntime = nullptr;
-	if(g_Config.m_QmExtraAnimations != 0 && GameClient()->UiRuntimeV2()->Enabled())
+	if(g_Config.m_QmUiMotionLevel > 0 && GameClient()->UiRuntimeV2()->Enabled())
 		pAnimRuntime = &GameClient()->UiRuntimeV2()->AnimRuntime();
 
 	if(pAnimRuntime != nullptr && !m_SoundMuteButtonAnimState.m_Initialized)
@@ -1160,14 +1406,14 @@ void CScoreboard::RenderTeamModeIcons(float x, float y, float IconSize, const SQ
 	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 }
 
-void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart, int CountEnd, const CScoreboardPlayerRowPlan &Plan, CScoreboardRenderState &State, bool Scroll)
+void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart, int CountEnd, const CScoreboardPlayerRowPlan &Plan, CScoreboardRenderState &State, bool Scroll, int NumPlayersForSize)
 {
 	dbg_assert(Team == TEAM_RED || Team == TEAM_BLUE, "Team invalid");
 
 	const CNetObj_GameInfo *pGameInfoObj = GameClient()->m_Snap.m_pGameInfoObj;
 	const CNetObj_GameData *pGameDataObj = GameClient()->m_Snap.m_pGameDataObj;
 	const bool TimeScore = GameClient()->m_GameInfo.m_TimeScore;
-	const int NumPlayers = Scroll ? 16 : CountEnd - CountStart;
+	const int NumPlayers = Scroll ? 16 : (NumPlayersForSize >= 0 ? NumPlayersForSize : CountEnd - CountStart);
 	const bool LowScoreboardWidth = Scoreboard.w < 350.0f;
 	const bool ShowPlaytime = g_Config.m_QmScoreboardPlaytime != 0;
 	// 积分视图在 Axiom 服显示当前模式分数，游玩时间独立使用 DDStats。
@@ -1199,7 +1445,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 	}
 
 	// calculate measurements
-	const float HeadlineFontsize = 11.0f;
+	constexpr float HeadlineFontsize = 11.0f;
 	const CUIRect PlayerRows = ScoreboardPlayerRowsRect(Scoreboard, HeadlineFontsize * 2.0f);
 	// 按原分列容量规划密度，短末列不能因实际人数少而放大字号。
 	const SQmScoreboardRowMetrics RowMetrics = QmScoreboardRowMetrics(PlayerRows.h, NumPlayers, NumTeamLabels, NumTeamModeLabels, Scroll);
@@ -1244,7 +1490,17 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 	const float ClientBrandLength = ShowClientBrand ? maximum(TextRender()->TextWidth(FontSize, "Qm"), TextRender()->TextWidth(FontSize, "Arg")) + CLIENT_BRAND_LABEL_GAP : 0.0f;
 	const float ClientBrandOffset = Scoreboard.x + 10.0f;
 	const float ScoreOffset = Scoreboard.x + 20.0f + ClientBrandLength;
-	const float ScoreLength = TextRender()->TextWidth(FontSize, TimeScore ? "00:00:00" : "99999");
+	// 0.6 服务器带毫秒完赛数据时，时间列要为「.000」留出宽度；
+	// 小数按 0.7 倍字号绘制，与 RenderTime 的排版一致。
+	const bool MillisecondScore = GameClient()->m_ReceivedDDNetPlayerFinishTimes;
+	const bool TrueMilliseconds = GameClient()->m_ReceivedDDNetPlayerFinishTimesMillis;
+	float ScoreLength = TextRender()->TextWidth(FontSize, TimeScore ? TIME_WIDTH_TEXT : "99999");
+	if(TimeScore && MillisecondScore)
+	{
+		const float MillisLength = TextRender()->TextWidth(FontSize * 0.7f, TrueMilliseconds ? ".000" : ".00");
+		// 小数块与秒数有意少量重叠，避免视觉断裂（见 CUi::RenderTime 的 FractionKern）。
+		ScoreLength += MillisLength * 0.65f;
+	}
 	// 统计列复用积分位置，并为带单位的表头预留宽度。
 	const char *pStatsLabel = ShowPlaytime ? Localize("Playtime (h)") : (AxiomScoreColumn ? QmAxiomModeName(m_QmAxiomScoreModeFrame) : Localize("Points"));
 	const float StatsLength = ShowStatistics ? maximum(TextRender()->TextWidth(FontSize, LowScoreboardWidth ? "99999" : "999999"), TextRender()->TextWidth(HeadlineFontsize, pStatsLabel)) : 0.0f;
@@ -1252,13 +1508,22 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 	const float TeeOffset = ShowStatistics ? (StatsOffset + StatsLength + 10.0f) : (ScoreOffset + ScoreLength + 10.0f);
 	const float TeeLength = 60.0f * TeeSizeMod;
 	const float NameOffset = TeeOffset + TeeLength;
-	const float CountryLength = (LineHeight - Spacing - TeeSizeMod * 5.0f) * 2.0f;
-	const float PingLength = 27.5f;
+	const float CountryFlagSize = TeeSizeMod * 5.0f;
+	const float CountryLength = (LineHeight - Spacing - CountryFlagSize) * 2.0f;
+	constexpr float PingLength = 27.5f;
 	const float PingOffset = Scoreboard.x + Scoreboard.w - PingLength - 10.0f;
 	const float CountryOffset = RowDetail.m_ShowCountry ? PingOffset - CountryLength : PingOffset;
-	const float NameLength = RowDetail.m_ShowClan ? (LowScoreboardWidth ? 90.0f : 150.0f) - TeeLength : maximum(0.0f, PingOffset - NameOffset - 5.0f);
+	float NameLength = RowDetail.m_ShowClan ? (LowScoreboardWidth ? 90.0f : 150.0f) - TeeLength : maximum(0.0f, PingOffset - NameOffset - 5.0f);
+	if(RowDetail.m_ShowClan)
+	{
+		// 分列后单列更窄：名字与 clan 之间至少留出 5px，剩余宽度按 7:3 分给名字和 clan。
+		constexpr float MinMiddleGap = 5.0f;
+		const float AvailableMiddle = CountryOffset - NameOffset;
+		if(NameLength + MinMiddleGap > AvailableMiddle)
+			NameLength = maximum(0.0f, (AvailableMiddle - MinMiddleGap) * 0.7f);
+	}
 	const float ClanOffset = NameOffset + NameLength + 2.5f;
-	const float ClanLength = CountryOffset - ClanOffset - 2.5f;
+	const float ClanLength = maximum(0.0f, CountryOffset - ClanOffset - 2.5f);
 
 	// render headlines
 	CUIRect Headline;
@@ -1303,7 +1568,10 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 		const int DDTeam = PlannedRow.m_DDTeam;
 		const int NextDDTeam = PlannedRow.m_NextSourceDDTeam;
 
-		const float ItemAlpha = (RenderDead ? 0.5f : 1.0f) * ContentAlpha;
+		// 文本依次出场：序号相对本列首行（首行 0），错峰窗口按本列行数压缩，
+		// 闭式曲线不落每行轨道，滚动虚拟化也不会留下孤儿轨道。
+		const float ItemAlpha = (RenderDead ? 0.5f : 1.0f) * ContentAlpha *
+					ScoreboardTextEntryFade(m_TextEntryElapsedSec, RowIndex - FirstRow, g_Config.m_QmUiMotionLevel, EndRow - FirstRow);
 		ColorRGBA TextColor = TextRender()->DefaultTextColor().WithMultipliedAlpha(ItemAlpha);
 		TextRender()->TextColor(TextColor);
 
@@ -1324,6 +1592,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 		CUIRect RowAndSpacing, Row;
 		Scoreboard.HSplitTop(LineHeight + TeamLabelLayout.m_RowSpacing, &RowAndSpacing, &Scoreboard);
 		RowAndSpacing.HSplitTop(LineHeight, &Row, nullptr);
+		const float TextY = Row.y + (Row.h - FontSize) / 2.0f;
 
 		// 裁剪外的行只推进队伍计数和布局，不提交文字、旗帜或 Tee 绘制。
 		if(Scroll && !m_ScrollRegion.AddRect(RowAndSpacing))
@@ -1455,6 +1724,23 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 				str_time((int64_t)absolute(pInfo->m_Score / 10), TIME_MINS_CENTISECS, aBuf, sizeof(aBuf));
 			}
 		}
+		else if(TimeScore && MillisecondScore)
+		{
+			// 0.6 服务器若上报了 DDNet 完赛时间，优先显示「秒 + 小数」，
+			// 不再退回只有整秒的 m_Score；未完赛或时间未知时留空。
+			const int FinishSeconds = ClientData.m_FinishTimeSeconds;
+			const bool NotFinished = FinishSeconds == FinishTime::NOT_FINISHED_MILLIS;
+			CUIRect ScoreRect = {ScoreOffset, Row.y, ScoreLength, Row.h};
+			Ui()->RenderTime(ScoreRect, FontSize, FinishSeconds, NotFinished, ClientData.m_FinishTimeMillis,
+				TrueMilliseconds, m_aScoreSecondsText[ClientId], m_aScoreMillisText[ClientId], TextColor);
+			// 超过一小时后 RenderTime 只显示到秒，悬停补一条带百分秒的完整时间。
+			if(!NotFinished && FinishSeconds >= 60 * 60 && m_MouseUnlocked && m_RenderInteractions)
+			{
+				char aTimeTooltip[32];
+				str_time((int64_t)FinishSeconds * 100 + ClientData.m_FinishTimeMillis / 10, TIME_HOURS_CENTISECS, aTimeTooltip, sizeof(aTimeTooltip));
+				GameClient()->m_Tooltips.DoToolTipForRect(&m_aScoreTooltipIds[ClientId], &ScoreRect, aTimeTooltip, ScoreLength * 1.5f);
+			}
+		}
 		else if(TimeScore)
 		{
 			if(pInfo->m_Score == -9999)
@@ -1470,7 +1756,8 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 		{
 			str_format(aBuf, sizeof(aBuf), "%d", std::clamp(pInfo->m_Score, -999, 99999));
 		}
-		TextRender()->Text(ScoreOffset + ScoreLength - TextRender()->TextWidth(FontSize, aBuf), Row.y + (Row.h - FontSize) / 2.0f, FontSize, aBuf);
+		if(Race7 || !(TimeScore && MillisecondScore))
+			TextRender()->Text(ScoreOffset + ScoreLength - TextRender()->TextWidth(FontSize, aBuf), TextY, FontSize, aBuf);
 		const bool HideIdentity = GameClient()->ShouldHideStreamerIdentity(ClientId);
 		char aNameBuf[MAX_NAME_LENGTH];
 		char aClanBuf[MAX_CLAN_LENGTH];
@@ -1494,7 +1781,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 			const float ClientBrandWidth = TextRender()->TextWidth(FontSize, pClientBrandLabel);
 			const float ClientBrandX = ClientBrandOffset + maximum(0.0f, ClientBrandLength - CLIENT_BRAND_LABEL_GAP - ClientBrandWidth) / 2.0f;
 			TextRender()->TextColor(ClientBrandScoreboardColor(ClientBrand, ItemAlpha));
-			TextRender()->Text(ClientBrandX, Row.y + (Row.h - FontSize) / 2.0f, FontSize, pClientBrandLabel);
+			TextRender()->Text(ClientBrandX, TextY, FontSize, pClientBrandLabel);
 			TextRender()->TextColor(TextColor);
 		}
 		if(ShowStatistics)
@@ -1547,7 +1834,6 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 		if(pGameInfoObj && (pGameInfoObj->m_GameFlags & GAMEFLAG_FLAGS) &&
 			pGameDataObj && (pGameDataObj->m_FlagCarrierRed == pInfo->m_ClientId || pGameDataObj->m_FlagCarrierBlue == pInfo->m_ClientId))
 		{
-			Graphics()->BlendNormal();
 			Graphics()->TextureSet(pGameDataObj->m_FlagCarrierBlue == pInfo->m_ClientId ? GameClient()->m_GameSkin.m_SpriteFlagBlue : GameClient()->m_GameSkin.m_SpriteFlagRed);
 			Graphics()->QuadsBegin();
 			Graphics()->QuadsSetSubset(1.0f, 0.0f, 0.0f, 1.0f);
@@ -1559,7 +1845,6 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 		// skin
 		if(RenderDead)
 		{
-			Graphics()->BlendNormal();
 			Graphics()->TextureSet(m_DeadTeeTexture);
 			Graphics()->QuadsBegin();
 			if(GameClient()->IsTeamPlay())
@@ -1586,19 +1871,23 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 			vec2 TeeRenderPos = vec2(TeeOffset + TeeLength / 2, Row.y + Row.h / 2.0f);
 			if(RowDetail.m_FullTee)
 			{
-				vec2 OffsetToMid;
-				CRenderTools::GetRenderTeeOffsetToRenderedTee(pIdleState, &TeeInfo, OffsetToMid);
-				TeeRenderPos.y += OffsetToMid.y;
-				RenderTools()->RenderTee(pIdleState, &TeeInfo, EMOTE_NORMAL, vec2(1.0f, 0.0f), TeeRenderPos, ItemAlpha);
+				RenderTools()->RenderIdleTeeAtCenter(&TeeInfo, TeeRenderPos, EMOTE_NORMAL, vec2(1.0f, 0.0f), ItemAlpha);
 			}
 			else
 				RenderTools()->RenderTee(pIdleState, &TeeInfo, EMOTE_NORMAL, vec2(1.0f, 0.0f), TeeRenderPos, TEE_PREVIEW_LAYER_BODY, ItemAlpha);
+
+			// 光标解锁时悬停皮肤显示皮肤名；0.7 下 m_aSkinName 是 body 部件名。
+			if(m_MouseUnlocked && m_RenderInteractions && ClientData.m_aSkinName[0] != '\0')
+			{
+				const CUIRect SkinRect = {TeeOffset, Row.y, TeeLength, Row.h};
+				GameClient()->m_Tooltips.DoToolTip(&ClientData, &SkinRect, ClientData.m_aSkinName);
+			}
 		}
 
 		// name
 		{
 			CTextCursor Cursor;
-			Cursor.SetPosition(vec2(NameOffset, Row.y + (Row.h - FontSize) / 2.0f));
+			Cursor.SetPosition(vec2(NameOffset, TextY));
 			Cursor.m_FontSize = FontSize;
 			Cursor.m_Flags |= TEXTFLAG_ELLIPSIS_AT_END;
 			Cursor.m_LineWidth = NameLength;
@@ -1680,7 +1969,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 				TextRender()->TextColor(GameClient()->m_WarList.GetClanColor(ClientId).WithMultipliedAlpha(ItemAlpha));
 
 			CTextCursor Cursor;
-			Cursor.SetPosition(vec2(ClanOffset + (ClanLength - minimum(TextRender()->TextWidth(FontSize, pClanName), ClanLength)) / 2.0f, Row.y + (Row.h - FontSize) / 2.0f));
+			Cursor.SetPosition(vec2(ClanOffset + (ClanLength - minimum(TextRender()->TextWidth(FontSize, pClanName), ClanLength)) / 2.0f, TextY));
 			Cursor.m_FontSize = FontSize;
 			Cursor.m_Flags |= TEXTFLAG_ELLIPSIS_AT_END;
 			Cursor.m_LineWidth = ClanLength;
@@ -1692,7 +1981,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 		{
 			const int CountryCode = g_Config.m_QmStreamerScoreboardDefaultFlags ? -1 : ClientData.m_Country;
 			GameClient()->m_CountryFlags.Render(CountryCode, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f * ItemAlpha),
-				CountryOffset, Row.y + (Spacing + TeeSizeMod * 5.0f) / 2.0f, CountryLength, Row.h - Spacing - TeeSizeMod * 5.0f, m_ActiveStartTime);
+				CountryOffset, Row.y + (Spacing + CountryFlagSize) / 2.0f, CountryLength, Row.h - Spacing - CountryFlagSize, m_ActiveStartTime);
 		}
 
 		// ping
@@ -1705,7 +1994,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 			TextRender()->TextColor(TextRender()->DefaultTextColor().WithMultipliedAlpha(ItemAlpha));
 		}
 		str_format(aBuf, sizeof(aBuf), "%d", std::clamp(pInfo->m_Latency, 0, 999));
-		TextRender()->Text(PingOffset + PingLength - TextRender()->TextWidth(FontSize, aBuf), Row.y + (Row.h - FontSize) / 2.0f, FontSize, aBuf);
+		TextRender()->Text(PingOffset + PingLength - TextRender()->TextWidth(FontSize, aBuf), TextY, FontSize, aBuf);
 		TextRender()->TextColor(TextRender()->DefaultTextColor().WithMultipliedAlpha(ItemAlpha));
 	}
 	if(Scroll)
@@ -1778,6 +2067,29 @@ void CScoreboard::RenderRecordingNotification(float x)
 
 void CScoreboard::OnRender()
 {
+	// 「死亡自动显示」与「游戏结束」都由快照派生：存活时也会偶发一两帧
+	// m_pLocalCharacter 为空（丢包、实体延迟），重生/换图/观战切换同理。
+	// 手动开关（Tab）保持立即响应，自动条件做 2 帧双向外滤——否则一帧噪声就会
+	// 开一次计分板，入场动画刚起手就被拉回，实机表现为「入场有时自己打断」。
+	// 放在所有提前返回之前：隐藏/离线期间也要能把这层状态收敛回 false。
+	{
+		const bool RawAutoActive = IsAutoActive();
+		if(RawAutoActive)
+		{
+			m_AutoOnFrames = minimum(m_AutoOnFrames + 1, 2);
+			m_AutoOffFrames = 0;
+		}
+		else
+		{
+			m_AutoOffFrames = minimum(m_AutoOffFrames + 1, 2);
+			m_AutoOnFrames = 0;
+		}
+		if(m_AutoOnFrames >= 2)
+			m_AutoActiveStable = true;
+		else if(m_AutoOffFrames >= 2)
+			m_AutoActiveStable = false;
+	}
+
 	m_RenderInteractions = false;
 	if(!IsActive() || !m_MouseUnlocked || GameClient()->m_Menus.IsActive() || GameClient()->m_Chat.IsActive() || GetQmFocusModeDecisions().m_HideScoreboard)
 		m_MediaControls.Cancel(*Ui());
@@ -1796,7 +2108,7 @@ void CScoreboard::OnRender()
 		// Axiom 排序继续使用当前模式分数，显示游玩时间不改变排序数据源。
 		GameClient()->m_QmAxiomScores.SetMode(m_QmAxiomScoreModeFrame);
 		// 记分板打开时给足预算铺满一屏，否则只做少量预热；
-		// 真正发请求的速度由组件内每帧搜索上限控制。
+		// 真正发请求的速度由查分组件按 API 限额控制。
 		int Budget = IsActive() ? MAX_CLIENTS : AXIOM_SCOREBOARD_PREFETCH_BUDGET;
 		for(int i = 0; i < MAX_CLIENTS && Budget > 0; i++)
 		{
@@ -1805,7 +2117,7 @@ void CScoreboard::OnRender()
 			if(GameClient()->ShouldHideStreamerIdentity(i))
 				continue;
 			Budget--;
-			GameClient()->m_QmAxiomScores.EnsureQueried(GameClient()->m_aClients[i].m_aName);
+			GameClient()->m_QmAxiomScores.EnsureScoreboardQueried(GameClient()->m_aClients[i].m_aName);
 		}
 	}
 	else
@@ -1847,11 +2159,14 @@ void CScoreboard::OnRender()
 		m_LastMousePos = std::nullopt;
 	}
 	// 显示状态转换检测：每次由隐藏转为显示（Tab 开合、死亡自动弹出、游戏结束）都重置
-	// 行内国旗的入场动画起点，保证每次打开计分板国旗都重放入场动画。
-	if(WantActive && !m_WasActive)
+	// 行内国旗的入场动画起点与面板弹性缩放轨道，保证每次打开都重放入场动画。
+	const bool FreshOpen = WantActive && !m_WasActive;
+	// 每次打开都重置入场基准（面板、文本、国旗同一套）：快速连按时三者一起重播，
+	// 不会出现「框不动、文本却在淡入」的错位。
+	if(FreshOpen)
 		m_ActiveStartTime = time_get();
 	m_WasActive = WantActive;
-	const bool ExtraAnimations = g_Config.m_QmExtraAnimations != 0 && GameClient()->UiRuntimeV2()->Enabled();
+	const bool ExtraAnimations = g_Config.m_QmUiMotionLevel > 0 && GameClient()->UiRuntimeV2()->Enabled();
 	float PanelOffsetY = 0.0f;
 	float PanelScale = 1.0f;
 	if(!ExtraAnimations)
@@ -1889,7 +2204,14 @@ void CScoreboard::OnRender()
 		m_Visibility = std::clamp(ResolveUiPresentationStateValue(AnimRuntime, PanelNode, EUiAnimProperty::ALPHA, TargetVisibility, Spring, 3, 0.004f), 0.0f, 1.0f);
 		m_AnimContentAlpha = std::clamp(ResolveUiPresentationStateValue(AnimRuntime, PanelNode, EUiAnimProperty::COLOR_A, TargetVisibility, ScoreboardContentSpring(WantActive), 3, 0.004f), 0.0f, 1.0f);
 		PanelOffsetY = ResolveUiPresentationStateValue(AnimRuntime, PanelNode, EUiAnimProperty::POS_Y, TargetOffsetY, Spring, 3, 0.01f);
-		PanelScale = std::max(0.01f, ResolveUiPresentationStateValue(AnimRuntime, PanelNode, EUiAnimProperty::SCALE, TargetScale, Spring, 3, 0.002f));
+		const float BaseScale = std::max(0.01f, ResolveUiPresentationStateValue(AnimRuntime, PanelNode, EUiAnimProperty::SCALE, TargetScale, Spring, 3, 0.002f));
+		// 0 → 过冲 → 100% 的弹性入场单独占一条轨道：不与上面 1.0/0.985 的收起缩放
+		// 共用，否则 ResolveUiPresentationStateValue 的目标缓存会把「重开时钉回 0」
+		// 当成目标没变而吞掉，第二次按 Tab 就没有弹一下了。
+		const uint64_t PopNode = ScoreboardPresentationNodeKey("pop");
+		if(FreshOpen)
+			StartScoreboardPop(AnimRuntime, PopNode);
+		PanelScale = BaseScale * std::max(0.01f, AnimRuntime.GetValue(PopNode, EUiAnimProperty::SCALE, 1.0f));
 		m_OpenTime = m_Visibility;
 
 		if(!WantActive && m_Visibility <= 0.01f && !AnimRuntime.HasActiveAnimation(PanelNode, EUiAnimProperty::ALPHA))
@@ -1900,6 +2222,36 @@ void CScoreboard::OnRender()
 			m_RenderInteractions = false;
 			return;
 		}
+	}
+
+	// 面板还很小的时候先把内容压住：立即模式布局会按缩放后的高度重排字号，
+	// 让文字在 0.1 倍尺寸下满透明度出现会读作一团噪点。门槛压在面板极小的那一段，
+	// 面板过半尺寸就完全放开，行的错峰淡入才有可玩的余量。
+	if(ExtraAnimations && WantActive)
+		m_AnimContentAlpha *= ScoreboardContentScaleGate(PanelScale);
+
+	// 文本错峰只在打开期间存在；关闭时置 -1，所有区块随面板一起淡出，不再依次出场。
+	// 起点是「面板弹跳到接近就位」那一帧，不是按下 Tab 那一帧：面板弹跳约 300ms，
+	// 行在整个弹跳过程中已经被缩放带着长大，若同时淡入，等面板停稳时整列早已满不
+	// 透明——这就是「下方列表瞬间出现」的由来。等面板就位再逐行浮现才有依次感。
+	if(!WantActive || !ExtraAnimations)
+	{
+		m_TextEntryStartTime = 0;
+		m_TextEntryElapsedSec = -1.0f;
+	}
+	else
+	{
+		if(FreshOpen)
+			m_TextEntryStartTime = 0;
+		// 面板过冲/收敛期间 PanelScale 会短暂超过 1；0.95 表示「基本就位」。
+		// 兜底：面板因任何原因久未到位时，最多等 0.6s 就开始，绝不让列表一直透明。
+		const bool EntryReady = PanelScale >= 0.95f ||
+					(m_ActiveStartTime > 0 && (double)(time_get() - m_ActiveStartTime) / (double)time_freq() > 0.6);
+		if(m_TextEntryStartTime == 0 && EntryReady)
+			m_TextEntryStartTime = time_get();
+		// 未到起点用 0（行完全透明）。不能沿用 -1：那是「不在入场生命周期」，
+		// 语义是「满透明度直接跟随面板淡出」，会让行在等待期间就整块显形。
+		m_TextEntryElapsedSec = m_TextEntryStartTime > 0 ? (float)((double)(time_get() - m_TextEntryStartTime) / (double)time_freq()) : 0.0f;
 	}
 
 	const bool ScoreboardUiInteractive = WantActive && !GameClient()->m_Menus.IsActive() && !GameClient()->m_Chat.IsActive();
@@ -2046,7 +2398,7 @@ void CScoreboard::OnRender()
 			char aTitle[256];
 			if(pGameDataObj->m_TeamscoreRed > pGameDataObj->m_TeamscoreBlue)
 			{
-				TextRender()->TextColor(ColorRGBA(0.975f, 0.17f, 0.17f, 1.0f).WithMultipliedAlpha(m_AnimContentAlpha));
+				TextRender()->TextColor(TEAM_RED_TITLE_COLOR.WithMultipliedAlpha(m_AnimContentAlpha));
 				if(pRedTeamName == nullptr)
 				{
 					str_copy(aTitle, Localize("Red team wins!"));
@@ -2058,7 +2410,7 @@ void CScoreboard::OnRender()
 			}
 			else if(pGameDataObj->m_TeamscoreBlue > pGameDataObj->m_TeamscoreRed)
 			{
-				TextRender()->TextColor(ColorRGBA(0.17f, 0.46f, 0.975f, 1.0f).WithMultipliedAlpha(m_AnimContentAlpha));
+				TextRender()->TextColor(TEAM_BLUE_TITLE_COLOR.WithMultipliedAlpha(m_AnimContentAlpha));
 				if(pBlueTeamName == nullptr)
 				{
 					str_copy(aTitle, Localize("Blue team wins!"));
@@ -2154,8 +2506,22 @@ void CScoreboard::OnRender()
 		DoStatisticsButton(StatisticsButton);
 		DoServerPlayers(ServerPlayers);
 		DoSortButton(SortButton);
-		RenderScoreboard(RedScoreboardContent, TEAM_RED, 0, NumPlayers, RedPlayerRows, RenderState);
-		RenderScoreboard(BlueScoreboardContent, TEAM_BLUE, 0, NumPlayers, BluePlayerRows, RenderState);
+		// 单队超过 64 人时拆成左右两列：上半区先排满 64 行，其余进右列。
+		// 两列共用 64 行密度，右列人少也不会把行高放大到和左列不一致。
+		const auto RenderTeamColumn = [&](CUIRect TeamScoreboard, int Team, const CScoreboardPlayerRowPlan &Plan) {
+			constexpr int ColumnCapacity = 64;
+			if(Plan.m_Count <= ColumnCapacity)
+			{
+				RenderScoreboard(TeamScoreboard, Team, 0, Plan.m_Count, Plan, RenderState);
+				return;
+			}
+			CUIRect LeftColumn, RightColumn;
+			TeamScoreboard.VSplitMid(&LeftColumn, &RightColumn, 2.5f);
+			RenderScoreboard(LeftColumn, Team, 0, ColumnCapacity, Plan, RenderState, false, ColumnCapacity);
+			RenderScoreboard(RightColumn, Team, ColumnCapacity, Plan.m_Count, Plan, RenderState, false, ColumnCapacity);
+		};
+		RenderTeamColumn(RedScoreboardContent, TEAM_RED, RedPlayerRows);
+		RenderTeamColumn(BlueScoreboardContent, TEAM_BLUE, BluePlayerRows);
 	}
 	else
 	{
@@ -2300,37 +2666,42 @@ void CScoreboard::OnRender()
 		}
 	}
 
-	RenderSoundMuteBar(ScoreboardContent);
-	m_MediaControls.Render(*Ui(), *TextRender(), GameClient()->m_Tooltips, GameClient()->m_SystemMediaControls, ScoreboardContent,
-		ScoreboardUiInteractive && m_MouseUnlocked && !GameClient()->m_HudEditor.IsActive(), m_AnimContentAlpha, ScoreboardUiColorSurface(BackgroundAlphaFinal));
-
-	CUIRect Spectators = {ScoreboardContent.x, ScoreboardContent.y + ScoreboardContent.h + 5.0f, ScoreboardContent.w, 100.0f};
-	if(pGameInfoObj && (pGameInfoObj->m_ScoreLimit || pGameInfoObj->m_TimeLimit || (pGameInfoObj->m_RoundNum && pGameInfoObj->m_RoundCurrent)))
+	// 尾部区块（声音条、媒体、观众、页脚、投票、录像提示）排在玩家行之后出场。
 	{
-		CUIRect Goals;
-		CUIRect SpectatorRest;
-		CUiV2LayoutEngine LayoutEngine;
-		SUiStyle ColumnStyle;
-		ColumnStyle.m_Axis = EUiAxis::COLUMN;
-		ColumnStyle.m_Gap = 5.0f;
-		ColumnStyle.m_AlignItems = EUiAlign::STRETCH;
-		ColumnStyle.m_JustifyContent = EUiAlign::START;
-		static thread_local std::vector<SUiLayoutChild> s_vChildren;
-		std::vector<SUiLayoutChild> &vChildren = s_vChildren;
-		vChildren.assign(2, SUiLayoutChild{});
-		vChildren[0].m_Style.m_Height = SUiLength::Px(25.0f);
-		vChildren[1].m_Style.m_Height = SUiLength::Flex(1.0f);
-		LayoutEngine.ComputeChildren(ColumnStyle, CUiV2LegacyAdapter::FromCUIRect(Spectators), vChildren);
-		Goals = CUiV2LegacyAdapter::ToCUIRect(vChildren[0].m_Box);
-		SpectatorRest = CUiV2LegacyAdapter::ToCUIRect(vChildren[1].m_Box);
-		Spectators = SpectatorRest;
-		RenderGoals(Goals);
-	}
-	RenderFooter(Spectators);
-	GameClient()->m_Voting.RenderScoreboard(ScoreboardContent, ScoreboardUiInteractive && m_MouseUnlocked && !GameClient()->m_HudEditor.IsActive(), m_AnimContentAlpha);
+		SScoreboardEntryAlphaScope EntryAlpha(m_AnimContentAlpha,
+			ScoreboardTextEntryFade(m_TextEntryElapsedSec, SCOREBOARD_TEXT_ENTRY_FOOTER_INDEX, g_Config.m_QmUiMotionLevel, NumPlayers));
+		RenderSoundMuteBar(ScoreboardContent);
+		m_MediaControls.Render(*Ui(), *TextRender(), GameClient()->m_Tooltips, GameClient()->m_SystemMediaControls, ScoreboardContent,
+			ScoreboardUiInteractive && m_MouseUnlocked && !GameClient()->m_HudEditor.IsActive(), m_AnimContentAlpha, ScoreboardUiColorSurface(m_AnimContentAlpha));
 
-	if(!g_Config.m_ClShowhudTimer)
-		RenderRecordingNotification((Screen.w / 7) * 4 + 10);
+		CUIRect Spectators = {ScoreboardContent.x, ScoreboardContent.y + ScoreboardContent.h + 5.0f, ScoreboardContent.w, 100.0f};
+		if(pGameInfoObj && (pGameInfoObj->m_ScoreLimit || pGameInfoObj->m_TimeLimit || (pGameInfoObj->m_RoundNum && pGameInfoObj->m_RoundCurrent)))
+		{
+			CUIRect Goals;
+			CUIRect SpectatorRest;
+			CUiV2LayoutEngine LayoutEngine;
+			SUiStyle ColumnStyle;
+			ColumnStyle.m_Axis = EUiAxis::COLUMN;
+			ColumnStyle.m_Gap = 5.0f;
+			ColumnStyle.m_AlignItems = EUiAlign::STRETCH;
+			ColumnStyle.m_JustifyContent = EUiAlign::START;
+			static thread_local std::vector<SUiLayoutChild> s_vChildren;
+			std::vector<SUiLayoutChild> &vChildren = s_vChildren;
+			vChildren.assign(2, SUiLayoutChild{});
+			vChildren[0].m_Style.m_Height = SUiLength::Px(25.0f);
+			vChildren[1].m_Style.m_Height = SUiLength::Flex(1.0f);
+			LayoutEngine.ComputeChildren(ColumnStyle, CUiV2LegacyAdapter::FromCUIRect(Spectators), vChildren);
+			Goals = CUiV2LegacyAdapter::ToCUIRect(vChildren[0].m_Box);
+			SpectatorRest = CUiV2LegacyAdapter::ToCUIRect(vChildren[1].m_Box);
+			Spectators = SpectatorRest;
+			RenderGoals(Goals);
+		}
+		RenderFooter(Spectators);
+		GameClient()->m_Voting.RenderScoreboard(ScoreboardContent, ScoreboardUiInteractive && m_MouseUnlocked && !GameClient()->m_HudEditor.IsActive(), m_AnimContentAlpha);
+
+		if(!g_Config.m_ClShowhudTimer)
+			RenderRecordingNotification((Screen.w / 7) * 4 + 10);
+	}
 
 	if(ScoreboardUiInteractive)
 	{
@@ -2352,9 +2723,12 @@ bool CScoreboard::IsActive() const
 	if(GameClient()->m_Statboard.IsActive())
 		return false;
 
-	if(m_Active)
-		return true;
+	// 自动条件用去抖后的稳定态（由 OnRender 每帧更新），单帧快照噪声不会在这里透传。
+	return m_Active || m_AutoActiveStable;
+}
 
+bool CScoreboard::IsAutoActive() const
+{
 	const CNetObj_GameInfo *pGameInfoObj = GameClient()->m_Snap.m_pGameInfoObj;
 	if(GameClient()->m_Snap.m_pLocalInfo && !GameClient()->m_Snap.m_SpecInfo.m_Active)
 	{

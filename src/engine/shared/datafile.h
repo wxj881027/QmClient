@@ -69,6 +69,7 @@ public:
 
 	int GetDataSize(int Index) const;
 	void *GetData(int Index);
+	bool ReadCompressedData(int Index, std::vector<unsigned char> &vData) const;
 	void *GetDataSwapped(int Index); // makes sure that the data is 32bit LE ints when saved
 	const char *GetDataString(int Index);
 	void AddDataProcessor(int Index, FDataProcessor DataProcessor);

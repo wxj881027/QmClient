@@ -28,8 +28,8 @@ bool CMenus::DoColorGradientPalette(CUIRect *pView, unsigned *pBaseColor, char *
 	const bool ReadOnly = Ui()->RenderOnly();
 	CUIRect ColorLine;
 	const std::string Id = "gradient-palette-" + std::to_string(reinterpret_cast<std::uintptr_t>(pGradient));
-	const bool HasRow = Flow.Control(Id.c_str(), ColorLineHeight, ColorLine);
-	Flow.Space(BottomMargin);
+	// 调色板行自带行距：声明阶段记到上一行末尾，行后不再补 Space。
+	const bool HasRow = Flow.Control(Id.c_str(), ColorLineHeight, ColorLine, BottomMargin);
 	if(!HasRow)
 		return false;
 	bool Changed = false;
@@ -95,8 +95,8 @@ bool CMenus::DoColorGradientGeometry(CUIRect &Content, const SQmGradientGeometry
 	CUIRect Row, Label, Control;
 	const auto NextRow = [&](const char *pId, const char *pText) {
 		const std::string Id = Prefix + pId;
-		const bool HasRow = Flow.Control(Id.c_str(), RowHeight, Row);
-		Flow.Space(Metrics.m_LineSpacing);
+		// 行距同样由行自己声明，行后不再补 Space。
+		const bool HasRow = Flow.Control(Id.c_str(), RowHeight, Row, ui_token::settings::RowGap(Metrics.m_LineSpacing));
 		if(!HasRow)
 			return false;
 		SplitSettingsControlRow(Row, Metrics, &Label, &Control);

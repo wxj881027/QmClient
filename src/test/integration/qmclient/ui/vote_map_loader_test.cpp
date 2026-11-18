@@ -19,10 +19,11 @@ namespace
 	class CResponse : public IHttpRequest
 	{
 	public:
+		std::string m_Header;
 		bool m_Aborted = false;
 		explicit CResponse(const char *pUrl) :
 			IHttpRequest(pUrl) {}
-		void Header(const char *) override {}
+		void Header(const char *pHeader) override { m_Header = pHeader; }
 		void Abort() override { m_Aborted = true; }
 		void Fail() { m_State = EHttpState::ERROR; }
 		void Finish(const char *pJson)
@@ -103,6 +104,50 @@ namespace
 			ASSERT_EQ(m_Loader.Maps().size(), 1u);
 		}
 	};
+}
+
+TEST_F(VoteMapLoader, AxiomUsesSelectedMapDetailsAndSharesTheOpenApiBudget)
+{
+	CQmAxiomRequestBudget Budget;
+	const int64_t WindowStart = time_get();
+	m_Loader.SetAxiomMode(EQmAxiomMode::GORES);
+	m_Loader.Select(&m_Alpha, 0.0f);
+	m_Loader.Update(&m_Http, &m_Engine, 0.1f, &Budget);
+	EXPECT_TRUE(m_Http.m_vRequests.empty());
+	m_Loader.Update(&m_Http, &m_Engine, 1.1f, &Budget, "example");
+	ASSERT_EQ(m_Http.m_vRequests.size(), 1u);
+	EXPECT_TRUE(Budget.TryStart(WindowStart, false));
+	EXPECT_TRUE(Budget.TryStart(WindowStart, false));
+	EXPECT_FALSE(Budget.TryStart(WindowStart, false));
+	const auto &pRequest = m_Http.m_vRequests.front();
+	EXPECT_EQ(pRequest->m_Header, "Authorization: Bearer example");
+	EXPECT_STREQ(pRequest->Url(), "https://api.axiom.teeworlds.cn/v1/open/map/info?mode=gores&map=Alpha");
+	pRequest->Finish(R"({"code":200,"data":{"map":"Alpha","median_time":83.2,"finisher_count":42}})");
+	m_Loader.Update(&m_Http, &m_Engine, 1.2f, &Budget);
+	m_Engine.CompleteJobs();
+	m_Loader.Update(&m_Http, &m_Engine, 1.3f, &Budget);
+	ASSERT_NE(m_Loader.Details(), nullptr);
+	EXPECT_EQ(m_Loader.Details()->m_Finishers, 42);
+	EXPECT_DOUBLE_EQ(m_Loader.Details()->m_MedianSeconds, 83.2);
+	EXPECT_LT(m_Loader.Details()->m_AverageSeconds, 0.0);
+}
+
+TEST_F(VoteMapLoader, SwitchingCommunityDiscardsPendingMapDetails)
+{
+	CQmAxiomRequestBudget Budget;
+	m_Loader.SetAxiomMode(EQmAxiomMode::AXRACE);
+	m_Loader.Select(&m_Beta, 0.0f);
+	m_Loader.Update(&m_Http, &m_Engine, 1.0f, &Budget);
+	ASSERT_EQ(m_Http.m_vRequests.size(), 1u);
+	EXPECT_STREQ(m_Http.m_vRequests.front()->Url(), "https://api.axiom.teeworlds.cn/v1/open/map/info?mode=axrace&map=Beta");
+	EXPECT_TRUE(m_Http.m_vRequests.front()->m_Header.empty());
+	m_Loader.SetAxiomMode(EQmAxiomMode::NONE);
+	EXPECT_TRUE(m_Http.m_vRequests.front()->m_Aborted);
+	Update();
+	ASSERT_EQ(m_Http.m_vRequests.size(), 2u);
+	EXPECT_STREQ(m_Http.m_vRequests.back()->Url(), "https://ddnet.org/releases/maps.json");
+	EXPECT_TRUE(m_Http.m_vRequests.back()->m_Header.empty());
+	EXPECT_EQ(m_Loader.Details(), nullptr);
 }
 
 TEST_F(VoteMapLoader, PublishesCatalogOnlyAfterBackgroundParsingCompletes)

@@ -5,6 +5,10 @@
 
 #include <game/client/ui_rect.h>
 
+// CUi 的滚轮事件以 120 为一个标准档。使用 AddWheelImpulse 的自定义滚动面
+// 必须按这个刻度报送档数，不能把“行”或“像素”直接当成原始滚轮增量。
+constexpr float QM_SCROLL_WHEEL_NOTCH = 120.0f;
+
 constexpr float QmScrollAltMultiplier()
 {
 	return 3.0f;
@@ -31,13 +35,21 @@ struct SQmScrollMetrics
 	float MaxOffset() const;
 };
 
-// 滚轮手感档位。SMOOTH 必须占 0：g_Config 在未跑配置加载时（测试环境）是零初始化，
+// 顶边裁剪：只要行的底边仍在视口上沿之下，就还有可见像素。
+// 调用方不能用“行顶越过上沿”直接判不可见，否则滚动到端点时，
+// 只露出一部分的半行会被整行丢掉，表现为滚动条已到顶却看不见第一行。
+inline bool QmScrollLineVisibleInViewportTop(float LineTop, float LineBottom, float ClipTop)
+{
+	return LineBottom > LineTop && LineBottom > ClipTop;
+}
+
+// 滚轮手感档位。ORIGINAL 必须占 0：g_Config 在未跑配置加载时（测试环境）是零初始化，
 // 0 必须是生产默认档，否则测试与线上手感会静默分叉。档位在设置界面的展示顺序
 // （原版 → 顺滑 → 弹簧）由卡片侧单独映射，不依赖枚举值大小。
 enum class EQmScrollFeel
 {
-	SMOOTH = 0,
-	ORIGINAL = 1,
+	ORIGINAL = 0,
+	SMOOTH = 1,
 	SPRING = 2,
 };
 
@@ -46,7 +58,7 @@ struct SQmScrollConfig
 	float m_WheelScale = 10.0f;
 	bool m_NativeWheelStep = true;
 	float m_NativeWheelAnimationTime = 0.0f;
-	EQmScrollFeel m_Feel = EQmScrollFeel::SMOOTH;
+	EQmScrollFeel m_Feel = EQmScrollFeel::ORIGINAL;
 	// 弹簧档的两个参数，直接来自设置界面（qm_ui_scroll_spring_response /
 	// qm_ui_scroll_spring_damping）。响应周期是弹簧的固有周期，与"固定时长动画
 	// 的结束时刻"不是同一个量，所以不再从 m_NativeWheelAnimationTime 推导。

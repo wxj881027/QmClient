@@ -32,6 +32,7 @@
 #include <winrt/base.h>
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <limits>
@@ -713,7 +714,85 @@ void CSystemMediaControls::ThreadMain(SRuntime &Runtime, const std::atomic_bool 
 					continue;
 				}
 
-				Session = Manager.GetCurrentSession();
+				// 系统的「当前会话」不会因为浏览器视频停下就自动让位：它要等下一次媒体
+				// 事件（典型是切歌）才切换，于是会出现「网页早就停了还显示网页媒体」。
+				// 这里自己枚举会话按播放状态挑：正在播放 > 暂停 > 未知 > 停止/关闭，
+				// 同档才保留系统当前会话。时间轴停住的「假播放」按暂停参与选源。
+				const auto ScoreSession = [](const GlobalSystemMediaTransportControlsSession &Candidate, int64_t NowUtc100ns) {
+					using Activity = SystemMediaControls::ESessionActivity;
+					int Priority = SystemMediaControls::SessionActivityPriority(Activity::UNKNOWN);
+					try
+					{
+						const auto Info = Candidate.GetPlaybackInfo();
+						if(!Info)
+							return Priority;
+						const auto Status = Info.PlaybackStatus();
+						if(Status == GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing)
+						{
+							Priority = SystemMediaControls::SessionActivityPriority(Activity::PLAYING);
+							const auto Timeline = Candidate.GetTimelineProperties();
+							if(Timeline)
+							{
+								const int64_t DurationMs = std::chrono::duration_cast<std::chrono::milliseconds>(Timeline.EndTime() - Timeline.StartTime()).count();
+								const int64_t LastUpdatedUtc100ns = Timeline.LastUpdatedTime().time_since_epoch().count();
+								if(SystemMediaControls::MediaTimelineLooksStale(true, DurationMs, LastUpdatedUtc100ns, NowUtc100ns))
+									Priority = SystemMediaControls::SessionActivityPriority(Activity::PAUSED);
+							}
+						}
+						else if(Status == GlobalSystemMediaTransportControlsSessionPlaybackStatus::Paused)
+						{
+							Priority = SystemMediaControls::SessionActivityPriority(Activity::PAUSED);
+						}
+						else if(Status == GlobalSystemMediaTransportControlsSessionPlaybackStatus::Stopped ||
+							Status == GlobalSystemMediaTransportControlsSessionPlaybackStatus::Closed)
+						{
+							Priority = SystemMediaControls::SessionActivityPriority(Activity::STOPPED);
+						}
+					}
+					catch(const winrt::hresult_error &)
+					{
+					}
+					return Priority;
+				};
+				GlobalSystemMediaTransportControlsSession CurrentSession{nullptr};
+				try
+				{
+					CurrentSession = Manager.GetCurrentSession();
+				}
+				catch(const winrt::hresult_error &)
+				{
+					CurrentSession = nullptr;
+				}
+				Session = CurrentSession;
+				try
+				{
+					const auto Sessions = Manager.GetSessions();
+					constexpr int MAX_SESSION_CANDIDATES = 8;
+					// WinRT 会话对象没有默认构造函数，用 vector 而不是 std::array，
+					// 数量最多 8 个，reserve 后不会反复分配。
+					std::vector<GlobalSystemMediaTransportControlsSession> vSessions;
+					std::array<int, MAX_SESSION_CANDIDATES> aPriorities{};
+					const int CandidateCount = minimum(static_cast<int>(Sessions.Size()), MAX_SESSION_CANDIDATES);
+					vSessions.reserve(CandidateCount);
+					const int64_t NowUtc100ns = winrt::clock::now().time_since_epoch().count();
+					const std::string CurrentAppId = CurrentSession ? winrt::to_string(CurrentSession.SourceAppUserModelId()) : std::string();
+					int CurrentIndex = -1;
+					for(int i = 0; i < CandidateCount; ++i)
+					{
+						const auto &Candidate = Sessions.GetAt(i);
+						vSessions.push_back(Candidate);
+						if(!CurrentAppId.empty() && winrt::to_string(Candidate.SourceAppUserModelId()) == CurrentAppId)
+							CurrentIndex = i;
+						aPriorities[i] = ScoreSession(Candidate, NowUtc100ns);
+					}
+					const int Chosen = SystemMediaControls::PickMediaSession(aPriorities.data(), CandidateCount, CurrentIndex);
+					if(Chosen >= 0)
+						Session = vSessions[Chosen];
+				}
+				catch(const winrt::hresult_error &)
+				{
+					Session = CurrentSession;
+				}
 				if(!Session)
 				{
 					PlayerVolume.Reset();
@@ -921,8 +1000,8 @@ void CSystemMediaControls::ThreadMain(SRuntime &Runtime, const std::atomic_bool 
 					{
 						try
 						{
-							const auto CurrentSession = Manager.GetCurrentSession();
-							if(!m_BackendEnabled.load(std::memory_order_relaxed) || !CurrentSession || Command.m_SourceAppId != SourceAppId || winrt::to_string(CurrentSession.SourceAppUserModelId()) != SourceAppId)
+							// 当前选中的播放会话可能与系统前台会话不同，按所选应用 id 分派。
+							if(!m_BackendEnabled.load(std::memory_order_relaxed) || Command.m_SourceAppId != SourceAppId)
 								continue;
 							switch(Command.m_Type)
 							{

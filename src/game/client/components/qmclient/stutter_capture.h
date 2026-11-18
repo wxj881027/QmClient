@@ -25,6 +25,7 @@ public:
 		bool m_Online = false;
 		uint64_t m_Frame = 0;
 		double m_FrameMs = 0.0;
+		int m_RenderLimit = 0;
 		const char *const *m_ppComponentNames = nullptr;
 		size_t m_ComponentCount = 0;
 		IConfigManager *m_pConfig = nullptr;
@@ -32,19 +33,16 @@ public:
 		SUiContext (*m_pfnUiContext)(void *) = nullptr;
 		void *m_pUser = nullptr;
 	};
-	struct SFeatures
+	struct SContext
 	{
-		std::vector<std::pair<std::string, int>> m_vValues;
 		std::string m_Page;
 		std::string m_Operation;
 		EQmStutterLimitCause m_LimitCause = EQmStutterLimitCause::NONE;
-		void Swap(SFeatures &Other) noexcept
-		{
-			m_vValues.swap(Other.m_vValues);
-			m_Page.swap(Other.m_Page);
-			m_Operation.swap(Other.m_Operation);
-			std::swap(m_LimitCause, Other.m_LimitCause);
-		}
+	};
+	struct SFeatures
+	{
+		std::vector<std::pair<std::string, int>> m_vValues;
+		SContext m_Context;
 	};
 	struct SComponent
 	{
@@ -89,11 +87,14 @@ private:
 	CQmStutterEpisodeTracker m_Tracker;
 	CQmStutterSampleSeries m_FrameSamples;
 	SFeatures m_Features;
+	SContext m_WorstContext;
 	bool m_WasEnabled = false;
 	bool m_RejectFrame = false;
 	uint64_t m_WindowStartFrame = 0;
 	uint64_t m_WorstFrame = 0;
 	double m_WorstFrameMs = 0.0;
+	double m_DetailWorstMs = 0.0;
+	uint64_t m_FeatureFrame = 0;
 	COperations *m_pOperations;
 };
 

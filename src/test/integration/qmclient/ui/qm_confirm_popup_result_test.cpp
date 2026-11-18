@@ -38,13 +38,15 @@ namespace
 			ASSERT_TRUE(m_Ui.OnInput(Event));
 		}
 
-		// 确认窗的按钮条贴底、左右等分：确认键在右侧。
-		static CUIRect ConfirmButtonRect(const CUIRect &Popup)
+		// 把面板渲染一帧，再从真实提交里取按钮：弹窗内容内边距（POPUP_MARGIN）
+		// 会改变按钮相对外框的位置，测试不该自己重算布局。
+		void ShowUntitledPanel(CUi::SConfirmPopupContext &Context, const char *pMessage)
 		{
-			CUIRect Label, ButtonBar, CancelButton, ConfirmButton;
-			Popup.HSplitBottom(CUi::SConfirmPopupContext::POPUP_BUTTON_HEIGHT, &Label, &ButtonBar);
-			ButtonBar.VSplitMid(&CancelButton, &ConfirmButton, CUi::SConfirmPopupContext::POPUP_BUTTON_SPACING);
-			return ConfirmButton;
+			Context.DefaultButtons();
+			str_copy(Context.m_aMessage, pMessage);
+			m_Ui.ShowPopupConfirm(0.0f, 0.0f, &Context);
+			UiGraphics()->m_vRoundedSubmissions.clear();
+			Frame({0.0f, 0.0f}, false);
 		}
 
 		void ShowDisconnectPanel(CUi::SConfirmPopupContext &Context)
@@ -72,14 +74,10 @@ namespace
 TEST_F(QmConfirmPopupResult, ClickingConfirmWritesConfirmedResult)
 {
 	CUi::SConfirmPopupContext Context;
-	Context.DefaultButtons();
 	Context.m_Tone = CUi::SConfirmPopupContext::ETone::DANGER;
-	str_copy(Context.m_aMessage, "Delete this skin?");
-	m_Ui.ShowPopupConfirm(0.0f, 0.0f, &Context);
-	const CUIRect *pPopup = m_Ui.GetPopupMenuRect(&Context);
-	ASSERT_NE(pPopup, nullptr);
-	const CUIRect Button = ConfirmButtonRect(*pPopup);
-	const vec2 Center{Button.x + Button.w * 0.5f, Button.y + Button.h * 0.5f};
+	ShowUntitledPanel(Context, "Delete this skin?");
+	const CUIRect Button = RenderedPanelButton(true);
+	const vec2 Center = Button.Center();
 
 	Frame(Center, false);
 	EXPECT_EQ(Context.m_Result, CUi::SConfirmPopupContext::UNSET);
@@ -92,15 +90,9 @@ TEST_F(QmConfirmPopupResult, ClickingConfirmWritesConfirmedResult)
 TEST_F(QmConfirmPopupResult, CancelingWritesCanceledResult)
 {
 	CUi::SConfirmPopupContext Context;
-	Context.DefaultButtons();
-	str_copy(Context.m_aMessage, "Reset the controls?");
-	m_Ui.ShowPopupConfirm(0.0f, 0.0f, &Context);
-	const CUIRect *pPopup = m_Ui.GetPopupMenuRect(&Context);
-	ASSERT_NE(pPopup, nullptr);
-	CUIRect Label, ButtonBar, CancelButton, ConfirmButton;
-	pPopup->HSplitBottom(CUi::SConfirmPopupContext::POPUP_BUTTON_HEIGHT, &Label, &ButtonBar);
-	ButtonBar.VSplitMid(&CancelButton, &ConfirmButton, CUi::SConfirmPopupContext::POPUP_BUTTON_SPACING);
-	const vec2 Center{CancelButton.x + CancelButton.w * 0.5f, CancelButton.y + CancelButton.h * 0.5f};
+	ShowUntitledPanel(Context, "Reset the controls?");
+	const CUIRect Button = RenderedPanelButton(false);
+	const vec2 Center = Button.Center();
 
 	Frame(Center, false);
 	Frame(Center, true);

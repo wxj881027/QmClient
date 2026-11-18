@@ -569,6 +569,7 @@ public:
 	char m_aQmClientLatestVersionStr[32] = "0";
 
 	Regex m_RegexChatIgnore;
+	void ApplyRegexChatIgnore(const char *pPattern);
 
 	// 玩家统计公开接口
 	const SPlayerStats &GetPlayerStats(int Dummy = 0) const { return m_aPlayerStats[Dummy]; }

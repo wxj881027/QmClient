@@ -34,7 +34,7 @@ public:
 
 	void OnInit(CEditor *pEditor) override;
 	bool OnInput(const IInput::CEvent &Event) override;
-	void OnRender(CUIRect View) override;
+	void Render();
 
 	bool IsActive() const;
 

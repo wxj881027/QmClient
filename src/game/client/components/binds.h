@@ -304,7 +304,8 @@ public:
 		bool OnInput(const IInput::CEvent &Event) override;
 	};
 
-	bool m_MouseOnAction;
+	// 本次按键事件是否正在执行新绑定的按下命令；子 tick 瞄准只认首次按下。
+	bool m_HandlingNewBind;
 
 	CBindsSpecial m_SpecialBinds;
 

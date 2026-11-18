@@ -138,7 +138,7 @@ namespace QmMusicLyrics
 		static void UpdateVisibleCharacters(SWorldLyric &Line, const SSourceSnapshot &Source, int Language)
 		{
 			const bool TranslationOnly = Language == static_cast<int>(EDisplayLanguage::TRANSLATION) &&
-						     !Source.m_Translation.empty() && !IsLyricCredit(Source.m_Translation);
+						     !Source.m_Translation.empty() && !IsBlankLyric(Source.m_Translation) && !IsLyricCredit(Source.m_Translation);
 			for(size_t Index = 0; Index < Line.m_aRows.size(); ++Index)
 			{
 				const auto &Text = Line.m_aRows[Index];
@@ -163,7 +163,7 @@ namespace QmMusicLyrics
 			}
 			const SIdentity Identity{SourceId, Source.m_SongId, Source.m_Generation, Source.m_ProducerPid};
 			const bool ResetIdentity = !m_HasIdentity || !(m_Identity == Identity) || Now < m_LastNow;
-			const bool HasLine = Source.m_Active && !Source.m_Original.empty() && !IsLyricCredit(Source.m_Original);
+			const bool HasLine = Source.m_Active && !Source.m_Original.empty() && !IsBlankLyric(Source.m_Original) && !IsLyricCredit(Source.m_Original);
 			const bool NewLine = HasLine && (ResetIdentity || !m_Current.m_Active ||
 								m_Current.m_LineStartMs != Source.m_LineStartMs || m_Current.m_Original != Source.m_Original);
 			const bool RowsChanged = HasLine && (NewLine || m_Language != Language || m_Current.m_Translation != Source.m_Translation);

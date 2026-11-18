@@ -31,12 +31,11 @@ namespace qm_card_catalog
 				CSettingsContentLayoutFlow Flow(Content);
 				static CButtonContainer s_HammerColor, s_HookColor;
 				CUIRect Row;
-				if(Flow.Control("water-hammer-color", LineHeight, Row))
-					pMenus->DoLine_ColorPicker(&s_HammerColor, Metrics, &Row, Localize("Pressed hammer icon color"), &g_Config.m_QmWaterHammerColor, ColorRGBA(1.0f, 1.0f, 1.0f), false);
-				Flow.Space(LineSpacing);
-				if(Flow.Control("water-hook-color", LineHeight, Row))
-					pMenus->DoLine_ColorPicker(&s_HookColor, Metrics, &Row, Localize("Pressed hook icon color"), &g_Config.m_QmWaterHookColor, ColorRGBA(1.0f, 1.0f, 1.0f), false);
-				Flow.Space(LineSpacing);
+				// 行距由行自己声明（声明阶段记到上一行末尾），行后不再补 Space。
+				if(Flow.Control("water-hammer-color", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
+					pMenus->DoLine_ColorPicker(&s_HammerColor, Metrics, &Row, Localize("Pressed hammer icon color"), &g_Config.m_QmWaterHammerColor, color_cast<ColorRGBA>(ColorHSLA(CConfig::ms_QmWaterHammerColor)), false);
+				if(Flow.Control("water-hook-color", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
+					pMenus->DoLine_ColorPicker(&s_HookColor, Metrics, &Row, Localize("Pressed hook icon color"), &g_Config.m_QmWaterHookColor, color_cast<ColorRGBA>(ColorHSLA(CConfig::ms_QmWaterHookColor)), false);
 			},
 			Out);
 		UseDeclaredModuleContent(Ctx, Out);

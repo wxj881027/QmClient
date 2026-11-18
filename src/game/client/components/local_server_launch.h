@@ -39,14 +39,16 @@ public:
 	CLocalServerLaunch(const CLocalServerLaunch &) = delete;
 	CLocalServerLaunch &operator=(const CLocalServerLaunch &) = delete;
 
-	bool TryPrepare(const char *const *ppArguments, size_t Count, const char *pAuthCommand, bool ConnectWhenReady) noexcept
+	bool TryPrepare(const char *const *ppArguments, size_t Count, const char *pAuthCommand, bool ConnectWhenReady, const char *pPortCommand = nullptr) noexcept
 	{
-		if(IsStarting() || !pAuthCommand || (Count && !ppArguments) || Count >= std::min(m_vArguments.max_size(), m_vPointers.max_size()))
+		const size_t Extra = pPortCommand ? 2 : 1;
+		const size_t Max = std::min(m_vArguments.max_size(), m_vPointers.max_size());
+		if(IsStarting() || !pAuthCommand || (Count && !ppArguments) || Max < Extra || Count > Max - Extra)
 			return false;
 		try
 		{
 			CLocalServerLaunch Candidate(m_pResource);
-			Candidate.m_vArguments.reserve(Count + 1);
+			Candidate.m_vArguments.reserve(Count + Extra);
 			for(size_t i = 0; i < Count; ++i)
 			{
 				if(!ppArguments[i])
@@ -54,7 +56,9 @@ public:
 				Candidate.m_vArguments.emplace_back(ppArguments[i], CBorrowedAllocator<char>(m_pResource));
 			}
 			Candidate.m_vArguments.emplace_back(pAuthCommand, CBorrowedAllocator<char>(m_pResource));
-			Candidate.m_vPointers.reserve(Count + 1);
+			if(pPortCommand)
+				Candidate.m_vArguments.emplace_back(pPortCommand, CBorrowedAllocator<char>(m_pResource));
+			Candidate.m_vPointers.reserve(Count + Extra);
 			for(const auto &Argument : Candidate.m_vArguments)
 				Candidate.m_vPointers.push_back(Argument.c_str());
 			m_vArguments.swap(Candidate.m_vArguments);

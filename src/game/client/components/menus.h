@@ -3,6 +3,7 @@
 #ifndef GAME_CLIENT_COMPONENTS_MENUS_H
 #define GAME_CLIENT_COMPONENTS_MENUS_H
 
+#include <base/bytes.h>
 #include <base/system.h>
 #include <base/types.h>
 #include <base/vmath.h>
@@ -55,7 +56,9 @@
 #include <game/client/components/qmclient/demo_cut.h>
 #include <game/client/components/qmclient/local_save_display.h>
 #include <game/client/components/qmclient/map_difficulty_catalog.h>
+#include <game/client/components/qmclient/map_preview_panel.h>
 #include <game/client/components/qmclient/map_vote_difficulty.h>
+#include <game/client/components/qmclient/menu_hit_regions.h>
 #include <game/client/components/qmclient/online_replay_player.h>
 #include <game/client/components/qmclient/pose_map.h>
 #include <game/client/components/qmclient/qm_map_upload.h>
@@ -83,6 +86,7 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -136,7 +140,8 @@ enum
 
 // 导航胶囊行高与内容缩放：主菜单导航栏（离线/在线）与游戏内浏览页服务器导航栏
 // 共用同一组尺寸，保证上下两排胶囊导航观感一致。
-inline constexpr float MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW = 21.0f;
+	// 与页签胶囊同高同号：ui_token::settings::TAB_HEIGHT(26)，导航选中滑块与页签滑块上下对齐。
+	inline constexpr float MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW = 26.0f;
 inline constexpr float MENU_MENUBAR_CONTENT_SCALE_NEW = 1.10f;
 
 class CUIRect;
@@ -174,8 +179,14 @@ class CMenus : public CComponent
 
 public:
 	int DoButton_Toggle(const void *pId, int Checked, const CUIRect *pRect, bool Active, unsigned Flags = BUTTONFLAG_LEFT);
-	int DoButton_Menu(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, unsigned Flags = BUTTONFLAG_LEFT, const char *pImageName = nullptr, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE, float FontFactor = 0.0f, ColorRGBA Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), CUIElement *pTextUiElement = nullptr, float TextFontSize = -1.0f, const CUIRect *pUnscaledRect = nullptr);
-	int DoButton_Menu_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, unsigned Flags = BUTTONFLAG_LEFT, const char *pImageName = nullptr, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE, float FontFactor = 0.0f, ColorRGBA Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), CUIElement *pTextUiElement = nullptr, float TextFontSize = -1.0f);
+	int DoButton_Menu(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, unsigned Flags = BUTTONFLAG_LEFT, const char *pImageName = nullptr, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE, float FontFactor = 0.0f, ColorRGBA Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), CUIElement *pTextUiElement = nullptr, float TextFontSize = -1.0f, const CUIRect *pUnscaledRect = nullptr, const ColorRGBA *pSurfaceColor = nullptr);
+	// 主菜单插画的两张纹理：未悬浮（灰版）/ 悬浮（彩版）。找不到同名插画时返回无效句柄。
+	// 给 QmUi 组件用——它们拿不到 CMenuImage，只认纹理句柄。
+	void MenuImageTextures(const char *pName, IGraphics::CTextureHandle *pIdle, IGraphics::CTextureHandle *pHover);
+	// 带图菜单按钮的文字字号（MenuButtonTextRect + 字体高度系数）。分段按钮要跟同一排的
+	// 单按钮同字号时用它，不要各自抄公式。
+	float MenuButtonLabelSize(const CUIRect &Rect, float FontFactor = 0.5f) const;
+	int DoButton_Menu_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, unsigned Flags = BUTTONFLAG_LEFT, const char *pImageName = nullptr, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE, float FontFactor = 0.0f, ColorRGBA Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), CUIElement *pTextUiElement = nullptr, float TextFontSize = -1.0f, std::optional<bool> HoveredOverride = std::nullopt);
 	int DoButton_MenuTab(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, int Corners, SUIAnimator *pAnimator = nullptr, const ColorRGBA *pDefaultColor = nullptr, const ColorRGBA *pActiveColor = nullptr, const ColorRGBA *pHoverColor = nullptr, float EdgeRounding = 10.0f, const CCommunityIcon *pCommunityIcon = nullptr, CUIElement *pTextUiElement = nullptr, float FontSize = -1.0f, bool CapsuleTab = false);
 	int DoButton_MenuTab_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, int Corners, SUIAnimator *pAnimator = nullptr, const ColorRGBA *pDefaultColor = nullptr, const ColorRGBA *pActiveColor = nullptr, const ColorRGBA *pHoverColor = nullptr, float EdgeRounding = 10.0f, const CCommunityIcon *pCommunityIcon = nullptr, CUIElement *pTextUiElement = nullptr, float FontSize = -1.0f, bool CapsuleTab = false);
 	int DoMenuTabV2(CButtonContainer *pButtonContainer, const char *pText, bool Active, const CUIRect *pRect, int Corners = IGraphics::CORNER_T, const ColorRGBA *pCustomDefault = nullptr, const ColorRGBA *pCustomActive = nullptr, const ColorRGBA *pCustomHover = nullptr, const CCommunityIcon *pCommunityIcon = nullptr, CUIElement *pTextUiElement = nullptr, float ContentScale = 1.0f, bool CapsuleTab = false);
@@ -198,7 +209,8 @@ public:
 	// 页面导航按下时先更新选择；复用多选一布局和窄窗口下拉退路。
 	int DoNavigationTabs(CButtonContainer *pButtons, const char *const *ppLabels, int Count, int Current, const CUIRect &Segments, float Rounding = 5.0f, const ui_widget::SCapsuleTabBarStyle *pCapsuleStyle = nullptr, float FontSize = -1.0f);
 	// 收藏地图页与统计数据页共用的工作区页签：收藏地图 / 地图游玩历史 / 本地存档 / 统计数据。
-	int DoMapWorkspaceTabs(const CUIRect &Segments, float Rounding, int CurrentTab);
+	// FontSize <= 0 时按行高反推；两个调用点显式传设置页页签字号，两页顶部一致。
+	int DoMapWorkspaceTabs(const CUIRect &Segments, float Rounding, int CurrentTab, float FontSize = -1.0f);
 	int MapWorkspaceTab();
 	ColorRGBA MenuPanelColor(float AlphaScale = 1.0f) const;
 	ColorRGBA MenuPanelElevatedColor(float AlphaScale = 1.0f) const;
@@ -217,10 +229,10 @@ public:
 	int DoButton_CheckBox_Number(const void *pId, const char *pText, int Checked, const CUIRect *pRect);
 
 	bool DoSliderWithScaledValue(const void *pId, int *pOption, const CUIRect *pRect, const char *pStr, int Min, int Max, int Scale, const IScrollbarScale *pScale, unsigned Flags = 0u, const char *pSuffix = "");
-	bool DoLine_KeyReader(CUIRect &View, CButtonContainer &ReaderButton, CButtonContainer &ClearButton, const char *pName, const char *pCommand);
+	bool DoLine_KeyReader(CUIRect &View, CButtonContainer &ReaderButton, CButtonContainer &ClearButton, const char *pName, const char *pCommand, float BodySize = -1.0f);
 
 private:
-	int DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize, const IGraphics::CTextureHandle *pIconTexture = nullptr, const CUIRect *pUnscaledRect = nullptr);
+	int DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize, const IGraphics::CTextureHandle *pIconTexture = nullptr, const CUIRect *pUnscaledRect = nullptr, const ColorRGBA *pSurfaceColor = nullptr, std::optional<bool> HoveredOverride = std::nullopt);
 	int DoMenuTabV2Internal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, bool Active, const CUIRect *pRect, int Corners, const ColorRGBA *pCustomDefault, const ColorRGBA *pCustomActive, const ColorRGBA *pCustomHover, const CCommunityIcon *pCommunityIcon, CUIElement *pTextUiElement, float ContentScale, bool CapsuleTab = false);
 
 	int DoButton_MenuTabInternal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, int Corners, SUIAnimator *pAnimator, const ColorRGBA *pDefaultColor, const ColorRGBA *pActiveColor, const ColorRGBA *pHoverColor, float EdgeRounding, const CCommunityIcon *pCommunityIcon, CUIElement *pTextUiElement, float FontSize, bool CapsuleTab = false);
@@ -253,11 +265,11 @@ private:
 
 	CUi::SColorPickerPopupContext m_ColorPickerPopupContext;
 	std::unordered_map<const unsigned int *, SSettingsAlphaColorPickerState> m_SettingsAlphaColorPickerStates;
-	ColorHSLA DoLine_ColorPicker(CButtonContainer *pResetId, const SSettingsContentMetrics &Metrics, CUIRect *pMainRect, const char *pText, unsigned int *pColorValue, ColorRGBA DefaultColor, bool CheckBoxSpacing = true, int *pCheckBoxValue = nullptr, bool Alpha = false, bool TrailingSpacing = true);
+	ColorHSLA DoLine_ColorPicker(CButtonContainer *pResetId, const SSettingsContentMetrics &Metrics, CUIRect *pMainRect, const char *pText, unsigned int *pColorValue, ColorRGBA DefaultColor, bool CheckBoxSpacing = true, int *pCheckBoxValue = nullptr, bool Alpha = false, bool TrailingSpacing = true, bool AlphaPercent = false);
 	bool DoLine_AlphaColorPicker(CButtonContainer *pResetId, const SSettingsContentMetrics &Metrics, CUIRect *pMainRect, const char *pText, unsigned int *pColorValue, int *pOpacity, unsigned int DefaultColor, int DefaultOpacity);
-	ColorHSLA DoLine_ColorPicker(CButtonContainer *pResetId, float LineSize, float LabelSize, float BottomMargin, CUIRect *pMainRect, const char *pText, unsigned int *pColorValue, ColorRGBA DefaultColor, bool CheckBoxSpacing = true, int *pCheckBoxValue = nullptr, bool Alpha = false);
-	ColorHSLA DoButton_ColorPicker(const CUIRect *pRect, unsigned int *pHslaColor, bool Alpha);
-	ColorHSLA DoButton_ColorPickerLogic(const CUIRect *pRect, unsigned int *pHslaColor, bool Alpha);
+	ColorHSLA DoLine_ColorPicker(CButtonContainer *pResetId, float LineSize, float LabelSize, float BottomMargin, CUIRect *pMainRect, const char *pText, unsigned int *pColorValue, ColorRGBA DefaultColor, bool CheckBoxSpacing = true, int *pCheckBoxValue = nullptr, bool Alpha = false, bool AlphaPercent = false);
+	ColorHSLA DoButton_ColorPicker(const CUIRect *pRect, unsigned int *pHslaColor, bool Alpha, bool AlphaPercent = false);
+	ColorHSLA DoButton_ColorPickerLogic(const CUIRect *pRect, unsigned int *pHslaColor, bool Alpha, bool AlphaPercent = false);
 	bool DoColorGradientPalette(CUIRect *pView, unsigned *pBaseColor, char *pGradient, int GradientSize, CButtonContainer *pAddButton, CButtonContainer *pRemoveButton, unsigned *pColorValues, const SSettingsContentMetrics &Metrics, bool CheckBoxSpacing = false, bool BaseHasAlpha = false);
 	bool DoMessageGradientLine(CChat &Chat, CUIRect *pView, int Tab, const char *pLabelTextId, const char *pLabel, unsigned *pBaseColor, char *pGradient, int GradientSize, ColorRGBA DefaultColor, CButtonContainer *pResetButton, CButtonContainer *pAddButton, CButtonContainer *pRemoveButton, unsigned *pColorValues, EQmChatGradientRole Role, bool CheckBoxSpacing = true, int *pCheckBoxValue = nullptr, float LineHeight = ui_token::settings::ROW_HEIGHT, float LineSpacing = ui_token::settings::ROW_GAP, float BodySize = ui_token::font::BODY, float ButtonHeight = -1.0f);
 	bool DoColorGradientGeometry(CUIRect &Content, const SQmGradientGeometryBinding &Binding, SQmGradientGeometryState &State, const SSettingsContentMetrics &Metrics, float LabelWidth);
@@ -265,7 +277,7 @@ private:
 
 	void DoLaserPreview(const CUIRect *pRect, ColorHSLA OutlineColor, ColorHSLA InnerColor, int LaserType);
 	int DoButton_GridHeader(const void *pId, const char *pText, int Checked, const CUIRect *pRect, int Align = TEXTALIGN_ML, const SLabelProperties &Props = {});
-	int DoButton_Favorite(const void *pButtonId, const void *pParentId, bool Checked, const CUIRect *pRect);
+	int DoButton_Favorite(const void *pButtonId, const void *pParentId, bool Checked, const CUIRect *pRect, float IconFontSize = 0.0f);
 
 	bool m_SkinListScrollToSelected = false;
 	int64_t m_TeeEntranceStartTime = 0;
@@ -1578,6 +1590,19 @@ protected:
 	bool m_ShowStart;
 	bool m_MenuActive;
 	int m_MenuOpenFrame = 0;
+	// 滑出动画进行中：IsActive() 仍为 true（菜单要继续绘制），但输入全部让出，
+	// 动画自然收敛后才真正 SetActive(false)。
+	bool m_MenuClosing = false;
+	// 收尾兜底截止时刻（time_get）：轨道因配置/后端变化不收敛时强制关闭，
+	// 避免菜单停在半路既关不掉也不再接受输入。
+	int64_t m_MenuCloseDeadline = 0;
+	// 点击菜单面板外空白：按下时只登记，等本帧绘制算出 HotItem 再判定，
+	// 避免「快速甩鼠标点击」在同一帧里因 HotItem 还是上一帧的值而误关。
+	bool m_MenuOutsideClickPending = false;
+	// 按下瞬间是否已有弹层：弹层可能在同帧绘制时先关闭，不能再用关闭后的状态判断。
+	bool m_MenuOutsideClickHadPopup = false;
+	// 本帧实际绘制出的菜单面板（已含滑动/切页偏移）：落在里面不算点外部。
+	SQmMenuHitRegions m_MenuHitRegions;
 	bool m_BrowserRefreshPending = false;
 	bool m_BrowserRefreshPendingForce = false;
 	// 切到浏览器页时递增；各列表（服务器列表、社区/国家/类型过滤）比对
@@ -2172,30 +2197,9 @@ protected:
 		CButtonContainer m_ConfirmButton;
 		CButtonContainer m_CancelButton;
 	} m_FriendNotePopupContext;
-	// 地图预览弹窗：锚定服务器列表地图列的富内容弹层，展示本地已缓存地图的
-	// 离屏渲染视图（未缓存不联网）并支持缩放、拖拽平移。
-	class CMapPreviewPopupContext : public SPopupMenuId
-	{
-	public:
-		CMenus *m_pMenus = nullptr;
-		// 服务器地址串（CServerInfo::m_aAddress 原样拷贝，含端口，作行身份比较）。
-		char m_aAddress[MAX_SERVER_ADDRESSES * NETADDR_MAXSTRSIZE] = {0};
-		char m_aMapName[MAX_MAP_LENGTH] = {0};
-		char m_aServerName[256] = {0};
-		char m_aGameType[16] = {0};
-		int m_NumPlayers = 0;
-		int m_MaxPlayers = 0;
-		// 打开时定位起点，后续保持用户拖拽与缩放，直到关闭。
-		CQmBrowserMapPreviewView m_View;
-		bool m_InitialViewSet = false;
-		// 只看实体层（关贴图）：模式变化时重新渲染（1 = 实体）。
-		int m_EntityOnly = 0;
-	} m_MapPreviewPopupContext;
-	// 预览地图加载缓存（LRU），实现位于 menus_browser.cpp。裸指针成员：
-	// unique_ptr<不完整类型> 会要求构造函数所在编译单元能实例化成员析构
-	//（异常清理），而 CMenus 构造在 menus.cpp，类型在那里不完整。
-	class CMapPreviewCache;
-	CMapPreviewCache *m_pMapPreviewCache = nullptr;
+	// 服务器列表与投票页共用的地图预览弹窗与缓存。
+	CQmMapPreviewPanel m_MapPreviewPanel;
+	CQmMapPreviewPanel::SContext m_MapPreviewPopupContext;
 	bool m_HasRemoveFriend = false;
 	char m_aRemoveFriendName[MAX_NAME_LENGTH] = {0};
 	char m_aRemoveFriendClan[MAX_CLAN_LENGTH] = {0};
@@ -2295,7 +2299,6 @@ protected:
 		unsigned m_TextHash = 0;
 		float m_Width = 0.0f;
 		float m_FontSize = 0.0f;
-		float m_Height = 0.0f;
 		int64_t m_UpdateTime = -1;
 		bool m_Valid = false;
 		unsigned m_PendingTextHash = 0;
@@ -2306,9 +2309,6 @@ protected:
 		uint64_t m_PendingFrame = 0;
 		bool m_Pending = false;
 		STextContainerIndex m_BuildTextContainerIndex;
-		CTextCursor m_BuildCursor;
-		int m_BuildByteOffset = 0;
-		float m_BuildHeight = 0.0f;
 	};
 	struct SMenuSnapshotTextKey
 	{
@@ -2428,11 +2428,12 @@ protected:
 	void DrainIngameUiSnapshotTextRuntime();
 	void DrainIngameUiTextRuntime(bool AllowCurrentFrame = false);
 	void RenderServerControl(CUIRect MainView);
+public:
+private:
 	void RenderServerVoteList(CUIRect MainView);
 	void RenderVoteMapLibrary(CUIRect MainView);
 	void RenderUnfinishedMaps(CUIRect MainView);
 	void RenderVotePlayerList(CUIRect MainView, bool MoveToSpectators);
-	void RenderIngameHint();
 
 	// found in menus_browser.cpp
 	int m_SelectedIndex;
@@ -2444,7 +2445,6 @@ protected:
 	void RenderServerbrowserMapFilterSelector(CUIRect Selector);
 	// 地图预览弹窗：行内触发（悬停 200ms / 右键）与弹层内容。
 	void OpenMapPreviewPopup(const CServerInfo *pItem);
-	void ClearMapPreviewCache();
 	enum class EConnectIntent
 	{
 		Manual,
@@ -2493,7 +2493,6 @@ protected:
 	void RenderServerbrowserFavoriteMaps(CUIRect View);
 	static CUi::EPopupMenuFunctionResult PopupFriendsCategory(void *pContext, CUIRect View, bool Active);
 	static CUi::EPopupMenuFunctionResult PopupFriendNote(void *pContext, CUIRect View, bool Active);
-	static CUi::EPopupMenuFunctionResult PopupMapPreview(void *pContext, CUIRect View, bool Active);
 	void FriendlistOnUpdate();
 	void ApplyFriendsCategoryExpandedState();
 	void SaveFriendsCategoryExpandedState();
@@ -2547,6 +2546,7 @@ protected:
 	std::vector<CButtonContainer> m_vButtonContainersNamePlateShow = {{}, {}, {}, {}, {}, {}};
 	std::vector<CButtonContainer> m_vButtonContainersNamePlateHookStrongWeakScope = {{}, {}, {}, {}, {}};
 	std::vector<CButtonContainer> m_vButtonContainersNamePlateKeyPresses = {{}, {}, {}, {}};
+	std::vector<CButtonContainer> m_vButtonContainersAntiPingPlayers = {{}, {}, {}};
 	class CSkinQueuePresetRenamePopupContext : public SPopupMenuId
 	{
 	public:
@@ -2640,6 +2640,10 @@ public:
 	SSettingsResourceFrameContext SettingsResourceFrameContext() const { return {m_SettingsScrollActive, false, m_SettingsPostScrollRecoveryFrames, m_SettingsHighPrioritySettled}; }
 	const SSettingsAdaptiveBudgetOutput &CurrentSettingsUiFrameBudget() const { return m_CurrentSettingsUiFrameBudget; }
 	void SetActive(bool Active);
+	// 收菜单：先播滑出，动画收敛后再 SetActive(false)。ESC 与点击外部共用。
+	void BeginMenuClose();
+	// 页面在绘制前登记本帧真实使用的内容矩形；外部点击判定只认这些矩形。
+	void AddMenuHitRegion(const CUIRect &Rect);
 
 	void OnInterfacesInit(CGameClient *pClient) override;
 	void OnInit() override;
@@ -2701,8 +2705,6 @@ public:
 
 		SETTINGS_LENGTH,
 	};
-	static constexpr float TCLIENT_SETTINGS_BODY_FONT_SIZE = 11.2f;
-
 	enum
 	{
 		QMCLIENT_SETTINGS_TAB_VISUAL = 0,
@@ -2765,6 +2767,23 @@ public:
 		APPEARANCE_TAB_INFO_MESSAGES = 4,
 		APPEARANCE_TAB_LASER = 5,
 		NUMBER_OF_APPEARANCE_TABS = 6,
+	};
+
+	// DDNet 页内子页签（不是一级页签）：常规放原有的四张卡，
+	// 网络补偿放「客户端预测」与从 TClient 页迁来的预测相关卡。
+	enum
+	{
+		DDNET_TAB_GENERAL = 0,
+		DDNET_TAB_PREDICTION = 1,
+		NUMBER_OF_DDNET_TABS = 2,
+	};
+
+	// 图像页内子页签：显示类卡片留在第一页，「卡片效果 / 界面主题」收进视觉效果。
+	enum
+	{
+		GRAPHICS_TAB_DISPLAY = 0,
+		GRAPHICS_TAB_VISUAL = 1,
+		NUMBER_OF_GRAPHICS_TABS = 2,
 	};
 
 	SUIAnimator m_aAnimatorsBigPage[BIG_TAB_LENGTH];
@@ -2958,13 +2977,13 @@ public:
 	// 短筛选按钮组：一排小按钮，每项左侧带圆形勾选指示；逐行开关仍走 DoSettingsToggleGroup。
 	bool DoSettingsToggleButtonGroup(int Page, int Tab, int Subtab, CUIRect &Content, std::initializer_list<SSettingsToggleEntry> Entries, const SSettingsContentMetrics &Metrics, bool ProcessInput = true, ESettingsToggleGroupPass Pass = ESettingsToggleGroupPass::RENDER);
 	bool DoSettingsToggleButton(int Page, int Tab, int Subtab, const CUIRect &Button, const SSettingsToggleEntry &Entry, const SSettingsContentMetrics &Metrics, bool ProcessInput = true, ESettingsToggleGroupPass Pass = ESettingsToggleGroupPass::RENDER, bool HoverEmphasis = false);
-	void DoSettingsMenuLabel(int Page, int Tab, int Subtab, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &Props = {}, int MaxWidth = -1, bool DrawSearchBackground = true);
+	void DoSettingsMenuLabel(int Page, int Tab, int Subtab, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &Props = {}, int MaxWidth = -1, bool DrawSearchBackground = true, bool AllowHintSplit = true);
 	int DoSettingsButton_Menu(int Page, int Tab, int Subtab, CButtonContainer *pBC, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, int Flags = BUTTONFLAG_LEFT, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE, const ColorRGBA &Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), float FontFactor = 0.0f, float BodySize = -1.0f, EQmIcon Icon = EQmIcon::COUNT, const char *pFallbackIcon = nullptr, const IGraphics::CTextureHandle *pIconTexture = nullptr);
 	int DoSettingsButton_Menu(int Page, int Tab, int Subtab, CButtonContainer *pBC, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, const SSettingsContentMetrics &Metrics, int Flags = BUTTONFLAG_LEFT, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE, const ColorRGBA &Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), float FontFactor = 0.0f, EQmIcon Icon = EQmIcon::COUNT, const char *pFallbackIcon = nullptr, const IGraphics::CTextureHandle *pIconTexture = nullptr);
 	int DoSettingsButton_CapsuleSegment(int Page, int Tab, int Subtab, CButtonContainer *pBC, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, float BodySize, const ColorRGBA *pLabelColor = nullptr, const ColorRGBA *pHoverColor = nullptr);
 	int DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect);
 	int DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, const SLabelProperties &LabelProps);
-	int DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, const SLabelProperties &LabelProps, bool ProcessInput, float RequestedFontSize = -1.0f);
+	int DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, const SLabelProperties &LabelProps, bool ProcessInput, float RequestedFontSize = -1.0f, bool AllowHintSplit = true);
 	bool DoSettingsScrollbarOption(int Page, int Tab, const char *pTextId, const void *pId, int *pOption, const CUIRect *pRect, const char *pStr, int Min, int Max, const IScrollbarScale *pScale = &CUi::ms_LinearScrollbarScale, unsigned Flags = 0u, const char *pSuffix = "", const char *pMaxText = nullptr);
 	bool DoSettingsScrollbarOption(int Page, int Tab, int Subtab, const char *pTextId, const void *pId, int *pOption, const CUIRect *pRect, const char *pStr, int Min, int Max, const IScrollbarScale *pScale = &CUi::ms_LinearScrollbarScale, unsigned Flags = 0u, const char *pSuffix = "", const char *pMaxText = nullptr);
 
@@ -3026,6 +3045,23 @@ public:
 	void JoinTutorial();
 
 private:
+	// 菜单文本池的键是临时的格式化串。透明哈希/比较让热路径直接用栈上的 string_view 查找，
+	// 命中时不再为每个标签构造 std::string；只有真正插入时才分配一次。
+	struct SMenuTextKeyHash
+	{
+		using is_transparent = void;
+		size_t operator()(const std::string &Value) const { return std::hash<std::string_view>{}(Value); }
+		size_t operator()(std::string_view Value) const { return std::hash<std::string_view>{}(Value); }
+	};
+
+	struct SMenuTextKeyEqual
+	{
+		using is_transparent = void;
+		bool operator()(const std::string &Left, const std::string &Right) const { return Left == Right; }
+		bool operator()(std::string_view Left, const std::string &Right) const { return Left == std::string_view(Right); }
+		bool operator()(const std::string &Left, std::string_view Right) const { return std::string_view(Left) == Right; }
+	};
+
 	struct SMenuTextPoolEntry
 	{
 		CUIElement m_Element;
@@ -3189,12 +3225,16 @@ private:
 	int m_SettingsTextContextTab = -1;
 	int m_SettingsTextContextSubtab = -1;
 	int *m_pSettingsTextPrebuildBudget = nullptr;
-	std::unordered_map<std::string, SMenuTextPoolEntry> m_MenuTextPool;
+	std::unordered_map<std::string, SMenuTextPoolEntry, SMenuTextKeyHash, SMenuTextKeyEqual> m_MenuTextPool;
 	uint64_t m_MenuTextLastTrimFrame = ~uint64_t{0};
 	CUIElement m_MenuTextFallbackElement;
 	uint64_t m_MenuTextPoolGeneration = 1;
 	uint64_t m_MenuTextPoolLanguageHash = 0;
 	uint64_t m_MenuTextPoolFontHash = 0;
+	// 语言/字体哈希按帧缓存：MenuTextElement 每个标签都会调用，不能每标签重算。
+	uint64_t m_MenuTextHashFrame = ~uint64_t{0};
+	uint64_t m_MenuTextCachedLanguageHash = 0;
+	uint64_t m_MenuTextCachedFontHash = 0;
 	uint64_t m_MenuTextPoolGlyphAtlasRevision = 0;
 	uint64_t m_MenuTextPoolLayoutHash = 0;
 	uint64_t m_MenuTextPoolThemeHash = 0;
@@ -3228,11 +3268,14 @@ private:
 	std::array<int, 3> SettingsTextPlanVisibleContext(bool Ingame);
 	std::vector<SSettingsMenuTextPlanCollectionUnit> m_vSettingsMenuTextPlanCollectionUnits;
 	std::unordered_set<std::string> m_SettingsMenuTextPlannedDescriptors;
-	std::unordered_set<std::string> m_SettingsMenuTextPlannedKeys;
+	std::unordered_set<std::string, SMenuTextKeyHash, SMenuTextKeyEqual> m_SettingsMenuTextPlannedKeys;
 	size_t m_SettingsMenuTextPlanCursor = 0;
 	size_t m_SettingsMenuTextPlanCollectionCursor = 0;
 	// 字形预热：每轮共用数量和时间预算，构建容器前完成当前条目的预热。
 	CSettingsTextPrewarm m_MenuTextGlyphPrewarm;
+	// 设置页空闲预热复用缓冲：已就绪后仍会每帧检查，不能每帧重新分配向量。
+	std::vector<int> m_SettingsPrewarmCountryCodes;
+	std::vector<int> m_SettingsPrewarmFlagIndices;
 	uint64_t m_SettingsMenuTextPlanGeneration = 0;
 	uint64_t m_SettingsMenuTextPlanCollectionGeneration = 0;
 	std::string m_SettingsMenuTextPlanCollectionOperation;
@@ -3341,9 +3384,9 @@ private:
 	float LayoutTClientPetCacheSection(CUIRect &CurrentColumn, bool Render);
 	float LayoutTClientHudCacheSection(CUIRect &CurrentColumn, bool Render);
 	float RenderTClientHudInteractiveLayer(CUIRect &CurrentColumn);
-	int DoTClientSettingsButton_CheckBox(const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect);
-	int DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(const void *pId, const char *pTextId, const char *pText, int *pValue, CUIRect *pRect, float VMargin);
-	int DoTClientSettingsButton_Menu(CButtonContainer *pButtonContainer, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, int Flags = BUTTONFLAG_LEFT, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE);
+	int DoTClientSettingsButton_CheckBox(const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, float BodySize = -1.0f);
+	int DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(const void *pId, const char *pTextId, const char *pText, int *pValue, CUIRect *pRect, float VMargin, float BodySize = -1.0f);
+	int DoTClientSettingsButton_Menu(CButtonContainer *pButtonContainer, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, float BodySize = -1.0f, int Flags = BUTTONFLAG_LEFT, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE);
 	void InvalidateTClientSettingsRuntimeCacheSections(ESettingsCacheDirtyReason Reason = ESettingsCacheDirtyReason::CONFIG);
 	bool PrewarmSettingsPageResources(int Page, int Tab, const CUIRect &ContentView);
 	bool PrewarmSettingsAssetResources();

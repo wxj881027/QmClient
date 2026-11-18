@@ -17,7 +17,6 @@ inline const SSettingsLabelMetadata *SettingsLabelMetadata(const char *pId)
 {
 	static constexpr SSettingsLabelMetadata aMetadata[] = {
 		{"appearance-show-client-ids", Localizable("Show client IDs"), Localizable("Scoreboard, chat, spectating")},
-		{"Show others (own team only)", Localizable("Show others"), Localizable("Own team only")},
 		{"Predict events (experimental)", Localizable("Predict events"), Localizable("Experimental")},
 		{"AntiPing (latency compensation)", Localizable("AntiPing"), Localizable("Latency compensation")},
 		{"general-lower-refresh-rate", Localizable("Save power by lowering update rate"), Localizable("Higher input latency")},

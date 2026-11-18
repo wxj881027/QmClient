@@ -123,6 +123,41 @@ TEST_F(QmImePopupBuild, PageKeepsCandidatesBeyondTheDrawingViewport)
 	EXPECT_EQ(m_Input.m_CandidateReads, 20);
 }
 
+TEST_F(QmImePopupBuild, UnevenPagesUseTheInputPageIndexAndCount)
+{
+	m_Candidates.m_PageStart = 10;
+	m_Candidates.m_PageSize = 2;
+	m_Candidates.m_TotalCount = 12;
+	m_Candidates.m_PageIndex = 2;
+	m_Candidates.m_PageCount = 3;
+	const auto Result = QmImeBuildPopupState(&m_Input, true, m_Anchor, 18.0f);
+	ASSERT_TRUE(Result.has_value());
+	EXPECT_EQ(Result->m_PageCount, 3);
+	EXPECT_EQ(Result->m_PageIndex, 2);
+	EXPECT_EQ(Result->m_vCandidates, m_Candidates.m_vCandidates);
+}
+
+TEST_F(QmImePopupBuild, ExplicitPageIndexIsClampedToThePublishedPageCount)
+{
+	m_Candidates.m_PageIndex = std::numeric_limits<int>::max();
+	m_Candidates.m_PageCount = 3;
+	const auto Result = QmImeBuildPopupState(&m_Input, true, m_Anchor, 18.0f);
+	ASSERT_TRUE(Result.has_value());
+	EXPECT_EQ(Result->m_PageCount, 3);
+	EXPECT_EQ(Result->m_PageIndex, 2);
+}
+
+TEST_F(QmImePopupBuild, ExplicitSinglePageHasNoPageLabel)
+{
+	m_Candidates.m_PageIndex = 0;
+	m_Candidates.m_PageCount = 1;
+	const auto Result = QmImeBuildPopupState(&m_Input, true, m_Anchor, 18.0f);
+	ASSERT_TRUE(Result.has_value());
+	EXPECT_EQ(Result->m_PageCount, 0);
+	EXPECT_EQ(Result->m_PageIndex, -1);
+	EXPECT_TRUE(QmImeHasPopupContent(*Result));
+}
+
 TEST_F(QmImePopupBuild, LargePageMetadataDoesNotOverflowThePageCount)
 {
 	constexpr int Max = std::numeric_limits<int>::max();

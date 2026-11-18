@@ -10,9 +10,9 @@ public:
 	void Begin() { m_Pending = true; }
 	void Cancel() { m_Pending = false; }
 	bool Pending() const { return m_Pending; }
-	bool CompleteWhenReady(bool BackgroundReady, bool ForegroundReady)
+	bool CompleteWhenReady(bool MapDataReady, bool BackgroundReady, bool ForegroundReady)
 	{
-		if(!m_Pending || !BackgroundReady || !ForegroundReady)
+		if(!m_Pending || !MapDataReady || !BackgroundReady || !ForegroundReady)
 			return false;
 		m_Pending = false;
 		return true;

@@ -22,7 +22,13 @@ namespace
 TEST_F(QmSurfaceText, StreamedBrowserLabelsKeepDefaultOutlineOpacity)
 {
 	auto *pTextRender = m_Ui.TextRender();
-	g_Config.m_QmUiTextColorMode = 1;
+	struct SRestoreConfig
+	{
+		CConfig m_Previous = g_Config;
+		~SRestoreConfig() { g_Config = m_Previous; }
+	} Restore;
+	// 0 = 白色：文本颜色模式四选一的第一档。
+	g_Config.m_QmUiTextColorMode = 0;
 	pTextRender->TextColor(pTextRender->DefaultTextColor());
 	pTextRender->TextOutlineColor(pTextRender->DefaultTextOutlineColor());
 	SLabelProperties Props;
@@ -48,6 +54,11 @@ TEST_F(QmSurfaceText, StreamedBrowserLabelsKeepDefaultOutlineOpacity)
 TEST_F(QmSurfaceText, NestedSurfacesPreserveCallerOpacityAndRestoreColors)
 {
 	auto *pTextRender = m_Ui.TextRender();
+	struct SRestoreConfig
+	{
+		CConfig m_Previous = g_Config;
+		~SRestoreConfig() { g_Config = m_Previous; }
+	} Restore;
 	g_Config.m_QmUiTextColorMode = 0;
 	const ColorRGBA CallerText(0.2f, 0.3f, 0.4f, 0.4f);
 	const ColorRGBA CallerOutline(0.8f, 0.7f, 0.6f, 0.12f);
@@ -59,6 +70,12 @@ TEST_F(QmSurfaceText, NestedSurfacesPreserveCallerOpacityAndRestoreColors)
 		EXPECT_EQ(pTextRender->GetTextOutlineColor(), ColorRGBA(0, 0, 0, 0.12f));
 		{
 			CUiScopedSurfaceText Child(pTextRender, ColorRGBA(1, 1, 1, 1));
+			// 文本颜色是显式模式，不再按嵌套表面明暗翻转；调用方透明度继续跟随。
+			EXPECT_EQ(pTextRender->GetTextColor(), ColorRGBA(1, 1, 1, 0.4f));
+			EXPECT_EQ(pTextRender->GetTextOutlineColor(), ColorRGBA(0, 0, 0, 0.12f));
+			// 切到黑色模式后，嵌套表面也不影响结果：黑字配白描边。
+			g_Config.m_QmUiTextColorMode = 1;
+			const CUiScopedSurfaceText BlackOnLight(pTextRender, ColorRGBA(1, 1, 1, 1));
 			EXPECT_EQ(pTextRender->GetTextColor(), ColorRGBA(0, 0, 0, 0.4f));
 			EXPECT_EQ(pTextRender->GetTextOutlineColor(), ColorRGBA(1, 1, 1, 0.12f));
 		}

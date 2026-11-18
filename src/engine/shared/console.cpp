@@ -710,6 +710,10 @@ void CConsole::ExecuteLineStroked(int Stroke, const char *pStr, int ClientId, bo
 
 bool CConsole::CanUseCommand(int ClientId, const IConsole::ICommandInfo *pCommand) const
 {
+	// 配置文件、econ、fifo 与投票来源都有完整权限。
+	if(ClientId == IConsole::CLIENT_ID_UNSPECIFIED || ClientId == IConsole::CLIENT_ID_GAME || ClientId == IConsole::CLIENT_ID_NO_GAME)
+		return true;
+	dbg_assert(ClientId >= 0, "Invalid ClientId: %d", ClientId);
 	// the fallback is needed for the client and rust tests
 	if(!m_pfnCanUseCommandCallback)
 		return true;
@@ -779,7 +783,10 @@ bool CConsole::ExecuteFile(const char *pFilename, int ClientId, bool LogFailure,
 			return false;
 	}
 	if(!m_pStorage)
+	{
+		log_error("console", "Storage is not initialized");
 		return false;
+	}
 
 	// push this one to the stack
 	CExecFile ThisFile;
@@ -934,7 +941,7 @@ void CConsole::ConCommandStatus(IResult *pResult, void *pUser)
 	pConsole->PrintCommandList(AccessLevel.value(), 0);
 }
 
-void CConsole::ConUserCommandStatus(IResult *pResult, void *pUser)
+void CConsole::ConCmdlistChat(IResult *pResult, void *pUser)
 {
 	CConsole *pConsole = static_cast<CConsole *>(pUser);
 	pConsole->Print(OUTPUT_LEVEL_STANDARD, "chatresp", "可用聊天命令列表：");
@@ -974,7 +981,7 @@ CConsole::CConsole(int FlagMask, CHeap::FAllocate TempAllocate) :
 
 	Register("access_level", "s[command] ?s['admin'|'moderator'|'helper'|'all']", CFGFLAG_SERVER, ConCommandAccess, this, "Specify command accessibility for given access level");
 	Register("access_status", "s['admin'|'moderator'|'helper'|'all']", CFGFLAG_SERVER, ConCommandStatus, this, "List all commands which are accessible for given access level");
-	Register("cmdlist", "", CFGFLAG_SERVER | CFGFLAG_CHAT, ConUserCommandStatus, this, "List all commands which are accessible for users");
+	Register("cmdlist", "", CFGFLAG_SERVER | CFGFLAG_CHAT, ConCmdlistChat, this, "List all commands which are accessible for users");
 	//List all commands which are accessible for users
 
 	// DDRace

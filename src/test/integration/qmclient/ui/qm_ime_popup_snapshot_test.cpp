@@ -20,7 +20,7 @@ TEST(QmImePopupPipeline, FailedPreparationKeepsTheCacheAndNextFrameCanReplaceIt)
 	Input.m_Composition = "old composition";
 	CQmImePopupSnapshot Snapshot;
 	ASSERT_EQ(Snapshot.Update(QmImeBuildPopupState(&Input, true, vec2(20.0f, 30.0f), 18.0f)), EResult::VISIBLE);
-	Candidates.UpdateFromNative(SQmImeCandidateList{{"new page", "new selection"}, 1, 10, 5, 23}, true);
+	Candidates.UpdateFromNative(SQmImeCandidateList{{"new page", "new selection"}, 1, 10, 2, 12, 2, 3}, true);
 	Input.m_Composition = "new composition";
 	int Copies = 0;
 	EXPECT_EQ(Snapshot.Update(QmImeBuildPopupState(&Input, true, vec2(40.0f, 50.0f), 20.0f, [&](const char *pText) {
@@ -40,7 +40,7 @@ TEST(QmImePopupPipeline, FailedPreparationKeepsTheCacheAndNextFrameCanReplaceIt)
 	EXPECT_EQ(Snapshot.State().m_Composition, "new composition");
 	EXPECT_EQ(Snapshot.State().m_SelectedIndex, 1);
 	EXPECT_EQ(Snapshot.State().m_PageIndex, 2);
-	EXPECT_EQ(Snapshot.State().m_PageCount, 5);
+	EXPECT_EQ(Snapshot.State().m_PageCount, 3);
 	EXPECT_FLOAT_EQ(Snapshot.State().m_AnchorScreen.x, 40.0f);
 }
 

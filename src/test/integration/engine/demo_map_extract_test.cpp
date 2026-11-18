@@ -126,7 +126,7 @@ namespace
 		void Load()
 		{
 			m_State.Create();
-			ASSERT_EQ(m_Player.Load(m_State.m_pStorage.get(), nullptr, "source.demo", IStorage::TYPE_SAVE, false), 0);
+			ASSERT_EQ(m_Player.Load(m_State.m_pStorage.get(), "source.demo", IStorage::TYPE_SAVE, false), 0);
 		}
 		void LoadWithoutExtension(unsigned char Version)
 		{
@@ -138,7 +138,7 @@ namespace
 			Bytes[offsetof(CDemoHeader, m_Version)] = Version;
 			Bytes.erase(ExtensionOffset, ExtensionSize);
 			m_State.Write("source.demo", Bytes);
-			ASSERT_EQ(m_Player.Load(m_State.m_pStorage.get(), nullptr, "source.demo", IStorage::TYPE_SAVE, false), 0);
+			ASSERT_EQ(m_Player.Load(m_State.m_pStorage.get(), "source.demo", IStorage::TYPE_SAVE, false), 0);
 			ASSERT_FALSE(m_Player.GetMapInfo()->m_Sha256.has_value());
 		}
 		SHA256_DIGEST ContentSha() { return sha256("mapbytes", 8); }
@@ -381,7 +381,7 @@ TEST_F(DemoMapExtractIntegration, AcceptedVersionSixWithoutExtensionCanBeSliced)
 {
 	ASSERT_NO_FATAL_FAILURE(LoadWithoutExtension(6));
 	CDemoEditor Editor;
-	Editor.Init(&*m_State.m_pDelta, &*m_State.m_pDeltaSixup, nullptr, m_State.m_pStorage.get());
+	Editor.Init(&*m_State.m_pDelta, &*m_State.m_pDeltaSixup, m_State.m_pStorage.get());
 	ASSERT_TRUE(Editor.Slice("source.demo", "target.demo", -1, -1, nullptr, nullptr));
 	EXPECT_EQ(m_State.MapData("target.demo"), "mapbytes");
 	EXPECT_EQ(m_State.Read(Destination(ContentSha()).c_str()), "mapbytes");

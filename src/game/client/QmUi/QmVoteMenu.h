@@ -1,11 +1,14 @@
 #ifndef GAME_CLIENT_QMUI_QMVOTEMENU_H
 #define GAME_CLIENT_QMUI_QMVOTEMENU_H
 
+class CGameClient;
+
 #include "QmPlayersMenu.h"
+#include "QmVoteMapPreview.h"
 
 #include <generated/protocol.h>
 
-#include <game/client/components/qmclient/map_covers.h>
+#include <game/client/components/qmclient/map_preview_panel.h>
 #include <game/client/components/qmclient/server_vote_list.h>
 #include <game/client/components/qmclient/vote_map_loader.h>
 #include <game/client/components/qmclient/vote_menu_mode.h>
@@ -34,8 +37,9 @@ inline bool QmVotePlayerEligible(EQmVoteMenuPage Page, int Id, int LocalId, bool
 struct SQmVoteMenuState
 {
 	CQmVoteMapLoader m_Loader;
-	// 地图库行条目与详情面板的封面背景；由菜单逐帧完成已排队任务，跨页面复用缓存。
-	CQmMapCovers m_Covers;
+	QmVoteMaps::SAxiomMenu m_AxiomMenu;
+	uint64_t m_AxiomRevision = std::numeric_limits<uint64_t>::max();
+	std::vector<const char *> m_vpAxiomCategoryLabels;
 	std::vector<QmVoteMaps::SMap> m_vMaps;
 	std::vector<int> m_vVisible;
 	QmVoteMaps::SFilter m_Filter;
@@ -50,6 +54,9 @@ struct SQmVoteMenuState
 	std::array<QmPlayersUi::CSelection, 2> m_PlayerSelections;
 	std::array<CLineInputBuffered<64>, 2> m_PlayerSearch;
 	std::array<CLineInputBuffered<64>, 2> m_PlayerExclude;
+	// 预览地图：按钮容器与面板上下文跨帧保留，三张子页共用同一个入口。
+	CButtonContainer m_MapPreviewButton;
+	CQmMapPreviewPanel::SContext m_MapPreview;
 	bool m_Dirty = true;
 	int m_FinishedCount = -1;
 	std::string m_RankPlayer;

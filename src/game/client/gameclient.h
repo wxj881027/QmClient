@@ -80,11 +80,14 @@
 #include "components/qmclient/checkpoint_guide.h"
 #include "components/qmclient/collision_hitbox.h"
 #include "components/qmclient/data_version.h"
+#include "components/qmclient/dummy_distance_link.h"
 #include "components/qmclient/demo_camera.h"
+#include "components/qmclient/finish_summary.h"
 #include "components/qmclient/friend_last_seen.h"
 #include "components/qmclient/hammer_hit_detection.h"
 #include "components/qmclient/hud_notifications/hud_notifications.h"
 #include "components/qmclient/input_overlay.h"
+#include "components/qmclient/map_covers.h"
 #include "components/qmclient/mobile_spectator.h"
 #include "components/qmclient/monitoring/monitoring.h"
 #include "components/qmclient/music_app_watcher.h"
@@ -298,8 +301,6 @@ public:
 	CGhost m_Ghost;
 	CHudEditor m_HudEditor;
 
-	CTooltips m_Tooltips;
-
 	CLocalServer m_LocalServer;
 
 	// TClient Components
@@ -309,11 +310,14 @@ public:
 	CBindWheel m_BindWheel;
 	CBgDraw m_BgDraw;
 	CQmClient m_QmClient;
+	CQmFinishSummary m_FinishSummary;
+	CQmMapCovers m_MapCovers;
 	CQmAxiomAutoLogin m_QmAxiomAutoLogin;
 	CQmAxiomScores m_QmAxiomScores;
 	CQmFriendLastSeen m_QmFriendLastSeen;
 	CQmChatEmoji m_QmChatEmoji;
 	CQmCheckpointGuide m_QmCheckpointGuide;
+	qm_dummy_link::CView m_QmDummyDistanceLink;
 	CQmMonitoring m_QmMonitoring;
 	CQmMobileSpectator m_QmMobileSpectator;
 	CQmHudNotifications m_QmHudNotifications;
@@ -391,6 +395,10 @@ private:
 	CLayers m_Layers;
 	CCollision m_Collision;
 	CUi m_UI;
+public:
+	// 气泡实例统一由 CUi 持有，这里保留引用别名给既有调用点，所有权仍只有一份。
+	CTooltips &m_Tooltips = m_UI.Tooltips();
+private:
 	CUiRuntimeV2 m_UiRuntimeV2;
 	CQmIconPrewarmPlan m_QmIconPrewarm;
 	int m_AppliedQmUiIconWeight = -1;
@@ -932,6 +940,7 @@ public:
 	void ResetDemoPlaybackState() override;
 	void InvalidateSnapshot() override;
 	void OnNewSnapshot(bool DummySwapped) override;
+	void EvolveSnapshotCharacter(CNetObj_Character *pCharacter, int Tick);
 	void OnPredict() override;
 	void OnActivateEditor() override;
 	void OnDummySwap() override;
@@ -1044,6 +1053,8 @@ public:
 	CQmHookCollCandidates m_HookCollCandidates;
 	CQmHookCollSpatialIndex m_HookCollSpatialIndex;
 	void UpdateHookCollTargets();
+	vec2 HookCollTargetPosition(int ClientId, float Intra) const;
+	const CTuningParams &HookCollTuning(int ClientId) const;
 
 	int IntersectCharacter(vec2 HookPos, vec2 NewPos, vec2 &NewPos2, int OwnId, vec2 *pPlayerPosition = nullptr);
 
@@ -1126,6 +1137,20 @@ public:
 	void LoadParticlesSkin(const char *pPath, bool AsDir = false);
 	void LoadHudSkin(const char *pPath, bool AsDir = false);
 	void LoadExtrasSkin(const char *pPath, bool AsDir = false);
+
+	class CImageAsset
+	{
+	public:
+		bool IsLoaded() const { return m_ImageInfo.m_pData != nullptr; }
+
+		char m_aPath[IO_MAX_PATH_LENGTH] = "";
+		bool m_IsDefault = false;
+		bool m_IsBlank = false;
+		CImageInfo m_ImageInfo = {};
+	};
+
+	CImageAsset LoadAssetFromPath(const char *pPath, bool AsDir, int AssetId, const char *pDirectory) const;
+
 	void ReloadNamedSingleFileAssetImage(int ImageId, const char *pCategoryId, const char *pActiveName);
 	// 影响加载结果的开关（例如 qm_blank_asset_fallback）变化后重载全部自定义素材图片。
 	// 只把任务排队，实际重载由 ProcessPendingCustomAssetImageryReload 每帧一个类别分摊执行。
@@ -1342,6 +1367,8 @@ public:
 private:
 	std::vector<CSnapEntities> m_vSnapEntities;
 	CConnectionResourcePreparation m_ConnectionResourcePreparation;
+	CMapLoadTask m_DesignTileSkips;
+	void CancelConnectionResourcePreparation();
 	void FinishConnectionResourcePreparation();
 	// 扩展信息暂存区：保留容量跨帧复用，只在构建快照时原地清空。
 	std::vector<CSnapEntities> m_vSnapEntityExtensionsScratch;

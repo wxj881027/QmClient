@@ -374,7 +374,7 @@ static void BM_TextColorPolicy(benchmark::State &State)
 		benchmark::DoNotOptimize(Surface);
 		benchmark::DoNotOptimize(Custom);
 		benchmark::DoNotOptimize(Mode);
-		const ColorRGBA Color = ResolveUiTextColor(Surface, Mode, Custom);
+		const ColorRGBA Color = ResolveUiTextColor(Mode, Custom, 0.37f);
 		benchmark::DoNotOptimize(Color);
 	}
 }
@@ -735,14 +735,15 @@ static void BM_RoundedSurfaceBorderMesh(benchmark::State &State)
 	Params.m_Radius = 8;
 	Params.m_BorderWidth = 2;
 	const auto Plan = ResolveRoundedSurfacePlan({20, 30, 160, 24}, Params, false);
+	const int Curve = static_cast<int>(State.range(0));
 	for(auto _ : State)
 	{
-		const auto Mesh = ResolveRoundedSurfaceBorderMesh(Plan, IGraphics::CORNER_ALL);
+		const auto Mesh = ResolveRoundedSurfaceBorderMesh(Plan, IGraphics::CORNER_ALL, Curve, 1.0f, 0.0f);
 		benchmark::DoNotOptimize(Mesh);
 	}
 	State.SetItemsProcessed(State.iterations());
 }
-BENCHMARK(BM_RoundedSurfaceBorderMesh);
+BENCHMARK(BM_RoundedSurfaceBorderMesh)->Arg(ROUNDED_CORNER_CURVE_CLASSIC)->Arg(ROUNDED_CORNER_CURVE_QUINTIC)->Arg(ROUNDED_CORNER_CURVE_APPLE);
 
 static void BM_SettingsToggleGroupGeometry(benchmark::State &State)
 {

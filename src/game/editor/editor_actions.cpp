@@ -740,7 +740,7 @@ CEditorActionGroup::CEditorActionGroup(CEditorMap *pMap, int GroupIndex, bool De
 	if(m_Delete)
 		str_format(m_aDisplayText, sizeof(m_aDisplayText), Localize("Delete group %d", "Editor"), m_GroupIndex);
 	else
-		str_copy(m_aDisplayText, Localize("New group", "Editor"), sizeof(m_aDisplayText));
+		str_copy(m_aDisplayText, Localize("New group", "Editor"));
 }
 
 void CEditorActionGroup::Undo()
@@ -993,7 +993,7 @@ void CEditorActionEditLayerTilesProp::Undo()
 		else
 		{
 			pLayerTiles->m_Image = m_Previous % Map()->m_vpImages.size();
-			pLayerTiles->m_AutoMapperConfig = -1;
+			pLayerTiles->m_AutomapperConfig = -1;
 		}
 	}
 	else if(m_Prop == ETilesProp::PROP_COLOR)
@@ -1019,7 +1019,7 @@ void CEditorActionEditLayerTilesProp::Undo()
 	}
 	else if(m_Prop == ETilesProp::PROP_AUTOMAPPER)
 	{
-		pLayerTiles->m_AutoMapperConfig = m_Previous;
+		pLayerTiles->m_AutomapperConfig = m_Previous;
 	}
 	else if(m_Prop == ETilesProp::PROP_LIVE_GAMETILES)
 	{
@@ -1077,7 +1077,7 @@ void CEditorActionEditLayerTilesProp::Redo()
 		else
 		{
 			pLayerTiles->m_Image = m_Current % Map()->m_vpImages.size();
-			pLayerTiles->m_AutoMapperConfig = -1;
+			pLayerTiles->m_AutomapperConfig = -1;
 		}
 	}
 	else if(m_Prop == ETilesProp::PROP_COLOR)
@@ -1103,7 +1103,7 @@ void CEditorActionEditLayerTilesProp::Redo()
 	}
 	else if(m_Prop == ETilesProp::PROP_AUTOMAPPER)
 	{
-		pLayerTiles->m_AutoMapperConfig = m_Current;
+		pLayerTiles->m_AutomapperConfig = m_Current;
 	}
 	else if(m_Prop == ETilesProp::PROP_LIVE_GAMETILES)
 	{

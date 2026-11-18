@@ -232,9 +232,10 @@ namespace ui_widget
 			CUIRect Row = TakeRow(m_Metrics.m_RowHeight);
 			if(pText == nullptr)
 				return;
-			Row.Draw(ColorRGBA(0.7f, 0.3f, 0.3f, 0.6f), IGraphics::CORNER_ALL, ui_token::radius::BASE);
-			Row.VMargin(4.0f, &Row);
-			Label(State, Row, pText, TEXTALIGN_ML);
+			Row.Draw(ColorRGBA(0.7f, 0.3f, 0.3f, 0.6f), IGraphics::CORNER_ALL, ui_token::list::RowRadius(Row.h));
+			// 文字与行左缘之间要留内退，与弹层/列表条目同一条公式；左右方向由 token 用 VMargin 处理。
+			const CUIRect LabelRect = ui_token::dropdown::EntryLabelRect(Row, 0.0f, m_Metrics.m_FontSize);
+			Label(State, LabelRect, pText, TEXTALIGN_ML);
 		}
 	};
 }

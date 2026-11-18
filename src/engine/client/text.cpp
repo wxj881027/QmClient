@@ -3207,7 +3207,10 @@ public:
 		// 正字号至少占一个物理像素；低分辨率的小字号不能退化为零行高。
 		const int ActualSize = maximum(1, round_truncate(pCursor->m_FontSize * FakeToScreen.y));
 		const bool Nameplate = (TextContainer.m_RenderFlags & TEXT_RENDER_FLAG_QM_NAMEPLATE) != 0;
-		pCursor->m_AlignedFontSize = Nameplate ? pCursor->m_FontSize : ActualSize / FakeToScreen.y;
+		// 浮点字号：字形仍按 ActualSize 光栅化（缓存键不变），只是显示尺寸不跟随取整，
+		// 字号连续变化时靠贴图等比缩放平滑过渡，而不是逐档跳。
+		const bool FloatFontSize = (TextContainer.m_RenderFlags & TEXT_RENDER_FLAG_QM_FLOAT_FONT_SIZE) != 0;
+		pCursor->m_AlignedFontSize = (Nameplate || FloatFontSize) ? pCursor->m_FontSize : ActualSize / FakeToScreen.y;
 		pCursor->m_AlignedLineSpacing = round_truncate(pCursor->m_LineSpacing * FakeToScreen.y) / FakeToScreen.y;
 
 		// string length

@@ -463,7 +463,7 @@ void CMenus::RenderSettingsTeeCustom7(CUIRect MainView, const SSettingsContentMe
 	RenderSkinPartSelection7(SkinPartSelection, BodySize);
 
 	int *pUseCustomColor = CSkins7::ms_apUCCVariables[(int)m_Dummy][m_TeePartSelected];
-	if(DoButton_CheckBox(pUseCustomColor, Localize("Custom colors"), *pUseCustomColor, &CustomColorsButton))
+	if(DoButton_CheckBox(pUseCustomColor, Localize("Custom colors"), *pUseCustomColor, &CustomColorsButton, BodySize))
 	{
 		*pUseCustomColor = !*pUseCustomColor;
 		SetNeedSendInfo();

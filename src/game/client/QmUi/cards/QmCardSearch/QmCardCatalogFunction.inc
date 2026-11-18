@@ -160,6 +160,8 @@ namespace
 namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_hj_assist[] = {
+		{Localizable("Show dummy distance link"), "qm_dummy_distance_link", "本体 分身连线 fenshen lianxian 距离 钩索"},
+		{Localizable("Link style"), "qm_dummy_distance_link_style", "直线 水滴 shuidi droplet"},
 		{Localizable("Auto switch to the tee that got unfrozen"), nullptr, "自动切换到解冻的 Tee"},
 		{Localizable("Auto team lock"), nullptr, "自动锁队"},
 		{Localizable("Auto unspec on unfreeze"), nullptr, "解冻自动取消旁观"},
@@ -318,17 +320,23 @@ namespace
 namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_pie_menu[] = {
+		{Localizable("Add options below"), nullptr, "在下方加入选项"},
+		{Localizable("Click a slice to set color"), nullptr, "点击扇区设置颜色"},
 		{Localizable("Detection distance"), nullptr, "检测距离"},
+		{Localizable("Drag options here to hide them"), nullptr, "把选项拖到这里以隐藏"},
+		{Localizable("Drag options here to show them"), nullptr, "把选项拖到这里以显示"},
+		{Localizable("Drag to the other list to show or hide this option"), nullptr, "拖到另一个列表可显示或隐藏该选项"},
 		{Localizable("Enable pie menu"), nullptr, "启用饼菜单"},
 		{Localizable("Example: A|B|C,D|E (C: main, D: dummy)"), nullptr, "示例：A|B|C,D|E（C 为本体，D 为分身）"},
 		{Localizable("Follow server"), nullptr, "跨服跟随"},
 		{Localizable("Following: %s"), nullptr, "正在跟随：%s"},
 		{Localizable("Friend"), nullptr, "好友"},
+		{Localizable("In pie menu"), nullptr, "饼菜单中"},
 		{Localizable("Invite to team"), nullptr, "邀请组队"},
 		{Localizable("Join team"), nullptr, "加入队伍"},
 		{Localizable("Mention"), nullptr, "提及"},
+		{Localizable("Not in pie menu"), nullptr, "未使用"},
 		{Localizable("Opacity"), nullptr, "不透明度"},
-		{Localizable("Option color"), nullptr, "选项颜色 点击设置颜色 set color 取色"},
 		{Localizable("Pie menu effects"), nullptr, "饼菜单开合效果"},
 		{Localizable("Pie menu highlight tint"), nullptr, "饼菜单选中色调"},
 		{Localizable("Rename queue"), nullptr, "改名名单"},

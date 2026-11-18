@@ -32,7 +32,7 @@ namespace qm_friend_notify
 		// 只由当前服务端提示推进状态；准备失败保留旧状态，不重新引入名单轮询。
 		// Parse 只操作局部跟踪器，完整准备通知与问候后才发布；返回值表示接纳了一次入服。
 		template<typename TParse, typename TPrepareBroadcast, typename TShowBroadcast>
-		bool OnMessage(const CSettings &Settings, const TParse &Parse, const TPrepareBroadcast &PrepareBroadcast, const TShowBroadcast &ShowBroadcast) noexcept
+		bool OnMessage(const CSettings &Settings, CGreetQueue::CClock::time_point Now, const TParse &Parse, const TPrepareBroadcast &PrepareBroadcast, const TShowBroadcast &ShowBroadcast) noexcept
 		{
 			if(!Settings.m_GreetEnabled && !Settings.m_BroadcastEnabled)
 			{
@@ -58,7 +58,7 @@ namespace qm_friend_notify
 				if(Settings.m_BroadcastEnabled)
 					BroadcastText = PrepareBroadcast(Message.m_Name);
 				if(Settings.m_GreetEnabled && Settings.m_GreetTextConfigured)
-					Candidate.m_Pending.Add(Message.m_Name);
+					Candidate.m_Pending.Add(Message.m_Name, Now);
 				m_Tracker.Swap(Candidate.m_Tracker);
 				m_Pending.Swap(Candidate.m_Pending);
 				if(!BroadcastText.empty())
@@ -82,7 +82,7 @@ namespace qm_friend_notify
 
 		// 沿原有聊天额度入口重试；发送前准备或回调失败不清空尚未确认的名字。
 		template<typename TSend>
-		bool TrySend(const CSettings &Settings, const TSend &Send) noexcept
+		bool TrySend(const CSettings &Settings, CGreetQueue::CClock::time_point Now, const TSend &Send) noexcept
 		{
 			if(!Settings.m_GreetEnabled || !Settings.m_GreetTextConfigured)
 			{
@@ -91,7 +91,7 @@ namespace qm_friend_notify
 			}
 			try
 			{
-				return m_Pending.TrySend(Send);
+				return m_Pending.TrySend(Now, Send);
 			}
 			catch(...)
 			{

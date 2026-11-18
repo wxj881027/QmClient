@@ -4,6 +4,7 @@
 #include <game/client/QmUi/QmModuleTypes.h>
 #include <game/client/QmUi/SettingsCardDeck.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
+#include <game/client/QmUi/SettingsRowReveal.h>
 #include <game/client/QmUi/UiContext.h>
 #include <game/client/ui.h>
 
@@ -133,7 +134,10 @@ namespace qm_card_catalog
 	// 这里显式列出“卡片可以调用哪些渲染/输入助手”，避免把整类成员公开出去。
 	struct QmCardRenderHook
 	{
-		static bool Personalization(CMenus *pMenus, CUIRect &Content, const char *pStableId, const SSettingsContentMetrics &Metrics, bool ReadOnly = false);
+		static bool Personalization(CMenus *pMenus, CUIRect &Content, const char *pStableId, const SSettingsContentMetrics &Metrics, bool ReadOnly = false, bool DrawDivider = true);
+		// 同上，另给出内容显隐进度：返回值在收起过渡播完前仍为 true，调用方据此
+		// 继续声明内容，配合 CSettingsContentRevealScope 做高度+淡入过渡。
+		static bool PersonalizationReveal(CMenus *pMenus, CUIRect &Content, const char *pStableId, const SSettingsContentMetrics &Metrics, float *pRevealOut, bool ReadOnly = false, bool DrawDivider = true);
 		static STClientCardResult RunTClientCard(const SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, ETClientCardPass Pass);
 		static uint64_t PrepareTClientCards(const SQmCardBuildContext &Ctx, const std::vector<const char *> &vIds);
 		static bool BuildTClientCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
@@ -150,7 +154,7 @@ namespace qm_card_catalog
 		static bool BuildWaterHammerCard(const SQmCardBuildContext &Ctx, qm_module::EQmModuleId Id, SSettingsCardDefinition &Out);
 		static bool BuildTitleCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
 		// 聊天框里「一条消息」的样子：消息底色 + 发言人名字 + 内容。
-		static void RenderQmSponsorChatMessagePreview(CMenus *pMenus, const CUIRect &Rect, int Style, double TimeSeconds);
+		static void RenderQmSponsorChatMessagePreview(CMenus *pMenus, const CUIRect &Rect, const char *pTitle, int Style, double TimeSeconds);
 		static bool BuildTeeCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
 		static bool RenderQmFunctionCheckbox(CMenus *pMenus, const void *pId, const char *pTextId, const char *pText, int *pValue, CUIRect *pRect, bool PrewarmOnly);
 		static bool RenderQmFunctionCheckboxRow(CMenus *pMenus, CUIRect &Content, float LineHeight, float LineSpacing, const void *pId, const char *pTextId, const char *pText, int *pValue, bool PrewarmOnly, const char *pTooltip = nullptr);

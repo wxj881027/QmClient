@@ -202,13 +202,28 @@ TEST(QmCardTabRecovery, SavedVisualChatBubbleAppearsInChatPage)
 		ASSERT_TRUE(Model.LoadMerged(pSaved, qm_card_registry::BuildDefaultEntries()));
 		const auto &vChatIds = qm_card_catalog::CatalogPageStableIds("appearance-chat");
 		const auto Before = DeckColumns(Model, "appearance-chat", vChatIds);
-		EXPECT_EQ(Before[1], (std::vector<std::string>{"deck:appearance-chat-settings", "deck:appearance-chat-preview"}));
+		// 气泡卡保存的是视觉页归属：修复前聊天页不应出现它，其余卡片保持默认两列。
+		for(const auto &Column : Before)
+			EXPECT_EQ(std::count(Column.begin(), Column.end(), "qm:chat_bubble"), 0);
+		size_t ExpectedBeforeCards = 0;
+		for(const char *pStableId : vChatIds)
+			if(std::string(pStableId) != "qm:chat_bubble")
+				++ExpectedBeforeCards;
+		EXPECT_EQ(Before[0].size() + Before[1].size() + Before[2].size(), ExpectedBeforeCards);
 
 		ASSERT_TRUE(qm_card_registry::RepairLegacyChatBubbleTab(Model));
 		const auto After = DeckColumns(Model, "appearance-chat", vChatIds);
-		EXPECT_EQ(After[1], (std::vector<std::string>{"deck:appearance-chat-settings", "deck:appearance-chat-preview", "qm:chat_bubble"}));
-		EXPECT_TRUE(After[0].empty());
-		EXPECT_EQ(After[2], (std::vector<std::string>{"deck:appearance-chat-messages"}));
+		// 修复只把气泡卡追加到"默认所在列"的末尾，其他列顺序不变。
+		const qm_card_order::SEntry *pBubblePlacement = qm_card_registry::FindDefaultPlacement("qm:chat_bubble");
+		ASSERT_NE(pBubblePlacement, nullptr);
+		const size_t BubbleColumn = static_cast<size_t>(pBubblePlacement->m_Column);
+		for(size_t Column = 0; Column < After.size(); ++Column)
+		{
+			auto vExpected = Before[Column];
+			if(Column == BubbleColumn)
+				vExpected.emplace_back("qm:chat_bubble");
+			EXPECT_EQ(After[Column], vExpected) << Column;
+		}
 		const auto Visual = DeckColumns(Model, "visual", qm_card_catalog::VisualCardStableIds());
 		for(const auto &Column : Visual)
 			EXPECT_EQ(std::count(Column.begin(), Column.end(), "qm:chat_bubble"), 0);
@@ -232,11 +247,17 @@ TEST(QmCardTabRecovery, ChatBubbleRepairPreservesOtherCardsCustomOrder)
 	ASSERT_TRUE(qm_card_registry::RepairLegacyChatBubbleTab(Model));
 	EXPECT_EQ(DeckColumns(Model, "visual", qm_card_catalog::VisualCardStableIds()), VisualBefore);
 	const auto ChatAfter = DeckColumns(Model, "appearance-chat", qm_card_catalog::CatalogPageStableIds("appearance-chat"));
-	auto ExpectedLeft = ChatBefore[1];
-	ExpectedLeft.push_back("qm:chat_bubble");
-	EXPECT_EQ(ChatAfter[1], ExpectedLeft);
-	EXPECT_EQ(ChatAfter[0], ChatBefore[0]);
-	EXPECT_EQ(ChatAfter[2], ChatBefore[2]);
+	// 气泡卡进入的是它默认所在的那一列，且追加在末尾；其他列保持用户自定顺序。
+	const qm_card_order::SEntry *pBubblePlacement = qm_card_registry::FindDefaultPlacement("qm:chat_bubble");
+	ASSERT_NE(pBubblePlacement, nullptr);
+	const size_t BubbleColumn = static_cast<size_t>(pBubblePlacement->m_Column);
+	for(size_t Column = 0; Column < ChatAfter.size(); ++Column)
+	{
+		auto vExpected = ChatBefore[Column];
+		if(Column == BubbleColumn)
+			vExpected.emplace_back("qm:chat_bubble");
+		EXPECT_EQ(ChatAfter[Column], vExpected) << Column;
+	}
 	EXPECT_EQ(Model.StableIdOrder("", "general", 1), GeneralBefore);
 }
 
@@ -280,12 +301,90 @@ TEST(QmCardTabRecovery, ChatBubbleRepairSurvivesReloadAndSearchTargetsChat)
 	EXPECT_STREQ(It->m_Target.m_pTab, "appearance-chat");
 }
 
+TEST(QmCardTabRecovery, SavedKeyBindsMovesToControlsAfterExistingCards)
+{
+	const auto vDefaults = qm_card_registry::BuildDefaultEntries();
+	const auto &vControlIds = qm_card_catalog::ControlsCardStableIds();
+	const qm_card_order::SEntry *pPlacement = qm_card_registry::FindDefaultPlacement("qm:key_binds");
+	ASSERT_NE(pPlacement, nullptr);
+	ASSERT_STREQ(pPlacement->m_pDefaultTab, "controls");
+	for(const char *pSaved : {
+		    "qm:key_binds|function|left|0;",
+		    "qm:key_binds|function|right|5;",
+		    "qm:key_binds|function|full|0;",
+	    })
+	{
+		SCOPED_TRACE(pSaved);
+		qm_card_order::CModel Model;
+		ASSERT_TRUE(Model.LoadMerged(pSaved, vDefaults));
+		const auto Before = DeckColumns(Model, "controls", vControlIds);
+		for(const auto &Column : Before)
+			EXPECT_EQ(std::count(Column.begin(), Column.end(), "qm:key_binds"), 0);
+
+		ASSERT_TRUE(qm_card_registry::RepairLegacyKeyBindsTab(Model));
+		const auto After = DeckColumns(Model, "controls", vControlIds);
+		// 迁入卡追加到默认列末尾，控制页其他卡片与原有列序保持不变。
+		auto Expected = Before;
+		Expected[static_cast<size_t>(pPlacement->m_Column)].emplace_back("qm:key_binds");
+		EXPECT_EQ(After, Expected);
+		const int Index = Model.FindByStableId("qm:key_binds");
+		ASSERT_GE(Index, 0);
+		EXPECT_STREQ(Model.Entry(Index).m_pDefaultTab, "controls");
+	}
+}
+
+TEST(QmCardTabRecovery, KeyBindsInControlsKeepsPlacementAndRepairSurvivesReload)
+{
+	const auto vDefaults = qm_card_registry::BuildDefaultEntries();
+	qm_card_order::CModel AlreadyInControls;
+	ASSERT_TRUE(AlreadyInControls.LoadMerged("qm:key_binds|controls|right|0;", vDefaults));
+	char aBefore[32768];
+	ASSERT_TRUE(AlreadyInControls.Serialize(aBefore, sizeof(aBefore)));
+	const uint64_t Revision = AlreadyInControls.LayoutRevision();
+	EXPECT_FALSE(qm_card_registry::RepairLegacyKeyBindsTab(AlreadyInControls));
+	EXPECT_EQ(AlreadyInControls.LayoutRevision(), Revision);
+	char aAfter[32768];
+	ASSERT_TRUE(AlreadyInControls.Serialize(aAfter, sizeof(aAfter)));
+	EXPECT_STREQ(aAfter, aBefore);
+
+	qm_card_order::CModel Model;
+	ASSERT_TRUE(Model.LoadMerged("qm:key_binds|function|left|0;", vDefaults));
+	ASSERT_TRUE(qm_card_registry::RepairLegacyKeyBindsTab(Model));
+	char aSaved[32768];
+	ASSERT_TRUE(Model.Serialize(aSaved, sizeof(aSaved)));
+	qm_card_order::CModel Reloaded;
+	ASSERT_TRUE(Reloaded.LoadMerged(aSaved, vDefaults));
+	EXPECT_FALSE(qm_card_registry::RepairLegacyKeyBindsTab(Reloaded));
+	EXPECT_EQ(DeckColumns(Reloaded, "controls", qm_card_catalog::ControlsCardStableIds()),
+		DeckColumns(Model, "controls", qm_card_catalog::ControlsCardStableIds()));
+
+	const auto Results = qm_card_registry::SearchCards("qm_timeout_disconnect", Reloaded);
+	const auto It = std::find_if(Results.begin(), Results.end(), [](const auto &Result) {
+		return Result.m_pStableId != nullptr && std::string(Result.m_pStableId) == "qm:key_binds";
+	});
+	ASSERT_NE(It, Results.end());
+	EXPECT_STREQ(It->m_Target.m_pTab, "controls");
+}
+
 TEST(QmCardTabRecovery, BindStatusHudDefaultsAndSearchUseAppearanceHud)
 {
 	qm_card_order::CModel Model;
 	Model.LoadMerged("", qm_card_registry::BuildDefaultEntries());
-	const auto Columns = DeckColumns(Model, "appearance-hud", qm_card_catalog::CatalogPageStableIds("appearance-hud"));
-	EXPECT_EQ(Columns[2], (std::vector<std::string>{"deck:appearance-hud-ddrace", "qm:bind_status_hud"}));
+	const auto &vHudPageIds = qm_card_catalog::CatalogPageStableIds("appearance-hud");
+	const auto Columns = DeckColumns(Model, "appearance-hud", vHudPageIds);
+	// 默认列由瀑布分配：HUD 页四张卡必须铺满两列（不再出现"左列空一半、右列溢出"），
+	// 并且每张卡都恰好出现一次。
+	EXPECT_TRUE(Columns[0].empty());
+	EXPECT_EQ(Columns[1].size() + Columns[2].size(), vHudPageIds.size());
+	EXPECT_FALSE(Columns[1].empty());
+	EXPECT_FALSE(Columns[2].empty());
+	for(const char *pStableId : vHudPageIds)
+	{
+		int Occurrences = 0;
+		for(const auto &Column : Columns)
+			Occurrences += static_cast<int>(std::count(Column.begin(), Column.end(), std::string(pStableId)));
+		EXPECT_EQ(Occurrences, 1) << pStableId;
+	}
 	EXPECT_TRUE(qm_card_catalog::HasCardModule("qm:bind_status_hud"));
 	const auto &HudIds = qm_card_catalog::HudCardStableIds();
 	EXPECT_TRUE(std::none_of(HudIds.begin(), HudIds.end(), [](const char *pId) { return std::string(pId) == "qm:bind_status_hud"; }));
@@ -315,7 +414,9 @@ TEST(QmCardTabRecovery, BindStatusHudSavedInQmHudMovesAfterExistingAppearanceCar
 	const auto BeforeTarget = DeckColumns(Model, "appearance-hud", qm_card_catalog::CatalogPageStableIds("appearance-hud"));
 	ASSERT_TRUE(qm_card_registry::RepairLegacyBindStatusHudTab(Model));
 	auto ExpectedTarget = BeforeTarget;
-	ExpectedTarget[2].push_back("qm:bind_status_hud");
+	const qm_card_order::SEntry *pPlacement = qm_card_registry::FindDefaultPlacement("qm:bind_status_hud");
+	ASSERT_NE(pPlacement, nullptr);
+	ExpectedTarget[static_cast<size_t>(pPlacement->m_Column)].push_back("qm:bind_status_hud");
 	EXPECT_EQ(DeckColumns(Model, "appearance-hud", qm_card_catalog::CatalogPageStableIds("appearance-hud")), ExpectedTarget);
 	EXPECT_EQ(DeckColumns(Model, "hud", qm_card_catalog::HudCardStableIds()), BeforeSource);
 	const uint64_t Revision = Model.LayoutRevision();

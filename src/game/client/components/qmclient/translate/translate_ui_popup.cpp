@@ -45,7 +45,7 @@ CUi::EPopupMenuFunctionResult CTranslateSettingsPopup::Render(void *pContext, CU
 		Ctx.m_ScopeHash = MakeUiScopeHash("translate_settings_popup");
 		Ctx.m_FrameDt = State.m_pGameClient->UiRuntimeV2()->FrameDt();
 	}
-	const SUiTheme SharedTheme = ResolveInputFallbackTheme(g_Config.m_QmUiFocusColor);
+	const SUiTheme SharedTheme = ResolveInputFallbackTheme();
 	const SQmDropdownVisualStyle Style = QmSettingsDropdownVisualStyle(SharedTheme, ResolveConfiguredSecondaryPanelTheme().m_Border);
 	ui_widget::CSecondaryPanel Panel(Ctx, View, Active, ui_widget::ResolveSecondaryPanelMetrics(State.m_pUi->Screen()->w), Style);
 	if(Panel.Header(State.m_Title, State.m_CloseButton, Localize("Translation Settings")))

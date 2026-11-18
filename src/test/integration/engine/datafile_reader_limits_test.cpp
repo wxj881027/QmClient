@@ -1,3 +1,5 @@
+#include <base/bytes.h>
+
 #include <engine/shared/datafile.h>
 
 #include <gtest/gtest.h>

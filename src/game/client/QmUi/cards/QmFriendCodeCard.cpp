@@ -80,7 +80,7 @@ void qm_card_catalog::QmCardRenderHook::RenderFriendCodeControls(CMenus *pMenus,
 		{
 			Clicked = pMenus->DoSettingsButton_Menu(CMenus::SETTINGS_QMCLIENT, CMenus::QMCLIENT_SETTINGS_TAB_FUNCTION, CMenus::QMCLIENT_SETTINGS_TAB_FUNCTION, &State.m_aButtons[Index], pId, pLabel, 0, &Row, Metrics);
 		}
-		Flow.Space(Metrics.m_LineSpacing);
+		Flow.Space(ui_token::settings::RowGap(Metrics.m_LineSpacing));
 		return Clicked && Interactive && !State.m_ConfirmPending && (Index != 2 || !State.m_Publication.Pending());
 	};
 	if(Button(0, "friend-code-copy", Localize("Copy friend code")))
@@ -103,7 +103,7 @@ void qm_card_catalog::QmCardRenderHook::RenderFriendCodeControls(CMenus *pMenus,
 	}
 	if(Flow.Control("friend-code-replace", Metrics.m_LineHeight, Row))
 		pMenus->RenderQmFunctionCheckbox(&State.m_Replace, "friend-code-replace", Localize("Replace all friends"), &State.m_Replace, &Row, !Interactive || State.m_ConfirmPending);
-	Flow.Space(Metrics.m_LineSpacing);
+	Flow.Space(ui_token::settings::RowGap(Metrics.m_LineSpacing));
 	if(Button(2, "friend-code-import", Localize("Import friend code")))
 	{
 		if(!State.m_HasPreview)
@@ -123,13 +123,13 @@ void qm_card_catalog::QmCardRenderHook::RenderFriendCodeControls(CMenus *pMenus,
 	}
 	// 用较长的固定说明测量换行空间，状态变化无需重建整个好友卡片。
 	const char *pHelp = Localize("Import merges friends and keeps local duplicates by default. Codes contain private names and notes.");
-	Flow.Text("friend-code-status", pHelp, 0.0f, Metrics.m_BodySize, Metrics.m_LineSpacing, [pMenus](const char *pText, float Width, float Size) { return pMenus->TextRender()->TextBoundingBox(Size, pText, -1, Width).m_H + Size * 0.25f; }, [&](const CUIRect &Rect, const char *pText) {
+	Flow.Text("friend-code-status", pHelp, 0.0f, Metrics.m_SmallSize, ui_token::settings::RowGap(Metrics.m_LineSpacing), [pMenus](const char *pText, float Width, float Size) { return pMenus->TextRender()->TextBoundingBox(Size, pText, -1, Width).m_H + Size * 0.25f; }, [&](const CUIRect &Rect, const char *pText) {
 			char aPreview[128];
 			str_format(aPreview, sizeof(aPreview), Localize("Ready to import: %d friends, %d categories."), static_cast<int>(State.m_Preview.m_vFriends.size()), static_cast<int>(State.m_Preview.m_vCategories.size()));
 			if(State.m_pStatus)
 				pText = Localize(State.m_pStatus);
 			else if(State.m_HasPreview)
 				pText = aPreview;
-			pMenus->Ui()->DoLabel(&Rect, pText, Metrics.m_BodySize, TEXTALIGN_ML, {.m_MaxWidth = Rect.w, .m_EnableWidthCheck = false}); }, 3 * Metrics.m_LineHeight);
-	Flow.Space(Metrics.m_LineSpacing);
+			pMenus->Ui()->DoLabel(&Rect, pText, Metrics.m_SmallSize, TEXTALIGN_ML, {.m_MaxWidth = Rect.w, .m_EnableWidthCheck = false}); }, 3 * Metrics.m_LineHeight);
+	Flow.Space(ui_token::settings::RowGap(Metrics.m_LineSpacing));
 }

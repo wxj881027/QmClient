@@ -39,7 +39,7 @@ namespace qm_card_catalog
 		LabelProps.m_MinimumFontSize = 6.0f;
 		const auto DoToggle = [&](int *pOption, const char *pId, const char *pText) {
 			const bool HasRow = Flow.Control(pId, Metrics.m_LineHeight, Row);
-			Flow.Space(Metrics.m_LineSpacing);
+			Flow.Space(ui_token::settings::RowGap(Metrics.m_LineSpacing));
 			if(!HasRow)
 				return;
 			if(pMenus->DoSettingsButton_CheckBox(CMenus::SETTINGS_GENERAL, -1, -1, pOption, pId, pText, *pOption, &Row, LabelProps, true, Metrics.m_BodySize))
@@ -57,8 +57,7 @@ namespace qm_card_catalog
 			InputOptions.m_FontSize = Metrics.m_BodySize;
 			ui_widget::InputField(Ctx.m_UiContext, &s_WatermarkTextInput, Row, InputOptions);
 		}
-		Flow.Space(Metrics.m_LineSpacing);
-		if(Flow.Control("watermark-position", Metrics.m_LineHeight, Row))
+		if(Flow.Control("watermark-position", Metrics.m_LineHeight, Row, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
 		{
 			static CUi::SDropDownState s_PositionState;
 			const char *apPositions[] = {Localize("Bottom left"), Localize("Bottom right"), Localize("Top left"), Localize("Top right")};
@@ -120,10 +119,11 @@ namespace qm_card_catalog
 							g_Config.m_ClMouseFollowfactor = 0;
 					}
 				}
-				if(g_Config.m_ClDyncam || g_Config.m_ClMouseFollowfactor > 0)
+				static CSettingsConditionalRows s_SmoothDynamicCameraRows;
+				if(s_SmoothDynamicCameraRows.Update(g_Config.m_ClDyncam || g_Config.m_ClMouseFollowfactor > 0, pMenus->GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 				{
-					Flow.Space(GeneralMetrics.m_LineSpacing);
-					if(Flow.Control("general-smooth-dynamic-camera", GeneralMetrics.m_LineHeight, Button) && pMenus->DoSettingsButton_CheckBox(CMenus::SETTINGS_GENERAL, -1, &g_Config.m_ClDyncamSmoothness, "general-smooth-dynamic-camera", Localize("Smooth Dynamic Camera"), g_Config.m_ClDyncamSmoothness, &Button))
+					const CSettingsContentRevealScope SmoothDynamicCameraRevealScope(pMenus->Ui(), Flow, s_SmoothDynamicCameraRows.Fade(g_Config.m_QmUiMotionLevel));
+					if(Flow.Control("general-smooth-dynamic-camera", GeneralMetrics.m_LineHeight, Button, ui_token::settings::RowGap(GeneralMetrics.m_LineSpacing)) && pMenus->DoSettingsButton_CheckBox(CMenus::SETTINGS_GENERAL, -1, &g_Config.m_ClDyncamSmoothness, "general-smooth-dynamic-camera", Localize("Smooth Dynamic Camera"), g_Config.m_ClDyncamSmoothness, &Button))
 					{
 						if(g_Config.m_ClDyncamSmoothness)
 							g_Config.m_ClDyncamSmoothness = 0;
@@ -134,11 +134,9 @@ namespace qm_card_catalog
 						}
 					}
 				}
-				Flow.Space(GeneralMetrics.m_LineSpacing);
-				if(Flow.Control("general-switch-weapon-pickup", GeneralMetrics.m_LineHeight, Button) && pMenus->DoSettingsButton_CheckBox(CMenus::SETTINGS_GENERAL, -1, &g_Config.m_ClAutoswitchWeapons, "general-switch-weapon-pickup", Localize("Switch weapon on pickup"), g_Config.m_ClAutoswitchWeapons, &Button))
+				if(Flow.Control("general-switch-weapon-pickup", GeneralMetrics.m_LineHeight, Button, ui_token::settings::RowGap(GeneralMetrics.m_LineSpacing)) && pMenus->DoSettingsButton_CheckBox(CMenus::SETTINGS_GENERAL, -1, &g_Config.m_ClAutoswitchWeapons, "general-switch-weapon-pickup", Localize("Switch weapon on pickup"), g_Config.m_ClAutoswitchWeapons, &Button))
 					g_Config.m_ClAutoswitchWeapons ^= 1;
-				Flow.Space(GeneralMetrics.m_LineSpacing);
-				if(Flow.Control("general-switch-weapon-out-of-ammo", GeneralMetrics.m_LineHeight, Button) && pMenus->DoSettingsButton_CheckBox(CMenus::SETTINGS_GENERAL, -1, &g_Config.m_ClAutoswitchWeaponsOutOfAmmo, "general-switch-weapon-out-of-ammo", Localize("Switch weapon when out of ammo"), g_Config.m_ClAutoswitchWeaponsOutOfAmmo, &Button))
+				if(Flow.Control("general-switch-weapon-out-of-ammo", GeneralMetrics.m_LineHeight, Button, ui_token::settings::RowGap(GeneralMetrics.m_LineSpacing)) && pMenus->DoSettingsButton_CheckBox(CMenus::SETTINGS_GENERAL, -1, &g_Config.m_ClAutoswitchWeaponsOutOfAmmo, "general-switch-weapon-out-of-ammo", Localize("Switch weapon when out of ammo"), g_Config.m_ClAutoswitchWeaponsOutOfAmmo, &Button))
 					g_Config.m_ClAutoswitchWeaponsOutOfAmmo ^= 1;
 			};
 			UseDeclared();
@@ -167,25 +165,33 @@ namespace qm_card_catalog
 				char aBuf[128 + IO_MAX_PATH_LENGTH];
 				if(Flow.Control("general-map-tags", GeneralMetrics.m_LineHeight, Button) && pMenus->DoSettingsButton_CheckBox(CMenus::SETTINGS_GENERAL, -1, &g_Config.m_QmMapTags, "general-map-tags", Localize("Show community map tags"), g_Config.m_QmMapTags, &Button))
 					g_Config.m_QmMapTags ^= 1;
-				Flow.Space(GeneralMetrics.m_LineSpacing);
-				if(Flow.Control("general-skip-main-menu", GeneralMetrics.m_LineHeight, Button))
+				if(Flow.Control("general-skip-main-menu", GeneralMetrics.m_LineHeight, Button, ui_token::settings::RowGap(GeneralMetrics.m_LineSpacing)))
 				{
 					if(pMenus->DoSettingsButton_CheckBox(CMenus::SETTINGS_GENERAL, -1, &g_Config.m_ClSkipStartMenu, "general-skip-main-menu", Localize("Skip the main menu"), g_Config.m_ClSkipStartMenu, &Button))
 						g_Config.m_ClSkipStartMenu ^= 1;
 				}
-				Flow.Space(GeneralMetrics.m_LineSpacing);
-				if(Flow.Control("general-refresh-rate", GeneralMetrics.m_LineHeight, Button))
+				if(Flow.Control("general-refresh-rate", GeneralMetrics.m_LineHeight, Button, ui_token::settings::RowGap(GeneralMetrics.m_LineSpacing)))
 				{
 					str_copy(aBuf, " ");
 					str_append(aBuf, Localize("Hz", "Hertz"));
 					DoNumericField("general-refresh-rate", &g_Config.m_ClRefreshRate, &g_Config.m_ClRefreshRate, Button, Localize("Update Rate"), 10, 10000, CUi::SCROLLBAR_OPTION_INFINITE | CUi::SCROLLBAR_OPTION_NOCLAMPVALUE | CUi::SCROLLBAR_OPTION_DELAYUPDATE, aBuf);
 				}
-				Flow.Space(GeneralMetrics.m_LineSpacing);
-				if(Flow.Control("general-lower-refresh-rate", GeneralMetrics.m_LineHeight, Button))
+				if(Flow.Control("general-lower-refresh-rate", GeneralMetrics.m_LineHeight, Button, ui_token::settings::RowGap(GeneralMetrics.m_LineSpacing)))
 				{
 					static int s_LowerRefreshRate;
 					if(pMenus->DoSettingsButton_CheckBox(CMenus::SETTINGS_GENERAL, -1, &s_LowerRefreshRate, "general-lower-refresh-rate", Localize("Save power by lowering update rate (higher input latency)"), g_Config.m_ClRefreshRate <= 480 && g_Config.m_ClRefreshRate != 0, &Button))
 						g_Config.m_ClRefreshRate = g_Config.m_ClRefreshRate > 480 || g_Config.m_ClRefreshRate == 0 ? 480 : 0;
+				}
+				if(Flow.Control("general-net-qos", GeneralMetrics.m_LineHeight, Button, ui_token::settings::RowGap(GeneralMetrics.m_LineSpacing)))
+				{
+					if(pMenus->DoSettingsButton_CheckBox(CMenus::SETTINGS_GENERAL, -1, &g_Config.m_QmNetQos, "general-net-qos", Localize("Prioritize game traffic (QoS, Windows only)"), g_Config.m_QmNetQos, &Button))
+						g_Config.m_QmNetQos ^= 1;
+					pMenus->GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmNetQos, &Button, Localize("Best-effort DSCP marking of the game connection; may be ignored by routers"));
+				}
+				if(Flow.Control("general-crash-report-on-startup", GeneralMetrics.m_LineHeight, Button, ui_token::settings::RowGap(GeneralMetrics.m_LineSpacing)))
+				{
+					if(pMenus->DoSettingsButton_CheckBox(CMenus::SETTINGS_GENERAL, -1, &g_Config.m_QmCrashReportOnStartup, "general-crash-report-on-startup", Localize("Show pending crash reports on startup"), g_Config.m_QmCrashReportOnStartup, &Button))
+						g_Config.m_QmCrashReportOnStartup ^= 1;
 				}
 				Flow.Space(GeneralMetrics.m_SectionGap);
 				static CButtonContainer s_SettingsButtonId, s_SavesButtonId, s_ConfigButtonId, s_ThemesButtonId;
@@ -206,7 +212,7 @@ namespace qm_card_catalog
 					if(!Flow.Control(RowIndex == 0 ? "general-config-files" : "general-directories", GeneralMetrics.m_LineHeight, Row))
 					{
 						if(RowIndex == 0)
-							Flow.Space(GeneralMetrics.m_LineSpacing);
+							Flow.Space(ui_token::settings::RowGap(GeneralMetrics.m_LineSpacing));
 						continue;
 					}
 					static ui_widget::SSettingsActionGroupState s_aDirectoryWidths[2];
@@ -225,11 +231,10 @@ namespace qm_card_catalog
 						DoOpenButton(s_ThemesButtonId, "general-themes-directory", Localize("Themes directory"), "themes", true, Localize("Open the directory to add custom themes"), RightButton);
 					}
 					if(RowIndex == 0)
-						Flow.Space(GeneralMetrics.m_LineSpacing);
+						Flow.Space(ui_token::settings::RowGap(GeneralMetrics.m_LineSpacing));
 				}
-				Flow.Space(GeneralMetrics.m_SectionGap);
 				CUIRect ThemeList;
-				if(Flow.Control("general-theme-list", GeneralThemeListHeight, ThemeList))
+				if(Flow.Control("general-theme-list", GeneralThemeListHeight, ThemeList, GeneralMetrics.m_SectionGap))
 					pMenus->RenderThemeSelection(ThemeList, &GeneralMetrics);
 			};
 
@@ -244,7 +249,7 @@ namespace qm_card_catalog
 				const auto DoToggle = [&](int *pEnabled, const char *pId, const char *pText) {
 					if(Flow.Control(pId, GeneralMetrics.m_LineHeight, Button) && pMenus->DoSettingsButton_CheckBox(CMenus::SETTINGS_GENERAL, -1, -1, pEnabled, pId, pText, *pEnabled, &Button))
 						*pEnabled ^= 1;
-					Flow.Space(GeneralMetrics.m_LineSpacing);
+					Flow.Space(ui_token::settings::RowGap(GeneralMetrics.m_LineSpacing));
 				};
 				DoToggle(&g_Config.m_ClAutoDemoRecord, "general-auto-demo-record", Localize("Automatically record demos"));
 				DoToggle(&g_Config.m_ClAutoScreenshot, "general-auto-screenshot", Localize("Automatically take game over screenshot"));
@@ -254,9 +259,11 @@ namespace qm_card_catalog
 				{
 					if(Flow.Control("general-screenshot-clipboard", GeneralMetrics.m_LineHeight, Button) && pMenus->DoSettingsButton_CheckBox(CMenus::SETTINGS_GENERAL, -1, -1, &g_Config.m_QmScreenshotClipboard, "general-screenshot-clipboard", Localize("Automatically copy manual screenshots to clipboard"), g_Config.m_QmScreenshotClipboard, &Button))
 						g_Config.m_QmScreenshotClipboard ^= 1;
-					Flow.Space(GeneralMetrics.m_LineSpacing);
+					Flow.Space(ui_token::settings::RowGap(GeneralMetrics.m_LineSpacing));
 				}
 				DoToggle(&g_Config.m_QmScreenshotWatermark, "screenshot-watermark", Localize("Automatically add a watermark to screenshots"));
+				if(Flow.Control("general-pose-capture-megapixels", GeneralMetrics.m_LineHeight, Button, ui_token::settings::RowGap(GeneralMetrics.m_LineSpacing)))
+					DoNumericField("general-pose-capture-megapixels", &g_Config.m_QmPoseCaptureMaxMegapixels, &g_Config.m_QmPoseCaptureMaxMegapixels, Button, Localize("Pose screenshot pixel budget (MP, 0 = unlimited)"), 0, 300, CUi::SCROLLBAR_OPTION_INFINITE);
 				if(qm_mobile_spectator::Enabled())
 				{
 					CUIRect MediaRow;
@@ -272,14 +279,16 @@ namespace qm_card_catalog
 					}
 					Flow.Space(GeneralMetrics.m_SectionGap);
 				}
-				if(!Personalization(pMenus, Content, "deck:general-recording", GeneralMetrics))
+				float SectionReveal = 0.0f;
+				if(!PersonalizationReveal(pMenus, Content, "deck:general-recording", GeneralMetrics, &SectionReveal))
 					return;
+				const CSettingsContentRevealScope SectionRevealScope(pMenus->Ui(), Flow, SectionReveal);
 				const auto DoRetention = [&](bool Enabled, int *pMax, const char *pId, const char *pText) {
 					if(!Enabled)
 						return;
-					if(Flow.Control(pId, GeneralMetrics.m_LineHeight, Button))
+					// 行距归这一行自己声明；旧写法在行尾补一格、下面再补分区档，会叠成 3×。
+					if(Flow.Control(pId, GeneralMetrics.m_LineHeight, Button, ui_token::settings::RowGap(GeneralMetrics.m_LineSpacing)))
 						DoNumericField(pId, pMax, pMax, Button, pText, 1, 1000, CUi::SCROLLBAR_OPTION_INFINITE);
-					Flow.Space(GeneralMetrics.m_LineSpacing);
 				};
 				DoRetention(g_Config.m_ClAutoDemoRecord, &g_Config.m_ClAutoDemoMax, "general-auto-demo-max", Localize("Max demos"));
 				DoRetention(g_Config.m_ClAutoScreenshot, &g_Config.m_ClAutoScreenshotMax, "general-auto-screenshot-max", Localize("Max Screenshots"));
@@ -292,22 +301,21 @@ namespace qm_card_catalog
 				const auto DoDirectory = [&](CLineInput &Input, const char *pId, const char *pLabel, const char *pDefault) {
 					if(Flow.Control(pId, GeneralMetrics.m_LineHeight, Button))
 						pMenus->Ui()->DoLabel(&Button, pLabel, GeneralMetrics.m_BodySize, TEXTALIGN_ML);
-					Flow.Space(GeneralMetrics.m_LineSpacing);
 					char aInputId[128];
 					str_format(aInputId, sizeof(aInputId), "%s-input", pId);
-					if(Flow.Control(aInputId, GeneralMetrics.m_LineHeight, Button))
+					if(Flow.Control(aInputId, GeneralMetrics.m_LineHeight, Button, ui_token::settings::RowGap(GeneralMetrics.m_LineSpacing)))
 					{
 						ui_widget::SInputFieldOptions Options;
 						Options.m_pPlaceholder = pDefault;
 						Options.m_FontSize = GeneralMetrics.m_BodySize;
 						ui_widget::InputField(GeneralCardCtx, &Input, Button, Options);
 					}
-					Flow.Space(GeneralMetrics.m_LineSpacing);
+					Flow.Space(ui_token::settings::RowGap(GeneralMetrics.m_LineSpacing));
 				};
 				DoDirectory(s_DemoDirectoryInput, "general-demo-directory", Localize("Demo directory"), "demos");
 				DoDirectory(s_VideoDirectoryInput, "general-video-directory", Localize("Video directory"), "videos");
 				DoDirectory(s_ScreenshotDirectoryInput, "general-screenshot-directory", Localize("Screenshot directory"), "screenshots");
-				Flow.Text("general-directory-help", Localize("Leave empty to use the default directory. Relative paths use the config directory."), 0.0f, GeneralMetrics.m_BodySize, GeneralMetrics.m_SectionGap, [pMenus](const char *pText, float Width, float Size) { return pMenus->TextRender()->TextBoundingBox(Size, pText, -1, Width).m_H + Size * 0.25f; }, [pMenus, GeneralMetrics](const CUIRect &Row, const char *pText) { SLabelProperties Props; Props.m_MaxWidth = Row.w; pMenus->Ui()->DoLabel(&Row, pText, GeneralMetrics.m_BodySize, TEXTALIGN_ML, Props); }, GeneralMetrics.m_LineHeight);
+				Flow.Text("general-directory-help", Localize("Leave empty to use the default directory. Relative paths use the config directory."), 0.0f, GeneralMetrics.m_SmallSize, GeneralMetrics.m_SectionGap, [pMenus](const char *pText, float Width, float Size) { return pMenus->TextRender()->TextBoundingBox(Size, pText, -1, Width).m_H + Size * 0.25f; }, [pMenus, GeneralMetrics](const CUIRect &Row, const char *pText) { SLabelProperties Props; Props.m_MaxWidth = Row.w; pMenus->Ui()->DoLabel(&Row, pText, GeneralMetrics.m_SmallSize, TEXTALIGN_ML, Props); }, GeneralMetrics.m_LineHeight);
 				if(qm_mobile_spectator::Enabled())
 				{
 					CUIRect MediaRow;

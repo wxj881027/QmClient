@@ -24,11 +24,11 @@ void CMenus::RenderQmAppearancePresetContent(CUIRect &Content, const SSettingsCo
 		Ui()->DoLabel(&Row, pText, Size, TEXTALIGN_ML, Props);
 	};
 	const auto RenderNote = [&](const char *pId, const char *pText) {
-		Flow.Text(pId, pText, 0.0f, Metrics.m_SmallSize, Metrics.m_LineSpacing, Measure, [&](const CUIRect &Row, const char *pValue) { DrawText(Row, pValue, Metrics.m_SmallSize); }, Metrics.m_LineHeight);
+		Flow.Text(pId, pText, 0.0f, Metrics.m_SmallSize, ui_token::settings::RowGap(Metrics.m_LineSpacing), Measure, [&](const CUIRect &Row, const char *pValue) { DrawText(Row, pValue, Metrics.m_SmallSize); }, Metrics.m_LineHeight);
 	};
 	RenderNote("preset-summary", Localize("Applying this preset changes the appearance settings listed below."));
 	const auto RenderChange = [&](const char *pId, const char *pLabel, const char *pValue) {
-		Flow.TextColumns(pId, pLabel, pValue, Metrics.m_BodySize, Metrics.m_LineHeight, 0.62f, Metrics.m_LineSpacing, Metrics.m_LineSpacing, Measure,
+		Flow.TextColumns(pId, pLabel, pValue, Metrics.m_BodySize, Metrics.m_LineHeight, 0.62f, Metrics.m_LineSpacing, ui_token::settings::RowGap(Metrics.m_LineSpacing), Measure,
 			[&](const CUIRect &Row, const char *pText) { DrawText(Row, pText, Metrics.m_BodySize); });
 	};
 	RenderChange("preset-latin-font", Localize("Latin font"), "LXGW WenKai");
@@ -56,7 +56,7 @@ void CMenus::RenderQmAppearancePresetContent(CUIRect &Content, const SSettingsCo
 			TextRender()->SetCustomFontWeightCjk(g_Config.m_QmCustomFontWeightCjk);
 		}
 	}
-	Flow.Space(Metrics.m_LineSpacing);
+	Flow.Space(ui_token::settings::RowGap(Metrics.m_LineSpacing));
 }
 
 namespace qm_card_catalog

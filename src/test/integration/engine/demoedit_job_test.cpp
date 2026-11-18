@@ -188,8 +188,8 @@ TEST_F(DemoEditJobIntegration, BackgroundExportDoesNotOverwriteMainThreadSelecti
 
 TEST_F(DemoEditJobIntegration, JobOwnsClonedDeltasAfterOriginalsAreReplaced)
 {
-	m_pState->m_Data.m_pDelta = CSnapshotDelta::New();
-	m_pState->m_Data.m_pDeltaSixup = CSnapshotDelta::New();
+	m_pState->m_Data.m_pDelta = std::make_unique<CSnapshotDelta>();
+	m_pState->m_Data.m_pDeltaSixup = std::make_unique<CSnapshotDelta>();
 	m_pState->m_pJob->RunNow();
 	EXPECT_TRUE(m_pState->m_pJob->Success());
 	EXPECT_EQ(m_pState->m_Data.MapData("target.demo"), "mapbytes");

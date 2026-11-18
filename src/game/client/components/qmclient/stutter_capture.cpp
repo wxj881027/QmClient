@@ -41,10 +41,6 @@ CQmStutterCapture::SFeatures CQmStutterCapture::COperations::CaptureFeatures(con
 	if(Frame.m_pConfig)
 		Frame.m_pConfig->PossibleConfigVariables("", CFGFLAG_CLIENT, CollectFeature, &Result.m_vValues);
 	std::sort(Result.m_vValues.begin(), Result.m_vValues.end());
-	const SUiContext Context = Frame.m_pfnUiContext ? Frame.m_pfnUiContext(Frame.m_pUser) : SUiContext{};
-	Result.m_Page = Context.m_pPage && Context.m_pPage[0] ? Context.m_pPage : "game";
-	Result.m_Operation = Context.m_pOperation && Context.m_pOperation[0] ? Context.m_pOperation : "none";
-	Result.m_LimitCause = Context.m_LimitCause;
 	return Result;
 }
 
@@ -108,13 +104,13 @@ void CQmStutterCapture::ResetWindow() noexcept
 		Component.m_Update.Reset();
 		Component.m_Render.Reset();
 	}
-	m_Features.m_vValues.clear();
-	m_Features.m_Page.clear();
-	m_Features.m_Operation.clear();
-	m_Features.m_LimitCause = EQmStutterLimitCause::NONE;
+	m_Features = {};
+	m_WorstContext = {};
 	m_WindowStartFrame = 0;
 	m_WorstFrame = 0;
 	m_WorstFrameMs = 0.0;
+	m_DetailWorstMs = 0.0;
+	m_FeatureFrame = 0;
 }
 
 bool CQmStutterCapture::Emit(const SFrame &Frame, bool Force, const char *pPayload) noexcept
@@ -147,12 +143,12 @@ bool CQmStutterCapture::EmitWindow(const SFrame &Frame, const SQmStutterFrameDec
 	const double FpsAverage = SampleSeconds > 0.0 ? m_FrameSamples.Count() / SampleSeconds : 0.0;
 	const double FpsMinimum = m_FrameSamples.Max() > 0.0 ? 1000.0 / m_FrameSamples.Max() : 0.0;
 	const double FpsOnePctLow = FrameMsP99 > 0.0 ? 1000.0 / FrameMsP99 : 0.0;
-	const bool CapLimited = m_Features.m_LimitCause != EQmStutterLimitCause::NONE;
+	const bool CapLimited = m_WorstContext.m_LimitCause != EQmStutterLimitCause::NONE;
 	const char *pClassification = SampleSeconds >= 1.0 || Decision.m_Reason == EQmStutterFlushReason::PERIODIC ? "sustained_low" : "frame_drop";
 
 	char aPayload[1024];
 	str_format(aPayload, sizeof(aPayload),
-		"schema=1 event=stutter_event stutter_id=%" PRIu64 " segment=%" PRIu64 " classification=%s end_reason=%s window_start_frame=%" PRIu64 " window_end_frame=%" PRIu64 " worst_frame=%" PRIu64 " target_fps=300 target_ms=%.6f sample_frames=%d sample_seconds=%.3f below_target_frames=%d fps_avg=%.3f fps_min=%.3f fps_1pct_low=%.3f frame_ms_avg=%.3f frame_ms_p95=%.3f frame_ms_p99=%.3f frame_ms_max=%.3f cap_limited=%d cap_reason=%s context=%s page=%s tab=%s",
+		"schema=1 event=stutter_event stutter_id=%" PRIu64 " segment=%" PRIu64 " classification=%s end_reason=%s window_start_frame=%" PRIu64 " window_end_frame=%" PRIu64 " worst_frame=%" PRIu64 " target_fps=300 target_ms=%.6f sample_frames=%d sample_seconds=%.3f below_target_frames=%d fps_avg=%.3f fps_min=%.3f fps_1pct_low=%.3f frame_ms_avg=%.3f frame_ms_p95=%.3f frame_ms_p99=%.3f frame_ms_max=%.3f cap_limited=%d cap_reason=%s detail_mode=%s context=%s page=%s tab=%s",
 		Decision.m_StutterId,
 		Decision.m_Segment,
 		pClassification,
@@ -172,12 +168,16 @@ bool CQmStutterCapture::EmitWindow(const SFrame &Frame, const SQmStutterFrameDec
 		FrameMsP99,
 		m_FrameSamples.Max(),
 		CapLimited ? 1 : 0,
-		QmStutterLimitCauseName(m_Features.m_LimitCause),
+		QmStutterLimitCauseName(m_WorstContext.m_LimitCause),
+		m_DetailWorstMs > 0.0 ? "slow_frames" : "summary",
 		Frame.m_Online ? "online" : "offline",
-		m_Features.m_Page.empty() ? "game" : m_Features.m_Page.c_str(),
-		m_Features.m_Operation.empty() ? "none" : m_Features.m_Operation.c_str());
+		m_WorstContext.m_Page.c_str(),
+		m_WorstContext.m_Operation.c_str());
 	if(!Emit(Frame, ForceLog, aPayload))
 		Complete = false;
+
+	if(m_DetailWorstMs == 0.0)
+		return Complete;
 
 	for(size_t i = 0; i < m_vComponents.size(); ++i)
 	{
@@ -214,12 +214,12 @@ bool CQmStutterCapture::EmitWindow(const SFrame &Frame, const SQmStutterFrameDec
 			"schema=1 event=feature_snapshot stutter_id=%" PRIu64 " segment=%" PRIu64 " frame=%" PRIu64 " owner=%s feature=%s module=unmapped config_enabled=1 config_value=%d hud_visible=-1 settings_visible=-1 executed_in_frame=-1 executed_in_window=-1 current_page=%s current_tab=%s",
 			Decision.m_StutterId,
 			Decision.m_Segment,
-			m_WorstFrame,
+			m_FeatureFrame,
 			pOwner,
 			Name.c_str(),
 			Value,
-			m_Features.m_Page.empty() ? "game" : m_Features.m_Page.c_str(),
-			m_Features.m_Operation.empty() ? "none" : m_Features.m_Operation.c_str());
+			m_Features.m_Context.m_Page.c_str(),
+			m_Features.m_Context.m_Operation.c_str());
 		if(!Emit(Frame, ForceLog, aFeaturePayload))
 			Complete = false;
 	}
@@ -247,18 +247,32 @@ bool CQmStutterCapture::ProcessFrame(const SFrame &Frame) noexcept
 		auto NextTracker = m_WasEnabled ? m_Tracker : CQmStutterEpisodeTracker{};
 		const auto Decision = NextTracker.RecordFrame(Frame.m_Frame, Frame.m_FrameMs);
 		const bool NewWindow = !m_WasEnabled || Decision.m_Started;
-		const bool Capture = Decision.m_BelowTarget && Frame.m_FrameMs > (NewWindow ? 0.0 : m_WorstFrameMs);
+		const bool CaptureWorst = Decision.m_BelowTarget && Frame.m_FrameMs > (NewWindow ? 0.0 : m_WorstFrameMs);
+		const bool RecordDetail = Decision.m_BelowTarget && QmStutterNeedsDetail(Frame.m_FrameMs, Frame.m_RenderLimit);
+		const bool CaptureDetail = RecordDetail && Frame.m_FrameMs > (NewWindow ? 0.0 : m_DetailWorstMs);
+		SContext PreparedWorst;
 		SFeatures PreparedFeatures;
 		if(Decision.m_BelowTarget)
-		{
 			Operations.PrepareSeries(m_FrameSamples, Frame.m_FrameMs);
+		if(RecordDetail)
+		{
 			for(auto &Component : m_vComponents)
 			{
 				Operations.PrepareSeries(Component.m_Update, Component.m_PendingUpdate);
 				Operations.PrepareSeries(Component.m_Render, Component.m_PendingRender);
 			}
-			if(Capture)
+			if(CaptureDetail)
 				PreparedFeatures = Operations.CaptureFeatures(Frame);
+		}
+		if(CaptureWorst || CaptureDetail)
+		{
+			const SUiContext Context = Frame.m_pfnUiContext ? Frame.m_pfnUiContext(Frame.m_pUser) : SUiContext{};
+			const char *pPage = Context.m_pPage && Context.m_pPage[0] ? Context.m_pPage : "game";
+			const char *pOperation = Context.m_pOperation && Context.m_pOperation[0] ? Context.m_pOperation : "none";
+			if(CaptureWorst)
+				PreparedWorst = {pPage, pOperation, Context.m_LimitCause};
+			if(CaptureDetail)
+				PreparedFeatures.m_Context = {pPage, pOperation, Context.m_LimitCause};
 		}
 		// 下面仅提交已经准备好的容量、快照和固定大小状态。
 		if(NewWindow)
@@ -270,16 +284,25 @@ bool CQmStutterCapture::ProcessFrame(const SFrame &Frame) noexcept
 			if(m_FrameSamples.Empty())
 				m_WindowStartFrame = Frame.m_Frame;
 			m_FrameSamples.Record(Frame.m_FrameMs, Frame.m_Frame);
-			for(auto &Component : m_vComponents)
+			if(RecordDetail)
 			{
-				Component.m_Update.Record(Component.m_PendingUpdate, Frame.m_Frame);
-				Component.m_Render.Record(Component.m_PendingRender, Frame.m_Frame);
+				for(auto &Component : m_vComponents)
+				{
+					Component.m_Update.Record(Component.m_PendingUpdate, Frame.m_Frame);
+					Component.m_Render.Record(Component.m_PendingRender, Frame.m_Frame);
+				}
+				if(CaptureDetail)
+				{
+					m_DetailWorstMs = Frame.m_FrameMs;
+					m_FeatureFrame = Frame.m_Frame;
+					m_Features = std::move(PreparedFeatures);
+				}
 			}
-			if(Capture)
+			if(CaptureWorst)
 			{
 				m_WorstFrameMs = Frame.m_FrameMs;
 				m_WorstFrame = Frame.m_Frame;
-				m_Features.Swap(PreparedFeatures);
+				m_WorstContext = std::move(PreparedWorst);
 			}
 		}
 		if(!Decision.m_FlushWindow)

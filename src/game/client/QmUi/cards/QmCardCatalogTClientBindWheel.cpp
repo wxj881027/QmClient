@@ -78,7 +78,7 @@ using namespace qm_tclient_cards;
 qm_card_catalog::STClientCardResult CMenus::RunTClientBindWheelCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass)
 {
 	CUIRect MainView = Ctx.m_Page.m_ContentViewport;
-	ApplyTClientContentMetrics(Ctx.m_Metrics);
+	const CTClientCardMetricsScope CardMetrics(Ctx.m_Metrics);
 	const bool ReadOnly = Ctx.m_ReadOnly || Pass != qm_card_catalog::ETClientCardPass::RENDER;
 	std::unique_ptr<CUiRenderOnlyGuard> pRenderOnlyGuard;
 	if(ReadOnly && !Ui()->RenderOnly())
@@ -103,7 +103,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientBindWheelCard(const qm_car
 		CSettingsContentLayoutFlow Flow(LeftView);
 		static CButtonContainer s_AddButton, s_RemoveButton, s_OverrideButton;
 
-		if(Flow.Control("tclient-bindwheel-name", LineSize, Button, MarginSmall))
+		if(Flow.Control("tclient-bindwheel-name", LineSize, Button, RowSpacing))
 		{
 			SplitSettingsControlRow(Button, CurrentSettingsContentMetrics(), &Label, &Button);
 			DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_BINDWHEEL, "tclient-bindwheel-name-label", &Label, Localize("Name:"), FontSize, TEXTALIGN_ML);
@@ -113,7 +113,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientBindWheelCard(const qm_car
 			ui_widget::InputField(TClientBindWheelTextInputCtx, &s_NameInput, Button, Localize("Name"), EditBoxFontSize);
 		}
 
-		if(Flow.Control("tclient-bindwheel-command", LineSize, Button, MarginSmall))
+		if(Flow.Control("tclient-bindwheel-command", LineSize, Button, RowSpacing))
 		{
 			SplitSettingsControlRow(Button, CurrentSettingsContentMetrics(), &Label, &Button);
 			DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_BINDWHEEL, "tclient-bindwheel-command-label", &Label, Localize("Command:"), FontSize, TEXTALIGN_ML);
@@ -123,7 +123,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientBindWheelCard(const qm_car
 			ui_widget::InputField(TClientBindWheelTextInputCtx, &s_BindInput, Button, Localize("Command"), EditBoxFontSize);
 		}
 
-		if(Flow.Control("tclient-bindwheel-override", LineSize, Button, MarginSmall))
+		if(Flow.Control("tclient-bindwheel-override", LineSize, Button, RowSpacing))
 		{
 			if(DoSettingsButton_Menu(SETTINGS_TCLIENT, TCLIENT_TAB_BINDWHEEL, TCLIENT_TAB_BINDWHEEL, &s_OverrideButton, "tclient-bindwheel-override-selected", Localize("Override Selected"), 0, &Button) && !ReadOnly && !Ui()->RenderOnly() && s_SelectedBindIndex >= 0 && s_SelectedBindIndex < static_cast<int>(GameClient()->m_BindWheel.m_vBinds.size()))
 			{
@@ -134,7 +134,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientBindWheelCard(const qm_car
 			}
 		}
 
-		if(Flow.Control("tclient-bindwheel-add-remove", LineSize, Button, MarginSmall))
+		if(Flow.Control("tclient-bindwheel-add-remove", LineSize, Button, RowSpacing))
 		{
 			CUIRect ButtonAdd, ButtonRemove;
 			static ui_widget::SSettingsActionGroupState s_BindActionWidths;
@@ -156,12 +156,12 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientBindWheelCard(const qm_car
 			}
 		}
 
-		if(Flow.Control("tclient-bindwheel-help-console", LineSize, Label, MarginSmall))
+		if(Flow.Control("tclient-bindwheel-help-console", LineSize, Label, RowSpacing))
 		{
 			DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_BINDWHEEL, "tclient-bindwheel-footer-console", &Label, Localize("Commands run in the console"), FontSize, TEXTALIGN_ML);
 		}
 
-		if(Flow.Control("tclient-bindwheel-help-mouse", SmallSize, Label, MarginSmall))
+		if(Flow.Control("tclient-bindwheel-help-mouse", SmallSize, Label, RowSpacing))
 		{
 			DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_BINDWHEEL, "tclient-bindwheel-footer-mouse", &Label, Localize("L select  R swap  M select only"), SmallSize, TEXTALIGN_ML);
 		}

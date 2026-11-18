@@ -36,3 +36,64 @@ TEST(Uuid, ParseFailures)
 	EXPECT_TRUE(ParseUuid(&Uuid, "01234567-89ab-cdef-0123-456789abcdef "));
 	EXPECT_TRUE(ParseUuid(&Uuid, "0x01234567-89ab-cdef-0123-456789abcdef"));
 }
+
+TEST(Uuid, ToInts)
+{
+	CUuid Uuid;
+	char aUuid[UUID_MAXSTRSIZE] = "01234567-89ab-cdef-0123-456789abcdef";
+	EXPECT_FALSE(ParseUuid(&Uuid, aUuid));
+
+	int aInts[UUID_INT_SIZE];
+	UuidToInts(Uuid, aInts);
+	const int aExpected[UUID_INT_SIZE]{
+		0x01234567,
+		static_cast<int>(0x89abcdefu),
+		0x01234567,
+		static_cast<int>(0x89abcdefu),
+	};
+	for(int Index = 0; Index < UUID_INT_SIZE; ++Index)
+	{
+		ASSERT_EQ(aInts[Index], aExpected[Index]);
+	}
+}
+
+TEST(Uuid, FromInts)
+{
+	const int aInts[UUID_INT_SIZE]{
+		0x01234567,
+		static_cast<int>(0x89abcdefu),
+		0x01234567,
+		static_cast<int>(0x89abcdefu),
+	};
+	const CUuid Uuid1 = UuidFromInts(aInts);
+	const CUuid Uuid2 = UuidFromInts(aInts, UUID_INT_SIZE);
+	ASSERT_EQ(Uuid1, Uuid2);
+
+	char aUuid1[UUID_MAXSTRSIZE];
+	char aUuid2[UUID_MAXSTRSIZE];
+	FormatUuid(Uuid1, aUuid1, sizeof(aUuid1));
+	FormatUuid(Uuid2, aUuid2, sizeof(aUuid2));
+	EXPECT_STREQ(aUuid1, "01234567-89ab-cdef-0123-456789abcdef");
+	EXPECT_STREQ(aUuid2, "01234567-89ab-cdef-0123-456789abcdef");
+}
+
+TEST(Uuid, ToIntsFailed)
+{
+	CUuid Uuid;
+	char aUuid[UUID_MAXSTRSIZE] = "01234567-89ab-cdef-0123-456789abcdef";
+	EXPECT_FALSE(ParseUuid(&Uuid, aUuid));
+
+	int aIntsTooSmall[UUID_INT_SIZE - 1];
+	int aIntsTooBig[UUID_INT_SIZE + 1];
+	ASSERT_DEATH(UuidToInts(Uuid, aIntsTooSmall), "");
+	ASSERT_DEATH(UuidToInts(Uuid, aIntsTooBig), "");
+}
+
+TEST(Uuid, FromIntsFailed)
+{
+	const int aIntsTooSmall[UUID_INT_SIZE - 1]{1, 2, 3};
+	const int aIntsTooBig[UUID_INT_SIZE + 1]{1, 2, 3, 4, 5};
+
+	ASSERT_DEATH(UuidFromInts(aIntsTooSmall);, "");
+	ASSERT_DEATH(UuidFromInts(aIntsTooBig);, "");
+}

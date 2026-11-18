@@ -15,12 +15,16 @@ TEST(MapHistoryUi, WorkspaceChromeScalesWithAvailableHeightWithinReadableBounds)
 	const QmMapHistoryUi::SWorkspaceMetrics Standard = QmMapHistoryUi::WorkspaceMetrics(520.0f);
 	const QmMapHistoryUi::SWorkspaceMetrics Tall = QmMapHistoryUi::WorkspaceMetrics(900.0f);
 
-	EXPECT_LT(Compact.m_TabHeight, Standard.m_TabHeight);
-	EXPECT_LT(Standard.m_TabHeight, Tall.m_TabHeight);
+	// 页签高度固定取设置页胶囊页签那一档 token：收藏地图页与统计数据页顶部同一种页签，
+	// 不随窗口高度浮出一个 22~28 之间的高度。
+	EXPECT_FLOAT_EQ(Compact.m_TabHeight, ui_token::settings::TAB_HEIGHT);
+	EXPECT_FLOAT_EQ(Standard.m_TabHeight, ui_token::settings::TAB_HEIGHT);
+	EXPECT_FLOAT_EQ(Tall.m_TabHeight, ui_token::settings::TAB_HEIGHT);
+	// 外缩并入 MainView 的全局安全区：工作区不再自缩一圈，左右边距与服务器列表面板同线。
+	EXPECT_FLOAT_EQ(Compact.m_OuterMargin, 0.0f);
+	EXPECT_FLOAT_EQ(Tall.m_OuterMargin, 0.0f);
 	EXPECT_LT(Compact.m_HeaderHeight, Standard.m_HeaderHeight);
 	EXPECT_LT(Standard.m_HeaderHeight, Tall.m_HeaderHeight);
-	EXPECT_GE(Compact.m_TabHeight, 22.0f);
-	EXPECT_LE(Tall.m_TabHeight, 28.0f);
 	EXPECT_GE(Compact.m_HeaderHeight, 26.0f);
 	EXPECT_LE(Tall.m_HeaderHeight, 32.0f);
 }

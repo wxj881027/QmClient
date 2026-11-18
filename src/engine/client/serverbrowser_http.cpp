@@ -20,6 +20,7 @@
 #include <cstdlib>
 #endif
 #include <exception>
+#include <limits>
 #include <mutex>
 #include <string>
 #include <vector>
@@ -28,6 +29,7 @@ namespace
 {
 	constexpr int MAX_URLS = 16;
 	constexpr size_t MAX_BODY = 8 * 1024 * 1024;
+	// 网络响应自报年龄与 GitHub 快照时间戳的可信上限；本地持久化列表不按年龄丢弃。
 	constexpr int MAX_CACHE_AGE = 24 * 60 * 60;
 	constexpr const char *MIRROR_URL = "https://ddrace.cn/ddnet/15/servers.json";
 	constexpr const char *SNAPSHOT_URL = "https://raw.githubusercontent.com/wxj881027/QmClient/serverlist-snapshot/servers.json";
@@ -171,10 +173,18 @@ namespace
 
 	class CServerBrowserHttp : public IServerBrowserHttp
 	{
+		// 队列项与活动请求都显式记录路由：同一来源可以先走继承的环境/系统代理，再走显式直连。
+		struct CQueuedAttempt
+		{
+			int m_Index;
+			bool m_DnsFallback;
+			bool m_Direct;
+		};
 		struct CAttempt
 		{
 			int m_Index;
 			bool m_DnsFallback;
+			bool m_Direct;
 			std::shared_ptr<IHttpRequest> m_pRequest;
 			std::shared_ptr<CServerListParseJob> m_pParse;
 		};
@@ -185,7 +195,7 @@ namespace
 		std::function<std::shared_ptr<IHttpRequest>(const char *)> m_Factory;
 		std::function<int64_t()> m_Clock;
 		FServerListParser m_ParseList;
-		std::vector<std::pair<int, bool>> m_vQueue;
+		std::vector<CQueuedAttempt> m_vQueue;
 		std::vector<CAttempt> m_vActive;
 		CQmServerListCache<CServerInfo> m_Cache;
 		int m_BestUrlIndex = -1;
@@ -198,6 +208,8 @@ namespace
 		bool m_Shutdown = false;
 		std::shared_ptr<CServerListSaveState> m_pSaveState;
 		std::vector<int64_t> m_vBlockedUntil;
+		// 每轮刷新内每个来源最多直连回退一次，避免在坏代理上反复重试。
+		std::vector<bool> m_vDirectRetried;
 		bool m_UseFallbackTiers;
 		int m_Tier = 0;
 		int64_t m_TierStartedAt = 0;
@@ -213,7 +225,7 @@ namespace
 		{
 			for(size_t Index = 0; Index < m_vUrls.size(); ++Index)
 				if(Tier(m_vUrls[Index]) == m_Tier)
-					m_vQueue.emplace_back(Index, false);
+					m_vQueue.push_back({static_cast<int>(Index), false, false});
 		}
 		void Cancel()
 		{
@@ -224,11 +236,14 @@ namespace
 			m_vQueue.clear();
 			m_Running = false;
 		}
-		void StartRequest(int Index, bool DnsFallback)
+		void StartRequest(int Index, bool DnsFallback, bool Direct)
 		{
 			auto pRequest = m_Factory(m_vUrls[Index].c_str());
 			if(DnsFallback && !pRequest->ServerListDnsFallback())
 				return;
+			// 直连回退只改路由，不改来源身份；显式空代理同时屏蔽继承的环境代理。
+			if(Direct)
+				pRequest->Proxy("");
 			const bool EncryptedDns = pRequest->ServerListDnsFallbackEnabled();
 			// Windows 吊销信息离线时尽力检查；保留目标和 DoH 的证书及主机名验证。
 			if(EncryptedDns)
@@ -236,9 +251,9 @@ namespace
 			pRequest->Timeout({EncryptedDns ? 15000 : 6000, m_UseFallbackTiers && m_Tier == 0 && !EncryptedDns ? 15000 : 30000, 1024, 10});
 			pRequest->MaxResponseSize(MAX_BODY);
 			pRequest->LogProgress(HTTPLOG::FAILURE);
-			log_info("serverbrowser_http", "fetching serverlist, url='%s' dns=%s", pRequest->Url(), EncryptedDns ? "encrypted" : "system");
+			log_info("serverbrowser_http", "fetching serverlist, url='%s' dns=%s%s", pRequest->Url(), EncryptedDns ? "encrypted" : "system", Direct ? " direct" : "");
 			// 先登记取消入口，再提交给 HTTP；提交失败只撤销本次尝试。
-			m_vActive.push_back({Index, DnsFallback, std::move(pRequest), nullptr});
+			m_vActive.push_back({Index, DnsFallback, Direct, std::move(pRequest), nullptr});
 			try
 			{
 				m_pHttp->Run(m_vActive.back().m_pRequest);
@@ -254,13 +269,13 @@ namespace
 		{
 			while(m_vActive.size() < 2 && !m_vQueue.empty())
 			{
-				const auto [Index, DnsFallback] = m_vQueue.front();
+				const CQueuedAttempt Queued = m_vQueue.front();
 				m_vQueue.erase(m_vQueue.begin());
-				if(m_vBlockedUntil[Index] > m_Clock())
+				if(m_vBlockedUntil[Queued.m_Index] > m_Clock())
 					continue;
 				try
 				{
-					StartRequest(Index, DnsFallback);
+					StartRequest(Queued.m_Index, Queued.m_DnsFallback, Queued.m_Direct);
 				}
 				catch(const std::exception &Error)
 				{
@@ -287,9 +302,17 @@ namespace
 					m_vBlockedUntil[Attempt.m_Index] = std::max(m_vBlockedUntil[Attempt.m_Index], m_Clock() + 60);
 				if(Attempt.m_pRequest->CompletedStatusCode() != 0 || Attempt.m_pRequest->State() == EHttpState::ABORTED)
 					return;
+				// 代理路由连不上时先切直连，再判定来源不可用；与更新模块的官方直连回退同一判据。
+				const bool ProxyRoute = Attempt.m_pRequest->CompletedUsedProxy() || Attempt.m_pRequest->ProxyUrl()[0] != '\0';
+				if(!Attempt.m_Direct && ProxyRoute && !m_vDirectRetried[Attempt.m_Index])
+				{
+					m_vDirectRetried[Attempt.m_Index] = true;
+					m_vQueue.push_back({Attempt.m_Index, false, true});
+					return;
+				}
 			}
-			if(!Attempt.m_DnsFallback && Attempt.m_pRequest && Attempt.m_pRequest->ServerListDnsFallback())
-				m_vQueue.emplace_back(Attempt.m_Index, true);
+			if(!Attempt.m_Direct && !Attempt.m_DnsFallback && Attempt.m_pRequest && Attempt.m_pRequest->ServerListDnsFallback())
+				m_vQueue.push_back({Attempt.m_Index, true, false});
 		}
 		void Save(const std::string &Body, int Age)
 		{
@@ -359,21 +382,21 @@ namespace
 			long long Received;
 			int Age;
 			char aHash[65];
-			if(sscanf(Header.c_str(), "QMSL1 %lld %d %64s", &Received, &Age, aHash) != 3 || m_SourceHash != aHash || Age < 0 || Age > MAX_CACHE_AGE)
+			// 刷新失败时沿用上次成功列表：年龄只影响 stale 标记，不再作为丢弃条件；仍拒绝未来时间戳与损坏正文。
+			if(sscanf(Header.c_str(), "QMSL1 %lld %d %64s", &Received, &Age, aHash) != 3 || m_SourceHash != aHash || Age < 0)
 				return;
 			const int64_t Now = time_timestamp();
 			if(Received < 0 || Received > Now)
 				return;
 			const int64_t Elapsed = Now - Received;
-			if(Elapsed + Age > MAX_CACHE_AGE)
-				return;
+			const int64_t TotalAge = std::min<int64_t>(static_cast<int64_t>(Age) + Elapsed, std::numeric_limits<int>::max());
 			std::unique_ptr<json_value, decltype(&json_value_free)> pJson(JsonParse(Body.data() + End + 1, Body.size() - End - 1), json_value_free);
 			std::vector<CServerInfo> vServers;
 			const bool Success = pJson && !m_ParseList(pJson.get(), &vServers);
-			if(Success && m_Cache.Publish(std::move(vServers), Age + Elapsed, m_Clock(), true))
+			if(Success && m_Cache.Publish(std::move(vServers), static_cast<int>(TotalAge), m_Clock(), true))
 			{
 				++m_Revision;
-				log_info("serverbrowser_http", "loaded previous serverlist; awaiting live refresh");
+				log_info("serverbrowser_http", "loaded previous serverlist age=%llds; awaiting live refresh", (long long)TotalAge);
 			}
 		}
 
@@ -414,6 +437,7 @@ namespace
 			if(Previous != m_vUrls.end())
 				std::rotate(m_vUrls.begin(), Previous, Previous + 1);
 			m_vBlockedUntil.resize(m_vUrls.size());
+			m_vDirectRetried.assign(m_vUrls.size(), false);
 			Load();
 			Refresh();
 		}
@@ -445,6 +469,7 @@ namespace
 			m_RetryAt = 0;
 			m_Tier = 0;
 			m_TierStartedAt = m_Clock();
+			std::fill(m_vDirectRetried.begin(), m_vDirectRetried.end(), false);
 			QueueTier();
 			Fill();
 		}

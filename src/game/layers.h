@@ -3,6 +3,7 @@
 #ifndef GAME_LAYERS_H
 #define GAME_LAYERS_H
 
+class CMapLoadTask;
 class IMap;
 
 class CMapItemGroup;
@@ -13,7 +14,8 @@ class CLayers
 {
 public:
 	CLayers();
-	void Init(IMap *pMap, bool GameOnly);
+	void Init(IMap *pMap, bool GameOnly, bool InitializeTilemapSkip = true, bool DeferDesignTileSkips = false);
+	CMapLoadTask PrepareDesignTileSkips();
 	void Unload();
 
 	int NumGroups() const { return m_GroupsNum; }
@@ -48,7 +50,7 @@ private:
 	CMapItemLayerTilemap *m_pSwitchLayer;
 	CMapItemLayerTilemap *m_pTuneLayer;
 
-	void InitTilemapSkip();
+	CMapLoadTask InitTilemapSkip(bool Game, bool Design);
 };
 
 #endif

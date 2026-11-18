@@ -1298,7 +1298,7 @@ void CServerBrowser::PrepareEntryInfo(CServerInfo &Info) const
 	Info.m_HasRank = CServerInfo::RANK_UNAVAILABLE;
 	ServerBrowserFormatAddresses(Info.m_aAddress, sizeof(Info.m_aAddress), Info.m_aAddresses, Info.m_NumAddresses);
 	UpdateServerCommunity(&Info);
-	str_copy(Info.m_aName, Info.m_aAddress, sizeof(Info.m_aName));
+	str_copy(Info.m_aName, Info.m_aAddress);
 	Info.m_Favorite = m_pFavorites->IsFavorite(Info.m_aAddresses, Info.m_NumAddresses);
 	Info.m_FavoriteAllowPing = m_pFavorites->IsPingAllowed(Info.m_aAddresses, Info.m_NumAddresses);
 }
@@ -2059,8 +2059,8 @@ bool CServerBrowser::ParseCommunityServers(CCommunity *pCommunity, const json_va
 		}
 		// communities JSON 由第三方维护，超范围 flagId 会在浏览器渲染国家过滤器时
 		// 触发 CCountryFlags::GetByCountryCode 的 dbg_assert（Invalid CountryCode）。
-		// 范围与 countryflags.h 的 CODE_LB/CODE_UB 保持一致。
-		if(FlagId.u.integer < -999 || FlagId.u.integer > 999)
+		// 国家码是 ISO 3166-1 数值码，只有 -1（默认旗）允许落在负数侧。
+		if(!in_range(FlagId.u.integer, (int64_t)CountryCode::MINIMUM, (int64_t)CountryCode::MAXIMUM))
 		{
 			log_error("serverbrowser", "community country flagId out of range (ServerIndex=%u, flagId=%" PRId64 "), skipping country '%s'",
 				ServerIndex, FlagId.u.integer, Name.u.string.ptr);

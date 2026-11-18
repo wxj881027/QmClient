@@ -379,7 +379,7 @@ namespace
 #endif
 			if(HasExecutableDataPaths && fs_is_dir(aExecutableMapresPath))
 			{
-				str_copy(m_aDatadir, aExecutableDataPath, sizeof(m_aDatadir));
+				str_copy(m_aDatadir, aExecutableDataPath);
 				return;
 			}
 
@@ -391,7 +391,7 @@ namespace
 			// 2) use compiled-in data-dir if present
 			if(fs_is_dir(DATA_DIR "/mapres"))
 			{
-				str_copy(m_aDatadir, DATA_DIR, sizeof(m_aDatadir));
+				str_copy(m_aDatadir, DATA_DIR);
 				return;
 			}
 #endif
@@ -444,7 +444,7 @@ namespace
 		void FindBinaryDirectory(const char *pArgv0)
 		{
 #if defined(BINARY_DIR)
-			str_copy(m_aBinarydir, BINARY_DIR, sizeof(m_aBinarydir));
+			str_copy(m_aBinarydir, BINARY_DIR);
 			return;
 #endif
 

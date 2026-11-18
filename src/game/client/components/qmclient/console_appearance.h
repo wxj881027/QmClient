@@ -39,7 +39,6 @@ namespace QmConsoleAppearance
 	{
 		std::array<ColorRGBA, COLOR_COUNT> m_aColors;
 		ColorRGBA m_Panel;
-		ColorRGBA m_SelectedButton;
 		ColorRGBA m_MutedText;
 		ColorRGBA m_Border;
 		ColorRGBA m_Shadow;
@@ -101,7 +100,7 @@ namespace QmConsoleAppearance
 					ColorRGBA(0.647f, 0.839f, 0.612f, 1.0f), ColorRGBA(0.839f, 0.647f, 0.898f, 1.0f),
 					ColorRGBA(0.424f, 0.714f, 1.0f, 1.0f), ColorRGBA(0.957f, 0.529f, 0.443f, 1.0f),
 					ColorRGBA(0.976f, 0.945f, 0.647f, 1.0f)},
-			{}, {}, {}, {}, {}};
+			{}, {}, {}, {}};
 		if(Scheme == 1)
 		{
 			Result.m_aColors[BACKGROUND] = ColorRGBA(0.004f, 0.141f, 0.337f, 1.0f);
@@ -118,7 +117,6 @@ namespace QmConsoleAppearance
 		}
 		Result.m_aColors[BACKGROUND].a = std::clamp(Opacity, 20, 100) / 100.0f;
 		Result.m_Panel = Blend(Result.m_aColors[BACKGROUND], Result.m_aColors[TEXT], 0.06f);
-		Result.m_SelectedButton = Blend(Result.m_Panel, Result.m_aColors[COMMAND], 0.22f);
 		Result.m_MutedText = Blend(Result.m_aColors[TEXT], Result.m_aColors[BACKGROUND], 0.25f);
 		// 底边向文本色适度靠拢，阴影保留背景色；两者透明度均跟随背景。
 		Result.m_Border = Blend(Result.m_aColors[BACKGROUND], Result.m_aColors[TEXT], 0.18f);

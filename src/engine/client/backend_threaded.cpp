@@ -235,7 +235,7 @@ void CGraphicsBackend_Threaded::ProcessError(const SGfxErrorContainer &Error) no
 				Report.append("\n");
 			if(ErrStr.m_RequiresTranslation)
 			{
-				const char *pText = m_TranslateFunc(ErrStr.m_Err.c_str(), "");
+				const char *pText = m_TranslateFunc(ErrStr.m_Err.c_str(), "Graphics error");
 				if(!pText)
 				{
 					Complete = false;

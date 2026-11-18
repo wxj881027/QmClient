@@ -7,6 +7,7 @@
 
 #include <game/client/QmUi/QmAnimResolve.h>
 #include <game/client/QmUi/QmListEntryAnimation.h>
+#include <game/client/QmUi/UiTokens.h>
 
 #include <algorithm>
 #include <cstdint>
@@ -171,7 +172,11 @@ struct CListboxItem
 {
 	bool m_Visible;
 	bool m_Selected;
+	// 整行矩形：行背景、命中区域和调用方自己的按钮都以它为准。
 	CUIRect m_Rect;
+	// 行内容区：胶囊行已经把 token 派生的左右内边距让出来，文字/图标排在这里；
+	// 未启用胶囊行时与 m_Rect 相同，旧调用点用 m_Rect 排版不受影响。
+	CUIRect m_ContentRect;
 	CUi *m_pUi = nullptr;
 	bool m_GaussianBlurSuppressed = false;
 
@@ -228,17 +233,60 @@ private:
 	bool m_EntryBaseIndexCaptured = false;
 	bool m_EntryAnimationFadeOnly = false;
 	float m_ItemSelectionInset = 0.0f;
+	// 滚轮步长倍率：只缩放这一个列表的滚轮位移，不动键盘 PageUp/Down 的翻页行数，
+	// 也不影响别的列表。行高特别大的网格（皮肤列表）用它把「每格两行」降下来。
+	float m_WheelStepScale = 1.0f;
+	// 悬浮反馈描边：卡片形态列表打开，行/胶囊列表保持关闭。
+	bool m_RowFeedbackBorder = false;
+	// 选中/悬浮填充延后由调用方按卡片矩形绘制（网格画廊用）。
+	bool m_DeferredItemFeedback = false;
+	// 条目不足时容器仍铺满调用方给的高度（网格画廊用）。
+	bool m_FillViewportHeight = false;
+	// 统一行外观（胶囊行）：行距、行内左右内边距和覆盖式滚动条都由它开启。
+	bool m_CapsuleRows = false;
+	float m_RowInsetX = 0.0f;
+	// 胶囊行：滚动条压在内容上时，行右侧要给滚动条让出的缝（避免胶囊被压住一角）。
+	float m_RowReserveRight = 0.0f;
+	// 单列胶囊行可选：只在内容真的溢出、滚动条要出现时才让出那一列；
+	// 让位量按时间推进，滚动条出现/消失时行胶囊横向滑动而不是瞬跳。
+	bool m_ReserveWhenOverflowing = false;
+	float m_ReserveRightCurrent = 0.0f;
+	int64_t m_ReserveRightStepTime = 0;
+	bool m_AutoSpacingOverridden = false;
+	// 自适应高度：可见行数夹在 [MinRows, MaxRows]；MaxRows <= 0 表示不接管高度。
+	int m_MinVisibleRows = 0;
+	int m_MaxVisibleRows = 0;
+	// 覆盖式滚动条：不预留内容宽度，出现/消失带淡入滑出。
+	bool m_ScrollbarOverlay = false;
+	// 调用点是否显式给过选中/悬停颜色；没给时胶囊行用列表 token 的统一配色。
+	bool m_ItemColorsOverridden = false;
+	// 容器圆角由容器长宽推导；带标题的列表沿用 DoHeader 用整容器算出的那一档。
+	float m_ContainerRadius = ui_token::radius::SMALL_MENU;
+	// 容器内边距：胶囊列表默认按行高分档，非胶囊列表为 0（旧页面观感不变）。
+	// m_ContainerPadding 是档位，X/Y 是本帧按「行数不被挤掉」与列数收敛后的生效值。
+	float m_ContainerPadding = 0.0f;
+	float m_ContainerPaddingX = 0.0f;
+	float m_ContainerPaddingY = 0.0f;
+	bool m_ContainerPaddingOverridden = false;
+	bool m_HeaderThisFrame = false;
+	// 本帧是否画了容器背板：只有背板才有圆角，胶囊行也才需要为它内退。
+	bool m_BackgroundDrawn = false;
 	CQmListRowFeedback m_SelectedFeedback;
 	CQmListRowFeedback m_HoverFeedback;
 	bool m_ScrollFeedbackSnap = false;
 	int m_FeedbackNumItems = -1;
 	void QmRestoreEntryScope();
+	// 行反馈圆角：调用点没显式给半径时，单列整行是胶囊，多列网格沿用旧的小圆角。
+	float ResolveRowCornerRadius() const;
 	ColorRGBA m_SelectedItemActiveColor;
 	ColorRGBA m_SelectedItemInactiveColor;
 	ColorRGBA m_HoveredItemColor;
 
 protected:
 	CListboxItem DoNextRow();
+	// 行首统一步进：本条目标记为「开启新的一行」时给一次行距并切出该行矩形，
+	// 返回是否新行。DoNextItem / SkipItems / DoSubheader 共用，避免三处各推一次。
+	bool BeginRowIfNeeded();
 
 public:
 	CListBox();
@@ -251,11 +299,65 @@ public:
 	// 行级小列表仍保留淡入+上浮的 wordRise。
 	void SetEntryAnimationFadeOnly(bool FadeOnly) { m_EntryAnimationFadeOnly = FadeOnly; }
 	// 选中/悬浮反馈内缩：网格卡片在格子内有半格间隙，反馈矩形须贴合卡片
-	// 而不是铺满格子；同时选中态附带按钮同款常驻描边。行列表保持 0。
+	// 而不是铺满格子；行列表保持 0。
 	void SetItemSelectionInset(float Inset) { m_ItemSelectionInset = Inset; }
+	// 悬浮反馈描边（**显式能力**，默认关闭）：关闭时悬浮只换填充，与弹层条目一致；
+	// 卡片形态列表（资源贴图、皮肤、指令工坊）打开后，鼠标悬停的卡片勾一圈
+	// ui_token::feedback::HOVER_BORDER 白边。选中态不受影响，仍只有填充。
+	void SetRowFeedbackBorder(bool Border) { m_RowFeedbackBorder = Border; }
+	// 反馈矩形延后到调用方算完卡片矩形之后再画（**显式能力**，默认关闭）。
+	// 多列网格里格子矩形含行距与行内退，按格子画会与卡片错开一圈；调用方在
+	// DoNextItem 之后调 DrawItemFeedback(卡片矩形) 才能逐像素贴合。开启后
+	// DoNextItem 不再画任何填充，动画 alpha 仍由组件持有。
+	void SetDeferredItemFeedback(bool Deferred) { m_DeferredItemFeedback = Deferred; }
+	// 画当前条目的选中/悬浮反馈（仅在 SetDeferredItemFeedback(true) 时使用）。
+	// Index 传循环里的条目序号（DoNextItem 之后组件游标已指向下一格）。
+	void DrawItemFeedback(int Index, const CUIRect &Rect, float CornerRadius);
+	// 高度填满调用方给的矩形（**显式能力**，默认关闭）：条目不足时组件默认把
+	// 容器收成内容高度，面板下方留出一块「没画到」的空档。网格画廊要的是
+	// 容器始终铺满面板，内容短就只在上方排版、下方留白由容器背景承担。
+	void SetFillViewportHeight(bool Fill) { m_FillViewportHeight = Fill; }
 
 	void DoHeader(const CUIRect *pRect, const char *pTitle, float HeaderHeight = 20.0f, float Spacing = 2.0f, int BackgroundCorners = IGraphics::CORNER_ALL);
-	void DoAutoSpacing(float Spacing = 20.0f) { m_AutoSpacing = Spacing; }
+	// 行距：在**行首**推进一次（多列网格每行只算一次，第一行不算），DoNextItem 与
+	// SkipItems 走同一条步进。传入的行高就是单行内容高度，不要再把行距折进去。
+	void DoAutoSpacing(float Spacing = 20.0f)
+	{
+		m_AutoSpacing = Spacing;
+		m_AutoSpacingOverridden = true;
+	}
+	// 统一行外观：整行胶囊 + token 行距 + 按字号派生的左右内边距，并默认启用
+	// 覆盖式滚动条（不占行宽）。FontSize 是行内文字字号，行内边距按
+	// ui_token::list::RowInsetX 从它派生，与弹层条目同一条公式。
+	void SetCapsuleRows(float FontSize);
+	// 容器内边距（**显式能力**，默认 0）：行区在容器四边内缩，选中/悬浮胶囊不再压在
+	// 容器圆角上。调用点声明档位时**必须同时**把 2×padding 算进列表高度
+	// （ui_token::list::PaddedRowsHeight），否则组件会为保行数把留白兜底缩回 0。
+	// 纵向留白给所有列表；横向留白只给多列网格（单列行的左右本就有行内内退与滚动条让位）。
+	void SetContainerPadding(float Padding)
+	{
+		m_ContainerPadding = std::max(0.0f, Padding);
+		m_ContainerPaddingOverridden = true;
+	}
+	// 本帧实际生效的纵向留白（未声明或高度不足时为 0）。
+	float ContainerPadding() const { return m_ContainerPaddingY; }
+	// 自适应高度：可见行数 = 条目行数夹在 [MinRows, MaxRows]，组件自己按行高和
+	// 行距算内容高度，调用方只给可用上限，不用再自己 std::min；超过上限就出滚动条。
+	// MaxRows <= 0 关闭接管（默认），高度完全由调用方矩形决定。
+	void SetVisibleRowRange(int MinRows, int MaxRows);
+	// 覆盖式滚动条开关：开启后行宽与有没有滚动条无关（默认随 SetCapsuleRows 打开）。
+	void SetScrollbarOverlay(bool Overlay) { m_ScrollbarOverlay = Overlay; }
+	// 单列胶囊行的让位策略：默认恒定为滚动条留出一列（拿不到真实内容高度的列表用）。
+	// 开启后改为「滚动条真出现才让位」，并把这个宽度做成过渡动画。
+	// 只对能提供准确条目数的列表有意义（服务器信息里的玩家行）。
+	void SetReserveRightWhenOverflowing(bool Enabled) { m_ReserveWhenOverflowing = Enabled; }
+	// 胶囊行/胶囊格右侧为滚动条让出的宽度（厚度 + 外边距 + 行缝）。调用点（表头列宽、
+	// 外框内容宽度）在 DoStart 前就要这份值，所以由 token（或显式覆盖值）直接算，
+	// 不依赖上一帧的滚动条状态；未开胶囊行或非覆盖式轨道时为 0。
+	float RowReserveWidth() const;
+	// 让位量的逐帧推进：目标由「内容是否溢出」决定，步长按真实时间折算，
+	// 因此窗口高度、条目数变化时都是同一条速度，不会随帧率变快变慢。
+	float StepRowReserveRight(float Target);
 	void DoSpacing(float Spacing = 20.0f);
 	void DoStart(float RowHeight, int NumItems, int ItemsPerRow, int RowsPerScroll, int SelectedIndex, const CUIRect *pRect = nullptr, bool Background = true, int BackgroundCorners = IGraphics::CORNER_ALL);
 	int ItemIndex() const { return m_ListBoxItemIndex; }
@@ -269,7 +371,8 @@ public:
 	// 已保存的选中项不一定是本次浏览目标；调用方可取消初始自动定位，显式定位仍有效。
 	void SuppressInitialSelectionScroll() { m_InitialScrollPending = false; }
 	void SkipItems(int Count);
-	CListboxItem DoNextItem(const void *pId, bool Selected = false, float CornerRadius = 5.0f);
+	// CornerRadius < 0 时按行类型取默认值：单列整行是胶囊，多列网格沿用旧的小圆角。
+	CListboxItem DoNextItem(const void *pId, bool Selected = false, float CornerRadius = -1.0f);
 	CListboxItem DoCustomRow(float Height, bool ScrollHere = false);
 	void ResetScroll()
 	{
@@ -284,6 +387,7 @@ public:
 	void SetWheelOwnerPriority(EUiWheelOwnerPriority Priority) { m_WheelOwnerPriority = Priority; }
 	void SetActive(bool Active) { m_Active = Active; }
 	void SetScrollProfile(EQmScrollProfile Profile) { m_ScrollProfile = Profile; }
+	void SetWheelStepScale(float Scale) { m_WheelStepScale = std::clamp(Scale, 0.1f, 4.0f); }
 	void SetHideScrollbar(bool HideScrollbar) { m_HideScrollbar = HideScrollbar; }
 	void SetScrollbarAlwaysReserved(bool AlwaysReserved) { m_ScrollbarAlwaysReserved = AlwaysReserved; }
 	void SetAnimateScrollbarReserve(bool Animate) { m_AnimateScrollbarReserve = Animate; }
@@ -292,6 +396,7 @@ public:
 		m_SelectedItemActiveColor = SelectedActive;
 		m_SelectedItemInactiveColor = SelectedInactive;
 		m_HoveredItemColor = Hovered;
+		m_ItemColorsOverridden = true;
 	}
 
 	// 弹层补画选中描边时与 CListBox 的填充共用同一条 alpha，旧行也能淡出。

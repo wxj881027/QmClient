@@ -90,8 +90,8 @@ namespace
 		CTestInfo m_Info;
 		std::unique_ptr<IStorage> m_pStorage = m_Info.CreateTestStorage();
 		COperations m_Operations;
-		rust::Box<CSnapshotDelta> m_pDelta = CSnapshotDelta::New();
-		rust::Box<CSnapshotDelta> m_pDeltaSixup = CSnapshotDelta::New();
+		std::unique_ptr<CSnapshotDelta> m_pDelta = std::make_unique<CSnapshotDelta>();
+		std::unique_ptr<CSnapshotDelta> m_pDeltaSixup = std::make_unique<CSnapshotDelta>();
 		CDemoRecorder m_Recorder{&*m_pDelta};
 		CDemoPlayer m_Player{&*m_pDelta, &*m_pDeltaSixup, false, &m_Operations};
 		int m_SliceBegin = -1;
@@ -141,9 +141,9 @@ namespace
 		void CreateDemo(bool WithMap = true)
 		{
 			unsigned char aMap[] = {'m', 'a', 'p', 'b', 'y', 't', 'e', 's'};
-			ASSERT_EQ(m_Recorder.Start(m_pStorage.get(), nullptr, SOURCE, "test", "map", SHA256_DIGEST{}, 0, "client", WithMap ? static_cast<unsigned>(sizeof(aMap)) : 0, aMap, nullptr, nullptr, nullptr), 0);
+			ASSERT_EQ(m_Recorder.Start(m_pStorage.get(), SOURCE, "test", "map", SHA256_DIGEST{}, 0, "client", WithMap ? static_cast<unsigned>(sizeof(aMap)) : 0, aMap, nullptr, nullptr, nullptr), 0);
 			const CSnapshot *pSnapshot = CSnapshot::EmptySnapshot();
-			const int SnapshotSize = static_cast<int>(pSnapshot->AsSlice().size() * sizeof(int32_t));
+			const int SnapshotSize = static_cast<int>(sizeof(CSnapshot));
 			m_Recorder.RecordSnapshot(100, pSnapshot, SnapshotSize);
 			m_Recorder.RecordSnapshot(150, pSnapshot, SnapshotSize, true);
 			ASSERT_EQ(m_Recorder.Stop(IDemoRecorder::EStopMode::KEEP_FILE), 0);
@@ -152,7 +152,7 @@ namespace
 		void Load(bool WithMap = true)
 		{
 			CreateDemo(WithMap);
-			ASSERT_EQ(m_Player.Load(m_pStorage.get(), nullptr, SOURCE, IStorage::TYPE_SAVE), 0);
+			ASSERT_EQ(m_Player.Load(m_pStorage.get(), SOURCE, IStorage::TYPE_SAVE), 0);
 		}
 
 		void ExpectOriginalPosition()
@@ -188,7 +188,7 @@ namespace
 		bool Slice()
 		{
 			CDemoEditor Editor;
-			Editor.Init(&*m_pDelta, &*m_pDeltaSixup, nullptr, m_pStorage.get(), &m_Operations);
+			Editor.Init(&*m_pDelta, &*m_pDeltaSixup, m_pStorage.get(), &m_Operations);
 			return Editor.Slice(SOURCE, TARGET, -1, -1, nullptr, nullptr);
 		}
 	};
@@ -216,7 +216,7 @@ TEST_F(DemoMapReadIntegration, DefaultOperationsPreserveTheExistingPlayerApi)
 {
 	CreateDemo();
 	CDemoPlayer Player(&*m_pDelta, &*m_pDeltaSixup, false);
-	ASSERT_EQ(Player.Load(m_pStorage.get(), nullptr, SOURCE, IStorage::TYPE_SAVE), 0);
+	ASSERT_EQ(Player.Load(m_pStorage.get(), SOURCE, IStorage::TYPE_SAVE), 0);
 	const CMapBuffer Data(Player.GetMapData(m_pStorage.get()), &std::free);
 	EXPECT_NE(Data, nullptr);
 	if(Data)
@@ -390,7 +390,7 @@ TEST_F(DemoMapReadIntegration, HealthySliceKeepsEmbeddedMapAndPlayableSnapshots)
 {
 	CreateDemo();
 	ASSERT_TRUE(Slice());
-	ASSERT_EQ(m_Player.Load(m_pStorage.get(), nullptr, TARGET, IStorage::TYPE_SAVE), 0);
+	ASSERT_EQ(m_Player.Load(m_pStorage.get(), TARGET, IStorage::TYPE_SAVE), 0);
 	const CMapBuffer Data = MapData();
 	ASSERT_NE(Data, nullptr);
 	EXPECT_EQ(std::string(reinterpret_cast<const char *>(Data.get()), 8), MAP_BYTES);
@@ -404,7 +404,7 @@ TEST_F(DemoMapReadIntegration, HealthyLegacySliceKeepsEmbeddedMap)
 	MakeLegacyDemo();
 	ASSERT_TRUE(m_pStorage->CreateFolder("downloadedmaps", IStorage::TYPE_SAVE));
 	ASSERT_TRUE(Slice());
-	ASSERT_EQ(m_Player.Load(m_pStorage.get(), nullptr, TARGET, IStorage::TYPE_SAVE), 0);
+	ASSERT_EQ(m_Player.Load(m_pStorage.get(), TARGET, IStorage::TYPE_SAVE), 0);
 	const CMapBuffer Data = MapData();
 	ASSERT_NE(Data, nullptr);
 	EXPECT_EQ(std::string(reinterpret_cast<const char *>(Data.get()), 8), MAP_BYTES);

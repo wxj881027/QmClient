@@ -31,7 +31,25 @@
 
 namespace
 {
+	// 测试环境的 g_Config 是零初始化：动效等级 0 等于关掉滚动动画。需要真实
+	// 动画轨迹的用例用它临时切到生产默认档位，析构时还原（断言失败提前退出也不漏还原）。
+	struct SMotionLevelScope
+	{
+		int m_Previous;
+		explicit SMotionLevelScope(int Level) :
+			m_Previous(g_Config.m_QmUiMotionLevel) { g_Config.m_QmUiMotionLevel = Level; }
+		~SMotionLevelScope() { g_Config.m_QmUiMotionLevel = m_Previous; }
+	};
 
+	// 滚动手感同理：零初始化是 ORIGINAL（每档重置初速），而「换向不打断速度」是
+	// SMOOTH 档的语义，用例必须显式选档，不能靠执行顺序留下来的全局状态。
+	struct SScrollFeelScope
+	{
+		int m_Previous;
+		explicit SScrollFeelScope(int Feel) :
+			m_Previous(g_Config.m_QmUiScrollFeel) { g_Config.m_QmUiScrollFeel = Feel; }
+		~SScrollFeelScope() { g_Config.m_QmUiScrollFeel = m_Previous; }
+	};
 }
 
 TEST(UiV2ScrollPhysics, WheelImpulseDecaysAndClampsToRange)
@@ -98,6 +116,11 @@ TEST(UiV2ScrollPhysics, NativeWheelStepMatchesDdnetScrollUnit)
 TEST(UiV2ScrollPhysics, RepeatedAndReversedWheelEventsPreservePositionAndVelocity)
 {
 	const SQmScrollMetrics Metrics{100.0f, 500.0f};
+	// g_Config 在测试里是零初始化，动效等级 0 等于关掉滚动动画（滚轮一档直接落位、
+	// 速度为 0）。这条测的是「动画途中换向不打断速度」，必须显式用生产默认档位，
+	// 并且手感要选 SMOOTH——只有 SMOOTH 会继承当前速度，ORIGINAL 每档重置初速。
+	const SMotionLevelScope MotionLevel(2);
+	const SScrollFeelScope ScrollFeel(static_cast<int>(EQmScrollFeel::SMOOTH));
 	const SQmScrollConfig Config = QmNativeWheelScrollConfig(1.0f, 0.5f);
 	CQmScrollState State;
 	State.SetOffset(100.0f, Metrics, Config);
@@ -586,6 +609,9 @@ TEST(UiV2ScrollController, HiddenRailKeepsScrollableContentAtFullWidth)
 }
 TEST(UiV2ScrollPhysics, PresetsExposeSharedSmallMediumLargeGeometry)
 {
+	// 预设里的平滑时长走动效等级缩放；零初始化的 0 档会把 0.5 秒压成 0，
+	// 这里显式要生产默认档，断言才是在测「预设值」而不是「当前动效等级」。
+	const SMotionLevelScope MotionLevel(2);
 	const SQmScrollContainerStyle Small = QmScrollContainerStyleForSize(EQmScrollSize::SMALL, 1.0f);
 	EXPECT_NEAR(Small.m_ScrollbarWidth, 10.0f, 0.01f);
 	EXPECT_NEAR(Small.m_ScrollbarMargin, 2.0f, 0.01f);
@@ -1751,6 +1777,11 @@ TEST(QmScoreboardScroll, SharedListPolicyMovesContentContinuouslyBetweenRows)
 	Request.m_Profile = EQmScrollProfile::MENU_LIST;
 	Request.m_RowExtent = 20.0f;
 	Request.m_RowsPerStep = 2;
+
+	// g_Config 在测试里是零初始化，动效等级 0 等于关闭滚动动画，
+	// 会让滚轮一档直接落到目标位置。这里显式用生产默认档位（全额动效）。
+	const int OldMotionLevel = g_Config.m_QmUiMotionLevel;
+	g_Config.m_QmUiMotionLevel = 2;
 	const auto Policy = QmResolveScrollPolicy(Request, 1.0f, 0.25f);
 	const SQmScrollMetrics Metrics{333.0f, ScoreboardRowsHeight(64, 0, 0, 20.0f, 0.0f, 8.0f, 12.0f)};
 	CQmScrollState State;
@@ -1765,6 +1796,7 @@ TEST(QmScoreboardScroll, SharedListPolicyMovesContentContinuouslyBetweenRows)
 		State.Advance(1.0f / 60.0f, Metrics, Policy.m_Config);
 	EXPECT_FLOAT_EQ(State.Offset(), 40.0f);
 	EXPECT_FALSE(State.Animating());
+	g_Config.m_QmUiMotionLevel = OldMotionLevel;
 }
 
 TEST(QmScoreboardScroll, ShrinkingPlayerCountClampsBeforeDrawingAndResetRestoresTop)

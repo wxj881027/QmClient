@@ -149,23 +149,24 @@ void CQmCheckpointGuide::OnRender()
 	const int Height = pCollision->GetHeight();
 	const int StartIndex = pCollision->GetPureMapIndex(Position);
 	const int64_t Now = time_get();
+	CCharacter *pCharacter = GameClient()->m_GameWorld.GetCharacterById(Player.m_ClientId);
+	if(!pCharacter)
+		pCharacter = GameClient()->m_PredictedWorld.GetCharacterById(Player.m_ClientId);
+	if(!pCharacter)
+		return;
+	const auto ReadTile = [&](int Index) {
+		const auto Center = QmCheckpointGuide::TileCenter(Width, Height, Index);
+		if(!Center)
+			return QmMapProgress::MakeTile(TILE_SOLID);
+		const CTeleTile &Tele = pCollision->TeleLayer()[Index];
+		const int Restrictions = pCollision->GetMoveRestrictions(IsGuideSwitchActive, pCharacter, *Center, QmCheckpointGuide::MOVE_RESTRICTION_DISTANCE, Index);
+		return QmMapProgress::MakeTile(pCollision->GameLayer()[Index].m_Index,
+			pCollision->FrontLayer() ? pCollision->FrontLayer()[Index].m_Index : TILE_AIR,
+			Tele.m_Type, Tele.m_Number, Restrictions);
+	};
 	if(Now >= Player.m_NextSearch)
 	{
-		CCharacter *pCharacter = GameClient()->m_GameWorld.GetCharacterById(Player.m_ClientId);
-		if(!pCharacter)
-			pCharacter = GameClient()->m_PredictedWorld.GetCharacterById(Player.m_ClientId);
-		if(!pCharacter)
-			return;
-		const bool Updated = Player.m_Planner.Update(Width, Height, StartIndex, [&](int Index) {
-			const auto Center = QmCheckpointGuide::TileCenter(Width, Height, Index);
-			if(!Center)
-				return QmMapProgress::MakeTile(TILE_SOLID);
-			const CTeleTile &Tele = pCollision->TeleLayer()[Index];
-			const int Restrictions = pCollision->GetMoveRestrictions(IsGuideSwitchActive, pCharacter, *Center, QmCheckpointGuide::MOVE_RESTRICTION_DISTANCE, Index);
-			return QmMapProgress::MakeTile(pCollision->GameLayer()[Index].m_Index,
-				pCollision->FrontLayer() ? pCollision->FrontLayer()[Index].m_Index : TILE_AIR,
-				Tele.m_Type, Tele.m_Number, Restrictions);
-		});
+		const bool Updated = Player.m_Planner.Update(Width, Height, StartIndex, ReadTile);
 		Player.m_NextSearch = Now + time_freq() / 10;
 		if(!Updated)
 			return;
@@ -173,29 +174,19 @@ void CQmCheckpointGuide::OnRender()
 	const auto &Result = Player.m_Planner.Result();
 	if(Result.m_TargetIndex < 0)
 		return;
-	const auto Begin = std::find(Result.m_vRoute.begin(), Result.m_vRoute.end(), StartIndex);
-	// 移出已计算的路线后等待下一轮局部搜索，不把旧路线直接接过墙角。
+	const auto Begin = Player.m_Planner.FindRouteEntry(pCollision->GetWidth(), StartIndex, ReadTile);
 	if(Begin == Result.m_vRoute.end())
 		return;
+	const auto StartCenter = QmCheckpointGuide::TileCenter(Width, Height, StartIndex);
 	const auto TargetCenter = QmCheckpointGuide::TileCenter(Width, Height, Result.m_TargetIndex);
-	std::array<vec2, QmCheckpointGuide::SEARCH_RADIUS + 1> aRoute;
-	const auto RouteCount = std::distance(Begin, Result.m_vRoute.end());
-	if(!TargetCenter || static_cast<size_t>(RouteCount) > aRoute.size())
+	const auto CenterIsValid = [Width, Height](int Index) { return QmCheckpointGuide::TileCenter(Width, Height, Index).has_value(); };
+	if(!StartCenter || !TargetCenter || std::distance(Begin, Result.m_vRoute.end()) > QmCheckpointGuide::SEARCH_RADIUS + 1 ||
+		!std::all_of(Begin, Result.m_vRoute.cend(), CenterIsValid))
 	{
 		Player.m_Planner.ClearRoute();
 		return;
 	}
-	size_t RouteIndex = 0;
-	for(auto It = Begin; It != Result.m_vRoute.end(); ++It)
-	{
-		const auto Center = QmCheckpointGuide::TileCenter(Width, Height, *It);
-		if(!Center)
-		{
-			Player.m_Planner.ClearRoute();
-			return;
-		}
-		aRoute[RouteIndex++] = *Center;
-	}
+	const auto GetPos = [Width, Height](int Index) { return *QmCheckpointGuide::TileCenter(Width, Height, Index); };
 	const vec2 Target = *TargetCenter;
 	const bool Warning = Result.m_Warning;
 	const int Checkpoint = Result.m_Checkpoint;
@@ -203,19 +194,12 @@ void CQmCheckpointGuide::OnRender()
 	Graphics()->TextureClear();
 	Graphics()->QuadsBegin();
 	Graphics()->SetColor(Color.WithAlpha(0.85f));
-	vec2 From = Position;
-	for(size_t Index = 0; Index < RouteIndex; ++Index)
-	{
-		const vec2 To = aRoute[Index];
+	Result.VisitSegments(Begin, *StartCenter, Position, CCharacterCore::PhysicalSize(), GetPos, [&](vec2 From, vec2 To) {
 		const vec2 Delta = To - From;
-		if(length_squared(Delta) > 0.01f)
-		{
-			const vec2 Normal = vec2(-Delta.y, Delta.x) / length(Delta) * (Warning ? 2.5f : 1.5f);
-			IGraphics::CFreeformItem Segment(From + Normal, To + Normal, From - Normal, To - Normal);
-			Graphics()->QuadsDrawFreeform(&Segment, 1);
-		}
-		From = To;
-	}
+		const vec2 Normal = vec2(-Delta.y, Delta.x) / length(Delta) * (Warning ? 2.5f : 1.5f);
+		IGraphics::CFreeformItem Segment(From + Normal, To + Normal, From - Normal, To - Normal);
+		Graphics()->QuadsDrawFreeform(&Segment, 1);
+	});
 	const float Pulse = Warning ? 2.0f * std::sin((float)(Now % time_freq()) / time_freq() * 2.0f * pi) : 0.0f;
 	const float Half = 18.0f + Pulse;
 	IGraphics::CQuadItem aBorder[] = {

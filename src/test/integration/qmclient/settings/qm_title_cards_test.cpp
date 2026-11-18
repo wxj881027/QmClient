@@ -26,17 +26,20 @@ TEST(QmTitleCards, SponsorStaysInCreditsAndDisplayMovesToNameplateSettings)
 		ASSERT_NE(pDefault, nullptr);
 		const bool Display = std::string(pId) == DISPLAY_CARD;
 		EXPECT_STREQ(pDefault->m_pDefaultTab, Display ? "appearance-name-plate" : "credits-qmclient");
-		EXPECT_EQ(pDefault->m_DefaultOrder, Display ? 2 : 0);
+		// 默认列/序由瀑布分配：两张都是半宽卡，列号由注册表顺序算出，不在表里手写。
+		const qm_card_order::SEntry *pPlacement = qm_card_registry::FindDefaultPlacement(pId);
+		ASSERT_NE(pPlacement, nullptr);
+		EXPECT_STREQ(pPlacement->m_pDefaultTab, pDefault->m_pDefaultTab);
+		EXPECT_GT(pPlacement->m_Column, 0);
 	}
-	EXPECT_EQ(qm_card_registry::FindByStableId(SPONSOR_CARD)->m_DefaultColumn, qm_card_registry::ECardColumn::Left);
-	EXPECT_EQ(qm_card_registry::FindByStableId(DISPLAY_CARD)->m_DefaultColumn, qm_card_registry::ECardColumn::Left);
 }
 
 TEST(QmTitleCards, MissingSettingNamesFindTheInteractiveDisplayCard)
 {
 	qm_card_order::CModel Model;
 	Model.SetEntries(qm_card_registry::BuildDefaultEntries());
-	for(const char *pQuery : {"头衔显示", "qm_nameplate_title_scale", "头衔大小", "qm_show_nameplate_title", "qm_show_main_title", "qm_show_dummy_title", "qm_title_badge_style", "qm_title_badge_color", "qm_title_opacity", "Moon", "Sun", "月亮", "太阳", "星轨"})
+	for(const char *pQuery : {"头衔显示", "qm_nameplate_title_scale", "头衔大小", "qm_show_nameplate_title", "qm_show_main_title", "qm_show_dummy_title", "qm_title_badge_style", "qm_title_badge_color", "qm_title_opacity", "Moon", "Sun", "月亮", "太阳", "星轨",
+		    "qm_title_text_style", "qm_title_text_wave", "文字1", "Text 3", "文字5", "逐字波动"})
 	{
 		SCOPED_TRACE(pQuery);
 		const auto vResults = qm_card_registry::SearchCards(pQuery, Model);
@@ -73,8 +76,14 @@ TEST(QmTitleCards, OldDefaultLayoutMovesDisplayToNameplatesAndSurvivesReload)
 		const auto &Entry = Reloaded.Entry(Index);
 		const bool Display = std::string(pId) == DISPLAY_CARD;
 		EXPECT_STREQ(Entry.m_pDefaultTab, Display ? "appearance-name-plate" : "credits-qmclient");
-		EXPECT_EQ(Entry.m_OrderInColumn, Display ? 2 : 0);
-		EXPECT_EQ(Entry.m_Column, 1);
+		if(Display)
+		{
+			// 显示卡被搬到名牌页的默认 placement（瀑布分配），而不是写死的左列第三位。
+			const qm_card_order::SEntry *pPlacement = qm_card_registry::FindDefaultPlacement(pId);
+			ASSERT_NE(pPlacement, nullptr);
+			EXPECT_EQ(Entry.m_Column, pPlacement->m_Column);
+			EXPECT_EQ(Entry.m_OrderInColumn, pPlacement->m_OrderInColumn);
+		}
 	}
 }
 
@@ -89,8 +98,11 @@ TEST(QmTitleCards, BothLegacyDisplayPositionsMigrateWithoutRequiringALayoutVersi
 		ASSERT_TRUE(qm_card_registry::RepairLegacyNameplateTitleLayout(Model));
 		const auto &Entry = Model.Entry(Model.FindByStableId(DISPLAY_CARD));
 		EXPECT_STREQ(Entry.m_pDefaultTab, "appearance-name-plate");
-		EXPECT_EQ(Entry.m_Column, 1);
-		EXPECT_EQ(Entry.m_OrderInColumn, 2);
+		// 迁移目标是当前默认 placement（瀑布分配结果）。
+		const qm_card_order::SEntry *pPlacement = qm_card_registry::FindDefaultPlacement(DISPLAY_CARD);
+		ASSERT_NE(pPlacement, nullptr);
+		EXPECT_EQ(Entry.m_Column, pPlacement->m_Column);
+		EXPECT_EQ(Entry.m_OrderInColumn, pPlacement->m_OrderInColumn);
 		EXPECT_FALSE(qm_card_registry::RepairLegacyNameplateTitleLayout(Model));
 	}
 }

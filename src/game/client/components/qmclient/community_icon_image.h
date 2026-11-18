@@ -4,6 +4,7 @@
 #include "community_icon_limits.h"
 
 #include <base/hash.h>
+#include <base/io.h>
 
 #include <engine/gfx/image_loader.h>
 #include <engine/gfx/image_manipulation.h>

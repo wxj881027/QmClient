@@ -43,7 +43,9 @@ TEST(QmMonitoringMiscContract, DemoBrowserFetchInfoUsesBoundedProgress)
 	ASSERT_FALSE(FetchAllBody.empty());
 	ASSERT_FALSE(EnsureDatesBody.empty());
 
-	EXPECT_NE(ButtonsBody.find("g_Config.m_BrDemoFetchInfo"), std::string::npos);
+	// 「回放信息」开关已从底栏移除：批量预读改为常开（配置默认 1，旧配置由
+	// qm_default_profile 迁移到 1），底栏不再有说不清作用的控件。
+	EXPECT_EQ(ButtonsBody.find("Localize(\"Fetch Info\")"), std::string::npos);
 	EXPECT_EQ(ButtonsBody.find("FetchAllHeaders();"), std::string::npos);
 	EXPECT_EQ(SortListBody.find("EnsureAllDemoDates();"), std::string::npos);
 	EXPECT_EQ(FetchAllBody.find("for(auto &Item : m_vDemos)"), std::string::npos);

@@ -1,5 +1,5 @@
 // 圆饼设置预览走真实 CUi、文字布局和容器，使用设备边界与原生分配故障注入。
-#include <game/client/QmUi/QmPieMenuSettingsControls.h>
+#include <game/client/QmUi/QmPieOptionPool.h>
 
 #include <test/support/prediction_allocation_failure.h>
 #include <test/support/qm_real_ui_fixture.h>
@@ -73,6 +73,13 @@ namespace
 		bool DrawTitle()
 		{
 			return QmDrawPieSettingsPreviewTitle(*m_Ui.TextRender(), {120.0f, 80.0f}, 18.0f, 32.0f, "Invite to team");
+		}
+		bool DrawChip()
+		{
+			IUiContext Ctx;
+			Ctx.m_pUi = &m_Ui;
+			return QmDrawPieOptionChip(Ctx, {20.0f, 40.0f, 180.0f, 28.0f}, "Invite to team", FontIcons::FONT_ICON_CHEVRON_RIGHT,
+				{0.4f, 0.5f, 0.6f, 0.7f}, 18.0f, true, false);
 		}
 		bool Draw(bool Title) { return Title ? DrawTitle() : DrawIcon(); }
 
@@ -239,4 +246,49 @@ TEST_F(QmPieMenuSettingsText, NativeIconAllocationsRestoreStateAndAllowTheNextFr
 TEST_F(QmPieMenuSettingsText, NativeTitleAllocationsKeepTheCorrectEndStateAndAllowTheNextFrame)
 {
 	CheckNativeFailures(true);
+}
+
+TEST_F(QmPieMenuSettingsText, OptionChipRestoresTheCallerTextState)
+{
+	PrepareCallerState();
+	ASSERT_TRUE(DrawChip());
+	EXPECT_EQ(m_PreviewGraphics.m_TextDrawCalls, 2);
+	EXPECT_EQ(m_PreviewGraphics.m_vTextSubmissions.size(), 2u);
+	EXPECT_EQ(m_PreviewGraphics.m_vRoundedSubmissions.size(), 2u);
+	ExpectCallerState();
+}
+
+TEST_F(QmPieMenuSettingsText, OptionChipResourceFailuresRestoreStateAndAllowTheNextFrame)
+{
+	for(const auto Failure : {CPiePreviewGraphics::EFailure::ALLOCATION, CPiePreviewGraphics::EFailure::LENGTH})
+	{
+		SCOPED_TRACE(static_cast<int>(Failure));
+		PrepareCallerState();
+		m_PreviewGraphics.m_vTextSubmissions.clear();
+		const int Calls = m_PreviewGraphics.m_TextDrawCalls;
+		m_PreviewGraphics.m_NextFailure = Failure;
+		EXPECT_FALSE(DrawChip());
+		EXPECT_EQ(m_PreviewGraphics.m_NextFailure, CPiePreviewGraphics::EFailure::NONE);
+		EXPECT_EQ(m_PreviewGraphics.m_TextDrawCalls, Calls + 1);
+		EXPECT_TRUE(m_PreviewGraphics.m_vTextSubmissions.empty());
+		ExpectCallerState();
+		m_Ui.TextRender()->QmTextFrameEnd();
+		ASSERT_TRUE(DrawChip());
+		EXPECT_EQ(m_PreviewGraphics.m_TextDrawCalls, Calls + 3);
+		EXPECT_EQ(m_PreviewGraphics.m_vTextSubmissions.size(), 2u);
+		ExpectCallerState();
+	}
+}
+
+TEST_F(QmPieMenuSettingsText, UnrelatedOptionChipFailureRestoresStateAndPropagates)
+{
+	PrepareCallerState();
+	m_PreviewGraphics.m_NextFailure = CPiePreviewGraphics::EFailure::OTHER;
+	EXPECT_THROW(DrawChip(), std::logic_error);
+	EXPECT_EQ(m_PreviewGraphics.m_NextFailure, CPiePreviewGraphics::EFailure::NONE);
+	EXPECT_TRUE(m_PreviewGraphics.m_vTextSubmissions.empty());
+	ExpectCallerState();
+	m_Ui.TextRender()->QmTextFrameEnd();
+	EXPECT_TRUE(DrawChip());
+	ExpectCallerState();
 }

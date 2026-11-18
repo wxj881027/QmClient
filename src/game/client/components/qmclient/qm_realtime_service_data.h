@@ -31,6 +31,7 @@ struct SQmRealtimeServiceDataView
 	bool m_ChatStyleSupported = false;
 	SQmTitleAppearance m_Appearance;
 	bool m_AppearanceSupported = false;
+	bool m_TextStyleSupported = false;
 	bool m_TitleAddressLimitReached = false;
 };
 
@@ -70,7 +71,7 @@ inline SQmRealtimeServiceDataView ReadQmRealtimeServiceData(const SQmRealtimeMes
 		const json_value *pChatStyle = qm_json::Field(pPayload, "chat_style");
 		Data.m_ChatStyleSupported = qm_json::Text(pChatStyle);
 		Data.m_ChatStyle = QmSponsorChatStyleFromId(Data.m_ChatStyleSupported ? pChatStyle->u.string.ptr : "");
-		Data.m_AppearanceSupported = ParseQmTitleAppearance(qm_json::Field(pPayload, "appearance"), Data.m_Appearance);
+		Data.m_AppearanceSupported = ParseQmTitleAppearance(qm_json::Field(pPayload, "appearance"), Data.m_Appearance, &Data.m_TextStyleSupported);
 	}
 	if(Message.m_Event == EQmRealtimeEvent::TITLE_STATUS)
 	{

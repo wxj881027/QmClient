@@ -43,6 +43,7 @@
 #include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/console.h>
+#include <game/client/components/qmclient/browser_status_layout.h>
 #include <game/client/components/qmclient/media_paths.h>
 #include <game/client/gameclient.h>
 #include <game/client/qm_icon.h>
@@ -56,6 +57,7 @@
 #include <chrono>
 #include <cstring>
 #include <limits>
+#include <memory>
 #include <optional>
 #include <vector>
 
@@ -85,7 +87,7 @@ namespace
 		static CUi::SMessagePopupContext s_Context;
 		if(pUi->IsPopupOpen(&s_Context))
 			return;
-		str_copy(s_Context.m_aMessage, pMessage, sizeof(s_Context.m_aMessage));
+		str_copy(s_Context.m_aMessage, pMessage);
 		s_Context.ErrorColor();
 		pUi->ShowPopupMessage(0.0f, 0.0f, &s_Context);
 	}
@@ -99,7 +101,7 @@ namespace
 		gs_DemoConfirm.Reset();
 		gs_DemoConfirm.DefaultButtons();
 		gs_DemoConfirm.m_Tone = CUi::SConfirmPopupContext::ETone::DANGER;
-		str_copy(gs_DemoConfirm.m_aMessage, pMessage, sizeof(gs_DemoConfirm.m_aMessage));
+		str_copy(gs_DemoConfirm.m_aMessage, pMessage);
 		pUi->ShowPopupConfirm(pUi->MouseX(), pUi->MouseY(), &gs_DemoConfirm);
 		gs_DemoConfirmAction = Action;
 	}
@@ -137,12 +139,13 @@ namespace
 	{
 		if(pStorage == nullptr || pPath == nullptr || pPath[0] == '\0')
 			return false;
-		rust::Box<CSnapshotDelta> pDelta = CSnapshotDelta::New();
-		rust::Box<CSnapshotDelta> pDeltaSixup = CSnapshotDelta::New();
-		CDemoPlayer DemoPlayer(&*pDelta, &*pDeltaSixup, false);
-		const int Result = DemoPlayer.Load(pStorage, nullptr, pPath, IStorage::TYPE_SAVE_OR_ABSOLUTE);
+		// CSnapshotDelta 每个约 512 KiB，两个值对象放栈上会超过 Windows 默认 1 MiB 栈。
+		auto pDelta = std::make_unique<CSnapshotDelta>();
+		auto pDeltaSixup = std::make_unique<CSnapshotDelta>();
+		auto pDemoPlayer = std::make_unique<CDemoPlayer>(pDelta.get(), pDeltaSixup.get(), false);
+		const int Result = pDemoPlayer->Load(pStorage, pPath, IStorage::TYPE_SAVE_OR_ABSOLUTE);
 		// CDemoPlayer 析构要求文件已关闭，否则 dbg_assert 在 Release 下也会 abort
-		DemoPlayer.Stop();
+		pDemoPlayer->Stop();
 		return Result == 0;
 	}
 
@@ -1027,6 +1030,69 @@ void CMenus::RenderDemoEncodeSettings(CUIRect View)
 		g_Config.m_ClVideoRecorderFPS = NewFps;
 	GameClient()->m_Tooltips.DoToolTip(&g_Config.m_ClVideoRecorderFPS, &Row, Localize("Recorded frame rate; higher is smoother and larger"));
 	Ui()->DoLabel(&RangeHint, "1-1000", FontSize, TEXTALIGN_MR, {.m_MaxWidth = RangeHint.w - 2.0f});
+
+	// 导出管线参数：缓冲线程、采集队列、分段，以及 ProRes 档位。
+	// 这些只在启动导出时读取，因此即时写回配置即可，不需要额外的「应用」按钮。
+	const auto DoPipelineIntRow = [&](const char *pLabel, CLineInputNumber &Input, int *pValue, int Min, int Max, const char *pHint, const char *pTip) {
+		CUIRect PipelineControl, PipelineField, PipelineValue, PipelineHint;
+		TwoColumn(qm_demo_ui::RENDER_ROW_HEIGHT, pLabel, &PipelineControl);
+		PipelineControl.VSplitRight(TierWidth, &PipelineField, &PipelineHint);
+		PipelineHint.VSplitLeft(4.0f, nullptr, &PipelineHint);
+		PipelineField.VSplitRight(ValueWidth, &PipelineField, &PipelineValue);
+		PipelineValue.VSplitLeft(4.0f, nullptr, &PipelineValue);
+		ui_widget::STextFieldOptions PipelineOptions;
+		PipelineOptions.m_FontSize = FontSize;
+		PipelineOptions.m_TextAlign = TEXTALIGN_MC;
+		ui_widget::IntegerField(EncodeInputCtx, &Input, pValue, Min, Max, PipelineValue, PipelineOptions);
+		GameClient()->m_Tooltips.DoToolTip(pValue, &Row, pTip);
+		Ui()->DoLabel(&PipelineHint, pHint, FontSize, TEXTALIGN_MR, {.m_MaxWidth = PipelineHint.w - 2.0f});
+	};
+	static CLineInputNumber s_ConvertThreadsInput;
+	DoPipelineIntRow(Localize("Convert threads"), s_ConvertThreadsInput, &g_Config.m_QmVideoConvertThreads, 1, 8, "1-8",
+		Localize("Worker threads that convert captured frames to the encoder pixel format. 2-4 is enough for most CPUs; more threads only help when the encoder is fast."));
+	static CLineInputNumber s_QueueFramesInput;
+	DoPipelineIntRow(Localize("Capture queue"), s_QueueFramesInput, &g_Config.m_QmVideoQueueFrames, 2, 32, "2-32",
+		Localize("Frames buffered between capture and encoding. Deeper queues absorb slow encoder frames at the cost of memory; lower values apply back-pressure earlier."));
+	static CLineInputNumber s_SegmentSecondsInput;
+	DoPipelineIntRow(Localize("Segment length (s)"), s_SegmentSecondsInput, &g_Config.m_QmVideoSegmentSeconds, 0, 3600, "0-3600",
+		Localize("Split the exported video into segments of this length. 0 writes a single file. Segments disable B-frames so they can be joined without timestamp errors."));
+	static CLineInputNumber s_SegmentWarmupInput;
+	DoPipelineIntRow(Localize("Segment warmup (ticks)"), s_SegmentWarmupInput, &g_Config.m_QmVideoSegmentWarmup, 0, 500, "0-500",
+		Localize("Ticks played without recording before each segment so effects and chat state match the segment start. 50 ticks equal one second."));
+
+	// ProRes 档位：-1 = 自动（4:4:4 输入用 4444，其余用 HQ）。
+	static const int s_aProresValues[] = {-1, 0, 1, 2, 3, 4, 5};
+	static const char *const s_apProresLabels[] = {
+		Localize("Auto"),
+		"Proxy",
+		"LT",
+		"422",
+		"HQ",
+		"4444",
+		"4444XQ",
+	};
+	int ProresIndex = 0;
+	for(int i = 0; i < (int)std::size(s_aProresValues); ++i)
+	{
+		if(s_aProresValues[i] == g_Config.m_QmVideoProresProfile)
+		{
+			ProresIndex = i;
+			break;
+		}
+	}
+	CUIRect ProresControl, ProresHint;
+	TwoColumn(qm_demo_ui::RENDER_ROW_HEIGHT, Localize("ProRes profile"), &ProresControl);
+	ProresControl.VSplitRight(TierWidth, &ProresControl, &ProresHint);
+	ProresHint.VSplitLeft(4.0f, nullptr, &ProresHint);
+	static CUi::SDropDownState s_ProresDropDownState;
+	CUi::SDropDownProperties ProresDropDownProps;
+	ProresDropDownProps.m_FontSize = FontSize;
+	const int NewProres = Ui()->DoDropDown(&ProresControl, ProresIndex, s_apProresLabels, (int)std::size(s_apProresLabels), s_ProresDropDownState, ProresDropDownProps);
+	if(NewProres != ProresIndex)
+		g_Config.m_QmVideoProresProfile = s_aProresValues[NewProres];
+	GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmVideoProresProfile, &Row,
+		Localize("ProRes profile used when the encoder is ProRes. Auto picks 4444 for 4:4:4 input and HQ otherwise; other encoders ignore this."));
+	Ui()->DoLabel(&ProresHint, g_Config.m_QmVideoProresProfile < 0 ? Localize("Auto") : s_apProresLabels[ProresIndex], FontSize, TEXTALIGN_MR, {.m_MaxWidth = ProresHint.w - 2.0f});
 	View.HSplitTop(qm_demo_ui::RENDER_ROW_GAP, nullptr, &View);
 }
 
@@ -2489,7 +2555,7 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 		if(s_RenderCut && !GameClient()->m_RankGhost.IsViewModeActive())
 		{
 			m_HasPendingDemoRenderSource = true;
-			str_copy(m_aPendingDemoRenderFolder, m_aCurrentDemoFolder, sizeof(m_aPendingDemoRenderFolder));
+			str_copy(m_aPendingDemoRenderFolder, m_aCurrentDemoFolder);
 			str_format(m_aPendingDemoRenderSelectionName, sizeof(m_aPendingDemoRenderSelectionName), "%s.demo", m_DemoSliceInput.GetString());
 			m_PendingDemoRenderStorageType = qmclient::media_paths::StorageType(aPath);
 			m_Popup = POPUP_RENDER_DEMO;
@@ -2603,10 +2669,10 @@ void CMenus::EnsureAllDemoDates()
 	m_DemoDateFetchComplete = false;
 	SSettingsAdaptiveBudgetInput Input;
 	Input.m_FrameId = Client()->PerfFrame();
-	str_copy(Input.m_aOperation, SettingsPerfActiveOperation(), sizeof(Input.m_aOperation));
-	str_copy(Input.m_aPage, "demo_browser", sizeof(Input.m_aPage));
-	str_copy(Input.m_aTab, "metadata", sizeof(Input.m_aTab));
-	str_copy(Input.m_aContext, SettingsPerfContextName(), sizeof(Input.m_aContext));
+	str_copy(Input.m_aOperation, SettingsPerfActiveOperation());
+	str_copy(Input.m_aPage, "demo_browser");
+	str_copy(Input.m_aTab, "metadata");
+	str_copy(Input.m_aContext, SettingsPerfContextName());
 	Input.m_FrameMsAverage = (float)GameClient()->m_QmMonitoring.Snapshot().m_Performance.m_FrameTimeMs;
 	Input.m_FrameMsP95 = Input.m_FrameMsAverage;
 	Input.m_TargetFrameMs = 8.333f;
@@ -2816,7 +2882,7 @@ void CMenus::DemolistPopulate()
 				CDemoItem Item;
 				str_copy(Item.m_aFilename, pBaseFolder);
 				Storage()->GetCompletePath(StorageType, pBaseFolder, Item.m_aName, sizeof(Item.m_aName));
-				str_append(Item.m_aName, "/", sizeof(Item.m_aName));
+				str_append(Item.m_aName, "/");
 				Item.m_InfosLoaded = false;
 				Item.m_Valid = false;
 				Item.m_Date = 0;
@@ -3055,10 +3121,21 @@ void CMenus::SyncDemoSelection()
 
 	if(m_vDemoSelection.empty())
 	{
-		if(!IsValidIndex(m_DemolistSelectedIndex))
-			m_DemolistSelectedIndex = 0;
-		if(IsValidIndex(m_DemolistSelectedIndex))
-			m_vDemoSelection.push_back(DemoSelectionEntryFromItem(*m_vpFilteredDemos[m_DemolistSelectedIndex]));
+		// 截图画廊进入时不预选任何条目：以前这里把第 0 项（通常是 auto 文件夹）
+		// 顺手选上，界面一打开就带着一块选中底衬，用户没点过任何东西。
+		// 回放列表保持原有的「首项预选」，右侧详情一开始就有内容。
+		if(DemoBrowserBrowsingScreenshots())
+		{
+			m_DemolistSelectedIndex = -1;
+			m_DemoSelectionAnchorIndex = -1;
+		}
+		else
+		{
+			if(!IsValidIndex(m_DemolistSelectedIndex))
+				m_DemolistSelectedIndex = 0;
+			if(IsValidIndex(m_DemolistSelectedIndex))
+				m_vDemoSelection.push_back(DemoSelectionEntryFromItem(*m_vpFilteredDemos[m_DemolistSelectedIndex]));
+		}
 	}
 	else if(!IsValidIndex(m_DemolistSelectedIndex) || !IsDemoItemSelected(*m_vpFilteredDemos[m_DemolistSelectedIndex]))
 	{
@@ -3280,7 +3357,7 @@ bool CMenus::FetchHeader(CDemoItem &Item)
 		char aBuffer[IO_MAX_PATH_LENGTH];
 		str_format(aBuffer, sizeof(aBuffer), "%s/%s", m_aCurrentDemoFolder, Item.m_aFilename);
 		IOHANDLE File;
-		Item.m_Valid = DemoPlayer()->GetDemoInfo(Storage(), nullptr, aBuffer, Item.m_StorageType, &Item.m_Info, &Item.m_TimelineMarkers, &Item.m_MapInfo, &File);
+		Item.m_Valid = DemoPlayer()->GetDemoInfo(Storage(), aBuffer, Item.m_StorageType, &Item.m_Info, &Item.m_TimelineMarkers, &Item.m_MapInfo, &File);
 		Item.m_InfosLoaded = true;
 
 		if(Item.m_Valid && File)
@@ -3410,9 +3487,9 @@ void CMenus::UpdateRankDemoDownload()
 
 		char aSafeMap[128];
 		char aSafeDemo[256];
-		str_copy(aSafeMap, m_RankDemoMap.c_str(), sizeof(aSafeMap));
+		str_copy(aSafeMap, m_RankDemoMap.c_str());
 		str_sanitize_filename(aSafeMap);
-		str_copy(aSafeDemo, DemoName.c_str(), sizeof(aSafeDemo));
+		str_copy(aSafeDemo, DemoName.c_str());
 		if(str_endswith_nocase(aSafeDemo, ".gz") != nullptr)
 			aSafeDemo[str_length(aSafeDemo) - 3] = '\0';
 		if(str_endswith_nocase(aSafeDemo, ".demo") != nullptr)
@@ -3485,18 +3562,27 @@ void CMenus::RenderDemoBrowser(CUIRect MainView)
 	UpdateRankDemoDownload();
 	GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_DEMOS);
 
+	// 面板间距与内边距统一取全局面板档（与服务器列表一致）：三个面板之间的缝、
+	// 内容到面板边缘的距离不再各自写 10。
+	// 最外层留白（含底部操作条到窗口底）以 panel::MARGIN 为准，但**要扣掉菜单壳层
+	// 已经内缩的全局安全区**：menus.cpp 会先 Screen.Margin(MARGIN)，页面再切一次就成了 16。
+	// 安全区不生效的回放/幽灵视角则由这里补足，最终「面板底 → 窗口底」恒为 8。
 	CUIRect ListView, DetailsView, ButtonsView;
-	MainView.HSplitBottom(10.0f, &MainView, nullptr);
+	const float BottomInset = QmResolveBrowserBottomInset(*Ui()->Screen(), MainView);
+	MainView.HSplitBottom(BottomInset, &MainView, nullptr);
 	MainView.HSplitBottom(44.0f, &ListView, &ButtonsView);
-	ListView.HSplitBottom(10.0f, &ListView, nullptr);
+	ListView.HSplitBottom(ui_token::panel::GAP, &ListView, nullptr);
 	ListView.VSplitRight(205.0f, &ListView, &DetailsView);
-	ListView.VSplitRight(10.0f, &ListView, nullptr);
+	ListView.VSplitRight(ui_token::panel::GAP, &ListView, nullptr);
+	AddMenuHitRegion(ListView);
+	AddMenuHitRegion(DetailsView);
+	AddMenuHitRegion(ButtonsView);
 	ListView.Draw(MenuPanelColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
 	DetailsView.Draw(MenuPanelColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
 	ButtonsView.Draw(MenuPanelElevatedColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
-	ListView.Margin(10.0f, &ListView);
-	DetailsView.Margin(10.0f, &DetailsView);
-	ButtonsView.Margin(10.0f, &ButtonsView);
+	ListView.Margin(ui_token::panel::PADDING, &ListView);
+	DetailsView.Margin(ui_token::panel::PADDING, &DetailsView);
+	ButtonsView.Margin(ui_token::panel::PADDING, &ButtonsView);
 
 	bool WasListboxItemActivated;
 	RenderDemoBrowserList(ListView, WasListboxItemActivated);
@@ -3558,9 +3644,16 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 	};
 
 	static CListBox s_ListBox;
+	// 胶囊行先开：行距、行内左右内退、胶囊圆角和覆盖式滚动条一次给齐。表头列宽要按行
+	// 让位收，而 RowReserveWidth() 由 token 直接算（厚度 + 外边距 + 行缝 = 16），不依赖
+	// 上一帧解析出的滚动条宽度，表头与行胶囊右缘因此是同一条公式。
+	s_ListBox.SetCapsuleRows(12.0f);
+	// 容器内边距（显式能力）：demo 列表与其它胶囊列表同一条留白，首/末行不再贴容器圆角。
+	s_ListBox.SetContainerPadding(ui_token::list::ContainerPadding(ui_token::list::ROW_HEIGHT));
+	// 表头最后一列给滚动条让位：与行右侧让出的宽度同源。
+	const float ColumnScrollbarReserve = s_ListBox.RowReserveWidth();
 	const float HeaderHeight = ms_ListheaderHeight + 8.0f;
 	const float HeaderOuterPadding = 2.0f;
-	const float HeaderInnerPadding = 2.0f;
 	const float HeaderGap = 4.0f;
 	const float RowHeight = ms_ListheaderHeight + 1.0f;
 	CColumn aCols[] = {
@@ -3574,7 +3667,7 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 		{COL_LENGTH, SORT_LENGTH, Localizable("Length"), 1, false, 84.0f, {0}, nullptr},
 		{-1, -1, "", 1, false, HeaderGap, {0}, nullptr},
 		{COL_DATE, SORT_DATE, Localizable("Date"), 1, false, 156.0f, {0}, nullptr},
-		{-1, -1, "", 1, false, s_ListBox.ScrollbarWidthMax() + HeaderGap, {0}, nullptr},
+		{-1, -1, "", 1, false, ColumnScrollbarReserve + HeaderGap, {0}, nullptr},
 	};
 	aCols[3].m_pCaption = DemoBrowserListColumnLabel(BrowsingScreenshots);
 	aCols[4].m_Width = BrowsingScreenshots ? 0.0f : HeaderGap;
@@ -3588,7 +3681,11 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 	ListView.HSplitTop(HeaderHeight, &HeaderArea, &ListBox);
 	HeaderArea.Draw(MenuPanelElevatedColor(), IGraphics::CORNER_T, ui_token::radius::BASE);
 	HeaderArea.Margin(HeaderOuterPadding, &Headers);
-	Headers.VMargin(HeaderInnerPadding, &Headers);
+	// 表头内容区与行内容区同一坐标系：胶囊行按 RowInsetX(12) 左右内退，表头补到同一档。
+	// 外圈 HeaderOuterPadding 已经算在里面，再叠一档会让列标题比行内列右移 4px、右缘短 4px。
+	Headers.VMargin(ui_token::list::RowInsetX(12.0f) - HeaderOuterPadding, &Headers);
+	// 列布局会吃掉 Headers，先留一份内容区原点，行内列按它重定基准。
+	const CUIRect HeaderContent = Headers;
 	ListBox.Draw(MenuPanelColor(0.72f), IGraphics::CORNER_B, ui_token::radius::BASE);
 
 	for(auto &Col : aCols)
@@ -3668,7 +3765,14 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 		m_DemolistSelectedReveal = false;
 	}
 
-	s_ListBox.DoAutoSpacing(1.0f);
+	// 行距只留半档：胶囊行之间留一条读得出的缝。这个列表没有 SkipItems，行距走
+	// DoAutoSpacing 就行，不需要把行距并进行高再补回来。
+	s_ListBox.DoAutoSpacing(ui_token::list::ROW_SPACING);
+	// 视口按可用高度收敛到整数行：滚动边界落在行与行的缝隙里，首/末行不会被裁成半个
+	// 胶囊。最小与最大行数都取这个值——列表要填满外层给的 ListBox，而且末尾还跟着
+	// 缓存为空时的提示行，按条目数收高度会把提示行裁掉。
+	const int ListVisibleRows = maximum(1, (int)((maximum(0.0f, ListBox.h) + ui_token::list::ROW_SPACING) / (RowHeight + ui_token::list::ROW_SPACING)));
+	s_ListBox.SetVisibleRowRange(ListVisibleRows, ListVisibleRows);
 	s_ListBox.DoStart(RowHeight, m_vpFilteredDemos.size(), 1, 3, m_DemolistSelectedIndex, &ListBox, false, IGraphics::CORNER_ALL);
 
 	char aBuf[64];
@@ -3694,12 +3798,14 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 				FirstVisibleIndex = ItemIndex;
 			EndVisibleIndex = ItemIndex + 1;
 			if(Selected && !Focused)
-				ListItem.m_Rect.Draw(ui_token::color::ACCENT_PRIMARY_DIM.WithMultipliedAlpha(1.35f), IGraphics::CORNER_ALL, ui_token::radius::BASE);
+				ListItem.m_Rect.Draw(ui_token::color::ACCENT_PRIMARY_DIM.WithMultipliedAlpha(1.35f), IGraphics::CORNER_ALL, ui_token::list::RowRadius(RowHeight));
 
 			for(const auto &Col : aCols)
 			{
 				CUIRect Button;
-				Button.x = Col.m_Rect.x;
+				// 列位置相对表头内容区定义，再落到行的内容区上：行内列不会探出胶囊的
+				// 左右内退（表头内容区与行内容区同一条内退，两者逐像素对齐）。
+				Button.x = ListItem.m_ContentRect.x + (Col.m_Rect.x - HeaderContent.x);
 				Button.y = ListItem.m_Rect.y;
 				Button.h = ListItem.m_Rect.h;
 				Button.w = Col.m_Rect.w;
@@ -3753,6 +3859,7 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 					Props.m_MaxWidth = Button.w;
 					Props.m_EllipsisAtEnd = true;
 					Props.m_EnableWidthCheck = false;
+					Props.m_pTooltipId = pItem;
 					Ui()->DoLabel(&Button, pItem->m_aName, 12.0f, TEXTALIGN_ML, Props);
 				}
 				else if(Col.m_Id == COL_MARKERS && pItem->IsDemoFile() && pItem->m_Valid)
@@ -3797,7 +3904,7 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 			if(HintItem.m_Visible)
 			{
 				TextRender()->TextColor(0.55f, 0.55f, 0.55f, 1.0f);
-				Ui()->DoLabel(&HintItem.m_Rect, Localize("No Rank 1 replays cached yet. Search and download from the Rank 1 page."), 12.0f, TEXTALIGN_ML);
+				Ui()->DoLabel(&HintItem.m_ContentRect, Localize("No Rank 1 replays cached yet. Search and download from the Rank 1 page."), 12.0f, TEXTALIGN_ML);
 				TextRender()->TextColor(TextRender()->DefaultTextColor());
 			}
 		}
@@ -3842,10 +3949,10 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 			abs((EndVisibleIndex - 1) - (s_DemoLastEndVisibleIndex - 1)) >= DemoJumpThreshold);
 	SSettingsAdaptiveBudgetInput AdaptiveBudgetInput;
 	AdaptiveBudgetInput.m_FrameId = Client()->PerfFrame();
-	str_copy(AdaptiveBudgetInput.m_aOperation, SettingsPerfActiveOperation(), sizeof(AdaptiveBudgetInput.m_aOperation));
-	str_copy(AdaptiveBudgetInput.m_aPage, "demo_browser", sizeof(AdaptiveBudgetInput.m_aPage));
-	str_copy(AdaptiveBudgetInput.m_aTab, "list", sizeof(AdaptiveBudgetInput.m_aTab));
-	str_copy(AdaptiveBudgetInput.m_aContext, SettingsPerfContextName(), sizeof(AdaptiveBudgetInput.m_aContext));
+	str_copy(AdaptiveBudgetInput.m_aOperation, SettingsPerfActiveOperation());
+	str_copy(AdaptiveBudgetInput.m_aPage, "demo_browser");
+	str_copy(AdaptiveBudgetInput.m_aTab, "list");
+	str_copy(AdaptiveBudgetInput.m_aContext, SettingsPerfContextName());
 	AdaptiveBudgetInput.m_FrameMsAverage = (float)GameClient()->m_QmMonitoring.Snapshot().m_Performance.m_FrameTimeMs;
 	AdaptiveBudgetInput.m_FrameMsP95 = AdaptiveBudgetInput.m_FrameMsAverage;
 	AdaptiveBudgetInput.m_TargetFrameMs = 8.333f;
@@ -4273,21 +4380,11 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 		GameClient()->m_Tooltips.DoToolTip(&s_RefreshButton, &RefreshButton, Localize("Refresh the demo list"));
 	}
 
-	// fetch info checkbox
-	if(!BrowsingScreenshots)
-	{
-		CUIRect FetchInfo;
-		const float FetchInfoWidth = minimum(maximum(LeftGroup.w * 0.26f, 104.0f), 140.0f);
-		LeftGroup.VSplitLeft(minimum(FetchInfoWidth, LeftGroup.w), &FetchInfo, &LeftGroup);
-		if(LeftGroup.w > TightSpacing)
-			LeftGroup.VSplitLeft(TightSpacing, nullptr, &LeftGroup);
-		if(DoButton_CheckBox(&g_Config.m_BrDemoFetchInfo, Localize("Fetch Info"), g_Config.m_BrDemoFetchInfo, &FetchInfo))
-		{
-			g_Config.m_BrDemoFetchInfo ^= 1;
-			m_DemoHeaderFetchCursor = 0;
-			m_DemoHeaderFetchComplete = DemoBrowserBrowsingScreenshots() || !g_Config.m_BrDemoFetchInfo;
-		}
-	}
+	// 「回放信息」开关已移除：它只是「刷新时批量预读 demo 头部」的开关，列表的
+	// 时长/标记/地图三列却依赖它，关着的时候整列显示 0，读起来像坏了。
+	// 读取本身是后台分帧预算的（DemoHeaderBudget），不必让用户为它做决定；
+	// 批量预读改为常开（qm 默认值 1），个别用户仍可在控制台关掉。
+	// 空出来的宽度留给搜索框，底栏不再有一个说不清作用的控件。
 
 	// demos directory button
 	if(HasSingleSelection && pSelectedItem->m_StorageType != IStorage::TYPE_ALL)
@@ -5022,7 +5119,7 @@ void CMenus::RenderQmPoseMapPopup(CUIRect View)
 		// 当前已加载的地图先填进输入框：直接回车就等于沿用当前地图。
 		const char *pCurrentMap = Client()->GetCurrentMapPath();
 		State.m_Input.Set(pCurrentMap != nullptr ? pCurrentMap : "");
-		str_copy(State.m_aProgrammaticInput, State.m_Input.GetString(), sizeof(State.m_aProgrammaticInput));
+		str_copy(State.m_aProgrammaticInput, State.m_Input.GetString());
 	}
 
 	// 每帧只扫一个目录：地图目录很大时也不会卡住界面。
@@ -5033,7 +5130,7 @@ void CMenus::RenderQmPoseMapPopup(CUIRect View)
 		State.m_SearchMode = true;
 	if(Scanned || QueryChanged)
 	{
-		str_copy(State.m_aCachedQuery, State.m_Input.GetString(), sizeof(State.m_aCachedQuery));
+		str_copy(State.m_aCachedQuery, State.m_Input.GetString());
 		State.m_vMatches = State.m_Index.Find(State.m_Input.GetString());
 		State.m_vKnownPaths.clear();
 		for(const QmMapUpload::SMapFile &Known : State.m_Index.Find(""))
@@ -5264,10 +5361,10 @@ void CMenus::RenderQmPoseMapPopup(CUIRect View)
 		if(Entry.m_IsDirectory)
 		{
 			if(str_comp(Entry.m_aFilename, "..") == 0)
-				str_copy(State.m_aFolder, qm_pose_map::BrowseParent(State.m_aFolder).c_str(), sizeof(State.m_aFolder));
+				str_copy(State.m_aFolder, qm_pose_map::BrowseParent(State.m_aFolder).c_str());
 			else
 			{
-				str_copy(State.m_aFolder, qm_pose_map::BrowseChild(State.m_aFolder, Entry.m_aFilename).c_str(), sizeof(State.m_aFolder));
+				str_copy(State.m_aFolder, qm_pose_map::BrowseChild(State.m_aFolder, Entry.m_aFilename).c_str());
 				State.m_StorageType = Entry.m_StorageType;
 			}
 			State.m_SearchMode = false;
@@ -5281,9 +5378,9 @@ void CMenus::RenderQmPoseMapPopup(CUIRect View)
 		else
 		{
 			// 点选地图：记下完整相对路径（同名地图可能有两份），输入框回填人能认出的名字。
-			str_copy(State.m_aSelectedPath, Entry.m_aPath, sizeof(State.m_aSelectedPath));
+			str_copy(State.m_aSelectedPath, Entry.m_aPath);
 			State.m_Input.Set(qm_pose_map::DisplayName(Entry.m_aFilename).c_str());
-			str_copy(State.m_aProgrammaticInput, State.m_Input.GetString(), sizeof(State.m_aProgrammaticInput));
+			str_copy(State.m_aProgrammaticInput, State.m_Input.GetString());
 			State.m_Attempted = false;
 			State.m_FocusInput = false;
 		}
@@ -5301,13 +5398,13 @@ void CMenus::RenderQmPoseMapPopup(CUIRect View)
 		switch(State.m_Selection.Status())
 		{
 		case qm_pose_map::EStatus::EMPTY:
-			str_copy(aError, Localize("Type a map name or choose one from the list."), sizeof(aError));
+			str_copy(aError, Localize("Type a map name or choose one from the list."));
 			break;
 		case qm_pose_map::EStatus::NOT_FOUND:
 			str_format(aError, sizeof(aError), Localize("No map named '%s' was found in maps/ or downloadedmaps/"), State.m_Input.GetString());
 			break;
 		case qm_pose_map::EStatus::INVALID:
-			str_copy(aError, Localize("This map path cannot be used."), sizeof(aError));
+			str_copy(aError, Localize("This map path cannot be used."));
 			break;
 		case qm_pose_map::EStatus::OK:
 			break;

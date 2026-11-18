@@ -1,3 +1,4 @@
+#include <base/bytes.h>
 #include <base/system.h>
 
 #include <engine/client/ghost.h>

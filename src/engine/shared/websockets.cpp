@@ -5,6 +5,7 @@
 #include <base/log.h>
 #include <base/system.h>
 
+#include <engine/shared/config.h>
 #include <engine/shared/network.h>
 #include <engine/shared/protocol.h>
 #include <engine/shared/websocket_log.h>
@@ -184,6 +185,11 @@ static LEVEL websocket_level_to_loglevel(int level)
 
 static void websocket_log_callback(int level, const char *line) noexcept
 {
+	if((level == LLL_NOTICE || level == LLL_INFO) && !g_Config.m_DbgWebsockets)
+	{
+		return;
+	}
+
 	try
 	{
 		char line_truncated[4096];

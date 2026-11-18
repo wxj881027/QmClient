@@ -97,10 +97,16 @@ inline float ResolveSettingsControlFontSize(const float BodySize)
 	return std::max(ui_token::font::BODY, BodySize);
 }
 
+// 单行控件高度 = 正文 + 上下内边距，上下内边距由 control::PadY 从行高反查，
+// 所以返回值恒满足 LineHeight = Body + 2 × PadY(LineHeight, Body)：控件内容在
+// 框内永远垂直居中，调用点不再另写一套偏移常量。只有正文大过标准行高时才回落到
+// settings::CONTROL_PADDING_Y 的历史最小内边距，保证这档高度与改动前逐位一致。
 inline float ResolveSettingsControlHeight(const float BodySize, const float UiScale = 1.0f)
 {
-	const float ExistingRowHeight = std::clamp(ui_token::settings::ROW_HEIGHT * UiScale, ui_token::settings::MIN_ROW_HEIGHT, ui_token::settings::ROW_HEIGHT);
-	return std::max(ExistingRowHeight, ResolveSettingsControlFontSize(BodySize) + 2.0f * ui_token::settings::CONTROL_PADDING_Y);
+	const float RowHeight = std::clamp(ui_token::settings::ROW_HEIGHT * UiScale, ui_token::settings::MIN_ROW_HEIGHT, ui_token::settings::ROW_HEIGHT);
+	const float Body = ResolveSettingsControlFontSize(BodySize);
+	const float PaddingY = std::max(ui_token::settings::CONTROL_PADDING_Y, ui_token::control::PadY(RowHeight, Body));
+	return std::max(RowHeight, Body + 2.0f * PaddingY);
 }
 
 struct SSettingsContentMetrics
@@ -154,7 +160,7 @@ private:
 
 // 页面和当前子 Tab 共同定义一次 card deck 的可见视图。
 // 子 Tab 改变时必须重新播放入场动画，但不能影响卡片在 model 中的持久化顺序。
-inline uint64_t ResolveSettingsCardDisplayViewKey(const int Page, const int PlayerTab, const int AppearanceTab, const int TClientTab, const int QmClientTab, const int CreditsTab = 0)
+inline uint64_t ResolveSettingsCardDisplayViewKey(const int Page, const int PlayerTab, const int AppearanceTab, const int TClientTab, const int QmClientTab, const int CreditsTab = 0, const int DdnetTab = 0)
 {
 	uint64_t Key = 1469598103934665603ULL;
 	const auto Mix = [&Key](const int Value) {
@@ -167,6 +173,8 @@ inline uint64_t ResolveSettingsCardDisplayViewKey(const int Page, const int Play
 	Mix(TClientTab);
 	Mix(QmClientTab);
 	Mix(CreditsTab);
+	// DDNet 页的页内子页签（常规 / 网络补偿）也要算进视图 key，否则切子页签不重播入场。
+	Mix(DdnetTab);
 	return Key;
 }
 
@@ -693,9 +701,11 @@ inline SSettingsGraphicsRuntimeInfo ResolveSettingsGraphicsRuntimeInfo(const cha
 
 // 列表 viewport 只允许显示完整行。列表控件的行距由调用方显式消费，
 // 不能把卡片剩余高度直接传进去，否则最后会露出半行内容。
+// 行数与行高、行距的关系只在 ui_token::list::RowsHeight 里定义一次，卡片测高与
+// CListBox 的自适应高度共用它，不会出现测出来 3 行、实际只画得下 2.8 行。
 inline float ResolveSettingsListViewportHeight(const int VisibleRows, const float RowHeight, const float RowSpacing)
 {
-	return ResolveSettingsRowsHeight(std::clamp(VisibleRows, 0, 8), RowHeight, RowSpacing);
+	return ui_token::list::RowsHeight(std::clamp(VisibleRows, 0, ui_token::list::MAX_VISIBLE_ROWS), RowHeight, RowSpacing);
 }
 
 struct SSettingsListCardGeometry
@@ -707,25 +717,47 @@ struct SSettingsListCardGeometry
 
 inline SSettingsListCardGeometry ResolveSettingsGeneralLanguageListGeometry(const int ItemCount, const SSettingsContentMetrics &Metrics)
 {
+	// 语言列表按胶囊行渲染（menus_settings.cpp 的 RenderLanguageSelection），行距取列表
+	// token 的半档：测高与行布局同一条 RowsHeight，卡片不会比「整数行 + 行距」短一档，
+	// 可见行数也不会因为少算行距掉到 7 行。
 	SSettingsListCardGeometry Geometry;
 	Geometry.m_VisibleRows = std::clamp(ItemCount, 1, 8);
-	Geometry.m_ListViewportHeight = ResolveSettingsListViewportHeight(Geometry.m_VisibleRows, Metrics.m_ListRowHeight, 0.0f);
-	Geometry.m_ContentHeight = Geometry.m_ListViewportHeight;
+	Geometry.m_ListViewportHeight = ResolveSettingsListViewportHeight(Geometry.m_VisibleRows, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING);
+	// 容器内边距：行胶囊不能贴着容器圆角（实机反馈：最后一行的高亮与容器下缘粘在一起，
+	// 看起来从容器里溢出去了）。两档内边距只让卡片变高，可见行数仍由上面那一行决定。
+	Geometry.m_ContentHeight = ui_token::list::PaddedRowsHeight(Geometry.m_VisibleRows, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING, ui_token::list::ContainerPadding(Metrics.m_ListRowHeight));
 	return Geometry;
 }
 
 inline SSettingsListCardGeometry ResolveSettingsGeneralThemeListGeometry(const int ItemCount, const SSettingsContentMetrics &Metrics)
 {
-	SSettingsListCardGeometry Geometry = ResolveSettingsGeneralLanguageListGeometry(ItemCount, Metrics);
-	Geometry.m_ContentHeight += Metrics.m_LineHeight + Metrics.m_LineSpacing;
+	// 主题列表按胶囊行渲染（RenderThemeSelection 里 SetCapsuleRows），所以可见行数只能取
+	// 整数行、行距必须用列表 token 的半档，和高度的唯一来源 RowsHeight 对齐。
+	// 之前这里直接复用语言列表那份（行距 0、可见行数 clamp(ItemCount, 1, 8)）再补
+	// 「LineHeight + LineSpacing」当标题，和 DoHeader 实际消费的「LineHeight + 2 × LineSpacing」
+	// 差一档，列表体拿到的高度既不是整数行、也不够最后一行的行距，底部就会露出半行。
+	SSettingsListCardGeometry Geometry;
+	Geometry.m_VisibleRows = ui_token::list::VisibleRows(ItemCount, 1, ui_token::list::THEME_MIN_VISIBLE_ROWS, ui_token::list::MAX_VISIBLE_ROWS);
+	Geometry.m_ListViewportHeight = ResolveSettingsListViewportHeight(Geometry.m_VisibleRows, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING);
+	// 标题行与列表体共用同一个容器背景：两段高度相加必须正好等于卡片给这个控件的高度，
+	// 否则列表体比背景短/长一截（滚动条滑块也会压在容器圆角外）。DoHeader 实际消费
+	// LineHeight + 2 × LineSpacing，和 CListBox 的自适应高度上限（PaddedRowsHeight）拼起来
+	// 才是整容器。两档内边距同时让标题之后、列表体的四边各留出留白，末行高亮不再贴容器下缘。
+	Geometry.m_ContentHeight = ui_token::list::PaddedRowsHeight(Geometry.m_VisibleRows, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING, ui_token::list::ContainerPadding(Metrics.m_ListRowHeight)) + Metrics.m_LineHeight + 2.0f * Metrics.m_LineSpacing;
 	return Geometry;
 }
 
 inline SSettingsListCardGeometry ResolveSettingsGraphicsModesGeometry(const int ModeCount, const SSettingsContentMetrics &Metrics)
 {
-	SSettingsListCardGeometry Geometry = ResolveSettingsGeneralLanguageListGeometry(ModeCount, Metrics);
+	SSettingsListCardGeometry Geometry;
+	// 显示模式列表按胶囊行渲染：可见行上限 8、行距取列表 token。测高和 CListBox
+	// 的自适应高度用同一组事实，超出的行交给覆盖式滚动条。
+	Geometry.m_VisibleRows = ui_token::list::VisibleRows(ModeCount, 1, 1, ui_token::list::MAX_VISIBLE_ROWS);
+	// 容器内边距与 CListBox 同一档：卡片测高必须把它算进去（否则列表拿到的矩形正好是
+	// 整数行、内边距被兜底退回 0，首/末行的胶囊会压在容器圆角上）。
+	Geometry.m_ListViewportHeight = ui_token::list::PaddedRowsHeight(Geometry.m_VisibleRows, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING, ui_token::list::ContainerPadding(Metrics.m_ListRowHeight));
 	// 窗口模式和当前显示模式各消费一行，模式列表使用剩余 viewport。
-	Geometry.m_ContentHeight += Metrics.m_RowStep * 2.0f;
+	Geometry.m_ContentHeight = Geometry.m_ListViewportHeight + Metrics.m_RowStep * 2.0f;
 	return Geometry;
 }
 
@@ -738,28 +770,17 @@ inline SSettingsListCardGeometry ResolveSettingsSoundAudioPackGeometry(const int
 {
 	SSettingsListCardGeometry Geometry;
 	Geometry.m_VisibleRows = ResolveSettingsSoundAudioPackVisibleRows(ItemCount);
-	Geometry.m_ListViewportHeight = ResolveSettingsListViewportHeight(Geometry.m_VisibleRows, Metrics.m_ListRowHeight, 0.0f);
+	// 音频包列表按胶囊行渲染（卡片里 SetCapsuleRows）：行距取列表 token 的半档，
+	// 与 CListBox 的自适应高度（RowsHeight）用同一组事实，否则测高少掉行间的缝，
+	// 最后一行会被裁一半。容器内边距与组件同一档（PaddedRowsHeight）：卡片测高把它
+	// 算进去，末行的选中填充才不会压在容器圆角上。下面的 OuterPadding / ListPadding
+	// 是面板外边距与面板到行区的留白，和这条内边距是两回事，不要混算。
+	Geometry.m_ListViewportHeight = ui_token::list::PaddedRowsHeight(Geometry.m_VisibleRows, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING, ui_token::list::ContainerPadding(Metrics.m_ListRowHeight));
 	// 外层 Margin(2) 与列表 Margin(6) 各作用于上下两侧。
 	constexpr float OuterPadding = 2.0f;
 	constexpr float ListPadding = 6.0f;
 	Geometry.m_ContentHeight = Metrics.m_LineHeight + Metrics.m_LineSpacing + Geometry.m_ListViewportHeight + 2.0f * (OuterPadding + ListPadding);
 	return Geometry;
-}
-
-inline float ResolveSettingsGeneralClientContentHeight(const SSettingsContentMetrics &Metrics, const float ThemeContentHeight)
-{
-	// 跳过主菜单单独成段；更新率和节能开关共享一段；文件按钮共享一段。
-	// 三段之间以及主题列表前各消费 SectionGap，各段内部只消费一次普通行距。
-	return Metrics.m_LineHeight + Metrics.m_SectionGap +
-	       ResolveSettingsRowsHeight(2, Metrics.m_LineHeight, Metrics.m_LineSpacing) + Metrics.m_SectionGap +
-	       ResolveSettingsRowsHeight(2, Metrics.m_ButtonHeight, Metrics.m_LineSpacing) + Metrics.m_SectionGap +
-	       ThemeContentHeight;
-}
-
-inline float ResolveSettingsGeneralGameContentHeight(const SSettingsContentMetrics &Metrics, const bool DynamicCameraExpanded)
-{
-	// 默认重生武器已移除（远程同名删除），本卡只剩 3 行：动态镜头、拾取换枪、弹药耗尽换枪。
-	return ResolveSettingsRowsHeight(3 + (DynamicCameraExpanded ? 1 : 0), Metrics.m_LineHeight, Metrics.m_LineSpacing);
 }
 
 inline uint64_t ResolveSettingsGeneralLayoutRevision(const bool RenderOnly, const uint64_t ToggleMask, const float ContentHeight, const int LanguageCount, const int ThemeCount)
@@ -784,25 +805,34 @@ inline float ResolveSettingsProfilesListHeight(const SSettingsContentMetrics &Me
 	const int RequiredRows = ProfileCount > 0 ? (ProfileCount + ItemsPerRow - 1) / ItemsPerRow : 0;
 	const int VisibleRows = std::clamp(RequiredRows, 1, 3);
 	const float ItemHeight = std::max(Metrics.m_ListRowHeight * 3.0f, Metrics.m_ButtonHeight * 3.0f + Metrics.m_LineSpacing * 2.0f);
-	const float ListHeight = ProfileCount > 0 ? VisibleRows * ItemHeight : Metrics.m_ListRowHeight * 2.0f;
+	// 行距必须算进来：列表按「行高 + 行距」步进（行距并进行高的多列网格），只按
+	// VisibleRows × ItemHeight 测高会少掉行与行之间的缝，卡片底部最后一行被裁一截。
+	// 容器内边距与 CListBox 同一档（PaddedRowsHeight）：卡片测高把它算进去，行胶囊
+	// 才不会压在容器圆角上（列数是按整宽推导的，可见行数不随留白变化）。
+	const float PaddedListHeight = ui_token::list::PaddedRowsHeight(VisibleRows, ItemHeight, ui_token::list::ROW_SPACING, ui_token::list::ContainerPadding(ItemHeight));
+	// 空列表仍按原来的两行高占位（提示文字的位置），不额外加留白。
+	const float ListHeight = ProfileCount > 0 ? PaddedListHeight : Metrics.m_ListRowHeight * 2.0f;
 	return Metrics.m_ButtonHeight + Metrics.m_LineSpacing + ListHeight;
 }
 
 inline float ResolveSettingsTeeQueuePresetHeight(const SSettingsContentMetrics &Metrics, const int VisiblePresetRows)
 {
-	// 操作图标与标题同一行，列表区域仅保留必要内边距。
-	const float PresetRowSpacing = Metrics.m_LineSpacing * 0.5f;
-	return Metrics.m_LineSpacing * 5.0f + Metrics.m_LineHeight + Metrics.m_ButtonHeight + ResolveSettingsListViewportHeight(VisiblePresetRows, Metrics.m_ListRowHeight, PresetRowSpacing);
+	// 操作图标与标题同一行，列表区域仅保留必要内边距。行距取列表 token，
+	// 与 CListBox 的胶囊行距一致，否则测出来的高度会少掉行与行之间的缝。
+	// 容器内边距与组件同一档（PaddedRowsHeight）：预设栏的末行高亮不再贴着容器下缘。
+	return Metrics.m_LineSpacing * 5.0f + Metrics.m_LineHeight + Metrics.m_ButtonHeight +
+	       ui_token::list::PaddedRowsHeight(VisiblePresetRows, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING, ui_token::list::ContainerPadding(Metrics.m_ListRowHeight));
 }
 
 inline int ResolveSettingsTeeVisiblePresetRows(const int PresetCount)
 {
-	return std::clamp(PresetCount, 2, 3);
+	return std::clamp(PresetCount, ui_token::list::PRESET_MIN_VISIBLE_ROWS, ui_token::list::PRESET_MAX_VISIBLE_ROWS);
 }
 
 inline int ResolveSettingsTeeVisibleQueueRows(const int QueueCount)
 {
-	return std::clamp(QueueCount, 1, 8);
+	// 皮肤队列最多 6 行：再多就交给覆盖式滚动条，卡片高度不再随队列长度长高。
+	return std::clamp(QueueCount, 1, ui_token::list::SKIN_QUEUE_MAX_VISIBLE_ROWS);
 }
 
 inline uint64_t ResolveSettingsSoundLayoutRevision(const bool RenderOnly, const bool SoundEnabled, const int AudioPackCount)
@@ -829,14 +859,15 @@ inline SSettingsTeeQueuePanelGeometry ResolveSettingsTeeQueuePanelGeometry(const
 	SSettingsTeeQueuePanelGeometry Geometry;
 	Geometry.m_VisibleQueueRows = ResolveSettingsTeeVisibleQueueRows(QueueCount);
 	Geometry.m_VisiblePresetRows = ResolveSettingsTeeVisiblePresetRows(PresetCount);
-	Geometry.m_QueueListViewportHeight = ResolveSettingsListViewportHeight(Geometry.m_VisibleQueueRows, Metrics.m_ListRowHeight, 0.0f);
-	// 列表 Surface 包含上下内边距、标题与标题到首行的标准间距，viewport 始终只显示完整行。
+	Geometry.m_QueueListViewportHeight = ui_token::list::PaddedRowsHeight(Geometry.m_VisibleQueueRows, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING, ui_token::list::ContainerPadding(Metrics.m_ListRowHeight));
+	// 列表 Surface 包含上下内边距、标题与标题到首行的标准间距，viewport 始终只显示完整行；
+	// viewport 里的两档容器内边距和 CListBox 的自适应上限同源，末行的胶囊不贴容器圆角。
 	Geometry.m_QueueListSurfaceHeight = Metrics.m_LineSpacing * 3.0f + Metrics.m_LineHeight + Geometry.m_QueueListViewportHeight;
 	Geometry.m_QueuePresetHeight = ResolveSettingsTeeQueuePresetHeight(Metrics, Geometry.m_VisiblePresetRows);
 	Geometry.m_StackInterval = ContentWidth < 250.0f * Metrics.m_UiScale;
 	Geometry.m_IntervalHeight = Metrics.m_InputHeight + (Geometry.m_StackInterval ? Metrics.m_LineHeight + Metrics.m_LineSpacing : 0.0f);
 	const float RequiredHeight =
-		Metrics.m_LineSpacing * 5.0f + Metrics.m_LineHeight * 3.0f + Geometry.m_IntervalHeight +
+		Metrics.m_LineSpacing * 7.0f + Metrics.m_LineHeight * 5.0f + Geometry.m_IntervalHeight +
 		Geometry.m_QueueListSurfaceHeight + Geometry.m_QueuePresetHeight;
 	Geometry.m_ContentHeight = RequiredHeight;
 	return Geometry;
@@ -883,19 +914,6 @@ inline int StepTeeEmoteSlider(int CurrentEmote, int Delta)
 {
 	const int Current = std::clamp(CurrentEmote, 0, NUM_EMOTES - 1);
 	return (Current + Delta % NUM_EMOTES + NUM_EMOTES) % NUM_EMOTES;
-}
-
-inline float ResolveQmVisualWeaponAnimationHeight(const SSettingsContentMetrics &Metrics, const bool SwitchEnabled, const bool ReloadEnabled)
-{
-	// 两个独立开关始终可见；装填概率、共享范围和切枪参数按各自开关展开。
-	const int Rows = 2 + (ReloadEnabled ? 1 : 0) + (SwitchEnabled || ReloadEnabled ? 1 : 0) + (SwitchEnabled ? 4 : 0);
-	return Rows * Metrics.m_RowStep + Metrics.m_LineSpacing;
-}
-
-inline float ResolveQmVisualCollisionHitboxHeight(const SSettingsContentMetrics &Metrics, const bool Enabled)
-{
-	// 总开关、十一个语义开关、玩家范围、三项颜色和透明度共十七行。
-	return (Enabled ? 17.0f : 1.0f) * Metrics.m_RowStep;
 }
 
 inline float ResolveSettingsHslaRowsHeight(const SSettingsContentMetrics &Metrics, const bool Alpha)
@@ -978,9 +996,12 @@ inline SSettingsColorRowLayout ResolveSettingsColorRowLayout(const CUIRect &View
 	return Layout;
 }
 
+// 单选/分段行的文字必须和标签、输入框、下拉框同一个正文字号。
+// 这里以前回落到未缩放的 ui_token::font::BODY，窗口把排版缩小时，
+// 只有这一行（及其降级下拉框）的字不跟着缩，同页文字大小不一致。
 inline float ResolveSettingsRadioFontSize(const SSettingsContentMetrics &Metrics)
 {
-	return ResolveSettingsControlFontSize(Metrics.m_BodySize);
+	return Metrics.m_BodySize;
 }
 
 inline float ResolveSettingsRadioButtonHeight(const SSettingsContentMetrics &Metrics)
@@ -1029,81 +1050,9 @@ inline SSettingsNestedRadioRowLayout ResolveSettingsNestedRadioRowLayout(const C
 	return Layout;
 }
 
-// 两级分段行的槽位表：一级槽位与子级槽位都不含动画，动画只发生在滑块胶囊上，
-// 这样文字宽度稳定、文本缓存键不会每帧变化。
-// 激活的一级项带子级时，它的一级槽位整段让给子级菜单（一级标签被替换掉，不再绘制），
-// 主滑块因此盖住整段子级区域，次级滑块再在主滑块之上标出当前子项。
-struct SSettingsNestedRadioSlots
-{
-	static constexpr int MAX_SLOTS = 8;
-	CUIRect m_aMain[MAX_SLOTS]{};
-	CUIRect m_aSub[MAX_SLOTS]{};
-	int m_MainCount = 0;
-	int m_SubCount = 0;
-};
-
-inline SSettingsNestedRadioSlots ResolveSettingsNestedRadioSlots(const CUIRect &Container, const int OptionCount, const int ActiveIndex, const int SubOptionCount, const float Inset)
-{
-	SSettingsNestedRadioSlots Slots;
-	if(OptionCount <= 0 || Container.w <= 0.0f)
-		return Slots;
-
-	CUIRect Inner = Container;
-	Inner.Margin(Inset, &Inner);
-	if(Inner.w <= 0.0f || Inner.h <= 0.0f)
-		return Slots;
-
-	const int MainCount = std::clamp(OptionCount, 0, SSettingsNestedRadioSlots::MAX_SLOTS);
-	const bool SubInline = ActiveIndex >= 0 && ActiveIndex < MainCount;
-	const int SubCount = SubInline ? std::clamp(SubOptionCount, 0, SSettingsNestedRadioSlots::MAX_SLOTS - 1) : 0;
-	// 激活项不再占一个单位（标签被子级替换），所以单位数是「其它一级项 + 子项」。
-	const int UnitCount = std::max(1, MainCount + (SubCount > 0 ? SubCount - 1 : 0));
-	const float UnitWidth = Inner.w / (float)UnitCount;
-	CUIRect Remainder = Inner;
-	for(int i = 0; i < MainCount; ++i)
-	{
-		const bool Expanded = i == ActiveIndex && SubCount > 0;
-		const int Span = Expanded ? SubCount : 1;
-		CUIRect Slot;
-		Remainder.VSplitLeft(UnitWidth * Span, &Slot, &Remainder);
-		Slots.m_aMain[i] = Slot;
-		if(!Expanded)
-			continue;
-		for(int s = 0; s < SubCount; ++s)
-		{
-			CUIRect SubSlot;
-			Slot.VSplitLeft(Slot.w / (float)(SubCount - s), &SubSlot, &Slot);
-			Slots.m_aSub[s] = SubSlot;
-		}
-		Slots.m_SubCount = SubCount;
-	}
-	Slots.m_MainCount = MainCount;
-	return Slots;
-}
-
 inline float ResolveSettingsControllerAxisPickerHeight(const int AxisCount, const int MaxAxisCount, const float RowHeight, const float RowSpacing)
 {
 	return (std::clamp(AxisCount, 0, std::max(0, MaxAxisCount)) + 1) * (std::max(0.0f, RowHeight) + std::max(0.0f, RowSpacing));
-}
-
-inline float ResolveSettingsControllerContentHeight(const float ContentWidth, const bool Enabled, const bool HasJoystick, const bool AbsoluteMode, const int AxisCount, const int MaxAxisCount, const float RowHeight, const float RowSpacing)
-{
-	float Height = std::max(0.0f, RowHeight) + std::max(0.0f, RowSpacing);
-	if(!Enabled)
-		return Height;
-
-	Height += std::max(0.0f, RowHeight) + std::max(0.0f, RowSpacing);
-	if(!HasJoystick)
-		return Height + std::max(0.0f, RowSpacing);
-
-	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(ContentWidth);
-	const SSettingsRadioRowLayout Radio = ResolveSettingsRadioRowLayout({0.0f, 0.0f, std::max(0.0f, ContentWidth), RowHeight * 2.0f + RowSpacing}, 2, Metrics);
-	Height += Radio.m_Height;
-	if(!AbsoluteMode)
-		Height += RowHeight + RowSpacing;
-	Height += 2.0f * (RowHeight + RowSpacing);
-	Height += RowSpacing + ResolveSettingsControllerAxisPickerHeight(AxisCount, MaxAxisCount, RowHeight, RowSpacing);
-	return Height;
 }
 
 inline int ResolveSettingsStatusCodeRows(const int ItemCount, const float ContentWidth)
@@ -1176,7 +1125,7 @@ inline float ResolveQmHudDynamicIslandHeight(const SSettingsContentMetrics &Metr
 	if(!OriginalStyle)
 	{
 		const CUIRect ColorRowView{0.0f, 0.0f, std::max(0.0f, ContentWidth), 0.0f};
-		Height += ResolveSettingsColorRowLayout(ColorRowView, Metrics, false).m_ConsumedHeight + Metrics.m_RowStep;
+		Height += ResolveSettingsColorRowLayout(ColorRowView, Metrics, false).m_ConsumedHeight + 3.0f * Metrics.m_RowStep;
 	}
 	// 开关倒计时启用时增加跟随 Tee / 灵动岛两个位置开关，不再保留位置标题行。
 	Height += (SwitchCountdownEnabled ? 2.0f : 0.0f) * Metrics.m_RowStep;
@@ -1245,33 +1194,6 @@ inline uint64_t ResolveQmHudBackground3DRevision(const bool Enabled, const bool 
 	       (Trail ? 1u << 3 : 0u) |
 	       (Pulse ? 1u << 4 : 0u) |
 	       (Twinkle ? 1u << 5 : 0u);
-}
-
-inline float ResolveAppearanceLaserColorsHeight(const SSettingsContentMetrics &Metrics)
-{
-	constexpr int ColorPickerCount = 10;
-	constexpr float EntitySectionGap = 10.0f;
-	const float HeadingHeight = Metrics.m_LineHeight + 2.0f * Metrics.m_LineSpacing;
-	const float ColorPickerHeight = std::max(Metrics.m_LineHeight, Metrics.m_ButtonHeight) + Metrics.m_LineSpacing;
-	return 2.0f * HeadingHeight + 8.0f * Metrics.m_LineSpacing + ColorPickerCount * ColorPickerHeight + EntitySectionGap + 2.0f * Metrics.m_LineHeight;
-}
-
-inline float ResolveAppearanceLaserEnhancedHeight(const SSettingsContentMetrics &Metrics, const bool Enhanced)
-{
-	const int RowCount = Enhanced ? 7 : 5;
-	const int SpacingCount = Enhanced ? 6 : 4;
-	return RowCount * Metrics.m_LineHeight + SpacingCount * Metrics.m_LineSpacing;
-}
-
-inline float ResolveDDNetDemoRows(const bool ReplaysEnabled, const bool RaceGhostEnabled, const bool SaveGhostEnabled)
-{
-	return 3.0f + (ReplaysEnabled ? 2.0f : 0.0f) + (RaceGhostEnabled ? 3.0f + (SaveGhostEnabled ? 1.0f : 0.0f) : 0.0f);
-}
-
-inline float ResolveDDNetGameplayRows(const bool TextEntitiesEnabled, const bool AntiPingEnabled)
-{
-	(void)TextEntitiesEnabled;
-	return 9.0f + (AntiPingEnabled ? 3.0f : 0.0f);
 }
 
 inline SSettingsSubTabLayoutFrame ResolveSettingsSubTabLayout(const CUIRect &MainView, const float UiScale = 1.0f)
@@ -1345,8 +1267,12 @@ inline SSettingsPageLayoutFrame ResolveSettingsPageLayoutForScrollViewport(const
 
 // 设置页壳层（页签条 + 内容面板）的宽度公式同时被其它菜单页用来对齐左右边界，
 // 两处必须共用同一份常量，避免某天调整设置页宽度后其它页面重新错位。
-inline constexpr float SETTINGS_SHELL_GAP = 10.0f;
-inline constexpr float SETTINGS_PANEL_MARGIN = 10.0f;
+// 设置页壳层的两栏缝隙与面板内边距取全局面板档：与服务器列表面板同一条基准，
+// 各页面之间不再各写 8/10/12。
+inline constexpr float SETTINGS_SHELL_GAP = ui_token::panel::GAP;
+// 设置页内容区相对可用区的内缩（10）：这是设置页壳层自己的排版档，不是页面面板
+// 到窗口的外距（那是 panel::MARGIN，8）。两处数值不同，不能互相顶替。
+inline constexpr float SETTINGS_PANEL_MARGIN = ui_token::panel::PADDING;
 
 inline float ResolveSettingsShellTabBarWidth(float AvailableWidth)
 {

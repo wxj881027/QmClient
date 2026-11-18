@@ -1,32 +1,59 @@
 #ifndef GAME_CLIENT_QMUI_SETTINGSSEARCHHIGHLIGHT_H
 #define GAME_CLIENT_QMUI_SETTINGSSEARCHHIGHLIGHT_H
 
-#include <game/client/QmUi/UiTheme.h>
-#include <game/client/ui_rect.h>
+#include "UiSurfaceText.h"
 
-#include <algorithm>
+#include <engine/textrender.h>
 
-// 搜索命中的行背景样式：填充取主题选中色，边框/文字取 accent，圆角按
-// 行高裁到 BASE 以内，避免短行出现方角或超出控件轮廓。
 namespace qm_settings_highlight
 {
-	struct SStyle
+	inline float ContrastRatio(ColorRGBA A, ColorRGBA B)
 	{
-		ColorRGBA m_Fill;
-		ColorRGBA m_Border;
-		ColorRGBA m_Text;
-		float m_Radius;
-	};
-
-	inline SStyle Resolve(const SUiTheme &Theme, const CUIRect &RowRect)
-	{
-		SStyle Style;
-		Style.m_Fill = Theme.m_Selected;
-		Style.m_Border = Theme.m_Accent.WithAlpha(0.65f);
-		Style.m_Text = Theme.m_Accent;
-		Style.m_Radius = std::min(ui_token::radius::BASE, std::max(0.0f, RowRect.h) * 0.5f);
-		return Style;
+		const float LuminanceA = UiSurfaceLuminance(A);
+		const float LuminanceB = UiSurfaceLuminance(B);
+		return (std::max(LuminanceA, LuminanceB) + 0.05f) / (std::min(LuminanceA, LuminanceB) + 0.05f);
 	}
+
+	// 搜索命中的字色按当前表面亮度二选一；组件内部不再写死纯黄。
+	inline ColorRGBA ResolveMatchColor()
+	{
+		const ColorRGBA Surface = CompositeUiSurface(CUiScopedSurfaceText::CurrentSurface());
+		const ColorRGBA OnLight = ui_token::color::SEARCH_MATCH_ON_LIGHT;
+		const ColorRGBA OnDark = ui_token::color::SEARCH_MATCH_ON_DARK;
+		const float LightContrast = ContrastRatio(Surface, OnLight);
+		const float DarkContrast = ContrastRatio(Surface, OnDark);
+		if(std::max(LightContrast, DarkContrast) >= 4.5f)
+			return LightContrast >= DarkContrast ? OnLight : OnDark;
+		// 中灰表面与两种黄色都拉不开对比度时，退回黑/白前景保证可读性。
+		return ResolveUiSurfaceForeground(Surface);
+	}
+
+	// 在绘制时覆盖字色，使已缓存的标签也能随搜索状态切换颜色。
+	class CScopedLabelColor
+	{
+		ITextRender *m_pTextRender;
+		ColorRGBA m_PreviousColor;
+
+	public:
+		CScopedLabelColor(ITextRender *pTextRender, bool Highlight) :
+			m_pTextRender(Highlight ? pTextRender : nullptr)
+		{
+			if(m_pTextRender)
+			{
+				m_PreviousColor = m_pTextRender->GetTextColor();
+				m_pTextRender->TextColor(ResolveMatchColor().WithAlpha(m_PreviousColor.a));
+			}
+		}
+
+		~CScopedLabelColor()
+		{
+			if(m_pTextRender)
+				m_pTextRender->TextColor(m_PreviousColor);
+		}
+
+		CScopedLabelColor(const CScopedLabelColor &) = delete;
+		CScopedLabelColor &operator=(const CScopedLabelColor &) = delete;
+	};
 }
 
 #endif // GAME_CLIENT_QMUI_SETTINGSSEARCHHIGHLIGHT_H

@@ -86,6 +86,7 @@ namespace
 	struct SRecordedAxiomRequest
 	{
 		std::string m_Url;
+		std::string m_ApiKey;
 		int m_ConnectTimeoutMs;
 		int m_TimeoutMs;
 		int64_t m_MaxResponseBytes;
@@ -97,10 +98,10 @@ namespace
 	public:
 		std::vector<SRecordedAxiomRequest> m_vRequests;
 
-		std::shared_ptr<IQmAxiomHttpRequest> Get(const char *pUrl, int ConnectTimeoutMs, int TimeoutMs, int64_t MaxResponseBytes) override
+		std::shared_ptr<IQmAxiomHttpRequest> Get(const char *pUrl, const char *pApiKey, int ConnectTimeoutMs, int TimeoutMs, int64_t MaxResponseBytes) override
 		{
 			auto pRequest = std::make_shared<CFakeAxiomHttpRequest>();
-			m_vRequests.push_back({pUrl, ConnectTimeoutMs, TimeoutMs, MaxResponseBytes, pRequest});
+			m_vRequests.push_back({pUrl, pApiKey, ConnectTimeoutMs, TimeoutMs, MaxResponseBytes, pRequest});
 			return pRequest;
 		}
 
@@ -183,34 +184,29 @@ namespace
 		Scores.OnUpdate();
 	}
 
-	class CScopedAxiomPlayerName
+	std::string PointsResponse(const char *pPlayerName, int Points, const char *pMode = "gores")
 	{
-		char m_aOriginal[sizeof(g_Config.m_PlayerName)]{};
-
-	public:
-		CScopedAxiomPlayerName()
-		{
-			str_copy(m_aOriginal, g_Config.m_PlayerName);
-			str_copy(g_Config.m_PlayerName, "test_local");
-		}
-		~CScopedAxiomPlayerName()
-		{
-			str_copy(g_Config.m_PlayerName, m_aOriginal);
-		}
-	};
+		return std::string("{\"code\":200,\"data\":{\"mode\":\"") + pMode +
+		       "\",\"points\":" + std::to_string(Points) + ",\"user\":{\"user_id\":5528,\"player\":{\"name\":\"" + pPlayerName + "\"},\"dummy\":null}}}";
+	}
 
 	void CompleteSuccessfulScoreboardQuery(CTestAxiomScores &Scores, CFakeAxiomHttp &Http, const char *pPlayerName, int Points)
 	{
-		const size_t SearchIndex = Http.m_vRequests.size();
-		Scores.EnsureQueried(pPlayerName);
-		ASSERT_EQ(Http.m_vRequests.size(), SearchIndex + 1);
-		Http.Request(SearchIndex).m_pRequest->Complete(SearchResponse(pPlayerName));
-		Scores.OnUpdate();
-		Scores.EnsureQueried(pPlayerName);
-		ASSERT_EQ(Http.m_vRequests.size(), SearchIndex + 2);
-		Http.Request(SearchIndex + 1).m_pRequest->Complete(InfoResponse(pPlayerName, Points));
+		const size_t Index = Http.m_vRequests.size();
+		Scores.EnsureScoreboardQueried(pPlayerName);
+		ASSERT_EQ(Http.m_vRequests.size(), Index + 1);
+		Http.Request(Index).m_pRequest->Complete(PointsResponse(pPlayerName, Points));
 		Scores.OnUpdate();
 	}
+
+	class CScopedAxiomApiKey
+	{
+		std::string m_Original{g_Config.m_QmAxiomApiKey};
+
+	public:
+		explicit CScopedAxiomApiKey(const char *pKey) { str_copy(g_Config.m_QmAxiomApiKey, pKey); }
+		~CScopedAxiomApiKey() { str_copy(g_Config.m_QmAxiomApiKey, m_Original.c_str()); }
+	};
 
 	void WriteStorageFile(IStorage *pStorage, const char *pFilename, const char *pContents)
 	{
@@ -250,28 +246,74 @@ TEST(QmAxiomScoresComponent, SuccessfulLocalQueryPublishesBothModes)
 	EXPECT_EQ(Scores.GetLookup("wolf_test").m_Points, 20);
 }
 
-TEST(QmAxiomScoresComponent, ScoreboardPrefetchDoesNotWaitForAnotherPlayer)
+TEST(QmAxiomScoresComponent, AnonymousScoreboardQueriesThreePlayersPerRollingSecond)
+{
+	CScopedAxiomApiKey Key("");
+	CFakeAxiomHttp Http;
+	CTestAxiomScores Scores(&Http);
+	Scores.SetMode(EQmAxiomMode::GORES);
+	Scores.EnsureScoreboardQueried("player & 1");
+	Scores.EnsureScoreboardQueried("player & 1");
+	Scores.EnsureScoreboardQueried("player_2");
+	Scores.EnsureScoreboardQueried("player_3");
+	Scores.EnsureScoreboardQueried("player_4");
+	ASSERT_EQ(Http.m_vRequests.size(), 3u);
+	EXPECT_EQ(Http.Request(0).m_Url, "https://api.axiom.teeworlds.cn/v1/open/user/points?mode=gores&name=player%20%26%201");
+	EXPECT_TRUE(Http.Request(0).m_ApiKey.empty());
+	Http.Request(1).m_pRequest->Complete(PointsResponse("player_2", 37));
+	Scores.OnUpdate();
+	EXPECT_EQ(Scores.GetLookup("player_2").m_Points, 37);
+	Scores.AdvanceMs(999);
+	Scores.EnsureScoreboardQueried("player_4");
+	EXPECT_EQ(Http.m_vRequests.size(), 3u);
+	Scores.AdvanceMs(2);
+	Scores.EnsureScoreboardQueried("player_2");
+	Scores.EnsureScoreboardQueried("player_4");
+	ASSERT_EQ(Http.m_vRequests.size(), 4u);
+	EXPECT_FALSE(Http.Request(0).m_pRequest->Aborted());
+}
+
+TEST(QmAxiomScoresComponent, PersonalKeyAllowsTenRequestsAndOnlyGoesToOpenPoints)
+{
+	CScopedAxiomApiKey Key("example");
+	CFakeAxiomHttp Http;
+	CTestAxiomScores Scores(&Http, true);
+	Scores.SetMode(EQmAxiomMode::AXRACE);
+	for(int Index = 0; Index < 11; ++Index)
+		Scores.EnsureScoreboardQueried(("player_" + std::to_string(Index)).c_str());
+	ASSERT_EQ(Http.m_vRequests.size(), 10u);
+	for(const auto &Request : Http.m_vRequests)
+		EXPECT_EQ(Request.m_ApiKey, "example");
+	Scores.EnsureQueried("stats_player");
+	ASSERT_EQ(Http.m_vRequests.size(), 12u);
+	EXPECT_TRUE(Http.Request(10).m_ApiKey.empty());
+	EXPECT_TRUE(Http.Request(11).m_ApiKey.empty());
+}
+
+TEST(QmAxiomScoresInfo, OpenPointsRequireMatchingModeAndRole)
+{
+	const char *pJson = R"({"code":200,"data":{"mode":"axrace","points":0,"user":{"player":{"name":"Main"},"dummy":{"name":"Twin"}}}})";
+	int64_t Points = -1;
+	EXPECT_EQ(QmParseAxiomPointsResponse(pJson, str_length(pJson), "Other", EQmAxiomMode::AXRACE, Points), EQmAxiomParseResult::INVALID_RESPONSE);
+	EXPECT_EQ(QmParseAxiomPointsResponse(pJson, str_length(pJson), "Twin", EQmAxiomMode::GORES, Points), EQmAxiomParseResult::INVALID_RESPONSE);
+	EXPECT_EQ(Points, -1);
+	EXPECT_EQ(QmParseAxiomPointsResponse(pJson, str_length(pJson), "Twin", EQmAxiomMode::AXRACE, Points), EQmAxiomParseResult::SUCCESS);
+	EXPECT_EQ(Points, 0);
+}
+
+TEST(QmAxiomScoresComponent, RateLimitedPlayerDelaysOtherScoreboardRequests)
 {
 	CFakeAxiomHttp Http;
 	CTestAxiomScores Scores(&Http);
 	Scores.SetMode(EQmAxiomMode::GORES);
-	for(int Index = 0; Index < 8; ++Index)
-		Scores.EnsureQueried(("player_" + std::to_string(Index)).c_str());
+	Scores.EnsureScoreboardQueried("first");
+	Http.Request(0).m_pRequest->Complete("{}", 429);
+	Scores.OnUpdate();
+	Scores.EnsureScoreboardQueried("second");
+	EXPECT_EQ(Http.m_vRequests.size(), 1u);
+	Scores.AdvanceMs(1001);
+	Scores.EnsureScoreboardQueried("second");
 	ASSERT_EQ(Http.m_vRequests.size(), 2u);
-	Scores.OnUpdate();
-	for(int Index = 0; Index < 8; ++Index)
-		Scores.EnsureQueried(("player_" + std::to_string(Index)).c_str());
-	ASSERT_EQ(Http.m_vRequests.size(), 4u);
-	Http.Request(1).m_pRequest->Complete(SearchResponse("player_1", 1001));
-	Scores.OnUpdate();
-	Scores.EnsureQueried("player_1");
-	ASSERT_EQ(Http.m_vRequests.size(), 5u);
-	EXPECT_NE(Http.Request(4).m_Url.find("mode=Gores"), std::string::npos);
-	Http.Request(4).m_pRequest->Complete(InfoResponse("player_1", 37));
-	Scores.OnUpdate();
-	EXPECT_EQ(Scores.GetLookup("player_1").m_Status, EQmAxiomScoreStatus::READY);
-	EXPECT_EQ(Scores.GetLookup("player_1").m_Points, 37);
-	EXPECT_FALSE(Http.Request(0).m_pRequest->Aborted());
 }
 
 TEST(QmAxiomScoresComponent, ModeSwitchCancelsPrefetchAndKeepsOtherModeCache)
@@ -279,24 +321,18 @@ TEST(QmAxiomScoresComponent, ModeSwitchCancelsPrefetchAndKeepsOtherModeCache)
 	CFakeAxiomHttp Http;
 	CTestAxiomScores Scores(&Http);
 	Scores.SetMode(EQmAxiomMode::GORES);
-	Scores.EnsureQueried("wolf_test");
-	Http.Request(0).m_pRequest->Complete(SearchResponse("wolf_test"));
-	Scores.OnUpdate();
-	Scores.EnsureQueried("wolf_test");
-	ASSERT_EQ(Http.m_vRequests.size(), 2u);
+	Scores.EnsureScoreboardQueried("wolf_test");
 	Scores.SetMode(EQmAxiomMode::AXRACE);
-	EXPECT_TRUE(Http.Request(1).m_pRequest->Aborted());
-	Scores.EnsureQueried("wolf_test");
-	ASSERT_EQ(Http.m_vRequests.size(), 3u);
-	EXPECT_NE(Http.Request(2).m_Url.find("mode=AXRace"), std::string::npos);
-	Http.Request(2).m_pRequest->Complete(InfoResponse("wolf_test", 22));
+	ASSERT_EQ(Http.m_vRequests.size(), 1u);
+	EXPECT_TRUE(Http.Request(0).m_pRequest->Aborted());
+	Scores.EnsureScoreboardQueried("wolf_test");
+	ASSERT_EQ(Http.m_vRequests.size(), 2u);
+	EXPECT_NE(Http.Request(1).m_Url.find("mode=axrace"), std::string::npos);
+	Http.Request(1).m_pRequest->Complete(PointsResponse("wolf_test", 22, "axrace"));
 	Scores.OnUpdate();
 	EXPECT_EQ(Scores.GetLookup("wolf_test").m_Points, 22);
 	Scores.SetMode(EQmAxiomMode::GORES);
-	Scores.EnsureQueried("wolf_test");
-	ASSERT_EQ(Http.m_vRequests.size(), 4u);
-	Http.Request(3).m_pRequest->Complete(InfoResponse("wolf_test", 11));
-	Scores.OnUpdate();
+	CompleteSuccessfulScoreboardQuery(Scores, Http, "wolf_test", 11);
 	EXPECT_EQ(Scores.GetLookup("wolf_test").m_Points, 11);
 	Scores.SetMode(EQmAxiomMode::AXRACE);
 	EXPECT_EQ(Scores.GetLookup("wolf_test").m_Points, 22);
@@ -307,15 +343,15 @@ TEST(QmAxiomScoresComponent, ResetCancelsPrefetchWithoutFailureBackoff)
 	CFakeAxiomHttp Http;
 	CTestAxiomScores Scores(&Http);
 	Scores.SetMode(EQmAxiomMode::GORES);
-	Scores.EnsureQueried("wolf_test");
+	Scores.EnsureScoreboardQueried("wolf_test");
 	ASSERT_EQ(Http.m_vRequests.size(), 1u);
 	Scores.OnReset();
 	EXPECT_TRUE(Http.Request(0).m_pRequest->Aborted());
 	EXPECT_EQ(Scores.GetLookup("wolf_test").m_Status, EQmAxiomScoreStatus::NOT_REQUESTED);
 	Scores.OnUpdate();
-	Scores.EnsureQueried("wolf_test");
+	Scores.EnsureScoreboardQueried("wolf_test");
 	ASSERT_EQ(Http.m_vRequests.size(), 2u);
-	Http.Request(0).m_pRequest->Complete(SearchResponse("wolf_test", 999));
+	Http.Request(0).m_pRequest->Complete(PointsResponse("wolf_test", 999));
 	Scores.OnUpdate();
 	EXPECT_EQ(Scores.GetLookup("wolf_test").m_Status, EQmAxiomScoreStatus::FETCHING);
 }
@@ -325,19 +361,19 @@ TEST(QmAxiomScoresComponent, FailedPrefetchBacksOffAndRecovers)
 	CFakeAxiomHttp Http;
 	CTestAxiomScores Scores(&Http);
 	Scores.SetMode(EQmAxiomMode::GORES);
-	Scores.EnsureQueried("wolf_test");
+	Scores.EnsureScoreboardQueried("wolf_test");
 	Http.Request(0).m_pRequest->Fail();
 	Scores.OnUpdate();
 	EXPECT_EQ(Scores.GetLookup("wolf_test").m_Status, EQmAxiomScoreStatus::HTTP_ERROR);
-	Scores.EnsureQueried("wolf_test");
+	Scores.EnsureScoreboardQueried("wolf_test");
 	EXPECT_EQ(Http.m_vRequests.size(), 1u);
 	Scores.AdvanceMs(31 * 1000);
 	Scores.OnUpdate();
-	Scores.EnsureQueried("wolf_test");
+	Scores.EnsureScoreboardQueried("wolf_test");
 	ASSERT_EQ(Http.m_vRequests.size(), 2u);
-	Http.Request(1).m_pRequest->Complete(SearchResponse("wolf_test"));
+	Http.Request(1).m_pRequest->Complete(PointsResponse("wolf_test", 12));
 	Scores.OnUpdate();
-	EXPECT_EQ(Scores.GetResult("wolf_test")->m_SearchStatus, EQmAxiomScoreStatus::READY);
+	EXPECT_EQ(Scores.GetLookup("wolf_test").m_Status, EQmAxiomScoreStatus::READY);
 }
 
 TEST(QmAxiomScoresComponent, RepeatedPrefetchFailuresBackOffExponentially)
@@ -349,123 +385,112 @@ TEST(QmAxiomScoresComponent, RepeatedPrefetchFailuresBackOffExponentially)
 	Scores.SetMode(EQmAxiomMode::GORES);
 
 	// 第 1 次失败后的窗口是 30 秒。
-	Scores.EnsureQueried("wolf_test");
+	Scores.EnsureScoreboardQueried("wolf_test");
 	ASSERT_EQ(Http.m_vRequests.size(), 1u);
 	Http.Request(0).m_pRequest->Fail();
 	Scores.OnUpdate();
 
 	// 29 秒内不重试。
 	Scores.AdvanceMs(29 * 1000);
-	Scores.EnsureQueried("wolf_test");
+	Scores.EnsureScoreboardQueried("wolf_test");
 	EXPECT_EQ(Http.m_vRequests.size(), 1u);
 
 	// 30 秒后允许重试，产生第 2 次请求。
 	Scores.AdvanceMs(2 * 1000);
-	Scores.EnsureQueried("wolf_test");
+	Scores.EnsureScoreboardQueried("wolf_test");
 	ASSERT_EQ(Http.m_vRequests.size(), 2u);
 	Http.Request(1).m_pRequest->Fail();
 	Scores.OnUpdate();
 
 	// 第 2 次失败后窗口翻倍到 60 秒：30 秒内不再重试。
 	Scores.AdvanceMs(31 * 1000);
-	Scores.EnsureQueried("wolf_test");
+	Scores.EnsureScoreboardQueried("wolf_test");
 	EXPECT_EQ(Http.m_vRequests.size(), 2u);
 
 	// 跨过 60 秒后恢复重试。
 	Scores.AdvanceMs(31 * 1000);
-	Scores.EnsureQueried("wolf_test");
+	Scores.EnsureScoreboardQueried("wolf_test");
 	ASSERT_EQ(Http.m_vRequests.size(), 3u);
 	Http.Request(2).m_pRequest->Fail();
 	Scores.OnUpdate();
 
 	// 第 3 次失败后窗口 120 秒：只等 61 秒不足以重试。
 	Scores.AdvanceMs(61 * 1000);
-	Scores.EnsureQueried("wolf_test");
+	Scores.EnsureScoreboardQueried("wolf_test");
 	EXPECT_EQ(Http.m_vRequests.size(), 3u);
 
 	// 成功后窗口复位，下一次失败仍按 30 秒起算。
 	Scores.AdvanceMs(61 * 1000);
-	Scores.EnsureQueried("wolf_test");
+	Scores.EnsureScoreboardQueried("wolf_test");
 	ASSERT_EQ(Http.m_vRequests.size(), 4u);
-	Http.Request(3).m_pRequest->Complete(SearchResponse("wolf_test"));
+	Http.Request(3).m_pRequest->Complete(PointsResponse("wolf_test", 12));
 	Scores.OnUpdate();
-	ASSERT_NE(Scores.GetResult("wolf_test"), nullptr);
-	EXPECT_EQ(Scores.GetResult("wolf_test")->m_SearchStatus, EQmAxiomScoreStatus::READY);
+	EXPECT_EQ(Scores.GetLookup("wolf_test").m_Points, 12);
+	EXPECT_EQ(Scores.GetLookup("wolf_test").m_Status, EQmAxiomScoreStatus::READY);
 
 	// 成功后再次失效（模拟重新入服），失败窗口回到 30 秒。
 	const size_t BeforeRejoin = Http.m_vRequests.size();
 	Scores.OnStateChange(IClient::STATE_OFFLINE, IClient::STATE_ONLINE);
 	Scores.OnStateChange(IClient::STATE_ONLINE, IClient::STATE_OFFLINE);
-	Scores.EnsureQueried("wolf_test");
-	// 重新入服清空成功时间戳，必须重新发起一次搜索。
+	Scores.SetMode(EQmAxiomMode::GORES);
+	Scores.EnsureScoreboardQueried("wolf_test");
+	// 重新入服清空成功时间戳，必须重新发起一次查分。
 	ASSERT_EQ(Http.m_vRequests.size(), BeforeRejoin + 1);
 	Http.LastRequest()->Fail();
 	Scores.OnUpdate();
 	// 只等 31 秒即可重试，说明失败窗口已从 120 秒复位回 30 秒。
 	Scores.AdvanceMs(31 * 1000);
-	Scores.EnsureQueried("wolf_test");
+	Scores.EnsureScoreboardQueried("wolf_test");
 	ASSERT_EQ(Http.m_vRequests.size(), BeforeRejoin + 2);
 }
 
 TEST(QmAxiomScoresComponent, NewServerRefreshesFreshScoreboardCacheWithoutHidingPoints)
 {
-	CScopedAxiomPlayerName PlayerName;
 	CFakeAxiomHttp Http;
 	CTestAxiomScores Scores(&Http);
 	Scores.SetMode(EQmAxiomMode::GORES);
 	CompleteSuccessfulScoreboardQuery(Scores, Http, "session_player", 37);
-	Scores.EnsureQueried("session_player");
-	ASSERT_EQ(Http.m_vRequests.size(), 2u);
+	Scores.EnsureScoreboardQueried("session_player");
+	ASSERT_EQ(Http.m_vRequests.size(), 1u);
 	Scores.OnStateChange(IClient::STATE_ONLINE, IClient::STATE_CONNECTING);
-	Scores.EnsureQueried("session_player");
-	ASSERT_EQ(Http.m_vRequests.size(), 3u);
+	Scores.EnsureScoreboardQueried("session_player");
+	ASSERT_EQ(Http.m_vRequests.size(), 2u);
 	EXPECT_EQ(Scores.GetLookup("session_player").m_Status, EQmAxiomScoreStatus::READY);
 	EXPECT_EQ(Scores.GetLookup("session_player").m_Points, 37);
-	Http.Request(2).m_pRequest->Complete(SearchResponse("session_player"));
-	Scores.OnUpdate();
-	Scores.EnsureQueried("session_player");
-	ASSERT_EQ(Http.m_vRequests.size(), 4u);
-	EXPECT_EQ(Scores.GetLookup("session_player").m_Points, 37);
-	Http.Request(3).m_pRequest->Complete(InfoResponse("session_player", 53));
+	Http.Request(1).m_pRequest->Complete(PointsResponse("session_player", 53));
 	Scores.OnUpdate();
 	EXPECT_EQ(Scores.GetLookup("session_player").m_Points, 53);
 }
 
-TEST(QmAxiomScoresComponent, SearchNotFoundAfterNewServerKeepsLastSuccessfulPoints)
+TEST(QmAxiomScoresComponent, MissingPlayerAfterNewServerKeepsLastSuccessfulPoints)
 {
-	CScopedAxiomPlayerName PlayerName;
 	CFakeAxiomHttp Http;
 	CTestAxiomScores Scores(&Http);
 	Scores.SetMode(EQmAxiomMode::GORES);
 	CompleteSuccessfulScoreboardQuery(Scores, Http, "session_player", 37);
 	Scores.OnStateChange(IClient::STATE_ONLINE, IClient::STATE_CONNECTING);
-	Scores.EnsureQueried("session_player");
-	ASSERT_EQ(Http.m_vRequests.size(), 3u);
-	Http.Request(2).m_pRequest->Complete(R"({"code":200,"data":{"results":[]}})");
+	Scores.EnsureScoreboardQueried("session_player");
+	ASSERT_EQ(Http.m_vRequests.size(), 2u);
+	Http.Request(1).m_pRequest->Complete("{}", 404);
 	Scores.OnUpdate();
 	EXPECT_EQ(Scores.GetLookup("session_player").m_Status, EQmAxiomScoreStatus::READY);
 	EXPECT_EQ(Scores.GetLookup("session_player").m_Points, 37);
-	Scores.EnsureQueried("session_player");
-	EXPECT_EQ(Http.m_vRequests.size(), 3u);
+	Scores.EnsureScoreboardQueried("session_player");
+	EXPECT_EQ(Http.m_vRequests.size(), 2u);
 	Scores.OnStateChange(IClient::STATE_ONLINE, IClient::STATE_CONNECTING);
-	Scores.EnsureQueried("session_player");
-	EXPECT_EQ(Http.m_vRequests.size(), 4u);
+	Scores.EnsureScoreboardQueried("session_player");
+	EXPECT_EQ(Http.m_vRequests.size(), 3u);
 }
 
 TEST(QmAxiomScoresComponent, FailedModeRefreshAfterNewServerKeepsLastSuccessfulPoints)
 {
-	CScopedAxiomPlayerName PlayerName;
 	CFakeAxiomHttp Http;
 	CTestAxiomScores Scores(&Http);
 	Scores.SetMode(EQmAxiomMode::GORES);
 	CompleteSuccessfulScoreboardQuery(Scores, Http, "session_player", 37);
 	Scores.OnStateChange(IClient::STATE_ONLINE, IClient::STATE_CONNECTING);
-	Scores.EnsureQueried("session_player");
-	Http.Request(2).m_pRequest->Complete(SearchResponse("session_player"));
-	Scores.OnUpdate();
-	Scores.EnsureQueried("session_player");
-	ASSERT_EQ(Http.m_vRequests.size(), 4u);
-	Http.Request(3).m_pRequest->Fail();
+	Scores.EnsureScoreboardQueried("session_player");
+	Http.Request(1).m_pRequest->Fail();
 	Scores.OnUpdate();
 	EXPECT_EQ(Scores.GetLookup("session_player").m_Status, EQmAxiomScoreStatus::READY);
 	EXPECT_EQ(Scores.GetLookup("session_player").m_Points, 37);
@@ -473,28 +498,25 @@ TEST(QmAxiomScoresComponent, FailedModeRefreshAfterNewServerKeepsLastSuccessfulP
 
 TEST(QmAxiomScoresComponent, NewServerCancelsOldPrefetchAndIgnoresLateCompletion)
 {
-	CScopedAxiomPlayerName PlayerName;
 	CFakeAxiomHttp Http;
 	CTestAxiomScores Scores(&Http);
 	Scores.SetMode(EQmAxiomMode::GORES);
 	CompleteSuccessfulScoreboardQuery(Scores, Http, "session_player", 37);
 	Scores.OnStateChange(IClient::STATE_ONLINE, IClient::STATE_CONNECTING);
-	Scores.EnsureQueried("session_player");
-	const auto OldRequest = Http.Request(2).m_pRequest;
+	Scores.EnsureScoreboardQueried("session_player");
+	const auto OldRequest = Http.Request(1).m_pRequest;
 	Scores.OnStateChange(IClient::STATE_OFFLINE, IClient::STATE_ONLINE);
 	EXPECT_TRUE(OldRequest->Aborted());
 	Scores.OnStateChange(IClient::STATE_ONLINE, IClient::STATE_CONNECTING);
 	Scores.SetMode(EQmAxiomMode::GORES);
 	CompleteSuccessfulScoreboardQuery(Scores, Http, "session_player", 53);
-	OldRequest->Complete(SearchResponse("session_player", 9999));
+	OldRequest->Complete(PointsResponse("session_player", 9999));
 	Scores.OnUpdate();
-	EXPECT_EQ(Scores.GetResult("session_player")->m_Match.m_UserId, 5528);
 	EXPECT_EQ(Scores.GetLookup("session_player").m_Points, 53);
 }
 
 TEST(QmAxiomScoresComponent, NewServerCancelsOldActiveQueryAndRefreshesBothModes)
 {
-	CScopedAxiomPlayerName PlayerName;
 	CFakeAxiomHttp Http;
 	CTestAxiomScores Scores(&Http);
 	CompleteSuccessfulQuery(Scores, Http, "session_player");

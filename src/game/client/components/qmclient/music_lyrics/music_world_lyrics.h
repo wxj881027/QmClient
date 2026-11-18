@@ -17,6 +17,8 @@ namespace QmMusicLyrics
 			uint64_t m_AtlasRevision = 0;
 			int m_VisibleCharacters = -1;
 			bool m_Initialized = false;
+			// 创建失败（纯空白或无可绘制字形）时保留输入指纹，避免逐帧重试。
+			bool m_CreationFailed = false;
 		};
 		// 只保留当前句与上一句，双语各占一行缓存。
 		std::array<std::array<SCachedRow, 2>, 2> m_aaRows;

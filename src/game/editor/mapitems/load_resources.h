@@ -19,7 +19,7 @@ namespace EditorMapLoad
 	{
 		std::vector<CMapItemImage_v2> m_vImages;
 		std::vector<CMapItemSound> m_vSounds;
-		std::vector<CMapItemAutoMapperConfig> m_vAutoMapperConfigs;
+		std::vector<CMapItemAutomapperConfig> m_vAutoMapperConfigs;
 	};
 
 	// 与实际导入共用筛选，自动映射索引按导入后的组/层序号解释。
@@ -142,28 +142,28 @@ namespace EditorMapLoad
 			const void *pData = Map.GetItem(ItemIndex, &Type);
 			if(pData == nullptr || Type != MAPITEMTYPE_AUTOMAPPER_CONFIG)
 				return std::nullopt;
-			CMapItemAutoMapperConfig Item{};
+			CMapItemAutomapperConfig Item{};
 			mem_copy(&Item, pData, sizeof(int));
 			if(Item.m_Version != 1)
 				continue;
-			if(Size < static_cast<int>(offsetof(CMapItemAutoMapperConfig, m_LayerId)))
+			if(Size < static_cast<int>(offsetof(CMapItemAutomapperConfig, m_LayerId)))
 			{
 				log_error("editor/load", "Automapper configuration %d is missing its group index.", i);
 				return std::nullopt;
 			}
-			mem_copy(&Item, pData, offsetof(CMapItemAutoMapperConfig, m_LayerId));
+			mem_copy(&Item, pData, offsetof(CMapItemAutomapperConfig, m_LayerId));
 			if(Item.m_GroupId < 0 || static_cast<size_t>(Item.m_GroupId) >= vvAutoMapperTargets.size())
 				continue;
-			if(Size < static_cast<int>(offsetof(CMapItemAutoMapperConfig, m_AutomapperConfig)))
+			if(Size < static_cast<int>(offsetof(CMapItemAutomapperConfig, m_AutomapperConfig)))
 			{
 				log_error("editor/load", "Automapper configuration %d is missing its layer index.", i);
 				return std::nullopt;
 			}
-			mem_copy(&Item, pData, offsetof(CMapItemAutoMapperConfig, m_AutomapperConfig));
+			mem_copy(&Item, pData, offsetof(CMapItemAutomapperConfig, m_AutomapperConfig));
 			const auto &vTargets = vvAutoMapperTargets[Item.m_GroupId];
 			if(Item.m_LayerId < 0 || static_cast<size_t>(Item.m_LayerId) >= vTargets.size() || !vTargets[Item.m_LayerId])
 				continue;
-			if(Size < static_cast<int>(sizeof(CMapItemAutoMapperConfig)))
+			if(Size < static_cast<int>(sizeof(CMapItemAutomapperConfig)))
 			{
 				log_error("editor/load", "Automapper configuration %d has truncated settings.", i);
 				return std::nullopt;

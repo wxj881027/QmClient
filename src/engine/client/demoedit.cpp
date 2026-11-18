@@ -23,8 +23,8 @@ CDemoEdit::COperations &CDemoEdit::Operations()
 }
 
 CDemoEdit::CDemoEdit(const char *pNetVersion, CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, IStorage *pStorage, const char *pDemo, const char *pDst, int StartTick, int EndTick, COperations *pOperations) :
-	m_pSnapshotDelta(pSnapshotDelta->Clone()),
-	m_pSnapshotDeltaSixup(pSnapshotDeltaSixup->Clone()),
+	m_pSnapshotDelta(std::make_unique<CSnapshotDelta>(*pSnapshotDelta)),
+	m_pSnapshotDeltaSixup(std::make_unique<CSnapshotDelta>(*pSnapshotDeltaSixup)),
 	m_pStorage(pStorage),
 	m_pOperations(pOperations)
 {
@@ -43,7 +43,7 @@ CDemoEdit::CDemoEdit(const char *pNetVersion, CSnapshotDelta *pSnapshotDelta, CS
 	m_EndTick = EndTick;
 
 	// Init the demoeditor
-	m_DemoEditor.Init(&*m_pSnapshotDelta, &*m_pSnapshotDeltaSixup, nullptr, pStorage, nullptr, m_pOperations);
+	m_DemoEditor.Init(m_pSnapshotDelta.get(), m_pSnapshotDeltaSixup.get(), pStorage, nullptr, m_pOperations);
 }
 
 void CDemoEdit::Run()

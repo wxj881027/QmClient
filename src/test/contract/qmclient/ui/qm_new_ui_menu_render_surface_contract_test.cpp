@@ -125,8 +125,10 @@ TEST(QmNewUiMenuRenderSurfaceContract, ShaderBackendsKeepRoundedSurfaceCompositi
 		EXPECT_NE(Shader.find("vec4 FillColor = GradientColor(GradientUV, "), std::string::npos);
 		EXPECT_NE(Shader.find("float OuterCoverage = Coverage(OuterDistance, Params.y);"), std::string::npos);
 		EXPECT_NE(Shader.find("InnerCoverage = BorderWidth > 0.0 && min(InnerHalfSize.x, InnerHalfSize.y) > 0.0 ? Coverage(InnerDistance, Params.y) : 0.0;"), std::string::npos);
-		EXPECT_EQ(Shader.find("* 0.8"), std::string::npos);
-		EXPECT_EQ(Shader.find("* 0.9"), std::string::npos);
+		// 早期圆角表面把整块颜色乘 0.8/0.9 做暗化，颜色对不上是回归。连续曲率引入后
+		// 0.8 合法地出现在半径数学里（胶囊半径比例），所以负向断言必须限定在颜色合成上。
+		EXPECT_EQ(Shader.find("FillColor.rgb * 0.8"), std::string::npos);
+		EXPECT_EQ(Shader.find("BorderTint.rgb * 0.9"), std::string::npos);
 		EXPECT_NE(Shader.find("Rect.zw + vec2(Params.z * 2.0)"), std::string::npos);
 		EXPECT_NE(Shader.find("float OutputAlpha = FillAlpha + BorderAlpha;"), std::string::npos);
 		// 边框颜色经 BorderTint 中转：默认为单色 BorderColor，Params.w 置位时改用渐变。
@@ -155,7 +157,8 @@ TEST(QmNewUiMenuRenderSurfaceContract, ShaderBackendsKeepRoundedSurfaceCompositi
 		EXPECT_NE(MetalShader.find("fragment float4 qmclient_rounded_rect_sdf_fragment("), std::string::npos);
 		EXPECT_NE(MetalShader.find("float4 RoundedRectGradientColor("), std::string::npos);
 		EXPECT_NE(MetalShader.find("constant float4 *Params [[buffer(1)]]"), std::string::npos);
-		EXPECT_NE(MetalShader.find("float RoundedRectDistance(float2 Point, float2 HalfSize, float Radius, float Smoothing, float CurveType, float SeamAmount)"), std::string::npos);
+		// 距离函数多带一个胶囊端头强度：圆角与胶囊端头共用同一条 SDF，接缝强度单独透传。
+		EXPECT_NE(MetalShader.find("float RoundedRectDistance(float2 Point, float2 HalfSize, float Radius, float Smoothing, float CurveType, float SeamAmount, float CapsuleStrength)"), std::string::npos);
 		EXPECT_NE(MetalShader.find("float RoundedRectCornerRadius(float2 Point, float4 CornerRadii)"), std::string::npos);
 		EXPECT_NE(MetalShader.find("float RoundedRectCoverage(float DistanceValue, float PixelSize)"), std::string::npos);
 		EXPECT_NE(MetalShader.find("const float Feather = max(PixelSize, length(float2(dfdx(DistanceValue), dfdy(DistanceValue))));"), std::string::npos);
@@ -264,7 +267,10 @@ TEST(QmNewUiMenuRenderSurfaceContract, ShaderBackendsKeepRoundedSurfaceCompositi
 		EXPECT_NE(pShader->find("clamp(ClampedRadius * (1.0 + 1.3 * Amount), ClampedRadius, MaxRadius)"), std::string::npos);
 		// 胶囊接缝软化：胶囊没有生长空间，但半圆端头与直边的曲率跳变要能单独缓，
 		// 否则就只能二选一（要么硬接缝，要么整个端头被压方）。
-		EXPECT_NE(pShader->find("min(Amount, clamp(SeamAmount, 0.0, 1.0))"), std::string::npos);
+		// 胶囊接缝软化改由 SeamAmount 的第二段编码（>0.9 表示「强度通道」），
+		// 只对真正封顶成胶囊的控件启用，避免把普通大圆角也软化。
+		EXPECT_NE(pShader->find("if(SeamAmount > 0.9)"), std::string::npos);
+		EXPECT_NE(pShader->find("bool SeamCapsule = SeamAmount > 0.001 && EffectiveRadius >= MinHalf * 0.9"), std::string::npos);
 		EXPECT_NE(pShader->find("GradientLength"), std::string::npos);
 		EXPECT_NE(pShader->find("[14].w"), std::string::npos);
 		EXPECT_NE(pShader->find("[16].w"), std::string::npos);
@@ -390,7 +396,8 @@ TEST(QmNewUiMenuBranches, NoThemeBackgroundAndFriendRowsUseSharedSdfSurfaces)
 	EXPECT_NE(Background.find("Graphics()->SetColor(CheckerColor);"), std::string::npos);
 	EXPECT_NE(Browser.find("#include <game/client/QmUi/UiSurface.h>"), std::string::npos);
 	// 圆角数值已收进 ui_token::radius（SMALL_MENU 即 5.0），断言跟着 token 走。
-	EXPECT_NE(Browser.find("DrawRoundedSurface(Ui(), Header, HeaderColor, ColorRGBA(), ui_token::radius::SMALL_MENU);"), std::string::npos);
+	// 好友列表行头是胶囊（与行选中态同一形状），圆角走 PILL 而不是卡片小圆角。
+	EXPECT_NE(Browser.find("DrawRoundedSurface(Ui(), Header, HeaderColor, ColorRGBA(), ui_token::radius::PILL);"), std::string::npos);
 	EXPECT_NE(Browser.find("DrawRoundedSurface(Ui(), Rect, CardFill, ColorRGBA(), ui_token::radius::SMALL_MENU);"), std::string::npos);
 	EXPECT_EQ(Browser.find("Rect.Draw(Color, IGraphics::CORNER_ALL, 5.0f);"), std::string::npos);
 }
@@ -401,10 +408,14 @@ TEST(QmNewUiMenuBranches, SharedListsAndResourceCardsUseRoundedSurfacePath)
 	const std::string Assets = ReadTextFile("src/game/client/components/menus_settings_assets.cpp");
 	EXPECT_NE(ListBox.find("DrawRoundedSurface(Ui(), Item.m_Rect"), std::string::npos);
 	EXPECT_NE(ListBox.find("DrawRoundedSurface(Ui(), View"), std::string::npos);
-	EXPECT_NE(Assets.find("DrawRoundedSurface(Ui(), ShellRect"), std::string::npos);
+	// 资源卡片壳改由列表卡片组件统一绘制（qm_list_card::DrawStaticShell 内部仍走
+	// DrawRoundedSurface），卡片几何与圆角不再散在页面里各写一份。
+	EXPECT_NE(Assets.find("#include <game/client/QmUi/QmListCard.h>"), std::string::npos);
+	EXPECT_NE(Assets.find("qm_list_card::DrawStaticShell(Ui()"), std::string::npos);
 	// PreviewFrame 的第二层圆角底已随"卡片去嵌套"设计移除：卡片壳是唯一容器，
 	// 不再断言预览框自己的表面绘制。
 	EXPECT_NE(Assets.find("DrawRoundedSurface(Ui(), FallbackRect"), std::string::npos);
-	EXPECT_NE(Assets.find("DrawRoundedSurface(pUi, StatusRect"), std::string::npos);
+	// 状态徽章改由标签组件统一绘制（ui_tag 内部走 DrawRoundedSurface）。
+	EXPECT_NE(Assets.find("ui_tag::DrawInRect(pUi, Shell.m_StatusTagRect"), std::string::npos);
 	EXPECT_NE(Assets.find("DrawRoundedSurface(Ui(), WorkshopHudView"), std::string::npos);
 }

@@ -99,6 +99,19 @@ namespace
 		EXPECT_FALSE(m_Ui.ConsumeHotkey(CUi::HOTKEY_ENTER));
 	}
 
+	TEST(QmCuiTooltipHost, UnboundUiIgnoresTooltipRequests)
+	{
+		CUi Ui;
+		const CUIRect Rect{10.0f, 10.0f, 120.0f, 20.0f};
+		Ui.SetCardLabelHintsEnabled(true);
+		EXPECT_EQ(Ui.QmTooltips(), nullptr);
+		Ui.DoButtonTooltip(&Ui, &Rect, "hint");
+		Ui.DoConfigTooltip(&Ui, &Rect, &Rect);
+		Ui.DoTooltip(&Ui, &Rect, "hint");
+		Ui.DoSmallTooltip(&Ui, &Rect, "hint");
+		EXPECT_STREQ(Ui.PrepareCardLabel(&Rect, "Label (hint)", false), "Label (hint)");
+	}
+
 	TEST_F(QmEditorTextInput, RetainedEnterKeepsCommandTextAndCallerHotkey)
 	{
 		Focus(m_First);

@@ -11,6 +11,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <vector>
 
 namespace
 {
@@ -50,6 +51,32 @@ namespace
 		const float Distance = std::sqrt(DeltaX * DeltaX + DeltaY * DeltaY);
 		// 1 像素羽化，避免硬边阶梯；覆盖度按「在圆内多少」给出。
 		return std::clamp(Radius - Distance + 0.5f, 0.0f, 1.0f);
+	}
+
+	// 在缓存工作线程内把原图和径向模糊图混合，文字与 HUD 不参与采样。
+	void ApplySummaryBlur(uint8_t *pPixels, int Width, int Height)
+	{
+		const std::vector<uint8_t> vSharp(pPixels, pPixels + static_cast<size_t>(Width) * Height * 4);
+		const float CenterY = (Height - 1) * 0.5f;
+		constexpr int Samples = 24;
+		for(int Y = 0; Y < Height; ++Y)
+			for(int X = 0; X < Width; ++X)
+			{
+				const float Mask = 0.10f + 0.70f * X / (Width - 1);
+				int aSum[3]{};
+				for(int i = 0; i < Samples; ++i)
+				{
+					const float T = 0.065f * i / (Samples - 1);
+					const int SampleX = static_cast<int>(X * (1.0f - T) + 0.5f);
+					const int SampleY = static_cast<int>(Y + (CenterY - Y) * T + 0.5f);
+					const uint8_t *pSample = &vSharp[(static_cast<size_t>(SampleY) * Width + SampleX) * 4];
+					for(int c = 0; c < 3; ++c)
+						aSum[c] += pSample[c];
+				}
+				uint8_t *pPixel = pPixels + (static_cast<size_t>(Y) * Width + X) * 4;
+				for(int c = 0; c < 3; ++c)
+					pPixel[c] = static_cast<uint8_t>(pPixel[c] + (aSum[c] / static_cast<float>(Samples) - pPixel[c]) * Mask + 0.5f);
+			}
 	}
 
 	float SampleChannel(const CImageInfo &Image, int ChannelCount, int X, int Y, int Channel)
@@ -185,7 +212,8 @@ QmMapCover::EPrepareResult QmMapCover::ComposeChecked(const CImageInfo &Source, 
 	if(OutWidth <= 0 || OutHeight <= 0 || OutWidth > MAX_WIDTH || OutHeight > MAX_HEIGHT || OutWidth < 2)
 		return EPrepareResult::INVALID;
 
-	const int ImageWidth = std::clamp(static_cast<int>(std::lround(static_cast<float>(OutWidth) * std::clamp(Art.m_ImageFraction, 0.3f, 0.95f))), 1, OutWidth - 1);
+	const bool FullImage = Art.m_ImageFraction >= 1.0f;
+	const int ImageWidth = FullImage ? OutWidth : std::clamp(static_cast<int>(std::lround(static_cast<float>(OutWidth) * std::clamp(Art.m_ImageFraction, 0.3f, 0.95f))), 1, OutWidth - 1);
 	const int ChannelCount = Source.m_Format == CImageInfo::FORMAT_RGBA ? 4 : 3;
 	const float Shade = std::clamp(Art.m_Shade, 0.0f, 1.0f);
 
@@ -235,14 +263,19 @@ QmMapCover::EPrepareResult QmMapCover::ComposeChecked(const CImageInfo &Source, 
 				SourceX = (1.0f - 0.10f * T * T) * MaxSourceX;
 				Alpha = TailAlpha(Art, X, Y, OutWidth, OutHeight, ImageWidth);
 			}
+			// 将完整封面的透明像素合成到黑色底，上层只需处理卡片渐隐。
+			const float SourceCoverage = FullImage && ChannelCount == 4 ? BilinearChannel(Source, ChannelCount, SourceX, SourceY, 3) : 1.0f;
 			for(int Channel = 0; Channel < 3; ++Channel)
 			{
-				const float Value = BilinearChannel(Source, ChannelCount, SourceX, SourceY, Channel) * Shade;
+				const float Value = BilinearChannel(Source, ChannelCount, SourceX, SourceY, Channel) * Shade * SourceCoverage;
 				pPixel[Channel] = static_cast<uint8_t>(std::clamp(Value, 0.0f, 1.0f) * 255.0f + 0.5f);
 			}
 			pPixel[3] = static_cast<uint8_t>(std::clamp(Alpha, 0.0f, 1.0f) * 255.0f + 0.5f);
 		}
 	}
+
+	if(Art.m_SummaryBlur)
+		ApplySummaryBlur(pOutput, OutWidth, OutHeight);
 
 	Out.Free();
 	Out.m_Width = static_cast<size_t>(OutWidth);

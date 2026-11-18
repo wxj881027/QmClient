@@ -6,11 +6,18 @@
 
 #include <vector>
 
+using namespace std::chrono_literals;
+
+namespace
+{
+	constexpr qm_friend_notify::CGreetQueue::CClock::time_point JOIN_TIME{};
+}
+
 TEST(QmFriendPresenceMessage, StandardJoinFormsExtractTheCompleteName)
 {
 	for(const char *pSuffix : {"' entered and joined the game", "' joined the game",
 		    "' entered and joined the red team", "' entered and joined the blue team",
-		    "' entered and joined the spectators"})
+		    "' entered and joined the spectators", "' 已进入并加入了 game", "' 已进入并加入了 spectators"})
 	{
 		SCOPED_TRACE(pSuffix);
 		const auto Message = qm_friend_notify::ParsePresenceMessage(-1, 0, std::string("'O'Brien") + pSuffix);
@@ -62,26 +69,35 @@ TEST(QmFriendPresenceMessage, LeaveMessagesWithOptionalReasonsExtractTheName)
 	EXPECT_EQ(qm_friend_notify::ParsePresenceMessage(-1, 0, "'Alice' has left the game soon").m_Event, qm_friend_notify::EPresenceEvent::NONE);
 }
 
-TEST(QmFriendGreetQueue, NewFriendCanBeGreetedInTheSameUpdate)
+TEST(QmFriendGreetQueue, DuplicateJoinDoesNotPostponeTheOneSecondDeadline)
 {
 	qm_friend_notify::CGreetQueue Queue;
-	Queue.Add("Friend");
-	EXPECT_TRUE(Queue.TrySend([](const std::string &Names) {
+	Queue.Add("Friend", JOIN_TIME);
+	Queue.Add("Friend", JOIN_TIME + 500ms);
+	EXPECT_FALSE(Queue.TrySend(JOIN_TIME + 999ms, [](const std::string &) { ADD_FAILURE(); return true; }));
+	EXPECT_TRUE(Queue.TrySend(JOIN_TIME + 1s, [](const std::string &Names) {
 		EXPECT_EQ(Names, "Friend");
 		return true;
 	}));
-	EXPECT_FALSE(Queue.TrySend([](const std::string &) { ADD_FAILURE(); return true; }));
+	EXPECT_FALSE(Queue.TrySend(JOIN_TIME + 2s, [](const std::string &) { ADD_FAILURE(); return true; }));
 }
 
-TEST(QmFriendGreetQueue, RejectedSendRemainsPendingAndMergesLaterArrival)
+TEST(QmFriendGreetQueue, RetryBatchesOnlyFriendsWhoseOwnDelayHasElapsed)
 {
 	qm_friend_notify::CGreetQueue Queue;
-	Queue.Add("Alice");
-	EXPECT_FALSE(Queue.TrySend([](const std::string &) { return false; }));
-	Queue.Add("Bob");
-	Queue.Add("Alice");
-	EXPECT_TRUE(Queue.TrySend([](const std::string &Names) {
+	Queue.Add("Alice", JOIN_TIME);
+	Queue.Add("Bob", JOIN_TIME + 200ms);
+	EXPECT_FALSE(Queue.TrySend(JOIN_TIME + 1s, [](const std::string &Names) {
+		EXPECT_EQ(Names, "Alice");
+		return false;
+	}));
+	Queue.Add("Carol", JOIN_TIME + 1100ms);
+	EXPECT_TRUE(Queue.TrySend(JOIN_TIME + 1200ms, [](const std::string &Names) {
 		EXPECT_EQ(Names, "Alice Bob");
+		return true;
+	}));
+	EXPECT_TRUE(Queue.TrySend(JOIN_TIME + 2100ms, [](const std::string &Names) {
+		EXPECT_EQ(Names, "Carol");
 		return true;
 	}));
 }
@@ -89,17 +105,17 @@ TEST(QmFriendGreetQueue, RejectedSendRemainsPendingAndMergesLaterArrival)
 TEST(QmFriendGreetQueue, FriendLeavingBeforeSendIsDiscarded)
 {
 	qm_friend_notify::CGreetQueue Queue;
-	Queue.Add("Alice");
+	Queue.Add("Alice", JOIN_TIME);
 	Queue.Remove("Alice");
-	EXPECT_FALSE(Queue.TrySend([](const std::string &) { ADD_FAILURE(); return true; }));
+	EXPECT_FALSE(Queue.TrySend(JOIN_TIME + 1s, [](const std::string &) { ADD_FAILURE(); return true; }));
 }
 
 TEST(QmFriendGreetQueue, DisablingOrChangingConnectionCancelsPendingGreeting)
 {
 	qm_friend_notify::CGreetQueue Queue;
-	Queue.Add("Alice");
+	Queue.Add("Alice", JOIN_TIME);
 	Queue.Reset();
-	EXPECT_FALSE(Queue.TrySend([](const std::string &) { ADD_FAILURE(); return true; }));
+	EXPECT_FALSE(Queue.TrySend(JOIN_TIME + 1s, [](const std::string &) { ADD_FAILURE(); return true; }));
 }
 
 TEST(QmFriendOnlineScan, InitialAndNewlyCompletedServersAreSilentUntilTheirNextSnapshot)

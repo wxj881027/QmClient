@@ -109,8 +109,14 @@ namespace
 		{
 			"deck:appearance-name-plate-text",
 			Localizable("Adds border, gradient, rainbow and glow effects to nameplate text, with separate scopes for play, spectating and demos."),
-			Localizable("Turn on \"Show advanced options\", then enable \"Border\", \"Gradient\", \"Rainbow\" or \"Glow\" and set the matching ranges and colors."),
+			Localizable("Turn on \"Nameplate text effects\", open \"Personal adjustments\", then enable \"Border\", \"Gradient\", \"Rainbow\" or \"Glow\" and set the matching ranges and colors."),
 			Localizable("Effects are heavy on crowded servers, so keep \"Automatic effect LOD when crowded\" enabled."),
+		},
+		{
+			"deck:appearance-scoreboard",
+			Localizable("Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list."),
+			Localizable("Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list."),
+			Localizable("Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read."),
 		},
 		{
 			"deck:controls-chat",
@@ -186,15 +192,21 @@ namespace
 		},
 		{
 			"deck:ddnet-gameplay",
-			Localizable("Toggles DDNet gameplay indicators and assists such as race time, team markers and hints."),
-			Localizable("Enable the indicators you need; each one draws on your own screen only."),
-			Localizable("Indicators that read game state can lag behind the server; do not rely on them for frame-perfect input."),
+			Localizable("General DDNet gameplay display: showing other players and their shadow opacity, background quads and the default zoom."),
+			Localizable("Tick \"Show others\" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use \"Show background quads\" and \"Default zoom\" for the view."),
+			Localizable("Prediction and latency compensation moved to the \"Network compensation\" sub-tab of the DDNet page."),
 		},
 		{
 			"deck:ddnet-miscellaneous",
 			Localizable("Collects the remaining DDNet client preferences that do not belong to other cards."),
 			Localizable("Review the entries and change only what you understand; defaults are tuned for normal play."),
 			Localizable("Options here affect networking or identity; test on a server before using them in matches."),
+		},
+		{
+			"deck:ddnet-prediction",
+			Localizable("Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, and upstream packet redundancy."),
+			Localizable("Set \"Prediction margin\" in milliseconds, tick \"AntiPing (latency compensation)\" and then choose what to predict; the redundancy switch is experimental and only useful on lossy connections."),
+			Localizable("Prediction trades accuracy for responsiveness: a larger margin and AntiPing smooth out ping jitter but can mispredict nearby actions, and upstream redundancy may triple upload traffic."),
 		},
 		{
 			"deck:general-client",
@@ -233,6 +245,12 @@ namespace
 			Localizable("Results include cards on other pages; the tab switches automatically."),
 		},
 		{
+			"deck:graphics-card-effects",
+			Localizable("Controls how the settings cards themselves are drawn: card background, border and the rainbow title effect."),
+			Localizable("Card shape is shared with the rest of the interface and lives in \"Interface theme\"."),
+			Localizable("Very thick borders make text look blurry; keep them near the defaults."),
+		},
+		{
 			"deck:graphics-display",
 			Localizable("Chooses windowed or fullscreen mode, the monitor and the resolution; switching recreates the swap chain, so the screen may flash briefly."),
 			Localizable("Pick the mode first, then the monitor and resolution; the refresh rate follows the monitor's current mode."),
@@ -246,9 +264,9 @@ namespace
 		},
 		{
 			"deck:graphics-interaction",
-			Localizable("Sets how much motion the interface plays: transitions, card entrance, reorder animations and scroll feel."),
-			Localizable("Choose off, simple or full; the individual switches below only apply to full."),
-			Localizable("Turn motion off on weaker machines; cards then open and scroll immediately."),
+			Localizable("Sets how much motion the interface plays (transitions, card entrance, reorder animations, scroll feel) and the shape of the text caret in every input field."),
+			Localizable("Choose off, reduced or full; this single switch drives every animation. Then pick a caret shape for the settings, console and chat input fields."),
+			Localizable("Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell."),
 		},
 		{
 			"deck:graphics-modes",
@@ -257,10 +275,10 @@ namespace
 			Localizable("Unusual refresh rates can cause tearing; prefer the monitor's native rate."),
 		},
 		{
-			"deck:graphics-visual",
-			Localizable("Controls how UI surfaces are drawn: card surface opacity, border width, corner rounding, segment count and the rainbow title effect."),
-			Localizable("Adjust one value at a time; corners and segments are drawn per frame, so large segment counts cost GPU time."),
-			Localizable("Very thick borders or high segment counts make text look blurry; keep them near the defaults."),
+			"deck:graphics-theme",
+			Localizable("Controls the shape and colors shared by the whole interface: corner curve, capsule ends, surfaces, accent, control and popup backgrounds, text color mode and blur."),
+			Localizable("Pick a text color mode first; the custom color row only appears for the custom mode."),
+			Localizable("Text follows the chosen mode instead of the surface, so a light surface with white text is unreadable by design."),
 		},
 		{
 			"deck:player-country",
@@ -300,9 +318,9 @@ namespace
 		},
 		{
 			"deck:qmclient-contributors-title-display",
-			Localizable("Where your title appears and how it looks: nameplate, style, motion, colors and glow."),
-			Localizable("Turn on \"Show titles on nameplates\", pick a \"Title style\", then adjust \"Title motion\" and \"Wave amount\"; \"Advanced mode\" adds color and glow."),
-			Localizable("Changes apply at once, so check \"Title preview\" to compare styles; press \"Save\" on the \"Sponsor title\" card to share one."),
+			Localizable("Choose a sponsor title style for your nameplate and chat messages."),
+			Localizable("Pick a text style or a moon or sun badge, check the preview, then press \"Save\" to share the style with other players."),
+			Localizable("The per-character wave setting affects text titles on your screen only."),
 		},
 		{
 			"deck:sound-audio-pack",
@@ -504,7 +522,7 @@ namespace
 		},
 		{
 			"qm:debug_graph",
-			Localizable("Graphs RTT, prediction, snapshot age and frame rate in a panel shown while the debug graph toggle is on."),
+			Localizable("Shows FPS, frame time, RTT and prediction lead. Frame-time bars above the guide exceed the 60 FPS frame budget."),
 			Localizable("Bind \"Global toggle key\" to show or hide the panel, and raise \"Panel opacity\" if the graphs are hard to read."),
 			Localizable("It is a diagnostic overlay, not gameplay data; lower the opacity when it covers the map."),
 		},
@@ -548,7 +566,7 @@ namespace
 			"qm:friend_notify",
 			Localizable("Watches your friend list and reports friends coming online or joining your map, with optional automatic greeting."),
 			Localizable("Turn on \"Notify when friends come online\" and \"Auto refresh server list\", then tune \"Refresh interval\"; \"Auto greet friends entering map\" is optional."),
-			Localizable("Auto greet posts a public chat line a few seconds after a friend joins, so leave \"Greeting text\" empty on strict servers."),
+			Localizable("Auto greet waits 1 second after a friend joins, then sends a public greeting when chat is available. Leave \"Greeting text\" empty on strict servers."),
 		},
 		{
 			"qm:gores",
@@ -625,8 +643,8 @@ namespace
 		{
 			"qm:pie_menu",
 			Localizable("A radial menu that opens near a player and offers quick actions such as whisper, spectate or copy skin."),
-			Localizable("Turn on \"Enable pie menu\", bind the \"Pie menu\" command on the Bind page, then hold that key near a player and release on an option."),
-			Localizable("Options only exist within \"Detection distance\"; turn off the ones you never use to keep the wheel short."),
+			Localizable("Turn on \"Enable pie menu\", bind the \"Pie menu\" command on the Bind page, then hold that key near a player and release on an option. Drag options between the two lists to show or hide them."),
+			Localizable("Click a slice in the preview to change that option's color; options only exist within \"Detection distance\", so keep the wheel short."),
 		},
 		{
 			"qm:player_stats",

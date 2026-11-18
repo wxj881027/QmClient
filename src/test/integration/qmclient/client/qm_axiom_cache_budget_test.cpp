@@ -44,7 +44,7 @@ namespace
 		bool m_Accept = false;
 		std::string m_LastUrl;
 		std::vector<std::shared_ptr<CResponse>> m_vRequests;
-		std::shared_ptr<IQmAxiomHttpRequest> Get(const char *pUrl, int, int, int64_t) override
+		std::shared_ptr<IQmAxiomHttpRequest> Get(const char *pUrl, const char *, int, int, int64_t) override
 		{
 			m_LastUrl = pUrl;
 			if(!m_Accept)
@@ -57,12 +57,14 @@ namespace
 
 	class CScores final : public CQmAxiomScores
 	{
-		int64_t CurrentTick() const noexcept override { return time_freq(); }
+		int64_t m_Now = time_freq();
+		int64_t CurrentTick() const noexcept override { return m_Now; }
 		const char *StatisticsPlayerName() const override { return g_Config.m_PlayerName; }
 
 	public:
 		explicit CScores(IQmAxiomHttp *pHttp) :
 			CQmAxiomScores(pHttp) { SetDdStatsEnabled(false); }
+		void AdvanceSeconds(int Seconds) { m_Now += Seconds * time_freq(); }
 	};
 
 	std::string Name(int Index) { return "p" + std::to_string(Index); }
@@ -74,9 +76,10 @@ namespace
 		       ",\"total_play_time\":2,\"total_maps_completed\":3,\"performance_points\":4,\"mileage\":5}]}";
 	}
 
-	std::string Search(const std::string &PlayerName)
+	std::string Points(const std::string &PlayerName, int Value = 9)
 	{
-		return "{\"code\":200,\"data\":{\"results\":[{\"user_id\":7,\"player_name\":\"" + PlayerName + "\"}]}}";
+		return "{\"code\":200,\"data\":{\"user\":{\"player\":{\"name\":\"" + PlayerName +
+		       "\"}},\"mode\":\"gores\",\"points\":" + std::to_string(Value) + "}}";
 	}
 
 	class QmAxiomCacheBudget : public testing::Test
@@ -182,7 +185,7 @@ TEST_F(QmAxiomCacheBudget, SelectedStatisticsPlayerRemainsAfterRequestHasFinishe
 	EXPECT_FALSE(m_Scores.IsFetchingPlayer("selected"));
 	m_Scores.SetMode(EQmAxiomMode::GORES);
 	for(int Index = 0; Index < 300; ++Index)
-		m_Scores.EnsureQueried(Name(Index).c_str());
+		m_Scores.EnsureScoreboardQueried(Name(Index).c_str());
 	EXPECT_EQ(m_Scores.GetResult("selected"), pSelected);
 	EXPECT_EQ(CountKnownPlayers(300), 127);
 }
@@ -214,7 +217,7 @@ TEST_F(QmAxiomCacheBudget, ScoreboardAdmissionProtectsActiveStatisticsRequest)
 	m_Http.m_Accept = false;
 	m_Scores.SetMode(EQmAxiomMode::GORES);
 	for(int Index = 128; Index < 300; ++Index)
-		m_Scores.EnsureQueried(Name(Index).c_str());
+		m_Scores.EnsureScoreboardQueried(Name(Index).c_str());
 	EXPECT_EQ(m_Scores.GetResult("p0"), pActive);
 	EXPECT_FALSE(m_Http.m_vRequests.front()->Done());
 	EXPECT_EQ(m_Http.m_vRequests.front()->m_Aborts, 0);
@@ -226,46 +229,48 @@ TEST_F(QmAxiomCacheBudget, ScoreboardAdmissionProtectsPendingPrefetch)
 	Load(Players(128));
 	m_Scores.SetMode(EQmAxiomMode::GORES);
 	m_Http.m_Accept = true;
-	m_Scores.EnsureQueried("p0");
+	m_Scores.EnsureScoreboardQueried("p0");
 	ASSERT_EQ(m_Http.m_vRequests.size(), 1u);
 	const auto *pPending = m_Scores.GetResult("p0");
 	m_Http.m_Accept = false;
 	for(int Index = 128; Index < 300; ++Index)
-		m_Scores.EnsureQueried(Name(Index).c_str());
+		m_Scores.EnsureScoreboardQueried(Name(Index).c_str());
 	EXPECT_EQ(m_Scores.GetResult("p0"), pPending);
 	EXPECT_EQ(m_Http.m_vRequests.front()->m_Aborts, 0);
 	EXPECT_EQ(CountKnownPlayers(300), 128);
 }
 
-TEST_F(QmAxiomCacheBudget, FullPinnedCacheRejectsNewNameUntilRequestReleasesEntry)
+TEST_F(QmAxiomCacheBudget, PendingPointsRequestsStayPinnedAtConcurrencyLimit)
 {
+	Load(Players(128));
 	m_Scores.SetMode(EQmAxiomMode::GORES);
 	m_Http.m_Accept = true;
 	for(int Index = 0; Index < 64; ++Index)
 	{
-		m_Scores.EnsureQueried(Name(Index).c_str());
-		m_Scores.OnUpdate();
+		m_Scores.EnsureScoreboardQueried(Name(Index).c_str());
+		m_Scores.AdvanceSeconds(1);
 	}
 	ASSERT_EQ(m_Http.m_vRequests.size(), 64u);
+	for(int Index = 128; Index < 300; ++Index)
+		m_Scores.EnsureScoreboardQueried(Name(Index).c_str());
 	for(int Index = 0; Index < 64; ++Index)
-		m_Http.m_vRequests[Index]->Complete(Search(Name(Index)));
-	m_Scores.OnUpdate();
-	for(int Index = 0; Index < 64; ++Index)
-		m_Scores.EnsureQueried(Name(Index).c_str());
-	ASSERT_EQ(m_Http.m_vRequests.size(), 128u);
-	for(int Index = 64; Index < 128; ++Index)
 	{
-		m_Scores.EnsureQueried(Name(Index).c_str());
-		m_Scores.OnUpdate();
+		EXPECT_NE(m_Scores.GetResult(Name(Index).c_str()), nullptr);
+		EXPECT_EQ(m_Http.m_vRequests[Index]->m_Aborts, 0);
 	}
-	ASSERT_EQ(m_Http.m_vRequests.size(), 192u);
-	m_Scores.EnsureQueried("blocked");
-	EXPECT_EQ(m_Scores.GetResult("blocked"), nullptr);
-	EXPECT_EQ(CountKnownPlayers(128), 128);
-	EXPECT_EQ(m_Http.m_vRequests.size(), 192u);
-	m_Http.m_vRequests[128]->Complete(R"({"code":200,"data":{"results":[]}})");
-	m_Scores.OnUpdate();
-	m_Scores.EnsureQueried("blocked");
+	EXPECT_EQ(CountKnownPlayers(300), 128);
+	m_Scores.EnsureScoreboardQueried("blocked");
 	EXPECT_NE(m_Scores.GetResult("blocked"), nullptr);
-	EXPECT_EQ(m_Scores.GetResult("p64"), nullptr);
+	EXPECT_EQ(m_Scores.GetLookup("blocked").m_Status, EQmAxiomScoreStatus::NOT_REQUESTED);
+	EXPECT_EQ(m_Http.m_vRequests.size(), 64u);
+	m_Http.m_vRequests[0]->Complete(Points("p0"));
+	m_Scores.OnUpdate();
+	m_Scores.EnsureScoreboardQueried("after_release");
+	ASSERT_EQ(m_Http.m_vRequests.size(), 65u);
+	EXPECT_EQ(m_Scores.GetResult("p0"), nullptr);
+	EXPECT_EQ(m_Scores.GetLookup("after_release").m_Status, EQmAxiomScoreStatus::FETCHING);
+	m_Http.m_vRequests.back()->Complete(Points("after_release", 42));
+	m_Scores.OnUpdate();
+	EXPECT_EQ(m_Scores.GetLookup("after_release").m_Status, EQmAxiomScoreStatus::READY);
+	EXPECT_EQ(m_Scores.GetLookup("after_release").m_Points, 42);
 }

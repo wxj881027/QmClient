@@ -84,7 +84,7 @@ namespace
 		void TearDown() override { m_Player.Stop(); }
 		int Load()
 		{
-			return m_Player.Load(m_State.m_pStorage.get(), nullptr, "source.demo", IStorage::TYPE_SAVE, false);
+			return m_Player.Load(m_State.m_pStorage.get(), "source.demo", IStorage::TYPE_SAVE, false);
 		}
 		void ExpectFailed(const char *pReason)
 		{
@@ -100,9 +100,9 @@ namespace
 		void RecordTicks(const char *pName, int Count)
 		{
 			unsigned char aMap[] = {'m', 'a', 'p', 'b', 'y', 't', 'e', 's'};
-			ASSERT_EQ(m_State.m_Recorder.Start(m_State.m_pStorage.get(), nullptr, pName, "test", "map", SHA256_DIGEST{}, 0, "client", sizeof(aMap), aMap, nullptr, nullptr, nullptr), 0);
+			ASSERT_EQ(m_State.m_Recorder.Start(m_State.m_pStorage.get(), pName, "test", "map", SHA256_DIGEST{}, 0, "client", sizeof(aMap), aMap, nullptr, nullptr, nullptr), 0);
 			const CSnapshot *pSnapshot = CSnapshot::EmptySnapshot();
-			const int Size = static_cast<int>(pSnapshot->AsSlice().size() * sizeof(int32_t));
+			const int Size = static_cast<int>(sizeof(CSnapshot));
 			for(int i = 0; i < Count; ++i)
 				m_State.m_Recorder.RecordSnapshot(300 + i, pSnapshot, Size, true);
 			ASSERT_EQ(m_State.m_Recorder.Stop(IDemoRecorder::EStopMode::KEEP_FILE), 0);
@@ -176,7 +176,7 @@ TEST_F(DemoLoadAllocationIntegration, FailureOnOnePlayerDoesNotAffectAnotherPlay
 	ASSERT_EQ(Load(), -1);
 	CObservedKeyFrameMemory OtherMemory;
 	CDemoPlayer Other(&*m_State.m_pDelta, &*m_State.m_pDeltaSixup, false, nullptr, CDemoPlayer::ETimeMode::UNCACHED, &OtherMemory);
-	EXPECT_EQ(Other.Load(m_State.m_pStorage.get(), nullptr, "source.demo", IStorage::TYPE_SAVE, false), 0);
+	EXPECT_EQ(Other.Load(m_State.m_pStorage.get(), "source.demo", IStorage::TYPE_SAVE, false), 0);
 	EXPECT_TRUE(Other.Play());
 	EXPECT_EQ(m_Memory.m_LiveBytes, 0U);
 	Other.Stop();
@@ -197,7 +197,7 @@ TEST_F(DemoLoadAllocationIntegration, DestructionReleasesIndexThroughTheBorrowed
 	CObservedKeyFrameMemory Memory;
 	{
 		CDemoPlayer Player(&*m_State.m_pDelta, &*m_State.m_pDeltaSixup, false, nullptr, CDemoPlayer::ETimeMode::UNCACHED, &Memory);
-		EXPECT_EQ(Player.Load(m_State.m_pStorage.get(), nullptr, "source.demo", IStorage::TYPE_SAVE, false), 0);
+		EXPECT_EQ(Player.Load(m_State.m_pStorage.get(), "source.demo", IStorage::TYPE_SAVE, false), 0);
 		Player.Stop();
 	}
 	EXPECT_EQ(Memory.m_LiveBytes, 0U);
@@ -233,7 +233,7 @@ TEST_F(DemoLoadAllocationIntegration, MetadataOnlyReadDoesNotAllocateAPlaybackIn
 	CDemoHeader Header;
 	CTimelineMarkers Markers;
 	CMapInfo Map;
-	ASSERT_TRUE(m_Player.GetDemoInfo(m_State.m_pStorage.get(), nullptr, "source.demo", IStorage::TYPE_SAVE, &Header, &Markers, &Map));
+	ASSERT_TRUE(m_Player.GetDemoInfo(m_State.m_pStorage.get(), "source.demo", IStorage::TYPE_SAVE, &Header, &Markers, &Map));
 	EXPECT_EQ(Map.m_Size, 8U);
 	EXPECT_EQ(m_Memory.m_Requests, 0U);
 	EXPECT_FALSE(m_Player.IsPlaying());
@@ -245,7 +245,7 @@ TEST_F(DemoLoadAllocationIntegration, MetadataReadTransfersTheFileOnlyOnSuccessf
 	CTimelineMarkers Markers;
 	CMapInfo Map;
 	IOHANDLE File = nullptr;
-	ASSERT_TRUE(m_Player.GetDemoInfo(m_State.m_pStorage.get(), nullptr, "source.demo", IStorage::TYPE_SAVE, &Header, &Markers, &Map, &File));
+	ASSERT_TRUE(m_Player.GetDemoInfo(m_State.m_pStorage.get(), "source.demo", IStorage::TYPE_SAVE, &Header, &Markers, &Map, &File));
 	ASSERT_NE(File, nullptr);
 	std::unique_ptr<void, decltype(&io_close)> pFile(File, &io_close);
 	char aMap[8];
@@ -262,7 +262,7 @@ TEST_F(DemoLoadAllocationIntegration, InvalidMetadataDoesNotReturnAnOpenFile)
 	CMapInfo Map;
 	IOHANDLE File = nullptr;
 	char aError[256] = "";
-	EXPECT_FALSE(m_Player.GetDemoInfo(m_State.m_pStorage.get(), nullptr, "source.demo", IStorage::TYPE_SAVE, &Header, &Markers, &Map, &File, aError, sizeof(aError)));
+	EXPECT_FALSE(m_Player.GetDemoInfo(m_State.m_pStorage.get(), "source.demo", IStorage::TYPE_SAVE, &Header, &Markers, &Map, &File, aError, sizeof(aError)));
 	EXPECT_EQ(File, nullptr);
 	EXPECT_NE(aError[0], '\0');
 }

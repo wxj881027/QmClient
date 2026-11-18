@@ -63,6 +63,7 @@
 - `qmclient_scripts/check_header_guards.py`
 - `qmclient_scripts/check_ci_deps.py` — CI Linux 依赖单一来源守卫：所有 Linux 构建作业的 apt 依赖统一走 `.github/actions/linux-deps` 复合 action；残留 apt 步骤的包、各 workflow 的 `extra` 包、可选特性（MYSQL/WEBSOCKETS/UPNP）与对应系统包的对应关系都在其注册表核对，curl share API 编译探针也在守卫范围内。已在 gate `quick/default/full` 注册为「CI 依赖单一来源守卫」。
 - `qmclient_scripts/check_card_search_index.py` — 设置搜索索引缺口报告：解析 `QmUi/cards/QmCardSearch/*.inc` 的声明式搜索表与 `QM_CARD_SEARCH_REGISTER` 注册（以及 `QmCardCatalogSearch.cpp` 的旧集中表），按 `Add`/`MakeModuleCard`、`pStableId` 分支、`AddCard` 规格与卡片源文件多级映射收集 `Localize` 文案，报告未入索引的卡片文案、失效索引标签和无静态文案可核对的卡片，并校验声明数组注册、聚合器 include 与默认卡登记；默认只报告，`--strict` 才在索引漂移/结构不一致时失败。CI style 作业以非阻断步骤运行并写入 step summary。
+- `qmclient_scripts/check_config_exposure.py` — 配置暴露审计：解析 `config_variables*.h` 的 `MACRO_CONFIG_*`，与设置页实现代码（`QmUi`、`menus*`、`qmclient`/`tclient` 菜单、HUD 编辑器与地图编辑器弹层）求差集。`qm_` 自有配置未接线时必须登记在 `config_exposure_baseline.json`（`internal` 代码内部状态 / `pending-ui` 待补入口）；基线里已接线或指向已删除配置的条目判为过期。`--list` 输出待补入口清单，`--write-baseline` 维护基线。已在 gate `quick/default/full` 注册为「配置暴露审计」。
 - `qmclient_scripts/bump_version.py`
 - `qmclient_scripts/fix_style.py`
 - `qmclient_scripts/export_settings_commands_table.py`
@@ -123,7 +124,7 @@ python qmclient_scripts/integration/e2e_qmclient.py <build-dir> [connection_fail
 
 gate 使用 `--run-qm-smoke` 时会在同一进程测试 check 中顺序执行 smoke 与 E2E。
 
-Demo 视频导出的画质/速度基准（手动入口，不计入 gate 与测试库存；阈值来自 2026-10-24 实测基线，见 `docs/规格/2026-10-16-Demo视频导出现代化实施方案.md` 补充 26/27）：
+Demo 视频导出的画质/速度基准（手动入口，不计入 gate 与测试库存；阈值来自 2026-10-24 实测基线，见 `docs/归档/2026-10-16-Demo视频导出现代化实施方案.md` 补充 26/27）：
 
 ```text
 python qmclient_scripts/integration/perf_video_export.py <build-dir> [speed_hd|quality_codec|quality_aa]

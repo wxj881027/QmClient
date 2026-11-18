@@ -5,6 +5,7 @@
 
 #include <gtest/gtest.h>
 
+#include <chrono>
 #include <memory>
 #include <new>
 #include <string>
@@ -31,6 +32,7 @@ namespace
 		int m_PreviousIgnoreClan = g_Config.m_ClFriendsIgnoreClan;
 		std::unique_ptr<CFriends> m_pFriends = std::make_unique<CFriends>();
 		qm_friend_notify::CEnterNotifier m_Notifier;
+		qm_friend_notify::CGreetQueue::CClock::time_point m_Now{};
 		qm_friend_notify::CEnterNotifier::CSettings m_Settings{true, true, true};
 		std::vector<std::string> m_vBroadcasts;
 		std::vector<std::string> m_vGreets;
@@ -55,7 +57,7 @@ namespace
 		void TearDown() override { g_Config.m_ClFriendsIgnoreClan = m_PreviousIgnoreClan; }
 		bool Retry()
 		{
-			return m_Notifier.TrySend(m_Settings, [&](const std::string &Names) {
+			return m_Notifier.TrySend(m_Settings, m_Now, [&](const std::string &Names) {
 				++m_GreetAttempts;
 				FailIfRequested(m_GreetFailure);
 				if(!m_GreetAccepted)
@@ -64,9 +66,9 @@ namespace
 				return true;
 			});
 		}
-		bool Step(const char *pText)
+		bool Step(const char *pText, bool TickUntilGreeting = true)
 		{
-			const bool Entered = m_Notifier.OnMessage(m_Settings, [&](qm_friend_notify::CEnterTracker &Tracker) {
+			const bool Entered = m_Notifier.OnMessage(m_Settings, m_Now, [&](qm_friend_notify::CEnterTracker &Tracker) {
      const auto Message = Tracker.OnMessage(-1, 0, pText, *m_pFriends, m_MainName, m_DummyName);
      FailIfRequested(m_ParseFailure);
      return Message; }, [&](const std::string &Name) {
@@ -79,17 +81,24 @@ namespace
      m_vBroadcasts.push_back(Text);
      if(m_ResetDuringBroadcast)
       m_Notifier.Reset(); });
-			if(Entered)
+			if(Entered && TickUntilGreeting)
+			{
+				m_Now += std::chrono::seconds(1);
 				Retry();
+			}
 			return Entered;
 		}
 	};
 }
 
-TEST_F(QmFriendEnterNotifyIntegration, ServerEnterImmediatelyBroadcastsAndAttemptsGreet)
+TEST_F(QmFriendEnterNotifyIntegration, ServerEnterBroadcastsImmediatelyAndGreetsAfterOneSecond)
 {
-	ASSERT_TRUE(Step("'Alice' entered and joined the game"));
+	ASSERT_TRUE(Step("'Alice' entered and joined the game", false));
 	EXPECT_EQ(m_vBroadcasts, std::vector<std::string>{"notice:Alice"});
+	m_Now += std::chrono::milliseconds(999);
+	EXPECT_FALSE(Retry());
+	m_Now += std::chrono::milliseconds(1);
+	EXPECT_TRUE(Retry());
 	EXPECT_EQ(m_vGreets, std::vector<std::string>{"Alice: hi"});
 }
 

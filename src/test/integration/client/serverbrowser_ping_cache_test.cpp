@@ -42,7 +42,7 @@ namespace
 		int Execute(const char *pSql)
 		{
 			if(!m_pDisk)
-				m_pDisk = SqliteOpen(m_pConsole.get(), m_pStorage.get(), "ddnet-cache.sqlite3");
+				m_pDisk = SqliteOpen(m_pStorage.get(), "ddnet-cache.sqlite3");
 			return m_pDisk ? sqlite3_exec(m_pDisk.get(), pSql, nullptr, nullptr, nullptr) : SQLITE_CANTOPEN;
 		}
 	};

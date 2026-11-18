@@ -593,8 +593,17 @@ TEST(QmModuleLayoutAdapter, MigrateGlobalCardOrderWritesPipeFormatAndMarksMigrat
 	const std::string Result(g_Config.m_QmGlobalCardOrder);
 	EXPECT_NE(Result.find("qm:chat_bubble|appearance-chat|right|"), std::string::npos);
 	EXPECT_NE(Result.find("qm:camera_view|visual|left|"), std::string::npos);
-	EXPECT_NE(Result.find("tclient:auto-reply|tclient|left|4;"), std::string::npos);
-	EXPECT_NE(Result.find("deck:sound-audio-pack|sound|right|0;"), std::string::npos);
+	// 默认列/序由对称瀑布派生，测试按注册表默认 placement 生成期望串，
+	// 不再把某张卡的列号和列内序号写死（写死会在每次调整注册顺序时误报）。
+	const auto ExpectPlacement = [&Result](const char *pStableId, const char *pTab) {
+		const qm_card_order::SEntry *pPlacement = qm_card_registry::FindDefaultPlacement(pStableId);
+		ASSERT_NE(pPlacement, nullptr) << pStableId;
+		char aExpected[160];
+		str_format(aExpected, sizeof(aExpected), "%s|%s|%s|%d;", pStableId, pTab, pPlacement->m_Column == 1 ? "left" : "right", pPlacement->m_OrderInColumn);
+		EXPECT_NE(Result.find(aExpected), std::string::npos) << aExpected;
+	};
+	ExpectPlacement("tclient:auto-reply", "tclient");
+	ExpectPlacement("deck:sound-audio-pack", "sound");
 	EXPECT_NE(Result.find("|"), std::string::npos);
 	EXPECT_EQ(Result.find("chat_bubble:right"), std::string::npos);
 }
@@ -614,7 +623,12 @@ TEST(QmModuleLayoutAdapter, MigrateGlobalCardOrderPreservesRegistryOnlyQmCards)
 
 	const std::string Result(g_Config.m_QmGlobalCardOrder);
 	EXPECT_NE(Result.find("qm:chat_bubble|appearance-chat|right|"), std::string::npos);
-	EXPECT_NE(Result.find("qm:nameplate_text|hud|right|18;"), std::string::npos);
+	const qm_card_order::SEntry *pNameplateText = qm_card_registry::FindDefaultPlacement("qm:nameplate_text");
+	ASSERT_NE(pNameplateText, nullptr);
+	char aNameplateExpected[160];
+	str_format(aNameplateExpected, sizeof(aNameplateExpected), "qm:nameplate_text|hud|%s|%d;",
+		pNameplateText->m_Column == 1 ? "left" : "right", pNameplateText->m_OrderInColumn);
+	EXPECT_NE(Result.find(aNameplateExpected), std::string::npos);
 }
 
 // 意图：首次迁移不能只把 Qm 旧排序合入全局配置；一旦 registry 默认 Tclient 卡片写入
@@ -632,8 +646,15 @@ TEST(QmModuleLayoutAdapter, MigrateGlobalCardOrderPreservesLegacyTClientOrder)
 
 	const std::string Result(g_Config.m_QmGlobalCardOrder);
 	EXPECT_NE(Result.find("tclient:visual-nameplates|tclient|left|0;"), std::string::npos);
-	EXPECT_NE(Result.find("tclient:input|tclient|right|0;"), std::string::npos);
-	EXPECT_EQ(Result.find("tclient:input|tclient|left|3;"), std::string::npos);
+	// 旧 tclient 顺序的列/序仍被保留，但归属页跟随注册表：预测三卡已整卡迁到
+	// DDNet 页的「网络补偿」子页签（ddnet-prediction），迁移输出不再写回 tclient。
+	EXPECT_NE(Result.find("tclient:input|ddnet-prediction|right|0;"), std::string::npos);
+	EXPECT_EQ(Result.find("tclient:input|tclient|"), std::string::npos);
+	EXPECT_EQ(Result.find("tclient:anti-latency-tools|tclient|"), std::string::npos);
+	EXPECT_EQ(Result.find("tclient:improved-anti-ping|tclient|"), std::string::npos);
+	// 旧配置里只出现过 tclient:input，所以迁移输出只写这一张；另外两张不在旧序里，
+	// 由注册表默认归属兜底（同样是 ddnet-prediction），不参与这次序列化。
+	EXPECT_NE(Result.find("tclient:input|ddnet-prediction|"), std::string::npos);
 }
 
 // 意图：迁移只有完整写出全局配置后才能覆盖 config 和标记完成；

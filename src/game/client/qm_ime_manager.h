@@ -121,13 +121,11 @@ std::optional<SQmImePopupState> QmImeBuildPopupState(const IInput *pInput, bool 
 			State.m_vCandidates.push_back(Copy(pInput->GetCandidate(i)));
 		State.m_SelectedIndex = qm_ime_overlay::NormalizeSelectedCandidateIndex(pInput->GetCandidateSelectedIndex(), CandidateCount);
 
-		const int PageSize = pInput->GetCandidatePageSize();
-		const int PageStart = pInput->GetCandidatePageStart();
-		const int TotalCount = pInput->GetCandidateTotalCount();
-		if(PageSize > 0 && TotalCount > PageSize)
+		const int PageCount = pInput->GetCandidatePageCount();
+		if(PageCount > 1)
 		{
-			State.m_PageCount = (TotalCount - 1) / PageSize + 1;
-			State.m_PageIndex = std::clamp(PageStart / PageSize, 0, State.m_PageCount - 1);
+			State.m_PageCount = PageCount;
+			State.m_PageIndex = std::clamp(pInput->GetCandidatePageIndex(), 0, PageCount - 1);
 		}
 		State.m_AnchorScreen = AnchorScreen;
 		State.m_LineHeightScreen = LineHeightScreen;

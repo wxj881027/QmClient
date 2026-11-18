@@ -117,8 +117,8 @@ namespace qm_pose
 		log_info("poses", "building snapshot for %d tees", NumTees);
 
 		// 合成快照：每名 Tee 4 个对象 + 场景 2 个对象。
-		rust::Box<CSnapshotBuilder> pBuilder = CSnapshotBuilder::New();
-		pBuilder->Init(false);
+		CSnapshotBuilder Builder;
+		Builder.Init();
 
 		const int Team = ClampTeam(Options.m_Team);
 		const int Now = 0;
@@ -135,7 +135,7 @@ namespace qm_pose
 			ClientInfo.m_UseCustomColor = Pose.m_UseCustomColor ? 1 : 0;
 			ClientInfo.m_ColorBody = Pose.m_ColorBody;
 			ClientInfo.m_ColorFeet = Pose.m_ColorFeet;
-			if(!pBuilder->NewItem(NETOBJTYPE_CLIENTINFO, i, ClientInfo.AsSlice()))
+			if(!Builder.NewItem(NETOBJTYPE_CLIENTINFO, i, &ClientInfo, sizeof(ClientInfo)))
 				return 0;
 
 			CNetObj_PlayerInfo PlayerInfo{};
@@ -147,7 +147,7 @@ namespace qm_pose
 			PlayerInfo.m_Team = Team;
 			PlayerInfo.m_Score = 0;
 			PlayerInfo.m_Latency = 0;
-			if(!pBuilder->NewItem(NETOBJTYPE_PLAYERINFO, i, PlayerInfo.AsSlice()))
+			if(!Builder.NewItem(NETOBJTYPE_PLAYERINFO, i, &PlayerInfo, sizeof(PlayerInfo)))
 				return 0;
 
 			CNetObj_DDNetPlayer DDNetPlayer{};
@@ -155,7 +155,7 @@ namespace qm_pose
 			DDNetPlayer.m_AuthLevel = 0;
 			DDNetPlayer.m_FinishTimeSeconds = 0;
 			DDNetPlayer.m_FinishTimeMillis = 0;
-			if(!pBuilder->NewItem(NETOBJTYPE_DDNETPLAYER, i, DDNetPlayer.AsSlice()))
+			if(!Builder.NewItem(NETOBJTYPE_DDNETPLAYER, i, &DDNetPlayer, sizeof(DDNetPlayer)))
 				return 0;
 
 			CNetObj_Character Character{};
@@ -183,7 +183,7 @@ namespace qm_pose
 			Character.m_Weapon = std::clamp(Pose.m_Weapon, -1, NUM_WEAPONS - 1);
 			Character.m_Emote = std::max(Pose.m_Emote, 0);
 			Character.m_AttackTick = 0;
-			if(!pBuilder->NewItem(NETOBJTYPE_CHARACTER, i, Character.AsSlice()))
+			if(!Builder.NewItem(NETOBJTYPE_CHARACTER, i, &Character, sizeof(Character)))
 				return 0;
 		}
 
@@ -197,7 +197,7 @@ namespace qm_pose
 		GameInfo.m_TimeLimit = 0;
 		GameInfo.m_RoundNum = 0;
 		GameInfo.m_RoundCurrent = 0;
-		if(!pBuilder->NewItem(NETOBJTYPE_GAMEINFO, 0, GameInfo.AsSlice()))
+		if(!Builder.NewItem(NETOBJTYPE_GAMEINFO, 0, &GameInfo, sizeof(GameInfo)))
 			return 0;
 
 		int CenterX = Options.m_CenterX;
@@ -215,11 +215,11 @@ namespace qm_pose
 		SpecInfo.m_SpectatorId = -1;
 		SpecInfo.m_X = CenterX;
 		SpecInfo.m_Y = CenterY;
-		if(!pBuilder->NewItem(NETOBJTYPE_SPECTATORINFO, 0, SpecInfo.AsSlice()))
+		if(!Builder.NewItem(NETOBJTYPE_SPECTATORINFO, 0, &SpecInfo, sizeof(SpecInfo)))
 			return 0;
 
 		CSnapshotBuffer Buffer;
-		const int Size = pBuilder->Finish(Buffer);
+		const int Size = Builder.Finish(&Buffer);
 		if(Size <= 0 || (size_t)Size > OutSize)
 			return 0;
 		mem_copy(pOutBuffer, Buffer.m_aData, (size_t)Size);

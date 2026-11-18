@@ -34,8 +34,11 @@ TEST(QmNameplateCards, FiveSettingsCardsIncludeTitleDisplay)
 	const auto *pPreview = qm_card_registry::FindByStableId("deck:appearance-name-plate-preview");
 	ASSERT_NE(pPreview, nullptr);
 	EXPECT_STREQ(pPreview->m_pDefaultTab, "appearance-name-plate");
-	EXPECT_EQ(pPreview->m_DefaultColumn, qm_card_registry::ECardColumn::Right);
-	EXPECT_EQ(pPreview->m_DefaultOrder, 0);
+	// 预览卡是半宽卡（左右列由瀑布分配），默认不独占一行。
+	const qm_card_order::SEntry *pPreviewPlacement = qm_card_registry::FindDefaultPlacement("deck:appearance-name-plate-preview");
+	ASSERT_NE(pPreviewPlacement, nullptr);
+	EXPECT_STREQ(pPreviewPlacement->m_pDefaultTab, "appearance-name-plate");
+	EXPECT_GT(pPreviewPlacement->m_Column, 0);
 }
 
 TEST(QmNameplateCards, SearchTargetsTheCardContainingTheSetting)
@@ -121,7 +124,7 @@ TEST(QmNameplateCards, ConditionalRowsInvalidatePageAndSearchMeasurements)
 		&g_Config.m_ClNamePlatesStrong,
 		&g_Config.m_ClShowDirection,
 		&g_Config.m_QmNameplateEffectAutoLod,
-		&g_Config.m_QmNameplateAdvanced,
+		&g_Config.m_QmNameplateTextEffectsEnabled,
 	};
 	for(size_t Index = 0; Index < std::size(apOptions); ++Index)
 	{

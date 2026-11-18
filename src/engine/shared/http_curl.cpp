@@ -825,7 +825,7 @@ CHttpCurl::EPrepareResult CHttpCurl::PrepareRequest(const std::shared_ptr<CHttpR
 		if(!pRequest->ConfigureHandle(pHandle))
 		{
 			str_copy(pRequest->m_aErr, "Failed to initialize request");
-			Result = EPrepareResult::ABORTED;
+			Result = EPrepareResult::LOCAL_ERROR;
 		}
 		else
 		{

@@ -37,6 +37,42 @@ std::optional<SOutgoingTranslateText> ParseOutgoingTranslateTarget(const char *p
 	return SOutgoingTranslateText{Line.substr(0, TextEnd), Target};
 }
 
+STranslateSendOptions ResolveTranslateSendOptions(bool AutoOutgoing, bool InvertTranslation)
+{
+	if(!InvertTranslation)
+		return {};
+	if(AutoOutgoing)
+		return {false, false};
+	return {true, true};
+}
+
+bool PrepareOutgoingTranslateRequest(const char *pLine, const char *pFallbackTarget, std::string &Text, std::string &Target)
+{
+	const auto Parsed = ParseOutgoingTranslateTarget(pLine);
+	std::string_view SourceText;
+	std::string_view TargetText;
+	if(Parsed)
+	{
+		SourceText = Parsed->m_Text;
+		TargetText = Parsed->m_Target;
+	}
+	else
+	{
+		if(!pLine || !pFallbackTarget || pFallbackTarget[0] == '\0')
+			return false;
+		const char *pTrimmed = str_utf8_skip_whitespaces(pLine);
+		if(*pTrimmed == '\0' || *pTrimmed == '/')
+			return false;
+		SourceText = pLine;
+		TargetText = pFallbackTarget;
+	}
+	std::string PreparedText(SourceText);
+	std::string PreparedTarget(TargetText);
+	Text.swap(PreparedText);
+	Target.swap(PreparedTarget);
+	return true;
+}
+
 bool CTranslateJobQueue::CanSubmit(int Limit) const
 {
 	return Limit > 0 && m_vJobs.size() < static_cast<size_t>(Limit);

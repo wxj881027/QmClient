@@ -27,10 +27,25 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <utility>
 
 namespace
 {
 	const char *const s_apCategories[] = {Localizable("Novice"), Localizable("Moderate"), Localizable("Brutal"), Localizable("Insane"), Localizable("Dummy"), "DDmaX", "DDmaX Easy", "DDmaX Next", "DDmaX Pro", "DDmaX Nut", Localizable("Oldschool"), Localizable("Solo"), Localizable("Race"), Localizable("Fun"), Localizable("Event")};
+
+	CUi::SDropDownState s_AxiomCategory;
+
+	void ClearVoteMapItems(CUi *pUi, const std::vector<QmVoteMaps::SMap> &vMaps)
+	{
+		// 仅清理即将失效的行 ID，后台刷新不能打断搜索框输入。
+		for(const auto &Map : vMaps)
+		{
+			if(pUi->HotItem() == &Map || pUi->HotItem() == &Map.m_Points)
+				pUi->SetHotItem(nullptr);
+			if(pUi->ActiveItem() == &Map || pUi->ActiveItem() == &Map.m_Points)
+				pUi->SetActiveItem(nullptr);
+		}
+	}
 
 	const char *CategoryLabel(const char *pKey)
 	{
@@ -51,6 +66,36 @@ namespace
 			return QmVoteMaps::ECompletion::UNFINISHED;
 		return QmVoteMaps::ECompletion::UNKNOWN;
 	}
+
+	// 投票页的封面图（含压暗与参差拖尾）已经烘进纹理：这里只负责贴在目标矩形上。
+	// 列表行、详情条与预览面板共用这一份提交，避免三处各写一遍纹理切换。
+	void DrawVoteMapCoverPatch(CQmMapCovers &Covers, CUi *pUi, const CUIRect &Rect, const std::string &Thumbnail, const CQmMapCovers::ERole Role)
+	{
+		if(pUi == nullptr || Thumbnail.empty() || Rect.w <= 0.0f || Rect.h <= 0.0f)
+			return;
+		CQmMapCovers::SImage Image;
+		if(!Covers.Get(Thumbnail.c_str(), Role, &Image))
+			return;
+		const float Alpha = pUi->ControlAlphaScale();
+		if(Alpha <= 0.001f)
+			return;
+		IGraphics *pGraphics = pUi->Graphics();
+		if(pGraphics == nullptr)
+			return;
+		// 限制边缘采样，避免右侧透明拖尾混入纹理左端的不透明像素。
+		pGraphics->WrapClamp();
+		pGraphics->TextureSet(Image.m_Texture);
+		pGraphics->QuadsBegin();
+		pGraphics->SetColor(1.0f, 1.0f, 1.0f, Alpha);
+		pGraphics->QuadsSetSubset(0.0f, 0.0f, 1.0f, 1.0f);
+		const IGraphics::CQuadItem Quad(Rect.x, Rect.y, Rect.w, Rect.h);
+		pGraphics->QuadsDrawTL(&Quad, 1);
+		pGraphics->QuadsEnd();
+		pGraphics->WrapNormal();
+		pGraphics->TextureClear();
+		pGraphics->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+	}
+
 }
 
 void CMenus::RenderServerControl(CUIRect MainView)
@@ -60,28 +105,94 @@ void CMenus::RenderServerControl(CUIRect MainView)
 	const auto *pServerEntry = pServerAddress != nullptr ? ServerBrowser()->Find(*pServerAddress) : nullptr;
 	// 社区名单晚于连接信息到达时，浏览器条目会先更新归属。
 	const char *pCommunityId = pServerEntry != nullptr ? pServerEntry->m_Info.m_aCommunityId : Client()->ServerInfo().m_aCommunityId;
-	bool ModeChanged = State.m_Mode.UpdateCommunity(pCommunityId);
+	auto &Voting = GameClient()->m_Voting;
+	bool ModeChanged = State.m_Mode.UpdateCommunity(pCommunityId, GameClient()->m_QmAxiomAutoLogin.IsAxiomCommunity());
+	const bool Axiom = State.m_Mode.IsAxiom();
+	if(ModeChanged)
+	{
+		State.m_SelectedName.clear();
+		State.m_OptionsRevision = std::numeric_limits<uint64_t>::max();
+		State.m_AxiomRevision = std::numeric_limits<uint64_t>::max();
+		State.m_Dirty = true;
+		ClearVoteMapItems(Ui(), State.m_vMaps);
+		ClearVoteMapItems(Ui(), State.m_AxiomMenu.m_vMaps);
+		State.m_AxiomMenu = {};
+		State.m_vpAxiomCategoryLabels.clear();
+	}
+	if(Axiom && State.m_AxiomRevision != Voting.OptionsRevision() && !Voting.IsReceivingOptions())
+	{
+		if(Ui()->IsPopupOpen(&s_AxiomCategory.m_SelectionPopupContext))
+			Ui()->ClosePopupMenu(&s_AxiomCategory.m_SelectionPopupContext);
+		s_AxiomCategory.m_SelectionPopupContext.m_SelectionIndex = -1;
+		const bool HadMapMenu = !State.m_AxiomMenu.m_vMaps.empty() || !State.m_AxiomMenu.m_vCategories.empty();
+		ClearVoteMapItems(Ui(), State.m_AxiomMenu.m_vMaps);
+		State.m_AxiomMenu = QmVoteMaps::ParseAxiomMenu(Voting.FirstOption());
+		ModeChanged |= HadMapMenu != (!State.m_AxiomMenu.m_vMaps.empty() || !State.m_AxiomMenu.m_vCategories.empty());
+		State.m_AxiomRevision = Voting.OptionsRevision();
+		State.m_vpAxiomCategoryLabels.clear();
+		for(const auto &Category : State.m_AxiomMenu.m_vCategories)
+			State.m_vpAxiomCategoryLabels.push_back(Category.m_Label.c_str());
+		State.m_SelectedName.clear();
+		State.m_Dirty = true;
+	}
+	const bool HasLibrary = State.m_Mode.IsOfficialDdnet() || (Axiom && (!State.m_AxiomMenu.m_vMaps.empty() || !State.m_AxiomMenu.m_vCategories.empty()));
 	const auto PreviousPage = State.m_Page;
 	CUIRect Navigation;
-	MainView.HSplitTop(28.0f, &Navigation, &MainView);
-	MainView.HSplitTop(8.0f, nullptr, &MainView);
-	if(State.m_Mode.IsOfficialDdnet())
+	// 页签条高度与字号取设置页胶囊页签同一档：投票页顶部不再用更大的一档文字。
+	MainView.HSplitTop(ui_token::settings::TAB_HEIGHT, &Navigation, &MainView);
+	MainView.HSplitTop(ui_token::panel::GAP, nullptr, &MainView);
+	AddMenuHitRegion(Navigation);
+	AddMenuHitRegion(MainView);
+	// 预览地图放在页签行最右端：见方的图标按钮，三张子页共用同一个入口，
+	// 地图库看选中的图，服务端投票 / 踢人 / 观战看当前地图。
+	CUIRect PreviewButton;
+	Navigation.VSplitRight(Navigation.h, &Navigation, &PreviewButton);
+	Navigation.VSplitRight(ui_token::spacing::SM, &Navigation, nullptr);
+	if(HasLibrary)
 	{
 		CUIRect SwitchView;
 		Navigation.VSplitRight(std::min(140.0f, Navigation.w * 0.25f), &Navigation, &SwitchView);
 		Navigation.VSplitRight(8.0f, &Navigation, nullptr);
 		static CButtonContainer s_SwitchView;
-		if(ui_widget::SecondaryButton(ui_widget::ControlContext(Ui()), &s_SwitchView, State.m_Mode.UseMapLibrary() ? Localize("Original options") : Localize("Map"), SwitchView))
+		if(ui_widget::SecondaryButton(ui_widget::ControlContext(Ui()), &s_SwitchView, State.m_Mode.UseMapLibrary() ? Localize("Restore legacy votes") : Localize("Map"), SwitchView))
 		{
 			ModeChanged = State.m_Mode.ToggleServerOptions();
 			State.m_Page = EQmVoteMenuPage::OPTIONS;
 		}
 	}
 	Navigation.w = std::min(540.0f, Navigation.w);
+	// 预览目标：地图库取选中项，其余子页（服务端投票 / 踢人 / 观战）一律取当前地图；
+	// 传空串给 TargetName 让它回落到当前地图，避免在别的子页预览到上次选中的图。
+	const bool PreviewSelection = State.m_Page == EQmVoteMenuPage::OPTIONS && State.m_Mode.UseMapLibrary();
+	const char *pPreviewName = qm_vote_map_preview::TargetName(PreviewSelection ? State.m_SelectedName.c_str() : "", Client()->GetCurrentMap());
+	// 元数据每帧重建：目录与详情是异步到达的，只比名字会让面板长期停在「只有名字、
+	// 说明全是破折号」，直到换图才补齐。目录里能查到就补齐作者 / 难度 / 分数。
+	qm_vote_map_preview::SInfo Info;
+	const auto &vPreviewMaps = Axiom ? State.m_AxiomMenu.m_vMaps : State.m_vMaps;
+	for(const auto &Candidate : vPreviewMaps)
+	{
+		if(Candidate.m_Name == pPreviewName)
+		{
+			Info.m_Mapper = Candidate.m_Mapper;
+			Info.m_Stars = Candidate.m_Stars;
+			Info.m_Points = Candidate.m_Points;
+			break;
+		}
+	}
+	char aCaption[192];
+	qm_vote_map_preview::FormatCaption(Info, aCaption, sizeof(aCaption));
+	CQmMapPreviewPanel::STarget Target;
+	str_copy(Target.m_aMapName, pPreviewName, sizeof(Target.m_aMapName));
+	str_copy(Target.m_aCaption, aCaption, sizeof(Target.m_aCaption));
+	Target.m_AllowDownload = true;
+	m_MapPreviewPanel.Init(GameClient());
+	m_MapPreviewPanel.DoIconButton(ui_widget::ControlContext(Ui()), &State.m_MapPreviewButton, &State.m_MapPreview, PreviewButton, Target, pPreviewName[0] != '\0');
+	GameClient()->m_Tooltips.DoToolTip(&State.m_MapPreviewButton, &PreviewButton, Localize("Map preview"));
 	static CButtonContainer s_aPages[3];
-	const char *apPages[] = {State.m_Mode.UseMapLibrary() ? Localize("Map") : Localize("Server votes"), Localize("Kick player"), Localize("Move player to spectators")};
+	const bool ShowLibrary = HasLibrary && State.m_Mode.UseMapLibrary();
+	const char *apPages[] = {ShowLibrary ? Localize("Map") : Localize("Server votes"), Localize("Kick player"), Localize("Move player to spectators")};
 	const auto Style = CapsuleTabBarStyleFor(MenuPanelColor());
-	State.m_Page = static_cast<EQmVoteMenuPage>(DoNavigationTabs(s_aPages, apPages, std::size(apPages), static_cast<int>(State.m_Page), Navigation, 8.0f, &Style));
+	State.m_Page = static_cast<EQmVoteMenuPage>(DoNavigationTabs(s_aPages, apPages, std::size(apPages), static_cast<int>(State.m_Page), Navigation, ui_token::radius::PILL, &Style, ui_token::settings::TAB_FONT_SIZE));
 	if(ModeChanged || State.m_Page != PreviousPage)
 	{
 		Ui()->ClosePopupMenus();
@@ -89,9 +200,9 @@ void CMenus::RenderServerControl(CUIRect MainView)
 			Ui()->ReleaseActiveTextInput(pActiveInput);
 		m_ControlPageOpening = true;
 	}
-	if(ModeChanged && !State.m_Mode.UseMapLibrary())
+	if(ModeChanged && !ShowLibrary)
 		GameClient()->m_Voting.ClearUnfinishedMapVoteChain();
-	if(State.m_Page == EQmVoteMenuPage::OPTIONS && State.m_Mode.UseMapLibrary())
+	if(State.m_Page == EQmVoteMenuPage::OPTIONS && ShowLibrary)
 		RenderVoteMapLibrary(MainView);
 	else
 	{
@@ -107,23 +218,22 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 {
 	auto &State = m_QmVoteMenu;
 	auto &Voting = GameClient()->m_Voting;
-	const CCommunity *pCommunity = ServerBrowser()->Community(IServerBrowser::COMMUNITY_DDNET);
-	State.m_Loader.Update(Http(), Engine(), Client()->LocalTime());
-	if((State.m_OptionsRevision != Voting.OptionsRevision() && !Voting.IsReceivingOptions()) || State.m_CatalogRevision != State.m_Loader.Revision())
+	const bool Axiom = State.m_Mode.IsAxiom();
+	const auto &Server = Client()->ServerInfo();
+	const auto *pEntry = Client()->ServerAddress() ? ServerBrowser()->Find(*Client()->ServerAddress()) : nullptr;
+	const char *pType = pEntry && pEntry->m_Info.m_aCommunityType[0] ? pEntry->m_Info.m_aCommunityType : Server.m_aCommunityType;
+	State.m_Loader.SetAxiomMode(Axiom ? QmResolveAxiomModeFromServerContext({pType, Server.m_aName}) : EQmAxiomMode::NONE);
+	const CCommunity *pCommunity = Axiom ? nullptr : ServerBrowser()->Community(IServerBrowser::COMMUNITY_DDNET);
+	State.m_Loader.Update(Http(), Engine(), Client()->LocalTime(), &GameClient()->m_QmAxiomScores.OpenApiBudget(), g_Config.m_QmAxiomApiKey);
+	if(!Axiom && ((State.m_OptionsRevision != Voting.OptionsRevision() && !Voting.IsReceivingOptions()) || State.m_CatalogRevision != State.m_Loader.Revision()))
 	{
-		// 仅清理即将失效的行 ID，后台刷新不能打断搜索框输入。
-		for(const auto &Map : State.m_vMaps)
-		{
-			if(Ui()->HotItem() == &Map || Ui()->HotItem() == &Map.m_Points)
-				Ui()->SetHotItem(nullptr);
-			if(Ui()->ActiveItem() == &Map || Ui()->ActiveItem() == &Map.m_Points)
-				Ui()->SetActiveItem(nullptr);
-		}
+		ClearVoteMapItems(Ui(), State.m_vMaps);
 		State.m_vMaps = QmVoteMaps::MergeCatalog(State.m_Loader.Maps(), Voting.FirstOption());
 		State.m_OptionsRevision = Voting.OptionsRevision();
 		State.m_CatalogRevision = State.m_Loader.Revision();
 		State.m_Dirty = true;
 	}
+	const auto &vMaps = Axiom ? State.m_AxiomMenu.m_vMaps : State.m_vMaps;
 	if(State.m_Favorites != GameClient()->m_TClient.GetFavoriteMaps())
 	{
 		State.m_Favorites = GameClient()->m_TClient.GetFavoriteMaps();
@@ -182,45 +292,32 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	// 列表行比旧版高一点：条目左侧要放得下正常比例的地图缩略图，否则只能看到
 	// 缩略图里的一条横线，玩家认不出是哪张图。封面图尺寸固定，与窗口宽度无关。
 	constexpr float RowHeight = 32.0f;
+	// 这个列表靠 SkipItems 做可见范围裁剪，而 SkipItems 不会推进行距（CListBox 自动行距
+	// 在裁剪路径上不成立），所以把行距并进行高：行本身仍是 RowHeight，行距留在行矩形
+	// 下方，滚动/裁剪/命中都与同一个 pitch 走，视觉上仍是胶囊行 + 半档行距。
+	const float RowPitch = RowHeight + ui_token::list::ROW_SPACING;
 	const float RowCoverHeight = RowHeight - 2.0f;
-	const float RowCoverWidth = RowCoverHeight * (float)CQmMapCovers::ROW_WIDTH / (float)CQmMapCovers::ROW_HEIGHT;
+	const float RowCoverWidth = Axiom ? 0.0f : RowCoverHeight * (float)CQmMapCovers::ROW_WIDTH / (float)CQmMapCovers::ROW_HEIGHT;
 	const float RowNameInset = 20.0f + 16.0f + 4.0f + RowCoverWidth + 6.0f;
-	// 封面图（含压暗和参差拖尾）已经烘进纹理，这里只负责贴在目标矩形上。
+	// 封面图（含压暗和参差拖尾）已经烘进纹理，这里只负责贴在目标矩形上；
+	// 地图库列表行与详情条共用 DrawVoteMapCoverPatch，两处不会各自漂移。
 	auto DrawMapPatch = [&](const CUIRect &Rect, const std::string &Thumbnail, CQmMapCovers::ERole Role) {
-		if(Thumbnail.empty() || Rect.w <= 0.0f || Rect.h <= 0.0f)
-			return;
-		CQmMapCovers::SImage Image;
-		if(!State.m_Covers.Get(Thumbnail.c_str(), Role, &Image))
-			return;
-		const float Alpha = Ui()->ControlAlphaScale();
-		if(Alpha <= 0.001f)
-			return;
-		// 限制边缘采样，避免右侧透明拖尾混入纹理左端的不透明像素。
-		Graphics()->WrapClamp();
-		Graphics()->TextureSet(Image.m_Texture);
-		Graphics()->QuadsBegin();
-		Graphics()->SetColor(1.0f, 1.0f, 1.0f, Alpha);
-		Graphics()->QuadsSetSubset(0.0f, 0.0f, 1.0f, 1.0f);
-		const IGraphics::CQuadItem Quad(Rect.x, Rect.y, Rect.w, Rect.h);
-		Graphics()->QuadsDrawTL(&Quad, 1);
-		Graphics()->QuadsEnd();
-		Graphics()->WrapNormal();
-		Graphics()->TextureClear();
-		Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+		DrawVoteMapCoverPatch(GameClient()->m_MapCovers, Ui(), Rect, Thumbnail, Role);
 	};
 	// 提前生成视口外一小段行的封面，滚动时纹理已就绪，不会一出现就从头加载。
 	auto PrefetchRowCover = [&](int Row) {
 		if(Row < 0 || Row >= (int)State.m_vVisible.size())
 			return;
-		const auto &Map = State.m_vMaps[State.m_vVisible[Row]];
+		const auto &Map = vMaps[State.m_vVisible[Row]];
 		CQmMapCovers::SImage Image;
-		State.m_Covers.Get(Map.m_Thumbnail.c_str(), CQmMapCovers::ERole::ROW, &Image);
+		if(!Map.m_Thumbnail.empty())
+			GameClient()->m_MapCovers.Get(Map.m_Thumbnail.c_str(), CQmMapCovers::ERole::ROW, &Image);
 	};
 	CUIRect Refresh, Search, Exclude;
-	Header.VSplitRight(28.0f, &Header, &Refresh);
+	Header.VSplitRight(ui_token::control::IconBox(ui_token::font::TITLE), &Header, &Refresh);
 	Header.VSplitRight(8.0f, &Header, nullptr);
 	static CButtonContainer s_Refresh;
-	if(ui_widget::IconButton(ui_widget::ControlContext(Ui()), &s_Refresh, EQmIcon::ARROWS_ROTATE, FontIcons::FONT_ICON_ARROWS_ROTATE, Refresh, State.m_Loader.Loading()))
+	if(ui_widget::IconButton(ui_widget::ControlContext(Ui()), &s_Refresh, EQmIcon::ARROW_ROTATE_RIGHT, FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT, Refresh, State.m_Loader.Loading()))
 		State.m_Loader.Refresh(Http());
 	GameClient()->m_Tooltips.DoToolTip(&s_Refresh, &Refresh, State.m_Loader.Loading() ? Localize("Loading…") : Localize("Refresh"));
 	Header.VSplitRight(Header.w * 0.34f, &Search, &Exclude);
@@ -274,8 +371,10 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	Ui()->DoLabel_QmIcon(&DifficultyIcon, EQmIcon::STAR, FontIcons::FONT_ICON_STAR, 12.0f, TEXTALIGN_MC);
 	static CButtonContainer s_aStars[7], s_Favorites;
 	const float AllWidth = std::clamp(TextRender()->TextWidth(12.0f, Localize("All")) + 16.0f, 36.0f, 60.0f);
-	const float StarWidth = std::min(28.0f, std::max(0.0f, Stars.w - AllWidth - 24.0f) / 6.0f);
-	for(int Star = -1; Star <= 5; ++Star)
+	const int MaxStars = Axiom && State.m_AxiomMenu.m_MaxStars > 0 ? State.m_AxiomMenu.m_MaxStars : 5;
+	const int AvailableStars = (1 << (MaxStars + 1)) - 1;
+	const float StarWidth = std::min(28.0f, std::max(0.0f, Stars.w - AllWidth - 4.0f * (MaxStars + 1)) / (MaxStars + 1));
+	for(int Star = -1; Star <= MaxStars; ++Star)
 	{
 		CUIRect Chip;
 		Stars.VSplitLeft(Star < 0 ? AllWidth : StarWidth, &Chip, &Stars);
@@ -283,7 +382,7 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		char aStar[16];
 		str_format(aStar, sizeof(aStar), "%d", Star);
 		const int Mask = Star < 0 ? 0 : 1 << Star;
-		const bool Active = Star < 0 ? State.m_Filter.m_StarMask == 0 : (State.m_Filter.m_StarMask & Mask) != 0;
+		const bool Active = Star < 0 ? (State.m_Filter.m_StarMask & AvailableStars) == 0 : (State.m_Filter.m_StarMask & Mask) != 0;
 		if(CompactButton(s_aStars[Star + 1], Star < 0 ? Localize("All") : aStar, Active, Chip))
 		{
 			State.m_Filter.m_StarMask = Star < 0 ? 0 : State.m_Filter.m_StarMask ^ Mask;
@@ -319,17 +418,36 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	}
 
 	// 目录未到时列表只有服务器当前批次的选项，不把它的数量冒充完整地图库。
-	const bool CatalogPending = State.m_Loader.Loading() && State.m_Loader.Revision() == 0;
+	const bool CatalogPending = State.m_Loader.Loading() && State.m_Loader.Maps().empty();
 	const bool ShowSidebar = MainView.w >= 500.0f;
 	List = MainView;
-	if(ShowSidebar)
+	if(Axiom)
+	{
+		if(!State.m_vpAxiomCategoryLabels.empty())
+		{
+			CUIRect CategoryRow;
+			List.HSplitTop(24.0f, &CategoryRow, &List);
+			List.HSplitTop(4.0f, nullptr, &List);
+			const int Current = State.m_AxiomMenu.m_SelectedCategory;
+			DropDownProps.m_Enabled = !Voting.IsReceivingOptions() && State.m_AxiomRevision == Voting.OptionsRevision() && !Voting.IsVoting();
+			const int Selected = Ui()->DoDropDown(&CategoryRow, Current, State.m_vpAxiomCategoryLabels.data(), (int)State.m_vpAxiomCategoryLabels.size(), s_AxiomCategory, DropDownProps);
+			if(DropDownProps.m_Enabled && Selected != Current && Selected >= 0 && Selected < (int)State.m_AxiomMenu.m_vCategories.size())
+			{
+				Voting.ClearUnfinishedMapVoteChain();
+				Voting.CallvoteOption(State.m_AxiomMenu.m_vCategories[Selected].m_VoteOption, "");
+			}
+		}
+	}
+	else if(ShowSidebar)
 	{
 		MainView.VSplitLeft(112.0f, &Sidebar, &List);
 		List.VSplitLeft(8.0f, nullptr, &List);
 		DrawRoundedSurface(Ui(), Sidebar, Ink.WithAlpha(0.025f), Ink.WithAlpha(0.10f), 8.0f, 1.0f);
 		Sidebar.Margin(4.0f, &Sidebar);
 		static CListBox s_Categories;
-		s_Categories.SetItemColors(Ink.WithAlpha(0.12f), Ink.WithAlpha(0.08f), Ink.WithAlpha(0.05f));
+		// 选中/悬浮走 CListBox 的统一默认（主题选中色 / 列表 token），行距半档，
+		// 圆角按行高推导成胶囊；不再用本页 Ink 另调一套。
+		s_Categories.DoAutoSpacing(ui_token::list::ROW_SPACING);
 		int SelectedCategory = 0;
 		for(size_t i = 0; i < std::size(s_apCategories); ++i)
 			if(State.m_Filter.m_Category == s_apCategories[i])
@@ -339,11 +457,11 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		static int s_AllCategory;
 		for(size_t i = 0; i <= std::size(s_apCategories); ++i)
 		{
-			const CListboxItem Item = s_Categories.DoNextItem(i == 0 ? (const void *)&s_AllCategory : (const void *)&s_apCategories[i - 1]);
+			const CListboxItem Item = s_Categories.DoNextItem(i == 0 ? (const void *)&s_AllCategory : (const void *)&s_apCategories[i - 1], false, ui_token::list::RowRadius(s_Categories.RowHeight()));
 			if(Item.m_Visible)
 			{
-				CUIRect Text = Item.m_Rect;
-				Text.VMargin(8.0f, &Text);
+				// 行文字排在组件让出左右内退后的内容区；DDmaX 子分类额外缩进一级。
+				CUIRect Text = Item.m_ContentRect;
 				if(i > 0 && str_startswith(s_apCategories[i - 1], "DDmaX "))
 					Text.VSplitLeft(8.0f, nullptr, &Text);
 				Label(Text, i == 0 ? Localize("All maps") : CategoryLabel(s_apCategories[i - 1]), 12.0f);
@@ -384,14 +502,21 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	}
 	if(State.m_Dirty)
 	{
-		State.m_vVisible.clear();
-		for(size_t i = 0; i < State.m_vMaps.size(); ++i)
+		auto Filter = State.m_Filter;
+		if(Axiom)
 		{
-			const auto &Map = State.m_vMaps[i];
-			if(QmVoteMaps::Matches(Map, State.m_Filter, GameClient()->m_TClient.IsFavoriteMap(Map.m_Name.c_str()), CompletionFor(pCommunity, Map.m_Name.c_str())))
+			// 服务器已按投票分类下发本批地图，保留 DDNet 自己的分类筛选。
+			Filter.m_Category.clear();
+			Filter.m_StarMask &= AvailableStars;
+		}
+		State.m_vVisible.clear();
+		for(size_t i = 0; i < vMaps.size(); ++i)
+		{
+			const auto &Map = vMaps[i];
+			if(QmVoteMaps::Matches(Map, Filter, GameClient()->m_TClient.IsFavoriteMap(Map.m_Name.c_str()), CompletionFor(pCommunity, Map.m_Name.c_str())))
 				State.m_vVisible.push_back((int)i);
 		}
-		QmVoteMaps::Sort(State.m_vVisible, State.m_vMaps, State.m_Sort);
+		QmVoteMaps::Sort(State.m_vVisible, vMaps, State.m_Sort);
 		State.m_Dirty = false;
 	}
 	CUIRect Count, Random;
@@ -401,7 +526,7 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	if(CatalogPending)
 		str_format(aCount, sizeof(aCount), "%d / %s", (int)State.m_vVisible.size(), Localize("Loading…"));
 	else
-		str_format(aCount, sizeof(aCount), Localize("%d / %d maps"), (int)State.m_vVisible.size(), (int)State.m_vMaps.size());
+		str_format(aCount, sizeof(aCount), Localize("%d / %d maps"), (int)State.m_vVisible.size(), (int)vMaps.size());
 	Label(Count, State.m_Loader.Error() ? Localize("Map data unavailable; server votes remain available") : aCount, 12.0f, TEXTALIGN_ML, true);
 	static int s_CountTooltip;
 	if(State.m_Loader.Error())
@@ -414,15 +539,16 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	{
 		const int Index = QmVoteMaps::Pick(State.m_vVisible, secure_rand_below((int)State.m_vVisible.size()));
 		if(Index >= 0)
-			State.m_SelectedName = State.m_vMaps[Index].m_Name;
+			State.m_SelectedName = vMaps[Index].m_Name;
 		ScrollToSelection = true;
 	}
 	List.HSplitTop(4.0f, nullptr, &List);
 	const bool Wide = List.w >= 540.0f;
 	const bool HasMapper = List.w >= 340.0f;
+	// 列排版只做水平切分：行传 CListBox 让出左右内退后的内容矩形；表头不在行里，
+	// 由调用点先用同一 token 内退，两类矩形同宽同起点，列才对得齐。
 	auto Columns = [&](CUIRect Row) {
 		std::array<CUIRect, 5> aRects{};
-		Row.VMargin(8.0f, &Row);
 		if(Wide)
 		{
 			Row.VSplitRight(86.0f, &Row, &aRects[4]);
@@ -442,8 +568,10 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	// 之后再画表头文字会被整行裁掉。滚动条宽度沿用上一帧 DoStart 记录的
 	// 策略宽度（与服务器列表表头同一做法），列宽仍按滚动条占用扣除。
 	CUIRect HeaderColumns = TableHeader;
-	const bool HeaderScrolls = (float)State.m_vVisible.size() * RowHeight > List.h;
+	const bool HeaderScrolls = (float)State.m_vVisible.size() * RowPitch > List.h;
 	HeaderColumns.VSplitRight(HeaderScrolls ? s_Maps.ScrollbarWidthMax() : 0.0f, &HeaderColumns, nullptr);
+	// 表头不在列表行里、拿不到 m_ContentRect：用与行内容区同一 token 源内退。
+	HeaderColumns.VMargin(ui_token::list::RowInsetX(ui_token::font::BODY), &HeaderColumns);
 	const auto aHead = Columns(HeaderColumns);
 	CUIRect MapHeading = aHead[0];
 	// 表头“地图”与行内名称对齐：前面是收藏星标、完成标记和缩略图。
@@ -459,36 +587,42 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	}
 	int Selected = -1;
 	for(size_t i = 0; i < State.m_vVisible.size(); ++i)
-		if(State.m_vMaps[State.m_vVisible[i]].m_Name == State.m_SelectedName)
+		if(vMaps[State.m_vVisible[i]].m_Name == State.m_SelectedName)
 			Selected = (int)i;
 	// 行的选中/悬停底色改由下面自己画：封面背景必须压在底色之上、文字之下。
 	s_Maps.SetItemColors(ui_token::color::COLOR_TRANSPARENT, ui_token::color::COLOR_TRANSPARENT, ui_token::color::COLOR_TRANSPARENT);
 	s_Maps.SetActive(!Ui()->IsPopupOpen() && !m_FilterInput.IsActive() && !m_ExcludeInput.IsActive());
 	if(ScrollToSelection)
 		s_Maps.ScrollToSelected();
-	s_Maps.DoStart(RowHeight, (int)State.m_vVisible.size(), 1, 3, Selected, &List, false);
+	s_Maps.DoStart(RowPitch, (int)State.m_vVisible.size(), 1, 3, Selected, &List, false);
 	const int ItemCount = (int)State.m_vVisible.size();
 	const float ScrollY = std::max(0.0f, s_Maps.ScrollOffsetY());
-	const int FirstVisible = ScrollToSelection ? 0 : std::clamp((int)std::floor(ScrollY / RowHeight) - 1, 0, ItemCount);
-	const int EndVisible = ScrollToSelection ? ItemCount : std::clamp((int)std::ceil((ScrollY + s_Maps.ViewHeight()) / RowHeight) + 1, FirstVisible, ItemCount);
+	const int FirstVisible = ScrollToSelection ? 0 : std::clamp((int)std::floor(ScrollY / RowPitch) - 1, 0, ItemCount);
+	const int EndVisible = ScrollToSelection ? ItemCount : std::clamp((int)std::ceil((ScrollY + s_Maps.ViewHeight()) / RowPitch) + 1, FirstVisible, ItemCount);
 	// 全目录仍参与滚动几何，只给可见行做命中测试和文字布局。
 	s_Maps.SkipItems(FirstVisible);
 	for(int Row = FirstVisible; Row < EndVisible; ++Row)
 	{
 		const int Index = State.m_vVisible[Row];
-		const auto &Map = State.m_vMaps[Index];
-		const CListboxItem Item = s_Maps.DoNextItem(&Map);
+		const auto &Map = vMaps[Index];
+		const CListboxItem Item = s_Maps.DoNextItem(&Map, false, ui_token::list::RowRadius(RowHeight));
 		if(!Item.m_Visible)
 			continue;
 		auto Blur = Item.SuppressGaussianBlur();
+		// 行矩形含行距，胶囊只画行高那一截；选中/悬浮统一用主题选中色（强调色派生），
+		// 不再有左侧竖条，也不再写死圆角，更不用白色 token 当第二档。
+		CUIRect RowRect = Item.m_Rect;
+		RowRect.h = RowHeight;
+		const ColorRGBA RowFeedback = Ui()->QmControlTheme().m_Selected;
 		const float SelectionAlpha = s_Maps.SelectionFeedbackAlpha(Row);
 		if(SelectionAlpha > 0.001f)
-			DrawRoundedSurface(Ui(), Item.m_Rect, Ui()->ScaleBackgroundAlpha(Ink.WithAlpha(s_Maps.Active() ? 0.12f : 0.08f)).WithMultipliedAlpha(SelectionAlpha), ColorRGBA(), 5.0f);
+			DrawRoundedSurface(Ui(), RowRect, RowFeedback.WithMultipliedAlpha(SelectionAlpha), ColorRGBA(), ui_token::list::RowRadius(RowHeight));
 		if(Ui()->HotItem() == &Map)
-			DrawRoundedSurface(Ui(), Item.m_Rect, Ui()->ScaleBackgroundAlpha(Ink.WithAlpha(0.05f)), ColorRGBA(), 5.0f);
-		if(Item.m_Selected)
-			CUIRect{Item.m_Rect.x, Item.m_Rect.y + 4.0f, 2.0f, Item.m_Rect.h - 8.0f}.Draw(Ink.WithAlpha(0.55f), IGraphics::CORNER_ALL, 1.0f);
-		const auto aRow = Columns(Item.m_Rect);
+			DrawRoundedSurface(Ui(), RowRect, RowFeedback, ColorRGBA(), ui_token::list::RowRadius(RowHeight));
+		// 行内容排在组件让出左右内退后的内容区（高度仍按行本身，行距不参与排版）。
+		CUIRect RowContent = Item.m_ContentRect;
+		RowContent.h = RowHeight;
+		const auto aRow = Columns(RowContent);
 		CUIRect MapLabel = aRow[0];
 		CUIRect Marker;
 		MapLabel.VSplitLeft(20.0f, &Marker, &MapLabel);
@@ -496,7 +630,7 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		const auto Completion = CompletionFor(pCommunity, Map.m_Name.c_str());
 		const ColorRGBA PreviousText = TextRender()->GetTextColor();
 		const CQmIconSemanticColorScope SemanticColor;
-		TextRender()->TextColor(Favorite ? ResolveUiSurfaceIconColor(SurfaceText.Surface(), ColorRGBA(1.0f, 0.76f, 0.24f, 1.0f)) : PreviousText.WithMultipliedAlpha(0.3f));
+		TextRender()->TextColor(Favorite ? ResolveUiSurfaceIconColor(SurfaceText.Surface(), ui_token::color::FAVORITE) : PreviousText.WithMultipliedAlpha(0.3f));
 		const bool FavoriteClicked = ui_widget::DoIconButton(ui_widget::ControlContext(Ui()), &Map.m_Points, EQmIcon::STAR, FontIcons::FONT_ICON_STAR, 0, Marker, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, true, std::nullopt, false, true, &Marker) != 0;
 		TextRender()->TextColor(PreviousText);
 		if(FavoriteClicked)
@@ -520,7 +654,7 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		MapLabel.VSplitLeft(4.0f, nullptr, &MapLabel);
 		CUIRect Cover;
 		MapLabel.VSplitLeft(RowCoverWidth, &Cover, &MapLabel);
-		Cover.y = Item.m_Rect.y + 1.0f;
+		Cover.y = RowContent.y + 1.0f;
 		Cover.h = RowCoverHeight;
 		DrawMapPatch(Cover, Map.m_Thumbnail, CQmMapCovers::ERole::ROW);
 		MapLabel.VSplitLeft(6.0f, nullptr, &MapLabel);
@@ -528,7 +662,7 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		if(HasMapper)
 			Label(aRow[1], Map.m_Mapper.empty() ? "—" : Map.m_Mapper.c_str(), 12.0f, TEXTALIGN_ML, true);
 		char aValue[32];
-		str_format(aValue, sizeof(aValue), "%d / 5", Map.m_Stars);
+		str_format(aValue, sizeof(aValue), "%d / %d", Map.m_Stars, Map.m_MaxStars);
 		Label(aRow[2], Map.m_Stars < 0 ? "—" : aValue);
 		if(Wide)
 		{
@@ -545,7 +679,7 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	s_Maps.SkipItems(ItemCount - EndVisible);
 	Selected = s_Maps.DoEnd();
 	const bool Activated = s_Maps.WasItemActivated();
-	const QmVoteMaps::SMap *pSelected = Selected >= 0 && Selected < (int)State.m_vVisible.size() ? &State.m_vMaps[State.m_vVisible[Selected]] : nullptr;
+	const QmVoteMaps::SMap *pSelected = Selected >= 0 && Selected < (int)State.m_vVisible.size() ? &vMaps[State.m_vVisible[Selected]] : nullptr;
 	const char *pNewSelectedName = pSelected != nullptr ? pSelected->m_Name.c_str() : "";
 	if(State.m_SelectedName != pNewSelectedName)
 	{
@@ -565,7 +699,8 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 			DrawMapPatch(Cover, pSelected->m_Thumbnail, CQmMapCovers::ERole::DETAILS);
 		CUIRect Content = Details;
 		Content.Margin(8.0f, &Content);
-		Content.x = Cover.x + Cover.w + 8.0f;
+		if(!Axiom)
+			Content.x = Cover.x + Cover.w + 8.0f;
 		Content.w = std::max(24.0f, Details.x + Details.w - 8.0f - Content.x);
 		CUIRect Name, Metadata, Statistics, Favorite;
 		Content.HSplitTop(20.0f, &Name, &Content);
@@ -632,7 +767,18 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 			if(const auto *pData = State.m_Loader.Details())
 			{
 				char aStats[160];
-				if(pData->m_Finishers >= 0 && pData->m_AverageSeconds >= 0)
+				if(Axiom)
+				{
+					str_format(aStats, sizeof(aStats), Localize(" · %d finishers"), pData->m_Finishers);
+					str_append(aInfo, aStats, sizeof(aInfo));
+					if(pData->m_MedianSeconds >= 0)
+					{
+						const int Seconds = (int)pData->m_MedianSeconds;
+						str_format(aStats, sizeof(aStats), Localize(" · median %d:%02d:%02d"), Seconds / 3600, Seconds / 60 % 60, Seconds % 60);
+						str_append(aInfo, aStats, sizeof(aInfo));
+					}
+				}
+				else if(pData->m_Finishers >= 0 && pData->m_AverageSeconds >= 0)
 				{
 					const int Seconds = (int)pData->m_AverageSeconds;
 					str_format(aStats, sizeof(aStats), Localize(" · %d finishers · average %d:%02d:%02d"), pData->m_Finishers, Seconds / 3600, Seconds / 60 % 60, Seconds % 60);
@@ -641,11 +787,15 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 			}
 			if(State.m_Loader.DetailsError())
 			{
+				// 重新拉取详情是刷新/重试类动作：圆形图标按钮（ARROW_ROTATE_RIGHT，与全仓刷新图标同一档），
+				// 与地图库右上角的刷新按钮同一套字号、图标与悬停反馈。
 				CUIRect Retry;
-				Statistics.VSplitRight(100.0f, &Statistics, &Retry);
+				Statistics.VSplitRight(Statistics.h, &Statistics, &Retry);
+				Statistics.VSplitRight(ui_token::spacing::SM, &Statistics, nullptr);
 				static CButtonContainer s_Retry;
-				if(CompactButton(s_Retry, Localize("Retry details"), 0, Retry))
+				if(ui_widget::IconButton(ui_widget::ControlContext(Ui()), &s_Retry, EQmIcon::ARROW_ROTATE_RIGHT, FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT, Retry))
 					State.m_Loader.RetryDetails();
+				GameClient()->m_Tooltips.DoToolTip(&s_Retry, &Retry, Localize("Retry details"));
 			}
 			Label(Statistics, aInfo, 12.0f, TEXTALIGN_ML, true);
 			GameClient()->m_Tooltips.DoToolTipForRect(&s_StatisticsTooltip, &Statistics, aInfo);
@@ -655,11 +805,31 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	CUIRect CallButton;
 	Bottom.VSplitRight(std::min(112.0f, Bottom.w * 0.3f), &Bottom, &CallButton);
 	Bottom.VSplitRight(8.0f, &Bottom, nullptr);
-	const bool CanCall = pSelected != nullptr && !Voting.IsVoting();
+	if(Axiom)
+	{
+		CUIRect Reason;
+		Bottom.VSplitRight(std::min(240.0f, Bottom.w * 0.6f), &Bottom, &Reason);
+		Bottom.VSplitRight(8.0f, &Bottom, nullptr);
+		InputOptions = {};
+		InputOptions.m_pPlaceholder = Localize("Reason (optional)");
+		Ctx.m_ScopeHash = MakeUiScopeHash("qm_axiom_vote_reason");
+		ui_widget::InputField(Ctx, &m_CallvoteReasonInput, Reason, InputOptions);
+	}
+	const bool CanCall = pSelected != nullptr && !Voting.IsVoting() &&
+		(!Axiom || (!Voting.IsReceivingOptions() && State.m_AxiomRevision == Voting.OptionsRevision() && pSelected->m_VoteOption >= 0));
 	Label(Bottom, pSelected != nullptr ? pSelected->m_Name.c_str() : Localize("Select a map"), 12.0f, TEXTALIGN_ML, true);
 	static CButtonContainer s_Call;
 	if((ui_widget::PrimaryButton(ui_widget::ControlContext(Ui()), &s_Call, Localize("Call vote"), CallButton, !CanCall) || Activated) && CanCall)
 	{
+		if(Axiom)
+		{
+			Voting.ClearUnfinishedMapVoteChain();
+			Voting.CallvoteOption(pSelected->m_VoteOption, m_CallvoteReasonInput.GetString());
+			m_CallvoteReasonInput.Clear();
+			if(g_Config.m_UiCloseWindowAfterChangingSetting)
+				SetActive(false);
+			return;
+		}
 		// 具体地图直接交给服务器的 /map 命令，不依赖当前分类的投票选项。
 		const std::string Command = QmVoteMaps::MapVoteCommand(pSelected->m_Name);
 		if(!Command.empty())
@@ -738,9 +908,10 @@ void CMenus::RenderVotePlayerList(CUIRect MainView, bool MoveToSpectators)
 		TextRender()->TextColor(Previous);
 	};
 	const bool ShowClan = MainView.w >= 340.0f;
+	// 列排版只做水平切分：行传 CListBox 让出左右内退后的内容矩形，表头不在行里，
+	// 先用同一 token 内退，两类矩形同宽同起点，列才对得齐。
 	auto Columns = [&](CUIRect Row) {
 		std::array<CUIRect, 2> aRects{};
-		Row.VMargin(8.0f, &Row);
 		if(ShowClan)
 			Row.VSplitRight(Row.w * 0.35f, &Row, &aRects[1]);
 		aRects[0] = Row;
@@ -749,7 +920,9 @@ void CMenus::RenderVotePlayerList(CUIRect MainView, bool MoveToSpectators)
 	CUIRect TableHeader;
 	MainView.HSplitTop(20.0f, &TableHeader, &MainView);
 	TableHeader.Draw(Ink.WithAlpha(0.06f), IGraphics::CORNER_ALL, 4.0f);
-	const auto aHead = Columns(TableHeader);
+	CUIRect HeadContent = TableHeader;
+	HeadContent.VMargin(ui_token::list::RowInsetX(ui_token::font::BODY), &HeadContent);
+	const auto aHead = Columns(HeadContent);
 	Label(aHead[0], Localize("Player"), true);
 	if(ShowClan)
 		Label(aHead[1], Localize("Clan"), true);
@@ -769,16 +942,19 @@ void CMenus::RenderVotePlayerList(CUIRect MainView, bool MoveToSpectators)
 	}
 	static CListBox s_aPlayerLists[2];
 	auto &ListBox = s_aPlayerLists[PageIndex];
-	ListBox.SetItemColors(Ink.WithAlpha(0.12f), Ink.WithAlpha(0.08f), Ink.WithAlpha(0.05f));
+	// 选中/悬浮走 CListBox 的统一默认（主题选中色 / 列表 token），行距半档，
+	// 圆角按行高推导成胶囊；不再用本页 Ink 另调一套。
+	ListBox.DoAutoSpacing(ui_token::list::ROW_SPACING);
 	ListBox.SetActive(!Ui()->IsPopupOpen() && !SearchInput.IsActive() && !ExcludeInput.IsActive() && !m_CallvoteReasonInput.IsActive());
 	ListBox.DoStart(24.0f, NumPlayers, 1, 3, Selected, &MainView, false);
 	for(int i = 0; i < NumPlayers; ++i)
 	{
 		const int Id = aPlayerIds[i];
-		const CListboxItem Item = ListBox.DoNextItem(&GameClient()->m_aClients[Id]);
+		const CListboxItem Item = ListBox.DoNextItem(&GameClient()->m_aClients[Id], false, ui_token::list::RowRadius(ListBox.RowHeight()));
 		if(!Item.m_Visible)
 			continue;
-		auto aColumns = Columns(Item.m_Rect);
+		// 行内容跟着内容区左右内退，不再手写 VMargin 补偿。
+		auto aColumns = Columns(Item.m_ContentRect);
 		CUIRect Tee;
 		aColumns[0].VSplitLeft(24.0f, &Tee, &aColumns[0]);
 		aColumns[0].VSplitLeft(4.0f, nullptr, &aColumns[0]);

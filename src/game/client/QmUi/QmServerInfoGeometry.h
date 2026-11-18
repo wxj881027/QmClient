@@ -66,27 +66,28 @@ namespace QmServerInfoGeometry
 		float m_CellWidth = 0.0f;
 	};
 
-	inline STagGrid TagGrid(CUIRect View, int Count, float MaxTagWidth, float MaxScale)
+	inline STagGrid TagGrid(CUIRect View, int Count, float MaxTagWidth, float MaxScale, float CellHeight = 26.0f)
 	{
 		STagGrid Result;
 		if(Count <= 0)
 			return Result;
 		MaxTagWidth = std::max(1.0f, MaxTagWidth);
+		CellHeight = std::max(1.0f, CellHeight);
 		// 在能完整放下所有标签的网格中，选择字号最大的一种排列。
 		for(int Columns = 1; Columns <= Count; ++Columns)
 		{
 			const int Rows = (Count + Columns - 1) / Columns;
-			const float Scale = std::min(MaxScale, FitScale(View, Columns * MaxTagWidth + (Columns - 1) * 6.0f, Rows * 26.0f + (Rows - 1) * 6.0f));
+			const float Scale = std::min(MaxScale, FitScale(View, Columns * MaxTagWidth + (Columns - 1) * 6.0f, Rows * CellHeight + (Rows - 1) * 6.0f));
 			if(Scale > 0.0f && Scale >= Result.m_Scale)
 				Result = {Columns, Scale, MaxTagWidth * Scale};
 		}
 		return Result;
 	}
 
-	inline CUIRect TagRect(CUIRect View, const STagGrid &Grid, int Index)
+	inline CUIRect TagRect(CUIRect View, const STagGrid &Grid, int Index, float CellHeight = 26.0f)
 	{
 		return {View.x + (Index % Grid.m_Columns) * (Grid.m_CellWidth + 6.0f * Grid.m_Scale),
-			View.y + (Index / Grid.m_Columns) * 32.0f * Grid.m_Scale, Grid.m_CellWidth, 26.0f * Grid.m_Scale};
+			View.y + (Index / Grid.m_Columns) * (std::max(1.0f, CellHeight) + 6.0f) * Grid.m_Scale, Grid.m_CellWidth, std::max(1.0f, CellHeight) * Grid.m_Scale};
 	}
 }
 

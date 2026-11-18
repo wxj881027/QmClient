@@ -62,9 +62,9 @@ namespace
 		};
 		struct SConfig
 		{
-			CMapItemAutoMapperConfig m_Item{1, 0, 0, 7, 13, CMapItemAutoMapperConfig::FLAG_AUTOMATIC};
+			CMapItemAutomapperConfig m_Item{1, 0, 0, 7, 13, CMapItemAutomapperConfig::FLAG_AUTOMATIC};
 			int m_Extra = 123;
-			size_t m_Size = sizeof(CMapItemAutoMapperConfig);
+			size_t m_Size = sizeof(CMapItemAutomapperConfig);
 		};
 		struct SItems
 		{
@@ -201,7 +201,7 @@ TEST_F(EditorMapAutomapper, DecorativeTileConfigurationKeepsAllValues)
 	EXPECT_EQ(Item.m_LayerId, 0);
 	EXPECT_EQ(Item.m_AutomapperConfig, 7);
 	EXPECT_EQ(Item.m_AutomapperSeed, 13);
-	EXPECT_EQ(Item.m_Flags, CMapItemAutoMapperConfig::FLAG_AUTOMATIC);
+	EXPECT_EQ(Item.m_Flags, CMapItemAutomapperConfig::FLAG_AUTOMATIC);
 }
 
 TEST_F(EditorMapAutomapper, StoredDisableValueAndSeedAreNotNormalized)
@@ -253,7 +253,7 @@ TEST_F(EditorMapAutomapper, InvalidGroupDoesNotConsumeMissingLayerOrSettings)
 		SCOPED_TRACE(Group);
 		SItems Items;
 		Items.m_vConfigs[0].m_Item.m_GroupId = Group;
-		Items.m_vConfigs[0].m_Size = offsetof(CMapItemAutoMapperConfig, m_LayerId);
+		Items.m_vConfigs[0].m_Size = offsetof(CMapItemAutomapperConfig, m_LayerId);
 		ASSERT_NO_FATAL_FAILURE(Load(Items));
 		const auto Resources = EditorMapLoad::ReadResourceItems(*m_pMap);
 		ASSERT_TRUE(Resources);
@@ -265,7 +265,7 @@ TEST_F(EditorMapAutomapper, InvalidGroupDoesNotConsumeMissingLayerOrSettings)
 TEST_F(EditorMapAutomapper, ValidGroupWithoutLayerFieldRejectsCandidate)
 {
 	SItems Items;
-	Items.m_vConfigs[0].m_Size = offsetof(CMapItemAutoMapperConfig, m_LayerId);
+	Items.m_vConfigs[0].m_Size = offsetof(CMapItemAutomapperConfig, m_LayerId);
 	ASSERT_NO_FATAL_FAILURE(Load(Items));
 	EXPECT_FALSE(EditorMapLoad::ReadResourceItems(*m_pMap));
 }
@@ -277,7 +277,7 @@ TEST_F(EditorMapAutomapper, InvalidLayerDoesNotConsumeMissingSettings)
 		SCOPED_TRACE(Layer);
 		SItems Items;
 		Items.m_vConfigs[0].m_Item.m_LayerId = Layer;
-		Items.m_vConfigs[0].m_Size = offsetof(CMapItemAutoMapperConfig, m_AutomapperConfig);
+		Items.m_vConfigs[0].m_Size = offsetof(CMapItemAutomapperConfig, m_AutomapperConfig);
 		ASSERT_NO_FATAL_FAILURE(Load(Items));
 		const auto Resources = EditorMapLoad::ReadResourceItems(*m_pMap);
 		ASSERT_TRUE(Resources);
@@ -288,7 +288,7 @@ TEST_F(EditorMapAutomapper, InvalidLayerDoesNotConsumeMissingSettings)
 
 TEST_F(EditorMapAutomapper, DecorativeTargetRequiresEveryConsumedSetting)
 {
-	for(size_t Size : {offsetof(CMapItemAutoMapperConfig, m_AutomapperConfig), offsetof(CMapItemAutoMapperConfig, m_AutomapperSeed), offsetof(CMapItemAutoMapperConfig, m_Flags)})
+	for(size_t Size : {offsetof(CMapItemAutomapperConfig, m_AutomapperConfig), offsetof(CMapItemAutomapperConfig, m_AutomapperSeed), offsetof(CMapItemAutomapperConfig, m_Flags)})
 	{
 		SCOPED_TRACE(Size);
 		SItems Items;
@@ -306,7 +306,7 @@ TEST_F(EditorMapAutomapper, PhysicsTargetsDoNotConsumeTheSettingsTail)
 		SCOPED_TRACE(Flags);
 		SItems Items;
 		Items.m_vGroups[0].m_vLayers[0].m_PhysicsFlags = Flags;
-		Items.m_vConfigs[0].m_Size = offsetof(CMapItemAutoMapperConfig, m_AutomapperConfig);
+		Items.m_vConfigs[0].m_Size = offsetof(CMapItemAutomapperConfig, m_AutomapperConfig);
 		ASSERT_NO_FATAL_FAILURE(Load(Items));
 		const auto Resources = EditorMapLoad::ReadResourceItems(*m_pMap);
 		ASSERT_TRUE(Resources);
@@ -322,7 +322,7 @@ TEST_F(EditorMapAutomapper, NonTileTargetsDoNotConsumeTheSettingsTail)
 		SCOPED_TRACE(Type);
 		SItems Items;
 		Items.m_vGroups[0].m_vLayers[0].m_Type = Type;
-		Items.m_vConfigs[0].m_Size = offsetof(CMapItemAutoMapperConfig, m_AutomapperConfig);
+		Items.m_vConfigs[0].m_Size = offsetof(CMapItemAutomapperConfig, m_AutomapperConfig);
 		ASSERT_NO_FATAL_FAILURE(Load(Items));
 		const auto Resources = EditorMapLoad::ReadResourceItems(*m_pMap);
 		ASSERT_TRUE(Resources);
@@ -347,7 +347,7 @@ TEST_F(EditorMapAutomapper, RawGroupIndexBeyondImportedGroupsRemainsIgnored)
 	SItems Items;
 	Items.m_vGroups.insert(Items.m_vGroups.begin(), {4, {{LAYERTYPE_QUADS, 2, 0}}});
 	Items.m_vConfigs[0].m_Item.m_GroupId = 1;
-	Items.m_vConfigs[0].m_Size = offsetof(CMapItemAutoMapperConfig, m_LayerId);
+	Items.m_vConfigs[0].m_Size = offsetof(CMapItemAutomapperConfig, m_LayerId);
 	ASSERT_NO_FATAL_FAILURE(Load(Items));
 	const auto Resources = EditorMapLoad::ReadResourceItems(*m_pMap);
 	ASSERT_TRUE(Resources);
@@ -394,7 +394,7 @@ TEST_F(EditorMapAutomapper, LaterTruncatedConfigurationCannotPublishPartialItems
 {
 	SItems Items;
 	Items.m_vConfigs.push_back({});
-	Items.m_vConfigs[1].m_Size = offsetof(CMapItemAutoMapperConfig, m_Flags);
+	Items.m_vConfigs[1].m_Size = offsetof(CMapItemAutomapperConfig, m_Flags);
 	ASSERT_NO_FATAL_FAILURE(Load(Items));
 	EXPECT_FALSE(EditorMapLoad::ReadResourceItems(*m_pMap));
 }
@@ -425,7 +425,7 @@ TEST_F(EditorMapAutomapper, ConfigurationSnapshotsRemainOwnedAfterMapUnload)
 TEST_F(EditorMapAutomapper, ExtendedVersionOneKeepsItsKnownPrefix)
 {
 	SItems Items;
-	Items.m_vConfigs[0].m_Size = sizeof(CMapItemAutoMapperConfig) + sizeof(int);
+	Items.m_vConfigs[0].m_Size = sizeof(CMapItemAutomapperConfig) + sizeof(int);
 	ASSERT_NO_FATAL_FAILURE(Load(Items));
 	const auto Resources = EditorMapLoad::ReadResourceItems(*m_pMap);
 	ASSERT_TRUE(Resources);

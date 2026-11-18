@@ -45,6 +45,7 @@ class CInfoMessages : public CComponent
 		int m_TeamSize;
 
 		// finish msg
+		int m_TimeMs;
 		int m_Diff;
 		char m_aTimeText[32];
 		char m_aDiffText[32];

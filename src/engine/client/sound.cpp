@@ -5,6 +5,7 @@
 #include "audio_sdl3.h"
 #include "sound_buffer.h"
 
+#include <base/bytes.h>
 #include <base/dbg.h>
 #include <base/log.h>
 #include <base/math.h>

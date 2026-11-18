@@ -113,6 +113,7 @@ CInfoMessages::CInfoMsg CInfoMessages::CreateInfoMsg(EType Type)
 	InfoMsg.m_FlagCarrierBlue = -1;
 	InfoMsg.m_TeamSize = 0;
 
+	InfoMsg.m_TimeMs = 0;
 	InfoMsg.m_Diff = 0;
 	InfoMsg.m_aTimeText[0] = '\0';
 	InfoMsg.m_aDiffText[0] = '\0';
@@ -299,6 +300,7 @@ void CInfoMessages::OnRaceFinishMessage(const CNetMsg_Sv_RaceFinish *pMsg)
 	GameClient()->FormatStreamerName(Finish.m_aVictimIds[0], Finish.m_aVictimName, sizeof(Finish.m_aVictimName));
 	Finish.m_apVictimManagedTeeRenderInfos[0] = GameClient()->CreateManagedTeeRenderInfo(GameClient()->m_aClients[pMsg->m_ClientId]);
 
+	Finish.m_TimeMs = pMsg->m_Time;
 	Finish.m_Diff = pMsg->m_Diff;
 	Finish.m_RecordPersonal = pMsg->m_RecordPersonal || pMsg->m_RecordServer;
 	if(Finish.m_Diff)
@@ -348,10 +350,7 @@ void CInfoMessages::RenderKillMsg(const CInfoMsg &InfoMsg, float x, float y)
 	// render victim tees
 	for(int j = (InfoMsg.m_TeamSize - 1); j >= 0; j--)
 	{
-		vec2 OffsetToMid;
-		CRenderTools::GetRenderTeeOffsetToRenderedTee(CAnimState::GetIdle(), &InfoMsg.m_apVictimManagedTeeRenderInfos[j]->TeeRenderInfo(), OffsetToMid);
-		const vec2 TeeRenderPos = vec2(x, y + ROW_HEIGHT / 2.0f + OffsetToMid.y);
-		RenderTools()->RenderTee(CAnimState::GetIdle(), &InfoMsg.m_apVictimManagedTeeRenderInfos[j]->TeeRenderInfo(), EMOTE_PAIN, vec2(-1, 0), TeeRenderPos);
+		RenderTools()->RenderIdleTeeAtCenter(&InfoMsg.m_apVictimManagedTeeRenderInfos[j]->TeeRenderInfo(), vec2(x, y + ROW_HEIGHT / 2.0f), EMOTE_PAIN, vec2(-1, 0));
 		x -= 44.0f;
 	}
 
@@ -388,10 +387,7 @@ void CInfoMessages::RenderKillMsg(const CInfoMsg &InfoMsg, float x, float y)
 		x -= 24.0f;
 		if(InfoMsg.m_pKillerManagedTeeRenderInfo != nullptr)
 		{
-			vec2 OffsetToMid;
-			CRenderTools::GetRenderTeeOffsetToRenderedTee(CAnimState::GetIdle(), &InfoMsg.m_pKillerManagedTeeRenderInfo->TeeRenderInfo(), OffsetToMid);
-			const vec2 TeeRenderPos = vec2(x, y + ROW_HEIGHT / 2.0f + OffsetToMid.y);
-			RenderTools()->RenderTee(CAnimState::GetIdle(), &InfoMsg.m_pKillerManagedTeeRenderInfo->TeeRenderInfo(), EMOTE_ANGRY, vec2(1, 0), TeeRenderPos);
+			RenderTools()->RenderIdleTeeAtCenter(&InfoMsg.m_pKillerManagedTeeRenderInfo->TeeRenderInfo(), vec2(x, y + ROW_HEIGHT / 2.0f), EMOTE_ANGRY, vec2(1, 0));
 		}
 		x -= 32.0f;
 
@@ -439,11 +435,8 @@ void CInfoMessages::RenderFinishMsg(const CInfoMsg &InfoMsg, float x, float y)
 
 	// render victim tee
 	x -= 24.0f;
-	vec2 OffsetToMid;
-	CRenderTools::GetRenderTeeOffsetToRenderedTee(CAnimState::GetIdle(), &InfoMsg.m_apVictimManagedTeeRenderInfos[0]->TeeRenderInfo(), OffsetToMid);
-	const vec2 TeeRenderPos = vec2(x, y + ROW_HEIGHT / 2.0f + OffsetToMid.y);
 	const int Emote = InfoMsg.m_RecordPersonal ? EMOTE_HAPPY : EMOTE_NORMAL;
-	RenderTools()->RenderTee(CAnimState::GetIdle(), &InfoMsg.m_apVictimManagedTeeRenderInfos[0]->TeeRenderInfo(), Emote, vec2(-1, 0), TeeRenderPos);
+	RenderTools()->RenderIdleTeeAtCenter(&InfoMsg.m_apVictimManagedTeeRenderInfos[0]->TeeRenderInfo(), vec2(x, y + ROW_HEIGHT / 2.0f), Emote, vec2(-1, 0));
 }
 
 void CInfoMessages::OnRender()
@@ -482,6 +475,8 @@ void CInfoMessages::OnRender()
 			ResetMessage(InfoMsg);
 			continue;
 		}
+		if(InfoMsg.m_Type == EType::TYPE_FINISH && GameClient()->m_FinishSummary.SuppressesFinishMessage(InfoMsg.m_aVictimIds[0], InfoMsg.m_TimeMs))
+			continue;
 
 		bool FilteredName = QmStreamerWordFilter::Filter(InfoMsg.m_aVictimName, g_Config.m_QmStreamerFilterWords != 0);
 		FilteredName |= QmStreamerWordFilter::Filter(InfoMsg.m_aKillerName, g_Config.m_QmStreamerFilterWords != 0);

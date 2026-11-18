@@ -1,7 +1,9 @@
 #ifndef BASE_IO_READ_ALL_H
 #define BASE_IO_READ_ALL_H
 
-#include "system.h"
+#include "io.h"
+
+#include <cstddef>
 
 // 整文件读取的分配边界；调用者负责用同一分配器释放成功返回的缓冲。
 // 每次调用独立传入上下文，避免为故障注入修改全局分配器。

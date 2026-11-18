@@ -26,6 +26,7 @@ enum
 	OUTLINE_DEEPFREEZE,
 	OUTLINE_TELE,
 	OUTLINE_KILL,
+	OUTLINE_NOHOOK,
 	OUTLINE_SOLID,
 };
 
@@ -107,8 +108,10 @@ public:
 				else
 				{
 					const auto Tile = pTiles[Index].m_Index;
-					if(Tile == TILE_SOLID || Tile == TILE_NOHOOK)
+					if(Tile == TILE_SOLID)
 						pData[IndexOut] = OUTLINE_SOLID;
+					else if(Tile == TILE_NOHOOK)
+						pData[IndexOut] = OUTLINE_NOHOOK;
 					else if(Tile == TILE_DFREEZE)
 						pData[IndexOut] = OUTLINE_DEEPFREEZE;
 					else if(Tile == TILE_FREEZE || Tile == TILE_LFREEZE)
@@ -194,7 +197,7 @@ void COutlines::OnRender()
 		y = std::clamp(y, 0, m_MapDataSize.y - 1);
 		// 必须掩掉高位：邻接缓存把 8 邻域位写在 tile 高位（见 qm_outline_neighbors.h），
 		// 不掩码会让 `GetTile(...) >= Type` 的邻域比较被缓存位污染。
-		return m_vMapData[y * m_MapDataSize.x + x] & 7;
+		return m_vMapData[y * m_MapDataSize.x + x] & 15;
 	};
 
 	// 配置与颜色只随帧变化，不随 tile 变化。
@@ -207,20 +210,24 @@ void COutlines::OnRender()
 	const COutlineConfig aConfigs[] = {
 		{0, 0, 0},
 		{g_Config.m_QmOutlineUnfreeze, g_Config.m_QmOutlineWidthUnfreeze, g_Config.m_QmOutlineColorUnfreeze},
-		{g_Config.m_QmOutlineUnfreeze, g_Config.m_QmOutlineWidthUnfreeze, g_Config.m_QmOutlineColorDeepUnfreeze},
+		{g_Config.m_QmOutlineDeepUnfreeze, g_Config.m_QmOutlineWidthDeepUnfreeze, g_Config.m_QmOutlineColorDeepUnfreeze},
 		{g_Config.m_QmOutlineFreeze, g_Config.m_QmOutlineWidthFreeze, g_Config.m_QmOutlineColorFreeze},
-		{g_Config.m_QmOutlineFreeze, g_Config.m_QmOutlineWidthFreeze, g_Config.m_QmOutlineColorDeepFreeze},
+		{g_Config.m_QmOutlineDeepFreeze, g_Config.m_QmOutlineWidthDeepFreeze, g_Config.m_QmOutlineColorDeepFreeze},
 		{g_Config.m_QmOutlineTele, g_Config.m_QmOutlineWidthTele, g_Config.m_QmOutlineColorTele},
 		{g_Config.m_QmOutlineKill, g_Config.m_QmOutlineWidthKill, g_Config.m_QmOutlineColorKill},
+		{g_Config.m_QmOutlineNoHook, g_Config.m_QmOutlineWidthNoHook, g_Config.m_QmOutlineColorNoHook},
 		{g_Config.m_QmOutlineSolid, g_Config.m_QmOutlineWidthSolid, g_Config.m_QmOutlineColorSolid},
 	};
 	ColorRGBA aColors[OUTLINE_SOLID + 1];
 	for(int Type = OUTLINE_NONE; Type <= OUTLINE_SOLID; ++Type)
 	{
-		aColors[Type] = color_cast<ColorRGBA>(ColorHSLA(aConfigs[Type].m_Color, true));
+		// 轮廓颜色的高字节不参与渲染：每个类型的透明度只由全局开关统一缩放，
+		// 避免颜色自带 alpha 与全局滑条形成两套互相打架的不透明度。
+		aColors[Type] = color_cast<ColorRGBA>(ColorHSLA(aConfigs[Type].m_Color));
 		aColors[Type].a *= g_Config.m_QmOutlineAlpha / 100.0f;
 	}
 	aColors[OUTLINE_SOLID].a *= g_Config.m_QmOutlineSolidAlpha / 100.0f;
+	aColors[OUTLINE_NOHOOK].a *= g_Config.m_QmOutlineSolidAlpha / 100.0f;
 
 	Graphics()->TextureClear();
 	Graphics()->QuadsBegin();

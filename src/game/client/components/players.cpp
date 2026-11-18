@@ -4,6 +4,7 @@
 #include "players.h"
 
 #include <base/color.h>
+#include <base/dbg.h>
 #include <base/math.h>
 #include <base/system.h>
 
@@ -429,18 +430,9 @@ void CPlayers::RenderHookCollLine(
 
 	// When the other player isn't predicted, we don't know their tunes.
 	// Use our own tunes instead. This is wrong, but a good heuristic.
-	const auto TuningClient = QmHookCollTuningClient(GameClient()->m_aClients[ClientId].m_IsPredicted, ClientId, GameClient()->m_aLocalIds[g_Config.m_ClDummy]);
-	const CTuningParams &Tuning = TuningClient ? GameClient()->m_aClients[*TuningClient].m_Predicted.m_Tuning : GameClient()->m_aTuning[g_Config.m_ClDummy];
+	const CTuningParams &Tuning = GameClient()->HookCollTuning(ClientId);
 	float HookLength = Tuning.m_HookLength;
 	float HookFireSpeed = Tuning.m_HookFireSpeed;
-
-	// TClient: Hook collision line length follows cursor distance
-	// 有问题,暂定改回原版
-	//if(Local && g_Config.m_QmHookCollCursor)
-	//{
-	//	float CursorDistance = length(GameClient()->m_Controls.m_aMousePos[g_Config.m_ClDummy]);
-	//	HookLength = CursorDistance;
-	//}
 
 	// janky physics
 	if(HookLength < HOOK_START_DISTANCE || HookFireSpeed <= 0.0f)
@@ -494,7 +486,7 @@ void CPlayers::RenderHookCollLine(
 		}
 	};
 
-	const ColorRGBA HookCollTipColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollTipColor, true));
+	ColorRGBA HookCollTipColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollTipColor, true));
 	auto &HookTipLineSegment = m_HookCollLineScratch.m_TipLine;
 	if(!m_HookCollLineScratch.TryPrepare([&] {
 		   // simulate the hook into the future

@@ -3,8 +3,12 @@
 
 #include <base/vmath.h>
 
+#include <game/gamecore.h>
+
 #include <algorithm>
 #include <vector>
+
+constexpr float QmHookCollTargetRadius = CCharacterCore::PhysicalSize() + 2.0f;
 
 // 仅用于提示线，复用每段固定几何量，不参与实际钩子或角色预测。
 struct SQmHookCollSegment

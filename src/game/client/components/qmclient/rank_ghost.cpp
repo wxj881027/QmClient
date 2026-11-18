@@ -4,6 +4,7 @@
 #include "rank_demo_manifest.h"
 #include "rank_view_camera.h"
 
+#include <base/bytes.h>
 #include <base/log.h>
 #include <base/str.h>
 #include <base/system.h>
@@ -57,10 +58,6 @@ namespace
 	constexpr int64_t MANIFEST_CACHE_TTL_SECONDS = 300;
 	constexpr const char *USER_AGENT = "QmClient (https://github.com/wxj881027/QmClient)";
 
-	// rust::Box 没有默认构造，必须在构造函数里创建
-	rust::Box<CSnapshotDelta> CreateSnapshotDelta();
-	rust::Box<CSnapshotDelta> CreateSnapshotDeltaSixup();
-
 	// 单个参与者的轨迹与外观（主选手与多轨模式下的其他 Tee 共用）
 	struct STrackContext
 	{
@@ -74,8 +71,8 @@ namespace
 	// demo 解析期间的状态，独立于主客户端，避免打断正常游戏
 	struct SParseContext
 	{
-		rust::Box<CSnapshotDelta> m_pDelta;
-		rust::Box<CSnapshotDelta> m_pDeltaSixup;
+		CSnapshotDelta m_Delta;
+		CSnapshotDelta m_DeltaSixup;
 		std::unique_ptr<CDemoPlayer> m_pPlayer;
 		CNetObjHandler m_NetObjHandler;
 		// 0.7 回放的消息用独立协议解包（对象类型编号与 0.6 不同）
@@ -765,31 +762,18 @@ namespace
 		}
 	}
 
-	// 与上游 demo_extract_chat 工具一致：snapshot delta 需要按对象类型设置静态大小
-	rust::Box<CSnapshotDelta> CreateSnapshotDelta()
+	SParseContext::SParseContext()
 	{
-		rust::Box<CSnapshotDelta> pResult = CSnapshotDelta::New();
+		// 与上游 demo_extract_chat 工具一致：snapshot delta 需要按对象类型设置静态大小
 		CNetObjHandler NetObjHandler;
 		for(int i = 0; i < NUM_NETOBJTYPES; i++)
-			pResult->SetStaticsize(i, NetObjHandler.GetObjSize(i));
-		return pResult;
-	}
+			m_Delta.SetStaticsize(i, NetObjHandler.GetObjSize(i));
 
-	rust::Box<CSnapshotDelta> CreateSnapshotDeltaSixup()
-	{
-		rust::Box<CSnapshotDelta> pResult = CSnapshotDelta::New();
 		protocol7::CNetObjHandler NetObjHandler7;
 		// HACK: 只设置 0.7 首个版本存在的对象，避免新对象破坏 snapshot delta
 		static const int OLD_NUM_NETOBJTYPES = 23;
 		for(int i = 0; i < OLD_NUM_NETOBJTYPES; i++)
-			pResult->SetStaticsize(i, NetObjHandler7.GetObjSize(i));
-		return pResult;
-	}
-
-	SParseContext::SParseContext() :
-		m_pDelta(CreateSnapshotDelta()),
-		m_pDeltaSixup(CreateSnapshotDeltaSixup())
-	{
+			m_DeltaSixup.SetStaticsize(i, NetObjHandler7.GetObjSize(i));
 	}
 } // namespace
 
@@ -1716,9 +1700,9 @@ void CRankGhost::StartParse()
 	Primary.m_Skin.m_ColorBody = 0;
 	Primary.m_Skin.m_ColorFeet = 0;
 
-	Parse.m_pPlayer = std::make_unique<CDemoPlayer>(&*Parse.m_pDelta, &*Parse.m_pDeltaSixup, false);
+	Parse.m_pPlayer = std::make_unique<CDemoPlayer>(&Parse.m_Delta, &Parse.m_DeltaSixup, false);
 
-	if(Parse.m_pPlayer->Load(Storage(), nullptr, m_aDemoStoragePath, IStorage::TYPE_SAVE) == -1)
+	if(Parse.m_pPlayer->Load(Storage(), m_aDemoStoragePath, IStorage::TYPE_SAVE) == -1)
 	{
 		char aBuf[512];
 		str_format(aBuf, sizeof(aBuf), Localize("Rank ghost: failed to load the replay: %s"), Parse.m_pPlayer->ErrorMessage());
@@ -2155,10 +2139,11 @@ bool CRankGhost::ExportViewCut(const char *pDestination, const std::vector<SDemo
 {
 	if(!IsViewModeActive() || m_aViewPlaybackFilename[0] == '\0')
 		return false;
-	auto Delta = CSnapshotDelta::New();
-	auto DeltaSixup = CSnapshotDelta::New();
+	// CSnapshotDelta 每个约 512 KiB，两个值对象放栈上会超过 Windows 默认 1 MiB 栈。
+	auto pDelta = std::make_unique<CSnapshotDelta>();
+	auto pDeltaSixup = std::make_unique<CSnapshotDelta>();
 	CDemoEditor Editor;
-	Editor.Init(&*Delta, &*DeltaSixup, Console(), Storage());
+	Editor.Init(pDelta.get(), pDeltaSixup.get(), Storage());
 	// 临时 demo 读取器会重置全局剪辑标记；保留当前在线会话的编辑状态。
 	const int SliceBegin = g_Config.m_ClDemoSliceBegin;
 	const int SliceEnd = g_Config.m_ClDemoSliceEnd;
@@ -2186,7 +2171,7 @@ void CRankGhost::EnterViewMode()
 	bool HaveMetadata = false;
 	// 只扫描源文件的 tick 与标记；不播放快照，不改变在线服务器状态。
 	CDemoPlayer Metadata(nullptr, nullptr, false);
-	if(Metadata.Load(Storage(), nullptr, m_aLoadedReplayFilename, IStorage::TYPE_SAVE, false) != -1)
+	if(Metadata.Load(Storage(), m_aLoadedReplayFilename, IStorage::TYPE_SAVE, false) != -1)
 	{
 		Info = *Metadata.BaseInfo();
 		if(Info.m_NumTimelineMarkers >= 2)
@@ -2938,8 +2923,7 @@ void CRankGhost::OnDemoPlayerMessage(void *pData, int Size)
 
 	int Msg;
 	bool Sys;
-	CUuid Uuid;
-	if(UnpackMessageId(&Msg, &Sys, &Uuid, &Unpacker, &Packer) == UNPACKMESSAGE_ERROR || Sys)
+	if(UnpackMessageId(&Msg, &Sys, &Unpacker, &Packer) == UNPACKMESSAGE_ERROR || Sys)
 		return;
 
 	// 消息按 tick 顺序到达。终点成绩可能紧跟在 run 结束标记之后（服务端在终点帧

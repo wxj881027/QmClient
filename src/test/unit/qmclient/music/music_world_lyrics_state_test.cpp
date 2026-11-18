@@ -104,6 +104,29 @@ TEST(QmWorldLyrics, InstrumentalGapFadesTheLastLineWithoutSpawningEmptyText)
 	EXPECT_FALSE(State.Previous().m_Active);
 }
 
+TEST(QmWorldLyrics, BlankTimedLineFadesThePreviousLineInsteadOfBecomingCurrent)
+{
+	CWorldLyricsState State;
+	State.Update(true, 1, Source(), 0, vec2(100, 200), 0.0);
+	State.Update(true, 1, Source(2000, " \t　"), 0, vec2(500, 600), 1.0);
+	EXPECT_FALSE(State.Current().m_Active);
+	EXPECT_TRUE(State.Previous().m_Active);
+	State.Update(true, 1, Source(3000, "second"), 0, vec2(700, 800), 1.5);
+	EXPECT_EQ(State.Previous().m_Original, "first");
+}
+
+TEST(QmWorldLyrics, BlankTranslationFallsBackToTimedOriginal)
+{
+	const SLyricsData Data = TimedLyrics();
+	CWorldLyricsState State;
+	auto Source = TimedSource(Data, 1000);
+	Source.m_Translation = " \t　";
+	State.Update(true, 1, Source, static_cast<int>(EDisplayLanguage::TRANSLATION), vec2(100, 200), 0.0);
+	ASSERT_EQ(State.Current().m_RowCount, 1);
+	EXPECT_EQ(State.Current().m_aRows[0], "你好世界");
+	EXPECT_EQ(WorldLyricVisibleCharacters(State.Current(), 0), 0);
+}
+
 TEST(QmWorldLyrics, SourceIdentityChangesDiscardOldLyrics)
 {
 	for(int Field = 0; Field < 4; ++Field)

@@ -2,6 +2,8 @@
 #include "sixup_server_info.h"
 #include "sixup_system_messages.h"
 
+#include <base/dbg.h>
+
 #include <engine/client/client.h>
 
 int CClient::TranslateSysMsg(int *pMsgId, bool System, CUnpacker *pUnpacker, CPacker *pPacker, CNetChunk *pPacket, bool *pIsExMsg)

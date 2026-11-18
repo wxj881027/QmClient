@@ -225,7 +225,7 @@ void CMenus::RenderQmFunctionKeywordReplyContent(CUIRect &Content, float UiScale
 			}
 		}
 	}
-	Flow.Space(LineSpacing);
+	Flow.Space(ui_token::settings::RowGap(LineSpacing));
 	if(s_KeywordReplyTab == 2)
 	{
 		if(Flow.Control("keyword-cooldown", LineHeight, Row))
@@ -235,11 +235,11 @@ void CMenus::RenderQmFunctionKeywordReplyContent(CUIRect &Content, float UiScale
 			static int s_QmAutoReplyCooldownInputId;
 			RenderQmSettingsSliderWithValueInput(&s_QmAutoReplyCooldownInputId, ControlColumn, &g_Config.m_QmAutoReplyCooldown, 0, 30, "s", !CanCommit);
 		}
-		Flow.Space(LineSpacing);
+		Flow.Space(ui_token::settings::RowGap(LineSpacing));
 		auto Checkbox = [&](const char *pId, const char *pText, int *pValue) {
 			if(Flow.Control(pId, LineHeight, Row))
 				RenderQmFunctionCheckbox(pValue, pText, Localize(pText), pValue, &Row, !CanCommit);
-			Flow.Space(LineSpacing);
+			Flow.Space(ui_token::settings::RowGap(LineSpacing));
 		};
 		Checkbox("keyword-enabled", Localizable("Enable keyword reply"), &g_Config.m_QmKeywordReplyEnabled);
 		Checkbox("keyword-dummy", Localizable("Reply with dummy"), &g_Config.m_QmKeywordReplyUseDummy);
@@ -262,7 +262,7 @@ void CMenus::RenderQmFunctionKeywordReplyContent(CUIRect &Content, float UiScale
 			Changes.m_Added = true;
 		}
 	}
-	Flow.Space(LineSpacing);
+	Flow.Space(ui_token::settings::RowGap(LineSpacing));
 	const float OptionSpacing = std::max(4.0f, 4.0f * UiScale);
 	const char *apOptions[] = {Localize("Rename"), Localize("Regex")};
 	// 选项是两个独立开关；保持原网格尺寸，由真实译文决定窄宽换行。
@@ -291,7 +291,7 @@ void CMenus::RenderQmFunctionKeywordReplyContent(CUIRect &Content, float UiScale
 			}
 			RemoveClicked = s_KeywordReplyTab == 0 && DoButton_Menu_QmIcon(&pRule->m_RemoveButton, EQmIcon::MINUS, FONT_ICON_MINUS, 0, &Remove, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::PILL) && CanCommit;
 		}
-		Flow.Space(LineSpacing);
+		Flow.Space(ui_token::settings::RowGap(LineSpacing));
 		if(s_KeywordReplyTab == 0)
 		{
 			if(Flow.Control(pRule->m_OptionsId.c_str(), Options.Height(), Row))
@@ -312,7 +312,7 @@ void CMenus::RenderQmFunctionKeywordReplyContent(CUIRect &Content, float UiScale
 		}
 		else if(Flow.Control(pRule->m_ReplyId.c_str(), LineHeight, Row))
 			Changes.m_ReplyText |= ui_widget::InputField(TextInputCtx, &pRule->m_ReplyInput, Row, Localize("Reply content"), BodySize);
-		Flow.Space(LineSpacing);
+		Flow.Space(ui_token::settings::RowGap(LineSpacing));
 		if(RemoveClicked)
 		{
 			// 输入 owner 随规则释放前先退出，邻卡的按钮与行标识保持稳定。
@@ -339,7 +339,7 @@ void CMenus::RenderQmFunctionKeywordReplyContent(CUIRect &Content, float UiScale
 		UpdateKeywordRulesLayoutState(s_vKeywordRuleRows.size(), HalfFilled);
 	}
 	if(s_KeywordRulesLayoutHalfFilled || s_KeywordRulesSaveFailed)
-		Flow.Text("keyword-validation", s_KeywordRulesSaveFailed ? Localize("Keyword rules are too long. Changes were not saved; shorten or remove a rule.") : Localize("Both sides of keyword rules must be filled"), 0.0f, SmallSize, LineSpacing, [this](const char *pText, float Width, float Size) { return TextRender()->TextBoundingBox(Size, pText, -1, Width).m_H; }, [this, SmallSize](const CUIRect &Rect, const char *pText) {
+		Flow.Text("keyword-validation", s_KeywordRulesSaveFailed ? Localize("Keyword rules are too long. Changes were not saved; shorten or remove a rule.") : Localize("Both sides of keyword rules must be filled"), 0.0f, SmallSize, ui_token::settings::RowGap(LineSpacing), [this](const char *pText, float Width, float Size) { return TextRender()->TextBoundingBox(Size, pText, -1, Width).m_H; }, [this, SmallSize](const CUIRect &Rect, const char *pText) {
 				TextRender()->TextColor(1.0f, 0.2f, 0.2f, 1.0f);
 				DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-keyword-reply-rule-validation", &Rect, pText, SmallSize, TEXTALIGN_ML, {}, (int)Rect.w);
 				TextRender()->TextColor(TextRender()->DefaultTextColor()); }, LineHeight);

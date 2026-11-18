@@ -1,4 +1,6 @@
 // 记录器、真实隔离文件与保存状态协作；故障只注入文件操作的返回结果。
+#include <base/bytes.h>
+
 #include <engine/shared/config.h>
 #include <engine/shared/demo.h>
 #include <engine/shared/network.h>
@@ -120,7 +122,7 @@ namespace
 		int Start(unsigned char *pMapData = nullptr, unsigned MapSize = 0, IOHANDLE MapFile = nullptr)
 		{
 			unsigned char EmptyMap = 0;
-			return m_Recorder.Start(m_pStorage.get(), nullptr, SOURCE, "test", "map", SHA256_DIGEST{}, 0, "client", MapSize, pMapData ? pMapData : (MapFile ? nullptr : &EmptyMap), MapFile, nullptr, nullptr);
+			return m_Recorder.Start(m_pStorage.get(), SOURCE, "test", "map", SHA256_DIGEST{}, 0, "client", MapSize, pMapData ? pMapData : (MapFile ? nullptr : &EmptyMap), MapFile, nullptr, nullptr);
 		}
 
 		void Write(const char *pFilename, const char *pText)
@@ -181,12 +183,12 @@ TEST_F(DemoRecorderIoIntegration, HealthyRecordingKeepsReadableHeaderLengthAndTi
 	CDemoHeader Header{};
 	CTimelineMarkers Markers{};
 	CMapInfo MapInfo{};
-	ASSERT_TRUE(Player.GetDemoInfo(m_pStorage.get(), nullptr, TARGET, IStorage::TYPE_SAVE, &Header, &Markers, &MapInfo));
+	ASSERT_TRUE(Player.GetDemoInfo(m_pStorage.get(), TARGET, IStorage::TYPE_SAVE, &Header, &Markers, &MapInfo));
 	EXPECT_TRUE(Header.Valid());
 	EXPECT_EQ(bytes_be_to_uint(Header.m_aLength), 1U);
 	EXPECT_EQ(bytes_be_to_uint(Markers.m_aNumTimelineMarkers), 1U);
 	EXPECT_EQ(bytes_be_to_uint(Markers.m_aTimelineMarkers[0]), 150U);
-	EXPECT_EQ(Player.Load(m_pStorage.get(), nullptr, TARGET, IStorage::TYPE_SAVE), 0);
+	EXPECT_EQ(Player.Load(m_pStorage.get(), TARGET, IStorage::TYPE_SAVE), 0);
 	Player.Stop();
 }
 
@@ -194,13 +196,13 @@ TEST_F(DemoRecorderIoIntegration, HealthySnapshotAndMessageChunksRemainReadable)
 {
 	ASSERT_EQ(Start(), 0);
 	const CSnapshot *pSnapshot = CSnapshot::EmptySnapshot();
-	const int SnapshotSize = static_cast<int>(pSnapshot->AsSlice().size() * sizeof(int32_t));
+	const int SnapshotSize = static_cast<int>(sizeof(CSnapshot));
 	m_Recorder.RecordSnapshot(100, pSnapshot, SnapshotSize);
 	RecordMessage();
 	m_Recorder.RecordSnapshot(150, pSnapshot, SnapshotSize, true);
 	ASSERT_EQ(m_Recorder.Stop(IDemoRecorder::EStopMode::KEEP_FILE), 0);
 	CDemoPlayer Player(nullptr, nullptr, false);
-	EXPECT_EQ(Player.Load(m_pStorage.get(), nullptr, SOURCE, IStorage::TYPE_SAVE), 0);
+	EXPECT_EQ(Player.Load(m_pStorage.get(), SOURCE, IStorage::TYPE_SAVE), 0);
 	Player.Stop();
 }
 
@@ -210,7 +212,7 @@ TEST_F(DemoRecorderIoIntegration, SnapshotMarkerFailureStopsBeforeSnapshotPayloa
 	const int Writes = m_Operations.m_aCalls[COperations::WRITE];
 	m_Operations.Fail(COperations::WRITE);
 	const CSnapshot *pSnapshot = CSnapshot::EmptySnapshot();
-	m_Recorder.RecordSnapshot(100, pSnapshot, static_cast<int>(pSnapshot->AsSlice().size() * sizeof(int32_t)));
+	m_Recorder.RecordSnapshot(100, pSnapshot, static_cast<int>(sizeof(CSnapshot)));
 	EXPECT_EQ(m_Operations.m_aCalls[COperations::WRITE], Writes + 1);
 	EXPECT_TRUE(m_Recorder.HasWriteError());
 	EXPECT_EQ(m_Recorder.Stop(IDemoRecorder::EStopMode::KEEP_FILE), -1);
@@ -218,7 +220,7 @@ TEST_F(DemoRecorderIoIntegration, SnapshotMarkerFailureStopsBeforeSnapshotPayloa
 
 TEST_F(DemoRecorderIoIntegration, MissingMapClosesAlreadyOpenedOutput)
 {
-	EXPECT_EQ(m_Recorder.Start(m_pStorage.get(), nullptr, SOURCE, "test", "missing-map", SHA256_DIGEST{}, 0, "client", 0, nullptr, nullptr, nullptr, nullptr), -1);
+	EXPECT_EQ(m_Recorder.Start(m_pStorage.get(), SOURCE, "test", "missing-map", SHA256_DIGEST{}, 0, "client", 0, nullptr, nullptr, nullptr, nullptr), -1);
 	EXPECT_FALSE(m_Recorder.IsRecording());
 	EXPECT_EQ(m_Operations.m_aCalls[COperations::CLOSE], 1);
 	EXPECT_TRUE(m_pStorage->RenameFile(SOURCE, TARGET, IStorage::TYPE_SAVE));
@@ -310,7 +312,7 @@ TEST_F(DemoRecorderIoIntegration, HealthyBorrowedMapRemainsOpenAndRewindsForCall
 	CDemoHeader Header{};
 	CTimelineMarkers Markers{};
 	CMapInfo MapInfo{};
-	ASSERT_TRUE(Player.GetDemoInfo(m_pStorage.get(), nullptr, SOURCE, IStorage::TYPE_SAVE, &Header, &Markers, &MapInfo));
+	ASSERT_TRUE(Player.GetDemoInfo(m_pStorage.get(), SOURCE, IStorage::TYPE_SAVE, &Header, &Markers, &MapInfo));
 	EXPECT_EQ(bytes_be_to_uint(Header.m_aMapSize), 8U);
 }
 
@@ -319,7 +321,7 @@ TEST_F(DemoRecorderIoIntegration, OwnedMapCloseFailureRejectsStartAndClosesOutpu
 	ASSERT_TRUE(m_pStorage->CreateFolder("maps", IStorage::TYPE_SAVE));
 	Write("maps/map.map", "mapbytes");
 	m_Operations.Fail(COperations::CLOSE);
-	EXPECT_EQ(m_Recorder.Start(m_pStorage.get(), nullptr, SOURCE, "test", "map", SHA256_DIGEST{}, 0, "client", 0, nullptr, nullptr, nullptr, nullptr), -1);
+	EXPECT_EQ(m_Recorder.Start(m_pStorage.get(), SOURCE, "test", "map", SHA256_DIGEST{}, 0, "client", 0, nullptr, nullptr, nullptr, nullptr), -1);
 	EXPECT_FALSE(m_Recorder.IsRecording());
 	EXPECT_TRUE(m_Recorder.HasWriteError());
 	EXPECT_EQ(m_Operations.m_aCalls[COperations::CLOSE], 2);
@@ -330,7 +332,7 @@ TEST_F(DemoRecorderIoIntegration, RecordingWithoutMapDataStillReleasesOwnedMap)
 	ASSERT_TRUE(m_pStorage->CreateFolder("maps", IStorage::TYPE_SAVE));
 	Write("maps/map.map", "mapbytes");
 	CDemoRecorder Recorder(nullptr, true, &m_Operations);
-	EXPECT_EQ(Recorder.Start(m_pStorage.get(), nullptr, SOURCE, "test", "map", SHA256_DIGEST{}, 0, "client", 0, nullptr, nullptr, nullptr, nullptr), 0);
+	EXPECT_EQ(Recorder.Start(m_pStorage.get(), SOURCE, "test", "map", SHA256_DIGEST{}, 0, "client", 0, nullptr, nullptr, nullptr, nullptr), 0);
 	EXPECT_EQ(m_Operations.m_aCalls[COperations::CLOSE], 1);
 	EXPECT_EQ(Recorder.Stop(IDemoRecorder::EStopMode::KEEP_FILE), 0);
 	EXPECT_EQ(m_Operations.m_aCalls[COperations::CLOSE], 2);

@@ -45,7 +45,8 @@ namespace
 			}
 			for(int i = 0; i < Entry.m_NumAddrs; i++)
 			{
-				char aAddr[NETADDR_MAXSTRSIZE];
+				// 0.7 地址会加 `tw-0.7+udp://` 前缀，缓冲区要留出前缀长度。
+				char aAddr[NETADDR_MAXSTRSIZE + 16];
 				char aBuffer[128];
 				net_addr_str(&Entry.m_aAddrs[i], aBuffer, sizeof(aBuffer), true);
 
@@ -179,6 +180,8 @@ namespace
 			{
 				if(pEntry->m_aAddrs[j] == Addr)
 				{
+					// 先从索引移除地址，避免后续查表取到已移出的旧条目。
+					m_ByAddr.erase(pAddrs[i]);
 					pEntry->m_aAddrs[j] = pEntry->m_aAddrs[pEntry->m_NumAddrs - 1];
 					pEntry->m_NumAddrs -= 1;
 					break;

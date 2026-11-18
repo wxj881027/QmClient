@@ -48,7 +48,7 @@ namespace
 		{
 			ASSERT_NE(m_State.m_pStorage, nullptr);
 			CNetBase::Init();
-			m_Editor.Init(&*m_State.m_pDelta, &*m_State.m_pDeltaSixup, nullptr, m_State.m_pStorage.get(), nullptr, &m_Output);
+			m_Editor.Init(&*m_State.m_pDelta, &*m_State.m_pDeltaSixup, m_State.m_pStorage.get(), nullptr, &m_Output);
 		}
 		bool Slice(const std::vector<SDemoSliceSegment> &vSegments)
 		{
@@ -57,18 +57,18 @@ namespace
 		void CreateChangingTimeline(std::initializer_list<int> Ticks, std::initializer_list<int> Markers)
 		{
 			unsigned char aMap[] = {'m', 'a', 'p', 'b', 'y', 't', 'e', 's'};
-			ASSERT_EQ(m_State.m_Recorder.Start(m_State.m_pStorage.get(), nullptr, "source.demo", "test", "map", SHA256_DIGEST{}, 0, "client", sizeof(aMap), aMap, nullptr, nullptr, nullptr), 0);
-			auto pBuilder = CSnapshotBuilder::New();
-			auto pBuffer = CSnapshotBuffer::New();
+			ASSERT_EQ(m_State.m_Recorder.Start(m_State.m_pStorage.get(), "source.demo", "test", "map", SHA256_DIGEST{}, 0, "client", sizeof(aMap), aMap, nullptr, nullptr, nullptr), 0);
+			CSnapshotBuilder Builder;
+			CSnapshotBuffer Buffer;
 			for(int Tick : Ticks)
 			{
-				pBuilder->Init(false);
+				Builder.Init(false);
 				CNetObj_Flag Flag{};
 				Flag.m_X = Tick;
-				ASSERT_TRUE(pBuilder->NewItem(NETOBJTYPE_FLAG, 0, Flag.AsSlice()));
-				const int Size = pBuilder->Finish(*pBuffer);
+				ASSERT_TRUE(Builder.NewItem(NETOBJTYPE_FLAG, 0, &Flag, sizeof(Flag)));
+				const int Size = Builder.Finish(&Buffer);
 				ASSERT_GT(Size, 0);
-				m_State.m_Recorder.RecordSnapshot(Tick, pBuffer->AsSnapshot(), Size, true);
+				m_State.m_Recorder.RecordSnapshot(Tick, Buffer.AsSnapshot(), Size, true);
 			}
 			for(int Tick : Markers)
 				ASSERT_TRUE(m_State.m_Recorder.AddDemoMarker(Tick));
@@ -78,7 +78,7 @@ namespace
 		{
 			CSliceSnapshots Snapshots;
 			CDemoPlayer Player(&*m_State.m_pDelta, &*m_State.m_pDeltaSixup, false, nullptr, CDemoPlayer::ETimeMode::UNCACHED);
-			const int Loaded = Player.Load(m_State.m_pStorage.get(), nullptr, "target.demo", IStorage::TYPE_SAVE, false);
+			const int Loaded = Player.Load(m_State.m_pStorage.get(), "target.demo", IStorage::TYPE_SAVE, false);
 			EXPECT_EQ(Loaded, 0);
 			if(Loaded == 0)
 			{

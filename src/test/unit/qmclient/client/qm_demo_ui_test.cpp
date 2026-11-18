@@ -99,10 +99,11 @@ TEST(QmDemoUi, SliceContentAccountsForFourVisibleSegmentsAndDisplayOptions)
 	EXPECT_FLOAT_EQ(qm_demo_ui::SliceContentHeight(4, false), 264.0f);
 	EXPECT_FLOAT_EQ(qm_demo_ui::SliceContentHeight(5, false), 280.0f);
 	EXPECT_FLOAT_EQ(qm_demo_ui::SliceContentHeight(5, true), 414.0f);
-	// 顶部 4 + 回放显示 110 + 10 + 视频导出 278 + 10 + 播放选项 110 + 10 + 视频编码 110 = 642。
+	// 顶部 4 + 回放显示 110 + 10 + 视频导出 278 + 10 + 播放选项 110 + 10 + 视频编码 230 = 762。
+	// 视频编码分组自 3 行扩到 8 行（转换线程/采集队列/分段时长/分段预热/ProRes 档位）。
 	// 在线时追加断线提示 30。
-	EXPECT_FLOAT_EQ(qm_demo_ui::RenderContentHeight(false), 642.0f);
-	EXPECT_FLOAT_EQ(qm_demo_ui::RenderContentHeight(true), 672.0f);
+	EXPECT_FLOAT_EQ(qm_demo_ui::RenderContentHeight(false), 762.0f);
+	EXPECT_FLOAT_EQ(qm_demo_ui::RenderContentHeight(true), 792.0f);
 }
 
 TEST(QmDemoUi, PresetGopMakesEditingAllIntraAndResetsOthers)

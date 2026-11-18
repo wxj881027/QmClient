@@ -1,3 +1,4 @@
+#include <base/bytes.h>
 #include <base/system.h>
 
 #include <engine/shared/datafile.h>
@@ -117,10 +118,10 @@ TEST(UuidSnapshot, ShortTypeDefinitionCannotMatchBytesBeyondItsPayload)
 	const int aSnapshot[] = {12, 2, 0, 8, (CSnapshot::OFFSET_UUID_TYPE << 16) | 7, 123, CSnapshot::OFFSET_UUID_TYPE};
 	mem_copy(Buffer.m_aData, aSnapshot, sizeof(aSnapshot));
 	const CUuid Expected = g_UuidManager.GetUuid(OFFSET_UUID);
-	auto Words = Buffer.AsMutSlice();
+	auto *pWords = reinterpret_cast<int32_t *>(Buffer.m_aData);
 	// 声明范围之外的保护数据恰好等于目标UUID，旧查找会跨条目误匹配。
 	for(size_t i = 0; i < sizeof(CUuid) / sizeof(int32_t); ++i)
-		Words[sizeof(aSnapshot) / sizeof(int32_t) + i] = bytes_be_to_uint(Expected.m_aData + i * sizeof(int32_t));
+		pWords[sizeof(aSnapshot) / sizeof(int32_t) + i] = bytes_be_to_uint(Expected.m_aData + i * sizeof(int32_t));
 	ASSERT_TRUE(Buffer.AsSnapshot()->IsValid(sizeof(aSnapshot)));
 	EXPECT_EQ(Buffer.AsSnapshot()->FindItem(OFFSET_UUID, 7), nullptr);
 }
@@ -129,13 +130,13 @@ TEST(UuidSnapshot, ShortTypeDefinitionAtMaximumSnapshotEndIsIgnored)
 {
 	CSnapshotBuffer Buffer;
 	mem_zero(Buffer.m_aData, sizeof(Buffer.m_aData));
-	auto Words = Buffer.AsMutSlice();
-	Words[0] = CSnapshot::MAX_SIZE - 4 * sizeof(int32_t);
-	Words[1] = 2;
-	Words[2] = 0;
-	Words[3] = Words[0] - sizeof(int32_t);
-	Words[4] = (1 << 16) | 1;
-	Words[Words.size() - 1] = CSnapshot::OFFSET_UUID_TYPE;
+	auto *pWords = reinterpret_cast<int32_t *>(Buffer.m_aData);
+	pWords[0] = CSnapshot::MAX_SIZE - 4 * sizeof(int32_t);
+	pWords[1] = 2;
+	pWords[2] = 0;
+	pWords[3] = pWords[0] - sizeof(int32_t);
+	pWords[4] = (1 << 16) | 1;
+	pWords[sizeof(Buffer.m_aData) / sizeof(*pWords) - 1] = CSnapshot::OFFSET_UUID_TYPE;
 	ASSERT_TRUE(Buffer.AsSnapshot()->IsValid(CSnapshot::MAX_SIZE));
 	EXPECT_EQ(Buffer.AsSnapshot()->FindItem(OFFSET_UUID, 7), nullptr);
 }

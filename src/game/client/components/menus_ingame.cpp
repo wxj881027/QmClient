@@ -28,6 +28,7 @@
 #include <generated/protocol.h>
 
 #include <game/client/QmUi/QmAnimResolve.h>
+#include <game/client/QmUi/QmMotdLayout.h>
 #include <game/client/QmUi/QmServerInfoGeometry.h>
 #include <game/client/QmUi/QmTree.h>
 #include <game/client/QmUi/UiButtons.h>
@@ -440,6 +441,7 @@ void CMenus::RenderGame(CUIRect MainView)
 	const bool HasSecondaryButtonBar = g_Config.m_ClTouchControls || UseSecondaryUtilityButtonBar;
 	MainView.HSplitTop(45.0f + (HasSecondaryButtonBar ? 35.0f : 0.0f), &ButtonBars, &MainView);
 	const int ButtonBarsCorners = IGraphics::CORNER_ALL;
+	AddMenuHitRegion(ButtonBars);
 	ButtonBars.Draw(ms_ColorTabbarActive, ButtonBarsCorners, 10.0f);
 	ButtonBars.Margin(10.0f, &ButtonBars);
 	ButtonBars.HSplitTop(MenuButtonHeight, &ButtonBar, &ButtonBars);
@@ -1064,8 +1066,13 @@ void CMenus::RenderSnapshotTextContainer(CUIElement &Element, const CUIRect *pRe
 	if(pRect == nullptr)
 		return;
 	const CUIElement::SUIElementRect *pElementRect = Element.Rect(0);
-	if(pElementRect != nullptr && pElementRect->m_UITextContainer.Valid())
-		TextRender()->RenderTextContainer(pElementRect->m_UITextContainer, pElementRect->m_TextColor, pElementRect->m_TextOutlineColor, pRect->x, pRect->y);
+	if(pElementRect == nullptr || !pElementRect->m_UITextContainer.Valid())
+		return;
+	// 与标签（DoMenuLabelStreamed）走**同一个**对齐渲染入口：标签按矩形垂直居中，
+	// 数值以前是在矩形左上角直接出图，于是同一行里「游戏模式：」和它的值差半个字高。
+	// 快照容器和标签容器本来就是同一种容器，对齐规则也必须同一条。
+	// 烘色模型不变：容器自带逐字色段时底色由 TextContainerTint() 给出。
+	Ui()->RenderLabelTextContainerAligned(*pElementRect, pRect, TEXTALIGN_ML);
 }
 
 bool CMenus::RequestSnapshotTextContainer(const char *pScope, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps, CUIElement **ppReadyElement)
@@ -1162,7 +1169,7 @@ void CMenus::PrepareIngameServerInfoTextRuntime(const CUIRect *pMainView)
 		MainView.HSplitTop(6.0f, nullptr, &MainView);
 	}
 
-	const float MotdFontSize = 16.0f;
+	const float MotdFontSize = ui_token::motd::FONT_SIZE;
 
 	SSettingsAdaptiveBudgetInput TextBudgetInput;
 	TextBudgetInput.m_FrameId = Client()->PerfFrame();
@@ -1191,20 +1198,22 @@ void CMenus::PrepareIngameServerInfoTextRuntime(const CUIRect *pMainView)
 	const auto *pGameInfoObj = GameClient()->m_Snap.m_pGameInfoObj;
 	const int OptionalFields = pGameInfoObj ? (int)(pGameInfoObj->m_ScoreLimit != 0) + (int)(pGameInfoObj->m_TimeLimit != 0) + (int)(pGameInfoObj->m_RoundCurrent && pGameInfoObj->m_RoundNum) : 0;
 	const float GameScale = QmServerInfoGeometry::FitScale(GameInfo, 280.0f, QmServerInfoGeometry::GameContentHeight(OptionalFields, GameClient()->m_GameInfo.m_DDRaceTeam, CurrentServerInfo.m_aMap[0] != '\0'));
-	float FontSizeTitle = 32.0f * ServerScale;
-	float FontSizeBody = 20.0f * ServerScale;
-	float ServerInfoLabelWidth = 132.0f * ServerScale;
+	float FontSizeTitle = ui_token::server_info::TITLE_SIZE * ServerScale;
+	float FontSizeBody = ui_token::server_info::BODY_SIZE * ServerScale;
+	// 字段行高单独一档：字号缩小后行距不跟着缩到密排。
+	const float FieldRowHeight = FontSizeBody * ui_token::server_info::ROW_HEIGHT_RATIO;
+	float ServerInfoLabelWidth = ui_token::server_info::LABEL_WIDTH * ServerScale;
 	SLabelProperties FieldProps;
 	FieldProps.m_MinimumFontSize = 0.1f;
 
 	CUIRect Label;
 	ServerInfo.HSplitTop(FontSizeTitle, &Label, &ServerInfo);
-	ServerInfo.HSplitTop(5.0f * ServerScale, nullptr, &ServerInfo);
-	ServerInfo.HSplitTop(FontSizeBody, &Label, &ServerInfo);
-	ServerInfo.HSplitTop(FontSizeBody, nullptr, &ServerInfo);
+	ServerInfo.HSplitTop(ui_token::server_info::TITLE_GAP * ServerScale, nullptr, &ServerInfo);
+	ServerInfo.HSplitTop(FieldRowHeight, &Label, &ServerInfo);
+	ServerInfo.HSplitTop(ui_token::server_info::NAME_GAP * ServerScale, nullptr, &ServerInfo);
 	RequestSnapshotTextContainer("ingame-server-info-name-value", &Label, CurrentServerInfo.m_aName, FontSizeBody, TEXTALIGN_ML, FieldProps);
 
-	ServerInfo.HSplitTop(FontSizeBody, &Label, &ServerInfo);
+	ServerInfo.HSplitTop(FieldRowHeight, &Label, &ServerInfo);
 	char aBuf[256];
 	auto RequestServerInfoField = [&](const char *pValueTextId, CUIRect *pRow, const char *pValueText) {
 		CUIRect LabelRect, ValueRect;
@@ -1215,43 +1224,45 @@ void CMenus::PrepareIngameServerInfoTextRuntime(const CUIRect *pMainView)
 
 	if(GameClient()->m_Snap.m_pLocalInfo)
 	{
-		ServerInfo.HSplitTop(FontSizeBody, &Label, &ServerInfo);
+		ServerInfo.HSplitTop(FieldRowHeight, &Label, &ServerInfo);
 		str_format(aBuf, sizeof(aBuf), "%d", GameClient()->m_Snap.m_pLocalInfo->m_Latency);
 		RequestServerInfoField("ingame-server-info-ping-value", &Label, aBuf);
 	}
 
-	ServerInfo.HSplitTop(FontSizeBody, &Label, &ServerInfo);
+	ServerInfo.HSplitTop(FieldRowHeight, &Label, &ServerInfo);
 	RequestServerInfoField("ingame-server-info-version-value", &Label, CurrentServerInfo.m_aVersion);
-	ServerInfo.HSplitTop(FontSizeBody, &Label, &ServerInfo);
+	ServerInfo.HSplitTop(FieldRowHeight, &Label, &ServerInfo);
 	RequestServerInfoField("ingame-server-info-password-value", &Label, CurrentServerInfo.m_Flags & SERVER_FLAG_PASSWORD ? Localize("Yes") : Localize("No"));
 
-	FontSizeTitle = 32.0f * GameScale;
-	FontSizeBody = 20.0f * GameScale;
-	ServerInfoLabelWidth = 132.0f * GameScale;
+	FontSizeTitle = ui_token::server_info::TITLE_SIZE * GameScale;
+	FontSizeBody = ui_token::server_info::BODY_SIZE * GameScale;
+	ServerInfoLabelWidth = ui_token::server_info::LABEL_WIDTH * GameScale;
+	// 游戏信息列的字段行高同样按本列缩放重算（与服务器列的 FieldRowHeight 分开）。
+	const float GameFieldRowHeight = FontSizeBody * ui_token::server_info::ROW_HEIGHT_RATIO;
 	GameInfo.HSplitTop(FontSizeTitle, &Label, &GameInfo);
-	GameInfo.HSplitTop(5.0f * GameScale, nullptr, &GameInfo);
-	GameInfo.HSplitTop(FontSizeBody, &Label, &GameInfo);
+	GameInfo.HSplitTop(ui_token::server_info::TITLE_GAP * GameScale, nullptr, &GameInfo);
+	GameInfo.HSplitTop(GameFieldRowHeight, &Label, &GameInfo);
 	RequestServerInfoField("ingame-game-info-type-value", &Label, CurrentServerInfo.m_aGameType);
-	GameInfo.HSplitTop(FontSizeBody, &Label, &GameInfo);
+	GameInfo.HSplitTop(GameFieldRowHeight, &Label, &GameInfo);
 	RequestServerInfoField("ingame-game-info-map-value", &Label, CurrentServerInfo.m_aMap);
 
 	if(pGameInfoObj)
 	{
 		if(pGameInfoObj->m_ScoreLimit)
 		{
-			GameInfo.HSplitTop(FontSizeBody, &Label, &GameInfo);
+			GameInfo.HSplitTop(GameFieldRowHeight, &Label, &GameInfo);
 			str_format(aBuf, sizeof(aBuf), "%d", pGameInfoObj->m_ScoreLimit);
 			RequestServerInfoField("ingame-game-info-score-limit-value", &Label, aBuf);
 		}
 		if(pGameInfoObj->m_TimeLimit)
 		{
-			GameInfo.HSplitTop(FontSizeBody, &Label, &GameInfo);
+			GameInfo.HSplitTop(GameFieldRowHeight, &Label, &GameInfo);
 			str_format(aBuf, sizeof(aBuf), "%d min", pGameInfoObj->m_TimeLimit);
 			RequestServerInfoField("ingame-game-info-time-limit-value", &Label, aBuf);
 		}
 		if(pGameInfoObj->m_RoundCurrent && pGameInfoObj->m_RoundNum)
 		{
-			GameInfo.HSplitTop(FontSizeBody, &Label, &GameInfo);
+			GameInfo.HSplitTop(GameFieldRowHeight, &Label, &GameInfo);
 			str_format(aBuf, sizeof(aBuf), "%d/%d", pGameInfoObj->m_RoundCurrent, pGameInfoObj->m_RoundNum);
 			RequestServerInfoField("ingame-game-info-round-value", &Label, aBuf);
 		}
@@ -1268,18 +1279,18 @@ void CMenus::PrepareIngameServerInfoTextRuntime(const CUIRect *pMainView)
 		case SV_TEAM_FORCED_SOLO: pTeamMode = Localize("solo", "Team status"); break;
 		default: pTeamMode = "";
 		}
-		GameInfo.HSplitTop(FontSizeBody, &Label, &GameInfo);
+		GameInfo.HSplitTop(GameFieldRowHeight, &Label, &GameInfo);
 		RequestServerInfoField("ingame-game-info-teams-value", &Label, pTeamMode);
 	}
 
-	GameInfo.HSplitTop(FontSizeBody, &Label, &GameInfo);
+	GameInfo.HSplitTop(GameFieldRowHeight, &Label, &GameInfo);
 	str_format(aBuf, sizeof(aBuf), "%d/%d", GameClient()->m_Snap.m_NumPlayers, CurrentServerInfo.m_MaxClients);
 	RequestServerInfoField("ingame-game-info-players-value", &Label, aBuf);
 
 	CUIRect MotdHeader;
-	const float MotdScale = QmServerInfoGeometry::FitScale(Motd, 180.0f, 53.0f);
-	Motd.HSplitTop(2.0f * MotdFontSize * MotdScale, &MotdHeader, &Motd);
-	Motd.HSplitTop(5.0f * MotdScale, nullptr, &Motd);
+	const float MotdScale = QmServerInfoGeometry::FitScale(Motd, ui_token::motd::DESIGN_WIDTH, ui_token::motd::DESIGN_HEIGHT);
+	Motd.HSplitTop(ui_token::motd::TITLE_HEIGHT_RATIO * MotdFontSize * MotdScale, &MotdHeader, &Motd);
+	Motd.HSplitTop(ui_token::motd::TITLE_GAP * MotdScale, nullptr, &Motd);
 	if(GameClient()->m_Motd.ServerMotd()[0])
 		RequestIngameMotdParagraphCache(Motd, MotdFontSize);
 
@@ -1290,6 +1301,192 @@ void CMenus::PrepareIngameServerInfoTextRuntime(const CUIRect *pMainView)
 		QmPerfLogPayload("perf/text", aPayload, Client(), "game");
 	}
 }
+
+namespace
+{
+	// 公告（MOTD）逐行排版状态：普通行沿用文本排版，框线行按统一格子逐字形发出。
+	// 只在公告文本 / 内容宽度 / 字号变化时重算，重算结果按 token 分摊到多帧
+	// （与整段文本容器同一套预算节奏），成型后就是一个容器，渲染期零重排。
+	struct SIngameMotdLayoutBuild
+	{
+		bool m_Valid = false;
+		unsigned m_TextHash = 0;
+		int64_t m_UpdateTime = -1;
+		float m_Width = 0.0f;
+		float m_FontSize = 0.0f;
+		QmMotdLayout::SLayout m_Layout;
+		int m_Row = 0;
+		int m_RowGlyph = 0;
+		int m_RowByteOffset = 0;
+		float m_RowTop = 0.0f;
+		float m_ContentWidth = 0.0f;
+		CTextCursor m_RowCursor;
+	};
+	SIngameMotdLayoutBuild s_IngameMotdLayoutBuild;
+
+	// 已完成（可渲染）容器的内容尺寸：同一个容器里既有普通行也有框线行，
+	// 容器自身的 bounding box 只反映最后一次追加，缩放必须用这里记下的实测值。
+	float s_IngameMotdContentWidth = 0.0f;
+	float s_IngameMotdContentHeight = 0.0f;
+
+	// 框线字形的自然推进与行高由字体实测：换字号或换字体后仍然首尾相接，不写死像素。
+	void MeasureIngameMotdBoxMetrics(ITextRender *pTextRender, float FontSize, float &CellAdvance, float &LineHeight)
+	{
+		// 行距在这里放宽一次：公告正文是多行长文，行贴行读起来吃力；
+	// 框线格宽仍取字体自然推进，所以方框笔画不会被拉长。
+	LineHeight = pTextRender->TextBoundingBox(FontSize, "─").m_H * ui_token::motd::LINE_SPACING_RATIO;
+		// 两个字形与一个字形的最长行宽之差就是一个字形的推进，抵消首尾字形的处理差异。
+		const float MeasuredAdvance = pTextRender->TextWidth(FontSize, "──") - pTextRender->TextWidth(FontSize, "─");
+		// 格宽向下取整：文本容器会把每个字形起点对齐到一个假屏幕像素上，
+		// 格宽取整后每一格都落在同一像素网格；宁可让笔画多重叠不到一像素，
+		// 也不让取整在格与格之间渗出缝（那正是「竹子有节」的成因）。
+		CellAdvance = MeasuredAdvance >= 1.0f ? (float)round_truncate(MeasuredAdvance) : 0.0f;
+		if(CellAdvance <= 0.0f)
+			CellAdvance = LineHeight; // 字体缺这两个字形时退回方形格子，至少不重叠
+	}
+
+	void ResetIngameMotdLayoutProgress()
+	{
+		SIngameMotdLayoutBuild &Build = s_IngameMotdLayoutBuild;
+		Build.m_Row = 0;
+		Build.m_RowGlyph = 0;
+		Build.m_RowByteOffset = 0;
+		Build.m_RowTop = 0.0f;
+		Build.m_ContentWidth = 0.0f;
+		Build.m_RowCursor = CTextCursor();
+	}
+
+	// 保证逐行排版与当前公告文本一致；换文本时丢掉半成品容器，从头开始。
+	void EnsureIngameMotdLayout(ITextRender *pTextRender, STextContainerIndex &BuildContainer, const char *pMotd, unsigned TextHash, int64_t UpdateTime, float Width, float FontSize)
+	{
+		SIngameMotdLayoutBuild &Build = s_IngameMotdLayoutBuild;
+		if(Build.m_Valid &&
+			Build.m_TextHash == TextHash &&
+			Build.m_UpdateTime == UpdateTime &&
+			absolute(Build.m_Width - Width) < 0.01f &&
+			absolute(Build.m_FontSize - FontSize) < 0.01f)
+		{
+			// 外部重置（换服 / 断线）会删掉半成品容器：进度还在就整段重来，
+			// 否则会把没有字形的空容器当成成品提交。
+			if(!BuildContainer.Valid() && Build.m_Row > 0)
+				ResetIngameMotdLayoutProgress();
+			return;
+		}
+
+		pTextRender->DeleteTextContainer(BuildContainer);
+		float CellAdvance = 0.0f;
+		float LineHeight = 0.0f;
+		MeasureIngameMotdBoxMetrics(pTextRender, FontSize, CellAdvance, LineHeight);
+		Build.m_Layout = QmMotdLayout::Build(pMotd, Width, CellAdvance, LineHeight);
+		Build.m_Valid = true;
+		Build.m_TextHash = TextHash;
+		Build.m_UpdateTime = UpdateTime;
+		Build.m_Width = Width;
+		Build.m_FontSize = FontSize;
+		ResetIngameMotdLayoutProgress();
+	}
+
+	bool IngameMotdLayoutComplete()
+	{
+		return s_IngameMotdLayoutBuild.m_Row >= s_IngameMotdLayoutBuild.m_Layout.LineCount();
+	}
+
+	float IngameMotdLayoutHeight()
+	{
+		return s_IngameMotdLayoutBuild.m_RowTop;
+	}
+
+	float IngameMotdLayoutContentWidth()
+	{
+		return s_IngameMotdLayoutBuild.m_ContentWidth;
+	}
+
+	// 发出一个排版单元：框线行一次发完整行（每个字形显式定位到自己的格子，
+	// 推进相同、字间距为 0），普通行按字节块发出并沿用自然推进与换行。
+	// 返回 false 表示全部行都发完了。
+	bool StepIngameMotdLayout(ITextRender *pTextRender, STextContainerIndex &BuildContainer, const char *pMotd, float Width, float FontSize, int ChunkBytes)
+	{
+		SIngameMotdLayoutBuild &Build = s_IngameMotdLayoutBuild;
+		const auto &vLines = Build.m_Layout.m_vLines;
+		if(Build.m_Row >= (int)vLines.size())
+			return false;
+
+		const QmMotdLayout::SLine &Line = vLines[Build.m_Row];
+		if(Line.m_Mode == QmMotdLayout::ELineMode::BOX)
+		{
+			// 框线行：一格一字形。字形按格子位置显式定位，所以相邻横线首尾相接，
+			// 不会像普通文本排版那样被字距切成一节一节。
+			int EmittedGlyphs = 0;
+			for(; Build.m_RowGlyph < Line.m_VisibleGlyphCount && EmittedGlyphs < ui_token::motd::BOX_GLYPHS_PER_STEP;)
+			{
+				const int GlyphOffset = Line.m_ByteOffset + Build.m_RowByteOffset;
+				const int GlyphBytes = str_utf8_forward(pMotd, GlyphOffset) - GlyphOffset;
+				if(GlyphBytes <= 0)
+					break;
+
+				CTextCursor GlyphCursor;
+				GlyphCursor.m_FontSize = FontSize;
+				GlyphCursor.SetPosition(vec2((float)Build.m_RowGlyph * Line.m_Advance, Build.m_RowTop));
+				pTextRender->CreateOrAppendTextContainer(BuildContainer, &GlyphCursor, pMotd + GlyphOffset, GlyphBytes);
+				Build.m_RowByteOffset += GlyphBytes;
+				Build.m_RowGlyph++;
+				++EmittedGlyphs;
+			}
+			// 预算用完但本行还没发完：保持行内进度，下一帧接着发。
+			if(Build.m_RowGlyph < Line.m_VisibleGlyphCount)
+				return true;
+			Build.m_ContentWidth = maximum(Build.m_ContentWidth, (float)Line.m_VisibleGlyphCount * Line.m_Advance);
+			Build.m_Row++;
+			Build.m_RowGlyph = 0;
+			Build.m_RowByteOffset = 0;
+			Build.m_RowTop += Build.m_Layout.m_LineHeight;
+			return true;
+		}
+
+		// 普通行：沿用文本排版的自然推进与换行，只把预算拆细，不改排版结果。
+		if(Build.m_RowByteOffset < Line.m_ByteLength)
+		{
+			const int ChunkStart = Line.m_ByteOffset + Build.m_RowByteOffset;
+			int ChunkLength = minimum(ChunkBytes, Line.m_ByteLength - Build.m_RowByteOffset);
+			if(ChunkStart + ChunkLength < Line.m_ByteOffset + Line.m_ByteLength)
+			{
+				while(ChunkLength > 0 && !str_utf8_isstart(pMotd[ChunkStart + ChunkLength]))
+					--ChunkLength;
+				if(ChunkLength <= 0)
+					ChunkLength = str_utf8_forward(pMotd, ChunkStart) - ChunkStart;
+			}
+
+			if(Build.m_RowByteOffset == 0)
+			{
+				// 行首重新定位光标：普通行从内容左边缘起排，宽度按内容区，允许换行。
+				Build.m_RowCursor = CTextCursor();
+				Build.m_RowCursor.m_FontSize = FontSize;
+				Build.m_RowCursor.m_LineWidth = Width;
+				Build.m_RowCursor.SetPosition(vec2(0.0f, Build.m_RowTop));
+			}
+
+			pTextRender->CreateOrAppendTextContainer(BuildContainer, &Build.m_RowCursor, pMotd + ChunkStart, ChunkLength);
+			Build.m_RowByteOffset += ChunkLength;
+			Build.m_ContentWidth = maximum(Build.m_ContentWidth, Build.m_RowCursor.m_LongestLineWidth);
+
+			if(Build.m_RowByteOffset >= Line.m_ByteLength)
+			{
+				// 引擎把光标 m_Y 停在「刚结束那一行的行顶」，不会自动补一行高度；
+				// 行顶推进必须显式加上实测行高 × 该行占用的视觉行数，否则下一行会叠在同一 y。
+				Build.m_RowTop += Build.m_Layout.m_LineHeight * (float)maximum(1, Build.m_RowCursor.m_LineCount);
+				Build.m_Row++;
+				Build.m_RowByteOffset = 0;
+			}
+			return true;
+		}
+
+		// 空行（没有字节可发）：只把行顶往下推一格。
+		Build.m_Row++;
+		Build.m_RowByteOffset = 0;
+		Build.m_RowTop += Build.m_Layout.m_LineHeight;
+		return true;
+	}
+} // namespace
 
 bool CMenus::RequestIngameMotdParagraphCache(CUIRect Motd, float FontSize)
 {
@@ -1306,9 +1503,6 @@ bool CMenus::RequestIngameMotdParagraphCache(CUIRect Motd, float FontSize)
 		absolute(m_IngameMotdParagraphCache.m_PendingFontSize - FontSize) >= 0.01f)
 	{
 		TextRender()->DeleteTextContainer(m_IngameMotdParagraphCache.m_BuildTextContainerIndex);
-		m_IngameMotdParagraphCache.m_BuildCursor = CTextCursor();
-		m_IngameMotdParagraphCache.m_BuildByteOffset = 0;
-		m_IngameMotdParagraphCache.m_BuildHeight = 0.0f;
 		m_IngameMotdParagraphCache.m_PendingTextHash = TextHash;
 		m_IngameMotdParagraphCache.m_PendingUpdateTime = UpdateTime;
 		m_IngameMotdParagraphCache.m_PendingRect = Motd;
@@ -1353,9 +1547,6 @@ void CMenus::DrainIngameMotdParagraphCache(CUIRect Motd, float FontSize, bool Al
 		if(!PendingMatches)
 		{
 			TextRender()->DeleteTextContainer(m_IngameMotdParagraphCache.m_BuildTextContainerIndex);
-			m_IngameMotdParagraphCache.m_BuildCursor = CTextCursor();
-			m_IngameMotdParagraphCache.m_BuildByteOffset = 0;
-			m_IngameMotdParagraphCache.m_BuildHeight = 0.0f;
 			m_IngameMotdParagraphCache.m_PendingTextHash = TextHash;
 			m_IngameMotdParagraphCache.m_PendingUpdateTime = UpdateTime;
 			m_IngameMotdParagraphCache.m_PendingRect = Motd;
@@ -1374,41 +1565,24 @@ void CMenus::DrainIngameMotdParagraphCache(CUIRect Motd, float FontSize, bool Al
 			if(m_IngameTextFrameBudget.m_ParagraphLayoutTokens > 0)
 				--m_IngameTextFrameBudget.m_ParagraphLayoutTokens;
 			const auto LayoutStart = time_get_nanoseconds();
-			if(m_IngameMotdParagraphCache.m_BuildByteOffset == 0 && !m_IngameMotdParagraphCache.m_BuildTextContainerIndex.Valid())
-			{
-				m_IngameMotdParagraphCache.m_BuildCursor = CTextCursor();
-				m_IngameMotdParagraphCache.m_BuildCursor.m_FontSize = FontSize;
-				m_IngameMotdParagraphCache.m_BuildCursor.m_LineWidth = Motd.w;
-			}
-
-			const int TextLength = str_length(pMotd);
-			int ChunkLength = minimum(SIngameMotdParagraphCache::INGAME_MOTD_PARAGRAPH_CHUNK_BYTES, TextLength - m_IngameMotdParagraphCache.m_BuildByteOffset);
-			if(m_IngameMotdParagraphCache.m_BuildByteOffset + ChunkLength < TextLength)
-			{
-				while(ChunkLength > 0 && !str_utf8_isstart(pMotd[m_IngameMotdParagraphCache.m_BuildByteOffset + ChunkLength]))
-					--ChunkLength;
-				if(ChunkLength <= 0)
-					ChunkLength = str_utf8_forward(pMotd, m_IngameMotdParagraphCache.m_BuildByteOffset) - m_IngameMotdParagraphCache.m_BuildByteOffset;
-			}
-			std::string ChunkText(pMotd + m_IngameMotdParagraphCache.m_BuildByteOffset, ChunkLength);
-			TextRender()->CreateOrAppendTextContainer(m_IngameMotdParagraphCache.m_BuildTextContainerIndex, &m_IngameMotdParagraphCache.m_BuildCursor, ChunkText.c_str(), ChunkLength);
-			m_IngameMotdParagraphCache.m_BuildByteOffset += ChunkLength;
+			// 逐行排版：文本/宽度/字号没变时不重算；重算后的进度按 token 分摊到多帧。
+			EnsureIngameMotdLayout(TextRender(), m_IngameMotdParagraphCache.m_BuildTextContainerIndex, pMotd, TextHash, UpdateTime, Motd.w, FontSize);
+			StepIngameMotdLayout(TextRender(), m_IngameMotdParagraphCache.m_BuildTextContainerIndex, pMotd, Motd.w, FontSize, SIngameMotdParagraphCache::INGAME_MOTD_PARAGRAPH_CHUNK_BYTES);
 			ParagraphLayoutMs = std::chrono::duration<double, std::milli>(time_get_nanoseconds() - LayoutStart).count();
-			m_IngameMotdParagraphCache.m_BuildHeight = m_IngameMotdParagraphCache.m_BuildCursor.Height();
 
-			if(m_IngameMotdParagraphCache.m_BuildByteOffset >= TextLength)
+			if(IngameMotdLayoutComplete())
 			{
 				// 文本容器不支持多 owner；构建期间继续显示旧容器，完成后再原子替换。
 				TextRender()->DeleteTextContainer(m_MotdTextContainerIndex);
 				std::swap(m_MotdTextContainerIndex, m_IngameMotdParagraphCache.m_BuildTextContainerIndex);
 				m_IngameMotdParagraphCache.m_BuildTextContainerIndex.Reset();
-				m_IngameMotdParagraphCache.m_BuildCursor = CTextCursor();
-				m_IngameMotdParagraphCache.m_BuildByteOffset = 0;
+				// 内容尺寸按逐行实测提交：渲染期只做缩放，不再重排。
+				s_IngameMotdContentWidth = IngameMotdLayoutContentWidth();
+				s_IngameMotdContentHeight = IngameMotdLayoutHeight();
 				m_IngameMotdParagraphCache.m_TextHash = TextHash;
 				m_IngameMotdParagraphCache.m_UpdateTime = UpdateTime;
 				m_IngameMotdParagraphCache.m_Width = Motd.w;
 				m_IngameMotdParagraphCache.m_FontSize = FontSize;
-				m_IngameMotdParagraphCache.m_Height = m_IngameMotdParagraphCache.m_BuildHeight;
 				m_IngameMotdParagraphCache.m_Valid = true;
 				m_IngameMotdParagraphCache.m_Pending = false;
 			}
@@ -1431,8 +1605,9 @@ bool CMenus::RenderIngameMotdStableParagraphCache(CUIRect Motd)
 {
 	if(!m_IngameMotdParagraphCache.m_Valid || !m_MotdTextContainerIndex.Valid())
 		return false;
-	const auto Bounds = TextRender()->GetBoundingBoxTextContainer(m_MotdTextContainerIndex);
-	const float Scale = QmServerInfoGeometry::FitScale(Motd, Bounds.m_W, maximum(Bounds.m_H, m_IngameMotdParagraphCache.m_Height));
+	// 内容尺寸取逐行排版提交时记下的实测值：容器里同时有普通行与框线行，
+	// 容器自身的 bounding box 只反映最后一次追加，撑不起整段内容的缩放。
+	const float Scale = QmServerInfoGeometry::FitScale(Motd, s_IngameMotdContentWidth, s_IngameMotdContentHeight);
 	if(Scale <= 0.0f)
 		return false;
 
@@ -1481,6 +1656,7 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 	LogSettingsAdaptiveBudget("ingame_server_info_snapshot_text", TextBudgetInput, m_IngameTextFrameBudget);
 	m_IngameTextFrameBudget.m_TextContainerTokens = maximum(1, m_IngameTextFrameBudget.m_TextContainerTokens);
 
+	AddMenuHitRegion(MainView);
 	MainView.Draw(ms_ColorTabbarActive, MenuShellCorners(), 10.0f);
 	MainView.Margin(10.0f, &MainView);
 	const bool ShowTags = g_Config.m_QmMapTags != 0;
@@ -1489,12 +1665,14 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 	CUIRect GameInfo = Layout.m_Game;
 	const CCommunity *pCommunity = ServerBrowser()->Community(CurrentServerInfo.m_aCommunityId);
 
-	ServerInfo.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_ALL, 10.0f);
+	ServerInfo.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_ALL, ui_token::server_info::CARD_RADIUS);
 	ServerInfo = QmServerInfoGeometry::ContentRect(ServerInfo);
 	const float ServerScale = QmServerInfoGeometry::FitScale(ServerInfo, 280.0f, QmServerInfoGeometry::ServerContentHeight(GameClient()->m_Snap.m_pLocalInfo != nullptr, pCommunity != nullptr));
-	float FontSizeTitle = 32.0f * ServerScale;
-	float FontSizeBody = 20.0f * ServerScale;
-	float ServerInfoLabelWidth = 132.0f * ServerScale;
+	float FontSizeTitle = ui_token::server_info::TITLE_SIZE * ServerScale;
+	float FontSizeBody = ui_token::server_info::BODY_SIZE * ServerScale;
+	float ServerInfoLabelWidth = ui_token::server_info::LABEL_WIDTH * ServerScale;
+	// 字段行高：字号缩小后行距不跟着缩到密排。
+	const float FieldRowHeight = FontSizeBody * ui_token::server_info::ROW_HEIGHT_RATIO;
 	SLabelProperties FieldProps;
 	FieldProps.m_MinimumFontSize = 0.1f;
 	if(!m_MenuTextPlanCollecting)
@@ -1502,14 +1680,14 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 
 	CUIRect Label;
 	ServerInfo.HSplitTop(FontSizeTitle, &Label, &ServerInfo);
-	ServerInfo.HSplitTop(5.0f * ServerScale, nullptr, &ServerInfo);
+	ServerInfo.HSplitTop(ui_token::server_info::TITLE_GAP * ServerScale, nullptr, &ServerInfo);
 	DoIngameMenuTitleLabel(PAGE_SERVER_INFO, "ingame-server-info-title", &Label, Localize("Server info"), FontSizeTitle, TEXTALIGN_ML, FieldProps);
 
-	ServerInfo.HSplitTop(FontSizeBody, &Label, &ServerInfo);
-	ServerInfo.HSplitTop(FontSizeBody, nullptr, &ServerInfo);
+	ServerInfo.HSplitTop(FieldRowHeight, &Label, &ServerInfo);
+	ServerInfo.HSplitTop(ui_token::server_info::NAME_GAP * ServerScale, nullptr, &ServerInfo);
 	RenderIngameServerInfoValueCached("ingame-server-info-name-value", m_IngameServerInfoTextSnapshot.m_ServerNameHash, &Label, CurrentServerInfo.m_aName, FontSizeBody, TEXTALIGN_ML, FieldProps);
 
-	ServerInfo.HSplitTop(FontSizeBody, &Label, &ServerInfo);
+	ServerInfo.HSplitTop(FieldRowHeight, &Label, &ServerInfo);
 	char aBuf[256];
 	auto DoServerInfoField = [&](const char *pLabelTextId, const char *pValueTextId, unsigned &ValueHash, CUIRect *pRow, const char *pLabelText, const char *pValueText) {
 		char aLabel[128];
@@ -1523,20 +1701,20 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 
 	if(GameClient()->m_Snap.m_pLocalInfo)
 	{
-		ServerInfo.HSplitTop(FontSizeBody, &Label, &ServerInfo);
+		ServerInfo.HSplitTop(FieldRowHeight, &Label, &ServerInfo);
 		str_format(aBuf, sizeof(aBuf), "%d", GameClient()->m_Snap.m_pLocalInfo->m_Latency);
 		DoServerInfoField("ingame-server-info-ping-label", "ingame-server-info-ping-value", m_IngameServerInfoTextSnapshot.m_PingHash, &Label, Localize("Ping"), aBuf);
 	}
 
-	ServerInfo.HSplitTop(FontSizeBody, &Label, &ServerInfo);
+	ServerInfo.HSplitTop(FieldRowHeight, &Label, &ServerInfo);
 	DoServerInfoField("ingame-server-info-version-label", "ingame-server-info-version-value", m_IngameServerInfoTextSnapshot.m_VersionHash, &Label, Localize("Version"), CurrentServerInfo.m_aVersion);
 
-	ServerInfo.HSplitTop(FontSizeBody, &Label, &ServerInfo);
+	ServerInfo.HSplitTop(FieldRowHeight, &Label, &ServerInfo);
 	DoServerInfoField("ingame-server-info-password-label", "ingame-server-info-password-value", m_IngameServerInfoTextSnapshot.m_PasswordHash, &Label, Localize("Password"), CurrentServerInfo.m_Flags & SERVER_FLAG_PASSWORD ? Localize("Yes") : Localize("No"));
 
 	if(pCommunity != nullptr)
 	{
-		ServerInfo.HSplitTop(FontSizeBody, &Label, &ServerInfo);
+		ServerInfo.HSplitTop(FieldRowHeight, &Label, &ServerInfo);
 		str_format(aBuf, sizeof(aBuf), "%s:", Localize("Community"));
 		DoIngameMenuLabel(PAGE_SERVER_INFO, "ingame-server-info-community-label", &Label, aBuf, FontSizeBody, TEXTALIGN_ML, FieldProps);
 
@@ -1561,7 +1739,8 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 		Actions.HSplitBottom(20.0f * ServerScale, &Actions, &Button);
 		Actions.HSplitBottom(5.0f * ServerScale, &Actions, nullptr);
 		static CButtonContainer s_CopyButton;
-		if(DoIngameMenuButton(PAGE_SERVER_INFO, "ingame-server-info-copy-button", &s_CopyButton, Localize("Copy info"), 0, &Button))
+		// 与设置页按钮同一端头：整行宽度远大于高度，胶囊读作一条可点行。
+		if(DoIngameMenuButton(PAGE_SERVER_INFO, "ingame-server-info-copy-button", &s_CopyButton, Localize("Copy info"), 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::PILL))
 		{
 			char aInfo[512];
 			str_format(
@@ -1579,80 +1758,54 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 		}
 	}
 
-	// favorite checkbox
-	{
-		CUIRect Button;
-		TRISTATE IsFavorite = Favorites()->IsFavorite(CurrentServerInfo.m_aAddresses, CurrentServerInfo.m_NumAddresses);
-		Actions.HSplitBottom(20.0f * ServerScale, &Actions, &Button);
-		Actions.HSplitBottom(5.0f * ServerScale, &Actions, nullptr);
-		static int s_AddFavButton = 0;
-		if(DoIngameMenuCheckBox(PAGE_SERVER_INFO, "ingame-server-info-favorite", &s_AddFavButton, Localize("Favorite"), IsFavorite != TRISTATE::NONE, &Button))
-		{
-			if(IsFavorite != TRISTATE::NONE)
-				Favorites()->Remove(CurrentServerInfo.m_aAddresses, CurrentServerInfo.m_NumAddresses);
-			else
-				Favorites()->Add(CurrentServerInfo.m_aAddresses, CurrentServerInfo.m_NumAddresses);
-		}
-	}
-
-	// favorite map checkbox
-	{
-		CUIRect Button;
-		bool IsMapFavorite = GameClient()->m_TClient.IsFavoriteMap(CurrentServerInfo.m_aMap);
-		Actions.HSplitBottom(20.0f * ServerScale, &Actions, &Button);
-		Actions.HSplitBottom(5.0f * ServerScale, &Actions, nullptr);
-		static int s_AddFavMapButton = 0;
-		if(DoIngameMenuCheckBox(PAGE_SERVER_INFO, "ingame-server-info-favorite-map", &s_AddFavMapButton, Localize("Favorite map"), IsMapFavorite, &Button))
-		{
-			if(IsMapFavorite)
-				GameClient()->m_TClient.RemoveFavoriteMap(CurrentServerInfo.m_aMap);
-			else
-				GameClient()->m_TClient.AddFavoriteMap(CurrentServerInfo.m_aMap);
-		}
-	}
+	// 收藏状态先读出来：开关按新排版画在右列地图备注下方。
+	const TRISTATE IsFavorite = Favorites()->IsFavorite(CurrentServerInfo.m_aAddresses, CurrentServerInfo.m_NumAddresses);
+	const bool IsMapFavorite = GameClient()->m_TClient.IsFavoriteMap(CurrentServerInfo.m_aMap);
 
 	if(!m_MenuTextPlanCollecting)
 		Ui()->ClipDisable();
-	GameInfo.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_ALL, 10.0f);
+	GameInfo.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_ALL, ui_token::server_info::CARD_RADIUS);
 	GameInfo = QmServerInfoGeometry::ContentRect(GameInfo);
 	if(!m_MenuTextPlanCollecting)
 		Ui()->ClipEnable(&GameInfo);
 	const auto *pGameInfoObj = GameClient()->m_Snap.m_pGameInfoObj;
 	const int OptionalFields = pGameInfoObj ? (int)(pGameInfoObj->m_ScoreLimit != 0) + (int)(pGameInfoObj->m_TimeLimit != 0) + (int)(pGameInfoObj->m_RoundCurrent && pGameInfoObj->m_RoundNum) : 0;
 	const float GameScale = QmServerInfoGeometry::FitScale(GameInfo, 280.0f, QmServerInfoGeometry::GameContentHeight(OptionalFields, GameClient()->m_GameInfo.m_DDRaceTeam, CurrentServerInfo.m_aMap[0] != '\0'));
-	FontSizeTitle = 32.0f * GameScale;
-	FontSizeBody = 20.0f * GameScale;
-	ServerInfoLabelWidth = 132.0f * GameScale;
+	FontSizeTitle = ui_token::server_info::TITLE_SIZE * GameScale;
+	FontSizeBody = ui_token::server_info::BODY_SIZE * GameScale;
+	ServerInfoLabelWidth = ui_token::server_info::LABEL_WIDTH * GameScale;
+	// 游戏信息列的字段行高同样按本列缩放重算。
+	const float GameFieldRowHeight = FontSizeBody * ui_token::server_info::ROW_HEIGHT_RATIO;
 
 	GameInfo.HSplitTop(FontSizeTitle, &Label, &GameInfo);
-	GameInfo.HSplitTop(5.0f * GameScale, nullptr, &GameInfo);
+	GameInfo.HSplitTop(ui_token::server_info::TITLE_GAP * GameScale, nullptr, &GameInfo);
 	DoIngameMenuTitleLabel(PAGE_SERVER_INFO, "ingame-game-info-title", &Label, Localize("Game info"), FontSizeTitle, TEXTALIGN_ML, FieldProps);
 
-	GameInfo.HSplitTop(FontSizeBody, &Label, &GameInfo);
+	GameInfo.HSplitTop(GameFieldRowHeight, &Label, &GameInfo);
 	DoServerInfoField("ingame-game-info-type-label", "ingame-game-info-type-value", m_IngameServerInfoTextSnapshot.m_GameTypeHash, &Label, Localize("Game type"), CurrentServerInfo.m_aGameType);
 
-	GameInfo.HSplitTop(FontSizeBody, &Label, &GameInfo);
+	GameInfo.HSplitTop(GameFieldRowHeight, &Label, &GameInfo);
 	DoServerInfoField("ingame-game-info-map-label", "ingame-game-info-map-value", m_IngameServerInfoTextSnapshot.m_MapHash, &Label, Localize("Map"), CurrentServerInfo.m_aMap);
 
 	if(pGameInfoObj)
 	{
 		if(pGameInfoObj->m_ScoreLimit)
 		{
-			GameInfo.HSplitTop(FontSizeBody, &Label, &GameInfo);
+			GameInfo.HSplitTop(GameFieldRowHeight, &Label, &GameInfo);
 			str_format(aBuf, sizeof(aBuf), "%d", pGameInfoObj->m_ScoreLimit);
 			DoServerInfoField("ingame-game-info-score-limit-label", "ingame-game-info-score-limit-value", m_IngameServerInfoTextSnapshot.m_ScoreLimitHash, &Label, Localize("Score limit"), aBuf);
 		}
 
 		if(pGameInfoObj->m_TimeLimit)
 		{
-			GameInfo.HSplitTop(FontSizeBody, &Label, &GameInfo);
+			GameInfo.HSplitTop(GameFieldRowHeight, &Label, &GameInfo);
 			str_format(aBuf, sizeof(aBuf), "%d min", pGameInfoObj->m_TimeLimit);
 			DoServerInfoField("ingame-game-info-time-limit-label", "ingame-game-info-time-limit-value", m_IngameServerInfoTextSnapshot.m_TimeLimitHash, &Label, Localize("Time limit"), aBuf);
 		}
 
 		if(pGameInfoObj->m_RoundCurrent && pGameInfoObj->m_RoundNum)
 		{
-			GameInfo.HSplitTop(FontSizeBody, &Label, &GameInfo);
+			GameInfo.HSplitTop(GameFieldRowHeight, &Label, &GameInfo);
 			str_format(aBuf, sizeof(aBuf), "%d/%d", pGameInfoObj->m_RoundCurrent, pGameInfoObj->m_RoundNum);
 			DoServerInfoField("ingame-game-info-round-label", "ingame-game-info-round-value", m_IngameServerInfoTextSnapshot.m_RoundHash, &Label, Localize("Round"), aBuf);
 		}
@@ -1696,11 +1849,11 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 		{
 			str_format(aBuf, sizeof(aBuf), "%s", pTeamMode);
 		}
-		GameInfo.HSplitTop(FontSizeBody, &Label, &GameInfo);
+		GameInfo.HSplitTop(GameFieldRowHeight, &Label, &GameInfo);
 		DoServerInfoField("ingame-game-info-teams-label", "ingame-game-info-teams-value", m_IngameServerInfoTextSnapshot.m_TeamsHash, &Label, Localize("Teams"), aBuf);
 	}
 
-	GameInfo.HSplitTop(FontSizeBody, &Label, &GameInfo);
+	GameInfo.HSplitTop(GameFieldRowHeight, &Label, &GameInfo);
 	str_format(aBuf, sizeof(aBuf), "%d/%d", GameClient()->m_Snap.m_NumPlayers, CurrentServerInfo.m_MaxClients);
 	DoServerInfoField("ingame-game-info-players-label", "ingame-game-info-players-value", m_IngameServerInfoTextSnapshot.m_PlayersHash, &Label, Localize("Players"), aBuf);
 
@@ -1711,7 +1864,7 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 	ServerInfoTextInputCtx.m_ScopeHash = MakeUiScopeHash("ingame_server_info_text_inputs");
 	ServerInfoTextInputCtx.m_FrameDt = GameClient()->UiRuntimeV2()->FrameDt();
 
-	if(CurrentServerInfo.m_aMap[0] != '\0' && GameInfo.h >= 34.0f * GameScale)
+	if(CurrentServerInfo.m_aMap[0] != '\0' && GameInfo.h >= 3.0f * GameFieldRowHeight)
 	{
 		static CLineInputBuffered<256> s_MapNoteInput;
 		static char s_aMapNoteInputMap[MAX_MAP_LENGTH] = "";
@@ -1722,17 +1875,61 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 			str_copy(s_aMapNoteInputMap, CurrentServerInfo.m_aMap);
 		}
 
+		// 地图备注与上面的字段同一套行制：行高、标签列宽完全一致。以前它另外用了
+		// NOTE_GAP + NOTE_ROW_HEIGHT + NOTE_LABEL_WIDTH 三档自有度量，于是与「收藏服务器 /
+		// 收藏地图」两行的间距明显比上面几行松、标签列也不齐。
 		CUIRect NoteRow, NoteLabel, NoteInput;
-		GameInfo.HSplitTop(8.0f * GameScale, nullptr, &GameInfo);
-		GameInfo.HSplitTop(22.0f * GameScale, &NoteRow, &GameInfo);
-		NoteRow.VSplitLeft(72.0f * GameScale, &NoteLabel, &NoteInput);
-		str_format(aBuf, sizeof(aBuf), "%s:", Localize("Note"));
+		GameInfo.HSplitTop(GameFieldRowHeight, &NoteRow, &GameInfo);
+		NoteRow.VSplitLeft(ServerInfoLabelWidth, &NoteLabel, &NoteInput);
+		// 这条备注记在「地图」上（按地图名存），标签必须写清是地图备注，
+		// 否则玩家会以为它锚定服务器。
+		str_format(aBuf, sizeof(aBuf), "%s:", Localize("Map note"));
 		DoIngameMenuLabel(PAGE_SERVER_INFO, "ingame-game-info-note", &NoteLabel, aBuf, FontSizeBody, TEXTALIGN_ML, FieldProps);
 		ui_widget::SInputFieldOptions MapNoteInputOptions;
-		MapNoteInputOptions.m_pPlaceholder = Localize("Note");
+		MapNoteInputOptions.m_pPlaceholder = Localize("Map note");
 		MapNoteInputOptions.m_FontSize = FontSizeBody * 0.85f;
 		if(ui_widget::InputField(ServerInfoTextInputCtx, &s_MapNoteInput, NoteInput, MapNoteInputOptions).m_Changed)
 			GameClient()->m_TClient.SetMapNote(CurrentServerInfo.m_aMap, s_MapNoteInput.GetString());
+	}
+
+	// 收藏开关排在右列地图备注下方，排版与其它字段完全一致：
+	// 标签落在标签列、开关落在值列左端，行高与其它字段同档。
+	// 开关本身用**设置卡片那颗件**（`ui_widget::Toggle`）与同一条尺寸公式
+	// （轨道宽 = max(2.75×正文, 行高×1.65)），所以两处开关读作同一个控件。
+	if(GameInfo.h >= 2.0f * GameFieldRowHeight)
+	{
+		// 开关取**设置卡片同款绝对尺寸**（行高 20 × 轨道比 1.65 = 33），不跟本页行高
+		// （22.5）走：跟行高走会比设置页大一圈，两处并排读作两个不同的控件。
+		// 高度小于行高时在行内垂直居中，标签列与值列的基线不受影响。
+		const float SwitchHeight = std::min(GameFieldRowHeight, ui_token::settings::ROW_HEIGHT * GameScale);
+		const float SwitchWidth = SwitchHeight * ui_token::control::SwitchTrackAspect();
+		auto DoFavoriteToggle = [&](const char *pTextId, const char *pText, const void *pId, bool Checked) {
+			CUIRect Row, LabelCol, ValueCol, Switch;
+			GameInfo.HSplitTop(GameFieldRowHeight, &Row, &GameInfo);
+			Row.VSplitLeft(ServerInfoLabelWidth, &LabelCol, &ValueCol);
+			DoIngameMenuLabel(PAGE_SERVER_INFO, pTextId, &LabelCol, pText, FontSizeBody, TEXTALIGN_ML, FieldProps);
+			if(m_MenuTextPlanCollecting)
+				return false;
+			Switch = CUIRect{ValueCol.x, Row.y + (Row.h - SwitchHeight) * 0.5f, std::min(SwitchWidth, ValueCol.w), SwitchHeight};
+			bool Value = Checked;
+			return ui_widget::Toggle(ServerInfoTextInputCtx, pId, &Value, Switch, true);
+		};
+		static int s_AddFavButton = 0;
+		if(DoFavoriteToggle("ingame-server-info-favorite", Localize("Favorite server"), &s_AddFavButton, IsFavorite != TRISTATE::NONE))
+		{
+			if(IsFavorite != TRISTATE::NONE)
+				Favorites()->Remove(CurrentServerInfo.m_aAddresses, CurrentServerInfo.m_NumAddresses);
+			else
+				Favorites()->Add(CurrentServerInfo.m_aAddresses, CurrentServerInfo.m_NumAddresses);
+		}
+		static int s_AddFavMapButton = 0;
+		if(DoFavoriteToggle("ingame-server-info-favorite-map", Localize("Favorite map"), &s_AddFavMapButton, IsMapFavorite))
+		{
+			if(IsMapFavorite)
+				GameClient()->m_TClient.RemoveFavoriteMap(CurrentServerInfo.m_aMap);
+			else
+				GameClient()->m_TClient.AddFavoriteMap(CurrentServerInfo.m_aMap);
+		}
 	}
 
 	if(!m_MenuTextPlanCollecting)
@@ -1740,7 +1937,7 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 	if(ShowTags)
 	{
 		CUIRect TagPanel = Layout.m_Tags;
-		TagPanel.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_ALL, 10.0f);
+		TagPanel.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_ALL, ui_token::server_info::CARD_RADIUS);
 		TagPanel = QmServerInfoGeometry::ContentRect(TagPanel);
 		if(!m_MenuTextPlanCollecting)
 			m_MapTagsPanel.Render(GameClient(), TagPanel);
@@ -1751,17 +1948,17 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 
 void CMenus::RenderServerInfoMotd(CUIRect Motd)
 {
-	const float MotdFontSize = 16.0f;
-	Motd.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_ALL, 10.0f);
+	const float MotdFontSize = ui_token::motd::FONT_SIZE;
+	Motd.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_ALL, ui_token::server_info::CARD_RADIUS);
 	Motd = QmServerInfoGeometry::ContentRect(Motd);
-	const float MotdScale = QmServerInfoGeometry::FitScale(Motd, 180.0f, 53.0f);
+	const float MotdScale = QmServerInfoGeometry::FitScale(Motd, ui_token::motd::DESIGN_WIDTH, ui_token::motd::DESIGN_HEIGHT);
 
 	CUIRect MotdHeader;
 	SLabelProperties HeaderProps;
 	HeaderProps.m_MinimumFontSize = 0.1f;
-	Motd.HSplitTop(2.0f * MotdFontSize * MotdScale, &MotdHeader, &Motd);
-	Motd.HSplitTop(5.0f * MotdScale, nullptr, &Motd);
-	DoIngameMenuTitleLabel(PAGE_SERVER_INFO, "ingame-server-info-motd-title", &MotdHeader, Localize("MOTD"), 2.0f * MotdFontSize * MotdScale, TEXTALIGN_ML, HeaderProps);
+	Motd.HSplitTop(ui_token::motd::TITLE_HEIGHT_RATIO * MotdFontSize * MotdScale, &MotdHeader, &Motd);
+	Motd.HSplitTop(ui_token::motd::TITLE_GAP * MotdScale, nullptr, &Motd);
+	DoIngameMenuTitleLabel(PAGE_SERVER_INFO, "ingame-server-info-motd-title", &MotdHeader, Localize("MOTD"), ui_token::motd::TITLE_HEIGHT_RATIO * MotdFontSize * MotdScale, TEXTALIGN_ML, HeaderProps);
 
 	if(m_MenuTextPlanCollecting)
 		return;
@@ -1785,6 +1982,7 @@ void CMenus::RenderServerInfoMotd(CUIRect Motd)
 
 void CMenus::RenderUnfinishedMaps(CUIRect MainView)
 {
+	AddMenuHitRegion(MainView);
 	MainView.Draw(ms_ColorTabbarActive, MenuShellCorners(), 10.0f);
 	MainView.Margin(10.0f, &MainView);
 
@@ -2017,6 +2215,7 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 {
 	CUIRect TabBar;
 	MainView.HSplitTop(MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW, &TabBar, &MainView);
+	AddMenuHitRegion(TabBar);
 
 	int NewPage = g_Config.m_UiPage;
 
@@ -2069,7 +2268,9 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 	SUiAnimTransition AppearTransition;
 	AppearTransition.m_DurationSec = 0.18f;
 	AppearTransition.m_Easing = EEasing::EASE_OUT;
-	for(const CCommunity *pCommunity : ServerBrowser()->FavoriteCommunities())
+	// FavoriteCommunities() 按值返回，页签、翻页边界和键盘切换共用同一份快照。
+	const std::vector<const CCommunity *> vpFavoriteCommunities = ServerBrowser()->FavoriteCommunities();
+	for(const CCommunity *pCommunity : vpFavoriteCommunities)
 	{
 		if((size_t)NumServerTabs >= std::size(s_aServerTabButtons))
 			break;
@@ -2096,7 +2297,7 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 		NewPage = aServerTabs[PressedServerTab].m_Page;
 
 	// 键盘左右键循环切换服务器页签。
-	int MaxPage = PAGE_FAVORITES + ServerBrowser()->FavoriteCommunities().size();
+	int MaxPage = PAGE_FAVORITES + vpFavoriteCommunities.size();
 	if(
 		!Ui()->IsPopupOpen() &&
 		CLineInput::GetActiveInput() == nullptr &&
@@ -2111,7 +2312,7 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 			}
 			else if(g_Config.m_UiPage == PAGE_FAVORITE_MAPS)
 			{
-				NewPage = ServerBrowser()->FavoriteCommunities().empty() ? PAGE_INTERNET : PAGE_FAVORITE_COMMUNITY_1;
+				NewPage = vpFavoriteCommunities.empty() ? PAGE_INTERNET : PAGE_FAVORITE_COMMUNITY_1;
 			}
 			else
 			{
@@ -2126,7 +2327,7 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 			{
 				NewPage = PAGE_FAVORITES;
 			}
-			else if(!ServerBrowser()->FavoriteCommunities().empty() && g_Config.m_UiPage == PAGE_FAVORITE_COMMUNITY_1)
+			else if(!vpFavoriteCommunities.empty() && g_Config.m_UiPage == PAGE_FAVORITE_COMMUNITY_1)
 			{
 				NewPage = PAGE_FAVORITE_MAPS;
 			}
@@ -2135,7 +2336,7 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 				NewPage = g_Config.m_UiPage - 1;
 			}
 			if(NewPage < PAGE_INTERNET)
-				NewPage = ServerBrowser()->FavoriteCommunities().empty() ? PAGE_FAVORITE_MAPS : MaxPage;
+				NewPage = vpFavoriteCommunities.empty() ? PAGE_FAVORITE_MAPS : MaxPage;
 		}
 	}
 
@@ -2324,6 +2525,7 @@ void CMenus::SortGhostlist()
 void CMenus::RenderGhost(CUIRect MainView)
 {
 	// render background
+	AddMenuHitRegion(MainView);
 	MainView.Draw(ms_ColorTabbarActive, MenuShellCorners(), 10.0f);
 
 	MainView.HSplitTop(10.0f, nullptr, &MainView);
@@ -2337,9 +2539,23 @@ void CMenus::RenderGhost(CUIRect MainView)
 	View.HSplitTop(17.0f, &Headers, &View);
 	View.HSplitBottom(28.0f, &View, &Status);
 
+	// 胶囊行先开：行距、行内内退、胶囊圆角和覆盖式滚动条一次给齐；表头让位要用
+	// RowReserveWidth()，它由 token 直接算，不依赖上一帧解析出的滚动条宽度。
+	static CListBox s_ListBox;
+	s_ListBox.SetCapsuleRows(12.0f);
+	// 容器内边距：行区在面板四边内缩，档位按做行的行高（17.0f，与 DoStart 同一个数）
+	// 派生。可见行数仍按可用高度反推，组件为保行数只把留白收敛到富余的那一段。
+	s_ListBox.SetContainerPadding(ui_token::list::ContainerPadding(17.0f));
+
 	// split of the scrollbar
 	Headers.Draw(ColorRGBA(1, 1, 1, 0.25f), IGraphics::CORNER_T, 5.0f);
-	Headers.VSplitRight(20.0f, &Headers, nullptr);
+	// 表头与行同一套列预算：右侧让出滚动条那一列，左侧让一档内退，行内列沿用表头列矩形。
+	// 17px 的行比标准行矮、列又多，左右各让 9 再让右 16 会把窄窗口下的列再挤掉 6px，
+	// 所以这一档收敛到 min(RowInsetX(12), 6) = 6；行胶囊名义内容内退仍由组件按 9 给，
+	// 差出的 3px 落在胶囊端帽里，不挪动任何列边界。
+	const float RowInsetX = std::min(ui_token::list::RowInsetX(12.0f), 6.0f);
+	Headers.VSplitRight(s_ListBox.RowReserveWidth(), &Headers, nullptr);
+	Headers.VMargin(RowInsetX, &Headers);
 
 	class CColumn
 	{
@@ -2402,7 +2618,11 @@ void CMenus::RenderGhost(CUIRect MainView)
 	int NumFailed = 0;
 	int NumActivated = 0;
 	static int s_SelectedIndex = 0;
-	static CListBox s_ListBox;
+	// 行距只留半档；视口按可用高度收敛到整数行（边界落在行缝里，首/末行不会被裁成
+	// 半个胶囊）。底板由调用方画满，行数固定取这个值即可，不随条目数收高度。
+	const int ListVisibleRows = maximum(1, (int)((maximum(0.0f, View.h) + ui_token::list::ROW_SPACING) / (17.0f + ui_token::list::ROW_SPACING)));
+	s_ListBox.DoAutoSpacing(ui_token::list::ROW_SPACING);
+	s_ListBox.SetVisibleRowRange(ListVisibleRows, ListVisibleRows);
 	s_ListBox.DoStart(17.0f, NumGhosts, 1, 3, s_SelectedIndex, &View, false);
 
 	for(int i = 0; i < NumGhosts; i++)
@@ -2432,9 +2652,10 @@ void CMenus::RenderGhost(CUIRect MainView)
 		for(int c = 0; c < NumCols; c++)
 		{
 			CUIRect Button;
+			// 列位置沿用表头列矩形（x/w 是同一份列预算）；纵向取行内容矩形。
 			Button.x = s_aCols[c].m_Rect.x;
-			Button.y = Item.m_Rect.y;
-			Button.h = Item.m_Rect.h;
+			Button.y = Item.m_ContentRect.y;
+			Button.h = Item.m_ContentRect.h;
 			Button.w = s_aCols[c].m_Rect.w;
 
 			int Id = s_aCols[c].m_Id;
@@ -2642,6 +2863,7 @@ void CMenus::RenderRankDemo(CUIRect MainView)
 			s_RankDemoPlayPending = false;
 	}
 
+	AddMenuHitRegion(MainView);
 	MainView.Draw(ms_ColorTabbarActive, MenuShellCorners(), 10.0f);
 
 	MainView.HSplitTop(10.0f, nullptr, &MainView);
@@ -2674,8 +2896,16 @@ void CMenus::RenderRankDemo(CUIRect MainView)
 	View.HSplitBottom(28.0f, &View, &Status);
 
 	// 与影子列表一致的列定义与表头样式
+	static CListBox s_ListBox;
+	s_ListBox.SetCapsuleRows(12.0f);
+	// 容器内边距：与影子列表同一档（行高 17.0f 派生），行区四边内缩。
+	s_ListBox.SetContainerPadding(ui_token::list::ContainerPadding(17.0f));
 	Headers.Draw(ColorRGBA(1, 1, 1, 0.25f), IGraphics::CORNER_T, 5.0f);
-	Headers.VSplitRight(20.0f, &Headers, nullptr);
+	// 表头与行同一套列预算（同影子列表）：右侧让出滚动条那一列，左侧让一档内退；
+	// 17px 行 + 全量 9 内退 + 16 让位会把窄窗口下的列挤窄，这一档收敛到 6。
+	const float RowInsetX = std::min(ui_token::list::RowInsetX(12.0f), 6.0f);
+	Headers.VSplitRight(s_ListBox.RowReserveWidth(), &Headers, nullptr);
+	Headers.VMargin(RowInsetX, &Headers);
 
 	enum
 	{
@@ -2728,7 +2958,10 @@ void CMenus::RenderRankDemo(CUIRect MainView)
 		s_SelectedIndex = NumEntries - 1;
 	if(s_SelectedIndex < 0)
 		s_SelectedIndex = 0;
-	static CListBox s_ListBox;
+	// 行距只留半档；视口按可用高度收敛到整数行（同影子列表），不随条目数收高度。
+	const int ListVisibleRows = maximum(1, (int)((maximum(0.0f, View.h) + ui_token::list::ROW_SPACING) / (17.0f + ui_token::list::ROW_SPACING)));
+	s_ListBox.DoAutoSpacing(ui_token::list::ROW_SPACING);
+	s_ListBox.SetVisibleRowRange(ListVisibleRows, ListVisibleRows);
 	s_ListBox.DoStart(17.0f, NumEntries, 1, 3, s_SelectedIndex, &View, false);
 
 	char aBuf[256];
@@ -2753,10 +2986,11 @@ void CMenus::RenderRankDemo(CUIRect MainView)
 		for(int c = 0; c < NUM_COLS; c++)
 		{
 			CUIRect Cell;
+			// 列位置沿用表头列矩形（x/w 是同一份列预算）；纵向取行内容矩形。
 			Cell.x = s_aCols[c].m_Rect.x;
-			Cell.y = Item.m_Rect.y;
+			Cell.y = Item.m_ContentRect.y;
 			Cell.w = s_aCols[c].m_Rect.w;
-			Cell.h = Item.m_Rect.h;
+			Cell.h = Item.m_ContentRect.h;
 
 			const int Id = s_aCols[c].m_Id;
 			if(Id == COL_ACTIVE)
@@ -2855,13 +3089,16 @@ void CMenus::RenderRankDemo(CUIRect MainView)
 	}
 
 	// 底部操作栏：刷新、打开缓存目录及条目动作。
-	Status.Draw(ColorRGBA(0, 0, 0, 0.15f), IGraphics::CORNER_B, 5.0f);
+	Status.Draw(ui_token::color::SURFACE_SUBHEADER, IGraphics::CORNER_B, ui_token::radius::SMALL_MENU);
 	Status.HMargin(4.0f, &Status);
 	Status.VSplitLeft(5.0f, nullptr, &Status);
 	CUIRect Button;
-	Status.VSplitLeft(110.0f, &Button, &Status);
+	// 刷新是图标类动作：方形图标按钮与行高同高，悬停给气泡。
+	Status.VSplitLeft(std::min(Status.h, Status.w), &Button, &Status);
 	static CButtonContainer s_RefreshButton;
-	if(DoIngameMenuButton(PAGE_RANK_DEMO, "ingame-rank-demo-refresh", &s_RefreshButton, Localize("Refresh"), 0, &Button) || Input()->KeyPress(KEY_F5))
+	const bool RefreshClicked = Ui()->DoButton_QmIcon(&s_RefreshButton, EQmIcon::ARROW_ROTATE_RIGHT, FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT, 0, &Button, BUTTONFLAG_LEFT) != 0;
+	GameClient()->m_Tooltips.DoToolTip(&s_RefreshButton, &Button, Localize("Refresh"));
+	if(RefreshClicked || Input()->KeyPress(KEY_F5))
 		RankGhost.RefreshManifest();
 
 	Status.VSplitLeft(5.0f, nullptr, &Status);
@@ -2963,17 +3200,4 @@ void CMenus::PopupConfirmRankDemoPlay()
 		s_RankDemoError.ErrorColor();
 		Ui()->ShowPopupMessage(0.0f, 0.0f, &s_RankDemoError);
 	}
-}
-
-void CMenus::RenderIngameHint()
-{
-	// With touch controls enabled there is a Close button in the menu and usually no Escape key available.
-	if(g_Config.m_ClTouchControls)
-		return;
-
-	float Width = 300 * Graphics()->ScreenAspect();
-	Graphics()->MapScreen(0, 0, Width, 300);
-	TextRender()->TextColor(1, 1, 1, 1);
-	TextRender()->Text(5, 280, 5, Localize("Menu opened. Press Esc key again to close menu."), -1.0f);
-	Ui()->MapScreen();
 }

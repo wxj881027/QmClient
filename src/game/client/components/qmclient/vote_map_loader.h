@@ -1,6 +1,7 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_VOTE_MAP_LOADER_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_VOTE_MAP_LOADER_H
 
+#include "axiom_scores_data.h"
 #include "vote_map_library.h"
 
 #include <cstdint>
@@ -22,6 +23,7 @@ class CQmVoteMapLoader
 		bool m_Attempted = false;
 		bool m_Error = false;
 	};
+	EQmAxiomMode m_AxiomMode = EQmAxiomMode::NONE;
 	SRequest m_CatalogRequest;
 	SRequest m_DetailRequest;
 	std::vector<QmVoteMaps::SMap> m_vMaps;
@@ -32,7 +34,7 @@ class CQmVoteMapLoader
 	bool m_DetailsReady = false;
 
 	static void Cancel(SRequest &Request) noexcept;
-	void Start(SRequest &Request, IHttp *pHttp, const char *pUrl, int MaxBytes);
+	void Start(SRequest &Request, IHttp *pHttp, const char *pUrl, int MaxBytes, const char *pApiKey = "");
 	bool Poll(SRequest &Request, IEngine *pEngine, bool Catalog);
 
 public:
@@ -41,7 +43,8 @@ public:
 	CQmVoteMapLoader(const CQmVoteMapLoader &) = delete;
 	CQmVoteMapLoader &operator=(const CQmVoteMapLoader &) = delete;
 	void Suspend();
-	void Update(IHttp *pHttp, IEngine *pEngine, float Now);
+	void SetAxiomMode(EQmAxiomMode Mode);
+	void Update(IHttp *pHttp, IEngine *pEngine, float Now, CQmAxiomRequestBudget *pBudget = nullptr, const char *pApiKey = "");
 	void Refresh(IHttp *pHttp);
 	void Select(const QmVoteMaps::SMap *pMap, float Now);
 	void RetryDetails() { m_DetailRequest.m_Attempted = false; }

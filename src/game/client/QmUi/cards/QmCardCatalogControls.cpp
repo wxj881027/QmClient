@@ -113,7 +113,7 @@ void CMenusSettingsControls::RenderSettingsBinds(EBindOptionGroup Group, CUIRect
 		char aRowId[64];
 		str_format(aRowId, sizeof(aRowId), "controls-bind-%d", (int)(&BindOption - m_vBindOptions.data()));
 		const bool HasRow = Flow.Control(aRowId, Height, KeyReaders);
-		Flow.Space(m_CardMetrics.m_LineSpacing);
+		Flow.Space(ui_token::settings::RowGap(m_CardMetrics.m_LineSpacing));
 		if(!HasRow)
 			continue;
 		if(!ReadOnly && m_pCardScrollRegion != nullptr && !m_pCardScrollRegion->AddRect(KeyReaders) && !m_SearchMatchReveal)
@@ -205,16 +205,36 @@ void CMenusSettingsControls::RenderSettingsMouse(CUIRect View)
 	if(Flow.Control("controls-ingame-mouse-sens-label", m_CardMetrics.m_LineHeight, Button))
 		DoSettingsControlsNumericField("controls-ingame-mouse-sens-label", &g_Config.m_InpMousesens, &g_Config.m_InpMousesens, Button, Localize("Ingame mouse sens."), 1, 500, &CUi::ms_LogarithmicScrollbarScale);
 
-	Flow.Space(m_CardMetrics.m_LineSpacing);
-	if(Flow.Control("controls-ingame-mouse-min-distance-label", m_CardMetrics.m_LineHeight, Button))
+	if(Flow.Control("controls-ingame-mouse-min-distance-label", m_CardMetrics.m_LineHeight, Button, ui_token::settings::RowGap(m_CardMetrics.m_LineSpacing)))
 		DoSettingsControlsNumericField("controls-ingame-mouse-min-distance-label", &g_Config.m_ClMouseMinDistance, &g_Config.m_ClMouseMinDistance, Button, Localize("Minimum cursor distance"), 0, 5000);
 
-	Flow.Space(m_CardMetrics.m_LineSpacing);
-	if(Flow.Control("controls-ingame-mouse-max-distance-label", m_CardMetrics.m_LineHeight, Button))
+	if(Flow.Control("controls-ingame-mouse-max-distance-label", m_CardMetrics.m_LineHeight, Button, ui_token::settings::RowGap(m_CardMetrics.m_LineSpacing)))
 		DoSettingsControlsNumericField("controls-ingame-mouse-max-distance-label", &g_Config.m_ClMouseMaxDistance, &g_Config.m_ClMouseMaxDistance, Button, Localize("Maximum cursor distance"), 0, 5000);
 
-	Flow.Space(m_CardMetrics.m_LineSpacing);
-	if(Flow.Control("controls-ui-mouse-sens-label", m_CardMetrics.m_LineHeight, Button))
+	// 高分辨率下同样手感：最大光标距离按 1000 像素归一化。
+	if(Flow.Control("controls-scale-mouse-distance", m_CardMetrics.m_LineHeight, Button, ui_token::settings::RowGap(m_CardMetrics.m_LineSpacing)))
+	{
+		if(DoSettingsControlsCheckBox(&g_Config.m_QmScaleMouseDistance, "controls-scale-mouse-distance", Localize("Scale cursor distance with resolution"), g_Config.m_QmScaleMouseDistance, &Button))
+			g_Config.m_QmScaleMouseDistance ^= 1;
+		GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmScaleMouseDistance, &Button, Localize("Keep the feeling of the maximum cursor distance independent of resolution"));
+	}
+
+	if(Flow.Control("controls-limit-mouse", m_CardMetrics.m_LineHeight, Button, ui_token::settings::RowGap(m_CardMetrics.m_LineSpacing)))
+	{
+		CUIRect Label, DropDown;
+		SplitSettingsControlRow(Button, m_CardMetrics, &Label, &DropDown, ESettingsControlWidth::LONG_CHOICE);
+		DoSettingsControlsMenuLabel("controls-limit-mouse", &Label, Localize("Limit cursor to game window"), m_CardMetrics.m_BodySize, TEXTALIGN_ML);
+		const char *apModes[] = {Localize("No limit"), Localize("Keep inside game window"), Localize("Keep square inside game window")};
+		static CUi::SDropDownState s_LimitMouseState;
+		static CScrollRegion s_LimitMouseScroll;
+		s_LimitMouseState.m_SelectionPopupContext.m_pScrollRegion = &s_LimitMouseScroll;
+		const int Mode = std::clamp(g_Config.m_QmLimitMouseToScreen, 0, 2);
+		const int NewMode = GameClient()->m_Menus.DoSettingsDropDown(&DropDown, Mode, apModes, 3, s_LimitMouseState, {}, &g_Config.m_QmLimitMouseToScreen, nullptr, &Button);
+		if(NewMode != Mode)
+			g_Config.m_QmLimitMouseToScreen = NewMode;
+	}
+
+	if(Flow.Control("controls-ui-mouse-sens-label", m_CardMetrics.m_LineHeight, Button, ui_token::settings::RowGap(m_CardMetrics.m_LineSpacing)))
 		DoSettingsControlsNumericField("controls-ui-mouse-sens-label", &g_Config.m_UiMousesens, &g_Config.m_UiMousesens, Button, Localize("UI mouse sens."), 1, 500, &CUi::ms_LogarithmicScrollbarScale);
 }
 
@@ -222,8 +242,7 @@ void CMenusSettingsControls::RenderSettingsJoystick(CUIRect View, bool ReadOnly)
 {
 	CSettingsContentLayoutFlow Flow(View);
 	CUIRect Button;
-	Flow.Space(m_CardMetrics.m_LineSpacing);
-	const bool HasToggle = Flow.Control("controls-enable-controller", m_CardMetrics.m_LineHeight, Button);
+	const bool HasToggle = Flow.Control("controls-enable-controller", m_CardMetrics.m_LineHeight, Button, ui_token::settings::RowGap(m_CardMetrics.m_LineSpacing));
 	const bool WasJoystickEnabled = g_Config.m_InpControllerEnable;
 	if(HasToggle && DoSettingsControlsCheckBox(&g_Config.m_InpControllerEnable, "controls-enable-controller", Localize("Enable controller"), g_Config.m_InpControllerEnable, &Button))
 	{
@@ -240,8 +259,7 @@ void CMenusSettingsControls::RenderSettingsJoystick(CUIRect View, bool ReadOnly)
 		// show joystick device selection if more than one available or just the joystick name if there is only one
 		{
 			CUIRect JoystickDropDown;
-			Flow.Space(m_CardMetrics.m_LineSpacing);
-			if(Flow.Control("controls-device", m_CardMetrics.m_LineHeight, JoystickDropDown))
+			if(Flow.Control("controls-device", m_CardMetrics.m_LineHeight, JoystickDropDown, ui_token::settings::RowGap(m_CardMetrics.m_LineSpacing)))
 			{
 				if(NumJoysticks > 1)
 				{
@@ -278,8 +296,7 @@ void CMenusSettingsControls::RenderSettingsJoystick(CUIRect View, bool ReadOnly)
 
 		const bool WasAbsolute = g_Config.m_InpControllerAbsolute;
 		CUIRect ModeRow;
-		Flow.Space(m_CardMetrics.m_LineSpacing);
-		if(Flow.Control("controls-mode", m_CardMetrics.m_LineHeight, ModeRow))
+		if(Flow.Control("controls-mode", m_CardMetrics.m_LineHeight, ModeRow, ui_token::settings::RowGap(m_CardMetrics.m_LineSpacing)))
 			GameClient()->m_Menus.DoSettingsLine_RadioMenu(CMenus::SETTINGS_CONTROLS, -1, -1, ModeRow, "controls-ingame-controller-mode-label", Localize("Ingame controller mode"),
 				m_vJoystickIngameModeButtonContainers,
 				{"controls-ingame-controller-mode-relative", "controls-ingame-controller-mode-absolute"},
@@ -290,24 +307,20 @@ void CMenusSettingsControls::RenderSettingsJoystick(CUIRect View, bool ReadOnly)
 
 		if(!WasAbsolute) // Use old value because this was used to allocate the available height
 		{
-			Flow.Space(m_CardMetrics.m_LineSpacing);
-			if(Flow.Control("controls-ingame-controller-sens-label", m_CardMetrics.m_LineHeight, Button))
+			if(Flow.Control("controls-ingame-controller-sens-label", m_CardMetrics.m_LineHeight, Button, ui_token::settings::RowGap(m_CardMetrics.m_LineSpacing)))
 				DoSettingsControlsNumericField("controls-ingame-controller-sens-label", &g_Config.m_InpControllerSens, &g_Config.m_InpControllerSens, Button, Localize("Ingame controller sens."), 1, 500,
 					&CUi::ms_LogarithmicScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE);
 		}
 
-		Flow.Space(m_CardMetrics.m_LineSpacing);
-		if(Flow.Control("controls-ui-controller-sens-label", m_CardMetrics.m_LineHeight, Button))
+		if(Flow.Control("controls-ui-controller-sens-label", m_CardMetrics.m_LineHeight, Button, ui_token::settings::RowGap(m_CardMetrics.m_LineSpacing)))
 			DoSettingsControlsNumericField("controls-ui-controller-sens-label", &g_Config.m_UiControllerSens, &g_Config.m_UiControllerSens, Button, Localize("UI controller sens."), 1, 500,
 				&CUi::ms_LogarithmicScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE);
 
-		Flow.Space(m_CardMetrics.m_LineSpacing);
-		if(Flow.Control("controls-controller-jitter-tolerance-label", m_CardMetrics.m_LineHeight, Button))
+		if(Flow.Control("controls-controller-jitter-tolerance-label", m_CardMetrics.m_LineHeight, Button, ui_token::settings::RowGap(m_CardMetrics.m_LineSpacing)))
 			DoSettingsControlsNumericField("controls-controller-jitter-tolerance-label", &g_Config.m_InpControllerTolerance, &g_Config.m_InpControllerTolerance, Button, Localize("Controller jitter tolerance"), 0, 50);
 
-		Flow.Space(m_CardMetrics.m_LineSpacing);
 		CUIRect AxisPicker;
-		if(Flow.Control("controls-axis-picker", ResolveSettingsControllerAxisPickerHeight(Input()->GetActiveJoystick()->GetNumAxes(), NUM_JOYSTICK_AXES, m_CardMetrics.m_LineHeight, m_CardMetrics.m_LineSpacing), AxisPicker) && (ReadOnly || m_pCardScrollRegion == nullptr || m_pCardScrollRegion->AddRect(AxisPicker)))
+		if(Flow.Control("controls-axis-picker", ResolveSettingsControllerAxisPickerHeight(Input()->GetActiveJoystick()->GetNumAxes(), NUM_JOYSTICK_AXES, m_CardMetrics.m_LineHeight, m_CardMetrics.m_LineSpacing), AxisPicker, ui_token::settings::RowGap(m_CardMetrics.m_LineSpacing)) && (ReadOnly || m_pCardScrollRegion == nullptr || m_pCardScrollRegion->AddRect(AxisPicker)))
 		{
 			DrawRoundedSurface(Ui(), AxisPicker, ColorRGBA(0.0f, 0.0f, 0.0f, 0.1f), ColorRGBA(), 5.0f);
 			RenderJoystickAxisPicker(AxisPicker, ReadOnly);
@@ -378,13 +391,13 @@ void CMenusSettingsControls::RenderJoystickAxisPicker(CUIRect View, bool ReadOnl
 		AimBind.VSplitMid(&AimBindX, &AimBindY);
 		Ui()->DoConfigTooltip(&m_aaJoystickAxisCheckboxIds[i][0], &AimBindX, &g_Config.m_InpControllerX);
 		Ui()->DoConfigTooltip(&m_aaJoystickAxisCheckboxIds[i][1], &AimBindY, &g_Config.m_InpControllerY);
-		if(GameClient()->m_Menus.DoButton_CheckBox(&m_aaJoystickAxisCheckboxIds[i][0], "X", g_Config.m_InpControllerX == i, &AimBindX))
+		if(GameClient()->m_Menus.DoButton_CheckBox(&m_aaJoystickAxisCheckboxIds[i][0], "X", g_Config.m_InpControllerX == i, &AimBindX, m_CardMetrics.m_BodySize))
 		{
 			if(g_Config.m_InpControllerY == i)
 				g_Config.m_InpControllerY = g_Config.m_InpControllerX;
 			g_Config.m_InpControllerX = i;
 		}
-		if(GameClient()->m_Menus.DoButton_CheckBox(&m_aaJoystickAxisCheckboxIds[i][1], "Y", g_Config.m_InpControllerY == i, &AimBindY))
+		if(GameClient()->m_Menus.DoButton_CheckBox(&m_aaJoystickAxisCheckboxIds[i][1], "Y", g_Config.m_InpControllerY == i, &AimBindY, m_CardMetrics.m_BodySize))
 		{
 			if(g_Config.m_InpControllerX == i)
 				g_Config.m_InpControllerX = g_Config.m_InpControllerY;

@@ -274,6 +274,21 @@ japanese = "適用"
             ),
             "menus",
         )
+        self.assertEqual(
+            i18n_store.module_name_for_source(
+                Path("E:/repo/src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp")
+            ),
+            "qmclient",
+        )
+        self.assertEqual(
+            i18n_store.module_name_for_source(
+                Path(
+                    "src/game/client/QmUi/cards/QmCardSearch/"
+                    "QmCardCatalogGraphics.inc"
+                )
+            ),
+            "qmclient",
+        )
 
     def test_all_config_help_has_simplified_chinese_translation(self):
         config_paths = tuple(
@@ -392,7 +407,7 @@ japanese = "適用"
             f"expected spanish failure; got: {errors}",
         )
 
-    def test_translation_quality_warns_for_placeholder_order_swap(self):
+    def test_translation_quality_errors_for_placeholder_order_swap(self):
         store = {
             "menus": {
                 ("%s vs %d", ""): {
@@ -403,8 +418,11 @@ japanese = "適用"
 
         report = i18n_store.translation_quality_report(store)
 
-        self.assertEqual(report.errors, [])
         self.assertTrue(
+            any("placeholder mismatch" in item for item in report.errors),
+            report.errors,
+        )
+        self.assertFalse(
             any("placeholder mismatch" in item for item in report.warnings),
             report.warnings,
         )
@@ -716,7 +734,7 @@ spanish = "Aplicar"
 
         self.assertEqual(i18n_store.translation_quality_errors(store), [])
 
-    def test_translation_quality_report_warns_for_placeholder_mismatch(self):
+    def test_translation_quality_report_errors_for_placeholder_mismatch(self):
         store = {
             "menus": {
                 ("Player %s joined", ""): {
@@ -728,8 +746,11 @@ spanish = "Aplicar"
 
         report = i18n_store.translation_quality_report(store)
 
-        self.assertEqual(report.errors, [])
         self.assertTrue(
+            any("placeholder mismatch" in item for item in report.errors),
+            report.errors,
+        )
+        self.assertFalse(
             any("placeholder mismatch" in item for item in report.warnings),
             report.warnings,
         )
@@ -766,6 +787,10 @@ spanish = "Aplicar"
         report = i18n_store.translation_quality_report(store)
 
         self.assertTrue(
+            any("placeholder mismatch" in item for item in report.errors),
+            report.errors,
+        )
+        self.assertFalse(
             any("placeholder mismatch" in item for item in report.warnings),
             report.warnings,
         )

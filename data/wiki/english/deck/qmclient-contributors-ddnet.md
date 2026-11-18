@@ -1,6 +1,6 @@
 ## What this controls
 
-The DDNet upstream credit list: a row of contributor names spaced by interpuncts, with two buttons above, "DDNet staff" and "DDNet releases".
+The DDNet upstream credit list: a row of contributor names spaced by interpuncts, with two buttons above, "DDNet staff" and "DDNet official installer".
 
 ## In game
 

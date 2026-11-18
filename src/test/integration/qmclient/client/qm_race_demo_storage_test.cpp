@@ -196,7 +196,7 @@ namespace
 		{
 			ASSERT_TRUE(qmclient::media_paths::PrepareWrite(m_pStorage.get(), SOURCE));
 			unsigned char MapData = 0;
-			ASSERT_EQ(m_Recorder.Start(m_pStorage.get(), nullptr, SOURCE, "test", "map", SHA256_DIGEST{}, 0, "client", 0, &MapData, nullptr, nullptr, nullptr), 0);
+			ASSERT_EQ(m_Recorder.Start(m_pStorage.get(), SOURCE, "test", "map", SHA256_DIGEST{}, 0, "client", 0, &MapData, nullptr, nullptr, nullptr), 0);
 			ASSERT_TRUE(m_Recorder.IsRecording());
 			ASSERT_TRUE(m_Finalizer.Queue(SOURCE, "map", "", false, 10000));
 		}

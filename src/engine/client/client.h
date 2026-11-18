@@ -96,10 +96,6 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	IUpdater *m_pUpdater = nullptr;
 	IEngineHttp *m_pHttp = nullptr;
 
-	rust::Box<CSnapshotDelta> m_pSnapshotDelta;
-	rust::Box<CSnapshotDelta> m_pSnapshotDeltaSixup;
-	CSnapshotDelta *SnapshotDelta();
-
 	CNetClient m_aNetClient[NUM_CONNS];
 	CDemoPlayer m_DemoPlayer;
 	CDemoRecorder m_aDemoRecorders[RECORDER_MAX];
@@ -252,7 +248,7 @@ class CClient : public IClient, public CDemoPlayer::IListener
 #endif
 
 	// graphs
-	CGraph m_InputtimeMarginGraph;
+	CGraph m_aInputtimeMarginGraphs[NUM_DUMMIES];
 	CGraph m_aGametimeMarginGraphs[NUM_DUMMIES];
 	CGraph m_FpsGraph;
 	float m_aLastGameTimeMarginMs[NUM_DUMMIES] = {0.0f, 0.0f};
@@ -270,6 +266,10 @@ class CClient : public IClient, public CDemoPlayer::IListener
 
 	CSnapshotStorage::CHolder m_aDemorecSnapshotHolders[NUM_SNAPSHOT_TYPES];
 	CSnapshotBuffer m_aaDemorecSnapshotData[NUM_SNAPSHOT_TYPES][2];
+
+	CSnapshotDelta m_SnapshotDelta;
+	CSnapshotDelta m_SnapshotDeltaSixup;
+	CSnapshotDelta *SnapshotDelta();
 
 	std::deque<std::shared_ptr<CDemoEdit>> m_EditJobs;
 
@@ -504,6 +504,7 @@ public:
 	void SnapshotStats(SClientSnapshotStats &Stats) const override;
 	int PendingResendCount() const override;
 	const void *SnapFindItem(int SnapId, int Type, int Id) const override;
+	const CSnapshot *CurrentSnapshotForConnection(int Conn) const override;
 	int SnapNumItems(int SnapId) const override;
 	void SnapSetStaticsize(int ItemType, int Size) override;
 	void SnapSetStaticsize7(int ItemType, int Size) override;

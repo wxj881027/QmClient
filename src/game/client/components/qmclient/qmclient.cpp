@@ -1435,16 +1435,19 @@ void CQmClient::ApplyQmRealtimeServiceData(const SQmRealtimeMessage &Message)
 		const bool ChatStyleSupported = Data.m_ChatStyleSupported;
 		const auto &Appearance = Data.m_Appearance;
 		const bool AppearanceSupported = Data.m_AppearanceSupported;
+		const bool TextStyleSupported = Data.m_TextStyleSupported;
 		const bool Authenticated = Data.m_TitleAuthenticated;
 		const bool Changed = m_TitleAuthenticated != Authenticated ||
 				     str_comp(m_aTitleText, pTitle) || str_comp(m_aTitleBoundName, pName) || str_comp(m_aTitleProfileStyle, pStyle) ||
 				     m_TitleProfileChatStyle != ChatStyle || m_TitleChatStyleSupported != ChatStyleSupported ||
-				     m_TitleAppearance != Appearance || m_TitleAppearanceSupported != AppearanceSupported;
+				     m_TitleAppearance != Appearance || m_TitleAppearanceSupported != AppearanceSupported ||
+				     m_TitleTextStyleSupported != TextStyleSupported;
 		m_TitleAuthenticated = Authenticated;
 		m_TitleProfileChatStyle = Authenticated ? ChatStyle : EQmSponsorChatStyle::NONE;
 		m_TitleChatStyleSupported = Authenticated && ChatStyleSupported;
 		m_TitleAppearance = Appearance;
 		m_TitleAppearanceSupported = Authenticated && AppearanceSupported;
+		m_TitleTextStyleSupported = Authenticated && TextStyleSupported;
 		str_copy(m_aTitleText, pTitle);
 		str_copy(m_aTitleBoundName, pName);
 		str_copy(m_aTitleProfileStyle, pStyle);
@@ -3097,7 +3100,7 @@ void CQmClient::RedeemTitleCode(const char *pCode)
 
 void CQmClient::RefreshTitleProfile()
 {
-	if(TitleBusy() || !m_aTitleToken[0])
+	if(!CanRefreshTitleProfile())
 		return;
 	// 资料读取复用已认证的实时通道，公网 HTTP GET 已由服务器隐私规则关闭。
 	if(RequestQmRealtimeTitleRefresh())
@@ -3121,6 +3124,11 @@ void CQmClient::SaveTitleProfile(const char *pTitle, const char *pBoundName, con
 	if(!m_TitleAppearanceSupported)
 	{
 		m_pTitleStatus = Localizable("Title server does not support badge appearance yet");
+		return;
+	}
+	if(Appearance.m_TextStyle != 0 && !m_TitleTextStyleSupported)
+	{
+		m_pTitleStatus = Localizable("Title server does not support text titles yet");
 		return;
 	}
 	const char *pStyleId = pStyle != nullptr ? pStyle : "";
@@ -3152,6 +3160,11 @@ void CQmClient::SaveTitleProfile(const char *pTitle, const char *pBoundName, con
 	Writer.WriteIntValue(Appearance.m_Color & 0xffffff);
 	Writer.WriteAttribute("opacity");
 	Writer.WriteIntValue(std::clamp(Appearance.m_Opacity, 0, 100));
+	if(m_TitleTextStyleSupported)
+	{
+		Writer.WriteAttribute("text_style");
+		Writer.WriteIntValue(Appearance.m_TextStyle);
+	}
 	Writer.EndObject();
 	Writer.EndObject();
 	StartTitleRequest("profile", Writer.GetOutputString().c_str(), m_pTitleOperation);
@@ -3172,8 +3185,8 @@ const char *CQmClient::PlayerTitle(int ClientId, bool ForNameplateLayout) const
 {
 	if(ClientId < 0 || ClientId >= MAX_CLIENTS || !GameClient()->m_aClients[ClientId].m_Active || (!ForNameplateLayout && GameClient()->ShouldHideStreamerIdentity(ClientId)))
 		return "";
-	if(PlayerHasDeveloperBadge(ClientId, ForNameplateLayout))
-		return "[开发者]";
+	// 开发者身份只由名牌上的徽章表示；头衔文字与样式完全交给本人设置，
+	// 否则开发者无法使用自己配置的头衔文本。
 	if(m_aTitleExpires[ClientId] > time_get() && str_comp(m_aaTitleNames[ClientId], GameClient()->m_aClients[ClientId].m_aName) == 0)
 		return m_aaPlayerTitles[ClientId];
 	return "";
@@ -3246,7 +3259,7 @@ void CQmClient::UpdateTitleAuthentication()
 			str_copy(m_aTitleProfileStyle, TitleJsonString(pRoot, "style"));
 			m_TitleProfileChatStyle = QmSponsorChatStyleFromId(TitleJsonString(pRoot, "chat_style"));
 			m_TitleChatStyleSupported = JsonObjectField(pRoot, "chat_style")->type == json_string;
-			m_TitleAppearanceSupported = ParseQmTitleAppearance(JsonObjectField(pRoot, "appearance"), m_TitleAppearance);
+			m_TitleAppearanceSupported = ParseQmTitleAppearance(JsonObjectField(pRoot, "appearance"), m_TitleAppearance, &m_TitleTextStyleSupported);
 			++m_TitleRevision;
 			m_pTitleStatus = Localizable("Permanent sponsor verified");
 			ResetTitlePresences();

@@ -5,6 +5,7 @@
 #include <base/system.h>
 #include <base/types.h>
 
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/component.h>
 #include <game/client/ui_rect.h>
 
@@ -217,55 +218,23 @@ struct SQmMonitoringSnapshot
 
 struct SQmMonitoringHudLayout
 {
-	CUIRect m_PanelRect = {0.0f, 0.0f, 0.0f, 0.0f};
-	CUIRect m_ContentRect = {0.0f, 0.0f, 0.0f, 0.0f};
+	CUIRect m_PanelRect;
+	float m_Scale;
 };
 
-struct SQmMonitoringBodyLayout
-{
-	float m_MainGraphHeight = 0.0f;
-	float m_FpsGraphHeight = 0.0f;
-	float m_PrimaryCardsHeight = 0.0f;
-	float m_MetricsExtraHeight = 0.0f;
-};
-
-struct SQmHistoryStats
-{
-	float m_Current = 0.0f;
-	float m_Average = 0.0f;
-	float m_Min = 0.0f;
-	float m_Max = 0.0f;
-	bool m_HasData = false;
-};
-
-struct SQmGraphSeriesCache
-{
-	SQmHistoryStats m_Stats;
-	int m_PeakIndex = -1;
-};
-
-struct SQmMonitoringGraphCache
-{
-	SQmGraphSeriesCache m_Rtt;
-	SQmGraphSeriesCache m_Prediction;
-	SQmGraphSeriesCache m_SnapshotGap;
-	SQmGraphSeriesCache m_PredictionJitter;
-	SQmGraphSeriesCache m_Fps;
-	SQmGraphSeriesCache m_GameTimeMargin;
-	float m_MainGraphMaxValue = 30.0f;
-	float m_FpsGraphMaxValue = 30.0f;
-	float m_GameTimeMarginMaxAbs = 25.0f;
-	bool m_Valid = false;
-};
-
-inline constexpr float QM_MONITORING_PANEL_PADDING = 12.0f;
-inline constexpr float QM_MONITORING_HEADER_HEIGHT = 50.0f;
-inline constexpr float QM_MONITORING_SECTION_GAP = 8.0f;
-inline constexpr float QM_MONITORING_MAIN_GRAPH_HEIGHT = 220.0f;
-inline constexpr float QM_MONITORING_FPS_GRAPH_HEIGHT = 140.0f;
-inline constexpr float QM_MONITORING_PRIMARY_CARDS_HEIGHT = 96.0f;
-inline constexpr float QM_MONITORING_SECONDARY_CARDS_HEIGHT = 136.0f;
 inline constexpr int QM_MONITORING_HISTORY_CAPACITY = 180;
+
+inline float QmMonitoringBarFraction(const std::array<float, QM_MONITORING_HISTORY_CAPACITY> &aHistory, int HistoryHead, int HistoryCount, int Column)
+{
+	using namespace ui_token::hud::debug_graph;
+	static_assert(BAR_COUNT <= QM_MONITORING_HISTORY_CAPACITY);
+	const int Age = BAR_COUNT - 1 - Column;
+	if(Age < 0 || Age >= std::min(HistoryCount, BAR_COUNT))
+		return 0.0f;
+	const int Index = (HistoryHead - 1 - Age + QM_MONITORING_HISTORY_CAPACITY) % QM_MONITORING_HISTORY_CAPACITY;
+	const float Sample = aHistory[Index];
+	return std::isfinite(Sample) ? std::clamp(Sample / GRAPH_MAX_MS, 0.0f, 1.0f) : 0.0f;
+}
 
 inline float QmComputeMonitoringUiScale(float ScreenWidth, float ScreenHeight)
 {
@@ -407,40 +376,6 @@ inline void FormatCpuRatioValue(char *pBuf, int BufSize, float ProcessCpuPct, fl
 }
 
 template<size_t N>
-inline SQmHistoryStats QmComputeHistoryStats(const std::array<float, N> &aHistory, int HistoryHead, int HistoryCount)
-{
-	SQmHistoryStats Stats;
-	if(HistoryCount <= 0)
-		return Stats;
-
-	const int Start = (HistoryHead - HistoryCount + (int)aHistory.size()) % (int)aHistory.size();
-	float Sum = 0.0f;
-	int ValidCount = 0;
-	for(int i = 0; i < HistoryCount; ++i)
-	{
-		const float Value = aHistory[(Start + i) % (int)aHistory.size()];
-		if(!std::isfinite(Value))
-			continue;
-		Stats.m_Current = Value;
-		if(ValidCount == 0)
-		{
-			Stats.m_Min = Value;
-			Stats.m_Max = Value;
-		}
-		Stats.m_Min = std::min(Stats.m_Min, Value);
-		Stats.m_Max = std::max(Stats.m_Max, Value);
-		Sum += Value;
-		++ValidCount;
-	}
-	if(ValidCount > 0)
-	{
-		Stats.m_Average = Sum / (float)ValidCount;
-		Stats.m_HasData = true;
-	}
-	return Stats;
-}
-
-template<size_t N>
 inline float QmComputeHistoryPercentile(const std::array<float, N> &aHistory, int HistoryHead, int HistoryCount, float Percentile)
 {
 	if(HistoryCount <= 0)
@@ -463,60 +398,6 @@ inline float QmComputeHistoryPercentile(const std::array<float, N> &aHistory, in
 	const float NormalizedPercentile = std::clamp(Percentile, 0.0f, 100.0f) / 100.0f;
 	const int Index = std::clamp((int)std::ceil(NormalizedPercentile * (ValidCount - 1)), 0, ValidCount - 1);
 	return aValues[Index];
-}
-
-template<size_t N>
-inline int QmFindLatestPeakIndex(const std::array<float, N> &aHistory, int HistoryHead, int HistoryCount)
-{
-	if(HistoryCount <= 0)
-		return 0;
-
-	const int Start = (HistoryHead - HistoryCount + (int)aHistory.size()) % (int)aHistory.size();
-	float PeakValue = -std::numeric_limits<float>::infinity();
-	for(int i = 0; i < HistoryCount; ++i)
-	{
-		const float Value = aHistory[(Start + i) % (int)aHistory.size()];
-		if(std::isfinite(Value))
-			PeakValue = std::max(PeakValue, Value);
-	}
-	if(!std::isfinite(PeakValue))
-		return -1;
-
-	const float Tolerance = std::max(0.05f, std::abs(PeakValue) * 0.005f);
-	for(int i = HistoryCount - 1; i >= 0; --i)
-	{
-		const float Value = aHistory[(Start + i) % (int)aHistory.size()];
-		if(std::isfinite(Value) && Value >= PeakValue - Tolerance)
-			return i;
-	}
-	return 0;
-}
-
-template<size_t N>
-inline int QmFindLatestAbsolutePeakIndex(const std::array<float, N> &aHistory, int HistoryHead, int HistoryCount)
-{
-	if(HistoryCount <= 0)
-		return 0;
-
-	const int Start = (HistoryHead - HistoryCount + (int)aHistory.size()) % (int)aHistory.size();
-	float PeakValue = -std::numeric_limits<float>::infinity();
-	for(int i = 0; i < HistoryCount; ++i)
-	{
-		const float Value = aHistory[(Start + i) % (int)aHistory.size()];
-		if(std::isfinite(Value))
-			PeakValue = std::max(PeakValue, std::abs(Value));
-	}
-	if(!std::isfinite(PeakValue))
-		return -1;
-
-	const float Tolerance = std::max(0.05f, PeakValue * 0.005f);
-	for(int i = HistoryCount - 1; i >= 0; --i)
-	{
-		const float Value = std::abs(aHistory[(Start + i) % (int)aHistory.size()]);
-		if(std::isfinite(Value) && Value >= PeakValue - Tolerance)
-			return i;
-	}
-	return 0;
 }
 
 inline EQmConnectionGrade QmDetermineConnectionGrade(const SQmNetworkMetrics &Net)
@@ -548,99 +429,20 @@ inline EQmDiagnosticCause QmDeterminePrimaryCause(const SQmNetworkMetrics &Net, 
 
 inline SQmMonitoringHudLayout QmComputeMonitoringHudLayout(float ScreenWidth, float ScreenHeight, float GraphX, float GraphSpacing)
 {
-	SQmMonitoringHudLayout Layout;
-	const float UiScale = QmComputeMonitoringUiScale(ScreenWidth, ScreenHeight);
-	const float Padding = std::round(QM_MONITORING_PANEL_PADDING * UiScale);
-
-	float PanelW = std::round(ScreenWidth * 0.42f);
-	float PanelH = std::round(ScreenHeight * 0.78f);
-	PanelW = std::max(PanelW, 620.0f * UiScale);
-	PanelH = std::max(PanelH, 560.0f * UiScale);
-	PanelW = std::min(PanelW, 760.0f * UiScale);
-	PanelH = std::min(PanelH, 860.0f * UiScale);
-	const float PreferredContentHeight = (QM_MONITORING_HEADER_HEIGHT +
-						     QM_MONITORING_SECTION_GAP * 4.0f +
-						     QM_MONITORING_MAIN_GRAPH_HEIGHT +
-						     QM_MONITORING_FPS_GRAPH_HEIGHT +
-						     QM_MONITORING_PRIMARY_CARDS_HEIGHT +
-						     QM_MONITORING_SECONDARY_CARDS_HEIGHT) *
-					     UiScale;
-	PanelH = std::min(PanelH, std::round(PreferredContentHeight + Padding * 2.0f));
-	PanelW = std::min(PanelW, ScreenWidth);
-	PanelH = std::min(PanelH, ScreenHeight);
-
-	Layout.m_PanelRect.w = PanelW;
-	Layout.m_PanelRect.h = PanelH;
-	Layout.m_PanelRect.x = std::clamp(GraphX - PanelW - GraphSpacing, 0.0f, std::max(ScreenWidth - PanelW, 0.0f));
-	Layout.m_PanelRect.y = std::clamp(GraphSpacing * 2.0f, 0.0f, std::max(ScreenHeight - PanelH, 0.0f));
-
-	Layout.m_ContentRect = Layout.m_PanelRect;
-	Layout.m_ContentRect.x += Padding;
-	Layout.m_ContentRect.y += Padding;
-	Layout.m_ContentRect.w = std::max(0.0f, Layout.m_ContentRect.w - Padding * 2.0f);
-	Layout.m_ContentRect.h = std::max(0.0f, Layout.m_ContentRect.h - Padding * 2.0f);
-	return Layout;
-}
-
-inline SQmMonitoringBodyLayout QmComputeMonitoringBodyLayout(float ContentHeight, float UiScale)
-{
-	SQmMonitoringBodyLayout Layout;
-	const float HeaderHeight = QM_MONITORING_HEADER_HEIGHT * UiScale;
-	const float SectionGap = QM_MONITORING_SECTION_GAP * UiScale;
-	const float MainGraphHeight = QM_MONITORING_MAIN_GRAPH_HEIGHT * UiScale;
-	const float FpsGraphHeight = QM_MONITORING_FPS_GRAPH_HEIGHT * UiScale;
-	const float PrimaryCardsHeight = QM_MONITORING_PRIMARY_CARDS_HEIGHT * UiScale;
-	const float MetricsExtraHeight = QM_MONITORING_SECONDARY_CARDS_HEIGHT * UiScale;
-	const float MainGraphMinHeight = 190.0f * UiScale;
-	const float FpsGraphMinHeight = 120.0f * UiScale;
-	const float AvailableBodyHeight = std::max(ContentHeight - HeaderHeight - SectionGap * 4.0f, 0.0f);
-	if(AvailableBodyHeight <= 0.0f)
-		return Layout;
-
-	const float PreferredGraphTotal = MainGraphHeight + FpsGraphHeight;
-	const float MinimumGraphTotal = MainGraphMinHeight + FpsGraphMinHeight;
-	const float ReservedCardTotal = PrimaryCardsHeight + MetricsExtraHeight;
-
-	Layout.m_PrimaryCardsHeight = PrimaryCardsHeight;
-	Layout.m_MetricsExtraHeight = MetricsExtraHeight;
-
-	if(AvailableBodyHeight >= ReservedCardTotal + PreferredGraphTotal)
-	{
-		Layout.m_MainGraphHeight = MainGraphHeight;
-		Layout.m_FpsGraphHeight = FpsGraphHeight;
-		return Layout;
-	}
-
-	const float AvailableGraphHeight = std::max(AvailableBodyHeight - ReservedCardTotal, 0.0f);
-	if(AvailableGraphHeight >= MinimumGraphTotal && PreferredGraphTotal > MinimumGraphTotal)
-	{
-		const float GraphScale = (AvailableGraphHeight - MinimumGraphTotal) / (PreferredGraphTotal - MinimumGraphTotal);
-		Layout.m_MainGraphHeight = MainGraphMinHeight + (MainGraphHeight - MainGraphMinHeight) * GraphScale;
-		Layout.m_FpsGraphHeight = FpsGraphMinHeight + (FpsGraphHeight - FpsGraphMinHeight) * GraphScale;
-		Layout.m_MetricsExtraHeight = std::max(AvailableBodyHeight - Layout.m_MainGraphHeight - Layout.m_FpsGraphHeight - Layout.m_PrimaryCardsHeight, 0.0f);
-		return Layout;
-	}
-
-	const float FallbackTotal = MinimumGraphTotal + ReservedCardTotal;
-	const float FallbackScale = FallbackTotal > 0.0f ? std::clamp(AvailableBodyHeight / FallbackTotal, 0.0f, 1.0f) : 0.0f;
-	Layout.m_MainGraphHeight = MainGraphMinHeight * FallbackScale;
-	Layout.m_FpsGraphHeight = FpsGraphMinHeight * FallbackScale;
-	Layout.m_PrimaryCardsHeight = PrimaryCardsHeight * FallbackScale;
-	Layout.m_MetricsExtraHeight = std::max(AvailableBodyHeight - Layout.m_MainGraphHeight - Layout.m_FpsGraphHeight - Layout.m_PrimaryCardsHeight, 0.0f);
-	return Layout;
+	using namespace ui_token::hud::debug_graph;
+	const float Scale = std::max(0.0f, std::min({QmComputeMonitoringUiScale(ScreenWidth, ScreenHeight), ScreenWidth / WIDTH, ScreenHeight / HEIGHT}));
+	const float Width = WIDTH * Scale;
+	const float Height = HEIGHT * Scale;
+	const float Left = std::clamp(GraphX - GraphSpacing - Width, 0.0f, std::max(0.0f, ScreenWidth - Width));
+	const float Top = std::clamp(GraphSpacing * 2.0f, 0.0f, std::max(0.0f, ScreenHeight - Height));
+	return {{Left, Top, Width, Height}, Scale};
 }
 
 class CQmMonitoring : public CComponent
 {
 	SQmMonitoringSnapshot m_Snapshot;
-	std::array<float, QM_MONITORING_HISTORY_CAPACITY> m_aRttHistory = {};
-	std::array<float, QM_MONITORING_HISTORY_CAPACITY> m_aPredHistory = {};
-	std::array<float, QM_MONITORING_HISTORY_CAPACITY> m_aSnapshotGapHistory = {};
-	std::array<float, QM_MONITORING_HISTORY_CAPACITY> m_aPredictionJitterHistory = {};
 	std::array<float, QM_MONITORING_HISTORY_CAPACITY> m_aGameTimeMarginHistory = {};
-	std::array<float, QM_MONITORING_HISTORY_CAPACITY> m_aFpsHistory = {};
 	std::array<float, QM_MONITORING_HISTORY_CAPACITY> m_aFrameTimeHistory = {};
-	SQmMonitoringGraphCache m_GraphCache;
 	int m_HistoryHead = 0;
 	int m_HistoryCount = 0;
 	int64_t m_LastSampleTick = 0;
@@ -666,13 +468,6 @@ class CQmMonitoring : public CComponent
 	void UpdatePerformanceMetrics(SQmPerformanceMetrics &Perf);
 	void UpdateDiagnosticVerdict(SQmDiagnosticVerdict &Verdict, const SQmNetworkMetrics &Net, const SQmPerformanceMetrics &Perf);
 	void PushFrameTimeSample(float FrameTimeMs);
-	void PushHistorySample(float RttMs, float PredMs, float SnapshotGapMs, float PredictionJitterMs, float GameTimeMarginMs, float Fps);
-	void UpdateGraphCache();
-	void RenderHeader(CUIRect Rect) const;
-	void RenderMainGraph(CUIRect Rect) const;
-	void RenderFpsGraph(CUIRect Rect) const;
-	void RenderPrimaryCards(CUIRect Rect) const;
-	void RenderDebugDetails(CUIRect Rect) const;
 
 public:
 	int Sizeof() const override { return sizeof(*this); }
@@ -682,7 +477,7 @@ public:
 	void OnRender() override;
 
 	void UpdateSnapshot();
-	void RenderHud(CUIRect View) const;
+	void RenderHud(const SQmMonitoringHudLayout &Layout) const;
 
 	const SQmMonitoringSnapshot &Snapshot() const { return m_Snapshot; }
 };

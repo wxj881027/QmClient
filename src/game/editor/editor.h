@@ -653,8 +653,8 @@ public:
 	static CUi::EPopupMenuFunctionResult PopupSelectImage(void *pContext, CUIRect View, bool Active);
 	static CUi::EPopupMenuFunctionResult PopupSelectSound(void *pContext, CUIRect View, bool Active);
 	static CUi::EPopupMenuFunctionResult PopupSelectGametileOp(void *pContext, CUIRect View, bool Active);
-	static CUi::EPopupMenuFunctionResult PopupSelectConfigAutoMap(void *pContext, CUIRect View, bool Active);
-	static CUi::EPopupMenuFunctionResult PopupSelectAutoMapReference(void *pContext, CUIRect View, bool Active);
+	static CUi::EPopupMenuFunctionResult PopupSelectAutomapperConfig(void *pContext, CUIRect View, bool Active);
+	static CUi::EPopupMenuFunctionResult PopupSelectAutomapperReference(void *pContext, CUIRect View, bool Active);
 	static CUi::EPopupMenuFunctionResult PopupTele(void *pContext, CUIRect View, bool Active);
 	static CUi::EPopupMenuFunctionResult PopupSpeedup(void *pContext, CUIRect View, bool Active);
 	static CUi::EPopupMenuFunctionResult PopupSwitch(void *pContext, CUIRect View, bool Active);
@@ -683,14 +683,14 @@ public:
 	void PopupSelectGametileOpInvoke(float x, float y);
 	int PopupSelectGameTileOpResult();
 
-	void PopupSelectConfigAutoMapInvoke(int Current, float x, float y);
-	int PopupSelectConfigAutoMapResult();
+	void PopupSelectAutomapperConfigInvoke(int Current, float x, float y);
+	int PopupSelectAutomapperConfigResult();
 
 	void PopupSelectSoundInvoke(int Current, float x, float y);
 	int PopupSelectSoundResult();
 
-	void PopupSelectAutoMapReferenceInvoke(int Current, float x, float y);
-	int PopupSelectAutoMapReferenceResult();
+	void PopupSelectAutomapperReferenceInvoke(int Current, float x, float y);
+	int PopupSelectAutomapperReferenceResult();
 
 	void DoQuadEnvelopes(const CLayerQuads *pLayerQuads);
 	void DoQuadEnvPoint(const CQuad *pQuad, CEnvelope *pEnvelope, int QuadIndex, int PointIndex);
@@ -764,6 +764,28 @@ public:
 	static bool AddSound(const char *pFilename, int StorageType, void *pUser);
 
 	static bool IsVanillaImage(const char *pImage);
+
+	enum class ELayerOperation
+	{
+		NONE,
+		CLICK,
+		LAYER_DRAG,
+		GROUP_DRAG,
+	};
+	struct SLayerPanelState
+	{
+		ELayerOperation m_Operation = ELayerOperation::NONE;
+		ELayerOperation m_PreviousOperation = ELayerOperation::NONE;
+		const void *m_pDraggedButton = nullptr;
+		float m_InitialMouseY = 0.0f;
+		float m_InitialCutHeight = 0.0f;
+		bool m_ScrollToSelectionNext = false;
+		SPopupMenuId m_PopupGroupId = {};
+		SLayerPopupContext m_LayerPopupContext = {};
+
+		void Reset();
+	};
+	SLayerPanelState m_LayerPanelState;
 
 	void RenderLayers(CUIRect LayersBox);
 	void RenderImagesList(CUIRect Toolbox);

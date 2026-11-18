@@ -2,26 +2,18 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "system.h"
 
-#include "aio_buffer.h"
-#include "io_read_all.h"
 #include "lock.h"
-#include "logger.h"
-#include "os_locale.h"
+#include "log.h"
 #include "sphore.h"
 #include "thread.h"
 #include "windows.h"
-#include "windows_io.h"
 
 #include <sys/types.h>
 
-#include <atomic>
 #include <chrono>
-#include <cmath>
 #include <cstring>
 #include <iterator> // std::size
 #include <limits>
-#include <mutex>
-#include <new>
 #include <string_view>
 
 #if defined(CONF_WEBSOCKETS)
@@ -32,15 +24,11 @@ static constexpr unsigned char LOOPBACKADDR_IPV4[16] = {127, 0, 0, 1};
 static constexpr unsigned char LOOPBACKADDR_IPV6[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
 
 #if defined(CONF_FAMILY_UNIX)
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <sys/time.h>
-#include <sys/utsname.h>
+#include <sys/time.h> // timeval
 #include <sys/wait.h>
 #include <unistd.h>
 
 #include <csignal>
-#include <locale>
 
 /* unix net includes */
 #include <arpa/inet.h>
@@ -52,15 +40,6 @@ static constexpr unsigned char LOOPBACKADDR_IPV6[16] = {0, 0, 0, 0, 0, 0, 0, 0, 
 #include <cerrno>
 
 #if defined(CONF_PLATFORM_MACOS)
-// some lock and pthread functions are already defined in headers
-// included from Carbon.h
-// this prevents having duplicate definitions of those
-#define _lock_set_user_
-#define _task_user_
-
-#include <Carbon/Carbon.h>
-#include <mach/mach_time.h>
-
 #if defined(__MAC_10_10) && __MAC_OS_X_VERSION_MIN_REQUIRED >= __MAC_10_10
 #include <pthread/qos.h>
 #endif
@@ -83,10 +62,6 @@ static constexpr unsigned char LOOPBACKADDR_IPV6[16] = {0, 0, 0, 0, 0, 0, 0, 0, 
 #include <cfenv>
 #else
 #error NOT IMPLEMENTED
-#endif
-
-#if defined(CONF_PLATFORM_MACOS) || defined(CONF_PLATFORM_IOS)
-#include <CoreFoundation/CoreFoundation.h>
 #endif
 
 #if defined(CONF_PLATFORM_SOLARIS)
@@ -138,50 +113,6 @@ struct NETQOS_INTERNAL
 };
 
 #if defined(CONF_FAMILY_WINDOWS)
-int CWindowsFileOperations::OpenDescriptor(intptr_t Handle, int OpenFlags) noexcept
-{
-	return _open_osfhandle(Handle, OpenFlags);
-}
-
-FILE *CWindowsFileOperations::OpenStream(int Descriptor, const char *pMode) noexcept
-{
-	return _fdopen(Descriptor, pMode);
-}
-
-void CWindowsFileOperations::CloseNativeHandle(intptr_t Handle) noexcept
-{
-	CloseHandle(reinterpret_cast<HANDLE>(Handle));
-}
-
-void CWindowsFileOperations::CloseDescriptor(int Descriptor) noexcept
-{
-	_close(Descriptor);
-}
-
-IOHANDLE windows_io_from_handle(intptr_t Handle, const char *pMode, CWindowsFileOperations *pOperations, int OpenFlags) noexcept
-{
-	CWindowsFileOperations DefaultOperations;
-	CWindowsFileOperations &Operations = pOperations ? *pOperations : DefaultOperations;
-	const int Descriptor = Operations.OpenDescriptor(Handle, OpenFlags);
-	if(Descriptor == -1)
-	{
-		const int Error = errno;
-		Operations.CloseNativeHandle(Handle);
-		errno = Error;
-		return nullptr;
-	}
-
-	FILE *pStream = Operations.OpenStream(Descriptor, pMode);
-	if(!pStream)
-	{
-		const int Error = errno;
-		// 句柄已交给 CRT，关闭描述符会同时关闭原生句柄，不能再次 CloseHandle。
-		Operations.CloseDescriptor(Descriptor);
-		errno = Error;
-	}
-	return pStream;
-}
-
 struct SQwaveApi
 {
 	HMODULE m_pModule = nullptr;
@@ -218,575 +149,6 @@ static const SQwaveApi &qwave_api()
 	return Api;
 }
 #endif
-
-static IOHANDLE io_open_impl(const char *filename, int flags, bool *pNotFound, bool RegularOnly = false)
-{
-	if(pNotFound)
-	{
-		*pNotFound = false;
-		if(!str_utf8_check(filename))
-			return nullptr;
-	}
-	dbg_assert(flags == IOFLAG_READ || flags == IOFLAG_WRITE || flags == IOFLAG_APPEND || flags == (IOFLAG_WRITE | IOFLAG_EXCLUSIVE), "invalid file open flags");
-#if defined(CONF_FAMILY_WINDOWS)
-	const std::wstring wide_filename = windows_utf8_to_wide(filename);
-	DWORD desired_access;
-	DWORD creation_disposition;
-	const char *open_mode;
-	if((flags & IOFLAG_READ) != 0)
-	{
-		desired_access = FILE_READ_DATA;
-		creation_disposition = OPEN_EXISTING;
-		open_mode = "rb";
-	}
-	else if((flags & IOFLAG_WRITE) != 0)
-	{
-		desired_access = FILE_WRITE_DATA;
-		creation_disposition = (flags & IOFLAG_EXCLUSIVE) != 0 ? CREATE_NEW : CREATE_ALWAYS;
-		open_mode = "wb";
-	}
-	else if(flags == IOFLAG_APPEND)
-	{
-		desired_access = FILE_APPEND_DATA;
-		creation_disposition = OPEN_ALWAYS;
-		open_mode = "ab";
-	}
-	else
-	{
-		dbg_assert_failed("logic error");
-	}
-	HANDLE handle = CreateFileW(wide_filename.c_str(), desired_access, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, creation_disposition, FILE_ATTRIBUTE_NORMAL, nullptr);
-	if(handle == INVALID_HANDLE_VALUE)
-	{
-		if(pNotFound)
-		{
-			const DWORD Error = GetLastError();
-			*pNotFound = Error == ERROR_FILE_NOT_FOUND || Error == ERROR_PATH_NOT_FOUND;
-		}
-		return nullptr;
-	}
-	if(RegularOnly)
-	{
-		BY_HANDLE_FILE_INFORMATION Information{};
-		if(GetFileType(handle) != FILE_TYPE_DISK || !GetFileInformationByHandle(handle, &Information) || (Information.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0)
-		{
-			CloseHandle(handle);
-			return nullptr;
-		}
-	}
-	return windows_io_from_handle(reinterpret_cast<intptr_t>(handle), open_mode);
-#else
-	if(RegularOnly)
-	{
-		int OpenFlags = O_RDONLY | O_NONBLOCK | O_NOCTTY;
-#if defined(O_CLOEXEC)
-		OpenFlags |= O_CLOEXEC;
-#endif
-		int Descriptor;
-		do
-		{
-			Descriptor = open(filename, OpenFlags);
-		} while(Descriptor == -1 && errno == EINTR);
-		if(Descriptor == -1)
-		{
-			if(pNotFound)
-				*pNotFound = errno == ENOENT;
-			return nullptr;
-		}
-		struct SDescriptor
-		{
-			int m_Value;
-			~SDescriptor()
-			{
-				if(m_Value != -1)
-				{
-					const int Error = errno;
-					close(m_Value);
-					errno = Error;
-				}
-			}
-		} Owner{Descriptor};
-		struct stat Information;
-		if(fstat(Descriptor, &Information) != 0)
-			return nullptr;
-		if(!S_ISREG(Information.st_mode))
-		{
-			errno = EINVAL;
-			return nullptr;
-		}
-#if !defined(O_CLOEXEC)
-		const int DescriptorFlags = fcntl(Descriptor, F_GETFD);
-		if(DescriptorFlags == -1 || fcntl(Descriptor, F_SETFD, DescriptorFlags | FD_CLOEXEC) == -1)
-			return nullptr;
-#endif
-		// 类型固定在已打开描述符上，恢复普通文件原有的阻塞读取行为。
-		const int StatusFlags = fcntl(Descriptor, F_GETFL);
-		if(StatusFlags == -1 || fcntl(Descriptor, F_SETFL, StatusFlags & ~O_NONBLOCK) == -1)
-			return nullptr;
-		FILE *pStream = fdopen(Descriptor, "rb");
-		if(pStream)
-			Owner.m_Value = -1;
-		return pStream;
-	}
-	const char *open_mode;
-	if((flags & IOFLAG_READ) != 0)
-	{
-		open_mode = "rb";
-	}
-	else if((flags & IOFLAG_WRITE) != 0)
-	{
-		open_mode = (flags & IOFLAG_EXCLUSIVE) != 0 ? "wbx" : "wb";
-	}
-	else if(flags == IOFLAG_APPEND)
-	{
-		open_mode = "ab";
-	}
-	else
-	{
-		dbg_assert_failed("Invalid flags: %d", flags);
-	}
-	FILE *pFile = fopen(filename, open_mode);
-	if(!pFile && pNotFound)
-		*pNotFound = errno == ENOENT;
-	return pFile;
-#endif
-}
-
-IOHANDLE io_open(const char *filename, int flags)
-{
-	return io_open_impl(filename, flags, nullptr);
-}
-
-IOHANDLE io_open_read_checked(const char *pFilename, bool *pNotFound)
-{
-	return io_open_impl(pFilename, IOFLAG_READ, pNotFound);
-}
-
-IOHANDLE io_open_read_regular_checked(const char *pFilename, bool *pNotFound)
-{
-	bool NotFound = false;
-	if(!pNotFound)
-		pNotFound = &NotFound;
-	*pNotFound = false;
-	if(!pFilename || pFilename[0] == '\0')
-	{
-		errno = EINVAL;
-		return nullptr;
-	}
-	return io_open_impl(pFilename, IOFLAG_READ, pNotFound, true);
-}
-
-unsigned io_read(IOHANDLE io, void *buffer, unsigned size)
-{
-	return fread(buffer, 1, size, (FILE *)io);
-}
-
-bool io_read_all(IOHANDLE io, void **result, unsigned *result_len)
-{
-	const SIOReadAllAllocator Allocator{
-		[](void *pBuffer, size_t Size, void *) { return realloc(pBuffer, Size); },
-		[](void *pBuffer, void *) { free(pBuffer); },
-		nullptr};
-	return io_read_all_with_allocator(io, result, result_len, Allocator);
-}
-
-bool io_read_all_with_allocator(IOHANDLE io, void **result, unsigned *result_len, const SIOReadAllAllocator &Allocator)
-{
-	*result = nullptr;
-	*result_len = 0;
-	// Loading files larger than 1 GiB into memory is not supported.
-	constexpr int64_t MAX_FILE_SIZE = (int64_t)1024 * 1024 * 1024;
-
-	int64_t real_len = io_length(io);
-	if(real_len > MAX_FILE_SIZE)
-	{
-		return false;
-	}
-
-	int64_t len = real_len < 0 ? 1024 : real_len; // use default initial size if we couldn't get the length
-	char *buffer = (char *)Allocator.m_pfnReallocate(nullptr, len + 1, Allocator.m_pUser);
-	if(buffer == nullptr)
-		return false;
-	auto resize = [&](size_t size) {
-		void *candidate = Allocator.m_pfnReallocate(buffer, size, Allocator.m_pUser);
-		if(candidate == nullptr)
-			return false;
-		buffer = (char *)candidate;
-		return true;
-	};
-	auto fail = [&]() {
-		Allocator.m_pfnFree(buffer, Allocator.m_pUser);
-		return false;
-	};
-	int64_t read = io_read(io, buffer, len + 1); // +1 to check if the file size is larger than expected
-	if(io_error(io))
-		return fail();
-	if(read < len)
-	{
-		// 缩小容量不是读取成功的必要条件，失败时保留原缓冲。
-		resize(read + 1);
-		len = read;
-	}
-	else if(read > len)
-	{
-		int64_t cap = 2 * read;
-		if(cap > MAX_FILE_SIZE)
-		{
-			return fail();
-		}
-		len = read;
-		if(!resize(cap))
-			return fail();
-		while((read = io_read(io, buffer + len, cap - len)) != 0)
-		{
-			len += read;
-			if(len == cap)
-			{
-				cap *= 2;
-				if(cap > MAX_FILE_SIZE)
-				{
-					return fail();
-				}
-				if(!resize(cap))
-					return fail();
-			}
-		}
-		if(io_error(io))
-			return fail();
-		resize(len + 1);
-	}
-	buffer[len] = 0;
-	*result = buffer;
-	*result_len = len;
-	return true;
-}
-
-char *io_read_all_str(IOHANDLE io)
-{
-	void *buffer;
-	unsigned len;
-	if(!io_read_all(io, &buffer, &len))
-	{
-		return nullptr;
-	}
-	if(mem_has_null(buffer, len))
-	{
-		free(buffer);
-		return nullptr;
-	}
-	return (char *)buffer;
-}
-
-int io_skip(IOHANDLE io, int64_t size)
-{
-	return io_seek(io, size, IOSEEK_CUR);
-}
-
-int io_seek(IOHANDLE io, int64_t offset, ESeekOrigin origin)
-{
-	int real_origin;
-	switch(origin)
-	{
-	case IOSEEK_START:
-		real_origin = SEEK_SET;
-		break;
-	case IOSEEK_CUR:
-		real_origin = SEEK_CUR;
-		break;
-	case IOSEEK_END:
-		real_origin = SEEK_END;
-		break;
-	default:
-		dbg_assert_failed("Invalid origin: %d", origin);
-	}
-#if defined(CONF_FAMILY_WINDOWS)
-	return _fseeki64((FILE *)io, offset, real_origin);
-#else
-	return fseeko((FILE *)io, offset, real_origin);
-#endif
-}
-
-int64_t io_tell(IOHANDLE io)
-{
-#if defined(CONF_FAMILY_WINDOWS)
-	return _ftelli64((FILE *)io);
-#else
-	return ftello((FILE *)io);
-#endif
-}
-
-int64_t io_length(IOHANDLE io)
-{
-	if(io_seek(io, 0, IOSEEK_END) != 0)
-	{
-		return -1;
-	}
-	const int64_t length = io_tell(io);
-	if(io_seek(io, 0, IOSEEK_START) != 0)
-	{
-		return -1;
-	}
-	return length;
-}
-
-unsigned io_write(IOHANDLE io, const void *buffer, unsigned size)
-{
-	return fwrite(buffer, 1, size, (FILE *)io);
-}
-
-bool io_write_newline(IOHANDLE io)
-{
-#if defined(CONF_FAMILY_WINDOWS)
-	return io_write(io, "\r\n", 2) == 2;
-#else
-	return io_write(io, "\n", 1) == 1;
-#endif
-}
-
-int io_close(IOHANDLE io)
-{
-	return fclose((FILE *)io) != 0;
-}
-
-int io_flush(IOHANDLE io)
-{
-	return fflush((FILE *)io);
-}
-
-int io_sync(IOHANDLE io)
-{
-	if(io_flush(io))
-	{
-		return 1;
-	}
-#if defined(CONF_FAMILY_WINDOWS)
-	return FlushFileBuffers((HANDLE)_get_osfhandle(_fileno((FILE *)io))) == FALSE;
-#else
-	return fsync(fileno((FILE *)io)) != 0;
-#endif
-}
-
-int io_error(IOHANDLE io)
-{
-	return ferror((FILE *)io);
-}
-
-IOHANDLE io_stdin()
-{
-	return stdin;
-}
-
-IOHANDLE io_stdout()
-{
-	return stdout;
-}
-
-IOHANDLE io_stderr()
-{
-	return stderr;
-}
-
-IOHANDLE io_current_exe()
-{
-	char path[IO_MAX_PATH_LENGTH];
-	if(fs_executable_path(path, sizeof(path)) != 0)
-	{
-		return nullptr;
-	}
-	return io_open(path, IOFLAG_READ);
-}
-
-#define ASYNC_LOCAL_BUFSIZE (64 * 1024)
-
-struct ASYNCIO
-{
-	CLock lock;
-	IOHANDLE io;
-	SEMAPHORE sphore;
-	void *thread;
-
-	CAsyncIOBuffer buffer;
-
-	int error;
-	unsigned char finish;
-	unsigned char refcount;
-};
-
-enum
-{
-	ASYNCIO_RUNNING,
-	ASYNCIO_CLOSE,
-	ASYNCIO_EXIT,
-};
-
-static void aio_handle_free_and_unlock(ASYNCIO *aio) RELEASE(aio->lock)
-{
-	int do_free;
-	aio->refcount--;
-
-	do_free = aio->refcount == 0;
-	aio->lock.unlock();
-	if(do_free)
-	{
-		sphore_destroy(&aio->sphore);
-		delete aio;
-	}
-}
-
-static void aio_thread(void *user)
-{
-	ASYNCIO *aio = (ASYNCIO *)user;
-
-	aio->lock.lock();
-	while(true)
-	{
-		int result_io_error;
-		unsigned char local_buffer[ASYNC_LOCAL_BUFSIZE];
-
-		if(aio->buffer.Empty())
-		{
-			if(aio->finish != ASYNCIO_RUNNING)
-			{
-				if(aio->finish == ASYNCIO_CLOSE)
-				{
-					io_close(aio->io);
-				}
-				aio_handle_free_and_unlock(aio);
-				break;
-			}
-			aio->lock.unlock();
-			sphore_wait(&aio->sphore);
-			aio->lock.lock();
-			continue;
-		}
-
-		const unsigned int local_buffer_len = aio->buffer.Read(local_buffer, sizeof(local_buffer));
-		aio->lock.unlock();
-
-		io_write(aio->io, local_buffer, local_buffer_len);
-		io_flush(aio->io);
-		result_io_error = io_error(aio->io);
-
-		aio->lock.lock();
-		if(aio->error == 0)
-			aio->error = result_io_error;
-	}
-}
-
-ASYNCIO *aio_new(IOHANDLE io)
-{
-	ASYNCIO *aio = new(std::nothrow) ASYNCIO;
-	if(!aio || !aio->buffer.IsValid())
-	{
-		delete aio;
-		return nullptr;
-	}
-	aio->io = io;
-	if(!sphore_try_init(&aio->sphore))
-	{
-		delete aio;
-		return nullptr;
-	}
-	aio->thread = nullptr;
-
-	aio->error = 0;
-	aio->finish = ASYNCIO_RUNNING;
-	aio->refcount = 2;
-
-	aio->thread = thread_try_init(aio_thread, aio, "aio");
-	if(!aio->thread)
-	{
-		sphore_destroy(&aio->sphore);
-		delete aio;
-		return nullptr;
-	}
-	return aio;
-}
-
-void aio_lock(ASYNCIO *aio) ACQUIRE(aio->lock)
-{
-	aio->lock.lock();
-}
-
-void aio_unlock(ASYNCIO *aio) RELEASE(aio->lock)
-{
-	aio->lock.unlock();
-	sphore_signal(&aio->sphore);
-}
-
-void aio_write_unlocked(ASYNCIO *aio, const void *buffer, unsigned size)
-{
-	if(aio->finish != ASYNCIO_RUNNING)
-		return;
-	// 后续成功的写入或刷盘不能抹去已发生的数据丢失。
-	if(!aio->buffer.Append(buffer, size) && aio->error == 0)
-		aio->error = -1;
-}
-
-void aio_write(ASYNCIO *aio, const void *buffer, unsigned size)
-{
-	aio_lock(aio);
-	aio_write_unlocked(aio, buffer, size);
-	aio_unlock(aio);
-}
-
-void aio_write_newline_unlocked(ASYNCIO *aio)
-{
-#if defined(CONF_FAMILY_WINDOWS)
-	aio_write_unlocked(aio, "\r\n", 2);
-#else
-	aio_write_unlocked(aio, "\n", 1);
-#endif
-}
-
-void aio_write_newline(ASYNCIO *aio)
-{
-	aio_lock(aio);
-	aio_write_newline_unlocked(aio);
-	aio_unlock(aio);
-}
-
-int aio_error(ASYNCIO *aio)
-{
-	CLockScope ls(aio->lock);
-	return aio->error;
-}
-
-void aio_close(ASYNCIO *aio)
-{
-	{
-		CLockScope ls(aio->lock);
-		aio->finish = ASYNCIO_CLOSE;
-	}
-	sphore_signal(&aio->sphore);
-}
-
-void aio_wait(ASYNCIO *aio)
-{
-	void *thread;
-	{
-		CLockScope ls(aio->lock);
-		thread = aio->thread;
-		aio->thread = nullptr;
-		if(aio->finish == ASYNCIO_RUNNING)
-		{
-			aio->finish = ASYNCIO_EXIT;
-		}
-	}
-	sphore_signal(&aio->sphore);
-	thread_wait(thread);
-}
-
-void aio_free(ASYNCIO *aio)
-{
-	aio->lock.lock();
-	if(aio->thread)
-	{
-		thread_detach(aio->thread);
-		aio->thread = nullptr;
-	}
-	aio_handle_free_and_unlock(aio);
-}
 
 /* -----  network ----- */
 
@@ -1225,7 +587,6 @@ bool net_addr_is_local(const NETADDR *addr)
 		       (addr->ip[0] >= 0xfc && addr->ip[0] <= 0xfd) ||
 		       mem_comp(addr->ip, LOOPBACKADDR_IPV6, sizeof(LOOPBACKADDR_IPV6)) == 0;
 	dbg_assert_failed("unknown NETADDR type %d", addr->type);
-	return false;
 }
 
 int net_addr_from_str(NETADDR *addr, const char *string)
@@ -1368,7 +729,17 @@ bool net_socket_is_selectable(int socket)
 #endif
 }
 
-static int priv_net_create_socket(int domain, int type, const NETADDR *bindaddr)
+static bool net_address_in_use()
+{
+#if defined(CONF_FAMILY_WINDOWS)
+	return net_errno() == WSAEADDRINUSE;
+#else
+	return net_errno() == EADDRINUSE;
+#endif
+}
+
+// `address_in_use` 只会被置为 true，因此同一个 NETSOCKET 的所有协议族可以共用。
+static int priv_net_create_socket(int domain, int type, const NETADDR *bindaddr, bool *address_in_use)
 {
 	int sock = socket(domain, type, 0);
 	if(sock < 0)
@@ -1385,7 +756,7 @@ static int priv_net_create_socket(int domain, int type, const NETADDR *bindaddr)
 		return -1;
 	}
 	// On TCP sockets set SO_REUSEADDR to fix port rebind on restart
-	if(domain == AF_INET && type == SOCK_STREAM)
+	if(type == SOCK_STREAM)
 	{
 		int reuse_addr = 1;
 		if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const char *)&reuse_addr, sizeof(reuse_addr)) != 0)
@@ -1436,6 +807,10 @@ static int priv_net_create_socket(int domain, int type, const NETADDR *bindaddr)
 
 	if(bind(sock, (sockaddr *)&addr, addr_len) != 0)
 	{
+		if(net_address_in_use())
+		{
+			*address_in_use = true;
+		}
 		log_error("net", "Failed to bind socket with domain %d and type %d (%s)", domain, type, net_error_message().c_str());
 		priv_net_close_socket(sock);
 		return -1;
@@ -1462,12 +837,13 @@ NETSOCKET net_udp_create_with_allocator(NETADDR bindaddr, void *(*pfnAllocate)(s
 	if(sock == nullptr)
 		return nullptr;
 	*sock = invalid_socket;
+	bool address_in_use = false;
 
 	if(bindaddr.type & NETTYPE_IPV4)
 	{
 		NETADDR bindaddr_ipv4 = bindaddr;
 		bindaddr_ipv4.type = NETTYPE_IPV4;
-		const int socket = priv_net_create_socket(AF_INET, SOCK_DGRAM, &bindaddr_ipv4);
+		const int socket = priv_net_create_socket(AF_INET, SOCK_DGRAM, &bindaddr_ipv4, &address_in_use);
 		if(socket >= 0)
 		{
 			sock->type |= NETTYPE_IPV4;
@@ -1511,7 +887,7 @@ NETSOCKET net_udp_create_with_allocator(NETADDR bindaddr, void *(*pfnAllocate)(s
 	{
 		NETADDR bindaddr_ipv6 = bindaddr;
 		bindaddr_ipv6.type = NETTYPE_IPV6;
-		const int socket = priv_net_create_socket(AF_INET6, SOCK_DGRAM, &bindaddr_ipv6);
+		const int socket = priv_net_create_socket(AF_INET6, SOCK_DGRAM, &bindaddr_ipv6, &address_in_use);
 		if(socket >= 0)
 		{
 			sock->type |= NETTYPE_IPV6;
@@ -1554,9 +930,9 @@ NETSOCKET net_udp_create_with_allocator(NETADDR bindaddr, void *(*pfnAllocate)(s
 	}
 #endif
 
-	if(sock->type == NETTYPE_INVALID)
+	if(sock->type == NETTYPE_INVALID || address_in_use)
 	{
-		free(sock);
+		priv_net_close_all_sockets(sock);
 		sock = nullptr;
 	}
 	else
@@ -1973,12 +1349,13 @@ NETSOCKET net_tcp_create(NETADDR bindaddr)
 {
 	NETSOCKET sock = (NETSOCKET_INTERNAL *)malloc(sizeof(*sock));
 	*sock = invalid_socket;
+	bool address_in_use = false;
 
 	if(bindaddr.type & NETTYPE_IPV4)
 	{
 		NETADDR bindaddr_ipv4 = bindaddr;
 		bindaddr_ipv4.type = NETTYPE_IPV4;
-		const int socket4 = priv_net_create_socket(AF_INET, SOCK_STREAM, &bindaddr_ipv4);
+		const int socket4 = priv_net_create_socket(AF_INET, SOCK_STREAM, &bindaddr_ipv4, &address_in_use);
 		if(socket4 >= 0)
 		{
 			sock->type |= NETTYPE_IPV4;
@@ -1990,7 +1367,7 @@ NETSOCKET net_tcp_create(NETADDR bindaddr)
 	{
 		NETADDR bindaddr_ipv6 = bindaddr;
 		bindaddr_ipv6.type = NETTYPE_IPV6;
-		const int socket6 = priv_net_create_socket(AF_INET6, SOCK_STREAM, &bindaddr_ipv6);
+		const int socket6 = priv_net_create_socket(AF_INET6, SOCK_STREAM, &bindaddr_ipv6, &address_in_use);
 		if(socket6 >= 0)
 		{
 			sock->type |= NETTYPE_IPV6;
@@ -1998,9 +1375,9 @@ NETSOCKET net_tcp_create(NETADDR bindaddr)
 		}
 	}
 
-	if(sock->type == NETTYPE_INVALID)
+	if(sock->type == NETTYPE_INVALID || address_in_use)
 	{
-		free(sock);
+		priv_net_close_all_sockets(sock);
 		sock = nullptr;
 	}
 
@@ -2249,32 +1626,6 @@ void net_unix_close(UNIXSOCKET sock)
 }
 #endif
 
-void swap_endian(void *data, unsigned elem_size, unsigned num)
-{
-	char *src = (char *)data;
-	char *dst = src + (elem_size - 1);
-
-	while(num)
-	{
-		unsigned n = elem_size >> 1;
-		char tmp;
-		while(n)
-		{
-			tmp = *src;
-			*src = *dst;
-			*dst = tmp;
-
-			src++;
-			dst--;
-			n--;
-		}
-
-		src = src + (elem_size >> 1);
-		dst = src + (elem_size - 1);
-		num--;
-	}
-}
-
 int net_socket_read_wait(NETSOCKET sock, std::chrono::nanoseconds nanoseconds)
 {
 	const int64_t microseconds = std::chrono::duration_cast<std::chrono::microseconds>(nanoseconds).count();
@@ -2341,74 +1692,12 @@ void net_stats(NETSTATS *stats_inout)
 	*stats_inout = network_stats;
 }
 
-static_assert(sizeof(unsigned) == 4, "unsigned must be 4 bytes in size");
-static_assert(sizeof(unsigned) == sizeof(int), "unsigned and int must have the same size");
-
-unsigned bytes_be_to_uint(const unsigned char *bytes)
-{
-	return ((bytes[0] & 0xffu) << 24u) | ((bytes[1] & 0xffu) << 16u) | ((bytes[2] & 0xffu) << 8u) | (bytes[3] & 0xffu);
-}
-
-void uint_to_bytes_be(unsigned char *bytes, unsigned value)
-{
-	bytes[0] = (value >> 24u) & 0xffu;
-	bytes[1] = (value >> 16u) & 0xffu;
-	bytes[2] = (value >> 8u) & 0xffu;
-	bytes[3] = value & 0xffu;
-}
-
 int pid()
 {
 #if defined(CONF_FAMILY_WINDOWS)
 	return _getpid();
 #else
 	return getpid();
-#endif
-}
-
-void cmdline_fix(int *argc, const char ***argv)
-{
-#if defined(CONF_FAMILY_WINDOWS)
-	int wide_argc = 0;
-	WCHAR **wide_argv = CommandLineToArgvW(GetCommandLineW(), &wide_argc);
-	dbg_assert(wide_argv != NULL, "CommandLineToArgvW failure");
-	dbg_assert(wide_argc > 0, "Invalid argc value");
-
-	int total_size = 0;
-
-	for(int i = 0; i < wide_argc; i++)
-	{
-		int size = WideCharToMultiByte(CP_UTF8, 0, wide_argv[i], -1, nullptr, 0, nullptr, nullptr);
-		dbg_assert(size != 0, "WideCharToMultiByte failure");
-		total_size += size;
-	}
-
-	char **new_argv = (char **)malloc((wide_argc + 1) * sizeof(*new_argv));
-	new_argv[0] = (char *)malloc(total_size);
-	mem_zero(new_argv[0], total_size);
-
-	int remaining_size = total_size;
-	for(int i = 0; i < wide_argc; i++)
-	{
-		int size = WideCharToMultiByte(CP_UTF8, 0, wide_argv[i], -1, new_argv[i], remaining_size, nullptr, nullptr);
-		dbg_assert(size != 0, "WideCharToMultiByte failure");
-
-		remaining_size -= size;
-		new_argv[i + 1] = new_argv[i] + size;
-	}
-
-	LocalFree(wide_argv);
-	new_argv[wide_argc] = nullptr;
-	*argc = wide_argc;
-	*argv = (const char **)new_argv;
-#endif
-}
-
-void cmdline_free(int argc, const char **argv)
-{
-#if defined(CONF_FAMILY_WINDOWS)
-	free((void *)*argv);
-	free((char **)argv);
 #endif
 }
 
@@ -2571,204 +1860,4 @@ bool is_process_alive(PROCESS process)
 #endif
 }
 
-int open_link(const char *link)
-{
-#if defined(CONF_FAMILY_WINDOWS)
-	const std::wstring wide_link = windows_utf8_to_wide(link);
-
-	SHELLEXECUTEINFOW info;
-	mem_zero(&info, sizeof(SHELLEXECUTEINFOW));
-	info.cbSize = sizeof(SHELLEXECUTEINFOW);
-	info.lpVerb = nullptr; // NULL to use the default verb, as "open" may not be available
-	info.lpFile = wide_link.c_str();
-	info.nShow = SW_SHOWNORMAL;
-	// The SEE_MASK_NOASYNC flag ensures that the ShellExecuteEx function
-	// finishes its DDE conversation before it returns, so it's not necessary
-	// to pump messages in the calling thread.
-	// The SEE_MASK_FLAG_NO_UI flag suppresses error messages that would pop up
-	// when the link cannot be opened, e.g. when a folder does not exist.
-	// The SEE_MASK_ASYNCOK flag is not used. It would allow the call to
-	// ShellExecuteEx to return earlier, but it also prevents us from doing
-	// our own error handling, as the function would always return TRUE.
-	info.fMask = SEE_MASK_NOASYNC | SEE_MASK_FLAG_NO_UI;
-	// Save and restore the FPU control word because ShellExecute might change it
-	fenv_t floating_point_environment;
-	int fegetenv_result = fegetenv(&floating_point_environment);
-	BOOL success = ShellExecuteExW(&info);
-	if(fegetenv_result == 0)
-		fesetenv(&floating_point_environment);
-	return success;
-#elif defined(CONF_PLATFORM_LINUX)
-	const int pid = fork();
-	if(pid == 0)
-	{
-		execlp("xdg-open", "xdg-open", link, nullptr);
-		// exec 失败后不能返回继承了其他线程状态的客户端调用栈。
-		_exit(1);
-	}
-	return pid > 0;
-#elif defined(CONF_FAMILY_UNIX)
-	const int pid = fork();
-	if(pid == 0)
-	{
-		execlp("open", "open", link, nullptr);
-		_exit(1);
-	}
-	return pid > 0;
-#endif
-}
-
-int open_file(const char *path)
-{
-#if defined(CONF_PLATFORM_MACOS)
-	return open_link(path);
-#else
-	// Create a file link so the path can contain forward and
-	// backward slashes. But the file link must be absolute.
-	char buf[512];
-	char workingDir[IO_MAX_PATH_LENGTH];
-	if(fs_is_relative_path(path))
-	{
-		if(!fs_getcwd(workingDir, sizeof(workingDir)))
-			return 0;
-		str_append(workingDir, "/");
-	}
-	else
-		workingDir[0] = '\0';
-	str_format(buf, sizeof(buf), "file://%s%s", workingDir, path);
-	return open_link(buf);
-#endif
-}
 #endif // !defined(CONF_PLATFORM_ANDROID)
-
-bool os_version_str(char *version, size_t length)
-{
-#if defined(CONF_FAMILY_WINDOWS)
-	const WCHAR *module_path = L"kernel32.dll";
-	DWORD handle;
-	DWORD size = GetFileVersionInfoSizeW(module_path, &handle);
-	if(!size)
-	{
-		return false;
-	}
-	void *data = malloc(size);
-	if(!GetFileVersionInfoW(module_path, handle, size, data))
-	{
-		free(data);
-		return false;
-	}
-	VS_FIXEDFILEINFO *fileinfo;
-	UINT unused;
-	if(!VerQueryValueW(data, L"\\", (void **)&fileinfo, &unused))
-	{
-		free(data);
-		return false;
-	}
-	str_format(version, length, "Windows %hu.%hu.%hu.%hu",
-		HIWORD(fileinfo->dwProductVersionMS),
-		LOWORD(fileinfo->dwProductVersionMS),
-		HIWORD(fileinfo->dwProductVersionLS),
-		LOWORD(fileinfo->dwProductVersionLS));
-	free(data);
-	return true;
-#else
-	struct utsname u;
-	if(uname(&u))
-	{
-		return false;
-	}
-	char extra[128];
-	extra[0] = 0;
-
-	do
-	{
-		IOHANDLE os_release = io_open("/etc/os-release", IOFLAG_READ);
-		char buf[4096];
-		int read;
-		int offset;
-		char *newline;
-		if(!os_release)
-		{
-			break;
-		}
-		read = io_read(os_release, buf, sizeof(buf) - 1);
-		io_close(os_release);
-		buf[read] = 0;
-		if(str_startswith(buf, "PRETTY_NAME="))
-		{
-			offset = 0;
-		}
-		else
-		{
-			const char *found = str_find(buf, "\nPRETTY_NAME=");
-			if(!found)
-			{
-				break;
-			}
-			offset = found - buf + 1;
-		}
-		newline = (char *)str_find(buf + offset, "\n");
-		if(newline)
-		{
-			*newline = 0;
-		}
-		str_format(extra, sizeof(extra), "; %s", buf + offset + 12);
-	} while(false);
-
-	str_format(version, length, "%s %s (%s, %s)%s", u.sysname, u.release, u.machine, u.version, extra);
-	return true;
-#endif
-}
-
-static bool query_os_locale(char *locale, size_t length)
-{
-#if defined(CONF_FAMILY_WINDOWS)
-	wchar_t wide_buffer[LOCALE_NAME_MAX_LENGTH]{};
-	const int count = GetUserDefaultLocaleName(wide_buffer, std::size(wide_buffer));
-	if(count <= 0 || static_cast<size_t>(count) > std::size(wide_buffer) || wide_buffer[count - 1] != L'\0')
-		return false;
-	const std::optional<std::string> buffer = windows_wide_to_utf8_bounded(wide_buffer, wide_buffer + count);
-	if(!buffer)
-		return false;
-	str_copy(locale, buffer.value().c_str(), length);
-	return true;
-#elif defined(CONF_PLATFORM_MACOS) || defined(CONF_PLATFORM_IOS)
-	struct CAppleLocaleOperations
-	{
-		CFLocaleRef Acquire() { return CFLocaleCopyCurrent(); }
-		void Release(CFLocaleRef Locale) noexcept { CFRelease(Locale); }
-		CFStringRef Identifier(CFLocaleRef Locale)
-		{
-			const CFTypeRef Value = CFLocaleGetValue(Locale, kCFLocaleIdentifier);
-			return Value && CFGetTypeID(Value) == CFStringGetTypeID() ? static_cast<CFStringRef>(Value) : nullptr;
-		}
-		CFIndex Length(CFStringRef Identifier) { return CFStringGetLength(Identifier); }
-		char *Allocate(size_t Bytes) { return static_cast<char *>(malloc(Bytes)); }
-		void Free(char *pBuffer) noexcept { free(pBuffer); }
-		bool Convert(CFStringRef Identifier, char *pBuffer, CFIndex Capacity) { return CFStringGetCString(Identifier, pBuffer, Capacity, kCFStringEncodingUTF8); }
-	} Operations;
-	return os_locale::ReadOwnedIdentifier(locale, length, Operations);
-#else
-	static const char *ENV_VARIABLES[] = {
-		"LC_ALL",
-		"LC_MESSAGES",
-		"LANG",
-	};
-
-	for(const char *env_variable : ENV_VARIABLES)
-	{
-		const char *env_value = getenv(env_variable);
-		if(env_value)
-		{
-			str_copy(locale, env_value, length);
-			return true;
-		}
-	}
-	return false;
-#endif
-}
-
-void os_locale_str(char *locale, size_t length) noexcept
-{
-	os_locale::Read(locale, length, query_os_locale);
-}

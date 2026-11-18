@@ -163,6 +163,7 @@ TEST_F(QmStutterCaptureLogging, ShutdownPreservesSummaryComponentsAndFilteredFea
 	ExpectString(Summary.get(), "page", "settings");
 	ExpectString(Summary.get(), "context", "online");
 	ExpectString(Summary.get(), "cap_reason", "configured_limit");
+	ExpectString(Summary.get(), "detail_mode", "slow_frames");
 	ExpectInteger(Summary.get(), "schema", 1);
 	ExpectInteger(Summary.get(), "stutter_id", 1);
 	ExpectInteger(Summary.get(), "segment", 0);
@@ -195,6 +196,52 @@ TEST_F(QmStutterCaptureLogging, ShutdownPreservesSummaryComponentsAndFilteredFea
 	}
 	for(const auto &Message : m_Log.m_vMessages)
 		EXPECT_EQ(Message.find("private-content"), std::string::npos);
+}
+
+TEST_F(QmStutterCaptureLogging, LimitedFrameWithinToleranceEmitsOnlySummary)
+{
+	auto Limited = Frame(10, 20.0);
+	Limited.m_RenderLimit = 60;
+	m_Operations.m_FailCapture = true;
+	m_Capture.RecordUpdate(0, 2.0);
+	ASSERT_TRUE(m_Capture.ProcessFrame(Limited));
+	ASSERT_TRUE(m_Capture.Finish(Frame(11, 0.0)));
+	ASSERT_EQ(m_Log.m_vMessages.size(), 1u);
+	const auto Summary = Parse(0);
+	ASSERT_NE(Summary, nullptr);
+	ExpectString(Summary.get(), "detail_mode", "summary");
+	ExpectInteger(Summary.get(), "worst_frame", 10);
+}
+
+TEST_F(QmStutterCaptureLogging, WorstFrameAndWorstDetailedFrameKeepTheirOwnContext)
+{
+	m_Page = "detail_page";
+	m_Capture.RecordUpdate(0, 2.0);
+	ASSERT_TRUE(m_Capture.ProcessFrame(Frame(10, 6.0)));
+	m_Page = "summary_page";
+	auto Limited = Frame(11, 20.0);
+	Limited.m_RenderLimit = 60;
+	m_Capture.RecordUpdate(0, 9.0);
+	ASSERT_TRUE(m_Capture.ProcessFrame(Limited));
+	ASSERT_TRUE(m_Capture.Finish(Frame(12, 0.0)));
+	const auto SummaryEvents = Events("stutter_event");
+	const auto FeatureEvents = Events("feature_snapshot");
+	const auto ComponentEvents = Events("component_sample");
+	ASSERT_EQ(SummaryEvents.size(), 1u);
+	ASSERT_EQ(FeatureEvents.size(), 3u);
+	ASSERT_EQ(ComponentEvents.size(), 4u);
+	const auto Summary = Parse(SummaryEvents.front());
+	const auto Feature = Parse(FeatureEvents.front());
+	const auto Component = Parse(ComponentEvents.front());
+	ASSERT_NE(Summary, nullptr);
+	ASSERT_NE(Feature, nullptr);
+	ASSERT_NE(Component, nullptr);
+	ExpectInteger(Summary.get(), "worst_frame", 11);
+	ExpectString(Summary.get(), "page", "summary_page");
+	ExpectInteger(Feature.get(), "frame", 10);
+	ExpectString(Feature.get(), "current_page", "detail_page");
+	ExpectInteger(Component.get(), "sample_count", 1);
+	ExpectDouble(Component.get(), "total_ms", 2.0);
 }
 
 TEST_F(QmStutterCaptureLogging, RecoveryDropsFastPendingSamplesAndNextEpisodeUsesFreshSnapshot)

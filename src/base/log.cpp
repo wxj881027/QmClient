@@ -1,3 +1,4 @@
+#include "aio.h"
 #include "color.h"
 #include "dbg.h"
 #include "logger.h"
@@ -196,7 +197,7 @@ std::unique_ptr<ILogger> log_logger_android()
 #else
 std::unique_ptr<ILogger> log_logger_android()
 {
-	dbg_assert(0, "Android logger on non-Android");
+	dbg_assert_failed("Android logger on non-Android");
 	return nullptr;
 }
 #endif
@@ -621,7 +622,7 @@ std::unique_ptr<ILogger> log_logger_windows_debugger()
 #else
 std::unique_ptr<ILogger> log_logger_windows_debugger()
 {
-	dbg_assert(0, "Windows Debug logger on non-Windows");
+	dbg_assert_failed("Windows Debug logger on non-Windows");
 	return nullptr;
 }
 #endif

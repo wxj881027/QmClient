@@ -100,8 +100,9 @@ bool CMenus::RenderQmVisualCheckbox(CUIRect &Content, float LineHeight, float Li
 {
 	CSettingsContentLayoutFlow Flow(Content);
 	CUIRect Row;
-	const bool HasRow = Flow.Control(pTextId, LineHeight, Row);
-	Flow.Space(LineSpacing);
+	// 行距由本行自己声明：声明阶段记到上一行末尾，行后不再补 Space，
+	// 卡底和下一行都不会再凭空多留一档，调用方也不用为此补边界间距。
+	const bool HasRow = Flow.Control(pTextId, LineHeight, Row, ui_token::settings::RowGap(LineSpacing));
 	if(!HasRow)
 		return false;
 	const char *pOverrideTooltip = TemporaryOverrideTooltip(pValue);
@@ -194,23 +195,30 @@ bool CMenus::RenderQmFunctionCheckboxRow(CUIRect &Content, const float LineHeigh
 	return Changed;
 }
 
-int CMenus::DoTClientSettingsButton_CheckBox(const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect)
+int CMenus::DoTClientSettingsButton_CheckBox(const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, float BodySize)
 {
-	return DoSettingsButton_CheckBox(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, pId, pTextId, pText, Checked, pRect, TClientFixedLabelProperties(TCLIENT_BODY_FONT_SIZE, pRect->w), true, TCLIENT_BODY_FONT_SIZE);
+	// TClient 页控件与设置页其它控件同字号：省参数时取当前设置页正文，不再自带 11.2。
+	const float ResolvedBodySize = BodySize > 0.0f ? BodySize : CurrentSettingsContentMetrics().m_BodySize;
+	return DoSettingsButton_CheckBox(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, pId, pTextId, pText, Checked, pRect, TClientFixedLabelProperties(ResolvedBodySize, pRect->w), true, ResolvedBodySize);
 }
 
-int CMenus::DoTClientSettingsButton_Menu(CButtonContainer *pButtonContainer, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, int Flags, int Corners, float Rounding)
+int CMenus::DoTClientSettingsButton_Menu(CButtonContainer *pButtonContainer, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, float BodySize, int Flags, int Corners, float Rounding)
 {
-	return DoSettingsButton_Menu(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, pButtonContainer, pTextId, pText, Checked, pRect, Flags, Corners, Rounding, ui_token::color::NEUTRAL_WHITE.WithAlpha(0.5f), 0.0f, TCLIENT_BODY_FONT_SIZE);
+	// 同上：按钮文字与同页标签、输入框、下拉共用设置页正文字号。
+	const float ResolvedBodySize = BodySize > 0.0f ? BodySize : CurrentSettingsContentMetrics().m_BodySize;
+	return DoSettingsButton_Menu(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, pButtonContainer, pTextId, pText, Checked, pRect, Flags, Corners, Rounding, ui_token::color::NEUTRAL_WHITE.WithAlpha(0.5f), 0.0f, ResolvedBodySize);
 }
 
-int CMenus::DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(const void *pId, const char *pTextId, const char *pText, int *pValue, CUIRect *pRect, float VMargin)
+int CMenus::DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(const void *pId, const char *pTextId, const char *pText, int *pValue, CUIRect *pRect, float VMargin, float BodySize)
 {
-	return DoSettingsButton_CheckBoxAutoVMarginAndSet(SETTINGS_TCLIENT, m_TClientSettingsTab, pId, pTextId, pText, pValue, pRect, VMargin, 0.0f, FontSize);
+	// 行高由调用方给，字号统一从这里取，避免“宽度用卡片度量、字号用卡片外变量”。
+	const float ResolvedBodySize = BodySize > 0.0f ? BodySize : CurrentSettingsContentMetrics().m_BodySize;
+	return DoSettingsButton_CheckBoxAutoVMarginAndSet(SETTINGS_TCLIENT, m_TClientSettingsTab, pId, pTextId, pText, pValue, pRect, VMargin, 0.0f, ResolvedBodySize);
 }
 
-bool CMenus::DoLine_KeyReader(CUIRect &View, CButtonContainer &ReaderButton, CButtonContainer &ClearButton, const char *pName, const char *pCommand)
+bool CMenus::DoLine_KeyReader(CUIRect &View, CButtonContainer &ReaderButton, CButtonContainer &ClearButton, const char *pName, const char *pCommand, float BodySize)
 {
+	const float ResolvedBodySize = BodySize > 0.0f ? BodySize : CurrentSettingsContentMetrics().m_BodySize;
 	const CBindSlot Bind = g_CommandBindCache.Find(GameClient()->m_Binds, pCommand, CSettingsBindCache::EFallback::LAST_MODIFIER_MATCH);
 
 	CUIRect KeyButton, KeyLabel;
@@ -219,11 +227,11 @@ bool CMenus::DoLine_KeyReader(CUIRect &View, CButtonContainer &ReaderButton, CBu
 
 	char aBuf[128];
 	str_format(aBuf, sizeof(aBuf), "%s:", pName);
-	DoTClientLabel(Ui(), &KeyLabel, aBuf, FontSize, TEXTALIGN_ML);
+	DoTClientLabel(Ui(), &KeyLabel, aBuf, ResolvedBodySize, TEXTALIGN_ML);
 
 	View.HSplitTop(MarginExtraSmall, nullptr, &View);
 
-	const auto Result = GameClient()->m_KeyBinder.DoKeyReader(&ReaderButton, &ClearButton, &KeyButton, Bind, false, TCLIENT_BODY_FONT_SIZE);
+	const auto Result = GameClient()->m_KeyBinder.DoKeyReader(&ReaderButton, &ClearButton, &KeyButton, Bind, false, ResolvedBodySize);
 	if(Result.m_Bind != Bind)
 	{
 		if(!GameClient()->m_Binds.Rebind(Bind, Result.m_Bind, pCommand))

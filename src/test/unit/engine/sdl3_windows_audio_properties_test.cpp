@@ -3,6 +3,8 @@
 #include <SDL3/SDL.h>
 #include <gtest/gtest.h>
 #include <mmdeviceapi.h>
+// 客户端与测试目标都带 NOGDI，wingdi.h 不会定义 BITMAPINFOHEADER；关掉位图段只保留波形格式定义。
+#define NOBITMAP
 #include <mmreg.h>
 
 #include <algorithm>

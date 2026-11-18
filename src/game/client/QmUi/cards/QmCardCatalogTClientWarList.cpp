@@ -94,13 +94,13 @@ namespace
 qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass)
 {
 	CUIRect MainView = Ctx.m_Page.m_ContentViewport;
-	ApplyTClientContentMetrics(Ctx.m_Metrics);
+	const CTClientCardMetricsScope CardMetrics(Ctx.m_Metrics);
 	CPerfTimer RenderTimer;
 	const bool ReadOnly = Ctx.m_ReadOnly || Pass != qm_card_catalog::ETClientCardPass::RENDER;
 	const float UiScale = SettingsPageUiScale(MainView.w);
 	const SSettingsPageLayoutFrame Page = Ctx.m_Page;
 	const SSettingsContentMetrics WarListMetrics = ResolveSettingsContentMetrics(MainView.w);
-	const float ListRowHeight = std::max(WarListMetrics.m_ListRowHeight, LineSize + 2.0f * MarginSmall);
+	const float ListRowHeight = std::max(WarListMetrics.m_ListRowHeight, LineSize + 2.0f * RowSpacing);
 	constexpr int WarListViewportRows = 8;
 	std::unique_ptr<CUiRenderOnlyGuard> pRenderOnlyGuard;
 	if(ReadOnly && !Ui()->RenderOnly())
@@ -168,7 +168,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		{
 			CUIRect SearchField, SortButton;
 			Button.VSplitRight(WarListMetrics.m_ButtonHeight, &SearchField, &SortButton);
-			SearchField.VSplitRight(MarginSmall, &SearchField, nullptr);
+			SearchField.VSplitRight(RowSpacing, &SearchField, nullptr);
 			ui_widget::InputField(TClientWarListEntriesSearchCtx, &s_EntriesFilterInput, SearchField, FontSize, !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive());
 			static CButtonContainer s_ReverseEntries;
 			// 排序箭头与设置卡片折叠箭头同一套过渡（0.26s EASE_IN_OUT 转 180°）：
@@ -184,9 +184,6 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 				s_Reversed = !s_Reversed;
 			GameClient()->m_Tooltips.DoToolTip(&s_ReverseEntries, &SortButton, Localize("Reverse order"));
 		}
-		// 列表与上方控件之间统一留间距，条目列表和在线玩家看起来才是同一套节奏。
-		if(!Flow.Control("tclient-warlist-entries-list", std::clamp((int)GameClient()->m_WarList.m_vWarEntries.size(), 2, WarListViewportRows) * ListRowHeight, EntriesList, MarginSmall))
-			return;
 		static std::vector<CWarEntry *> s_vFilteredEntries;
 		static char s_aCachedEntriesFilter[128] = "";
 		static bool s_CachedReversed = false;
@@ -212,6 +209,16 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 			s_CachedWarEntriesRevision = GameClient()->m_WarList.Revision();
 		}
 
+		// 列表与上方控件之间统一留间距，条目列表和在线玩家看起来才是同一套节奏。
+		// 高度按**过滤后**的整数行派生（RowsHeight）：胶囊行的行距是半档，
+		// 用行数×行高会少掉行间的缝；空结果不占高度，不留没有背景的空面板。
+		const int EntryRows = ui_token::list::VisibleRows((int)s_vFilteredEntries.size(), 1, 2, WarListViewportRows);
+		// 容器内边距：测高处按 PaddedRowsHeight 计入上下两档留白，组件在内侧排版，
+		// 首/末行的胶囊不贴容器圆角。空结果不声明留白（0 行时留白只会多出一块空面板）。
+		const float EntryListPadding = s_vFilteredEntries.empty() ? 0.0f : ui_token::list::ContainerPadding(ListRowHeight);
+		if(!Flow.Control("tclient-warlist-entries-list", ui_token::list::PaddedRowsHeight(EntryRows, ListRowHeight, ui_token::list::ROW_SPACING, EntryListPadding), EntriesList, RowSpacing))
+			return;
+
 		int SelectedOldEntry = -1;
 		static CListBox s_EntriesListBox;
 		static CListBox s_EntriesReadOnlyListBox;
@@ -219,6 +226,11 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		EntriesListBox.SetActive(!ReadOnly);
 		EntriesListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);
 		EntriesListBox.SetWheelOwnerPriority(EUiWheelOwnerPriority::COMPOSITE_CONTROL);
+		// 胶囊行：行距、行内退、胶囊圆角与覆盖式滚动条统一走列表 token；
+		// 可见行数锁成外层声明的整数行，DoStart 的自适应高度才不会把末行裁一半。
+		EntriesListBox.SetCapsuleRows(StandardFontSize);
+		EntriesListBox.SetContainerPadding(EntryListPadding);
+		EntriesListBox.SetVisibleRowRange(EntryRows, EntryRows);
 		EntriesListBox.DoStart(ListRowHeight, s_vFilteredEntries.size(), 1, 2, SelectedOldEntry, &EntriesList);
 
 		static std::vector<unsigned char> s_vItemIds;
@@ -239,7 +251,8 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 				continue;
 
 			CUIRect EntryRect, DeleteButton, EntryTypeRect, WarType;
-			Item.m_Rect.Margin(0.0f, &EntryRect);
+			// 行内容排在内容区：胶囊行让出左右内退与滚动条那一列，删除按钮不会压到滚动条。
+			EntryRect = Item.m_ContentRect;
 			// 删除放最右侧，和群组行同一套尺寸与位置：一行左手名字、右手操作。
 			EntryRect.VSplitRight(20.0f, &EntryRect, &DeleteButton);
 			DeleteButton.HSplitTop(20.0f, &DeleteButton, nullptr);
@@ -278,11 +291,11 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 
 			// 名称与分组各占一列，长文本省略，避免两行挤压和删除按钮缩成小点。
 			EntryRect.VSplitRight(EntryRect.w * 0.32f, &EntryRect, &WarType);
-			EntryRect.VSplitRight(MarginSmall, &EntryRect, nullptr);
+			EntryRect.VSplitRight(RowSpacing, &EntryRect, nullptr);
 			DoTClientLabel(Ui(), &EntryRect, aBuf, StandardFontSize, TEXTALIGN_ML);
 			if(Flow.Drawing())
 				WarType.Draw(pEntry->m_pWarType->m_Color.WithAlpha(0.16f), IGraphics::CORNER_ALL, ui_token::radius::TIGHT * UiScale);
-			WarType.VMargin(MarginSmall, &WarType);
+			WarType.VMargin(RowSpacing, &WarType);
 			DoTClientLabel(Ui(), &WarType, pEntry->m_pWarType->m_aWarName, StandardFontSize, TEXTALIGN_MC);
 		}
 
@@ -350,10 +363,10 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		// 识别方式和输入框合成一行：左边选「按名字还是按战队」，右边就是被编辑的那个字段。
 		// 原来两个输入框 + 一行胶囊分开画，玩家看不出胶囊到底在选什么。
 		// 名称和战队各占一个输入框并排：两样都是条目的身份，没必要先选一个再输入。
-		if(Flow.Control("tclient-warlist-entry-identity", LineSize, Button, MarginSmall))
+		if(Flow.Control("tclient-warlist-entry-identity", LineSize, Button, RowSpacing))
 		{
 			CUIRect NameField, ClanField;
-			Button.VSplitMid(&NameField, &ClanField, MarginSmall);
+			Button.VSplitMid(&NameField, &ClanField, RowSpacing);
 			s_NameInput.SetBuffer(s_aEntryName, sizeof(s_aEntryName));
 			s_NameInput.SetEmptyText(Localize("Name"));
 			ui_widget::InputField(TClientWarListTextInputCtx, &s_NameInput, NameField, Localize("Name"), EditBoxFontSize);
@@ -361,27 +374,27 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 			s_ClanInput.SetEmptyText(Localize("Clan"));
 			ui_widget::InputField(TClientWarListTextInputCtx, &s_ClanInput, ClanField, Localize("Clan"), EditBoxFontSize);
 		}
-		if(Flow.Control("tclient-warlist-selected-group", LineSize, Button, MarginSmall) && pSelectedType)
+		if(Flow.Control("tclient-warlist-selected-group", LineSize, Button, RowSpacing) && pSelectedType)
 		{
-			Button.VSplitMid(&ButtonL, &ButtonR, MarginSmall);
+			Button.VSplitMid(&ButtonL, &ButtonR, RowSpacing);
 			DoTClientLabel(Ui(), &ButtonL, Localize("War Groups"), FontSize, TEXTALIGN_ML);
 			if(Flow.Drawing())
 				ButtonR.Draw(pSelectedType->m_Color.WithAlpha(0.16f), IGraphics::CORNER_ALL, ui_token::radius::TIGHT * UiScale);
-			ButtonR.VMargin(MarginSmall, &ButtonR);
+			ButtonR.VMargin(RowSpacing, &ButtonR);
 			DoTClientLabel(Ui(), &ButtonR, pSelectedType->m_aWarName, FontSize, TEXTALIGN_MC);
 		}
-		if(Flow.Control("tclient-warlist-reason", LineSize, Button, MarginSmall))
+		if(Flow.Control("tclient-warlist-reason", LineSize, Button, RowSpacing))
 		{
 			s_ReasonInput.SetBuffer(s_aEntryReason, sizeof(s_aEntryReason));
 			s_ReasonInput.SetEmptyText(Localize("Reason"));
 			ui_widget::InputField(TClientWarListTextInputCtx, &s_ReasonInput, Button, Localize("Reason"), EditBoxFontSize);
 		}
-		if(Flow.Control("tclient-warlist-entry-actions", WarListMetrics.m_ButtonHeight, Button, MarginSmall))
+		if(Flow.Control("tclient-warlist-entry-actions", WarListMetrics.m_ButtonHeight, Button, RowSpacing))
 		{
 			// 两个动作都用图标按钮：加号写入新条目，勾号把改动写回选中条目；说明走悬浮提示。
 			CUIRect AddRect, OverrideRect;
 			Button.VSplitRight(WarListMetrics.m_ButtonHeight, &Button, &OverrideRect);
-			Button.VSplitRight(MarginSmall, &Button, nullptr);
+			Button.VSplitRight(RowSpacing, &Button, nullptr);
 			Button.VSplitRight(WarListMetrics.m_ButtonHeight, &Button, &AddRect);
 			static CButtonContainer s_AddButton, s_OverrideButton;
 			if(Ui()->DoButton_QmIcon(&s_AddButton, EQmIcon::PLUS, FONT_ICON_PLUS, pSelectedType != nullptr ? 0 : -1, &AddRect, IGraphics::CORNER_ALL) && pSelectedType != nullptr && !ReadOnly && !Ui()->RenderOnly())
@@ -425,48 +438,53 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		if(Flow.Control("tclient-warlist-settings-divider", ui_token::spacing::SM, CaptionRect, ui_token::spacing::XS))
 			ui_widget::DrawFadeDivider(Ui(), CaptionRect);
 		// 「颜色」：敌对颜色显示在哪些地方，四个并列胶囊，可多选。
-		DrawCaption("tclient-warlist-colors-caption", Localize("Colors"), MarginSmall);
+		DrawCaption("tclient-warlist-colors-caption", Localize("Colors"), RowSpacing);
 		if(Flow.Control("tclient-warlist-colors-divider", ui_token::spacing::SM, CaptionRect))
 			ui_widget::DrawFadeDivider(Ui(), CaptionRect);
 		// 显示位置回归开关行：和卡片里其他开关同一套排布，不再用胶囊。
-		if(Flow.Control("tclient-warlist-colors-chat", LineSize, CheckBoxRect, MarginSmall))
+		if(Flow.Control("tclient-warlist-colors-chat", LineSize, CheckBoxRect, RowSpacing))
 		{
 			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarListChat, "tclient-warlist-colors-chat", Localize("Show enemy colors in chat"), g_Config.m_QmWarListChat, &CheckBoxRect) && MasterOn && !ReadOnly && !Ui()->RenderOnly())
 				g_Config.m_QmWarListChat ^= 1;
 		}
-		if(Flow.Control("tclient-warlist-colors-scoreboard", LineSize, CheckBoxRect, MarginSmall))
+		if(Flow.Control("tclient-warlist-colors-scoreboard", LineSize, CheckBoxRect, RowSpacing))
 		{
 			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarListScoreboard, "tclient-warlist-colors-scoreboard", Localize("Show enemy colors in scoreboard"), g_Config.m_QmWarListScoreboard, &CheckBoxRect) && MasterOn && !ReadOnly && !Ui()->RenderOnly())
 				g_Config.m_QmWarListScoreboard ^= 1;
 		}
-		if(Flow.Control("tclient-warlist-colors-spectate", LineSize, CheckBoxRect, MarginSmall))
+		if(Flow.Control("tclient-warlist-colors-spectate", LineSize, CheckBoxRect, RowSpacing))
 		{
 			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarListSpectate, "tclient-warlist-colors-spectate", Localize("Show enemy color in spectator menu"), g_Config.m_QmWarListSpectate, &CheckBoxRect) && MasterOn && !ReadOnly && !Ui()->RenderOnly())
 				g_Config.m_QmWarListSpectate ^= 1;
 		}
-		if(Flow.Control("tclient-warlist-colors-clan", LineSize, CheckBoxRect, MarginSmall))
+		if(Flow.Control("tclient-warlist-colors-clan", LineSize, CheckBoxRect, RowSpacing))
 		{
 			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarListShowClan, "tclient-warlist-colors-clan", Localize("Show clan for enemies"), g_Config.m_QmWarListShowClan, &CheckBoxRect) && MasterOn && !ReadOnly && !Ui()->RenderOnly())
 				g_Config.m_QmWarListShowClan ^= 1;
 		}
 		// 「其他」：不涉及显示位置的行为开关。
-		DrawCaption("tclient-warlist-other-caption", Localize("Other"), MarginSmall * 2.0f);
+		DrawCaption("tclient-warlist-other-caption", Localize("Other"), RowSpacing * 2.0f);
 		if(Flow.Control("tclient-warlist-other-divider", ui_token::spacing::SM, CaptionRect))
 			ui_widget::DrawFadeDivider(Ui(), CaptionRect);
-		if(Flow.Control("tclient-warlist-allow-duplicates", LineSize, CheckBoxRect, MarginSmall))
+		if(Flow.Control("tclient-warlist-allow-duplicates", LineSize, CheckBoxRect, RowSpacing))
 		{
 			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarListAllowDuplicates, "tclient-warlist-allow-duplicates", Localize("Allow Duplicate Entries"), g_Config.m_QmWarListAllowDuplicates, &CheckBoxRect) && MasterOn && !ReadOnly && !Ui()->RenderOnly())
 				g_Config.m_QmWarListAllowDuplicates ^= 1;
 		}
-		if(Flow.Control("tclient-warlist-block-enemies", LineSize, CheckBoxRect, MarginSmall))
+		if(Flow.Control("tclient-warlist-block-enemies", LineSize, CheckBoxRect, RowSpacing))
 		{
 			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarListBlockEnemies, "tclient-warlist-block-enemies", Localize("Fully block enemy players"), g_Config.m_QmWarListBlockEnemies, &CheckBoxRect) && MasterOn && !ReadOnly && !Ui()->RenderOnly())
 				g_Config.m_QmWarListBlockEnemies ^= 1;
 		}
-		if(Flow.Control("tclient-warlist-block-enemy-chat", LineSize, CheckBoxRect, MarginSmall))
+		if(Flow.Control("tclient-warlist-block-enemy-chat", LineSize, CheckBoxRect, RowSpacing))
 		{
 			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarListBlockEnemyChat, "tclient-warlist-block-enemy-chat", Localize("Block enemy chat"), g_Config.m_QmWarListBlockEnemyChat, &CheckBoxRect) && MasterOn && !ReadOnly && !Ui()->RenderOnly())
 				g_Config.m_QmWarListBlockEnemyChat ^= 1;
+		}
+		if(Flow.Control("tclient-warlist-reason", LineSize, CheckBoxRect, RowSpacing))
+		{
+			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarListReason, "tclient-warlist-reason", Localize("Show the reason in name plates"), g_Config.m_QmWarListReason, &CheckBoxRect) && MasterOn && !ReadOnly && !Ui()->RenderOnly())
+				g_Config.m_QmWarListReason ^= 1;
 		}
 	};
 	// 0 = 只看，1 = 新增中，2 = 重命名中。
@@ -476,7 +494,11 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		CUIRect WarTypeList, Button, ButtonL, ButtonR;
 		CSettingsContentLayoutFlow Flow(Column);
 		static CButtonContainer s_GroupColorPicker;
-		if(Flow.Control("tclient-warlist-groups-list", std::clamp((int)GameClient()->m_WarList.m_WarTypes.size(), 2, WarListViewportRows) * ListRowHeight, WarTypeList, MarginSmall))
+		// 整数行派生高度：胶囊行的行距是半档，行数×行高会少掉行间的缝。
+		const int TypeRows = ui_token::list::VisibleRows((int)GameClient()->m_WarList.m_WarTypes.size(), 1, 2, WarListViewportRows);
+		// 容器内边距与测高同源（PaddedRowsHeight）；空列表不声明留白。
+		const float WarTypeListPadding = TypeRows > 0 ? ui_token::list::ContainerPadding(ListRowHeight) : 0.0f;
+		if(Flow.Control("tclient-warlist-groups-list", ui_token::list::PaddedRowsHeight(TypeRows, ListRowHeight, ui_token::list::ROW_SPACING, WarTypeListPadding), WarTypeList, RowSpacing))
 		{
 			m_pRemoveWarType = nullptr;
 			int SelectedOldType = -1;
@@ -486,6 +508,10 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 			WarTypeListBox.SetActive(!ReadOnly);
 			WarTypeListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);
 			WarTypeListBox.SetWheelOwnerPriority(EUiWheelOwnerPriority::COMPOSITE_CONTROL);
+			// 与条目列表同一套胶囊行外观；可见行数锁成外层声明的整数行。
+			WarTypeListBox.SetCapsuleRows(StandardFontSize);
+			WarTypeListBox.SetContainerPadding(WarTypeListPadding);
+			WarTypeListBox.SetVisibleRowRange(TypeRows, TypeRows);
 			WarTypeListBox.DoStart(ListRowHeight, GameClient()->m_WarList.m_WarTypes.size(), 1, 2, SelectedOldType, &WarTypeList, true, IGraphics::CORNER_ALL);
 
 			static std::vector<unsigned char> s_vTypeItemIds;
@@ -507,11 +533,13 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 					continue;
 
 				CUIRect TypeRect, DeleteButton;
-				Item.m_Rect.Margin(MarginSmall, &TypeRect);
+				// 行内容排在内容区：胶囊行已经让出左右内退与滚动条那一列，
+				// 不再额外叠一层手写 Margin，否则组名会缩两遍。
+				TypeRect = Item.m_ContentRect;
 				if(pType->m_Removable)
 				{
 					TypeRect.VSplitRight(LineSize, &TypeRect, &DeleteButton);
-					TypeRect.VSplitRight(MarginSmall, &TypeRect, nullptr);
+					TypeRect.VSplitRight(RowSpacing, &TypeRect, nullptr);
 					if(Ui()->DoButton_QmIcon(&s_vTypeDeleteButtons[i], EQmIcon::TRASH, FONT_ICON_TRASH, 0, &DeleteButton, IGraphics::CORNER_ALL) && !ReadOnly && !Ui()->RenderOnly())
 						m_pRemoveWarType = pType;
 				}
@@ -574,20 +602,20 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 			}
 		}
 		// 头部做成「标题 + 动作」：新增、重命名在头上，颜色跟着选中项走，形态对齐皮肤队列的预设栏。
-		if(Flow.Control("tclient-warlist-groups-header", LineSize, Button, MarginSmall))
+		if(Flow.Control("tclient-warlist-groups-header", LineSize, Button, RowSpacing))
 		{
 			CUIRect Label, MoveUpButton, MoveDownButton, AddButton, RenameButton;
 			char aGroupLabel[96];
 			str_format(aGroupLabel, sizeof(aGroupLabel), "%s (%d)", Localize("War Groups"), (int)GameClient()->m_WarList.m_WarTypes.size());
 			// 图标按钮只放图标，说明交给悬浮提示：图标按钮里塞文字最容易看错。
 			const float IconSide = WarListMetrics.m_ButtonHeight;
-			Button.VSplitRight(IconSide * 4.0f + MarginSmall * 3.0f, &Label, &Button);
+			Button.VSplitRight(IconSide * 4.0f + RowSpacing * 3.0f, &Label, &Button);
 			Button.VSplitRight(IconSide, &Button, &RenameButton);
-			Button.VSplitRight(MarginSmall, &Button, nullptr);
+			Button.VSplitRight(RowSpacing, &Button, nullptr);
 			Button.VSplitRight(IconSide, &Button, &AddButton);
-			Button.VSplitRight(MarginSmall, &Button, nullptr);
+			Button.VSplitRight(RowSpacing, &Button, nullptr);
 			Button.VSplitRight(IconSide, &Button, &MoveDownButton);
-			Button.VSplitRight(MarginSmall, &Button, nullptr);
+			Button.VSplitRight(RowSpacing, &Button, nullptr);
 			MoveUpButton = Button;
 			SLabelProperties LabelProps;
 			LabelProps.m_MaxWidth = Label.w;
@@ -620,12 +648,12 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 			GameClient()->m_Tooltips.DoToolTip(&s_RenameGroupButton, &RenameButton, Localize("Rename group"));
 		}
 		// 只有新增或重命名时才出现输入行，确定后才落库，写错不会污染已有群组。
-		if(s_GroupEditMode != 0 && Flow.Control("tclient-warlist-group-name", LineSize, Button, MarginSmall))
+		if(s_GroupEditMode != 0 && Flow.Control("tclient-warlist-group-name", LineSize, Button, RowSpacing))
 		{
 			CUIRect Field, ConfirmButton, CancelButton;
-			const float CommitWidth = WarListMetrics.m_ButtonHeight * 2.0f + MarginSmall;
+			const float CommitWidth = WarListMetrics.m_ButtonHeight * 2.0f + RowSpacing;
 			Button.VSplitRight(CommitWidth, &Field, &Button);
-			Button.VSplitMid(&ConfirmButton, &CancelButton, MarginSmall);
+			Button.VSplitMid(&ConfirmButton, &CancelButton, RowSpacing);
 			s_TypeNameInput.SetBuffer(s_aTypeName, sizeof(s_aTypeName));
 			s_TypeNameInput.SetEmptyText(Localize("Group name"));
 			ui_widget::InputField(TClientWarListTextInputCtx, &s_TypeNameInput, Field, Localize("Group name"), EditBoxFontSize);
@@ -654,7 +682,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 				s_GroupEditMode = 0;
 		}
 		// 颜色跟着选中群组走：点开色板改完立刻生效，不用再去按「覆盖群组」。
-		if(pSelectedType != nullptr && pSelectedType->m_Removable && Flow.Control("tclient-warlist-group-color", ColorPickerLineSize, Button, MarginSmall))
+		if(pSelectedType != nullptr && pSelectedType->m_Removable && Flow.Control("tclient-warlist-group-color", ColorPickerLineSize, Button, RowSpacing))
 		{
 			static unsigned int s_ColorValue = 0;
 			s_ColorValue = color_cast<ColorHSLA>(pSelectedType->m_Color).Pack(false);
@@ -680,7 +708,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		CUIRect PlayerSearch, PlayerList, PlayerSourceRect;
 		CSettingsContentLayoutFlow Flow(Column);
 		// 页签式切换统一用胶囊滑块，轨道和滑块自己会画，不给四个独立按钮拼手感。
-		if(Flow.Control("tclient-warlist-player-source", LineSize, PlayerSourceRect, MarginSmall))
+		if(Flow.Control("tclient-warlist-player-source", LineSize, PlayerSourceRect, RowSpacing))
 		{
 			static CButtonContainer s_aPlayerSourceButtons[4];
 			const char *apSourceLabels[4] = {Localize("Online"), Localize("Friends"), Localize("Self"), Localize("Dummy")};
@@ -722,26 +750,31 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 				}
 				s_vPlayerPicks.push_back({pName, pClan});
 			}
-			const int PickRows = std::clamp((int)s_vPlayerPicks.size(), 2, WarListViewportRows);
-			if(!Flow.Control("tclient-warlist-player-picks", PickRows * ListRowHeight, PlayerList, MarginSmall))
+			// 空列表保留两行高度，让「没有匹配玩家」的提示有位置放。
+			const int PickRows = std::max(2, ui_token::list::VisibleRows((int)s_vPlayerPicks.size(), 1, 2, WarListViewportRows));
+			// 容器内边距与测高同源；没有可选玩家时不给留白，避免空面板上多出一圈内缩。
+			const float PickListPadding = s_vPlayerPicks.empty() ? 0.0f : ui_token::list::ContainerPadding(ListRowHeight);
+			if(!Flow.Control("tclient-warlist-player-picks", ui_token::list::PaddedRowsHeight(PickRows, ListRowHeight, ui_token::list::ROW_SPACING, PickListPadding), PlayerList, RowSpacing))
 				return;
 			static CListBox s_PickListBox;
 			static std::vector<unsigned char> s_vPickItemIds;
 			s_vPickItemIds.resize(std::max<size_t>(1, s_vPlayerPicks.size()));
 			s_PickListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);
 			s_PickListBox.SetWheelOwnerPriority(EUiWheelOwnerPriority::COMPOSITE_CONTROL);
+			s_PickListBox.SetCapsuleRows(StandardFontSize);
+			s_PickListBox.SetContainerPadding(PickListPadding);
+			s_PickListBox.SetVisibleRowRange(2, WarListViewportRows);
 			s_PickListBox.DoStart(ListRowHeight, s_vPlayerPicks.size(), 1, 2, -1, &PlayerList, true, IGraphics::CORNER_ALL);
 			for(size_t PickIndex = 0; PickIndex < s_vPlayerPicks.size(); ++PickIndex)
 			{
 				const CListboxItem Item = s_PickListBox.DoNextItem(&s_vPickItemIds[PickIndex], false);
 				if(!Item.m_Visible)
 					continue;
-				CUIRect RowRect = Item.m_Rect;
-				RowRect.Margin(MarginSmall, &RowRect);
+				CUIRect RowRect = Item.m_ContentRect;
 				CUIRect NameRect, ClanRect, AddEntryRect;
 				RowRect.VSplitRight(WarListMetrics.m_ButtonHeight, &RowRect, &AddEntryRect);
-				RowRect.VSplitRight(MarginSmall, &RowRect, nullptr);
-				RowRect.VSplitMid(&NameRect, &ClanRect, MarginSmall);
+				RowRect.VSplitRight(RowSpacing, &RowRect, nullptr);
+				RowRect.VSplitMid(&NameRect, &ClanRect, RowSpacing);
 				DoTClientLabel(Ui(), &NameRect, s_vPlayerPicks[PickIndex].m_pName, StandardFontSize, TEXTALIGN_ML);
 				DoTClientLabel(Ui(), &ClanRect, s_vPlayerPicks[PickIndex].m_pClan, StandardFontSize, TEXTALIGN_ML);
 				if(Ui()->DoButtonLogic(&s_vPickItemIds[PickIndex], 0, &Item.m_Rect, BUTTONFLAG_LEFT) && !ReadOnly && !Ui()->RenderOnly())
@@ -788,10 +821,16 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 				str_find_nocase(Client.m_aClan, s_PlayerSearchInput.GetString()))
 				s_vFilteredPlayerIds.push_back(ClientId);
 		}
-		// 列表高度跟着实际人数收，空列表只占两行高，不铺满一屏空白。
-		const int PlayerRows = std::clamp((int)s_vFilteredPlayerIds.size(), 2, WarListViewportRows);
-		if(!Flow.Control("tclient-warlist-players-list", PlayerRows * ListRowHeight, PlayerList, MarginSmall))
+		// 列表高度跟着实际人数收，空列表保留两行高度给「没有匹配玩家」的提示；
+		// 行高按胶囊行的整数行派生（含半档行距），末行才不会被裁。
+		const int PlayerRows = std::max(2, ui_token::list::VisibleRows((int)s_vFilteredPlayerIds.size(), 1, 2, WarListViewportRows));
+		// 容器内边距与测高同源；没有在线玩家时不给留白，空面板保持原样。
+		const float PlayerListPadding = s_vFilteredPlayerIds.empty() ? 0.0f : ui_token::list::ContainerPadding(ListRowHeight);
+		if(!Flow.Control("tclient-warlist-players-list", ui_token::list::PaddedRowsHeight(PlayerRows, ListRowHeight, ui_token::list::ROW_SPACING, PlayerListPadding), PlayerList, RowSpacing))
 			return;
+		PlayerListBox.SetCapsuleRows(StandardFontSize);
+		PlayerListBox.SetContainerPadding(PlayerListPadding);
+		PlayerListBox.SetVisibleRowRange(2, WarListViewportRows);
 		PlayerListBox.DoStart(ListRowHeight, s_vFilteredPlayerIds.size(), 1, 2, -1, &PlayerList, true, IGraphics::CORNER_ALL);
 		if(s_vFilteredPlayerIds.empty())
 		{
@@ -818,10 +857,11 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 
 			CUIRect PlayerRect, TeeRect, NameRect, ClanRect, AddEntryRect;
 			CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
-			Item.m_Rect.Margin(0.0f, &PlayerRect);
+			// 行内容排在内容区：胶囊行让出左右内退与滚动条那一列。
+			PlayerRect = Item.m_ContentRect;
 			// 每行末尾一个 +：作用对象就是这一行的人，不用先选中再去别处点添加。
 			PlayerRect.VSplitRight(WarListMetrics.m_ButtonHeight, &PlayerRect, &AddEntryRect);
-			AddEntryRect.VSplitRight(MarginSmall, &AddEntryRect, nullptr);
+			AddEntryRect.VSplitRight(RowSpacing, &AddEntryRect, nullptr);
 			PlayerRect.VSplitLeft(25.0f, &TeeRect, &PlayerRect);
 			PlayerRect.VSplitMid(&NameRect, &ClanRect);
 			PlayerRect = NameRect;
@@ -906,9 +946,9 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 						ui_widget::DrawFadeDivider(Ui(), Line);
 				}
 				CUIRect Header;
-				if(SectionFlow.Control(apSectionIds[Index], LineSize, Header))
+				// 行距由标题行自己声明，不在行后补：这张卡其它行都是这个规则。
+				if(SectionFlow.Control(apSectionIds[Index], LineSize, Header, RowSpacing))
 					DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, apSectionIds[Index], &Header, Localize(apTitles[Index]), HeadlineFontSize, TEXTALIGN_ML);
-				SectionFlow.Space(MarginSmall);
 				aContents[Index](Col);
 			};
 			aHeights[Index] = TClientDeclaredRegion(apSectionIds[Index], ColumnWidth, aRenderSections[Index], nullptr);

@@ -4,6 +4,7 @@
 #include <engine/friends.h>
 
 #include <algorithm>
+#include <chrono>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -41,6 +42,8 @@ namespace qm_friend_notify
 			"' entered and joined the red team",
 			"' entered and joined the blue team",
 			"' entered and joined the spectators",
+			"' 已进入并加入了 game",
+			"' 已进入并加入了 spectators",
 		};
 		for(const auto Suffix : s_aJoinSuffixes)
 			if(Text.size() > Suffix.size() && Text.ends_with(Suffix))
@@ -103,41 +106,54 @@ namespace qm_friend_notify
 		}
 	};
 
-	// 问候只等待聊天发送额度，离服提示取消相应的待发对象。
+	// 每位好友从各自的入服提示起计时，只合并已到期的问候。
 	class CGreetQueue
 	{
-		std::vector<std::string> m_vNames;
+	public:
+		using CClock = std::chrono::steady_clock;
+
+	private:
+		struct SPending
+		{
+			std::string m_Name;
+			CClock::time_point m_ReadyAt;
+		};
+		std::vector<SPending> m_vPending;
 
 	public:
-		void Reset() noexcept { m_vNames.clear(); }
-		void Swap(CGreetQueue &Other) noexcept { m_vNames.swap(Other.m_vNames); }
+		void Reset() noexcept { m_vPending.clear(); }
+		void Swap(CGreetQueue &Other) noexcept { m_vPending.swap(Other.m_vPending); }
+		bool Empty() const { return m_vPending.empty(); }
 
-		void Add(const std::string &Name)
+		void Add(const std::string &Name, CClock::time_point Now)
 		{
-			if(!Name.empty() && std::find(m_vNames.begin(), m_vNames.end(), Name) == m_vNames.end())
-				m_vNames.push_back(Name);
+			if(!Name.empty() && std::none_of(m_vPending.begin(), m_vPending.end(), [&](const SPending &Entry) { return Entry.m_Name == Name; }))
+				m_vPending.push_back({Name, Now + std::chrono::seconds(1)});
 		}
 
 		void Remove(const std::string &Name)
 		{
-			m_vNames.erase(std::remove(m_vNames.begin(), m_vNames.end(), Name), m_vNames.end());
+			std::erase_if(m_vPending, [&](const SPending &Entry) { return Entry.m_Name == Name; });
 		}
 
 		template<typename F>
-		bool TrySend(F &&Send)
+		bool TrySend(CClock::time_point Now, F &&Send)
 		{
-			if(m_vNames.empty())
+			auto End = m_vPending.begin();
+			while(End != m_vPending.end() && End->m_ReadyAt <= Now)
+				++End;
+			if(End == m_vPending.begin())
 				return false;
 			std::string Names;
-			for(const auto &Name : m_vNames)
+			for(auto It = m_vPending.begin(); It != End; ++It)
 			{
 				if(!Names.empty())
 					Names += ' ';
-				Names += Name;
+				Names += It->m_Name;
 			}
 			if(!Send(Names))
 				return false;
-			Reset();
+			m_vPending.erase(m_vPending.begin(), End);
 			return true;
 		}
 	};

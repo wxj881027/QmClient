@@ -18,6 +18,8 @@ namespace
 {
 	constexpr char SEARCH[] = R"({"code":200,"data":{"results":[{"user_id":7,"player_name":"player"}]}})";
 	constexpr char INFO[] = R"({"code":200,"data":{"player":{"player_name":"player","points":42,"total_play_time":1,"total_maps_completed":1,"performance_points":1,"mileage":1},"difficultyData":{}}})";
+	constexpr char GORES_POINTS[] = R"({"code":200,"data":{"user":{"player":{"name":"player"}},"mode":"gores","points":42}})";
+	constexpr char AXRACE_POINTS[] = R"({"code":200,"data":{"user":{"player":{"name":"player"}},"mode":"axrace","points":59}})";
 	constexpr char DDSTATS[] = R"({"profile":{"name":"player"},"most_played_gametypes":[{"key":"Gores","seconds_played":10}]})";
 
 	class CResponse final : public IQmAxiomHttpRequest
@@ -55,7 +57,7 @@ namespace
 		int m_Calls = 0;
 		int m_ThrowOnCall = 0;
 		std::vector<std::shared_ptr<CResponse>> m_vRequests;
-		std::shared_ptr<IQmAxiomHttpRequest> Get(const char *, int, int, int64_t) override
+		std::shared_ptr<IQmAxiomHttpRequest> Get(const char *, const char *, int, int, int64_t) override
 		{
 			if(++m_Calls == m_ThrowOnCall)
 				throw std::bad_alloc();
@@ -202,9 +204,10 @@ namespace
 			for(int Index = 0; Index < 8; ++Index)
 			{
 				m_Scores.OnUpdate();
-				m_Scores.EnsureQueried(("remote_" + std::to_string(Index)).c_str());
+				m_Scores.EnsureScoreboardQueried(("remote_" + std::to_string(Index)).c_str());
 				ASSERT_EQ(m_Scores.m_vRequests.size(), static_cast<size_t>(Index + 1));
 				ASSERT_EQ(m_Scores.m_vRequests.back()->Feed(Body), Body.size());
+				m_Scores.AdvanceSeconds(1);
 			}
 		}
 	};
@@ -265,12 +268,12 @@ TEST_F(QmAxiomRequestLifecycle, ScoreboardFactoryExceptionLeavesNoFetchingSlot)
 {
 	m_Scores.SetMode(EQmAxiomMode::GORES);
 	m_Http.m_ThrowOnCall = 1;
-	EXPECT_NO_THROW(m_Scores.EnsureQueried("player"));
+	EXPECT_NO_THROW(m_Scores.EnsureScoreboardQueried("player"));
 	EXPECT_EQ(m_Scores.GetLookup("player").m_Status, EQmAxiomScoreStatus::HTTP_ERROR);
-	m_Scores.EnsureQueried("player");
+	m_Scores.EnsureScoreboardQueried("player");
 	EXPECT_EQ(m_Http.m_Calls, 1);
 	m_Scores.AdvanceSeconds(30);
-	m_Scores.EnsureQueried("player");
+	m_Scores.EnsureScoreboardQueried("player");
 	EXPECT_EQ(m_Http.m_Calls, 2);
 	EXPECT_EQ(m_Scores.GetLookup("player").m_Status, EQmAxiomScoreStatus::FETCHING);
 }
@@ -294,25 +297,52 @@ TEST_F(QmAxiomRequestLifecycle, ResetContinuesAfterSearchAbortExceptionAndIgnore
 	EXPECT_EQ(m_Http.m_vRequests.size(), 4u);
 }
 
-TEST_F(QmAxiomRequestLifecycle, ScoreboardModeFactoryFailureClearsCandidateAndCanRetry)
+TEST_F(QmAxiomRequestLifecycle, FailedScoreboardModeCanRetryWithoutLosingCachedPointsForOtherMode)
 {
 	m_Scores.SetMode(EQmAxiomMode::GORES);
-	m_Scores.EnsureQueried("player");
+	m_Scores.EnsureScoreboardQueried("player");
 	ASSERT_EQ(m_Http.m_vRequests.size(), 1u);
-	m_Http.m_vRequests[0]->Complete(SEARCH);
+	m_Http.m_vRequests[0]->Complete(GORES_POINTS);
 	m_Scores.OnUpdate();
+	ASSERT_EQ(m_Scores.GetLookup("player").m_Status, EQmAxiomScoreStatus::READY);
+
+	m_Scores.SetMode(EQmAxiomMode::AXRACE);
 	m_Http.m_ThrowOnCall = 2;
-	EXPECT_NO_THROW(m_Scores.EnsureQueried("player"));
+	EXPECT_NO_THROW(m_Scores.EnsureScoreboardQueried("player"));
 	EXPECT_EQ(m_Scores.GetLookup("player").m_Status, EQmAxiomScoreStatus::HTTP_ERROR);
-	m_Scores.EnsureQueried("player");
+	m_Scores.EnsureScoreboardQueried("player");
 	EXPECT_EQ(m_Http.m_Calls, 2);
-	m_Scores.AdvanceSeconds(30);
-	m_Scores.EnsureQueried("player");
-	ASSERT_EQ(m_Http.m_vRequests.size(), 2u);
-	m_Http.m_vRequests[1]->Complete(INFO);
-	m_Scores.OnUpdate();
+
+	m_Scores.SetMode(EQmAxiomMode::GORES);
 	EXPECT_EQ(m_Scores.GetLookup("player").m_Status, EQmAxiomScoreStatus::READY);
 	EXPECT_EQ(m_Scores.GetLookup("player").m_Points, 42);
+
+	m_Scores.SetMode(EQmAxiomMode::AXRACE);
+	m_Scores.AdvanceSeconds(30);
+	m_Scores.EnsureScoreboardQueried("player");
+	ASSERT_EQ(m_Http.m_vRequests.size(), 2u);
+	m_Http.m_vRequests[1]->Complete(AXRACE_POINTS);
+	m_Scores.OnUpdate();
+	EXPECT_EQ(m_Scores.GetLookup("player").m_Status, EQmAxiomScoreStatus::READY);
+	EXPECT_EQ(m_Scores.GetLookup("player").m_Points, 59);
+}
+
+TEST_F(QmAxiomRequestLifecycle, ScoreboardRejectsTruncatedPlayerIdentityOrMode)
+{
+	m_Scores.SetMode(EQmAxiomMode::GORES);
+	for(const char *pBody : {
+		    R"({"code":200,"data":{"user":{"player":{"name":"player\u0000extra"}},"mode":"gores","points":42}})",
+		    R"({"code":200,"data":{"user":{"player":{"name":"player"}},"mode":"gores\u0000extra","points":42}})"})
+	{
+		SCOPED_TRACE(pBody);
+		m_Scores.EnsureScoreboardQueried("player");
+		ASSERT_EQ(m_Scores.GetLookup("player").m_Status, EQmAxiomScoreStatus::FETCHING);
+		m_Http.m_vRequests.back()->Complete(pBody);
+		m_Scores.OnUpdate();
+		EXPECT_EQ(m_Scores.GetLookup("player").m_Status, EQmAxiomScoreStatus::INVALID_RESPONSE);
+		m_Scores.OnReset();
+		m_Scores.AdvanceSeconds(1);
+	}
 }
 
 TEST_F(QmAxiomRequestLifecycle, FailedRefreshKeepsReadyMatchAndScoresDuringBackoff)
@@ -373,8 +403,8 @@ TEST_F(QmAxiomRequestLifecycle, ShutdownDropsAllRequestsAndCacheEvenIfAbortThrow
 TEST_F(QmAxiomRequestLifecycle, ModeSwitchCancelsEveryPrefetchAfterFirstAbortThrows)
 {
 	m_Scores.SetMode(EQmAxiomMode::GORES);
-	m_Scores.EnsureQueried("first");
-	m_Scores.EnsureQueried("second");
+	m_Scores.EnsureScoreboardQueried("first");
+	m_Scores.EnsureScoreboardQueried("second");
 	ASSERT_EQ(m_Http.m_vRequests.size(), 2u);
 	m_Http.m_vRequests[0]->m_AbortThrows = true;
 	EXPECT_NO_THROW(m_Scores.SetMode(EQmAxiomMode::AXRACE));
@@ -383,7 +413,7 @@ TEST_F(QmAxiomRequestLifecycle, ModeSwitchCancelsEveryPrefetchAfterFirstAbortThr
 	EXPECT_EQ(m_Scores.GetLookup("first").m_Status, EQmAxiomScoreStatus::NOT_REQUESTED);
 	EXPECT_EQ(m_Scores.GetLookup("second").m_Status, EQmAxiomScoreStatus::NOT_REQUESTED);
 	m_Scores.OnUpdate();
-	m_Scores.EnsureQueried("first");
+	m_Scores.EnsureScoreboardQueried("first");
 	EXPECT_EQ(m_Http.m_vRequests.size(), 3u);
 }
 
@@ -467,15 +497,13 @@ TEST_F(QmAxiomNativeBufferBudget, NativeRequestsShareOneCapacityLimit)
 {
 	ASSERT_NO_FATAL_FAILURE(FillBudget());
 	m_Scores.OnUpdate();
-	m_Scores.EnsureQueried("over_budget");
+	m_Scores.EnsureScoreboardQueried("over_budget");
 	ASSERT_EQ(m_Scores.m_vRequests.size(), 9u);
 	EXPECT_EQ(m_Scores.m_vRequests.back()->Feed("x"), 0u);
 	m_Scores.m_vRequests.back()->Complete();
 	EXPECT_EQ(m_Scores.m_vRequests.back()->State(), EHttpState::ERROR);
 	m_Scores.OnUpdate();
-	const auto *pResult = m_Scores.GetResult("over_budget");
-	ASSERT_NE(pResult, nullptr);
-	EXPECT_EQ(pResult->m_SearchStatus, EQmAxiomScoreStatus::HTTP_ERROR);
+	EXPECT_EQ(m_Scores.GetLookup("over_budget").m_Status, EQmAxiomScoreStatus::HTTP_ERROR);
 }
 
 TEST_F(QmAxiomNativeBufferBudget, ResetRetainsChargesUntilBackendOwnersActuallyReleaseBuffers)
@@ -484,13 +512,13 @@ TEST_F(QmAxiomNativeBufferBudget, ResetRetainsChargesUntilBackendOwnersActuallyR
 	m_Scores.OnReset();
 	EXPECT_TRUE(m_Scores.m_vRequests[0]->IsAbortRequested());
 	m_Scores.OnUpdate();
-	m_Scores.EnsureQueried("during_reset");
+	m_Scores.EnsureScoreboardQueried("during_reset");
 	ASSERT_EQ(m_Scores.m_vRequests.size(), 9u);
 	EXPECT_EQ(m_Scores.m_vRequests.back()->Feed("x"), 0u);
 	m_Scores.m_vRequests.back()->Complete();
 	m_Scores.OnUpdate();
 	m_Scores.m_vRequests.clear();
-	m_Scores.EnsureQueried("after_release");
+	m_Scores.EnsureScoreboardQueried("after_release");
 	ASSERT_EQ(m_Scores.m_vRequests.size(), 1u);
 	EXPECT_EQ(m_Scores.m_vRequests.back()->Feed("x"), 1u);
 }

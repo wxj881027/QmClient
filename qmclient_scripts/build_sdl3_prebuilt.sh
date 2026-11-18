@@ -17,8 +17,20 @@ SRC=${1:?需要 SDL3 源码目录}
 shift || true
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 DEST="$ROOT/ddnet-libs/sdl"
-SDL_VERSION=3.4.18
 JOBS=${JOBS:-4}
+SDL_VERSION_HEADER="$SRC/include/SDL3/SDL_version.h"
+if [[ ! -f "$SDL_VERSION_HEADER" ]]; then
+	echo "missing SDL version header: $SDL_VERSION_HEADER" >&2
+	exit 1
+fi
+SDL_MAJOR=$(awk '$1 == "#define" && $2 == "SDL_MAJOR_VERSION" { print $3 }' "$SDL_VERSION_HEADER")
+SDL_MINOR=$(awk '$1 == "#define" && $2 == "SDL_MINOR_VERSION" { print $3 }' "$SDL_VERSION_HEADER")
+SDL_MICRO=$(awk '$1 == "#define" && $2 == "SDL_MICRO_VERSION" { print $3 }' "$SDL_VERSION_HEADER")
+if [[ -z "$SDL_MAJOR" || -z "$SDL_MINOR" || -z "$SDL_MICRO" ]]; then
+	echo "failed to parse SDL version from $SDL_VERSION_HEADER" >&2
+	exit 1
+fi
+SDL_VERSION="$SDL_MAJOR.$SDL_MINOR.$SDL_MICRO"
 
 copy_headers() {
 	local platform=$1
@@ -126,6 +138,7 @@ build_android() {
 build_webasm() {
 	local out="$ROOT/tmp/sdl3-prebuilt/webasm"
 	emcmake cmake -G Ninja -S "$SRC" -B "$out" -DCMAKE_BUILD_TYPE=Release \
+		-DCMAKE_C_FLAGS=-pthread -DCMAKE_CXX_FLAGS=-pthread \
 		-DSDL_SHARED=OFF -DSDL_STATIC=ON -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF -DSDL_INSTALL=OFF
 	cmake --build "$out" --target SDL3-static -j "$JOBS"
 	mkdir -p "$DEST/webasm/libwasm"

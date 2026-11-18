@@ -148,6 +148,7 @@ constexpr int QmComputeAutoPredictionMargin(int BaseMargin, float MeasuredPingMa
 	return std::clamp(round_to_int(ConnectionMargin), 1, 300);
 }
 
+// Note: The values of some of these flags cannot be changed because they are recorded to Teehistorian files.
 enum
 {
 	CFGFLAG_SAVE = 1 << 0,
@@ -166,10 +167,8 @@ enum
 		0,
 #endif
 	CFGFLAG_STORE = 1 << 3,
-	CFGFLAG_MASTER = 1 << 4,
+	// 1 << 4 has been removed. Do not reuse this flag.
 	CFGFLAG_ECON = 1 << 5,
-	// DDRace
-
 	CMDFLAG_TEST = 1 << 6,
 	CFGFLAG_CHAT = 1 << 7,
 	CFGFLAG_GAME = 1 << 8,
@@ -231,6 +230,8 @@ struct SConfigVariable
 	virtual bool IsDefault() const = 0;
 	virtual size_t MaxSerializedSize() const = 0;
 	virtual void Serialize(char *pOut, size_t Size) const = 0;
+	/** 面向玩家展示的序列化形式（颜色输出为 $RRGGBB 而不是打包整数）。 */
+	virtual void SerializeHumanReadable(char *pOut, size_t Size) const = 0;
 	virtual void ResetToDefault() = 0;
 	virtual void ResetToOld() = 0;
 
@@ -266,6 +267,7 @@ struct SIntConfigVariable : public SConfigVariable
 	size_t MaxSerializedSize() const override;
 	void Serialize(char *pOut, size_t Size, int Value) const;
 	void Serialize(char *pOut, size_t Size) const override;
+	void SerializeHumanReadable(char *pOut, size_t Size) const override;
 	void SetValue(int Value);
 	void ResetToDefault() override;
 	void ResetToOld() override;
@@ -311,6 +313,7 @@ struct SColorConfigVariable : public SConfigVariable
 	size_t MaxSerializedSize() const override;
 	void Serialize(char *pOut, size_t Size, unsigned Value) const;
 	void Serialize(char *pOut, size_t Size) const override;
+	void SerializeHumanReadable(char *pOut, size_t Size) const override;
 	void SetValue(unsigned Value);
 	void ResetToDefault() override;
 	void ResetToOld() override;
@@ -332,6 +335,7 @@ struct SStringConfigVariable : public SConfigVariable
 	size_t MaxSerializedSize() const override;
 	void Serialize(char *pOut, size_t Size, const char *pValue) const;
 	void Serialize(char *pOut, size_t Size) const override;
+	void SerializeHumanReadable(char *pOut, size_t Size) const override;
 	void SetValue(const char *pValue);
 	void ResetToDefault() override;
 	void ResetToOld() override;
@@ -408,6 +412,7 @@ public:
 	void StoreUnknownCommand(const char *pCommand, ConfigDomain ConfigDomain = ConfigDomain::QMCLIENT) override;
 
 	void PossibleConfigVariables(const char *pStr, int FlagMask, POSSIBLECFGFUNC pfnCallback, void *pUserData) override;
+	const SConfigVariable *FindVariable(const char *pScriptName) const override;
 	EColorInputAlphaMode ColorValueInputAlphaMode(const char *pScriptName) const override;
 };
 

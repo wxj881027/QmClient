@@ -40,6 +40,7 @@ namespace
 		{Localizable("Always show own player's hook collision line"), nullptr, "始终显示自己的钩子辅助线"},
 		{Localizable("Colors of the hook collision line, in case of a possible collision with:"), nullptr, "钩子辅助线颜色（瞄准以下目标时）："},
 		{Localizable("Hook collision line opacity"), nullptr, "钩子辅助线不透明度"},
+		{Localizable("Old single-segment hook collision line"), nullptr, "旧版单段钩索碰撞线"},
 		{Localizable("Hook line tip"), nullptr, "辅助线提示"},
 		{Localizable("Nothing hookable"), nullptr, "未瞄准可钩物体"},
 		{Localizable("Pressed hook line color; always used when custom pressed colors are enabled"), nullptr, "按下后颜色；开启自定义按下后颜色时始终生效"},
@@ -56,6 +57,7 @@ namespace
 		{Localizable("Your movements are not taken into account when calculating the line colors"), nullptr, "计算线条颜色时不考虑你的移动"},
 		{Localizable("Custom pressed hook line colors"), nullptr, "自定义按下钩线颜色"},
 		{nullptr, "cl_hook_coll_alpha", nullptr},
+		{nullptr, "qm_revert_hook_line", nullptr},
 		{nullptr, "cl_hook_coll_color_hookable_coll", nullptr},
 		{nullptr, "cl_hook_coll_color_no_coll", nullptr},
 		{nullptr, "cl_hook_coll_color_tee_coll", nullptr},
@@ -131,22 +133,17 @@ namespace
 namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_deck_appearance_hud_main[] = {
-		{Localizable("Authed name color in scoreboard"), nullptr, "管理权限者名字在计分板上的颜色"},
-		{Localizable("Clan color in friends list"), nullptr, "好友列表中战队成员条目颜色"},
-		{Localizable("Friend color in friends list"), nullptr, "好友列表中好友条目颜色"},
-		{Localizable("Same clan color in scoreboard"), nullptr, "相同战队在计分板上的颜色"},
-		{Localizable("Scoreboard"), nullptr, "计分板"},
 		{Localizable("Show health, shields and ammo"), nullptr, "显示生命、护甲与弹药栏"},
 		{Localizable("Show ingame HUD"), nullptr, "显示 HUD"},
 		{Localizable("Show local time always"), nullptr, "始终显示本地时间"},
+		{Localizable("Show seconds in local time"), nullptr, "本地时间显示秒"},
+		{Localizable("Animate country flags"), nullptr, "国旗入场动画"},
 		{Localizable("Show score"), nullptr, "显示分数"},
 		{Localizable("Show spectator cursor"), nullptr, "显示旁观者光标"},
 		{Localizable("Show votes window after voting"), nullptr, "投票后不关闭投票窗口"},
-		{nullptr, "cl_authed_player_color", nullptr},
-		{nullptr, "cl_friends_list_clan_color", nullptr},
-		{nullptr, "cl_friends_list_friend_color", nullptr},
-		{nullptr, "cl_same_clan_color", nullptr},
 		{nullptr, "cl_show_local_time_always", nullptr},
+		{nullptr, "qm_show_local_time_seconds", nullptr},
+		{nullptr, "qm_country_flag_anim", nullptr},
 		{nullptr, "cl_show_votes_after_voting", nullptr},
 		{nullptr, "cl_showhud", nullptr},
 		{nullptr, "cl_showhud_healthammo", nullptr},
@@ -240,4 +237,20 @@ namespace
 		{nullptr, "cl_laser_sg_outline_color", nullptr},
 	};
 	QM_CARD_SEARCH_REGISTER("deck:appearance-laser-preview", deck_appearance_laser_preview);
+}
+
+// 声明式搜索索引：文案随所属卡片声明，静态初始化时自动注册。
+namespace
+{
+	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_deck_appearance_scoreboard[] = {
+		{Localizable("Authed name color in scoreboard"), nullptr, "管理权限者名字在计分板上的颜色"},
+		{Localizable("Clan color in friends list"), nullptr, "好友列表中战队成员条目颜色"},
+		{Localizable("Friend color in friends list"), nullptr, "好友列表中好友条目颜色"},
+		{Localizable("Same clan color in scoreboard"), nullptr, "相同战队在计分板上的颜色"},
+		{nullptr, "cl_authed_player_color", nullptr},
+		{nullptr, "cl_friends_list_clan_color", nullptr},
+		{nullptr, "cl_friends_list_friend_color", nullptr},
+		{nullptr, "cl_same_clan_color", nullptr},
+	};
+	QM_CARD_SEARCH_REGISTER("deck:appearance-scoreboard", deck_appearance_scoreboard);
 }

@@ -194,11 +194,11 @@ void CMenus::RenderProfileWheelEditor(const qm_card_catalog::SQmCardBuildContext
 		State.m_pStatus = Localizable("The wheel changed. Your draft can be added as a new preset.");
 	}
 	const auto Text = [&](const char *pId, const char *pText) {
-		Flow.Text(pId, pText, 0, Metrics.m_BodySize, Metrics.m_LineSpacing, [this](const char *pValue, float Width, float Size) { return TextRender()->TextBoundingBox(Size, pValue, -1, Width).m_H + Size * 0.25f; }, [this, &Metrics](const CUIRect &Row, const char *pValue) { Ui()->DoLabel(&Row, pValue, Metrics.m_BodySize, TEXTALIGN_ML, {.m_MaxWidth = Row.w, .m_EnableWidthCheck = false}); });
+		Flow.Text(pId, pText, 0, Metrics.m_BodySize, ui_token::settings::RowGap(Metrics.m_LineSpacing), [this](const char *pValue, float Width, float Size) { return TextRender()->TextBoundingBox(Size, pValue, -1, Width).m_H + Size * 0.25f; }, [this, &Metrics](const CUIRect &Row, const char *pValue) { Ui()->DoLabel(&Row, pValue, Metrics.m_BodySize, TEXTALIGN_ML, {.m_MaxWidth = Row.w, .m_EnableWidthCheck = false}); });
 	};
 	const auto Input = [&](const char *pId, const char *pLabel, CLineInput &Value, int *pEnabled = nullptr) {
 		CUIRect Row, Label, Control;
-		if(!Flow.Control(pId, Metrics.m_ButtonHeight, Row, Metrics.m_LineSpacing))
+		if(!Flow.Control(pId, Metrics.m_ButtonHeight, Row, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
 			return;
 		SplitSettingsControlRow(Row, Metrics, &Label, &Control);
 		if(pEnabled)
@@ -212,7 +212,7 @@ void CMenus::RenderProfileWheelEditor(const qm_card_catalog::SQmCardBuildContext
 	};
 	const auto Choice = [&](const char *pId, const char *pLabel, int &Value, const char *const *ppNames, int Count, CUi::SDropDownState &DropDown, CScrollRegion &Scroll) {
 		CUIRect Row, Label, Control;
-		if(!Flow.Control(pId, Metrics.m_ButtonHeight, Row, Metrics.m_LineSpacing))
+		if(!Flow.Control(pId, Metrics.m_ButtonHeight, Row, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
 			return;
 		SplitSettingsControlRow(Row, Metrics, &Label, &Control);
 		Ui()->DoLabel(&Label, pLabel, Metrics.m_BodySize, TEXTALIGN_ML);
@@ -225,7 +225,7 @@ void CMenus::RenderProfileWheelEditor(const qm_card_catalog::SQmCardBuildContext
 	Text("profile-wheel-help", Localize("Create wheel presets here. Existing wheel entries are kept."));
 	CUIRect Row;
 	const char *apTypes[] = {Localize("Name"), Localize("Identity preset"), Localize("Chat phrase"), Localize("Asset preset")};
-	if(Flow.Control("profile-wheel-defaults", Metrics.m_ButtonHeight, Row, Metrics.m_LineSpacing))
+	if(Flow.Control("profile-wheel-defaults", Metrics.m_ButtonHeight, Row, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
 	{
 		if(DoTClientSettingsButton_Menu(&State.m_DefaultsButton, "profile-wheel-defaults", Localize("Add default presets"), 0, &Row) && Editable)
 		{
@@ -287,7 +287,7 @@ void CMenus::RenderProfileWheelEditor(const qm_card_catalog::SQmCardBuildContext
 				continue;
 			Input((Prefix + "-clan").c_str(), Localize("Clan"), Identity.m_Clan, &Identity.m_aEnabled[CLAN]);
 			Input((Prefix + "-skin").c_str(), Localize("Skin"), Identity.m_Skin, &Identity.m_aEnabled[SKIN]);
-			if(Flow.Control((Prefix + "-custom-colors").c_str(), Metrics.m_ButtonHeight, Row, Metrics.m_LineSpacing))
+			if(Flow.Control((Prefix + "-custom-colors").c_str(), Metrics.m_ButtonHeight, Row, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
 			{
 				CUIRect Include, Custom;
 				Row.VSplitMid(&Include, &Custom, Metrics.m_LineSpacing);
@@ -300,7 +300,7 @@ void CMenus::RenderProfileWheelEditor(const qm_card_catalog::SQmCardBuildContext
 					Identity.m_CustomColors ^= 1;
 			}
 			const float ColorsHeight = ResolveSettingsTeeCustomColorsLayout(Content, true, Metrics).m_Height;
-			if(Flow.Control((Prefix + "-colors").c_str(), ColorsHeight, Row, Metrics.m_LineSpacing))
+			if(Flow.Control((Prefix + "-colors").c_str(), ColorsHeight, Row, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
 			{
 				const auto Colors = ResolveSettingsTeeCustomColorsLayout(Row, true, Metrics);
 				const CUIRect aTitles[] = {Colors.m_BodyTitle, Colors.m_FeetTitle};
@@ -314,7 +314,7 @@ void CMenus::RenderProfileWheelEditor(const qm_card_catalog::SQmCardBuildContext
 				}
 			}
 			Input((Prefix + "-country").c_str(), Localize("Country code"), Identity.m_Country, &Identity.m_aEnabled[COUNTRY]);
-			if(Flow.Control((Prefix + "-include-eyes").c_str(), Metrics.m_ButtonHeight, Row, Metrics.m_LineSpacing))
+			if(Flow.Control((Prefix + "-include-eyes").c_str(), Metrics.m_ButtonHeight, Row, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
 				if(DoTClientSettingsButton_CheckBox(&Identity.m_aEnabled[EYES], (Prefix + "-include-eyes").c_str(), Localize("Save/Load Emote"), Identity.m_aEnabled[EYES], &Row) && Editable)
 					Identity.m_aEnabled[EYES] ^= 1;
 			const char *apEyes[] = {Localize("Normal"), Localize("Pain"), Localize("Happy"), Localize("Surprise"), Localize("Angry"), Localize("Blink")};
@@ -324,7 +324,7 @@ void CMenus::RenderProfileWheelEditor(const qm_card_catalog::SQmCardBuildContext
 	else if(State.m_Type == static_cast<int>(EType::CHAT))
 	{
 		Input("profile-wheel-chat", Localize("Chat phrase"), State.m_Chat);
-		if(Flow.Control("profile-wheel-team-chat", Metrics.m_ButtonHeight, Row, Metrics.m_LineSpacing))
+		if(Flow.Control("profile-wheel-team-chat", Metrics.m_ButtonHeight, Row, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
 			if(DoTClientSettingsButton_CheckBox(&State.m_TeamChat, "profile-wheel-team-chat", Localize("Team chat"), State.m_TeamChat, &Row) && Editable)
 				State.m_TeamChat ^= 1;
 	}
@@ -335,7 +335,7 @@ void CMenus::RenderProfileWheelEditor(const qm_card_catalog::SQmCardBuildContext
 		for(int Index = 0; Index < NUM_ASSETS; ++Index)
 			Input(AssetCommand(Index), apAssets[Index], State.m_aAssets[Index]);
 	}
-	if(State.m_Type != static_cast<int>(EType::CHAT) && Flow.Control("profile-wheel-capture", Metrics.m_ButtonHeight, Row, Metrics.m_LineSpacing))
+	if(State.m_Type != static_cast<int>(EType::CHAT) && Flow.Control("profile-wheel-capture", Metrics.m_ButtonHeight, Row, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
 	{
 		if(DoTClientSettingsButton_Menu(&State.m_CaptureButton, "profile-wheel-capture", Localize("Use current settings"), 0, &Row) && Editable)
 		{
@@ -360,7 +360,7 @@ void CMenus::RenderProfileWheelEditor(const qm_card_catalog::SQmCardBuildContext
 			}
 		}
 	}
-	if(Flow.Control("profile-wheel-new-remove", Metrics.m_ButtonHeight, Row, Metrics.m_LineSpacing))
+	if(Flow.Control("profile-wheel-new-remove", Metrics.m_ButtonHeight, Row, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
 	{
 		CUIRect New, Remove;
 		Row.VSplitMid(&New, &Remove, Metrics.m_LineSpacing);
@@ -381,17 +381,27 @@ void CMenus::RenderProfileWheelEditor(const qm_card_catalog::SQmCardBuildContext
 	}
 	Text("profile-wheel-status", Localize(State.m_pStatus));
 	Text("profile-wheel-list-title", Localize("Bind Wheel"));
-	if(!Flow.Control("profile-wheel-list", Metrics.m_ListRowHeight * 5, Row, Metrics.m_LineSpacing))
+	// 绑定列表按胶囊行渲染：可见行数取整数行（最多 5 行，沿用原面板高度），
+	// 高度用 PaddedRowsHeight 派生（行内容 + 上下两档容器内边距），和 CListBox 的
+	// 自适应上限同源，末行不会被裁一半、末行高亮也不会压在容器圆角上；
+	// 空轮盘不占高度（0 行时留白也是 0），不留一块没有背景的空面板。
+	constexpr int MaxWheelRows = 5;
+	const int WheelRows = ui_token::list::VisibleRows((int)Wheel.m_vBinds.size(), 1, 1, MaxWheelRows);
+	const float WheelListPadding = WheelRows > 0 ? ui_token::list::ContainerPadding(Metrics.m_ListRowHeight) : 0.0f;
+	if(!Flow.Control("profile-wheel-list", ui_token::list::PaddedRowsHeight(WheelRows, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING, WheelListPadding), Row, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
 		return;
 	auto &List = ReadOnly ? State.m_ReadOnlyList : State.m_List;
 	List.SetActive(!ReadOnly);
 	List.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);
+	List.SetCapsuleRows(Metrics.m_BodySize);
+	List.SetContainerPadding(WheelListPadding);
+	List.SetVisibleRowRange(WheelRows, WheelRows);
 	List.DoStart(Metrics.m_ListRowHeight, Wheel.m_vBinds.size(), 1, 3, State.m_Selected, &Row);
 	for(size_t Index = 0; Index < Wheel.m_vBinds.size(); ++Index)
 	{
 		const CListboxItem Item = List.DoNextItem(&State.m_aItemIds[Index], State.m_Selected == static_cast<int>(Index));
 		if(Item.m_Visible)
-			Ui()->DoLabel(&Item.m_Rect, Wheel.m_vBinds[Index].m_aName, Metrics.m_BodySize, TEXTALIGN_ML);
+			Ui()->DoLabel(&Item.m_ContentRect, Wheel.m_vBinds[Index].m_aName, Metrics.m_BodySize, TEXTALIGN_ML);
 	}
 	const int Selected = List.DoEnd();
 	if(Editable && Selected >= 0 && Selected < static_cast<int>(Wheel.m_vBinds.size()) && (Selected != State.m_Selected || List.WasItemActivated()))

@@ -76,6 +76,8 @@ public:
 	virtual void StoreUnknownCommand(const char *pCommand, ConfigDomain ConfigDomain = ConfigDomain::QMCLIENT) = 0;
 
 	virtual void PossibleConfigVariables(const char *pStr, int FlagMask, POSSIBLECFGFUNC pfnCallback, void *pUserData) = 0;
+	/** 按脚本名（如 cl_hook_coll_alpha）查找配置项，找不到返回 nullptr。 */
+	virtual const struct SConfigVariable *FindVariable(const char *pScriptName) const = 0;
 	virtual EColorInputAlphaMode ColorValueInputAlphaMode(const char *pScriptName) const = 0;
 };
 

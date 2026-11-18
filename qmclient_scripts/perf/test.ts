@@ -1676,6 +1676,28 @@ function testUnifiedConfigurationKeepsInitialCurrentAndStringValues() {
 
 testUnifiedFrameSamplesDoNotMixComponentDurations();
 testUnifiedConfigurationKeepsInitialCurrentAndStringValues();
+function testLimitedWindowDistinguishesSuppressedDetailsFromLegacyLogs() {
+  const event = { system: 'perf/stutter', event: 'stutter_event', stutter_id: 1, segment: 0, frame_ms_max: 9, sample_frames: 120, cap_limited: 1 };
+  const summary = [parseLine(JSON.stringify({ ...event, detail_mode: 'summary' }))!];
+  assert.equal(stutterDiagnosticsSummary(summary).windows[0].detailMode, 'summary');
+  assert.ok(generateReport(summary, 'limited.log', null).includes('此窗口只记录限帧摘要'));
+  const legacy = [parseLine(JSON.stringify(event))!];
+  assert.equal(stutterDiagnosticsSummary(legacy).windows[0].detailMode, 'full');
+}
+testLimitedWindowDistinguishesSuppressedDetailsFromLegacyLogs();
+
+function testMapReportSeparatesDecodeTimeFromLayerSliceTime() {
+  const entries = [
+    { stage: 'map_image_prepare', image: 3, read_ms: 1, decode_ms: 34.5, submit_ms: 2, duration_ms: 37.5 },
+    { stage: 'map_image_prepare', image: 4, read_ms: 11, read_includes_decode: 1, duration_ms: 11 },
+    { stage: 'map_layer_prepare', group: 1, layer: 2, slices: 8, duration_ms: 14, peak_ms: 2.7 },
+  ].map(e => parseLine(JSON.stringify({ system: 'perf/connect', ...e }))!);
+  const report = generateReport(entries, 'map.log', null);
+  for (const label of ['进服和换图', '34.500ms', '已计入读取', '14.000ms', '2.700ms']) {
+    assert.ok(report.includes(label), label);
+  }
+}
+testMapReportSeparatesDecodeTimeFromLayerSliceTime();
 runSamplingTests();
 
 console.log('qmclient perf tests passed');

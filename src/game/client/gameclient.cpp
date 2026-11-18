@@ -42,6 +42,7 @@
 #include "components/qmclient/perf_logging.h"
 #include "components/qmclient/player_display_privacy.h"
 #include "components/qmclient/predicted_event_queue.h"
+#include "components/qmclient/qm_hook_coll_tuning.h"
 #include "components/qmclient/qmclient_utils.h"
 #include "components/qmclient/race_timing.h"
 #include "components/qmclient/screenshot_manager.h"
@@ -632,6 +633,7 @@ void CGameClient::OnConsoleInit()
 	AddComponent(&m_Translate, "translate");
 	AddComponent(&m_Ghost, "ghost");
 	AddComponent(&m_QmClient, "qmclient");
+	AddComponent(&m_FinishSummary, "finish_summary");
 	AddComponent(&m_QmAxiomAutoLogin, "axiom_auto_login");
 	AddComponent(&m_QmAxiomScores, "axiom_scores");
 	AddComponent(&m_QmFriendLastSeen, "friend_last_seen");
@@ -694,7 +696,6 @@ void CGameClient::OnConsoleInit()
 	AddComponent(&m_Menus, "menus");
 	AddComponent(&m_PieMenu, "pie_menu");
 	AddComponent(&m_HudEditor, "hud_editor");
-	AddComponent(&m_Tooltips, "tooltips");
 	AddComponent(&m_Scripting, "scripting");
 	AddComponent(&m_KeyBinder, "key_binder");
 	AddComponent(&m_GameConsole, "game_console");
@@ -987,7 +988,7 @@ void CGameClient::OnInit()
 	});
 	m_UiRuntimeV2.Init(this);
 	m_UI.SetQmAnimationRuntime(&m_UiRuntimeV2.AnimRuntime());
-	m_UI.SetQmTooltips(&m_Tooltips);
+	m_UI.InitTooltips(this);
 	m_RenderTools.Init(Graphics(), TextRender(), this); // TClient
 	m_RenderMap.Init(Graphics(), TextRender());
 	m_AppliedQmUiIconWeight = NormalizeQmIconWeight(g_Config.m_QmUiIconWeight);
@@ -1200,25 +1201,53 @@ void CGameClient::PrewarmSettingsRuntimeCachesDuringLoading(const char *pLoading
 	// ESC 的字形与 plan 现在改由菜单关闭时的空闲帧预热（CMenus::OnUpdate / OnRender）。
 }
 
-void CGameClient::OnConnectionResourceUpdate()
+void CGameClient::CancelConnectionResourcePreparation()
 {
 	if(m_ConnectionResourcePreparation.Pending())
 	{
-		CPerfTimer ResourceTimer(QmPerfEnabled());
-		// 初始信息仍在资源就绪后发送；准备期间留在加载状态，每帧只推进一个图层。
-		if(Client()->State() != IClient::STATE_LOADING)
-			m_ConnectionResourcePreparation.Cancel();
-		else
-		{
-			if(!m_MapLayersBackground.IsMapLoaded())
-				m_MapLayersBackground.AdvanceMapLoad(1);
-			else if(!m_MapLayersForeground.IsMapLoaded())
-				m_MapLayersForeground.AdvanceMapLoad(1);
-			if(m_ConnectionResourcePreparation.CompleteWhenReady(m_MapLayersBackground.IsMapLoaded(), m_MapLayersForeground.IsMapLoaded()))
-				FinishConnectionResourcePreparation();
-		}
-		LogPerfStage(this, "connection_resource_prepare", ResourceTimer.ElapsedMs());
+		m_MapLayersBackground.UnloadMap();
+		m_MapLayersForeground.UnloadMap();
+		m_MapImages.Unload();
 	}
+	m_DesignTileSkips = {};
+	m_ConnectionResourcePreparation.Cancel();
+}
+
+void CGameClient::OnConnectionResourceUpdate()
+{
+	if(!m_ConnectionResourcePreparation.Pending())
+		return;
+	if(Client()->State() != IClient::STATE_LOADING)
+	{
+		CancelConnectionResourcePreparation();
+		return;
+	}
+
+	const bool Trace = QmPerfEnabled();
+	CPerfTimer Timer(Trace);
+	const auto Deadline = CMapLoadTask::TClock::now() + std::chrono::milliseconds(2);
+	if(!m_MapImages.ImagesReady())
+		m_MapImages.AdvanceImageLoad();
+
+	// 等贴图解码时可以先做装饰层跳距，创建图层时再读取已经就绪的纹理句柄。
+	if(!m_DesignTileSkips.Done() && CMapLoadTask::TClock::now() < Deadline)
+	{
+		CPerfTimer SkipTimer(Trace);
+		m_DesignTileSkips.RunUntil(Deadline);
+		if(Trace)
+			QmPerfLogStage("perf/connect", "map_design_tile_skips", SkipTimer.ElapsedMs(), true, Client());
+	}
+	const bool DataReady = m_MapImages.ImagesReady() && m_DesignTileSkips.Done();
+	if(DataReady && CMapLoadTask::TClock::now() < Deadline)
+	{
+		if(!m_MapLayersBackground.IsMapLoaded())
+			m_MapLayersBackground.AdvanceMapLoad(1, Deadline);
+		else if(!m_MapLayersForeground.IsMapLoaded())
+			m_MapLayersForeground.AdvanceMapLoad(1, Deadline);
+	}
+	if(m_ConnectionResourcePreparation.CompleteWhenReady(DataReady, m_MapLayersBackground.IsMapLoaded(), m_MapLayersForeground.IsMapLoaded()))
+		FinishConnectionResourcePreparation();
+	LogPerfStage(this, "connection_resource_prepare", Timer.ElapsedMs());
 }
 
 void CGameClient::OnUpdate()
@@ -1269,6 +1298,7 @@ void CGameClient::OnUpdate()
 	}
 
 	// handle key presses
+	std::fill(std::begin(m_Controls.m_aMouseOnAction), std::end(m_Controls.m_aMouseOnAction), false);
 	Input()->ConsumeEvents([&](const IInput::CEvent &Event) {
 		const bool HadCountingFocus = m_InputOverlay.HasCountingFocus();
 		OnInput(Event);
@@ -1276,10 +1306,14 @@ void CGameClient::OnUpdate()
 		m_InputOverlay.ObservePhysicalInput(Event, HadCountingFocus);
 	});
 
-	if(g_Config.m_ClSubTickAiming && m_Binds.m_MouseOnAction)
+	if(g_Config.m_ClSubTickAiming)
 	{
-		m_Controls.m_aMousePosOnAction[g_Config.m_ClDummy] = m_Controls.m_aMousePos[g_Config.m_ClDummy];
-		m_Binds.m_MouseOnAction = false;
+		// 主号和 dummy 各自记录：同帧内切换 cl_dummy 不会把另一只的瞄准位置写错。
+		for(int Dummy = 0; Dummy < NUM_DUMMIES; Dummy++)
+		{
+			if(m_Controls.m_aMouseOnAction[Dummy])
+				m_Controls.m_aMousePosOnAction[Dummy] = m_Controls.m_aMousePos[Dummy];
+		}
 	}
 
 	if(g_Config.m_QmPerfStutterDiagnostics)
@@ -1688,7 +1722,7 @@ void CGameClient::OnMapLoadStart()
 	if(m_ConnectionResourcePreparation.Pending())
 		dbg_msg("client/map", "canceled pending resource preparation for '%s'", Client()->GetCurrentMap());
 	// 取消旧任务并先释放借用地图数据的渲染资源，再让引擎替换地图文件。
-	m_ConnectionResourcePreparation.Cancel();
+	CancelConnectionResourcePreparation();
 	m_MapLayersBackground.UnloadMap();
 	m_MapLayersForeground.UnloadMap();
 	Collision()->Unload();
@@ -1708,14 +1742,17 @@ void CGameClient::OnConnected()
 		StageTimer.Reset();
 	};
 
-	m_ConnectionResourcePreparation.Cancel();
+	CancelConnectionResourcePreparation();
 	m_FastPractice.InvalidateBufferedInputState();
 	const char *pConnectCaption = DemoPlayer()->IsPlaying() ? Localize("Preparing demo playback") : Localize("Connected");
 	const char *pLoadMapContent = Localize("Initializing map logic");
 	// render loading before skip is calculated
 	m_Menus.RenderLoading(pConnectCaption, pLoadMapContent, 0);
 	LogConnectStage("loading_screen");
-	m_Layers.Init(Kernel()->RequestInterface<IMap>(), false);
+	const bool Live = Client()->State() == IClient::STATE_LOADING;
+	m_Layers.Init(Kernel()->RequestInterface<IMap>(), false, true, Live);
+	if(Live)
+		m_DesignTileSkips = m_Layers.PrepareDesignTileSkips();
 	LogConnectStage("layers_init");
 	m_Collision.Init(Layers());
 	LogConnectStage("collision_init");
@@ -1740,6 +1777,7 @@ void CGameClient::OnConnected()
 			QmPerfLogPayloadForce("perf/connect", aPayload, Client());
 		}
 	}
+	m_UI.OnReset();
 
 	LogConnectStage("components_map_load_total");
 	ConfigManager()->ResetGameSettings();
@@ -1770,7 +1808,7 @@ void CGameClient::OnReset()
 {
 	// 离开对局：自杀保护回到配置默认值，本局自动开启的拦截不会漏到下一局。
 	ResetQmSelfKillProtectionRound(false);
-	m_ConnectionResourcePreparation.Cancel();
+	CancelConnectionResourcePreparation();
 	InvalidateSnapshot();
 	ResetDemoPlaybackState();
 	m_LastDemoHudRecordTick = -1;
@@ -1845,6 +1883,7 @@ void CGameClient::OnReset()
 
 	std::fill(std::begin(m_aNextChangeInfo), std::end(m_aNextChangeInfo), -1);
 	std::fill(std::begin(m_aLocalIds), std::end(m_aLocalIds), -1);
+	m_QmDummyDistanceLink = {};
 	m_DummyInput = {};
 	m_HammerInput = {};
 	m_DummyFire = 0;
@@ -1949,6 +1988,7 @@ void CGameClient::OnReset()
 
 	for(auto &pComponent : m_vpAll)
 		pComponent->OnReset();
+	m_UI.OnReset();
 
 	if(m_pEditor != nullptr)
 	{
@@ -2028,6 +2068,8 @@ void CGameClient::UpdatePositions()
 
 void CGameClient::OnRender()
 {
+	// 地图库和结算卡共享封面缓存，菜单关闭时仍完成后台任务。
+	m_MapCovers.Update(Http(), Engine(), Graphics(), Storage(), Client()->LocalTime());
 	UpdateQmAxiomPrediction();
 	m_HudEditor.BeginRenderFrame();
 	CQmIconFrameColorClock::BeginFrame(static_cast<double>(time_get()) / static_cast<double>(time_freq()));
@@ -2181,6 +2223,7 @@ void CGameClient::OnRender()
 		for(auto &pComponent : m_vpAll)
 			RenderComponent(pComponent);
 	}
+	m_UI.OnRenderTooltip();
 	LogPerfStage(this, "components_total", ComponentsTimer.ElapsedMs());
 
 	// clear all events/input for this frame
@@ -2297,6 +2340,7 @@ CQmStutterCapture::SFrame CGameClient::QmStutterFrameContext()
 	{
 		Frame.m_Frame = Client()->PerfFrame();
 		Frame.m_FrameMs = Client()->RenderFrameTime() * 1000.0;
+		Frame.m_RenderLimit = Client()->PerfRenderLimit();
 		Frame.m_Online = Client()->State() == IClient::STATE_ONLINE;
 	}
 	Frame.m_pUser = this;
@@ -2328,6 +2372,7 @@ void CGameClient::OnDummyDisconnect()
 	m_Chat.InvalidateOutgoingConnection(IClient::CONN_DUMMY);
 	TClientComponent().CancelSoloSplit();
 	m_aLocalIds[1] = -1;
+	m_QmDummyDistanceLink = {};
 	m_aDDRaceMsgSent[1] = false;
 	m_aShowOthers[1] = SHOW_OTHERS_NOT_SET;
 	m_aEnableSpectatorCount[1] = -1;
@@ -2541,7 +2586,7 @@ void CGameClient::RenderQmMonitoringHud(float GraphX, float GraphSpacing)
 		Graphics()->ScreenHeight(),
 		GraphX,
 		GraphSpacing);
-	m_QmMonitoring.RenderHud(Layout.m_PanelRect);
+	m_QmMonitoring.RenderHud(Layout);
 }
 
 void CGameClient::FormatStreamerClan(int ClientId, char *pBuf, int BufSize) const
@@ -2845,6 +2890,11 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dumm
 			{
 				m_Chat.OnMessage(MsgId, pRawMsg, Conn);
 			}
+		}
+		else if(MsgId == NETMSGTYPE_SV_MODERATORALERT)
+		{
+			// 管理员警告可能只发给 dummy 连接，必须单独分发。
+			m_ImportantAlert.OnMessage(MsgId, pRawMsg);
 		}
 		return; // no need of all that stuff for the dummy
 	}
@@ -3212,6 +3262,7 @@ bool CGameClient::QmUiAnimationsIdle() const
 
 void CGameClient::OnShutdown()
 {
+	CancelConnectionResourcePreparation();
 	// 退出前结算进行中的 stutter 窗口，避免最后的诊断数据丢失
 	if(m_QmStutterCapture.Active())
 		m_QmStutterCapture.Finish(QmStutterFrameContext());
@@ -3219,6 +3270,7 @@ void CGameClient::OnShutdown()
 	for(auto &pComponent : m_vpAll)
 		pComponent->OnShutdown();
 
+	m_MapCovers.Shutdown(Graphics());
 	m_UI.OnShutdown();
 	m_LocalServer.KillServer();
 }
@@ -3816,6 +3868,28 @@ void CGameClient::InvalidateSnapshot()
 		SnapCollectEntities();
 }
 
+void CGameClient::EvolveSnapshotCharacter(CNetObj_Character *pCharacter, int Tick)
+{
+	CQmAxiomQuadTimeScope EvolveQuadTime(m_Collision, pCharacter->m_Tick, Client()->GameTickSpeed());
+	CWorldCore TempWorld;
+	CCharacterCore TempCore = CCharacterCore();
+	CTeamsCore TempTeams = CTeamsCore();
+	TempCore.Init(&TempWorld, Collision(), &TempTeams);
+	TempCore.Read(pCharacter);
+	TempCore.m_ActiveWeapon = pCharacter->m_Weapon;
+
+	while(pCharacter->m_Tick < Tick)
+	{
+		pCharacter->m_Tick++;
+		m_Collision.SetQmAxiomQuadTick(pCharacter->m_Tick, Client()->GameTickSpeed());
+		TempCore.Tick(false);
+		TempCore.Move();
+		TempCore.Quantize();
+	}
+
+	TempCore.Write(pCharacter);
+}
+
 void CGameClient::OnNewSnapshot(bool DummySwapped)
 {
 	UpdateQmAxiomPrediction();
@@ -3826,26 +3900,6 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 		if(QmPerfEnabled())
 			LogPerfStage(this, pStage, SnapshotStageTimer.ElapsedMs());
 		SnapshotStageTimer.Reset();
-	};
-	auto &&Evolve = [this](CNetObj_Character *pCharacter, int Tick) {
-		CQmAxiomQuadTimeScope EvolveQuadTime(m_Collision, pCharacter->m_Tick, Client()->GameTickSpeed());
-		CWorldCore TempWorld;
-		CCharacterCore TempCore = CCharacterCore();
-		CTeamsCore TempTeams = CTeamsCore();
-		TempCore.Init(&TempWorld, Collision(), &TempTeams);
-		TempCore.Read(pCharacter);
-		TempCore.m_ActiveWeapon = pCharacter->m_Weapon;
-
-		while(pCharacter->m_Tick < Tick)
-		{
-			pCharacter->m_Tick++;
-			m_Collision.SetQmAxiomQuadTick(pCharacter->m_Tick, Client()->GameTickSpeed());
-			TempCore.Tick(false);
-			TempCore.Move();
-			TempCore.Quantize();
-		}
-
-		TempCore.Write(pCharacter);
 	};
 
 	if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
@@ -3983,7 +4037,8 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 
 					if(m_aClients[Item.m_Id].m_FinishTimeSeconds == FinishTime::UNSET)
 						HasUnsetDDNetFinishTimes = true;
-					else if(m_aClients[Item.m_Id].m_FinishTimeMillis % 10 != 0)
+					// 秒以下的精度只在计分板里展示一小时以内的成绩。
+					else if(m_aClients[Item.m_Id].m_FinishTimeSeconds < 60 * 60 && m_aClients[Item.m_Id].m_FinishTimeMillis % 10 != 0)
 						HasTrueMillisecondFinishTimes = true;
 
 					if(Item.m_Id == m_Snap.m_LocalClientId && (m_aClients[Item.m_Id].m_Paused || m_aClients[Item.m_Id].m_Spec))
@@ -4017,9 +4072,9 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 						}
 
 						if(EvolvePrev && m_Snap.m_aCharacters[Item.m_Id].m_Prev.m_Tick)
-							Evolve(&m_Snap.m_aCharacters[Item.m_Id].m_Prev, Client()->PrevGameTick(g_Config.m_ClDummy));
+							EvolveSnapshotCharacter(&m_Snap.m_aCharacters[Item.m_Id].m_Prev, Client()->PrevGameTick(g_Config.m_ClDummy));
 						if(EvolveCur && m_Snap.m_aCharacters[Item.m_Id].m_Cur.m_Tick)
-							Evolve(&m_Snap.m_aCharacters[Item.m_Id].m_Cur, Client()->GameTick(g_Config.m_ClDummy));
+							EvolveSnapshotCharacter(&m_Snap.m_aCharacters[Item.m_Id].m_Cur, Client()->GameTick(g_Config.m_ClDummy));
 
 						m_aClients[Item.m_Id].m_Snapped = *((const CNetObj_Character *)Item.m_pData);
 						m_aClients[Item.m_Id].m_Evolved = m_Snap.m_aCharacters[Item.m_Id].m_Cur;
@@ -6848,6 +6903,20 @@ IGameClient *CreateGameClient()
 	return new CGameClient();
 }
 
+const CTuningParams &CGameClient::HookCollTuning(int ClientId) const
+{
+	const int Active = g_Config.m_ClDummy;
+	const bool IsPredicted = ClientId >= 0 && ClientId < MAX_CLIENTS && m_aClients[ClientId].m_IsPredicted;
+	const auto Source = QmHookCollTuningClient(IsPredicted, ClientId, m_aLocalIds[Active]);
+	return Source ? m_aClients[*Source].m_Predicted.m_Tuning : m_aTuning[Active];
+}
+
+vec2 CGameClient::HookCollTargetPosition(int ClientId, float Intra) const
+{
+	const auto &Character = m_Snap.m_aCharacters[ClientId];
+	return mix(vec2(Character.m_Prev.m_X, Character.m_Prev.m_Y), vec2(Character.m_Cur.m_X, Character.m_Cur.m_Y), Intra);
+}
+
 void CGameClient::UpdateHookCollTargets()
 {
 	m_HookCollCandidates.Reset();
@@ -6862,9 +6931,7 @@ void CGameClient::UpdateHookCollTargets()
 		Target.m_Super = Data.m_Super;
 		Target.m_Solo = Data.m_Solo;
 		Target.m_HookHitDisabled = Data.m_HookHitDisabled;
-		const CNetObj_Character &Prev = m_Snap.m_aCharacters[i].m_Prev;
-		const CNetObj_Character &Cur = m_Snap.m_aCharacters[i].m_Cur;
-		Target.m_Pos = mix(vec2(Prev.m_X, Prev.m_Y), vec2(Cur.m_X, Cur.m_Y), Intra);
+		Target.m_Pos = HookCollTargetPosition(i, Intra);
 	}
 }
 
@@ -6880,7 +6947,7 @@ int CGameClient::IntersectCharacter(vec2 HookPos, vec2 NewPos, vec2 &NewPos2, in
 		const bool IsOneSolo = Target.m_Solo || OwnTarget.m_Solo;
 		return IsOneSuper || (m_Teams.SameTeam(Id, OwnId) && !IsOneSolo && !OwnTarget.m_HookHitDisabled);
 	});
-	const float Radius = CCharacterCore::PhysicalSize() + 2.0f;
+	const float Radius = QmHookCollTargetRadius;
 	const auto PositionOf = [&](int Id) { return m_aHookCollTargets[Id].m_Pos; };
 	const SQmHookCollSegment Segment(HookPos, NewPos, Radius);
 	const auto &vNearby = m_HookCollSpatialIndex.GetCandidates(Segment, vCandidates, PositionOf, [&](int Id) { return m_aHookCollTargets[Id].m_Valid; });
@@ -7796,6 +7863,28 @@ void CGameClient::OnGraphicsResourcesReset()
 	m_NamePlates.OnGraphicsResourcesReset();
 }
 
+CGameClient::CImageAsset CGameClient::LoadAssetFromPath(const char *pPath, bool AsDir, int AssetId, const char *pDirectory) const
+{
+	CImageAsset LoadedAsset;
+	LoadedAsset.m_IsBlank = IsBlankAssetName(pPath);
+	LoadedAsset.m_IsDefault = str_comp(pPath, "default") == 0 || LoadedAsset.m_IsBlank;
+	if(LoadedAsset.m_IsDefault)
+	{
+		str_copy(LoadedAsset.m_aPath, g_pData->m_aImages[AssetId].m_pFilename);
+	}
+	else if(AsDir)
+	{
+		str_format(LoadedAsset.m_aPath, sizeof(LoadedAsset.m_aPath), "assets/%s/%s/%s", pDirectory, pPath, g_pData->m_aImages[AssetId].m_pFilename);
+	}
+	else
+	{
+		str_format(LoadedAsset.m_aPath, sizeof(LoadedAsset.m_aPath), "assets/%s/%s.png", pDirectory, pPath);
+	}
+
+	Graphics()->LoadPng(LoadedAsset.m_ImageInfo, LoadedAsset.m_aPath, IStorage::TYPE_ALL);
+	return LoadedAsset;
+}
+
 void CGameClient::LoadGameSkin(const char *pPath, bool AsDir)
 {
 	if(m_GameSkinLoaded)
@@ -7903,26 +7992,11 @@ void CGameClient::LoadGameSkin(const char *pPath, bool AsDir)
 		m_GameSkinLoaded = false;
 	}
 
-	char aPath[IO_MAX_PATH_LENGTH];
-	bool IsDefault = false;
-	// "blank" 是客户端自带的空白材质：以内置默认图为基准造一张全透明图（尺寸与格式一致），
-	// 关闭 qm_blank_asset_fallback 时清空，开启时直接使用默认图。
-	const bool IsBlankAsset = IsBlankAssetName(pPath);
-	if(str_comp(pPath, "default") == 0 || IsBlankAsset)
-	{
-		str_copy(aPath, g_pData->m_aImages[IMAGE_GAME].m_pFilename);
-		IsDefault = true;
-	}
-	else
-	{
-		if(AsDir)
-			str_format(aPath, sizeof(aPath), "assets/game/%s/%s", pPath, g_pData->m_aImages[IMAGE_GAME].m_pFilename);
-		else
-			str_format(aPath, sizeof(aPath), "assets/game/%s.png", pPath);
-	}
-
-	CImageInfo ImgInfo;
-	bool PngLoaded = Graphics()->LoadPng(ImgInfo, aPath, IStorage::TYPE_ALL);
+	CImageAsset LoadedAsset = LoadAssetFromPath(pPath, AsDir, IMAGE_GAME, "game");
+	CImageInfo &ImgInfo = LoadedAsset.m_ImageInfo;
+	const bool PngLoaded = LoadedAsset.IsLoaded();
+	const bool IsDefault = LoadedAsset.m_IsDefault;
+	const bool IsBlankAsset = LoadedAsset.m_IsBlank;
 	// 开关打开时 blank 直接按默认图加载（不清空、不再另解码一份回退源），结果等价且省一半解码。
 	if(IsBlankAsset && PngLoaded && g_Config.m_QmBlankAssetFallback == 0)
 		ClearImageToTransparent(ImgInfo);
@@ -7938,8 +8012,8 @@ void CGameClient::LoadGameSkin(const char *pPath, bool AsDir)
 	}
 
 	const bool ImageValid = PngLoaded &&
-				Graphics()->CheckImageDivisibility(aPath, ImgInfo, g_pData->m_aSprites[SPRITE_HEALTH_FULL].m_pSet->m_Gridx, g_pData->m_aSprites[SPRITE_HEALTH_FULL].m_pSet->m_Gridy, true) &&
-				Graphics()->IsImageFormatRgba(aPath, ImgInfo);
+				Graphics()->CheckImageDivisibility(LoadedAsset.m_aPath, ImgInfo, g_pData->m_aSprites[SPRITE_HEALTH_FULL].m_pSet->m_Gridx, g_pData->m_aSprites[SPRITE_HEALTH_FULL].m_pSet->m_Gridy, true) &&
+				Graphics()->IsImageFormatRgba(LoadedAsset.m_aPath, ImgInfo);
 	if(!PngLoaded && !IsDefault)
 	{
 		if(AsDir)
@@ -8092,26 +8166,11 @@ void CGameClient::LoadEmoticonsSkin(const char *pPath, bool AsDir)
 		m_EmoticonsSkinLoaded = false;
 	}
 
-	char aPath[IO_MAX_PATH_LENGTH];
-	bool IsDefault = false;
-	// "blank" 是客户端自带的空白材质：以内置默认图为基准造一张全透明图（尺寸与格式一致），
-	// 关闭 qm_blank_asset_fallback 时清空，开启时直接使用默认图。
-	const bool IsBlankAsset = IsBlankAssetName(pPath);
-	if(str_comp(pPath, "default") == 0 || IsBlankAsset)
-	{
-		str_copy(aPath, g_pData->m_aImages[IMAGE_EMOTICONS].m_pFilename);
-		IsDefault = true;
-	}
-	else
-	{
-		if(AsDir)
-			str_format(aPath, sizeof(aPath), "assets/emoticons/%s/%s", pPath, g_pData->m_aImages[IMAGE_EMOTICONS].m_pFilename);
-		else
-			str_format(aPath, sizeof(aPath), "assets/emoticons/%s.png", pPath);
-	}
-
-	CImageInfo ImgInfo;
-	bool PngLoaded = Graphics()->LoadPng(ImgInfo, aPath, IStorage::TYPE_ALL);
+	CImageAsset LoadedAsset = LoadAssetFromPath(pPath, AsDir, IMAGE_EMOTICONS, "emoticons");
+	CImageInfo &ImgInfo = LoadedAsset.m_ImageInfo;
+	const bool PngLoaded = LoadedAsset.IsLoaded();
+	const bool IsDefault = LoadedAsset.m_IsDefault;
+	const bool IsBlankAsset = LoadedAsset.m_IsBlank;
 	// 开关打开时 blank 直接按默认图加载（不清空、不再另解码一份回退源），结果等价且省一半解码。
 	if(IsBlankAsset && PngLoaded && g_Config.m_QmBlankAssetFallback == 0)
 		ClearImageToTransparent(ImgInfo);
@@ -8146,7 +8205,7 @@ void CGameClient::LoadEmoticonsSkin(const char *pPath, bool AsDir)
 			LoadEmoticonsSkin(pPath, true);
 		return;
 	}
-	else if(PngLoaded && Graphics()->CheckImageDivisibility(aPath, ImgInfo, g_pData->m_aSprites[SPRITE_OOP].m_pSet->m_Gridx, g_pData->m_aSprites[SPRITE_OOP].m_pSet->m_Gridy, true) && Graphics()->IsImageFormatRgba(aPath, ImgInfo))
+	else if(PngLoaded && Graphics()->CheckImageDivisibility(LoadedAsset.m_aPath, ImgInfo, g_pData->m_aSprites[SPRITE_OOP].m_pSet->m_Gridx, g_pData->m_aSprites[SPRITE_OOP].m_pSet->m_Gridy, true) && Graphics()->IsImageFormatRgba(LoadedAsset.m_aPath, ImgInfo))
 	{
 		// 表情属装饰性资源：默认（qm_blank_asset_fallback 关闭）时皮肤作者有意留空的格子保持空白；
 		// 打开开关才按官方行为用同图集默认图的同位置贴图补齐。回退成功的那条日志由引擎打印。
@@ -8169,26 +8228,11 @@ void CGameClient::LoadEmoticonsSkin(const char *pPath, bool AsDir)
 
 void CGameClient::LoadParticlesSkin(const char *pPath, bool AsDir)
 {
-	char aPath[IO_MAX_PATH_LENGTH];
-	bool IsDefault = false;
-	// "blank" 是客户端自带的空白材质：以内置默认图为基准造一张全透明图（尺寸与格式一致），
-	// 关闭 qm_blank_asset_fallback 时清空，开启时直接使用默认图。
-	const bool IsBlankAsset = IsBlankAssetName(pPath);
-	if(str_comp(pPath, "default") == 0 || IsBlankAsset)
-	{
-		str_copy(aPath, g_pData->m_aImages[IMAGE_PARTICLES].m_pFilename);
-		IsDefault = true;
-	}
-	else
-	{
-		if(AsDir)
-			str_format(aPath, sizeof(aPath), "assets/particles/%s/%s", pPath, g_pData->m_aImages[IMAGE_PARTICLES].m_pFilename);
-		else
-			str_format(aPath, sizeof(aPath), "assets/particles/%s.png", pPath);
-	}
-
-	CImageInfo ImgInfo;
-	bool PngLoaded = Graphics()->LoadPng(ImgInfo, aPath, IStorage::TYPE_ALL);
+	CImageAsset LoadedAsset = LoadAssetFromPath(pPath, AsDir, IMAGE_PARTICLES, "particles");
+	CImageInfo &ImgInfo = LoadedAsset.m_ImageInfo;
+	const bool PngLoaded = LoadedAsset.IsLoaded();
+	const bool IsDefault = LoadedAsset.m_IsDefault;
+	const bool IsBlankAsset = LoadedAsset.m_IsBlank;
 	// 开关打开时 blank 直接按默认图加载（不清空、不再另解码一份回退源），结果等价且省一半解码。
 	if(IsBlankAsset && PngLoaded && g_Config.m_QmBlankAssetFallback == 0)
 		ClearImageToTransparent(ImgInfo);
@@ -8203,7 +8247,7 @@ void CGameClient::LoadParticlesSkin(const char *pPath, bool AsDir)
 		if(Graphics()->LoadPng(ImgDefaultInfo, g_pData->m_aImages[IMAGE_PARTICLES].m_pFilename, IStorage::TYPE_ALL))
 			FallbackImgInfo = std::move(ImgDefaultInfo);
 	}
-	const bool ValidImage = PngLoaded && Graphics()->CheckImageDivisibility(aPath, ImgInfo, g_pData->m_aSprites[SPRITE_PART_SLICE].m_pSet->m_Gridx, g_pData->m_aSprites[SPRITE_PART_SLICE].m_pSet->m_Gridy, true) && Graphics()->IsImageFormatRgba(aPath, ImgInfo);
+	const bool ValidImage = PngLoaded && Graphics()->CheckImageDivisibility(LoadedAsset.m_aPath, ImgInfo, g_pData->m_aSprites[SPRITE_PART_SLICE].m_pSet->m_Gridx, g_pData->m_aSprites[SPRITE_PART_SLICE].m_pSet->m_Gridy, true) && Graphics()->IsImageFormatRgba(LoadedAsset.m_aPath, ImgInfo);
 	if(!ValidImage && !IsDefault)
 	{
 		ImgInfo.Free();
@@ -8306,26 +8350,11 @@ void CGameClient::LoadHudSkin(const char *pPath, bool AsDir)
 		m_HudSkinLoaded = false;
 	}
 
-	char aPath[IO_MAX_PATH_LENGTH];
-	bool IsDefault = false;
-	// "blank" 是客户端自带的空白材质：以内置默认图为基准造一张全透明图（尺寸与格式一致），
-	// 关闭 qm_blank_asset_fallback 时清空，开启时直接使用默认图。
-	const bool IsBlankAsset = IsBlankAssetName(pPath);
-	if(str_comp(pPath, "default") == 0 || IsBlankAsset)
-	{
-		str_copy(aPath, g_pData->m_aImages[IMAGE_HUD].m_pFilename);
-		IsDefault = true;
-	}
-	else
-	{
-		if(AsDir)
-			str_format(aPath, sizeof(aPath), "assets/hud/%s/%s", pPath, g_pData->m_aImages[IMAGE_HUD].m_pFilename);
-		else
-			str_format(aPath, sizeof(aPath), "assets/hud/%s.png", pPath);
-	}
-
-	CImageInfo ImgInfo;
-	bool PngLoaded = Graphics()->LoadPng(ImgInfo, aPath, IStorage::TYPE_ALL);
+	CImageAsset LoadedAsset = LoadAssetFromPath(pPath, AsDir, IMAGE_HUD, "hud");
+	CImageInfo &ImgInfo = LoadedAsset.m_ImageInfo;
+	const bool PngLoaded = LoadedAsset.IsLoaded();
+	const bool IsDefault = LoadedAsset.m_IsDefault;
+	const bool IsBlankAsset = LoadedAsset.m_IsBlank;
 	// 开关打开时 blank 直接按默认图加载（不清空、不再另解码一份回退源），结果等价且省一半解码。
 	if(IsBlankAsset && PngLoaded && g_Config.m_QmBlankAssetFallback == 0)
 		ClearImageToTransparent(ImgInfo);
@@ -8360,7 +8389,7 @@ void CGameClient::LoadHudSkin(const char *pPath, bool AsDir)
 			LoadHudSkin(pPath, true);
 		return;
 	}
-	else if(PngLoaded && Graphics()->CheckImageDivisibility(aPath, ImgInfo, g_pData->m_aSprites[SPRITE_HUD_AIRJUMP].m_pSet->m_Gridx, g_pData->m_aSprites[SPRITE_HUD_AIRJUMP].m_pSet->m_Gridy, true) && Graphics()->IsImageFormatRgba(aPath, ImgInfo))
+	else if(PngLoaded && Graphics()->CheckImageDivisibility(LoadedAsset.m_aPath, ImgInfo, g_pData->m_aSprites[SPRITE_HUD_AIRJUMP].m_pSet->m_Gridx, g_pData->m_aSprites[SPRITE_HUD_AIRJUMP].m_pSet->m_Gridy, true) && Graphics()->IsImageFormatRgba(LoadedAsset.m_aPath, ImgInfo))
 	{
 		// HUD 图标是装饰性状态提示，且 set_hud 一直在新增 sprite（lock / team0 / practice /
 		// dummy 等都是后加的），旧皮肤这些格子空白属常态，不是资源损坏。皮肤是"完整替换"
@@ -8425,26 +8454,11 @@ void CGameClient::LoadExtrasSkin(const char *pPath, bool AsDir)
 		Graphics()->UnloadTexture(&Skin.m_SpriteHectagon);
 	};
 
-	char aPath[IO_MAX_PATH_LENGTH];
-	bool IsDefault = false;
-	// "blank" 是客户端自带的空白材质：以内置默认图为基准造一张全透明图（尺寸与格式一致），
-	// 关闭 qm_blank_asset_fallback 时清空，开启时直接使用默认图。
-	const bool IsBlankAsset = IsBlankAssetName(pPath);
-	if(str_comp(pPath, "default") == 0 || IsBlankAsset)
-	{
-		str_copy(aPath, g_pData->m_aImages[IMAGE_EXTRAS].m_pFilename);
-		IsDefault = true;
-	}
-	else
-	{
-		if(AsDir)
-			str_format(aPath, sizeof(aPath), "assets/extras/%s/%s", pPath, g_pData->m_aImages[IMAGE_EXTRAS].m_pFilename);
-		else
-			str_format(aPath, sizeof(aPath), "assets/extras/%s.png", pPath);
-	}
-
-	CImageInfo ImgInfo;
-	bool PngLoaded = Graphics()->LoadPng(ImgInfo, aPath, IStorage::TYPE_ALL);
+	CImageAsset LoadedAsset = LoadAssetFromPath(pPath, AsDir, IMAGE_EXTRAS, "extras");
+	CImageInfo &ImgInfo = LoadedAsset.m_ImageInfo;
+	const bool PngLoaded = LoadedAsset.IsLoaded();
+	const bool IsDefault = LoadedAsset.m_IsDefault;
+	const bool IsBlankAsset = LoadedAsset.m_IsBlank;
 	// 开关打开时 blank 直接按默认图加载（不清空、不再另解码一份回退源），结果等价且省一半解码。
 	if(IsBlankAsset && PngLoaded && g_Config.m_QmBlankAssetFallback == 0)
 		ClearImageToTransparent(ImgInfo);
@@ -8459,7 +8473,7 @@ void CGameClient::LoadExtrasSkin(const char *pPath, bool AsDir)
 		if(Graphics()->LoadPng(ImgDefaultInfo, g_pData->m_aImages[IMAGE_EXTRAS].m_pFilename, IStorage::TYPE_ALL))
 			FallbackImgInfo = std::move(ImgDefaultInfo);
 	}
-	const bool ValidImage = PngLoaded && Graphics()->CheckImageDivisibility(aPath, ImgInfo, g_pData->m_aSprites[SPRITE_PART_SNOWFLAKE].m_pSet->m_Gridx, g_pData->m_aSprites[SPRITE_PART_SNOWFLAKE].m_pSet->m_Gridy, true) && Graphics()->IsImageFormatRgba(aPath, ImgInfo);
+	const bool ValidImage = PngLoaded && Graphics()->CheckImageDivisibility(LoadedAsset.m_aPath, ImgInfo, g_pData->m_aSprites[SPRITE_PART_SNOWFLAKE].m_pSet->m_Gridx, g_pData->m_aSprites[SPRITE_PART_SNOWFLAKE].m_pSet->m_Gridy, true) && Graphics()->IsImageFormatRgba(LoadedAsset.m_aPath, ImgInfo);
 	// 回退图是手动管理的 CImageInfo（没有析构函数），而本函数有多条提前返回路径，
 	// 统一用这个幂等的 lambda 释放，避免漏掉某条路径造成整张解码图集泄漏。
 	auto &&FreeFallback = [&FallbackImgInfo]() {

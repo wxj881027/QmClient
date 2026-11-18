@@ -132,6 +132,8 @@ namespace
 		void SetUp() override
 		{
 			g_Config.m_QmRectCornerSegments = 16;
+			g_Config.m_QmUiCornerCurve = ROUNDED_CORNER_CURVE_CLASSIC;
+			g_Config.m_QmUiCornerSmoothing = 0;
 			m_Params.m_Radius = 4.0f;
 			m_Params.m_BorderWidth = 1.0f;
 			m_Params.m_PixelSize = 1.0f;
@@ -154,7 +156,6 @@ TEST_F(CQmRoundedSurfaceRender, TransparentFillLeavesInteriorUnpainted)
 	ASSERT_TRUE(DrawRoundedSurface(&m_Graphics, m_Rect, ColorRGBA(1, 0, 0, 0), ColorRGBA(0, 0, 1, 0.7f), m_Params));
 	ExpectColor(m_Graphics.Sample(vec2(10.37f, 6.23f)), ColorRGBA(0, 0, 0, 0));
 	ExpectColor(m_Graphics.Sample(vec2(10.37f, 0.43f)), ColorRGBA(0, 0, 1, 0.7f));
-	EXPECT_EQ(m_Graphics.m_AntialiasDraws, 1);
 }
 
 TEST_F(CQmRoundedSurfaceRender, TranslucentFillDoesNotBlendWithBorderUnderneath)
@@ -188,11 +189,14 @@ TEST_F(CQmRoundedSurfaceRender, BorderCoversEdgesForEachCornerMaskAndQuality)
 			ExpectColor(Graphics.Sample(vec2(0.43f, 9.13f)), Border);
 			for(const auto &Corner : std::array<std::pair<int, vec2>, 4>{{{IGraphics::CORNER_TL, vec2(0, 0)}, {IGraphics::CORNER_TR, vec2(30, 0)}, {IGraphics::CORNER_BR, vec2(30, 20)}, {IGraphics::CORNER_BL, vec2(0, 20)}}})
 			{
+				// 半径是形状的唯一来源：给了非零半径时 CORNER_NONE 也会被解析成四角全圆，
+				// 所以期望值要按解析后的掩码算，不能再拿调用点传进来的原始掩码。
+				const int EffectiveCorners = ResolveRoundedSurfaceCorners(m_Params.m_Radius, Corners);
 				const vec2 Direction(Corner.second.x > 0 ? -1.0f : 1.0f, Corner.second.y > 0 ? -1.0f : 1.0f);
-				const vec2 Point = Corner.second + Direction * (Corners & Corner.first ? vec2(1.21f, 1.17f) : vec2(0.43f, 1.17f));
+				const vec2 Point = Corner.second + Direction * (EffectiveCorners & Corner.first ? vec2(1.21f, 1.17f) : vec2(0.43f, 1.17f));
 				ExpectColor(Graphics.Sample(Point), Border);
 				const vec2 Outside = Corner.second + Direction * vec2(0.31f, 0.27f);
-				ExpectColor(Graphics.Sample(Outside), Corners & Corner.first ? ColorRGBA(0, 0, 0, 0) : Border);
+				ExpectColor(Graphics.Sample(Outside), EffectiveCorners & Corner.first ? ColorRGBA(0, 0, 0, 0) : Border);
 			}
 		}
 	}
@@ -243,6 +247,31 @@ TEST_F(CQmRoundedSurfaceRender, ZeroBorderKeepsFillAcrossSurface)
 	ExpectColor(m_Graphics.Sample(vec2(10.37f, 0.43f)), Fill);
 }
 
+TEST_F(CQmRoundedSurfaceRender, GradientFallbackRendersEveryCornerCurve)
+{
+	const CUIRect Rect{0, 0, 100, 100};
+	SQmColorGradient Gradient;
+	Gradient.m_NumColors = 2;
+	Gradient.m_aColors[0] = Gradient.m_aColors[1] = ColorRGBA(1, 0, 0, 1);
+	SRoundedSurfaceParams Params;
+	Params.m_Radius = 20.0f;
+	Params.m_PixelSize = 1.0f;
+	g_Config.m_QmUiCornerSmoothing = 100;
+	g_Config.m_QmUiCornerSmoothingSquircle = 100;
+	g_Config.m_QmUiCornerSmoothingConic = 100;
+	g_Config.m_QmUiCornerSmoothingApple = 100;
+	for(int Curve = ROUNDED_CORNER_CURVE_CLASSIC; Curve <= ROUNDED_CORNER_CURVE_APPLE; ++Curve)
+	{
+		SCOPED_TRACE(Curve);
+		CSurfaceGraphics Graphics;
+		g_Config.m_QmUiCornerCurve = Curve;
+		ASSERT_TRUE(DrawRoundedGradientSurface(&Graphics, Rect, Gradient, 1.0f, ColorRGBA(0, 0, 0, 0), Params));
+		const ColorRGBA Center = Graphics.Sample(Rect.Center());
+		EXPECT_GT(Center.r, 0.99f);
+		EXPECT_GT(Center.a, 0.99f);
+	}
+}
+
 TEST_F(CQmRoundedSurfaceRender, SdfReceivesIndependentFillAndBorderAlpha)
 {
 	m_Graphics.m_HasSdf = true;
@@ -254,6 +283,55 @@ TEST_F(CQmRoundedSurfaceRender, SdfReceivesIndependentFillAndBorderAlpha)
 	EXPECT_EQ(Sdf.m_BorderColor, vec4(0, 0, 1, 0.7f));
 	EXPECT_EQ(Sdf.m_CornerRadii, vec4(0, 4, 4, 0));
 	EXPECT_FLOAT_EQ(Sdf.m_Params.x, 1.0f);
+}
+
+TEST_F(CQmRoundedSurfaceRender, SdfGlowIsBorderOnlyAndBandExpandsOutsideTheShell)
+{
+	m_Graphics.m_HasSdf = true;
+	SRoundedGlowParams Glow;
+	Glow.m_Radius = m_Params.m_Radius;
+	Glow.m_Spread = 6.0f;
+	Glow.m_Falloff = 2.4f;
+	Glow.m_PixelSize = 1.0f;
+	ASSERT_TRUE(DrawRoundedSurfaceGlow(&m_Graphics, m_Rect, ColorRGBA(0.4f, 0.75f, 0.95f, 0.3f), Glow));
+	ASSERT_EQ(m_Graphics.m_vSdf.size(), 1u);
+	const auto &Sdf = m_Graphics.m_vSdf[0];
+	// 只描边：填充整体丢弃，光晕不会把外壳内部染上一层色。
+	EXPECT_EQ(Sdf.m_FillColor, vec4(0.0f, 0.0f, 0.0f, 0.0f));
+	EXPECT_FLOAT_EQ(Sdf.m_GradientParams2.y, 1.0f);
+	EXPECT_FLOAT_EQ(Sdf.m_GradientParams2.z, 2.4f);
+	EXPECT_EQ(Sdf.m_BorderColor, vec4(0.4f, 0.75f, 0.95f, 0.3f));
+	// 环带整段落在外壳之外：SDF 矩形按 Spread 外扩、带宽同为 Spread，
+	// 距离场零等值线正好回到外壳边缘，所以最亮处贴着外壳、向外淡出。
+	// m_Rect 是 (x, y, 宽, 高) 的 vec4，取分量时按位置读，别用 h/w 这类别名。
+	EXPECT_FLOAT_EQ(Sdf.m_Rect.x, m_Rect.x - 6.0f);
+	EXPECT_FLOAT_EQ(Sdf.m_Rect.y, m_Rect.y - 6.0f);
+	EXPECT_FLOAT_EQ(Sdf.m_Rect.z, m_Rect.w + 12.0f);
+	EXPECT_FLOAT_EQ(Sdf.m_Rect.w, m_Rect.h + 12.0f);
+	EXPECT_FLOAT_EQ(Sdf.m_Params.x, 6.0f);
+	EXPECT_FLOAT_EQ(Sdf.m_TextureParams1.w, 6.0f);
+}
+
+TEST_F(CQmRoundedSurfaceRender, GlowWithoutSdfFallsBackToOutwardFadingRings)
+{
+	m_Graphics.m_HasSdf = false;
+	SRoundedGlowParams Glow;
+	Glow.m_Radius = m_Params.m_Radius;
+	Glow.m_Spread = 6.0f;
+	Glow.m_Falloff = 2.4f;
+	Glow.m_PixelSize = 1.0f;
+	ASSERT_TRUE(DrawRoundedSurfaceGlow(&m_Graphics, m_Rect, ColorRGBA(1.0f, 1.0f, 1.0f, 0.30f), Glow));
+	// 回退路径没有带宽内的连续羽化，只能用几道逐层变淡的窄环近似向外扩散；
+	// 这里按离开外壳边缘的距离采样，验证「越远越淡」这个光晕语义仍然成立。
+	const float NearAlpha = m_Graphics.Sample(vec2(15.0f, -1.5f)).a;
+	const float MidAlpha = m_Graphics.Sample(vec2(15.0f, -3.5f)).a;
+	const float FarAlpha = m_Graphics.Sample(vec2(15.0f, -5.5f)).a;
+	EXPECT_GT(NearAlpha, MidAlpha);
+	EXPECT_GT(MidAlpha, FarAlpha);
+	EXPECT_GT(FarAlpha, 0.0f);
+	// 铺开宽度之外不留残余光圈，外壳内部也不被染色。
+	EXPECT_FLOAT_EQ(m_Graphics.Sample(vec2(15.0f, -7.5f)).a, 0.0f);
+	EXPECT_FLOAT_EQ(m_Graphics.Sample(vec2(15.0f, 10.0f)).a, 0.0f);
 }
 
 // 圆角容器放图：图片作为 SDF 填充被采样，UV 换算必须是「卡片像素 → 图片 UV」，

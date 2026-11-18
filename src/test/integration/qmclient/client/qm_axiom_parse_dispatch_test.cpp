@@ -80,7 +80,7 @@ namespace
 	{
 	public:
 		std::vector<std::shared_ptr<CResponse>> m_vRequests;
-		std::shared_ptr<IQmAxiomHttpRequest> Get(const char *, int, int, int64_t) override
+		std::shared_ptr<IQmAxiomHttpRequest> Get(const char *, const char *, int, int, int64_t) override
 		{
 			auto pRequest = std::make_shared<CResponse>();
 			m_vRequests.push_back(pRequest);

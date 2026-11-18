@@ -307,6 +307,50 @@ TEST(Net, Ipv4AndIpv6Work)
 	net_udp_close(Socket2);
 }
 
+TEST(Net, DualStackBindFailsWhenIpv4AddressInUse)
+{
+	NETADDR Ipv6Probe = {};
+	ASSERT_EQ(net_addr_from_str(&Ipv6Probe, "[::1]"), 0);
+	NETSOCKET Ipv6ProbeSocket = net_udp_create(Ipv6Probe);
+	if(!Ipv6ProbeSocket)
+		GTEST_SKIP() << "IPv6 loopback is unavailable";
+	net_udp_close(Ipv6ProbeSocket);
+
+	NETADDR BindAddr = {};
+	BindAddr.type = NETTYPE_IPV4;
+	NETSOCKET Ipv4Socket = nullptr;
+	for(int Attempt = 0; Attempt < 100 && !Ipv4Socket; ++Attempt)
+	{
+		BindAddr.port = secure_rand_below(65535 - 1024) + 1024;
+		Ipv4Socket = net_udp_create(BindAddr);
+	}
+	ASSERT_NE(Ipv4Socket, nullptr);
+
+	BindAddr.type = NETTYPE_IPV4 | NETTYPE_IPV6;
+	EXPECT_EQ(net_udp_create(BindAddr), nullptr);
+	net_udp_close(Ipv4Socket);
+
+	NETADDR TcpIpv6Probe = {};
+	ASSERT_EQ(net_addr_from_str(&TcpIpv6Probe, "[::1]"), 0);
+	NETSOCKET TcpIpv6ProbeSocket = net_tcp_create(TcpIpv6Probe);
+	if(!TcpIpv6ProbeSocket)
+		GTEST_SKIP() << "IPv6 loopback TCP is unavailable";
+	net_tcp_close(TcpIpv6ProbeSocket);
+
+	BindAddr.port = 0;
+	NETSOCKET TcpIpv4Socket = nullptr;
+	for(int Attempt = 0; Attempt < 100 && !TcpIpv4Socket; ++Attempt)
+	{
+		BindAddr.port = secure_rand_below(65535 - 1024) + 1024;
+		TcpIpv4Socket = net_tcp_create(BindAddr);
+	}
+	ASSERT_NE(TcpIpv4Socket, nullptr);
+
+	BindAddr.type = NETTYPE_IPV4 | NETTYPE_IPV6;
+	EXPECT_EQ(net_tcp_create(BindAddr), nullptr);
+	net_tcp_close(TcpIpv4Socket);
+}
+
 TEST(Net, FailedUdpSendDoesNotCountAsSentTraffic)
 {
 	NETSOCKET Socket = BindUdpSocket(0);

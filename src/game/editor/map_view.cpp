@@ -290,7 +290,7 @@ void CEditor::DoMapEditor(CUIRect View)
 		}
 
 		MapView()->RenderGroupBorder();
-		MapView()->MapGrid()->OnRender(View);
+		MapView()->MapGrid()->Render();
 	}
 
 	const bool ShouldPan = Ui()->HotItem() == MapView() && ((Input()->ModifierIsPressed() && Ui()->MouseButton(0)) || Ui()->MouseButton(2));

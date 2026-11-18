@@ -19,7 +19,7 @@ namespace
 		void Load(std::initializer_list<int> Ticks)
 		{
 			ASSERT_NO_FATAL_FAILURE(m_State.CreateTimeline(Ticks));
-			ASSERT_EQ(m_Player.Load(m_State.m_pStorage.get(), nullptr, "source.demo", IStorage::TYPE_SAVE, false), 0);
+			ASSERT_EQ(m_Player.Load(m_State.m_pStorage.get(), "source.demo", IStorage::TYPE_SAVE, false), 0);
 		}
 	};
 }

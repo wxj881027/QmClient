@@ -103,17 +103,27 @@ TEST(QmMonitoringRuntimeContract, RollbackAmountUsesNegativeGameTimeMargin)
 	EXPECT_FLOAT_EQ(QmComputeRollbackMs(std::numeric_limits<float>::quiet_NaN()), -1.0f);
 }
 
-TEST(QmMonitoringRuntimeContract, PeakSelectionPrefersLatestMatchingPeak)
+TEST(QmMonitoringRuntimeContract, FrameBarsKeepNewestSampleOnRightAcrossWrap)
 {
-	std::array<float, 8> aHistory = {41.0f, 39.0f, 41.0f, 24.0f, 24.0f, 18.0f, 24.0f, 17.0f};
-	EXPECT_EQ(QmFindLatestPeakIndex(aHistory, 0, 8), 2);
-	EXPECT_EQ(QmFindLatestAbsolutePeakIndex(aHistory, 0, 8), 2);
+	using namespace ui_token::hud::debug_graph;
+	std::array<float, QM_MONITORING_HISTORY_CAPACITY> aHistory;
+	aHistory.fill(GRAPH_MAX_MS);
+	aHistory.back() = std::numeric_limits<float>::quiet_NaN();
+	aHistory.front() = FRAME_BUDGET_MS;
+	EXPECT_FLOAT_EQ(QmMonitoringBarFraction(aHistory, 1, 3, BAR_COUNT - 1), 0.5f);
+	EXPECT_FLOAT_EQ(QmMonitoringBarFraction(aHistory, 1, 3, BAR_COUNT - 2), 0.0f);
+	EXPECT_FLOAT_EQ(QmMonitoringBarFraction(aHistory, 1, 3, BAR_COUNT - 3), 1.0f);
+	EXPECT_FLOAT_EQ(QmMonitoringBarFraction(aHistory, 1, 3, BAR_COUNT - 4), 0.0f);
 }
 
-TEST(QmMonitoringRuntimeContract, SignedPeakSelectionUsesLatestAbsolutePeak)
+TEST(QmMonitoringRuntimeContract, LongFrameSaturatesWithoutRescalingAdjacentBars)
 {
-	std::array<float, 8> aHistory = {-7.0f, 5.0f, -9.0f, 3.0f, 9.0f, 4.0f, 8.0f, 2.0f};
-	EXPECT_EQ(QmFindLatestAbsolutePeakIndex(aHistory, 0, 8), 4);
+	using namespace ui_token::hud::debug_graph;
+	std::array<float, QM_MONITORING_HISTORY_CAPACITY> aHistory{};
+	aHistory[0] = FRAME_BUDGET_MS;
+	aHistory[1] = 500.0f;
+	EXPECT_FLOAT_EQ(QmMonitoringBarFraction(aHistory, 2, 2, BAR_COUNT - 2), 0.5f);
+	EXPECT_FLOAT_EQ(QmMonitoringBarFraction(aHistory, 2, 2, BAR_COUNT - 1), 1.0f);
 }
 
 TEST(QmMonitoringLayoutContract, UiScaleGrowsOnHighResolutionScreens)
@@ -198,65 +208,30 @@ TEST(QmMonitoringRuntimeContract, HistoryPercentileUsesRecentSamples)
 	EXPECT_FLOAT_EQ(QmComputeHistoryPercentile(aHistory, 0, 0, 95.0f), -1.0f);
 }
 
-TEST(QmMonitoringRuntimeContract, HistoryStatsIgnoreUnavailableSamples)
+TEST(QmMonitoringLayoutContract, CompactOverlayStaysInUpperRightAtDesktopResolutions)
 {
-	const float InvalidMetric = std::numeric_limits<float>::quiet_NaN();
-	const std::array<float, 4> aHistory = {InvalidMetric, 10.0f, InvalidMetric, 20.0f};
-	const SQmHistoryStats Stats = QmComputeHistoryStats(aHistory, 0, 4);
-	EXPECT_TRUE(Stats.m_HasData);
-	EXPECT_FLOAT_EQ(Stats.m_Current, 20.0f);
-	EXPECT_FLOAT_EQ(Stats.m_Min, 10.0f);
-	EXPECT_FLOAT_EQ(Stats.m_Max, 20.0f);
-	EXPECT_FLOAT_EQ(Stats.m_Average, 15.0f);
+	for(const float Width : {1600.0f, 3840.0f})
+	{
+		const float Height = Width * 9.0f / 16.0f;
+		const float Spacing = std::round(Width / 100.0f);
+		const CUIRect Panel = QmComputeMonitoringHudLayout(Width, Height, Width - Spacing, Spacing).m_PanelRect;
+		EXPECT_FLOAT_EQ(Panel.x + Panel.w, Width - 2.0f * Spacing);
+		EXPECT_FLOAT_EQ(Panel.y, 2.0f * Spacing);
+		EXPECT_GT(Panel.w, 0.0f);
+		EXPECT_LT(Panel.w, Width / 5.0f);
+		EXPECT_GT(Panel.h, 0.0f);
+		EXPECT_LT(Panel.h, Height / 8.0f);
+	}
 }
 
-TEST(QmMonitoringLayoutContract, HudLayoutPlacesPanelLeftOfGraphColumn)
+TEST(QmMonitoringLayoutContract, TinyViewportFitsWholeOverlayWithoutCropping)
 {
-	// 紧凑化布局：1600x900 的 UiScale=5/6，面板宽受 760*UiScale 上限约束，
-	// 高受内容高度(674*UiScale+2*Padding)约束；面板右缘对齐 GraphX-GraphSpacing。
-	const SQmMonitoringHudLayout Layout = QmComputeMonitoringHudLayout(1600.0f, 900.0f, 1184.0f, 16.0f);
-	EXPECT_NEAR(Layout.m_PanelRect.w, 633.333f, 0.01f);
-	EXPECT_FLOAT_EQ(Layout.m_PanelRect.h, 582.0f);
-	EXPECT_NEAR(Layout.m_PanelRect.x, 534.667f, 0.01f);
-	EXPECT_FLOAT_EQ(Layout.m_PanelRect.y, 32.0f);
-	EXPECT_NEAR(Layout.m_ContentRect.x, 544.667f, 0.01f);
-	EXPECT_FLOAT_EQ(Layout.m_ContentRect.y, 42.0f);
-}
-
-TEST(QmMonitoringLayoutContract, BodyLayoutPreservesMetricsBudgetOnCompactPanels)
-{
-	const SQmMonitoringBodyLayout Layout = QmComputeMonitoringBodyLayout(260.0f, 1.0f);
-	const float AvailableBodyHeight = 260.0f - QM_MONITORING_HEADER_HEIGHT - QM_MONITORING_SECTION_GAP * 4.0f;
-	EXPECT_GE(Layout.m_MainGraphHeight, 0.0f);
-	EXPECT_GE(Layout.m_FpsGraphHeight, 0.0f);
-	EXPECT_GE(Layout.m_PrimaryCardsHeight, 0.0f);
-	EXPECT_GE(Layout.m_MetricsExtraHeight, 0.0f);
-	EXPECT_LE(Layout.m_MainGraphHeight, 190.0f);
-	EXPECT_LE(Layout.m_FpsGraphHeight, 120.0f);
-	EXPECT_LE(Layout.m_PrimaryCardsHeight, QM_MONITORING_PRIMARY_CARDS_HEIGHT);
-	EXPECT_NEAR(Layout.m_MainGraphHeight + Layout.m_FpsGraphHeight + Layout.m_PrimaryCardsHeight + Layout.m_MetricsExtraHeight, AvailableBodyHeight, 0.001f);
-	EXPECT_GT(Layout.m_PrimaryCardsHeight, 0.0f);
-}
-
-TEST(QmMonitoringLayoutContract, HudLayoutUsesLargerPanelOn4kScreens)
-{
-	// 4K 的 UiScale 被 clamp 到 1.8：面板宽 760*1.8=1368，高受内容高度约束 1257，
-	// 仍是 1080p(633x582) 的两倍以上，"更大面板"语义保持。
-	const SQmMonitoringHudLayout Layout = QmComputeMonitoringHudLayout(3840.0f, 2160.0f, 2842.0f, 38.0f);
-	EXPECT_FLOAT_EQ(Layout.m_PanelRect.w, 1368.0f);
-	EXPECT_GT(Layout.m_PanelRect.h, 1200.0f);
-	EXPECT_LE(Layout.m_PanelRect.y + Layout.m_PanelRect.h, 2160.0f);
-	EXPECT_FLOAT_EQ(Layout.m_ContentRect.x, 1458.0f);
-	EXPECT_FLOAT_EQ(Layout.m_ContentRect.y, 98.0f);
-}
-
-TEST(QmMonitoringLayoutContract, HudLayoutClampsPanelInsideScreenBounds)
-{
-	const SQmMonitoringHudLayout Layout = QmComputeMonitoringHudLayout(360.0f, 240.0f, 120.0f, 16.0f);
-	EXPECT_FLOAT_EQ(Layout.m_PanelRect.x, 0.0f);
-	EXPECT_FLOAT_EQ(Layout.m_PanelRect.y, 0.0f);
-	EXPECT_LE(Layout.m_PanelRect.x + Layout.m_PanelRect.w, 360.0f);
-	EXPECT_LE(Layout.m_PanelRect.y + Layout.m_PanelRect.h, 240.0f);
+	const auto Layout = QmComputeMonitoringHudLayout(100.0f, 30.0f, 98.0f, 2.0f);
+	EXPECT_GT(Layout.m_Scale, 0.0f);
+	EXPECT_GE(Layout.m_PanelRect.x, 0.0f);
+	EXPECT_GE(Layout.m_PanelRect.y, 0.0f);
+	EXPECT_LE(Layout.m_PanelRect.x + Layout.m_PanelRect.w, 100.0f);
+	EXPECT_LE(Layout.m_PanelRect.y + Layout.m_PanelRect.h, 30.0f);
 }
 
 TEST(QmMonitoringRuntimeContract, DeviceMetricsDefaultToUnavailable)

@@ -79,6 +79,7 @@
 #include <game/client/components/theme_scan.h>
 #include <game/client/gameclient.h>
 #include <game/client/qm_icon.h>
+#include <game/client/qm_icon_label.h>
 #include <game/client/ui_listbox.h>
 #include <game/localization.h>
 #include <game/version.h>
@@ -216,6 +217,109 @@ namespace
 {
 	constexpr float MENU_SWITCH_DURATION = ui_token::motion::PAGE_SLIDE.m_DurationSec;
 	constexpr float MENU_SWITCH_ALPHA_MAX = 0.12f;
+	// ---- ESC 菜单滑入/滑出 ----
+	// 整块壳层（顶部导航 + 内容区）从屏幕上方滑下来，关闭时原路收回上方。
+	// 位置只由一条 POS_Y 弹簧轨道承担：ζ<1 才有落位回弹，「曲线速率」来自弹簧
+	// 解析解，不是分段手写缓动。弹性档由 qm_menu_slide_feel 配置（设置-图像-视觉效果）。
+	// 弹簧只按「响应周期 + 阻尼比」这两个直觉量调，不按刚度/阻尼试错
+	// （与 SUiSpringConfig::FromResponse 的 Apple Fluid Interfaces 范式同一套）。
+	SUiSpringConfig MenuSlideSpring(bool Opening)
+	{
+		// 位移量 = 整屏高度，所以「过冲百分比」在这里会被放大成整百像素：
+		// ζ=0.70 的 4.6% 过冲就是 57px 的下压回弹，观感是面板掉下去又弹回来。
+		// 因此三档一律取高阻尼，弹性档只保留「落位时轻轻一顿」的量级。
+		float Response = 0.26f;
+		float DampingRatio = 0.88f;
+		switch(std::clamp(g_Config.m_QmMenuSlideFeel, 0, 2))
+		{
+		case 0: // 柔和：临界阻尼，零过冲
+			Response = 0.30f;
+			DampingRatio = 1.00f;
+			break;
+		case 2: // 弹性：约 1.9% 过冲（整屏高度下 ≈23px），落位一顿就走
+			Response = 0.24f;
+			DampingRatio = 0.78f;
+			break;
+		default: // 标准：约 0.35% 过冲，肉眼几乎不回弹
+			break;
+		}
+		// 收回比展开利落：关闭时缩短响应周期，别让面板在玩家眼前飘走。
+		// 收起必须单调——越过目标会从屏幕外再往回落一下，读作「收一半又冒头」。
+		if(!Opening)
+		{
+			Response *= 0.72f;
+			DampingRatio = std::max(DampingRatio, 1.0f);
+		}
+
+		SUiSpringConfig Spring = SUiSpringConfig::FromResponse(Response, DampingRatio);
+		// 位移单位是像素：0.5px 或 2px/s 以内即视为停，避免弹簧尾巴无限收敛。
+		Spring.m_RestEpsilon = 0.5f;
+		Spring.m_RestVelocity = 2.0f;
+		return Spring;
+	}
+
+	// 滑动节点键：固定一条，不按控件 id 派生（壳层每帧同一个节点）。
+	uint64_t MenuSlideNodeKey()
+	{
+		static const uint64_t s_NodeKey = BuildUiAnimNodeKey(static_cast<uint64_t>(str_quickhash("qm_menu_slide")), 0);
+		return s_NodeKey;
+	}
+
+	// 滑动距离取整屏高度：设置页、服务器信息页的内容铺满整屏，只有整页滑出
+	// 才是「从顶部滑离」；取一小段会变成「整页被抬起、底部露游戏画面」。
+	// 游戏页内容少（顶部约 110px），靠弹簧前段的加速度把它尽快送进来，
+	// 而不是缩短距离——距离一旦按页面改，同一手势在不同页面的位移就不一致。
+	float MenuSlideDistance(CUi *pUi)
+	{
+		if(pUi != nullptr && pUi->Screen() != nullptr && pUi->Screen()->h > 1.0f)
+			return pUi->Screen()->h;
+		return 600.0f;
+	}
+
+	// 起点只在「真正打开」那一刻写一次，之后绘制趟只读轨道值——不在绘制趟推进本地时钟
+	// （出图趟会把动画跑完、交互趟瞬变，这是 UI 全局术语规范 2.6 明令禁止的写法）。
+	// 目标与起点分开传：关闭途中按 ESC 折返时，目标回到 0 但不能钉起点，
+	// 否则面板会先瞬移到屏幕外再弹回来（狂按 ESC 时最刺眼的那种跳）。
+	void StartMenuSlide(CGameClient *pGameClient, CUi *pUi, float Target, bool SnapToStart)
+	{
+		if(pGameClient == nullptr || !pGameClient->UiRuntimeV2()->Enabled() || g_Config.m_QmUiMotionLevel <= 0)
+			return;
+
+		CUiV2AnimationRuntime &AnimRuntime = pGameClient->UiRuntimeV2()->AnimRuntime();
+		const uint64_t NodeKey = MenuSlideNodeKey();
+		const float Distance = MenuSlideDistance(pUi);
+		if(SnapToStart)
+			AnimRuntime.SetValue(NodeKey, EUiAnimProperty::POS_Y, -Distance);
+
+		SUiAnimRequest Request;
+		Request.m_NodeKey = NodeKey;
+		Request.m_Property = EUiAnimProperty::POS_Y;
+		Request.m_Target = Target;
+		Request.m_Transition.m_Driver = EUiAnimDriver::SPRING;
+		Request.m_Transition.m_Spring = MenuSlideSpring(Target >= 0.0f);
+		Request.m_Transition.m_Priority = 2;
+		// 同一条轨道反复改目标：REPLACE 让新目标立刻接管，从当前位置续接，不排队。
+		// 没有这条，「狂按 ESC」会变成一串排队动画，按几次就要等几次，完全不跟手。
+		Request.m_Transition.m_Interrupt = EUiAnimInterruptPolicy::REPLACE;
+		AnimRuntime.RequestAnimation(Request);
+	}
+
+	// 绘制趟只读。Instant 用于测量/背景趟与动效关闭：那里必须是终态，
+	// 否则测量与绘制不同源（偏移后的矩形会让命中区与绘制错位）。
+	float MenuSlideOffset(const CUiV2AnimationRuntime &AnimRuntime, bool Instant)
+	{
+		if(Instant)
+			return 0.0f;
+		return AnimRuntime.GetValue(MenuSlideNodeKey(), EUiAnimProperty::POS_Y, 0.0f);
+	}
+
+	// 出场的完成判据：轨道自然收敛（弹簧到 RestEpsilon 会自行结束），
+	// 不用「距离小于阈值」自己判 —— 那会把回弹阶段的过冲当成还没到位。
+	bool MenuSlideSettled(const CUiV2AnimationRuntime &AnimRuntime)
+	{
+		return !AnimRuntime.HasActiveAnimation(MenuSlideNodeKey(), EUiAnimProperty::POS_Y);
+	}
+
 	constexpr float MENU_TAB_HOVER_DURATION = ui_token::motion::HOVER_FADE.m_DurationSec;
 	constexpr float MENU_TAB_DEFAULT_X_OFFSET = 0.0f;
 	constexpr float MENU_TAB_DEFAULT_Y_OFFSET = 0.0f;
@@ -240,13 +344,17 @@ namespace
 	{
 		CUIRect Text = MenuButtonTextRect(pRect, FontFactor, HoverLift);
 		const float ResolvedTextFontSize = TextFontSize > 0.0f ? std::min(TextFontSize, Text.h * CUi::ms_FontmodHeight) : Text.h * CUi::ms_FontmodHeight;
-		const float IconSide = Text.h;
-		const float Gap = IconSide * 0.20f;
+		// 图标盒子由字形字号按 0.8 约定反推：直接用 Text.h 会比约定大 6%，
+		// 同一个按钮里图标比文字小半档，和下拉 chevron 也不同源。
+		const float IconSide = std::min(Text.h, ui_token::control::IconBox(ResolvedTextFontSize));
+		const float Gap = ui_token::control::IconTextGap(ResolvedTextFontSize);
 		float TextWidth = pTextRender->TextWidth(ResolvedTextFontSize, pText);
 		TextWidth = std::clamp(TextWidth, 1.0f, std::max(1.0f, Text.w - IconSide - Gap));
 		const float TotalWidth = IconSide + Gap + TextWidth;
 		const float StartX = Text.x + (Text.w - TotalWidth) * 0.5f;
-		*pIconRect = {StartX, Text.y, IconSide, IconSide};
+		// 图标盒与文字标签共用文本行；盒比行矮时按中间对齐，不能把盒顶贴到行顶，
+		// 否则站点纹理与字体图标都会整体偏上。x 已由整组居中算好，这里只收敛 y。
+		*pIconRect = QmIconLabelRect({StartX, Text.y, IconSide, Text.h}, IconSide, TEXTALIGN_ML);
 		*pTextRect = {StartX + IconSide + Gap, Text.y, TextWidth, Text.h};
 	}
 
@@ -370,13 +478,22 @@ namespace
 		return UiCacheRoundedBucket(Value, 10.0f);
 	}
 
-	std::string MenuTextCacheKey(CMenus::EMenuTextScope Scope, int Page, int Tab, int Subtab, const char *pTextId, const CMenus::SMenuTextStyleKey &StyleKey)
+	constexpr size_t MENU_TEXT_CACHE_KEY_SIZE = 512;
+
+	// 热路径直接格式化到调用方的栈缓冲，配合文本池的透明查找避免每个标签构造一次 std::string。
+	void FormatMenuTextCacheKey(char *pKey, size_t KeySize, CMenus::EMenuTextScope Scope, int Page, int Tab, int Subtab, const char *pTextId, const CMenus::SMenuTextStyleKey &StyleKey)
 	{
-		char aKey[512];
-		str_format(aKey, sizeof(aKey), "%s:%d:%d:%d:%s:fs%d:al%d:mw%d:us%d:hd%d:cm%d",
+		str_format(pKey, KeySize, "%s:%d:%d:%d:%s:fs%d:al%d:mw%d:us%d:hd%d:cm%d",
 			MenuTextScopeName(Scope), Page, Tab, Subtab, pTextId != nullptr ? pTextId : "",
 			MenuTextBucket(StyleKey.m_FontSize), StyleKey.m_Align, StyleKey.m_MaxWidthBucket,
 			StyleKey.m_UiScaleBucket, StyleKey.m_HiDpiScaleBucket, StyleKey.m_CompactMode);
+	}
+
+	// 计划收集等冷路径需要持有键本身，这里才真正分配字符串。
+	std::string MenuTextCacheKey(CMenus::EMenuTextScope Scope, int Page, int Tab, int Subtab, const char *pTextId, const CMenus::SMenuTextStyleKey &StyleKey)
+	{
+		char aKey[MENU_TEXT_CACHE_KEY_SIZE];
+		FormatMenuTextCacheKey(aKey, sizeof(aKey), Scope, Page, Tab, Subtab, pTextId, StyleKey);
 		return aKey;
 	}
 
@@ -719,7 +836,7 @@ CMenus::CMenus()
 
 IUiContext CMenus::SettingsUiContext(const char *pScope, const float UiScale)
 {
-	m_SettingsUiTheme = ResolveUiTheme(ColorHSLA(g_Config.m_QmUiColor), g_Config.m_QmUiOpacity / 100.0f, ColorHSLA(g_Config.m_QmUiFocusColor), ColorHSLA(g_Config.m_QmUiAccentColor).WithAlpha(g_Config.m_QmUiAccentOpacity / 100.0f), ColorHSLA(g_Config.m_QmUiSelectedColor));
+	m_SettingsUiTheme = ResolveUiTheme(ColorHSLA(g_Config.m_QmUiColor), g_Config.m_QmUiOpacity / 100.0f, ColorHSLA(g_Config.m_QmUiAccentColor).WithAlpha(g_Config.m_QmUiAccentOpacity / 100.0f));
 	IUiContext Context;
 	Context.m_pUi = Ui();
 	Context.m_pAnim = &GameClient()->UiRuntimeV2()->AnimRuntime();
@@ -769,12 +886,10 @@ int CMenus::DoSettingsDropDown(CUIRect *pRect, const int CurSelection, const cha
 
 SCardMotionSpec CMenus::SettingsCardMotionSpec() const
 {
-	return ResolveCardMotionSpec(
-		g_Config.m_QmUiMotionLevel,
-		g_Config.m_QmUiListEntryAnimations != 0,
-		g_Config.m_QmUiCardHeightAnimations != 0,
-		g_Config.m_QmUiCardReflowAnimations != 0,
-		g_Config.m_QmExtraAnimations != 0);
+	// 四类卡片动画不再单独配置：动效强度是唯一开关，四档全部跟随它。
+	// 拆成多个开关后，同一个界面会出现「卡片高度动画开着、入场动画关着」的半套效果。
+	const bool AnimateCards = g_Config.m_QmUiMotionLevel > 0;
+	return ResolveCardMotionSpec(g_Config.m_QmUiMotionLevel, AnimateCards, AnimateCards, AnimateCards, AnimateCards);
 }
 
 SSettingsCardDeckVisualOptions CMenus::SettingsCardDeckVisualOptions() const
@@ -805,11 +920,13 @@ qm_card_order::CModel &CMenus::SettingsCardOrderModelForRenderPass()
 		m_SettingsCardRenderOnlyOrderModel.LoadMerged(g_Config.m_QmGlobalCardOrder, qm_card_registry::BuildDefaultEntries());
 		qm_card_registry::RepairRemovedModernTabs(m_SettingsCardRenderOnlyOrderModel);
 		qm_card_registry::RepairLegacyBindTab(m_SettingsCardRenderOnlyOrderModel);
+		qm_card_registry::RepairLegacyKeyBindsTab(m_SettingsCardRenderOnlyOrderModel);
 		qm_card_registry::RepairLegacyCreditsTabs(m_SettingsCardRenderOnlyOrderModel);
 		qm_card_registry::RepairLegacyNameplateTitleLayout(m_SettingsCardRenderOnlyOrderModel);
 		qm_card_registry::RepairLegacyTeeLayout(m_SettingsCardRenderOnlyOrderModel);
 		qm_card_registry::RepairLegacyChatBubbleTab(m_SettingsCardRenderOnlyOrderModel);
 		qm_card_registry::RepairLegacyBindStatusHudTab(m_SettingsCardRenderOnlyOrderModel);
+		qm_card_registry::RepairLegacyPredictionCardTabs(m_SettingsCardRenderOnlyOrderModel);
 		m_SettingsCardRenderOnlyOrderSource = g_Config.m_QmGlobalCardOrder;
 		m_SettingsCardRenderOnlyOrderInitialized = true;
 	}
@@ -870,12 +987,14 @@ void CMenus::LoadSettingsCardOrderModel()
 	// 写回失败时仍保留可显示的内存布局，下次加载会再次尝试修复。
 	const bool ModernTabsChanged = qm_card_registry::RepairRemovedModernTabs(m_SettingsCardOrderModel);
 	const bool LegacyBindTabChanged = qm_card_registry::RepairLegacyBindTab(m_SettingsCardOrderModel);
+	const bool KeyBindsTabChanged = qm_card_registry::RepairLegacyKeyBindsTab(m_SettingsCardOrderModel);
 	const bool CreditsLayoutChanged = qm_card_registry::RepairLegacyCreditsTabs(m_SettingsCardOrderModel);
 	const bool NameplateTitleLayoutChanged = qm_card_registry::RepairLegacyNameplateTitleLayout(m_SettingsCardOrderModel);
 	const bool TeeLayoutChanged = qm_card_registry::RepairLegacyTeeLayout(m_SettingsCardOrderModel);
 	const bool ChatBubbleTabChanged = qm_card_registry::RepairLegacyChatBubbleTab(m_SettingsCardOrderModel);
 	const bool BindStatusHudTabChanged = qm_card_registry::RepairLegacyBindStatusHudTab(m_SettingsCardOrderModel);
-	if((ModernTabsChanged || LegacyBindTabChanged || CreditsLayoutChanged || NameplateTitleLayoutChanged || TeeLayoutChanged || ChatBubbleTabChanged || BindStatusHudTabChanged) && !PersistCurrentLayout())
+	const bool PredictionCardTabsChanged = qm_card_registry::RepairLegacyPredictionCardTabs(m_SettingsCardOrderModel);
+	if((ModernTabsChanged || LegacyBindTabChanged || KeyBindsTabChanged || CreditsLayoutChanged || NameplateTitleLayoutChanged || TeeLayoutChanged || ChatBubbleTabChanged || BindStatusHudTabChanged || PredictionCardTabsChanged) && !PersistCurrentLayout())
 	{
 		m_SettingsCardOrderLoaded = true;
 		return;
@@ -886,7 +1005,8 @@ void CMenus::LoadSettingsCardOrderModel()
 		MakeCandidate(Candidate);
 		const bool QmLayoutChanged = qm_module::LoadLegacyQmLayoutIntoModel(Candidate, g_Config.m_QmSidebarCardOrder);
 		const bool TClientLayoutChanged = qm_module::LoadLegacyTClientLayoutIntoModel(Candidate, g_Config.m_QmSettingsCardOrder);
-		const bool CandidateChanged = QmLayoutChanged || TClientLayoutChanged;
+		const bool LegacyKeyBindsMoved = qm_card_registry::RepairLegacyKeyBindsTab(Candidate);
+		const bool CandidateChanged = QmLayoutChanged || TClientLayoutChanged || LegacyKeyBindsMoved;
 		if(!PersistCandidate(Candidate, CandidateChanged, true))
 		{
 			m_SettingsCardOrderLoaded = true;
@@ -1145,6 +1265,21 @@ void CMenus::LoadSettingsCardOrderModel()
 		}
 		g_Config.m_QmCardLayoutVersion = 13;
 	}
+	if(g_Config.m_QmCardLayoutVersion < 14)
+	{
+		// 图像页分组调整：图标与界面动效两张卡从「显示选项」搬到「视觉效果」。
+		// 已保存的卡片顺序里这两张仍记着旧 tab，顺序模型按 tab 投影，不搬过去
+		// 它们会从两页同时消失（新页的 id 列表里没有它们旧的 tab）。
+		qm_card_order::CModel Candidate;
+		MakeCandidate(Candidate);
+		const bool CandidateChanged = qm_card_registry::RepairLegacyGraphicsVisualCards(Candidate);
+		if(!PersistCandidate(Candidate, CandidateChanged, true))
+		{
+			m_SettingsCardOrderLoaded = true;
+			return;
+		}
+		g_Config.m_QmCardLayoutVersion = 14;
+	}
 	m_SettingsCardOrderLoaded = true;
 }
 
@@ -1268,21 +1403,21 @@ int CMenus::DoButton_Toggle(const void *pId, int Checked, const CUIRect *pRect, 
 	return Active ? Ui()->DoButtonLogic(pId, Checked, pRect, Flags) : 0;
 }
 
-int CMenus::DoButton_Menu(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, const unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize, const CUIRect *pUnscaledRect)
+int CMenus::DoButton_Menu(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, const unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize, const CUIRect *pUnscaledRect, const ColorRGBA *pSurfaceColor)
 {
-	return DoButton_MenuInternal(pButtonContainer, pText, EQmIcon::COUNT, nullptr, Checked, pRect, Flags, pImageName, Corners, Rounding, FontFactor, Color, pTextUiElement, TextFontSize, nullptr, pUnscaledRect);
+	return DoButton_MenuInternal(pButtonContainer, pText, EQmIcon::COUNT, nullptr, Checked, pRect, Flags, pImageName, Corners, Rounding, FontFactor, Color, pTextUiElement, TextFontSize, nullptr, pUnscaledRect, pSurfaceColor);
 }
 
-int CMenus::DoButton_Menu_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize)
+int CMenus::DoButton_Menu_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize, std::optional<bool> HoveredOverride)
 {
 	const CUIRect ButtonRect = QmUiSquareIconButtonRect(*pRect);
-	return DoButton_MenuInternal(pButtonContainer, nullptr, Icon, pFallbackIcon, Checked, &ButtonRect, Flags, pImageName, Corners, Rounding, FontFactor, Color, pTextUiElement, TextFontSize);
+	return DoButton_MenuInternal(pButtonContainer, nullptr, Icon, pFallbackIcon, Checked, &ButtonRect, Flags, pImageName, Corners, Rounding, FontFactor, Color, pTextUiElement, TextFontSize, nullptr, nullptr, nullptr, HoveredOverride);
 }
 
-int CMenus::DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize, const IGraphics::CTextureHandle *pIconTexture, const CUIRect *pUnscaledRect)
+int CMenus::DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize, const IGraphics::CTextureHandle *pIconTexture, const CUIRect *pUnscaledRect, const ColorRGBA *pSurfaceColor, std::optional<bool> HoveredOverride)
 {
 	if(Icon != EQmIcon::COUNT && (pText == nullptr || pText[0] == '\0') && pImageName == nullptr && pIconTexture == nullptr)
-		return ui_widget::DoIconButton(ui_widget::ControlContext(Ui()), pButtonContainer, Icon, pFallbackIcon, Checked, *pRect, Flags, Corners);
+		return ui_widget::DoIconButton(ui_widget::ControlContext(Ui()), pButtonContainer, Icon, pFallbackIcon, Checked, *pRect, Flags, Corners, true, std::nullopt, false, false, nullptr, nullptr, HoveredOverride);
 	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
 	CUIRect Text = *pRect;
 	ui_widget::SButtonSurfaceOptions Options;
@@ -1290,8 +1425,18 @@ int CMenus::DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char
 	Options.m_Enabled = Checked >= 0;
 	Options.m_Selected = Checked > 0;
 	Options.m_Corners = Corners;
-	Options.m_Radius = Rounding;
+	// 显示层统一「长条即胶囊」：宽明显大于高的按钮按半高取端头，与主菜单其它胶囊按钮同一曲线；
+	// 贴图本身不动，只把落点往内收一点避开圆头。
+	const bool CapsuleDisplay = pRect->w >= pRect->h * 1.8f;
+	// Corners 保持调用点原值：这里是「四角全圆」的引擎路径，清成 NONE 会直接画成方块；
+	// 端头形状靠半径表达，半径取半高即为胶囊。
+	Options.m_Corners = Corners;
+	Options.m_Radius = CapsuleDisplay ? pRect->h * 0.5f : Rounding;
 	Options.m_AlignToPixel = pUnscaledRect == nullptr;
+	// 个别调用点要换底色语义时显式覆盖；其余按钮继续吃 ResolveConfiguredControlSurface()。
+	// 只在显式传入时生效，避免把整条共享按钮路径刷成同一个颜色。
+	if(pSurfaceColor != nullptr)
+		Options.m_Color = *pSurfaceColor;
 	Color = ui_widget::DrawButtonSurface(ui_widget::ControlContext(Ui()), pButtonContainer, *pRect, Options);
 	CUiScopedSurfaceText SurfaceText(TextRender(), Color);
 
@@ -1301,6 +1446,15 @@ int CMenus::DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char
 		pRect->VSplitRight(pRect->h * 4.0f, &Text, &Image); // always correct ratio for image
 
 		// render image
+		// 胶囊端头是圆弧：贴图内收一档，避免直角压在圆角外侧。
+		if(CapsuleDisplay)
+		{
+			const float ImageInset = Image.h * 0.12f;
+			Image.x -= ImageInset * 1.5f;
+			Image.y += ImageInset;
+			Image.h -= ImageInset * 2.0f;
+			Image.w -= ImageInset;
+		}
 		const CMenuImage *pImage = FindMenuImage(pImageName);
 		if(pImage)
 		{
@@ -1429,7 +1583,7 @@ int CMenus::DoButton_MenuTabInternal(CButtonContainer *pButtonContainer, const c
 		if(pActiveColor)
 			ColorMenuTab = *pActiveColor;
 		else
-			ColorMenuTab = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(0.42f);
+			ColorMenuTab = ResolveConfiguredAccentColor().WithAlpha(0.42f);
 
 		DrawRoundedSurface(Ui(), *pRect, ColorMenuTab, ColorRGBA(), EdgeRounding, 0.0f, Corners);
 	}
@@ -1441,7 +1595,7 @@ int CMenus::DoButton_MenuTabInternal(CButtonContainer *pButtonContainer, const c
 			if(pHoverColor)
 				HoverColorMenuTab = *pHoverColor;
 			else
-				HoverColorMenuTab = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(0.20f);
+				HoverColorMenuTab = ResolveConfiguredAccentColor().WithAlpha(0.20f);
 
 			const ColorRGBA IdleColor = pDefaultColor != nullptr ? *pDefaultColor : ms_ColorTabbarInactive;
 			const ColorRGBA AnimatedColor(
@@ -1652,7 +1806,7 @@ int CMenus::DoButton_GridHeader(const void *pId, const char *pText, int Checked,
 	return Ui()->DoButtonLogic(pId, Checked, pRect, BUTTONFLAG_LEFT);
 }
 
-int CMenus::DoButton_Favorite(const void *pButtonId, const void *pParentId, bool Checked, const CUIRect *pRect)
+int CMenus::DoButton_Favorite(const void *pButtonId, const void *pParentId, bool Checked, const CUIRect *pRect, float IconFontSize)
 {
 	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
 	const bool ShouldShow = Checked || (pParentId != nullptr && Ui()->HotItem() == pParentId) || Ui()->HotItem() == pButtonId;
@@ -1680,7 +1834,10 @@ int CMenus::DoButton_Favorite(const void *pButtonId, const void *pParentId, bool
 		// 全局「实心收藏图标」只决定收藏徽标外观，沿用到开关上会让悬停预览与已收藏同形。
 		const CQmIconSemanticColorScope FavoriteIconColorScope(!Checked);
 		const CQmFavoriteStarFillScope FavoriteStarFillScope(Checked);
-		Ui()->DoLabel_QmIcon(pRect, EQmIcon::STAR, FONT_ICON_STAR, 12.0f + HoverStrength, TEXTALIGN_MC, Props);
+		// IconFontSize 是 em 字号（与并排动作图标同一口径），盒边长按 ICON_INK_RATIO 反推；
+		// 不传时沿用历史盒径 12，服务器列表等既有调用点的观感不变。
+		const float StarBox = IconFontSize > 0.0f ? ui_token::control::IconBox(IconFontSize) : 12.0f;
+		Ui()->DoLabel_QmIcon(pRect, EQmIcon::STAR, FONT_ICON_STAR, StarBox + HoverStrength, TEXTALIGN_MC, Props);
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
 		TextRender()->SetRenderFlags(0);
 		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
@@ -1728,6 +1885,9 @@ int CMenus::DoButton_CheckBox_Common_WithLabelElement(const void *pId, const cha
 	const bool HasLabel = pText != nullptr && pText[0] != '\0';
 	const bool HasCustomGlyph = MarkedControl || (pBoxText[0] != '\0' && pBoxText[0] != 'X');
 	const IUiContext Context = ui_widget::ControlContext(Ui());
+	// 标签字号就是这一行控件的正文字号：开关轨道宽与标签间距都按它取，
+	// 与文字实际绘制用同一个值，窄窗口下不会出现开关比文字缩得慢。
+	const float FontSize = LabelFontSize > 0.0f ? LabelFontSize : std::min(ui_token::font::BODY, pRect->h * CUi::ms_FontmodHeight);
 	CUIRect Label, Control;
 	if(HasCustomGlyph)
 	{
@@ -1738,7 +1898,7 @@ int CMenus::DoButton_CheckBox_Common_WithLabelElement(const void *pId, const cha
 	}
 	else
 	{
-		const auto Layout = ui_widget::ResolveBooleanControlLayout(*pRect, HasLabel);
+		const auto Layout = ui_widget::ResolveBooleanControlLayout(*pRect, HasLabel, FontSize);
 		Label = Layout.m_LabelRect;
 		Control = Layout.m_ControlRect;
 		ui_widget::DrawToggle(Context, pId, pBoxText[0] == 'X', Control, true, ProcessInput, pRect);
@@ -1747,7 +1907,6 @@ int CMenus::DoButton_CheckBox_Common_WithLabelElement(const void *pId, const cha
 		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pId, pRect, pId, &Label);
 	if(HasLabel)
 	{
-		const float FontSize = LabelFontSize > 0.0f ? LabelFontSize : std::min(ui_token::font::BODY, pRect->h * CUi::ms_FontmodHeight);
 		SLabelProperties Props;
 		Props.m_MaxWidth = Label.w;
 		Props.m_MinimumFontSize = FontSize;
@@ -1758,12 +1917,6 @@ int CMenus::DoButton_CheckBox_Common_WithLabelElement(const void *pId, const cha
 			Ui()->DoLabel(&Label, pText, FontSize, TEXTALIGN_ML, Props);
 	}
 	return ProcessInput ? Ui()->DoButtonLogic(pId, 0, pRect, Flags) : 0;
-}
-
-static void DrawSettingsSearchHighlight(CUi *pUi, const CUIRect &Rect)
-{
-	const qm_settings_highlight::SStyle Style = qm_settings_highlight::Resolve(pUi->QmControlTheme(), Rect);
-	DrawRoundedSurface(pUi, Rect, Style.m_Fill, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), Style.m_Radius, 0.0f);
 }
 
 int CMenus::DoSettingsButton_CheckBox(int Page, int Tab, const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect)
@@ -1782,24 +1935,23 @@ int CMenus::DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void 
 	return DoSettingsButton_CheckBox(Page, Tab, Subtab, pId, pTextId, pText, Checked, pRect, LabelProps, true);
 }
 
-int CMenus::DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, const SLabelProperties &LabelProps, const bool ProcessInput, const float RequestedFontSize)
+int CMenus::DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, const SLabelProperties &LabelProps, const bool ProcessInput, const float RequestedFontSize, const bool AllowHintSplit)
 {
 	Ui()->DoConfigTooltip(pId, pRect, pId);
 	const float BodySize = RequestedFontSize > 0.0f ? RequestedFontSize : CurrentSettingsContentMetrics().m_BodySize;
-	// 搜索结果逐行定位：命中行先铺一层浅色底，再按普通控件绘制，文字与开关保持可读。
-	const bool SearchReveal = !m_MenuTextPlanCollecting && qm_settings_reveal::OnRow(pTextId, pText, *pRect);
-	if(SearchReveal)
-		DrawSettingsSearchHighlight(Ui(), *pRect);
 	if(pTextId == nullptr)
 	{
+		const qm_settings_highlight::CScopedLabelColor LabelColor(TextRender(), !m_MenuTextPlanCollecting && qm_settings_reveal::OnRow(nullptr, pText, *pRect));
 		return DoButton_CheckBox_Common_WithLabelElement(pId, pText, Checked ? "X" : "", pRect, BUTTONFLAG_LEFT, nullptr, ProcessInput, BodySize);
 	}
-	const auto Layout = ui_widget::ResolveBooleanControlLayout(*pRect, pText != nullptr && pText[0] != '\0');
+	const auto Layout = ui_widget::ResolveBooleanControlLayout(*pRect, pText != nullptr && pText[0] != '\0', BodySize);
 	const CUIRect &Label = Layout.m_LabelRect;
 	const CUIRect &ToggleRect = Layout.m_ControlRect;
 	SLabelProperties Props = LabelProps;
 	Props.m_MaxWidth = Label.w;
-	DoSettingsMenuLabel(Page, Tab, Subtab, pTextId, &Label, pText, BodySize, TEXTALIGN_ML, Props, -1, false);
+	// 这里的 true 是「允许命中高亮」：合并后高亮由 CScopedLabelColor 染色承担，
+	// 不再有底色块可关；传 false 会让搜索命中的复选框行整行都不高亮。
+	DoSettingsMenuLabel(Page, Tab, Subtab, pTextId, &Label, pText, BodySize, TEXTALIGN_ML, Props, -1, true, AllowHintSplit);
 	if(!m_MenuTextPlanCollecting)
 		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pId, pRect, pId, &Label);
 	if(m_MenuTextPlanCollecting)
@@ -1851,11 +2003,7 @@ void CMenus::DoSettingsLabel(int Page, int Tab, const char *pTextId, const CUIRe
 		GameClient()->m_Tooltips.DoSmallToolTip(Presentation.m_pTipId, pRect, Presentation.m_pTip, CurrentSettingsContentMetrics().m_SmallSize);
 	pText = Ui()->PrepareCardLabel(pRect, pText, Render && !m_MenuTextPlanCollecting);
 	SLabelProperties EffectiveProps = LabelProps;
-	if(Render && !m_MenuTextPlanCollecting && qm_settings_reveal::OnRow(pTextId, pText, *pRect))
-	{
-		if(DrawSearchBackground)
-			DrawSettingsSearchHighlight(Ui(), *pRect);
-	}
+	const qm_settings_highlight::CScopedLabelColor LabelColor(TextRender(), DrawSearchBackground && Render && !m_MenuTextPlanCollecting && qm_settings_reveal::OnRow(pTextId, pText, *pRect));
 	if(Page == SETTINGS_TCLIENT && Size > 0.0f)
 	{
 		EffectiveProps.m_MaxWidth = EffectiveProps.m_MaxWidth >= 0.0f ? EffectiveProps.m_MaxWidth : pRect->w;
@@ -1878,19 +2026,18 @@ void CMenus::DoSettingsLabel(int Page, int Tab, const char *pTextId, const CUIRe
 	DoSettingsLabelStreamed(Element, pRect, pText, Size, Align, EffectiveProps, -1, nullptr, Render);
 }
 
-void CMenus::DoSettingsMenuLabel(int Page, int Tab, int Subtab, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &Props, int MaxWidth, const bool DrawSearchBackground)
+void CMenus::DoSettingsMenuLabel(int Page, int Tab, int Subtab, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &Props, int MaxWidth, const bool DrawSearchBackground, const bool AllowHintSplit)
 {
+	const char *pFullText = pText;
 	const auto Presentation = ResolveSettingsLabelPresentation(pTextId, pText, [](const char *pKey) { return Localize(pKey); });
 	pText = Presentation.m_pText;
 	if(Presentation.m_pTip != nullptr && !m_MenuTextPlanCollecting && !Ui()->RenderOnly() && !Ui()->DrawingSuppressed())
 		GameClient()->m_Tooltips.DoSmallToolTip(Presentation.m_pTipId, pRect, Presentation.m_pTip, CurrentSettingsContentMetrics().m_SmallSize);
-	pText = Ui()->PrepareCardLabel(pRect, pText, !m_MenuTextPlanCollecting);
+	pText = Ui()->PrepareCardLabel(pRect, pText, !m_MenuTextPlanCollecting, AllowHintSplit);
 	SLabelProperties EffectiveProps = Props;
-	if(!m_MenuTextPlanCollecting && qm_settings_reveal::OnRow(pTextId, pText, *pRect))
-	{
-		if(DrawSearchBackground)
-			DrawSettingsSearchHighlight(Ui(), *pRect);
-	}
+	const bool Highlight = DrawSearchBackground && !m_MenuTextPlanCollecting && (qm_settings_reveal::OnRow(pTextId, pText, *pRect) ||
+		(pFullText != pText && qm_settings_reveal::OnRow(nullptr, pFullText, *pRect)));
+	const qm_settings_highlight::CScopedLabelColor LabelColor(TextRender(), Highlight);
 	if(Page == SETTINGS_TCLIENT && Size > 0.0f)
 	{
 		EffectiveProps.m_MaxWidth = EffectiveProps.m_MaxWidth >= 0.0f ? EffectiveProps.m_MaxWidth : (MaxWidth >= 0 ? (float)MaxWidth : pRect->w);
@@ -2207,7 +2354,7 @@ bool CMenus::DoSettingsLine_RadioMenu(int Page, int Tab, int Subtab, CUIRect &Vi
 	return Locked ? false : Pressed;
 }
 
-ColorHSLA CMenus::DoLine_ColorPicker(CButtonContainer *pResetId, const SSettingsContentMetrics &Metrics, CUIRect *pMainRect, const char *pText, unsigned int *pColorValue, const ColorRGBA DefaultColor, bool CheckBoxSpacing, int *pCheckBoxValue, bool Alpha, bool TrailingSpacing)
+ColorHSLA CMenus::DoLine_ColorPicker(CButtonContainer *pResetId, const SSettingsContentMetrics &Metrics, CUIRect *pMainRect, const char *pText, unsigned int *pColorValue, const ColorRGBA DefaultColor, bool CheckBoxSpacing, int *pCheckBoxValue, bool Alpha, bool TrailingSpacing, bool AlphaPercent)
 {
 	CUIRect HintRect = *pMainRect;
 	const SSettingsColorRowLayout Layout = ResolveSettingsColorRowLayout(*pMainRect, Metrics, CheckBoxSpacing && pCheckBoxValue == nullptr, TrailingSpacing);
@@ -2237,7 +2384,7 @@ ColorHSLA CMenus::DoLine_ColorPicker(CButtonContainer *pResetId, const SSettings
 		HoverRect.w = Layout.m_ColorButtonRect.x + Layout.m_ColorButtonRect.w - Label.x;
 		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pColorValue, &HoverRect, pColorValue, &Label);
 	}
-	const ColorHSLA PickedColor = DoButton_ColorPicker(&Layout.m_ColorButtonRect, pColorValue, Alpha);
+	const ColorHSLA PickedColor = DoButton_ColorPicker(&Layout.m_ColorButtonRect, pColorValue, Alpha, AlphaPercent);
 
 	// 重置只放回转箭头图标，说明走悬浮提示：颜色行里塞「重置」两个字太占地方，
 	// 而且和旁边那几个图标按钮不是一套语言。
@@ -2258,13 +2405,15 @@ bool CMenus::DoLine_AlphaColorPicker(CButtonContainer *pResetId, const SSettings
 	const bool Editing = Ui()->IsPopupOpen(&m_ColorPickerPopupContext) && m_ColorPickerPopupContext.m_pHslaColor == &State.m_PackedColor;
 	State.RefreshFromConfig(*pColorValue, *pOpacity, Editing);
 
-	DoLine_ColorPicker(pResetId, Metrics, pMainRect, pText, &State.m_PackedColor, color_cast<ColorRGBA>(ColorHSLA(DefaultColor).WithAlpha(DefaultOpacity / 100.0f)), false, nullptr, true);
+	// 这一行的透明度由百分比配置承载，取色器的 A 通道也必须按百分比工作，
+	// 否则 100 这类值写回时会被舍成 99（见 SColorPickerPopupContext::m_AlphaPercent）。
+	DoLine_ColorPicker(pResetId, Metrics, pMainRect, pText, &State.m_PackedColor, color_cast<ColorRGBA>(ColorHSLA(DefaultColor).WithAlpha(DefaultOpacity / 100.0f)), false, nullptr, true, true, true);
 	HintRect.h = pMainRect->y - HintRect.y;
 	Ui()->DoConfigTooltip(&State.m_PackedColor, &HintRect, pColorValue, pOpacity);
 	return State.ApplyToConfig(*pColorValue, *pOpacity);
 }
 
-ColorHSLA CMenus::DoLine_ColorPicker(CButtonContainer *pResetId, const float LineSize, const float LabelSize, const float BottomMargin, CUIRect *pMainRect, const char *pText, unsigned int *pColorValue, const ColorRGBA DefaultColor, bool CheckBoxSpacing, int *pCheckBoxValue, bool Alpha)
+ColorHSLA CMenus::DoLine_ColorPicker(CButtonContainer *pResetId, const float LineSize, const float LabelSize, const float BottomMargin, CUIRect *pMainRect, const char *pText, unsigned int *pColorValue, const ColorRGBA DefaultColor, bool CheckBoxSpacing, int *pCheckBoxValue, bool Alpha, bool AlphaPercent)
 {
 	SSettingsContentMetrics Metrics;
 	Metrics.m_UiScale = std::clamp(LineSize / ui_token::settings::ROW_HEIGHT, 0.5f, 1.5f);
@@ -2272,10 +2421,10 @@ ColorHSLA CMenus::DoLine_ColorPicker(CButtonContainer *pResetId, const float Lin
 	Metrics.m_ButtonHeight = std::max(0.0f, LineSize);
 	Metrics.m_BodySize = std::max(0.0f, LabelSize);
 	Metrics.m_LineSpacing = std::max(0.0f, BottomMargin);
-	return DoLine_ColorPicker(pResetId, Metrics, pMainRect, pText, pColorValue, DefaultColor, CheckBoxSpacing, pCheckBoxValue, Alpha);
+	return DoLine_ColorPicker(pResetId, Metrics, pMainRect, pText, pColorValue, DefaultColor, CheckBoxSpacing, pCheckBoxValue, Alpha, true, AlphaPercent);
 }
 
-ColorHSLA CMenus::DoButton_ColorPicker(const CUIRect *pRect, unsigned int *pHslaColor, bool Alpha)
+ColorHSLA CMenus::DoButton_ColorPicker(const CUIRect *pRect, unsigned int *pHslaColor, bool Alpha, bool AlphaPercent)
 {
 	Ui()->DoConfigTooltip(pHslaColor, pRect, pHslaColor);
 	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
@@ -2286,10 +2435,10 @@ ColorHSLA CMenus::DoButton_ColorPicker(const CUIRect *pRect, unsigned int *pHsla
 
 	DrawRoundedSurface(Ui(), *pRect, color_cast<ColorRGBA>(HslaColor), Outline, 4.0f, 3.0f);
 
-	return DoButton_ColorPickerLogic(pRect, pHslaColor, Alpha);
+	return DoButton_ColorPickerLogic(pRect, pHslaColor, Alpha, AlphaPercent);
 }
 
-ColorHSLA CMenus::DoButton_ColorPickerLogic(const CUIRect *pRect, unsigned int *pHslaColor, bool Alpha)
+ColorHSLA CMenus::DoButton_ColorPickerLogic(const CUIRect *pRect, unsigned int *pHslaColor, bool Alpha, bool AlphaPercent)
 {
 	ColorHSLA HslaColor = ColorHSLA(*pHslaColor, Alpha);
 	if(Ui()->DoButtonLogic(pHslaColor, 0, pRect, BUTTONFLAG_LEFT))
@@ -2299,6 +2448,7 @@ ColorHSLA CMenus::DoButton_ColorPickerLogic(const CUIRect *pRect, unsigned int *
 		m_ColorPickerPopupContext.m_HsvaColor = color_cast<ColorHSVA>(HslaColor);
 		m_ColorPickerPopupContext.m_RgbaColor = color_cast<ColorRGBA>(m_ColorPickerPopupContext.m_HsvaColor);
 		m_ColorPickerPopupContext.m_Alpha = Alpha;
+		m_ColorPickerPopupContext.m_AlphaPercent = AlphaPercent;
 		Ui()->ShowPopupColorPicker(Ui()->MouseX(), Ui()->MouseY(), &m_ColorPickerPopupContext);
 	}
 	else if(Ui()->IsPopupOpen(&m_ColorPickerPopupContext) && m_ColorPickerPopupContext.m_pHslaColor == pHslaColor)
@@ -2409,7 +2559,10 @@ int CMenus::DoMenuTabV2Internal(CButtonContainer *pButtonContainer, const char *
 	{
 		CUIRect Label;
 		pRect->HMargin(2.0f * ContentScale, &Label);
-		const float LabelFontSize = ui_token::settings::TAB_FONT_SIZE * ContentScale;
+		// 页签字号只有一档：ESC 顶部主导航（游戏/玩家/服务器信息/浏览/影子/Rank）与下方页面页签同档，
+		// 高度仍由调用点的行高 token 决定。以前这里乘了内容缩放（1.10）得 16.5，
+		// 和下方 TAB_FONT_SIZE(15) 并排就能看出大小差；缩放只留给外边距与自查圆角。
+		const float LabelFontSize = ui_token::settings::MENU_NAV_FONT_SIZE;
 		if(Icon != EQmIcon::COUNT)
 		{
 			Ui()->DoLabel_QmIcon(&Label, Icon, pFallbackIcon, LabelFontSize, TEXTALIGN_MC);
@@ -2573,7 +2726,9 @@ bool CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 			static_assert(std::size(s_aStartTabButtons) == 1 + 4 + (size_t)PAGE_FAVORITE_COMMUNITY_5 - PAGE_FAVORITE_COMMUNITY_1 + 1);
 			static_assert(std::size(s_aStartTabButtons) - 5 == (size_t)BIT_TAB_FAVORITE_COMMUNITY_5 - BIT_TAB_FAVORITE_COMMUNITY_1 + 1);
 			static_assert(std::size(s_aStartTabButtons) - 5 == (size_t)IServerBrowser::TYPE_FAVORITE_COMMUNITY_5 - IServerBrowser::TYPE_FAVORITE_COMMUNITY_1 + 1);
-			for(const CCommunity *pCommunity : ServerBrowser()->FavoriteCommunities())
+			// FavoriteCommunities() 按值返回，渲染路径里只取一次，避免重复分配。
+			const std::vector<const CCommunity *> vpFavoriteCommunities = ServerBrowser()->FavoriteCommunities();
+			for(const CCommunity *pCommunity : vpFavoriteCommunities)
 			{
 				if((size_t)NumStartTabs >= std::size(s_aStartTabButtons))
 					break;
@@ -2952,21 +3107,16 @@ void CMenus::RenderStatistics(CUIRect MainView)
 
 	// 外间距和页签条直接取收藏地图页那套工作区度量：页签宽度、离顶部导航的距离、
 	// 与下方内容的间距都和其它页签页一致，卡片也铺到同一条内容线上。
+	// 外缩并入 MainView 的全局安全区（与服务器列表面板同一条基线），不再各页自缩一圈。
 	const QmMapHistoryUi::SWorkspaceMetrics StatisticsWorkspace = QmMapHistoryUi::WorkspaceMetrics(MainView.h);
 	CUIRect Window = MainView;
-	// 手机端工作区不再水平内缩：MainView 已对齐设置页壳层，额外缩进会让统计页
-	// 比导航栏窄一圈。只保留上下留白，左右与其它菜单页同线。
-	if(QmUiMobilePlatform())
-		Window.HMargin(StatisticsWorkspace.m_OuterMargin, &Window);
-	else
-		Window.Margin(StatisticsWorkspace.m_OuterMargin, &Window);
 
 	// 与收藏地图页共用的工作区页签：贴在内容顶端、离顶部导航和其它页面同一条基线，
 	// 且不随统计内容滚动；统计数据是第 4 个页签，点其它页签直接跳回收藏地图。
 	{
 		CUIRect WorkspaceTabs = Window;
 		WorkspaceTabs.h = StatisticsWorkspace.m_TabHeight;
-		const int PickedWorkspaceTab = DoMapWorkspaceTabs(WorkspaceTabs, StatisticsWorkspace.m_TabHeight * 0.20f, 3);
+		const int PickedWorkspaceTab = DoMapWorkspaceTabs(WorkspaceTabs, StatisticsWorkspace.m_TabHeight * 0.20f, 3, ui_token::settings::TAB_FONT_SIZE);
 		if(PickedWorkspaceTab >= 0 && PickedWorkspaceTab < 3)
 			SetMenuPage(PAGE_FAVORITE_MAPS);
 		Window.HSplitTop(StatisticsWorkspace.m_TabHeight + StatisticsWorkspace.m_SectionGap, nullptr, &Window);
@@ -3369,17 +3519,19 @@ void CMenus::RenderStatistics(CUIRect MainView)
 	ActionTop.h = ActionMiddle.h = ActionBottom.h = ActionButtonHeight;
 	ActionMiddle.y = ActionColumn.y + (ActionColumn.h - ActionButtonHeight) * 0.5f;
 	ActionBottom.y = ActionColumn.y + ActionColumn.h - ActionButtonHeight;
-	// 三枚操作按钮直接走菜单通用按钮面（DoButton_Menu + BASE 圆角），
-	// 和页面底部链接按钮、设置页 Reset 同一套底色/描边/选中态，不再自绘胶囊。
+	// 三枚操作按钮直接走菜单通用按钮面（DoButton_Menu + 胶囊端头），
+	// 和页面底部链接按钮同一套底色/描边/选中态，不再自绘。
+	// 统计页整页的可点元素（操作按钮、概览行、表格悬浮行）统一为胶囊：这一页
+	// 行高固定且都远宽于高，圆角矩形会和胶囊圆环/胶囊链接按钮混在一条竖线上。
 	const char *pRefreshStatsLabel = StatisticsFetching ? Localize("Syncing remote stats") : (StatisticsFailed ? Localize("Retry remote stats") : Localize("Sync remote stats"));
 	static CButtonContainer s_StatisticsRefreshButton;
-	if(DoButton_Menu(&s_StatisticsRefreshButton, pRefreshStatsLabel, 0, &ActionTop, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::BASE, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, 12.0f))
+	if(DoButton_Menu(&s_StatisticsRefreshButton, pRefreshStatsLabel, 0, &ActionTop, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::PILL, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, 12.0f))
 		GameClient()->m_QmClient.RefreshQmClientStatistics();
 	static CButtonContainer s_StatisticsUseCurrentNameButton;
-	if(DoButton_Menu(&s_StatisticsUseCurrentNameButton, Localize("Use current name"), 0, &ActionMiddle, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::BASE, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, 12.0f))
+	if(DoButton_Menu(&s_StatisticsUseCurrentNameButton, Localize("Use current name"), 0, &ActionMiddle, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::PILL, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, 12.0f))
 		GameClient()->m_QmClient.UseCurrentQmDdnetPlayerName();
 	static CButtonContainer s_TotalHoursButton;
-	if(DoButton_Menu(&s_TotalHoursButton, Localize("Total hours"), s_ShowTotalHours ? 1 : 0, &ActionBottom, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::BASE, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, 12.0f))
+	if(DoButton_Menu(&s_TotalHoursButton, Localize("Total hours"), s_ShowTotalHours ? 1 : 0, &ActionBottom, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::PILL, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, 12.0f))
 		s_ShowTotalHours = !s_ShowTotalHours;
 
 	const float ChartRadius = std::clamp(minimum(BodyMain.h * 0.40f, BodyMain.w * 0.24f), 44.0f, 92.0f);
@@ -3832,9 +3984,10 @@ void CMenus::RenderStatistics(CUIRect MainView)
 			CUIRect Highlight = Row;
 			Highlight.x -= 8.0f;
 			Highlight.w = maximum(0.0f, TableContentRight + 8.0f - Highlight.x);
-			Highlight.y += 1.0f;
-			Highlight.h -= 2.0f;
-			Highlight.Draw(ui_token::color::LIST_ITEM_HOVER, IGraphics::CORNER_ALL, ui_token::radius::SMALL_MENU);
+			// 上下各让出一档行距：胶囊高度小于行高，文字到胶囊边才有余量。
+			Highlight.y += ui_token::list::ROW_HIGHLIGHT_INSET_Y;
+			Highlight.h = maximum(0.0f, Highlight.h - ui_token::list::ROW_HIGHLIGHT_INSET_Y * 2.0f);
+			Highlight.Draw(Ui()->QmControlTheme().m_Selected, IGraphics::CORNER_ALL, ui_token::radius::PILL);
 		}
 		const ColorRGBA Color = aModeColors[Index % std::size(aModeColors)];
 		CUIRect Dot, Name, Maps, Duration, Score = CUIRect();
@@ -3894,7 +4047,7 @@ void CMenus::RenderStatistics(CUIRect MainView)
 	auto RenderInfoRow = [this](CUIRect &View, const char *pLabel, const char *pValue) {
 		CUIRect Row;
 		View.HSplitTop(24.0f, &Row, &View);
-		Row.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.04f), IGraphics::CORNER_ALL, ui_token::radius::BASE);
+		Row.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.04f), IGraphics::CORNER_ALL, ui_token::radius::PILL);
 		Row.VMargin(8.0f, &Row);
 
 		CUIRect Label, Value;
@@ -4033,11 +4186,11 @@ void CMenus::RenderStatistics(CUIRect MainView)
 	str_copy(aDdstatsButtonText, Localize("ddstats.tw ID stats"), sizeof(aDdstatsButtonText));
 	str_copy(aDdnetButtonText, Localize("DDNet.org map stats"), sizeof(aDdnetButtonText));
 	const bool HasPlayerName = pPlayerName && pPlayerName[0] != '\0';
-	if(DoButton_Menu(&s_DdstatsLinkButton, aDdstatsButtonText, 0, &DdstatsButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::BASE, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, HasPlayerName ? 0.5f : 0.2f), nullptr, 12.0f) && HasPlayerName)
+	if(DoButton_Menu(&s_DdstatsLinkButton, aDdstatsButtonText, 0, &DdstatsButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::PILL, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, HasPlayerName ? 0.5f : 0.2f), nullptr, 12.0f) && HasPlayerName)
 	{
 		Client()->ViewLink(aDdstatsUrl);
 	}
-	if(DoButton_Menu(&s_DdnetLinkButton, aDdnetButtonText, 0, &DdnetButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::BASE, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, HasPlayerName ? 0.5f : 0.2f), nullptr, 12.0f) && HasPlayerName)
+	if(DoButton_Menu(&s_DdnetLinkButton, aDdnetButtonText, 0, &DdnetButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::PILL, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, HasPlayerName ? 0.5f : 0.2f), nullptr, 12.0f) && HasPlayerName)
 	{
 		Client()->ViewLink(aDdnetUrl);
 	}
@@ -4064,6 +4217,8 @@ void CMenus::OnInit()
 	ResetDemoBrowserFolder();
 	GameClient()->FrameScheduler()->Reset();
 	m_MapDifficultyCatalog.Load(Storage(), Console());
+	// ESC 菜单滑入手感由 qm_menu_slide_feel 承担（配置宏自动注册同名控制台命令），
+	// 设置页与控制台改的是同一个值，不再另设临时全局。
 
 	if(g_Config.m_ClShowWelcome)
 	{
@@ -4224,6 +4379,12 @@ bool CMenus::CanDisplayWarning() const
 void CMenus::Render()
 {
 	const int MenuOpenFrame = m_MenuOpenFrame++;
+	// ESC 菜单滑入/滑出：只挂在游戏内壳层（在线/回放）。主菜单常驻，没有「打开」时刻，
+	// 让它走同一套轨道会干扰启动画面与加载流程。
+	const IClient::EClientState IntroClientState = Client()->State();
+	const bool SlideApplies = (IntroClientState == IClient::STATE_ONLINE || IntroClientState == IClient::STATE_DEMOPLAYBACK) &&
+				  GameClient()->UiRuntimeV2()->Enabled() && !Ui()->AnimationsBlocked();
+	const float MenuSlideY = SlideApplies ? MenuSlideOffset(GameClient()->UiRuntimeV2()->AnimRuntime(), false) : 0.0f;
 	// 菜单首帧先显示界面，避免首次创建模糊 render target、捕获 backbuffer
 	// 和执行 blur pass 阻塞 ESC 打开路径；下一帧再恢复完整的半透明模糊效果。
 	CUiScopedGaussianBlur GaussianBlurScope(Ui(), MenuOpenFrame == 0 ? 0.0f : 1.0f);
@@ -4318,9 +4479,11 @@ void CMenus::Render()
 	{
 		// 全局安全区 = 统一边距基准：菜单内所有页面到窗口四边的基础距离，
 		// 内部元素（导航胶囊/内容面板）直接对齐安全区边缘，不再叠加额外内缩。
+		// 页面自己算底部外距时必须扣掉这一层（见 QmResolveBrowserBottomInset），
+		// 否则回放/截图浏览器底部会变成 8+8。
 		// 手机端的额外左右留白由各页面布局矩形处理（见 QmApplyMenuPageSideInset），
 		// 不要改 Screen()/这里：触摸映射按整屏换算，内缩 Screen 会让点击错位。
-		Screen.Margin(8.0f, &Screen);
+		Screen.Margin(ui_token::panel::MARGIN, &Screen);
 	}
 
 	if(ClientState == IClient::STATE_OFFLINE && QmNewsShouldAnnounce(true, m_ShowStart, m_Popup != POPUP_NONE,
@@ -4570,6 +4733,12 @@ void CMenus::Render()
 			// 只动布局矩形，触摸映射仍按整屏换算。
 			QmApplyMenuPageSideInset(&TabBar, Screen.w + 16.0f);
 			QmApplyMenuPageSideInset(&MainView, Screen.w + 16.0f);
+			// ESC 菜单滑入/滑出：导航栏与内容区共用一个纵向偏移，读作「一整块面板」
+			// 从屏幕上方落下；只动布局矩形，绘制与命中检测同步偏移（所见即所点）。
+			TabBar.y += MenuSlideY;
+			MainView.y += MenuSlideY;
+			// 记录导航栏命中矩形（含偏移）：点它内部属于点菜单自身，不算「点外部」。
+			AddMenuHitRegion(TabBar);
 			bool NavigationHandedOff;
 			{
 				CPerfTimer StageTimer;
@@ -4640,7 +4809,6 @@ void CMenus::Render()
 			{
 				CPerfTimer StageTimer;
 				RenderGame(MainView);
-				RenderIngameHint();
 				LogPerfStage(Client(), "ingame_esc_tab_content", StageTimer.ElapsedMs(), TransitionActive, aEscPerfExtra);
 			}
 			else if(m_GamePage == PAGE_PLAYERS)
@@ -4916,7 +5084,10 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 	}
 
 	// Background
+	CUIRect PopupBounds = Box;
 	Box.Draw(BgColor, IGraphics::CORNER_ALL, ui_token::radius::CARD);
+	// 弹层自己的标题、正文等空白点击也属于弹层，不能落成「菜单外」。
+	AddMenuHitRegion(PopupBounds);
 	if(CompactPopup)
 		Box.Margin(12.0f, &Box);
 
@@ -5605,7 +5776,7 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 				if(LastStateChangeSeconds >= 2.0f &&
 					GameClient()->m_LocalServer.IsServerRunning())
 				{
-					Client()->Connect("localhost");
+					GameClient()->m_LocalServer.Connect();
 				}
 
 				pProgressLabel = Localize("Waiting for local server to start…");
@@ -6109,7 +6280,21 @@ void CMenus::RenderThemeSelection(CUIRect MainView, const SSettingsContentMetric
 	const SSettingsContentMetrics Metrics = pMetrics != nullptr ? *pMetrics : ResolveSettingsContentMetrics(MainView.w);
 	s_ListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);
 	s_ListBox.SetWheelOwnerPriority(EUiWheelOwnerPriority::COMPOSITE_CONTROL);
-	s_ListBox.SetItemColors(ui_token::color::LIST_ITEM_SELECTED, ui_token::color::LIST_ITEM_SELECTED, ui_token::color::LIST_ITEM_HOVER);
+	// 选中态与悬浮态统一取主题强调色（QmSettingsDropdownVisualStyle().m_ActiveEntryColor
+	// 就是 Theme.m_Selected）：强调色低透明度填充、无描边，两种反馈同一份颜色。
+	// 白色 token（LIST_ITEM_HOVER/LIST_ITEM_SELECTED）不再参与行反馈——实机反馈「悬浮
+	// 颜色要跟强调色走，不是白的一档」。
+	const ColorRGBA SelectedItemColor = Ui()->QmControlTheme().m_Selected;
+	s_ListBox.SetItemColors(SelectedItemColor, SelectedItemColor, SelectedItemColor);
+	// 统一行外观：胶囊整行 + token 行距 + 按字号派生的行内内边距，与图形页列表同一套。
+	// 可见行数取整数行（最少 3 行沿用原 RowsPerScroll 的设计意图，最多 8 行），
+	// 卡片测高（ResolveSettingsGeneralThemeListGeometry）用同一组行数，超出的行交给滚动条；
+	// 这样列表体高度正好停在整行边界，最上/最下一行的胶囊不会被裁掉或探出容器背景。
+	s_ListBox.SetCapsuleRows(Metrics.m_BodySize);
+	// 容器内边距显式声明（卡片测高 ResolveSettingsGeneralThemeListGeometry 已按
+	// PaddedRowsHeight 计入两档）：首/末行的胶囊不再压在容器圆角上。
+	s_ListBox.SetContainerPadding(ui_token::list::ContainerPadding(Metrics.m_ListRowHeight));
+	s_ListBox.SetVisibleRowRange(ui_token::list::THEME_MIN_VISIBLE_ROWS, ui_token::list::MAX_VISIBLE_ROWS);
 
 	const float HeaderHeight = Metrics.m_LineHeight;
 	const float HeaderSpacing = Metrics.m_LineSpacing;
@@ -6165,7 +6350,9 @@ void CMenus::RenderThemeSelection(CUIRect MainView, const SSettingsContentMetric
 		Ui()->DoConfigTooltip(&Theme.m_Name, &Item.m_Rect, g_Config.m_ClMenuMap);
 
 		const std::string Name = ThemeDisplayName(Theme.m_Name.c_str());
-		const auto RowLayout = ResolveThemeSelectionRowLayout(Item.m_Rect, TextRender()->TextWidth(Metrics.m_BodySize, Name.c_str()), Metrics.m_LineSpacing);
+		// 行内容一律排在 m_ContentRect：胶囊行会按字号让出左右内边距，并给覆盖式滚动条
+		// 那一列再让一条缝，用 m_Rect 摆图标/名称会压到滚动条下面。
+		const auto RowLayout = ResolveThemeSelectionRowLayout(Item.m_ContentRect, TextRender()->TextWidth(Metrics.m_BodySize, Name.c_str()), Metrics.m_LineSpacing);
 		CUIRect Icon = RowLayout.m_Icon;
 		const CUIRect Label = RowLayout.m_Label;
 
@@ -6209,6 +6396,8 @@ void CMenus::SetActive(bool Active)
 		if(Active)
 		{
 			m_MenuOpenFrame = 0;
+			// 入场动效的唯一起点：轨道值钉到屏幕外，插值交给运行时。
+			StartMenuSlide(GameClient(), Ui(), 0.0f, true);
 			if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK &&
 				((m_MenuPage >= PAGE_INTERNET && m_MenuPage <= PAGE_FAVORITE_COMMUNITY_5) || m_MenuPage == PAGE_FAVORITE_MAPS))
 			{
@@ -6226,6 +6415,13 @@ void CMenus::SetActive(bool Active)
 	if(!Active && m_ScreenshotEditor.IsOpen())
 		m_ScreenshotEditor.Close(this);
 	m_MenuActive = Active;
+	// 真正关闭时清收尾状态：下一次打开必须能重新接收输入与点击判定。
+	if(!Active)
+	{
+		m_MenuClosing = false;
+		m_MenuOutsideClickPending = false;
+		m_MenuOutsideClickHadPopup = false;
+	}
 	if(!m_MenuActive)
 	{
 		CommitSettingsTeeSkinEdits();
@@ -6254,6 +6450,35 @@ void CMenus::SetActive(bool Active)
 	{
 		GameClient()->OnRelease();
 	}
+}
+
+void CMenus::BeginMenuClose()
+{
+	if(!m_MenuActive || m_MenuClosing)
+		return;
+
+	// 动效关闭或轨道不可用：立即关闭，不留一帧空转。
+	if(g_Config.m_QmUiMotionLevel <= 0 || !GameClient()->UiRuntimeV2()->Enabled())
+	{
+		SetActive(false);
+		return;
+	}
+
+	m_MenuClosing = true;
+	m_MenuCloseDeadline = time_get() + time_freq() * 3 / 2; // 兜底 1.5s
+	m_MenuOutsideClickPending = false;
+	m_MenuOutsideClickHadPopup = false;
+	// 收尾期间不再接受菜单交互：悬停与按下都交回游戏，避免动画区里的点击落到旧控件上。
+	Ui()->SetHotItem(nullptr);
+	Ui()->SetActiveItem(nullptr);
+	StartMenuSlide(GameClient(), Ui(), -MenuSlideDistance(Ui()), false);
+}
+
+void CMenus::AddMenuHitRegion(const CUIRect &Rect)
+{
+	if(Ui()->RenderOnly())
+		return;
+	m_MenuHitRegions.Add(Rect);
 }
 
 void CMenus::MarkMenuInteraction()
@@ -6374,7 +6599,7 @@ void CMenus::FinishSettingsScrollRegion(CScrollRegion &ScrollRegion, SSettingsSc
 CMenus::SQmSettingsCardStyle CMenus::QmSettingsCardStyle(float UiScale) const
 {
 	SQmSettingsCardStyle Style;
-	const SUiTheme Theme = ResolveUiTheme(ColorHSLA(g_Config.m_QmUiColor), g_Config.m_QmUiOpacity / 100.0f, ColorHSLA(g_Config.m_QmUiFocusColor), ColorHSLA(g_Config.m_QmUiAccentColor).WithAlpha(g_Config.m_QmUiAccentOpacity / 100.0f), ColorHSLA(g_Config.m_QmUiSelectedColor));
+	const SUiTheme Theme = ResolveUiTheme(ColorHSLA(g_Config.m_QmUiColor), g_Config.m_QmUiOpacity / 100.0f, ColorHSLA(g_Config.m_QmUiAccentColor).WithAlpha(g_Config.m_QmUiAccentOpacity / 100.0f));
 	const ui_widget::SCardProps CardProps = ui_widget::QmClientCardProps(UiScale, &Theme);
 	const SQmScrollContainerStyle ScrollStyle = QmScrollContainerStyleForSize(EQmScrollSize::MEDIUM, 1.0f);
 	Style.m_Padding = CardProps.m_Padding;
@@ -6528,11 +6753,29 @@ bool CMenus::SetSettingsPageFromCardTab(const char *pTab)
 		m_QmClientSettingsTab = QMCLIENT_SETTINGS_TAB_CONFIG;
 	}
 	else if(str_comp(pTab, "graphics") == 0)
+	{
 		g_Config.m_UiSettingsPage = SETTINGS_GRAPHICS;
+		g_Config.m_QmGraphicsTab = GRAPHICS_TAB_DISPLAY;
+	}
+	else if(str_comp(pTab, "graphics-visual") == 0)
+	{
+		// 图像页「视觉效果」子页签：拆出来的两张卡在全局搜索里仍要能直达。
+		g_Config.m_UiSettingsPage = SETTINGS_GRAPHICS;
+		g_Config.m_QmGraphicsTab = GRAPHICS_TAB_VISUAL;
+	}
 	else if(str_comp(pTab, "sound") == 0)
 		g_Config.m_UiSettingsPage = SETTINGS_SOUND;
 	else if(str_comp(pTab, "ddnet") == 0)
+	{
 		g_Config.m_UiSettingsPage = SETTINGS_DDNET;
+		g_Config.m_QmDdnetTab = DDNET_TAB_GENERAL;
+	}
+	else if(str_comp(pTab, "ddnet-prediction") == 0)
+	{
+		// DDNet 页内「网络补偿」子页签：迁过来的预测卡在全局搜索里仍要能直达。
+		g_Config.m_UiSettingsPage = SETTINGS_DDNET;
+		g_Config.m_QmDdnetTab = DDNET_TAB_PREDICTION;
+	}
 	else if(str_comp(pTab, "controls") == 0)
 		g_Config.m_UiSettingsPage = SETTINGS_CONTROLS;
 	else if(str_comp(pTab, "appearance-hud") == 0)
@@ -6721,8 +6964,6 @@ void CMenus::OnReset()
 void CMenus::OnShutdown()
 {
 	m_QmVoteMenu.m_Loader.Suspend();
-	// 图形接口此刻仍存活，地图库封面的 GPU 纹理必须在这一步释放。
-	m_QmVoteMenu.m_Covers.Shutdown(Graphics());
 	m_ScreenshotEditor.Close(this);
 	m_TranslateProbe.Cancel();
 	m_LocalSaveDisplay.Reset();
@@ -6759,7 +7000,7 @@ void CMenus::OnShutdown()
 	// 预览缓存的 GPU 资源必须在此窗口期释放，不能等到组件析构。
 	if(auto *pServerBrowserImpl = dynamic_cast<CServerBrowser *>(ServerBrowser()))
 		pServerBrowserImpl->m_MapDifficultyStarsFunction = nullptr;
-	ClearMapPreviewCache();
+	m_MapPreviewPanel.Shutdown();
 
 	// QmClient: 保存“最近缺失字形”集合，供下次启动后立即预热（详见 text.cpp）。
 	Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
@@ -6831,7 +7072,8 @@ CMenus::SMenuTextStyleKey CMenus::BuildSettingsShellTitleTextStyle(const CUIRect
 	Props.m_MaxWidth = Label.w;
 	if(pOutLabel != nullptr)
 		*pOutLabel = Label;
-	return BuildMenuTextStyleKey(&Label, 16.0f, TEXTALIGN_MC, Props);
+	// 标题字号取页面标题档：写死 16 会让「设置」与正文一样细（用户实机反馈的观感问题）。
+	return BuildMenuTextStyleKey(&Label, ui_token::page_title::FONT_SIZE, TEXTALIGN_MC, Props);
 }
 
 CMenus::SMenuTextPlanItem CMenus::AddStableTextCheckbox(int Page, int Tab, int Subtab, const char *pTextId, const char *pText, const CUIRect &Rect, const char *pSourceTag) const
@@ -6877,7 +7119,9 @@ int CMenus::DoIngameMenuTab(CButtonContainer *pButtonContainer, int Page, const 
 	Text.HMargin(2.0f * ContentScale, &Text);
 	SLabelProperties Props;
 	Props.m_MaxWidth = Text.w;
-	const float FontSize = ui_token::settings::TAB_FONT_SIZE * ContentScale;
+	// 字号与 DoMenuTabV2Internal 同一条解析：ESC 顶部主导航取页签唯一字号档，
+	// 不再乘内容缩放，避免文字测量与真实绘制两个字号。
+	const float FontSize = ui_token::settings::MENU_NAV_FONT_SIZE;
 	const SMenuTextStyleKey StyleKey = BuildMenuTextStyleKey(&Text, FontSize, TEXTALIGN_MC, Props);
 	if(m_MenuTextPlanCollecting)
 	{
@@ -7001,13 +7245,22 @@ void CMenus::DoIngameMenuTitleLabel(int Page, const char *pTextId, const CUIRect
 
 CUIElement &CMenus::MenuTextElement(EMenuTextScope Scope, int Page, int Tab, int Subtab, const char *pTextId, const SMenuTextStyleKey &StyleKey)
 {
-	const uint64_t LanguageHash = str_quickhash(g_Config.m_ClLanguagefile);
-	// 分类字体（中文/图标符号）与各分类可变字重改变文本外观，一并计入菜单文本池字体键。
-	const uint64_t FontHash = str_quickhash(g_Config.m_QmCustomFont) * 31 +
-				  str_quickhash(g_Config.m_QmCustomFontCjk) * 131 +
-				  str_quickhash(g_Config.m_QmCustomFontIcons) * 1013 +
-				  (uint64_t)g_Config.m_QmCustomFontWeight * 10007 +
-				  (uint64_t)g_Config.m_QmCustomFontWeightCjk * 100003;
+	const uint64_t CurrentFrame = Client()->PerfFrame();
+	// 语言/字体哈希只随配置变化，但 MenuTextElement 每个标签都会调用；
+	// 按帧缓存，避免同一帧内对同一批字体路径重复做 str_quickhash。
+	if(m_MenuTextHashFrame != CurrentFrame)
+	{
+		m_MenuTextCachedLanguageHash = str_quickhash(g_Config.m_ClLanguagefile);
+		// 分类字体（中文/图标符号）与各分类可变字重改变文本外观，一并计入菜单文本池字体键。
+		m_MenuTextCachedFontHash = str_quickhash(g_Config.m_QmCustomFont) * 31 +
+					   str_quickhash(g_Config.m_QmCustomFontCjk) * 131 +
+					   str_quickhash(g_Config.m_QmCustomFontIcons) * 1013 +
+					   (uint64_t)g_Config.m_QmCustomFontWeight * 10007 +
+					   (uint64_t)g_Config.m_QmCustomFontWeightCjk * 100003;
+		m_MenuTextHashFrame = CurrentFrame;
+	}
+	const uint64_t LanguageHash = m_MenuTextCachedLanguageHash;
+	const uint64_t FontHash = m_MenuTextCachedFontHash;
 	if(m_MenuTextPoolLanguageHash == 0 || m_MenuTextPoolFontHash == 0)
 	{
 		m_MenuTextPoolLanguageHash = LanguageHash;
@@ -7046,11 +7299,20 @@ CUIElement &CMenus::MenuTextElement(EMenuTextScope Scope, int Page, int Tab, int
 		return m_MenuTextFallbackElement;
 	}
 
-	const std::string Key = MenuTextCacheKey(Scope, Page, Tab, Subtab, pTextId, StyleKey);
+	// 命中路径只在栈上格式化一次键，不分配字符串；未命中插入时才复制一次。
+	char aKey[MENU_TEXT_CACHE_KEY_SIZE];
+	FormatMenuTextCacheKey(aKey, sizeof(aKey), Scope, Page, Tab, Subtab, pTextId, StyleKey);
+	const std::string_view Key(aKey);
 	auto It = m_MenuTextPool.find(Key);
-	const uint64_t CurrentFrame = Client()->PerfFrame();
-	const bool HasDescriptor = m_SettingsMenuTextPlannedDescriptors.find(MenuTextDescriptorKey(Scope, Page, Tab, Subtab, pTextId)) != m_SettingsMenuTextPlannedDescriptors.end();
-	const bool KeyPlanned = m_SettingsMenuTextPlannedKeys.find(Key) != m_SettingsMenuTextPlannedKeys.end();
+	// descriptor/planned 只用于 visible guard 的诊断输出；正常帧不构造第二个 key，
+	// 也不做这两次与缓存命中无关的查找。
+	bool HasDescriptor = false;
+	bool KeyPlanned = false;
+	if(m_MenuTextPoolVisibleGuard)
+	{
+		HasDescriptor = m_SettingsMenuTextPlannedDescriptors.find(MenuTextDescriptorKey(Scope, Page, Tab, Subtab, pTextId)) != m_SettingsMenuTextPlannedDescriptors.end();
+		KeyPlanned = m_SettingsMenuTextPlannedKeys.find(Key) != m_SettingsMenuTextPlannedKeys.end();
+	}
 	if(m_MenuTextPoolVisibleGuard)
 	{
 		if(m_MenuTextStableCandidatesThisFrame == 0)
@@ -7077,13 +7339,13 @@ CUIElement &CMenus::MenuTextElement(EMenuTextScope Scope, int Page, int Tab, int
 		if(m_MenuTextPoolVisibleGuard)
 		{
 			++m_MenuTextStableMissesThisFrame;
-			LogSettingsTextPoolCoverageGap(Client(), "settings_text_miss", Scope, SettingsPerfStableTextScope(Page), Page, Tab, Subtab, Key.c_str(), "missing", HasDescriptor ? (KeyPlanned ? "not_built" : "key_mismatch") : "missing_descriptor", SettingsPerfActiveOperation(), m_MenuTextCoverageFrame);
+			LogSettingsTextPoolCoverageGap(Client(), "settings_text_miss", Scope, SettingsPerfStableTextScope(Page), Page, Tab, Subtab, aKey, "missing", HasDescriptor ? (KeyPlanned ? "not_built" : "key_mismatch") : "missing_descriptor", SettingsPerfActiveOperation(), m_MenuTextCoverageFrame);
 			if(!m_MenuTextFallbackElement.IsRegistered())
 				m_MenuTextFallbackElement.Init(Ui(), 1);
 			return m_MenuTextFallbackElement;
 		}
 		TrimMenuTextPoolForInsert(CurrentFrame);
-		It = m_MenuTextPool.try_emplace(Key).first;
+		It = m_MenuTextPool.try_emplace(std::string(Key)).first;
 		It->second.m_Element.Init(Ui(), 1);
 		It->second.m_StyleKey = StyleKey;
 		It->second.m_Generation = m_MenuTextPoolGeneration;
@@ -7093,7 +7355,7 @@ CUIElement &CMenus::MenuTextElement(EMenuTextScope Scope, int Page, int Tab, int
 		if(m_MenuTextPoolVisibleGuard)
 		{
 			++m_MenuTextStableStalesThisFrame;
-			LogSettingsTextPoolCoverageGap(Client(), "settings_text_stale", Scope, SettingsPerfStableTextScope(Page), Page, Tab, Subtab, Key.c_str(), m_MenuTextPoolLastStaleReason.empty() ? "style" : m_MenuTextPoolLastStaleReason.c_str(), KeyPlanned ? "stale_generation" : (HasDescriptor ? "key_mismatch" : "missing_descriptor"), SettingsPerfActiveOperation(), m_MenuTextCoverageFrame);
+			LogSettingsTextPoolCoverageGap(Client(), "settings_text_stale", Scope, SettingsPerfStableTextScope(Page), Page, Tab, Subtab, aKey, m_MenuTextPoolLastStaleReason.empty() ? "style" : m_MenuTextPoolLastStaleReason.c_str(), KeyPlanned ? "stale_generation" : (HasDescriptor ? "key_mismatch" : "missing_descriptor"), SettingsPerfActiveOperation(), m_MenuTextCoverageFrame);
 			if(!m_MenuTextFallbackElement.IsRegistered())
 				m_MenuTextFallbackElement.Init(Ui(), 1);
 			return m_MenuTextFallbackElement;
@@ -7157,7 +7419,11 @@ bool CMenus::MenuTextContainerNeedsBuild(CUIElement &Element, const CUIRect *pRe
 		(StrLen != 0 && StrLen < 0 && str_comp(pElementRect->m_Text.c_str(), pText) != 0);
 	const int ReadCursorGlyphCount = pReadCursor == nullptr ? -1 : pReadCursor->m_GlyphCount;
 	const bool SizeChanged = pElementRect->m_Width != pRect->w || pElementRect->m_Height != pRect->h;
-	const bool StyleChanged = pElementRect->m_FontSize != Size || pElementRect->m_TextAlign != Align || pElementRect->m_LabelMaxWidth != LabelProps.m_MaxWidth || pElementRect->m_LabelFlags != Ui()->GetLabelFlagsForProperties(LabelProps, pReadCursor);
+	// 逐字色段烘在容器顶点里，改了就必须重建；没改继续复用。判定与
+	// CUi::DoLabelStreamed 完全一致（同一个谓词），否则这里排队、那边不重建
+	// 会逐帧空转。
+	const bool BakedColorChanged = !pElementRect->BakedColorMatches(LabelProps.m_vColorSplits, TextRender()->GetTextColor());
+	const bool StyleChanged = BakedColorChanged || pElementRect->m_FontSize != Size || pElementRect->m_TextAlign != Align || pElementRect->m_LabelMaxWidth != LabelProps.m_MaxWidth || pElementRect->m_LabelFlags != Ui()->GetLabelFlagsForProperties(LabelProps, pReadCursor);
 	const bool NeedsBuild =
 		(!pElementRect->m_UITextContainer.Valid() && pText[0] != '\0' && StrLen != 0) ||
 		TextChanged ||
@@ -8174,28 +8440,38 @@ bool CMenus::PrewarmSettingsPageResources(int Page, int Tab, const CUIRect &Cont
 	Page = SettingsCanonicalPage(Page);
 	if(Page == SETTINGS_GENERAL)
 	{
-		std::vector<int> vCountryCodes;
+		// 空闲预热每帧都会走到这里，复用成员缓冲，避免已就绪后仍反复分配。
+		std::vector<int> &vCountryCodes = m_SettingsPrewarmCountryCodes;
+		vCountryCodes.clear();
 		const int NumLanguages = (int)g_Localization.Languages().size();
 		vCountryCodes.reserve(NumLanguages);
+		// 当前语言排在最前，让每轮 16 个加载启动名额先服务正在显示的国旗。
+		int SelectedIndex = -1;
 		for(int i = 0; i < NumLanguages; ++i)
 		{
 			const auto &Language = g_Localization.Languages()[i];
 			if(str_comp(Language.m_Filename.c_str(), g_Config.m_ClLanguagefile) == 0)
 			{
+				SelectedIndex = i;
 				vCountryCodes.push_back(Language.m_CountryCode);
 				break;
 			}
 		}
 		for(int i = 0; i < NumLanguages; ++i)
-			vCountryCodes.push_back(g_Localization.Languages()[i].m_CountryCode);
+		{
+			if(i != SelectedIndex)
+				vCountryCodes.push_back(g_Localization.Languages()[i].m_CountryCode);
+		}
 		return GameClient()->m_CountryFlags.PrewarmByCountryCodesReady(BuildSettingsCountryFlagWarmupPlan(vCountryCodes));
 	}
 	else if(Page == SETTINGS_TEE)
 	{
 		const int TeeWarmupEntries = SettingsTeeSkinListFirstPageWarmupEntries(ContentView.h);
-		std::vector<int> vIndices;
-		vIndices.reserve(GameClient()->m_CountryFlags.Num());
-		for(int i = 0; i < (int)GameClient()->m_CountryFlags.Num(); ++i)
+		std::vector<int> &vIndices = m_SettingsPrewarmFlagIndices;
+		vIndices.clear();
+		const int NumFlags = (int)GameClient()->m_CountryFlags.Num();
+		vIndices.reserve(NumFlags);
+		for(int i = 0; i < NumFlags; ++i)
 			vIndices.push_back(i);
 		const bool FlagsReady = GameClient()->m_CountryFlags.PrewarmByIndicesReady(vIndices);
 		const bool TeeReady = GameClient()->m_Skins.PrewarmPlayerPreviewReady(m_Dummy ? 1 : 0, TeeWarmupEntries, true);
@@ -8245,6 +8521,9 @@ bool CMenus::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
 	// 否则列表点不到、光标也不会跟着动。预览 HUD 同理。
 	if(!m_MenuActive && !GameClient()->m_Spectator.PlaybackControlsActive() && !QmPoseMapPopupOpen() && !QmPoseHudActive() && !Client()->PoseSessionActive())
 		return false;
+	// 滑出收尾期间鼠标交回游戏：玩家关掉菜单就能立刻转身瞄准。
+	if(m_MenuClosing)
+		return false;
 
 	MarkMenuInteraction();
 	Ui()->ConvertMouseMove(&x, &y, CursorType);
@@ -8268,6 +8547,18 @@ bool CMenus::OnInput(const IInput::CEvent &Event)
 {
 	if(!IsActive() && GameClient()->m_HudEditor.IsActive())
 		return false;
+
+	// 滑出收尾期间让出输入：按键与鼠标都交回游戏，菜单只剩绘制。
+	// 只有 ESC 例外——它必须能立刻折返重开，否则狂按时按下去没反应，手感就断了。
+	if(m_MenuClosing)
+	{
+		if((Event.m_Flags & IInput::FLAG_PRESS) && Event.m_Key == KEY_ESCAPE)
+		{
+			Ui()->OnInput(Event);
+			return true;
+		}
+		return false;
+	}
 
 	// 合影预览：Esc 开/关预览 HUD，沿用回放 HUD 的心智——先叫出控制条，再决定
 	// 看哪里、拍哪一张。这里不再「Esc 即回菜单」，也不会顺手把会话收掉。
@@ -8295,6 +8586,16 @@ bool CMenus::OnInput(const IInput::CEvent &Event)
 		return true;
 	}
 
+	// 点菜单外面关闭：这里只登记，判定放到本帧绘制之后（见 OnRender 末尾）——
+	// 「移动 + 点击」落在同一帧时 HotItem 还是上一帧的值，当场判定会把点按钮误判成点外部。
+	// 只在游戏内壳层启用：离线主菜单没有「打开」动作，点空白把它关掉会闪一下。
+	if(m_MenuActive && (Client()->State() == IClient::STATE_ONLINE || Client()->State() == IClient::STATE_DEMOPLAYBACK) &&
+		Event.m_Key == KEY_MOUSE_1 && (Event.m_Flags & IInput::FLAG_PRESS))
+	{
+		m_MenuOutsideClickPending = true;
+		m_MenuOutsideClickHadPopup = m_Popup != POPUP_NONE || Ui()->IsPopupOpen();
+	}
+
 	// Escape key is always handled to activate/deactivate menu
 	if((Event.m_Flags & IInput::FLAG_PRESS && Event.m_Key == KEY_ESCAPE) || IsActive() || QmPoseMapPopupOpen() || QmPoseHudActive())
 	{
@@ -8318,9 +8619,7 @@ void CMenus::OnStateChange(int NewState, int OldState)
 	{
 		m_QmVoteMenu.m_Mode.Reset();
 		m_QmVoteMenu.m_Page = EQmVoteMenuPage::OPTIONS;
-	}
-	m_QmPlayersMenu.m_Selection.Validate(nullptr);
-	if(NewState == IClient::STATE_DEMOPLAYBACK)
+	}	if(NewState == IClient::STATE_DEMOPLAYBACK)
 	{
 		m_DemoDisplayExpanded = false;
 		m_DemoExportDisplayExpanded = false;
@@ -8412,8 +8711,8 @@ void CMenus::OnUpdate()
 
 void CMenus::OnRender()
 {
-	// 关菜单和切页后继续完成已请求的封面，重开时直接复用纹理。
-	m_QmVoteMenu.m_Covers.Update(Http(), Engine(), Graphics(), Storage(), Client()->LocalTime());
+	if(!Ui()->RenderOnly())
+		m_MenuHitRegions.Reset();
 	m_BrowserColumnResizeCursor = false;
 	PumpDemoScreenshotWatermark();
 	// 引擎侧（Windows 双击 .poses、poses_open 命令）缺少地图时留下的请求：
@@ -8449,6 +8748,11 @@ void CMenus::OnRender()
 		// 被动断开要说明原因，但不该再挡一层模态：用警告提示。
 		qm_ui::Toast(EQmToastKind::WARNING, Localize("The server is running a non-standard tuning on a pure game type."));
 	}
+
+	// 滑出收尾：轨道自然收敛后才真正关闭。动画期间 IsActive() 仍为 true，
+	// 菜单继续逐帧绘制（位置由轨道带着往屏幕外走），输入已在 OnInput/OnCursorMove 里让出。
+	if(m_MenuClosing && (MenuSlideSettled(GameClient()->UiRuntimeV2()->AnimRuntime()) || time_get() > m_MenuCloseDeadline))
+		SetActive(false);
 
 	if(!IsActive())
 	{
@@ -8582,8 +8886,31 @@ void CMenus::OnRender()
 		Ui()->EndBackgroundRender();
 	else
 	{
+		// ESC 在任何时刻都立刻生效、并且可以中途折返：
+		// 打开中按下 → 立刻转成收起；收起中按下 → 立刻从当前位置弹回打开态。
+		// 两者都只改轨道目标（REPLACE 从当前值续接），不重置起点，所以狂按也不会跳帧。
 		if(Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE))
-			SetActive(false);
+		{
+			if(m_MenuClosing)
+			{
+				m_MenuClosing = false;
+				StartMenuSlide(GameClient(), Ui(), 0.0f, false);
+			}
+			else
+			{
+				BeginMenuClose();
+			}
+		}
+		// 点击面板外空白：本帧 HotItem 已由绘制算出，此刻判定才是「点到了什么」的真相。
+		if(m_MenuOutsideClickPending)
+		{
+			m_MenuOutsideClickPending = false;
+			const vec2 ClickPos = Ui()->MousePos();
+			const bool HadPopup = m_MenuOutsideClickHadPopup;
+			m_MenuOutsideClickHadPopup = false;
+			if(m_MenuActive && !m_MenuClosing && QmMenuOutsideClickShouldClose(ClickPos, Ui()->HotItem() != nullptr, m_MenuHitRegions, HadPopup))
+				BeginMenuClose();
+		}
 		Ui()->FinishCheck();
 		Ui()->ClearHotkeys();
 	}
@@ -8758,6 +9085,21 @@ const CMenus::CMenuImage *CMenus::FindMenuImage(const char *pName)
 		if(str_comp(Image.m_aName, pName) == 0)
 			return &Image;
 	return nullptr;
+}
+
+void CMenus::MenuImageTextures(const char *pName, IGraphics::CTextureHandle *pIdle, IGraphics::CTextureHandle *pHover)
+{
+	const CMenuImage *pImage = pName == nullptr ? nullptr : FindMenuImage(pName);
+	if(pIdle != nullptr)
+		*pIdle = pImage != nullptr ? pImage->m_GreyTexture : IGraphics::CTextureHandle();
+	if(pHover != nullptr)
+		*pHover = pImage != nullptr ? pImage->m_OrgTexture : IGraphics::CTextureHandle();
+}
+
+float CMenus::MenuButtonLabelSize(const CUIRect &Rect, float FontFactor) const
+{
+	const CUIRect Text = MenuButtonTextRect(&Rect, FontFactor, 0.0f);
+	return Text.h * CUi::ms_FontmodHeight;
 }
 
 void CMenus::SetMenuPage(int NewPage)

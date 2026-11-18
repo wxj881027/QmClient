@@ -168,16 +168,20 @@ TEST(SettingsTeeLayout, SkinOptionsAndAppearanceGroupsFitTheirMeasuredBounds)
 	}
 }
 
-TEST(SettingsTeeLayout, EmptyQueueDoesNotReserveSpaceForEightItems)
+TEST(SettingsTeeLayout, EmptyQueueDoesNotReserveSpaceForCappedVisibleRows)
 {
 	const SSettingsContentMetrics Metrics;
 	const auto Empty = ResolveSettingsTeeQueuePanelGeometry(Metrics, 0, 2, 400.0f);
 	const auto Full = ResolveSettingsTeeQueuePanelGeometry(Metrics, 8, 2, 400.0f);
 	const auto More = ResolveSettingsTeeQueuePanelGeometry(Metrics, 50, 2, 400.0f);
 	EXPECT_EQ(Empty.m_VisibleQueueRows, 1);
-	EXPECT_EQ(Full.m_VisibleQueueRows, 8);
+	// 队列可见行数封顶在 token 上；空队列只占 1 行，封顶后高度不再随条目数增长。
+	EXPECT_EQ(Full.m_VisibleQueueRows, ui_token::list::SKIN_QUEUE_MAX_VISIBLE_ROWS);
+	EXPECT_EQ(More.m_VisibleQueueRows, ui_token::list::SKIN_QUEUE_MAX_VISIBLE_ROWS);
 	EXPECT_EQ(Empty.m_VisiblePresetRows, 2);
-	EXPECT_FLOAT_EQ(Full.m_ContentHeight - Empty.m_ContentHeight, 7.0f * Metrics.m_ListRowHeight);
+	const float CappedQueueViewport = ResolveSettingsListViewportHeight(ui_token::list::SKIN_QUEUE_MAX_VISIBLE_ROWS, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING);
+	const float SingleRowViewport = ResolveSettingsListViewportHeight(1, Metrics.m_ListRowHeight, ui_token::list::ROW_SPACING);
+	EXPECT_FLOAT_EQ(Full.m_ContentHeight - Empty.m_ContentHeight, CappedQueueViewport - SingleRowViewport);
 	EXPECT_FLOAT_EQ(More.m_ContentHeight, Full.m_ContentHeight);
 	const auto Narrow = ResolveSettingsTeeQueuePanelGeometry(Metrics, 0, 2, 200.0f);
 	EXPECT_TRUE(Narrow.m_StackInterval);

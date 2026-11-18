@@ -95,6 +95,9 @@ namespace
 		void NextVideoFrameThread() override {}
 		void NextAudioFrame(ISoundMixFunc) override {}
 		void NextAudioFrameTimeline(ISoundMixFunc) override {}
+		int64_t Time() const override { return 0; }
+		float LocalTime() const override { return 0.0f; }
+		void SetLocalStartTime(int64_t) override {}
 		const SVideoDisplaySnapshot *DisplaySnapshot() const override { return &m_Snapshot; }
 
 	private:

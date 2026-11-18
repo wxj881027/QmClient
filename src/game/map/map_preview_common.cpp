@@ -448,7 +448,7 @@ namespace MapPreview
 			}
 		}
 
-		const int TextureLoadFlag = m_pGraphics->Uses2DTextureArrays() ? IGraphics::TEXLOAD_TO_2D_ARRAY_TEXTURE : IGraphics::TEXLOAD_TO_3D_TEXTURE;
+		const int TextureLoadFlag = m_pGraphics->TextureLoadFlags();
 		for(int i = 0; i < Num; ++i)
 		{
 			if(vTextureUsageFlags[i] == 0)

@@ -1,6 +1,7 @@
 #include <base/log.h>
 #include <base/logger.h>
 #include <base/math.h>
+#include <base/os.h>
 #include <base/str.h>
 #include <base/system.h>
 
@@ -137,7 +138,7 @@ namespace MapRenderer
 			int Start;
 			m_pMap->GetType(MAPITEMTYPE_IMAGE, &Start, &m_Count);
 			m_Count = std::clamp<int>(m_Count, 0, MAX_MAPIMAGES);
-			const int TextureLoadFlag = m_pGraphics->Uses2DTextureArrays() ? IGraphics::TEXLOAD_TO_2D_ARRAY_TEXTURE : IGraphics::TEXLOAD_TO_3D_TEXTURE;
+			const int TextureLoadFlag = m_pGraphics->TextureLoadFlags();
 
 			constexpr LOG_COLOR WarningLogColor = LOG_COLOR{255, 255, 0};
 
@@ -464,7 +465,7 @@ int main(int argc, const char **argv)
 	MapRenderer.OnInit(&Graphics, nullptr, &RenderMap);
 
 	CMapRenderEnvelopeEval EnvelopeEval(pMap.get(), TimeOffsetMillis);
-	MapRenderer.Load(RENDERTYPE_FULL_DESIGN, &Layers, &MapImages, &EnvelopeEval, std::nullopt);
+	MapRenderer.Load(RENDERTYPE_FULL_DESIGN, &Layers, &MapImages, &EnvelopeEval, std::nullopt, false);
 
 	// Override the forced viewport from AdjustViewport (which clamps aspect ratio)
 	Graphics.SetScreenSize(OutputWidth, OutputHeight);
@@ -494,7 +495,6 @@ int main(int argc, const char **argv)
 	RenderParams.m_Zoom = Zoom;
 	RenderParams.m_RenderText = false;
 	RenderParams.m_RenderInvalidTiles = false;
-	RenderParams.m_TileAndQuadBuffering = false;
 	RenderParams.m_RenderTileBorder = true;
 	RenderParams.m_DebugRenderGroupClips = false;
 	RenderParams.m_DebugRenderQuadClips = false;

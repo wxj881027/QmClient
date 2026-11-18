@@ -8,11 +8,11 @@ namespace
 {
 	using CPlan = CQmEntityOverlayBuildPlan;
 
-	// 与生产层相同，只有计划回调被调用时才提交该类别的构建工作。
 	std::vector<CPlan::ECategory> ScheduledCategories(const CPlan &Plan)
 	{
 		std::vector<CPlan::ECategory> vCategories;
-		Plan.ForEachPresent([&](CPlan::ECategory Category) { vCategories.push_back(Category); });
+		for(auto Category = Plan.NextPresent(); Category != CPlan::NUM_CATEGORIES; Category = Plan.NextPresent(Category + 1))
+			vCategories.push_back(Category);
 		return vCategories;
 	}
 }

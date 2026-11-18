@@ -42,7 +42,7 @@ struct SQmTitlePresenceParseResult
 bool ParseQmTitlePresencesJson(const json_value *pRoot, const char *pServerAddress, SQmTitlePresenceParseResult &OutResult);
 bool IsValidQmTitle(const char *pTitle);
 // 缺字段兼容旧服务；不完整或非法的新外观整体回退，避免半份资料。
-bool ParseQmTitleAppearance(const json_value *pValue, SQmTitleAppearance &Out);
+bool ParseQmTitleAppearance(const json_value *pValue, SQmTitleAppearance &Out, bool *pTextStyleSupported = nullptr);
 
 // 后端使用该标记表示包含多服分布的全局 USERS 快照。
 inline constexpr const char *QMCLIENT_REALTIME_USERS_GLOBAL = "users";

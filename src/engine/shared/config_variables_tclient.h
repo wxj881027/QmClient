@@ -57,8 +57,6 @@ MACRO_CONFIG_INT(QmShowCenter, qm_show_center, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG
 MACRO_CONFIG_INT(QmShowCenterWidth, qm_show_center_width, 0, 0, 20, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Center line width (requires qm_show_center)")
 MACRO_CONFIG_COL(QmShowCenterColor, qm_show_center_color, 1694498688, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Center line color (requires qm_show_center)") // transparent red
 
-MACRO_CONFIG_INT(QmHookCollCursor, qm_hook_coll_cursor, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hook collision line length follows cursor distance")
-
 MACRO_CONFIG_INT(QmFastInput, qm_fast_input, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Apply input early before next tick for prediction")
 MACRO_CONFIG_INT(QmFastInputAmount, qm_fast_input_amount, 20, 1, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Milliseconds to apply quick input early")
 MACRO_CONFIG_INT(QmFastInputOthers, qm_fast_input_others, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Apply quick input to other Tees as well")
@@ -91,25 +89,34 @@ MACRO_CONFIG_INT(QmOutlineEntities, qm_outline_in_entities, 0, 0, 1, CFGFLAG_CLI
 MACRO_CONFIG_INT(QmOutlineAlpha, qm_outline_alpha, 100, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Outline global opacity")
 MACRO_CONFIG_INT(QmOutlineSolidAlpha, qm_outline_solid_alpha, 100, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Entity wall outline opacity")
 
-MACRO_CONFIG_INT(QmOutlineSolid, qm_outline_solid, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show hookable/unhookable tile outlines")
-MACRO_CONFIG_INT(QmOutlineFreeze, qm_outline_freeze, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show freeze/deep freeze tile outlines")
-MACRO_CONFIG_INT(QmOutlineUnfreeze, qm_outline_unfreeze, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show unfreeze/deep unfreeze tile outlines")
+MACRO_CONFIG_INT(QmOutlineSolid, qm_outline_solid, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show hookable tile outlines")
+MACRO_CONFIG_INT(QmOutlineNoHook, qm_outline_nohook, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show unhookable tile outlines")
+MACRO_CONFIG_INT(QmOutlineDeepFreeze, qm_outline_deep_freeze, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show deep freeze tile outlines")
+MACRO_CONFIG_INT(QmOutlineDeepUnfreeze, qm_outline_deep_unfreeze, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show deep unfreeze tile outlines")
+MACRO_CONFIG_INT(QmOutlineFreeze, qm_outline_freeze, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show freeze tile outlines")
+MACRO_CONFIG_INT(QmOutlineUnfreeze, qm_outline_unfreeze, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show unfreeze tile outlines")
 MACRO_CONFIG_INT(QmOutlineKill, qm_outline_kill, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show death tile outlines")
 MACRO_CONFIG_INT(QmOutlineTele, qm_outline_tele, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show teleporter tile outlines")
 
-MACRO_CONFIG_INT(QmOutlineWidthSolid, qm_outline_width_solid, 2, 1, 16, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hookable/unhookable tile outline width")
-MACRO_CONFIG_INT(QmOutlineWidthFreeze, qm_outline_width_freeze, 2, 1, 16, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Freeze/Deep freeze tile outline width")
-MACRO_CONFIG_INT(QmOutlineWidthUnfreeze, qm_outline_width_unfreeze, 2, 1, 16, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Unfreeze/Deep unfreeze tile outline width")
+MACRO_CONFIG_INT(QmOutlineWidthSolid, qm_outline_width_solid, 2, 1, 16, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hookable tile outline width")
+MACRO_CONFIG_INT(QmOutlineWidthNoHook, qm_outline_width_nohook, 2, 1, 16, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Unhookable tile outline width")
+MACRO_CONFIG_INT(QmOutlineWidthDeepFreeze, qm_outline_width_deep_freeze, 2, 1, 16, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Deep freeze tile outline width")
+MACRO_CONFIG_INT(QmOutlineWidthDeepUnfreeze, qm_outline_width_deep_unfreeze, 2, 1, 16, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Deep unfreeze tile outline width")
+MACRO_CONFIG_INT(QmOutlineWidthFreeze, qm_outline_width_freeze, 2, 1, 16, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Freeze tile outline width")
+MACRO_CONFIG_INT(QmOutlineWidthUnfreeze, qm_outline_width_unfreeze, 2, 1, 16, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Unfreeze tile outline width")
 MACRO_CONFIG_INT(QmOutlineWidthKill, qm_outline_width_kill, 2, 1, 16, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Death tile outline width")
 MACRO_CONFIG_INT(QmOutlineWidthTele, qm_outline_width_tele, 2, 1, 16, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Teleport tile outline width")
 
-MACRO_CONFIG_COL(QmOutlineColorSolid, qm_outline_color_solid, 4294901760, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Hookable/Unhookable tile outline color") // 255 0 0 0
-MACRO_CONFIG_COL(QmOutlineColorFreeze, qm_outline_color_freeze, 4294901760, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Freeze tile outline color") // 255 0 0 0
-MACRO_CONFIG_COL(QmOutlineColorDeepFreeze, qm_outline_color_deep_freeze, 4294901760, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Deep freeze tile outline color") // 255 0 0 0
-MACRO_CONFIG_COL(QmOutlineColorUnfreeze, qm_outline_color_unfreeze, 4294901760, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Unfreeze tile outline color") // 255 0 0 0
-MACRO_CONFIG_COL(QmOutlineColorDeepUnfreeze, qm_outline_color_deep_unfreeze, 4294901760, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Deep unfreeze tile outline color") // 255 0 0 0
-MACRO_CONFIG_COL(QmOutlineColorKill, qm_outline_color_kill, 4294901760, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Death tile outline color") // 0 0 0
-MACRO_CONFIG_COL(QmOutlineColorTele, qm_outline_color_tele, 4294901760, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Teleport tile outline color") // 255 0 0 0
+// 墙体轮廓颜色只使用 RGB；透明度统一由 qm_outline_alpha / qm_outline_solid_alpha 控制，
+// 因此不带 CFGFLAG_COLALPHA，默认值也不含 alpha 高字节。
+MACRO_CONFIG_COL(QmOutlineColorSolid, qm_outline_color_solid, 16711680, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hookable tile outline color") // #FF0000
+MACRO_CONFIG_COL(QmOutlineColorNoHook, qm_outline_color_nohook, 16711680, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Unhookable tile outline color") // #FF0000
+MACRO_CONFIG_COL(QmOutlineColorFreeze, qm_outline_color_freeze, 16711680, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Freeze tile outline color") // #FF0000
+MACRO_CONFIG_COL(QmOutlineColorDeepFreeze, qm_outline_color_deep_freeze, 16711680, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Deep freeze tile outline color") // #FF0000
+MACRO_CONFIG_COL(QmOutlineColorUnfreeze, qm_outline_color_unfreeze, 16711680, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Unfreeze tile outline color") // #FF0000
+MACRO_CONFIG_COL(QmOutlineColorDeepUnfreeze, qm_outline_color_deep_unfreeze, 16711680, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Deep unfreeze tile outline color") // #FF0000
+MACRO_CONFIG_COL(QmOutlineColorKill, qm_outline_color_kill, 16711680, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Death tile outline color") // #FF0000
+MACRO_CONFIG_COL(QmOutlineColorTele, qm_outline_color_tele, 16711680, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Teleport tile outline color") // #FF0000
 
 // Indicator Variables
 MACRO_CONFIG_COL(QmIndicatorAlive, qm_indicator_alive, 255, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Player indicator alive Tee color")
@@ -162,6 +169,7 @@ MACRO_CONFIG_INT(QmTinyTeeSize, qm_indicator_tees_size, 100, 85, 115, CFGFLAG_CL
 MACRO_CONFIG_INT(QmTinyTeesOthers, qm_tiny_tees_others, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Scale down other Tees as well")
 
 MACRO_CONFIG_INT(QmCursorScale, qm_cursor_scale, 100, 0, 500, CFGFLAG_CLIENT | CFGFLAG_SAVE, "In-game crosshair scale percent (50=half, 200=double)")
+MACRO_CONFIG_INT(QmCursorRotation, qm_cursor_rotation, 0, -720, 720, CFGFLAG_CLIENT | CFGFLAG_SAVE, "In-game crosshair rotation speed in degrees per second (0=static, negative=reverse)")
 
 // Profiles
 MACRO_CONFIG_INT(QmProfileSkin, qm_profile_skin, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Include skin when saving/loading config preset")

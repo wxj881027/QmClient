@@ -82,7 +82,8 @@ TEST(QmNewUiMenuGameplayScoreboardContract, NewColorControlsUseIndependentUiDoma
 
 	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_COL(QmUiColor, qm_ui_color"), std::string::npos);
 	EXPECT_EQ(ConfigSource.find("MACRO_CONFIG_COL(QmMapBrowserColor, qm_map_browser_color"), std::string::npos);
-	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_COL(QmScoreboardColor, qm_scoreboard_color"), std::string::npos);
+	// 计分板表面已并入界面表面：不再有独立配置项。
+	EXPECT_EQ(ConfigSource.find("MACRO_CONFIG_COL(QmScoreboardColor, qm_scoreboard_color"), std::string::npos);
 	EXPECT_NE(MenusSource.find("ColorHSLA(g_Config.m_QmUiColor)"), std::string::npos);
 	EXPECT_EQ(MenusSource.find("ColorHSLA(g_Config.m_QmMapBrowserColor)"), std::string::npos);
 	EXPECT_EQ(MenusSource.find("ColorHSLA(g_Config.m_ClMenuPanelColor)"), std::string::npos);
@@ -92,15 +93,17 @@ TEST(QmNewUiMenuGameplayScoreboardContract, NewColorControlsUseIndependentUiDoma
 	EXPECT_NE(RenderBackground.find("ms_GuiColor.WithAlpha(1.0f)"), std::string::npos);
 	EXPECT_EQ(RenderBackground.find("g_Config.m_QmUiColor"), std::string::npos);
 	EXPECT_NE(BrowserSource.find("ColorHSLA(g_Config.m_QmUiColor)"), std::string::npos);
-	EXPECT_NE(ScoreboardSource.find("ColorHSLA(g_Config.m_QmScoreboardColor)"), std::string::npos);
+	EXPECT_NE(ScoreboardSource.find("ColorHSLA(g_Config.m_QmUiColor)"), std::string::npos);
 }
 
-TEST(QmNewUiMenuGameplayScoreboardContract, ScoreboardBackgroundsUseScoreboardOpacity)
+TEST(QmNewUiMenuGameplayScoreboardContract, ScoreboardBackgroundsUseInterfaceOpacity)
 {
 	const std::string Source = ReadTextFile("src/game/client/components/scoreboard.cpp");
 
 	EXPECT_NE(Source.find("Color.a = ScoreboardUiAlpha(AlphaScale);"), std::string::npos);
-	EXPECT_NE(Source.find("g_Config.m_QmScoreboardOpacity / 100.0f"), std::string::npos);
+	// 计分板透明度跟随界面透明度，不再单独配置。
+	EXPECT_NE(Source.find("g_Config.m_QmUiOpacity / 100.0f"), std::string::npos);
+	EXPECT_EQ(Source.find("m_QmScoreboardOpacity"), std::string::npos);
 	EXPECT_NE(Source.find("ScoreboardDecorationColor(GameClient()->GetDDTeamColor(DDTeam).WithAlpha(0.5f * ItemAlpha))"), std::string::npos);
 	EXPECT_NE(Source.find("Row.Draw(ScoreboardDecorationColor(ui_token::color::ACCENT_PRIMARY_DIM.WithMultipliedAlpha(ItemAlpha * 1.45f))"), std::string::npos);
 	EXPECT_NE(Source.find("Row.Draw(ScoreboardDecorationColor(ColorRGBA(0.7f, 0.7f, 0.7f, 0.7f * ItemAlpha))"), std::string::npos);

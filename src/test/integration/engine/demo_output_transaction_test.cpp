@@ -108,7 +108,7 @@ namespace
 		bool Slice(DEMOFUNC_FILTER pfnFilter = nullptr)
 		{
 			CDemoEditor Editor;
-			Editor.Init(&*m_State.m_pDelta, &*m_State.m_pDeltaSixup, nullptr, m_State.m_pStorage.get(), nullptr, &m_Operations, &m_Recording);
+			Editor.Init(&*m_State.m_pDelta, &*m_State.m_pDeltaSixup, m_State.m_pStorage.get(), nullptr, &m_Operations, &m_Recording);
 			return Editor.Slice("source.demo", "target.demo", -1, -1, pfnFilter, nullptr);
 		}
 		void Prepare()
@@ -371,7 +371,7 @@ TEST_F(DemoOutputTransactionIntegration, PrimaryPlaybackLoadStillResetsUserSelec
 	g_Config.m_ClDemoSliceBegin = 110;
 	g_Config.m_ClDemoSliceEnd = 140;
 	CDemoPlayer Player(&*m_State.m_pDelta, &*m_State.m_pDeltaSixup, false);
-	EXPECT_EQ(Player.Load(m_State.m_pStorage.get(), nullptr, "source.demo", IStorage::TYPE_SAVE), 0);
+	EXPECT_EQ(Player.Load(m_State.m_pStorage.get(), "source.demo", IStorage::TYPE_SAVE), 0);
 	EXPECT_EQ(g_Config.m_ClDemoSliceBegin, -1);
 	EXPECT_EQ(g_Config.m_ClDemoSliceEnd, -1);
 	Player.Stop();
@@ -390,7 +390,7 @@ TEST(DemoOutputClockDeathTest, InternalSliceDoesNotChangeTheCallersCachedFrameTi
 				set_new_tick();
 				const int64_t FrameTime = time_get();
 				CDemoEditor Editor;
-				Editor.Init(&*State.m_pDelta, &*State.m_pDeltaSixup, nullptr, State.m_pStorage.get());
+				Editor.Init(&*State.m_pDelta, &*State.m_pDeltaSixup, State.m_pStorage.get());
 				return Editor.Slice("source.demo", "target.demo", 100, 150, nullptr, nullptr) && time_get() == FrameTime;
 			}();
 			std::exit(Preserved ? 0 : 1);
@@ -409,7 +409,7 @@ TEST(DemoOutputClockDeathTest, PrimaryPlaybackStillUsesTheExistingCachedFrameTim
 				CNetBase::Init();
 				State.Create();
 				CDemoPlayer Player(&*State.m_pDelta, &*State.m_pDeltaSixup, false);
-				if(Player.Load(State.m_pStorage.get(), nullptr, "source.demo", IStorage::TYPE_SAVE, false) != 0)
+				if(Player.Load(State.m_pStorage.get(), "source.demo", IStorage::TYPE_SAVE, false) != 0)
 					return false;
 				set_new_tick();
 				(void)time_get();

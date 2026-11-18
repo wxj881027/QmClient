@@ -75,10 +75,17 @@ class CSettingsContentLayoutCache
 	std::vector<SSettingsContentRowDeclaration> m_vDeclarations;
 	std::shared_ptr<const CSettingsContentLayout> m_pLayout;
 	uint64_t m_FontRevision = UINT64_MAX;
+	// 声明缓冲由缓存持有并复用：每帧每张卡都会重新声明内容，不能每次新建 vector。
+	std::vector<SSettingsContentRowDeclaration> m_vScratchDeclarations;
 
 public:
 	using FMeasureText = std::function<float(const char *, float, float)>;
 	using FMeasureControlText = std::function<float(const SSettingsContentRowDeclaration &, float)>;
+	std::vector<SSettingsContentRowDeclaration> &ScratchDeclarations()
+	{
+		m_vScratchDeclarations.clear();
+		return m_vScratchDeclarations;
+	}
 	std::shared_ptr<const CSettingsContentLayout> Resolve(const std::vector<SSettingsContentRowDeclaration> &vRows, float Width, uint64_t FontRevision, const FMeasureText &MeasureText, const FMeasureControlText &MeasureControlText = {})
 	{
 		Width = std::isfinite(Width) ? std::max(0.0f, Width) : 0.0f;
@@ -153,6 +160,8 @@ public:
 	const CSettingsContentLayout *m_pLayout = nullptr;
 	CUIRect m_Origin{};
 	bool m_HasOrigin = false;
+	// 已由声明方自行预留行距的行：后续对该行的间距只按较大者合并，避免重复叠加成双倍空隙。
+	size_t m_MinimumSpacingRow = SIZE_MAX;
 	CSettingsContentLayoutScope(std::vector<SSettingsContentRowDeclaration> &vRows) : m_pPrevious(s_pCurrent), m_Pass(ESettingsContentPass::DECLARE), m_pDeclarations(&vRows) { s_pCurrent = this; }
 	CSettingsContentLayoutScope(const CSettingsContentLayout &Layout, ESettingsContentPass Pass) : m_pPrevious(s_pCurrent), m_Pass(Pass), m_pLayout(&Layout) { s_pCurrent = this; }
 	// 专用二维编辑器自行解析内部几何；外层只登记真实块尺寸，内部不复用卡片行坐标。
@@ -168,6 +177,11 @@ class CSettingsContentLayoutFlow
 	CUIRect &m_Content;
 	CSettingsContentLayoutScope *m_pScope = CSettingsContentLayoutScope::Current();
 	const CUIRect m_Origin;
+	// 展开/收起过渡的缩放系数：区间内声明的行按它缩放高度与行距，布局随之重算，
+	// 下面的行因此会平滑让位，而不是瞬间跳一格。默认 1（无过渡）。
+	float m_RevealScale = 1.0f;
+	float m_RevealStack[8] = {};
+	int m_RevealDepth = 0;
 
 	const SSettingsContentLayoutRow *Place(const char *pId, CUIRect &Row)
 	{
@@ -204,6 +218,26 @@ public:
 	bool Input() const { return m_pScope == nullptr || m_pScope->m_Pass == ESettingsContentPass::INPUT; }
 	bool Drawing() const { return m_pScope == nullptr || m_pScope->m_Pass == ESettingsContentPass::DRAW; }
 	bool Declaring() const { return m_pScope && m_pScope->m_Pass == ESettingsContentPass::DECLARE; }
+	// 只读：Flow 到此刻已经推进的高度。用法是「声明一段内容前后各取一次，差值是它的占高」。
+	// 声明趟按已登记的「行高 + 行距」累计，与布局高度同口径；自动换行的文本要等布局解析
+	// 才有真实行高，所以含换行文本的行会比最终布局高度略小。输入/绘制趟不再产生声明，
+	// 这里返回本帧布局总高度（区间差恒为 0），只适合观察总量。没有布局作用域的自绘卡片
+	// 直接按内容游标位移给出真实推进高度。
+	float AdvancedHeight() const
+	{
+		if(Declaring())
+		{
+			if(m_pScope->m_pDeclarations == nullptr)
+				return 0.0f;
+			float Height = 0.0f;
+			for(const auto &Declaration : *m_pScope->m_pDeclarations)
+				Height += std::max(0.0f, Declaration.m_MinimumHeight) + std::max(0.0f, Declaration.m_Spacing);
+			return Height;
+		}
+		if(m_pScope != nullptr)
+			return m_pScope->m_pLayout != nullptr ? m_pScope->m_pLayout->Height() : 0.0f;
+		return std::max(0.0f, m_Content.y - m_Origin.y);
+	}
 	const char *PublishedText(const char *pId, const char *pFallback) const
 	{
 		if(m_pScope && m_pScope->m_pLayout)
@@ -216,28 +250,59 @@ public:
 	}
 	bool Control(const char *pId, float Height, CUIRect &Row, float SpacingBefore = 0.0f)
 	{
+		const float ScaledHeight = std::max(0.0f, Height * m_RevealScale);
+		// 行距不要在这里预先乘系数：Space() 内部会按展开进度缩放一次，先乘一遍会变成
+		// 系数平方（过渡中行距被压得过死，展开结束才「弹」回正常值）。
+		const float UnscaledSpacing = std::max(0.0f, SpacingBefore);
 		if(Declaring())
 		{
-			Space(SpacingBefore);
-			m_pScope->m_pDeclarations->push_back({pId, {}, Height});
+			Space(UnscaledSpacing);
+			m_pScope->m_pDeclarations->push_back({pId, {}, ScaledHeight});
 			return false;
 		}
 		if(m_pScope)
 			return Place(pId, Row) != nullptr && Row.w > 0.0f && Row.h > 0.0f;
 		if(m_Content.y != m_Origin.y)
-			Space(SpacingBefore);
-		m_Content.HSplitTop(Height, &Row, &m_Content);
+			Space(UnscaledSpacing);
+		m_Content.HSplitTop(ScaledHeight, &Row, &m_Content);
 		return true;
+	}
+
+	// 展开/收起过渡：Progress 0..1，区间内新声明的行按进度缩放，区间外不受影响；
+	// 支持嵌套（例如折叠区里再套一层开关驱动的参数行），系数相乘。
+	void BeginReveal(float Progress)
+	{
+		if(m_RevealDepth < (int)std::size(m_RevealStack))
+			m_RevealStack[m_RevealDepth] = m_RevealScale;
+		++m_RevealDepth;
+		m_RevealScale *= std::clamp(Progress, 0.0f, 1.0f);
+	}
+
+	void EndReveal()
+	{
+		if(m_RevealDepth <= 0)
+			return;
+		--m_RevealDepth;
+		if(m_RevealDepth < (int)std::size(m_RevealStack))
+			m_RevealScale = m_RevealStack[m_RevealDepth];
 	}
 	void Space(float Height)
 	{
+		const float ScaledHeight = std::max(0.0f, Height * m_RevealScale);
 		if(Declaring())
 		{
 			if(!m_pScope->m_pDeclarations->empty())
-				m_pScope->m_pDeclarations->back().m_Spacing += Height;
+			{
+				auto &Back = m_pScope->m_pDeclarations->back();
+				// 自留行距的行只取较大者：调用方再声明同一处间距时不会叠成两倍。
+				if(m_pScope->m_pDeclarations->size() - 1 == m_pScope->m_MinimumSpacingRow)
+					Back.m_Spacing = std::max(Back.m_Spacing, ScaledHeight);
+				else
+					Back.m_Spacing += ScaledHeight;
+			}
 		}
 		else if(m_pScope == nullptr)
-			m_Content.HSplitTop(Height, nullptr, &m_Content);
+			m_Content.HSplitTop(ScaledHeight, nullptr, &m_Content);
 	}
 	// 多行输入测量 control 列的文本，回放仍发布包含 label 的完整行。
 	bool MeasuredControl(const char *pId, const char *pText, float MinimumHeight, float FontSize, float ControlIndent, float TextLineSpacing, float TextPadding, CUIRect &Row, const CSettingsContentLayoutCache::FMeasureControlText &Measure)
@@ -258,7 +323,9 @@ public:
 	{
 		if(Declaring())
 		{
-			m_pScope->m_pDeclarations->push_back({pId, pText, std::max(FontSize, MinimumHeight), FontSize, Indent, Spacing, true});
+			// 文本行的行后间距也要跟着展开进度缩放，否则过渡中它和 Control 行的节奏不一致
+			// （Control 由 Space() 缩放一次，这里手动补同一次缩放）。
+			m_pScope->m_pDeclarations->push_back({pId, pText, std::max(FontSize, MinimumHeight), FontSize, Indent, std::max(0.0f, Spacing) * m_RevealScale, true});
 			return;
 		}
 		CUIRect Row;

@@ -28,6 +28,8 @@ CCommunityIcons::CCommunityIconDownloadJob::CCommunityIconDownloadJob(CCommunity
 	m_pHttpRequest->MaxResponseSize(qm_community_icons::MAX_FILE_BYTES);
 	// Keep icon downloads bounded so broken remote endpoints can't hang forever.
 	m_pHttpRequest->Timeout(CTimeout{10000, 30000, 500, 10});
+	// 哈希变化时也要重新下载，不能只比较本地文件时间。
+	m_pHttpRequest->SkipByFileTime(false);
 	m_pHttpRequest->LogProgress(HTTPLOG::FAILURE);
 }
 

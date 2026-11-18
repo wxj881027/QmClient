@@ -165,8 +165,41 @@ struct SHudRecordingPresentation
 
 inline SHudRecordingPresentation QmHudRecordingPresentation(bool Recording, bool ScoreboardExpanded, bool LocalTime, bool FrozenSummary)
 {
+	// 计分板展开时录像详情不再独占状态区：它与本地时间/冻结摘要并列显示
+	// （本地时间位置见 QmHudInfoStackLines）。录像仍在录时玩家既能看时间也能看时长。
 	const bool ShowRecordingText = Recording && ScoreboardExpanded;
-	return {(LocalTime || FrozenSummary) && !ShowRecordingText, ShowRecordingText};
+	return {LocalTime || FrozenSummary || ShowRecordingText, ShowRecordingText};
+}
+
+// 状态区（灵动岛右侧信息栈）的行内容。最多两行：主行放最重要的一条，次行承载
+// 剩余条目（用「 · 」拼接）。优先级：本地时间 > 冻结摘要 > 录像状态——本地时间
+// 是玩家主动要看的信息，不能被录像详情顶掉；冻结摘要描述对局状态，排在录像之前。
+struct SHudInfoStackLines
+{
+	const char *m_pPrimary = nullptr;
+	char m_aSecondary[192] = {};
+	bool m_HasSecondary = false;
+};
+
+inline SHudInfoStackLines QmHudInfoStackLines(const char *pLocalTime, const char *pFrozenSummary, const char *pRecordingStatus)
+{
+	SHudInfoStackLines Lines;
+	const char *apCandidates[] = {pLocalTime, pFrozenSummary, pRecordingStatus};
+	for(const char *pText : apCandidates)
+	{
+		if(pText == nullptr || pText[0] == '\0')
+			continue;
+		if(Lines.m_pPrimary == nullptr)
+		{
+			Lines.m_pPrimary = pText;
+			continue;
+		}
+		if(Lines.m_HasSecondary)
+			str_append(Lines.m_aSecondary, " · ", sizeof(Lines.m_aSecondary));
+		str_append(Lines.m_aSecondary, pText, sizeof(Lines.m_aSecondary));
+		Lines.m_HasSecondary = true;
+	}
+	return Lines;
 }
 
 // 连接质量图标（数据流量语义）在灵动岛状态区的常驻占位几何。
@@ -1117,6 +1150,7 @@ struct SHudMediaIslandSdfRenderState
 	int m_ItemCount = 0;
 	bool m_HasRightCapsule = false;
 	SHudMediaIslandSdfCapsule m_RightCapsule{};
+	SHudMediaIslandSdfCapsule m_AttachedCard{};
 	float m_RingRadius = 0.0f;
 	float m_RingThickness = 0.0f;
 	ColorRGBA m_BackgroundColor{};
@@ -1133,7 +1167,7 @@ struct SHudMediaIslandSdfRenderState
 
 inline float QmHudMediaIslandSdfPadding(const SHudMediaIslandSdfRenderState &State)
 {
-	float MaxSmoothUnion = 0.0f;
+	float MaxSmoothUnion = State.m_AttachedCard.m_SmoothUnion;
 	const int ItemCount = std::clamp(State.m_ItemCount, 0, QmHudMediaIslandSdfMaxItems);
 	for(int i = 0; i < ItemCount; ++i)
 		MaxSmoothUnion = std::max(MaxSmoothUnion, State.m_Items[i].m_SmoothUnion);
@@ -1170,9 +1204,11 @@ inline CUIRect QmHudMediaIslandSdfOuterRect(const SHudMediaIslandSdfRenderState 
 		Right = std::max(Right, Item.m_Center.x + RadiusX);
 		Bottom = std::max(Bottom, Item.m_Center.y + RadiusY);
 	}
-	if(State.m_HasRightCapsule && State.m_RightCapsule.m_Rect.w > 0.0f && State.m_RightCapsule.m_Rect.h > 0.0f)
+	for(const auto *pCapsule : {State.m_HasRightCapsule ? &State.m_RightCapsule : nullptr, &State.m_AttachedCard})
 	{
-		const CUIRect &Rect = State.m_RightCapsule.m_Rect;
+		if(!pCapsule || pCapsule->m_Rect.w <= 0.0f || pCapsule->m_Rect.h <= 0.0f)
+			continue;
+		const CUIRect &Rect = pCapsule->m_Rect;
 		Left = std::min(Left, Rect.x);
 		Top = std::min(Top, Rect.y);
 		Right = std::max(Right, Rect.x + Rect.w);
@@ -1207,6 +1243,8 @@ inline bool QmHudMediaIslandBuildGpuSdfParams(const SHudMediaIslandSdfRenderStat
 		return false;
 
 	Params.Clear();
+	Params.m_aData[IGraphics::SMediaIslandSdfParams::DATA_CARD_RECT] = QmHudMediaIslandSdfRectVec4(State.m_AttachedCard.m_Rect);
+	Params.m_aData[IGraphics::SMediaIslandSdfParams::DATA_CARD_PARAMS] = vec4(State.m_AttachedCard.m_Radius, State.m_AttachedCard.m_SmoothUnion, 0, 0);
 	Params.m_aData[IGraphics::SMediaIslandSdfParams::DATA_RECT] = QmHudMediaIslandSdfRectVec4(State.m_Rect);
 	Params.m_aData[IGraphics::SMediaIslandSdfParams::DATA_MAIN_RECT] = QmHudMediaIslandSdfRectVec4(State.m_MainRect);
 	Params.m_aData[IGraphics::SMediaIslandSdfParams::DATA_CAPSULE_RECT] = QmHudMediaIslandSdfRectVec4(State.m_RightCapsule.m_Rect);

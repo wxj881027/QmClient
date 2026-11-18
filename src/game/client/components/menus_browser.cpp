@@ -2,6 +2,7 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "menus.h"
 
+#include <base/dbg.h>
 #include <base/log.h>
 #include <base/perf_timer.h>
 
@@ -25,6 +26,7 @@
 #include <game/client/QmUi/QmNeonRainbow.h>
 #include <game/client/QmUi/SecondaryPanel.h>
 #include <game/client/QmUi/UiButtons.h>
+#include <game/client/QmUi/UiTag.h>
 #include <game/client/QmUi/UiDiscreteSlider.h>
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiMotion.h>
@@ -38,6 +40,7 @@
 #include <game/client/components/countryflags.h>
 #include <game/client/components/qmclient/browser_column_layout.h>
 #include <game/client/components/qmclient/browser_friend_ui_id.h>
+#include <game/client/components/qmclient/browser_map_preview.h>
 #include <game/client/components/qmclient/browser_map_preview_loader.h>
 #include <game/client/components/qmclient/browser_score.h>
 #include <game/client/components/qmclient/browser_selection.h>
@@ -94,10 +97,25 @@ static constexpr ColorRGBA gs_HighlightedTextColor = ColorRGBA(0.4f, 0.4f, 1.0f,
 static constexpr ColorRGBA gs_QmClientCountColor = ColorRGBA(0.75f, 0.55f, 1.0f, 1.0f);
 static constexpr float SERVER_LIST_TEXT_SIZE = 11.0f;
 static constexpr float SERVER_LIST_SCROLLBAR_RAIL_ALPHA_SCALE = 0.28f;
+// 筛选工具箱里的三张胶囊列表（社区 / 国家 / 类型）的行高与可见行数。
+// 槽位高度、列表渲染和滚动步进都从这里取，卡片高度不会和实际行数差半行。
+static constexpr float COMMUNITY_FILTER_ROW_HEIGHT = 13.0f;
+static constexpr float COUNTRY_FILTER_ROW_HEIGHT = 18.0f;
+static constexpr float TYPE_FILTER_ROW_HEIGHT = 13.0f;
+static constexpr int COMMUNITY_FILTER_VISIBLE_ROWS = 4;
+static constexpr int COUNTRY_FILTER_VISIBLE_ROWS = 4;
+
+// 筛选胶囊列表的整数行占位：N 行行高 + 行间 (N-1) 档 + 上下两档容器内边距，
+// 与列表里「内边距 → 行高 → 行距 → … → 行高 → 内边距」的步进严格相等，
+// 即 N × (行高 + 行距) + 2 × ContainerPadding(行高)。
+static inline float FilterGridExtent(int Rows, float RowHeight)
+{
+	return Rows * (RowHeight + ui_token::list::ROW_SPACING) + 2.0f * ui_token::list::ContainerPadding(RowHeight);
+}
 
 static SQmDropdownVisualStyle FriendsPopupVisualStyle()
 {
-	return QmSettingsDropdownVisualStyle(ResolveInputFallbackTheme(g_Config.m_QmUiFocusColor), color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiCardBorderColor, true)));
+	return QmSettingsDropdownVisualStyle(ResolveInputFallbackTheme(), color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiCardBorderColor, true)));
 }
 
 static SPopupMenuProperties FriendsPopupProperties()
@@ -453,21 +471,20 @@ static void DrawFriendFollowRing(CUi *pUi, const CUIRect &Rect, float Alpha, boo
 		const SQmColorGradient Gradient = FriendRingGradient(Flow);
 		// 单次绘制一条很宽的环带，靠带宽内的幂次衰减本身形成连续渐变。
 		// 叠多个窄环带会看到彼此的分界（"一层层"），只有一条连续衰减的带才是晕。
+		// 光晕用形状外扩（m_ShapeExpand）而不是「矩形放大 + 半径加宽」：连续曲率下
+		// 圆角的等距外扩不是半径加宽的同一条曲线，手动放大矩形会让光环四角与卡片
+		// 错位（换档位/强度时尤其明显）。外扩走距离场偏移，任何曲线档位都同心。
 		const auto EmitSdfGlow = [&](float Spread, float Falloff, float RingAlpha) {
-			CUIRect Layer = Ring;
-			Layer.x -= Spread;
-			Layer.y -= Spread;
-			Layer.w += 2.0f * Spread;
-			Layer.h += 2.0f * Spread;
 			SRoundedSurfaceParams Params;
-			Params.m_Radius = Radius + Spread;
+			Params.m_Radius = Radius;
+			Params.m_ShapeExpand = Spread;
 			Params.m_BorderWidth = Spread;
 			Params.m_BorderUsesGradient = true;
 			Params.m_BorderOnly = true;
 			Params.m_BorderFalloff = Falloff;
 			// 边框色的 alpha 决定整体强弱，渐变只提供色相。
 			const ColorRGBA RingColor(1.0f, 1.0f, 1.0f, RingAlpha);
-			DrawRoundedGradientSurface(pUi->Graphics(), Layer, Gradient, 1.0f, RingColor, Params);
+			DrawRoundedGradientSurface(pUi->Graphics(), Ring, Gradient, 1.0f, RingColor, Params);
 		};
 		// 外层：宽而柔的氤氲；内层：窄而实的彩带。两者同一套几何中心，
 		// 宽度连续衔接，因此叠起来看不到分层。
@@ -621,469 +638,21 @@ static ColorRGBA GetServerListPingColor(const CServerInfo *pInfo, int OwnLocatio
 	return GetPingTextColor(pInfo->m_Latency);
 }
 
-// ================= 地图预览（二级面板） =================
-// 地图列图标的富内容二级面板（字体商店同款：大面板 + 标题行 + 关闭 X）：
-// 本地已缓存 .map 的离屏渲染（未缓存绝不联网）。相机或图层模式变化时
-// 重绘纹理，静止时复用；放大直接绘制地图细节，不采样整图缩略图。
-namespace
-{
-	constexpr size_t MAP_PREVIEW_CACHE_CAPACITY = 3;
-	// LRU 逐出前的最小驻留时长：刚用过的条目即使超出容量也先保留一拍。
-	constexpr float MAP_PREVIEW_LRU_MIN_AGE = 0.4f;
-	// 失败条目的重查间隔：浏览器停留期间地图下载完成后，占位应自行换成预览。
-	constexpr float MAP_PREVIEW_FAILED_RETRY_DELAY = 2.0f;
-
-	// 地图贴图属于缓存项；实体和数字图集复用客户端资源，避免预览重复加载、
-	// 丢失玩家实体包配置，或逐出地图后遗留实体纹理。
-	class CMapPreviewImages : public CMapImages
-	{
-		std::vector<IGraphics::CTextureHandle> m_vTextures;
-		CMapImages &m_Shared;
-
-	public:
-		explicit CMapPreviewImages(CMapImages &Shared) :
-			m_Shared(Shared) {}
-		IGraphics::CTextureHandle Get(int Index) const override { return m_vTextures[Index]; }
-		int Num() const override { return m_vTextures.size(); }
-		void Resize(int Count) { m_vTextures.resize(Count); }
-		void Upload(int Index, const CImageInfo &Image, int Usage)
-		{
-			if(Image.m_pData == nullptr)
-				return;
-			const int ArrayFlag = Graphics()->Uses2DTextureArrays() ? IGraphics::TEXLOAD_TO_2D_ARRAY_TEXTURE : IGraphics::TEXLOAD_TO_3D_TEXTURE;
-			const int Flags = ((Usage & 1) ? ArrayFlag : 0) | ((Usage & 2) ? 0 : (Graphics()->HasTextureArraysSupport() ? IGraphics::TEXLOAD_NO_2D_TEXTURE : 0));
-			m_vTextures[Index] = Graphics()->LoadTextureRaw(Image, Flags, "browser-map-preview");
-		}
-		void UnloadPreview()
-		{
-			for(auto &Texture : m_vTextures)
-				Graphics()->UnloadTexture(&Texture);
-			m_vTextures.clear();
-		}
-		IGraphics::CTextureHandle GetEntities(EMapImageEntityLayerType Type) override { return m_Shared.GetEntities(Type); }
-		IGraphics::CTextureHandle GetSpeedupArrow() override { return m_Shared.GetSpeedupArrow(); }
-		IGraphics::CTextureHandle GetTuneColors() override { return m_Shared.GetTuneColors(); }
-		IGraphics::CTextureHandle GetOverlayBottom() override { return m_Shared.GetOverlayBottom(); }
-		IGraphics::CTextureHandle GetOverlayTop() override { return m_Shared.GetOverlayTop(); }
-		IGraphics::CTextureHandle GetOverlayCenter() override { return m_Shared.GetOverlayCenter(); }
-	};
-
-	// 离线渲染器（OnlineOnly=false）：菜单内直接 RenderCustomWithCamera，
-	// 图层 GPU 资源由 OnMapLoad 开始分帧初始化，面板首帧渲染前推进完毕。
-	// SetEntityOnly：100 = 只渲染实体层（关贴图），0 = 正常完整渲染。
-	class CMapPreviewLayers : public CMapLayers
-	{
-	public:
-		CMapPreviewLayers() :
-			CMapLayers(ERenderType::RENDERTYPE_FULL_DESIGN, false) {}
-		void SetSources(CLayers *pLayers, CMapImages *pImages)
-		{
-			m_pLayers = pLayers;
-			m_pImages = pImages;
-		}
-		void SetEntityOnly(bool EntityOnly)
-		{
-			m_EntityOverlayValOverride = EntityOnly ? 100 : 0;
-		}
-	};
-
-	struct SQmMapPreviewEntry
-	{
-		char m_aMapName[MAX_MAP_LENGTH] = {0};
-		std::unique_ptr<CMap> m_pMap;
-		std::unique_ptr<CLayers> m_pLayers;
-		std::unique_ptr<CMapPreviewImages> m_pImages;
-		std::shared_ptr<CQmBrowserMapPreviewLoadJob> m_pLoadJob;
-		int m_UploadIndex = 0;
-		std::unique_ptr<CMapPreviewLayers> m_pRenderer;
-		IGraphics::CRenderTargetHandle m_RenderTarget;
-		bool m_NeedsRender = true;
-		vec2 m_RenderedCenter{};
-		float m_RenderedZoom = 0.0f;
-		bool m_RenderedEntities = false;
-		unsigned m_RenderedBackgroundColor = 0;
-		char m_aRenderedBackground[IO_MAX_PATH_LENGTH] = {};
-		int m_TargetHeight = 0;
-		int m_TargetWidth = 0;
-		std::optional<vec2> m_Start;
-		uint32_t m_GraphicsResetVersion = 0;
-		vec2 m_WorldSize = vec2(32.0f * 64, 32.0f * 64);
-		// 本地没有对应 .map 或解析失败；占位提示不区分这两种情况。
-		bool m_LoadFailed = false;
-		float m_LastUseTime = 0.0f;
-		float m_RetryAfterTime = 0.0f;
-	};
-
-}
-
-// 预览地图加载缓存（LRU）。作为 CMenus 成员析构，保证 GPU 资源在图形
-// 接口存活期间释放；图形重建后旧句柄仅失效、不再提交销毁命令。
-class CMenus::CMapPreviewCache
-{
-public:
-	explicit CMapPreviewCache(IGraphics *pGraphics) :
-		m_pGraphics(pGraphics) {}
-	~CMapPreviewCache() { Clear(); }
-
-	void Clear()
-	{
-		const uint32_t CurrentVersion = m_pGraphics->GraphicsResourcesResetVersion();
-		for(auto &pEntry : m_vEntries)
-			ReleaseEntry(*pEntry, CurrentVersion);
-		m_vEntries.clear();
-	}
-
-	// 返回命中的缓存项；本地没有对应 .map 时返回带 m_LoadFailed 的空项，
-	// 缓存满且全部条目仍被当前会话使用时返回 nullptr（本帧按加载中处理）。
-	SQmMapPreviewEntry *Acquire(const char *pMapName, float NowTime, IStorage *pStorage, CGameClient *pGameClient)
-	{
-		for(auto It = m_vEntries.begin(); It != m_vEntries.end(); ++It)
-		{
-			if(str_comp((*It)->m_aMapName, pMapName) == 0)
-			{
-				(*It)->m_LastUseTime = NowTime;
-				if((*It)->m_GraphicsResetVersion != m_pGraphics->GraphicsResourcesResetVersion())
-				{
-					ReleaseEntry(**It, m_pGraphics->GraphicsResourcesResetVersion());
-					**It = SQmMapPreviewEntry{};
-					str_copy((*It)->m_aMapName, pMapName);
-					(*It)->m_LastUseTime = NowTime;
-					(*It)->m_GraphicsResetVersion = m_pGraphics->GraphicsResourcesResetVersion();
-					LoadEntry(**It, pStorage, pGameClient);
-				}
-				// 失败条目间隔重查：下载完成前打开过弹窗的图，下载完成后应直接出预览。
-				if((*It)->m_LoadFailed && NowTime >= (*It)->m_RetryAfterTime)
-				{
-					(*It)->m_RetryAfterTime = NowTime + MAP_PREVIEW_FAILED_RETRY_DELAY;
-					(*It)->m_LoadFailed = false;
-					LoadEntry(**It, pStorage, pGameClient);
-					// 重试期间可能发生过图形重建，按当前版本重新盖戳。
-					(*It)->m_GraphicsResetVersion = m_pGraphics->GraphicsResourcesResetVersion();
-				}
-				auto pEntry = std::move(*It);
-				m_vEntries.erase(It);
-				m_vEntries.insert(m_vEntries.begin(), std::move(pEntry));
-				return m_vEntries.front().get();
-			}
-		}
-
-		if(m_vEntries.size() >= MAP_PREVIEW_CACHE_CAPACITY)
-		{
-			auto ItLru = std::min_element(m_vEntries.begin(), m_vEntries.end(), [](const auto &A, const auto &B) {
-				return A->m_LastUseTime < B->m_LastUseTime;
-			});
-			if(ItLru == m_vEntries.end() || NowTime - (*ItLru)->m_LastUseTime < MAP_PREVIEW_LRU_MIN_AGE)
-				return nullptr;
-			ReleaseEntry(**ItLru, m_pGraphics->GraphicsResourcesResetVersion());
-			m_vEntries.erase(ItLru);
-		}
-
-		auto pEntry = std::make_unique<SQmMapPreviewEntry>();
-		str_copy(pEntry->m_aMapName, pMapName, sizeof(pEntry->m_aMapName));
-		pEntry->m_LastUseTime = NowTime;
-		LoadEntry(*pEntry, pStorage, pGameClient);
-		if(pEntry->m_LoadFailed)
-			pEntry->m_RetryAfterTime = NowTime + MAP_PREVIEW_FAILED_RETRY_DELAY;
-		// 图像纹理在当前图形版本下加载；此后发生图形重建时句柄随之失效，
-		// 释放路径据此决定销毁还是仅失效。
-		pEntry->m_GraphicsResetVersion = m_pGraphics->GraphicsResourcesResetVersion();
-		m_vEntries.insert(m_vEntries.begin(), std::move(pEntry));
-		return m_vEntries.front().get();
-	}
-
-private:
-	void ReleaseEntry(SQmMapPreviewEntry &Entry, uint32_t CurrentResetVersion)
-	{
-		// 图形重建后前端句柄已失效，不能再提交销毁/卸载命令（仓库既定约定，
-		// 见 CHud 对 dummy mini view 渲染目标的处理）。
-		const bool HandleAlive = Entry.m_GraphicsResetVersion == CurrentResetVersion;
-		if(Entry.m_RenderTarget.IsValid())
-		{
-			if(HandleAlive)
-				m_pGraphics->DestroyRenderTarget(&Entry.m_RenderTarget);
-			else
-				Entry.m_RenderTarget.Invalidate();
-		}
-		if(Entry.m_pLoadJob)
-			Entry.m_pLoadJob->m_Cancelled.store(true);
-		if(HandleAlive)
-		{
-			if(Entry.m_pRenderer != nullptr)
-				Entry.m_pRenderer->UnloadMap();
-			if(Entry.m_pImages != nullptr)
-				Entry.m_pImages->UnloadPreview();
-			if(Entry.m_pMap != nullptr)
-				Entry.m_pMap->Unload();
-		}
-	}
-
-	static void LoadEntry(SQmMapPreviewEntry &Entry, IStorage *pStorage, CGameClient *pGameClient)
-	{
-		Entry.m_pLoadJob = std::make_shared<CQmBrowserMapPreviewLoadJob>(pStorage, Entry.m_aMapName, str_comp(pGameClient->Client()->GetCurrentMap(), Entry.m_aMapName) == 0 ? pGameClient->Client()->GetCurrentMapPath() : "", pGameClient->Client()->IsSixup());
-		pGameClient->Engine()->AddJob(Entry.m_pLoadJob);
-		Entry.m_UploadIndex = 0;
-	}
-
-public:
-	static bool AdvanceEntry(SQmMapPreviewEntry &Entry, CGameClient *pGameClient, float Now)
-	{
-		if(!Entry.m_pLoadJob)
-			return Entry.m_pRenderer != nullptr;
-		auto &Job = *Entry.m_pLoadJob;
-		if(!Job.Finished())
-			return false;
-		if(Job.State() != IJob::STATE_DONE || !Job.m_Success)
-		{
-			Entry.m_LoadFailed = true;
-			Entry.m_RetryAfterTime = Now + MAP_PREVIEW_FAILED_RETRY_DELAY;
-			Entry.m_pLoadJob.reset();
-			return false;
-		}
-		if(!Entry.m_pImages)
-		{
-			Entry.m_pImages = std::make_unique<CMapPreviewImages>(pGameClient->m_MapImages);
-			Entry.m_pImages->OnInterfacesInit(pGameClient);
-			Entry.m_pImages->Resize(Job.m_vImages.size());
-		}
-		// 一帧最多上传一张贴图，不让高分辨率纹理集中复制并挤满图形命令缓冲。
-		if(Entry.m_UploadIndex < static_cast<int>(Job.m_vImages.size()))
-		{
-			const CPerfTimer Timer(QmPerfEnabled());
-			const int Index = Entry.m_UploadIndex++;
-			Entry.m_pImages->Upload(Index, Job.m_vImages[Index], Job.m_vUsage[Index]);
-			Job.m_vImages[Index].Free();
-			QmPerfLogStage("perf/map_preview", "upload", Timer.ElapsedMs(), false, pGameClient->Client());
-			return false;
-		}
-		Entry.m_pMap = std::move(Job.m_pMap);
-		Entry.m_Start = Job.m_Start;
-		Entry.m_pLayers = std::move(Job.m_pLayers);
-		auto pRenderer = std::make_unique<CMapPreviewLayers>();
-		pRenderer->OnInterfacesInit(pGameClient);
-		pRenderer->SetSources(Entry.m_pLayers.get(), Entry.m_pImages.get());
-		Entry.m_pRenderer = std::move(pRenderer);
-		Entry.m_pRenderer->OnMapLoad();
-
-		// 整图范围以游戏层瓦片数为准；缺游戏层的地图退回 64x64 默认值。
-		if(Entry.m_pLayers->GameLayer() != nullptr)
-			Entry.m_WorldSize = vec2(Entry.m_pLayers->GameLayer()->m_Width * 32.0f, Entry.m_pLayers->GameLayer()->m_Height * 32.0f);
-		Entry.m_NeedsRender = true;
-		Entry.m_pLoadJob.reset();
-		return false;
-	}
-
-private:
-	IGraphics *m_pGraphics;
-	std::vector<std::unique_ptr<SQmMapPreviewEntry>> m_vEntries;
-};
-
-// 预览缓存与注入回调的释放统一在 CMenus::OnShutdown（menus.cpp）：
-// 关闭路径上 CKernel 先销毁图形接口，组件析构函数晚于它执行——在析构里
-// 触达 m_pGraphics/ServerBrowser() 会访问违例（2026-10-14 关闭崩溃根因）。
-void CMenus::ClearMapPreviewCache()
-{
-	// 删除操作留在完整类型所在编译单元，确保实际调用缓存析构函数。
-	delete m_pMapPreviewCache;
-	m_pMapPreviewCache = nullptr;
-}
-
-CUi::EPopupMenuFunctionResult CMenus::PopupMapPreview(void *pContext, CUIRect View, bool Active)
-{
-	auto *pPopupContext = static_cast<CMapPreviewPopupContext *>(pContext);
-	CMenus *pMenus = pPopupContext->m_pMenus;
-	if(pMenus == nullptr || pPopupContext->m_aMapName[0] == '\0')
-		return CUi::POPUP_CLOSE_CURRENT;
-
-	CUi *pUi = pMenus->Ui();
-	const float Now = pMenus->Client()->GlobalTime();
-
-	// 字体商店同款二级面板骨架：标题行（地图名 + 关闭 X）+ 分隔线。
-	IUiContext PanelCtx;
-	PanelCtx.m_pUi = pUi;
-	static ui_widget::SSecondaryPanelLabel s_Title;
-	static ui_widget::SSecondaryPanelLabel s_Caption;
-	static ui_widget::SSecondaryPanelLabel s_EntitiesLabel;
-	static CButtonContainer s_CloseButton;
-	ui_widget::CSecondaryPanel Panel(PanelCtx, View, Active, ui_widget::ResolveSecondaryPanelMetrics(pUi->Screen()->w), {});
-	const CQmMapDifficultyCatalog::SEntry *pDifficulty = pMenus->m_MapDifficultyCatalog.Find(pPopupContext->m_aMapName);
-	const char *pStars = pDifficulty != nullptr ? MapDifficultyStars(pDifficulty->m_Stars) : "";
-	char aMeta[192];
-	if(pStars[0] != '\0')
-		str_format(aMeta, sizeof(aMeta), "%s · %s · %d/%d", pStars, pPopupContext->m_aGameType, pPopupContext->m_NumPlayers, pPopupContext->m_MaxPlayers);
-	else
-		str_format(aMeta, sizeof(aMeta), "%s · %d/%d", pPopupContext->m_aGameType, pPopupContext->m_NumPlayers, pPopupContext->m_MaxPlayers);
-	if(Panel.Header(s_Title, s_CloseButton, pPopupContext->m_aMapName, &s_Caption, aMeta))
-		return CUi::POPUP_CLOSE_CURRENT;
-	// 工具行与提示在画布外，始终留在二级面板内部。
-	Panel.ToggleRow(s_EntitiesLabel, Localize("Show entities only (hide textures)"), pPopupContext->m_EntityOnly);
-	CUIRect Preview = Panel.ContentRect();
-	const auto Metrics = ui_widget::ResolveSecondaryPanelMetrics(pUi->Screen()->w);
-	Preview.HSplitTop(Metrics.m_Spacing, nullptr, &Preview);
-	CUIRect Hint;
-	Preview.HSplitBottom(Metrics.m_RowHeight, &Preview, &Hint);
-	Preview.HSplitBottom(Metrics.m_Spacing, &Preview, nullptr);
-	SLabelProperties HintProps;
-	HintProps.m_MaxWidth = Hint.w;
-	HintProps.m_EllipsisAtEnd = true;
-	pUi->DoLabel(&Hint, Localize("Drag to pan, scroll to zoom"), Metrics.m_FontSize, TEXTALIGN_ML, HintProps);
-	if(Preview.w <= 2.0f || Preview.h <= 2.0f)
-		return CUi::POPUP_KEEP_OPEN;
-
-	// 预览框背板。
-	CUiScopedGaussianBlurSuppression PreviewBlurSuppression(pUi);
-	Preview.Draw(ColorRGBA(0.055f, 0.065f, 0.085f, 1.0f), IGraphics::CORNER_ALL, 6.0f);
-	Preview.Margin(1.0f, &Preview);
-
-	if(pMenus->m_pMapPreviewCache == nullptr)
-		pMenus->m_pMapPreviewCache = new CMenus::CMapPreviewCache(pMenus->Graphics());
-	SQmMapPreviewEntry *pEntry = pMenus->m_pMapPreviewCache->Acquire(pPopupContext->m_aMapName, Now, pMenus->Storage(), pMenus->GameClient());
-	if(pEntry == nullptr || pEntry->m_LoadFailed)
-	{
-		// 骨架占位：未缓存不联网，进入服务器下载后才能预览。
-		pMenus->TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-		pMenus->TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-		pMenus->TextRender()->TextColor(ColorRGBA(0.55f, 0.58f, 0.62f, 1.0f));
-		pMenus->Ui()->DoLabel_QmIcon(&Preview, EQmIcon::MAP, FontIcons::FONT_ICON_MAP, 26.0f, TEXTALIGN_MC);
-		pMenus->TextRender()->SetRenderFlags(0);
-		pMenus->TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
-		pMenus->TextRender()->TextColor(pMenus->TextRender()->DefaultTextColor());
-		CUIRect Hint;
-		Preview.HSplitTop(Preview.h * 0.5f + 8.0f, nullptr, &Hint);
-		pMenus->Ui()->DoLabel(&Hint, Localize("Map not downloaded yet — join the server to preview it"), 9.5f, TEXTALIGN_MC);
-		return CUi::POPUP_KEEP_OPEN;
-	}
-
-	const CPerfTimer PrepareTimer(QmPerfEnabled());
-	const bool Ready = CMapPreviewCache::AdvanceEntry(*pEntry, pMenus->GameClient(), Now) && pEntry->m_pRenderer->AdvanceMapLoad(1);
-	QmPerfLogStage("perf/map_preview", "prepare", PrepareTimer.ElapsedMs(), false, pMenus->Client());
-	if(!Ready)
-	{
-		// 图层 GPU 资源分帧初始化中；小图预计几十毫秒内完成。
-		pMenus->Ui()->DoLabel(&Preview, Localize("Initializing map layers"), 10.0f, TEXTALIGN_MC);
-		return CUi::POPUP_KEEP_OPEN;
-	}
-
-	// 使用引擎同一投影宽高比，画布内居中留边，避免拉伸。
-	const float Aspect = pMenus->Graphics()->GameScreenAspect();
-	// 使用画布对应的物理像素，避免高分屏把固定 1024 纹理再次放大。
-	const float CanvasWidth = std::min(Preview.w, Preview.h * Aspect);
-	const int TargetWidth = std::clamp((int)std::ceil(CanvasWidth * pMenus->Graphics()->ScreenWidth() / pUi->Screen()->w), 128, 4096);
-	const int TargetHeight = maximum(32, (int)std::round(TargetWidth / Aspect));
-	const uint32_t ResetVersion = pMenus->Graphics()->GraphicsResourcesResetVersion();
-	const bool Reset = pEntry->m_GraphicsResetVersion != ResetVersion;
-	if(Reset)
-		pEntry->m_RenderTarget.Invalidate();
-	if(!pEntry->m_RenderTarget.IsValid() || pEntry->m_TargetWidth != TargetWidth || pEntry->m_TargetHeight != TargetHeight)
-	{
-		if(pEntry->m_RenderTarget.IsValid())
-			pMenus->Graphics()->DestroyRenderTarget(&pEntry->m_RenderTarget);
-		pEntry->m_RenderTarget = pMenus->Graphics()->CreateRenderTarget(TargetWidth, TargetHeight);
-		pEntry->m_TargetHeight = TargetHeight;
-		pEntry->m_TargetWidth = TargetWidth;
-		pEntry->m_NeedsRender = true;
-		pEntry->m_GraphicsResetVersion = ResetVersion;
-	}
-	if(!pEntry->m_RenderTarget.IsValid())
-	{
-		pUi->DoLabel(&Preview, Localize("Map preview rendering unavailable"), 10.0f, TEXTALIGN_MC);
-		return CUi::POPUP_KEEP_OPEN;
-	}
-
-	float DrawW = Preview.w;
-	float DrawH = DrawW / Aspect;
-	if(DrawH > Preview.h)
-	{
-		DrawH = Preview.h;
-		DrawW = DrawH * Aspect;
-	}
-	const CUIRect DrawRect(Preview.x + (Preview.w - DrawW) * 0.5f, Preview.y + (Preview.h - DrawH) * 0.5f, DrawW, DrawH);
-	float BaseW, BaseH;
-	pMenus->Graphics()->CalcScreenParams(Aspect, 1.0f, &BaseW, &BaseH);
-	auto &Camera = pPopupContext->m_View;
-	Camera.Configure(pEntry->m_WorldSize, vec2(BaseW, BaseH));
-	if(!pPopupContext->m_InitialViewSet)
-	{
-		if(pEntry->m_Start)
-			Camera.FocusStart(*pEntry->m_Start);
-		pPopupContext->m_InitialViewSet = true;
-	}
-	QmBrowserMapPreviewInput(*pUi, Camera, DrawRect, Active);
-	const bool EntityOnly = pPopupContext->m_EntityOnly != 0;
-	const bool DynamicBackground = EntityOnly && !IsDefaultBackgroundEntitiesValue(g_Config.m_ClBackgroundEntities) && !IsBackgroundImageExtension(g_Config.m_ClBackgroundEntities);
-	const bool ViewChanged = Camera.Center() != pEntry->m_RenderedCenter || Camera.Zoom() != pEntry->m_RenderedZoom || EntityOnly != pEntry->m_RenderedEntities ||
-				 (EntityOnly && (pEntry->m_RenderedBackgroundColor != g_Config.m_ClBackgroundEntitiesColor || str_comp(pEntry->m_aRenderedBackground, g_Config.m_ClBackgroundEntities) != 0)) || DynamicBackground;
-	if(pEntry->m_NeedsRender || ViewChanged)
-	{
-		// UI 批次必须先落到原目标；地图渲染的投影和裁剪不得泄漏到菜单。
-		pUi->FlushQuadBatch();
-		pUi->ClipEnable(pUi->Screen());
-		pEntry->m_pRenderer->SetEntityOnly(EntityOnly);
-		if(pMenus->Graphics()->BeginRenderTarget(pEntry->m_RenderTarget, ColorRGBA(0.055f, 0.065f, 0.085f, 1.0f)))
-		{
-			if(EntityOnly)
-				pMenus->GameClient()->m_Background.RenderPreview(Camera.Center(), Camera.Zoom(), *pEntry->m_pRenderer);
-			// FULL_DESIGN 明确跳过实体；实体模式使用包含完整实体层的前景策略。
-			pEntry->m_pRenderer->RenderCustomWithCamera(Camera.Center(), Camera.Zoom(), EntityOnly ? ERenderType::RENDERTYPE_FOREGROUND : ERenderType::RENDERTYPE_FULL_DESIGN);
-			pMenus->Graphics()->EndRenderTarget();
-			pEntry->m_RenderedCenter = Camera.Center();
-			pEntry->m_RenderedZoom = Camera.Zoom();
-			pEntry->m_RenderedEntities = EntityOnly;
-			pEntry->m_RenderedBackgroundColor = g_Config.m_ClBackgroundEntitiesColor;
-			str_copy(pEntry->m_aRenderedBackground, g_Config.m_ClBackgroundEntities);
-			pEntry->m_NeedsRender = false;
-		}
-		pUi->MapScreen();
-		pUi->ClipDisable();
-	}
-	if(pEntry->m_NeedsRender)
-	{
-		pUi->DoLabel(&Preview, Localize("Initializing map layers"), 10.0f, TEXTALIGN_MC);
-		return CUi::POPUP_KEEP_OPEN;
-	}
-
-	int BackendMajor = 0, BackendMinor = 0, BackendPatch = 0;
-	const char *pBackendName = "";
-	const auto Backend = pMenus->Graphics()->GetDetectedContextVersion(BackendMajor, BackendMinor, BackendPatch, pBackendName) ? QmDummyMiniViewLayout::ResolveBackend(pBackendName) : QmDummyMiniViewLayout::EBackend::UNKNOWN;
-	IGraphics::SRenderTargetDrawParams DrawParams;
-	DrawParams.m_X = DrawRect.x;
-	DrawParams.m_Y = DrawRect.y;
-	DrawParams.m_W = DrawRect.w;
-	DrawParams.m_H = DrawRect.h;
-	DrawParams.m_Alpha = pUi->ControlAlphaScale();
-	DrawParams.m_Corners = IGraphics::CORNER_ALL;
-	DrawParams.m_Rounding = ui_token::radius::BASE;
-	DrawParams.m_CornerSmoothing = std::clamp(g_Config.m_QmUiCornerSmoothing / 100.0f, 0.0f, 1.0f);
-	DrawParams.m_CornerCurve = (float)g_Config.m_QmUiCornerCurve;
-	DrawParams.m_CornerSeam = std::clamp(g_Config.m_QmUiCapsuleSeam / 100.0f, 0.0f, 1.0f);
-	if(Backend == QmDummyMiniViewLayout::EBackend::VULKAN)
-	{
-		DrawParams.m_V0 = 0.0f;
-		DrawParams.m_V1 = 1.0f;
-	}
-	pUi->FlushQuadBatch();
-	pUi->ClipEnable(&Preview);
-	pMenus->Graphics()->DrawRenderTarget(pEntry->m_RenderTarget, DrawParams);
-	pUi->ClipDisable();
-	return CUi::POPUP_KEEP_OPEN;
-}
-
 void CMenus::OpenMapPreviewPopup(const CServerInfo *pItem)
 {
-	m_MapPreviewPopupContext = CMapPreviewPopupContext{};
-	m_MapPreviewPopupContext.m_pMenus = this;
-	str_copy(m_MapPreviewPopupContext.m_aAddress, pItem->m_aAddress, sizeof(m_MapPreviewPopupContext.m_aAddress));
-	str_copy(m_MapPreviewPopupContext.m_aMapName, pItem->m_aMap, sizeof(m_MapPreviewPopupContext.m_aMapName));
-	str_copy(m_MapPreviewPopupContext.m_aServerName, pItem->m_aName, sizeof(m_MapPreviewPopupContext.m_aServerName));
-	str_copy(m_MapPreviewPopupContext.m_aGameType, pItem->m_aGameType, sizeof(m_MapPreviewPopupContext.m_aGameType));
-	m_MapPreviewPopupContext.m_NumPlayers = pItem->m_NumFilteredPlayers;
-	m_MapPreviewPopupContext.m_MaxPlayers = ServerBrowser()->Max(*pItem);
+	const CQmMapDifficultyCatalog::SEntry *pDifficulty = m_MapDifficultyCatalog.Find(pItem->m_aMap);
+	const char *pStars = pDifficulty != nullptr ? MapDifficultyStars(pDifficulty->m_Stars) : "";
+	char aCaption[192];
+	if(pStars[0] != '\0')
+		str_format(aCaption, sizeof(aCaption), "%s · %s · %d/%d", pStars, pItem->m_aGameType, pItem->m_NumFilteredPlayers, ServerBrowser()->Max(*pItem));
+	else
+		str_format(aCaption, sizeof(aCaption), "%s · %d/%d", pItem->m_aGameType, pItem->m_NumFilteredPlayers, ServerBrowser()->Max(*pItem));
 
-	// 字体商店同款大面板：统一二级面板矩形（居中）+ 面板主题 + 入场动画；
-	// 外部点击关闭由 IgnoreOpeningClick 保证打开的那次图标点击不会立即关闭。
-	SPopupMenuProperties Props = ui_widget::SecondaryPanelProperties();
-	Props.m_OnClosed = [this]() { m_MapPreviewPopupContext.m_View.EndDrag(); };
-	const CUIRect PanelRect = ResolveSettingsSecondaryPanelRect(*Ui()->Screen());
-	Ui()->DoPopupMenu(&m_MapPreviewPopupContext, PanelRect.x, PanelRect.y, PanelRect.w, PanelRect.h, &m_MapPreviewPopupContext, PopupMapPreview, Props);
+	CQmMapPreviewPanel::STarget Target;
+	str_copy(Target.m_aMapName, pItem->m_aMap, sizeof(Target.m_aMapName));
+	str_copy(Target.m_aCaption, aCaption, sizeof(Target.m_aCaption));
+	m_MapPreviewPanel.Init(GameClient());
+	m_MapPreviewPanel.Open(ui_widget::ControlContext(Ui()), &m_MapPreviewPopupContext, Target);
 }
 
 void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemActivated)
@@ -1127,11 +696,24 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 
 	CUIRect Headers;
 	View.HSplitTop(ms_ListheaderHeight, &Headers, &View);
-	Headers.VSplitRight(s_ListBox.ScrollbarWidthMax(), &Headers, nullptr);
+	// 胶囊行先开：表头列宽要按行让位收，而 RowReserveWidth 由 token 直接算，
+	// 不依赖上一帧解析出的滚动条宽度；表头与行胶囊右缘因此同一条公式。
+	s_ListBox.SetCapsuleRows(SERVER_LIST_TEXT_SIZE);
+	const float BrowserScrollbarReserve = s_ListBox.RowReserveWidth();
+	Headers.VSplitRight(BrowserScrollbarReserve, &Headers, nullptr);
+	// 胶囊行统一外观：表格行的行距并进行高（滚动步进与 SkipItems 都按行高走，
+	// 组件再叠一档行距会把跳过行补不回来），左右内退与行内内边距同源。
+	// 表头跟着同一条内退，列标题、列内容与行胶囊才会落在同一个坐标系里。
+	const float BrowserRowInsetX = ui_token::list::RowInsetX(SERVER_LIST_TEXT_SIZE);
+	const float BrowserRowStep = ms_ListheaderHeight + ui_token::list::ROW_SPACING;
+	Headers.VSplitLeft(BrowserRowInsetX, nullptr, &Headers);
+	Headers.VSplitRight(BrowserRowInsetX, &Headers, nullptr);
 
 	{
 		CUIRect ResetBtn;
 		Headers.VSplitLeft(ms_ListheaderHeight, &ResetBtn, &Headers);
+		// 左侧留一点呼吸边距：按钮不贴列表左边缘（右侧不动，后面各列的对齐不变）。
+		ResetBtn.VSplitLeft(4.0f, nullptr, &ResetBtn);
 		ResetBtn.Margin(1.0f, &ResetBtn);
 		static CButtonContainer s_ResetColsButton;
 		if(Ui()->DoButton_QmIcon(&s_ResetColsButton, EQmIcon::ARROW_ROTATE_RIGHT, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &ResetBtn, BUTTONFLAG_LEFT))
@@ -1732,7 +1314,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 					if(GameClient()->m_LocalServer.IsServerRunning())
 					{
 						RefreshBrowserTab(true);
-						Connect("localhost");
+						GameClient()->m_LocalServer.Connect();
 					}
 					else
 					{
@@ -1780,7 +1362,23 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	}
 	// 列表行和滚动条保留原有淡化，不影响上方表头及空列表提示中的按钮。
 	CUiBackgroundAlphaScaleScope ListOpacityScope(Ui(), SERVER_LIST_SCROLLBAR_RAIL_ALPHA_SCALE);
-	s_ListBox.DoStart(ms_ListheaderHeight, NumServers, 1, 3, SelectedServerIndex, &View, false);
+	// 胶囊行：整行圆角、主题选中/悬浮填充与行内左右内退。行距已经并入
+	// BrowserRowStep，这里显式把组件行距压成 0——可见范围裁剪只用 SkipItems，
+	// 它不补行距，滚过一屏后整张表会向上漂移。行间留白由行内选择内缩给出。
+	// 行反馈（选中/悬浮胶囊）一律传主题选中色原色：列表反馈只看强调色，悬浮与
+	// 选中是同一份 m_Selected（与下拉弹层同源），不要再掺白色 token 另起一档。
+	// 上面那次整体淡化只服务滚动条轨道，反算已经下沉到 CListBox 内部（组件按
+	// 1/BackgroundAlphaScale 还原一次）；这里再预除一遍会变成二次补偿。
+	const ColorRGBA ThemeSelected = Ui()->QmControlTheme().m_Selected;
+	s_ListBox.SetItemColors(ThemeSelected, ThemeSelected, ThemeSelected);
+	s_ListBox.DoAutoSpacing(0.0f);
+	s_ListBox.SetItemSelectionInset(ui_token::list::ROW_SPACING * 0.5f);
+	// 可见行取整：按实际可用高度收敛到整数行，首/末行不会被裁掉半行。
+	// 容器内边距（显式能力）：服务器列表也要首/末行与容器边缘留白。
+	s_ListBox.SetContainerPadding(ui_token::list::ContainerPadding(BrowserRowStep));
+	const int ServerVisibleRows = maximum(1, (int)std::floor(std::max(0.0f, View.h - 2.0f * ui_token::list::ContainerPadding(BrowserRowStep)) / BrowserRowStep));
+	s_ListBox.SetVisibleRowRange(1, ServerVisibleRows);
+	s_ListBox.DoStart(BrowserRowStep, NumServers, 1, 3, SelectedServerIndex, &View, false);
 
 	const bool RevealSelection = m_ServerBrowserShouldRevealSelection;
 	if(m_ServerBrowserShouldRevealSelection)
@@ -1797,14 +1395,13 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	int EndVisibleItem = NumServers;
 	if(!RevealSelection && NumServers > 0)
 	{
-		const float RowHeight = ms_ListheaderHeight;
 		const float ScrollY = std::max(0.0f, s_ListBox.ScrollOffsetY());
 		const float ViewHeight = std::max(0.0f, s_ListBox.ViewHeight());
 		const int ExtraRows = 1;
-		const int FirstVisibleRow = std::max(0, (int)std::floor(ScrollY / RowHeight) - ExtraRows);
+		const int FirstVisibleRow = std::max(0, (int)std::floor(ScrollY / BrowserRowStep) - ExtraRows);
 		const int LastVisibleRowExclusive = std::min(
 			NumServers,
-			(int)std::ceil((ScrollY + ViewHeight) / RowHeight) + ExtraRows);
+			(int)std::ceil((ScrollY + ViewHeight) / BrowserRowStep) + ExtraRows);
 		FirstVisibleItem = std::min(FirstVisibleRow, NumServers);
 		EndVisibleItem = std::max(FirstVisibleItem, LastVisibleRowExclusive);
 	}
@@ -1910,7 +1507,12 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			if(SegmentBlank)
 				pDisplayServerName = pItem->m_aName;
 		}
-		const CUIRect RowClip{Headers.x, ListItem.m_Rect.y, Headers.w, ListItem.m_Rect.h};
+		// 行内容排在内退后的内容区上：左右内边距由 CListBox 的胶囊行给出，
+		// 表格列只在这个内容区里按列宽切分，不再用整行矩形贴边摆文字。
+		// 纵向再让出半档，让内容与行胶囊（不含格间缝隙）同高。
+		CUIRect RowContent = ListItem.m_ContentRect;
+		RowContent.HMargin(ui_token::list::ROW_SPACING * 0.5f, &RowContent);
+		const CUIRect RowClip{Headers.x, RowContent.y, Headers.w, RowContent.h};
 		Ui()->ClipEnable(&RowClip);
 		for(const auto &Col : s_aCols)
 		{
@@ -1918,8 +1520,8 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 				continue;
 			CUIRect Button;
 			Button.x = Col.m_Rect.x;
-			Button.y = ListItem.m_Rect.y;
-			Button.h = ListItem.m_Rect.h;
+			Button.y = RowContent.y;
+			Button.h = RowContent.h;
 			Button.w = Col.m_Rect.w;
 			if(Button.w <= 0.0f)
 				continue;
@@ -2027,6 +1629,9 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 				Props.m_MaxWidth = Button.w;
 				Props.m_StopAtEnd = true;
 				Props.m_EnableWidthCheck = false;
+				// 名称列可能被搜索高亮拆成多段流式绘制；裁剪时统一用完整名称提示。
+				Props.m_pTooltipId = pUiElement->Rect(UI_ELEM_NAME_1);
+				Props.m_pTooltipText = pDisplayServerName;
 
 				bool Printed = false;
 				if(g_Config.m_BrFilterString[0] && (g_Config.m_QmShortServerNames || (pItem->m_QuickSearchHit & IServerBrowser::QUICK_SERVERNAME)))
@@ -2076,6 +1681,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 				Props.m_MaxWidth = Button.w;
 				Props.m_StopAtEnd = true;
 				Props.m_EnableWidthCheck = false;
+				Props.m_pTooltipId = pUiElement->Rect(UI_ELEM_GAMETYPE);
 				if(g_Config.m_UiColorizeGametype)
 				{
 					TextRender()->TextColor(pItem->m_GametypeColor);
@@ -2099,8 +1705,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 						// 同步放大绘制区域，避免图标被原有边距限制尺寸。
 						PreviewIcon.Margin(-0.1f * std::min(PreviewIcon.w, PreviewIcon.h), &PreviewIcon);
 						const bool SamePreviewTarget = Ui()->IsPopupOpen(&m_MapPreviewPopupContext) &&
-									       str_comp(m_MapPreviewPopupContext.m_aAddress, pItem->m_aAddress) == 0 &&
-									       str_comp(m_MapPreviewPopupContext.m_aMapName, pItem->m_aMap) == 0;
+									       str_comp(m_MapPreviewPopupContext.m_Target.m_aMapName, pItem->m_aMap) == 0;
 						if(Ui()->DoButtonLogic(&pItem->m_RequiresLogin, 0, &PreviewIcon, BUTTONFLAG_LEFT))
 						{
 							if(!SamePreviewTarget)
@@ -2131,6 +1736,8 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 					Props.m_MaxWidth = Button.w;
 					Props.m_StopAtEnd = true;
 					Props.m_EnableWidthCheck = false;
+					Props.m_pTooltipId = pUiElement->Rect(UI_ELEM_MAP_1);
+					Props.m_pTooltipText = pItem->m_aMap;
 					bool Printed = false;
 					if(g_Config.m_BrFilterString[0] && (pItem->m_QuickSearchHit & IServerBrowser::QUICK_MAPNAME))
 						Printed = PrintHighlighted(pItem->m_aMap, [&](const char *pFilteredStr, const int FilterLen) {
@@ -2250,20 +1857,24 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		MenuUiPerf.m_UiMs = (float)ListFrameDurationMs;
 		QmLogMenuUiFramePerf(MenuUiPerf, Client());
 	}
-	if(NumServers * ms_ListheaderHeight > ListView.h)
+	if(NumServers * BrowserRowStep > ListView.h)
 	{
 		CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
 		CUIRect Fade = ListView;
-		Fade.VSplitRight(s_ListBox.ScrollbarWidthMax(), &Fade, nullptr);
+		Fade.VSplitRight(BrowserScrollbarReserve, &Fade, nullptr);
 		constexpr float FadeHeight = 44.0f;
 		Fade.y += maximum(Fade.h - FadeHeight, 0.0f);
 		Fade.h = minimum(Fade.h, FadeHeight);
+		// 渐变的下沿必须跟容器圆角走：它是列表体最底下 44px 的压暗层，方形下沿会正好
+		// 把卡片底部的两个圆角盖成直角（用户实机看到的就是这一条）。上沿接在内容中间，
+		// 保持直边——那里加圆角会把跨过渐变起点的行切出缺口。
+		const float FadeRadius = ui_token::list::ContainerRadius(ListView.w, ListView.h);
 		Fade.Draw4(
 			BrowserOpacityColor(ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f)),
 			BrowserOpacityColor(ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f)),
 			BrowserOpacityColor(ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)),
 			BrowserOpacityColor(ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)),
-			IGraphics::CORNER_NONE, 0.0f);
+			IGraphics::CORNER_BL | IGraphics::CORNER_BR, FadeRadius);
 	}
 	if(NewSelected != m_SelectedIndex)
 	{
@@ -2390,48 +2001,81 @@ void CMenus::RenderServerbrowserMapFilterSelector(CUIRect Selector)
 	GameClient()->m_Tooltips.DoToolTip(&s_FavoriteToggleId, &FavoriteGroup, Localize("Favorite maps"));
 }
 
-static bool BrowserStatusHasNotice(IServerBrowser *pBrowser)
+// 状态栏不再有提示行：用户明确说「服务器列表刷新失败，正在显示上次列表」这一行没必要，
+// 所以这里连绘制带占位一起删掉。布局接口（QmBrowserStatusLayout / QmBrowserPanelLayout
+// 的 ShowNotice）仍然保留，浏览器两处调用一律传 false：既不画字，也不为它预留高度，
+// 不会留下一行空白。IsServerlistError() 的其它用途（空列表态文案、后台加载判定）不受影响。
+
+// 浏览器面板里自绘的三处滚动区（好友列表 / 筛选面板 / 状态栏）现在分两条口径。
+// 静态面板（筛选 / 状态栏）走**非覆盖式**：Begin() 会把 thickness 当作占位从 clip
+// 里切走，内容矩形天然内缩，行右缘与轨道之间由 margin 留出缝隙，调用点不需要也不
+// 允许再手写一次让位减法（双扣）。参数全部由列表 token 派生：可见轨宽 =
+// thickness − 2×margin = (SCROLLBAR_WIDTH + 2×SCROLLBAR_MARGIN) − 2×SCROLLBAR_MARGIN
+// = SCROLLBAR_WIDTH = 8，内容与轨道之间的缝 = SCROLLBAR_MARGIN = 4。
+// 「轨道隐形」是 thickness/margin 取值把可见宽算成 0，与是否覆盖无关。
+// 好友列表例外：它的内容高度在展开/折叠动画里逐帧变化、轨道随时可能进出，
+// 占位必须恒定，见下面的 ApplyFriendsScrollbar。
+static void ApplyBrowserScrollbar(CScrollRegionParams &Params, float TrackInset)
 {
-	return pBrowser->GetCurrentType() != IServerBrowser::TYPE_LAN && pBrowser->NumServers() > 0 &&
-	       !pBrowser->IsGettingServerlist() && (pBrowser->IsServerlistError() || pBrowser->IsServerlistStale());
+	Params.m_ScrollbarThickness = ui_token::list::SCROLLBAR_WIDTH + 2.0f * ui_token::list::SCROLLBAR_MARGIN;
+	Params.m_ScrollbarMargin = ui_token::list::SCROLLBAR_MARGIN;
+	Params.m_ScrollbarOverlay = false;
+	// 非覆盖式不需要显示系数与横向滑出：轨道显隐直接走占位那一档。
+	Params.m_ScrollbarRevealSec = 0.0f;
+	Params.m_ScrollbarSlide = 0.0f;
+	// 宿主按容器圆角给长度方向内缩：滑块端头不会压到（或探出）面板圆角。
+	Params.m_ScrollbarTrackInset = std::max(0.0f, TrackInset);
+	// 占位不跟着显隐动画：面板里的行宽只在轨道出现时收一档，不会逐帧抖。
+	Params.m_AnimateScrollbarReserve = false;
+	Params.m_ScrollbarAlwaysReserved = false;
+	// FILTER_GRID 的 policy 默认把轨道设成 HIDDEN；这三处要的是可见、能拖的轨道。
+	Params.m_HideScrollbar = false;
+}
+
+// 好友列表的轨道：与非覆盖式面板同一档（可见宽 8、外边距 4、缝 4），但**开启占位动画**。
+// 没有滚动条时占位为 0，卡片与分类表头占满全宽；轨道出现/消失时占位宽度（0↔16）
+// 走同一档缓动，内容连续让位而不是整段横跳。好友列表的内容高度是展开进度 ExpandT
+// 的函数，逐帧都会跨过溢出阈值，只有占位动画能吸收这个跳变；恒定让位会让没有滚动条
+// 时也永久空出一列（实机反馈：正常情况下应当占满全宽）。
+static void ApplyFriendsScrollbar(CScrollRegionParams &Params, float TrackInset)
+{
+	Params.m_ScrollbarThickness = ui_token::list::SCROLLBAR_WIDTH + 2.0f * ui_token::list::SCROLLBAR_MARGIN;
+	Params.m_ScrollbarMargin = ui_token::list::SCROLLBAR_MARGIN;
+	Params.m_ScrollbarOverlay = false;
+	// 非覆盖式不需要显示系数与横向滑出：轨道显隐直接走占位那一档动画。
+	Params.m_ScrollbarRevealSec = 0.0f;
+	Params.m_ScrollbarSlide = 0.0f;
+	Params.m_ScrollbarTrackInset = std::max(0.0f, TrackInset);
+	// 占位跟着显隐动画走：出现/消失都平滑，展开动画中途跨过阈值也不会闪一列。
+	Params.m_AnimateScrollbarReserve = true;
+	Params.m_ScrollbarAlwaysReserved = false;
+	Params.m_HideScrollbar = false;
 }
 
 void CMenus::RenderServerbrowserStatusBox(CUIRect StatusBox, bool WasListboxItemActivated)
 {
 	if(StatusBox.w <= 0.0f || StatusBox.h <= 0.0f)
 		return;
-	const bool ShowNotice = BrowserStatusHasNotice(ServerBrowser());
 	static CScrollRegion s_StatusScrollRegion;
 	SQmScrollRequest ScrollRequest;
 	ScrollRequest.m_Profile = EQmScrollProfile::SETTINGS_INNER;
 	ScrollRequest.m_RowExtent = 24.0f;
 	ScrollRequest.m_RowsPerStep = 2;
 	CScrollRegionParams ScrollParams = QmScrollRegionParamsFromPolicy(QmResolveScrollPolicy(ScrollRequest));
-	ScrollParams.m_ScrollbarThickness = std::min(ScrollParams.m_ScrollbarThickness, StatusBox.w * 0.1f);
-	ScrollParams.m_ScrollbarMargin = std::min(ScrollParams.m_ScrollbarMargin, ScrollParams.m_ScrollbarThickness * 0.25f);
-	// 首帧就按实际内容判定滚动，避免窄宽度换行与滚动条占宽互相滞后一帧。
-	float ContentHeight = QmBrowserStatusLayout(StatusBox, ShowNotice).m_ContentHeight;
-	if(ContentHeight > StatusBox.h)
-	{
-		CUIRect ScrollContent = StatusBox;
-		ScrollContent.w -= ScrollParams.m_ScrollbarThickness;
-		ContentHeight = QmBrowserStatusLayout(ScrollContent, ShowNotice).m_ContentHeight;
-	}
-	s_StatusScrollRegion.SetContentHeightForNextFrame(ContentHeight);
+	// 轨道口径与好友列表、筛选面板相同：非覆盖式，可见轨宽 8、内容与轨道之间留 4 的缝。
+	ApplyBrowserScrollbar(ScrollParams, ui_token::radius::CARD);
+	// 内容矩形只从 Begin() 回写的 clip 取（非覆盖式已把轨道占位切走），调用点不再减法。
+	// 首帧测高按「滚动条已占位」的宽度算，与随后 Begin 回写的宽度同宽，避免开面板时先错一帧。
+	CUIRect StatusContent = StatusBox;
+	StatusContent.w = std::max(0.0f, StatusContent.w - ScrollParams.m_ScrollbarThickness);
+	// 提示行已删除：布局按「无提示行」测高，下面也不再画那条文案（不留空行）。
+	s_StatusScrollRegion.SetContentHeightForNextFrame(QmBrowserStatusLayout(StatusContent, false).m_ContentHeight);
 	vec2 ScrollOffset(0.0f, 0.0f);
 	s_StatusScrollRegion.Begin(&StatusBox, &ScrollOffset, &ScrollParams);
 	StatusBox.y += ScrollOffset.y;
-	const SQmBrowserStatusLayout Layout = QmBrowserStatusLayout(StatusBox, ShowNotice);
+	const SQmBrowserStatusLayout Layout = QmBrowserStatusLayout(StatusBox, false);
 	s_StatusScrollRegion.AddRect({StatusBox.x, StatusBox.y, StatusBox.w, Layout.m_ContentHeight});
 	CUIRect RefreshBar = Layout.m_RefreshBar;
-	if(ShowNotice)
-	{
-		SLabelProperties Props;
-		Props.m_MaxWidth = Layout.m_Notice.w;
-		Props.m_EllipsisAtEnd = true;
-		Props.SetColor(ColorRGBA(1.0f, 0.75f, 0.35f, 1.0f));
-		Ui()->DoLabel(&Layout.m_Notice, ServerBrowser()->IsServerlistError() ? Localize("Server list refresh failed; showing the previous list") : Localize("Server list is more than five minutes old"), 10.0f, TEXTALIGN_ML, Props);
-	}
 	const auto DoFieldLabel = [&](const CUIRect &Rect, const char *pText) {
 		SLabelProperties Props;
 		Props.m_MaxWidth = Rect.w;
@@ -2572,6 +2216,9 @@ void CMenus::RenderServerbrowserStatusBox(CUIRect StatusBox, bool WasListboxItem
 			Props.m_HintRequiresStringCheck = true;
 			Props.m_HintCanChangePositionOrSize = true;
 			Props.m_UseIconFont = true;
+			// 工具条按钮是长条控件：端头直接给胶囊档，绘制层按短边一半裁，
+			// 与列表胶囊行/输入框外壳同一族圆角。
+			Props.m_Rounding = ui_token::radius::PILL;
 
 			static CButtonContainer s_RefreshButton;
 			if(Ui()->DoButton_Menu(m_RefreshButton, &s_RefreshButton, RefreshLabelFunc, &ButtonRefresh, Props) || (!Ui()->IsPopupOpen() && (Input()->KeyPress(KEY_F5) || (Input()->KeyPress(KEY_R) && Input()->ModifierIsPressed()))))
@@ -2587,6 +2234,8 @@ void CMenus::RenderServerbrowserStatusBox(CUIRect StatusBox, bool WasListboxItem
 			SMenuButtonProperties Props;
 			Props.m_UseIconFont = true;
 			Props.m_HintCanChangePositionOrSize = true;
+			// 与刷新按钮同一条工具条，圆角同档：长条按钮按胶囊绘制。
+			Props.m_Rounding = ui_token::radius::PILL;
 			// 连接动作保留绿色语义，颜色改由统一语义色板提供（原为裸字面量 0.5/1.0/0.5）。
 			Props.m_Color = ui_token::color::SUCCESS.WithAlpha(0.5f);
 
@@ -2634,9 +2283,6 @@ void CMenus::RenderServerbrowserFilters(CUIRect View)
 	CUIRect Button, ResetButton;
 	View.HSplitBottom(RowHeight, &View, &ResetButton);
 	View.HSplitBottom(3.0f, &View, nullptr);
-	// 右内边距让给滚动条：滚动区域一直画到面板右缘，滚动条位置与好友列表一致。
-	ResetButton.w = std::max(0.0f, ResetButton.w - 5.0f);
-	View.w += 5.0f;
 
 	// 长译文或较矮窗口通过整体滚动保留全部筛选项，重置按钮固定在底部。
 	static CScrollRegion s_FilterScrollRegion;
@@ -2644,30 +2290,30 @@ void CMenus::RenderServerbrowserFilters(CUIRect View)
 	ScrollRequest.m_Profile = EQmScrollProfile::SETTINGS_GRID;
 	ScrollRequest.m_RowExtent = RowHeight;
 	CScrollRegionParams ScrollParams = QmScrollRegionParamsFromPolicy(QmResolveScrollPolicy(ScrollRequest));
-	// 工具箱三个页签共用同一档滚动条：宽度按内容宽度取紧凑轨道，与好友列表逐像素对齐。
-	ScrollParams.m_ScrollbarThickness = std::clamp(View.w * 0.05f, 6.0f, 10.0f);
-	ScrollParams.m_ScrollbarMargin = std::min(ScrollParams.m_ScrollbarMargin, ScrollParams.m_ScrollbarThickness * 0.25f);
-	ScrollParams.m_AnimateScrollbarReserve = true;
+	// 工具箱三个页签共用同一档滚动条：非覆盖式，可见轨宽 8，
+	// 内容与轨道之间由 margin 天然留出 4 的缝，与服务器列表、好友列表同一口径。
+	ApplyBrowserScrollbar(ScrollParams, ui_token::radius::CARD);
 	vec2 ScrollOffset(0.0f, 0.0f);
 	s_FilterScrollRegion.Begin(&View, &ScrollOffset, &ScrollParams);
 	View.y += ScrollOffset.y;
 	const float ContentTop = View.y;
-	// 正文与滚动条之间留出轨道宽度加两侧间隙：滚动条压在内容右缘上，长译文会贴到轨道。
-	const float ContentWidth = View.w;
-	View.w = std::max(0.0f, View.w - (ScrollParams.m_ScrollbarThickness + ScrollParams.m_ScrollbarMargin * 2.0f));
+	// 表单宽度直接取 Begin() 回写的 clip：轨道占位已经切走一档，这里再减就是双扣。
 	RenderServerbrowserFilterForm(View);
-	View.w = ContentWidth;
 
 	// countries and types filters
 	if(ServerBrowser()->CommunityCache().CountriesTypesFilterAvailable())
 	{
 		const ColorRGBA ColorActive = BrowserOpacityColor(ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f));
 		const ColorRGBA ColorInactive = BrowserOpacityColor(ColorRGBA(0.0f, 0.0f, 0.0f, 0.15f));
+		// 页签的**选中态**只表达「当前在哪一页」，用主题选中色（强调色派生），与列表行/格、
+		// 下拉弹层条目同一份；内容区背板仍用上面那档暗色（它表达的是容器，不是选中）。
+		const ColorRGBA TabSelectedColor = Ui()->QmControlTheme().m_Selected;
 
 		CUIRect TabContents, CountriesTab, TypesTab;
 		View.HSplitTop(6.0f, nullptr, &View);
 		View.HSplitTop(19.0f, &Button, &View);
-		View.HSplitTop(4.0f * 22.0f, &TabContents, &View);
+		// 页签内容区按国家/类型里更高的一档取整数行：末行完整可见，不被裁半行。
+		View.HSplitTop(FilterGridExtent(COUNTRY_FILTER_VISIBLE_ROWS, COUNTRY_FILTER_ROW_HEIGHT), &TabContents, &View);
 		Button.VSplitMid(&CountriesTab, &TypesTab);
 		// 与社区卡片同属工具箱面板内的顶层卡片，圆角跟随面板的 radius::CARD，
 		// 否则外缘大圆角里会套一圈更方的小圆角。
@@ -2687,10 +2333,10 @@ void CMenus::RenderServerbrowserFilters(CUIRect View)
 			s_ActiveTab = static_cast<EFilterTab>(Pressed);
 
 		static CButtonContainer s_CountriesButton;
-		DoButton_MenuTab(&s_CountriesButton, Localize("Countries"), s_ActiveTab == FILTERTAB_COUNTRIES, &CountriesTab, IGraphics::CORNER_TL, nullptr, &ColorInactive, &ColorActive, nullptr, ui_token::radius::MENU);
+		DoButton_MenuTab(&s_CountriesButton, Localize("Countries"), s_ActiveTab == FILTERTAB_COUNTRIES, &CountriesTab, IGraphics::CORNER_TL, nullptr, &ColorInactive, &TabSelectedColor, nullptr, ui_token::radius::MENU);
 
 		static CButtonContainer s_TypesButton;
-		DoButton_MenuTab(&s_TypesButton, Localize("Types"), s_ActiveTab == FILTERTAB_TYPES, &TypesTab, IGraphics::CORNER_TR, nullptr, &ColorInactive, &ColorActive, nullptr, ui_token::radius::MENU);
+		DoButton_MenuTab(&s_TypesButton, Localize("Types"), s_ActiveTab == FILTERTAB_TYPES, &TypesTab, IGraphics::CORNER_TR, nullptr, &ColorInactive, &TabSelectedColor, nullptr, ui_token::radius::MENU);
 
 		if(s_ActiveTab != s_PrevFilterTab)
 		{
@@ -2731,7 +2377,11 @@ void CMenus::RenderServerbrowserFilters(CUIRect View)
 	// 重置按钮和其他筛选按钮用同一套胶囊：同一个面板里不混两种按钮形态。
 	static unsigned char s_ResetFilterChipId = 0;
 	CUIRect ResetChip = ResetButton;
-	ResetChip.h = ui_token::server_filter::CHIP_HEIGHT;
+	// 与表单内容同宽（View.w 仍是 Begin() 回写的 clip 宽）：右缘和 chip / 输入框右缘
+	// 对齐，不伸到轨道下面，也不在轨道消失时留下一段空边。
+	ResetChip.w = View.w;
+	// 与筛选 chip 同高：都是从正文档派生的标准控件高度。
+	ResetChip.h = ResolveSettingsControlHeight(ResolveSettingsContentMetrics(View.w).m_BodySize);
 	ResetChip.y += std::max(0.0f, (ResetButton.h - ResetChip.h) / 2.0f);
 	if(ui_widget::FilterChip(SettingsUiContext("server_browser_filter_reset"), &s_ResetFilterChipId, ResetChip, Localize("Reset filter"), false))
 	{
@@ -2780,7 +2430,7 @@ void CMenus::ResetServerbrowserFilters()
 
 void CMenus::RenderServerbrowserDDNetFilter(CUIRect View,
 	IFilterList &Filter,
-	float ItemHeight, int MaxItems, int ItemsPerRow,
+	float RowHeight, int MaxItems, int ItemsPerRow,
 	CScrollRegion &ScrollRegion, std::vector<unsigned char> &vItemIds,
 	bool UpdateCommunityCacheOnChange,
 	const std::function<const char *(int ItemIndex)> &GetItemName,
@@ -2788,15 +2438,45 @@ void CMenus::RenderServerbrowserDDNetFilter(CUIRect View,
 {
 	vItemIds.resize(MaxItems);
 
+	// 胶囊格：行高/行距/圆角/左右内退全部走列表 token，与设置页胶囊行同一套。
+	// 悬浮/选中是整格胶囊（含格间半档行距），文字与图标排在内退后的内容区上。
+	const float RowSpacing = ui_token::list::ROW_SPACING;
+	const float RowStep = RowHeight + RowSpacing;
+	const float CellRadius = ui_token::list::RowRadius(RowHeight);
+	// 行内左右内退：单列整行走 token 全量内退（文字不再贴胶囊左缘）；多列网格的格子
+	// 只有几十像素宽，全量内退会把旗标/文字挤小，按更小的一档收敛，格子边界仍由胶囊给出。
+	const float TokenRowInsetX = ui_token::list::RowInsetX(RowHeight * CUi::ms_FontmodHeight);
+	const float ContentInsetX = ItemsPerRow > 1 ? std::min(TokenRowInsetX, ui_token::spacing::XS) : TokenRowInsetX;
+	// 容器内边距：与 CListBox 同一条 token（按行高分档，网格不大所以落在 XS/SM）。
+	// 四边都内缩——首/末列与首/末行的胶囊不再压在容器圆角上，格子与容器边缘之间
+	// 有可见留白（实机反馈：上下左右边距都得做，但不必太大）。
+	const float Padding = ui_token::list::ContainerPadding(RowHeight);
+	// 只按整数行开口：滚动视口边界落在行与行的缝隙里，首/末行不会被裁成半个胶囊。
+	const int VisibleGridRows = maximum(1, (int)std::floor((std::max(0.0f, View.h - 2.0f * Padding) - RowHeight - RowSpacing * 0.5f) / RowStep) + 1);
+	// 容器总高 = 整数行内容 + 上下两档内边距（调用点测高用 FilterGridExtent 同一条公式）。
+	View.h = std::min(View.h, VisibleGridRows * RowStep + 2.0f * Padding);
+	// 行区排在内边距内侧：滚动区、格宽、左右内退都从这条线开始算。
+	CUIRect Layout = View;
+	Layout.x += Padding;
+	Layout.w = maximum(0.0f, Layout.w - 2.0f * Padding);
+	Layout.y += Padding;
+	Layout.h = maximum(0.0f, Layout.h - 2.0f * Padding);
+
 	vec2 ScrollOffset(0.0f, 0.0f);
 	SQmScrollRequest ScrollRequest;
 	ScrollRequest.m_Profile = EQmScrollProfile::FILTER_GRID;
-	ScrollRequest.m_RowExtent = ItemHeight;
+	ScrollRequest.m_RowExtent = RowStep;
 	ScrollRequest.m_RowsPerStep = 2;
 	const SQmResolvedScrollPolicy ScrollPolicy = QmResolveScrollPolicy(ScrollRequest);
 	CScrollRegionParams ScrollParams = QmScrollRegionParamsFromPolicy(ScrollPolicy);
-	ScrollRegion.Begin(&View, &ScrollOffset, &ScrollParams);
-	View.y += ScrollOffset.y;
+	// 这三张胶囊网格（社区 / 国家 / 模式）固定可见行数、内容本来就放得下：不画轨道
+	// （回到 FILTER_GRID policy 的 HIDDEN 默认），也不为轨道让位。上一轮为了修
+	// 「轨道隐形」把它们强制改成常显轨道，结果最右一列格子反被轨道压住。
+	// 滚轮滚动能力保留；宽度直接取外层面板的内容宽（已扣面板轨道让位），
+	// 所以格子右缘不会伸到面板轨道下面。
+	ScrollParams.m_HideScrollbar = true;
+	ScrollRegion.Begin(&Layout, &ScrollOffset, &ScrollParams);
+	Layout.y += ScrollOffset.y;
 
 	CUIRect Row;
 	int ColumnIndex = 0;
@@ -2812,31 +2492,32 @@ void CMenus::RenderServerbrowserDDNetFilter(CUIRect View,
 	}
 	const int64_t EntryNow = time_get();
 	const int64_t EntryFreq = maximum<int64_t>(1, time_freq());
-	const bool EntryEnabled = g_Config.m_QmUiListEntryAnimations != 0 && g_Config.m_QmUiMotionLevel > 0;
+	const bool EntryEnabled = g_Config.m_QmUiMotionLevel > 0;
 	const float EntryElapsed = s_EntryAnimation.Resolve(EntryNow, EntryFreq, EntryEnabled, g_Config.m_QmUiMotionLevel,
 		Ui()->MeasurementOnly() ? EQmListEntryRenderPass::MEASUREMENT : EQmListEntryRenderPass::INTERACTIVE);
 	for(int ItemIndex = 0; ItemIndex < MaxItems; ++ItemIndex)
 	{
-		CUIRect Item;
+		const int RowIndex = ItemIndex / ItemsPerRow;
+		CUIRect Cell;
 		if(ColumnIndex == 0)
-			View.HSplitTop(ItemHeight, &Row, &View);
-		Row.VSplitLeft(View.w / ItemsPerRow, &Item, &Row);
+			Layout.HSplitTop(RowStep, &Row, &Layout);
+		Cell = {Row.x + ColumnIndex * (Row.w / ItemsPerRow), Row.y + RowSpacing * 0.5f, Row.w / ItemsPerRow, RowHeight};
 		ColumnIndex = (ColumnIndex + 1) % ItemsPerRow;
-		if(!ScrollRegion.AddRect(Item))
+		if(!ScrollRegion.AddRect(Cell))
 			continue;
 
-		const SQmListEntryVisual EntryVisual = QmListEntryVisual(EntryElapsed, ItemIndex / maximum(1, ItemsPerRow), g_Config.m_QmUiMotionLevel);
+		const SQmListEntryVisual EntryVisual = QmListEntryVisual(EntryElapsed, RowIndex, g_Config.m_QmUiMotionLevel);
 		std::optional<CUiScopedControlAlphaScale> EntryFade;
 		if(EntryVisual.m_Fade < 0.999f)
 			EntryFade.emplace(Ui(), EntryVisual.m_Fade);
-		Item.y += EntryVisual.m_OffsetY;
+		Cell.y += EntryVisual.m_OffsetY;
 
 		const void *pItemId = &vItemIds[ItemIndex];
 		const char *pName = GetItemName(ItemIndex);
 		const bool Active = !Filter.Filtered(pName);
 		CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
 
-		const int Click = Ui()->DoButtonLogic(pItemId, 0, &Item, BUTTONFLAG_ALL);
+		const int Click = Ui()->DoButtonLogic(pItemId, 0, &Cell, BUTTONFLAG_ALL);
 		if(Click == 1 || Click == 2)
 		{
 			// left/right click to toggle filter
@@ -2912,9 +2593,21 @@ void CMenus::RenderServerbrowserDDNetFilter(CUIRect View,
 				UpdateCommunityCache(true);
 		}
 
+		// 内容区左右内退由列表 token 派生：图标、旗标、文字都排在这里，
+		// 不再靠各列表自己写 +2/-2 像素补偿；悬浮胶囊仍按整格绘制。
+		CUIRect Content = Cell;
+		Content.VMargin(std::min(ContentInsetX, std::max(0.0f, Cell.w * 0.5f)), &Content);
 		if(Ui()->HotItem() == pItemId && !ScrollRegion.Animating())
-			Item.Draw(BrowserOpacityColor(ColorRGBA(1.0f, 1.0f, 1.0f, 0.33f)), IGraphics::CORNER_ALL, 2.0f);
-		RenderItem(ItemIndex, Item, pItemId, Active);
+		{
+			// 悬浮是整格胶囊，只填充不描边：白色描边只属于卡片内的小控件，列表行/格不用。
+			// 填充取主题选中色（与 CListBox 的选中/悬浮同一份 m_Selected，alpha 0.22），
+			// 不掺白色 token、也不乘任何系数；更不能过 BrowserOpacityColor——那是背板
+			// 与描边的表面染色，会把 alpha 再乘一档 qm_ui_opacity（默认 12%），
+			// 悬浮因此几乎看不出来。这里只叠入场淡入。
+			const ColorRGBA HoverFill = Ui()->QmControlTheme().m_Selected;
+			DrawRoundedSurface(Ui(), Cell, HoverFill.WithAlpha(HoverFill.a * Ui()->ControlAlphaScale()), ColorRGBA(), CellRadius);
+		}
+		RenderItem(ItemIndex, Content, pItemId, Active);
 	}
 
 	ScrollRegion.End();
@@ -2948,8 +2641,7 @@ void CMenus::RenderServerbrowserCommunitiesFilter(CUIRect View)
 	static std::vector<unsigned char> s_vItemIds;
 	static std::vector<unsigned char> s_vFavoriteButtonIds;
 
-	const float ItemHeight = 13.0f;
-	const float Spacing = 2.0f;
+	const float RowHeight = COMMUNITY_FILTER_ROW_HEIGHT;
 
 	const auto &&GetItemName = [&](int ItemIndex) {
 		return ServerBrowser()->Communities()[ItemIndex].Id();
@@ -2958,13 +2650,12 @@ void CMenus::RenderServerbrowserCommunitiesFilter(CUIRect View)
 		const auto &Community = ServerBrowser()->Communities()[ItemIndex];
 		const float Alpha = ((Active ? 0.9f : 0.2f) + (Ui()->HotItem() == pItemId ? 0.1f : 0.0f)) * Ui()->ControlAlphaScale();
 
+		// 内容区已含胶囊行的左右内退，这里只排图标、名称、人数与收藏星：
+		// 星标右缘、人数与图标都跟着内容区走，不再手写 +2/-1 像素补偿。
 		CUIRect Icon, NameLabel, PlayerCountIcon, PlayerCountLabel, FavoriteButton;
 		Item.VSplitRight(Item.h, &Item, &FavoriteButton);
-		Item.HMargin(Spacing, &Item);
-		Item.VSplitLeft(Spacing, nullptr, &Item);
-		Item.VSplitRight(1.0f, &Item, nullptr);
 		Item.VSplitLeft(Item.h * 2.0f, &Icon, &NameLabel);
-		NameLabel.VSplitLeft(Spacing, nullptr, &NameLabel);
+		NameLabel.VSplitLeft(ui_token::control::IconTextGap(NameLabel.h), nullptr, &NameLabel);
 		NameLabel.VSplitRight(8.0f, &NameLabel, &PlayerCountIcon);
 		NameLabel.VSplitRight(25.0f, &NameLabel, &PlayerCountLabel);
 
@@ -3002,7 +2693,7 @@ void CMenus::RenderServerbrowserCommunitiesFilter(CUIRect View)
 	};
 
 	s_vFavoriteButtonIds.resize(MaxEntries);
-	RenderServerbrowserDDNetFilter(View, ServerBrowser()->CommunitiesFilter(), ItemHeight + 2.0f * Spacing, MaxEntries, EntriesPerRow, s_ScrollRegion, s_vItemIds, true, GetItemName, RenderItem);
+	RenderServerbrowserDDNetFilter(View, ServerBrowser()->CommunitiesFilter(), RowHeight, MaxEntries, EntriesPerRow, s_ScrollRegion, s_vItemIds, true, GetItemName, RenderItem);
 }
 
 void CMenus::RenderServerbrowserCountriesFilter(CUIRect View)
@@ -3013,21 +2704,21 @@ void CMenus::RenderServerbrowserCountriesFilter(CUIRect View)
 	static CScrollRegion s_ScrollRegion;
 	static std::vector<unsigned char> s_vItemIds;
 
-	const float ItemHeight = 18.0f;
-	const float Spacing = 2.0f;
+	const float RowHeight = COUNTRY_FILTER_ROW_HEIGHT;
 
 	const auto &&GetItemName = [&](int ItemIndex) {
 		return ServerBrowser()->CommunityCache().SelectableCountries()[ItemIndex]->Name();
 	};
 	const auto &&RenderItem = [&](int ItemIndex, CUIRect Item, const void *pItemId, bool Active) {
-		Item.Margin(Spacing, &Item);
-		const float OldWidth = Item.w;
-		Item.w = Item.h * 2.0f;
-		Item.x += (OldWidth - Item.w) / 2.0f;
-		GameClient()->m_CountryFlags.Render(ServerBrowser()->CommunityCache().SelectableCountries()[ItemIndex]->FlagId(), ColorRGBA(1.0f, 1.0f, 1.0f, ((Active ? 0.9f : 0.2f) + (Ui()->HotItem() == pItemId ? 0.1f : 0.0f)) * Ui()->ControlAlphaScale()), Item.x, Item.y, Item.w, Item.h);
+		// 旗帜保持 2:1，在内容区里居中；内容区由胶囊行的左右内退派生，
+		// 内退吃掉宽度时旗帜等比缩小而不是压扁。
+		const float FlagWidth = std::min(Item.w, Item.h * 2.0f);
+		const float FlagHeight = std::min(Item.h, FlagWidth * 0.5f);
+		CUIRect FlagRect{Item.x + (Item.w - FlagWidth) * 0.5f, Item.y + (Item.h - FlagHeight) * 0.5f, FlagWidth, FlagHeight};
+		GameClient()->m_CountryFlags.Render(ServerBrowser()->CommunityCache().SelectableCountries()[ItemIndex]->FlagId(), ColorRGBA(1.0f, 1.0f, 1.0f, ((Active ? 0.9f : 0.2f) + (Ui()->HotItem() == pItemId ? 0.1f : 0.0f)) * Ui()->ControlAlphaScale()), FlagRect.x, FlagRect.y, FlagRect.w, FlagRect.h);
 	};
 
-	RenderServerbrowserDDNetFilter(View, ServerBrowser()->CountriesFilter(), ItemHeight + 2.0f * Spacing, MaxEntries, EntriesPerRow, s_ScrollRegion, s_vItemIds, false, GetItemName, RenderItem);
+	RenderServerbrowserDDNetFilter(View, ServerBrowser()->CountriesFilter(), RowHeight, MaxEntries, EntriesPerRow, s_ScrollRegion, s_vItemIds, false, GetItemName, RenderItem);
 }
 
 void CMenus::RenderServerbrowserTypesFilter(CUIRect View)
@@ -3038,20 +2729,18 @@ void CMenus::RenderServerbrowserTypesFilter(CUIRect View)
 	static CScrollRegion s_ScrollRegion;
 	static std::vector<unsigned char> s_vItemIds;
 
-	const float ItemHeight = 13.0f;
-	const float Spacing = 2.0f;
+	const float RowHeight = TYPE_FILTER_ROW_HEIGHT;
 
 	const auto &&GetItemName = [&](int ItemIndex) {
 		return ServerBrowser()->CommunityCache().SelectableTypes()[ItemIndex]->Name();
 	};
 	const auto &&RenderItem = [&](int ItemIndex, CUIRect Item, const void *pItemId, bool Active) {
-		Item.Margin(Spacing, &Item);
 		TextRender()->TextColor(1.0f, 1.0f, 1.0f, ((Active ? 0.9f : 0.2f) + (Ui()->HotItem() == pItemId ? 0.1f : 0.0f)) * Ui()->ControlAlphaScale());
 		Ui()->DoLabel(&Item, GetItemName(ItemIndex), Item.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
 	};
 
-	RenderServerbrowserDDNetFilter(View, ServerBrowser()->TypesFilter(), ItemHeight + 2.0f * Spacing, MaxEntries, EntriesPerRow, s_ScrollRegion, s_vItemIds, false, GetItemName, RenderItem);
+	RenderServerbrowserDDNetFilter(View, ServerBrowser()->TypesFilter(), RowHeight, MaxEntries, EntriesPerRow, s_ScrollRegion, s_vItemIds, false, GetItemName, RenderItem);
 }
 
 CUi::EPopupMenuFunctionResult CMenus::PopupCountrySelection(void *pContext, CUIRect View, bool Active)
@@ -3066,8 +2755,21 @@ CUi::EPopupMenuFunctionResult CMenus::PopupCountrySelection(void *pContext, CUIR
 	s_ListBox.SetActive(Active);
 	s_ListBox.SetWheelOwnerPriority(EUiWheelOwnerPriority::POPUP);
 	s_ListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_GRID);
-	// 选中/悬停填充由 CListBox 统一绘制；这里只补选中描边，避免同一行画两遍。
-	s_ListBox.SetItemColors(ui_token::color::LIST_ITEM_SELECTED, ui_token::color::LIST_ITEM_SELECTED, ui_token::color::LIST_ITEM_HOVER);
+	// 选中填充（主题选中色）与悬停填充都由 CListBox 的胶囊格轨道统一绘制，
+	// 与下拉弹层条目同源；这里不再覆盖颜色，也不补描边。
+	// 多列网格也走胶囊格：行距、左右内退和单列胶囊行同一套；圆角由调用点显式
+	// 传给 DoNextItem——组件对 ItemsPerRow > 1 默认仍取小圆角（多列网格的旧观感）。
+	// 行距并进行高：组件的自动行距在 ItemsPerRow > 1 时按每个格子推进一格
+	// （一格一行的 N 倍），网格行距会随列数放大；这里自己按行步进，网格才是
+	// 严格 N 行 × 行步进，滚动条高度和实际行位一致。
+	const float FlagCellHeight = 44.0f;
+	const float FlagCellStep = FlagCellHeight + ui_token::list::ROW_SPACING;
+	const float FlagCellRadius = ui_token::list::RowRadius(FlagCellHeight);
+	s_ListBox.SetCapsuleRows(10.0f);
+	// 容器内边距：格子与弹层容器四边留白，选中/悬浮胶囊不再压在圆角上（与列表同一能力）。
+	s_ListBox.SetContainerPadding(ui_token::list::ContainerPadding(FlagCellHeight));
+	s_ListBox.DoAutoSpacing(0.0f);
+	s_ListBox.SetItemSelectionInset(ui_token::list::ROW_SPACING * 0.5f);
 
 	if(pPopupContext->m_New)
 	{
@@ -3143,32 +2845,31 @@ CUi::EPopupMenuFunctionResult CMenus::PopupCountrySelection(void *pContext, CUIR
 		}
 	}
 
-	s_ListBox.DoStart(44.0f, s_vFiltered.size(), Columns, 1, SelectedIndex, &GridArea, false);
+	// 整数行：可见行由可用高度收敛，最后一行完整可见；列表再高也不越出内容区。
+	// 可见行按「可用高 − 上下两档内边距」取整：内边距不会挤掉一行。
+	s_ListBox.SetVisibleRowRange(1, maximum(1, (int)std::floor(std::max(0.0f, GridArea.h - 2.0f * ui_token::list::ContainerPadding(FlagCellHeight)) / FlagCellStep)));
+	s_ListBox.DoStart(FlagCellStep, s_vFiltered.size(), Columns, 1, SelectedIndex, &GridArea, false);
 
 	for(size_t i = 0; i < s_vFiltered.size(); ++i)
 	{
 		const SFilteredFlag &Filtered = s_vFiltered[i];
 		const CCountryFlags::CCountryFlag *pEntry = Filtered.m_pEntry;
 		const bool IsSelected = pEntry->m_CountryCode == pPopupContext->m_Selection;
-		const CListboxItem Item = s_ListBox.DoNextItem(pEntry, IsSelected);
+		const CListboxItem Item = s_ListBox.DoNextItem(pEntry, IsSelected, FlagCellRadius);
 		if(!Item.m_Visible)
 			continue;
 
-		const float SelectedAlpha = s_ListBox.SelectionFeedbackAlpha((int)i);
-		if(SelectedAlpha > 0.001f)
-		{
-			// 选中描边与资产卡/列表选中态同源（白 0.7），不用 BORDER_FOCUS 强调蓝；
-			// 填充交给 CListBox 的选中轨道，这里不再叠第二层。
-			DrawRoundedSurface(pUi, Item.m_Rect, ColorRGBA(), ui_token::color::NEUTRAL_WHITE.WithAlpha(ui_token::feedback::ICON_BORDER_ALPHA * SelectedAlpha), ui_token::radius::BASE, 1.0f);
-		}
-
+		// 选中填充与白色细描边都由 CListBox 的胶囊格轨道绘制（行内内缩给出格间缝隙），
+		// 这里不再补第二层描边；描边圆角随 FlagCellRadius 与胶囊格同档。
+		// 内容区已含胶囊格的左右内退：旗标与国码都排在这里，纵向让 5 给上下呼吸。
+		const CUIRect CellContent = Item.m_ContentRect;
 		CUIRect FlagRect, Label;
-		Item.m_Rect.Margin(5.0f, &FlagRect);
+		CellContent.HMargin(5.0f, &FlagRect);
 		FlagRect.HSplitBottom(12.0f, &FlagRect, &Label);
 		Label.HSplitTop(2.0f, nullptr, &Label);
-		const float OldWidth = FlagRect.w;
-		FlagRect.w = FlagRect.h * 2.0f;
-		FlagRect.x += (OldWidth - FlagRect.w) / 2.0f;
+		const float FlagWidth = std::min(CellContent.w, FlagRect.h * 2.0f);
+		const float FlagHeight = FlagWidth * 0.5f;
+		FlagRect = {CellContent.x + (CellContent.w - FlagWidth) * 0.5f, FlagRect.y + (FlagRect.h - FlagHeight) * 0.5f, FlagWidth, FlagHeight};
 		int64_t FlagAnimStartTime = s_PopupOpenTime;
 		if(s_PopupOpenTime > 0)
 		{
@@ -3204,16 +2905,88 @@ CUi::EPopupMenuFunctionResult CMenus::PopupCountrySelection(void *pContext, CUIR
 	return CUi::POPUP_KEEP_OPEN;
 }
 
+// 本地时间状态机：折叠/展开这类「按帧时间推进」的过渡只在这里有一份缓动
+// （0.15s + smoothstep），好友分类表头与服务器信息页「暴露 IP」行共用同一套。
+//
+// 关键约束：只有交互趟能推进（Retarget），背景/出图趟（RenderOnly）与测量趟
+// （MeasurementOnly，是 RenderOnly 的子集）只读 Current()。菜单一帧里会被渲染
+// 不止一趟，上一版把记账放在所有趟里：非交互趟的闸门收起时直接把 m_From/m_To
+// 推到目标，等交互趟再来时 Current() 已经是终点——动画被吃掉，只剩瞬变。
+static constexpr float LOCAL_EASED_PROGRESS_SEC = 0.15f;
+
+static constexpr float LocalEasedSmoothstep(float Progress)
+{
+	return Progress * Progress * (3.0f - 2.0f * Progress);
+}
+
+// (from, to, startTick, now, freq) → 当前进度。纯函数：不碰任何静态状态，
+// 起止点、半程与越界钳制都在下面用 static_assert 自检（等价于单元测试，
+// 不需要额外测试文件）。
+static constexpr float ResolveLocalEasedProgress(float From, float To, int64_t StartTick, int64_t Now, int64_t Freq)
+{
+	if(From == To || Freq <= 0)
+		return To;
+	const float ElapsedSec = (float)(Now - StartTick) / (float)Freq;
+	const float Progress = std::clamp(ElapsedSec / LOCAL_EASED_PROGRESS_SEC, 0.0f, 1.0f);
+	return From + (To - From) * LocalEasedSmoothstep(Progress);
+}
+
+// 推进条件：只有交互趟、且目标真的变了，才允许重起一段过渡。
+static constexpr bool LocalEasedProgressShouldRetarget(bool InteractivePass, float CurrentTo, float Target)
+{
+	return InteractivePass && CurrentTo != Target;
+}
+
+// 下面这几条 static_assert 就是这条状态机的「单元测试」：起止点、半程与越界钳制，
+// 外加「非交互趟不推进」的闸门。消息保持 ASCII——本工程 MSVC 主目标没开 /utf-8，
+// 中文只出现在注释里。
+static_assert(!LocalEasedProgressShouldRetarget(false, 0.0f, 1.0f), "background/measurement pass must not advance the transition");
+static_assert(!LocalEasedProgressShouldRetarget(false, 1.0f, 0.0f), "background/measurement pass must not advance the transition");
+static_assert(LocalEasedProgressShouldRetarget(true, 0.0f, 1.0f), "interactive pass must restart the transition when the target changes");
+static_assert(!LocalEasedProgressShouldRetarget(true, 1.0f, 1.0f), "unchanged target must not restart the transition");
+static_assert(ResolveLocalEasedProgress(0.0f, 1.0f, 0, 0, 1000) == 0.0f, "progress must start at From");
+static_assert(ResolveLocalEasedProgress(0.0f, 1.0f, 0, 150, 1000) == 1.0f, "progress must reach To after one duration");
+static_assert(ResolveLocalEasedProgress(0.0f, 1.0f, 0, 500, 1000) == 1.0f, "progress must clamp to To past the duration");
+static_assert(ResolveLocalEasedProgress(1.0f, 0.0f, 0, 75, 1000) > 0.45f && ResolveLocalEasedProgress(1.0f, 0.0f, 0, 75, 1000) < 0.55f, "progress must be about halfway at half duration");
+static_assert(ResolveLocalEasedProgress(0.4f, 0.4f, 0, 0, 1000) == 0.4f, "equal From/To must return the resting value");
+
+struct SLocalEasedProgress
+{
+	float m_From = 1.0f;
+	float m_To = 1.0f;
+	int64_t m_StartTick = 0;
+	float Current(int64_t Now, int64_t Freq) const { return ResolveLocalEasedProgress(m_From, m_To, m_StartTick, Now, Freq); }
+	// 目标变了就重新起跑。调用点必须先用 LocalEasedProgressShouldRetarget 判断，
+	// 非交互趟调一次就可能把整段过渡推到终点。
+	void Retarget(float Target, int64_t Now, int64_t Freq)
+	{
+		m_From = Current(Now, Freq);
+		m_To = Target;
+		m_StartTick = Now;
+	}
+	// 直接落在某个静止值上（换页、换服务器这类不该播过渡的场景）。
+	void SnapTo(float Value)
+	{
+		m_From = Value;
+		m_To = Value;
+		m_StartTick = 0;
+	}
+};
+
 void CMenus::RenderServerbrowserInfo(CUIRect View)
 {
 	const CServerInfo *pSelectedServer = ServerBrowser()->SortedGet(m_SelectedServerIndex);
 
-	// 与筛选页共用胶囊开关的绘制入口、字号、行高和间距。
-	SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(Ui()->Screen()->w);
-	Metrics.m_LineHeight = ui_token::server_info::ROW_HEIGHT;
-	Metrics.m_BodySize = (ui_token::server_info::ROW_HEIGHT - ui_token::server_info::LABEL_FONT_INSET) * CUi::ms_FontmodHeight;
-	Metrics.m_LineSpacing = ui_token::server_info::ROW_GAP;
-	Metrics.m_SectionGap = ui_token::server_info::ROW_GAP * 3.0f;
+	// 本页不再另造一套尺寸：信息行、开关行和复制按钮统一吃设置卡片那份内容度量
+	// （行高、正文字号、行距、分区间距都从本面板的实际内容宽推导，窄面板自动落到
+	// 紧凑档），和卡片同源。之前的写法按屏幕宽取度量、再把行高压成 15px 并反推
+	// 字号 (15-4)×FontmodHeight：正文因此比卡片小一档，开关却仍按标准控件高度
+	// 绘制，同一页里出现两种密度。
+	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(View.w);
+	// 行间距只按卡片语义声明：本页没有分区，只有行——行与行之间、以及进入复制
+	// 按钮和记分板之前统一用 RowGap，不再借用分区的 SectionGap（那一档比行间距大，
+	// 实机反馈「这几处都比行间距大」）。
+	const float RowGap = ui_token::settings::RowGap(Metrics.m_LineSpacing);
 	View.Margin(5.0f, &View);
 	View.VSplitRight(std::min(5.0f, View.w), &View, nullptr);
 	View.HSplitTop(ui_token::spacing::MD, nullptr, &View);
@@ -3224,30 +2997,77 @@ void CMenus::RenderServerbrowserInfo(CUIRect View)
 		return;
 	}
 
+	// 收藏 / 暴露 IP 都以「本页意图」为准：点击那一帧立刻翻转，动画和行高跟着它走，
+	// 不等服务器列表刷新把 m_Favorite / m_FavoriteAllowPing 回写（后台刷新至少滞后
+	// 一帧以上，旧写法让目标每帧在旧值和新值之间来回，实机表现就是开关自己动来动去）。
+	// 记账只在交互趟做：背景/出图/测量趟只读，不推进动画，也不回写配置。
+	const bool InteractivePass = !Ui()->RenderOnly();
+	// 引擎里 CFavorites::Add() 给新收藏项写死 m_AllowPing = false、Remove() 整条删除，
+	// 所以「取消收藏 → 再收藏」必然回到不暴露；而 m_FavoriteAllowPing 只在当前是收藏时
+	// 有意义（IsPingAllowed 对非收藏地址返回 ALL，对「收藏但不暴露」返回 NONE）。
+	// 未收藏时改用持久化的 qm_browser_favorite_expose_ip 作为这次收藏的默认策略。
 	const bool WasFavorite = pSelectedServer->m_Favorite != TRISTATE::NONE;
-	static float s_ExposeRowAnim = 0.0f;
+	const bool ObservedExposeIp = WasFavorite ? pSelectedServer->m_FavoriteAllowPing != TRISTATE::NONE : g_Config.m_QmBrowserFavoriteExposeIp != 0;
+	static char s_aIntentServerAddress[NETADDR_MAXSTRSIZE] = "";
+	static bool s_FavoriteIntent = false;
+	static bool s_ExposeIpIntent = false;
+	static bool s_LastObservedFavorite = false;
+	static bool s_LastObservedExposeIp = false;
+	static SLocalEasedProgress s_ExposeRowAnim;
+	if(str_comp(s_aIntentServerAddress, pSelectedServer->m_aAddress) != 0)
 	{
-		static int64_t s_ExposeLastTick = 0;
-		const int64_t ExposeNow = time_get();
-		const int64_t ExposeFreq = maximum<int64_t>(1, time_freq());
-		const float ExposeDt = s_ExposeLastTick == 0 ? 0.0f : std::clamp((float)(ExposeNow - s_ExposeLastTick) / (float)ExposeFreq, 0.0f, 0.1f);
-		s_ExposeLastTick = ExposeNow;
-		const float Target = WasFavorite ? 1.0f : 0.0f;
-		const float Step = (g_Config.m_QmUiMotionLevel > 0 ? 1.0f / 0.15f : 1000.0f) * ExposeDt;
-		s_ExposeRowAnim = std::clamp(s_ExposeRowAnim + std::clamp(Target - s_ExposeRowAnim, -Step, Step), 0.0f, 1.0f);
+		// 换服务器（按地址认：列表刷新会重建条目，指针不可靠）：直接落在该服务器的
+		// 真实状态上，不播过渡。
+		str_copy(s_aIntentServerAddress, pSelectedServer->m_aAddress, sizeof(s_aIntentServerAddress));
+		s_FavoriteIntent = s_LastObservedFavorite = WasFavorite;
+		s_ExposeIpIntent = s_LastObservedExposeIp = ObservedExposeIp;
+		s_ExposeRowAnim.SnapTo(s_FavoriteIntent ? 1.0f : 0.0f);
 	}
+	else if(InteractivePass && WasFavorite != s_LastObservedFavorite)
+	{
+		// 收藏状态变了：跟随它（外部改动来自服务器列表的星标 / 热键；本页点击的意图
+		// 本来就等于回写值）。暴露 IP 的意图**不跟着清掉**——取消收藏再收藏时开关
+		// 位置必须保持不变，由上面那条持久化配置把这个选择带过来。
+		const bool NewlyFavorited = WasFavorite;
+		s_LastObservedFavorite = WasFavorite;
+		s_FavoriteIntent = WasFavorite;
+		// 外部新建的收藏项（列表星标 / 热键）同样是引擎默认的「不暴露」，按记住的
+		// 策略补一次，否则第四个问题（开关位置被引擎默认值悄悄改掉）只会换个入口复发。
+		if(NewlyFavorited && !ObservedExposeIp && g_Config.m_QmBrowserFavoriteExposeIp != 0)
+			Favorites()->AllowPing(pSelectedServer->m_aAddresses, pSelectedServer->m_NumAddresses, true);
+		s_LastObservedExposeIp = ObservedExposeIp;
+	}
+	else if(InteractivePass && ObservedExposeIp != s_LastObservedExposeIp)
+	{
+		// 本页之外改了暴露策略（控制台的 add_favorite / allow_ping）：跟随它。
+		s_LastObservedExposeIp = ObservedExposeIp;
+		s_ExposeIpIntent = ObservedExposeIp;
+	}
+
+	// 暴露 IP 行的让位：与好友分类同一台状态机、同一条 smoothstep，只有交互趟推进。
+	const int64_t ExposeNow = time_get();
+	const int64_t ExposeFreq = maximum<int64_t>(1, time_freq());
+	const float ExposeTarget = s_FavoriteIntent ? 1.0f : 0.0f;
+	if(LocalEasedProgressShouldRetarget(!Ui()->RenderOnly(), s_ExposeRowAnim.m_To, ExposeTarget))
+		s_ExposeRowAnim.Retarget(ExposeTarget, ExposeNow, ExposeFreq);
+	// 动效关掉（或测量趟）时直接给目标值，状态机本身不因闸门被推着走。
+	const float ExposeRowAnim = g_Config.m_QmUiMotionLevel > 0 && !Ui()->MeasurementOnly() ? s_ExposeRowAnim.Current(ExposeNow, ExposeFreq) : ExposeTarget;
 
 	const char *apLabels[] = {Localize("Version"), Localize("Game type"), Localize("Ping")};
 	float LabelWidth = 0.0f;
 	for(const char *pLabel : apLabels)
 		LabelWidth = std::max(LabelWidth, TextRender()->TextWidth(Metrics.m_BodySize, pLabel));
-	LabelWidth = std::min(LabelWidth + Metrics.m_LineSpacing, View.w * 0.45f);
-	const auto DrawInfoRow = [&](const char *pLabel, const char *pValue, SLabelProperties ValueProps = {}) {
+	LabelWidth = std::min(LabelWidth + RowGap, View.w * 0.45f);
+	// 行前间距，与卡片 Flow.Control(..., SpacingBefore) 同一语义：首行不加，
+	// 之后每行先让一档 RowGap，行与行之间只有这一档。
+	const auto DrawInfoRow = [&](const char *pLabel, const char *pValue, float SpacingBefore, SLabelProperties ValueProps = {}) {
+		if(SpacingBefore > 0.0f)
+			View.HSplitTop(SpacingBefore, nullptr, &View);
 		CUIRect Row, Label, Value;
 		View.HSplitTop(Metrics.m_LineHeight, &Row, &View);
-		View.HSplitTop(Metrics.m_LineSpacing, nullptr, &View);
 		Row.VSplitLeft(LabelWidth, &Label, &Value);
-		Value.VSplitLeft(std::min(Metrics.m_SectionGap, Value.w), nullptr, &Value);
+		// 标签与右对齐数值之间的最小间隔同样取 RowGap，不借用分区间距。
+		Value.VSplitLeft(std::min(RowGap, Value.w), nullptr, &Value);
 		SLabelProperties LabelProps;
 		LabelProps.m_MaxWidth = Label.w;
 		LabelProps.m_EllipsisAtEnd = true;
@@ -3256,45 +3076,48 @@ void CMenus::RenderServerbrowserInfo(CUIRect View)
 		ValueProps.m_EllipsisAtEnd = true;
 		Ui()->DoLabel(&Value, pValue, Metrics.m_BodySize, TEXTALIGN_MR, ValueProps);
 	};
-	DrawInfoRow(apLabels[0], pSelectedServer->m_aVersion);
+	DrawInfoRow(apLabels[0], pSelectedServer->m_aVersion, 0.0f);
 	SLabelProperties GameTypeLabelProps;
 	if(g_Config.m_UiColorizeGametype)
 		GameTypeLabelProps.SetColor(pSelectedServer->m_GametypeColor);
-	DrawInfoRow(apLabels[1], pSelectedServer->m_aGameType, GameTypeLabelProps);
+	DrawInfoRow(apLabels[1], pSelectedServer->m_aGameType, RowGap, GameTypeLabelProps);
 	SLabelProperties PingLabelProps;
 	if(g_Config.m_UiColorizePing)
 		PingLabelProps.SetColor(GetServerListPingColor(pSelectedServer, ServerBrowser()->GetCurrentClientLocation()));
 	char aPingLabel[8];
 	FormatServerbrowserPing(aPingLabel, pSelectedServer);
-	DrawInfoRow(apLabels[2], aPingLabel, PingLabelProps);
-	View.HSplitTop(Metrics.m_SectionGap, nullptr, &View);
+	DrawInfoRow(apLabels[2], aPingLabel, RowGap, PingLabelProps);
+	View.HSplitTop(RowGap, nullptr, &View);
 
-	// 开关占满内容宽度；长译文按同一标签内边距测量，避免挤入下一行控件。
-	const auto ToggleHeight = [&](const char *pLabel) {
-		const float PaddingX = std::max(Metrics.m_LineSpacing, Metrics.m_BodySize * 0.5f);
-		const float PaddingY = Metrics.m_LineSpacing * 0.5f;
-		const float IndicatorWidth = Metrics.m_BodySize + Metrics.m_LineSpacing;
-		const CUIRect Label = ResolveSettingsToggleButtonLabel(View, PaddingX, PaddingY, IndicatorWidth);
-		const float LabelHeight = TextRender()->TextBoundingBox(Metrics.m_BodySize, pLabel, -1, std::max(1.0f, Label.w)).m_H;
-		return ResolveSettingsToggleButtonSize(0.0f, LabelHeight, Metrics.m_LineHeight, PaddingX, PaddingY).m_Height;
-	};
+	// 「收藏」与「暴露 IP」两行都走设置卡片的开关行同一入口（DoSettingsButton_CheckBox
+	// → ui_widget::DrawToggle）：左侧标签 + 右侧 Toggle，点击整行或开关都能切。
+	// 行高直接取同一份度量的标准控件高度，不再为开关单独放大——开关轨道/滑块的
+	// 尺寸本来就由「行高 + 正文字号」推出，行高统一即开关统一。
+	const float ToggleRowHeight = Metrics.m_LineHeight;
 	CUIRect Button;
 	static int s_AddFavButton = 0;
-	int Favorite = WasFavorite;
-	SSettingsToggleEntry FavoriteEntry{&Favorite, "Favorite", Localize("Favorite"), &s_AddFavButton};
-	FavoriteEntry.m_ShowCheckmark = true;
-	View.HSplitTop(ToggleHeight(FavoriteEntry.m_pLabel), &Button, &View);
-	if(DoSettingsToggleButton(-1, -1, -1, Button, FavoriteEntry, Metrics))
+	int Favorite = s_FavoriteIntent ? 1 : 0;
+	View.HSplitTop(ToggleRowHeight, &Button, &View);
+	// 标签带上作用对象：「收藏服务器」，和相邻的「暴露 IP」同为「动作 + 对象」口径，
+	// 不再只有一个动作词。语义、配置项与提示文案都不变，只换显示文案。
+	if(DoSettingsButton_CheckBox(-1, -1, -1, &s_AddFavButton, "Favorite", Localize("Favorite server"), Favorite, &Button, SLabelProperties{}, !Ui()->RenderOnly(), Metrics.m_BodySize))
 	{
-		if(Favorite)
+		s_FavoriteIntent = !s_FavoriteIntent;
+		if(s_FavoriteIntent)
 		{
 			Favorites()->Add(pSelectedServer->m_aAddresses, pSelectedServer->m_NumAddresses);
 			// 列表星标据此播一次进场；表只活到那一行被渲染为止。
 			if(gs_FavoriteStarGrowPending.size() >= 64)
 				gs_FavoriteStarGrowPending.clear();
 			gs_FavoriteStarGrowPending.insert(pSelectedServer->m_aAddress);
-			if(g_Config.m_UiPage == PAGE_LAN)
+			// 引擎新建的收藏项一律 m_AllowPing = false：把本页维护的暴露意图写回去，
+			// 否则「打开收藏 → 关闭收藏 → 再打开」会把开关位置悄悄改回关闭（用户点名）。
+			// LAN 另有一档历史行为：添加时自动允许 ping，否则拿不到服务器信息。
+			if(s_ExposeIpIntent || g_Config.m_UiPage == PAGE_LAN)
+			{
 				Favorites()->AllowPing(pSelectedServer->m_aAddresses, pSelectedServer->m_NumAddresses, true);
+				s_ExposeIpIntent = true;
+			}
 		}
 		else
 		{
@@ -3303,37 +3126,47 @@ void CMenus::RenderServerbrowserInfo(CUIRect View)
 		Client()->ServerBrowserUpdate();
 	}
 
-	// 保留收藏后向下展开的过渡，复制按钮与玩家列表随实际行高让位。
-	if(s_ExposeRowAnim > 0.0f)
+	// 收藏后向下展开「暴露 IP」行：进度是上面对 s_ExposeRowAnim 求出的同一个值，
+	// 复制按钮与玩家列表随实际行高让位（不再有第二套缓动）。
+	if(ExposeRowAnim > 0.0f)
 	{
 		static int s_LeakIpButton = 0;
-		int ExposeIp = pSelectedServer->m_FavoriteAllowPing != TRISTATE::NONE;
-		SSettingsToggleEntry ExposeEntry{&ExposeIp, "Leak IP", Localize("Leak IP"), &s_LeakIpButton};
-		ExposeEntry.m_pTooltip = Localize("Leaks your IP address to this server by pinging it, also acquiring the latency in the process");
-		ExposeEntry.m_ShowCheckmark = true;
-		const float Height = ToggleHeight(ExposeEntry.m_pLabel);
-		View.HSplitTop(Metrics.m_LineSpacing * s_ExposeRowAnim, nullptr, &View);
-		View.HSplitTop(Height * s_ExposeRowAnim, &Button, &View);
+		int ExposeIp = s_ExposeIpIntent ? 1 : 0;
+		// 与「收藏」同一套行几何与开关绘制（语义不变：仍然是 m_FavoriteAllowPing）。
+		const float Height = ToggleRowHeight;
+		View.HSplitTop(RowGap * ExposeRowAnim, nullptr, &View);
+		View.HSplitTop(Height * ExposeRowAnim, &Button, &View);
 		if(Button.h > 2.0f)
 		{
-			const float Eased = s_ExposeRowAnim * s_ExposeRowAnim * (3.0f - 2.0f * s_ExposeRowAnim);
-			CUiScopedControlAlphaScale ExposeAlpha(Ui(), Eased);
+			CUiScopedControlAlphaScale ExposeAlpha(Ui(), ExposeRowAnim);
 			const CUIRect Clip = Button;
 			Ui()->ClipEnable(&Clip);
 			Button.h = Height;
-			if(DoSettingsToggleButton(-1, -1, -1, Button, ExposeEntry, Metrics, Favorite != 0))
+			if(DoSettingsButton_CheckBox(-1, -1, -1, &s_LeakIpButton, "Leak IP", Localize("Leak IP"), ExposeIp, &Button, SLabelProperties{}, !Ui()->RenderOnly(), Metrics.m_BodySize))
 			{
-				Favorites()->AllowPing(pSelectedServer->m_aAddresses, pSelectedServer->m_NumAddresses, ExposeIp != 0);
+				s_ExposeIpIntent = !s_ExposeIpIntent;
+				Favorites()->AllowPing(pSelectedServer->m_aAddresses, pSelectedServer->m_NumAddresses, s_ExposeIpIntent);
+				// 记住这次选择：它就是新建收藏项的默认暴露策略，也是「取消收藏再收藏」
+				// 之后开关位置保持不变的那份持久化状态（引擎侧记录会随 Remove 丢掉）。
+				// 先写收藏项再落盘，一次 Save 同时带上条目与这条配置。
+				g_Config.m_QmBrowserFavoriteExposeIp = s_ExposeIpIntent ? 1 : 0;
+				ConfigManager()->Save();
 				Client()->ServerBrowserUpdate();
 			}
+			// 行说明保持不变（它不是 g_Config 项，DoSettingsButton_CheckBox 内部的
+			// 配置提示查不到它，这里显式挂一次）。
+			GameClient()->m_Tooltips.DoToolTip(&s_LeakIpButton, &Button, Localize("Leaks your IP address to this server by pinging it, also acquiring the latency in the process"));
 			Ui()->ClipDisable();
 		}
 	}
 
-	View.HSplitTop(Metrics.m_SectionGap, nullptr, &View);
-	View.HSplitTop(Metrics.m_LineHeight, &Button, &View);
+	View.HSplitTop(RowGap, nullptr, &View);
+	View.HSplitTop(Metrics.m_ButtonHeight, &Button, &View);
 	static CButtonContainer s_CopyButton;
-	if(DoButton_Menu(&s_CopyButton, Localize("Copy info"), 0, &Button))
+	// 次级按钮与设置卡片里的同档按钮是同一入口（ui_widget::SecondaryButton）：
+	// 字号按 Ctx.m_UiScale 取同一档正文字号，胶囊半径也与卡片一致，不再用菜单
+	// 按钮的「行高 × FontmodHeight」自行推字号。
+	if(ui_widget::SecondaryButton(SettingsUiContext("server_browser_info_copy", Metrics.m_UiScale), &s_CopyButton, Localize("Copy info"), Button))
 	{
 		char aInfo[512];
 		str_format(aInfo, sizeof(aInfo),
@@ -3345,10 +3178,12 @@ void CMenus::RenderServerbrowserInfo(CUIRect View)
 			pSelectedServer->m_aMap);
 		Input()->SetClipboardText(aInfo);
 	}
-	View.HSplitTop(Metrics.m_SectionGap, nullptr, &View);
-	// 玩家列表内部自带左侧间距和滚动条，将外框还原到工具箱边缘。
-	View.x -= 5.0f;
-	View.w += 15.0f;
+	View.HSplitTop(RowGap, nullptr, &View);
+	// 记分板与上面的「复制服务器信息」按钮共用同一个左缘、同一条内容宽，不再做
+	// `View.x -= 5 / View.w += 15` 再由 Scoreboard 里 VSplitLeft(5) 抵消的往返——
+	// 两组内边距对不齐时卡片会左右错开，而宽度也会跟着那 10 个单位走。
+	// 横向让位只剩列表组件自己的滚动条那一列（RowReserveWidth），与可见行数无关：
+	// 暴露 IP 行展开少一行时，卡片宽度保持不变，只有可见行数变。
 	View.h = std::max(0.0f, View.h);
 	RenderServerbrowserInfoScoreboard(View, pSelectedServer);
 }
@@ -3356,11 +3191,20 @@ void CMenus::RenderServerbrowserInfo(CUIRect View)
 void CMenus::RenderServerbrowserInfoScoreboard(CUIRect View, const CServerInfo *pSelectedServer)
 {
 	const float FontSize = 10.0f;
+	// 玩家行与服务器列表同一套胶囊行：行距并进行高（可见范围按整数行收敛），
+	// 行内左右内边距由组件按字号派生，皮肤/旗标跟着内容区排。
+	const float PlayerRowHeight = 25.0f;
+	const float PlayerRowStep = PlayerRowHeight + ui_token::list::ROW_SPACING;
 
 	static CListBox s_ListBox;
-	View.VSplitLeft(5.0f, nullptr, &View);
-	s_ListBox.DoAutoSpacing(2.0f);
-	s_ListBox.DoStart(25.0f, (int)pSelectedServer->m_vClients.size(), 1, 3, -1, &View, false, IGraphics::CORNER_NONE);
+	s_ListBox.SetCapsuleRows(FontSize);
+	// 玩家行是本页唯一能拿到真实内容高度的列表：没有滚动条时行胶囊占满整宽，
+	// 滚动条出现的那一刻横向让出一列（带过渡），不再一直空着一条轨道。
+	s_ListBox.SetReserveRightWhenOverflowing(true);
+	s_ListBox.DoAutoSpacing(0.0f);
+	s_ListBox.SetItemSelectionInset(ui_token::list::ROW_SPACING * 0.5f);
+	s_ListBox.SetVisibleRowRange(1, maximum(1, (int)std::floor(std::max(0.0f, View.h) / PlayerRowStep)));
+	s_ListBox.DoStart(PlayerRowStep, (int)pSelectedServer->m_vClients.size(), 1, 3, -1, &View, false, IGraphics::CORNER_NONE);
 
 	for(size_t i = 0; i < pSelectedServer->m_vClients.size(); i++)
 	{
@@ -3371,11 +3215,13 @@ void CMenus::RenderServerbrowserInfoScoreboard(CUIRect View, const CServerInfo *
 		auto GaussianBlurSuppression = Item.SuppressGaussianBlur();
 
 		CUIRect Skin, Name, Clan, Score, Flag;
-		Name = Item.m_Rect;
-
 		const ColorRGBA Color = PlayerBackgroundColor(CurrentClient.m_FriendState == IFriends::FRIEND_PLAYER, CurrentClient.m_FriendState == IFriends::FRIEND_CLAN, CurrentClient.m_Afk, false, false);
-		DrawRoundedSurface(Ui(), Name, Color, ColorRGBA(), 4.0f);
-		Name.VSplitLeft(1.0f, nullptr, &Name);
+		// 好友/战队/离开色块与胶囊行同形同内缩，不再是一块方角底色。
+		CUIRect RowRect = Item.m_Rect;
+		RowRect.Margin(ui_token::list::ROW_SPACING * 0.5f, &RowRect);
+		DrawRoundedSurface(Ui(), RowRect, Color, ColorRGBA(), ui_token::list::RowRadius(PlayerRowHeight));
+		Name = Item.m_ContentRect;
+		Name.HMargin(ui_token::list::ROW_SPACING * 0.5f, &Name);
 		Name.VSplitLeft(34.0f, &Score, &Name);
 		Name.VSplitLeft(18.0f, &Skin, &Name);
 		Name.VSplitRight(26.0f, &Name, &Flag);
@@ -3392,22 +3238,14 @@ void CMenus::RenderServerbrowserInfoScoreboard(CUIRect View, const CServerInfo *
 		if(CurrentClient.m_aSkin[0] != '\0')
 		{
 			const CTeeRenderInfo TeeInfo = GetTeeRenderInfo(vec2(Skin.w, Skin.h), CurrentClient.m_aSkin, CurrentClient.m_CustomSkinColors, CurrentClient.m_CustomSkinColorBody, CurrentClient.m_CustomSkinColorFeet);
-			const CAnimState *pIdleState = CAnimState::GetIdle();
-			vec2 OffsetToMid;
-			CRenderTools::GetRenderTeeOffsetToRenderedTee(pIdleState, &TeeInfo, OffsetToMid);
-			const vec2 TeeRenderPos = vec2(Skin.x + TeeInfo.m_Size / 2.0f, Skin.y + Skin.h / 2.0f + OffsetToMid.y);
-			RenderTools()->RenderTee(pIdleState, &TeeInfo, CurrentClient.m_Afk ? EMOTE_BLINK : EMOTE_NORMAL, vec2(1.0f, 0.0f), TeeRenderPos);
+			RenderTools()->RenderIdleTeeAtCenter(&TeeInfo, vec2(Skin.x + TeeInfo.m_Size / 2.0f, Skin.y + Skin.h / 2.0f), CurrentClient.m_Afk ? EMOTE_BLINK : EMOTE_NORMAL);
 			Ui()->DoButtonLogic(&CurrentClient.m_aSkin, 0, &Skin, BUTTONFLAG_NONE);
 			GameClient()->m_Tooltips.DoToolTip(&CurrentClient.m_aSkin, &Skin, CurrentClient.m_aSkin);
 		}
 		else if(CurrentClient.m_aaSkin7[protocol7::SKINPART_BODY][0] != '\0')
 		{
 			const CTeeRenderInfo TeeInfo = GetTeeRenderInfo(vec2(Skin.w, Skin.h), "default", false, 0, 0);
-			const CAnimState *pIdleState = CAnimState::GetIdle();
-			vec2 OffsetToMid;
-			CRenderTools::GetRenderTeeOffsetToRenderedTee(pIdleState, &TeeInfo, OffsetToMid);
-			const vec2 TeeRenderPos = vec2(Skin.x + TeeInfo.m_Size / 2.0f, Skin.y + Skin.h / 2.0f + OffsetToMid.y);
-			RenderTools()->RenderTee(pIdleState, &TeeInfo, CurrentClient.m_Afk ? EMOTE_BLINK : EMOTE_NORMAL, vec2(1.0f, 0.0f), TeeRenderPos);
+			RenderTools()->RenderIdleTeeAtCenter(&TeeInfo, vec2(Skin.x + TeeInfo.m_Size / 2.0f, Skin.y + Skin.h / 2.0f), CurrentClient.m_Afk ? EMOTE_BLINK : EMOTE_NORMAL);
 		}
 
 		// name
@@ -3489,15 +3327,11 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 	const float FontSize = 10.0f;
 	const float SpacingH = 2.0f;
 	// 标签按译文实测宽度收窄，不再常驻预留 32 单位；只在真正跟随时占位。
-	// 字号比名字低一档（9 → 7），药丸高 13 并与顶部 16 单位动作行垂直居中；
-	// 右缘让出 6 单位，避免药丸边框和卡片彩虹描边贴在一起。
-	const float FollowTagFontSize = FontSize - 3.0f;
-	constexpr float FollowTagHPadding = 4.0f;
+	// 高度、内边距、字号都交给 ui_tag（固定档），右缘让出 6 单位，避免胶囊边框
+	// 和卡片彩虹描边贴在一起。
 	constexpr float FollowTagRightInset = 6.0f;
 	constexpr float FollowTagGap = 4.0f;
-	constexpr float FollowTagHeight = 13.0f;
-	constexpr float FollowTagRowInset = 1.5f;
-	const float FollowTagWidth = TextRender()->TextWidth(FollowTagFontSize, Localize("Follow")) + 2.0f * FollowTagHPadding;
+	const float FollowTagWidth = ui_tag::MeasureWidth(TextRender(), Localize("Follow"));
 	const float FollowTagSlotWidth = FollowTagWidth + FollowTagRightInset;
 	constexpr float ActionFadeInSec = 0.08f;
 	constexpr float ActionFadeOutDelaySec = 0.15f;
@@ -3560,15 +3394,17 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 	ScrollRequest.m_RowsPerStep = 3;
 	const SQmResolvedScrollPolicy ScrollPolicy = QmResolveScrollPolicy(ScrollRequest);
 	CScrollRegionParams ScrollParams = QmScrollRegionParamsFromPolicy(ScrollPolicy);
-	// 好友面板只有约 185 宽，沿用服务器列表的 20 宽滚动条会吃掉 >10% 内容宽度。
-	// 这里按内容宽度比例收窄到紧凑轨道档位，让卡片尽量贴近上方胶囊的宽度。
-	ScrollParams.m_ScrollbarThickness = std::clamp(List.w * 0.05f, 6.0f, 10.0f);
-	ScrollParams.m_ScrollbarMargin = std::min(ScrollParams.m_ScrollbarMargin, ScrollParams.m_ScrollbarThickness * 0.25f);
-	ScrollParams.m_AnimateScrollbarReserve = true;
+	// 好友列表与非覆盖式面板共用同一档轨道：**没有滚动条时内容占满全宽**，
+	// 轨道出现时占位宽度动画过渡（m_AnimateScrollbarReserve），卡片与分类表头
+	// 连续让位而不是整段横跳。展开/折叠动画期间内容高度逐帧变化，占位动画把
+	// 「本帧是否溢出」的跳变吸收掉，所以既不需要恒定让位，也不会瞬移。
+	ApplyFriendsScrollbar(ScrollParams, ui_token::radius::CARD);
 	s_ScrollRegion.Begin(&List, &ScrollOffset, &ScrollParams);
 	List.y += ScrollOffset.y;
 
-	const CUIRect ListViewport = *s_ScrollRegion.ClipRect();
+	// 视口宽度直接取滚动区裁剪区：占位（含动画中的占位）已经由 Begin 从裁剪区里扣掉，
+	// 拖动悬停判定与插入提示线都按内容宽算，不会伸到轨道下面去。
+	CUIRect ListViewport = *s_ScrollRegion.ClipRect();
 	const float UiScale = 1.0f;
 	const float CategoryDropPreviewThickness = std::clamp(3.0f * UiScale, 2.0f, 4.0f);
 	const float CategoryDragOutlineThickness = std::clamp(2.0f * UiScale, 1.0f, 2.0f);
@@ -3674,36 +3510,27 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 	vCategoryHeaders.reserve(NumCategories);
 	m_vFriendsCategoryManageButtons.resize(NumCategories);
 
-	// 折叠/展开进度：菜单可能在后台或测量通道渲染，动画运行时不一定逐帧喂值，
-	// 之前依赖 ResolveUiAnimValue 会直接跳变；这里用按帧时间推进的本地状态。
-	struct SFriendCategoryExpandAnim
-	{
-		float m_From = 1.0f;
-		float m_To = 1.0f;
-		int64_t m_StartTick = 0;
-		float Current(int64_t Now, int64_t Freq) const
-		{
-			if(m_From == m_To)
-				return m_To;
-			const float Progress = std::clamp((float)(Now - m_StartTick) / (float)Freq / 0.15f, 0.0f, 1.0f);
-			const float Eased = Progress * Progress * (3.0f - 2.0f * Progress);
-			return m_From + (m_To - m_From) * Eased;
-		}
-	};
-	static std::vector<SFriendCategoryExpandAnim> s_vCategoryExpand;
+	// 折叠/展开进度用文件级的本地时间状态机（同一份 0.15s + smoothstep）。菜单会被
+	// 背景/出图趟与测量趟各渲染一次，动画运行时不一定逐帧喂值，所以不走 ResolveUiAnimValue；
+	// 状态只在交互趟推进，其余趟只读。
+	static std::vector<SLocalEasedProgress> s_vCategoryExpand;
 
 	char aBuf[256];
 	int FriendTooltipIndex = 0;
 	for(int CategoryIndex = 0; CategoryIndex < NumCategories; ++CategoryIndex)
 	{
 		// header
-		CUIRect Header, GroupIcon, GroupLabel, ManageButton;
+		CUIRect Header, HeaderAction, GroupIcon, GroupLabel, ManageButton;
 		List.HSplitTop(ms_ListheaderHeight, &Header, &List);
 		s_ScrollRegion.AddRect(Header);
 		vCategoryHeaders.push_back({CategoryIndex, Header});
 		const char *pCategoryName = GameClient()->Friends()->GetCategory(CategoryIndex);
-		CUIRect HeaderAction;
-		SplitFriendsCategoryHeaderRects(Header, &HeaderAction, nullptr);
+		// 表头矩形是「胶囊 / 切换热区 / 齿轮 / 图标 + 标签」四段派生的唯一来源：两处
+		// Split 都拿同一条未改写的 Header 当输入。此前先 Header.VSplitLeft(...) 改写
+		// 自身，再把改窄后的矩形拿去切齿轮——齿轮位置只是两处宽度差刚好抵消才对得上；
+		// 拖拽描边更糟：用的是改写后的 Header，左端整整少一个图标宽（15），
+		// 和胶囊本身不同宽。
+		SplitFriendsCategoryHeaderRects(Header, &HeaderAction, &ManageButton);
 		const bool HeaderInside = Ui()->MouseHovered(&HeaderAction);
 		const bool FriendDropHovered = DraggingFriend && HeaderInside && Ui()->MouseHovered(&ListViewport);
 		const bool FriendDropAllowed = s_FriendDragState.CanDropTo(pCategoryName);
@@ -3717,28 +3544,33 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 			HeaderColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClFriendsListFriendColor));
 		else if(IsClanMembersCategory(pCategoryName))
 			HeaderColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClFriendsListClanColor));
+		// 三行填充共用同一档 alpha（静止 0.25 / 悬停或弹层 0.4）：基色只承担「好友 /
+		// 战队 / 中立」这一层语义，不再让某一行单独改 alpha。半透明胶囊两端融进背景
+		// 的程度一变，同一张图里的三个表头就会被读成三个不同长度——这正是「宽度不
+		// 一致」的观感来源；宽度本身由上面那次恒定让位保证（有无轨道、展开多少都一样）。
 		HeaderColor.a = HeaderHovered || PopupOpen ? 0.4f : 0.25f;
 		if(FriendDropHovered)
 			HeaderColor = FriendDropAllowed ? ColorRGBA(0.2f, 0.9f, 0.4f, 0.5f) : ColorRGBA(0.9f, 0.25f, 0.2f, 0.4f);
-		DrawRoundedSurface(Ui(), Header, HeaderColor, ColorRGBA(), ui_token::radius::SMALL_MENU);
-		Header.VSplitLeft(Header.h, &GroupIcon, &GroupLabel);
+		// 分类表头是横条，端头直接用半圆：和页面里其它胶囊背景同一种形状。
+		DrawRoundedSurface(Ui(), Header, HeaderColor, ColorRGBA(), ui_token::radius::PILL);
+		CUIRect HeaderLabel = Header;
+		HeaderLabel.VSplitLeft(HeaderLabel.h, &GroupIcon, &GroupLabel);
 		GroupIcon.Margin(2.0f, &GroupIcon);
 		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 		TextRender()->TextColor(HeaderHovered ? TextRender()->DefaultTextColor() : ColorRGBA(0.6f, 0.6f, 0.6f, 1.0f));
 		// 分组展开 ⇄ 折叠：加/减方框形变（外框常量、加号竖臂压平），拖拽表头时按折叠显示。
-		// 折叠/展开按高度过渡：进度推动布局高度并裁切内容，不再整块跳变。
+		// 展开进度 ExpandT 是唯一事实：图标形变跟意图，行高与下方内容让位跟进度。
 		const bool WantsExpanded = m_vFriendsCategoryExpanded[CategoryIndex] && !DraggingAnyHeader && !DraggingFriend;
 		const bool ExpandMotion = g_Config.m_QmUiMotionLevel > 0 && !Ui()->MeasurementOnly();
 		if(s_vCategoryExpand.size() < (size_t)NumCategories)
-			s_vCategoryExpand.resize(NumCategories, SFriendCategoryExpandAnim());
-		SFriendCategoryExpandAnim &ExpandAnim = s_vCategoryExpand[CategoryIndex];
+			s_vCategoryExpand.resize(NumCategories, SLocalEasedProgress());
+		SLocalEasedProgress &ExpandAnim = s_vCategoryExpand[CategoryIndex];
 		const float ExpandTarget = WantsExpanded ? 1.0f : 0.0f;
-		if(ExpandAnim.m_To != ExpandTarget)
-		{
-			ExpandAnim.m_From = ExpandAnim.Current(FadeNow, FadeFreq);
-			ExpandAnim.m_To = ExpandTarget;
-			ExpandAnim.m_StartTick = FadeNow;
-		}
+		// 关键：只有交互趟推进状态机。背景/出图/测量趟同样会走这段代码，若它们把
+		// m_From/m_To 推到目标，交互趟再来时 Current() 已经是终点——展开动画被吃掉，
+		// 只剩瞬变（实机「完全没有动画」就是这条路径）。
+		if(LocalEasedProgressShouldRetarget(!Ui()->RenderOnly(), ExpandAnim.m_To, ExpandTarget))
+			ExpandAnim.Retarget(ExpandTarget, FadeNow, FadeFreq);
 		const float ExpandT = ExpandMotion ? ExpandAnim.Current(FadeNow, FadeFreq) : ExpandTarget;
 		const bool GroupExpanded = ExpandT > 0.001f;
 		IUiContext GroupIconCtx = ui_widget::ControlContext(Ui());
@@ -3746,11 +3578,11 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 			GroupIconCtx, EQmIconSwapPair::SQUARE_PLUS_MINUS,
 			EQmIcon::SQUARE_PLUS, FONT_ICON_SQUARE_PLUS,
 			EQmIcon::SQUARE_MINUS, FONT_ICON_SQUARE_MINUS,
-			GroupExpanded ? 1.0f : 0.0f, str_quickhash("friends-category-icon"), pCategoryName);
+			WantsExpanded ? 1.0f : 0.0f, str_quickhash("friends-category-icon"), pCategoryName);
 		ui_widget::DrawIconSwapBinding(GroupIconCtx, QmIconLabelRect(GroupIcon, GroupIcon.h * CUi::ms_FontmodHeight, TEXTALIGN_MC), TextRender()->GetTextColor(), &GroupIconBinding);
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
 		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
-		SplitFriendsCategoryHeaderRects(Header, nullptr, &ManageButton);
+		// 标签右缘收到齿轮左边：两者都来自同一条 Header 派生（见函数开头那次 Split）。
 		GroupLabel.w = maximum(ManageButton.x - GroupLabel.x, 0.0f);
 		str_format(aBuf, sizeof(aBuf), "%s (%d)", LocalizeFriendsCategory(pCategoryName), (int)vvFriends[CategoryIndex].size());
 		Ui()->DoLabel(&GroupLabel, aBuf, FontSize, TEXTALIGN_ML);
@@ -3927,44 +3759,18 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 					DrawFriendFollowRing(Ui(), FriendRow, FollowTagAlpha, FeedbackMotion);
 				if(FollowSlot.w > 0.5f && FollowTagAlpha > 0.01f)
 				{
-					// 药丸和顶部动作图标同处 16 单位动作行：上下各留 1.5 单位后
-					// 正好垂直居中；右缘再让出 6 单位，避免边框压到卡片描边。
+					// 胶囊统一由标签组件画：高度/内边距/字号固定，颜色取好友卡片
+					// 主色（accent）派生的一档更深色——同一色系、更实，读作「这张卡
+					// 上的状态」；右缘让 6 单位，避免边框压到卡片彩虹描边。
 					CUIRect FollowTag = FollowSlot;
 					FollowTag.w = maximum(0.0f, FollowTag.w - FollowTagRightInset);
-					FollowTag.y = FollowSlot.y + FollowTagRowInset;
-					FollowTag.h = minimum(FollowTagHeight, maximum(0.0f, FollowSlot.h - 2.0f * FollowTagRowInset));
-					const ColorRGBA FollowColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiFocusColor));
-					DrawRoundedSurface(Ui(), FollowTag, FollowColor.WithAlpha(0.3f * FollowTagAlpha), FollowColor.WithAlpha(0.6f * FollowTagAlpha), 3.0f);
+					FollowTag = ui_tag::FitRect(FollowTag, minimum(FollowTagWidth, FollowTag.w));
 					// 文字等槽位展开到接近满宽再画，避免中途把 "Follow" 压成 "F…"。
 					if(FollowTagCurrentWidth >= FollowTagSlotWidth * 0.9f)
 					{
 						CUiScopedControlAlphaScale FollowFade(Ui(), FollowTagAlpha);
-						SLabelProperties FollowLabelProps;
-						FollowLabelProps.m_MaxWidth = FollowTag.w;
-						FollowLabelProps.m_DisallowNewline = true;
-						FollowLabelProps.m_EllipsisAtEnd = true;
-						// TEXTALIGN_MC 的中线补偿按整行高度算，小字号矮药丸里会把基线
-						// 留在偏下位置；这里改用顶部对齐 + 实测墨迹高度自己居中，
-						// 绕开该补偿，让字形本体落在药丸视觉中心。
-						const char *pFollowText = Localize("Follow");
-						float InkTop = 0.0f;
-						float InkBottom = 0.0f;
-						STextSizeProperties InkProps{};
-						InkProps.m_pVisualTop = &InkTop;
-						InkProps.m_pVisualBottom = &InkBottom;
-						TextRender()->TextWidth(FollowTagFontSize, pFollowText, -1, FollowTag.w, TEXTFLAG_DISALLOW_NEWLINE | TEXTFLAG_ELLIPSIS_AT_END, InkProps);
-						const float InkHeight = maximum(0.0f, InkBottom - InkTop);
-						CUIRect FollowLabel = FollowTag;
-						float FollowLabelHeight = FollowTagFontSize;
-						if(InkHeight > 0.01f)
-						{
-							// 顶部对齐时行框从 y 起算，墨迹相对行框顶端下移 InkTop；
-							// 反推矩形 y 让墨迹上下留白相等。
-							FollowLabelHeight = InkHeight;
-							FollowLabel.y = FollowTag.y + (FollowTag.h - InkHeight) * 0.5f - InkTop;
-						}
-						FollowLabel.h = FollowLabelHeight;
-						Ui()->DoLabel(&FollowLabel, pFollowText, FollowTagFontSize, TEXTALIGN_TC, FollowLabelProps);
+						const ColorRGBA FollowColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiAccentColor));
+						ui_tag::DrawInRect(Ui(), FollowTag, Localize("Follow"), ui_tag::EColorMode::DERIVED, FollowColor, nullptr, FollowTagAlpha);
 					}
 				}
 
@@ -4010,22 +3816,14 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 				if(Friend.Skin()[0] != '\0')
 				{
 					const CTeeRenderInfo TeeInfo = GetTeeRenderInfo(vec2(Skin.w, Skin.h), Friend.Skin(), Friend.CustomSkinColors(), Friend.CustomSkinColorBody(), Friend.CustomSkinColorFeet());
-					const CAnimState *pIdleState = CAnimState::GetIdle();
-					vec2 OffsetToMid;
-					CRenderTools::GetRenderTeeOffsetToRenderedTee(pIdleState, &TeeInfo, OffsetToMid);
-					const vec2 TeeRenderPos = vec2(Skin.x + Skin.w / 2.0f, Skin.y + Skin.h * 0.55f + OffsetToMid.y);
-					RenderTools()->RenderTee(pIdleState, &TeeInfo, Friend.IsAfk() ? EMOTE_BLINK : EMOTE_NORMAL, vec2(1.0f, 0.0f), TeeRenderPos);
+					RenderTools()->RenderIdleTeeAtCenter(&TeeInfo, vec2(Skin.x + Skin.w / 2.0f, Skin.y + Skin.h * 0.55f), Friend.IsAfk() ? EMOTE_BLINK : EMOTE_NORMAL);
 					Ui()->DoButtonLogic(pSkinTooltipId, 0, &Skin, BUTTONFLAG_NONE);
 					GameClient()->m_Tooltips.DoToolTip(pSkinTooltipId, &Skin, Friend.Skin());
 				}
 				else if(Friend.Skin7(protocol7::SKINPART_BODY)[0] != '\0')
 				{
 					const CTeeRenderInfo TeeInfo = GetTeeRenderInfo(vec2(Skin.w, Skin.h), "default", false, 0, 0);
-					const CAnimState *pIdleState = CAnimState::GetIdle();
-					vec2 OffsetToMid;
-					CRenderTools::GetRenderTeeOffsetToRenderedTee(pIdleState, &TeeInfo, OffsetToMid);
-					const vec2 TeeRenderPos = vec2(Skin.x + Skin.w / 2.0f, Skin.y + Skin.h * 0.55f + OffsetToMid.y);
-					RenderTools()->RenderTee(pIdleState, &TeeInfo, Friend.IsAfk() ? EMOTE_BLINK : EMOTE_NORMAL, vec2(1.0f, 0.0f), TeeRenderPos);
+					RenderTools()->RenderIdleTeeAtCenter(&TeeInfo, vec2(Skin.x + Skin.w / 2.0f, Skin.y + Skin.h * 0.55f), Friend.IsAfk() ? EMOTE_BLINK : EMOTE_NORMAL);
 				}
 				Rect.HSplitTop(11.0f, &NameLabel, &ClanLabel);
 
@@ -4984,7 +4782,7 @@ namespace
 	CButtonContainer s_aFavoriteMapsWorkspaceTabButtons[4];
 }
 
-int CMenus::DoMapWorkspaceTabs(const CUIRect &Segments, float Rounding, int CurrentTab)
+int CMenus::DoMapWorkspaceTabs(const CUIRect &Segments, float Rounding, int CurrentTab, float FontSize)
 {
 	// 本地存档列表的计数与收藏地图页共用同一份缓存，这里沿用同样的节流刷新。
 	char aSavesPath[IO_MAX_PATH_LENGTH];
@@ -5000,7 +4798,7 @@ int CMenus::DoMapWorkspaceTabs(const CUIRect &Segments, float Rounding, int Curr
 	const char *apTabLabels[4] = {aaTabLabels[0], aaTabLabels[1], aaTabLabels[2], aaTabLabels[3]};
 	// 胶囊滑块配色按浏览器面板表面自适应，两个页面都用同一档面板色。
 	const ui_widget::SCapsuleTabBarStyle TabStyle = CapsuleTabBarStyleFor(BrowserPanelColor(0.68f));
-	const int NewTab = DoNavigationTabs(s_aFavoriteMapsWorkspaceTabButtons, apTabLabels, 4, CurrentTab, Segments, Rounding, &TabStyle);
+	const int NewTab = DoNavigationTabs(s_aFavoriteMapsWorkspaceTabButtons, apTabLabels, 4, CurrentTab, Segments, Rounding, &TabStyle, FontSize);
 	if(NewTab == 3)
 		SetMenuPage(PAGE_STATS);
 	else if(NewTab != CurrentTab)
@@ -5015,12 +4813,9 @@ int CMenus::MapWorkspaceTab()
 
 void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 {
+	// 工作区不再自算外缩：View 已对齐全局安全区，与服务器列表面板同一条基线，
+	// 页签条与下方正文面板因此贴着同一条左缘。
 	const QmMapHistoryUi::SWorkspaceMetrics Layout = QmMapHistoryUi::WorkspaceMetrics(View.h);
-	// 手机端左右不留额外外缩：面板直接对齐导航栏，上下留白保持不变。
-	if(QmUiMobilePlatform())
-		View.HMargin(Layout.m_OuterMargin, &View);
-	else
-		View.Margin(Layout.m_OuterMargin, &View);
 
 	char aSavesPath[IO_MAX_PATH_LENGTH];
 	Storage()->GetCompletePath(IStorage::TYPE_SAVE, SAVES_FILE, aSavesPath, sizeof(aSavesPath));
@@ -5032,9 +4827,11 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 	const std::vector<QmMapHistory::SMapHistoryRecord> &HistoryEntries = GameClient()->m_TClient.GetMapHistory().Entries();
 	const ColorRGBA TabInactiveColor = BrowserPanelColor(0.68f);
 
+	// 页签字体与设置页胶囊页签同档：DoNavigationTabs 不传字号时按行高反推，
+	// 反推值比设置页大一档，两页并排看得出差别。
 	CUIRect WorkspaceTabs;
 	View.HSplitTop(Layout.m_TabHeight, &WorkspaceTabs, &View);
-	DoMapWorkspaceTabs(WorkspaceTabs, Layout.m_TabHeight * 0.20f, s_FavoriteMapsWorkspaceTab);
+	DoMapWorkspaceTabs(WorkspaceTabs, Layout.m_TabHeight * 0.20f, s_FavoriteMapsWorkspaceTab, ui_token::settings::TAB_FONT_SIZE);
 	View.HSplitTop(Layout.m_SectionGap, nullptr, &View);
 
 	View.Draw(BrowserPanelColor(0.82f), IGraphics::CORNER_ALL, Layout.m_PanelMargin);
@@ -5056,7 +4853,21 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 	const float HeaderTextInset = Layout.m_PanelMargin * 0.50f;
 	WorkspaceTitle.VMargin(HeaderTextInset, &WorkspaceTitle);
 	WorkspaceSubTitle.VMargin(HeaderTextInset, &WorkspaceSubTitle);
-	Ui()->DoLabel(&WorkspaceTitle, apWorkspaceTitles[s_FavoriteMapsWorkspaceTab], std::clamp(WorkspaceTitle.h * 0.72f, 13.0f, 15.0f), TEXTALIGN_ML);
+	// 工作区标题与设置页顶部标题同一档字号，并带前置图标（三个工作区都与地图有关）。
+	{
+		const char *pWorkspaceIcon = FontIcons::FONT_ICON_MAP;
+		const float TitleFontSize = ui_token::font::TITLE;
+		const float TitleIconSize = TitleFontSize;
+		const float TitleGap = ui_token::page_title::ICON_GAP * 0.5f;
+		CUIRect TitleIconRect{WorkspaceTitle.x, WorkspaceTitle.y + (WorkspaceTitle.h - TitleIconSize) * 0.5f, TitleIconSize, TitleIconSize};
+		Ui()->DoLabel_QmIcon(&TitleIconRect, EQmIcon::MAP, pWorkspaceIcon, TitleIconSize, TEXTALIGN_ML);
+		CUIRect TitleTextRect = WorkspaceTitle;
+		TitleTextRect.VSplitLeft(TitleIconSize + TitleGap, nullptr, &TitleTextRect);
+		SLabelProperties TitleProps;
+		TitleProps.m_MaxWidth = TitleTextRect.w;
+		TitleProps.m_EllipsisAtEnd = true;
+		Ui()->DoLabel(&TitleTextRect, apWorkspaceTitles[s_FavoriteMapsWorkspaceTab], TitleFontSize, TEXTALIGN_ML, TitleProps);
+	}
 	Ui()->DoLabel(&WorkspaceSubTitle, apWorkspaceSubTitles[s_FavoriteMapsWorkspaceTab], std::clamp(WorkspaceSubTitle.h * 0.78f, 8.0f, 10.0f), TEXTALIGN_ML);
 	View.HSplitTop(Layout.m_SectionGap, nullptr, &View);
 
@@ -5704,6 +5515,7 @@ void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 	(void)DrawBackground;
 	if(g_Config.m_UiPage == PAGE_FAVORITE_MAPS)
 	{
+		AddMenuHitRegion(MainView);
 		// 新 UI：面板直接对齐全局安全区边缘（距窗口 8px 统一基准），
 		// 垂直不额外内缩，面板顶边与其他页面的卡片同线。
 		RenderServerbrowserFavoriteMaps(MainView);
@@ -5711,7 +5523,9 @@ void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 	}
 
 	const CUIRect View = MainView;
-	const SQmBrowserPanelLayout PanelLayout = QmBrowserPanelLayout(View, BrowserStatusHasNotice(ServerBrowser()));
+	AddMenuHitRegion(View);
+	// 状态栏提示行已删除，列表/状态栏分割按「无提示行」算（见 RenderServerbrowserStatusBox 上方的说明）。
+	const SQmBrowserPanelLayout PanelLayout = QmBrowserPanelLayout(View, false);
 	PanelLayout.m_List.Draw(BrowserPanelColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
 	PanelLayout.m_Status.Draw(BrowserPanelElevatedColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
 	if(PanelLayout.m_Toolbox.w > 0.0f)
@@ -5769,7 +5583,8 @@ void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 		if(g_Config.m_UiPage == PAGE_INTERNET || g_Config.m_UiPage == PAGE_FAVORITES)
 		{
 			CUIRect CommunityFilter;
-			ToolBox.HSplitTop(19.0f + 4.0f * 17.0f, &CommunityFilter, &ToolBox);
+			// 社区卡片 = 标题 + 整数行（胶囊行行高 + 半档行距），末行完整可见。
+			ToolBox.HSplitTop(19.0f + FilterGridExtent(COMMUNITY_FILTER_VISIBLE_ROWS, COMMUNITY_FILTER_ROW_HEIGHT), &CommunityFilter, &ToolBox);
 			ToolBox.HSplitTop(8.0f, nullptr, &ToolBox);
 			RenderServerbrowserCommunitiesFilter(CommunityFilter);
 		}

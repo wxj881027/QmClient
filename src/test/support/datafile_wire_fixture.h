@@ -1,6 +1,7 @@
 #ifndef TEST_SUPPORT_DATAFILE_WIRE_FIXTURE_H
 #define TEST_SUPPORT_DATAFILE_WIRE_FIXTURE_H
 
+#include <base/bytes.h>
 #include <base/system.h>
 
 #include <engine/storage.h>

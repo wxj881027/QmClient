@@ -1071,21 +1071,33 @@ void CTClient::OnConsoleInit()
 		},
 		this);
 
+	// 启动时按已保存的配置重建一次；控制台链只在运行期赋值，
+	// 缺了这一步重启后过滤规则会静默失效。
+	ApplyRegexChatIgnore(g_Config.m_QmRegexChatIgnore);
 	Console()->Chain(
 		"qm_regex_chat_ignore", [](IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData) {
 			if(pResult->NumArguments() == 1)
-			{
-				auto Re = Regex(pResult->GetString(0));
-				if(!Re.error().empty())
-				{
-					log_error("qmclient", "Invalid regex: %s", Re.error().c_str());
-					return;
-				}
-				((CTClient *)pUserData)->m_RegexChatIgnore = std::move(Re);
-			}
+				((CTClient *)pUserData)->ApplyRegexChatIgnore(pResult->GetString(0));
 			pfnCallback(pResult, pCallbackUserData);
 		},
 		this);
+}
+
+void CTClient::ApplyRegexChatIgnore(const char *pPattern)
+{
+	// 空字符串表示「不过滤」：Regex("") 会匹配任意消息，必须显式清空。
+	if(pPattern == nullptr || pPattern[0] == '\0')
+	{
+		m_RegexChatIgnore = Regex();
+		return;
+	}
+	auto Re = Regex(pPattern);
+	if(!Re.error().empty())
+	{
+		log_error("qmclient", "Invalid regex in qm_regex_chat_ignore: %s", Re.error().c_str());
+		return;
+	}
+	m_RegexChatIgnore = std::move(Re);
 }
 
 void CTClient::RandomBodyColor()
@@ -1981,7 +1993,7 @@ void CTClient::CheckFriendEnterGreet()
 	if(!SyncFriendEnterSettings())
 		return;
 	const qm_friend_notify::CEnterNotifier::CSettings Settings{g_Config.m_QmFriendEnterAutoGreet != 0, g_Config.m_QmFriendEnterGreetText[0] != '\0', g_Config.m_QmFriendEnterBroadcast != 0};
-	m_FriendEnterNotifier.TrySend(Settings, [&](const std::string &Names) {
+	m_FriendEnterNotifier.TrySend(Settings, qm_friend_notify::CGreetQueue::CClock::now(), [&](const std::string &Names) {
 		char aMessage[256];
 		str_format(aMessage, sizeof(aMessage), "%s: %s", Names.c_str(),
 			ResolveFriendEnterLocalizeText(g_Config.m_QmFriendEnterGreetText, s_pFriendEnterGreetDefaultText));
@@ -2003,9 +2015,10 @@ void CTClient::HandleFriendEnterMessage(int Sender, int Team, const char *pMessa
 		return Connection == IClient::CONN_MAIN ? g_Config.m_PlayerName : g_Config.m_ClDummyName;
 	};
 	const qm_friend_notify::CEnterNotifier::CSettings Settings{g_Config.m_QmFriendEnterAutoGreet != 0, g_Config.m_QmFriendEnterGreetText[0] != '\0', g_Config.m_QmFriendEnterBroadcast != 0};
-	const bool Entered = m_FriendEnterNotifier.OnMessage(Settings, [&](qm_friend_notify::CEnterTracker &Tracker) { return Tracker.OnMessage(Sender, Team, pMessage, *GameClient()->Friends(), LocalName(IClient::CONN_MAIN), LocalName(IClient::CONN_DUMMY)); }, [&](const std::string &Name) { return BuildFriendEnterBroadcastText(ResolveFriendEnterLocalizeText(g_Config.m_QmFriendEnterBroadcastText, s_pFriendEnterBroadcastDefaultText), Name); }, [&](const std::string &Text) { GameClient()->m_Broadcast.DoBroadcast(Text.c_str()); });
-	if(Entered)
-		CheckFriendEnterGreet();
+	m_FriendEnterNotifier.OnMessage(Settings, qm_friend_notify::CGreetQueue::CClock::now(),
+		[&](qm_friend_notify::CEnterTracker &Tracker) { return Tracker.OnMessage(Sender, Team, pMessage, *GameClient()->Friends(), LocalName(IClient::CONN_MAIN), LocalName(IClient::CONN_DUMMY)); },
+		[&](const std::string &Name) { return BuildFriendEnterBroadcastText(ResolveFriendEnterLocalizeText(g_Config.m_QmFriendEnterBroadcastText, s_pFriendEnterBroadcastDefaultText), Name); },
+		[&](const std::string &Text) { GameClient()->m_Broadcast.DoBroadcast(Text.c_str()); });
 }
 
 void CTClient::QueueAspectApply()

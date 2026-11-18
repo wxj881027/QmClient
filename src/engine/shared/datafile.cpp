@@ -6,6 +6,7 @@
 #include "uuid_manager.h"
 
 #include <base/borrowed_allocator.h>
+#include <base/bytes.h>
 #include <base/hash_ctxt.h>
 #include <base/log.h>
 #include <base/math.h>
@@ -17,6 +18,7 @@
 
 #include <cstdlib>
 #include <limits>
+#include <new>
 #include <unordered_set>
 #include <utility>
 
@@ -50,26 +52,18 @@ namespace
 	class CItemEx
 	{
 	public:
-		int m_aUuid[sizeof(CUuid) / sizeof(int32_t)];
+		int m_aUuid[UUID_INT_SIZE];
 
 		static CItemEx FromUuid(CUuid Uuid)
 		{
 			CItemEx Result;
-			for(size_t i = 0; i < std::size(Result.m_aUuid); i++)
-			{
-				Result.m_aUuid[i] = bytes_be_to_uint(&Uuid.m_aData[i * sizeof(int32_t)]);
-			}
+			UuidToInts(Uuid, Result.m_aUuid);
 			return Result;
 		}
 
 		CUuid ToUuid() const
 		{
-			CUuid Result;
-			for(size_t i = 0; i < std::size(m_aUuid); i++)
-			{
-				uint_to_bytes_be(&Result.m_aData[i * sizeof(int32_t)], m_aUuid[i]);
-			}
-			return Result;
+			return UuidFromInts(m_aUuid);
 		}
 	};
 
@@ -127,7 +121,6 @@ namespace
 		int *m_pDataSizes;
 
 		char *m_pItemStart;
-		char *m_pDataStart;
 	};
 
 } // namespace
@@ -753,8 +746,6 @@ try
 		pTmpDataFile->m_Info.m_pDataSizes = nullptr;
 		pTmpDataFile->m_Info.m_pItemStart = (char *)&pTmpDataFile->m_Info.m_pDataOffsets[pTmpDataFile->m_Header.m_NumRawData];
 	}
-	pTmpDataFile->m_Info.m_pDataStart = pTmpDataFile->m_Info.m_pItemStart + pTmpDataFile->m_Header.m_ItemSize;
-
 	if(!pTmpDataFile->Validate(pValidationMemory))
 	{
 		return false;
@@ -812,6 +803,32 @@ int CDataFileReader::GetDataSize(int Index) const
 	dbg_assert(m_pDataFile != nullptr, "File not open");
 
 	return m_pDataFile->GetDataSize(Index);
+}
+
+bool CDataFileReader::ReadCompressedData(int Index, std::vector<unsigned char> &vData) const
+{
+	vData.clear();
+	const CDatafile *pFile = m_pDataFile;
+	if(!pFile || Index < 0 || Index >= pFile->m_Header.m_NumRawData || !pFile->m_Info.m_pDataSizes ||
+		pFile->m_ppDataProcessors[Index] || pFile->m_ppDataPtrs[Index] || pFile->m_pDataSizes[Index] < 0)
+		return false;
+	const int Size = pFile->GetFileDataSize(Index);
+	if(Size <= 0 || io_seek(pFile->m_File, pFile->m_DataStartOffset + pFile->m_Info.m_pDataOffsets[Index], IOSEEK_START) != 0)
+		return false;
+	try
+	{
+		vData.resize(Size);
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	IOperations DefaultOperations;
+	auto &Operations = pFile->m_pOperations ? *pFile->m_pOperations : DefaultOperations;
+	if(Operations.Read(pFile->m_File, vData.data(), Size) == static_cast<unsigned>(Size))
+		return true;
+	vData.clear();
+	return false;
 }
 
 void *CDataFileReader::GetData(int Index)

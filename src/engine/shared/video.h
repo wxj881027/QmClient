@@ -54,6 +54,10 @@ public:
 	virtual void NextAudioFrame(ISoundMixFunc Mix) = 0;
 	virtual void NextAudioFrameTimeline(ISoundMixFunc Mix) = 0;
 
+	virtual int64_t Time() const = 0;
+	virtual float LocalTime() const = 0;
+	virtual void SetLocalStartTime(int64_t LocalStartTime) = 0;
+
 	// 最近一次 Stop() 的最终结果（对象在 Stop 内自删除，调用方只能静态查询）：
 	// Stop 会排空编码器、写 trailer 并关闭文件，这些都可能失败；HasError() 在
 	// Stop() 之前只覆盖录制期错误，收尾失败由此闭锁在 Stop 完成后暴露。
@@ -68,18 +72,9 @@ public:
 
 	static IVideo *Current() { return ms_pCurrentVideo; }
 
-	static int64_t Time() { return ms_Time; }
-	static float LocalTime() { return ms_LocalTime; }
-	static void SetLocalStartTime(int64_t LocalStartTime) { ms_LocalStartTime = LocalStartTime; }
-	static void SetFPS(int FPS) { ms_TickTime = time_freq() / FPS; }
-
 protected:
 	static IVideo *ms_pCurrentVideo;
 	static bool ms_LastStopFailed;
-	static int64_t ms_Time;
-	static int64_t ms_LocalStartTime;
-	static float ms_LocalTime;
-	static int64_t ms_TickTime;
 };
 
 #endif

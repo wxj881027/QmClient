@@ -10,6 +10,8 @@
 #include <game/localization.h>
 
 #include <array>
+#include <string>
+#include <utility>
 
 namespace
 {
@@ -226,11 +228,24 @@ void CTranslate::Translate(CChat::CLine &Line, bool ShowProgress, bool AutoTrigg
 	}
 }
 
-bool CTranslate::TryTranslateOutgoingChat(int Team, const char *pText)
+bool CTranslate::TryTranslateOutgoingChat(int Team, const char *pText, bool TranslateOnce)
 {
-	const auto Parsed = ParseOutgoingTranslateTarget(pText);
-	if(!Parsed)
-		return false;
+	std::string Text;
+	std::string Target;
+	const char *pFallbackTarget = TranslateOnce ? g_Config.m_QmTranslateOutgoingTarget : nullptr;
+	if(pFallbackTarget && !IsValidLanguageCode(pFallbackTarget))
+		pFallbackTarget = DefaultConfig::QmTranslateOutgoingTarget;
+	try
+	{
+		if(!PrepareOutgoingTranslateRequest(pText, pFallbackTarget, Text, Target))
+			return false;
+	}
+	catch(const std::bad_alloc &)
+	{
+		// 已识别的翻译请求不能在准备失败后回退发送原文。
+		dbg_msg("translate", "could not prepare outgoing translation request");
+		return true;
+	}
 	if(!m_Jobs.CanSubmit(GetMaxConcurrency()))
 	{
 		GameClient()->m_Chat.Echo(Localize("Too many translation tasks"));
@@ -245,9 +260,8 @@ bool CTranslate::TryTranslateOutgoingChat(int Team, const char *pText)
 		Job.m_Connection = g_Config.m_ClDummy;
 		Job.m_LocalClientId = GameClient()->m_aLocalIds[Job.m_Connection];
 		Job.m_Team = Team;
-		Job.m_OriginalText.assign(Parsed->m_Text);
-		mem_copy(Job.m_aTarget, Parsed->m_Target.data(), Parsed->m_Target.size());
-		Job.m_aTarget[Parsed->m_Target.size()] = '\0';
+		Job.m_OriginalText = std::move(Text);
+		str_copy(Job.m_aTarget, Target.c_str(), sizeof(Job.m_aTarget));
 		const char *pSource = NormalizeTranslateSource(g_Config.m_QmTranslateSource);
 		if(!IsValidLanguageCode(pSource) && str_comp_nocase(pSource, "auto") != 0)
 			pSource = "auto";

@@ -14,6 +14,7 @@ namespace QmMusicLyrics
 			for(auto &Row : aRows)
 			{
 				Row.m_Initialized = false;
+				Row.m_CreationFailed = false;
 				try
 				{
 					TextRender.DeleteTextContainer(Row.m_Container);
@@ -57,16 +58,21 @@ namespace QmMusicLyrics
 				auto &Cache = m_aaRows[Slot][Index];
 				if(!Line.m_Active || Index >= static_cast<size_t>(Line.m_RowCount))
 				{
-					if(Cache.m_Initialized || Cache.m_Container.m_Index >= 0)
+					if(Cache.m_Initialized || Cache.m_CreationFailed || Cache.m_Container.m_Index >= 0)
 					{
 						Cache.m_Initialized = false;
 						TextRender.DeleteTextContainer(Cache.m_Container);
 						Cache.m_Text.clear();
+						Cache.m_CreationFailed = false;
 					}
 					continue;
 				}
 				const int VisibleCharacters = WorldLyricVisibleCharacters(Line, Index);
-				if(!Cache.m_Initialized || !Cache.m_Container.Valid() || Cache.m_Text != Line.m_aRows[Index] || Cache.m_VisibleCharacters != VisibleCharacters || Cache.m_AtlasRevision != TextRender.GlyphAtlasRevision())
+				const uint64_t AtlasRevision = TextRender.GlyphAtlasRevision();
+				const bool InputsChanged = Cache.m_Text != Line.m_aRows[Index] || Cache.m_VisibleCharacters != VisibleCharacters || Cache.m_AtlasRevision != AtlasRevision;
+				if(Cache.m_CreationFailed && !InputsChanged)
+					continue;
+				if(!Cache.m_Initialized || !Cache.m_Container.Valid() || InputsChanged)
 				{
 					std::string PreparedText(Line.m_aRows[Index]);
 					// 使用固定烘焙密度，缩放镜头只改变投影，不逐帧重建文字。
@@ -81,17 +87,27 @@ namespace QmMusicLyrics
 						const int VisibleBytes = static_cast<int>(str_utf8_offset_chars_to_bytes(Line.m_aRows[Index].c_str(), VisibleCharacters));
 						Cursor.m_vColorSplits.emplace_back(VisibleBytes, -1, ColorRGBA(1.0f, 1.0f, 1.0f, 0.0f));
 					}
-					// 句柄始终由缓存持有，创建失败后也能在下帧先清理再重建。
+					// 句柄始终由缓存持有，异常后在下帧先清理再重建。
 					Cache.m_Initialized = false;
 					TextRender.DeleteTextContainer(Cache.m_Container);
 					if(!TextRender.CreateTextContainer(Cache.m_Container, &Cursor, PreparedText.c_str()) || !Cache.m_Container.Valid())
-						return;
+					{
+						// 真实文字池拒绝发生在排版前；已处理字符却没有字形才缓存空布局。
+						// 资源不足和异常都保留后帧重试入口。
+						Cache.m_CreationFailed = PreparedText.empty() || Cursor.m_CharCount > 0;
+						Cache.m_Text.swap(PreparedText);
+						Cache.m_VisibleCharacters = VisibleCharacters;
+						Cache.m_Size = vec2(0.0f, 0.0f);
+						Cache.m_AtlasRevision = AtlasRevision;
+						continue;
+					}
 					const auto Box = TextRender.GetBoundingBoxTextContainer(Cache.m_Container);
 					Cache.m_Size = vec2(Box.m_W, Box.m_H);
 					Cache.m_Text.swap(PreparedText);
 					Cache.m_VisibleCharacters = VisibleCharacters;
 					Cache.m_AtlasRevision = TextRender.GlyphAtlasRevision();
 					Cache.m_Initialized = true;
+					Cache.m_CreationFailed = false;
 				}
 				Height += Cache.m_Size.y + 4.0f;
 				Width = std::max(Width, Cache.m_Size.x);
@@ -113,6 +129,8 @@ namespace QmMusicLyrics
 			for(int Index = 0; Index < Line.m_RowCount; ++Index)
 			{
 				const auto &Cache = m_aaRows[Slot][Index];
+				if(!Cache.m_Initialized || Cache.m_CreationFailed)
+					continue;
 				QmRenderTextContainerWithEffects(TextRender, Cache.m_Container, Style, Visual.m_Position.x - Cache.m_Size.x * 0.5f, Y);
 				Y += Cache.m_Size.y + 4.0f;
 			}

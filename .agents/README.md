@@ -4,11 +4,17 @@
 
 `AGENTS.md` 管全局授权、项目边界和任务路由；skill 管一项操作；`references/` 放按需命令或检查参考。功能设计、方案和实施安排放 `docs/规格/`；历史调研、修复记录和被替代的方案放 `docs/归档/`。新增说明文档的日期命名、复用与归档遵循根 `AGENTS.md`，正文按实际内容组织，不套用 skill 模板，也不再创建工具或插件专属的文档目录。
 
-测试书写由根 `AGENTS.md` 维护质量边界，`src/test/AGENTS.md` 提供目录内的执行入口；`src/test/benchmark/AGENTS.md` 路由到 verification skill 的性能参考。目录规则继承根规则，不另设验证、授权或性能证据标准。README 只提供导航，不承担必须读取的规则入口。
+测试的完整规则（层级定义、编写与保留、源码合同边界、覆盖要求）由 `src/test/AGENTS.md` 的「测试规则」一节维护；根 `AGENTS.md` 只保留层级名称、证据纪律和放置边界。`src/test/benchmark/AGENTS.md` 路由到 verification skill 的性能参考。目录规则继承上述入口，不另设验证、授权或性能证据标准。README 只提供导航，不承担必须读取的规则入口。
 
 ## 本地机器偏好
 
-机器路径、集成分支、固定槽位与资源预算配置在 Git 忽略的 `machine.local.json`；从 [machine.example.json](machine.example.json) 复制后按机器修改。会话启动、配置发现、校验、继承与授权边界由根 `AGENTS.md` 维护；本地槽位交接状态保存在主工作树的 `worktree-state.local.json`，新会话按根规则核对后使用；配置不是自动执行脚本，不保存凭据。
+机器路径、集成分支、固定槽位与资源预算配置在 Git 忽略的 `machine.local.json`；从 [machine.example.json](machine.example.json) 复制后按机器修改，不提交、不推送、不写入版本化报告。
+
+会话启动时按根 `AGENTS.md`「会话启动与交接」发现配置：当前工作树没有时，用 `git worktree list --porcelain` 找到主工作树并读取其配置。只允许继承同一仓库已登记的主工作树；本地槽位配置优先于继承配置，不合并字段。配置存在且匹配当前工作区即选择对应 profile，不依赖用户名或硬编码主机名；用户当前明确指令优先。
+
+读取后校验：`schema_version` 受支持；`primary_worktree` 指向实际登记的主工作树；当前目录是主工作树或已登记的配置槽位，且分支存在；各槽位绝对路径互不重复；`build_directory` 为不含 `..` 的工作树内相对目录；`slot_mode` 为 `detached`；烟测模式为 `windowed`；最小化字段为布尔值；构建资源为正整数，单次 job 数与最大并行 job 总数均不超过预算。配置无效时说明具体问题，不据此切换分支或操作其他目录。
+
+配置只作为数据读取，不执行其中内容，不自动创建、切换、重置或删除 Worktree，也不扩大任务授权。本地槽位交接状态保存在主工作树的 `worktree-state.local.json`（Git 忽略），记录任务、会话占用、基线与交付 SHA、构建对应源码状态、验证证据和待办，不保存凭据；新会话按根规则核对后使用，记录只是参考，不是互斥锁。
 
 ## 维护原则
 

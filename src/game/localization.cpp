@@ -3,8 +3,10 @@
 
 #include "localization.h"
 
+#include <base/io.h>
 #include <base/log.h>
-#include <base/system.h>
+#include <base/os.h>
+#include <base/str.h>
 
 #include <engine/console.h>
 #include <engine/shared/linereader.h>
@@ -197,6 +199,7 @@ try
 	bool HasReplacements = false;
 	char aContext[512];
 	char aOrigin[512];
+	char aReplacement[512];
 	int Line = 0;
 	while(const char *pLine = LineReader.Get())
 	{
@@ -225,6 +228,8 @@ try
 		}
 
 		str_copy(aOrigin, pLine);
+		// 语言文件里的 \n 是转义写法，入库前还原成真实换行，否则含换行的文案不可翻译。
+		str_unescape_newlines(aOrigin);
 		const char *pReplacement = LineReader.Get();
 		if(!pReplacement)
 		{
@@ -242,8 +247,9 @@ try
 		if(str_comp(pReplacement, "== ") == 0)
 			continue;
 
-		pReplacement += 3;
-		Candidate.AddString(aOrigin, pReplacement, aContext);
+		str_copy(aReplacement, pReplacement + 3);
+		str_unescape_newlines(aReplacement);
+		Candidate.AddString(aOrigin, aReplacement, aContext);
 		HasReplacements = true;
 	}
 	std::sort(Candidate.m_vStrings.begin(), Candidate.m_vStrings.end());

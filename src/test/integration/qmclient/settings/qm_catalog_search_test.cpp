@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <iterator>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -70,6 +71,9 @@ TEST(QmCatalogSearch, InternalLabelsAliasesAndConfigsResolveWithoutOpeningTheirP
 		const char *m_pCard;
 	};
 	const SCase aCases[] = {
+		{"qm_dummy_distance_link", "qm:hj_assist"},
+		{"qm_dummy_distance_link_style", "qm:hj_assist"},
+		{"水滴", "qm:hj_assist"},
 		{"inp_mousesens", "deck:controls-mouse"},
 		{"Maximum cursor distance", "deck:controls-mouse"},
 		{"inp_controller_tolerance", "deck:controls-controller"},
@@ -78,11 +82,14 @@ TEST(QmCatalogSearch, InternalLabelsAliasesAndConfigsResolveWithoutOpeningTheirP
 		{"gfx_screen_refresh_rate", "deck:graphics-modes"},
 		{"snd_volume", "deck:sound-volume"},
 		{"Sound volume", "deck:sound-volume"},
-		{"cl_predict_events", "deck:ddnet-gameplay"},
+		// 预测相关行已从「游戏玩法」搬到 DDNet 页「网络补偿」子页签的「客户端预测」卡：
+		// 查询必须命中新卡，而不是继续指向搬走行的旧卡。
+		{"cl_predict_events", "deck:ddnet-prediction"},
 		{"Axiom dummy password", "qm:gores"},
 		{"qm_ime_auto_manage", "qm:ime"},
 		{"cl_replay_length", "deck:ddnet-demo"},
-		{"预测余量", "deck:ddnet-gameplay"},
+		{"预测余量", "deck:ddnet-prediction"},
+		{"最大包份数", "deck:ddnet-prediction"},
 		{"cl_background_entities", "deck:ddnet-background"},
 		{"cl_chat_size", "deck:appearance-chat-settings"},
 		{"qm_custom_font_cjk", "tclient:font"},
@@ -105,6 +112,10 @@ TEST(QmCatalogSearch, InternalLabelsAliasesAndConfigsResolveWithoutOpeningTheirP
 		{"Scroll feel", "deck:graphics-interaction"},
 		{"Spring damping", "deck:graphics-interaction"},
 		{"End bounce", "deck:graphics-interaction"},
+		// 输入光标样式行落在「界面动效」卡：配置名、英文界面文案与中文检索词都要直达该卡。
+		{"qm_text_caret_style", "deck:graphics-interaction"},
+		{"Text caret style", "deck:graphics-interaction"},
+		{"输入光标样式", "deck:graphics-interaction"},
 		// 旧标签删掉后靠卡片关键词兜底，检索意图不能丢。
 		{"Config Filters", "deck:tclient-configs-actions"},
 		{"Show enemy color in spectator menu", "deck:tclient-warlist"},
@@ -201,24 +212,29 @@ TEST(QmCatalogSearch, PreviewHighlightsEveryResultCard)
 	qm_settings_reveal::Clear();
 }
 
-TEST(QmCatalogSearch, HighlightStyleUsesThemeAccentAndClampsRadius)
+TEST(QmCatalogSearch, MatchingLabelUsesSurfaceAwareHighlightUntilDrawingFinishes)
 {
-	SUiTheme Theme;
-	Theme.m_Accent = ColorRGBA(0.2f, 0.4f, 0.6f, 1.0f);
-	CUIRect Row;
-	Row.w = 200.0f;
-	Row.h = 20.0f;
-	qm_settings_highlight::SStyle Style = qm_settings_highlight::Resolve(Theme, Row);
-	EXPECT_FLOAT_EQ(Style.m_Text.r, 0.2f);
-	EXPECT_FLOAT_EQ(Style.m_Text.g, 0.4f);
-	EXPECT_FLOAT_EQ(Style.m_Text.b, 0.6f);
-	EXPECT_FLOAT_EQ(Style.m_Fill.a, Theme.m_Selected.a);
-	EXPECT_FLOAT_EQ(Style.m_Border.r, Theme.m_Accent.r);
-	EXPECT_FLOAT_EQ(Style.m_Radius, ui_token::radius::BASE);
-
-	Row.h = 6.0f;
-	Style = qm_settings_highlight::Resolve(Theme, Row);
-	EXPECT_FLOAT_EQ(Style.m_Radius, 3.0f);
+	std::unique_ptr<IEngineTextRender> pTextRender(CreateEngineTextRender());
+	const ColorRGBA Original(0.2f, 0.4f, 0.6f, 0.5f);
+	pTextRender->TextColor(Original);
+	const ColorRGBA Outline = pTextRender->GetTextOutlineColor();
+	{
+		const qm_settings_highlight::CScopedLabelColor Highlight(pTextRender.get(), true);
+		EXPECT_EQ(pTextRender->GetTextColor(), ui_token::color::SEARCH_MATCH_ON_DARK.WithAlpha(Original.a));
+		EXPECT_EQ(pTextRender->GetTextOutlineColor(), Outline);
+	}
+	EXPECT_EQ(pTextRender->GetTextColor(), Original);
+	{
+		// 浅色卡片上改用深琥珀，避免白底浅黄字读不清。
+		CUiScopedSurfaceText LightSurface(pTextRender.get(), ColorRGBA(0.96f, 0.96f, 0.96f, 1.0f));
+		const qm_settings_highlight::CScopedLabelColor Highlight(pTextRender.get(), true);
+		EXPECT_EQ(pTextRender->GetTextColor(), ui_token::color::SEARCH_MATCH_ON_LIGHT.WithAlpha(Original.a));
+	}
+	EXPECT_EQ(pTextRender->GetTextColor(), Original);
+	{
+		const qm_settings_highlight::CScopedLabelColor Unmatched(pTextRender.get(), false);
+		EXPECT_EQ(pTextRender->GetTextColor(), Original);
+	}
 }
 
 TEST(QmCatalogSearch, RevealRequestMatchesOnlyTargetRowAndExpires)

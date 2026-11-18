@@ -146,31 +146,18 @@ static bool CommandBufferCanFitCommands(CCommandBuffer &CommandBuffer, size_t Fi
 }
 
 static CVideoMode g_aFakeModes[] = {
-	{8192, 4320, 8192, 4320, 0, 8, 8, 8, 0}, {7680, 4320, 7680, 4320, 0, 8, 8, 8, 0}, {5120, 2880, 5120, 2880, 0, 8, 8, 8, 0},
-	{4096, 2160, 4096, 2160, 0, 8, 8, 8, 0}, {3840, 2160, 3840, 2160, 0, 8, 8, 8, 0}, {2560, 1440, 2560, 1440, 0, 8, 8, 8, 0},
-	{2048, 1536, 2048, 1536, 0, 8, 8, 8, 0}, {1920, 2400, 1920, 2400, 0, 8, 8, 8, 0}, {1920, 1440, 1920, 1440, 0, 8, 8, 8, 0},
-	{1920, 1200, 1920, 1200, 0, 8, 8, 8, 0}, {1920, 1080, 1920, 1080, 0, 8, 8, 8, 0}, {1856, 1392, 1856, 1392, 0, 8, 8, 8, 0},
-	{1800, 1440, 1800, 1440, 0, 8, 8, 8, 0}, {1792, 1344, 1792, 1344, 0, 8, 8, 8, 0}, {1680, 1050, 1680, 1050, 0, 8, 8, 8, 0},
-	{1600, 1200, 1600, 1200, 0, 8, 8, 8, 0}, {1600, 1000, 1600, 1000, 0, 8, 8, 8, 0}, {1440, 1050, 1440, 1050, 0, 8, 8, 8, 0},
-	{1440, 900, 1440, 900, 0, 8, 8, 8, 0}, {1400, 1050, 1400, 1050, 0, 8, 8, 8, 0}, {1368, 768, 1368, 768, 0, 8, 8, 8, 0},
-	{1280, 1024, 1280, 1024, 0, 8, 8, 8, 0}, {1280, 960, 1280, 960, 0, 8, 8, 8, 0}, {1280, 800, 1280, 800, 0, 8, 8, 8, 0},
-	{1280, 768, 1280, 768, 0, 8, 8, 8, 0}, {1152, 864, 1152, 864, 0, 8, 8, 8, 0}, {1024, 768, 1024, 768, 0, 8, 8, 8, 0},
-	{1024, 600, 1024, 600, 0, 8, 8, 8, 0}, {800, 600, 800, 600, 0, 8, 8, 8, 0}, {768, 576, 768, 576, 0, 8, 8, 8, 0},
-	{720, 400, 720, 400, 0, 8, 8, 8, 0}, {640, 480, 640, 480, 0, 8, 8, 8, 0}, {400, 300, 400, 300, 0, 8, 8, 8, 0},
-	{320, 240, 320, 240, 0, 8, 8, 8, 0},
-
-	{8192, 4320, 8192, 4320, 0, 5, 6, 5, 0}, {7680, 4320, 7680, 4320, 0, 5, 6, 5, 0}, {5120, 2880, 5120, 2880, 0, 5, 6, 5, 0},
-	{4096, 2160, 4096, 2160, 0, 5, 6, 5, 0}, {3840, 2160, 3840, 2160, 0, 5, 6, 5, 0}, {2560, 1440, 2560, 1440, 0, 5, 6, 5, 0},
-	{2048, 1536, 2048, 1536, 0, 5, 6, 5, 0}, {1920, 2400, 1920, 2400, 0, 5, 6, 5, 0}, {1920, 1440, 1920, 1440, 0, 5, 6, 5, 0},
-	{1920, 1200, 1920, 1200, 0, 5, 6, 5, 0}, {1920, 1080, 1920, 1080, 0, 5, 6, 5, 0}, {1856, 1392, 1856, 1392, 0, 5, 6, 5, 0},
-	{1800, 1440, 1800, 1440, 0, 5, 6, 5, 0}, {1792, 1344, 1792, 1344, 0, 5, 6, 5, 0}, {1680, 1050, 1680, 1050, 0, 5, 6, 5, 0},
-	{1600, 1200, 1600, 1200, 0, 5, 6, 5, 0}, {1600, 1000, 1600, 1000, 0, 5, 6, 5, 0}, {1440, 1050, 1440, 1050, 0, 5, 6, 5, 0},
-	{1440, 900, 1440, 900, 0, 5, 6, 5, 0}, {1400, 1050, 1400, 1050, 0, 5, 6, 5, 0}, {1368, 768, 1368, 768, 0, 5, 6, 5, 0},
-	{1280, 1024, 1280, 1024, 0, 5, 6, 5, 0}, {1280, 960, 1280, 960, 0, 5, 6, 5, 0}, {1280, 800, 1280, 800, 0, 5, 6, 5, 0},
-	{1280, 768, 1280, 768, 0, 5, 6, 5, 0}, {1152, 864, 1152, 864, 0, 5, 6, 5, 0}, {1024, 768, 1024, 768, 0, 5, 6, 5, 0},
-	{1024, 600, 1024, 600, 0, 5, 6, 5, 0}, {800, 600, 800, 600, 0, 5, 6, 5, 0}, {768, 576, 768, 576, 0, 5, 6, 5, 0},
-	{720, 400, 720, 400, 0, 5, 6, 5, 0}, {640, 480, 640, 480, 0, 5, 6, 5, 0}, {400, 300, 400, 300, 0, 5, 6, 5, 0},
-	{320, 240, 320, 240, 0, 5, 6, 5, 0}};
+	{8192, 4320, 8192, 4320, 0}, {7680, 4320, 7680, 4320, 0}, {5120, 2880, 5120, 2880, 0},
+	{4096, 2160, 4096, 2160, 0}, {3840, 2160, 3840, 2160, 0}, {2560, 1440, 2560, 1440, 0},
+	{2048, 1536, 2048, 1536, 0}, {1920, 2400, 1920, 2400, 0}, {1920, 1440, 1920, 1440, 0},
+	{1920, 1200, 1920, 1200, 0}, {1920, 1080, 1920, 1080, 0}, {1856, 1392, 1856, 1392, 0},
+	{1800, 1440, 1800, 1440, 0}, {1792, 1344, 1792, 1344, 0}, {1680, 1050, 1680, 1050, 0},
+	{1600, 1200, 1600, 1200, 0}, {1600, 1000, 1600, 1000, 0}, {1440, 1050, 1440, 1050, 0},
+	{1440, 900, 1440, 900, 0}, {1400, 1050, 1400, 1050, 0}, {1368, 768, 1368, 768, 0},
+	{1280, 1024, 1280, 1024, 0}, {1280, 960, 1280, 960, 0}, {1280, 800, 1280, 800, 0},
+	{1280, 768, 1280, 768, 0}, {1152, 864, 1152, 864, 0}, {1024, 768, 1024, 768, 0},
+	{1024, 600, 1024, 600, 0}, {800, 600, 800, 600, 0}, {768, 576, 768, 576, 0},
+	{720, 400, 720, 400, 0}, {640, 480, 640, 480, 0}, {400, 300, 400, 300, 0},
+	{320, 240, 320, 240, 0}};
 
 void CGraphics_Threaded::FlushVertices(bool KeepVertices)
 {
@@ -909,8 +896,11 @@ void CGraphics_Threaded::EndRenderTarget()
 	});
 }
 
-void CGraphics_Threaded::DrawRenderTarget(CRenderTargetHandle Target, const SRenderTargetDrawParams &Params)
+void CGraphics_Threaded::DrawRenderTarget(CRenderTargetHandle Target, const SRenderTargetDrawParams &InputParams)
 {
+	SRenderTargetDrawParams Params = InputParams;
+	if(Params.m_NativeTextureCoordinates)
+		Params.SetNativeTextureCoordinates(m_pBackend->GetBackendType());
 	if(!IsRenderTargetSupported() || !Target.IsValid() || Params.m_W <= 0.0f || Params.m_H <= 0.0f)
 		return;
 	const size_t TargetId = Target.Id();
@@ -932,25 +922,53 @@ void CGraphics_Threaded::DrawRenderTarget(CRenderTargetHandle Target, const SRen
 
 	// 四角每角至多 NumSegments / 2 个四边形，另有中心和四条边。
 	static_assert(RECT_CORNER_SEGMENTS >= 2 && RECT_CORNER_SEGMENTS % 2 == 0);
-	constexpr size_t MaxVertices = (RECT_CORNER_SEGMENTS / 2 * 4 + 9) * 4;
+	constexpr int ProjectionColumns = 4;
+	constexpr int ProjectionRows = 2;
+	constexpr int CornerRows = 12;
+	constexpr int BodyRows = 8;
+	constexpr int FeatherRows = CornerRows * 2 + BodyRows;
+	constexpr size_t MaxVertices = std::max(RECT_CORNER_SEGMENTS / 2 * 4 + 9 * ProjectionColumns * ProjectionRows,
+		(FeatherRows + 2) * (ProjectionColumns + 2)) * 4;
 	CCommandBuffer::SVertex aVertices[MaxVertices];
 	size_t NumVertices = 0;
 	const float InvW = 1.0f / Params.m_W;
 	const float InvH = 1.0f / Params.m_H;
 	const uint8_t Alpha = (uint8_t)(Cmd.m_Alpha * 255.0f + 0.5f);
-	auto AddQuad = [&](vec2 Point0, vec2 Point1, vec2 Point2, vec2 Point3) {
+	const bool Projected = Params.m_TopPinch > 0.0f || std::abs(Params.m_TiltX) > 0.0001f || std::abs(Params.m_TiltY) > 0.0001f;
+	auto AddVertices = [&](vec2 Point0, vec2 Point1, vec2 Point2, vec2 Point3, unsigned TransparentMask = 0u) {
 		dbg_assert(NumVertices + 4 <= MaxVertices, "render target vertex capacity exceeded");
 		const vec2 aPositions[] = {Point0, Point1, Point2, Point3};
-		for(const vec2 Position : aPositions)
+		for(unsigned i = 0; i < 4; ++i)
 		{
+			const vec2 Position = aPositions[i];
 			CCommandBuffer::SVertex Vertex{};
-			Vertex.m_Pos = Position;
+			Vertex.m_Pos = Projected ? Params.ProjectPoint(Position) : Position;
 			const float LocalU = (Position.x - Params.m_X) * InvW;
 			const float LocalV = (Position.y - Params.m_Y) * InvH;
 			Vertex.m_Tex = vec2(mix(Params.m_U0, Params.m_U1, LocalU), mix(Params.m_V0, Params.m_V1, LocalV));
-			Vertex.m_Color = CCommandBuffer::SColor{255, 255, 255, Alpha};
+			const uint8_t Brightness = Params.m_TopShade > 0.0f ? static_cast<uint8_t>(Params.BrightnessAt(LocalV) * 255.0f + 0.5f) : 255;
+			Vertex.m_Color = CCommandBuffer::SColor{Brightness, Brightness, Brightness, static_cast<uint8_t>((TransparentMask & (1u << i)) ? 0 : Alpha)};
 			aVertices[NumVertices++] = Vertex;
 		}
+	};
+
+	const auto AddQuad = [&](vec2 Point0, vec2 Point1, vec2 Point2, vec2 Point3) {
+		// 圆角扇形已有密集采样，直边与中心额外细分以近似透视纹理插值。
+		const bool Rectangle = Point0.y == Point1.y && Point1.x == Point2.x && Point2.y == Point3.y && Point3.x == Point0.x;
+		if(!Projected || !Rectangle)
+		{
+			AddVertices(Point0, Point1, Point2, Point3);
+			return;
+		}
+		for(int Y = 0; Y < ProjectionRows; ++Y)
+			for(int X = 0; X < ProjectionColumns; ++X)
+			{
+				const float Left = mix(Point0.x, Point1.x, static_cast<float>(X) / ProjectionColumns);
+				const float Right = mix(Point0.x, Point1.x, static_cast<float>(X + 1) / ProjectionColumns);
+				const float Top = mix(Point0.y, Point3.y, static_cast<float>(Y) / ProjectionRows);
+				const float Bottom = mix(Point0.y, Point3.y, static_cast<float>(Y + 1) / ProjectionRows);
+				AddVertices(vec2(Left, Top), vec2(Right, Top), vec2(Right, Bottom), vec2(Left, Bottom));
+			}
 	};
 
 	const float Rounding = std::clamp(Params.m_Rounding, 0.0f, minimum(Params.m_W, Params.m_H) * 0.5f);
@@ -960,7 +978,51 @@ void CGraphics_Threaded::DrawRenderTarget(CRenderTargetHandle Target, const SRen
 	const SRoundedCornerShape CornerShape = ResolveRoundedCornerShape(Rounding, Params.m_W, Params.m_H, Params.m_CornerSmoothing, CornerCurve, Params.m_CornerSeam);
 	const float CornerAmount = CornerShape.m_Amount;
 	const float Inset = CornerShape.m_Radius;
-	if(Params.m_Corners == CORNER_NONE || Rounding <= 0.0f)
+	if(Params.m_EdgeFeather > 0.0f && Params.m_Corners == CORNER_ALL && Inset > 0.0f)
+	{
+		// 横向切片共用端点，边缘和内部纹理一起变形。外圈顶点插值覆盖率。
+		const float Edge = std::min(Params.m_EdgeFeather, Inset);
+		struct SRow
+		{
+			vec2 m_Left, m_Right, m_OuterLeft, m_OuterRight;
+		};
+		const auto RowAt = [&](int Row) {
+			float X = 1.0f, Y = 0.0f;
+			const bool Top = Row <= CornerRows;
+			const bool Bottom = Row >= CornerRows + BodyRows;
+			if(Top || Bottom)
+			{
+				const int Index = Top ? CornerRows - Row : Row - CornerRows - BodyRows;
+				RoundedCornerCurveDirection(CornerCurve, CornerAmount, Index, CornerRows, X, Y);
+				Y *= Top ? -1.0f : 1.0f;
+			}
+			const float CenterY = Params.m_Y + mix(Inset, Params.m_H - Inset, std::clamp((Row - CornerRows) / static_cast<float>(BodyRows), 0.0f, 1.0f));
+			const vec2 Left(Params.m_X + Inset, CenterY);
+			const vec2 Right(Params.m_X + Params.m_W - Inset, CenterY);
+			return SRow{Left + vec2(-X, Y) * (Inset - Edge), Right + vec2(X, Y) * (Inset - Edge),
+				Left + vec2(-X, Y) * Inset, Right + vec2(X, Y) * Inset};
+		};
+		const auto Band = [&](vec2 L0, vec2 R0, vec2 L1, vec2 R1, unsigned Mask) {
+			const int Columns = Projected ? ProjectionColumns : 1;
+			for(int i = 0; i < Columns; ++i)
+			{
+				const float A = static_cast<float>(i) / Columns, B = static_cast<float>(i + 1) / Columns;
+				AddVertices(mix(L0, R0, A), mix(L0, R0, B), mix(L1, R1, B), mix(L1, R1, A), Mask);
+			}
+		};
+		SRow Previous = RowAt(0);
+		Band(Previous.m_OuterLeft, Previous.m_OuterRight, Previous.m_Left, Previous.m_Right, 3u);
+		for(int i = 1; i <= FeatherRows; ++i)
+		{
+			const SRow Next = RowAt(i);
+			AddVertices(Previous.m_OuterLeft, Previous.m_Left, Next.m_Left, Next.m_OuterLeft, 9u);
+			Band(Previous.m_Left, Previous.m_Right, Next.m_Left, Next.m_Right, 0u);
+			AddVertices(Previous.m_Right, Previous.m_OuterRight, Next.m_OuterRight, Next.m_Right, 6u);
+			Previous = Next;
+		}
+		Band(Previous.m_Left, Previous.m_Right, Previous.m_OuterLeft, Previous.m_OuterRight, 12u);
+	}
+	else if(Params.m_Corners == CORNER_NONE || Rounding <= 0.0f)
 	{
 		AddQuad(
 			vec2(Params.m_X, Params.m_Y),
@@ -1690,6 +1752,16 @@ static SWarning FormatPngliteIncompatibilityWarning(int PngliteIncompatible, con
 	}
 	str_append(Warning.m_aWarningMsg, " unsupported");
 	return Warning;
+}
+
+IGraphics::CTextureHandle CGraphics_Threaded::FinishExternalTexture(CImageInfo &Image, int Flags, const char *pName, int PngliteIncompatible)
+{
+	if(!Image.m_pData)
+		return m_NullTexture;
+	if(m_WarnPngliteIncompatibleImages && PngliteIncompatible != 0)
+		AddWarning(FormatPngliteIncompatibilityWarning(PngliteIncompatible, pName));
+	const auto Texture = LoadTextureRawMove(Image, Flags, pName);
+	return Texture.IsValid() ? Texture : m_NullTexture;
 }
 
 bool CGraphics_Threaded::LoadPng(CImageInfo &Image, const char *pFilename, int StorageType)
@@ -3226,7 +3298,7 @@ void CGraphics_Threaded::QuadContainerUpload(int ContainerIndex)
 	}
 }
 
-int CGraphics_Threaded::QuadContainerAddQuads(int ContainerIndex, CQuadItem *pArray, int Num)
+int CGraphics_Threaded::QuadContainerAddQuads(int ContainerIndex, const CQuadItem *pArray, int Num)
 {
 	if(!IsQuadContainerIndexValid(ContainerIndex))
 		return -1;
@@ -3275,7 +3347,7 @@ int CGraphics_Threaded::QuadContainerAddQuads(int ContainerIndex, CQuadItem *pAr
 	return RetOff;
 }
 
-int CGraphics_Threaded::QuadContainerAddQuads(int ContainerIndex, CFreeformItem *pArray, int Num)
+int CGraphics_Threaded::QuadContainerAddQuads(int ContainerIndex, const CFreeformItem *pArray, int Num)
 {
 	if(!IsQuadContainerIndexValid(ContainerIndex))
 		return -1;
@@ -4450,7 +4522,6 @@ bool CGraphics_Threaded::SwitchWindowScreen(int Index, bool MoveToCenter)
 		CVideoMode CurMode;
 		if(GetCurrentVideoMode(CurMode, Index))
 		{
-			g_Config.m_GfxColorDepth = CurMode.m_Red + CurMode.m_Green + CurMode.m_Blue > 16 ? 24 : 16;
 			g_Config.m_GfxScreenWidth = CurMode.m_WindowWidth;
 			g_Config.m_GfxScreenHeight = CurMode.m_WindowHeight;
 			g_Config.m_GfxScreenRefreshRate = CurMode.m_RefreshRate;
@@ -4651,9 +4722,9 @@ void CGraphics_Threaded::CreateNullTexture()
 	NullTextureInfo.m_Height = NullTextureDimension;
 	NullTextureInfo.m_Format = CImageInfo::FORMAT_RGBA;
 	NullTextureInfo.m_pData = aNullTextureData;
-	const int TextureLoadFlags = Uses2DTextureArrays() ? IGraphics::TEXLOAD_TO_2D_ARRAY_TEXTURE : IGraphics::TEXLOAD_TO_3D_TEXTURE;
+	const int NullTextureLoadFlags = TextureLoadFlags();
 	m_NullTexture.Invalidate();
-	m_NullTexture = LoadTextureRaw(NullTextureInfo, TextureLoadFlags, "null-texture");
+	m_NullTexture = LoadTextureRaw(NullTextureInfo, NullTextureLoadFlags, "null-texture");
 	dbg_assert(m_NullTexture.IsNullTexture(), "Null texture invalid");
 
 	// 全透明占位纹理（16x16，与空纹理同尺寸以满足整除校验，避免触发警告弹窗）：
@@ -4666,7 +4737,7 @@ void CGraphics_Threaded::CreateNullTexture()
 	BlankTextureInfo.m_Format = CImageInfo::FORMAT_RGBA;
 	BlankTextureInfo.m_pData = aBlankData;
 	m_BlankTexture.Invalidate();
-	m_BlankTexture = LoadTextureRaw(BlankTextureInfo, TextureLoadFlags, "blank-texture");
+	m_BlankTexture = LoadTextureRaw(BlankTextureInfo, TextureLoadFlags(), "blank-texture");
 	dbg_assert(m_BlankTexture.IsValid(), "Blank texture invalid");
 }
 

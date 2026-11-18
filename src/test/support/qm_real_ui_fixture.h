@@ -38,6 +38,16 @@ namespace qm_ui_test
 
 	public:
 		std::vector<IGraphics::SRoundedRectSdfParams> m_vRoundedSubmissions;
+		struct SClipRect
+		{
+			int m_X;
+			int m_Y;
+			int m_W;
+			int m_H;
+		};
+		// 与 m_vRoundedSubmissions 一一对应：每条圆角提交当时生效的裁剪矩形。
+		std::vector<SClipRect> m_vRoundedClips;
+		std::vector<SClipRect> m_vClipStack;
 		std::vector<CUIRect> m_vRectSubmissions;
 		// 纹理圆角是设备能力；fixture 默认按 CPU 预烘焙回退，保持既有断言不变。
 		bool m_HasSdfTexture = false;
@@ -72,6 +82,15 @@ namespace qm_ui_test
 		};
 		std::vector<SLegacyDraw> m_vLegacyDraws;
 		std::vector<std::pair<size_t, ColorRGBA>> m_vLegacyRecolors;
+		struct SQuadVertexColor
+		{
+			size_t m_QuadOffset;
+			unsigned char m_r;
+			unsigned char m_g;
+			unsigned char m_b;
+			unsigned char m_a;
+		};
+		std::vector<SQuadVertexColor> m_vQuadVertexColors;
 		ColorRGBA m_LegacyColor{1, 1, 1, 1};
 		int m_LegacyTexture = -1;
 		int m_LegacyKeepCalls = 0, m_LegacyReplayCalls = 0;
@@ -99,6 +118,7 @@ namespace qm_ui_test
 		}
 		void ChangeColorOfQuadVertices(size_t Offset, unsigned char R, unsigned char G, unsigned char B, unsigned char A) override
 		{
+			m_vQuadVertexColors.push_back({Offset, R, G, B, A});
 			if(m_RecordLegacyText)
 				m_vLegacyRecolors.emplace_back(Offset, ColorRGBA(R / 255.0f, G / 255.0f, B / 255.0f, A / 255.0f));
 		}
@@ -171,6 +191,13 @@ namespace qm_ui_test
 			++m_Draws;
 			m_vRectSubmissions.push_back({X, Y, W, H});
 		}
+		// 禁用的图标按钮用自由四边形画“不可用”斜线，圆角面的几何回退也走这条路径；
+		// 同属 GPU 提交边界，记录次数即可，不影响任何布局或输入断言。
+		void QuadsDrawFreeform(const CFreeformItem *, int Num) override
+		{
+			++m_Draws;
+			m_Quads += Num;
+		}
 		bool HasRoundedRectSdf() override { return true; }
 		bool HasRoundedRectSdfTexture() override { return m_HasSdfTexture; }
 		void DestroyRenderTarget(CRenderTargetHandle *pTarget) override
@@ -179,7 +206,13 @@ namespace qm_ui_test
 			if(pTarget != nullptr && pTarget->IsValid())
 				throw std::logic_error("unexpected live render target in UI fixture");
 		}
-		void RenderRoundedRectSdf(const SRoundedRectSdfParams &Params) override { m_vRoundedSubmissions.push_back(Params); }
+		void RenderRoundedRectSdf(const SRoundedRectSdfParams &Params) override
+		{
+			m_vRoundedSubmissions.push_back(Params);
+			// 记录每条圆角提交生效的裁剪区，测试才能证明「按半裁剪」真的发生了，
+			// 而不是只比较颜色和矩形。没有裁剪时记整屏，语义等同不裁剪。
+			m_vRoundedClips.push_back(m_vClipStack.empty() ? SClipRect{0, 0, m_ScreenWidth, m_ScreenHeight} : m_vClipStack.back());
+		}
 		// 裁剪、光标与选区只提交 GPU 绘制，不替代真实文字布局和输入行为。
 		bool m_Clipped = false;
 		bool m_FailClipDisable = false;
@@ -187,6 +220,7 @@ namespace qm_ui_test
 		int m_ClipChanges = 0;
 		void ClipEnable(int X, int Y, int W, int H) override
 		{
+			m_vClipStack.push_back({X, Y, W, H});
 			m_Clipped = true;
 			m_ClipRect = {static_cast<float>(X), static_cast<float>(Y), static_cast<float>(W), static_cast<float>(H)};
 			++m_ClipChanges;
@@ -195,9 +229,14 @@ namespace qm_ui_test
 		{
 			if(std::exchange(m_FailClipDisable, false))
 				throw std::bad_alloc();
+			if(!m_vClipStack.empty())
+				m_vClipStack.pop_back();
 			m_Clipped = false;
 			++m_ClipChanges;
 		}
+		void WrapClamp() override {}
+		void WrapNormal() override {}
+		int TextureLoadFlags() override { return 0; }
 		void QuadsDrawTL(const CQuadItem *pItems, int Num) override
 		{
 			if(m_RecordLegacyText)
@@ -221,7 +260,7 @@ namespace qm_ui_test
 			m_QuadCounts.emplace(Id, 0);
 			return Id;
 		}
-		int QuadContainerAddQuads(int ContainerIndex, CQuadItem *, int Num) override
+		int QuadContainerAddQuads(int ContainerIndex, const CQuadItem *, int Num) override
 		{
 			int &Count = m_QuadCounts.at(ContainerIndex);
 			const int Offset = Count;
@@ -353,6 +392,8 @@ namespace qm_ui_test
 			m_pUiKernel = std::make_unique<CRealUiTestKernel>(pGraphics, m_pText.get(), UiInput(), UiClient());
 			m_Ui.Init(m_pUiKernel.get());
 			m_Ui.SetQmAnimationRuntime(&m_AnimRuntime);
+			// 独立 UI 目标把提示生命周期隔离为可替换边界；启用标签解析，不创建真实 owner。
+			m_Ui.InitTooltips(nullptr);
 			if(auto *pTestClient = dynamic_cast<qm_ui_test::CTestUiClient *>(UiClient()))
 				pTestClient->AttachAnimRuntime(&m_AnimRuntime);
 			m_UiInitialized = true;

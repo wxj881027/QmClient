@@ -34,7 +34,9 @@ namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_deck_appearance_name_plate_preview[] = {
 		{Localizable("Free move"), nullptr, "自由移动"},
+		{Localizable("Multi-select move"), nullptr, "多选移动"},
 		{Localizable("Preview dummy nameplate"), nullptr, "预览分身名牌"},
+		{Localizable("Share layout with dummy"), nullptr, "与分身共用布局"},
 		{Localizable("Preview player nameplate"), nullptr, "预览玩家名牌"},
 		{nullptr, "cl_dummy", nullptr},
 		{nullptr, "qm_nameplate_clan_offset_x", nullptr},
@@ -46,8 +48,14 @@ namespace
 		{nullptr, "qm_nameplate_free_move_y", nullptr},
 		{nullptr, "qm_nameplate_hook_offset_x", nullptr},
 		{nullptr, "qm_nameplate_hook_offset_y", nullptr},
-		{nullptr, "qm_nameplate_keys_offset_x", nullptr},
-		{nullptr, "qm_nameplate_keys_offset_y", nullptr},
+		{nullptr, "qm_nameplate_keys_left_offset_x", nullptr},
+		{nullptr, "qm_nameplate_keys_left_offset_y", nullptr},
+		{nullptr, "qm_nameplate_keys_right_offset_x", nullptr},
+		{nullptr, "qm_nameplate_keys_right_offset_y", nullptr},
+		{nullptr, "qm_nameplate_keys_up_offset_x", nullptr},
+		{nullptr, "qm_nameplate_keys_up_offset_y", nullptr},
+		{nullptr, "qm_nameplate_multi_select", nullptr},
+		{nullptr, "qm_nameplate_offsets_linked", nullptr},
 		{nullptr, "qm_nameplate_water_hammer_offset_x", "卡锤位置"},
 		{nullptr, "qm_nameplate_water_hammer_offset_y", nullptr},
 		{nullptr, "qm_nameplate_water_hook_offset_x", "卡钩位置"},
@@ -115,8 +123,10 @@ namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_tclient_cursor[] = {
 		{Localizable("Ingame cursor scale"), nullptr, "游戏内光标缩放"},
+		{Localizable("Ingame cursor rotation"), nullptr, "游戏内光标旋转"},
 		{Localizable("Visual: Cursor"), nullptr, "视觉：光标"},
 		{nullptr, "qm_cursor_scale", nullptr},
+		{nullptr, "qm_cursor_rotation", nullptr},
 	};
 	QM_CARD_SEARCH_REGISTER("tclient:cursor", tclient_cursor);
 }
@@ -306,6 +316,7 @@ namespace
 		{Localizable("Self-kill off"), nullptr, "关闭自杀 禁止自杀 防误触"},
 		{Localizable("Self-kill on"), nullptr, "开启自杀 允许自杀 解除"},
 		{Localizable("Auto-enable after"), nullptr, "自动开启 开局后 自动拦截 延迟 分钟"},
+		{Localizable("0 = never"), nullptr, "0 分钟 永不自动开启"},
 		{Localizable("To prevent accidental kills while racing, toggle the switch above or use the two bind rows. To self-kill, enable first, then press K. Auto-enable counts from the moment you join a game; 0 minutes keeps it off. Server commands are not affected"), nullptr, "跑图 防误触 绑定按键 bind 按键开关"},
 		{nullptr, "qm_self_kill_auto_delay", nullptr},
 		{nullptr, "qm_self_kill_enabled", nullptr},
@@ -426,9 +437,15 @@ namespace
 		{Localizable("Platinum highlight"), nullptr, "铂金高光"},
 		{Localizable("Show dummy title locally"), nullptr, "本机显示分身头衔"},
 		{Localizable("Show main tee title locally"), nullptr, "本机显示本体头衔"},
+		{Localizable("Show per-character title waves locally"), "qm_title_text_wave", "逐字波动 文字波浪 本地头衔动画"},
 		{Localizable("Show sponsor chat effects locally"), nullptr, "本机显示赞助者发言特效"},
 		{Localizable("Show titles on nameplates"), nullptr, "显示名牌头衔"},
 		{Localizable("Sun"), nullptr, "太阳"},
+		{Localizable("Text 1"), "qm_title_text_style", "文字1 文字 1 文字头衔"},
+		{Localizable("Text 2"), nullptr, "文字2 文字 2"},
+		{Localizable("Text 3"), nullptr, "文字3 文字 3"},
+		{Localizable("Text 4"), nullptr, "文字4 文字 4"},
+		{Localizable("Text 5"), nullptr, "文字5 文字 5"},
 		{Localizable("Title color"), nullptr, "头衔颜色"},
 		{Localizable("Title opacity"), nullptr, "头衔不透明度"},
 		{Localizable("Title preview"), nullptr, "头衔成品预览"},
