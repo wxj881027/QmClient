@@ -4,6 +4,7 @@
 #include "QmListEntryAnimation.h"
 #include "SettingsContentLayout.h"
 #include "SettingsPageLayout.h"
+#include "UiTextRenderState.h"
 
 #include <base/dbg.h>
 
@@ -12,7 +13,9 @@
 #include <game/client/ui.h>
 
 #include <algorithm>
+#include <new>
 #include <optional>
+#include <stdexcept>
 
 // 开关驱动的条件行（打开开关后才出现的配置行）的显隐动效。
 // 布局高度立刻给足，容器高度交给卡片自己的高度动画；这里只记“出现/消失”的
@@ -483,6 +486,23 @@ private:
 	CSettingsConditionalRows m_Rows;
 };
 
+inline void QmDrawSettingsSecondaryLabel(CUi &Ui, ITextRender &TextRender, const CUIRect &Rect, const char *pText, float FontSize, int Align, const SLabelProperties &Props)
+try
+{
+	const CUiScopedTextRenderState TextState(TextRender);
+	TextRender.TextColor(ui_token::color::TEXT_SECONDARY);
+	Ui.DoLabel(&Rect, pText, FontSize, Align, Props);
+}
+catch(const std::bad_alloc &)
+{
+	// 当前帧保留行布局，文字在下一次绘制时重试。
+	return;
+}
+catch(const std::length_error &)
+{
+	return;
+}
+
 // ---------------------------------------------------------------------------
 // 约定 B：行尾说明（Inline trailing hint）
 // ---------------------------------------------------------------------------
@@ -524,10 +544,7 @@ inline void DoSettingsInlineHint(CUi *pUi, const char *pElementId, const CUIRect
 	const float TextWidth = std::min(Available, pTextRender->TextWidth(SmallSize, pText, -1, -1.0f));
 	// 右对齐到保留区左侧：提示贴控件，不贴卡片边缘。
 	const CUIRect Hint{Row.x + Available - TextWidth, Row.y, TextWidth, Row.h};
-	const ColorRGBA PreviousColor = pTextRender->GetTextColor();
-	pTextRender->TextColor(ui_token::color::TEXT_SECONDARY);
-	pUi->DoLabel(&Hint, pText, SmallSize, TEXTALIGN_MR, Props);
-	pTextRender->TextColor(PreviousColor);
+	QmDrawSettingsSecondaryLabel(*pUi, *pTextRender, Hint, pText, SmallSize, TEXTALIGN_MR, Props);
 }
 
 // ---------------------------------------------------------------------------
@@ -552,15 +569,12 @@ inline void DoSettingsSectionHeading(CUi *pUi, CSettingsContentLayoutFlow &Flow,
 		return pTextRender != nullptr ? pTextRender->TextBoundingBox(Size, pValue, -1, std::max(1.0f, Width)).m_H + Size * 0.25f : Size;
 	};
 	const auto Draw = [pUi, pTextRender, FontSize](const CUIRect &Rect, const char *pValue) {
+		if(pTextRender == nullptr)
+			return;
 		SLabelProperties Props;
 		Props.m_MaxWidth = Rect.w;
 		Props.m_EllipsisAtEnd = true;
-		const ColorRGBA PreviousColor = pTextRender != nullptr ? pTextRender->GetTextColor() : ui_token::color::TEXT_PRIMARY;
-		if(pTextRender != nullptr)
-			pTextRender->TextColor(ui_token::color::TEXT_SECONDARY);
-		pUi->DoLabel(&Rect, pValue, FontSize, TEXTALIGN_ML, Props);
-		if(pTextRender != nullptr)
-			pTextRender->TextColor(PreviousColor);
+		QmDrawSettingsSecondaryLabel(*pUi, *pTextRender, Rect, pValue, FontSize, TEXTALIGN_ML, Props);
 	};
 	// 标题占一档常规行高：比正文大一档字号，但不再单独占两档。
 	Flow.Text(pId, pText, 0.0f, FontSize, 0.0f, Measure, Draw, Metrics.m_LineHeight);

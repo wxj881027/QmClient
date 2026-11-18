@@ -1,12 +1,15 @@
 #include "UiTag.h"
 
 #include "UiSurface.h"
+#include "UiTextRenderState.h"
 
 #include <engine/textrender.h>
 
 #include <game/client/ui.h>
 
 #include <algorithm>
+#include <new>
+#include <stdexcept>
 
 namespace ui_tag
 {
@@ -35,16 +38,28 @@ namespace ui_tag
 			return;
 		const float Scale = std::max(UiScale, 0.01f);
 		const SColors Colors = Resolve(Mode, Base, pKey, Alpha);
-		const ColorRGBA PrevColor = pUi->TextRender()->GetTextColor();
 		// 只画填充：胶囊没有描边（描边会让它读成一张小卡片，抢列表卡片的层级）。
 		DrawRoundedSurface(pUi, Rect, Colors.m_Fill, ColorRGBA(), std::min(RADIUS * Scale, Rect.h * 0.5f));
 		SLabelProperties Props;
 		Props.m_MaxWidth = (int)std::max(Rect.w - 2.0f * PADDING_X * Scale, 0.0f);
 		Props.m_DisallowNewline = true;
 		Props.m_EllipsisAtEnd = true;
-		pUi->TextRender()->TextColor(Colors.m_Text);
-		pUi->DoLabel(&Rect, pText, FONT_SIZE * Scale, TEXTALIGN_MC, Props);
-		pUi->TextRender()->TextColor(PrevColor);
+		try
+		{
+			ITextRender &TextRender = *pUi->TextRender();
+			const CUiScopedTextRenderState TextState(TextRender);
+			TextRender.TextColor(Colors.m_Text);
+			pUi->DoLabel(&Rect, pText, FONT_SIZE * Scale, TEXTALIGN_MC, Props);
+		}
+		catch(const std::bad_alloc &)
+		{
+			// 保留已画的标签底，下帧重新绘制文字。
+			return;
+		}
+		catch(const std::length_error &)
+		{
+			return;
+		}
 	}
 
 	CUIRect Draw(CUi *pUi, const CUIRect &Slot, const char *pText, EColorMode Mode, const ColorRGBA &Base, const char *pKey, float Alpha, float UiScale)

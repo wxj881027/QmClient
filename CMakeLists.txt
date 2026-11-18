@@ -6801,6 +6801,9 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/ui/qm_scaled_label_test.cpp
       src/test/integration/qmclient/ui/qm_search_answer_card_test.cpp
       src/test/integration/qmclient/ui/qm_settings_card_deck_consumer_test.cpp
+      src/test/integration/qmclient/ui/qm_finish_summary_surface_test.cpp
+      src/test/integration/qmclient/ui/qm_settings_reveal_text_test.cpp
+      src/test/integration/qmclient/ui/qm_ui_tag_render_test.cpp
       src/test/integration/qmclient/client/qm_chat_cloud_renderer_test.cpp
       src/test/integration/qmclient/ui/qm_chat_bubble_text_test.cpp
       src/test/integration/qmclient/ui/qm_popconfirm_source_test.cpp
@@ -6882,6 +6885,12 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/game/client/QmUi/cards/QmSearchAnswerCard.cpp
       src/game/client/components/qmclient/search_answers.cpp
       src/game/client/QmUi/QmCardWikiPanel.cpp
+      src/game/client/QmUi/QmFinishSummary.cpp
+      src/game/client/QmUi/QmFinishSummarySurface.cpp
+      src/game/client/QmUi/QmFinishSummaryCover.cpp
+      src/game/client/QmUi/QmIslandSurface.cpp
+      src/game/client/QmUi/UiTag.cpp
+      src/game/client/components/qmclient/finish_summary_data.cpp
       src/game/client/QmUi/QmChatBubble.cpp
       src/game/client/QmUi/QmCloudBubble.cpp
       src/game/client/QmUi/QmPopconfirm.cpp
@@ -6901,7 +6910,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       $<TARGET_OBJECTS:rust-bridge-shared>
       ${DEPS}
     )
-    add_dependencies(qm-ui-popup-tests generate_protocol)
+    add_dependencies(qm-ui-popup-tests generate_protocol generate_content_types)
     target_link_libraries(qm-ui-popup-tests ${PNG_LIBRARIES} ${WebP_LIBRARIES} ${QM_GTEST_LIBRARIES} ${LIBS_SERVER} ${FREETYPE_LIBRARIES})
     target_include_directories(qm-ui-popup-tests SYSTEM PRIVATE ${GTEST_INCLUDE_DIRS} ${FREETYPE_INCLUDE_DIRS} ${PNG_INCLUDE_DIRS} ${WebP_INCLUDE_DIRS})
     target_compile_definitions(qm-ui-popup-tests PRIVATE DDNET_TEST_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
