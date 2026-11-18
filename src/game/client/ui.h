@@ -903,6 +903,7 @@ private:
 	SPopupFocus m_KeyboardFocus;
 	SPopupFocus m_PendingPopupFocus;
 	void RestorePopupFocus(const void *pId, CLineInput *pLineInput = nullptr);
+	void UpdateEditBoxFocus(CLineInput *pLineInput, const CUIRect &HitRect);
 	void QueuePopupFocusRestore(const SPopupFocus &Focus);
 	void TrackActiveTextInput(CLineInput *pLineInput);
 	void ReleaseTrackedTextInput();

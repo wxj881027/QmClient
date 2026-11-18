@@ -855,6 +855,22 @@ void CUi::RestorePopupFocus(const void *pId, CLineInput *pLineInput)
 	}
 }
 
+void CUi::UpdateEditBoxFocus(CLineInput *pLineInput, const CUIRect &HitRect)
+{
+	if(IsClipped())
+	{
+		const CUIRect Visible = HitRect.Intersection(*ClipArea());
+		if(Visible.w <= 0.0f || Visible.h <= 0.0f)
+		{
+			// 字段仍在预布局中执行时，也要在完全裁剪后释放文本输入。
+			if(m_pLastActiveItem == pLineInput || pLineInput->IsActive())
+				ReleaseActiveTextInput(pLineInput);
+			return;
+		}
+	}
+	RestorePopupFocus(pLineInput, pLineInput);
+}
+
 int CUi::DoButtonGroupKeyboard(const void *const *ppIds, const bool *pEnabled, int Count)
 {
 	if(RenderOnly() || UnderlyingPointerInputBlocked() || !Enabled() || CLineInput::GetActiveInput() != nullptr || Count <= 0)
@@ -2375,7 +2391,7 @@ bool CUi::DoEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize
 		return false;
 	}
 
-	RestorePopupFocus(pLineInput, pLineInput);
+	UpdateEditBoxFocus(pLineInput, *pHitRect);
 	const bool Inside = MouseHovered(pHitRect);
 	bool Active = m_pLastActiveItem == pLineInput;
 	const bool Changed = pLineInput->WasChanged();
@@ -2510,8 +2526,8 @@ bool CUi::DoEditBoxMultiLine(CLineInput *pLineInput, const CUIRect *pRect, float
 		ClipDisable();
 		return false;
 	}
-	RestorePopupFocus(pLineInput, pLineInput);
 	const CUIRect *pHitRect = RenderOptions.m_pHitRect != nullptr ? RenderOptions.m_pHitRect : pRect;
+	UpdateEditBoxFocus(pLineInput, *pHitRect);
 	const bool Inside = MouseHovered(pHitRect);
 	bool Active = ActiveItem() == pLineInput || pLineInput->IsActive();
 	const bool ClickedOutside = (MouseButtonClicked(0) || MouseButtonClicked(1)) && !Inside;
@@ -2648,17 +2664,9 @@ bool CUi::DoClearableEditBox(CLineInput *pLineInput, const CUIRect *pRect, float
 	TextRender()->TextColor(PreviousTextColor);
 	if(DoButtonLogic(pLineInput->GetClearButtonId(), 0, &ClearButton, BUTTONFLAG_LEFT))
 	{
-		CUiScopedGaussianBlurSuppression GaussianBlurSuppression(this);
-		ClearButton.Draw(ScaleControlAlpha(ColorRGBA(1.0f, 1.0f, 1.0f, 0.33f * ButtonColorMul(pLineInput->GetClearButtonId()))), Corners & ~IGraphics::CORNER_L, EditBoxRounding);
-		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-		DoLabel(&ClearButton, "×", ClearButton.h * CUi::ms_FontmodHeight * 0.8f, TEXTALIGN_MC);
-		TextRender()->SetRenderFlags(0);
-		if(DoButtonLogic(pLineInput->GetClearButtonId(), 0, &ClearButton, BUTTONFLAG_LEFT))
-		{
-			pLineInput->Clear();
-			SetActiveItem(pLineInput);
-			ReturnValue = true;
-		}
+		pLineInput->Clear();
+		SetActiveItem(pLineInput);
+		ReturnValue = true;
 	}
 
 	return ReturnValue;

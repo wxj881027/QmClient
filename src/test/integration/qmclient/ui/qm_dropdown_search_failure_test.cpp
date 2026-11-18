@@ -1,3 +1,5 @@
+#include <engine/keys.h>
+
 #include <game/client/ui_scrollregion.h>
 
 #include <test/support/qm_real_ui_fixture.h>
@@ -77,4 +79,32 @@ TEST_F(QmDropdownSearchFailure, UnknownSnapshotExceptionClosesPopupWithoutUnwind
 	EXPECT_EQ(m_Context.m_SelectionIndex, -1);
 	EXPECT_EQ(m_Context.m_pSelection, nullptr);
 	EXPECT_EQ(m_Memory.m_Live, 0);
+}
+
+TEST_F(QmDropdownSearchFailure, ClickingClearRestoresAllEntriesWithoutSelecting)
+{
+	ASSERT_NO_FATAL_FAILURE(Open());
+	Frame();
+	ASSERT_EQ(m_Context.m_Search.Indices(), (std::vector<int>{1}));
+	const CUIRect *pPopup = m_Ui.GetPopupMenuRect(&m_Context);
+	ASSERT_NE(pPopup, nullptr);
+	CUIRect Search, ClearButton;
+	pPopup->Margin(CUi::PopupMenuContentInset() * 0.5f, &Search);
+	Search.HSplitTop(m_Context.m_EntryHeight, &Search, nullptr);
+	Search.VSplitRight(Search.h, nullptr, &ClearButton);
+	const vec2 WindowSize(Graphics().WindowWidth(), Graphics().WindowHeight());
+	const vec2 Position = ClearButton.Center() * WindowSize / m_Ui.Screen()->Size();
+	const vec2 Delta = Position - m_Ui.UpdatedMousePos();
+	m_Ui.OnCursorMove(Delta.x, Delta.y);
+	Frame();
+
+	m_Input.m_HeldKey = KEY_MOUSE_1;
+	Frame();
+	m_Input.m_HeldKey = 0;
+	Frame();
+
+	ASSERT_TRUE(m_Ui.IsPopupOpen(&m_Context));
+	EXPECT_STREQ(m_Context.m_SearchInput.GetString(), "");
+	EXPECT_EQ(m_Context.m_Search.Indices(), (std::vector<int>{0, 1, 2}));
+	EXPECT_EQ(m_Context.m_SelectionIndex, -1);
 }
