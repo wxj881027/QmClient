@@ -3053,8 +3053,8 @@ private:
 	struct SMenuTextKeyHash
 	{
 		using is_transparent = void;
-		size_t operator()(const std::string &Value) const { return std::hash<std::string_view>{}(Value); }
-		size_t operator()(std::string_view Value) const { return std::hash<std::string_view>{}(Value); }
+		size_t operator()(const std::string &Value) const noexcept { return std::hash<std::string_view>{}(Value); }
+		size_t operator()(std::string_view Value) const noexcept { return std::hash<std::string_view>{}(Value); }
 	};
 
 	struct SMenuTextKeyEqual

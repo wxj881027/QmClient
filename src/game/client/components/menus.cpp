@@ -8102,7 +8102,8 @@ void CMenus::EnsureSettingsMenuTextPlanReadyForVisible()
 		return;
 
 	std::vector<SMenuTextPlanItem> vPlan;
-	std::unordered_set<std::string> Descriptors, Keys;
+	std::unordered_set<std::string> Descriptors;
+	decltype(m_SettingsMenuTextPlannedKeys) Keys;
 	const bool Prepared = TryCollectSettingsTextPlan(vPlan, Descriptors, Keys, [&](std::vector<SMenuTextPlanItem> &vVisibleItems) {
 			RunSettingsTextPlanMeasurement(Ui(), [&] {
 				const CUIRect Screen = *Ui()->Screen();

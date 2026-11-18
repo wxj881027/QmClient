@@ -4791,8 +4791,8 @@ int CMenus::DoMapWorkspaceTabs(const CUIRect &Segments, float Rounding, int Curr
 	// 本地存档列表的计数与收藏地图页共用同一份缓存，这里沿用同样的节流刷新。
 	char aSavesPath[IO_MAX_PATH_LENGTH];
 	Storage()->GetCompletePath(IStorage::TYPE_SAVE, SAVES_FILE, aSavesPath, sizeof(aSavesPath));
-	if(auto pJob = m_LocalSaveDisplay.Refresh(aSavesPath, time_get(), time_freq() * 2))
-		Engine()->AddJob(std::move(pJob));
+	m_LocalSaveDisplay.Refresh(aSavesPath, time_get(), time_freq() * 2,
+		[this](std::shared_ptr<IJob> pJob) { return Engine()->TryAddJob(std::move(pJob)); });
 
 	char aaTabLabels[4][128];
 	str_format(aaTabLabels[0], sizeof(aaTabLabels[0]), "%s (%d)", Localize("Favorite map"), (int)GameClient()->m_TClient.GetFavoriteMaps().size());

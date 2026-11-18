@@ -61,11 +61,11 @@ inline int SettingsTextPlanPendingUnitCount(size_t UnitCount, size_t Cursor, boo
 
 // 单元先收集到候选，文本和两套索引全部准备成功才共同发布。
 // 失败保留值；reserve可能改变容量和引用，调用方不能跨此调用保存容器迭代器。
-template<typename TItem, typename FCollect, typename FKeys>
-bool TryCollectSettingsTextPlan(std::vector<TItem> &vPlan, std::unordered_set<std::string> &Descriptors, std::unordered_set<std::string> &Keys, FCollect &&Collect, FKeys &&MakeKeys) noexcept
+template<typename TItem, typename TKeyHash, typename TKeyEqual, typename FCollect, typename FKeys>
+bool TryCollectSettingsTextPlan(std::vector<TItem> &vPlan, std::unordered_set<std::string> &Descriptors, std::unordered_set<std::string, TKeyHash, TKeyEqual> &Keys, FCollect &&Collect, FKeys &&MakeKeys) noexcept
 {
 	static_assert(std::is_nothrow_move_constructible_v<TItem> && std::is_nothrow_destructible_v<TItem>);
-	static_assert(noexcept(std::declval<std::hash<std::string>>()(std::declval<const std::string &>())));
+	static_assert(noexcept(std::declval<TKeyHash>()(std::declval<const std::string &>())));
 	std::vector<const std::string *> vAddedDescriptors, vAddedKeys;
 	try
 	{
