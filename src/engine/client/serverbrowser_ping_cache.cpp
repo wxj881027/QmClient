@@ -9,11 +9,15 @@
 
 #include <sqlite3.h>
 
+#include <limits>
 #include <new>
 #include <unordered_map>
 
 namespace
 {
+	constexpr char LOAD_PINGS[] = "SELECT ip_address, ping, strftime('%s', utc_timestamp) FROM server_pings";
+	constexpr char STORE_PING[] = "INSERT OR REPLACE INTO server_pings (ip_address, ping, utc_timestamp) VALUES (?, ?, datetime('now'))";
+
 	class CStatementReset
 	{
 		sqlite3_stmt *m_pStatement;
@@ -86,8 +90,8 @@ namespace
 			pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "serverbrowse_ping_cache", "failed to create server_pings table");
 			return;
 		}
-		m_pLoadStmt = SqlitePrepare(pSqlite, "SELECT ip_address, ping, strftime('%s', utc_timestamp) FROM server_pings");
-		m_pStoreStmt = SqlitePrepare(pSqlite, "INSERT OR REPLACE INTO server_pings (ip_address, ping, utc_timestamp) VALUES (?, ?, datetime('now'))");
+		m_pLoadStmt = SqlitePrepare(pSqlite, LOAD_PINGS);
+		m_pStoreStmt = SqlitePrepare(pSqlite, STORE_PING);
 	}
 
 	void CServerBrowserPingCache::Load()
@@ -95,14 +99,21 @@ namespace
 	{
 		if(m_pDisk)
 		{
+			sqlite3 *pSqlite = m_pDisk.get();
+			IConsole *pConsole = m_pConsole;
+			if(!m_pLoadStmt)
+			{
+				m_pLoadStmt = SqlitePrepare(pSqlite, LOAD_PINGS);
+				if(!m_pLoadStmt)
+					return;
+			}
+
 			std::unordered_map<NETADDR, CEntry> Entries;
 			Entries.reserve(m_Entries.size());
 
-			sqlite3 *pSqlite = m_pDisk.get();
-			IConsole *pConsole = m_pConsole;
 			CStatementReset Reset(m_pLoadStmt.get());
-			bool Error = !m_pLoadStmt;
-			bool WarnedForBadAddress = false;
+			bool Error = false;
+			bool WarnedForInvalidRow = false;
 			while(!Error)
 			{
 				const int StepResult = sqlite3_step(m_pLoadStmt.get());
@@ -113,30 +124,44 @@ namespace
 				else if(StepResult == SQLITE_ROW)
 				{
 					const char *pIpAddress = (const char *)sqlite3_column_text(m_pLoadStmt.get(), 0);
+					const int AddressLength = pIpAddress ? sqlite3_column_bytes(m_pLoadStmt.get(), 0) : 0;
 					// 列转换分配失败时 SQLite 同样返回空指针，整次读取失败并保留旧缓存。
-					if(!pIpAddress && sqlite3_errcode(pSqlite) == SQLITE_NOMEM)
+					if(AddressLength == 0 && sqlite3_errcode(pSqlite) == SQLITE_NOMEM)
 					{
-						SqliteHandleError(SQLITE_NOMEM, pSqlite, "sqlite3_column_text(m_pLoadStmt.get(), 0)");
+						SqliteHandleError(SQLITE_NOMEM, pSqlite, "reading server_pings.ip_address");
 						Error = true;
 						break;
 					}
-					const int Ping = sqlite3_column_int(m_pLoadStmt.get(), 1);
-					// strftime 在时间戳格式异常时返回 NULL，这种记录按"时间未知"处理。
-					const bool HasUtcTimestamp = sqlite3_column_type(m_pLoadStmt.get(), 2) != SQLITE_NULL;
-					const int64_t UtcTimestamp = HasUtcTimestamp ? sqlite3_column_int64(m_pLoadStmt.get(), 2) : 0;
 					NETADDR Addr;
-					if(!pIpAddress || net_addr_from_str(&Addr, pIpAddress))
+					if(AddressLength == 0 || AddressLength >= NETADDR_MAXSTRSIZE || str_length(pIpAddress) != AddressLength ||
+						net_addr_from_str(&Addr, pIpAddress) || Addr.port != 0)
 					{
-						if(!WarnedForBadAddress)
+						if(!WarnedForInvalidRow)
 						{
 							char aBuf[64];
-							str_format(aBuf, sizeof(aBuf), "invalid address: %s", pIpAddress ? pIpAddress : "NULL");
+							str_format(aBuf, sizeof(aBuf), "invalid address: %.*s", NETADDR_MAXSTRSIZE - 1, pIpAddress ? pIpAddress : "NULL");
 							pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "serverbrowse_ping_cache", aBuf);
-							WarnedForBadAddress = true;
+							WarnedForInvalidRow = true;
 						}
 						continue;
 					}
-					Entries.insert_or_assign(Addr, CEntry{Ping, UtcTimestamp, false});
+					const int64_t Ping = sqlite3_column_type(m_pLoadStmt.get(), 1) == SQLITE_INTEGER ? sqlite3_column_int64(m_pLoadStmt.get(), 1) : -1;
+					if(Ping < 0 || Ping > std::numeric_limits<int>::max())
+					{
+						if(!WarnedForInvalidRow)
+						{
+							pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "serverbrowse_ping_cache", "invalid ping in server_pings");
+							WarnedForInvalidRow = true;
+						}
+						continue;
+					}
+					// strftime 在时间戳格式异常时返回 NULL，这种记录按"时间未知"处理。
+					const bool HasUtcTimestamp = sqlite3_column_type(m_pLoadStmt.get(), 2) != SQLITE_NULL;
+					const int64_t UtcTimestamp = HasUtcTimestamp ? sqlite3_column_int64(m_pLoadStmt.get(), 2) : 0;
+					const CEntry Entry{static_cast<int>(Ping), UtcTimestamp, false};
+					const auto [It, Inserted] = Entries.try_emplace(Addr, Entry);
+					if(!Inserted && UtcTimestamp >= It->second.m_UtcTimestamp)
+						It->second = Entry;
 				}
 				else
 				{
@@ -184,6 +209,8 @@ namespace
 			char aAddr[NETADDR_MAXSTRSIZE];
 			net_addr_str(&StoredAddr, aAddr, sizeof(aAddr), false);
 
+			if(!m_pStoreStmt)
+				m_pStoreStmt = SqlitePrepare(pSqlite, STORE_PING);
 			CStatementReset Reset(m_pStoreStmt.get());
 			bool Error = !m_pStoreStmt;
 			Error = Error || SQLITE_HANDLE_ERROR(sqlite3_bind_text(m_pStoreStmt.get(), 1, aAddr, -1, SQLITE_TRANSIENT)) != SQLITE_OK;

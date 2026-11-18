@@ -143,6 +143,48 @@ TEST_F(ServerBrowserPingCache, NullEmptyAndInvalidAddressesDoNotHideLaterValidRo
 	EXPECT_EQ(m_pCache->GetPing(&m_Localhost4, 1), 104);
 }
 
+TEST_F(ServerBrowserPingCache, InvalidDiskMeasurementsDoNotMaskValidAddresses)
+{
+	ASSERT_EQ(Execute("CREATE TABLE server_pings (ip_address TEXT PRIMARY KEY, ping INTEGER, utc_timestamp TEXT NOT NULL); "
+			  "INSERT INTO server_pings VALUES ('[::1]', 123, datetime('now'))"), SQLITE_OK);
+	const NETADDR aAddresses[] = {m_Localhost4, m_Localhost6};
+	const char *apValues[] = {"NULL", "'invalid'", "1.5", "-2", "4294967296"};
+	for(const char *pValue : apValues)
+	{
+		SCOPED_TRACE(pValue);
+		char aQuery[160];
+		str_format(aQuery, sizeof(aQuery), "INSERT OR REPLACE INTO server_pings VALUES ('127.0.0.1', %s, datetime('now'))", pValue);
+		ASSERT_EQ(Execute(aQuery), SQLITE_OK);
+		CreateCache();
+		m_pCache->Load();
+		EXPECT_EQ(m_pCache->GetPing(&m_Localhost4, 1), -1);
+		EXPECT_EQ(m_pCache->GetPing(aAddresses, std::size(aAddresses)), 123);
+	}
+}
+
+TEST_F(ServerBrowserPingCache, InvalidDiskAddressesAreSkipped)
+{
+	CreateCache();
+	ASSERT_EQ(Execute("INSERT INTO server_pings VALUES ('127.0.0.1' || char(0) || 'suffix', 17, datetime('now')), "
+			  "('[::1]:8304', 25, datetime('now')), ('[::1]', 123, datetime('now'))"), SQLITE_OK);
+	m_pCache->Load();
+	EXPECT_EQ(m_pCache->NumEntries(), 1);
+	EXPECT_EQ(m_pCache->GetPing(&m_Localhost4, 1), -1);
+	EXPECT_EQ(m_pCache->GetPing(&m_Localhost6, 1), 123);
+}
+
+TEST_F(ServerBrowserPingCache, EquivalentDiskAddressesKeepTheNewestMeasurement)
+{
+	CreateCache();
+	ASSERT_EQ(Execute("DROP TABLE server_pings; "
+			  "CREATE VIEW server_pings AS "
+			  "SELECT '[::1]' AS ip_address, 123 AS ping, '2026-01-02 00:00:00' AS utc_timestamp "
+			  "UNION ALL SELECT '[0:0:0:0:0:0:0:1]', 456, '2026-01-01 00:00:00' ORDER BY utc_timestamp DESC"), SQLITE_OK);
+	m_pCache->Load();
+	EXPECT_EQ(m_pCache->NumEntries(), 1);
+	EXPECT_EQ(m_pCache->GetPing(&m_Localhost6, 1), 123);
+}
+
 TEST_F(ServerBrowserPingCache, FailedReadKeepsOldCacheAndNextLoadCanRecover)
 {
 	CreateCache();
@@ -208,6 +250,31 @@ TEST_F(ServerBrowserPingCache, IncompatibleTableKeepsInMemoryCacheUsable)
 	m_pCache->CachePing(m_Localhost4, 85);
 	m_pCache->Load();
 	EXPECT_EQ(m_pCache->NumEntries(), 1);
+	EXPECT_EQ(m_pCache->GetPing(&m_Localhost4, 1), 85);
+}
+
+TEST_F(ServerBrowserPingCache, LoadRetriesPreparationAfterTableRecovers)
+{
+	ASSERT_EQ(Execute("CREATE TABLE server_pings (unrelated_column INTEGER)"), SQLITE_OK);
+	CreateCache();
+	m_pCache->CachePing(m_Localhost4, 85);
+	ASSERT_EQ(Execute("DROP TABLE server_pings; "
+			  "CREATE TABLE server_pings (ip_address TEXT PRIMARY KEY NOT NULL, ping INTEGER NOT NULL, utc_timestamp TEXT NOT NULL); "
+			  "INSERT INTO server_pings VALUES ('[::1]', 123, datetime('now'))"), SQLITE_OK);
+	m_pCache->Load();
+	EXPECT_EQ(m_pCache->GetPing(&m_Localhost4, 1), 85);
+	EXPECT_EQ(m_pCache->GetPing(&m_Localhost6, 1), 123);
+}
+
+TEST_F(ServerBrowserPingCache, CachePingRetriesPreparationAfterTableRecovers)
+{
+	ASSERT_EQ(Execute("CREATE TABLE server_pings (unrelated_column INTEGER)"), SQLITE_OK);
+	CreateCache();
+	ASSERT_EQ(Execute("DROP TABLE server_pings; "
+			  "CREATE TABLE server_pings (ip_address TEXT PRIMARY KEY NOT NULL, ping INTEGER NOT NULL, utc_timestamp TEXT NOT NULL)"), SQLITE_OK);
+	m_pCache->CachePing(m_Localhost4, 85);
+	CreateCache();
+	m_pCache->Load();
 	EXPECT_EQ(m_pCache->GetPing(&m_Localhost4, 1), 85);
 }
 
