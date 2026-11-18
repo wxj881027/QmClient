@@ -9,11 +9,15 @@ namespace
 		{Localizable("Saves file"), nullptr, "存档密码文件"},
 		{Localizable("Settings file"), nullptr, "设置文件"},
 		{Localizable("Skip the main menu"), nullptr, "跳过主菜单"},
+		{Localizable("Prioritize game traffic (QoS, Windows only)"), nullptr, "优先游戏流量（QoS，仅 Windows）"},
+		{Localizable("Show pending crash reports on startup"), nullptr, "启动时显示待处理崩溃报告"},
 		{Localizable("Themes directory"), nullptr, "主题目录"},
 		{Localizable("Update Rate"), nullptr, "客户端刷新率"},
 		{nullptr, "cl_menu_map", nullptr},
 		{nullptr, "cl_refresh_rate", nullptr},
 		{nullptr, "cl_skip_start_menu", nullptr},
+		{nullptr, "qm_net_qos", nullptr},
+		{nullptr, "qm_crash_report_on_startup", nullptr},
 	};
 	QM_CARD_SEARCH_REGISTER("deck:general-client", deck_general_client);
 }
@@ -54,6 +58,7 @@ namespace
 		{Localizable("Automatically copy manual screenshots to clipboard"), "qm_screenshot_clipboard", "手动截图 自动复制 剪贴板 剪切板 F10 clipboard screenshot"},
 #endif
 		{Localizable("Automatically add a watermark to screenshots"), nullptr, "截图自动水印 时间戳 地图名 自定义文本"},
+		{Localizable("Pose screenshot pixel budget (MP, 0 = unlimited)"), nullptr, "姿势截图像素预算（百万像素，0 = 不限）"},
 		{Localizable("Custom watermark text"), nullptr, "截图水印文本"},
 		{Localizable("Timestamp"), nullptr, "截图时间戳"},
 		{Localizable("Map name"), nullptr, "截图地图名"},
@@ -69,6 +74,7 @@ namespace
 		{nullptr, "qm_screenshot_watermark_map", nullptr},
 		{nullptr, "qm_screenshot_watermark_position", nullptr},
 		{nullptr, "qm_screenshot_watermark_text", nullptr},
+		{nullptr, "qm_pose_capture_max_megapixels", nullptr},
 		{Localizable("Automatically create statboard csv"), nullptr, "自动将统计板导出为 csv 文件"},
 		{Localizable("Automatically record demos"), nullptr, "自动录制回放"},
 		{Localizable("Automatically take game over screenshot"), nullptr, "自动对游戏结束画面截图"},

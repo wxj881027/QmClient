@@ -34,7 +34,9 @@ namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_deck_appearance_name_plate_preview[] = {
 		{Localizable("Free move"), nullptr, "自由移动"},
+		{Localizable("Multi-select move"), nullptr, "多选移动"},
 		{Localizable("Preview dummy nameplate"), nullptr, "预览分身名牌"},
+		{Localizable("Share layout with dummy"), nullptr, "与分身共用布局"},
 		{Localizable("Preview player nameplate"), nullptr, "预览玩家名牌"},
 		{nullptr, "cl_dummy", nullptr},
 		{nullptr, "qm_nameplate_clan_offset_x", nullptr},
@@ -46,8 +48,14 @@ namespace
 		{nullptr, "qm_nameplate_free_move_y", nullptr},
 		{nullptr, "qm_nameplate_hook_offset_x", nullptr},
 		{nullptr, "qm_nameplate_hook_offset_y", nullptr},
-		{nullptr, "qm_nameplate_keys_offset_x", nullptr},
-		{nullptr, "qm_nameplate_keys_offset_y", nullptr},
+		{nullptr, "qm_nameplate_keys_left_offset_x", nullptr},
+		{nullptr, "qm_nameplate_keys_left_offset_y", nullptr},
+		{nullptr, "qm_nameplate_keys_right_offset_x", nullptr},
+		{nullptr, "qm_nameplate_keys_right_offset_y", nullptr},
+		{nullptr, "qm_nameplate_keys_up_offset_x", nullptr},
+		{nullptr, "qm_nameplate_keys_up_offset_y", nullptr},
+		{nullptr, "qm_nameplate_multi_select", nullptr},
+		{nullptr, "qm_nameplate_offsets_linked", nullptr},
 		{nullptr, "qm_nameplate_water_hammer_offset_x", "卡锤位置"},
 		{nullptr, "qm_nameplate_water_hammer_offset_y", nullptr},
 		{nullptr, "qm_nameplate_water_hook_offset_x", "卡钩位置"},
@@ -115,8 +123,10 @@ namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_tclient_cursor[] = {
 		{Localizable("Ingame cursor scale"), nullptr, "游戏内光标缩放"},
+		{Localizable("Ingame cursor rotation"), nullptr, "游戏内光标旋转"},
 		{Localizable("Visual: Cursor"), nullptr, "视觉：光标"},
 		{nullptr, "qm_cursor_scale", nullptr},
+		{nullptr, "qm_cursor_rotation", nullptr},
 	};
 	QM_CARD_SEARCH_REGISTER("tclient:cursor", tclient_cursor);
 }
