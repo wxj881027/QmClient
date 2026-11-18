@@ -566,6 +566,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFontStore(void *pContext, CUIRect Vie
 	SearchOptions.m_Mode = ui_widget::EInputFieldMode::SEARCH;
 	SearchOptions.m_pPlaceholder = Localize("Search online fonts…");
 	SearchOptions.m_Clearable = true;
+	SearchOptions.m_FontSize = SmallFontSize;
 	{
 		// 子层活动时父搜索框只绘制，不能重新激活或覆盖子层的文本焦点。
 		std::optional<CUiScopedBackgroundRender> Background;
@@ -578,7 +579,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFontStore(void *pContext, CUIRect Vie
 	// （localization.cpp Load 的 Clear 分支调用 m_StringsHeap.Reset），
 	// 缓存 Localize 返回的指针会在切语言后悬空；标签栏（1164 行）有按
 	// 语言文件键控的刷新条件，这里没有键控需求，每帧取用最安全。
-	const char *aCategoryNames[] = {Localize("All"), Localize("Sans-serif"), Localize("Serif"), Localize("Display"), Localize("Handwriting"), Localize("Monospace")};
+	const char *aCategoryNames[] = {Localize("All typefaces"), Localize("Sans-serif"), Localize("Serif"), Localize("Display"), Localize("Handwriting"), Localize("Monospace")};
 	static CUi::SDropDownState s_CategoryState;
 	static CScrollRegion s_CategoryScrollRegion;
 	s_CategoryState.m_SelectionPopupContext.m_pScrollRegion = &s_CategoryScrollRegion;
@@ -599,7 +600,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFontStore(void *pContext, CUIRect Vie
 	pCtx->m_Category = pSelf->DoSettingsDropDown(&CategoryRect, pCtx->m_Category, aCategoryNames, (int)std::size(aCategoryNames), s_CategoryState, CategoryProps);
 
 	// 安装状态筛选：全部 / 未安装 / 已安装（与卡片底部状态文字同语义）。
-	const char *aInstallFilterNames[] = {Localize("All"), Localize("Not installed"), Localize("Installed")};
+	const char *aInstallFilterNames[] = {Localize("All items"), Localize("Not installed"), Localize("Installed")};
 	static CUi::SDropDownState s_InstallFilterState;
 	static CScrollRegion s_InstallFilterScrollRegion;
 	s_InstallFilterState.m_SelectionPopupContext.m_pScrollRegion = &s_InstallFilterScrollRegion;

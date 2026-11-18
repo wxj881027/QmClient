@@ -836,6 +836,9 @@ All categories
 All combined
 == 모두 결합
 
+All items
+== 모든 항목
+
 All maps
 == 모든 맵
 
@@ -847,6 +850,9 @@ All remaining binds: scoreboard, spectating, console, screenshots, emoticon and 
 
 All sounds
 == 모든 사운드
+
+All typefaces
+== 모든 서체
 
 Allow /map.
 == /map 허용.

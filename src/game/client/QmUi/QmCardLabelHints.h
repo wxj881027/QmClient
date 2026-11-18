@@ -65,7 +65,18 @@ inline SQmCardLabelText QmSplitCardLabel(std::string_view Text)
 	{
 		const auto Begin = Result.m_Label.find_first_not_of(" ");
 		const auto End = Result.m_Label.find_last_not_of(" ");
-		Result.m_Label = Begin == std::string::npos ? "…" : Result.m_Label.substr(Begin, End - Begin + 1);
+		// 整句都包在括号里时没有可保留的主标签（例如“(Follow Chinese font)”）：
+		// 此时把括号内容当提示会只剩省略号，选项本身失去名称。保留原文，并取消
+		// 与标签完全重复的悬停提示。
+		if(Begin == std::string::npos)
+		{
+			Result.m_Label = std::string(Text);
+			Result.m_Hint.clear();
+		}
+		else
+		{
+			Result.m_Label = Result.m_Label.substr(Begin, End - Begin + 1);
+		}
 	}
 	return Result;
 }

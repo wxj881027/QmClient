@@ -72,6 +72,8 @@ namespace
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_tclient_font[] = {
 		{Localizable("(Follow Chinese font)"), nullptr, "（跟随中文字体）"},
 		{Localizable("(Follow English font)"), nullptr, "（跟随英文字体）"},
+		{Localizable("All items"), nullptr, "全部项目"},
+		{Localizable("All typefaces"), nullptr, "全部书体"},
 		{Localizable("CJK font weight:"), nullptr, "中日韩字体字重："},
 		{Localizable("Chinese font:"), nullptr, "中文字体："},
 		{Localizable("Default"), nullptr, "默认"},
