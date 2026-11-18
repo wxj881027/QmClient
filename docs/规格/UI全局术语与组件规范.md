@@ -62,6 +62,12 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 - 唯一实现：`src/game/client/QmUi/UiTokens.h`，命名空间共 25 个：`ui_token::color`（60 项，含搜索命中的 `SEARCH_MATCH_ON_DARK/SEARCH_MATCH_ON_LIGHT`）、`ui_token::spacing`、`ui_token::radius`（`NONE/TIGHT/BASE/SMALL_MENU/MENU/CARD/PILL`）、`ui_token::font`（`HEADLINE_LG/HEADLINE/TITLE/BODY/SMALL/CAPTION/TIP`）、`ui_token::motion`（36 项）、`ui_token::elevation`、`ui_token::control`（`PadX/PadY/IconBox/IconTextGap/SUFFIX_RATIO/SwitchMinWidth/SwitchTrackAspect`）、`ui_token::list`、`ui_token::settings` + `ui_token::settings::row`、`ui_token::feedback`、`ui_token::glow`、`ui_token::tooltip`、`ui_token::secondary_panel`、`ui_token::server_filter`、`ui_token::status_bar`、`ui_token::server_info`（`TITLE_SIZE/BODY_SIZE/TITLE_GAP/ROW_HEIGHT_RATIO/LABEL_WIDTH/CARD_RADIUS/TAGS_*`，整页只认一套行制：行高 = `BODY_SIZE × ROW_HEIGHT_RATIO`、标签列 = `LABEL_WIDTH`，备注行与开关行不再自带 `NOTE_*` 度量）、`ui_token::motd`（`FONT_SIZE/BOX_CELL_MIN_RATIO`）、`ui_token::motd`（`DESIGN_WIDTH/DESIGN_HEIGHT/TITLE_HEIGHT_RATIO/TITLE_GAP/BOX_GLYPHS_PER_STEP/FONT_SIZE`）、`ui_token::page_title`（`FONT_SIZE/HEIGHT/ICON_SIZE/ICON_GAP/ICON_Y_OFFSET`）、`ui_token::panel`（`GAP/PADDING/MARGIN`）、`ui_token::chat`（滚动条 + 气泡圆角派生 + `input::RowHeight/ButtonBorderWidth` 聊天输入行行高与翻译按钮描边）、`ui_token::player_card`（玩家信息卡分区度量）、`ui_token::text_caret`（`THICKNESS_PX/RADIUS_PX/BLOCK_RADIUS_PX/WIDTH_RATIO/OUTLINE_PX`）、`ui_token::confirm_dialog`、`ui_token::dropdown`、`ui_token::discrete_slider`、`ui_token::ime`、`ui_token::hud::font`、`ui_token::page_title`（`FONT_SIZE/HEIGHT/ICON_SIZE/ICON_GAP`）、`ui_token::panel`（`GAP/PADDING/MARGIN`）、`ui_token::chat`（`SCROLLBAR_*/BUBBLE_*`、`BubbleRadius`）、`ui_token::player_card`（`SIDE_BY_SIDE_MIN_WIDTH/CARD_MAX_WIDTH/CARD_WIDTH_RATIO/STACK_CARD_HEIGHT_RATIO/LIST_CARD_GAP/PADDING/RADIUS/SECTION_GAP/HEADER_*/ACTION_*/ICON_*/STATUS_*/DETAIL_*/LIST_*/SEARCH_HEIGHT/COPY_TOAST_SECONDS`）。
 - 禁止的反面写法：`Row.h - 2.0f` 这类就地魔数；为单个组件新开命名空间放通用色；用近似值复制已有 token（`PREVIEW_BACKDROP` 与 `SURFACE_OVERLAY` 二选一时必须复用）。
 
+### 2.1a 调试图表（debug graph）
+
+- 定义：右上角的只读性能叠层，上方显示帧率、帧耗时与网络数值，下方按时间从左至右绘制帧耗时柱，横线标记 60 FPS 的单帧预算。
+- 唯一实现：`CQmMonitoring::RenderHud`；布局、柱数与刻度由 `ui_token::hud::debug_graph` 维护，面板、文字和柱色来自当前界面主题。原有面板透明度只调节底板。
+- 禁止的反面写法：在监控组件中另写面板配色、堆叠指标卡，或用平均 FPS 反推历史柱高。
+
 ### 2.2 设置内容布局流（settings content flow）
 
 - 定义：卡片内容按「行」声明：高度、行前间距、ID；同一段代码在声明趟、测量趟、输入趟、绘制趟各跑一次，输出必须一致。

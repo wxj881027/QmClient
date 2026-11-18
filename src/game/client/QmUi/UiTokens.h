@@ -1112,6 +1112,21 @@ namespace ui_token::hud::font
 	inline constexpr float EMPHASIS = 12.0f;
 } // namespace ui_token::hud::font
 
+namespace ui_token::hud::debug_graph
+{
+	inline constexpr float WIDTH = 256.0f;
+	inline constexpr float PADDING = spacing::SM;
+	inline constexpr float SUMMARY_HEIGHT = ui_token::font::TITLE + spacing::XS;
+	inline constexpr float NETWORK_HEIGHT = ui_token::font::BODY + spacing::XS;
+	inline constexpr float GRAPH_HEIGHT = 32.0f;
+	inline constexpr float HEIGHT = 2.0f * PADDING + SUMMARY_HEIGHT + NETWORK_HEIGHT + spacing::XS + GRAPH_HEIGHT;
+	inline constexpr int BAR_COUNT = 96;
+	inline constexpr float FRAME_BUDGET_MS = 1000.0f / 60.0f;
+	inline constexpr float GRAPH_MAX_MS = 2.0f * FRAME_BUDGET_MS;
+	inline constexpr float GUIDE_HEIGHT = 1.0f;
+	inline constexpr float GUIDE_ALPHA = 0.30f;
+}
+
 // 输入法（IME）候选面板：跟随系统输入法浮在光标下方的小面板。
 // 全部尺寸都是「基准值 × SCALE」，改整体大小只动 SCALE，不要逐项改数字。
 // 面板有明暗两套配色：跟随界面（浅色界面用 LIGHT 族），无 _LIGHT/_DARK 后缀的别名
