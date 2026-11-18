@@ -542,7 +542,7 @@
 <p>影子回放的音效与命中特效默认不播放，避免盖住玩家正在操作的本地世界；可在设置页的“影子工具”卡打开“播放影子回放的音效和命中特效”，也可用控制台 <code>qm_ghost_view_feedback 1</code>。开启后仍受 <code>snd_game</code>、专注模式与地图音效门控约束。</p>
 
 <div class="panel note">
-	<p><b>仍可继续 token 化的部分：</b>卡片圆角 12/11.4、按钮圆角 6、Live 图标 24 等还是尺寸字面量。建议下一轮并入 <code>ui_token::radius</code> 与 <code>ui_token::replay</code> 尺寸组，但不要和本轮交互修复混在一起。</p>
+	<p><b>控制卡尺寸已收口：</b>卡片内外圆角、边框宽度、按钮圆角、名称栏字号、Live 图标、播放头圆角与动作按钮宽度都统一放在 <code>qm_demo_ui</code>；表面、动作底、显示分组底、进度槽、播放头与标记阴影统一放在 <code>ui_token::replay</code>，调用点不再写字面量。</p>
 </div>
 
 <h2 id="fields">6. 字段归属表</h2>
@@ -615,8 +615,8 @@
 	<tbody>
 		<tr>
 			<td>P0</td>
-			<td>实机验收本轮四项：旁观计时继续、退出不跳、<code>/restart</code> 机关相位、换队后门状态</td>
-			<td>窗口化客户端复现通过；<code>qm_local_world_dump</code> 的 <code>render_pos</code>/<code>dummy_tee</code>/<code>spec</code> 一致</td>
+			<td>回放控制卡颜色与尺寸、Esc/X/眼睛/点外关闭、Rank 1 二次点击进入</td>
+			<td><span class="tag done">已完成</span><code>b641a63573</code>、<code>dc0298aeed</code>；实机视觉验收不属于代码待办</td>
 		</tr>
 		<tr>
 			<td>P1</td>
@@ -636,7 +636,7 @@
 		<tr>
 			<td>P3</td>
 			<td>控制卡剩余尺寸 token 化</td>
-			<td><code>menus_demo.cpp</code> 不再出现卡片/按钮圆角与图标字号字面量</td>
+			<td><span class="tag done">已完成</span><code>menus_demo.cpp</code> 不再出现卡片/按钮圆角、图标字号或回放颜色字面量；尺寸集中在 <code>qm_demo_ui</code></td>
 		</tr>
 	</tbody>
 </table>

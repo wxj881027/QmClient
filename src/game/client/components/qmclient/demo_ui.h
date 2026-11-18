@@ -25,6 +25,20 @@ namespace qm_demo_ui
 	constexpr float TRANSPORT_BUTTON_MAX = 22.0f;
 	constexpr float SEEK_ROUNDING = 5.0f;
 	constexpr float NAME_ACTION_GAP = 3.0f;
+	// 控制卡外壳、按钮与名称栏的固定排版事实。调用点只引用这些名字，
+	// 再按窗口宽度派生实际矩形，不再把圆角、字面字号写回 menus_demo.cpp。
+	constexpr float CARD_SHADOW_OFFSET_Y = 2.0f;
+	constexpr float CARD_RADIUS = 12.0f;
+	constexpr float CARD_BORDER_WIDTH = 0.6f;
+	constexpr float CARD_INNER_RADIUS = 11.4f;
+	constexpr float CONTROL_RADIUS = 6.0f;
+	constexpr float POPUP_RADIUS = 15.0f;
+	constexpr float PLAYHEAD_RADIUS = 2.0f;
+	constexpr float CONTROL_FONT_SIZE = 11.0f;
+	constexpr float NAME_LABEL_FONT_SIZE = 12.0f;
+	constexpr float LIVE_ICON_SIZE = 24.0f;
+	constexpr float DEMO_DISPLAY_BUTTON_WIDTH = 80.0f;
+	constexpr float CAMERA_BUTTON_WIDTH = 90.0f;
 
 	// 渲染回放弹窗与设置页卡片共用同一套单行控件节奏：20 高、4 间距。
 	// 分组上下各留 8，标题行 18，标题与首行间隔 4。

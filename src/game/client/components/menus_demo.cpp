@@ -266,22 +266,22 @@ namespace
 void CMenus::RenderDemoCard(const CUIRect &Rect)
 {
 	// 只模糊回放背景，控件与文字保持清晰。
-	Ui()->RenderGaussianBlur(Rect, 1.0f, IGraphics::CORNER_ALL, 12.0f);
+	Ui()->RenderGaussianBlur(Rect, 1.0f, IGraphics::CORNER_ALL, qm_demo_ui::CARD_RADIUS);
 	CUiScopedGaussianBlurSuppression BlurSuppression(Ui());
 	CUIRect Shadow = Rect;
-	Shadow.y += 2.0f;
-	Shadow.Draw(ui_token::replay::CARD_SHADOW, IGraphics::CORNER_ALL, 12.0f);
-	Rect.Draw(ui_token::replay::CARD_BORDER, IGraphics::CORNER_ALL, 12.0f);
+	Shadow.y += qm_demo_ui::CARD_SHADOW_OFFSET_Y;
+	Shadow.Draw(ui_token::replay::CARD_SHADOW, IGraphics::CORNER_ALL, qm_demo_ui::CARD_RADIUS);
+	Rect.Draw(ui_token::replay::CARD_BORDER, IGraphics::CORNER_ALL, qm_demo_ui::CARD_RADIUS);
 	CUIRect Inner;
-	Rect.Margin(0.6f, &Inner);
+	Rect.Margin(qm_demo_ui::CARD_BORDER_WIDTH, &Inner);
 	const bool BlurSupported = g_Config.m_QmGaussianBlur && Graphics()->IsBackbufferCaptureSupported() && Graphics()->IsRenderTargetGaussianBlurSupported();
-	Inner.Draw(BlurSupported ? ui_token::replay::CARD_FILL_BLURRED : ui_token::replay::CARD_FILL_OPAQUE, IGraphics::CORNER_ALL, 11.4f);
+	Inner.Draw(BlurSupported ? ui_token::replay::CARD_FILL_BLURRED : ui_token::replay::CARD_FILL_OPAQUE, IGraphics::CORNER_ALL, qm_demo_ui::CARD_INNER_RADIUS);
 }
 
 void CMenus::RenderDemoDisplayToggle(const CUIRect &Rect, bool &Expanded, CButtonContainer &Button, bool Enabled)
 {
 	Enabled = Enabled && !Ui()->IsPopupOpen();
-	if(DoButton_Menu(&Button, Localize("Demo display"), Enabled ? 0 : -1, &Rect, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 6.0f, 0.0f, Expanded ? ui_token::color::ACCENT_PRIMARY_DIM.WithAlpha(0.18f) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.08f), nullptr, 11.0f) && Enabled)
+	if(DoButton_Menu(&Button, Localize("Demo display"), Enabled ? 0 : -1, &Rect, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, qm_demo_ui::CONTROL_RADIUS, 0.0f, Expanded ? ui_token::color::ACCENT_PRIMARY_DIM.WithAlpha(0.18f) : ui_token::replay::CONTROL_FILL, nullptr, qm_demo_ui::CONTROL_FONT_SIZE) && Enabled)
 		Expanded = !Expanded;
 	CUIRect Arrow;
 	Rect.VSplitRight(22.0f, nullptr, &Arrow);
@@ -291,7 +291,7 @@ void CMenus::RenderDemoDisplayToggle(const CUIRect &Rect, bool &Expanded, CButto
 void CMenus::RenderDemoDisplaySettings(CUIRect View, bool Enabled, bool WithToggles)
 {
 	CUiScopedGaussianBlurSuppression BlurSuppression(Ui());
-	View.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.05f), IGraphics::CORNER_ALL, 8.0f);
+	View.Draw(ui_token::color::SURFACE_HIGHLIGHT, IGraphics::CORNER_ALL, ui_token::radius::BASE);
 	View.Margin(qm_demo_ui::RENDER_SECTION_PADDING, &View);
 	constexpr float LabelFontSize = 11.5f;
 	constexpr float SegmentFontSize = 10.0f;
@@ -315,7 +315,7 @@ void CMenus::RenderDemoDisplaySettings(CUIRect View, bool Enabled, bool WithTogg
 		for(int i = 0; i < Count; ++i)
 			Slots[i] = {Options.x + (SlotWidth + Gap) * i, Options.y, SlotWidth, Options.h};
 
-		const auto Style = CapsuleTabBarStyleFor(ColorRGBA(0.10f, 0.11f, 0.14f, 1.0f));
+		const auto Style = CapsuleTabBarStyleFor(ui_token::replay::DISPLAY_BASE);
 		const uint64_t Group = MakeUiScopeHash("demo_display_segments") ^ reinterpret_cast<uint64_t>(pButtons);
 		ui_widget::CapsuleTabBarChrome(TabBarUiContext(), Group, Slots, Count, Available ? *pValue : -1, Style);
 
@@ -381,7 +381,7 @@ void CMenus::RenderDemoDisplaySettings(CUIRect View, bool Enabled, bool WithTogg
 void CMenus::RenderDemoExportSettings(CUIRect View)
 {
 	CUiScopedGaussianBlurSuppression BlurSuppression(Ui());
-	View.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.05f), IGraphics::CORNER_ALL, 8.0f);
+	View.Draw(ui_token::color::SURFACE_HIGHLIGHT, IGraphics::CORNER_ALL, ui_token::radius::BASE);
 	View.Margin(qm_demo_ui::RENDER_SECTION_PADDING, &View);
 
 	constexpr float FontSize = 11.5f;
@@ -565,7 +565,7 @@ void CMenus::RenderDemoExportSettings(CUIRect View)
 	if(FixedQuality)
 	{
 		CUIRect FixedControl = Control;
-		FixedControl.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.04f), IGraphics::CORNER_ALL, 5.0f);
+		FixedControl.Draw(ui_token::replay::CONTROL_FILL_SUBTLE, IGraphics::CORNER_ALL, qm_demo_ui::SEEK_ROUNDING);
 		FixedControl.VMargin(8.0f, &FixedControl);
 		Ui()->DoLabel(&FixedControl, "—", FontSize, TEXTALIGN_MC);
 	}
@@ -792,7 +792,7 @@ void CMenus::RenderDemoExportSettings(CUIRect View)
 void CMenus::RenderDemoPlaybackSettings(CUIRect View)
 {
 	CUiScopedGaussianBlurSuppression BlurSuppression(Ui());
-	View.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.05f), IGraphics::CORNER_ALL, 8.0f);
+	View.Draw(ui_token::color::SURFACE_HIGHLIGHT, IGraphics::CORNER_ALL, ui_token::radius::BASE);
 	View.Margin(qm_demo_ui::RENDER_SECTION_PADDING, &View);
 
 	constexpr float FontSize = 11.5f;
@@ -932,7 +932,7 @@ void CMenus::RenderDemoPlaybackSettings(CUIRect View)
 void CMenus::RenderDemoEncodeSettings(CUIRect View)
 {
 	CUiScopedGaussianBlurSuppression BlurSuppression(Ui());
-	View.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.05f), IGraphics::CORNER_ALL, 8.0f);
+	View.Draw(ui_token::color::SURFACE_HIGHLIGHT, IGraphics::CORNER_ALL, ui_token::radius::BASE);
 	View.Margin(qm_demo_ui::RENDER_SECTION_PADDING, &View);
 
 	constexpr float FontSize = 11.5f;
@@ -947,7 +947,7 @@ void CMenus::RenderDemoEncodeSettings(CUIRect View)
 	Row.VSplitRight(ResetWidth, &Row, &ResetButton);
 	Ui()->DoLabel(&Row, Localize("Video encoding"), 11.0f, TEXTALIGN_ML);
 	static CButtonContainer s_ResetEncodeButton;
-	if(DoButton_Menu(&s_ResetEncodeButton, pResetLabel, 0, &ResetButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ResetButton.h * 0.5f, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.08f), nullptr, 10.0f))
+	if(DoButton_Menu(&s_ResetEncodeButton, pResetLabel, 0, &ResetButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ResetButton.h * 0.5f, 0.0f, ui_token::replay::CONTROL_FILL, nullptr, 10.0f))
 	{
 		g_Config.m_ClVideoX264Crf = qm_video_encode::CRF_DEFAULT;
 		g_Config.m_ClVideoX264Preset = qm_video_encode::PRESET_RECOMMENDED;
@@ -1024,7 +1024,7 @@ void CMenus::RenderDemoEncodeSettings(CUIRect View)
 	const bool PlaceboPreset = g_Config.m_ClVideoX264Preset == qm_video_encode::PRESET_COUNT - 1;
 	const ColorRGBA PreviousColor = TextRender()->GetTextColor();
 	if(PlaceboPreset)
-		TextRender()->TextColor(ColorRGBA(1.0f, 0.25f, 0.25f, 1.0f));
+		TextRender()->TextColor(ui_token::color::DANGER);
 	Ui()->DoLabel(&HintLabel, qm_video_encode::QmVideoPresetHint(g_Config.m_ClVideoX264Preset), FontSize, TEXTALIGN_MR, {.m_MaxWidth = HintLabel.w - 2.0f});
 	TextRender()->TextColor(PreviousColor);
 
@@ -1597,7 +1597,7 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 		DemoControls.HSplitTop(6.0f, nullptr, &DemoControls);
 		DemoControls.HSplitTop(qm_demo_ui::CAMERA_HEIGHT, &CameraBar, &DemoControls);
 	}
-	ButtonBar.Draw(ui_token::replay::TRANSPORT_BAR, IGraphics::CORNER_ALL, 6.0f);
+	ButtonBar.Draw(ui_token::replay::TRANSPORT_BAR, IGraphics::CORNER_ALL, qm_demo_ui::CONTROL_RADIUS);
 	ButtonBar.VMargin(std::max(0.0f, (ButtonBar.w - qm_demo_ui::TransportWidth(ButtonbarHeight, ShowSkipDuration)) * 0.5f), &ButtonBar);
 	ButtonBar.HMargin((ButtonBar.h - ButtonbarHeight) * 0.5f, &ButtonBar);
 
@@ -1652,7 +1652,7 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
 		TextRender()->TextColor(pInfo->m_LivePlayback ? ui_token::replay::LIVE_ON : ui_token::replay::LIVE_OFF);
-		Ui()->DoLabel_QmIcon(&LiveButton, EQmIcon::CIRCLE, FONT_ICON_CIRCLE, 24.0f, TEXTALIGN_MC);
+		Ui()->DoLabel_QmIcon(&LiveButton, EQmIcon::CIRCLE, FONT_ICON_CIRCLE, qm_demo_ui::LIVE_ICON_SIZE, TEXTALIGN_MC);
 		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 		TextRender()->SetRenderFlags(0);
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
@@ -1669,7 +1669,7 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	// do seekbar
 	{
 		// draw seek bar
-		const float Rounding = 5.0f;
+		const float Rounding = qm_demo_ui::SEEK_ROUNDING;
 		SeekBar.Draw(ui_token::replay::SEEK_TRACK, IGraphics::CORNER_ALL, Rounding);
 
 		// draw filled bar
@@ -1760,7 +1760,7 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 		str_format(aSeekBarLabel, sizeof(aSeekBarLabel), "%s / %s", aCurrentTime, aTotalTime);
 		Ui()->DoLabel(&TimeBar, aSeekBarLabel, 10.0f, TEXTALIGN_MC);
 		CUIRect Playhead{SeekBar.x + Rounding + (SeekBar.w - 2.0f * Rounding) * Amount - 2.0f, SeekBar.y - 2.0f, 4.0f, SeekBar.h + 4.0f};
-		Playhead.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.95f), IGraphics::CORNER_ALL, 2.0f);
+		Playhead.Draw(ui_token::replay::PLAYHEAD, IGraphics::CORNER_ALL, qm_demo_ui::PLAYHEAD_RADIUS);
 
 		// do the logic
 		const auto &&SnapToTimelineMarker = [&](float AmountSeek) {
@@ -2002,7 +2002,7 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	{
 		const auto CutControls = qm_demo_ui::CutControls(CutBar, ButtonbarHeight);
 		const auto DoCutMarkerButton = [&](CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Tick, const CUIRect &Rect) {
-			const int Result = DoButton_Menu(pButtonContainer, nullptr, CutControlsEnabled ? 0 : -1, &Rect, BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT, nullptr, IGraphics::CORNER_ALL, 6.0f, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.08f));
+			const int Result = DoButton_Menu(pButtonContainer, nullptr, CutControlsEnabled ? 0 : -1, &Rect, BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT, nullptr, IGraphics::CORNER_ALL, qm_demo_ui::CONTROL_RADIUS, 0.0f, ui_token::replay::CONTROL_FILL);
 			CUIRect Label, IconRect;
 			Rect.Margin(3.0f, &Label);
 			Label.VSplitLeft(16.0f, &IconRect, &Label);
@@ -2181,8 +2181,8 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	}
 
 	NameBar.VSplitRight(Margins, &NameBar, nullptr);
-	NameBar.VSplitRight(80.0f, &NameBar, &Button);
-	if(DoButton_Menu(&m_DemoDisplayButton, Localize("Demo display"), CutControlsEnabled ? static_cast<int>(DisplayExpanded) : -1, &Button, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 6.0f, 0.0f, DisplayExpanded ? ReplayAccent : ui_token::color::SURFACE_HIGHLIGHT, nullptr, 11.0f) && CutControlsEnabled)
+	NameBar.VSplitRight(qm_demo_ui::DEMO_DISPLAY_BUTTON_WIDTH, &NameBar, &Button);
+	if(DoButton_Menu(&m_DemoDisplayButton, Localize("Demo display"), CutControlsEnabled ? static_cast<int>(DisplayExpanded) : -1, &Button, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, qm_demo_ui::CONTROL_RADIUS, 0.0f, DisplayExpanded ? ReplayAccent : ui_token::color::SURFACE_HIGHLIGHT, nullptr, qm_demo_ui::CONTROL_FONT_SIZE) && CutControlsEnabled)
 	{
 		m_DemoDisplayExpanded = !DisplayExpanded;
 		if(m_DemoDisplayExpanded && !OnlineReplay)
@@ -2194,8 +2194,8 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 
 	if(!OnlineReplay)
 	{
-		NameBar.VSplitRight(90.0f, &NameBar, &Button);
-		if(DoButton_Menu(&m_DemoCameraButton, Localize("Camera path"), CutControlsEnabled ? static_cast<int>(CameraExpanded) : -1, &Button, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 6.0f, 0.0f, CameraExpanded ? ReplayAccent : ui_token::color::SURFACE_HIGHLIGHT, nullptr, 11.0f) && CutControlsEnabled)
+		NameBar.VSplitRight(qm_demo_ui::CAMERA_BUTTON_WIDTH, &NameBar, &Button);
+		if(DoButton_Menu(&m_DemoCameraButton, Localize("Camera path"), CutControlsEnabled ? static_cast<int>(CameraExpanded) : -1, &Button, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, qm_demo_ui::CONTROL_RADIUS, 0.0f, CameraExpanded ? ReplayAccent : ui_token::color::SURFACE_HIGHLIGHT, nullptr, qm_demo_ui::CONTROL_FONT_SIZE) && CutControlsEnabled)
 		{
 			GameClient()->m_DemoCamera.SetPanelOpen(!CameraExpanded);
 			if(!CameraExpanded)
@@ -2215,7 +2215,7 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	Props.m_MaxWidth = NameBar.w;
 	Props.m_EllipsisAtEnd = true;
 	Props.m_EnableWidthCheck = false;
-	Ui()->DoLabel(&NameBar, aBuf, 12.0f, TEXTALIGN_ML, Props);
+	Ui()->DoLabel(&NameBar, aBuf, qm_demo_ui::NAME_LABEL_FONT_SIZE, TEXTALIGN_ML, Props);
 
 	if(IncreaseDemoSpeed)
 	{
@@ -2254,7 +2254,7 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 	CUIRect Box = qm_demo_ui::PopupRect(MainView, ContentHeight + 116.0f);
 
 	// background
-	Box.Draw(ui_token::replay::POPUP_BACKDROP, IGraphics::CORNER_ALL, 15.0f);
+	Box.Draw(ui_token::replay::POPUP_BACKDROP, IGraphics::CORNER_ALL, qm_demo_ui::POPUP_RADIUS);
 	Box.Margin(24.0f, &Box);
 
 	// title
@@ -3846,9 +3846,9 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 
 					ColorRGBA IconColor;
 					if(!pItem->m_IsDir && pItem->IsDemoFile() && (!pItem->m_InfosLoaded || !pItem->m_Valid))
-						IconColor = ColorRGBA(0.6f, 0.6f, 0.6f, 1.0f); // not loaded
+						IconColor = ui_token::color::TEXT_DISABLED; // not loaded
 					else
-						IconColor = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
+						IconColor = ui_token::color::TEXT_PRIMARY;
 
 					TextRender()->TextColor(IconColor);
 					Ui()->DoLabel_QmIcon(&Button, IconType, pIconType, 12.0f, TEXTALIGN_ML);
@@ -5424,7 +5424,7 @@ void CMenus::RenderQmPoseMapPopup(CUIRect View)
 	if(aError[0] != '\0')
 	{
 		SLabelProperties ErrorProps;
-		ErrorProps.SetColor(ColorRGBA(1.0f, 0.35f, 0.35f));
+		ErrorProps.SetColor(ui_token::color::DANGER);
 		ErrorProps.m_MaxWidth = (int)ErrorRow.w;
 		ErrorProps.m_DisallowNewline = true;
 		ErrorProps.m_EllipsisAtEnd = true;

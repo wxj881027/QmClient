@@ -347,7 +347,7 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 ### 3.21 回放控制卡（Replay transport card）
 
 - 定义：demo 播放与 Rank 1 / 练习组查看模式共用的底部回放控制卡，包含名称栏、进度条、传输按钮、切片行与显示选项；强调色跟随用户界面强调色，表面、投影、描边、进度槽与 Live 指示来自组件内部角色色。
-- 唯一实现：颜色 `ui_token::replay::*`（`src/game/client/QmUi/UiTokens.h`）与强调色 `Ui()->QmControlTheme().m_Accent`；尺寸 `qm_demo_ui::{PLAYER_PANEL_HEIGHT, PLAYER_MARGIN, NAME_BAR_HEIGHT, SEEK_BAR_HEIGHT, TIME_BAR_HEIGHT, BUTTON_BAR_HEIGHT, CUT_BAR_GAP, CUT_BAR_HEIGHT, CUT_SECTION_HEIGHT, CONTROL_MARGIN, SEEK_ROUNDING}`（`src/game/client/components/qmclient/demo_ui.h`）；绘制入口 `CMenus::RenderDemoCard` / `CMenus::RenderDemoPlayer`（`src/game/client/components/menus_demo.cpp`）；Esc/隐藏状态 `COnlineReplayUiState`（`src/game/client/components/qmclient/online_replay_player.h`）。
+- 唯一实现：颜色 `ui_token::replay::{CARD_*, TRANSPORT_BAR, CONTROL_FILL, CONTROL_FILL_SUBTLE, DISPLAY_BASE, SEEK_TRACK, PLAYHEAD, MARKER_SHADOW, LIVE_*, POPUP_BACKDROP}`（`src/game/client/QmUi/UiTokens.h`）与强调色 `Ui()->QmControlTheme().m_Accent`；尺寸 `qm_demo_ui::{CARD_*, PLAYER_PANEL_HEIGHT, PLAYER_MARGIN, NAME_BAR_HEIGHT, NAME_LABEL_FONT_SIZE, SEEK_BAR_HEIGHT, SEEK_ROUNDING, PLAYHEAD_RADIUS, TIME_BAR_HEIGHT, BUTTON_BAR_HEIGHT, CONTROL_RADIUS, CONTROL_FONT_SIZE, LIVE_ICON_SIZE, CUT_BAR_GAP, CUT_BAR_HEIGHT, CUT_SECTION_HEIGHT, CONTROL_MARGIN, POPUP_RADIUS}`（`src/game/client/components/qmclient/demo_ui.h`）；绘制入口 `CMenus::RenderDemoCard` / `CMenus::RenderDemoPlayer`（`src/game/client/components/menus_demo.cpp`）；Esc/隐藏状态 `COnlineReplayUiState`（`src/game/client/components/qmclient/online_replay_player.h`）。
 - 禁止的反面写法：在 `menus_demo.cpp` 写 `ColorRGBA(...)` 字面量或第二份回放强调色（`DEMO_ACCENT`）；把控制卡高度、按钮上限、进度条圆角各写一份；查看模式仍显示切片/导出等 demo 专属入口；Esc 面板与点击外部关闭各维护一套状态。
 
 ## 四、后续更新维护协议

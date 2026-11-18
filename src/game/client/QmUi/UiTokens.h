@@ -179,6 +179,14 @@ namespace ui_token::replay
 	inline constexpr ColorRGBA CARD_FILL_OPAQUE{0.07f, 0.08f, 0.11f, 0.92f};
 	// 传输按钮条、进度槽与标记阴影。
 	inline constexpr ColorRGBA TRANSPORT_BAR{1.0f, 1.0f, 1.0f, 0.045f};
+	// 名称栏里的普通动作按钮底；比常驻提示层亮一档，但仍是中性白。
+	inline constexpr ColorRGBA CONTROL_FILL{1.0f, 1.0f, 1.0f, 0.08f};
+	// 只做分区提示的浅底，例如显示选项里的固定控件槽。
+	inline constexpr ColorRGBA CONTROL_FILL_SUBTLE{1.0f, 1.0f, 1.0f, 0.04f};
+	// “回放显示”胶囊页签的底；比控制卡内底再亮一档，页签边界才读得出来。
+	inline constexpr ColorRGBA DISPLAY_BASE{0.10f, 0.11f, 0.14f, 1.0f};
+	// 进度条播放头：白色高光压到 95%，避免压住其下方的切片标记。
+	inline constexpr ColorRGBA PLAYHEAD{1.0f, 1.0f, 1.0f, 0.95f};
 	inline constexpr ColorRGBA SEEK_TRACK{0.0f, 0.0f, 0.0f, 0.28f};
 	inline constexpr ColorRGBA MARKER_SHADOW{0.15f, 0.10f, 0.0f, 0.75f};
 	// Live 指示：直播红点与不可回直播的灰点。
