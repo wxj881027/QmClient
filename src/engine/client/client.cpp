@@ -7788,7 +7788,7 @@ void CClient::ConchainInputFifo(IConsole::IResult *pResult, void *pUserData, ICo
 {
 	CClient *pSelf = (CClient *)pUserData;
 	pfnCallback(pResult, pCallbackUserData);
-	if(pSelf->m_Fifo.IsInit())
+	if(pResult->NumArguments() && pSelf->m_Fifo.IsInit())
 	{
 		pSelf->m_Fifo.Shutdown();
 		pSelf->m_Fifo.Init(pSelf->m_pConsole, pSelf->Config()->m_ClInputFifo, CFGFLAG_CLIENT);
