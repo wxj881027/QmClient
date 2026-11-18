@@ -71,6 +71,18 @@ TEST(UiV2Anim, ZeroDeltaTimeDoesNotAdvance)
 	EXPECT_TRUE(Runtime.HasActiveAnimation(9, EUiAnimProperty::POS_X));
 }
 
+TEST(UiV2Anim, ClockKeepsAdvancingWithShortFramesInLongSessions)
+{
+	CUiV2AnimationRuntime Runtime;
+	constexpr float LONG_SESSION_SEC = 131072.0f;
+	constexpr int FRAMES_PER_SECOND = 144;
+	Runtime.Advance(LONG_SESSION_SEC);
+	for(int Frame = 0; Frame < FRAMES_PER_SECOND; ++Frame)
+		Runtime.Advance(1.0f / FRAMES_PER_SECOND);
+
+	EXPECT_FLOAT_EQ(Runtime.TimeSec(), LONG_SESSION_SEC + 1.0f);
+}
+
 TEST(UiV2Anim, ZeroDurationCompletesImmediately)
 {
 	CUiV2AnimationRuntime Runtime;

@@ -292,7 +292,8 @@ private:
 	bool IsTrackPending(uint32_t TrackId) const;
 	float CurrentValueFor(const STrackKey &Key, float DefaultValue) const;
 
-	float m_TimeSec = 0.0f;
+	// 累计时间用双精度，长会话中的短帧仍能累加。
+	double m_TimeSec = 0.0;
 	std::deque<SUiAnimCompleteEvent> m_CompletedEvents;
 	std::deque<SUiAnimGroupCompleteEvent> m_GroupCompletedEvents;
 	uint32_t m_NextTrackId = 1;
