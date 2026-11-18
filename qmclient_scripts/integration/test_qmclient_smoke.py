@@ -25,6 +25,7 @@ class QmClientSmokeRunnerTest(unittest.TestCase):
 				"gores_configuration",
 				"connection_shutdown",
 				"default_media_directory_startup",
+				"startup_console_commands",
 				"custom_media_directory_startup",
 				"saved_custom_communities_startup",
 			},
