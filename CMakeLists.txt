@@ -6110,6 +6110,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/netobj_secure_unpack_test.cpp
     src/test/unit/engine/snapshot_test.cpp
     src/test/contract/base/steam_presence_contract_test.cpp
+    src/test/contract/base/detect_contract_test.cpp
     src/test/unit/engine/str_search_test.cpp
     src/test/unit/engine/str_utf8_test.cpp
     src/test/unit/engine/str_format_test.cpp

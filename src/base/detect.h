@@ -176,7 +176,7 @@
 #define CONF_ARCH_ARM 1
 #define CONF_ARCH_STRING "arm"
 #define CONF_ARCH_ENDIAN_LITTLE 1
-#elif defined(__aarch64__) || defined(__arm64__) || defined(__ARM_ARCH_ISA_A64)
+#elif defined(__aarch64__) || defined(__arm64__) || defined(__ARM_ARCH_ISA_A64) || defined(_M_ARM64)
 #define CONF_ARCH_ARM64 1
 #define CONF_ARCH_STRING "arm64"
 #if defined(__ARM_BIG_ENDIAN)
