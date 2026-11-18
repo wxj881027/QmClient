@@ -126,6 +126,7 @@ build_android() {
 build_webasm() {
 	local out="$ROOT/tmp/sdl3-prebuilt/webasm"
 	emcmake cmake -G Ninja -S "$SRC" -B "$out" -DCMAKE_BUILD_TYPE=Release \
+		-DCMAKE_C_FLAGS=-pthread -DCMAKE_CXX_FLAGS=-pthread \
 		-DSDL_SHARED=OFF -DSDL_STATIC=ON -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF -DSDL_INSTALL=OFF
 	cmake --build "$out" --target SDL3-static -j "$JOBS"
 	mkdir -p "$DEST/webasm/libwasm"
