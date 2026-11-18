@@ -8,6 +8,7 @@
 
 #include <deque>
 #include <filesystem>
+#include <functional>
 #include <memory>
 #include <new>
 #include <stdexcept>
@@ -29,9 +30,12 @@ namespace
 		bool m_RemoveSourceFails = false;
 		bool m_RemoveSourceThrows = false;
 		int m_SourceRemoves = 0;
+		std::function<void()> m_OnPublish;
 
 		bool Publish(const char *pTemporary, const char *pDestination) override
 		{
+			if(m_OnPublish)
+				m_OnPublish();
 			if(m_PublishThrows)
 				throw std::bad_alloc();
 			return !m_PublishFails && COperations::Publish(pTemporary, pDestination);
@@ -116,6 +120,53 @@ TEST_F(DemoEditJobIntegration, SourceIsRemovedOnlyAfterACompleteReplacement)
 	EXPECT_FALSE(m_pState->m_Data.Exists("source.demo"));
 	EXPECT_EQ(m_pState->m_Data.MapData("target.demo"), "mapbytes");
 	EXPECT_EQ(m_pState->m_Operations.m_SourceRemoves, 1);
+}
+
+TEST_F(DemoEditJobIntegration, ReplacementBeforeWorkerStartKeepsBothTheNewFileAndTheTarget)
+{
+	auto &Data = m_pState->m_Data;
+	ASSERT_TRUE(Data.m_pStorage->RenameFile("source.demo", "original.demo", IStorage::TYPE_SAVE, false));
+	Data.Create("source.demo");
+	const std::string Replacement = Data.Read("source.demo");
+	m_pState->m_pJob->RunNow();
+	EXPECT_FALSE(m_pState->m_pJob->Success());
+	EXPECT_EQ(Data.Read("source.demo"), Replacement);
+	EXPECT_EQ(Data.Read("target.demo"), "previous");
+	EXPECT_EQ(m_pState->m_Operations.m_SourceRemoves, 0);
+}
+
+TEST_F(DemoEditJobIntegration, SuccessfulExportLeavesANewFileAtTheOriginalName)
+{
+	auto &Data = m_pState->m_Data;
+	m_pState->m_Operations.m_OnPublish = [&Data] { Data.Write("source.demo", "another recording"); };
+	m_pState->m_pJob->RunNow();
+	EXPECT_TRUE(m_pState->m_pJob->Success());
+	EXPECT_EQ(Data.Read("source.demo"), "another recording");
+	EXPECT_EQ(Data.MapData("target.demo"), "mapbytes");
+}
+
+TEST_F(DemoEditJobIntegration, FailedExportWithOccupiedSourceNameKeepsTheRecoverableRecording)
+{
+	auto &Data = m_pState->m_Data;
+	const std::string Original = Data.Read("source.demo");
+	m_pState->m_Operations.m_PublishFails = true;
+	m_pState->m_Operations.m_OnPublish = [&Data] { Data.Write("source.demo", "another recording"); };
+	m_pState->m_pJob->RunNow();
+	EXPECT_FALSE(m_pState->m_pJob->Success());
+	EXPECT_EQ(Data.Read("source.demo"), "another recording");
+	EXPECT_EQ(Data.Read("source.demo.saving/source.demo"), Original);
+	EXPECT_EQ(Data.Read("target.demo"), "previous");
+}
+
+TEST_F(DemoEditJobIntegration, SubsequentExportPreservesTheEarlierRecoveryFile)
+{
+	auto &Data = m_pState->m_Data;
+	ASSERT_TRUE(Data.m_pStorage->CreateFolder("source.demo.saving", IStorage::TYPE_SAVE));
+	Data.Write("source.demo.saving/source.demo", "earlier recording");
+	m_pState->m_pJob->RunNow();
+	EXPECT_TRUE(m_pState->m_pJob->Success());
+	EXPECT_EQ(Data.Read("source.demo.saving/source.demo"), "earlier recording");
+	EXPECT_EQ(Data.MapData("target.demo"), "mapbytes");
 }
 
 TEST_F(DemoEditJobIntegration, PublishingFailureDoesNotRemoveTheCapturedSource)

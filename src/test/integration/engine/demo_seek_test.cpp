@@ -5,11 +5,30 @@
 
 namespace
 {
+	class CSeekReadOperations : public CDemoPlayer::CMapDataOperations
+	{
+	public:
+		bool m_EofOnNextRead = false;
+		bool m_ReportError = false;
+
+		unsigned ReadChunkHeaderBytes(IOHANDLE File, void *pData, unsigned Size) noexcept override
+		{
+			if(m_EofOnNextRead)
+			{
+				m_EofOnNextRead = false;
+				return 0;
+			}
+			return CMapDataOperations::ReadChunkHeaderBytes(File, pData, Size);
+		}
+		int Error(IOHANDLE File) noexcept override { return m_ReportError ? 1 : CMapDataOperations::Error(File); }
+	};
+
 	class DemoSeekIntegration : public ::testing::Test
 	{
 	protected:
 		CDemoStorageState m_State;
-		CDemoPlayer m_Player{&*m_State.m_pDelta, &*m_State.m_pDeltaSixup, false, nullptr, CDemoPlayer::ETimeMode::UNCACHED};
+		CSeekReadOperations m_ReadOperations;
+		CDemoPlayer m_Player{&*m_State.m_pDelta, &*m_State.m_pDeltaSixup, false, &m_ReadOperations, CDemoPlayer::ETimeMode::UNCACHED};
 		void SetUp() override
 		{
 			ASSERT_NE(m_State.m_pStorage, nullptr);
@@ -87,6 +106,33 @@ TEST_F(DemoSeekIntegration, SeekingWhileManuallyPausedDoesNotResumePlayback)
 	m_Player.Unpause();
 	m_Player.Update(false);
 	EXPECT_EQ(m_Player.Info()->m_Info.m_CurrentTick, 400);
+}
+
+TEST_F(DemoSeekIntegration, EarlyEndWhileSeekingReturnsFailureAndAllowsRetry)
+{
+	ASSERT_NO_FATAL_FAILURE(m_State.CreateTimeline({100, 200, 300, 400, 500}));
+	for(const int Target : {301, 302})
+	{
+		SCOPED_TRACE(Target);
+		ASSERT_EQ(m_Player.Load(m_State.m_pStorage.get(), "source.demo", IStorage::TYPE_SAVE, false), 0);
+		ASSERT_TRUE(m_Player.Play());
+		m_ReadOperations.m_EofOnNextRead = true;
+		EXPECT_FALSE(m_Player.SetPos(Target));
+		ASSERT_TRUE(m_Player.IsPlaying());
+		EXPECT_TRUE(m_Player.BaseInfo()->m_Paused);
+		EXPECT_TRUE(m_Player.SetPos(Target));
+		m_Player.Stop();
+	}
+}
+
+TEST_F(DemoSeekIntegration, ReadErrorAfterIndexedKeyframesRejectsLoadAndAllowsRetry)
+{
+	ASSERT_NO_FATAL_FAILURE(m_State.CreateTimeline({100, 200, 300}));
+	m_ReadOperations.m_ReportError = true;
+	EXPECT_NE(m_Player.Load(m_State.m_pStorage.get(), "source.demo", IStorage::TYPE_SAVE, false), 0);
+	ASSERT_FALSE(m_Player.IsPlaying());
+	m_ReadOperations.m_ReportError = false;
+	EXPECT_EQ(m_Player.Load(m_State.m_pStorage.get(), "source.demo", IStorage::TYPE_SAVE, false), 0);
 }
 
 TEST_F(DemoSeekIntegration, SeekingAfterEndKeepsThePauseUntilExplicitlyResumed)

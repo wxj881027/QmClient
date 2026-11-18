@@ -102,7 +102,7 @@ CDemoRecorder::~CDemoRecorder()
 }
 
 // Record
-int CDemoRecorder::Start(class IStorage *pStorage, const char *pFilename, const char *pNetVersion, const char *pMap, const SHA256_DIGEST &Sha256, unsigned Crc, const char *pType, unsigned MapSize, unsigned char *pMapData, IOHANDLE MapFile, DEMOFUNC_FILTER pfnFilter, void *pUser)
+int CDemoRecorder::Start(class IStorage *pStorage, const char *pFilename, const char *pNetVersion, const char *pMap, const SHA256_DIGEST &Sha256, unsigned Crc, const char *pType, unsigned MapSize, unsigned char *pMapData, IOHANDLE MapFile, DEMOFUNC_FILTER pfnFilter, void *pUser) try
 {
 	dbg_assert(m_File == 0, "Demo recorder already recording");
 
@@ -115,7 +115,15 @@ int CDemoRecorder::Start(class IStorage *pStorage, const char *pFilename, const 
 		return -1;
 	}
 
-	IOHANDLE DemoFile = pStorage->OpenFile(pFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE_OR_ABSOLUTE);
+	// 新文件直接录制；已有同名录像要等地图和文件头准备好才替换。
+	std::optional<demo_output::CTransaction> Replacement;
+	IOHANDLE DemoFile = pStorage->OpenFile(pFilename, IOFLAG_WRITE | IOFLAG_EXCLUSIVE, IStorage::TYPE_SAVE_OR_ABSOLUTE);
+	if(!DemoFile && pStorage->FileExists(pFilename, IStorage::TYPE_SAVE_OR_ABSOLUTE))
+	{
+		Replacement.emplace();
+		if(Replacement->Prepare(*pStorage, pFilename))
+			DemoFile = pStorage->OpenFile(Replacement->Filename(), IOFLAG_WRITE, IStorage::TYPE_ABSOLUTE);
+	}
 	if(!DemoFile)
 	{
 		log_error_color(DEMO_PRINT_COLOR, "demo_recorder", "Unable to open '%s' for recording", pFilename);
@@ -252,10 +260,20 @@ int CDemoRecorder::Start(class IStorage *pStorage, const char *pFilename, const 
 	m_pfnFilter = pfnFilter;
 	m_pUser = pUser;
 
+	if(Replacement && (FileOperations().Flush(DemoFile) != 0 || FileOperations().Error(DemoFile) != 0 || !Replacement->Publish()))
+	{
+		MarkWriteError();
+		return -1;
+	}
 	m_File = DemoGuard.release();
 	str_copy(m_aCurrentFilename, pFilename);
 
 	return 0;
+}
+catch(...)
+{
+	MarkWriteError();
+	return -1;
 }
 
 /*
@@ -572,6 +590,7 @@ void CDemoPlayer::CMapDataOperations::Free(unsigned char *pData) noexcept { std:
 int64_t CDemoPlayer::CMapDataOperations::Tell(IOHANDLE File) noexcept { return io_tell(File); }
 int CDemoPlayer::CMapDataOperations::Seek(IOHANDLE File, int64_t Offset) noexcept { return io_seek(File, Offset, IOSEEK_START); }
 unsigned CDemoPlayer::CMapDataOperations::Read(IOHANDLE File, void *pData, unsigned Size) noexcept { return io_read(File, pData, Size); }
+unsigned CDemoPlayer::CMapDataOperations::ReadChunkHeaderBytes(IOHANDLE File, void *pData, unsigned Size) noexcept { return io_read(File, pData, Size); }
 int CDemoPlayer::CMapDataOperations::Error(IOHANDLE File) noexcept { return io_error(File); }
 
 CDemoPlayer::CMapDataOperations &CDemoPlayer::MapDataOperations()
@@ -631,9 +650,18 @@ CDemoPlayer::EReadChunkHeaderResult CDemoPlayer::ReadChunkHeader(int *pType, int
 	*pSize = 0;
 	*pType = 0;
 
+	const auto Read = [this](void *pData, unsigned Size, bool AtChunkStart = false) {
+		const unsigned Bytes = m_pMapDataOperations ? m_pMapDataOperations->ReadChunkHeaderBytes(m_File, pData, Size) : io_read(m_File, pData, Size);
+		if(Bytes == Size)
+			return CHUNKHEADER_SUCCESS;
+		if(m_pMapDataOperations ? m_pMapDataOperations->Error(m_File) : io_error(m_File))
+			return CHUNKHEADER_IO_ERROR;
+		return AtChunkStart ? CHUNKHEADER_EOF : CHUNKHEADER_ERROR;
+	};
+
 	unsigned char Chunk = 0;
-	if(io_read(m_File, &Chunk, sizeof(Chunk)) != sizeof(Chunk))
-		return CHUNKHEADER_EOF;
+	if(const auto Result = Read(&Chunk, sizeof(Chunk), true); Result != CHUNKHEADER_SUCCESS)
+		return Result;
 
 	if(Chunk & CHUNKTYPEFLAG_TICKMARKER)
 	{
@@ -658,8 +686,8 @@ CDemoPlayer::EReadChunkHeaderResult CDemoPlayer::ReadChunkHeader(int *pType, int
 		else
 		{
 			unsigned char aTickdata[sizeof(int32_t)];
-			if(io_read(m_File, aTickdata, sizeof(aTickdata)) != sizeof(aTickdata))
-				return CHUNKHEADER_ERROR;
+			if(const auto Result = Read(aTickdata, sizeof(aTickdata)); Result != CHUNKHEADER_SUCCESS)
+				return Result;
 			NewTick = bytes_be_to_uint(aTickdata);
 		}
 		if(NewTick < MIN_TICK || NewTick >= MAX_TICK) // invalid tick
@@ -675,15 +703,15 @@ CDemoPlayer::EReadChunkHeaderResult CDemoPlayer::ReadChunkHeader(int *pType, int
 		if(*pSize == 30)
 		{
 			unsigned char aSizedata[1];
-			if(io_read(m_File, aSizedata, sizeof(aSizedata)) != sizeof(aSizedata))
-				return CHUNKHEADER_ERROR;
+			if(const auto Result = Read(aSizedata, sizeof(aSizedata)); Result != CHUNKHEADER_SUCCESS)
+				return Result;
 			*pSize = aSizedata[0];
 		}
 		else if(*pSize == 31)
 		{
 			unsigned char aSizedata[2];
-			if(io_read(m_File, aSizedata, sizeof(aSizedata)) != sizeof(aSizedata))
-				return CHUNKHEADER_ERROR;
+			if(const auto Result = Read(aSizedata, sizeof(aSizedata)); Result != CHUNKHEADER_SUCCESS)
+				return Result;
 			*pSize = (aSizedata[1] << 8) | aSizedata[0];
 		}
 	}
@@ -718,6 +746,8 @@ CDemoPlayer::EScanFileResult CDemoPlayer::ScanFile()
 		}
 		int ChunkType, ChunkSize;
 		const EReadChunkHeaderResult Result = ReadChunkHeader(&ChunkType, &ChunkSize, &ChunkTick);
+		if(Result == CHUNKHEADER_IO_ERROR)
+			return EScanFileResult::ERROR_UNRECOVERABLE;
 		if(Result != CHUNKHEADER_SUCCESS ||
 			(ChunkSize > 0 && io_skip(m_File, ChunkSize) != 0))
 		{
@@ -742,6 +772,10 @@ CDemoPlayer::EScanFileResult CDemoPlayer::ScanFile()
 		else if(Result == CHUNKHEADER_ERROR)
 		{
 			return ResetToStartPosition(EScanFileResult::ERROR_RECOVERABLE);
+		}
+		else if(Result == CHUNKHEADER_IO_ERROR)
+		{
+			return EScanFileResult::ERROR_UNRECOVERABLE;
 		}
 
 		if(ChunkType & CHUNKTYPEFLAG_TICKMARKER)
@@ -786,7 +820,7 @@ CDemoPlayer::EScanFileResult CDemoPlayer::ScanFile()
 	return ResetToStartPosition(EScanFileResult::SUCCESS);
 }
 
-void CDemoPlayer::DoTick()
+bool CDemoPlayer::DoTick()
 {
 	// update ticks
 	m_Info.m_PreviousTick = m_Info.m_Info.m_CurrentTick;
@@ -817,7 +851,7 @@ void CDemoPlayer::DoTick()
 			}
 			break;
 		}
-		else if(Result == CHUNKHEADER_ERROR)
+		else if(Result != CHUNKHEADER_SUCCESS)
 		{
 			Stop("Error reading chunk header");
 			break;
@@ -908,7 +942,7 @@ void CDemoPlayer::DoTick()
 			if(ChunkType & CHUNKTYPEFLAG_TICKMARKER)
 			{
 				m_Info.m_NextTick = ChunkTick;
-				break;
+				return IsPlaying();
 			}
 			else if(ChunkType == CHUNKTYPE_MESSAGE)
 			{
@@ -917,6 +951,7 @@ void CDemoPlayer::DoTick()
 			}
 		}
 	}
+	return false;
 }
 
 void CDemoPlayer::Pause()
@@ -1213,8 +1248,7 @@ bool CDemoPlayer::SetPos(int WantedTick)
 	// Just the next tick
 	if(WantedTick == m_Info.m_NextTick + 1)
 	{
-		DoTick();
-		return Play();
+		return DoTick() && Play();
 	}
 
 	const int KeyFrameWantedTick = WantedTick - 5; // -5 because we have to have a current tick and previous tick when we do the playback
@@ -1248,8 +1282,7 @@ bool CDemoPlayer::SetPos(int WantedTick)
 	// playback everything until we hit our tick
 	while(m_Info.m_NextTick < WantedTick)
 	{
-		DoTick();
-		if(!IsPlaying())
+		if(!DoTick())
 		{
 			return false;
 		}

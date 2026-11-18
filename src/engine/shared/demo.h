@@ -117,6 +117,8 @@ public:
 		virtual int64_t Tell(IOHANDLE File) noexcept;
 		virtual int Seek(IOHANDLE File, int64_t Offset) noexcept;
 		virtual unsigned Read(IOHANDLE File, void *pData, unsigned Size) noexcept;
+		// 块头和内嵌地图共用流错误状态，读取边界各自独立。
+		virtual unsigned ReadChunkHeaderBytes(IOHANDLE File, void *pData, unsigned Size) noexcept;
 		virtual int Error(IOHANDLE File) noexcept;
 	};
 
@@ -272,10 +274,12 @@ private:
 	{
 		CHUNKHEADER_SUCCESS,
 		CHUNKHEADER_ERROR,
+		CHUNKHEADER_IO_ERROR,
 		CHUNKHEADER_EOF,
 	};
 	EReadChunkHeaderResult ReadChunkHeader(int *pType, int *pSize, int *pTick);
-	void DoTick();
+	// 读到下一个 tick 标记时返回 true，暂停播放仍可定位。
+	bool DoTick();
 	enum class EScanFileResult
 	{
 		SUCCESS,

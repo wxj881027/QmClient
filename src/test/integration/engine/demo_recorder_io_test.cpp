@@ -226,6 +226,32 @@ TEST_F(DemoRecorderIoIntegration, MissingMapClosesAlreadyOpenedOutput)
 	EXPECT_TRUE(m_pStorage->RenameFile(SOURCE, TARGET, IStorage::TYPE_SAVE));
 }
 
+TEST_F(DemoRecorderIoIntegration, FailedReplacementStartPreservesTheExistingRecording)
+{
+	ASSERT_NO_FATAL_FAILURE(Write(SOURCE, "previous demo"));
+	m_Operations.Fail(COperations::WRITE);
+	EXPECT_EQ(Start(), -1);
+	EXPECT_FALSE(m_Recorder.IsRecording());
+	EXPECT_EQ(Read(SOURCE), "previous demo");
+
+	ASSERT_EQ(Start(), 0);
+	m_Recorder.RecordTickMarker(100, true);
+	m_Recorder.RecordTickMarker(150, true);
+	ASSERT_EQ(m_Recorder.Stop(IDemoRecorder::EStopMode::KEEP_FILE), 0);
+	CDemoPlayer Player(nullptr, nullptr, false);
+	EXPECT_EQ(Player.Load(m_pStorage.get(), SOURCE, IStorage::TYPE_SAVE, false), 0);
+	Player.Stop();
+}
+
+TEST_F(DemoRecorderIoIntegration, FailedStartupFlushDoesNotReplaceAnExistingRecording)
+{
+	ASSERT_NO_FATAL_FAILURE(Write(SOURCE, "previous demo"));
+	m_Operations.Fail(COperations::FLUSH);
+	EXPECT_EQ(Start(), -1);
+	EXPECT_FALSE(m_Recorder.IsRecording());
+	EXPECT_EQ(Read(SOURCE), "previous demo");
+}
+
 TEST_F(DemoRecorderIoIntegration, ShortHeaderWriteClosesOutputAndRejectsStart)
 {
 	m_Operations.Fail(COperations::WRITE);

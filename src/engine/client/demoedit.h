@@ -22,6 +22,7 @@ public:
 private:
 	std::unique_ptr<CSnapshotDelta> m_pSnapshotDelta;
 	std::unique_ptr<CSnapshotDelta> m_pSnapshotDeltaSixup;
+	std::unique_ptr<void, decltype(&io_close)> m_pSourceFile{nullptr, &io_close};
 	IStorage *m_pStorage;
 	COperations *m_pOperations;
 	COperations &Operations();

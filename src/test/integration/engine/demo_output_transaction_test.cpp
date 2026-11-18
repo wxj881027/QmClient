@@ -123,6 +123,32 @@ namespace
 	};
 }
 
+TEST_F(DemoOutputTransactionIntegration, SourceReadErrorAfterRecordingDoesNotPublishPartialCut)
+{
+	ASSERT_NO_FATAL_FAILURE(m_State.CreateTimeline({100, 150, 200, 250, 300}));
+	ASSERT_NO_FATAL_FAILURE(m_State.Write("target.demo", "previous"));
+	class CSourceReadFault : public CDemoPlayer::CMapDataOperations
+	{
+		const CObservedDemoOutput &m_Output;
+
+	public:
+		explicit CSourceReadFault(const CObservedDemoOutput &Output) :
+			m_Output(Output) {}
+		int Error(IOHANDLE File) noexcept override
+		{
+			// 输入扫描和地图读取先正常完成，写出选段后才报告源流错误。
+			return m_Output.m_Creates > 0 ? 1 : CMapDataOperations::Error(File);
+		}
+	} Input(m_Operations);
+	CDemoEditor Editor;
+	Editor.Init(m_State.m_pDelta.get(), m_State.m_pDeltaSixup.get(), m_State.m_pStorage.get(), &Input, &m_Operations);
+	EXPECT_FALSE(Editor.Slice("source.demo", "target.demo", -1, -1, nullptr, nullptr));
+	EXPECT_GT(m_Operations.m_Creates, 0);
+	EXPECT_EQ(m_Operations.m_Publishes, 0);
+	EXPECT_EQ(m_State.Read("target.demo"), "previous");
+	EXPECT_TRUE(m_State.Exists("source.demo"));
+}
+
 TEST_F(DemoOutputTransactionIntegration, ExistingTargetRemainsIntactUntilPublish)
 {
 	m_State.Write("target.demo", "previous");
