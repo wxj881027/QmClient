@@ -23,22 +23,34 @@ namespace QmConsoleText
 		int m_EndChar;
 	};
 
-	inline SRange Range(const char *pText, const char *pStart, const char *pEnd)
+	class CRangeCursor
 	{
-		int StartChar = 0, EndChar = 0;
-		for(const char *pScan = pText; pScan < pEnd;)
+		const char *m_pText;
+		const char *m_pScan;
+		int m_CharIndex = 0;
+
+		int AdvanceTo(const char *pEnd)
 		{
-			const char *pBefore = pScan;
-			if(str_utf8_decode(&pScan) != '\n')
-			{
-				++EndChar;
-				if(pBefore < pStart)
-					++StartChar;
-			}
+			while(m_pScan < pEnd)
+				m_CharIndex += str_utf8_decode(&m_pScan) != '\n';
+			return m_CharIndex;
 		}
-		return {static_cast<int>(pStart - pText), static_cast<int>(pEnd - pText),
-			StartChar, EndChar};
-	}
+
+	public:
+		explicit CRangeCursor(const char *pText) :
+			m_pText(pText),
+			m_pScan(pText)
+		{
+		}
+
+		// 区间按字节顺序且不重叠，字形计数从上一段末尾继续。
+		SRange Next(const char *pStart, const char *pEnd)
+		{
+			const int StartChar = AdvanceTo(pStart);
+			const int EndChar = AdvanceTo(pEnd);
+			return {static_cast<int>(pStart - m_pText), static_cast<int>(pEnd - m_pText), StartChar, EndChar};
+		}
+	};
 
 	inline bool IsLinkDelimiter(int Character)
 	{
@@ -123,6 +135,7 @@ namespace QmConsoleText
 			return;
 		if(!str_find_nocase(pText, "https://") && !str_find_nocase(pText, "http://") && !str_find_nocase(pText, "www."))
 			return;
+		CRangeCursor RangeCursor(pText);
 		const char *pScan = pText;
 		while(*pScan)
 		{
@@ -154,7 +167,7 @@ namespace QmConsoleText
 			pScan = pEnd;
 			pEnd = TrimLinkEnd(pStart, pEnd);
 			if(pEnd > pStart + PrefixLength && HasLinkHost(pStart, pEnd, PrefixLength, Www))
-				vLinks.push_back(Range(pText, pStart, pEnd));
+				vLinks.push_back(RangeCursor.Next(pStart, pEnd));
 		}
 	}
 
@@ -192,11 +205,12 @@ namespace QmConsoleText
 		vMatches.clear();
 		if(pText == nullptr || pNeedle == nullptr || *pNeedle == '\0')
 			return;
+		CRangeCursor RangeCursor(pText);
 		const char *pSearch = pText;
 		const char *pEnd;
 		while(const char *pStart = str_utf8_find_nocase(pSearch, pNeedle, &pEnd))
 		{
-			vMatches.push_back(Range(pText, pStart, pEnd));
+			vMatches.push_back(RangeCursor.Next(pStart, pEnd));
 			pSearch = pEnd;
 		}
 	}

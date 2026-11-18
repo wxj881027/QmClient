@@ -121,6 +121,19 @@ TEST(QmConsoleText, SearchRangesUseMatchedUtf8Bytes)
 	EXPECT_EQ(vMatches[1].m_EndByte, 19);
 }
 
+TEST(QmConsoleText, SuccessiveSearchMatchesKeepGlyphOffsetsAcrossNewlines)
+{
+	std::vector<QmConsoleText::SRange> vMatches;
+	QmConsoleText::CollectSearchMatches("前缀中文\n 中文", "中文", vMatches);
+	ASSERT_EQ(vMatches.size(), 2u);
+	EXPECT_EQ(vMatches[0].m_StartChar, 2);
+	EXPECT_EQ(vMatches[0].m_EndChar, 4);
+	EXPECT_EQ(vMatches[1].m_StartByte, 14);
+	EXPECT_EQ(vMatches[1].m_EndByte, 20);
+	EXPECT_EQ(vMatches[1].m_StartChar, 5);
+	EXPECT_EQ(vMatches[1].m_EndChar, 7);
+}
+
 TEST(QmConsoleText, CaseInsensitiveSearchUsesActualMatchedLength)
 {
 	std::vector<QmConsoleText::SRange> vMatches;
