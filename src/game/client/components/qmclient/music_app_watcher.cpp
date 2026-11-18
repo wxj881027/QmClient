@@ -7,6 +7,7 @@
 #include <engine/engine.h>
 
 #if defined(CONF_FAMILY_WINDOWS)
+#include <memory>
 #include <new>
 
 #include <windows.h>
@@ -19,25 +20,45 @@ namespace
 	constexpr int CHECK_INTERVAL_SECONDS = 2;
 
 #if defined(CONF_FAMILY_WINDOWS)
-	std::optional<uint64_t> BuildRunningMask()
+	std::optional<uint64_t> BuildRunningMask(const IJob &Job)
 	{
+		if(Job.State() == IJob::STATE_ABORTED)
+			return std::nullopt;
+
 		const HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 		if(hSnapshot == INVALID_HANDLE_VALUE)
+			return std::nullopt;
+		const std::unique_ptr<void, decltype(&CloseHandle)> pSnapshot(hSnapshot, &CloseHandle);
+
+		PROCESSENTRY32W Entry{};
+		Entry.dwSize = sizeof(Entry);
+		// 快照至少应包含当前客户端进程，首条读取失败时不发布结果。
+		if(Job.State() == IJob::STATE_ABORTED || !Process32FirstW(pSnapshot.get(), &Entry))
 			return std::nullopt;
 
 		size_t HookCount = 0;
 		const SQmMusicHookEntry *pHooks = QmMusicHookRegistry(&HookCount);
 		uint64_t Mask = 0;
-		PROCESSENTRY32W Entry{};
-		Entry.dwSize = sizeof(Entry);
-		for(BOOL Found = Process32FirstW(hSnapshot, &Entry); Found; Found = Process32NextW(hSnapshot, &Entry))
+		do
+		{
 			Mask |= QmMusicHookMaskForProcess(Entry.szExeFile, pHooks, HookCount);
-		const DWORD Error = GetLastError();
-		CloseHandle(hSnapshot);
-		if(Error != ERROR_NO_MORE_FILES)
+			if(Job.State() == IJob::STATE_ABORTED)
+				return std::nullopt;
+		} while(Process32NextW(pSnapshot.get(), &Entry));
+		if(GetLastError() != ERROR_NO_MORE_FILES)
 			return std::nullopt;
 		return Mask;
 	}
+
+	class CWindowsMusicAppScanJob final : public CQmMusicAppScanJob
+	{
+	public:
+		CWindowsMusicAppScanJob() :
+			CQmMusicAppScanJob([this] { return BuildRunningMask(*this); })
+		{
+			Abortable(true);
+		}
+	};
 #endif
 }
 
@@ -72,7 +93,7 @@ void CQmMusicAppWatcher::OnUpdate()
 #if defined(CONF_FAMILY_WINDOWS)
 	try
 	{
-		auto pScanJob = std::make_shared<CQmMusicAppScanJob>(BuildRunningMask);
+		auto pScanJob = std::make_shared<CWindowsMusicAppScanJob>();
 		if(Engine()->TryAddJob(pScanJob))
 			m_pScanJob = std::move(pScanJob);
 	}
