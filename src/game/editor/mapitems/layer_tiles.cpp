@@ -502,7 +502,8 @@ int CLayerTiles::BrushGrab(CLayerGroup *pBrush, CUIRect Rect)
 
 void CLayerTiles::FillSelection(bool Empty, CLayer *pBrush, CUIRect Rect)
 {
-	if(m_Readonly || (!Empty && pBrush->m_Type != LAYERTYPE_TILES))
+	const CLayerTiles *pLt;
+	if(m_Readonly || !ResolveFillBrush(Empty, pBrush, pLt))
 		return;
 
 	Snap(&Rect);
@@ -511,8 +512,6 @@ void CLayerTiles::FillSelection(bool Empty, CLayer *pBrush, CUIRect Rect)
 	int sy = ConvertY(Rect.y);
 	int w = ConvertX(Rect.w);
 	int h = ConvertY(Rect.h);
-
-	CLayerTiles *pLt = static_cast<CLayerTiles *>(pBrush);
 
 	bool Destructive = Editor()->m_BrushDrawDestructive || Empty || pLt->IsEmpty();
 

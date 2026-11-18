@@ -3,6 +3,7 @@
 #ifndef GAME_EDITOR_MAPITEMS_MAP_H
 #define GAME_EDITOR_MAPITEMS_MAP_H
 
+#include <base/str.h>
 #include <base/types.h>
 
 #include <game/editor/editor_history.h>
@@ -162,6 +163,13 @@ public:
 	void ModifySoundIndex(const FIndexModifyFunction &IndexModifyFunction);
 
 	// I/O
+	static void FormatAppendedImageName(char (&aName)[IO_MAX_PATH_LENGTH], const char *pOriginalName, size_t Number)
+	{
+		char aSuffix[32];
+		const int SuffixLength = str_format(aSuffix, sizeof(aSuffix), " (%zu)", Number);
+		str_copy(aName, pOriginalName, sizeof(aName) - SuffixLength);
+		str_append(aName, aSuffix);
+	}
 	bool Save(const char *pFilename, const FErrorHandler &ErrorHandler);
 	bool PerformPreSaveSanityChecks(const FErrorHandler &ErrorHandler);
 	bool Load(const char *pFilename, int StorageType, const FErrorHandler &ErrorHandler);

@@ -132,6 +132,13 @@ public:
 	[[nodiscard]] virtual bool HasContentInRect(const CIntRect &Rect) const;
 	void BrushSelecting(CUIRect Rect) override;
 	int BrushGrab(CLayerGroup *pBrush, CUIRect Rect) override;
+	// 空画笔执行擦除，不需要读取来源图层。
+	template<typename T, typename TBrush>
+	static bool ResolveFillBrush(bool Empty, const TBrush *pBrush, const T *&pTiles)
+	{
+		pTiles = Empty ? nullptr : dynamic_cast<const T *>(pBrush);
+		return Empty || pTiles != nullptr;
+	}
 	void FillSelection(bool Empty, CLayer *pBrush, CUIRect Rect) override;
 	void FillGameTiles(EGameTileOp Fill);
 	bool CanFillGameTiles() const;

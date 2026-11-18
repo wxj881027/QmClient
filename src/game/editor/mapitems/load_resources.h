@@ -7,6 +7,7 @@
 #include <game/map/map_render_items.h>
 #include <game/mapitems_ex.h>
 
+#include <array>
 #include <cstddef>
 #include <new>
 #include <optional>
@@ -77,6 +78,11 @@ namespace EditorMapLoad
 		Map.GetType(MAPITEMTYPE_LAYER, &LayersStart, &LayersNum);
 		int AutoMapperStart, AutoMapperNum;
 		Map.GetType(MAPITEMTYPE_AUTOMAPPER_CONFIG, &AutoMapperStart, &AutoMapperNum);
+		constexpr std::array<int, 6> aPhysicsFlags = {TILESLAYERFLAG_GAME, TILESLAYERFLAG_TELE, TILESLAYERFLAG_SPEEDUP,
+			TILESLAYERFLAG_FRONT, TILESLAYERFLAG_SWITCH, TILESLAYERFLAG_TUNE};
+		std::array<int, aPhysicsFlags.size()> aPhysicsGroups;
+		aPhysicsGroups.fill(-1);
+
 		std::vector<std::vector<bool>> vvAutoMapperTargets;
 		if(AutoMapperNum > 0)
 			vvAutoMapperTargets.reserve(GroupsNum);
@@ -96,7 +102,23 @@ namespace EditorMapLoad
 			{
 				const int ItemIndex = LayersStart + pGroup->m_StartLayer + l;
 				const auto *pLayer = static_cast<const CMapItemLayer *>(Map.GetItem(ItemIndex));
-				if(pLayer->m_Type == LAYERTYPE_QUADS)
+				bool IsAutoMapperTarget = false;
+				if(pLayer->m_Type == LAYERTYPE_TILES)
+				{
+					const auto *pTiles = static_cast<const CMapItemLayerTilemap *>(Map.GetItem(ItemIndex));
+					IsAutoMapperTarget = true;
+					for(size_t i = 0; i < aPhysicsFlags.size(); ++i)
+					{
+						if(pTiles->m_Flags & aPhysicsFlags[i])
+						{
+							// 导入时同类物理层以后出现的为准。
+							aPhysicsGroups[i] = g;
+							IsAutoMapperTarget = false;
+							break;
+						}
+					}
+				}
+				else if(pLayer->m_Type == LAYERTYPE_QUADS)
 				{
 					const auto *pQuads = MapRenderItems::QuadLayer(Map, ItemIndex);
 					if(pQuads == nullptr ||
@@ -117,18 +139,25 @@ namespace EditorMapLoad
 					}
 				}
 				if(pAutoMapperTargets != nullptr && ImportsLayer(Map, ItemIndex))
-				{
-					bool IsTarget = false;
-					if(pLayer->m_Type == LAYERTYPE_TILES)
-					{
-						const auto *pTiles = static_cast<const CMapItemLayerTilemap *>(Map.GetItem(ItemIndex));
-						IsTarget = !(pTiles->m_Flags & (TILESLAYERFLAG_GAME | TILESLAYERFLAG_TELE | TILESLAYERFLAG_SPEEDUP |
-										       TILESLAYERFLAG_FRONT | TILESLAYERFLAG_SWITCH | TILESLAYERFLAG_TUNE));
-					}
-					pAutoMapperTargets->push_back(IsTarget);
-				}
+					pAutoMapperTargets->push_back(IsAutoMapperTarget);
 			}
 		}
+
+		const int GameGroup = aPhysicsGroups.front();
+		if(GameGroup == -1)
+		{
+			log_error("editor/load", "Game layer is missing from the supported groups.");
+			return std::nullopt;
+		}
+		for(size_t i = 1; i < aPhysicsGroups.size(); ++i)
+		{
+			if(aPhysicsGroups[i] != -1 && aPhysicsGroups[i] != GameGroup)
+			{
+				log_error("editor/load", "Physics layer in group %d is outside the game group %d.", aPhysicsGroups[i], GameGroup);
+				return std::nullopt;
+			}
+		}
+
 		for(int i = 0; i < AutoMapperNum; ++i)
 		{
 			const int ItemIndex = AutoMapperStart + i;

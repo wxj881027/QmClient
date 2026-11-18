@@ -1282,10 +1282,11 @@ bool CEditorMap::Append(const char *pFilename, int StorageType, bool IgnoreHisto
 
 	const auto &&Rename = [&](const std::shared_ptr<CEditorImage> &pImage) {
 		char aRenamed[IO_MAX_PATH_LENGTH];
-		int DuplicateCount = 1;
-		str_copy(aRenamed, pImage->m_aName);
-		while(std::find_if(m_vpImages.begin(), m_vpImages.end(), [aRenamed](const std::shared_ptr<CEditorImage> &OtherImage) { return str_comp(OtherImage->m_aName, aRenamed) == 0; }) != m_vpImages.end())
-			str_format(aRenamed, sizeof(aRenamed), "%s (%d)", pImage->m_aName, DuplicateCount++); // 重命名为“image_name (%d)”
+		size_t DuplicateCount = 1;
+		do
+		{
+			FormatAppendedImageName(aRenamed, pImage->m_aName, DuplicateCount++);
+		} while(std::any_of(m_vpImages.begin(), m_vpImages.end(), [&aRenamed](const auto &pOtherImage) { return str_comp(pOtherImage->m_aName, aRenamed) == 0; }));
 		str_copy(pImage->m_aName, aRenamed);
 	};
 
