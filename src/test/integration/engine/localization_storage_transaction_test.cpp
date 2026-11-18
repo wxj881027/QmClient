@@ -134,7 +134,7 @@ TEST_F(LocalizationStorageTransaction, SuccessfulAppendPreservesUntouchedAndPrev
 	EXPECT_EQ(Find("Old"), pOriginal);
 	const char *pAdded = Find("New");
 	ASSERT_STREQ(pAdded, "added");
-	Write("override.txt", "Old\n== overridden\n");
+	Write("override.txt", "Old\n== earlier in append\nOld\n== overridden\n");
 	ASSERT_TRUE(Load("override.txt", false));
 	EXPECT_STREQ(Find("Old"), "overridden");
 	EXPECT_STREQ(pOriginal, "previous");
@@ -211,6 +211,36 @@ TEST_F(LocalizationStorageTransaction, ContextAndDuplicateReplacementRulesRemain
 	EXPECT_STREQ(Find("Key", "Other"), "newest");
 	EXPECT_EQ(Find("Key", "Other", false), nullptr);
 	EXPECT_EQ(Find("Skipped"), nullptr);
+}
+
+TEST_F(LocalizationStorageTransaction, LongReplacementKeepsUtf8AndEscapedNewlines)
+{
+	const std::string Prefix(510, 'x');
+	Write("long-replacement.txt", "Long\n== " + Prefix + "中文\\nending\n");
+	ASSERT_TRUE(Load("long-replacement.txt"));
+	EXPECT_STREQ(Find("Long"), (Prefix + "中文\nending").c_str());
+}
+
+TEST_F(LocalizationStorageTransaction, LongOriginalsWithSharedPrefixStayDistinct)
+{
+	const std::string Prefix(512, 'x');
+	const std::string First = Prefix + " first";
+	const std::string Second = Prefix + " second";
+	Write("long-originals.txt", First + "\n== one\n" + Second + "\n== two\n");
+	ASSERT_TRUE(Load("long-originals.txt"));
+	EXPECT_STREQ(Find(First.c_str()), "one");
+	EXPECT_STREQ(Find(Second.c_str()), "two");
+}
+
+TEST_F(LocalizationStorageTransaction, LongContextsWithSharedPrefixStayDistinct)
+{
+	const std::string Prefix(512, 'x');
+	const std::string First = Prefix + " first";
+	const std::string Second = Prefix + " second";
+	Write("long-contexts.txt", "[" + First + "]\nKey\n== one\n[" + Second + "]\nKey\n== two\n");
+	ASSERT_TRUE(Load("long-contexts.txt"));
+	EXPECT_STREQ(Find("Key", First.c_str(), false), "one");
+	EXPECT_STREQ(Find("Key", Second.c_str(), false), "two");
 }
 
 TEST_F(LocalizationStorageTransaction, MissingInitialIndexKeepsEnglishFallback)
