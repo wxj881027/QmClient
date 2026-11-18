@@ -2,10 +2,13 @@
 
 #include <game/client/ui_scrollregion.h>
 
+#include <test/support/prediction_allocation_failure.h>
 #include <test/support/qm_real_ui_fixture.h>
 #include <test/support/qm_ui_test_client.h>
 #include <test/support/qm_ui_test_input.h>
 #include <test/support/tracked_allocation_resource.h>
+
+#include <iterator>
 
 class QmDropdownSearchFailure : public qm_ui_test::CRealUiFixture
 {
@@ -107,4 +110,52 @@ TEST_F(QmDropdownSearchFailure, ClickingClearRestoresAllEntriesWithoutSelecting)
 	EXPECT_STREQ(m_Context.m_SearchInput.GetString(), "");
 	EXPECT_EQ(m_Context.m_Search.Indices(), (std::vector<int>{0, 1, 2}));
 	EXPECT_EQ(m_Context.m_SelectionIndex, -1);
+}
+
+TEST_F(QmDropdownSearchFailure, ScrollRegionAllocationFailureKeepsRegistrationForRetry)
+{
+	m_Ui.SetEnabled(true);
+	{
+		// 预留一个登记位置，让故障落在滚动区分配。
+		CUIElement Element;
+		Element.Init(&m_Ui, -1);
+	}
+
+	const char *apEntries[] = {"Default", "Arial"};
+	for(CScrollRegion *pBorrowedScroll : {static_cast<CScrollRegion *>(nullptr), &m_Scroll})
+	{
+		SCOPED_TRACE(pBorrowedScroll != nullptr ? "borrowed scroll region" : "owned scroll region");
+		CUi::SDropDownState State;
+		State.m_SelectionPopupContext.m_pScrollRegion = pBorrowedScroll;
+		CUIRect Anchor{40.0f, 40.0f, 200.0f, 24.0f};
+		const auto DrawDropDown = [&] { return m_Ui.DoDropDown(&Anchor, 1, apEntries, static_cast<int>(std::size(apEntries)), State); };
+
+		Frame();
+		int Selection = -1;
+		bool Triggered = false;
+		m_Ui.BeginPreLayoutInput();
+		{
+			CPredictionAllocationFailure Fault;
+			EXPECT_NO_THROW(Selection = DrawDropDown());
+			Triggered = Fault.Triggered();
+		}
+		m_Ui.EndPreLayoutInput();
+		ASSERT_TRUE(Triggered);
+		ASSERT_TRUE(State.m_Init);
+		EXPECT_EQ(Selection, 1);
+		EXPECT_EQ(State.m_pOwnedScrollRegion, nullptr);
+		EXPECT_EQ(State.m_SelectionPopupContext.m_pScrollRegion, pBorrowedScroll);
+		EXPECT_FALSE(m_Ui.IsPopupOpen(&State.m_SelectionPopupContext));
+
+		Frame();
+		Selection = -1;
+		m_Ui.BeginPreLayoutInput();
+		EXPECT_NO_THROW(Selection = DrawDropDown());
+		m_Ui.EndPreLayoutInput();
+		EXPECT_EQ(Selection, 1);
+		ASSERT_NE(State.m_pOwnedScrollRegion, nullptr);
+		const CScrollRegion *pExpected = pBorrowedScroll != nullptr ? pBorrowedScroll : State.m_pOwnedScrollRegion.get();
+		EXPECT_EQ(State.m_pScrollRegion, pExpected);
+		EXPECT_EQ(State.m_SelectionPopupContext.m_pScrollRegion, pExpected);
+	}
 }

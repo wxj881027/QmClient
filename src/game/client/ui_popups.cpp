@@ -34,6 +34,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <new>
 #include <stdexcept>
 #include <type_traits>
 
@@ -45,6 +46,22 @@ namespace
 	uint64_t PopupAnimKey(const SPopupMenuId *pId)
 	{
 		return BuildUiAnimNodeKey(POPUP_ANIM_SCOPE, reinterpret_cast<uint64_t>(pId));
+	}
+
+	bool TryResizePopupSelectionButtons(CUi::SSelectionPopupContext &Context)
+	{
+		try
+		{
+			Context.m_vButtonContainers.resize(Context.m_vEntries.size());
+			return true;
+		}
+		catch(const std::bad_alloc &)
+		{
+		}
+		catch(const std::length_error &)
+		{
+		}
+		return false;
 	}
 }
 
@@ -1058,6 +1075,9 @@ CUi::EPopupMenuFunctionResult CUi::PopupSelection(void *pContext, CUIRect View, 
 	}
 	if(KeyboardResult.m_Closed)
 		return CUi::POPUP_CLOSE_CURRENT;
+	// 已打开的列表也可能换源。先准备按钮，再开启滚动区域的裁剪。
+	if(!TryResizePopupSelectionButtons(*pSelectionPopup))
+		return CUi::POPUP_CLOSE_CURRENT;
 	if(QmDropdownShouldRequestActiveScroll(true, PreviousActiveIndex, pSelectionPopup->m_ActiveIndex))
 		pSelectionPopup->m_ScrollToActiveItem = true;
 
@@ -1088,8 +1108,6 @@ CUi::EPopupMenuFunctionResult CUi::PopupSelection(void *pContext, CUIRect View, 
 			pUI->TextRender()->Text(Slot.x, Slot.y, pSelectionPopup->m_FontSize, pSelectionPopup->m_aMessage, Slot.w);
 		}
 	}
-
-	pSelectionPopup->m_vButtonContainers.resize(pSelectionPopup->m_vEntries.size());
 
 	size_t Index = 0;
 	int VisibleEntries = 0;
@@ -1156,6 +1174,10 @@ CUi::EPopupMenuFunctionResult CUi::PopupSelection(void *pContext, CUIRect View, 
 
 void CUi::ShowPopupSelection(float X, float Y, SSelectionPopupContext *pContext)
 {
+	// 新弹层的按钮准备失败时，保留当前弹层和它的输入焦点。
+	if(!RenderOnly() && pContext->m_vButtonContainers.size() < pContext->m_vEntries.size() &&
+		!IsPopupOpen(pContext) && !TryResizePopupSelectionButtons(*pContext))
+		return;
 	const bool HasMessage = pContext->m_aMessage[0] != '\0';
 	const STextBoundingBox TextBoundingBox = TextRender()->TextBoundingBox(pContext->m_FontSize, pContext->m_aMessage, -1, pContext->m_Width);
 	const float OuterHeight = (SPopupMenu::POPUP_BORDER + SPopupMenu::POPUP_MARGIN) * 2;
@@ -1217,13 +1239,15 @@ void CUi::ShowPopupSelection(float X, float Y, SSelectionPopupContext *pContext)
 	const CUIRect PopupRect{X, Y, PopupWidth, PopupHeightResolved};
 	const bool Scrollable = pContext->m_PopupVisible && QmDropdownPopupScrollable(pContext->m_PopupPolicy, PopupHeightResolved);
 	const bool BlockUnderlying = QmDropdownPopupBlocksUnderlying(pContext->m_PopupVisible);
-	RegisterWheelOwner(pContext, EUiWheelOwnerPriority::POPUP, PopupRect, BlockUnderlying);
+	const bool CanRegisterWheel = BlockUnderlying && !WheelInputBlocked(pContext);
 	pContext->m_Scrollable = Scrollable;
 	pContext->m_BlockUnderlyingScroll = BlockUnderlying;
 	pContext->m_Props.m_ClipToViewport = true;
 	pContext->m_Props.m_BlockUnderlyingScroll = BlockUnderlying;
 	pContext->m_Props.m_Viewport = Viewport;
 	DoPopupMenu(pContext, X, Y, PopupWidth, PopupHeightResolved, pContext, PopupSelection, pContext->m_Props);
+	if(CanRegisterWheel && IsPopupOpen(pContext))
+		RegisterWheelOwner(pContext, EUiWheelOwnerPriority::POPUP, PopupRect, true);
 }
 
 int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, int Num, SDropDownState &State, const SDropDownProperties &DropDownProps)
@@ -1253,7 +1277,8 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 		{
 			if(!State.m_Init)
 			{
-				State.m_UiElement.Init(this, -1);
+				if(!State.m_UiElement.TryInit(this, -1))
+					return CurSelection;
 				State.m_Init = true;
 			}
 			SMenuButtonProperties Props;
@@ -1279,11 +1304,22 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 	if(!State.m_Init || !State.m_pOwnedScrollRegion)
 	{
 		if(!State.m_Init)
-			State.m_UiElement.Init(this, -1);
-		State.m_pOwnedScrollRegion = std::make_shared<CScrollRegion>();
+		{
+			if(!State.m_UiElement.TryInit(this, -1))
+				return CurSelection;
+			// 滚动区分配失败后，下一帧只补建滚动区。
+			State.m_Init = true;
+		}
+		try
+		{
+			State.m_pOwnedScrollRegion = std::make_shared<CScrollRegion>();
+		}
+		catch(const std::bad_alloc &)
+		{
+			return CurSelection;
+		}
 		State.m_pScrollRegion = State.m_SelectionPopupContext.m_pScrollRegion != nullptr ? State.m_SelectionPopupContext.m_pScrollRegion : State.m_pOwnedScrollRegion.get();
 		State.m_SelectionPopupContext.m_pScrollRegion = State.m_pScrollRegion;
-		State.m_Init = true;
 	}
 	else if(State.m_SelectionPopupContext.m_pScrollRegion != nullptr && State.m_SelectionPopupContext.m_pScrollRegion != State.m_pScrollRegion)
 		State.m_pScrollRegion = State.m_SelectionPopupContext.m_pScrollRegion;
@@ -1379,7 +1415,8 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 		DropDownInput.m_HoveredIndex = State.m_SelectionPopupContext.m_ActiveIndex;
 	const int PreviousActiveIndex = State.m_DropDownState.ActiveIndex();
 	const SQmDropdownUpdateResult DropDownResult = State.m_DropDownState.Update(DropDownInput, Num);
-	State.m_SelectionPopupContext.m_ActiveIndex = State.m_DropDownState.ActiveIndex();
+	if(!DropDownResult.m_Opened || PopupOpen)
+		State.m_SelectionPopupContext.m_ActiveIndex = State.m_DropDownState.ActiveIndex();
 	if(QmDropdownShouldRequestActiveScroll(PopupOpen, PreviousActiveIndex, State.m_DropDownState.ActiveIndex()))
 		State.m_SelectionPopupContext.m_ScrollToActiveItem = true;
 	if(PopupOpen)
@@ -1400,39 +1437,58 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 		if(State.m_DropDownState.IsOpen() && !PopupOpen)
 			State.m_DropDownState.Reset();
 	}
-	if(DropDownResult.m_Opened)
+	if(DropDownResult.m_Opened && !PopupOpen)
 	{
-		CScrollRegion *pScrollRegion = State.m_SelectionPopupContext.m_pScrollRegion;
-		const bool SpecialFontRenderMode = State.m_SelectionPopupContext.m_SpecialFontRenderMode;
-		const bool FontFaceAvailabilityCheck = State.m_SelectionPopupContext.m_FontFaceAvailabilityCheck;
-		const bool FontFamilySelection = State.m_SelectionPopupContext.m_FontFamilySelection;
-		State.m_SelectionPopupContext.Reset();
-		State.m_SelectionPopupContext.m_Props.m_ReturnFocus = true;
-		State.m_SelectionPopupContext.m_pScrollRegion = pScrollRegion != nullptr ? pScrollRegion : State.m_pScrollRegion;
-		State.m_SelectionPopupContext.m_SpecialFontRenderMode = SpecialFontRenderMode;
-		State.m_SelectionPopupContext.m_FontFaceAvailabilityCheck = FontFaceAvailabilityCheck;
-		State.m_SelectionPopupContext.m_FontFamilySelection = FontFamilySelection;
-		State.m_SelectionPopupContext.m_Searchable = DropDownProps.m_Searchable;
-		State.m_SelectionPopupContext.m_FocusSearch = DropDownProps.m_Searchable;
-		State.m_SelectionPopupContext.m_Props.m_BorderColor = VisualStyle.m_PopupBorderColor;
-		State.m_SelectionPopupContext.m_Props.m_BackgroundColor = VisualStyle.m_PopupBackgroundColor;
-		State.m_SelectionPopupContext.m_ActiveEntryColor = DropDownProps.m_VisualStyle.m_ActiveEntryColor;
-		State.m_SelectionPopupContext.m_HoverEntryColor = DropDownProps.m_VisualStyle.m_ActiveEntryColor;
-		for(int i = 0; i < Num; ++i)
-			State.m_SelectionPopupContext.m_vEntries.emplace_back(pStrs[i]);
-		State.m_SelectionPopupContext.m_Search.Update(State.m_SelectionPopupContext.m_vEntries, State.m_SelectionPopupContext.m_SearchInput.GetString());
-		State.m_SelectionPopupContext.m_EntryHeight = pRect->h;
-		State.m_SelectionPopupContext.m_EntryPadding = pRect->h >= 20.0f ? 2.0f : 1.0f;
-		State.m_SelectionPopupContext.m_FontSize = ResolvedFontSize;
-		State.m_SelectionPopupContext.m_Width = pRect->w;
-		State.m_SelectionPopupContext.m_AlignmentHeight = pRect->h;
-		State.m_SelectionPopupContext.m_TransparentButtons = DropDownProps.m_VisualStyle.m_TransparentEntries;
-		State.m_SelectionPopupContext.m_ActiveIndex = State.m_DropDownState.ActiveIndex();
-		State.m_SelectionPopupContext.m_Props.m_RequireSourceRefresh = DropDownProps.m_RequireSourceRefresh;
-		State.m_SelectionPopupContext.m_Props.m_SourceFrame = SourceFrame;
-		State.m_SelectionPopupContext.m_ScrollToActiveItem = true;
-		State.m_SelectionPopupContext.m_Viewport = Viewport;
-		ShowPopupSelection(pRect->x, pRect->y, &State.m_SelectionPopupContext);
+		std::vector<std::string> vEntries;
+		try
+		{
+			vEntries.reserve(Num);
+			for(int i = 0; i < Num; ++i)
+				vEntries.emplace_back(pStrs[i]);
+		}
+		catch(...)
+		{
+			State.m_DropDownState.Reset();
+			return CurSelection;
+		}
+
+		auto &Context = State.m_SelectionPopupContext;
+		const bool SpecialFontRenderMode = Context.m_SpecialFontRenderMode;
+		const bool FontFaceAvailabilityCheck = Context.m_FontFaceAvailabilityCheck;
+		const bool FontFamilySelection = Context.m_FontFamilySelection;
+		Context.Reset();
+		Context.m_Props.m_ReturnFocus = true;
+		Context.m_pScrollRegion = State.m_pScrollRegion;
+		Context.m_SpecialFontRenderMode = SpecialFontRenderMode;
+		Context.m_FontFaceAvailabilityCheck = FontFaceAvailabilityCheck;
+		Context.m_FontFamilySelection = FontFamilySelection;
+		Context.m_Searchable = DropDownProps.m_Searchable;
+		Context.m_FocusSearch = DropDownProps.m_Searchable;
+		Context.m_Props.m_BorderColor = VisualStyle.m_PopupBorderColor;
+		Context.m_Props.m_BackgroundColor = VisualStyle.m_PopupBackgroundColor;
+		Context.m_ActiveEntryColor = VisualStyle.m_ActiveEntryColor;
+		Context.m_HoverEntryColor = VisualStyle.m_ActiveEntryColor;
+		Context.m_vEntries.swap(vEntries);
+		Context.m_EntryHeight = pRect->h;
+		Context.m_EntryPadding = pRect->h >= 20.0f ? 2.0f : 1.0f;
+		Context.m_FontSize = ResolvedFontSize;
+		Context.m_Width = pRect->w;
+		Context.m_AlignmentHeight = pRect->h;
+		Context.m_TransparentButtons = VisualStyle.m_TransparentEntries;
+		Context.m_ActiveIndex = State.m_DropDownState.ActiveIndex();
+		Context.m_Props.m_RequireSourceRefresh = DropDownProps.m_RequireSourceRefresh;
+		Context.m_Props.m_SourceFrame = SourceFrame;
+		Context.m_ScrollToActiveItem = true;
+		Context.m_Viewport = Viewport;
+		if(Context.m_Search.TryUpdate(Context.m_vEntries, Context.m_SearchInput.GetString()) != CQmDropdownSearch::EUpdateResult::FAILED)
+			ShowPopupSelection(pRect->x, pRect->y, &Context);
+		if(!IsPopupOpen(&Context))
+		{
+			State.m_DropDownState.Reset();
+			Context.m_vEntries.clear();
+			Context.m_vButtonContainers.clear();
+			Context.m_Search.Reset();
+		}
 	}
 	if(DropDownResult.m_Selected)
 	{

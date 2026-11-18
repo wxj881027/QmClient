@@ -6757,6 +6757,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/support/qm_exit_process_probe.cpp
       src/test/integration/qmclient/ui/qm_dropdown_popup_wheel_test.cpp
       src/test/integration/qmclient/ui/qm_dropdown_search_failure_test.cpp
+      src/test/integration/qmclient/ui/qm_popup_selection_preparation_failure_test.cpp
       src/test/integration/qmclient/ui/qm_discrete_slider_spring_test.cpp
       src/test/integration/qmclient/ui/qm_settings_personalization_test.cpp
       src/test/integration/qmclient/ui/qm_numeric_field_enter_test.cpp
