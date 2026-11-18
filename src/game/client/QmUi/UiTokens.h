@@ -637,11 +637,11 @@ namespace ui_token::chat
 		// 按钮描边宽度占直径的比例：圆形图标按钮只需要一圈勾边。
 		// 固定 1 单位在 8 单位直径的小圆上就是八分之一，读起来是「粗框」而不是「描边」。
 		inline constexpr float BUTTON_BORDER_RATIO = 0.05f;
-	// 图标相对内径的内缩比例：图标与圆边之间必须有边距，
-	// 否则大图标顶到描边上，看起来像「图标和圆一样高」。
-	inline constexpr float ICON_INSET_RATIO = 0.14f;
-	// 翻译按钮直径相对输入行行高的比例：外圈比行高小一档，文字行不被按钮撑高。
-	inline constexpr float BUTTON_ROW_RATIO = 0.82f;
+		// 图标相对内径的内缩比例：图标与圆边之间必须有边距，
+		// 否则大图标顶到描边上，看起来像「图标和圆一样高」。
+		inline constexpr float ICON_INSET_RATIO = 0.14f;
+		// 翻译按钮直径相对输入行行高的比例：外圈比行高小一档，文字行不被按钮撑高。
+		inline constexpr float BUTTON_ROW_RATIO = 0.82f;
 
 		// 输入行行高：按钮直径与「全体」前缀块高度都只从这里取。
 		inline float RowHeight(const float FontSize)
