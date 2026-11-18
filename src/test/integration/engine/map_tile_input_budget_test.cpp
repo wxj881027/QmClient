@@ -18,6 +18,15 @@ namespace
 	class MapTileInputBudget : public ::testing::Test
 	{
 	protected:
+		struct STileLayer
+		{
+			size_t m_Bytes = 4 * sizeof(CTile);
+			int m_Version = 4;
+			int m_Height = 2;
+			unsigned char m_Skip = 0;
+			size_t m_ItemSize = sizeof(CMapItemLayerTilemap);
+		};
+
 		CTestInfo m_Info;
 		std::unique_ptr<IStorage> m_pStorage;
 		CTestDatafileReaderOperations m_Operations;
@@ -28,25 +37,26 @@ namespace
 			ASSERT_NE(m_pStorage, nullptr);
 			m_pMap = std::make_unique<CMap>(m_pStorage.get());
 		}
-		void Write(size_t GameBytes = 4 * sizeof(CTile), size_t DecorBytes = 4 * sizeof(CTile), int LayerVersion = 4, unsigned char GameSkip = 0)
+		void Write(const STileLayer &Game, const STileLayer &Decor, const char *pFilename = "tiles.map")
 		{
 			CDataFileWriter Writer;
-			ASSERT_TRUE(Writer.Open(m_pStorage.get(), "tiles.map"));
+			ASSERT_TRUE(Writer.Open(m_pStorage.get(), pFilename));
 			CMapItemVersion Version{};
 			Version.m_Version = 1;
 			ASSERT_GE(Writer.AddItem(MAPITEMTYPE_VERSION, 0, sizeof(Version), &Version), 0);
-			const auto AddLayer = [&](int Id, const char *pName, size_t Bytes) {
-				std::vector<unsigned char> vData(Bytes, 0);
-				if(Id == 0 && Bytes >= sizeof(CTile))
+			const auto AddLayer = [&](int Id, const char *pName, const STileLayer &Spec) {
+				std::vector<unsigned char> vData(Spec.m_Bytes, 0);
+				if(Spec.m_Bytes >= sizeof(CTile))
 				{
 					CTile First{};
-					First.m_Skip = GameSkip;
+					First.m_Skip = Spec.m_Skip;
 					mem_copy(vData.data(), &First, sizeof(First));
 				}
 				CMapItemLayerTilemap Layer{};
-				Layer.m_Version = LayerVersion;
+				Layer.m_Version = Spec.m_Version;
 				Layer.m_Layer.m_Type = LAYERTYPE_TILES;
-				Layer.m_Width = Layer.m_Height = 2;
+				Layer.m_Width = 2;
+				Layer.m_Height = Spec.m_Height;
 				Layer.m_Flags = Id == 0 ? TILESLAYERFLAG_GAME : 0;
 				Layer.m_Image = Layer.m_ColorEnv = -1;
 				Layer.m_Color = CColor(255, 255, 255, 255);
@@ -54,10 +64,10 @@ namespace
 				Layer.m_Data = Writer.AddData(vData.size(), vData.data());
 				ASSERT_EQ(Layer.m_Data, Id);
 				StrToInts(Layer.m_aName, std::size(Layer.m_aName), pName);
-				ASSERT_GE(Writer.AddItem(MAPITEMTYPE_LAYER, Id, sizeof(Layer), &Layer), 0);
+				ASSERT_GE(Writer.AddItem(MAPITEMTYPE_LAYER, Id, Spec.m_ItemSize, &Layer), 0);
 			};
-			ASSERT_NO_FATAL_FAILURE(AddLayer(0, "Game", GameBytes));
-			ASSERT_NO_FATAL_FAILURE(AddLayer(1, "Decor", DecorBytes));
+			ASSERT_NO_FATAL_FAILURE(AddLayer(0, "Game", Game));
+			ASSERT_NO_FATAL_FAILURE(AddLayer(1, "Decor", Decor));
 			CMapItemGroup Group{};
 			Group.m_Version = 3;
 			Group.m_ParallaxX = Group.m_ParallaxY = 100;
@@ -75,16 +85,16 @@ namespace
 			const int SizeOffset = sizeof(aHeader) + aHeader[4] * 3 * sizeof(int) + aHeader[5] * sizeof(int) + (aHeader[6] + Index) * sizeof(int);
 			ASSERT_NO_FATAL_FAILURE(PatchDatafileFixtureWord(m_pStorage.get(), "tiles.map", SizeOffset, Size));
 		}
-		bool Load()
+		bool Load(const char *pFilename = "tiles.map")
 		{
-			return m_pMap->Load("tiles.map", IStorage::TYPE_SAVE, nullptr, &m_Operations);
+			return m_pMap->Load(pFilename, IStorage::TYPE_SAVE, nullptr, &m_Operations);
 		}
 	};
 }
 
 TEST_F(MapTileInputBudget, ExactVersionFourRecordsLoadAndDecodeGameAndDecor)
 {
-	ASSERT_NO_FATAL_FAILURE(Write());
+	ASSERT_NO_FATAL_FAILURE(Write({}, {}));
 	ASSERT_TRUE(Load());
 	for(int Index = 0; Index < 2; ++Index)
 	{
@@ -102,7 +112,7 @@ TEST_F(MapTileInputBudget, IncompleteTrailingRecordBytesKeepExistingAcceptance)
 	{
 		SCOPED_TRACE(Tail);
 		m_pMap->Unload();
-		ASSERT_NO_FATAL_FAILURE(Write(4 * sizeof(CTile) + Tail));
+		ASSERT_NO_FATAL_FAILURE(Write({.m_Bytes = 4 * sizeof(CTile) + Tail}, {}));
 		ASSERT_TRUE(Load());
 		ASSERT_NE(m_pMap->GetData(0), nullptr);
 		EXPECT_EQ(m_pMap->GetDataSize(0), 4 * sizeof(CTile));
@@ -111,7 +121,7 @@ TEST_F(MapTileInputBudget, IncompleteTrailingRecordBytesKeepExistingAcceptance)
 
 TEST_F(MapTileInputBudget, FinalSkipRunKeepsExistingTruncationToTheLayerExtent)
 {
-	ASSERT_NO_FATAL_FAILURE(Write(sizeof(CTile), 4 * sizeof(CTile), 4, 255));
+	ASSERT_NO_FATAL_FAILURE(Write({.m_Bytes = sizeof(CTile), .m_Skip = 255}, {}));
 	ASSERT_TRUE(Load());
 	const auto *pTiles = static_cast<const CTile *>(m_pMap->GetData(0));
 	ASSERT_NE(pTiles, nullptr);
@@ -121,7 +131,7 @@ TEST_F(MapTileInputBudget, FinalSkipRunKeepsExistingTruncationToTheLayerExtent)
 
 TEST_F(MapTileInputBudget, HugeDeclaredGameInputFailsBeforeAnyRawAllocationAndCanRetry)
 {
-	ASSERT_NO_FATAL_FAILURE(Write());
+	ASSERT_NO_FATAL_FAILURE(Write({}, {}));
 	ASSERT_NO_FATAL_FAILURE(DeclareInputSize(0, std::numeric_limits<int>::max()));
 	EXPECT_FALSE(Load());
 	EXPECT_FALSE(m_pMap->IsLoaded());
@@ -133,7 +143,7 @@ TEST_F(MapTileInputBudget, HugeDeclaredGameInputFailsBeforeAnyRawAllocationAndCa
 
 TEST_F(MapTileInputBudget, TooManyGameRecordsFailBeforeRawAllocation)
 {
-	ASSERT_NO_FATAL_FAILURE(Write(5 * sizeof(CTile)));
+	ASSERT_NO_FATAL_FAILURE(Write({.m_Bytes = 5 * sizeof(CTile)}, {}));
 	EXPECT_FALSE(Load());
 	EXPECT_EQ(m_Operations.m_Allocations, 0);
 	EXPECT_EQ(m_Operations.m_RejectedAllocations, 0);
@@ -141,7 +151,7 @@ TEST_F(MapTileInputBudget, TooManyGameRecordsFailBeforeRawAllocation)
 
 TEST_F(MapTileInputBudget, OversizedOptionalInputStillFailsLazilyAfterGamePublishes)
 {
-	ASSERT_NO_FATAL_FAILURE(Write());
+	ASSERT_NO_FATAL_FAILURE(Write({}, {}));
 	ASSERT_NO_FATAL_FAILURE(DeclareInputSize(1, std::numeric_limits<int>::max()));
 	ASSERT_TRUE(Load());
 	const int Reads = m_Operations.m_Reads;
@@ -158,8 +168,70 @@ TEST_F(MapTileInputBudget, OversizedOptionalInputStillFailsLazilyAfterGamePublis
 
 TEST_F(MapTileInputBudget, LegacyLayerExtraTilesKeepExistingAcceptance)
 {
-	ASSERT_NO_FATAL_FAILURE(Write(5 * sizeof(CTile), 4 * sizeof(CTile), 3));
+	ASSERT_NO_FATAL_FAILURE(Write({.m_Bytes = 5 * sizeof(CTile), .m_Version = 3}, {.m_Version = 3}));
 	ASSERT_TRUE(Load());
 	EXPECT_NE(m_pMap->GetData(0), nullptr);
 	EXPECT_EQ(m_pMap->GetDataSize(0), 5 * sizeof(CTile));
+}
+
+TEST_F(MapTileInputBudget, UnrepresentableDecorSizePreservesTheLoadedMap)
+{
+	ASSERT_NO_FATAL_FAILURE(Write({}, {}));
+	ASSERT_TRUE(Load());
+	const auto PreviousCrc = m_pMap->Crc();
+	const void *pPreviousGame = m_pMap->GetData(0);
+	ASSERT_NE(pPreviousGame, nullptr);
+
+	constexpr int DecorHeight = std::numeric_limits<int>::max() / (2 * sizeof(CTile)) + 1;
+	ASSERT_NO_FATAL_FAILURE(Write({}, {.m_Height = DecorHeight}, "decor-size-out-of-range.map"));
+	const int Allocations = m_Operations.m_Allocations;
+	ASSERT_FALSE(Load("decor-size-out-of-range.map"));
+	EXPECT_EQ(m_Operations.m_Allocations, Allocations);
+	ASSERT_TRUE(m_pMap->IsLoaded());
+	EXPECT_EQ(m_pMap->Crc(), PreviousCrc);
+	EXPECT_EQ(m_pMap->GetData(0), pPreviousGame);
+}
+
+TEST_F(MapTileInputBudget, UndersizedLegacyGameDataFailsBeforeRawAllocation)
+{
+	ASSERT_NO_FATAL_FAILURE(Write({.m_Bytes = sizeof(CTile), .m_Version = 3}, {}));
+	EXPECT_FALSE(Load());
+	EXPECT_FALSE(m_pMap->IsLoaded());
+	EXPECT_EQ(m_Operations.m_Allocations, 0);
+}
+
+TEST_F(MapTileInputBudget, UndersizedOptionalTileskipDataFailsBeforeReadingRawData)
+{
+	// 一条记录最多展开 256 个瓦片，无法填满 258 个瓦片。
+	ASSERT_NO_FATAL_FAILURE(Write({}, {.m_Bytes = sizeof(CTile), .m_Height = 129}));
+	ASSERT_TRUE(Load());
+	const int Reads = m_Operations.m_Reads;
+	const int Allocations = m_Operations.m_Allocations;
+	EXPECT_EQ(m_pMap->GetData(1), nullptr);
+	EXPECT_EQ(m_Operations.m_Reads, Reads);
+	EXPECT_EQ(m_Operations.m_Allocations, Allocations);
+	EXPECT_NE(m_pMap->GetData(0), nullptr);
+}
+
+TEST_F(MapTileInputBudget, LegacyLayerPrefixesLoadWithoutUnusedPhysicsIndices)
+{
+	const STileLayer aLegacyLayers[] = {
+		{.m_Version = 2, .m_ItemSize = sizeof(CMapItemLayerTilemap_v2)},
+		{.m_Version = 3, .m_ItemSize = sizeof(CMapItemLayerTilemap_v3Teeworlds)},
+	};
+	for(const STileLayer &LegacyLayer : aLegacyLayers)
+	{
+		SCOPED_TRACE(LegacyLayer.m_Version);
+		m_pMap->Unload();
+		ASSERT_NO_FATAL_FAILURE(Write({}, LegacyLayer));
+		ASSERT_TRUE(Load());
+		int LayersStart, LayersNum;
+		m_pMap->GetType(MAPITEMTYPE_LAYER, &LayersStart, &LayersNum);
+		ASSERT_EQ(LayersNum, 2);
+		const auto *pDecor = static_cast<const CMapItemLayerTilemap *>(m_pMap->GetItem(LayersStart + 1));
+		EXPECT_EQ(m_pMap->GetItemSize(LayersStart + 1), static_cast<int>(sizeof(*pDecor)));
+		EXPECT_EQ(pDecor->m_Tele, -1);
+		EXPECT_EQ(pDecor->m_Tune, -1);
+		EXPECT_NE(m_pMap->GetData(pDecor->m_Data), nullptr);
+	}
 }
