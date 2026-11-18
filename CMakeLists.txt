@@ -5332,6 +5332,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/editor_collab_camera_reload_test.cpp
     src/test/unit/client/editor_collab_join_test.cpp
     src/test/unit/client/editor_quad_slice_test.cpp
+    src/test/integration/qmclient/client/qm_bind_workshop_cfg_save_test.cpp
     src/test/integration/client/statboard_csv_test.cpp
     src/test/integration/client/map_immediate_tile_budget_test.cpp
     src/test/unit/base/str_number_parse_test.cpp

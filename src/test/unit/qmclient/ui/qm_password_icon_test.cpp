@@ -12,6 +12,15 @@ TEST(QmPasswordIcon, StyleFallsBackToFadeForUnknownValues)
 	EXPECT_EQ(qm_password_icon::ResolveStyle(7), qm_password_icon::STYLE_FADE);
 }
 
+TEST(QmPasswordIcon, OnlyCompleteFrameStripsCanBeSampled)
+{
+	EXPECT_TRUE(qm_password_icon::HasFrameStripGeometry(1536, 128));
+	EXPECT_TRUE(qm_password_icon::HasFrameStripGeometry(768, 64));
+	EXPECT_FALSE(qm_password_icon::HasFrameStripGeometry(0, 0));
+	EXPECT_FALSE(qm_password_icon::HasFrameStripGeometry(1536, 127));
+	EXPECT_FALSE(qm_password_icon::HasFrameStripGeometry(128, 128));
+}
+
 TEST(QmPasswordIcon, ResolveFramePixelsRoundsAndClamps)
 {
 	// 纹理与绘制尺寸必须严格 1:1：取整后 quad 落在整数坐标，采样才不会落到半像素。

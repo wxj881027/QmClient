@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 
 // 密码显隐图标的形变动画参数。资产由
 // qmclient_scripts/qm_build_password_icon_frames.py 从随包 Phosphor 字体烘焙，
@@ -23,6 +24,11 @@ namespace qm_password_icon
 	inline constexpr int FRAME_MIN_PIXELS = 8;
 	inline constexpr int FRAME_MAX_PIXELS = 96;
 	inline constexpr int FRAME_COUNT = 24;
+
+	inline constexpr bool HasFrameStripGeometry(std::size_t Width, std::size_t Height)
+	{
+		return Height > 0 && Height % 2 == 0 && Width % FRAME_COUNT == 0 && Width / FRAME_COUNT == Height / 2;
+	}
 
 	// 烘焙画布的字体单位边长与字体 upm：绘制边长 = FontSize * CANVAS_UNITS / FONT_UNITS。
 	// 画布是固定在墨迹中心的 1152 单位方框，因此帧内墨迹与同字号字形墨迹等高。

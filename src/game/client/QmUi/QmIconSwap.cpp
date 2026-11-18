@@ -19,7 +19,6 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
-#include <vector>
 
 namespace
 {
@@ -107,7 +106,9 @@ namespace
 		{
 			SSlot &Slot = m_aSlots[static_cast<int>(Pair)];
 			const uint32_t ResetVersion = pGraphics->GraphicsResourcesResetVersion();
-			if(Slot.m_Texture.IsValid() && ResetVersion == Slot.m_ResetVersion && Slot.m_Pixels == DrawPixels && str_comp(Slot.m_aAsset, pAsset) == 0)
+			const bool Reset = ResetVersion != Slot.m_ResetVersion;
+			const bool AssetChanged = str_comp(Slot.m_aAsset, pAsset) != 0;
+			if(Slot.m_Texture.IsValid() && !Reset && !AssetChanged && Slot.m_Pixels == DrawPixels)
 				return true;
 			if(Slot.m_Texture.IsValid())
 				pGraphics->UnloadTexture(&Slot.m_Texture);
@@ -115,32 +116,22 @@ namespace
 			Slot.m_Pixels = DrawPixels;
 			Slot.m_ResetVersion = ResetVersion;
 
-			// 解码后的源帧条按 pair 缓存：hover 缩放会让目标尺寸变化一两次，
-			// 每次都重新解 PNG（1536×128）会掉帧。
-			if(Slot.m_aSource.empty() || str_comp(Slot.m_aAsset, pAsset) != 0)
+			// 缓存解码结果；缺失或无效的资产在换资产或图形重置时再试。
+			if(AssetChanged || (Reset && Slot.m_Source.m_pData == nullptr))
 			{
-				CImageInfo Loaded;
-				if(!pGraphics->LoadPng(Loaded, pAsset, IStorage::TYPE_ALL))
-				{
-					Slot.m_aAsset[0] = '\0';
-					return false;
-				}
-				const size_t Bytes = Loaded.PixelSize() * Loaded.m_Width * Loaded.m_Height;
-				Slot.m_aSource.assign(Loaded.m_pData, Loaded.m_pData + Bytes);
-				Slot.m_SourceWidth = static_cast<int>(Loaded.m_Width);
-				Slot.m_SourceHeight = static_cast<int>(Loaded.m_Height);
-				Slot.m_SourceFormat = Loaded.m_Format;
-				Loaded.Free();
+				Slot.m_Source.Free();
 				str_copy(Slot.m_aAsset, pAsset);
+				// 用户目录可以覆盖随包资产。先验证整条帧图，再按方形帧访问像素。
+				if(!pGraphics->LoadPng(Slot.m_Source, pAsset, IStorage::TYPE_ALL) ||
+					Slot.m_Source.m_pData == nullptr || Slot.m_Source.m_Format != CImageInfo::FORMAT_RGBA ||
+					!qm_password_icon::HasFrameStripGeometry(Slot.m_Source.m_Width, Slot.m_Source.m_Height))
+					Slot.m_Source.Free();
 			}
+			if(Slot.m_Source.m_pData == nullptr)
+				return false;
 
-			CImageInfo Source;
-			Source.m_Width = static_cast<size_t>(Slot.m_SourceWidth);
-			Source.m_Height = static_cast<size_t>(Slot.m_SourceHeight);
-			Source.m_Format = Slot.m_SourceFormat;
-			Source.m_pData = Slot.m_aSource.data();
 			CImageInfo Target;
-			const bool Resampled = Resample(Source, DrawPixels, Target);
+			const bool Resampled = Resample(Slot.m_Source, DrawPixels, Target);
 			if(!Resampled)
 				return false;
 			Slot.m_Texture = pGraphics->LoadTextureRawMove(Target, 0, "qm_icon_swap_frames");
@@ -157,11 +148,7 @@ namespace
 		// 逐帧逐半独立处理，相邻帧不会互相串色。
 		static bool Resample(const CImageInfo &Source, int DstPixels, CImageInfo &Target)
 		{
-			if(Source.m_Format != CImageInfo::FORMAT_RGBA || Source.m_Width == 0 || Source.m_Height == 0 || DstPixels <= 0)
-				return false;
 			const int SrcPixels = static_cast<int>(Source.m_Height) / 2;
-			if(SrcPixels <= 0)
-				return false;
 			const int DstWidth = qm_password_icon::FRAME_COUNT * DstPixels;
 			const int DstHeight = DstPixels * 2;
 			const size_t DstStride = static_cast<size_t>(DstWidth) * 4;
@@ -203,7 +190,7 @@ namespace
 									if(Wx <= 0.0f)
 										continue;
 									const int SrcX = Frame * SrcPixels + std::min(sx, SrcPixels - 1);
-									Sum += pSrcRow[SrcX * 4 + 3] * Wx * Wy;
+									Sum += pSrcRow[static_cast<size_t>(SrcX) * 4 + 3] * Wx * Wy;
 									Weight += Wx * Wy;
 								}
 							}
@@ -225,10 +212,8 @@ namespace
 			int m_Pixels = 0;
 			uint32_t m_ResetVersion = 0;
 			// 解码后的源帧条，避免 hover 改变目标尺寸时重复解析 PNG。
-			std::vector<uint8_t> m_aSource;
-			int m_SourceWidth = 0;
-			int m_SourceHeight = 0;
-			CImageInfo::EImageFormat m_SourceFormat = CImageInfo::FORMAT_UNDEFINED;
+			CImageInfo m_Source;
+			~SSlot() { m_Source.Free(); }
 		};
 		SSlot m_aSlots[static_cast<int>(EQmIconSwapPair::COUNT)];
 	};

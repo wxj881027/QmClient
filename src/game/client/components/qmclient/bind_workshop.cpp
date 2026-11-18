@@ -2,12 +2,14 @@
 
 #include <engine/external/unordered_dense/ankerl/unordered_dense.h>
 #include <engine/keys.h>
+#include <engine/storage.h>
 
 #include <game/client/components/qmclient/bind_editor.h>
 #include <game/client/components/qmclient/bind_workshop.h>
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cctype>
 #include <cmath>
 #include <cstdint>
@@ -635,12 +637,87 @@ namespace qm_bind_workshop
 		return FindBuiltinCfg(Preset, VariantIndex) != nullptr;
 	}
 
+	bool HasCompleteBuiltinCfgSet(IStorage &Storage, const SPreset &Preset)
+	{
+		bool Found = false;
+		for(size_t Variant = 0; Variant < Preset.m_vVariants.size(); ++Variant)
+		{
+			if(!HasBuiltinCfg(Preset, Variant))
+				continue;
+			if(!Storage.FileExists(CfgFileName(Preset, Variant).c_str(), IStorage::TYPE_SAVE))
+				return false;
+			Found = true;
+		}
+		return Found;
+	}
+
 	std::string BuildCfgContent(const SPreset &Preset, size_t VariantIndex)
 	{
 		const SBuiltinCfg *pCfg = FindBuiltinCfg(Preset, VariantIndex);
 		if(pCfg == nullptr || pCfg->m_pContent == nullptr)
 			return {};
 		return pCfg->m_pContent;
+	}
+
+	bool SaveCfgFile(IStorage &Storage, const char *pFileName, std::string_view Content, char *pFullPath, unsigned FullPathSize) noexcept
+	{
+		if(pFileName == nullptr || pFileName[0] == '\0' || Content.empty() || Content.size() > std::numeric_limits<unsigned>::max())
+			return false;
+		try
+		{
+			char aTargetPath[IO_MAX_PATH_LENGTH * 2] = {};
+			Storage.GetCompletePath(IStorage::TYPE_SAVE, pFileName, aTargetPath, sizeof(aTargetPath));
+			static std::atomic<uint64_t> s_NextCandidate{0};
+			for(int Attempt = 0; Attempt < 32; ++Attempt)
+			{
+				char aSuffix[64];
+				str_format(aSuffix, sizeof(aSuffix), ".%d.%llu.tmp", pid(), static_cast<unsigned long long>(s_NextCandidate.fetch_add(1, std::memory_order_relaxed)));
+				char aCandidate[IO_MAX_PATH_LENGTH];
+				if(aTargetPath[0] == '\0' || str_length(aTargetPath) + str_length(aSuffix) >= IO_MAX_PATH_LENGTH ||
+					str_format(aCandidate, sizeof(aCandidate), "%s%s", pFileName, aSuffix) >= IO_MAX_PATH_LENGTH)
+					return false;
+				IOHANDLE File = Storage.OpenFile(aCandidate, IOFLAG_WRITE | IOFLAG_EXCLUSIVE, IStorage::TYPE_SAVE);
+				if(File == nullptr)
+				{
+					if(Storage.FileExists(aCandidate, IStorage::TYPE_SAVE) || Storage.FolderExists(aCandidate, IStorage::TYPE_SAVE))
+						continue;
+					return false;
+				}
+				struct SCandidateCleanup
+				{
+					IStorage &m_Storage;
+					const char *m_pName;
+					bool m_Active = true;
+
+					~SCandidateCleanup()
+					{
+						try
+						{
+							if(m_Active)
+								m_Storage.RemoveFile(m_pName, IStorage::TYPE_SAVE);
+						}
+						catch(...)
+						{
+							// 清理失败不改变保存结果。
+						}
+					}
+				} Cleanup{Storage, aCandidate};
+				const bool Written = io_write(File, Content.data(), static_cast<unsigned>(Content.size())) == Content.size() && io_error(File) == 0;
+				const bool Synced = Written && io_sync(File) == 0;
+				const bool Closed = io_close(File) == 0;
+				if(!Synced || !Closed || !Storage.RenameFile(aCandidate, pFileName, IStorage::TYPE_SAVE, false))
+					return false;
+				Cleanup.m_Active = false;
+				if(pFullPath != nullptr && FullPathSize != 0)
+					str_copy(pFullPath, aTargetPath, FullPathSize);
+				return true;
+			}
+		}
+		catch(...)
+		{
+			return false;
+		}
+		return false;
 	}
 
 	size_t FindCfgViolation(std::string_view Content)
@@ -708,6 +785,19 @@ namespace qm_bind_workshop
 		return Count;
 	}
 
+	static bool ReadPreviousBind(SApplyEntry &Entry, const FBoundCommand &GetBoundCommand)
+	{
+		std::string Current = GetBoundCommand(Entry.m_Slot);
+		if(Current == Entry.m_Previous)
+			return false;
+		Entry.m_Previous = std::move(Current);
+		Entry.m_Overwrite = !Entry.m_Previous.empty();
+		Entry.m_Conflicts &= ~APPLY_CONFLICT_OVERWRITE;
+		if(Entry.m_Overwrite && Entry.m_Previous != Entry.m_Command)
+			Entry.m_Conflicts |= APPLY_CONFLICT_OVERWRITE;
+		return true;
+	}
+
 	SApplyPlan MakePresetPlan(const SPreset &Preset, size_t VariantIndex, const std::vector<CBindSlot> &vSlots,
 		const FBoundCommand &GetBoundCommand, const int *pParamValues, size_t NumParamValues, bool CfgInstalled)
 	{
@@ -769,10 +859,7 @@ namespace qm_bind_workshop
 				continue;
 			}
 			if(GetBoundCommand)
-				Entry.m_Previous = GetBoundCommand(Entry.m_Slot);
-			Entry.m_Overwrite = !Entry.m_Previous.empty();
-			if(Entry.m_Overwrite && Entry.m_Previous != Entry.m_Command)
-				Entry.m_Conflicts |= APPLY_CONFLICT_OVERWRITE;
+				ReadPreviousBind(Entry, GetBoundCommand);
 			Plan.m_vEntries.push_back(std::move(Entry));
 		}
 		return Plan;
@@ -798,16 +885,18 @@ namespace qm_bind_workshop
 
 	void CApplyUndo::Record(const SApplyPlan &Plan)
 	{
-		m_vEntries.clear();
-		m_vEntries.reserve(Plan.m_vEntries.size());
+		std::vector<SRestoreEntry> vEntries;
+		vEntries.reserve(Plan.m_vEntries.size());
 		for(const SApplyEntry &Entry : Plan.m_vEntries)
 		{
 			SRestoreEntry Restore;
 			Restore.m_Slot = Entry.m_Slot;
 			Restore.m_Command = Entry.m_Previous;
+			Restore.m_AppliedCommand = Entry.m_Command;
 			Restore.m_HadBind = !Entry.m_Previous.empty();
-			m_vEntries.push_back(std::move(Restore));
+			vEntries.push_back(std::move(Restore));
 		}
+		m_vEntries.swap(vEntries);
 	}
 
 	bool CApplyUndo::Covers(const CBindSlot &Slot) const
@@ -820,13 +909,31 @@ namespace qm_bind_workshop
 		return false;
 	}
 
-	size_t RestoreUndo(const CApplyUndo &Undo, const FBinder &Binder)
+	bool ApplyPresetPlan(SApplyPlan &Plan, CApplyUndo &Undo, const FBoundCommand &GetBoundCommand, const FBinder &Binder)
 	{
-		if(!Binder)
+		if(!Plan.Valid() || !GetBoundCommand || !Binder)
+			return false;
+		bool Changed = false;
+		for(SApplyEntry &Entry : Plan.m_vEntries)
+			Changed |= ReadPreviousBind(Entry, GetBoundCommand);
+		if(Changed)
+			return false;
+
+		Undo.Record(Plan);
+		for(const SApplyEntry &Entry : Plan.m_vEntries)
+			Binder(Entry.m_Slot, Entry.m_Command.c_str());
+		return true;
+	}
+
+	size_t RestoreUndo(const CApplyUndo &Undo, const FBoundCommand &GetBoundCommand, const FBinder &Binder)
+	{
+		if(!GetBoundCommand || !Binder)
 			return 0;
 		size_t Restored = 0;
 		for(const SRestoreEntry &Entry : Undo.Entries())
 		{
+			if(GetBoundCommand(Entry.m_Slot) != Entry.m_AppliedCommand)
+				continue;
 			// 原来没绑的键写空串：空命令等于解绑那个 (键, 修饰键) 槽位。
 			Binder(Entry.m_Slot, Entry.m_HadBind ? Entry.m_Command.c_str() : "");
 			++Restored;
@@ -988,53 +1095,6 @@ namespace qm_bind_workshop
 		CBlueprintGraph Copy;
 		*Copy.m_pData = *m_pData;
 		return Copy;
-	}
-
-	void CBlueprintHistory::Record(size_t Flow, const CBlueprintGraph &Graph)
-	{
-		PushUndo(Flow, Graph.Clone());
-		// 新编辑让「未来」失效：重做栈必须清空，否则会回到一条不存在的分支。
-		m_vRedo.clear();
-	}
-
-	void CBlueprintHistory::PushUndo(size_t Flow, CBlueprintGraph Graph)
-	{
-		m_vUndo.push_back({Flow, std::move(Graph)});
-		if(m_vUndo.size() > MAX_DEPTH)
-			m_vUndo.erase(m_vUndo.begin());
-	}
-
-	void CBlueprintHistory::PushRedo(size_t Flow, CBlueprintGraph Graph)
-	{
-		m_vRedo.push_back({Flow, std::move(Graph)});
-		if(m_vRedo.size() > MAX_DEPTH)
-			m_vRedo.erase(m_vRedo.begin());
-	}
-
-	bool CBlueprintHistory::PopUndo(size_t &rFlow, CBlueprintGraph &rGraph)
-	{
-		if(m_vUndo.empty())
-			return false;
-		rFlow = m_vUndo.back().m_Flow;
-		rGraph = std::move(m_vUndo.back().m_Graph);
-		m_vUndo.pop_back();
-		return true;
-	}
-
-	bool CBlueprintHistory::PopRedo(size_t &rFlow, CBlueprintGraph &rGraph)
-	{
-		if(m_vRedo.empty())
-			return false;
-		rFlow = m_vRedo.back().m_Flow;
-		rGraph = std::move(m_vRedo.back().m_Graph);
-		m_vRedo.pop_back();
-		return true;
-	}
-
-	void CBlueprintHistory::Clear()
-	{
-		m_vUndo.clear();
-		m_vRedo.clear();
 	}
 
 	int CBlueprintGraph::AddNode(SNode Node)
@@ -1974,9 +2034,7 @@ namespace qm_bind_workshop
 
 	CFlowCollection::CFlowCollection()
 	{
-		m_vFlows.push_back(SFlowFile{});
-		m_vFlows.front().m_Title = "Untitled flow";
-		RefreshFileNames();
+		AddFlow("Untitled flow");
 	}
 
 	size_t CFlowCollection::Count() const { return m_vFlows.size(); }
@@ -2005,8 +2063,8 @@ namespace qm_bind_workshop
 	{
 		SFlowFile Flow;
 		Flow.m_Title = Title.empty() ? std::string("Untitled flow") : std::string(Title);
+		Flow.m_FileName = UniqueFileName(Flow.m_Title);
 		m_vFlows.push_back(std::move(Flow));
-		RefreshFileNames();
 		return m_vFlows.size() - 1;
 	}
 
@@ -2016,9 +2074,20 @@ namespace qm_bind_workshop
 		if(Index >= m_vFlows.size() || m_vFlows.size() <= 1)
 			return false;
 		m_vFlows.erase(m_vFlows.begin() + static_cast<ptrdiff_t>(Index));
-		if(m_Active >= m_vFlows.size())
+		if(m_Active > Index)
+			--m_Active;
+		else if(m_Active >= m_vFlows.size())
 			m_Active = m_vFlows.size() - 1;
-		RefreshFileNames();
+		const auto RemoveHistory = [Index](std::vector<SBlueprintSnapshot> &vHistory) {
+			std::erase_if(vHistory, [Index](const SBlueprintSnapshot &Snapshot) { return Snapshot.m_Flow == Index; });
+			for(SBlueprintSnapshot &Snapshot : vHistory)
+			{
+				if(Snapshot.m_Flow > Index)
+					--Snapshot.m_Flow;
+			}
+		};
+		RemoveHistory(m_vUndo);
+		RemoveHistory(m_vRedo);
 		return true;
 	}
 
@@ -2026,24 +2095,56 @@ namespace qm_bind_workshop
 	{
 		if(Index >= m_vFlows.size() || Title.empty())
 			return false;
-		m_vFlows[Index].m_Title = std::string(Title);
-		RefreshFileNames();
+		SFlowFile &Flow = m_vFlows[Index];
+		std::string NewTitle(Title);
+		if(SlugifyTitle(NewTitle) != SlugifyTitle(Flow.m_Title))
+			Flow.m_FileName = UniqueFileName(NewTitle, &Flow);
+		Flow.m_Title = std::move(NewTitle);
 		return true;
 	}
 
-	void CFlowCollection::RefreshFileNames()
+	void CFlowCollection::PushSnapshot(std::vector<SBlueprintSnapshot> &vHistory, size_t Flow, CBlueprintGraph &&Graph)
 	{
-		for(size_t Index = 0; Index < m_vFlows.size(); ++Index)
-		{
-			const std::string Slug = SlugifyTitle(m_vFlows[Index].m_Title);
-			size_t Suffix = 1;
-			for(size_t Previous = 0; Previous < Index; ++Previous)
-			{
-				if(SlugifyTitle(m_vFlows[Previous].m_Title) == Slug)
-					++Suffix;
-			}
-			m_vFlows[Index].m_FileName = BlueprintFileName(m_vFlows[Index].m_Title, Suffix);
-		}
+		constexpr size_t MAX_DEPTH = 32;
+		// 先取得容量。撤销时 Graph 借用正在使用的图，分配失败必须保留它。
+		vHistory.reserve(MAX_DEPTH);
+		if(vHistory.size() == MAX_DEPTH)
+			vHistory.erase(vHistory.begin());
+		vHistory.push_back({Flow, std::move(Graph)});
+	}
+
+	void CFlowCollection::RecordEdit()
+	{
+		const size_t FlowIndex = ActiveIndex();
+		PushSnapshot(m_vUndo, FlowIndex, m_vFlows[FlowIndex].m_Graph.Clone());
+		m_vRedo.clear();
+	}
+
+	bool CFlowCollection::RestoreSnapshot(std::vector<SBlueprintSnapshot> &vFrom, std::vector<SBlueprintSnapshot> &vTo)
+	{
+		if(vFrom.empty())
+			return false;
+		SBlueprintSnapshot &Snapshot = vFrom.back();
+		const size_t FlowIndex = Snapshot.m_Flow;
+		CBlueprintGraph &Target = m_vFlows[FlowIndex].m_Graph;
+		PushSnapshot(vTo, FlowIndex, std::move(Target));
+		Target = std::move(Snapshot.m_Graph);
+		vFrom.pop_back();
+		m_Active = FlowIndex;
+		return true;
+	}
+
+	bool CFlowCollection::Undo() { return RestoreSnapshot(m_vUndo, m_vRedo); }
+	bool CFlowCollection::Redo() { return RestoreSnapshot(m_vRedo, m_vUndo); }
+
+	std::string CFlowCollection::UniqueFileName(std::string_view Title, const SFlowFile *pCurrent) const
+	{
+		size_t Suffix = 1;
+		std::string Candidate = BlueprintFileName(Title);
+		const auto IsUsed = [&Candidate, pCurrent](const SFlowFile &Flow) { return &Flow != pCurrent && Flow.m_FileName == Candidate; };
+		while(std::any_of(m_vFlows.begin(), m_vFlows.end(), IsUsed))
+			Candidate = BlueprintFileName(Title, ++Suffix);
+		return Candidate;
 	}
 
 	SCfgBundle CFlowCollection::BuildCfg(size_t Index, std::string_view KeyName) const
@@ -2078,5 +2179,10 @@ namespace qm_bind_workshop
 		for(size_t Index = 0; Index < m_vFlows.size(); ++Index)
 			vBundles.push_back(BuildCfg(Index, KeyName));
 		return vBundles;
+	}
+
+	bool SaveBlueprintCfg(IStorage &Storage, const SCfgBundle &Bundle, char *pFullPath, unsigned FullPathSize) noexcept
+	{
+		return Bundle.m_Ok && SaveCfgFile(Storage, Bundle.m_FileName.c_str(), Bundle.m_Content, pFullPath, FullPathSize);
 	}
 }

@@ -225,17 +225,63 @@ TEST(QmBindWorkshop, UndoRestoreWritesOldValuesBackAndUnbindsTheEmptyOnes)
 		Call.m_Command = pCommand != nullptr ? pCommand : "<null>";
 		vCalls.push_back(std::move(Call));
 	};
-	EXPECT_EQ(RestoreUndo(Undo, Binder), 2u);
+	const FBoundCommand Applied = [](const CBindSlot &Slot) {
+		return Slot.m_Key == KEY_MOUSE_4 ? std::string("+prevweapon") : std::string("+nextweapon");
+	};
+	EXPECT_EQ(RestoreUndo(Undo, Applied, Binder), 2u);
 	ASSERT_EQ(vCalls.size(), 2u) << "a grouped apply is undone as one batch";
 	EXPECT_EQ(vCalls[0].m_Key, KEY_MOUSE_4);
 	EXPECT_EQ(vCalls[0].m_Command, "+jump") << "a key that had a bind gets its old command back";
 	EXPECT_EQ(vCalls[1].m_Key, KEY_MOUSE_5);
 	EXPECT_EQ(vCalls[1].m_Command, "") << "a key that had no bind is unbound instead of keeping the new command";
 	// 没有记录、没有绑定器时不调回调、不报写入。
-	EXPECT_EQ(RestoreUndo(CApplyUndo{}, Binder), 0u);
+	EXPECT_EQ(RestoreUndo(CApplyUndo{}, Applied, Binder), 0u);
 	EXPECT_EQ(vCalls.size(), 2u);
-	const CApplyUndo Empty;
-	EXPECT_EQ(RestoreUndo(Empty, FBinder{}), 0u);
+	EXPECT_EQ(RestoreUndo(Undo, Applied, FBinder{}), 0u);
+}
+
+TEST(QmBindWorkshop, ApplyRequiresConfirmationAfterABindChanges)
+{
+	const SPreset *pPreset = FindPreset(BuiltinPresets(), "precision_jump");
+	ASSERT_NE(pPreset, nullptr);
+	std::string Current;
+	const FBoundCommand GetBound = [&](const CBindSlot &) { return Current; };
+	const FBinder Bind = [&](const CBindSlot &, const char *pCommand) { Current = pCommand; };
+	SApplyPlan Plan = MakePresetPlan(*pPreset, 0, {CBindSlot(KEY_C, KeyModifier::NONE)}, GetBound);
+	ASSERT_EQ(Plan.m_vEntries.size(), 1u);
+	EXPECT_FALSE(Plan.HasConflicts());
+
+	Current = "+hook";
+	CApplyUndo Undo;
+	EXPECT_FALSE(ApplyPresetPlan(Plan, Undo, GetBound, Bind));
+	EXPECT_EQ(Current, "+hook");
+	EXPECT_FALSE(Undo.CanUndo());
+	EXPECT_TRUE(Plan.HasConflicts());
+	EXPECT_EQ(Plan.m_vEntries.front().m_Previous, "+hook");
+
+	ASSERT_TRUE(ApplyPresetPlan(Plan, Undo, GetBound, Bind));
+	EXPECT_EQ(Current, Plan.m_vEntries.front().m_Command);
+	EXPECT_EQ(RestoreUndo(Undo, GetBound, Bind), 1u);
+	EXPECT_EQ(Current, "+hook");
+}
+
+TEST(QmBindWorkshop, GroupedUndoKeepsTheSlotChangedSinceApply)
+{
+	const SPreset *pPreset = FindPreset(BuiltinPresets(), "mouse_swift_weapons");
+	ASSERT_NE(pPreset, nullptr);
+	const FBoundCommand Before = [](const CBindSlot &Slot) {
+		return Slot.m_Key == KEY_MOUSE_4 ? std::string("+jump") : std::string("+hook");
+	};
+	CApplyUndo Undo;
+	Undo.Record(MakePresetPlan(*pPreset, 0, {}, Before));
+	std::string BackButton = "+prevweapon";
+	std::string ForwardButton = "+fire";
+	const auto BindValue = [&](const CBindSlot &Slot) -> std::string & {
+		return Slot.m_Key == KEY_MOUSE_4 ? BackButton : ForwardButton;
+	};
+	EXPECT_EQ(RestoreUndo(Undo, BindValue, [&](const CBindSlot &Slot, const char *pCommand) { BindValue(Slot) = pCommand; }), 1u);
+	EXPECT_EQ(BackButton, "+jump");
+	EXPECT_EQ(ForwardButton, "+fire");
 }
 
 TEST(QmBindWorkshop, EachConflictingBindIsMarkedAndThePlanStaysUsable)
