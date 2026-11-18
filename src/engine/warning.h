@@ -11,7 +11,8 @@ struct SWarning
 	SWarning &operator=(const SWarning &Other);
 
 	char m_aWarningTitle[128] = "";
-	char m_aWarningMsg[768] = "";
+	// 客户端退出时的保存失败提示用 1024 字节缓冲区生成。
+	char m_aWarningMsg[1024] = "";
 	bool m_AutoHide = true;
 };
 

@@ -1,4 +1,7 @@
+#include <base/str.h>
+
 #include <engine/client/backend/backend_base.h>
+#include <engine/warning.h>
 
 #include <gtest/gtest.h>
 
@@ -91,6 +94,15 @@ TEST(GraphicsDiagnosticTransfer, TransferredWarningOutlivesTheFragment)
 		Warning = Fragment.TakeWarning();
 	}
 	EXPECT_EQ(Warning.m_vWarnings, (std::vector<std::string>{std::string(4096, 'w'), "fallback advice"}));
+}
+
+TEST(GraphicsDiagnosticTransfer, WarningRetainsFullDiagnosticMessage)
+{
+	const std::string LastLine = "\nwrite_probe=denied";
+	const std::string Message = std::string(1023 - LastLine.size(), 'w') + LastLine;
+	SWarning Warning;
+	str_copy(Warning.m_aWarningMsg, Message.c_str());
+	EXPECT_STREQ(Warning.m_aWarningMsg, Message.c_str());
 }
 
 TEST(GraphicsDiagnosticTransfer, EmptyFragmentHasNoDiagnosticPayload)
