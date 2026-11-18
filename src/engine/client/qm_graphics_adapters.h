@@ -10,6 +10,7 @@
 #include <new>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #if defined(CONF_FAMILY_WINDOWS)
@@ -43,6 +44,27 @@ inline bool QmIsSystemGraphicsHardwareAdapter(std::wstring_view DevicePath)
 	return false;
 }
 
+#if defined(CONF_FAMILY_WINDOWS)
+template<size_t N>
+std::string QmDecodeSystemGraphicsAdapterName(const wchar_t (&aDescription)[N], size_t DescriptionBytes)
+{
+	if(DescriptionBytes > sizeof(aDescription) || DescriptionBytes % sizeof(wchar_t) != 0)
+		return {};
+
+	// 注册表字符串可能缺少终止符，转换时只使用属性返回的字节。
+	const std::wstring_view Property(aDescription, DescriptionBytes / sizeof(wchar_t));
+	const std::wstring_view Description = Property.substr(0, Property.find(L'\0'));
+	if(Description.empty())
+		return {};
+
+	char aName[sizeof(aDescription) * 2];
+	const int NameBytes = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, Description.data(), static_cast<int>(Description.size()), aName, sizeof(aName), nullptr, nullptr);
+	if(NameBytes == 0)
+		return {};
+	return std::string(aName, NameBytes);
+}
+#endif
+
 inline std::vector<std::string> QmReadSystemGraphicsAdapters()
 {
 	std::vector<std::string> vNames;
@@ -65,12 +87,13 @@ inline std::vector<std::string> QmReadSystemGraphicsAdapters()
 		if(!QmIsSystemGraphicsHardwareAdapter(aInstanceId))
 			continue;
 		wchar_t aDescription[512] = {};
-		if(!SetupDiGetDeviceRegistryPropertyW(Devices, &Device, SPDRP_FRIENDLYNAME, nullptr, reinterpret_cast<BYTE *>(aDescription), sizeof(aDescription), nullptr) &&
-			!SetupDiGetDeviceRegistryPropertyW(Devices, &Device, SPDRP_DEVICEDESC, nullptr, reinterpret_cast<BYTE *>(aDescription), sizeof(aDescription), nullptr))
+		DWORD DescriptionBytes = 0;
+		if(!SetupDiGetDeviceRegistryPropertyW(Devices, &Device, SPDRP_FRIENDLYNAME, nullptr, reinterpret_cast<BYTE *>(aDescription), sizeof(aDescription), &DescriptionBytes) &&
+			!SetupDiGetDeviceRegistryPropertyW(Devices, &Device, SPDRP_DEVICEDESC, nullptr, reinterpret_cast<BYTE *>(aDescription), sizeof(aDescription), &DescriptionBytes))
 			continue;
-		char aName[sizeof(aDescription) * 2];
-		if(WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, aDescription, -1, aName, sizeof(aName), nullptr, nullptr) > 1)
-			vNames.emplace_back(aName);
+		std::string Name = QmDecodeSystemGraphicsAdapterName(aDescription, DescriptionBytes);
+		if(!Name.empty())
+			vNames.push_back(std::move(Name));
 	}
 #endif
 	return vNames;

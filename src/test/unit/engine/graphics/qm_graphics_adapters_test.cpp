@@ -4,6 +4,20 @@
 
 #include <new>
 
+#if defined(CONF_FAMILY_WINDOWS)
+TEST(QmGraphicsAdapters, AdapterNameUsesReportedBytesWithoutTerminator)
+{
+	const wchar_t aDescription[] = L"GPU (previous property)";
+	EXPECT_EQ(QmDecodeSystemGraphicsAdapterName(aDescription, sizeof(L"GPU") - sizeof(wchar_t)), "GPU");
+}
+
+TEST(QmGraphicsAdapters, AdapterNameRejectsPartialUtf16CodeUnit)
+{
+	const wchar_t aDescription[] = L"GPU";
+	EXPECT_TRUE(QmDecodeSystemGraphicsAdapterName(aDescription, sizeof(aDescription) - 1).empty());
+}
+#endif
+
 TEST(QmGraphicsAdapters, VirtualDisplayCopyOfPhysicalGpuDoesNotCountAsSecondAdapter)
 {
 	STWGraphicGpu List;
