@@ -4,6 +4,7 @@
 #include <base/mem.h>
 #include <base/system.h>
 
+#include <engine/client/map_download_resolver.h>
 #include <engine/gfx/image_loader.h>
 #include <engine/shared/jobs.h>
 #include <engine/shared/map.h>
@@ -20,6 +21,7 @@
 #include <memory>
 #include <optional>
 #include <span>
+#include <string_view>
 #include <vector>
 
 // 优先普通出生点，其次队伍出生点和计时起点；不取全图平均，避免落在远处空白。
@@ -55,12 +57,10 @@ inline int ProbeDownloadedMap(const CFsFileInfo *pInfo, int IsDir, int DirType, 
 	SMapDownloadProbeContext *pProbe = static_cast<SMapDownloadProbeContext *>(pUser);
 	if(IsDir || pInfo->m_TimeModified <= pProbe->m_BestTime)
 		return 0;
-	const int PrefixLen = str_length(pProbe->m_pPrefix);
-	const int NameLen = str_length(pInfo->m_pName);
-	// 严格 <前缀>_<哈希>.map：前缀后必须紧跟 '_'，防止 "Sunny" 误配 "SunnyLand_…"。
-	if(NameLen < PrefixLen + 2 || str_startswith(pInfo->m_pName, pProbe->m_pPrefix) == nullptr || pInfo->m_pName[PrefixLen] != '_')
-		return 0;
-	if(str_endswith(pInfo->m_pName, ".map") == nullptr)
+	const std::string_view Name = pInfo->m_pName;
+	const std::string_view Prefix = pProbe->m_pPrefix;
+	if(Name.size() <= Prefix.size() || !Name.starts_with(Prefix) || Name[Prefix.size()] != '_' ||
+		!QmMapDownloadSuffixIsHashed(Name.substr(Prefix.size() + 1)))
 		return 0;
 	pProbe->m_BestTime = pInfo->m_TimeModified;
 	str_format(pProbe->m_aBest, sizeof(pProbe->m_aBest), "downloadedmaps/%s", pInfo->m_pName);
@@ -114,19 +114,23 @@ class CQmBrowserMapPreviewLoadJob : public IJob
 	char m_aCurrentPath[IO_MAX_PATH_LENGTH];
 	bool m_Sixup;
 
+	bool Cancelled() const { return m_Cancelled.load() || State() == STATE_ABORTED; }
+
 public:
 	void Run() override
 	{
 		char aPath[IO_MAX_PATH_LENGTH];
-		if(m_Cancelled.load() || !ResolveLocalPreviewMapPath(m_pStorage, m_aCurrentPath, m_aName, aPath, sizeof(aPath)) || m_Cancelled.load())
+		if(Cancelled() || !ResolveLocalPreviewMapPath(m_pStorage, m_aCurrentPath, m_aName, aPath, sizeof(aPath)) || Cancelled())
 			return;
 		m_pMap = std::make_unique<CMap>(m_pStorage);
-		if(!m_pMap->Load(aPath, IStorage::TYPE_ALL_OR_ABSOLUTE) || m_Cancelled.load())
+		if(!m_pMap->Load(aPath, IStorage::TYPE_ALL_OR_ABSOLUTE) || Cancelled())
 			return;
 		m_pLayers = std::make_unique<CLayers>();
 		m_pLayers->Init(m_pMap.get(), false);
 		for(const auto *pLayer : {m_pLayers->GameLayer(), m_pLayers->FrontLayer()})
 		{
+			if(Cancelled())
+				return;
 			if(m_Start || !pLayer)
 				continue;
 			const int DataIndex = pLayer == m_pLayers->GameLayer() ? pLayer->m_Data : pLayer->m_Front;
@@ -147,6 +151,8 @@ public:
 			const auto *pGroup = m_pLayers->GetGroup(Group);
 			for(int Layer = 0; Layer < pGroup->m_NumLayers; ++Layer)
 			{
+				if(Cancelled())
+					return;
 				const auto *pLayer = m_pLayers->GetLayer(pGroup->m_StartLayer + Layer);
 				int Image = -1, Usage = 0;
 				if(pLayer->m_Type == LAYERTYPE_TILES)
@@ -168,7 +174,7 @@ public:
 					m_vUsage[Image] |= Usage;
 			}
 		}
-		for(int Index = 0; Index < Count && !m_Cancelled.load(); ++Index)
+		for(int Index = 0; Index < Count && !Cancelled(); ++Index)
 		{
 			if(m_vUsage[Index] == 0)
 				continue;
@@ -186,11 +192,12 @@ public:
 				str_format(aPath, sizeof(aPath), "mapres/%s%s.png", pName, Translate ? "_0.7" : "");
 				void *pData = nullptr;
 				unsigned Size = 0;
-				if(m_pStorage->ReadFile(aPath, IStorage::TYPE_ALL, &pData, &Size))
-				{
-					CImageLoader::LoadPng(pData, Size, aPath, m_vImages[Index]);
-					free(pData);
-				}
+				const bool Read = m_pStorage->ReadFile(aPath, IStorage::TYPE_ALL, &pData, &Size);
+				const std::unique_ptr<void, decltype(&free)> pFile(pData, free);
+				if(Cancelled())
+					return;
+				if(Read)
+					CImageLoader::LoadPng(pFile.get(), Size, aPath, m_vImages[Index]);
 			}
 			else if(ImageItem->m_Width > 0 && ImageItem->m_Height > 0)
 			{
@@ -199,6 +206,8 @@ public:
 				Image.m_Height = ImageItem->m_Height;
 				Image.m_Format = CImageInfo::FORMAT_RGBA;
 				const void *pData = m_pMap->GetData(ImageItem->m_ImageData);
+				if(Cancelled())
+					return;
 				size_t Size;
 				if(pData && Image.DataSize(Size) && m_pMap->GetDataSize(ImageItem->m_ImageData) >= 0 && Size <= static_cast<size_t>(m_pMap->GetDataSize(ImageItem->m_ImageData)))
 				{
@@ -209,7 +218,7 @@ public:
 				m_pMap->UnloadData(ImageItem->m_ImageData);
 			}
 		}
-		m_Success = !m_Cancelled.load();
+		m_Success = !Cancelled();
 	}
 
 public:
@@ -224,6 +233,7 @@ public:
 	{
 		str_copy(m_aName, pName);
 		str_copy(m_aCurrentPath, pCurrentPath);
+		Abortable(true);
 	}
 	~CQmBrowserMapPreviewLoadJob() override
 	{

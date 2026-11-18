@@ -1,3 +1,5 @@
+#include <engine/client/map_download_resolver.h>
+
 #include <game/client/components/qmclient/browser_map_preview_loader.h>
 
 #include <gtest/gtest.h>
@@ -54,6 +56,22 @@ TEST(QmBrowserMapPreviewPath, LongerMapNameAndOtherSuffixDoNotReplaceValidMatch)
 	EXPECT_EQ(Context.m_BestTime, 10);
 }
 
+TEST(QmBrowserMapPreviewPath, UnderscoreInAnotherMapNameDoesNotReplaceTheExactMatch)
+{
+	SMapDownloadProbeContext Context{"m", {}, 0};
+	Probe(Context, "m_12345678.map", 10);
+	Probe(Context, "m_training_12345678.map", 20);
+	EXPECT_STREQ(Context.m_aBest, "downloadedmaps/m_12345678.map");
+	EXPECT_EQ(Context.m_BestTime, 10);
+}
+
+TEST(QmBrowserMapPreviewPath, CombinedHashInDownloadedFilenameStillMatches)
+{
+	SMapDownloadProbeContext Context{"m", {}, 0};
+	Probe(Context, "m_12345678_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef.map", 10);
+	EXPECT_STREQ(Context.m_aBest, "downloadedmaps/m_12345678_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef.map");
+}
+
 TEST(QmBrowserMapPreviewPath, MostRecentlyModifiedMatchReplacesOlderSelection)
 {
 	SMapDownloadProbeContext Context{"m", {}, 0};
@@ -78,4 +96,18 @@ TEST(QmBrowserMapPreviewPath, EqualModificationTimeKeepsFirstMatch)
 	Probe(Context, "m_11111111.map", 10);
 	Probe(Context, "m_22222222.map", 10);
 	EXPECT_STREQ(Context.m_aBest, "downloadedmaps/m_11111111.map");
+}
+
+TEST(QmMapDownloadResolver, IndexedPlanRejectsAnotherMapSharingAnUnderscorePrefix)
+{
+	SQmMapDownloadPlan Plan;
+	EXPECT_FALSE(QmBuildIndexedMapDownloadPlan("Map One", "Map%20One_training_12345678.map", nullptr, &Plan));
+	EXPECT_TRUE(Plan.m_FileName.empty());
+}
+
+TEST(QmMapDownloadResolver, IndexedPlanRejectsMapNamesThatTheClientCannotLoad)
+{
+	SQmMapDownloadPlan Plan;
+	EXPECT_FALSE(QmBuildIndexedMapDownloadPlan("Map  One", "Map%20%20One_12345678.map", nullptr, &Plan));
+	EXPECT_TRUE(Plan.m_FileName.empty());
 }

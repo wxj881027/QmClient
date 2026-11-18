@@ -4,6 +4,7 @@
 #include <game/gamecore.h>
 
 #include <gtest/gtest.h>
+#include <test/support/job_wait.h>
 #include <test/test.h>
 
 #include <array>
@@ -38,10 +39,11 @@ protected:
 	void Run(const std::shared_ptr<CQmBrowserMapPreviewLoadJob> &pJob)
 	{
 		CJobPool Pool;
-		Pool.Init(1);
-		Pool.Add(pJob);
-		Pool.Shutdown();
+		ASSERT_TRUE(Pool.TryInit(1));
+		ASSERT_TRUE(Pool.TryAdd(pJob));
+		ASSERT_TRUE(WaitForJobFinished(*pJob));
 		ASSERT_EQ(pJob->State(), IJob::STATE_DONE);
+		Pool.Shutdown();
 	}
 	// 保留有效游戏层，仅改变预览要读取的可选条目尺寸。
 	void WritePreviewMap(const CMapItemImage_v2 &Image, size_t ImageSize, int TileImage = 0, std::optional<size_t> QuadSize = std::nullopt)
@@ -144,9 +146,35 @@ TEST_F(QmBrowserMapPreviewLoader, CancelledCacheEntryDoesNotPublishMap)
 	EXPECT_EQ(pJob->m_pLayers, nullptr);
 }
 
+TEST_F(QmBrowserMapPreviewLoader, PoolShutdownDiscardsQueuedPreviewWithoutOpeningTheMap)
+{
+	class CKeepPreviewQueued : public IJob
+	{
+		const IJob &m_Preview;
+		void Run() override { (void)WaitForJobFinished(m_Preview); }
+
+	public:
+		explicit CKeepPreviewQueued(const IJob &Preview) :
+			m_Preview(Preview) {}
+	};
+
+	CopyMap("maps/preview.map");
+	auto pJob = std::make_shared<CQmBrowserMapPreviewLoadJob>(m_pStorage.get(), "preview", "", false);
+	CJobPool Pool;
+	ASSERT_TRUE(Pool.TryInit(1));
+	ASSERT_TRUE(Pool.TryAdd(std::make_shared<CKeepPreviewQueued>(*pJob)));
+	ASSERT_TRUE(Pool.TryAdd(pJob));
+	Pool.Shutdown();
+	EXPECT_TRUE(pJob->Finished());
+	EXPECT_EQ(pJob->State(), IJob::STATE_ABORTED);
+	EXPECT_FALSE(pJob->m_Success);
+	EXPECT_EQ(pJob->m_pMap, nullptr);
+}
+
 TEST_F(QmBrowserMapPreviewLoader, PrefixCollisionDoesNotLoadAnotherMap)
 {
 	CopyMap("downloadedmaps/previewExtra_12345678.map");
+	CopyMap("downloadedmaps/preview_training_12345678.map");
 	auto pJob = std::make_shared<CQmBrowserMapPreviewLoadJob>(m_pStorage.get(), "preview", "", false);
 	Run(pJob);
 	EXPECT_FALSE(pJob->m_Success);
