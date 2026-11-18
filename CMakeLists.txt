@@ -6745,6 +6745,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/ui/qm_dropdown_popup_wheel_test.cpp
       src/test/integration/qmclient/ui/qm_dropdown_search_failure_test.cpp
       src/test/integration/qmclient/ui/qm_discrete_slider_spring_test.cpp
+      src/test/integration/qmclient/ui/qm_settings_personalization_test.cpp
       src/test/integration/qmclient/ui/qm_numeric_field_enter_test.cpp
       src/test/integration/qmclient/ui/qm_ime_menu_input_test.cpp
       src/test/integration/qmclient/ui/qm_font_combobox_test.cpp

@@ -160,7 +160,8 @@ inline bool SettingsFoldRow(CUi *pUi, const void *pId, const CUIRect &Row, const
 	}
 	// 箭头与设置卡片标题共用同一条形变轨道：展开/收起是 V↔^ 的补间，不是瞬切；
 	// 该字重没有烘焙帧条时由 DrawIconSwap 自动回落成交叉淡化。
-	if(!pUi->MeasurementOnly())
+	// 预布局只处理输入，帧条需要在实际绘制趟提交。
+	if(!pUi->DrawingSuppressed())
 	{
 		IUiContext IconCtx;
 		IconCtx.m_pUi = pUi;
