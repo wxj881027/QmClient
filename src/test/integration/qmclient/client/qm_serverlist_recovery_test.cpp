@@ -715,6 +715,26 @@ TEST_F(QmServerListRecovery, OlderRefreshDoesNotReplaceFresherExistingCache)
 	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "Recent");
 }
 
+TEST_F(QmServerListRecovery, ValidOlderRefreshClearsFailureAndKeepsFresherList)
+{
+	Begin({"https://one.test/list"});
+	m_vRequests[0]->Reply(List("Recent"), 5);
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
+	m_pBrowser->Refresh();
+	ASSERT_EQ(m_vRequests.size(), 2U);
+	m_vRequests[1]->Fail(500);
+	m_pBrowser->Update();
+	ASSERT_TRUE(m_pBrowser->IsError());
+	m_Now += 5;
+	m_pBrowser->Update();
+	ASSERT_EQ(m_vRequests.size(), 3U);
+	m_vRequests[2]->Reply(List("Older"), 100);
+	ASSERT_TRUE(Until([this] { return !m_pBrowser->IsRefreshing(); }));
+	EXPECT_FALSE(m_pBrowser->IsError());
+	EXPECT_EQ(m_pBrowser->Revision(), 1U);
+	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "Recent");
+}
+
 TEST_F(QmServerListRouteRecovery, ProxyRouteConnectFailureRetriesSameSourceDirectly)
 {
 	m_ProxyRoute = true;
@@ -890,6 +910,35 @@ TEST_F(QmServerListRecovery, SavedCacheKeepsRealAgeForComparisonWhileAwaitingLiv
 	ASSERT_TRUE(Until([this] { return !m_pBrowser->IsRefreshing(); }));
 	EXPECT_EQ(m_pBrowser->Revision(), Revision);
 	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "Recent persisted");
+	EXPECT_TRUE(m_pBrowser->IsStale());
+	const size_t NumRequests = m_vRequests.size();
+	m_Now += 59;
+	m_pBrowser->Update();
+	EXPECT_EQ(m_vRequests.size(), NumRequests);
+	++m_Now;
+	m_pBrowser->Update();
+	ASSERT_EQ(m_vRequests.size(), NumRequests + 1);
+	m_vRequests.back()->Reply(List("Current"));
+	ASSERT_TRUE(Until([this, Revision] { return m_pBrowser->Revision() == Revision + 1; }));
+	EXPECT_FALSE(m_pBrowser->IsStale());
+	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "Current");
+}
+
+TEST_F(QmServerListRecovery, OlderResponseLeavesOtherSourceRunningWhileUsingPersistentList)
+{
+	WritePersistentList(List("Persisted").c_str(), time_timestamp(), 5, "https://one.test/list\nhttps://two.test/list\n");
+	Begin({"https://one.test/list", "https://two.test/list"});
+	ASSERT_EQ(m_pBrowser->Revision(), 1U);
+	ASSERT_EQ(m_vRequests.size(), 2U);
+	m_vRequests[0]->Reply(List("Older"), 300);
+	ASSERT_TRUE(Until([this] { return !m_pBrowser->IsRefreshing(); }));
+	EXPECT_EQ(m_pBrowser->Revision(), 1U);
+	EXPECT_TRUE(m_pBrowser->IsStale());
+	ASSERT_FALSE(m_vRequests[1]->IsAbortRequested());
+	m_vRequests[1]->Reply(List("Current"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 2; }));
+	EXPECT_FALSE(m_pBrowser->IsStale());
+	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "Current");
 }
 
 TEST_F(QmServerListRecovery, ParserAllocationExceptionRetainsCacheAndRecoversAfterBackoff)

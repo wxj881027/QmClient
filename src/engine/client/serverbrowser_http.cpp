@@ -541,8 +541,12 @@ namespace
 						log_info("serverbrowser_http", "published serverlist, url='%s' age=%ds", m_vUrls[m_BestUrlIndex].c_str(), Result->m_Age);
 					}
 					else
+					{
+						m_Cache.RefreshSucceeded();
 						log_info("serverbrowser_http", "retained fresher cached serverlist, response age=%ds", Result->m_Age);
-					if(Result->m_Age <= 300)
+					}
+					// 磁盘缓存需要在线列表替换，收到更旧的响应时仍给其他来源机会。
+					if(Result->m_Age <= 300 && !m_Cache.IsStale(Now))
 					{
 						Cancel();
 						return;

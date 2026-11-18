@@ -75,6 +75,15 @@ TEST_F(QmServerListFollow, PreferredSixAddressIsAlsoTheFollowDestination)
 	EXPECT_EQ(m_Connect, "127.0.0.1:8304");
 }
 
+TEST_F(QmServerListFollow, SixAddressWithZeroPortKeepsUsableSevenDestination)
+{
+	ASSERT_FALSE(Parse(R"(["tw-0.6+udp://127.0.0.1:0","tw-0.7+udp://127.0.0.1:8304"])"));
+	ASSERT_EQ(m_vServers.size(), 1U);
+	EXPECT_EQ(m_vServers[0].m_NumAddresses, 1);
+	ASSERT_TRUE(Step(100.0));
+	EXPECT_EQ(m_Connect, "tw-0.7+udp://127.0.0.1:8304");
+}
+
 TEST_F(QmServerListFollow, RefreshedDestinationRestartsDelayWithoutBorrowingOldEntry)
 {
 	ASSERT_FALSE(Parse(R"(["tw-0.6+udp://127.0.0.1:8303"])"));
