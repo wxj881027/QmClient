@@ -6952,6 +6952,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/game/client/QmUi/QmFinishSummarySurface.cpp
       src/game/client/QmUi/QmFinishSummaryCover.cpp
       src/game/client/QmUi/QmIslandSurface.cpp
+      src/test/integration/qmclient/ui/qm_island_surface_fallback_test.cpp
       src/game/client/QmUi/UiTag.cpp
       src/game/client/components/qmclient/finish_summary_data.cpp
       src/game/client/QmUi/QmChatBubble.cpp

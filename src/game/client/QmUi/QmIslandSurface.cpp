@@ -42,11 +42,12 @@ namespace qm_island
 				const float Angle1 = Sweep * (float)(i + 1) / (float)NumSegments;
 				const vec2 Direction0(std::sin(Angle0), -std::cos(Angle0));
 				const vec2 Direction1(std::sin(Angle1), -std::cos(Angle1));
+			// Freeform 按 0、1、3、2 连接，内外沿的起点和终点分别对应。
 				aSegments[i] = IGraphics::CFreeformItem(
 					Center + Direction0 * OuterRadius,
 					Center + Direction1 * OuterRadius,
-					Center + Direction1 * InnerRadius,
-					Center + Direction0 * InnerRadius);
+					Center + Direction0 * InnerRadius,
+					Center + Direction1 * InnerRadius);
 			}
 
 			pGraphics->TextureClear();
@@ -88,8 +89,8 @@ namespace qm_island
 				aSegments[i] = IGraphics::CFreeformItem(
 					RoundedRectPerimeterPoint(OuterRect, OuterRadius, Fraction0),
 					RoundedRectPerimeterPoint(OuterRect, OuterRadius, Fraction1),
-					RoundedRectPerimeterPoint(InnerRect, InnerRadius, Fraction1),
-					RoundedRectPerimeterPoint(InnerRect, InnerRadius, Fraction0));
+					RoundedRectPerimeterPoint(InnerRect, InnerRadius, Fraction0),
+					RoundedRectPerimeterPoint(InnerRect, InnerRadius, Fraction1));
 			}
 
 			pGraphics->TextureClear();
@@ -143,9 +144,17 @@ namespace qm_island
 				if(Item.m_Radii.x <= 0.0f || Item.m_Radii.y <= 0.0f)
 					continue;
 
-				const CUIRect ItemRect = {Item.m_Center.x - Item.m_Radii.x, Item.m_Center.y - Item.m_Radii.y, Item.m_Radii.x * 2.0f, Item.m_Radii.y * 2.0f};
 				const float ItemRadius = std::max(0.0f, std::min(Item.m_Radii.x, Item.m_Radii.y));
+			// 与主体共用形状时，只混合一次底色，倒计时环仍按 item 参数绘制。
+			const bool MatchesMain = State.m_MainCorners == IGraphics::CORNER_ALL &&
+				State.m_MainRadius == ItemRadius &&
+				Item.m_Radii == State.m_MainRect.Size() * 0.5f &&
+				Item.m_Center == State.m_MainRect.Center();
+			if(!MatchesMain)
+			{
+				const CUIRect ItemRect = {Item.m_Center.x - Item.m_Radii.x, Item.m_Center.y - Item.m_Radii.y, Item.m_Radii.x * 2.0f, Item.m_Radii.y * 2.0f};
 				DrawIslandRect(pGraphics, ItemRect, State.m_BackgroundColor, ItemRadius, IGraphics::CORNER_ALL);
+			}
 
 				// 轮廓环模式下环不属于任何单个 item，统一在循环外画。
 				if(Item.m_ContentAlpha > 0.001f && State.m_OutlineRingThickness <= 0.0f)
