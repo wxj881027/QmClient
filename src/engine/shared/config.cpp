@@ -833,8 +833,10 @@ bool CConfigManager::ReadConfigFileState(const char *pPath, SConfigFileState &St
 	if(Result != IStorage::EReadFileResult::SUCCESS)
 		return false;
 	State.m_Exists = true;
-	State.m_Content.assign(static_cast<const char *>(pData), Length);
-	State.m_Readable = !mem_has_null(State.m_Content.data(), State.m_Content.size()) && CLineReader::IsValidBuffer(State.m_Content.c_str());
+	// 解码只用于校验，保存前后仍比较同一次读取的原始字节。
+	State.m_Content.assign(static_cast<const char *>(pContent.get()), Length);
+	CLineReader Reader;
+	State.m_Readable = Reader.OpenTextBuffer(pContent.release(), Length, true);
 	return State.m_Readable;
 }
 

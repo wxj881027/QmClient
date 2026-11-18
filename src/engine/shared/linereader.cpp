@@ -136,15 +136,10 @@ bool CLineReader::OpenFile(IOHANDLE File, bool RejectInvalidLines)
 
 bool CLineReader::OpenFileWithBudget(IOHANDLE File, unsigned MaxBufferBytes, bool RejectInvalidLines)
 {
-	const auto Fail = [this](EOpenResult Result) {
-		m_LastOpenResult = Result;
-		return false;
-	};
-
+	m_LastOpenResult = EOpenResult::CANNOT_READ;
 	if(!File)
-	{
-		return Fail(EOpenResult::CANNOT_READ);
-	}
+		return false;
+
 	void *pRaw = nullptr;
 	unsigned RawLength = 0;
 	const SIOReadAllAllocator BoundedAllocator{
@@ -155,10 +150,15 @@ bool CLineReader::OpenFileWithBudget(IOHANDLE File, unsigned MaxBufferBytes, boo
 		&MaxBufferBytes};
 	const bool Read = MaxBufferBytes ? io_read_all_with_allocator(File, &pRaw, &RawLength, BoundedAllocator) : io_read_all(File, &pRaw, &RawLength);
 	io_close(File);
-	if(!Read)
-	{
-		return Fail(EOpenResult::CANNOT_READ);
-	}
+	return Read && OpenTextBuffer(pRaw, RawLength, RejectInvalidLines);
+}
+
+bool CLineReader::OpenTextBuffer(void *pRaw, unsigned RawLength, bool RejectInvalidLines)
+{
+	const auto Fail = [this](EOpenResult Result) {
+		m_LastOpenResult = Result;
+		return false;
+	};
 
 	const auto *pData = static_cast<const unsigned char *>(pRaw);
 	char *pBuffer = nullptr;
