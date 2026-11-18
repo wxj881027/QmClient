@@ -12,6 +12,7 @@
 #include "QmUi/QmUiLifetime.h"
 #include "QmUi/UiTokens.h"
 #include "lineinput.h"
+#include "components/tooltips.h"
 #include "ui_rect.h"
 
 #include <engine/input.h>
@@ -27,6 +28,7 @@
 
 class CScrollRegion;
 class CTooltips;
+class CGameClient;
 enum class EQmIcon;
 class IClient;
 class IGraphics;
@@ -330,6 +332,28 @@ inline SUiQuadBatchSubmissionPlan UiPlanQuadBatchSubmission(bool BatchActive, in
 	return Plan;
 }
 
+// 逐字色段是否逐项相同：条数、起点、长度与两端色全部一致才算相同。
+// 只比较 hash 会在碰撞时静默沿用旧颜色，所以重建判定必须精确比较。
+inline bool QmColorSplitsEqual(const std::vector<STextColorSplit> &Left, const std::vector<STextColorSplit> &Right)
+{
+	if(Left.size() != Right.size())
+		return false;
+	for(size_t i = 0; i < Left.size(); ++i)
+	{
+		if(Left[i].m_CharIndex != Right[i].m_CharIndex || Left[i].m_Length != Right[i].m_Length ||
+			Left[i].m_Color != Right[i].m_Color || Left[i].m_ColorEnd != Right[i].m_ColorEnd)
+			return false;
+	}
+	return true;
+}
+
+// 单条「从首字符到末尾」的色段覆盖全文，此时容器底色不会被任何字符看到。
+// 多段色段是否拼满全文依赖文本长度，缓存判定不为此引入逐帧文本扫描。
+inline bool QmColorSplitsCoverAllText(const std::vector<STextColorSplit> &Splits)
+{
+	return !Splits.empty() && Splits.front().m_CharIndex == 0 && Splits.front().m_Length == -1;
+}
+
 class CUIElement
 {
 	friend class CUi;
@@ -373,9 +397,33 @@ public:
 		ColorRGBA m_TextColor;
 		ColorRGBA m_TextOutlineColor;
 
+		// 容器顶点里已经烘入逐字色段（SLabelProperties::m_vColorSplits）。
+		// 色段指纹直接取 m_Cursor.m_vColorSplits：它和建容器用的是同一份光标数据，
+		// 精确可比较，也不必再复制一份色段。
+		bool m_TextColorBaked;
+		// 建容器时烘入的调用方文字颜色：色段没覆盖到的字符用它，绘制时不再乘色。
+		ColorRGBA m_TextColorBakedBase;
+
 		SUIElementRect();
 
 		ColorRGBA m_QuadColor;
+
+		// 容器烘入的颜色是否仍与本次请求一致。色段要逐项相同（含「有 → 无」）；
+		// 色段没覆盖全文时，未被覆盖字符用的底色也参与比较；覆盖全文时底色看不见，
+		// 调用方换色不需要重建。缓存判定与重建判定都只走这一处，避免两边失配。
+		bool BakedColorMatches(const std::vector<STextColorSplit> &Splits, const ColorRGBA &CurrentTextColor) const
+		{
+			if(m_TextColorBaked != !Splits.empty() || !QmColorSplitsEqual(m_Cursor.m_vColorSplits, Splits))
+				return false;
+			return !m_TextColorBaked || QmColorSplitsCoverAllText(Splits) || m_TextColorBakedBase == CurrentTextColor;
+		}
+
+		// 绘制容器时乘在顶点上的底色。色段已经烘进顶点，烘色后再乘调用方颜色
+		// 会二次染色，所以烘色容器固定用白色，只保留淡入淡出系数。
+		ColorRGBA TextContainerTint() const
+		{
+			return m_TextColorBaked ? ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f) : m_TextColor;
+		}
 
 		void Reset();
 		void Draw(const CUIRect *pRect, ColorRGBA Color, int Corners, float Rounding);
@@ -419,7 +467,15 @@ struct SLabelProperties
 	bool m_EllipsisAtEnd = false;
 	bool m_EnableWidthCheck = true;
 	float m_MinimumFontSize = 5.0f;
+	// 缩字号的档位（UI 单位）。1 = 逐档整数，与历史行为一致；0.5 = 半档，
+	// 悬浮收缩这类「可用宽度逐帧变化」的场合看起来是连续缩放而不是一格一格跳。
+	// 档位只决定精度，不影响测量次数上限：内部用二分夹逼，细档反而比逐档递减更少调用。
+	float m_FontSizeStep = 1.0f;
 	std::vector<STextColorSplit> m_vColorSplits;
+	// 文本被裁剪时自动登记完整内容提示；pTooltipText 供分段绘制（搜索高亮）
+	// 用完整字符串覆盖当前分段的文本。
+	const void *m_pTooltipId = nullptr;
+	const char *m_pTooltipText = nullptr;
 
 	void SetColor(const ColorRGBA &Color);
 };
@@ -531,6 +587,7 @@ class CCachedText
 	int m_CursorFlags = 0;
 	STextBoundingBox m_BoundingBox = {0.0f, 0.0f, 0.0f, 0.0f};
 	float m_MaxCharacterHeight = 0.0f;
+	float m_AlignedFontSize = 0.0f;
 	// 记录创建容器的渲染器，析构时才能归还容器；仅 Update 成功创建后非空。
 	ITextRender *m_pTextContainerOwner = nullptr;
 
@@ -550,6 +607,7 @@ public:
 
 	float Width() const { return m_BoundingBox.m_W; }
 	float MaxCharacterHeight() const { return m_MaxCharacterHeight; }
+	float AlignedFontSize() const { return m_AlignedFontSize; }
 };
 
 struct SPopupMenuProperties
@@ -783,10 +841,12 @@ private:
 	float m_DropDownFontSize = -1.0f;
 	// 仅客户端绑定；地图编辑器保留自己的控件样式。
 	CUiV2AnimationRuntime *m_pQmAnimationRuntime = nullptr;
-	CTooltips *m_pQmTooltips = nullptr;
+	// 气泡由 CUi 持有，生命周期与 UI 一致；配置页、服务器列表与通用控件共用同一实例。
+	mutable CTooltips m_Tooltips;
+	bool m_TooltipsInitialized = false;
 	bool m_CardLabelHintsEnabled = false;
 	SUiTheme m_QmControlTheme{};
-	std::array<unsigned, 8> m_aQmControlThemeConfig{};
+	std::array<unsigned, 6> m_aQmControlThemeConfig{};
 	bool m_HasQmControlTheme = false;
 	mutable int m_QuadBatchDepth = 0;
 	mutable int m_QuadBatchContainerIndex = -1;
@@ -930,7 +990,9 @@ private:
 	struct SPopupMenu
 	{
 		static constexpr float POPUP_BORDER = 1.0f;
-		static constexpr float POPUP_MARGIN = 4.0f;
+		// 二级菜单内容四周留白。原 4 在视觉上几乎贴边，统一改为 spacing::SM（8），
+		// 弹窗内容与圆角外框之间才有可读的呼吸感。
+		static constexpr float POPUP_MARGIN = 8.0f;
 
 		const SPopupMenuId *m_pId;
 		SPopupMenuProperties m_Props;
@@ -1067,6 +1129,8 @@ public:
 
 	void AddUIElement(CUIElement *pElement);
 	void RemoveUIElement(CUIElement *pElement);
+	void OnReset();
+	void OnRenderTooltip();
 	void OnShutdown();
 	void OnElementsReset();
 	void OnWindowResize();
@@ -1149,19 +1213,27 @@ public:
 	void SetDropDownFontSize(float FontSize) { m_DropDownFontSize = FontSize; }
 	void SetQmAnimationRuntime(CUiV2AnimationRuntime *pRuntime) { m_pQmAnimationRuntime = pRuntime; }
 	CUiV2AnimationRuntime *QmAnimationRuntime() const { return m_pQmAnimationRuntime; }
-	void SetQmTooltips(CTooltips *pTooltips) { m_pQmTooltips = pTooltips; }
+	void InitTooltips(CGameClient *pClient)
+	{
+		m_Tooltips.OnInterfacesInit(pClient);
+		m_TooltipsInitialized = true;
+	}
+	CTooltips &Tooltips() { return m_Tooltips; }
+	const CTooltips &Tooltips() const { return m_Tooltips; }
 	bool CardLabelHintsEnabled() const { return m_CardLabelHintsEnabled; }
 	void SetCardLabelHintsEnabled(bool Enabled) { m_CardLabelHintsEnabled = Enabled; }
-	const char *PrepareCardLabel(const CUIRect *pRect, const char *pText, bool Render = true) const;
+	const char *PrepareCardLabel(const CUIRect *pRect, const char *pText, bool Render = true, bool AllowHintSplit = true) const;
 	void DoConfigTooltip(const void *pId, const CUIRect *pRect, const void *pValue, const void *pSecondValue = nullptr);
-	void DoButtonTooltip(const void *pId, const CUIRect *pRect, const char *pText);
+	void DoButtonTooltip(const void *pId, const CUIRect *pRect, const char *pText) const;
 	void SetKeyboardFocus(const void *pId);
 	const void *KeyboardFocusItem() const { return m_KeyboardFocus.m_pItem; }
 	bool KeyboardFocusFromKeyboard() const { return m_KeyboardFocus.m_FromKeyboard; }
 	int DoButtonGroupKeyboard(const void *const *ppIds, const bool *pEnabled, int Count);
 	void DoTooltip(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint = -1.0f);
-	void DoSmallTooltip(const void *pId, const CUIRect *pNearRect, const char *pText, float FontSize = 12.0f, float WidthHint = -1.0f);
-	CTooltips *QmTooltips() const { return m_pQmTooltips; }
+	// FontSize <= 0 表示按提示令牌取字号：设置页用紧凑小字，页面外用 tooltip 令牌，
+	// 与普通气泡同源，避免调用点自带一个和全局不一致的魔数。
+	void DoSmallTooltip(const void *pId, const CUIRect *pNearRect, const char *pText, float FontSize = -1.0f, float WidthHint = -1.0f);
+	CTooltips *QmTooltips() const { return m_TooltipsInitialized ? const_cast<CTooltips *>(&m_Tooltips) : nullptr; }
 	const SUiTheme &QmControlTheme();
 	float DropDownFontSize() const { return m_DropDownFontSize; }
 	void Update();
@@ -1176,6 +1248,11 @@ public:
 	vec2 UpdatedMousePos() const { return m_UpdatedMousePos; }
 	vec2 UpdatedMouseDelta() const { return m_UpdatedMouseDelta; }
 	bool PointerInputBlocked() const { return UnderlyingPointerInputBlocked(); }
+	// 弹窗打开时会接管指针，但弹窗自己的控件仍应有悬浮反馈与提示气泡。
+	// 提示组件用这两个入口区分“来源在弹窗内”和“来源被弹窗挡住”。
+	bool MouseInsideOpenPopupMenu() const;
+	// FromPopup：提示来源登记于弹窗渲染过程。弹窗接管指针时只有这类来源还算悬浮。
+	bool TooltipSourceHovered(const CUIRect *pRect, bool FromPopup) const;
 	int LastMouseButton(int Index) const { return QmResolvePointerButtons(m_MouseButtons, m_LastMouseButtons, UnderlyingPointerInputBlocked()).Previous(Index); }
 	int MouseButton(int Index) const { return QmResolvePointerButtons(m_MouseButtons, m_LastMouseButtons, UnderlyingPointerInputBlocked()).Held(Index); }
 	int MouseButtonClicked(int Index) const { return QmResolvePointerButtons(m_MouseButtons, m_LastMouseButtons, UnderlyingPointerInputBlocked()).Pressed(Index); }
@@ -1413,7 +1490,7 @@ public:
 	CLabelResult DoLabel_QmIcon(const CUIRect *pRect, EQmIcon Icon, const char *pFallbackIcon, float Size, int Align, const SLabelProperties &LabelProps = {}) const;
 	int DoButton_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, unsigned Flags, int Corners = IGraphics::CORNER_ALL, bool Enabled = true, std::optional<ColorRGBA> ButtonColor = std::nullopt, bool ShowSlash = false, bool TransparentInactive = false, const ui_widget::SIconButtonIconDraw *pIconDraw = nullptr);
 	// only used for popup menus
-	int DoButton_PopupMenu(CButtonContainer *pButtonContainer, const char *pText, const CUIRect *pRect, float Size, int Align, float Padding = 0.0f, bool TransparentInactive = false, bool Enabled = true, std::optional<ColorRGBA> ButtonColor = std::nullopt, float MinimumFontSize = -1.0f);
+	int DoButton_PopupMenu(CButtonContainer *pButtonContainer, const char *pText, const CUIRect *pRect, float Size, int Align, float Padding = 0.0f, bool TransparentInactive = false, bool Enabled = true, std::optional<ColorRGBA> ButtonColor = std::nullopt, float MinimumFontSize = -1.0f, float TextInsetX = 0.0f);
 
 	// value selector
 	SEditResult<int64_t> DoValueSelectorWithState(const void *pId, const CUIRect *pRect, const char *pLabel, int64_t Current, int64_t Min, int64_t Max, const SValueSelectorProperties &Props = {});
@@ -1428,6 +1505,9 @@ public:
 		SCROLLBAR_OPTION_DELAYUPDATE = 1 << 3,
 	};
 	void RenderScrollbarH(const void *pId, const CUIRect *pRect, float Current, const ColorRGBA *pColorInner = nullptr);
+	// 只处理滚动条交互与命中，不绘制。供需要自定义轨道的调用点（如取色器通道滑条）
+	// 复用同一套滑块行程、拖拽与热项语义。
+	float DoScrollbarHLogic(const void *pId, const CUIRect *pRect, float Current);
 	float DoScrollbarH(const void *pId, const CUIRect *pRect, float Current, const ColorRGBA *pColorInner = nullptr);
 	bool DoScrollbarOption(const void *pId, int *pOption, const CUIRect *pRect, const char *pStr, int Min, int Max, const IScrollbarScale *pScale = &ms_LinearScrollbarScale, unsigned Flags = 0u, const char *pSuffix = "", const char *pMaxText = nullptr);
 
@@ -1578,7 +1658,6 @@ public:
 		enum EColorPickerMode
 		{
 			MODE_UNSET = -1,
-			MODE_RECOMMENDED,
 			MODE_HSVA,
 			MODE_RGBA,
 			MODE_HSLA,
@@ -1594,6 +1673,9 @@ public:
 		EColorPickerMode m_ColorMode = MODE_UNSET;
 		EColorPickerShape m_Shape = SHAPE_SQUARE;
 		bool m_Alpha = false;
+		// A 通道以百分比（0..100）显示与写回。配置里存的是「颜色 + 不透明度百分比」时，
+		// 百分比才是权威值，用 0..255 会让 100 这类值在往返后被舍成 99。
+		bool m_AlphaPercent = false;
 		unsigned int *m_pHslaColor = nullptr; // may be nullptr
 		ColorHSVA m_HsvaColor;
 		ColorRGBA m_RgbaColor;
@@ -1605,9 +1687,24 @@ public:
 		// 「我的调色板」工作副本：打开时从 g_Config.m_QmColorPickerPalette 载入，
 		// 每次增删改名即刻序列化回写；全部取色器实例共享同一份配置。
 		std::vector<qm_picker_palette::SSwatch> m_vPalette;
-		int m_RenamingPaletteIndex = -1; // >=0 时对应色块显示为行内改名输入框
+		int m_RenamingPaletteIndex = -1; // >=0 时标题行变成改名输入框
 		CLineInput m_RenameInput;
 		char m_aRenameBuffer[qm_picker_palette::MAX_NAME_BYTES];
+		// 选中项（只对“我的颜色”生效）：删除/改名按钮的操作目标。
+		int m_SelectedPaletteIndex = -1;
+		// 单级撤回：记住最近一次删除的色块与插入位置，撤回后清空。
+		qm_picker_palette::SSwatch m_UndoSwatch{};
+		int m_UndoIndex = -1;
+		bool m_UndoWasDraft = false; // 撤销缓冲里的条目是否为本次编辑的草稿
+		// 「自定义 N」草稿：用户首次改动颜色时自动追加到调色板末尾并实时跟随，
+		// ✓ 保留、✕ 撤销；点已有色块只应用颜色，不产生草稿。
+		int m_DraftPaletteIndex = -1;
+		// 关闭帧是否由内容回调自己处理（✓/✕/Esc）。外部点击、ClosePopupMenu 等
+		// 不跑内容回调的关闭路径由弹层的 OnClosed 收尾。
+		bool m_bCloseConsumedByCallback = false;
+		// 关闭前最后一帧仍在编辑的通道/Hex 输入框。弹层关闭会先释放活动项再跑
+		// OnClosed，届时 IsActive() 已为 false，只能靠这份记录补提交文本。
+		CLineInput *m_pLastActiveInput = nullptr;
 		// UI element IDs
 		const char m_HuePickerId = 0;
 		const char m_WheelPickerId = 0;
@@ -1622,14 +1719,20 @@ public:
 		CButtonContainer m_ShapeButton;
 		CButtonContainer m_AcceptButton;
 		CButtonContainer m_CloseButton;
-		CButtonContainer m_InitialColorButton;
-		CButtonContainer m_aPresetButtons[24];
+		// 预设色系按钮：每组最多 8 色，按“组号 * 8 + 组内序号”平铺取用。
+		static constexpr int PRESET_MAX_PER_GROUP = 8;
+		CButtonContainer m_aPresetButtons[3 * PRESET_MAX_PER_GROUP];
+		// 莫奈预设组（12 色相 × 4 档）：色表在 `ui_tag::MONET_PALETTE`，这里只留命中容器。
+		CButtonContainer m_aMonetSwatchButtons[qm_picker_palette::MONET_SWATCHES];
 		CButtonContainer m_aPaletteSwatchButtons[qm_picker_palette::MAX_SWATCHES];
-		CButtonContainer m_aPaletteDeleteButtons[qm_picker_palette::MAX_SWATCHES];
+		// 名字单独一份命中区：点名字进改名，点色块应用颜色。
+		CButtonContainer m_aPaletteNameButtons[qm_picker_palette::MAX_SWATCHES];
+		// 调色板首位的“当前颜色”格（实时跟随取色结果，只作指示）。
+		CButtonContainer m_CurrentColorButton;
 		CButtonContainer m_AddPaletteButton;
-		// 调色板色块双击改名判定：记录上次左键点击的色块与时间。
-		float m_aSwatchClickTime[qm_picker_palette::MAX_SWATCHES] = {0.0f};
-		int m_LastSwatchClickIndex = -1;
+		CButtonContainer m_RenamePaletteButton;
+		CButtonContainer m_DeletePaletteButton;
+		CButtonContainer m_UndoPaletteButton;
 		EEditState m_State = EEditState::NONE;
 	};
 	void ShowPopupColorPicker(float X, float Y, SColorPickerPopupContext *pContext);

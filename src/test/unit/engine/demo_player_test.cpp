@@ -1,4 +1,5 @@
 // 请抬头享受阳光｜日子很好 我很我---------致咩子
+#include <base/bytes.h>
 #include <base/system.h>
 
 #include <engine/demo.h>
@@ -96,7 +97,7 @@ namespace
 		int LoadDemo(const char *pFilename)
 		{
 			CDemoPlayer Player(nullptr, nullptr, false);
-			const int Result = Player.Load(m_pStorage.get(), nullptr, pFilename, IStorage::TYPE_SAVE);
+			const int Result = Player.Load(m_pStorage.get(), pFilename, IStorage::TYPE_SAVE);
 			Player.Stop();
 			return Result;
 		}

@@ -2,7 +2,9 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "particles.h"
 
+#include <base/dbg.h>
 #include <base/math.h>
+#include <base/mem.h>
 
 #include <engine/demo.h>
 #include <engine/graphics.h>

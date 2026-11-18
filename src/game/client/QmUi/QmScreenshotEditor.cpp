@@ -6,6 +6,7 @@
 
 #include <game/client/QmUi/QmToast.h>
 #include <game/client/components/menus.h>
+#include <game/client/gameclient.h>
 #include <game/localization.h>
 
 #include <SDL3/SDL_dialog.h>
@@ -361,8 +362,12 @@ void CQmScreenshotEditor::Render(CMenus *pMenus, CUIRect Rect)
 	if(m_Failed)
 	{
 		Next();
-		if(pMenus->DoButton_Menu(&m_aButtons[19], Localize("Retry"), 0, &Row))
+		// 重试是图标类动作：方形按钮居中在行内，悬停给气泡。
+		const float RetrySize = std::min(Row.h, Row.w);
+		CUIRect Retry{Row.x + (Row.w - RetrySize) * 0.5f, Row.y, RetrySize, RetrySize};
+		if(pMenus->Ui()->DoButton_QmIcon(&m_aButtons[19], EQmIcon::ARROW_ROTATE_RIGHT, FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT, 0, &Retry, BUTTONFLAG_LEFT) != 0)
 			m_Dirty = true;
+		pMenus->GameClient()->m_Tooltips.DoToolTip(&m_aButtons[19], &Retry, Localize("Retry"));
 	}
 	m_Scroll.End();
 	RenderImage(pMenus, Canvas);

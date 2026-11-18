@@ -1,6 +1,7 @@
 #ifndef GAME_CLIENT_QMUI_CARDS_QMCARDCATALOGTEESKINLISTSTATE_H
 #define GAME_CLIENT_QMUI_CARDS_QMCARDCATALOGTEESKINLISTSTATE_H
 
+#include <game/client/QmUi/UiIconActionStrip.h>
 #include <game/client/components/qmclient/recent_tee_skins.h>
 #include <game/client/components/settings_resource_jobs.h>
 
@@ -32,6 +33,10 @@ public:
 		char m_Queue = 0;
 		char m_RightDoubleClick = 0;
 		char m_ErrorTooltip = 0;
+		// 卡片右上角的功能图标条：只按本帧真的会画的动作从右到左排，
+		// 出现/消失走同一条缓动（见 UiIconActionStrip.h 的公共约定）。
+		// 0 = 加入/移出队列，1 = 收藏。
+		ui_widget::CIconActionStrip<2> m_ActionStrip;
 	};
 
 	SIds &Resolve(const char *pName, const std::optional<SSettingsSkinListColorKey> &Color)

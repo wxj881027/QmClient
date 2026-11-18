@@ -8,7 +8,7 @@
 #include <engine/textrender.h>
 
 #include <game/client/QmUi/QmPieMenuRender.h>
-#include <game/client/QmUi/QmPieMenuSettingsControls.h>
+#include <game/client/QmUi/QmPieOptionPool.h>
 #include <game/client/QmUi/SettingsContentLayout.h>
 #include <game/client/QmUi/SettingsToggleGrid.h>
 #include <game/client/QmUi/UiForms.h>
@@ -81,8 +81,7 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 	RenderSlider(&s_PieMenuMaxDistanceInputId, "qmclient-pie-menu-detection-distance", Localizable("Detection distance"), &g_Config.m_QmPieMenuMaxDistance, 100, 2000);
 	if(Flow.Control("pie-effects", LineHeight, Row))
 		RenderQmFunctionCheckbox(&g_Config.m_QmPieMenuEffects, "Pie menu effects", Localize("Pie menu effects"), &g_Config.m_QmPieMenuEffects, &Row, !CanCommit);
-	Flow.Space(LineSpacing);
-	if(Flow.Control("pie-selected-color", ResolveSettingsColorRowLayout({0, 0, Content.w, LineHeight}, CurrentSettingsContentMetrics(), false).m_ConsumedHeight, Row))
+	if(Flow.Control("pie-selected-color", ResolveSettingsColorRowLayout({0, 0, Content.w, LineHeight}, CurrentSettingsContentMetrics(), false).m_ConsumedHeight, Row, LineSpacing))
 	{
 		static CButtonContainer s_SelectedColor;
 		CSettingsContentLayoutScope ColorScope;
@@ -108,9 +107,8 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 		g_Config.m_QmPieMenuColorScore = DefaultConfig::QmPieMenuColorScore;
 		g_Config.m_QmPieMenuColorCopyName = DefaultConfig::QmPieMenuColorCopyName;
 	}
-	Flow.Space(LineSpacing);
 
-	if(Flow.Control("pie-rename-queue", LineHeight, Row))
+	if(Flow.Control("pie-rename-queue", LineHeight, Row, LineSpacing))
 	{
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
 		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-pie-menu-rename-queue", &LabelColumn, Localize("Rename queue"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
@@ -128,19 +126,20 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 			GameClient()->m_Tooltips.DoSmallToolTip(&s_PieMenuRenameQueue, &ControlColumn, pRenameQueueHelp, HelpFontSize, HelpWidth);
 		}
 	}
-	Flow.Space(LineSpacing * 2.0f);
 
-	struct SPieMenuColorEntry
+	// 选项表：颜色 + 图标 + 「是否在饼菜单里」的配置项。逐项色块控件已删除——
+	// 颜色统一在左侧预览的扇区上点选，卡片里不再并排一堆色块（同一件事只有一个入口）。
+	struct SPieMenuOptionEntry
 	{
 		const char *m_pName;
 		const char *m_pIcon;
-		unsigned int *m_pColorValue;
+		unsigned *m_pColorValue;
 		ColorRGBA m_DefaultColor;
 		int *m_pEnabled;
 		const char *m_pTextId;
 		bool m_Alpha = false;
 	};
-	const std::array<SPieMenuColorEntry, qm_pie_menu::OPTION_COUNT> aColorEntries = {{
+	const std::array<SPieMenuOptionEntry, qm_pie_menu::OPTION_COUNT> aOptions = {{
 		{Localize("Friend"), FontIcons::FONT_ICON_HEART, (unsigned int *)&g_Config.m_QmPieMenuColorFriend, ColorRGBA(0.9f, 0.3f, 0.4f), &g_Config.m_QmPieMenuFriendEnabled, "qmclient-pie-friend"},
 		{Localize("Whisper"), FontIcons::FONT_ICON_COMMENT, (unsigned int *)&g_Config.m_QmPieMenuColorWhisper, ColorRGBA(0.5f, 0.35f, 0.7f), &g_Config.m_QmPieMenuWhisperEnabled, "qmclient-pie-whisper"},
 		{Localize("Mention"), FontIcons::FONT_ICON_CHEVRON_RIGHT, (unsigned int *)&g_Config.m_QmPieMenuColorMention, ColorRGBA(0.85f, 0.5f, 0.2f), &g_Config.m_QmPieMenuMentionEnabled, "qmclient-pie-mention"},
@@ -153,136 +152,84 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 		{Localize("View points"), FontIcons::FONT_ICON_MAGNIFYING_GLASS, (unsigned int *)&g_Config.m_QmPieMenuColorScore, ColorRGBA(0.69f, 0.42f, 0.9f, 0.75f), &g_Config.m_QmPieMenuScoreEnabled, "qmclient-pie-points", true},
 		{Localize("Copy name"), FontIcons::FONT_ICON_USER, (unsigned int *)&g_Config.m_QmPieMenuColorCopyName, ColorRGBA(0.4f, 0.8f, 0.8f, 0.75f), &g_Config.m_QmPieMenuCopyNameEnabled, "qmclient-pie-copy-name", true},
 	}};
-	auto OpenColorPopup = [&](const SPieMenuColorEntry &Entry) {
+	auto OpenColorPopup = [&](const SPieMenuOptionEntry &Entry) {
 		const ColorHSLA HslaColor = ColorHSLA(*Entry.m_pColorValue, Entry.m_Alpha);
 		m_ColorPickerPopupContext.m_pHslaColor = Entry.m_pColorValue;
 		m_ColorPickerPopupContext.m_HslaColor = HslaColor;
 		m_ColorPickerPopupContext.m_HsvaColor = color_cast<ColorHSVA>(HslaColor);
 		m_ColorPickerPopupContext.m_RgbaColor = color_cast<ColorRGBA>(m_ColorPickerPopupContext.m_HsvaColor);
 		m_ColorPickerPopupContext.m_Alpha = Entry.m_Alpha;
+		// 饼菜单颜色直接存 alpha 字节，A 通道沿用 0..255，不继承其它入口的百分比模式。
+		m_ColorPickerPopupContext.m_AlphaPercent = false;
 		Ui()->ShowPopupColorPicker(Ui()->MouseX(), Ui()->MouseY(), &m_ColorPickerPopupContext);
 	};
-	SSettingsContentMetrics ToggleMetrics = CurrentSettingsContentMetrics();
-	ToggleMetrics.m_UiScale = UiScale;
-	ToggleMetrics.m_LineHeight = LineHeight;
-	ToggleMetrics.m_BodySize = BodySize;
-	ToggleMetrics.m_LineSpacing = LineSpacing;
-	const float PaddingX = std::max(LineSpacing, BodySize * 0.5f);
-	const float PaddingY = LineSpacing * 0.5f;
-	const auto OptionButtonRect = [LineHeight, LineSpacing](CUIRect Cell) {
-		// 色块位于按钮右侧，两个命中区域始终分离。
-		return QmPieOptionButtonRect(Cell, LineHeight, LineSpacing);
-	};
-	std::array<SSettingsToggleSize, qm_pie_menu::OPTION_COUNT> aItemSizes{};
-	for(size_t Index = 0; Index < aColorEntries.size(); ++Index)
+
+	// 两个池的成员：配置项为 1 的进「饼菜单中」，否则进「未使用」。顺序即配置顺序，
+	// 池内不做额外排序——玩家认的是自己排的那套顺序。
+	std::array<int, qm_pie_menu::OPTION_COUNT> aEnabledOptions{}, aDisabledOptions{};
+	int EnabledCount = 0;
+	int DisabledCount = 0;
+	for(int Index = 0; Index < qm_pie_menu::OPTION_COUNT; ++Index)
 	{
-		aItemSizes[Index] = ResolveSettingsToggleButtonSize(TextRender()->TextWidth(BodySize, aColorEntries[Index].m_pName), BodySize, LineHeight, PaddingX, PaddingY);
-		aItemSizes[Index].m_Width += LineHeight + LineSpacing;
+		if(*aOptions[Index].m_pEnabled)
+			aEnabledOptions[EnabledCount++] = Index;
+		else
+			aDisabledOptions[DisabledCount++] = Index;
 	}
-	// 左右对调：左边是圆饼预览，中间是重置图标，右边是选项按钮网格。
-	// 预览边长仍沿用行高公式（卡片高度估算 QmPieMenuContentHeight 用的是同一个式子），
-	// 选项网格先占够两列，预览只使用剩下的宽度，右侧按钮不会被挤成一列一个。
-	const float PreviewBaseSide = minimum(Content.w, std::clamp(Content.w * 0.88f, LineHeight * 10.0f, LineHeight * 13.5f));
-	const float PreviewSide = PreviewBaseSide * 0.8f;
-	const float ColumnGap = maximum(CardPadding * 0.8f, LineSpacing * 2.0f);
-	// 重置图标按钮原来按 clamp(ButtonHeight, 1.5 倍行高, 2 倍行高) 出尺寸，比行高明显偏大；
-	// 现在收到控件行高量级（约 1.2 倍行高），下限用 spacing token 托底。
-	const float ResetButtonSide = maximum(ui_token::spacing::LG, minimum(ButtonHeight, LineHeight) * 1.2f);
-	const float ResetColumnWidth = ResetButtonSide + ColumnGap;
-	// 选项网格是「按钮 + 色块」成对的两列：按列取最长项得到两列各自的最小宽度，
-	// 先保证右侧列宽放得下两列，再决定预览能用多少宽度。
-	float aOptionColumnMinWidth[2] = {0.0f, 0.0f};
-	for(size_t Index = 0; Index < aItemSizes.size(); ++Index)
+
+	// 预览容器：占满整卡宽，圆饼在容器里居中。背景就是这个父容器，
+	// 不再让圆饼直接压在卡片底上——那样看不出预览的可点范围。
+	const float PreviewSide = std::clamp(Content.w * 0.42f, LineHeight * 8.0f, LineHeight * 12.0f);
+	const float PoolPadding = ui_token::list::ContainerPadding(LineHeight);
+	const float PreviewBoxHeight = PreviewSide + PoolPadding * 2.0f;
+
+	// 胶囊宽度先量好：池的高度要在声明趟就算出来，不能等画到那一行才知道要不要换行。
+	float aEnabledChipWidths[qm_pie_menu::OPTION_COUNT] = {};
+	float aDisabledChipWidths[qm_pie_menu::OPTION_COUNT] = {};
+	for(int Slot = 0; Slot < EnabledCount; ++Slot)
+		aEnabledChipWidths[Slot] = QmPieOptionChipWidth(TextRender()->TextWidth(BodySize, aOptions[aEnabledOptions[Slot]].m_pName), BodySize);
+	for(int Slot = 0; Slot < DisabledCount; ++Slot)
+		aDisabledChipWidths[Slot] = QmPieOptionChipWidth(TextRender()->TextWidth(BodySize, aOptions[aDisabledOptions[Slot]].m_pName), BodySize);
+	const SQmPieOptionPoolLayout MeasuredEnabledPool = QmResolvePieOptionPool({0.0f, 0.0f, Content.w, 0.0f}, EnabledCount, aEnabledChipWidths, LineHeight, BodySize);
+	const SQmPieOptionPoolLayout MeasuredDisabledPool = QmResolvePieOptionPool({0.0f, 0.0f, Content.w, 0.0f}, DisabledCount, aDisabledChipWidths, LineHeight, BodySize);
+
+	SQmPieOptionPoolLayout EnabledPoolLayout{};
+	SQmPieOptionPoolLayout DisabledPoolLayout{};
+
+	// 拖动状态跨趟跨帧保留：只有交互趟推进它，绘制趟只读。
+	static SQmPieOptionPoolDrag s_PieOptionPoolDrag;
+
+	CUIRect PreviewRow;
+	if(Flow.Control("pie-preview", PreviewBoxHeight, PreviewRow, LineSpacing))
 	{
-		const size_t Column = Index % 2;
-		aOptionColumnMinWidth[Column] = maximum(aOptionColumnMinWidth[Column], aItemSizes[Index].m_Width);
-	}
-	const float OptionsMinWidth = aOptionColumnMinWidth[0] + aOptionColumnMinWidth[1] + LineSpacing;
-	const float OptionsColumnWidth = minimum(maximum(OptionsMinWidth, Content.w - PreviewSide - ResetColumnWidth), maximum(0.0f, Content.w - ResetColumnWidth));
-	// 预览尺寸按剩余宽度重算：只拿两栏分完剩下的那一列。
-	const float PreviewColumnWidth = maximum(0.0f, Content.w - OptionsColumnWidth - ResetColumnWidth);
-	auto Grid = ResolveSettingsToggleGrid(OptionsColumnWidth, aItemSizes, LineSpacing);
-	for(size_t Index = 0; Index < aColorEntries.size(); ++Index)
-	{
-		const CUIRect Button = OptionButtonRect({0, 0, Grid.m_aColumnWidths[Index % Grid.m_Columns], LineHeight});
-		const CUIRect Label = ResolveSettingsToggleButtonLabel(Button, PaddingX, PaddingY);
-		const float LabelHeight = TextRender()->TextBoundingBox(BodySize, aColorEntries[Index].m_pName, -1, std::max(1.0f, Label.w)).m_H;
-		aItemSizes[Index].m_Height = ResolveSettingsToggleButtonSize(0, LabelHeight, LineHeight, PaddingX, PaddingY).m_Height;
-	}
-	Grid.SetItemHeights(aItemSizes);
-	std::array<const SPieMenuColorEntry *, qm_pie_menu::OPTION_COUNT> apVisibleEntries{};
-	int VisibleCount = 0;
-	for(const auto &Entry : aColorEntries)
-		if(*Entry.m_pEnabled)
-			apVisibleEntries[VisibleCount++] = &Entry;
-	constexpr float PreviewStartAngle = -90.0f;
-	const float PreviewSectorGap = VisibleCount == 1 ? 0.0f : 3.6f;
-	constexpr float PreviewInnerRatio = 108.0f / 288.0f;
-	// 行高同时容纳网格与预览：预览被剩余列宽夹住时，整行跟着夹住后的尺寸走。
-	const float OptionsRowHeight = std::max(Grid.Height(), minimum(PreviewSide, PreviewColumnWidth));
-	if(Flow.Control("pie-option-color-heading", BodySize, Row))
-		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-pie-menu-option-color", &Row, Localize("Option color"), BodySize, TEXTALIGN_ML, {}, (int)Row.w);
-	Flow.Space(LineSpacing);
-	CUIRect OptionsRow;
-	if(Flow.Control("pie-color-options-row", OptionsRowHeight, OptionsRow))
-	{
-		CUIRect PreviewColumn, ResetColumn, OptionsColumn;
-		// 从左到右：圆饼预览、重置图标、选项按钮网格。
-		OptionsRow.VSplitLeft(PreviewColumnWidth, &PreviewColumn, &OptionsRow);
-		OptionsRow.VSplitLeft(ResetColumnWidth, &ResetColumn, &OptionsColumn);
-		for(size_t Index = 0; Index < aColorEntries.size(); ++Index)
+		const CUIRect PreviewFrame = PreviewRow;
+		if(Flow.Drawing())
 		{
-			const auto &Entry = aColorEntries[Index];
-			const CUIRect Cell = Grid.Cell(OptionsColumn, static_cast<int>(Index));
-			// 末位参数打开悬浮明暗反馈：按钮和右侧色块要一起响应指针。
-			DoSettingsToggleButton(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, OptionButtonRect(Cell),
-				{Entry.m_pEnabled, Entry.m_pTextId, Entry.m_pName}, ToggleMetrics, CanCommit, Flow.Input() ? ESettingsToggleGroupPass::INPUT : ESettingsToggleGroupPass::RENDER, true);
-			const CUIRect Swatch = QmPieOptionSwatchRect(Cell, LineHeight);
-			if(QmDrawPieOptionColorControl(TextInputCtx, Entry.m_pColorValue,
-				   color_cast<ColorRGBA>(ColorHSLA(*Entry.m_pColorValue, Entry.m_Alpha)), Swatch, CornerRadius * 0.5f, CanCommit))
-				OpenColorPopup(Entry);
-			if(!PrewarmOnly)
-				GameClient()->m_Tooltips.DoToolTip(Entry.m_pColorValue, &Swatch, Localize("Set color"));
+			CUiScopedGaussianBlurSuppression PreviewBlurSuppression(Ui());
+			DrawRoundedSurface(Ui(), PreviewFrame, ui_token::color::PREVIEW_BACKDROP, ui_token::color::BORDER_SUBTLE, CornerRadius * 0.8f, 0.0f);
 		}
-		// 重置图标夹在两栏之间并垂直居中：一键把选项颜色恢复成默认值。
-		CUIRect ResetButton;
-		ResetButton.w = ResetButton.h = ResetButtonSide;
-		ResetButton.x = ResetColumn.x + (ResetColumn.w - ResetButton.w) * 0.5f;
-		ResetButton.y = ResetColumn.y + (ResetColumn.h - ResetButton.h) * 0.5f;
-		static CButtonContainer s_ResetAllColorsButton;
-		if(!PrewarmOnly && Ui()->DoButton_QmIcon(&s_ResetAllColorsButton, EQmIcon::ARROW_ROTATE_RIGHT, FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT, 0, &ResetButton, BUTTONFLAG_LEFT) && CanCommit)
-			for(const auto &Entry : aColorEntries)
-				*Entry.m_pColorValue = color_cast<ColorHSLA>(Entry.m_DefaultColor).Pack(Entry.m_Alpha);
-		if(!PrewarmOnly)
-			GameClient()->m_Tooltips.DoToolTip(&s_ResetAllColorsButton, &ResetButton, Localize("Reset colors"));
-		CUIRect PreviewRect = PreviewColumn;
-		// 预览边长取剩余列宽与行高上限里的较小值，列比圆饼宽时左右居中。
+		CUIRect PreviewRect = PreviewFrame;
 		PreviewRect.w = minimum(PreviewRect.w, PreviewSide);
 		PreviewRect.h = minimum(PreviewRect.h, PreviewSide);
-		PreviewRect.x = PreviewColumn.x + (PreviewColumn.w - PreviewRect.w) * 0.5f;
-		PreviewRect.y = PreviewColumn.y + (PreviewColumn.h - PreviewRect.h) * 0.5f;
-		PreviewRect.Margin(LineSpacing * 0.5f, &PreviewRect);
-		CUIRect PreviewFrame = PreviewRect;
+		PreviewRect.x = PreviewFrame.x + (PreviewFrame.w - PreviewRect.w) * 0.5f;
+		PreviewRect.y = PreviewFrame.y + (PreviewFrame.h - PreviewRect.h) * 0.5f;
 		if(!PrewarmOnly)
 		{
-			if(Flow.Drawing())
-			{
-				CUiScopedGaussianBlurSuppression PreviewBlurSuppression(Ui());
-				PreviewFrame.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.18f), IGraphics::CORNER_ALL, CornerRadius * 0.8f);
-			}
-			PreviewRect.Margin(maximum(4.0f, LineSpacing * 0.6f), &PreviewRect);
 			const vec2 PreviewCenter = PreviewRect.Center();
-			const float BaseOuterRadius = maximum(1.0f, minimum(PreviewRect.w, PreviewRect.h) * 0.5f - LineSpacing * 0.8f);
-			const float InnerRadius = BaseOuterRadius * PreviewInnerRatio;
+			const float BaseOuterRadius = maximum(1.0f, minimum(PreviewRect.w, PreviewRect.h) * 0.5f - LineSpacing);
+			const float InnerRadius = BaseOuterRadius * (108.0f / 288.0f);
 			const float CenterRadius = maximum(1.0f, InnerRadius - maximum(4.0f, BaseOuterRadius * 0.03f));
+			constexpr float PreviewStartAngle = -90.0f;
+			const int VisibleCount = EnabledCount;
+			const float PreviewSectorGap = VisibleCount == 1 ? 0.0f : 3.6f;
 			const float AnglePerSector = VisibleCount > 0 ? 360.0f / VisibleCount : 0.0f;
 			const float PreviewAlpha = std::clamp(g_Config.m_QmPieMenuOpacity / 100.0f, 0.2f, 1.0f);
 			int PopupSectorIndex = -1;
 			if(Ui()->IsPopupOpen(&m_ColorPickerPopupContext))
 			{
 				for(int i = 0; i < VisibleCount; ++i)
-					if(m_ColorPickerPopupContext.m_pHslaColor == apVisibleEntries[i]->m_pColorValue)
-						PopupSectorIndex = (int)i;
+					if(m_ColorPickerPopupContext.m_pHslaColor == aOptions[aEnabledOptions[i]].m_pColorValue)
+						PopupSectorIndex = i;
 			}
 			int HoveredSector = -1;
 			if(VisibleCount > 0 && Ui()->MouseInside(&PreviewFrame))
@@ -290,23 +237,22 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 					PreviewStartAngle, VisibleCount, PreviewSectorGap, qm_pie_menu_ui::PixelSize(Graphics()));
 			static CButtonContainer s_ColorPreviewButton;
 			if(Ui()->DoButtonLogic(&s_ColorPreviewButton, 0, &PreviewFrame, BUTTONFLAG_LEFT) && HoveredSector >= 0 && CanCommit)
-				OpenColorPopup(*apVisibleEntries[HoveredSector]);
+				OpenColorPopup(aOptions[aEnabledOptions[HoveredSector]]);
 			if(Flow.Drawing())
 			{
-				qm_pie_menu_ui::DrawDisc(Graphics(), PreviewCenter, CenterRadius, ColorRGBA(0.15f, 0.15f, 0.2f, 0.9f * PreviewAlpha));
+				qm_pie_menu_ui::DrawDisc(Graphics(), PreviewCenter, CenterRadius, ui_token::color::TINT_HUD_CARD_ACTIVE.WithMultipliedAlpha(PreviewAlpha));
 				for(int i = 0; i < VisibleCount; ++i)
 				{
-					const auto &Entry = *apVisibleEntries[i];
-					const bool Highlighted = (int)i == HoveredSector || (int)i == PopupSectorIndex;
-					const float OuterRadius = BaseOuterRadius;
+					const auto &Entry = aOptions[aEnabledOptions[i]];
+					const bool Highlighted = i == HoveredSector || i == PopupSectorIndex;
 					const float StartAngle = PreviewStartAngle + AnglePerSector * i + PreviewSectorGap * 0.5f;
 					const float EndAngle = StartAngle + AnglePerSector - PreviewSectorGap;
 					const ColorRGBA Color = qm_pie_menu_ui::OptionColor(color_cast<ColorRGBA>(ColorHSLA(*Entry.m_pColorValue, Entry.m_Alpha)), Highlighted,
 						color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmPieMenuSelectedColor, true)))
 									.WithMultipliedAlpha(PreviewAlpha);
-					qm_pie_menu_ui::DrawSector(Graphics(), PreviewCenter, InnerRadius, OuterRadius, StartAngle, EndAngle, PreviewSectorGap, Color);
+					qm_pie_menu_ui::DrawSector(Graphics(), PreviewCenter, InnerRadius, BaseOuterRadius, StartAngle, EndAngle, PreviewSectorGap, Color);
 					const float MidAngle = (StartAngle + EndAngle) * 0.5f * pi / 180.0f;
-					const vec2 ItemPos = PreviewCenter + vec2(cos(MidAngle), sin(MidAngle)) * ((InnerRadius + OuterRadius) * 0.5f);
+					const vec2 ItemPos = PreviewCenter + vec2(cos(MidAngle), sin(MidAngle)) * ((InnerRadius + BaseOuterRadius) * 0.5f);
 					const float IconSize = BaseOuterRadius * 0.19f;
 					TextRender()->TextColor(1.0f, 1.0f, 1.0f, PreviewAlpha);
 					const EFontPreset PreviousFont = TextRender()->GetFontPreset();
@@ -317,9 +263,10 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 					TextRender()->SetFontPreset(PreviousFont);
 				}
 				const int FocusedSector = HoveredSector >= 0 ? HoveredSector : PopupSectorIndex;
-				const char *pCenterTitle = FocusedSector >= 0 ? apVisibleEntries[FocusedSector]->m_pName : Localize("Set color");
+				// 没有选项时中间给一句「先加选项」的提示，否则空饼看起来像画坏了。
+				const char *pCenterTitle = FocusedSector >= 0 ? aOptions[aEnabledOptions[FocusedSector]].m_pName : (VisibleCount > 0 ? Localize("Click a slice to set color") : Localize("Add options below"));
 				float CenterTitleSize = maximum(BodySize, BaseOuterRadius * 0.095f);
-				TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.98f);
+				TextRender()->TextColor(ui_token::color::TEXT_PRIMARY.WithAlpha(0.98f));
 				float CenterTitleWidth = TextRender()->TextWidth(CenterTitleSize, pCenterTitle);
 				if(CenterTitleWidth > CenterRadius * 1.65f)
 				{
@@ -329,6 +276,146 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 				TextRender()->Text(PreviewCenter.x - CenterTitleWidth * 0.5f, PreviewCenter.y - CenterTitleSize * 0.5f, CenterTitleSize, pCenterTitle);
 				TextRender()->TextColor(TextRender()->DefaultTextColor());
 			}
+		}
+	}
+
+	const auto RenderOptionPool = [&](const char *pPoolId, const char *pHeadingText, const char *pEmptyText, float PoolHeight,
+					      const std::array<int, qm_pie_menu::OPTION_COUNT> &Order, int Count, const float *pChipWidths, SQmPieOptionPoolLayout &OutLayout) {
+		// 标题与池容器是两个独立布局行：标题用 <id>-heading，池本身用 <id>。
+		char aHeadingId[96];
+		str_format(aHeadingId, sizeof(aHeadingId), "%s-heading", pPoolId);
+		if(Flow.Control(aHeadingId, BodySize, Row, LineSpacing))
+			DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, aHeadingId, &Row, Localize(pHeadingText), BodySize, TEXTALIGN_ML, {}, (int)Row.w);
+		// 说明文本与池容器之间的间距必须是常规行距：写 0 会让标题贴住池的上边框，
+		// 两个池看起来像黏在一起的一整块。
+		if(Flow.Control(pPoolId, PoolHeight, Row, LineSpacing))
+		{
+			OutLayout = QmResolvePieOptionPool(Row, Count, pChipWidths, LineHeight, BodySize);
+			if(Flow.Drawing())
+			{
+				DrawRoundedSurface(Ui(), OutLayout.m_Container, ui_token::color::PREVIEW_BACKDROP, ui_token::color::BORDER_SUBTLE, ui_token::radius::MENU, 0.0f);
+				if(OutLayout.m_Count == 0)
+				{
+					CUIRect EmptyRow = OutLayout.m_Container;
+					SLabelProperties EmptyProps;
+					EmptyProps.SetColor(ui_token::color::TEXT_DISABLED);
+					Ui()->DoLabel(&EmptyRow, Localize(pEmptyText), BodySize, TEXTALIGN_MC, EmptyProps);
+				}
+			}
+			for(int Slot = 0; Slot < OutLayout.m_Count; ++Slot)
+			{
+				const SPieMenuOptionEntry &Entry = aOptions[Order[Slot]];
+				const bool Dragged = s_PieOptionPoolDrag.Active() && s_PieOptionPoolDrag.m_Option == Order[Slot];
+				if(Flow.Drawing())
+					QmDrawPieOptionChip(SettingsUiContext("settings_qmclient_pie_option_pool"), OutLayout.m_aChips[Slot].m_Rect, Entry.m_pName, Entry.m_pIcon,
+						color_cast<ColorRGBA>(ColorHSLA(*Entry.m_pColorValue, Entry.m_Alpha)), BodySize,
+						Ui()->MouseHovered(&OutLayout.m_aChips[Slot].m_Rect), Dragged);
+				// 色点/图标/名字都不是独立热区：整个胶囊只有一条 tooltip 说明「拖到另一池」。
+				if(!PrewarmOnly)
+					GameClient()->m_Tooltips.DoToolTip(Entry.m_pColorValue, &OutLayout.m_aChips[Slot].m_Rect, Localize("Drag to the other list to show or hide this option"));
+			}
+		}
+		Flow.Space(LineSpacing);
+	};
+	RenderOptionPool("pie-pool-enabled", "In pie menu", "Drag options here to show them", MeasuredEnabledPool.m_Height, aEnabledOptions, EnabledCount, aEnabledChipWidths, EnabledPoolLayout);
+	RenderOptionPool("pie-pool-disabled", "Not in pie menu", "Drag options here to hide them", MeasuredDisabledPool.m_Height, aDisabledOptions, DisabledCount, aDisabledChipWidths, DisabledPoolLayout);
+
+	// 池间拖动：起手记录池与项，指针离开一档间距后才算拖动，松手按落点池切换配置项。
+	// 只有交互趟推进状态；测量趟与只读趟保持原样，避免后台绘制把拖动「走」一遍。
+	if(CanCommit && EnabledPoolLayout.m_Container.w > 0.0f && DisabledPoolLayout.m_Container.w > 0.0f)
+	{
+		const auto HitTestPool = [&](const SQmPieOptionPoolLayout &Pool, const std::array<int, qm_pie_menu::OPTION_COUNT> &Order, int &Option) {
+			for(int Slot = 0; Slot < Pool.m_Count; ++Slot)
+			{
+				if(Ui()->MouseHovered(&Pool.m_aChips[Slot].m_Rect))
+				{
+					Option = Order[Slot];
+					return true;
+				}
+			}
+			return false;
+		};
+		int HoverOption = -1;
+		int HoverPool = -1;
+		if(HitTestPool(EnabledPoolLayout, aEnabledOptions, HoverOption))
+			HoverPool = 0;
+		else if(HitTestPool(DisabledPoolLayout, aDisabledOptions, HoverOption))
+			HoverPool = 1;
+		int HoverContainer = -1;
+		if(HoverPool < 0)
+		{
+			if(Ui()->MouseHovered(&EnabledPoolLayout.m_Container))
+				HoverContainer = 0;
+			else if(Ui()->MouseHovered(&DisabledPoolLayout.m_Container))
+				HoverContainer = 1;
+		}
+		if(!s_PieOptionPoolDrag.Active() && Ui()->MouseButtonClicked(0) && HoverPool >= 0 && HoverOption >= 0)
+		{
+			s_PieOptionPoolDrag.m_Pool = HoverPool;
+			s_PieOptionPoolDrag.m_Option = HoverOption;
+			s_PieOptionPoolDrag.m_Start = Ui()->MousePos();
+			const SQmPieOptionPoolLayout &SourcePool = HoverPool == 0 ? EnabledPoolLayout : DisabledPoolLayout;
+			s_PieOptionPoolDrag.m_GhostRect = {0.0f, 0.0f, 0.0f, 0.0f};
+			for(int Slot = 0; Slot < SourcePool.m_Count; ++Slot)
+			{
+				const int Option = HoverPool == 0 ? aEnabledOptions[Slot] : aDisabledOptions[Slot];
+				if(Option == HoverOption)
+				{
+					s_PieOptionPoolDrag.m_GhostRect = SourcePool.m_aChips[Slot].m_Rect;
+					s_PieOptionPoolDrag.m_GrabOffset = Ui()->MousePos() - vec2(SourcePool.m_aChips[Slot].m_Rect.x, SourcePool.m_aChips[Slot].m_Rect.y);
+					break;
+				}
+			}
+			s_PieOptionPoolDrag.m_Dragging = false;
+		}
+		if(s_PieOptionPoolDrag.Active() && Ui()->MouseButton(0))
+		{
+			if(!s_PieOptionPoolDrag.m_Dragging && distance(Ui()->MousePos(), s_PieOptionPoolDrag.m_Start) > ui_token::spacing::XS)
+				s_PieOptionPoolDrag.m_Dragging = true;
+		}
+		else if(s_PieOptionPoolDrag.Active())
+		{
+			// 落点优先看胶囊，其次看池容器：拖到池的空白处也算那一池。
+			int TargetPool = HoverPool >= 0 ? HoverPool : HoverContainer;
+			if(TargetPool < 0)
+				TargetPool = s_PieOptionPoolDrag.m_Pool;
+			if(s_PieOptionPoolDrag.m_Option >= 0 && TargetPool != s_PieOptionPoolDrag.m_Pool)
+				*aOptions[s_PieOptionPoolDrag.m_Option].m_pEnabled = TargetPool == 0 ? 1 : 0;
+			else if(!s_PieOptionPoolDrag.m_Dragging && s_PieOptionPoolDrag.m_Option >= 0)
+			{
+				// 原地单击等价于切换归属：不拖也能用，键盘/触控板一样有路径。
+				int *pEnabled = aOptions[s_PieOptionPoolDrag.m_Option].m_pEnabled;
+				*pEnabled = *pEnabled ? 0 : 1;
+			}
+			s_PieOptionPoolDrag.Reset();
+		}
+	}
+
+	// 拖动中的幽灵胶囊与落点池高亮：画在最后，压在两池之上。
+	if(Flow.Drawing() && s_PieOptionPoolDrag.m_Dragging)
+	{
+		int TargetPool = -1;
+		if(Ui()->MouseHovered(&EnabledPoolLayout.m_Container))
+			TargetPool = 0;
+		else if(Ui()->MouseHovered(&DisabledPoolLayout.m_Container))
+			TargetPool = 1;
+		if(TargetPool >= 0)
+		{
+			const CUIRect &TargetRect = TargetPool == 0 ? EnabledPoolLayout.m_Container : DisabledPoolLayout.m_Container;
+			DrawRoundedSurface(Ui(), TargetRect, ui_token::color::COLOR_TRANSPARENT, ui_token::feedback::ACTIVE_BORDER, ui_token::radius::MENU, ui_token::feedback::ICON_BORDER_WIDTH);
+		}
+		if(s_PieOptionPoolDrag.m_Option >= 0 && s_PieOptionPoolDrag.m_GhostRect.w > 0.0f)
+		{
+			const SPieMenuOptionEntry &Entry = aOptions[s_PieOptionPoolDrag.m_Option];
+			CUIRect Ghost = s_PieOptionPoolDrag.m_GhostRect;
+			Ghost.x = Ui()->MousePos().x - s_PieOptionPoolDrag.m_GrabOffset.x;
+			Ghost.y = Ui()->MousePos().y - s_PieOptionPoolDrag.m_GrabOffset.y;
+			CUIRect GhostShadow = Ghost;
+			GhostShadow.x += ui_token::elevation::SHADOW_X_LOW;
+			GhostShadow.y += ui_token::elevation::SHADOW_Y_MED;
+			DrawRoundedSurface(Ui(), GhostShadow, ui_token::color::SURFACE_SHADOW, ui_token::color::COLOR_TRANSPARENT, ui_token::radius::PILL);
+			QmDrawPieOptionChip(SettingsUiContext("settings_qmclient_pie_option_pool"), Ghost, Entry.m_pName, Entry.m_pIcon,
+				color_cast<ColorRGBA>(ColorHSLA(*Entry.m_pColorValue, Entry.m_Alpha)), BodySize, true, true);
 		}
 	}
 	Flow.Space(LineSpacing);

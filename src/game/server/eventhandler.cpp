@@ -61,7 +61,7 @@ void CEventHandler::Snap(int SnappingClient)
 					EventToSixup(&Type, &Size, &pData);
 
 				const auto &&SnapEvent = [&]() {
-					GameServer()->Server()->SnapNewItem(Type, i, rust::Slice((const int32_t *)pData, Size / sizeof(int32_t)));
+					GameServer()->Server()->SnapNewItem(Type, i, pData, Size);
 				};
 				const auto &&SnapTranslateEvent = [&](int *pClientId) {
 					int ClientId = *pClientId; // Save real Id

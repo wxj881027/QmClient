@@ -1,4 +1,5 @@
 #include <game/client/QmUi/QmServerInfoGeometry.h>
+#include <game/client/components/qmclient/menu_hit_regions.h>
 
 #include <gtest/gtest.h>
 
@@ -118,6 +119,38 @@ TEST(QmServerInfoLayout, LongMotdScalesEntireParagraphToAvailableHeight)
 	const float Scale = FitScale(View, 350, 1600);
 	EXPECT_FLOAT_EQ(Scale, 0.125f);
 	ExpectInside(View, {View.x, View.y, 350 * Scale, 1600 * Scale});
+}
+
+TEST(QmIngameMenuHitRegions, ServerInfoPageKeepsClicksInsideItsMeasuredPanel)
+{
+	SQmMenuHitRegions Regions;
+	// 服务器信息页本帧实际使用的整块内容面板（窗口尺寸变化后仍是这块矩形）。
+	Regions.Add({0.0f, 72.0f, 1200.0f, 600.0f});
+
+	// 页面里的空白也算菜单内部；只有真正落在面板外的点击才关闭菜单。
+	EXPECT_FALSE(QmMenuOutsideClickShouldClose({600.0f, 360.0f}, false, Regions));
+	EXPECT_TRUE(QmMenuOutsideClickShouldClose({600.0f, 700.0f}, false, Regions));
+	// 命中交互控件时无论位置如何都不进入外部点击关闭路径。
+	EXPECT_FALSE(QmMenuOutsideClickShouldClose({600.0f, 360.0f}, true, Regions));
+	// 全屏弹层打开时，弹层外的遮罩点击也不能连带收起 ESC 菜单。
+	EXPECT_FALSE(QmMenuOutsideClickShouldClose({600.0f, 700.0f}, false, Regions, true));
+}
+
+TEST(QmIngameMenuHitRegions, MultipleVisiblePanelsAreMeasuredIndividually)
+{
+	SQmMenuHitRegions Regions;
+	Regions.Add({10.0f, 80.0f, 300.0f, 240.0f});
+	Regions.Add({320.0f, 80.0f, 500.0f, 240.0f});
+
+	EXPECT_TRUE(Regions.Contains({20.0f, 90.0f}));
+	EXPECT_TRUE(Regions.Contains({700.0f, 300.0f}));
+	// 两个面板之间的空隙没有被外接矩形误吞。
+	EXPECT_FALSE(Regions.Contains({310.0f, 150.0f}));
+	EXPECT_TRUE(QmMenuOutsideClickShouldClose({310.0f, 150.0f}, false, Regions));
+
+	Regions.Reset();
+	EXPECT_FALSE(Regions.Contains({20.0f, 90.0f}));
+	EXPECT_TRUE(QmMenuOutsideClickShouldClose({20.0f, 90.0f}, false, Regions));
 }
 
 TEST(QmServerInfoLayout, WideMotdFitsAfterWindowNarrows)

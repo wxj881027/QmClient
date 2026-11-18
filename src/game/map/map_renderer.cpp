@@ -85,7 +85,7 @@ void CMapRenderer::LoadStep(int MaxLayers)
 		if(!m_pLoadGroup)
 		{
 			m_pLoadGroup = std::make_unique<CRenderLayerGroup>(m_LoadGroupId, pGroup);
-			m_pLoadGroup->OnInit(Graphics(), TextRender(), RenderMap(), m_pLoadEnvelopeManager, m_pLoadLayers->Map(), m_pLoadImages);
+			m_pLoadGroup->OnInit(Graphics(), TextRender(), RenderMap(), m_pLoadEnvelopeManager, m_pLoadLayers->Map(), m_pLoadImages, m_TileAndQuadBuffering);
 			if(!m_pLoadGroup->IsValid())
 			{
 				log_error("map_renderer", "error group was null, group number = %d, total groups = %d", m_LoadGroupId, m_pLoadLayers->NumGroups());
@@ -150,7 +150,7 @@ void CMapRenderer::LoadStep(int MaxLayers)
 		}
 		if(pRenderLayer)
 		{
-			pRenderLayer->OnInit(Graphics(), TextRender(), RenderMap(), m_pLoadEnvelopeManager, m_pLoadLayers->Map(), m_pLoadImages);
+			pRenderLayer->OnInit(Graphics(), TextRender(), RenderMap(), m_pLoadEnvelopeManager, m_pLoadLayers->Map(), m_pLoadImages, m_TileAndQuadBuffering);
 			if(pRenderLayer->IsValid())
 			{
 				if(!m_pFirstWorldTile && pLayer->m_Type == LAYERTYPE_TILES && pGroup->m_ParallaxX == 100 && pGroup->m_ParallaxY == 100)
@@ -174,8 +174,9 @@ void CMapRenderer::LoadStep(int MaxLayers)
 	}
 }
 
-void CMapRenderer::Load(ERenderType Type, CLayers *pLayers, IMapImages *pMapImages, const IEnvelopeEval *pEnvelopeEval, std::optional<FCallbackMapRendererInit> CallbackMapRendererInitOptional)
+void CMapRenderer::Load(ERenderType Type, CLayers *pLayers, IMapImages *pMapImages, const IEnvelopeEval *pEnvelopeEval, std::optional<FCallbackMapRendererInit> CallbackMapRendererInitOptional, bool TileAndQuadBuffering)
 {
+	m_TileAndQuadBuffering = TileAndQuadBuffering;
 	BeginLoad(Type, pLayers, pMapImages, pEnvelopeEval, std::move(CallbackMapRendererInitOptional));
 	while(!IsLoadFinished())
 		LoadStep(64);

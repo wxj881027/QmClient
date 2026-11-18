@@ -685,9 +685,8 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 			{KEY_RIGHT, nullptr, nullptr, 1.0f, nullptr, false, 1, (int)EQmIcon::CHEVRON_RIGHT, FontIcons::FONT_ICON_CHEVRON_RIGHT},
 			{KEY_UNKNOWN, nullptr, nullptr, 0.25f, nullptr, true}, {KEY_UNKNOWN, nullptr, nullptr, 4.0f, nullptr, true}});
 
-		Flow.Space(LineSpacing * 0.65f);
 		CUIRect MouseHeader;
-		if(Flow.Control("bind-mouse-header", LineHeight, MouseHeader))
+		if(Flow.Control("bind-mouse-header", LineHeight, MouseHeader, LineSpacing * 0.65f))
 			DoSettingsMenuLabel(SETTINGS_CONTROLS, -1, -1, "qm-bind-editor-mouse", &MouseHeader, Localize("Mouse"), BodySize, TEXTALIGN_ML, {}, (int)MouseHeader.w);
 		// 鼠标图自己占一块固定高度的行：高度只由行高决定，测量和绘制两趟算出来的卡片高度一致。
 		CUIRect MouseBlock;
@@ -764,7 +763,6 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 				GameClient()->m_Binds.GetKeyBindName(ActiveSlot.m_Key, ActiveSlot.m_ModifierMask, aActiveKeyName, sizeof(aActiveKeyName));
 			}
 		}
-		Flow.Space(LineSpacing);
 
 		const std::string ExistingBinding = GameClient()->m_Binds.Get(ActiveSlot.m_Key, ActiveSlot.m_ModifierMask);
 		qm_bind_editor::SCommands Parsed = qm_bind_editor::SplitCommands(ExistingBinding);
@@ -772,7 +770,7 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 			SetBindEditorError(State, Localize("This bind contains an unfinished quote and cannot be edited safely."));
 
 		CUIRect BoundHeader;
-		if(Flow.Control("bind-bound-functions", LineHeight, BoundHeader))
+		if(Flow.Control("bind-bound-functions", LineHeight, BoundHeader, LineSpacing))
 		{
 			// 「撤销」放在标题右侧，做成图标按钮：撤销上一次删除 / 清空 / 修改写回。
 			// 图标取图标库现成的「逆时针回退箭头」（ARROW_ROTATE_LEFT，arrow-counter-clockwise），
@@ -1058,9 +1056,8 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 		const bool HasStatusLine = !State.m_Error.empty() || !State.m_Status.empty();
 		if(HasStatusLine)
 		{
-			Flow.Space(LineSpacing * 0.4f);
 			CUIRect ErrorRow;
-			if(Flow.Control(State.m_Error.empty() ? "bind-editor-status" : "bind-editor-error", LineHeight, ErrorRow))
+			if(Flow.Control(State.m_Error.empty() ? "bind-editor-status" : "bind-editor-error", LineHeight, ErrorRow, LineSpacing * 0.4f))
 			{
 				if(State.m_Error.empty())
 				{

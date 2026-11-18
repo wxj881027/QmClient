@@ -20,6 +20,7 @@
 #include <game/client/components/qmclient/hook_countdown.h>
 #include <game/client/components/qmclient/hud_island_soft_body.h>
 #include <game/client/components/qmclient/hud_map_progress.h>
+#include <game/client/components/qmclient/media_cover_spin.h>
 #include <game/client/components/system_media_controls.h>
 #include <game/client/ui_rect.h>
 #include <game/teamscore.h>
@@ -157,6 +158,8 @@ class CHud : public CComponent
 		float m_TargetTrackMetaInOffset = 0.0f;
 		float m_TargetTrackMetaOutOffset = 0.0f;
 		SHudMediaIslandWaveformClock m_WaveformClock;
+		// 圆形封面的自转（播放才转、暂停定格），与计分板媒体条共用同一份状态实现。
+		SQmMediaCoverSpin m_CoverSpin;
 		CHudIslandSoftBody m_SoftBody;
 		int64_t m_SoftBodyLastTick = 0;
 		bool m_WaveformWasPlaying = false;
@@ -269,6 +272,7 @@ class CHud : public CComponent
 			m_TargetTrackMetaInOffset = 0.0f;
 			m_TargetTrackMetaOutOffset = 0.0f;
 			m_WaveformClock.Reset();
+			m_CoverSpin.Reset();
 			m_SoftBody.Reset();
 			m_SoftBodyLastTick = 0;
 			m_WaveformWasPlaying = false;
@@ -339,6 +343,11 @@ class CHud : public CComponent
 		float m_TargetWidth = 0.0f;
 		float m_TargetAlpha = 0.0f;
 		float m_TargetTextAlpha = 0.0f;
+		// 状态区「单行 ↔ 两行」的混合系数（0=单行，1=两行），驱动字号、行位置与
+		// 次行透明度，让录像/冻结状态的出现与消失是过渡而不是一帧换版。
+		float m_TargetStackBlend = 0.0f;
+		// 上一帧的次行文本：行数回落时用来淡出，避免整行瞬间消失。
+		char m_aSecondaryCache[192] = {};
 		bool m_Initialized = false;
 
 		void Reset()
@@ -346,6 +355,8 @@ class CHud : public CComponent
 			m_TargetWidth = 0.0f;
 			m_TargetAlpha = 0.0f;
 			m_TargetTextAlpha = 0.0f;
+			m_TargetStackBlend = 0.0f;
+			m_aSecondaryCache[0] = '\0';
 			m_Initialized = false;
 		}
 	};

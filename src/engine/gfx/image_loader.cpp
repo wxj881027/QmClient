@@ -187,7 +187,7 @@ bool CImageLoader::LoadPng(CByteBufferReader &Reader, const char *pContextName, 
 	if(pState == nullptr)
 		return false;
 	pState->m_Error = {&Reader, pContextName, {}};
-	pState->m_pPng = png_create_read_struct(PNG_LIBPNG_VER_STRING, &pState->m_Error, PngErrorCallback, PngWarningCallback);
+	pState->m_pPng = png_create_read_struct(png_get_libpng_ver(nullptr), &pState->m_Error, PngErrorCallback, PngWarningCallback);
 	if(pState->m_pPng == nullptr)
 		return false;
 	if(setjmp(pState->m_Error.m_JmpBuf))
@@ -228,6 +228,8 @@ bool CImageLoader::LoadPng(CByteBufferReader &Reader, const char *pContextName, 
 	const png_uint_32 PngHeight = png_get_image_height(pState->m_pPng, pState->m_pInfo);
 	const png_byte BitDepth = png_get_bit_depth(pState->m_pPng, pState->m_pInfo);
 	const int ColorType = png_get_color_type(pState->m_pPng, pState->m_pInfo);
+	// 兼容性判断必须在任何 png_set_* 变换前读取原始色彩类型。
+	const int PngliteCompatible = PngliteIncompatibility(pState->m_pPng, pState->m_pInfo);
 
 	if(PngWidth == 0 || PngHeight == 0 || PngWidth > (png_uint_32)std::numeric_limits<int>::max() || PngHeight > (png_uint_32)std::numeric_limits<int>::max())
 	{
@@ -307,7 +309,7 @@ bool CImageLoader::LoadPng(CByteBufferReader &Reader, const char *pContextName, 
 		Image.m_Width = Width;
 		Image.m_Height = Height;
 		Image.m_Format = ImageFormat;
-		PngliteIncompatible = PngliteIncompatibility(pState->m_pPng, pState->m_pInfo);
+		PngliteIncompatible = PngliteCompatible;
 	}
 	return !Reader.Error();
 }
@@ -385,7 +387,7 @@ bool CImageLoader::ReadPngComment(IOHANDLE File, const char *pFilename, std::str
 		return false;
 
 	CUserErrorStruct UserErrorStruct = {nullptr, pFilename, {}};
-	png_structp pPngStruct = png_create_read_struct(PNG_LIBPNG_VER_STRING, &UserErrorStruct, PngErrorCallback, PngWarningCallback);
+	png_structp pPngStruct = png_create_read_struct(png_get_libpng_ver(nullptr), &UserErrorStruct, PngErrorCallback, PngWarningCallback);
 	if(pPngStruct == nullptr)
 	{
 		io_close(File);
@@ -462,7 +464,7 @@ bool CImageLoader::SavePng(CByteBufferWriter &Writer, const CImageInfo &Image, c
 		}
 	};
 	auto pState = std::make_unique<SWriteState>();
-	pState->m_pPng = png_create_write_struct(PNG_LIBPNG_VER_STRING, &pState->m_Error, PngErrorCallback, PngWarningCallback);
+	pState->m_pPng = png_create_write_struct(png_get_libpng_ver(nullptr), &pState->m_Error, PngErrorCallback, PngWarningCallback);
 	if(pState->m_pPng == nullptr)
 		return false;
 	if(setjmp(pState->m_Error.m_JmpBuf))
@@ -484,10 +486,8 @@ bool CImageLoader::SavePng(CByteBufferWriter &Writer, const CImageInfo &Image, c
 		png_set_text(pState->m_pPng, pState->m_pInfo, &Text, 1);
 	}
 	png_write_info(pState->m_pPng, pState->m_pInfo);
-	pState->m_pRows = new png_bytep[Image.m_Height];
 	for(size_t Y = 0; Y < Image.m_Height; ++Y)
-		pState->m_pRows[Y] = Image.m_pData + Y * Image.m_Width * CImageInfo::PixelSize(Image.m_Format);
-	png_write_image(pState->m_pPng, pState->m_pRows);
+		png_write_row(pState->m_pPng, Image.m_pData + Y * Image.m_Width * CImageInfo::PixelSize(Image.m_Format));
 	png_write_end(pState->m_pPng, pState->m_pInfo);
 	return true;
 }

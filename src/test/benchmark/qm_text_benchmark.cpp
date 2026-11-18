@@ -125,7 +125,7 @@ static void BM_StrUtf8Check(benchmark::State &State)
 	const int Len = str_length(pText);
 	for(auto _ : State)
 	{
-		int Valid = str_utf8_check(pText);
+		bool Valid = str_utf8_check(pText);
 		benchmark::DoNotOptimize(Valid);
 	}
 	State.SetItemsProcessed(State.iterations()); // 完整字符串数量

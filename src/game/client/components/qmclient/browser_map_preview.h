@@ -8,6 +8,14 @@
 #include <algorithm>
 #include <cmath>
 
+// 引擎 Zoom 越大，视野越大；整图适配必须取两个维度的最大比例。
+inline float QmBrowserMapPreviewFitZoom(vec2 WorldSize, vec2 BaseView)
+{
+	WorldSize = vec2(std::max(1.0f, WorldSize.x), std::max(1.0f, WorldSize.y));
+	BaseView = vec2(std::max(1.0f, BaseView.x), std::max(1.0f, BaseView.y));
+	return std::max(WorldSize.x / BaseView.x, WorldSize.y / BaseView.y);
+}
+
 // 相机直接消费引擎的视野尺寸；缩放后重新渲染，避免放大整图缩略纹理。
 class CQmBrowserMapPreviewView
 {
@@ -47,8 +55,7 @@ public:
 			EndDrag();
 		}
 		m_BaseView = BaseView;
-		// 引擎 Zoom 越大，视野越大；必须取两个维度的最大比例才能容纳全图。
-		m_FitZoom = std::max(WorldSize.x / BaseView.x, WorldSize.y / BaseView.y);
+		m_FitZoom = QmBrowserMapPreviewFitZoom(WorldSize, BaseView);
 		ClampCenter();
 	}
 

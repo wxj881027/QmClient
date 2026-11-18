@@ -9,6 +9,7 @@
 
 #include <game/client/component.h>
 #include <game/client/components/qmclient/axiom_scores_data.h>
+#include <game/client/components/qmclient/media_cover_spin.h>
 #include <game/client/components/qmclient/scoreboard_media_controls.h>
 #include <game/client/components/qmclient/scoreboard_team_modes.h>
 #include <game/client/ui.h>
@@ -148,12 +149,15 @@ class CScoreboard : public CComponent
 	void RenderServerPlayerCount(CUIRect Rect, const char *pText);
 	void RenderGoals(CUIRect Goals);
 	void RenderFooter(CUIRect Footer);
-	void RenderSpectators(CUIRect Spectators);
+	// 旁观者列表按实测行数/行宽收缩，背景只包住内容；返回实际占用的面板矩形。
+	CUIRect RenderSpectators(CUIRect Area, float &CursorY, float Gap);
+	void RenderCursorHint(CUIRect Hint, const char *pHint);
 	void RenderSoundMuteBar(CUIRect ScoreboardRect);
 	void RenderTeamModeIcons(float x, float y, float IconSize, const SQmScoreboardTeamModeState &State, float Alpha);
 	void UpdateTeamModeCache();
 	void BuildPlayerRowPlan(int Team, CScoreboardPlayerRowPlan &Plan);
-	void RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart, int CountEnd, const CScoreboardPlayerRowPlan &Plan, CScoreboardRenderState &State, bool Scroll = false);
+	// 分列绘制时用 NumPlayersForSize 固定行密度，短末列不能因实际人数少而放大字号。
+	void RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart, int CountEnd, const CScoreboardPlayerRowPlan &Plan, CScoreboardRenderState &State, bool Scroll = false, int NumPlayersForSize = -1);
 	void RenderRecordingNotification(float x);
 	static CUi::EPopupMenuFunctionResult PopupScoreboard(void *pContext, CUIRect View, bool Active);
 
@@ -172,6 +176,19 @@ class CScoreboard : public CComponent
 	// 入场动画起点，规避名牌国旗持续渲染对 CCountryFlags 重现检测的遮蔽。
 	int64_t m_ActiveStartTime = 0;
 	bool m_WasActive = false;
+	// 入场/出场去抖：IsActive() 的「死亡自动显示」「游戏结束」两个条件由快照派生，
+	// 存活时也会偶发一两帧 m_pLocalCharacter 为空。手动开关（Tab）立即生效；
+	// 自动条件要连续 2 帧成立才认打开、连续 2 帧不成立才认关闭，
+	// 避免入场动画在播放途中被拉回再重放。
+	bool m_AutoActiveStable = false;
+	int m_AutoOnFrames = 0;
+	int m_AutoOffFrames = 0;
+	// 内部文本依次出场的已流逝秒数；<0 表示当前不在入场生命周期（关闭/动效关闭）。
+	// 起点不是按下 Tab 那一刻，而是「面板弹跳到接近就位」那一帧——面板弹跳期间行已经
+	// 被缩放带着长大，若同时淡入，等面板停稳时整列早就满不透明，读作「下方列表瞬间出现」。
+	float m_TextEntryElapsedSec = -1.0f;
+	// 行入场起点；0 表示还没到起点（此时行保持透明，等面板就位）。
+	int64_t m_TextEntryStartTime = 0;
 	static constexpr int SOUND_MUTE_BUTTON_COUNT = 9;
 
 	IGraphics::CTextureHandle m_DeadTeeTexture;
@@ -190,6 +207,8 @@ class CScoreboard : public CComponent
 	bool m_MouseUnlocked = false;
 	bool m_RenderInteractions = false;
 	CQmScoreboardMediaControls m_MediaControls;
+	// 底栏媒体条圆形封面的自转（与 HUD 媒体岛共用同一份实现）。
+	SQmMediaCoverSpin m_MediaCoverSpin;
 
 	struct SSoundMuteButtonAnimState
 	{
@@ -274,6 +293,11 @@ class CScoreboard : public CComponent
 	};
 	CPlayerElement m_aPlayers[MAX_CLIENTS];
 
+	// 完赛时间按「秒 + 小数」分块缓存：0.6 服务器带毫秒完赛数据时使用。
+	std::array<CCachedText, MAX_CLIENTS> m_aScoreSecondsText;
+	std::array<CCachedText, MAX_CLIENTS> m_aScoreMillisText;
+	std::array<char, MAX_CLIENTS> m_aScoreTooltipIds{};
+
 	// 本帧解析出的 Axiom 积分模式（NONE 表示当前服务器不是 Axiom 积分服）。
 	// 每帧在 OnRender 开头刷新一次，渲染期由 HasQmAxiomScoreMode / QmAxiomScorePoints 复用。
 	EQmAxiomMode m_QmAxiomScoreModeFrame = EQmAxiomMode::NONE;
@@ -300,6 +324,8 @@ public:
 	bool OnInput(const IInput::CEvent &Event) override;
 
 	bool IsActive() const;
+	// IsActive() 里由快照派生的那部分（死亡自动显示、游戏结束）；手动开关不在这里。
+	bool IsAutoActive() const;
 	// 打开/关闭计分板与光标解锁共用的入口：控制台 +scoreboard、手机端点行跟随、
 	// 触控层关闭按钮和返回手势都走这里。
 	void SetActive(bool Active);

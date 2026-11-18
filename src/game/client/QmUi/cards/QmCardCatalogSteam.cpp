@@ -83,9 +83,9 @@ void CMenus::RenderQmSteamContent(CUIRect &Content, const SSettingsContentMetric
 	CUIRect Row;
 	if(Flow.Control("qm-steam-auto-launch", Metrics.m_LineHeight, Row))
 		RenderQmFunctionCheckbox(&g_Config.m_QmSteamAutoLaunch, "qm-steam-auto-launch", Localize("Launch Steam automatically when starting externally"), &g_Config.m_QmSteamAutoLaunch, &Row, ReadOnly);
-	Flow.Space(Metrics.m_LineSpacing);
+	Flow.Space(ui_token::settings::RowGap(Metrics.m_LineSpacing));
 	const auto TextRow = [&](const char *pId, const char *pText, float Size) {
-		Flow.Text(pId, pText, 0.0f, Size, Metrics.m_LineSpacing, [this](const char *pValue, float Width, float FontSize) { return TextRender()->TextBoundingBox(FontSize, pValue, -1, Width).m_H + FontSize * 0.25f; }, [this, pId, Size](const CUIRect &TextRect, const char *pValue) {
+		Flow.Text(pId, pText, 0.0f, Size, ui_token::settings::RowGap(Metrics.m_LineSpacing), [this](const char *pValue, float Width, float FontSize) { return TextRender()->TextBoundingBox(FontSize, pValue, -1, Width).m_H + FontSize * 0.25f; }, [this, pId, Size](const CUIRect &TextRect, const char *pValue) {
 				SLabelProperties Props;
 				Props.m_MaxWidth = TextRect.w;
 				DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, pId, &TextRect, pValue, Size, TEXTALIGN_ML, Props); }, Metrics.m_LineHeight);
@@ -106,11 +106,11 @@ void CMenus::RenderQmSteamContent(CUIRect &Content, const SSettingsContentMetric
 		if(ui_widget::InputField(Ctx, &s_ManualPathInput, PathInput, "", Metrics.m_BodySize) && !ReadOnly)
 			str_copy(g_Config.m_QmSteamClientPath, s_ManualPathInput.GetString());
 		// 重新检测只留图标，说明走悬浮提示，和卡片里其它刷新图标保持一致。
-		if(Ui()->DoButton_QmIcon(&s_DetectButton, EQmIcon::ARROW_ROTATE_RIGHT, "\xEE\x80\xB6", 0, &PathDetectButton, IGraphics::CORNER_ALL) && Flow.Input() && !ReadOnly && s_pProbe == nullptr)
+		if(Ui()->DoButton_QmIcon(&s_DetectButton, EQmIcon::ARROW_ROTATE_RIGHT, FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT, 0, &PathDetectButton, IGraphics::CORNER_ALL) && Flow.Input() && !ReadOnly && s_pProbe == nullptr)
 			s_RefreshRequested = true;
 		GameClient()->m_Tooltips.DoToolTip(&s_DetectButton, &PathDetectButton, Localize("Detect Steam again"));
 	}
-	Flow.Space(Metrics.m_LineSpacing);
+	Flow.Space(ui_token::settings::RowGap(Metrics.m_LineSpacing));
 	if(!ReadOnly && s_pProbe == nullptr && (s_RefreshRequested || (!s_ManualPathInput.IsActive() && (!s_HasResult || s_CheckedManualPath != g_Config.m_QmSteamClientPath))))
 	{
 		s_pProbe = std::make_shared<CSteamProbeJob>(g_Config.m_QmSteamClientPath);
@@ -129,7 +129,7 @@ void CMenus::RenderQmSteamContent(CUIRect &Content, const SSettingsContentMetric
 	else
 		pStatus = Localize("Steam is installed");
 	TextRow("qm-steam-status", pStatus, Metrics.m_BodySize);
-	Flow.Space(Metrics.m_LineSpacing);
+	Flow.Space(ui_token::settings::RowGap(Metrics.m_LineSpacing));
 	const char *pInvalidPath = Localize("Manual Steam path is invalid; using automatic detection");
 	const char *pSelectHelp = Localize("Enter the Steam client program path, without command arguments");
 	TextRow("qm-steam-help", s_HasResult && s_Info.m_ManualPathRejected ? pInvalidPath : pSelectHelp, Metrics.m_SmallSize);

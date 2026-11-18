@@ -18,9 +18,64 @@ using offset_ptr32 = unsigned int;
 #include <game/mapitems_ex.h>
 
 #include <functional>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <vector>
+
+// 一次 RenderTileLayer 提交：起始索引偏移与索引数量。
+struct STileLayerDrawRange
+{
+	offset_ptr m_Offset;
+	unsigned int m_Count;
+};
+
+// 把可见行区间折算成提交段：整层左右边界都在可见区时所有可见行连续，只有一段；
+// 否则逐行合并相邻行。与渲染后端无关，可单独测量。
+template<typename TOffsetAt, typename TDrawAt>
+void QmBuildTileLayerDrawRanges(int Width, int X0, int X1, int Y0, int Y1, TOffsetAt OffsetAt, TDrawAt DrawAt, std::vector<STileLayerDrawRange> &vRanges)
+{
+	vRanges.clear();
+	if(Width <= 0 || X0 < 0 || X1 > Width || Y0 >= Y1)
+		return;
+
+	if(X0 == 0 && X1 == Width)
+	{
+		const size_t StartIndex = (size_t)Y0 * (size_t)Width;
+		const size_t EndIndex = (size_t)Y1 * (size_t)Width - 1;
+		const offset_ptr Start = OffsetAt(StartIndex);
+		const offset_ptr End = OffsetAt(EndIndex);
+		dbg_assert(End >= Start, "Tile offsets are not monotone.");
+		const unsigned int Count = (unsigned int)((End - Start) / sizeof(unsigned int)) + (DrawAt(EndIndex) ? 6u : 0u);
+		if(Count != 0)
+			vRanges.push_back({Start, Count});
+		return;
+	}
+
+	const int XR = X1 - 1;
+	for(int y = Y0; y < Y1; ++y)
+	{
+		const size_t StartIndex = (size_t)y * (size_t)Width + (size_t)X0;
+		const size_t EndIndex = (size_t)y * (size_t)Width + (size_t)XR;
+		const offset_ptr RowStart = OffsetAt(StartIndex);
+		const offset_ptr RowEnd = OffsetAt(EndIndex);
+		dbg_assert(RowEnd >= RowStart, "Tile offsets are not monotone.");
+		const unsigned int Count = (unsigned int)((RowEnd - RowStart) / sizeof(unsigned int)) + (DrawAt(EndIndex) ? 6u : 0u);
+		if(Count == 0)
+			continue;
+		if(!vRanges.empty())
+		{
+			STileLayerDrawRange &Last = vRanges.back();
+			if(Last.m_Offset + (offset_ptr)Last.m_Count * sizeof(unsigned int) == RowStart &&
+				std::numeric_limits<unsigned int>::max() - Last.m_Count >= Count)
+			{
+				Last.m_Count += Count;
+				continue;
+			}
+		}
+		vRanges.push_back({RowStart, Count});
+	}
+}
 
 class CMapLayers;
 class CMapItemLayerTilemap;
@@ -52,7 +107,6 @@ public:
 	float m_Zoom;
 	bool m_RenderText;
 	bool m_RenderInvalidTiles;
-	bool m_TileAndQuadBuffering;
 	bool m_RenderTileBorder;
 	bool m_DebugRenderGroupClips;
 	bool m_DebugRenderQuadClips;
@@ -64,13 +118,14 @@ class CRenderLayer : public CRenderComponent
 {
 public:
 	CRenderLayer(int GroupId, int LayerId, int Flags);
-	virtual void OnInit(IGraphics *pGraphics, ITextRender *pTextRender, CRenderMap *pRenderMap, std::shared_ptr<CEnvelopeManager> &pEnvelopeManager, IMap *pMap, IMapImages *pMapImages);
+	virtual void OnInit(IGraphics *pGraphics, ITextRender *pTextRender, CRenderMap *pRenderMap, std::shared_ptr<CEnvelopeManager> &pEnvelopeManager, IMap *pMap, IMapImages *pMapImages, bool TileAndQuadBuffering);
 
 	virtual void Init() = 0;
 	virtual void Render(const CRenderLayerParams &Params) = 0;
 	virtual bool DoRender(const CRenderLayerParams &Params) = 0;
 	virtual bool IsValid() const { return true; }
 	virtual bool IsGroup() const { return false; }
+	virtual bool IsDesignLayer() const { return true; }
 	virtual void Unload() = 0;
 
 	bool IsVisibleInClipRegion(const std::optional<CClipRegion> &ClipRegion) const;
@@ -78,6 +133,7 @@ public:
 	int GetLayer() const { return m_LayerId; }
 
 protected:
+	bool m_TileAndQuadBuffering = true;
 	int m_GroupId;
 	int m_LayerId;
 	int m_Flags;
@@ -117,10 +173,16 @@ public:
 	void Render(const CRenderLayerParams &Params) override;
 	bool DoRender(const CRenderLayerParams &Params) override;
 	void Init() override;
-	void OnInit(IGraphics *pGraphics, ITextRender *pTextRender, CRenderMap *pRenderMap, std::shared_ptr<CEnvelopeManager> &pEnvelopeManager, IMap *pMap, IMapImages *pMapImages) override;
+	void OnInit(IGraphics *pGraphics, ITextRender *pTextRender, CRenderMap *pRenderMap, std::shared_ptr<CEnvelopeManager> &pEnvelopeManager, IMap *pMap, IMapImages *pMapImages, bool TileAndQuadBuffering) override;
 
 	virtual int GetDataIndex() const;
-	bool IsValid() const override { return GetRawData() != nullptr; }
+	bool IsValid() const override
+	{
+		// 设计层上传 GPU 后会释放原始 tile 数据，有效性不能只看 map 数据。
+		return m_pLayerTilemap != nullptr && m_pLayerTilemap->m_Width > 0 && m_pLayerTilemap->m_Height > 0 &&
+		       (m_pTiles != nullptr || (m_VisualTiles.has_value() && m_VisualTiles->m_BufferContainerIndex != -1) ||
+			       (m_pMap != nullptr && m_pMap->GetDataSize(GetDataIndex()) > 0));
+	}
 	void Unload() override;
 
 protected:
@@ -220,6 +282,7 @@ protected:
 
 	std::vector<char *> m_vpRenderTileLayerIndexOffsets;
 	std::vector<unsigned int> m_vRenderTileLayerDrawCounts;
+	std::vector<STileLayerDrawRange> m_vRenderTileLayerRanges;
 
 	std::optional<CRenderLayerTile::CTileLayerVisuals> m_VisualTiles;
 	CMapItemLayerTilemap *m_pLayerTilemap;
@@ -230,7 +293,7 @@ class CRenderLayerQuads : public CRenderLayer
 {
 public:
 	CRenderLayerQuads(int GroupId, int LayerId, int Flags, CMapItemLayerQuads *pLayerQuads);
-	void OnInit(IGraphics *pGraphics, ITextRender *pTextRender, CRenderMap *pRenderMap, std::shared_ptr<CEnvelopeManager> &pEnvelopeManager, IMap *pMap, IMapImages *pMapImages) override;
+	void OnInit(IGraphics *pGraphics, ITextRender *pTextRender, CRenderMap *pRenderMap, std::shared_ptr<CEnvelopeManager> &pEnvelopeManager, IMap *pMap, IMapImages *pMapImages, bool TileAndQuadBuffering) override;
 	void Init() override;
 	bool IsValid() const override { return m_pLayerQuads->m_NumQuads > 0 && m_pQuads; }
 	void Render(const CRenderLayerParams &Params) override;
@@ -291,6 +354,8 @@ public:
 protected:
 	ColorRGBA GetRenderColor(const CRenderLayerParams &Params) const override { return ColorRGBA(1.0f, 1.0f, 1.0f, Params.m_EntityOverlayVal / 100.0f); }
 	IGraphics::CTextureHandle GetTexture() const override;
+	// 实体层在运行期仍要读取 tile 数据，不能在上传 GPU 后释放。
+	bool IsDesignLayer() const override { return false; }
 };
 
 class CRenderLayerEntityGame final : public CRenderLayerEntityBase

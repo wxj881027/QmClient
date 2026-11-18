@@ -86,8 +86,7 @@ void CEditorMap::PlaceBorderTiles()
 		}
 	}
 
-	int GameGroupIndex = std::find(m_vpGroups.begin(), m_vpGroups.end(), m_pGameGroup) - m_vpGroups.begin();
-	m_EditorHistory.RecordAction(std::make_shared<CEditorBrushDrawAction>(this, GameGroupIndex), Localize("Tool 'Make borders'", "Editor"));
+	m_EditorHistory.RecordAction(std::make_shared<CEditorBrushDrawAction>(this, m_SelectedGroup), Localize("Tool 'Make borders'", "Editor"));
 
 	OnModify();
 }

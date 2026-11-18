@@ -1,6 +1,7 @@
 #include <game/client/QmUi/QmCardRegistry.h>
 #include <game/client/QmUi/SettingsCardDeck.h>
 #include <game/client/QmUi/SettingsCardDeckLogic.h>
+#include <game/client/QmUi/cards/QmCardCatalog.h>
 
 #include <gtest/gtest.h>
 
@@ -347,84 +348,145 @@ TEST(SettingsCardDeck, ColumnProjectionExcludesInactiveDefinitions)
 {
 	qm_card_order::CModel Model;
 	Model.LoadMerged("", qm_card_registry::BuildDefaultEntries());
+	// 两张仍在「显示选项」页的卡片：图标与动效已迁到「视觉效果」，这里改用显示与显示模式。
 	const std::vector<int> vActiveStateIndices{
-		Model.StateIndexForStableId("deck:graphics-visual"),
+		Model.StateIndexForStableId("deck:graphics-display"),
 		Model.StateIndexForStableId("deck:graphics-modes"),
 	};
 	const auto aColumns = BuildSettingsCardDeckColumnOrder(Model, "graphics", vActiveStateIndices);
-	EXPECT_EQ(aColumns[0], (std::vector<int>{}));
-	EXPECT_EQ(aColumns[1], (std::vector<int>{Model.StateIndexForStableId("deck:graphics-visual")}));
-	EXPECT_EQ(aColumns[2], (std::vector<int>{Model.StateIndexForStableId("deck:graphics-modes")}));
+	// 投影只保留活动卡片，并按各自 model 列分组；默认列由注册表瀑布分配，不在这里写死。
+	int ProjectedCards = 0;
+	for(int Column = 0; Column < 3; ++Column)
+	{
+		for(const int Index : aColumns[Column])
+		{
+			ASSERT_GE(Index, 0);
+			EXPECT_EQ(Model.Entry(Index).m_Column, Column);
+			EXPECT_NE(std::find(vActiveStateIndices.begin(), vActiveStateIndices.end(), Index), vActiveStateIndices.end());
+			++ProjectedCards;
+		}
+	}
+	EXPECT_EQ(ProjectedCards, static_cast<int>(vActiveStateIndices.size()));
+	// 未激活的同页卡片不得占用任何列槽位。
+	for(int Column = 0; Column < 3; ++Column)
+	{
+		for(const int Index : Model.ColumnIndices("graphics", Column))
+		{
+			if(std::find(vActiveStateIndices.begin(), vActiveStateIndices.end(), Index) != vActiveStateIndices.end())
+				continue;
+			EXPECT_EQ(std::count(aColumns[Column].begin(), aColumns[Column].end(), Index), 0);
+		}
+	}
 }
 
-TEST(SettingsCardDeck, ProductionPagePlacementsPreserveWideColumnsAndNarrowReadingOrder)
+// 意图：生产页面的「卡片清单 → deck 列投影 → 宽屏阅读序」必须覆盖每张活动卡一次：
+// 加卡或调整默认列时，投影不能丢卡、重复放卡，也不能把半宽卡塞进全宽列。
+TEST(SettingsCardDeck, ProductionPageProjectionsCoverEveryActiveCardOnce)
 {
 	qm_card_order::CModel Model;
 	Model.LoadMerged("", qm_card_registry::BuildDefaultEntries());
 
-	const auto VerifyPage = [&Model](const char *pTab, const std::vector<const char *> &vStableIds, const std::array<std::vector<const char *>, 3> &aExpectedColumns, const std::vector<const char *> &vExpectedVisualOrder, int LeadingFullWidthCards = 0) {
+	// 页面清单来源有两类：栖梦分类页用各自的 *CardStableIds()，
+	// 标准目录页用 CatalogPageStableIds()（两者都从注册表派生）。
+	const std::vector<const char *> vCatalogGraphics = qm_card_catalog::CatalogPageStableIds("graphics");
+	const std::vector<const char *> vCatalogSound = qm_card_catalog::CatalogPageStableIds("sound");
+	const std::vector<const char *> vCatalogDdnet = qm_card_catalog::CatalogPageStableIds("ddnet");
+	const std::vector<const char *> vCatalogPlayer = qm_card_catalog::CatalogPageStableIds("player");
+	const std::vector<const char *> vCatalogChat = qm_card_catalog::CatalogPageStableIds("appearance-chat");
+	const std::vector<const char *> vCatalogHud = qm_card_catalog::CatalogPageStableIds("appearance-hud");
+	const std::vector<const char *> vCatalogNamePlate = qm_card_catalog::CatalogPageStableIds("appearance-name-plate");
+	const std::vector<const char *> vCatalogLaser = qm_card_catalog::CatalogPageStableIds("appearance-laser");
+	const std::vector<const char *> vCatalogTClient = qm_card_catalog::CatalogPageStableIds("tclient");
+	struct SPageCards
+	{
+		const char *m_pTab;
+		const std::vector<const char *> *m_pIds;
+	};
+	const SPageCards aPages[] = {
+		{"visual", &qm_card_catalog::VisualCardStableIds()},
+		{"function", &qm_card_catalog::FunctionCardStableIds()},
+		{"hud", &qm_card_catalog::HudCardStableIds()},
+		{"tee", &qm_card_catalog::TeeCardStableIds()},
+		{"controls", &qm_card_catalog::ControlsCardStableIds()},
+		{"general", &qm_card_catalog::GeneralCardStableIds()},
+		{"graphics", &vCatalogGraphics},
+		{"sound", &vCatalogSound},
+		{"ddnet", &vCatalogDdnet},
+		{"player", &vCatalogPlayer},
+		{"appearance-chat", &vCatalogChat},
+		{"appearance-hud", &vCatalogHud},
+		{"appearance-name-plate", &vCatalogNamePlate},
+		{"appearance-laser", &vCatalogLaser},
+		{"tclient", &vCatalogTClient},
+	};
+	for(const SPageCards &Page : aPages)
+	{
+		SCOPED_TRACE(Page.m_pTab);
+		ASSERT_NE(Page.m_pIds, nullptr);
+		ASSERT_FALSE(Page.m_pIds->empty()) << Page.m_pTab;
 		std::vector<int> vActiveStateIndices;
-		vActiveStateIndices.reserve(vStableIds.size());
-		for(const char *pStableId : vStableIds)
+		for(const char *pStableId : *Page.m_pIds)
 		{
-			const int StateIndex = Model.StateIndexForStableId(pStableId);
-			ASSERT_GE(StateIndex, 0) << pStableId;
-			vActiveStateIndices.push_back(StateIndex);
+			const int Index = Model.StateIndexForStableId(pStableId);
+			ASSERT_GE(Index, 0) << pStableId;
+			// 目录页可以把卡片"呈现"在别的页（例如字体卡），deck 投影只认模型 tab。
+			const char *pModelTab = Model.Entry(Index).m_pDefaultTab;
+			if(pModelTab == nullptr || std::string(pModelTab) != Page.m_pTab)
+				continue;
+			vActiveStateIndices.push_back(Index);
 		}
+		ASSERT_FALSE(vActiveStateIndices.empty()) << Page.m_pTab;
 
-		const std::array<std::vector<int>, 3> aColumns = BuildSettingsCardDeckColumnOrder(Model, pTab, vActiveStateIndices);
+		const std::array<std::vector<int>, 3> aColumns = BuildSettingsCardDeckColumnOrder(Model, Page.m_pTab, vActiveStateIndices);
+		std::vector<int> vVisualOrder;
+		ForEachSettingsCardDeckVisualOrder(aColumns, [&](const int StateIndex, int) { vVisualOrder.push_back(StateIndex); });
+		ASSERT_EQ(vVisualOrder.size(), vActiveStateIndices.size()) << Page.m_pTab;
+		for(const int Index : vActiveStateIndices)
+			EXPECT_EQ(std::count(vVisualOrder.begin(), vVisualOrder.end(), Index), 1) << Page.m_pTab;
+
+		// 全宽卡只在 0 列，其余卡片只在 1/2 列。
 		for(int Column = 0; Column < 3; ++Column)
 		{
-			ASSERT_EQ(aColumns[Column].size(), aExpectedColumns[Column].size());
-			for(size_t Index = 0; Index < aColumns[Column].size(); ++Index)
-				EXPECT_STREQ(Model.Entry(aColumns[Column][Index]).m_pStableId, aExpectedColumns[Column][Index]);
+			for(const int Index : aColumns[Column])
+				EXPECT_EQ(Model.Entry(Index).m_Column == 0, Column == 0) << Page.m_pTab;
 		}
-
-		std::vector<const char *> vVisualOrder;
-		ForEachSettingsCardDeckVisualOrder(aColumns, [&](const int StateIndex, int) { vVisualOrder.push_back(Model.Entry(StateIndex).m_pStableId); }, LeadingFullWidthCards);
-		ASSERT_EQ(vVisualOrder.size(), vExpectedVisualOrder.size());
-		for(size_t Index = 0; Index < vVisualOrder.size(); ++Index)
-			EXPECT_STREQ(vVisualOrder[Index], vExpectedVisualOrder[Index]);
-	};
-
-	VerifyPage("tee",
-		{"deck:tee-identity", "deck:tee-skin-options", "deck:tee-skin-list"},
-		{{{"deck:tee-identity", "deck:tee-skin-list"}, {"deck:tee-skin-options"}, {}}},
-		{"deck:tee-identity", "deck:tee-skin-list", "deck:tee-skin-options"}, 2);
-	VerifyPage("appearance-chat",
-		{"deck:appearance-chat-settings", "deck:appearance-chat-messages", "deck:appearance-chat-preview"},
-		{{{}, {"deck:appearance-chat-settings", "deck:appearance-chat-preview"}, {"deck:appearance-chat-messages"}}},
-		{"deck:appearance-chat-settings", "deck:appearance-chat-messages", "deck:appearance-chat-preview"});
-	VerifyPage("tclient-status-bar",
-		{"deck:tclient-status-bar-settings", "deck:tclient-status-bar-preview"},
-		{{{}, {"deck:tclient-status-bar-settings", "deck:tclient-status-bar-preview"}, {}}},
-		{"deck:tclient-status-bar-settings", "deck:tclient-status-bar-preview"});
+	}
 }
 
 TEST(SettingsCardDeck, ColumnProjectionCacheRebuildsOnlyForLayoutOrActiveDefinitionChanges)
 {
 	qm_card_order::CModel Model;
 	Model.LoadMerged("", qm_card_registry::BuildDefaultEntries());
-	const int Visual = Model.StateIndexForStableId("deck:graphics-visual");
+	const int Display = Model.StateIndexForStableId("deck:graphics-display");
 	const int Modes = Model.StateIndexForStableId("deck:graphics-modes");
-	const std::vector<int> vActiveStateIndices{Visual, Modes};
+	const std::vector<int> vActiveStateIndices{Display, Modes};
 	settings_card_deck_logic::CProjectionCache Cache;
 
+	// 列号由默认布局（对称瀑布）决定，两张卡也可能落在同一列，所以这里只锁
+	// 「每张卡在自己的默认列里且只出现一次」，不把具体列或同列/分列写死。
+	const int DisplayColumn = Model.Entry(Display).m_Column;
+	const int ModesColumn = Model.Entry(Modes).m_Column;
+	const auto CountIn = [](const std::vector<int> &vRows, const int Id) {
+		return (int)std::count(vRows.begin(), vRows.end(), Id);
+	};
 	const auto &aInitialColumns = Cache.Resolve(Model, "graphics", vActiveStateIndices);
 	EXPECT_EQ(Cache.RebuildCount(), 1u);
-	EXPECT_EQ(aInitialColumns[1], (std::vector<int>{Visual}));
-	EXPECT_EQ(aInitialColumns[2], (std::vector<int>{Modes}));
+	EXPECT_EQ(CountIn(aInitialColumns[DisplayColumn], Display), 1);
+	EXPECT_EQ(CountIn(aInitialColumns[ModesColumn], Modes), 1);
 
 	Cache.Resolve(Model, "graphics", vActiveStateIndices);
 	EXPECT_EQ(Cache.RebuildCount(), 1u);
 
-	const std::vector<int> vVisualOnly{Visual};
-	const auto &aFilteredColumns = Cache.Resolve(Model, "graphics", vVisualOnly);
+	const std::vector<int> vDisplayOnly{Display};
+	const auto &aFilteredColumns = Cache.Resolve(Model, "graphics", vDisplayOnly);
 	EXPECT_EQ(Cache.RebuildCount(), 2u);
-	EXPECT_EQ(aFilteredColumns[2], (std::vector<int>{}));
+	EXPECT_EQ(CountIn(aFilteredColumns[ModesColumn], Modes), 0);
 
-	ASSERT_TRUE(CommitSettingsCardDeckDrop(Model, "graphics", "deck:graphics-visual", 2, 0));
+	// 换到另一列的首位：该列按读序把这张卡排在最前，且这次落位不是空操作。
+	const int OtherColumn = DisplayColumn == 1 ? 2 : 1;
+	ASSERT_TRUE(CommitSettingsCardDeckDrop(Model, "graphics", "deck:graphics-display", OtherColumn, 0));
 	const auto &aMovedColumns = Cache.Resolve(Model, "graphics", vActiveStateIndices);
 	EXPECT_EQ(Cache.RebuildCount(), 3u);
-	EXPECT_EQ(aMovedColumns[2], (std::vector<int>{Visual, Modes}));
+	ASSERT_FALSE(aMovedColumns[OtherColumn].empty());
+	EXPECT_EQ(aMovedColumns[OtherColumn].front(), Display);
 }

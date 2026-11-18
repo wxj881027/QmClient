@@ -92,7 +92,7 @@ void CVideo::Init()
 	av_log_set_callback(AvLogCallback);
 }
 
-CVideo::CVideo(IGraphics *pGraphics, ISound *pSound, IStorage *pStorage, int Width, int Height, const char *pName, int OutputWidth, int OutputHeight, const SVideoDisplaySnapshot *pDisplaySnapshot) :
+CVideo::CVideo(IGraphics *pGraphics, ISound *pSound, IStorage *pStorage, int Width, int Height, int64_t LocalStartTime, const char *pName, int OutputWidth, int OutputHeight, const SVideoDisplaySnapshot *pDisplaySnapshot) :
 	m_pGraphics(pGraphics),
 	m_pStorage(pStorage),
 	m_pSound(pSound),
@@ -120,6 +120,10 @@ CVideo::CVideo(IGraphics *pGraphics, ISound *pSound, IStorage *pStorage, int Wid
 	str_copy(m_aName, pName);
 
 	m_FPS = g_Config.m_ClVideoRecorderFPS;
+	m_TickTime = time_freq() / m_FPS;
+	m_LocalStartTime = LocalStartTime;
+	m_LocalTime = 0.0f;
+	m_Time = 0;
 
 	m_Recording = false;
 	m_Started = false;
@@ -130,7 +134,6 @@ CVideo::CVideo(IGraphics *pGraphics, ISound *pSound, IStorage *pStorage, int Wid
 
 	dbg_assert(ms_pCurrentVideo == nullptr, "ms_pCurrentVideo is NOT set to nullptr while creating a new Video.");
 
-	ms_TickTime = time_freq() / m_FPS;
 	ms_pCurrentVideo = this;
 }
 
@@ -320,7 +323,8 @@ bool CVideo::Start()
 	m_Recording = true;
 	m_Started = true;
 	m_Stopped = false;
-	ms_Time = time_get();
+	m_Time = time_get();
+	m_LocalTime = (m_Time - m_LocalStartTime) / (float)time_freq();
 	return true;
 }
 
@@ -562,8 +566,8 @@ void CVideo::NextVideoFrame()
 {
 	if(IsRecording())
 	{
-		ms_Time += ms_TickTime;
-		ms_LocalTime = (ms_Time - ms_LocalStartTime) / (float)time_freq();
+		m_Time += m_TickTime;
+		m_LocalTime = (m_Time - m_LocalStartTime) / (float)time_freq();
 	}
 }
 

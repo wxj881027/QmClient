@@ -11,6 +11,7 @@
 
 #include <generated/protocol7.h>
 
+#include <game/client/QmUi/QmScroll.h>
 #include <game/client/component.h>
 #include <game/client/components/qmclient/chat_command_hud.h>
 #include <game/client/components/qmclient/chat_emoji.h>
@@ -205,7 +206,7 @@ private:
 
 		STextContainerIndex m_TextContainerIndex;
 		STextContainerIndex m_BodyTextContainerIndex;
-		int m_QuadContainerIndex;
+		// 气泡底色几何：布局趟写入，绘制趟按它走公共圆角表面链（不再缓存直绘四边形容器）。
 		CUIRect m_BackgroundRect = {};
 		float m_BackgroundRounding = 0.0f;
 		std::vector<SQmTitleBadgePlacement> m_vTitleBadges;
@@ -247,7 +248,6 @@ private:
 	QmWordFilterList::CFileList m_StreamerWordsFile;
 	uint64_t m_PreparedGlyphAtlasRevision = 0;
 	std::array<int, 5> m_aPreparedChatTextSettings = {-1, -1, -1, -1, -1};
-	int64_t m_LastPresentationUpdateTime;
 	int64_t m_LargeAreaOpenTick;
 	bool m_LastPresentationShowLargeArea;
 	int m_PendingConsoleLineIndex;
@@ -260,7 +260,17 @@ private:
 
 	CLine m_aLines[MAX_LINES];
 	int m_CurrentLine;
+	// 历史滚动偏移：单位是"行"，由 m_HistoryScroll 推进后取整得到。
+	// 推进器与列表 / 设置页共用 QmScroll（弹簧、惯性、橡皮筋同一实现），
+	// m_BacklogCurLine 只是它每帧取整后的可见行号。
 	int m_BacklogCurLine;
+	CQmScrollState m_HistoryScroll;
+	// 推进器上一次落到 m_BacklogCurLine 的行号。新消息到达时 AddLine 会直接把
+	// 可见行 +1（视图锚定在同一批消息上），这类外部改动要靠它识别并同步回推进器。
+	int m_HistoryScrollAppliedLine;
+	// 滚轮在输入事件里只累积方向（+1 = 往上翻历史），真正推进放到渲染帧：
+	// 那里才知道这一次能显示多少行，视口大小必须与绘制同一份。
+	int m_HistoryWheelSteps;
 	bool m_ScrollbarDragging;
 	float m_ScrollbarDragOffset;
 
@@ -400,6 +410,8 @@ private:
 	static void ConChat(IConsole::IResult *pResult, void *pUserData);
 	static void ConShowChat(IConsole::IResult *pResult, void *pUserData);
 	static void ConEcho(IConsole::IResult *pResult, void *pUserData);
+	static void ConEchoConfig(IConsole::IResult *pResult, void *pUserData);
+	void EchoConfig(const char *pName);
 	static void ConClearChat(IConsole::IResult *pResult, void *pUserData);
 	static void ConAppendBlockWords(IConsole::IResult *pResult, void *pUserData);
 	static void ConReloadWordFiles(IConsole::IResult *pResult, void *pUserData);
@@ -422,7 +434,16 @@ private:
 	void RenderCommandHud(float X, float Bottom, float Width, float FontSize, const CUIRect &ChatRect, const CUIRect &TargetRect);
 
 	int CountInitializedLines() const;
-	int CountVisibleLinesFrom(int BacklogLine) const;
+	// 历史"内容尺寸"：行数与总高度一趟量完。滚轮推进与行号夹取用行数；
+	// 滚动条滑块要用总高度——消息会换行，"条数"不等于"高度"，两把尺子必须分开量。
+	struct SQmChatHistoryExtent
+	{
+		int m_Lines = 0;
+		float m_Height = 0.0f;
+		// 从最旧一端量出的屏幕容量：滚到顶时这组消息必须完整可见。
+		int m_FittingLines = 1;
+	};
+	SQmChatHistoryExtent MeasureVisibleHistory(int BacklogLine, int OffsetType, float FallbackLineHeight, float ExtraLineSpacing, float ViewportHeight = -1.0f) const;
 	void UpdatePresentationStates(int64_t Now, float DeltaSeconds, bool ShowLargeArea, bool ExtraAnimations);
 	bool UpdateHistoryTouchScroll(const CUIRect &ChatRect, float HeightLimit, float HistoryBottom, float LineHeight, int TotalVisibleLines, int VisibleLineCapacity, bool StartAllowed);
 
@@ -664,7 +685,6 @@ public:
 	float MessagePaddingX() const { return FontSize() * (5 / 6.f); }
 	float MessagePaddingY() const { return FontSize() * (1 / 6.f); }
 	float MessageTeeSize() const { return FontSize() * (7 / 6.f); }
-	float MessageRounding() const { return FontSize() * (1 / 2.f); }
 
 	// 翻译按钮相关方法
 	vec2 GetChatMousePos() const;

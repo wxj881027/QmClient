@@ -13,7 +13,7 @@ void CMapGrid::CState::Reset()
 	m_GridFactor = 1;
 }
 
-void CMapGrid::OnRender(CUIRect View)
+void CMapGrid::Render()
 {
 	if(!IsEnabled())
 	{

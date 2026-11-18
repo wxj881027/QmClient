@@ -124,7 +124,10 @@ inline CUIRect ResolveSettingsCardChromeRect(const CUIRect &Rect, const float Pi
 inline CUIRect ResolveSettingsFocusSafeClipRect(const CUIRect &Rect, const float UiScale)
 {
 	const float Scale = std::max(0.1f, UiScale);
-	const float FocusOutset = std::max(1.0f, 2.0f * Scale);
+	// 焦点安全区：描边外扩一档，再加搜索框聚焦光晕的最大铺开距离——裁剪区若只按
+	// 描边外扩，光晕会在卡片内容边缘被切出一条直边。上限仍由调用方与卡片矩形取交集，
+	// 所以放行得再多也不会画到卡片外面。
+	const float FocusOutset = std::max({1.0f, 2.0f * Scale, ui_token::glow::FOCUS_CLIP_ALLOWANCE});
 	CUIRect Expanded = Rect;
 	Expanded.x -= FocusOutset;
 	Expanded.y -= FocusOutset;

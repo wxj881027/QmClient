@@ -1,6 +1,7 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_BROWSER_STATUS_LAYOUT_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_BROWSER_STATUS_LAYOUT_H
 
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/ui_rect.h>
 
 #include <algorithm>
@@ -23,6 +24,29 @@ inline float QmBrowserLayoutExtent(float Value)
 	return std::isfinite(Value) ? std::max(0.0f, Value) : 0.0f;
 }
 
+// 页面底部外距必须**按实际已内缩的量**补足：菜单壳层已经对 Screen 应用过全局安全区
+// （menus.cpp 的 Screen.Margin(panel::MARGIN)），页面若再切一次 8 就变成 16。
+// 回放播放 / 幽灵视角下安全区不生效，此时 View 底边贴着 Screen，需要页面自己补满 8。
+// 返回页面还应该额外切掉的量，保证「面板底边 → 窗口底」恒等于 Margin。
+inline float QmResolveBrowserBottomInset(const CUIRect &Screen, const CUIRect &View, float Margin = ui_token::panel::MARGIN)
+{
+	const float ScreenBottom = Screen.y + Screen.h;
+	const float ViewBottom = View.y + View.h;
+	const float Existing = std::max(0.0f, ScreenBottom - ViewBottom);
+	return std::clamp(Margin - Existing, 0.0f, std::max(0.0f, Margin));
+}
+
+// 图库（截图画廊 / 卡片网格）的行高：**只由列宽决定**。预览图按固定宽高比铺满
+// 卡片宽度，说明行固定高，所以卡片永远保持同一形状，窗口变宽卡片等比变大。
+//
+// 面板高度只决定「这一屏放得下几行」（可以是 2 行 + 第三行露出一截，滚动列表的
+// 正常形态），**绝不反过来拉伸卡片去凑满高度**。此前按可用高度均分行高，卡片会
+// 被拉成很大一张、一屏反而只放得下 2 行（实机反馈「为啥面板只允许两行」）。
+inline float QmResolveGalleryRowHeight(const float CellWidth, const float CaptionHeight, const float PreviewAspect)
+{
+	return QmBrowserLayoutExtent(CellWidth) * std::clamp(PreviewAspect, 0.05f, 4.0f) + QmBrowserLayoutExtent(CaptionHeight);
+}
+
 struct SQmBrowserChipGrid
 {
 	static constexpr int MAX_CHIPS = 16;
@@ -34,7 +58,10 @@ struct SQmBrowserChipGrid
 
 // 等宽胶囊网格：宽度决定每行个数，行数决定内容高度；所有矩形都落在 Area 内。
 // 底部快捷条与右侧筛选面板共用同一套度量，避免两处密度不一致。
-inline SQmBrowserChipGrid QmBrowserChipGrid(CUIRect Area, int Count, float MinChipWidth, float ChipHeight = 18.0f, float Gap = 4.0f)
+// PerRowOverride > 0 时直接采用该列数（筛选面板的模式分组固定一行四个），
+// 否则按 MinChipWidth 反推能放几个。列数决定每格宽度，格子变窄时文字靠
+// FilterChip 自己的内边距与最小字号兜底，不会溢出胶囊。
+inline SQmBrowserChipGrid QmBrowserChipGrid(CUIRect Area, int Count, float MinChipWidth, float ChipHeight = 18.0f, float Gap = 4.0f, int PerRowOverride = 0)
 {
 	SQmBrowserChipGrid Result;
 	const float Width = QmBrowserLayoutExtent(Area.w);
@@ -43,7 +70,7 @@ inline SQmBrowserChipGrid QmBrowserChipGrid(CUIRect Area, int Count, float MinCh
 		return Result;
 	const float SafeMin = std::max(MinChipWidth, 1.0f);
 	const float SafeGap = std::max(Gap, 0.0f);
-	Result.m_PerRow = std::clamp((int)((Width + SafeGap) / (SafeMin + SafeGap)), 1, Result.m_Count);
+	Result.m_PerRow = PerRowOverride > 0 ? std::clamp(PerRowOverride, 1, Result.m_Count) : std::clamp((int)((Width + SafeGap) / (SafeMin + SafeGap)), 1, Result.m_Count);
 	const float ChipWidth = std::max(0.0f, (Width - SafeGap * (Result.m_PerRow - 1)) / Result.m_PerRow);
 	const int Rows = (Result.m_Count + Result.m_PerRow - 1) / Result.m_PerRow;
 	for(int Index = 0; Index < Result.m_Count; ++Index)
@@ -186,12 +213,12 @@ inline SQmBrowserPanelLayout QmBrowserPanelLayout(CUIRect View, bool ShowNotice)
 	// 连工具箱的最小内容列都放不下时，让主操作区使用全宽。
 	if(ToolboxWidth < 120.0f)
 		ToolboxWidth = 0.0f;
-	const float ColumnGap = ToolboxWidth > 0.0f ? 8.0f : 0.0f;
+	const float ColumnGap = ToolboxWidth > 0.0f ? ui_token::panel::GAP : 0.0f;
 	const float ListWidth = Width - ToolboxWidth - ColumnGap;
 	const float PaddingX = std::min(10.0f, ListWidth * 0.1f);
 	const float NaturalHeight = QmBrowserStatusLayout({0.0f, 0.0f, ListWidth - 2.0f * PaddingX, 0.0f}, ShowNotice).m_ContentHeight + 20.0f;
 	const float StatusHeight = std::min(Height, NaturalHeight);
-	const float ListHeight = std::max(0.0f, Height - StatusHeight - 8.0f);
+	const float ListHeight = std::max(0.0f, Height - StatusHeight - ui_token::panel::GAP);
 	Result.m_List = {View.x, View.y, ListWidth, ListHeight};
 	Result.m_Status = {View.x, View.y + Height - StatusHeight, ListWidth, StatusHeight};
 	Result.m_Toolbox = {View.x + Width - ToolboxWidth, View.y, ToolboxWidth, Height};

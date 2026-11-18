@@ -31,6 +31,7 @@
 #include <game/localization.h>
 
 #include <algorithm>
+#include <array>
 #include <functional>
 #include <string>
 #include <vector>
@@ -231,8 +232,19 @@ void CMenusSettingsControls::Render(CUIRect MainView)
 	const SSettingsPageLayoutFrame Page = GameClient()->m_Menus.SettingsPageLayout(MainView, UiScale);
 	const IUiContext CardCtx = GameClient()->m_Menus.SettingsUiContext("settings_controls", UiScale);
 	const SSettingsCardDeckVisualOptions VisualOptions = GameClient()->m_Menus.SettingsCardDeckVisualOptions();
+	static std::array<bool, qm_module::QmModuleCount> s_aCollapsed = {};
+	static std::array<CButtonContainer, qm_module::QmModuleCount> s_aCollapseButtons;
+	qm_card_collapse::SyncQmModules(s_aCollapsed);
+	const auto ToggleCollapsed = [](void *, qm_module::EQmModuleId Id) {
+		const int Index = std::clamp(static_cast<int>(Id), 0, static_cast<int>(qm_module::QmModuleCount) - 1);
+		const bool Collapsed = !s_aCollapsed[Index];
+		if(!qm_card_collapse::SetQmModuleCollapsed(Id, Collapsed))
+			return;
+		s_aCollapsed[Index] = Collapsed;
+	};
 	CPerfTimer BindListTimer;
-	const uint64_t CardLayoutRevision = SettingsCardsRevision(ReadOnly);
+	uint64_t CardLayoutRevision = SettingsCardsRevision(ReadOnly);
+	CardLayoutRevision = CardLayoutRevision * 1099511628211ULL ^ (s_aCollapsed[static_cast<int>(qm_module::EQmModuleId::KeyBinds)] ? 1u : 0u);
 	const uint64_t DefinitionsRevision = ResolveSettingsCardDefinitionsRevision(GameClient()->m_Menus.m_SettingsCardDeckDisplayCycle, GameClient()->m_Menus.m_MenuTextPoolGeneration, MainView.w, CardLayoutRevision);
 	qm_card_catalog::SQmCardBuildContext CardBuild;
 	CardBuild.m_pMenus = &GameClient()->m_Menus;
@@ -241,6 +253,9 @@ void CMenusSettingsControls::Render(CUIRect MainView)
 	CardBuild.m_Metrics = m_CardMetrics;
 	CardBuild.m_UiContext = CardCtx;
 	CardBuild.m_pScrollRegion = Ui()->MeasurementOnly() ? nullptr : &m_SettingsScrollRegion;
+	CardBuild.m_pCollapsed = s_aCollapsed.data();
+	CardBuild.m_pCollapseButtons = s_aCollapseButtons.data();
+	CardBuild.m_pToggleCollapsed = ToggleCollapsed;
 	const auto BuildDefinitions = [CardBuild](std::vector<SSettingsCardDefinition> &vCards) {
 		qm_card_catalog::BuildCards(CardBuild, qm_card_catalog::ControlsCardStableIds(), vCards);
 	};

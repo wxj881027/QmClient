@@ -177,18 +177,16 @@ TEST(QmRoundedSurface, CornerCurveSamplesAgreeOnSeamAndOnlyBezierEndsAtZeroCurva
 
 TEST(QmRoundedSurface, CornerShapeSeamSoftensCapsuleWithoutGrowingRadius)
 {
-	// 胶囊没有生长空间，半径始终不动；接缝软化只改曲线强度，不改半径。
-	const SRoundedCornerShape Seam = ResolveRoundedCornerShape(10.0f, 40.0f, 20.0f, 1.0f, ROUNDED_CORNER_CURVE_QUINTIC, 0.3f);
-	EXPECT_FLOAT_EQ(Seam.m_Radius, 10.0f);
-	EXPECT_NEAR(Seam.m_Amount, 0.3f, 1e-6f);
-	// 强度比接缝上限还低时按强度走，滑块在胶囊上仍然有效。
-	const SRoundedCornerShape Weak = ResolveRoundedCornerShape(10.0f, 40.0f, 20.0f, 0.2f, ROUNDED_CORNER_CURVE_QUINTIC, 0.3f);
-	EXPECT_FLOAT_EQ(Weak.m_Radius, 10.0f);
-	EXPECT_NEAR(Weak.m_Amount, 0.2f, 1e-6f);
-	// 接缝关掉就是纯半圆端头，与改动前逐像素一致。
-	const SRoundedCornerShape Off = ResolveRoundedCornerShape(10.0f, 40.0f, 20.0f, 1.0f, ROUNDED_CORNER_CURVE_QUINTIC, 0.0f);
-	EXPECT_FLOAT_EQ(Off.m_Radius, 10.0f);
-	EXPECT_FLOAT_EQ(Off.m_Amount, 0.0f);
+	// 胶囊的端帽永远保持精确正圆：半径不生长，曲线强度恒为 0。
+	// 「丝滑胶囊」只改直边上的肩部（着色器里独立实现），不参与圆角曲线，所以这里
+	// 无论接缝参数给多少，胶囊都回到纯半圆端头。
+	for(const float SeamAmount : {0.0f, 0.3f, 1.0f})
+	{
+		SCOPED_TRACE(SeamAmount);
+		const SRoundedCornerShape Capsule = ResolveRoundedCornerShape(10.0f, 40.0f, 20.0f, 1.0f, ROUNDED_CORNER_CURVE_QUINTIC, SeamAmount);
+		EXPECT_FLOAT_EQ(Capsule.m_Radius, 10.0f);
+		EXPECT_FLOAT_EQ(Capsule.m_Amount, 0.0f);
+	}
 	// 不是胶囊的控件不受接缝设置影响，强度仍只由生长决定。
 	const SRoundedCornerShape Card = ResolveRoundedCornerShape(14.0f, 400.0f, 300.0f, 0.4f, ROUNDED_CORNER_CURVE_QUINTIC, 1.0f);
 	EXPECT_NEAR(Card.m_Radius, 14.0f * 1.52f, 1e-4f);
@@ -244,7 +242,16 @@ TEST(QmRoundedSurface, PartialCornersBordersAndFallbackRemainBounded)
 	ExpectMask(IGraphics::CORNER_TR, 0.0f, 4.0f, 0.0f, 0.0f);
 	ExpectMask(IGraphics::CORNER_BR, 0.0f, 0.0f, 4.0f, 0.0f);
 	ExpectMask(IGraphics::CORNER_BL, 0.0f, 0.0f, 0.0f, 4.0f);
-	ExpectMask(IGraphics::CORNER_NONE, 0.0f, 0.0f, 0.0f, 0.0f);
+	// 约定：半径是形状的唯一来源。给了非零半径又传 CORNER_NONE 的调用点在语义上是
+	// 「要圆但忘了给角掩码」，一律按四角全圆处理；真要方块应当把半径给 0。
+	ExpectMask(IGraphics::CORNER_NONE, 4.0f, 4.0f, 4.0f, 4.0f);
+	{
+		SRoundedSurfaceParams SquareParams;
+		SquareParams.m_Radius = 0.0f;
+		SquareParams.m_Corners = IGraphics::CORNER_NONE;
+		const SRoundedSurfacePlan Square = ResolveRoundedSurfacePlan(Rect, SquareParams, true);
+		ExpectCornerRadii(Square, 0.0f, 0.0f, 0.0f, 0.0f);
+	}
 	SRoundedSurfaceParams WideBorderParams;
 	WideBorderParams.m_Radius = 2.0f;
 	WideBorderParams.m_BorderWidth = 4.0f;
@@ -266,4 +273,99 @@ TEST(QmRoundedSurface, PartialCornersBordersAndFallbackRemainBounded)
 	const SRoundedSurfacePlan Unsupported = ResolveRoundedSurfacePlan(Rect, UnsupportedParams, false);
 	EXPECT_FALSE(Unsupported.m_UseSdf);
 	EXPECT_FLOAT_EQ(Unsupported.m_PixelSize, 0.0001f);
+}
+
+TEST(QmRoundedSurface, FallbackOutlineUsesTheConfiguredCornerCurve)
+{
+	SRoundedSurfaceParams Params;
+	Params.m_Radius = 8.0f;
+	const auto Plan = ResolveRoundedSurfacePlan({20, 30, 100, 100}, Params, false);
+	const auto Classic = ResolveRoundedSurfaceOutline(Plan, IGraphics::CORNER_TL, ROUNDED_CORNER_CURVE_CLASSIC, 0.0f, 0.0f);
+	const auto Apple = ResolveRoundedSurfaceOutline(Plan, IGraphics::CORNER_TL, ROUNDED_CORNER_CURVE_APPLE, 1.0f, 0.0f);
+	float ClassicMaxX = Plan.m_Rect.x;
+	float AppleMaxX = Plan.m_Rect.x;
+	for(int i = 0; i <= ROUNDED_SURFACE_CORNER_SEGMENTS; ++i)
+	{
+		ClassicMaxX = std::max(ClassicMaxX, Classic[i].x);
+		AppleMaxX = std::max(AppleMaxX, Apple[i].x);
+	}
+	EXPECT_NEAR(ClassicMaxX, Plan.m_Rect.x + Plan.m_Radius, 1e-4f);
+	EXPECT_GT(AppleMaxX, ClassicMaxX);
+	for(const auto &Point : Apple)
+	{
+		EXPECT_GE(Point.x, Plan.m_Rect.x);
+		EXPECT_LE(Point.x, Plan.m_Rect.x + Plan.m_Rect.w);
+		EXPECT_GE(Point.y, Plan.m_Rect.y);
+		EXPECT_LE(Point.y, Plan.m_Rect.y + Plan.m_Rect.h);
+	}
+}
+
+TEST(QmRoundedSurface, AppleCurveMatchesMeasuredContinuousCorner)
+{
+	// 满强度就是 UIBezierPath(roundedRect:) 实测的三段三次贝塞尔：单侧足迹 1.528665 r、
+	// 最贴角点 0.41225 r（对 CoreAnimation 的零像素误差反解）。这两个值同时钉住缩放和形状：
+	// 只对上足迹、形状不对的近似（比如「圆弧 + 自造手柄」）会在这里被最贴角点检出来。
+	const int Count = 400;
+	float StartX = 0.0f, StartY = 0.0f, EndX = 0.0f, EndY = 0.0f;
+	RoundedCornerCurveDirection(ROUNDED_CORNER_CURVE_APPLE, 1.0f, 0, Count, StartX, StartY);
+	RoundedCornerCurveDirection(ROUNDED_CORNER_CURVE_APPLE, 1.0f, Count, Count, EndX, EndY);
+	EXPECT_NEAR(StartX, 1.0f, 1e-5f);
+	EXPECT_NEAR(StartY, -APPLE_CORNER_FOOTPRINT, 1e-5f);
+	EXPECT_NEAR(EndX, -APPLE_CORNER_FOOTPRINT, 1e-5f);
+	EXPECT_NEAR(EndY, 1.0f, 1e-5f);
+	// 调用方坐标里角点在 (1, 1)：到曲线的最小距离就是最贴角点。曲线还必须沿两个轴单调，
+	// 否则会自己折回去——分轴各算一个混合系数最容易犯这个错。
+	float MinDistance = 1e9f;
+	float PreviousX = 2.0f;
+	float PreviousY = -1.0f;
+	for(int i = 0; i <= Count; i++)
+	{
+		float X = 0.0f, Y = 0.0f;
+		RoundedCornerCurveDirection(ROUNDED_CORNER_CURVE_APPLE, 1.0f, i, Count, X, Y);
+		MinDistance = std::min(MinDistance, std::sqrt((X - 1.0f) * (X - 1.0f) + (Y - 1.0f) * (Y - 1.0f)));
+		EXPECT_LE(X, PreviousX + 1e-5f);
+		EXPECT_GE(Y, PreviousY - 1e-5f);
+		PreviousX = X;
+		PreviousY = Y;
+	}
+	EXPECT_NEAR(MinDistance, 0.41225f, 2e-4f);
+	// 强度减半时足迹线性收窄，仍是同一条曲线族里的形状。
+	float HalfX = 0.0f, HalfY = 0.0f;
+	RoundedCornerCurveDirection(ROUNDED_CORNER_CURVE_APPLE, 0.5f, 0, Count, HalfX, HalfY);
+	EXPECT_NEAR(HalfY, -APPLE_CORNER_FOOTPRINT * 0.5f, 1e-5f);
+	// 0 = 原圆弧：切点回到 (1, 0)。
+	float ZeroX = 0.0f, ZeroY = 0.0f;
+	RoundedCornerCurveDirection(ROUNDED_CORNER_CURVE_APPLE, 0.0f, 0, Count, ZeroX, ZeroY);
+	EXPECT_NEAR(ZeroX, 1.0f, 1e-6f);
+	EXPECT_NEAR(ZeroY, 0.0f, 1e-6f);
+}
+
+TEST(QmRoundedSurface, AppleCornerShrinksOnTheShortSideInsteadOfStretching)
+{
+	// 足迹 1 + 0.528665·s 必须塞进短边半高：塞不下时只削强度（两个轴共用同一个标量），
+	// 半径不缩、曲线不拉伸。否则上下两个角的肩部会互相穿过中线，端边挤出外凸的唇边。
+	const SRoundedCornerShape Squeezed = ResolveRoundedCornerShape(8.0f, 400.0f, 20.0f, 1.0f, ROUNDED_CORNER_CURVE_APPLE, 0.0f);
+	EXPECT_FLOAT_EQ(Squeezed.m_Radius, 8.0f);
+	EXPECT_NEAR(Squeezed.m_Amount, (10.0f / 8.0f - 1.0f) / APPLE_CORNER_FOOTPRINT, 1e-5f);
+	EXPECT_NEAR(8.0f * (1.0f + APPLE_CORNER_FOOTPRINT * Squeezed.m_Amount), 10.0f, 1e-4f);
+	// 半径已经贴到短边一半：没有生长空间，强度归零（端头由端头构造单独负责）。
+	const SRoundedCornerShape Capsule = ResolveRoundedCornerShape(10.0f, 40.0f, 20.0f, 1.0f, ROUNDED_CORNER_CURVE_APPLE, 1.6f);
+	EXPECT_FLOAT_EQ(Capsule.m_Radius, 10.0f);
+	EXPECT_FLOAT_EQ(Capsule.m_Amount, 0.0f);
+}
+
+TEST(QmRoundedSurface, AppleCurveUsesSmoothingDirectlyWithoutGrowingRadius)
+{
+	// Figma / CoreGraphics 的构造里曲线自己负责扩边，半径不再乘 1.3：
+	// 否则曲线扩边和半径生长会叠加，圆角被放大两次。
+	const SRoundedCornerShape Apple = ResolveRoundedCornerShape(14.0f, 400.0f, 300.0f, 0.6f, ROUNDED_CORNER_CURVE_APPLE, 0.0f);
+	EXPECT_FLOAT_EQ(Apple.m_Radius, 14.0f);
+	EXPECT_NEAR(Apple.m_Amount, 0.6f, 1e-6f);
+	// 对照：同样参数的五次贝塞尔确实会生长。
+	const SRoundedCornerShape Quintic = ResolveRoundedCornerShape(14.0f, 400.0f, 300.0f, 0.6f, ROUNDED_CORNER_CURVE_QUINTIC, 0.0f);
+	EXPECT_GT(Quintic.m_Radius, 14.0f);
+	// 平滑度为 0 时退化成原圆弧的外观：半径不变、强度为 0。
+	const SRoundedCornerShape Flat = ResolveRoundedCornerShape(14.0f, 400.0f, 300.0f, 0.0f, ROUNDED_CORNER_CURVE_APPLE, 0.0f);
+	EXPECT_FLOAT_EQ(Flat.m_Radius, 14.0f);
+	EXPECT_FLOAT_EQ(Flat.m_Amount, 0.0f);
 }

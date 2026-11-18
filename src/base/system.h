@@ -11,6 +11,7 @@
 #include "dbg.h"
 #include "detect.h"
 #include "fs.h"
+#include "io.h"
 #include "mem.h"
 #include "secure.h"
 #include "str.h"
@@ -18,420 +19,12 @@
 #include "types.h"
 
 #include <chrono>
-#include <cstdint>
-#include <ctime>
-#include <functional>
-#include <mutex>
-#include <optional>
+#include <cstddef>
 #include <string>
 
 #ifdef CONF_FAMILY_UNIX
-#include <sys/un.h>
+#include <sys/un.h> // sockaddr_un
 #endif
-
-#ifdef CONF_PLATFORM_LINUX
-#include <netinet/in.h>
-#include <sys/socket.h>
-#endif
-
-/**
- * File I/O related operations.
- *
- * @defgroup File-IO File I/O
- */
-
-/**
- * @ingroup File-IO
- */
-enum
-{
-	/**
-	 * Open file for reading.
-	 *
-	 * @see io_open
-	 */
-	IOFLAG_READ = 1,
-	/**
-	 * Open file for writing.
-	 *
-	 * @see io_open
-	 */
-	IOFLAG_WRITE = 2,
-	/**
-	 * Open file for appending at the end.
-	 *
-	 * @see io_open
-	 */
-	IOFLAG_APPEND = 4,
-};
-
-/**
- * @ingroup File-IO
- */
-enum ESeekOrigin
-{
-	/**
-	 * Start seeking from the beginning of the file.
-	 *
-	 * @see io_seek
-	 */
-	IOSEEK_START = 0,
-	/**
-	 * Start seeking from the current position.
-	 *
-	 * @see io_seek
-	 */
-	IOSEEK_CUR = 1,
-	/**
-	 * Start seeking from the end of the file.
-	 *
-	 * @see io_seek
-	 */
-	IOSEEK_END = 2,
-};
-
-/**
- * Opens a file.
- *
- * @ingroup File-IO
- *
- * @param filename File to open.
- * @param flags A set of IOFLAG flags.
- *
- * @see IOFLAG_READ, IOFLAG_WRITE, IOFLAG_APPEND.
- *
- * @return A handle to the file on success, or `nullptr` on failure.
- */
-IOHANDLE io_open(const char *filename, int flags);
-
-/**
- * Reads data into a buffer from a file.
- *
- * @ingroup File-IO
- *
- * @param io Handle to the file to read data from.
- * @param buffer Pointer to the buffer that will receive the data.
- * @param size Number of bytes to read from the file.
- *
- * @return Number of bytes read.
- */
-unsigned io_read(IOHANDLE io, void *buffer, unsigned size);
-
-/**
- * Reads the rest of the file into a buffer.
- *
- * @ingroup File-IO
- *
- * @param io Handle to the file to read data from.
- * @param result Receives the file's remaining contents.
- * @param result_len Receives the file's remaining length.
- *
- * @return `true` on success, `false` on failure.
- *
- * @remark 失败时 result 为 nullptr，result_len 为零。
- * @remark Does NOT guarantee that there are no internal null bytes.
- * @remark The result must be freed after it has been used.
- * @remark The function will fail if more than 1 GiB of memory would
- *         have to be allocated. Large files should not be loaded into memory.
- */
-bool io_read_all(IOHANDLE io, void **result, unsigned *result_len);
-
-/**
- * Reads the rest of the file into a null-terminated buffer with
- * no internal null bytes.
- *
- * @ingroup File-IO
- *
- * @param io Handle to the file to read data from.
- *
- * @return The file's remaining contents, or `nullptr` on failure.
- *
- * @remark Guarantees that there are no internal null bytes.
- * @remark Guarantees that result will contain null-termination.
- * @remark The result must be freed after it has been used.
- * @remark The function will fail if more than 1 GiB of memory would
- *         have to be allocated. Large files should not be loaded into memory.
- */
-char *io_read_all_str(IOHANDLE io);
-
-/**
- * Skips data in a file.
- *
- * @ingroup File-IO
- *
- * @param io Handle to the file.
- * @param size Number of bytes to skip.
- *
- * @return `0` on success.
- */
-int io_skip(IOHANDLE io, int64_t size);
-
-/**
- * Seeks to a specified offset in the file.
- *
- * @ingroup File-IO
- *
- * @param io Handle to the file.
- * @param offset Offset from position to search.
- * @param origin Position to start searching from.
- *
- * @return `0` on success.
- */
-int io_seek(IOHANDLE io, int64_t offset, ESeekOrigin origin);
-
-/**
- * Gets the current position in the file.
- *
- * @ingroup File-IO
- *
- * @param io Handle to the file.
- *
- * @return The current position, or `-1` on failure.
- */
-int64_t io_tell(IOHANDLE io);
-
-/**
- * Gets the total length of the file. Resets cursor to the beginning.
- *
- * @ingroup File-IO
- *
- * @param io Handle to the file.
- *
- * @return The total size, or `-1` on failure.
- */
-int64_t io_length(IOHANDLE io);
-
-/**
- * Writes data from a buffer to a file.
- *
- * @ingroup File-IO
- *
- * @param io Handle to the file.
- * @param buffer Pointer to the data that should be written.
- * @param size Number of bytes to write.
- *
- * @return Number of bytes written.
- */
-unsigned io_write(IOHANDLE io, const void *buffer, unsigned size);
-
-/**
- * Writes a platform dependent newline to a file.
- *
- * @ingroup File-IO
- *
- * @param io Handle to the file.
- *
- * @return `true` on success, `false` on failure.
- */
-bool io_write_newline(IOHANDLE io);
-
-/**
- * Closes a file.
- *
- * @ingroup File-IO
- *
- * @param io Handle to the file.
- *
- * @return `0` on success.
- */
-int io_close(IOHANDLE io);
-
-/**
- * Empties all buffers and writes all pending data.
- *
- * @ingroup File-IO
- *
- * @param io Handle to the file.
- *
- * @return `0` on success.
- */
-int io_flush(IOHANDLE io);
-
-/**
- * Synchronize file changes to disk.
- *
- * @ingroup File-IO
- *
- * @param io Handle to the file.
- *
- * @return `0` on success.
- */
-int io_sync(IOHANDLE io);
-
-/**
- * Checks whether an error occurred during I/O with the file.
- *
- * @ingroup File-IO
- *
- * @param io Handle to the file.
- *
- * @return `0` on success, or non-`0` on error.
- */
-int io_error(IOHANDLE io);
-
-/**
- * Returns a handle for the standard input.
- *
- * @ingroup File-IO
- *
- * @return An @link IOHANDLE @endlink for the standard input.
- *
- * @remark The handle must not be closed.
- */
-IOHANDLE io_stdin();
-
-/**
- * Returns a handle for the standard output.
- *
- * @ingroup File-IO
- *
- * @return An @link IOHANDLE @endlink for the standard output.
- *
- * @remark The handle must not be closed.
- */
-IOHANDLE io_stdout();
-
-/**
- * Returns a handle for the standard error.
- *
- * @ingroup File-IO
- *
- * @return An @link IOHANDLE @endlink for the standard error.
- *
- * @remark The handle must not be closed.
- */
-IOHANDLE io_stderr();
-
-/**
- * Returns a handle for the current executable.
- *
- * @ingroup File-IO
- *
- * @return An @link IOHANDLE @endlink for the current executable.
- */
-IOHANDLE io_current_exe();
-
-/**
- * Wrapper for asynchronously writing to an @link IOHANDLE @endlink.
- *
- * @ingroup File-IO
- */
-typedef struct ASYNCIO ASYNCIO;
-
-/**
- * Wraps a @link IOHANDLE @endlink for asynchronous writing.
- *
- * @ingroup File-IO
- *
- * @param io Handle to the file.
- *
- * @return The handle for asynchronous writing.
- */
-ASYNCIO *aio_new(IOHANDLE io);
-
-/**
- * Locks the `ASYNCIO` structure so it can't be written into by
- * other threads.
- *
- * @ingroup File-IO
- *
- * @param aio Handle to the file.
- */
-void aio_lock(ASYNCIO *aio);
-
-/**
- * Unlocks the `ASYNCIO` structure after finishing the contiguous
- * write.
- *
- * @ingroup File-IO
- *
- * @param aio Handle to the file.
- */
-void aio_unlock(ASYNCIO *aio);
-
-/**
- * Queues a chunk of data for writing.
- *
- * @ingroup File-IO
- *
- * @param aio Handle to the file.
- * @param buffer Pointer to the data that should be written.
- * @param size Number of bytes to write.
- */
-void aio_write(ASYNCIO *aio, const void *buffer, unsigned size);
-
-/**
- * Queues a newline for writing.
- *
- * @ingroup File-IO
- *
- * @param aio Handle to the file.
- */
-void aio_write_newline(ASYNCIO *aio);
-
-/**
- * Queues a chunk of data for writing. The `ASYNCIO` struct must be
- * locked using @link aio_lock @endlink first.
- *
- * @ingroup File-IO
- *
- * @param aio Handle to the file.
- * @param buffer Pointer to the data that should be written.
- * @param size Number of bytes to write.
- */
-void aio_write_unlocked(ASYNCIO *aio, const void *buffer, unsigned size);
-
-/**
- * Queues a newline for writing. The `ASYNCIO` struct must be locked
- * using @link aio_lock @endlink first.
- *
- * @ingroup File-IO
- *
- * @param aio Handle to the file.
- */
-void aio_write_newline_unlocked(ASYNCIO *aio);
-
-/**
- * Checks whether errors have occurred during the asynchronous writing.
- *
- * Call this function regularly to see if there are errors. Call this
- * function after @link aio_wait @endlink to see if the process of writing
- * to the file succeeded.
- *
- * @ingroup File-IO
- *
- * @param aio Handle to the file.
- *
- * @return `0` on success, or non-`0` on error.
- */
-int aio_error(ASYNCIO *aio);
-
-/**
- * Queues file closing.
- *
- * @ingroup File-IO
- *
- * @param aio Handle to the file.
- */
-void aio_close(ASYNCIO *aio);
-
-/**
- * Wait for the asynchronous operations to complete.
- *
- * @ingroup File-IO
- *
- * @param aio Handle to the file.
- */
-void aio_wait(ASYNCIO *aio);
-
-/**
- * Frees the resources associated with the asynchronous file handle.
- *
- * @ingroup File-IO
- *
- * @param aio Handle to the file.
- */
-void aio_free(ASYNCIO *aio);
 
 /**
  * @defgroup Network Networking
@@ -653,6 +246,11 @@ int net_socket_type(NETSOCKET sock);
 /**
  * Creates a UDP socket and binds it to a port.
  *
+ * In case a port is already in use on any of the protocol families, the whole
+ * bind operation fails. Otherwise, if binding at least one protocol family
+ * succeeds, the operation is treated as a success: the host may not support all
+ * protocol families.
+ *
  * @ingroup Network-UDP
  *
  * @param bindaddr Address to bind the socket to.
@@ -720,6 +318,11 @@ void net_udp_close(NETSOCKET sock);
 
 /**
  * Creates a TCP socket.
+ *
+ * In case a port is already in use on any of the protocol families, the whole
+ * bind operation fails. Otherwise, if binding at least one protocol family
+ * succeeds, the operation is treated as a success: the host may not support all
+ * protocol families.
  *
  * @ingroup Network-TCP
  *
@@ -866,45 +469,7 @@ void net_unix_close(UNIXSOCKET sock);
 
 #endif
 
-/**
- * Swaps the endianness of data. Each element is swapped individually by reversing its bytes.
- *
- * @param data Pointer to data to be swapped.
- * @param elem_size Size in bytes of each element.
- * @param num Number of elements.
- *
- * @remark The caller must ensure that the data is at least `elem_size * num` bytes in size.
- */
-void swap_endian(void *data, unsigned elem_size, unsigned num);
-
 void net_stats(NETSTATS *stats);
-
-/**
- * Packs 4 big endian bytes into an unsigned.
- *
- * @param bytes Pointer to an array of bytes that will be packed.
- *
- * @return The packed unsigned.
- *
- * @remark Assumes the passed array is least 4 bytes in size.
- * @remark Assumes unsigned is 4 bytes in size.
- *
- * @see uint_to_bytes_be
- */
-unsigned bytes_be_to_uint(const unsigned char *bytes);
-
-/**
- * Packs an unsigned into 4 big endian bytes.
- *
- * @param bytes Pointer to an array where the bytes will be stored.
- * @param value The values that will be packed into the array.
- *
- * @remark Assumes the passed array is least 4 bytes in size.
- * @remark Assumes unsigned is 4 bytes in size.
- *
- * @see bytes_be_to_uint
- */
-void uint_to_bytes_be(unsigned char *bytes, unsigned value);
 
 /**
  * Shell, process management, OS specific functionality.
@@ -920,28 +485,6 @@ void uint_to_bytes_be(unsigned char *bytes, unsigned value);
  * @return PID of the current process.
  */
 int pid();
-
-/**
- * Fixes the command line arguments to be encoded in UTF-8 on all systems.
- *
- * @ingroup Shell
- *
- * @param argc A pointer to the argc parameter that was passed to the main function.
- * @param argv A pointer to the argv parameter that was passed to the main function.
- *
- * @remark You need to call @link cmdline_free @endlink once you're no longer using the results.
- */
-void cmdline_fix(int *argc, const char ***argv);
-
-/**
- * Frees memory that was allocated by @link cmdline_fix @endlink.
- *
- * @ingroup Shell
- *
- * @param argc The argc obtained from `cmdline_fix`.
- * @param argv The argv obtained from `cmdline_fix`.
- */
-void cmdline_free(int argc, const char **argv);
 
 #if !defined(CONF_PLATFORM_ANDROID)
 /**
@@ -1007,86 +550,6 @@ int kill_process(PROCESS process);
  */
 bool is_process_alive(PROCESS process);
 
-/**
- * Opens a link in the browser.
- *
- * @ingroup Shell
- *
- * @param link The link to open in a browser.
- *
- * @return `1` on success, `0` on failure.
- *
- * @remark The strings are treated as null-terminated strings.
- * @remark This may not be called with untrusted input or it'll result in arbitrary code execution, especially on Windows.
- */
-int open_link(const char *link);
-
-/**
- * Opens a file or directory with the default program.
- *
- * @ingroup Shell
- *
- * @param path The file or folder to open with the default program.
- *
- * @return `1` on success, `0` on failure.
- *
- * @remark The strings are treated as null-terminated strings.
- * @remark This may not be called with untrusted input or it'll result in arbitrary code execution, especially on Windows.
- */
-int open_file(const char *path);
 #endif // !defined(CONF_PLATFORM_ANDROID)
-
-/**
- * Returns a human-readable version string of the operating system.
- *
- * @ingroup Shell
- *
- * @param version Buffer to use for the output.
- * @param length Length of the output buffer.
- *
- * @return `true` on success, `false` on failure.
- */
-bool os_version_str(char *version, size_t length);
-
-/**
- * Returns a string of the preferred locale of the user / operating system.
- * The string conforms to [RFC 3066](https://www.ietf.org/rfc/rfc3066.txt)
- * and only contains the characters `a`-`z`, `A`-`Z`, `0`-`9` and `-`.
- * If the preferred locale could not be determined this function
- * falls back to the locale `"en-US"`.
- *
- * @ingroup Shell
- *
- * @param locale Buffer to use for the output.
- * @param length Length of the output buffer.
- *
- * @remark The strings are treated as null-terminated strings.
- */
-void os_locale_str(char *locale, size_t length);
-
-/**
- * Fixes the command line arguments to be encoded in UTF-8 on all systems.
- * This is a RAII wrapper for @link cmdline_fix @endlink and @link cmdline_free @endlink.
- *
- * @ingroup Shell
- */
-class CCmdlineFix
-{
-	int m_Argc;
-	const char **m_ppArgv;
-
-public:
-	CCmdlineFix(int *pArgc, const char ***pppArgv)
-	{
-		cmdline_fix(pArgc, pppArgv);
-		m_Argc = *pArgc;
-		m_ppArgv = *pppArgv;
-	}
-	~CCmdlineFix()
-	{
-		cmdline_free(m_Argc, m_ppArgv);
-	}
-	CCmdlineFix(const CCmdlineFix &) = delete;
-};
 
 #endif

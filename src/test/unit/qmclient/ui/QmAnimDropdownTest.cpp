@@ -37,32 +37,36 @@ namespace
 {
 	class CQmDropdownVisualStyleTest : public ::testing::Test
 	{
-		unsigned m_TriggerColor = g_Config.m_QmUiDropdownColor;
-		int m_TriggerOpacity = g_Config.m_QmUiDropdownOpacity;
-		unsigned m_ListColor = g_Config.m_QmUiDropdownListColor;
-		int m_ListOpacity = g_Config.m_QmUiDropdownListOpacity;
+		unsigned m_TriggerColor = g_Config.m_QmUiControlColor;
+		int m_TriggerOpacity = g_Config.m_QmUiControlOpacity;
+		unsigned m_ListColor = g_Config.m_QmUiLayerColor;
+		int m_ListOpacity = g_Config.m_QmUiLayerOpacity;
 		unsigned m_BorderColor = g_Config.m_QmUiCardBorderColor;
-		unsigned m_SelectedColor = g_Config.m_QmUiSelectedColor;
+		unsigned m_AccentColor = g_Config.m_QmUiAccentColor;
+		int m_AccentOpacity = g_Config.m_QmUiAccentOpacity;
 
 	protected:
 		void SetUp() override
 		{
-			g_Config.m_QmUiDropdownColor = ColorHSLA(0.15f, 0.6f, 0.4f).Pack(false);
-			g_Config.m_QmUiDropdownOpacity = 35;
-			g_Config.m_QmUiDropdownListColor = ColorHSLA(0.7f, 0.4f, 0.3f).Pack(false);
-			g_Config.m_QmUiDropdownListOpacity = 45;
+			g_Config.m_QmUiControlColor = ColorHSLA(0.15f, 0.6f, 0.4f).Pack(false);
+			g_Config.m_QmUiControlOpacity = 35;
+			g_Config.m_QmUiLayerColor = ColorHSLA(0.7f, 0.4f, 0.3f).Pack(false);
+			g_Config.m_QmUiLayerOpacity = 45;
 			g_Config.m_QmUiCardBorderColor = ColorHSLA(0.2f, 0.3f, 0.7f, 0.8f).Pack(true);
-			g_Config.m_QmUiSelectedColor = ColorHSLA(0.5f, 0.7f, 0.4f).Pack(false);
+			// 选中项已并入强调色：这里改强调色，验证下拉的激活条目跟随它。
+			g_Config.m_QmUiAccentColor = ColorHSLA(0.5f, 0.7f, 0.4f).Pack(false);
+			g_Config.m_QmUiAccentOpacity = 100;
 		}
 
 		void TearDown() override
 		{
-			g_Config.m_QmUiDropdownColor = m_TriggerColor;
-			g_Config.m_QmUiDropdownOpacity = m_TriggerOpacity;
-			g_Config.m_QmUiDropdownListColor = m_ListColor;
-			g_Config.m_QmUiDropdownListOpacity = m_ListOpacity;
+			g_Config.m_QmUiControlColor = m_TriggerColor;
+			g_Config.m_QmUiControlOpacity = m_TriggerOpacity;
+			g_Config.m_QmUiLayerColor = m_ListColor;
+			g_Config.m_QmUiLayerOpacity = m_ListOpacity;
 			g_Config.m_QmUiCardBorderColor = m_BorderColor;
-			g_Config.m_QmUiSelectedColor = m_SelectedColor;
+			g_Config.m_QmUiAccentColor = m_AccentColor;
+			g_Config.m_QmUiAccentOpacity = m_AccentOpacity;
 		}
 	};
 }
@@ -1022,7 +1026,9 @@ TEST(UiV2TranslateSettings, BaiduCanBeSelectedAndRestoredAcrossSharedMenus)
 
 TEST_F(CQmDropdownVisualStyleTest, DefaultAndSettingsDropdownsUseTheSameConfiguredRoles)
 {
-	const SUiTheme Theme = ResolveUiTheme(ColorHSLA(0.2f, 0.5f, 0.4f), 0.75f, ColorHSLA(0x97FFA6), ColorHSLA(0x5DFE54), ColorHSLA(g_Config.m_QmUiSelectedColor));
+	// 选中项已并入强调色：默认样式取配置里的强调色，这里必须用同一个来源，
+	// 否则「默认 vs 设置页」比较的是两个不同的强调色。
+	const SUiTheme Theme = ResolveUiTheme(ColorHSLA(0.2f, 0.5f, 0.4f), 0.75f, ColorHSLA(g_Config.m_QmUiAccentColor));
 	const SQmDropdownVisualStyle Default;
 	const SQmDropdownVisualStyle Settings = QmSettingsDropdownVisualStyle(Theme, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiCardBorderColor, true)));
 	EXPECT_EQ(Default.m_TriggerColor, Settings.m_TriggerColor);
@@ -1034,8 +1040,8 @@ TEST_F(CQmDropdownVisualStyleTest, DefaultAndSettingsDropdownsUseTheSameConfigur
 TEST_F(CQmDropdownVisualStyleTest, ReconstructedDefaultStyleReflectsChangedOpacity)
 {
 	const SQmDropdownVisualStyle Before;
-	g_Config.m_QmUiDropdownOpacity = 0;
-	g_Config.m_QmUiDropdownListOpacity = 80;
+	g_Config.m_QmUiControlOpacity = 0;
+	g_Config.m_QmUiLayerOpacity = 80;
 	const SQmDropdownVisualStyle After;
 	EXPECT_FLOAT_EQ(After.m_TriggerColor.a, 0.0f);
 	EXPECT_FLOAT_EQ(After.m_PopupBackgroundColor.a, 0.8f);
@@ -1080,4 +1086,18 @@ TEST(QmDropdownSearch, SourceChangeAndReopeningDiscardStaleMatches)
 	Search.Reset();
 	ASSERT_TRUE(Search.Update({"Arial", "Verdana"}, ""));
 	EXPECT_EQ(Search.Indices().size(), 2u);
+}
+
+TEST(QmDropdownRadius, TriggerAndEntryShareTheCapsuleDerivation)
+{
+	// 常见行高：20 高的触发按钮得到 10、24 高的得到 12——完整胶囊端头，
+	// 不再是固定 radius::BASE(8) 的圆角矩形；弹层条目取同一档，展开前后不跳形。
+	EXPECT_FLOAT_EQ(QmDropdownEntryRadius(20.0f), 10.0f);
+	EXPECT_FLOAT_EQ(QmDropdownEntryRadius(24.0f), 12.0f);
+	for(const float RowHeight : {12.0f, 16.0f, 20.0f, 24.0f, 28.0f})
+		EXPECT_FLOAT_EQ(QmDropdownEntryRadius(RowHeight), ui_token::list::RowRadius(RowHeight));
+	// 高行停在上限档，不再继续长大；非正行高不产生负半径。
+	EXPECT_FLOAT_EQ(QmDropdownEntryRadius(40.0f), ui_token::radius::CARD);
+	EXPECT_FLOAT_EQ(QmDropdownEntryRadius(0.0f), 0.0f);
+	EXPECT_FLOAT_EQ(QmDropdownEntryRadius(-8.0f), 0.0f);
 }

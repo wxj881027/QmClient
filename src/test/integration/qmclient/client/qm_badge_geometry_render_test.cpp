@@ -53,7 +53,7 @@ namespace
 		}
 		void QuadContainerChangeAutomaticUpload(int Container, bool AutomaticUpload) override { EXPECT_EQ(m_Live.count(Container), 1u); }
 		void QuadContainerUpload(int Container) override { EXPECT_EQ(m_Live.count(Container), 1u); }
-		int QuadContainerAddQuads(int Container, CFreeformItem *pItems, int Num) override
+		int QuadContainerAddQuads(int Container, const CFreeformItem *pItems, int Num) override
 		{
 			EXPECT_EQ(m_Live.count(Container), 1u);
 			return 0;

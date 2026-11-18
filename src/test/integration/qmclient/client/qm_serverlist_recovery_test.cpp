@@ -69,9 +69,16 @@ namespace
 		std::vector<std::shared_ptr<CResponse>> m_vRequests;
 		std::unique_ptr<IServerBrowserHttp> m_pBrowser;
 		int64_t m_Now = 100;
+		// 模拟进程继承了环境代理；调度器显式 Proxy("") 的直连回退必须能覆盖它。
+		bool m_ProxyRoute = false;
 		void Begin(std::vector<std::string> vUrls = {"https://one.test/list", "https://two.test/list", "https://three.test/list"}, const char *pPrevious = "", bool Tiers = false, std::function<bool(const std::string &, const std::string &)> SaveWriter = {})
 		{
-			m_pBrowser.reset(CreateServerBrowserHttpWithSources(m_pEngine.get(), m_pStorage.get(), &m_Http, std::move(vUrls), pPrevious, [this](const char *pUrl) { auto pResult = std::make_shared<CResponse>(pUrl); m_vRequests.push_back(pResult); return pResult; }, [this] { return m_Now; }, Tiers, {}, std::move(SaveWriter)));
+			m_pBrowser.reset(CreateServerBrowserHttpWithSources(m_pEngine.get(), m_pStorage.get(), &m_Http, std::move(vUrls), pPrevious, [this](const char *pUrl) {
+				auto pResult = std::make_shared<CResponse>(pUrl);
+				if(m_ProxyRoute)
+					pResult->Proxy("http://127.0.0.1:7890");
+				m_vRequests.push_back(pResult);
+				return pResult; }, [this] { return m_Now; }, Tiers, {}, std::move(SaveWriter)));
 		}
 		bool Until(const std::function<bool()> &Condition)
 		{
@@ -84,6 +91,19 @@ namespace
 				std::this_thread::yield();
 			}
 			return false;
+		}
+		// 持久化缓存头部与正文由生产格式决定，测试只构造文件内容。
+		void WritePersistentList(const char *pBody, int64_t Received = time_timestamp(), int Age = 0, const char *pSourceKey = "https://one.test/list\n")
+		{
+			m_pStorage->CreateFolder("cache", IStorage::TYPE_SAVE);
+			const std::string SourceKey(pSourceKey);
+			char aHash[SHA256_MAXSTRSIZE];
+			sha256_str(sha256(SourceKey.data(), SourceKey.size()), aHash, sizeof(aHash));
+			const std::string Text = "QMSL1 " + std::to_string(Received) + " " + std::to_string(Age) + " " + aHash + "\n" + pBody;
+			IOHANDLE File = m_pStorage->OpenFile("cache/qm-serverlist.json", IOFLAG_WRITE, IStorage::TYPE_SAVE);
+			ASSERT_NE(File, nullptr);
+			io_write(File, Text.data(), Text.size());
+			io_close(File);
 		}
 		void TearDown() override
 		{
@@ -302,31 +322,44 @@ TEST_F(QmServerListRecovery, SnapshotWithoutCollectionTimestampIsRejected)
 	EXPECT_EQ(m_pBrowser->NumServers(), 0);
 }
 
-TEST_F(QmServerListRecovery, CorruptFutureAndExpiredPersistentCachesAreIgnored)
+TEST_F(QmServerListRecovery, CorruptAndFuturePersistentCachesAreIgnored)
 {
-	m_pStorage->CreateFolder("cache", IStorage::TYPE_SAVE);
-	const std::string SourceKey = "https://one.test/list\n";
-	char aHash[SHA256_MAXSTRSIZE];
-	sha256_str(sha256(SourceKey.data(), SourceKey.size()), aHash, sizeof(aHash));
-	for(const int64_t Received : {time_timestamp() + 1000, time_timestamp() - 86401, INT64_MIN})
+	for(const int64_t Received : {time_timestamp() + 1000, INT64_MIN})
 	{
 		SCOPED_TRACE(Received);
-		const std::string Text = "QMSL1 " + std::to_string(Received) + " 0 " + aHash + "\n" + List();
-		IOHANDLE File = m_pStorage->OpenFile("cache/qm-serverlist.json", IOFLAG_WRITE, IStorage::TYPE_SAVE);
-		ASSERT_NE(File, nullptr);
-		io_write(File, Text.data(), Text.size());
-		io_close(File);
+		WritePersistentList(List().c_str(), Received);
 		Begin({"https://one.test/list"});
 		EXPECT_EQ(m_pBrowser->NumServers(), 0);
 		m_pBrowser.reset();
 	}
-	const std::string Corrupt = "QMSL1 " + std::to_string(time_timestamp()) + " 0 " + aHash + "\n<html>not JSON</html>";
-	IOHANDLE File = m_pStorage->OpenFile("cache/qm-serverlist.json", IOFLAG_WRITE, IStorage::TYPE_SAVE);
-	ASSERT_NE(File, nullptr);
-	io_write(File, Corrupt.data(), Corrupt.size());
-	io_close(File);
+	WritePersistentList("<html>not JSON</html>");
 	Begin({"https://one.test/list"});
 	EXPECT_EQ(m_pBrowser->NumServers(), 0);
+}
+
+TEST_F(QmServerListRecovery, PersistentCacheOlderThanOneDayStillLoadsAsStale)
+{
+	WritePersistentList(List("Last known").c_str(), time_timestamp() - 30LL * 86400);
+	Begin({"https://one.test/list"});
+	ASSERT_EQ(m_pBrowser->NumServers(), 1);
+	EXPECT_TRUE(m_pBrowser->IsStale());
+	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "Last known");
+	m_vRequests[0]->Reply(List("Fresh"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 2; }));
+	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "Fresh");
+	EXPECT_FALSE(m_pBrowser->IsStale());
+}
+
+TEST_F(QmServerListRecovery, ExtremePersistedAgeIsClampedAndReplacedByFreshResponse)
+{
+	// 头部自报年龄接近 int 上限时既不能溢出，也不能因此拒绝加载。
+	WritePersistentList(List("Ancient").c_str(), time_timestamp(), 2147483647);
+	Begin({"https://one.test/list"});
+	ASSERT_EQ(m_pBrowser->NumServers(), 1);
+	EXPECT_TRUE(m_pBrowser->IsStale());
+	m_vRequests[0]->Reply(List("Fresh"), 1);
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 2; }));
+	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "Fresh");
 }
 
 TEST_F(QmServerListRecovery, UserConfigurationReplacesDefaultsAndDeduplicatesUrls)
@@ -448,6 +481,90 @@ TEST_F(QmServerListRecovery, OlderRefreshDoesNotReplaceFresherExistingCache)
 	ASSERT_TRUE(Until([this] { return !m_pBrowser->IsRefreshing(); }));
 	EXPECT_EQ(m_pBrowser->Revision(), 1U);
 	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "Recent");
+}
+
+TEST_F(QmServerListRecovery, ProxyRouteConnectFailureRetriesSameSourceDirectly)
+{
+	m_ProxyRoute = true;
+	Begin({OFFICIAL});
+	ASSERT_EQ(m_vRequests.size(), 1U);
+	EXPECT_STREQ(m_vRequests[0]->ProxyUrl(), "http://127.0.0.1:7890");
+	m_vRequests[0]->Fail();
+	m_pBrowser->Update();
+	ASSERT_EQ(m_vRequests.size(), 2U);
+	EXPECT_STREQ(m_vRequests[1]->Url(), OFFICIAL);
+	EXPECT_STREQ(m_vRequests[1]->ProxyUrl(), "");
+	m_vRequests[1]->Reply(List("Direct"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->NumServers() == 1; }));
+	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "Direct");
+	EXPECT_FALSE(m_pBrowser->IsError());
+}
+
+TEST_F(QmServerListRecovery, DirectRetryHappensOnlyOncePerSourceAndRound)
+{
+	m_ProxyRoute = true;
+	Begin({OFFICIAL});
+	m_vRequests[0]->Fail();
+	m_pBrowser->Update();
+	ASSERT_EQ(m_vRequests.size(), 2U);
+	m_vRequests[1]->Fail();
+	m_pBrowser->Update();
+	EXPECT_EQ(m_vRequests.size(), 2U);
+	EXPECT_TRUE(m_pBrowser->IsError());
+	EXPECT_FALSE(m_pBrowser->IsRefreshing());
+}
+
+TEST_F(QmServerListRecovery, HttpRejectionOnProxyRouteDoesNotSwitchToDirect)
+{
+	m_ProxyRoute = true;
+	Begin({OFFICIAL});
+	m_vRequests[0]->Fail(503);
+	m_pBrowser->Update();
+	EXPECT_EQ(m_vRequests.size(), 1U);
+	EXPECT_TRUE(m_pBrowser->IsError());
+}
+
+TEST_F(QmServerListRecovery, ManualRefreshAfterProxyFailureAllowsAnotherDirectRetry)
+{
+	m_ProxyRoute = true;
+	Begin({OFFICIAL});
+	m_vRequests[0]->Fail();
+	m_pBrowser->Update();
+	ASSERT_EQ(m_vRequests.size(), 2U);
+	m_vRequests[1]->Fail();
+	m_pBrowser->Update();
+	ASSERT_EQ(m_vRequests.size(), 2U);
+	m_pBrowser->Refresh();
+	ASSERT_EQ(m_vRequests.size(), 3U);
+	m_vRequests[2]->Fail();
+	m_pBrowser->Update();
+	ASSERT_EQ(m_vRequests.size(), 4U);
+	EXPECT_STREQ(m_vRequests[3]->Url(), OFFICIAL);
+	EXPECT_STREQ(m_vRequests[3]->ProxyUrl(), "");
+}
+
+TEST_F(QmServerListRecovery, MirrorPublishesThroughDirectRetryWhenProxyIsUnreachable)
+{
+	m_ProxyRoute = true;
+	const char *pMirror = "https://ddrace.cn/ddnet/15/servers.json";
+	Begin({OFFICIAL, pMirror}, "", true);
+	m_vRequests[0]->Fail();
+	m_pBrowser->Update();
+	ASSERT_EQ(m_vRequests.size(), 2U);
+	EXPECT_STREQ(m_vRequests[1]->Url(), OFFICIAL);
+	m_vRequests[1]->Fail();
+	m_pBrowser->Update();
+	ASSERT_EQ(m_vRequests.size(), 3U);
+	EXPECT_STREQ(m_vRequests[2]->Url(), pMirror);
+	m_vRequests[2]->Fail();
+	m_pBrowser->Update();
+	ASSERT_EQ(m_vRequests.size(), 4U);
+	EXPECT_STREQ(m_vRequests[3]->Url(), pMirror);
+	EXPECT_STREQ(m_vRequests[3]->ProxyUrl(), "");
+	m_vRequests[3]->Reply(List("Mirror direct"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->NumServers() == 1; }));
+	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "Mirror direct");
+	EXPECT_FALSE(m_pBrowser->IsError());
 }
 
 namespace

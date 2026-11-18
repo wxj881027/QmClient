@@ -58,7 +58,8 @@ void CMenus::RenderQmVisualSkinAppearanceContent(CUIRect &Content, float LineHei
 	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmSkinOutlineLocal, "Skin outline for self and dummy", Localize("Skin outline for self and dummy"), &g_Config.m_QmSkinOutlineLocal);
 	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmSkinOutlineOthers, "Skin outline for other players", Localize("Skin outline for other players"), &g_Config.m_QmSkinOutlineOthers);
 	CUIRect HueToggle;
-	if(Flow.Control("Cycle custom Tee hue", LineHeight, HueToggle))
+	// 上面的勾选行和这里的色相开关都用同一条规则：行自己声明行距，行后不再补 Space。
+	if(Flow.Control("Cycle custom Tee hue", LineHeight, HueToggle, ui_token::settings::RowGap(LineSpacing)))
 	{
 		if(DoSettingsButton_CheckBox(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, &g_Config.m_QmCycleTeeHue, "Cycle custom Tee hue", Localize("Cycle custom Tee hue"), g_Config.m_QmCycleTeeHue, &HueToggle) && Flow.Input() && !Ui()->RenderOnly())
 			g_Config.m_QmCycleTeeHue ^= 1;
@@ -66,13 +67,14 @@ void CMenus::RenderQmVisualSkinAppearanceContent(CUIRect &Content, float LineHei
 		str_format(aHueTooltip, sizeof(aHueTooltip), "%s\n%s", Localize("Only affects custom Tee colors."), Localize("When TClient rainbow Tee is enabled, this feature has no effect."));
 		GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmCycleTeeHue, &HueToggle, aHueTooltip);
 	}
-	Flow.Space(LineSpacing);
 	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmCycleTeeHueDummy, "Also apply to dummy", Localize("Also apply to dummy"), &g_Config.m_QmCycleTeeHueDummy);
 	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmEmoticonShadow, "Emoticon shadow", Localize("Emoticon shadow"), &g_Config.m_QmEmoticonShadow);
 	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmHammerSwapSkin, "Hammer skin steal", Localize("Hammer skin steal"), &g_Config.m_QmHammerSwapSkin);
 	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmSkinChangeTransition, "Skin transition animation", Localize("Skin transition animation"), &g_Config.m_QmSkinChangeTransition);
-	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:skin_appearance", Metrics, PrewarmOnly))
+	float SectionReveal = 0.0f;
+	if(!qm_card_catalog::QmCardRenderHook::PersonalizationReveal(this, Content, "qm:skin_appearance", Metrics, &SectionReveal, PrewarmOnly))
 		return;
+	const CSettingsContentRevealScope SectionRevealScope(Ui(), Flow, SectionReveal);
 
 	{
 		CUIRect Details;
@@ -117,7 +119,7 @@ void CMenus::RenderQmVisualSkinAppearanceContent(CUIRect &Content, float LineHei
 	CUIRect Row, LabelColumn, ControlColumn;
 	auto RenderDropDown = [&](const char *pTextId, const char *pText, int *pValue, int MaxValue, const char **ppNames, int NumNames, CUi::SDropDownState &State, CScrollRegion &ScrollRegion) {
 		const bool HasRow = Flow.Control(pTextId, LineHeight, Row);
-		Flow.Space(LineSpacing);
+		Flow.Space(ui_token::settings::RowGap(LineSpacing));
 		if(!HasRow)
 			return;
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
@@ -149,7 +151,7 @@ void CMenus::RenderQmVisualSkinAppearanceContent(CUIRect &Content, float LineHei
 		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(&s_QmSkinChangeTransitionMsInputId, &Row, &g_Config.m_QmSkinChangeTransitionMs, &LabelColumn);
 		RenderQmSettingsSliderWithValueInput(&s_QmSkinChangeTransitionMsInputId, ControlColumn, &g_Config.m_QmSkinChangeTransitionMs, 0, 2000, "ms", PrewarmOnly);
 	}
-	Flow.Space(LineSpacing);
+	Flow.Space(ui_token::settings::RowGap(LineSpacing));
 
 	static CUi::SDropDownState s_SkinTransitionEasingDropDownState;
 	static CScrollRegion s_SkinTransitionEasingDropDownScrollRegion;
@@ -164,5 +166,5 @@ void CMenus::RenderQmVisualSkinAppearanceContent(CUIRect &Content, float LineHei
 		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(&s_QmSkinChangeTransitionIntensityInputId, &Row, &g_Config.m_QmSkinChangeTransitionIntensity, &LabelColumn);
 		RenderQmSettingsSliderWithValueInput(&s_QmSkinChangeTransitionIntensityInputId, ControlColumn, &g_Config.m_QmSkinChangeTransitionIntensity, 0, 300, "%", PrewarmOnly);
 	}
-	Flow.Space(LineSpacing);
+	Flow.Space(ui_token::settings::RowGap(LineSpacing));
 }

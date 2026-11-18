@@ -29,6 +29,32 @@ static qm_card_order::CModel RegistryModelAfterRoundTrip()
 	return Reloaded;
 }
 
+namespace
+{
+	// 默认布局的两列卡片数与估计高度。测试只核对均衡性质（两列都非空、高度同量级），
+	// 不逐卡写死列/序——加卡时不需要改这些断言。
+	struct STabColumnBalance
+	{
+		int m_Counts[2] = {0, 0};
+		int m_Heights[2] = {0, 0};
+	};
+
+	STabColumnBalance DefaultColumnBalance(const char *pTab)
+	{
+		STabColumnBalance Balance;
+		const std::string Tab(pTab != nullptr ? pTab : "");
+		for(const qm_card_order::SEntry &Entry : qm_card_registry::BuildDefaultEntries())
+		{
+			if(Entry.m_Column == 0 || Entry.m_pDefaultTab == nullptr || Tab != Entry.m_pDefaultTab)
+				continue;
+			const int Side = Entry.m_Column - 1;
+			Balance.m_Counts[Side] += 1;
+			Balance.m_Heights[Side] += qm_card_registry::DefaultCardHeightWeight(Entry.m_pStableId);
+		}
+		return Balance;
+	}
+} // namespace
+
 TEST(QmCardRegistrySearch, MapRouteSettingFindsItsPlayerStatsCardBeforeOpeningIt)
 {
 	const auto Model = RegistryModelAfterRoundTrip();
@@ -89,8 +115,6 @@ TEST(QmCardRegistry, BetterScoreboardCardIsRegisteredInFunctionColumn)
 	const auto *pCard = qm_card_registry::FindByStableId("qm:better_scoreboard");
 	ASSERT_NE(pCard, nullptr);
 	EXPECT_STREQ(pCard->m_pDefaultTab, "function");
-	EXPECT_EQ(pCard->m_DefaultColumn, qm_card_registry::ECardColumn::Left);
-	EXPECT_EQ(pCard->m_DefaultOrder, 6);
 	EXPECT_STREQ(pCard->m_pTitle, "Better scoreboard");
 
 	const auto &vFunctionCards = qm_card_catalog::FunctionCardStableIds();
@@ -98,16 +122,37 @@ TEST(QmCardRegistry, BetterScoreboardCardIsRegisteredInFunctionColumn)
 		return pStableId != nullptr && std::string(pStableId) == "qm:better_scoreboard";
 	});
 	EXPECT_NE(BetterScoreboardIt, vFunctionCards.end());
-	qm_card_order::CModel Model;
-	Model.LoadMerged("", qm_card_registry::BuildDefaultEntries());
-	const int MiniFeaturesIndex = Model.FindByStableId("qm:mini_features");
-	const int BetterScoreboardIndex = Model.FindByStableId("qm:better_scoreboard");
-	const int JumpHintIndex = Model.FindByStableId("qm:jump_hint");
-	ASSERT_GE(MiniFeaturesIndex, 0);
-	ASSERT_GE(BetterScoreboardIndex, 0);
-	ASSERT_GE(JumpHintIndex, 0);
-	EXPECT_EQ(Model.Entry(BetterScoreboardIndex).m_OrderInColumn, Model.Entry(MiniFeaturesIndex).m_OrderInColumn - 1);
-	EXPECT_GT(Model.Entry(JumpHintIndex).m_OrderInColumn, Model.Entry(BetterScoreboardIndex).m_OrderInColumn);
+
+	// 默认 placement 来自瀑布：落在 function 页的半宽列且只出现一次。
+	const qm_card_order::SEntry *pPlacement = qm_card_registry::FindDefaultPlacement("qm:better_scoreboard");
+	ASSERT_NE(pPlacement, nullptr);
+	EXPECT_STREQ(pPlacement->m_pDefaultTab, "function");
+	EXPECT_GT(pPlacement->m_Column, 0);
+	EXPECT_GE(pPlacement->m_OrderInColumn, 0);
+}
+
+TEST(QmCardRegistryPlacement, KeyBindsCardIsRegisteredOnControlsPage)
+{
+	const auto *pCard = qm_card_registry::FindByStableId("qm:key_binds");
+	ASSERT_NE(pCard, nullptr);
+	EXPECT_STREQ(pCard->m_pDefaultTab, "controls");
+
+	const auto &vControlsCards = qm_card_catalog::ControlsCardStableIds();
+	EXPECT_NE(std::find_if(vControlsCards.begin(), vControlsCards.end(), [](const char *pStableId) {
+		return pStableId != nullptr && std::string(pStableId) == "qm:key_binds";
+	}),
+		vControlsCards.end());
+
+	const auto &vFunctionCards = qm_card_catalog::FunctionCardStableIds();
+	EXPECT_EQ(std::find_if(vFunctionCards.begin(), vFunctionCards.end(), [](const char *pStableId) {
+		return pStableId != nullptr && std::string(pStableId) == "qm:key_binds";
+	}),
+		vFunctionCards.end());
+
+	const qm_card_order::SEntry *pPlacement = qm_card_registry::FindDefaultPlacement("qm:key_binds");
+	ASSERT_NE(pPlacement, nullptr);
+	EXPECT_STREQ(pPlacement->m_pDefaultTab, "controls");
+	EXPECT_GT(pPlacement->m_Column, 0);
 }
 
 TEST(QmCardRegistry, BetterScoreboardSearchTargetsItsFunctionCard)
@@ -162,98 +207,96 @@ TEST(QmCardRegistry, P6QmClientContributorsCards)
 	EXPECT_STREQ(pDdnet->m_pDefaultTab, "credits-links");
 	EXPECT_STREQ(pTcDevelopers->m_pDefaultTab, "credits-links");
 	EXPECT_STREQ(pTcFiles->m_pDefaultTab, "general");
-	EXPECT_EQ(pCommunity->m_DefaultColumn, qm_card_registry::ECardColumn::Left);
-	EXPECT_EQ(pSponsors->m_DefaultColumn, qm_card_registry::ECardColumn::Right);
-	EXPECT_EQ(pDdnet->m_DefaultColumn, qm_card_registry::ECardColumn::Right);
-	EXPECT_EQ(pTcDevelopers->m_DefaultColumn, qm_card_registry::ECardColumn::Left);
-	EXPECT_EQ(pTcFiles->m_DefaultColumn, qm_card_registry::ECardColumn::Right);
-	EXPECT_EQ(pFriendLinks->m_DefaultColumn, qm_card_registry::ECardColumn::Left);
-	EXPECT_EQ(pCommunity->m_DefaultOrder, 1);
-	EXPECT_EQ(pTitle->m_DefaultOrder, 0);
-	EXPECT_EQ(pSponsors->m_DefaultOrder, 0);
-	EXPECT_EQ(pDdnet->m_DefaultOrder, 0);
-	EXPECT_EQ(pTcDevelopers->m_DefaultOrder, 1);
-	EXPECT_EQ(pTcFiles->m_DefaultOrder, 2);
-	EXPECT_EQ(pFriendLinks->m_DefaultOrder, 0);
+	// 列/序由瀑布分配：这里只锁定 tab 归属与默认 placement 的一致性。
+	for(const qm_card_registry::SCardDefault *pCard : {pCommunity, pSponsors, pDdnet, pTcDevelopers, pTcFiles, pFriendLinks})
+	{
+		ASSERT_NE(pCard, nullptr);
+		const qm_card_order::SEntry *pPlacement = qm_card_registry::FindDefaultPlacement(pCard->m_pStableId);
+		ASSERT_NE(pPlacement, nullptr) << pCard->m_pStableId;
+		EXPECT_STREQ(pPlacement->m_pDefaultTab, pCard->m_pDefaultTab) << pCard->m_pStableId;
+	}
 	EXPECT_EQ(qm_card_registry::FindByStableId("deck:tclient-info-links"), nullptr);
 	EXPECT_EQ(qm_card_registry::FindByStableId("deck:tclient-info-tabs"), nullptr);
 }
 
 TEST(QmCardRegistry, BindWheelUsesTwoColumnsByDefault)
 {
-	const auto *pEditor = qm_card_registry::FindByStableId("deck:tclient-bind-wheel-editor");
-	const auto *pPreview = qm_card_registry::FindByStableId("deck:tclient-bind-wheel-preview");
+	const qm_card_order::SEntry *pEditor = qm_card_registry::FindDefaultPlacement("deck:tclient-bind-wheel-editor");
+	const qm_card_order::SEntry *pPreview = qm_card_registry::FindDefaultPlacement("deck:tclient-bind-wheel-preview");
 	ASSERT_NE(pEditor, nullptr);
 	ASSERT_NE(pPreview, nullptr);
-	EXPECT_EQ(pEditor->m_DefaultColumn, qm_card_registry::ECardColumn::Left);
-	EXPECT_EQ(pPreview->m_DefaultColumn, qm_card_registry::ECardColumn::Right);
-	EXPECT_EQ(pEditor->m_DefaultOrder, 0);
-	EXPECT_EQ(pPreview->m_DefaultOrder, 0);
+	EXPECT_STREQ(pEditor->m_pDefaultTab, "tclient-bind-wheel");
+	EXPECT_STREQ(pPreview->m_pDefaultTab, "tclient-bind-wheel");
+	// 编辑器和预览各占一列：默认布局是双列而不是堆叠。
+	EXPECT_GT(pEditor->m_Column, 0);
+	EXPECT_GT(pPreview->m_Column, 0);
+	EXPECT_NE(pEditor->m_Column, pPreview->m_Column);
 }
 
-// 意图：注册表必须覆盖当前 Tclient 运行时 section 的 stable card id。
-// 这些 id 是全局 Search/迁移/默认补位的事实来源，漏掉会让对应卡片从全局卡片系统消失。
+// 意图：注册表必须覆盖当前 Tclient 运行时 section 的 stable card id，并写明每张卡的当前归属页。
+// 归属页是可变的重构结果（预测相关三卡已迁到 DDNet 页的「网络补偿」子页签），所以断言
+// 「注册表覆盖 + 归属正确」，不再用一句「全都属于 tclient」把页面结构焊死。
 TEST(QmCardRegistry, CoversCurrentTClientSectionIds)
 {
-	const char *apIds[] = {
-		"tclient:visual-font-cursor",
-		"tclient:visual-nameplates",
-		"tclient:visual-effects",
-		"tclient:input",
-		"tclient:anti-latency-tools",
-		"tclient:improved-anti-ping",
-		"tclient:execute-on-join",
-		"tclient:voting",
-		"tclient:auto-reply",
-		"tclient:player-indicator",
-		"tclient:pet",
-		"tclient:hud",
-		"tclient:tee-status-bar",
-		"tclient:tile-outlines",
-		"tclient:ghost-tools",
-		"tclient:rainbow",
-		"tclient:tee-trails",
-		"tclient:background-draw",
-		"tclient:finish-name",
-	};
-	for(const char *pId : apIds)
+	struct SExpectation
 	{
-		const auto *pDefault = qm_card_registry::FindByStableId(pId);
-		ASSERT_NE(pDefault, nullptr) << pId;
-		EXPECT_STREQ(pDefault->m_pDefaultTab, "tclient") << pId;
+		const char *m_pStableId;
+		const char *m_pTab;
+	};
+	const SExpectation aIds[] = {
+		{"tclient:visual-font-cursor", "tclient"},
+		{"tclient:visual-nameplates", "tclient"},
+		{"tclient:visual-effects", "tclient"},
+		// 预测相关三卡：实现仍是 TClient 卡，归属页是 DDNet 页的「网络补偿」子页签。
+		{"tclient:input", "ddnet-prediction"},
+		{"tclient:anti-latency-tools", "ddnet-prediction"},
+		{"tclient:improved-anti-ping", "ddnet-prediction"},
+		{"tclient:execute-on-join", "tclient"},
+		{"tclient:voting", "tclient"},
+		{"tclient:auto-reply", "tclient"},
+		{"tclient:player-indicator", "tclient"},
+		{"tclient:pet", "tclient"},
+		{"tclient:hud", "tclient"},
+		{"tclient:tee-status-bar", "tclient"},
+		{"tclient:tile-outlines", "tclient"},
+		{"tclient:ghost-tools", "tclient"},
+		{"tclient:rainbow", "tclient"},
+		{"tclient:tee-trails", "tclient"},
+		{"tclient:background-draw", "tclient"},
+		{"tclient:finish-name", "tclient"},
+	};
+	for(const SExpectation &Expectation : aIds)
+	{
+		const auto *pDefault = qm_card_registry::FindByStableId(Expectation.m_pStableId);
+		ASSERT_NE(pDefault, nullptr) << Expectation.m_pStableId;
+		EXPECT_STREQ(pDefault->m_pDefaultTab, Expectation.m_pTab) << Expectation.m_pStableId;
 	}
 }
 
-TEST(QmCardRegistry, TClientMainCardsAlternateColumnsByDefault)
+// 意图：Tclient 页卡片全部登记在同一 tab 下，默认瀑布把两列都填满并保持高度接近，
+// 不再依赖"逐张交替"的手写列号。页面成员从 CatalogPageStableIds()（生产事实）取，
+// 迁移走的卡片不应再留在 TClient 页。
+TEST(QmCardRegistry, TClientMainCardsFillBothDefaultColumns)
 {
-	const char *apIds[] = {
-		"tclient:visual-font-cursor",
-		"tclient:visual-nameplates",
-		"tclient:visual-effects",
-		"tclient:input",
-		"tclient:anti-latency-tools",
-		"tclient:improved-anti-ping",
-		"tclient:execute-on-join",
-		"tclient:voting",
-		"tclient:auto-reply",
-		"tclient:player-indicator",
-		"tclient:pet",
-		"tclient:hud",
-		"tclient:tee-status-bar",
-		"tclient:tile-outlines",
-		"tclient:ghost-tools",
-		"tclient:rainbow",
-		"tclient:tee-trails",
-		"tclient:background-draw",
-		"tclient:finish-name",
-	};
-	for(size_t Index = 0; Index < std::size(apIds); ++Index)
+	const auto &vIds = qm_card_catalog::CatalogPageStableIds("tclient");
+	ASSERT_FALSE(vIds.empty());
+	for(const char *pId : vIds)
 	{
-		const auto *pDefault = qm_card_registry::FindByStableId(apIds[Index]);
-		ASSERT_NE(pDefault, nullptr) << apIds[Index];
-		EXPECT_EQ(pDefault->m_DefaultColumn, Index % 2 == 0 ? qm_card_registry::ECardColumn::Left : qm_card_registry::ECardColumn::Right) << apIds[Index];
-		EXPECT_EQ(pDefault->m_DefaultOrder, static_cast<int>(Index / 2)) << apIds[Index];
+		const qm_card_order::SEntry *pPlacement = qm_card_registry::FindDefaultPlacement(pId);
+		ASSERT_NE(pPlacement, nullptr) << pId;
+		EXPECT_STREQ(pPlacement->m_pDefaultTab, "tclient") << pId;
+		EXPECT_GT(pPlacement->m_Column, 0) << pId;
 	}
+	// 预测相关三卡整卡迁到 DDNet 页「网络补偿」子页签，TClient 页不再有它们的副本。
+	for(const char *pMoved : {"tclient:input", "tclient:anti-latency-tools", "tclient:improved-anti-ping"})
+	{
+		const bool StillInTClient = std::any_of(vIds.begin(), vIds.end(), [pMoved](const char *pId) { return str_comp(pId, pMoved) == 0; });
+		EXPECT_FALSE(StillInTClient) << pMoved;
+	}
+	const STabColumnBalance Balance = DefaultColumnBalance("tclient");
+	EXPECT_GT(Balance.m_Counts[0], 0);
+	EXPECT_GT(Balance.m_Counts[1], 0);
+	EXPECT_LE(std::max(Balance.m_Heights[0], Balance.m_Heights[1]), std::min(Balance.m_Heights[0], Balance.m_Heights[1]) * 2);
 }
 
 TEST(QmCardRegistry, TClientMigrationCommitPlanRetriesOnlyPersistenceFailures)
@@ -430,7 +473,8 @@ TEST(QmCardRegistry, CoversCurrentSettingsDeckIds)
 		"deck:graphics-display",
 		"deck:player-identity",
 		"deck:player-country",
-		"deck:graphics-visual",
+		"deck:graphics-card-effects",
+		"deck:graphics-theme",
 		"deck:graphics-modes",
 		"deck:graphics-interaction",
 		"deck:sound-toggle",
@@ -446,6 +490,7 @@ TEST(QmCardRegistry, CoversCurrentSettingsDeckIds)
 		"deck:tclient-status-bar-preview",
 		"deck:appearance-hud-main",
 		"deck:appearance-hud-ddrace",
+		"deck:appearance-scoreboard",
 		"deck:appearance-chat-settings",
 		"deck:appearance-chat-messages",
 		"deck:appearance-chat-preview",
@@ -472,33 +517,26 @@ TEST(QmCardRegistry, CoversCurrentSettingsDeckIds)
 	EXPECT_EQ(qm_card_registry::FindByStableId("deck:tclient-status-bar-items"), nullptr);
 }
 
-TEST(QmCardRegistry, ControlsStandardPageCardsPersistInVisualOrder)
+// 意图：标准页的默认 placement 必须随全局 model 往返持久化，避免重启后列投影或 Search 跳转丢失卡片。
+// 期望值同样来自默认模型：不逐卡写死列/序，加卡时这条测试不需要改动。
+TEST(QmCardRegistry, StandardPageCardsPersistInVisualOrder)
 {
+	const std::vector<qm_card_order::SEntry> Defaults = qm_card_registry::BuildDefaultEntries();
+	qm_card_order::CModel DefaultModel;
+	DefaultModel.SetEntries(Defaults);
 	const qm_card_order::CModel Model = RegistryModelAfterRoundTrip();
-	EXPECT_EQ(Model.StableIdOrder("deck:", "controls", 1), (std::vector<std::string>{"deck:controls-mouse", "deck:controls-controller", "deck:controls-movement", "deck:controls-weapon"}));
-	EXPECT_EQ(Model.StableIdOrder("deck:", "controls", 2), (std::vector<std::string>{"deck:controls-voting", "deck:controls-chat", "deck:controls-dummy", "deck:controls-miscellaneous", "deck:controls-custom"}));
-}
-
-// 意图：General 的默认卡片顺序必须随全局 model 往返持久化，避免重启后列投影或 Search 跳转丢失 placement。
-TEST(QmCardRegistry, GeneralStandardPageCardsPersistInVisualOrder)
-{
-	const qm_card_order::CModel Model = RegistryModelAfterRoundTrip();
-	EXPECT_EQ(Model.StableIdOrder("deck:", "general", 1),
-		(std::vector<std::string>{"deck:general-game", "deck:general-client"}));
-	// 配置文件卡（原 TClient 信息 tab）排在常规页右列末尾。
-	EXPECT_EQ(Model.StableIdOrder("deck:", "general", 2),
-		(std::vector<std::string>{"deck:general-language", "deck:general-recording", "deck:tclient-info-files"}));
-} // 意图：appearance deck 的默认 placement 必须与运行时子页和列顺序对齐。
-
-// 意图：Player 页的身份和国家选择必须在重启后保持左右两列的默认 placement，
-// 否则全局 Search 或自定义排序会丢失目标卡片。
-TEST(QmCardRegistry, PlayerStandardPageCardsPersistInVisualOrder)
-{
-	const qm_card_order::CModel Model = RegistryModelAfterRoundTrip();
-	EXPECT_EQ(Model.StableIdOrder("deck:", "player", 1),
-		(std::vector<std::string>{"deck:player-identity"}));
-	EXPECT_EQ(Model.StableIdOrder("deck:", "player", 2),
-		(std::vector<std::string>{"deck:player-country"}));
+	for(const char *pTab : {"controls", "general", "player"})
+	{
+		SCOPED_TRACE(pTab);
+		bool AnyCard = false;
+		for(int Column = 0; Column < 3; ++Column)
+		{
+			const auto vExpected = DefaultModel.StableIdOrder("deck:", pTab, Column);
+			AnyCard = AnyCard || !vExpected.empty();
+			EXPECT_EQ(Model.StableIdOrder("deck:", pTab, Column), vExpected);
+		}
+		EXPECT_TRUE(AnyCard) << pTab;
+	}
 }
 
 TEST(QmCardRegistry, LegacyGroupMigrationRejectsExtraCardInTargetTab)
@@ -583,38 +621,38 @@ TEST(QmCardRegistry, ExactMigrationRejectsDuplicateStableIdsWithoutChangingModel
 	EXPECT_EQ(Model.LayoutRevision(), Revision);
 }
 
-// 意图：Graphics 试点卡片的 placement 已是公共 registry 的事实源；补齐滚动时不得破坏序列化后的列顺序。
-TEST(QmCardRegistry, GraphicsPilotPlacementSurvivesSerialization)
+// 意图：页面默认 placement 由注册表瀑布决定，序列化往返后每个页面每列的卡片序列都不变。
+TEST(QmCardRegistry, PageDefaultPlacementSurvivesSerialization)
 {
-	const qm_card_order::CModel Model = RegistryModelAfterRoundTrip();
-	EXPECT_EQ(Model.StableIdOrder("deck:", "graphics", 1),
-		(std::vector<std::string>{"deck:graphics-display", "deck:graphics-visual", "deck:graphics-icons"}));
-	EXPECT_EQ(Model.StableIdOrder("deck:", "graphics", 2),
-		(std::vector<std::string>{"deck:graphics-modes", "deck:graphics-interaction"}));
+	const std::vector<qm_card_order::SEntry> Defaults = qm_card_registry::BuildDefaultEntries();
+	qm_card_order::CModel DefaultModel;
+	DefaultModel.SetEntries(Defaults);
+	qm_card_order::CModel Source;
+	Source.SetEntries(Defaults);
+	char aSerialized[32768];
+	ASSERT_TRUE(Source.Serialize(aSerialized, sizeof(aSerialized)));
+	qm_card_order::CModel Reloaded;
+	ASSERT_TRUE(Reloaded.LoadMerged(aSerialized, Defaults));
+	for(const char *pTab : {"visual", "function", "hud", "controls", "general", "player", "tee", "graphics", "sound", "ddnet", "tclient",
+		    "appearance-chat", "appearance-hud", "appearance-name-plate", "appearance-laser", "appearance-hook-collision", "tclient-status-bar"})
+	{
+		SCOPED_TRACE(pTab);
+		for(int Column = 0; Column < 3; ++Column)
+			EXPECT_EQ(Reloaded.StableIdOrder("", pTab, Column), DefaultModel.StableIdOrder("", pTab, Column));
+	}
 }
 
-// 意图：Sound 页的音频包卡必须默认位于右列，和运行时 Deck 的双列内容密度保持一致。
-TEST(QmCardRegistry, SoundStandardPageCardsPersistInVisualOrder)
+// 意图：实体层调整必须归到 DDNet 页、可被目录页取到，且具备 deck 渲染器。
+TEST(QmCardRegistry, DDNetEntityOverlayBelongsToDdnetPage)
 {
-	const qm_card_order::CModel Model = RegistryModelAfterRoundTrip();
-	EXPECT_EQ(Model.StableIdOrder("deck:", "sound", 1),
-		(std::vector<std::string>{"deck:sound-toggle", "deck:sound-volume"}));
-	EXPECT_EQ(Model.StableIdOrder("deck:", "sound", 2),
-		(std::vector<std::string>{"deck:sound-audio-pack"}));
-}
-
-// 意图：实体层调整位于 DDNet 右列首位，序列化后仍保持该归属和阅读顺序。
-TEST(QmCardRegistry, DDNetStandardPageCardsPersistInVisualOrder)
-{
-	const qm_card_order::CModel Model = RegistryModelAfterRoundTrip();
-	EXPECT_EQ(Model.StableIdOrder("", "ddnet", 1),
-		(std::vector<std::string>{"deck:ddnet-demo", "deck:ddnet-gameplay"}));
-	EXPECT_EQ(Model.StableIdOrder("", "ddnet", 2),
-		(std::vector<std::string>{"qm:entity_overlay", "deck:ddnet-background", "deck:ddnet-miscellaneous", "qm:system_media_controls"}));
-
 	const auto *pCard = qm_card_registry::FindByStableId("qm:entity_overlay");
 	ASSERT_NE(pCard, nullptr);
+	EXPECT_STREQ(pCard->m_pDefaultTab, "ddnet");
 	EXPECT_STREQ(pCard->m_pTitle, "Entity layer adjustments");
+	const qm_card_order::SEntry *pPlacement = qm_card_registry::FindDefaultPlacement("qm:entity_overlay");
+	ASSERT_NE(pPlacement, nullptr);
+	EXPECT_STREQ(pPlacement->m_pDefaultTab, "ddnet");
+	EXPECT_GT(pPlacement->m_Column, 0);
 	const auto &vDDNetCards = qm_card_catalog::CatalogPageStableIds("ddnet");
 	EXPECT_NE(std::find_if(vDDNetCards.begin(), vDDNetCards.end(), [](const char *pStableId) { return std::string(pStableId) == "qm:entity_overlay"; }), vDDNetCards.end());
 	const auto &vVisualCards = qm_card_catalog::VisualCardStableIds();
@@ -678,17 +716,26 @@ TEST(QmCardRegistry, TClientWarListLegacyCardsStayRemovedAfterFreshReload)
 TEST(QmCardRegistry, TClientStatusBarUsesMergedPreviewCard)
 {
 	qm_card_order::CModel Model = RegistryModelAfterRoundTrip();
-	EXPECT_EQ(Model.StableIdOrder("deck:", "tclient-status-bar", 1),
-		(std::vector<std::string>{"deck:tclient-status-bar-settings", "deck:tclient-status-bar-preview"}));
-	EXPECT_TRUE(Model.StableIdOrder("deck:", "tclient-status-bar", 2).empty());
+	// 三列合起来恰好两张卡：设置卡 + 合并后的预览卡（左右列由瀑布分配，不写死在哪一列）。
+	std::vector<std::string> vCards;
+	for(int Column = 0; Column < 3; ++Column)
+	{
+		const auto vColumn = Model.StableIdOrder("deck:", "tclient-status-bar", Column);
+		vCards.insert(vCards.end(), vColumn.begin(), vColumn.end());
+	}
+	ASSERT_EQ(vCards.size(), 2u);
+	EXPECT_NE(std::find(vCards.begin(), vCards.end(), std::string("deck:tclient-status-bar-settings")), vCards.end());
+	EXPECT_NE(std::find(vCards.begin(), vCards.end(), std::string("deck:tclient-status-bar-preview")), vCards.end());
+	EXPECT_EQ(Model.FindByStableId("deck:tclient-status-bar-items"), -1);
 
-	Model.Move("deck:tclient-status-bar-preview", 2, 0);
+	// 用户把预览卡拖到左列首位后必须原样保存（默认布局里它在另一列）。
+	Model.Move("deck:tclient-status-bar-preview", 1, 0);
 	char aSerialized[8192];
 	ASSERT_TRUE(Model.Serialize(aSerialized, sizeof(aSerialized)));
 	qm_card_order::CModel Reloaded;
 	ASSERT_TRUE(Reloaded.LoadMerged(aSerialized, qm_card_registry::BuildDefaultEntries()));
-	EXPECT_EQ(Reloaded.StableIdOrder("deck:", "tclient-status-bar", 2),
-		(std::vector<std::string>{"deck:tclient-status-bar-preview"}));
+	EXPECT_EQ(Reloaded.StableIdOrder("deck:", "tclient-status-bar", 1),
+		(std::vector<std::string>{"deck:tclient-status-bar-preview", "deck:tclient-status-bar-settings"}));
 }
 
 // 意图：旧的独立代码卡在 registry 合并和配置写回后不能在下一次加载时重新出现。
@@ -810,48 +857,132 @@ TEST(QmCardRegistry, GlobalCardOrderSurvivesFreshConfigManagerReload)
 
 		qm_card_order::CModel Reloaded;
 		ASSERT_TRUE(Reloaded.LoadMerged(g_Config.m_QmGlobalCardOrder, qm_card_registry::BuildDefaultEntries()));
-		EXPECT_EQ(Reloaded.StableIdOrder("deck:", "tee", 0), (std::vector<std::string>{"deck:tee-skin-list", "deck:tee-identity"}));
-		EXPECT_EQ(Reloaded.StableIdOrder("deck:", "tee", 1), (std::vector<std::string>{"deck:tee-skin-options"}));
-		EXPECT_EQ(Reloaded.StableIdOrder("deck:", "tee", 2), (std::vector<std::string>{"deck:tee-skin-queue", "deck:tee-glow"}));
+		EXPECT_EQ(Reloaded.StableIdOrder("deck:", "tee", 0), CustomizedModel.StableIdOrder("deck:", "tee", 0));
+		EXPECT_EQ(Reloaded.StableIdOrder("deck:", "tee", 1), CustomizedModel.StableIdOrder("deck:", "tee", 1));
+		EXPECT_EQ(Reloaded.StableIdOrder("deck:", "tee", 2), CustomizedModel.StableIdOrder("deck:", "tee", 2));
+		EXPECT_EQ(Reloaded.StableIdOrder("deck:", "tclient-status-bar", 2), CustomizedModel.StableIdOrder("deck:", "tclient-status-bar", 2));
+		EXPECT_EQ(Reloaded.StableIdOrder("deck:", "tclient-profiles", 2), CustomizedModel.StableIdOrder("deck:", "tclient-profiles", 2));
 		EXPECT_TRUE(Reloaded.StableIdOrder("deck:", "tclient-status-bar", 1).empty());
-		EXPECT_EQ(Reloaded.StableIdOrder("deck:", "tclient-status-bar", 2), (std::vector<std::string>{"deck:tclient-status-bar-settings", "deck:tclient-status-bar-preview"}));
 		EXPECT_TRUE(Reloaded.StableIdOrder("deck:", "tclient-profiles", 1).empty());
-		EXPECT_EQ(Reloaded.StableIdOrder("deck:", "tclient-profiles", 2), (std::vector<std::string>{"deck:tclient-profiles"}));
 	}
 }
 
-// 否则全局默认补位会把不同 appearance 子页混在同一个 tab 下，或留下 order 空洞。
+// 意图：全局默认补位不能把不同 appearance 子页混在同一个 tab 下，也不能留下 order 空洞；
+// 左右列由对称瀑布分配，聊天气泡卡不再被固定塞进左列（用户报告的左右悬殊）。
 TEST(QmCardRegistry, AppearanceDeckDefaultsUseSubPagePlacements)
 {
-	struct SExpectedPlacement
+	struct SExpectedTab
 	{
 		const char *m_pStableId;
 		const char *m_pTab;
-		qm_card_registry::ECardColumn m_Column;
-		int m_Order;
 	};
-	const SExpectedPlacement aExpected[] = {
-		{"deck:appearance-hud-main", "appearance-hud", qm_card_registry::ECardColumn::Left, 0},
-		{"deck:appearance-hud-ddrace", "appearance-hud", qm_card_registry::ECardColumn::Right, 0},
-		{"deck:appearance-chat-settings", "appearance-chat", qm_card_registry::ECardColumn::Left, 0},
-		{"deck:appearance-chat-messages", "appearance-chat", qm_card_registry::ECardColumn::Right, 0},
-		{"deck:appearance-chat-preview", "appearance-chat", qm_card_registry::ECardColumn::Left, 1},
-		{"deck:appearance-name-plate-settings", "appearance-name-plate", qm_card_registry::ECardColumn::Left, 0},
-		{"deck:appearance-name-plate-preview", "appearance-name-plate", qm_card_registry::ECardColumn::Right, 0},
-		{"deck:appearance-hook-collision-main", "appearance-hook-collision", qm_card_registry::ECardColumn::Left, 0},
-		{"deck:appearance-hook-collision-preview", "appearance-hook-collision", qm_card_registry::ECardColumn::Right, 0},
-		{"deck:appearance-info-messages", "appearance-info-messages", qm_card_registry::ECardColumn::Left, 0},
-		{"deck:appearance-laser-enhanced", "appearance-laser", qm_card_registry::ECardColumn::Left, 0},
-		{"deck:appearance-laser-colors", "appearance-laser", qm_card_registry::ECardColumn::Left, 1},
-		{"deck:appearance-laser-preview", "appearance-laser", qm_card_registry::ECardColumn::Right, 0},
+	const SExpectedTab aExpected[] = {
+		{"deck:appearance-hud-main", "appearance-hud"},
+		{"deck:appearance-hud-ddrace", "appearance-hud"},
+		{"deck:appearance-scoreboard", "appearance-hud"},
+		{"deck:appearance-chat-settings", "appearance-chat"},
+		{"deck:appearance-chat-messages", "appearance-chat"},
+		{"deck:appearance-chat-preview", "appearance-chat"},
+		{"qm:chat_bubble", "appearance-chat"},
+		{"deck:appearance-name-plate-settings", "appearance-name-plate"},
+		{"deck:appearance-name-plate-preview", "appearance-name-plate"},
+		{"deck:appearance-hook-collision-main", "appearance-hook-collision"},
+		{"deck:appearance-hook-collision-preview", "appearance-hook-collision"},
+		{"deck:appearance-info-messages", "appearance-info-messages"},
+		{"deck:appearance-laser-enhanced", "appearance-laser"},
+		{"deck:appearance-laser-colors", "appearance-laser"},
+		{"deck:appearance-laser-preview", "appearance-laser"},
 	};
-	for(const SExpectedPlacement &Expected : aExpected)
+	for(const SExpectedTab &Expected : aExpected)
 	{
 		const auto *pDefault = qm_card_registry::FindByStableId(Expected.m_pStableId);
 		ASSERT_NE(pDefault, nullptr) << Expected.m_pStableId;
 		EXPECT_STREQ(pDefault->m_pDefaultTab, Expected.m_pTab) << Expected.m_pStableId;
-		EXPECT_EQ(pDefault->m_DefaultColumn, Expected.m_Column) << Expected.m_pStableId;
-		EXPECT_EQ(pDefault->m_DefaultOrder, Expected.m_Order) << Expected.m_pStableId;
+		const qm_card_order::SEntry *pPlacement = qm_card_registry::FindDefaultPlacement(Expected.m_pStableId);
+		ASSERT_NE(pPlacement, nullptr) << Expected.m_pStableId;
+		EXPECT_STREQ(pPlacement->m_pDefaultTab, Expected.m_pTab) << Expected.m_pStableId;
+		EXPECT_GT(pPlacement->m_Column, 0) << Expected.m_pStableId; // 子页卡片都是半宽卡
+	}
+}
+
+// 意图：聊天气泡卡曾默认留在左列，左列三张、右列一张，两列高度悬殊（用户报告的缺陷）。
+// 瀑布分配必须让聊天页两列都拿到卡片，并把两列高度控制在同一个量级。
+TEST(QmCardRegistry, ChatPageDefaultsKeepBothColumnsEvenlyFilled)
+{
+	const STabColumnBalance Balance = DefaultColumnBalance("appearance-chat");
+	EXPECT_GT(Balance.m_Counts[0], 0);
+	EXPECT_GT(Balance.m_Counts[1], 0);
+	const int Smallest = std::min(Balance.m_Heights[0], Balance.m_Heights[1]);
+	const int Largest = std::max(Balance.m_Heights[0], Balance.m_Heights[1]);
+	EXPECT_GE(Smallest * 4, Largest * 3) << "左=" << Balance.m_Heights[0] << " 右=" << Balance.m_Heights[1];
+}
+
+// 意图：默认布局「对称瀑布」的分配规则：按注册表顺序把每张半宽卡放进当前累计高度更矮的一列
+// （等高放左列），全宽卡独占一行并重置两列高度。任何一张卡被塞进更深的一列都会让这个重放失败，
+// 也就是用户报告的「某张卡被塞到左列、右列深坑」不再出现。
+TEST(QmCardRegistry, DefaultLayoutNeverPlacesACardIntoTheDeeperColumn)
+{
+	struct STabReplay
+	{
+		int m_aHeight[2] = {0, 0};
+		int m_FullWidthCount = 0;
+	};
+	std::map<std::string, STabReplay> Tabs;
+	for(const qm_card_registry::SCardDefault &Card : qm_card_registry::Defaults())
+	{
+		SCOPED_TRACE(Card.m_pStableId);
+		const qm_card_order::SEntry *pPlacement = qm_card_registry::FindDefaultPlacement(Card.m_pStableId);
+		ASSERT_NE(pPlacement, nullptr);
+		const std::string Tab(Card.m_pDefaultTab != nullptr ? Card.m_pDefaultTab : "");
+		STabReplay &Replay = Tabs[Tab];
+		if(Card.m_FullWidth)
+		{
+			EXPECT_EQ(pPlacement->m_Column, 0) << "全宽卡独占一行";
+			EXPECT_EQ(pPlacement->m_OrderInColumn, Replay.m_FullWidthCount) << "全宽卡按注册表顺序排列";
+			++Replay.m_FullWidthCount;
+			Replay.m_aHeight[0] = 0;
+			Replay.m_aHeight[1] = 0;
+			continue;
+		}
+		const int Side = Replay.m_aHeight[0] <= Replay.m_aHeight[1] ? 0 : 1;
+		EXPECT_EQ(pPlacement->m_Column, Side + 1) << "左高=" << Replay.m_aHeight[0] << " 右高=" << Replay.m_aHeight[1];
+		Replay.m_aHeight[Side] += qm_card_registry::DefaultCardHeightWeight(Card.m_pStableId);
+	}
+}
+
+// 意图：每张卡的默认 placement 必须可预测且落在注册表顺序上：同一列内的卡片顺序是
+// 注册表顺序的子序列，且列内序号从 0 连续递增（否则 NormalizeColumns 之后读序会跳）。
+TEST(QmCardRegistry, DefaultColumnOrderFollowsRegistrationOrder)
+{
+	std::vector<std::string> vRegistrationOrder;
+	for(const qm_card_registry::SCardDefault &Card : qm_card_registry::Defaults())
+		if(Card.m_pDefaultTab != nullptr)
+			vRegistrationOrder.emplace_back(Card.m_pStableId);
+	const std::vector<qm_card_order::SEntry> Entries = qm_card_registry::BuildDefaultEntries();
+	std::map<std::string, std::vector<std::string>> PerColumn;
+	for(const qm_card_order::SEntry &Entry : Entries)
+	{
+		if(Entry.m_pStableId == nullptr || Entry.m_pDefaultTab == nullptr)
+			continue;
+		std::string Key(Entry.m_pDefaultTab);
+		Key.push_back('#');
+		Key.append(std::to_string(Entry.m_Column));
+		PerColumn[Key].resize(static_cast<size_t>(Entry.m_OrderInColumn) + 1);
+		PerColumn[Key][static_cast<size_t>(Entry.m_OrderInColumn)] = Entry.m_pStableId;
+	}
+	for(const auto &[Key, vIds] : PerColumn)
+	{
+		SCOPED_TRACE(Key);
+		// 序号连续到 max+1：没有空洞，也没有重复占位。
+		EXPECT_EQ(std::count(vIds.begin(), vIds.end(), std::string()), 0) << "列内序号必须连续";
+		// 列内顺序是注册表顺序的子序列：瀑布只决定"落哪列"，不允许打乱读序。
+		size_t RegistrationCursor = 0;
+		for(const std::string &Id : vIds)
+		{
+			const auto It = std::find(vRegistrationOrder.begin() + RegistrationCursor, vRegistrationOrder.end(), Id);
+			ASSERT_NE(It, vRegistrationOrder.end()) << Id;
+			RegistrationCursor = static_cast<size_t>(std::distance(vRegistrationOrder.begin(), It)) + 1;
+		}
 	}
 }
 
@@ -870,12 +1001,17 @@ TEST(QmCardRegistry, BuildDefaultEntriesCoversEveryRegisteredCard)
 	EXPECT_GE(Model.StateIndexForStableId("deck:sound-audio-pack"), 0);
 	EXPECT_GE(Model.StateIndexForStableId("deck:appearance-chat-preview"), 0);
 
+	// 列/序自洽：列号只在 0/1/2，order 非负；序列化后能原样重建。
+	for(const qm_card_order::SEntry &Entry : Entries)
+	{
+		ASSERT_NE(Entry.m_pStableId, nullptr);
+		EXPECT_GE(Entry.m_Column, 0) << Entry.m_pStableId;
+		EXPECT_LE(Entry.m_Column, 2) << Entry.m_pStableId;
+		EXPECT_GE(Entry.m_OrderInColumn, 0) << Entry.m_pStableId;
+	}
 	char aBuf[8192];
-	Model.Serialize(aBuf, sizeof(aBuf));
-	const std::string Serialized(aBuf);
-	EXPECT_NE(Serialized.find("tclient:auto-reply|tclient|left|4;"), std::string::npos);
-	EXPECT_NE(Serialized.find("deck:sound-audio-pack|sound|right|0;"), std::string::npos);
-	EXPECT_NE(Serialized.find("deck:appearance-chat-preview|appearance-chat|left|1;"), std::string::npos);
+	ASSERT_TRUE(Model.Serialize(aBuf, sizeof(aBuf)));
+	EXPECT_NE(std::string(aBuf).find("qm:chat_bubble|appearance-chat|"), std::string::npos);
 }
 
 // 意图：全局搜索页不能只展示 stableId 占位符，注册表要提供可读标题与搜索关键词。
@@ -1071,10 +1207,12 @@ TEST(QmCardRegistry, LyricsCardRegisteredForSidebarModuleMigration)
 {
 	const qm_card_registry::SCardDefault *pLyrics = qm_card_registry::FindByStableId("qm:lyrics");
 	ASSERT_NE(pLyrics, nullptr);
-	// 与 s_aQmModuleDefaults 的 Lyrics（Right, 16）保持一致。
 	EXPECT_STREQ(pLyrics->m_pDefaultTab, "hud");
-	EXPECT_EQ(pLyrics->m_DefaultColumn, qm_card_registry::ECardColumn::Right);
-	EXPECT_EQ(pLyrics->m_DefaultOrder, 16);
+	// 默认列/序由瀑布分配决定：这里只锁定它是一条 hud 页的半宽卡，且能随全局顺序往返。
+	const qm_card_order::SEntry *pPlacement = qm_card_registry::FindDefaultPlacement("qm:lyrics");
+	ASSERT_NE(pPlacement, nullptr);
+	EXPECT_STREQ(pPlacement->m_pDefaultTab, "hud");
+	EXPECT_GT(pPlacement->m_Column, 0);
 	EXPECT_GE(RegistryModelAfterRoundTrip().StateIndexForStableId("qm:lyrics"), 0);
 }
 
@@ -1084,7 +1222,10 @@ TEST(QmCardRegistry, DebugModeCardRegisteredInHudTab)
 	const auto *pDefault = qm_card_registry::FindByStableId("qm:debug_mode");
 	ASSERT_NE(pDefault, nullptr);
 	EXPECT_STREQ(pDefault->m_pDefaultTab, "hud");
-	EXPECT_EQ(pDefault->m_DefaultColumn, qm_card_registry::ECardColumn::Right);
+	const qm_card_order::SEntry *pPlacement = qm_card_registry::FindDefaultPlacement("qm:debug_mode");
+	ASSERT_NE(pPlacement, nullptr);
+	EXPECT_STREQ(pPlacement->m_pDefaultTab, "hud");
+	EXPECT_GT(pPlacement->m_Column, 0);
 	ASSERT_NE(pDefault->m_pSearchKeywords, nullptr);
 	EXPECT_NE(std::string(pDefault->m_pSearchKeywords).find("调试模式"), std::string::npos);
 	qm_module::EQmModuleId Id;
@@ -1151,6 +1292,11 @@ TEST(QmCardRegistry, TimeoutDisconnectSearchPointsToControls)
 		{
 			EXPECT_EQ(UniqueIds.count("qm:key_binds"), 1u);
 			EXPECT_EQ(UniqueIds.count("qm:bind_editor"), 1u);
+			const auto KeyBinds = std::find_if(Results.begin(), Results.end(), [](const auto &Result) {
+				return Result.m_pStableId != nullptr && std::string(Result.m_pStableId) == "qm:key_binds";
+			});
+			ASSERT_NE(KeyBinds, Results.end());
+			EXPECT_STREQ(KeyBinds->m_Target.m_pTab, "controls");
 		}
 	}
 }
@@ -1202,6 +1348,37 @@ TEST(QmCardRegistry, FavoriteMapsCardIsRemovedFromSettingsAndSearch)
 		const auto Results = qm_card_registry::SearchCards(pQuery, Model);
 		EXPECT_FALSE(std::any_of(Results.begin(), Results.end(), [](const auto &Result) {
 			return std::string(Result.m_pStableId) == "qm:favorite_maps";
+		}));
+	}
+}
+
+// 标准卡（deck:）与 TClient 卡是两个互斥的渲染目录：DDNet 页「网络补偿」子页签
+// 里也有 deck: 前缀的卡（deck:ddnet-prediction），若同时被判成 TClient 卡，
+// BuildCard 会先命中 TClient 分派、落到没有该卡分支的实现，卡片变 0 高空壳。
+TEST(QmCardRegistry, StandardCardsAreNeverRoutedThroughTheTClientDirectory)
+{
+	for(const qm_card_registry::SCardDefault &Default : qm_card_registry::Defaults())
+	{
+		if(Default.m_pStableId == nullptr || Default.m_pNavigationStableId != nullptr)
+			continue;
+		if(!qm_card_catalog::IsStandardCard(Default.m_pStableId))
+			continue;
+		SCOPED_TRACE(Default.m_pStableId);
+		EXPECT_FALSE(qm_card_catalog::IsTClientCard(Default.m_pStableId));
+	}
+	// 迁到「网络补偿」子页签的三张卡实现仍在 TClient 模块，必须继续走 TClient 目录。
+	for(const char *pId : {"tclient:input", "tclient:anti-latency-tools", "tclient:improved-anti-ping"})
+	{
+		SCOPED_TRACE(pId);
+		EXPECT_TRUE(qm_card_catalog::IsTClientCard(pId));
+		EXPECT_FALSE(qm_card_catalog::IsStandardCard(pId));
+	}
+	const auto &vPredictionPage = qm_card_catalog::CatalogPageStableIds("ddnet-prediction");
+	for(const char *pId : {"deck:ddnet-prediction", "tclient:input", "tclient:anti-latency-tools", "tclient:improved-anti-ping"})
+	{
+		SCOPED_TRACE(pId);
+		EXPECT_TRUE(std::any_of(vPredictionPage.begin(), vPredictionPage.end(), [pId](const char *pCandidate) {
+			return std::string(pCandidate) == pId;
 		}));
 	}
 }

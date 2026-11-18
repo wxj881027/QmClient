@@ -57,6 +57,8 @@ namespace
 			m_aTextureCoords = {vec2(X0, Y0), vec2(X1, Y1), vec2(X2, Y2), vec2(X3, Y3)};
 			m_TextureIndex = Index;
 		}
+		// 引擎接口新增的纹理目标标志：测试桩不加载真实纹理，统一返回 0（不启用数组/3D 目标）。
+		int TextureLoadFlags() override { return 0; }
 		void QuadsDrawTL(const CQuadItem *pArray, int Num) override { Record(pArray, Num, false); }
 		void QuadsTex3DDrawTL(const CQuadItem *pArray, int Num) override { Record(pArray, Num, true); }
 

@@ -65,38 +65,31 @@ void CMenus::RenderQmFunctionKeyBindsContent(CUIRect &Content, float LineHeight,
 		s_ReaderButtonTimeoutDisconnect, s_ClearButtonTimeoutDisconnect;
 	[[maybe_unused]] static CButtonContainer s_ReaderButtonDeepflyToggle, s_ClearButtonDeepflyToggle;
 
-	if(Flow.Control("key-hdf", LineHeight, Row))
+	// 行距由每行自己声明（声明阶段记到上一行末尾），行后不再补 Space。
+	if(Flow.Control("key-hdf", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		RenderQmHudKeyBindRow(Row, s_ReaderButtonDummyPseudo, s_ClearButtonDummyPseudo,
 			Localize("HDF"), "+toggle cl_dummy_hammer 1 0", LineHeight, BodySize, 0, ResolveSettingsControlRowLayout(Row, CurrentSettingsContentMetrics()).m_ControlRect.x - Row.x);
-	Flow.Space(LineSpacing);
-	if(Flow.Control("key-deepfly", LineHeight, Row))
+	if(Flow.Control("key-deepfly", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		RenderQmHudKeyBindRow(Row, s_ReaderButtonDeepfly, s_ClearButtonDeepfly,
 			Localize("DF"), "+fire; +toggle cl_dummy_hammer 1 0", LineHeight, BodySize, 0, ResolveSettingsControlRowLayout(Row, CurrentSettingsContentMetrics()).m_ControlRect.x - Row.x);
-	Flow.Space(LineSpacing);
-	if(Flow.Control("key-45-degree", LineHeight, Row))
+	if(Flow.Control("key-45-degree", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		RenderQmHudKeyBindRow(Row, s_ReaderButton45Degrees, s_ClearButton45Degrees,
 			Localize("45° Aim"), "echo You are using 45-degree aim;+toggle cl_mouse_max_distance 2 400; +toggle_restore inp_mousesens 1", LineHeight, BodySize, 0, ResolveSettingsControlRowLayout(Row, CurrentSettingsContentMetrics()).m_ControlRect.x - Row.x);
-	Flow.Space(LineSpacing);
-	if(Flow.Control("key-small-sensitivity", LineHeight, Row))
+	if(Flow.Control("key-small-sensitivity", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		RenderQmHudKeyBindRow(Row, s_ReaderButtonSmallSens, s_ClearButtonSmallSens,
 			Localize("Gap aim rescue"), "+toggle_restore inp_mousesens 1", LineHeight, BodySize, 0, ResolveSettingsControlRowLayout(Row, CurrentSettingsContentMetrics()).m_ControlRect.x - Row.x);
-	Flow.Space(LineSpacing);
-	if(Flow.Control("key-left-jump", LineHeight, Row))
+	if(Flow.Control("key-left-jump", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		RenderQmHudKeyBindRow(Row, s_ReaderButtonLeftJump, s_ClearButtonLeftJump,
 			Localize("Left jump"), "+jump; +left", LineHeight, BodySize, 0, ResolveSettingsControlRowLayout(Row, CurrentSettingsContentMetrics()).m_ControlRect.x - Row.x);
-	Flow.Space(LineSpacing);
-	if(Flow.Control("key-right-jump", LineHeight, Row))
+	if(Flow.Control("key-right-jump", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		RenderQmHudKeyBindRow(Row, s_ReaderButtonRightJump, s_ClearButtonRightJump,
 			Localize("Right jump"), "+jump; +right", LineHeight, BodySize, 0, ResolveSettingsControlRowLayout(Row, CurrentSettingsContentMetrics()).m_ControlRect.x - Row.x);
-	Flow.Space(LineSpacing);
-	if(Flow.Control("key-trajectory-key", LineHeight, Row))
+	if(Flow.Control("key-trajectory-key", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		RenderQmHudKeyBindRow(Row, s_ReaderButtonWeaponTrajectory, s_ClearButtonWeaponTrajectory,
 			Localize("Weapon Trajectory"), "+showweapontrajectory", LineHeight, BodySize, 0, ResolveSettingsControlRowLayout(Row, CurrentSettingsContentMetrics()).m_ControlRect.x - Row.x);
-	Flow.Space(LineSpacing);
-	if(Flow.Control("key-disconnect-key", LineHeight, Row))
+	if(Flow.Control("key-disconnect-key", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		RenderQmHudKeyBindRow(Row, s_ReaderButtonTimeoutDisconnect, s_ClearButtonTimeoutDisconnect,
 			Localize("Active disconnect"), "qm_timeout_disconnect", LineHeight, BodySize, 0, ResolveSettingsControlRowLayout(Row, CurrentSettingsContentMetrics()).m_ControlRect.x - Row.x);
-	Flow.Space(LineSpacing);
 }
 
 void CMenus::RenderQmFunctionGoresActorContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
@@ -104,29 +97,28 @@ void CMenus::RenderQmFunctionGoresActorContent(CUIRect &Content, float LineHeigh
 	CSettingsContentLayoutFlow Flow(Content);
 	IUiContext TextInputCtx = SettingsUiContext("settings_qmclient_gores_actor_text_inputs", BodySize / ui_token::font::BODY);
 	CUIRect Row, LabelColumn, ControlColumn;
-	if(Flow.Control("RenderQmFunctionGoresActorContent-1", LineHeight, Row))
+	if(Flow.Control("RenderQmFunctionGoresActorContent-1", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		RenderQmFunctionCheckbox(&g_Config.m_QmFreezeChatEnabled, "qmclient-gores-actor-enable", Localize("Auto chat in water"), &g_Config.m_QmFreezeChatEnabled, &Row, PrewarmOnly);
 	}
-	Flow.Space(LineSpacing);
 	if(!g_Config.m_QmFreezeChatEnabled)
 		return;
 
-	if(Flow.Control("RenderQmFunctionGoresActorContent-2", LineHeight, Row))
+	if(Flow.Control("RenderQmFunctionGoresActorContent-2", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		RenderQmFunctionCheckbox(&g_Config.m_QmFreezeChatEmoticon, "qmclient-gores-actor-emoticon", Localize("Send emoticon in water"), &g_Config.m_QmFreezeChatEmoticon, &Row, PrewarmOnly);
 	}
-	Flow.Space(LineSpacing);
-	if(g_Config.m_QmFreezeChatEmoticon)
+	static CSettingsConditionalRows s_GoresActorEmoticonRows;
+	if(s_GoresActorEmoticonRows.Update(g_Config.m_QmFreezeChatEmoticon, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 	{
-		if(Flow.Control("RenderQmFunctionGoresActorContent-3", LineHeight, Row))
+		const CSettingsContentRevealScope GoresActorEmoticonRevealScope(Ui(), Flow, s_GoresActorEmoticonRows.Fade(g_Config.m_QmUiMotionLevel));
+		if(Flow.Control("RenderQmFunctionGoresActorContent-3", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		{
 			DoSettingsScrollbarOption(SETTINGS_QMCLIENT, m_QmClientSettingsTab, m_QmClientSettingsTab, "qmclient-gores-actor-emoticon-id", &g_Config.m_QmFreezeChatEmoticonId, &g_Config.m_QmFreezeChatEmoticonId, &Row, Localize("Emoticon ID"), 0, 15);
 		}
-		Flow.Space(LineSpacing);
 	}
 
-	if(Flow.Control("RenderQmFunctionGoresActorContent-4", LineHeight, Row))
+	if(Flow.Control("RenderQmFunctionGoresActorContent-4", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
 		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-gores-actor-chat-message", &LabelColumn, Localize("Chat message"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
@@ -134,13 +126,11 @@ void CMenus::RenderQmFunctionGoresActorContent(CUIRect &Content, float LineHeigh
 		s_FreezeChatMessageQmClient.SetEmptyText(Localize("Leave empty to disable"));
 		ui_widget::InputField(TextInputCtx, &s_FreezeChatMessageQmClient, ControlColumn, Localize("Leave empty to disable"), BodySize);
 	}
-	Flow.Space(LineSpacing);
 
-	if(Flow.Control("RenderQmFunctionGoresActorContent-5", LineHeight, Row))
+	if(Flow.Control("RenderQmFunctionGoresActorContent-5", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		DoSettingsScrollbarOption(SETTINGS_QMCLIENT, m_QmClientSettingsTab, m_QmClientSettingsTab, "qmclient-gores-actor-send-probability", &g_Config.m_QmFreezeChatChance, &g_Config.m_QmFreezeChatChance, &Row, Localize("Send probability"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
 	}
-	Flow.Space(LineSpacing);
 }
 
 void CMenus::RenderQmFunctionGoresContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
@@ -149,10 +139,10 @@ void CMenus::RenderQmFunctionGoresContent(CUIRect &Content, float LineHeight, fl
 	static CButtonContainer s_ReaderButtonGoresToggle, s_ClearButtonGoresToggle;
 	static ui_widget::SPasswordFieldState s_AxiomMainPasswordState, s_AxiomDummyPasswordState;
 	CUIRect Row, LabelColumn, ControlColumn;
+	// 行距由每行自己声明（声明阶段记到上一行末尾），行后不再补 Space，卡底不会多留一档。
 	auto RenderCheckbox = [this, &Flow, &Row, LineHeight, LineSpacing, PrewarmOnly](const void *pId, const char *pTextId, const char *pText, int *pValue) {
-		if(Flow.Control(pTextId, LineHeight, Row))
+		if(Flow.Control(pTextId, LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 			RenderQmFunctionCheckbox(pId, pTextId, Localize(pText), pValue, &Row, PrewarmOnly);
-		Flow.Space(LineSpacing);
 	};
 	RenderCheckbox(&g_Config.m_QmGores, "qmclient-gores-enable", "Enable Gores mode", &g_Config.m_QmGores);
 	RenderCheckbox(&g_Config.m_QmAxiomQuadPrediction, "qmclient-gores-axiom-quad-prediction", "Moving block and freeze prediction (experimental)", &g_Config.m_QmAxiomQuadPrediction);
@@ -162,15 +152,16 @@ void CMenus::RenderQmFunctionGoresContent(CUIRect &Content, float LineHeight, fl
 	if(!Flow.Declaring())
 		GameClient()->m_Tooltips.DoToolTipForRect(&g_Config.m_QmAxiomAutoLogin, &Row, pAxiomHelp);
 
-	if(g_Config.m_QmAxiomAutoLogin)
+	// Axiom 账号密码只在勾上自动登录后出现：收起时整块不声明，展开时按进度长高，
+	// 密码行自己带行前间距（A 型），所以这里不需要块外再补一档。
+	static CSettingsConditionalRows s_AxiomAutoLoginRows;
+	if(s_AxiomAutoLoginRows.Update(g_Config.m_QmAxiomAutoLogin, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 	{
+		const CSettingsContentRevealScope AxiomAutoLoginRevealScope(Ui(), Flow, s_AxiomAutoLoginRows.Fade(g_Config.m_QmUiMotionLevel));
 		IUiContext TextInputCtx = SettingsUiContext("settings_qmclient_gores_text_inputs", BodySize / ui_token::font::BODY);
 		auto RenderPassword = [&](const char *pTextId, const char *pText, CLineInput &Input, ui_widget::SPasswordFieldState &State) {
-			if(!Flow.Control(pTextId, LineHeight, Row))
-			{
-				Flow.Space(LineSpacing);
+			if(!Flow.Control(pTextId, LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 				return;
-			}
 			SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
 			DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, pTextId, &LabelColumn, Localize(pText), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
 			GameClient()->m_Tooltips.DoSettingsToolTipForConfig(&Input, &Row, Input.GetString(), &LabelColumn);
@@ -178,7 +169,6 @@ void CMenus::RenderQmFunctionGoresContent(CUIRect &Content, float LineHeight, fl
 			Options.m_FontSize = BodySize;
 			Options.m_TrailingWidth = ControlColumn.h;
 			ui_widget::PasswordField(TextInputCtx, &Input, ControlColumn, &State, Options);
-			Flow.Space(LineSpacing);
 		};
 		static CLineInput s_AxiomLoginPassword(g_Config.m_QmAxiomLoginPassword, sizeof(g_Config.m_QmAxiomLoginPassword));
 		static CLineInput s_AxiomDummyLoginPassword(g_Config.m_QmAxiomDummyLoginPassword, sizeof(g_Config.m_QmAxiomDummyLoginPassword));
@@ -187,7 +177,7 @@ void CMenus::RenderQmFunctionGoresContent(CUIRect &Content, float LineHeight, fl
 	}
 
 	// Axiom 官网入口：注册账号、找回密码都从这里进。
-	if(Flow.Control("qmclient-gores-axiom-website", LineHeight, Row))
+	if(Flow.Control("qmclient-gores-axiom-website", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
 		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-gores-axiom-website", &LabelColumn, Localize("Axiom website"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
@@ -195,7 +185,6 @@ void CMenus::RenderQmFunctionGoresContent(CUIRect &Content, float LineHeight, fl
 		if(Ui()->DoButton_QmIcon(&s_AxiomWebsiteButton, EQmIcon::ARROW_UP_RIGHT_FROM_SQUARE, FONT_ICON_ARROW_UP_RIGHT_FROM_SQUARE, 0, &ControlColumn, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL) && Flow.Input() && !PrewarmOnly && !Ui()->RenderOnly())
 			Client()->ViewLink("https://axiom.teeworlds.cn/");
 	}
-	Flow.Space(LineSpacing);
 
 	RenderCheckbox(&g_Config.m_QmGoresAutoEnable, "qmclient-gores-auto-enable", "Auto enable in Gores mode", &g_Config.m_QmGoresAutoEnable);
 	if(g_Config.m_QmGores || g_Config.m_QmGoresAutoEnable)
@@ -213,7 +202,7 @@ void CMenus::RenderQmFunctionGoresContent(CUIRect &Content, float LineHeight, fl
 			CurrentSettingsContentMetrics(), !PrewarmOnly);
 	}
 
-	if(!Flow.Control("qmclient-gores-mode-key", LineHeight, Row))
+	if(!Flow.Control("qmclient-gores-mode-key", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		return;
 	CUIRect BindLabel, BindKey;
 	SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &BindLabel, &BindKey);
@@ -251,23 +240,21 @@ void CMenus::RenderQmFunctionSoloSplitContent(CUIRect &Content, float LineHeight
 	static const void *s_AutoTeamLockCheckboxId = &s_AutoTeamLockCheckboxId;
 	CUIRect Row, BindLabel, BindKey, LabelColumn, ControlColumn;
 	auto RenderCheckbox = [&](const void *pId, const char *pTextId, const char *pText, int *pValue) {
-		if(Flow.Control(pTextId, LineHeight, Row))
+		if(Flow.Control(pTextId, LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 			RenderQmFunctionCheckbox(pId, pTextId, Localize(pText), pValue, &Row, PrewarmOnly);
-		Flow.Space(LineSpacing);
 	};
 	RenderCheckbox(&g_Config.m_QmSoloSplitLinkDummy, "qmclient-solo-split-link-dummy", "Auto-connect dummy", &g_Config.m_QmSoloSplitLinkDummy);
 	RenderCheckbox(s_AutoTeamLockCheckboxId, "qmclient-solo-split-auto-team-lock", "Auto team lock", &g_Config.m_QmAutoTeamLock);
-	if(Flow.Control("qmclient-solo-split-restore-team", LineHeight, Row))
+	if(Flow.Control("qmclient-solo-split-restore-team", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
 		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-solo-split-restore-team", &LabelColumn, Localize("Team when leaving solo split"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
 		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(s_RestoreTeamInputId, &Row, &g_Config.m_QmSoloSplitRestoreTeam, &LabelColumn);
 		RenderQmSettingsSliderWithValueInput(s_RestoreTeamInputId, ControlColumn, &g_Config.m_QmSoloSplitRestoreTeam, 0, 63, "", PrewarmOnly);
 	}
-	Flow.Space(LineSpacing);
 
 	// 只保留键位行：按下触发 qm_solo_split（toggle 语义，非 toggle 命令）。
-	if(Flow.Control("qmclient-solo-split-key", LineHeight, Row))
+	if(Flow.Control("qmclient-solo-split-key", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &BindLabel, &BindKey);
 		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-solo-split-key", &BindLabel, Localize("Solo split key"), BodySize, TEXTALIGN_ML, {}, (int)BindLabel.w);
@@ -289,13 +276,9 @@ void CMenus::RenderQmFunctionSoloSplitContent(CUIRect &Content, float LineHeight
 				g_CommandBindCache.erase("qm_solo_split");
 		}
 	}
-	Flow.Space(LineSpacing);
 	auto RenderBind = [&](const char *pCommand, const char *pTextId, const char *pText, CButtonContainer &Reader, CButtonContainer &Clear) {
-		if(!Flow.Control(pTextId, LineHeight, Row))
-		{
-			Flow.Space(LineSpacing);
+		if(!Flow.Control(pTextId, LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 			return;
-		}
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &BindLabel, &BindKey);
 		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, pTextId, &BindLabel, pText, BodySize, TEXTALIGN_ML, {}, (int)BindLabel.w);
 		CBindSlot Bind(KEY_UNKNOWN, KeyModifier::NONE);
@@ -315,7 +298,6 @@ void CMenus::RenderQmFunctionSoloSplitContent(CUIRect &Content, float LineHeight
 			else
 				g_CommandBindCache.erase(pCommand);
 		}
-		Flow.Space(LineSpacing);
 	};
 	RenderBind("qm_solo_split_enter", "qmclient-solo-split-enter-key", Localize("Solo split enter key"), s_ReaderButtonSoloSplitEnter, s_ClearButtonSoloSplitEnter);
 	RenderBind("qm_solo_split_leave", "qmclient-solo-split-leave-key", Localize("Solo split leave key"), s_ReaderButtonSoloSplitLeave, s_ClearButtonSoloSplitLeave);
@@ -326,25 +308,24 @@ void CMenus::RenderQmFunctionJumpHintContent(CUIRect &Content, float LineHeight,
 {
 	CSettingsContentLayoutFlow Flow(Content);
 	CUIRect Row, LabelColumn, ControlColumn;
-	if(Flow.Control("RenderQmFunctionJumpHintContent-1", LineHeight, Row))
+	if(Flow.Control("RenderQmFunctionJumpHintContent-1", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		RenderQmFunctionCheckbox(&g_Config.m_QmJumpHint, "Position jump hint", Localize("Position jump hint"), &g_Config.m_QmJumpHint, &Row, PrewarmOnly);
 	}
-	Flow.Space(LineSpacing);
 
 	static CButtonContainer s_QmJumpHintColorId;
-	if(Flow.Control("color", ResolveSettingsColorRowLayout(Content, CurrentSettingsContentMetrics(), false).m_ConsumedHeight, Row))
-		DoLine_ColorPicker(&s_QmJumpHintColorId, CurrentSettingsContentMetrics(), &Row, Localize("Text color"), &g_Config.m_QmJumpHintColor, ui_token::color::NEUTRAL_WHITE, false);
+	// 色块行只按按钮高度占位、行距自己声明：ConsumedHeight 自带的那档行尾间距会和下一行叠成双倍。
+	if(Flow.Control("color", CurrentSettingsContentMetrics().m_ButtonHeight, Row, ui_token::settings::RowGap(LineSpacing)))
+		DoLine_ColorPicker(&s_QmJumpHintColorId, CurrentSettingsContentMetrics(), &Row, Localize("Text color"), &g_Config.m_QmJumpHintColor, color_cast<ColorRGBA>(ColorHSLA(CConfig::ms_QmJumpHintColor)), false);
 
 	auto RenderValue = [&](const char *pTextId, const char *pText, const void *pInputId, int *pValue, int MinValue, int MaxValue, const char *pSuffix = "") {
-		if(Flow.Control(pTextId, LineHeight, Row))
+		if(Flow.Control(pTextId, LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		{
 			SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
 			DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, pTextId, &LabelColumn, Localize(pText), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
 			GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pInputId, &Row, pValue, &LabelColumn);
 			RenderQmSettingsSliderWithValueInput(pInputId, ControlColumn, pValue, MinValue, MaxValue, pSuffix, PrewarmOnly);
 		}
-		Flow.Space(LineSpacing);
 	};
 	static int s_QmJumpHintXInputId;
 	static int s_QmJumpHintYInputId;
@@ -358,7 +339,7 @@ void CMenus::RenderQmFunctionWeaponTrajectoryContent(CUIRect &Content, float Lin
 {
 	CSettingsContentLayoutFlow Flow(Content);
 	CUIRect Row, LabelColumn, ControlColumn;
-	if(Flow.Control("RenderQmFunctionWeaponTrajectoryContent-1", LineHeight, Row))
+	if(Flow.Control("RenderQmFunctionWeaponTrajectoryContent-1", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
 		CUIElement &DisplayModeLabel = SettingsTextElement(SETTINGS_QMCLIENT, m_QmClientSettingsTab, "qmclient-display-mode");
@@ -372,36 +353,35 @@ void CMenus::RenderQmFunctionWeaponTrajectoryContent(CUIRect &Content, float Lin
 		if(Flow.Input() && !PrewarmOnly && !Ui()->RenderOnly() && g_Config.m_QmWeaponTrajectory != WeaponTrajectoryModeNew)
 			g_Config.m_QmWeaponTrajectory = WeaponTrajectoryModeNew;
 	}
-	Flow.Space(LineSpacing);
 	if(g_Config.m_QmWeaponTrajectory == 0)
 		return;
 
-	if(Flow.Control("RenderQmFunctionWeaponTrajectoryContent-2", LineHeight, Row))
+	if(Flow.Control("RenderQmFunctionWeaponTrajectoryContent-2", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		RenderQmFunctionCheckbox(&g_Config.m_QmWeaponTrajectoryGun, "qmclient-weapon-trajectory-gun", Localize("Pistol guide line"), &g_Config.m_QmWeaponTrajectoryGun, &Row, PrewarmOnly);
 	}
-	Flow.Space(LineSpacing);
-	if(Flow.Control("RenderQmFunctionWeaponTrajectoryContent-3", LineHeight, Row))
+	if(Flow.Control("RenderQmFunctionWeaponTrajectoryContent-3", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		RenderQmFunctionCheckbox(&g_Config.m_QmWeaponTrajectoryNinja, "qmclient-weapon-trajectory-ninja", Localize("Predict ninja path"), &g_Config.m_QmWeaponTrajectoryNinja, &Row, PrewarmOnly);
 	}
-	Flow.Space(LineSpacing);
 
-	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:weapon_trajectory", CurrentSettingsContentMetrics(), PrewarmOnly))
+	float SectionReveal = 0.0f;
+	if(!qm_card_catalog::QmCardRenderHook::PersonalizationReveal(this, Content, "qm:weapon_trajectory", CurrentSettingsContentMetrics(), &SectionReveal, PrewarmOnly))
 		return;
+	const CSettingsContentRevealScope SectionRevealScope(Ui(), Flow, SectionReveal);
 
 	static CButtonContainer s_WeaponTrajectoryColorId;
-	if(Flow.Control("color", ResolveSettingsColorRowLayout(Content, CurrentSettingsContentMetrics(), false).m_ConsumedHeight, Row))
-		DoLine_ColorPicker(&s_WeaponTrajectoryColorId, CurrentSettingsContentMetrics(), &Row, Localize("Guide line color"), &g_Config.m_QmWeaponTrajectoryColor, ColorRGBA(1.0f, 0.6f, 0.2f, 1.0f), false);
+	// 同上：行距由色块行自己声明，高度只占按钮本身。
+	if(Flow.Control("color", CurrentSettingsContentMetrics().m_ButtonHeight, Row, ui_token::settings::RowGap(LineSpacing)))
+		DoLine_ColorPicker(&s_WeaponTrajectoryColorId, CurrentSettingsContentMetrics(), &Row, Localize("Guide line color"), &g_Config.m_QmWeaponTrajectoryColor, color_cast<ColorRGBA>(ColorHSLA(CConfig::ms_QmWeaponTrajectoryColor)), false);
 	auto RenderValue = [&](const char *pTextId, const char *pText, const void *pInputId, int *pValue, int MinValue, int MaxValue, const char *pSuffix = "") {
-		if(Flow.Control(pTextId, LineHeight, Row))
+		if(Flow.Control(pTextId, LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		{
 			SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
 			DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, pTextId, &LabelColumn, Localize(pText), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
 			GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pInputId, &Row, pValue, &LabelColumn);
 			RenderQmSettingsSliderWithValueInput(pInputId, ControlColumn, pValue, MinValue, MaxValue, pSuffix, PrewarmOnly);
 		}
-		Flow.Space(LineSpacing);
 	};
 	static int s_QmWeaponTrajectoryWidthInputId;
 	static int s_QmWeaponTrajectoryAlphaInputId;
@@ -414,32 +394,30 @@ void CMenus::RenderQmFunctionFriendNotifyContent(CUIRect &Content, float LineHei
 	CSettingsContentLayoutFlow Flow(Content);
 	IUiContext TextInputCtx = SettingsUiContext("settings_qmclient_friend_enter_text_inputs", BodySize / ui_token::font::BODY);
 	CUIRect Row, LabelColumn, ControlColumn;
+	// 行距由行自己声明，行后不再补 Space：组和普通行共用同一条规则。
 	auto RenderCheckbox = [&](const void *pId, const char *pTextId, const char *pText, int *pValue) {
-		if(Flow.Control(pTextId, LineHeight, Row))
+		if(Flow.Control(pTextId, LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		{
 			RenderQmFunctionCheckbox(pId, pTextId, Localize(pText), pValue, &Row, PrewarmOnly);
 		}
-		Flow.Space(LineSpacing);
 	};
 	auto RenderValue = [&](const char *pTextId, const char *pText, const void *pInputId, int *pValue, int MinValue, int MaxValue, const char *pSuffix = "") {
-		if(Flow.Control(pTextId, LineHeight, Row))
+		if(Flow.Control(pTextId, LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		{
 			SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
 			DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, pTextId, &LabelColumn, Localize(pText), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
 			GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pInputId, &Row, pValue, &LabelColumn);
 			RenderQmSettingsSliderWithValueInput(pInputId, ControlColumn, pValue, MinValue, MaxValue, pSuffix, PrewarmOnly);
 		}
-		Flow.Space(LineSpacing);
 	};
 	auto RenderText = [&](const char *pTextId, const char *pText, CLineInput *pInput, const char *pPlaceholder) {
-		if(Flow.Control(pTextId, LineHeight, Row))
+		if(Flow.Control(pTextId, LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		{
 			SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
 			DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, pTextId, &LabelColumn, Localize(pText), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
 			pInput->SetEmptyText(Localize(pPlaceholder));
 			ui_widget::InputField(TextInputCtx, pInput, ControlColumn, Localize(pPlaceholder), BodySize);
 		}
-		Flow.Space(LineSpacing);
 	};
 
 	static int s_QmFriendAutoFollowDelayInputId;
@@ -467,8 +445,10 @@ void CMenus::RenderQmFunctionFriendNotifyContent(CUIRect &Content, float LineHei
 		static CLineInput s_FriendEnterGreetText(g_Config.m_QmFriendEnterGreetText, sizeof(g_Config.m_QmFriendEnterGreetText));
 		RenderText("qmclient-friend-notifications-greeting-text", "Greeting text", &s_FriendEnterGreetText, "Leave empty to disable");
 	}
-	if(qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:friend_notify", CurrentSettingsContentMetrics(), PrewarmOnly))
+	float SectionReveal = 0.0f;
+	if(qm_card_catalog::QmCardRenderHook::PersonalizationReveal(this, Content, "qm:friend_notify", CurrentSettingsContentMetrics(), &SectionReveal, PrewarmOnly))
 	{
+		const CSettingsContentRevealScope SectionRevealScope(Ui(), Flow, SectionReveal);
 		RenderValue("qmclient-friend-auto-follow-delay", "Auto-follow delay", &s_QmFriendAutoFollowDelayInputId, &g_Config.m_QmFriendAutoFollowDelay, 0, 30, "s");
 		if(g_Config.m_QmFriendOnlineAutoRefresh)
 			RenderValue("qmclient-friend-notifications-refresh-interval", "Refresh interval", &s_QmFriendOnlineRefreshSecondsInputId, &g_Config.m_QmFriendOnlineRefreshSeconds, 5, 300, "s");
@@ -484,16 +464,13 @@ void CMenus::RenderQmFunctionEmoticonsContent(CUIRect &Content, float LineHeight
 	static CButtonContainer s_ReaderButtonLaunchEmote;
 	static CButtonContainer s_ClearButtonLaunchEmote;
 	CUIRect Row;
-	if(Flow.Control("emoticon-1", LineHeight, Row))
+	if(Flow.Control("emoticon-1", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		RenderQmFunctionCheckbox(&g_Config.m_QmShowOtherSuperEmotes, "Show other players' large emoticons", Localize("Show other players' large emoticons"), &g_Config.m_QmShowOtherSuperEmotes, &Row, false);
-	Flow.Space(LineSpacing);
-	if(Flow.Control("emoticon-2", LineHeight, Row))
+	if(Flow.Control("emoticon-2", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		RenderQmFunctionCheckbox(&g_Config.m_QmShowOtherLaunchEmotes, "Show other players' launched emoticons", Localize("Show other players' launched emoticons"), &g_Config.m_QmShowOtherLaunchEmotes, &Row, false);
-	Flow.Space(LineSpacing);
-	if(Flow.Control("emoticon-launch-key", LineHeight, Row))
+	if(Flow.Control("emoticon-launch-key", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		RenderQmHudKeyBindRow(Row, s_ReaderButtonLaunchEmote, s_ClearButtonLaunchEmote,
 			Localize("Launch emote key"), "toggle_emote_launcher", LineHeight, BodySize, 0, ResolveSettingsControlRowLayout(Row, CurrentSettingsContentMetrics()).m_ControlRect.x - Row.x);
-	Flow.Space(LineSpacing);
 }
 
 void CMenus::RenderQmFunctionMiniFeaturesContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)

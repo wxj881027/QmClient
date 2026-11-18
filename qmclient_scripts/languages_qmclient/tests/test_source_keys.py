@@ -24,26 +24,95 @@ class SourceKeysTest(unittest.TestCase):
         )
 
     def test_extracts_qm_card_registry_titles_and_descriptions(self):
+        # 表结构对齐 SCardDefault：{stableId, defaultTab, fullWidth, title, searchKeywords,
+        # description, navigationTab, navigationStableId}。标题/描述必须进 active key。
         content = "\n".join(
             (
                 'static const std::vector<SCardDefault> s_aDefaults = {',
-                '{"qm:camera_view", "visual", ECardColumn::Right, 0, "Camera view", "camera keywords"},',
-                '{"deck:graphics-display", "graphics", ECardColumn::Left, 0,',
-                ' Localizable("Graphics display"), "monitor keywords",',
-                ' Localizable("Window and monitor")},',
+                '{"qm:camera_view", "visual", false, "Camera view", "camera keywords", "Adjust fields"},',
+                '{"deck:graphics-display", "graphics", false,',
+                ' "Display modes", "display modes graphics resolutions",',
+                ' "Available resolutions"},',
+                '{"qm:info", "visual", true, "QmClient", "qmclient info",',
+                ' "QmClient information and project links", "credits-qmclient",',
+                ' "deck:qmclient-contributors-community"},',
+                '{"deck:tclient-menu", "tclient", false, Localizable("TClient menu"),',
+                ' "tclient menu keywords", Localizable("Configure TClient tools")},',
                 '};',
             )
         )
 
         records = source_keys.extract_qm_card_registry_records(content)
 
+        # 已显式包在 Localizable 里的字段交给通用 Localize 规则登记，这里不重复登记。
         self.assertEqual(
             {(record.key, record.category) for record in records},
             {
                 ("Camera view", "card_registry"),
-                ("Graphics display", "card_registry"),
-                ("Window and monitor", "card_registry"),
+                ("Adjust fields", "card_registry"),
+                ("Display modes", "card_registry"),
+                ("Available resolutions", "card_registry"),
+                ("QmClient", "card_registry"),
+                ("QmClient information and project links", "card_registry"),
             },
+        )
+        # 多行条目里，记录行号要落在字面量自己那一行，审计才能把它和同一条记录对上。
+        lines_by_key = {record.key: record.line for record in records}
+        self.assertEqual(lines_by_key["Display modes"], 4)
+        self.assertEqual(lines_by_key["Available resolutions"], 5)
+        self.assertEqual(lines_by_key["QmClient information and project links"], 7)
+
+    def test_card_registry_skips_search_keywords_and_navigation_metadata(self):
+        content = "\n".join(
+            (
+                '{"deck:general-game", "general", false, "Game", "Game general camera weapon 视角",',
+                ' "Configure camera, weapon, and gameplay defaults", "general", "deck:general"},',
+                '{"qm:bind_editor", "controls", true, "Bind", "bind keyboard 键盘 mouse 鼠标",',
+                ' "Configure keyboard and mouse bindings", "bind", "deck:controls-bind"},',
+            )
+        )
+
+        records = source_keys.extract_qm_card_registry_records(content)
+
+        extracted = {record.key for record in records}
+        self.assertEqual(
+            extracted,
+            {
+                "Game",
+                "Configure camera, weapon, and gameplay defaults",
+                "Bind",
+                "Configure keyboard and mouse bindings",
+            },
+        )
+        for metadata in (
+            "Game general camera weapon 视角",
+            "general",
+            "deck:general",
+            "bind keyboard 键盘 mouse 鼠标",
+            "bind",
+            "deck:controls-bind",
+        ):
+            with self.subTest(metadata=metadata):
+                self.assertNotIn(metadata, extracted)
+
+    def test_card_registry_joins_adjacent_literals_and_skips_empty_fields(self):
+        content = "\n".join(
+            (
+                '{"qm:empty_title", "visual", false, "", "keywords", "Description only"},',
+                '{"qm:null_description", "visual", false, "Title only", "keywords", nullptr},',
+                '{"qm:split_title", "visual", false, "Split " "title", "keywords",',
+                ' "Split " "description"},',
+                '{"deck:order_entry", "credits-qmclient", 1, 0},',
+                '};',
+            )
+        )
+
+        records = source_keys.extract_qm_card_registry_records(content)
+
+        # 相邻字面量按 C++ 编译期拼接语义合并；空标题和 nullptr 描述不产生记录。
+        self.assertEqual(
+            {record.key for record in records},
+            {"Description only", "Title only", "Split title", "Split description"},
         )
 
     def test_extracts_qm_runtime_card_titles_and_subtitles(self):
@@ -207,16 +276,38 @@ class SourceKeysTest(unittest.TestCase):
         self.assertNotIn("列出普通玩家可用的所有命令", help_strings)
 
     def test_collects_category_summary_from_source_file(self):
-        records = source_keys.collect_source_key_records(
-            paths=(Path(__file__),),
-            extra_strings={"Extra test key"},
-        )
+        with TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "src" / "game" / "client" / "sample.cpp"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text('Localize("Sample");\n', encoding="utf-8")
+            records = source_keys.collect_source_key_records(
+                paths=(Path(temp_dir) / "src",),
+                extra_strings={"Extra test key"},
+            )
 
         summary = source_keys.summarize_source_key_records(records)
 
         self.assertGreaterEqual(summary.localize_or_localizable, 1)
         self.assertEqual(summary.extra, 1)
         self.assertEqual(summary.total_unique, len({record.key for record in records}))
+
+    def test_source_key_collection_ignores_test_fixtures(self):
+        with TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "src" / "test" / "console_test.cpp"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(
+                'Register("test_echo", "", CFGFLAG_SERVER, Fn, nullptr, "test");\n',
+                encoding="utf-8",
+            )
+
+            records = source_keys.collect_source_key_records(
+                paths=(Path(temp_dir) / "src",),
+                extra_strings=set(),
+            )
+            file_records = source_keys.collect_file_source_key_records(path)
+
+        self.assertNotIn("test", {record.key for record in records})
+        self.assertEqual(file_records, [])
 
     def test_audit_marks_notification_aliases_as_business_data(self):
         with TemporaryDirectory() as tmpdir:
@@ -397,18 +488,27 @@ class SourceKeysTest(unittest.TestCase):
         self.assertNotIn("u", keys)
 
     def test_extracts_tclient_cached_section_titles(self):
-        path = (
-            source_keys.PROJECT_ROOT
-            / "src"
-            / "game"
-            / "client"
-            / "components"
-            / "tclient"
-            / "menus_tclient.cpp"
-        )
-        content = source_keys.strip_cpp_comments(source_keys.read_source_text(path))
-        records = source_keys.extract_known_indirect_records(path, content)
-        keys = {record.key for record in records}
+        with TemporaryDirectory() as temp_dir:
+            path = (
+                Path(temp_dir)
+                / "src"
+                / "game"
+                / "client"
+                / "components"
+                / "tclient"
+                / "menus_tclient.cpp"
+            )
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(
+                'AddCard("visual", "Visual: Nameplates");\n'
+                'AddCard("status", "Tee status bar");\n',
+                encoding="utf-8",
+            )
+            content = source_keys.strip_cpp_comments(
+                source_keys.read_source_text(path)
+            )
+            records = source_keys.extract_known_indirect_records(path, content)
+            keys = {record.key for record in records}
 
         self.assertIn("Visual: Nameplates", keys)
         self.assertIn("Tee status bar", keys)
@@ -619,16 +719,23 @@ class SourceKeysTest(unittest.TestCase):
             path = root / "src" / "game" / "client" / "QmUi" / "QmCardRegistry.cpp"
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(
-                '{"deck:sample", "general", ECardColumn::Left, 0, "Sample", "sample search keyword"};\n',
+                '{"deck:sample", "general", false, "Sample", "sample search keyword",'
+                ' "Sample card description"};\n',
                 encoding="utf-8",
             )
 
             report = source_keys.build_string_audit_report(paths=(root / "src",))
 
         business_texts = {record.text for record in report.business_data}
+        must_i18n_texts = {record.text for record in report.must_i18n}
         review_texts = {record.text for record in report.needs_review}
         self.assertIn("sample search keyword", business_texts)
         self.assertNotIn("sample search keyword", review_texts)
+        # 标题和描述面向用户，不能被同一个文件级 business_data 规则吞掉。
+        self.assertIn("Sample", must_i18n_texts)
+        self.assertIn("Sample card description", must_i18n_texts)
+        self.assertNotIn("Sample", business_texts)
+        self.assertNotIn("Sample card description", business_texts)
 
     def test_audit_marks_tutorial_command_and_perf_fragments_as_business_data(self):
         with TemporaryDirectory() as tmpdir:

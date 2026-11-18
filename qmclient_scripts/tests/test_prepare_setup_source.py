@@ -30,6 +30,7 @@ class PrepareSetupSourceTest(unittest.TestCase):
 		for helper in ("qm-nmt-helper.exe", "qm-soda-helper.exe", "qm-music-helper.exe"):
 			(self.source / helper).write_bytes(helper.encode())
 		(self.source / "qmclient-setup-runtime.txt").write_text("DDNet.exe\nDDNet-Server.exe\nqm-nmt-helper.exe\nqm-soda-helper.exe\nqm-music-helper.exe\n", encoding="utf-8")
+		(self.source / "qmclient-setup-dlls.txt").write_text("runtime.dll\n", encoding="utf-8")
 		(self.source / "qmclient-setup-generated.txt").write_text("", encoding="utf-8")
 		(self.data / "asset.txt").write_bytes(b"asset")
 		self.steam_appid = self.root / "steam_appid.txt"
@@ -214,9 +215,28 @@ class PrepareSetupSourceTest(unittest.TestCase):
 		(self.source / "runtime.dll").unlink()
 		self.output.mkdir()
 		(self.output / "previous.txt").write_bytes(b"old")
-		with self.assertRaisesRegex(ValueError, "no runtime DLLs"):
+		with self.assertRaisesRegex(ValueError, "missing runtime DLL"):
 			MODULE.prepare(self.source, self.data, self.output)
 		self.assertEqual((self.output / "previous.txt").read_bytes(), b"old")
+
+	def test_stale_build_dlls_are_not_packaged(self) -> None:
+		(self.source / "SDL2.dll").write_bytes(b"stale")
+		MODULE.prepare(self.source, self.data, self.output)
+		self.assertIn("runtime.dll", {path.name for path in self.output.iterdir()})
+		self.assertNotIn("SDL2.dll", {path.name for path in self.output.iterdir()})
+
+	def test_dll_manifest_rejects_directory_traversal(self) -> None:
+		for content in ("../runtime.dll\n", "C:/runtime.dll\n", "runtime.exe\n", "runtime.dll\nRUNTIME.dll\n"):
+			with self.subTest(content=content):
+				(self.source / "qmclient-setup-dlls.txt").write_text(content, encoding="utf-8")
+				with self.assertRaisesRegex(ValueError, "Setup runtime DLL manifest"):
+					MODULE.prepare(self.source, self.data, self.output)
+
+	def test_installer_deletes_obsolete_runtime_dlls(self) -> None:
+		installer = (REPO_ROOT / "qmclient_scripts/installer/QmClient.iss").read_text(encoding="utf-8")
+		install_delete = installer.split("[InstallDelete]", 1)[1].split("[", 1)[0]
+		for name in ("SDL2.dll", "avcodec-61.dll", "avformat-61.dll", "avutil-59.dll", "swresample-5.dll", "swscale-8.dll"):
+			self.assertIn(f'Name: "{{app}}\\{name}"', install_delete)
 
 	def test_temporary_directory_cannot_replace_source(self) -> None:
 		source = self.root / ".payload.tmp"

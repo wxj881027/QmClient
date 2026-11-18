@@ -31,7 +31,7 @@
 TEST(QmNewUiMenuRenderBrowserContract, EditorSaveFileDialogKeepsFilenameInputInControl)
 {
 	const std::string Source = ReadTextFile("src/game/editor/file_browser.cpp");
-	const std::string OnRender = FunctionBody(Source, "void CFileBrowser::OnRender(CUIRect _)");
+	const std::string OnRender = FunctionBody(Source, "void CFileBrowser::Render()");
 
 	EXPECT_NE(OnRender.find("m_ListBox.SetActive(!Ui()->IsPopupOpen() && (!m_SaveAction || !m_FilenameInput.IsActive()))"), std::string::npos);
 	EXPECT_NE(OnRender.find("const bool ListChoseItem = m_ListBox.WasItemSelected() || m_ListBox.WasItemActivated();"), std::string::npos);

@@ -300,8 +300,6 @@ public:
 	CGhost m_Ghost;
 	CHudEditor m_HudEditor;
 
-	CTooltips m_Tooltips;
-
 	CLocalServer m_LocalServer;
 
 	// TClient Components
@@ -418,6 +416,10 @@ private:
 	CLayers m_Layers;
 	CCollision m_Collision;
 	CUi m_UI;
+public:
+	// 气泡实例统一由 CUi 持有，这里保留引用别名给既有调用点，所有权仍只有一份。
+	CTooltips &m_Tooltips = m_UI.Tooltips();
+private:
 	CUiRuntimeV2 m_UiRuntimeV2;
 	CQmIconPrewarmPlan m_QmIconPrewarm;
 	int m_AppliedQmUiIconWeight = -1;
@@ -1164,6 +1166,20 @@ public:
 	void LoadParticlesSkin(const char *pPath, bool AsDir = false);
 	void LoadHudSkin(const char *pPath, bool AsDir = false);
 	void LoadExtrasSkin(const char *pPath, bool AsDir = false);
+
+	class CImageAsset
+	{
+	public:
+		bool IsLoaded() const { return m_ImageInfo.m_pData != nullptr; }
+
+		char m_aPath[IO_MAX_PATH_LENGTH] = "";
+		bool m_IsDefault = false;
+		bool m_IsBlank = false;
+		CImageInfo m_ImageInfo = {};
+	};
+
+	CImageAsset LoadAssetFromPath(const char *pPath, bool AsDir, int AssetId, const char *pDirectory) const;
+
 	void ReloadNamedSingleFileAssetImage(int ImageId, const char *pCategoryId, const char *pActiveName);
 	// 影响加载结果的开关（例如 qm_blank_asset_fallback）变化后重载全部自定义素材图片。
 	// 只把任务排队，实际重载由 ProcessPendingCustomAssetImageryReload 每帧一个类别分摊执行。

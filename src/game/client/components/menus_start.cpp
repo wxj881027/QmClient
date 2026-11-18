@@ -13,6 +13,7 @@
 
 #include <generated/client_data.h>
 
+#include <game/client/QmUi/QmAnimationBackend.h>
 #include <game/client/QmUi/QmLayout.h>
 #include <game/client/QmUi/QmLegacy.h>
 #include <game/client/QmUi/UiButtons.h>
@@ -187,7 +188,8 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 	const std::chrono::nanoseconds TotalStart = StartMenuPerfNow(TrackPerf);
 	GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_START);
 
-	const float Rounding = ResolveUiTextButtonRadius(EUiButtonGeometry::START_MENU);
+	// 开始菜单这几个按钮都是宽横条，端头给半圆。
+	const float Rounding = ui_token::radius::PILL;
 	const float VMargin = MainView.w / 2 - 190.0f;
 
 	int NewPage = -1;
@@ -200,20 +202,20 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 	{
 		const std::chrono::nanoseconds StageStart = StartMenuPerfNow(TrackPerf);
 		static CButtonContainer s_DiscordButton;
-		if(GameClient()->m_Menus.DoButton_Menu(&s_DiscordButton, Localize("Discord"), 0, &DiscordButtonRect, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::SMALL_MENU, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+		if(GameClient()->m_Menus.DoButton_Menu(&s_DiscordButton, Localize("Discord"), 0, &DiscordButtonRect, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::PILL, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
 		{
 			Client()->ViewLink(Localize("https://ddnet.org/discord"));
 		}
 
 		static CButtonContainer s_LearnButton;
-		if(GameClient()->m_Menus.DoButton_Menu(&s_LearnButton, Localize("Learn"), 0, &LearnButtonRect, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::SMALL_MENU, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+		if(GameClient()->m_Menus.DoButton_Menu(&s_LearnButton, Localize("Learn"), 0, &LearnButtonRect, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::PILL, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
 		{
 			Client()->ViewLink(Localize("https://wiki.ddnet.org/"));
 		}
 
 		static CButtonContainer s_TutorialButton;
 		static float s_JoinTutorialTime = 0.0f;
-		if(GameClient()->m_Menus.DoButton_Menu(&s_TutorialButton, Localize("Tutorial"), 0, &TutorialButtonRect, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::SMALL_MENU, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)) ||
+		if(GameClient()->m_Menus.DoButton_Menu(&s_TutorialButton, Localize("Tutorial"), 0, &TutorialButtonRect, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::PILL, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)) ||
 			(!Ui()->RenderOnly() && s_JoinTutorialTime != 0.0f && Client()->LocalTime() >= s_JoinTutorialTime))
 		{
 			// Activate internet tab before joining tutorial to make sure the server info
@@ -239,17 +241,17 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 		}
 
 		static CButtonContainer s_WebsiteButton;
-		if(GameClient()->m_Menus.DoButton_Menu(&s_WebsiteButton, Localize("Website"), 0, &WebsiteButtonRect, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::SMALL_MENU, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+		if(GameClient()->m_Menus.DoButton_Menu(&s_WebsiteButton, Localize("Website"), 0, &WebsiteButtonRect, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::PILL, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
 		{
 			Client()->ViewLink("https://ddnet.org/");
 		}
 
 		static CButtonContainer s_StatisticsButton;
-		if(GameClient()->m_Menus.DoButton_Menu(&s_StatisticsButton, Localize("Stats"), 0, &StatisticsButtonRect, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::SMALL_MENU, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+		if(GameClient()->m_Menus.DoButton_Menu(&s_StatisticsButton, Localize("Stats"), 0, &StatisticsButtonRect, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::PILL, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
 			NewPage = CMenus::PAGE_STATS;
 
 		static CButtonContainer s_NewsButton;
-		if(GameClient()->m_Menus.DoButton_Menu(&s_NewsButton, Localize("News"), 0, &NewsButtonRect, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::SMALL_MENU, 0.0f, g_Config.m_UiUnreadNews ? ColorRGBA(0.0f, 1.0f, 0.0f, 0.25f) : ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)) || CheckHotKey(KEY_N))
+		if(GameClient()->m_Menus.DoButton_Menu(&s_NewsButton, Localize("News"), 0, &NewsButtonRect, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::PILL, 0.0f, g_Config.m_UiUnreadNews ? ColorRGBA(0.0f, 1.0f, 0.0f, 0.25f) : ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)) || CheckHotKey(KEY_N))
 			NewPage = CMenus::PAGE_NEWS;
 		LogStartMenuPerfStage(Client(), "start_menu_external_buttons", StageStart, TrackPerf, UseV2Layout);
 	}
@@ -266,6 +268,41 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 
 	const bool LocalServerRunning = GameClient()->m_LocalServer.IsServerRunning();
 	const bool EditorDirty = GameClient()->Editor()->HasUnsavedData();
+	// 本地服务器格：0 = 单按钮「运行服务器」，1 = 已分成「进入 / 停止服务器」两段。
+	// 欠阻尼弹簧（固有响应约 0.34s、阻尼比 0.62）让右段冲过头一点再回稳，切换不是生硬的瞬变。
+	static float s_LocalServerSplit = 0.0f, s_LocalServerSplitVel = 0.0f;
+	QmSpringAdvance(s_LocalServerSplit, s_LocalServerSplitVel, LocalServerRunning ? 1.0f : 0.0f, SUiSpringConfig::FromResponse(0.34f, 0.62f), Client()->RenderFrameTime());
+	// 两段的底色沿用语义色，浓度跟着进度长：整条还是单按钮时不着色。
+	const ColorRGBA ControlSurface = ResolveConfiguredControlSurface();
+	const float SplitTint = std::clamp(s_LocalServerSplit, 0.0f, 1.0f);
+	const ColorRGBA JoinSurface = BlendUiButtonSurface(ControlSurface, ui_token::color::SUCCESS.WithAlpha(0.22f * SplitTint));
+	const ColorRGBA StopSurface = BlendUiButtonSurface(ControlSurface, ui_token::color::DANGER.WithAlpha(0.22f * SplitTint));
+	// 热键走边缘触发，只看目标态：CheckHotKey 是电平判定，按住 R 会每帧在「运行 → 停止」
+	// 之间来回切（实测按一下就能把刚起的服务器立刻停掉）。RenderOnly 趟不推进锁存，
+	// 否则背景趟吃掉边沿、绘制趟就不再响应。
+	{
+		static bool s_LocalServerRWasDown = false, s_LocalServerJWasDown = false;
+		if(!Ui()->RenderOnly())
+		{
+			const bool RDown = Input()->KeyPress(KEY_R);
+			const bool JDown = Input()->KeyPress(KEY_J);
+			const bool REdge = RDown && !s_LocalServerRWasDown;
+			const bool JEdge = JDown && !s_LocalServerJWasDown;
+			s_LocalServerRWasDown = RDown;
+			s_LocalServerJWasDown = JDown;
+			if(LocalServerRunning)
+			{
+				if(JEdge && CheckHotKey(KEY_J))
+					GameClient()->m_LocalServer.Connect();
+				else if(REdge && CheckHotKey(KEY_R))
+					GameClient()->m_LocalServer.KillServer();
+			}
+			else if(REdge && CheckHotKey(KEY_R))
+			{
+				GameClient()->m_LocalServer.RunServer({});
+			}
+		}
+	}
 	{
 		const std::chrono::nanoseconds StageStart = StartMenuPerfNow(TrackPerf);
 		constexpr int MenuButtonCount = 6;
@@ -309,6 +346,9 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 
 		// 更新入口始终允许查看；重开详情保留下载和已准备的安装包。
 		const char *pUpdateLabel = GameClient()->m_TClient.QmClientUpdateStatusText();
+		// 双操作行的文字字号跟同一排的带图菜单按钮对齐（两条版式分支共用）。
+		// 分段按钮自己按控件正文档取字会小一号，同一列里看得出来。
+		const float RowLabelSize = GameClient()->m_Menus.MenuButtonLabelSize(aMenuButtons[2]);
 
 		if(UseV2Layout)
 		{
@@ -341,7 +381,9 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 
 			// 检查更新与「新功能」共用双操作按钮：左半显示更新状态，右半打开新功能弹窗。
 			static CButtonContainer s_QmUpdateButton, s_QmNewFeaturesButton;
-			const int QmAction = ui_widget::SplitActionButton(Ctx, &s_QmUpdateButton, pUpdateLabel, &s_QmNewFeaturesButton, GameClient()->m_QmClient.HasUnreadQmNews() ? Localize("New features (unread)") : Localize("New features"), NewFeaturesButton, false, false, EUiButtonGeometry::CONTROL, Localize("Check for updates"), Localize("New features"));
+			ui_widget::SSplitActionOptions UpdateOptions;
+			UpdateOptions.m_LabelSize = RowLabelSize;
+			const int QmAction = ui_widget::SplitActionButton(Ctx, &s_QmUpdateButton, pUpdateLabel, &s_QmNewFeaturesButton, GameClient()->m_QmClient.HasUnreadQmNews() ? Localize("New features (unread)") : Localize("New features"), NewFeaturesButton, false, false, EUiButtonGeometry::CONTROL, Localize("Check for updates"), Localize("New features"), UpdateOptions);
 			if(QmAction == 0)
 			{
 				GameClient()->m_Menus.ShowQmUpdatePopup();
@@ -349,19 +391,23 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 			else if(QmAction == 1)
 				GameClient()->m_Menus.ShowQmNewFeaturesPopup();
 
-			static CButtonContainer s_LocalServerButton;
-			if(ui_widget::SecondaryButton(Ctx, &s_LocalServerButton, LocalServerRunning ? Localize("Stop server") : Localize("Run server"), aMenuButtons[2]) || (CheckHotKey(KEY_R) && Input()->KeyPress(KEY_R)))
+			// 与 legacy 同一套分段按钮和同一条进度：V2 版式不带主菜单插画，只换两段文字与底色。
+			static CButtonContainer s_LocalServerButton, s_LocalServerStopButton;
+			ui_widget::SSplitActionOptions LocalServerOptions;
+			LocalServerOptions.m_Progress = s_LocalServerSplit;
+			LocalServerOptions.m_LeftSurface = JoinSurface;
+			LocalServerOptions.m_RightSurface = StopSurface;
+			LocalServerOptions.m_LabelSize = RowLabelSize;
+			const int LocalServerAction = ui_widget::SplitActionButton(Ctx, &s_LocalServerButton, s_LocalServerSplit > 0.5f ? Localize("Join") : Localize("Run server"), &s_LocalServerStopButton, Localize("Stop server"), aMenuButtons[2], false, false, EUiButtonGeometry::CONTROL, nullptr, nullptr, LocalServerOptions);
+			if(LocalServerAction == 0)
 			{
 				if(LocalServerRunning)
-				{
-					GameClient()->m_LocalServer.KillServer();
-				}
+					GameClient()->m_LocalServer.Connect();
 				else
-				{
 					GameClient()->m_LocalServer.RunServer({});
-				}
 			}
-
+			else if(LocalServerAction == 1)
+				GameClient()->m_LocalServer.KillServer();
 			if(!QmUiMobilePlatform())
 			{
 				static CButtonContainer s_MapEditorButton;
@@ -451,6 +497,9 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 					Target = (i == HoveredIndex) ? HoverScale : OtherScale;
 				}
 
+				// 描边模式不缩放：按钮几何保持不动，反馈只走边框。
+				if(g_Config.m_QmUiHoverStyle != 0)
+					Target = 1.0f;
 				s_aMenuButtonScale[i] += (Target - s_aMenuButtonScale[i]) * Blend;
 				s_aMenuButtonTargetScale[i] = s_aMenuButtonScale[i];
 			}
@@ -477,7 +526,9 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 
 			// 检查更新与新功能共用双操作按钮：左半显示更新状态，右半打开内置新功能弹窗。
 			static CButtonContainer s_QmUpdateButton, s_QmNewFeaturesButton;
-			const int QmAction = ui_widget::SplitActionButton(ui_widget::ControlContext(Ui()), &s_QmUpdateButton, pUpdateLabel, &s_QmNewFeaturesButton, GameClient()->m_QmClient.HasUnreadQmNews() ? Localize("New features (unread)") : Localize("New features"), NewFeaturesButton, false, false, EUiButtonGeometry::START_MENU, Localize("Check for updates"), Localize("New features"));
+			ui_widget::SSplitActionOptions UpdateOptions;
+			UpdateOptions.m_LabelSize = RowLabelSize;
+			const int QmAction = ui_widget::SplitActionButton(ui_widget::ControlContext(Ui()), &s_QmUpdateButton, pUpdateLabel, &s_QmNewFeaturesButton, GameClient()->m_QmClient.HasUnreadQmNews() ? Localize("New features (unread)") : Localize("New features"), NewFeaturesButton, false, false, EUiButtonGeometry::START_MENU, Localize("Check for updates"), Localize("New features"), UpdateOptions);
 			if(QmAction == 0)
 			{
 				GameClient()->m_Menus.ShowQmUpdatePopup();
@@ -486,19 +537,35 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 				GameClient()->m_Menus.ShowQmNewFeaturesPopup();
 
 			ScaledButton = ScaleButtonRect(aMenuButtons[2], s_aMenuButtonScale[2]);
-			static CButtonContainer s_LocalServerButton;
-			if(GameClient()->m_Menus.DoButton_Menu(&s_LocalServerButton, LocalServerRunning ? Localize("Stop server") : Localize("Run server"), 0, &ScaledButton, BUTTONFLAG_LEFT, g_Config.m_ClShowStartMenuImages ? "local_server" : nullptr, IGraphics::CORNER_ALL, Rounding, 0.5f, LocalServerRunning ? ColorRGBA(0.0f, 1.0f, 0.0f, 0.25f) : ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), &m_aButtonLabels[2], -1.0f, &aMenuButtons[2]) || (CheckHotKey(KEY_R) && Input()->KeyPress(KEY_R)))
+			// 与「检查更新 / 新功能」同一个分段组件，边框、圆角、字号、悬浮与按下反馈完全一致。
+			// 未运行时进度为 0，整条仍是单按钮「运行服务器」；启动后右段从右端弹性长出，
+			// 左段被压窄成「进入」，插画始终钉在整条右端不动。切点照抄上游：
+			// 左段宽 =（总宽 − 贴图宽）/ 2，贴图占 4 倍按钮高。
+			const char *pLocalServerImage = g_Config.m_ClShowStartMenuImages ? "local_server" : nullptr;
+			IGraphics::CTextureHandle LocalServerImageIdle, LocalServerImageHover;
+			if(pLocalServerImage != nullptr)
+				GameClient()->m_Menus.MenuImageTextures(pLocalServerImage, &LocalServerImageIdle, &LocalServerImageHover);
+			const float LocalServerImageWidth = LocalServerImageIdle.IsValid() ? ScaledButton.h * 4.0f : 0.0f;
+			ui_widget::SSplitActionOptions LocalServerOptions;
+			LocalServerOptions.m_Progress = s_LocalServerSplit;
+			LocalServerOptions.m_LeftFraction = ScaledButton.w > 0.0f ? std::clamp((ScaledButton.w - LocalServerImageWidth) / 2.0f / ScaledButton.w, 0.0f, 1.0f) : 0.5f;
+			LocalServerOptions.m_ImageIdle = LocalServerImageIdle;
+			LocalServerOptions.m_ImageHover = LocalServerImageHover;
+			LocalServerOptions.m_ImageWidth = LocalServerImageWidth;
+			LocalServerOptions.m_LeftSurface = JoinSurface;
+			LocalServerOptions.m_RightSurface = StopSurface;
+			LocalServerOptions.m_LabelSize = RowLabelSize;
+			static CButtonContainer s_LocalServerButton, s_LocalServerStopButton;
+			const int LocalServerAction = ui_widget::SplitActionButton(ui_widget::ControlContext(Ui()), &s_LocalServerButton, s_LocalServerSplit > 0.5f ? Localize("Join") : Localize("Run server"), &s_LocalServerStopButton, Localize("Stop server"), ScaledButton, false, false, EUiButtonGeometry::START_MENU, nullptr, nullptr, LocalServerOptions);
+			if(LocalServerAction == 0)
 			{
 				if(LocalServerRunning)
-				{
-					GameClient()->m_LocalServer.KillServer();
-				}
+					GameClient()->m_LocalServer.Connect();
 				else
-				{
 					GameClient()->m_LocalServer.RunServer({});
-				}
 			}
-
+			else if(LocalServerAction == 1)
+				GameClient()->m_LocalServer.KillServer();
 			if(!QmUiMobilePlatform())
 			{
 				ScaledButton = ScaleButtonRect(aMenuButtons[3], s_aMenuButtonScale[3]);
@@ -581,9 +648,16 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 		}
 #endif
 		static CButtonContainer s_ConsoleButton;
+		// 主页每帧登记终端按钮的真实命中区；控制台激活时（含开合动画）
+		// 由控制台自己的输入趟读取同一份几何，主页不再被背景渲染挡住点击。
+		const CUIRect ConsoleHitRect = QmUiSquareIconButtonRect(ConsoleButton);
+		GameClient()->m_GameConsole.RegisterStartMenuToggle(&s_ConsoleButton, ConsoleHitRect);
+		const std::optional<bool> ConsoleToggleHover = GameClient()->m_GameConsole.IsActive()
+			? std::optional<bool>(GameClient()->m_GameConsole.StartMenuToggleHovered())
+			: std::nullopt;
 		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-		if(GameClient()->m_Menus.DoButton_Menu_QmIcon(&s_ConsoleButton, EQmIcon::TERMINAL, FONT_ICON_TERMINAL, 0, &ConsoleButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::SMALL_MENU, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.1f)))
+		if(GameClient()->m_Menus.DoButton_Menu_QmIcon(&s_ConsoleButton, EQmIcon::TERMINAL, FONT_ICON_TERMINAL, 0, &ConsoleButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::SMALL_MENU, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.1f), nullptr, -1.0f, ConsoleToggleHover))
 		{
 			GameClient()->m_GameConsole.Toggle(CGameConsole::CONSOLETYPE_LOCAL);
 		}

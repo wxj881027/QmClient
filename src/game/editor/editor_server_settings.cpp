@@ -2149,11 +2149,11 @@ void CMapSettingsBackend::CContext::GetCommandHelpText(char *pStr, int Length) c
 		const auto *pSetting = static_cast<const SMapSettingInt *>(m_pCurrentSetting.get());
 		const char *pHelpText = Localize(pSetting->m_pHelp);
 		if(pSetting->m_Min == 0 && pSetting->m_Max == 0)
-			str_format(pStr, Length, Localize("%s (default: %d)", "Config help"), pHelpText, pSetting->m_Default);
+			str_format(pStr, Length, Localize("%s (default: %d)", "Editor"), pHelpText, pSetting->m_Default);
 		else if(pSetting->m_Max == 0)
-			str_format(pStr, Length, Localize("%s (default: %d, min: %d)", "Config help"), pHelpText, pSetting->m_Default, pSetting->m_Min);
+			str_format(pStr, Length, Localize("%s (default: %d, min: %d)", "Editor"), pHelpText, pSetting->m_Default, pSetting->m_Min);
 		else
-			str_format(pStr, Length, Localize("%s (default: %d, min: %d, max: %d)", "Config help"), pHelpText, pSetting->m_Default, pSetting->m_Min, pSetting->m_Max);
+			str_format(pStr, Length, Localize("%s (default: %d, min: %d, max: %d)", "Editor"), pHelpText, pSetting->m_Default, pSetting->m_Min, pSetting->m_Max);
 	}
 	else
 	{

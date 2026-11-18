@@ -4,6 +4,8 @@
 #include <gtest/gtest-printers.h>
 #include <gtest/gtest.h>
 
+#include <iterator>
+
 namespace testing::internal
 {
 	template<>
@@ -24,4 +26,19 @@ TEST(Mapitems, FixedTimeRoundtrip)
 	{
 		ASSERT_EQ(Fixed, CFixedTime::FromSeconds(Fixed.AsSeconds()));
 	}
+}
+
+TEST(Mapitems, RotatePointsAroundCenter)
+{
+	ivec2 aPoints[] = {
+		ivec2(10, 0),
+		ivec2(0, 10),
+		ivec2(5, 5),
+	};
+
+	RotatePoints(ivec2(0, 0), aPoints, std::size(aPoints), pi / 2.0f);
+
+	EXPECT_EQ(aPoints[0], ivec2(0, 10));
+	EXPECT_EQ(aPoints[1], ivec2(-10, 0));
+	EXPECT_EQ(aPoints[2], ivec2(-5, 5));
 }

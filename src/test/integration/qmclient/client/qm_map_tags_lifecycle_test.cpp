@@ -103,3 +103,24 @@ TEST(QmMapTagsLifecycle, FailedReadKeepsRetryAvailableWithoutReadingFailedHttpRe
 	EXPECT_TRUE(Client.Ready());
 	EXPECT_STREQ(Client.Status(), "");
 }
+
+TEST(QmMapTagsLifecycle, DeletingTagCancelsOnlyItsInFlightSubmission)
+{
+	CHttpRecorder Http;
+	QmMapTags::CClient Client(Read, Write);
+	Client.SetContext("ddnet", "Lighthouse", "Alice");
+	Client.Update(&Http, 1.0);
+	Http.m_vRequests[0]->Finish(SNAPSHOT);
+	Client.Poll();
+	ASSERT_TRUE(Client.Ready());
+	ASSERT_TRUE(Client.Submit(&Http, "Hook"));
+	ASSERT_TRUE(Client.Busy());
+	EXPECT_FALSE(Client.CancelSubmit("Other"));
+	EXPECT_TRUE(Client.Busy());
+	EXPECT_TRUE(Client.CancelSubmit("Hook"));
+	EXPECT_FALSE(Client.Busy());
+	EXPECT_TRUE(Http.m_vRequests.back()->m_Aborted);
+	// 取消后写入通道立即释放，下一条合法标签仍能提交。
+	EXPECT_TRUE(Client.Submit(&Http, "Fly"));
+	EXPECT_TRUE(Client.Busy());
+}

@@ -148,7 +148,7 @@ namespace
 			m_QuadCounts.emplace(Id, 0);
 			return Id;
 		}
-		int QuadContainerAddQuads(int Container, CQuadItem *, int Num) override
+		int QuadContainerAddQuads(int Container, const CQuadItem *, int Num) override
 		{
 			int &Count = m_QuadCounts.at(Container);
 			const int Offset = Count;

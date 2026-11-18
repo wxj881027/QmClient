@@ -5,6 +5,7 @@
 
 #include "uuid_manager.h"
 
+#include <base/bytes.h>
 #include <base/hash_ctxt.h>
 #include <base/log.h>
 #include <base/math.h>
@@ -48,26 +49,18 @@ namespace
 	class CItemEx
 	{
 	public:
-		int m_aUuid[sizeof(CUuid) / sizeof(int32_t)];
+		int m_aUuid[UUID_INT_SIZE];
 
 		static CItemEx FromUuid(CUuid Uuid)
 		{
 			CItemEx Result;
-			for(size_t i = 0; i < std::size(Result.m_aUuid); i++)
-			{
-				Result.m_aUuid[i] = bytes_be_to_uint(&Uuid.m_aData[i * sizeof(int32_t)]);
-			}
+			UuidToInts(Uuid, Result.m_aUuid);
 			return Result;
 		}
 
 		CUuid ToUuid() const
 		{
-			CUuid Result;
-			for(size_t i = 0; i < std::size(m_aUuid); i++)
-			{
-				uint_to_bytes_be(&Result.m_aData[i * sizeof(int32_t)], m_aUuid[i]);
-			}
-			return Result;
+			return UuidFromInts(m_aUuid);
 		}
 	};
 
@@ -125,7 +118,6 @@ namespace
 		int *m_pDataSizes;
 
 		char *m_pItemStart;
-		char *m_pDataStart;
 	};
 
 } // namespace
@@ -716,8 +708,6 @@ bool CDataFileReader::Open(class IStorage *pStorage, const char *pFilename, int 
 		pTmpDataFile->m_Info.m_pDataSizes = nullptr;
 		pTmpDataFile->m_Info.m_pItemStart = (char *)&pTmpDataFile->m_Info.m_pDataOffsets[pTmpDataFile->m_Header.m_NumRawData];
 	}
-	pTmpDataFile->m_Info.m_pDataStart = pTmpDataFile->m_Info.m_pItemStart + pTmpDataFile->m_Header.m_ItemSize;
-
 	if(!pTmpDataFile->Validate())
 	{
 		io_close(pTmpDataFile->m_File);

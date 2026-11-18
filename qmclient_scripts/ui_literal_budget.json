@@ -1,0 +1,19 @@
+{
+	"total": 35,
+	"files": {
+		"src/game/client/QmUi/cards/QmCardCatalogBind.cpp": 1,
+		"src/game/client/QmUi/cards/QmCardCatalogControls.cpp": 3,
+		"src/game/client/QmUi/cards/QmCardCatalogIme.cpp": 1,
+		"src/game/client/QmUi/cards/QmCardCatalogSound.cpp": 1,
+		"src/game/client/QmUi/cards/QmCardCatalogTClientFont.cpp": 1,
+		"src/game/client/QmUi/cards/QmCardCatalogTClientProfiles.cpp": 2,
+		"src/game/client/QmUi/cards/QmCardCatalogTClientStatusBar.cpp": 3,
+		"src/game/client/QmUi/cards/QmCardCatalogTee.cpp": 3,
+		"src/game/client/QmUi/QmDemoCameraPanel.cpp": 3,
+		"src/game/client/QmUi/QmPlayersMenu.cpp": 2,
+		"src/game/client/QmUi/QmScreenshotEditor.cpp": 6,
+		"src/game/client/QmUi/QmToastRender.cpp": 1,
+		"src/game/client/QmUi/QmVoteMenu.cpp": 7,
+		"src/game/client/QmUi/SettingsCard.cpp": 1
+	}
+}

@@ -43,7 +43,15 @@ TEST(QmTeeCards, DefaultReadingOrderStartsWithSharedEditorAndLibrary)
 	const auto Columns = BuildSettingsCardDeckColumnOrder(Model, "tee", vActive);
 	std::vector<std::string> vOrder;
 	ForEachSettingsCardDeckVisualOrder(Columns, [&](int Index, int) { vOrder.emplace_back(Model.Entry(Index).m_pStableId); }, 2);
-	EXPECT_EQ(vOrder, (std::vector<std::string>{"deck:tee-identity", "deck:tee-skin-list", "deck:tee-skin-options", "deck:tee-skin-queue", "qm:skin_appearance", "deck:tee-glow"}));
+	ASSERT_EQ(vOrder.size(), 6u);
+	// 共享编辑器（身份预览）和皮肤库是全宽卡，永远排在最前。
+	EXPECT_EQ(vOrder[0], "deck:tee-identity");
+	EXPECT_EQ(vOrder[1], "deck:tee-skin-list");
+	// 其余卡片由默认瀑布铺满两列：不丢卡、不重复，两列都非空。
+	EXPECT_FALSE(Columns[1].empty());
+	EXPECT_FALSE(Columns[2].empty());
+	for(const char *pId : qm_card_catalog::TeeCardStableIds())
+		EXPECT_EQ(std::count(vOrder.begin(), vOrder.end(), std::string(pId)), 1) << pId;
 	const auto &Visual = qm_card_catalog::VisualCardStableIds();
 	EXPECT_TRUE(std::none_of(Visual.begin(), Visual.end(), [](const char *pId) { return std::string(pId) == "qm:skin_appearance"; }));
 }
@@ -66,9 +74,11 @@ TEST(QmTeeCards, PreviousDefaultLayoutMigratesAndSurvivesReload)
 {
 	auto Model = LegacyTeeModel();
 	ASSERT_TRUE(qm_card_registry::RepairLegacyTeeLayout(Model));
-	EXPECT_EQ(Model.StableIdOrder("", "tee", 0), (std::vector<std::string>{"deck:tee-identity", "deck:tee-skin-list"}));
-	EXPECT_EQ(Model.StableIdOrder("", "tee", 1), (std::vector<std::string>{"deck:tee-skin-options", "qm:skin_appearance"}));
-	EXPECT_EQ(Model.StableIdOrder("", "tee", 2), (std::vector<std::string>{"deck:tee-skin-queue", "deck:tee-glow"}));
+	// 迁移目标就是当前默认布局（瀑布分配结果）：不再维护第二份手写列/序。
+	qm_card_order::CModel DefaultModel;
+	DefaultModel.SetEntries(qm_card_registry::BuildDefaultEntries());
+	for(int Column = 0; Column < 3; ++Column)
+		EXPECT_EQ(Model.StableIdOrder("", "tee", Column), DefaultModel.StableIdOrder("", "tee", Column)) << Column;
 	EXPECT_FALSE(qm_card_registry::RepairLegacyTeeLayout(Model));
 	char aSaved[32768];
 	ASSERT_TRUE(Model.Serialize(aSaved, sizeof(aSaved)));

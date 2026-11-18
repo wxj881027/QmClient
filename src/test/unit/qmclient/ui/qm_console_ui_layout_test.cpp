@@ -57,6 +57,121 @@ TEST(QmConsoleUiLayout, LargerFontsReserveTallerRowsWhenControlsWrap)
 	EXPECT_LE(Layout.m_ActionX + 400.0f * Layout.m_ActionScale, 490.0f);
 }
 
+TEST(QmConsoleUiLayout, AnimatedToolbarKeepsTargetRowCountWhileItemsGrow)
+{
+	const auto Empty = QmConsoleUi::LayoutToolbarAnimated(500.0f, 240.0f, 320.0f, 0.0f, 0.0f);
+	const auto Half = QmConsoleUi::LayoutToolbarAnimated(500.0f, 240.0f, 320.0f, 120.0f, 160.0f);
+	const auto Full = QmConsoleUi::LayoutToolbarAnimated(500.0f, 240.0f, 320.0f, 240.0f, 320.0f);
+	for(const auto *pLayout : {&Empty, &Half, &Full})
+	{
+		EXPECT_TRUE(pLayout->m_SplitRows);
+		EXPECT_FLOAT_EQ(pLayout->m_Height, 52.0f);
+	}
+	EXPECT_GT(Empty.m_ActionX, Half.m_ActionX);
+	EXPECT_GT(Half.m_ActionX, Full.m_ActionX);
+}
+
+TEST(QmConsoleUiLayout, AnimatedToolbarDoesNotReserveAHiddenFilterRow)
+{
+	const auto Layout = QmConsoleUi::LayoutToolbarAnimated(500.0f, 0.0f, 320.0f, 0.0f, 160.0f);
+	EXPECT_FALSE(Layout.m_SplitRows);
+	EXPECT_FLOAT_EQ(Layout.m_Height, 26.0f);
+}
+
+TEST(QmConsoleUiLayout, AnimatedCrossfadeKeepsFadingGroupsFromOverlapping)
+{
+	// 筛选已退出目标集合但仍在淡出，导出动作同时进场：两组都单独放得下，
+	// 但按旧逻辑会叠在同一段横向空间里。
+	const auto Layout = QmConsoleUi::LayoutToolbarAnimated(500.0f, 0.0f, 320.0f, 220.0f, 300.0f);
+	EXPECT_FALSE(Layout.m_SplitRows);
+	const float FilterRight = 10.0f + 220.0f * Layout.m_FilterScale;
+	const float ActionRight = Layout.m_ActionX + 300.0f * Layout.m_ActionScale;
+	EXPECT_GE(Layout.m_ActionX, FilterRight + 10.0f - 0.001f);
+	EXPECT_LE(FilterRight, 490.0f);
+	EXPECT_LE(ActionRight, 490.0f);
+}
+
+TEST(QmConsoleUiLayout, ToolbarFlowKeepsOneFixedGapAcrossHiddenSlots)
+{
+	const std::array<float, 3> aWidths = {40.0f, 55.0f, 70.0f};
+	const std::array<float, 3> aVisibleEdges = {1.0f, 0.0f, 1.0f};
+	EXPECT_FLOAT_EQ(QmConsoleUi::ToolbarFlowWidth(aWidths, aVisibleEdges, 4.0f), 114.0f);
+
+	const std::array<float, 3> aVisible = {1.0f, 1.0f, 1.0f};
+	EXPECT_FLOAT_EQ(QmConsoleUi::ToolbarFlowWidth(aWidths, aVisible, 4.0f), 173.0f);
+
+	const std::array<float, 3> aPartial = {1.0f, 0.5f, 1.0f};
+	EXPECT_FLOAT_EQ(QmConsoleUi::ToolbarFlowWidth(aWidths, aPartial, 4.0f), 145.5f);
+
+	const std::array<float, 3> aHidden = {};
+	EXPECT_FLOAT_EQ(QmConsoleUi::ToolbarFlowWidth(aWidths, aHidden, 4.0f), 0.0f);
+}
+
+TEST(QmConsoleUiLayout, SearchLabelWidthReversesWithoutRestartingItsSlot)
+{
+	const int PreviousMotion = g_Config.m_QmUiMotionLevel;
+	g_Config.m_QmUiMotionLevel = 2;
+	CQmAnimationBackend Runtime;
+	constexpr uint64_t Key = 0x5EA2;
+
+	EXPECT_FLOAT_EQ(QmConsoleUi::ResolveToolbarWidth(&Runtime, Key, 80.0f, true, ui_token::motion::TAB_SWITCH), 80.0f);
+	EXPECT_FLOAT_EQ(QmConsoleUi::ResolveToolbarWidth(&Runtime, Key, 56.0f, true, ui_token::motion::TAB_SWITCH), 80.0f);
+	Runtime.Advance(0.05f);
+	const float Shrinking = QmConsoleUi::ResolveToolbarWidth(&Runtime, Key, 56.0f, true, ui_token::motion::TAB_SWITCH);
+	EXPECT_GT(Shrinking, 56.0f);
+	EXPECT_LT(Shrinking, 80.0f);
+
+	const float Reversed = QmConsoleUi::ResolveToolbarWidth(&Runtime, Key, 80.0f, true, ui_token::motion::TAB_SWITCH);
+	EXPECT_NEAR(Reversed, Shrinking, 0.001f);
+	Runtime.Advance(0.05f);
+	EXPECT_GT(QmConsoleUi::ResolveToolbarWidth(&Runtime, Key, 80.0f, true, ui_token::motion::TAB_SWITCH), Shrinking);
+
+	EXPECT_FLOAT_EQ(QmConsoleUi::ResolveToolbarWidth(nullptr, Key, 64.0f, true, ui_token::motion::TAB_SWITCH), 64.0f);
+	g_Config.m_QmUiMotionLevel = PreviousMotion;
+}
+
+TEST(QmConsoleUiLayout, OutsideClickCloseDoesNotRestoreStaleDisabledUi)
+{
+	// 控制台打开时 UI 只在自己的渲染期间临时启用，帧末要恢复禁用。
+	EXPECT_FALSE(QmConsoleUi::RestoreUiEnabledAtFrameEnd(false, true, false));
+	// 点击面板外的同一帧从 OPEN 切到 CLOSING，Toggle 已写入启用态，不得被旧值覆盖。
+	EXPECT_TRUE(QmConsoleUi::RestoreUiEnabledAtFrameEnd(false, true, true));
+	// 关闭动画期间状态不再变化，继续按进入本帧的值恢复。
+	EXPECT_TRUE(QmConsoleUi::RestoreUiEnabledAtFrameEnd(true, true, false));
+}
+
+TEST(QmConsoleUiLayout, ConsoleTypeBlendReversesFromCurrentProgress)
+{
+	const int PreviousMotion = g_Config.m_QmUiMotionLevel;
+	g_Config.m_QmUiMotionLevel = 2;
+	CQmAnimationBackend Runtime;
+	constexpr uint64_t Key = 0x7EA1;
+
+	EXPECT_FLOAT_EQ(QmConsoleUi::ResolveConsoleTypeBlend(&Runtime, Key, false, true, ui_token::motion::TAB_SWITCH), 0.0f);
+	EXPECT_FLOAT_EQ(QmConsoleUi::ResolveConsoleTypeBlend(&Runtime, Key, true, true, ui_token::motion::TAB_SWITCH), 0.0f);
+	Runtime.Advance(0.05f);
+	const float Switching = QmConsoleUi::ResolveConsoleTypeBlend(&Runtime, Key, true, true, ui_token::motion::TAB_SWITCH);
+	EXPECT_GT(Switching, 0.0f);
+	EXPECT_LT(Switching, 1.0f);
+
+	const float Reversed = QmConsoleUi::ResolveConsoleTypeBlend(&Runtime, Key, false, true, ui_token::motion::TAB_SWITCH);
+	EXPECT_NEAR(Reversed, Switching, 0.001f);
+	Runtime.Advance(0.05f);
+	EXPECT_LT(QmConsoleUi::ResolveConsoleTypeBlend(&Runtime, Key, false, true, ui_token::motion::TAB_SWITCH), Reversed);
+
+	EXPECT_FLOAT_EQ(QmConsoleUi::ResolveConsoleTypeBlend(nullptr, Key, true, true, ui_token::motion::TAB_SWITCH), 1.0f);
+	g_Config.m_QmUiMotionLevel = PreviousMotion;
+}
+
+TEST(QmConsoleUiLayout, HeaderAndFooterPanelsShrinkWithConsoleHeight)
+{
+	EXPECT_FLOAT_EQ(QmConsoleUi::ClampPanelHeight(28.0f, 100.0f), 28.0f);
+	EXPECT_FLOAT_EQ(QmConsoleUi::ClampPanelHeight(28.0f, 10.0f), 10.0f);
+	EXPECT_FLOAT_EQ(QmConsoleUi::ClampPanelHeight(28.0f, -5.0f), 0.0f);
+	EXPECT_FLOAT_EQ(QmConsoleUi::PanelTopForBottomAligned(100.0f, 18.0f), 82.0f);
+	EXPECT_FLOAT_EQ(QmConsoleUi::PanelTopForBottomAligned(10.0f, 18.0f), 0.0f);
+}
+
 TEST(QmConsoleUiLayout, TextOnlyButtonCentersLabelWithoutReservingIconSlot)
 {
 	const CUIRect Button = {20.0f, 3.0f, 120.0f, 24.0f};
@@ -222,6 +337,64 @@ TEST(QmConsoleUiLayout, LogBottomLeavesReadableSeparatorGapAtEveryFontSize)
 	}
 }
 
+TEST(QmConsoleUiLayout, EmptyInputReservesNoHintRow)
+{
+	EXPECT_FLOAT_EQ(QmConsoleUi::ResolveConsoleHintReserve(10.0f, 0), 0.0f);
+	EXPECT_FLOAT_EQ(QmConsoleUi::ResolveConsoleHintReserve(10.0f, -2), 0.0f);
+	EXPECT_FLOAT_EQ(QmConsoleUi::ResolveConsoleHintReserve(0.0f, 2), 0.0f);
+	EXPECT_FLOAT_EQ(QmConsoleUi::ResolveConsoleHintReserve(10.0f, 1), 14.0f);
+	EXPECT_FLOAT_EQ(QmConsoleUi::ResolveConsoleHintReserve(10.0f, 2), 28.0f);
+}
+
+TEST(QmConsoleUiLayout, HintReserveStopsAtThreeRows)
+{
+	// 帮助最多两行 + 用法一行；再长的内容也不会继续吞掉日志区。
+	EXPECT_FLOAT_EQ(QmConsoleUi::ResolveConsoleHintReserve(8.0f, 3), 36.0f);
+	EXPECT_FLOAT_EQ(QmConsoleUi::ResolveConsoleHintReserve(8.0f, 99), 36.0f);
+}
+
+TEST(QmConsoleUiLayout, StartMenuToggleOnlyCommitsOnInsideRelease)
+{
+	QmConsoleUi::CStartMenuTogglePress Press;
+	EXPECT_FALSE(Press.Update(true, true, true));
+	EXPECT_TRUE(Press.Pressed());
+	EXPECT_FALSE(Press.Update(true, true, false));
+	EXPECT_TRUE(Press.Update(true, false, false));
+	EXPECT_FALSE(Press.Pressed());
+
+	// 按钮内按下后拖出再松开：取消，不切换。
+	EXPECT_FALSE(Press.Update(true, true, true));
+	EXPECT_FALSE(Press.Update(false, true, false));
+	EXPECT_FALSE(Press.Update(false, false, false));
+
+	// 按钮外按下后拖入：不接管这次手势。
+	EXPECT_FALSE(Press.Update(false, true, true));
+	EXPECT_FALSE(Press.Update(true, true, false));
+	EXPECT_FALSE(Press.Update(true, false, false));
+}
+
+TEST(QmConsoleUiLayout, StartMenuToggleCanReverseEveryAnimationPress)
+{
+	QmConsoleUi::CStartMenuTogglePress Press;
+	for(int PressIndex = 0; PressIndex < 3; ++PressIndex)
+	{
+		SCOPED_TRACE(PressIndex);
+		EXPECT_FALSE(Press.Update(true, true, true));
+		EXPECT_TRUE(Press.Update(true, false, false));
+		EXPECT_FALSE(Press.Pressed());
+	}
+}
+
+TEST(QmConsoleUiLayout, StartMenuToggleIsNotClickableUnderFullscreenPanel)
+{
+	// 常规 60% 高度下，右下角按钮在面板下方，可以透传点击。
+	EXPECT_TRUE(QmConsoleUi::StartMenuToggleVisibleBelowPanel(1000.0f, 1080.0f, false));
+	// 全屏本地控制台盖住按钮，同一坐标属于面板，不能再触发开关。
+	EXPECT_FALSE(QmConsoleUi::StartMenuToggleVisibleBelowPanel(1000.0f, 1080.0f, true));
+	// 按钮几何一旦落进常规面板区域，同样不接管。
+	EXPECT_FALSE(QmConsoleUi::StartMenuToggleVisibleBelowPanel(600.0f, 1080.0f, false));
+}
+
 TEST(QmConsoleUiLayout, FilterDisableMovesGraduallyAndRedirectsWithoutJump)
 {
 	const int PreviousMotion = g_Config.m_QmUiMotionLevel;
@@ -248,6 +421,56 @@ TEST(QmConsoleUiLayout, FilterWithoutMotionOrRuntimeUsesFinalState)
 	QmConsoleUi::ResolveFilterDisabled(&Runtime, 19, true);
 	EXPECT_FLOAT_EQ(QmConsoleUi::ResolveFilterDisabled(&Runtime, 19, false), 1.0f);
 	g_Config.m_QmUiMotionLevel = PreviousMotion;
+}
+
+TEST(QmConsoleUiLayout, ToolbarPresenceEntersExitsAndResumesFromTheCurrentWidth)
+{
+	const int PreviousMotion = g_Config.m_QmUiMotionLevel;
+	g_Config.m_QmUiMotionLevel = 2;
+	CQmAnimationBackend Runtime;
+	QmConsoleUi::CToolbarPresenceMotion<1> Motion;
+	constexpr uint64_t Key = 0xC0DE;
+
+	EXPECT_FLOAT_EQ(Motion.Resolve(&Runtime, Key, 0, true, true, ui_token::motion::NAVIGATION_APPEAR), 0.0f);
+	Runtime.Advance(0.10f);
+	const float Entering = Motion.Resolve(&Runtime, Key, 0, true, true, ui_token::motion::NAVIGATION_APPEAR);
+	EXPECT_GT(Entering, 0.0f);
+	EXPECT_LT(Entering, 1.0f);
+	Runtime.Advance(0.5f);
+	EXPECT_NEAR(Motion.Resolve(&Runtime, Key, 0, true, true, ui_token::motion::NAVIGATION_APPEAR), 1.0f, 0.001f);
+
+	EXPECT_FLOAT_EQ(Motion.Resolve(&Runtime, Key, 0, false, true, ui_token::motion::NAVIGATION_APPEAR), 1.0f);
+	Runtime.Advance(0.08f);
+	const float Exiting = Motion.Resolve(&Runtime, Key, 0, false, true, ui_token::motion::NAVIGATION_APPEAR);
+	EXPECT_GT(Exiting, 0.0f);
+	EXPECT_LT(Exiting, 1.0f);
+
+	const float Resumed = Motion.Resolve(&Runtime, Key, 0, true, true, ui_token::motion::NAVIGATION_APPEAR);
+	EXPECT_NEAR(Resumed, Exiting, 0.001f);
+	Runtime.Advance(0.5f);
+	EXPECT_NEAR(Motion.Resolve(&Runtime, Key, 0, true, true, ui_token::motion::NAVIGATION_APPEAR), 1.0f, 0.001f);
+	g_Config.m_QmUiMotionLevel = PreviousMotion;
+}
+
+TEST(QmConsoleUiLayout, ToolbarPresenceJumpsToTargetWhenMotionIsDisabled)
+{
+	CQmAnimationBackend Runtime;
+	QmConsoleUi::CToolbarPresenceMotion<1> Motion;
+	constexpr uint64_t Key = 0xBEEF;
+	EXPECT_FLOAT_EQ(Motion.Resolve(&Runtime, Key, 0, true, false, ui_token::motion::NAVIGATION_APPEAR), 1.0f);
+	EXPECT_FLOAT_EQ(Motion.Resolve(&Runtime, Key, 0, false, false, ui_token::motion::NAVIGATION_APPEAR), 0.0f);
+}
+
+TEST(QmConsoleUiLayout, SelectedToolbarButtonUsesControlThemeAccentDerivative)
+{
+	SUiTheme Theme{};
+	Theme.m_Selected = ColorRGBA(0.25f, 0.75f, 0.50f, 0.22f);
+	QmConsoleAppearance::SPalette Palette{};
+	Palette.m_Panel = ColorRGBA(0.10f, 0.12f, 0.14f, 0.90f);
+	EXPECT_EQ(QmConsoleUi::ResolveConsoleButtonFill(Theme, Palette, 0.0f, true), Theme.m_Selected);
+	EXPECT_EQ(QmConsoleUi::ResolveConsoleButtonFill(Theme, Palette, 1.0f, true), Palette.m_Panel);
+	const ColorRGBA Disabled = QmConsoleUi::ResolveConsoleButtonFill(Theme, Palette, 0.0f, false);
+	EXPECT_FLOAT_EQ(Disabled.a, Theme.m_Selected.a * 0.65f);
 }
 
 TEST(QmConsoleUiLayout, FilterContentFadesInAfterMaskChangeAndCompletes)

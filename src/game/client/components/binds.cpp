@@ -52,13 +52,15 @@ static void ExecuteBindCommand(IConsole *pConsole, const char *pBind, const CGam
 {
 	if(!pBind)
 		return;
-	if(!ShouldAppendGoresPrevWeapon(pGameClient) || str_find(pBind, "+fire") == nullptr || str_find(pBind, "+prevweapon") != nullptr)
+	// 绑定命令可能在执行中解绑或改写自身槽位，先复制再交给控制台。
+	const std::string BindCopy(pBind);
+	if(!ShouldAppendGoresPrevWeapon(pGameClient) || str_find(BindCopy.c_str(), "+fire") == nullptr || str_find(BindCopy.c_str(), "+prevweapon") != nullptr)
 	{
-		pConsole->ExecuteLineStroked(Stroke, pBind, ClientId);
+		pConsole->ExecuteLineStroked(Stroke, BindCopy.c_str(), ClientId);
 		return;
 	}
 
-	std::string Command(pBind);
+	std::string Command(BindCopy);
 	Command += ";+prevweapon";
 	pConsole->ExecuteLineStroked(Stroke, Command.c_str(), ClientId);
 }
@@ -95,6 +97,7 @@ bool CBinds::CBindsSpecial::OnInput(const IInput::CEvent &Event)
 CBinds::CBinds()
 {
 	m_SpecialBinds.m_pBinds = this;
+	m_HandlingNewBind = false;
 }
 
 CBinds::~CBinds()
@@ -196,15 +199,9 @@ bool CBinds::OnInput(const IInput::CEvent &Event)
 		});
 		if(ActiveBind == m_vActiveBinds.end())
 		{
+			m_HandlingNewBind = true;
 			const auto &&OnKeyPress = [&](int Mask) {
 				const char *pBind = m_Storage.m_aapKeyBindings[Mask][Event.m_Key];
-				if(g_Config.m_ClSubTickAiming)
-				{
-					if(str_comp("+fire", pBind) == 0 || str_comp("+hook", pBind) == 0)
-					{
-						m_MouseOnAction = true;
-					}
-				}
 				ExecuteBindCommand(Console(), pBind, GameClient(), 1, IConsole::CLIENT_ID_UNSPECIFIED);
 				m_vActiveBinds.emplace_back(Event.m_Key, Mask);
 			};
@@ -220,6 +217,7 @@ bool CBinds::OnInput(const IInput::CEvent &Event)
 				OnKeyPress(KeyModifier::NONE);
 				Handled = true;
 			}
+			m_HandlingNewBind = false;
 		}
 		else
 		{
@@ -690,5 +688,10 @@ void CBinds::SetDDRaceBinds(bool FreeOnly)
 		Bind(KEY_LALT, "toggle_scoreboard_cursor", FreeOnly);
 	}
 
-	g_Config.m_ClDDRaceBindsSet = 2;
+	if(g_Config.m_ClDDRaceBindsSet < 3)
+	{
+		Bind(KEY_W, "+jump", FreeOnly);
+	}
+
+	g_Config.m_ClDDRaceBindsSet = 3;
 }

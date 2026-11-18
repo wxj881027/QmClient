@@ -5,13 +5,16 @@
 
 #include "demoedit.h"
 #include "friends.h"
+#include "map_download_resolver.h"
 #include "perf_file_logger.h"
 #include "qm_graphics_diagnostics.h"
 #include "qm_storage_mode.h"
 #include "serverbrowser.h"
 #include "video_export.h"
 
+#include <base/bytes.h>
 #include <base/crashdump.h>
+#include <base/dbg.h>
 #include <base/fs.h>
 #include <base/hash.h>
 #include <base/hash_ctxt.h>
@@ -19,6 +22,8 @@
 #include <base/log.h>
 #include <base/logger.h>
 #include <base/math.h>
+#include <base/mem.h>
+#include <base/os.h>
 #include <base/perf_timer.h>
 #include <base/str.h>
 #include <base/system.h>
@@ -304,7 +309,7 @@ static bool ShowQmCrashReporterDialog(const char *pReportPath)
 		char aReportDirectory[IO_MAX_PATH_LENGTH];
 		str_copy(aReportDirectory, pReportPath);
 		if(fs_parent_dir(aReportDirectory) == 0)
-			open_file(aReportDirectory);
+			os_open_file(aReportDirectory);
 	}
 	return true;
 }
@@ -615,24 +620,22 @@ CSnapshotDelta *CClient::SnapshotDelta()
 {
 	if(IsSixup())
 	{
-		return &*m_pSnapshotDeltaSixup;
+		return &m_SnapshotDeltaSixup;
 	}
-	return &*m_pSnapshotDelta;
+	return &m_SnapshotDelta;
 }
 
 CClient::CClient() :
-	m_pSnapshotDelta(CSnapshotDelta::New()),
-	m_pSnapshotDeltaSixup(CSnapshotDelta::New()),
-	m_DemoPlayer(&*m_pSnapshotDelta, &*m_pSnapshotDeltaSixup, true, [&]() { UpdateDemoIntraTimers(); }),
-	m_InputtimeMarginGraph(128, 2, true),
+	m_DemoPlayer(&m_SnapshotDelta, &m_SnapshotDeltaSixup, true, [&]() { UpdateDemoIntraTimers(); }),
+	m_aInputtimeMarginGraphs{{128, 2, true}, {128, 2, true}},
 	m_aGametimeMarginGraphs{{128, 2, true}, {128, 2, true}},
 	m_FpsGraph(4096, 0, true)
 {
 	m_StateStartTime = time_get();
 	for(auto &DemoRecorder : m_aDemoRecorders)
-		DemoRecorder = CDemoRecorder(&*m_pSnapshotDelta);
+		DemoRecorder = CDemoRecorder(&m_SnapshotDelta);
 	for(auto &DemoRecorder : m_aDemoRecordersSixup)
-		DemoRecorder = CDemoRecorder(&*m_pSnapshotDeltaSixup);
+		DemoRecorder = CDemoRecorder(&m_SnapshotDeltaSixup);
 	m_LastRenderTime = time_get();
 	mem_zero(m_aInputs, sizeof(m_aInputs));
 	mem_zero(m_aapSnapshots, sizeof(m_aapSnapshots));
@@ -1485,7 +1488,7 @@ void CClient::Connect(const char *pAddress, const char *pPassword)
 	m_aNetClient[CONN_MAIN].RefreshStun();
 	SetState(IClient::STATE_CONNECTING);
 
-	m_InputtimeMarginGraph.Init(-150.0f, 150.0f);
+	m_aInputtimeMarginGraphs[CONN_MAIN].Init(-150.0f, 150.0f);
 	m_aGametimeMarginGraphs[CONN_MAIN].Init(-150.0f, 150.0f);
 
 	GenerateTimeoutCodes(aConnectAddrs, NumConnectAddrs);
@@ -1658,6 +1661,7 @@ void CClient::DummyConnect()
 		m_aNetClient[CONN_DUMMY].Connect(pMainAddr, 1);
 
 	m_aGametimeMarginGraphs[CONN_DUMMY].Init(-150.0f, 150.0f);
+	m_aInputtimeMarginGraphs[CONN_DUMMY].Init(-150.0f, 150.0f);
 }
 
 void CClient::DummyDisconnect(const char *pReason)
@@ -1763,12 +1767,12 @@ int CClient::SnapNumItems(int SnapId) const
 
 void CClient::SnapSetStaticsize(int ItemType, int Size)
 {
-	m_pSnapshotDelta->SetStaticsize(ItemType, Size);
+	m_SnapshotDelta.SetStaticsize(ItemType, Size);
 }
 
 void CClient::SnapSetStaticsize7(int ItemType, int Size)
 {
-	m_pSnapshotDeltaSixup->SetStaticsize(ItemType, Size);
+	m_SnapshotDeltaSixup.SetStaticsize(ItemType, Size);
 }
 
 void CClient::RenderDebug()
@@ -1835,11 +1839,11 @@ void CClient::RenderDebug()
 		if(HasSample && SendCountersValid)
 			str_format(aSendRateBuf, sizeof(aSendRateBuf), "%" PRIu64, RateKibitPerSec(SendTotal));
 		else
-			str_copy(aSendRateBuf, "--", sizeof(aSendRateBuf));
+			str_copy(aSendRateBuf, "--");
 		if(HasSample && RecvCountersValid)
 			str_format(aRecvRateBuf, sizeof(aRecvRateBuf), "%" PRIu64, RateKibitPerSec(RecvTotal));
 		else
-			str_copy(aRecvRateBuf, "--", sizeof(aRecvRateBuf));
+			str_copy(aRecvRateBuf, "--");
 
 		str_format(aBuffer, sizeof(aBuffer), "Process UDP TX (estimated): %3" PRIu64 " %5" PRIu64 "+%4" PRIu64 "=%5" PRIu64 " (%s Kibit/s) avg payload: %5" PRIu64,
 			SendPackets, SendBytes, SendPackets * OverheadSize, SendTotal, aSendRateBuf, SendPackets == 0 ? 0 : SendBytes / SendPackets);
@@ -2166,20 +2170,38 @@ const char *CClient::LoadMap(const char *pName, const char *pFilename, const std
 
 static void FormatMapDownloadFilename(const char *pName, const std::optional<SHA256_DIGEST> &Sha256, int Crc, bool Temp, char *pBuffer, int BufferSize)
 {
-	char aSuffix[32];
-	if(Temp)
-	{
-		IStorage::FormatTmpPath(aSuffix, sizeof(aSuffix), "");
-	}
-	else
-	{
-		str_copy(aSuffix, ".map");
-	}
-
+	char aSha256[SHA256_MAXSTRSIZE];
+	const char *pSha256 = nullptr;
 	if(Sha256.has_value())
 	{
-		char aSha256[SHA256_MAXSTRSIZE];
 		sha256_str(Sha256.value(), aSha256, sizeof(aSha256));
+		pSha256 = aSha256;
+	}
+	const std::string FileName = QmMapDownloadFileName(pName, pSha256, Crc);
+	if(!FileName.empty())
+	{
+		if(!Temp)
+		{
+			str_copy(pBuffer, FileName.c_str(), BufferSize);
+			return;
+		}
+		char aTmpSuffix[32];
+		IStorage::FormatTmpPath(aTmpSuffix, sizeof(aTmpSuffix), "");
+		std::string Base = FileName;
+		if(Base.size() > 4 && Base.compare(Base.size() - 4, 4, ".map") == 0)
+			Base.resize(Base.size() - 4);
+		str_format(pBuffer, BufferSize, "%s%s", Base.c_str(), aTmpSuffix);
+		return;
+	}
+
+	// 兜底保留旧行为：无效地图名或未知 CRC 时仍按旧格式落盘。
+	char aSuffix[32];
+	if(Temp)
+		IStorage::FormatTmpPath(aSuffix, sizeof(aSuffix), "");
+	else
+		str_copy(aSuffix, ".map");
+	if(Sha256.has_value())
+	{
 		str_format(pBuffer, BufferSize, "downloadedmaps/%s_%s%s", pName, aSha256, aSuffix);
 	}
 	else
@@ -2291,7 +2313,7 @@ void CClient::ProcessServerInfo(int RawType, NETADDR *pFrom, const void *pData, 
 	CUnpacker Up;
 	Up.Reset(pData, DataSize);
 
-#define GET_STRING(array) str_copy(array, Up.GetString(CUnpacker::SANITIZE_CC | CUnpacker::SKIP_START_WHITESPACES), sizeof(array))
+#define GET_STRING(array) str_copy(array, Up.GetString(CUnpacker::SANITIZE_CC | CUnpacker::SKIP_START_WHITESPACES))
 #define GET_INT(integer) (integer) = str_toint(Up.GetString())
 
 	int Token;
@@ -2528,9 +2550,8 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 	// unpack msgid and system flag
 	int Msg;
 	bool Sys;
-	CUuid Uuid;
 
-	int Result = UnpackMessageId(&Msg, &Sys, &Uuid, &Unpacker, &Packer);
+	int Result = UnpackMessageId(&Msg, &Sys, &Unpacker, &Packer);
 	if(Result == UNPACKMESSAGE_ERROR)
 	{
 		return;
@@ -2724,17 +2745,30 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 
 				if(MapSha256.has_value())
 				{
-					char aUrl[256];
-					char aEscaped[256];
-					EscapeUrl(aEscaped, str_startswith(m_aMapdownloadFilename, "downloadedmaps/"));
 					bool UseConfigUrl = str_comp(g_Config.m_ClMapDownloadUrl, "https://maps.ddnet.org") != 0 || m_aMapDownloadUrl[0] == '\0';
-					str_format(aUrl, sizeof(aUrl), "%s/%s", UseConfigUrl ? g_Config.m_ClMapDownloadUrl : m_aMapDownloadUrl, aEscaped);
-
-					m_pMapdownloadTask = HttpGetFile(pMapUrl ? pMapUrl : aUrl, Storage(), m_aMapdownloadFilenameTemp, IStorage::TYPE_SAVE);
-					m_pMapdownloadTask->Timeout(CTimeout{g_Config.m_ClMapDownloadConnectTimeoutMs, 0, g_Config.m_ClMapDownloadLowSpeedLimit, g_Config.m_ClMapDownloadLowSpeedTime});
-					m_pMapdownloadTask->MaxResponseSize(MapSize);
-					m_pMapdownloadTask->ExpectSha256(MapSha256.value());
-					Http()->Run(m_pMapdownloadTask);
+					char aSha256[SHA256_MAXSTRSIZE];
+					sha256_str(MapSha256.value(), aSha256, sizeof(aSha256));
+					SQmMapDownloadRequest Request;
+					Request.m_pMapName = pMap;
+					Request.m_pSha256Hex = aSha256;
+					Request.m_Crc = MapCrc;
+					Request.m_pServerUrl = pMapUrl;
+					Request.m_pBaseUrl = UseConfigUrl ? g_Config.m_ClMapDownloadUrl : m_aMapDownloadUrl;
+					SQmMapDownloadPlan Plan;
+					if(!QmBuildMapDownloadPlan(Request, &Plan) || Plan.m_Url.empty())
+					{
+						log_error("client/network", "failed to resolve map download URL for '%s'", pMap);
+						SendMapRequest();
+					}
+					else
+					{
+						str_copy(m_aMapdownloadFilename, Plan.m_FileName.c_str(), sizeof(m_aMapdownloadFilename));
+						m_pMapdownloadTask = HttpGetFile(Plan.m_Url.c_str(), Storage(), m_aMapdownloadFilenameTemp, IStorage::TYPE_SAVE);
+						m_pMapdownloadTask->Timeout(CTimeout{g_Config.m_ClMapDownloadConnectTimeoutMs, 0, g_Config.m_ClMapDownloadLowSpeedLimit, g_Config.m_ClMapDownloadLowSpeedTime});
+						m_pMapdownloadTask->MaxResponseSize(MapSize);
+						m_pMapdownloadTask->ExpectSha256(MapSha256.value());
+						Http()->Run(m_pMapdownloadTask);
+					}
 				}
 				else
 				{
@@ -3095,7 +3129,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 
 			if(Target)
 			{
-				const CSmoothTime::EUpdateStatus UpdateStatus = m_PredictedTime.Update(&m_InputtimeMarginGraph, Target, TimeLeft, CSmoothTime::ADJUSTDIRECTION_UP);
+				const CSmoothTime::EUpdateStatus UpdateStatus = m_PredictedTime.Update(&m_aInputtimeMarginGraphs[Conn], Target, TimeLeft, CSmoothTime::ADJUSTDIRECTION_UP);
 				switch(UpdateStatus)
 				{
 				case CSmoothTime::EUpdateStatus::IGNORED_SPIKE:
@@ -3201,7 +3235,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 					}
 
 					// decompress snapshot
-					const void *pDeltaData = SnapshotDelta()->EmptyDelta().data();
+					const void *pDeltaData = SnapshotDelta()->EmptyDelta();
 					int DeltaSize = sizeof(int) * 3;
 
 					if(m_aSnapshotIncomingDataSize[Conn])
@@ -3216,12 +3250,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 					}
 
 					// unpack delta
-					// TODO: this needs alignment for
-					// `m_aChunkData` of 4, but this is not
-					// guaranteed. This is assumed above,
-					// too, anyway, in
-					// `CVariableInt::Decompress`.
-					const int SnapSize = SnapshotDelta()->UnpackDelta(*pDeltaShot, TmpBuffer3, rust::Slice((const int32_t *)pDeltaData, DeltaSize / sizeof(int32_t)));
+					const int SnapSize = SnapshotDelta()->UnpackDelta(pDeltaShot, &TmpBuffer3, pDeltaData, DeltaSize);
 					if(SnapSize < 0)
 					{
 						dbg_msg("client", "delta unpack failed. error=%d", SnapSize);
@@ -3356,7 +3385,10 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 						{
 							m_LocalStartTime = time_get();
 #if defined(CONF_VIDEORECORDER)
-							IVideo::SetLocalStartTime(m_LocalStartTime);
+							if(IVideo::Current())
+							{
+								IVideo::Current()->SetLocalStartTime(m_LocalStartTime);
+							}
 #endif
 						}
 						if(!Dummy)
@@ -3465,8 +3497,8 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 int CClient::UnpackAndValidateSnapshot(CSnapshot *pFrom, CSnapshotBuffer *pTo)
 {
 	CUnpacker Unpacker;
-	rust::Box<CSnapshotBuilder> pBuilder = CSnapshotBuilder::New();
-	pBuilder->Init(false);
+	CSnapshotBuilder Builder;
+	Builder.Init();
 	CNetObjHandler *pNetObjHandler = GameClient()->GetNetObjHandler();
 
 	int Num = pFrom->NumItems();
@@ -3475,6 +3507,9 @@ int CClient::UnpackAndValidateSnapshot(CSnapshot *pFrom, CSnapshotBuffer *pTo)
 		const CSnapshotItem *pFromItem = pFrom->GetItem(Index);
 		const int FromItemSize = pFrom->GetItemSize(Index);
 		const int ItemType = pFrom->GetItemType(Index);
+		const void *pData = pFromItem->Data();
+		Unpacker.Reset(pData, FromItemSize);
+
 		if(ItemType <= 0)
 		{
 			// Don't add extended item type descriptions, they get
@@ -3483,8 +3518,6 @@ int CClient::UnpackAndValidateSnapshot(CSnapshot *pFrom, CSnapshotBuffer *pTo)
 			// Don't add items of unknown item types either (< 0).
 			continue;
 		}
-		const void *pData = pFromItem->Data();
-		Unpacker.Reset(pData, FromItemSize);
 
 		const void *pSecuredData = pNetObjHandler->SecureUnpackObj(ItemType, &Unpacker);
 		if(!pSecuredData)
@@ -3499,13 +3532,13 @@ int CClient::UnpackAndValidateSnapshot(CSnapshot *pFrom, CSnapshotBuffer *pTo)
 		}
 		const int ItemSize = pNetObjHandler->GetUnpackedObjSize(ItemType);
 
-		if(!pBuilder->NewItem(ItemType, pFromItem->Id(), rust::Slice((const int32_t *)pSecuredData, ItemSize / sizeof(int32_t))))
+		if(!Builder.NewItem(ItemType, pFromItem->Id(), pSecuredData, ItemSize))
 		{
 			return -4;
 		}
 	}
 
-	return pBuilder->Finish(*pTo);
+	return Builder.Finish(pTo);
 }
 
 void CClient::ResetMapDownload(bool ResetActive)
@@ -4123,9 +4156,8 @@ void CClient::OnDemoPlayerMessage(void *pData, int Size)
 	// unpack msgid and system flag
 	int Msg;
 	bool Sys;
-	CUuid Uuid;
 
-	int Result = UnpackMessageId(&Msg, &Sys, &Uuid, &Unpacker, &Packer);
+	int Result = UnpackMessageId(&Msg, &Sys, &Unpacker, &Packer);
 	if(Result == UNPACKMESSAGE_ERROR)
 	{
 		return;
@@ -4704,7 +4736,7 @@ void CClient::InitInterfaces()
 	m_pStorage = Kernel()->RequestInterface<IStorage>();
 	m_pHttp = Kernel()->RequestInterface<IEngineHttp>();
 
-	m_DemoEditor.Init(&*m_pSnapshotDelta, &*m_pSnapshotDeltaSixup, m_pConsole, m_pStorage);
+	m_DemoEditor.Init(&m_SnapshotDelta, &m_SnapshotDeltaSixup, m_pStorage);
 
 #if defined(CONF_AUTOUPDATE)
 	m_Updater.Init(m_pHttp);
@@ -4763,9 +4795,6 @@ void CClient::Run()
 #endif
 	QmProbeSaveDirectory();
 	m_LocalStartTime = m_GlobalStartTime = time_get();
-#if defined(CONF_VIDEORECORDER)
-	IVideo::SetLocalStartTime(m_LocalStartTime);
-#endif
 	m_aSnapshotParts[0] = 0;
 	m_aSnapshotParts[1] = 0;
 
@@ -5739,7 +5768,9 @@ void CClient::Con_Ping(IConsole::IResult *pResult, void *pUserData)
 void CClient::ConNetReset(IConsole::IResult *pResult, void *pUserData)
 {
 	CClient *pSelf = (CClient *)pUserData;
-	pSelf->ResetSocket();
+	// 启动阶段尚未记录本地起始时间，此时重建 socket 会打断端口配置。
+	if(pSelf->m_LocalStartTime > 0)
+		pSelf->ResetSocket();
 }
 
 void CClient::AutoScreenshot_Start()
@@ -5850,7 +5881,7 @@ bool CClient::EnterPoseSession(const char *pPosesPath, int &TeeCountOut, const c
 		// 没有地图时不静默失败，也不退回 dm1：把这份合影交给界面，
 		// 由玩家选好地图后再走同一条 poses_open（Windows 双击 .poses 也在这里）。
 		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "no map is loaded for this .poses file; waiting for a map selection");
-		str_copy(m_aPendingPoseMapPath, pPosesPath, sizeof(m_aPendingPoseMapPath));
+		str_copy(m_aPendingPoseMapPath, pPosesPath);
 		return false;
 	}
 
@@ -6354,7 +6385,7 @@ CClient::EVideoExportStartResult CClient::StartSegmentedVideoExport(const char *
 		str_format(aWithExt, sizeof(aWithExt), "%s.%s", pLogicalPath, ContainerName());
 		const std::string Whole = qmclient::media_paths::CompletePath(Storage(),
 			qmclient::media_paths::Resolve(Storage(), g_Config, aWithExt));
-		str_copy(aWhole, Whole.c_str(), sizeof(aWhole));
+		str_copy(aWhole, Whole.c_str());
 		return Whole.empty() ? nullptr : aWhole;
 	});
 
@@ -6645,7 +6676,7 @@ void CClient::StartVideo(const char *pFilename, bool WithTimestamp)
 	m_VideoOffscreenFailed = false;
 	const int RenderWidth = m_VideoOffscreenPlan.m_Offscreen ? m_VideoOffscreenPlan.m_RenderWidth : Graphics()->ScreenWidth();
 	const int RenderHeight = m_VideoOffscreenPlan.m_Offscreen ? m_VideoOffscreenPlan.m_RenderHeight : Graphics()->ScreenHeight();
-	new CVideo(Graphics(), Sound(), Storage(), RenderWidth, RenderHeight, aFilename, g_Config.m_QmVideoWidth, g_Config.m_QmVideoHeight, &DisplaySnapshot);
+	new CVideo(Graphics(), Sound(), Storage(), RenderWidth, RenderHeight, m_LocalStartTime, aFilename, g_Config.m_QmVideoWidth, g_Config.m_QmVideoHeight, &DisplaySnapshot);
 	Sound()->UnpauseAudioDevice();
 	if(!IVideo::Current()->Start())
 	{
@@ -6900,7 +6931,7 @@ void CClient::SaveReplay(const int Length, const char *pFilename)
 		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", "Saving replay...");
 
 		// Create a job to do this slicing in background because it can be a bit long depending on the file size
-		std::shared_ptr<CDemoEdit> pDemoEditTask = std::make_shared<CDemoEdit>(GameClient()->NetVersion(), &*m_pSnapshotDelta, &*m_pSnapshotDeltaSixup, m_pStorage, pSrc, aFilename, StartTick, EndTick);
+		std::shared_ptr<CDemoEdit> pDemoEditTask = std::make_shared<CDemoEdit>(GameClient()->NetVersion(), &m_SnapshotDelta, &m_SnapshotDeltaSixup, m_pStorage, pSrc, aFilename, StartTick, EndTick);
 		Engine()->AddJob(pDemoEditTask);
 		m_EditJobs.push_back(pDemoEditTask);
 
@@ -6943,7 +6974,7 @@ const char *CClient::DemoPlayer_Play(const char *pFilename, int StorageType)
 
 	// try to start playback
 	m_DemoPlayer.SetListener(this);
-	if(m_DemoPlayer.Load(Storage(), m_pConsole, pFilename, StorageType))
+	if(m_DemoPlayer.Load(Storage(), pFilename, StorageType))
 	{
 		DisconnectWithReason(m_DemoPlayer.ErrorMessage());
 		return m_DemoPlayer.ErrorMessage();
@@ -7102,7 +7133,6 @@ void CClient::DemoRecorder_Start(const char *pFilename, bool WithTimestamp, int 
 	str_copy(aFilename, Path.c_str());
 	if(DemoRecorders()[Recorder].Start(
 		   Storage(),
-		   m_pConsole,
 		   aFilename,
 		   IsSixup() ? GameClient()->NetVersion7() : GameClient()->NetVersion(),
 		   m_aCurrentMap,
@@ -7274,17 +7304,17 @@ void CClient::UpdateHangHeartbeat()
 {
 	QmHangDiagnostics::SSnapshot Info;
 	Info.m_State = m_State;
-	str_copy(Info.m_aCurrentMap, m_aCurrentMap, sizeof(Info.m_aCurrentMap));
+	str_copy(Info.m_aCurrentMap, m_aCurrentMap);
 	const NETADDR *pAddr = ServerAddress();
 	if(!pAddr || pAddr->type == NETTYPE_INVALID)
 	{
-		str_copy(Info.m_aServerAddr, "unknown", sizeof(Info.m_aServerAddr));
+		str_copy(Info.m_aServerAddr, "unknown");
 	}
 	else
 	{
 		char aAddr[NETADDR_MAXSTRSIZE];
 		net_addr_str(pAddr, aAddr, sizeof(aAddr), true);
-		str_copy(Info.m_aServerAddr, aAddr, sizeof(Info.m_aServerAddr));
+		str_copy(Info.m_aServerAddr, aAddr);
 	}
 	// 心跳使用单调时钟纳秒，与客户端状态作为同一份快照发布。
 	Info.m_LastHeartbeat = time_get_nanoseconds().count();
@@ -7549,7 +7579,7 @@ int CClient::HandleChecksum(int Conn, CUuid Uuid, CUnpacker *pUnpacker)
 #define MACRO_CONFIG_STR(Name, ScriptName, Len, Def, Flags, Desc) \
 	if(CHECKSUM_RECORD(Flags)) \
 	{ \
-		str_copy(m_Checksum.m_Data.m_Config.m_##Name, g_Config.m_##Name, sizeof(m_Checksum.m_Data.m_Config.m_##Name)); \
+		str_copy(m_Checksum.m_Data.m_Config.m_##Name, g_Config.m_##Name); \
 	}
 #include <engine/shared/config_variables.h>
 #undef CHECKSUM_RECORD
@@ -7755,7 +7785,8 @@ void CClient::ConchainNetReset(IConsole::IResult *pResult, void *pUserData, ICon
 {
 	CClient *pSelf = (CClient *)pUserData;
 	pfnCallback(pResult, pCallbackUserData);
-	if(pResult->NumArguments())
+	// 启动阶段加载 cl_port 等配置时不能重建 socket。
+	if(pResult->NumArguments() && pSelf->m_LocalStartTime > 0)
 		pSelf->ResetSocket();
 }
 
@@ -8415,7 +8446,7 @@ int main(int argc, const char **argv)
 		char aBufName[IO_MAX_PATH_LENGTH];
 		char aDate[64];
 		str_timestamp(aDate, sizeof(aDate));
-		str_format(aBufName, sizeof(aBufName), "%s/" GAME_NAME "_%s_crash_log_%s_%d_%s.RTP", gs_pQmCrashDumpDir, CONF_PLATFORM_STRING, aDate, pid(), GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "");
+		str_format(aBufName, sizeof(aBufName), "%s/" GAME_NAME "_%s_%s_%s_crash_log_%s_%d_%s.RTP", gs_pQmCrashDumpDir, GAME_RELEASE_VERSION, CONF_PLATFORM_STRING, CONF_ARCH_STRING, aDate, pid(), GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "");
 		pStorage->GetCompletePath(IStorage::TYPE_SAVE, aBufName, aBufPath, sizeof(aBufPath));
 		fs_makedir_rec_for(aBufPath);
 		crashdump_init_if_available(aBufPath);
@@ -8744,7 +8775,6 @@ void CClient::RaceRecord_Start(const char *pFilename)
 
 	if(DemoRecorders()[RECORDER_RACE].Start(
 		   Storage(),
-		   m_pConsole,
 		   pFilename,
 		   IsSixup() ? GameClient()->NetVersion7() : GameClient()->NetVersion(),
 		   m_aCurrentMap,
@@ -9011,7 +9041,7 @@ static bool ViewLinkImpl(const char *pLink)
 	log_error("client", "Failed to open link '%s' (%s)", pLink, SDL_GetError());
 	return false;
 #else
-	if(open_link(pLink))
+	if(os_open_link(pLink))
 	{
 		return true;
 	}

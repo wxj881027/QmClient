@@ -135,7 +135,7 @@ TEST_F(CQmMediaStorageTest, RecorderKeepsAndRemovesAbsoluteDemoFiles)
 	CDemoRecorder Recorder(nullptr, true);
 	unsigned char MapData = 0;
 	const auto Start = [&]() {
-		return Recorder.Start(m_pStorage.get(), nullptr, Path.c_str(), "test", "test_map", SHA256_DIGEST{}, 0, "client", 0, &MapData, nullptr, nullptr, nullptr);
+		return Recorder.Start(m_pStorage.get(), Path.c_str(), "test", "test_map", SHA256_DIGEST{}, 0, "client", 0, &MapData, nullptr, nullptr, nullptr);
 	};
 	ASSERT_EQ(Start(), 0);
 	Recorder.RecordTickMarker(100, true);

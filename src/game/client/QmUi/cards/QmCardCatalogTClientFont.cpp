@@ -528,6 +528,10 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFontStore(void *pContext, CUIRect Vie
 	if(Panel.Header(s_Title, s_CloseButton, Localize("Font store")))
 		return CUi::POPUP_CLOSE_CURRENT;
 	View = Panel.ContentRect();
+	// 弹层在 RenderPopupMenus 阶段绘制，此时卡片入口的度量作用域已经退出，
+	// 直接读短名字号会拿到基础 token。这里按弹层自身内容宽度重建同一份度量，
+	// 弹层的字号/行高/间距与卡片同源，且随弹层宽度缩放。
+	const CTClientCardMetricsScope PopupMetrics(ResolveSettingsContentMetrics(View.w));
 	if(!fontstore::Catalog(pStorage).m_Loaded)
 	{
 		pUi->DoLabel(&View, Localize("Loading…"), FontSize, TEXTALIGN_MC);
@@ -537,7 +541,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFontStore(void *pContext, CUIRect Vie
 	// 顶部栏：搜索框 + 分类下拉 + 结果数量。
 	CUIRect TopBar, List;
 	View.HSplitTop(LineSize, &TopBar, &List);
-	List.HSplitTop(MarginSmall, nullptr, &List);
+	List.HSplitTop(RowSpacing, nullptr, &List);
 
 	CUIRect SearchRect, CategoryRect, FilterRect, CountRect;
 	// 顶部栏（从右往左切）：字体总数 | 安装筛选 | 分类 —— 两个下拉等宽；
@@ -545,12 +549,12 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFontStore(void *pContext, CUIRect Vie
 	const float FilterWidth = std::min(150.0f, TopBar.w * 0.20f);
 	const float CountWidth = std::min(150.0f, TopBar.w * 0.18f);
 	TopBar.VSplitRight(CountWidth, &TopBar, &CountRect);
-	TopBar.VSplitRight(MarginSmall, &TopBar, nullptr);
+	TopBar.VSplitRight(RowSpacing, &TopBar, nullptr);
 	TopBar.VSplitRight(FilterWidth, &TopBar, &FilterRect);
-	TopBar.VSplitRight(MarginSmall, &TopBar, nullptr);
+	TopBar.VSplitRight(RowSpacing, &TopBar, nullptr);
 	TopBar.VSplitRight(FilterWidth, &TopBar, &CategoryRect);
 	SearchRect = TopBar;
-	SearchRect.VSplitRight(MarginSmall, &SearchRect, nullptr);
+	SearchRect.VSplitRight(RowSpacing, &SearchRect, nullptr);
 
 	IUiContext TextInputCtx;
 	TextInputCtx.m_pUi = pUi;
@@ -654,7 +658,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFontStore(void *pContext, CUIRect Vie
 	const SQmResolvedScrollPolicy ScrollPolicy = QmResolveScrollPolicy({EQmScrollProfile::SETTINGS_OUTER}, UiScale, 0.0f);
 	CScrollRegionParams ScrollParams = QmScrollRegionParamsFromPolicy(ScrollPolicy);
 	// 滚轮步长按卡片行计（每格 2 行）：目录数千行，沿用设置页固定 120px/格 体感过慢。
-	const float Gap = MarginSmall;
+	const float Gap = RowSpacing;
 	const float CardH = 108.0f;
 	ScrollParams.m_ScrollUnit = (CardH + Gap) * 2.0f;
 	s_GridScrollRegion.Begin(&List, &ScrollOffset, &ScrollParams);
@@ -761,13 +765,14 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFontStore(void *pContext, CUIRect Vie
 			if(FaceReady)
 				pTextRender->SetFontPreviewFace(PreviewConfig.c_str());
 			pTextRender->TextColor(pTextRender->DefaultTextColor().WithAlpha(FaceReady ? 1.0f : 0.45f));
-			pTextRender->Text(Preview.x, PreviewY, 12.0f, Family.m_Name.c_str(), Preview.w);
+			// 预览区三档文字与卡片度量同源：族名用正文号，样例两行与提示行用小字档。
+			pTextRender->Text(Preview.x, PreviewY, FontSize, Family.m_Name.c_str(), Preview.w);
 			// 固定样例文案：拉丁+数字 与 CJK（汉字/假名）各一行，直观展示该
 			// 字体的实际字形效果；未就绪的族同样渲染（压暗），视觉密度一致。
-			pTextRender->Text(Preview.x, PreviewY + 16.0f, 10.0f, "Aa Bb Gg 0123456789", Preview.w);
-			pTextRender->Text(Preview.x, PreviewY + 30.0f, 10.0f, "永久 字体 テスト", Preview.w);
+			pTextRender->Text(Preview.x, PreviewY + 16.0f, SmallFontSize, "Aa Bb Gg 0123456789", Preview.w);
+			pTextRender->Text(Preview.x, PreviewY + 30.0f, SmallFontSize, "永久 字体 テスト", Preview.w);
 			if(pHint != nullptr)
-				pTextRender->Text(Preview.x, PreviewY + 44.0f, 9.0f, pHint, Preview.w);
+				pTextRender->Text(Preview.x, PreviewY + 44.0f, SmallFontSize, pHint, Preview.w);
 			pTextRender->TextColor(pTextRender->DefaultTextColor());
 			if(FaceReady)
 				pTextRender->SetFontPreviewFace(nullptr);
@@ -977,7 +982,7 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 	CSettingsContentLayoutFlow Flow(CurrentColumn);
 
 #if defined(CONF_FAMILY_WINDOWS)
-	if(Flow.Control("tclient-show-system-fonts", LineSize, Button, MarginSmall))
+	if(Flow.Control("tclient-show-system-fonts", LineSize, Button, RowSpacing))
 	{
 		const int Old = g_Config.m_QmShowSystemFonts;
 		DoSettingsButton_CheckBoxAutoVMarginAndSet(SETTINGS_TCLIENT, m_TClientSettingsTab, &g_Config.m_QmShowSystemFonts, "tclient-show-system-fonts", Localize("Show system fonts"), &g_Config.m_QmShowSystemFonts, &Button, LineSize, 0.0f, FontSize);
@@ -997,7 +1002,7 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 	std::string LatinFamilyDefaultConfig;
 	const bool LatinFamilyAvailable = TextRender()->QmFontFamilyDefaultConfig(aLatinFamily, LatinFamilyDefaultConfig);
 	const bool LatinVariable = LatinFamilyAvailable && TextRender()->CustomFontWeightRange(LatinFamilyDefaultConfig.c_str(), LatinVarMin, LatinVarMax);
-	if(Flow.Control("tclient-custom-font", LineSize, Button, MarginSmall))
+	if(Flow.Control("tclient-custom-font", LineSize, Button, RowSpacing))
 	{
 		SplitSettingsControlRow(Button, CurrentSettingsContentMetrics(), &Label, &Button, ESettingsControlWidth::LONG_CHOICE);
 		CUIElement &CustomFontElement = SettingsTextElement(SETTINGS_TCLIENT, m_TClientSettingsTab, "tclient-custom-font-label");
@@ -1123,7 +1128,7 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 	// 英文可变字重滑杆行：仅当前英文族为可变字体时新增，卡片高度过渡由设置
 	// 卡片外壳按测量变化自动承载。拖动实时预览（节流推进渲染层，渲染层坐标
 	// 真变才清图集），停手稳定后归一配置为族名并做布局收尾。
-	if(LatinVariable && Flow.Control("tclient-latin-weight", LineSize, Button, MarginSmall))
+	if(LatinVariable && Flow.Control("tclient-latin-weight", LineSize, Button, RowSpacing))
 	{
 		SplitSettingsControlRow(Button, CurrentSettingsContentMetrics(), &Label, &Button, ESettingsControlWidth::LONG_CHOICE);
 		CUIElement &LatinWeightElement = SettingsTextElement(SETTINGS_TCLIENT, m_TClientSettingsTab, "tclient-latin-weight-label");
@@ -1157,7 +1162,7 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 	std::string CjkFamilyDefaultConfig;
 	const bool CjkFamilyAvailable = TextRender()->QmFontFamilyDefaultConfig(aCjkFamily, CjkFamilyDefaultConfig);
 	const bool CjkVariable = CjkFamilyAvailable && TextRender()->CustomFontWeightRange(CjkFamilyDefaultConfig.c_str(), CjkVarMin, CjkVarMax);
-	if(Flow.Control("tclient-cjk-font", LineSize, Button, MarginSmall))
+	if(Flow.Control("tclient-cjk-font", LineSize, Button, RowSpacing))
 	{
 		SplitSettingsControlRow(Button, CurrentSettingsContentMetrics(), &Label, &Button, ESettingsControlWidth::LONG_CHOICE);
 		CUIElement &CjkFontElement = SettingsTextElement(SETTINGS_TCLIENT, m_TClientSettingsTab, "tclient-cjk-font-label");
@@ -1273,7 +1278,7 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 	}
 	// CJK 可变字重滑杆行：仅当前 CJK 族为可变字体时新增（CJK 未设置不出现）。
 	// 拖动实时预览与停手收尾逻辑与英文滑杆行一致。
-	if(CjkVariable && Flow.Control("tclient-cjk-weight", LineSize, Button, MarginSmall))
+	if(CjkVariable && Flow.Control("tclient-cjk-weight", LineSize, Button, RowSpacing))
 	{
 		SplitSettingsControlRow(Button, CurrentSettingsContentMetrics(), &Label, &Button, ESettingsControlWidth::LONG_CHOICE);
 		CUIElement &CjkWeightElement = SettingsTextElement(SETTINGS_TCLIENT, m_TClientSettingsTab, "tclient-cjk-weight-label");
@@ -1295,7 +1300,7 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 				GameClient()->OnWindowResize(); });
 	}
 	// QmClient: 图标符号行 —— 星号、心形、几何形状等符号字形与私用区图标。
-	if(Flow.Control("tclient-icons-font", LineSize, Button, MarginSmall))
+	if(Flow.Control("tclient-icons-font", LineSize, Button, RowSpacing))
 	{
 		SplitSettingsControlRow(Button, CurrentSettingsContentMetrics(), &Label, &Button, ESettingsControlWidth::LONG_CHOICE);
 		CUIElement &IconsFontElement = SettingsTextElement(SETTINGS_TCLIENT, m_TClientSettingsTab, "tclient-icons-font-label");
@@ -1335,8 +1340,8 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 	// QmClient: 预览区 —— 「预览」标签 + 方框（背景+边框），内部三行分别展示
 	// 英文、中文与图标符号字形的实际效果（走当前配置的字体回退链）。
 	{
-		const float PreviewBoxH = LineSize * 3.0f + MarginSmall * 2.0f + 6.0f;
-		if(Flow.Control("tclient-font-preview", PreviewBoxH, Button, MarginSmall) && Flow.Drawing() && !Ui()->DrawingSuppressed())
+		const float PreviewBoxH = LineSize * 3.0f + RowSpacing * 2.0f + 6.0f;
+		if(Flow.Control("tclient-font-preview", PreviewBoxH, Button, RowSpacing) && Flow.Drawing() && !Ui()->DrawingSuppressed())
 		{
 			SplitSettingsControlRow(Button, CurrentSettingsContentMetrics(), &Label, &Button, ESettingsControlWidth::LONG_CHOICE);
 			CUIElement &PreviewElement = SettingsTextElement(SETTINGS_TCLIENT, m_TClientSettingsTab, "tclient-font-preview-label");
@@ -1344,7 +1349,7 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 			// 预览框与激光/头衔等 QmClient 预览行同款：暗色半透明底、无高亮边框。
 			DrawRoundedSurface(Ui(), Button, ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f), ui_token::color::COLOR_TRANSPARENT, ui_token::radius::BASE);
 			CUIRect Inner;
-			Button.Margin(MarginSmall + 2.0f, &Inner);
+			Button.Margin(RowSpacing + 2.0f, &Inner);
 			const ColorRGBA PreviousTextColor = TextRender()->GetTextColor();
 			TextRender()->TextColor(TextRender()->DefaultTextColor().WithAlpha(PreviousTextColor.a));
 			Ui()->DoText(Inner.x, Inner.y, FontSize, "The quick brown fox 0123");
@@ -1358,7 +1363,7 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 	// QmClient: 字体商店 —— 点击打开可搜索的大弹层（workshop 风格卡片网格）。
 	{
 		// 仅输入趟推进任务；测量和绘制只读取已发布的目录快照。
-		if(Flow.Control("tclient-font-store", LineSize, Button, MarginSmall))
+		if(Flow.Control("tclient-font-store", LineSize, Button, RowSpacing))
 		{
 			if(Flow.Input() && !Ui()->RenderOnly())
 				fontstore::UpdateCatalog(Engine(), Storage());
@@ -1370,7 +1375,7 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 			// 状态位（右侧）：最近一次安装任务的进度 / 失败重试 / 已安装。
 			CUIRect StoreStatus;
 			Button.VSplitRight(64.0f, &Button, &StoreStatus);
-			Button.VSplitRight(MarginSmall, &Button, nullptr);
+			Button.VSplitRight(RowSpacing, &Button, nullptr);
 
 			static CButtonContainer s_StoreBrowseId;
 			if(DoButton_Menu(&s_StoreBrowseId, Localize("Browse font store…"), 0, &Button))
@@ -1409,11 +1414,15 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 				else if(pJob != nullptr && pJob->m_Failed)
 				{
 					static CButtonContainer s_StoreRetryId;
-					if(DoButton_Menu(&s_StoreRetryId, Localize("Retry"), 0, &StoreStatus))
+					// 重试是图标类动作：方形按钮居中在状态行内。
+					const float RetrySize = std::min(StoreStatus.h, StoreStatus.w);
+					CUIRect RetryRect{StoreStatus.x + (StoreStatus.w - RetrySize) * 0.5f, StoreStatus.y, RetrySize, RetrySize};
+					if(Ui()->DoButton_QmIcon(&s_StoreRetryId, EQmIcon::ARROW_ROTATE_RIGHT, FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT, 0, &RetryRect, BUTTONFLAG_LEFT) != 0)
 					{
 						fontstore::RetryInstall(Http(), Storage(), (size_t)LastInstall);
 						fontstore::s_LastInstallFamily = LastInstall;
 					}
+					GameClient()->m_Tooltips.DoToolTip(&s_StoreRetryId, &RetryRect, Localize("Retry"));
 				}
 				else if(LastFamily.m_Installed)
 				{

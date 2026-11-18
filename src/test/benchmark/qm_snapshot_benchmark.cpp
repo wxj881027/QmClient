@@ -4,7 +4,7 @@
 //  2. 客户端应用：CSnapshotDelta::UnpackDelta(prev, delta)——增量还原完整快照
 // 场景：N 个同型实体（10 int/个，类型 1 注册静态大小），当前帧所有实体
 // 位置 +1（模拟一 tick 移动，全量更新是位置数据每 tick 的典型形态）。
-// 夹具模式参照 src/test/unit/engine/snapshot_test.cpp（Rust 后端 API）。
+// 夹具模式参照 src/test/unit/engine/snapshot_test.cpp。
 // 运行方式：配置时加 -DDOWNLOAD_BENCHMARK=ON，构建 run_cxx_benchmarks 目标
 #include <engine/shared/snapshot.h>
 
@@ -25,8 +25,7 @@ namespace
 class SnapshotDeltaBenchmark : public benchmark::Fixture
 {
 public:
-	// rust::Box 无默认构造，成员直接以工厂产物初始化（每次 fixture 实例化各建一份）
-	rust::Box<CSnapshotDelta> m_pDelta = CSnapshotDelta::New();
+	CSnapshotDelta m_Delta;
 
 	void SetUp(const benchmark::State &State) override
 	{
@@ -35,8 +34,8 @@ public:
 		if(NumItems < 0 || NumItems > CSnapshot::MAX_ITEMS)
 			return;
 
-		m_pDelta->SetStaticsize(0, 0);
-		m_pDelta->SetStaticsize(ITEM_TYPE, ITEM_INTS * static_cast<int>(sizeof(int32_t)));
+		m_Delta.SetStaticsize(0, 0);
+		m_Delta.SetStaticsize(ITEM_TYPE, ITEM_INTS * static_cast<int>(sizeof(int32_t)));
 
 		const int PreviousSize = BuildSnapshot(m_Prev, NumItems, 0);
 		m_CurrentSize = BuildSnapshot(m_Current, NumItems, 1); // 全部字段 +1 的固定输入
@@ -44,27 +43,26 @@ public:
 			return;
 
 		// 预生成一份真实 delta 供解压基准使用
-		m_DeltaSize = m_pDelta->CreateDelta(*m_Prev.AsSnapshot(), *m_Current.AsSnapshot(), m_DeltaBuffer.AsMutSlice());
+		m_DeltaSize = m_Delta.CreateDelta(m_Prev.AsSnapshot(), m_Current.AsSnapshot(), m_DeltaBuffer.Data(), sizeof(m_DeltaBuffer.m_aData));
 		if(m_DeltaSize <= 0 || m_DeltaSize % sizeof(int32_t) != 0)
 			return;
-		const rust::Slice<const int32_t> Delta(reinterpret_cast<const int32_t *>(m_DeltaBuffer.m_aData), m_DeltaSize / sizeof(int32_t));
-		m_Ready = m_pDelta->UnpackDelta(*m_Prev.AsSnapshot(), m_Output, Delta) == m_CurrentSize &&
+		m_Ready = m_Delta.UnpackDelta(m_Prev.AsSnapshot(), &m_Output, m_DeltaBuffer.m_aData, m_DeltaSize) == m_CurrentSize &&
 			  std::memcmp(m_Output.m_aData, m_Current.m_aData, m_CurrentSize) == 0;
 	}
 
 	int BuildSnapshot(CSnapshotBuffer &Buffer, int NumItems, int Offset)
 	{
-		rust::Box<CSnapshotBuilder> pBuilder = CSnapshotBuilder::New();
-		pBuilder->Init(false);
+		CSnapshotBuilder Builder;
+		Builder.Init();
 		for(int i = 0; i < NumItems; i++)
 		{
 			std::array<int32_t, ITEM_INTS> aData;
 			for(int j = 0; j < ITEM_INTS; j++)
 				aData[j] = i * 100 + j + Offset;
-			if(!pBuilder->NewItem(ITEM_TYPE, i, rust::Slice<const int32_t>(aData.data(), aData.size())))
+			if(!Builder.NewItem(ITEM_TYPE, i, aData.data(), (int)aData.size() * sizeof(int32_t)))
 				return -1;
 		}
-		return pBuilder->Finish(Buffer);
+		return Builder.Finish(&Buffer);
 	}
 
 	CSnapshotBuffer m_Prev;
@@ -88,7 +86,7 @@ BENCHMARK_DEFINE_F(SnapshotDeltaBenchmark, BM_SnapshotDeltaDiff)(benchmark::Stat
 	const int NumItems = static_cast<int>(State.range(0));
 	for(auto _ : State)
 	{
-		int DeltaSize = m_pDelta->CreateDelta(*m_Prev.AsSnapshot(), *m_Current.AsSnapshot(), m_DeltaOutput.AsMutSlice());
+		int DeltaSize = m_Delta.CreateDelta(m_Prev.AsSnapshot(), m_Current.AsSnapshot(), m_DeltaOutput.Data(), sizeof(m_DeltaOutput.m_aData));
 		benchmark::DoNotOptimize(DeltaSize);
 		benchmark::ClobberMemory();
 		if(DeltaSize != m_DeltaSize)
@@ -110,12 +108,9 @@ BENCHMARK_DEFINE_F(SnapshotDeltaBenchmark, BM_SnapshotDeltaUnpack)(benchmark::St
 		State.SkipWithError("snapshot fixture round-trip failed");
 		return;
 	}
-	rust::Slice<const int32_t> Delta(
-		reinterpret_cast<const int32_t *>(m_DeltaBuffer.m_aData),
-		m_DeltaSize / static_cast<int>(sizeof(int32_t)));
 	for(auto _ : State)
 	{
-		int Result = m_pDelta->UnpackDelta(*m_Prev.AsSnapshot(), m_Output, Delta);
+		int Result = m_Delta.UnpackDelta(m_Prev.AsSnapshot(), &m_Output, m_DeltaBuffer.m_aData, m_DeltaSize);
 		benchmark::DoNotOptimize(Result);
 		benchmark::ClobberMemory();
 		if(Result != m_CurrentSize)

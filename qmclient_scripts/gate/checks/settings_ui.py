@@ -59,3 +59,26 @@ def run(results: ResultCollector, changed: list[str], dry_run: bool = False) -> 
 		results.add("FAIL", "设置页统一 UI 迁移合同", out)
 		return
 	results.add("PASS", "设置页统一 UI 迁移合同", "所有已迁移设置页合同通过")
+
+	# 条件行动画：g_Config 开关包住行声明却没有 reveal 作用域时，展开/收起会瞬变。
+	# 这条放在闸门里，靠机器记住，而不是靠每次改动时想起来。
+	code, out = runner.run_python(
+		str(REPO_ROOT / "qmclient_scripts" / "check_settings_reveal.py"),
+		title="设置页条件行动画",
+		check=False,
+	)
+	if code != 0:
+		results.add("FAIL", "设置页条件行动画", out)
+		return
+	results.add("PASS", "设置页条件行动画", "所有条件行都接入了展开/收起动画")
+
+	# 间距/字号/圆角的裸字面量预算：只减不增。新增一处写死值就会顶破预算。
+	code, out = runner.run_python(
+		str(REPO_ROOT / "qmclient_scripts" / "check_ui_literals.py"),
+		title="设置页 UI 字面量预算",
+		check=False,
+	)
+	if code != 0:
+		results.add("FAIL", "设置页 UI 字面量预算", out)
+		return
+	results.add("PASS", "设置页 UI 字面量预算", "裸字面量未超出预算")

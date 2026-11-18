@@ -4,6 +4,7 @@ import argparse
 import os
 import subprocess
 import sys
+import tomllib
 
 os.chdir(os.path.dirname(__file__) + "/..")
 
@@ -20,21 +21,30 @@ def find_cxxbridge(version):
 	sys.exit(-1)
 
 
+def find_cxxbridge_version():
+	with open("Cargo.toml") as f:
+		cargo_toml = tomllib.loads(f.read())
+	cxx_version = cargo_toml["workspace"]["dependencies"]["cxx"]
+	if not cxx_version.startswith("="):
+		raise RuntimeError("expected cxx package to pin a specific version")
+	return cxx_version[1:]
+
+
 FILES = {
 	"src/engine/shared/rust_version.rs": "src/rust-bridge/engine/shared/rust_version",
-	"src/engine/shared/snapshot/builder.rs": "src/rust-bridge/engine/shared/snapshot/builder",
-	"src/engine/shared/snapshot/delta.rs": "src/rust-bridge/engine/shared/snapshot/delta",
 	"src/engine/console.rs": "src/rust-bridge/cpp/console",
-	"src/engine/shared/snapshot/mod.rs": "src/rust-bridge/cpp/snapshot",
-	"src/engine/shared/uuid_manager.rs": "src/rust-bridge/cpp/uuid_manager",
 }
 
 
 def main():
 	p = argparse.ArgumentParser(description="Generate src/rust-bridge")
-	_args = p.parse_args()
+	p.add_argument("--cxx-version", action="store_true", help="Print the pinned cxx version and exit")
+	args = p.parse_args()
+	if args.cxx_version:
+		print(find_cxxbridge_version())
+		return
 
-	cxxbridge = find_cxxbridge(version="1.0.194")
+	cxxbridge = find_cxxbridge(version=find_cxxbridge_version())
 	for input_, output_prefix in FILES.items():
 		subprocess.check_call([
 			cxxbridge,
@@ -44,13 +54,5 @@ def main():
 			"--output",
 			f"{output_prefix}.h",
 		])
-	subprocess.check_call([
-		cxxbridge,
-		"--header",
-		"--output",
-		"src/rust-bridge/base/cxx.h",
-	])
-
-
 if __name__ == "__main__":
 	main()

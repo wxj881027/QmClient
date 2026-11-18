@@ -153,7 +153,8 @@ CUi::EPopupMenuFunctionResult CMenus::PopupQmMapUploadPicker(void *pContext, CUI
 		const CListboxItem Item = List.DoNextItem(&File, (int)Index == pPicker->m_Selected);
 		if(!Item.m_Visible)
 			continue;
-		CUIRect Name = Item.m_Rect, Source;
+		// 行内容区自带 token 内退：文件名与来源都不再贴着行左缘。
+		CUIRect Name = Item.m_ContentRect, Source;
 		Name.HSplitTop(Metrics.m_LineHeight, &Name, &Source);
 		char aLabel[IO_MAX_PATH_LENGTH + 2];
 		str_format(aLabel, sizeof(aLabel), "%s%s", File.m_aFilename, File.m_IsDirectory ? "/" : "");
@@ -224,7 +225,7 @@ void CMenus::RenderQmFunctionMapUploadContent(CUIRect &Content, float LineHeight
 	const auto LabelRow = [&](const char *pId, const char *pValue) {
 		if(Flow.Control(pId, LineHeight, Row))
 			DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, pId, &Row, pValue, BodySize, TEXTALIGN_ML, SingleLine);
-		Flow.Space(LineSpacing);
+		Flow.Space(ui_token::settings::RowGap(LineSpacing));
 	};
 	str_format(aText, sizeof(aText), Localize("Target server: %s"), g_Config.m_QmMapUploadEndpoint[0] ? g_Config.m_QmMapUploadEndpoint : Localize("None"));
 	LabelRow("qmclient-map-upload-server", aText);
@@ -273,7 +274,7 @@ void CMenus::RenderQmFunctionMapUploadContent(CUIRect &Content, float LineHeight
 			}
 		}
 	}
-	Flow.Space(LineSpacing);
+	Flow.Space(ui_token::settings::RowGap(LineSpacing));
 
 	const char *pStatus = Localize("Select a saved .map file (client limit: 64 MiB).");
 	switch(m_QmMapUpload.Status())
@@ -299,7 +300,7 @@ void CMenus::RenderQmFunctionMapUploadContent(CUIRect &Content, float LineHeight
 		pStatus = aStatus;
 	}
 	const auto TextRow = [&](const char *pId, const char *pValue, float MinimumHeight) {
-		Flow.Text(pId, pValue, 0.0f, BodySize, LineSpacing, [this](const char *pText, float Width, float Size) { return TextRender()->TextBoundingBox(Size, pText, -1, Width).m_H + Size * 0.25f; }, [this, pId, BodySize](const CUIRect &TextRect, const char *pText) {
+		Flow.Text(pId, pValue, 0.0f, BodySize, ui_token::settings::RowGap(LineSpacing), [this](const char *pText, float Width, float Size) { return TextRender()->TextBoundingBox(Size, pText, -1, Width).m_H + Size * 0.25f; }, [this, pId, BodySize](const CUIRect &TextRect, const char *pText) {
 				SLabelProperties Wrapped;
 				Wrapped.m_MaxWidth = TextRect.w;
 				Wrapped.m_EnableWidthCheck = false;

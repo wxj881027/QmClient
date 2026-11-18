@@ -78,8 +78,6 @@ namespace
 		int m_Selection = -1;
 		bool m_FocusFilter = false;
 		bool m_ArgumentsValid = true;
-		float m_FontSize = 12.0f;
-		float m_LineHeight = 20.0f;
 	};
 
 	SBindCommandEditorState &CommandEditorState()
@@ -156,10 +154,14 @@ CUi::EPopupMenuFunctionResult CMenus::PopupQmBindCommands(void *pContext, CUIRec
 	CMenus *pMenus = State.m_pMenus;
 	CUi *pUi = pMenus->Ui();
 	View.Margin(4.0f, &View);
+	// 弹层在 RenderPopupMenus 阶段绘制，卡片入口的度量作用域已经退出：字号/行高
+	// 按弹层自身宽度重新解析，二级层级（分类页签、命令参数行）直接用小字档，
+	// 不再在正文字号上叠 0.9/0.85 这类比例系数。
+	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(View.w);
 	const IUiContext Ctx = pMenus->SettingsUiContext("qm_bind_command_picker", 1.0f);
-	const float TabFontSize = State.m_FontSize * 0.9f;
+	const float TabFontSize = Metrics.m_SmallSize;
 	const float Gap = 4.0f;
-	float TabWidth = State.m_LineHeight * 3.0f;
+	float TabWidth = Metrics.m_LineHeight * 3.0f;
 	for(const char *pLabel : s_apCategoryLabels)
 		TabWidth = std::max(TabWidth, pMenus->TextRender()->TextWidth(TabFontSize, Localize(pLabel)) + 12.0f);
 	const int TabsPerRow = std::clamp(static_cast<int>((View.w + Gap) / (TabWidth + Gap)), 1, static_cast<int>(s_apCategoryLabels.size()));
@@ -168,7 +170,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupQmBindCommands(void *pContext, CUIRec
 	{
 		if(Index % TabsPerRow == 0)
 		{
-			View.HSplitTop(State.m_LineHeight, &TabRow, &View);
+			View.HSplitTop(Metrics.m_LineHeight, &TabRow, &View);
 			View.HSplitTop(Gap, nullptr, &View);
 		}
 		CUIRect Tab;
@@ -191,7 +193,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupQmBindCommands(void *pContext, CUIRec
 			State.m_Category = Category;
 	}
 	CUIRect Search;
-	View.HSplitTop(State.m_LineHeight, &Search, &View);
+	View.HSplitTop(Metrics.m_LineHeight, &Search, &View);
 	View.HSplitTop(4.0f, nullptr, &View);
 	if(Active && State.m_FocusFilter)
 	{
@@ -204,7 +206,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupQmBindCommands(void *pContext, CUIRec
 	SearchOptions.m_Mode = ui_widget::EInputFieldMode::SEARCH;
 	SearchOptions.m_Clearable = true;
 	SearchOptions.m_ProcessInput = Active;
-	SearchOptions.m_FontSize = State.m_FontSize;
+	SearchOptions.m_FontSize = Metrics.m_BodySize;
 	const auto SearchResult = ui_widget::InputField(Ctx, &State.m_Filter, Search, SearchOptions);
 	if(State.m_LastCategory != State.m_Category || State.m_LastFilter != State.m_Filter.GetString())
 	{
@@ -217,8 +219,8 @@ CUi::EPopupMenuFunctionResult CMenus::PopupQmBindCommands(void *pContext, CUIRec
 
 	State.m_ListBox.SetActive(Active);
 	State.m_ListBox.SetWheelOwnerPriority(EUiWheelOwnerPriority::POPUP);
-	const int ItemsPerRow = std::max(1, static_cast<int>(View.w / (State.m_LineHeight * 8.0f)));
-	State.m_ListBox.DoStart(State.m_LineHeight * 1.8f, (int)State.m_vFiltered.size(), ItemsPerRow, 3, State.m_Selection, &View, false);
+	const int ItemsPerRow = std::max(1, static_cast<int>(View.w / (Metrics.m_LineHeight * 8.0f)));
+	State.m_ListBox.DoStart(Metrics.m_LineHeight * 1.8f, (int)State.m_vFiltered.size(), ItemsPerRow, 3, State.m_Selection, &View, false);
 	for(const size_t Index : State.m_vFiltered)
 	{
 		const SCommandOption &Option = State.m_vOptions[Index];
@@ -226,20 +228,22 @@ CUi::EPopupMenuFunctionResult CMenus::PopupQmBindCommands(void *pContext, CUIRec
 		if(!Item.m_Visible)
 			continue;
 		CUIRect Label, Detail;
-		Item.m_Rect.VMargin(4.0f, &Label);
-		Label.HSplitTop(State.m_LineHeight, &Label, &Detail);
+		// 行内容区自带 token 内退（左右），上下仍各自留 4；命令名不再贴着行左缘。
+		CUIRect RowContent = Item.m_ContentRect;
+		RowContent.VMargin(4.0f, &Label);
+		Label.HSplitTop(Metrics.m_LineHeight, &Label, &Detail);
 		SLabelProperties Props;
 		Props.m_MaxWidth = Label.w;
 		Props.m_EllipsisAtEnd = true;
-		pUi->DoLabel(&Label, Localize(Option.m_Label.c_str()), State.m_FontSize, TEXTALIGN_ML, Props);
+		pUi->DoLabel(&Label, Localize(Option.m_Label.c_str()), Metrics.m_BodySize, TEXTALIGN_ML, Props);
 		const char *pDetail = Option.m_Preset ? Option.m_Command.m_Name.c_str() : Option.m_Command.m_Parameters.c_str();
-		pUi->DoLabel(&Detail, pDetail, State.m_FontSize * 0.85f, TEXTALIGN_ML, Props);
+		pUi->DoLabel(&Detail, pDetail, Metrics.m_SmallSize, TEXTALIGN_ML, Props);
 		if(!Option.m_Command.m_Help.empty())
 			pMenus->GameClient()->m_Tooltips.DoToolTip(&Option, &Item.m_Rect, Localize(Option.m_Command.m_Help.c_str()));
 	}
 	State.m_Selection = State.m_ListBox.DoEnd();
 	if(State.m_vFiltered.empty())
-		pUi->DoLabel(&View, Localize("No results"), State.m_FontSize, TEXTALIGN_MC);
+		pUi->DoLabel(&View, Localize("No results"), Metrics.m_BodySize, TEXTALIGN_MC);
 	if(Active && (State.m_ListBox.WasItemSelected() || State.m_ListBox.WasItemActivated() || SearchResult.m_Submitted) &&
 		State.m_Selection >= 0 && State.m_Selection < (int)State.m_vFiltered.size())
 	{
@@ -316,8 +320,6 @@ void CMenus::RenderQmBindCommandEditor(CUIRect &Content, const CBindSlot Slot, c
 			const bool AnchorVisible = pClip == nullptr || (Selector.x < pClip->x + pClip->w && Selector.x + Selector.w > pClip->x && Selector.y < pClip->y + pClip->h && Selector.y + Selector.h > pClip->y);
 			if(AnchorVisible)
 			{
-				State.m_FontSize = Metrics.m_BodySize;
-				State.m_LineHeight = Metrics.m_LineHeight;
 				const CUIRect Screen = *Ui()->Screen();
 				const float Width = std::min(std::max(Selector.w, 560.0f), Screen.w - 16.0f);
 				const float Height = std::min(std::max(380.0f, Metrics.m_LineHeight * 19.0f), Screen.h - 16.0f);
@@ -337,7 +339,7 @@ void CMenus::RenderQmBindCommandEditor(CUIRect &Content, const CBindSlot Slot, c
 		if(!ReadOnly && !Ui()->IsPopupOpen(&State.m_PopupId))
 			Ui()->ReleaseActiveTextInput(&State.m_Filter);
 	}
-	Flow.Space(Metrics.m_LineSpacing);
+	Flow.Space(ui_token::settings::RowGap(Metrics.m_LineSpacing));
 	IUiContext InputCtx = SettingsUiContext("qm_bind_command_editor", Metrics.m_UiScale);
 	if(ReadOnly)
 	{
@@ -358,7 +360,7 @@ void CMenus::RenderQmBindCommandEditor(CUIRect &Content, const CBindSlot Slot, c
 		{
 			if(Argument.m_Parameter.m_Optional)
 			{
-				if(DoButton_CheckBox(&Argument.m_IncludeButton, Argument.m_Parameter.m_Name.c_str(), Argument.m_Included, &Label) && Enabled)
+				if(DoButton_CheckBox(&Argument.m_IncludeButton, Argument.m_Parameter.m_Name.c_str(), Argument.m_Included, &Label, Metrics.m_BodySize) && Enabled)
 				{
 					Argument.m_Included = !Argument.m_Included;
 					// 可选参数只能从尾部省略，启用后项时同时保留前项的位置。
@@ -378,18 +380,17 @@ void CMenus::RenderQmBindCommandEditor(CUIRect &Content, const CBindSlot Slot, c
 				Ui()->DoLabel(&Label, Argument.m_Parameter.m_Name.c_str(), Metrics.m_BodySize, TEXTALIGN_ML, Props);
 			}
 		}
-		Flow.Space(Metrics.m_LineSpacing);
 		char aInputId[64];
 		str_format(aInputId, sizeof(aInputId), "bind-argument-%d-input", (int)Index);
 		CUIRect InputRect;
-		if(Flow.Control(aInputId, Metrics.m_LineHeight, InputRect))
+		if(Flow.Control(aInputId, Metrics.m_LineHeight, InputRect, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
 		{
 			InputOptions.m_ProcessInput = Enabled && !OpenPicker && Argument.m_Included;
 			InputOptions.m_pPlaceholder = Argument.m_Parameter.m_Optional ? Localize("Optional") : nullptr;
 			if(ui_widget::InputField(InputCtx, &Argument.m_Input, InputRect, InputOptions).m_Changed && Enabled)
 				ArgumentsChanged = true;
 		}
-		Flow.Space(Metrics.m_LineSpacing);
+		Flow.Space(ui_token::settings::RowGap(Metrics.m_LineSpacing));
 	}
 	if(ArgumentsChanged)
 		UpdateCommand(State);
@@ -410,9 +411,8 @@ void CMenus::RenderQmBindCommandEditor(CUIRect &Content, const CBindSlot Slot, c
 			State.m_pError = nullptr;
 		}
 	}
-	Flow.Space(Metrics.m_LineSpacing);
 	const bool CanAdd = Enabled && !OpenPicker && State.m_ArgumentsValid && !State.m_CommandInput.IsEmpty();
-	if(Flow.Control("bind-command-add", Metrics.m_ButtonHeight, AddRow))
+	if(Flow.Control("bind-command-add", Metrics.m_ButtonHeight, AddRow, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
 	{
 		const bool Add = DoButton_Menu(&State.m_AddButton, Localize("Add"), CanAdd ? 0 : -1, &AddRow);
 		if(CanAdd && (Add || CommandResult.m_Submitted))
@@ -434,10 +434,10 @@ void CMenus::RenderQmBindCommandEditor(CUIRect &Content, const CBindSlot Slot, c
 			}
 		}
 	}
-	Flow.Space(Metrics.m_LineSpacing);
+	Flow.Space(ui_token::settings::RowGap(Metrics.m_LineSpacing));
 	if(State.m_pError != nullptr)
 	{
-		Flow.Text("bind-command-error", Localize(State.m_pError), 0.0f, Metrics.m_SmallSize, Metrics.m_LineSpacing, [this](const char *pText, float Width, float FontSize) { return TextRender()->TextBoundingBox(FontSize, pText, -1, Width).m_H + FontSize * 0.25f; }, [this, Metrics](const CUIRect &Error, const char *pText) {
+		Flow.Text("bind-command-error", Localize(State.m_pError), 0.0f, Metrics.m_SmallSize, ui_token::settings::RowGap(Metrics.m_LineSpacing), [this](const char *pText, float Width, float FontSize) { return TextRender()->TextBoundingBox(FontSize, pText, -1, Width).m_H + FontSize * 0.25f; }, [this, Metrics](const CUIRect &Error, const char *pText) {
 		SLabelProperties Props;
 		Props.m_MaxWidth = Error.w;
 		Props.m_EllipsisAtEnd = true;
@@ -592,8 +592,9 @@ void CMenus::RenderQmBindOverviewContent(CUIRect &Content, const bool ReadOnly)
 
 	// 卡片里只说这两档标记的含义，它们都不是错误：一条绑定可以用分号串多个命令；
 	// 同一个命令也可能同时挂在别的键上（合法的双键位）。
-	const float HintSize = Metrics.m_SmallSize * 0.9f;
-	Flow.Text("bind-overview-occupancy-hint", Localize("Badges are informational: a bind can chain several commands, and one command can be bound to several keys."), 0.0f, HintSize, Metrics.m_LineSpacing * 0.5f, [this, HintSize](const char *pText, float Width, float FontSize) { return TextRender()->TextBoundingBox(FontSize, pText, -1, Width, FontSize * 1.45f).m_H; }, [this, HintSize](const CUIRect &Row, const char *pText) {
+	// 说明行取小字档本身，不再在已解析的小字号上叠比例（测量与绘制共用这一档）。
+	const float HintSize = Metrics.m_SmallSize;
+	Flow.Text("bind-overview-occupancy-hint", Localize("Badges are informational: a bind can chain several commands, and one command can be bound to several keys."), 0.0f, HintSize, ui_token::settings::SubRowGap(Metrics.m_LineSpacing), [this, HintSize](const char *pText, float Width, float FontSize) { return TextRender()->TextBoundingBox(FontSize, pText, -1, Width, FontSize * 1.45f).m_H; }, [this, HintSize](const CUIRect &Row, const char *pText) {
 			SLabelProperties Props;
 			Props.m_MaxWidth = Row.w;
 			Props.m_EllipsisAtEnd = true;
@@ -648,7 +649,10 @@ void CMenus::RenderQmBindOverviewContent(CUIRect &Content, const bool ReadOnly)
 		Filter = Toolbar;
 		if(DoButton_Menu(&State.m_SortButton, State.m_SortByCommand ? Localize("Sort by command") : Localize("Sort by key"), 0, &Sort) && Enabled)
 			State.m_SortByCommand = !State.m_SortByCommand;
-		if(DoButton_Menu(&State.m_CopyButton, Localize("Copy all"), 0, &Copy) && Enabled)
+		// 禁用态交给 DoButton_QmIcon 的 Enabled 形参：外观与命中一起关闭，不再用 0 旗标绕过。
+		const bool CopyClicked = Ui()->DoButton_QmIcon(&State.m_CopyButton, EQmIcon::COPY, FontIcons::FONT_ICON_COPY, 0, &Copy, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Enabled) != 0;
+		GameClient()->m_Tooltips.DoToolTip(&State.m_CopyButton, &Copy, Localize("Copy all"));
+		if(CopyClicked && Enabled)
 		{
 			std::vector<qm_bind_overview::SBindOverviewEntry> vCopyEntries;
 			vCopyEntries.reserve(State.m_vFiltered.size());
@@ -670,7 +674,7 @@ void CMenus::RenderQmBindOverviewContent(CUIRect &Content, const bool ReadOnly)
 		FilterOptions.m_FontSize = Metrics.m_BodySize;
 		(void)ui_widget::InputField(InputCtx, &State.m_Filter, Filter, FilterOptions);
 	}
-	Flow.Space(Metrics.m_LineSpacing);
+	Flow.Space(ui_token::settings::RowGap(Metrics.m_LineSpacing));
 
 	if(Client()->LocalTime() - State.m_CopiedTime < 2.0f)
 	{
@@ -681,7 +685,7 @@ void CMenus::RenderQmBindOverviewContent(CUIRect &Content, const bool ReadOnly)
 			Ui()->DoLabel(&StatusRow, Localize("Copied"), Metrics.m_SmallSize, TEXTALIGN_ML);
 			TextRender()->TextColor(TextRender()->DefaultTextColor());
 		}
-		Flow.Space(Metrics.m_LineSpacing * 0.5f);
+		Flow.Space(ui_token::settings::SubRowGap(Metrics.m_LineSpacing));
 	}
 
 	// 徽标列固定宽度：被标记与未被标记的行共用同一列宽，键名与命令两条竖线不因
@@ -713,7 +717,7 @@ void CMenus::RenderQmBindOverviewContent(CUIRect &Content, const bool ReadOnly)
 					Ui()->DoLabel(&Header, BindOverviewGroupTitle(Group), Metrics.m_SmallSize, TEXTALIGN_ML);
 					TextRender()->TextColor(TextRender()->DefaultTextColor());
 				}
-				Flow.Space(Metrics.m_LineSpacing * 0.4f);
+				Flow.Space(ui_token::settings::SubRowGap(Metrics.m_LineSpacing));
 				GroupStarted = true;
 			}
 			CUIRect Row;
@@ -759,11 +763,13 @@ void CMenus::RenderQmBindOverviewContent(CUIRect &Content, const bool ReadOnly)
 					TextRender()->TextColor(TextRender()->DefaultTextColor());
 				}
 			}
-			Flow.Space(Metrics.m_LineSpacing * 0.35f);
+			Flow.Space(ui_token::settings::SubRowGap(Metrics.m_LineSpacing));
 			HasAny = true;
 		}
+		// 组与组之间仍是列表内的一档间距：与上一行的子行档叠加后正好一行行距，
+		// 不提升到分区分档（那会是行距的 5 倍，把整张一览表拉散）。
 		if(GroupStarted)
-			Flow.Space(Metrics.m_LineSpacing * 0.6f);
+			Flow.Space(ui_token::settings::SubRowGap(Metrics.m_LineSpacing));
 	}
 	if(!HasAny)
 	{
