@@ -41,6 +41,7 @@ public:
 		Browser.m_ServerlistType = IServerBrowser::TYPE_INTERNET;
 		Browser.m_RefreshingHttp = false;
 	}
+	static void SetNetClient(CServerBrowser &Browser, CNetClient *pNetClient) { Browser.m_pNetClient = pNetClient; }
 	static void SetLan(CServerBrowser &Browser, CNetClient *pNetClient, int64_t BroadcastTime)
 	{
 		Browser.m_pNetClient = pNetClient;

@@ -1,4 +1,10 @@
+#include <base/system.h>
+
+#include <engine/shared/network.h>
+
 #include <test/support/serverbrowser_fixture.h>
+
+#include <chrono>
 
 using ServerBrowserPublication = ServerBrowserTests::CServerBrowserFixture;
 using ServerBrowserTests::CPublicationLogger;
@@ -56,7 +62,9 @@ TEST_F(ServerBrowserPublication, UnknownLatencyFailureRestoresAddressAndRequestC
 	pFirst->m_RequestTime = 41;
 	CServerBrowserTestAccess::SetMaxRequests(m_Browser, 3);
 	m_pPings->m_Fail = true;
-	EXPECT_NO_THROW(Publish({Server("Replacement", 8303)}));
+	m_pHttp->m_vServers = {Server("Replacement", 8303)};
+	++m_pHttp->m_Revision;
+	EXPECT_NO_THROW(m_Browser.Refresh(IServerBrowser::TYPE_INTERNET, true));
 	EXPECT_EQ(CServerBrowserTestAccess::NumRequests(m_Browser), 2);
 	ASSERT_EQ(CServerBrowserTestAccess::FirstRequest(m_Browser), pFirst);
 	ASSERT_EQ(CServerBrowserTestAccess::LastRequest(m_Browser), pSecond);
@@ -136,7 +144,9 @@ TEST_F(ServerBrowserPublication, SortFailureRestoresCommunityCountsOrderAndPendi
 	const auto *pCountry = &m_Browser.Community("a")->Countries()[0];
 	m_Friends.m_Calls = 0;
 	m_Friends.m_FailAt = 3;
-	EXPECT_NO_THROW(Publish({Server("New Beta", 8302, 2), Server("New Gamma", 8303, 4)}));
+	m_pHttp->m_vServers = {Server("New Beta", 8302, 2), Server("New Gamma", 8303, 4)};
+	++m_pHttp->m_Revision;
+	EXPECT_NO_THROW(m_Browser.Refresh(IServerBrowser::TYPE_INTERNET, true));
 	ASSERT_EQ(m_Browser.Communities().size(), 4U);
 	EXPECT_STREQ(m_Browser.Communities()[0].Id(), "a");
 	EXPECT_EQ(m_Browser.Community("a")->NumPlayers(), 3);
@@ -280,6 +290,79 @@ TEST_F(ServerBrowserPublication, RetryWaitsOneSecondButManualRefreshCanRecoverIm
 	m_Browser.Refresh(IServerBrowser::TYPE_INTERNET);
 	ASSERT_EQ(m_Browser.NumServers(), 1);
 	EXPECT_STREQ(m_Browser.Get(0)->m_aName, "Manual");
+	EXPECT_FALSE(m_Browser.IsServerlistError());
+}
+
+TEST_F(ServerBrowserPublication, RetainedListSendsQueuedQueriesWhenPublicationFailsAndDuringBackoff)
+{
+	struct CLoopbackClient
+	{
+		CNetClient m_Client{};
+		~CLoopbackClient() { m_Client.Close(); }
+	} Loopback;
+	NETADDR Address;
+	ASSERT_EQ(net_addr_from_str(&Address, "127.0.0.1"), 0);
+	for(int Attempt = 0; Attempt < 100 && !Loopback.m_Client.m_Socket; ++Attempt)
+	{
+		Address.port = secure_rand_below(65535 - 1024) + 1024;
+		Loopback.m_Client.Open(Address);
+	}
+	ASSERT_NE(Loopback.m_Client.m_Socket, nullptr);
+	CServerBrowserTestAccess::SetNetClient(m_Browser, &Loopback.m_Client);
+	g_Config.m_Debug = 0;
+
+	const auto Old = Server("Retained", Address.port);
+	Publish({Old});
+	auto *pOld = m_Browser.Find(Address);
+	ASSERT_NE(pOld, nullptr);
+	m_Browser.QueueRequest(pOld);
+	m_pHttp->m_FailAt = 0;
+	Publish({Server("Replacement", 444)});
+	ASSERT_TRUE(m_Browser.IsServerlistError());
+	ASSERT_EQ(m_Browser.Find(Address), pOld);
+	const auto ReadQuery = [&] {
+		if(net_socket_read_wait(Loopback.m_Client.m_Socket, std::chrono::seconds(1)) != 1)
+			return false;
+		NETADDR From;
+		unsigned char *pData;
+		return net_udp_recv(Loopback.m_Client.m_Socket, &From, &pData) > 0 && From == Address;
+	};
+	ASSERT_TRUE(ReadQuery());
+	const int Token = CServerBrowserTestAccess::GenerateToken(m_Browser, Address);
+	m_Browser.OnServerInfoUpdate(Address, CServerBrowserTestAccess::BasicToken(Token), &Old);
+	ASSERT_FALSE(m_Browser.IsRefreshing());
+
+	m_Browser.QueueRequest(pOld);
+	m_pHttp->m_FailAt = -1;
+	m_Now += time_freq() - 1;
+	m_Browser.Update();
+	ASSERT_EQ(m_Browser.Find(Address), pOld);
+	EXPECT_TRUE(ReadQuery());
+	EXPECT_TRUE(m_Browser.IsServerlistError());
+}
+
+TEST_F(ServerBrowserPublication, RetainedListResortsDuringBackoffAndPublishesAtTheRetryDeadline)
+{
+	Publish({Server("Alpha", 8301), Server("Beta", 8302)});
+	ASSERT_EQ(m_Browser.NumSortedServers(), 2);
+	m_pHttp->m_FailAt = 0;
+	Publish({Server("Replacement", 8303)});
+	ASSERT_TRUE(m_Browser.IsServerlistError());
+
+	g_Config.m_BrSortOrder = 1;
+	m_pHttp->m_FailAt = -1;
+	m_Now += time_freq() - 1;
+	m_Browser.Update();
+	ASSERT_EQ(m_Browser.NumSortedServers(), 2);
+	EXPECT_STREQ(m_Browser.SortedGet(0)->m_aName, "Beta");
+	EXPECT_EQ(CServerBrowserTestAccess::HttpRevision(m_Browser), 1U);
+	EXPECT_TRUE(m_Browser.IsServerlistError());
+
+	++m_Now;
+	m_Browser.Update();
+	ASSERT_EQ(m_Browser.NumSortedServers(), 1);
+	EXPECT_STREQ(m_Browser.SortedGet(0)->m_aName, "Replacement");
+	EXPECT_EQ(CServerBrowserTestAccess::HttpRevision(m_Browser), 2U);
 	EXPECT_FALSE(m_Browser.IsServerlistError());
 }
 
