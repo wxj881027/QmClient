@@ -6844,6 +6844,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/support/prediction_allocation_main.cpp
       src/test/support/allocation_failure_new.cpp
       src/test/support/prediction_allocation_failure.h
+      src/test/unit/engine/net_client_allocation_test.cpp
       src/test/support/prediction_collision_map.h
       src/test/integration/client/prediction_world_copy_failure_test.cpp
       src/test/integration/client/prediction_entity_numeric_test.cpp

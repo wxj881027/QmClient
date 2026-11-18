@@ -1,6 +1,7 @@
 // 请抬头享受阳光｜日子很好 我很我---------致咩子
 #include <base/system.h>
 
+#include <engine/external/kcp/ikcp.h>
 #include <engine/shared/config.h>
 #include <engine/shared/network.h>
 
@@ -8,6 +9,8 @@
 #include <test/test.h>
 
 #include <chrono>
+#include <cstdlib>
+#include <memory>
 #include <string>
 #include <thread>
 #include <vector>
@@ -112,6 +115,29 @@ namespace
 		BindAddr.port = Port;
 		return net_udp_create(BindAddr);
 	}
+
+	class CKcpMtuAllocationFailure
+	{
+		static inline int s_AllocationsBeforeFailure = 0;
+
+	public:
+		CKcpMtuAllocationFailure()
+		{
+			// 控制块和默认缓冲可以分配，调整 MTU 所用的新缓冲分配失败。
+			s_AllocationsBeforeFailure = 2;
+			ikcp_allocator([](size_t Size) -> void * {
+				if(s_AllocationsBeforeFailure == 0)
+					return nullptr;
+				--s_AllocationsBeforeFailure;
+				return std::malloc(Size);
+			}, nullptr);
+		}
+
+		~CKcpMtuAllocationFailure()
+		{
+			ikcp_allocator(nullptr, nullptr);
+		}
+	};
 
 	int OnTestClientConnected(int ClientId, void *pUser, bool Sixup)
 	{
@@ -627,6 +653,38 @@ TEST(Net, KcpSessionSendsOverUdpAndRoundtripsPacket)
 
 	net_udp_close(Socket1);
 	net_udp_close(Socket2);
+}
+
+TEST(NetKcpSession, MtuAllocationFailureLeavesSessionInactiveAndAllowsRetry)
+{
+	const std::unique_ptr<NETSOCKET_INTERNAL, decltype(&net_udp_close)> pSocket(BindUdpSocket(0), net_udp_close);
+	ASSERT_NE(pSocket, nullptr);
+	const NETADDR Peer = {};
+	CNetKcpSession Session;
+
+	{
+		const CKcpMtuAllocationFailure Failure;
+		EXPECT_FALSE(Session.Init(pSocket.get(), Peer, 1));
+		EXPECT_FALSE(Session.IsActive());
+	}
+
+	ASSERT_TRUE(Session.Init(pSocket.get(), Peer, 1));
+	EXPECT_TRUE(Session.IsActive());
+	EXPECT_EQ(Session.Conv(), 1u);
+}
+
+TEST(NetKcpSession, MtuAllocationFailurePreservesPreviouslyActiveSession)
+{
+	const std::unique_ptr<NETSOCKET_INTERNAL, decltype(&net_udp_close)> pSocket(BindUdpSocket(0), net_udp_close);
+	ASSERT_NE(pSocket, nullptr);
+	const NETADDR Peer = {};
+	CNetKcpSession Session;
+	ASSERT_TRUE(Session.Init(pSocket.get(), Peer, 1));
+
+	const CKcpMtuAllocationFailure Failure;
+	EXPECT_FALSE(Session.Init(pSocket.get(), Peer, 2));
+	EXPECT_TRUE(Session.IsActive());
+	EXPECT_EQ(Session.Conv(), 1u);
 }
 
 TEST(Net, KcpSessionRejectsInvalidRebindWithoutChangingPeer)

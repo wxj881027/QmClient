@@ -26,6 +26,23 @@ TEST(Network, UnpackOversizedUncompressedPacket)
 	EXPECT_EQ(UnpackUncompressedPacket(NET_PACKETHEADERSIZE + (int)sizeof(Packet.m_aChunkData) + 1, &Packet), -1);
 }
 
+TEST(Network, UnpackLegacyKeepaliveClearsHeaderSecurityToken)
+{
+	CNetPacketConstruct Packet = {};
+	Packet.m_Flags = NET_PACKETFLAG_CONTROL;
+	Packet.m_DataSize = 1;
+	Packet.m_aChunkData[0] = NET_CTRLMSG_KEEPALIVE;
+	unsigned char aBuffer[NET_MAX_PACKETSIZE];
+	const int Size = CNetBase::PackPacket(aBuffer, sizeof(aBuffer), &Packet, NET_SECURITY_TOKEN_UNSUPPORTED);
+	ASSERT_GT(Size, 0);
+
+	CNetPacketConstruct Unpacked;
+	bool Sixup = false;
+	SECURITY_TOKEN SecurityToken = NET_SECURITY_TOKEN_UNSUPPORTED;
+	ASSERT_EQ(CNetBase::UnpackPacket(aBuffer, Size, &Unpacked, Sixup, true, &SecurityToken), 0);
+	EXPECT_EQ(SecurityToken, NET_SECURITY_TOKEN_UNKNOWN);
+}
+
 TEST(Network, UnpackChunks)
 {
 	constexpr int NumChunks = 3;

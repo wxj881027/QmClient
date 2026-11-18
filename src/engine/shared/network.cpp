@@ -316,6 +316,10 @@ int CNetBase::UnpackPacket(unsigned char *pBuffer, int Size, CNetPacketConstruct
 	if(pDecompressed != nullptr)
 		*pDecompressed = false;
 
+	if(pSecurityToken != nullptr)
+	{
+		*pSecurityToken = NET_SECURITY_TOKEN_UNKNOWN;
+	}
 	if(pResponseToken != nullptr)
 	{
 		*pResponseToken = NET_SECURITY_TOKEN_UNKNOWN;

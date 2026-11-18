@@ -9,6 +9,9 @@
 #include <engine/shared/protocol7.h>
 
 #include <algorithm>
+#include <memory>
+#include <new>
+#include <utility>
 
 static constexpr int CNET_QOS_MAX_ATTEMPTS = 3;
 static constexpr int CNET_QOS_RETRY_DELAY_SECONDS = 2;
@@ -17,25 +20,30 @@ static constexpr int CNET_QOS_RETRY_DELAY_SECONDS = 2;
 static constexpr int CNET_MAX_DATAGRAMS_PER_RECV = 64;
 
 bool CNetClient::Open(NETADDR BindAddr, bool LowLatency)
+try
 {
-	// open socket
-	NETSOCKET Socket;
-	Socket = net_udp_create(BindAddr);
-	if(!Socket)
+	std::unique_ptr<NETSOCKET_INTERNAL, decltype(&net_udp_close)> pSocket(net_udp_create(BindAddr), net_udp_close);
+	if(!pSocket)
 		return false;
-	Close();
-	// clean it
-	*this = CNetClient{};
 
-	// init
-	m_Socket = Socket;
+	auto pStun = std::make_unique<CStun>(pSocket.get());
+	CNetClient EmptyClient{};
+
+	Close();
+	*this = std::move(EmptyClient);
+
+	m_Socket = pSocket.release();
 	m_LowLatency = LowLatency;
 	m_QosStatus = LowLatency ? ENetQosStatus::PENDING : ENetQosStatus::DISABLED;
-	m_pStun = new CStun(m_Socket);
+	m_pStun = pStun.release();
 	m_Connection.Init(m_Socket, false);
 	m_TokenCache.Init(m_Socket);
 
 	return true;
+}
+catch(const std::bad_alloc &)
+{
+	return false;
 }
 
 void CNetClient::Close()

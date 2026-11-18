@@ -141,8 +141,8 @@ try
 		if(pGroup->m_StartLayer < 0 || pGroup->m_NumLayers < 0 ||
 			(int64_t)pGroup->m_StartLayer + pGroup->m_NumLayers > LayersNum)
 		{
-			log_error("map/load", "Group %d uses invalid layers %d to %d (the map contains %d layers).",
-				GroupIndex, pGroup->m_StartLayer, pGroup->m_StartLayer + pGroup->m_NumLayers - 1, LayersNum);
+			log_error("map/load", "Group %d uses an invalid layer range (start %d, count %d, map contains %d layers).",
+				GroupIndex, pGroup->m_StartLayer, pGroup->m_NumLayers, LayersNum);
 			return false;
 		}
 		for(int LayerIndex = 0; LayerIndex < pGroup->m_NumLayers; LayerIndex++)

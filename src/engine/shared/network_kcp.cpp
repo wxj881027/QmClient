@@ -63,14 +63,20 @@ CNetKcpSession &CNetKcpSession::operator=(CNetKcpSession &&Other) noexcept
 
 bool CNetKcpSession::Init(NETSOCKET Socket, const NETADDR &PeerAddr, uint32_t Conv)
 {
-	Reset();
 	if(Socket == nullptr || Conv == 0)
 		return false;
 
-	m_pKcp = ikcp_create(Conv, this);
-	if(!m_pKcp)
+	IKCPCB *pKcp = ikcp_create(Conv, this);
+	if(!pKcp)
 		return false;
+	if(ikcp_setmtu(pKcp, NET_KCP_MTU) != 0)
+	{
+		ikcp_release(pKcp);
+		return false;
+	}
 
+	Reset();
+	m_pKcp = pKcp;
 	m_Socket = Socket;
 	m_PeerAddr = PeerAddr;
 	m_Conv = Conv;
@@ -110,7 +116,6 @@ void CNetKcpSession::ApplyTuning()
 	if(!m_pKcp)
 		return;
 
-	ikcp_setmtu(m_pKcp, NET_KCP_MTU);
 	ikcp_nodelay(m_pKcp, 1, 10, 2, 0);
 	ikcp_wndsize(m_pKcp, 64, 128);
 	m_pKcp->rx_minrto = 30;

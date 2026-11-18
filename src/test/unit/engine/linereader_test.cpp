@@ -91,6 +91,13 @@ TEST(LineReader, MixedLineEndings)
 	TestFileLineReader("1\n2\r\n3\n4\n5\r\n6\r", {"1", "2", "3", "4", "5"}); // Line with trailing `\r` is skipped
 }
 
+TEST(LineReader, ShortUtf8WithoutBomKeepsItsText)
+{
+	TestFileLineReaderRaw("x\n", 2, {"x"}, true, false);
+	const char aCharacter[] = "\xe4\xbd\xa0";
+	TestFileLineReaderRaw(aCharacter, sizeof(aCharacter) - 1, {aCharacter}, true, false);
+}
+
 TEST(LineReader, EmptyLines)
 {
 	TestFileLineReader("\n\r\n\n\n\r\n", {"", "", "", "", ""});

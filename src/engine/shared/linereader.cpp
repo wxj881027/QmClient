@@ -87,7 +87,7 @@ static bool LooksLikeUtf16(const unsigned char *pData, unsigned Length, bool *pB
 		if(Index % 2 == 0)
 			++EvenNulls;
 	}
-	if(Length < 2 || Nulls < Length / 4)
+	if(Length < 2 || Nulls == 0 || Nulls < Length / 4)
 		return false;
 	if(EvenNulls == 0)
 	{
