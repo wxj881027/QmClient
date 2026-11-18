@@ -6100,6 +6100,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/client/qm_theme_catalog_release_test.cpp
     src/test/unit/client/theme_catalog_test.cpp
     src/test/unit/client/menu_background_prepare_test.cpp
+    src/test/unit/client/entity_background_load_test.cpp
+    src/test/integration/client/menu_background_recovery_test.cpp
     src/test/unit/base/thread_test.cpp
     src/test/unit/base/semaphore_creation_test.cpp
     src/test/unit/base/thread_startup_test.cpp

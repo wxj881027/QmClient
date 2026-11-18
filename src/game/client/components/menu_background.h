@@ -3,6 +3,7 @@
 
 #include <game/client/components/background.h>
 #include <game/client/components/camera.h>
+#include <game/client/components/qmclient/menu_background_prepare.h>
 #include <game/client/components/qmclient/theme_catalog.h>
 #include <game/client/components/qmclient/theme_list_load_request.h>
 
@@ -97,6 +98,8 @@ private:
 	bool m_Loading;
 	std::unique_ptr<CMenuMap> m_pOwnedBackgroundMap;
 	std::unique_ptr<SPreviousBackground> m_pPreviousBackground;
+	CMenuBackgroundMapPreparation m_MapPreparation;
+	bool m_PreviousRetiring = false;
 
 	void ResetPositions();
 
@@ -109,7 +112,8 @@ private:
 	void UpdateThemeLoading();
 	void InvalidateCurrentPosition();
 	bool PreserveCurrentBackground();
-	void ReleasePreviousBackground();
+	bool ReleasePreviousBackground();
+	bool ReleaseCurrentMapResources();
 	void InitializeLoadedMap();
 
 	std::vector<CTheme> m_vThemes;

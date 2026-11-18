@@ -166,13 +166,13 @@ void CMenuBackground::AdvanceLoading()
 	if(!m_Loading)
 		return;
 	// 非地图背景（图片/视频/加载失败）没有分帧工作，直接结束等待。
-	if(!m_Loaded || m_ImageBackground || m_VideoBackground || AdvanceMapLoad())
+	if(!m_Loaded || m_ImageBackground || m_VideoBackground || m_MapPreparation.Advance(static_cast<CMapLayers &>(*this)) || m_MapPreparation.HasFailed())
 		m_Loading = false;
 }
 
 bool CMenuBackground::PreserveCurrentBackground()
 {
-	if(!m_Loaded || m_ImageBackground || m_VideoBackground || m_pBackgroundMap == nullptr || m_pBackgroundLayers == nullptr || m_pBackgroundImages == nullptr)
+	if(!m_Loaded || m_ImageBackground || m_VideoBackground || !IsMapLoaded() || m_MapPreparation.HasFailed() || m_pBackgroundMap == nullptr || m_pBackgroundLayers == nullptr || m_pBackgroundImages == nullptr)
 		return true;
 
 	using SPrepared = SMenuBackgroundPrepared<CMenuMap, CLayers, CMapImages, CMapLayers>;
@@ -196,6 +196,10 @@ bool CMenuBackground::PreserveCurrentBackground()
 		// 尚未交接当前资源；保持当前地图及借用指针，沿既有切换入口重试。
 		return false;
 	}
+	catch(const std::length_error &)
+	{
+		return false;
+	}
 
 	// 后续只移动所有者、交换已初始化的状态及重绑指针，不再构造或分配资源。
 	pPrevious->m_pRenderer = std::move(Prepared.m_pRenderer);
@@ -214,13 +218,31 @@ bool CMenuBackground::PreserveCurrentBackground()
 	return true;
 }
 
-void CMenuBackground::ReleasePreviousBackground()
+bool CMenuBackground::ReleasePreviousBackground()
 {
-	if(!m_pPreviousBackground)
-		return;
-	if(m_pPreviousBackground->m_pImages)
-		m_pPreviousBackground->m_pImages->Unload();
-	m_pPreviousBackground.reset();
+	return ReleaseMenuBackgroundResources(m_pPreviousBackground, m_PreviousRetiring);
+}
+
+bool CMenuBackground::ReleaseCurrentMapResources()
+{
+	m_Loading = false;
+	if(!m_MapPreparation.Cancel(static_cast<CMapLayers &>(*this)))
+		return false;
+	try
+	{
+		m_pBackgroundImages->Unload();
+		if(m_pMap != nullptr && m_pMap == m_pBackgroundMap)
+			m_pMap->Unload();
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	catch(const std::length_error &)
+	{
+		return false;
+	}
+	return true;
 }
 
 void CMenuBackground::ResetPositions()
@@ -295,11 +317,12 @@ void CMenuBackground::LoadMenuBackground(bool HasDayHint, bool HasNightHint)
 	if(!m_IsInit)
 		return;
 
-	ReleasePreviousBackground();
-	if(!PreserveCurrentBackground())
+	const bool CurrentReady = m_Loaded && !m_ImageBackground && !m_VideoBackground && IsMapLoaded() && !m_MapPreparation.HasFailed();
+	if(!PrepareMenuBackgroundChange(CurrentReady, m_PreviousRetiring,
+		   [this] { return ReleasePreviousBackground(); },
+		   [this] { return PreserveCurrentBackground(); },
+		   [this] { return ReleaseCurrentMapResources(); }))
 		return;
-	if(m_pMap != nullptr && m_pMap == m_pBackgroundMap && m_pPreviousBackground == nullptr)
-		m_pMap->Unload();
 
 	m_Loaded = false;
 	ClearImageBackground();
@@ -307,6 +330,7 @@ void CMenuBackground::LoadMenuBackground(bool HasDayHint, bool HasNightHint)
 	m_pMap = m_pBackgroundMap;
 	m_pLayers = m_pBackgroundLayers;
 	m_pImages = m_pBackgroundImages;
+	m_MapPreparation.Reset();
 
 	ResetPositions();
 	InvalidateCurrentPosition();
@@ -509,7 +533,6 @@ void CMenuBackground::LoadMenuBackground(bool HasDayHint, bool HasNightHint)
 			{
 				str_format(aBuf, sizeof(aBuf), "failed to load menu theme '%s'", pMenuMap);
 				Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "menuthemes", aBuf);
-				ReleasePreviousBackground();
 				m_Loading = false;
 				return;
 			}
@@ -540,18 +563,30 @@ void CMenuBackground::LoadMenuBackground(bool HasDayHint, bool HasNightHint)
 		}
 
 		if(m_Loaded && !m_ImageBackground && !m_VideoBackground)
-			InitializeLoadedMap();
+		{
+			try
+			{
+				InitializeLoadedMap();
+			}
+			catch(const std::bad_alloc &)
+			{
+				m_MapPreparation.Cancel(static_cast<CMapLayers &>(*this));
+			}
+			catch(const std::length_error &)
+			{
+				m_MapPreparation.Cancel(static_cast<CMapLayers &>(*this));
+			}
+		}
 		if(!m_Loaded)
 		{
 			str_format(aBuf, sizeof(aBuf), "failed to load menu theme '%s'", pMenuMap);
 			Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "menuthemes", aBuf);
-			ReleasePreviousBackground();
 		}
 		else if(pMenuMap[0] == '\0')
 		{
 			ReleasePreviousBackground();
 		}
-		m_Loading = m_Loaded && !m_ImageBackground && !m_VideoBackground && !IsMapLoaded();
+		m_Loading = m_Loaded && !m_ImageBackground && !m_VideoBackground && !IsMapLoaded() && !m_MapPreparation.HasFailed();
 	}
 	else
 	{
@@ -574,13 +609,22 @@ bool CMenuBackground::Render()
 	if(!InterfacesInitialized())
 		return false;
 
-	if(!m_Loaded && !m_pPreviousBackground)
+	m_MapPreparation.RetryCleanup(static_cast<CMapLayers &>(*this));
+	if(m_PreviousRetiring)
+		ReleasePreviousBackground();
+	if(!m_Loaded && !CanRenderMenuBackgroundPrevious(m_pPreviousBackground, m_PreviousRetiring))
 		return false;
 
 	if(m_Loaded && RenderBackgroundTexture())
+	{
+		if(!m_PreviousRetiring)
+			ReleasePreviousBackground();
 		return true;
+	}
 
-	const bool MapReady = AdvanceMapLoad();
+	const bool MapReady = m_Loaded && !m_MapPreparation.HasFailed() && m_MapPreparation.Advance(static_cast<CMapLayers &>(*this));
+	if(m_MapPreparation.HasFailed())
+		m_Loading = false;
 
 	// 位置未选定且相机处于退化态时，下面的位置插值会变成不动点：
 	// 启动首帧 m_RotationCenter 与 m_Camera.m_Center 都是构造函数里的 (0,0)，
@@ -663,7 +707,7 @@ bool CMenuBackground::Render()
 
 	if(!MapReady)
 	{
-		if(m_pPreviousBackground && m_pPreviousBackground->m_pRenderer)
+		if(CanRenderMenuBackgroundPrevious(m_pPreviousBackground, m_PreviousRetiring))
 		{
 			m_pPreviousBackground->m_pRenderer->RenderCustomWithCamera(m_Camera.m_Center, m_Camera.m_Zoom);
 			return true;
@@ -672,7 +716,8 @@ bool CMenuBackground::Render()
 	}
 
 	m_Loading = false;
-	ReleasePreviousBackground();
+	if(!m_PreviousRetiring)
+		ReleasePreviousBackground();
 	CMapLayers::OnRender();
 
 	return true;
