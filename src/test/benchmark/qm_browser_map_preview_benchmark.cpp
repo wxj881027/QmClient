@@ -1,5 +1,6 @@
 #include <game/client/components/qmclient/browser_map_preview.h>
 #include <game/client/components/qmclient/browser_map_preview_loader.h>
+#include <game/client/QmUi/QmVoteMapPreview.h>
 
 #include <benchmark/benchmark.h>
 
@@ -55,3 +56,14 @@ static void BM_BrowserMapPreviewPrepare(benchmark::State &State)
 	State.SetItemsProcessed(State.iterations());
 }
 BENCHMARK(BM_BrowserMapPreviewPrepare);
+
+// 投票页预览面板的排版只依赖内容矩形、封面长宽比和行高；
+// 每轮覆盖并排、堆叠、高度不足三种真实布局路径，不含文字测量或 GPU 绘制。
+static void BM_VoteMapPreviewLayout(benchmark::State &State)
+{
+	const CUIRect Content{0.0f, 0.0f, static_cast<float>(State.range(0)), static_cast<float>(State.range(1))};
+	for(auto _ : State)
+		benchmark::DoNotOptimize(qm_vote_map_preview::ResolveLayout(Content, 2.32f, 16.0f));
+	State.SetItemsProcessed(State.iterations());
+}
+BENCHMARK(BM_VoteMapPreviewLayout)->Args({480, 240})->Args({800, 260})->Args({120, 240})->Args({480, 20});

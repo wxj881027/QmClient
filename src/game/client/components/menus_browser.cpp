@@ -1210,7 +1210,19 @@ bool CMenus::RenderMapPreviewForVote(const CUIRect &Preview, const char *pMapNam
 	static char s_aVotePreviewMap[128] = "";
 	static vec2 s_VotePreviewCenter{};
 	static float s_VotePreviewZoom = 1.0f;
-	if(str_comp(s_aVotePreviewMap, pMapName) != 0)
+	const bool CurrentMap = str_comp(Client()->GetCurrentMap(), pMapName) == 0;
+	if(CurrentMap)
+	{
+		// 当前地图的预览跟随玩家相机：投票时看到的是自己所在区域，而不是固定出生点。
+		// 相机中心量化到半格、缩放量化到 0.01，站立或轻微平滑时不触发每帧重建。
+		const auto Quantize = [](float Value, float Step) { return std::round(Value / Step) * Step; };
+		s_VotePreviewCenter = vec2(
+			Quantize(GameClient()->m_Camera.m_Center.x, 16.0f),
+			Quantize(GameClient()->m_Camera.m_Center.y, 16.0f));
+		s_VotePreviewZoom = std::max(Quantize(GameClient()->m_Camera.m_Zoom, 0.01f), 0.01f);
+		str_copy(s_aVotePreviewMap, pMapName);
+	}
+	else if(str_comp(s_aVotePreviewMap, pMapName) != 0)
 	{
 		str_copy(s_aVotePreviewMap, pMapName);
 		s_VotePreviewCenter = pEntry->m_Start ? *pEntry->m_Start : vec2(pEntry->m_WorldSize.x * 0.5f, pEntry->m_WorldSize.y * 0.5f);
@@ -1246,11 +1258,14 @@ bool CMenus::RenderMapPreviewForVote(const CUIRect &Preview, const char *pMapNam
 		DrawW = DrawH * Aspect;
 	}
 	const CUIRect DrawRect(Preview.x + (Preview.w - DrawW) * 0.5f, Preview.y + (Preview.h - DrawH) * 0.5f, DrawW, DrawH);
-	if(pEntry->m_NeedsRender || pEntry->m_RenderedCenter != s_VotePreviewCenter || pEntry->m_RenderedZoom != s_VotePreviewZoom)
+	const bool EntityOnly = g_Config.m_QmMapPreviewEntityOnly != 0;
+	const bool DynamicBackground = EntityOnly && !IsDefaultBackgroundEntitiesValue(g_Config.m_ClBackgroundEntities) && !IsBackgroundImageExtension(g_Config.m_ClBackgroundEntities);
+	const bool ViewChanged = pEntry->m_RenderedCenter != s_VotePreviewCenter || pEntry->m_RenderedZoom != s_VotePreviewZoom || EntityOnly != pEntry->m_RenderedEntities ||
+				 (EntityOnly && (pEntry->m_RenderedBackgroundColor != g_Config.m_ClBackgroundEntitiesColor || str_comp(pEntry->m_aRenderedBackground, g_Config.m_ClBackgroundEntities) != 0)) || DynamicBackground;
+	if(pEntry->m_NeedsRender || ViewChanged)
 	{
 		Ui()->FlushQuadBatch();
 		Ui()->ClipEnable(Ui()->Screen());
-		const bool EntityOnly = g_Config.m_QmMapPreviewEntityOnly != 0;
 		pEntry->m_pRenderer->SetEntityOnly(EntityOnly);
 		if(Graphics()->BeginRenderTarget(pEntry->m_RenderTarget, ColorRGBA(0.055f, 0.065f, 0.085f, 1.0f)))
 		{
@@ -1260,6 +1275,9 @@ bool CMenus::RenderMapPreviewForVote(const CUIRect &Preview, const char *pMapNam
 			Graphics()->EndRenderTarget();
 			pEntry->m_RenderedCenter = s_VotePreviewCenter;
 			pEntry->m_RenderedZoom = s_VotePreviewZoom;
+			pEntry->m_RenderedEntities = EntityOnly;
+			pEntry->m_RenderedBackgroundColor = g_Config.m_ClBackgroundEntitiesColor;
+			str_copy(pEntry->m_aRenderedBackground, g_Config.m_ClBackgroundEntities);
 			pEntry->m_NeedsRender = false;
 		}
 		Ui()->MapScreen();
