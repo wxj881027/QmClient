@@ -411,6 +411,66 @@ TEST(MetalBackendRuntime, RenderTargetGaussianBlurAndReadbackUseNativeGpu)
 	Image.Free();
 }
 
+TEST(MetalBackendRuntime, RenderTargetKeepsBothCommandBufferSlices)
+{
+	CMetalRuntimeBackend Runtime;
+	ASSERT_TRUE(Runtime.Init()) << Runtime.Error();
+	CCommandProcessorFragment_GLBase *pBackend = Runtime.Backend();
+	ASSERT_NE(pBackend, nullptr);
+
+	pBackend->StartCommands(2, 0);
+	CCommandBuffer::SCommand_RenderTarget_Create Create;
+	Create.m_TargetId = 0;
+	Create.m_Width = 16;
+	Create.m_Height = 16;
+	ASSERT_TRUE(RunCommand(pBackend, &Create));
+	CCommandBuffer::SCommand_RenderTarget_Begin Begin;
+	Begin.m_TargetId = Create.m_TargetId;
+	Begin.m_ClearColor = {1.0f, 0.0f, 0.0f, 1.0f};
+	ASSERT_TRUE(RunCommand(pBackend, &Begin));
+	pBackend->EndCommands();
+
+	pBackend->StartCommands(3, 1);
+	auto aVertices = SdfQuadVertices(8.0f, 16.0f);
+	for(auto &Vertex : aVertices)
+		Vertex.m_Color = {0, 255, 0, 255};
+	CCommandBuffer::SCommand_Render Render;
+	Render.m_State = {};
+	Render.m_State.m_BlendMode = EBlendMode::NONE;
+	Render.m_State.m_Texture = -1;
+	Render.m_State.m_ScreenBR = {16.0f, 16.0f};
+	Render.m_PrimType = EPrimitiveType::QUADS;
+	Render.m_PrimCount = 1;
+	Render.m_pVertices = aVertices.data();
+	ASSERT_TRUE(RunCommand(pBackend, &Render));
+	CCommandBuffer::SCommand_RenderTarget_End End;
+	ASSERT_TRUE(RunCommand(pBackend, &End));
+
+	CImageInfo Image;
+	CCommandBuffer::SCommand_RenderTarget_Readback Readback;
+	Readback.m_TargetId = Create.m_TargetId;
+	Readback.m_pImage = &Image;
+	const bool Read = RunCommand(pBackend, &Readback);
+	pBackend->EndCommands();
+
+	const std::unique_ptr<uint8_t, decltype(&std::free)> pPixels(Image.m_pData, &std::free);
+	ASSERT_TRUE(Read);
+	ASSERT_NE(pPixels, nullptr);
+	ASSERT_EQ(Image.m_Width, 16U);
+	ASSERT_EQ(Image.m_Height, 16U);
+	ASSERT_EQ(Image.m_Format, CImageInfo::FORMAT_RGBA);
+	const uint8_t *pLeft = pPixels.get() + (8U * Image.m_Width + 4U) * 4U;
+	const uint8_t *pRight = pPixels.get() + (8U * Image.m_Width + 12U) * 4U;
+	EXPECT_LE(pLeft[0], 2);
+	EXPECT_GE(pLeft[1], 250);
+	EXPECT_LE(pLeft[2], 2);
+	EXPECT_GE(pLeft[3], 250);
+	EXPECT_GE(pRight[0], 250);
+	EXPECT_LE(pRight[1], 2);
+	EXPECT_LE(pRight[2], 2);
+	EXPECT_GE(pRight[3], 250);
+}
+
 TEST(MetalBackendRuntime, BackbufferCaptureAndTrySwapReadbacksShareNativePresentedFrame)
 {
 	CMetalRuntimeBackend Runtime;

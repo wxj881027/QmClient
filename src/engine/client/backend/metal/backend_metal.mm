@@ -4225,6 +4225,7 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		m_CurrentCommandBuffer = Frame.m_CommandBuffer;
 		m_CommandBufferCommitted = false;
 		m_BackbufferContinuationPending = false;
+		// 编码器按命令片重开，活动离屏目标继续沿用，直到收到结束命令。
 		m_RenderEncoderStarted = false;
 		if(!ContinueBackbufferFrame)
 		{
@@ -4232,7 +4233,6 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 			Frame.m_BackbufferHasContents = false;
 		}
 		m_SkipCurrentFrame = false;
-		m_RenderTargetState.Reset();
 		Frame.m_VertexOffset = 0;
 		Frame.m_FrameId = m_FrameState.CurrentFrameId();
 		m_FrameId = Frame.m_FrameId;
@@ -4266,6 +4266,7 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		// 后续 POST_SHUTDOWN 不再通过 StartCommands 创建新帧。
 		m_State = EMetalBackendState::SHUTDOWN;
 		EndActiveEncoders();
+		m_RenderTargetState.Reset();
 		if(!m_CommandBufferCommitted)
 		{
 			// 释放未提交的录制，避免 WaitForGpuIdle 再提交残缺帧或等待它完成。
