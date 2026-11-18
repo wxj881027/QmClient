@@ -142,20 +142,26 @@ TEST(QmWheelPresets, ChecksWheelCapacityAfterEscapingAllFields)
 	EXPECT_FALSE(BuildCommand(Preset, Command));
 }
 
-TEST(QmWheelPresets, KeepsNegativeCountryCodesSupportedByPlayerConfiguration)
+TEST(QmWheelPresets, CountryCodesMatchPlayerConfigurationRange)
 {
 	SPreset Preset;
 	Preset.m_Type = EType::IDENTITY;
-	Preset.m_aTees[0].m_aValues[COUNTRY] = "-999";
 	std::string Command;
-	ASSERT_TRUE(BuildCommand(Preset, Command));
-	const auto Restored = ParseCommand(Command);
-	ASSERT_TRUE(Restored);
-	EXPECT_EQ(Restored->m_aTees[0].m_aValues[COUNTRY], "-999");
+	for(const char *pCode : {"-999", "999"})
+	{
+		SCOPED_TRACE(pCode);
+		Preset.m_aTees[0].m_aValues[COUNTRY] = pCode;
+		ASSERT_TRUE(BuildCommand(Preset, Command));
+		const auto Restored = ParseCommand(Command);
+		ASSERT_TRUE(Restored);
+		EXPECT_EQ(Restored->m_aTees[0].m_aValues[COUNTRY], pCode);
+	}
+
 	Preset.m_aTees[0].m_aValues[COUNTRY] = "-1000";
 	EXPECT_FALSE(BuildCommand(Preset, Command));
-	Preset.m_aTees[0].m_aValues[COUNTRY] = "1001";
+	Preset.m_aTees[0].m_aValues[COUNTRY] = "1000";
 	EXPECT_FALSE(BuildCommand(Preset, Command));
+	EXPECT_FALSE(ParseCommand("player_country 1000"));
 }
 
 TEST(QmWheelPresets, CustomScriptsRemainOutsideThePresetEditor)
