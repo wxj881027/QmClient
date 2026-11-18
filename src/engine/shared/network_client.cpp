@@ -27,10 +27,11 @@ try
 		return false;
 
 	auto pStun = std::make_unique<CStun>(pSocket.get());
-	CNetClient EmptyClient{};
 
 	Close();
-	*this = std::move(EmptyClient);
+	m_PacketChunkUnpacker.Reset();
+	m_RecvBuffer = {};
+	m_TokenCache = {};
 
 	m_Socket = pSocket.release();
 	m_LowLatency = LowLatency;

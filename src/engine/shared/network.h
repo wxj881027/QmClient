@@ -802,8 +802,8 @@ class CNetClient
 	void ResetQos();
 	void TryConfigureQos();
 
-	// Open 关闭当前资源后用空实例重置成员。
-	CNetClient &operator=(CNetClient &&) = default;
+	// 连接持有静态环形缓冲和内部借用，不能跨实例移动。
+	CNetClient &operator=(CNetClient &&) = delete;
 
 public:
 	~CNetClient() { Close(); }
