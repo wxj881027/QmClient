@@ -169,8 +169,14 @@ void qm_tee_trail::CTrailState::Update(vec2 Position, double Time, float Speed, 
 		const unsigned Segment = Split ? m_Head.m_Segment + 1 : 0;
 		const double PathDistance = Split ? m_Head.m_Distance : 0.0;
 		// 固定旧段的端帽，避免切换后它随新位置移动或被提前丢弃。
-		if(Split && distance(m_aPoints[(m_First + m_Count - 1) % MAX_POINTS].m_Pos, m_Head.m_Pos) > 0.001f)
-			Push(m_Head);
+		if(Split)
+		{
+			CTrailPart &LastPoint = m_aPoints[(m_First + m_Count - 1) % MAX_POINTS];
+			if(distance(LastPoint.m_Pos, m_Head.m_Pos) > 0.001f)
+				Push(m_Head);
+			else
+				LastPoint = m_Head;
+		}
 		m_Head = CTrailPart();
 		m_Head.m_Pos = Position;
 		m_Head.m_Time = Time;
