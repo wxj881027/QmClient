@@ -5,6 +5,7 @@
 #include <base/time.h>
 
 #include <engine/http.h>
+#include <engine/map.h>
 #include <engine/shared/json.h>
 
 #include <algorithm>
@@ -309,6 +310,13 @@ const char *QmAxiomParseResultLabel(EQmAxiomParseResult Result)
 		return "invalid response";
 	}
 	return "";
+}
+
+std::string QmBuildAxiomMapInfoUrl(const char *pMapName, EQmAxiomMode Mode)
+{
+	char aEscaped[MAX_MAP_LENGTH * 3];
+	EscapeUrl(aEscaped, pMapName);
+	return std::string("https://api.axiom.teeworlds.cn/v1/open/map/info?mode=") + (Mode == EQmAxiomMode::GORES ? "gores" : "axrace") + "&map=" + aEscaped;
 }
 
 std::string QmBuildAxiomPointsUrl(const char *pPlayerName, EQmAxiomMode Mode)

@@ -2,13 +2,18 @@
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_MAP_DIFFICULTY_CATALOG_H
 
 #include <cstddef>
+#include <cstdint>
 #include <map>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
 
+class CQmAxiomRequestBudget;
 class CServerInfo;
+class IHttp;
+class IHttpRequest;
 class IConsole;
 class IStorage;
 
@@ -24,6 +29,12 @@ public:
 
 		const char *StarLabel() const;
 	};
+
+	using TRequestFactory = std::unique_ptr<IHttpRequest> (*)(const char *);
+	explicit CQmMapDifficultyCatalog(TRequestFactory CreateRequest = nullptr);
+	void RequestAxiomDifficulty(const CServerInfo &Server, IHttp &Http, CQmAxiomRequestBudget &Budget, const char *pApiKey, int64_t Now);
+	bool PollAxiomRequests(CQmAxiomRequestBudget &Budget, int64_t Now);
+	void CancelAxiomRequests();
 
 	// 读取随客户端发布的 DDNet 分类 SQL 和本地 Axiom 公告缓存，不访问网络。
 	bool Load(IStorage *pStorage, IConsole *pConsole);
@@ -50,7 +61,13 @@ private:
 		bool operator()(std::pair<int, std::string_view> A, std::pair<int, std::string_view> B) const { return A < B; }
 	};
 	// 星级上限区分 Gores（3）与 AXRace（5），同名地图不跨玩法共用。
-	std::map<std::pair<int, std::string>, SEntry, SAxiomKeyLess> m_AxiomEntries;
+	using TAxiomKey = std::pair<int, std::string>;
+	bool StoreAxiomEntry(SEntry Entry);
+	bool RecordAxiomResponse(const TAxiomKey &Key, const IHttpRequest &Request);
+	TRequestFactory m_CreateRequest;
+	std::map<TAxiomKey, std::shared_ptr<IHttpRequest>, SAxiomKeyLess> m_AxiomRequests;
+	std::map<TAxiomKey, int64_t, SAxiomKeyLess> m_AxiomRetryAfter;
+	std::map<TAxiomKey, SEntry, SAxiomKeyLess> m_AxiomEntries;
 	bool m_AxiomCacheDirty = false;
 	std::vector<SEntry> m_vEntries;
 };

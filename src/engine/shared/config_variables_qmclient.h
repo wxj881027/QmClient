@@ -707,7 +707,7 @@ MACRO_CONFIG_INT(QmGoresFastInputOthers, qm_gores_fast_input_others, 0, 0, 1, CF
 MACRO_CONFIG_INT(QmGoresHideGuides, qm_gores_hide_guides, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hide helper lines in Gores mode")
 MACRO_CONFIG_INT(QmGoresDisableDummyHammer, qm_gores_disable_dummy_hammer, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Temporarily disable dummy hammering in Gores mode")
 MACRO_CONFIG_INT(QmGoresSuppressSwitchAnim, qm_gores_suppress_switch_anim, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Skip the weapon switch animation for hammer switches in Gores mode")
-MACRO_CONFIG_STR(QmAxiomApiKey, qm_axiom_api_key, 256, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Optional Axiom API key for scoreboard points and vote map details (leave empty for anonymous queries)")
+MACRO_CONFIG_STR(QmAxiomApiKey, qm_axiom_api_key, 256, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Optional Axiom API key for scoreboard points and map queries (leave empty for anonymous queries)")
 MACRO_CONFIG_INT(QmAxiomAutoLogin, qm_axiom_auto_login, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-login after entering Axiom community server")
 MACRO_CONFIG_INT(QmAxiomQuadPrediction, qm_axiom_quad_prediction, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Predict moving blocks and freeze quads on servers using Axiom quad rules (experimental)")
 MACRO_CONFIG_STR(QmAxiomLoginPassword, qm_axiom_login_password, 128, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Password for Axiom main account auto-login")
