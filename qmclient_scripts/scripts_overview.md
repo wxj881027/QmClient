@@ -123,7 +123,7 @@ python qmclient_scripts/integration/e2e_qmclient.py <build-dir> [connection_fail
 
 gate 使用 `--run-qm-smoke` 时会在同一进程测试 check 中顺序执行 smoke 与 E2E。
 
-Demo 视频导出的画质/速度基准（手动入口，不计入 gate 与测试库存；阈值来自 2026-10-24 实测基线，见 `docs/规格/2026-10-16-Demo视频导出现代化实施方案.md` 补充 26/27）：
+Demo 视频导出的画质/速度基准（手动入口，不计入 gate 与测试库存；阈值来自 2026-10-24 实测基线，见 `docs/归档/2026-10-16-Demo视频导出现代化实施方案.md` 补充 26/27）：
 
 ```text
 python qmclient_scripts/integration/perf_video_export.py <build-dir> [speed_hd|quality_codec|quality_aa]
