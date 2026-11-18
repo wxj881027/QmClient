@@ -98,18 +98,19 @@ public:
 
 	bool Reset(size_t WarTypeCount) noexcept
 	{
+		const size_t PreviousSize = m_WarGroupMatches.size();
 		bool Prepared = true;
 		try
 		{
-			m_WarGroupMatches.assign(std::max(WarTypeCount, size_t{3}), false);
+			m_WarGroupMatches.resize(std::max(WarTypeCount, size_t{3}), false);
 		}
 		catch(...)
 		{
-			// 成功构造后始终保有三个内置槽，缩回它们不需要新分配。
+			// resize 扩容失败时保留原存储，缩回三个内置槽无需分配。
 			m_WarGroupMatches.resize(3);
-			std::fill(m_WarGroupMatches.begin(), m_WarGroupMatches.end(), false);
 			Prepared = false;
 		}
+		std::fill_n(m_WarGroupMatches.begin(), std::min(PreviousSize, m_WarGroupMatches.size()), false);
 		m_WarName = m_WarClan = false;
 		m_aReason[0] = '\0';
 		m_NameColor = m_ClanColor = ColorRGBA(1, 1, 1, 1);

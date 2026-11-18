@@ -296,22 +296,25 @@ TEST_F(QmWarListAllocation, FailedConfigTypeLoadStaysIncompleteAfterAValidOverri
 TEST_F(QmWarListAllocation, PlayerCacheFailureKeepsThreeSafeNeutralBuiltinSlotsAndCanRetry)
 {
 	CWarDataCache Cache;
+	ASSERT_TRUE(Cache.Reset(5));
 	Cache.m_WarName = Cache.m_WarClan = true;
-	Cache.m_WarGroupMatches[1] = Cache.m_WarGroupMatches[2] = true;
+	std::fill(Cache.m_WarGroupMatches.begin(), Cache.m_WarGroupMatches.end(), true);
 	str_copy(Cache.m_aReason, "old");
 	Cache.m_NameColor = ColorRGBA(1, 0, 0, 1);
 	const size_t Target = Cache.m_WarGroupMatches.capacity() + 1;
 	bool Prepared, Triggered;
+	size_t AllocationAttempts;
 	{
 		CPredictionAllocationFailure Failure;
 		Prepared = Cache.Reset(Target);
 		Triggered = Failure.Triggered();
+		AllocationAttempts = Failure.Attempts();
 	}
 	EXPECT_TRUE(Triggered);
 	EXPECT_FALSE(Prepared);
+	EXPECT_EQ(AllocationAttempts, 1u);
 	ASSERT_EQ(Cache.m_WarGroupMatches.size(), 3u);
-	EXPECT_FALSE(Cache.m_WarGroupMatches[1]);
-	EXPECT_FALSE(Cache.m_WarGroupMatches[2]);
+	EXPECT_TRUE(std::none_of(Cache.m_WarGroupMatches.begin(), Cache.m_WarGroupMatches.end(), [](char Match) { return Match != 0; }));
 	EXPECT_FALSE(Cache.m_WarName);
 	EXPECT_FALSE(Cache.m_WarClan);
 	EXPECT_STREQ(Cache.m_aReason, "");
