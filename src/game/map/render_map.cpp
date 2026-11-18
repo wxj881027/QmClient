@@ -20,6 +20,7 @@
 
 #include <chrono>
 #include <cmath>
+#include <cstdint>
 
 using namespace std::chrono_literals;
 
@@ -53,6 +54,8 @@ void CRenderMap::ForceRenderQuads(CQuad *pQuads, int NumQuads, const IEnvelopeEv
 		pEnvEval->EnvelopeEval(pQuad->m_PosEnvOffset, pQuad->m_PosEnv, Position, 3);
 		const vec2 Offset = vec2(Position.r, Position.g);
 		const float Rotation = Position.b / 180.0f * pi;
+		if(!std::isfinite(Rotation) || !std::isfinite(Offset.x) || !std::isfinite(Offset.y))
+			continue;
 
 		IGraphics::CColorVertex aColors[4] = {
 			IGraphics::CColorVertex(0, ColorRGBA(pQuad->m_aColors[0].r, pQuad->m_aColors[0].g, pQuad->m_aColors[0].b, pQuad->m_aColors[0].a * Alpha).Multiply(Color).Multiply(Conv)),
@@ -62,24 +65,33 @@ void CRenderMap::ForceRenderQuads(CQuad *pQuads, int NumQuads, const IEnvelopeEv
 		};
 		Graphics()->SetColorVertex(aColors, std::size(aColors));
 
-		const CPoint *pPoints;
-		CPoint aRotated[4];
+		vec2 aPoints[4];
 		if(Rotation == 0.0f)
 		{
-			pPoints = pQuad->m_aPoints;
+			for(size_t PointIndex = 0; PointIndex < std::size(aPoints); ++PointIndex)
+			{
+				const CPoint &Point = pQuad->m_aPoints[PointIndex];
+				aPoints[PointIndex] = vec2(fx2f(Point.x), fx2f(Point.y));
+			}
 		}
 		else
 		{
-			std::copy_n(pQuad->m_aPoints, std::size(aRotated), aRotated);
-			RotatePoints(pQuad->m_aPoints[4], aRotated, std::size(aRotated), Rotation);
-			pPoints = aRotated;
+			const CPoint &Center = pQuad->m_aPoints[4];
+			const float Cos = std::cos(Rotation);
+			const float Sin = std::sin(Rotation);
+			for(size_t PointIndex = 0; PointIndex < std::size(aPoints); ++PointIndex)
+			{
+				const CPoint &Point = pQuad->m_aPoints[PointIndex];
+				const float X = static_cast<int64_t>(Point.x) - Center.x;
+				const float Y = static_cast<int64_t>(Point.y) - Center.y;
+				// 保留旧定点截断，旋转后的坐标直接转成用于绘制的世界坐标。
+				aPoints[PointIndex] = vec2(
+					std::trunc(X * Cos - Y * Sin + Center.x) / fxpscale,
+					std::trunc(X * Sin + Y * Cos + Center.y) / fxpscale);
+			}
 		}
 
-		IGraphics::CFreeformItem Freeform(
-			fx2f(pPoints[0].x) + Offset.x, fx2f(pPoints[0].y) + Offset.y,
-			fx2f(pPoints[1].x) + Offset.x, fx2f(pPoints[1].y) + Offset.y,
-			fx2f(pPoints[2].x) + Offset.x, fx2f(pPoints[2].y) + Offset.y,
-			fx2f(pPoints[3].x) + Offset.x, fx2f(pPoints[3].y) + Offset.y);
+		IGraphics::CFreeformItem Freeform(aPoints[0] + Offset, aPoints[1] + Offset, aPoints[2] + Offset, aPoints[3] + Offset);
 		Graphics()->QuadsDrawFreeform(&Freeform, 1);
 	}
 	Graphics()->TrianglesEnd();

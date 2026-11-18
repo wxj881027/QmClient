@@ -24,7 +24,7 @@ public:
 	const CEnvelopeExtremaItem &GetExtrema(int EnvelopeIndex) const;
 
 private:
-	void CalculateEnvelope(const CMapItemEnvelope *pEnvelopeItem, int EnvelopeIndex);
+	void CalculateEnvelope(const CMapItemEnvelope *pEnvelopeItem, int EnvelopeIndex, int &RemainingPoints);
 	void CalculateExtrema();
 
 	CEnvelopeExtremaItem m_EnvelopeExtremaItemNone;

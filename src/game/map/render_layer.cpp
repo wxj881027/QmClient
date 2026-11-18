@@ -634,6 +634,7 @@ CMapLoadTask CRenderLayerTile::Init()
 	{
 		m_pMap->UnloadData(GetDataIndex());
 		m_pTiles = nullptr;
+		m_TileDataLoaded = false;
 	}
 }
 
@@ -976,7 +977,8 @@ void *CRenderLayerTile::GetRawData() const
 void CRenderLayerTile::OnInit(IGraphics *pGraphics, ITextRender *pTextRender, CRenderMap *pRenderMap, std::shared_ptr<CEnvelopeManager> &pEnvelopeManager, IMap *pMap, IMapImages *pMapImages, bool TileAndQuadBuffering)
 {
 	CRenderLayer::OnInit(pGraphics, pTextRender, pRenderMap, pEnvelopeManager, pMap, pMapImages, TileAndQuadBuffering);
-	InitTileData();
+	// 文件声明的长度仍可能有效，必须以图层实际取得的缓冲为准。
+	m_TileDataLoaded = InitTileData();
 }
 
 CMapLoadTask CRenderLayerTile::Prepare()
@@ -1031,9 +1033,10 @@ CMapLoadTask CRenderLayerTile::Prepare()
 	co_await Init();
 }
 
-void CRenderLayerTile::InitTileData()
+bool CRenderLayerTile::InitTileData()
 {
 	m_pTiles = GetData<CTile>();
+	return m_pTiles != nullptr;
 }
 
 template<class T>
@@ -1954,9 +1957,10 @@ CMapLoadTask CRenderLayerEntityTele::Init()
 	m_LayerClip = LayerClip;
 }
 
-void CRenderLayerEntityTele::InitTileData()
+bool CRenderLayerEntityTele::InitTileData()
 {
 	m_pTeleTiles = GetData<CTeleTile>();
+	return m_pTeleTiles != nullptr;
 }
 
 void CRenderLayerEntityTele::Unload()
@@ -2065,9 +2069,10 @@ CMapLoadTask CRenderLayerEntitySpeedup::Init()
 	co_await UploadTileData(m_VisualMaxSpeed, 2, false);
 }
 
-void CRenderLayerEntitySpeedup::InitTileData()
+bool CRenderLayerEntitySpeedup::InitTileData()
 {
 	m_pSpeedupTiles = GetData<CSpeedupTile>();
+	return m_pSpeedupTiles != nullptr;
 }
 
 void CRenderLayerEntitySpeedup::Unload()
@@ -2199,9 +2204,10 @@ CMapLoadTask CRenderLayerEntitySwitch::Init()
 	}
 }
 
-void CRenderLayerEntitySwitch::InitTileData()
+bool CRenderLayerEntitySwitch::InitTileData()
 {
 	m_pSwitchTiles = GetData<CSwitchTile>();
+	return m_pSwitchTiles != nullptr;
 }
 
 void CRenderLayerEntitySwitch::Unload()
@@ -2362,9 +2368,10 @@ int CRenderLayerEntityTune::GetDataIndex() const
 	return m_pLayerTilemap->m_Tune;
 }
 
-void CRenderLayerEntityTune::InitTileData()
+bool CRenderLayerEntityTune::InitTileData()
 {
 	m_pTuneTiles = GetData<CTuneTile>();
+	return m_pTuneTiles != nullptr;
 }
 
 void CRenderLayerEntityTune::RenderTileLayerNoTileBuffer(const ColorRGBA &Color, const CRenderLayerParams &Params)

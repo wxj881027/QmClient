@@ -23,7 +23,7 @@ CEnvelopeExtrema::CEnvelopeExtrema(IMap *pMap) :
 	CalculateExtrema();
 }
 
-void CEnvelopeExtrema::CalculateEnvelope(const CMapItemEnvelope *pEnvelopeItem, int EnvelopeIndex)
+void CEnvelopeExtrema::CalculateEnvelope(const CMapItemEnvelope *pEnvelopeItem, int EnvelopeIndex, int &RemainingPoints)
 {
 	CEnvelopeExtremaItem &EnvExt = m_vEnvelopeExtrema[EnvelopeIndex];
 
@@ -49,6 +49,10 @@ void CEnvelopeExtrema::CalculateEnvelope(const CMapItemEnvelope *pEnvelopeItem, 
 	}
 	if(Start < 0 || Count < 0 || Start > m_EnvelopePoints.NumPointsMax() || Count > m_EnvelopePoints.NumPointsMax() - Start)
 		return;
+	if(Count > RemainingPoints)
+		return;
+	RemainingPoints -= Count;
+
 	const auto ExpandByTangent = [&EnvExt](int Channel, int Value, int Tangent) {
 		const int64_t Position = static_cast<int64_t>(Value) + Tangent;
 		// 范围无法表示时禁用提前裁剪，实际包络求值仍走原路径。
@@ -108,10 +112,12 @@ void CEnvelopeExtrema::CalculateExtrema()
 	int EnvelopeStart, EnvelopeNum;
 	m_pMap->GetType(MAPITEMTYPE_ENVELOPE, &EnvelopeStart, &EnvelopeNum);
 	m_vEnvelopeExtrema.resize(EnvelopeNum);
+	// 重叠区间会反复扫描同一批点。超出实际点数时，剩余预算不足的包络禁用提前裁剪。
+	int RemainingPoints = m_EnvelopePoints.NumPointsMax();
 	for(int EnvelopeIndex = 0; EnvelopeIndex < EnvelopeNum; ++EnvelopeIndex)
 	{
 		const auto Item = MapRenderItems::ReadEnvelope(*m_pMap, EnvelopeStart + EnvelopeIndex);
-		CalculateEnvelope(Item ? &*Item : nullptr, EnvelopeIndex);
+		CalculateEnvelope(Item ? &*Item : nullptr, EnvelopeIndex, RemainingPoints);
 	}
 }
 

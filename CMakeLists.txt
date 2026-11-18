@@ -5448,6 +5448,9 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/client/editor_map_sounds_test.cpp
     src/test/integration/client/map_sound_source_queue_test.cpp
     src/test/integration/client/map_envelope_items_test.cpp
+    src/test/integration/client/map_tile_layer_read_failure_test.cpp
+    src/test/integration/client/map_envelope_extrema_budget_test.cpp
+    src/test/integration/client/map_quad_render_transform_test.cpp
     src/test/integration/client/editor_map_info_test.cpp
     src/test/integration/engine/datafile_string_processor_test.cpp
     src/test/integration/engine/map_group_load_test.cpp

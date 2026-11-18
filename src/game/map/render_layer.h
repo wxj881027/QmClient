@@ -185,8 +185,7 @@ public:
 	{
 		// 设计层上传 GPU 后会释放原始 tile 数据，有效性不能只看 map 数据。
 		return m_pLayerTilemap != nullptr && m_pLayerTilemap->m_Width > 0 && m_pLayerTilemap->m_Height > 0 &&
-		       (m_pTiles != nullptr || (m_VisualTiles.has_value() && m_VisualTiles->m_BufferContainerIndex != -1) ||
-			       (m_pMap != nullptr && m_pMap->GetDataSize(GetDataIndex()) > 0));
+		       (m_TileDataLoaded || (m_VisualTiles.has_value() && m_VisualTiles->m_BufferContainerIndex != -1));
 	}
 	void Unload() override;
 
@@ -196,13 +195,14 @@ protected:
 	T *GetData() const;
 
 	virtual ColorRGBA GetRenderColor(const CRenderLayerParams &Params) const;
-	virtual void InitTileData();
+	virtual bool InitTileData();
 	virtual void GetTileData(unsigned char *pIndex, unsigned char *pFlags, int *pAngleRotate, unsigned int x, unsigned int y, int CurOverlay) const;
 	IGraphics::CTextureHandle GetTexture() const override { return m_TextureHandle; }
 	CTile *m_pTiles;
 
 private:
 	IGraphics::CTextureHandle m_TextureHandle;
+	bool m_TileDataLoaded = false;
 
 protected:
 	class CTileLayerVisuals : public CRenderComponent
@@ -337,9 +337,9 @@ protected:
 		int m_NumQuads;
 
 		int m_PosEnv;
-		float m_PosEnvOffset;
+		int m_PosEnvOffset;
 		int m_ColorEnv;
-		float m_ColorEnvOffset;
+		int m_ColorEnvOffset;
 
 		std::vector<SQuadRenderInfo> m_vQuadRenderInfo;
 		std::optional<CClipRegion> m_ClipRegion;
@@ -417,7 +417,7 @@ public:
 	void Unload() override;
 
 protected:
-	void InitTileData() override;
+	bool InitTileData() override;
 	void RenderTileLayerWithTileBuffer(const ColorRGBA &Color, const CRenderLayerParams &Params) override;
 	void RenderTileLayerNoTileBuffer(const ColorRGBA &Color, const CRenderLayerParams &Params) override;
 	void GetTileData(unsigned char *pIndex, unsigned char *pFlags, int *pAngleRotate, unsigned int x, unsigned int y, int CurOverlay) const override;
@@ -438,7 +438,7 @@ public:
 	void Unload() override;
 
 protected:
-	void InitTileData() override;
+	bool InitTileData() override;
 	void RenderTileLayerWithTileBuffer(const ColorRGBA &Color, const CRenderLayerParams &Params) override;
 	void RenderTileLayerNoTileBuffer(const ColorRGBA &Color, const CRenderLayerParams &Params) override;
 	void GetTileData(unsigned char *pIndex, unsigned char *pFlags, int *pAngleRotate, unsigned int x, unsigned int y, int CurOverlay) const override;
@@ -459,7 +459,7 @@ public:
 	void Unload() override;
 
 protected:
-	void InitTileData() override;
+	bool InitTileData() override;
 	void RenderTileLayerWithTileBuffer(const ColorRGBA &Color, const CRenderLayerParams &Params) override;
 	void RenderTileLayerNoTileBuffer(const ColorRGBA &Color, const CRenderLayerParams &Params) override;
 	void GetTileData(unsigned char *pIndex, unsigned char *pFlags, int *pAngleRotate, unsigned int x, unsigned int y, int CurOverlay) const override;
@@ -483,7 +483,7 @@ public:
 	CMapLoadTask Init() override;
 
 protected:
-	void InitTileData() override;
+	bool InitTileData() override;
 	void RenderTileLayerNoTileBuffer(const ColorRGBA &Color, const CRenderLayerParams &Params) override;
 	void GetTileData(unsigned char *pIndex, unsigned char *pFlags, int *pAngleRotate, unsigned int x, unsigned int y, int CurOverlay) const override;
 	IGraphics::CTextureHandle GetTexture() const override;
