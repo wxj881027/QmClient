@@ -7007,6 +7007,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/client/qm_map_progress_allocation_test.cpp
       src/test/unit/engine/net_client_allocation_test.cpp
       src/test/unit/engine/favorites_allocation_test.cpp
+      src/test/unit/qmclient/client/qm_rank_demo_manifest_allocation_test.cpp
       src/test/unit/qmclient/client/qm_auto_reply_allocation_test.cpp
       src/test/unit/qmclient/client/qm_chat_avatar_allocation_test.cpp
       src/test/support/prediction_collision_map.h
