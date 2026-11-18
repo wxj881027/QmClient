@@ -41,6 +41,39 @@ TEST(QmWheelPresets, IdentityKeepsDistinctMainAndDummyValues)
 	EXPECT_EQ(Restored->m_aTees[1].m_aValues, Preset.m_aTees[1].m_aValues);
 }
 
+TEST(QmWheelPresets, ProfileCombinesIdentityAssetsAndChat)
+{
+	SPreset Preset;
+	Preset.m_Type = EType::PROFILE;
+	Preset.m_aTees[0].m_aValues[NAME] = "DYL";
+	Preset.m_aTees[0].m_aValues[SKIN] = "default_v2";
+	Preset.m_aAssets[1] = "gamepack";
+	Preset.m_Chat = "ready";
+	std::string Command;
+	ASSERT_TRUE(BuildCommand(Preset, Command));
+	EXPECT_EQ(Command.rfind("say \"ready\""), Command.size() - std::string("say \"ready\"").size());
+
+	const auto Restored = ParseCommand(Command);
+	ASSERT_TRUE(Restored);
+	EXPECT_EQ(Restored->m_Type, EType::PROFILE);
+	EXPECT_EQ(Restored->m_aTees[0].m_aValues[NAME], Preset.m_aTees[0].m_aValues[NAME]);
+	EXPECT_EQ(Restored->m_aTees[0].m_aValues[SKIN], Preset.m_aTees[0].m_aValues[SKIN]);
+	EXPECT_EQ(Restored->m_aAssets[1], "gamepack");
+	EXPECT_EQ(Restored->m_Chat, "ready");
+}
+
+TEST(QmWheelPresets, MixedAssignmentsParseAsProfilePreset)
+{
+	const auto Preset = ParseCommand("player_skin \"default\"; cl_asset_game \"default\"; say_team \"help\"");
+	ASSERT_TRUE(Preset);
+	EXPECT_EQ(Preset->m_Type, EType::PROFILE);
+	ASSERT_TRUE(Preset->m_aTees[0].m_aValues[SKIN]);
+	EXPECT_EQ(*Preset->m_aTees[0].m_aValues[SKIN], "default");
+	EXPECT_EQ(Preset->m_aAssets[1], "default");
+	EXPECT_EQ(Preset->m_Chat, "help");
+	EXPECT_TRUE(Preset->m_TeamChat);
+}
+
 TEST(QmWheelPresets, PartialIdentityDoesNotTurnUnspecifiedFieldsIntoResets)
 {
 	const auto Preset = ParseCommand("player_skin \"default\"; player_clan \"\"");
@@ -160,7 +193,7 @@ TEST(QmWheelPresets, KeepsNegativeCountryCodesSupportedByPlayerConfiguration)
 
 TEST(QmWheelPresets, CustomScriptsRemainOutsideThePresetEditor)
 {
-	for(const char *pCommand : {"exec DYL.cfg", "say \"hi\"; kill", "say \"hi\"; say \"again\"", "player_name \"one\"; player_name \"two\"", "player_skin \"default\"; cl_asset_game \"default\"", "player_name \"unterminated", "player_default_eyes 6", "player_color_body 16777216", "player_country -1000", "cl_asset_game \"\""})
+	for(const char *pCommand : {"exec DYL.cfg", "say \"hi\"; kill", "say \"hi\"; say \"again\"", "player_name \"one\"; player_name \"two\"", "player_name \"unterminated", "player_default_eyes 6", "player_color_body 16777216", "player_country -1000", "cl_asset_game \"\""})
 	{
 		SCOPED_TRACE(pCommand);
 		EXPECT_FALSE(ParseCommand(pCommand));
@@ -170,7 +203,7 @@ TEST(QmWheelPresets, CustomScriptsRemainOutsideThePresetEditor)
 TEST(QmWheelPresets, EmptyPresetsCannotCreateNoOpWheelEntries)
 {
 	std::string Command;
-	for(EType Type : {EType::NAME, EType::IDENTITY, EType::CHAT, EType::ASSETS})
+	for(EType Type : {EType::NAME, EType::PROFILE, EType::IDENTITY, EType::CHAT, EType::ASSETS})
 	{
 		SPreset Preset;
 		Preset.m_Type = Type;

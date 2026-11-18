@@ -96,10 +96,11 @@ namespace qm_wheel_presets
 		const auto Add = [&](const char *pName, const std::string &Value) {
 			vCommands.emplace_back(std::string(pName) + " " + qm_bind_editor::QuoteArgument(Value));
 		};
-		switch(Preset.m_Type)
+		const bool IncludeIdentity = Preset.m_Type == EType::NAME || Preset.m_Type == EType::IDENTITY || Preset.m_Type == EType::PROFILE;
+		const bool IncludeAssets = Preset.m_Type == EType::ASSETS || Preset.m_Type == EType::PROFILE;
+		const bool IncludeChat = Preset.m_Type == EType::CHAT || Preset.m_Type == EType::PROFILE;
+		if(IncludeIdentity)
 		{
-		case EType::NAME:
-		case EType::IDENTITY:
 			for(int Tee = 0; Tee < 2; ++Tee)
 			{
 				for(int Field = 0; Field < (Preset.m_Type == EType::NAME ? 1 : NUM_IDENTITY_FIELDS); ++Field)
@@ -112,13 +113,9 @@ namespace qm_wheel_presets
 					Add(IdentityCommand(Tee, Field), *Value);
 				}
 			}
-			break;
-		case EType::CHAT:
-			if(Preset.m_Chat.empty() || !ValidText(Preset.m_Chat, 256))
-				return false;
-			Add(Preset.m_TeamChat ? "say_team" : "say", Preset.m_Chat);
-			break;
-		case EType::ASSETS:
+		}
+		if(IncludeAssets)
+		{
 			for(int Index = 0; Index < NUM_ASSETS; ++Index)
 			{
 				const auto &Asset = Preset.m_aAssets[Index];
@@ -128,9 +125,12 @@ namespace qm_wheel_presets
 					return false;
 				Add(AssetCommand(Index), Asset);
 			}
-			break;
-		default:
-			return false;
+		}
+		if(IncludeChat && !Preset.m_Chat.empty())
+		{
+			if(!ValidText(Preset.m_Chat, 256))
+				return false;
+			Add(Preset.m_TeamChat ? "say_team" : "say", Preset.m_Chat);
 		}
 		const std::string Result = qm_bind_editor::JoinCommands(vCommands);
 		if(Result.empty() || Result.size() >= COMMAND_CAPACITY)
@@ -147,7 +147,10 @@ namespace qm_wheel_presets
 		if(!Commands.m_Complete || Commands.m_vCommands.empty())
 			return std::nullopt;
 		SPreset Result;
-		std::optional<EType> Type;
+		bool HasIdentity = false;
+		bool HasNonNameIdentity = false;
+		bool HasChat = false;
+		bool HasAssets = false;
 		for(const auto &Entry : Commands.m_vCommands)
 		{
 			std::string Name, Value;
@@ -155,9 +158,9 @@ namespace qm_wheel_presets
 				return std::nullopt;
 			if(Name == "say" || Name == "say_team")
 			{
-				if(Type)
+				if(HasChat || Value.empty())
 					return std::nullopt;
-				Type = EType::CHAT;
+				HasChat = true;
 				Result.m_Chat = Value;
 				Result.m_TeamChat = Name == "say_team";
 				continue;
@@ -169,10 +172,11 @@ namespace qm_wheel_presets
 				{
 					if(Name != IdentityCommand(Tee, Field))
 						continue;
-					if((Type && *Type != EType::NAME && *Type != EType::IDENTITY) || Result.m_aTees[Tee].m_aValues[Field])
+					if(Result.m_aTees[Tee].m_aValues[Field])
 						return std::nullopt;
-					if(!Type || Field != NAME)
-						Type = Field == NAME ? EType::NAME : EType::IDENTITY;
+					HasIdentity = true;
+					if(Field != NAME)
+						HasNonNameIdentity = true;
 					Result.m_aTees[Tee].m_aValues[Field] = Value;
 					Found = true;
 					break;
@@ -182,16 +186,26 @@ namespace qm_wheel_presets
 			{
 				if(Name != AssetCommand(Index))
 					continue;
-				if((Type && *Type != EType::ASSETS) || !Result.m_aAssets[Index].empty() || Value.empty())
+				if(!Result.m_aAssets[Index].empty() || Value.empty())
 					return std::nullopt;
-				Type = EType::ASSETS;
+				HasAssets = true;
 				Result.m_aAssets[Index] = Value;
 				Found = true;
 			}
 			if(!Found)
 				return std::nullopt;
 		}
-		Result.m_Type = *Type;
+		const int CategoryCount = HasIdentity + HasChat + HasAssets;
+		if(CategoryCount == 0)
+			return std::nullopt;
+		if(CategoryCount > 1)
+			Result.m_Type = EType::PROFILE;
+		else if(HasChat)
+			Result.m_Type = EType::CHAT;
+		else if(HasAssets)
+			Result.m_Type = EType::ASSETS;
+		else
+			Result.m_Type = HasNonNameIdentity ? EType::IDENTITY : EType::NAME;
 		std::string Rebuilt;
 		if(!BuildCommand(Result, Rebuilt))
 			return std::nullopt;

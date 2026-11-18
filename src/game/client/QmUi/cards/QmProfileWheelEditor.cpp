@@ -145,7 +145,7 @@ void CMenus::EditProfileInWheel(const CProfile &Profile, bool Dummy)
 	if(!m_pProfileWheelEditor)
 		m_pProfileWheelEditor = std::make_shared<SQmProfileWheelEditorState>();
 	SPreset Preset;
-	Preset.m_Type = EType::IDENTITY;
+	Preset.m_Type = EType::PROFILE;
 	auto &Values = Preset.m_aTees[Dummy ? 1 : 0].m_aValues;
 	if(g_Config.m_QmProfileName && Profile.m_Name[0])
 		Values[NAME] = Profile.m_Name;
@@ -224,19 +224,20 @@ void CMenus::RenderProfileWheelEditor(const qm_card_catalog::SQmCardBuildContext
 
 	Text("profile-wheel-help", Localize("Create wheel presets here. Existing wheel entries are kept."));
 	CUIRect Row;
-	const char *apTypes[] = {Localize("Name"), Localize("Identity preset"), Localize("Chat phrase"), Localize("Asset preset")};
+	const char *apTypes[] = {Localize("Name"), Localize("Profile"), Localize("Identity preset"), Localize("Chat phrase"), Localize("Asset preset")};
 	if(Flow.Control("profile-wheel-defaults", Metrics.m_ButtonHeight, Row, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
 	{
 		if(DoTClientSettingsButton_Menu(&State.m_DefaultsButton, "profile-wheel-defaults", Localize("Add default presets"), 0, &Row) && Editable)
 		{
 			std::vector<std::pair<std::string, std::string>> vMissing;
 			bool Valid = true;
-			for(int Type = 0; Type < 4; ++Type)
+			const EType aDefaultTypes[] = {EType::NAME, EType::IDENTITY, EType::CHAT, EType::ASSETS};
+			for(const EType Type : aDefaultTypes)
 			{
-				const std::string Label = std::string(Localize("Default")) + ": " + apTypes[Type];
+				const std::string Label = std::string(Localize("Default")) + ": " + apTypes[static_cast<int>(Type)];
 				if(std::any_of(Wheel.m_vBinds.begin(), Wheel.m_vBinds.end(), [&](const auto &Bind) { return Label == Bind.m_aName; }))
 					continue;
-				SPreset Preset = CurrentPreset(static_cast<EType>(Type));
+				SPreset Preset = CurrentPreset(Type);
 				Preset.m_Chat = Localize("Thanks!");
 				Preset.m_aAssets.fill("default");
 				std::string Command;
@@ -257,13 +258,14 @@ void CMenus::RenderProfileWheelEditor(const qm_card_catalog::SQmCardBuildContext
 		DoLine_KeyReader(Row, State.m_WheelKey, State.m_ClearWheelKey, Localize("Bind Wheel Key"), "+bindwheel");
 	Input("profile-wheel-label", Localize("Wheel label"), State.m_Label);
 	const int OldType = State.m_Type;
-	Choice("profile-wheel-type", Localize("Preset type"), State.m_Type, apTypes, 4, State.m_TypeDropdown, State.m_TypeScroll);
+	Choice("profile-wheel-type", Localize("Preset type"), State.m_Type, apTypes, 5, State.m_TypeDropdown, State.m_TypeScroll);
 	if(Editable && OldType != State.m_Type)
 	{
 		State.Load(CurrentPreset(static_cast<EType>(State.m_Type)));
 		return;
 	}
-	if(State.m_Type <= static_cast<int>(EType::IDENTITY))
+	const bool IsProfile = State.m_Type == static_cast<int>(EType::PROFILE);
+	if(State.m_Type == static_cast<int>(EType::NAME) || IsProfile || State.m_Type == static_cast<int>(EType::IDENTITY))
 	{
 		const char *apTargets[] = {Localize("Main Tee"), Localize("Dummy"), Localize("Main Tee and dummy")};
 		Choice("profile-wheel-target", Localize("Apply to"), State.m_Target, apTargets, 3, State.m_TargetDropdown, State.m_TargetScroll);
@@ -314,15 +316,19 @@ void CMenus::RenderProfileWheelEditor(const qm_card_catalog::SQmCardBuildContext
 			Choice((Prefix + "-eyes").c_str(), Localize("Eyes", "skins"), Identity.m_Eyes, apEyes, 6, Identity.m_EyesDropdown, Identity.m_EyesScroll);
 		}
 	}
-	else if(State.m_Type == static_cast<int>(EType::CHAT))
+	if(State.m_Type == static_cast<int>(EType::CHAT) || IsProfile)
 	{
+		if(IsProfile)
+			Text("profile-wheel-chat-title", Localize("Chat phrase"));
 		Input("profile-wheel-chat", Localize("Chat phrase"), State.m_Chat);
 		if(Flow.Control("profile-wheel-team-chat", Metrics.m_ButtonHeight, Row, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
 			if(DoTClientSettingsButton_CheckBox(&State.m_TeamChat, "profile-wheel-team-chat", Localize("Team chat"), State.m_TeamChat, &Row) && Editable)
 				State.m_TeamChat ^= 1;
 	}
-	else
+	if(State.m_Type == static_cast<int>(EType::ASSETS) || IsProfile)
 	{
+		if(IsProfile)
+			Text("profile-wheel-assets-title", Localize("Asset preset"));
 		Text("profile-wheel-assets-help", Localize("Use installed asset names. Empty fields keep the current asset."));
 		const char *apAssets[] = {Localize("Entities"), Localize("Game"), Localize("Emoticons"), Localize("Particles"), Localize("HUD"), Localize("Extras"), Localize("Arrow"), Localize("GUI cursor"), Localize("Strong / Weak")};
 		for(int Index = 0; Index < NUM_ASSETS; ++Index)

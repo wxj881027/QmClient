@@ -8,6 +8,7 @@
 
 #include <array>
 #include <map>
+#include <vector>
 
 using namespace qm_wheel_presets;
 
@@ -21,6 +22,19 @@ namespace
 		{
 			const auto &Capture = *static_cast<SCapture *>(pUser);
 			(*Capture.m_pValues)[Capture.m_pName] = pResult->GetString(0);
+		}
+	};
+
+	struct SOrderedCapture
+	{
+		std::map<std::string, std::string> *m_pValues;
+		std::vector<std::string> *m_pOrder;
+		const char *m_pName;
+		static void OnCommand(IConsole::IResult *pResult, void *pUser)
+		{
+			const auto &Capture = *static_cast<SOrderedCapture *>(pUser);
+			(*Capture.m_pValues)[Capture.m_pName] = pResult->GetString(0);
+			Capture.m_pOrder->emplace_back(Capture.m_pName);
 		}
 	};
 }
@@ -65,6 +79,35 @@ TEST(QmWheelPresetsConsole, ChatTextCannotExecuteAnAdditionalConsoleCommand)
 	pConsole->ExecuteLine(Command.c_str());
 	EXPECT_EQ(KillCalls, 0);
 	EXPECT_EQ(Values["say_team"], Preset.m_Chat);
+}
+
+TEST(QmWheelPresetsConsole, ProfileAppliesIdentityAssetsThenChat)
+{
+	auto pConsole = CreateConsole(CFGFLAG_CLIENT);
+	std::map<std::string, std::string> Values;
+	std::vector<std::string> Order;
+	std::array<SOrderedCapture, 3> aCapture{{
+		{&Values, &Order, "player_name"},
+		{&Values, &Order, "cl_asset_game"},
+		{&Values, &Order, "say_team"},
+	}};
+	for(auto &Capture : aCapture)
+		pConsole->Register(Capture.m_pName, "s[value]", CFGFLAG_CLIENT, SOrderedCapture::OnCommand, &Capture, "");
+
+	SPreset Preset;
+	Preset.m_Type = EType::PROFILE;
+	Preset.m_aTees[0].m_aValues[NAME] = "DYL";
+	Preset.m_aAssets[1] = "gamepack";
+	Preset.m_Chat = "ready";
+	Preset.m_TeamChat = true;
+	std::string Command;
+	ASSERT_TRUE(BuildCommand(Preset, Command));
+	pConsole->ExecuteLine(Command.c_str());
+
+	EXPECT_EQ(Values["player_name"], "DYL");
+	EXPECT_EQ(Values["cl_asset_game"], "gamepack");
+	EXPECT_EQ(Values["say_team"], "ready");
+	EXPECT_EQ(Order, (std::vector<std::string>{"player_name", "cl_asset_game", "say_team"}));
 }
 
 TEST(QmWheelPresetsConsole, WheelConfigRoundTripPreservesQuotedLabelAndCommand)

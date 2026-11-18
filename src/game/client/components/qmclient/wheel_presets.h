@@ -12,6 +12,7 @@ namespace qm_wheel_presets
 	enum class EType
 	{
 		NAME,
+		PROFILE,
 		IDENTITY,
 		CHAT,
 		ASSETS,
