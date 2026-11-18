@@ -113,3 +113,12 @@ TEST_F(QmBrowserMapPreviewInteraction, InactivePanelCannotStartADragOrConsumeWhe
 	EXPECT_FALSE(m_View.Dragging());
 	EXPECT_FLOAT_EQ(m_View.ZoomFactor(), 1.0f);
 }
+
+TEST(QmBrowserMapPreviewFitZoom, UsesTheLargerAxisRatio)
+{
+	EXPECT_FLOAT_EQ(QmBrowserMapPreviewFitZoom({3000, 2000}, {1500, 1000}), 2.0f);
+	EXPECT_FLOAT_EQ(QmBrowserMapPreviewFitZoom({1000, 3000}, {1500, 1000}), 3.0f);
+	EXPECT_FLOAT_EQ(QmBrowserMapPreviewFitZoom({600, 400}, {1200, 800}), 0.5f);
+	// 空尺寸按 1 处理，避免除零；返回值仍可交给渲染器作为正缩放。
+	EXPECT_FLOAT_EQ(QmBrowserMapPreviewFitZoom({0, 0}, {0, 0}), 1.0f);
+}

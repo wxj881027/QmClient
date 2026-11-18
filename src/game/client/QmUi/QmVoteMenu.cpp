@@ -82,22 +82,6 @@ namespace
 		pGraphics->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 	}
 
-	// 预览面板内容区：只画封面；作者/难度/分数由 qm_vote_map_preview::Popup 统一排版。
-	void DrawVoteMapPreviewCover(CUi *pUi, const qm_vote_map_preview::SLayout &Layout, void *pUser)
-	{
-		auto *pState = static_cast<SQmVoteMenuState *>(pUser);
-		if(pState == nullptr)
-			return;
-		// 先试实时预览：与服务器列表同一套缓存与渲染目标，本地没有这张图时返回 false。
-		if(pState->m_pGameClient != nullptr)
-		{
-			CMenus &Menus = pState->m_pGameClient->m_Menus;
-			if(Menus.RenderMapPreviewForVote(Layout.m_Cover, pState->m_aPreviewMapName))
-				return;
-		}
-		if(pState->m_pGameClient != nullptr)
-			DrawVoteMapCoverPatch(pState->m_pGameClient->m_MapCovers, pUi, Layout.m_Cover, pState->m_MapPreview.m_Info.m_Thumbnail, CQmMapCovers::ERole::DETAILS);
-	}
 }
 
 void CMenus::RenderServerControl(CUIRect MainView)
@@ -137,37 +121,27 @@ void CMenus::RenderServerControl(CUIRect MainView)
 	// 传空串给 TargetName 让它回落到当前地图，避免在别的子页预览到上次选中的图。
 	const bool PreviewSelection = State.m_Page == EQmVoteMenuPage::OPTIONS && State.m_Mode.UseMapLibrary();
 	const char *pPreviewName = qm_vote_map_preview::TargetName(PreviewSelection ? State.m_SelectedName.c_str() : "", Client()->GetCurrentMap());
+	// 元数据每帧重建：目录与详情是异步到达的，只比名字会让面板长期停在「只有名字、
+	// 说明全是破折号」，直到换图才补齐。目录里能查到就补齐作者 / 难度 / 分数。
+	qm_vote_map_preview::SInfo Info;
+	for(const auto &Candidate : State.m_vMaps)
 	{
-		// 元数据每帧重建：目录与详情是异步到达的，只比名字会让面板长期停在「只有名字、
-		// 事实行全是破折号、没有封面」，直到换图才补齐。
-		// 目录里能查到就补齐作者 / 难度 / 分数 / 封面；查不到时只显示地图名。
-		const QmVoteMaps::SMap *pPreviewMap = nullptr;
-		for(const auto &Candidate : State.m_vMaps)
+		if(Candidate.m_Name == pPreviewName)
 		{
-			if(Candidate.m_Name == pPreviewName)
-			{
-				pPreviewMap = &Candidate;
-				break;
-			}
+			Info.m_Mapper = Candidate.m_Mapper;
+			Info.m_Stars = Candidate.m_Stars;
+			Info.m_Points = Candidate.m_Points;
+			break;
 		}
-		qm_vote_map_preview::SInfo Info;
-		Info.m_Name = pPreviewName;
-		if(pPreviewMap != nullptr)
-		{
-			Info.m_Mapper = pPreviewMap->m_Mapper;
-			Info.m_Category = pPreviewMap->m_Category;
-			Info.m_Thumbnail = pPreviewMap->m_Thumbnail;
-			Info.m_Stars = pPreviewMap->m_Stars;
-			Info.m_Points = pPreviewMap->m_Points;
-		}
-		State.m_MapPreview.m_Info = std::move(Info);
 	}
-	State.m_pGameClient = GameClient();
-	str_copy(State.m_aPreviewMapName, pPreviewName, sizeof(State.m_aPreviewMapName));
-	State.m_MapPreview.m_CoverAspect = (float)CQmMapCovers::DETAILS_WIDTH / (float)CQmMapCovers::DETAILS_HEIGHT;
-	State.m_MapPreview.m_pfnDrawContent = DrawVoteMapPreviewCover;
-	State.m_MapPreview.m_pUser = &State;
-	qm_vote_map_preview::DoButton(ui_widget::ControlContext(Ui()), &State.m_MapPreviewButton, &State.m_MapPreviewPopup, &State.m_MapPreview, PreviewButton, pPreviewName[0] != '\0');
+	char aCaption[192];
+	qm_vote_map_preview::FormatCaption(Info, aCaption, sizeof(aCaption));
+	CQmMapPreviewPanel::STarget Target;
+	str_copy(Target.m_aMapName, pPreviewName, sizeof(Target.m_aMapName));
+	str_copy(Target.m_aCaption, aCaption, sizeof(Target.m_aCaption));
+	Target.m_AllowDownload = true;
+	m_MapPreviewPanel.Init(GameClient());
+	m_MapPreviewPanel.DoIconButton(ui_widget::ControlContext(Ui()), &State.m_MapPreviewButton, &State.m_MapPreview, PreviewButton, Target, pPreviewName[0] != '\0');
 	GameClient()->m_Tooltips.DoToolTip(&State.m_MapPreviewButton, &PreviewButton, Localize("Map preview"));
 	static CButtonContainer s_aPages[3];
 	const char *apPages[] = {State.m_Mode.UseMapLibrary() ? Localize("Map") : Localize("Server votes"), Localize("Kick player"), Localize("Move player to spectators")};
@@ -281,7 +255,7 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	const float RowCoverWidth = RowCoverHeight * (float)CQmMapCovers::ROW_WIDTH / (float)CQmMapCovers::ROW_HEIGHT;
 	const float RowNameInset = 20.0f + 16.0f + 4.0f + RowCoverWidth + 6.0f;
 	// 封面图（含压暗和参差拖尾）已经烘进纹理，这里只负责贴在目标矩形上；
-	// 纹理提交与预览面板共用 DrawVoteMapCoverPatch，两处不会各自漂移。
+	// 地图库列表行与详情条共用 DrawVoteMapCoverPatch，两处不会各自漂移。
 	auto DrawMapPatch = [&](const CUIRect &Rect, const std::string &Thumbnail, CQmMapCovers::ERole Role) {
 		DrawVoteMapCoverPatch(GameClient()->m_MapCovers, Ui(), Rect, Thumbnail, Role);
 	};

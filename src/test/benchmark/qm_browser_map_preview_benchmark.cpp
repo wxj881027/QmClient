@@ -1,6 +1,5 @@
 #include <game/client/components/qmclient/browser_map_preview.h>
 #include <game/client/components/qmclient/browser_map_preview_loader.h>
-#include <game/client/QmUi/QmVoteMapPreview.h>
 
 #include <benchmark/benchmark.h>
 
@@ -57,13 +56,13 @@ static void BM_BrowserMapPreviewPrepare(benchmark::State &State)
 }
 BENCHMARK(BM_BrowserMapPreviewPrepare);
 
-// 投票页预览面板的排版只依赖内容矩形、封面长宽比和行高；
-// 每轮覆盖并排、堆叠、高度不足三种真实布局路径，不含文字测量或 GPU 绘制。
-static void BM_VoteMapPreviewLayout(benchmark::State &State)
+// 整图适配只依赖地图尺寸与画布视野；服务器列表与投票页共用该函数。
+static void BM_BrowserMapPreviewFitZoom(benchmark::State &State)
 {
-	const CUIRect Content{0.0f, 0.0f, static_cast<float>(State.range(0)), static_cast<float>(State.range(1))};
+	const vec2 World(static_cast<float>(State.range(0)), static_cast<float>(State.range(1)));
+	const vec2 BaseView(1500.0f, 844.0f);
 	for(auto _ : State)
-		benchmark::DoNotOptimize(qm_vote_map_preview::ResolveLayout(Content, 2.32f, 16.0f));
+		benchmark::DoNotOptimize(QmBrowserMapPreviewFitZoom(World, BaseView));
 	State.SetItemsProcessed(State.iterations());
 }
-BENCHMARK(BM_VoteMapPreviewLayout)->Args({480, 240})->Args({800, 260})->Args({120, 240})->Args({480, 20});
+BENCHMARK(BM_BrowserMapPreviewFitZoom)->Args({32000, 18000})->Args({320000, 18000});

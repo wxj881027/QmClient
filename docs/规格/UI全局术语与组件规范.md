@@ -208,6 +208,12 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 - 唯一实现：`QmConsoleUi::CStartMenuTogglePress`（`src/game/client/QmUi/QmConsoleUi.h`）、`CGameConsole::RegisterStartMenuToggle` / `CGameConsole::UpdateStartMenuToggle`（`src/game/client/components/console.cpp`）；登记点 `CMenusStart::RenderStartMenuImpl`（`src/game/client/components/menus_start.cpp`）。
 - 禁止的反面写法：动画期间直接让主页跳过输入（按钮永远点不到）；在主页背景渲染趟直接处理点击（同一次点击被控制台和主页各算一次）；按下发生在控制台激活之前也算作折返；按钮矩形跨帧复用导致切页后误点。
 
+### 2.19b 地图预览面板（map preview panel）
+
+- 定义：服务器列表与投票页的地图预览是同一个二级面板：标题与右侧说明、实体层开关、离屏地图画布、拖拽平移与滚轮缩放共用一份实现和一份 LRU 缓存；调用点只提供地图名、说明文字和缺图时是否允许自动下载。
+- 唯一实现：`CQmMapPreviewPanel`（`src/game/client/components/qmclient/map_preview_panel.h`，缓存与离屏渲染在 `.cpp`）、`CQmBrowserMapPreviewView` + `QmBrowserMapPreviewInput`（同目录 `browser_map_preview.h`）、`CQmBrowserMapPreviewLoadJob`（`browser_map_preview_loader.h`）；入口 `DoIconButton` 只用 `EQmIcon::EYE`。
+- 禁止的反面写法：投票页另画封面缩略图或整图适配作为“预览”；两处各建一份地图缓存；在调用点复制拖拽/缩放/实体层开关；把地图画布塞进事实行排版（预览必须以地图为主体）。
+
 ### 2.19 圆角与胶囊（radius / capsule）
 
 - 定义：表面形状只由「半径」决定。半径取控件短边的一半即胶囊端头，取短边一半且宽高相等即正圆；宽度明显大于高度（≥1.8 倍）时按半高取端头。

@@ -55,6 +55,7 @@
 #include <game/client/components/qmclient/demo_cut.h>
 #include <game/client/components/qmclient/local_save_display.h>
 #include <game/client/components/qmclient/map_difficulty_catalog.h>
+#include <game/client/components/qmclient/map_preview_panel.h>
 #include <game/client/components/qmclient/map_vote_difficulty.h>
 #include <game/client/components/qmclient/menu_hit_regions.h>
 #include <game/client/components/qmclient/online_replay_player.h>
@@ -2193,28 +2194,9 @@ protected:
 		CButtonContainer m_ConfirmButton;
 		CButtonContainer m_CancelButton;
 	} m_FriendNotePopupContext;
-	// 地图预览弹窗：锚定服务器列表地图列的富内容弹层，展示本地已缓存地图的
-	// 离屏渲染视图（未缓存不联网）并支持缩放、拖拽平移。
-	class CMapPreviewPopupContext : public SPopupMenuId
-	{
-	public:
-		CMenus *m_pMenus = nullptr;
-		// 服务器地址串（CServerInfo::m_aAddress 原样拷贝，含端口，作行身份比较）。
-		char m_aAddress[MAX_SERVER_ADDRESSES * NETADDR_MAXSTRSIZE] = {0};
-		char m_aMapName[MAX_MAP_LENGTH] = {0};
-		char m_aServerName[256] = {0};
-		char m_aGameType[16] = {0};
-		int m_NumPlayers = 0;
-		int m_MaxPlayers = 0;
-		// 打开时定位起点，后续保持用户拖拽与缩放，直到关闭。
-		CQmBrowserMapPreviewView m_View;
-		bool m_InitialViewSet = false;
-	} m_MapPreviewPopupContext;
-	// 预览地图加载缓存（LRU），实现位于 menus_browser.cpp。裸指针成员：
-	// unique_ptr<不完整类型> 会要求构造函数所在编译单元能实例化成员析构
-	//（异常清理），而 CMenus 构造在 menus.cpp，类型在那里不完整。
-	class CMapPreviewCache;
-	CMapPreviewCache *m_pMapPreviewCache = nullptr;
+	// 服务器列表与投票页共用的地图预览弹窗与缓存。
+	CQmMapPreviewPanel m_MapPreviewPanel;
+	CQmMapPreviewPanel::SContext m_MapPreviewPopupContext;
 	bool m_HasRemoveFriend = false;
 	char m_aRemoveFriendName[MAX_NAME_LENGTH] = {0};
 	char m_aRemoveFriendClan[MAX_CLAN_LENGTH] = {0};
@@ -2444,9 +2426,6 @@ protected:
 	void DrainIngameUiTextRuntime(bool AllowCurrentFrame = false);
 	void RenderServerControl(CUIRect MainView);
 public:
-	// 按地图名渲染预览（投票页复用服务器列表那套缓存与渲染目标）。
-	// 返回 false 表示本地没有这张地图，调用点回退到静态封面。
-	bool RenderMapPreviewForVote(const CUIRect &Preview, const char *pMapName);
 private:
 	void RenderServerVoteList(CUIRect MainView);
 	void RenderVoteMapLibrary(CUIRect MainView);
@@ -2462,7 +2441,6 @@ private:
 	void RenderServerbrowserMapFilterSelector(CUIRect Selector);
 	// 地图预览弹窗：行内触发（悬停 200ms / 右键）与弹层内容。
 	void OpenMapPreviewPopup(const CServerInfo *pItem);
-	void ClearMapPreviewCache();
 	enum class EConnectIntent
 	{
 		Manual,
@@ -2511,7 +2489,6 @@ private:
 	void RenderServerbrowserFavoriteMaps(CUIRect View);
 	static CUi::EPopupMenuFunctionResult PopupFriendsCategory(void *pContext, CUIRect View, bool Active);
 	static CUi::EPopupMenuFunctionResult PopupFriendNote(void *pContext, CUIRect View, bool Active);
-	static CUi::EPopupMenuFunctionResult PopupMapPreview(void *pContext, CUIRect View, bool Active);
 	void FriendlistOnUpdate();
 	void ApplyFriendsCategoryExpandedState();
 	void SaveFriendsCategoryExpandedState();
