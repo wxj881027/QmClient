@@ -1,3 +1,5 @@
+#include <base/detect.h>
+
 #include <engine/storage.h>
 
 #include <game/client/components/qmclient/community_icon_image.h>
@@ -11,6 +13,10 @@
 #include <cstdlib>
 #include <stdexcept>
 #include <vector>
+
+#if defined(CONF_PLATFORM_LINUX)
+#include <unistd.h>
+#endif
 
 namespace
 {
@@ -225,6 +231,23 @@ TEST_F(CommunityIconImage, EmptyFileFailsDecodeWithoutChangingDigest)
 	EXPECT_EQ(m_Original.m_pData, nullptr);
 	EXPECT_EQ(m_Gray.m_pData, nullptr);
 }
+
+#if defined(CONF_PLATFORM_LINUX)
+TEST_F(CommunityIconImage, NonRegularFileIsRejectedBeforeDecode)
+{
+	char aPath[IO_MAX_PATH_LENGTH];
+	m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, "icon.png", aPath, sizeof(aPath));
+	// 空设备可直接读到 EOF，用例在旧实现上也能结束。
+	ASSERT_EQ(symlink("/dev/null", aPath), 0);
+	qm_community_icons::CBoundedFileReader Reader(*m_pStorage);
+	const auto Before = m_Digest;
+	EXPECT_EQ(qm_community_icons::LoadImage(Reader, "icon.png", IStorage::TYPE_SAVE, m_Original, m_Gray, m_Digest), ELoadResult::READ_FAILED);
+	EXPECT_FALSE(Reader.TooLarge());
+	EXPECT_EQ(m_Original.m_pData, nullptr);
+	EXPECT_EQ(m_Gray.m_pData, nullptr);
+	EXPECT_EQ(m_Digest, Before);
+}
+#endif
 
 TEST_F(CommunityIconImage, BoundedReaderRejectsOversizedFileBeforeReturningAnySnapshot)
 {

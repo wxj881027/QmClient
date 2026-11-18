@@ -3,6 +3,7 @@
 
 #include "community_icon_limits.h"
 
+#include <base/detect.h>
 #include <base/hash.h>
 #include <base/io.h>
 
@@ -11,13 +12,14 @@
 #include <engine/storage.h>
 
 #include <cstdlib>
+#include <cstring>
 #include <limits>
 #include <memory>
 #include <utility>
 
 namespace qm_community_icons
 {
-	// 从同一打开的文件检查长度并读取，禁止先ReadFile后才拒绝大缓冲。
+	// 只读取普通文件，限长检查和读取共用同一个句柄。
 	class CBoundedFileReader
 	{
 		IStorage &m_Storage;
@@ -33,6 +35,24 @@ namespace qm_community_icons
 			*ppData = nullptr;
 			*pSize = 0;
 			m_TooLarge = false;
+			if(!pPath || !pPath[0] || StorageType < IStorage::TYPE_SAVE || StorageType >= m_Storage.NumPaths())
+				return false;
+			if(pPath[0] == '/' || pPath[0] == '\\' || std::strstr(pPath, "../") || std::strstr(pPath, "..\\")
+#if defined(CONF_FAMILY_WINDOWS)
+				|| pPath[1] == ':'
+#endif
+			)
+				return false;
+
+			// 图标任务已选定存储根。先检查拼接长度，避免打开被截断的路径。
+			char aPath[IO_MAX_PATH_LENGTH + 1];
+			m_Storage.GetCompletePath(StorageType, "", aPath, sizeof(aPath));
+			const std::size_t RootLength = std::strlen(aPath);
+			const std::size_t PathLength = std::strlen(pPath);
+			if(RootLength >= IO_MAX_PATH_LENGTH || PathLength >= IO_MAX_PATH_LENGTH - RootLength)
+				return false;
+			std::memcpy(aPath + RootLength, pPath, PathLength + 1);
+
 			struct SFile
 			{
 				IOHANDLE m_Handle;
@@ -41,7 +61,7 @@ namespace qm_community_icons
 					if(m_Handle)
 						io_close(m_Handle);
 				}
-			} File{m_Storage.OpenFile(pPath, IOFLAG_READ, StorageType)};
+			} File{io_open_read_regular_checked(aPath, nullptr)};
 			if(!File.m_Handle)
 				return false;
 			const int64_t Length = io_length(File.m_Handle);
