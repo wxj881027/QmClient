@@ -353,6 +353,11 @@ int CSnapshotDelta::CreateDelta(const CSnapshot *pFrom, const CSnapshot *pTo, vo
 		{
 			int *pItemDataDst = pData + 3;
 
+			// 解包端要求同键对象的尺寸一致，尺寸变化时不能按新尺寸读取旧对象。
+			if(pFrom->GetItemSize(PastIndex) != ItemSize)
+			{
+				return -1;
+			}
 			const CSnapshotItem *pPastItem = pFrom->GetItem(PastIndex);
 
 			if(!IncludeSize)
@@ -904,7 +909,13 @@ void *CSnapshotBuilder::NewItemRaw(int Type, int Id, int Size)
 	const bool Extended = Type >= OFFSET_UUID;
 	dbg_assert((Type >= 0 && Type <= CSnapshot::MAX_TYPE) || Extended || (m_Sixup && Type >= -CSnapshot::MAX_TYPE && Type < 0), "Invalid snap item Type: %d", Type);
 	dbg_assert(Id >= 0 && Id <= CSnapshot::MAX_ID, "Invalid snap item Id: %d", Id);
-	dbg_assert(Size >= 0 && (size_t)Size <= CSnapshot::MAX_SIZE - sizeof(CSnapshot) - sizeof(CSnapshotItem) - sizeof(int) && Size % sizeof(int32_t) == 0, "Invalid snap item Size: %d", Size);
+	dbg_assert(Size >= 0 && Size % sizeof(int32_t) == 0, "Invalid snap item Size: %d", Size);
+
+	// 增量解包后的单项也可能超过快照容量，沿用构建失败返回。
+	if((size_t)Size > CSnapshot::MAX_SIZE - sizeof(CSnapshot) - sizeof(CSnapshotItem) - sizeof(int))
+	{
+		return nullptr;
+	}
 
 	// 先解析扩展类型：UUID 说明项也要占用一个 item，必须计入下面的容量检查。
 	if(Extended)
