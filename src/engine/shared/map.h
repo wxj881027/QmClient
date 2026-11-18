@@ -26,6 +26,7 @@ public:
 
 	int GetDataSize(int Index) const override;
 	void *GetData(int Index) override;
+	bool ReadCompressedData(int Index, std::vector<unsigned char> &vData) override { return m_DataFile.ReadCompressedData(Index, vData); }
 	void *GetDataSwapped(int Index) override;
 	const char *GetDataString(int Index) override;
 	void UnloadData(int Index) override;

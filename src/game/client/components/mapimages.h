@@ -7,12 +7,15 @@
 #include <engine/graphics.h>
 
 #include <game/client/component.h>
+#include <game/map/map_load_task.h>
 #include <game/map/render_interfaces.h>
 #include <game/mapitems.h>
 
 #include <memory>
 
 class IJob;
+class CLayers;
+class IMap;
 
 enum EMapImageModType
 {
@@ -56,7 +59,8 @@ public:
 	IGraphics::CTextureHandle Get(int Index) const override { return m_aTextures[Index]; }
 	int Num() const override { return m_Count; }
 
-	void OnMapLoadImpl(class CLayers *pLayers, class IMap *pMap);
+	bool ImagesReady() const { return m_ImageLoad.Done(); }
+	void AdvanceImageLoad();
 	void OnMapLoad() override;
 	void OnInit() override;
 	void Unload();
@@ -94,6 +98,11 @@ public:
 	void OnRender() override;
 
 private:
+	void CancelImageLoad();
+	CMapLoadTask LoadMapImages(CLayers *pLayers, IMap *pMap, bool Live);
+	CMapLoadTask m_ImageLoad;
+	std::shared_ptr<IJob> m_pMapImageDecode;
+
 	bool m_aEntitiesIsLoaded[MAP_IMAGE_MOD_TYPE_COUNT * 2];
 	bool m_SpeedupArrowIsLoaded;
 	bool m_TuneColorsIsLoaded;

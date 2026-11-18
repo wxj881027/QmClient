@@ -1750,6 +1750,16 @@ static SWarning FormatPngliteIncompatibilityWarning(int PngliteIncompatible, con
 	return Warning;
 }
 
+IGraphics::CTextureHandle CGraphics_Threaded::FinishExternalTexture(CImageInfo &Image, int Flags, const char *pName, int PngliteIncompatible)
+{
+	if(!Image.m_pData)
+		return m_NullTexture;
+	if(m_WarnPngliteIncompatibleImages && PngliteIncompatible != 0)
+		AddWarning(FormatPngliteIncompatibilityWarning(PngliteIncompatible, pName));
+	const auto Texture = LoadTextureRawMove(Image, Flags, pName);
+	return Texture.IsValid() ? Texture : m_NullTexture;
+}
+
 bool CGraphics_Threaded::LoadPng(CImageInfo &Image, const char *pFilename, int StorageType)
 {
 	IOHANDLE File = m_pStorage->OpenFile(pFilename, IOFLAG_READ, StorageType);

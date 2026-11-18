@@ -5206,6 +5206,13 @@ void CClient::Run()
 				(!AsyncRenderOld || m_pGraphics->IsIdle()) &&
 				RenderDue)
 			{
+				if(PerfEnabled)
+				{
+					m_PerfRenderLimit = GfxRefreshRate ? GfxRefreshRate : RefreshRate;
+					const int DisplayRate = g_Config.m_GfxScreenRefreshRate;
+					if(g_Config.m_GfxVsync && DisplayRate > 0 && (m_PerfRenderLimit == 0 || DisplayRate < m_PerfRenderLimit))
+						m_PerfRenderLimit = DisplayRate;
+				}
 				// update frametime
 				m_RenderFrameTime = (Now - m_LastRenderTime) / (float)time_freq();
 				m_FpsGraph.Add(1.0f / m_RenderFrameTime);
