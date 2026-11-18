@@ -15,10 +15,7 @@
 #include <chrono>
 #include <cstdio>
 #include <cstring>
-#include <filesystem>
-#include <fstream>
 #include <new>
-#include <sstream>
 #include <stdexcept>
 #include <string_view>
 #include <utility>
@@ -83,16 +80,7 @@ namespace
 			m_Result.m_SongId = m_SongId;
 			m_Result.m_Generation = m_Generation;
 			m_Result.m_Epoch = m_Epoch;
-			std::ifstream File(std::filesystem::path(reinterpret_cast<const char8_t *>(m_Path.c_str())), std::ios::binary);
-			if(!File)
-				return;
-			std::ostringstream Buffer;
-			Buffer << File.rdbuf();
-			const std::string Json = Buffer.str();
-			if(Json.empty())
-				return;
-			std::string Error;
-			m_Result.m_Parsed = QmSodaLyricFile::ParseLyricFileJson(Json, &m_Result.m_Lyrics, &Error);
+			m_Result.m_Parsed = QmSodaLyricFile::LoadLyricFile(m_Path.c_str(), &m_Result.m_Lyrics);
 		}
 
 	public:

@@ -5,12 +5,15 @@
 
 #include <engine/external/json-parser/json.h>
 
+#include <game/client/components/qmclient/bounded_file_reader.h>
 #include <game/client/components/qmclient/netease/netease_lyric_parser.h>
 
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <memory>
+#include <new>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -52,6 +55,29 @@ namespace QmSodaLyricFile
 				return static_cast<int64_t>(pValue->u.dbl);
 			return 0;
 		}
+	}
+
+	bool LoadLyricFile(const char *pPath, QmMusicLyrics::SLyricsData *pOut)
+	try
+	{
+		if(pOut == nullptr)
+			return false;
+		std::string Json;
+		if(!QmReadFileBounded(io_open_read_regular_checked(pPath, nullptr), MAX_FILE_BYTES, Json))
+			return false;
+		QmMusicLyrics::SLyricsData Candidate;
+		if(!ParseLyricFileJson(Json, &Candidate))
+			return false;
+		*pOut = std::move(Candidate);
+		return true;
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	catch(const std::length_error &)
+	{
+		return false;
 	}
 
 	bool ParseLyricFileJson(std::string_view Json, QmMusicLyrics::SLyricsData *pOut, std::string *pError)

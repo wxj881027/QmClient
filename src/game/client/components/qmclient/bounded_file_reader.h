@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <limits>
 #include <new>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -72,8 +73,17 @@ namespace QmBoundedFileDetail
 		struct SCloseFile
 		{
 			IOHANDLE m_File;
-			~SCloseFile() { io_close(m_File); }
-		} Close{File};
+			bool Close()
+			{
+				const IOHANDLE File = std::exchange(m_File, nullptr);
+				return File == nullptr || io_close(File) == 0;
+			}
+			~SCloseFile()
+			{
+				if(m_File != nullptr)
+					io_close(m_File);
+			}
+		} FileOwner{File};
 		const int64_t Length = io_length(File);
 		if(Length <= 0 || (uint64_t)Length > MaxBytes || (uint64_t)Length > std::numeric_limits<unsigned>::max())
 			return false;
@@ -81,12 +91,20 @@ namespace QmBoundedFileDetail
 		{
 			TBuffer Candidate(Output.get_allocator());
 			Candidate.resize((size_t)Length);
-			if(io_read(File, Candidate.data(), (unsigned)Candidate.size()) != Candidate.size())
+			if(io_read(File, Candidate.data(), (unsigned)Candidate.size()) != Candidate.size() || io_error(File) != 0)
+				return false;
+			// 独立探测增长，不对已可达 unsigned 上限的长度再加一。
+			char Extra;
+			if(io_read(File, &Extra, 1) != 0 || io_error(File) != 0 || !FileOwner.Close())
 				return false;
 			Output = std::move(Candidate);
 			return true;
 		}
 		catch(const std::bad_alloc &)
+		{
+			return false;
+		}
+		catch(const std::length_error &)
 		{
 			return false;
 		}

@@ -1,6 +1,7 @@
 #include "qm_music_publication.h"
 
 #include <algorithm>
+#include <array>
 #include <cstdio>
 #include <string_view>
 
@@ -39,12 +40,46 @@ namespace QmMusicHook
 
 	bool CPublication::Update(const SPlayback &Playback)
 	{
-		const bool Changed = m_Playback.m_ProcessId != Playback.m_ProcessId ||
-				     m_Playback.m_HasSong != Playback.m_HasSong || m_Playback.m_MediaId != Playback.m_MediaId ||
-				     m_Playback.m_LyricType != Playback.m_LyricType || m_Playback.m_LyricContent != Playback.m_LyricContent ||
-				     m_Playback.m_TranslationLrc != Playback.m_TranslationLrc || m_Playback.m_Title != Playback.m_Title ||
-				     m_Playback.m_Artist != Playback.m_Artist || m_Playback.m_Album != Playback.m_Album;
-		m_Playback = Playback;
+		struct STextField
+		{
+			std::string SPlayback::*m_pMember;
+			bool m_ChangesGeneration;
+		};
+		constexpr std::array<STextField, 9> aFields = {{
+			{&SPlayback::m_MediaId, true},
+			{&SPlayback::m_Title, true},
+			{&SPlayback::m_Artist, true},
+			{&SPlayback::m_Album, true},
+			{&SPlayback::m_CoverUrl, false},
+			{&SPlayback::m_LyricType, true},
+			{&SPlayback::m_LyricContent, true},
+			{&SPlayback::m_TranslationLrc, true},
+			{&SPlayback::m_Error, false},
+		}};
+		std::array<std::string, aFields.size()> aPrepared;
+		std::array<bool, aFields.size()> aChanged{};
+		bool Changed = m_Playback.m_ProcessId != Playback.m_ProcessId || m_Playback.m_HasSong != Playback.m_HasSong;
+		for(size_t Index = 0; Index < aFields.size(); ++Index)
+		{
+			const auto &Field = aFields[Index];
+			if(m_Playback.*Field.m_pMember != Playback.*Field.m_pMember)
+			{
+				aPrepared[Index] = Playback.*Field.m_pMember;
+				aChanged[Index] = true;
+				Changed |= Field.m_ChangesGeneration;
+			}
+		}
+		// 全部文字准备成功后才发布；稳定帧和进度变化不复制整份歌词。
+		for(size_t Index = 0; Index < aFields.size(); ++Index)
+			if(aChanged[Index])
+				(m_Playback.*aFields[Index].m_pMember).swap(aPrepared[Index]);
+		m_Playback.m_ProcessId = Playback.m_ProcessId;
+		m_Playback.m_HasSong = Playback.m_HasSong;
+		m_Playback.m_Playing = Playback.m_Playing;
+		m_Playback.m_Loading = Playback.m_Loading;
+		m_Playback.m_PositionValid = Playback.m_PositionValid;
+		m_Playback.m_PositionMs = Playback.m_PositionMs;
+		m_Playback.m_DurationMs = Playback.m_DurationMs;
 		if(Changed)
 			++m_Generation;
 		return Changed;
