@@ -9,6 +9,7 @@
 #include <memory>
 #include <new>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 class CByteBufferReader
@@ -41,24 +42,17 @@ public:
 private:
 	friend class CImageLoader;
 	// 使用普通标准分配器，避免给旧系统增加PMR运行库依赖。
-	template<typename T>
-	struct CAllocator
+	struct CByteAllocator
 	{
-		using value_type = T;
 		const SAllocation *m_pAllocation = nullptr;
-		CAllocator() = default;
-		explicit CAllocator(const SAllocation *pAllocation) noexcept :
-			m_pAllocation(pAllocation) {}
-		template<typename U>
-		CAllocator(const CAllocator<U> &Other) noexcept :
-			m_pAllocation(Other.m_pAllocation)
-		{
-		}
-		template<typename U>
-		struct rebind
-		{
-			using other = CAllocator<U>;
-		};
+		uint8_t *allocate(size_t Count);
+		void deallocate(uint8_t *pData, size_t Count) noexcept;
+	};
+
+	template<typename T>
+	struct CReboundAllocator
+	{
+		const SAllocation *m_pAllocation = nullptr;
 		T *allocate(size_t Count)
 		{
 			if(Count > std::numeric_limits<size_t>::max() / sizeof(T))
@@ -77,10 +71,30 @@ private:
 			else
 				std::allocator<T>{}.deallocate(pData, Count);
 		}
+	};
+
+	template<typename T>
+	using TAllocatorBase = std::conditional_t<std::is_same_v<T, uint8_t>, CByteAllocator, CReboundAllocator<T>>;
+
+	template<typename T>
+	struct CAllocator : TAllocatorBase<T>
+	{
+		using value_type = T;
+		CAllocator() = default;
+		explicit CAllocator(const SAllocation *pAllocation) noexcept :
+			TAllocatorBase<T>{pAllocation} {}
+		template<typename U>
+		CAllocator(const CAllocator<U> &Other) noexcept :
+			CAllocator(Other.m_pAllocation) {}
+		template<typename U>
+		struct rebind
+		{
+			using other = CAllocator<U>;
+		};
 		template<typename U>
 		bool operator==(const CAllocator<U> &Other) const noexcept
 		{
-			return m_pAllocation == Other.m_pAllocation;
+			return this->m_pAllocation == Other.m_pAllocation;
 		}
 	};
 	std::vector<uint8_t, CAllocator<uint8_t>> m_vBuffer;

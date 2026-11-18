@@ -40,9 +40,24 @@ bool CByteBufferReader::Read(void *pData, size_t Size)
 	}
 }
 
-// 为调试构建中的 allocator_traits 提供字节分配函数的链接定义。
-template uint8_t *CByteBufferWriter::CAllocator<uint8_t>::allocate(size_t);
-template void CByteBufferWriter::CAllocator<uint8_t>::deallocate(uint8_t *, size_t) noexcept;
+// 字节分配函数在此提供外部定义，供 Clang sanitizer 构建链接。
+uint8_t *CByteBufferWriter::CByteAllocator::allocate(size_t Count)
+{
+	if(!m_pAllocation)
+		return std::allocator<uint8_t>{}.allocate(Count);
+	auto *pData = m_pAllocation->m_pfnAllocate(Count, alignof(uint8_t), m_pAllocation->m_pUser);
+	if(!pData)
+		throw std::bad_alloc();
+	return static_cast<uint8_t *>(pData);
+}
+
+void CByteBufferWriter::CByteAllocator::deallocate(uint8_t *pData, size_t Count) noexcept
+{
+	if(m_pAllocation)
+		m_pAllocation->m_pfnDeallocate(pData, Count, alignof(uint8_t), m_pAllocation->m_pUser);
+	else
+		std::allocator<uint8_t>{}.deallocate(pData, Count);
+}
 
 bool CByteBufferWriter::Write(const void *pData, size_t Size) noexcept
 {
