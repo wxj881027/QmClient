@@ -6,6 +6,7 @@
 #include <gtest/gtest.h>
 #include <test/support/heap_allocation_probe.h>
 
+#include <new>
 #include <string>
 #include <vector>
 
@@ -158,4 +159,46 @@ TEST(ConsoleCompletionOwnership, SavedSuggestionSurvivesReuseOfTemporaryCommandS
 
 	ASSERT_EQ(vSuggestions.size(), 1u);
 	EXPECT_EQ(vSuggestions.front(), "temporary_first");
+}
+
+TEST(ConsoleCompletionOwnership, ArgumentCollectionFailureRejectsTheWholeRefreshAndCanRetry)
+{
+	CConsole Console(CFGFLAG_SERVER);
+	Console.RegisterTemp("remote_old", "", CFGFLAG_SERVER, "");
+	Console.RegisterTemp("argument_first", "", CFGFLAG_SERVER, "");
+	Console.RegisterTemp("argument_second", "", CFGFLAG_SERVER, "");
+
+	struct SArgumentCollection
+	{
+		std::vector<std::string> *m_pResult;
+		bool m_RejectSecond;
+	};
+	bool RejectSecond = false;
+	const auto Collect = [&](QmConsoleCompletion::SSuggestions &Result) {
+		Console.PossibleCommands("remote_", CFGFLAG_SERVER, true, QmConsoleCompletion::CollectSuggestion, &Result.m_vCommands);
+		SArgumentCollection Collection{&Result.m_vArguments, RejectSecond};
+		Console.PossibleCommands("argument_", CFGFLAG_SERVER, true, [](int Index, const char *pText, void *pUser) {
+			const auto &State = *static_cast<SArgumentCollection *>(pUser);
+			if(Index == 1 && State.m_RejectSecond)
+				throw std::bad_alloc();
+			QmConsoleCompletion::CollectSuggestion(Index, pText, State.m_pResult);
+		}, &Collection);
+	};
+
+	const auto Original = QmConsoleCompletion::TryCollectSuggestions(Collect);
+	ASSERT_TRUE(Original);
+	ASSERT_EQ(Original->m_vCommands.size(), 1u);
+	ASSERT_EQ(Original->m_vCommands.front(), "remote_old");
+
+	Console.DeregisterTemp("remote_old");
+	Console.RegisterTemp("remote_new", "", CFGFLAG_SERVER, "");
+	RejectSecond = true;
+	EXPECT_FALSE(QmConsoleCompletion::TryCollectSuggestions(Collect));
+
+	RejectSecond = false;
+	const auto Retry = QmConsoleCompletion::TryCollectSuggestions(Collect);
+	ASSERT_TRUE(Retry);
+	ASSERT_EQ(Retry->m_vCommands.size(), 1u);
+	EXPECT_EQ(Retry->m_vCommands.front(), "remote_new");
+	EXPECT_EQ(Retry->m_vArguments.size(), 2u);
 }

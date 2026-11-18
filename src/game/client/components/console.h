@@ -22,7 +22,9 @@
 
 #include <cstdint>
 #include <memory>
+#include <new>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -41,6 +43,29 @@ namespace QmConsoleCompletion
 	{
 		auto &vSuggestions = *static_cast<std::vector<std::string> *>(pUser);
 		vSuggestions.emplace_back(pText);
+	}
+
+	struct SSuggestions
+	{
+		std::vector<std::string> m_vCommands;
+		std::vector<std::string> m_vArguments;
+	};
+
+	template<typename FCollect>
+	std::optional<SSuggestions> TryCollectSuggestions(const FCollect &Collect)
+	try
+	{
+		std::optional<SSuggestions> Result(std::in_place);
+		Collect(*Result);
+		return Result;
+	}
+	catch(const std::bad_alloc &)
+	{
+		return std::nullopt;
+	}
+	catch(const std::length_error &)
+	{
+		return std::nullopt;
 	}
 }
 
@@ -156,6 +181,7 @@ private:
 			std::string m_Params;
 		};
 		std::optional<SCommandHint> m_CommandHint;
+		bool m_CommandHintCopyFailed = false;
 
 		bool m_CompletionDirty;
 		bool m_QueueResetAnimation;
@@ -216,7 +242,7 @@ private:
 		bool BuildSelectionText(std::string &Result);
 
 		bool IsInputHidden() const;
-		void UpdateCompletionSuggestions();
+		bool UpdateCompletionSuggestions();
 		void UpdateCommandHint();
 		void UpdateInputState(bool ResetCompletion);
 
