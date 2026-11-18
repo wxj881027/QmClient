@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 #include <test/support/async_io_wait.h>
 
+#include <memory>
 #include <new>
 #include <utility>
 #include <vector>
@@ -77,6 +78,24 @@ TEST(LogDispatch, BackendExceptionDoesNotEscapeOrSuppressNextMessage)
 		ASSERT_EQ(Logger.m_vMessages.size(), 1U);
 		EXPECT_STREQ(Logger.m_vMessages[0].Message(), "recovered 2");
 	}));
+}
+
+TEST(LogDispatch, CollectionContinuesWritingTheSameMessageAfterBackendException)
+{
+	auto pFailing = std::make_shared<CDispatchLogger>();
+	auto pRecording = std::make_shared<CDispatchLogger>();
+	auto pCollection = log_logger_collection({pFailing, pRecording});
+	CLogScope Scope(pCollection.get());
+
+	pFailing->m_ThrowNext = 1;
+	log_info("dispatch-test", "first");
+	log_info("dispatch-test", "second");
+
+	ASSERT_EQ(pRecording->m_vMessages.size(), 2U);
+	EXPECT_STREQ(pRecording->m_vMessages[0].Message(), "first");
+	EXPECT_STREQ(pRecording->m_vMessages[1].Message(), "second");
+	ASSERT_EQ(pFailing->m_vMessages.size(), 1U);
+	EXPECT_STREQ(pFailing->m_vMessages[0].Message(), "second");
 }
 
 TEST(LogDispatch, UnknownBackendExceptionAllowsNewScopeToLog)

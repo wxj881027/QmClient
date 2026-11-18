@@ -220,7 +220,14 @@ public:
 		}
 		for(auto &pLogger : m_vpLoggers)
 		{
-			pLogger->Log(pMessage);
+			try
+			{
+				pLogger->Log(pMessage);
+			}
+			catch(...)
+			{
+				// 单个后端写入失败时，继续将本条日志交给其余后端。
+			}
 		}
 	}
 	void GlobalFinish() override

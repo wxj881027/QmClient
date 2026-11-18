@@ -205,6 +205,8 @@ std::unique_ptr<ILogger> log_logger_android();
  * @ingroup Log
  *
  * Logger combining a vector of other loggers.
+ *
+ * 写入时按后端隔离 C++ 异常，仍尝试其余后端。
  */
 std::unique_ptr<ILogger> log_logger_collection(std::vector<std::shared_ptr<ILogger>> &&vpLoggers);
 
