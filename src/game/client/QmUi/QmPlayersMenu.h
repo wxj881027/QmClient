@@ -1,6 +1,10 @@
 #ifndef GAME_CLIENT_QMUI_QMPLAYERSMENU_H
 #define GAME_CLIENT_QMUI_QMPLAYERSMENU_H
 
+#include <base/str.h>
+
+#include <engine/shared/protocol.h>
+
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/lineinput.h>
 #include <game/client/ui_rect.h>
@@ -32,11 +36,44 @@ namespace QmPlayersUi
 		}
 	};
 
+	class CActionPress
+	{
+		const void *m_pButton = nullptr;
+		char m_aName[MAX_NAME_LENGTH] = {};
+		char m_aClan[MAX_CLAN_LENGTH] = {};
+
+	public:
+		void CancelIfInactive(const void *pActiveButton)
+		{
+			if(m_pButton != pActiveButton)
+				m_pButton = nullptr;
+		}
+
+		bool ProcessButton(const void *pButton, const char *pName, const char *pClan, bool Pressed, bool Clicked)
+		{
+			if(Pressed)
+			{
+				m_pButton = pButton;
+				str_copy(m_aName, pName);
+				str_copy(m_aClan, pClan);
+			}
+			if(m_pButton != pButton)
+				return false;
+
+			// 槽位复用时按钮地址不变，用按下时的玩家身份校验这次点击。
+			const bool SamePlayer = str_comp(m_aName, pName) == 0 && str_comp(m_aClan, pClan) == 0;
+			if(Clicked || !SamePlayer)
+				m_pButton = nullptr;
+			return Clicked && SamePlayer;
+		}
+	};
+
 } // namespace QmPlayersUi
 
 struct SQmPlayersMenuState
 {
 	CLineInputBuffered<64> m_Search;
+	QmPlayersUi::CActionPress m_ActionPress;
 	int m_Filter = 0;
 	// 复制类图标按钮的轻提示：记录到期时刻（Client()->GlobalTime() 秒），
 	// 到期后不再绘制；文案统一取「Copied」，避免每个字段各造一条翻译。
