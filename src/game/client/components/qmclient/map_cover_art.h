@@ -31,12 +31,12 @@ namespace QmMapCover
 		void *m_pUser = nullptr;
 	};
 
-	// ddnet.org 官方地图缩略图地址前缀；只有该来源的图片会被下载和缓存。
+	// DDNet 官方地图缩略图的初始请求 URL 前缀，重定向由 HTTP 层处理。
 	inline constexpr const char *THUMBNAIL_URL_PREFIX = "https://ddnet.org/ranks/maps/";
 	// 缓存目录与文件名前缀：缓存文件名沿用 URL 末段，避开 Windows 设备名。
 	inline constexpr const char *CACHE_FOLDER = "qmclient/mapcovers";
 	inline constexpr const char *CACHE_FILE_PREFIX = "cover_";
-	// 输出尺寸上限与单张缩略图解码上限。
+	// 输出尺寸上限与源图像素预算，源图按 RGBA 字节数校验。
 	inline constexpr int MAX_WIDTH = 512;
 	inline constexpr int MAX_HEIGHT = 256;
 	inline constexpr size_t MAX_DECODED_BYTES = 8 * 1024 * 1024;
