@@ -461,4 +461,65 @@ TEST(HttpSchedulerReentry, RunningShutdownCompletionCanSubmitAnotherRequest)
 		EXPECT_EQ(pConsumer->m_Calls, 1);
 	}));
 }
+#else
+#include <engine/shared/http_emscripten.h>
+#include <engine/storage.h>
+
+#include <test/test.h>
+
+#include <emscripten/emscripten.h>
+
+#include <chrono>
+#include <memory>
+
+namespace
+{
+	bool WaitForRequest(const IHttpRequest &Request)
+	{
+		const auto Deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+		while(!Request.Done() && std::chrono::steady_clock::now() < Deadline)
+			emscripten_sleep(1);
+		return Request.Done();
+	}
+}
+
+TEST(HttpEmscriptenScheduler, CancelledRequestWithMatchingCacheCompletesAborted)
+{
+	CTestInfo Info;
+	auto pStorage = Info.CreateTestStorage();
+	ASSERT_NE(pStorage, nullptr);
+	IOHANDLE File = pStorage->OpenFile("cached.bin", IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	ASSERT_NE(File, nullptr);
+	EXPECT_EQ(io_write(File, "cached", 6), 6u);
+	ASSERT_EQ(io_close(File), 0);
+
+	CHttpEmscripten Http;
+	ASSERT_TRUE(Http.Init(std::chrono::milliseconds(0)));
+	std::shared_ptr<IHttpRequest> pRequest = HttpGetFile("data:application/octet-stream,unused", pStorage.get(), "cached.bin", IStorage::TYPE_SAVE);
+	pRequest->ExpectSha256(sha256("cached", 6));
+	pRequest->Abort();
+	Http.Run(pRequest);
+
+	ASSERT_TRUE(WaitForRequest(*pRequest));
+	EXPECT_EQ(pRequest->State(), EHttpState::ABORTED);
+	EXPECT_TRUE(pStorage->FileExists("cached.bin", IStorage::TYPE_SAVE));
+}
+
+TEST(HttpEmscriptenScheduler, UnopenableDestinationCompletesWithError)
+{
+	CTestInfo Info;
+	auto pStorage = Info.CreateTestStorage();
+	ASSERT_NE(pStorage, nullptr);
+	IOHANDLE File = pStorage->OpenFile("blocked", IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	ASSERT_NE(File, nullptr);
+	ASSERT_EQ(io_close(File), 0);
+
+	CHttpEmscripten Http;
+	ASSERT_TRUE(Http.Init(std::chrono::milliseconds(0)));
+	std::shared_ptr<IHttpRequest> pRequest = HttpGetFile("data:application/octet-stream,unused", pStorage.get(), "blocked/response.bin", IStorage::TYPE_SAVE);
+	Http.Run(pRequest);
+
+	ASSERT_TRUE(WaitForRequest(*pRequest));
+	EXPECT_EQ(pRequest->State(), EHttpState::ERROR);
+}
 #endif

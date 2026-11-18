@@ -401,14 +401,16 @@ void CHttpEmscripten::RunLoop()
 				{
 					log_debug("http", "task: %s %s", CHttpRequestEmscripten::GetRequestType(pRequest->m_Type), pRequest->m_aUrl);
 				}
-				if(pRequest->ShouldSkipRequest())
-				{
-					pRequest->PublishCompletion(EHttpState::DONE);
-					continue;
-				}
+				const bool UseCache = !m_StartedShutdown && !pRequest->IsAbortRequested() && pRequest->ShouldSkipRequest();
 				if(m_StartedShutdown || pRequest->IsAbortRequested())
 				{
-					pRequest->OnCompletionInternal(EHttpState::ABORTED, m_StartedShutdown ? "Shutting down" : "Request aborted");
+					// 尚未创建响应临时文件，取消时只需发布终态。
+					pRequest->PublishCompletion(EHttpState::ABORTED);
+					continue;
+				}
+				if(UseCache)
+				{
+					pRequest->PublishCompletion(EHttpState::DONE);
 					continue;
 				}
 				// 先登记稳定的请求身份，再创建 SDK 句柄；同步回调也已经有 owner。
@@ -417,7 +419,7 @@ void CHttpEmscripten::RunLoop()
 					continue;
 				if(!pRequest->ConfigureAndRun())
 				{
-					pRequest->OnCompletionInternal(EHttpState::ABORTED, "Failed to initialize request");
+					pRequest->OnCompletionInternal(EHttpState::ERROR, "Failed to initialize request");
 					m_RunningRequests.erase(pRequest.get());
 				}
 			}
