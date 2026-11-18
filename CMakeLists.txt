@@ -5574,6 +5574,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/client/qm_public_word_filter_cache_write_test.cpp
     src/test/integration/qmclient/client/qm_word_filter_persistence_test.cpp
     src/test/integration/qmclient/client/qm_console_text_pipeline_test.cpp
+    src/test/integration/client/important_alert_logging_test.cpp
     src/test/unit/qmclient/client/qm_red_packet_auto_claim_test.cpp
     src/test/unit/qmclient/client/qm_tclient_warlist_test.cpp
     src/test/integration/qmclient/client/qm_tclient_map_data_save_test.cpp
@@ -6263,6 +6264,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/game/client/components/qmclient/qm_title_badge.cpp
     src/game/client/components/qmclient/screenshot_clipboard.cpp
     src/game/client/components/qmclient/screenshot_image_job.cpp
+    src/game/client/components/important_alert.cpp
     src/game/client/components/qmclient/watermark_compositor.cpp
     src/game/client/components/qmclient/skin_source_job.cpp
     src/game/client/components/qmclient/scripting/impl.cpp

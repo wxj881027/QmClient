@@ -3,6 +3,7 @@
 #include "important_alert.h"
 
 #include <base/log.h>
+#include <base/str.h>
 #include <base/time.h>
 
 #include <engine/client.h>
@@ -30,25 +31,26 @@ void CImportantAlert::OnReset()
 
 void CImportantAlert::OnWindowResize()
 {
+	m_DismissTouchRect.reset();
 	DeleteTextContainers();
 }
 
 void CImportantAlert::OnRender()
 {
-	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
-	{
-		return;
-	}
 	if(!m_Active)
 	{
 		return;
 	}
-#if defined(CONF_VIDEORECORDER)
-	if(IVideo::Current() && !g_Config.m_ClVideoShowImportantAlerts)
+	if(m_FadeOutSince >= 0.0f && Client()->GlobalTime() - m_FadeOutSince >= 1.0f)
 	{
+		OnReset();
 		return;
 	}
-#endif
+	if(!IsActive())
+	{
+		m_DismissTouchRect.reset();
+		return;
+	}
 	RenderImportantAlert();
 }
 
@@ -61,12 +63,6 @@ void CImportantAlert::DeleteTextContainers()
 
 void CImportantAlert::RenderImportantAlert()
 {
-	if(m_FadeOutSince >= 0.0f && Client()->GlobalTime() - m_FadeOutSince >= 1.0f)
-	{
-		OnReset();
-		return;
-	}
-
 	const float Seconds = SecondsActive();
 
 	const float Height = 300.0f;
@@ -166,8 +162,12 @@ void CImportantAlert::DoImportantAlert(const char *pTitle, const char *pLogGroup
 	char aLine[sizeof(m_aMessageText)];
 	while((pMessage = str_next_token(pMessage, "\n", aLine, sizeof(aLine))))
 	{
-		if(aLine[0] != '\0')
+		const int ChunkLength = str_length(aLine);
+		const int CompleteLength = str_utf8_fix_truncation(aLine);
+		if(CompleteLength > 0)
 		{
+			// 下一段从被截断的字符开始，保留完整的 UTF-8 字符。
+			pMessage -= ChunkLength - CompleteLength;
 			log_info_color(IMPORTANT_ALERT_COLOR, pLogGroup, "%s", aLine);
 		}
 	}
@@ -254,5 +254,15 @@ bool CImportantAlert::OnTouchState(std::vector<IInput::CTouchFingerState> &vTouc
 
 bool CImportantAlert::IsActive() const
 {
-	return m_Active;
+	if(!m_Active || (Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK))
+	{
+		return false;
+	}
+#if defined(CONF_VIDEORECORDER)
+	if(IVideo::Current() && !g_Config.m_ClVideoShowImportantAlerts)
+	{
+		return false;
+	}
+#endif
+	return true;
 }
