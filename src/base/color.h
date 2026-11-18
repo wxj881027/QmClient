@@ -2,6 +2,7 @@
 #ifndef BASE_COLOR_H
 #define BASE_COLOR_H
 
+#include <base/dbg.h>
 #include <base/math.h>
 
 #include <optional>
@@ -44,6 +45,12 @@ constexpr float RgbToHue(float r, float g, float b)
 template<typename DerivedT>
 class color4_base
 {
+	static constexpr unsigned PackChannel(float Channel)
+	{
+		// 比较同时把 NaN 和负值映射到 0，正值最多占一个字节。
+		return Channel > 0.0f ? static_cast<unsigned>(round_to_int(std::min(Channel, 1.0f) * 255.0f)) : 0u;
+	}
+
 public:
 	union
 	{
@@ -91,9 +98,16 @@ public:
 		requires(!std::is_same_v<DerivedT, OtherDerivedT>)
 	color4_base(const color4_base<OtherDerivedT> &Other) = delete;
 
-	constexpr float &operator[](int index)
+	constexpr float &operator[](int Index)
 	{
-		return ((float *)this)[index];
+		switch(Index)
+		{
+		case 0: return x;
+		case 1: return y;
+		case 2: return z;
+		case 3: return a;
+		default: dbg_assert_failed("invalid color channel index %d", Index);
+		}
 	}
 
 	constexpr bool operator==(const color4_base &col) const { return x == col.x && y == col.y && z == col.z && a == col.a; }
@@ -101,16 +115,14 @@ public:
 
 	constexpr unsigned Pack(bool Alpha = true) const
 	{
-		return (Alpha ? ((unsigned)round_to_int(a * 255.0f) << 24) : 0) + ((unsigned)round_to_int(x * 255.0f) << 16) + ((unsigned)round_to_int(y * 255.0f) << 8) + (unsigned)round_to_int(z * 255.0f);
+		return (Alpha ? (PackChannel(a) << 24) : 0u) | (PackChannel(x) << 16) | (PackChannel(y) << 8) | PackChannel(z);
 	}
 
 	constexpr unsigned PackAlphaLast(bool Alpha = true) const
 	{
-		if(Alpha)
-		{
-			return ((unsigned)round_to_int(x * 255.0f) << 24) + ((unsigned)round_to_int(y * 255.0f) << 16) + ((unsigned)round_to_int(z * 255.0f) << 8) + (unsigned)round_to_int(a * 255.0f);
-		}
-		return ((unsigned)round_to_int(x * 255.0f) << 16) + ((unsigned)round_to_int(y * 255.0f) << 8) + (unsigned)round_to_int(z * 255.0f);
+		if(!Alpha)
+			return Pack(false);
+		return (PackChannel(x) << 24) | (PackChannel(y) << 16) | (PackChannel(z) << 8) | PackChannel(a);
 	}
 
 	constexpr DerivedT WithAlpha(float alpha) const
@@ -222,7 +234,13 @@ constexpr ColorHSLA color_cast(const ColorRGBA &rgb)
 	float c = Max - Min;
 	float h = RgbToHue(rgb.r, rgb.g, rgb.b);
 	float l = 0.5f * (Max + Min);
-	float s = (Max != 0.0f && Min != 1.0f) ? (c / (1 - (absolute(2 * l - 1)))) : 0;
+	float Denominator = 1.0f - absolute(2 * l - 1);
+	if(Denominator == 0.0f || (Denominator < c && Min >= 0.0f && Max <= 1.0f))
+	{
+		// 端点附近的舍入可能让分母小于色度，用原始分量重算。
+		Denominator = l < 0.5f ? Max + Min : (1.0f - Max) + (1.0f - Min);
+	}
+	float s = (Max != 0.0f && Min != 1.0f && Denominator != 0.0f) ? c / Denominator : 0.0f;
 
 	return ColorHSLA(h, s, l, rgb.a);
 }
@@ -231,7 +249,11 @@ template<>
 constexpr ColorRGBA color_cast(const ColorHSLA &hsl)
 {
 	float h1 = hsl.h * 6;
-	float c = (1.f - absolute(2 * hsl.l - 1)) * hsl.s;
+	const float TwiceLightness = 2.0f * hsl.l;
+	float ChromaScale = 1.0f - absolute(TwiceLightness - 1.0f);
+	if(ChromaScale == 0.0f && hsl.l > 0.0f && hsl.l < 0.5f)
+		ChromaScale = TwiceLightness;
+	float c = ChromaScale * hsl.s;
 	float x = c * (1.f - absolute(std::fmod(h1, 2) - 1.f));
 
 	float r = 0.0f;
