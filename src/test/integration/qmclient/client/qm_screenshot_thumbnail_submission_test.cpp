@@ -136,6 +136,40 @@ TEST_F(QmScreenshotThumbnailSubmission, RejectedRequestDoesNotConsumeSlotsForOth
 	EXPECT_EQ(m_Engine.m_vAccepted.size(), (size_t)QM_SCREENSHOT_THUMBNAIL_MAX_CONCURRENT_JOBS);
 }
 
+TEST_F(QmScreenshotThumbnailSubmission, RefreshRetainsDecodeSlotsUntilOldJobsFinish)
+{
+	ASSERT_TRUE(StoreSource());
+	Request();
+	Pump();
+	ASSERT_EQ(m_Engine.m_vAccepted.size(), 1u);
+	const auto pOldJob = m_Engine.m_vAccepted.front();
+
+	m_Manager.ClearThumbnails(nullptr);
+	for(const char *pPath : {"second.png", "third.png", "fourth.png", "fifth.png"})
+		Request(pPath);
+	Pump();
+	constexpr size_t MaxJobs = QM_SCREENSHOT_THUMBNAIL_MAX_CONCURRENT_JOBS;
+	ASSERT_EQ(m_Engine.m_vAccepted.size(), MaxJobs);
+
+	m_Manager.ClearThumbnails(nullptr);
+	Request("sixth.png");
+	EXPECT_EQ(m_Manager.LoadThumbnail("source.png", IStorage::TYPE_SAVE), nullptr);
+	Pump();
+	EXPECT_EQ(m_Engine.m_vAccepted.size(), MaxJobs);
+
+	CJobPool Pool;
+	ASSERT_TRUE(Pool.TryInit(1));
+	ASSERT_TRUE(Pool.TryAdd(pOldJob));
+	ASSERT_TRUE(WaitForJobFinished(*pOldJob));
+	ASSERT_EQ(pOldJob->State(), IJob::STATE_DONE);
+
+	m_Manager.LoadThumbnail("source.png", IStorage::TYPE_SAVE);
+	Pump();
+	EXPECT_EQ(m_Engine.m_vAccepted.size(), MaxJobs + 1);
+	EXPECT_NE(m_Engine.m_vAccepted.back(), pOldJob);
+	ExpectPending();
+}
+
 TEST_F(QmScreenshotThumbnailSubmission, ClosedNativePoolRejectsAndReopenedPoolDecodesRetry)
 {
 	ASSERT_TRUE(StoreSource());

@@ -240,6 +240,18 @@ namespace
 		{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1f}, // _
 	};
 
+	std::string ResolveScreenshotTargetPath(IStorage &Storage, const char *pPath)
+	{
+		if(pPath == nullptr || pPath[0] == '\0' || str_length(pPath) >= IO_MAX_PATH_LENGTH)
+			return {};
+		// 先解析完整路径，再检查存储前缀与文件名的总长度。
+		char aPath[IO_MAX_PATH_LENGTH * 2] = {};
+		Storage.GetCompletePath(IStorage::TYPE_SAVE_OR_ABSOLUTE, pPath, aPath, sizeof(aPath));
+		if(str_length(aPath) >= IO_MAX_PATH_LENGTH)
+			return {};
+		return aPath;
+	}
+
 	const uint8_t *Glyph(char Character)
 	{
 		if(Character >= '0' && Character <= '9')
@@ -302,6 +314,8 @@ const CQmScreenshotManager::SThumbnail *CQmScreenshotManager::LoadThumbnail(cons
 		SThumbnailEntry &Entry = It->second;
 		QmTryQueueScreenshotThumbnailRequest(m_vThumbnailRequests, Entry.m_Requested, Key);
 		Entry.m_LastUsedFrame = m_ThumbnailFrame;
+		if(Entry.m_pJob != nullptr && !Entry.m_Thumbnail.m_Loading)
+			return nullptr;
 		return &Entry.m_Thumbnail;
 	}
 	catch(const std::bad_alloc &)
@@ -342,7 +356,7 @@ void CQmScreenshotManager::PumpThumbnailWork(IGraphics *pGraphics, IStorage *pSt
 		for(auto &[Key, Entry] : m_vThumbnails)
 		{
 			(void)Key;
-			if(Entry.m_pJob == nullptr || !Entry.m_pJob->Finished())
+			if(!Entry.m_Thumbnail.m_Loading || Entry.m_pJob == nullptr || !Entry.m_pJob->Finished())
 				continue;
 			if(Entry.m_pJob->State() != IJob::STATE_DONE)
 			{
@@ -379,12 +393,20 @@ void CQmScreenshotManager::PumpThumbnailWork(IGraphics *pGraphics, IStorage *pSt
 	}
 
 	int OutstandingJobs = 0;
-	for(const auto &[Key, Entry] : m_vThumbnails)
+	for(auto &[Key, Entry] : m_vThumbnails)
 	{
 		(void)Key;
-		// 等待上传的解码结果也占名额，上传预算不足时暂停启动新任务。
-		if(Entry.m_pJob != nullptr)
-			++OutstandingJobs;
+		if(Entry.m_pJob == nullptr)
+			continue;
+		// 刷新前的结果只释放名额，不能发布到刷新后的列表。
+		if(!Entry.m_Thumbnail.m_Loading && Entry.m_pJob->Finished())
+		{
+			Entry.m_pJob.reset();
+			Entry.m_Thumbnail.m_Loading = true;
+			continue;
+		}
+		// 在途解码和等待上传的结果都占名额。
+		++OutstandingJobs;
 	}
 
 	int PendingRequests = 0;
@@ -468,30 +490,41 @@ void CQmScreenshotManager::ClearThumbnails(IGraphics *pGraphics)
 {
 	m_ThumbnailClearPending = true;
 	m_vThumbnailRequests.clear();
+	bool TextureReleasePending = false;
 	for(auto It = m_vThumbnails.begin(); It != m_vThumbnails.end();)
 	{
-		if(It->second.m_Thumbnail.m_Texture.IsValid())
+		SThumbnailEntry &Entry = It->second;
+		if(Entry.m_Thumbnail.m_Texture.IsValid())
 		{
 			if(pGraphics == nullptr)
 			{
+				TextureReleasePending = true;
 				++It;
 				continue;
 			}
 			try
 			{
-				pGraphics->UnloadTexture(&It->second.m_Thumbnail.m_Texture);
+				pGraphics->UnloadTexture(&Entry.m_Thumbnail.m_Texture);
 			}
 			catch(const std::bad_alloc &)
 			{
 				// 保留尚未交付的句柄，并继续释放其它条目；成功的卸载不重复提交。
+				TextureReleasePending = true;
 				++It;
 				continue;
 			}
 		}
-		// 任务池继续拥有正在运行的任务，结果不再发布给已清理的缓存。
+		if(Entry.m_pJob != nullptr && !Entry.m_pJob->Finished())
+		{
+			// 清空显示状态，任务结束前继续计入解码上限。
+			Entry.m_Thumbnail = {};
+			Entry.m_Requested = false;
+			++It;
+			continue;
+		}
 		It = m_vThumbnails.erase(It);
 	}
-	m_ThumbnailClearPending = !m_vThumbnails.empty();
+	m_ThumbnailClearPending = TextureReleasePending;
 }
 
 int CQmScreenshotManager::ScanCallback(const CFsFileInfo *pInfo, int IsDir, int StorageType, void *pUser)
@@ -733,16 +766,17 @@ bool CQmScreenshotManager::DrawEditorWatermark(IStorage *pStorage, CImageInfo &I
 
 bool CQmScreenshotManager::ApplyWatermark(IStorage *pStorage, const char *pSourcePath, int SourceStorageType, const char *pTargetPath, const SWatermarkOptions &Options) const
 {
-	if(pStorage == nullptr || pSourcePath == nullptr || pTargetPath == nullptr || pTargetPath[0] == '\0')
+	if(pStorage == nullptr || pSourcePath == nullptr)
+		return false;
+	const std::string Target = ResolveScreenshotTargetPath(*pStorage, pTargetPath);
+	if(Target.empty())
 		return false;
 	SImageLifetime ImageLifetime;
 	CImageInfo &Image = ImageLifetime.m_Image;
 	if(!LoadScreenshotImage(pStorage, pSourcePath, SourceStorageType, Image) || !(Options.m_Editor ? DrawEditorWatermark(pStorage, Image, BuildWatermarkText(pStorage, pSourcePath, SourceStorageType, Options), Options, {}) : DrawWatermark(pStorage, Image, BuildWatermarkText(pStorage, pSourcePath, SourceStorageType, Options), Options.m_Position)))
 		return false;
 	const SCaptureMetadata &Metadata = CaptureMetadata(pStorage, pSourcePath, SourceStorageType);
-	char aTargetPath[IO_MAX_PATH_LENGTH];
-	pStorage->GetCompletePath(IStorage::TYPE_SAVE_OR_ABSOLUTE, pTargetPath, aTargetPath, sizeof(aTargetPath));
-	return SavePngAtomically(aTargetPath, Image, Metadata.m_Comment.c_str());
+	return SavePngAtomically(Target, Image, Metadata.m_Comment.c_str());
 }
 
 namespace
@@ -849,17 +883,18 @@ bool CQmScreenshotManager::SavePngAtomically(const std::string &TargetPath, cons
 
 std::shared_ptr<CQmScreenshotWatermarkJob> CQmScreenshotManager::CreateWatermarkJob(IStorage *pStorage, const char *pSourcePath, int SourceStorageType, const char *pTargetPath, const SWatermarkOptions &Options, int PreviewMaxEdge) const
 {
-	if(pStorage == nullptr || pSourcePath == nullptr || pTargetPath == nullptr || pTargetPath[0] == '\0' || str_length(pTargetPath) >= IO_MAX_PATH_LENGTH)
+	if(pStorage == nullptr || pSourcePath == nullptr)
+		return nullptr;
+	const std::string TargetPath = ResolveScreenshotTargetPath(*pStorage, pTargetPath);
+	if(TargetPath.empty())
 		return nullptr;
 	char aSource[IO_MAX_PATH_LENGTH];
-	char aTarget[IO_MAX_PATH_LENGTH];
 	IOHANDLE SourceFile = pStorage->OpenFile(pSourcePath, IOFLAG_READ, SourceStorageType, aSource, sizeof(aSource));
 	if(SourceFile == nullptr)
 		return nullptr;
 	io_close(SourceFile);
-	pStorage->GetCompletePath(IStorage::TYPE_SAVE_OR_ABSOLUTE, pTargetPath, aTarget, sizeof(aTarget));
 	const std::string Source = AbsoluteScreenshotPath(aSource);
-	const std::string Target = AbsoluteScreenshotPath(aTarget);
+	const std::string Target = AbsoluteScreenshotPath(TargetPath.c_str());
 	if(Source.empty() || Target.empty() || Source == Target)
 		return nullptr;
 	std::vector<std::string> vFontPaths;

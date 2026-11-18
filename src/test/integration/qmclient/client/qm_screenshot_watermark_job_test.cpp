@@ -153,6 +153,21 @@ TEST_F(CQmScreenshotWatermarkJobTest, CancelQueuedJobPreservesPreviousExport)
 	EXPECT_EQ(Read(m_Target), "previous export");
 }
 
+TEST_F(CQmScreenshotWatermarkJobTest, RejectsRelativeTargetThatExceedsTheCompletePathLimit)
+{
+	char aStoragePrefix[IO_MAX_PATH_LENGTH] = {};
+	m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, "", aStoragePrefix, sizeof(aStoragePrefix));
+	const size_t PrefixLength = str_length(aStoragePrefix);
+	constexpr size_t SeparatorAndExtensionLength = sizeof("/.png") - 1;
+	ASSERT_GT(PrefixLength, 0u);
+	ASSERT_LT(PrefixLength + SeparatorAndExtensionLength, static_cast<size_t>(IO_MAX_PATH_LENGTH));
+	const size_t StemLength = IO_MAX_PATH_LENGTH - PrefixLength - SeparatorAndExtensionLength;
+	const size_t FolderLength = StemLength / 2;
+	const std::string Target = std::string(FolderLength, 'a') + "/" + std::string(StemLength - FolderLength, 'b') + ".png";
+
+	EXPECT_EQ(m_Manager.CreateWatermarkJob(m_pStorage.get(), "source.png", IStorage::TYPE_SAVE, Target.c_str(), Options("")), nullptr);
+}
+
 TEST_F(CQmScreenshotWatermarkJobTest, JobKeepsRequestOptionsAndSurvivesOriginalStorageDestruction)
 {
 	auto RequestOptions = Options("123");
