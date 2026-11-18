@@ -1,3 +1,5 @@
+#include <base/str.h>
+
 #include <generated/protocol.h>
 
 #include <game/client/laser_data.h>
@@ -5,9 +7,12 @@
 #include <game/client/prediction/entities/projectile.h>
 #include <game/client/projectile_data.h>
 #include <game/collision.h>
+#include <game/layers.h>
 #include <game/mapitems.h>
 
 #include <gtest/gtest.h>
+#include <test/support/prediction_allocation_failure.h>
+#include <test/support/prediction_collision_map.h>
 #include <test/support/prediction_world.h>
 
 #include <cmath>
@@ -16,6 +21,68 @@
 
 namespace
 {
+	class CLaserQuadTestMap : public CPredictionCollisionMap
+	{
+		CMapItemLayerQuads m_QuadLayer{};
+		CQuad m_Quad{};
+		const int m_QuadItem = CPredictionCollisionMap::NumItems();
+
+	public:
+		CLaserQuadTestMap()
+		{
+			auto *pGroup = static_cast<CMapItemGroup *>(CPredictionCollisionMap::GetItem(0));
+			++pGroup->m_NumLayers;
+			m_QuadLayer.m_Layer.m_Type = LAYERTYPE_QUADS;
+			m_QuadLayer.m_Version = 2;
+			m_QuadLayer.m_NumQuads = 1;
+			m_QuadLayer.m_Data = CPredictionCollisionMap::NumData();
+			StrToInts(m_QuadLayer.m_aName, std::size(m_QuadLayer.m_aName), "QHook");
+			m_Quad.m_PosEnv = m_Quad.m_ColorEnv = -1;
+			m_Quad.m_aPoints[0] = ivec2(f2fx(32), f2fx(32));
+			m_Quad.m_aPoints[1] = ivec2(f2fx(64), f2fx(32));
+			m_Quad.m_aPoints[2] = ivec2(f2fx(32), f2fx(64));
+			m_Quad.m_aPoints[3] = ivec2(f2fx(64), f2fx(64));
+			m_Quad.m_aPoints[4] = ivec2(f2fx(48), f2fx(48));
+			for(auto &Color : m_Quad.m_aColors)
+				Color = CColor(255, 255, 255, 255);
+		}
+
+		int NumData() const override { return m_QuadLayer.m_Data + 1; }
+		int GetDataSize(int Index) const override
+		{
+			return Index == m_QuadLayer.m_Data ? static_cast<int>(sizeof(m_Quad)) : CPredictionCollisionMap::GetDataSize(Index);
+		}
+		void *GetData(int Index) override
+		{
+			return Index == m_QuadLayer.m_Data ? &m_Quad : CPredictionCollisionMap::GetData(Index);
+		}
+		int NumItems() const override { return m_QuadItem + 1; }
+		int GetItemSize(int Index) override
+		{
+			return Index == m_QuadItem ? static_cast<int>(sizeof(m_QuadLayer)) : CPredictionCollisionMap::GetItemSize(Index);
+		}
+		void *GetItem(int Index, int *pType = nullptr, int *pId = nullptr) override
+		{
+			if(Index != m_QuadItem)
+				return CPredictionCollisionMap::GetItem(Index, pType, pId);
+			if(pType)
+				*pType = MAPITEMTYPE_LAYER;
+			if(pId)
+				*pId = m_QuadItem - 1;
+			return &m_QuadLayer;
+		}
+		void GetType(int Type, int *pStart, int *pNum) override
+		{
+			CPredictionCollisionMap::GetType(Type, pStart, pNum);
+			if(Type == MAPITEMTYPE_LAYER)
+				++*pNum;
+		}
+		int FindItemIndex(int Type, int Id) override
+		{
+			return Type == MAPITEMTYPE_LAYER && Id == m_QuadItem - 1 ? m_QuadItem : CPredictionCollisionMap::FindItemIndex(Type, Id);
+		}
+	};
+
 	CProjectileData ProjectileData(int StartTick, int Type = WEAPON_GUN)
 	{
 		CProjectileData Data{};
@@ -210,4 +277,61 @@ TEST(PredictionEntityNumeric, LocalLaserComputedOutOfRangeEndpointIsRemovedBefor
 	EXPECT_EQ(pLaser->GetPos(), Start);
 	World.Tick();
 	EXPECT_EQ(World.FindFirst(CGameWorld::ENTTYPE_LASER), nullptr);
+}
+
+TEST(PredictionEntityNumeric, LaserCollisionAllocationFailureDiscardsShotWithoutRetry)
+{
+	CLaserQuadTestMap Map;
+	CLayers Layers;
+	Layers.Init(&Map, false);
+	CCollision Collision;
+	Collision.Init(&Layers);
+	Collision.SetQmAxiomQuadCollision(true);
+	ASSERT_TRUE(Collision.QmAxiomQuadCollisionEnabled());
+
+	CPredictionTestWorld World;
+	World.Init(&Collision, World.TuningList(), nullptr);
+	World.TuningList()->m_LaserBounceDelay = 0.0f;
+	const vec2 Start(16, 48);
+	const vec2 Direction(1, 0);
+	constexpr float Reach = 128.0f;
+	int Hit;
+	size_t RayAllocations;
+	{
+		CPredictionAllocationFailure Count(std::numeric_limits<size_t>::max());
+		Hit = Collision.IntersectLineTeleWeapon(Start, Start + Direction * Reach, nullptr, nullptr);
+		RayAllocations = Count.Attempts();
+	}
+	ASSERT_EQ(Hit, TILE_SOLID);
+	ASSERT_GT(RayAllocations, 0u);
+
+	// 放过实体分配，分别注入射线和反弹查询的首次分配失败。
+	for(const size_t BeforeFailure : {size_t{1}, 1 + RayAllocations})
+	{
+		SCOPED_TRACE(BeforeFailure);
+		bool Triggered;
+		{
+			CPredictionAllocationFailure Failure(BeforeFailure);
+			new CLaser(&World, Start, Direction, Reach, -1, WEAPON_LASER);
+			Triggered = Failure.Triggered();
+		}
+		ASSERT_TRUE(Triggered);
+		const CEntity *pLaser = World.FindFirst(CGameWorld::ENTTYPE_LASER);
+		ASSERT_NE(pLaser, nullptr);
+		EXPECT_EQ(pLaser->GetPos(), Start);
+
+		++World.m_GameTick;
+		bool Retried;
+		{
+			CPredictionAllocationFailure Failure;
+			World.Tick();
+			Retried = Failure.Triggered();
+		}
+		EXPECT_FALSE(Retried);
+		ASSERT_EQ(World.FindFirst(CGameWorld::ENTTYPE_LASER), nullptr);
+	}
+
+	const auto *pNextLaser = new CLaser(&World, Start, Direction, Reach, -1, WEAPON_LASER);
+	EXPECT_GT(pNextLaser->GetPos().x, Start.x);
+	EXPECT_LT(pNextLaser->GetPos().x, 32.0f);
 }
