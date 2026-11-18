@@ -70,12 +70,12 @@ void CCustomCommunities::ApplyCustomCommunitiesInfo(TQmCommunityInfo pInfo)
 	QmPerfLogStage("perf/custom_communities", "apply", ApplyTimer.ElapsedMs(), false, Client());
 }
 
-void CCustomCommunities::OnInit()
+void CCustomCommunities::OnConsoleInit()
 {
-	DownloadCustomCommunitiesDDNetInfo();
+	// 启动配置在 HTTP 初始化前执行，URL 刷新回调留到组件初始化时绑定。
 }
 
-void CCustomCommunities::OnConsoleInit()
+void CCustomCommunities::OnInit()
 {
 	Console()->Chain(
 		"qm_custom_communities_url", [](IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData) {
@@ -84,6 +84,7 @@ void CCustomCommunities::OnConsoleInit()
 				((CCustomCommunities *)pUserData)->DownloadCustomCommunitiesDDNetInfo();
 		},
 		this);
+	DownloadCustomCommunitiesDDNetInfo();
 }
 
 void CCustomCommunities::OnRender()

@@ -12,12 +12,14 @@ import sys
 from collections.abc import Callable
 
 try:
+	from qmclient_scripts.integration.e2e_serverlist import Loopback
 	from qmclient_scripts.integration.process_harness import (
 		ProcessEnvironment as SmokeEnvironment,
 		_format_exit_code,
 		log_message,
 	)
 except ModuleNotFoundError:
+	from e2e_serverlist import Loopback  # type: ignore[no-redef]
 	from process_harness import (  # type: ignore[no-redef]
 		ProcessEnvironment as SmokeEnvironment,
 		_format_exit_code,
@@ -55,6 +57,50 @@ def smoke_default_media_directory_startup(env: SmokeEnvironment) -> None:
 def smoke_custom_media_directory_startup(env: SmokeEnvironment) -> None:
 	"""从隔离配置加载相对自定义目录后完成启动，避免初始化前访问存储。"""
 	_smoke_media_directory_startup(env, "自定义 媒体")
+
+
+def smoke_saved_custom_communities_startup(env: SmokeEnvironment) -> None:
+	"""加载保存的社区 URL 后启动，使用最终值发出首次请求。"""
+	http = Loopback()
+	try:
+		saved_path = "/saved-communities.json"
+		startup_path = "/startup-communities.json"
+		runtime_path = "/runtime-communities.json"
+		http.set(startup_path, 200, b'{"communities":[]}')
+		http.set(runtime_path, 200, b'{"communities":[]}')
+
+		settings_path = env.path("qmclient", "settings.cfg")
+		settings_path.write_text(
+			f'qm_custom_communities_url "{http.url}{saved_path}"\n',
+			encoding="utf-8",
+		)
+		client_env = {
+			key: http.url
+			for key in ("http_proxy", "https_proxy", "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "all_proxy")
+		}
+		client_env.update({"NO_PROXY": "127.0.0.1,localhost", "no_proxy": "127.0.0.1,localhost"})
+		client = env.start_client([
+			"qm_steam_auto_launch 0",
+			"qm_auto_update 0",
+			"http_allow_insecure 1",
+			f"qm_websocket_url ws://127.0.0.1:{http.server.server_port}/ws",
+			f"qm_custom_communities_url {http.url}{startup_path}",
+		], connect=False, env=client_env)
+		http.wait_requests(startup_path, 1)
+
+		client.command(f"qm_custom_communities_url {http.url}{runtime_path}")
+		http.wait_requests(runtime_path, 1)
+		client.command("quit")
+		code = client.wait_for_exit(15)
+		if code != 0:
+			raise RuntimeError(f"client exited with {_format_exit_code(code)}")
+
+		with http.condition:
+			paths = [path for path, _ in http.requests if path in {saved_path, startup_path, runtime_path}]
+		if paths != [startup_path, runtime_path]:
+			raise AssertionError(f"unexpected custom community requests: {paths}")
+	finally:
+		http.close()
 
 
 def smoke_plain_connection(env: SmokeEnvironment) -> None:
@@ -111,6 +157,7 @@ def smoke_connection_shutdown(env: SmokeEnvironment) -> None:
 SMOKE_TESTS: dict[str, Callable[[SmokeEnvironment], None]] = {
 	"default_media_directory_startup": smoke_default_media_directory_startup,
 	"custom_media_directory_startup": smoke_custom_media_directory_startup,
+	"saved_custom_communities_startup": smoke_saved_custom_communities_startup,
 	"plain_connection": smoke_plain_connection,
 	"focus_configuration": smoke_focus_configuration,
 	"gores_configuration": smoke_gores_configuration,
