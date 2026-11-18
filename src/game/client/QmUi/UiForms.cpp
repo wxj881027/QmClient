@@ -9,7 +9,6 @@
 #include "QmPasswordIcon.h"
 #include "SettingsPageLayout.h"
 #include "UiButtons.h"
-#include "UiDiscreteSliderStyle.h"
 #include "UiFormLogic.h"
 #include "UiMotion.h"
 #include "UiSurface.h"
@@ -639,6 +638,14 @@ namespace ui_widget
 		if(Ctx.m_pTooltips != nullptr)
 			Ctx.m_pTooltips->DoSettingsToolTipForConfig(pId, &Rect, pValue, HasLabel ? &Label : nullptr);
 
+		const bool SliderOwnsInput = HasSlider && Ctx.m_pUi->CheckActiveItem(pId);
+		if(!SliderOwnsInput)
+		{
+			// 离页等操作可以先清除鼠标捕获，重返页面时不提交上一轮的拖动值。
+			pState->m_SliderWasActive = false;
+			pState->m_HasPendingValue = false;
+		}
+
 		bool Changed = false;
 		const int Increment = std::max(ValueStep, (SliderMax - SliderMin) / 35 / ValueStep * ValueStep);
 		if(!RenderOnly && ValueStep > 1 && (!Infinite || *pValue != 0))
@@ -686,7 +693,6 @@ namespace ui_widget
 		const float InfiniteEndpointStart = Infinite ? NumericFieldInfiniteEndpointStart(ScrollBar.w, Ctx.m_UiScale) : 1.0f;
 		const float Normalized = IsInfinite ? 1.0f : std::clamp(pScale->ToRelative(SliderValue, SliderMin, FiniteSliderMax), 0.0f, 1.0f) * InfiniteEndpointStart;
 		const bool SliderWasActive = pState->m_SliderWasActive;
-		const bool SliderOwnsInput = Ctx.m_pUi->CheckActiveItem(pId);
 		bool SliderActive = SliderOwnsInput;
 		if(HasSlider && !RenderOnly && (!pInput->IsActive() || SliderOwnsInput))
 		{
@@ -701,10 +707,14 @@ namespace ui_widget
 				if(Infinite && NewSliderValue == SliderMax)
 					CandidateStored = 0;
 
-				if(NoClampValue && ((CandidateStored <= SliderMin && *pValue < SliderMin) || (CandidateStored >= SliderInputStoredMaximum(Max, Multiplier) && *pValue > SliderInputStoredMaximum(Max, Multiplier))))
+				// 无限值有独立端点，只有有限值参与越界保留。
+				const bool KeepStoredValue = NoClampValue && !NewInfiniteValue && !SliderInputIsInfiniteValue(*pValue, Infinite) &&
+							     ((CandidateStored <= SliderMin && *pValue < SliderMin) || (CandidateStored >= FiniteSliderMax && *pValue > FiniteSliderMax));
+				if(KeepStoredValue)
 				{
-					// 保留越界值
-					DisplayValue = SliderInputIsInfiniteValue(*pValue, Infinite) ? Max : SliderInputDisplayValue(*pValue, Multiplier);
+					// 拖回端点后保留原值，并丢弃拖动途中暂存的值。
+					pState->m_HasPendingValue = false;
+					DisplayValue = SliderInputDisplayValue(*pValue, Multiplier);
 					pInput->SetInteger(DisplayValue);
 					pInput->SelectAll();
 					pState->m_SliderWasActive = SliderActive;
