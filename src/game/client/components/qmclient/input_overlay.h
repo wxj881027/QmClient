@@ -15,12 +15,14 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstdint>
 #include <ctime>
 #include <functional>
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 typedef struct _json_value json_value;
@@ -63,6 +65,58 @@ namespace QmInputOverlay
 		std::array<uint64_t, KEY_LAST> m_aCounts{};
 		std::array<bool, KEY_LAST> m_aHeld{};
 	};
+
+	// 候选布局和生效布局各自持有纹理，回退时只释放候选资源。
+	class CObsLayoutTexture
+	{
+		IGraphics *m_pGraphics = nullptr;
+		IGraphics::CTextureHandle m_Handle;
+
+		void Reset()
+		{
+			if(m_pGraphics != nullptr && m_Handle.IsValid())
+				m_pGraphics->UnloadTexture(&m_Handle);
+		}
+
+	public:
+		CObsLayoutTexture() = default;
+		CObsLayoutTexture(CObsLayoutTexture &&Other) noexcept :
+			m_pGraphics(std::exchange(Other.m_pGraphics, nullptr)),
+			m_Handle(std::exchange(Other.m_Handle, IGraphics::CTextureHandle{})) {}
+		~CObsLayoutTexture() { Reset(); }
+
+		void Take(IGraphics &Graphics, IGraphics::CTextureHandle Handle)
+		{
+			Reset();
+			m_pGraphics = &Graphics;
+			m_Handle = Handle;
+		}
+
+		IGraphics::CTextureHandle Handle() const { return m_Handle; }
+	};
+
+	struct SObsAtlasSampleRect
+	{
+		int m_X;
+		int m_Y;
+		int m_W;
+		int m_H;
+	};
+
+	inline std::optional<SObsAtlasSampleRect> ResolveObsAtlasSampleRect(float X, float Y, float W, float H, int TextureW, int TextureH)
+	{
+		if(W <= 1.0f || H <= 1.0f)
+			return std::nullopt;
+
+		const double Left = std::round(X);
+		const double Top = std::round(Y);
+		const double Width = std::round(W);
+		const double Height = std::round(H);
+		if(!(Left >= 0 && Top >= 0 && Left + Width <= TextureW && Top + Height <= TextureH))
+			return std::nullopt;
+
+		return SObsAtlasSampleRect{static_cast<int>(Left), static_cast<int>(Top), static_cast<int>(Width), static_cast<int>(Height)};
+	}
 
 	struct SScaledBounds
 	{
@@ -132,7 +186,7 @@ public:
 	int Sizeof() const override { return sizeof(*this); }
 	void OnInit() override;
 	void OnRender() override;
-	void OnShutdown() override { m_pFileTimeJob.reset(); }
+	void OnShutdown() override;
 	void OnWindowResize() override;
 	void OnReset() override { m_KeyCounts.ReleaseKeys(); }
 	void OnRelease() override { m_KeyCounts.ReleaseKeys(); }
@@ -238,7 +292,7 @@ private:
 	struct SObsLayout
 	{
 		std::vector<SObsElement> m_vElements;
-		IGraphics::CTextureHandle m_Texture;
+		QmInputOverlay::CObsLayoutTexture m_Texture;
 		int m_TextureWidth = 0;
 		int m_TextureHeight = 0;
 		float m_OverlayWidth = 0.0f;
@@ -255,11 +309,12 @@ private:
 	};
 
 	bool LoadConfiguration(int StorageType);
-	bool ParseConfiguration(const void *pFileData, unsigned FileLength);
+	bool ParseConfiguration(const json_value &Root);
 	void ParseStyleObject(const json_value &Object, SStyle &Style) const;
 	bool ParseElement(const json_value &Object, const SElementDefaults &Defaults, SElement &Out) const;
 	bool ParseFloat(const json_value &Value, float &Out) const;
 	bool ParseFloatArray(const json_value &Value, float *pOut, int Count) const;
+	std::optional<int> ParsePressedOffset(const json_value &Value, bool Round) const;
 	std::optional<ColorRGBA> ParseColor(const json_value &Value) const;
 	EShape ParseShape(const char *pName) const;
 	bool ParseInputBinding(const json_value &Value, SElement &Out) const;
@@ -276,7 +331,6 @@ private:
 	bool GetConfigModifiedTime(time_t &OutModified) const;
 	std::vector<std::string> ConfigPaths() const;
 	int DetectObsPressedOffset(const CImageInfo &Image, const std::vector<SObsElement> &Elements) const;
-	void ClearObsLayouts();
 
 	bool IsActiveInput(const SElement &Element) const;
 	void RenderKeyCount(int Key, const CUIRect &Rect, float Opacity);
