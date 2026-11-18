@@ -16,7 +16,7 @@ typedef enum EDiscordResult(DISCORD_API *FDiscordCreate)(DiscordVersion, struct 
 
 class CDiscord : public IDiscord
 {
-	DiscordActivity m_Activity;
+	DiscordActivity m_Activity{};
 	bool m_UpdateActivity = false;
 	int64_t m_LastActivityUpdate = 0;
 
@@ -87,7 +87,11 @@ public:
 		m_pActivityManager->register_command(m_pActivityManager, CONNECTLINK_DOUBLE_SLASH);
 		m_pActivityManager->register_steam(m_pActivityManager, 412220); // steam id
 
-		ClearGameInfo();
+		// RPC 关闭期间也会更新游戏状态，重建 SDK 后重新发布当前在线活动。
+		if(m_Activity.instance)
+			m_UpdateActivity = true;
+		else
+			ClearGameInfo();
 	}
 
 	void Update(bool Enabled) override
