@@ -23,11 +23,13 @@ public:
 	const char *SaveValueOverrideOwner(const int *) const override { return nullptr; }
 	int RealValue(const int *pValue) const override { return *pValue; }
 	bool Save(bool) override { return true; }
+	const char *LastSaveError() const override { return ""; }
 	CConfig *Values() override { return nullptr; }
 	void RegisterCallback(SAVECALLBACKFUNC, void *, ConfigDomain) override {}
 	void WriteLine(const char *, ConfigDomain) override {}
 	void MarkSaveFailed(ConfigDomain) override {}
 	void StoreUnknownCommand(const char *, ConfigDomain) override {}
+	const SConfigVariable *FindVariable(const char *) const override { return nullptr; }
 	EColorInputAlphaMode ColorValueInputAlphaMode(const char *) const override { return EColorInputAlphaMode::PACKED; }
 
 	void PossibleConfigVariables(const char *, int, POSSIBLECFGFUNC pfnCallback, void *pUserData) override
