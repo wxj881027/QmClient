@@ -213,20 +213,30 @@ SEditResult<int> CEditor::UiDoValueSelector(const void *pId, CUIRect *pRect, con
 	static CLineInputNumber s_NumberInput;
 	static int s_ButtonUsed = -1;
 	static const void *s_pLastTextId = nullptr;
+	static const CEditorMap *s_pTextMap = nullptr;
+	static const void *s_pDragId = nullptr;
+
+	// 同一属性控件 ID 会被多个图层复用。弹窗释放焦点或地图切换后丢弃旧草稿。
+	if(s_pLastTextId != nullptr && (!s_NumberInput.IsActive() || s_pTextMap != Map()))
+	{
+		if(s_NumberInput.IsActive())
+			Ui()->ReleaseActiveTextInput(&s_NumberInput);
+		s_pLastTextId = nullptr;
+		s_pTextMap = nullptr;
+	}
 
 	const bool Inside = Ui()->MouseInside(pRect);
 	const int Base = IsHex ? 16 : 10;
+	EEditState State = EEditState::NONE;
 
-	if(Ui()->HotItem() == pId && s_ButtonUsed >= 0 && !Ui()->MouseButton(s_ButtonUsed))
+	if(Ui()->HotItem() == pId && s_ButtonUsed >= 0 && !Ui()->MouseButton(s_ButtonUsed) && Ui()->CheckActiveItem(pId))
 	{
 		Ui()->DisableMouseLock();
-		if(Ui()->CheckActiveItem(pId))
-		{
-			Ui()->SetActiveItem(nullptr);
-		}
+		Ui()->SetActiveItem(nullptr);
 		if(Inside && ((s_ButtonUsed == 0 && !s_DidScroll && Ui()->DoDoubleClickLogic(pId)) || s_ButtonUsed == 1))
 		{
 			s_pLastTextId = pId;
+			s_pTextMap = Map();
 			s_NumberInput.SetInteger(Current, Base);
 			s_NumberInput.SelectAll();
 		}
@@ -239,19 +249,25 @@ SEditResult<int> CEditor::UiDoValueSelector(const void *pId, CUIRect *pRect, con
 		Ui()->SetActiveItem(&s_NumberInput);
 		DoEditBox(&s_NumberInput, pRect, 10.0f, Corners);
 
-		if(Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER) || ((Ui()->MouseButtonClicked(1) || Ui()->MouseButtonClicked(0)) && !Inside))
+		const bool Submit = Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER) || ((Ui()->MouseButtonClicked(1) || Ui()->MouseButtonClicked(0)) && !Inside);
+		const bool Cancel = Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE);
+		if(Submit)
 		{
 			Current = std::clamp(s_NumberInput.GetInteger(Base), Min, Max);
-			Ui()->DisableMouseLock();
-			Ui()->ReleaseActiveTextInput(&s_NumberInput);
-			s_pLastTextId = nullptr;
+			// 文本只在提交时修改属性，撤销记录也在这一帧开始和结束。
+			State = EEditState::ONE_GO;
+		}
+		else if(!Cancel)
+		{
+			State = EEditState::EDITING;
 		}
 
-		if(Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE))
+		if(Submit || Cancel)
 		{
 			Ui()->DisableMouseLock();
 			Ui()->ReleaseActiveTextInput(&s_NumberInput);
 			s_pLastTextId = nullptr;
+			s_pTextMap = nullptr;
 		}
 	}
 	else
@@ -323,27 +339,25 @@ SEditResult<int> CEditor::UiDoValueSelector(const void *pId, CUIRect *pRect, con
 		CUIRect Textbox;
 		pRect->VMargin(2.0f, &Textbox);
 		Ui()->DoLabel(&Textbox, aBuf, 10, TEXTALIGN_MC);
+
+		if(s_pDragId == pId)
+		{
+			State = EEditState::EDITING;
+		}
+		if(Ui()->CheckActiveItem(pId) && Ui()->CheckMouseLock() && s_DidScroll && s_pDragId != pId)
+		{
+			State = EEditState::START;
+			s_pDragId = pId;
+		}
+		if(!Ui()->CheckMouseLock() && s_pDragId == pId)
+		{
+			State = EEditState::END;
+			s_pDragId = nullptr;
+		}
 	}
 
 	if(Inside && !Ui()->MouseButton(0) && !Ui()->MouseButton(1))
 		Ui()->SetHotItem(pId);
-
-	static const void *s_pEditing = nullptr;
-	EEditState State = EEditState::NONE;
-	if(s_pEditing == pId)
-	{
-		State = EEditState::EDITING;
-	}
-	if(((Ui()->CheckActiveItem(pId) && Ui()->CheckMouseLock() && s_DidScroll) || s_pLastTextId == pId) && s_pEditing != pId)
-	{
-		State = EEditState::START;
-		s_pEditing = pId;
-	}
-	if(!Ui()->CheckMouseLock() && s_pLastTextId != pId && s_pEditing == pId)
-	{
-		State = EEditState::END;
-		s_pEditing = nullptr;
-	}
 
 	return SEditResult<int>{State, Current};
 }
