@@ -66,6 +66,17 @@ TEST(Mapitems, RotatePointsClampCoordinatesOutsideInt)
 	EXPECT_EQ(NegativePoint.x, std::numeric_limits<int>::min());
 }
 
+TEST(Mapitems, RotatePointsKeepExactCoordinatesForZeroAngle)
+{
+	const int Coordinate = 1 << 24;
+	const ivec2 OriginalPoint(Coordinate + 1, -Coordinate - 1);
+	ivec2 Point = OriginalPoint;
+
+	RotatePoints(ivec2(Coordinate, -Coordinate), &Point, 1, 0.0f);
+
+	EXPECT_EQ(Point, OriginalPoint);
+}
+
 TEST(Mapitems, RotatePointsKeepCoordinatesForNonfiniteAngle)
 {
 	ivec2 Point(5, 7);

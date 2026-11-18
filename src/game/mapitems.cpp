@@ -206,7 +206,7 @@ CColor UnpackColor(int PackedColor)
 
 void RotatePoints(const ivec2 &Center, ivec2 *pPoints, size_t NumPoints, float Rotation)
 {
-	if(!std::isfinite(Rotation))
+	if(Rotation == 0.0f || !std::isfinite(Rotation))
 		return;
 
 	const float Cos = std::cos(Rotation);
