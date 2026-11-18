@@ -4231,6 +4231,7 @@ if(CLIENT)
     auto_map.h
     collab_camera.cpp
     collab_camera.h
+    collab_join.h
     collab_camera_map_capture.cpp
     component.cpp
     component.h
@@ -5317,6 +5318,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/video_frame_index_queue_test.cpp
     src/test/unit/engine/editor_test.cpp
     src/test/unit/client/editor_collab_camera_test.cpp
+    src/test/unit/client/editor_collab_join_test.cpp
     src/test/unit/client/editor_quad_slice_test.cpp
     src/test/unit/client/editor_envelope_channels_test.cpp
     src/test/integration/client/editor_envelope_channel_io_test.cpp

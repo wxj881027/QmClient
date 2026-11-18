@@ -10,7 +10,9 @@
 #include <game/mapitems.h>
 
 #include <cstring>
+#include <new>
 #include <optional>
+#include <stdexcept>
 #include <vector>
 
 namespace EditorMapLoad
@@ -23,6 +25,7 @@ namespace EditorMapLoad
 
 	// 在清空编辑器旧状态前准备信息头和设置值，失败不发布部分命令。
 	inline std::optional<SInfoItems> ReadInfoItems(IEngineMap &Map)
+	try
 	{
 		if(!Map.IsLoaded())
 			return std::nullopt;
@@ -76,6 +79,14 @@ namespace EditorMapLoad
 			Remaining -= Consumed;
 		}
 		return Info;
+	}
+	catch(const std::bad_alloc &)
+	{
+		return std::nullopt;
+	}
+	catch(const std::length_error &)
+	{
+		return std::nullopt;
 	}
 }
 

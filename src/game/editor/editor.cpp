@@ -5,6 +5,7 @@
 
 #include "auto_map.h"
 #include "collab_camera.h"
+#include "collab_join.h"
 #include "editor_actions.h"
 
 #include <base/color.h>
@@ -3726,7 +3727,6 @@ void CEditor::UpdateCollabRealtime()
 		const int Id = EditorCollabJsonInt(pRoot, "request_id", -1);
 		const int Status = EditorCollabJsonInt(pRoot, "status", 0);
 		const bool Valid = str_comp(EditorCollabJsonString(pRoot, "type"), "collab") == 0;
-		const bool JoinedResponse = Status == 200 && EditorCollabJsonOk(pRoot);
 		json_value_free(pRoot);
 		if(!Valid)
 			continue;
@@ -3751,8 +3751,6 @@ void CEditor::UpdateCollabRealtime()
 		pRequest->m_Response = std::move(Message.m_Data);
 		pRequest->m_Status = Status;
 		pRequest->m_Done = true;
-		if(JoinedResponse && (pRequest->m_JoinTransport || pRequest == m_pCollabCreateTask))
-			m_CollabJoinedTransport = true;
 		// 按收到的帧顺序更新 revision，避免推送与上传确认互相覆盖。
 		FinishCollabCreateJoin(m_pCollabCreateTask, false);
 		FinishCollabCreateJoin(m_pCollabJoinTask, true);
@@ -3991,23 +3989,26 @@ void CEditor::FinishCollabCreateJoin(std::shared_ptr<SCollabRequest> &pTask, boo
 	}
 	else
 	{
+		const char *pSnapshot = Joining ? EditorCollabJsonString(pRoot, "map_base64") : "";
+		const int Revision = EditorCollabJsonInt(pRoot, "revision", 0);
+		if(!AcceptCollabJoinSnapshot(pSnapshot, Revision, false))
+		{
+			json_value_free(pRoot);
+			return;
+		}
 		const char *pRoomCode = EditorCollabJsonString(pRoot, "room_code");
 		if(pRoomCode[0] != '\0')
 		{
 			str_copy(m_aCollabRoomCode, pRoomCode);
 			m_CollabRoomInput.Set(pRoomCode);
 		}
-		m_CollabRevision = EditorCollabJsonInt(pRoot, "revision", 0);
 		m_CollabMemberCount = EditorCollabJsonInt(pRoot, "member_count", 1);
 		m_CollabMaxMembers = EditorCollabJsonInt(pRoot, "max_members", QM_EDITOR_COLLAB_MAX_MEMBERS);
 		m_CollabState = ECollabState::CONNECTED;
 		m_CollabNextPushTime = 0;
-		m_CollabLastUploadedModifiedTime = -1.0f;
-
-		const char *pMapBase64 = EditorCollabJsonString(pRoot, "map_base64");
-		if(Joining && pMapBase64[0] != '\0')
-			ApplyCollabSnapshotBase64(pMapBase64, m_CollabRevision);
-		else if(!Joining)
+		if(pSnapshot[0] == '\0')
+			m_CollabLastUploadedModifiedTime = -1.0f;
+		if(!Joining)
 			StartCollabSnapshotSave(true);
 
 		SetCollabStatus(Localizable("Joined room %s (%d/%d people)", "Editor"), m_aCollabRoomCode, m_CollabMemberCount, m_CollabMaxMembers);
@@ -4137,9 +4138,16 @@ void CEditor::FinishCollabPull()
 		m_CollabMaxMembers = EditorCollabJsonInt(pRoot, "max_members", m_CollabMaxMembers);
 
 		const char *pMapBase64 = EditorCollabJsonString(pRoot, "map_base64");
-		if(Revision > m_CollabRevision && pMapBase64[0] != '\0')
+		const bool NewSnapshot = Revision > m_CollabRevision && pMapBase64[0] != '\0';
+		const bool Rejoining = m_pCollabPullTask->m_JoinTransport;
+		if(Rejoining && !AcceptCollabJoinSnapshot(pMapBase64, Revision, true))
 		{
-			if(ApplyCollabSnapshotBase64(pMapBase64, Revision, !m_pCollabPullTask->m_JoinTransport))
+			json_value_free(pRoot);
+			return;
+		}
+		if(NewSnapshot)
+		{
+			if(Rejoining || ApplyCollabSnapshotBase64(pMapBase64, Revision, true))
 				SetCollabStatus(Localizable("Received a sync update from room %s (%d/%d people)", "Editor"), m_aCollabRoomCode, m_CollabMemberCount, m_CollabMaxMembers);
 		}
 		else
@@ -4152,6 +4160,17 @@ void CEditor::FinishCollabPull()
 	if(pRoot)
 		json_value_free(pRoot);
 	m_pCollabPullTask = nullptr;
+}
+
+bool CEditor::AcceptCollabJoinSnapshot(const char *pSnapshot, int Revision, bool Rejoining)
+{
+	const auto Load = [this](const char *pData, int RoomRevision) { return ApplyCollabSnapshotBase64(pData, RoomRevision); };
+	if(EditorCollab::AcceptJoinSnapshot(pSnapshot, Revision, Rejoining, m_CollabRevision, m_CollabJoinedTransport, Load))
+		return true;
+
+	// 快照失败时保留具体错误，并清除会话、旧请求和待上传状态，以便重新加入。
+	ResetCollabSession();
+	return false;
 }
 
 bool CEditor::ApplyCollabSnapshotBase64(const char *pMapBase64, int Revision, bool RemoteUpdate)
@@ -4213,14 +4232,14 @@ bool CEditor::LoadCollabSnapshot(const char *pFilename, int StorageType, bool Fo
 	char aPreviousFilename[IO_MAX_PATH_LENGTH];
 	str_copy(aPreviousFilename, Map()->m_aFilename);
 	const bool ValidSaveFilename = Map()->m_ValidSaveFilename;
-	const auto PreviousPlacements = FollowPlacement ? CEditorCollabPlacementSnapshot::Capture(*Map()) : CEditorCollabPlacementSnapshot{};
+	const auto Capture = [this] { return CEditorCollabPlacementSnapshot::Capture(*Map()); };
 
 	const auto &&ErrorHandler = [this](const char *pErrorMessage) {
 		SetCollabStatus("%s", pErrorMessage);
 		log_error("editor/collab", "%s", pErrorMessage);
 	};
 
-	const bool Result = ReloadEditorCollabSnapshotKeepingCamera(Map()->m_MapViewState, [&]() {
+	return ReloadEditorCollabSnapshot(Map()->m_MapViewState, FollowPlacement, Capture, [&]() {
 		Reset(false);
 		// Load 在新地图通过基础校验后清理旧内容，加载失败时保留原地图与撤销记录。
 		const bool Loaded = Map()->Load(pFilename, StorageType, std::move(ErrorHandler));
@@ -4238,13 +4257,6 @@ bool CEditor::LoadCollabSnapshot(const char *pFilename, int StorageType, bool Fo
 		}
 		return Loaded;
 	});
-	if(Result && FollowPlacement && PreviousPlacements.m_Complete)
-	{
-		const auto Placements = CEditorCollabPlacementSnapshot::Capture(*Map());
-		if(const auto Target = Placements.FindPlacement(PreviousPlacements))
-			Target->CenterCamera(Map()->m_MapViewState.m_WorldOffset, Map()->m_MapViewState.m_EditorOffset);
-	}
-	return Result;
 }
 
 void CEditor::UpdateCollab()

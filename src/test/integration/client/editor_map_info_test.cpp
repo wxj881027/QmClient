@@ -14,7 +14,9 @@
 #include <cstdlib>
 #include <iterator>
 #include <memory>
+#include <new>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <utility>
 
@@ -84,6 +86,44 @@ namespace
 			Writer.Finish();
 		}
 	};
+}
+
+TEST_F(EditorMapInfo, SettingsPreparationCanRetryAfterResourceFailure)
+{
+	class CSettingsReadMap : public CMap
+	{
+	public:
+		using CMap::CMap;
+		int m_FailingIndex = -1;
+		bool m_CapacityFailure = false;
+		void *GetData(int Index) override
+		{
+			if(Index == m_FailingIndex)
+			{
+				if(m_CapacityFailure)
+					throw std::length_error("settings capacity");
+				throw std::bad_alloc();
+			}
+			return CMap::GetData(Index);
+		}
+	};
+
+	ASSERT_NO_FATAL_FAILURE(WriteMap({}));
+	CSettingsReadMap Map(m_pStorage.get());
+	ASSERT_TRUE(Map.Load("editor_info.map", IStorage::TYPE_SAVE));
+	for(bool CapacityFailure : {false, true})
+	{
+		SCOPED_TRACE(CapacityFailure);
+		Map.m_FailingIndex = m_SettingsDataIndex;
+		Map.m_CapacityFailure = CapacityFailure;
+		EXPECT_FALSE(EditorMapLoad::ReadInfoItems(Map));
+		Map.m_FailingIndex = -1;
+		const auto Info = EditorMapLoad::ReadInfoItems(Map);
+		ASSERT_TRUE(Info);
+		ASSERT_EQ(Info->m_vSettings.size(), 2u);
+		EXPECT_STREQ(Info->m_vSettings[0].m_aCommand, "first");
+		EXPECT_STREQ(Info->m_vSettings[1].m_aCommand, "second");
+	}
 }
 
 TEST_F(EditorMapInfo, UnloadedCandidateCannotPrepareInfo)

@@ -379,6 +379,7 @@ public:
 	void FinishCollabLeave();
 	void FinishCollabPush();
 	void FinishCollabPull();
+	bool AcceptCollabJoinSnapshot(const char *pSnapshot, int Revision, bool Rejoining);
 	bool ApplyCollabSnapshotBase64(const char *pMapBase64, int Revision, bool RemoteUpdate = false);
 	bool LoadCollabSnapshot(const char *pFilename, int StorageType, bool FollowPlacement = false);
 
