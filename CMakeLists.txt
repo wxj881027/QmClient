@@ -6798,6 +6798,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/settings/qm_bind_command_card_commit_test.cpp
       src/test/unit/qmclient/settings/qm_chat_completion_card_preview_test.cpp
       src/test/unit/qmclient/settings/qm_graphics_mode_choice_test.cpp
+      src/test/unit/qmclient/settings/qm_menu_settings_card_layout_migration_test.cpp
       src/test/integration/qmclient/ui/qm_popup_blur_scope_test.cpp
       src/test/integration/qmclient/ui/qm_clip_suspend_test.cpp
       src/test/integration/qmclient/ui/qm_author_name_blur_test.cpp

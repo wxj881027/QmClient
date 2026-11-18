@@ -1149,18 +1149,10 @@ void CMenus::LoadSettingsCardOrderModel()
 			return;
 		}
 	}
-	if(g_Config.m_QmCardLayoutVersion < 6)
+	if(g_Config.m_QmCardLayoutVersion < 6 && !qmclient::settings_card_order::TryMigrateTClientMainCardsLayout(m_SettingsCardOrderModel, g_Config.m_QmGlobalCardOrder, g_Config.m_QmCardLayoutVersion))
 	{
-		char aSerialized[sizeof(g_Config.m_QmGlobalCardOrder)];
-		const qm_card_registry::ETClientMainCardsMigrationResult MigrationResult = qm_card_registry::MigrateTClientMainCardsToAlternatingColumns(m_SettingsCardOrderModel, aSerialized, sizeof(aSerialized));
-		const qm_card_registry::STClientMainCardsMigrationCommitPlan CommitPlan = qm_card_registry::TClientMainCardsMigrationCommitPlan(MigrationResult);
-		if(CommitPlan.m_PersistSerialized)
-		{
-			str_copy(g_Config.m_QmGlobalCardOrder, aSerialized, sizeof(g_Config.m_QmGlobalCardOrder));
-			m_SettingsCardOrderModel.ClearDirty();
-		}
-		if(CommitPlan.m_AdvanceVersion)
-			g_Config.m_QmCardLayoutVersion = 6;
+		m_SettingsCardOrderLoaded = true;
+		return;
 	}
 	if(g_Config.m_QmCardLayoutVersion < 7)
 	{

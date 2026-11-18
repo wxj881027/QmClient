@@ -24,6 +24,7 @@
 #include <game/client/QmUi/MapTagsPanel.h>
 #include <game/client/QmUi/QmAuthorName.h>
 #include <game/client/QmUi/QmAuthorTee.h>
+#include <game/client/QmUi/QmCardRegistry.h>
 #include <game/client/QmUi/QmIslandNotice.h>
 #include <game/client/QmUi/QmLocalizedLabels.h>
 #include <game/client/QmUi/QmPlayersMenu.h>
@@ -3503,4 +3504,24 @@ private:
 	bool RenderHslaScrollbars(CUIRect *pRect, unsigned int *pColor, bool Alpha, float DarkestLight, const SSettingsContentMetrics &Metrics);
 	int DoButtonLineSize_Menu(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, float ButtonLineSize, bool Fake = false, const char *pImageName = nullptr, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE, float FontFactor = 0.0f, ColorRGBA Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), float FontSize = -1.0f);
 };
+
+namespace qmclient::settings_card_order
+{
+	template<size_t Size>
+	bool TryMigrateTClientMainCardsLayout(qm_card_order::CModel &Model, char (&aStoredOrder)[Size], int &Version)
+	{
+		char aSerialized[Size];
+		const auto Result = qm_card_registry::MigrateTClientMainCardsToAlternatingColumns(Model, aSerialized, sizeof(aSerialized));
+		const auto CommitPlan = qm_card_registry::TClientMainCardsMigrationCommitPlan(Result);
+		if(!CommitPlan.m_AdvanceVersion)
+			return false;
+		if(CommitPlan.m_PersistSerialized)
+		{
+			str_copy(aStoredOrder, aSerialized);
+			Model.ClearDirty();
+		}
+		Version = 6;
+		return true;
+	}
+}
 #endif
