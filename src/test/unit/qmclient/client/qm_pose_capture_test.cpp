@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 
+#include <vector>
+
 TEST(QmPoseCapture, ScaleOutsideOneToFourFallsBackToOne)
 {
 	// 命令来自控制台与界面：越界值不该让渲染路径失效，归一成 1 倍（窗口分辨率）。

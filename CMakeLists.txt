@@ -5605,6 +5605,10 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_pose_scene_test.cpp
     src/test/unit/qmclient/client/qm_pose_map_test.cpp
     src/test/unit/qmclient/client/qm_pose_capture_test.cpp
+    src/test/integration/qmclient/client/qm_pose_map_console_test.cpp
+    src/test/integration/qmclient/client/qm_rank_ghost_legacy_cleanup_test.cpp
+    src/test/unit/qmclient/client/qm_axiom_checkpoint_test.cpp
+    src/test/unit/qmclient/client/qm_fast_practice_rescue_history_test.cpp
     src/test/unit/qmclient/client/qm_video_preset_labels_test.cpp
     src/test/unit/client/online_replay_player_test.cpp
     src/test/unit/qmclient/client/qm_jump_hint_utils_test.cpp
@@ -7009,6 +7013,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/client/qm_map_progress_allocation_test.cpp
       src/test/unit/engine/net_client_allocation_test.cpp
       src/test/unit/engine/favorites_allocation_test.cpp
+      src/test/unit/qmclient/client/qm_pose_capture_allocation_test.cpp
       src/test/unit/qmclient/client/qm_public_word_filter_match_allocation_test.cpp
       src/test/integration/qmclient/client/qm_map_tags_write_completion_allocation_test.cpp
       src/test/unit/qmclient/client/qm_rank_demo_manifest_allocation_test.cpp

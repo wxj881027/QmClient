@@ -11,7 +11,10 @@
 #include <base/vmath.h>
 
 #include <cstdint>
-#include <vector>
+#include <cstring>
+#include <limits>
+#include <memory>
+#include <new>
 
 namespace qm_pose
 {
@@ -162,16 +165,19 @@ namespace qm_pose
 		// 缓变渐变每像素变化 1-2，这个阈值把它们整片跳过；真实边缘远超它。
 		constexpr int EDGE_THRESHOLD = 12;
 
-		// 先拷一份源：就地处理会让已经锐化过的像素参与邻域计算，产生方向性条纹。
-		const size_t Bytes = (size_t)Width * (size_t)Height * 4;
-		std::vector<uint8_t> Source(Bytes);
-		for(size_t i = 0; i < Bytes; ++i)
-			Source[i] = pPixels[i];
+		// 用原图做采样，避免就地处理产生方向性条纹。内存不足时仍可提交原图。
+		if(static_cast<size_t>(Width) > std::numeric_limits<size_t>::max() / 4 / static_cast<size_t>(Height))
+			return;
+		const size_t Bytes = static_cast<size_t>(Width) * static_cast<size_t>(Height) * 4;
+		const std::unique_ptr<uint8_t[]> pSource(new(std::nothrow) uint8_t[Bytes]);
+		if(!pSource)
+			return;
+		std::memcpy(pSource.get(), pPixels, Bytes);
 
 		const auto Sample = [&](int X, int Y, int Channel) {
 			X = minimum(maximum(X, 0), Width - 1);
 			Y = minimum(maximum(Y, 0), Height - 1);
-			return (int)Source[((size_t)Y * (size_t)Width + (size_t)X) * 4 + (size_t)Channel];
+			return (int)pSource[((size_t)Y * (size_t)Width + (size_t)X) * 4 + (size_t)Channel];
 		};
 
 		for(int Y = 0; Y < Height; ++Y)
@@ -179,7 +185,7 @@ namespace qm_pose
 			for(int X = 0; X < Width; ++X)
 			{
 				const size_t Index = ((size_t)Y * (size_t)Width + (size_t)X) * 4;
-				const int CenterAlpha = Source[Index + 3];
+				const int CenterAlpha = pSource[Index + 3];
 				// 完全透明的像素不参与，否则会把邻域颜色扩散进空白区。
 				if(CenterAlpha == 0)
 					continue;

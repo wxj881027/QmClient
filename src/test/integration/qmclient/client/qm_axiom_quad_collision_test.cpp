@@ -6,6 +6,7 @@
 #include <game/gamecore.h>
 #include <game/layers.h>
 #include <game/mapitems.h>
+#include <game/qm_axiom_quad_collision.h>
 
 #include <gtest/gtest.h>
 
@@ -420,6 +421,24 @@ TEST(QmAxiomQuadCollision, InvalidTimeAndDegenerateQuadDoNotCorruptQueries)
 	EXPECT_DOUBLE_EQ(F.m_Collision.QmAxiomQuadTime(), 0);
 	EXPECT_TRUE(F.m_Collision.CheckPoint(48, 48));
 	EXPECT_FALSE(F.m_Collision.CheckPoint(80, 80));
+}
+
+TEST(QmAxiomQuadCollision, UnrepresentableQueryCoordinatesLeaveCollisionUsable)
+{
+	SQuadFixture F;
+	F.m_vLayers.push_back({"QHook", {MakeQuad()}});
+	F.Init(false);
+	CQmAxiomQuadCollision Quads;
+	Quads.Init(&F.m_Layers);
+
+	const float Huge = std::numeric_limits<float>::max();
+	const float Nan = std::numeric_limits<float>::quiet_NaN();
+	EXPECT_EQ(Quads.TileAt(vec2(Huge, 48)), 0);
+	EXPECT_FALSE(Quads.TestBox(vec2(Huge, 48), vec2(1, 1)));
+	float Fraction = -1;
+	EXPECT_EQ(Quads.IntersectLine(vec2(48, 48), vec2(Nan, 48), &Fraction), 0);
+	EXPECT_FLOAT_EQ(Fraction, -1);
+	EXPECT_EQ(Quads.TileAt(vec2(48, 48)), TILE_SOLID);
 }
 
 TEST(QmAxiomQuadCollision, TuneZoneIsReadFromQuadAndRangeChecked)

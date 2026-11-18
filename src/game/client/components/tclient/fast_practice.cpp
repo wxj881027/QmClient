@@ -861,6 +861,15 @@ void CFastPractice::Enable(bool PreserveHeldInput)
 		return;
 	}
 
+	// 在锁定联机输入前准备渲染和相机所需的预测世界。
+	m_PracticeBaseWorld.m_GameTick = Client()->PredGameTick(g_Config.m_ClDummy);
+	if(!GameClient()->m_PrevPredictedWorld.CopyWorldClean(&m_PracticeBaseWorld) ||
+		!GameClient()->m_PredictedWorld.CopyWorldClean(&m_PracticeBaseWorld))
+	{
+		ResetPracticeState();
+		return;
+	}
+
 	CaptureServerLockedInputs();
 	CaptureServerReleasedFireStates();
 	CapturePracticeInputFilterStates();
@@ -868,7 +877,6 @@ void CFastPractice::Enable(bool PreserveHeldInput)
 		PreserveCurrentPracticeInputFilterStates();
 	ReleaseBufferedActionInputState();
 	m_Enabled = true;
-	m_PracticeBaseWorld.m_GameTick = Client()->PredGameTick(g_Config.m_ClDummy);
 	GameClient()->m_PredictedDummyId = CurrentPracticeDummyId();
 	ResetCommandState();
 	ResetAttackTickHistory();
@@ -880,11 +888,6 @@ void CFastPractice::Enable(bool PreserveHeldInput)
 	m_SuppressFireOnNextPredictTick = true;
 	m_InputSuppressTicks = std::max(m_InputSuppressTicks, 2);
 
-	// Snap renderer/camera prediction state to the local practice world immediately.
-	if(!GameClient()->m_PredictedWorld.CopyWorldClean(&m_PracticeBaseWorld))
-		return;
-	if(!GameClient()->m_PrevPredictedWorld.CopyWorldClean(&m_PracticeBaseWorld))
-		return;
 	if(CCharacter *pPredChar = GameClient()->m_PredictedWorld.GetCharacterById(m_EnableLocalClientId))
 	{
 		GameClient()->m_PredictedChar = pPredChar->GetCore();
@@ -2221,12 +2224,8 @@ void CFastPractice::TrackSafeRescuePosition(int ClientId, CCharacter *pChar)
 		return;
 
 	auto &State = m_aPracticeCommandState[ClientId];
-	if(!State.m_vSafePositions.empty() && distance(State.m_vSafePositions.front(), Pos) < 48.0f)
+	if(!State.m_RescueHistory.Add(Pos))
 		return;
-
-	State.m_vSafePositions.push_front(Pos);
-	if((int)State.m_vSafePositions.size() > SPracticeCommandState::MAX_SAFE_POSITIONS)
-		State.m_vSafePositions.pop_back();
 	State.m_HasRescueAuto = true;
 	State.m_RescueAutoPos = Pos;
 }
@@ -2240,8 +2239,9 @@ bool CFastPractice::FindNearestSafeRescuePosition(int ClientId, const vec2 &From
 	float BestDistance = std::numeric_limits<float>::max();
 	bool Found = false;
 
-	for(const vec2 &Pos : State.m_vSafePositions)
+	for(int Offset = 0; Offset < State.m_RescueHistory.Size(); ++Offset)
 	{
+		const vec2 &Pos = State.m_RescueHistory.NewestAt(Offset);
 		if(!IsSafeRescuePosition(Pos, CCharacterCore::PhysicalSize()))
 			continue;
 

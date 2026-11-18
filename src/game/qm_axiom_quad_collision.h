@@ -8,11 +8,29 @@
 
 #include <array>
 #include <cstdint>
+#include <limits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
 class CLayers;
+
+namespace qm_axiom
+{
+	template<typename TGetOuts>
+	const std::vector<vec2> *FindTeleCheckpointOuts(int Checkpoint, const TGetOuts &GetOuts)
+	{
+		// 快照给的是 int。地图只能存储一字节的传送编号，向下查找时从最大合法编号起步。
+		constexpr int MAX_NUMBER = std::numeric_limits<decltype(CTeleTile::m_Number)>::max();
+		for(int Number = minimum(Checkpoint, MAX_NUMBER); Number > 0; --Number)
+		{
+			const auto &vOuts = GetOuts(Number - 1);
+			if(!vOuts.empty())
+				return &vOuts;
+		}
+		return nullptr;
+	}
+}
 
 // 由显式启用预测的碰撞实例持有；时间由调用方传入，支持回退与重放。
 class CQmAxiomQuadCollision

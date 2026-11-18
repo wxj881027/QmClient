@@ -15,9 +15,38 @@
 #include <game/gamecore.h>
 
 #include <array>
-#include <deque>
 #include <string>
 #include <vector>
+
+namespace qm_fast_practice
+{
+	// 每个角色保留最近的安全位置，复位和预测 tick 无需为历史记录分配内存。
+	class CRescueHistory
+	{
+		static constexpr int MAX_POSITIONS = 256;
+		std::array<vec2, MAX_POSITIONS> m_aPositions{};
+		int m_Count = 0;
+		int m_Next = 0;
+
+	public:
+		int Size() const { return m_Count; }
+
+		const vec2 &NewestAt(int Offset) const
+		{
+			return m_aPositions[(m_Next + MAX_POSITIONS - 1 - Offset) % MAX_POSITIONS];
+		}
+
+		bool Add(vec2 Position)
+		{
+			if(m_Count > 0 && distance(NewestAt(0), Position) < 48.0f)
+				return false;
+			m_aPositions[m_Next] = Position;
+			m_Next = (m_Next + 1) % MAX_POSITIONS;
+			m_Count = minimum(m_Count + 1, MAX_POSITIONS);
+			return true;
+		}
+	};
+}
 
 class CFastPractice : public CComponent
 {
@@ -100,7 +129,6 @@ private:
 
 	struct SPracticeCommandState
 	{
-		static constexpr int MAX_SAFE_POSITIONS = 256;
 		bool m_RescueManual = false;
 		bool m_HasRescueAuto = false;
 		bool m_HasRescueManual = false;
@@ -111,7 +139,7 @@ private:
 		vec2 m_RescueManualPos = vec2(0.0f, 0.0f);
 		vec2 m_LastTeleportPos = vec2(0.0f, 0.0f);
 		vec2 m_LastDeathPos = vec2(0.0f, 0.0f);
-		std::deque<vec2> m_vSafePositions;
+		qm_fast_practice::CRescueHistory m_RescueHistory;
 	};
 
 	bool m_Enabled = false;
