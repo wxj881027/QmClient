@@ -432,6 +432,16 @@ TEST(ServerBrowserStatusLayout, NarrowContentStacksFieldsFilterAndActionsWithout
 	EXPECT_GE(Layout.m_ConnectButton.x, Layout.m_RefreshButton.x + Layout.m_RefreshButton.w);
 }
 
+TEST(ServerBrowserStatusLayout, MapFilterRemainsWideEnoughToRenderAcrossInlineTransition)
+{
+	for(float Width : {549.0f, 550.0f, 600.0f, 666.0f, 667.0f})
+	{
+		SCOPED_TRACE(Width);
+		const auto Layout = QmBrowserStatusLayout({0.0f, 0.0f, Width, 100.0f}, false);
+		EXPECT_GE(Layout.m_MapFilter.w, 150.0f);
+	}
+}
+
 TEST(ServerBrowserStatusLayout, WidthTransitionsKeepEveryControlWithinMeasuredContent)
 {
 	for(float Width : {0.0f, 1.0f, 16.0f, 80.0f, 219.0f, 220.0f, 429.0f, 430.0f, 549.0f, 550.0f, 630.0f, 1000.0f})

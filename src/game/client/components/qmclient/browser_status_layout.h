@@ -141,8 +141,13 @@ inline SQmBrowserStatusLayout QmBrowserStatusLayout(CUIRect Area, bool ShowNotic
 	const float Width = QmBrowserLayoutExtent(Area.w);
 	const bool SideActions = Width >= 430.0f;
 	const bool InlineMapFilter = Width >= 550.0f;
-	const float FieldWidth = InlineMapFilter ? std::min(350.0f, Width - 143.0f - 24.0f - 140.0f) : SideActions ? Width - 143.0f :
-														     Width;
+	float FieldWidth = SideActions ? Width - 143.0f : Width;
+	if(InlineMapFilter)
+	{
+		// 给地图筛选留出 RenderServerbrowserMapFilterSelector 要求的最小宽度。
+		constexpr float MinMapFilterWidth = 150.0f;
+		FieldWidth = std::min(350.0f, FieldWidth - 24.0f - MinMapFilterWidth);
+	}
 	const bool StackedLabels = FieldWidth < 220.0f;
 	const float RowHeight = StackedLabels ? 40.0f : 24.0f;
 	Result.m_RefreshBar = {Area.x, Area.y, Width, 2.0f};
