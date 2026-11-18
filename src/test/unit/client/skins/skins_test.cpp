@@ -584,6 +584,14 @@ TEST(Skins, SourceChangeRestartsLoadingAndPreservesPendingRequests)
 	EXPECT_EQ(CSkins::CSkinContainer::SourceRefreshState(Before, After, EState::PENDING, false, true, true), EState::PENDING);
 }
 
+TEST(Skins, LocalReplacementKeepsSkinRequestWaitingForAdmission)
+{
+	using EState = CSkins::CSkinContainer::EState;
+	const SQmSkinSourceIdentity Downloaded{true, IStorage::TYPE_SAVE, 100};
+	const SQmSkinSourceIdentity Local{false, IStorage::TYPE_SAVE, 101};
+	EXPECT_EQ(CSkins::CSkinContainer::SourceRefreshState(Downloaded, Local, EState::BACKGROUND_REQUESTED, false, true, true), EState::BACKGROUND_REQUESTED);
+}
+
 TEST(Skins, SourceChangeLeavesUnrequestedSkinsUnloadedAndRespectsDisabledDownloads)
 {
 	using EState = CSkins::CSkinContainer::EState;
@@ -669,6 +677,7 @@ TEST(Skins, ChangedDownloadSourceStillRespectsDisabledDownloads)
 	const SQmSkinSourceIdentity Before{true, IStorage::TYPE_SAVE, 100};
 	const SQmSkinSourceIdentity After{true, IStorage::TYPE_SAVE, 101};
 	EXPECT_EQ(CSkins::CSkinContainer::SourceRefreshState(Before, After, EState::LOADED, false, true, false), EState::NOT_FOUND);
+	EXPECT_EQ(CSkins::CSkinContainer::SourceRefreshState(Before, After, EState::BACKGROUND_REQUESTED, false, true, false), EState::NOT_FOUND);
 }
 
 TEST(Skins, LocalSourceReplacementStillRespectsVanillaRestriction)

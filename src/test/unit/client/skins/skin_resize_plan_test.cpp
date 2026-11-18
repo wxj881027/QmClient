@@ -21,11 +21,11 @@ namespace
 		const CSkins::SSkinSpriteSpec m_Feet{8, 4, 6, 1, 2, 1};
 		const CSkins::SSkinSpriteSpec m_FeetOutline{8, 4, 6, 2, 2, 1};
 
-		void Prepare(int Width, int Height)
+		void Prepare(int Width, int Height, CImageInfo::EImageFormat Format = CImageInfo::FORMAT_RGBA)
 		{
 			m_Image.m_Width = Width;
 			m_Image.m_Height = Height;
-			m_Image.m_Format = CImageInfo::FORMAT_RGBA;
+			m_Image.m_Format = Format;
 			m_Image.m_pData = static_cast<uint8_t *>(malloc(m_Image.DataSize()));
 			ASSERT_NE(m_Image.m_pData, nullptr);
 			mem_set(m_Image.m_pData, 255, m_Image.DataSize());
@@ -60,6 +60,16 @@ TEST_F(CSkinResizePlan, FailedHeightResizeKeepsTheOriginalImageAndPlan)
 	EXPECT_EQ(m_Image.m_Width, 8u);
 	EXPECT_EQ(m_Image.m_Height, 1u);
 	EXPECT_EQ(m_Image.m_pData, pPixels);
+	EXPECT_EQ(m_Plan.m_Body.m_MaxWidth, 77);
+	EXPECT_EQ(m_Plan.m_Feet.m_MaxHeight, 88);
+}
+
+TEST_F(CSkinResizePlan, RgbSkinIsRejectedWithoutResizing)
+{
+	Prepare(1, 4, CImageInfo::FORMAT_RGB);
+	EXPECT_FALSE(Build());
+	EXPECT_EQ(m_Image.m_Width, 1u);
+	EXPECT_EQ(m_Image.m_Height, 4u);
 	EXPECT_EQ(m_Plan.m_Body.m_MaxWidth, 77);
 	EXPECT_EQ(m_Plan.m_Feet.m_MaxHeight, 88);
 }

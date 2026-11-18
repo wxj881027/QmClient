@@ -217,6 +217,8 @@ public:
 				return InitialState;
 			if(State == EState::LOADED || State == EState::LOADING || State == EState::PENDING)
 				return EState::PENDING;
+			if(State == EState::BACKGROUND_REQUESTED && InitialState == EState::UNLOADED)
+				return EState::BACKGROUND_REQUESTED;
 			return InitialState;
 		}
 		static bool IsUnresolved(EState State)
@@ -380,10 +382,10 @@ public:
 		bool m_SelectedDummy;
 		std::optional<SColorKey> m_ColorKey;
 		std::optional<std::pair<int, int>> m_NameMatch;
-		char m_ListItemId;
-		char m_FavoriteButtonId;
-		char m_ErrorTooltipId;
-		char m_RightDoubleClickId;
+		char m_ListItemId = 0;
+		char m_FavoriteButtonId = 0;
+		char m_ErrorTooltipId = 0;
+		char m_RightDoubleClickId = 0;
 	};
 
 	class CSkinList
@@ -514,11 +516,11 @@ public:
 
 	static bool BuildSkinDataPlan(CImageInfo &Image, const SSkinSpriteSpec &Body, const SSkinSpriteSpec &BodyOutline, const SSkinSpriteSpec &Feet, const SSkinSpriteSpec &FeetOutline, SSkinDataPlan &Plan, void (*pfnResize)(CImageInfo &, int, int) = ResizeImage)
 	{
-		if(!PrepareSkinImage(Image, Body.m_GridX, Body.m_GridY, pfnResize))
+		if(Image.m_Format != CImageInfo::FORMAT_RGBA)
 		{
 			return false;
 		}
-		if(Image.m_Format != CImageInfo::FORMAT_RGBA)
+		if(!PrepareSkinImage(Image, Body.m_GridX, Body.m_GridY, pfnResize))
 		{
 			return false;
 		}
@@ -807,8 +809,9 @@ private:
 			NewWidth = (NewHeight / DivY) * DivX;
 		}
 		pfnResize(Image, NewWidth, NewHeight);
-		// 缩放分配失败会保留原图，只有目标尺寸实际生效才允许继续生成度量。
-		return Image.m_Width == (size_t)NewWidth && Image.m_Height == (size_t)NewHeight;
+		// 缩放后仍须保有 RGBA 格式和目标尺寸才能读取透明度。
+		return Image.m_Format == CImageInfo::FORMAT_RGBA &&
+		       Image.m_Width == (size_t)NewWidth && Image.m_Height == (size_t)NewHeight;
 	}
 	static bool MeasureSkinSprite(SSkinMetricPlan &Plan, const CImageInfo &Image, const SSkinSpriteSpec &Sprite)
 	{
