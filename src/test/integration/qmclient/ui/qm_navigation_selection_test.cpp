@@ -240,6 +240,32 @@ TEST_F(QmNavigationSelection, SavedListSelectionCanStayAtTopUntilExplicitlyRevea
 	EXPECT_GT(List.ScrollOffsetY(), 0.0f);
 }
 
+TEST_F(QmNavigationSelection, ListActivationKeepsItsRowWhenNavigationSharesTheFrame)
+{
+	CUIElementBase::Init(&m_Ui);
+	CListBox List;
+	std::array<int, 3> aIds{};
+	const CUIRect View{20.0f, 20.0f, 200.0f, 100.0f};
+	const auto DrawList = [&]() {
+		List.DoStart(20.0f, static_cast<int>(aIds.size()), 1, 3, 1, &View, false);
+		for(const int &Id : aIds)
+			List.DoNextItem(&Id);
+		return List.DoEnd();
+	};
+
+	const IInput::CEvent Navigate{.m_Flags = IInput::FLAG_PRESS, .m_Key = KEY_DOWN};
+	const IInput::CEvent Activate{.m_Flags = IInput::FLAG_PRESS, .m_Key = KEY_RETURN};
+	ASSERT_TRUE(m_Ui.OnInput(Navigate));
+	ASSERT_TRUE(m_Ui.OnInput(Activate));
+	EXPECT_EQ(DrawList(), 1);
+	EXPECT_TRUE(List.WasItemActivated());
+
+	Frame({0, 0}, false);
+	ASSERT_TRUE(m_Ui.OnInput(Navigate));
+	EXPECT_EQ(DrawList(), 2);
+	EXPECT_FALSE(List.WasItemActivated());
+}
+
 TEST_F(QmNavigationSelection, HidingActiveSlotFadesIndicatorInPlaceAndBack)
 {
 	// 进到不属于这组页签的页面时滑块不该瞬间消失，而是停在上一次的位置淡出；
