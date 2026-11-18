@@ -209,7 +209,7 @@ TEST(QmCatalogSearch, PreviewHighlightsEveryResultCard)
 	qm_settings_reveal::Clear();
 }
 
-TEST(QmCatalogSearch, MatchingLabelUsesYellowUntilDrawingFinishes)
+TEST(QmCatalogSearch, MatchingLabelUsesSurfaceAwareHighlightUntilDrawingFinishes)
 {
 	std::unique_ptr<IEngineTextRender> pTextRender(CreateEngineTextRender());
 	const ColorRGBA Original(0.2f, 0.4f, 0.6f, 0.5f);
@@ -217,8 +217,15 @@ TEST(QmCatalogSearch, MatchingLabelUsesYellowUntilDrawingFinishes)
 	const ColorRGBA Outline = pTextRender->GetTextOutlineColor();
 	{
 		const qm_settings_highlight::CScopedLabelColor Highlight(pTextRender.get(), true);
-		EXPECT_EQ(pTextRender->GetTextColor(), ColorRGBA(1.0f, 1.0f, 0.0f, Original.a));
+		EXPECT_EQ(pTextRender->GetTextColor(), ui_token::color::SEARCH_MATCH_ON_DARK.WithAlpha(Original.a));
 		EXPECT_EQ(pTextRender->GetTextOutlineColor(), Outline);
+	}
+	EXPECT_EQ(pTextRender->GetTextColor(), Original);
+	{
+		// 浅色卡片上改用深琥珀，避免白底浅黄字读不清。
+		CUiScopedSurfaceText LightSurface(pTextRender.get(), ColorRGBA(0.96f, 0.96f, 0.96f, 1.0f));
+		const qm_settings_highlight::CScopedLabelColor Highlight(pTextRender.get(), true);
+		EXPECT_EQ(pTextRender->GetTextColor(), ui_token::color::SEARCH_MATCH_ON_LIGHT.WithAlpha(Original.a));
 	}
 	EXPECT_EQ(pTextRender->GetTextColor(), Original);
 	{

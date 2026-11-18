@@ -100,6 +100,10 @@ namespace ui_token::color
 	inline constexpr ColorRGBA SUCCESS{0.42f, 0.85f, 0.52f, 1.0f};
 	// 警告：可用但需注意，例如长度超限、配置冲突。
 	inline constexpr ColorRGBA WARNING{0.98f, 0.78f, 0.30f, 1.0f};
+	// 搜索命中：暗表面用亮金、亮表面用深琥珀，保留「黄色高亮」的识别性，
+	// 同时避免白底浅黄字对比度不足。
+	inline constexpr ColorRGBA SEARCH_MATCH_ON_DARK{1.0f, 0.86f, 0.20f, 1.0f};
+	inline constexpr ColorRGBA SEARCH_MATCH_ON_LIGHT{0.55f, 0.38f, 0.00f, 1.0f};
 	// 危险：删除、断连、错误一类的负向结果，与删除按钮同一档红。
 	inline constexpr ColorRGBA DANGER{0.95f, 0.41f, 0.38f, 1.0f};
 	// 角色色：好友与收藏在各列表里反复出现，集中一处避免各页各写一份金色/粉色。
