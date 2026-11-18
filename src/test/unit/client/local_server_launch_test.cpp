@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 
+#include <cerrno>
 #include <limits>
 #include <new>
 
@@ -214,4 +215,164 @@ TEST(LocalServerLaunch, CancelledBindingCannotEmitLateConnectAndCanPrepareNewAut
 	ASSERT_TRUE(Launch.TryPrepare(nullptr, 0, "new auth", false));
 	EXPECT_STREQ(Launch.Data()[0], "new auth");
 	EXPECT_TRUE(Launch.IsReady());
+}
+
+namespace
+{
+	class LocalServerUnixProcess : public testing::Test
+	{
+	protected:
+		using TPid = CLocalServerUnixProcess::TPid;
+		CLocalServerUnixProcess m_Process;
+		CLocalServerUnixProcess::SProbeResult m_ProbeResult{};
+		int m_StartCalls = 0;
+		int m_SignalCalls = 0;
+		int m_SignalError = 0;
+		TPid m_LastProbed = 0;
+		TPid m_LastSignalled = 0;
+
+		bool Start(TPid Pid)
+		{
+			return m_Process.TryStart([&] {
+				++m_StartCalls;
+				return Pid;
+			});
+		}
+
+		CLocalServerUnixProcess::SPollResult Poll()
+		{
+			return m_Process.Poll(
+				[this](TPid Pid) {
+					m_LastProbed = Pid;
+					return m_ProbeResult;
+				},
+				[this](TPid Pid) {
+					++m_SignalCalls;
+					m_LastSignalled = Pid;
+					return m_SignalError;
+				});
+		}
+	};
+}
+
+TEST_F(LocalServerUnixProcess, DelayedExitBlocksRestartAndRepeatedStopSignals)
+{
+	ASSERT_TRUE(Start(42));
+	m_Process.RequestStop();
+	EXPECT_FALSE(Poll().m_Released);
+
+	for(int i = 0; i < 64; ++i)
+	{
+		m_Process.RequestStop();
+		EXPECT_FALSE(Poll().m_Released);
+	}
+	EXPECT_EQ(m_SignalCalls, 1);
+	EXPECT_EQ(m_LastProbed, 42);
+	EXPECT_EQ(m_LastSignalled, 42);
+	EXPECT_TRUE(m_Process.IsStopping());
+	EXPECT_EQ(m_Process.Pid(), 42);
+	EXPECT_FALSE(Start(43));
+	EXPECT_EQ(m_StartCalls, 1);
+
+	m_ProbeResult.m_Exited = true;
+	ASSERT_TRUE(Poll().m_Released);
+	EXPECT_FALSE(Poll().m_Released);
+	ASSERT_TRUE(Start(43));
+	EXPECT_EQ(m_StartCalls, 2);
+	EXPECT_EQ(m_Process.Pid(), 43);
+	EXPECT_FALSE(m_Process.IsStopping());
+}
+
+TEST_F(LocalServerUnixProcess, InterruptedProbeDefersStopToTheNextPoll)
+{
+	ASSERT_TRUE(Start(42));
+	m_Process.RequestStop();
+	m_ProbeResult.m_Error = EINTR;
+	const auto Interrupted = Poll();
+	EXPECT_FALSE(Interrupted.m_Released);
+	EXPECT_EQ(Interrupted.m_ProbeError, 0);
+	EXPECT_EQ(m_SignalCalls, 0);
+	EXPECT_EQ(m_Process.Pid(), 42);
+	EXPECT_TRUE(m_Process.IsStopping());
+
+	m_ProbeResult = {};
+	EXPECT_FALSE(Poll().m_Released);
+	EXPECT_EQ(m_SignalCalls, 1);
+	EXPECT_EQ(m_LastSignalled, 42);
+}
+
+TEST_F(LocalServerUnixProcess, ExitedChildIsReapedWithoutSendingSignal)
+{
+	ASSERT_TRUE(Start(42));
+	m_Process.RequestStop();
+	m_ProbeResult.m_Exited = true;
+	EXPECT_TRUE(Poll().m_Released);
+	EXPECT_EQ(m_SignalCalls, 0);
+	EXPECT_FALSE(m_Process.HasProcess());
+}
+
+TEST_F(LocalServerUnixProcess, NoChildReleasesOwnershipWithoutSendingSignal)
+{
+	ASSERT_TRUE(Start(42));
+	m_Process.RequestStop();
+	m_ProbeResult.m_Error = ECHILD;
+	EXPECT_TRUE(Poll().m_Released);
+	EXPECT_EQ(m_SignalCalls, 0);
+	EXPECT_FALSE(m_Process.HasProcess());
+
+	EXPECT_TRUE(Start(43));
+}
+
+TEST_F(LocalServerUnixProcess, MissingSignalTargetStillRequiresReapBeforeRestart)
+{
+	ASSERT_TRUE(Start(42));
+	m_Process.RequestStop();
+	m_SignalError = ESRCH;
+	const auto TargetGone = Poll();
+	EXPECT_FALSE(TargetGone.m_Released);
+	EXPECT_EQ(TargetGone.m_SignalError, 0);
+	EXPECT_TRUE(m_Process.IsStopping());
+	EXPECT_FALSE(Start(43));
+
+	m_Process.RequestStop();
+	EXPECT_FALSE(Poll().m_Released);
+	EXPECT_EQ(m_SignalCalls, 1);
+	m_ProbeResult.m_Error = ECHILD;
+	EXPECT_TRUE(Poll().m_Released);
+	EXPECT_TRUE(Start(43));
+}
+
+TEST_F(LocalServerUnixProcess, FailedSignalWaitsForAnExplicitRetry)
+{
+	ASSERT_TRUE(Start(42));
+	m_Process.RequestStop();
+	m_SignalError = EPERM;
+	EXPECT_EQ(Poll().m_SignalError, EPERM);
+	EXPECT_TRUE(m_Process.IsStopping());
+	EXPECT_FALSE(Start(43));
+	m_SignalError = 0;
+	EXPECT_FALSE(Poll().m_Released);
+	EXPECT_EQ(m_SignalCalls, 1);
+
+	m_Process.RequestStop();
+	EXPECT_FALSE(Poll().m_Released);
+	EXPECT_EQ(m_SignalCalls, 2);
+	EXPECT_EQ(m_LastSignalled, 42);
+}
+
+TEST_F(LocalServerUnixProcess, UnexpectedProbeFailureRetainsOwnershipAndPollsAgain)
+{
+	ASSERT_TRUE(Start(42));
+	m_Process.RequestStop();
+	m_ProbeResult.m_Error = EINVAL;
+	EXPECT_EQ(Poll().m_ProbeError, EINVAL);
+	EXPECT_EQ(Poll().m_ProbeError, 0);
+	EXPECT_EQ(m_SignalCalls, 0);
+	EXPECT_FALSE(Start(43));
+	EXPECT_EQ(m_Process.Pid(), 42);
+
+	m_ProbeResult = {};
+	EXPECT_FALSE(Poll().m_Released);
+	EXPECT_EQ(m_SignalCalls, 1);
+	EXPECT_EQ(m_LastSignalled, 42);
 }
