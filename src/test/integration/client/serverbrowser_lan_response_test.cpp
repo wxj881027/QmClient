@@ -65,6 +65,19 @@ namespace
 	};
 }
 
+TEST_F(ServerBrowserLanResponse, RefreshAfterClosingContactSocketClearsPreviousResults)
+{
+	Publish({Bridge()});
+	ASSERT_EQ(m_Browser.NumServers(), 1);
+	BeginLan();
+	m_NetClient.Close();
+
+	m_Browser.Refresh(IServerBrowser::TYPE_LAN);
+
+	EXPECT_EQ(m_Browser.GetCurrentType(), IServerBrowser::TYPE_LAN);
+	EXPECT_EQ(m_Browser.NumServers(), 0);
+}
+
 TEST_F(ServerBrowserLanResponse, WrongBasicTokenCannotReplaceExistingBridgeOrConsumeItsRequest)
 {
 	const auto Old = Bridge();

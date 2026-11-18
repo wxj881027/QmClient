@@ -1457,6 +1457,9 @@ void CServerBrowser::Refresh(int Type, bool Force)
 		m_HttpUpdateRetryAt = 0;
 		m_SortUpdateFailed = false;
 		m_SortUpdateRetryAt = 0;
+		if(!m_pNetClient || !m_pNetClient->m_Socket)
+			return;
+
 		unsigned char aBuffer[sizeof(SERVERBROWSE_GETINFO) + 1];
 		CNetChunk Packet;
 
