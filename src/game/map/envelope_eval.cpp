@@ -282,8 +282,8 @@ void CRenderMap::RenderEvalEnvelope(const IEnvelopePointAccess *pPoints, std::ch
 	const CEnvPoint *pCurrentPoint = pPoints->GetPoint(FoundIndex);
 	const CEnvPoint *pNextPoint = pPoints->GetPoint(FoundIndex + 1);
 
-	const CFixedTime Delta = pNextPoint->m_Time - pCurrentPoint->m_Time;
-	if(Delta <= CFixedTime(0))
+	const int64_t Delta = static_cast<int64_t>(pNextPoint->m_Time.GetInternal()) - pCurrentPoint->m_Time.GetInternal();
+	if(Delta <= 0)
 	{
 		for(size_t c = 0; c < Channels; c++)
 		{
@@ -292,7 +292,7 @@ void CRenderMap::RenderEvalEnvelope(const IEnvelopePointAccess *pPoints, std::ch
 		return;
 	}
 
-	float a = (float)(TimeMillis - pCurrentPoint->m_Time.GetInternal()) / Delta.GetInternal();
+	float a = (float)(TimeMillis - pCurrentPoint->m_Time.GetInternal()) / Delta;
 
 	switch(pCurrentPoint->m_Curvetype)
 	{

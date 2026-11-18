@@ -349,6 +349,19 @@ TEST_F(MapEnvelopeItems, MismatchedSeparateBezierCountRetainsLinearFallback)
 	EXPECT_FLOAT_EQ(Result.r, 1.5f);
 }
 
+TEST_F(MapEnvelopeItems, WideKeyframeTimeIntervalStillInterpolates)
+{
+	SItems Items;
+	Items.m_vPoints[0].m_Time = CFixedTime(INT_MIN);
+	Items.m_vPoints[0].m_Curvetype = CURVETYPE_LINEAR;
+	Items.m_vPoints[1].m_Time = CFixedTime(INT_MAX);
+	ASSERT_NO_FATAL_FAILURE(Load(Items));
+	CMapBasedEnvelopePointAccess Points(m_pMap.get());
+	ColorRGBA Result(0, 0, 0, 0);
+	CRenderMap::RenderEvalEnvelope(&Points, std::chrono::milliseconds::zero(), Result, 1);
+	EXPECT_FLOAT_EQ(Result.r, 1.5f);
+}
+
 TEST_F(MapEnvelopeItems, InvalidChannelsRemainAvailableForExistingEditorFallback)
 {
 	SItems Items;
