@@ -584,10 +584,9 @@ void CQmMobileSpectator::ExportFile(const char *pPath)
 #if defined(CONF_PLATFORM_ANDROID)
 	if(pPath == nullptr || pPath[0] == '\0')
 		return;
+	// Java 在后台复制完成后提示结果，这里只处理提交失败。
 	if(!ExportAndroidMediaFile(pPath))
 		ShowToast(Localize("Export failed"));
-	else
-		ShowToast(Localize("Saved to Downloads/QmClient"));
 #else
 	(void)pPath;
 #endif

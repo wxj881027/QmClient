@@ -112,3 +112,22 @@ TEST_F(CMapDifficultyAxiomFile, MissingCacheDoesNotDiscardSessionRatingsOrDirtyS
 	EXPECT_FALSE(m_Catalog.AxiomCacheDirty());
 	EXPECT_FALSE(Read(CACHE_PATH).empty());
 }
+
+TEST_F(CMapDifficultyAxiomFile, FailedPublicationRemovesTheCandidateAndCanRetry)
+{
+	ASSERT_TRUE(m_pStorage->CreateFolder(CACHE_PATH, IStorage::TYPE_SAVE));
+	EXPECT_FALSE(m_Catalog.SaveAxiomCache(m_pStorage.get()));
+	char aCandidate[IO_MAX_PATH_LENGTH];
+	str_format(aCandidate, sizeof(aCandidate), "%s.%d.tmp", CACHE_PATH, pid());
+	EXPECT_FALSE(m_pStorage->FileExists(aCandidate, IStorage::TYPE_SAVE));
+	EXPECT_TRUE(m_Catalog.AxiomCacheDirty());
+	ASSERT_NE(m_Catalog.FindForServer(Server()), nullptr);
+
+	ASSERT_TRUE(m_pStorage->RemoveFolder(CACHE_PATH, IStorage::TYPE_SAVE));
+	ASSERT_TRUE(m_Catalog.SaveAxiomCache(m_pStorage.get()));
+	EXPECT_FALSE(m_Catalog.AxiomCacheDirty());
+	CQmMapDifficultyCatalog Restored;
+	ASSERT_TRUE(Restored.Load(m_pStorage.get(), nullptr));
+	ASSERT_NE(Restored.FindForServer(Server()), nullptr);
+	EXPECT_EQ(Restored.FindForServer(Server())->m_Stars, 1);
+}

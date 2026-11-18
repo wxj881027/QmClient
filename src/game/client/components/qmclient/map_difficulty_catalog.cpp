@@ -1,6 +1,7 @@
 #include "map_difficulty_catalog.h"
 
 #include "axiom_scores_data.h"
+#include "bounded_file_reader.h"
 
 #include <base/log.h>
 #include <base/str.h>
@@ -45,6 +46,27 @@ namespace
 		bool Close() { return !m_File || io_close(std::exchange(m_File, nullptr)) == 0; }
 	};
 
+	struct SAxiomCacheCandidate
+	{
+		IStorage &m_Storage;
+		const char *m_pPath;
+		bool m_Owned = false;
+
+		~SAxiomCacheCandidate()
+		{
+			if(!m_Owned)
+				return;
+			try
+			{
+				m_Storage.RemoveFile(m_pPath, IStorage::TYPE_SAVE);
+			}
+			catch(...)
+			{
+				// 清理失败不能让原保存失败变成进程退出。
+			}
+		}
+	};
+
 	void ReportLoadFailure(IConsole *pConsole) noexcept
 	{
 		try
@@ -67,7 +89,7 @@ namespace
 	}
 
 	constexpr const char *AXIOM_CACHE_PATH = "qmclient/axiom_map_difficulty.json";
-	constexpr size_t MAX_AXIOM_CACHE_BYTES = 2 * 1024 * 1024;
+	constexpr unsigned MAX_AXIOM_CACHE_BYTES = 2 * 1024 * 1024;
 	constexpr size_t MAX_AXIOM_ENTRIES = 4096;
 
 	int AxiomMaxStars(const CServerInfo &Server)
@@ -427,18 +449,13 @@ try
 {
 	if(pStorage == nullptr)
 		return;
-	CScopedFile File(pStorage->OpenFile(AXIOM_CACHE_PATH, IOFLAG_READ, IStorage::TYPE_SAVE));
-	if(!File.Get())
+	void *pRawData = nullptr;
+	unsigned Size = 0;
+	const auto Result = pStorage->ReadFileCheckedBounded(AXIOM_CACHE_PATH, IStorage::TYPE_SAVE, &pRawData, &Size, MAX_AXIOM_CACHE_BYTES);
+	const std::unique_ptr<void, decltype(&free)> pData(pRawData, free);
+	if(Result == IStorage::EReadFileResult::NOT_FOUND)
 		return;
-	const int64_t Length = io_length(File.Get());
-	bool Loaded = false;
-	if(Length > 0 && Length <= (int64_t)MAX_AXIOM_CACHE_BYTES)
-	{
-		std::string Json((size_t)Length, '\0');
-		if(io_read(File.Get(), Json.data(), (unsigned)Json.size()) == Json.size() && io_error(File.Get()) == 0 && File.Close())
-			Loaded = LoadAxiomCacheJson(Json.data(), Json.size());
-	}
-	if(!Loaded)
+	if(Result != IStorage::EReadFileResult::SUCCESS || !LoadAxiomCacheJson(static_cast<const char *>(pData.get()), Size))
 		log_warn("map_difficulty", "ignoring invalid Axiom map cache");
 }
 catch(const std::bad_alloc &)
@@ -458,13 +475,16 @@ try
 	pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE);
 	char aTempPath[IO_MAX_PATH_LENGTH];
 	str_format(aTempPath, sizeof(aTempPath), "%s.%d.tmp", AXIOM_CACHE_PATH, pid());
+	SAxiomCacheCandidate Candidate{*pStorage, aTempPath};
 	CScopedFile File(pStorage->OpenFile(aTempPath, IOFLAG_WRITE, IStorage::TYPE_SAVE));
 	if(!File.Get())
 		return false;
+	Candidate.m_Owned = true;
 	const bool Written = io_write(File.Get(), Json.data(), (unsigned)Json.size()) == Json.size();
 	const bool Closed = File.Close();
 	if(!Written || !Closed || !pStorage->RenameFile(aTempPath, AXIOM_CACHE_PATH, IStorage::TYPE_SAVE, false))
 		return false;
+	Candidate.m_Owned = false;
 	m_AxiomCacheDirty = false;
 	return true;
 }
@@ -557,27 +577,10 @@ bool CQmMapDifficultyCatalog::Load(IStorage *pStorage, IConsole *pConsole)
 	try
 	{
 		LoadAxiomCache(pStorage);
-		CScopedFile File(pStorage != nullptr ? pStorage->OpenFile(MAP_DIFFICULTY_SQL, IOFLAG_READ, IStorage::TYPE_ALL) : nullptr);
-		if(File.Get())
-		{
-			std::string Sql;
-			char aBuffer[4096];
-			while(true)
-			{
-				// 按实际读取计数，达到旧上限后仅探测一个字节，不先整文件分配。
-				const unsigned Want = static_cast<unsigned>(std::min(sizeof(aBuffer), MAX_MAP_DIFFICULTY_SQL_BYTES - Sql.size() + 1));
-				const unsigned Count = io_read(File.Get(), aBuffer, Want);
-				if(Count == 0)
-				{
-					if(io_error(File.Get()) == 0 && File.Close() && LoadSqlText(Sql.data(), Sql.size()))
-						return true;
-					break;
-				}
-				if(Count > MAX_MAP_DIFFICULTY_SQL_BYTES - Sql.size())
-					break;
-				Sql.append(aBuffer, Count);
-			}
-		}
+		CQmCheckedFileData Sql;
+		if(pStorage && Sql.Read(*pStorage, MAP_DIFFICULTY_SQL, IStorage::TYPE_ALL, MAX_MAP_DIFFICULTY_SQL_BYTES) &&
+			LoadSqlText(static_cast<const char *>(Sql.Data()), Sql.Size()))
+			return true;
 	}
 	catch(...)
 	{

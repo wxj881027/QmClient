@@ -33,9 +33,9 @@ namespace
 			m_pOld = m_Catalog.Find("Old");
 			ASSERT_NE(m_pOld, nullptr);
 		}
-		void Write(const std::string &Text)
+		void Write(const std::string &Text, const char *pPath = PATH)
 		{
-			const IOHANDLE File = m_pStorage->OpenFile(PATH, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+			const IOHANDLE File = m_pStorage->OpenFile(pPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
 			ASSERT_NE(File, nullptr);
 			const unsigned Written = io_write(File, Text.data(), static_cast<unsigned>(Text.size()));
 			const int Closed = io_close(File);
@@ -117,4 +117,25 @@ TEST_F(MapDifficultyCatalogFile, EmptyFileKeepsTheOldDirectory)
 	ASSERT_NO_FATAL_FAILURE(Write(""));
 	EXPECT_FALSE(m_Catalog.Load(m_pStorage.get(), nullptr));
 	ExpectOld();
+}
+
+TEST_F(MapDifficultyCatalogFile, NonFileInFirstStorageRootKeepsOldRowsUntilRemoved)
+{
+	for(const char *pDirectory : {"catalog_save", "catalog_save/qmclient", "catalog_app",
+		    "catalog_app/data", "catalog_app/data/mapres", "catalog_app/data/qmclient"})
+		ASSERT_TRUE(m_pStorage->CreateFolder(pDirectory, IStorage::TYPE_SAVE));
+	ASSERT_NO_FATAL_FAILURE(Write(SQL, "catalog_app/data/qmclient/map_difficulty.sql"));
+	char aSave[IO_MAX_PATH_LENGTH], aExecutable[IO_MAX_PATH_LENGTH];
+	m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, "catalog_save", aSave, sizeof(aSave));
+	m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, "catalog_app/client.exe", aExecutable, sizeof(aExecutable));
+	const char *apArgs[] = {aExecutable};
+	const auto pLayered = CreateTempStorage(aSave, 1, apArgs);
+	ASSERT_NE(pLayered, nullptr);
+	ASSERT_TRUE(pLayered->CreateFolder(PATH, IStorage::TYPE_SAVE));
+
+	EXPECT_FALSE(m_Catalog.Load(pLayered.get(), nullptr));
+	ExpectOld();
+	ASSERT_TRUE(pLayered->RemoveFolder(PATH, IStorage::TYPE_SAVE));
+	ASSERT_TRUE(m_Catalog.Load(pLayered.get(), nullptr));
+	EXPECT_NE(m_Catalog.Find("New"), nullptr);
 }
