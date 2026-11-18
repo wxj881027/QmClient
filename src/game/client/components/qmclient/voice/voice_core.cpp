@@ -32,6 +32,7 @@
 #include <array>
 #include <chrono>
 #include <cmath>
+#include <limits>
 #include <thread>
 #include <vector>
 
@@ -317,7 +318,7 @@ void CRClientVoice::UpdateVoiceTransport() NO_THREAD_SAFETY_ANALYSIS
 		Online = m_OnlineSnap;
 	}
 	const bool NeedNetwork = Online && std::clamp(Config.m_QmVoiceTestMode, 0, 2) != 1;
-	const bool Reset = m_pVoiceTransport->Update(aServerUrl, NeedNetwork, m_ContextHash.load(), Config.m_QmVoiceTokenHash, VoiceProtocolVersion(Config));
+	const bool Reset = m_pVoiceTransport->UpdateAt(aServerUrl, NeedNetwork, m_ContextHash.load(), Config.m_QmVoiceTokenHash, VoiceProtocolVersion(Config), time_get_impl());
 	m_ServerAddrValid.store(m_pVoiceTransport->UrlValid());
 	m_TransportReady.store(m_pVoiceTransport->Connected());
 	m_TransportConnecting.store(m_pVoiceTransport->Connecting());
@@ -337,7 +338,7 @@ void CRClientVoice::UpdateVoiceTransport() NO_THREAD_SAFETY_ANALYSIS
 
 bool CRClientVoice::SendVoicePacket(const uint8_t *pData, size_t Size) NO_THREAD_SAFETY_ANALYSIS
 {
-	return m_pVoiceTransport && m_pVoiceTransport->SendPacket(pData, Size);
+	return !m_Worker.StopRequested() && m_pVoiceTransport && m_pVoiceTransport->SendPacket(pData, Size);
 }
 
 bool CRClientVoice::EnsureAudioSubsystem()
@@ -996,6 +997,12 @@ void CRClientVoice::ExportOverlayState(CVoiceOverlayState &Overlay) const NO_THR
 	}
 }
 
+static int VoiceElapsedMilliseconds(int64_t Now, int64_t Since, int MaxMs)
+{
+	// 时钟以纳秒计数，直接除以每毫秒的 tick 数。
+	return static_cast<int>(std::clamp<int64_t>((Now - Since) / (time_freq() / 1000), 0, MaxMs));
+}
+
 void CRClientVoice::ExportUiStatus(VoiceUtils::SVoiceUiStatus &Out) const NO_THREAD_SAFETY_ANALYSIS
 {
 	Out = {};
@@ -1031,8 +1038,8 @@ void CRClientVoice::ExportUiStatus(VoiceUtils::SVoiceUiStatus &Out) const NO_THR
 	const int64_t RecentWindow = time_freq() * 3;
 	const int64_t LastTxPacketTime = m_LastTxPacketTime.load();
 	const int64_t LastMediaRxPacketTime = m_LastMediaRxPacketTime.load();
-	Out.m_TxAgeMs = LastTxPacketTime > 0 ? (int)std::clamp((Now - LastTxPacketTime) * 1000 / time_freq(), (int64_t)0, (int64_t)999999) : -1;
-	Out.m_RxAgeMs = LastMediaRxPacketTime > 0 ? (int)std::clamp((Now - LastMediaRxPacketTime) * 1000 / time_freq(), (int64_t)0, (int64_t)999999) : -1;
+	Out.m_TxAgeMs = LastTxPacketTime > 0 ? VoiceElapsedMilliseconds(Now, LastTxPacketTime, 999999) : -1;
+	Out.m_RxAgeMs = LastMediaRxPacketTime > 0 ? VoiceElapsedMilliseconds(Now, LastMediaRxPacketTime, 999999) : -1;
 	Out.m_HaveRecentRx = LastMediaRxPacketTime > 0 && Now - LastMediaRxPacketTime <= RecentWindow;
 
 	int aLocalClientIds[2] = {-1, -1};
@@ -1300,6 +1307,8 @@ void CRClientVoice::ResetRuntimeState(uint32_t Flags, uint32_t RoomTokenHash) NO
 	if((Flags & VoiceUtils::VOICE_RUNTIME_RESET_PEERS) != 0)
 	{
 		ClearPeerFrames();
+		for(auto &LastHeard : m_aLastHeard)
+			LastHeard.store(0);
 		for(auto &RoomMemberSeen : m_aRoomMemberSeen)
 			RoomMemberSeen.store(0);
 		for(auto &SpeakerLevel : m_aSpeakerLevel)
@@ -1377,7 +1386,7 @@ void CRClientVoice::ProcessCapture() NO_THREAD_SAFETY_ANALYSIS
 		}
 	};
 
-	const int64_t Now = time_get();
+	const int64_t Now = time_get_impl();
 	const bool UseVad = Config.m_QmVoiceVadEnable != 0;
 	m_Vad.PrepareUpdate(UseVad, Now);
 	int64_t ReleaseDeadline = 0;
@@ -1508,7 +1517,7 @@ void CRClientVoice::ProcessCapture() NO_THREAD_SAFETY_ANALYSIS
 		if(UseVad)
 		{
 			const bool Trigger = CVoiceVadState::ShouldActivate(Peak, VadThreshold);
-			const int64_t FrameNow = time_get();
+			const int64_t FrameNow = time_get_impl();
 			m_Vad.UpdateFrame(Trigger, FrameNow, VadReleaseTicks);
 		}
 
@@ -1606,6 +1615,10 @@ void CRClientVoice::ProcessIncoming() NO_THREAD_SAFETY_ANALYSIS
 	const int TestMode = std::clamp(Config.m_QmVoiceTestMode, 0, 2);
 	const bool TestServer = TestMode == 2;
 	const uint8_t ProtocolVersion = VoiceProtocolVersion(Config);
+	const auto CountDrop = [](int &Count) {
+		if(Count < std::numeric_limits<int>::max())
+			++Count;
+	};
 
 	// 持续来包时也检查停止请求，并为同一轮的解码和采集留出执行机会。
 	size_t RemainingMessages = VOICE_MAX_RECEIVE_MESSAGES_PER_UPDATE;
@@ -1619,14 +1632,14 @@ void CRClientVoice::ProcessIncoming() NO_THREAD_SAFETY_ANALYSIS
 
 		if(Bytes < VOICE_PACKET_HEADER_SIZE)
 		{
-			m_RxDropHeader++;
+			CountDrop(m_RxDropHeader);
 			continue;
 		}
 
 		VoiceUtils::SVoicePacketHeader Header;
 		if(!VoiceUtils::ReadVoicePacketHeader(pData, Bytes, Header))
 		{
-			m_RxDropHeader++;
+			CountDrop(m_RxDropHeader);
 			continue;
 		}
 
@@ -1634,12 +1647,12 @@ void CRClientVoice::ProcessIncoming() NO_THREAD_SAFETY_ANALYSIS
 		const uint8_t Type = Header.m_Type;
 		if(Version != ProtocolVersion)
 		{
-			m_RxDropVersion++;
+			CountDrop(m_RxDropVersion);
 			continue;
 		}
 		if(Type != VOICE_TYPE_AUDIO && Type != VOICE_TYPE_PING && Type != VOICE_TYPE_PONG)
 		{
-			m_RxDropType++;
+			CountDrop(m_RxDropType);
 			continue;
 		}
 		const uint16_t PayloadSize = Header.m_PayloadSize;
@@ -1659,29 +1672,29 @@ void CRClientVoice::ProcessIncoming() NO_THREAD_SAFETY_ANALYSIS
 		switch(PacketDecision)
 		{
 		case VoiceUtils::EVoiceIncomingPacketDecision::DROP_HEADER:
-			m_RxDropHeader++;
+			CountDrop(m_RxDropHeader);
 			continue;
 		case VoiceUtils::EVoiceIncomingPacketDecision::DROP_VERSION:
-			m_RxDropVersion++;
+			CountDrop(m_RxDropVersion);
 			continue;
 		case VoiceUtils::EVoiceIncomingPacketDecision::DROP_TYPE:
-			m_RxDropType++;
+			CountDrop(m_RxDropType);
 			continue;
 		case VoiceUtils::EVoiceIncomingPacketDecision::DROP_FLAGS:
-			m_RxDropHeader++;
+			CountDrop(m_RxDropHeader);
 			continue;
 		case VoiceUtils::EVoiceIncomingPacketDecision::DROP_CONTEXT:
-			m_RxDropContext++;
+			CountDrop(m_RxDropContext);
 			continue;
 		case VoiceUtils::EVoiceIncomingPacketDecision::DROP_GROUP:
 		case VoiceUtils::EVoiceIncomingPacketDecision::DROP_KEEPALIVE_TOKEN:
-			m_RxDropGroup++;
+			CountDrop(m_RxDropGroup);
 			continue;
 		case VoiceUtils::EVoiceIncomingPacketDecision::DROP_SENDER:
-			m_RxDropSender++;
+			CountDrop(m_RxDropSender);
 			continue;
 		case VoiceUtils::EVoiceIncomingPacketDecision::DROP_PAYLOAD:
-			m_RxDropPayload++;
+			CountDrop(m_RxDropPayload);
 			continue;
 		case VoiceUtils::EVoiceIncomingPacketDecision::HANDLE_AUDIO:
 		case VoiceUtils::EVoiceIncomingPacketDecision::HANDLE_PING:
@@ -1691,10 +1704,10 @@ void CRClientVoice::ProcessIncoming() NO_THREAD_SAFETY_ANALYSIS
 
 		const uint32_t LocalToken = Config.m_QmVoiceTokenHash;
 
-		const int64_t PacketNow = time_get();
+		const int64_t PacketNow = time_get_impl();
 		if(SenderId >= MAX_CLIENTS)
 		{
-			m_RxDropSender++;
+			CountDrop(m_RxDropSender);
 			continue;
 		}
 		m_aRoomMemberSeen[SenderId].store(PacketNow);
@@ -1704,8 +1717,7 @@ void CRClientVoice::ProcessIncoming() NO_THREAD_SAFETY_ANALYSIS
 			m_LastRxPacketTime.store(PacketNow);
 			if(VoiceUtils::VoiceShouldUpdatePingRtt(Sequence, m_LastPingSeq, m_LastPingSentTime))
 			{
-				const int RttMs = (int)std::clamp((PacketNow - m_LastPingSentTime) * 1000 / time_freq(), (int64_t)0, (int64_t)9999);
-				m_PingMs.store(RttMs);
+				m_PingMs.store(VoiceElapsedMilliseconds(PacketNow, m_LastPingSentTime, 9999));
 			}
 			continue;
 		}
@@ -1764,17 +1776,17 @@ void CRClientVoice::ProcessIncoming() NO_THREAD_SAFETY_ANALYSIS
 
 		if(PayloadSize > (uint16_t)VOICE_MAX_PAYLOAD)
 		{
-			m_RxDropPayload++;
+			CountDrop(m_RxDropPayload);
 			continue;
 		}
 		if((size_t)VOICE_PACKET_HEADER_SIZE + PayloadSize > (size_t)Bytes)
 		{
-			m_RxDropPayload++;
+			CountDrop(m_RxDropPayload);
 			continue;
 		}
 		if(PayloadSize == 0)
 		{
-			m_RxDropPayload++;
+			CountDrop(m_RxDropPayload);
 			continue;
 		}
 
@@ -1782,7 +1794,7 @@ void CRClientVoice::ProcessIncoming() NO_THREAD_SAFETY_ANALYSIS
 		const float Radius = std::max(1, Config.m_QmVoiceRadius) * 32.0f;
 		if(!VoiceUtils::VoiceIsPacketWithinAudibleRadius(LocalPos, SenderPos, Radius, IgnoreDistance))
 		{
-			m_RxDropRadius++;
+			CountDrop(m_RxDropRadius);
 			continue;
 		}
 
@@ -1807,7 +1819,7 @@ void CRClientVoice::ProcessIncoming() NO_THREAD_SAFETY_ANALYSIS
 		const float RightGain = Volume * (Pan >= 0.0f ? 1.0f : (1.0f + Pan));
 
 		SVoicePeer &Peer = (*m_pPeers)[SenderId];
-		const int64_t Now = time_get();
+		const int64_t Now = time_get_impl();
 		bool ResetStream = false;
 		if(Peer.m_LastRecvTime != 0)
 		{
@@ -1825,6 +1837,9 @@ void CRClientVoice::ProcessIncoming() NO_THREAD_SAFETY_ANALYSIS
 		}
 		if(ResetStream)
 			ResetPeer(Peer);
+		// 播放游标已越过的包不会被消费，不能再进入抖动队列。
+		if(Peer.m_HasNextSeq && VoiceUtils::VoiceSeqLess(Sequence, Peer.m_NextSeq))
+			continue;
 
 		if(Peer.m_LastRecvTime != 0)
 		{
@@ -1969,7 +1984,7 @@ void CRClientVoice::UpdateEncoderParams()
 	if(!m_pEncoder)
 		return;
 
-	const int64_t Now = time_get();
+	const int64_t Now = time_get_impl();
 	if(m_LastEncUpdate != 0 && Now - m_LastEncUpdate < time_freq())
 		return;
 
@@ -2049,7 +2064,7 @@ void CRClientVoice::DecodeJitter()
 		{
 			if(Peer.m_QueuedPackets < Peer.m_TargetFrames)
 				continue;
-			const bool DecoderCreated = Peer.m_DecoderRetry.TryCreate(time_get(), time_freq(), [this, &Peer] {
+			const bool DecoderCreated = Peer.m_DecoderRetry.TryCreate(time_get_impl(), time_freq(), [this, &Peer] {
 				int Error = OPUS_OK;
 				OpusDecoder *pDecoder = opus_decoder_create(VOICE_SAMPLE_RATE, VOICE_CHANNELS, &Error);
 				if(!pDecoder || Error != OPUS_OK)
@@ -2159,6 +2174,9 @@ void CRClientVoice::StopWorker()
 
 void CRClientVoice::WorkerLoop() NO_THREAD_SAFETY_ANALYSIS
 {
+	if(m_Worker.StopRequested())
+		return;
+
 	// 在受保护的线程入口准备资源，分配失败不会离开客户端初始化入口。
 	// 首次打开输出流前完成混音缓冲分配；正常暂停后重开保留已有资源。
 	if(!m_pPeers)
@@ -2174,19 +2192,27 @@ void CRClientVoice::WorkerLoop() NO_THREAD_SAFETY_ANALYSIS
 		if(m_AndroidRecordPermissionKnown && !m_AndroidRecordPermissionGranted)
 			CaptureNeedsRetry = false;
 #endif
-		m_AudioRetry.Update(m_AudioRefreshRequested.exchange(false), CaptureNeedsRetry || m_OutputUnavailable.load(), time_get(), time_freq(), [this] { return EnsureAudio(); });
+		// 工作线程使用未缓存的单调时间，避开主循环的帧时钟缓存。
+		m_AudioRetry.Update(m_AudioRefreshRequested.exchange(false), CaptureNeedsRetry || m_OutputUnavailable.load(), time_get_impl(), time_freq(), [this] { return EnsureAudio(); });
+		if(m_Worker.StopRequested())
+			break;
 
 		UpdateVoiceTransport();
 		ProcessIncoming();
+		if(m_Worker.StopRequested())
+			break;
+
 		DecodeJitter();
 		UpdateEncoderParams();
+		if(m_Worker.StopRequested())
+			break;
 		ProcessCapture();
 
 		SRClientVoiceConfigSnapshot Config;
 		GetConfigSnapshot(Config);
 		if(Config.m_QmVoiceDebug)
 		{
-			const int64_t Now = time_get();
+			const int64_t Now = time_get_impl();
 			if(m_DebugStateLastLog == 0 || Now - m_DebugStateLastLog >= time_freq())
 			{
 				bool OnlineSnap = false;
@@ -2229,8 +2255,10 @@ void CRClientVoice::WorkerLoop() NO_THREAD_SAFETY_ANALYSIS
 				char aTxBlockers[128];
 				VoiceUtils::FormatVoiceTransmitBlockers(TxBlockers, aTxBlockers, (int)sizeof(aTxBlockers));
 
-				const int TxAgeMs = m_LastTxPacketTime.load() > 0 ? (int)std::clamp((Now - m_LastTxPacketTime.load()) * 1000 / time_freq(), (int64_t)0, (int64_t)999999) : -1;
-				const int RxAgeMs = m_LastRxPacketTime.load() > 0 ? (int)std::clamp((Now - m_LastRxPacketTime.load()) * 1000 / time_freq(), (int64_t)0, (int64_t)999999) : -1;
+				const int64_t LastTxPacketTime = m_LastTxPacketTime.load();
+				const int64_t LastRxPacketTime = m_LastRxPacketTime.load();
+				const int TxAgeMs = LastTxPacketTime > 0 ? VoiceElapsedMilliseconds(Now, LastTxPacketTime, 999999) : -1;
+				const int RxAgeMs = LastRxPacketTime > 0 ? VoiceElapsedMilliseconds(Now, LastRxPacketTime, 999999) : -1;
 
 				log_info("voice", "state server_valid=%d ping=%d socket=%d online=%d out=%d cap=%d enc=%d mute=%d tx_block=0x%x tx_blockers=%s tx=%d tx_age=%d mic=%.2f rx_age=%d drop_header=%d drop_version=%d drop_type=%d drop_ctx=%d drop_group=%d drop_sender=%d drop_payload=%d drop_radius=%d peers=%d queued_packets=%d queued_frames=%d",
 					m_ServerAddrValid.load() ? 1 : 0,
