@@ -156,9 +156,35 @@ TEST_F(CGraphicsReadbackFlow, DeferredRequestStaysPendingAcrossBufferReuseUntilG
 	ASSERT_EQ(Run(), RUN_COMMAND_COMMAND_HANDLED);
 	ASSERT_EQ(m_Queue.Poll(Allocation.m_Index, Allocation.m_Generation), EState::READY);
 	CImageInfo Image;
-	ASSERT_TRUE(m_Queue.Resolve(Allocation.m_Index, Allocation.m_Generation, Image));
+	ASSERT_TRUE(m_Queue.ResolveAfterIdle(Allocation.m_Index, Allocation.m_Generation, Image, true));
 	EXPECT_EQ(Image.m_pData[0], 71);
 	Image.Free();
+}
+
+TEST_F(CGraphicsReadbackFlow, CpuIdleWithoutCompletionKeepsDeferredStorageUntilTheGpuReleasesIt)
+{
+	SAllocation Allocation;
+	ASSERT_NO_FATAL_FAILURE(DeferOne(Allocation));
+
+	CImageInfo Image;
+	Image.m_Width = 19;
+	EXPECT_FALSE(m_Queue.ResolveAfterIdle(Allocation.m_Index, Allocation.m_Generation, Image, true));
+	EXPECT_EQ(Image.m_pData, nullptr);
+	EXPECT_EQ(Image.m_Width, 19U);
+	EXPECT_EQ(m_Queue.Poll(Allocation.m_Index, Allocation.m_Generation), EState::INVALID);
+
+	const auto Next = m_Queue.Allocate();
+	ASSERT_GE(Next.m_Index, 0);
+	ASSERT_NE(Next.m_Index, Allocation.m_Index);
+	ASSERT_TRUE(m_Buffer.AddCommandUnsafe(CCommandBuffer::SCommand_RenderTarget_ReadbackFlush{}));
+	ASSERT_EQ(Run(), RUN_COMMAND_COMMAND_HANDLED);
+
+	const auto Reused = m_Queue.Allocate();
+	ASSERT_EQ(Reused.m_Index, Allocation.m_Index);
+	EXPECT_NE(Reused.m_Generation, Allocation.m_Generation);
+	EXPECT_EQ(Reused.m_pImage->m_pData, nullptr);
+	EXPECT_EQ(m_Queue.Poll(Reused.m_Index, Reused.m_Generation), EState::PENDING);
+	EXPECT_EQ(m_Queue.Poll(Next.m_Index, Next.m_Generation), EState::PENDING);
 }
 
 TEST_F(CGraphicsReadbackFlow, SynchronousBackendPublishesAtCommandBufferCompletionAndDrainsSignalBeforeReuse)

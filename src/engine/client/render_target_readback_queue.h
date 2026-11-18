@@ -190,16 +190,23 @@ public:
 		return true;
 	}
 
-	// 调用方先完成后端结算并确认空闲；同步后端允许直接检查像素。
-	// 若已收到完成信号，必须消费它，不能把旧信号留给复用后的新请求。
-	bool ResolveAfterIdle(int Index, uint32_t Generation, CImageInfo &Image)
+	// 调用方先等待已提交的命令执行完毕。同步后端可以直接检查像素。
+	// 延迟读回仍可能借用槽位，取消后等完成信号再回收。
+	bool ResolveAfterIdle(int Index, uint32_t Generation, CImageInfo &Image, bool RequireCompletionSignal = false)
 	{
 		SRequest *pRequest = Get(Index, Generation);
 		if(pRequest == nullptr)
 			return false;
 		Update(*pRequest);
 		if(pRequest->m_State == EState::PENDING)
+		{
+			if(RequireCompletionSignal)
+			{
+				Cancel(Index, Generation);
+				return false;
+			}
 			pRequest->m_State = pRequest->m_Image.m_pData != nullptr ? EState::READY : EState::FAILED;
+		}
 		if(pRequest->m_State != EState::READY)
 		{
 			if(pRequest->m_State == EState::FAILED)

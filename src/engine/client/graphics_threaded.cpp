@@ -1371,23 +1371,9 @@ bool CGraphics_Threaded::ReadRenderTarget(CRenderTargetHandle Target, CImageInfo
 		WaitForIdle();
 	}
 
-	const ERenderTargetReadbackState State = PollRenderTargetReadback(Readback);
-	if(State == ERenderTargetReadbackState::READY)
-	{
-		const bool Resolved = ResolveRenderTargetReadback(&Readback, Image);
-		if(!Resolved)
-			CancelRenderTargetReadback(&Readback);
-		return Resolved;
-	}
-	// 兼容不在读回命令内发信号的同步后端：空闲后按像素归属判定。
-	if(State == ERenderTargetReadbackState::PENDING)
-	{
-		const bool Resolved = m_RenderTargetReadbacks.ResolveAfterIdle(Readback.Id(), Readback.Generation(), Image);
-		Readback.Invalidate();
-		return Resolved;
-	}
-	CancelRenderTargetReadback(&Readback);
-	return false;
+	const bool Resolved = m_RenderTargetReadbacks.ResolveAfterIdle(Readback.Id(), Readback.Generation(), Image, m_ReadbackCompletionSignal);
+	Readback.Invalidate();
+	return Resolved;
 }
 
 bool CGraphics_Threaded::BeginOffscreenFrame(int Width, int Height)
@@ -1441,9 +1427,7 @@ bool CGraphics_Threaded::EndOffscreenFrame(CImageInfo &Image)
 
 	// 先结束离屏目标（后端在这里 resolve 并恢复视口）：读回接口要求当前没有活动目标。
 	EndRenderTarget();
-	// 读回分两步：先排队读回命令，再等渲染线程空闲后结算。
-	// PBO 双缓冲下排队命令只启动 DMA，需要补一个 Flush 命令把像素拷出；
-	// 同步后端的像素由命令缓冲结束时发布；先确认空闲，再按像素归属判定。
+	// 同步后端命令结束后即可取像素。PBO 仍在途时需要 Flush 结算并发出完成信号。
 	bool Read = false;
 	CRenderTargetReadbackHandle Readback = BeginRenderTargetReadback(m_OffscreenFrameTarget);
 	if(!Readback.IsValid())
@@ -1455,14 +1439,16 @@ bool CGraphics_Threaded::EndOffscreenFrame(CImageInfo &Image)
 		WaitForIdle();
 		if(PollRenderTargetReadback(Readback) == ERenderTargetReadbackState::PENDING)
 		{
-			FlushPendingRenderTargetReadback();
-			WaitForIdle();
+			if(FlushPendingRenderTargetReadback() || !m_ReadbackCompletionSignal)
+				WaitForIdle();
+			else
+				CancelRenderTargetReadback(&Readback);
 		}
-		if(PollRenderTargetReadback(Readback) == ERenderTargetReadbackState::READY)
-			Read = m_RenderTargetReadbacks.Resolve(Readback.Id(), Readback.Generation(), Image);
-		else
-			Read = m_RenderTargetReadbacks.ResolveAfterIdle(Readback.Id(), Readback.Generation(), Image);
-		Readback.Invalidate();
+		if(Readback.IsValid())
+		{
+			Read = m_RenderTargetReadbacks.ResolveAfterIdle(Readback.Id(), Readback.Generation(), Image, m_ReadbackCompletionSignal);
+			Readback.Invalidate();
+		}
 		if(!Read)
 			log_error("graphics", "offscreen frame readback produced no pixels (%dx%d)", m_OffscreenFrameWidth, m_OffscreenFrameHeight);
 	}
