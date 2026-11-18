@@ -16,6 +16,7 @@
 #include <game/client/components/qmclient/browser_map_preview_loader.h>
 #include <game/client/components/qmclient/dummy_mini_view_layout.h>
 #include <game/client/components/qmclient/map_download_index.h>
+#include <game/client/components/qmclient/map_download_resolver.h>
 #include <game/client/components/qmclient/map_preview_panel.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/gameclient.h>
@@ -180,13 +181,13 @@ public:
 			m_NotFoundName = pMapName;
 			return false;
 		}
-		char aUrl[2048];
-		str_format(aUrl, sizeof(aUrl), "%s/%s", g_Config.m_ClMapDownloadUrl, Href.c_str());
-		char aOutput[IO_MAX_PATH_LENGTH];
-		// 预览加载器按 downloadedmaps/<名>_<指纹>.map 前缀查找；落盘名必须
-		// 保留索引里的哈希后缀，否则下载成功也永远命中不到。
-		str_format(aOutput, sizeof(aOutput), "downloadedmaps/%s_%s", pMapName, Href.c_str() + Prefix.size());
-		std::shared_ptr<IHttpRequest> pTask(HttpGetFile(aUrl, pGameClient->Storage(), aOutput, IStorage::TYPE_SAVE).release());
+		SQmMapDownloadPlan Plan;
+		if(!QmBuildIndexedMapDownloadPlan(pMapName, Href, g_Config.m_ClMapDownloadUrl, &Plan))
+		{
+			m_NotFoundName = pMapName;
+			return false;
+		}
+		std::shared_ptr<IHttpRequest> pTask(HttpGetFile(Plan.m_Url.c_str(), pGameClient->Storage(), Plan.m_FileName.c_str(), IStorage::TYPE_SAVE).release());
 		if(!pTask)
 			return false;
 		m_pDownloadTask = pTask;

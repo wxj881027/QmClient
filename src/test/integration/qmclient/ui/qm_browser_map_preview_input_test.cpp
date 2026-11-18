@@ -3,6 +3,7 @@
 #include <game/client/QmUi/SecondaryPanel.h>
 #include <game/client/components/qmclient/browser_map_preview.h>
 #include <game/client/components/qmclient/map_download_index.h>
+#include <game/client/components/qmclient/map_download_resolver.h>
 
 #include <test/support/qm_real_ui_fixture.h>
 #include <test/support/qm_ui_test_input.h>
@@ -138,4 +139,50 @@ TEST(QmMapDownloadIndex, SelectsTheLongestHashedFileForTheExactMapName)
 	EXPECT_EQ(QmSelectMapDownloadHref(vHrefs, "%23MegaRosenkohl_"),
 		"%23MegaRosenkohl_50c7e9ad_56c8c8d17f52d1afef22ebfb2763d70eae200f605d5927cb797b0cdc5f0991f5.map");
 	EXPECT_TRUE(QmSelectMapDownloadHref(vHrefs, "%23Unknown_").empty());
+}
+
+TEST(QmMapDownloadResolver, ServerUrlWinsOverShaCdn)
+{
+	SQmMapDownloadRequest Request;
+	Request.m_pMapName = "Map One";
+	Request.m_pSha256Hex = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+	Request.m_pServerUrl = "https://axiom.example/maps/Map%20One.map";
+	SQmMapDownloadPlan Plan;
+	ASSERT_TRUE(QmBuildMapDownloadPlan(Request, &Plan));
+	EXPECT_EQ(Plan.m_Source, EQmMapDownloadSource::SERVER_URL);
+	EXPECT_EQ(Plan.m_Url, "https://axiom.example/maps/Map%20One.map");
+	EXPECT_EQ(Plan.m_FileName, "downloadedmaps/Map One_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.map");
+}
+
+TEST(QmMapDownloadResolver, ShaBuildsTheOfficialCdnUrlAndFilename)
+{
+	SQmMapDownloadRequest Request;
+	Request.m_pMapName = "Map One";
+	Request.m_pSha256Hex = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+	SQmMapDownloadPlan Plan;
+	ASSERT_TRUE(QmBuildMapDownloadPlan(Request, &Plan));
+	EXPECT_EQ(Plan.m_Source, EQmMapDownloadSource::CDN_HASH);
+	EXPECT_EQ(Plan.m_Url, "https://maps.ddnet.org/Map%20One_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.map");
+	EXPECT_EQ(Plan.m_FileName, "downloadedmaps/Map One_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.map");
+}
+
+TEST(QmMapDownloadResolver, MissingShaFallsBackToServerTransfer)
+{
+	SQmMapDownloadRequest Request;
+	Request.m_pMapName = "Map One";
+	Request.m_Crc = 0x1234abcd;
+	SQmMapDownloadPlan Plan;
+	ASSERT_TRUE(QmBuildMapDownloadPlan(Request, &Plan));
+	EXPECT_EQ(Plan.m_Source, EQmMapDownloadSource::SERVER_TRANSFER);
+	EXPECT_TRUE(Plan.m_Url.empty());
+	EXPECT_EQ(Plan.m_FileName, "downloadedmaps/Map One_1234abcd.map");
+}
+
+TEST(QmMapDownloadResolver, NameIndexPlanKeepsTheHashSuffix)
+{
+	SQmMapDownloadPlan Plan;
+	ASSERT_TRUE(QmBuildIndexedMapDownloadPlan("#MegaRosenkohl", "%23MegaRosenkohl_50c7e9ad_56c8c8d1.map", "https://maps.ddnet.org", &Plan));
+	EXPECT_EQ(Plan.m_Source, EQmMapDownloadSource::CDN_NAME_INDEX);
+	EXPECT_EQ(Plan.m_Url, "https://maps.ddnet.org/%23MegaRosenkohl_50c7e9ad_56c8c8d1.map");
+	EXPECT_EQ(Plan.m_FileName, "downloadedmaps/#MegaRosenkohl_50c7e9ad_56c8c8d1.map");
 }
