@@ -25,12 +25,9 @@ bool CKeyBinder::OnInput(const IInput::CEvent &Event)
 
 	if(Event.m_Flags & IInput::FLAG_RELEASE)
 	{
-		int ModifierCombination = CBinds::GetModifierMask(Input());
-		if(ModifierCombination == CBinds::GetModifierMaskOfKey(Event.m_Key))
-		{
-			ModifierCombination = KeyModifier::NONE;
-		}
-		m_Reader.Capture({Event.m_Key, ModifierCombination});
+		const int KeyModifierMask = CBinds::GetModifierMaskOfKey(Event.m_Key);
+		const int ModifierMask = CBinds::GetModifierMask(Input()) & ~KeyModifierMask;
+		m_Reader.Capture({Event.m_Key, ModifierMask});
 	}
 	return true;
 }
@@ -92,7 +89,8 @@ CKeyBinder::CKeyReaderResult CKeyBinder::DoKeyReader(CButtonContainer *pReaderBu
 				Result.m_Aborted = true;
 			else
 				Result.m_Bind = *Bind;
-			Ui()->SetActiveItem(nullptr);
+			if(Ui()->IsActiveItem(pReaderButton))
+				Ui()->SetActiveItem(nullptr);
 		}
 	}
 

@@ -17,6 +17,7 @@ public:
 	{
 		m_pReader = pReader;
 		m_Result.reset();
+		m_ReaderSeenThisFrame = false;
 	}
 
 	bool Owns(const CButtonContainer *pReader) const { return m_pReader == pReader; }
@@ -34,9 +35,18 @@ public:
 		return true;
 	}
 
+	void FinishRenderFrame()
+	{
+		if(!std::exchange(m_ReaderSeenThisFrame, false))
+			Abort();
+	}
+
 	std::optional<CBindSlot> TakeResult(const CButtonContainer *pReader)
 	{
-		if(!Owns(pReader) || !m_Result)
+		if(!Owns(pReader))
+			return std::nullopt;
+		m_ReaderSeenThisFrame = true;
+		if(!m_Result)
 			return std::nullopt;
 		m_pReader = nullptr;
 		return std::exchange(m_Result, std::nullopt);
@@ -45,6 +55,7 @@ public:
 private:
 	const CButtonContainer *m_pReader = nullptr;
 	std::optional<CBindSlot> m_Result;
+	bool m_ReaderSeenThisFrame = false;
 };
 
 // component to fetch keypresses, override all other input
@@ -53,6 +64,8 @@ class CKeyBinder : public CComponent
 public:
 	int Sizeof() const override { return sizeof(*this); }
 	bool OnInput(const IInput::CEvent &Event) override;
+	// 菜单组件先处理按键录入控件，随后检查发起录入的控件是否还在交互。
+	void OnRender() override { m_Reader.FinishRenderFrame(); }
 	void OnRelease() override { AbortPendingKey(); }
 	void OnStateChange(int, int) override { AbortPendingKey(); }
 
