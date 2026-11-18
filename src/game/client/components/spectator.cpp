@@ -621,33 +621,33 @@ void CSpectator::OnRender()
 		int m_DDTeam;
 		bool m_Friend;
 		bool m_HasTeam;
+		bool m_IsGhost;
 	};
 	SDisplayPlayer aDisplayPlayers[CGhost::MAX_ACTIVE_GHOSTS];
 	bool aIsFriend[CGhost::MAX_ACTIVE_GHOSTS];
 	int aDisplayOrder[CGhost::MAX_ACTIVE_GHOSTS];
 	int DisplayCount = 0;
-	if(ViewModeActive)
+	// 服务器玩家始终占正常队伍分组；影子另起一组，不能把自己的队伍混进正常玩家。
+	for(const CNetObj_PlayerInfo *pInfo : GameClient()->m_Snap.m_apInfoByDDTeamName)
 	{
-		DisplayCount = minimum(GameClient()->m_RankGhost.ViewMemberCount(), (int)CGhost::MAX_ACTIVE_GHOSTS);
-		for(int i = 0; i < DisplayCount; ++i)
-		{
-			int Team = TEAM_FLOCK;
-			const bool HasTeam = GameClient()->m_RankGhost.ViewMemberTeam(i, &Team);
-			aDisplayPlayers[i] = {i, Team, false, HasTeam};
-			aIsFriend[i] = false;
-		}
+		if(!pInfo || pInfo->m_Team == TEAM_SPECTATORS)
+			continue;
+		const int Id = pInfo->m_ClientId;
+		aDisplayPlayers[DisplayCount] = {Id, GameClient()->m_Teams.Team(Id), GameClient()->m_aClients[Id].m_Friend, true, false};
+		aIsFriend[DisplayCount] = aDisplayPlayers[DisplayCount].m_Friend;
+		++DisplayCount;
 	}
-	else
-		for(const CNetObj_PlayerInfo *pInfo : GameClient()->m_Snap.m_apInfoByDDTeamName)
-		{
-			if(!pInfo || pInfo->m_Team == TEAM_SPECTATORS)
-				continue;
-			const int Id = pInfo->m_ClientId;
-			aDisplayPlayers[DisplayCount] = {Id, GameClient()->m_Teams.Team(Id), GameClient()->m_aClients[Id].m_Friend, true};
-			aIsFriend[DisplayCount] = aDisplayPlayers[DisplayCount].m_Friend;
-			++DisplayCount;
-		}
+	const int GhostCount = minimum(GameClient()->m_RankGhost.LoadedGhostCount(), (int)CGhost::MAX_ACTIVE_GHOSTS - DisplayCount);
+	for(int i = 0; i < GhostCount; ++i)
+	{
+		int Team = TEAM_FLOCK;
+		const bool HasTeam = GameClient()->m_RankGhost.ViewMemberTeam(i, &Team);
+		aDisplayPlayers[DisplayCount] = {i, Team, false, HasTeam, true};
+		aIsFriend[DisplayCount] = false;
+		++DisplayCount;
+	}
 	const int FriendCount = qm_spectator_friends::BuildFriendFirstOrder(aIsFriend, DisplayCount, aDisplayOrder, g_Config.m_QmSpectatorFriendsFirst != 0);
+	const int GhostStartOrder = DisplayCount - GhostCount;
 
 	// draw background
 	float Width = 400 * 3.0f * Graphics()->ScreenAspect();
@@ -739,7 +739,10 @@ void CSpectator::OnRender()
 	// 分组标题高度也随行高走：上限跟着 LayoutScale 放大，否则手机上标题永远卡在 15。
 	const float TitleHeight = std::clamp(LineHeight * 0.5f, 12.0f * LayoutScale, 15.0f * LayoutScale);
 	const float TitleFontSize = TitleHeight * 0.8f;
-	const float PlayersBottom = StartY + BoxMove + qm_spectator_friends::MaxColumnHeight(DisplayCount, FriendCount, PerLine, LineHeight, TitleHeight);
+	const int NormalPlayerCount = GhostStartOrder;
+	const float NormalColumnHeight = qm_spectator_friends::MaxColumnHeight(NormalPlayerCount, FriendCount, PerLine, LineHeight, TitleHeight);
+	const float GhostColumnHeight = GhostCount > 0 ? TitleHeight + minimum(GhostCount, PerLine) * LineHeight : 0.0f;
+	const float PlayersBottom = StartY + BoxMove + maximum(NormalColumnHeight, GhostColumnHeight);
 	const auto SelectorLayout = qm_spectator_layout::Build(ScreenCenter, ObjWidth, !ViewModeActive, PlayersBottom, 300.0f * LayoutScale);
 	const CUIRect &SpectatorRect = SelectorLayout.m_Panel;
 	const CUIRect &SpectatorMouseRect = SelectorLayout.m_Mouse;
@@ -892,25 +895,37 @@ void CSpectator::OnRender()
 	};
 
 	int OldDDTeam = -1;
-
+	int ColumnRow = 0;
 	for(int i = 0; i < DisplayCount; ++i)
 	{
-		const int Count = i + 1;
-		if(Count == PerLine + 1 || (Count > PerLine + 1 && (Count - 1) % PerLine == 0))
+		// 影子成员从独立列开始，不与任何服务器玩家的队伍色带连在一起。
+		if(GhostCount > 0 && i == GhostStartOrder && i > 0)
 		{
 			x += ColumnStep;
 			y = StartY;
+			ColumnRow = 0;
+		}
+		else if(ColumnRow >= PerLine)
+		{
+			x += ColumnStep;
+			y = StartY;
+			ColumnRow = 0;
 		}
 
 		if(FriendCount > 0 && i == 0)
 			DrawGroupTitle(Localize("Friends"), color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClMessageFriendColor)));
-		else if(FriendCount > 0 && i == FriendCount)
+		else if(FriendCount > 0 && FriendCount < GhostStartOrder && i == FriendCount)
 			DrawGroupTitle(Localize("Others"), ColorRGBA(1.0f, 1.0f, 1.0f, 0.85f));
+		if(GhostCount > 0 && i == GhostStartOrder)
+			DrawGroupTitle(Localize("Ghost"), ColorRGBA(0.85f, 0.9f, 1.0f, 0.75f));
 
 		const SDisplayPlayer *pInfo = &aDisplayPlayers[aDisplayOrder[i]];
 		const int DDTeam = pInfo->m_DDTeam;
-		const bool StartsGroup = i % PerLine == 0 || (FriendCount > 0 && i == FriendCount);
-		const bool EndsGroup = i + 1 == DisplayCount || (i + 1) % PerLine == 0 || (FriendCount > 0 && i + 1 == FriendCount);
+		const bool IsGhost = pInfo->m_IsGhost;
+		const bool StartsGroup = ColumnRow == 0 || (FriendCount > 0 && FriendCount < GhostStartOrder && i == FriendCount) || (GhostCount > 0 && i == GhostStartOrder);
+		const bool EndsGroup = i + 1 == DisplayCount || ColumnRow + 1 >= PerLine ||
+				       (FriendCount > 0 && FriendCount < GhostStartOrder && i + 1 == FriendCount) ||
+				       (GhostCount > 0 && i + 1 == GhostStartOrder);
 		const int NextDDTeam = EndsGroup ? 0 : aDisplayPlayers[aDisplayOrder[i + 1]].m_DDTeam;
 
 		if(DDTeam != TEAM_FLOCK)
@@ -930,7 +945,7 @@ void CSpectator::OnRender()
 		}
 		OldDDTeam = DDTeam;
 
-		if(SelectedId() == pInfo->m_Id)
+		if((IsGhost ? ViewModeActive : !ViewModeActive) && SelectedId() == pInfo->m_Id)
 		{
 			{
 				SRoundedSurfaceParams SelectionSurface;
@@ -941,12 +956,16 @@ void CSpectator::OnRender()
 		}
 
 		bool PlayerSelected = false;
+		const bool CanSelectRow = IsGhost ? ViewModeActive : !ViewModeActive;
 		if(WantActive && m_SelectorMouse.x >= x - RowHitInset && m_SelectorMouse.x < x + RowHitWidth &&
 			m_SelectorMouse.y >= y - (LineHeight / 6.0f) && m_SelectorMouse.y < y + (LineHeight * 5.0f / 6.0f))
 		{
-			m_SelectedSpectatorId = pInfo->m_Id;
-			PlayerSelected = true;
-			if(MousePressed)
+			if(CanSelectRow)
+			{
+				m_SelectedSpectatorId = pInfo->m_Id;
+				PlayerSelected = true;
+			}
+			if(MousePressed && CanSelectRow)
 			{
 				if(ViewModeActive)
 				{
@@ -990,7 +1009,7 @@ void CSpectator::OnRender()
 		}
 		float TeeAlpha;
 		float NameAlpha;
-		if(Client()->State() == IClient::STATE_DEMOPLAYBACK &&
+		if(!IsGhost && Client()->State() == IClient::STATE_DEMOPLAYBACK &&
 			!GameClient()->m_Snap.m_aCharacters[pInfo->m_Id].m_Active)
 		{
 			NameAlpha = 0.25f;
@@ -1009,11 +1028,11 @@ void CSpectator::OnRender()
 		NameCursor.m_Flags |= TEXTFLAG_ELLIPSIS_AT_END;
 		NameCursor.m_LineWidth = 180.0f * LayoutScale;
 		const int ClientId = pInfo->m_Id;
-		const bool HideIdentity = !ViewModeActive && GameClient()->ShouldHideStreamerIdentity(ClientId);
+		const bool HideIdentity = !ViewModeActive && !IsGhost && GameClient()->ShouldHideStreamerIdentity(ClientId);
 		const bool IsFriend = pInfo->m_Friend;
 		char aNameBuf[MAX_NAME_LENGTH];
 		char aClanBuf[MAX_CLAN_LENGTH];
-		if(ViewModeActive)
+		if(IsGhost)
 		{
 			GameClient()->m_RankGhost.ViewMemberName(ClientId, aNameBuf, sizeof(aNameBuf));
 			aClanBuf[0] = '\0';
@@ -1024,7 +1043,7 @@ void CSpectator::OnRender()
 			GameClient()->FormatStreamerClan(ClientId, aClanBuf, sizeof(aClanBuf));
 		}
 		bool IsSameClan = false;
-		if(aClanBuf[0] != '\0')
+		if(!IsGhost && aClanBuf[0] != '\0')
 		{
 			const int LocalClientId = GameClient()->m_aLocalIds[g_Config.m_ClDummy];
 			if(LocalClientId >= 0 && str_comp(aClanBuf, GameClient()->m_aClients[LocalClientId].m_aClan) == 0)
@@ -1034,7 +1053,7 @@ void CSpectator::OnRender()
 		}
 
 		ColorRGBA NameColor;
-		if(!ViewModeActive && GameClient()->IsLocalClientId(ClientId))
+		if(!ViewModeActive && !IsGhost && GameClient()->IsLocalClientId(ClientId))
 		{
 			const float Time = Client()->GlobalTime();
 			const float Hue = std::fmod(Time * 0.15f, 1.0f);
@@ -1055,7 +1074,7 @@ void CSpectator::OnRender()
 		NameColor.a *= NameAlpha;
 		TextRender()->TextColor(NameColor);
 
-		if(g_Config.m_ClShowIds && !HideIdentity && !ViewModeActive)
+		if(g_Config.m_ClShowIds && !HideIdentity && !ViewModeActive && !IsGhost)
 		{
 			char aClientId[16];
 			GameClient()->FormatClientId(ClientId, aClientId, EClientIdFormat::INDENT_AUTO);
@@ -1063,7 +1082,7 @@ void CSpectator::OnRender()
 		}
 
 		TextRender()->TextEx(&NameCursor, aNameBuf);
-		if(ViewModeActive && pInfo->m_HasTeam)
+		if(IsGhost && pInfo->m_HasTeam)
 		{
 			char aTeamBuf[32];
 			str_format(aTeamBuf, sizeof(aTeamBuf), Localize("Team %d"), DDTeam);
@@ -1077,14 +1096,27 @@ void CSpectator::OnRender()
 				TextRender()->Text(CenterX + x + NameOffsetX, CenterY + y + BoxMove + LineHeight - TeamFontSize - 2.0f * LayoutScale, TeamFontSize, aTeamBuf, -1.0f);
 			}
 		}
-		if(MultiViewActive())
+		if(IsGhost && ViewModeActive)
 		{
-			if(ViewModeActive ? GameClient()->m_RankGhost.ViewMultiMemberSelected(pInfo->m_Id) : GameClient()->m_aMultiViewId[pInfo->m_Id])
+			if(GameClient()->m_RankGhost.ViewMultiMemberSelected(pInfo->m_Id))
 			{
 				TextRender()->TextColor(0.1f, 1.0f, 0.1f, (PlayerSelected ? 1.0f : 0.5f) * ContentAlpha);
 				TextRender()->Text(CenterX + x + NameOffsetX + 180.0f * LayoutScale, CenterY + y + BoxMove + (LineHeight - FontSize) / 2.f, FontSize - 3, "⬤", 220.0f);
 			}
-			else if(ViewModeActive || GameClient()->m_MultiViewTeam == DDTeam)
+			else
+			{
+				TextRender()->TextColor(1.0f, 0.1f, 0.1f, (PlayerSelected ? 1.0f : 0.5f) * ContentAlpha);
+				TextRender()->Text(CenterX + x + NameOffsetX + 180.0f * LayoutScale, CenterY + y + BoxMove + (LineHeight - FontSize) / 2.f, FontSize - 3, "◯", 220.0f);
+			}
+		}
+		else if(!IsGhost && !ViewModeActive && MultiViewActive())
+		{
+			if(GameClient()->m_aMultiViewId[pInfo->m_Id])
+			{
+				TextRender()->TextColor(0.1f, 1.0f, 0.1f, (PlayerSelected ? 1.0f : 0.5f) * ContentAlpha);
+				TextRender()->Text(CenterX + x + NameOffsetX + 180.0f * LayoutScale, CenterY + y + BoxMove + (LineHeight - FontSize) / 2.f, FontSize - 3, "⬤", 220.0f);
+			}
+			else if(GameClient()->m_MultiViewTeam == DDTeam)
 			{
 				TextRender()->TextColor(1.0f, 0.1f, 0.1f, (PlayerSelected ? 1.0f : 0.5f) * ContentAlpha);
 				TextRender()->Text(CenterX + x + NameOffsetX + 180.0f * LayoutScale, CenterY + y + BoxMove + (LineHeight - FontSize) / 2.f, FontSize - 3, "◯", 220.0f);
@@ -1092,7 +1124,7 @@ void CSpectator::OnRender()
 		}
 
 		// flag
-		if(!ViewModeActive && GameClient()->m_Snap.m_pGameInfoObj && (GameClient()->m_Snap.m_pGameInfoObj->m_GameFlags & GAMEFLAG_FLAGS) &&
+		if(!IsGhost && !ViewModeActive && GameClient()->m_Snap.m_pGameInfoObj && (GameClient()->m_Snap.m_pGameInfoObj->m_GameFlags & GAMEFLAG_FLAGS) &&
 			GameClient()->m_Snap.m_pGameDataObj && (GameClient()->m_Snap.m_pGameDataObj->m_FlagCarrierRed == pInfo->m_Id || GameClient()->m_Snap.m_pGameDataObj->m_FlagCarrierBlue == pInfo->m_Id))
 		{
 			Graphics()->BlendNormal();
@@ -1113,7 +1145,7 @@ void CSpectator::OnRender()
 		}
 
 		CTeeRenderInfo TeeInfo;
-		if(ViewModeActive)
+		if(IsGhost)
 			GameClient()->m_RankGhost.ViewMemberRenderInfo(pInfo->m_Id, &TeeInfo);
 		else
 			TeeInfo = GameClient()->m_aClients[pInfo->m_Id].m_RenderInfo;
@@ -1147,6 +1179,7 @@ void CSpectator::OnRender()
 		TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
 
 		y += LineHeight;
+		++ColumnRow;
 	}
 	TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
 
