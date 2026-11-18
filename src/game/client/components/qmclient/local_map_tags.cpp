@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cstddef>
 #include <cstdlib>
 #include <memory>
@@ -24,6 +25,7 @@ namespace QmMapTags
 		constexpr char LOCAL_TAGS_FILE[] = "qm_local_map_tags.txt";
 		constexpr int MAX_LOCAL_TAGS_PER_MAP = 16;
 		constexpr unsigned MAX_FILE_BYTES = 256 * 1024;
+		constexpr int MAX_TEMPORARY_ATTEMPTS = 8;
 		constexpr char KEY_SEPARATOR = '\x1f';
 
 		std::string_view AsView(const char *pText)
@@ -126,8 +128,8 @@ namespace QmMapTags
 		std::string Content;
 		for(const auto &[Key, Tag] : vEntries)
 		{
-			// 键的分隔符换成制表符，再为标签和换行各追加一个分隔符。
-			if(Key.size() + Tag.size() + 2 > MAX_FILE_BYTES - Content.size())
+			// 键内分隔符已计入，只需另算标签前的制表符。
+			if(Key.size() + Tag.size() + 1 > MAX_FILE_BYTES - Content.size())
 				return false;
 			const size_t Separator = Key.find(KEY_SEPARATOR);
 			Content.append(Key, 0, Separator);
@@ -135,17 +137,34 @@ namespace QmMapTags
 			Content.append(Key, Separator + 1, std::string::npos);
 			Content.push_back('\t');
 			Content.append(Tag);
-			Content.push_back('\n');
+			// 末行正文占满上限时，读取仍可识别没有换行的末行。
+			if(Content.size() < MAX_FILE_BYTES)
+				Content.push_back('\n');
 		}
 
 		char aTemporary[sizeof(LOCAL_TAGS_FILE) + 32];
-		IStorage::FormatTmpPath(aTemporary, sizeof(aTemporary), LOCAL_TAGS_FILE);
 		char aRoot[IO_MAX_PATH_LENGTH] = "";
 		Storage.GetCompletePath(IStorage::TYPE_SAVE, "", aRoot, sizeof(aRoot));
-		if(str_length(aRoot) + str_length(aTemporary) >= IO_MAX_PATH_LENGTH)
-			return false;
 
-		std::unique_ptr<void, decltype(&io_close)> pFile(Storage.OpenFile(aTemporary, IOFLAG_WRITE | IOFLAG_EXCLUSIVE, IStorage::TYPE_SAVE), &io_close);
+		std::unique_ptr<void, decltype(&io_close)> pFile(nullptr, &io_close);
+		static std::atomic<unsigned> s_NextTemporary{0};
+		char aBase[sizeof(LOCAL_TAGS_FILE) + 12];
+		str_copy(aBase, LOCAL_TAGS_FILE);
+		for(int Attempt = 0; Attempt < MAX_TEMPORARY_ATTEMPTS; ++Attempt)
+		{
+			if(Attempt != 0)
+				str_format(aBase, sizeof(aBase), "%s.%u", LOCAL_TAGS_FILE, s_NextTemporary.fetch_add(1, std::memory_order_relaxed));
+			IStorage::FormatTmpPath(aTemporary, sizeof(aTemporary), aBase);
+			if(str_length(aRoot) + str_length(aTemporary) >= IO_MAX_PATH_LENGTH)
+				return false;
+
+			pFile.reset(Storage.OpenFile(aTemporary, IOFLAG_WRITE | IOFLAG_EXCLUSIVE, IStorage::TYPE_SAVE));
+			if(pFile)
+				break;
+			// 同名候选可能在上次退出后遗留，只遇到占用时才换名字。
+			if(!Storage.FileExists(aTemporary, IStorage::TYPE_SAVE) && !Storage.FolderExists(aTemporary, IStorage::TYPE_SAVE))
+				return false;
+		}
 		if(!pFile)
 			return false;
 		const auto Size = static_cast<unsigned>(Content.size());

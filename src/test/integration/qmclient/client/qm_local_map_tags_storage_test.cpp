@@ -14,6 +14,21 @@ namespace
 {
 	constexpr char TAGS_FILE[] = "qm_local_map_tags.txt";
 	constexpr char SAVED_TAGS[] = "community\tmap\tfirst\ncommunity\tmap\tsecond\n";
+	constexpr size_t FILE_LIMIT = 256 * 1024;
+	constexpr size_t ROW_SIZE = 64;
+
+	std::string MapTagRows(size_t Count)
+	{
+		const std::string Community(24, 'c');
+		std::string Rows;
+		for(size_t Index = 0; Index < Count; ++Index)
+		{
+			std::string Map = "map" + std::to_string(Index);
+			Map.resize(ROW_SIZE - Community.size() - 3 - 5, 'a');
+			Rows += Community + "\t" + Map + "\tfirst\n";
+		}
+		return Rows;
+	}
 
 	class CQmLocalMapTagsStorage : public testing::Test
 	{
@@ -48,7 +63,7 @@ namespace
 TEST_F(CQmLocalMapTagsStorage, OversizedExistingFileCannotBeOverwrittenByAnEdit)
 {
 	std::string Existing(SAVED_TAGS);
-	Existing.resize(256 * 1024 + 1, ' ');
+	Existing.resize(FILE_LIMIT + 1, ' ');
 	ASSERT_NO_FATAL_FAILURE(Write(TAGS_FILE, Existing));
 	m_Tags.Load(m_pStorage.get());
 
@@ -71,7 +86,7 @@ TEST_F(CQmLocalMapTagsStorage, AnEditRetriesTheReadAfterAStorageFailure)
 	EXPECT_EQ(Reloaded.Get("community", "map"), (std::vector<std::string>{"first", "second", "extra"}));
 }
 
-TEST_F(CQmLocalMapTagsStorage, UnavailableTemporaryPathKeepsBothPreviousStates)
+TEST_F(CQmLocalMapTagsStorage, OccupiedTemporaryPathDoesNotBlockSaving)
 {
 	ASSERT_NO_FATAL_FAILURE(Write(TAGS_FILE, SAVED_TAGS));
 	m_Tags.Load(m_pStorage.get());
@@ -80,14 +95,10 @@ TEST_F(CQmLocalMapTagsStorage, UnavailableTemporaryPathKeepsBothPreviousStates)
 	IStorage::FormatTmpPath(aTemporary, sizeof(aTemporary), TAGS_FILE);
 	ASSERT_NO_FATAL_FAILURE(Write(aTemporary, "existing temporary file"));
 
-	EXPECT_FALSE(m_Tags.Remove(m_pStorage.get(), "community", "map", "first"));
-	EXPECT_TRUE(m_Tags.Has("community", "map", "first"));
-	EXPECT_EQ(Read(TAGS_FILE), SAVED_TAGS);
-	EXPECT_EQ(Read(aTemporary), "existing temporary file");
-
-	ASSERT_TRUE(m_pStorage->RemoveFile(aTemporary, IStorage::TYPE_SAVE));
 	ASSERT_TRUE(m_Tags.Remove(m_pStorage.get(), "community", "map", "first"));
+	EXPECT_FALSE(m_Tags.Has("community", "map", "first"));
 	EXPECT_EQ(Read(TAGS_FILE), "community\tmap\tsecond\n");
+	EXPECT_EQ(Read(aTemporary), "existing temporary file");
 }
 
 TEST_F(CQmLocalMapTagsStorage, FailedReplacementDiscardsTheCandidateAndKeepsTheTagOrder)
@@ -119,16 +130,7 @@ TEST_F(CQmLocalMapTagsStorage, TagTrailingSpacesSurviveReload)
 
 TEST_F(CQmLocalMapTagsStorage, AnEditCannotSaveMoreBytesThanTheLoaderCanRead)
 {
-	constexpr size_t FILE_LIMIT = 256 * 1024;
-	constexpr size_t ROW_SIZE = 64;
-	const std::string Community(24, 'c');
-	std::string Existing;
-	for(size_t Index = 0; Index < FILE_LIMIT / ROW_SIZE; ++Index)
-	{
-		std::string Map = "map" + std::to_string(Index);
-		Map.resize(ROW_SIZE - Community.size() - 3 - 5, 'a');
-		Existing += Community + "\t" + Map + "\tfirst\n";
-	}
+	const std::string Existing = MapTagRows(FILE_LIMIT / ROW_SIZE);
 	ASSERT_EQ(Existing.size(), FILE_LIMIT);
 	ASSERT_NO_FATAL_FAILURE(Write(TAGS_FILE, Existing));
 	m_Tags.Load(m_pStorage.get());
@@ -137,4 +139,20 @@ TEST_F(CQmLocalMapTagsStorage, AnEditCannotSaveMoreBytesThanTheLoaderCanRead)
 	EXPECT_FALSE(m_Tags.Add(m_pStorage.get(), "community", "other", "new"));
 	EXPECT_FALSE(m_Tags.Has("community", "other", "new"));
 	EXPECT_TRUE(Read(TAGS_FILE) == Existing);
+}
+
+TEST_F(CQmLocalMapTagsStorage, MoveStillSavesAFullFileWithoutFinalNewline)
+{
+	const std::string Existing = SAVED_TAGS + MapTagRows(FILE_LIMIT / ROW_SIZE - 1) + "community\tlast-map\tlast";
+	ASSERT_EQ(Existing.size(), FILE_LIMIT);
+	ASSERT_NO_FATAL_FAILURE(Write(TAGS_FILE, Existing));
+	m_Tags.Load(m_pStorage.get());
+	ASSERT_TRUE(m_Tags.Loaded());
+
+	ASSERT_TRUE(m_Tags.Move(m_pStorage.get(), "community", "map", 0, 1));
+	EXPECT_EQ(Read(TAGS_FILE).size(), FILE_LIMIT);
+	QmMapTags::CLocalTags Reloaded;
+	Reloaded.Load(m_pStorage.get());
+	EXPECT_EQ(Reloaded.Get("community", "map"), (std::vector<std::string>{"second", "first"}));
+	EXPECT_TRUE(Reloaded.Has("community", "last-map", "last"));
 }
