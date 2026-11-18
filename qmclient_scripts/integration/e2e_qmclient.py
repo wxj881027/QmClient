@@ -17,6 +17,7 @@ from unittest import SkipTest
 from collections.abc import Callable
 
 try:
+	from qmclient_scripts.integration.e2e_console_settings import scenario_console_settings_startup
 	from qmclient_scripts.integration.e2e_crash_reporting import scenario_fatal_exception_exits_without_hang
 	from qmclient_scripts.integration.e2e_demo_browser import scenario_demo_browser_pre_epoch_date
 	from qmclient_scripts.integration.e2e_menu_background import (
@@ -36,6 +37,7 @@ try:
 	from qmclient_scripts.integration.e2e_settings_language import scenario_settings_language_round_trip
 	from qmclient_scripts.integration.process_harness import ProcessEnvironment
 except ModuleNotFoundError:
+	from e2e_console_settings import scenario_console_settings_startup  # type: ignore[no-redef]
 	from e2e_crash_reporting import scenario_fatal_exception_exits_without_hang  # type: ignore[no-redef]
 	from e2e_demo_browser import scenario_demo_browser_pre_epoch_date  # type: ignore[no-redef]
 	from e2e_menu_background import (  # type: ignore[no-redef]
@@ -445,6 +447,7 @@ E2E_TESTS: dict[str, Callable[[ProcessEnvironment], None]] = {
 	"asset_loading_stall_reports_hang": scenario_asset_loading_stall_reports_hang,
 	"hang_watchdog_reports_stall": scenario_hang_watchdog_reports_stall,
 	"connection_failure_recovery": scenario_connection_failure_recovery,
+	"console_settings_startup": scenario_console_settings_startup,
 	"fatal_exception_exits_without_hang": scenario_fatal_exception_exits_without_hang,
 	"demo_browser_pre_epoch_date": scenario_demo_browser_pre_epoch_date,
 	"demo_recording": scenario_demo_recording,
