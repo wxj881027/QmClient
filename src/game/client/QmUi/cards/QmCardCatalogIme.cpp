@@ -14,6 +14,7 @@
 #include <game/localization.h>
 
 #include <array>
+#include <new>
 
 namespace
 {
@@ -29,6 +30,12 @@ namespace
 		int *m_pCenterY;
 		int *m_pRange;
 		int *m_pReverse;
+	};
+
+	struct SImePreviewClipScope
+	{
+		CUi &m_Ui;
+		~SImePreviewClipScope() { m_Ui.ClipDisable(); }
 	};
 
 	class CImePrewarmScope
@@ -95,7 +102,17 @@ void CMenus::RenderQmFunctionImeContent(CUIRect &Content, float LineHeight, floa
 	if(HasPreview && !PrewarmOnly && Flow.Drawing())
 	{
 		DrawRoundedSurface(Ui(), Preview, ColorRGBA(0.5f, 0.5f, 0.5f, 0.12f), ColorRGBA(), 4.0f);
-		QmImeRenderStylePreview(GameClient(), Preview);
+		try
+		{
+			// 折叠时预览行会变矮，候选栏仍按当前字号绘制。
+			Ui()->ClipEnable(&Preview);
+			const SImePreviewClipScope ClipScope{*Ui()};
+			QmImeRenderStylePreview(GameClient(), Preview);
+		}
+		catch(const std::bad_alloc &)
+		{
+			// 保留预览底板，下一帧再尝试绘制候选栏。
+		}
 	}
 
 	// 目录拥有控件状态，分类页与搜索页打开的是同一组编辑器。
