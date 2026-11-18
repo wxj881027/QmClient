@@ -1585,22 +1585,31 @@ class CTextRender : public IEngineTextRender
 		Graphics()->MapScreen(ScreenX0 - Offset.x, ScreenY0 - Offset.y, ScreenX1 - Offset.x, ScreenY1 - Offset.y);
 		if(Graphics()->IsTextBufferingEnabled())
 		{
-			const size_t DataSize = m_vTextEffectQuads.size() * sizeof(STextCharQuad);
+			constexpr size_t MaxUploadBytes = GRAPHICS_VERTEX_CAPACITY * std::max(sizeof(GL_SVertexTex3DStream), sizeof(GL_SVertexTex3D));
+			constexpr size_t MaxQuadsPerUpload = MaxUploadBytes / sizeof(STextCharQuad);
 			const int Flags = IGraphics::EBufferObjectCreateFlags::BUFFER_OBJECT_CREATE_FLAGS_ONE_TIME_USE_BIT;
-			if(m_TextEffectBufferObject == -1)
-				m_TextEffectBufferObject = Graphics()->CreateBufferObject(DataSize, m_vTextEffectQuads.data(), Flags);
-			else
-				Graphics()->RecreateBufferObject(m_TextEffectBufferObject, DataSize, m_vTextEffectQuads.data(), Flags);
-			if(m_TextEffectBufferContainer == -1)
+			// 每批遵守一次性缓冲的字节上限，提交绘制后再复用缓冲。
+			for(size_t BatchStart = 0; BatchStart < m_vTextEffectQuads.size();)
 			{
-				m_DefaultTextContainerInfo.m_VertBufferBindingIndex = m_TextEffectBufferObject;
-				m_TextEffectBufferContainer = Graphics()->CreateBufferContainer(&m_DefaultTextContainerInfo);
+				const size_t BatchQuads = std::min(MaxQuadsPerUpload, m_vTextEffectQuads.size() - BatchStart);
+				const size_t DataSize = BatchQuads * sizeof(STextCharQuad);
+				STextCharQuad *pQuads = m_vTextEffectQuads.data() + BatchStart;
+				if(m_TextEffectBufferObject == -1)
+					m_TextEffectBufferObject = Graphics()->CreateBufferObject(DataSize, pQuads, Flags);
+				else
+					Graphics()->RecreateBufferObject(m_TextEffectBufferObject, DataSize, pQuads, Flags);
+				if(m_TextEffectBufferContainer == -1)
+				{
+					m_DefaultTextContainerInfo.m_VertBufferBindingIndex = m_TextEffectBufferObject;
+					m_TextEffectBufferContainer = Graphics()->CreateBufferContainer(&m_DefaultTextContainerInfo);
+				}
+				Graphics()->IndicesNumRequiredNotify(static_cast<unsigned int>(BatchQuads) * 6);
+				Graphics()->TextureClear();
+				Graphics()->RenderText(m_TextEffectBufferContainer, static_cast<int>(BatchQuads), m_pGlyphMap->TextureDimension(),
+					m_pGlyphMap->Texture(CGlyphMap::FONT_TEXTURE_FILL), m_pGlyphMap->Texture(CGlyphMap::FONT_TEXTURE_OUTLINE),
+					Tint, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f));
+				BatchStart += BatchQuads;
 			}
-			Graphics()->IndicesNumRequiredNotify(m_vTextEffectQuads.size() * 6);
-			Graphics()->TextureClear();
-			Graphics()->RenderText(m_TextEffectBufferContainer, m_vTextEffectQuads.size(), m_pGlyphMap->TextureDimension(),
-				m_pGlyphMap->Texture(CGlyphMap::FONT_TEXTURE_FILL), m_pGlyphMap->Texture(CGlyphMap::FONT_TEXTURE_OUTLINE),
-				Tint, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f));
 		}
 		else
 		{
