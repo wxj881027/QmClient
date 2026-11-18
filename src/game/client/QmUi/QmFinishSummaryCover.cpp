@@ -64,7 +64,7 @@ namespace qm_finish_summary
 		if(DrawRoundedImage(&Graphics, Rect, Image, ColorRGBA(0, 0, 0, 0), Surface))
 			return;
 		const auto aRows = CoverRows(Rect.w, Rect.h, Radius, g_Config.m_QmUiCornerCurve,
-			g_Config.m_QmUiCornerSmoothing / 100.0f, QmEffectiveCapsuleSeam());
+			QmEffectiveCornerSmoothing(), QmEffectiveCapsuleSeam());
 		const float Opacity = std::clamp(Alpha, 0.0f, 1.0f);
 		const float Feather = std::min(Rect.w * 0.005f, Pixel);
 		Graphics.WrapClamp();

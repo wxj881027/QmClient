@@ -1,6 +1,7 @@
 #include "QmFinishSummarySurface.h"
 
 #include "QmFinishSummaryCover.h"
+#include "QmColorGradient.h"
 #include "QmIslandSurface.h"
 #include "UiSurface.h"
 
@@ -58,9 +59,21 @@ bool qm_finish_summary::CSurface::Render(IGraphics &Graphics, ITextRender &TextR
 			ContentAlpha * DrawAlpha, pTextScreen);
 		if(!pTextScreen && Style.m_TopShade > 0.0f)
 		{
-			const ColorRGBA Top(0.0f, 0.0f, 0.0f, Style.m_TopShade * DrawAlpha);
-			const ColorRGBA Bottom = Top.WithAlpha(0.0f);
-			Graphics.DrawRect4(Rect.x, Rect.y, Rect.w, Rect.h, Top, Top, Bottom, Bottom, IGraphics::CORNER_ALL, Style.m_Radius);
+			// 顶部渐暗层与卡片共用同一套圆角曲线/连续曲率/胶囊端头；旧的 DrawRect4
+			// 只接受半径，切到超椭圆或苹果档时遮罩会越出卡片轮廓。
+			SQmColorGradient Shade;
+			Shade.m_aColors[0] = ColorRGBA(0.0f, 0.0f, 0.0f, Style.m_TopShade * DrawAlpha);
+			Shade.m_aColors[1] = Shade.m_aColors[0].WithAlpha(0.0f);
+			Shade.m_NumColors = 2;
+			Shade.m_Type = EQmGradientType::LINEAR;
+			Shade.m_Center = vec2(0.5f, 0.5f);
+			Shade.m_Direction = vec2(0.0f, 1.0f);
+			Shade.m_Range = 1.0f;
+			SRoundedSurfaceParams Surface;
+			Surface.m_Radius = Style.m_Radius;
+			Surface.m_PixelSize = std::max(PixelSize.x, PixelSize.y);
+			Surface.m_AlignToPixel = false;
+			DrawRoundedGradientSurface(&Graphics, Rect, Shade, 1.0f, ColorRGBA(), Surface);
 		}
 		return Complete;
 	};
@@ -130,7 +143,7 @@ bool qm_finish_summary::CSurface::Render(IGraphics &Graphics, ITextRender &TextR
 	Draw.m_NativeTextureCoordinates = true;
 	Draw.m_Corners = IGraphics::CORNER_ALL;
 	Draw.m_Rounding = Style.m_Radius;
-	Draw.m_CornerSmoothing = std::clamp(g_Config.m_QmUiCornerSmoothing / 100.0f, 0.0f, 1.0f);
+	Draw.m_CornerSmoothing = QmEffectiveCornerSmoothing();
 	Draw.m_CornerCurve = static_cast<float>(g_Config.m_QmUiCornerCurve);
 	Draw.m_CornerSeam = QmEffectiveCapsuleSeam();
 	Graphics.DrawRenderTarget(m_Target, Draw);
