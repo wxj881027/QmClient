@@ -603,6 +603,30 @@ TEST(QmInputOverlayLayout, MouseClassificationRequiresMouseOnlyInputs)
 	EXPECT_FALSE(QmInputOverlay::IsMouseOnlyLayout(false, false));
 }
 
+TEST(QmInputOverlayLayout, ArrowFollowsAimDistanceAndDirection)
+{
+	const vec2 SpriteSize(6.0f, 8.0f);
+	EXPECT_EQ(QmInputOverlay::MouseArrowOffset(vec2(0, 0), 100, SpriteSize, 25), vec2(0, 0));
+	EXPECT_EQ(QmInputOverlay::MouseArrowOffset(vec2(0, -50), 100, SpriteSize, 25), vec2(0, -10));
+	EXPECT_EQ(QmInputOverlay::MouseArrowOffset(vec2(0, -100), 100, SpriteSize, 25), vec2(0, -20));
+}
+
+TEST(QmInputOverlayLayout, DiagonalOvertravelLeavesRoomForRotatedCorners)
+{
+	const vec2 Offset = QmInputOverlay::MouseArrowOffset(vec2(-300, 400), 100, vec2(6, 8), 25);
+	EXPECT_FLOAT_EQ(Offset.x, -12.0f);
+	EXPECT_FLOAT_EQ(Offset.y, 16.0f);
+}
+
+TEST(QmInputOverlayLayout, ArrowStaysAtAnchorWhenTranslationIsUnavailable)
+{
+	const vec2 Aim(100, 0);
+	const vec2 Size(6, 8);
+	EXPECT_EQ(QmInputOverlay::MouseArrowOffset(Aim, 100, Size, 0), vec2(0, 0));
+	EXPECT_EQ(QmInputOverlay::MouseArrowOffset(Aim, 100, Size, 4), vec2(0, 0));
+	EXPECT_EQ(QmInputOverlay::MouseArrowOffset(Aim, 0, Size, 25), vec2(0, 0));
+}
+
 TEST(QmInputOverlayLayout, MouseSizeDoesNotMoveKeyboardOrMouseAnchor)
 {
 	constexpr float KeyboardScale = 0.5f;
