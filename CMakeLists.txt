@@ -6541,6 +6541,14 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       target_link_libraries(${TARGET_TESTRUNNER} opengl32)
     endif()
   endif()
+  if(TARGET_OS STREQUAL "linux" AND TARGET steam_api)
+    target_sources(${TARGET_TESTRUNNER} PRIVATE
+      src/engine/client/steam.cpp
+      src/engine/client/steam_probe.cpp
+      src/test/integration/engine/steam_auto_launch_test.cpp
+    )
+    target_link_libraries(${TARGET_TESTRUNNER} steam_api)
+  endif()
   if(FFMPEG_FOUND)
     target_link_libraries(${TARGET_TESTRUNNER} ${FFMPEG_LIBRARIES})
   endif()

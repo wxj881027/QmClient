@@ -12,10 +12,81 @@
 
 #include <steam/steam_api_flat.h>
 
+#if defined(CONF_FAMILY_WINDOWS)
+#include <base/windows.h>
+
+#include <windows.h>
+
+#include <objbase.h>
+#include <shellapi.h>
+
+#include <cfenv>
+#elif defined(CONF_PLATFORM_MACOS)
+#include <base/os.h>
+#elif defined(CONF_FAMILY_UNIX) && !defined(CONF_PLATFORM_ANDROID) && !defined(CONF_PLATFORM_EMSCRIPTEN)
+#include <base/thread.h>
+
+#include <sys/wait.h>
+
+#include <cerrno>
+#include <future>
+#endif
+
 namespace
 {
 
-	constexpr const char *STEAM_SILENT_ARGUMENT = "-silent";
+#if defined(CONF_FAMILY_WINDOWS)
+	bool LaunchSteamWindows(const char *pPath)
+	{
+		const std::wstring WidePath = windows_utf8_to_wide(pPath);
+		SHELLEXECUTEINFOW Info = {};
+		Info.cbSize = sizeof(Info);
+		Info.lpVerb = L"open";
+		Info.lpFile = WidePath.c_str();
+		Info.lpParameters = L"-silent";
+		Info.nShow = SW_SHOWMINNOACTIVE;
+		// Steam 可能复用已启动的实例。这里只需要 shell 的启动结果。
+		std::fenv_t Environment;
+		const bool RestoreEnvironment = std::fegetenv(&Environment) == 0;
+		const bool Launched = ShellExecuteExW(&Info) != 0;
+		if(RestoreEnvironment)
+			std::fesetenv(&Environment);
+		return Launched;
+	}
+#elif defined(CONF_FAMILY_UNIX) && !defined(CONF_PLATFORM_ANDROID) && !defined(CONF_PLATFORM_MACOS) && !defined(CONF_PLATFORM_EMSCRIPTEN)
+	bool LaunchSteamUnix(const char *pPath)
+	{
+		// 在启动前准备回收者，否则线程创建失败后就没有人等待子进程退出。
+		std::promise<PROCESS> Launch;
+		auto pResult = std::make_unique<std::future<PROCESS>>(Launch.get_future());
+		void *pReaper = thread_try_init([](void *pUser) {
+			const std::unique_ptr<std::future<PROCESS>> pChildResult(static_cast<std::future<PROCESS> *>(pUser));
+			const PROCESS Child = pChildResult->get();
+			if(Child == INVALID_PROCESS)
+				return;
+			while(true)
+			{
+				int Status;
+				const pid_t Waited = waitpid(Child, &Status, 0);
+				if(Waited == Child && (WIFEXITED(Status) || WIFSIGNALED(Status)))
+					return;
+				if(Waited < 0 && errno != EINTR)
+					return;
+			}
+		},
+			pResult.get(), "steam launch reaper");
+		if(!pReaper)
+			return false;
+		pResult.release();
+		thread_detach(pReaper);
+
+		const char *apArguments[] = {"-silent"};
+		const PROCESS Child = shell_execute(pPath, EShellExecuteWindowState::BACKGROUND, apArguments, 1);
+		Launch.set_value(Child);
+		return Child != INVALID_PROCESS;
+	}
+#endif
+
 	const char *SteamSourceName(ESteamClientSource Source)
 	{
 		switch(Source)
@@ -283,11 +354,13 @@ bool SteamOpenClient()
 		if(g_Config.m_Debug)
 			dbg_msg("steam", "found steam client: '%s', source=%s", pPath, SteamSourceName(Source));
 #if defined(CONF_PLATFORM_MACOS)
-		// macOS：用 open 启动检测到的应用包。
-		const char *apOpenArguments[] = {pPath};
-		return shell_execute("open", EShellExecuteWindowState::BACKGROUND, apOpenArguments, 1) != INVALID_PROCESS;
+		return os_open_link(pPath) != 0;
+#elif defined(CONF_FAMILY_WINDOWS)
+		return LaunchSteamWindows(pPath);
+#elif defined(CONF_FAMILY_UNIX) && !defined(CONF_PLATFORM_EMSCRIPTEN)
+		return LaunchSteamUnix(pPath);
 #else
-		const char *apArguments[] = {STEAM_SILENT_ARGUMENT};
+		const char *apArguments[] = {"-silent"};
 		return shell_execute(pPath, EShellExecuteWindowState::BACKGROUND, apArguments, 1) != INVALID_PROCESS;
 #endif
 	});
