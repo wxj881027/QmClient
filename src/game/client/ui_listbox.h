@@ -80,7 +80,7 @@ public:
 			return Index >= 0 && Index == m_Candidate ? 1.0f : 0.0f;
 		if(!m_Initialized)
 			return Index >= 0 && Index == m_Candidate ? 1.0f : 0.0f;
-		if(Index < 0 || m_Current < 0)
+		if(Index < 0)
 			return 0.0f;
 		if(m_Previous == m_Current)
 			return Index == m_Current ? 1.0f : 0.0f;
@@ -107,18 +107,21 @@ public:
 			return;
 		}
 
+		if(m_Snap || m_pAnim == nullptr)
+		{
+			// 候选行相同也要结算旧过渡，避免停止滚动后旧行再次出现。
+			if(m_Candidate == m_Current && !m_Transitioning)
+				return;
+			m_Previous = m_Current = m_Candidate;
+			m_Progress = 1.0f;
+			m_Transitioning = false;
+			if(m_pAnim != nullptr)
+				m_pAnim->SetValue(m_NodeKey, EUiAnimProperty::ALPHA, 1.0f);
+			return;
+		}
+
 		if(m_Candidate != m_Current)
 		{
-			if(m_Snap || m_pAnim == nullptr)
-			{
-				m_Previous = m_Current = m_Candidate;
-				m_Progress = 1.0f;
-				m_Transitioning = false;
-				if(m_pAnim != nullptr)
-					m_pAnim->SetValue(m_NodeKey, EUiAnimProperty::ALPHA, 1.0f);
-				return;
-			}
-
 			if(m_Transitioning && m_Candidate == m_Previous)
 			{
 				std::swap(m_Previous, m_Current);
@@ -139,7 +142,7 @@ public:
 			return;
 		}
 
-		if(!m_Transitioning || m_pAnim == nullptr)
+		if(!m_Transitioning)
 			return;
 
 		SUiAnimTransition Transition = ui_token::motion::HOVER_FADE;
