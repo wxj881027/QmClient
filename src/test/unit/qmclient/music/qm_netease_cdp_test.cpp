@@ -15,6 +15,22 @@ TEST(QmNeteaseCdp, SelectsOnlyLoopbackOrpheusTargetWithJsonParser)
 	EXPECT_EQ(Targets[0].m_ProcessId, 42u);
 }
 
+TEST(QmNeteaseCdp, RejectsTargetListWithRawNul)
+{
+	const std::string Json = R"([{"url":"orpheus://main","webSocketDebuggerUrl":"ws://127.0.0.1:40002/devtools/page/b"}])";
+	std::vector<SCdpTarget> Targets;
+	ASSERT_TRUE(ParseTargetList(Json, &Targets));
+
+	std::string PaddedJson = Json;
+	PaddedJson.append("\0\n", 2);
+	std::string Error;
+	EXPECT_FALSE(ParseTargetList(PaddedJson, &Targets, &Error));
+	EXPECT_TRUE(Targets.empty());
+	EXPECT_EQ(Error, "invalid JSON");
+
+	EXPECT_TRUE(ParseTargetList(Json, &Targets));
+}
+
 TEST(QmNeteaseCdp, RequiresTargetPortAndListenerPidToMatchCloudMusic)
 {
 	SCdpTarget Target;
@@ -41,6 +57,15 @@ TEST(QmNeteaseCdp, RejectsMalformedOrNonLoopbackWebSocket)
 	EXPECT_TRUE(ParseLoopbackWebSocketUrl("ws://127.0.0.1:40000/x"));
 }
 
+TEST(QmNeteaseCdp, RejectsRawSpaceInWebSocketPath)
+{
+	uint16_t Port = 0;
+	EXPECT_FALSE(ParseLoopbackWebSocketUrl("ws://127.0.0.1:40002/devtools/page/with space", &Port));
+	EXPECT_EQ(Port, 0);
+	EXPECT_TRUE(ParseLoopbackWebSocketUrl("ws://127.0.0.1:40002/devtools/page/with%20space", &Port));
+	EXPECT_EQ(Port, 40002);
+}
+
 TEST(QmNeteaseCdp, DoesNotDuplicateExplicitDebuggingPort)
 {
 	uint16_t Port = 0;
@@ -59,11 +84,29 @@ TEST(QmNeteaseCdp, SkipsMalformedPortBeforeValidPort)
 	EXPECT_EQ(Port, 41235);
 }
 
+TEST(QmNeteaseCdp, FindsDebuggingPortOutsideQuotedArgument)
+{
+	uint16_t Port = 0;
+	const std::wstring_view CommandLine = LR"("D:\Cloud Music\cloudmusic.exe" --user-data-dir="D:\Music profiles --remote-debugging-port=41000 cache" --remote-debugging-port=41234)";
+	ASSERT_TRUE(ParseDebuggingPort(CommandLine, &Port));
+	EXPECT_EQ(Port, 41234);
+}
+
+TEST(QmNeteaseCdp, ReadsQuotedDebuggingSwitches)
+{
+	uint16_t Port = 0;
+	const std::wstring_view CommandLine = LR"("D:\Cloud Music\cloudmusic.exe" "--remote-debugging-address"="LOCALHOST" "--remote-debugging-port=41234")";
+	ASSERT_TRUE(ParseDebuggingPort(CommandLine, &Port));
+	EXPECT_EQ(Port, 41234);
+}
+
 TEST(QmNeteaseCdp, RejectsExplicitNonLoopbackDebuggingAddress)
 {
 	uint16_t Port = 0;
 	EXPECT_FALSE(ParseDebuggingPort(L"cloudmusic.exe --remote-debugging-address=0.0.0.0 --remote-debugging-port=41234", &Port));
 	EXPECT_FALSE(ParseDebuggingPort(L"cloudmusic.exe --remote-debugging-address=192.168.1.2 --remote-debugging-port=41234", &Port));
+	EXPECT_FALSE(ParseDebuggingPort(L"cloudmusic.exe --remote-debugging-port=41234 --remote-debugging-address=0.0.0.0", &Port));
+	EXPECT_EQ(Port, 0);
 }
 
 TEST(QmNeteaseCdp, RejectsMissingExplicitDebuggingAddressValue)
