@@ -3,6 +3,7 @@
 
 #include <engine/graphics.h>
 
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/ui_rect.h>
 
 #include <algorithm>
@@ -19,8 +20,7 @@ inline constexpr float QM_DRAG_GUIDE_GAP = 4.0f;
 
 inline ColorRGBA QmDragGuideColor()
 {
-	// 淡蓝白：叠在深色预览和游戏画面上都能读清，又不盖住被拖的内容。
-	return ColorRGBA(0.62f, 0.82f, 1.0f, 0.45f);
+	return ui_token::color::DRAG_GUIDE;
 }
 
 struct SQmSnapTarget
@@ -206,7 +206,7 @@ inline void QmDrawDragGuideLine(IGraphics *pGraphics, float X0, float Y0, float 
 	pGraphics->LinesBegin();
 	pGraphics->LinesDraw(aSegments, Count);
 	pGraphics->LinesEnd();
-	pGraphics->SetColor(ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+	pGraphics->SetColor(ui_token::color::NEUTRAL_WHITE);
 }
 
 #endif

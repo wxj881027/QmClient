@@ -247,8 +247,9 @@ namespace qm_demo_ui
 		return std::clamp(MapCount, POSE_MAP_MIN_ROWS, POSE_MAP_MAX_ROWS);
 	}
 
-	// 渲染模式在输入行下方多画两行（输出格式 + 分辨率倍数），列表下移，高度必须一起算。
-	constexpr int POSE_MAP_RENDER_ROWS = 3;
+	// 渲染模式在输入行下方多画四行（输出格式 / 分辨率倍数 / 锐化 / 像素预算），
+	// 列表下移，高度必须一起算。
+	constexpr int POSE_MAP_RENDER_ROWS = 4;
 
 	inline float PoseMapRenderRowsHeight(int RenderRows)
 	{

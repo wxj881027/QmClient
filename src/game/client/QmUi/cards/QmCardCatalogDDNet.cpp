@@ -442,6 +442,15 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 					DoDDNetNumericField("ddnet-upstream-redundancy-copies", &g_Config.m_QmUpstreamRedundancyMaxCopies, &g_Config.m_QmUpstreamRedundancyMaxCopies, Button, Localize("Maximum packet copies"), 2, 3);
 				Flow.Space(ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing));
 			}
+			// 优先游戏流量：属于传输层，不参与预测，所以放在本卡末尾。
+			// 它只做 DSCP/802.1p 标记（Windows qWave），不预留带宽；路由器不认标记时没有效果。
+			if(Flow.Control("net-qos", DDNetMetrics.m_LineHeight, Button, ui_token::settings::SectionGap(DDNetMetrics.m_LineSpacing)))
+			{
+				if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_QmNetQos, "net-qos", Localize("Prioritize game traffic (QoS, Windows only)"), g_Config.m_QmNetQos, &Button) && CanCommit)
+					g_Config.m_QmNetQos ^= 1;
+				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmNetQos, &Button, Localize("Best-effort DSCP marking of the game connection; may be ignored by routers"));
+			}
+			Flow.Space(ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing));
 			if(CanCommit)
 				LogPerfStage(Client(), "ddnet_prediction_section", PredictionSectionTimer.ElapsedMs(), false, "page=ddnet section=prediction");
 		});

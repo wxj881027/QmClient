@@ -125,6 +125,9 @@ namespace ui_token::color
 	// 与 NEUTRAL_* 同值但语义不同：这里是「用户指定白/黑字」，那边是「颜色基准」。
 	inline constexpr ColorRGBA TEXT_FORCED_LIGHT = NEUTRAL_WHITE;
 	inline constexpr ColorRGBA TEXT_FORCED_DARK = NEUTRAL_BLACK;
+	// 拖动磁吸辅助线：淡蓝白半透明，压在深色预览或游戏画面上都能读清，
+	// 又不盖住被拖的内容（名牌自由布局与 HUD 编辑器共用同一档）。
+	inline constexpr ColorRGBA DRAG_GUIDE{0.62f, 0.82f, 1.0f, 0.45f};
 
 	// 自适应对比双色：浅表面用深前景、深表面用浅前景（胶囊导航等明暗推导）。
 	// 成对修改，保持两者的对比关系；透明度由调用点 WithAlpha 决定。
