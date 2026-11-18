@@ -4478,6 +4478,9 @@ Drift smoothness
 Drop on right canvas to replace one part.
 == Перетащите на правое полотно, чтобы заменить одну часть.
 
+Droplet
+== Капля
+
 Drown deaths
 == Смерти от утопления
 
@@ -4519,6 +4522,9 @@ Dummy country (ISO 3166-1 numeric)
 
 Dummy decoration color
 == Цвет украшения куклы
+
+Dummy distance link style: 0 = line, 1 = droplet
+== Вид линии до дамми: 0 = линия, 1 = капля
 
 Dummy eyes color
 == Цвет глаз куклы
@@ -8159,6 +8165,9 @@ Limit the title to the exact nickname below.
 Limiter threshold (percent)
 == Порог лимитера (в процентах)
 
+Line
+== Линия
+
 Line width
 == Ширина линии
 
@@ -8170,6 +8179,9 @@ Linear gradient
 
 Lines %d - %d (%s)
 == Строки %d - %d (%s)
+
+Link style
+== Вид линии
 
 Links open in the system browser.
 == Ссылки открываются в системном браузере.
@@ -13493,6 +13505,9 @@ Shotgun laser outline color
 Show %s group
 == Показать группу %s
 
+Show a distance link between main tee and dummy
+== Соединять основного ти и дамми линией расстояния
+
 Show a ghost of your best time after crossing the start line
 == Показывать призрак лучшего времени после пересечения стартовой линии
 
@@ -13702,6 +13717,9 @@ Show dummy copy status
 
 Show dummy CTF flags on players (0=Off, 1=Red flag, 2=Blue flag)
 == Показывать флаги CTF дамми на игроках (0=Выкл, 1=Красный флаг, 2=Синий флаг)
+
+Show dummy distance link
+== Показывать линию до дамми
 
 Show dummy mini view only when other tee leaves current view
 == Показывать мини-вид дамми, только когда другой ти покинул текущий обзор

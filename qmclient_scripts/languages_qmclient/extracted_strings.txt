@@ -1,7 +1,9 @@
  min
  seconds
  seconds (never)
+ · %d finishers
  · %d finishers · average %d:%02d:%02d
+ · median %d:%02d:%02d
 "%s" is not compatible with pnglite and cannot be loaded by old DDNet versions:
 "Absolute" aims at a fixed point and hides the speed setting, so pick "Relative" if you want to tune it.
 "Active disconnect" leaves the server without closing the client, so bind it only for deliberate use.
@@ -1544,6 +1546,7 @@ Drift intensity
 Drift smoothness
 Drop on an input port to link
 Drop on right canvas to replace one part.
+Droplet
 Drown deaths
 Dual Kawase
 Dummies are not allowed on this server
@@ -1558,6 +1561,7 @@ Dummy copy
 Dummy copy: %s
 Dummy country (ISO 3166-1 numeric)
 Dummy decoration color
+Dummy distance link style: 0 = line, 1 = droplet
 Dummy eyes color
 Dummy eyes when joining server (0=normal, 1=pain, 2=happy, 3=surprised, 4=angry, 5=blink)
 Dummy feet color
@@ -2813,6 +2817,7 @@ Limit cursor to game window
 Limit information in spectator mode
 Limit the title to the exact nickname below.
 Limiter threshold (percent)
+Line
 Line length
 Line length: bytes of the bind line that will be written.
 Line width
@@ -2822,6 +2827,7 @@ Lines %d - %d (%s)
 Link deleted
 Link failed
 Link source is gone
+Link style
 Linked
 Links and gestures
 Links open in the system browser.
@@ -3545,6 +3551,7 @@ Opt-in protection for client-initiated self-kill, with optional auto-enable afte
 Optimistic prediction along stable direction
 Optional
 Optional authentication key for the DNSBL provider
+Optional Axiom API key for scoreboard points and vote map details (leave empty for anonymous queries)
 Optional export range in seconds. Leave empty to export the whole demo.
 Optional start and end time in seconds. Leave both empty to export the whole demo.
 Options here affect networking or identity; test on a server before using them in matches.
@@ -4666,6 +4673,7 @@ Shotgun laser inner color
 Shotgun Laser Outline Color
 Shotgun laser outline color
 Show %s group
+Show a distance link between main tee and dummy
 Show a ghost of your best time after crossing the start line
 Show a MomentCap .poses file in game (no export)
 Show a per-character wave on text titles locally
@@ -4738,6 +4746,7 @@ Show dummy angle in movement info HUD
 Show dummy control status
 Show dummy copy status
 Show dummy CTF flags on players (0=Off, 1=Red flag, 2=Blue flag)
+Show dummy distance link
 Show dummy mini view only when other tee leaves current view
 Show dummy mini view window
 Show dummy position in movement info HUD

@@ -4478,6 +4478,9 @@ Drift smoothness
 Drop on right canvas to replace one part.
 == Bir parçayı değiştirmek için sağ tuvalin üzerine bırakın.
 
+Droplet
+== Damla
+
 Drown deaths
 == Boğulma ölümleri
 
@@ -4519,6 +4522,9 @@ Dummy country (ISO 3166-1 numeric)
 
 Dummy decoration color
 == Yapay süsleme rengi
+
+Dummy distance link style: 0 = line, 1 = droplet
+== Kuklaya mesafe çizgisinin biçimi: 0 = çizgi, 1 = damla
 
 Dummy eyes color
 == Yapay göz rengi
@@ -8159,6 +8165,9 @@ Limit the title to the exact nickname below.
 Limiter threshold (percent)
 == Sınırlayıcı eşiği (yüzde)
 
+Line
+== Çizgi
+
 Line width
 == Çizgi genişliği
 
@@ -8170,6 +8179,9 @@ Linear gradient
 
 Lines %d - %d (%s)
 == Satırlar %d - %d (%s)
+
+Link style
+== Çizgi biçimi
 
 Links open in the system browser.
 == Bağlantılar sistem tarayıcısında açılır.
@@ -13493,6 +13505,9 @@ Shotgun laser outline color
 Show %s group
 == %s grubunu göster
 
+Show a distance link between main tee and dummy
+== Ana tee ile kukla arasındaki mesafeyi bir çizgiyle göster
+
 Show a ghost of your best time after crossing the start line
 == Başlangıç çizgisini geçtikten sonra en iyi sürenin hayaletini göster
 
@@ -13702,6 +13717,9 @@ Show dummy copy status
 
 Show dummy CTF flags on players (0=Off, 1=Red flag, 2=Blue flag)
 == Oyuncular üzerinde dummy CTF bayraklarını göster (0=Kapalı, 1=Kırmızı bayrak, 2=Mavi bayrak)
+
+Show dummy distance link
+== Kuklaya mesafe çizgisini göster
 
 Show dummy mini view only when other tee leaves current view
 == Dummy mini görünümünü yalnızca diğer tee mevcut görüş alanından ayrıldığında göster

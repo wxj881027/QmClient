@@ -33,12 +33,13 @@ public:
 	void LoadStep(int MaxLayers = 1, CMapLoadTask::TClock::time_point Deadline = CMapLoadTask::TClock::time_point::max(), SLoadProfile *pProfile = nullptr);
 	bool IsLoadFinished() const { return m_LoadFinished; }
 	void Load(ERenderType Type, CLayers *pLayers, IMapImages *pMapImages, const IEnvelopeEval *pEnvelopeEval, std::optional<FCallbackMapRendererInit> CallbackMapRendererInitOptional, bool TileAndQuadBuffering = true);
-	void Render(const CRenderLayerParams &Params);
+	void Render(const CRenderLayerParams &Params, const std::function<void()> &BeforeWorldTiles = {});
 
 private:
 	int GetLayerType(const CMapItemLayer *pLayer) const;
 
 	std::vector<std::unique_ptr<CRenderLayer>> m_vpRenderLayers;
+	const CRenderLayer *m_pFirstWorldTile = nullptr;
 	ERenderType m_LoadType = ERenderType::RENDERTYPE_FULL_DESIGN;
 	CLayers *m_pLoadLayers = nullptr;
 	IMapImages *m_pLoadImages = nullptr;

@@ -4478,6 +4478,9 @@ Drift smoothness
 Drop on right canvas to replace one part.
 == 拖到右側畫布可替換一個部件。
 
+Droplet
+== 水滴
+
 Drown deaths
 == 落水榜
 
@@ -4519,6 +4522,9 @@ Dummy country (ISO 3166-1 numeric)
 
 Dummy decoration color
 == 分身裝飾顏色
+
+Dummy distance link style: 0 = line, 1 = droplet
+== 分身連線樣式：0 = 直線，1 = 水滴
 
 Dummy eyes color
 == 分身眼睛顏色
@@ -8159,6 +8165,9 @@ Limit the title to the exact nickname below.
 Limiter threshold (percent)
 == 限幅器閾值（百分比）
 
+Line
+== 直線
+
 Line width
 == 線寬
 
@@ -8170,6 +8179,9 @@ Linear gradient
 
 Lines %d - %d (%s)
 == 行 %d - %d (%s)
+
+Link style
+== 連線樣式
 
 Links open in the system browser.
 == 連結會在系統瀏覽器中開啟。
@@ -13493,6 +13505,9 @@ Shotgun laser outline color
 Show %s group
 == 顯示 %s 分組
 
+Show a distance link between main tee and dummy
+== 在本體與分身之間顯示距離連線
+
 Show a ghost of your best time after crossing the start line
 == 越過起跑線後顯示最佳成績的殘影
 
@@ -13702,6 +13717,9 @@ Show dummy copy status
 
 Show dummy CTF flags on players (0=Off, 1=Red flag, 2=Blue flag)
 == 在玩家身上顯示分身 CTF 旗幟（0=關閉，1=紅旗，2=藍旗）
+
+Show dummy distance link
+== 顯示分身連線
 
 Show dummy mini view only when other tee leaves current view
 == 僅在另一隻 tee 離開當前視角時顯示分身迷你視圖

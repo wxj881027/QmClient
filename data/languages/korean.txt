@@ -4478,6 +4478,9 @@ Drift smoothness
 Drop on right canvas to replace one part.
 == 오른쪽 캔버스에 드롭하여 한 부품을 교체합니다.
 
+Droplet
+== 물방울
+
 Drown deaths
 == 익사 사망
 
@@ -4519,6 +4522,9 @@ Dummy country (ISO 3166-1 numeric)
 
 Dummy decoration color
 == 더미 장식 색상
+
+Dummy distance link style: 0 = line, 1 = droplet
+== 더미 연결선 모양: 0 = 직선, 1 = 물방울
 
 Dummy eyes color
 == 더미 눈 색상
@@ -8159,6 +8165,9 @@ Limit the title to the exact nickname below.
 Limiter threshold (percent)
 == 리미터 임계값 (백분율)
 
+Line
+== 직선
+
 Line width
 == 선 두께
 
@@ -8170,6 +8179,9 @@ Linear gradient
 
 Lines %d - %d (%s)
 == %d행 - %d행 (%s)
+
+Link style
+== 연결선 모양
 
 Links open in the system browser.
 == 링크는 시스템 브라우저에서 열립니다.
@@ -13493,6 +13505,9 @@ Shotgun laser outline color
 Show %s group
 == %s 그룹 표시
 
+Show a distance link between main tee and dummy
+== 본체와 더미 사이에 거리 표시선 그리기
+
 Show a ghost of your best time after crossing the start line
 == 시작선을 통과한 후 최고 기록의 고스트 표시
 
@@ -13702,6 +13717,9 @@ Show dummy copy status
 
 Show dummy CTF flags on players (0=Off, 1=Red flag, 2=Blue flag)
 == 플레이어에 더미 CTF 깃발 표시 (0=끄기, 1=빨간 깃발, 2=파란 깃발)
+
+Show dummy distance link
+== 더미 연결선 표시
 
 Show dummy mini view only when other tee leaves current view
 == 다른 티가 현재 시야를 벗어날 때만 더미 미니 뷰 표시

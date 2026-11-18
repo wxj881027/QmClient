@@ -80,6 +80,7 @@
 #include "components/qmclient/checkpoint_guide.h"
 #include "components/qmclient/collision_hitbox.h"
 #include "components/qmclient/data_version.h"
+#include "components/qmclient/dummy_distance_link.h"
 #include "components/qmclient/demo_camera.h"
 #include "components/qmclient/finish_summary.h"
 #include "components/qmclient/friend_last_seen.h"
@@ -315,6 +316,7 @@ public:
 	CQmFriendLastSeen m_QmFriendLastSeen;
 	CQmChatEmoji m_QmChatEmoji;
 	CQmCheckpointGuide m_QmCheckpointGuide;
+	qm_dummy_link::CView m_QmDummyDistanceLink;
 	CQmMonitoring m_QmMonitoring;
 	CQmMobileSpectator m_QmMobileSpectator;
 	CQmHudNotifications m_QmHudNotifications;
@@ -972,6 +974,7 @@ public:
 	void ResetDemoPlaybackState() override;
 	void InvalidateSnapshot() override;
 	void OnNewSnapshot(bool DummySwapped) override;
+	void EvolveSnapshotCharacter(CNetObj_Character *pCharacter, int Tick);
 	void OnPredict() override;
 	void OnActivateEditor() override;
 	void OnDummySwap() override;
@@ -1084,6 +1087,8 @@ public:
 	CQmHookCollCandidates m_HookCollCandidates;
 	CQmHookCollSpatialIndex m_HookCollSpatialIndex;
 	void UpdateHookCollTargets();
+	vec2 HookCollTargetPosition(int ClientId, float Intra) const;
+	const CTuningParams &HookCollTuning(int ClientId) const;
 
 	int IntersectCharacter(vec2 HookPos, vec2 NewPos, vec2 &NewPos2, int OwnId, vec2 *pPlayerPosition = nullptr);
 

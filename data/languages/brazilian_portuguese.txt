@@ -4478,6 +4478,9 @@ Drift smoothness
 Drop on right canvas to replace one part.
 == Solte na tela direita para substituir uma parte.
 
+Droplet
+== Gota
+
 Drown deaths
 == Mortes por afogamento
 
@@ -4519,6 +4522,9 @@ Dummy country (ISO 3166-1 numeric)
 
 Dummy decoration color
 == Cor da decoração do boneco
+
+Dummy distance link style: 0 = line, 1 = droplet
+== Estilo da linha até o dummy: 0 = linha, 1 = gota
 
 Dummy eyes color
 == Cor dos olhos do boneco
@@ -8159,6 +8165,9 @@ Limit the title to the exact nickname below.
 Limiter threshold (percent)
 == Limiar do limitador (porcentagem)
 
+Line
+== Linha
+
 Line width
 == Largura da linha
 
@@ -8170,6 +8179,9 @@ Linear gradient
 
 Lines %d - %d (%s)
 == Linhas %d - %d (%s)
+
+Link style
+== Estilo da linha
 
 Links open in the system browser.
 == Os links abrem no navegador do sistema.
@@ -13493,6 +13505,9 @@ Shotgun laser outline color
 Show %s group
 == Mostrar grupo %s
 
+Show a distance link between main tee and dummy
+== Ligar o tee principal ao dummy com uma linha de distância
+
 Show a ghost of your best time after crossing the start line
 == Mostra um fantasma do seu melhor tempo após cruzar a linha de largada
 
@@ -13702,6 +13717,9 @@ Show dummy copy status
 
 Show dummy CTF flags on players (0=Off, 1=Red flag, 2=Blue flag)
 == Mostrar bandeiras CTF do Dummy nos jogadores (0=Desligado, 1=Bandeira vermelha, 2=Bandeira azul)
+
+Show dummy distance link
+== Mostrar linha até o dummy
 
 Show dummy mini view only when other tee leaves current view
 == Mostrar miniatura do Dummy apenas quando o outro tee sair da visão atual

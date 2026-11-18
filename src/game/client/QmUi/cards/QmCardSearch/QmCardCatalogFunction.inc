@@ -160,6 +160,8 @@ namespace
 namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_hj_assist[] = {
+		{Localizable("Show dummy distance link"), "qm_dummy_distance_link", "本体 分身连线 fenshen lianxian 距离 钩索"},
+		{Localizable("Link style"), "qm_dummy_distance_link_style", "直线 水滴 shuidi droplet"},
 		{Localizable("Auto switch to the tee that got unfrozen"), nullptr, "自动切换到解冻的 Tee"},
 		{Localizable("Auto team lock"), nullptr, "自动锁队"},
 		{Localizable("Auto unspec on unfreeze"), nullptr, "解冻自动取消旁观"},

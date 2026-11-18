@@ -97,6 +97,14 @@ void CMapLayers::OnRender()
 	m_Params.m_DebugRenderClusterClips = g_Config.m_DbgRenderClusterClips;
 	m_Params.m_DebugRenderTileClips = g_Config.m_DbgRenderTileClips;
 
+	if(this == &GameClient()->m_MapLayersBackground)
+	{
+		if(const auto Link = GameClient()->m_QmDummyDistanceLink.CurrentLink(*GameClient()))
+		{
+			m_MapRenderer.Render(m_Params, [&] { qm_dummy_link::Draw(*Graphics(), *Link); });
+			return;
+		}
+	}
 	m_MapRenderer.Render(m_Params);
 }
 

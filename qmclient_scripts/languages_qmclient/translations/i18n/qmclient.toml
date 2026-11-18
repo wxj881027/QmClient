@@ -41733,6 +41733,38 @@ turkish = "Unvan sunucusu henüz metin biçimindeki unvanları desteklemiyor"
 polish = "Serwer tytułów jeszcze nie obsługuje tytułów tekstowych"
 
 [[message]]
+key = "Dummy distance link style: 0 = line, 1 = droplet"
+[message.translations]
+simplified_chinese = "分身连线样式：0 = 直线，1 = 水滴"
+traditional_chinese = "分身連線樣式：0 = 直線，1 = 水滴"
+japanese = "ダミーとの距離線のスタイル：0 = 直線、1 = しずく"
+korean = "더미 연결선 모양: 0 = 직선, 1 = 물방울"
+russian = "Вид линии до дамми: 0 = линия, 1 = капля"
+german = "Linienstil zum Dummy: 0 = Linie, 1 = Tropfen"
+spanish = "Estilo de línea al dummy: 0 = línea, 1 = gota"
+french = "Style du lien vers le dummy : 0 = trait, 1 = goutte"
+brazilian_portuguese = "Estilo da linha até o dummy: 0 = linha, 1 = gota"
+portuguese = "Estilo da linha até ao dummy: 0 = linha, 1 = gota"
+turkish = "Kuklaya mesafe çizgisinin biçimi: 0 = çizgi, 1 = damla"
+polish = "Styl linii do dummy: 0 = linia, 1 = kropla"
+
+[[message]]
+key = "Show a distance link between main tee and dummy"
+[message.translations]
+simplified_chinese = "在本体与分身之间显示距离连线"
+traditional_chinese = "在本體與分身之間顯示距離連線"
+japanese = "メインのティーとダミーを距離線で結ぶ"
+korean = "본체와 더미 사이에 거리 표시선 그리기"
+russian = "Соединять основного ти и дамми линией расстояния"
+german = "Haupt-Tee und Dummy mit einer Entfernungslinie verbinden"
+spanish = "Unir el tee principal y el dummy con una línea de distancia"
+french = "Relier le tee principal au dummy pour indiquer la distance"
+brazilian_portuguese = "Ligar o tee principal ao dummy com uma linha de distância"
+portuguese = "Ligar o tee principal ao dummy com uma linha de distância"
+turkish = "Ana tee ile kukla arasındaki mesafeyi bir çizgiyle göster"
+polish = "Połącz głównego tee z dummy linią wskazującą odległość"
+
+[[message]]
 key = "Follow remote placements in the collaborative editor"
 [message.translations]
 simplified_chinese = "协作制图时，将视角移到其他协作者新增或替换的放置区域"

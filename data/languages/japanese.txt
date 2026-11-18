@@ -4478,6 +4478,9 @@ Drift smoothness
 Drop on right canvas to replace one part.
 == 右側キャンバスにドロップして部品を1つ置き換える。
 
+Droplet
+== しずく
+
 Drown deaths
 == 溺死数
 
@@ -4519,6 +4522,9 @@ Dummy country (ISO 3166-1 numeric)
 
 Dummy decoration color
 == ダミーの装飾色
+
+Dummy distance link style: 0 = line, 1 = droplet
+== ダミーとの距離線のスタイル：0 = 直線、1 = しずく
 
 Dummy eyes color
 == ダミーの目の色
@@ -8159,6 +8165,9 @@ Limit the title to the exact nickname below.
 Limiter threshold (percent)
 == リミッターしきい値（パーセント）
 
+Line
+== 直線
+
 Line width
 == 線幅
 
@@ -8170,6 +8179,9 @@ Linear gradient
 
 Lines %d - %d (%s)
 == 行 %d - %d (%s)
+
+Link style
+== 線のスタイル
 
 Links open in the system browser.
 == リンクはシステムのブラウザーで開きます。
@@ -13493,6 +13505,9 @@ Shotgun laser outline color
 Show %s group
 == %s グループを表示
 
+Show a distance link between main tee and dummy
+== メインのティーとダミーを距離線で結ぶ
+
 Show a ghost of your best time after crossing the start line
 == スタートライン通過後にベストタイムのゴーストを表示
 
@@ -13702,6 +13717,9 @@ Show dummy copy status
 
 Show dummy CTF flags on players (0=Off, 1=Red flag, 2=Blue flag)
 == プレイヤーにダミー CTF フラグを表示 (0=オフ, 1=赤旗, 2=青旗)
+
+Show dummy distance link
+== ダミーとの距離線を表示
 
 Show dummy mini view only when other tee leaves current view
 == もう一方の Tee が現在の視野から外れた場合のみダミーミニビューを表示

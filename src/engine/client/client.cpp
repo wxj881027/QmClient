@@ -1749,6 +1749,14 @@ const void *CClient::SnapFindItem(int SnapId, int Type, int Id) const
 	return m_aapSnapshots[g_Config.m_ClDummy][SnapId]->m_pAltSnap->FindItem(Type, Id);
 }
 
+const CSnapshot *CClient::CurrentSnapshotForConnection(int Conn) const
+{
+	if(Conn != CONN_MAIN && Conn != CONN_DUMMY)
+		return nullptr;
+	const auto *pHolder = m_aapSnapshots[Conn][SNAP_CURRENT];
+	return pHolder ? pHolder->m_pAltSnap : nullptr;
+}
+
 int CClient::SnapNumItems(int SnapId) const
 {
 	dbg_assert(SnapId >= 0 && SnapId < NUM_SNAPSHOT_TYPES, "invalid SnapId");

@@ -1896,6 +1896,7 @@ void CGameClient::OnReset()
 
 	std::fill(std::begin(m_aNextChangeInfo), std::end(m_aNextChangeInfo), -1);
 	std::fill(std::begin(m_aLocalIds), std::end(m_aLocalIds), -1);
+	m_QmDummyDistanceLink = {};
 	m_DummyInput = {};
 	m_HammerInput = {};
 	m_DummyFire = 0;
@@ -2556,6 +2557,7 @@ void CGameClient::OnDummyDisconnect()
 	m_Chat.InvalidateOutgoingConnection(IClient::CONN_DUMMY);
 	TClientComponent().CancelSoloSplit();
 	m_aLocalIds[1] = -1;
+	m_QmDummyDistanceLink = {};
 	m_aDDRaceMsgSent[1] = false;
 	m_aShowOthers[1] = SHOW_OTHERS_NOT_SET;
 	m_aEnableSpectatorCount[1] = -1;
@@ -4030,6 +4032,28 @@ void CGameClient::InvalidateSnapshot()
 		SnapCollectEntities();
 }
 
+void CGameClient::EvolveSnapshotCharacter(CNetObj_Character *pCharacter, int Tick)
+{
+	CQmAxiomQuadTimeScope EvolveQuadTime(m_Collision, pCharacter->m_Tick, Client()->GameTickSpeed());
+	CWorldCore TempWorld;
+	CCharacterCore TempCore = CCharacterCore();
+	CTeamsCore TempTeams = CTeamsCore();
+	TempCore.Init(&TempWorld, Collision(), &TempTeams);
+	TempCore.Read(pCharacter);
+	TempCore.m_ActiveWeapon = pCharacter->m_Weapon;
+
+	while(pCharacter->m_Tick < Tick)
+	{
+		pCharacter->m_Tick++;
+		m_Collision.SetQmAxiomQuadTick(pCharacter->m_Tick, Client()->GameTickSpeed());
+		TempCore.Tick(false);
+		TempCore.Move();
+		TempCore.Quantize();
+	}
+
+	TempCore.Write(pCharacter);
+}
+
 void CGameClient::OnNewSnapshot(bool DummySwapped)
 {
 	UpdateQmAxiomPrediction();
@@ -4040,26 +4064,6 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 		if(QmPerfEnabled())
 			LogPerfStage(this, pStage, SnapshotStageTimer.ElapsedMs());
 		SnapshotStageTimer.Reset();
-	};
-	auto &&Evolve = [this](CNetObj_Character *pCharacter, int Tick) {
-		CQmAxiomQuadTimeScope EvolveQuadTime(m_Collision, pCharacter->m_Tick, Client()->GameTickSpeed());
-		CWorldCore TempWorld;
-		CCharacterCore TempCore = CCharacterCore();
-		CTeamsCore TempTeams = CTeamsCore();
-		TempCore.Init(&TempWorld, Collision(), &TempTeams);
-		TempCore.Read(pCharacter);
-		TempCore.m_ActiveWeapon = pCharacter->m_Weapon;
-
-		while(pCharacter->m_Tick < Tick)
-		{
-			pCharacter->m_Tick++;
-			m_Collision.SetQmAxiomQuadTick(pCharacter->m_Tick, Client()->GameTickSpeed());
-			TempCore.Tick(false);
-			TempCore.Move();
-			TempCore.Quantize();
-		}
-
-		TempCore.Write(pCharacter);
 	};
 
 	if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
@@ -4232,9 +4236,9 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 						}
 
 						if(EvolvePrev && m_Snap.m_aCharacters[Item.m_Id].m_Prev.m_Tick)
-							Evolve(&m_Snap.m_aCharacters[Item.m_Id].m_Prev, Client()->PrevGameTick(g_Config.m_ClDummy));
+							EvolveSnapshotCharacter(&m_Snap.m_aCharacters[Item.m_Id].m_Prev, Client()->PrevGameTick(g_Config.m_ClDummy));
 						if(EvolveCur && m_Snap.m_aCharacters[Item.m_Id].m_Cur.m_Tick)
-							Evolve(&m_Snap.m_aCharacters[Item.m_Id].m_Cur, Client()->GameTick(g_Config.m_ClDummy));
+							EvolveSnapshotCharacter(&m_Snap.m_aCharacters[Item.m_Id].m_Cur, Client()->GameTick(g_Config.m_ClDummy));
 
 						m_aClients[Item.m_Id].m_Snapped = *((const CNetObj_Character *)Item.m_pData);
 						m_aClients[Item.m_Id].m_Evolved = m_Snap.m_aCharacters[Item.m_Id].m_Cur;
@@ -7059,6 +7063,19 @@ IGameClient *CreateGameClient()
 	return new CGameClient();
 }
 
+const CTuningParams &CGameClient::HookCollTuning(int ClientId) const
+{
+	const int Active = g_Config.m_ClDummy;
+	const int SourceId = ClientId >= 0 && ClientId < MAX_CLIENTS && m_aClients[ClientId].m_IsPredicted ? ClientId : m_aLocalIds[Active];
+	return SourceId >= 0 && SourceId < MAX_CLIENTS ? m_aClients[SourceId].m_Predicted.m_Tuning : m_aTuning[Active];
+}
+
+vec2 CGameClient::HookCollTargetPosition(int ClientId, float Intra) const
+{
+	const auto &Character = m_Snap.m_aCharacters[ClientId];
+	return mix(vec2(Character.m_Prev.m_X, Character.m_Prev.m_Y), vec2(Character.m_Cur.m_X, Character.m_Cur.m_Y), Intra);
+}
+
 void CGameClient::UpdateHookCollTargets()
 {
 	m_HookCollCandidates.Reset();
@@ -7073,9 +7090,7 @@ void CGameClient::UpdateHookCollTargets()
 		Target.m_Super = Data.m_Super;
 		Target.m_Solo = Data.m_Solo;
 		Target.m_HookHitDisabled = Data.m_HookHitDisabled;
-		const CNetObj_Character &Prev = m_Snap.m_aCharacters[i].m_Prev;
-		const CNetObj_Character &Cur = m_Snap.m_aCharacters[i].m_Cur;
-		Target.m_Pos = mix(vec2(Prev.m_X, Prev.m_Y), vec2(Cur.m_X, Cur.m_Y), Intra);
+		Target.m_Pos = HookCollTargetPosition(i, Intra);
 	}
 }
 
@@ -7091,7 +7106,7 @@ int CGameClient::IntersectCharacter(vec2 HookPos, vec2 NewPos, vec2 &NewPos2, in
 		const bool IsOneSolo = Target.m_Solo || OwnTarget.m_Solo;
 		return IsOneSuper || (m_Teams.SameTeam(Id, OwnId) && !IsOneSolo && !OwnTarget.m_HookHitDisabled);
 	});
-	const float Radius = CCharacterCore::PhysicalSize() + 2.0f;
+	const float Radius = QmHookCollTargetRadius;
 	const auto PositionOf = [&](int Id) { return m_aHookCollTargets[Id].m_Pos; };
 	const SQmHookCollSegment Segment(HookPos, NewPos, Radius);
 	const auto &vNearby = m_HookCollSpatialIndex.GetCandidates(Segment, vCandidates, PositionOf, [&](int Id) { return m_aHookCollTargets[Id].m_Valid; });

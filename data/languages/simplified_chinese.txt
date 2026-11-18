@@ -4637,6 +4637,9 @@ Drop on an input port to link
 Drop on right canvas to replace one part.
 == 拖到右侧画布可替换一个部件。
 
+Droplet
+== 水滴
+
 Drown deaths
 == 落水榜
 
@@ -4678,6 +4681,9 @@ Dummy country (ISO 3166-1 numeric)
 
 Dummy decoration color
 == 分身装饰颜色
+
+Dummy distance link style: 0 = line, 1 = droplet
+== 分身连线样式：0 = 直线，1 = 水滴
 
 Dummy eyes color
 == 分身眼睛颜色
@@ -8444,6 +8450,9 @@ Limit the title to the exact nickname below.
 Limiter threshold (percent)
 == 限幅器阈值（百分比）
 
+Line
+== 直线
+
 Line length
 == 命令行长度
 
@@ -8470,6 +8479,9 @@ Link failed
 
 Link source is gone
 == 连线起点已消失
+
+Link style
+== 连线样式
 
 Linked
 == 已连线
@@ -14003,6 +14015,9 @@ Shotgun laser outline color
 Show %s group
 == 显示 %s 分组
 
+Show a distance link between main tee and dummy
+== 在本体与分身之间显示距离连线
+
 Show a ghost of your best time after crossing the start line
 == 越过起跑线后显示最佳成绩的残影
 
@@ -14218,6 +14233,9 @@ Show dummy copy status
 
 Show dummy CTF flags on players (0=Off, 1=Red flag, 2=Blue flag)
 == 在玩家身上显示分身 CTF 旗帜（0=关闭，1=红旗，2=蓝旗）
+
+Show dummy distance link
+== 显示分身连线
 
 Show dummy mini view only when other tee leaves current view
 == 仅在另一只 tee 离开当前视角时显示分身迷你视图
