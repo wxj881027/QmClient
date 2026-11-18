@@ -18,7 +18,7 @@ TEST(QmSponsorAuthors, ProvidesTheFourDisplayedAuthors)
 	EXPECT_STREQ(Authors[1].m_pSkin, "default_v2");
 	EXPECT_STREQ(Authors[2].m_pSkin, "Miemiemiea");
 	EXPECT_STREQ(Authors[3].m_pName, "丘卡");
-	EXPECT_STREQ(Authors[3].m_pSkin, "Vaporeon");
+	EXPECT_STREQ(Authors[3].m_pSkin, "vaporeon_acqua");
 	EXPECT_FALSE(Authors[3].m_CustomColors);
 }
 

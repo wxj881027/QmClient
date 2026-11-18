@@ -14,7 +14,7 @@ const std::array<QmSponsorAuthors::SAuthor, 4> &QmSponsorAuthors::Authors()
 		{"qmclient-community-author-xuanmeng", "璇梦", "qwqdog_mie", false, ColorRGBA(), ColorRGBA()},
 		{"qmclient-community-author-dyl", "DYL", "default_v2", true, ui_token::color::NEUTRAL_WHITE, ui_token::color::NEUTRAL_WHITE},
 		{"qmclient-community-author-xiari", "夏日", "Miemiemiea", false, ColorRGBA(), ColorRGBA(), true},
-		{"qmclient-community-author-qiuka", "丘卡", "Vaporeon", false, ColorRGBA(), ColorRGBA()},
+		{"qmclient-community-author-qiuka", "丘卡", "vaporeon_acqua", false, ColorRGBA(), ColorRGBA()},
 	}};
 	return s_aAuthors;
 }
