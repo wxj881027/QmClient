@@ -68,18 +68,18 @@ bool CBinds::CBindsSpecial::OnInput(const IInput::CEvent &Event)
 
 	const int KeyModifierMask = GetModifierMaskOfKey(Event.m_Key);
 	const int ModifierMask = GetModifierMask(Input()) & ~KeyModifierMask;
-	const auto HasGlobalDebugGraphBind = [&](int Mask) {
-		return IsExactDebugGraphToggleCommand(m_pBinds->Get(Event.m_Key, Mask));
-	};
-	if(HasGlobalDebugGraphBind(ModifierMask) ||
-		(ModifierMask != ((1 << KeyModifier::CTRL) | (1 << KeyModifier::SHIFT)) &&
-			ModifierMask != ((1 << KeyModifier::GUI) | (1 << KeyModifier::SHIFT)) &&
-			HasGlobalDebugGraphBind(KeyModifier::NONE)))
-	{
-		return m_pBinds->OnInput(Event);
-	}
+	const char *pBind = m_pBinds->Get(Event.m_Key, ModifierMask);
+	if(!pBind[0] && AllowsUnmodifiedFallback(Event.m_Key, ModifierMask))
+		pBind = m_pBinds->Get(Event.m_Key, KeyModifier::NONE);
+	if(!IsExactDebugGraphToggleCommand(pBind))
+		return false;
 
-	return false;
+	// 已按住的键仍按活动槽位处理，避免提前执行该槽位中的普通命令。
+	const auto OtherActiveId = m_pBinds->m_ActiveBinds.Find([&](const CActiveBind &Bind) {
+		return Bind.m_Key == Event.m_Key &&
+		       !IsExactDebugGraphToggleCommand(Bind.m_ShortcutState.Command(m_pBinds->Get(Bind)));
+	});
+	return OtherActiveId == 0 && m_pBinds->OnInput(Event);
 }
 
 CBinds::CBinds()
@@ -565,7 +565,8 @@ CBindSlot CBinds::GetBindSlot(const char *pBindString) const
 		if(str_find(pKey + 1, "+"))
 		{
 			pKey = str_next_token(pKey + 1, "+", aMod, sizeof(aMod));
-			if(pKey == nullptr)
+			// 分词可能跳过段首的 '+'，下一段修饰键仍须以 '+' 结束。
+			if(pKey == nullptr || *pKey != '+')
 				return EMPTY_BIND_SLOT;
 		}
 		else
@@ -631,7 +632,8 @@ void CBinds::ConfigSaveCallback(IConfigManager *pConfigManager, void *pUserData)
 				continue;
 			const CBindSlot Slot(Key, Modifier);
 			const auto Line = pSelf->GetKeyBindCommand(Slot);
-			if(!Line)
+			// 配置读取器按物理行切分，带换行的绑定无法原样读回。
+			if(!Line || Line->find_first_of("\r\n") != std::string::npos)
 			{
 				pConfigManager->MarkSaveFailed();
 				char aBindName[128];
