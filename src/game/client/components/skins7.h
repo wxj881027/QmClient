@@ -24,8 +24,10 @@
 #include <game/client/components/qmclient/skin7_refresh_request.h>
 #include <game/client/components/qmclient/skin7_refresh_retirement.h>
 #include <game/client/components/qmclient/skin7_resource_lifecycle.h>
+#include <game/client/components/qmclient/skin7_save.h>
 #include <game/client/render.h>
 
+#include <algorithm>
 #include <chrono>
 #include <deque>
 #include <vector>
@@ -120,6 +122,31 @@ public:
 	bool SaveSkinfile(const char *pName, int Dummy);
 	bool RemoveSkin(const char *pName);
 
+	// 列表中的条目借用部件，刷新完成后才能绑定这些地址。
+	template<typename TFindPart>
+	static bool SaveConfiguredSkin(IStorage *pStorage, const char *pName, const qm_skin7_save::TParts &Parts, std::vector<CSkin> &Skins, bool Loading, TFindPart &&FindPart)
+	{
+		if(Loading)
+			return false;
+		return qm_skin7_save::SaveAndPublish(pStorage, pName, Parts, Skins, [&](auto &Candidate) {
+			auto OldSkin = std::find_if(Candidate.begin(), Candidate.end(), [pName](const CSkin &Skin) {
+				return str_comp(Skin.m_aName, pName) == 0;
+			});
+			if(OldSkin != Candidate.end())
+				Candidate.erase(OldSkin);
+
+			CSkin NewSkin{};
+			str_copy(NewSkin.m_aName, pName);
+			for(int Part = 0; Part < protocol7::NUM_SKINPARTS; ++Part)
+			{
+				NewSkin.m_apParts[Part] = FindPart(Part, Parts[Part].m_pFilename);
+				NewSkin.m_aUseCustomColors[Part] = Parts[Part].m_CustomColors;
+				NewSkin.m_aPartColors[Part] = Parts[Part].m_Color;
+			}
+			Candidate.insert(std::lower_bound(Candidate.begin(), Candidate.end(), NewSkin), NewSkin);
+		});
+	}
+
 	IGraphics::CTextureHandle XmasHatTexture() const { return m_XmasHatTexture; }
 	IGraphics::CTextureHandle BotDecorationTexture() const { return m_BotTexture; }
 
@@ -156,8 +183,6 @@ private:
 	bool LoadSkin(const char *pName, int DirType, const json_value &Info);
 
 	void InitPlaceholderSkinParts();
-
-	void PrepareSkinFromConfigVariables(std::vector<CSkin> &Skins, const char *pName, int Dummy) const;
 };
 
 #endif

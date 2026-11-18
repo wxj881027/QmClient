@@ -490,28 +490,6 @@ void CSkins7::TryStartRefresh()
 	ProcessCompletedJobs();
 }
 
-void CSkins7::PrepareSkinFromConfigVariables(std::vector<CSkin> &Skins, const char *pName, int Dummy) const
-{
-	auto OldSkin = std::find_if(Skins.begin(), Skins.end(), [pName](const CSkin &Skin) {
-		return str_comp(Skin.m_aName, pName) == 0;
-	});
-	if(OldSkin != Skins.end())
-	{
-		Skins.erase(OldSkin);
-	}
-
-	CSkin NewSkin;
-	NewSkin.m_Flags = 0;
-	str_copy(NewSkin.m_aName, pName);
-	for(int PartIndex = 0; PartIndex < protocol7::NUM_SKINPARTS; ++PartIndex)
-	{
-		NewSkin.m_apParts[PartIndex] = FindSkinPart(PartIndex, ms_apSkinVariables[Dummy][PartIndex], false);
-		NewSkin.m_aUseCustomColors[PartIndex] = *ms_apUCCVariables[Dummy][PartIndex];
-		NewSkin.m_aPartColors[PartIndex] = *ms_apColorVariables[Dummy][PartIndex];
-	}
-	Skins.insert(std::lower_bound(Skins.begin(), Skins.end(), NewSkin), NewSkin);
-}
-
 bool CSkins7::RemoveSkin(const char *pName)
 {
 	const CSkin *pSkin = FindSkin(pName, true);
@@ -705,8 +683,8 @@ bool CSkins7::SaveSkinfile(const char *pName, int Dummy)
 	{
 		Parts[Part] = {ms_apSkinVariables[Dummy][Part], *ms_apUCCVariables[Dummy][Part] != 0, *ms_apColorVariables[Dummy][Part]};
 	}
-	if(!qm_skin7_save::SaveAndPublish(Storage(), pName, Parts, m_vSkins, [this, pName, Dummy](auto &Candidate) {
-		   PrepareSkinFromConfigVariables(Candidate, pName, Dummy);
+	if(!SaveConfiguredSkin(Storage(), pName, Parts, m_vSkins, m_Loading, [this](int Part, const char *pPartName) {
+		   return FindSkinPart(Part, pPartName, false);
 	   }))
 		return false;
 	m_LastRefreshTime = time_get_nanoseconds();

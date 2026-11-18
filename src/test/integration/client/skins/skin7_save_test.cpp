@@ -156,6 +156,26 @@ TEST_F(CQmSkin7SaveTest, FileReplacementSeesOldCacheAndOnlyThenPublishesPrepared
 	EXPECT_STREQ(m_Skins.back().m_aName, "new");
 }
 
+TEST_F(CQmSkin7SaveTest, RefreshInProgressDoesNotBindPartsOrReplaceFile)
+{
+	CSkins7::CSkinPart aParts[protocol7::NUM_SKINPARTS]{};
+	int Lookups = 0;
+	const auto FindPart = [&](int Part, const char *) {
+		++Lookups;
+		return &aParts[Part];
+	};
+	EXPECT_FALSE(CSkins7::SaveConfiguredSkin(m_pStorage.get(), "saved", m_Parts, m_Skins, true, FindPart));
+	EXPECT_EQ(Lookups, 0);
+	ExpectOldState();
+
+	ASSERT_TRUE(CSkins7::SaveConfiguredSkin(m_pStorage.get(), "saved", m_Parts, m_Skins, false, FindPart));
+	ASSERT_EQ(m_Skins.size(), 2u);
+	EXPECT_EQ(Lookups, protocol7::NUM_SKINPARTS);
+	EXPECT_STREQ(m_Skins.back().m_aName, "saved");
+	EXPECT_EQ(m_Skins.back().m_apParts[protocol7::SKINPART_BODY], &aParts[protocol7::SKINPART_BODY]);
+	EXPECT_NE(Read("skins7/saved.json"), m_Old);
+}
+
 TEST_F(CQmSkin7SaveTest, MissingTargetIsCreatedFromCompleteJson)
 {
 	ASSERT_TRUE(Save("created"));
