@@ -34,6 +34,8 @@ TEST(QmGeneralCards, InternalSettingsCanFindTheirSharedCardBeforeOpeningThePage)
 		{"剪贴板", "deck:general-recording"},
 #endif
 		{"Chat Binds", "deck:tclient-info-files"},
+		{"Export configuration package", "deck:tclient-info-files"},
+		{"导出配置包", "deck:tclient-info-files"},
 		{"配置文件", "deck:tclient-info-files"},
 	};
 	for(const auto &Case : aCases)

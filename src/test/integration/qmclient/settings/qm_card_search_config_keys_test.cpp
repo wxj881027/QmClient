@@ -19,7 +19,6 @@ namespace
 		{"dummy_country", "cl_dummy_country", "deck:player-country"},
 		{"dummy_clan", "cl_dummy_clan", "deck:player-identity"},
 		{"dummy_name", "cl_dummy_name", "deck:player-identity"},
-		{"cl_video_preset", "cl_video_x264_preset", "deck:general-recording"},
 	};
 }
 
@@ -54,5 +53,28 @@ TEST(QmCardSearchConfigKeys, FormerSearchTermsUseCurrentConfigNamesAsMatchKeys)
 		ASSERT_NE(Result, vResults.end());
 		EXPECT_NE(std::find(Result->m_vMatches.begin(), Result->m_vMatches.end(), Case.m_pConfigKey), Result->m_vMatches.end());
 		EXPECT_NE(std::find(Result->m_vMatchKeys.begin(), Result->m_vMatchKeys.end(), Case.m_pConfigKey), Result->m_vMatchKeys.end());
+	}
+}
+
+TEST(QmCardSearchConfigKeys, RecordingCardOmitsExportEncodingOptions)
+{
+	qm_card_order::CModel Model;
+	Model.SetEntries(qm_card_registry::BuildDefaultEntries());
+	constexpr const char *apQueries[] = {
+		"Video quality CRF",
+		"cl_video_crf",
+		"Recorder FPS",
+		"cl_video_recorder_fps",
+		"Render preset",
+		"cl_video_preset",
+		"cl_video_x264_preset",
+	};
+	for(const char *pQuery : apQueries)
+	{
+		SCOPED_TRACE(pQuery);
+		const auto vResults = qm_card_registry::SearchCards(pQuery, Model);
+		EXPECT_TRUE(std::none_of(vResults.begin(), vResults.end(), [](const auto &Candidate) {
+			return str_comp(Candidate.m_pStableId, "deck:general-recording") == 0;
+		}));
 	}
 }
