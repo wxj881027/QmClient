@@ -5571,6 +5571,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_word_filter_list_test.cpp
     src/test/integration/qmclient/client/qm_word_filter_file_test.cpp
     src/test/integration/qmclient/client/qm_public_word_filter_cache_test.cpp
+    src/test/integration/qmclient/client/qm_public_word_filter_cache_write_test.cpp
     src/test/integration/qmclient/client/qm_word_filter_persistence_test.cpp
     src/test/integration/qmclient/client/qm_console_text_pipeline_test.cpp
     src/test/unit/qmclient/client/qm_red_packet_auto_claim_test.cpp

@@ -34,7 +34,10 @@ namespace
 		const bool Written = io_write(File, Content.data(), static_cast<unsigned>(Content.size())) == Content.size();
 		const bool Closed = io_close(File) == 0;
 		if(!Written || !Closed || !pStorage->RenameFile(aTempPath, CACHE_PATH, IStorage::TYPE_SAVE, false))
+		{
+			pStorage->RemoveFile(aTempPath, IStorage::TYPE_SAVE);
 			log_warn("public-word-filter", "Cannot save public word cache; current words remain active");
+		}
 	}
 }
 
@@ -148,6 +151,11 @@ bool QmPublicWordFilter::CState::Filter(std::string &Text, const char *pReplacem
 	}
 }
 
+QmPublicWordFilter::CClient::CClient(TRequestFactory RequestFactory) :
+	m_CreateRequest(RequestFactory ? RequestFactory : HttpGet)
+{
+}
+
 QmPublicWordFilter::CClient::~CClient()
 {
 	Shutdown();
@@ -203,7 +211,12 @@ void QmPublicWordFilter::CClient::Update(IHttp *pHttp, IStorage *pStorage, bool 
 	m_RequestGeneration = m_State.StartRefresh(Now);
 	if(m_RequestGeneration == 0)
 		return;
-	m_pRequest = HttpGet(PUBLIC_WORDS_URL);
+	m_pRequest = m_CreateRequest(PUBLIC_WORDS_URL);
+	if(!m_pRequest)
+	{
+		m_State.CompleteRefresh(m_RequestGeneration, std::nullopt, Now);
+		return;
+	}
 	m_pRequest->Timeout(CTimeout{4000, 10000, 256, 5});
 	m_pRequest->MaxResponseSize(QmWordFilterList::MAX_FILE_BYTES);
 	m_pRequest->LogProgress(HTTPLOG::NONE);
