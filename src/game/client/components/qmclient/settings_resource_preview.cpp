@@ -27,6 +27,8 @@ namespace
 			const int NewWidth = maximum(1, round_to_int((float)Image.m_Width * Scale));
 			const int NewHeight = maximum(1, round_to_int((float)Image.m_Height * Scale));
 			ResizeImage(Image, NewWidth, NewHeight);
+			if(Image.m_Width != (size_t)NewWidth || Image.m_Height != (size_t)NewHeight)
+				return;
 		}
 		Artifact.m_Success = SettingsResourcePreviewImageValidForUpload(Image);
 	}

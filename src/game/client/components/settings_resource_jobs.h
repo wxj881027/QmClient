@@ -5,7 +5,9 @@
 #include <game/client/ui_rect.h>
 
 #include <cstdint>
+#include <new>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -98,16 +100,33 @@ class CSettingsSkinLoadViewport
 
 public:
 	void BeginFrame() { ++m_Frame; }
-	void Publish(std::vector<std::string> Names, bool MeasurementOnly = false)
+	void Publish(std::vector<std::string> &&Names, bool MeasurementOnly = false)
 	{
 		if(MeasurementOnly)
 			return;
+		if(Names != m_vNames)
+		{
+			if(Names.empty())
+				m_Names.clear();
+			else
+			{
+				try
+				{
+					std::unordered_set<std::string> NameIndex(Names.begin(), Names.end(), Names.size());
+					m_Names.swap(NameIndex);
+				}
+				catch(const std::bad_alloc &)
+				{
+					return;
+				}
+				catch(const std::length_error &)
+				{
+					return;
+				}
+			}
+			m_vNames.swap(Names);
+		}
 		m_PublishedFrame = m_Frame;
-		if(Names == m_vNames)
-			return;
-		m_vNames = std::move(Names);
-		m_Names.clear();
-		m_Names.insert(m_vNames.begin(), m_vNames.end());
 	}
 	bool Contains(const std::string &Name) const { return m_PublishedFrame == m_Frame && m_Names.contains(Name); }
 	static bool RowVisible(bool MeasurementOnly, const CUIRect &Row, const CUIRect *pClip)
