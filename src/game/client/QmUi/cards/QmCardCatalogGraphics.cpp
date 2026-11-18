@@ -311,7 +311,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 	// 动态高度只交给 Card Deck 处理。页面私有动画会让 measure revision 每帧变化，
 	// 与 Deck 的高度轨道叠加后产生双重缓动和背景闪动。
 	const uint64_t GraphicsModesMeasureRevision = static_cast<uint64_t>(std::max(0, s_NumNodes));
-	const int GraphicsDisplayRowCount = 5 + (Graphics()->GetNumScreens() > 1 ? 1 : 0) + GraphicsBackendRowCount;
+	const int GraphicsDisplayRowCount = 7 + (Graphics()->GetNumScreens() > 1 ? 1 : 0) + GraphicsBackendRowCount;
 	uint64_t GraphicsDisplayMeasureRevision = (static_cast<uint64_t>(std::max(0, GraphicsDisplayRowCount)) << 32) ^ static_cast<uint64_t>(std::max(0, OldWindowMode));
 	GraphicsDisplayMeasureRevision = GraphicsDisplayMeasureRevision * 1099511628211ULL ^ static_cast<uint64_t>(GpuList.m_CanSelect);
 	GraphicsDisplayMeasureRevision = GraphicsDisplayMeasureRevision * 1099511628211ULL ^ str_quickhash(Graphics()->GetRendererString());
@@ -568,7 +568,25 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 			RowAction("graphics-refresh-rate", GraphicsMetrics.m_LineHeight, [&](CUIRect Button) {
 				str_copy(aBuf, " ");
 				str_append(aBuf, Localize("Hz", "Hertz"));
-				DoGraphicsNumericField("graphics-refresh-rate", &g_Config.m_GfxRefreshRate, &g_Config.m_GfxRefreshRate, Button, Localize("Refresh Rate"), 10, 10000, &CUi::ms_LinearScrollbarScale, aBuf, CUi::SCROLLBAR_OPTION_INFINITE | CUi::SCROLLBAR_OPTION_NOCLAMPVALUE, 0, 10000);
+				DoGraphicsNumericField("graphics-refresh-rate", &g_Config.m_GfxRefreshRate, &g_Config.m_GfxRefreshRate, Button, Localize("Render frame rate limit"), 10, 10000, &CUi::ms_LinearScrollbarScale, aBuf, CUi::SCROLLBAR_OPTION_INFINITE | CUi::SCROLLBAR_OPTION_NOCLAMPVALUE, 0, 10000);
+				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_GfxRefreshRate, &Button, Localize("Frames drawn per second when V-Sync is off; 0 = unlimited"));
+			});
+
+			// 客户端更新频率：游戏逻辑、输入处理与渲染共用这条主循环节拍。
+			// 和上面的渲染帧率上限放在一起，两者的从属关系才看得出来
+			// （更新频率设得低时，渲染帧率上限不再单独生效）。
+			RowAction("graphics-client-update-rate", GraphicsMetrics.m_LineHeight, [&](CUIRect Button) {
+				str_copy(aBuf, " ");
+				str_append(aBuf, Localize("Hz", "Hertz"));
+				DoGraphicsNumericField("graphics-client-update-rate", &g_Config.m_ClRefreshRate, &g_Config.m_ClRefreshRate, Button, Localize("Client update rate"), 10, 10000, &CUi::ms_LinearScrollbarScale, aBuf, CUi::SCROLLBAR_OPTION_INFINITE | CUi::SCROLLBAR_OPTION_NOCLAMPVALUE | CUi::SCROLLBAR_OPTION_DELAYUPDATE, 0, 10000);
+				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_ClRefreshRate, &Button, Localize("Logic and input ticks per second; rendering follows this beat."));
+			});
+
+			RowAction("graphics-lower-update-rate", GraphicsMetrics.m_LineHeight, [&](CUIRect Button) {
+				static int s_LowerUpdateRate;
+				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &s_LowerUpdateRate, "graphics-lower-update-rate", Localize("Cap update rate to save power"), g_Config.m_ClRefreshRate <= 480 && g_Config.m_ClRefreshRate != 0, &Button))
+					g_Config.m_ClRefreshRate = g_Config.m_ClRefreshRate > 480 || g_Config.m_ClRefreshRate == 0 ? 480 : 0;
+				GameClient()->m_Tooltips.DoToolTip(&s_LowerUpdateRate, &Button, Localize("Sets the client update rate to 480 Hz (0 = unlimited)"));
 			});
 
 			if(FoundBackendCount > 1)

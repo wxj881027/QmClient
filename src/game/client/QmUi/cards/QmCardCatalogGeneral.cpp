@@ -159,10 +159,9 @@ namespace qm_card_catalog
 		}
 		if(str_comp(pStableId, "deck:general-client") == 0)
 		{
-			Out.m_Render = [pMenus, DoNumericField, GeneralMetrics, GeneralThemeListHeight](CUIRect Content) {
+			Out.m_Render = [pMenus, GeneralMetrics, GeneralThemeListHeight](CUIRect Content) {
 				CSettingsContentLayoutFlow Flow(Content);
 				CUIRect Button;
-				char aBuf[128 + IO_MAX_PATH_LENGTH];
 				if(Flow.Control("general-map-tags", GeneralMetrics.m_LineHeight, Button) && pMenus->DoSettingsButton_CheckBox(CMenus::SETTINGS_GENERAL, -1, &g_Config.m_QmMapTags, "general-map-tags", Localize("Show community map tags"), g_Config.m_QmMapTags, &Button))
 					g_Config.m_QmMapTags ^= 1;
 				if(Flow.Control("general-skip-main-menu", GeneralMetrics.m_LineHeight, Button, ui_token::settings::RowGap(GeneralMetrics.m_LineSpacing)))
@@ -170,24 +169,8 @@ namespace qm_card_catalog
 					if(pMenus->DoSettingsButton_CheckBox(CMenus::SETTINGS_GENERAL, -1, &g_Config.m_ClSkipStartMenu, "general-skip-main-menu", Localize("Skip the main menu"), g_Config.m_ClSkipStartMenu, &Button))
 						g_Config.m_ClSkipStartMenu ^= 1;
 				}
-				if(Flow.Control("general-refresh-rate", GeneralMetrics.m_LineHeight, Button, ui_token::settings::RowGap(GeneralMetrics.m_LineSpacing)))
-				{
-					str_copy(aBuf, " ");
-					str_append(aBuf, Localize("Hz", "Hertz"));
-					DoNumericField("general-refresh-rate", &g_Config.m_ClRefreshRate, &g_Config.m_ClRefreshRate, Button, Localize("Update Rate"), 10, 10000, CUi::SCROLLBAR_OPTION_INFINITE | CUi::SCROLLBAR_OPTION_NOCLAMPVALUE | CUi::SCROLLBAR_OPTION_DELAYUPDATE, aBuf);
-				}
-				if(Flow.Control("general-lower-refresh-rate", GeneralMetrics.m_LineHeight, Button, ui_token::settings::RowGap(GeneralMetrics.m_LineSpacing)))
-				{
-					static int s_LowerRefreshRate;
-					if(pMenus->DoSettingsButton_CheckBox(CMenus::SETTINGS_GENERAL, -1, &s_LowerRefreshRate, "general-lower-refresh-rate", Localize("Save power by lowering update rate (higher input latency)"), g_Config.m_ClRefreshRate <= 480 && g_Config.m_ClRefreshRate != 0, &Button))
-						g_Config.m_ClRefreshRate = g_Config.m_ClRefreshRate > 480 || g_Config.m_ClRefreshRate == 0 ? 480 : 0;
-				}
-				if(Flow.Control("general-net-qos", GeneralMetrics.m_LineHeight, Button, ui_token::settings::RowGap(GeneralMetrics.m_LineSpacing)))
-				{
-					if(pMenus->DoSettingsButton_CheckBox(CMenus::SETTINGS_GENERAL, -1, &g_Config.m_QmNetQos, "general-net-qos", Localize("Prioritize game traffic (QoS, Windows only)"), g_Config.m_QmNetQos, &Button))
-						g_Config.m_QmNetQos ^= 1;
-					pMenus->GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmNetQos, &Button, Localize("Best-effort DSCP marking of the game connection; may be ignored by routers"));
-				}
+				// 更新频率与渲染帧率上限都挪到图像页：那里才有「画多少帧」的上下文，
+				// 两行放在一起玩家才能看懂两者的区别。
 				if(Flow.Control("general-crash-report-on-startup", GeneralMetrics.m_LineHeight, Button, ui_token::settings::RowGap(GeneralMetrics.m_LineSpacing)))
 				{
 					if(pMenus->DoSettingsButton_CheckBox(CMenus::SETTINGS_GENERAL, -1, &g_Config.m_QmCrashReportOnStartup, "general-crash-report-on-startup", Localize("Show pending crash reports on startup"), g_Config.m_QmCrashReportOnStartup, &Button))
@@ -262,8 +245,8 @@ namespace qm_card_catalog
 					Flow.Space(ui_token::settings::RowGap(GeneralMetrics.m_LineSpacing));
 				}
 				DoToggle(&g_Config.m_QmScreenshotWatermark, "screenshot-watermark", Localize("Automatically add a watermark to screenshots"));
-				if(Flow.Control("general-pose-capture-megapixels", GeneralMetrics.m_LineHeight, Button, ui_token::settings::RowGap(GeneralMetrics.m_LineSpacing)))
-					DoNumericField("general-pose-capture-megapixels", &g_Config.m_QmPoseCaptureMaxMegapixels, &g_Config.m_QmPoseCaptureMaxMegapixels, Button, Localize("Pose screenshot pixel budget (MP, 0 = unlimited)"), 0, 300, CUi::SCROLLBAR_OPTION_INFINITE);
+				// 姿势截图的像素预算只影响「渲染 .poses」那一次抓帧，属于出图参数，
+				// 已放到合影渲染弹窗（输出格式 / 分辨率倍数 / 锐化 同一组），这里不再常驻一行。
 				if(qm_mobile_spectator::Enabled())
 				{
 					CUIRect MediaRow;

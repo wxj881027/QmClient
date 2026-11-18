@@ -1109,7 +1109,7 @@ void CMenus::RenderDemoEncodeSettings(CUIRect View)
 	if(NewProres != ProresIndex)
 		g_Config.m_QmVideoProresProfile = s_aProresValues[NewProres];
 	GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmVideoProresProfile, &Row,
-		Localize("ProRes profile used when the encoder is ProRes. Auto picks 4444 for 4:4:4 input and HQ otherwise; other encoders ignore this."));
+		Localize("ProRes profile for 4:4:4 input; other encoders ignore it."));
 	Ui()->DoLabel(&ProresHint, g_Config.m_QmVideoProresProfile < 0 ? Localize("Auto") : s_apProresLabels[ProresIndex], FontSize, TEXTALIGN_MR, {.m_MaxWidth = ProresHint.w - 2.0f});
 	View.HSplitTop(qm_demo_ui::RENDER_ROW_GAP, nullptr, &View);
 }
@@ -4921,10 +4921,11 @@ void CMenus::RenderQmPoseHud(CUIRect MainView)
 		const qm_pose_map::EOutput Output = PoseMap.m_RenderOutput == 1 ? qm_pose_map::EOutput::WEBP : qm_pose_map::EOutput::PNG;
 		const std::string MapLabel = pMapName[0] != '\0' ? qm_pose_map::DisplayName(pMapName) : std::string(Localize("No map"));
 		// 目标尺寸和拍摄走同一份计算：超过像素预算时这里先显示降级后的真实倍数，
-		// 玩家不会以为选了 4x 就真出了 4 倍图。
+		// 玩家不会以为选了 4x 就真出了 4 倍图。预算与抓帧共用 ConfiguredPixelBudget，
+		// 否则这里按旧的 8K 常量算、实际抓帧按配置算，显示和出图会对不上。
 		const qm_pose::SCaptureSize Captured = qm_pose::ComputeCaptureSize(
 			Graphics()->ScreenWidth(), Graphics()->ScreenHeight(), PoseMap.m_RenderScale,
-			qm_pose::MAX_CAPTURE_DIMENSION, qm_pose::MAX_CAPTURE_PIXELS);
+			qm_pose::MAX_CAPTURE_DIMENSION, qm_pose::ConfiguredPixelBudget(g_Config.m_QmPoseCaptureMaxMegapixels));
 		const int EffectiveScale = Captured.m_Width > 0 ? Captured.m_Scale : PoseMap.m_RenderScale;
 		const int OutputWidth = Captured.m_Width > 0 ? Captured.m_Width : Graphics()->ScreenWidth();
 		const int OutputHeight = Captured.m_Height > 0 ? Captured.m_Height : Graphics()->ScreenHeight();
@@ -5323,6 +5324,24 @@ void CMenus::RenderQmPoseMapPopup(CUIRect View)
 		const IUiContext SharpenCtx = ui_widget::ControlContext(Ui());
 		if(ui_widget::DiscreteSlider(SharpenCtx, &s_PoseSharpenSliderId, s_PoseSharpenSliderState, &State.m_RenderSharpen, 0, 60, SharpenRow))
 			g_Config.m_QmPoseSharpen = State.m_RenderSharpen;
+
+		// 像素预算：超采样撞到显存/编码上限时的降级阈值，只影响这一次出图。
+		// 和输出格式、倍数、锐化同属「出图」参数，所以跟着它们走，
+		// 不放在回放卡片的常驻行上（那个位置会让人以为它管普通截图）。
+		const float BudgetTop = SharpenTop + qm_demo_ui::POSE_MAP_ROW_HEIGHT + qm_demo_ui::POSE_MAP_GAP;
+		CUIRect BudgetLabel = {View.x, BudgetTop, 110.0f, qm_demo_ui::POSE_MAP_ROW_HEIGHT};
+		char aBudgetLabel[96];
+		if(g_Config.m_QmPoseCaptureMaxMegapixels > 0)
+			str_format(aBudgetLabel, sizeof(aBudgetLabel), "%s: %d MP", Localize("Pixel budget"), g_Config.m_QmPoseCaptureMaxMegapixels);
+		else
+			str_format(aBudgetLabel, sizeof(aBudgetLabel), "%s: %s", Localize("Pixel budget"), Localize("Unlimited"));
+		Ui()->DoLabel(&BudgetLabel, aBudgetLabel, 12.0f, TEXTALIGN_ML);
+		CUIRect BudgetRow = {View.x + 110.0f, BudgetTop, View.w - 110.0f, qm_demo_ui::POSE_MAP_ROW_HEIGHT};
+		BudgetRow.HMargin(4.0f, &BudgetRow);
+		static ui_widget::SDiscreteSliderState s_PoseBudgetSliderState;
+		static const int s_PoseBudgetSliderId = 0;
+		const IUiContext BudgetCtx = ui_widget::ControlContext(Ui());
+		ui_widget::DiscreteSlider(BudgetCtx, &s_PoseBudgetSliderId, s_PoseBudgetSliderState, &g_Config.m_QmPoseCaptureMaxMegapixels, 0, 300, BudgetRow);
 	}
 
 	const std::vector<QmMapUpload::SMapFile> &vRows = Searching ? State.m_vMatches : State.m_vEntries;

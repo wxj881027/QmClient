@@ -7,8 +7,14 @@
  seconds (never)
 == saniye (asla)
 
+ · %d finishers
+==  · %d bitiren
+
  · %d finishers · average %d:%02d:%02d
 ==  · %d oyuncu bitirdi · ortalama %d:%02d:%02d
+
+ · median %d:%02d:%02d
+==  · medyan %d:%02d:%02d
 
 "%s" is not compatible with pnglite and cannot be loaded by old DDNet versions:
 == "%s" pnglite ile uyumlu değil ve eski DDNet sürümleri tarafından yüklenemez
@@ -48,9 +54,6 @@
 
 "None" hides all name plates including your own team, so choose "Others" if you only want a cleaner screen.
 == Hiçbiri kendi takımın dahil tüm isim plakalarını gizler; sadece daha temiz bir ekran istiyorsan Diğerleri seç.
-
-"Save power by lowering update rate (higher input latency)" adds input delay, so keep it off while racing.
-== Güncelleme hızını düşürerek enerji tasarrufu (giriş gecikmesi artar) ek gecikme getirir, yarışırken kapalı tut.
 
 "Scoreboard filter" keeps only players whose name or clan matches, so clear it when the scoreboard looks empty.
 == Skor tablosu filtresi yalnızca adı veya klanı eşleşen oyuncuları bırakır; tablo boş görünüyorsa filtreyi temizle.
@@ -325,9 +328,6 @@
 0-51, empty = default
 == 0-51, boş = varsayılan
 
-1% low
-== %1 düşük
-
 128 player id <-> 64 player id map update rate
 == 128 <-> 64 oyuncu kimliği harita güncelleme hızı
 
@@ -595,9 +595,6 @@ Add demo timeline marker
 
 Add Entry
 == Giriş Ekle
-
-Add every player's skin to the queue when entering a map. Editing the queue by hand turns this off.
-== Haritaya girildiğinde her oyuncunun skinini kuyruğa ekler. Kuyruğu elle düzenlemek bunu kapatır.
 
 Add friend
 == Arkadaş ekle
@@ -2120,6 +2117,12 @@ Cannot update public words. Previous words remain active.
 Cannot write the wiki file
 == Wiki dosyası yazılamıyor
 
+Cap update rate to save power
+== Güç tasarrufu için güncelleme hızını sınırla
+
+Capping the update rate adds input latency; only use it to save power. If exclusive fullscreen fails, switch back to windowed or borderless first.
+== Güncelleme hızını sınırlamak girdi gecikmesini artırır; yalnızca güç tasarrufu için kullanın. Özel tam ekran başarısız olursa önce pencere veya kenarlıksız moda dönün.
+
 Capsule end strength
 == Kapsül uç gücü
 
@@ -2170,9 +2173,6 @@ Center line color (requires qm_show_center)
 
 Center line width (requires qm_show_center)
 == Merkez çizgisi genişliği (qm_show_center gerektirir)
-
-Change "Update Rate" in Hz, tick "Skip the main menu", and use "Settings file" or "Themes directory" to open those locations.
-== Güncelleme Hızını Hz olarak değiştir, Ana menüyü atla seçeneğini işaretle ve bu konumları Ayarlar dosyası ya da Temalar dizini ile aç.
 
 Change colors and style options, then compare the preview.
 == Renkleri ve stil seçeneklerini değiştirin, ardından önizlemeyle karşılaştırın.
@@ -2468,8 +2468,8 @@ Chooses the menu background map and the colors drawn behind the UI.
 Chooses which name plates are drawn and adds clan, team color, friend icon, coordinates and client IDs to them.
 == Hangi isim plakalarının çizileceğini seçer ve bunlara klan, takım rengi, arkadaş simgesi, koordinatlar ve istemci ID'leri ekler.
 
-Chooses windowed or fullscreen mode, the monitor and the resolution; switching recreates the swap chain, so the screen may flash briefly.
-== Pencereli veya tam ekran modunu, monitörü ve çözünürlüğü seçer; değiştirmek takas zincirini yeniden oluşturur, bu yüzden ekran kısa süreliğine yanıp sönebilir.
+Chooses windowed or fullscreen mode, the monitor and the resolution, plus two frame pacing caps: render frame rate and client update rate.
+== Pencere/tam ekran modu, monitör ve çözünürlüğün yanı sıra iki kare hızı sınırını seçer: işleme kare hızı ve istemci güncelleme hızı.
 
 Chroma sampling
 == Renk örneklemesi
@@ -2693,14 +2693,17 @@ Client self-kill is disabled (server commands are not affected)
 Client self-kill is enabled
 == İstemci intiharları açıldı
 
+Client update rate
+== İstemci güncelleme hızı
+
 Client uptime
 == İstemci çalışma süresi
 
 Client-side prediction and latency compensation
 == Client-side prediction and latency compensation
 
-Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, and upstream packet redundancy.
-== Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, and upstream packet redundancy.
+Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, upstream packet redundancy and DSCP traffic marking.
+== İstemci tarafı tahmin ve gecikme telafisi: tahmin payı, AntiPing ve tahmin edilen varlıklar, tahmin edilen olaylar, yukarı yönlü paket yedekliliği ve DSCP trafik işaretleme.
 
 Client-side self-kill protection
 == İstemci tarafı intihar koruması
@@ -2725,6 +2728,9 @@ Collapse console
 
 Collect all players' skins on map join
 == Haritaya girişte tüm oyuncuların skinlerini topla
+
+Collect all players' skins on map join; manual edits turn it off.
+== Haritaya girince tüm oyuncuların skinlerini topla; kuyruğu elle düzenlemek kapatır.
 
 Collect CP %d before teleporting
 == Işınlanmadan önce CP %d noktasını etkinleştir
@@ -6119,20 +6125,14 @@ Fraction of players needed to pass a vote
 Frags
 == Öldürme
 
-Frame rate
-== Kare hızı
-
 Frame time
 == Kare süresi
 
-Frame time p95
-== Kare süresi P95
-
-Frame time p99
-== Kare süresi p99
-
 Frames buffered between capture and encoding. Deeper queues absorb slow encoder frames at the cost of memory; lower values apply back-pressure earlier.
 == Yakalama ile kodlama arasında tamponlanan kare sayısı. Daha derin kuyruk yavaş kareleri yutar ama bellek harcar; küçük değerler geri baskıyı erken uygular.
+
+Frames drawn per second when V-Sync is off; 0 = unlimited
+== V-Sync kapalıyken saniyedeki kare sayısı üst sınırı; 0 = sınırsız
 
 Frankenstein (drop parts on right)
 == Frankenstein (parçaları sağa bırakın)
@@ -6332,9 +6332,6 @@ Game paused
 Game sound volume
 == Oyun sesi seviyesi
 
-Game time margin
-== Oyun süresi kenar boşluğu
-
 Game type
 == Oyun türü
 
@@ -6349,9 +6346,6 @@ Game update rate when window inactive (Hz)
 
 Game window mode
 == Oyun pencere modu
-
-Game/predicted tick
-== Oyun/tahmin tick
 
 Gamemode. When enabled, players join as spectators
 == Oyun modu. Etkinleştirildiğinde oyuncular izleyici olarak katılır
@@ -6628,9 +6622,6 @@ Graphics settings sub-tab: 0=display, 1=visual effects
 
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
 == Grafik izleme düzeyi: 0 = kapalı, 1 = dönemsel özet, 2 = özet ve yavaş kareler, 3 = ayrıntılı arka uç izlemesi
-
-Graphs RTT, prediction, snapshot age and frame rate in a panel shown while the debug graph toggle is on.
-== Hata ayıklama grafiği açıkken görünen panelde RTT, tahmin, anlık görüntü yaşı ve kare hızını grafikler.
 
 Greek
 == Yunanca
@@ -7202,9 +7193,6 @@ If a device disappears after unplugging headphones, reselect it or restart the c
 If chat score exceeds this value, the player is muted for sv_spam_mute_duration seconds
 == Sohbet puanı bu değeri aşarsa, oyuncu sv_spam_mute_duration saniye boyunca susturulur
 
-If exclusive fullscreen fails, switch back to windowed or borderless first.
-== Özel tam ekran başarısız olursa önce pencereli veya kenarlıksız moda dönün.
-
 If lasers can hit you when shot and pull you to bounce origin (0 for all new maps), or lasers cannot hit you and pull others to shooter.
 == Lazerler vurulduğunda size çarpıp sizi sekme kaynağına çekiyorsa (tüm yeni haritalar için 0), veya lazerler size çarpamayıp başkalarını atıcıya çekiyorsa.
 
@@ -7672,9 +7660,6 @@ Jelly others
 
 Jelly strength
 == Jelly gücü
-
-Jitter
-== Titreşim
 
 Join
 == Katıl
@@ -8441,6 +8426,9 @@ Log realtime WebSocket channel events
 Log the network
 == Ağı günlüğe kaydet
 
+Logic and input ticks per second; rendering follows this beat.
+== Saniyedeki oyun mantığı ve girdi tick sayısı; render de bu tempoyu izler.
+
 Logout of econ
 == Econ'dan çıkış yap
 
@@ -8449,9 +8437,6 @@ Logout of rcon
 
 Logs slow frames and startup stutter timings so you can report why the game felt laggy.
 == Yavaş kareleri ve açılıştaki takılma sürelerini kaydeder, böylece oyunun neden kasıntılı hissettirdiğini bildirebilirsin.
-
-Long frames
-== Uzun kareler
 
 Lose weapons when teleporting (useful for race maps)
 == Işınlanırken silahları kaybet (yarış haritaları için kullanışlıdır)
@@ -8798,6 +8783,9 @@ Max Screenshots
 Max size
 == Maksimum boyut
 
+Max skins in the rotation queue; 0 stops collecting.
+== Rotasyon kuyruğundaki azami skin sayısı; 0 toplamayı durdurur.
+
 Max stroke entries to keep
 == Tutulacak maksimum kontur girişi
 
@@ -8864,9 +8852,6 @@ Maximum number of resend requests answered per second (0 for no limit)
 Maximum number of server info responses of any size sent per second (0 = unlimited).
 == Boyutu ne olursa olsun saniyede gönderilecek sunucu bilgisi yanıtlarının maksimum sayısı (0 = sınırsız).
 
-Maximum number of skins kept in the rotation queue; extra skins are dropped oldest first. 0 empties the queue and stops collecting.
-== Döndürme kuyruğunda tutulacak en fazla skin sayısı; fazlası en eskiden başlanarak atılır. 0 kuyruğu boşaltır ve toplamayı durdurur.
-
 Maximum number of skins loaded simultaneously
 == Aynı anda yüklenen maksimum skin sayısı
 
@@ -8902,9 +8887,6 @@ May overload the service
 
 Medium
 == Orta
-
-Memory
-== Bellek
 
 Mention
 == Bahsedilme
@@ -10010,8 +9992,8 @@ Ok
 Old chat style: no tee icons, no background
 == Eski sohbet stili: tee simgesi yok, arka plan yok
 
-Old files are deleted once the save limit is reached, so copy any demo you want to keep somewhere else.
-== Kayıt sınırına ulaşınca eski dosyalar silinir; saklamak istediğin demoyu başka bir yere kopyala.
+Old files are deleted once the save limit is reached, so copy any demo you want to keep somewhere else. The pose screenshot pixel budget is not here: it is a render option in the .poses file dialog.
+== Kayıt sınırına ulaşıldığında eski dosyalar silinir; saklamak istediğiniz demoları başka yere kopyalayın. Poz ekran görüntüsü piksel bütçesi burada değil, .poses dosyası render penceresindeki bir çıktı seçeneğidir.
 
 Old single-segment hook collision line
 == Eski tek parçalı kanca çarpışma çizgisi
@@ -10225,6 +10207,9 @@ Optional
 
 Optional authentication key for the DNSBL provider
 == DNSBL sağlayıcısı için isteğe bağlı kimlik doğrulama anahtarı
+
+Optional Axiom API key for scoreboard points and vote map details (leave empty for anonymous queries)
+== Puan tablosu ve oylama haritası ayrıntıları için isteğe bağlı Axiom API anahtarı (boş = anonim sorgular).
 
 Optional export range in seconds. Leave empty to export the whole demo.
 == İsteğe bağlı dışa aktarma aralığı (saniye). Tüm demoyu aktarmak için boş bırakın.
@@ -10601,8 +10586,8 @@ Pick each color row and choose a color; the authed and same-clan colors apply to
 Pick result: %s
 == Seçim sonucu: %s
 
-Pick the mode first, then the monitor and resolution; the refresh rate follows the monitor's current mode.
-== Önce modu, ardından monitörü ve çözünürlüğü seçin; yenileme hızı monitörün geçerli modunu izler.
+Pick the mode first, then the monitor and resolution. "Render frame rate limit" caps how many frames are drawn when V-Sync is off; "Client update rate" caps how often game logic and input are processed and throttles rendering with it.
+== Önce modu, sonra monitörü ve çözünürlüğü seçin. "İşleme kare hızı sınırı" V-Sync kapalıyken çizilen kareleri sınırlar; "İstemci güncelleme hızı" oyun mantığı ve girdilerin işlenme sıklığını sınırlayıp renderı da birlikte kısıtlar.
 
 Pick the parts to colorize, then choose a gradient mode and colors.
 == Renklendirilecek kısımları seçin, ardından bir renk geçişi modu ve renkleri seçin.
@@ -10648,6 +10633,9 @@ Pistol
 
 Pistol guide line
 == Tabanca yardımcı çizgisi
+
+Pixel budget
+== Piksel bütçesi
 
 Pixel: Layer Shift
 == Piksel: katman kayması
@@ -11033,9 +11021,6 @@ Pose render supersampling scale (1-4)
 Pose render unsharp mask strength (0 = off)
 == Poz işleme unsharp mask gücü (0 = kapalı)
 
-Pose screenshot pixel budget (MP, 0 = unlimited)
-== Poz ekran görüntüsü piksel bütçesi (MP, 0 = sınırsız)
-
 Poses
 == Pozlar
 
@@ -11144,8 +11129,8 @@ Prediction margin
 Prediction margin when frozen
 == Donduğunda tahmin marjı
 
-Prediction trades accuracy for responsiveness: a larger margin and AntiPing smooth out ping jitter but can mispredict nearby actions, and upstream redundancy may triple upload traffic.
-== Tahmin, isabetlilik yerine tepkisellik sunar: daha büyük pay ve AntiPing ping dalgalanmasını yumuşatır ama yakın eylemleri yanlış tahmin edebilir; üst akış yedekliliği yükleme trafiğini üç katına çıkarabilir.
+Prediction trades accuracy for responsiveness; upstream redundancy may triple upload traffic. "Prioritize game traffic" only tags packets on Windows and needs a QoS-aware router to have any effect.
+== Tahmin doğruluğu tepki hızıyla takas eder; yukarı yönlü yedeklilik uploadı üç katına çıkarır. "Oyun trafiğini önceliklendir" yalnızca Windows'ta paketleri işaretler ve QoS destekli bir yönlendirici gerektirir.
 
 Preparing chat export: %d%%
 == Sohbet dışa aktarımı hazırlanıyor: %d%%
@@ -11384,11 +11369,11 @@ Projectile / explosion range
 ProRes profile
 == ProRes profili
 
+ProRes profile for 4:4:4 input; other encoders ignore it.
+== 4:4:4 girdi için ProRes profili; diğer kodlayıcılar bunu yok sayar.
+
 ProRes profile override: -1=auto (4444 for 4:4:4, HQ otherwise), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ
 == ProRes profil geçersiz kılma: -1=otomatik (4:4:4 için 4444, aksi halde HQ), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ
-
-ProRes profile used when the encoder is ProRes. Auto picks 4444 for 4:4:4 input and HQ otherwise; other encoders ignore this.
-== Kodlayıcı ProRes olduğunda kullanılan profil. Otomatik, 4:4:4 girişte 4444, aksi halde HQ seçer; diğer kodlayıcılar bunu yok sayar.
 
 Protect names and skins while streaming
 == Yayın yaparken isimleri ve skinleri koru
@@ -11915,9 +11900,6 @@ Refresh interval
 Refresh isolated serverlist consumer
 == Yalıtılmış sunucu listesi tüketicisini yenile
 
-Refresh Rate
-== Yenileme Hızı
-
 Refresh the demo list
 == Demo listesini yenile
 
@@ -12205,6 +12187,9 @@ Render entity text data
 
 Render entity text data in editor
 == Editörde varlık metin verilerini işle
+
+Render frame rate limit
+== İşleme kare hızı sınırı
 
 Render ghosts as circles
 == Hayaletleri daire olarak işle
@@ -12733,12 +12718,6 @@ Save player names in replay
 
 Save PNG copy
 == PNG kopyası kaydet
-
-Save power by lowering update rate
-== Güncelleme hızını düşürerek güç tasarrufu sağlar
-
-Save power by lowering update rate (higher input latency)
-== Güncelleme hızını düşürerek güç tasarrufu sağlar (daha yüksek giriş gecikmesi)
 
 Save replay of best time per game
 == Oyun başına en iyi sürenin tekrar oynatmasını kaydet
@@ -13391,8 +13370,8 @@ Sets one of the two rescue modes (auto or manual). Prints current mode if no arg
 Sets player and dummy name, clan and identity information.
 == Oyuncu ve dummy adını, klan ve kimlik bilgilerini ayarlar.
 
-Sets the client update rate, whether the main menu is skipped, and opens the folders for settings, saves and themes.
-== İstemci güncelleme hızını, ana menünün atlanıp atlanmayacağını ayarlar ve ayarlar, kayıtlar ve temalar klasörlerini açar.
+Sets the client update rate to 480 Hz (0 = unlimited)
+== İstemci güncelleme hızını 480 Hz olarak ayarlar (0 = sınırsız)
 
 Sets the position, size and text style of the status bar.
 == Durum çubuğunun konumunu, boyutunu ve yazı stilini ayarlar.
@@ -14582,6 +14561,9 @@ Shows five points of the global point ladder beginning with rank i (1 by default
 Shows five team ranks of the ladder or of a player beginning with rank i (1 by default, -1 for worst)
 == Sıralamanın veya bir oyuncunun takım sıralamasında i sırasından başlayarak 5 takım derecesini gösterir (varsayılan 1, en kötü için -1)
 
+Shows FPS, frame time, RTT and prediction lead. Frame-time bars above the guide exceed the 60 FPS frame budget.
+== FPS, kare süresi, RTT ve tahmin öncülüğünü gösterir. Kılavuzun üstündeki çubuklar 60 FPS kare bütçesini aşar.
+
 Shows fractional position numbers for edge jumps as on-screen text, so you can time a jump at the right spot.
 == Kenar zıplamaları için ondalık konum sayılarını ekran metni olarak gösterir; doğru noktada zıplama zamanlaması yaparsınız.
 
@@ -14890,15 +14872,6 @@ Snapshot age
 
 Snapshot Latency
 == Snapshot gecikmesi
-
-Snapshot payload
-== Anlık görüntü yükü
-
-Snapshot rate
-== Anlık görüntü hızı
-
-Snapshot tick gap
-== Anlık görüntü tick aralığı
 
 Social
 == Sosyal
@@ -16046,6 +16019,9 @@ The server rejected the map upload.
 The two keys that cast your vote: one for yes and one for no.
 == Oyunu veren iki tuş: biri evet, biri hayır için.
 
+The update-rate and frame-rate caps moved to the Graphics page; they belong next to the rendering settings, not here.
+== Güncelleme ve kare hızı sınırları Grafik sayfasına taşındı; işleme ayarlarının yanında olmalı, burada değil.
+
 The watermarked screenshot was saved next to the original
 == Filigranlı ekran görüntüsü orijinalin yanına kaydedildi
 
@@ -16240,6 +16216,9 @@ Tick "Show inputs", then size and place it with "Keyboard size", "Mouse size", "
 
 Tick "Show others" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use "Show background quads" and "Default zoom" for the view.
 == Diğer takımları yarı saydam çizmek için "Diğerlerini göster"i işaretleyin; gölge saydamlığı hemen altındaki bağımlı satırda ayarlanır, görünüm için "Arka plan dörtgenlerini göster" ve "Varsayılan yakınlaştırma" kullanılır.
+
+Tick "Skip the main menu", and use "Settings file" or "Themes directory" to open those locations.
+== "Ana menüyü atla" seçeneğini işaretleyin ve "Ayarlar dosyası" veya "Temalar klasörü" ile konumları açın.
 
 Tick any of "Show key stuck status", "Show hammer status", "Show dummy control status" or "Show dummy copy status".
 == Tuş takılı durumunu göster, çekiç durumunu göster, dummy kontrol durumunu göster veya dummy kopya durumunu göster seçeneklerinden istediklerini işaretle.
@@ -17135,6 +17114,9 @@ Unknown status
 Unknown title style
 == Bilinmeyen unvan stili
 
+Unlimited
+== Sınırsız
+
 Unload the rank ghost
 == Rank hayaletini kaldır
 
@@ -17218,9 +17200,6 @@ Update notice
 
 Update or add a specific war group
 == Belirli bir savaş grubunu güncelle veya ekle
-
-Update Rate
-== Güncelleme Hızı
 
 Update ready to install
 == Güncelleme kuruluma hazır
@@ -17950,6 +17929,9 @@ Whether players see all tees by default
 
 Whether players see others by default (own team = 2)
 == Oyuncuların varsayılan olarak diğerlerini görüp görmediği (kendi takımı = 2)
+
+Whether the main menu is skipped, the community map tags, crash reports on startup, and the folders for settings, saves and themes.
+== Ana menünün atlanması, topluluk harita etiketleri, açılışta çökme raporları ve ayarlar/kayıtlar/temalar klasörleri.
 
 Whether to control dummy simultaneously (cl_dummy_jump, cl_dummy_fire, cl_dummy_hook)
 == Dummy'yi aynı anda kontrol edip etmeme (cl_dummy_jump, cl_dummy_fire, cl_dummy_hook)
