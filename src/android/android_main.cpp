@@ -14,12 +14,11 @@
 #include <jni.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <atomic>
 #include <cstdio>
 #include <cstdlib>
 #include <memory>
-#include <string>
-#include <vector>
 
 static bool UnpackAsset(const char *pFilename) noexcept
 {
@@ -148,7 +147,8 @@ const char *InitAndroid()
 		return "Failed to create 'data' and 'user' directories in external storage.";
 	}
 
-	if(EqualIntegrityFiles(INTEGRITY_INDEX, INTEGRITY_INDEX_SAVE))
+	// 存储初始化需要 data/mapres。完整性索引可能在资源目录被清理后仍然存在。
+	if(fs_is_dir("data/mapres") && EqualIntegrityFiles(INTEGRITY_INDEX, INTEGRITY_INDEX_SAVE))
 	{
 		return nullptr;
 	}
@@ -171,11 +171,11 @@ const char *InitAndroid()
 	{
 		const CIntegrityFileLine &IntegrityLine = vIntegrityLines[i];
 
-		// Check if the asset is unchanged from the last unpacking
+		// 只有上次解包的记录和这次相同，且文件还存在时，才复用磁盘上的资源。
 		const auto IntegritySaveLine = std::find_if(vIntegritySaveLines.begin(), vIntegritySaveLines.end(), [&](const CIntegrityFileLine &Line) {
 			return str_comp(Line.m_aFilename, IntegrityLine.m_aFilename) == 0;
 		});
-		if(IntegritySaveLine != vIntegritySaveLines.end() && IntegritySaveLine->m_Sha256 == IntegrityLine.m_Sha256)
+		if(IntegritySaveLine != vIntegritySaveLines.end() && IntegritySaveLine->m_Sha256 == IntegrityLine.m_Sha256 && fs_is_file(IntegrityLine.m_aFilename))
 		{
 			continue;
 		}
@@ -215,16 +215,25 @@ const char *InitAndroid()
 	return nullptr;
 }
 
+static bool CallAndroidActivityMethod(const char *pMethod)
+{
+	JNIEnv *pEnv = static_cast<JNIEnv *>(SDL_GetAndroidJNIEnv());
+	return android_jni::Call(pEnv, [] { return static_cast<jobject>(SDL_GetAndroidActivity()); }, [&](jobject Activity) {
+		const jclass ActivityClass = pEnv->GetObjectClass(Activity);
+		if(!ActivityClass || pEnv->ExceptionCheck())
+			return false;
+		const jmethodID Method = pEnv->GetMethodID(ActivityClass, pMethod, "()V");
+		if(!Method || pEnv->ExceptionCheck())
+			return false;
+		pEnv->CallVoidMethod(Activity, Method);
+		return true; });
+}
+
 void RestartAndroidApp()
 {
 	// 等待启动请求提交后再结束进程，避免 UI 消息队列中的重启请求随进程一起丢失。
-	JNIEnv *pEnv = static_cast<JNIEnv *>(SDL_GetAndroidJNIEnv());
-	jobject Activity = (jobject)SDL_GetAndroidActivity();
-	jclass ActivityClass = pEnv->GetObjectClass(Activity);
-	jmethodID MethodId = pEnv->GetMethodID(ActivityClass, "restartApp", "()V");
-	pEnv->CallVoidMethod(Activity, MethodId);
-	pEnv->DeleteLocalRef(ActivityClass);
-	pEnv->DeleteLocalRef(Activity);
+	if(!CallAndroidActivityMethod("restartApp"))
+		log_warn("android", "Failed to request app restart");
 }
 
 bool StartAndroidServer(const char **ppArguments, size_t NumArguments)
@@ -259,33 +268,7 @@ bool ShowAndroidMediaFiles(const char *pDirectory, bool Videos, const char *cons
 
 bool OpenAndroidDownloadsFolder()
 {
-	JNIEnv *pEnv = static_cast<JNIEnv *>(SDL_GetAndroidJNIEnv());
-	if(pEnv == nullptr)
-		return false;
-	jobject Activity = static_cast<jobject>(SDL_GetAndroidActivity());
-	if(Activity == nullptr)
-		return false;
-	jclass ActivityClass = pEnv->GetObjectClass(Activity);
-	if(ActivityClass == nullptr)
-	{
-		pEnv->DeleteLocalRef(Activity);
-		return false;
-	}
-	jmethodID Method = pEnv->GetMethodID(ActivityClass, "openDownloadsFolder", "()V");
-	bool Success = false;
-	if(Method != nullptr)
-	{
-		pEnv->CallVoidMethod(Activity, Method);
-		Success = !pEnv->ExceptionCheck();
-	}
-	if(pEnv->ExceptionCheck())
-	{
-		pEnv->ExceptionDescribe();
-		pEnv->ExceptionClear();
-	}
-	pEnv->DeleteLocalRef(ActivityClass);
-	pEnv->DeleteLocalRef(Activity);
-	return Success;
+	return CallAndroidActivityMethod("openDownloadsFolder");
 }
 
 bool ExportAndroidMediaFile(const char *pPath)
@@ -293,55 +276,17 @@ bool ExportAndroidMediaFile(const char *pPath)
 	if(pPath == nullptr || pPath[0] == '\0')
 		return false;
 	JNIEnv *pEnv = static_cast<JNIEnv *>(SDL_GetAndroidJNIEnv());
-	if(pEnv == nullptr)
-		return false;
-	jobject Activity = static_cast<jobject>(SDL_GetAndroidActivity());
-	if(Activity == nullptr)
-		return false;
-	const bool HasFrame = pEnv->PushLocalFrame(8) == 0;
-	bool Success = false;
-	if(HasFrame)
-	{
-		jclass ActivityClass = pEnv->GetObjectClass(Activity);
-		if(ActivityClass != nullptr)
-		{
-			jmethodID Method = pEnv->GetMethodID(ActivityClass, "exportToDownloads", "(Ljava/lang/String;)V");
-			if(Method != nullptr)
-			{
-				// JNI 用 modified UTF-8：先把 UTF-8 解码成 UTF-16，路径里的中文才不会乱。
-				std::vector<jchar> vCharacters;
-				for(const char *pCursor = pPath; *pCursor != '\0';)
-				{
-					const int Codepoint = str_utf8_decode(&pCursor);
-					if(Codepoint < 0)
-						vCharacters.push_back(0xfffd);
-					else if(Codepoint <= 0xffff)
-						vCharacters.push_back((jchar)Codepoint);
-					else
-					{
-						vCharacters.push_back((jchar)(0xd800 + ((Codepoint - 0x10000) >> 10)));
-						vCharacters.push_back((jchar)(0xdc00 + ((Codepoint - 0x10000) & 0x3ff)));
-					}
-				}
-				jstring Path = pEnv->NewString(vCharacters.data(), (jsize)vCharacters.size());
-				if(Path != nullptr)
-				{
-					pEnv->CallVoidMethod(Activity, Method, Path);
-					Success = !pEnv->ExceptionCheck();
-					pEnv->DeleteLocalRef(Path);
-				}
-			}
-			pEnv->DeleteLocalRef(ActivityClass);
-		}
-		pEnv->PopLocalFrame(nullptr);
-	}
-	if(pEnv->ExceptionCheck())
-	{
-		pEnv->ExceptionDescribe();
-		pEnv->ExceptionClear();
-	}
-	pEnv->DeleteLocalRef(Activity);
-	return Success;
+	return android_jni::Call(pEnv, [] { return static_cast<jobject>(SDL_GetAndroidActivity()); }, [&](jobject Activity) {
+		const jclass ActivityClass = pEnv->GetObjectClass(Activity);
+		if(!ActivityClass || pEnv->ExceptionCheck())
+			return false;
+		const jmethodID Method = pEnv->GetMethodID(ActivityClass, "exportToDownloads", "(Ljava/lang/String;)Z");
+		if(!Method || pEnv->ExceptionCheck())
+			return false;
+		const jstring Path = android_jni::MakeString(*pEnv, pPath);
+		if(!Path || pEnv->ExceptionCheck())
+			return false;
+		return pEnv->CallBooleanMethod(Activity, Method, Path) == JNI_TRUE; });
 }
 
 namespace

@@ -26,10 +26,6 @@ public class ServerService extends Service {
 	private static final String INTENT_EXTRA_COMMANDS = "commands";
 	private static final String KEY_EXECUTE_TEXT_REPLY = "execute-command-reply";
 
-	static {
-		System.loadLibrary("DDNet-Server");
-	}
-
 	private class IncomingHandler extends Handler {
 
 		IncomingHandler(Context context) {
@@ -62,23 +58,25 @@ public class ServerService extends Service {
 	public void onCreate() {
 		super.onCreate();
 		try {
+			notificationManager = getSystemService(NotificationManager.class);
+			createNotificationChannel();
+			ServiceCompat.startForeground(
+				this,
+				NOTIFICATION_ID,
+				createRunningNotification(),
+				ServiceInfo.FOREGROUND_SERVICE_TYPE_MANIFEST
+			);
+			// Activity 也调用本类的 Intent 和 Message 工厂。只有服务进程加载本地库。
+			System.loadLibrary("DDNet-Server");
 			nativeCommands = new QmServerCommands(NativeServer::executeCommand);
-		} catch(RuntimeException | OutOfMemoryError error) {
+		} catch(RuntimeException | LinkageError | OutOfMemoryError error) {
 			startFailed = true;
-			NativeServerThread.failStart(this);
-			return;
+			try {
+				Log.e("qmclient", "Local server service failed to start", error);
+			} finally {
+				NativeServerThread.failStart(this);
+			}
 		}
-
-		notificationManager = getSystemService(NotificationManager.class);
-
-		createNotificationChannel();
-
-		ServiceCompat.startForeground(
-			this,
-			NOTIFICATION_ID,
-			createRunningNotification(),
-			ServiceInfo.FOREGROUND_SERVICE_TYPE_MANIFEST
-		);
 	}
 
 	@Override
@@ -346,9 +344,13 @@ class NativeServerThread extends Thread implements QmServerCompletion.Worker {
 		return isAlive();
 	}
 
-	static void failStart(Context context) {
+	static void failStart(Service service) {
 		try {
-			Toast.makeText(context, context.getString(R.string.server_error_exit_code, -1002), Toast.LENGTH_LONG).show();
+			service.stopSelf();
+		} catch(RuntimeException | OutOfMemoryError ignored) {
+		}
+		try {
+			Toast.makeText(service, service.getString(R.string.server_error_exit_code, -1002), Toast.LENGTH_LONG).show();
 		} catch(RuntimeException | OutOfMemoryError ignored) {
 		} finally {
 			terminateProcess();

@@ -10,6 +10,7 @@ import android.util.Log;
 import android.widget.Toast;
 
 import java.io.File;
+import java.util.function.BooleanSupplier;
 
 import androidx.core.content.ContextCompat;
 
@@ -34,9 +35,13 @@ public class ClientActivity extends SDLActivity {
 
 		@Override
 		public boolean bind() {
-			ContextCompat.startForegroundService(ClientActivity.this, intent);
-			bindingAttempted = true;
-			return bindService(intent, this, 0);
+			return startAndBindServer(
+				() -> ContextCompat.startForegroundService(ClientActivity.this, intent),
+				() -> {
+					bindingAttempted = true;
+					return bindService(intent, this, 0);
+				},
+				() -> stopService(intent));
 		}
 
 		@Override
@@ -69,6 +74,18 @@ public class ClientActivity extends SDLActivity {
 		@Override
 		public void onNullBinding(ComponentName name) {
 			serverBinding.failed(this);
+		}
+	}
+
+	static boolean startAndBindServer(Runnable start, BooleanSupplier bind, Runnable stop) {
+		start.run();
+		boolean bound = false;
+		try {
+			bound = bind.getAsBoolean();
+			return bound;
+		} finally {
+			if(!bound)
+				stop.run();
 		}
 	}
 
@@ -140,11 +157,11 @@ public class ClientActivity extends SDLActivity {
 		});
 	}
 
-	public void exportToDownloads(String path) {
+	public boolean exportToDownloads(String path) {
 		final File source = new File(path);
 		if(!source.isFile()) {
 			runOnUiThread(() -> Toast.makeText(this, "导出失败：文件不存在", Toast.LENGTH_LONG).show());
-			return;
+			return false;
 		}
 		new Thread(() -> {
 			String message;
@@ -158,6 +175,7 @@ public class ClientActivity extends SDLActivity {
 			final String text = message;
 			runOnUiThread(() -> Toast.makeText(this, text, Toast.LENGTH_LONG).show());
 		}).start();
+		return true;
 	}
 
 	public void showMediaFiles(String directory, boolean videos, String[] excluded) {
@@ -175,10 +193,13 @@ public class ClientActivity extends SDLActivity {
 			} finally {
 				stopServer();
 			}
-			if(mediaExporter != null)
-				mediaExporter.close();
 		} finally {
-			super.onDestroy();
+			try {
+				if(mediaExporter != null)
+					mediaExporter.close();
+			} finally {
+				super.onDestroy();
+			}
 		}
 	}
 
@@ -198,12 +219,12 @@ public class ClientActivity extends SDLActivity {
 	}
 
 	public void restartApp() {
-		Intent restartIntent =
-			Intent.makeRestartActivityTask(
-				getPackageManager().getLaunchIntentForPackage(
-					getPackageName()
-				).getComponent()
-			);
+		Intent launchIntent = getPackageManager().getLaunchIntentForPackage(getPackageName());
+		if(launchIntent == null || launchIntent.getComponent() == null) {
+			Log.w("qmclient", "restart failed: no launch activity");
+			return;
+		}
+		Intent restartIntent = Intent.makeRestartActivityTask(launchIntent.getComponent());
 		restartIntent.setPackage(getPackageName());
 		startActivity(restartIntent);
 	}
