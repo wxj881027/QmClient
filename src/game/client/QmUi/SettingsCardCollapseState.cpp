@@ -187,7 +187,10 @@ namespace qm_card_collapse
 
 	bool IsCollapsed(const char *pStableId, const bool DefaultValue)
 	{
-		return CurrentState().IsCollapsed(pStableId, DefaultValue);
+		// 首次同步失败时直接使用调用方默认值，避免再次分配。
+		if(!TrySyncFromConfig() && !s_Initialized)
+			return DefaultValue;
+		return GlobalState().IsCollapsed(pStableId, DefaultValue);
 	}
 
 	bool SetCollapsed(const char *pStableId, const bool Collapsed)
@@ -219,7 +222,10 @@ namespace qm_card_collapse
 
 	void SyncQmModules(std::array<bool, qm_module::QmModuleCount> &Collapsed)
 	{
-		const CState &State = CurrentState();
+		// 配置完整载入后才覆盖页面现有的折叠状态。
+		if(!TrySyncFromConfig())
+			return;
+		const CState &State = GlobalState();
 		for(size_t Index = 0; Index < Collapsed.size(); ++Index)
 			Collapsed[Index] = State.IsCollapsed(qm_module::QmModuleStableId(static_cast<qm_module::EQmModuleId>(Index)), false);
 	}

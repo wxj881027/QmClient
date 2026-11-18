@@ -8,6 +8,7 @@
 #include <test/support/prediction_allocation_failure.h>
 
 #include <array>
+#include <cstdlib>
 #include <limits>
 
 namespace
@@ -188,3 +189,58 @@ TEST_F(SettingsCardCollapsePublication, CachedConfigAndLongIdentityCanBeReadWith
 	EXPECT_FALSE(Triggered);
 	EXPECT_EQ(Attempts, 0u);
 }
+
+TEST_F(SettingsCardCollapsePublication, FailedModuleSyncKeepsPageStateUntilRetry)
+{
+	constexpr auto TRANSLATE = static_cast<size_t>(qm_module::EQmModuleId::Translate);
+	constexpr auto VOICE = static_cast<size_t>(qm_module::EQmModuleId::Voice);
+	std::array<bool, qm_module::QmModuleCount> aPage{};
+	str_copy(g_Config.m_QmSettingsCardCollapsed, "qm:voice");
+	g_Config.m_QmSettingsCardCollapseMigrated = 1;
+	qm_card_collapse::SyncQmModules(aPage);
+	ASSERT_TRUE(aPage[VOICE]);
+	const auto PreviousPage = aPage;
+
+	// 另一个页面已经载入过没有折叠项的配置。
+	g_Config.m_QmSettingsCardCollapsed[0] = '\0';
+	qm_card_collapse::SyncFromConfig();
+	str_copy(g_Config.m_QmSettingsCardCollapsed, "qm:translate;!qm:voice");
+
+	bool Triggered = false;
+	{
+		CPredictionAllocationFailure Failure;
+		qm_card_collapse::SyncQmModules(aPage);
+		Triggered = Failure.Triggered();
+	}
+	ASSERT_TRUE(Triggered);
+	EXPECT_EQ(aPage, PreviousPage);
+
+	qm_card_collapse::SyncQmModules(aPage);
+	EXPECT_TRUE(aPage[TRANSLATE]);
+	EXPECT_FALSE(aPage[VOICE]);
+}
+
+#if GTEST_HAS_DEATH_TEST
+TEST(SettingsCardCollapseFirstLoadDeathTest, FailedLookupUsesDefaultWithoutAnotherAllocation)
+{
+	const auto PreviousStyle = GTEST_FLAG_GET(death_test_style);
+	GTEST_FLAG_SET(death_test_style, "threadsafe");
+	EXPECT_EXIT(
+		{
+			str_copy(g_Config.m_QmSettingsCardCollapsed, "!qm:translate");
+			g_Config.m_QmSettingsCardCollapseMigrated = 1;
+			{
+				CPredictionAllocationFailure Failure;
+				if(!qm_card_collapse::IsCollapsed("qm:translate", true))
+					std::_Exit(1);
+				if(!Failure.Triggered() || Failure.Attempts() != 1)
+					std::_Exit(2);
+			}
+			if(qm_card_collapse::IsCollapsed("qm:translate", true))
+				std::_Exit(3);
+			std::_Exit(0);
+		},
+		::testing::ExitedWithCode(0), "");
+	GTEST_FLAG_SET(death_test_style, PreviousStyle);
+}
+#endif
