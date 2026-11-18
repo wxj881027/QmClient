@@ -896,8 +896,15 @@ public:
 			m_Active = false;
 			m_IngameTicks += Tick - m_JoinTick;
 		}
-		int GetIngameTicks(int Tick) const { return m_IngameTicks + Tick - m_JoinTick; }
-		float GetFPM(int Tick, int TickSpeed) const { return (float)(m_Frags * TickSpeed * 60) / GetIngameTicks(Tick); }
+		int64_t GetIngameTicks(int Tick) const { return static_cast<int64_t>(m_IngameTicks) + Tick - m_JoinTick; }
+		float GetFPM(int Tick, int TickSpeed) const
+		{
+			const int64_t IngameTicks = GetIngameTicks(Tick);
+			if(IngameTicks <= 0)
+				return 0.0f;
+			const float FragsScaledToMinute = static_cast<float>(static_cast<double>(m_Frags) * TickSpeed * 60.0);
+			return FragsScaledToMinute / static_cast<float>(IngameTicks);
+		}
 	};
 
 	CClientStats m_aStats[MAX_CLIENTS];
