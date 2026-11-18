@@ -729,13 +729,20 @@ void CMenus::RenderSettingsTeeEditor(CUIRect Content, const SSettingsContentMetr
 			TeeAlphaScale = ComputeCountryFlagEntryAlpha(Progress);
 		}
 	}
+	const float PreviewCornerRadius = 50.0f * Ui()->PixelSize();
 	for(int PreviewTarget = 0; PreviewTarget < NUM_DUMMIES; ++PreviewTarget)
 	{
 		const bool Dummy = PreviewTarget != 0;
 		const bool Selected = PreviewTarget == Target;
 		const CUIRect &Preview = Layout.m_aPreviews[PreviewTarget];
-		const float PreviewRadius = 14.0f * UiScale;
-		DoButton_Menu(&gs_TeeEditorState.m_aPreviewButtons[PreviewTarget], "", Selected, &Preview, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, PreviewRadius, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, Selected ? 0.16f : 0.04f));
+		// 预览框使用固定圆角；短边不足时缩小半径，给两端之间留出直边。
+		const float PreviewRadius = std::min(PreviewCornerRadius, 0.4f * std::min(Preview.w, Preview.h));
+		ui_widget::SButtonSurfaceOptions Options;
+		Options.m_Selected = Selected;
+		Options.m_Radius = PreviewRadius;
+		auto *pButton = &gs_TeeEditorState.m_aPreviewButtons[PreviewTarget];
+		ui_widget::DrawButtonSurface(ui_widget::ControlContext(Ui()), pButton, Preview, Options);
+		Ui()->DoButtonLogic(pButton, Selected, &Preview, BUTTONFLAG_LEFT);
 		const float UnderlineInset = std::max(Gap, PreviewRadius);
 		const CUIRect Underline{Preview.x + UnderlineInset, Preview.y + Preview.h - 2.0f * UiScale, std::max(0.0f, Preview.w - UnderlineInset * 2.0f), 2.0f * UiScale};
 		if(Selected)
@@ -745,7 +752,8 @@ void CMenus::RenderSettingsTeeEditor(CUIRect Content, const SSettingsContentMetr
 		if(pPreviewSkin[0] == '\0')
 			pPreviewSkin = "default";
 		CUIRect Inner, Heading, Flag, SkinLabel, TeeRect;
-		Preview.Margin(Gap, &Inner);
+		// 标题和旗帜位于顶角，内边距至少留出圆弧在对角线方向占用的距离。
+		Preview.Margin(std::max(Gap, 0.3f * PreviewRadius), &Inner);
 		Inner.HSplitTop(TeeMetrics.m_LineHeight, &Heading, &Inner);
 		Heading.VSplitRight(TeeMetrics.m_LineHeight * 2.0f, &Heading, &Flag);
 		char aHeading[128];
