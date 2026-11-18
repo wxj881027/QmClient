@@ -14,6 +14,7 @@
 #include <game/localization.h>
 
 #include <algorithm>
+#include <new>
 #include <optional>
 #include <utility>
 
@@ -22,16 +23,42 @@ namespace qm_card_catalog
 	namespace
 	{
 		CSettingsPersonalizationState s_Personalization;
-		// 展开状态第一次用到时才从配置读入：静态初始化阶段 g_Config 还没就绪。
-		bool s_PersonalizationLoaded = false;
+		char s_aPersonalizationConfig[sizeof(g_Config.m_QmExpandedSections)] = {};
+		bool s_PersonalizationNeedsReload = false;
+		bool s_DirectSectionWritable = false;
 
-		void EnsurePersonalizationLoaded()
+		bool *TryPersonalizationSection(const char *pStableId)
+		try
 		{
-			// 静态初始化阶段 g_Config 还没就绪，所以只在第一次用到时读入。
-			if(s_PersonalizationLoaded)
-				return;
-			s_Personalization.LoadExpandedSections(g_Config.m_QmExpandedSections);
-			s_PersonalizationLoaded = true;
+			if(s_PersonalizationNeedsReload || str_comp(s_aPersonalizationConfig, g_Config.m_QmExpandedSections) != 0)
+			{
+				CSettingsPersonalizationState Candidate;
+				Candidate.LoadExpandedSections(g_Config.m_QmExpandedSections);
+				Candidate.Section(pStableId);
+				s_Personalization = std::move(Candidate);
+				str_copy(s_aPersonalizationConfig, g_Config.m_QmExpandedSections);
+				s_PersonalizationNeedsReload = false;
+			}
+			return &s_Personalization.Section(pStableId);
+		}
+		catch(const std::bad_alloc &)
+		{
+			s_PersonalizationNeedsReload = true;
+			return nullptr;
+		}
+
+		bool TrySavePersonalization()
+		{
+			if(str_comp(s_aPersonalizationConfig, g_Config.m_QmExpandedSections) != 0)
+				return false;
+			// 多留一条记录的空间，才能区分刚好写满与序列化时丢掉后续记录。
+			char aCandidate[sizeof(g_Config.m_QmExpandedSections) + CSettingsPersonalizationState::MAX_ID_LENGTH + 3];
+			s_Personalization.SaveExpandedSections(aCandidate, sizeof(aCandidate));
+			if(static_cast<size_t>(str_length(aCandidate)) >= sizeof(g_Config.m_QmExpandedSections))
+				return false;
+			str_copy(g_Config.m_QmExpandedSections, aCandidate);
+			str_copy(s_aPersonalizationConfig, aCandidate);
+			return true;
 		}
 
 		bool ContainsStableId(const std::vector<const char *> &vStableIds, const char *pStableId)
@@ -44,39 +71,65 @@ namespace qm_card_catalog
 
 	bool QmCardRenderHook::Personalization(CMenus *pMenus, CUIRect &Content, const char *pStableId, const SSettingsContentMetrics &Metrics, bool ReadOnly, bool DrawDivider)
 	{
-		EnsurePersonalizationLoaded();
+		bool *pSection = TryPersonalizationSection(pStableId);
+		if(pSection == nullptr)
+			return false;
 		// 强调色沿用卡片选中色；折叠行不画分割线，所以不再需要边框色。
 		SSettingsFoldRowStyle Style = ResolveSettingsFoldRowStyle(
 			color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiCardBorderColor, true)),
 			ResolveConfiguredAccentColor().WithAlpha(1.0f));
-		const bool WasExpanded = s_Personalization.Expanded(pStableId);
+		const bool WasExpanded = *pSection;
 		const bool Expanded = SettingsPersonalizationSectionEx(s_Personalization, Content, pStableId, Metrics,
 			ReadOnly || pMenus->Ui()->RenderOnly() || pMenus->m_MenuTextPlanCollecting, DrawDivider,
-			[pMenus, &Metrics, &Style](const void *pId, const CUIRect &Row, bool Expanded, bool) {
-				return SettingsFoldRow(pMenus->Ui(), pId, Row, Localize("Personal adjustments"), Metrics.m_SmallSize, Expanded, Style);
+			[pMenus, pStableId, &Metrics, &Style](const void *, const CUIRect &Row, bool Expanded, bool) {
+				// 调用点使用静态 ID，重载配置时按钮身份跟随卡片。
+				return SettingsFoldRow(pMenus->Ui(), pStableId, Row, Localize("Personal adjustments"), Metrics.m_SmallSize, Expanded, Style);
 			});
 		// 只在真切换时写回，避免每帧重排整串配置。
-		if(Expanded != WasExpanded)
-			s_Personalization.SaveExpandedSections(g_Config.m_QmExpandedSections, sizeof(g_Config.m_QmExpandedSections));
-		return Expanded;
+		if(Expanded != WasExpanded && !TrySavePersonalization())
+			*pSection = WasExpanded;
+		return *pSection;
 	}
 
 	bool QmCardRenderHook::PersonalizationReveal(CMenus *pMenus, CUIRect &Content, const char *pStableId, const SSettingsContentMetrics &Metrics, float *pRevealOut, bool ReadOnly, bool DrawDivider)
 	{
 		const bool Expanded = Personalization(pMenus, Content, pStableId, Metrics, ReadOnly, DrawDivider);
+		if(s_PersonalizationNeedsReload)
+		{
+			if(pRevealOut != nullptr)
+				*pRevealOut = 0.0f;
+			return false;
+		}
 		const float FrameDt = pMenus->GameClient()->UiRuntimeV2()->FrameDt();
-		return s_Personalization.AdvanceReveal(pStableId, Expanded, FrameDt, g_Config.m_QmUiMotionLevel, pRevealOut);
+		try
+		{
+			return s_Personalization.AdvanceReveal(pStableId, Expanded, FrameDt, g_Config.m_QmUiMotionLevel, pRevealOut);
+		}
+		catch(const std::bad_alloc &)
+		{
+			if(pRevealOut != nullptr)
+				*pRevealOut = Expanded ? 1.0f : 0.0f;
+			return Expanded;
+		}
 	}
 
 	bool &SettingsPersonalizationExpanded(const char *pStableId)
 	{
-		EnsurePersonalizationLoaded();
-		return s_Personalization.Section(pStableId);
+		bool *pSection = TryPersonalizationSection(pStableId);
+		s_DirectSectionWritable = pSection != nullptr;
+		if(pSection != nullptr)
+			return *pSection;
+		static bool s_Closed = false;
+		s_Closed = false;
+		return s_Closed;
 	}
 
 	void SaveSettingsPersonalizationExpanded()
 	{
-		s_Personalization.SaveExpandedSections(g_Config.m_QmExpandedSections, sizeof(g_Config.m_QmExpandedSections));
+		// 自绘折叠行已修改引用。提交失败后，下次访问从原配置恢复。
+		if(s_DirectSectionWritable)
+			s_PersonalizationNeedsReload = !TrySavePersonalization();
+		s_DirectSectionWritable = false;
 	}
 
 	void UseDeclaredModuleContent(const SQmCardBuildContext &Ctx, SSettingsCardDefinition &Out)
